@@ -7,6 +7,7 @@ import * as OPERATOR_SUBS from './classes/operator.data.mjs';
 const CLASS_DATA = { breaker: BREAKER_SUBS, bastion: BASTION_SUBS, infiltrator: INFILTRATOR_SUBS, operator: OPERATOR_SUBS };
 // Viruses are built from genes (genes.mjs) and written by authors (authors.mjs): docs/genome.md.
 import { GENES, partGenes } from './genes.mjs';
+import { PARTS, rollParts, along as alongParts } from './parts.mjs';
 import { crewOf, buildAuthor, bossAuthor } from './authors.mjs';
 
 export const CONFIG = {
@@ -62,6 +63,7 @@ export const CONFIG = {
   mutex: { share: 0.25, every: 4 }, // Mutex: the part it locks carries a shield of a quarter of its max, back to full 4 cycles after it breaks
   tripwire: { loud: 1.25 }, // Tripwire: break it while the others live and they hit 25% harder, each attack a cycle sooner
   c2: { gnaw: 0.5 }, // C2 Node: while it lives, fragments gnaw 50% harder; break it and they drop with it
+  zipbomb: { fuse: 2, share: 0.2 }, // Zip Bomb: break it and it goes off 2 cycles later for 20% of your max (a ◆ or a shield takes it)
   runEarly: [1, 1, 1.35, 1.5, 1.45, 1.45, 1.45, 1.45, 1.45, 1.45, 1.45, 1.45, 1.35, 1.25, 1.15, 1.05], // and this on top, by enemy level (1 past 16): levels 5–12 hit hardest, before gear catches up
   // ...and from level 10 a late step on top of that (linear between the points, flat after the last): your
   // subclass, talents, a fifth and sixth protocol slot and v2–v3 services outgrow the 4% a level, so without
@@ -341,6 +343,52 @@ export const SKILLS = {
 // carry: CRYPTJACK-4821), and its pool of third parts. A third part is a gene's part (genes.mjs GENES[id].parts);
 // a wild virus brings one of those open at its level, picked by its seed, in the pool's order.
 const thirds = (family, ids) => ids.map((g) => ({ ...GENES[g].parts[family], gene: g }));
+// The basic slot (docs/parts-plan.md "Basic parts"): each family's plain attackers and guards beside the Pulse Node,
+// free because each is pressure-matched to its family's Pulse Node (k: its hit as a share of the Pulse Node's;
+// parts.test.mjs holds the match within 5% after a level's Block). A basic keeps its own timing under any attack set.
+//   accum      Accumulator: one big Discharge, never a charge (tells.mjs)
+//   taps       Repeater, Prism: a volley of that many hits on back to back cycles, one move (a cut stops the rest,
+//              a delay moves them all)
+//   buffer     Buffer: every N cycles it shields the part below it; the shield takes command hits only
+//   cipher     Cipher Block: its hit grows this share for each Encrypt on you
+//   fanin      Fan-in: its hit grows this share for each fragment on the board
+//   obfuscate  Obfuscator: while it lives every part stays veiled, bare or not (Tag still shows a timer)
+export const BASICS = {
+  accumulator: { name: 'Accumulator', integrity: 30, armor: 1, loot: 'Charge Cell', accum: true, attack: { name: 'Discharge', k: 1.25, interval: 5, first: 4 } },
+  strobe: { name: 'Strobe', integrity: 26, armor: 0, loot: 'Strobe Diode', attack: { name: 'Tick', k: 0.42, interval: 1, first: 2 } },
+  repeater: { name: 'Repeater', integrity: 32, armor: 1, loot: 'Relay Coil', taps: 2, attack: { name: 'Double Tap', k: 0.63, interval: 5, first: 3 } },
+  buffer: { name: 'Buffer', integrity: 30, armor: 1, loot: 'Buffer Plate', buffer: { every: 3, share: 0.5 } }, // a shield of half its own max
+  prism: { name: 'Prism', integrity: 30, armor: 1, veiled: true, loot: 'Prism Shard', taps: 3, attack: { name: 'Spread', k: 0.43, interval: 5, first: 3 } },
+  cipherblock: { name: 'Cipher Block', integrity: 30, armor: 1, loot: 'Cipher Plate', cipher: 0.25, attack: { name: 'Cipher', k: 0.67, interval: 4, first: 3 } },
+  fanin: { name: 'Fan-in', integrity: 30, armor: 1, loot: 'Fan-in Bus', fanin: 0.5, attack: { name: 'Fan-in', k: 0.46, interval: 4, first: 4 } },
+  obfuscator: { name: 'Obfuscator', integrity: 22, armor: 1, veiled: true, loot: 'Smoke Lens', obfuscate: true },
+};
+// What a part (or a spec) lands in a fight's first 20 cycles if nothing were broken, as families.mjs pressureOf counts it:
+// a hit its amount (a volley each of its hits), an Encrypt its stack every cycle from its landing, a Replicate its
+// Splice and a fragment gnawing 4 cycles, a Scramble its hit and its cycles of static. The parts plan's share-out reads it.
+export function nominal(p) {
+  const a = p?.attack;
+  if (!a) return 0;
+  let n = 0;
+  for (let c = a.first ?? a.due, k = 0; c <= 20; k++) {
+    if (a.effect === 'damage') n += a.amount;
+    if (a.effect === 'encrypt') n += a.amount * (20 - c + 1);
+    if (a.effect === 'replicate') n += (a.hit || 0) + CONFIG.fragmentDamage * 4;
+    if (a.effect === 'scramble') n += (a.hit || 0) + a.amount * 3;
+    c += p.taps && (k + 1) % p.taps ? 1 : Math.max(1, a.interval) - (p.taps ? p.taps - 1 : 0);
+  }
+  return n;
+}
+// A family's basic: its spec at the family's Pulse Node's size (Ghostroot's are veiled, as all its parts are).
+function basicOf(family, id, from) {
+  const b = BASICS[id], pulse = FAMILIES[family].parts.find((x) => x.id === 'pulse');
+  const attack = b.attack ? { name: b.attack.name, effect: 'damage', amount: Math.max(1, Math.round(pulse.attack.amount * b.attack.k * 10) / 10), interval: b.attack.interval, first: b.attack.first } : undefined;
+  const { attack: _, ...rest } = b;
+  // One with no attack is its signature's fallback (combat.mjs breakPart): break the signature first and it takes the
+  // attack over, so no kill order leaves the rest harmless (degenerate.test.mjs).
+  const sig = FAMILIES[family].parts.find((x) => x.special);
+  return { id, ...rest, ...(family === 'ghostroot' ? { veiled: true } : {}), ...(attack ? { attack } : { fallback: sig.id }), from, pool: 'basic' };
+}
 export const FAMILIES = {
   ransomware: {
     name: 'Ransomware',
@@ -348,7 +396,8 @@ export const FAMILIES = {
     threatens: 'Integrity',
     summary: 'Encrypts your server. Each Encrypt adds damage every cycle until you break the Encryptor, which holds the key.',
     core: ['surge', 'encrypt'],
-    third: ['ward', 'mutexlock', 'tripwire'], // the Lockbox from level 3, the Mutex from 8, the Tripwire from 20
+    basic: [['accumulator', 1], ['buffer', 3], ['cipherblock', 5]],
+    third: ['ward', 'zipbomb', 'hotspot', 'mutexlock', 'idletimer', 'frontend', 'tripwire'], // the Lockbox from level 3, the Zip Bomb from 5, the Hotspot from 6, the Mutex from 8, the Idle Timer from 9, the Front End from 10, the Tripwire from 20
     parts: [
       { id: 'pulse', name: 'Pulse Node', integrity: 34, armor: 1, loot: 'Pulse Kernel', attack: { name: 'Surge', effect: 'damage', amount: 14, interval: 4, first: 3 } },
       { id: 'encryptor', name: 'Encryptor', integrity: 38, armor: 1, loot: 'Cipher Seed', special: true, attack: { name: 'Encrypt', effect: 'encrypt', amount: 4, interval: 5, first: 4 } },
@@ -360,7 +409,8 @@ export const FAMILIES = {
     threatens: 'Integrity',
     summary: 'Spawns fragments that gnaw your server every cycle. The Replicator makes them.',
     core: ['surge', 'replicate'],
-    third: ['twin', 'c2'], // the Mirror from level 3, the C2 Node from 8
+    basic: [['strobe', 1], ['repeater', 3], ['fanin', 5]],
+    third: ['twin', 'zipbomb', 'c2', 'backlog'], // the Mirror from level 3, the Zip Bomb from 5, the C2 Node from 8, the Backlog from 12
     parts: [
       { id: 'pulse', name: 'Pulse Node', integrity: 34, armor: 1, loot: 'Pulse Kernel', attack: { name: 'Surge', effect: 'damage', amount: 12, interval: 4, first: 4 } },
       { id: 'replicator', name: 'Replicator', integrity: 38, armor: 1, loot: 'Replication Seed', special: true, attack: { name: 'Replicate', effect: 'replicate', amount: 1, interval: 4, first: 3, hit: 4 } }, // a small Splice hit with each spawn
@@ -372,7 +422,8 @@ export const FAMILIES = {
     threatens: 'Integrity',
     summary: 'Its timers stay hidden while its parts are armored. The Scrambler hits you and Scrambles you for 2 cycles. While you are Scrambled, each of your attacks has a 25% chance to hit you instead, at half damage.',
     core: ['surge', 'scramble', 'veil'],
-    third: ['decoymirror', 'mimic'], // the Decoy from level 4, the Mimic from 8
+    basic: [['strobe', 1], ['prism', 3], ['obfuscator', 5]],
+    third: ['decoymirror', 'hotspot', 'mimic', 'frontend'], // the Decoy from level 4, the Hotspot from 6, the Mimic from 8, the Front End from 10
     parts: [
       // The Scrambler carries the threat, not the Pulse: killing the Pulse first no longer halves the fight.
       { id: 'pulse', name: 'Pulse Node', integrity: 34, armor: 1, veiled: true, loot: 'Pulse Kernel', attack: { name: 'Surge', effect: 'damage', amount: 11, interval: 4, first: 3 } },
@@ -380,7 +431,7 @@ export const FAMILIES = {
     ],
   },
 };
-for (const [k, f] of Object.entries(FAMILIES)) f.parts.push(...thirds(k, f.third));
+for (const [k, f] of Object.entries(FAMILIES)) f.parts.push(...f.basic.map(([id, from]) => basicOf(k, id, from)), ...thirds(k, f.third));
 
 // Strains: variants of a home family, each built around one rule: a named build of its author (authors.mjs), its
 // fixed genes (genes) on its rule's part, and its charge's gene (tell.gene). They share their lineage's
@@ -621,6 +672,11 @@ export function makePart(spec, kind, scale, extraArmor = 0) {
     command: !!spec.command, // C2 Node: fragments gnaw harder while it lives, and drop when it breaks
     mimic: !!spec.mimic, // Mimic: plays your last command back at you (its tell)
     fallback: spec.fallback || null, // Fallback (Keyring, Brood, Patcher, Cooler): the part whose attack it takes over when that part breaks
+    // The parts plan (BASICS, genes.mjs): only on the parts that carry them, so every other part is built as it was.
+    ...(spec.pool === 'basic' ? { basic: true } : {}), ...(spec.copy ? { copy: true } : {}),
+    ...(spec.accum ? { accum: true } : {}), ...(spec.taps ? { taps: spec.taps } : {}), ...(spec.buffer ? { buffer: { ...spec.buffer } } : {}),
+    ...(spec.cipher ? { cipher: spec.cipher } : {}), ...(spec.fanin ? { fanin: spec.fanin } : {}), ...(spec.obfuscate ? { obfuscate: true } : {}),
+    ...(spec.fuse ? { fuse: true } : {}), ...(spec.hotspot ? { hotspot: true } : {}), ...(spec.idle ? { idle: spec.idle } : {}), ...(spec.front ? { front: true } : {}), ...(spec.backlog ? { backlog: spec.backlog } : {}),
     ...(spec.wardCommands ? { wardCommands: true } : {}), // HASHLORD's Pool Lock: its ward holds back your commands only, not burns or helpers
     attack: spec.attack ? { ...spec.attack, due: spec.attack.first, amount: spec.attack.amount } : null,
     exposedUntil: 0,
@@ -959,15 +1015,46 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   // Tougher viruses wear more armor and strike sooner (see THREAT_STEPS).
   const extra = (spec) => (mutation === 'armored' ? 1 : 0) + THREAT_STEPS.armor.filter((x) => threat >= x.threat && (x.part === 'any' || (x.part === 'special') === !!spec.special)).length;
   // A family's third part joins wild viruses from its level (named fixtures stay as they are); the others give up some Integrity for it.
-  const open = (strain ? strain.parts : family.parts).filter((spec) => !spec.from || ((random || overrides.family) && level >= spec.from));
+  // A wild virus (random, no strain, boss or forced genes) is rolled by the parts plan (parts.mjs): a basic or two copies,
+  // the signature most of the time, 0 to 2 thirds, its Integrity shared out so the total stays its family's.
+  // A forced basic (overrides.basic: the Codex's sample, a probe, the playtest page) builds the same way, with the
+  // signature and the forced genes' third (if any): { basic, signature, thirds } as the roll would have it.
+  const forced2 = overrides.basic && random && !strain && !overrides.boss && FAMILIES[familyId] ? family.parts.find((x) => (x.pool === 'basic' || x.id === 'pulse') && x.id === overrides.basic) : null;
+  const rolled2 = forced2 ? { basic: forced2, dup: false, signature: true, thirds: family.parts.filter((x) => x.pool === 'third' && genes?.includes(x.gene)), strangers: 0 }
+    : PARTS.on && !overrides.classic && random && !strain && !overrides.boss && !genes && FAMILIES[familyId] ? rollParts({ family: familyId, body: family, level, rand: rng((seed ^ 0x2545f491) >>> 0), elite: !!overrides.elite, seen: overrides.seen || null, extra: [...(mutation && MUTATIONS[mutation] ? [MUTATIONS[mutation].gene] : []), ...(grade >= 2 ? ['linked'] : [])] }) : null;
+  const open = (strain ? strain.parts : family.parts).filter((spec) => spec.pool !== 'basic' && (!spec.from || ((random || overrides.family) && level >= spec.from)));
   // The third part: a gene's part (genes.mjs), one of those open at its level (the family's pool, in order), picked by its own hash of the
   // seed so it never moves the virus's other rolls. A boss keeps its family's first (the classic one).
-  const pool = open.filter((spec) => spec.pool === 'third');
+  const pool = open.filter((spec) => spec.pool === 'third' && (!spec.plan || genes)); // the parts plan's thirds (plan) come only by its roll, or forced
   const own = overrides.boss && pool.find((spec) => spec.id === BOSSES[overrides.boss]?.third); // a native boss brings its own (data BOSSES nb-*)
   const third = genes ? pool.find((spec) => genes.includes(spec.gene)) || null : pool.length ? own || pool[overrides.boss ? 0 : (Math.imul((seed >>> 0) ^ 0x7f4a7c15, 2246822519) >>> 0) % pool.length] : null;
-  const specs = [...open.filter((spec) => spec.pool !== 'third' || spec === third), ...(BOSSES[overrides.boss]?.extra || [])]; // a boss's own parts (HASHLORD's Pool Lock)
-  const trim = specs.some((spec) => spec.from) ? CONFIG.thirdTrim : 1;
-  const parts = specs.map((spec) => makePart(spec, 'system', scale * g.hp * (spec.from ? 1 : trim), extra(spec) + (spec.special ? 0 : g.armor)));
+  // A forced basic (overrides.basic: the Codex's sample, a probe) takes the Pulse Node's place.
+  let specs = [...open.filter((spec) => spec.pool !== 'third' || spec === third), ...(BOSSES[overrides.boss]?.extra || [])]; // a boss's own parts (HASHLORD's Pool Lock)
+  let share = (spec) => (spec.pool === 'third' ? 1 : specs.some((x) => x.pool === 'third') ? CONFIG.thirdTrim : 1);
+  if (rolled2) {
+    const r = rolled2, sig = family.parts.find((x) => x.special), copy = { ...r.basic, id: r.basic.id + '2', name: r.basic.name + ' 2', copy: true };
+    specs = [r.basic, ...(r.dup ? [copy] : []), ...(r.signature ? [sig] : []), ...r.thirds];
+    // Its Integrity: the family's two core parts' total (PARTS.bulk), shared out. A third keeps about its own size (never
+    // more than PARTS.thirdMax of it); the basic and the signature take the rest.
+    const weight = (spec) => (r.dup && (spec === r.basic || spec === copy) ? PARTS.copy : 1);
+    const total = alongParts(PARTS.bulk, level) * (family.parts.find((x) => x.id === 'pulse').integrity + sig.integrity), sum = specs.reduce((n, x) => n + x.integrity * weight(x), 0);
+    const kt = Math.min(PARTS.thirdMax, total / sum), t3 = r.thirds.reduce((n, x) => n + x.integrity * kt, 0), core = specs.filter((x) => x.pool !== 'third').reduce((n, x) => n + x.integrity * weight(x), 0);
+    const kc = (total - t3) / core;
+    share = (spec) => (spec.pool === 'third' ? kt : weight(spec) * kc);
+  }
+  const parts = specs.map((spec) => makePart(spec, 'system', scale * g.hp * share(spec), extra(spec) + (spec.special ? 0 : g.armor)));
+  if (rolled2) parts.forEach((p, i) => { if (specs[i].id === 'pulse' || specs[i].pool === 'basic') p.basic = true; }); // the Pulse Node is a basic too, in a rolled fight
+  // A doubled basic: each copy hits for PARTS.copy of one, the second a cycle behind.
+  if (rolled2?.dup) for (const p of parts.filter((x) => x.id === rolled2.basic.id + '2' || x.id === rolled2.basic.id)) { if (p.attack) p.attack.amount *= PARTS.copy; if (p.copy && p.attack) { p.attack.first += 1; p.attack.due += 1; } }
+  // Its pressure, like its Integrity, is its family's (docs/parts-plan.md "The total stays the same"): a fight whose
+  // parts land less than the Pulse Node and the signature would over 20 cycles (no signature, a basic with no attack)
+  // hits that much harder, up to PARTS.pressure; one that lands more, softer. An Accumulator's Discharge never grows.
+  if (rolled2) {
+    const sig = family.parts.find((x) => x.special), core = nominal(family.parts.find((x) => x.id === 'pulse')) + nominal(sig);
+    const now = parts.reduce((n, p) => n + nominal(p), 0), [lo, hi] = PARTS.pressure;
+    const k = now > 0 ? Math.max(lo, Math.min(hi, core / now)) : 1;
+    if (k !== 1) for (const p of parts) if (p.attack && !(p.accum && k > 1)) { if (['damage', 'encrypt'].includes(p.attack.effect)) p.attack.amount *= k; if (p.attack.hit) p.attack.hit *= k; }
+  }
   const step = overrides.run ? (CONFIG.runEarly[level - 1] ?? 1) * (overrides.boss || overrides.elite ? 1 : runLate(level)) : 1;
   const dmgScale = mobPower(level) * (1 + CONFIG.enemyRamp * (level - 1)) * g.dmg * (overrides.run ? CONFIG.runDamage * step : 1);
   // Encryption stacks, so it skips the early-game and late steps (they would compound).
@@ -1004,6 +1091,7 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   if (cut) { cut.armor = cut.maxArmor = Math.min(cut.maxArmor, boss.trim.armor); if (cut.attack) cut.attack.interval = Math.max(cut.attack.interval, boss.trim.interval); }
   const weakPoint = parts[Math.floor(next() * parts.length)].id;
   const srcs = specs.map((spec) => (spec.pool === 'third' || boss?.extra?.includes(spec) ? 'rolled' : null));
+  const unsigned = rolled2 && !rolled2.signature ? { noSignature: true } : {}; // no signature this fight (tells.mjs skips its tells)
   const genome = genomeOf(parts, { strain: strainId, mutation, grade, boss: overrides.boss || null, ice: !!family.ice, srcs, linked: !!genes?.includes('linked') });
   // Its name (docs/genome.md 5.4): the adjective of its costliest rolled gene, its body's stem or its build's name, its
   // tag (the seed's four digits, or its file's) and its grade: WARDED CRYPTJACK-4821 v2. Named fixtures keep theirs.
@@ -1013,7 +1101,7 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   const crit = level >= SERVER.mutationsFrom ? CONFIG.enemyCrit : 0;
   const author = authorOf({ family: familyId, strain: strainId, boss: overrides.boss || null }, overrides.author);
   return { id: familyId + '-' + seed, name, family: familyId, strain: strainId, grade, dormant: strain?.dormant ? true : false, art: family.art || familyId, mutation, threat, level, power: dmgScale * (overrides.elite ? ELITE.dmg : 1), hpPower: scale, crit, threatens: family.threatens, parts, weakPoint, weakKnown: false, ...(overrides.elite ? { elite: true } : {}), ...(boss ? { boss: overrides.boss, phases: boss.phases.map((x) => ({ ...x, done: false })), enrageAt: boss.enrageAt } : {}),
-    genes: genome, author };
+    genes: genome, author, ...unsigned };
 }
 
 // ---------- locations ----------

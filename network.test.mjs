@@ -349,7 +349,7 @@ test('native effects: Open, locks and wards, the Tripwire, twins, reads, after-e
     // Mirror Maze: on the Decoy's beat your command goes through at half.
     const mz = (maze) => {
       const x = at(40); if (maze) wear(x, 'mirror-maze', 40);
-      fight(x, 'random', 40, { family: 'ghostroot' });
+      fight(x, 'random', 40, { family: 'ghostroot', classic: true }); // the classic shape: a Pulse Node beside the signature
       const dec = x.encounter.virus.parts.find((q) => q.reflect);
       if (!dec) { x.encounter.virus.parts.push({ ...part(x, 'pulse'), id: 'decoy', name: 'Decoy', reflect: 4, attack: null }); }
       x.encounter.cycle = 8;

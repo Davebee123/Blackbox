@@ -58,7 +58,7 @@ const locked = (text) => `<p class="cxp-lock"><span>${UNKNOWN}</span>${esc(text)
 const TELL_VERB = { charge: 'Charges', cast: 'Casts', seal: 'Seals with', lock: 'Locks with' };
 function partCard(level, x, tells = []) {
   // Lv N+: a third part (it joins viruses of that level and up), or a part whose body comes later than your level (its numbers are at N).
-  const p = x.part, later = x.level > level, opens = (x.gene && x.from > 1) || later ? `<span class="tag dim" title="${esc(`${x.gene ? `Joins viruses of level ${x.from} and up.` : `Comes at level ${x.from} and up.`}${later ? ` Its numbers are at level ${x.level}.` : ''}`)}">Lv ${x.from}+</span>` : '';
+  const p = x.part, later = x.level > level, opens = ((x.gene || x.basic) && x.from > 1) || later ? `<span class="tag dim" title="${esc(`${x.gene || x.basic ? `Joins viruses of level ${x.from} and up.` : `Comes at level ${x.from} and up.`}${later ? ` Its numbers are at level ${x.level}.` : ''}`)}">Lv ${x.from}+</span>` : '';
   if (!x.named) {
     return `<div class="cx-part unknown"><div class="cxp-head"><b>${UNKNOWN}</b></div><div class="cxp-stats"><span>${UNKNOWN} Integrity</span><span>◆ ${UNKNOWN}</span></div><p class="cxp-hint">Meet one to learn its name.</p></div>`;
   }

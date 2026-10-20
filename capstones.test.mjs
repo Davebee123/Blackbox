@@ -74,7 +74,7 @@ test('the capstone row spends only its own points: a full tree has none left for
 
 // One rule each, checked on a fight: the capstone changes what it says it changes.
 test('capstone rules do what they say: a sample fight logs each one', () => {
-  const said = (sub, cap, re, seeds = [1, 2, 3, 4, 5, 6]) => {
+  const said = (sub, cap, re, seeds = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]) => {
     for (const seed of seeds) {
       const s = fresh(); build(s, SUBS[sub].cls, at(50), { sub, capstone: cap });
       s.rng = (seed * 2654435761 + 6) >>> 0;
@@ -100,16 +100,16 @@ test('the passive capstones change the numbers: Iron Curtain, Load-Bearing Wall 
   const setup = (cls, sub, cap) => { const s = fresh(); build(s, cls, at(50), { sub, capstone: cap }); s.run = { loc: 'sim', cwd: '/', integrity: maxSignal(s), max: maxSignal(s), pack: [], visited: ['/'] }; selectEncounter(s, 'random', 3, { mode: 'run', room: '/sim', level: 50, zone: true }); command(s, 'engage'); return s; };
   const r2 = (sub, j) => SUBS[sub].capstones[j].ranks[1];
   // Iron Curtain: the part that last hit you (Grudge's part).
-  const w = setup('bastion', 'warden', 0), p = livingParts(w)[0];
+  const w = setup('bastion', 'warden', 0), p = livingParts(w).find((x) => x.attack);
   w.encounter.grudge = null; const before = takenMult(w, p);
   w.encounter.grudge = p.id;
   assert.ok(Math.abs(takenMult(w, p) / before - (1 - r2('warden', 0))) < 1e-9, 'the part that last hit you hits softer');
   // Load-Bearing Wall: the last part standing.
-  const d = setup('breaker', 'demolitionist', 1), q = livingParts(d)[0], many = takenMult(d, q);
-  for (const x of livingParts(d).slice(1)) x.integrity = 0;
+  const d = setup('breaker', 'demolitionist', 1), q = livingParts(d).find((x) => x.attack), many = takenMult(d, q);
+  for (const x of livingParts(d).filter((y) => y !== q)) x.integrity = 0;
   assert.ok(Math.abs(takenMult(d, q) / many - (1 - r2('demolitionist', 1))) < 1e-9, 'the last part standing hits softer');
   // Dead Air: a Jammed part.
-  const h = setup('operator', 'hijacker', 1), j = livingParts(h)[0], free = takenMult(h, j);
+  const h = setup('operator', 'hijacker', 1), j = livingParts(h).find((x) => x.attack), free = takenMult(h, j);
   j.jammedUntil = h.encounter.cycle + 1;
   assert.ok(Math.abs(takenMult(h, j) / free - (1 - r2('hijacker', 1))) < 1e-9, 'a Jammed part hits softer');
 });

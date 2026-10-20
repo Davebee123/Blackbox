@@ -7,7 +7,7 @@
 // node genesim.mjs bosses [ids] [levels]   the boss bands
 // node genesim.mjs genes [seeds]           the per-gene table (docs/genome.md "What shipped")
 import { fresh, selectEncounter, command, resolveCycle, active, defender, maxSignal, classOf } from './dist/combat.mjs';
-import { ARCHETYPES, BOSSES, TELL, SUBCLASS, STRAINS } from './dist/data.mjs';
+import { ARCHETYPES, BOSSES, TELL, SUBCLASS, STRAINS, FAMILIES } from './dist/data.mjs';
 import { GENES, GENE_BOTS } from './dist/genes.mjs';
 import { planner } from './dist/planner.mjs';
 import { build } from './balance.mjs';
@@ -116,6 +116,12 @@ export const PROBES = {
   rekey: probe(6, { key: 'sentinel', only: [] }, 'rekey', { only: ['rekey'] }),
   batteringram: probe(1, { key: 'bouncer', only: [] }, 'batteringram', { only: ['batteringram'] }),
   hotfix: probe(3, { key: 'random', family: 'worm', strain: 'patchwork', genes: [], only: [] }, 'hotfix', { only: ['hotfix'] }),
+  // The parts plan's thirds (docs/parts-plan.md P1).
+  zipbomb: probe(5, fam('ransomware'), 'zipbomb', { genes: ['zipbomb'] }),
+  hotspot: probe(6, fam('ransomware'), 'hotspot', { genes: ['hotspot'] }),
+  idletimer: probe(9, fam('ransomware'), 'idletimer', { genes: ['idletimer'] }),
+  frontend: probe(10, fam('ghostroot'), 'frontend', { genes: ['frontend'] }),
+  backlog: probe(12, fam('worm'), 'backlog', { genes: ['backlog'] }),
 };
 // The named builds: each strain against its family's body. Keylogger's two genes share one probe.
 for (const [k, st] of Object.entries(STRAINS)) PROBES[st.genes[0]] = { opens: st.from, body: fam(st.lineage), with: { ...fam(st.lineage), strain: k }, gene: st.genes[0], build: k, also: st.genes.slice(1) };
@@ -123,7 +129,7 @@ export const PROBE_LEVELS = [5, 10, 18, 30];
 // Who plays a level: the four classes below SUBCLASS.from, every subclass from it.
 export const playersAt = (L) => (L >= SUBCLASS.from ? SUBS : Object.keys(ARCHETYPES).map((cls) => [cls, null]));
 // Genes the planner has a rule for, so ignoring them means something (planner.mjs, tells.mjs, the Sync Window here).
-export const ANSWERED = ['ward', 'mutexlock', 'tripwire', 'twin', 'c2', 'decoymirror', 'mimic', 'keyring', 'adaptive', 'phaseshift', 'synclock', 'overcharge', 'fulldisk', 'massmailer', 'possession', 'doubleextortion', 'selfupdate', 'persistence', 'rekey', 'batteringram', 'hotfix'];
+export const ANSWERED = ['ward', 'mutexlock', 'tripwire', 'twin', 'c2', 'decoymirror', 'mimic', 'keyring', 'adaptive', 'phaseshift', 'synclock', 'overcharge', 'fulldisk', 'massmailer', 'possession', 'doubleextortion', 'selfupdate', 'persistence', 'rekey', 'batteringram', 'hotfix', 'zipbomb', 'hotspot', 'idletimer', 'frontend', 'backlog'];
 
 // One probe fight: a run fight at the level, the planner reading (or ignoring one gene).
 export function probeFight(cfg, level, cls, sub, seed, { ignore = null } = {}) {
@@ -133,7 +139,7 @@ export function probeFight(cfg, level, cls, sub, seed, { ignore = null } = {}) {
   TELL.sim.only = cfg.only || null;
   if (ignore) GENE_BOTS.ignore = new Set([ignore]);
   try {
-    selectEncounter(s, key, (seed * 7919 + level * 131) >>> 0, { mode: 'run', room: '/sim', level, zone: key === 'random', ...(key === 'random' ? { family: cfg.family, strain: cfg.strain, genes: cfg.genes || [], grade: 1, mutation: cfg.mutation || null } : { mutation: null }) });
+    selectEncounter(s, key, (seed * 7919 + level * 131) >>> 0, { mode: 'run', room: '/sim', level, zone: key === 'random', ...(key === 'random' ? { family: cfg.family, strain: cfg.strain, genes: cfg.genes || [], grade: 1, mutation: cfg.mutation || null, ...(cfg.basic ? { basic: cfg.basic } : {}) } : { mutation: null }) });
     s.encounter.soft = 1;
     const max = s.run.max, r = playOut(s, planner, 80, { sync: ignore !== 'synclock' });
     return { win: r.result === 'victory', lost: Math.min(100, Math.round(((max - r.endIntegrity) / max) * 100)) };
@@ -165,7 +171,26 @@ export function geneCheck(id, { seeds = SEEDS, levels = PROBE_LEVELS, answer = t
   if (out.answered) { out.answer = avg(all.ignore) - avg(all.with); out.ignoreCost = avg(all.ignore) - avg(all.body); }
   return out;
 }
+// The basics (docs/parts-plan.md "Basic parts"): each against its family's Pulse Node, on the same seeds, at the level it
+// opens and at 30. A basic is free, so it should cost about what a Pulse Node does (within 3 points of Signal).
+export const BASIC_LEVELS = (from) => [...new Set([Math.max(from, 3), 30])];
+export function basicCheck(family, id, { seeds = SEEDS, levels = null } = {}) {
+  const from = FAMILIES[family].parts.find((x) => x.id === id)?.from || 1, out = { family, id, levels: {} };
+  const all = { body: [], with: [] };
+  for (const L of levels || BASIC_LEVELS(from)) {
+    const row = { body: [], with: [] };
+    for (const [cls, sub] of playersAt(L)) for (const seed of seeds) {
+      row.body.push(probeFight({ ...fam(family), basic: 'pulse' }, L, cls, sub, seed).lost); // both built as the roll builds them (data.mjs createVirus)
+      row.with.push(probeFight({ ...fam(family), basic: id }, L, cls, sub, seed).lost);
+    }
+    out.levels[L] = { pulse: avg(row.body), basic: avg(row.with), delta: avg(row.with) - avg(row.body) };
+    all.body.push(...row.body); all.with.push(...row.with);
+  }
+  out.delta = avg(all.with) - avg(all.body);
+  return out;
+}
 const f1 = (x) => (x == null ? '' : (x >= 0 ? '+' : '') + x.toFixed(1));
+export const basicLine = (c) => `${c.family}/${c.id}`.padEnd(24) + ` ${f1(c.delta)} pts against the Pulse Node · ${Object.entries(c.levels).map(([L, x]) => `${L}: ${x.basic.toFixed(1)} vs ${x.pulse.toFixed(1)}`).join(' · ')}`;
 export const geneLine = (c) => `${GENES[c.id].name.padEnd(16)} cost ${c.cost} · ${f1(c.delta)} pts (${f1(c.perPoint)} a point)${c.answered ? ` · answering saves ${f1(c.answer)}, ignoring costs ${f1(c.ignoreCost)}` : ''} · ${Object.entries(c.levels).map(([L, x]) => `${L}: ${f1(x.cost)}`).join(' ')}`;
 
 const isMain = import.meta.url === `file://${process.argv[1]}`;
@@ -174,6 +199,10 @@ if (isMain) {
   if (what === 'bosses') {
     const ids = args.filter((x) => BOSSES[x]), levels = args.filter((x) => /^\d+$/.test(x)).map(Number);
     for (const id of ids.length ? ids : ['nb-hashlord', 'nb-mirrorshade']) for (const L of levels.length ? levels : [10, 12, 16, 18, 30]) console.log(bandLine(bossBand(id, L)));
+  }
+  if (what === 'basics') {
+    const seeds = SEEDS.slice(0, Number(args.find((x) => /^\d+$/.test(x))) || SEEDS.length);
+    for (const [f, body] of Object.entries(FAMILIES)) for (const spec of body.parts.filter((x) => x.pool === 'basic')) if (!args.some((x) => !/^\d+$/.test(x)) || args.includes(spec.id)) console.log(basicLine(basicCheck(f, spec.id, { seeds })));
   }
   if (what === 'genes') {
     const seeds = SEEDS.slice(0, Number(args.find((x) => /^\d+$/.test(x))) || SEEDS.length), only = args.filter((x) => PROBES[x]);

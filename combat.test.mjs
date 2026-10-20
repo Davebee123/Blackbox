@@ -284,11 +284,12 @@ test('invalid input keeps the queued command', () => {
 
 test('every enemy is a basic attacker and a signature part (a family adds a third from level 3, from a pool), with armor as chits', async () => {
   const { FAMILIES, GUARDS } = await import('./dist/data.mjs');
-  const changes = (p) => p.ward || p.twin || p.reflect || p.lock || p.deadman || p.command || p.mimic; // a part whose death or survival changes the fight
+  const changes = (p) => p.ward || p.twin || p.reflect || p.lock || p.deadman || p.command || p.mimic || p.fuse || p.hotspot || p.idle || p.front || p.backlog || p.buffer || p.obfuscate; // a part whose death or survival changes the fight
   for (const f of [...Object.values(FAMILIES), ...Object.values(GUARDS)]) {
-    const base = f.parts.filter((p) => !p.from), third = f.parts.filter((p) => p.from);
+    const base = f.parts.filter((p) => !p.from), third = f.parts.filter((p) => p.pool === 'third'), basics = f.parts.filter((p) => p.pool === 'basic'); // the parts plan's basics take the Pulse Node's slot (dist/parts.mjs)
     assert.equal(base.length, 2, f.name);
-    assert.ok(third.every((p) => p.from >= 3 && p.pool === 'third' && changes(p)), f.name);
+    assert.ok(third.every((p) => p.from >= 3 && changes(p)), f.name);
+    assert.ok(basics.every((p) => p.from >= 1 && !p.special), f.name);
     assert.ok(!FAMILIES[f.name.toLowerCase()] || third.length >= 2, f.name + ' has a pool of third parts');
     assert.equal(f.parts.filter((p) => p.special).length, 1, f.name);
     assert.ok(f.parts.every((p) => p.armor >= 0 && p.armor <= (f.ice ? 3 : 2) && (p.attack || p.rearm || changes(p))), f.name); // ICE may wear more, and a part may work passively

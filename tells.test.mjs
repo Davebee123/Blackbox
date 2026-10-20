@@ -17,7 +17,7 @@ function fight({ level = 12, family = 'ransomware', cls = 'breaker', seed = 7, k
   const s = fresh();
   s.hackers = Object.fromEntries(['breaker', 'bastion', 'infiltrator', 'operator'].map((c) => [c, { level, xp: 0 }]));
   if (cls !== 'breaker') command(s, 'archetype ' + cls);
-  selectEncounter(s, key, seed, { level, mutation: null, ...(key === 'random' ? { family } : {}), ...opts });
+  selectEncounter(s, key, seed, { level, mutation: null, ...(key === 'random' ? { family, classic: true } : {}), ...opts }); // the classic shape (a Pulse Node, the signature, one third): the parts roll is parts.test.mjs's
   command(s, 'engage');
   s.server.max = s.server.integrity = 5000; // a server that outlasts any test fight
   s.encounter.hardened = 0; // and no Bastion Hardened trimming the first hit
@@ -328,7 +328,7 @@ test('a seal: if its part still wears ◆ when it lands it re-arms with one more
 });
 
 test('the Mimic plays the command you fire on its beat back at you; go quiet and it gives you an opening', () => {
-  const pick = (seed) => createVirus('random', seed, { family: 'ghostroot', threat: 9 + 12 }).parts.some((p) => p.mimic);
+  const pick = (seed) => createVirus('random', seed, { family: 'ghostroot', threat: 9 + 12, classic: true }).parts.some((p) => p.mimic);
   const seed = Array.from({ length: 50 }, (_, i) => i + 1).find(pick);
   assert.ok(seed, 'a Mimic among the ghostroot third parts');
   const s = fight({ level: 12, family: 'ghostroot', seed });
@@ -404,23 +404,23 @@ test('Deep Shred (the Shredder\'s tell) shreds a code file out of your pack when
   assert.deepEqual(s.run.pack.map((f) => f.name), ['protocol.bin'], 'the code is gone, the protocol isn\'t');
 });
 
-test('the third part comes from a pool from level 8: a family brings one of those open at its level, by its seed; a boss keeps the classic one', () => {
+test('the classic shape (a fixture, a boss, a designed set): the third part comes from a pool from level 8, by its seed; a boss keeps the classic one', () => {
   for (const [family, pool] of [['ransomware', ['lockbox', 'mutex']], ['worm', ['mirror', 'c2']], ['ghostroot', ['decoy', 'mimic']]]) {
     const seen = new Set();
     for (let seed = 1; seed <= 40; seed++) {
-      const v = createVirus('random', seed, { family, threat: 9 + 12 });
+      const v = createVirus('random', seed, { family, threat: 9 + 12, classic: true });
       const third = v.parts.filter((p) => FAMILIES[family].parts.find((x) => x.id === p.id)?.pool === 'third');
       assert.equal(third.length, 1, `${family} ${seed}: one third part`);
       seen.add(third[0].id);
     }
     assert.deepEqual([...seen].sort(), [...pool].sort(), family);
-    assert.ok(createVirus('random', 3, { family, threat: 9 + 5 }).parts.some((p) => p.id === pool[0]), 'below 8: the classic one');
+    assert.ok(createVirus('random', 3, { family, threat: 9 + 5, classic: true }).parts.some((p) => p.id === pool[0]), 'below 8: the classic one');
     assert.ok(createVirus('random', 5, { family, threat: 9 + 12, boss: 'resident' }).parts.some((p) => p.id === pool[0]), 'a boss: the classic one');
   }
-  assert.ok(Array.from({ length: 40 }, (_, i) => createVirus('random', i + 1, { family: 'ransomware', threat: 9 + 22 })).some((v) => v.parts.some((p) => p.id === 'tripwire')), 'the Tripwire from 20');
+  assert.ok(Array.from({ length: 40 }, (_, i) => createVirus('random', i + 1, { family: 'ransomware', threat: 9 + 22, classic: true })).some((v) => v.parts.some((p) => p.id === 'tripwire')), 'the Tripwire from 20');
 });
 
-const withPart = (family, id, level = 22) => Array.from({ length: 60 }, (_, i) => i + 1).find((seed) => createVirus('random', seed, { family, threat: 9 + level }).parts.some((p) => p.id === id));
+const withPart = (family, id, level = 22) => Array.from({ length: 60 }, (_, i) => i + 1).find((seed) => createVirus('random', seed, { family, threat: 9 + level, classic: true }).parts.some((p) => p.id === id));
 
 test('Mutex: the Encryptor carries a lock (a shield) that takes hits first, comes back 4 cycles after it breaks, and goes with the Mutex', () => {
   const s = fight({ level: 12, seed: withPart('ransomware', 'mutex', 12) });
@@ -522,7 +522,7 @@ test('bots read tells: the planner cuts a charging part on its cycle (before any
   for (const p of livingParts(c)) if (p.ward || p.lock) p.integrity = 0;
   tell(c, 'extortion', 'encryptor', 1);
   assert.equal(planner(c), 'sigint');
-  const seed = Array.from({ length: 50 }, (_, i) => i + 1).find((x) => createVirus('random', x, { family: 'ghostroot', threat: 21 }).parts.some((p) => p.mimic));
+  const seed = Array.from({ length: 50 }, (_, i) => i + 1).find((x) => createVirus('random', x, { family: 'ghostroot', threat: 21, classic: true }).parts.some((p) => p.mimic));
   const g = fight({ level: 12, family: 'ghostroot', seed });
   quietParts(g);
   for (const p of livingParts(g)) Object.assign(p, { armor: 0, maxArmor: 0, integrity: 999, max: 999 }); // nothing breaks this cycle
@@ -711,7 +711,7 @@ test('the log\'s tell lines are as short as the chip\'s tooltip: what, when, on 
   const armor = Object.assign(part(c, 'encryptor'), { armor: 3, maxArmor: 3 }).armor;
   assert.equal(sayOf(c, tell(c, 'keyrotation', 'encryptor', 2)), `KEY ROTATION in 2: the Encryptor. Strip its ${armor} ◆ before then, or it re-arms.`);
   assert.equal(sayOf(c, tell(c, 'lock', 'encryptor', 2)), 'LOCK in 2: the Encryptor. It locks your next command for 3 cycles. Break it, or feed it a cooling skill.');
-  const seed = Array.from({ length: 50 }, (_, i) => i + 1).find((x) => createVirus('random', x, { family: 'ghostroot', threat: 9 + 12 }).parts.some((p) => p.mimic));
+  const seed = Array.from({ length: 50 }, (_, i) => i + 1).find((x) => createVirus('random', x, { family: 'ghostroot', threat: 9 + 12, classic: true }).parts.some((p) => p.mimic));
   const m = fight({ level: 12, family: 'ghostroot', seed }); quietParts(m);
   assert.equal(sayOf(m, tell(m, 'mimic', 'mimic', 2)), 'MIMIC in 2: the Mimic. It plays back what you fire. Go quiet, or cut it.');
   // The cut, in a fight: the interrupt's line and the call-off.

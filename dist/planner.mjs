@@ -1,7 +1,7 @@
 // The scripted fight player: one planner for every class (finish what you can, answer what lands
 // now, strip, then finish), playing that class's own kit. Used by the balance scripts and by
 // simulated crewmates (crew.mjs). It reads the fight through the engine's own functions.
-import { classPlan, classFill, hooks, classOf, subOf, toIntent, intents, attackers, livingParts, alive, part, defender, previewDamage, ignoresArmor, readyIn, mirrorOn, usable, hookHit, wards, attackAmount, delayHeld } from './combat.mjs';
+import { classPlan, classFill, hooks, classOf, subOf, toIntent, intents, attackers, livingParts, alive, part, defender, previewDamage, ignoresArmor, readyIn, mirrorOn, usable, hookHit, wards, attackAmount, delayHeld, frontOf, bufferOn, signatureOf, cooldownOf } from './combat.mjs';
 import { ABILITIES, TELL, CONFIG } from './data.mjs';
 import { raidMove, raidFocus, noTaunt } from './raid.mjs';
 import { tellMove, tellFocus, answers, QUIET, chargeNow, echoesNow } from './tells.mjs';
@@ -31,7 +31,9 @@ const invested = (s, p) => 1 + 0.6 * s.encounter.burns.filter((b) => b.target ==
 // Parts that change the fight (data.mjs FAMILIES): a Tripwire sets the others off when it breaks, so it goes last;
 // a C2 Node takes its fragments with it, so it goes first once they pile up. A boss's ♛ part with a phase still to
 // come (interrupt.mjs, rule a) waits for the others: its phases start when you choose, after the add is down.
-const order = (s, p) => (p.core && p.ticks?.some((t) => !t.spent) && livingParts(s).some((x) => x !== p && x.attack) ? 0.4 : p.deadman && !ignores('tripwire') && livingParts(s).some((x) => x !== p && x.kind === 'system') ? 0.05 : p.command && !ignores('c2') && livingParts(s).filter((x) => x.kind === 'fragment').length >= 2 ? 4 : 1);
+// A Zip Bomb goes last too (the fight ending puts its fuse out); a Hotspot late, by burns and helpers if it can.
+const others = (s, p) => livingParts(s).some((x) => x !== p && x.kind === 'system');
+const order = (s, p) => (p.core && p.ticks?.some((t) => !t.spent) && livingParts(s).some((x) => x !== p && x.attack) ? 0.4 : p.deadman && !ignores('tripwire') && others(s, p) ? 0.05 : p.fuse && !ignores('zipbomb') && others(s, p) ? 0.05 : p.hotspot && !ignores('hotspot') && others(s, p) ? 0.3 : p.command && !ignores('c2') && livingParts(s).filter((x) => x.kind === 'fragment').length >= 2 ? 4 : 1);
 export const mostThreat = (s) => livingParts(s).map((p) => ({ p, k: (threatOf(p) * invested(s, p) * order(s, p)) / (p.integrity + 10 * (p.armor || 0)) })).sort((a, b) => b.k - a.k || dueOf(s, a.p) - dueOf(s, b.p))[0]?.p || soonest(s);
 const bare = (p) => alive(p) && !p.armor;
 // A Trojan's Package while its Loader lives (families.mjs): any damage unpacks it, so a player leaves it alone.
@@ -111,9 +113,12 @@ function plan0(s) {
     const keep = !kill && TELL.bots.save !== false && s.encounter.virus.level >= TELL.castFrom && saveTick(s, plan);
     if (keep && ok(s, keep)) return keep;
   }
+  // Backlog: its Ack lands this cycle, and the skill you fire cools 2 longer: fire one with no cooldown then.
+  const e = s.encounter;
+  const syn = !ignores('backlog') && landingNow(s).some((i) => i.syn);
+  if (syn && plan && at && !killing(s, plan, at) && cooldownOf(s, plan.split(' ')[0]) >= 5 && ok(s, 'spike ' + at.id)) return 'spike ' + at.id; // a long cooldown only: on a short one the 2 cycles cost less than the swap
   // Scrambled (a Scramble, or a Possession that made it longer): a big hit may turn on you, so set up instead,
   // unless the hit breaks the part.
-  const e = s.encounter;
   if (e.scrambleUntil >= e.cycle && !ignores('scramble') && plan && at && !killing(s, plan, at)) {
     const id = plan.split(' ')[0];
     if (ABILITIES[id]?.damage > 25) { const quiet = first(s, [...QUIET, ...['crack', 'shaped-charge', 'bit-rot', 'exploit', 'tag', 'hook', 'inject', 'deploy', 'spawn', 'botnet', 'fan-out', 'purge', 'thermal-runaway', 'keepalive', 'spike'].map((k) => k + ' ' + at.id)]); if (quiet) return quiet; }
@@ -143,8 +148,17 @@ function play(s) {
   const burst = classOf(s) === 'breaker' && subOf(s) === 'overclocker';
   const warder = livingParts(s).find((p) => (wards(p, t) && !ignores('ward')) || (p.lock === t.id && t.lockHp > 0 && !burst && !ignores('mutexlock'))); // an Overclocker bursts through one lock
   if (warder && classOf(s) !== 'infiltrator') t = warder; // burns tick under the cap anyway
-  // Tripwire: leave it for last while anything else stands.
-  if (t.deadman && !ignores('tripwire')) t = livingParts(s).filter((p) => p !== t && p.kind === 'system').sort((a, b) => dueOf(s, a) - dueOf(s, b))[0] || t;
+  // Tripwire, Zip Bomb: leave them for last while anything else stands.
+  if ((t.deadman && !ignores('tripwire')) || (t.fuse && !ignores('zipbomb'))) t = livingParts(s).filter((p) => p !== t && p.kind === 'system' && !p.deadman && !p.fuse).sort((a, b) => dueOf(s, a) - dueOf(s, b))[0] || livingParts(s).filter((p) => p !== t && p.kind === 'system').sort((a, b) => dueOf(s, a) - dueOf(s, b))[0] || t;
+  // Front End: a direct hit on its partner lands on it while it wears ◆. A Breaker or a Bastion strips it first; burns and helpers go past.
+  const fe = !ignores('frontend') && livingParts(s).find((p) => p.front && p.armor > 0 && frontOf(s, p) === t);
+  if (fe && ['breaker', 'bastion'].includes(classOf(s))) t = fe;
+  // Buffer: its shield takes direct hits; a Breaker or a Bastion breaks the bare Buffer first.
+  const bf = !ignores('buffer') && t.bufHp > 0 ? bufferOn(s, t) : null;
+  if (bf && !bf.armor && ['breaker', 'bastion'].includes(classOf(s))) t = bf;
+  // Idle Timer: the signature untouched for its count re-arms every part. A hit on it in time keeps the count down.
+  const idler = !ignores('idletimer') && livingParts(s).find((p) => p.idle), sig = idler && signatureOf(s);
+  if (sig && t !== sig && idler.idle - (s.encounter.cycle - (s.encounter.virus.idleHit || 0)) <= 1 && livingParts(s).some((p) => p.maxArmor > 0 && p.armor < p.maxArmor)) t = sig;
   // Twins: work on the healthier of the pair, so both go down close together.
   const twin = livingParts(s).find((p) => p !== t && (p.twin === t.id || t.twin === p.id));
   if (twin && !ignores('twin') && (twin.integrity / twin.max > t.integrity / t.max + 0.2 || (burnsOn(s, t) >= 2 && burnsOn(s, twin) < burnsOn(s, t)))) t = twin; // burns too: spread them over both
@@ -153,6 +167,8 @@ function play(s) {
   // Adaptive: a third cycle in a row on the same part hardens it. Switch, unless this hit breaks it.
   const wary = (p) => s.encounter.virus.mutation === 'adaptive' && !ignores('adaptive') && p.adaptRun >= 2 && p.adaptAt === s.encounter.cycle - 1;
   if (wary(t) && !killNow(s, t)) t = livingParts(s).filter((p) => p !== t && !wary(p) && !phasedOut(s, p)).sort((a, b) => dueOf(s, a) - dueOf(s, b))[0] || t;
+  // Hotspot: a direct hit sets it off. Burns and helpers don't: use them on it if you have them.
+  if (t.hotspot && !ignores('hotspot')) { const soft = first(s, [!injected(s, t) && 'inject ' + t.id, 'deploy ' + t.id, 'spawn ' + t.id, 'botnet ' + t.id, !burnsOn(s, t) && 'purge ' + t.id]); if (soft) return soft; }
   // A subclass's own play (dist/classes/<class>.mjs plan): its new skills, before the generic rules.
   const own = classPlan(s, t);
   if (own && ok(s, own)) return own;
@@ -163,7 +179,9 @@ function play(s) {
   if (lit && bare(t) && (!lit.startsWith('shatter') || previewDamage(s, 'shatter', t) >= best)) return lit;
   // 1. Break a part that's about to fire, or a bare part before it patches.
   const urgent = [...new Set(now.map((i) => part(s, i.source)))].filter(alive);
-  for (const p of [...urgent, ...livingParts(s).filter(bare)].filter((x) => !shunned(s, x))) {
+  // (Not a Zip Bomb or a Hotspot while anything else stands: one breaks last, the other is set off by a direct hit.)
+  const later = (x) => ((x.fuse && !ignores('zipbomb')) || (x.hotspot && !ignores('hotspot'))) && others(s, x);
+  for (const p of [...urgent, ...livingParts(s).filter(bare)].filter((x) => !shunned(s, x) && !later(x))) {
     if (doomed(s, p)) continue;
     // Kill Switch first when the helpers on a part break it: with Last Gasp in the cash-in it loses nothing, unless
     // some helpers still chip armor (cashed in on ◆ they break one each). On a part about to fire it's worth that.
@@ -173,7 +191,9 @@ function play(s) {
     if (k) return k;
   }
   // 2. Something lands now that we can't break: answer it.
-  const big = now.filter((i) => i.effect !== 'tell' && (i.effect !== 'damage' || i.amount >= Math.max(6, defender(s).max * 0.08)) && !part(s, i.source)?.phase).sort((a, b) => b.amount - a.amount)[0]; // a Shade in phase: hit it instead (a tell that isn't a hit: tellMove)
+  const fuse = !ignores('zipbomb') && now.find((i) => i.effect === 'fuse');
+  if (fuse) { const cover = first(s, ['harden', 'firewall']); if (cover) return cover; } // a Zip Bomb's fuse: a ◆ or a shield takes it
+  const big = now.filter((i) => i.effect !== 'tell' && i.effect !== 'buffer' && i.effect !== 'fuse' && (i.effect !== 'damage' || i.amount >= Math.max(6, defender(s).max * 0.08)) && !part(s, i.source)?.phase).sort((a, b) => b.amount - a.amount)[0]; // a Shade in phase: hit it instead (a tell that isn't a hit: tellMove)
   if (big) {
     // A Tripwire's own hit: soften it, but don't break it while the others stand.
     const trip = part(s, big.source)?.deadman && !ignores('tripwire') && livingParts(s).some((x) => x.id !== big.source && x.kind === 'system');

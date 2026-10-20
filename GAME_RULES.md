@@ -1710,7 +1710,33 @@ Home intrusions (100 Integrity to defend). Numbers are at enemy level 6; Integri
 | Worm (SPLINTER) | Integrity | Pulse Node: 34, ◆, Surge 12 every 4 (first cycle 4) | Replicator: 38, ◆ (◆◆ from level 5), spawns a fragment every 4 (first cycle 3) with a 4-damage Splice. Fragments: 18 Integrity (scaled like the virus's health, not its damage), no armor, gnaw 3 every cycle, max 3 |
 | Ghostroot (GHOSTROOT) | Integrity | Pulse Node: 34, ◆, veiled, Surge 11 every 4 (first cycle 3) | Scrambler: 40, ◆ (◆◆ from level 5), veiled, Scramble every 4 (first cycle 2), hitting for 9: Scrambled for 2 cycles, each of your attacks 25% likely to hit you instead at half |
 
-**Third parts.** From level 3 (ghostroot from 4), wild viruses of each family bring a third part, and the other two give up 15% of their Integrity for it. Each third part comes from the rule library (`GENES[id].parts` in `genes.mjs`). Each family has a pool of them: a virus brings one of those open at its level, picked by its seed (`FAMILIES[f].third` in data.mjs, in order), so from level 8 the same family can be two different fights. Each one changes the fight by living or dying, so kill order is the decision, and each shows on the board (a tag, a chip, the codex line). Named fixtures (CRYPTJACK, SPLINTER, GHOSTROOT) keep two parts, and a boss keeps its family's first.
+**What a wild virus is made of** (`dist/parts.mjs`, docs/parts-plan.md phase P1). A wild virus (a room's process, a courier, a bounty, an invader, a SPRAWL-00 stray) is 2 to 4 parts: a **basic** part (or two copies of it), its family's **signature** part most of the time, and 0 to 2 **third** parts. Strains, bosses, guards, named fixtures (CRYPTJACK, SPLINTER, GHOSTROOT) and hub swarms keep their own shapes, and a boss keeps its family's first third part.
+
+- **Levels 1–2:** always two parts, the basic and the signature, no third, no mutation. The basic is the Pulse Node about two fights in three.
+- **The signature** comes in every fight at levels 1–2, then in about 70% from level 3, 55% from 10 and 45% from 20 (`PARTS.signature`). Without it, a second third part takes its slot, free, and only one that doesn't refer to the signature: never a Lockbox, Mutex, Mirror or Idle Timer then (at levels 3–4 none can, so the signature stays). Its charge becomes a plain Overcharge on another part, and its basic is one that attacks. The family still shows through its basics, its thirds and its colour.
+- **Part count** (`PARTS.count`): levels 3–7 two parts 30%, three 70%; levels 8–15 two 15%, three 70%, four 15%. An elite brings at least three. From level 10, one fight in ten with three or more parts doubles its basic (`PARTS.duplicate`): two copies, each with 60% of one's Integrity and damage, the second a cycle behind, named for targeting (*Strobe*, *Strobe 2*). Only a basic that attacks doubles, and a rule part never does.
+- **Thirds** are drawn by `genes.mjs` `rollGenome` from the family's open pool within the budget (2 points from level 3, 4 from 8), struck when they break a compatibility rule (one punishment per axis, one beat).
+- **The total stays the same.** A fight's Integrity is its family's two core parts' total (×1.06 from level 3 and ×1.5 from 14, `PARTS.bulk`), shared out: a third keeps about its own size, the basic and the signature take the rest, so a two-part fight's parts are bigger and a four-part fight's smaller. Its pressure is its family's too: what its parts land over 20 cycles, against what the Pulse Node and the signature would, scales every hit by 0.85 to 1.15 (`PARTS.pressure`), so a fight without its signature, or with a basic that doesn't attack, hits a little harder. An Accumulator's Discharge never grows.
+- **One stranger a fight.** A fight never holds more than one part you've never met (research 0; the Pulse Node and the signature aside), and a fight with one is never four parts.
+- Every number here is one named constant in `PARTS`; `developer parts` shows them and the mix at your level, and `developer parts <name> [level] <value>` sets one.
+
+**Basic parts** (free: each is pressure-matched to its family's Pulse Node over 20 cycles, after Block). Numbers at level 6, before the share-out.
+
+| Part | Families | From | Integrity, ◆, attack | Rule | On the board |
+|---|---|---:|---|---|---|
+| Pulse Node | all | 1 | 34, ◆, Surge 14 / 12 / 11 every 4 | As before. | — |
+| **Accumulator** | Ransomware | 1 | 30, ◆, Discharge 18 every 5 | One big hit. It never carries a charge. | A charge bar by its name that fills toward the hit |
+| **Strobe** | Worm, Ghostroot | 1 | 26, bare, Tick 5 every cycle from 2 | A small hit every cycle, so your Block counts on every one. | A chip in every column |
+| **Repeater** | Worm | 3 | 32, ◆, Double Tap 8 + 8 every 5 | Two hits on back to back cycles, one move: a cut on the first stops the second, a delay moves both. | Two chips joined by a bracket, *1/2*, *2/2* |
+| **Buffer** | Ransomware | 3 | 30, ◆, no attack | Every 3 cycles it shields the part below it for half its own Integrity. The shield takes your commands' hits only; burns and helpers go under it. | A steel tether to that part, and the lock's steel segment on its bar |
+| **Prism** | Ghostroot | 3 | 30, ◆, veiled, Spread 5 × 3 every 5 | Its volley is three hits on three cycles. A cut stops the rest. | Three bracketed chips |
+| **Cipher Block** | Ransomware | 5 | 30, ◆, Cipher 9 every 4 | Hits 25% harder for each Encrypt on you. | Its number climbs with your encryption |
+| **Fan-in** | Worm | 5 | 30, ◆, Fan-in 6 every 4 | Hits 50% harder for each fragment on the board. | Its number climbs with the fragments |
+| **Obfuscator** | Ghostroot | 5 | 22, ◆, veiled, no attack | While it lives, every part hides its timers, ◆ or not. Tag still shows a timer. | A *smoke* tag; every timer hidden |
+
+A basic with no attack (the Buffer, the Obfuscator) is its signature's **fallback**: break the signature first and it takes the attack over, so no kill order leaves the rest harmless.
+
+**Third parts** (each from the rule library, `GENES[id].parts` in `genes.mjs`, in its family's pool `FAMILIES[f].third`). Each changes the fight by living or dying, and each shows on the board.
 
 | Family | Third part | What it does |
 |---|---|---|
@@ -1721,6 +1747,13 @@ Home intrusions (100 Integrity to defend). Numbers are at enemy level 6; Integri
 | Ransomware | **Tripwire** (from level 20): 18, ◆, Ping 3 every 3 | Break it while the others stand and they go loud: 25% harder and every attack a cycle sooner, for the rest of the fight (`CONFIG.tripwire`). Break it last, and live with its Ping meanwhile. |
 | Worm | **C2 Node** (from level 8): 18, ◆, Beacon 3 every 4 | Commands the fragments: they gnaw half again as hard while it lives, and every one of them drops when it breaks (`CONFIG.c2`). Break it once the fragments pile up (after a Mass Mailer). |
 | Ghostroot | **Mimic** (from level 8): 18, ◆, veiled, no attack | Records you. Every 4 cycles (its tell, announced two ahead) it plays the command you fire that cycle back at you, its whole direct hit. Fire something with no hit in it then (a debuff, a strip, a burn, a shield). Breaking it ends it. |
+| Ransomware, Worm | **Zip Bomb** (from level 5): 14, bare, no attack | Break it and its fuse burns for 2 cycles (a sparking *Fuse* chip on its row, which stays on the board), then it goes off for 20% of your max, unless a ◆ or a shield takes it (Block doesn't). A fight that ends puts the fuse out, so break it last (`CONFIG.zipbomb`). Cost 2. |
+| Ransomware, Ghostroot | **Hotspot** (from level 6): 14, bare, no attack | A hit from your command on it turns the virus's next attack 2 or more cycles away into a charge, a *Hot Charge*, said at once (cut it on its cycle like any charge). Burns and helpers don't set it off. An amber *hot* tag. Cost 1. |
+| Ransomware | **Idle Timer** (from level 9): 20, ◆, no attack | Counts the cycles since the signature part last took a hit from your commands. At 5, every part re-arms to full ◆, and the count starts over. Pips on the signature's row count down (amber at 2 left), and a clock tether runs to it. Needs the signature. Cost 2. |
+| Ghostroot, Ransomware | **Front End** (from level 10): 22, ◆, no attack (veiled on a Ghostroot) | While it wears ◆, your single-target commands at its partner (the signature, else the basic) land on it instead. Burns, helpers and hits on every part go through, and so does Sudo. A dashed tether bends from its partner to it. Cost 2. |
+| Worm | **Backlog** (from level 12): 20, ◆, Ack 3 every 4 | When its Ack lands, the skill you fired that cycle cools down 2 cycles longer (a skill with no cooldown loses nothing). Its chips carry a blue *SYN* mark. Cost 2. |
+
+The Decoy costs 2 budget points now (it was 3).
 
 Guards on runs are lighter (you have 50 Signal): Watchdog (Sentry 24 bare, Sweep 6 every 3; Tracker 28 ◆, Trace-back 16 every 5), Sentinel (Lens and Lockout, 24 ◆ each, both veiled), Crawler (Maw 24 bare; Brood 28 ◆ spawns fragments, and once the Maw is down it bites for the Maw's Bite with each spawn: *Fallback*), Shredder (Grinder 26 ◆, Grind 9 every 4; Shredder 26 ◆, Shred 14 every 5).
 
@@ -1737,7 +1770,7 @@ Mutations are always visible and each changes a decision:
 
 (Reactive and Redundant were cut: they added rules without adding decisions.)
 
-**Planned: more part variety.** [`docs/parts-plan.md`](docs/parts-plan.md) is the design plan (not built): basic parts per family, a new third part every 2–3 levels, floor natives, the Cryptominer and the Wiper as families, and fights of 2 to 4 parts.
+**More part variety.** [`docs/parts-plan.md`](docs/parts-plan.md) is the plan. Phase P1 is built (the basics, fights of 2 to 4 parts, the signature in most fights, and the new thirds to level 12, above); floor natives, the deep thirds and the Cryptominer and the Wiper as families are still to come.
 
 ## After a fight
 
@@ -1758,20 +1791,20 @@ A loss crashes the server: it reboots at half Integrity in Degraded mode (see In
 
 | Bracket | Spike, no gear | Spike only | Breaker | Bastion | Infiltrator | Operator |
 |---|---:|---:|---:|---:|---:|---:|
-| Lv 1 | 11/24 · 0 clean · 78% · 10.3c | 23/24 · 1 clean · 42% · 8.3c | 24/24 · 1 clean · 31% · 7.7c | 24/24 · 1 clean · 21% · 7.5c | 24/24 · 2 clean · 21% · 6.8c | 24/24 · 1 clean · 15% · 6.7c |
-| Lv 10 | 4/24 · 0 clean · 95% · 7.6c | 8/24 · 1 clean · 85% · 9.4c | 22/24 · 2 clean · 35% · 9.0c | 24/24 · 1 clean · 35% · 13.8c | 24/24 · 1 clean · 29% · 9.3c | 24/24 · 1 clean · 35% · 8.0c |
-| Lv 18 | 0/24 · 0 clean · 100% · 6.7c | 3/24 · 0 clean · 96% · 9.7c | 24/24 · 1 clean · 35% · 7.5c | 24/24 · 2 clean · 29% · 15.8c | 24/24 · 2 clean · 32% · 9.8c | 24/24 · 0 clean · 40% · 6.4c |
-| Lv 30 | 3/24 · 0 clean · 94% · 5.8c | 4/24 · 0 clean · 89% · 8.2c | 24/24 · 1 clean · 21% · 6.3c | 24/24 · 2 clean · 34% · 15.4c | 24/24 · 3 clean · 28% · 9.1c | 22/24 · 1 clean · 44% · 5.7c |
-| Lv 50 | 3/24 · 0 clean · 96% · 4.2c | 4/24 · 1 clean · 88% · 7.5c | 24/24 · 3 clean · 23% · 6.3c | 23/24 · 2 clean · 52% · 14.8c | 24/24 · 4 clean · 24% · 8.5c | 23/24 · 2 clean · 49% · 5.1c |
+| Lv 1 | 21/24 · 0 clean · 62% · 10.8c | 24/24 · 0 clean · 28% · 8.5c | 24/24 · 0 clean · 20% · 8.0c | 24/24 · 1 clean · 17% · 7.8c | 24/24 · 1 clean · 14% · 6.1c | 24/24 · 2 clean · 13% · 6.6c |
+| Lv 10 | 13/24 · 3 clean · 71% · 9.8c | 20/24 · 5 clean · 53% · 9.9c | 24/24 · 7 clean · 24% · 7.3c | 24/24 · 9 clean · 13% · 9.3c | 22/24 · 7 clean · 31% · 8.1c | 24/24 · 6 clean · 21% · 7.0c |
+| Lv 18 | 0/24 · 0 clean · 100% · 7.3c | 12/24 · 0 clean · 85% · 11.3c | 24/24 · 4 clean · 20% · 6.3c | 24/24 · 6 clean · 12% · 14.4c | 24/24 · 11 clean · 18% · 9.5c | 24/24 · 3 clean · 16% · 7.9c |
+| Lv 30 | 3/24 · 0 clean · 95% · 6.4c | 12/24 · 0 clean · 76% · 10.0c | 24/24 · 6 clean · 24% · 6.7c | 24/24 · 4 clean · 17% · 12.5c | 24/24 · 12 clean · 15% · 7.8c | 24/24 · 2 clean · 20% · 5.9c |
+| Lv 50 | 2/24 · 0 clean · 94% · 5.4c | 21/24 · 0 clean · 60% · 9.8c | 24/24 · 8 clean · 15% · 5.4c | 24/24 · 5 clean · 12% · 12.2c | 24/24 · 17 clean · 3% · 7.3c | 24/24 · 5 clean · 15% · 4.6c |
 
 By subclass (health lost · wins; from level 10 the class columns play each class's default: Demolitionist, Warden, Phantom, Herder):
 
 | Bracket | Demolitionist | Overclocker | Warden | Sysop | Payload | Phantom | Herder | Hijacker |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| Lv 10 | 35% · 22/24 | 41% · 23/24 | 35% · 24/24 | 41% · 24/24 | 34% · 24/24 | 29% · 24/24 | 35% · 24/24 | 43% · 24/24 |
-| Lv 18 | 35% · 24/24 | 40% · 24/24 | 29% · 24/24 | 44% · 22/24 | 44% · 24/24 | 32% · 24/24 | 40% · 24/24 | 34% · 24/24 |
-| Lv 30 | 21% · 24/24 | 36% · 23/24 | 34% · 24/24 | 46% · 21/24 | 49% · 24/24 | 28% · 24/24 | 44% · 22/24 | 46% · 23/24 |
-| Lv 50 | 23% · 24/24 | 36% · 22/24 | 52% · 23/24 | 49% · 18/24 | 53% · 24/24 | 24% · 24/24 | 49% · 23/24 | 46% · 22/24 |
+| Lv 10 | 24% · 24/24 | 26% · 24/24 | 13% · 24/24 | 20% · 23/24 | 18% · 24/24 | 31% · 22/24 | 21% · 24/24 | 18% · 24/24 |
+| Lv 18 | 20% · 24/24 | 30% · 23/24 | 12% · 24/24 | 2% · 24/24 | 20% · 24/24 | 18% · 24/24 | 16% · 24/24 | 28% · 23/24 |
+| Lv 30 | 24% · 24/24 | 33% · 22/24 | 17% · 24/24 | 2% · 24/24 | 22% · 24/24 | 15% · 24/24 | 20% · 24/24 | 21% · 23/24 |
+| Lv 50 | 15% · 24/24 | 31% · 22/24 | 12% · 24/24 | 0% · 24/24 | 17% · 24/24 | 3% · 24/24 | 15% · 24/24 | 8% · 24/24 |
 
 The hard slice (every strain open at the level, six grade 2 wilds, six wilds two levels up), the per-build tables and the crews in the farm are in docs/BALANCE.md. Talents count as a player has them (a point at 10, then every 2 levels); implant slots are filled only from 15, where implants drop.
 

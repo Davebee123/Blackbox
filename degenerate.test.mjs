@@ -80,6 +80,12 @@ test('no easy solution: the home families, with each of their third parts', () =
   }
 });
 
+// The parts plan's basics (dist/parts.mjs): each beside its family's signature. One with no attack (a Buffer, an
+// Obfuscator) takes the signature's attack over when it breaks first (Fallback).
+test('no easy solution: every basic with its family\'s signature', () => {
+  for (const [id, f] of Object.entries(FAMILIES)) for (const b of f.parts.filter((x) => x.pool === 'basic')) noEasyWay(`${f.name}: ${b.name}`, (L, seed) => runFight('random', Math.max(L, b.from), seed, { family: id, basic: b.id, genes: [] }));
+});
+
 test('no easy solution: the room bodies (the Trojan, the Cryptominer, the Wiper) and the Exfil', () => {
   for (const id of ['trojan', 'cryptominer', 'wiper', 'exfil']) noEasyWay(id, (L, seed) => roomFight(id, Math.max(L, 10), seed));
 });

@@ -140,7 +140,8 @@ function cancel(s, p, due, t) {
       const charge = (tellsOf(s)?.list || []).find((x) => x.told && x.kind === 'charge' && x.part === p.id && x.n === (a.n || 0));
       if (charge) { tellAnswer(s, charge, p, `Cut: ${charge.name.toUpperCase()} called off.`, { stagger: false }); names.push(charge.name); }
       else names.push(a.name);
-      a.due = e.cycle + a.interval;
+      a.due = a.tap ? Math.max(e.cycle + 1, a.volley + a.interval) : e.cycle + a.interval; // a volley cut mid-way: the rest of it goes too
+      a.tap = 0; a.volley = null;
       a.n = (a.n || 0) + 1;
       if (a.windup) a.wound = 0;
     } else if (d.kind === 'deliver') { p.deliver.due = e.cycle + p.deliver.interval; names.push('delivery'); }
@@ -211,7 +212,8 @@ export function saveTick(s, plan) {
   if (!p?.ticks || !ABILITIES[id] || crossBy(s, id, p) !== 'waste' || previewDamage(s, id, p) >= p.integrity) return null;
   const coming = (tellsOf(s)?.list || []).find((t) => t.told && ['charge', 'cast'].includes(t.kind) && t.part === p.id && tellNext(s, t) - e.cycle >= 1 && tellNext(s, t) - e.cycle <= 3);
   if (!coming) return null;
-  const other = livingParts(s).find((q) => q !== p && ok(s, `${id} ${q.id}`) && crossBy(s, id, q) !== 'waste');
+  // Never onto a part that is best broken last (a Tripwire, a Zip Bomb) or set off by a hit (a Hotspot).
+  const other = livingParts(s).find((q) => q !== p && !q.deadman && !q.fuse && !q.hotspot && ok(s, `${id} ${q.id}`) && crossBy(s, id, q) !== 'waste');
   return other ? `${id} ${other.id}` : null;
 }
 export const ticksOn = (p) => (p?.ticks || []).map((t) => ({ at: t.at, spent: t.spent, phase: t.phase != null }));

@@ -84,11 +84,11 @@ export const GENES = {
   ward: { name: 'Ward', adj: 'Warded', cat: 'part', axis: 'shell', role: 'primary', cost: 2, opens: 3, decode: 'part', suits: 'Ransomware, TOLLGATE',
     does: 'While it lives, its partner loses at most 25% of its max Integrity each cycle.', telegraph: 'A warded tag on the partner shows the damage held back.', answer: 'Break the ward first, or chip the partner down under the cap. Lockpick, Keyjam, Sudo and Zero-day get through it.',
     implicit: 'Your hits get through a ward\'s cap more.', carried: (p) => !!p.ward, bot: { focus: 'first' }, counter: 'mutexlock',
-    parts: { ransomware: { id: 'lockbox', name: 'Lockbox', integrity: 16, armor: 0, loot: 'Lock Pin', ward: 'encryptor', from: 3, pool: 'third' } } },
+    parts: { ransomware: { id: 'lockbox', name: 'Lockbox', integrity: 16, armor: 0, loot: 'Lock Pin', ward: 'encryptor', from: 3, pool: 'third', sig: true } } },
   mutexlock: { name: 'Mutex lock', adj: 'Locked', cat: 'part', axis: 'shell', role: 'primary', cost: 3, opens: 8, decode: 'part', suits: 'Ransomware, TOLLGATE',
     does: 'While the Mutex lives, its partner wears a shield of 25% of its max Integrity, which returns 4 cycles after it breaks.', telegraph: 'A lock tag on the partner, then a countdown to the relock.', answer: 'Break the Mutex, or burst through one lock. Lockpick, Thermal Throttle and Sudo get through it.',
     implicit: 'Locks take more from you.', carried: (p) => !!p.lock, bot: { focus: 'first' }, counter: 'ratecap',
-    parts: { ransomware: { id: 'mutex', name: 'Mutex', integrity: 18, armor: 1, loot: 'Mutex Handle', lock: 'encryptor', from: 8, pool: 'third' } } },
+    parts: { ransomware: { id: 'mutex', name: 'Mutex', integrity: 18, armor: 1, loot: 'Mutex Handle', lock: 'encryptor', from: 8, pool: 'third', sig: true } } },
   tripwire: { name: 'Tripwire', adj: 'Wired', cat: 'part', axis: 'order', role: 'primary', cost: 2, opens: 20, decode: 'part', suits: 'Ransomware, TOLLGATE',
     does: 'If it breaks while other parts live, they go loud for the rest of the fight, dealing 25% more damage and attacking 1 cycle sooner.', telegraph: 'A tripwire tag, then a loud tag on the others.', answer: 'Break it last. Quiet Wire, Logic Bomb and Sudo keep it quiet, and Throttle silences a loud part.',
     implicit: 'Loud parts hit you less.', carried: (p) => !!p.deadman, bot: { focus: 'last' }, counter: 'zipbomb',
@@ -96,12 +96,12 @@ export const GENES = {
   twin: { name: 'Twin', adj: 'Twinned', cat: 'part', axis: 'order', role: 'primary', cost: 2, opens: 3, decode: 'part', suits: 'Worm, SWARMLINE',
     does: 'A twin broken while the other lives reboots at 40% Integrity 3 cycles later. It reboots only once.', telegraph: 'A Reboot chip on the board.', answer: 'Break both close together. Split Brain and Logic Bomb stop the reboot.',
     implicit: 'A twin reboots with less.', carried: (p) => !!p.twin, bot: { focus: 'together' }, counter: 'hotspare',
-    parts: { worm: { id: 'mirror', name: 'Mirror', integrity: 18, armor: 1, loot: 'Mirror Shard', twin: 'replicator', from: 3, pool: 'third', attack: { name: 'Splice', effect: 'damage', amount: 3, interval: 4, first: 3 } } } },
+    parts: { worm: { id: 'mirror', name: 'Mirror', integrity: 18, armor: 1, loot: 'Mirror Shard', twin: 'replicator', from: 3, pool: 'third', sig: true, attack: { name: 'Splice', effect: 'damage', amount: 3, interval: 4, first: 3 } } } },
   c2: { name: 'C2 command', adj: 'Commanded', cat: 'part', axis: 'swarm', role: 'amplifier', cost: 2, opens: 8, decode: 'part', suits: 'Worm, SWARMLINE',
     does: 'Fragments gnaw 50% harder while it lives, and all of them drop when it breaks.', telegraph: 'A commands-fragments tag.', answer: 'Break it once fragments are up.',
     implicit: 'More damage on a part that commands others.', carried: (p) => !!p.command, bot: { focus: 'first' },
     parts: { worm: { id: 'c2', name: 'C2 Node', integrity: 18, armor: 1, loot: 'C2 Beacon', command: true, from: 8, pool: 'third', attack: { name: 'Beacon', effect: 'damage', amount: 3, interval: 4, first: 3 } } } },
-  decoymirror: { name: 'Decoy mirror', adj: 'Mirrored', cat: 'part', axis: 'feedback', role: 'amplifier', beat: 'global', cost: 3, opens: 4, decode: 'part', suits: 'Ghostroot, PALEMASK',
+  decoymirror: { name: 'Decoy mirror', adj: 'Mirrored', cat: 'part', axis: 'feedback', role: 'amplifier', beat: 'global', cost: 2, opens: 4, decode: 'part', suits: 'Ghostroot, PALEMASK',
     does: 'Every 4th cycle, your commands deal no damage and 30% bounces back at you. Its timers are veiled.', telegraph: 'A Mirror chip in its column, once it is visible.', answer: 'Fire nothing direct on its beat, or break it. Mirror Maze and Sudo get through.',
     implicit: 'Bounces and mirrors hit you less.', carried: (p) => !!p.reflect, bot: { quiet: 'beat' }, counter: 'phaseshift',
     parts: { ghostroot: { id: 'decoy', name: 'Decoy', integrity: 18, armor: 1, veiled: true, loot: 'Decoy Shell', reflect: 4, from: 4, pool: 'third' } } },
@@ -109,6 +109,28 @@ export const GENES = {
     does: 'Records you, and on its beat plays your command\'s direct damage back at you.', telegraph: 'Its beat chip is always on the board.', answer: 'Go quiet on its beat with a debuff, a strip, a burn, a helper, a shield or hold, or break it. Reflector, Log Wipe and Sudo also beat it.',
     implicit: 'Playback on you deals less.', carried: (p) => !!p.mimic, bot: { quiet: 'beat' }, counter: 'handshake',
     parts: { ghostroot: { id: 'mimic', name: 'Mimic', integrity: 18, armor: 1, veiled: true, loot: 'Mimic Mask', mimic: true, from: 8, pool: 'third' } } },
+  // The parts plan's first wave (docs/parts-plan.md P1): third parts for levels 1 to 12. sig: it refers to the
+  // signature part, so a fight without its signature never rolls it (parts.mjs).
+  zipbomb: { name: 'Zip bomb', adj: 'Fused', cat: 'part', axis: 'burst', role: 'primary', cost: 2, opens: 5, decode: 'part', suits: 'Ransomware, Worm, TOLLGATE',
+    does: 'Break it and a 2-cycle fuse burns. Then it hits you for 20% of your max, unless a shield or ◆ takes it. A fight that ends puts the fuse out.', telegraph: 'A fuse chip on its row that counts down 2, 1.', answer: 'Break it last, or have a shield or ◆ up when the fuse runs out.',
+    implicit: 'Fuses on you deal less.', carried: (p) => !!p.fuse, bot: { focus: 'last' },
+    parts: { ransomware: { id: 'zipbomb', plan: 1, name: 'Zip Bomb', integrity: 14, armor: 0, loot: 'Fuse Wire', fuse: true, from: 5, pool: 'third' }, worm: { id: 'zipbomb', plan: 1, name: 'Zip Bomb', integrity: 14, armor: 0, loot: 'Fuse Wire', fuse: true, from: 5, pool: 'third' } } },
+  hotspot: { name: 'Hotspot', adj: 'Heated', cat: 'part', axis: 'burst', role: 'amplifier', cost: 1, opens: 6, decode: 'part', suits: 'Ransomware, Ghostroot',
+    does: 'A command hit on it turns the virus\'s next attack 2 or more cycles away into a charge. Burns and helpers don\'t set it off.', telegraph: 'An amber glow on its row, then a charge chip on the attack it powers up.', answer: 'Burn it or send helpers, or hit it when the charge would land on a part you can cut.',
+    implicit: 'Charges a hit of yours sets off deal less.', carried: (p) => !!p.hotspot, bot: { quiet: 'part' },
+    parts: { ransomware: { id: 'hotspot', plan: 1, name: 'Hotspot', integrity: 14, armor: 0, loot: 'Thermal Pad', hotspot: true, from: 6, pool: 'third' }, ghostroot: { id: 'hotspot', plan: 1, name: 'Hotspot', integrity: 14, armor: 0, loot: 'Thermal Pad', hotspot: true, from: 6, pool: 'third' } } },
+  idletimer: { name: 'Idle timer', adj: 'Idling', cat: 'part', axis: 'shell', role: 'amplifier', cost: 2, opens: 9, decode: 'part', suits: 'Ransomware, the Cryptominer', sig: true,
+    does: 'Counts the cycles since the signature part last took a command hit. At 5, every part re-arms to full ◆.', telegraph: 'Countdown pips on the signature\'s row, and a chip at 2 left.', answer: 'Hit the signature part at least every 4 cycles, or break the Idle Timer.',
+    implicit: 'Idle timers count one cycle longer.', carried: (p) => !!p.idle, bot: { focus: 'partner' },
+    parts: { ransomware: { id: 'idletimer', plan: 1, name: 'Idle Timer', integrity: 20, armor: 1, loot: 'Timer Crystal', idle: 5, from: 9, pool: 'third', sig: true } } },
+  frontend: { name: 'Front end', adj: 'Fronted', cat: 'part', axis: 'order', role: 'primary', cost: 2, opens: 10, decode: 'part', suits: 'Ghostroot, Ransomware, PALEMASK',
+    does: 'While it wears ◆, your single-target commands at its partner land on it instead. Burns, helpers and hits on every part go through.', telegraph: 'A tether from its partner that bends your hit onto it.', answer: 'Strip its ◆ first, or burn its partner, send helpers, or hit every part.',
+    implicit: 'Your hits bend onto a front end less.', carried: (p) => !!p.front, bot: { strip: true },
+    parts: { ghostroot: { id: 'frontend', plan: 1, name: 'Front End', integrity: 22, armor: 1, veiled: true, loot: 'Proxy Card', front: true, from: 10, pool: 'third' }, ransomware: { id: 'frontend', plan: 1, name: 'Front End', integrity: 22, armor: 1, loot: 'Proxy Card', front: true, from: 10, pool: 'third' } } },
+  backlog: { name: 'Backlog', adj: 'Backlogged', cat: 'part', axis: 'tempo', role: 'primary', cost: 2, opens: 12, decode: 'part', suits: 'Worm, the Cryptominer',
+    does: 'When its Ack lands, the skill you fired that cycle cools down 2 cycles longer.', telegraph: 'A SYN mark on its cell.', answer: 'On its cycle, fire a skill with no cooldown, or one you can spare.',
+    implicit: 'A backlog adds one cycle less to your cooldowns.', carried: (p) => !!p.backlog, bot: { quiet: 'cooldown' },
+    parts: { worm: { id: 'backlog', plan: 1, name: 'Backlog', integrity: 20, armor: 1, loot: 'Queue Slab', backlog: 2, from: 12, pool: 'third', attack: { name: 'Ack', effect: 'damage', amount: 3, interval: 4, first: 3 } } } },
   keyring: { name: 'Keyring', adj: 'Keyed', cat: 'part', axis: 'shell', role: 'primary', beat: 'part', cost: 2, opens: 1, decode: 'part', suits: 'ICE, Kestrel (the Bouncer)',
     does: 'Re-arms its partner to full ◆ every 4 cycles, 3 times. Break the partner first and it takes over the partner\'s attack.', telegraph: 'A re-arm chip on the board.', answer: 'Break the partner between re-arms, ready for the Keyring. Break the Keyring first when you cannot get through the partner\'s armor before the next re-arm.',
     implicit: 'Re-armed ◆ come back one fewer.', carried: (p) => !!p.rearm, bot: { focus: 'partner' } },
@@ -253,15 +275,17 @@ export const ROLL_WEIGHT = { signature: 3, toolkit: 1, other: 0.1 };
 //   signature, toolkit   the author's (authors.mjs)
 //   elite       +3 points, one more gene, two mutations; bonus: points on top (Testbed)
 //   known       a set of gene ids: roll only these (Sinkhole: genes you've decoded)
-export function rollGenome({ rand, level, family, core = [], signature = [], toolkit = [], elite = false, bonus = 0, known = null } = {}) {
+//   count, slots, mutations, allow   a wild virus's parts roll (parts.mjs): that many genes, room for that many third
+//               parts, mutations or not, and a test each gene must pass ((id, picked) → true)
+export function rollGenome({ rand, level, family, core = [], signature = [], toolkit = [], elite = false, bonus = 0, known = null, count = null, slots = 1, mutations = true, allow = null } = {}) {
   let budget = budgetFor(level, { elite }) + bonus;
-  const count = GENE_COUNT.reduce((n, [L, k]) => (level >= L ? k : n), 0) + (elite && level >= 4 ? 1 : 0);
+  count ??= GENE_COUNT.reduce((n, [L, k]) => (level >= L ? k : n), 0) + (elite && level >= 4 ? 1 : 0);
   const cap = elite ? MUTATION_CAP.elite : MUTATION_CAP.wild;
   const weight = (id) => (signature.includes(id) ? ROLL_WEIGHT.signature : toolkit.includes(id) ? ROLL_WEIGHT.toolkit : ROLL_WEIGHT.other);
-  let pool = GENE_IDS.filter((id) => { const g = GENES[id]; if (g.opens > level || (known && !known.has(id))) return false; return g.mutation || (g.parts?.[family] && (g.parts[family].from || 1) <= level); });
+  let pool = GENE_IDS.filter((id) => { const g = GENES[id]; if (g.opens > level || (known && !known.has(id))) return false; return (mutations && g.mutation) || (g.parts?.[family] && (g.parts[family].from || 1) <= level); });
   const picked = [];
   while (picked.length < count && budget > 0) {
-    const fits = pool.filter((id) => GENES[id].cost <= budget && !(GENES[id].parts && picked.some((x) => GENES[x].parts)) && !(GENES[id].mutation && picked.filter((x) => GENES[x].mutation).length >= cap));
+    const fits = pool.filter((id) => GENES[id].cost <= budget && !(GENES[id].parts && picked.filter((x) => GENES[x].parts).length >= slots) && !(GENES[id].mutation && picked.filter((x) => GENES[x].mutation).length >= cap) && (!allow || allow(id, picked)));
     let got = null;
     for (let t = 0; t < 8 && fits.length && !got; t++) {
       const total = fits.reduce((n, id) => n + weight(id), 0);

@@ -62,12 +62,12 @@ function met(s, group, id) {
 // the Codex quotes "at your level". gene: the third part it brings. A family's comes under its Standard set (raw: before
 // any set, for the attack sets' strips). Built once, kept, never fought.
 const built = new Map();
-export function sampleOf(group, id, level, gene = null, raw = false) {
-  const key = `${group}:${id}:${gene || ''}:${level}${raw ? ':raw' : ''}`;
+export function sampleOf(group, id, level, gene = null, raw = false, basic = null) {
+  const key = `${group}:${id}:${gene || ''}:${basic || ''}:${level}${raw ? ':raw' : ''}`;
   if (built.has(key)) return built.get(key);
   const threat = SERVER.threat(level), seed = 4821;
   const v = group === 'strain' ? createVirus(id, seed, { threat, run: true, mutation: null })
-    : createVirus('random', seed, { family: id, threat, run: true, mutation: null, genes: gene ? [gene] : [] });
+    : createVirus('random', seed, { family: id, threat, run: true, mutation: null, genes: gene ? [gene] : [], ...(basic ? { basic } : {}) }); // a basic (parts.mjs) takes the Pulse Node's place
   const S = ROOMS.size[group === 'guard' ? 'guard' : group === 'runner' ? 'exfil' : 'process'];
   for (const p of v.parts) {
     p.max = p.integrity = Math.max(1, Math.round(p.max * S.hp));
@@ -78,7 +78,7 @@ export function sampleOf(group, id, level, gene = null, raw = false) {
   }
   if (group === 'family' && ATTACK_SETS[id] && !raw) applySet(v, Object.keys(ATTACK_SETS[id])[0], null); // its Standard set (a room body's Courier delivers by it)
   if (group === 'runner') for (const p of v.parts) p.armor = p.maxArmor = Math.min(p.maxArmor, 1); // a runner wears 1 ◆ at most (floorplan.mjs fight)
-  v.id = `codex-${group}-${id}-${gene || 'core'}-${level}${raw ? '-raw' : ''}`;
+  v.id = `codex-${group}-${id}-${gene || basic || 'core'}-${level}${raw ? '-raw' : ''}`;
   v.author = null;
   built.set(key, v);
   return v;
@@ -88,7 +88,7 @@ const levelOf = (s) => Math.max(1, Math.min(CONFIG.maxMobLevel, hackerLevel(s)))
 function specsOf(group, id) {
   if (group === 'strain') return STRAINS[id].parts.map((spec) => ({ spec, gene: null, from: STRAINS[id].from }));
   const body = bodyOf(id);
-  return body.parts.map((spec) => ({ spec, gene: spec.pool === 'third' ? spec.gene : null, from: spec.from || OPENS[id] || 1 }));
+  return body.parts.map((spec) => ({ spec, gene: spec.pool === 'third' ? spec.gene : null, basic: spec.pool === 'basic' ? spec.id : null, from: spec.from || OPENS[id] || 1 }));
 }
 
 // ---------- the index ----------
@@ -131,12 +131,12 @@ export function partsOf(s, group, id) {
   const L = levelOf(s), specs = specsOf(group, id), thirds = specs.filter((x) => x.gene);
   const first = thirds.find((x) => x.from <= L)?.gene || null; // the core parts as a virus at your level brings them
   return specs.map((x) => {
-    const level = Math.max(L, x.from), v = sampleOf(group, id, level, x.gene || (x.from <= L ? first : null));
+    const level = Math.max(L, x.from), v = sampleOf(group, id, level, x.gene || (x.from <= L && !x.basic ? first : null), false, x.basic);
     const p = v.parts.find((q) => q.id === x.spec.id) || null;
-    // A third part: named once you've met one (its own rule seen in a fight), or researched it.
-    const named = met(s, group, id) && (!x.gene || geneState(s, x.gene) !== 'unknown' || (p && knowsPart(s, v, p)));
+    // A third part: named once you've met one (its own rule seen in a fight), or researched it. A basic: once researched.
+    const named = met(s, group, id) && (x.basic ? !!p && researchAt(s, codexKey(v, p)) > 0 : !x.gene || geneState(s, x.gene) !== 'unknown' || (p && knowsPart(s, v, p)));
     const n = p && met(s, group, id) ? researchAt(s, codexKey(v, p)) : 0;
-    return { spec: x.spec, part: p, virus: v, level, from: x.from, gene: x.gene, named: !!named, research: n, tier: tierAt(n), known: !!p && met(s, group, id) && knowsPart(s, v, p) };
+    return { spec: x.spec, part: p, virus: v, level, from: x.from, gene: x.gene, basic: x.basic, named: !!named, research: n, tier: tierAt(n), known: !!p && met(s, group, id) && knowsPart(s, v, p) };
   });
 }
 // The authors who write it: its family's crew and the authors whose servers field it, or a build's or a boss's own.
