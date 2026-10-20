@@ -16,6 +16,8 @@ Open http://127.0.0.1:4173. You land on the **Map**.
 
 For isolated checks that never read or write the save, open `/?playtest=cryptjack`, `/?playtest=splinter`, `/?playtest=ghostroot` or `/?playtest=random` (fights start paused; type `resume`; add `&level=12` to fight at that level, tells and all), or `/?playtest=run` to start connected to a location (add `&template=mailhub|mirror|archive|lab`, `&family=worm|ghostroot` for the Nest / Hidden quirks, and `&depth=3` for a deeper floor).
 
+**Planned: more part variety.** [`docs/parts-plan.md`](docs/parts-plan.md) is the design plan (not built): basic parts per family, a new third part every 2–3 levels, floor natives, the Cryptominer and the Wiper as families, and fights of 2 to 4 parts.
+
 To skip straight to a run in your real save, type `developer location ransomware`, then click the new node on the Map and Connect: since R1 every server plays as rooms (the **Run** tab), SPRAWL-00 from level 1. To try later skills and talents, `developer level 25` sets your class's level (your server's level is your highest class level; `developer server 10` sets a floor under it, for testing). To start over from level 1, type `reset game` (twice) or use Reset game on the System page; settings stay.
 
 ## Rooms playtest (R0)

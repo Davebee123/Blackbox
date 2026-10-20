@@ -1737,6 +1737,8 @@ Mutations are always visible and each changes a decision:
 
 (Reactive and Redundant were cut: they added rules without adding decisions.)
 
+**Planned: more part variety.** [`docs/parts-plan.md`](docs/parts-plan.md) is the design plan (not built): basic parts per family, a new third part every 2–3 levels, floor natives, the Cryptominer and the Wiper as families, and fights of 2 to 4 parts.
+
 ## After a fight
 
 A win shows a card over the virus with what it gave you: XP (one bar, any level-up), drops, code, components, leads, located origins and bounties; the fight log has the same in words. Enter on an empty line takes you back to the map (home) or the run.
