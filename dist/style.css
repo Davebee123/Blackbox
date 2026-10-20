@@ -201,6 +201,12 @@ code { font-family: var(--mono); color: var(--amber); }
 /* Encryption: the damage you take every cycle until the Encryptor breaks. On the Encryptor's row, in every column. */
 .intent.crypt { margin-bottom: 4px; padding: 2px 7px; font: 600 11px var(--mono); letter-spacing: 1px; border-color: var(--hot); color: var(--hot); background: repeating-linear-gradient(135deg, var(--hot-soft) 0 6px, transparent 6px 12px); }
 .intent.crypt small { color: var(--hot); opacity: 0.8; }
+/* A Ratchet (a rolled fight's ramp on its basic): the same drain, amber, growing column by column. */
+.intent.crypt.esc { border-color: var(--amber); color: var(--amber); background: repeating-linear-gradient(45deg, var(--amber-wash) 0 6px, transparent 6px 12px); }
+.intent.crypt.esc small { color: var(--amber); }
+.crypt-line.esc { background: repeating-linear-gradient(45deg, var(--amber) 0 4px, transparent 4px 8px); }
+.crypt-line.esc::after { border-color: var(--amber); color: var(--amber); background: repeating-linear-gradient(45deg, var(--amber-wash) 0 6px, transparent 6px 12px), var(--panel); }
+.tag.esc { color: var(--amber); border-color: var(--amber-soft); }
 /* A crew boss's mechanics (raid.mjs): their own row on the board, each chip on the cycle it lands. */
 .braid .bname small { display: block; font-size: 11px; }
 .intent.raid { border-color: var(--hot); color: var(--hot); display: flex; flex-direction: column; gap: 1px; }
@@ -4251,3 +4257,29 @@ p.impl { margin: 6px 0 0; padding: 4px 2px; border-bottom: 1px dotted color-mix(
   .ch-lines { font-size: 12px; }
   .ch-from.hacker { font-size: 12px; }
 }
+
+/* The parts plan (docs/parts-plan.md P1), in the board's own vocabulary: an Accumulator's charge bar, a volley's
+   bracket, a Backlog's SYN, a Zip Bomb's fuse, a Buffer's shield (the lock's steel segment), a Hotspot's glow, the
+   Idle Timer's pips on the signature's row. */
+.tag.accum { display: inline-flex; align-items: center; gap: 3px; }
+.tag.accum .glyph { width: 10px; height: 10px; margin: 0; }
+.acc-bar { position: relative; display: inline-block; width: 34px; height: 5px; border: 1px solid var(--hot); background: transparent; }
+.acc-bar b { position: absolute; left: 0; top: 0; bottom: 0; background: var(--hot); }
+.intent.tap { position: relative; }
+.intent.tap::after { content: ''; position: absolute; bottom: -5px; height: 4px; left: -10px; right: -10px; border-bottom: 1px solid currentColor; opacity: 0.75; pointer-events: none; }
+.intent.tap.first::after { left: 50%; border-left: 1px solid currentColor; }
+.intent.tap.last::after { right: 50%; border-right: 1px solid currentColor; }
+.intent .tapmark, .intent .synmark { font: 700 9px/1 var(--mono); font-style: normal; letter-spacing: 0.5px; opacity: 0.85; margin-left: 3px; }
+.intent .synmark { color: #6fb6ff; border: 1px solid #6fb6ff; padding: 0 2px; }
+.intent.fuse { border-color: var(--hot); color: var(--hot); background: repeating-linear-gradient(135deg, var(--hot-soft) 0 5px, transparent 5px 10px); animation: fuse-spark 0.9s ease-in-out infinite alternate; }
+@keyframes fuse-spark { from { box-shadow: 0 0 2px var(--hot); } to { box-shadow: 0 0 9px var(--hot); } }
+.no-motion .intent.fuse, body[data-fx="minimal"] .intent.fuse { animation: none; }
+@media (prefers-reduced-motion: reduce) { .intent.fuse { animation: none; } }
+.intent.bufup { border-style: dashed; border-color: var(--steel); color: var(--steel); background: transparent; }
+.tag.hotspot { display: inline-flex; align-items: center; gap: 3px; color: var(--amber); border-color: var(--amber); box-shadow: 0 0 6px var(--amber-wash); }
+.tag.hotspot .glyph { width: 10px; height: 10px; margin: 0; }
+.brow.bpart:has(.tag.hotspot) { box-shadow: inset 3px 0 0 var(--amber-soft); }
+.tag.idlepips { display: inline-flex; align-items: center; gap: 2px; letter-spacing: 1px; font-size: 9px; }
+.tag.idlepips .glyph { width: 10px; height: 10px; margin: 0 2px 0 0; }
+.tag.idlepips i { opacity: 0.4; font-style: normal; }
+.tether.k-front .tt-line { border-style: dashed; }

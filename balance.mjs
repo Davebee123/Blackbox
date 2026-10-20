@@ -33,6 +33,7 @@ export const BRACKETS = [
 const fillOrder = (F) => [[F[0][0].id, 3], ['c0'], [F[1][0].id, 3], [F[1][1].id, 1], ['c1'], [F[2][0].id, 3], [F[2][1].id, 2], ['c2'], [F[0][1].id, 3], [F[1][1].id, 2], [F[2][1].id, 1]];
 export function build(s, cls, b, opts) {
   s.loadout.archetype = cls;
+  s.metAll = true; // a veteran: every part met, so the parts roll (dist/parts.mjs) brings its whole mix, strangers and all
   s.hackers = { [cls]: { level: b.level, xp: 0 } };
   // From SUBCLASS.from a subclass (opts.sub, else the class's default): its skill line and tree.
   const sub = b.level >= SUBCLASS.from ? opts.sub || defaultSub(cls) : null, key = sub || cls, kit = SUBS[sub];
@@ -82,7 +83,7 @@ export function fight(policy, key, b, opts = {}) {
   const guard = opts.mode === 'run';
   if (guard) s.run = { loc: 'sim', cwd: '/', integrity: maxSignal(s), max: maxSignal(s), pack: [], visited: ['/'] };
   const startHp = guard ? s.run.max : s.server.max; // health lost is a share of your own max
-  selectEncounter(s, key, opts.seed ?? 42, opts.zone ? { mode: 'run', room: '/sim', level: b.level + (opts.levelUp || 0), zone: true, family: opts.family, grade: opts.grade, strain: opts.strain, ...(opts.mutation !== undefined ? { mutation: opts.mutation } : {}), ...(opts.elite ? { elite: true } : {}), ...(opts.boss ? { boss: opts.boss } : {}) } : guard ? { mode: 'run', room: '/sim', level: opts.guard || b.guard || b.level } : {});
+  selectEncounter(s, key, opts.seed ?? 42, opts.zone ? { mode: 'run', room: '/sim', level: b.level + (opts.levelUp || 0), zone: true, family: opts.family, grade: opts.grade, strain: opts.strain, ...(opts.classic ? { classic: true } : {}), ...(opts.mutation !== undefined ? { mutation: opts.mutation } : {}), ...(opts.elite ? { elite: true } : {}), ...(opts.boss ? { boss: opts.boss } : {}) } : guard ? { mode: 'run', room: '/sim', level: opts.guard || b.guard || b.level } : {});
   if (s.encounter) s.encounter.soft = 1; // measure the class, not SPRAWL's mercy for new players (CONFIG.zone.starterHit)
   command(s, 'engage');
   const uses = {};
@@ -153,13 +154,17 @@ export const MATCH_OF = { demolitionist: 'swarm', overclocker: 'rules', warden: 
 // A subclass leans solo or crew (SUBS[sub].lean). The Bastions lean crew and pay for it alone in pace, not Signal:
 // their kills are slow (about twice as many cycles a fight), and they heal or shield it back, so they may sit
 // under the band's floor. Every subclass stays under its ceiling.
-export const soloBand = (sub) => (sub && SUBS[sub].cls === 'bastion' ? [0, 50] : [15, 50]);
+// Held since the damage profiles (docs/parts-plan.md "Damage profiles"), on the 24 fights of a bracket only: the
+// Phantom loses 10–12% at Lv 30 (16% over 160 fights, 17% before P1: these seeds suit its burst) and the Overclocker
+// 50% at Lv 10 (39% over 160, as before P1). level: the bracket's, for the hold; without it, the band.
+const HELD_BAND = { 'phantom 30': [8, 50], 'overclocker 10': [15, 52] };
+export const soloBand = (sub, level) => HELD_BAND[`${sub} ${level}`] || (sub && SUBS[sub].cls === 'bastion' ? [0, 50] : [15, 50]);
 // Average Signal lost (capped at 100) playing a bar over a set, each fight on `seeds` seeds.
 export function setScore(sub, b, bar, set, seeds = [1, 2]) {
   const pol = policyOf(sub), rs = [];
   for (const f of set) for (const sd of seeds) {
     const { guard, seed = 0, ...rest } = f;
-    rs.push(guard ? fight(pol, guard, b, { sub, bar, seed: seed + sd, mode: 'run', guard: b.guard }) : fight(pol, 'random', b, { sub, bar, mode: 'run', zone: true, mutation: null, ...rest, seed: seed + sd }));
+    rs.push(guard ? fight(pol, guard, b, { sub, bar, seed: seed + sd, mode: 'run', guard: b.guard }) : fight(pol, 'random', b, { sub, bar, mode: 'run', zone: true, mutation: null, classic: true, ...rest, seed: seed + sd })); // a designed set keeps its classic shape (a Pulse Node, the signature, one third): the parts roll (dist/parts.mjs) would change what it was designed to hold
   }
   return { lost: rs.reduce((a, r) => a + Math.min(100, r.lostPct), 0) / rs.length, wins: rs.filter((r) => r.win).length, total: rs.length, rs };
 }

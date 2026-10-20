@@ -12,8 +12,10 @@ import { tellIntents } from './dist/tells.mjs';
 
 Object.assign(CONFIG, { enemyCrit: 0, misses: false });
 const at = (level = 12) => { const s = fresh(); s.hackers = { breaker: { level, xp: 0 } }; syncServer(s); s.server.integrity = s.server.max = 5000; return s; };
-const engage = (s, { level = 12, family = 'ransomware', seed = 7, set = null } = {}) => {
-  selectEncounter(s, 'random', seed, { level, family, mutation: null });
+// A fight with no seed given is the family's Pulse Node and signature (the parts roll, dist/parts.mjs, would pick its
+// basic); a seed given rolls the virus as the game does (the searches below look for a third part that way).
+const engage = (s, { level = 12, family = 'ransomware', seed, set = null } = {}) => {
+  selectEncounter(s, 'random', seed ?? 7, { level, family, mutation: null, ...(seed == null ? { basic: 'pulse' } : {}) });
   command(s, 'engage');
   s.server.max = s.server.integrity = 5000;
   if (set) { const v = s.encounter.virus; v.tells = null; v.tellSet = set; v.extraTells = 4; tellStart(s); }
@@ -64,7 +66,7 @@ test('tell tooltips: the tell\'s name, then what happens if it lands (with its n
   const lk = fight({ set: ['fulldisk', 'overclock', 'lock'] }); quiet(lk); tell(lk, 'lock', 'encryptor', 2);
   assert.equal(chipOf(lk).tip, 'Lock: Locks the first command you fire after it for 3 cycles, key 1 included.\nBreak the Encryptor before it lands in 2 cycles, or feed it a skill that is cooling anyway.');
   let mi = null;
-  for (let seed = 1; seed < 40 && !mi; seed++) { const x = fight({ family: 'ghostroot', seed }); if (x.encounter.virus.parts.some((p) => p.mimic)) mi = x; }
+  for (let seed = 1; seed < 400 && !mi; seed++) { const x = fight({ family: 'ghostroot', seed }); if (x.encounter.virus.parts.some((p) => p.mimic)) mi = x; }
   quiet(mi); tell(mi, 'mimic', mi.encounter.virus.parts.find((p) => p.mimic).id, 2);
   assert.match(chipOf(mi).tip, /^Mimic: Plays the command you fire then back at you, its whole direct hit\.\nFire no direct hit on its beat \(in 2 cycles\): a debuff, a strip, a burn or a shield(, or take the Mimic under 50% then)?\.$/);
   // The chip and its tooltip don't say the same thing twice: the chip has the kind and NOW / in N; the tooltip the rest.
@@ -175,7 +177,7 @@ test('a conditional rule that fires names itself on the hit: a crit from Clock S
 
 test('part tooltips by research: ??? and how to decode it, then its attack and a cue on its row at 3, then what it does and how to answer it at 15', () => {
   let s = null;
-  for (let seed = 1; seed < 20 && !s; seed++) { const x = fight({ seed }); if (x.encounter.virus.parts.some((p) => p.lock)) s = x; }
+  for (let seed = 1; seed < 400 && !s; seed++) { const x = fight({ seed }); if (x.encounter.virus.parts.some((p) => p.lock)) s = x; }
   const v = s.encounter.virus, mutex = part(s, 'mutex'), enc = part(s, 'encryptor');
   assert.ok(!knowsPart(s, v, mutex));
   assert.equal(partTip(s, v, mutex), 'Mutex: ???\nBreak one, cut it or answer its tell to decode it.');
@@ -218,7 +220,7 @@ test('part reads stay true to the code: a Lockbox\'s cap, a Mirror\'s reboot, a 
 });
 
 // ---------- what protects what: the tethers between rows, the lock on its partner's bar ----------
-const mutexFight = () => { for (let seed = 1; seed < 30; seed++) { const x = fight({ seed }); if (x.encounter.virus.parts.some((p) => p.lock)) return x; } };
+const mutexFight = () => { for (let seed = 1; seed < 400; seed++) { const x = fight({ seed }); if (x.encounter.virus.parts.some((p) => p.lock)) return x; } };
 const tethersOf = (html, kind) => [...html.matchAll(new RegExp(`<span class="(tether k-${kind}[^"]*)" data-links="([^"]*)"[^>]*title="([^"]*)">([\\s\\S]*?)</span>(?=<span class="tether|<span class="aim-pips|<span class="part-top)`, 'g'))].map((m) => ({ cls: m[1], links: m[2], tip: m[3], inner: m[4] }));
 const segOf = (html, id) => { const row = html.split('data-target="').find((r) => r.startsWith(id + '"')) || ''; const m = row.match(/<i class="lockseg" data-lock="(\d+)" style="left:([\d.]+)%;width:([\d.]+)%"/); return m ? { lock: +m[1], left: +m[2], width: +m[3], row } : { row }; };
 
@@ -291,7 +293,7 @@ test('a tether between the Mutex and the Encryptor: ? and ??? until decoded, glo
 test('one visual language for every relation: a Lockbox\'s ward (and a cap line on its partner\'s bar), a Mirror\'s twin, a Keyring re-arming its Gate', () => {
   // The Lockbox, from level 3.
   let s = null;
-  for (let seed = 1; seed < 40 && !s; seed++) { const x = fight({ level: 5, seed }); if (x.encounter.virus.parts.some((p) => p.ward)) s = x; }
+  for (let seed = 1; seed < 400 && !s; seed++) { const x = fight({ level: 5, seed }); if (x.encounter.virus.parts.some((p) => p.ward)) s = x; }
   quiet(s);
   const enc = Object.assign(part(s, 'encryptor'), { armor: 0, maxArmor: 0, integrity: 100, max: 100 });
   let html = boardMarkup(s, null);
@@ -308,7 +310,7 @@ test('one visual language for every relation: a Lockbox\'s ward (and a cap line 
   assert.ok(forecast(s).parts.encryptor <= cap, 'the preview stops at the cap');
   // The Mirror (worm, from level 3): twins, and a stub with the reboot countdown when one is down.
   let w = null;
-  for (let seed = 1; seed < 40 && !w; seed++) { const x = fight({ level: 5, family: 'worm', seed }); if (x.encounter.virus.parts.some((p) => p.twin)) w = x; }
+  for (let seed = 1; seed < 400 && !w; seed++) { const x = fight({ level: 5, family: 'worm', seed }); if (x.encounter.virus.parts.some((p) => p.twin)) w = x; }
   quiet(w);
   const tw = tethersOf(boardMarkup(w, null), 'twin');
   assert.ok(tw.length >= 2 && tw.every((t) => t.links === 'mirror replicator' && /\bup\b/.test(t.cls)));

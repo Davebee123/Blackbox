@@ -10,8 +10,8 @@ import { CREWS } from './dist/mail.mjs';
 
 const ids = (v) => v.genes.map((g) => g.id);
 
-test('the library: 41 genes that carry today\'s content, each with a category, an axis, a role, a cost and an answer', () => {
-  assert.equal(GENE_IDS.length, 41);
+test('the library: 46 genes that carry today\'s content, each with a category, an axis, a role, a cost and an answer', () => {
+  assert.equal(GENE_IDS.length, 46);
   for (const [id, g] of Object.entries(GENES)) {
     assert.ok(CATS[g.cat] && AXES[g.axis], id);
     assert.ok(['primary', 'amplifier'].includes(g.role), id);
@@ -20,7 +20,7 @@ test('the library: 41 genes that carry today\'s content, each with a category, a
     assert.ok(['part', 'tell', 'kills'].includes(g.decode), id);
   }
   const by = Object.fromEntries(Object.keys(CATS).map((c) => [c, GENE_IDS.filter((id) => GENES[id].cat === c).length]));
-  assert.deepEqual(by, { attack: 10, part: 9, defence: 3, rule: 9, tell: 10 });
+  assert.deepEqual(by, { attack: 10, part: 14, defence: 3, rule: 9, tell: 10 }); // the parts plan's P1 brought five part genes
 });
 
 test('today\'s content, mapped: the bodies, the third parts, the mutations, the strains and the guards are genes', () => {
@@ -30,7 +30,7 @@ test('today\'s content, mapped: the bodies, the third parts, the mutations, the 
   assert.deepEqual(body('ghostroot'), ['surge', 'veil', 'scramble']);
   for (const f of Object.keys(FAMILIES)) assert.deepEqual([...body(f)].sort(), [...FAMILIES[f].core].sort(), f);
   // Each third part is its gene's part, in its family's pool.
-  const third = { lockbox: 'ward', mutex: 'mutexlock', tripwire: 'tripwire', mirror: 'twin', c2: 'c2', decoy: 'decoymirror', mimic: 'mimic' };
+  const third = { lockbox: 'ward', mutex: 'mutexlock', tripwire: 'tripwire', mirror: 'twin', c2: 'c2', decoy: 'decoymirror', mimic: 'mimic', zipbomb: 'zipbomb', hotspot: 'hotspot', idletimer: 'idletimer', frontend: 'frontend', backlog: 'backlog' };
   for (const f of Object.values(FAMILIES)) for (const p of f.parts.filter((x) => x.pool === 'third')) assert.equal(p.gene, third[p.id], p.id);
   for (const [part, gene] of Object.entries(third)) {
     const fam = Object.keys(FAMILIES).find((f) => FAMILIES[f].parts.some((p) => p.id === part));

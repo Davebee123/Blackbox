@@ -54,15 +54,20 @@ const cycles = (n) => `${n} ${n === 1 ? 'cycle' : 'cycles'}`;
 // with an attack, so it falls back to the other system part that has one. A charge or a cast stays off a boss's ♛
 // part (interrupt.mjs, rule a: its ticks start phases and cut nothing) while another part can carry it.
 const isSystem = (x) => x.kind === 'system' || !x.kind; // a part, or a part's spec (the codex)
-const isBasic = (x) => isSystem(x) && !x.special && !x.ward && !x.lock && !x.twin && !x.reflect && !x.mimic && !x.command && !x.deadman;
+// A basic part (parts.mjs): never a third part's rule. A charge never rides an Accumulator (its Discharge is the big
+// hit already) or a volley (a Repeater's, a Prism's); the basic with the biggest plain hit carries it.
+const RULED = ['ward', 'lock', 'twin', 'reflect', 'mimic', 'command', 'deadman', 'fuse', 'hotspot', 'idle', 'front', 'backlog'];
+const isBasic = (x) => isSystem(x) && !x.special && !RULED.some((k) => x[k]);
+const plainHit = (x) => (x.attack?.effect === 'damage' ? x.attack.amount : 0);
 export function findSource(v, def) {
-  const sys = v.parts.filter((x) => isSystem(x) && !x.mimic && !x.from);
-  const pick = def.part === 'special' ? sys.find((x) => x.special) : def.part === 'basic' ? sys.find(isBasic) : sys.find((x) => x.id === def.part);
-  const can = (p) => !!p && (def.kind === 'charge' ? !!p.attack : def.kind === 'seal' ? (p.maxArmor ?? p.armor) > 0 : true);
+  const sys = v.parts.filter((x) => isSystem(x) && !x.mimic && (!x.from || x.pool === 'basic'));
+  const basics = sys.filter(isBasic).sort((a, b) => plainHit(b) - plainHit(a));
+  const pick = def.part === 'special' ? sys.find((x) => x.special) : def.part === 'basic' ? basics.find((x) => !x.accum && !x.taps) || basics[0] : sys.find((x) => x.id === def.part);
+  const can = (p) => !!p && (def.kind === 'charge' ? !!p.attack && !p.accum && !p.taps : def.kind === 'seal' ? (p.maxArmor ?? p.armor) > 0 : true);
   const cut = def.kind === 'charge' || def.kind === 'cast', other = cut && sys.some((x) => !x.core && can(x));
   const fits = (p) => can(p) && !(other && p.core);
   if (fits(pick)) return pick;
-  return [sys.find((x) => x.special), sys.find(isBasic), ...sys].find(fits) || null;
+  return [sys.find((x) => x.special), ...basics, ...sys].find(fits) || null;
 }
 // Two tells from the roguelite redesign (docs/roguelite.md 5.2), brought by breach viruses only (breach.mjs sets
 // v.tellSet): each asks for its own verb, and letting it land can be the right call.
@@ -109,10 +114,13 @@ export function plannedTells(v) {
   let count = tier.count + (elite && tier.count ? TELL.elite.count : 0) + (v.extraTells || 0); // extraTells: a breach gate at heat 2 (breach.mjs), a boss rule (interrupt.mjs)
   if (v.boss) count = Math.max(count, TELL.boss.count);
   const list = [];
-  for (const def of setOf(v)) {
+  for (let def of setOf(v)) {
     if (list.length >= count) break;
     if (def.kind === 'cast' && v.level < TELL.castFrom) continue;
     if (def.kind === 'seal' && v.level < SEAL_FROM) continue;
+    // No signature this fight (parts.mjs): its charge becomes a plain Overcharge on another part; its cast and seal
+    // fall back to another part as any tell does.
+    if (def.part === 'special' && v.noSignature && def.kind === 'charge') def = { ...TELLS.overcharge, id: def.id };
     const p = findSource(v, def);
     if (!p) continue;
     list.push({ ...def, part: p.id });
@@ -172,7 +180,7 @@ function announce(s) {
   const c = e.cycle, lead = Math.min(3, T.tier.lead + (fxOn(s, 'warn-early')?.fx.value || 0)), beats = T.list.filter((x) => x.kind === 'mimic');
   const clear = (t, x) => x >= t.after && !live(s, t).some((o) => o.next === x) && !beats.some((b) => alive(sourceOf(s, b)) && beatAt(b, x));
   for (const t of [...T.list].sort((a, b) => a.after - b.after)) {
-    if (t.told) continue;
+    if (t.told || t.gone || t.once) continue; // a Hotspot's charge comes only when you set it off
     const p = sourceOf(s, t);
     if (!alive(p)) continue;
     if (t.kind === 'mimic' && !p.mimic) continue; // a Mimic that stopped recording (MIRRORSHADE's Doppelganger) has no beat
@@ -301,6 +309,7 @@ function rest(s, t, from, answered = false) {
   if (p?.attack && alive(p)) from = Math.max(from, landsAt(p, t.n));
   t.told = false; t.count++; t.n = null;
   if (answered) { t.answered = (t.answered || 0) + 1; tally(s, t, 'answered'); }
+  if (t.once) { t.gone = true; const T = tellsOf(s); T.list = T.list.filter((x) => x !== t); return; }
   if (t.kind === 'mimic') { t.next = null; return; }
   t.after = from + (TELL.rest[t.kind] ?? 3) + jitter(s.encounter.virus, t);
   t.next = null;
@@ -319,6 +328,24 @@ export function tellCallOff(s, by) {
     n++;
   }
   return n;
+}
+// Hotspot (genes.mjs hotspot): a command hit on it turns the virus's next attack 2 or more cycles away into a charge,
+// said at once (a Hot Charge on that part's row). One at a time; never on a Hotspot's own row or a part a charge
+// can't ride. It is a charge like any other: cut it on its cycle.
+export function hotCharge(s, hot) {
+  const T = tellsOf(s), e = s.encounter;
+  if (!T || !T.tier || T.list.some((t) => t.id === 'hotspot')) return null;
+  const c = e.cycle, taken = new Set(T.list.filter((t) => t.told).map((t) => tellNext(s, t)));
+  let best = null;
+  for (const p of attackers(s)) {
+    if (p === hot || p.accum || p.taps || p.attack.due >= 900 || p.kind !== 'system') continue;
+    for (let n = p.attack.n || 0; n < (p.attack.n || 0) + 4; n++) { const x = landsAt(p, n); if (x - c >= 2 && !taken.has(x)) { if (!best || x < best.x) best = { p, n, x }; break; } }
+  }
+  if (!best) return null;
+  const t = { kind: 'charge', name: 'Hot Charge', gene: 'hotspot', id: 'hotspot', part: best.p.id, once: true, told: false, next: null, n: null, said: null, count: 0, after: c, from: hot.id };
+  T.list.push(t);
+  say(s, t, best.p, best.x, best.n);
+  return t;
 }
 // A part broke (combat.mjs breakPart): its tells stop for good (they sit on a fixed part).
 export function tellBroke(s, p) {

@@ -12,7 +12,7 @@
 //   partLinks(s, v)        what protects what: one link a rule that reaches from one part to another (a Mutex's lock, a
 //                          Lockbox's ward, a Mirror's twin, a Keyring's re-arm), for the board's tethers
 //   lockOf(s, v, p)        the lock shield a part wears now (its bar's absorb segment), wardOf the most a ward lets it lose
-import { part, livingParts, gearFx, fxHolds, blocked, attackAmount, knowsPart, usable, fxOn, alive, wards } from './combat.mjs';
+import { part, livingParts, gearFx, fxHolds, blocked, attackAmount, knowsPart, usable, fxOn, alive, wards, belowOf, frontOf, signatureOf } from './combat.mjs';
 import { CONFIG, TELL, TELLS, BOSSES } from './data.mjs';
 import { fxText } from './content.mjs';
 import { tellsOf, tellIntents, partTells, NEW_TELLS } from './tells.mjs';
@@ -147,6 +147,11 @@ function attackRead(s, v, p) {
   if (a.dump) return [`Dumps for ${n} once it has logged 3 commands fired outside a Sync Window, and every ${a.interval} cycles anyway.`, 'Fire inside the Sync Window.'];
   if (a.ramp) return [`Hits you for ${n}${each}, ${a.rampBy || 1} more each time it lands.`, 'Delay it to reset the climb, or break it.'];
   if (a.grow) return [`Hits you for ${n}${each}, more every cycle the fight lasts.`, 'Break it early.'];
+  if (p.taps) return [`Hits you ${times(p.taps)} for ${n} on back to back cycles${each}, as one move: a cut stops the rest, a delay moves them all.`, 'Cut it on its first hit, or soften every hit with Block and ◆.'];
+  if (p.accum) return [`Charges one big Discharge: it hits you for ${n}${each}. It never carries a charge.`, 'Break it before its bar fills, or have ◆ or a shield up when it lands.'];
+  if (p.cipher) return [`Hits you for ${n}${each}, ${pct(p.cipher)} harder for each Encrypt (or Ratchet step) on you.`, 'Break the Encryptor, or Purge the encryption, and it shrinks.'];
+  if (p.fanin) return [`Hits you for ${n}${each}, ${pct(p.fanin)} harder for each fragment on the board.`, 'Clear the fragments, or break the Replicator.'];
+  if (a.interval === 1) return [`Hits you for ${n} every cycle, so your Block counts on every hit.`, 'Break it: it wears no ◆.'];
   if (a.siphon) return [`Hits you for ${n}${each}, and heals the most damaged part for what it deals.`, 'Break it, or shrink its hit with a shield or Throttle.'];
   if (a.wipe) return [`Hits you for ${n}${each}, and wipes ${a.wipe === 'last' ? 'the skill you used last' : 'your strongest ready skill'} off your bar for ${cycles(a.wipeFor || 3)}. Key 1 and SIGINT are never wiped.`, a.wipe === 'last' ? 'Lead with a cheap skill before its Wipe lands, or break it.' : 'Fire your big skill before its Wipe lands, or break it.'];
   return [`Hits you for ${n}${each}.`, 'Break it, or delay its attack. ◆ and shields soften the hit.'];
@@ -176,6 +181,15 @@ function readOf(s, v, p) {
   if (p.syncOnly) return [`Takes damage only from commands fired in a Sync Window. Each command outside one is logged, and at 3 logs it Dumps${p.attack ? ` for ${hitOf(s, p)}. It also Dumps ${every(p.attack.interval)}` : ''}.`, 'Fire inside the Sync Window.', { text: 'sync window only', icon: 'sync', link: null }];
   if (p.phase) return [`Out of phase on odd cycles: hits pass through it, and ${pct(CONFIG.phaseBounce)} of your command bounces back at you.`, 'Hit it on even cycles.', null];
   if (p.echo) return ['While it stands, every hit you take repeats 1 cycle later at half damage.', 'Break it early. Shields and Block shrink what repeats.', null];
+  // The parts plan (data.mjs BASICS, genes.mjs).
+  if ((p.buffer || p.obfuscate) && p.tookOver && p.attack) return [`${attackRead(s, v, p)[0]} It took over the ${other(p.tookOver)}'s ${p.attack.name} when the ${other(p.tookOver)} broke.`, 'Break it.', null];
+  if (p.buffer) { const t = v?.parts && s?.encounter?.virus === v ? belowOf(s, p) : null; return [`Every ${p.buffer.every} cycles it shields ${t ? `the ${t.name}` : 'the part below it'} for ${pct(p.buffer.share)} of its own Integrity. The shield takes your commands' hits only: burns and helpers go under it.${p.fallback && !p.tookOver ? ` ${fallbackLine(v, p)}` : ''}`, 'Break it first, or burn the part it shields.', { text: t ? `shields ${t.name}` : 'shields below', icon: 'shield', link: t?.id || null }]; }
+  if (p.obfuscate) return [`While it stands, every part hides its timers, ◆ or not. Tag still shows one.${p.fallback && !p.tookOver ? ` ${fallbackLine(v, p)}` : ''}`, 'Break it, or Tag the part you need to read.', { text: 'veils every part', icon: 'stealth', link: null }];
+  if (p.fuse) return [`Break it and its fuse burns for ${cycles(CONFIG.zipbomb.fuse)}. Then it goes off for ${pct(CONFIG.zipbomb.share)} of your max, unless a ◆ or a shield takes it. A fight that ends puts the fuse out.`, 'Break it last, or have a ◆ or a shield up when the fuse runs out.', { text: 'fuse on break', icon: 'damage', link: null }];
+  if (p.hotspot) return ['A command hit on it turns the virus\'s next attack 2 or more cycles away into a charge. Burns and helpers don\'t set it off.', 'Burn it or send helpers, or hit it when the charge would land on a part you can cut.', { text: 'charges on a hit', icon: 'burn', link: null }];
+  if (p.idle) { const t = s?.encounter?.virus === v ? signatureOf(s) : v?.parts?.find((x) => x.special); return [`Counts the cycles since ${t ? `the ${t.name}` : 'the signature part'} last took a hit from your commands. At ${p.idle}, every part re-arms to full ◆.`, `Hit ${t ? `the ${t.name}` : 'the signature'} at least every ${p.idle - 1} cycles, or break the ${p.name}.`, { text: `idle ${p.idle}`, icon: 'clock', link: t?.id || null }]; }
+  if (p.front) { const t = s?.encounter?.virus === v ? frontOf(s, p) : v?.parts?.find((x) => x.special); return [`While it wears ◆, your single-target commands at ${t ? `the ${t.name}` : 'its partner'} land on it instead. Burns, helpers and hits on every part go through.`, 'Strip its ◆ first, or burn its partner, send helpers, or hit every part.', { text: t ? `fronts ${t.name}` : 'fronts its partner', icon: 'firewall', link: t?.id || null }]; }
+  if (p.backlog) return [`${attackRead(s, v, p)[0]} When it lands, the skill you fired that cycle cools down ${cycles(p.backlog)} longer.`, 'On its cycle, fire a skill with no cooldown, or one you can spare.', { text: 'slows a cooldown', icon: 'clock', link: null }];
   if (p.overrun) return [`Spawns fragments${p.attack ? ` ${every(p.attack.interval)}` : ''} whose bite deals 1 more damage every cycle they live.`, 'Clear fragments young, or break it.', null];
   // A server room's bodies (families.mjs).
   if (fam === 'trojan' && p.id === 'courier') return [`Hits you for ${p.attack ? hitOf(s, p) : 0} ${every(p.attack?.interval || 5)}, and delivers a Package ${every((p.deliver || p.redeploy?.deliver)?.interval || 3)}. While the Loader stands, a Package unpacks into two Droppers when anything damages it, or on its own ${cycles(BODY.package.opens)} after delivery, and a broken Courier is redeployed ${cycles(BODY.redeploy.in)} later at ${pct(BODY.redeploy.at)} Integrity.`, 'Breaking it buys time. Break the Loader, and leave the Packages alone until then.', null];
@@ -200,8 +214,12 @@ export function partRead(s, v, p, { tells: withTells = true } = {}) {
   const tl = !withTells ? [] : (T ?T.list.filter((t) => t.part === p.id).map((t) => ({ name: t.name, kind: t.kind })) : v ? partTells(v, p) : []).filter((x) => x.kind !== 'mimic');
   const VERB = { charge: 'Charges', cast: 'Casts', seal: 'Seals with', lock: 'Locks with' };
   const tells = tl.map((x) => `${VERB[x.kind] || 'Brings'} ${x.name}.`).join(' ');
-  const more = [p.veiled ? 'Hides its timers while it wears ◆.' : '', p.enrage ? `Deals ${pct(CONFIG.enrage - 1)} more once it drops below half.` : '', tells].filter(Boolean).join(' ');
-  return { does: more ? `${does} ${more}` : does, answer, cue };
+  // A role it carries for a missing signature (parts.mjs PARTS.profile): a Ratchet, or the Scrambler's Scramble.
+  const esc = p.ratchet ? `Ratchets: from cycle ${p.ratchet.from + 1} it deals ${p.ratchet.amount} damage to you every cycle, ${p.ratchet.amount} more every ${p.ratchet.every} cycles it lives.` : '';
+  const scr = p.attack?.scrambles ? `Its hits Scramble you for ${cycles(p.attack.scrambles)}, at most once ${every(p.attack.scrambleEvery || 1)}.` : '';
+  const more = [esc, scr, p.veiled && !p.obfuscate ? 'Hides its timers while it wears ◆.' : '', p.enrage ? `Deals ${pct(CONFIG.enrage - 1)} more once it drops below half.` : '', tells].filter(Boolean).join(' ');
+  const ans = p.ratchet ? `${answer} Break it early: its Ratchet ends only when it breaks (Purge starts it over).` : answer;
+  return { does: more ? `${does} ${more}` : does, answer: ans, cue };
 }
 // The part row's tooltip, by its research (research.mjs). Until it's decoded: ??? and how to research it. At 1: its
 // attack and timing. From 5: what it does, its tells, and what answers it.
@@ -233,7 +251,7 @@ export function gearOnParts(live) {
 //   up     the rule holds now (a lock standing, a ward, both twins up, re-arms left): the tether glows
 //   count  cycles until it comes back or fires (a broken lock relocking, the next re-arm, a broken twin's reboot), or null
 //   snap   the part it sits on just broke (a dissolving row: view.mjs passes stands): the tether snaps and goes
-export const LINK_ICON = { lock: 'lock', ward: 'shield', twin: 'mirror', rearm: 'repair', cool: 'scheduler', command: 'router', redeploy: 'upload', fallback: 'relay' };
+export const LINK_ICON = { lock: 'lock', ward: 'shield', twin: 'mirror', rearm: 'repair', cool: 'scheduler', command: 'router', redeploy: 'upload', fallback: 'relay', buffer: 'shield', front: 'firewall', idle: 'clock' };
 // The lock shield on p now: { cur, max, by } (the Mutex holding it), or null.
 export function lockOf(s, v, p) {
   if (!alive(p) || !(p.lockHp > 0)) return null;
@@ -283,6 +301,9 @@ function linkTip(s, v, l) {
     if (!to.length) return `${p.name} redeploy: the ${c?.name || 'Courier'} comes back ${upTo(l.count ?? 0)}, at ${at} Integrity.\nBreak the ${p.name} before then and it stays down.`;
     return `${p.name} redeploy: break ${names} while the ${p.name} stands and it comes back ${cycles(BODY.redeploy.in)} later at ${at} Integrity, every time.\nBreaking ${names} buys time. Break the ${p.name} and it stays down.`;
   }
+  if (l.kind === 'buffer') { const t = to[0], n = t?.bufHp > 0 && t.bufBy === p.id ? t.bufHp : 0; return n ? `${p.name} shield: ${names} wears a ${n} shield that takes your commands' hits first.\nBurns and helpers go under it. Break the ${p.name} and it shields nothing more.` : `${p.name} shield: ${names} is shielded again ${upTo(l.count ?? 0)}.\nHit it before then, or break the ${p.name}.`; }
+  if (l.kind === 'front') return l.up ? `${p.name} front: your single-target commands at ${names} land on the ${p.name} while it wears ◆.\nStrip its ◆, or use burns, helpers or hits on every part.` : `${p.name} front: stripped. Your hits reach ${names} again until its ◆ patches back.`;
+  if (l.kind === 'idle') return `${p.name}: ${l.count === 0 ? 'every part re-arms at the end of this cycle' : `every part re-arms to full ◆ ${upTo(l.count)}`} unless your command hits ${names}.\nEach hit on ${names} starts the count over.`;
   if (l.kind === 'command') return `${p.name} command: the fragments gnaw ${pct(CONFIG.c2.gnaw)} harder while it stands, and all of them drop when it breaks.\nBreak it once fragments are up.`;
   const r = partRead(s, v, p);
   return `${p.name}: ${r.does}\n${r.answer}`;
@@ -305,6 +326,10 @@ export function partLinks(s, v = s.encounter?.virus, { stands = alive } = {}) {
     }
     if (v.family === 'cryptominer' && p.id === 'cooler') { const t = v.parts.find((x) => x.id === 'rig'); if (alive(t)) add('cool', p, [t], { up: alive(p) }); }
     if (p.command) { const to = v.parts.filter((x) => alive(x) && x.kind === 'fragment'); if (to.length) add('command', p, to, { up: alive(p) }); }
+    // The parts plan: a Buffer's shield on the part below it, a Front End over its partner, an Idle Timer on the signature.
+    if (p.buffer && alive(p)) { const t = belowOf(s, p); if (t) add('buffer', p, [t], { up: t.bufHp > 0 && t.bufBy === p.id, count: t.bufHp > 0 && t.bufBy === p.id ? null : (p.buffer.every - ((cycle - 1) % p.buffer.every)) % p.buffer.every }); }
+    if (p.front && alive(p)) { const t = frontOf(s, p); if (t) add('front', p, [t], { up: p.armor > 0 }); }
+    if (p.idle && alive(p)) { const t = signatureOf(s); if (t) add('idle', p, [t], { up: true, count: Math.max(0, p.idle - (cycle - (v.idleHit || 0))) }); }
     // A Trojan's Loader over its Courier: both up, a tether; the Courier down with its redeploy coming, a stub on the
     // Loader with the countdown (the Mirror's twin reboot, drawn the same way).
     if (v.family === 'trojan' && p.id === 'loader') {

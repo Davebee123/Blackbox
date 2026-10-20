@@ -26,7 +26,7 @@ import { siteTrait, postsOf, listenBoost as postBoost, componentChance, gainComp
 import { consortiumWon } from './consortium.mjs';
 import { rollRogue, rogueKill } from './rogue.mjs';
 import { raidStart, raidLand, raidCycle, raidShield, raidBroke, raidTaken, raidAbsorb, noteDealt, noteHeal, cleanse, attackTarget, sigint, sigintCheck } from './raid.mjs';
-import { tellStart, tellCycle, tellLand, tellBroke, chargeNow, tellIntents, tellSigint, tellSigintCheck, tellOn, tellsOf, overclockMult } from './tells.mjs';
+import { tellStart, tellCycle, tellLand, tellBroke, chargeNow, tellIntents, tellSigint, tellSigintCheck, tellOn, tellsOf, overclockMult, hotCharge } from './tells.mjs';
 import { prepareTicks, onHit as tickHit, BOSS_RULES } from './interrupt.mjs';
 import { TELL, ROOM_FAMILIES } from './data.mjs';
 import { tickRoot, processWon } from './root.mjs';
@@ -46,7 +46,8 @@ import { fxText, fxList } from './content.mjs';
 import { deathRecap } from './recap.mjs';
 import { situationOf } from './situations.mjs';
 import { seeGenes, winGenes, genomeCommand, virusGenes, bylined, logFight, logWin, dexOf } from './genome.mjs';
-import { researchOf, gainResearch, knows as knowsAt, masteryDmg, masteryDrop, TIER } from './research.mjs';
+import { researchOf, gainResearch, knows as knowsAt, masteryDmg, masteryDrop, TIER, researchAt } from './research.mjs';
+import { PARTS, heatOf } from './parts.mjs';
 import { crewOf, factionAuthor, AUTHORS } from './authors.mjs';
 import { fightNet, noteKill, nativeRoll, biasCode, richMult, networkRestore, networkCommand, lairUniques, lairFell, lairBoss, mine, netOf, isNative, named, nameOf, nameNative, openLair } from './network.mjs';
 
@@ -261,7 +262,8 @@ export function timersHidden(s, p = null) {
   const c = s.encounter.cycle;
   // Actuarial Model (Halcyon): nothing hides its timers from you.
   const near = fxHas(s, 'unveil'), soon = (x) => !!near && !!x.attack && x.attack.due - c <= (Number(near.fx.value) || 0); // Sounding Line: its next attack shows once it is close
-  const hides = (x) => alive(x) && !(x.taggedUntil >= c) && !(x.seenUntil >= c) && x.veiled && x.armor > 0 && !zeroDay(s, 'actuarial') && !soon(x); // seenUntil: Side Channel, Unmask
+  const smoke = livingParts(s).some((x) => x.obfuscate); // an Obfuscator: every part stays veiled while it lives, bare or not
+  const hides = (x) => alive(x) && !(x.taggedUntil >= c) && !(x.seenUntil >= c) && (smoke ? !!x.attack || x.veiled : x.veiled && x.armor > 0) && !zeroDay(s, 'actuarial') && !soon(x); // seenUntil: Side Channel, Unmask
   return p ? hides(p) : livingParts(s).some(hides);
 }
 
@@ -1110,6 +1112,21 @@ export function selectEncounter(s, key = 'cryptjack', seed = s.seed, opts = {}) 
     ? `${virus.name} guards ${opts.room}.${signed}`
     : `${virus.name} detected. Level ${virus.level} ${familyInfo(virus.family).name}.${signed}`);
 }
+// The parts plan's mix at a level (developer parts, parts.test.mjs): n wild viruses as a veteran meets them, the kinds
+// among them, the share that bring the signature, the part counts and the doubled basics, and the most common parts.
+export function partsMix(level, n = 300) {
+  const kinds = new Map(), counts = [0, 0, 0];
+  let sig = 0, dup = 0;
+  for (let seed = 1; seed <= n; seed++) {
+    const v = createVirus('random', seed, { threat: SERVER.threat(level) });
+    for (const p of v.parts) { const id = p.copy ? p.id.slice(0, -1) : p.id; kinds.set(id, (kinds.get(id) || 0) + 1); }
+    if (!v.noSignature) sig++;
+    if (v.parts.some((p) => p.copy)) dup++;
+    counts[Math.min(4, v.parts.length) - 2]++;
+  }
+  const top = [...kinds.entries()].sort((a, b) => b[1] - a[1]).map(([id, k]) => `${id} ${Math.round((k / n) * 100)}%`).join(', ');
+  return { n, kinds: kinds.size, sig: sig / n, dup: dup / n, counts, top, list: [...kinds.keys()] };
+}
 // The virus a fight brings (selectEncounter), and what `scan` shows before you start one (run.mjs): the same
 // seed and place always build the same virus, and building it changes nothing.
 export function encounterVirus(s, key, seed, opts = {}) {
@@ -1134,10 +1151,14 @@ export function encounterVirus(s, key, seed, opts = {}) {
   if (opts.elite) { over.elite = true; if (opts.eliteHp) over.eliteHp = opts.eliteHp; }
   if (opts.boss) { over.boss = opts.boss; if (opts.bossHp) over.bossHp = opts.bossHp; }
   if (opts.genes) over.genes = opts.genes; // forced rolled genes (genesim.mjs probes)
+  if (opts.basic) over.basic = opts.basic; // a forced basic (parts.mjs: genesim.mjs probes, the playtest page)
+  if (opts.classic) over.classic = true; // the shape from before the parts roll (a Pulse Node, the signature, one third): balance.mjs's designed fight sets
   if (mode === 'run') over.run = true; // tuned for Signal fights (CONFIG.runHp, runDamage)
   if (opts.tag) over.tag = opts.tag; // a file's four digits: the fight carries its file's tag (WARDED CRYPTJACK-4821)
   const by = placeAuthor(s, mode, opts);
   if (by !== undefined) over.author = by;
+  // One stranger a fight (parts.mjs): a part you've never met (research 0) comes alone. A sim plays a veteran (s.metAll).
+  if (key === 'random' && !s.metAll) over.seen = (spec, family) => researchAt(s, `${family}:${spec.id}`) > 0;
   const virus = (hooks.createVirus || createVirus)(key, seed, over); // hooks.createVirus: golden.test.mjs plays the same fight on the builder from before genes
   if (mode === 'run' && s.run?.hot) { // a hot run (HOT_RUN): tougher fights
     virus.hot = true;
@@ -2352,6 +2373,18 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
       s.degraded = null;
       emit(s, 'info', 'Developer reboot: Integrity and test credits restored.');
     }
+  } else if (/^developer parts( [a-z]+( [\d.]+){1,2}| profile [a-z]+ (steady|ramp|burst) [\d.]+)?$/.test(text)) { // the parts plan's numbers (parts.mjs PARTS): show them and the mix, or set one
+    const [, , k, a, b, c] = text.split(' '), key = Object.keys(PARTS).find((x) => x.toLowerCase() === k);
+    if (k && !key) warn(s, `No parts number ${k}. Try: ${Object.keys(PARTS).filter((x) => x !== 'native' && x !== 'count').join(', ')}.`);
+    else if (key === 'profile') { if (!PARTS.profile[a]) warn(s, `No profile for ${a}. Try: ${Object.keys(PARTS.profile).join(', ')}.`); else { PARTS.profile[a][b] = Number(c); emit(s, 'info', `Developer: the ${a} profile's ${b} is ${c}.`); } } // developer parts profile <family> <steady|ramp|burst> <value>
+    else if (['weight', 'native', 'roles', 'ratchet'].includes(key)) warn(s, `${key} is set by name in parts.mjs.`);
+    else if (key === 'pressure') { if (b == null) warn(s, 'pressure is a range: developer parts pressure <low> <high>.'); else { PARTS.pressure = [Number(a), Number(b)]; emit(s, 'info', `Developer: parts pressure is ${a} to ${b}.`); } }
+    else if (key && Array.isArray(PARTS[key])) { if (b == null) warn(s, `${key} is a table: developer parts ${k} <level> <value>.`); else { const L = Number(a), row = PARTS[key].find(([x]) => x === L); if (row) row[1] = Number(b); else PARTS[key] = [...PARTS[key], [L, Number(b)]].sort((x, y) => x[0] - y[0]); emit(s, 'info', `Developer: parts ${key} from level ${L} is ${b}.`); } }
+    else if (key) { PARTS[key] = key === 'on' ? a !== '0' : Number(a); emit(s, 'info', `Developer: parts ${key} is ${PARTS[key]}.`); }
+    const L = hackerLevel(s), m = partsMix(L);
+    const nums = Object.entries(PARTS).filter(([x]) => x !== 'native').map(([x, v]) => `${x} ${v && typeof v === 'object' && !Array.isArray(v) ? Object.entries(v).map(([g, w]) => `${g}:${w && typeof w === 'object' ? Object.values(w).join('/') : w}`).join(' ') : Array.isArray(v) && !Array.isArray(v[0]) ? v.join(' to ') : Array.isArray(v) ? v.map(([l, y]) => `${l}:${Array.isArray(y) ? y.map((z) => Math.round(z * 100)).join('/') : Math.round(y * 1000) / 1000}`).join(' ') : v}`).join(' · ');
+    emit(s, 'info', `Parts: ${nums}.`);
+    emit(s, 'info', `Mix at level ${L} (${m.n} fights): ${m.kinds} kinds, signature in ${Math.round(m.sig * 100)}%, ${m.counts.map((n, i) => `${i + 2} parts ${Math.round((n / m.n) * 100)}%`).join(', ')}, a doubled basic in ${Math.round(m.dup * 100)}%. ${m.top}.`);
   } else if (/^developer bossrule [abc]$/.test(text)) { // the boss rule for every boss fight (interrupt.mjs, docs/servers.md 3.4)
     s.bossRule = text.split(' ')[2];
     emit(s, 'info', `Boss rule ${s.bossRule}: ${BOSS_RULES[s.bossRule].name}. From your next boss fight.`);
@@ -2617,6 +2650,16 @@ const srcOf = (e, opts) => ({
 export function hit(s, p, base, opts = {}) {
   const e = s.encounter;
   if (!alive(p)) return { dealt: 0, overflow: 0 };
+  // The parts plan's rules on your own command's hit (burns, helpers, area hits and the server's go past them).
+  const cmd = opts.mine && !opts.dot && !opts.by && !opts.server && base > 0;
+  // Front End: while it wears ◆, a single-target command at its partner lands on it.
+  if (cmd && !opts.fronted && e.commanding?.target === p.id && ABILITIES[e.commanding.id]?.target !== 'none' && !buffed(e, 'sudo')) {
+    const fe = livingParts(s).find((x) => x.front && x !== p && x.armor > 0 && frontOf(s, x) === p);
+    if (fe) { emit(s, 'status', `The ${fe.name} takes your hit on the ${p.name}.`, { target: fe.id, from: p.id, fronted: true }); return hit(s, fe, base, { ...opts, fronted: true }); }
+  }
+  if (cmd && p.special) e.virus.idleHit = e.cycle; // the Idle Timer counts from the signature's last command hit
+  // Hotspot: a command hit on it powers up the virus's next attack 2 or more cycles away (tells.mjs).
+  if (cmd && p.hotspot && p.hotAt !== e.cycle) { p.hotAt = e.cycle; hotCharge(s, p); }
   // Adaptive (mutation): count the cycles in a row your commands hit this part (the chit comes at cycle end).
   if (mutated(s, 'adaptive') && opts.mine && !opts.dot && !opts.server && base > 0 && p.adaptAt !== e.cycle) {
     p.adaptRun = p.adaptAt === e.cycle - 1 ? (p.adaptRun || 0) + 1 : 1;
@@ -2740,6 +2783,13 @@ export function hit(s, p, base, opts = {}) {
     notes.push(`lock: ${soak} held`);
     if (!p.lockHp) { p.lockAt = e.cycle + CONFIG.mutex.every; unlocked = true; }
   }
+  // Buffer: its shield on the part below it takes your command hits first (burns and helpers go under it).
+  if (dealt > 0 && !root && p.bufHp > 0 && opts.mine && !opts.dot && !opts.by && !opts.server && bufferOn(s, p)) {
+    const soak = Math.min(p.bufHp, dealt);
+    lockWas = p.bufHp; lockLost = soak;
+    p.bufHp -= soak; dealt -= soak; soaked = soak;
+    notes.push(`buffer: ${soak} held`);
+  }
   // A crew boss (raid.mjs): a firewall phase's shield takes the hit first, a priority add's ward cuts it.
   if (dealt > 0 && e.virus.raid) { const was = dealt; dealt = raidShield(s, p, dealt); if (dealt < was && !dealt) notes.push('shielded'); }
   if (crit) notes.push(doubled ? 'CRIT, doubled' : 'CRIT');
@@ -2860,6 +2910,13 @@ function doppelganger(s) {
   m.armor = m.maxArmor = Math.max(m.armor, shape.maxArmor); m.patchAt = null;
   return `${v.name}'s Mimic stops recording and takes the shape of the ${shape.name}${first ? ', the first part you broke' : ''}: its ${shape.attack.name} and ${m.armor} ◆.`;
 }
+// The parts plan's tethers: the part a Buffer shields (the next living part below it, else the one above), the part
+// a Front End stands in front of (the signature, else the basic, else the next part), the signature an Idle Timer watches.
+const sysParts = (s) => livingParts(s).filter((x) => x.kind === 'system');
+export function belowOf(s, p) { const xs = sysParts(s).filter((x) => x !== p), all = parts(s); return xs.find((x) => all.indexOf(x) > all.indexOf(p)) || xs.at(-1) || null; }
+export const bufferOn = (s, p) => livingParts(s).find((x) => x.buffer && belowOf(s, x) === p) || null;
+export function frontOf(s, fe) { const xs = sysParts(s).filter((x) => x !== fe && !x.front); return xs.find((x) => x.special) || xs.find((x) => x.basic) || xs[0] || null; }
+export const signatureOf = (s) => livingParts(s).find((x) => x.special && x.kind === 'system') || null;
 // A part that wards another (a Lockbox, HASHLORD's Pool Lock, which wards a forked Miner too).
 export const wards = (x, p) => !!p && (x.ward === p.id || !!x.wardsToo?.includes(p.id));
 // The Decoy whose beat is this cycle (it mirrors your commands), and a part's twin (Mirror).
@@ -2931,6 +2988,8 @@ function breakPart(s, p) {
     if (next) { e.virus.weakPoint = next.id; e.virus.weakKnown = false; }
     if (wasKnown && next && usable(s).includes('scan')) emit(s, 'info', 'A new weak point formed. Scan to find it.');
   }
+  // Zip Bomb: its fuse burns, then it hits you (cycleStart), unless the fight ends first.
+  if (p.fuse && !p.fuseAt) { p.fuseAt = e.cycle + CONFIG.zipbomb.fuse; emit(s, 'warning', `The ${p.name}'s fuse is lit. It goes off in ${CONFIG.zipbomb.fuse} cycles unless the fight ends first.`, { target: p.id, fuse: p.fuseAt }); }
   if (p.loot) e.lastLoot = p.loot; // the part you broke last (a Harvester's and an elite's one more: floorplan.mjs)
   // Its component: 60% in a room fight, an elite's always, 35% elsewhere (sockets.mjs); a network rich in components
   // (network.mjs) and a part you've mastered (research.mjs, 25% more) on top.
@@ -3127,6 +3186,7 @@ function useAbility(s, intent, auto = false) {
     emit(s, 'status', was ? `${a.name} refreshed on the ${target.name}: ${b.damage} every cycle for ${b.left} cycles.` : `${target.name} is burning for ${tick}${a.grow ? ', growing,' : ''} every cycle${ticks > 20 ? ' until it breaks' : ` for ${ticks} cycles`}.`, { target: target.id, mark: 'burn', ability: id });
     if (id === 'inject' && e.surprise) for (let k = 0; k < CONFIG.surprise.injectNow && alive(target); k++) hit(s, target, b.damage, { by: 'Inject (Surprise)', dot: true, synced: b.synced });
   }
+  if (id === 'purge') coolRatchet(s);
   if (id === 'purge' && (e.encrypt || e.burst || e.corrupt)) { const what = e.corrupt && !(e.encrypt || e.burst) ? 'corruption' : 'encryption'; e.encrypt = 0; e.burst = null; e.corrupt = null; emit(s, 'decrypted', `Purge clears your ${what}.`); }
   if (id === 'purge' && e.virus.raid) cleanse(s, ['dots', 'stress']); // a crew boss's damage over time and Thermal Stress
   if (id === 'sigint') { if (e.virus.raid) sigint(s); else tellSigint(s); } // a crew boss's cast, or a solo one (tells.mjs)
@@ -3290,6 +3350,7 @@ function rollback(s) {
   e.undo = null;
   if (u?.type === 'damage') heal(s, u.amount, 'Rolled back');
   if (u?.type === 'replicate') { const f = part(s, u.part); if (alive(f)) { f.integrity = 0; emit(s, 'heal', `Rolled back. ${f.name} is deleted.`, { target: f.id }); } }
+  coolRatchet(s);
   if (e.encrypt || e.burst || e.corrupt) { e.encrypt = 0; e.burst = null; e.corrupt = null; emit(s, 'decrypted', 'Rolled back. Your encryption is wiped.'); }
 }
 
@@ -3299,6 +3360,11 @@ export const blocked = (s, amount) => (blockOf(s) ? Math.max(Math.ceil(amount / 
 
 // Special attacks: the ones Lockdown shuts off.
 const SPECIALS = ['encrypt', 'scramble', 'replicate'];
+// Purge or Rollback: a Ratchet's stack starts over, its next step a full step away (as an Encryptor's next Encrypt).
+function coolRatchet(s) {
+  const e = s.encounter;
+  for (const p of livingParts(s)) if (heatOf(p, e.cycle + 1)) { p.ratchet.from = e.cycle + p.ratchet.every - 1; emit(s, 'decrypted', `${p.name}'s ${p.ratchet.name} starts over.`, { target: p.id }); }
+}
 
 // Damage from an attack or from encryption: your shield soaks it first.
 // dot: damage over time on you (encryption, a Full Disk burst, Corrupted, an Echo's repeat).
@@ -3378,11 +3444,35 @@ function slipLonger(s) {
 // What an attack hits for right now: Floodgate's ramp and Bricker's rage included.
 export function attackAmount(p) {
   const a = p.attack;
-  let n = a.amount + (a.ramp ? (a.step || 0) * (a.rampBy || 1) : 0) + (a.bonus || 0);
+  let n = a.amount + (a.ramp ? (a.step || 0) * (a.rampBy || 1) : 0) + (a.bonus || 0) + (a.lift || 0); // lift: a Cipher Block's or a Fan-in's (liftOf)
   if (p.enrage && p.integrity < p.max / 2) n *= CONFIG.enrage;
   return Math.round(n);
 }
 
+// A Cipher Block hits harder for each Encrypt on you, a Fan-in for each fragment on the board: its attack's lift now.
+export function liftOf(s) {
+  const e = s.encounter;
+  if (!e?.virus) return;
+  const enc = livingParts(s).find((x) => x.attack?.effect === 'encrypt'), stacks = (e.encrypt > 0 ? Math.max(1, Math.round(e.encrypt / Math.max(1, enc?.attack.amount || e.encrypt))) : 0)
+    + livingParts(s).reduce((n, x) => n + (x.ratchet ? Math.round(heatOf(x, e.cycle) / x.ratchet.amount) : 0), 0); // a Ratchet's steps count as Encrypts (parts.mjs)
+  const frags = livingParts(s).filter((x) => x.kind === 'fragment').length;
+  for (const p of livingParts(s)) if (p.attack && (p.cipher || p.fanin)) p.attack.lift = Math.round(p.attack.amount * ((p.cipher || 0) * stacks + (p.fanin || 0) * frags));
+}
+// The cycles a part's attack lands on, from now until `until` (exclusive): its timer, then its interval; a volley
+// (taps: a Repeater, a Prism) on back to back cycles, its next volley an interval after the first.
+export function landingsOf(p, until) {
+  const a = p.attack, out = [];
+  if (!a || a.due >= 900) return out;
+  if (!p.taps) { for (let c = a.due; c < until; c += Math.max(1, a.interval)) out.push(c); return out; }
+  let start = a.tap ? a.volley : a.due, k = a.tap || 0, c = a.due;
+  while (c < until && out.length < 40) {
+    out.push(c);
+    k++;
+    if (k < p.taps) c++;
+    else { start = start + Math.max(1, a.interval); c = Math.max(start, c + 1); k = 0; }
+  }
+  return out;
+}
 // C2 Node: while it lives, fragments gnaw harder (CONFIG.c2).
 export const c2Gnaw = (s, p) => (p.kind === 'fragment' && livingParts(s).some((x) => x.command) ? 1 + CONFIG.c2.gnaw : 1);
 // A player drawing fire this cycle (Bastion Firewall in a crew): the one every attack goes at.
@@ -3410,6 +3500,7 @@ const buffStat = (s, stat) => (!s.encounter?.fxs?.buff ? 0 : uniqueFx(s).reduce(
 function landAttack(s, p) {
   const e = s.encounter;
   const atk = p.attack;
+  liftOf(s);
   const power = attackAmount(p) * c2Gnaw(s, p) * (e.soft || 1) * gapTaken(levelGap(s)) * (p.boosted ? CONFIG.reactiveBonus : 1) * (on(s, p, 'throttled') ? (hasTalent(s, 'backpressure') ? 0.25 : SKILLS.throttled) : 1);
   // A hit: a damage attack, or a special that also hits (the Scrambler's Scramble). Its size is `hit`, scaled like the rest.
   const hits = atk.effect === 'damage' || !!atk.hit, hitPower = atk.hit ? (power * atk.hit) / Math.max(1, atk.amount) : power;
@@ -3435,6 +3526,12 @@ function landAttack(s, p) {
   p.lastLanded = e.cycle;
   atk.due = e.cycle + atk.interval; // it lands: the next attack can be delayed again
   atk.n = (atk.n || 0) + 1; // its landings: a charge rides one of them (tells.mjs)
+  // A volley (a Repeater's Double Tap, a Prism's Spread): its next hit the next cycle, then an interval after the first.
+  if (p.taps) {
+    if (!atk.tap) atk.volley = e.cycle;
+    atk.tap = (atk.tap || 0) + 1;
+    if (atk.tap < p.taps) atk.due = e.cycle + 1; else { atk.due = Math.max(e.cycle + 1, atk.volley + atk.interval); atk.tap = 0; atk.volley = null; }
+  }
   if (atk.ramp) atk.step = (atk.step || 0) + 1; // Floodgate: one harder each time
   if (atk.dump) e.keylog = 0; // Keylogger: the log empties into the Dump
   // Null Route: this cycle's attacks miss (and Opening lights up).
@@ -3505,6 +3602,11 @@ function landAttack(s, p) {
       }
     }
     if (dealt && zeroDay(s, 'subrogation')) e.subro = p.id;
+    // Backlog: the skill you fired this cycle cools down longer (one with no cooldown loses nothing).
+    if (p.backlog) {
+      const id = e.lastCmd?.cycle === e.cycle ? e.lastCmd.id : null;
+      if (id && ABILITIES[id] && e.readyAt[id] > e.cycle) { e.readyAt[id] += p.backlog; (e.backlogged ||= {})[id] = e.readyAt[id]; emit(s, 'locked', `${atk.name} lands on your queue. ${ABILITIES[id].name} cools ${p.backlog} cycles longer.`, { source: p.id, ability: id, cycles: p.backlog, backlog: true }); }
+    }
     const verb = crit ? 'CRITS' : 'hits';
     if (dealt) emit(s, 'server-hit', e.mode === 'run' ? `${atk.name} ${verb} your Signal: −${dealt}.` : `${atk.name} ${verb} the server: −${dealt} Integrity.`, { source: p.id, amount: dealt, crit, atk: atk.name, ...(atk.tell ? { tell: atk.tell } : {}) });
     // Countermeasures (server gear): whatever hits your server takes a hit back.
@@ -3517,6 +3619,12 @@ function landAttack(s, p) {
     e.encrypt = (e.encrypt || 0) + add;
     p.encrypted = true;
     emit(s, 'encrypt', `${atk.name} lands, and your ${e.mode === 'run' ? 'Signal' : 'server'} is encrypted. You take ${e.encrypt} damage every cycle until you break the ${p.name}.`, { source: p.id, amount: add, total: e.encrypt });
+  }
+  // A basic carrying its Ghostroot's burst (parts.mjs PARTS.profile): its hit Scrambles you too, on the Scrambler's clock.
+  if (atk.scrambles && atk.effect === 'damage' && !(e.scrambleUntil > e.cycle) && e.cycle - (atk.scrambledAt ?? -99) >= (atk.scrambleEvery || 1)) {
+    atk.scrambledAt = e.cycle;
+    if (e.buffs?.honeypot >= e.cycle) { delete e.buffs.honeypot; emit(s, 'blocked', `${atk.name} goes after your honeypot. You aren't Scrambled.`, { source: p.id, ability: 'honeypot' }); }
+    else { const n = Math.max(1, Math.round(atk.scrambles) - (fxHas(s, 'blind-short') ? 1 : 0)); e.scrambleUntil = e.cycle + n; emit(s, 'blind', `${atk.name} Scrambles you for ${n} ${n === 1 ? 'cycle' : 'cycles'}. Each of your attacks has a ${Math.round(CONFIG.scramble.chance * 100)}% chance to hit you instead.`, { source: p.id }); }
   }
   if (atk.effect === 'scramble' && e.buffs?.honeypot >= e.cycle) {
     delete e.buffs.honeypot; // Honeypot (Warden): the scramble goes after the honeypot
@@ -3763,6 +3871,17 @@ function cycleStart(s) {
     }
   }
 
+  // A Ratchet (parts.mjs PARTS.profile: a rolled fight's ramp with no Encryptor to carry it): the basic's own stack,
+  // a step more every few cycles it lives, gone when it breaks.
+  for (const p of livingParts(s)) {
+    const heat = heatOf(p, e.cycle);
+    if (!heat) continue;
+    const dealt = takeDamage(s, heat, p.id, p.ratchet.name, { dot: true });
+    e.metrics.encrypted += dealt;
+    if (dealt) emit(s, 'encrypted', `${p.ratchet.name} (${p.name}): −${dealt}. ${e.mode === 'run' ? 'Signal' : 'Server'} ${defender(s).integrity}/${defender(s).max}.`, { source: p.id, amount: dealt, ratchet: true });
+    if (defender(s).integrity <= 0) { finish(s, 'crashed'); return true; }
+  }
+
   // Full Disk (a tell, tells.mjs): a burst of encryption on top of the stack, for a few cycles.
   if (e.burst?.left > 0) {
     const burst = e.burst, dealt = takeDamage(s, burst.amount, burst.source, burst.name, { dot: true }); // (what reacts to the hit can clear it: a breach's Reflective ACL breaking the Encryptor)
@@ -3793,6 +3912,18 @@ function cycleStart(s) {
       }
       emit(s, 'status', `${e.virus.name} WAKES.`, {});
     }
+  }
+
+  // A Zip Bomb's fuse runs out: 20% of your max, unless a ◆ or a shield takes it (Block doesn't).
+  for (const z of parts(s).filter((x) => x.fuseAt && x.fuseAt <= e.cycle && !x.fused)) {
+    z.fused = true;
+    const n = Math.max(1, Math.round(defender(s).max * CONFIG.zipbomb.share));
+    if (e.chits > 0) { e.chits--; emit(s, 'blocked', `The ${z.name} goes off on your ◆ and does nothing${e.chits ? ` (${e.chits} left)` : ''}.`, { source: z.id, fuse: true }); continue; }
+    const soak = Math.min(e.shield || 0, n);
+    if (soak) e.shield -= soak;
+    const dealt = n - soak > 0 ? takeDamage(s, n - soak, z.id, `${z.name} fuse`) : 0;
+    emit(s, 'server-hit', `The ${z.name} goes off: −${dealt}${soak ? ` (${soak} on your shield)` : ''}.`, { source: z.id, amount: dealt, atk: 'Fuse', fuse: true });
+    if (defender(s).integrity <= 0) { finish(s, 'crashed'); return true; }
   }
 
   // Echoes of last cycle's hits (Echo strain): they land first, and die with the Echo.
@@ -3908,6 +4039,25 @@ function cycleClose(s, landed) {
     if (!re.length) continue;
     k.rearms = (k.rearms || 0) + 1;
     emit(s, 'patch', `${k.name} re-arms ${re.map((x) => x.name).join(' and ')} to full armor.${k.rearms >= CONFIG.rearmMax ? ` The ${k.name} overheats and cannot re-arm again.` : ''}`, { target: re[0].id });
+  }
+  // Buffer: on its beat it shields the part below it (a fresh shield, not a bigger one).
+  for (const b of livingParts(s).filter((x) => x.buffer && (e.cycle - 1) % x.buffer.every === 0)) {
+    const t = belowOf(s, b);
+    if (!t) continue;
+    const n = Math.max(1, Math.round(b.max * b.buffer.share));
+    for (const x of parts(s)) if (x !== t && x.bufBy === b.id) x.bufHp = 0;
+    t.bufHp = n; t.bufMax = n; t.bufBy = b.id;
+    emit(s, 'patch', `The ${b.name} shields the ${t.name}: ${n}. Your commands hit the shield first.`, { target: t.id, from: b.id, buffer: true });
+  }
+  // Idle Timer: the signature untouched by your commands for its count, every part re-arms to full ◆.
+  for (const it of livingParts(s).filter((x) => x.idle)) {
+    const sig = signatureOf(s);
+    if (!sig) continue;
+    if (e.cycle - (e.virus.idleHit || 0) < it.idle) continue;
+    e.virus.idleHit = e.cycle;
+    const re = livingParts(s).filter((x) => x.maxArmor > x.armor);
+    for (const x of re) { x.armor = x.maxArmor; x.patchAt = null; }
+    emit(s, 'patch', re.length ? `IDLE. The ${it.name} re-arms ${re.map((x) => x.name).join(' and ')} to full ◆.` : `IDLE. The ${it.name} times out, but every part still wears its ◆.`, { target: (re[0] || it).id, idle: true });
   }
   // Mutex: a broken lock comes back while the Mutex lives.
   for (const p of livingParts(s).filter((x) => x.lockAt != null && e.cycle >= x.lockAt)) {
@@ -4058,22 +4208,26 @@ export function intents(s, columns = 4) {
   // Tells (tells.mjs): each on its part's row, never hidden. A charge takes the place of its part's attack in its column.
   const told = tellIntents(s, columns);
   const charged = new Set(told.filter((t) => t.tell === 'charge').map((t) => `${t.source}@${t.col}`));
+  liftOf(s);
   for (const p of attackers(s)) {
     const hidden = timersHidden(s, p);
-    let due = p.attack.due;
     let boosted = p.boosted;
-    // Ramps (Floodgate, Overrun) and growth (Tracer) show up column by column.
+    // Ramps (Floodgate, Overrun) and growth (Tracer) show up column by column; a volley's hits on back to back cycles.
     const a = p.attack, step0 = a.step, bonus0 = a.bonus;
-    while (due - e.cycle < columns) {
+    const at = landingsOf(p, e.cycle + columns);
+    at.forEach((due, k) => {
       const col = due - e.cycle;
       if (a.grow) a.bonus = (bonus0 || 0) + a.grow * Math.max(0, col);
-      if (col >= 0 && !charged.has(`${p.id}@${col}`)) out.push({ source: p.id, name: a.name, effect: a.effect, amount: Math.round(attackAmount(p) * c2Gnaw(s, p) * (boosted ? CONFIG.reactiveBonus : 1)), ...(a.hit ? { hit: Math.round(a.hit * (boosted ? CONFIG.reactiveBonus : 1)) } : {}), col, hidden, kind: p.kind, ...(due === a.due && delayHeld(p) ? { held: true } : {}) }); // held: already delayed, it lands there
+      const tap = p.taps ? { tap: ((a.tap || 0) + k) % p.taps + 1, taps: p.taps } : {}; // which hit of its volley
+      if (col >= 0 && !charged.has(`${p.id}@${col}`)) out.push({ source: p.id, name: a.name, effect: a.effect, amount: Math.round(attackAmount(p) * c2Gnaw(s, p) * (boosted ? CONFIG.reactiveBonus : 1)), ...(a.hit ? { hit: Math.round(a.hit * (boosted ? CONFIG.reactiveBonus : 1)) } : {}), col, hidden, kind: p.kind, ...tap, ...(p.backlog ? { syn: true } : {}), ...(due === a.due && delayHeld(p) ? { held: true } : {}) }); // held: already delayed, it lands there
       if (a.ramp) a.step = (a.step || 0) + 1;
       boosted = false;
-      due += a.interval;
-    }
+    });
     a.step = step0; a.bonus = bonus0;
   }
+  // A Zip Bomb's fuse (it stays on the board, broken, until it goes off) and a Buffer's next shield.
+  for (const z of parts(s).filter((x) => x.fuseAt && !x.fused && x.fuseAt - e.cycle >= 0 && x.fuseAt - e.cycle < columns)) out.push({ source: z.id, name: 'Fuse', effect: 'fuse', amount: Math.max(1, Math.round(defender(s).max * CONFIG.zipbomb.share)), col: z.fuseAt - e.cycle, hidden: false, kind: z.kind });
+  for (const b of livingParts(s).filter((x) => x.buffer)) for (let col = 0; col < columns; col++) if ((e.cycle + col - 1) % b.buffer.every === 0) { const t = belowOf(s, b); if (t) out.push({ source: b.id, name: 'Shield', effect: 'buffer', amount: Math.max(1, Math.round(b.max * b.buffer.share)), col, hidden: false, kind: b.kind, to: t.id }); }
   const echo = livingParts(s).find((x) => x.echo);
   if (echo) for (const x of e.echoes || []) if (x.due - e.cycle >= 0 && x.due - e.cycle < columns) out.push({ source: echo.id, name: x.name + ' echo', effect: 'damage', amount: x.amount, col: x.due - e.cycle, hidden: false, kind: echo.kind });
   // The Decoy's beat (your commands mirrored), and a broken twin's reboot: chips on the board like attacks.

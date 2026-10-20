@@ -140,7 +140,8 @@ test('scan: the genome card before you engage costs 1 Signal (and Trace on a bre
   assert.ok(deep.card.deep && deep.card.genes.every((c) => c.rule), 'every rule');
   play(i, 'attack');
   const n = i.logs.length, cycle = i.encounter.cycle;
-  command(i, 'inspect pulse');
+  const plain = i.encounter.virus.parts.find((p) => p.attack?.effect === 'damage' && (p.basic || p.id === 'pulse')); // its basic (the parts roll picks it: dist/parts.mjs)
+  command(i, 'inspect ' + plain.id);
   assert.equal(i.encounter.cycle, cycle, 'inspect takes no cycle');
   assert.match(i.logs.slice(n).map((e) => e.message).join(' '), /Surge is an attack type that presses on Burst\. Deals a plain heavy hit/);
 });

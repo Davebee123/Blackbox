@@ -9,6 +9,10 @@ import { hooks } from './dist/combat.mjs';
 import { createVirus as legacy } from './golden-virus.mjs';
 import { fight, BRACKETS, strainsAt } from './balance.mjs';
 import { bossFight } from './genesim.mjs';
+import { PARTS } from './dist/parts.mjs';
+// The builder from before genes knows nothing of the parts plan (parts.mjs): its wild viruses are a basic, the
+// signature and one third. This file compares that builder, so it plays with the parts roll off.
+PARTS.on = false;
 
 // What the genome adds to a virus: its genes, its author, and a name read off them (phase 1).
 const ADDED = ['genes', 'author', 'name'];

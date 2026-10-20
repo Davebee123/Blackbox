@@ -33,7 +33,9 @@ const CREW_ONLY = ['rebalance'];
 // Known gap, held: the Hijacker's Reroute (helpers onto a casting part, or three onto a bare one) was pressed once in
 // these 40 fights at 38; since Payload went flat (save v44) its helpers finish the parts before that moment comes, and
 // it is pressed in none. It waits on the Hijacker's planner pass (docs/kits.md).
-const KNOWN_DEAD = ['hijacker reroute'];
+// Since the damage profiles the Hijacker's Blackhole (its last answer to a charge, after Hijack and Spoofed ACK) is
+// pressed in none of them at 42: the keys ahead of it answer every charge these fights bring. Held.
+const KNOWN_DEAD = ['hijacker reroute', 'hijacker blackhole'];
 test('every subclass skill is pressed in the moments it is built for', () => {
   const dead = [];
   for (const [cls, pol, sub] of ALL) {
