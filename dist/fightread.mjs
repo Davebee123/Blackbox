@@ -149,7 +149,7 @@ function attackRead(s, v, p) {
   if (a.grow) return [`Hits you for ${n}${each}, more every cycle the fight lasts.`, 'Break it early.'];
   if (p.taps) return [`Hits you ${times(p.taps)} for ${n} on back to back cycles${each}, as one move: a cut stops the rest, a delay moves them all.`, 'Cut it on its first hit, or soften every hit with Block and ◆.'];
   if (p.accum) return [`Charges one big Discharge: it hits you for ${n}${each}. It never carries a charge.`, 'Break it before its bar fills, or have ◆ or a shield up when it lands.'];
-  if (p.cipher) return [`Hits you for ${n}${each}, ${pct(p.cipher)} harder for each Encrypt on you.`, 'Break the Encryptor, or Purge the encryption, and it shrinks.'];
+  if (p.cipher) return [`Hits you for ${n}${each}, ${pct(p.cipher)} harder for each Encrypt (or Ratchet step) on you.`, 'Break the Encryptor, or Purge the encryption, and it shrinks.'];
   if (p.fanin) return [`Hits you for ${n}${each}, ${pct(p.fanin)} harder for each fragment on the board.`, 'Clear the fragments, or break the Replicator.'];
   if (a.interval === 1) return [`Hits you for ${n} every cycle, so your Block counts on every hit.`, 'Break it: it wears no ◆.'];
   if (a.siphon) return [`Hits you for ${n}${each}, and heals the most damaged part for what it deals.`, 'Break it, or shrink its hit with a shield or Throttle.'];

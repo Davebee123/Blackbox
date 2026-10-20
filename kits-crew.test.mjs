@@ -24,8 +24,6 @@ test('crew-leaning damage dealers carry a crew: over Lv 18 and 30, more boss tri
     // folders are rooms) it measures 69%: held at 65%.
     if (c === 'hijacker') { assert.ok(r[c].won >= 0.65 && r[c].won >= r.overclocker.won, line); continue; }
     assert.ok(r[c].won >= 0.9, line);
-    // Since the damage profiles (docs/parts-plan.md: the farm's wild packs are rolled fights) the Herder's low point sits
-    // a point under the Phantom's on these seeds (26% against 27%, winning 95% of tries against 85%): held within 2.
-    for (const s of solo) assert.ok(r[c].won >= r[s].won && r[c].low > r[s].low - (c === 'herder' ? 2 : 0), `${c} vs ${s}: ${line}`);
+    for (const s of solo) assert.ok(r[c].won >= r[s].won && r[c].low > r[s].low, `${c} vs ${s}: ${line}`);
   }
 });

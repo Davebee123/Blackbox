@@ -365,26 +365,39 @@ test('damage profiles: every Ransomware fight carries its ramp (the Encryptor, o
   }
   for (const [f, prof] of Object.entries(PARTS.profile)) assert.ok(FAMILIES[f] && prof.steady > 0, f);
 });
-test('damage profiles: a fight without its signature deals what one with it does, within 15% over 20 cycles (nominal, the Ratchet counted), and wears its family\'s ◆', () => {
-  // nominal's count at the fight's level: a fragment's gnaw and a Scramble's cycles scale with the virus's damage too.
-  const at = (v, p) => {
-    const a = p.attack;
-    if (!a) return 0;
-    if (a.effect === 'replicate' || a.effect === 'scramble') return nominal({ attack: { ...a, effect: 'damage', amount: (a.hit || 0) + (a.effect === 'replicate' ? CONFIG.fragmentDamage * 4 : a.amount * 3) * v.power } });
-    return nominal(p) + (a.scrambles ? a.scrambles * 3 * v.power * Math.ceil((21 - (a.first ?? a.due)) / Math.max(a.interval, a.scrambleEvery)) : 0);
-  };
-  const total = (v) => v.parts.reduce((n, p) => { let r = 0; for (let c = 1; c <= 20; c++) r += heatOf(p, c); return n + at(v, p) + r; }, 0);
+// nominal's count over a typical fight (PARTS.horizon) at the fight's level: a fragment's gnaw and a Scramble's cycles
+// scale with the virus's damage too, and a Ratchet's stack counts every cycle it deals.
+const fightTotal = (v, T) => v.parts.reduce((n, p) => {
+  const a = p.attack;
+  let r = 0;
+  for (let c = 1; c <= T; c++) r += heatOf(p, c);
+  if (!a) return n + r;
+  if (a.effect === 'replicate' || a.effect === 'scramble') return n + r + nominal({ attack: { ...a, effect: 'damage', amount: (a.hit || 0) + (a.effect === 'replicate' ? CONFIG.fragmentDamage * 4 : a.amount * 3) * v.power } }, T);
+  return n + r + nominal(p, T) + (a.scrambles ? a.scrambles * 3 * v.power * Math.ceil((T + 1 - (a.first ?? a.due)) / Math.max(a.interval, a.scrambleEvery)) : 0);
+}, 0);
+const avg = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;
+test('damage profiles: a fight without its signature deals what one with it does over a typical fight, within 15% (nominal, the Ratchet counted), and wears its family\'s ◆ (where PARTS.armor holds it to all of them)', () => {
   for (const L of [10, 30]) for (const f of Object.keys(FAMILIES)) {
-    const by = { sig: [], none: [] }, armor = { sig: [], none: [] };
+    const T = along(PARTS.horizon, L), by = { sig: [], none: [] }, armor = { sig: [], none: [] };
     for (let seed = 1; seed <= 300; seed++) {
       const v = createVirus('random', seed, { family: f, threat: SERVER.threat(L), run: true, mutation: null });
       const k = v.noSignature ? 'none' : 'sig';
-      by[k].push(total(v)); armor[k].push(v.parts.reduce((n, p) => n + p.armor, 0));
+      by[k].push(fightTotal(v, T)); armor[k].push(v.parts.reduce((n, p) => n + p.armor, 0));
     }
-    const avg = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;
     assert.ok(Math.abs(avg(by.none) / avg(by.sig) - 1) <= 0.15, `${f} at ${L}: ${avg(by.none).toFixed(0)} without, ${avg(by.sig).toFixed(0)} with`);
     if (along(PARTS.armor, L) === 1) assert.ok(avg(armor.none) >= avg(armor.sig) - 1, `${f} at ${L}: ◆ ${avg(armor.none).toFixed(1)} without, ${avg(armor.sig).toFixed(1)} with`);
   }
+});
+test('damage profiles: every family deals the same over a typical fight at its level (within 5%), only the shape differs', () => {
+  // Each family's own fight (the Pulse Node and the signature, no third), over PARTS.horizon at the level.
+  for (const L of [5, 10, 30, 50]) {
+    const T = along(PARTS.horizon, L);
+    const by = Object.fromEntries(Object.keys(FAMILIES).map((f) => { const v = createVirus('random', 7, { family: f, threat: SERVER.threat(L), mutation: null, basic: 'pulse' }); /* at home: a run's early steps leave encryption out */ return [f, fightTotal(v, T) / v.power]; }));
+    const xs = Object.values(by);
+    assert.ok(Math.max(...xs) / Math.min(...xs) <= 1.05, `level ${L} over ${T} cycles: ${Object.entries(by).map(([f, x]) => `${f} ${x.toFixed(0)}`).join(' / ')}`);
+  }
+  const sum = (f) => Object.values(PARTS.profile[f]).reduce((a, b) => a + b, 0);
+  for (const f of Object.keys(PARTS.profile)) assert.ok(Math.abs(sum(f) - 1) < 0.02, `${f}'s shares add up to 1`);
 });
 test('the Ratchet: the basic\'s own stack, a step on the Encryptor\'s clock while it lives; Purge starts it over, breaking it ends it; the board shows it', () => {
   const s = unsigned('ransomware', 10), p = s.encounter.virus.parts.find((x) => x.ratchet);

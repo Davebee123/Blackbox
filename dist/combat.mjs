@@ -3453,7 +3453,8 @@ export function attackAmount(p) {
 export function liftOf(s) {
   const e = s.encounter;
   if (!e?.virus) return;
-  const enc = livingParts(s).find((x) => x.attack?.effect === 'encrypt'), stacks = e.encrypt > 0 ? Math.max(1, Math.round(e.encrypt / Math.max(1, enc?.attack.amount || e.encrypt))) : 0;
+  const enc = livingParts(s).find((x) => x.attack?.effect === 'encrypt'), stacks = (e.encrypt > 0 ? Math.max(1, Math.round(e.encrypt / Math.max(1, enc?.attack.amount || e.encrypt))) : 0)
+    + livingParts(s).reduce((n, x) => n + (x.ratchet ? Math.round(heatOf(x, e.cycle) / x.ratchet.amount) : 0), 0); // a Ratchet's steps count as Encrypts (parts.mjs)
   const frags = livingParts(s).filter((x) => x.kind === 'fragment').length;
   for (const p of livingParts(s)) if (p.attack && (p.cipher || p.fanin)) p.attack.lift = Math.round(p.attack.amount * ((p.cipher || 0) * stacks + (p.fanin || 0) * frags));
 }

@@ -29,16 +29,20 @@ export const PARTS = {
   weight: { mimic: 3 }, // a third part's weight in the roll, by gene (1 when it isn't named). The Mimic at 3: in about half the Ghostroot fights, as before P1, since going quiet on its beat is where reading tells pays most
   carve: 1, // the share of the thirds' Integrity that comes out of the basic's and the signature's (0: thirds come on top)
   thirdMax: 1.15, // a third part's Integrity never grows past this share of its own (the basic and the signature take the rest)
-  // Damage profiles (docs/parts-plan.md "Damage profiles"): what a family's fight deals over its first 20 cycles at
-  // its level (data.mjs nominal, before the level's damage scale), split into three shapes. The pre-P1 fight (the
-  // Pulse Node and the signature) is each one's reference.
+  // Damage profiles (docs/parts-plan.md "Damage profiles"): every family deals the same over a typical fight at its
+  // level, and only the shape differs. The budget is the average of the three families' pre-P1 fights (the Pulse Node
+  // and the signature) over PARTS.horizon cycles, in data.mjs nominal's units before the level's damage scale
+  // (data.mjs profileBudget), times PARTS.budget; each family splits it into three shapes, its pre-P1 fight's split over
+  // a typical fight (10 cycles):
   //   steady  regular hits (the Pulse Node, the basics, the thirds' small hits, the Replicator's fragments)
-  //   ramp    damage that grows the longer the fight runs (the Encryptor's stacks)
+  //   ramp    damage that grows the longer the fight runs (the Encryptor's stacks): it starts lower and climbs
   //   burst   big hits a cut can stop, and what comes with them (the Scrambler's hit and its Scramble)
   // A rolled fight's parts share their family's profile out by role (PARTS.roles). A role with no part to carry it
   // moves onto the basic: the ramp as a Ratchet (its own stack, one step more every few cycles the basic lives, gone
   // when it breaks), the burst as the basic's hits taking the Scrambler's (its hit and, on the Scrambler's clock, its Scramble).
-  profile: { ransomware: { steady: 70, ramp: 152, burst: 0 }, worm: { steady: 140, ramp: 0, burst: 0 }, ghostroot: { steady: 55, ramp: 0, burst: 75 } },
+  profile: { ransomware: { steady: 0.5, ramp: 0.5, burst: 0 }, worm: { steady: 1, ramp: 0, burst: 0 }, ghostroot: { steady: 0.33, ramp: 0, burst: 0.67 } },
+  horizon: [[1, 10], [40, 9], [50, 8]], // a typical fight's length by level, in cycles (balance.mjs's wild fights before P1, every subclass: 9.7 at 10, 10.5 at 18, 10.3 at 30, 8.4 at 50)
+  budget: 1, // the shared budget's scale (1: the three pre-P1 fights' average)
   // Each part's shape (a part not named: steady if it attacks). A shape its family's profile hasn't is steady there.
   roles: { encryptor: 'ramp', scrambler: 'burst', accumulator: 'burst' },
   ratchet: { from: null, every: null }, // a Ratchet's first step and its beat (null: the Encryptor's first Encrypt and interval)
@@ -63,8 +67,8 @@ export function roleOf(spec, family) {
   return prof[r] > 0 ? r : 'steady';
 }
 // A Ratchet (a ramp with no Encryptor to carry it, on the basic): a stack like the Encryptor's, one more step every
-// `every` cycles from cycle `from` while its part lives. Its 20-cycle total per point of a step (data.mjs nominal's count):
-export const ratchetSpan = (from, every) => { let n = 0; for (let c = from; c <= 20; c += every) n += 21 - c; return n; };
+// `every` cycles from cycle `from` while its part lives. Its total over `until` cycles per point of a step (data.mjs nominal's count: each step ticks from the next cycle):
+export const ratchetSpan = (from, every, until = 20) => { let n = 0; for (let c = from; c <= until; c += every) n += until - c; return n; };
 // Its stack on cycle `cycle` (combat.mjs cycleStart deals it; the board shows it).
 export const heatOf = (p, cycle) => { const r = p?.ratchet; return r && cycle > r.from ? r.amount * (Math.floor((cycle - r.from - 1) / r.every) + 1) : 0; };
 

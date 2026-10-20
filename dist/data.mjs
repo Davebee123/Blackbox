@@ -366,13 +366,14 @@ export const BASICS = {
 // What a part (or a spec) lands in a fight's first 20 cycles if nothing were broken, as families.mjs pressureOf counts it:
 // a hit its amount (a volley each of its hits), an Encrypt its stack every cycle from its landing, a Replicate its
 // Splice and a fragment gnawing 4 cycles, a Scramble its hit and its cycles of static. The parts plan's share-out reads it.
-export function nominal(p) {
+// until: the last cycle counted (20; the parts plan's damage profiles count a typical fight, PARTS.horizon).
+export function nominal(p, until = 20) {
   const a = p?.attack;
   if (!a) return 0;
   let n = 0;
-  for (let c = a.first ?? a.due, k = 0; c <= 20; k++) {
+  for (let c = a.first ?? a.due, k = 0; c <= until; k++) {
     if (a.effect === 'damage') n += a.amount;
-    if (a.effect === 'encrypt') n += a.amount * (20 - c + 1);
+    if (a.effect === 'encrypt') n += a.amount * (until - c); // its stack ticks from the next cycle on
     if (a.effect === 'replicate') n += (a.hit || 0) + CONFIG.fragmentDamage * 4;
     if (a.effect === 'scramble') n += (a.hit || 0) + a.amount * 3;
     c += p.taps && (k + 1) % p.taps ? 1 : Math.max(1, a.interval) - (p.taps ? p.taps - 1 : 0);
@@ -988,7 +989,11 @@ export function authorOf({ family, strain = null, boss = null }, context) {
   return crewOf(family);
 }
 
-// The profile share-out of a rolled fight (createVirus), before the level's damage scale, in nominal's units. Each
+// Every family's budget over a typical fight of T cycles (PARTS.horizon): the average of the families' pre-P1 fights
+// (the Pulse Node and the signature), so all three deal the same and only the shape differs.
+const budgets = {};
+export const profileBudget = (T) => (budgets[T] ??= Object.keys(PARTS.profile).reduce((n, f) => n + FAMILIES[f].parts.filter((x) => x.id === 'pulse' || x.special).reduce((m, x) => m + nominal(x, T), 0), 0) / Object.keys(PARTS.profile).length);
+// The profile share-out of a rolled fight (createVirus), before the level's damage scale, in nominal's units over T. Each
 // role's parts scale to its share (within PARTS.pressure); a role nothing here carries moves onto the basic (the ramp
 // as a Ratchet, the burst as the Scrambler's hit and Scramble on the basic's hits); what's still left goes onto
 // the other attackers. No single hit grows past PARTS.cap Pulse Nodes: past it, the part hits that size more often.
@@ -997,30 +1002,35 @@ function shareProfile(familyId, family, specs, parts, r, level) {
   if (!prof) return;
   const pulse = family.parts.find((x) => x.id === 'pulse'), sig = family.parts.find((x) => x.special);
   const lift = alongParts(PARTS.hit, level), [lo, hi] = PARTS.pressure, top = PARTS.cap * pulse.attack.amount;
+  const T = alongParts(PARTS.horizon, level), budget = profileBudget(T) * PARTS.budget;
   const scalable = (p) => ['damage', 'encrypt'].includes(p.attack?.effect);
-  // A basic is pressure-matched to the Pulse Node (parts.test.mjs), so it counts as one Pulse Node whatever nominal reads.
-  const eff = nominal(r.basic) > 0 ? nominal(pulse) / nominal(r.basic) : 1;
+  // A basic is pressure-matched to the Pulse Node over 20 cycles (parts.test.mjs), so it counts as one Pulse Node.
+  const eff = nominal(r.basic) > 0 ? (nominal(pulse) / nominal(r.basic)) * (nominal(pulse, T) / nominal(pulse)) : 1;
   const host = parts.find((p) => p.id === r.basic.id);
-  const rows = parts.map((p, i) => ({ p, role: roleOf(specs[i], familyId), d: nominal(p) * (p.basic ? eff : 1), k: 1, carry: 0 }));
+  // …but a Fan-in with no Replicator to feed it fragments hits only for what it is (a Cipher Block's Ratchet lifts it too).
+  const lifted = !r.basic.fanin || parts.some((p) => p.attack?.effect === 'replicate');
+  const rows = parts.map((p, i) => ({ p, role: roleOf(specs[i], familyId), d: p.basic && lifted ? nominal(p) * eff : nominal(p, T), k: 1, carry: 0 }));
   // Nothing steady at all (a Buffer or an Obfuscator beside the signature and thirds that don't attack): the basic
   // takes its family's Surge, so the steady share isn't lost and the fight isn't one attacker that a cut answers whole.
-  if (prof.steady > 0 && PARTS.steadyCarry && !host.attack && !rows.some((x) => x.role === 'steady')) { host.attack = { ...pulse.attack, due: pulse.attack.first }; Object.assign(rows.find((x) => x.p === host), { role: 'steady', d: nominal(host) }); }
+  if (prof.steady > 0 && PARTS.steadyCarry && !host.attack && !rows.some((x) => x.role === 'steady')) { host.attack = { ...pulse.attack, due: pulse.attack.first }; Object.assign(rows.find((x) => x.p === host), { role: 'steady', d: nominal(host, T) }); }
   let left = 0;
   for (const role of ['steady', 'ramp', 'burst']) {
-    const want = (prof[role] || 0) * lift;
+    const want = (prof[role] || 0) * budget * lift;
     if (!want) continue;
-    const mine = rows.filter((x) => x.role === role), fixed = mine.filter((x) => !scalable(x.p)).reduce((n, x) => n + x.d, 0), d = mine.filter((x) => scalable(x.p)).reduce((n, x) => n + x.d, 0);
+    // A special's hit scales with its role (the Scrambler's, the Replicator's Splice); its Scramble and fragments stay.
+    const hitOf = (x) => (!scalable(x.p) && x.p.attack?.hit ? nominal({ attack: { ...x.p.attack, effect: 'damage', amount: x.p.attack.hit } }, T) : 0);
+    const mine = rows.filter((x) => x.role === role), fixed = mine.filter((x) => !scalable(x.p)).reduce((n, x) => n + x.d - hitOf(x), 0), d = mine.reduce((n, x) => n + (scalable(x.p) ? x.d : hitOf(x)), 0);
     if (mine.length) {
-      if (d > 0) { const k = Math.max(lo, Math.min(hi, (want - fixed) / d)); for (const x of mine) if (scalable(x.p)) x.k = k; left += Math.max(0, want - fixed - k * d); } else left += Math.max(0, want - fixed);
+      if (d > 0) { const k = Math.max(lo, Math.min(hi, (want - fixed) / d)); for (const x of mine) if (scalable(x.p)) x.k = k; else if (hitOf(x)) x.hk = k; left += Math.max(0, want - fixed - k * d); } else left += Math.max(0, want - fixed);
       continue;
     }
     // Nothing carries it: it moves onto the basic.
-    if (role === 'ramp') { const a = sig.attack, from = PARTS.ratchet.from ?? a.first, every = PARTS.ratchet.every ?? a.interval; host.ratchet = { name: 'Ratchet', amount: want / ratchetSpan(from, every), every, from }; continue; } // by default the Encryptor's clock
+    if (role === 'ramp') { const a = sig.attack, from = PARTS.ratchet.from ?? a.first, every = PARTS.ratchet.every ?? a.interval; host.ratchet = { name: 'Ratchet', amount: want / ratchetSpan(from, every, T), every, from }; continue; } // by default the Encryptor's clock
     if (role === 'burst' && host.attack && sig.attack?.effect === 'scramble') {
       // The Scrambler's hit on the basic's hits, and its Scramble on the Scrambler's clock.
-      const a = sig.attack, hits = nominal({ attack: { ...a, effect: 'damage', amount: a.hit || 0 } });
+      const a = sig.attack, hits = nominal({ attack: { ...a, effect: 'damage', amount: a.hit || 0 } }, T);
       if (PARTS.scrambleCarry) { host.attack.scrambles = a.amount; host.attack.scrambleEvery = a.interval; }
-      rows.find((x) => x.p === host).carry = hits * lift * PARTS.burstHit;
+      rows.find((x) => x.p === host).carry = want * (hits / Math.max(1, nominal(sig, T))) * PARTS.burstHit; // the hit's part of the burst
       continue;
     }
     left += want;
@@ -1030,7 +1040,8 @@ function shareProfile(familyId, family, specs, parts, r, level) {
   const pool = rows.filter((x) => scalable(x.p)), now = pool.reduce((n, x) => n + x.k * x.d, 0);
   if (left > 0 && now > 0) for (const x of pool) x.k = Math.min(hi, (x.k * (now + left)) / now);
   // No hit to take it (an Obfuscator beside the Scrambler, a Buffer beside the Replicator): onto the hit a special carries.
-  else if (left > 0) { const hitters = rows.filter((x) => x.p.attack?.hit); for (const x of hitters) { const n = nominal({ attack: { ...x.p.attack, effect: 'damage', amount: 1 } }); if (n) x.p.attack.hit = Math.min(Math.max(x.p.attack.hit, top), x.p.attack.hit + left / hitters.length / n); } }
+  else if (left > 0) { const hitters = rows.filter((x) => x.p.attack?.hit); for (const x of hitters) { const n = nominal({ attack: { ...x.p.attack, effect: 'damage', amount: 1 } }, T); if (n) x.p.attack.hit = Math.min(Math.max(x.p.attack.hit, top), x.p.attack.hit + left / hitters.length / n); } }
+  for (const { p, hk } of rows) if (hk && hk !== 1) p.attack.hit = hk > 1 ? Math.min(Math.max(p.attack.hit, top), p.attack.hit * hk) : p.attack.hit * hk;
   for (const row of rows) {
     // A hit every cycle or two (a Strobe) grows only PARTS.fast of its lift: Block takes the same off each hit, so a bigger small hit gains more than its share.
     const k = row.k > 1 && row.p.attack?.interval <= 2 ? 1 + (row.k - 1) * PARTS.fast : row.k, p = row.p;

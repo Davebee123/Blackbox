@@ -93,7 +93,7 @@ test('the farm\'s eight: two from each boss (with bad-luck protection), two from
 // mostly wins.
 test('at level 18 a full crew wins at least 95% of boss tries under pressure; without its tank, healer, SIGINTs or second damage dealer the matching boss mostly wins', async () => {
   const { farmScore } = await import('./farmsim.mjs');
-  const full = farmScore('demolitionist', ['warden', 'sysop', 'payload'], 18, { seeds: 8 });
+  const full = farmScore('demolitionist', ['warden', 'sysop', 'payload'], 18, { seeds: 24 }); // 24 seeds: since the damage profiles the wild rooms on the way shift the dice, and on 8 it swung to 24 of 26 (72 of 74 on 24; 72 of 72 with the parts roll off)
   assert.ok(full.wins >= 0.95 * full.tries, `full crew: ${full.wins}/${full.tries}`);
   assert.ok(full.low < 50 && full.heals > 30, `pressure: lowest ${full.low.toFixed(0)}%, healing ${full.heals.toFixed(0)}% of cycles`);
   const one = (crew, boss, bots = {}, seeds = 16) => farmScore('demolitionist', crew, 18, { seeds, only: boss, tries: 1, bots }).by[boss];
