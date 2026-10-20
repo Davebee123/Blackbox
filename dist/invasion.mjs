@@ -24,6 +24,8 @@ import { SERVICES, codeOf, uniqueItem, MATERIALS } from './gear.mjs';
 import { pickOrigin, hiddenNode, hiddenLead, HIDDEN, connectedTo } from './hidden.mjs';
 import { emit, warn, rand, active, holding, selectEncounter, crashServer, endInvasion, gainXp, xpFor, command, gainCode, hackerLevel, syncServer, addItem, UNIQUES, listenBoost } from './combat.mjs';
 import { nativeStrain } from './network.mjs';
+import { tickProfile } from './profile.mjs';
+import { tickChannel } from './channel.mjs';
 
 const I = () => CONFIG.invasion;
 const since = (s, first) => s.logs.filter((e) => e.id > first);
@@ -170,6 +172,8 @@ export function tickNetwork(s, now = Date.now()) {
   tickFirewall(s, now); // a defrag that's done
   tickEvents(s, dt); // the event director deals what happens on the net, degraded or not
   tickConsortium(s, dt, now); // the dividend, sieges, raids, the travelling virus, invites (consortium.mjs)
+  tickProfile(s); // deeds from the log, and a title just earned (profile.mjs)
+  tickChannel(s, dt); // #net, the public channel: news, contacts and who's chatting (channel.mjs)
   crashCheck(s);
   if (s.degraded) {
     const d = s.degraded;

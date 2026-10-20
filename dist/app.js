@@ -42,6 +42,9 @@ import { roomsMarkup, fillClocks, popOf, pickRoom, closePop } from './floorplan-
 import { createPuzzleFx, panelRoom, closePanel, openPanel, pzUi } from './puzzle-view.mjs';
 import { PUZZLES } from './puzzles.mjs';
 import { threadPanel, thUi, offerMarkup as thOfferMarkup } from './threads-view.mjs';
+import * as PV from './profile-view.mjs';
+import { channelOf, muted as chanMuted, say as chanSay } from './channel.mjs';
+import { setBanner, setPlan, handleOf } from './profile.mjs';
 
 const SAVE_KEY = 'blackbox-v6';
 const $ = (id) => document.getElementById(id);
@@ -1229,7 +1232,6 @@ function run(raw) {
   if (text.startsWith('weather')) { const w = text.split(' ')[1]; outside.force(w === 'auto' ? null : w); return notice(`Weather: ${w && w !== 'auto' ? w : 'follows the clock'}.`); }
   if (text === 'reset game' || text === 'new game') return resetGame();
   if (text === 'help' && !CAMP) return notice('In a fight, key 1 is your plain hit, keys 2 to 0 fire your skills, - is SIGINT, hold skips a move and now ends the cycle at once. On a run, use ls, cd, cat, pull, unlock, attack and jack out. For gear, use load, unload, compile, deconstruct and craft. For your server, use install, uninstall, firewall upgrade|defrag|harden and filter equip. On the net, use connect, relay, detach and mail. The pages are map, mail, server, craft, loadout and system. Change the screen with shell immersive|plain|boot, and start over with reset game.', false, null, true);
-  if (text.startsWith("'") || text.startsWith('say ')) return notice('Chat arrives with co-op. For now it is just you and the virus.');
   // The campaign: fights, your gear, skills and talents. The old game's commands (connect, mail, install…) sit out.
   if (CAMP && !fighting && !/^(load|unload|equip|unequip|talent|untalent|respec|subclass|archetype|loadout|preset|deconstruct|scan|codex|collection|hold|now)\b/.test(text)) {
     if (text === 'help') return notice('On the campaign map, pick a server and breach it. On a breach, use ls, cd <n>, tree and the screen\'s verbs (pick, cat, pull, rest, reslot, buy, patch, service, open, force, fight, splice, leave, choose). In a breach fight, script <n> runs one of your scripts. In a fight, key 1 is your plain hit, keys 2 to 0 fire your skills and - is SIGINT. For gear and skills, use load, unload, equip and unequip. The pages are campaign, room, loadout, archive and system.', false, null, true);
@@ -1238,8 +1240,10 @@ function run(raw) {
 
   const wasAlert = campaign.encounter?.phase === 'alert';
   const queuedBefore = campaign.encounter?.queue;
-  let events = play(campaign, /^(consortium|guild)\b/.test(text) ? raw.trim() : text); // a consortium's name keeps its capitals
+  let events = play(campaign, /^(consortium|guild|say|plan)\b/.test(text) || text.startsWith("'") ? raw.trim() : text); // a consortium's name, a line on #net and a plan keep their capitals
   react(events);
+  const fg = events.find((e) => e.finger);
+  if (fg) openProfile(fg.finger); // finger <handle>: the card
   const warning = events.findLast((e) => e.type === 'warning');
   // In a fight, an order you enter goes now: the cycle turns without waiting out the bar.
   const e = campaign.encounter;
@@ -1626,6 +1630,8 @@ function renderMeters() {
   casing();
   pagerUi();
   peopleUi();
+  channelUi();
+  profileUi();
   $('haptics').setAttribute('aria-pressed', String(!!campaign.settings.haptics));
   $('motion').setAttribute('aria-pressed', String(campaign.settings.motion));
   document.body.classList.toggle('no-motion', !campaign.settings.motion);
@@ -2234,6 +2240,7 @@ function frame(now) {
   if (now - lastSecond >= 1000) {
     lastSecond = now; shell.second(module); services();
     if (simOn(campaign)) peopleUi(); // people move about (presence.mjs)
+    channelUi(); // #net's latest line (channel.mjs)
     if (pruneComms(campaign)) { save(); dirty = true; } // handled comms clear out after 5 minutes
     // Unanswered alerts shake the pager every 10 s; a breach pings every 15 s.
     const tickNow = Date.now();
@@ -2533,6 +2540,80 @@ $('people-panel').addEventListener('click', (e) => {
 document.addEventListener('click', (e) => { if (e.target.closest('[data-people-open]')) { e.stopPropagation(); peopleOpen = true; peopleTab = 'online'; setComms(false); dirty = true; } }, true);
 document.addEventListener('click', (e) => { if (peopleOpen && !e.target.closest('#people-panel, #people')) { peopleOpen = false; dirty = true; } });
 
+// #net (channel.mjs): its latest line sits over the prompt (fights too, as one line); click it for the channel, a
+// drawer with the last lines and a field to say something. Muted, the line goes; the drawer still opens with `channel`.
+let chanOpen = false, chanShown = -1;
+const chanOff = () => !!(playtest || CAMP || introOn);
+function channelUi() {
+  const c = channelOf(campaign), last = c.lines.at(-1)?.id ?? 0, off = chanOff();
+  $('net-line').hidden = off || chanMuted(campaign);
+  $('net-line').setAttribute('aria-expanded', String(chanOpen));
+  $('channel').hidden = off || !chanOpen;
+  if (off) return;
+  put('net-line', PV.tickerMarkup(campaign));
+  if (!chanOpen) return;
+  put('channel-head', PV.channelHead(campaign));
+  const box = $('channel-lines'), stick = box.scrollHeight - box.scrollTop - box.clientHeight < 40 || chanShown < 0;
+  put('channel-lines', PV.channelLinesMarkup(campaign));
+  if (stick || chanShown !== last) { if (stick) box.scrollTop = box.scrollHeight; }
+  chanShown = last;
+}
+function setChan(open) { chanOpen = open; if (open) { chanShown = -1; peopleOpen = false; setComms(false); } dirty = true; channelUi(); if (open) $('channel-input').focus({ preventScroll: true }); }
+$('net-line').addEventListener('click', (e) => { if (e.target.closest('[data-finger]')) return; e.stopPropagation(); setChan(!chanOpen); });
+$('channel').addEventListener('click', (e) => { if (e.target.closest('[data-chan-close]')) { e.stopPropagation(); setChan(false); } });
+$('channel-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const r = chanSay(campaign, $('channel-input').value);
+  if (r.error) return notice(r.error, true);
+  $('channel-input').value = '';
+  save(); channelUi();
+});
+document.addEventListener('click', (e) => { if (chanOpen && !e.target.closest('#channel, #net-line, #profile')) { chanOpen = false; dirty = true; } });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && chanOpen && !profileOn) { setChan(false); $('command-input').focus(); } });
+
+// The profile card (profile.mjs): finger <handle>, a handle clicked in #net or People, or your own from the handle
+// on the top bar. Yours has its editor beside it: a banner (a preset or your own drawing), a title, a plan.
+let profileOn = null, pf = { tab: 'banner', draft: null, err: null };
+function openProfile(h) { profileOn = h || handleOf(campaign); pf = { tab: pf.tab, draft: null, err: null }; dirty = true; profileUi(); }
+function profileUi() {
+  const el = $('profile');
+  el.hidden = !profileOn;
+  if (!profileOn) return;
+  const box = $('pf-draw-box');
+  if (box) pf.draft = box.value; // a redraw keeps what you were drawing
+  const html = PV.profileMarkup(campaign, profileOn, pf);
+  if (!html) { profileOn = null; el.hidden = true; return; }
+  put('profile', html);
+}
+document.addEventListener('click', (e) => {
+  const f = e.target.closest('[data-finger]');
+  if (f) { e.stopPropagation(); e.preventDefault(); return openProfile(f.dataset.finger); }
+  if (e.target.closest('#whoami')) return openProfile(handleOf(campaign));
+}, true);
+$('profile').addEventListener('click', (e) => {
+  if (e.target === $('profile') || e.target.closest('[data-profile-close]')) { profileOn = null; profileUi(); return; }
+  const tab = e.target.closest('[data-pf-tab]');
+  if (tab) { pf.tab = tab.dataset.pfTab; pf.err = null; return profileUi(); }
+  if (e.target.closest('[data-pf-draw]')) {
+    const first = campaign.serial;
+    setBanner(campaign, $('pf-draw-box').value);
+    const w = campaign.logs.filter((x) => x.id > first).find((x) => x.type === 'warning');
+    pf.err = w ? w.message : null;
+    if (!w) { pf.draft = null; save(); }
+    cache.delete('profile'); profileUi();
+  }
+});
+$('profile').addEventListener('submit', (e) => {
+  if (!e.target.closest('[data-pf-plan]')) return;
+  e.preventDefault();
+  const first = campaign.serial;
+  setPlan(campaign, $('pf-plan-in').value);
+  const w = campaign.logs.filter((x) => x.id > first).find((x) => x.type === 'warning');
+  if (w) notice(w.message, true); else { notice('Plan saved.'); save(); }
+  profileUi();
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && profileOn) { profileOn = null; profileUi(); } });
+
 function setComms(open) {
   commsOpen = open;
   if (open) { seeAll(campaign); save(); }
@@ -2588,6 +2669,7 @@ function goTo(target) {
   else if (where === 'map') { if (what === 'consortium') { mapView = 'consortium'; mapSel = 'server'; } else if (what?.startsWith('con=')) { mapView = 'consortium'; mapSel = what.slice(4); } else if (what) { mapSel = what; mapPop = true; } go('map'); }
   else if (where === 'consortium' || where === 'people') { peopleOpen = false; go('consortium'); }
   else if (where === 'jack') run('jack in');
+  else if (where === 'profile') { setComms(false); openProfile(what || null); pf.tab = 'title'; profileUi(); } // a title just earned: your card, on its titles
 }
 document.addEventListener('click', (e) => { const g = !e.target.closest('#comms') && e.target.closest('[data-go]'); if (g) { peopleOpen = false; goTo(g.dataset.go); } });
 document.addEventListener('click', (e) => { if (commsOpen && !e.target.closest('#comms, #pager')) setComms(false); });
