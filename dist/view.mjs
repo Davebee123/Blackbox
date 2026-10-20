@@ -1718,7 +1718,7 @@ export function commsMarkup(s, filter = 'all', now = Date.now()) {
 export function peopleMarkup(s, tab = 'friends', now = Date.now()) {
   const all = online(s, now), crew = (s.crewSim || []).map((x) => x.name);
   const c = consortiumOf(s), inv = s.consortiumInvite;
-  const row = (x) => `<li class="person${x.friend ? ' friend' : ''}${x.member ? ' member' : ''}"><span class="p-dot${x.place.fighting ? ' fighting' : ''}"></span><b>${esc(x.handle)}</b><small>${esc(ARCHETYPES[x.cls].name)} ${x.level}</small><span class="p-where">${esc(whereText(x.place))}</span>
+  const row = (x) => `<li class="person${x.friend ? ' friend' : ''}${x.member ? ' member' : ''}"><span class="p-dot${x.place.fighting ? ' fighting' : ''}"></span><b class="p-handle" data-finger="${esc(x.handle)}" title="finger ${esc(x.handle)}">${esc(x.handle)}</b><small>${esc(ARCHETYPES[x.cls].name)} ${x.level}</small><span class="p-where">${esc(whereText(x.place))}</span>
     <span class="p-acts">${c && !x.member && c.founder !== x.handle ? `<button type="button" class="act" data-run="consortium invite ${esc(x.handle)}" title="Merge their server with the consortium">Invite to consortium</button>` : ''}${crew.includes(x.handle) ? `<span class="tag you">crew</span><button type="button" class="act dim" data-run="crew kick ${esc(x.handle)}">Remove from crew</button>` : ''}${x.friend || x.member ? `${crew.includes(x.handle) ? '' : `<button type="button" class="act" data-run="crew invite ${esc(x.handle)}" ${crew.length >= 3 ? 'disabled title="Your crew is full"' : ''}>Invite to crew</button>`}${x.friend ? `<button type="button" class="act dim" data-run="friend remove ${esc(x.handle)}">Remove</button>` : ''}` : ''}${x.friend ? '' : `<button type="button" class="act" data-run="friend add ${esc(x.handle)}">Add friend</button>`}</span></li>`;
   const offline = friends(s).filter((h) => !all.some((x) => x.handle === h));
   const memberOffline = (c?.members || []).filter((h) => !all.some((x) => x.handle === h));
@@ -1729,7 +1729,7 @@ export function peopleMarkup(s, tab = 'friends', now = Date.now()) {
     const rows = members.map((x) => {
       const p = all.find((y) => y.handle === x.name), onRun = s.run?.crew?.[x.name];
       const where = onRun ? `with you on ${esc(s.run.loc === 'sprawl' ? 'SPRAWL-00' : s.run.loc)} · ${esc(onRun.cwd)}${onRun.link === 'you' ? ' · linked' : ''}` : p ? esc(whereText(p.place)) : 'waiting for your next run';
-      return `<li class="person crewmate"><span class="p-dot${p || onRun ? '' : ' off'}"></span><b>${esc(x.name)}</b><small>${esc(ARCHETYPES[x.cls].name)}${p ? ` ${p.level}` : ''}</small><span class="p-where">${where}</span>
+      return `<li class="person crewmate"><span class="p-dot${p || onRun ? '' : ' off'}"></span><b class="p-handle" data-finger="${esc(x.name)}" title="finger ${esc(x.name)}">${esc(x.name)}</b><small>${esc(ARCHETYPES[x.cls].name)}${p ? ` ${p.level}` : ''}</small><span class="p-where">${where}</span>
         <span class="p-acts"><button type="button" class="act dim" data-run="crew kick ${esc(x.name)}">Remove from crew</button></span></li>`;
     }).join('');
     const open = Math.max(0, 3 - members.length);
@@ -2770,6 +2770,7 @@ export function systemMarkup(s) {
       <button type="button" class="btn" data-run="window ${s.settings.window === false ? 'on' : 'off'}" aria-pressed="${s.settings.window !== false}" ${s.settings.shell === 'plain' || s.settings.casing === false ? 'disabled' : ''} title="The city outside, beside the monitor">Window ${s.settings.window === false ? 'off' : 'on'}</button>
       <button type="button" class="btn" data-run="tips ${s.settings.tips === false ? 'on' : 'off'}" aria-pressed="${s.settings.tips !== false}">Tips ${s.settings.tips === false ? 'off' : 'on'}</button>
       <button type="button" class="btn" data-run="tips replay">Replay tips</button>
+      <button type="button" class="btn" data-run="channel ${s.settings.channel === false ? 'on' : 'off'}" aria-pressed="${s.settings.channel !== false}" title="#net's latest line over the prompt">#net ${s.settings.channel === false ? 'muted' : 'on'}</button>
     </div>
     <div class="row sound-test"><span class="next-label">Sound test</span>${[['hit', 'Hit'], ['break', 'Break'], ['hurt', 'Hurt'], ['unlock', 'Unlock'], ['pickup', 'Pickup'], ['good', 'Good news'], ['win', 'Win / level'], ['chit', 'Armor ◆'], ['patch', 'Patch'], ['interrupt', 'Interrupt'], ['nope', 'Refused'], ['prewarn', 'Warning'], ['daemon', 'Daemon'], ['channel', 'Channel change'], ['jackin', 'Connect'], ['hangup', 'Hang up'], ['lose', 'Crash'], ['mark', 'Mark'], ['burn', 'Burn'], ['helper', 'Helper'], ['shield', 'Shield'], ['buff', 'Buff']].map(([id, name]) => `<button type="button" class="btn" data-sound="${id}">${name}</button>`).join('')}</div></section>
     ${collectionMarkup(s)}

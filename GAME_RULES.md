@@ -700,10 +700,52 @@ Every server on a floor links to its neighbours on that floor's diagram. A linke
 
 Simulated until the server exists (developer mode only, `?dev`): `online sim` turns on a pool of 20 hackers who log on and off (about half are on at any time) and move every minute or so; `online off` turns them off. Everything else here is how it will work online.
 
-- **The people button** on the top bar (a dot and how many are online; violet when a friend is on) opens two tabs: **Friends** (online ones first, with where they are; offline ones dimmed) and **Online** (everyone). Each line: handle, class and level, where they are (SPRAWL-00 and the room, by its name, fighting or not; or just *on a run*, *on a rogue server*, *at home*: those are private).
+- **The people button** on the top bar (a dot and how many are online; violet when a friend is on) opens two tabs: **Friends** (online ones first, with where they are; offline ones dimmed) and **Online** (everyone). Each line: handle, class and level, where they are (SPRAWL-00 and the room, by its name, fighting or not; or just *on a run*, *on a rogue server*, *at home*: those are private). Click a handle for their profile card (Profile, below).
+- **#net** (below) is where they talk: what they're doing, what they found, who they need.
 - **Friends:** Add friend / Remove on any line, or `friend add <handle>`, `friend remove <handle>`, `friends`. `who` lists everyone online.
 - **Crew:** an online friend can be **invited** (`crew invite <friend>`) and joins your run fights as a crewmate in their class (a bot for now). `crew kick <name>` lets them go. Three at most.
 - **SPRAWL-00 is shared.** Since R1 its folders are rooms named for what they are: `ls` puts who's in each room on its line, and arriving in a room says who's there. (The old terminal's chips: In its terminal, each folder shows who's in it or below it (a chip each, friends in violet, a red dot if they're fighting); arriving in a folder starts with *here* and who's there. The map's SPRAWL-00 node says how many are online there. Every other server is private.)
+
+## The channel: #net (channel.mjs)
+
+The net talks to itself, like a MUD's gossip line or WoW's General chat. Every line comes from real game state; nothing is flavour unrelated to the world, and nothing on it beeps or goes to the pager (the pager stays for what needs you).
+
+- **Where:** its latest line sits over the prompt (one line, quiet, on every page and in fights). Click it for the drawer: the last lines with their times, and a field to say something. `say <text>` (or `'text`) does the same from the prompt; your line carries your handle and title, capitals as typed, up to 120 plain characters. **Mute** (the drawer, the System page's #net button, or `channel off`) hides the line over the prompt; `channel on` brings it back. The channel keeps its lines either way.
+- **The wire and the hubs (everyone):** the director's events as they're dealt (*wire: A courier was seen heading for MERIDIAN-MX-14.*), a hunt's hops, and how each ends: a feud's line names the side that held more of the bar, through its contact (*vesper@nullchoir: GLASSJAW lost the Stacks feud. Again.* when the same side lost the last one too), or the loser's if only its hub is known, or the wire's; a hunt that got away, an outbreak burning out, a market back to normal, a bounty or courier you took. Now and then the wire says how a card stands (a feud's lead, a hunt's level), at most once in 5 minutes a card. **Faction contacts** (concierge@halcyon, —@glassjaw, helpdesk@kestrel, ops@lantern, vesper@nullchoir; only hubs you've found, Halcyon always) speak for their side: after a feud it was in (won: a dig at the loser, and thanks if you fought for it; lost: gracious), else a line for your tier with them. Never at you, never scolding.
+- **Your feats:** a unique you found (*★ dana found [Item].*), a title earned, every tenth class level.
+- **Simulated hackers (developer, `online sim`):** while they're online they chat from what they're doing (presence.mjs): looking for a class for KESSLER-FARM-00 or for an elite in their SPRAWL-00 room (someone online in that class may answer), a unique they found (a real one that drops in the world at their level, by name, in brackets, with where it drops), a faction piece assembled, a boss's real phase (*REPO MAN re-arms at 60%*), the feud, hunt, outbreak or market shock that's up, a hello to whoever spoke last. They react a few seconds after news, a feat of yours (*grats on [Item]*) or a line of yours that names them. Each has a voice from their handle (lower case or not, terse or chatty, how they end a line, an emoticon now and then) and their title beside their handle; click it for their card.
+- **Pacing:** a line every 20–90 seconds of logged-on time (none before the tutorial is done, and none when there's nothing true to say), news at once, reactions 3–12 seconds after; not the same line twice within a dozen. The last 80 lines stay on the save. The channel rolls its own dice (like the director's): the game's rolls never move.
+
+## Profile: finger (profile.mjs)
+
+Who you are to everyone else on the net, the way `finger` shows a Unix login. `finger` (or click your handle on the top bar) shows yours; `finger <handle>`, or a handle clicked in #net or People, shows theirs.
+
+- **The card:** handle and title; a **banner** (gamertag art, 4 rows of 24); the **plan** (one line); each class you've played with its emblem and level; your **best pieces** as their glyphs (faction pieces, then set pieces, then other uniques; four at most); a **mark** for each faction you've met, with its tier as four pips; your **stickers**; and when you've been on since. Explanations are tooltips only.
+- **Your editor**, beside your own card: **Banner** (12 presets: CRT, tape reel, circuit, moth, ghost, lantern, floppy, radio mast, carrier wave, cassette, keyboard, constellation; or draw your own in a 4×24 box: plain keyboard characters only, trailing spaces and blank rows trimmed; `banner <name>`, `banner list`), **Title** (the ones you've earned to pick from, *No title*, and the rest dimmed with their rule on hover; `titles`, `title <name>`, `title off`), **Plan** (60 characters; `plan <text>`, `plan clear`).
+- **Titles come from deeds** (checked every second; a new one is a quiet pager line that opens your card, and a line on #net; the first you earn shows until you pick):
+
+| Title | Earned by |
+|---|---|
+| the Patient | winning a fight that ran 20 cycles or more |
+| Uncrowner | beating RELAY-KING |
+| Repossessor | beating REPO MAN |
+| of the Last Note | silencing the HOLLOW CHOIR |
+| Courier's Bane | intercepting 10 couriers (LANTERN's own courier counts) |
+| Tracker | collecting 5 bounty hunts (a returning bounty counts) |
+| Feudbreaker | winning 5 feuds (the feud, not a runner) |
+| Mapper | Mapping 20 servers |
+| Farmhand | beating KESSLER-FARM-00's three |
+| Lair-born | beating a lair boss |
+| the Assembler | assembling a faction piece |
+| the Matched | finding every piece of a set |
+| Collector | finding 25 uniques |
+| Deepwalker | reaching floor 5 |
+| of Halcyon, of GLASSJAW, of Kestrel, of LANTERN, of NULL CHOIR | that faction's top tier (75 rep: Preferred, Inner circle, Key account, Signal, Cantor) |
+| the Hammer, the Wall, the Quiet, the Conductor | a Breaker, Bastion, Infiltrator or Operator at level 50 |
+
+- **Stickers**, earned marks in their colours: one per faction at its top tier, per set completed, per floor reached from 2, per lair boss beaten. (Putting them on the rig's casing is a later step.)
+- **Simulated hackers have cards too**, worked out from their handle: a preset banner, a title a hacker of their level could have earned, a plan in their voice, their class and level (and a second class from level 6), a couple of real uniques at their level, two or three faction marks, where they are now. `finger` on them works while `online sim` is on, or while their lines are still in #net.
+- **Saves:** new fields on `s.profile` (banner, title, plan, titles, deeds) and `s.channel`, with defaults; an older save starts with none of them and needs no migration.
 
 ## Consortium and the crew on a run (consortium.mjs, run.mjs)
 
@@ -856,7 +898,7 @@ Online co-op comes later (a hosted server with logins). To try how it plays firs
 
 ## Events (events.mjs)
 
-The net isn't a storyline: things happen on it, and you act on them or let them pass. From class level 3 an **event director** deals one event now and then: the first 4–8 minutes of logged-on time after you reach level 3, then every 15–30 minutes, never the same kind twice in a row, at most two up at once. Each one goes to the pager and stays there while it's up. Missing one costs nothing. The director rolls its own dice, so an event never shifts the rest of the game's rolls.
+The net isn't a storyline: things happen on it, and you act on them or let them pass. From class level 3 an **event director** deals one event now and then: the first 4–8 minutes of logged-on time after you reach level 3, then every 15–30 minutes, never the same kind twice in a row, at most two up at once. Each one goes to the pager and stays there while it's up. Each is news on #net too (see The channel), as is how it ends. Missing one costs nothing. The director rolls its own dice, so an event never shifts the rest of the game's rolls.
 
 | Event | Where | Lasts | What you do | What you get |
 |---|---|---|---|---|
@@ -1470,7 +1512,7 @@ The pager sits on the top bar, between the tabs and your meters (on narrower scr
 - Click it for **Comms**: the list, newest first (× on any entry clears just that one; Clear clears everything you have seen), filtered by All, Contracts (offers, contracts ready), Mail, Network (flags, relays, locations, invasions, swarms, breaches) or Money (retainer, pay, standing, the store). Each line has its sender, its age and a link to where it happened: the letter or contract in Mail, the server on the map, the Store, or Jack in for a breach. Opening it marks everything read.
 - **Handled** lines grey out and clear after 2 minutes: you handled one when you opened what it points at, or ticked it (✓). Lines with nothing to act on count as handled once seen. **Clear** removes everything you've seen.
 - An unanswered alert shakes the pager every 10 seconds until you open Comms. A **breach** makes the Integrity meter flash red with a pulsing BREACH badge, and pings every 15 seconds until it's dealt with.
-- It chirps for letters, offers, contracts ready, the retainer, flags, locations, invasions and dropped standing; pay for a delivery, rising standing, restocks and takeovers only light it up. While you're in a fight, only a breach chirps.
+- It chirps for letters, offers, contracts ready, the retainer, flags, locations, invasions and dropped standing; pay for a delivery, rising standing, restocks, takeovers and a title earned only light it up. #net never touches it. While you're in a fight, only a breach chirps.
 
 ## The monitor casing
 

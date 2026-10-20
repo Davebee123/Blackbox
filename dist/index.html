@@ -101,6 +101,13 @@
   <div id="th-offer" class="gain th-offer" hidden></div>
 
   <footer class="command-dock">
+    <!-- #net (channel.mjs): the latest line over the prompt; click it for the channel. -->
+    <button type="button" class="net-line" id="net-line" aria-controls="channel" aria-expanded="false" title="#net, the public channel"></button>
+    <section class="channel" id="channel" aria-label="#net, the public channel" hidden>
+      <div class="comms-head ch-head" id="channel-head"></div>
+      <ol class="ch-lines" id="channel-lines" role="log" aria-live="off"></ol>
+      <form class="ch-say" id="channel-form" autocomplete="off"><label for="channel-input">say</label><input id="channel-input" maxlength="120" spellcheck="false" autocapitalize="off" placeholder="Say something to #net"></form>
+    </section>
     <div class="prompt-row">
       <div id="suggestions" class="suggestions" role="listbox" aria-label="Suggestions" hidden></div>
       <form id="command-form" autocomplete="off">
@@ -124,6 +131,8 @@
     <span class="lamp" id="lamp-pwr"><i></i>PWR</span><span class="lamp" id="lamp-gate"><i></i>GATE</span><span class="lamp" id="lamp-wall"><i></i>WALL</span><span class="lamp" id="lamp-net"><i></i>NET</span><span class="lamp" id="lamp-inst"><i></i>INST</span><span class="lamp" id="lamp-dmn"><i></i>DMN</span>
   </div>
 </div>
+<!-- finger <handle>: a hacker's profile card (profile.mjs). -->
+<div class="profile-scrim" id="profile" role="dialog" aria-modal="true" aria-label="Profile" hidden></div>
 <div id="fx-edge" aria-hidden="true"></div>
 <div id="levelup" class="levelup" role="status" aria-live="polite" hidden></div>
 <div id="tip" class="tip" role="dialog" aria-live="polite" hidden><p id="tip-text"></p><div class="tip-row"><button type="button" class="btn small primary" id="tip-ok">Got it</button><span class="tip-step" id="tip-step"></span><button type="button" class="tip-off" id="tip-off">Turn tips off</button></div></div>

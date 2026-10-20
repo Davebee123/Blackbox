@@ -406,9 +406,12 @@ export function deal(s, card = null) {
   return ev;
 }
 
+// What an ended card was, for the public channel (channel.mjs): its name and kind, and a feud's winner (the side
+// holding more of the bar, none if even).
+const wire = (ev) => ({ name: ev.name, ...(ev.family ? { family: ev.family } : {}), ...(ev.hub ? { hub: ev.hub, ware: ev.ware } : {}), ...(ev.card === 'feud' ? { sides: ev.sides, winner: (ev.bar ?? 0.5) > 0.5 ? ev.sides[0] : (ev.bar ?? 0.5) < 0.5 ? ev.sides[1] : null } : {}) });
 function end(s, ev, message, type = 'world-event-end', how = 'gone') {
   s.events = eventsOf(s).filter((e) => e !== ev);
-  if (message) emit(s, type, message, { card: ev.card, location: ev.loc });
+  if (message) emit(s, type, message, { card: ev.card, location: ev.loc, ...wire(ev) });
   chainAfter(s, ev, how);
 }
 
@@ -535,5 +538,5 @@ export function eventWon(s, e) {
   if (!ev) return;
   const said = CARDS[ev.card].won?.(s, ev);
   if (!CARDS[ev.card].again || ev.over) end(s, ev, null, 'world-event-end', 'won'); // a feud stays up for the next runner until it's won
-  if (said) emit(s, 'world-event-won', said, { card: ev.card, location: ev.loc });
+  if (said) emit(s, 'world-event-won', said, { card: ev.card, location: ev.loc, ...(CARDS[ev.card].again && !ev.over ? { name: ev.name } : wire(ev)) });
 }
