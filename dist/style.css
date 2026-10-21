@@ -160,9 +160,9 @@ code { font-family: var(--mono); color: var(--amber); }
 .bpart.now .part-bar span { background: var(--hot); }
 .byou .bcell { padding-top: 6px; padding-bottom: 6px; }
 .bbroken { color: var(--dim); font-size: 12px; }
-.part-top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.part-top { display: flex; flex-wrap: wrap; justify-content: space-between; column-gap: 8px; row-gap: 0; align-items: baseline; min-width: 0; } /* a long ◆ row wraps the Integrity under it, never into the Now column */
 .part-name { font-weight: 600; color: var(--bright); }
-.part-hp { font: 500 13px var(--mono); color: var(--text); }
+.part-hp { font: 500 13px var(--mono); color: var(--text); white-space: nowrap; margin-left: auto; }
 .part-bar { height: 5px; background: var(--inset); display: block; }
 .part-bar span { display: block; height: 100%; background: var(--amber); }
 .part-tags { display: flex; gap: 4px; flex-wrap: wrap; }

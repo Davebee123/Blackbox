@@ -214,7 +214,8 @@ test('an exception hands over only its part: the program plays the rest and neve
   assert.deepEqual(R.exceptionsOf(s).map((x) => x.part), ['encryptor']);
   const html = boardMarkup(s);
   assert.match(html, /m-exc[^>]*data-target="encryptor"/, 'its row is marked');
-  assert.match(html, /exc-mark[^>]*title="Your program has no handler for this part yet\. Play it yourself, or research it in the Codex\."><strong>EXCEPTION<\/strong><span> · no available handler<\/span>/);
+  assert.match(html, /rt-exc-tag" title="Your program has no handler for this part yet\. Play it yourself, or research it in the Codex\."><strong>EXCEPTION<\/strong><span> · no available handler<\/span>/, 'the full label on its tag line, with the tooltip');
+  assert.match(html, /intent prog exc-mark" title="EXCEPTION · no available handler\. Your program has no handler for this part yet\.[^"]*"><strong>EXCEPTION<\/strong><\/div>/, 'only the word in its Now cell');
   assert.doesNotMatch(html, /program resume|rt-back/, 'no hand-back button');
   assert.match(html, /intent mine prog ghost[^>]*data-at="(?!encryptor)[a-z]+"/, 'the Now cell: its move on another part');
   const ev = cycle(s);
@@ -233,7 +234,7 @@ test('an exception hands over only its part: the program plays the rest and neve
   assert.equal(others().length, 0, 'the others are down');
   // Only the Encryptor is left: the program holds, and the Now cell says it's yours.
   assert.equal(R.decide(s).hold, true);
-  assert.match(boardMarkup(s), /intent mine prog exc[^>]*><strong>EXCEPTION<\/strong><span> · no available handler/);
+  assert.match(boardMarkup(s), /intent prog mine exc"[^>]*title="EXCEPTION · no available handler\.[^"]*Nothing fires[^"]*"><strong>EXCEPTION<\/strong>/);
   const held = cycle(s);
   assert.equal(mine(held).length, 0, 'nothing fires');
   assert.ok(held.some((e) => e.type === 'hold' && e.auto === 'program'));
@@ -260,6 +261,20 @@ test('an exception hands over only its part: the program plays the rest and neve
   assert.deepEqual(R.exceptionsOf(t).map((x) => x.part), [box.id]);
   command(t, `program ransomware add ${ref}:present spike that`);
   assert.equal(R.exceptionsOf(t).length, 0, 'named by a handler: covered');
+});
+
+test('a broad TARGET leaves a Hotspot, a Tripwire or a Zip Bomb for last, as the rotation does; that part still hits it', () => {
+  const s = fight({ level: 14, opts: { genes: ['hotspot'] } });
+  const hot = livingParts(s).find((p) => p.hotspot);
+  assert.ok(hot, 'a Hotspot in the fight');
+  for (const p of livingParts(s)) if (p !== hot) p.integrity = Math.max(hot.integrity + 1, p.integrity);
+  command(s, 'program ransomware add always spike lowest');
+  assert.equal(R.leftForLast(s, hot), true);
+  assert.notEqual(R.decide(s).text, `spike ${hot.id}`, 'not the lowest when that sets it off');
+  R.routineOf(s, 'ransomware').handlers = [{ when: `ransomware:${hot.id}:present`, do: 'spike', target: 'that' }];
+  assert.equal(R.decide(s).text, `spike ${hot.id}`, 'named, it is hit');
+  for (const p of livingParts(s)) if (p !== hot) p.integrity = 0;
+  assert.equal(R.leftForLast(s, hot), false, 'alone, it is fair game');
 });
 
 test('a mutation is the program\'s; a rule part needs its rule; a tell needs mastery; a boss is wholly yours', () => {

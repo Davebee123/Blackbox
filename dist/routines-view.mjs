@@ -107,12 +107,14 @@ export function programMarkup(s) {
 
 // ---------- the board ----------
 const excLabel = `<strong>${EXCEPTION.label}</strong><span> · ${EXCEPTION.phrase}</span>`;
+// In a Now cell, only the word (the full label sits on the part's tag line, the log and a boss fight's header).
+const excMark = (cls, tip, k = '') => `<div class="intent prog ${cls}"${k} title="${esc(`${EXCEPTION.label} · ${EXCEPTION.phrase}. ${tip}`)}"><strong>${EXCEPTION.label}</strong></div>`;
 // The program's next move, ghosted, in your row's Now cell; or, when all that's left is yours, that it's yours.
 export function progNow(s) {
   if (!live(s) || !active(s) || s.encounter.queue) return null;
   const d = preview(s);
   if (!d) return null;
-  if (d.hold) return `<div class="intent mine prog exc" data-k="you@${s.encounter.cycle}" title="${esc(d.whole ? EXCEPTION.fight : `${EXCEPTION.tip} Nothing fires when the timer runs out.`)}">${excLabel}</div>`;
+  if (d.hold) return excMark('mine exc', d.whole ? EXCEPTION.fight : `${EXCEPTION.tip} Nothing fires when the timer runs out.`, ` data-k="you@${s.encounter.cycle}"`);
   const by = d.handler >= 0 ? `handler ${d.handler + 1}` : 'rotation';
   return `<div class="intent mine prog ghost" data-k="you@${s.encounter.cycle}" data-at="${esc(d.target || '')}" title="${esc(`Your program's next move (${by}). Type anything to override it this cycle.`)}">⟳ ${esc(said(s, d.text))}</div>`;
 }
@@ -135,10 +137,17 @@ export function progText(s) {
 export function progOnPart(s, p) {
   if (!live(s) || !active(s)) return '';
   const x = exceptionsOf(s).find((y) => y.part === p.id);
-  if (x) return `<div class="intent prog exc-mark" title="${esc(x.kind === 'tell' ? `${EXCEPTION.tip} Its ${x.tell} is on the board.` : EXCEPTION.tip)}">${excLabel}</div>`;
+  if (x) return excMark('exc-mark', excTip(x));
   const d = s.encounter.queue ? null : preview(s);
   if (!d || d.hold || d.target !== p.id) return '';
   const [id] = d.text.split(' ');
   return `<div class="intent prog ghost-on" title="${esc(`Your program's next move: ${said(s, d.text)}.`)}">⟳ ${esc(skillName(s, id))}</div>`;
+}
+const excTip = (x) => (x.kind === 'tell' ? `${EXCEPTION.tip} Its ${x.tell} is on the board.` : EXCEPTION.tip);
+// On a part's tag line (beside FALLBACK, SHIELDS …): the full label, when that part is yours to play.
+export function progTag(s, p) {
+  if (!live(s) || !active(s)) return '';
+  const x = exceptionsOf(s).find((y) => y.part === p.id);
+  return x ? `<span class="tag rt-exc-tag" title="${esc(excTip(x))}">${excLabel}</span>` : '';
 }
 export const progExc = (s, p) => !!live(s) && active(s) && exceptionsOf(s).some((x) => x.part === p.id);

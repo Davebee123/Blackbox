@@ -297,12 +297,20 @@ function holds(s, w) {
   });
   return ps.length ? ps : null;
 }
+// Parts a broad TARGET (soonest, lowest, no ◆) leaves for last, as the rotation's planner does: a Hotspot (a direct
+// hit sets it off), a Tripwire and a Zip Bomb while another part stands, a Trojan's live Package while its Loader lives.
+// A handler that names the part (that part) still hits it.
+const others = (s, p) => livingParts(s).some((x) => x !== p && x.kind === 'system');
+export const leftForLast = (s, p) => ((p.hotspot || p.deadman || p.fuse) && others(s, p)) || (!!p.pkg && !p.pkg.inert && livingParts(s).some((x) => x.id === 'loader'));
+const firstOf = (s, list) => list.find((p) => !leftForLast(s, p)) || list[0] || null;
+// When a part's next attack lands, by the timers the board shows (a hidden one counts as 2, no attack as last).
+const dueOf = (s, p) => shown(s).find((i) => i.source === p.id && !i.hidden && !i.tell)?.col ?? (p.attack ? 2 : 9);
 function targetOf(s, h, ps) {
   const live = livingParts(s);
   if (h.target === 'that') return ps?.[0] || null;
-  if (h.target === 'soonest') return soonest(s) || null;
-  if (h.target === 'lowest') return [...live].sort((a, b) => a.integrity - b.integrity)[0] || null;
-  if (h.target === 'bare') return live.filter((p) => !(p.armor > 0)).sort((a, b) => a.integrity - b.integrity)[0] || null;
+  if (h.target === 'soonest') return firstOf(s, [...live].sort((a, b) => dueOf(s, a) - dueOf(s, b) || b.max - a.max));
+  if (h.target === 'lowest') return firstOf(s, [...live].sort((a, b) => a.integrity - b.integrity));
+  if (h.target === 'bare') return firstOf(s, live.filter((p) => !(p.armor > 0)).sort((a, b) => a.integrity - b.integrity));
   return null;
 }
 const takesPart = (id) => !['none', 'aggro'].includes(ABILITIES[id]?.target);
