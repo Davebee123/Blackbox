@@ -10,17 +10,18 @@ import { entries } from './codex.mjs';
 import { ROUTINES, LOCKED, EXCEPTION, confirmed, TARGETS, unlocked, programsOf, programName, routineOf, focusBody, bodyName, bodyDecoded, isBody, handlerRows, ramFor, ramUsed, barSkills, palette, presetsFor, presetNow, whenLabel, whenTip, whenIcon, whenRam, isLong, parseWhen, refName, live, preview, exceptionsOf, wholeFight } from './routines.mjs';
 
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-const pips = (n, cls = '') => `<span class="rt-pips${cls ? ' ' + cls : ''}" aria-label="${n} RAM">${Array.from({ length: n }, () => '<i></i>').join('')}</span>`;
+// A RAM cost: a small circle on the left of a chip, "2R".
+const ramCost = (n, cls = '') => `<span class="rt-rc${cls ? ' ' + cls : ''}" title="${n} RAM" aria-label="${n} RAM">${n}R</span>`;
 const takesPart = (id) => !['none', 'aggro'].includes(ABILITIES[id]?.target);
 const skillName = (s, id) => (id === 'spike' ? said(s, 'spike').replace(/^./, (c) => c.toUpperCase()) : ABILITIES[id]?.name || id);
 const verbOf = (id) => ABILITIES[id]?.verb || 'hit';
 const BODY_GROUPS = ['family', 'strain', 'guard', 'runner'];
 
 // ---------- chips ----------
-function whenChip(s, id, { drag = true, open = true, extra = '', short = false } = {}) {
+function whenChip(s, id, { drag = true, open = true, extra = '', short = false, cost = true } = {}) {
   const w = parseWhen(id), ram = whenRam(id), label = short && w?.kind === 'part' ? w.def.short : whenLabel(id);
   const tip = open ? `${whenTip(id)} RAM ${ram}.` : `${whenTip(id)} Research ${w?.def.tier} on the ${refName(w?.ref)} opens it.`;
-  return `<span class="rt-chip rt-when${open ? '' : ' locked'}"${drag && open ? ` draggable="true" data-rt-drag="when:${esc(id)}"` : ''} title="${esc(tip)}">${glyph(open ? whenIcon(id) : 'lock')}<b>${esc(label)}</b>${pips(ram)}${extra}</span>`;
+  return `<span class="rt-chip rt-when${open ? '' : ' locked'}"${drag && open ? ` draggable="true" data-rt-drag="when:${esc(id)}"` : ''} title="${esc(tip)}">${cost ? ramCost(ram) : ''}${glyph(open ? whenIcon(id) : 'lock')}<b>${esc(label)}</b>${extra}</span>`;
 }
 function doChip(s, x, { drag = true } = {}) {
   const long = isLong(s, x.id);
@@ -57,7 +58,7 @@ function virusList(s, body) {
 // The ready-made routines for a virus: the rotation alone, then its presets; the one the stack is now lit.
 function presetRow(s, body) {
   const R = routineOf(s, body), now = presetNow(s, body), empty = !R.handlers.length, own = confirmed(s, body);
-  const chip = (id, name, icon, tip, on, hs = []) => `<button type="button" class="rt-pre${on ? ' on' : ''}" data-command="program ${esc(body)} preset ${esc(id)}" aria-pressed="${on}" title="${esc(`${tip}${hs.length ? ` ${hs.map((h) => `${whenLabel(h.when)} → ${skillName(s, h.do)}${takesPart(h.do) ? ` → ${TARGETS[h.target].label}` : ''}`).join('; ')}.` : ''}`)}">${glyph(icon)}<b>${esc(name)}</b>${hs.length ? pips(hs.reduce((n, h) => n + whenRam(h.when) + (isLong(s, h.do) ? 1 : 0), 0)) : ''}</button>`;
+  const chip = (id, name, icon, tip, on, hs = []) => `<button type="button" class="rt-pre${on ? ' on' : ''}" data-command="program ${esc(body)} preset ${esc(id)}" aria-pressed="${on}" title="${esc(`${tip}${hs.length ? ` ${hs.map((h) => `${whenLabel(h.when)} → ${skillName(s, h.do)}${takesPart(h.do) ? ` → ${TARGETS[h.target].label}` : ''}`).join('; ')}.` : ''}`)}">${hs.length ? ramCost(hs.reduce((n, h) => n + whenRam(h.when) + (isLong(s, h.do) ? 1 : 0), 0)) : ''}${glyph(icon)}<b>${esc(name)}</b></button>`;
   const list = [chip('rotation', 'Rotation', 'cron', `No handlers: your ${programName(s)} rotation plays it.`, empty && own), ...presetsFor(s, body).map((p) => chip(p.id, p.name, p.icon, p.tip, p.id === now, p.handlers))].join('');
   const undo = R.undo ? `<button type="button" class="btn small rt-undo" data-command="program ${esc(body)} undo" title="Bring back the handlers you had before">↶ Undo</button>` : '';
   const mark = !empty && !now ? '<span class="rt-pre-own" title="Your own stack: a preset replaces it, and Undo brings it back">edited</span>' : '';
@@ -78,11 +79,10 @@ export function programMarkup(s) {
     const why = !r.fits ? 'Out of RAM: it sits out.' : !r.open ? 'Its WHEN chip needs research.' : !r.onBar ? 'Its skill is not on your bar.' : '';
     const noTgt = !takesPart(h.do);
     return `<li class="rt-h${state ? ' ' + state : ''}" data-rt-drop="row:${r.i}"${why ? ` title="${esc(why)}"` : ''}>
-      <span class="rt-grip" draggable="true" data-rt-drag="row:${r.i}" title="Drag to reorder" aria-hidden="true">⋮⋮</span><span class="rt-n">${r.i + 1}</span>
-      ${slot('when', r.i, whenChip(s, h.when, { drag: false, open: r.open }), whenOpts.some(([v]) => v === h.when) ? whenOpts : [[h.when, whenLabel(h.when)], ...whenOpts], h.when)}
+      <span class="rt-grip" draggable="true" data-rt-drag="row:${r.i}" title="Drag to reorder" aria-hidden="true">⋮⋮</span><span class="rt-n">${r.i + 1}</span><span class="rt-cost">${ramCost(r.ram, r.fits ? '' : 'over')}</span>
+      ${slot('when', r.i, whenChip(s, h.when, { drag: false, open: r.open, cost: false }), whenOpts.some(([v]) => v === h.when) ? whenOpts : [[h.when, whenLabel(h.when)], ...whenOpts], h.when)}
       ${slot('do', r.i, doChip(s, x, { drag: false }), doOpts.some(([v]) => v === h.do) ? doOpts : [[h.do, skillName(s, h.do)], ...doOpts], h.do)}
       ${slot('target', r.i, noTgt ? '<span class="rt-chip rt-tgt none"><b>—</b></span>' : targetChip(h.target, { drag: false }), tgtOpts, h.target, noTgt)}
-      <span class="rt-cost" title="${esc(`${r.ram} RAM`)}">${pips(r.ram, r.fits ? '' : 'over')}</span>
       <button type="button" class="rt-x" data-command="program ${esc(body)} remove ${r.i + 1}" aria-label="Remove handler ${r.i + 1}" title="Remove">×</button></li>`;
   }).join('');
   const rot = `<li class="rt-h rt-rot" title="${esc(`When no handler fits: your ${programName(s)} rotation, the priorities the balance bots play. It never fires a cooldown of ${ROUTINES.long} or more.`)}"><span class="rt-grip" aria-hidden="true"></span><span class="rt-n">⟳</span><span class="rt-chip rt-when rot">${glyph('cron')}<b>else</b></span><span class="rt-chip rt-do rot">${glyph('chain')}<b>${esc(programName(s))} rotation</b></span></li>`;
