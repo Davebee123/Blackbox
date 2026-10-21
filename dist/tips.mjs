@@ -38,7 +38,7 @@ const TOUR_STEPS = [
     mark: (s) => s.rooms.at, done: (s, m) => !!s.rooms?.visit?.rested || s.rooms?.at !== m,
     text: 'Rest gives back some of your Signal, once a visit. The hunter never comes in here.' },
   { id: 'tour-jackout', at: '.fp-acts [data-rooms="jackout"]:not([disabled])', after: ['tour-engage'], when: (s) => !!visitOf(s) && !s.rooms.screen && (s.rooms.stats?.won || 0) > 0, done: (s) => !s.rooms?.at,
-    text: 'Jack out to bank your pack and go home, back to full Signal. The server takes you back 30 seconds later.' },
+    text: 'Jack out to bank your pack and go home. The server takes you back 30 seconds later.' },
 ];
 export const TOUR = TOUR_STEPS.map((t) => ({ ...t, page: 'rooms', tour: true }));
 export const tourIds = TOUR.map((t) => t.id);
@@ -57,6 +57,7 @@ export const TIPS = [
   { id: 'protocol-tab', page: 'loadout', at: '[data-ltab="protocols"][aria-selected="false"]', when: (s) => spare(s), text: 'Your protocols are on this tab.' },
   { id: 'protocol-home', page: 'loadout', at: '.inv-btn.load[disabled]', when: (s) => !!s.run || s.encounter?.phase === 'active', text: 'You can only equip protocols at home. Jack out and finish any fight first, then come back and click Load.' },
   { id: 'protocol-load', page: 'loadout', at: '.inv-btn.load:not([disabled])', text: 'Click Load to equip it. Every protocol you load adds its stats to yours in every fight.' },
+  { id: 'top-up', page: '*', at: '#meter-signal .meter-buy', text: 'Signal refills on its own at home, and the clock shows how long that takes. Click + to refill it now for credits.' },
   { id: 'repair', page: '*', at: '#meter-integrity .meter-buy', text: 'Your server repairs on its own. Click + to repair it now for credits.' },
   { id: 'level', page: '*', at: '#whoami', when: (s) => hackerLevel(s) >= 2, text: 'This is you: your handle, your class and its level. Each level makes you 4% stronger, and some levels unlock new skills.' },
 

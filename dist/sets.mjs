@@ -11,7 +11,7 @@
 //                                 never found) and its bonus lines, each open or not, a class set's subclass lines too
 //   SET_LOOT, sourcePool          each source's set pieces and its odds (combat.mjs setDrop: BOSS_LOOT's pattern)
 //   tierLine(id)                  a class set's tier line ("Breaker tier set, level 50"), or null for a general set
-//   SET_HOOKS                     what the bonuses do in a fight (the codes below), and setCredits, restMore, seesRare
+//   SET_HOOKS                     what the bonuses do in a fight (the codes below), and setCredits, restFast, seesRare
 //                                 for the ones that act outside it
 // Every piece has its own bonus (its unique effect, worn alone) and a green line (u.green), a second small stat that
 // counts while two or more pieces of its set are worn. A class set's 4-piece adds a line for each of its subclasses
@@ -212,7 +212,7 @@ export function setsRestore(s, was) {
 //   first-heal%, heal+%, overheal, crew%, crew-share   heals: the first larger, every cast larger, past full a shield,
 //                          more with a crew, a crewmate's share on you
 //   late-tick, repeat-every, cd-start   the cycles: an extra cooldown tick, a skill repeating, the first cooldowns shorter
-//   rest-more, credits%, see-rare   outside a fight: a rest room and a Defrag Bay, caches and vaults, the map card
+//   rest-fast, credits%, see-rare   outside a fight: resting, caches and vaults, the map card
 const who = (s) => s.who || '';
 const pct = (n) => 1 + n / 100;
 // Your set state in this fight (e.sx), made the first time a hook asks, and again at every start (a crewmate's
@@ -246,10 +246,10 @@ function beside(s, p) {
 // A stat or max Signal from set blocks (combat.mjs gearStat and maxSignal ask, with a set piece loaded).
 export const setStat = (s, stat) => total(custom(s, 'stat', {}, active(s) && sxOf(s) ? listOf(s) : gearFx(s)).filter((x) => x.fx.stat === stat));
 export const setSignal = (s) => total(custom(s, 'signal%', {}, active(s) && sxOf(s) ? listOf(s) : gearFx(s)));
-// What the outside-a-fight bonuses give: credits from caches or vaults (Lantern Route), how much more Signal a rest
-// room or a Defrag Bay gives (Night Shift), and whether a server's map card shows its rare spawn (the Antenna).
+// What the outside-a-fight bonuses give: credits from caches or vaults (Lantern Route), how much faster Signal rests
+// back (Night Shift), and whether a server's map card shows its rare spawn (the Antenna).
 export const setCredits = (s, of) => pct(total(custom(s, 'credits%', {}, gearFx(s)).filter((x) => (x.fx.of || []).includes(of))));
-export const restMore = (s) => pct(total(custom(s, 'rest-more', {}, gearFx(s))));
+export const restFast = (s) => pct(total(custom(s, 'rest-fast', {}, gearFx(s))));
 export const seesRare = (s) => custom(s, 'see-rare', {}, gearFx(s)).length > 0;
 // Heals you cast (combat.mjs healScaled): larger with Link, and with Mesh for each crewmate in the fight.
 const crewN = (s, x) => Math.min(x.fx.cap || 3, alliesOf(s).length);

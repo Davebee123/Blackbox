@@ -41,7 +41,7 @@ import { slotNode, pickSlot, hiddenAt, hiddenNear, floorOfSlot, lairAt, reached,
 import { STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, lootOdds, magicFind, uniqueItem, DECONSTRUCT, SLOTS, OLD_SLOT, BASES, AFFIX_FOR, COMPILE, STASH_CAP, CRIT, ECHO, PROTOCOL_NAMES, protocolSlots, rollItem, statLine, itemLabel, MATERIALS, codeOf, codeDrop, EXPLOIT_CHANCE, RULES, IMPLICITS, implicitFx, BLUEPRINTS, BLUEPRINT_CHANCE, blueprintName, recipeId, recipeStat, PROTOCOL_STATS, SLOT_KINDS, GROUPS, groupOf, statValue, seeded, statsRestore } from './gear.mjs';
 
 import ITEMS from './content/items.mjs';
-import { SETS, setFx, activeSets, isPiece, setPool, SET_LOOT, CLASS_SET, setPityKey, SET_EVENT, sourcePool, sourceKey, setOf, setsRestore, SET_HOOKS, setStat, setSignal, setHealMult, sxOf } from './sets.mjs';
+import { SETS, setFx, activeSets, isPiece, setPool, SET_LOOT, CLASS_SET, setPityKey, SET_EVENT, sourcePool, sourceKey, setOf, setsRestore, SET_HOOKS, setStat, setSignal, setHealMult, sxOf, restFast } from './sets.mjs';
 import { fxText, fxList } from './content.mjs';
 import { deathRecap } from './recap.mjs';
 import { situationOf } from './situations.mjs';
@@ -484,10 +484,20 @@ const gapMiss = (gap) => Math.min(CONFIG.maxMiss, Math.max(0, CONFIG.baseMiss + 
 export const missChance = (s) => (CONFIG.misses ? Math.max(0, gapMiss(levelGap(s)) - gearStat(s, 'accuracy')) : 0);
 export const enemyMissChance = (s) => (CONFIG.misses ? Math.min(75, gapMiss(-levelGap(s)) + defense(s, 'evasion')) : defense(s, 'evasion'));
 // Server Regen between fights: very slow (its number every 5 real minutes, as in a fight it is every 5 cycles).
-// Between fights: resting (see CONFIG.restRegen) plus any Self-healing filter's Regen. Signal needs none: you come
-// home to full (run.mjs bank, disconnect below).
+// Between fights: resting (see CONFIG.restRegen) plus any Self-healing filter's Regen.
+const maxSignalOf = (s) => maxSignal(s);
 export function idleRegen(s, ms) {
-  const changed = false;
+  // Signal rests back up while you're not connected.
+  let changed = false;
+  if (!s.run && s.signal != null && !active(s)) {
+    const max = maxSignalOf(s);
+    if (s.signal < max) {
+      s.signalAcc = (s.signalAcc || 0) + ((CONFIG.signalRest * max * ms) / 60000) * (piecesOn(s) ? restFast(s) : 1); // Night Shift (3): faster (sets.mjs)
+      const n = Math.floor(s.signalAcc + 1e-9);
+      if (n) { s.signalAcc -= n; s.signal = Math.min(max, s.signal + n); changed = true; }
+    }
+    if (s.signal >= max) s.signal = null; // full again: back to "whatever your max is"
+  }
   if (active(s) || s.server.integrity <= 0 || s.server.integrity >= s.server.max) return changed;
   const besieged = s.invasion && ['siege', 'breach'].includes(s.invasion.state);
   const rate = regenRate(gearStat(s, 'regen', 'server')) + CONFIG.restRegen * s.server.max * (besieged ? 0.5 : 1); // half rate while an invasion is at the wall
@@ -816,8 +826,8 @@ export function giveUnique(s, id, why = 'Reward: ') {
 export function setDeliver(s) {
   for (const x of fxFire(s, 'deliver')) {
     if (x.fx.do === 'fill-signal') {
-      if (!s.run) continue; // at home your Signal is full anyway
-      s.run.integrity = Math.max(s.run.integrity, s.run.max || maxSignal(s));
+      if (s.run) s.run.integrity = Math.max(s.run.integrity, s.run.max || maxSignal(s));
+      else s.signal = null; // full: whatever your max is
       emit(s, 'net-good', `${x.name}: your Signal is full.`, firedOf([x]));
     }
     if (x.fx.do === 'kill-xp') { s.killXp = Math.max(s.killXp || 0, x.value); s.killXpFrom = x.name; emit(s, 'status', `${x.name}: your next kill pays ${x.value}% more XP.`, firedOf([x])); }
@@ -1879,11 +1889,11 @@ function serviceCommand(s) {
   return warn(s, 'Services are gone. Programs in a server\'s sockets bend that server\'s rules: clear a socket room, then build.');
 }
 
-// How long a server makes you wait to reconnect: CONFIG.relockMs, and CONFIG.deathWait.each more for each disconnect
-// on its run (loc.deaths), up to CONFIG.deathWait.cap.
+// How long a server makes you wait to reconnect after a disconnect: CONFIG.relockMs, and CONFIG.deathWait.each more for
+// each disconnect on its run (loc.deaths), up to CONFIG.deathWait.cap.
 export const relockWait = (deaths = 0) => Math.min(CONFIG.deathWait.cap, CONFIG.relockMs + deaths * CONFIG.deathWait.each);
-// Losing all Signal on a run: back home at full Signal, pack lost, server untouched. The server waits a little longer for
-// each disconnect on its run (relockWait).
+// Losing all Signal on a run: back home, pack lost, server untouched. The server waits a little longer for each
+// disconnect on its run (relockWait).
 export function disconnect(s, reason) {
   const run = s.run;
   if (!run) return;
@@ -1900,7 +1910,8 @@ export function disconnect(s, reason) {
   const lost = run.pack.length;
   const by = s.encounter?.mode === 'run' ? s.encounter.virus?.name : null; // what took you out, for the card
   const recap = s.encounter?.mode === 'run' ? deathRecap(s) : null; // how: the last cycles' Signal and hits (recap.mjs)
-  s.run = null; // home: your Signal is full again (signalNow)
+  s.signal = Math.max(0, run.integrity);
+  s.run = null;
   const wait = loc ? relockWait((loc.deaths = (loc.deaths || 0) + 1)) : 0;
   if (loc) loc.lockUntil = (hooks.now?.() ?? Date.now()) + wait; // every server: see rogue.mjs relocks/relockLeft
   if (s.encounter?.mode === 'run' && s.encounter.phase !== 'active') s.encounter = null;
@@ -2369,6 +2380,7 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     }
   } else if (text === 'developer refill') { // Signal and Integrity to full, in a fight or out (the test bench's panel)
     s.server.integrity = s.server.max;
+    s.signal = null; // full: whatever your max is
     if (s.run) s.run.integrity = s.run.max;
     s.degraded = null;
     emit(s, 'info', 'Developer: Signal and Integrity full.');
@@ -2414,7 +2426,8 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
   } else if (/^repair( \d+)?$/.test(text)) {
     topUp(s, 'server', text.split(' ')[1] ? Number(text.split(' ')[1]) : null);
   } else if (/^top ?up( signal)?( \d+)?$/.test(text)) {
-    emit(s, 'info', s.run ? 'On a run, a Signal patch from the store fills it.' : 'Your Signal is full whenever you are home.');
+    const n = text.match(/(\d+)$/);
+    topUp(s, 'signal', n ? Number(n[1]) : null);
   } else if (/^encounter [a-z]+( \d+)?$/.test(text) && (FIXTURES[text.split(' ')[1]] || STRAINS[text.split(' ')[1]] || text.split(' ')[1] === 'random')) {
     const [, key, seed] = text.split(' ');
     selectEncounter(s, key, seed ? Number(seed) >>> 0 : (s.seed + 1) >>> 0);
@@ -2506,7 +2519,7 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
   } else if (text.startsWith('outpost ') || /^build( |$)/.test(text)) {
     warn(s, 'Outposts are gone. Build in a server\'s socket rooms: connect, clear a socket, and build there.');
   } else if (/^craft( booster)?( pay .*)?$/.test(text)) {
-    warn(s, 'Signal boosters are gone. You come home to full Signal.');
+    warn(s, 'Signal boosters are gone. Top up your Signal with credits at home.');
   } else if (/^relay \S+$/.test(text)) {
     installRelay(s, text.split(' ')[1]);
   } else if (/^use /.test(text)) {
@@ -2606,26 +2619,30 @@ function actorTurn(s, who) {
   return active(s);
 }
 
-// Repairing: pay to have server Integrity full now (CONFIG.topUp), instead of resting. (Signal needs no top-up: you
-// come home to full.) `what` is 'server', the bar it fills.
-// What a unit of code counts for when you're short of credits.
+const signalNow = (s) => Math.min(maxSignal(s), s.signal ?? maxSignal(s)); // as run.mjs
+// Topping up: pay to have Signal or server Integrity full now (CONFIG.topUp), instead of resting.
+// What a unit of code counts for when you're short of credits (top-ups).
 export const CODE_CREDITS = 8;
-export function topUpPrice(s, what = 'server') {
+export function topUpPrice(s, what) {
   const [base, per] = CONFIG.topUp[what];
-  return Math.round(base + per * serverLevel(s));
+  return Math.round(base + per * (what === 'signal' ? hackerLevel(s) : serverLevel(s)));
 }
 // What it costs to fill `points` of the bar (all that's missing by default).
-export function topUpCost(s, what = 'server', points = null) {
-  const max = s.server.max, missing = s.server.max - s.server.integrity;
+export function topUpCost(s, what, points = null) {
+  const max = what === 'signal' ? maxSignal(s) : s.server.max;
+  const missing = what === 'signal' ? max - signalNow(s) : s.server.max - s.server.integrity;
   const n = Math.min(missing, points ?? missing);
   return n > 0 ? Math.max(1, Math.ceil((topUpPrice(s, what) * n) / max)) : 0;
 }
-function topUp(s, what = 'server', wanted = null) {
+function topUp(s, what, wanted = null) {
   if (active(s)) return warn(s, 'Finish the fight first.');
-  if (s.server.integrity <= 0) return warn(s, 'The server crashed. Type developer reboot.');
-  const max = s.server.max, now = s.server.integrity;
+  const signal = what === 'signal';
+  if (signal && s.run) return warn(s, 'Top up at home. On a run, use a Signal patch from the store.');
+  if (!signal && s.server.integrity <= 0) return warn(s, 'The server crashed. Type developer reboot.');
+  const max = signal ? maxSignal(s) : s.server.max;
+  const now = signal ? signalNow(s) : s.server.integrity;
   let n = Math.min(max - now, wanted ?? max);
-  if (n <= 0) return warn(s, 'Server is already at full Integrity.');
+  if (n <= 0) return warn(s, signal ? 'Signal is already full.' : 'Server is already at full Integrity.');
   // Short on credits: the rest comes out of your biggest pile of code (any kind), CODE_CREDITS each.
   const mats = materialsOf(s), pile = ['cipher', 'worm', 'kernel'].sort((a, b) => (mats[b] || 0) - (mats[a] || 0))[0];
   const short = Math.max(0, topUpCost(s, what, n) - s.server.credits), code = Math.ceil(short / CODE_CREDITS);
@@ -2636,8 +2653,9 @@ function topUp(s, what = 'server', wanted = null) {
   const cost = topUpCost(s, what, n);
   s.server.credits -= cost;
   if (paidCode) emit(s, 'info', `Paid ${paidCode} ${MATERIALS[pile].name} toward it.`);
-  s.server.integrity += n;
-  emit(s, 'repair', `Repaired ${n} Integrity for ${cost} credits. Server ${s.server.integrity}/${s.server.max}.`, { what, credits: cost });
+  if (signal) { s.signal = now + n >= max ? null : now + n; s.signalAcc = 0; }
+  else s.server.integrity += n;
+  emit(s, 'repair', signal ? `Signal topped up: +${n} for ${cost} credits. Signal ${now + n}/${max}.` : `Repaired ${n} Integrity for ${cost} credits. Server ${s.server.integrity}/${s.server.max}.`, { what, credits: cost });
 }
 
 // ---------- resolution ----------
@@ -4446,8 +4464,6 @@ export function restore(raw) {
       if (s.encounter) s.encounter.mode = 'home';
     }
     if (!Number.isFinite(s.server?.integrity) || !Array.isArray(s.logs)) return fresh();
-    // Signal no longer rests at home: you come home to full. A save left part rested is full now.
-    delete s.signal; delete s.signalAcc;
     s.settings.speed ||= 'normal';
     if (s.settings.haptics === undefined) s.settings.haptics = true;
     if (s.settings.tips === undefined) s.settings.tips = true;
@@ -4598,7 +4614,7 @@ export function suggestions(s, input = '') {
   }
   const base = active(s)
     ? [...usable(s).map((id) => (id === 'spike' ? spikeWord(s) : id)), 'hold', 'pause', 'resume', 'cancel', 'status', 'scan', ...living.filter((p) => p.kind !== 'fragment').map((p) => `inspect ${p.id}`)]
-    : ['engage', 'jack in', 'mail', 'repair', 'protocols', 'compile', 'load', 'unload', 'encounter cryptjack', 'encounter splinter', 'encounter ghostroot', 'encounter random', 'status', 'developer reboot'];
+    : ['engage', 'jack in', 'mail', 'repair', 'top up', 'protocols', 'compile', 'load', 'unload', 'encounter cryptjack', 'encounter splinter', 'encounter ghostroot', 'encounter random', 'status', 'developer reboot'];
   return base.filter((x) => x.startsWith(text));
 }
 

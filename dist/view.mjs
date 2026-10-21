@@ -2588,8 +2588,8 @@ function consortiumLine(s, l) {
 export const deathMark = (n) => (n > 0 ? `<span class="tag hot death-mark" title="${esc(`+${CONFIG.deathWait.each / 1000} s for each disconnect on this run, up to ${CONFIG.deathWait.cap / 60000} min.`)}">☠ ${n}</span>` : '');
 // The rogue server's card: the main thing to do, so it also leads the server card.
 function zoneCard(s) {
-  const here = s.run?.loc === CONFIG.zone.id;
-  const why = active(s) ? 'Finish the fight first' : s.run ? 'Jack out first' : relockLeft(s.zone) ? `Reconnect in ${relockLeft(s.zone)}s` : '';
+  const here = s.run?.loc === CONFIG.zone.id, sig = signalNow(s), max = maxSignal(s), need = Math.ceil(max * CONFIG.zone.minSignal);
+  const why = active(s) ? 'Finish the fight first' : s.run ? 'Jack out first' : relockLeft(s.zone) ? `Reconnect in ${relockLeft(s.zone)}s` : sig < need ? `Needs ${need} Signal` : '';
   return `<section class="card zone-card"><h2>Rogue server</h2><h1>${CONFIG.zone.name}</h1>
     <div class="stats">${stat('Hostiles', `${liveSpawns(s)}/${zoneRooms().length}`)}${stat('Levels', `<b class="${hackerLevel(s) > CONFIG.zone.maxLevel + 4 ? 'con-gray' : hackerLevel(s) > CONFIG.zone.maxLevel ? 'con-orange' : 'con-yellow'}" title="${hackerLevel(s) > CONFIG.zone.maxLevel ? 'You\'re outgrowing it: its kills pay less every level' : 'Its viruses keep up with you to this level'}">Lv 1–${CONFIG.zone.maxLevel}</b>`)}</div>
     <div class="row">${here ? btn('net', 'Back to the run', true) : `<button type="button" class="btn primary" data-command="connect ${CONFIG.zone.id}" ${why ? `disabled title="${esc(why)}"` : ''}>Connect</button>`}${why && !here ? `<small class="svc-line">${esc(why)}</small>` : ''}${here ? '' : deathMark(s.zone?.deaths)}</div></section>`;
@@ -2628,6 +2628,7 @@ function mapSide(s, sel, node) {
     const r = s.reports.findLast((x) => x.mode !== 'run');
     const upkeep = [];
     if (srv.integrity > 0 && srv.integrity < srv.max) upkeep.push(btn('repair', `Repair (${topUpCost(s, 'server')}c)`));
+    if (!s.run && !busy && topUpCost(s, 'signal')) upkeep.push(btn('top up', `Top up Signal (${topUpCost(s, 'signal')}c)`));
     if (srv.integrity <= 0) upkeep.push(btn('developer reboot', 'Reboot (testing)', true));
     const runCard = s.run ? `<section class="card lesson"><h2>On a run</h2><h1>${esc(currentLocation(s).name)}</h1><p>Signal ${s.run.integrity}/${s.run.max} · ${s.run.pack.length} unbanked.</p><div class="row">${btn('net', 'Back to the run', true)}</div></section>` : '';
     const occ = s.occupation && !s.occupation.occupied.cleared ? mapSide(s, 'home', { kind: 'location', loc: s.occupation }) : '';
@@ -2665,6 +2666,13 @@ function mapSide(s, sel, node) {
       ${rebooting(s, h) ? '<p class="svc-line"><span class="tag warn" title="Crashed: their server is on the map below them, open to clear.">Crashed</span></p>' : ''}</section>${networkCardMarkup(s, h)}`;
   }
   if (node.kind === 'intrusion') return alertCard();
+  if (false) {
+    const here = s.run?.loc === CONFIG.zone.id, sig = signalNow(s), max = maxSignal(s), need = Math.ceil(max * CONFIG.zone.minSignal);
+    const why = active(s) ? 'Finish the fight first' : s.run ? 'Jack out first' : sig < need ? `Needs ${need} Signal` : '';
+    return `${alertCard()}<section class="card"><h2>Rogue server</h2><h1>${CONFIG.zone.name}</h1>
+      <div class="stats">${stat('Hostiles', `${liveSpawns(s)}/${zoneRooms().length}`)}${stat('Signal', `${here ? s.run.integrity : sig}/${max}`)}</div>
+      <div class="row">${here ? btn('net', 'Back to the run', true) : `<button type="button" class="btn primary" data-command="connect ${CONFIG.zone.id}" ${why ? `disabled title="${esc(why)}"` : ''}>Connect</button>`}</div></section>`;
+  }
   if (node.kind === 'intrusion') return alertCard();
   if (node.kind === 'invader') return invaderCard(s);
   if (node.kind === 'hidden') {

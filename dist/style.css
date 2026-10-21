@@ -1665,6 +1665,12 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 .sig-bars i:nth-child(1) { height: 4px; } .sig-bars i:nth-child(2) { height: 7px; } .sig-bars i:nth-child(3) { height: 10px; } .sig-bars i:nth-child(4) { height: 13px; } .sig-bars i:nth-child(5) { height: 16px; }
 .sig-bars i.on { background: var(--you); box-shadow: 0 0 5px rgba(127, 209, 199, 0.5); }
 .meter-signal strong { color: var(--you); min-width: 3ch; }
+.meter-signal.weak .sig-bars i.on { background: var(--hot); box-shadow: 0 0 5px rgba(255, 91, 61, 0.5); }
+.meter-signal.weak strong { color: var(--hot); }
+/* Resting: the next bar up breathes while it refills. */
+.meter-signal.resting .sig-bars i.on + i:not(.on), .meter-signal.resting .sig-bars i:first-child:not(.on) { animation: sig-rest 1.2s ease-in-out infinite; }
+@keyframes sig-rest { 50% { background: rgba(127, 209, 199, 0.5); } }
+.no-motion .meter-signal .sig-bars i { animation: none; }
 @media (max-width: 1700px) and (min-width: 901px) { .meters { gap: 14px; } .meter-integrity .meter-bar { width: 80px; } }
 @media (max-width: 1440px) and (min-width: 901px) { .meter-signal .meter-label { display: none; } .meter-integrity .meter-bar { width: 56px; } .meters { gap: 10px; } }
 @media (max-width: 1600px) and (min-width: 1440px) { .pager .lcd { width: 84px; } }
@@ -3024,6 +3030,8 @@ details.map-pick { pointer-events: auto; }
 /* Crew rooms (elites): a gold frame, so nobody walks in solo by accident */
 .tag.tag-crew { color: #1a1206; background: var(--gold, #e8b54a); border-color: var(--gold, #e8b54a); font-weight: 700; letter-spacing: 0.06em; box-shadow: 0 0 0 1px rgba(232, 181, 74, 0.35), 0 0 8px rgba(232, 181, 74, 0.25); }
 
+.sig-eta { color: var(--dim); font-size: 11px; font-variant-numeric: tabular-nums; margin-left: 4px; }
+.meter-signal.weak .sig-eta { color: var(--amber); }
 .sp-row.k-lost { border-left-color: var(--hot); } .sp-row.k-lost .sp-ico { color: var(--hot); }
 .sp-row.k-time .sp-qty { font-variant-numeric: tabular-nums; }
 .gain.loss .sp-kicker { color: var(--hot); }

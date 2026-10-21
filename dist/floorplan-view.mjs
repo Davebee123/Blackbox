@@ -47,8 +47,6 @@ import { SCRIPTS, TIER, scriptsOf, slotsOf, scriptTip } from './scripts.mjs';
 import { BOSS_RULES } from './interrupt.mjs';
 import { familyName } from './families.mjs';
 import { ROOMS, KINDS, HUNTERS, RESIDENT, WORLD, STOCKED, farmed, respawnMs, roomList, hereOf, neighbours, linksOf, seenOf, isUp, backAt, downAt, cacheFull, refillAt, isBait, coreOpen, opened, signalNow, sigOf, progressOf, fmtLeft, hunterOf, hunterNext, paceOf, moveCost, fightOf, exits, hunterLine, xpEarned, virusName, exfilOf, exfilNext, exfilSeen, exfilLine, known, nameOf, hunterSeen, isSocket, socketOpen, socketOff, programIn, roomRuns, tunnelOf, addrOf, PUZZLES, isPuzzle, puzzleState } from './floorplan.mjs';
-import { restGain as FP_restGain } from './floorplan.mjs';
-import { restMore } from './sets.mjs';
 import { puzzlePanel } from './puzzle-view.mjs';
 import { PROGRAMS, SOCKET, programCost, buildBlock, codebasesOf, costLine as programCostLine } from './sockets.mjs';
 import { materialsOf } from './combat.mjs';
@@ -73,7 +71,7 @@ export function labelOf(s, room) {
 // chip, the card and the tooltip.
 const plateOf = (s, room) => { const n = labelOf(s, room); return n.match(/\S+-\d{4}$/)?.[0] || n; };
 const pctOf = (s, x) => Math.max(1, Math.round(s.rooms.max * x));
-const restGain = (s) => FP_restGain(s, ROOMS.rest);
+const restGain = (s) => Math.min(s.rooms.max - sigOf(s), Math.round(s.rooms.max * ROOMS.rest));
 // The threads' marks on this server (threads-view.mjs): { roomId: { mark: '!' | '?', text } }. None on the playtest.
 const R_th = (s) => (s.rooms?.world && s.threads ? roomMarksOf(s) : {});
 // The network's words for a server and its rooms (netrooms.mjs fills WORLD.view; the playtest has none).
@@ -210,7 +208,7 @@ function aboutOf(s, room) {
   else if (room.nook) who = room.log ? 'A log. Read it.' : nookLive(s, room, R_th(s)) ? 'Someone, or something, waits here.' : 'Quiet now.';
   else if (room.kind === 'empty') who = 'Nothing here.';
   else if (room.kind === 'vault' && !opened(s, room)) who = room.farm ? 'Opens once the Foreman and the Heatsink are down.' : R.visit?.keys.includes(room.id) ? 'Your key fits.' : `Its key is in ${guardOf(s, room.id) ? labelOf(s, guardOf(s, room.id)) : 'an elite'}.`;
-  else if (room.kind === 'rest') who = `Restores ${Math.round(R.max * ROOMS.rest * restMore(s))} Signal, once a visit.`;
+  else if (room.kind === 'rest') who = `Restores ${Math.round(R.max * ROOMS.rest)} Signal, once a visit.`;
   else if (isPuzzle(room.kind)) who = `${PUZZLES[room.kind].title}. ${PUZZLES[room.kind].rule}`;
   if (isSocket(s, room) && socketOpen(s, room)) { const p = programIn(s, room.id); who = p ? `${PROGRAMS[p].name}: ${PROGRAMS[p].rule}${socketOff(s, room) ? ' (offline)' : ''}` : room.kind === 'core' ? 'The core socket: build a program here.' : 'An open socket: build a program here.'; }
   const denEdge = g.hunter === 'track' && g.den && neighbours(g, g.den).includes(room.id) && h && !h.awake && !h.down;
@@ -458,11 +456,11 @@ function hudMarkup(s) {
   const c = connectOf(s);
   const acts = R.at
     ? btn('wait', 'Wait', { small: true, disabled: !!R.screen || active(s), tip: R.screen ? 'Wait: finish what is in front of you first.' : `Wait: the hunter takes its step${filesHere(s).length ? ', and the file you carry' : ''}. Costs nothing.` })
-      + btn('jackout', 'Jack out', { small: true, hot: true, disabled: active(s), tip: 'Jack out: banks your pack and sends you home, back to full Signal.' })
-    : btn('connect', 'Connect', { small: true, primary: true, disabled: !c.can, tip: c.can ? `Connect to ${R.name}.` : `${R.name} takes you back in ${fmtLeft(c.wait)}.` });
+      + btn('jackout', 'Jack out', { small: true, hot: true, disabled: active(s), tip: 'Jack out: banks your pack. Signal rests at home.' })
+    : btn('connect', 'Connect', { small: true, primary: true, disabled: !c.can, tip: c.can ? `Connect to ${R.name}.` : c.wait > 0 ? `${R.name} takes you back in ${fmtLeft(c.wait)}.` : `You need ${c.need} Signal to connect.` });
   return `<header class="fp-hud" aria-label="The server">
     <span class="fp-id" title="${esc(net(s, 'idTip') ?? `${R.name}: ${author} ${R.kind}, level ${R.level}, floor ${R.floor}.\n${K.rule}: ${K.text}`)}"><span class="ico" ${icon('server')}></span><b>${esc(R.name)}</b><small>${esc(net(s, 'idLine') ?? `${R.kind} · lv ${R.level} · ${K.rule}`)}</small></span>
-    <div class="fp-sig ${lvl}" title="${esc(`Signal: carries from fight to fight, and you're back to full at home.\nA room's first step each visit costs ${step}, or ${stepNew} into one you've never been in.`)}"><span class="lbl">Signal</span><span class="sigbar"><span style="width:${(f * 100).toFixed(1)}%"></span></span><strong>${sig}</strong><small>/${max}</small></div>
+    <div class="fp-sig ${lvl}" title="${esc(`Signal: carries from fight to fight and rests back at home.\nA room's first step each visit costs ${step}, or ${stepNew} into one you've never been in.`)}"><span class="lbl">Signal</span><span class="sigbar"><span style="width:${(f * 100).toFixed(1)}%"></span></span><strong>${sig}</strong><small>/${max}</small></div>
     <div class="fp-prog" title="${esc(`Rooms cleared for good: at ${Math.ceil(prog.total / 2)} the whole map is drawn, at ${prog.total} the server is Mapped.`)}"><span class="lbl">Rooms</span><span class="pbar"><span style="width:${(prog.done / prog.total) * 100}%"></span><i style="left:50%"></i></span><b>${prog.done}/${prog.total}</b>${R.mapped ? '<small class="fp-mapped">MAPPED</small>' : ''}</div>
     ${keys}${hunt}${ml}${pack}${job}${R.world && s.threads ? threadHud(s) : ''}
     <span class="fp-tools">${R.world ? '' : `<span class="fp-rules" role="group" aria-label="Boss rule"><span class="lbl" title="${esc(`Boss rule: how ${BOSSES[RESIDENT].name}'s ticks work. It applies to your next fight with it.`)}">Boss</span>${rule}</span>`}
@@ -470,10 +468,10 @@ function hudMarkup(s) {
     <span class="fp-acts">${acts}</span></span>
   </header>`;
 }
-// Whether you can connect from home: the reconnect wait over (home is always full Signal).
+// Whether you can connect from home: Signal enough, and the reconnect wait over.
 function connectOf(s) {
-  const wait = s.rooms.reconnectAt - now();
-  return { wait, can: wait <= 0 };
+  const R = s.rooms, sig = signalNow(s), wait = R.reconnectAt - now(), need = Math.ceil(R.max * 0.25);
+  return { sig, wait, need, can: wait <= 0 && sig >= need };
 }
 
 // ---------- the pop-up ----------
@@ -607,7 +605,7 @@ function socketCard(s, room) {
   if (p) {
     const P = PROGRAMS[p], off = socketOff(s, room), bay = p === 'defrag' && !off;
     const body = holder(p, P.name, `Program · ${P.weight}${off ? ' · offline' : ''}`, '', 'prog') + note(esc(P.rule), off ? 'dim' : '') + (off ? note(esc(WORLD.view?.offNote?.(s, room) || 'Offline.'), 'hot') : '');
-    const used = !!R.visit?.bays?.[room.id], gain = FP_restGain(s, SOCKET.rest);
+    const used = !!R.visit?.bays?.[room.id], gain = Math.min(R.max - sigOf(s), Math.round(R.max * SOCKET.rest));
     const acts = (bay ? btn('rest', used ? 'Rested' : 'Rest', { primary: !used && gain > 0, disabled: used || gain <= 0, note: used ? 'once a visit' : gain > 0 ? `+${gain} Signal` : 'Signal full' }) : '')
       + `<button type="button" class="btn small" data-rooms="uninstall" title="Uninstall: half its components and code come back.">Uninstall</button>`;
     return { body, acts };
@@ -665,16 +663,16 @@ function unknownCard(s, room) {
   if (!body) body = note("You haven't been in it.", 'dim');
   return cardOf({ word: 'unknown', cls: 'dim' }, false, 'Unknown room', jobNote(s, room) + body + hunterNote(s, room), '', false, addrOf(s, room.id));
 }
-// Home: the reconnect wait, what the last visit did, and Connect.
+// Home: Signal resting, the reconnect wait, what the last visit did, and Connect.
 function homeCard(s) {
-  const R = s.rooms, { wait, can } = connectOf(s);
+  const R = s.rooms, t = now(), { sig, wait, need, can } = connectOf(s), full = t + Math.max(0, Math.ceil(((R.max - sig) / (R.max * 0.2 * R.speed)) * 60000));
   const L = R.last;
   const last = L ? `<ul class="fp-lines">${L.result === 'lost' ? `<li class="hot"><span class="lbl">lost</span><span>${esc(`${L.why} ${L.lost?.length ? `${L.lost.length} unbanked ${L.lost.length === 1 ? 'item' : 'items'} lost: ${L.lost.join(', ')}.` : 'Nothing unbanked was lost.'}`)}</span></li>` : `<li><span class="lbl">banked</span><span>${L.banked} ${L.banked === 1 ? 'item' : 'items'}</span></li>`}<li><span class="lbl">xp</span><span>+${(L.xp || 0).toLocaleString('en-US')}</span></li></ul>` : '';
   const items = R.banked.map((id) => stashItem(s, id)).filter(Boolean);
   const loot = items.length ? `<h3 class="fp-sec">Banked <small>${items.length}</small></h3><ul class="fp-items">${items.slice(-6).map((it) => `<li data-ptip="${esc(it.id)}"><b class="iname r-${it.rarity}">${esc(itemLabel(it))}</b><small class="fp-stats">${Object.keys(it.stats || {}).map((k) => statLine({ [k]: it.stats[k] })).filter(Boolean).map((x) => `<span>${esc(x)}</span>`).join('')}</small></li>`).join('')}</ul>` : '';
-  const lines = wait > 0 ? `Reconnect in ${clock(R.reconnectAt)}. ${deathMark(R.deaths || 0)}` : '';
+  const lines = [sig < R.max ? `Full in ${clock(full)}.` : '', wait > 0 ? `Reconnect in ${clock(R.reconnectAt)}. ${deathMark(R.deaths || 0)}` : '', sig < need ? esc(`You need ${need} Signal to connect.`) : ''].filter(Boolean).join(' ');
   return `<section class="card fp-screen fp-home"><h2>${R.visits ? `Home · visit ${R.visits}` : 'Home'}</h2><h1>${R.visits ? (L?.result === 'lost' ? 'Disconnected' : 'Jacked out') : 'Ready to connect'}</h1>
-    ${lines ? note(lines) : ''}${L?.result === 'lost' ? recapMarkup(L.recap) : ''}${last}<div class="row acts">${btn('connect', 'Connect', { primary: true, disabled: !can, note: can ? '' : 'wait' })}</div>
+    ${lines ? note(lines) : ''}${L?.result === 'lost' ? recapMarkup(L.recap) : ''}${last}<div class="row acts">${btn('connect', 'Connect', { primary: true, disabled: !can, note: can ? '' : wait > 0 ? 'wait' : `${need} Signal` })}</div>
     <p class="fp-note dim">${esc(`This session: +${xpEarned(s).toLocaleString('en-US')} XP · fights won ${R.stats.won}/${R.stats.fights} · ${BOSSES[RESIDENT].name} ${R.stats.boss.won}/${R.stats.boss.tries}`)}</p>${loot}</section>`;
 }
 function popCard(s, id) {

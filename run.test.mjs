@@ -218,15 +218,20 @@ test('the rogue server: viruses sit in its folders; attack one for a home-style 
   hooks.now = null;
 });
 
-test('Signal carries from fight to fight on a run, and you are home at full whatever you left with', async () => {
-  const { maxSignal } = await import('./dist/combat.mjs');
+test('Signal carries between connections and rests back up; too weak and you cannot connect', async () => {
+  const { idleRegen, maxSignal } = await import('./dist/combat.mjs');
   const s = fresh();
+  s.signal = 10;
+  assert.match(say(s, 'connect sprawl').at(-1).message, /too weak/);
+  for (let i = 0; i < 30; i++) idleRegen(s, 1000);
+  assert.ok(s.signal - 10 >= Math.floor(maxSignal(s) * CONFIG.signalRest / 2) - 1, 'rests back at home');
+  idleRegen(s, 2 * 60000);
+  assert.ok(s.signal >= Math.ceil(maxSignal(s) * CONFIG.zone.minSignal));
   say(s, 'connect sprawl');
-  assert.equal(s.run.integrity, maxSignal(s));
+  assert.equal(s.run.integrity, s.signal ?? maxSignal(s));
   s.run.integrity = 40;
   say(s, 'jack out');
-  assert.equal(runMod.signalNow(s), maxSignal(s), 'jacked out: full');
-  assert.equal(s.signal, undefined, 'no Signal of its own at home');
+  assert.equal(s.signal, 40);
 });
 
 test('arriving in a directory lists it automatically', () => {
@@ -544,7 +549,7 @@ test('saves from before the skill rework start each class on the new kit, and ol
   assert.deepEqual(r.daemonLv, {});
 });
 
-test('Signal boosters are retired: no crafting; one you still carry works on a run', () => {
+test('Signal boosters are retired: no crafting (top up instead); one you still carry works on a run', () => {
   const s = fresh();
   s.salvage = Array.from({ length: 4 }, () => ({ name: 'Pulse Kernel' }));
   say(s, 'craft booster');
@@ -558,29 +563,33 @@ test('Signal boosters are retired: no crafting; one you still carry works on a r
   assert.equal(s.items.booster, 0);
 });
 
-test('repair: pay to fill the server now; less missing costs less; Signal needs no top-up', async () => {
-  const { topUpCost, topUpPrice } = await import('./dist/combat.mjs');
+test('top up: pay to fill Signal or the server now; less missing costs less; not on a run', async () => {
+  const { topUpCost, topUpPrice, maxSignal } = await import('./dist/combat.mjs');
   const s = fresh();
   s.server.credits = 200; // you start with none
-  s.server.integrity = Math.floor(s.server.max / 2);
-  const half = topUpCost(s, 'server');
-  assert.ok(half >= 1 && half <= topUpPrice(s, 'server'));
+  s.signal = Math.floor(maxSignal(s) / 2);
+  const half = topUpCost(s, 'signal');
+  assert.ok(half >= 1 && half <= topUpPrice(s, 'signal'));
+  s.signal = 0;
+  assert.equal(topUpCost(s, 'signal'), topUpPrice(s, 'signal'));
+  const credits = s.server.credits;
+  say(s, 'top up');
+  assert.equal(s.signal, null, 'full again');
+  assert.equal(s.server.credits, credits - topUpPrice(s, 'signal'));
   s.server.integrity = s.server.max - 10;
   const c2 = s.server.credits;
   say(s, 'repair');
   assert.equal(s.server.integrity, s.server.max);
   assert.ok(c2 - s.server.credits >= 1 && c2 - s.server.credits < topUpPrice(s, 'server'));
   // Can't afford it all: you get what you can pay for.
-  s.server.integrity = 1; s.server.credits = 2;
-  say(s, 'repair');
-  assert.ok(s.server.integrity > 1 && s.server.integrity < s.server.max && s.server.credits <= 2);
-  // Signal: full at home, a store patch on a run.
-  s.server.credits = 200;
-  const c3 = s.server.credits;
-  assert.match(say(s, 'top up').at(-1).message, /full whenever you are home/);
-  assert.equal(s.server.credits, c3, 'nothing paid');
+  s.signal = 0; s.server.credits = 2;
+  say(s, 'top up');
+  assert.ok(s.signal > 0 && s.signal < maxSignal(s) && s.server.credits <= 2);
+  // On a run it's a booster or a store patch instead.
+  s.signal = null;
   say(s, 'connect sprawl');
-  assert.match(say(s, 'top up').at(-1).message, /Signal patch/);
+  s.run.integrity = 10;
+  assert.match(say(s, 'top up').at(-1).message, /Top up at home/);
 });
 
 test('typos during a guard fight stay on the fight screen, out of the run terminal', async () => {

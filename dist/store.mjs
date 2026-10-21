@@ -9,7 +9,7 @@
 //     the exploring kit (key crackers, trace injectors, cheap relays), code, repairs and the odd
 //     blueprint turn up. (Daemons only come from invasions.)
 import { ZERO_DAYS, rollItem, MATERIALS } from './gear.mjs';
-import { emit, warn, rand, hackerLevel, addItem, learnBlueprint, materialsOf, gainCode, hooks } from './combat.mjs';
+import { emit, warn, rand, hackerLevel, addItem, learnBlueprint, materialsOf, gainCode, maxSignal, hooks } from './combat.mjs';
 import { tierIndex, TIERS, indemnity, boardOpen } from './mail.mjs';
 import { items } from './hidden.mjs';
 import { bestSell } from './market.mjs';
@@ -134,7 +134,7 @@ export function deliverGoods(s, id, L, f = 'halcyon') {
   if (id === 'exploit') return gainCode(s, { exploit: 1 }, 'Bought: ');
   if (id === 'salvage') { gainComponents(s, 5, null, 'store'); return; }
   if (GOODS[id]?.codebase) return learnCodebase(s, GOODS[id].codebase, 'Unsealed: ');
-  if (id === 'signal') { if (s.run) s.run.integrity = s.run.max; return emit(s, 'heal', 'Signal patched to full.'); }
+  if (id === 'signal') { s.signal = maxSignal(s); if (s.run) s.run.integrity = s.run.max; return emit(s, 'heal', 'Signal patched to full.'); }
   if (id === 'repair') { s.server.integrity = s.server.max; return emit(s, 'heal', `Server back to ${s.server.max}/${s.server.max}.`); }
   if (id === 'crate') return addItem(s, rollItem(() => rand(s), { level: L, rarity: 'tuned', faction: f }), 'Unsealed: ');
   if (id === 'blueprint') return learnBlueprint(s, 'Unsealed: ');

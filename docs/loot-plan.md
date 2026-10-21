@@ -40,7 +40,7 @@ Seventeen sets any class can wear, sorted by level. Early ones are small with st
 | Boot Disk | 1–8 | 2 | SPRAWL-00 rare spawns, RELAY-KING | new players | +10% max Signal; Regen heals 1 more every 5 cycles |  |  |
 | Hive Mind | 5–16 | 4 | floor 1–2 lairs | damage over time | Burns and helpers deal 8% more | Burns and helpers last 1 cycle longer | Parts under your burns or helpers take 8% more from all your damage |
 | Kestrel Clearance | 7+ | 3 | Kestrel guard posts | survival | +8% max Signal | Once a fight, a hit that would take more than 30% of your max Signal deals 30% instead |  |
-| Night Shift | 7–14 | 3 | Threads on floors 1–2 | staying power | +2 Regen | Rest rooms and Defrag Bays restore 50% more Signal |  |
+| Night Shift | 7–14 | 3 | Threads on floors 1–2 | staying power | +2 Regen | Resting at home refills Signal 50% faster |  |
 | Choirbook | 10–20 | 3 | floor 2–3 named bosses | control | Answering a tell shields you for 5% of max Signal | Jams and delays you apply last 1 cycle longer |  |
 | Patchwork | 10–18 | 4 | strain kills, one piece per family | mixed rotations | +5% damage, +5% max Signal | +5% Clock Speed | Each different skill you use in a fight adds +2% damage, up to +12% |
 | Lantern Route | 12+ | 3 | LANTERN couriers | farming | +10% Scavenge | Caches and vaults pay 25% more credits |  |

@@ -606,7 +606,7 @@ export function roomsRestore(s, was) {
   if (s.run && !s.run.rooms) {
     const loc = s.run.loc === CONFIG.zone.id ? zoneOf(s) : findLocation(s, s.run.loc);
     if (s.encounter?.mode === 'run') s.encounter = null;
-    try { if (loc) bank(s, loc, 'Your save moved to rooms:'); else s.run = null; } catch { s.run = null; }
+    try { if (loc) bank(s, loc, 'Your save moved to rooms:'); else { s.signal = s.run.integrity; s.run = null; } } catch { s.run = null; }
   }
   const t = now();
   for (const loc of [zoneOf(s), ...(s.locations || [])]) {

@@ -1,5 +1,5 @@
 // The economy check: the bot (bot.mjs) plays a class to a level three ways — never paying for
-// repairs (the server rests), always repairing, and repairing plus building — and reports what
+// health (it rests), always topping up, and topping up plus building services — and reports what
 // it earned, what it spent, how long it rested and how long the climb took.
 // node econ.mjs [class] [targetLevel] [seed]
 import { simulate } from './bot.mjs';

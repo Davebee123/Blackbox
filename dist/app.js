@@ -835,15 +835,17 @@ function rewardCard(kicker, e, events, toast = false) {
   showGain(kicker, name, rows, toast);
 }
 // Losing a run: how it went (the death recap over the last cycles: recap.mjs), what took you out, what it cost, and
-// when you can go back (you're home at full Signal; each disconnect on the server's run waits a little longer).
+// when you can go back.
 function lossCard(e) {
   const clock = (ms) => `${Math.floor(ms / 60000)}:${String(Math.ceil((ms % 60000) / 1000) % 60).padStart(2, '0')}`;
+  const max = maxSignal(campaign), sig = signalNow(campaign), need = Math.ceil(max * CONFIG.zone.minSignal);
   const rows = [
     { kind: 'lost', label: e.by ? `Taken out by ${e.by}` : (e.reason || 'Signal lost'), qty: '', text: 'Signal lost' },
     ...(e.lost ? [{ kind: 'lost', label: 'Unbanked files', qty: `−${e.lost}`, text: `${e.lost} files lost` }] : []),
     ...(e.failed || []).map((t) => ({ kind: 'lost', label: `Contract failed: ${t}`, qty: '', text: `Contract failed: ${t}` })), // an Install job's item went with the pack (mail.mjs)
   ];
-  const wait = e.relockMs || 0;
+  // One clock: you can go back once both the reconnect wait and your Signal allow it, so the later of the two.
+  const wait = Math.max(e.relockMs || 0, sig < need ? ((need - sig) / (CONFIG.signalRest * max)) * 60000 : 0);
   if (wait > 0) rows.push({ kind: 'time', label: 'Reconnection possible in', qty: clock(wait), text: `Reconnection possible in ${clock(wait)}` });
   showGain('Disconnected', e.where || '', rows, false, recapMarkup(e.recap));
   $('gain').classList.add('loss');
@@ -1579,16 +1581,26 @@ function renderMeters() {
       `Server Integrity ${srv.integrity}/${srv.max}. At 0 the server crashes and reboots at half, degraded for 10 minutes.${missing > 0 && srv.integrity > 0 ? ` Rests back to full in about ${mins} min.` : ''}`);
   }
   $('vault-value').textContent = srv.credits;
-  // Signal: your health out on the net, full whenever you're home; on a run the run's own header shows it.
+  // Signal: your health out on the net. At home it rests back; on a run the run's own header shows it.
   {
     const sig = campaign.run ? campaign.run.integrity : signalNow(campaign), max = campaign.run ? campaign.run.max : maxSignal(campaign);
-    const f = max ? sig / max : 0;
+    const f = max ? sig / max : 0, need = CONFIG.zone.minSignal;
     const m = $('meter-signal');
     m.hidden = !!campaign.run || active(campaign) || !!campaign.breach || !!campaign.rooms; // a fight has its own bars, a breach and the rooms their own page
     $('signal-value').textContent = sig;
     const lit = Math.ceil(f * 5 - 1e-9);
     m.querySelectorAll('.sig-bars i').forEach((b, i) => b.classList.toggle('on', i < lit));
-    m.title = `Signal ${sig}/${max}: your health out on the net. You're back to full whenever you come home.`;
+    m.classList.toggle('weak', f < need);
+    m.classList.toggle('resting', !campaign.run && !active(campaign) && sig < max);
+    const mins = Math.ceil((max - sig) / (CONFIG.signalRest * max));
+    // Resting: a clock to full (to connect, while too weak for it), so a low meter says when, not just "slowly".
+    const resting = !campaign.run && !active(campaign) && sig < max;
+    const goal = f < need ? Math.ceil(max * need) : max, secs = Math.max(0, Math.ceil(((goal - sig) / (CONFIG.signalRest * max)) * 60));
+    const eta = $('signal-eta');
+    eta.hidden = !resting;
+    if (resting) { eta.textContent = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`; eta.title = f < need ? 'Time until you have enough Signal to connect' : 'Time until Signal is full'; }
+    meterBuy(m, 'top up', campaign.run ? 0 : topUpCost(campaign, 'signal'),
+      `Signal ${sig}/${max}: your health out on the net. ${sig < max ? `Rests back to full in about ${mins} min at home.${f < need ? ` You need ${Math.ceil(max * need)} to connect.` : ''}` : 'Full.'}`);
   }
   const s = shown();
   // On a run, Signal lives in the prompt, the net header and the combat HUD.
@@ -2811,7 +2823,7 @@ document.querySelector('.brand')?.addEventListener('click', (ev) => {
   ev.preventDefault();
   go('map');
 });
-// The meter that takes a click (repair) takes Enter and Space too.
+// The meters that take a click (top up, repair) take Enter and Space too.
 document.addEventListener('keydown', (e) => {
   const m = e.target.closest?.('.meter[data-command]');
   if (m && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); m.click(); }

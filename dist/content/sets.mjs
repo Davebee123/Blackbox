@@ -454,11 +454,11 @@ export default {
           ]
         },
         "3": {
-          "text": "Rest rooms and Defrag Bays restore 50% more Signal.",
+          "text": "Resting at home refills Signal 50% faster.",
           "fx": [
             {
               "when": "custom",
-              "do": "rest-more",
+              "do": "rest-fast",
               "value": 50
             }
           ]

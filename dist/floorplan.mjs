@@ -2,8 +2,8 @@
 //   the playtest  (R0, app.js ?playtest=rooms): one server on a fresh character that's never saved, s.rooms its own,
 //                 its Signal and pack on it (R.signal, R.pack), its clocks ten times as fast.
 //   the network   (R1, netrooms.mjs): every server on the real save is a room graph, kept on its location
-//                 (loc.floorplan, R.world), s.rooms the one you're connected to. Signal is the run's (s.run.integrity;
-//                 full again at home), the pack the run's files (banked by run.mjs when you jack out), and
+//                 (loc.floorplan, R.world), s.rooms the one you're connected to. Signal is the run's (s.run.integrity,
+//                 resting at home as s.signal), the pack the run's files (banked by run.mjs when you jack out), and
 //                 the world's own rules (what a room spawns, the Resident, takeover, Root, contracts) come through
 //                 the WORLD hooks netrooms.mjs fills.
 //
@@ -36,9 +36,10 @@
 //               first use it, a junction when you first walk it. At 50% the whole graph is drawn (the rooms you haven't
 //               been in as unknown chips); at 100% the server is Mapped (an item roll two levels over it, and 5 kills'
 //               worth of XP).
-//   visits      connect at the entry, jack out from any room (the pack banks), home at full Signal, reconnect after
-//               ROOMS.reconnect (CONFIG.deathWait.each more for each disconnect since your last clean jack out, up to
-//               its cap). Lose a fight and you're disconnected: the unbanked pack is lost, XP and banked gear stay.
+//   visits      connect at the entry, jack out from any room (the pack banks), rest at home (Signal back at
+//               CONFIG.signalRest a minute), reconnect after ROOMS.reconnect. Lose a fight and you're disconnected: the
+//               unbanked pack lost (XP and banked gear stay), and CONFIG.deathWait.each more on the wait for each
+//               disconnect since your last clean jack out, up to its cap.
 //
 // Fights are ordinary run fights (combat.mjs selectEncounter, mode 'run') flagged e.rooms: combat.mjs finish hands the
 // end back here (hooks.roomEnd), and families.mjs and interrupt.mjs play the room rules (attack sets, the new bodies,
@@ -54,7 +55,6 @@ import { logSet } from './genome.mjs';
 import { deathRecap } from './recap.mjs';
 import { addrsOf, byAddr } from './address.mjs';
 import { PROGRAMS, SOCKET, buildProgram, uninstallProgram, gainComponents, programCost, buildBlock as programBlock, costLine as programCostLine, codebasesOf } from './sockets.mjs';
-import { restMore } from './sets.mjs';
 import { PUZZLES, PUZZLE_KINDS, isPuzzle, newPuzzle, puzzleMove, puzzleScore, puzzleStarted, cellOf, boardLines, moveLine } from './puzzles.mjs';
 
 // ---------- tuning ----------
@@ -435,11 +435,9 @@ export const addrOf = (s, id) => (s.rooms ? addrsOf(s.rooms.graph)[id] : null) |
 // ---------- the server on you ----------
 const nowOf = () => hooks.now?.() ?? Date.now();
 const mins = (s, m) => (m * 60000) / (s.rooms?.speed || ROOMS.speed);
-// Your Signal on the server: the playtest's own, or the run's on the network (at home, full).
-export const sigOf = (s) => (world(s) ? (s.run ? s.run.integrity : maxSignal(s)) : s.rooms.signal);
+// Your Signal on the server: the playtest's own, or the run's on the network (and at home, what rests there).
+export const sigOf = (s) => (world(s) ? (s.run ? s.run.integrity : Math.min(maxSignal(s), s.signal ?? maxSignal(s))) : s.rooms.signal);
 function setSig(s, n) { if (!world(s)) s.rooms.signal = n; else if (s.run) s.run.integrity = n; }
-// What a rest gives (a rest room's ROOMS.rest, a Defrag Bay's SOCKET.rest of your max): Night Shift (3) adds half again.
-export const restGain = (s, share) => Math.min(s.rooms.max - sigOf(s), Math.round(s.rooms.max * share * restMore(s)));
 const ask = (fn, ...a) => { const f = WORLD[fn]; return f ? f(...a) : undefined; }; // a WORLD hook, on the network only
 export const roomOf = (s, id) => s.rooms?.graph.rooms[id] || null;
 export const hereOf = (s) => (s.rooms?.at ? roomOf(s, s.rooms.at) : null);
@@ -464,7 +462,7 @@ export function newRooms(s, { seed = 1, size = 'medium', kind = 'Mailhub', level
     v: 1, fog: FOG, seed, size, kind, level, floor, author, speed, bossRule: world ? null : BOSS_RULES[boss] ? boss : 'a', graph,
     id: (name || serverName(seed, kind)).toLowerCase(), name: name || serverName(seed, kind),
     at: null, visit: null, visits: 0, cleared: {}, seen: {}, down: {}, spawns: {}, rare: {}, taken: {}, opened: {},
-    signal: max, max, reconnectAt: 0, deaths: 0, screen: null, pack: [], banked: [], credits: 0, xpStart: 0,
+    signal: max, max, homeAt: nowOf(), reconnectAt: 0, deaths: 0, screen: null, pack: [], banked: [], credits: 0, xpStart: 0,
     log: [], scripts: [], codex: {}, mapped: false, last: null, rolls: 0,
     stats: { fights: 0, won: 0, lost: 0, cuts: 0, wasted: 0, ticks: 0, signalBy: {}, boss: { tries: 0, won: 0 }, hunted: 0, moves: 0, cycles: 0 },
     ...(world ? { world: true } : {}), ...more,
@@ -517,14 +515,14 @@ export const isBait = (s, room) => room.kind === 'cache' && !room.mirror && seed
 export const coreOpen = (s) => { const w = world(s) ? ask('coreOpen', s) : undefined; return w !== undefined ? w : !!s.rooms.opened[s.rooms.graph.vaults[0]]; };
 // A vault opened (the farm's ledger locks again when its keeper is back: netrooms.mjs).
 export const opened = (s, room) => { const w = world(s) ? ask('vaultOpen', s, room) : undefined; return w !== undefined ? w : !!s.rooms.opened[room.id]; };
-// Your Signal now: the run's (what a fight that just ended leaves you), and full at home.
-export function signalNow(s) {
+// Your Signal at home rests back (CONFIG.signalRest of your max a minute, at the clock's speed).
+export function signalNow(s, now = nowOf()) {
   const R = s.rooms;
   if (R.world) return s.run ? (active(s) ? s.run.integrity : Math.max(1, Math.min(s.run.max, s.run.integrity, R.fightFrom ?? s.run.max))) : sigOf(s);
   if (active(s) && s.run?.rooms) return s.run.integrity;
   // A fight that just ended (its run not settled yet): what it leaves you, on the server or home.
   if (R.at) return s.run?.rooms ? Math.max(1, Math.min(s.run.max, s.run.integrity, R.fightFrom ?? s.run.max)) : R.signal;
-  return R.max;
+  return Math.min(R.max, Math.floor(R.signal + ((now - R.homeAt) / 60000) * CONFIG.signalRest * R.max * R.speed));
 }
 // The next room to come back (a fight room, or a cache), for the server card.
 export function soonest(s, now = nowOf()) {
@@ -762,8 +760,10 @@ export function connect(s) {
   settle(s);
   if (R.at) { deny(s, `You are already on ${R.name}.`); return out(s, first); }
   if (now < R.reconnectAt) { deny(s, `${R.name} won't take you back for ${fmtLeft(R.reconnectAt - now)}.`); return out(s, first); }
+  const sig = signalNow(s, now);
+  if (sig < Math.ceil(R.max * CONFIG.zone.minSignal)) { deny(s, `You need ${Math.ceil(R.max * CONFIG.zone.minSignal)} Signal to connect. You have ${sig}. It rests back at home.`); return out(s, first); }
   R.max = maxSignal(s);
-  R.signal = R.max; // home is full Signal
+  R.signal = Math.min(R.max, sig);
   enter(s, now);
   return out(s, first);
 }
@@ -773,6 +773,7 @@ export function enter(s, now = nowOf(), { keys = [] } = {}) {
   const R = s.rooms;
   if (R.world) R.max = s.run.max;
   R.visits++;
+  R.fightFrom = null; // in with the Signal you connected with, never a fight's from an earlier visit
   R.at = R.graph.entry;
   R.inSince = now;
   R.visit = { n: R.visits, walked: { [R.graph.entry]: true }, keys: [...keys], rested: false, moves: 0, hunter: newHunter(s), slipped: false, back: null, xp0: xpTotal(s) };
@@ -811,11 +812,11 @@ function keysBack(s) {
   if (keys.length && !R.visit.cracked) say(s, `Your key goes back to ${keys.map((vid) => roomList(s).find((x) => x.key === vid)?.path).filter(Boolean).join(' and ') || 'its elite'}, its guard up again.`, 'rooms-bad');
   if (R.visit) R.visit.keys = [];
 }
-// Home: full Signal, and the server's wait (longer after each disconnect since your last clean jack out: R.deaths).
+// Home, and the server's wait (longer after each disconnect since your last clean jack out: R.deaths).
 function goHome(s, R = s.rooms) {
   const now = nowOf();
-  R.at = null; R.screen = null; R.reconnectAt = now + (R.world ? ROOMS.reconnect : Math.min(CONFIG.deathWait.cap, ROOMS.reconnect + (R.deaths || 0) * CONFIG.deathWait.each)) / R.speed;
-  if (!R.world) R.signal = R.max;
+  R.fightFrom = null; // the fight you left (or lost) is over: its Signal never caps your next visit's
+  R.at = null; R.screen = null; R.homeAt = now; R.reconnectAt = now + (R.world ? ROOMS.reconnect : Math.min(CONFIG.deathWait.cap, ROOMS.reconnect + (R.deaths || 0) * CONFIG.deathWait.each)) / R.speed;
   R.visit = { ...R.visit, hunter: null, exfil: R.visit?.exfil?.state === 'loose' ? { ...R.visit.exfil, state: 'gone' } : R.visit?.exfil || null }; // an Exfil you left is gone
 }
 // Lost a fight: disconnected. The unbanked pack is lost; XP, banked gear and your scripts stay.
@@ -833,6 +834,7 @@ function disconnected(s, why) {
   R.pack = [];
   keysBack(s);
   R.last = { result: 'lost', why, lost, xp: xpTotal(s) - (R.visit?.xp0 ?? xpTotal(s)), visit: R.visit?.n, ...recap };
+  R.signal = 0;
   R.deaths = (R.deaths || 0) + 1;
   goHome(s);
   say(s, `DISCONNECTED. ${why}${lost.length ? ` ${lost.length} unbanked ${lost.length === 1 ? 'item' : 'items'} lost.` : ''}`, 'rooms-bad');
@@ -980,7 +982,7 @@ export function act(s, verb, arg = null, opts = {}) {
   if (verb === 'rest' && here.kind === 'rest') {
     if (R.visit.rested) deny(s, 'You already rested this visit.');
     else if (sigOf(s) >= R.max) deny(s, 'Your Signal is full. Your rest keeps for later this visit.');
-    else { const n = restGain(s, ROOMS.rest); setSig(s, sigOf(s) + n); R.visit.rested = true; clear(s, here); say(s, `You rest: +${n} Signal.`, 'rooms-good'); }
+    else { const n = Math.min(R.max - sigOf(s), Math.round(R.max * ROOMS.rest)); setSig(s, sigOf(s) + n); R.visit.rested = true; clear(s, here); say(s, `You rest: +${n} Signal.`, 'rooms-good'); }
     return out(s, first);
   }
   // A Defrag Bay: a rest room of your own, once a visit.
@@ -988,7 +990,7 @@ export function act(s, verb, arg = null, opts = {}) {
     const bays = (R.visit.bays ||= {});
     if (bays[here.id]) deny(s, 'You already used this Defrag Bay this visit.');
     else if (sigOf(s) >= R.max) deny(s, 'Your Signal is full. The bay keeps for later this visit.');
-    else { const n = restGain(s, SOCKET.rest); setSig(s, sigOf(s) + n); bays[here.id] = true; say(s, `The Defrag Bay: +${n} Signal.`, 'rooms-good'); }
+    else { const n = Math.min(R.max - sigOf(s), Math.round(R.max * SOCKET.rest)); setSig(s, sigOf(s) + n); bays[here.id] = true; say(s, `The Defrag Bay: +${n} Signal.`, 'rooms-good'); }
     return out(s, first);
   }
   // A contract's item (mail.mjs: an Install job's, in your pack on its server): install it in its room. `install` is

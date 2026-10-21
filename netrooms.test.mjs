@@ -283,9 +283,10 @@ test('a save whose wild rooms were named by their folders (/var/log) loads with 
   assert.equal(t.run.cwd, 'Entry', 'where you stand, by its name');
 });
 
-// Coming home (the designer: "jacking out and dying and healing should bring you back to full"): full Signal at once,
-// whichever way you leave. A disconnect adds CONFIG.deathWait.each to that server's wait, up to its cap; a clean jack
-// out (or the server's reboot) clears the count.
+// Coming home. You leave with the Signal you have (0 after a disconnect); it rests back at home, or you top it up, and you
+// go back in with whatever you have then: never with a fight's Signal from an earlier visit. A disconnect adds
+// CONFIG.deathWait.each to that server's wait, up to its cap, and a clean jack out (or the server's reboot) clears the
+// count.
 const loseFight = (s) => {
   const next = FP.roomList(s).find((r) => FP.isUp(s, r) && r.kind === 'process');
   enterRoom(s, next.id); play(s, 'engage');
@@ -293,32 +294,42 @@ const loseFight = (s) => {
   for (const p of s.encounter.virus.parts) if (p.attack) p.attack.due = s.encounter.cycle;
   for (let i = 0; i < 5 && active(s); i++) { command(s, 'hold'); resolveCycle(s); }
 };
-test('jack out: home at full Signal at once, and 30 s later the server takes you back at full', async () => {
-  const { maxSignal } = await import('./dist/combat.mjs'), { signalNow } = await import('./dist/run.mjs'), { relockLeft } = await import('./dist/rogue.mjs');
+test('jack out: your Signal carries home and rests back (or you top it up); the server takes you back 30 s later', async () => {
+  const { maxSignal, idleRegen, topUpPrice } = await import('./dist/combat.mjs'), { signalNow } = await import('./dist/run.mjs'), { relockLeft } = await import('./dist/rogue.mjs');
   const { s, loc } = traced();
+  const max = maxSignal(s), half = Math.floor(max / 2);
   play(s, 'connect ' + loc.id);
-  s.run.integrity = 10;
+  s.run.integrity = half;
   play(s, 'jack out');
   assert.equal(s.run, null);
-  assert.equal(signalNow(s), maxSignal(s), 'full the moment you are home');
+  assert.equal(signalNow(s), half, 'it carries: what you left with');
   assert.equal(relockLeft(loc), CONFIG.relockMs / 1000, 'the plain 30-second wait');
-  clock += CONFIG.relockMs - 1000;
+  idleRegen(s, 60000);
+  assert.equal(signalNow(s), half + Math.floor(max * CONFIG.signalRest), 'it rests back, 20% of max a minute');
+  clock += CONFIG.relockMs;
   play(s, 'connect ' + loc.id);
-  assert.equal(s.run, null, 'still waiting');
-  clock += 1000;
-  play(s, 'connect ' + loc.id);
-  assert.equal(s.run.integrity, maxSignal(s), 'back in at full');
+  assert.equal(s.run.integrity, half + Math.floor(max * CONFIG.signalRest), 'and you go back in with that');
+  // Or top it up to full for credits.
+  s.run.integrity = 10;
+  play(s, 'jack out');
+  s.server.credits = 1000;
+  play(s, 'top up');
+  assert.equal(signalNow(s), max, 'topped up to full');
+  assert.ok(s.server.credits < 1000 && 1000 - s.server.credits <= topUpPrice(s, 'signal'));
 });
-test('disconnected by a lost fight: home at full Signal, and that server waits 45 s', async () => {
+test('disconnected by a lost fight: home at 0 Signal, that server waits 45 s, and a top-up sends you back in at full', async () => {
   const { maxSignal } = await import('./dist/combat.mjs'), { signalNow } = await import('./dist/run.mjs'), { relockLeft } = await import('./dist/rogue.mjs');
   const { s, loc } = traced();
   play(s, 'connect ' + loc.id);
   loseFight(s);
   assert.equal(s.run, null, 'disconnected');
-  assert.equal(signalNow(s), maxSignal(s), 'full at once');
+  assert.equal(signalNow(s), 0, 'home at 0');
   assert.equal(relockLeft(loc), 45, '30 s and 15 s for the disconnect');
   assert.equal(loc.deaths, 1);
   assert.equal(s.logs.findLast((e) => e.type === 'disconnected').relockMs, 45000, 'the loss card counts the same wait');
+  s.server.credits = 10000;
+  play(s, 'top up');
+  assert.equal(signalNow(s), maxSignal(s), 'topped up');
   clock += 44000;
   play(s, 'connect ' + loc.id);
   assert.equal(s.run, null, 'still waiting');
@@ -326,21 +337,50 @@ test('disconnected by a lost fight: home at full Signal, and that server waits 4
   play(s, 'connect ' + loc.id);
   assert.equal(s.run.integrity, maxSignal(s), 'back in at full');
 });
+test('you go back in with the Signal you topped up to, never the Signal you started the fight you died in with', async () => {
+  // Main kept that fight's starting Signal on the server (its heal cap, R.fightFrom), and the next visit's first step
+  // clamped you to it: die in a fight you started at 56, top up to 100, reconnect, and you were at 56.
+  const { maxSignal } = await import('./dist/combat.mjs');
+  const { s, loc } = traced();
+  play(s, 'connect ' + loc.id);
+  s.run.integrity = 56;
+  loseFight(s);
+  assert.ok(loc.floorplan.fightFrom == null, 'the fight is over, and so is its cap');
+  s.server.credits = 10000;
+  play(s, 'top up');
+  clock += 5 * 60000;
+  play(s, 'connect ' + loc.id);
+  assert.equal(s.run.integrity, maxSignal(s));
+  assert.equal(FP.signalNow(s), maxSignal(s), 'the strip shows it');
+  play(s, 'wait');
+  assert.equal(s.run.integrity, maxSignal(s), 'and the first move keeps it');
+  // The same after a jack out mid-fight (the emergency escape).
+  const next = FP.roomList(s).find((r) => FP.isUp(s, r) && r.kind === 'process');
+  enterRoom(s, next.id); play(s, 'engage');
+  s.run.integrity = 40;
+  command(s, 'jack out'); resolveCycle(s); FP.settle(s);
+  assert.equal(s.run, null);
+  play(s, 'top up');
+  clock += 5 * 60000;
+  play(s, 'connect ' + loc.id);
+  play(s, 'wait');
+  assert.equal(s.run.integrity, maxSignal(s));
+});
 test('each disconnect on a run adds 15 s, up to 2 minutes; a clean jack out clears the count; other servers keep 30 s', async () => {
   const { disconnect } = await import('./dist/combat.mjs'), { relockLeft, rogueReboot } = await import('./dist/rogue.mjs');
   const { s, loc } = traced();
-  const die = () => { clock += 5 * 60000; play(s, 'connect ' + loc.id); assert.ok(s.run, 'connected'); s.run.integrity = 0; disconnect(s, 'Signal lost'); return relockLeft(loc); };
+  const die = () => { clock += 5 * 60000; s.signal = null; play(s, 'connect ' + loc.id); assert.ok(s.run, 'connected'); s.run.integrity = 0; disconnect(s, 'Signal lost'); return relockLeft(loc); };
   assert.equal(die(), 45, 'the first: 45 s');
   assert.equal(die(), 60, 'the second: 60 s');
   assert.equal(die(), 75);
   for (let i = 0; i < 6; i++) die();
   assert.equal(die(), CONFIG.deathWait.cap / 1000, 'capped at 2 minutes');
   // Another server isn't touched.
-  play(s, 'connect sprawl'); play(s, 'jack out');
+  s.signal = null; play(s, 'connect sprawl'); play(s, 'jack out');
   assert.equal(relockLeft(s.zone), 30, 'SPRAWL-00 waits the plain 30 s');
   assert.ok(relockLeft(loc) > 30, 'the other keeps its own');
   // A clean jack out clears it.
-  clock += 5 * 60000;
+  clock += 5 * 60000; s.signal = null;
   play(s, 'connect ' + loc.id); play(s, 'jack out');
   assert.equal(relockLeft(loc), 30);
   assert.equal(loc.deaths, undefined);

@@ -146,6 +146,7 @@ export function benchBuild(s, name, level) {
   if (sub) { s.loadout.equipped[sub] = presetKeys(s, kit.cls, 'rotation'); (s.loadout.follow ||= {})[sub] = 'rotation'; }
   const floor = benchFloors(s, L);
   openFarm(s); // KESSLER-FARM-00, from its level (rogue.mjs): on the map now, not a notice later
+  s.signal = null; // full: whatever your max is
   syncServer(s);
   s.server.integrity = s.server.max;
   s.server.credits = Math.max(s.server.credits, 500);

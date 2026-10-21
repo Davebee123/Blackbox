@@ -36,7 +36,7 @@ export function farmScore(you, crew, level, { seeds = 12, rarity = 'tuned', mate
       const loc = openFarm(s);
       play(s, 'crew sim ' + crew.join(' '));
       for (const x of s.crewSim) x.rarity = mates;
-      const back = () => { if (!s.run) { s.server.integrity = s.server.max; s.lockouts = {}; for (const l of s.locations) l.lockUntil = 0; play(s, 'connect kessler'); } };
+      const back = () => { if (!s.run) { s.server.integrity = s.server.max; s.signal = null; s.lockouts = {}; for (const l of s.locations) l.lockUntil = 0; play(s, 'connect kessler'); } };
       const fight = (room, boss) => {
         back();
         s.run.integrity = s.run.max; for (const c of Object.values(s.run.crew || {})) delete c.signal; // rested
