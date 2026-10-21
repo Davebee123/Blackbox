@@ -1183,10 +1183,6 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 .ptile-acts { display: flex; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
 .ptile .tag { justify-self: start; }
 .ptile.on { border-color: rgba(78, 222, 200, 0.45); }
-.ptile .dmn-when { font: 11px var(--mono); color: var(--dim); }
-.dmn-band h2 small { font: 11px var(--mono); color: var(--dim); margin-left: 6px; }
-.dmn-unknown { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
-.dmn-unknown li { padding: 3px 9px; border: 1px dashed var(--line-strong); border-radius: 4px; font: 12px var(--mono); color: var(--dim); }
 .compile-card.shut .svc-line { margin: 0; }
 /* The fight's name line stays one line: name, level, family, then any tags, clipped if tight. */
 .hud-id { flex-wrap: nowrap; white-space: nowrap; overflow: hidden; }

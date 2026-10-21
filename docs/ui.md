@@ -105,6 +105,12 @@ hit would only take lock); a Lockbox's ward is a cap line (`.wardcap`) at the mo
 cycle. The segment drains (a steel trail) and shatters (steel shards) with the hit (`app.js` `juice.lockDrain`).
 Screen effects off, Motion off or reduced motion: no glow pulse, no snap, no trail or shards; the static look stays.
 
+**The Daemons tab** (`daemons-view.mjs`, `daemons.css`): direction C, the party. Rows put a daemon's sprite in a
+fixed left column (`.dm-face`), its name over its level. A cycle bar lights a cell (violet) where a daemon acts and a
+short teal bar for your command in every cycle; a trigger is a dashed lane. The panel is the only place a rule's key
+facts are lit; its labels are plain (*Acts*, *Gets stronger*, *Found in*, *Scrap for*) and the precise detail (drop odds,
+the number at each level) is in tooltips. The sprites' blink stops with Motion off or reduced motion.
+
 **Part research** (`codex-view.mjs` researchBar, `research.mjs`): a part card's research is a thin bar of 60 with a
 tick at 3, 15 and 60 (gray, amber once reached) and *n/60* in mono beside it; what a tier still hides reads **???** in
 gray mono with what unlocks it in `--dim`. A part researched to 100% carries the **mastered mark** (`.pmast`): a small
