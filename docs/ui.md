@@ -17,6 +17,7 @@ emoji markers, nothing centred that is meant to be scanned.
 | `--next` | lands next cycle |
 | `--you` (teal) | you: your command, your bars, your level, what is on and yours |
 | `--daemon` (violet) | your daemons and your crew acting for you |
+| `--exception` (orchid) | a part your program leaves to you: *EXCEPTION · no available handler* (routines.mjs), on its row, the Now cell, the log line and a boss fight's header. Never red (a threat), teal (you) or amber (what you use) |
 | `--steel` (steel teal) | what protects a virus part: a Mutex's lock on its partner's bar, a Lockbox's cap, the tethers between parts |
 | `--gray` / `--dim` | broken, unavailable, small print |
 | `--r-set` (set green) | a set (sets.mjs): its name, its lit pieces and its bonuses once on, under a piece in its tooltip and rows, the Loadout's Set bonuses and the Collection's Sets. It sits with the rarity colours (`--r-stock` … `--r-indemnified`, D2's white, blue, yellow, gold and orange): D2's set green, warmed to the amber screen (`#b6cf55`). A piece's own name stays gold (it is a unique); greyed lines are `--gray`. Never teal: teal is only ever you. |
@@ -189,7 +190,7 @@ interface**. CSS, the DOM and text only (no canvas, WebGL or PixiJS).
 - **Floor palettes** are the one exception to *No new colours*, approved by the designer. A floor swaps the surface
   tokens (`--bg`, `--panel`, `--panel-2`, `--inset`), the structure colour (`--amber` and its soft, deep, line and wash
   forms) and the text tints (`--text`, `--bright`, `--muted`, `--dim`) inline on `<html>`; the job colours (`--hot`,
-  `--next`, `--you`, `--daemon`, `--steel`, `--gray`) never change. At medium and bold the accent tints `--panel` and
+  `--next`, `--you`, `--daemon`, `--exception`, `--steel`, `--gray`) never change. At medium and bold the accent tints `--panel` and
   `--panel-2` (3.5%, 6%) and `--inset` a little less, so the floor reads beyond the gaps; subtle keeps the palette's own
   panels. Each tint keeps 4.5:1 on the floor's bg, both panels (tinted, at every strength) and the textured backdrop
   (body text 7:1), checked in `screenfx.test.mjs`. Hues sit away from the job colours: Coldline's

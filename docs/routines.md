@@ -1,6 +1,6 @@
 # Routines: programs you write to fight for you
 
-Draft, October 20, 2026, for the designer's review. Phase R1 is built (Build phases); the rest is not.
+Draft, October 20, 2026, for the designer's review; reworked after the designer's playtest, October 21, 2026 (Decisions). Phase R1 is built (Build phases); the rest is not.
 
 You should be able to start something and look away, the way you can in RuneScape or World of Warcraft, without the game losing its nuance. Attention is a dial, not a switch. Looking away never costs you the run or your rewards. Paying attention earns more.
 
@@ -14,7 +14,7 @@ You should be able to start something and look away, the way you can in RuneScap
 
 ## 1. Programs and handlers
 
-Today, when the cycle timer runs out, key 1 hits the last part you hit. A **program** replaces that fallback: your subclass's default rotation, plus a stack of **handlers** you write for the viruses you understand. Each cycle you don't act, the program checks its handlers top to bottom, and the first one that fits fires. If none fits, the rotation does.
+Today, when the cycle timer runs out, key 1 hits the last part you hit. From class level 5, a **program** replaces that fallback: your subclass's default rotation, plus a **routine for each virus** you've met (a Codex family, strain, guard or the Exfil): a stack of **handlers** you write, or a ready-made one you pick. The fight's virus picks the routine. Each cycle you don't act, the routine checks its handlers top to bottom, and the first one that fits fires. If none fits, the rotation does.
 
 ### Writing a handler: three chips, no code
 
@@ -30,7 +30,8 @@ A handler is one line of three chips, dragged into place (a dropdown on each chi
 - **WHEN** chips come from your Codex: only parts and behaviours you've researched appear, each with its icon.
 - **DO** chips are the skills on your bar, as cards.
 - **TARGET** is a short list: that part, the soonest attacker, the lowest, a bare part.
-- Handlers sit in a stack you reorder by dragging. It reads like a sentence and needs no typing. It lives on the Loadout page beside the bar, and on each part's Codex page (a quick "add a handler for this part").
+- You start from the virus: pick it from the list, then pick a ready-made routine for it (*Encryptor first*, *Before it hits*, *Guard when low*, *Focus the lowest*: built from its parts, your research and your bar) or write your own.
+- Handlers sit in a stack you reorder by dragging. It reads like a sentence and needs no typing. It lives on the Loadout page, and on each part's Codex page (a quick "add a handler for this part", which opens that part's virus).
 - Each subclass keeps its own program and starts with a sensible default rotation (the planner's priorities, which the balance bots already play).
 
 ### What the Codex unlocks
@@ -45,7 +46,7 @@ Understanding a virus is how your program gets better at it.
 
 ### Exceptions: where you step in
 
-When a fight has a part, mutation or behaviour your program has no handler for, the program **throws an exception**: it holds its turn, a distinct cue sounds, and the part is marked on the board. You play that part by hand; one key hands control back. New things always need you; things you've mastered become automatic. The varied encounters of the parts plan keep this loop going.
+Once a virus's routine is yours (you picked a preset, wrote or changed a handler, or pressed Confirm), a part in its fights that the routine has no handler for and your research doesn't cover **throws an exception**: that part, and only that part, is yours to play. It's marked on the board, *EXCEPTION · no available handler*, and a cue sounds once a fight. The program keeps playing the rest and never targets it; once it's gone, or you've acted on it, the program takes it too. A virus with no routine of yours never throws: the rotation plays it all. New things need you; things you've mastered become automatic. The varied encounters of the parts plan keep this loop going.
 
 ### Watching and overriding
 
@@ -62,12 +63,12 @@ When a fight has a part, mutation or behaviour your program has no handler for, 
 
 ### RAM: the program's budget
 
-Each handler costs RAM by complexity (a plain handler 1, one with a rarer chip more). (Not "memory": that's the network's server slots.)
+Each virus's routine has its own RAM, never a shared total. Each handler costs RAM by complexity (a plain handler 1, one with a rarer chip more). (Not "memory": that's the network's server slots.)
 
 | Source | What it gives | What it rewards |
 |---|---|---|
 | Class level | A small, steady base: about 4 at level 1, about 10 at 50 | Playing |
-| Codex mastery | +1 for every 3 parts mastered, a bonus for a fully mastered family | Preparation: the main growth |
+| Codex mastery | That virus's routine: +1 for every 3 of its parts mastered, a bonus for a fully mastered family | Preparation: the main growth |
 | Gear | A RAM stat on some protocols, paid for like Scavenge (it costs the item's other stats); a few uniques and set bonuses add RAM or make one kind of handler cheaper | A build choice: a stronger character or a smarter program |
 
 At level 30, roughly 8 from level, 4–6 from mastery and 0–3 from gear: a player who studies has nearly twice the program of one who doesn't.
@@ -125,29 +126,42 @@ Parked, by the designer's call (October 20, 2026). Revisit with real multiplayer
 
 R1 waits for phase P1 of the parts plan: that's where the variety comes from.
 
-1. **R1 (built):** programs with the drag-and-drop handler stack (WHEN, DO and TARGET chips from the Codex and your bar), per-subclass default rotations, the shown next move, override at any time, exceptions on unknown parts, the ⟳ mark, RAM from class level, the auto jack-out threshold and stop-before-danger. Tests: a program fires only visible conditions and only researched WHEN chips, never the sync bonus, never a long cooldown unless named; an unknown part throws an exception; programs pay normal rewards; the rails stop a run.
+1. **R1 (built):** programs from level 5, a routine per virus with its own RAM and ready-made presets, the drag-and-drop handler stack (WHEN, DO and TARGET chips from the Codex and your bar), per-subclass default rotations, the shown next move, override at any time, exceptions that hand you only the part, the ⟳ mark, RAM from class level, the auto jack-out threshold and stop-before-danger. Tests: a program fires only visible conditions and only researched WHEN chips, never the sync bonus, never a long cooldown unless named; an unknown part throws an exception; programs pay normal rewards; the rails stop a run.
 2. **R2:** RAM from Codex mastery and gear, and the sandbox benchmark. Sound cues and the browser notification option.
 3. **R3:** the rarer chips (Predict, Chain, Hold, Watch) as loot and Codex rewards, share codes, the run queue, and the bigger variety bonus.
 4. **Later:** per-virus leaderboards and a weekly featured strain.
 
 **R1 as built** (`dist/routines.mjs`, `dist/routines-view.mjs`, `dist/routines-ui.mjs`, `routines.test.mjs`; GAME_RULES.md *Routines*). Where it settles what the plan leaves open:
 
-- **A cycle.** When the timer runs out and you typed nothing, the program first checks for an exception (it holds), then its handlers top to bottom (the first whose WHEN holds now, whose skill is ready and whose target exists fires), then the rotation: the planner with every long cooldown taken out (only a handler that names one fires it), and key 1 on the soonest attacker if that leaves nothing. It fires like auto-repeat: never synced, never a read of a tell. Off (`program off`), the old fallback comes back.
-- **Chips.** WHEN on a part: *on board*, *under half*, *no ◆* at decoded; *hits now*, *hits in 2*, *tell live* at rule; *before tell* (the cycle before a tell's window opens) and *Open* at mastered. About the fight: *every cycle*, *you under half*, *2+ fragments* (a Replicator decoded), *encrypted 3+* (an Encryptor decoded), *any tell live* (any part at its rule), and a mutation once its rule is decoded. A part is its Codex key (a second copy answers to the first's). TARGET: that part, soonest, lowest, no ◆. DO: the skills on your bar, Spike and SIGINT included.
+- **Level 5.** Routines unlock at class level 5 (`ROUTINES.unlockLevel`). Below it the Loadout's Program tab is greyed (its tooltip and its page say *Routines unlock at level 5.*), every `program …` command refuses with that sentence, the timer repeats your last hit as before, nothing throws, the rails are off and the Codex has no *+ handler*.
+- **A routine a virus.** A virus is a Codex body: a family (and the room bodies), a strain, a guard, the Exfil; the key a part's research is kept under. Each class (each subclass from level 10) keeps one routine per virus, and a subclass's first program copies its class's routines. The fight's virus picks the routine; a virus with no handlers plays the rotation.
+- **A cycle.** When the timer runs out and you typed nothing: a boss fight holds (nothing fires); else the parts that are yours to play (exceptions) are taken off the board for the program, which checks the routine's handlers top to bottom (the first whose WHEN holds now, whose skill is ready and whose target exists fires), then the rotation: the planner with every long cooldown taken out, and key 1 on the soonest attacker if that leaves nothing. With only parts that are yours left, it holds and nothing fires. It fires like auto-repeat: never synced, never a read of a tell. Off (`program off`), the old fallback comes back.
+- **Chips.** WHEN on a part: *on board*, *under half*, *no ◆* at decoded; *hits now*, *hits in 2*, *tell live* at rule; *before tell* (the cycle before a tell's window opens) and *Open* at mastered. About the fight: *every cycle*, *you under half*, *2+ fragments* (a Replicator decoded), *encrypted 3+* (an Encryptor decoded), *any tell live* (any part at its rule), and a mutation once its rule is decoded. The palette shows the fight-wide chips and only the picked virus's parts you've met. TARGET: that part, soonest, lowest, no ◆. DO: the skills on your bar, Spike and SIGINT included.
 - **Long cooldown** means 6 or more, by your talents and gear, or once a fight.
-- **RAM.** 4 + 6 × (level − 1) / 49, rounded: 4 at 1, 5 at 6, 8 at 30, 10 at 50. A handler costs its WHEN chip's RAM (1, 2 or 3) and 1 more for a long cooldown. Handlers past the budget sit out, top to bottom.
-- **Exceptions.** A part is covered by a handler that names it, or by its research: decoded for a plain part, its rule tier for a part with a rule (a Lockbox, a Mutex, a Mimic, a guard's rule). A mutation by a handler on it or its rule decoded. A tell by a handler on that part's tells (or *any tell live*) or by mastery. A boss, lair, Resident or crew boss always throws, once a phase. Handing back covers what's on the board for the rest of the fight. The cue is an existing sound (escalate) for now.
-- **Rails.** Auto jack-out trips on a crossing (a run you start under the line never trips) and works mid-fight as the emergency jack out. Stop-before-danger applies to a walk of more than one room (`cd` to an address or a folder far off); one step you take yourself goes in.
-- **Saves.** `s.programs`, made on first use with the defaults (program on, auto jack-out off, stop-before-danger on, no handlers); no SAVE_VERSION change.
+- **RAM.** Per routine: `ramFor(s, virus)` = 4 + 6 × (level − 1) / 49, rounded (4 at 1, 5 at 6, 8 at 30, 10 at 50) + `ramBonus(s, virus)`, which is 0 in R1 and is where R2's Codex mastery of that virus adds. A handler costs its WHEN chip's RAM (1, 2 or 3) and 1 more for a long cooldown. Handlers past the budget sit out, top to bottom.
+- **Presets.** Two to four a virus (`presetsFor`), each a prefilled stack that fits its RAM, with only chips you've opened and skills on your bar: *‹Signature› first* (its signature part decoded: the strip skill while it wears ◆, your best hit once it's bare), *Before it hits* (its parts at their rule: your best hit on each whose attack lands now, signature first), *Guard when low* (a short-cooldown guard skill under half Signal, else the lowest), *Focus the lowest*, and *No ◆ first* if that leaves fewer than two. *Rotation* (no handlers) sits first. The current one is lit; an edited stack is marked *edited*, and a preset over it keeps it one **Undo** away (`program undo`).
+- **Confirmed.** A routine is yours once you pick a preset (or *Rotation*), add, change, move, remove or clear a handler, or press **Confirm** (`program <virus> confirm`): `confirmed` on the routine. Only a confirmed virus throws exceptions; an R1 save's migrated routines count as confirmed.
+- **Exceptions.** In a confirmed virus's fight, a part is covered by a handler that names it, or by its research: decoded for a plain part, its rule tier for a part with a rule (a Lockbox, a Mutex, a Mimic, a guard's rule); a tell on it by a handler on that part's tells (or *any tell live*) or by mastery. An uncovered part is yours: its row and Now cell carry *EXCEPTION · no available handler* in the exception colour (`--exception`, an orchid: not red, which is a threat, nor teal, amber or the daemons' violet), and the log says it once. Acting on it (a typed command at it) or breaking it ends it; there is no hand-back key. A mutation hands nothing over (it is the whole virus, not a part; its chip is how you teach it). A boss, lair boss, Resident or crew boss: the whole fight is yours, one mark on the fight's header, whether or not the virus's routine is confirmed. The cue (an existing sound, escalate) plays once a fight.
+- **Rails.** Auto jack-out trips on a crossing (a run you start under the line never trips) and works mid-fight as the emergency jack out. Stop-before-danger applies to a walk of more than one room (`cd` to an address or a folder far off); one step you take yourself goes in. Both from level 5.
+- **Saves.** `s.programs`, made on first use with the defaults (program on, auto jack-out off, stop-before-danger on, no handlers); no SAVE_VERSION change. An R1 save's single stack per class moves on load: each handler into the routine of the virus whose part it names, one naming no part into every met virus's routine with room for it (else dropped).
 
 ## Decisions
 
 October 20, 2026, from the designer.
 
 1. **Reward attention, never penalize its absence.** No reduced XP or loot for routine-played fights, and no streak or bonus for watching. Attention pays because the most complex and rewarding fights need you to look: their tells and mechanics are beyond what a routine can handle.
-2. **Routines are available from the start,** to see how it feels.
+2. **Routines are available from the start,** to see how it feels. (Changed October 21: from level 5.)
 3. **No diminishing returns.** Farming one place is never paid below normal; varied play earns a bigger variety bonus on top.
 4. **Handlers are written with drag and drop** (dropdowns as a fallback), never typed code.
 5. **Encounters need some skill, and prep is rewarded,** like RuneScape: ordinary fights can run on a program; bosses can't.
 6. **Sharing will happen,** so it's designed in: share codes, limited by your own Codex and RAM.
 7. **RAM** comes from class level (a small base), Codex mastery (the main growth) and gear (a trade-off).
+
+October 21, 2026, from the designer's playtest.
+
+8. **Routines open at class level 5,** not from the start: below it the Program tab is greyed and the old fallback plays.
+9. **RAM is per virus,** never a shared total: each routine has its own budget, and Codex mastery will grow the virus you mastered.
+10. **Virus first.** You pick a virus, then a routine for it: ready-made presets from its parts, or your own stack.
+11. **Auto jack-out stays** (the emergency escape mid-fight).
+12. **Exceptions, streamlined:** a colour that isn't red, labelled *EXCEPTION · no available handler*, handing over only the part (the program plays the rest), with no key to hand back and one cue a fight.
+13. **Only a routine you made or confirmed throws.** A virus you haven't set up is the rotation's, start to finish.

@@ -2524,7 +2524,7 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
   } else if (text === 'daemon' || text.startsWith('daemon ')) {
     daemonCommand(s, text);
   } else if (/^program( |$)/.test(text) && hooks.programCommand) {
-    hooks.programCommand(s, text); // routines.mjs: your program's handlers, its rails, and handing control back
+    hooks.programCommand(s, text); // routines.mjs: your program's routines, its presets and its rails
   } else if (/^speed (relaxed|normal|fast)$/.test(text)) {
     s.settings.speed = text.split(' ')[1];
     emit(s, 'info', `Speed: ${s.settings.speed}, ${cycleLength(s) / 1000} seconds per cycle.`);
@@ -3714,7 +3714,7 @@ function helperGone(s) {
   for (const x of fxFire(s, 'expire', { do: 'helper-cd' })) fxState(e).helperCd = Math.max(fxState(e).helperCd || 0, x.value);
 }
 // Your program's turn (routines.mjs): a move it picked, fired like auto-repeat (never in a Sync Window, never a read of
-// a tell), or a hold while an exception waits for you.
+// a tell), or a hold when all that's left is yours to play.
 function programTurn(s, prog) {
   const e = s.encounter;
   if (prog.hold) {
@@ -3752,6 +3752,7 @@ export function playerPhase(s, phase = 'all') {
     e.surprise = !!(e.synced && e.sync?.surprise && q.ability !== 'hold'); // Infiltrator Surprise (see CONFIG.surprise)
     e.commanding = { id: q.ability, target: q.target || null, at: q.at ?? e.cycle, auto: false }; // your command: a tell on its part may count it (tells.mjs)
     const before = beforeCommand(e);
+    hooks.programActed?.(s, q); // routines.mjs: a part that was yours to play, played: your program takes it from here
     try { useAbility(s, q); } finally { e.commanding = false; }
     commandFx(s, before);
     if (e.synced && active(s) && q.ability !== 'hold') { syncBonus(s, q); daemonsOn(s, 'synced', { part: q.target }); } // Pendulum
@@ -4154,7 +4155,7 @@ function cycleClose(s, landed) {
   rollSync(s);
   if (e.virus.raid) raidCycle(s); // a crew boss: its phase, then what it announces (raid.mjs)
   if (e.virus.tells) { tellCycle(s); flushDaemons(s); } // a solo fight's tells: what it announces now (tells.mjs); a Lookout's hit
-  hooks.programCycle?.(s); // routines.mjs: a new exception, and the auto jack-out rail
+  hooks.programCycle?.(s); // routines.mjs: a part that's yours to play, and the auto jack-out rail
 }
 function endCycle(s, first) {
   if (cycleStart(s)) return since(s, first);

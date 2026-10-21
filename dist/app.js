@@ -49,7 +49,7 @@ import { channelOf, muted as chanMuted, say as chanSay } from './channel.mjs';
 import { setBanner, setPlan, handleOf } from './profile.mjs';
 import * as BN from './bench.mjs';
 import { PARTS } from './parts.mjs';
-import { installPrograms, noteExceptions, ROUTINES } from './routines.mjs';
+import { installPrograms, noteExceptions } from './routines.mjs';
 import { wireRoutines } from './routines-ui.mjs';
 
 const $ = (id) => document.getElementById(id);
@@ -1032,7 +1032,7 @@ function react(events) {
       case 'hung': flash('HUNG'); feel.add('nope', MINE, 'HUNG'); break;
       case 'resolved': feel.add(e.auto === 'daemon' ? 'daemon' : 'cycle', e.auto === 'daemon' ? '.byou' : '.bnow'); if (e.auto === 'daemon') lampBlink('dmn'); break;
       case 'hold': feel.add('cycle', '.bnow'); break;
-      case 'exception': flash('EXCEPTION'); feel.add('escalate', '.board .m-exc'); break; // routines.mjs: the program holds for you
+      case 'exception': if (e.cue) { flash('EXCEPTION'); feel.add('escalate', '.board .m-exc'); } break; // routines.mjs: a part with no available handler is yours to play (the cue once a fight)
       case 'rail': feel.add('prewarn', null); notice(e.message, true); break; // a walk stopped before danger, or the auto jack-out
       case 'loot': break; // the break already said it
       case 'net-good': feel.add(/unlocked|forced/.test(e.message) ? 'unlock' : /^pulled/.test(e.message) ? 'pickup' : 'good', null); if (e.gain) showGain('Pulled', '', [e.gain], true); break;
@@ -2511,7 +2511,6 @@ $('command-input').addEventListener('keydown', (e) => {
     return;
   }
   if (e.key === 'Escape') { if (tip && !input.value) { hideTip(true); return; } input.value = ''; $('suggestions').hidden = true; return; }
-  if (e.key === ROUTINES.key && !input.value.trim() && active(campaign)) { e.preventDefault(); run('program resume'); return; } // hand control back to your program
   if (/^[0-9-]$/.test(e.key) && !input.value.trim() && keyMap(shown())[e.key]) { // 1 Spike, 2–9 and 0 your skills, - SIGINT
     e.preventDefault();
     prepare(keyMap(shown())[e.key]);

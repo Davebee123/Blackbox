@@ -11,7 +11,7 @@ import { attackAmount } from './combat.mjs';
 import { partRead } from './fightread.mjs';
 import { entries, entryOf, validKey, firstKey, tellKind, SET_CYCLES } from './codex.mjs';
 import { RESEARCH, TIER } from './research.mjs';
-import { refOf } from './routines.mjs';
+import { refOf, refBody, unlocked } from './routines.mjs';
 
 const UNKNOWN = '???';
 const every = (n) => (n >= 900 ? 'once' : n === 1 ? 'every cycle' : `every ${n} cycles`);
@@ -57,7 +57,7 @@ function researchBar(n) {
 }
 const locked = (text) => `<p class="cxp-lock"><span>${UNKNOWN}</span>${esc(text)}</p>`;
 const TELL_VERB = { charge: 'Charges', cast: 'Casts', seal: 'Seals with', lock: 'Locks with' };
-function partCard(level, x, tells = []) {
+function partCard(level, x, tells = [], withHandler = false) {
   // Lv N+: a third part (it joins viruses of that level and up), or a part whose body comes later than your level (its numbers are at N).
   const p = x.part, later = x.level > level, opens = ((x.gene || x.basic) && x.from > 1) || later ? `<span class="tag dim" title="${esc(`${x.gene || x.basic ? `Joins viruses of level ${x.from} and up.` : `Comes at level ${x.from} and up.`}${later ? ` Its numbers are at level ${x.level}.` : ''}`)}">Lv ${x.from}+</span>` : '';
   if (!x.named) {
@@ -79,8 +79,9 @@ function partCard(level, x, tells = []) {
   } else rule = locked(`Research ${TIER.rule} to learn its rule, its answer and its tells.`);
   const loot = !p.loot ? '' : mast ? `<p class="cxp-loot">${glyph('salvage')}Drops ${esc(p.loot)}</p>` : locked(`Research ${RESEARCH.max} to learn its drop.`);
   const perk = mast ? `<p class="cxp-perk">Mastered. Its component drops ${Math.round((RESEARCH.perk.drop - 1) * 100)}% more often, and you deal ${Math.round((RESEARCH.perk.dmg - 1) * 100)}% more damage to it.</p>` : '';
-  // A handler for it (routines.mjs): a quick one on the Program tab, its WHEN chip on this part.
-  const handler = `<button type="button" class="btn small cx-handler" data-rt-goto="program add ${esc(refOf(x.virus, p))}:present" title="${esc(`Add a handler for the ${p.name} to your program`)}">${glyph('chain')}+ handler</button>`;
+  // A handler for it (routines.mjs, from level 5): the Program tab opens on its virus, with a handler on this part.
+  const ref = refOf(x.virus, p);
+  const handler = withHandler ? `<button type="button" class="btn small cx-handler" data-rt-goto="program ${esc(refBody(ref))} add ${esc(ref)}:present" title="${esc(`Add a handler for the ${p.name} to its virus's routine`)}">${glyph('chain')}+ handler</button>` : '';
   return `<div class="cx-part t${x.tier}${mast ? ' mastered' : ''}">${head}${bar}${stats}${atk}${rule}${loot}${perk}${handler}</div>`;
 }
 function setMarkup(x) {
@@ -110,7 +111,7 @@ function bodyPage(s, e) {
     ${e.authors.length ? `<p class="cx-by"><span class="cx-label">Written by</span>${e.authors.map(byline).join('')}</p>` : ''}</div></header>`;
   const rule = e.rule ? `<p class="cx-rule"${e.ice ? ' title="ICE: its rule shows as a tag in the fight"' : ''}>${esc(e.rule)}</p>` : '';
   const ridesOf = (x) => e.tells.filter((t) => t.part && t.part === (x.part?.name || x.spec.name)).map((t) => ({ name: t.name, kind: t.kind, level: t.level, elite: t.elite }));
-  const parts = section('Parts', `<div class="cx-parts">${e.parts.map((x) => partCard(e.level, x, ridesOf(x))).join('')}</div>`, ` <small>at <b class="you">Lv ${e.level}</b></small>`);
+  const parts = section('Parts', `<div class="cx-parts">${e.parts.map((x) => partCard(e.level, x, ridesOf(x), unlocked(s))).join('')}</div>`, ` <small>at <b class="you">Lv ${e.level}</b></small>`);
   const sets = e.sets.length ? section('Attack sets', `<div class="cx-sets">${e.sets.map(setMarkup).join('')}</div><p class="cx-foot">Each fight rolls its set, and nudges every part's first attack by up to 1 cycle.</p>`) : '';
   const tells = section('Tells', e.tells.length ? `<ul class="cx-tells">${e.tells.map(tellMarkup).join('')}</ul>` : '<p class="cx-foot">Brings no tells.</p>');
   const loot = section('Loot', lootList(e.parts) + (e.setLoot ? setLootTable(e.setLoot) : ''), ` <small>at research ${RESEARCH.max}</small>`);

@@ -6,6 +6,7 @@
    gold   = lands next cycle
    teal   = you (your command, your log lines)
    violet = your daemons acting for you
+   orchid = an exception: a part your program leaves to you
    gray   = broken / unavailable */
 :root {
   color-scheme: dark;
@@ -27,6 +28,8 @@
   --next: #ffd85c;
   --you: #7fd1c7;
   --daemon: #c3a6ff;
+  --exception: #e07bff; /* a part your program leaves to you (routines.mjs): not red (a threat), teal (you), amber or violet (daemons) */
+  --exception-soft: rgba(224, 123, 255, 0.14);
   --steel: #86b6c6; /* what protects a virus part: a lock, a ward, the tethers between parts (docs/ui.md) */
   --steel-glow: rgba(134, 182, 198, 0.6);
   --gray: #7d7362;
@@ -275,6 +278,7 @@ code { font-family: var(--mono); color: var(--amber); }
 .log-lines .c { color: var(--dim); }
 .log-lines .you { color: var(--you); }
 .log-lines .bad { color: var(--hot); }
+.log-lines .exc { color: var(--exception); }
 .log-lines .loss { color: var(--next); }
 .log-lines .good { color: var(--bright); }
 .log-lines .note { color: var(--text); }

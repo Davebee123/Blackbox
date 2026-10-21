@@ -190,7 +190,7 @@ const mix = (a, b, t) => '#' + rgb(a).map((v, i) => Math.round((v * (1 - t) + rg
 test('eight floors, eight palettes, every text tint readable on every surface, at every strength', () => {
   assert.deepEqual(PALETTES.map((p) => p.name), FLOORS.map((f) => f.name));
   assert.equal(new Set(PALETTES.map((p) => p.texture)).size, 8, 'a texture each');
-  const JOBS = { hot: '#ff5b3d', next: '#ffd85c', you: '#7fd1c7', daemon: '#c3a6ff', steel: '#86b6c6' };
+  const JOBS = { hot: '#ff5b3d', next: '#ffd85c', you: '#7fd1c7', daemon: '#c3a6ff', steel: '#86b6c6', exception: '#e07bff' };
   for (const p of PALETTES) for (const level of SFX.levels.slice(1)) {
     const v = varsOf(p, level);
     if (level === 'subtle') assert.deepEqual(v, p.vars, 'subtle keeps the palette\'s own panels');

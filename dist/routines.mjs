@@ -1,47 +1,58 @@
-// Routines (docs/routines.md, phase R1): a program fights for you when you don't act. Each class (each subclass from
-// level 10) keeps one: its default rotation, the planner's priorities (planner.mjs, what the balance bots play), and
-// an ordered stack of handlers you write. Each cycle you let the timer run out, the program checks its handlers top to
-// bottom and the first that fits fires; if none fits, the rotation does. Anything you type overrides it for that cycle.
+// Routines (docs/routines.md, phase R1): a program fights for you when you don't act. They unlock at class level 5
+// (ROUTINES.unlockLevel); below it the timer repeats your last hit, as it always did. Each class (each subclass from
+// level 10) keeps one program: a routine per virus (a Codex body: a family, a strain, a guard, the Exfil) it has met,
+// and its default rotation, the planner's priorities (planner.mjs, what the balance bots play), for every virus with no
+// routine. The fight's virus picks the routine. Each cycle you let the timer run out, the routine checks its handlers
+// top to bottom and the first that fits fires; if none fits, the rotation does. Anything you type overrides it.
 //
 //   handler    three chips: WHEN (a condition), DO (a skill on your bar), TARGET (that part, the soonest attacker, the
 //              lowest, a part with no ◆). Stored { when, do, target }. A part's WHEN chips open with its research
 //              (research.mjs): decoded (3) its name and health, rule (15) its rule and timer, mastered (60) prediction.
-//   RAM        the program's budget, from class level only in R1 (ramOf: 4 at level 1 to 10 at 50). A handler costs
-//              its WHEN chip's RAM (1 plain, 2 a rule chip, 3 a mastered one), +1 when it fires a long cooldown.
-//              Handlers past the budget, top to bottom, sit out.
+//   RAM        a budget per routine, not shared: ramFor(s, body) = ramOf(class level) (4 at level 1 to 10 at 50) +
+//              ramBonus(s, body) (0 in R1; R2's Codex mastery adds there, per virus). A handler costs its WHEN chip's
+//              RAM (1 plain, 2 a rule chip, 3 a mastered one), +1 when it fires a long cooldown. Handlers past the
+//              budget, top to bottom, sit out.
+//   presets    ready-made routines for a virus (presetsFor), built from its parts, your research and your bar, each
+//              fitting its RAM. Picking one replaces the stack; an edited stack can be got back with program undo.
 //   can't      fire a skill with a cooldown of 6 or more (or once a fight) unless a handler names it; press Enter in
 //              the Sync Window (it fires when the timer runs out, so never synced); read what the board doesn't show
 //              (hidden timers, a veiled part's attack); read a tell (its moves count like auto-repeat: a tell's
 //              simple answer, never its Open).
-//   exception  a part, mutation or tell no handler covers and your research doesn't either, or a boss, lair,
-//              Resident or crew boss phase (always): the program holds its turn, the part is marked on the board and
-//              a cue sounds. You play it by hand; ` (or program resume) hands control back for what's on the board.
+//   exception  only against a virus whose routine you made or confirmed (a preset picked, a handler added or edited,
+//              Confirm pressed; a virus with none is the rotation's and never throws): a part no handler names and your research doesn't cover (a tell on it, until mastered): that part is
+//              yours to play. The program plays the rest of the fight and never targets it; once it's gone, or you
+//              have acted on it, the program takes it too. Only excepted parts left: it holds (nothing fires). A boss,
+//              lair boss, Resident or crew boss: the whole fight is yours. One cue a fight.
 //   rails      auto jack-out at a Signal share you set (off, 10–50%), with your pack; stop-before-danger (on by
 //              default): a walk never steps into an elite, a boss, the Resident or a vault guard.
 //
 // Rewards: a program's fight pays exactly what the same fight pays you (nothing here touches XP or loot).
 //
-// State: s.programs = { on, rails: { jackOut, danger }, by: { <class or subclass>: { handlers: [] } } }, made on first
-// use (an older save gets the defaults: no SAVE_VERSION change). A fight's exceptions live on e.program.
-import { hooks, emit, warn, active, alive, part, livingParts, attackers, intents, toIntent, said, classOf, subOf, hackerLevel, barKeys, cooldownOf, codexKey, defender, maxSignal, timersHidden } from './combat.mjs';
+// State: s.programs = { on, focus, rails: { jackOut, danger }, by: { <class or subclass>: { routines: { <body>:
+// { handlers: [], confirmed, undo } } } } }, made on first use (an older save gets the defaults: no SAVE_VERSION change; an R1
+// save's single stack moves into its viruses' routines, migrate). A fight's exceptions live on e.program.
+import { hooks, emit, warn, active, alive, part, livingParts, intents, toIntent, said, classOf, subOf, hackerLevel, barKeys, cooldownOf, codexKey, defender, maxSignal, timersHidden } from './combat.mjs';
 import { ABILITIES, MUTATIONS, FAMILIES, ROOM_FAMILIES, GUARDS, STRAINS, BOSSES, ARCHETYPES, SUBS } from './data.mjs';
 import { researchAt, TIER } from './research.mjs';
 import { decoded as geneDecoded } from './genome.mjs';
 import { plannerWithout, soonest } from './planner.mjs';
-import { raidOf } from './raid.mjs';
 import { isUp } from './floorplan.mjs';
 
 export const ROUTINES = {
-  ram: [4, 10], // RAM at class level 1 and at 50, a straight line between
+  unlockLevel: 5, // the class level routines open at; below it the timer repeats your last hit
+  ram: [4, 10], // RAM at class level 1 and at 50, a straight line between: every routine's base
   long: 6, // a cooldown this long or longer stays your call unless a handler names it
   jackOut: [0, 10, 20, 30, 40, 50], // the auto jack-out line, % of your max Signal (0: off)
   low: 0.5, // "under half": a part's Integrity, your Signal
   fragments: 2, encrypted: 3,
   danger: ['elite', 'guard', 'core', 'boss'], // rooms a walk stops before
-  key: '`', // hands control back
 };
+export const LOCKED = `Routines unlock at level ${ROUTINES.unlockLevel}.`;
+export const unlocked = (s, arch = classOf(s)) => hackerLevel(s, arch) >= ROUTINES.unlockLevel;
 export const ramOf = (level) => Math.round(ROUTINES.ram[0] + ((Math.min(50, Math.max(1, level || 1)) - 1) * (ROUTINES.ram[1] - ROUTINES.ram[0])) / 49);
-export const ramFor = (s) => ramOf(hackerLevel(s));
+// RAM a virus's routine gets on top of the base. R2: Codex mastery of that virus adds here (docs/routines.md, RAM).
+export const ramBonus = (s, body) => { void s; void body; return 0; };
+export const ramFor = (s, body = null, arch = classOf(s)) => ramOf(hackerLevel(s, arch)) + (body ? ramBonus(s, body) : 0);
 
 // ---------- the chips ----------
 // WHEN chips on a part, by the research tier that opens them. ref is the part's Codex key (combat.mjs codexKey).
@@ -72,18 +83,39 @@ export const TARGETS = {
   bare: { icon: 'cracker', label: 'no ◆', tip: 'The lowest part with no armor. None: the handler waits.' },
 };
 
+// ---------- the viruses ----------
+// A virus here is a Codex body: what a part's Codex key starts with (a family, a room body, a strain, a guard).
+const bodyDef = (body) => STRAINS[body] || FAMILIES[body] || ROOM_FAMILIES[body] || GUARDS[body] || null;
+export const isBody = (body) => !!bodyDef(body);
+export const BODY_GROUPS = ['family', 'strain', 'guard', 'runner'];
+export const groupOf = (body) => (STRAINS[body] ? 'strain' : GUARDS[body] ? 'guard' : ROOM_FAMILIES[body]?.runner ? 'runner' : FAMILIES[body] || ROOM_FAMILIES[body] ? 'family' : null);
+// Every body, in the Codex's order: families (and room bodies), strains, guards, the Exfil.
+export function allBodies() {
+  const fam = [...Object.keys(FAMILIES), ...Object.keys(ROOM_FAMILIES)];
+  return BODY_GROUPS.flatMap((g) => [...new Set([...fam, ...Object.keys(STRAINS), ...Object.keys(GUARDS)])].filter((b) => groupOf(b) === g));
+}
+// Met, as the Codex counts it (codex.mjs met): seen in a fight, or killed.
+export const metBody = (s, body) => !!s.met?.[body] || (s.dex?.kills?.[body] || 0) > 0;
+export const metBodies = (s) => allBodies().filter((b) => metBody(s, b));
+// A body's parts as specs (a boss's extra parts share their family's research, so they count as its).
+const bodySpecs = (body) => [...(bodyDef(body)?.parts || []), ...Object.values(BOSSES).filter((b) => (b.strain || b.family) === body).flatMap((b) => b.extra || [])];
+export const bodyRefs = (body) => [...new Set(bodySpecs(body).map((x) => `${body}:${x.id}`))];
+// Decoded: any of its parts researched to its name and health.
+export const bodyDecoded = (s, body) => bodyRefs(body).some((ref) => researchAt(s, ref) >= TIER.decoded);
+
 // A part's name from its Codex key, from the tables (a strain's, a family's, a guard's, a boss's extra parts).
 function specOf(ref) {
   const [body, id] = String(ref).split(':');
-  const specs = [...(STRAINS[body]?.parts || []), ...(FAMILIES[body]?.parts || []), ...(ROOM_FAMILIES[body]?.parts || []), ...(GUARDS[body]?.parts || []), ...Object.values(BOSSES).filter((b) => b.family === body).flatMap((b) => b.extra || [])];
-  return specs.find((x) => x.id === id) || null;
+  return bodySpecs(body).find((x) => x.id === id) || null;
 }
 export const refName = (ref) => specOf(ref)?.name || String(ref).split(':')[1]?.replace(/-/g, ' ') || String(ref);
-export const bodyName = (body) => STRAINS[body]?.name || FAMILIES[body]?.name || ROOM_FAMILIES[body]?.name || GUARDS[body]?.name || body;
+export const bodyName = (body) => bodyDef(body)?.name || body;
 export const refBody = (ref) => String(ref).split(':')[0];
 // The key a part in a fight answers to: its Codex key, a second copy (Strobe 2, an id with a digit) as the first.
 export const refOf = (v, p) => codexKey(v, p).replace(/\d+$/, '');
 const researchOfRef = (s, ref) => researchAt(s, ref);
+// The fight's virus: the body its parts' Codex keys name.
+export const fightBody = (s) => (s.encounter?.virus ? s.encounter.virus.strain || s.encounter.virus.family : null);
 
 // A WHEN id: a global one, mut:<mutation>, or <ref>:<condition> (ref is body:part).
 export function parseWhen(id) {
@@ -130,7 +162,23 @@ export function programsOf(s) {
   if (P.rails.jackOut === undefined) P.rails.jackOut = 0;
   if (P.rails.danger === undefined) P.rails.danger = true;
   P.by ||= {};
+  for (const key of Object.keys(P.by)) if (Array.isArray(P.by[key].handlers)) migrate(s, key, P.by[key]);
   return P;
+}
+// An R1 save kept one stack a class: each handler moves into the routine of the virus whose part it names; one that
+// names no part goes into every routine of a virus you've met that has room for it, else it's dropped.
+function migrate(s, key, prog) {
+  const old = prog.handlers, arch = SUBS[key]?.cls || key;
+  delete prog.handlers;
+  const R = (prog.routines ||= {});
+  const room = (body, h) => (R[body]?.handlers || []).reduce((n, x) => n + handlerRam(s, x), 0) + handlerRam(s, h) <= ramFor(s, body, arch);
+  const put = (body, h) => { const r = (R[body] ||= { handlers: [] }); r.handlers.push({ ...h }); r.confirmed = true; }; // a routine you wrote: it throws
+  for (const h of old) {
+    const w = parseWhen(h?.when);
+    if (!w) continue;
+    if (w.kind === 'part') { if (isBody(refBody(w.ref))) put(refBody(w.ref), h); continue; }
+    for (const body of metBodies(s)) if (room(body, h)) put(body, h);
+  }
 }
 // Whose program: your subclass's from level 10, your class's before.
 export const programKey = (s) => subOf(s) || classOf(s);
@@ -138,28 +186,83 @@ export const programName = (s) => SUBS[subOf(s)]?.name || ARCHETYPES[classOf(s)]
 export function programOf(s, key = programKey(s)) {
   const P = programsOf(s);
   if (!P.by[key]) {
-    // A subclass's first program starts as its class's (the handlers you wrote before level 10).
+    // A subclass's first program starts as its class's (the routines you wrote before level 10).
     const from = SUBS[key] && P.by[SUBS[key].cls];
-    P.by[key] = { handlers: from ? from.handlers.map((h) => ({ ...h })) : [] };
+    P.by[key] = { routines: Object.fromEntries(Object.entries(from?.routines || {}).map(([b, r]) => [b, { handlers: r.handlers.map((h) => ({ ...h })) }])) };
   }
+  P.by[key].routines ||= {};
   return P.by[key];
+}
+// The virus a bare command or the Program tab means: the one you picked last, else the fight's, else the first you met.
+export function focusBody(s) {
+  const P = programsOf(s);
+  if (P.focus && isBody(P.focus)) return P.focus;
+  const f = active(s) ? fightBody(s) : null;
+  return (f && isBody(f) ? f : null) || metBodies(s)[0] || Object.keys(FAMILIES)[0];
+}
+// The routine the fight uses (or the Program tab shows): the fight's virus while one runs, else the focus.
+const currentBody = (s) => (active(s) && isBody(fightBody(s)) ? fightBody(s) : focusBody(s));
+export function routineOf(s, body = currentBody(s), key = programKey(s)) {
+  const R = programOf(s, key).routines;
+  return (R[body] ||= { handlers: [] });
 }
 export const rails = (s) => programsOf(s).rails;
 // Your bar's skills (Spike, your slots, SIGINT): what a DO chip can be.
 export const barSkills = (s) => barKeys(s).map(([key, id]) => ({ key, id })).filter((x) => ABILITIES[x.id]);
 // Each handler with what it costs and whether it runs: in budget (top to bottom), its WHEN researched, its skill on your bar.
-export function handlerRows(s, prog = programOf(s)) {
-  const budget = ramFor(s), bar = new Set(barSkills(s).map((x) => x.id));
+export function handlerRows(s, body = currentBody(s)) {
+  const budget = ramFor(s, body), bar = new Set(barSkills(s).map((x) => x.id));
   let used = 0;
-  return prog.handlers.map((h, i) => {
+  return routineOf(s, body).handlers.map((h, i) => {
     const ram = handlerRam(s, h), fits = used + ram <= budget;
     if (fits) used += ram;
     const open = whenOpen(s, h.when), onBar = bar.has(h.do);
     return { h, i, ram, fits, open, onBar, runs: fits && open && onBar };
   });
 }
-export const ramUsed = (s, prog = programOf(s)) => handlerRows(s, prog).filter((r) => r.fits).reduce((n, r) => n + r.ram, 0);
-const liveHandlers = (s) => handlerRows(s).filter((r) => r.runs).map((r) => r.h);
+export const ramUsed = (s, body = currentBody(s)) => handlerRows(s, body).filter((r) => r.fits).reduce((n, r) => n + r.ram, 0);
+const liveHandlers = (s, body) => handlerRows(s, body).filter((r) => r.runs).map((r) => r.h);
+
+// ---------- presets ----------
+// Ready-made routines for a virus: plain stacks from its parts (its signature first), your research and your bar.
+// Each fits the virus's RAM and uses only chips you have open and skills on your bar.
+const partSkills = (s) => barSkills(s).map((x) => x.id).filter((id) => ABILITIES[id].target === 'part' && !isLong(s, id));
+const bestHit = (s) => partSkills(s).filter((id) => ABILITIES[id].verb === 'hit').sort((a, b) => (ABILITIES[b].damage || 0) - (ABILITIES[a].damage || 0))[0] || 'spike';
+const bestStrip = (s) => partSkills(s).filter((id) => ABILITIES[id].strip || ABILITIES[id].pierce).sort((a, b) => (ABILITIES[b].strip || 0) - (ABILITIES[a].strip || 0))[0] || null;
+const bestGuard = (s) => barSkills(s).map((x) => x.id).filter((id) => ABILITIES[id].verb === 'shield' && ABILITIES[id].target === 'none' && !isLong(s, id))[0] || null;
+export function presetsFor(s, body) {
+  const budget = ramFor(s, body), hit = bestHit(s), strip = bestStrip(s), guard = bestGuard(s);
+  const specs = bodySpecs(body).filter((x, i, a) => a.findIndex((y) => y.id === x.id) === i);
+  const at = (x, tier) => researchAt(s, `${body}:${x.id}`) >= tier;
+  const sig = specs.find((x) => x.special && at(x, TIER.decoded)) || null;
+  const out = [];
+  const add = (id, name, icon, tip, list) => {
+    const hs = [];
+    let used = 0;
+    for (const h of list) {
+      if (!h || !whenOpen(s, h.when)) continue;
+      const ram = handlerRam(s, h);
+      if (used + ram > budget) break;
+      used += ram;
+      hs.push(h);
+    }
+    if (hs.length && !out.some((p) => same(p.handlers, hs))) out.push({ id, name, icon, tip, handlers: hs });
+  };
+  if (sig) {
+    const ref = `${body}:${sig.id}`;
+    add('signature', `${sig.name} first`, 'part', `The ${sig.name} before anything else: ${ABILITIES[strip || hit].name} it while it wears ◆${strip ? `, ${ABILITIES[hit].name} it once it's bare` : ''}.`,
+      [strip && { when: `${ref}:bare`, do: hit, target: 'that' }, { when: `${ref}:present`, do: strip || hit, target: 'that' }]);
+  }
+  const hitters = specs.filter((x) => at(x, TIER.rule) && x.attack);
+  if (hitters.length) add('hits', 'Before it hits', 'clock', `${ABILITIES[hit].name} each part whose attack lands this cycle, signature first.`, hitters.sort((a, b) => !!b.special - !!a.special).map((x) => ({ when: `${body}:${x.id}:due`, do: hit, target: 'that' })));
+  if (guard) add('guard', 'Guard when low', 'signal', `${ABILITIES[guard].name} when you're under half, else focus the lowest.`, [{ when: 'hurt', do: guard, target: 'soonest' }, { when: 'always', do: hit, target: 'lowest' }]);
+  add('lowest', 'Focus the lowest', 'kill', `${ABILITIES[hit].name} the part with the least Integrity left.`, [{ when: 'always', do: hit, target: 'lowest' }]);
+  if (out.length < 2) add('bare', 'No ◆ first', 'cracker', `${ABILITIES[hit].name} the lowest part with no armor; the rotation does the rest.`, [{ when: 'always', do: hit, target: 'bare' }]);
+  return out.slice(0, 4);
+}
+const same = (a, b) => a.length === b.length && a.every((h, i) => h.when === b[i].when && h.do === b[i].do && h.target === b[i].target);
+// The preset the stack is now, or null (edited, or empty: the rotation).
+export const presetNow = (s, body) => (routineOf(s, body).handlers.length ? presetsFor(s, body).find((p) => same(p.handlers, routineOf(s, body).handlers))?.id || null : null);
 
 // ---------- reading the board (only what it shows) ----------
 const isFrag = (p) => p.kind === 'fragment';
@@ -223,85 +326,95 @@ function rotation(s) {
   const t = soonest(s);
   return t && !toIntent(s, `spike ${t.id}`).error ? `spike ${t.id}` : 'hold';
 }
+// The board with some parts out of it (the ones that are yours): the program reads and plans as if they weren't there,
+// so it never targets one. Put back however fn ends.
+function without(s, ids, fn) {
+  if (!ids.size) return fn();
+  const hidden = livingParts(s).filter((p) => ids.has(p.id)).map((p) => [p, p.integrity]);
+  for (const [p] of hidden) p.integrity = 0;
+  try { return fn(); } finally { for (const [p, n] of hidden) p.integrity = n; }
+}
 
 // ---------- exceptions ----------
 // Parts whose rule changes a decision (a third part, a guard's rule): the program covers one only at its rule tier.
 const RULED = ['ward', 'wardsToo', 'lock', 'twin', 'reflect', 'mimic', 'command', 'deadman', 'fuse', 'hotspot', 'idle', 'front', 'backlog', 'buffer', 'rearm', 'syncOnly', 'phase', 'echo', 'tax', 'pkg', 'obfuscate'];
 export const ruled = (p) => RULED.some((k) => p[k]);
-const named = (s, pred) => liveHandlers(s).some((h) => { const w = parseWhen(h.when); return !!w && pred(w); });
-// What the program doesn't cover on the board now: [{ key, kind, part, name }], before what you've handed back.
+const named = (s, pred) => liveHandlers(s, fightBody(s)).some((h) => { const w = parseWhen(h.when); return !!w && pred(w); });
+export const EXCEPTION = { label: 'EXCEPTION', phrase: 'no available handler', tip: 'Your program has no handler for this part yet. Play it yourself, or research it in the Codex.', fight: 'Your program leaves this fight to you: a boss is always yours to play.' };
+// What the program doesn't cover on the board now: [{ key, kind, part, name }], before the parts you've acted on.
+// A boss, a lair's native, the Resident or a crew boss: the whole fight (kind 'fight'). Else each part your research
+// doesn't cover and no handler names (a plain part: decoded; a part with a rule: its rule tier), or that has a tell on
+// the board you haven't mastered and no handler answers.
 export function uncovered(s) {
   const e = s.encounter;
   if (!active(s)) return [];
-  const v = e.virus, out = [];
-  // A boss, a lair's native, the Resident or a crew boss: its phases always need you (a new phase throws again).
-  if (v.boss || v.raid) {
-    const ph = v.raid ? `raid${raidOf(s)?.phase ?? 0}` : `p${(v.phases || []).filter((x) => x.done).length}`;
-    const crown = livingParts(s).find((p) => p.core) || livingParts(s).find((p) => !isFrag(p)) || null;
-    out.push({ key: `boss:${ph}`, kind: 'boss', part: crown?.id || null, name: v.name });
-  }
+  const v = e.virus, out = new Map();
+  if (v.boss || v.raid) return [{ key: 'fight', kind: 'fight', part: null, name: v.name }];
+  if (!confirmed(s, fightBody(s))) return []; // a routine you never made or confirmed: the rotation plays it all
   for (const p of livingParts(s)) {
     if (isFrag(p)) continue;
     const ref = refOf(v, p), n = researchOfRef(s, ref);
     const need = ruled(p) ? TIER.rule : TIER.decoded;
-    if (n < need && !named(s, (w) => w.kind === 'part' && w.ref === ref)) out.push({ key: `part:${ref}`, kind: 'part', part: p.id, name: p.name });
+    if (n < need && !named(s, (w) => w.kind === 'part' && w.ref === ref)) out.set(p.id, { key: `part:${p.id}`, kind: 'part', part: p.id, name: p.name });
   }
-  if (v.mutation && MUTATIONS[v.mutation] && !geneDecoded(s, MUTATIONS[v.mutation].gene) && !named(s, (w) => w.kind === 'mutation' && w.mut === v.mutation)) out.push({ key: `mut:${v.mutation}`, kind: 'mutation', part: null, name: MUTATIONS[v.mutation].name });
-  // A tell on the board: a part you've mastered, or a handler on its tells (or any tell), covers it.
   for (const i of shown(s).filter((x) => x.tell)) {
     const p = part(s, i.source);
-    if (!alive(p)) continue;
+    if (!alive(p) || out.has(p.id)) continue;
     const ref = refOf(v, p);
     if (researchOfRef(s, ref) >= TIER.mastered || named(s, (w) => w.id === 'anytell' || (w.kind === 'part' && w.ref === ref && ['tell', 'pretell'].includes(w.cond)))) continue;
-    out.push({ key: `tell:${p.id}:${i.id || i.name}`, kind: 'tell', part: p.id, name: `${p.name}'s ${i.name}` });
+    out.set(p.id, { key: `part:${p.id}`, kind: 'tell', part: p.id, name: p.name, tell: i.name });
   }
-  return [...new Map(out.map((x) => [x.key, x])).values()];
+  return [...out.values()];
 }
-const progE = (e) => (e.program ||= { ack: {}, thrown: {} });
-// The exceptions holding the program now: uncovered, and not handed back.
-export const exceptionsOf = (s) => (active(s) ? uncovered(s).filter((x) => !progE(s.encounter).ack[x.key]) : []);
-// Say each new exception once, with its cue (app.js plays it): true if one was new.
+// A routine you made or confirmed (a preset picked, a handler added or edited, Confirm pressed): only its fights throw.
+export const confirmed = (s, body) => !!programOf(s).routines[body]?.confirmed;
+const progE = (e) => (e.program ||= { thrown: {}, played: {}, cued: false });
+// The exceptions now: uncovered, less the parts you've acted on (the program takes those back). None while it's off.
+export const exceptionsOf = (s) => (live(s) && active(s) ? uncovered(s).filter((x) => !x.part || !progE(s.encounter).played[x.part]) : []);
+export const wholeFight = (s) => exceptionsOf(s).some((x) => x.kind === 'fight');
+export const yoursNow = (s) => new Set(exceptionsOf(s).map((x) => x.part).filter(Boolean));
+// Say each new exception once (the log line, in the exception colour); the first one in a fight carries the cue.
 export function noteExceptions(s) {
   if (!live(s) || !active(s)) return false;
   const P = progE(s.encounter), xs = exceptionsOf(s).filter((x) => !P.thrown[x.key]);
   if (!xs.length) return false;
   for (const x of xs) P.thrown[x.key] = s.encounter.cycle;
-  const what = (x) => (x.kind === 'boss' ? `${x.name}'s phase` : x.kind === 'mutation' ? `${x.name} mutation` : x.kind === 'tell' ? x.name : `the ${x.name}`);
+  const what = (x) => (x.kind === 'fight' ? `the whole fight (${x.name})` : x.kind === 'tell' ? `the ${x.name} (${x.tell})` : `the ${x.name}`);
   const names = xs.map(what), list = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : names[0];
-  emit(s, 'exception', `EXCEPTION: ${list}. Your program holds. Play it, or press ${ROUTINES.key} to hand back.`, { target: xs.find((x) => x.part)?.part || null, exception: xs.map((x) => x.key), kind: xs[0].kind });
+  emit(s, 'exception', `${EXCEPTION.label} · ${EXCEPTION.phrase}: ${list}.`, { target: xs.find((x) => x.part)?.part || null, exception: xs.map((x) => x.key), kind: xs[0].kind, cue: !P.cued });
+  P.cued = true;
   return true;
 }
-// Hand control back: what's on the board now is yours to leave to the program for the rest of the fight (a boss's
-// next phase throws again).
-export function handBack(s) {
-  if (!active(s)) return warn(s, 'No fight running.');
-  const xs = exceptionsOf(s), P = progE(s.encounter);
-  if (!xs.length) return emit(s, 'info', '⟳ Your program is running.');
-  for (const x of xs) P.ack[x.key] = s.encounter.cycle;
-  emit(s, 'program', `⟳ Back to your program: ${xs.map((x) => x.name).join(', ')}.`, { auto: 'program' });
+// You acted on a part that was yours (combat.mjs playerPhase, your typed command): the program takes it from here.
+function acted(s, q) {
+  if (!q?.target || !live(s) || !active(s)) return;
+  if (exceptionsOf(s).some((x) => x.part === q.target)) progE(s.encounter).played[q.target] = s.encounter.cycle;
 }
 
 // ---------- a cycle ----------
-// Is a program running your fights? (The browser installs it; a crewmate never has one.)
-export const live = (s) => !!hooks.program && !s?.who && programsOf(s).on;
+// Is a program running your fights? (The browser installs it; a crewmate never has one; it opens at level 5.)
+export const live = (s) => !!hooks.program && !s?.who && unlocked(s) && programsOf(s).on;
 // What the program does when the timer runs out: { text, handler } (handler: its index, or -1 for the rotation), or
-// { hold } while an exception waits. null when it's off.
+// { hold } when nothing is left for it (only parts that are yours, or a boss: the whole fight). null when it's off.
 export function decide(s) {
   if (!live(s) || !active(s)) return null;
-  const xs = exceptionsOf(s);
-  if (xs.length) return { hold: true, exceptions: xs, part: xs.find((x) => x.part)?.part || null };
-  const rows = handlerRows(s);
-  for (const r of rows) {
-    if (!r.runs) continue;
-    const text = handlerMove(s, r.h);
-    if (text) return { text, handler: r.i };
-  }
-  return { text: rotation(s), handler: -1 };
+  const xs = exceptionsOf(s), mine = new Set(xs.map((x) => x.part).filter(Boolean));
+  if (xs.some((x) => x.kind === 'fight')) return { hold: true, whole: true, exceptions: xs, part: null };
+  if (livingParts(s).every((p) => mine.has(p.id))) return { hold: true, exceptions: xs, part: xs[0]?.part || null };
+  const body = fightBody(s);
+  return without(s, mine, () => {
+    for (const r of handlerRows(s, body)) {
+      if (!r.runs) continue;
+      const text = handlerMove(s, r.h);
+      if (text) return { text, handler: r.i };
+    }
+    return { text: rotation(s), handler: -1 };
+  });
 }
 // The same, for the board: nothing it reads may move the game's dice or log.
 export function preview(s) {
   if (!live(s) || !active(s)) return null;
-  const e = s.encounter, key = `${e.cycle}:${s.serial}:${e.queue?.text || ''}:${JSON.stringify(e.program?.ack || {})}`;
+  const e = s.encounter, key = `${e.cycle}:${s.serial}:${e.queue?.text || ''}:${JSON.stringify(e.program?.played || {})}`;
   if (cache.e === e && cache.key === key) return cache.out;
   const rng = s.rng, serial = s.serial, logs = s.logs.length;
   let out = null;
@@ -316,15 +429,15 @@ function programHook(s) {
   const d = decide(s);
   if (!d) return null;
   if (!d.hold) return d;
-  const fresh = noteExceptions(s);
-  return { hold: true, part: d.part, type: 'hold', message: fresh ? '⟳ Your program holds.' : `⟳ Your program holds: ${d.exceptions.map((x) => x.name).join(', ')}. Press ${ROUTINES.key} to hand back.` };
+  noteExceptions(s);
+  return { hold: true, part: d.part, type: 'hold', message: d.whole ? '⟳ Nothing fired: this fight is yours to play.' : `⟳ Nothing fired: ${EXCEPTION.phrase} for what is left.` };
 }
 
 // ---------- the rails ----------
 // Auto jack-out: on a run, crossing your line jacks you out with your pack (in a fight, the emergency jack out).
 export function railCheck(s) {
   const r = rails(s), run = s.run;
-  if (!r.jackOut || !run || run.breach || s.who) return false;
+  if (!r.jackOut || !run || run.breach || s.who || !unlocked(s)) return false;
   const max = run.max || maxSignal(s), pct = max ? (run.integrity / max) * 100 : 100;
   const was = run.railAt;
   run.railAt = pct;
@@ -344,28 +457,33 @@ export function dangerous(s, room) {
   return !!room && ROUTINES.danger.includes(room.kind) && isUp(s, room);
 }
 export function walkStop(s, room) {
-  if (!rails(s).danger || !dangerous(s, room)) return false;
+  if (!unlocked(s) || !rails(s).danger || !dangerous(s, room)) return false;
   const label = room.kind === 'core' ? 'the Resident' : room.kind === 'boss' ? 'a boss' : room.kind === 'guard' ? 'a vault guard' : 'an elite';
   emit(s, 'rail', `Stopped before ${room.path}: ${label} holds it. Walk in when you're ready.`, { rail: 'danger', room: room.id });
   return true;
 }
 
 // ---------- the command ----------
-// program · program on|off · program add [when] [do] [target] · program set <n> when|do|target <id> ·
-// program move <n> <to> · program remove <n> · program clear · program resume · program jackout off|10–50 ·
-// program danger on|off
+// program [<virus>] · program on|off · program [<virus>] add [when] [do] [target] · program [<virus>] set <n>
+// when|do|target <id> · program [<virus>] move <n> <to> · program [<virus>] remove <n> · program [<virus>] clear ·
+// program [<virus>] preset <id> · program [<virus>] undo · program [<virus>] confirm · program jackout off|10–50 · program danger on|off.
+// A virus named picks it (the Program tab opens on it); with none, the one picked last (focusBody).
+const line = (s, h) => `${whenLabel(h.when)} → ${said(s, h.do)} → ${TARGETS[h.target]?.label || h.target}`;
 export function programCommand(s, text) {
-  const [, verb = '', ...args] = text.split(' ');
-  const prog = programOf(s), P = programsOf(s), H = prog.handlers;
+  if (!unlocked(s)) return warn(s, LOCKED);
+  let [, verb = '', ...args] = text.trim().split(/\s+/);
+  const P = programsOf(s);
+  if (isBody(verb)) { P.focus = verb; [verb = '', ...args] = args; }
+  const body = focusBody(s), R = routineOf(s, body), H = R.handlers, name = bodyName(body), budget = ramFor(s, body);
   const n = (x) => { const i = Number(x) - 1; return Number.isInteger(i) && i >= 0 && i < H.length ? i : -1; };
-  const fits = (list) => { const used = list.reduce((a, h) => a + handlerRam(s, h), 0); return used <= ramFor(s) ? null : `That needs ${used} RAM. You have ${ramFor(s)}.`; };
+  const fits = (list) => { const used = list.reduce((a, h) => a + handlerRam(s, h), 0); return used <= budget ? null : `That needs ${used} RAM. ${name} has ${budget}.`; };
   const checkWhen = (id) => (!parseWhen(id) ? `No WHEN chip ${id}.` : !whenOpen(s, id) ? `${whenLabel(id)}: research it first.` : null);
   const bar = new Set(barSkills(s).map((x) => x.id));
   const checkDo = (id) => (!ABILITIES[id] ? `No skill ${id}.` : !bar.has(id) ? `${ABILITIES[id].name} is not on your bar.` : null);
   const checkTarget = (id) => (TARGETS[id] ? null : `No TARGET chip ${id}. Try: ${Object.keys(TARGETS).join(', ')}.`);
-  if (!verb) return emit(s, 'info', `${programName(s)} program: ${P.on ? 'on' : 'off'}, ${ramUsed(s)}/${ramFor(s)} RAM. ${H.length ? H.map((h, i) => `${i + 1}. ${whenLabel(h.when)} → ${said(s, h.do)} → ${TARGETS[h.target]?.label || h.target}`).join('. ') + '.' : 'No handlers: the rotation plays.'}`);
+  const edited = () => { delete R.undo; R.confirmed = true; };
+  if (!verb) return emit(s, 'info', `${programName(s)} program: ${P.on ? 'on' : 'off'}. ${name}: ${ramUsed(s, body)}/${budget} RAM. ${H.length ? H.map((h, i) => `${i + 1}. ${line(s, h)}`).join('. ') + '.' : 'No handlers: the rotation plays.'}`);
   if (verb === 'on' || verb === 'off') { P.on = verb === 'on'; return emit(s, 'info', `Program ${verb}.${P.on ? '' : ' The timer repeats your last hit again.'}`); }
-  if (verb === 'resume' || verb === 'back') return handBack(s);
   if (verb === 'jackout') {
     const v = args[0] === 'off' ? 0 : Number(String(args[0]).replace('%', ''));
     if (!ROUTINES.jackOut.includes(v)) return warn(s, 'program jackout off, 10, 20, 30, 40 or 50.');
@@ -378,8 +496,8 @@ export function programCommand(s, text) {
     const h = { when: args[0] || 'always', do: args[1] || 'spike', target: args[2] || (parseWhen(args[0])?.kind === 'part' ? 'that' : 'soonest') };
     const bad = checkWhen(h.when) || checkDo(h.do) || checkTarget(h.target) || fits([...H, h]);
     if (bad) return warn(s, bad);
-    H.push(h);
-    return emit(s, 'info', `Handler ${H.length}: ${whenLabel(h.when)} → ${said(s, h.do)} → ${TARGETS[h.target].label}.`);
+    H.push(h); edited();
+    return emit(s, 'info', `${name}, handler ${H.length}: ${line(s, h)}.`);
   }
   if (verb === 'set') {
     const i = n(args[0]), slot = args[1], id = args[2];
@@ -390,27 +508,48 @@ export function programCommand(s, text) {
     const next = H.map((h, j) => (j === i ? { ...h, [slot]: id } : h));
     const over = fits(next);
     if (over) return warn(s, over);
-    H[i] = next[i];
-    return emit(s, 'info', `Handler ${i + 1}: ${whenLabel(H[i].when)} → ${said(s, H[i].do)} → ${TARGETS[H[i].target].label}.`);
+    H[i] = next[i]; edited();
+    return emit(s, 'info', `${name}, handler ${i + 1}: ${line(s, H[i])}.`);
   }
   if (verb === 'move') {
     const i = n(args[0]), j = Math.max(0, Math.min(H.length - 1, Number(args[1]) - 1));
     if (i < 0 || !Number.isInteger(j)) return warn(s, 'program move <n> <to>.');
     const [h] = H.splice(i, 1);
-    H.splice(j, 0, h);
-    return emit(s, 'info', `Handler moved to ${j + 1}.`);
+    H.splice(j, 0, h); edited();
+    return emit(s, 'info', `${name}: handler moved to ${j + 1}.`);
   }
-  if (verb === 'remove') { const i = n(args[0]); if (i < 0) return warn(s, `No handler ${args[0]}.`); H.splice(i, 1); return emit(s, 'info', `Handler ${i + 1} removed.`); }
-  if (verb === 'clear') { H.length = 0; return emit(s, 'info', 'Handlers cleared: the rotation plays.'); }
-  return warn(s, 'program [on|off|add|set|move|remove|clear|resume|jackout|danger].');
+  if (verb === 'remove') { const i = n(args[0]); if (i < 0) return warn(s, `No handler ${args[0]}.`); H.splice(i, 1); edited(); return emit(s, 'info', `${name}: handler ${i + 1} removed.`); }
+  if (verb === 'clear' || (verb === 'preset' && args[0] === 'rotation')) {
+    if (H.length && !presetNow(s, body)) R.undo = H.map((h) => ({ ...h }));
+    H.length = 0;
+    R.confirmed = true;
+    return emit(s, 'info', `${name}: no handlers, the rotation plays.`);
+  }
+  if (verb === 'preset') {
+    const p = presetsFor(s, body).find((x) => x.id === args[0]);
+    if (!p) return warn(s, `No preset ${args[0] || ''} for ${name}. Try: ${['rotation', ...presetsFor(s, body).map((x) => x.id)].join(', ')}.`);
+    if (H.length && !presetNow(s, body)) R.undo = H.map((h) => ({ ...h })); // an edited stack: program undo brings it back
+    H.splice(0, H.length, ...p.handlers.map((h) => ({ ...h })));
+    R.confirmed = true;
+    return emit(s, 'info', `${name}: ${p.name}.${R.undo ? ' program undo brings your own back.' : ''}`);
+  }
+  if (verb === 'confirm') { R.confirmed = true; return emit(s, 'info', `${name}: routine confirmed. A part it doesn't cover is yours to play.`); }
+  if (verb === 'undo') {
+    if (!R.undo) return warn(s, `Nothing to undo for ${name}.`);
+    H.splice(0, H.length, ...R.undo);
+    delete R.undo;
+    R.confirmed = true;
+    return emit(s, 'info', `${name}: your own handlers are back.`);
+  }
+  return warn(s, 'program [virus] [on|off|add|set|move|remove|clear|preset|undo|confirm|jackout|danger].');
 }
 
-// The palette: every WHEN chip you could know, open or not. Parts you've met (research above 0), by body.
-export function palette(s) {
+// The palette for a virus: the fight-wide chips, then its parts you've met (research above 0) with their chips.
+export function palette(s, body = focusBody(s)) {
   const glob = Object.keys(GLOBAL_WHEN).map((id) => ({ id, open: whenOpen(s, id) }));
   const muts = Object.keys(MUTATIONS).filter((m) => !MUTATIONS[m].retired).map((m) => ({ id: 'mut:' + m, open: whenOpen(s, 'mut:' + m) })).filter((x) => x.open);
-  const refs = Object.keys(s.research || {}).filter((k) => researchAt(s, k) > 0 && specOf(k));
-  const parts = refs.map((ref) => ({ ref, name: refName(ref), body: bodyName(refBody(ref)), n: researchAt(s, ref), chips: Object.keys(PART_WHEN).map((c) => ({ id: `${ref}:${c}`, cond: c, open: researchAt(s, ref) >= PART_WHEN[c].tier, tier: PART_WHEN[c].tier })) })).sort((a, b) => a.body.localeCompare(b.body) || a.name.localeCompare(b.name));
+  const refs = bodyRefs(body).filter((k) => researchAt(s, k) > 0);
+  const parts = refs.map((ref) => ({ ref, name: refName(ref), body: bodyName(body), n: researchAt(s, ref), chips: Object.keys(PART_WHEN).map((c) => ({ id: `${ref}:${c}`, cond: c, open: researchAt(s, ref) >= PART_WHEN[c].tier, tier: PART_WHEN[c].tier })) }));
   return { glob, muts, parts };
 }
 
@@ -418,6 +557,7 @@ export function palette(s) {
 export function installPrograms() {
   hooks.program = programHook;
   hooks.programCycle = (s) => { if (s.who) return; noteExceptions(s); railCheck(s); };
+  hooks.programActed = acted;
   hooks.railCheck = railCheck;
   hooks.walkStop = walkStop;
 }

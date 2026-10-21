@@ -1,9 +1,11 @@
-// Routines (docs/routines.md R1, routines.mjs): a program per class and subclass (the planner's rotation and your
-// handler stack) moves when the timer runs out. It fires only what the board shows and only the WHEN chips your
-// research has opened, never in the Sync Window, never a long cooldown unless a handler names it; a part, mutation or
-// tell it doesn't cover throws an exception and it holds; anything you type overrides it; RAM limits the stack; the
-// rails jack you out at your line and stop a walk before danger; a program's fight pays what the same fight pays you;
-// an old save loads with the defaults.
+// Routines (docs/routines.md R1, routines.mjs): from class level 5, a program per class and subclass keeps a routine
+// per virus (a Codex body) and the planner's rotation for the rest; the fight's virus picks the routine, each with its
+// own RAM. It fires only what the board shows and only the WHEN chips your research has opened, never in the Sync
+// Window, never a long cooldown unless a handler names it. In a fight against a virus whose routine you made or
+// confirmed, a part it doesn't cover is yours to play: the program plays the rest and never targets it (a boss: the
+// whole fight is yours). Presets fill a routine from the virus's parts; anything you type overrides it; the rails jack
+// you out at your line and stop a walk before danger; a program's fight pays what the same fight pays you; an old save
+// loads with the defaults, an R1 stack moved into its viruses' routines.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, resolveCycle, advance, selectEncounter, part, livingParts, attackers, hooks, active, restore, cycleLength, codexKey, barKeys, finish } from './dist/combat.mjs';
@@ -13,7 +15,8 @@ import { play } from './dist/run.mjs';
 import { planner } from './dist/planner.mjs';
 import * as R from './dist/routines.mjs';
 import { programMarkup } from './dist/routines-view.mjs';
-import { boardMarkup, loadoutMarkup, logMarkup } from './dist/view.mjs';
+import { boardMarkup, hudMarkup, loadoutMarkup, logMarkup } from './dist/view.mjs';
+import { codexPageMarkup } from './dist/codex-view.mjs';
 import { TIPS } from './dist/tips.mjs';
 import { TIER } from './dist/research.mjs';
 
@@ -23,7 +26,7 @@ hooks.now = () => clock;
 R.installPrograms();
 
 const FAMS = ['ransomware', 'worm', 'ghostroot'];
-// Research every part of the home families to a tier (60: mastered, so no part or tell throws).
+// Research every part of the home families to a tier (60: mastered, so no part or tell is left to you).
 const study = (s, n = 60) => { s.research = {}; s.researchScale = 3; for (const f of FAMS) for (const p of FAMILIES[f].parts) s.research[`${f}:${p.id}`] = n; };
 function fight({ cls = 'breaker', level = 14, family = 'ransomware', seed = 7, research = 60, opts = {} } = {}) {
   const s = fresh();
@@ -37,6 +40,7 @@ function fight({ cls = 'breaker', level = 14, family = 'ransomware', seed = 7, r
 const since = (s, n) => s.logs.filter((e) => e.id > n);
 const cycle = (s) => { const n = s.serial; resolveCycle(s); return since(s, n); };
 const mine = (ev) => ev.filter((e) => e.type === 'resolved' && !e.who);
+const warning = (ev) => ev.find((e) => e.type === 'warning')?.message || null;
 
 test('RAM comes from class level: 4 at level 1, 10 at 50; a plain handler costs 1, a rule chip 2, a mastered chip 3, a long cooldown 1 more', () => {
   assert.equal(R.ramOf(1), 4);
@@ -50,24 +54,61 @@ test('RAM comes from class level: 4 at level 1, 10 at 50; a plain handler costs 
   assert.equal(R.handlerRam(s, { when: 'always', do: 'flood', target: 'soonest' }), 2, 'Flood (cooldown 6) costs 1 more');
 });
 
-test('RAM limits the stack: an add past it is refused, and a handler past it (an old stack) sits out', () => {
-  const s = fight({ level: 1 });
-  assert.equal(R.ramFor(s), 4);
-  for (let i = 0; i < 4; i++) command(s, 'program add always spike soonest');
-  assert.equal(R.programOf(s).handlers.length, 4);
-  const ev = command(s, 'program add always spike lowest');
-  assert.match(ev.find((e) => e.type === 'warning').message, /needs 5 RAM\. You have 4/);
-  assert.equal(R.programOf(s).handlers.length, 4);
-  R.programOf(s).handlers.push({ when: 'always', do: 'spike', target: 'lowest' });
-  const rows = R.handlerRows(s);
-  assert.deepEqual(rows.map((r) => r.fits), [true, true, true, true, false], 'the fifth sits out');
-  assert.equal(R.ramUsed(s), 4);
+test('routines open at class level 5: below it the tab is locked, commands refuse, nothing is left to you and the timer repeats your last hit', () => {
+  assert.equal(R.ROUTINES.unlockLevel, 5);
+  const s = fight({ level: 4, research: 0 });
+  assert.equal(R.unlocked(s), false);
+  for (const c of ['program', 'program add always spike soonest', 'program jackout 30', 'program worm preset lowest', 'program on']) assert.equal(warning(command(s, c)), 'Routines unlock at level 5.', c);
+  assert.equal(R.routineOf(s, 'ransomware').handlers.length, 0);
+  R.routineOf(s, 'ransomware').confirmed = true; // even a confirmed routine: nothing throws below 5
+  assert.deepEqual(R.exceptionsOf(s), [], 'no exceptions');
+  assert.equal(R.decide(s), null);
+  command(s, 'spike pulse');
+  cycle(s);
+  const ev = cycle(s);
+  assert.match(mine(ev)[0].message, /timer ran out/, 'the old fallback: your last hit again');
+  assert.ok(!ev.some((e) => e.type === 'exception'));
+  const tab = loadoutMarkup(s, null, 'program');
+  assert.match(tab, /data-ltab="program"[^>]*aria-disabled="true"[^>]*title="Routines unlock at level 5\."/, 'the tab, greyed, with its tooltip');
+  assert.match(programMarkup(s), /rt-locked[\s\S]*Routines unlock at level 5\./, 'a short locked state');
+  assert.doesNotMatch(programMarkup(s), /rt-stack|rt-presets/);
+  s.research['ransomware:encryptor'] = TIER.decoded;
+  s.met = { ransomware: true };
+  assert.doesNotMatch(codexPageMarkup(s, 'family:ransomware'), /cx-handler/, 'no + handler in the Codex');
+  // Level 5: it opens.
+  FP.outfit(s, { cls: 'breaker', level: 5 });
+  assert.equal(R.unlocked(s), true);
+  assert.equal(warning(command(s, 'program add always spike soonest')), null);
+  assert.match(codexPageMarkup(s, 'family:ransomware'), /cx-handler[^>]*data-rt-goto="program ransomware add ransomware:encryptor:present"/, 'the Codex\'s + handler opens the part\'s virus');
+});
+
+test('a routine a virus: the fight\'s virus picks it, one with none plays the rotation; each has its own RAM', () => {
+  const s = fight({ level: 6 });
+  for (const p of attackers(s)) p.attack.due = 999;
+  const base = R.ramOf(6);
+  assert.equal(R.ramFor(s, 'ransomware'), base);
+  assert.equal(R.ramFor(s, 'worm'), base, 'every virus starts from the class level\'s RAM');
+  assert.equal(R.ramBonus(s, 'worm'), 0, 'R2\'s per-virus RAM hook: nothing yet');
+  assert.equal(warning(command(s, 'program worm add always spike soonest')), null);
+  assert.equal(R.programsOf(s).focus, 'worm', 'naming a virus picks it');
+  assert.equal(R.decide(s).handler, -1, 'a worm routine never plays a Ransomware fight: the rotation does');
+  for (let i = 0; i < base; i++) assert.equal(warning(command(s, 'program ransomware add always spike lowest')), null);
+  assert.equal(R.ramUsed(s, 'ransomware'), base);
+  assert.match(warning(command(s, 'program ransomware add always spike lowest')), /needs \d+ RAM\. Ransomware has \d+/, 'Ransomware is full');
+  assert.equal(R.ramUsed(s, 'worm'), 1, 'and Worm\'s RAM is its own');
+  assert.equal(warning(command(s, 'program worm add always spike lowest')), null, 'Worm still has room');
+  assert.equal(R.decide(s).handler, 0, 'the Ransomware fight plays the Ransomware routine');
+  assert.match(R.decide(s).text, /^spike /);
+  // A stack past its RAM (an old one): the rest sit out.
+  R.routineOf(s, 'ransomware').handlers.push({ when: 'always', do: 'spike', target: 'lowest' });
+  assert.equal(R.handlerRows(s, 'ransomware').at(-1).fits, false, 'the last sits out');
+  assert.equal(R.ramUsed(s, 'ransomware'), base);
 });
 
 test('WHEN chips open by research: decoded its name and health, rule its timer and tell, mastered its prediction', () => {
   const s = fight({ research: 0 });
   const ref = 'ransomware:encryptor';
-  const add = (when) => command(s, `program add ${when} crack that`).find((e) => e.type === 'warning')?.message || null;
+  const add = (when) => warning(command(s, `program ransomware add ${when} crack that`));
   assert.match(add(`${ref}:present`), /research it first/);
   s.research[ref] = TIER.decoded;
   assert.equal(add(`${ref}:present`), null);
@@ -78,44 +119,44 @@ test('WHEN chips open by research: decoded its name and health, rule its timer a
   assert.match(add(`${ref}:pretell`), /research it first/);
   s.research[ref] = TIER.mastered;
   assert.equal(R.whenOpen(s, `${ref}:pretell`), true);
-  // A handler whose chip isn't open (shared, or written for research you no longer match) never fires.
-  const t = fight({ level: 4 }); // no tells yet
+  // A handler whose chip isn't open (written for research you no longer match) never fires.
+  const t = fight({ level: 5 });
   t.research['ransomware:encryptor'] = TIER.decoded;
-  R.programOf(t).handlers.push({ when: 'ransomware:encryptor:due', do: 'crack', target: 'that' });
-  assert.equal(R.handlerRows(t)[0].runs, false);
+  R.routineOf(t, 'ransomware').handlers.push({ when: 'ransomware:encryptor:due', do: 'crack', target: 'that' });
+  assert.equal(R.handlerRows(t, 'ransomware')[0].runs, false);
   part(t, 'encryptor').attack.due = t.encounter.cycle;
   assert.equal(R.decide(t).handler, -1, 'the rotation plays instead');
-  // The palette lists only what you've met, and shows a locked chip as locked.
+  // The palette lists only the picked virus's parts you've met, and shows a locked chip as locked.
+  t.research['worm:replicator'] = TIER.decoded;
+  command(t, 'program ransomware');
   const html = programMarkup(t);
   assert.match(html, /Encryptor/);
   assert.match(html, /rt-chip rt-when locked/);
+  assert.doesNotMatch(html.slice(html.indexOf('rt-palette')), /Replicator/, 'another virus\'s parts stay on its own routine');
 });
 
 test('a handler fires on what the board shows: the first that fits, top to bottom, at its target; a veiled timer never counts', () => {
   const s = fight();
-  const enc = part(s, 'encryptor'), pulse = part(s, 'pulse');
+  const pulse = part(s, 'pulse');
   for (const p of attackers(s)) p.attack.due = 999;
-  command(s, 'program add ransomware:pulse:due overload that');
-  command(s, 'program add ransomware:encryptor:present crack that');
+  command(s, 'program ransomware add ransomware:pulse:due overload that');
+  command(s, 'program ransomware add ransomware:encryptor:present crack that');
   assert.deepEqual(R.decide(s), { text: 'crack encryptor', handler: 1 }, 'the first handler waits, the second fits');
   pulse.attack.due = s.encounter.cycle;
   assert.deepEqual(R.decide(s), { text: 'overload pulse', handler: 0 }, 'its attack lands now: the first fits');
-  // Veiled with ◆ on: its timer is hidden, so "attacks now" can't be read.
   pulse.veiled = true; pulse.armor = Math.max(1, pulse.armor);
   assert.equal(R.decide(s).handler, 1, 'a hidden timer is not on the board');
   pulse.veiled = false;
-  const ev = cycle(s);
-  const r = mine(ev)[0];
+  const r = mine(cycle(s))[0];
   assert.equal(r.ability, 'overload'); assert.equal(r.target, 'pulse');
   assert.match(r.message, /^⟳ /, 'its move carries ⟳ in the log');
   assert.equal(r.auto, 'program');
   assert.match(logMarkup(s), /⟳ Overload pulse|⟳ overload pulse/i);
-  void enc;
 });
 
 test('the program never takes the Sync Window: its move fires when the timer runs out, unsynced', () => {
   const s = fight();
-  s.encounter.sync = { at: 0, width: 1 }; // the whole cycle is a window
+  s.encounter.sync = { at: 0, width: 1 };
   const n = s.serial;
   advance(s, cycleLength(s));
   const ev = since(s, n);
@@ -130,81 +171,158 @@ test('a long cooldown stays yours: the rotation never fires one (the planner wou
     R.programsOf(s).on = mode === 'program';
     for (let i = 0; i < 40 && active(s); i++) {
       if (mode === 'planner') command(s, planner(s));
-      const ev = cycle(s);
-      for (const e of mine(ev)) used[mode].add(e.ability);
-      if (ev.some((e) => e.type === 'exception')) command(s, 'program resume');
+      for (const e of mine(cycle(s))) used[mode].add(e.ability);
     }
   }
   const long = [...used.planner].filter((id) => R.isLong(fight(), id));
   assert.ok(long.length, `the planner fires a long cooldown (${[...used.planner].join(', ')})`);
   for (const id of long) assert.ok(!used.program.has(id), `the rotation never fires ${id}`);
-  // Named by a handler, it fires.
   const s = fight();
-  command(s, 'program add always flood soonest');
-  const r = mine(cycle(s))[0];
-  assert.equal(r.ability, 'flood');
+  command(s, 'program ransomware add always flood soonest');
+  assert.equal(mine(cycle(s))[0].ability, 'flood');
 });
 
-test('an uncovered part throws an exception: the program holds (no fallback move), the part is marked, and ` hands control back', () => {
-  const s = fight({ research: 0, level: 2 });
-  s.research['ransomware:pulse'] = TIER.decoded; // the Encryptor: never researched
-  const xs = R.exceptionsOf(s);
-  assert.deepEqual(xs.map((x) => x.key), ['part:ransomware:encryptor']);
-  const html = boardMarkup(s);
-  assert.match(html, /m-exc/, 'the part is marked');
-  assert.match(html, /EXCEPTION/);
-  assert.match(html, /data-command="program resume"/, 'the hand-back button');
+test('a virus whose routine you never made or confirmed never throws, even with parts you haven\'t researched', () => {
+  const s = fight({ level: 6, research: 0 });
+  assert.equal(R.confirmed(s, 'ransomware'), false);
+  assert.deepEqual(R.exceptionsOf(s), []);
   const ev = cycle(s);
-  assert.equal(mine(ev).length, 0, 'nothing fired');
-  assert.ok(ev.some((e) => e.type === 'exception' && /the Encryptor/.test(e.message)), 'the exception, once, with its cue');
-  assert.ok(ev.some((e) => e.type === 'hold' && e.auto === 'program'));
-  const ev2 = cycle(s);
-  assert.ok(!ev2.some((e) => e.type === 'exception'), 'said once');
-  assert.equal(mine(ev2).length, 0, 'it still holds');
-  // You play it by hand: your command fires.
+  assert.ok(!ev.some((e) => e.type === 'exception'));
+  assert.match(mine(ev)[0].message, /^⟳ /, 'the rotation plays it all');
+  assert.doesNotMatch(boardMarkup(s), /m-exc|EXCEPTION/);
+  // Confirmed (as it stands: no handlers), it throws.
+  command(s, 'program ransomware confirm');
+  assert.equal(R.confirmed(s, 'ransomware'), true);
+  assert.ok(R.exceptionsOf(s).length, 'now its unresearched parts are yours');
+  // Each way of making a routine yours confirms it: a preset, an added, an edited, a removed handler.
+  for (const c of ['preset lowest', 'add always spike soonest']) {
+    const t = fight({ level: 6, research: 0 });
+    command(t, `program ransomware ${c}`);
+    assert.equal(R.confirmed(t, 'ransomware'), true, c);
+  }
+  const u = fight({ level: 6 });
+  R.routineOf(u, 'ransomware').handlers.push({ when: 'always', do: 'spike', target: 'soonest' });
+  assert.equal(R.confirmed(u, 'ransomware'), false);
+  command(u, 'program ransomware set 1 target lowest');
+  assert.equal(R.confirmed(u, 'ransomware'), true, 'an edit');
+});
+
+test('an exception hands over only its part: the program plays the rest and never targets it; once you act on it, the program takes it too', () => {
+  const s = fight({ level: 6 });
+  s.research['ransomware:encryptor'] = 0; // the Encryptor: never researched, the rest mastered
+  command(s, 'program ransomware confirm');
+  assert.deepEqual(R.exceptionsOf(s).map((x) => x.part), ['encryptor']);
+  const html = boardMarkup(s);
+  assert.match(html, /m-exc[^>]*data-target="encryptor"/, 'its row is marked');
+  assert.match(html, /exc-mark[^>]*title="Your program has no handler for this part yet\. Play it yourself, or research it in the Codex\."><strong>EXCEPTION<\/strong><span> · no available handler<\/span>/);
+  assert.doesNotMatch(html, /program resume|rt-back/, 'no hand-back button');
+  assert.match(html, /intent mine prog ghost[^>]*data-at="(?!encryptor)[a-z]+"/, 'the Now cell: its move on another part');
+  const ev = cycle(s);
+  const x = ev.filter((e) => e.type === 'exception');
+  assert.equal(x.length, 1);
+  assert.match(x[0].message, /^EXCEPTION · no available handler: the Encryptor\.$/);
+  assert.equal(x[0].cue, true, 'the cue');
+  assert.match(logMarkup(s), /class="exc">EXCEPTION · no available handler/, 'its log line in the exception colour');
+  assert.notEqual(mine(ev)[0].target, 'encryptor', 'the program plays the others');
+  const others = () => livingParts(s).filter((p) => p.id !== 'encryptor' && p.kind !== 'fragment');
+  for (let i = 0; i < 40 && active(s) && others().length; i++) {
+    const ev2 = cycle(s);
+    assert.ok(!ev2.some((e) => e.type === 'exception'), 'said once');
+    for (const m of mine(ev2)) assert.notEqual(m.target, 'encryptor', 'never at the Encryptor');
+  }
+  assert.equal(others().length, 0, 'the others are down');
+  // Only the Encryptor is left: the program holds, and the Now cell says it's yours.
+  assert.equal(R.decide(s).hold, true);
+  assert.match(boardMarkup(s), /intent mine prog exc[^>]*><strong>EXCEPTION<\/strong><span> · no available handler/);
+  const held = cycle(s);
+  assert.equal(mine(held).length, 0, 'nothing fires');
+  assert.ok(held.some((e) => e.type === 'hold' && e.auto === 'program'));
+  // You act on it: it's no longer yours alone, the program takes it from here. No key needed.
   command(s, 'spike encryptor');
-  assert.equal(mine(cycle(s))[0]?.message.startsWith('⟳'), false);
-  // Hand back: the program plays the rest.
-  command(s, 'program resume');
-  assert.equal(R.exceptionsOf(s).length, 0);
-  assert.match(mine(cycle(s))[0].message, /^⟳ /);
-  // A rule part decoded but not at its rule throws; a handler that names it covers it.
-  const t = fight({ level: 4, opts: { genes: ['ward'] } });
+  assert.doesNotMatch(mine(cycle(s))[0].message, /⟳/);
+  assert.deepEqual(R.exceptionsOf(s), []);
+  assert.match(mine(cycle(s))[0]?.message || '⟳', /^⟳ /);
+  assert.match(warning(command(s, 'program resume')), /^program \[virus\]/, 'program resume is gone');
+  // The cue is once a fight: a second part left to you later says so without it.
+  const t = fight({ level: 6, research: 0, opts: { genes: ['ward'] } });
+  for (const p of FAMILIES.ransomware.parts) t.research[`ransomware:${p.id}`] = TIER.mastered;
   const box = livingParts(t).find((p) => p.ward), ref = codexKey(t.encounter.virus, box);
+  t.research[ref] = 0;
+  t.research['ransomware:encryptor'] = 0;
+  command(t, 'program ransomware confirm');
+  R.noteExceptions(t);
+  t.research['ransomware:encryptor'] = TIER.mastered;
+  const later = t.logs.filter((e) => e.type === 'exception');
+  assert.equal(later.length, 1, 'one line for both at once');
+  assert.equal(later[0].cue, true);
+  // A rule part decoded but not at its rule is yours; a handler that names it covers it.
   t.research[ref] = TIER.decoded;
-  command(t, 'program add always spike soonest');
   assert.deepEqual(R.exceptionsOf(t).map((x) => x.part), [box.id]);
-  command(t, `program add ${ref}:present spike that`);
+  command(t, `program ransomware add ${ref}:present spike that`);
   assert.equal(R.exceptionsOf(t).length, 0, 'named by a handler: covered');
 });
 
-test('a mutation, a tell and a rule part need research or a handler; a boss always throws, again each phase', () => {
-  const s = fight({ opts: { mutation: 'hasty' } });
-  assert.ok(R.exceptionsOf(s).some((x) => x.key === 'mut:hasty'), 'an undecoded mutation');
-  // A third part's rule: decoded is not enough, its rule is.
+test('a mutation is the program\'s; a rule part needs its rule; a tell needs mastery; a boss is wholly yours', () => {
+  const s = fight({ level: 14, opts: { mutation: 'hasty' } });
+  command(s, 'program ransomware confirm');
+  assert.ok(!R.exceptionsOf(s).length, 'an undecoded mutation hands nothing over');
   const t = fight({ research: TIER.decoded, opts: { genes: ['mutexlock'] } });
+  command(t, 'program ransomware confirm');
   const mutex = livingParts(t).find((p) => p.lock);
-  assert.ok(mutex, 'a Mutex in the fight');
   assert.ok(R.exceptionsOf(t).some((x) => x.part === mutex.id), 'its rule is not researched');
   t.research[codexKey(t.encounter.virus, mutex)] = TIER.rule;
-  assert.ok(!R.exceptionsOf(t).some((x) => x.part === mutex.id));
-  // A boss: its phase is always yours.
+  assert.ok(!R.exceptionsOf(t).some((x) => x.part === mutex.id && x.kind === 'part'));
+  // A boss: the whole fight is yours, one mark on its header; nothing fires.
   const b = fresh();
   FP.outfit(b, { cls: 'breaker', level: 14 });
   study(b);
   selectEncounter(b, 'random', 3, { level: 14, family: 'ransomware', boss: 'resident', mutation: null });
   command(b, 'engage');
-  assert.ok(R.exceptionsOf(b).some((x) => x.kind === 'boss'), 'the Resident throws');
-  command(b, 'program resume');
-  assert.ok(!R.exceptionsOf(b).some((x) => x.kind === 'boss'));
-  const ph = b.encounter.virus.phases?.[0];
-  if (ph) { ph.done = true; assert.ok(R.exceptionsOf(b).some((x) => x.kind === 'boss'), 'a new phase throws again'); }
+  assert.deepEqual(R.exceptionsOf(b).map((x) => x.kind), ['fight'], 'the Resident: the whole fight');
+  assert.equal(R.decide(b).whole, true);
+  assert.match(hudMarkup(b), /rt-exc-tag[^>]*><strong>EXCEPTION<\/strong><span> · no available handler/, 'the header mark');
+  assert.doesNotMatch(boardMarkup(b), /exc-mark/, 'no mark on its parts');
+  const ev = cycle(b);
+  assert.equal(mine(ev).length, 0, 'nothing fires');
+  assert.equal(ev.filter((e) => e.type === 'exception').length, 1);
+});
+
+test('presets: ready-made routines from the virus\'s parts, each fitting its RAM with only chips you\'ve opened and skills on your bar', () => {
+  for (const [level, research] of [[5, TIER.decoded], [14, TIER.rule], [30, TIER.mastered], [6, 0]]) for (const body of FAMS) {
+    const s = fight({ level, research, family: body });
+    const ps = R.presetsFor(s, body), bar = new Set(R.barSkills(s).map((x) => x.id));
+    assert.ok(ps.length >= 2 && ps.length <= 4, `${body} at ${level}: ${ps.length} presets`);
+    for (const p of ps) {
+      assert.ok(p.handlers.reduce((n, h) => n + R.handlerRam(s, h), 0) <= R.ramFor(s, body), `${p.name} fits`);
+      for (const h of p.handlers) {
+        assert.ok(R.whenOpen(s, h.when), `${p.name}: ${h.when} is open`);
+        assert.ok(bar.has(h.do), `${p.name}: ${h.do} is on the bar`);
+        assert.ok(R.TARGETS[h.target]);
+        const w = R.parseWhen(h.when);
+        if (w.kind === 'part') assert.equal(R.refBody(w.ref), body, 'its own parts');
+      }
+      assert.match(p.name, /^[A-Z][^A-Z]*( [A-Z][a-z]+)?[^A-Z]*$/, `sentence case: ${p.name}`);
+    }
+    if (research >= TIER.decoded) assert.ok(ps.some((p) => p.id === 'signature'), `${body}: its signature part first`);
+  }
+  // Picking one replaces the stack and is marked; an edited stack comes back with undo.
+  const s = fight({ level: 14 });
+  command(s, 'program ransomware add always spike soonest');
+  command(s, 'program ransomware preset signature');
+  assert.equal(R.presetNow(s, 'ransomware'), 'signature');
+  assert.match(programMarkup(s), /rt-pre on[^>]*preset signature/, 'the current one marked');
+  assert.match(programMarkup(s), /program ransomware undo/, 'Undo, for the stack it replaced');
+  command(s, 'program ransomware undo');
+  assert.deepEqual(R.routineOf(s, 'ransomware').handlers, [{ when: 'always', do: 'spike', target: 'soonest' }]);
+  command(s, 'program ransomware preset lowest');
+  command(s, 'program ransomware preset signature');
+  assert.deepEqual(R.routineOf(s, 'ransomware').undo, [{ when: 'always', do: 'spike', target: 'soonest' }], 'a preset over a preset keeps your own stack one undo away');
 });
 
 test('anything you type overrides the program for that cycle; the board shows its next move ghosted on its target', () => {
   const s = fight();
   for (const p of attackers(s)) p.attack.due = 999;
-  command(s, 'program add ransomware:encryptor:present crack that');
+  command(s, 'program ransomware add ransomware:encryptor:present crack that');
   const html = boardMarkup(s);
   assert.match(html, /intent mine prog ghost[^>]*data-at="encryptor"[^>]*>⟳ crack encryptor/, 'your row: the ghost');
   assert.match(html, /ghost-on[^>]*>⟳ Crack/, 'the part it will hit');
@@ -213,24 +331,20 @@ test('anything you type overrides the program for that cycle; the board shows it
   const r = mine(cycle(s))[0];
   assert.doesNotMatch(r.message, /⟳|timer ran out/, 'your command');
   assert.equal(r.target, 'pulse');
-  const r2 = mine(cycle(s))[0];
-  assert.equal(r2.ability, 'crack', 'the next cycle is the program\'s again');
-  // Off: the timer repeats your last hit, as before.
+  assert.equal(mine(cycle(s))[0].ability, 'crack', 'the next cycle is the program\'s again');
   command(s, 'program off');
-  const r3 = mine(cycle(s))[0];
-  assert.match(r3.message, /timer ran out/);
+  assert.match(mine(cycle(s))[0].message, /timer ran out/);
 });
 
 test('a program\'s fight pays what the same fight pays you: the same moves typed bring the same XP, loot and credits', () => {
   const run = (prog, moves = null) => {
-    const s = fight({ level: 4, seed: 11, opts: { classic: false } });
+    const s = fight({ level: 5, seed: 11, opts: { classic: false } });
     s.rng = 12345;
     R.programsOf(s).on = prog;
     const out = [];
     for (let i = 0; i < 60 && active(s); i++) {
       if (moves) command(s, moves[i] || 'spike ' + livingParts(s)[0].id);
-      const ev = cycle(s);
-      const m = mine(ev)[0];
+      const m = mine(cycle(s))[0];
       if (m) out.push(`${m.ability} ${m.target}`);
     }
     const xp = s.logs.filter((e) => e.type === 'xp').reduce((n, e) => n + e.amount, 0);
@@ -249,11 +363,12 @@ test('a program\'s fight pays what the same fight pays you: the same moves typed
 
 test('the rails: auto jack-out at your line, with your pack, in a fight or out of one; a walk stops before an elite', () => {
   const s = fresh();
+  FP.outfit(s, { cls: 'breaker', level: 5 });
   play(s, 'connect sprawl');
   assert.ok(s.run?.rooms);
   command(s, 'program jackout 30');
   assert.equal(R.rails(s).jackOut, 30);
-  R.railCheck(s); // full Signal: the line is above you
+  R.railCheck(s);
   s.run.pack.push({ kind: 'credits', amount: 40, path: '/tmp/x', name: 'x.dat' });
   const credits = s.server.credits;
   play(s, 'cd /'); play(s, 'cd tmp'); play(s, 'attack');
@@ -266,8 +381,8 @@ test('the rails: auto jack-out at your line, with your pack, in a fight or out o
   assert.ok(ev.some((e) => /AUTO JACK OUT/.test(e.message)), 'it jacks you out');
   assert.equal(s.run, null, 'home');
   assert.ok(s.server.credits >= credits + 40, 'with your pack');
-  // Off: nothing.
   const t = fresh();
+  FP.outfit(t, { cls: 'breaker', level: 5 });
   play(t, 'connect sprawl');
   R.railCheck(t);
   t.run.integrity = 1;
@@ -295,30 +410,69 @@ test('the rails: auto jack-out at your line, with your pack, in a fight or out o
 });
 
 test('programs are per class and per subclass on the save; an old save loads with the defaults', () => {
-  const s = fight({ level: 4 });
-  command(s, 'program add always spike soonest');
+  const s = fight({ level: 5 });
+  command(s, 'program ransomware add always spike soonest');
   assert.equal(R.programKey(s), 'breaker');
   FP.outfit(s, { cls: 'breaker', level: 14 });
   assert.equal(R.programKey(s), 'demolitionist');
-  assert.equal(R.programOf(s).handlers.length, 1, 'a subclass starts from its class\'s program');
-  command(s, 'program add always crack soonest');
-  assert.equal(R.programOf(s, 'breaker').handlers.length, 1, 'each keeps its own');
+  assert.equal(R.routineOf(s, 'ransomware').handlers.length, 1, 'a subclass starts from its class\'s program');
+  command(s, 'program ransomware add always crack soonest');
+  assert.equal(R.routineOf(s, 'ransomware', 'breaker').handlers.length, 1, 'each keeps its own');
   const back = restore(JSON.parse(JSON.stringify(s)));
-  assert.equal(R.programOf(back, 'demolitionist').handlers.length, 2, 'saved');
+  assert.equal(R.routineOf(back, 'ransomware', 'demolitionist').handlers.length, 2, 'saved');
+  assert.equal(R.confirmed(back, 'ransomware'), true);
   const old = JSON.parse(JSON.stringify(fresh()));
   delete old.programs;
   const o = restore(old);
   assert.deepEqual(R.programsOf(o).rails, { jackOut: 0, danger: true });
   assert.equal(R.programsOf(o).on, true);
-  assert.deepEqual(R.programOf(o).handlers, []);
+  assert.deepEqual(R.routineOf(o, 'ransomware').handlers, []);
 });
 
-test('the Program tab: the stack, RAM, the chips and the rails on one page; a tip for it', () => {
-  const s = fight();
-  command(s, 'program add ransomware:encryptor:due crack that');
+test('an R1 save\'s single stack moves into its viruses\' routines, which count as yours', () => {
+  const s = fight({ level: 5 });
+  s.met = { ransomware: true, worm: true };
+  const save = JSON.parse(JSON.stringify(s));
+  save.programs = { on: true, rails: { jackOut: 20, danger: true }, by: { breaker: { handlers: [
+    { when: 'ransomware:encryptor:present', do: 'crack', target: 'that' },
+    { when: 'always', do: 'spike', target: 'lowest' },
+    { when: 'worm:replicator:low', do: 'spike', target: 'that' },
+    { when: 'hurt', do: 'spike', target: 'soonest' },
+    { when: 'nonsense', do: 'spike', target: 'soonest' },
+  ] } } };
+  const o = restore(save);
+  assert.equal(R.programsOf(o).rails.jackOut, 20, 'the rails as they were');
+  assert.equal(R.programOf(o, 'breaker').handlers, undefined, 'the old stack is gone');
+  assert.deepEqual(R.routineOf(o, 'ransomware', 'breaker').handlers.map((h) => h.when), ['ransomware:encryptor:present', 'always', 'hurt']);
+  assert.deepEqual(R.routineOf(o, 'worm', 'breaker').handlers.map((h) => h.when), ['always', 'worm:replicator:low', 'hurt'], 'a handler naming no part: every met virus with room');
+  assert.equal(R.routineOf(o, 'ghostroot', 'breaker').handlers.length, 0, 'not met: nothing');
+  assert.equal(R.confirmed(o, 'ransomware'), true);
+  assert.equal(R.confirmed(o, 'worm'), true);
+  assert.equal(R.confirmed(o, 'ghostroot'), false);
+  // No room: a handler naming no part is dropped, without an error.
+  const t = fight({ level: 1 });
+  t.met = { ransomware: true };
+  const save2 = JSON.parse(JSON.stringify(t));
+  save2.programs = { by: { breaker: { handlers: [1, 2, 3, 4, 5].map(() => ({ when: 'always', do: 'spike', target: 'soonest' })) } } };
+  const o2 = restore(save2);
+  assert.equal(R.routineOf(o2, 'ransomware', 'breaker').handlers.length, R.ramFor(o2, 'ransomware'), 'what fits');
+});
+
+test('the Program tab: viruses down the left, the picked one\'s presets, stack, chips and the rails; a tip for it', () => {
+  const s = fight({ level: 14 });
+  s.met = { ransomware: true, worm: true, ghostroot: true };
+  s.research['ghostroot:pulse'] = 0; s.research['ghostroot:scrambler'] = 0;
+  for (const p of FAMILIES.ghostroot.parts) s.research[`ghostroot:${p.id}`] = 0;
+  command(s, 'program ransomware add ransomware:encryptor:due crack that');
   const html = loadoutMarkup(s, null, 'program');
-  for (const k of ['rt-stack', 'rt-ram', 'data-rt-drop="when:0"', 'data-rt-set="1 when"', 'data-rt-drag="do:', 'data-rt-drag="target:', 'program jackout 30', 'program danger off', 'rotation']) assert.ok(html.includes(k), k);
+  for (const k of ['rt-viruses', 'rt-stack', 'rt-ram', 'rt-presets', 'data-rt-body="ransomware"', 'data-rt-drop="when:0"', 'data-rt-set="1 when"', 'data-rt-drag="do:', 'data-rt-drag="target:', 'program jackout 30', 'program danger off', 'rotation', 'program ransomware remove 1']) assert.ok(html.includes(k), k);
+  assert.match(html, /class="rt-v on set"[^>]*data-command="program ransomware"[\s\S]*?Ransomware[\s\S]*?1 handler/, 'the picked virus, its state');
+  assert.match(html, /class="rt-v dim"[^>]*data-command="program ghostroot"[\s\S]*?no routine/, 'met but undecoded: greyed');
+  assert.doesNotMatch(html, /data-command="program trojan"/, 'not met: hidden');
+  assert.match(html, /<h1>Ransomware<\/h1>/);
   assert.match(html, /data-ltab="program"/);
+  command(s, 'program worm');
+  assert.match(loadoutMarkup(s, null, 'program'), /<h1>Worm<\/h1>[\s\S]*program worm confirm/, 'picking a virus opens its routine, with its Confirm');
   const tip = TIPS.find((t) => t.id === 'program-editor');
   assert.ok(tip && tip.text.length <= 200);
   void barKeys;
