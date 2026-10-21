@@ -18,7 +18,7 @@ import { nextPayIn, boardOpen, storyAt, openContracts, ready } from './mail.mjs'
 import { hubsOf, hubFound, hubTraceOf, FACTIONS } from './factions.mjs';
 import { WARES } from './market.mjs';
 import { logComms, commsOf, unseen, unseenAlert, seeAll, markDone, pruneComms, clearComms, clearOne } from './comms.mjs';
-import { nextTip, markSeen } from './tips.mjs';
+import { nextTip, markSeen, TOUR, tourDone, skipTour } from './tips.mjs';
 import { createWindow } from './window.mjs';
 import { createIntro } from './intro.mjs';
 import { powerOn } from './poweron.mjs';
@@ -835,17 +835,15 @@ function rewardCard(kicker, e, events, toast = false) {
   showGain(kicker, name, rows, toast);
 }
 // Losing a run: how it went (the death recap over the last cycles: recap.mjs), what took you out, what it cost, and
-// when you can go back.
+// when you can go back (you're home at full Signal; each disconnect on the server's run waits a little longer).
 function lossCard(e) {
   const clock = (ms) => `${Math.floor(ms / 60000)}:${String(Math.ceil((ms % 60000) / 1000) % 60).padStart(2, '0')}`;
-  const max = maxSignal(campaign), sig = signalNow(campaign), need = Math.ceil(max * CONFIG.zone.minSignal);
   const rows = [
     { kind: 'lost', label: e.by ? `Taken out by ${e.by}` : (e.reason || 'Signal lost'), qty: '', text: 'Signal lost' },
     ...(e.lost ? [{ kind: 'lost', label: 'Unbanked files', qty: `−${e.lost}`, text: `${e.lost} files lost` }] : []),
     ...(e.failed || []).map((t) => ({ kind: 'lost', label: `Contract failed: ${t}`, qty: '', text: `Contract failed: ${t}` })), // an Install job's item went with the pack (mail.mjs)
   ];
-  // One clock: you can go back once both the reconnect wait and your Signal allow it, so the later of the two.
-  const wait = Math.max(e.relockMs || 0, sig < need ? ((need - sig) / (CONFIG.signalRest * max)) * 60000 : 0);
+  const wait = e.relockMs || 0;
   if (wait > 0) rows.push({ kind: 'time', label: 'Reconnection possible in', qty: clock(wait), text: `Reconnection possible in ${clock(wait)}` });
   showGain('Disconnected', e.where || '', rows, false, recapMarkup(e.recap));
   $('gain').classList.add('loss');
@@ -1224,7 +1222,7 @@ function run(raw) {
   { const said = screenFxCommand(campaign, text); if (said) { save(); dirty = true; return notice(said); } } // screen fx [off|subtle|medium|bold|next] / screen fx <effect> on|off (and the old effects calm|full|minimal)
   if (text === 'casing on' || text === 'casing off') { campaign.settings.casing = text === 'casing on'; save(); dirty = true; return; }
   if (text === 'tips on' || text === 'tips off' || text === 'tips replay') {
-    if (text === 'tips replay') { campaign.settings.seen = {}; campaign.settings.tips = true; }
+    if (text === 'tips replay') { campaign.settings.seen = {}; delete campaign.tour; campaign.settings.tips = true; }
     else campaign.settings.tips = text === 'tips on';
     hideTip(false); save(); dirty = true;
     return notice(text === 'tips replay' ? 'Tips will show again as you meet things.' : `Tips ${campaign.settings.tips ? 'on' : 'off'}.`);
@@ -1581,26 +1579,16 @@ function renderMeters() {
       `Server Integrity ${srv.integrity}/${srv.max}. At 0 the server crashes and reboots at half, degraded for 10 minutes.${missing > 0 && srv.integrity > 0 ? ` Rests back to full in about ${mins} min.` : ''}`);
   }
   $('vault-value').textContent = srv.credits;
-  // Signal: your health out on the net. At home it rests back; on a run the run's own header shows it.
+  // Signal: your health out on the net, full whenever you're home; on a run the run's own header shows it.
   {
     const sig = campaign.run ? campaign.run.integrity : signalNow(campaign), max = campaign.run ? campaign.run.max : maxSignal(campaign);
-    const f = max ? sig / max : 0, need = CONFIG.zone.minSignal;
+    const f = max ? sig / max : 0;
     const m = $('meter-signal');
     m.hidden = !!campaign.run || active(campaign) || !!campaign.breach || !!campaign.rooms; // a fight has its own bars, a breach and the rooms their own page
     $('signal-value').textContent = sig;
     const lit = Math.ceil(f * 5 - 1e-9);
     m.querySelectorAll('.sig-bars i').forEach((b, i) => b.classList.toggle('on', i < lit));
-    m.classList.toggle('weak', f < need);
-    m.classList.toggle('resting', !campaign.run && !active(campaign) && sig < max);
-    const mins = Math.ceil((max - sig) / (CONFIG.signalRest * max));
-    // Resting: a clock to full (to connect, while too weak for it), so a low meter says when, not just "slowly".
-    const resting = !campaign.run && !active(campaign) && sig < max;
-    const goal = f < need ? Math.ceil(max * need) : max, secs = Math.max(0, Math.ceil(((goal - sig) / (CONFIG.signalRest * max)) * 60));
-    const eta = $('signal-eta');
-    eta.hidden = !resting;
-    if (resting) { eta.textContent = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`; eta.title = f < need ? 'Time until you have enough Signal to connect' : 'Time until Signal is full'; }
-    meterBuy(m, 'top up', campaign.run ? 0 : topUpCost(campaign, 'signal'),
-      `Signal ${sig}/${max}: your health out on the net. ${sig < max ? `Rests back to full in about ${mins} min at home.${f < need ? ` You need ${Math.ceil(max * need)} to connect.` : ''}` : 'Full.'}`);
+    m.title = `Signal ${sig}/${max}: your health out on the net. You're back to full whenever you come home.`;
   }
   const s = shown();
   // On a run, Signal lives in the prompt, the net header and the combat HUD.
@@ -1823,6 +1811,7 @@ function render(force = false) {
   applySideMarks();
   showArmed();
   renderPrompt();
+  tourCheck();
   placeTip();
   dirty = false;
 }
@@ -2038,21 +2027,20 @@ function services() {
 // ---------- first-time tips ----------
 // The game's only tutorial: the first time you meet something, a tip points at it, once.
 // One at a time; fight tips pause the fight until you close them (Got it, Enter on an empty
-// line, Esc, or clicking the thing it points at).
+// line, Esc, or clicking the thing it points at). The rooms tour (tips.mjs TOUR) is a run of these that moves on
+// when you do what a step says, by a click or the prompt.
 let tip = null;
 let tipWait = 0;
-function onScreen(sel) {
-  const el = document.querySelector(sel);
-  if (!el) return false;
-  const r = el.getBoundingClientRect();
-  return r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth;
-}
+const shownRect = (el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth; };
+// The first match that's on screen: the room map draws twice (wide, and tall for a phone) and shows one.
+const shownEl = (sel) => [...document.querySelectorAll(sel)].find(shownRect) || null;
+function onScreen(sel) { return !!shownEl(sel); }
 function checkTips(now) {
   if (tip || ending || introOn || !$('levelup').hidden || shell.booting || playtest || now < tipWait) return;
   tipWait = now + 400;
   const t = nextTip(campaign, module, onScreen);
   if (!t) return;
-  tip = { t, cur: t, step: 0, paused: false };
+  tip = { t, cur: t, step: 0, paused: false, base: t.mark?.(campaign) };
   showStep();
   $('tip').hidden = false;
   if (t.pause && active(campaign) && !campaign.encounter.paused) { campaign.encounter.paused = true; tip.paused = true; dirty = true; }
@@ -2066,8 +2054,9 @@ function showStep() {
   const steps = tip.t.steps;
   tip.cur = steps ? steps[tip.step] : tip.t;
   $('tip-text').textContent = tip.cur.text;
-  $('tip-step').textContent = steps ? `${tip.step + 1}/${steps.length}` : '';
+  $('tip-step').textContent = steps ? `${tip.step + 1}/${steps.length}` : tip.t.tour ? `${tourDone(campaign) + 1}/${TOUR.length}` : '';
   $('tip-ok').textContent = steps && tip.step < steps.length - 1 ? 'Next' : 'Got it';
+  $('tip-skip').hidden = !tip.t.tour;
 }
 function advanceTip() {
   if (!tip) return;
@@ -2083,8 +2072,8 @@ function advanceTip() {
 }
 function placeTip() {
   if (!tip) return;
-  const el = document.querySelector(tip.cur.at);
-  if (!el || !onScreen(tip.cur.at)) return hideTip(false); // it'll come back when its thing does
+  const el = shownEl(tip.cur.at);
+  if (!el) return hideTip(false); // it'll come back when its thing does
   document.querySelectorAll('.tip-target').forEach((x) => { if (x !== el) x.classList.remove('tip-target'); });
   el.classList.add('tip-target');
   const box = $('tip'), r = el.getBoundingClientRect(), w = box.offsetWidth, h = box.offsetHeight;
@@ -2115,6 +2104,9 @@ function hideTip(seen) {
 }
 $('tip-ok').addEventListener('click', () => { advanceTip(); $('command-input').focus(); });
 $('tip-off').addEventListener('click', () => { campaign.settings.tips = false; hideTip(true); notice('Tips off. Turn them back on on the System page.'); dirty = true; });
+$('tip-skip').addEventListener('click', () => { skipTour(campaign); hideTip(false); save(); $('command-input').focus(); });
+// A tour step you did (by a click or the prompt): it closes, and the next waits for its own thing.
+function tourCheck() { if (tip?.t.tour && tip.t.done?.(campaign, tip.base)) hideTip(true); }
 addEventListener('resize', () => placeTip());
 
 // A status lands: its chip shows big over the board, then flies into its place in the Status
@@ -2327,7 +2319,7 @@ document.addEventListener('click', (e) => {
 }, true);
 document.addEventListener('keydown', (e) => { if (payState && e.key === 'Escape') { payState = null; payDraw(); } });
 document.addEventListener('click', (e) => {
-  if (tip && !e.target.closest('#tip') && e.target.closest(tip.cur.at)) advanceTip();
+  if (tip && !e.target.closest('#tip') && (e.target.closest(tip.cur.at) || (tip.cur.also && e.target.closest(tip.cur.also)))) advanceTip();
   if (e.target.closest('[data-spoils-go]')) { if (ended) leaveFight(); else hideSpoils(); return; }
   if (e.target.closest('[data-gain-go]')) { hideGain(); return; }
   const pick = e.target.closest('[data-mk-pick]');
@@ -2819,7 +2811,7 @@ document.querySelector('.brand')?.addEventListener('click', (ev) => {
   ev.preventDefault();
   go('map');
 });
-// The meters that take a click (top up, repair) take Enter and Space too.
+// The meter that takes a click (repair) takes Enter and Space too.
 document.addEventListener('keydown', (e) => {
   const m = e.target.closest?.('.meter[data-command]');
   if (m && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); m.click(); }

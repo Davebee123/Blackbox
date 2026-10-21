@@ -29,10 +29,9 @@ export const CONFIG = {
   enrage: 1.3, // Bricker: a part under half Integrity hits this much harder
   linked: 0.33, // Linked parts (v2+): the share of a broken part's hit its survivor takes on (a half broke Breakers on v2 Ghostroots)
   startingCredits: 0, // you start broke: caches, kills and contracts pay
-  // Topping up: Signal and server Integrity rest back slowly for free, or you pay to have them
-  // full now. The price is for a full bar at your level; less missing costs less (at least 1).
-  // Signal goes by your class level, Integrity by your server level.
-  topUp: { signal: [8, 1.5], server: [10, 2] }, // [base, per level]
+  // Repair: server Integrity rests back slowly for free, or you pay to have it full now. The price is for a full
+  // bar at your server level; less missing costs less (at least 1). (Signal needs none: you're home at full.)
+  topUp: { server: [10, 2] }, // [base, per level]
   // Crits: your hits crit at baseCrit% (+ Crit from protocols) for ×1.5. Enemy damage attacks
   // crit at enemyCrit (from enemy level 3; a brand-new server never sees one).
   baseCrit: 5,
@@ -113,7 +112,7 @@ export const CONFIG = {
   // Runs
   depthThreat: 3, // guard threat added per depth below the first
   depthLoot: 0.4, // caches hold 40% more credits per old layer down (layerOf: floors 1, 2, 3–4, 5–6, 7–8)
-  maxSignal: 100, // your health out in the net (it carries between connections and rests back up)
+  maxSignal: 100, // your health out in the net (it carries from fight to fight on a run; full again at home)
   cdCost: 1, // Signal spent per move between directories
   leadBase: 25, // lead progress every neutralized virus gives (four kills; a Route Logger adds more)
   cacheCredits: 30,
@@ -149,15 +148,16 @@ export const CONFIG = {
   },
   // Resting: between fights the server repairs itself, 2% of its max a minute (empty to full in
   // about 50 minutes), offline too, at half that while an invasion is contested or breaching at your wall.
-  // Or pay to top up (topUp above).
+  // Or pay to repair (topUp above). Signal never rests: you come home to full (run.mjs bank, combat.mjs disconnect).
   restRegen: 0.02,
-  signalRest: 0.2, // Signal back per minute at home, out of a fight: empty to full in 5 minutes, offline too
   booster: { restore: 0.5 }, // Signal booster (retired: no longer crafted; ones already carried still work on a run)
   // The rogue server: where you go to fight from the start. Viruses sit in its folders at
-  // your level, up to level 3 (it's a starter area), and come back a while after you kill them. Signal carries between connections
-  // (and rests back up like the server); you need a quarter of it to connect.
-  zone: { id: 'sprawl', name: 'SPRAWL-00', respawnMs: 90000, minSignal: 0.25, maxLevel: 5, starterKills: 2, starterHit: 0.6, bossRespawnMs: 30 * 60000 }, // your first two kills: SPRAWL's hits land at 60% while you learn the board // SPRAWL follows you up to level 5 (a spawn now and then one higher); past that it's grey-ish filler
-  relockMs: 30000, // any server but an outpost won't take you back for 30 seconds after you leave: no jack out, top up, return
+  // your level, up to level 3 (it's a starter area), and come back a while after you kill them.
+  zone: { id: 'sprawl', name: 'SPRAWL-00', respawnMs: 90000, maxLevel: 5, starterKills: 2, starterHit: 0.6, bossRespawnMs: 30 * 60000 }, // your first two kills: SPRAWL's hits land at 60% while you learn the board // SPRAWL follows you up to level 5 (a spawn now and then one higher); past that it's grey-ish filler
+  relockMs: 30000, // any server won't take you back for 30 seconds after you leave (jacked out or disconnected)
+  // Each disconnect on a server's run (Signal 0, a lost fight) adds this to its wait, up to the cap in all; a clean jack
+  // out or the server's reboot clears the count (combat.mjs relockWait, loc.deaths).
+  deathWait: { each: 15000, cap: 120000 },
   // The Exfil (floorplan.mjs, netrooms.mjs): a process smuggling a stolen archive off a rogue server, a loot mob. One
   // roll a run (rogue.mjs: a run lasts until the server reboots), chance of an Exfil; after one turns up, none on any of
   // your rogue servers for cooldownMs (yours:

@@ -36,6 +36,7 @@ export const runCleared = (loc) => inRuns(loc) && rogueRooms(loc).every((p) => l
 export function rogueReboot(s, loc, now = clock()) {
   loc.spawns = {};
   loc.rogueRun = { n: (loc.rogueRun?.n || 0) + 1, at: now };
+  delete loc.deaths; // a new run: its disconnects no longer count (combat.mjs relockWait)
   const R = loc.floorplan;
   if (R) for (const r of Object.values(R.graph.rooms)) if (r.kind === 'purse') delete R.taken[r.id];
 }

@@ -168,6 +168,7 @@ code { font-family: var(--mono); color: var(--amber); }
 .part-tags { display: flex; gap: 4px; flex-wrap: wrap; }
 .tag { display: inline-block; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; padding: 1px 6px; border: 1px solid var(--line-strong); border-radius: 2px; color: var(--amber); white-space: nowrap; }
 .tag.hot { border-color: var(--hot); color: var(--hot); }
+.death-mark { margin-left: 6px; font-variant-numeric: tabular-nums; cursor: help; }
 .tag.you { border-color: var(--you); color: var(--you); }
 .tag.dim { border-color: var(--line); color: var(--muted); }
 .part-tags:empty { display: none; }
@@ -972,13 +973,14 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 .tip-step { color: var(--dim); font-size: 12px; margin-right: auto; font-variant-numeric: tabular-nums; }
 .tip::before { content: ''; position: absolute; left: var(--arrow, 50%); top: -7px; width: 12px; height: 12px; background: var(--panel-2); border-left: 1px solid var(--you); border-top: 1px solid var(--you); transform: translateX(-50%) rotate(45deg); }
 .tip.above::before { top: auto; bottom: -7px; transform: translateX(-50%) rotate(225deg); }
-.tip-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.tip-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 10px; }
+.tip-off[hidden] { display: none; }
 .tip-off { background: none; border: 0; color: var(--muted); font: 12px var(--mono); cursor: pointer; padding: 0; }
 .tip-off:hover { color: var(--text); }
 .tip.show { animation: tip-in 0.25s ease-out both; }
 @keyframes tip-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 .tip-target { outline: 2px solid var(--you); outline-offset: 3px; box-shadow: 0 0 18px rgba(127, 209, 199, 0.3); }
-.mnode.tip-target { outline: none; box-shadow: none; filter: drop-shadow(0 0 7px rgba(127, 209, 199, 0.9)); }
+.mnode.tip-target, .fp-room.tip-target { outline: none; box-shadow: none; filter: drop-shadow(0 0 7px rgba(127, 209, 199, 0.9)); }
 .no-motion .tip.show { animation: none; }
 /* Victory: the fight's gains, until you close it. Under the CRT glass (z 70), over everything else. */
 /* A level-up (app.js levelUp): a privilege escalation on the terminal. A header strip, the level as a big
@@ -1663,12 +1665,6 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 .sig-bars i:nth-child(1) { height: 4px; } .sig-bars i:nth-child(2) { height: 7px; } .sig-bars i:nth-child(3) { height: 10px; } .sig-bars i:nth-child(4) { height: 13px; } .sig-bars i:nth-child(5) { height: 16px; }
 .sig-bars i.on { background: var(--you); box-shadow: 0 0 5px rgba(127, 209, 199, 0.5); }
 .meter-signal strong { color: var(--you); min-width: 3ch; }
-.meter-signal.weak .sig-bars i.on { background: var(--hot); box-shadow: 0 0 5px rgba(255, 91, 61, 0.5); }
-.meter-signal.weak strong { color: var(--hot); }
-/* Resting: the next bar up breathes while it refills. */
-.meter-signal.resting .sig-bars i.on + i:not(.on), .meter-signal.resting .sig-bars i:first-child:not(.on) { animation: sig-rest 1.2s ease-in-out infinite; }
-@keyframes sig-rest { 50% { background: rgba(127, 209, 199, 0.5); } }
-.no-motion .meter-signal .sig-bars i { animation: none; }
 @media (max-width: 1700px) and (min-width: 901px) { .meters { gap: 14px; } .meter-integrity .meter-bar { width: 80px; } }
 @media (max-width: 1440px) and (min-width: 901px) { .meter-signal .meter-label { display: none; } .meter-integrity .meter-bar { width: 56px; } .meters { gap: 10px; } }
 @media (max-width: 1600px) and (min-width: 1440px) { .pager .lcd { width: 84px; } }
@@ -3028,8 +3024,6 @@ details.map-pick { pointer-events: auto; }
 /* Crew rooms (elites): a gold frame, so nobody walks in solo by accident */
 .tag.tag-crew { color: #1a1206; background: var(--gold, #e8b54a); border-color: var(--gold, #e8b54a); font-weight: 700; letter-spacing: 0.06em; box-shadow: 0 0 0 1px rgba(232, 181, 74, 0.35), 0 0 8px rgba(232, 181, 74, 0.25); }
 
-.sig-eta { color: var(--dim); font-size: 11px; font-variant-numeric: tabular-nums; margin-left: 4px; }
-.meter-signal.weak .sig-eta { color: var(--amber); }
 .sp-row.k-lost { border-left-color: var(--hot); } .sp-row.k-lost .sp-ico { color: var(--hot); }
 .sp-row.k-time .sp-qty { font-variant-numeric: tabular-nums; }
 .gain.loss .sp-kicker { color: var(--hot); }

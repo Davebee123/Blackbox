@@ -283,17 +283,18 @@ test('the rest room: 30% of your max, once a visit', () => {
   assert.ok(R.cleared[rest.id]);
 });
 
-test('home: Signal rests back at 20% a minute (the clock\'s speed in the playtest), and the server takes you back after 30 s', () => {
+test('home: jack out and you are back to full Signal at once; the server takes you back after 30 s (the clock\'s speed in the playtest)', () => {
   const s = server(), R = s.rooms;
   R.signal = 20;
   FP.jackOut(s);
   assert.equal(R.at, null);
+  assert.equal(FP.signalNow(s), R.max, 'full the moment you are home');
   const r = FP.connect(s);
   assert.ok(r.some((e) => e.type === 'warning'), 'the reconnect wait');
-  tick(30000);
-  assert.equal(FP.signalNow(s), 20 + Math.floor(0.5 * 0.2 * R.max));
-  tick(5 * 60000);
-  assert.equal(FP.signalNow(s), R.max, 'full in 5 minutes');
+  tick(FP.ROOMS.reconnect / R.speed - 1000);
+  FP.connect(s);
+  assert.equal(R.at, null, 'still waiting');
+  tick(1000);
   FP.connect(s);
   assert.equal(R.at, R.graph.entry);
   assert.equal(R.signal, R.max);
@@ -304,7 +305,7 @@ test('home: Signal rests back at 20% a minute (the clock\'s speed in the playtes
   place(s, roomOfKind(s, 'process').id); FP.fight(s, roomOfKind(s, 'process')); lose(s);
   assert.equal(R.pack.length, 0);
   for (const id of items) assert.equal(stashItem(s, id), null, 'the unbanked pack is gone');
-  assert.equal(R.signal, 0);
+  assert.equal(FP.signalNow(s), R.max, 'disconnected: home at full Signal');
 });
 
 test('fog: a room is unknown until you have been in it; you see the shapes next to you and one further, and the Core\'s chip', () => {
@@ -697,15 +698,18 @@ test('a Mirror\'s mirrored cache: pulling it breaks the mirror, and the elite be
   assert.ok(R.cleared[c.id]);
 });
 
-test('after a lost fight, home shows your Signal resting from 0, and Connect waits for it', () => {
+test('after a lost fight you are home at full Signal; Connect waits 30 s and 15 s more for the disconnect', () => {
   const s = server(), R = s.rooms, p = roomOfKind(s, 'process');
   place(s, p.id); FP.fight(s, p);
   s.run.integrity = 0; finish(s, 'crashed'); // not settled yet, as in the browser
   assert.equal(R.at, null);
-  assert.equal(FP.signalNow(s), 0);
-  tick(60000);
-  assert.ok(FP.signalNow(s) > 0, 'it rests');
-  tick(5 * 60000);
+  assert.equal(FP.signalNow(s), R.max, 'full at once');
+  const wait = (FP.ROOMS.reconnect + CONFIG.deathWait.each) / R.speed;
+  tick(wait - 1000);
+  FP.connect(s);
+  assert.equal(R.at, null, 'the disconnect adds to the wait');
+  tick(1000);
   FP.connect(s);
   assert.equal(R.at, R.graph.entry);
+  assert.equal(FP.signalNow(s), R.max, 'back in at full');
 });

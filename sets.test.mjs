@@ -208,10 +208,7 @@ test('LOWLIGHT Kit (2): delivering a contract fills your Signal, and your next k
   wear(s, ['wicks-old-toolkit', 'lowlight-badge'], 22);
   wear(base, ['wicks-old-toolkit'], 22);
   assert.deepEqual(activeSets(loaded(s))[0].open, [2]);
-  s.signal = 5; base.signal = 5;
-  setDeliver(s); setDeliver(base);
-  assert.equal(s.signal, null, 'full at home');
-  assert.equal(base.signal, 5, 'one piece: nothing');
+  setDeliver(s); setDeliver(base); // at home your Signal is full anyway: the XP is what's left
   assert.equal(s.killXp, 25);
   const xpOf = (log) => log.filter((l) => l.type === 'xp').reduce((n, l) => n + l.amount, 0);
   const a = kill(s), b = kill(base);
@@ -228,10 +225,9 @@ test('LOWLIGHT Kit (2): delivering a contract fills your Signal, and your next k
   const m = at(22);
   wear(m, ['wicks-old-toolkit', 'lowlight-badge'], 22);
   const j = { id: 77, type: 'materials', material: 'worm', amount: 1, got: 0, reward: { credits: 5 }, from: 'x', subject: 'x', body: [] };
-  m.mail.jobs.push(j); m.materials = { ...(m.materials || {}), worm: 3 }; m.signal = 4;
+  m.mail.jobs.push(j); m.materials = { ...(m.materials || {}), worm: 3 };
   command(m, 'mail deliver 77');
   assert.ok(j.done);
-  assert.equal(m.signal, null);
   assert.equal(m.killXp, 25);
 });
 
@@ -799,4 +795,20 @@ test('the pace: about how many events of each source to a piece you lack, as GAM
   // The frequent sources are the slow ones: no source an event of which comes often (a kill, a vault) gives a piece in
   // fewer than 40 of them, bar a Kestrel guard post's own (about 8 kills of that one guard).
   for (const kind of ['rare', 'strain', 'author', 'vault']) assert.ok(mean(SET_LOOT[kind]) >= 40, kind);
+});
+
+test('Night Shift (3): a rest room and a Defrag Bay restore 50% more Signal (you come home to full, so it no longer speeds a rest at home)', async () => {
+  const FP = await import('./dist/floorplan.mjs');
+  const { SOCKET } = await import('./dist/sockets.mjs');
+  const plain = at(16), worn = at(16); // the Thermos is an implant: from level 15
+  wear(worn, ['timecard', 'night-light', 'thermos'], 15);
+  assert.deepEqual(activeSets(loaded(worn))[0].open, [2, 3]);
+  for (const s of [plain, worn]) { FP.startRooms(s, { seed: 3 }); s.rooms.signal = 1; }
+  const max = worn.rooms.max;
+  assert.equal(FP.restGain(plain, FP.ROOMS.rest), Math.round(plain.rooms.max * FP.ROOMS.rest));
+  assert.equal(FP.restGain(worn, FP.ROOMS.rest), Math.round(max * FP.ROOMS.rest * 1.5), 'a rest room: half again');
+  assert.equal(FP.restGain(worn, SOCKET.rest), Math.round(max * SOCKET.rest * 1.5), 'a Defrag Bay too');
+  worn.rooms.signal = max - 2;
+  assert.equal(FP.restGain(worn, FP.ROOMS.rest), 2, 'never past full');
+  assert.match(SETS.nightshift.bonuses[3].text, /Rest rooms and Defrag Bays restore 50% more Signal/);
 });

@@ -15,7 +15,7 @@
 // node bot.mjs [class] [targetLevel] [seed]
 import { UNIQUES, topUpCost, tickServices, fresh, command, resolveCycle, active, hooks, hackerLevel, idleRegen, maxSignal, addLocation, finish, loaded, rigOf, stashItem, slotCount, loadedOn } from './dist/combat.mjs';
 import { RARITY_ORDER, SLOT_KINDS, groupOf, LOOT } from './dist/gear.mjs';
-import { play, layoutOf, currentLocation, signalNow, takeable, CORE, residentBonus } from './dist/run.mjs';
+import { play, layoutOf, currentLocation, takeable, CORE, residentBonus } from './dist/run.mjs';
 import { relockLeft, relocks } from './dist/rogue.mjs';
 import { joinCost, memoryCost, isLive } from './dist/memory.mjs';
 import { items } from './dist/hidden.mjs';
@@ -31,8 +31,6 @@ import * as FP from './dist/floorplan.mjs';
 import { CONFIG, STRAINS, FAMILIES, GUARDS, ROOM_FAMILIES, BOSSES, power, bandOf } from './dist/data.mjs';
 import { canDescend, floorsOf, hiddenNear } from './dist/floors.mjs';
 
-// How full the bot rests its Signal before it goes back out (a share of your max): 1 waits for full.
-export const REST = { to: 1 };
 // Real play, in milliseconds (see the header): a fight with its walk, a puzzle board, a log sweep.
 export const REAL = { fight: 3600000 / LOOT.killsPerHour, puzzle: 2 * 60000, sweep: 60000 };
 // gearRule: 'rarity' (the highest rarity, then the highest level) or 'stats' (what an item adds: its Damage
@@ -125,14 +123,13 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
     if (s.encounter && !active(s)) command(s, '');
     lvlCheck();
   };
-  const restUp = () => { // rest until Signal is full and the server mostly repaired (or pay for it)
+  const restUp = () => { // rest until the server is mostly repaired (or pay for it); Signal is full at home
     if (spend !== 'none' && !s.run && !active(s)) {
       const before = s.server.credits;
-      if (topUpCost(s, 'signal') && s.server.credits >= topUpCost(s, 'signal') + 50) command(s, 'top up');
       if (s.server.integrity > 0 && s.server.integrity < s.server.max * 0.8 && s.server.credits >= topUpCost(s, 'server') + 50) command(s, 'repair');
       (stats.spent ||= {}).topup = (stats.spent.topup || 0) + before - s.server.credits;
     }
-    let n = 0; const t0 = t; while ((signalNow(s) < maxSignal(s) * (REST.to ?? 1) || s.server.integrity < s.server.max * 0.3) && n++ < 400) wait(10);
+    let n = 0; const t0 = t; while (s.server.integrity < s.server.max * 0.3 && n++ < 400) wait(10);
     stats.restMins = (stats.restMins || 0) + (t - t0) / 60000;
     if (trace) here().rest += (t - t0) / 60000;
     if (s.server.integrity <= 0) { stats.crashes++; command(s, 'reboot'); }

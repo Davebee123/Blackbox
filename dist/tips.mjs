@@ -14,7 +14,41 @@ import { retakeOf } from './hubs.mjs';
 
 const home = (s) => s.encounter?.mode !== 'run';
 
+// ---------- the rooms tour: your first server ----------
+// A short guided tour of a server's room map (the Run tab), a step at a time, each pointing at the thing to do and
+// moving on when you do it (click it, or type its command): walk into a room, a virus's card, then Jack out once
+// you've won a fight. A cache, the hunter and the rest room get their step the first time you meet them (SPRAWL-00,
+// where you start, has none). Got it closes a step, Skip tour ends them all, and tips off stops it. The tour is kept on
+// the save (s.tour), so it shows once a save. Each step: mark(s) is taken as it shows, done(s, mark) says you did it,
+// also is another click that does it (Step back, Leave it).
+const visitOf = (s) => (s.rooms?.at ? s.rooms : null);
+const hereKind = (s) => s.rooms?.at && s.rooms.graph.rooms[s.rooms.at]?.kind;
+const movesOf = (s) => s.rooms?.stats?.moves || 0;
+const TOUR_STEPS = [
+  { id: 'tour-walk', at: '.fp-room.reach', when: (s) => !!visitOf(s) && !s.rooms.screen, mark: movesOf, done: (s, m) => movesOf(s) > m,
+    text: 'Click a room with a number on its corner to walk in. The number is the Signal your first step costs.' },
+  { id: 'tour-engage', at: '#fp-pop [data-rooms="engage"]', also: '#fp-pop [data-rooms="back"]', after: ['tour-walk'], when: (s) => s.rooms?.screen?.kind === 'virus', done: (s) => s.rooms?.screen?.kind !== 'virus',
+    text: 'A virus holds this room. Engage to fight it, or Step back the way you came.' },
+  { id: 'tour-cache', at: '#fp-pop [data-rooms="pull"]', also: '#fp-pop [data-fp-pop-close]', after: ['tour-walk'], when: (s) => hereKind(s) === 'cache' && !s.rooms.screen,
+    mark: (s) => `${s.rooms.at}:${s.rooms.taken[s.rooms.at] ?? ''}`, done: (s, m) => `${s.rooms?.at}:${s.rooms?.taken[s.rooms?.at] ?? ''}` !== m,
+    text: 'A cache holds credits and code. One in four is bait, and its card says which: take it, or leave it.' },
+  { id: 'tour-hunter', at: '.fp-hunt:not(.out)', after: ['tour-walk'], when: (s) => !!visitOf(s) && !s.rooms.screen, mark: movesOf, done: (s, m) => movesOf(s) > m,
+    text: 'The hunter moves only when you walk or wait, and this shows when it moves next.', more: (s) => (classOf(s) === 'infiltrator' ? 'If it reaches you, slip past it or fight it.' : 'If it reaches you, you fight it.') },
+  { id: 'tour-rest', at: '#fp-pop [data-rooms="rest"]:not([disabled])', also: '#fp-pop [data-fp-pop-close]', after: ['tour-walk'], when: (s) => hereKind(s) === 'rest',
+    mark: (s) => s.rooms.at, done: (s, m) => !!s.rooms?.visit?.rested || s.rooms?.at !== m,
+    text: 'Rest gives back some of your Signal, once a visit. The hunter never comes in here.' },
+  { id: 'tour-jackout', at: '.fp-acts [data-rooms="jackout"]:not([disabled])', after: ['tour-engage'], when: (s) => !!visitOf(s) && !s.rooms.screen && (s.rooms.stats?.won || 0) > 0, done: (s) => !s.rooms?.at,
+    text: 'Jack out to bank your pack and go home, back to full Signal. The server takes you back 30 seconds later.' },
+];
+export const TOUR = TOUR_STEPS.map((t) => ({ ...t, page: 'rooms', tour: true }));
+export const tourIds = TOUR.map((t) => t.id);
+// How far along the tour is: the steps done or skipped, of all of them (the tip's 2/6).
+export const tourDone = (s) => tourIds.filter((id) => s.tour?.[id]).length;
+// Skip tour: every step done, none shows again on this save.
+export function skipTour(s) { s.tour ||= {}; for (const id of tourIds) s.tour[id] = 1; }
+
 export const TIPS = [
+  ...TOUR, // first, on the rooms page: the tour of your first server (above)
   // ---------- anywhere ----------
   { id: 'degraded', page: '*', at: '#integrity-note.degraded', text: 'Your server crashed and rebooted at half Integrity. For the next 10 minutes your wall is down, and any swarm at a hub you hold is paused.' },
   { id: 'code', page: '*', at: '.modules [data-module="server"]', when: (s, m) => m !== 'server' && Object.values(s.materials || {}).some((n) => n > 0), text: 'Kills drop code. You spend it on programs in a server\'s sockets and on your firewall\'s tiers.' },
@@ -23,7 +57,6 @@ export const TIPS = [
   { id: 'protocol-tab', page: 'loadout', at: '[data-ltab="protocols"][aria-selected="false"]', when: (s) => spare(s), text: 'Your protocols are on this tab.' },
   { id: 'protocol-home', page: 'loadout', at: '.inv-btn.load[disabled]', when: (s) => !!s.run || s.encounter?.phase === 'active', text: 'You can only equip protocols at home. Jack out and finish any fight first, then come back and click Load.' },
   { id: 'protocol-load', page: 'loadout', at: '.inv-btn.load:not([disabled])', text: 'Click Load to equip it. Every protocol you load adds its stats to yours in every fight.' },
-  { id: 'top-up', page: '*', at: '#meter-signal .meter-buy', text: 'Signal refills on its own at home, and the clock shows how long that takes. Click + to refill it now for credits.' },
   { id: 'repair', page: '*', at: '#meter-integrity .meter-buy', text: 'Your server repairs on its own. Click + to repair it now for credits.' },
   { id: 'level', page: '*', at: '#whoami', when: (s) => hackerLevel(s) >= 2, text: 'This is you: your handle, your class and its level. Each level makes you 4% stronger, and some levels unlock new skills.' },
 
@@ -173,7 +206,8 @@ export function nextTip(s, page, visible) {
   if (s.settings?.tips === false) return null;
   const seen = s.settings?.seen || {};
   for (const t of TIPS) {
-    if (seen[t.id]) continue;
+    if (seenOf(s, t.id)) continue;
+    if (t.after?.some((id) => !seenOf(s, id))) continue; // a tour step waits for the one before it
     if (t.page !== '*' && t.page !== page) continue;
     if (t.when && !t.when(s, page)) continue;
     if (!visible(t.at)) continue;
@@ -185,7 +219,11 @@ export function nextTip(s, page, visible) {
   }
   return null;
 }
+// Seen: a tip with your settings (a new game keeps them), a tour step on the save itself (s.tour: once a save).
+const isTour = (id) => tourIds.includes(id);
+export const seenOf = (s, id) => !!(isTour(id) ? s.tour?.[id] : s.settings?.seen?.[id]);
 export function markSeen(s, id) {
+  if (isTour(id)) { (s.tour ||= {})[id] = 1; return; }
   s.settings.seen ||= {};
   s.settings.seen[id] = 1;
 }

@@ -390,7 +390,6 @@ export function connect(s, id) {
   const loc = zone ? zoneOf(s) : findLocation(s, id) || [...s.locations, ...memberServers(s)].find((l) => l.name.toLowerCase() === id);
   const signal = signalNow(s);
   if (active(s)) warn(s, 'Finish the fight first.');
-  else if (!s.run && signal < Math.ceil(maxSignal(s) * CONFIG.zone.minSignal)) warn(s, `Your Signal (${signal}/${maxSignal(s)}) is too weak to connect. Let it rest back up to ${Math.ceil(maxSignal(s) * CONFIG.zone.minSignal)}.`);
   else if (s.run) warn(s, 'Already connected. Type jack out first.');
   else if (!loc) warn(s, `No server called "${id}" on your map.`);
   else if (isDark(loc)) warn(s, `${loc.name} is dark. Nothing answers.`); // a thread's temporary server, shut down for good (threads.mjs)
@@ -441,8 +440,8 @@ function connectFiles(s, loc, signal, hot, zone) {
   }
 }
 
-// Signal carries between connections: what you left with, rested back up at home.
-export const signalNow = (s) => Math.min(maxSignal(s), s.signal ?? maxSignal(s));
+// Your Signal: the run's while you're connected; at home it's full (jacked out or disconnected, you come back to full).
+export const signalNow = (s) => (s.run ? s.run.integrity : maxSignal(s));
 
 // ls is structured so the screen can make every name clickable.
 const jobNames = (s, kill) => wantedBy(s, kill).map((c) => contractTitle(s, c));
@@ -657,7 +656,7 @@ function unlock(s, rest) {
 // A Signal booster: half your Signal back, on the spot.
 function boost(s) {
   const n = s.items?.booster || 0;
-  if (!n) return err(s, 'boost: no Signal boosters left. Top up with credits at home.');
+  if (!n) return err(s, 'boost: no Signal boosters left. A Signal patch from the store fills it.');
   if (s.run.integrity >= s.run.max) return out(s, 'Signal is already full.');
   s.items.booster = n - 1;
   const gain = Math.min(s.run.max - s.run.integrity, Math.ceil(s.run.max * CONFIG.booster.restore));
@@ -696,9 +695,9 @@ export function bank(s, loc, why = '') {
   if (clean) credits += Math.round(credits * TRACE.cleanCredits);
   s.server.credits += credits;
   const items = pack.filter((f) => f.kind === 'item').map((f) => f.item);
-  s.signal = s.run.integrity;
-  s.run = null;
+  s.run = null; // home: your Signal is full again (signalNow)
   if (relocks(loc)) loc.lockUntil = clock() + ROGUE.relockMs;
+  delete loc.deaths; // a clean jack out: the next disconnect waits the plain 30 seconds again (combat.mjs relockWait)
   if (s.encounter?.mode === 'run') s.encounter = null;
   if (s.parked) { s.encounter = s.parked; s.parked = null; }
   if (s.gate && s.encounter?.phase !== 'alert') { s.encounter = s.gate; s.gate = null; }

@@ -2583,13 +2583,16 @@ function consortiumLine(s, l) {
   return isGround(s, l) ? `<p class="svc-line"><span class="tag tag-con">${esc(c.name)}</span> shared with the consortium</p>` : '';
 }
 
+// The disconnects on a server since your last clean jack out (loc.deaths), each a little more on its reconnect wait
+// (combat.mjs relockWait): a small mark beside its Connect.
+export const deathMark = (n) => (n > 0 ? `<span class="tag hot death-mark" title="${esc(`+${CONFIG.deathWait.each / 1000} s for each disconnect on this run, up to ${CONFIG.deathWait.cap / 60000} min.`)}">☠ ${n}</span>` : '');
 // The rogue server's card: the main thing to do, so it also leads the server card.
 function zoneCard(s) {
-  const here = s.run?.loc === CONFIG.zone.id, sig = signalNow(s), max = maxSignal(s), need = Math.ceil(max * CONFIG.zone.minSignal);
-  const why = active(s) ? 'Finish the fight first' : s.run ? 'Jack out first' : relockLeft(s.zone) ? `Reconnect in ${relockLeft(s.zone)}s` : sig < need ? `Needs ${need} Signal` : '';
+  const here = s.run?.loc === CONFIG.zone.id;
+  const why = active(s) ? 'Finish the fight first' : s.run ? 'Jack out first' : relockLeft(s.zone) ? `Reconnect in ${relockLeft(s.zone)}s` : '';
   return `<section class="card zone-card"><h2>Rogue server</h2><h1>${CONFIG.zone.name}</h1>
     <div class="stats">${stat('Hostiles', `${liveSpawns(s)}/${zoneRooms().length}`)}${stat('Levels', `<b class="${hackerLevel(s) > CONFIG.zone.maxLevel + 4 ? 'con-gray' : hackerLevel(s) > CONFIG.zone.maxLevel ? 'con-orange' : 'con-yellow'}" title="${hackerLevel(s) > CONFIG.zone.maxLevel ? 'You\'re outgrowing it: its kills pay less every level' : 'Its viruses keep up with you to this level'}">Lv 1–${CONFIG.zone.maxLevel}</b>`)}</div>
-    <div class="row">${here ? btn('net', 'Back to the run', true) : `<button type="button" class="btn primary" data-command="connect ${CONFIG.zone.id}" ${why ? `disabled title="${esc(why)}"` : ''}>Connect</button>`}${why && !here ? `<small class="svc-line">${esc(why)}</small>` : ''}</div></section>`;
+    <div class="row">${here ? btn('net', 'Back to the run', true) : `<button type="button" class="btn primary" data-command="connect ${CONFIG.zone.id}" ${why ? `disabled title="${esc(why)}"` : ''}>Connect</button>`}${why && !here ? `<small class="svc-line">${esc(why)}</small>` : ''}${here ? '' : deathMark(s.zone?.deaths)}</div></section>`;
 }
 // The server card's lines: icon and name, then what it is (a bar or pips), then its number.
 const srvLine = (icon, name, body, value, tip = '') => `<div class="srv-line"${tip ? ` title="${esc(tip)}"` : ''}><span class="srv-k">${glyph(icon)}${esc(name)}</span><span class="srv-v">${body}</span><b class="srv-n">${value}</b></div>`;
@@ -2625,7 +2628,6 @@ function mapSide(s, sel, node) {
     const r = s.reports.findLast((x) => x.mode !== 'run');
     const upkeep = [];
     if (srv.integrity > 0 && srv.integrity < srv.max) upkeep.push(btn('repair', `Repair (${topUpCost(s, 'server')}c)`));
-    if (!s.run && !busy && topUpCost(s, 'signal')) upkeep.push(btn('top up', `Top up Signal (${topUpCost(s, 'signal')}c)`));
     if (srv.integrity <= 0) upkeep.push(btn('developer reboot', 'Reboot (testing)', true));
     const runCard = s.run ? `<section class="card lesson"><h2>On a run</h2><h1>${esc(currentLocation(s).name)}</h1><p>Signal ${s.run.integrity}/${s.run.max} · ${s.run.pack.length} unbanked.</p><div class="row">${btn('net', 'Back to the run', true)}</div></section>` : '';
     const occ = s.occupation && !s.occupation.occupied.cleared ? mapSide(s, 'home', { kind: 'location', loc: s.occupation }) : '';
@@ -2663,13 +2665,6 @@ function mapSide(s, sel, node) {
       ${rebooting(s, h) ? '<p class="svc-line"><span class="tag warn" title="Crashed: their server is on the map below them, open to clear.">Crashed</span></p>' : ''}</section>${networkCardMarkup(s, h)}`;
   }
   if (node.kind === 'intrusion') return alertCard();
-  if (false) {
-    const here = s.run?.loc === CONFIG.zone.id, sig = signalNow(s), max = maxSignal(s), need = Math.ceil(max * CONFIG.zone.minSignal);
-    const why = active(s) ? 'Finish the fight first' : s.run ? 'Jack out first' : sig < need ? `Needs ${need} Signal` : '';
-    return `${alertCard()}<section class="card"><h2>Rogue server</h2><h1>${CONFIG.zone.name}</h1>
-      <div class="stats">${stat('Hostiles', `${liveSpawns(s)}/${zoneRooms().length}`)}${stat('Signal', `${here ? s.run.integrity : sig}/${max}`)}</div>
-      <div class="row">${here ? btn('net', 'Back to the run', true) : `<button type="button" class="btn primary" data-command="connect ${CONFIG.zone.id}" ${why ? `disabled title="${esc(why)}"` : ''}>Connect</button>`}</div></section>`;
-  }
   if (node.kind === 'intrusion') return alertCard();
   if (node.kind === 'invader') return invaderCard(s);
   if (node.kind === 'hidden') {
@@ -2721,7 +2716,7 @@ function mapSide(s, sel, node) {
       <div class="stats">${stat('Hostile', `${live}/${rogueRooms(l).length}`)}${stat('Runs', l.runs || 0)}</div>
       <p class="svc-line"><span class="tag dim" title="Can't be taken over; never sends invasions">wild</span></p>
       ${consortiumLine(s, l)}
-      <div class="row">${st === 'here' ? btn('net', 'Back to the run', true) : `<button type="button" class="btn primary" data-command="connect ${esc(l.id)}" ${busy ? 'disabled title="Finish what you are doing first"' : relockLeft(l) ? `disabled title="${l.rogueRun?.rebootAt > rogueClock() ? 'Rebooting: every room comes back fresh' : 'Still tracing your last connection'}"` : ''}>Connect</button><button type="button" class="btn hot-btn" data-command="connect ${esc(l.id)} loud" ${busy || relockLeft(l) ? 'disabled' : ''} title="${esc(LOUD_TIP)}"><span class="loud-ico" aria-hidden="true"></span>Go loud</button>`}${!l.member && !l.trunk && s.locations.includes(l) && MEMORY.on && !freeOfMemory(l) ? `<button type="button" class="btn small mem-x" data-command="detach ${esc(l.id)}" data-confirm="Click again to detach" ${busy ? 'disabled' : ''} title="Free a memory slot. Frozen until you attach it again.">${glyph('memory')}Detach · ${memoryCost(l)}</button>` : ''}${st !== 'here' && relockLeft(l) ? `<small class="svc-line">${l.rogueRun?.rebootAt > rogueClock() ? 'Rebooting: back' : 'Reconnect'} in ${relockLeft(l)}s</small>` : ''}</div></section>`;
+      <div class="row">${st === 'here' ? btn('net', 'Back to the run', true) : `<button type="button" class="btn primary" data-command="connect ${esc(l.id)}" ${busy ? 'disabled title="Finish what you are doing first"' : relockLeft(l) ? `disabled title="${l.rogueRun?.rebootAt > rogueClock() ? 'Rebooting: every room comes back fresh' : 'Still tracing your last connection'}"` : ''}>Connect</button><button type="button" class="btn hot-btn" data-command="connect ${esc(l.id)} loud" ${busy || relockLeft(l) ? 'disabled' : ''} title="${esc(LOUD_TIP)}"><span class="loud-ico" aria-hidden="true"></span>Go loud</button>`}${!l.member && !l.trunk && s.locations.includes(l) && MEMORY.on && !freeOfMemory(l) ? `<button type="button" class="btn small mem-x" data-command="detach ${esc(l.id)}" data-confirm="Click again to detach" ${busy ? 'disabled' : ''} title="Free a memory slot. Frozen until you attach it again.">${glyph('memory')}Detach · ${memoryCost(l)}</button>` : ''}${st !== 'here' && relockLeft(l) ? `<small class="svc-line">${l.rogueRun?.rebootAt > rogueClock() ? 'Rebooting: back' : 'Reconnect'} in ${relockLeft(l)}s</small>` : ''}${st !== 'here' ? deathMark(l.deaths) : ''}</div></section>`;
   }
   const layout = layoutName(l);
   const guard = Object.keys(l.state.cleared).length ? 'guard beaten' : 'guarded';
@@ -2746,7 +2741,7 @@ function mapSide(s, sel, node) {
     ${dropLine(s, l)}
     ${programsLine(s, l)}
     ${l.takenOver && !l.relay && !kitOf(s).relay ? `<p class="op-hint">${boardOpen(s) ? knowsRelay(s) ? 'You can install a relay here once you have one. Craft one on the Craft page, or buy one in Halcyon\'s store.' : 'You can install a relay here once you have one. Buy one in Halcyon\'s store, or earn one from a contract. Some contracts pay the Relay plan, so you can craft your own.' : 'You can install a relay here once you have one. Halcyon Mutual sells them once you start working for them.'}</p>` : ''}
-    <div class="row">${l.takenOver && !l.relay ? `<button type="button" class="btn" data-command="relay ${esc(l.id)}" ${kitOf(s).relay ? '' : 'disabled title="You have no relay yet."'}>Install relay${kitOf(s).relay ? ` (${kitOf(s).relay})` : ''}</button>` : ''}${!l.takenOver && !l.member && !l.passwordKnown && kitOf(s).cracker ? `<button type="button" class="btn" data-command="use cracker ${esc(l.id)}">Key cracker (${kitOf(s).cracker})</button>` : ''}${st === 'here' ? btn('net', 'Back to the run', true) : `<button type="button" class="btn ${st !== 'done' ? 'primary' : ''}" data-command="connect ${esc(l.id)}" ${busy ? 'disabled title="Finish what you are doing first"' : relockLeft(l) ? 'disabled title="Still tracing your last connection"' : ''}>${relockLeft(l) ? `Connect · ${relockLeft(l)}s` : 'Connect'}</button>${st !== 'done' ? `<button type="button" class="btn hot-btn" data-command="connect ${esc(l.id)} loud" ${busy || relockLeft(l) ? 'disabled' : ''} title="${esc(LOUD_TIP)}"><span class="loud-ico" aria-hidden="true"></span>Go loud</button>` : ''}`}${!l.member && !l.trunk && s.locations.includes(l) && MEMORY.on && !freeOfMemory(l) ? `<button type="button" class="btn small mem-x" data-command="detach ${esc(l.id)}" data-confirm="Click again to detach" ${busy ? 'disabled' : ''} title="Free a memory slot. Frozen until you attach it again.">${glyph('memory')}Detach · ${memoryCost(l)}</button>` : ''}</div></section>`;
+    <div class="row">${l.takenOver && !l.relay ? `<button type="button" class="btn" data-command="relay ${esc(l.id)}" ${kitOf(s).relay ? '' : 'disabled title="You have no relay yet."'}>Install relay${kitOf(s).relay ? ` (${kitOf(s).relay})` : ''}</button>` : ''}${!l.takenOver && !l.member && !l.passwordKnown && kitOf(s).cracker ? `<button type="button" class="btn" data-command="use cracker ${esc(l.id)}">Key cracker (${kitOf(s).cracker})</button>` : ''}${st === 'here' ? btn('net', 'Back to the run', true) : `<button type="button" class="btn ${st !== 'done' ? 'primary' : ''}" data-command="connect ${esc(l.id)}" ${busy ? 'disabled title="Finish what you are doing first"' : relockLeft(l) ? 'disabled title="Still tracing your last connection"' : ''}>${relockLeft(l) ? `Connect · ${relockLeft(l)}s` : 'Connect'}</button>${st !== 'done' ? `<button type="button" class="btn hot-btn" data-command="connect ${esc(l.id)} loud" ${busy || relockLeft(l) ? 'disabled' : ''} title="${esc(LOUD_TIP)}"><span class="loud-ico" aria-hidden="true"></span>Go loud</button>` : ''}`}${!l.member && !l.trunk && s.locations.includes(l) && MEMORY.on && !freeOfMemory(l) ? `<button type="button" class="btn small mem-x" data-command="detach ${esc(l.id)}" data-confirm="Click again to detach" ${busy ? 'disabled' : ''} title="Free a memory slot. Frozen until you attach it again.">${glyph('memory')}Detach · ${memoryCost(l)}</button>` : ''}${st !== 'here' ? deathMark(l.deaths) : ''}</div></section>`;
 }
 
 // The Antenna (a Lantern Route piece, sets.mjs): a server's ★ rare spawn on its map card, the room it waits in.

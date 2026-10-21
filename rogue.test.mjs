@@ -103,7 +103,7 @@ test('a kill empties the room for the rest of the run; the full clear pays the G
   } finally { delete hooks.now; }
 });
 
-test('jack out of a wild server and it will not take you back for a minute (no jack out, top up, return)', () => {
+test('jack out of a wild server and it will not take you back for a while (no jack out and straight back)', () => {
   let t = 5_000_000;
   hooks.now = () => t;
   try {

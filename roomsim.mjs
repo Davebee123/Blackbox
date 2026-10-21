@@ -1,8 +1,8 @@
 // Rooms sim (docs/servers.md 9, R0): a bot plays one server as a room graph, visit by visit, until it's Mapped (every
 // room cleared, the Resident beaten). It walks to what's worth doing (the key, then the vault, then /core; uncleared
 // rooms; caches; respawns for XP; an Exfil 2 rooms off or nearer; a Stash it walks through pays as it goes), keeps clear of the hunter, rests in the rest room or jacks out when its Signal runs
-// low, rests at home and comes back. It fights with the planner (planner.mjs, which crosses ticks on due cycles,
-// interrupt.mjs interruptMove) and runs a script when one fits. Time is simulated: a move, a fight's cycles, the rest at
+// low, and comes back once the server takes it (home is full Signal). It fights with the planner (planner.mjs, which crosses ticks on due cycles,
+// interrupt.mjs interruptMove) and runs a script when one fits. Time is simulated: a move, a fight's cycles, the time at
 // home and the reconnect wait, with the respawns on their real clocks.
 //   node roomsim.mjs [runs=6] [level=10] [size=medium]     every class under each boss rule (a, b, c): win rates,
 //                                                          Signal lost a fight, minutes to Mapped, XP an hour
@@ -163,9 +163,8 @@ export function runServer({ cls = 'breaker', level = 10, seed = 1, size = 'mediu
       steps++;
       FP.tick(s, clock);
       if (!R.at) {
-        // Home: rest until the bar is nearly full, then reconnect.
-        const want = Math.ceil(R.max * 0.95), need = Math.max(0, want - FP.signalNow(s, clock));
-        clock += Math.max(TIME.home * 1000, Math.ceil((need / (R.max * 0.2)) * 60000), R.reconnectAt - clock);
+        // Home: full Signal; reconnect once the server takes it back.
+        clock += Math.max(TIME.home * 1000, R.reconnectAt - clock);
         FP.connect(s);
         continue;
       }
