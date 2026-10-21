@@ -26,6 +26,10 @@
 //               in them; a cache refills. Nothing expires: a week away and the server is just full again.
 //   quiet rooms a rogue server's (netrooms.mjs rogueGraph): Empty (nothing in it, cleared as you walk in) and Stash
 //               (a few credits, taken as you walk in, full again when the server reboots: rogue.mjs rogueReboot).
+//   quirk rooms a traced server's quirk (netrooms.mjs placeQuirkRoom), both optional (never in Rooms n/N): a Worm
+//               server's nest (a Crawler with its brood out, paying components: addNest) and a Ghostroot server's
+//               hidden room (off the map until you clear the room beside it, then open for good, a stash: addSecret,
+//               revealSecret).
 //   the Exfil   a process smuggling a stolen archive off a rogue server, a loot mob on a visit (CONFIG.exfil; the
 //               world decides when one turns up, netrooms.mjs). It starts in a room away from you and flees after each
 //               of your moves to the neighbour farthest from you (never your room, never a room with a live virus);
@@ -53,7 +57,7 @@ import { armTicks, bossRule, BOSS_RULES } from './interrupt.mjs';
 import { logSet } from './genome.mjs';
 import { deathRecap } from './recap.mjs';
 import { addrsOf, byAddr } from './address.mjs';
-import { PROGRAMS, SOCKET, buildProgram, uninstallProgram, gainComponents, programCost, buildBlock as programBlock, costLine as programCostLine, codebasesOf } from './sockets.mjs';
+import { PROGRAMS, SOCKET, buildProgram, uninstallProgram, gainComponents, familyComponents, programCost, buildBlock as programBlock, costLine as programCostLine, codebasesOf } from './sockets.mjs';
 import { PUZZLES, PUZZLE_KINDS, isPuzzle, newPuzzle, puzzleMove, puzzleScore, puzzleStarted, cellOf, boardLines, moveLine } from './puzzles.mjs';
 
 // ---------- tuning ----------
@@ -81,7 +85,9 @@ export const ROOMS = {
   // your level costs 20–30% of your Signal, an elite 45–60%, the Resident wins about one fight in three (2.5).
   // stray: SPRAWL-00's strays (netrooms.mjs), the levels 1 to 5 where you learn the ticks: a plain virus's Integrity, lighter hits.
   // exfil: the Exfil (a runner, quick to break): a plain virus's Integrity, light hits.
-  size: { process: { hp: 1.3, dmg: 0.9 }, elite: { hp: 0.9, dmg: 0.6 }, guard: { hp: 1.2, dmg: 0.85 }, hunter: { hp: 1.6, dmg: 0.7 }, boss: { hp: 1.25, dmg: 0.9 }, stray: { hp: 1, dmg: 0.8 }, exfil: { hp: 1.5, dmg: 0.35 } },
+  // nest: a Worm server's nest, elite-lite: the Crawler and its two hatchlings cost about 40% of your Signal over the
+  // classes at levels 6, 12 and 20 (a process there about 35%, an elite 53%), and almost never lose.
+  size: { process: { hp: 1.3, dmg: 0.9 }, elite: { hp: 0.9, dmg: 0.6 }, nest: { hp: 2.3, dmg: 1 }, guard: { hp: 1.2, dmg: 0.85 }, hunter: { hp: 1.6, dmg: 0.7 }, boss: { hp: 1.25, dmg: 0.9 }, stray: { hp: 1, dmg: 0.8 }, exfil: { hp: 1.5, dmg: 0.35 } },
   eliteHp: 2.2, // an elite's Integrity (of a plain virus's), before its size
   hunter: { pace: 2, lose: 5, level: 2 }, // a room per 2 of your moves; a Tracker loses you 5 rooms away; 2 levels over the server (its size: twice a guard's Integrity)
   cache: { credits: [18, 36], code: [2, 4], script: 0.15 },
@@ -96,21 +102,33 @@ export const ROOMS = {
     parts: 3, spare: 2, // Cascade: components, and this many more for each tap left over
     cache: 1, budget: 0.25, // Ping sweep: a cache's credits and code, a quarter more for each of the budget left
     trail: 0.5 }, // the chase: half a cache, and the Tracker loses your trail for the visit
+  // The quirks' rooms (netrooms.mjs places them): a Worm server's nest, a Ghostroot server's hidden room. Both optional,
+  // never in Rooms n/N. The nest: a Crawler with its brood already out (brood fragments), an elite-lite fight, a kill
+  // paying parts components (a cache's worth, past a process room's one or two) and xp room kills of XP; it respawns
+  // like an elite. The hidden room: a cache's pile (its script chance too) and a blue this often, refilled like a cache.
+  nest: { brood: 2, parts: 6, xp: 2 },
+  secret: { blue: 0.1 },
 };
 // The server kinds (2.2), as room themes: one rule each, the hunter they keep, and the directory names their rooms take.
 export const KINDS = {
-  Mailhub: { rule: 'Spam floods', text: 'Fights on the Patroller\'s loop bring a weak, quick Spam Flood.', hunter: 'patrol', author: 'tollgate',
+  Mailhub: { name: 'Mailhub', rule: 'Spam floods', text: 'Fights on its mail queue bring a weak, quick Spam Flood.', hunter: 'patrol', author: 'tollgate',
     dirs: ['spool', 'postfix', 'mqueue', 'smtpd', 'relay', 'aliases', 'maildrop', 'bounce', 'virtual', 'transport', 'lmtp', 'pickup', 'qmgr', 'cleanup', 'tlsmgr', 'anvil', 'scache', 'flush'] },
-  Relay: { rule: 'Hops', text: 'Two curved links skip a room. The hunter uses them too.', hunter: 'patrol', author: 'swarmline',
+  Relay: { name: 'Name server', rule: 'Hops', text: 'Two curved links skip a room. The hunter uses them too.', hunter: 'patrol', author: 'swarmline',
     dirs: ['bind', 'named', 'zones', 'resolv', 'forward', 'slave', 'keys', 'dyn', 'stats', 'hints', 'rndc', 'journal', 'views', 'acl', 'dnssec', 'notify', 'axfr', 'master'] },
-  Mirror: { rule: 'Mirrors', text: 'One cache is a mirror with an elite behind it.', hunter: 'track', author: 'palemask',
+  Mirror: { name: 'Mirror', rule: 'Mirrors', text: 'One cache is a mirror with an elite behind it.', hunter: 'track', author: 'palemask',
     dirs: ['www', 'private', 'html', 'assets', 'cdn', 'static', 'uploads', 'cgi-bin', 'logs', 'media', 'themes', 'vhosts', 'certs', 'cache', 'drafts', 'mirror', 'stage', 'public'] },
-  Archive: { rule: 'Deep storage', text: 'Two vaults, each with its own key. Only the vault before the Core unseals it.', hunter: 'track', author: 'glassjaw',
+  Archive: { name: 'Archive', rule: 'Deep storage', text: 'Two vaults, each with its own key. Only the vault before the Core unseals it.', hunter: 'track', author: 'glassjaw',
     dirs: ['backups', 'srv', 'cold', 'dumps', 'snapshots', 'incr', 'full', 'catalog', 'index', 'offsite', 'restore', 'media', 'rotate', 'weekly', 'monthly', 'ledger', 'escrow', 'ltfs'] },
-  Lab: { rule: 'Overheat', text: 'From cycle 10 of a fight, the rack burns you for 2% of your max Signal a cycle and every part for 3% of its max Integrity. Its Tracker moves every move once awake.', hunter: 'track', fast: true, author: 'lantern',
+  Lab: { name: 'Lab', rule: 'Overheat', text: 'From cycle 10 of a fight, the rack burns you for 2% of your max Signal a cycle and every part for 3% of its max Integrity. Its Tracker moves every move once awake.', hunter: 'track', fast: true, author: 'lantern',
     dirs: ['lab', 'tmp', 'bench', 'rig', 'sandbox', 'builds', 'cores', 'gpu', 'scratch', 'fuzz', 'harness', 'probe', 'samples', 'jit', 'debug', 'trace', 'cold', 'kiln'] },
 };
 export const KIND_IDS = Object.keys(KINDS);
+// A traced server's template (data.mjs TEMPLATES) as its kind.
+export const KIND_OF = { relay: 'Relay', mailhub: 'Mailhub', mirror: 'Mirror', archive: 'Archive', lab: 'Lab' };
+// A server kind as the player reads it (the id stays: a Relay is a name server on every screen).
+export const kindName = (kind) => KINDS[kind]?.name || kind;
+// Its one rule, as a tooltip says it.
+export const kindRule = (kind) => (KINDS[kind] ? `${KINDS[kind].rule}: ${KINDS[kind].text}` : '');
 // The network's rules (netrooms.mjs fills these; the playtest leaves them empty). Each returns undefined to leave a
 // room to the playtest's rules.
 //   up(s, room, now)        is its fight there (a wild server's spawns)        back(s, room) / from(s, room): its timer
@@ -125,13 +143,18 @@ const world = (s) => !!s.rooms?.world;
 // Room kinds: their mark on the map, and what they are.
 // What each room is called on the map, its card and in the log.
 // boss: a crew boss's room (KESSLER-FARM-00's three); stash: Root 2's /root on a server you hold (netrooms.mjs);
-// empty, purse: a rogue server's quiet rooms (Empty, and a Stash of a few credits).
-export const ROOM_LABEL = { socket: 'Socket', entry: 'Entry', process: 'Process', elite: 'Elite', guard: 'Elite', core: 'Core', boss: 'Boss', den: "Hunter's den", cache: 'Cache', vault: 'Vault', rest: 'Rest room', junction: 'Junction', stash: 'Stash', empty: 'Empty', purse: 'Stash', quarantine: 'Quarantine', chase: 'Hunter chase', cascade: 'Cascade', sweep: 'Ping sweep' };
-export const MARKS = { socket: '⊕', entry: '⌂', process: '▣', elite: '◆▣', guard: '◆▣', core: '♛', boss: '♛', den: '☠', cache: '▤', vault: '▥', rest: '☰', junction: '·', stash: '▤', empty: '·', purse: '¤', quarantine: '⊞', chase: '⇥', cascade: '≋', sweep: '◎' };
+// empty, purse: a rogue server's quiet rooms (Empty, and a Stash of a few credits); nest, secret: the quirks' rooms (a
+// Worm server's nest, a Ghostroot server's hidden room).
+export const ROOM_LABEL = { nest: 'Nest', secret: 'Hidden room', socket: 'Socket', entry: 'Entry', process: 'Process', elite: 'Elite', guard: 'Elite', core: 'Core', boss: 'Boss', den: "Hunter's den", cache: 'Cache', vault: 'Vault', rest: 'Rest room', junction: 'Junction', stash: 'Stash', empty: 'Empty', purse: 'Stash', quarantine: 'Quarantine', chase: 'Hunter chase', cascade: 'Cascade', sweep: 'Ping sweep' };
+export const MARKS = { nest: '▦', secret: '▧', socket: '⊕', entry: '⌂', process: '▣', elite: '◆▣', guard: '◆▣', core: '♛', boss: '♛', den: '☠', cache: '▤', vault: '▥', rest: '☰', junction: '·', stash: '▤', empty: '·', purse: '¤', quarantine: '⊞', chase: '⇥', cascade: '≋', sweep: '◎' };
 // Rooms that hold something you take, and refill (a puzzle room's board, played to its end, refills like a cache).
-export const STOCKED = ['cache', 'stash', 'purse', ...PUZZLE_KINDS];
+export const STOCKED = ['cache', 'stash', 'purse', 'secret', ...PUZZLE_KINDS];
 export { PUZZLES, PUZZLE_KINDS, isPuzzle };
-export const FIGHTS = ['process', 'elite', 'guard', 'core', 'boss', 'socket']; // a socket: guarded by a process until its first clear, then never again
+export const FIGHTS = ['process', 'elite', 'guard', 'core', 'boss', 'socket', 'nest']; // a socket: guarded by a process until its first clear, then never again
+// Optional rooms (a quirk's: the nest, the hidden room) and a thread's room never count toward Rooms n/N or Mapped.
+export const counted = (x) => !x.nook && !x.optional;
+// A hidden room stays off the map until it opens (revealSecret): no link, no fog, no path, no address, no chip.
+export const onMap = (x) => !x.concealed;
 export const HUNTERS = {
   patrol: { name: 'Patroller', body: 'bouncer', text: 'Walks a fixed loop, a room for every 2 of your moves.' },
   track: { name: 'Tracker', body: 'tracer', text: 'Wakes when you walk next to its den, then follows you a room for every 2 of your moves. Loses you 5 rooms off.' },
@@ -246,6 +269,78 @@ export function addPuzzles(g, kinds, seed, spare = []) {
   nameRooms(g);
   return added;
 }
+// A quirk's room (netrooms.mjs): one new leaf room on a free cell beside an anchor, on the same rules as a puzzle room's
+// cells (never left of the entry, above the top row or on the spine's row, so no address moves; not beside the Core).
+// The anchor: a branch room (never the entry, a vault, the Core, the den, a stash, a thread's room or another quirk
+// room, nor a guard post, a socket or a puzzle room) that `ok` lets through, picked by the seed among them by id. On a
+// crowded server, in turn: a spine room's free side, the kinds `wide` names (a guard post, a socket or a puzzle room),
+// then a cell beside the Core (it never links to it). The same graph and seed always add the same room. Its kind and
+// extra fields come from `room`.
+function addLeaf(g, seed, salt, ok, room, wide = []) {
+  const r = seeded((((seed || 1) * 8191 + salt) >>> 0) || 1), R = g.rooms, spine = new Set(g.spine || []);
+  const all = Object.values(R), taken = new Set(all.map((x) => `${x.x},${x.y}`));
+  const x0 = Math.min(0, ...all.map((x) => x.x)), y0 = Math.min(...all.map((x) => x.y), ...(g.sockets != null ? [-1] : []));
+  const core = g.core && R[g.core], bad = new Set([g.entry, g.core, g.den, ...(g.vaults || [])]);
+  const nearCore = (x, y) => !!core && Math.abs(core.x - x) + Math.abs(core.y - y) <= 1;
+  const never = ['vault', 'core', 'entry', 'den', 'stash'], side = ['guard', 'socket', ...PUZZLE_KINDS];
+  let loose = false;
+  const free = (p) => [[0, -1], [0, 1], [1, 0], [-1, 0]].map(([dx, dy]) => [p.x + dx, p.y + dy]).filter(([x, y]) => !taken.has(`${x},${y}`) && x >= x0 && y >= y0 && !(y === 0 && x < (g.spine || []).length) && (loose || !nearCore(x, y)));
+  const fit = (x, also) => !bad.has(x.id) && !x.nook && !x.optional && !x.extra && !never.includes(x.kind) && (!side.includes(x.kind) || also.includes(x.kind)) && ok(x) && free(x).length;
+  const byId = (a, b) => Number(a.id.slice(1)) - Number(b.id.slice(1));
+  let pool = [];
+  for (const [also, onSpine, near] of [[[], false, false], [[], true, false], [wide, true, false], [wide, true, true]]) {
+    loose = near;
+    pool = all.filter((x) => fit(x, also) && (onSpine || !spine.has(x.id))).sort(byId);
+    if (pool.length) break;
+  }
+  if (!pool.length) return null;
+  const a = pool[Math.floor(r() * pool.length)], cells = free(a), [cx, cy] = cells[Math.floor(r() * cells.length)];
+  const id = `r${Math.max(...Object.keys(R).map((k) => Number(k.slice(1)))) + 1}`;
+  R[id] = { id, x: cx, y: cy, depth: (a.depth || 0) + 1, branch: a.branch || a.id, seed: Math.floor(r() * 2 ** 31), optional: true, ...room(a) };
+  nameRooms(g);
+  return { room: R[id], at: a };
+}
+// A Worm server's nest (its Nest quirk): a dead end off a branch room, a fight room of its own (a Crawler and its brood).
+export function addNest(g, seed) {
+  if (Object.values(g.rooms).some((x) => x.kind === 'nest')) return null;
+  const got = addLeaf(g, seed, 4099, () => true, () => ({ kind: 'nest' }), ['guard', 'socket', ...PUZZLE_KINDS]);
+  if (got) g.links.push([got.at.id, got.room.id]);
+  return got?.room || null;
+}
+// A Ghostroot server's hidden room (its Hidden quirk): beside a process or elite room off the spine (a guard post or a
+// socket on a crowded server, any room on a boxed-in one), and off the map until you clear that room (revealSecret): no
+// link until then, so the fog, the hunter, paths and the map never see it.
+export function addSecret(g, seed) {
+  if (Object.values(g.rooms).some((x) => x.kind === 'secret')) return null;
+  const room = (a) => ({ kind: 'secret', concealed: true, off: a.id });
+  const got = addLeaf(g, seed, 6007, (x) => ['process', 'elite', 'guard', 'socket'].includes(x.kind) && !x.mirror, room, ['guard', 'socket'])
+    || addLeaf(g, seed, 6007, () => true, room, ['guard', 'socket', ...PUZZLE_KINDS]); // boxed in: beside any room, open once it's cleared
+  return got?.room || null;
+}
+// The hidden room beside a room you just cleared opens: linked for good, on the map as a room you haven't been in, with a
+// line saying where. Returns it, or null.
+export function revealSecret(s, by) {
+  const R = s.rooms, g = R?.graph, x = g && by ? Object.values(g.rooms).find((r) => r.concealed && r.off === by.id) : null;
+  if (!x) return null;
+  delete x.concealed;
+  g.links.push([by.id, x.id]);
+  R.seen[x.id] ||= 'shape';
+  if (R.visit) (R.visit.revealed ||= []).push(x.id); // the map fades its chip in (floorplan-view.mjs)
+  say(s, `A hidden room opens off ${by.path}.`, 'rooms-reveal');
+  return x;
+}
+// A Mailhub's mail queue: the Patroller's loop, or on a server without one its longest branch with a fight room on it
+// (the lowest ids first on a tie), so every Mailhub has its Spam floods. Nothing rolled: an older graph gets the same queue.
+export function markQueue(g) {
+  const R = g.rooms, spine = new Set(g.spine || []);
+  if (Object.values(R).some((x) => x.queue)) return g;
+  const by = {};
+  for (const x of Object.values(R)) if (!spine.has(x.id) && x.branch && !x.optional && !x.nook) (by[x.branch] ||= []).push(x);
+  const fights = (xs) => (xs.some((x) => ['process', 'elite'].includes(x.kind) && !x.mirror) ? 1 : 0);
+  const best = Object.values(by).sort((a, b) => fights(b) - fights(a) || b.length - a.length || Math.min(...a.map((x) => Number(x.id.slice(1)))) - Math.min(...b.map((x) => Number(x.id.slice(1)))))[0];
+  for (const x of best || []) x.queue = true;
+  return g;
+}
 // Which puzzles a server gets, from its seed: one, two this often by its size (ROOMS.puzzles.second), never two of a
 // kind. Quarantine leans to Worm-family servers, the chase comes only where a Tracker sleeps; Cascade and Ping sweep
 // anywhere.
@@ -285,30 +380,42 @@ function tryGenerate(seed, attempt, { size, kind, level, floor, author, hunter }
   }
   if (n < N) return null;
   const g = { rooms, links, hops: [], loops: [], entry: 'r0', core: `r${L - 1}`, vaults: [`r${L - 2}`], spine: Array.from({ length: L }, (_, i) => `r${i}`) };
-  // Loops: two grid neighbours not yet linked (never the vault or /core), whose cycle is 4 to 7 rooms.
   const want = size === 'large' ? 2 : size === 'medium' ? 1 : 0, banned = new Set([g.core, g.vaults[0]]);
-  const cands = [];
-  for (const a of Object.values(rooms)) for (const [dx, dy] of [[1, 0], [0, 1]]) {
-    const b = rooms[grid[key(a.x + dx, a.y + dy)]];
-    if (!b || banned.has(a.id) || banned.has(b.id) || links.some(([p, q]) => (p === a.id && q === b.id) || (p === b.id && q === a.id))) continue;
-    if (a.spine != null && b.spine != null) continue;
-    const cyc = pathTo(g, a.id, b.id);
-    if (cyc && cyc.length >= 4 && cyc.length <= 7) cands.push({ a: a.id, b: b.id, cyc });
+  // Loop candidates: two grid neighbours not yet linked (never the vault or /core), whose cycle is 4 to 7 rooms.
+  const loopCands = () => {
+    const cands = [];
+    for (const a of Object.values(rooms)) for (const [dx, dy] of [[1, 0], [0, 1]]) {
+      const b = rooms[grid[key(a.x + dx, a.y + dy)]];
+      if (!b || banned.has(a.id) || banned.has(b.id) || links.some(([p, q]) => (p === a.id && q === b.id) || (p === b.id && q === a.id))) continue;
+      if (a.spine != null && b.spine != null) continue;
+      const cyc = pathTo(g, a.id, b.id);
+      if (cyc && cyc.length >= 4 && cyc.length <= 7) cands.push({ a: a.id, b: b.id, cyc });
+    }
+    return cands;
+  };
+  // A loop through a hop that a Patroller can walk (never the entry's or a vault's).
+  const hopped = (c) => !c.cyc.includes(g.entry) && !c.cyc.some((id) => g.vaults.includes(id)) && c.cyc.some((id, j) => j && g.hops.some(([x, y]) => (x === id && y === c.cyc[j - 1]) || (y === id && x === c.cyc[j - 1])));
+  if (kind === 'Relay') {
+    // Two hops: a link between two rooms a room apart (not through the vault or /core), skipping the one between. They
+    // come before the loops, the first one where a loop can run through it, so a Patroller's beat takes it (assign:
+    // "the hunter uses them too").
+    const pairs = [];
+    for (const b of Object.keys(rooms)) for (const a of neighbours(g, b)) for (const c of neighbours(g, b)) if (a < c && !banned.has(a) && !banned.has(c) && !banned.has(b) && !neighbours(g, a).includes(c)) pairs.push([a, c]);
+    const shuffled = pairs.sort(() => r() - 0.5), loopy = (p) => { g.hops = [p]; const ok = loopCands().some(hopped); g.hops = []; return ok; };
+    const first = want ? shuffled.find(loopy) : null;
+    for (const p of first ? [first, ...shuffled.filter((x) => x !== first)] : shuffled) { if (g.hops.length >= 2) break; if (g.hops.some(([x, y]) => [x, y].some((id) => p.includes(id)))) continue; g.hops.push(p); }
+    if (g.hops.length < 2) return null;
   }
-  for (const c of cands.sort(() => r() - 0.5)) {
+  // Loops (on a Relay, one through a hop first).
+  const shuffled = loopCands().sort(() => r() - 0.5), first = kind === 'Relay' ? shuffled.filter(hopped) : [];
+  if (kind === 'Relay' && want && !first.length) return null; // no loop through a hop: another layout
+  for (const c of [...first, ...shuffled.filter((c) => !first.includes(c))]) {
     if (g.loops.length >= want) break;
     if (g.loops.some((l) => l.cyc.some((id) => c.cyc.includes(id)))) continue;
     link(c.a, c.b);
     g.loops.push(c);
   }
   if (g.loops.length < want) return null;
-  if (kind === 'Relay') {
-    // Two hops: a link between two rooms a room apart (not through the vault or /core), skipping the one between.
-    const pairs = [];
-    for (const b of Object.keys(rooms)) for (const a of neighbours(g, b)) for (const c of neighbours(g, b)) if (a < c && !banned.has(a) && !banned.has(c) && !banned.has(b) && !neighbours(g, a).includes(c)) pairs.push([a, c]);
-    for (const p of pairs.sort(() => r() - 0.5)) { if (g.hops.length >= 2) break; if (g.hops.some(([x, y]) => [x, y].some((id) => p.includes(id)))) continue; g.hops.push(p); }
-    if (g.hops.length < 2) return null;
-  }
   return assign(g, r, { size, kind, level, floor, author, hunter, N, L }) ? g : null;
 }
 // What each room is (2.2's table, R0's room kinds), and what its fights spawn.
@@ -343,15 +450,29 @@ function assign(g, r, { size, kind, level, floor, author, hunter, N, L }) {
       // A Patroller walks a loop (one of the generator's, never through the entry or the rest room), else a path there
       // and back. Its den is on it.
       const loop = g.loops.map((l) => l.cyc).find((cyc) => !cyc.includes(g.entry) && !cyc.some((id) => g.vaults.includes(id)));
-      let route = loop;
+      let route = loop, ping = !loop;
+      const isHop = (a, b) => (g.hops || []).some(([x, y]) => (x === a && y === b) || (x === b && y === a));
       if (!route) {
+        // (On a Relay, the first such path that crosses a hop, so its Patroller uses one.)
         const starts = offSpine().filter((id) => R[id].kind == null).sort((a, b) => neighbours(g, a).length - neighbours(g, b).length);
         for (const a of starts) {
           const d = distances(g, a, (x) => x !== g.entry && !g.vaults.includes(x) && x !== g.core);
           const far = Object.keys(d).filter((x) => d[x] >= 2 && d[x] <= 3).sort((x, y) => d[y] - d[x])[0];
           if (!far) continue;
           const p = pathTo(g, a, far, (x) => x !== g.entry && !g.vaults.includes(x) && x !== g.core);
-          if (p && p.length >= 3) { route = [...p, ...p.slice(1, -1).reverse()]; break; }
+          if (!p || p.length < 3) continue;
+          route ||= [...p, ...p.slice(1, -1).reverse()];
+          if (kind !== 'Relay' || p.some((id, j) => j && isHop(p[j - 1], id))) { route = [...p, ...p.slice(1, -1).reverse()]; break; }
+        }
+      }
+      // A Relay's Patroller that can't take a hop on its loop or its path: a path there and back across a hop instead
+      // (a room either side of it, none of them the entry, a vault or the Core).
+      const free4 = (x) => x !== g.entry && !g.vaults.includes(x) && x !== g.core;
+      const hopOn = (p) => p.some((id, j) => j && isHop(p[j - 1], id)) || (!ping && isHop(p.at(-1), p[0]));
+      if (route && ping && kind === 'Relay' && !hopOn(route)) {
+        for (const [a, c] of g.hops.filter(([a, c]) => free4(a) && free4(c))) {
+          const x = neighbours(g, a).find((id) => id !== c && free4(id) && !isHop(a, id)), y = neighbours(g, c).find((id) => id !== a && id !== x && free4(id) && !isHop(c, id));
+          if (x && y) { route = [x, a, c, y, c, a]; ping = true; break; }
         }
       }
       if (!route) return false;
@@ -360,7 +481,7 @@ function assign(g, r, { size, kind, level, floor, author, hunter, N, L }) {
       set(den, 'den');
       const i = route.indexOf(den);
       g.route = [...route.slice(i), ...route.slice(0, i)];
-      g.ping = !loop;
+      g.ping = ping;
     } else {
       // A Tracker's den sits beside the way to the key, a room or more from the entry.
       const dEntry = distances(g, g.entry);
@@ -394,6 +515,7 @@ function assign(g, r, { size, kind, level, floor, author, hunter, N, L }) {
   const junctions = Math.max(0, Math.round(N * ROOMS.junctions) - 1 - { small: 1, medium: 1, large: 2 }[size]);
   for (const id of free().sort((a, b) => neighbours(g, b).length - neighbours(g, a).length).slice(0, junctions)) if (neighbours(g, id).length >= 2) set(id, 'junction');
   for (const id of free()) set(id, 'process');
+  if (kind === 'Mailhub' && !g.route) markQueue(g); // no Patroller: its longest branch is the mail queue
   // What spawns where: a family from the author's open ones (each at least once where there's room), its attack set by
   // the author's taste, a third part fixed for the room. Guard posts take a guard (ICE from floor 2, half the time).
   const fams = (AUTHOR_FAMILIES[author] || AUTHOR_FAMILIES.tollgate).filter((f) => OPENS[f] <= level);
@@ -440,14 +562,14 @@ function setSig(s, n) { if (!world(s)) s.rooms.signal = n; else if (s.run) s.run
 const ask = (fn, ...a) => { const f = WORLD[fn]; return f ? f(...a) : undefined; }; // a WORLD hook, on the network only
 export const roomOf = (s, id) => s.rooms?.graph.rooms[id] || null;
 export const hereOf = (s) => (s.rooms?.at ? roomOf(s, s.rooms.at) : null);
-export const roomList = (s) => Object.values(s.rooms.graph.rooms);
+export const roomList = (s) => Object.values(s.rooms.graph.rooms).filter(onMap); // a hidden room only once it opens
 // Start the playtest's server: a fresh map, you at home with full Signal.
 //   seed, size, kind, level, floor, author: the server. hunter: 'patrol' | 'track' (overrides its kind's). boss: a | b | c.
 //   speed: the clocks' speed (the playtest 10). name: shown on the card.
 export function startRooms(s, { seed = 1, size = 'medium', kind = 'Mailhub', level = hackerLevel(s), floor = 2, author = null, hunter = null, boss = 'a', speed = ROOMS.speed, name = null } = {}) {
   s.rooms = newRooms(s, { seed, size, kind, level, floor, author, hunter, boss, speed, name });
   s.run = null;
-  say(s, `${s.rooms.name}: a ${s.rooms.author.toUpperCase()} ${s.rooms.kind}. ${BOSSES[RESIDENT].name} holds the Core.`);
+  say(s, `${s.rooms.name}: a ${s.rooms.author.toUpperCase()} ${kindName(s.rooms.kind)}. ${BOSSES[RESIDENT].name} holds the Core.`);
   return s.rooms;
 }
 // A server's rooms, built and not yet anyone's: the playtest's (startRooms) or a location's (netrooms.mjs, with its
@@ -486,7 +608,7 @@ const rnd = (R, salt = 0) => seeded((R.seed * 2654435761 + (++R.rolls) * 40503 +
 // A fight room's virus is up: it never fell, or its timer ran out and you're not standing in it.
 // A server on the farm timers (ROOMS.respawn): Mapped, or yours (the network says: netrooms.mjs 'held').
 export const farmed = (s) => !!s.rooms?.mapped || !!(world(s) && ask('held', s));
-const respawnKind = (room) => (room.kind === 'core' || room.kind === 'boss' ? 'core' : room.kind === 'guard' ? 'guard' : room.kind === 'elite' ? 'elite' : 'process');
+const respawnKind = (room) => (room.kind === 'core' || room.kind === 'boss' ? 'core' : room.kind === 'guard' ? 'guard' : room.kind === 'elite' || room.kind === 'nest' ? 'elite' : 'process'); // a nest like an elite
 // A room's respawn in minutes, before a Cron Spawner or a Hostile server: the farm timers once farmed, else the slow ones.
 export const respawnBase = (s, room) => (farmed(s) ? ROOMS.respawn : ROOMS.respawnNew)[respawnKind(room)];
 export const respawnMs = (s, room) => mins(s, ((world(s) ? ask('respawn', s, room) : undefined) ?? respawnBase(s, room)) * (runs(s, 'cron') && !['core', 'boss'].includes(room.kind) ? 0.5 : 1)); // a Cron Spawner: twice as fast
@@ -557,7 +679,7 @@ export function walkable(s, id) {
 }
 
 // ---------- progress ----------
-export const progressOf = (s) => { const all = roomList(s).filter((x) => !x.nook); return { done: all.filter((x) => s.rooms.cleared[x.id]).length, total: all.length }; };
+export const progressOf = (s) => { const all = roomList(s).filter(counted); return { done: all.filter((x) => s.rooms.cleared[x.id]).length, total: all.length }; };
 // (quiet: the entry, cleared as you connect, says nothing.)
 function clear(s, room, quiet = false) {
   const R = s.rooms;
@@ -568,6 +690,7 @@ function clear(s, room, quiet = false) {
   if (p.done * 2 >= p.total && !R.drawn) { R.drawn = true; for (const x of roomList(s)) R.seen[x.id] ||= 'shape'; say(s, 'Half cleared: the whole map is drawn.', 'rooms-good'); }
   if (p.done === p.total && !R.mapped) mapped(s);
   if (R.world) ask('cleared', s, room);
+  if (!FIGHTS.includes(room.kind)) revealSecret(s, room); // a hidden room beside a room that isn't a fight: its first clear opens it
   return true;
 }
 // Silt Map (a unique, explore-xp%): first clears and Mapped servers pay more XP.
@@ -854,7 +977,7 @@ export function go(s, id, opts = {}) {
   const R = s.rooms, first = s.serial;
   if (!R) return [];
   settle(s);
-  const room = R.graph.rooms[id] || roomList(s).find((x) => x.dir === id || x.path === id) || R.graph.rooms[byAddr(R.graph, id)];
+  const named = R.graph.rooms[id] || roomList(s).find((x) => x.dir === id || x.path === id) || R.graph.rooms[byAddr(R.graph, id)], room = named && onMap(named) ? named : null;
   if (!R.at) deny(s, 'You are not on the server. Connect first.');
   else if (active(s)) deny(s, 'Finish the fight first.');
   else if (R.screen?.kind === 'virus') deny(s, `The ${R.screen.name} holds ${hereOf(s).path}. Engage it, or step back.`);
@@ -968,7 +1091,7 @@ export function act(s, verb, arg = null, opts = {}) {
     else { R.read = { ...(R.read || {}), [here.id]: R.spawns[here.id] || 0 }; say(s, here.mirror ? "It's a mirror. An elite waits behind it." : isBait(s, here) ? `Bait: a canary in every block. Taking it costs ${Math.round(R.max * ROOMS.bait)} Signal.` : 'Clean: credits and code.', isBait(s, here) || here.mirror ? 'rooms-bad' : 'rooms'); }
     return out(s, first);
   }
-  if ((verb === 'pull' || verb === 'pull all') && here.kind === 'cache') { pull(s, here, opts); return out(s, first); }
+  if ((verb === 'pull' || verb === 'pull all') && (here.kind === 'cache' || here.kind === 'secret')) { pull(s, here, opts); return out(s, first); }
   if ((verb === 'pull' || verb === 'pull all') && here.kind === 'stash') { if (!cacheFull(s, here)) deny(s, `The stash is empty. It fills again in ${fmtLeft(refillAt(s, here) - nowOf())}.`); else { ask('stash', s, here); R.taken[here.id] = nowOf(); clear(s, here); } return out(s, first); }
   if ((verb === 'pull' || verb === 'pull all') && here.kind === 'vault' && R.world && opened(s, here)) { if (!ask('pull', s, here)) deny(s, 'Nothing left in the vault.'); return out(s, first); }
   if ((verb === 'pull' || verb === 'pull all') && here.kind === 'entry' && R.world) { if (!ask('entryPull', s)) deny(s, 'Nothing here to take.'); return out(s, first); }
@@ -1017,16 +1140,21 @@ function pull(s, room, opts) {
   if (room.mirror) { say(s, 'The mirror breaks. An elite steps out.', 'rooms-bad'); R.screen = null; return fight(s, room, { as: 'mirror', pause: !!opts.pause }); }
   takeCache(s, room);
 }
+// A hidden room's stash (a Ghostroot server's) is a cache's pile, never bait, and a blue now and then (ROOMS.secret).
 function takeCache(s, room) {
-  const R = s.rooms, r = rnd(R, 21), C = ROOMS.cache, mill = runs(s, 'mill') ? 1.5 : 1, rich = ((R.world && ask('cacheMult', s, room)) || 1) * mill; // a Cache Mill: half again
+  const R = s.rooms, r = rnd(R, 21), C = ROOMS.cache, mill = runs(s, 'mill') && room.kind === 'cache' ? 1.5 : 1, rich = ((R.world && ask('cacheMult', s, room)) || 1) * mill; // a Cache Mill: half again
   if (isBait(s, room)) { const lost = Math.round(R.max * ROOMS.bait); setSig(s, Math.max(1, sigOf(s) - lost)); say(s, `The canary costs you ${lost} Signal.`, 'rooms-bad'); }
   const credits = Math.round((C.credits[0] + Math.floor(r() * (C.credits[1] - C.credits[0] + 1))) * rich * (1 + R.level / 20));
   const fam = roomList(s).find((x) => x.family)?.family, kind = { ransomware: 'cipher', worm: 'worm', ghostroot: 'kernel', trojan: 'worm', cryptominer: 'cipher', wiper: 'cipher' }[fam] || 'cipher';
   const code = Math.round((C.code[0] + Math.floor(r() * (C.code[1] - C.code[0] + 1))) * mill);
   if (R.world) ask('cache', s, room, { credits, code, material: kind }); // into the pack: banked when you jack out
   else { R.credits += credits; s.server.credits += credits; gainCode(s, { [kind]: code }, 'Cache: '); }
-  say(s, `You take the cache: ${credits} credits and ${code} ${kind} code.`, 'rooms-good');
-  if (r() < C.script) giveScript(s, rollScript(r), 'Cache: ');
+  say(s, `You take the ${room.kind === 'secret' ? 'stash' : 'cache'}: ${credits} credits and ${code} ${kind} code.`, 'rooms-good');
+  if (r() < C.script) giveScript(s, rollScript(r), room.kind === 'secret' ? 'Stash: ' : 'Cache: ');
+  if (room.kind === 'secret' && r() < ROOMS.secret.blue) {
+    const L = (R.world ? ask('level', s) : undefined) ?? R.level, it = addItem(s, rollItem(r, { level: L, rarity: 'tuned', cls: classOf(s) }), 'Stash: ');
+    if (it) { if (R.world) ask('packItem', s, it); else R.pack.push(it.id); say(s, `${itemLabel(it)} goes in your pack.`, 'rooms-good'); }
+  }
   R.taken[room.id] = nowOf();
   R.spawns[room.id] = (R.spawns[room.id] || 0) + 1;
   clear(s, room);
@@ -1164,6 +1292,8 @@ export function fightOf(s, room, as = null) {
     return { key: body, seed: (room.seed ^ 0x7ace) >>> 0, opts: { mode: 'run', room: room.path, level: R.level + ROOMS.hunter.level, name: `${HUNTERS[hunterOf(s)?.kind || 'track'].name.toUpperCase()} ICE` }, size: 'hunter', name: `${HUNTERS[hunterOf(s)?.kind || 'track'].name.toUpperCase()} ICE`, level: R.level + ROOMS.hunter.level, family: null, author: 'kestrel' };
   }
   if (room.kind === 'guard') return { key: room.guard, seed, opts: { mode: 'run', room: room.path, level }, size: 'guard', name: GUARDS[room.guard].name.toUpperCase(), level, family: room.guard, author: GUARDS[room.guard].ice ? 'kestrel' : null };
+  // A nest: the Crawler with its brood already out (fight adds the fragments), an elite-lite fight.
+  if (room.kind === 'nest') return { key: 'crawler', seed, opts: { mode: 'run', room: room.path, level }, size: 'nest', name: null, level, family: 'crawler', author: null, brood: ROOMS.nest.brood, xp: ROOMS.nest.xp };
   if (room.kind === 'core') return { key: 'random', seed, opts: { mode: 'run', room: room.path, level, family: BOSSES[RESIDENT].family, boss: RESIDENT, mutation: null, name: BOSSES[RESIDENT].name, author: R.author }, size: 'boss', name: BOSSES[RESIDENT].name, level, family: BOSSES[RESIDENT].family, author: R.author };
   // A wild virus: its room's family, author, third part and set, and a mutation fresh with each respawn (one at most).
   const elite = room.kind === 'elite' || as === 'mirror';
@@ -1228,6 +1358,7 @@ export function fight(s, room, { pause = false, as = null } = {}) {
   if (set) { applySet(v, set, seeded((f.seed ^ 0x5e7) >>> 0)); R.codex[`${v.family}:${set}`] = true; logSet(s, v.family, set); }
   else if (fresh) jitterFirst(v, seeded((f.seed ^ 0x5e7) >>> 0));
   if (room.queue && R.kind === 'Mailhub' && as !== 'hunter' && as !== 'exfil') spamFlood(s, e);
+  if (f.brood) brood(s, e, f.brood);
   if (as === 'exfil') { e.escapeAt = CONFIG.exfil.escape; for (const p of v.parts) { p.armor = p.maxArmor = Math.min(p.maxArmor, 1); p.patchAt = null; } } // still up after its cycles: it gets away (combat.mjs cycleClose); a runner wears 1 ◆ at most
   if (v.boss && !v.raid) bossRule(s, R.bossRule || s.bossRule || 'a');
   armTicks(s);
@@ -1246,6 +1377,15 @@ function spamFlood(s, e) {
   const hp = Math.max(8, Math.round(total * 0.08)), dmg = Math.max(2, Math.round((hits.reduce((a, x) => a + x, 0) / Math.max(1, hits.length)) * 0.25));
   e.virus.parts.push({ id: 'spam', name: 'Spam Flood', kind: 'system', integrity: hp, max: hp, armor: 0, maxArmor: 0, patchAt: null, veiled: false, loot: null, special: false, spam: true, attack: { name: 'Junk Mail', effect: 'damage', amount: dmg, interval: 3, due: 2 }, exposedUntil: 0, lastDamaged: 0, boosted: false });
   emit(s, 'status', `A Spam Flood joins the fight: ${hp} Integrity, ${dmg} damage every 3 cycles.`, { target: 'spam' });
+}
+// A nest's brood, out before the fight starts: fragments as its Brood spawns them (combat.mjs), gnawing every cycle.
+function brood(s, e, n) {
+  const pw = e.virus.power || 1;
+  for (let i = 0; i < n; i++) {
+    const k = e.nextFragment++, amount = Math.max(1, Math.round(CONFIG.fragmentDamage * pw)), hp = Math.max(1, Math.round(CONFIG.fragmentIntegrity * (e.virus.hpPower ?? pw)));
+    e.virus.parts.push({ id: 'frag' + k, name: 'Hatchling ' + k, kind: 'fragment', integrity: hp, max: hp, armor: 0, maxArmor: 0, patchAt: null, veiled: false, loot: null, special: false, attack: { name: 'Gnaw', effect: 'damage', amount, interval: 1, due: 2 }, exposedUntil: 0, lastDamaged: 0, boosted: false });
+  }
+  emit(s, 'status', `The nest's brood is out: ${n} hatchlings gnaw every cycle.`, { target: 'frag1' });
 }
 // After a fight: your Signal back on the server (never over what you started it with), and the fight cleared away.
 export function settle(s) {
@@ -1327,7 +1467,7 @@ hooks.roomEnd = (s, result) => {
   R.spawns[room.id] = (R.spawns[room.id] || 0) + 1;
   const wasRare = !!R.rare[room.id], first = !R.cleared[room.id];
   // One respawn in 25 is a rare spawn (ROOMS.rare): it waits until you kill it (a held server's Root 5, a Legacy server's twice).
-  R.rare[room.id] = FIGHTS.includes(room.kind) && !['core', 'boss', 'socket'].includes(room.kind) && !room.wild && rnd(R, 31)() < ROOMS.rare * ((R.world && ask('rare', s)) || 1);
+  R.rare[room.id] = FIGHTS.includes(room.kind) && !['core', 'boss', 'socket', 'nest'].includes(room.kind) && !room.wild && rnd(R, 31)() < ROOMS.rare * ((R.world && ask('rare', s)) || 1);
   programsPay(s, room, e);
   // First clear: half that fight's XP again (7.2).
   if (!R.cleared[room.id]) {
@@ -1339,10 +1479,20 @@ hooks.roomEnd = (s, result) => {
   if (room.kind === 'guard' && room.key && !R.opened[room.key] && !R.visit.keys.includes(room.key)) { R.visit.keys.push(room.key); say(s, `You take the ${R.graph.rooms[room.key].path} key.`, 'rooms-good'); }
   if (room.kind === 'socket' && first) say(s, `${room.path} is open: a socket. Build a program in it.`, 'rooms-good');
   drops(s, room, e, wasRare);
+  if (room.kind === 'nest') nestPay(s, room);
   if (R.world) ask('won', s, room, e, { first, rare: wasRare });
   else if (room.kind === 'core') say(s, `${BOSSES[RESIDENT].name} falls.`, 'rooms-good');
+  revealSecret(s, room); // a hidden room beside it opens (a Ghostroot server's: addSecret)
   if (R.at === room.id && !R.screen) stood(s, room);
 };
+// A nest's kill: a cache's worth of components, the Crawler's own and the server's family's (straight into your stock).
+function nestPay(s, room) {
+  const n = ROOMS.nest.parts, pool = [...familyComponents('crawler'), ...familyComponents(lineOf(serverFamily(s)))];
+  gainComponents(s, n, pool, room.path);
+  emit(s, 'loot', `The nest gives up ${n} components.`, { harvest: n });
+}
+const serverFamily = (s) => roomList(s).find((x) => x.family && FAMILIES[x.family])?.family || 'worm';
+const lineOf = (f) => (FAMILIES[f] ? f : 'worm');
 // XP the playtest character has earned in all (its level's bars and what's in the current one): the server card's
 // count is the difference since you started.
 export const xpTotal = (s) => { const h = hackerOf(s); let n = h.xp; for (let l = 1; l < h.level; l++) n += xpToNext(l); return n; };
@@ -1415,7 +1565,8 @@ const tagOf = (s, room) => {
   if (room.kind === 'core') return `core · ${BOSSES[RESIDENT].name}${coreOpen(s) ? '' : ' · sealed'}`;
   if (room.kind === 'guard') return `elite · ${GUARDS[room.guard].name}${room.key && !s.rooms.opened[room.key] ? ' · key' : ''}${up ? '' : ` · ↻ ${fmtLeft(backAt(s, room) - nowOf())}`}`;
   if (['process', 'elite'].includes(room.kind)) return `${room.kind} · ${familyName(room.family)} · ${(AUTHORS[room.author]?.name || '').toUpperCase()}${up ? '' : ` · ↻ ${fmtLeft(backAt(s, room) - nowOf())}`}`;
-  if (room.kind === 'cache') return `cache${cacheFull(s, room) ? '' : ` · ↻ ${fmtLeft(refillAt(s, room) - nowOf())}`}`;
+  if (room.kind === 'cache' || room.kind === 'secret') return `${room.kind === 'secret' ? 'hidden stash' : 'cache'}${cacheFull(s, room) ? '' : ` · ↻ ${fmtLeft(refillAt(s, room) - nowOf())}`}`;
+  if (room.kind === 'nest') return `nest · Crawler and brood${up ? '' : ` · ↻ ${fmtLeft(backAt(s, room) - nowOf())}`}`;
   if (room.kind === 'vault') return `vault${opened(s, room) ? ' · open' : ''}`;
   if (isPuzzle(room.kind)) { const st = puzzleState(s, room); return `puzzle · ${PUZZLES[room.kind].name}${st === 'ready' ? '' : st === 'live' ? ' · in play' : ` · ${st === 'won' ? 'solved' : 'failed'} · ↻ ${fmtLeft(refillAt(s, room) - nowOf())}`}`; }
   return room.kind;

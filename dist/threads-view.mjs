@@ -159,7 +159,7 @@ export function offerMarkup(s) {
 // A temporary server: an amber ? with its name (dark and gray once it's shut down), linked to the server it grew from.
 export const tempNodes = (s, floor) => tempsOn(s, floor).map((l) => ({ id: l.id, kind: 'temp', loc: l, x: l.temp.at.x, y: l.temp.at.y, host: l.temp.host }));
 export function tempNodeSvg(s, n, sel, label) {
-  const l = n.loc, dark = isDark(l), R = l.floorplan, rooms = R ? Object.values(R.graph.rooms).filter((x) => !x.nook) : [], done = rooms.filter((x) => R.cleared[x.id]).length;
+  const l = n.loc, dark = isDark(l), R = l.floorplan, rooms = R ? Object.values(R.graph.rooms).filter((x) => !x.nook && !x.optional) : [], done = rooms.filter((x) => R.cleared[x.id]).length;
   const sub = dark ? 'dark' : `temporary · ${done}/${rooms.length}${l.temp.grown ? ` · +${l.temp.grown}` : ''}`;
   return `<g class="mnode temp${dark ? ' dark' : ' f-target'}${sel}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(`${l.name}, a temporary server${dark ? ', dark' : ''}`)}"><circle r="18" class="mhit"/><path class="tframe" d="M0 -12 L11 -5 L11 6 L0 12 L-11 6 L-11 -5 Z"/><text class="tq" text-anchor="middle" y="4.5">${dark ? '×' : '?'}</text>${label(n, 12, l.name, sub, dark ? 'dim' : 'th')}</g>`;
 }
@@ -195,7 +195,7 @@ export const transitSvg = (n, motion = true) => {
 };
 // A temporary server's card: what it is, its rooms, the thread it belongs to, Connect (none once it's dark).
 export function tempCard(s, l, { here = false, busy = false, relock = 0, btn = () => '' } = {}) {
-  const dark = isDark(l), t = threadById(s, l.temp.thread), R = l.floorplan, rooms = R ? Object.values(R.graph.rooms).filter((x) => !x.nook) : [], done = rooms.filter((x) => R.cleared[x.id]).length;
+  const dark = isDark(l), t = threadById(s, l.temp.thread), R = l.floorplan, rooms = R ? Object.values(R.graph.rooms).filter((x) => !x.nook && !x.optional) : [], done = rooms.filter((x) => R.cleared[x.id]).length;
   const host = findLocation(s, l.temp.host);
   return `<section class="card th-temp${dark ? ' dark' : ''}"><h2>Temporary server · floor ${l.depth || 1}</h2><h1>${esc(l.name)}</h1>
     <p class="tagline">${dark ? '<span class="tag dim">dark</span>' : `<span class="tag th-tag" title="It never goes on its own. Each visit it grows a room.">grows</span> lv ${l.level}`}${host ? ` · beside ${esc(host.name)}` : ''}</p>

@@ -130,6 +130,8 @@ export function bountyOf(s, inv = s.invasion) {
 // "13 Worm code"
 export const codeText = (n, k) => `${n} ${MATERIALS[k]?.name || k}`;
 // One plain sentence on what this invasion does, beyond chipping at your wall (the map and the Firewall card show it).
+// What its server's quirk does to an invasion, in a sentence (its tag's tooltip too: view.mjs).
+export const quirkLine = (inv) => ({ hoard: `It carries its server's hoard, so it is Armored and its bounty is 50% bigger.`, nest: 'It brings a brood from its Nest, one more virus behind it.', hidden: `It hides like its server does, so it counts ${QUIRKED.hiddenPush} levels higher at your wall.` })[inv?.quirk] || '';
 export function tellOf(s, inv = s.invasion) {
   if (!inv) return '';
   const svc = inv.service && SERVICES[inv.service]?.name, tgt = targetOf(s, inv);
@@ -142,7 +144,7 @@ export function tellOf(s, inv = s.invasion) {
     thief: `It is after the stores on ${tgt?.name || 'your outpost'}. Intercept it on the way, or it takes half of what is stored there.`,
     scout: inv.state === 'watch' ? `It is mapping your wall. Kill it in the next ${fmtLeft(inv.mapLeft)}, or the next invasion counts ${SCOUT.mark} levels higher.` : `It wants to map your wall. If your wall doesn't stop it, kill it within ${fmtLeft(SCOUT.mapMs)} or the next invasion counts ${SCOUT.mark} levels higher.`,
   }[inv.kind || 'raider'] || '';
-  const q = { hoard: `It carries its server's hoard, so it is Armored and its bounty is 50% bigger.`, nest: 'It brings a brood from its Nest, one more virus behind it.', hidden: `It hides like its server does, so it counts ${QUIRKED.hiddenPush} levels higher at your wall.` }[inv.quirk] || '';
+  const q = quirkLine(inv);
   const m = inv.marked ? `A scout mapped your wall for it, so it counts ${inv.marked} levels higher.` : '';
   const w = inv.scouted ? `You killed its spotter, so it comes ${inv.scouted} levels weaker.` : '';
   return [say, q, m, w].filter(Boolean).join(' ');

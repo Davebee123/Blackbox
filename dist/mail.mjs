@@ -353,7 +353,7 @@ export function offer(s, at = now()) {
 // A server with first clears left for a rooms job (yours, rogue or not, SPRAWL-00 aside), and one to map: a traced
 // server not Mapped yet, never a rogue server's (they keep up with you).
 const busyLoc = (s) => new Set([...jobs(s), ...offers(s)].filter((j) => !j.done).map((j) => j.loc).filter(Boolean));
-const roomsLeft = (l) => { const R = l.floorplan; return R ? Object.keys(R.graph.rooms).filter((id) => !R.cleared[id]).length : 6; };
+const roomsLeft = (l) => { const R = l.floorplan; return R ? Object.values(R.graph.rooms).filter((x) => !R.cleared[x.id] && !x.nook && !x.optional).length : 6; };
 function roomsTarget(s) { const busy = busyLoc(s), pool = (s.locations || []).filter((l) => !l.member && !l.farm && !busy.has(l.id) && !(l.fresh && l.detached) && roomsLeft(l) >= 4); return pool.length ? pool[Math.floor(rand(s) * pool.length)] : null; }
 function mapTarget(s) { const busy = busyLoc(s), pool = (s.locations || []).filter((l) => !l.rogue && !l.member && !busy.has(l.id) && !(l.fresh && l.detached) && !l.floorplan?.mapped); return pool.length ? pool[Math.floor(rand(s) * pool.length)] : null; }
 // A room cleared for the first time (netrooms.mjs): rooms jobs on that server count it.
@@ -654,7 +654,7 @@ export function progress(s, c) {
   if (c.type === 'rooms') return { text: `${c.got}/${c.count} rooms cleared`, part: c.got / c.count };
   if (c.type === 'map') {
     if (c.got) return { text: 'Mapped', part: 1 };
-    const R = s.locations.find((x) => x.id === c.loc)?.floorplan, n = R ? Object.keys(R.graph.rooms).length : 0, done = R ? Object.keys(R.graph.rooms).filter((id) => R.cleared[id]).length : 0;
+    const R = s.locations.find((x) => x.id === c.loc)?.floorplan, all = R ? Object.values(R.graph.rooms).filter((x) => !x.nook && !x.optional) : [], n = all.length, done = all.filter((x) => R.cleared[x.id]).length; // Rooms n/N, as the strip counts them
     return { text: R ? `Rooms ${done}/${n}` : 'Not connected yet', part: n ? done / n : 0 };
   }
   if (c.type === 'takeover') {

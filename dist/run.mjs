@@ -314,9 +314,9 @@ function decoy(loc, k) {
 
 // How many of those you've banked (dead drops, route and contract files don't count toward it).
 // A server's progress for the map: on rooms (R1) its rooms cleared of all its rooms, else the old files taken.
-export const takenOf = (loc) => (loc.floorplan ? Object.keys(loc.floorplan.graph.rooms).filter((id) => loc.floorplan.cleared[id] && !loc.floorplan.graph.rooms[id].nook).length : takeable(loc).filter((f) => loc.state.taken[f]).length);
+export const takenOf = (loc) => (loc.floorplan ? Object.keys(loc.floorplan.graph.rooms).filter((id) => loc.floorplan.cleared[id] && !loc.floorplan.graph.rooms[id].nook && !loc.floorplan.graph.rooms[id].optional).length : takeable(loc).filter((f) => loc.state.taken[f]).length);
 export function takeable(loc) {
-  if (loc.floorplan) return Object.keys(loc.floorplan.graph.rooms).filter((id) => !loc.floorplan.graph.rooms[id].nook); // a thread's room never counts (threads.mjs)
+  if (loc.floorplan) return Object.keys(loc.floorplan.graph.rooms).filter((id) => !loc.floorplan.graph.rooms[id].nook && !loc.floorplan.graph.rooms[id].optional); // a thread's room and a quirk's never count
   const out = [];
   for (const [dir, d] of Object.entries(layoutOf(loc))) if (!d.drop) for (const f of d.files) if (!['text', 'trap', 'sweep'].includes(fileInfo(loc, dir, f).kind)) out.push(join(dir, f));
   return out;
@@ -414,7 +414,7 @@ export function connect(s, id) {
     else {
       // R1: the server's rooms (netrooms.mjs). Your crew comes along, linked to you.
       const R = enterRooms(s, loc, { signal, hot });
-      const counted = Object.values(R.graph.rooms).filter((x) => !x.nook), rooms = ` Rooms ${counted.filter((x) => R.cleared[x.id]).length}/${counted.length}.`;
+      const counted = Object.values(R.graph.rooms).filter((x) => !x.nook && !x.optional), rooms = ` Rooms ${counted.filter((x) => R.cleared[x.id]).length}/${counted.length}.`;
       emit(s, 'run-start', `CONNECTED to ${loc.name}${zone ? ', a rogue server' : loc.member ? `, ${loc.member}'s server` : loc.rogue ? `, a rogue server (${ROGUE.kinds[loc.rogue.kind].name})` : ''}.${rooms}${rootOf(loc) ? ` Root ${rootOf(loc)}.` : ''}`, { location: loc.id, rooms: true });
       if (hot) emit(s, 'warning', `LOUD RUN. You went in loud: every fight here has ${Math.round((HOT_RUN.hp - 1) * 100)}% more Integrity and hits ${Math.round((HOT_RUN.dmg - 1) * 100)}% harder. Every kill pays ${Math.round((HOT_RUN.xp - 1) * 100)}% more XP and rolls for loot once more.`);
     }

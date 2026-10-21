@@ -9,7 +9,7 @@
 const colName = (n) => (n < 26 ? String.fromCharCode(65 + n) : colName(Math.floor(n / 26) - 1) + String.fromCharCode(65 + (n % 26)));
 const ADDRS = new WeakMap();
 export function addrsOf(g) {
-  const rooms = Object.values(g?.rooms || {}), had = ADDRS.get(g);
+  const rooms = Object.values(g?.rooms || {}).filter((r) => !r.concealed), had = ADDRS.get(g); // a hidden room has no address until it opens
   if (had && had.n === rooms.length) return had.map;
   const x0 = Math.min(0, ...rooms.map((r) => r.x)), y0 = Math.min(...rooms.map((r) => r.y), ...(g.sockets != null ? [-1] : []));
   const map = {}, used = new Set();
@@ -28,9 +28,9 @@ export function byAddr(g, text) {
   return /^[A-Z]+\d+[A-Z]?$/.test(a) ? Object.keys(m).find((id) => m[id].toUpperCase() === a) || null : null;
 }
 // The rooms you can reach from the entry without going through the Core (a no-rest map job's rooms; where a
-// contract's item can go).
+// contract's item can go), never a quirk's optional room (a nest, a hidden room).
 export function sweepRooms(g) {
   const links = [...(g.links || []), ...(g.hops || [])], seen = new Set([g.entry]), q = [g.entry];
-  while (q.length) { const id = q.shift(); for (const [a, b] of links) { const x = a === id ? b : b === id ? a : null; if (x && !seen.has(x) && x !== g.core) { seen.add(x); q.push(x); } } }
+  while (q.length) { const id = q.shift(); for (const [a, b] of links) { const x = a === id ? b : b === id ? a : null; if (x && !seen.has(x) && x !== g.core && !g.rooms?.[x]?.optional) { seen.add(x); q.push(x); } } }
   return [...seen];
 }

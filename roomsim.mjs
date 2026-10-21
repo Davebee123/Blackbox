@@ -19,7 +19,7 @@ export const PICK = { breaker: 'demolitionist', bastion: 'warden', infiltrator: 
 // Seconds the sim charges for each thing (a cycle at the normal speed is 8 s).
 export const TIME = { cycle: 8, move: 6, act: 4, home: 2 };
 // What the bot expects a fight to cost, of its max Signal, before it takes one on (and the margin it keeps).
-export const NEED = { process: 0.32, elite: 0.6, guard: 0.38, core: 0.8, hunter: 0.6, margin: 0.06, low: 0.35 };
+export const NEED = { process: 0.32, elite: 0.6, guard: 0.38, nest: 0.45, core: 0.8, hunter: 0.6, margin: 0.06, low: 0.35 };
 // What the bot builds in a socket it has cleared (sockets.mjs): the first of these it knows and can pay for. log: a
 // sim's eye on each build. (It only ever builds what pays as it plays: components, respawns, code, caches, a rest.)
 export const BUILD = { order: ['harvester', 'cron', 'siphon', 'mill', 'defrag', 'tunnel', 'snare'], log: null };
@@ -56,7 +56,7 @@ function botScript(s) {
   if (i >= 0) runScript(s, i);
 }
 const sig = (s) => FP.sigOf(s) / Math.max(1, s.rooms.max); // the playtest's Signal, or the run's on the network
-const needOf = (s, room) => (room.kind === 'core' ? NEED.core : room.kind === 'elite' || room.mirror ? NEED.elite : room.kind === 'guard' ? NEED.guard : NEED.process);
+const needOf = (s, room) => (room.kind === 'core' ? NEED.core : room.kind === 'elite' || room.mirror ? NEED.elite : room.kind === 'guard' ? NEED.guard : room.kind === 'nest' ? NEED.nest : NEED.process);
 // What the bot walks to next, and the path there. null: jack out.
 export function botTarget(s) {
   const R = s.rooms, g = R.graph, h = FP.hunterOf(s), here = R.at;
@@ -88,7 +88,7 @@ export function botTarget(s) {
     else if (room.wild && up && can(room) && FP.WORLD.view?.fightNote?.(s, room)?.startsWith('A named')) v = 8; // a contract's named target (netrooms.mjs)
     else if (!R.cleared[room.id] && (!up || can(room)) && room.kind !== 'core' && !FP.isPuzzle(room.kind)) v = up ? 5 : 6; // (a puzzle room is a side room: below, with the caches)
     else if (FP.socketOpen(s, room) && !FP.programIn(s, room.id) && !FP.socketOff(s, room) && !R.visit.built && BUILD.order.some((p) => !programBlock(s, R, room, p))) v = 4; // a program it can build there
-    else if ((room.kind === 'cache' || FP.isPuzzle(room.kind)) && FP.cacheFull(s, room)) v = 3; // a cache, or a puzzle room's fresh board
+    else if ((room.kind === 'cache' || room.kind === 'secret' || FP.isPuzzle(room.kind)) && FP.cacheFull(s, room)) v = 3; // a cache (a hidden room's stash too), or a puzzle room's fresh board
     else if (up && can(room) && room.kind !== 'core') v = 2;
     else if (room.kind === 'rest' && !R.visit.rested && f < 0.7) v = 7;
     if (!v) continue;
@@ -109,6 +109,7 @@ export function botStep(s) {
     if (sig(s) >= needOf(s, room) || !R.visit.back) FP.act(s, 'engage'); else { (R.visit.avoid ||= {})[room.id] = true; FP.act(s, 'back'); }
     return true;
   }
+  if (here.kind === 'secret' && FP.cacheFull(s, here)) { FP.act(s, 'pull'); return true; } // a hidden room's stash: never bait
   if (here.kind === 'cache' && FP.cacheFull(s, here) && !(here.mirror && sig(s) < NEED.elite + NEED.margin)) { FP.act(s, 'cat'); if (!(FP.isBait(s, here) && sig(s) < 0.5)) { FP.act(s, 'pull'); return true; } }
   if (here.kind === 'vault' && !FP.opened(s, here) && R.visit.keys.includes(here.id)) { FP.act(s, 'open'); return true; }
   // A puzzle room's fresh board (puzzles.mjs): played to its end, its solver's moves (the chase's and the cascade's
