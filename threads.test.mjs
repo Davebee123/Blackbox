@@ -410,5 +410,5 @@ test('the bots never start one: a whole visit leaves every thread where it was, 
   for (const room of FP.roomList(s)) if (FP.FIGHTS.includes(room.kind) && room.kind !== 'core' && !room.nook) { if (s.rooms.at !== room.id) walk(s, room.id); }
   assert.equal(s.threads.list.length, 0, 'walking a server starts nothing');
   const sum = summaryOf(s, loc);
-  assert.ok(sum.total === FP.roomList(s).filter((x) => !x.nook).length);
+  assert.ok(sum.total === FP.roomList(s).filter(FP.counted).length); // a thread's room and a quirk's optional room never count
 });

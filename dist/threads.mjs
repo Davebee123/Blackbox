@@ -119,7 +119,7 @@ export function addNook(R, { label = 'Empty', seed = 1, deep = false, kind = 'em
   const spine = g.spine?.length || 0, bad = new Set([g.entry, g.core, g.den, ...(g.vaults || [])].filter(Boolean));
   const d = FP.distances(g, g.entry);
   const cells = (p) => [[1, 0], [0, 1], [0, -1], [-1, 0]].map(([dx, dy]) => [p.x + dx, p.y + dy]).filter(([x, y]) => !taken.has(`${x},${y}`) && x >= x0 && y >= y0 && !(y === 0 && x >= 0 && x < spine));
-  const anchors = list.filter((x) => !bad.has(x.id) && !x.nook && x.kind !== 'socket' && !FP.isPuzzle(x.kind) && d[x.id] != null && cells(x).length).sort(byId);
+  const anchors = list.filter((x) => !bad.has(x.id) && !x.nook && !x.optional && x.kind !== 'socket' && !FP.isPuzzle(x.kind) && d[x.id] != null && cells(x).length).sort(byId);
   if (!anchors.length) return null;
   const r = seeded((seed >>> 0) || 1);
   let at;

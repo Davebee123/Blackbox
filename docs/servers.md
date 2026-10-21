@@ -116,7 +116,7 @@ The generator works from the server's seed, size, kind and floor, the same seed 
 | Lair | the network's | A rogue server whose core is the floor's native boss, back an hour after it falls | None |
 | Kestrel's servers | its data centres | Every guard post is ICE | Always one, on any size and any floor (where floor 1 meets its first) |
 
-**Server traits** (the old site traits, fixed when found, 45% of servers) now read in rooms: **Rich** (caches pay double), **Legacy** (rare spawns twice as often), **Backbone** (+1 socket room), **Hostile** (fight rooms respawn twice as fast), **Hardened** (its viruses are Armored), and the old quirks: **Hoard** (caches +50%, guard posts Armored), **Nest** (an extra nest room with a brood sample), **Hidden** (a hidden room only `ls -a` or a `topology.map` shows).
+**Server traits** (the old site traits, fixed when found, 45% of servers) now read in rooms: **Rich** (caches pay double), **Legacy** (rare spawns twice as often), **Backbone** (+1 socket room), **Hostile** (fight rooms respawn twice as fast), **Hardened** (its Resident and guard posts are Armored), and the quirks: **Hoard** (caches +50%, guard posts Armored), **Nest** (an optional nest room, a Crawler and its brood, paying components), **Hidden** (a hidden room, off the map until you clear the room beside it, holding a stash). As built: GAME_RULES.md Quirks.
 
 ### 2.3 What replaces the file system
 

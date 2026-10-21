@@ -494,3 +494,9 @@
 .th-panel .sweep { margin: 0; }
 @media (max-width: 980px) { .th-panel .pz-card.th-card { width: 100%; } }
 @media (max-width: 640px) { .fp-thread small, .fp-filestat .lbl, .fp-filestat small { display: none; } .fp-thread b { max-width: 14ch; } }
+
+/* A hidden room that just opened (a Ghostroot server's): its chip and its trace fade in. Nothing else moves. */
+@media (prefers-reduced-motion: no-preference) {
+  body:not(.no-motion) .fp-room.reveal, body:not(.no-motion) .fp-svg g.reveal { animation: fp-reveal 1.4s ease-out both; }
+}
+@keyframes fp-reveal { from { opacity: 0; } to { opacity: 1; } }

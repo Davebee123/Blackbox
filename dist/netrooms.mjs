@@ -25,7 +25,7 @@
 import { hooks, emit, warn, active, hackerLevel, maxSignal, disconnect, gainXp, xpFor, deedXpFor, addItem, findLocation, roomKill, classOf, gainCode, rollDrop, uniqueFrom, rand, setDrop, fxPct } from './combat.mjs';
 import { setCredits } from './sets.mjs';
 import { PUZZLES } from './puzzles.mjs';
-import { CONFIG, BOSSES, FAMILIES, GUARDS, ROOM_FAMILIES, layerOf } from './data.mjs';
+import { CONFIG, BOSSES, FAMILIES, GUARDS, ROOM_FAMILIES, QUIRKS, layerOf } from './data.mjs';
 import { seeded, MATERIALS, codeOf, rollItem } from './gear.mjs';
 import { crewOf, factionAuthor, AUTHORS } from './authors.mjs';
 import * as FP from './floorplan.mjs';
@@ -33,7 +33,7 @@ import { AUTHOR_FAMILIES, familyName } from './families.mjs';
 import { zoneOf, zoneRooms } from './zone.mjs';
 import { ROGUE, FARM, rogueRooms, rogueSpawns, rogueKill, relocks, clock, inRuns } from './rogue.mjs';
 import { lairOpen, NETWORK } from './network.mjs';
-import { sizeOf, learnCodebase, familyComponents, gainComponents, AUTHOR_CODEBASES } from './sockets.mjs';
+import { sizeOf, learnCodebase, familyComponents, gainComponents, AUTHOR_CODEBASES, SITES } from './sockets.mjs';
 import { consortiumSockets } from './consortium.mjs';
 import { owned, rootOf, ROOT, ROOT_PERKS } from './root.mjs';
 import { contractTakeover, contractRooms, contractMapped, contractConnect, contractInstall, contractStood, contractExfil, payloadFor, roomMarks, jobsOn } from './mail.mjs';
@@ -45,7 +45,7 @@ import { hiddenNear } from './floors.mjs';
 import { zoneSpawns, spawnFight, levelOf, layoutOf, fileInfo, residentLevel, RESIDENT, bank, KING_ROOM, packGain, peopleIn } from './run.mjs';
 import { threadsConnect, threadsMoved, threadsStood, threadVerb, tempCoreOpen, tempKilled, threadsRestore } from './threads.mjs';
 
-export const KIND_OF = { relay: 'Relay', mailhub: 'Mailhub', mirror: 'Mirror', archive: 'Archive', lab: 'Lab' };
+export const KIND_OF = FP.KIND_OF;
 export const NET = {
   hostile: 0.5, // a Hostile server's fight rooms come back twice as fast
   rich: 2, hoard: 1.5, // caches pay this much more on a Rich server, a Hoard
@@ -77,6 +77,7 @@ function build(s, loc) {
     const kind = KIND_OF[loc.template] || 'Relay', author = authorOf(loc), level = levelOf(loc), floor = loc.depth || 1, size = sizeOf(loc).id;
     const graph = FP.generate(loc.seed || 1, { size, kind, level, floor, author: AUTHOR_FAMILIES[author] ? author : 'tollgate', sockets: socketsFor(loc, size) });
     placePuzzles(loc, graph, size);
+    placeQuirkRoom(loc, graph);
     return FP.newRooms(s, { ...base, seed: loc.seed || 1, size, kind, level, floor, author: AUTHOR_FAMILIES[author] ? author : 'tollgate', graph, type: 'server', code: codeOf(loc.family) || 'cipher' });
   }
   const graph = loc.zone ? sprawlGraph() : loc.farm ? farmGraph() : wildGraph(loc);
@@ -88,6 +89,15 @@ const wormy = (loc) => lineageOf(loc.family) === 'worm';
 export function placePuzzles(loc, g, size = sizeOf(loc).id) {
   if (!g || g.puzzles != null) return [];
   return FP.addPuzzles(g, FP.puzzleKinds(g, loc.seed || 1, { size, worm: wormy(loc) }), loc.seed || 1, ['cascade', 'sweep', 'quarantine']);
+}
+// A traced server's quirk room (floorplan.mjs addNest, addSecret), from its seed: a Worm server's nest (the Nest
+// quirk), a Ghostroot server's hidden room (Hidden). g.quirks marks it done (also an older save's graph:
+// quirkRoomsRestore).
+export function placeQuirkRoom(loc, g) {
+  if (!g || g.quirks != null) return null;
+  const room = loc.quirk === 'nest' ? FP.addNest(g, loc.seed || 1) : loc.quirk === 'hidden' ? FP.addSecret(g, loc.seed || 1) : null;
+  g.quirks = room ? 1 : 0;
+  return room;
 }
 // A traced server's socket rooms: by its size, one more on a Backbone server (Root 4's and Grid's are rooms added later).
 const socketsFor = (loc, size = sizeOf(loc).id) => (FP.ROOMS.sockets[size] || 1) + (loc.trait === 'backbone' ? 1 : 0);
@@ -287,8 +297,8 @@ WORLD_hook('fight', (s, room, as) => {
     return { key: 'random', seed: (((loc.seed || 1) * 7 + 31) >>> 0) + (R.spawns[room.id] || 0) * 7919, opts: { mode: 'run', room: room.path, level, family: loc.family, boss: 'resident', ...(loc.starter ? { bossHp: RESIDENT.starterHp } : {}), mutation: loc.trait === 'hardened' ? 'armored' : null, name, author: R.author }, size: 'boss', name, level, family: loc.family, author: R.author };
   }
   if (room.kind === 'guard' && (loc.quirk === 'hoard' || loc.trait === 'hardened')) {
-    const level = levelOf(loc);
-    return { key: room.guard, seed: ((room.seed + (R.spawns[room.id] || 0) * 7919) >>> 0) || 1, opts: { mode: 'run', room: room.path, level, mutation: 'armored' }, size: 'guard', name: GUARDS[room.guard].name.toUpperCase(), level, family: room.guard, author: GUARDS[room.guard].ice ? 'kestrel' : null };
+    const rare = !as && !!R.rare[room.id], level = levelOf(loc) + (rare ? FP.ROOMS.rareLevel : 0); // a rare spawn two levels up, as any guard post's
+    return { key: room.guard, seed: ((room.seed + (R.spawns[room.id] || 0) * 7919) >>> 0) || 1, opts: { mode: 'run', room: room.path, level, mutation: 'armored' }, size: 'guard', name: GUARDS[room.guard].name.toUpperCase(), level, family: room.guard, author: GUARDS[room.guard].ice ? 'kestrel' : null, rare };
   }
   return undefined;
 });
@@ -524,13 +534,13 @@ FP.WORLD.view = {
   idLine: (s) => {
     const loc = locOf(s), R = s.rooms, r = ruleOf(loc);
     if (r) return `${r.rule} · lv ${loc.zone ? `1–${CONFIG.zone.maxLevel}` : levelOf(loc)}`;
-    return `${R.kind} · lv ${levelOf(loc)}${loc.depth > 1 ? ` · floor ${loc.depth}` : ''}${rootOf(loc) ? ` · Root ${rootOf(loc)}` : ''}${loc.takenOver ? ' · yours' : ''}`;
+    return `${FP.kindName(R.kind)} · lv ${levelOf(loc)}${loc.depth > 1 ? ` · floor ${loc.depth}` : ''}${rootOf(loc) ? ` · Root ${rootOf(loc)}` : ''}${loc.takenOver ? ' · yours' : ''}`;
   },
   idTip: (s) => {
     const loc = locOf(s), R = s.rooms, r = ruleOf(loc);
     if (r) return `${loc.name}: ${r.rule}.\n${r.text}${inRuns(loc) ? '\nCleared rooms stay down. Clear them all and it reboots: every room back fresh a minute later.' : ''}`;
-    const K = FP.KINDS[R.kind], by = (AUTHORS[R.author]?.name || R.author).toUpperCase();
-    return `${loc.name}: a ${by} ${R.kind}, level ${levelOf(loc)}, ${R.size}.\n${K.rule}: ${K.text}${loc.takenOver ? '\nYours: its Core is quiet.' : ''}`;
+    const by = (AUTHORS[R.author]?.name || R.author).toUpperCase(), site = SITES[loc.trait], q = QUIRKS[loc.quirk];
+    return `${loc.name}: a ${by} ${FP.kindName(R.kind)}, level ${levelOf(loc)}, ${R.size}.\n${FP.kindRule(R.kind)}${site ? `\n${site.name}: ${site.rule}` : ''}${q ? `\n${q.name}: ${q.rule}` : ''}${loc.takenOver ? '\nYours: its Core is quiet.' : ''}`;
   },
   sealed: (s) => { const loc = locOf(s); return loc?.zone ? 'RELAY-KING holds it from level 3.' : loc?.farm ? 'Behind the ledger.' : loc?.lair ? `${BOSSES[loc.lair]?.name || 'Its boss'} holds it from level ${BOSSES[loc.lair]?.floor || 1}.` : undefined; },
   elite: (s, room) => { const sp = spawnOf(s, room); return !!(sp?.elite || sp?.bounty); },
@@ -580,7 +590,7 @@ WORLD_hook('mapped', (s) => {
 export function summaryOf(s, loc) {
   const R = loc?.floorplan;
   if (!R) return null;
-  const all = Object.values(R.graph.rooms).filter((x) => !x.nook), done = all.filter((x) => R.cleared[x.id]).length; // a thread's room never counts (threads.mjs)
+  const all = Object.values(R.graph.rooms).filter(FP.counted), done = all.filter((x) => R.cleared[x.id]).length; // a thread's room and a quirk's never count
   const vault = R.graph.vaults[0] ? !!R.opened[R.graph.vaults[0]] || (loc.farm && !!loc.state?.unlocked?.['/ledger']) : null;
   return { done, total: all.length, mapped: !!R.mapped, vault, visits: R.visits, kind: R.type === 'server' ? R.kind : null, size: R.size };
 }
@@ -652,6 +662,23 @@ export function puzzleRoomsRestore(s) {
     const R = loc.floorplan;
     if (!R?.graph || R.type !== 'server' || R.graph.puzzles != null) continue;
     for (const x of placePuzzles(loc, R.graph, R.size || sizeOf(loc).id)) if (R.drawn || R.mapped) R.seen[x.id] ||= 'shape';
+  }
+  quirkRoomsRestore(s);
+}
+// The quirks' rooms on a traced server's graph from before them (a Worm server's nest, a Ghostroot server's hidden
+// room), and a Mailhub's mail queue where it had no Patroller: from its seed, as new leaf rooms (nothing you'd cleared,
+// held or built moves). A nest is unknown until you walk in (a ? at once on a server already half cleared); a hidden
+// room stays off the map until you clear the room beside it. Every load, idempotent: g.quirks marks a graph done.
+export function quirkRoomsRestore(s) {
+  for (const loc of s.locations || []) {
+    const R = loc.floorplan;
+    if (!R?.graph || R.type !== 'server') continue;
+    if (R.kind === 'Mailhub') FP.markQueue(R.graph);
+    if (R.graph.quirks != null) continue;
+    const room = placeQuirkRoom(loc, R.graph), by = room?.concealed && R.graph.rooms[room.off];
+    // Beside a room you'd cleared that never fights again (a socket, a cache): it's open already, a room you haven't been in.
+    if (by && R.cleared[by.id] && (!FP.FIGHTS.includes(by.kind) || by.kind === 'socket')) { delete room.concealed; R.graph.links.push([by.id, room.id]); }
+    if (room && !room.concealed && (R.drawn || R.mapped)) R.seen[room.id] ||= 'shape';
   }
 }
 hooks.roomsRestore = roomsRestore;

@@ -230,7 +230,7 @@ test('placement: one or two a server from its seed, never two of a kind, new roo
       if (x.kind === 'chase') { assert.equal(g.hunter, 'track'); assert.ok(FP.neighbours(g, g.den).includes(a.id), 'the chase beside the den'); }
       if (g.core) assert.ok(Math.abs(g.rooms[g.core].x - x.x) + Math.abs(g.rooms[g.core].y - x.y) > 1, 'never beside the Core (Root 2 and 4 build there)');
     }
-    assert.equal(Object.keys(FP.distances(g, g.entry)).length, Object.keys(g.rooms).length, 'still all connected');
+    assert.equal(Object.keys(FP.distances(g, g.entry)).length, Object.values(g.rooms).filter(FP.onMap).length, 'still all connected (a hidden room only once it opens)');
     // Nothing moved: every room the generator made keeps its address.
     const bare = FP.generate(loc.seed, { size: R.size, kind: R.kind, level: R.level, floor: R.floor, author: R.author }), was = addrsOf(bare), now = addrsOf(g);
     for (const id of Object.keys(bare.rooms)) assert.equal(now[id], was[id], `${loc.name} ${id}`);

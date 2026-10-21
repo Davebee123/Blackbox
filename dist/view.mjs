@@ -52,7 +52,7 @@ import { programMarkup, progNow, progTarget, progText, progOnPart, progExc, prog
 import { unlocked as routinesOpen, LOCKED as ROUTINES_LOCKED } from './routines.mjs';
 import { bodyTags } from './families.mjs';
 import { heatOf } from './parts.mjs';
-import { wallRating, wallBands, ratioOf, outcome, chipRate, grindRate, fighting, degradedLeft, fmtLeft, bountyOf, tellOf, labelOf, verdictOf, wallLevelOf, strength, streakOf, streakMult, STREAK, SCOUT, daemonChance, SCOUTED, KINDS as INV_KINDS, scoutedLine } from './invasion.mjs';
+import { wallRating, wallBands, ratioOf, outcome, chipRate, grindRate, fighting, degradedLeft, fmtLeft, bountyOf, tellOf, quirkLine, labelOf, verdictOf, wallLevelOf, strength, streakOf, streakMult, STREAK, SCOUT, daemonChance, SCOUTED, KINDS as INV_KINDS, scoutedLine } from './invasion.mjs';
 import { RULES, LOOT, SLOTS, BASES, STATS, GROUPS, RARITIES, RARITY_ORDER, ZERO_DAYS, STASH_CAP, PROTOCOL_SLOTS, PROTOCOL_STATS, SERVICES, MATERIALS, statLine, itemLabel, fmtStat, sideStats, BLUEPRINTS, PROTOCOL_NAMES, recipeStat, SLOT_KINDS, groupOf, codeOf, uniqueItem, seeded, IMPLICITS } from './gear.mjs';
 import { raidIntents, raidMarks, raidOf, attackTarget } from './raid.mjs';
 import { EMBLEMS } from './class-emblems.mjs';
@@ -63,7 +63,7 @@ import { sigOf, named, lairOf, intelOf, knowsStrain, knowsEvent, knowsRich, name
 import { guardSetChance, lairChance, bossOdds, presetsOf, presetKeys, followOf, spikeName, said, mutated, capstonePoints, capPickOf, capState } from './combat.mjs';
 import { cantripsOf } from './data.mjs';
 import { daemonText } from './daemons.mjs';
-import { ROOMS as ROOMS_FP } from './floorplan.mjs'; // a server card's respawn timers
+import { ROOMS as ROOMS_FP, kindRule, KIND_OF } from './floorplan.mjs'; // a server card's respawn timers, its type's rule
 import { threadRows, threadReader, tempNodes, tempNodeSvg, tempCard, serverMarkSvg, transitNodes, transitSvg } from './threads-view.mjs';
 import { threadById, serverMarks } from './threads.mjs';
 
@@ -1279,7 +1279,7 @@ function jackInButton(st) {
 // An invasion's kind, quirk and a scout's mark, as tags (what it does on hover).
 function invTags(s, inv) {
   const kind = inv.kind && inv.kind !== 'raider' ? `<span class="tag ${inv.kind === 'champion' ? 'tag-crew' : 'warn'} inv-kind" title="${esc(tellOf(s, inv))}">${esc(labelOf(inv))}</span>` : '';
-  const q = inv.quirk && QUIRKS[inv.quirk] ? `<span class="tag tag-strain" title="${esc(QUIRKS[inv.quirk].rule)}">${esc(QUIRKS[inv.quirk].name)}</span>` : '';
+  const q = inv.quirk && QUIRKS[inv.quirk] ? `<span class="tag tag-strain" title="${esc(quirkLine(inv))}">${esc(QUIRKS[inv.quirk].name)}</span>` : ''; // what the quirk does to the invasion (its server's rule is about its rooms)
   const m = inv.marked ? `<span class="tag hot" title="A scout mapped your wall for it">mapped +${inv.marked}</span>` : '';
   return [kind, q, m].filter(Boolean).map((t) => ' ' + t).join(''); // a space before each, so they never butt up against the level
 }
@@ -2783,7 +2783,7 @@ function mapSide(s, sel, node) {
   const vaultStat = l.takenOver ? stat('Root', rootPips(l)) : stat('Vault', R && vaultId && R.opened[vaultId] ? 'open' : R ? 'shut' : '???');
   const parent = l.parent && s.locations.find((x) => x.id === l.parent);
   return `<section class="card ${st === 'new' ? 'alert' : ''}"><h2>${l.member ? `${esc(l.member)}'s server` : `Floor ${l.depth || 1}`} · ${esc(FAMILIES[l.family].name)}</h2><h1>${esc(l.name)}</h1>
-    <p class="tagline">${levelTag(s, l.level || 1)} · ${esc(layout)}${siteLabel(l) ? ` <span class="tag tag-site" title="${esc(siteLabel(l).rule)}">${esc(siteLabel(l).name)}</span>` : ''}${QUIRKS[l.quirk] ? ` <span class="tag tag-quirk" data-quirk="${l.quirk}" title="${esc(QUIRKS[l.quirk].rule)}">${esc(QUIRKS[l.quirk].name)}</span>` : ''}</p>
+    <p class="tagline">${levelTag(s, l.level || 1)} <span class="tag tag-kind" data-kind="${esc(l.template || '')}"${layoutRule(l) ? ` title="${esc(layoutRule(l))}"` : ''}>${esc(layout)}</span>${siteLabel(l) ? ` <span class="tag tag-site" title="${esc(siteLabel(l).rule)}">${esc(siteLabel(l).name)}</span>` : ''}${QUIRKS[l.quirk] ? ` <span class="tag tag-quirk" data-quirk="${l.quirk}" title="${esc(QUIRKS[l.quirk].rule)}">${esc(QUIRKS[l.quirk].name)}</span>` : ''}</p>
     <div class="stats">${roomsStat}${vaultStat}${stat('Runs', l.runs || 0)}</div>
     ${R?.mapped || (R && l.takenOver) ? `<p class="svc-line">${R.mapped ? '<span class="tag you" title="Every room cleared at least once">Mapped</span> ' : ''}<span class="tag" title="Mapped or held, a server's rooms come back fast">Fast respawns</span> <small>fight rooms ${ROOMS_FP.respawn.process} min, guard posts ${ROOMS_FP.respawn.guard}, elites ${ROOMS_FP.respawn.elite}</small></p>` : ''}
     ${openContracts(s).filter((c) => c.loc === l.id).map((c) => `<p class="svc-line"><span class="tag${c.offBooks ? ' hot' : ''}">Contract</span> ${esc(contractTitle(s, c))} <small class="svc-prog">· ${esc(contractProgress(s, c).text)}</small></p>`).join('')}
@@ -2815,7 +2815,11 @@ function programsLine(s, l) {
   return `<div class="op-row prog-row"><span class="op-label" title="Socket rooms you've cleared${l.takenOver ? ', and its Core' : ''}, of all its sockets">${glyph('module')}Sockets ${open}/${sockets.length + (l.takenOver ? 1 : 0)}</span><div class="op-val"><div class="mods">${chips || '<small class="quiet">no programs</small>'}</div></div></div>`;
 }
 
-const layoutName = (l) => ({ relay: 'Relay node', mailhub: 'Mail hub', mirror: 'Public mirror', archive: 'Backup archive', lab: 'Research lab' })[l.template] || 'Node';
+// A traced server's type as the card names it, and its one rule on rooms (floorplan.mjs KINDS) for the tag's tooltip.
+// (A relay is the item you install on a server you hold: the relay template reads as a name server.)
+export const LAYOUT_NAMES = { relay: 'Name server', mailhub: 'Mail hub', mirror: 'Public mirror', archive: 'Backup archive', lab: 'Research lab' };
+export const layoutName = (l) => LAYOUT_NAMES[l.template] || 'Node';
+export const layoutRule = (l) => kindRule(KIND_OF[l.template]);
 
 // Free memory: the pips you have, and the one(s) a server would take (blinking): "4 → 3/4 free".
 function memPips(j) {

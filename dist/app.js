@@ -78,6 +78,7 @@ let historyIndex = -1;
 let suggestionList = [];
 let suggestionIndex = -1;
 let noticeTimer = 0;
+let revealNote = null; // a hidden room that opened mid-fight: its line goes up when you're back on the room map
 let dirty = true;
 let archView = null; // archetype shown on the Loadout page (defaults to the equipped one)
 let loadoutTab = 'protocols'; // Loadout page: 'protocols' or 'skills' (skills and talents)
@@ -1044,6 +1045,7 @@ function react(events) {
       case 'thread-talk': feel.add('pickup', null); break;
       case 'thread-start': feel.add('unlock', null); break;
       case 'thread': feel.add('good', null); if (module !== 'rooms') notice(e.message); break;
+      case 'rooms-reveal': feel.add('unlock', null); if (module === 'rooms' && !active(campaign)) notice(e.message); else revealNote = e.message; break; // floorplan.mjs revealSecret
       case 'thread-temp': feel.add('jackin', null); break;
       case 'thread-dark': feel.add('break', null); break;
       case 'thread-done': feel.add('win', null); thOffer.later = null; break;
@@ -1351,6 +1353,7 @@ function go(name, quiet = false) {
   if (name !== 'hub') { hubOpen = false; hubWin = null; }
   const moved = name !== module;
   module = name;
+  if (name === 'rooms' && revealNote) { const m = revealNote; revealNote = null; setTimeout(() => notice(m), 0); } // a hidden room that opened while you fought
   selected = null;
   document.querySelectorAll('.modules button').forEach((b) => b.setAttribute('aria-current', b.dataset.module === name ? 'page' : 'false'));
   dirty = true;
