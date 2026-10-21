@@ -47,20 +47,23 @@ import { threadPanel, thUi, offerMarkup as thOfferMarkup } from './threads-view.
 import * as PV from './profile-view.mjs';
 import { channelOf, muted as chanMuted, say as chanSay } from './channel.mjs';
 import { setBanner, setPlan, handleOf } from './profile.mjs';
+import * as BN from './bench.mjs';
+import { PARTS } from './parts.mjs';
 
-const SAVE_KEY = 'blackbox-v6';
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const playtest = params.get('playtest');
 // The breach campaign (campaign.mjs, ?campaign=breach): its own save under its own key. The old game's save is never
 // read, written or migrated from here, and the old game's systems (map, mail, server, hubs, invasions, timers) sit out.
-const CAMP = !playtest && params.get('campaign') === 'breach';
-const KEY = CAMP ? CP.CAMPAIGN_KEY : SAVE_KEY;
+// A test bench (bench.mjs, ?bench=<name>): its own save under blackbox-bench-<name>, developer mode on. The real save
+// is never read, written or reset from a bench.
+const { key: KEY, bench: BENCH, camp: CAMP } = BN.pageSave(location.search, CP.CAMPAIGN_KEY);
+const DEV = params.has('dev') || !!BENCH; // developer commands (and window.__bb, for tests)
 
 // ---------- state ----------
 let campaign = load();
 migrateEffects(campaign); // the old Effects setting becomes its Screen effects level (screenfx.mjs)
-if (params.has('dev')) Object.defineProperty(window, '__bb', { get: () => campaign }); // dev only: the live state, for tests
+if (DEV) Object.defineProperty(window, '__bb', { get: () => campaign }); // dev only: the live state, for tests
 let module = playtest === 'story' ? 'mail' : playtest === 'breach' ? 'breach' : playtest === 'rooms' ? 'rooms' : CAMP ? 'campaign' : 'map';
 let selected = null;
 let mapSel = 'server';
@@ -165,6 +168,8 @@ function load() {
     const raw = JSON.parse(localStorage.getItem(KEY));
     const s = restore(raw);
     if (!raw) { s.rng = newRng(); s.netSeed = newRng() || 1; } // crits and drops differ from game to game, and every network has its own signature (network.mjs)
+    // A bench with no save yet, opened as ?bench=<name>&as=<subclass|class>&level=<n>: that character, ready (bench.mjs).
+    if (!raw && BENCH && params.get('as')) BN.benchCommand(s, `bench ${params.get('as')} ${Number(params.get('level')) || 10}`, { bench: BENCH });
     return s;
   } catch {
     const s = fresh();
@@ -1148,6 +1153,7 @@ function run(raw) {
   if (!$('notice').hidden) notice(''); // a sticky notice (help) goes with the next command
   history = [text, ...history.filter((h) => h !== text)].slice(0, 40);
   historyIndex = -1;
+  if (/^bench( |$)/.test(text)) return benchRun(text); // the test bench (bench.mjs)
   // A server you found but never connected: typing connect asks first, on its map card.
   const join = text.match(/^connect (\S+)(?: (?:loud|\+loud|\+hot))?$/);
   const found = join && campaign.locations?.find((l) => (l.id === join[1] || l.name.toLowerCase() === join[1]) && l.fresh && l.detached);
@@ -1203,7 +1209,7 @@ function run(raw) {
   }
   // Developer commands are for tests and ?dev / playtest pages, not the real game (a crashed
   // server's reboot excepted: the engine points you to it).
-  if (/^(developer( |$)|online sim$|crew sim( |$))/.test(text) && !params.has('dev') && !playtest && !(text === 'developer reboot' && shown().server.integrity <= 0)) text = 'developer-off'; // dev only (the co-op sims too, until real multiplayer): the engine answers it as an unknown command
+  if (/^(developer( |$)|online sim$|crew sim( |$))/.test(text) && !DEV && !playtest && !(text === 'developer reboot' && shown().server.integrity <= 0)) text = 'developer-off'; // dev only (the co-op sims too, until real multiplayer): the engine answers it as an unknown command
 
   // Ability names win over page names during a fight ("trace" is both).
   const fighting = active(shown());
@@ -1259,6 +1265,26 @@ function run(raw) {
   else if (campaign.run && module !== 'net' && !events.some((e) => e.type === 'victory') && events.some((e) => e.type.startsWith('net'))) go('net'); // a win stays on its kill screen (the folder listing waits in the terminal)
   else if (text.startsWith('encounter ') && campaign.encounter?.phase === 'alert') { mapSel = 'intrusion'; go('map'); }
   save();
+  dirty = true;
+}
+
+// bench …: a ready character on this bench, the bench saves listed, one deleted (bench.mjs). A build starts the page
+// over as a reset does, on the Map.
+function benchRun(text) {
+  if (active(campaign) && !/^bench (list|delete)\b/.test(text)) return notice('Finish the fight first.', true);
+  let store = null;
+  try { store = localStorage; } catch { /* storage unavailable */ }
+  const events = BN.benchCommand(campaign, text, { bench: BENCH, dev: DEV, store });
+  const built = events.find((e) => e.type === 'bench'), w = events.findLast((e) => e.type === 'warning');
+  if (built) {
+    $('levelup').hidden = true;
+    ended = null; archView = null; selected = null; mapSel = null; mapFloor = built.bench.floor; mapPop = false; loadoutTab = 'protocols'; // the map opens on your floor
+    cache.clear();
+    if ($('bench-body')) $('bench-body').innerHTML = BN.panelMarkup(campaign); // its pickers start on the new character
+    save();
+    go('map', true);
+  }
+  notice((w || built || events.at(-1))?.message || '', !!w, null, !w && !built);
   dirty = true;
 }
 
@@ -2709,11 +2735,49 @@ document.addEventListener('keydown', (e) => {
 // Typing anywhere goes to the prompt.
 document.addEventListener('keydown', (e) => {
   if (e.target === $('command-input') || e.target.closest?.('[data-select], [data-rooms], [data-fp-sel]') || e.metaKey || e.ctrlKey || e.altKey) return;
-  if (e.key.length === 1 && !/input|textarea/i.test(e.target.tagName)) $('command-input').focus();
+  if (e.key.length === 1 && !/input|textarea|select/i.test(e.target.tagName)) $('command-input').focus();
 });
 
 if (playtest) document.title = playtest === 'breach' ? 'BLACKBOX · breach' : playtest === 'rooms' ? 'BLACKBOX · rooms' : 'BLACKBOX · playtest';
 if (CAMP) document.title = 'BLACKBOX · campaign';
+// The test bench (bench.mjs): a BENCH tag in the top bar, and the dev panel in a drawer, each button one command.
+if (BENCH) {
+  document.title = `BLACKBOX · bench ${BENCH}`;
+  document.body.classList.add('bench-mode');
+  const tag = document.createElement('span');
+  tag.className = 'bench-tag';
+  tag.textContent = `BENCH · ${BENCH}`;
+  tag.title = `A test bench, saved as ${KEY}. Your real game is never read or written here.`;
+  document.querySelector('.topbar .brand').after(tag);
+  let open = true;
+  try { const was = localStorage.getItem('bb-bench-panel'); open = was ? was === 'open' : innerWidth > 900; } catch { /* storage unavailable */ } // open on a wide screen, shut on a phone, then as you left it
+  const panel = document.createElement('aside');
+  panel.className = 'bench-panel';
+  panel.setAttribute('aria-label', 'Developer panel');
+  panel.innerHTML = `<button type="button" class="bp-toggle" aria-expanded="${open}" aria-controls="bench-body" title="Developer panel: each button types a developer command"><span class="bp-ico" aria-hidden="true">⚒</span>Dev</button><div class="bp-body" id="bench-body"${open ? '' : ' hidden'}>${BN.panelMarkup(campaign)}</div>`;
+  document.body.append(panel);
+  // The drawer sits just above the prompt, wherever the page puts it.
+  const place = () => { const p = document.querySelector('.prompt-row'); if (p) panel.style.bottom = `${Math.max(12, innerHeight - p.getBoundingClientRect().top + 8)}px`; };
+  addEventListener('resize', place);
+  requestAnimationFrame(place); setInterval(place, 500); // the prompt moves between pages
+  if (campaign.floors?.at > 1) { mapSel = null; mapFloor = campaign.floors.at; } // the map opens on your floor
+  panel.addEventListener('click', (e) => {
+    const t = e.target.closest('.bp-toggle');
+    if (t) {
+      open = !open;
+      t.setAttribute('aria-expanded', String(open));
+      $('bench-body').hidden = !open;
+      try { localStorage.setItem('bb-bench-panel', open ? 'open' : 'closed'); } catch { /* storage unavailable */ }
+      return;
+    }
+    const b = e.target.closest('[data-bench-act]');
+    if (!b) return;
+    const v = Object.fromEntries([...b.closest('.bp-row').querySelectorAll('[data-bench-field]')].map((x) => [x.dataset.benchField, x.value]));
+    const cmd = BN.benchAction(campaign, b.dataset.benchAct, v);
+    if (cmd) run(cmd);
+    for (const x of panel.querySelectorAll('[aria-pressed]')) x.setAttribute('aria-pressed', String(PARTS.on));
+  });
+}
 go(active(campaign) ? 'combat' : campaign.breach ? 'breach' : campaign.rooms ? 'rooms' : campaign.run ? 'net' : playtest === 'story' ? 'mail' : CAMP ? 'campaign' : 'map');
 // No intrusion waits at the gate any more: you go to the rogue server to find fights.
 if (campaign.encounter?.phase === 'alert' && campaign.encounter.mode === 'home' && !campaign.encounter.invader) campaign.encounter = null;

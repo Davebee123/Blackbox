@@ -2373,6 +2373,29 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
       s.degraded = null;
       emit(s, 'info', 'Developer reboot: Integrity and test credits restored.');
     }
+  } else if (text === 'developer refill') { // Signal and Integrity to full, in a fight or out (the test bench's panel)
+    s.server.integrity = s.server.max;
+    s.signal = null; // full: whatever your max is
+    if (s.run) s.run.integrity = s.run.max;
+    s.degraded = null;
+    emit(s, 'info', 'Developer: Signal and Integrity full.');
+  } else if (/^developer credits \d+$/.test(text)) {
+    const n = Math.min(1e6, Number(text.split(' ')[2]));
+    s.server.credits += n;
+    emit(s, 'info', `Developer: +${n} credits.`);
+  } else if (/^developer fight (random|[a-z]+|part:[a-z0-9-]+)( \d+)?( \d+)?$/.test(text)) {
+    // developer fight <family|random> [level] [seed]: a home fight at that level (your level by default), at once.
+    // developer fight part:<id> [level]: one with that basic or third part, at the level it opens (as ?playtest=part:<id>).
+    const [, , what, lv, sd] = text.split(' '), L = Math.max(1, Math.min(LOADOUT.maxLevel, Number(lv) || hackerLevel(s))), seed = Number(sd) >>> 0 || 1;
+    const pid = what.startsWith('part:') ? what.slice(5) : null, home = pid && Object.entries(FAMILIES).find(([, f]) => f.parts.some((x) => x.id === pid));
+    if (active(s) || s.run) warn(s, active(s) ? 'Finish the fight first.' : 'Jack out first: developer fight is a fight at home.');
+    else if (pid && !home) warn(s, `No part called ${pid}.`);
+    else if (!pid && what !== 'random' && !FAMILIES[what]) warn(s, `developer fight <random|${Object.keys(FAMILIES).join('|')}|part:<id>> [level] [seed]`);
+    else {
+      if (home) { const spec = home[1].parts.find((x) => x.id === pid), PL = lv ? L : Math.max(spec.from || 1, 3); selectEncounter(s, 'random', seed, { level: PL, family: home[0], mutation: null, ...(spec.pool === 'third' ? { genes: [spec.gene], basic: 'pulse' } : { basic: pid }) }); }
+      else selectEncounter(s, 'random', seed, { level: L, ...(what !== 'random' ? { family: what } : {}), mutation: null });
+      engage(s);
+    }
   } else if (/^developer parts( [a-z]+( [\d.]+){1,2}| profile [a-z]+ (steady|ramp|burst) [\d.]+)?$/.test(text)) { // the parts plan's numbers (parts.mjs PARTS): show them and the mix, or set one
     const [, , k, a, b, c] = text.split(' '), key = Object.keys(PARTS).find((x) => x.toLowerCase() === k);
     if (k && !key) warn(s, `No parts number ${k}. Try: ${Object.keys(PARTS).filter((x) => x !== 'native' && x !== 'count').join(', ')}.`);

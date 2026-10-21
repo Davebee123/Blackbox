@@ -1,11 +1,12 @@
 // Class balance by level: one scripted player per class, at points along the level curve.
 // Scripted policies, not people: they check the numbers are in the same league, not that it's fun.
 import fs from 'node:fs';
-import { fresh, selectEncounter, command, resolveCycle, active, livingParts, attackers, readyIn, intents, alive, part, defender, toIntent, previewDamage, ignoresArmor, addItem, maxSignal, syncServer, UNIQUES } from './dist/combat.mjs';
-import { rollItem, seeded, protocolSlots, SLOT_KINDS, chaseStat, uniqueItem } from './dist/gear.mjs';
-import { ARCHETYPES, SERVER, skillOrder, LOADOUT, STRAINS, SUBS, SUBCLASS, defaultSub, TELL, BOSSES } from './dist/data.mjs';
+import { fresh, selectEncounter, command, resolveCycle, active, livingParts, attackers, readyIn, intents, alive, part, defender, toIntent, previewDamage, ignoresArmor, maxSignal } from './dist/combat.mjs';
+import { seeded } from './dist/gear.mjs';
+import { ARCHETYPES, SERVER, skillOrder, STRAINS, SUBS, SUBCLASS, defaultSub, TELL, BOSSES } from './dist/data.mjs';
 
 import { planner, soonest } from './dist/planner.mjs';
+import { build } from './dist/bench.mjs';
 
 export const POLICIES = {
   'Spike only': (s) => 'spike ' + soonest(s).id,
@@ -28,52 +29,8 @@ export const BRACKETS = [
   { name: 'Lv 50', level: 50, server: 50, guard: 28 },
 ];
 
-// Talents as a player would have them: a point at 10 and every 2 levels after (LOADOUT), spent in a
-// fixed order (rank up a row's first node, take the tier's choice, move down). `tree: 'full'` maxes it.
-const fillOrder = (F) => [[F[0][0].id, 3], ['c0'], [F[1][0].id, 3], [F[1][1].id, 1], ['c1'], [F[2][0].id, 3], [F[2][1].id, 2], ['c2'], [F[0][1].id, 3], [F[1][1].id, 2], [F[2][1].id, 1]];
-export function build(s, cls, b, opts) {
-  s.loadout.archetype = cls;
-  s.metAll = true; // a veteran: every part met, so the parts roll (dist/parts.mjs) brings its whole mix, strangers and all
-  s.hackers = { [cls]: { level: b.level, xp: 0 } };
-  // From SUBCLASS.from a subclass (opts.sub, else the class's default): its skill line and tree.
-  const sub = b.level >= SUBCLASS.from ? opts.sub || defaultSub(cls) : null, key = sub || cls, kit = SUBS[sub];
-  if (sub) s.loadout.sub = { [cls]: sub };
-  if (!kit) { /* no tree before the subclass */ }
-  else if (b.tree === 'full') { s.loadout.picks[key] = [0, 0, 0]; s.loadout.ranks[key] = Object.fromEntries(kit.fillers.flat().map((n) => [n.id, 3])); }
-  else {
-    let left = b.level < LOADOUT.talentFrom ? 0 : Math.floor((b.level - LOADOUT.talentFrom) / LOADOUT.talentEvery) + 1;
-    const ranks = {}, picks = [];
-    for (const [id, n] of fillOrder(kit.fillers)) {
-      if (left <= 0) break;
-      if (!n) { picks[+id[1]] = (opts.picks || [0, 0, 0])[+id[1]]; left--; } else { const k = Math.min(n, left); ranks[id] = (ranks[id] || 0) + k; left -= k; }
-    }
-    s.loadout.picks[key] = picks; s.loadout.ranks[key] = ranks;
-  }
-  if (opts.picks) s.loadout.picks[key] = opts.picks;
-  if (opts.ranks) s.loadout.ranks[key] = opts.ranks;
-  // The capstone (from level 45, rank 2 at 50): opts.capstone 0 or 1, the first by default; null for none.
-  if (kit && b.level >= LOADOUT.capstoneAt[0] && opts.capstone !== null) s.loadout.caps = { [key]: opts.capstone ?? 0 };
-  if (opts.extra) s.loadout.equipped[key] = [...skillOrder(cls).slice(0, 4), opts.extra];
-  if (opts.bar) s.loadout.equipped[key] = [...opts.bar]; // a bar of your own (the press-diversity test puts each unlock on it)
-  // Protocols: a Tuned one in every open slot at the bracket's level, except an implant slot below
-  // the level implants start to drop (item level 15). From the subclass, each carries the stat its
-  // player chases (the subclass's `chase` list in turn: Restore for a Sysop, Payload for a burn or
-  // helper class), as a player would build; a white has no affix to carry one. Services: the bracket's set.
-  if (!opts.noGear) {
-    const rarity = opts.rarity || 'tuned';
-    for (let i = 0; i < protocolSlots(b.level); i++) {
-      if (SLOT_KINDS[i] === 'implant' && b.level < 15) continue;
-      const stat = opts.randomGear ? undefined : chaseStat(kit?.chase, i, rarity);
-      const it = addItem(s, rollItem(seeded(b.level * 100 + i + (opts.gearSeed || 0) * 7919), { level: b.level, rarity, group: SLOT_KINDS[i], stat }));
-      command(s, 'load ' + it.id);
-    }
-  }
-  // Uniques in place of the blue in their slot (opts.uniques: ids), at the bracket's level: the native-unique check
-  // (network.test.mjs) loads each one this way.
-  for (const id of opts.uniques || []) { const it = addItem(s, uniqueItem(UNIQUES[id], b.level, seeded(b.level * 7 + 3))); command(s, 'load ' + it.id); }
-  syncServer(s);
-  s.server.integrity = s.server.max;
-}
+// Talents, gear and slots at a level: build() lives in dist/bench.mjs (the test bench builds the same character).
+export { build };
 
 export function fight(policy, key, b, opts = {}) {
   const s = fresh();
