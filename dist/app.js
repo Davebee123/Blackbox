@@ -82,7 +82,8 @@ let noticeTimer = 0;
 let dirty = true;
 let archView = null; // archetype shown on the Loadout page (defaults to the equipped one)
 let loadoutTab = 'protocols'; // Loadout page: 'protocols' or 'skills' (skills and talents)
-let silkShow = false; // a stash tile was just picked: bring its datasheet into view (render)
+const pd = { id: null, anchor: null, el: null, scrim: null, sheet: false, html: '', mine: false, timer: 0 }; // the Loadout's item datasheet popover (pdShow)
+let pdTouch = 0; // when a touch last came down: the click after it is a tap
 let compileFocus = null; // (old) the recipe picked on the Craft page's Protocols card
 let craftUi = { cat: null, pick: null }; // the Craft page: the category, and the recipe in it
 
@@ -1784,13 +1785,18 @@ function render(force = false) {
     const focusCx = module === 'codex' ? document.activeElement?.closest?.('[data-codex], [data-codex-fold]') : null; // and a Codex row its focus
     const focusCxKey = focusCx ? (focusCx.dataset.codex ?? 'fold') : null;
     const focusSilk = module === 'loadout' ? document.activeElement?.closest?.('[data-silk-sel]')?.dataset.silkSel : null; // and the board its pick
+    const focusRow = module === 'loadout' ? document.activeElement?.closest?.('.silk-tile') : null; // and the stash its row, or the next once it's loaded
+    const focusRowAt = focusRow ? [...focusRow.parentElement.children].indexOf(focusRow) : -1;
     if (!(module === 'hub' && mkDrag)) put('page-view', pageOrError(() => (pages[module] || pages.map)(campaign))); // not while you drag a ticket's slider
     if (focusRoom && !document.activeElement?.closest?.('.fp-room')) [...$('page-view').querySelectorAll(`.fp-room[data-room="${CSS.escape(focusRoom)}"][tabindex]`)].find((t) => t.getBoundingClientRect().width)?.focus({ preventScroll: true });
     if (module === 'breach') breachScroll(keep);
     if (module === 'codex') codexDrawn(focusCxKey);
-    // A stash tile picked where the datasheet sits above the stash (one column): bring the datasheet up.
-    if (silkShow) { silkShow = false; const sh = $('page-view').querySelector('.silk-sheet'), st = $('page-view').querySelector('.silk-stash'); if (sh && st && sh.offsetWidth >= st.offsetWidth - 2) sh.scrollIntoView({ block: 'nearest', behavior: canMove() ? 'smooth' : 'auto' }); }
     if (focusSilk && !document.activeElement?.closest?.('[data-silk-sel]')) $('page-view').querySelector(`[data-silk-sel="${CSS.escape(focusSilk)}"]`)?.focus({ preventScroll: true });
+    if (focusRow && !focusRow.isConnected && !document.activeElement?.closest?.('.silk-tile')) {
+      const rows = [...$('page-view').querySelectorAll('.silk-tiles > .silk-tile')], row = rows.find((r) => r.dataset.pdetail === focusRow.dataset.pdetail) || rows[Math.min(focusRowAt, rows.length - 1)];
+      row?.querySelector('.silk-pick')?.focus({ preventScroll: true });
+    }
+    pdDrawn();
     if (module === 'rooms') { applyFpZoom(); fillClocks($('page-view')); placeRoomsPop(); pzFx.mounted(); renderOffer(); } // the countdowns tick in place: the markup only changes with the server
     // The Mail page opens the first unread item by itself: showing it in full counts as reading it.
     if (module === 'mail') { const o = $('page-view').querySelector('.mrow.open.unread'); if (o) { const k = o.dataset.mail, id = k[0] === 'l' ? k.slice(1) : campaign.mail?.list?.find((m) => m.job === Number(k.slice(1)))?.id; if (id != null) { command(campaign, 'mail read ' + id); save(); dirty = true; } } }
@@ -2385,11 +2391,13 @@ document.addEventListener('click', (e) => {
   }
   const stf = e.target.closest('[data-stash-filter]');
   if (stf) { V.stashUi.filter = stf.dataset.stashFilter; feel.key('click'); dirty = true; return; }
-  const silk = e.target.closest('[data-silk-sel]'); // the protocol board's pick: a slot or a stash item, for its datasheet
+  const sts = e.target.closest('[data-stash-sort]');
+  if (sts) { V.stashUi.sort = sts.dataset.stashSort; feel.key('click'); dirty = true; return; }
+  const silk = e.target.closest('[data-silk-sel]'); // the protocol board's pick: a slot, whose kind the stash lists
   if (silk) {
     V.stashUi.sel = silk.dataset.silkSel;
-    if (silk.dataset.silkKind) V.stashUi.filter = silk.dataset.silkKind; // a slot shows the stash what fits it
-    silkShow = !!silk.closest('.silk-tile'); feel.key('click'); dirty = true; return;
+    if (silk.dataset.silkKind) V.stashUi.filter = silk.dataset.silkKind; // a slot shows the stash everything that fits it
+    feel.key('click'); dirty = true; return;
   }
   const sf = e.target.closest('[data-sweep-filter]');
   if (sf) { V.sweepUi.filter = sf.dataset.sweepFilter; feel.key('click'); dirty = true; return; }
@@ -2742,7 +2750,7 @@ document.addEventListener('keydown', (e) => {
 
 // Typing anywhere goes to the prompt.
 document.addEventListener('keydown', (e) => {
-  if (e.target === $('command-input') || e.target.closest?.('[data-select], [data-rooms], [data-fp-sel]') || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.target === $('command-input') || e.target.closest?.('[data-select], [data-rooms], [data-fp-sel], [data-pdetail]') || e.metaKey || e.ctrlKey || e.altKey) return;
   if (e.key.length === 1 && !/input|textarea|select/i.test(e.target.tagName)) $('command-input').focus();
 });
 
@@ -2868,6 +2876,110 @@ document.addEventListener('mouseout', (e) => {
   const a = e.target.closest?.('[data-ptip]');
   if (a && ptip && !a.contains(e.relatedTarget) && !e.relatedTarget?.closest?.(`[data-ptip="${CSS.escape(ptip.ref)}"]`)) hidePtip();
 });
+
+// The Loadout's item datasheets (view.mjs protocolDetailMarkup), on a stash row or a filled slot ([data-pdetail]).
+// Hover or keyboard focus: beside it, read only (its buttons are on the row), placed where it fits on screen without
+// covering the stash's list or the row; below or above it when neither side has room. A tap (a phone has no hover): a
+// bottom sheet with the buttons in it, closed by a tap outside. Escape closes either; i opens it again on a focused
+// row, and ↑ ↓ walk the rows. It follows its row through redraws and goes when the row does.
+function pdShow(anchor, sheet = false) {
+  clearTimeout(pd.timer);
+  const id = anchor.dataset.pdetail, html = V.protocolDetailMarkup(campaign, id);
+  if (!html) return pdHide();
+  if (!pd.el) {
+    pd.scrim = Object.assign(document.createElement('div'), { className: 'pg-scrim', hidden: true });
+    pd.el = Object.assign(document.createElement('div'), { className: 'pg-pop', hidden: true });
+    document.body.append(pd.scrim, pd.el);
+  }
+  pd.anchor?.classList.remove('pd-on');
+  Object.assign(pd, { id, anchor, sheet, html, mine: /data-command="unload /.test(html) });
+  anchor.classList.add('pd-on');
+  pd.el.innerHTML = html;
+  pd.el.className = `pg-pop${sheet ? ' sheet' : ''}`;
+  pd.el.setAttribute('role', sheet ? 'dialog' : 'tooltip');
+  pd.el.hidden = false; pd.scrim.hidden = !sheet;
+  pdPlace(); showArmed();
+}
+function pdHide() {
+  clearTimeout(pd.timer);
+  if (!pd.id) return;
+  pd.anchor?.classList.remove('pd-on');
+  pd.el.hidden = true; pd.scrim.hidden = true;
+  Object.assign(pd, { id: null, anchor: null, sheet: false, html: '' });
+}
+function pdPlace() {
+  if (!pd.id || pd.sheet) return;
+  const el = pd.el, a = pd.anchor.getBoundingClientRect(), pad = 8, gap = 12;
+  const list = document.querySelector('#page-view .silk-stash .silk-tiles')?.getBoundingClientRect();
+  const w = el.offsetWidth, h = el.offsetHeight, beside = pd.anchor.closest('.silk-tiles') ? list : a;
+  const y = Math.max(pad, Math.min(innerHeight - h - pad, a.top + a.height / 2 - h / 2));
+  const clear = (x, top) => !list || x >= list.right || x + w <= list.left || top >= list.bottom || top + h <= list.top;
+  let x = [beside.left - w - gap, beside.right + gap].find((v) => v >= pad && v + w <= innerWidth - pad && clear(v, y)), top = y;
+  if (x === undefined) { // no room beside (one column): above or below the row, the side clear of the list first
+    x = Math.max(pad, Math.min(innerWidth - w - pad, a.left));
+    const ys = [a.top - gap - h, a.bottom + gap].filter((v) => v >= pad && v + h <= innerHeight - pad);
+    top = ys.find((v) => clear(x, v)) ?? ys[0] ?? Math.max(pad, innerHeight - h - pad);
+  }
+  el.style.left = x + 'px'; el.style.top = top + 'px';
+}
+// Focus from the keyboard keeps it open; focus a click left behind doesn't.
+const pdKeyed = (a) => a.contains(document.activeElement) && document.activeElement.matches(':focus-visible');
+// After each redraw: find the row again (or close: it's gone, loaded from the sheet, or no longer pointed at).
+function pdDrawn() {
+  if (!pd.id) return;
+  const n = document.querySelector(`#page-view [data-pdetail="${CSS.escape(pd.id)}"]`), html = n ? V.protocolDetailMarkup(campaign, pd.id) : '';
+  if (!html || (pd.sheet ? /data-command="unload /.test(html) !== pd.mine : !(n.matches(':hover') || pdKeyed(n)))) return pdHide();
+  pd.anchor = n; n.classList.add('pd-on');
+  if (html !== pd.html || (!confirmArm && pd.el.querySelector('.armed'))) { pd.html = html; pd.el.innerHTML = html; }
+  pdPlace();
+}
+document.addEventListener('pointerdown', (e) => { if (e.pointerType === 'touch') pdTouch = Date.now(); }, true);
+document.addEventListener('pointerover', (e) => {
+  if (e.pointerType === 'touch' || pd.sheet) return;
+  const a = e.target.closest?.('#page-view [data-pdetail]');
+  if (!a) return;
+  if (pd.anchor === a) return clearTimeout(pd.timer);
+  clearTimeout(pd.timer);
+  if (pd.id) pdShow(a); else pd.timer = setTimeout(() => a.isConnected && a.matches(':hover') && pdShow(a), 90); // scanning down the list: the next row's at once
+});
+document.addEventListener('pointerout', (e) => {
+  if (e.pointerType === 'touch' || pd.sheet) return;
+  const a = e.target.closest?.('#page-view [data-pdetail]');
+  if (!a || a.contains(e.relatedTarget)) return;
+  clearTimeout(pd.timer);
+  if (pd.anchor === a && !pdKeyed(a)) pdHide();
+});
+document.addEventListener('focusin', (e) => {
+  const a = e.target.closest?.('#page-view [data-pdetail]');
+  if (a && !pd.sheet && e.target.matches(':focus-visible')) pdShow(a);
+});
+document.addEventListener('focusout', (e) => {
+  if (pd.sheet || !pd.anchor?.contains(e.target) || pd.anchor.contains(e.relatedTarget) || pd.anchor.matches(':hover')) return;
+  pdHide();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && pd.id) { pdHide(); return; }
+  const a = e.target.closest?.('#page-view [data-pdetail]');
+  if (!a || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.key === 'i') { e.preventDefault(); pdShow(a); return; }
+  if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && a.matches('.silk-tile')) {
+    const rows = [...a.parentElement.querySelectorAll('.silk-tile > .silk-pick')], i = rows.indexOf(a.querySelector('.silk-pick'));
+    e.preventDefault();
+    rows[Math.max(0, Math.min(rows.length - 1, i + (e.key === 'ArrowDown' ? 1 : -1)))]?.focus();
+  }
+});
+// A tap: a stash row opens its sheet instead of loading (its Swap still acts at once); a filled slot is picked as ever
+// (the list shows what fits it), and a tap on the picked one opens its sheet. A tap on the scrim closes it, and goes
+// no further.
+document.addEventListener('click', (e) => {
+  if (pd.sheet && e.target === pd.scrim) { e.stopPropagation(); e.preventDefault(); pdHide(); return; }
+  if (Date.now() - pdTouch > 800 || pd.el?.contains(e.target)) return;
+  const a = e.target.closest?.('#page-view [data-pdetail]');
+  if (!a || e.target.closest('.inv-acts, .silk-out')) return;
+  if (a.matches('.silk-tile') || V.stashUi.sel === a.querySelector('[data-silk-sel]')?.dataset.silkSel) { e.stopPropagation(); e.preventDefault(); pdShow(a, true); feel.key('click'); }
+}, true);
+addEventListener('scroll', () => pdPlace(), true);
+addEventListener('resize', () => (pd.sheet ? null : pdHide()));
 
 // Themed hover tips: every title="" in the game shows in the game's own card instead of the browser's.
 // The title moves to data-tt on first hover (so the browser's tip never shows) and the card follows the element.

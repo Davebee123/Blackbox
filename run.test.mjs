@@ -442,12 +442,13 @@ test('talent tree: points come from levels, ranks open the tiers, swapping is fr
   assert.match(command(s, `talent add ${a.id}`).at(-1).message, /at home/);
 });
 
-test('the loadout page: Protocols (the board, the stash, the datasheet, the stats), then Skills and talents, picks locked during a fight', async () => {
+test('the loadout page: Protocols (the board, the stash, the stats), then Skills and talents, picks locked during a fight', async () => {
   const { loadoutMarkup } = await import('./dist/view.mjs');
   const s = fresh();
   let html = loadoutMarkup(s, 'breaker');
   assert.match(html, /data-ltab="protocols" aria-selected="true">Protocols<.*data-ltab="skills"[^>]*>Skills and talents/s, 'Protocols first, then skills and talents together');
-  assert.match(html, /class="loadout-protocols silk"><section class="card silk-card"><h2>Protocols · Breaker.*class="silk-board".*<section class="card stash-card silk-stash"><h2>Stash · .*<aside class="card silk-sheet[^"]*" aria-label="Datasheet"><h2>U1 · Exploit<\/h2>.*<section class="card silk-statcard"><h2>Stats<\/h2>/s, 'the board, the stash, the first slot\'s datasheet, the stats');
+  assert.match(html, /class="loadout-protocols silk"><section class="card silk-card"><h2>Protocols · Breaker.*class="silk-board".*<section class="card stash-card silk-stash"><h2>Stash · [^]*?<\/section><section class="card silk-statcard"><h2>Stats<\/h2>/s, 'the board, the stash, the stats: no datasheet card');
+  assert.doesNotMatch(html, /silk-sheet|aria-label="Datasheet"/);
   assert.match(loadoutMarkup(s, 'operator'), /Protocols belong to the class in use/, 'another class: no protocol slots to change');
   html = loadoutMarkup(s, 'operator', 'skills');
   assert.match(html, /<h1>Operator<\/h1><div class="class-xp"><b>Lv 1<\/b>/, 'level and XP under the class name');
@@ -785,6 +786,6 @@ test('protocols: stash tiles and the board\'s footprints share a data-kind, so h
   let seed = 3; const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
   const it = rollItem(rand, { level: 10 }); it.id = 'hv1'; s.stash.push(it);
   const html = protocolGearMarkup(s);
-  const kind = html.match(/class="silk-tile [^"]*" data-kind="([a-z]+)">/)[1];
+  const kind = html.match(/class="silk-tile [^"]*" data-kind="([a-z]+)" data-pdetail="hv1">/)[1];
   assert.match(html, new RegExp(`<div class="silk-fp [^"]*" data-kind="${kind}"`));
 });

@@ -3,7 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { SHAPES, FILL, MIRROR, GLYPH_W, GLYPH_H, asymmetric, shapeOf, fillOf, glyphText, glyphFx, glyphMarkup, glyphFrame, scanRow, flickering } from './dist/protocol-glyphs.mjs';
-import { SLOT_KINDS, PROTOCOL_STATS, seeded, rollItem } from './dist/gear.mjs';
+import { SLOT_KINDS, PROTOCOL_STATS, STATS, seeded, rollItem } from './dist/gear.mjs';
 
 test('every protocol kind has three shapes, each 23 columns, fill spots marked, mirror-symmetric', () => {
   assert.deepEqual(Object.keys(SHAPES).sort(), [...new Set(SLOT_KINDS)].sort());
@@ -65,9 +65,9 @@ test('rarity: white dims, yellow and up get corner marks, a Zero-day scans, a un
   assert.equal(glyphFrame(text, 'flicker', 140 * 5), text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'));
 });
 
-test('the Loadout’s board: footprints with glyphs, the stash as glanceable tiles, a datasheet for the pick, stats one a line', async () => {
+test('the Loadout’s board: footprints with glyphs, the stash as scannable rows, a datasheet popover for each, stats one a line', async () => {
   const { fresh, addItem, command, rigOf } = await import('./dist/combat.mjs');
-  const { protocolGearMarkup, itemTipMarkup, stashUi } = await import('./dist/view.mjs');
+  const { protocolGearMarkup, protocolStashCard, protocolDetailMarkup, itemTipMarkup, stashUi } = await import('./dist/view.mjs');
   const s = fresh();
   s.hackers = { breaker: { level: 16, xp: 0 } };
   s.profile = { handle: 'zer0' };
@@ -86,41 +86,97 @@ test('the Loadout’s board: footprints with glyphs, the stash as glanceable til
   assert.match(html, /<div class="silk-fp at-r0 empty" data-kind="proxy"[^>]*>.*?<span class="silk-text"><span class="silk-none">Empty <b class="silk-count"[^>]*>2<\/b><\/span><span class="silk-ref"><i class="silk-led" aria-hidden="true"><\/i><b>J1<\/b>Proxy<\/span>/s);
   assert.match(html, /<div class="silk-fp at-r2 locked"[^>]*><div class="silk-pick">.*?Lv 30/s);
   assert.match(html, new RegExp(`data-command="unload ${on.id}"`), 'unload from the board');
-  // The datasheet: the first slot by default, its item's stats one a line.
-  assert.match(html, /<aside class="card silk-sheet r-tuned" aria-label="Datasheet"><h2>U1 · Exploit<\/h2><div class="silk-head">/);
-  assert.match(html, /<div class="silk-plate"><span class="pglyph pg-lg r-tuned"/);
-  assert.equal(html.match(/<dl class="silk-stats">(.*?)<\/dl>/s)[1].match(/<div[ >]/g).length, Object.keys(on.stats).length, 'a row a stat');
-  // A stash tile: a small glyph, the name, its first stats as numbers with ▲ ▼ against the slot, no effect text; Swap
-  // (the slot is full) and Deconstruct (a yellow asks first). Nothing lit until you pick a slot.
-  const tile = html.match(new RegExp(`<li class="silk-tile r-custom" data-kind="exploit">.*?</li>`, 's'))[0];
-  assert.match(tile, new RegExp(`<button type="button" class="silk-pick" data-silk-sel="${spare.id}" aria-pressed="false" data-ptip="${spare.id}"><span class="pglyph pg-sm r-custom pg-framed"`));
+  // No datasheet card in the layout: a filled slot carries its item for the popover (app.js).
+  assert.doesNotMatch(html, /silk-sheet|Datasheet/);
+  assert.match(html, new RegExp(`<div class="silk-fp at-l0 sel r-tuned" data-kind="exploit" data-pdetail="${on.id}"`));
+  assert.doesNotMatch(html, /<div class="silk-fp at-r0 empty"[^>]*data-pdetail/, 'an empty slot has none');
+  // A filled slot's datasheet: its stats one a line, no ▲ ▼ (nothing to compare), Unload.
+  const slotSheet = protocolDetailMarkup(s, on.id);
+  assert.match(slotSheet, /^<div class="pg-detail r-tuned"><div class="silk-head">/);
+  assert.match(slotSheet, /<div class="silk-plate"><span class="pglyph pg-lg r-tuned"/);
+  assert.equal(slotSheet.match(/<dl class="silk-stats">(.*?)<\/dl>/s)[1].match(/<div[ >]/g).length, Object.keys(on.stats).length, 'a row a stat');
+  assert.match(slotSheet, new RegExp(`<div class="silk-acts pg-acts"><button type="button" class="btn" data-command="unload ${on.id}"`));
+  // A stash row: a small glyph, the name, its biggest stats as numbers with ▲ ▼ against the slot, no effect text; a
+  // click loads it (a swap: the slot is full); Swap and Deconstruct (a yellow asks first) on it. Nothing lit until you
+  // pick a slot.
+  const tile = html.match(new RegExp(`<li class="silk-tile r-custom" data-kind="exploit" data-pdetail="${spare.id}">.*?</li>`, 's'))[0];
+  assert.match(tile, new RegExp(`<button type="button" class="silk-pick" data-command="load ${spare.id}" aria-label="Swap [^"]+ into U1"><span class="pglyph pg-sm r-custom pg-framed"`));
   assert.ok((tile.match(/class="silk-st[ "]/g) || []).length >= 1 && (tile.match(/class="silk-st[ "]/g) || []).length <= 3, 'two or three numbers');
   assert.match(tile, /<i class="(up|down)">[▲▼]<\/i>/, 'against what it would replace');
-  assert.doesNotMatch(tile, /inv-fx|set-lines|<em/);
+  assert.doesNotMatch(tile, /inv-fx|set-lines|<em|data-ptip/);
   assert.match(tile, new RegExp(`class="inv-btn load" data-command="load ${spare.id}"[^>]*>Swap<`));
   assert.match(tile, new RegExp(`data-command="deconstruct ${spare.id}" data-confirm="Sure\\? Deconstruct"`));
   assert.doesNotMatch(html, /silk-tile [^"]* fit/);
-  // Pick a slot (app.js also filters the stash to its kind): what fits it lights.
+  // Its datasheet: against U1, ▲ ▼ a stat, the buttons naming the slot.
+  const sheet = protocolDetailMarkup(s, spare.id);
+  assert.match(sheet, /^<div class="pg-detail r-custom">/);
+  assert.ok(sheet.includes(`Stats · vs ${on.name} v15`));
+  assert.match(sheet, /<dl class="silk-stats vs">/);
+  assert.match(sheet, /class="silk-d (up|down)">[▲▼] /, 'gains and losses against the slot');
+  assert.match(sheet, />Swap into U1<\/button>/);
+  assert.match(sheet, new RegExp(`data-command="deconstruct ${spare.id}" data-confirm="Sure\\? Deconstruct"[^>]*>.*? Deconstruct</button>`));
+  assert.equal(protocolDetailMarkup(s, 'nope'), '');
+  // Pick a slot (app.js also filters the stash to its kind): what fits it lights, its trace too.
   stashUi.sel = 'slot:1';
   html = protocolGearMarkup(s);
   assert.equal((html.match(/<li class="silk-tile [^"]* fit"/g) || []).length, 2, 'both proxies light');
-  assert.match(html, /<h2>J1 · Proxy<\/h2><h3 class="silk-title silk-none">Empty <b class="silk-count">2<\/b><\/h3>/);
-  // Pick the stash item: the datasheet reads it against U1, and U1 takes it in one click.
-  stashUi.sel = spare.id;
-  html = protocolGearMarkup(s);
-  assert.match(html, /<aside class="card silk-sheet r-custom" aria-label="Datasheet"><h2>Stash · Exploit<\/h2>/);
-  assert.ok(html.includes(`Stats · vs ${on.name} v15`));
-  assert.match(html, /class="silk-d (up|down)">[▲▼]/, 'gains and losses against the slot');
-  assert.match(html, />Swap into U1<\/button>/);
-  assert.match(html, new RegExp(`<div class="silk-fp at-l0 target r-tuned"[^>]*><button type="button" class="silk-pick" data-command="load ${spare.id}"`));
-  assert.match(html, /class="silk-trace live"/, 'its trace lights');
-  // Loaded, the pick follows it to its slot.
+  assert.match(html, /class="silk-trace live"/);
+  // Busy (a fight): no click-to-load on a row, and the buttons wait.
+  command(s, 'encounter cryptjack'); command(s, 'engage');
+  const busyRow = protocolStashCard(s).match(new RegExp(`<li class="silk-tile r-custom"[^>]*>.*?</li>`, 's'))[0];
+  assert.match(busyRow, /<button type="button" class="silk-pick" aria-disabled="true" title="At home only">/);
+  assert.doesNotMatch(busyRow, /class="silk-pick" data-command/);
+  assert.match(protocolDetailMarkup(s, on.id), /data-command="unload [^"]+" disabled title="At home only">Unload/);
+  s.encounter = null;
+  // Loaded, it leaves the stash for the board.
   command(s, 'load ' + spare.id);
   assert.equal(rigOf(s)[0], spare.id);
-  assert.match(protocolGearMarkup(s), /<h2>U1 · Exploit<\/h2>/);
+  assert.match(protocolGearMarkup(s), new RegExp(`<div class="silk-fp at-l0 [^"]*" data-kind="exploit" data-pdetail="${spare.id}"`));
   stashUi.sel = null;
   // The hover card shows the item's glyph, stats one a line.
   const tip = itemTipMarkup(s, on.id);
   assert.match(tip, /<div class="ptip-card r-tuned"><span class="ptip-glyph"><span class="pglyph pg-tip r-tuned"/);
   assert.doesNotMatch(tip, /ptip-art/);
+});
+
+test('a picked slot lists every stash item of its kind, best first, and each one’s datasheet compares it ▲ ▼', async () => {
+  const { fresh, addItem, command } = await import('./dist/combat.mjs');
+  const { protocolStashCard, protocolDetailMarkup, stashUi } = await import('./dist/view.mjs');
+  const s = fresh();
+  s.hackers = { breaker: { level: 20, xp: 0 } };
+  const r = seeded(7);
+  const on = addItem(s, rollItem(r, { level: 12, rarity: 'stock', slot: 'shell' }));
+  command(s, 'load ' + on.id);
+  const shells = [5, 20, 12, 16, 9].map((level, i) => addItem(s, rollItem(r, { level, rarity: ['stock', 'tuned', 'custom'][i % 3], slot: 'shell' })));
+  const others = [addItem(s, rollItem(r, { level: 18, rarity: 'tuned', slot: 'exploit' })), addItem(s, rollItem(r, { level: 18, rarity: 'tuned', slot: 'proxy' }))];
+  // As app.js does on a click of SH1: pick it, show its kind.
+  Object.assign(stashUi, { sel: 'slot:2', filter: 'shell', sort: 'up' });
+  let card = protocolStashCard(s);
+  const ids = [...card.matchAll(/<li class="silk-tile [^"]*" data-kind="([a-z]+)" data-pdetail="([^"]+)"/g)].map((m) => [m[1], m[2]]);
+  assert.deepEqual(ids.map(([, id]) => id).sort(), shells.map((x) => x.id).sort(), 'every shell in the stash, nothing else');
+  assert.ok(ids.every(([k]) => k === 'shell'));
+  assert.ok(!ids.some(([, id]) => id === on.id || others.some((o) => o.id === id)));
+  assert.match(card, /data-stash-filter="shell" aria-pressed="true" ?>Shell <span>5<\/span>/, 'with the count');
+  assert.match(card, /data-stash-sort="up" aria-pressed="true">▲ Best</);
+  // Best first: the biggest gain against SH1 leads; by level, the highest.
+  const gain = (it) => Object.keys({ ...it.stats, ...on.stats }).filter((k) => STATS[k]).reduce((n, k) => n + ((it.stats[k] || 0) - (on.stats[k] || 0)) / STATS[k].base, 0);
+  assert.equal(ids[0][1], [...shells].sort((a, b) => gain(b) - gain(a))[0].id);
+  stashUi.sort = 'level';
+  card = protocolStashCard(s);
+  assert.deepEqual([...card.matchAll(/<li [^>]*data-pdetail="([^"]+)"/g)].map((m) => m[1]), [...shells].sort((a, b) => b.level - a.level).map((x) => x.id));
+  // All: everything again.
+  stashUi.filter = 'all';
+  assert.equal(protocolStashCard(s).match(/<li class="silk-tile /g).length, shells.length + others.length);
+  // Each one's datasheet: every stat against SH1's, ▲ ▼ and by how much.
+  const sheet = protocolDetailMarkup(s, shells[1].id);
+  assert.ok(sheet.includes(`Stats · vs ${on.name}`));
+  const rows = sheet.match(/<dl class="silk-stats vs">(.*?)<\/dl>/s)[1];
+  assert.equal(rows.match(/<div[ >]/g).length, new Set([...Object.keys(on.stats), ...Object.keys(shells[1].stats)].filter((k) => STATS[k])).size, 'a row a stat of either');
+  assert.match(rows, /<dd class="silk-d (up|down)">[▲▼] /);
+  // Loaded elsewhere: on another class, it still lists here with its tag.
+  s.hackers.bastion = { level: 20, xp: 0 };
+  command(s, 'archetype bastion'); command(s, 'load ' + shells[0].id); command(s, 'archetype breaker');
+  stashUi.filter = 'shell';
+  assert.match(protocolStashCard(s).match(new RegExp(`<li [^>]*data-pdetail="${shells[0].id}">.*?</li>`, "s"))[0], / <span class="tag dim">on Bastion<\/span><\/b>.*<span class="pg-lv"><b>Lv 5<\/b><small>Shell<\/small>/s);
+  Object.assign(stashUi, { sel: null, filter: 'all', sort: 'up' });
 });
