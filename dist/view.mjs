@@ -57,7 +57,7 @@ import { RULES, LOOT, SLOTS, BASES, STATS, GROUPS, RARITIES, RARITY_ORDER, ZERO_
 import { raidIntents, raidMarks, raidOf, attackTarget } from './raid.mjs';
 import { EMBLEMS } from './class-emblems.mjs';
 import { ARCHETYPES, CANTRIPS, EDGE, SYNC, STATUSES, LOADOUT, TREE, SERVER, SKILLS, xpToNext, unlockLevel, power, SUBS, SUBCLASS, skillOrder, barSlots, isRunSkill } from './data.mjs';
-import { XP_KINDS, xpFor, cooldownOf, subOf, subPicked, kitTalent, specRule, skillBase, knowsPart, codexKey, previewDamage, ignoresArmor, blocked, attackAmount, drawingFire, momentumStacks, momentumBonus, topUpCost, UNIQUES, bossChance, listenBoost, effectLine, implicitText, paceOf, keyMap, barKeys, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverClass, daemonSlots, procOpen, slottedDaemons, daemonNext, talentPoints, loaded, loadedOn, slotCount, maxSignal, compileCost, materialsOf, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, picksOf, ranksOf, freeSlot, rigOf, stashItem, knows, knownRecipes, pointsSpent, tierState, rowState, spentAbove, knownSkills, equippedSkills, cycleLength, familyInfo, defender, healCap, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, part, daemonLevel } from './combat.mjs';
+import { XP_KINDS, xpFor, cooldownOf, subOf, subPicked, kitTalent, specRule, skillBase, knowsPart, codexKey, previewDamage, ignoresArmor, armorTakes, parse, blocked, attackAmount, drawingFire, momentumStacks, momentumBonus, topUpCost, UNIQUES, bossChance, listenBoost, effectLine, implicitText, paceOf, keyMap, barKeys, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverClass, daemonSlots, procOpen, slottedDaemons, daemonNext, talentPoints, loaded, loadedOn, slotCount, maxSignal, compileCost, materialsOf, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, picksOf, ranksOf, freeSlot, rigOf, stashItem, knows, knownRecipes, pointsSpent, tierState, rowState, spentAbove, knownSkills, equippedSkills, cycleLength, familyInfo, defender, healCap, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, part, daemonLevel } from './combat.mjs';
 import { behindOf } from './progression.mjs';
 import { sigOf, named, lairOf, intelOf, knowsStrain, knowsEvent, knowsRich, nameOf, NETWORK, nativeChance, homeName, isNative, whoLabel, homeOf, netSeedOf, knownNets, NATIVE_POOL, awayChance } from './network.mjs';
 import { guardSetChance, lairChance, bossOdds, presetsOf, presetKeys, followOf, spikeName, said, mutated, capstonePoints, capPickOf, capState } from './combat.mjs';
@@ -669,7 +669,7 @@ export function boardMarkup(s, selected, preview = null) {
   const cutNote = (q) => { const x = q?.target && e.ticked ? crossBy(s, q.ability, part(s, q.target)) : null; return x === 'cut' ? ' <small class="cuts">cuts</small>' : x === 'both' ? ' <small class="cuts">cuts · −tick</small>' : x === 'waste' ? ' <small class="cuts waste">−tick</small>' : ''; };
   const prog = !e.queue && fighting ? progNow(s) : null; // your program's next move (routines.mjs), when one runs your fights
   const nowChip = e.queue
-    ? `<div class="intent mine" data-k="you@${e.cycle}" data-at="${esc(e.queue.target || '')}" title="Press Enter on an empty line to go now">${esc(e.queue.text)}${cutNote(e.queue)}</div>`
+    ? `<div class="intent mine" data-k="you@${e.cycle}" data-at="${esc(e.queue.target || '')}" title="Press Enter on an empty line to go now">${esc(e.queue.text)}${cutNote(e.queue)}${fighting && e.queue.target ? armorBadge(s, e.queue.ability, part(s, e.queue.target)) : ''}</div>`
     : prog || (e.lastAttack
         ? `<div class="intent mine auto" data-k="you@${e.cycle}" data-at="${esc(e.lastAttack.split(' ')[1] || '')}" title="Nothing typed: you ${esc(spikeName(s))} the last part you hit">${esc(said(s, e.lastAttack))} <small>auto</small></div>`
         : '<div class="intent mine idle">—</div>');
@@ -803,7 +803,30 @@ export function logMarkup(s, limit = 60) {
   return lines.map((e) => `<li class="${e.who ? 'crew ' : ''}${THEIRS.has(e.type) && !e.who ? 'side-them' : MINE_LOG.has(e.type) || e.who ? 'side-you' : ''}"><span class="c">c${e.cycle}</span><span class="${e.auto === 'daemon' ? 'daemon' : LOG_CLASS[e.type] ?? ''}">${e.who ? `<b class="who">${esc(e.who)}</b> ` : ''}${esc(e.message)}</span></li>`).join('');
 }
 
-export function trayMarkup(s) {
+// The part a key would hit now: the part you queued it on, else the part you selected, else the one it hits with none
+// named (combat.mjs parse: the last part you hit, else the soonest attacker).
+function keyAim(s, id, selected) {
+  const e = s.encounter, a = ABILITIES[id];
+  if (!a || !['part', 'attack'].includes(a.target)) return null;
+  if (e.queue?.ability === id && e.queue.target) return part(s, e.queue.target);
+  const sel = selected ? part(s, selected) : null;
+  if (alive(sel) && (a.target === 'part' || sel.attack)) return sel;
+  const q = parse(s, id);
+  return q?.target ? part(s, q.target) : null;
+}
+// Armor takes it: a small ◆ on a key (or your Now chip) whose hit a ◆ on that part would take whole, breaking it and
+// dealing no damage (combat.mjs armorTakes: never on Crack and the skills that break or ignore ◆). Steel, the colour of
+// what protects a part. The tooltip says what happens and what to do.
+export function armorBadge(s, id, p) {
+  const n = alive(p) ? armorTakes(s, id, p) : 0;
+  if (!n) return '';
+  const crack = barKeys(s).some(([, x]) => x === 'crack');
+  const tip = `Armor takes this hit: it breaks ${n} ◆ and deals no damage. ${crack ? 'Crack it first.' : 'Break its ◆ first.'}`;
+  return `<span class="armd" title="${esc(tip)}" aria-label="${esc(tip)}">◆</span>`;
+}
+
+// selected: the part you picked on the board (app.js), the one a key prefills.
+export function trayMarkup(s, selected = null) {
   const e = s.encounter;
   const fighting = active(s);
   // Key 1 Spike, 2–9 and 0 your equipped skills, - SIGINT.
@@ -830,7 +853,8 @@ export function trayMarkup(s) {
     const cd = cooldownOf(s, id), charge = dark ? 0 : !fighting || !wait ? 100 : cd ? Math.round((1 - wait / Math.max(cd, wait)) * 100) : 0;
     const count = fighting && wait ? `<span class="cd" aria-label="${wait} ${wait === 1 ? 'cycle' : 'cycles'} to go">${wait}</span>` : '';
     const help = id === 'spike' ? said(s, a.help).replace(/Spike/g, spikeName(s)) : a.help; // key 1 under your class's name
-    return `<button type="button" class="ability ${cantrip ? 'cantrip' : ''} ${wait || dark ? 'cooling' : fighting ? 'ready' : ''} ${lit ? 'lit' : ''} ${moment ? 'moment' : ''} ${offline ? 'offline' : ''}${wiped ? ' wiped' : ''} ${queued ? 'queued' : ''}" data-ability="${id}" title="${esc(scaledText(s, id, help))}"><span class="ico" ${icon(a.icon)}></span><span class="name"><kbd>${key}</kbd>${esc(id === 'spike' ? spikeName(s) : a.name)}</span><span class="state">${state}</span>${count}<span class="charge" style="width:${charge}%"></span></button>`;
+    const armd = fighting && !dark && !offline && !wiped ? armorBadge(s, id, keyAim(s, id, selected)) : ''; // a key you can't press now says nothing of armor
+    return `<button type="button" class="ability ${cantrip ? 'cantrip' : ''} ${wait || dark ? 'cooling' : fighting ? 'ready' : ''} ${lit ? 'lit' : ''} ${moment ? 'moment' : ''} ${offline ? 'offline' : ''}${wiped ? ' wiped' : ''} ${queued ? 'queued' : ''}" data-ability="${id}" title="${esc(scaledText(s, id, help))}"><span class="ico" ${icon(a.icon)}></span><span class="name"><kbd>${key}</kbd>${esc(id === 'spike' ? spikeName(s) : a.name)}</span><span class="state">${state}</span>${count}${armd}<span class="charge" style="width:${charge}%"></span></button>`;
   });
   // The next thing your level will unlock, as a faint slot.
   const nx = nextUnlock(s);

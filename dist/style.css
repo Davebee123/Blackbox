@@ -328,6 +328,10 @@ code { font-family: var(--mono); color: var(--amber); }
 .no-motion .ability.just-ready { animation: none; }
 .ability.queued { border-color: var(--you); box-shadow: 0 0 0 1px var(--you) inset; }
 .ability.queued .state { color: var(--you); }
+/* Armor takes this hit (view.mjs armorBadge): a small steel ◆ in the key's corner, and on your Now chip. Absolute, so
+   nothing moves when it comes and goes; steel is what protects a part (docs/ui.md). */
+.ability .armd, .intent .armd { position: absolute; top: 2px; right: 4px; font: 700 11px/1 var(--mono); color: var(--steel); text-shadow: 0 0 4px var(--steel-glow); cursor: help; }
+.intent .armd { top: -6px; right: -4px; padding: 0 2px; background: var(--panel); border: 1px solid var(--steel); border-radius: var(--r-tag); font-size: 9px; line-height: 11px; }
 .pips { letter-spacing: 2px; color: var(--amber); font-family: var(--mono); }
 .ability.emergency { border-style: dashed; border-color: var(--line-strong); }
 .ability.emergency .ico { background: var(--next); }

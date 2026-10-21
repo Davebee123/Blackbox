@@ -395,6 +395,23 @@ export function previewDamage(s, abilityId, p) {
   if (p.armor > 0 && !ignoresArmor(s, abilityId) && !rootkitReady(s)) return 0;
   return Math.min(p.integrity, Math.floor((skillBase(s, abilityId, p) + gearStat(s, 'damage')) * damageMultiplier(s, p, { mine: true }) + 1e-9));
 }
+// Armor takes this hit: the ◆ a damaging skill of yours would break on p instead of dealing its damage (hit below), or
+// 0. 0 too for a hit that goes through (Backdoor and the other piercers, Piercing's first Overload, Rootkit, a
+// Breaker's Sudo, Dead Reckoning's first hit on a part, Thermal Throttle hot enough) and for the skills built to break
+// ◆ (Crack, Shaped Charge, Fork Bomb: strip; Rate Limit, Reclaim, Chain Reaction, Bit Rot: chits). A heavy hit breaks 2.
+// The fight tray and the board mark a key it holds for (view.mjs armorBadge).
+export function armorTakes(s, id, p) {
+  const a = ABILITIES[id], e = s.encounter;
+  if (!a || !alive(p) || !(p.armor > 0) || a.strip || a.chits > 1) return 0;
+  const stacks = a.pierceAt ? momentumStacks(s) : 0; // Thermal Throttle: its base and Momentum, through ◆ from pierceAt
+  const base = a.pierceAt ? (a.base + a.perStack * stacks) * powerOf(s) : skillBase(s, id, p);
+  if (!(base > 0) || (a.pierceAt && stacks >= a.pierceAt)) return 0;
+  if (ignoresArmor(s, id) || rootkitReady(s)) return 0;
+  if (e && buffed(e, 'sudo') && classOf(s) === 'breaker') return 0;
+  if (e && fxHas(s, 'first-pierce') && !e.fxs?.touched?.[p.id]) return 0;
+  const heavy = !a.tick && (base >= CONFIG.heavyHit * powerOf(s) - 1e-9 || fxFire(s, 'hit', { target: p, do: 'shatter' }, false).length > 0);
+  return heavy && p.armor > 1 ? 2 : 1;
+}
 
 export function readyIn(s, abilityId) {
   const e = s.encounter;
@@ -2755,7 +2772,13 @@ export function hit(s, p, base, opts = {}) {
     p.lastDamaged = e.cycle;
     if (!opts.server) classEach('chipped', s, p, heavy ? 2 : 1, opts); // Debris Field (dist/classes)
     if (!p.armor) { p.patchAt = e.cycle + patchDelay(s) + (p.phase ? 1 : 0); stripMark(s, p); if (!opts.server) openProc(s, 'stripped', { part: p.id }); }
-    emit(s, 'armor', `${opts.by ? opts.by + ': ' : ''}${p.name} ${heavy ? 'two ◆ broken' : '◆ broken'}${p.armor ? ` (${p.armor} left)` : `. Its armor is broken, and it patches in ${patchDelay(s)} ${patchDelay(s) === 1 ? 'cycle' : 'cycles'}`}.`, { target: p.id, left: p.armor });
+    const patchNote = `Its armor is broken, and it patches in ${patchDelay(s)} ${patchDelay(s) === 1 ? 'cycle' : 'cycles'}`;
+    // Your command's own hit says whose it was: a big hit spent on ◆ reads as absorbed, not as a miss (app.js floats
+    // ◆ ABSORBED off it: absorbed). Burns, helpers, extra hits and a server's keep the plain line.
+    const cmd = opts.mine && !opts.dot && !opts.by && !opts.server && e.commanding?.id && ABILITIES[e.commanding.id] ? e.commanding.id : null;
+    const n = heavy ? 2 : 1;
+    if (cmd) emit(s, 'armor', `${cmd === 'spike' ? spikeName(s) : ABILITIES[cmd].name}: absorbed by ${p.name}'s ◆ (${n} broken${p.armor ? `, ${p.armor} left` : ''}).${p.armor ? '' : ` ${patchNote}.`}`, { target: p.id, left: p.armor, absorbed: true, ability: cmd, broke: n });
+    else emit(s, 'armor', `${opts.by ? opts.by + ': ' : ''}${p.name} ${heavy ? 'two ◆ broken' : '◆ broken'}${p.armor ? ` (${p.armor} left)` : `. ${patchNote}`}.`, { target: p.id, left: p.armor, broke: n });
     return { dealt: 0, overflow: 0, absorbed: true };
   }
   // Flat gear: Damage on your skill hits, Payload on burn ticks and helper hits.

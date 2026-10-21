@@ -25,7 +25,7 @@ import { powerOn } from './poweron.mjs';
 import { autoPay } from './salvage.mjs';
 import { relockLeft } from './rogue.mjs';
 import { createHitFx } from './hitfx.mjs';
-import { plan as dmgPlan, queueAfter, absorbOf } from './dmgfx.mjs';
+import { plan as dmgPlan, queueAfter, absorbOf, armorFloat, missFloat } from './dmgfx.mjs';
 import { recapMarkup } from './recap.mjs';
 import { createLash } from './lash.mjs';
 import { online, simOn } from './presence.mjs';
@@ -211,7 +211,7 @@ const hitfx = createHitFx(document.getElementById('board'), { canMove: () => can
 const partRow = (id) => document.querySelector(`#board .bpart[data-target="${CSS.escape(id)}"]`);
 const initials = (h) => (h || '').replace(/[^a-z0-9]/gi, '').slice(0, 2).toUpperCase() || 'YO'; // as on the board (view.mjs)
 // Only commands: burns, helpers and other ticks ("Inject: …") don't strike. Crack's chits do.
-const ticked = (e) => /^[A-Z][\w-]*( [A-Z][\w-]*)*: /.test(e.message) && !e.message.startsWith('Crack: ');
+const ticked = (e) => !e.absorbed && /^[A-Z][\w-]*( [A-Z][\w-]*)*: /.test(e.message) && !e.message.startsWith('Crack: '); // absorbed: your command's own hit on a ◆ (it names the skill)
 function strikes(events, delayOf = () => 0) {
   if (module !== 'combat' || fxLevel() === 'minimal') return;
   const hits = new Map(); // who>part → the strongest result this batch
@@ -960,7 +960,7 @@ function react(events) {
         break;
       }
       case 'drop': feel.add('pickup', null); if (['tuned', 'custom', 'zeroday'].includes(e.rarity) && !active(campaign) && !won && !ended && !campaign.breach) rewardCard('Found', e, [e], true); break; // a breach shows its own pack
-      case 'miss': feel.add('miss', e.target ? row(e.target) : '.bnow', 'MISS'); break;
+      case 'miss': { const mf = missFloat(e); feel.add(mf.sign, e.target ? row(e.target) : '.bnow', mf.text); break; }
       case 'evaded': feel.add('evade', MINE, 'EVADED'); break;
       case 'gear': feel.add('good', null); if (e.gains?.length) showGain('Deconstructed', e.name || '', e.gains, false); break;
       case 'code': if (!won && !hush) feel.add('pickup', null); break;
@@ -995,7 +995,7 @@ function react(events) {
       case 'decrypted': flash('DECRYPTED'); feel.add('unlock', MINE, 'KEY'); break;
       case 'blind': flash('SCRAMBLED'); feel.add('blind', '.board', null); break;
       case 'scrambled': { const frac = e.amount / (defender(campaign).max || 100); flash('SCRAMBLED'); if (lashing) { feel.add(() => lashAt(e, 'hit', frac)); feel.beat(split.delay(e) + LASH_TRAVEL); } feel.add('hurt', MINE, f?.text || `−${e.amount}`, { amount: e.amount, frac, size: 1.3, src, stack, noEdge: lashing, softEdge: !lashing, noFlash: lashing, floatAt: BAR, x: 0.5 }); break; }
-      case 'armor': { const lvl = fxLevel(); artHit(e.target, 'chit'); if (e.lock === 'broke') { feel.add('absorb', `${row(e.target)} .part-top`, 'LOCK BROKEN', { size: 1.1, floatAt: `${row(e.target)} > .bcell:first-child` }); break; } /* a Mutex's lock: its segment shatters (lockDrain, with the hit) */ feel.add('chit', `${row(e.target)} .part-top`, 'CRACKED', { size: 1.1, noFlash: lvl === 'minimal', floatAt: `${row(e.target)} > .bcell:first-child` }); if (fx && lvl !== 'minimal') feel.add(() => { juice.shatter(e.target); if (lvl === 'full') juice.punch(0.35); }); break; }
+      case 'armor': { const lvl = fxLevel(), af = armorFloat(e); if (!af) break; artHit(e.target, 'chit'); if (e.lock === 'broke') { feel.add(af.sign, `${row(e.target)} .part-top`, af.text, { size: 1.1, floatAt: `${row(e.target)} > .bcell:first-child` }); break; } /* a Mutex's lock: its segment shatters (lockDrain, with the hit) */ feel.add(af.sign, `${row(e.target)} .part-top`, af.text, { size: 1.1, noFlash: lvl === 'minimal', floatAt: `${row(e.target)} > .bcell:first-child` }); if (fx && lvl !== 'minimal') feel.add(() => { juice.shatter(e.target); if (lvl === 'full') juice.punch(0.35); }); break; } // ◆ ABSORBED: your command's whole hit went into the ◆ (dmgfx.mjs armorFloat), never a MISS
       case 'patch': feel.add('patch', row(e.target), e.adapt ? 'ADAPTS +◆' : '+◆'); break;
       case 'reroute': feel.add('patch', row(e.target), `+${e.amount} REROUTED`, { src }); if (e.from) artHit(e.target, 'attack'); break;
       case 'xp': if (!hush) feel.add('cycle', null, `+${e.amount} XP`); break;
@@ -1815,7 +1815,7 @@ function render(force = false) {
   const netTray = module === 'net' && !!campaign.run;
   $('tray').hidden = !(combatLike || netTray);
   $('tray').classList.toggle('net-tray', netTray);
-  put('tray', netTray ? V.netTrayMarkup(nextActions(campaign)) : V.trayMarkup(s) + scriptTray(s));
+  put('tray', netTray ? V.netTrayMarkup(nextActions(campaign)) : V.trayMarkup(s, selected) + scriptTray(s));
   // An ability that just came off cooldown flashes once.
   const cooling = new Set([...document.querySelectorAll('#tray .ability.cooling[data-ability]')].map((b) => b.dataset.ability));
   for (const b of document.querySelectorAll('#tray .ability.ready[data-ability]')) if (wasCooling.has(b.dataset.ability)) b.classList.add('just-ready');
