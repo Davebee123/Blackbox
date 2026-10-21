@@ -861,7 +861,7 @@ export function go(s, id, opts = {}) {
   else if (R.screen?.kind === 'hunter') deny(s, 'The hunter is on you.');
   else if (!room || !walkable(s, R.at).includes(room.id)) deny(s, room ? `${room.path} is not next to ${hereOf(s).path}.` : `No room ${id}.`);
   else if (room.kind === 'core' && !coreOpen(s)) deny(s, R.world ? `The Core is sealed. ${WORLD.view?.sealed?.(s) || (R.graph.vaults[0] ? `Open the ${R.graph.rooms[R.graph.vaults[0]].path} first.` : '')}`.trim() : `The Core is sealed. Open the ${R.graph.rooms[R.graph.vaults[0]].path} first.`);
-  else step(s, room, opts);
+  else { step(s, room, opts); hooks.railCheck?.(s); } // routines.mjs: a move that took you under your jack-out line
   return out(s, first);
 }
 function step(s, room, opts) {
@@ -1491,6 +1491,7 @@ function walkTo(s, id) {
   if (path.length < 2) { deny(s, `cd: no way to ${R.graph.rooms[id].path} from here that you've seen.`); return out(s, first); }
   for (const next of path.slice(1)) {
     const was = R.at;
+    if (path.length > 2 && hooks.walkStop?.(s, R.graph.rooms[next])) break; // routines.mjs: a walk stops before an elite, a boss, the Resident or a vault guard
     go(s, next);
     if (R.at !== next || R.at === was || R.screen || active(s)) break;
   }

@@ -1,0 +1,112 @@
+/* Routines (routines-view.mjs): the Loadout's Program tab and the program's marks on the fight board.
+   Your program is you (teal); an exception is --hot; RAM is amber, like every other budget (memory, slots). */
+
+/* ---------- the Program tab ---------- */
+.rt-editor { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: var(--s5); align-items: start; }
+.rt-side { display: grid; gap: var(--s5); min-width: 0; }
+/* Four Loadout tabs: on a phone they wrap rather than push the page sideways. */
+.ltabs { flex-wrap: wrap; }
+.rt-label { font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--dim); margin: 0; }
+.rt-stack .thead { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--s5); }
+.rt-power { grid-template-columns: auto; }
+.rt-power .btn { min-width: 112px; }
+
+/* RAM: a row of cells, lit amber for what the handlers use. */
+.rt-ram { display: flex; align-items: center; gap: var(--s4); cursor: help; }
+.rt-ram .rt-cells { display: flex; gap: 3px; flex-wrap: wrap; }
+.rt-ram .rt-cells i { width: 14px; height: 8px; border: 1px solid var(--line-strong); border-radius: 1px; }
+.rt-ram .rt-cells i.on { background: var(--amber); border-color: var(--amber); box-shadow: 0 0 6px rgba(241, 185, 47, 0.35); }
+.rt-ram b { font: 600 12px var(--mono); color: var(--amber); }
+.rt-pips { display: inline-flex; gap: 2px; align-items: center; }
+.rt-pips i { width: 4px; height: 8px; background: var(--amber-soft); border-radius: 1px; }
+.rt-pips.over i { background: var(--hot); }
+
+/* The stack: one handler a row, WHEN · DO · TARGET, checked top to bottom. */
+.rt-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s3); }
+.rt-h { display: grid; grid-template-columns: 14px 18px minmax(0, 1.25fr) minmax(0, 1fr) minmax(0, 0.8fr) auto 24px; gap: var(--s3); align-items: center; padding: var(--s3) var(--s4); border: 1px solid var(--line); border-radius: var(--r-card); background: var(--panel-2); }
+.rt-h.over { opacity: 0.5; border-style: dashed; }
+.rt-h.shut .rt-slot:first-of-type .rt-chip, .rt-h.shut { border-color: rgba(125, 115, 98, 0.5); }
+.rt-h.rt-over, .rt-slot.rt-over { border-color: var(--you); box-shadow: 0 0 0 1px var(--you) inset; }
+.rt-grip { color: var(--dim); cursor: grab; font: 600 11px/1 var(--mono); letter-spacing: -2px; user-select: none; }
+.rt-grip:active { cursor: grabbing; }
+.rt-n { font: 600 11px var(--mono); color: var(--muted); text-align: center; }
+.rt-slot { position: relative; display: grid; gap: 1px; min-width: 0; border: 1px dashed transparent; border-radius: var(--r-btn); padding: 1px; }
+.rt-kind { font: 600 8px/1 var(--mono); letter-spacing: 1px; color: var(--dim); }
+.rt-slot.off { opacity: 0.6; }
+.rt-sel { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; font: 12px var(--mono); }
+.rt-sel:focus-visible { opacity: 1; background: var(--panel); color: var(--text); border: 1px solid var(--amber); }
+.rt-x { width: 24px; height: 24px; padding: 0; color: var(--dim); font-size: 16px; line-height: 1; }
+.rt-x:hover { color: var(--hot); }
+.rt-rot { grid-template-columns: 14px 18px auto minmax(0, 1fr); background: transparent; border-style: dashed; cursor: help; }
+.rt-rot .rt-n { color: var(--you); }
+.rt-add { grid-template-columns: auto 1fr; background: transparent; border-style: dashed; }
+.rt-drop-hint { justify-self: end; color: var(--dim); opacity: 0; transition: opacity 0.15s; }
+body[class*='rt-drag-'] .rt-add .rt-drop-hint { opacity: 1; }
+body[class*='rt-drag-'] .rt-slot { border-color: var(--line-strong); }
+body.rt-drag-when .rt-slot:not(.rt-s-when), body.rt-drag-do .rt-slot:not(.rt-s-do), body.rt-drag-target .rt-slot:not(.rt-s-target) { border-color: transparent; }
+
+/* A chip: an icon, a short label, its RAM. */
+.rt-chip { display: inline-flex; align-items: center; gap: 5px; min-width: 0; height: var(--h-chip); padding: 0 7px; border: 1px solid var(--line-strong); border-radius: var(--r-btn); background: var(--inset); font: 500 11px/1 var(--mono); color: var(--text); white-space: nowrap; }
+.rt-chip b { font-weight: 500; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.rt-chip .glyph { width: 12px; height: 12px; flex: none; }
+.rt-chip kbd { font: 600 9px var(--mono); color: var(--muted); border: 1px solid var(--line); border-radius: 2px; padding: 0 3px; }
+.rt-chip[draggable='true'] { cursor: grab; }
+.rt-chip[draggable='true']:hover { border-color: var(--amber); }
+.rt-chip.rt-dragging { opacity: 0.4; }
+.rt-chip.rt-when { border-color: rgba(241, 185, 47, 0.45); }
+.rt-chip.rt-do { border-color: rgba(127, 209, 199, 0.5); color: var(--you); }
+.rt-chip.rt-tgt { border-color: rgba(134, 182, 198, 0.5); color: var(--steel); }
+.rt-chip.rt-tgt.none { color: var(--dim); border-style: dashed; }
+.rt-chip.locked { color: var(--gray); border-style: dashed; border-color: rgba(125, 115, 98, 0.45); cursor: help; }
+.rt-chip.locked .rt-pips i { background: var(--gray); }
+.rt-chip.rot { border-style: dashed; color: var(--you); cursor: help; }
+.rt-long { font: 600 9px var(--mono); color: var(--amber); }
+.rt-tier { font: 600 8px var(--mono); letter-spacing: 0.5px; color: var(--dim); text-transform: uppercase; }
+.rt-slot .rt-chip { width: 100%; }
+
+/* The palette. */
+.rt-palette { gap: var(--s5); }
+.rt-group { display: grid; gap: var(--s3); }
+.rt-row { display: flex; flex-wrap: wrap; gap: var(--s3); }
+.rt-parts { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s3); max-height: 420px; overflow-y: auto; }
+.rt-prow { display: grid; gap: var(--s2); padding: var(--s3) 0; border-top: 1px solid var(--line); }
+.rt-pname { display: flex; align-items: center; gap: 5px; font: 600 12px var(--sans); color: var(--bright); cursor: help; }
+.rt-pname .glyph { width: 12px; height: 12px; color: var(--amber); }
+.rt-pname small { font: 500 10px var(--mono); color: var(--dim); text-transform: uppercase; letter-spacing: 1px; }
+.rt-pchips { display: flex; flex-wrap: wrap; gap: var(--s2); }
+.rt-empty { color: var(--gray); font: 12px var(--mono); display: flex; gap: 6px; align-items: center; cursor: help; }
+
+/* The rails. */
+.rt-rails { gap: var(--s4); }
+.rt-rail { display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: var(--s4); align-items: center; }
+.rt-rail .rt-label { cursor: help; }
+.rt-seg { display: flex; flex-wrap: wrap; gap: 3px; }
+.rt-seg .btn { min-width: 44px; justify-content: center; }
+.rt-seg .btn[aria-pressed='true'] { background: var(--amber-wash); border-color: var(--amber); color: var(--amber); }
+.rt-rail .settings-grid { grid-template-columns: auto; }
+
+@media (max-width: 900px) {
+  .rt-editor { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 600px) {
+  .rt-h { grid-template-columns: 14px 16px minmax(0, 1fr) minmax(0, 1fr) 24px; grid-template-areas: 'g n w w x' 'g n d t c'; row-gap: var(--s2); }
+  .rt-h > .rt-grip { grid-area: g; } .rt-h > .rt-n { grid-area: n; } .rt-h > .rt-s-when { grid-area: w; } .rt-h > .rt-s-do { grid-area: d; } .rt-h > .rt-s-target { grid-area: t; } .rt-h > .rt-cost { grid-area: c; justify-self: end; } .rt-h > .rt-x { grid-area: x; }
+  .rt-rot, .rt-add { grid-template-areas: none; }
+  .rt-add { grid-template-columns: auto 1fr; }
+  .rt-rot { grid-template-columns: 14px 16px auto minmax(0, 1fr); }
+  .rt-rail { grid-template-columns: 1fr; }
+}
+
+/* ---------- the board ---------- */
+.intent.mine.prog.ghost { border-style: dashed; opacity: 0.9; background: rgba(127, 209, 199, 0.06); }
+.intent.mine.prog.exc { border-color: var(--hot); color: var(--hot); background: var(--hot-soft); gap: 6px; }
+.intent.mine.prog.exc small { color: var(--hot); opacity: 0.8; }
+.intent.prog.ghost-on { border: 1px dashed rgba(127, 209, 199, 0.6); color: var(--you); opacity: 0.85; background: transparent; font-size: 11px; }
+.intent.prog.exc-mark { border: 1px solid var(--hot); color: var(--hot); background: var(--hot-soft); font-weight: 700; min-width: 22px; justify-content: center; cursor: help; }
+.bpart.m-exc { box-shadow: inset 3px 0 0 var(--hot); }
+.bpart.m-exc .part-name { color: var(--hot); }
+.aim.you.prog { outline: 1px dashed var(--you); outline-offset: 1px; opacity: 0.85; }
+.rt-back { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 6px; margin-left: 6px; border: 1px solid var(--hot); border-radius: var(--r-btn); color: var(--hot); font: 600 10px var(--mono); letter-spacing: 0.5px; background: var(--hot-soft); }
+.rt-back:hover:not(:disabled) { border-color: var(--hot); background: rgba(255, 91, 61, 0.24); }
+.rt-back kbd { min-width: 14px; text-align: center; font: 700 15px/14px var(--mono); border: 1px solid rgba(255, 91, 61, 0.5); border-radius: 2px; padding: 0 3px; }
+.cx-handler { justify-self: start; margin-top: var(--s2); }

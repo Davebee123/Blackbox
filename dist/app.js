@@ -49,6 +49,8 @@ import { channelOf, muted as chanMuted, say as chanSay } from './channel.mjs';
 import { setBanner, setPlan, handleOf } from './profile.mjs';
 import * as BN from './bench.mjs';
 import { PARTS } from './parts.mjs';
+import { installPrograms, noteExceptions, ROUTINES } from './routines.mjs';
+import { wireRoutines } from './routines-ui.mjs';
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -1029,6 +1031,8 @@ function react(events) {
       case 'hung': flash('HUNG'); feel.add('nope', MINE, 'HUNG'); break;
       case 'resolved': feel.add(e.auto === 'daemon' ? 'daemon' : 'cycle', e.auto === 'daemon' ? '.byou' : '.bnow'); if (e.auto === 'daemon') lampBlink('dmn'); break;
       case 'hold': feel.add('cycle', '.bnow'); break;
+      case 'exception': flash('EXCEPTION'); feel.add('escalate', '.board .m-exc'); break; // routines.mjs: the program holds for you
+      case 'rail': feel.add('prewarn', null); notice(e.message, true); break; // a walk stopped before danger, or the auto jack-out
       case 'loot': break; // the break already said it
       case 'net-good': feel.add(/unlocked|forced/.test(e.message) ? 'unlock' : /^pulled/.test(e.message) ? 'pickup' : 'good', null); if (e.gain) showGain('Pulled', '', [e.gain], true); break;
       case 'located': case 'upgrade': feel.add('unlock', null); break;
@@ -1981,6 +1985,7 @@ function tickUi() {
     for (const g of document.querySelectorAll('#hud .gfx[data-if="synced"]:not(.spent)')) g.classList.toggle('lit', live || !!s.encounter.synced);
   }
   ttTapTick();
+  { const first = s.serial, k = `${s.encounter.cycle}:${first}`; if (s === campaign && tickUi.exc !== k) { tickUi.exc = k; if (noteExceptions(s)) { react(s.logs.filter((x) => x.id > first)); dirty = true; } } } // an exception the moment it is on the board (checked when the fight changes)
   if (cd) cd.textContent = s.encounter.paused ? 'II' : Math.max(0, (cycleLength(s) - s.encounter.elapsedMs) / 1000).toFixed(1);
   // One warning per cycle when something is about to land on you.
   const left = cycleLength(s) - s.encounter.elapsedMs;
@@ -2177,6 +2182,8 @@ function applySideMarks() {
 // A cycle plays out in turns: you (then each crewmate), then the virus, a beat apart (stepCycle in
 // combat.mjs), so you can follow who did what. The virus's answer waits a little longer.
 hooks.stepped = true;
+installPrograms(); // routines.mjs: when the timer runs out, your program moves (Loadout → Program)
+wireRoutines({ run: (t) => run(t), openProgram: () => { loadoutTab = 'program'; go('loadout'); } });
 const STEP_MS = { relaxed: 380, normal: 330, fast: 260 };
 const VIRUS_BEAT = 4; // × a step: the virus's half (red) plays about 1.3 s before its first hit, not after it
 let stepTimer = null;
@@ -2496,6 +2503,7 @@ $('command-input').addEventListener('keydown', (e) => {
     return;
   }
   if (e.key === 'Escape') { if (tip && !input.value) { hideTip(true); return; } input.value = ''; $('suggestions').hidden = true; return; }
+  if (e.key === ROUTINES.key && !input.value.trim() && active(campaign)) { e.preventDefault(); run('program resume'); return; } // hand control back to your program
   if (/^[0-9-]$/.test(e.key) && !input.value.trim() && keyMap(shown())[e.key]) { // 1 Spike, 2–9 and 0 your skills, - SIGINT
     e.preventDefault();
     prepare(keyMap(shown())[e.key]);

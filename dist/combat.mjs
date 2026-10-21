@@ -2523,6 +2523,8 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     mailCommand(s, text, now);
   } else if (text === 'daemon' || text.startsWith('daemon ')) {
     daemonCommand(s, text);
+  } else if (/^program( |$)/.test(text) && hooks.programCommand) {
+    hooks.programCommand(s, text); // routines.mjs: your program's handlers, its rails, and handing control back
   } else if (/^speed (relaxed|normal|fast)$/.test(text)) {
     s.settings.speed = text.split(' ')[1];
     emit(s, 'info', `Speed: ${s.settings.speed}, ${cycleLength(s) / 1000} seconds per cycle.`);
@@ -3122,7 +3124,7 @@ function useAbility(s, intent, auto = false) {
   }
   const error = validate(s, intent);
   if (error) {
-    emit(s, 'warning', `${auto ? 'Auto-repeat' : 'Command'} failed: ${error}`);
+    emit(s, 'warning', `${auto === 'program' ? '⟳ Your program' : auto ? 'Auto-repeat' : 'Command'} failed: ${error}`);
     return;
   }
   const id = intent.ability;
@@ -3136,7 +3138,7 @@ function useAbility(s, intent, auto = false) {
   else if (auto) e.metrics.auto++;
   if (!intent.ignoreCooldown) e.readyAt[id] = e.cycle + fxCooldown(s, id, a);
   if (a.once) e.once[id] = true;
-  emit(s, 'resolved', `${auto === 'daemon' ? `Daemon ${intent.daemon}: ` : ''}${said(s, intent.text)}${auto && auto !== 'daemon' ? ' (timer ran out)' : ''}.`, { ability: id, target: intent.target, auto });
+  emit(s, 'resolved', `${auto === 'daemon' ? `Daemon ${intent.daemon}: ` : auto === 'program' ? '⟳ ' : ''}${said(s, intent.text)}${auto && auto !== 'daemon' && auto !== 'program' ? ' (timer ran out)' : ''}.`, { ability: id, target: intent.target, auto });
   const base = target ? skillBase(s, id, target) : 0;
   e.lastSkill = id;
   e.lastCmd = { id, cycle: e.cycle, target: intent.target || null }; // what the Mimic plays back (tells.mjs)
@@ -3711,6 +3713,24 @@ function helperGone(s) {
   const e = s.encounter;
   for (const x of fxFire(s, 'expire', { do: 'helper-cd' })) fxState(e).helperCd = Math.max(fxState(e).helperCd || 0, x.value);
 }
+// Your program's turn (routines.mjs): a move it picked, fired like auto-repeat (never in a Sync Window, never a read of
+// a tell), or a hold while an exception waits for you.
+function programTurn(s, prog) {
+  const e = s.encounter;
+  if (prog.hold) {
+    e.metrics.holds++;
+    e.lastCmd = { id: 'hold', cycle: e.cycle };
+    emit(s, prog.type || 'hold', prog.message, { target: prog.part || null, exception: true, auto: 'program' });
+    return;
+  }
+  const intent = toIntent(s, prog.text);
+  if (intent.error) { emit(s, 'hold', `⟳ Your program had no move: ${intent.error}`, { auto: 'program' }); e.metrics.holds++; return; }
+  e.metrics.program = (e.metrics.program || 0) + 1;
+  e.commanding = { id: intent.ability, target: intent.target || null, auto: true, program: true }; // like auto-repeat: never a read
+  const before = beforeCommand(e);
+  try { useAbility(s, intent, 'program'); } finally { e.commanding = false; }
+  commandFx(s, before);
+}
 export function playerPhase(s, phase = 'all') {
   const e = s.encounter;
   if (phase !== 'after') {
@@ -3719,8 +3739,11 @@ export function playerPhase(s, phase = 'all') {
     const next = soonestAttacker(s) || livingParts(s)[0];
     if (next) { emit(s, 'info', `${part(s, e.queue.target)?.name || 'Your target'} is already broken, so ${ABILITIES[e.queue.ability]?.name || e.queue.ability} goes at the ${next.name}.`); e.queue = { ...e.queue, target: next.id, text: `${e.queue.ability} ${next.id}` }; }
   }
+  // Your program (routines.mjs, when the browser runs one): what it does when you typed nothing. Off, it's null and
+  // the timer falls back to auto-repeat as before.
+  const prog = !e.queue && hooks.program ? hooks.program(s) : null;
   // Hung (a tell that landed, tells.mjs): this cycle's command doesn't fire.
-  if (e.hung === e.cycle && (e.queue || e.lastAttack)) {
+  if (e.hung === e.cycle && (e.queue || e.lastAttack || prog)) {
     emit(s, 'hung', 'HUNG. Your command does not fire this cycle.', {});
     e.metrics.holds++;
     e.lastCmd = { id: 'hold', cycle: e.cycle };
@@ -3734,6 +3757,7 @@ export function playerPhase(s, phase = 'all') {
     if (e.synced && active(s) && q.ability !== 'hold') { syncBonus(s, q); daemonsOn(s, 'synced', { part: q.target }); } // Pendulum
     e.surprise = false;
   }
+  else if (prog) programTurn(s, prog);
   else if (e.lastAttack) {
     const intent = parse(s, e.lastAttack);
     if (intent.error) emit(s, 'hold', 'Auto-repeat had no target. Nothing fired.');
@@ -3750,7 +3774,7 @@ export function playerPhase(s, phase = 'all') {
   }
   // Keylogger: a command fired outside the window is logged; 3 logs come back as the Dump.
   const logger = livingParts(s).find((x) => x.syncOnly);
-  if (logger && (e.queue || e.lastAttack) && !e.synced && !(e.queue && e.queue.ability === 'hold') && logger.attack) {
+  if (logger && (e.queue || e.lastAttack || (prog && !prog.hold)) && !e.synced && !(e.queue && e.queue.ability === 'hold') && logger.attack) {
     e.keylog = (e.keylog || 0) + 1;
     if (e.keylog >= 3 && logger.attack.due > e.cycle + 1) { logger.attack.due = e.cycle + 1; emit(s, 'status', `The ${logger.name} has logged 3 keystrokes. It Dumps next cycle.`, { target: logger.id }); }
     else if (e.keylog < 3) emit(s, 'status', `The ${logger.name} logs a keystroke (${e.keylog}/3).`, { target: logger.id });
@@ -4130,6 +4154,7 @@ function cycleClose(s, landed) {
   rollSync(s);
   if (e.virus.raid) raidCycle(s); // a crew boss: its phase, then what it announces (raid.mjs)
   if (e.virus.tells) { tellCycle(s); flushDaemons(s); } // a solo fight's tells: what it announces now (tells.mjs); a Lookout's hit
+  hooks.programCycle?.(s); // routines.mjs: a new exception, and the auto jack-out rail
 }
 function endCycle(s, first) {
   if (cycleStart(s)) return since(s, first);
