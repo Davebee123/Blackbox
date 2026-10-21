@@ -1884,11 +1884,12 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 /* ---------- the protocol board (Loadout → Protocols; view.mjs silkBoard) ----------
    A silkscreened board: the rig in the middle, its slots as labelled footprints three a side, a trace from each to the
    rig. The columns (36% · 6% · 16% · 6% · 36%) match the traces' percent coordinates, inside the board's padding. Wide:
-   the board, then its datasheet and the stats, down the left; the stash down the right, on the first screen. One column
-   (and a phone): board, stash, datasheet, stats, the board folded to one column of slots under the rig, traces gone. */
-.loadout-protocols.silk { grid-template-columns: minmax(0, 1.55fr) minmax(340px, 1fr); grid-template-rows: auto auto auto 1fr; grid-template-areas: 'board stash' 'sheet stash' 'stats stash' '. stash'; }
-.silk > .silk-card { grid-area: board; } .silk > .silk-sheet { grid-area: sheet; } .silk > .silk-stash { grid-area: stash; align-self: start; } .silk > .silk-statcard { grid-area: stats; }
-@media (max-width: 1100px) { .loadout-protocols.silk { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; grid-template-areas: 'board' 'stash' 'sheet' 'stats'; } }
+   the board and the stats down the left; the stash, a list of every item that fits, down the right, on the first screen.
+   One column (900px and under): board, stash, stats. A phone, and a narrow screen with the board beside the stash
+   (901–1100px), fold the board to one column of slots under the rig, traces gone. An item's datasheet is a popover (.pg-pop, app.js), never a card in the layout. */
+.loadout-protocols.silk { grid-template-columns: minmax(0, 1.3fr) minmax(380px, 1fr); grid-template-rows: auto auto 1fr; grid-template-areas: 'board stash' 'stats stash' '. stash'; }
+.silk > .silk-card { grid-area: board; } .silk > .silk-stash { grid-area: stash; align-self: start; } .silk > .silk-statcard { grid-area: stats; }
+@media (max-width: 900px) { .loadout-protocols.silk { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; grid-template-areas: 'board' 'stash' 'stats'; } }
 .silk-card { padding: 20px 22px 22px; }
 .silk-board { --bx: 18px; --by: 16px; position: relative; display: grid; grid-template-columns: 36% 6% 16% 6% 36%; grid-template-rows: repeat(3, 1fr); padding: var(--by) var(--bx); border-radius: 8px; background: #0c0905; border: 1px solid var(--line); }
 .silk-traces { position: absolute; top: var(--by); left: var(--bx); width: calc(100% - 2 * var(--bx)); height: calc(100% - 2 * var(--by)); overflow: visible; pointer-events: none; }
@@ -1931,7 +1932,7 @@ body:has(.silk-stash .silk-tile[data-kind="proxy"]:hover) .silk-fp[data-kind="pr
 body:has(.silk-stash .silk-tile[data-kind="shell"]:hover) .silk-fp[data-kind="shell"]:not(.locked) .silk-pick,
 body:has(.silk-stash .silk-tile[data-kind="script"]:hover) .silk-fp[data-kind="script"]:not(.locked) .silk-pick,
 body:has(.silk-stash .silk-tile[data-kind="implant"]:hover) .silk-fp[data-kind="implant"]:not(.locked) .silk-pick { border-color: var(--amber); background: #1d160b; box-shadow: 0 0 10px rgba(241, 185, 47, 0.25); }
-@media (max-width: 640px) {
+@media (max-width: 640px), (min-width: 901px) and (max-width: 1100px) { /* a phone, and the board beside the stash on a narrow screen: one column of slots */
   .silk-card { padding: 16px 14px 18px; }
   .silk-board { --bx: 12px; --by: 12px; grid-template-columns: minmax(0, 1fr); grid-template-rows: none; gap: 8px; }
   .silk-traces { display: none; }
@@ -1941,10 +1942,26 @@ body:has(.silk-stash .silk-tile[data-kind="implant"]:hover) .silk-fp[data-kind="
   .silk-out { top: 50%; margin-top: -11px; }
 }
 
-/* The datasheet: the pick in full, a rarity edge down its left. Name and buttons first, the glyph beside them. */
-.silk-sheet { --edge: var(--line); position: relative; align-content: start; gap: 8px; border-left: 3px solid var(--edge); min-width: 0; }
-.silk-sheet.r-stock { --edge: var(--r-stock); } .silk-sheet.r-tuned { --edge: var(--r-tuned); } .silk-sheet.r-custom { --edge: var(--r-custom); }
-.silk-sheet.r-zeroday { --edge: var(--r-zeroday); } .silk-sheet.r-indemnified { --edge: var(--r-indemnified); }
+/* An item's datasheet (view.mjs protocolDetailMarkup), in its popover: a rarity edge down its left, the name first and
+   the glyph beside it. Beside a row or slot on hover or focus it only reads (the buttons are on the row); on a phone it
+   is a bottom sheet, its buttons along the bottom under your thumb, closed by a tap outside. */
+.pg-pop { position: fixed; z-index: 80; width: 340px; max-width: calc(100vw - 16px); max-height: calc(100vh - 16px); overflow: auto; pointer-events: none; animation: ptip-in 0.14s ease-out; }
+.pg-pop[hidden] { display: none; }
+.pg-detail { --edge: var(--line-strong); display: grid; gap: 8px; padding: 14px 16px; background: #0a0805; border: 1px solid var(--line-strong); border-left: 3px solid var(--edge); border-radius: 4px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); color: var(--text); }
+.pg-detail.r-stock { --edge: var(--r-stock); } .pg-detail.r-tuned { --edge: var(--r-tuned); } .pg-detail.r-custom { --edge: var(--r-custom); }
+.pg-detail.r-zeroday { --edge: var(--r-zeroday); } .pg-detail.r-indemnified { --edge: var(--r-indemnified); }
+.pg-detail .silk-title { font-size: 16px; }
+.pg-pop:not(.sheet) .pg-acts { display: none; }
+.pg-scrim { position: fixed; inset: 0; z-index: 79; background: rgba(0, 0, 0, 0.45); }
+.pg-scrim[hidden] { display: none; }
+.pg-pop.sheet { left: 0 !important; right: 0; top: auto !important; bottom: 0; width: auto; max-width: none; max-height: 78vh; pointer-events: auto; animation: pg-up 0.18s ease-out; padding-bottom: env(safe-area-inset-bottom); }
+.pg-pop.sheet .pg-detail { border-radius: 12px 12px 0 0; border-left-width: 1px; border-top: 3px solid var(--edge); padding: 10px 16px 0; }
+.pg-pop.sheet .pg-detail::before { content: ''; justify-self: center; width: 40px; height: 4px; border-radius: 2px; background: var(--line-strong); } /* the grab bar */
+.pg-pop.sheet .pg-acts { position: sticky; bottom: 0; margin: 4px -16px 0; padding: 12px 16px 14px; background: rgba(10, 8, 5, 0.98); border-top: 1px solid var(--line); }
+.pg-pop.sheet .pg-acts .btn { flex: 1; min-height: 44px; }
+@keyframes pg-up { from { transform: translateY(40px); opacity: 0; } }
+.no-motion .pg-pop, .no-motion .pg-pop.sheet { animation: none; }
+@media (prefers-reduced-motion: reduce) { .pg-pop, .pg-pop.sheet { animation: none; } }
 .silk-head { display: flex; align-items: center; gap: 14px; }
 .silk-headtext { display: grid; gap: 6px; flex: 1; min-width: 0; }
 .silk-plate { flex: none; display: grid; place-items: center; padding: 4px; background: #0c0905; border: 1px solid var(--line); border-radius: 3px; }
@@ -1964,29 +1981,40 @@ body:has(.silk-stash .silk-tile[data-kind="implant"]:hover) .silk-fp[data-kind="
 .silk-fx { margin: 0; font-size: 13px; color: var(--text); max-width: none; }
 .silk-fx b { color: var(--r-zeroday); font-weight: 600; }
 .silk-flavour { color: var(--muted); font-size: 12px; }
-.silk-sheet .set-lines { margin-top: 2px; }
+.pg-detail .set-lines { margin-top: 2px; }
 .silk-acts { display: flex; flex-wrap: wrap; gap: 8px; }
 .silk-acts .btn .glyph { margin: 0; }
 
-/* The stash: a tile a protocol, read at a glance: its small glyph, its name, its first stats with ▲ ▼. */
-.silk-tiles { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
-.silk-tile { --edge: var(--line-strong); position: relative; display: grid; grid-template-rows: minmax(0, 1fr) auto; min-width: 0; background: var(--inset); border: 1px solid var(--line); border-top: 2px solid var(--edge); border-radius: var(--r-card); }
+/* The stash: a row a protocol, to scan down: its small glyph, its name and level, its three biggest stats with ▲ ▼ in a
+   column of their own, then Load or Swap and Deconstruct. A click on the row loads it. */
+.pg-bar { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 0 12px; }
+.pg-bar .inv-filters { flex: 1 1 auto; }
+.pg-bar .pg-sort { flex: 0 0 auto; }
+.silk-tiles { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 4px; }
+.silk-tile { --edge: var(--line-strong); position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; min-width: 0; background: var(--inset); border: 1px solid var(--line); border-left: 3px solid var(--edge); border-radius: var(--r-card); }
 .silk-tile.r-stock { --edge: var(--r-stock); } .silk-tile.r-tuned { --edge: var(--r-tuned); } .silk-tile.r-custom { --edge: var(--r-custom); }
 .silk-tile.r-zeroday { --edge: var(--r-zeroday); } .silk-tile.r-indemnified { --edge: var(--r-indemnified); }
-.silk-tile:hover { background: rgba(241, 185, 47, 0.05); }
-.silk-tile.fit { border-color: rgba(241, 185, 47, 0.75); border-top-color: var(--edge); box-shadow: 0 0 0 1px rgba(241, 185, 47, 0.35), 0 0 12px rgba(241, 185, 47, 0.16); }
-.silk-tile.on { border-color: var(--amber); border-top-color: var(--edge); background: rgba(241, 185, 47, 0.07); box-shadow: 0 0 0 1px var(--amber); }
-.silk-tile .silk-pick { display: flex; align-items: center; gap: 8px; margin: 0; padding: 8px 10px 4px 6px; text-align: left; color: var(--text); background: none; border: 0; border-radius: var(--r-card) var(--r-card) 0 0; }
+.silk-tile:hover, .silk-tile.pd-on { background: rgba(241, 185, 47, 0.06); border-color: var(--line-strong); border-left-color: var(--edge); }
+.silk-tile.fit { border-color: rgba(241, 185, 47, 0.45); border-left-color: var(--edge); }
+.silk-tile .silk-pick { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px; min-width: 0; margin: 0; padding: 5px 6px 5px 4px; text-align: left; color: var(--text); background: none; border: 0; border-radius: var(--r-card) 0 0 var(--r-card); cursor: pointer; }
+.silk-tile .silk-pick[aria-disabled='true'] { cursor: default; }
 .silk-tile .silk-pick:hover { border: 0; }
-.silk-tile .iname { font: 600 13px/1.3 var(--mono); overflow-wrap: break-word; }
-.silk-tile small { font: 11px var(--mono); color: var(--dim); }
-.silk-sts { display: grid; gap: 1px; margin-top: 2px; }
-.silk-st { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); }
+.silk-tile .silk-pick:focus-visible { outline: 1px solid var(--amber); outline-offset: -1px; }
+.silk-tile .silk-text { gap: 2px; }
+.silk-tile .pglyph.pg-sm { --pg-size: 2.6px; }
+.silk-tile .iname { font: 600 13px/1.25 var(--mono); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.silk-tile .iname .tag { margin-left: 4px; vertical-align: 1px; }
+.pg-lv { display: grid; justify-items: end; gap: 1px; min-width: 52px; }
+.pg-lv b { font: 600 12px var(--mono); color: var(--text); white-space: nowrap; }
+.pg-lv small { font: 10px var(--mono); letter-spacing: 0.5px; text-transform: uppercase; color: var(--dim); }
+.silk-sts { display: flex; flex-wrap: wrap; gap: 0 12px; }
+.silk-st { display: flex; align-items: center; gap: 3px; font-size: 12px; color: var(--muted); }
 .silk-st .glyph { width: 0.95em; height: 0.95em; margin: 0; color: var(--muted); }
 .silk-st b { font: 600 12px var(--mono); color: var(--text); }
 .silk-st.neg b { color: var(--hot); }
 .silk-st i { font: normal 10px var(--mono); } .silk-st i.up { color: var(--you); } .silk-st i.down { color: var(--hot); }
-.silk-tile .inv-acts { justify-content: flex-end; padding: 0 8px 8px; }
+.silk-tile .inv-acts { padding: 0 6px 0 0; }
+@media (max-width: 640px) { .silk-tile .inv-acts .inv-btn:not(.load) { display: none; } .pg-lv { min-width: 0; } } /* a phone: Deconstruct is in the tap's sheet */
 .no-motion .silk-trace.live { animation: none; }
 @media (prefers-reduced-motion: reduce) { .silk-trace.live { animation: none; } }
 
