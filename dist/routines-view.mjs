@@ -34,7 +34,8 @@ function slot(kind, i, chip, options, value, disabled = false) {
   const sel = disabled ? '' : `<select class="rt-sel" data-rt-set="${i + 1} ${kind}" aria-label="${esc(kind.toUpperCase())} for handler ${i + 1}">${options.map(([v, l]) => `<option value="${esc(v)}"${v === value ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
   return `<span class="rt-slot rt-s-${kind}${disabled ? ' off' : ''}" data-rt-drop="${kind}:${i}"><span class="rt-kind">${kind === 'when' ? 'WHEN' : kind === 'do' ? 'DO' : 'TARGET'}</span>${chip}${sel}</span>`;
 }
-const ramCells = (used, budget) => `<span class="rt-cells">${Array.from({ length: budget }, (_, k) => `<i class="${k < used ? 'on' : ''}"></i>`).join('')}</span>`;
+// RAM in use against the budget: one continuous meter, so it reads the same at 6 or 60.
+const ramMeter = (used, budget) => `<span class="rt-meter${used > budget ? ' over' : ''}" role="meter" aria-valuemin="0" aria-valuemax="${budget}" aria-valuenow="${used}"><i style="width:${budget ? Math.min(100, Math.round((used / budget) * 100)) : 0}%"></i></span>`;
 
 // ---------- the Program tab ----------
 // Below level 5: one locked card, your level against the one it opens at.
@@ -72,7 +73,7 @@ export function programMarkup(s) {
   const whenOpts = [...pal.glob.filter((x) => x.open).map((x) => x.id), ...pal.muts.map((x) => x.id), ...pal.parts.flatMap((p) => p.chips.filter((c) => c.open).map((c) => c.id))].map((id) => [id, whenLabel(id)]);
   const doOpts = bar.map((x) => [x.id, `${x.key} ${skillName(s, x.id)}`]);
   const tgtOpts = Object.keys(TARGETS).map((id) => [id, TARGETS[id].label]);
-  const ramBar = `<div class="rt-ram" title="${esc(`RAM: ${used} of ${budget} in use. Each virus's routine has its own. Your class level gives it: ${ROUTINES.ram[0]} at level 1, ${ROUTINES.ram[1]} at 50.`)}"><span class="rt-label">RAM</span>${ramCells(used, budget)}<b>${used}/${budget}</b></div>`;
+  const ramBar = `<div class="rt-ram" title="${esc(`RAM: ${used} of ${budget} in use. Each virus's routine has its own. Your class level gives it: ${ROUTINES.ram[0]} at level 1, ${ROUTINES.ram[1]} at 50.`)}"><span class="rt-label">RAM</span><b class="rt-ramnum${used > budget ? ' over' : ''}">${used}<small> / ${budget}</small></b>${ramMeter(used, budget)}</div>`;
   const list = rows.map((r) => {
     const h = r.h, x = bar.find((b) => b.id === h.do) || { id: h.do, key: '' };
     const state = !r.fits ? 'over' : !r.open ? 'shut' : !r.onBar ? 'shut' : '';

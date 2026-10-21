@@ -49,12 +49,14 @@
 .rt-power { grid-template-columns: auto; }
 .rt-power .btn { min-width: 112px; }
 
-/* RAM: a row of cells, lit amber for what the handlers use. */
+/* RAM: the number in use over the budget, large, and one continuous meter under no cell count. */
 .rt-ram { display: flex; align-items: center; gap: var(--s4); cursor: help; }
-.rt-ram .rt-cells { display: flex; gap: 3px; flex-wrap: wrap; }
-.rt-ram .rt-cells i { width: 14px; height: 8px; border: 1px solid var(--line-strong); border-radius: 1px; }
-.rt-ram .rt-cells i.on { background: var(--amber); border-color: var(--amber); box-shadow: 0 0 6px rgba(241, 185, 47, 0.35); }
-.rt-ram b { font: 600 12px var(--mono); color: var(--amber); }
+.rt-ramnum { font: 700 22px var(--mono); line-height: 1; color: var(--amber); white-space: nowrap; }
+.rt-ramnum small { font-size: 14px; font-weight: 600; color: var(--amber-soft); }
+.rt-ramnum.over { color: var(--hot); }
+.rt-meter { position: relative; flex: 1 1 auto; max-width: 260px; height: 8px; border: 1px solid var(--line-strong); border-radius: 999px; overflow: hidden; }
+.rt-meter i { position: absolute; inset: 0 auto 0 0; background: var(--amber); box-shadow: 0 0 6px rgba(241, 185, 47, 0.35); }
+.rt-meter.over i { background: var(--hot); }
 .rt-rc { display: inline-flex; flex: none; align-items: center; justify-content: center; min-width: 22px; height: 18px; padding: 0 4px; border: 1px solid var(--amber-soft); border-radius: 999px; color: var(--amber); font-size: 10px; font-weight: 700; line-height: 1; letter-spacing: 0; }
 .rt-rc.over { border-color: var(--hot); color: var(--hot); }
 
