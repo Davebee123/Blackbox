@@ -24,6 +24,9 @@ test('crew-leaning damage dealers carry a crew: over Lv 18 and 30, more boss tri
     // folders are rooms) it measures 69%: held at 65%.
     if (c === 'hijacker') { assert.ok(r[c].won >= 0.65 && r[c].won >= r.overclocker.won, line); continue; }
     assert.ok(r[c].won >= 0.9, line);
-    for (const s of solo) assert.ok(r[c].won >= r[s].won && r[c].low > r[s].low, `${c} vs ${s}: ${line}`);
+    // The designer's call (October 21, 2026): once a lost fight stopped leaving a stale heal cap on the next visit, the
+    // Phantom's crew low point passed the Herder's by under a point (27.4 to 26.7) while the Herder still won more tries
+    // (92% to 89%). The Herder is fine as it is, so against the Phantom it is held to winning more, not to the low point.
+    for (const s of solo) assert.ok(r[c].won >= r[s].won && (r[c].low > r[s].low || (c === 'herder' && s === 'phantom')), `${c} vs ${s}: ${line}`);
   }
 });
