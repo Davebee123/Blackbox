@@ -240,7 +240,7 @@ test('the Daemons tab: your party and its slots, the bench, and every daemon on 
 test('in a fight: the Airbag shields at the start, the Breakpoint lands on a cut, the Lifeline holds you at 1, the Leash slows an Exfil', () => {
   const setup = (id, L = 20) => {
     const s = fresh();
-    s.hackers = { breaker: { level: L, xp: 0 } };
+    s.hackers = { breaker: { level: L, xp: 0 } }; s.loadout.sub = { breaker: 'demolitionist' };
     gainDaemon(s, id, L); s.daemons = [id];
     selectEncounter(s, 'cryptjack', 7, { level: L });
     return s;

@@ -6,7 +6,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, selectEncounter, resolveCycle, part, addItem, loaded, hooks, UNIQUES, gearStat, maxSignal, damageMultiplier, hit, heal, takeDamage, takenMult, cooldownOf, timersHidden, fxOn, fxPct, rollDrop, setBonusCount, puzzleUnique, floorUniques, strainTrophies, WORLD_SOURCES, addLocation, finish, hackerLevel, critChance } from './dist/combat.mjs';
 import { uniqueItem, seeded, BASES, STATS, LOOT } from './dist/gear.mjs';
-import { CONFIG, BOSS_LOOT, ABILITIES } from './dist/data.mjs';
+import { CONFIG, BOSS_LOOT, ABILITIES, defaultSub } from './dist/data.mjs';
 import { checkItems, fxText, fxList } from './dist/content.mjs';
 import ITEMS from './dist/content/items.mjs';
 
@@ -41,7 +41,7 @@ const ALL = [...SINK, ...BEDROCK];
 
 // ---------- fixtures ----------
 const L = 50;
-const vet = (cls = 'breaker', opts = {}) => { const s = fresh(); s.hackers = { [cls]: { level: opts.level || L, xp: 0 } }; s.loadout.archetype = cls; if (opts.sub) s.loadout.sub = { [cls]: opts.sub }; if (opts.kit) s.loadout.devKit = { talents: [] }; return s; };
+const vet = (cls = 'breaker', opts = {}) => { const s = fresh(); s.hackers = { [cls]: { level: opts.level || L, xp: 0 } }; s.loadout.archetype = cls; s.loadout.sub = { [cls]: opts.sub || defaultSub(cls) }; /* a subclass picked: the one named, else the old-edge one */ if (opts.kit) s.loadout.devKit = { talents: [] }; return s; };
 const wear = (s, id) => { const it = addItem(s, uniqueItem(UNIQUES[id], UNIQUES[id].level, seeded(1))); command(s, 'load ' + it.id); assert.ok(loaded(s).some((x) => x.id === it.id), `${id} loaded`); return it; };
 // A fight with no tells and nothing due: the test sets what lands, and when. run: on a run (your Signal, your rig's Block).
 function fight(s, { run = true, hp = 1000, level = L } = {}) {

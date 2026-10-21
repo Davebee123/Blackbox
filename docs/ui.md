@@ -90,6 +90,13 @@ at half width with a gap beside it.
 **Hover tips** (`.tt`): every `title` in the game shows in the game's own card (amber top rule, mono title
 line). Never rely on the browser's default tooltip.
 
+**Card and detail panel** (`.sk-page`, `skills-view.mjs`: Loadout → Skills and talents, and the subclass breakout): a
+card of picks (keys, chips, name chips with pips; names and state only) and, beside it, one sticky panel that explains
+the picked, hovered or focused item ([data-sk]: the full rule with `ruleHtml`'s facts lit, the only place on the page
+they are, its facts as tags, *Works with*, and its buttons). On a phone the panel is a bottom sheet: a tap opens it, a
+tap on the scrim or × closes it. A full-screen step (the breakout) sits inside the glass like the class picker
+(`.breakout`, cased).
+
 **Tethers** (`.tether`, `view.mjs` `tethers`, `fightread.mjs` `partLinks`): one look for every rule that reaches
 from one virus part to another (a Mutex's lock, a Lockbox's ward, a Mirror's twin, a Keyring's re-arm, the Cooler
 on the Rig, the C2 Node over its fragments). A steel bracket in the board's left gutter runs from the part the rule
@@ -173,6 +180,7 @@ star glyph in `--amber-soft` by its name, on the fight board and in the Codex, n
 | 34 | Fight board, parts that protect parts | A *lock 12* tag and a cue under the Mutex's name; nothing joined the two rows | A tether between the rows, the lock as an absorb segment on the partner's bar, a ward's cap line |
 | 35 | Top tabs, phone, eight tabs (the Codex, Craft and Run up together) | System ran off the screen's right edge | Two even rows of four (`.modules[data-tabs]`, set by app.js fitTopbar) |
 | 36 | Event cards on the map cards | A sentence per event and a row of plain buttons (Intercept, a button a faction) | One shell (kicker strip, time ring), each card its own picture with its action built in; the sentence is a tooltip |
+| 37 | Loadout → Skills and talents | Two cards of rule text (a library of skill cards, a tree of rule cards), a subclass tab row, four big class cards | One card of names and pips, a detail panel that holds every rule, a slim class row; the subclass breakout from level 10 |
 
 ## Screen effects (screenfx.mjs, screenfx.css)
 

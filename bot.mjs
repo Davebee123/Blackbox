@@ -13,7 +13,7 @@
 // world's timers (respawns, refills, the Resident, invasions) run on the bot's clock, the play clock (`tickPlay`:
 // Behind, Fresh) on real play. pacing.mjs prints both.
 // node bot.mjs [class] [targetLevel] [seed]
-import { UNIQUES, topUpCost, tickServices, fresh, command, resolveCycle, active, hooks, hackerLevel, idleRegen, maxSignal, addLocation, finish, loaded, rigOf, stashItem, slotCount, loadedOn } from './dist/combat.mjs';
+import { UNIQUES, topUpCost, tickServices, fresh, command, resolveCycle, active, hooks, hackerLevel, subWaiting, idleRegen, maxSignal, addLocation, finish, loaded, rigOf, stashItem, slotCount, loadedOn } from './dist/combat.mjs';
 import { RARITY_ORDER, SLOT_KINDS, groupOf, LOOT } from './dist/gear.mjs';
 import { play, layoutOf, currentLocation, signalNow, takeable, CORE, residentBonus } from './dist/run.mjs';
 import { relockLeft, relocks } from './dist/rogue.mjs';
@@ -28,7 +28,7 @@ import { offers, openContracts, heldCount, ready, MAIL } from './dist/mail.mjs';
 import { POLICIES } from './balance.mjs';
 import { botStep, BUILD } from './roomsim.mjs';
 import * as FP from './dist/floorplan.mjs';
-import { CONFIG, STRAINS, FAMILIES, GUARDS, ROOM_FAMILIES, BOSSES, power, bandOf } from './dist/data.mjs';
+import { CONFIG, STRAINS, FAMILIES, GUARDS, ROOM_FAMILIES, BOSSES, power, bandOf, defaultSub } from './dist/data.mjs';
 import { canDescend, floorsOf, hiddenNear } from './dist/floors.mjs';
 
 // How full the bot rests its Signal before it goes back out (a share of your max): 1 waits for full.
@@ -96,7 +96,9 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
     if (e.type === 'xp') { const why = (e.message.split('·')[1] || 'other').trim().replace(/[0-9]+/g, '#').replace(/ on .*/, '').replace(/\.$/, ''); stats.xp[why] = (stats.xp[why] || 0) + e.amount; }
   };
   const say = (text) => { const ev = play(s, text) || []; ev.forEach(note); t += cmdSec * 1000; return ev; };
-  const lvlCheck = () => { const L = hackerLevel(s); for (let l = 2; l <= L; l++) if (stats.levelAt[l] == null) { stats.levelAt[l] = Math.round((t - 1_700_000_000_000) / 60000); stats.realAt[l] = Math.round(real / 60000); stats.fightsAt[l] = stats.wins + stats.losses; byLevel[l] = JSON.parse(JSON.stringify(ledger)); if (trace) { const g = loaded(s), spike = 25 * power(l); (stats.worn_at ||= {})[l] = { uniques: g.filter((x) => x.unique).length, effects: g.filter(effectOf).length, slots: g.length, dmg: Math.round((g.reduce((n, x) => n + (x.stats.damage || 0), 0) / spike) * 100) / 100, sig: Math.round((g.reduce((n, x) => n + (x.stats.signal || 0), 0) / maxSignal(s)) * 100) / 100 }; } if (log) console.log(`level ${l} at ${stats.levelAt[l]} min`); } };
+  // At the subclass level it picks its class's default (there is no default in play: an unpicked class plays its core).
+  const subCheck = () => { if (subWaiting(s) && !active(s)) command(s, `subclass ${defaultSub(cls)}`); };
+  const lvlCheck = () => { subCheck(); const L = hackerLevel(s); for (let l = 2; l <= L; l++) if (stats.levelAt[l] == null) { stats.levelAt[l] = Math.round((t - 1_700_000_000_000) / 60000); stats.realAt[l] = Math.round(real / 60000); stats.fightsAt[l] = stats.wins + stats.losses; byLevel[l] = JSON.parse(JSON.stringify(ledger)); if (trace) { const g = loaded(s), spike = 25 * power(l); (stats.worn_at ||= {})[l] = { uniques: g.filter((x) => x.unique).length, effects: g.filter(effectOf).length, slots: g.length, dmg: Math.round((g.reduce((n, x) => n + (x.stats.damage || 0), 0) / spike) * 100) / 100, sig: Math.round((g.reduce((n, x) => n + (x.stats.signal || 0), 0) / maxSignal(s)) * 100) / 100 }; } if (log) console.log(`level ${l} at ${stats.levelAt[l]} min`); } };
   const fightKey = () => { const v = s.encounter.virus; return (v.strain ? STRAINS[v.strain].name : (FAMILIES[v.family] || GUARDS[v.family] || { name: v.family }).name) + (v.grade > 1 ? ` v${v.grade}` : ''); };
   const fight = () => {
     if (!s.encounter || (s.encounter.phase !== 'alert' && !active(s))) return; // a finished fight still on screen

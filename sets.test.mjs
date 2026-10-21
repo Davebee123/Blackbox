@@ -395,7 +395,7 @@ test('the LOWLIGHT Badge comes at level 22 from wick, with wick\'s Old Toolkit r
 });
 
 test('save v45: loaded protocols are stamped in slot order, held pieces count as found, the Badge beat is armed', () => {
-  assert.equal(SAVE_VERSION, 45);
+  assert.ok(SAVE_VERSION >= 45);
   const s = at(22);
   const a = give(s, 'wicks-old-toolkit', 3), b = give(s, 'lien');
   command(s, 'load ' + a.id);
@@ -406,7 +406,7 @@ test('save v45: loaded protocols are stamped in slot order, held pieces count as
   raw.collection = {}; // a save whose toolkit came before the Collection
   raw.mail.posted = STORY.beats.slice(0, -1).map((x) => x.id); raw.mail.story = STORY_LENGTH - 1; raw.mail.waiting = false;
   const r = restore(raw);
-  assert.equal(r.version, 45);
+  assert.equal(r.version, SAVE_VERSION);
   assert.equal(r.stash.find((x) => x.id === a.id).on, 1);
   assert.equal(r.stash.find((x) => x.id === b.id).on, undefined, 'only what is loaded');
   assert.ok(r.collection['wicks-old-toolkit'], 'holding the Toolkit is owning the piece');
@@ -631,7 +631,7 @@ test('a class set: anyone wears its 2- and 3-piece and the 4-piece\'s base line;
 });
 
 test('Kestrel pieces held from save v45 keep working, as the retuned set', () => {
-  assert.equal(SAVE_VERSION, 45, 'no save bump: a piece reads its bonuses from its unique, and its id and stats are unchanged');
+  assert.equal(SAVE_VERSION, 46, 'no save bump since v45 for sets (v46 is the subclass pick): a piece reads its bonuses from its unique, and its id and stats are unchanged');
   const s = at(12);
   const items = wear(s, KESTREL);
   (s.pity ||= {})['set:bouncer'] = 3;
@@ -763,7 +763,7 @@ test('a tier set drop comes up three times as often for your own class, pieces y
 });
 
 test('tier pieces held from the floor 3 to 6 version keep their item level and stats, and work as the set', () => {
-  assert.equal(SAVE_VERSION, 45, 'no save bump: a held piece keeps its stats and reads its bonuses from its unique and its set');
+  assert.equal(SAVE_VERSION, 46, 'no save bump since v45 for sets (v46 is the subclass pick): a held piece keeps its stats and reads its bonuses from its unique and its set');
   // A Wrecking Crew found before, at its old levels and bases.
   const OLD = { crowbar: ['exploit-chain', 15, { damage: [15, 19] }], 'det-cord': ['loader', 20, { damage: 9, signal: 40, payload: 4 }], 'hard-hat': ['ghost-shell', 26, { signal: 70, regen: 15, restore: 30 }], 'blast-map': ['implant', 32, { damage: 6, signal: 30 }] };
   const s = as('breaker', 'demolitionist', 32);

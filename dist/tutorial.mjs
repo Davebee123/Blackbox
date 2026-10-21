@@ -33,6 +33,7 @@ export const LESSONS = [
 export function beginTutorial(settings) {
   const s = fresh();
   s.hackers = { breaker: { level: 25, xp: 0 } }; // parked lessons use the full Breaker kit
+  s.loadout.sub = { breaker: 'demolitionist' };
   s.settings = structuredClone(settings);
   selectEncounter(s, 'cryptjack', 3);
   const v = s.encounter.virus;
