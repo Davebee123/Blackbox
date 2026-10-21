@@ -38,7 +38,8 @@
 //               worth of XP).
 //   visits      connect at the entry, jack out from any room (the pack banks), rest at home (Signal back at
 //               CONFIG.signalRest a minute), reconnect after ROOMS.reconnect. Lose a fight and you're disconnected: the
-//               unbanked pack is lost, XP and banked gear stay.
+//               unbanked pack lost (XP and banked gear stay), and CONFIG.deathWait.each more on the wait for each
+//               disconnect since your last clean jack out, up to its cap.
 //
 // Fights are ordinary run fights (combat.mjs selectEncounter, mode 'run') flagged e.rooms: combat.mjs finish hands the
 // end back here (hooks.roomEnd), and families.mjs and interrupt.mjs play the room rules (attack sets, the new bodies,
@@ -461,7 +462,7 @@ export function newRooms(s, { seed = 1, size = 'medium', kind = 'Mailhub', level
     v: 1, fog: FOG, seed, size, kind, level, floor, author, speed, bossRule: world ? null : BOSS_RULES[boss] ? boss : 'a', graph,
     id: (name || serverName(seed, kind)).toLowerCase(), name: name || serverName(seed, kind),
     at: null, visit: null, visits: 0, cleared: {}, seen: {}, down: {}, spawns: {}, rare: {}, taken: {}, opened: {},
-    signal: max, max, homeAt: nowOf(), reconnectAt: 0, screen: null, pack: [], banked: [], credits: 0, xpStart: 0,
+    signal: max, max, homeAt: nowOf(), reconnectAt: 0, deaths: 0, screen: null, pack: [], banked: [], credits: 0, xpStart: 0,
     log: [], scripts: [], codex: {}, mapped: false, last: null, rolls: 0,
     stats: { fights: 0, won: 0, lost: 0, cuts: 0, wasted: 0, ticks: 0, signalBy: {}, boss: { tries: 0, won: 0 }, hunted: 0, moves: 0, cycles: 0 },
     ...(world ? { world: true } : {}), ...more,
@@ -772,6 +773,7 @@ export function enter(s, now = nowOf(), { keys = [] } = {}) {
   const R = s.rooms;
   if (R.world) R.max = s.run.max;
   R.visits++;
+  R.fightFrom = null; // in with the Signal you connected with, never a fight's from an earlier visit
   R.at = R.graph.entry;
   R.inSince = now;
   R.visit = { n: R.visits, walked: { [R.graph.entry]: true }, keys: [...keys], rested: false, moves: 0, hunter: newHunter(s), slipped: false, back: null, xp0: xpTotal(s) };
@@ -797,6 +799,7 @@ export function jackOut(s, why = '') {
   }
   const banked = R.pack.length;
   R.banked.push(...R.pack); R.pack = [];
+  R.deaths = 0; // a clean jack out: the next disconnect waits the plain ROOMS.reconnect again
   R.last = { result: 'out', xp: xpTotal(s) - R.visit.xp0, banked, visit: R.visit.n };
   goHome(s);
   say(s, `${why ? `${why} ` : ''}JACKED OUT of ${R.name}.${banked ? ` ${banked} ${banked === 1 ? 'item' : 'items'} banked.` : ''}`, 'jacked-out');
@@ -809,9 +812,11 @@ function keysBack(s) {
   if (keys.length && !R.visit.cracked) say(s, `Your key goes back to ${keys.map((vid) => roomList(s).find((x) => x.key === vid)?.path).filter(Boolean).join(' and ') || 'its elite'}, its guard up again.`, 'rooms-bad');
   if (R.visit) R.visit.keys = [];
 }
+// Home, and the server's wait (longer after each disconnect since your last clean jack out: R.deaths).
 function goHome(s, R = s.rooms) {
   const now = nowOf();
-  R.at = null; R.screen = null; R.homeAt = now; R.reconnectAt = now + ROOMS.reconnect / R.speed;
+  R.fightFrom = null; // the fight you left (or lost) is over: its Signal never caps your next visit's
+  R.at = null; R.screen = null; R.homeAt = now; R.reconnectAt = now + (R.world ? ROOMS.reconnect : Math.min(CONFIG.deathWait.cap, ROOMS.reconnect + (R.deaths || 0) * CONFIG.deathWait.each)) / R.speed;
   R.visit = { ...R.visit, hunter: null, exfil: R.visit?.exfil?.state === 'loose' ? { ...R.visit.exfil, state: 'gone' } : R.visit?.exfil || null }; // an Exfil you left is gone
 }
 // Lost a fight: disconnected. The unbanked pack is lost; XP, banked gear and your scripts stay.
@@ -830,6 +835,7 @@ function disconnected(s, why) {
   keysBack(s);
   R.last = { result: 'lost', why, lost, xp: xpTotal(s) - (R.visit?.xp0 ?? xpTotal(s)), visit: R.visit?.n, ...recap };
   R.signal = 0;
+  R.deaths = (R.deaths || 0) + 1;
   goHome(s);
   say(s, `DISCONNECTED. ${why}${lost.length ? ` ${lost.length} unbanked ${lost.length === 1 ? 'item' : 'items'} lost.` : ''}`, 'rooms-bad');
 }

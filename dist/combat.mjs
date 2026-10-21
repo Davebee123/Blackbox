@@ -1889,7 +1889,11 @@ function serviceCommand(s) {
   return warn(s, 'Services are gone. Programs in a server\'s sockets bend that server\'s rules: clear a socket room, then build.');
 }
 
-// Losing all Signal on a run: back home, pack lost, server untouched.
+// How long a server makes you wait to reconnect after a disconnect: CONFIG.relockMs, and CONFIG.deathWait.each more for
+// each disconnect on its run (loc.deaths), up to CONFIG.deathWait.cap.
+export const relockWait = (deaths = 0) => Math.min(CONFIG.deathWait.cap, CONFIG.relockMs + deaths * CONFIG.deathWait.each);
+// Losing all Signal on a run: back home, pack lost, server untouched. The server waits a little longer for each
+// disconnect on its run (relockWait).
 export function disconnect(s, reason) {
   const run = s.run;
   if (!run) return;
@@ -1908,11 +1912,12 @@ export function disconnect(s, reason) {
   const recap = s.encounter?.mode === 'run' ? deathRecap(s) : null; // how: the last cycles' Signal and hits (recap.mjs)
   s.signal = Math.max(0, run.integrity);
   s.run = null;
-  if (loc) loc.lockUntil = (hooks.now?.() ?? Date.now()) + CONFIG.relockMs; // every server: see rogue.mjs relocks/relockLeft
+  const wait = loc ? relockWait((loc.deaths = (loc.deaths || 0) + 1)) : 0;
+  if (loc) loc.lockUntil = (hooks.now?.() ?? Date.now()) + wait; // every server: see rogue.mjs relocks/relockLeft
   if (s.encounter?.mode === 'run' && s.encounter.phase !== 'active') s.encounter = null;
   if (s.parked) { s.encounter = s.parked; s.parked = null; }
   if (s.gate && s.encounter?.phase !== 'alert') { s.encounter = s.gate; s.gate = null; }
-  emit(s, 'disconnected', `DISCONNECTED${reason ? ': ' + reason : ''}. ${lost ? `${lost} unbanked ${lost === 1 ? 'file' : 'files'} lost.` : ''} Your server is untouched.`, { by, reason: reason || '', lost, where: loc?.name || '', relockMs: loc ? CONFIG.relockMs : 0, failed, ...(recap ? { recap } : {}) });
+  emit(s, 'disconnected', `DISCONNECTED${reason ? ': ' + reason : ''}. ${lost ? `${lost} unbanked ${lost === 1 ? 'file' : 'files'} lost.` : ''} Your server is untouched.`, { by, reason: reason || '', lost, where: loc?.name || '', relockMs: wait, deaths: loc?.deaths || 0, failed, ...(recap ? { recap } : {}) });
 }
 
 function newMetrics(s) {

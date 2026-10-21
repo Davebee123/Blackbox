@@ -18,7 +18,7 @@ import { nextPayIn, boardOpen, storyAt, openContracts, ready } from './mail.mjs'
 import { hubsOf, hubFound, hubTraceOf, FACTIONS } from './factions.mjs';
 import { WARES } from './market.mjs';
 import { logComms, commsOf, unseen, unseenAlert, seeAll, markDone, pruneComms, clearComms, clearOne } from './comms.mjs';
-import { nextTip, markSeen } from './tips.mjs';
+import { nextTip, markSeen, TOUR, tourDone, skipTour } from './tips.mjs';
 import { createWindow } from './window.mjs';
 import { createIntro } from './intro.mjs';
 import { powerOn } from './poweron.mjs';
@@ -1224,7 +1224,7 @@ function run(raw) {
   { const said = screenFxCommand(campaign, text); if (said) { save(); dirty = true; return notice(said); } } // screen fx [off|subtle|medium|bold|next] / screen fx <effect> on|off (and the old effects calm|full|minimal)
   if (text === 'casing on' || text === 'casing off') { campaign.settings.casing = text === 'casing on'; save(); dirty = true; return; }
   if (text === 'tips on' || text === 'tips off' || text === 'tips replay') {
-    if (text === 'tips replay') { campaign.settings.seen = {}; campaign.settings.tips = true; }
+    if (text === 'tips replay') { campaign.settings.seen = {}; delete campaign.tour; campaign.settings.tips = true; }
     else campaign.settings.tips = text === 'tips on';
     hideTip(false); save(); dirty = true;
     return notice(text === 'tips replay' ? 'Tips will show again as you meet things.' : `Tips ${campaign.settings.tips ? 'on' : 'off'}.`);
@@ -1823,6 +1823,7 @@ function render(force = false) {
   applySideMarks();
   showArmed();
   renderPrompt();
+  tourCheck();
   placeTip();
   dirty = false;
 }
@@ -2038,21 +2039,20 @@ function services() {
 // ---------- first-time tips ----------
 // The game's only tutorial: the first time you meet something, a tip points at it, once.
 // One at a time; fight tips pause the fight until you close them (Got it, Enter on an empty
-// line, Esc, or clicking the thing it points at).
+// line, Esc, or clicking the thing it points at). The rooms tour (tips.mjs TOUR) is a run of these that moves on
+// when you do what a step says, by a click or the prompt.
 let tip = null;
 let tipWait = 0;
-function onScreen(sel) {
-  const el = document.querySelector(sel);
-  if (!el) return false;
-  const r = el.getBoundingClientRect();
-  return r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth;
-}
+const shownRect = (el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth; };
+// The first match that's on screen: the room map draws twice (wide, and tall for a phone) and shows one.
+const shownEl = (sel) => [...document.querySelectorAll(sel)].find(shownRect) || null;
+function onScreen(sel) { return !!shownEl(sel); }
 function checkTips(now) {
   if (tip || ending || introOn || !$('levelup').hidden || shell.booting || playtest || now < tipWait) return;
   tipWait = now + 400;
   const t = nextTip(campaign, module, onScreen);
   if (!t) return;
-  tip = { t, cur: t, step: 0, paused: false };
+  tip = { t, cur: t, step: 0, paused: false, base: t.mark?.(campaign) };
   showStep();
   $('tip').hidden = false;
   if (t.pause && active(campaign) && !campaign.encounter.paused) { campaign.encounter.paused = true; tip.paused = true; dirty = true; }
@@ -2066,8 +2066,9 @@ function showStep() {
   const steps = tip.t.steps;
   tip.cur = steps ? steps[tip.step] : tip.t;
   $('tip-text').textContent = tip.cur.text;
-  $('tip-step').textContent = steps ? `${tip.step + 1}/${steps.length}` : '';
+  $('tip-step').textContent = steps ? `${tip.step + 1}/${steps.length}` : tip.t.tour ? `${tourDone(campaign) + 1}/${TOUR.length}` : '';
   $('tip-ok').textContent = steps && tip.step < steps.length - 1 ? 'Next' : 'Got it';
+  $('tip-skip').hidden = !tip.t.tour;
 }
 function advanceTip() {
   if (!tip) return;
@@ -2083,8 +2084,8 @@ function advanceTip() {
 }
 function placeTip() {
   if (!tip) return;
-  const el = document.querySelector(tip.cur.at);
-  if (!el || !onScreen(tip.cur.at)) return hideTip(false); // it'll come back when its thing does
+  const el = shownEl(tip.cur.at);
+  if (!el) return hideTip(false); // it'll come back when its thing does
   document.querySelectorAll('.tip-target').forEach((x) => { if (x !== el) x.classList.remove('tip-target'); });
   el.classList.add('tip-target');
   const box = $('tip'), r = el.getBoundingClientRect(), w = box.offsetWidth, h = box.offsetHeight;
@@ -2115,6 +2116,9 @@ function hideTip(seen) {
 }
 $('tip-ok').addEventListener('click', () => { advanceTip(); $('command-input').focus(); });
 $('tip-off').addEventListener('click', () => { campaign.settings.tips = false; hideTip(true); notice('Tips off. Turn them back on on the System page.'); dirty = true; });
+$('tip-skip').addEventListener('click', () => { skipTour(campaign); hideTip(false); save(); $('command-input').focus(); });
+// A tour step you did (by a click or the prompt): it closes, and the next waits for its own thing.
+function tourCheck() { if (tip?.t.tour && tip.t.done?.(campaign, tip.base)) hideTip(true); }
 addEventListener('resize', () => placeTip());
 
 // A status lands: its chip shows big over the board, then flies into its place in the Status
@@ -2327,7 +2331,7 @@ document.addEventListener('click', (e) => {
 }, true);
 document.addEventListener('keydown', (e) => { if (payState && e.key === 'Escape') { payState = null; payDraw(); } });
 document.addEventListener('click', (e) => {
-  if (tip && !e.target.closest('#tip') && e.target.closest(tip.cur.at)) advanceTip();
+  if (tip && !e.target.closest('#tip') && (e.target.closest(tip.cur.at) || (tip.cur.also && e.target.closest(tip.cur.also)))) advanceTip();
   if (e.target.closest('[data-spoils-go]')) { if (ended) leaveFight(); else hideSpoils(); return; }
   if (e.target.closest('[data-gain-go]')) { hideGain(); return; }
   const pick = e.target.closest('[data-mk-pick]');

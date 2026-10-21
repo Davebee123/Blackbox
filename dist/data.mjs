@@ -158,6 +158,9 @@ export const CONFIG = {
   // (and rests back up like the server); you need a quarter of it to connect.
   zone: { id: 'sprawl', name: 'SPRAWL-00', respawnMs: 90000, minSignal: 0.25, maxLevel: 5, starterKills: 2, starterHit: 0.6, bossRespawnMs: 30 * 60000 }, // your first two kills: SPRAWL's hits land at 60% while you learn the board // SPRAWL follows you up to level 5 (a spawn now and then one higher); past that it's grey-ish filler
   relockMs: 30000, // any server but an outpost won't take you back for 30 seconds after you leave: no jack out, top up, return
+  // Each disconnect on a server's run (Signal 0, a lost fight) adds this to its wait, up to the cap in all; a clean jack
+  // out or the server's reboot clears the count (combat.mjs relockWait, loc.deaths).
+  deathWait: { each: 15000, cap: 120000 },
   // The Exfil (floorplan.mjs, netrooms.mjs): a process smuggling a stolen archive off a rogue server, a loot mob. One
   // roll a run (rogue.mjs: a run lasts until the server reboots), chance of an Exfil; after one turns up, none on any of
   // your rogue servers for cooldownMs (yours:

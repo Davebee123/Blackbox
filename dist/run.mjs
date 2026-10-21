@@ -699,6 +699,7 @@ export function bank(s, loc, why = '') {
   s.signal = s.run.integrity;
   s.run = null;
   if (relocks(loc)) loc.lockUntil = clock() + ROGUE.relockMs;
+  delete loc.deaths; // a clean jack out: the next disconnect waits the plain 30 seconds again (combat.mjs relockWait)
   if (s.encounter?.mode === 'run') s.encounter = null;
   if (s.parked) { s.encounter = s.parked; s.parked = null; }
   if (s.gate && s.encounter?.phase !== 'alert') { s.encounter = s.gate; s.gate = null; }
