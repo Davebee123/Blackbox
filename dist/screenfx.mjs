@@ -2,14 +2,14 @@
 // the game: every effect lives in the backdrop behind the panels (#fx-back), on the tube's edge (#crt-bezel), in the
 // monitor casing's lamps, or across the virus picture (#virus-canvas). Text, numbers, bars, chips and the board are
 // never touched, moved or dimmed. The one thing that reaches the interface is a floor's palette: its colour tokens
-// (style.css :root), set on <html data-floor>, each checked for contrast (docs/ui.md).
+// (style.css :root), set on <html data-sfx-floor>, each checked for contrast (docs/ui.md).
 //   Low Signal   your health under a quarter, in a fight or out on a run: the screen's edge burns a thin red into a
 //                grey haze, light static runs in the backdrop and a slow vignette breathes in it. Under a half, a
 //                faint warm edge (medium and bold).
 //   Big hits     a hit on you of an eighth of your bar or more (a crit always): a brief tear across the backdrop.
 //   Crits        your crit on a part: a short horizontal tear across the virus picture.
 //   Floor colour each floor its own palette (its accent tinting the panels at medium and bold) and a light texture in
-//                the backdrop (rain on the Sprawl, frost on Coldline).
+//                the backdrop (neon haze on the Sprawl, frost on Coldline).
 //   Status lights the casing's lamps (PWR GATE WALL NET INST DMN) glow and blink with real state.
 // Off / subtle / medium (default) / bold, and each effect can be switched off on its own (screen fx <effect> off).
 // The same setting says how much moves on the fight board (the old Effects setting: off is minimal, subtle and medium
@@ -35,7 +35,7 @@ export const SFX = {
 // (screenfx.test.mjs checks it).
 const line = (r, g, b) => ({ '--line': `rgba(${r}, ${g}, ${b}, 0.2)`, '--line-strong': `rgba(${r}, ${g}, ${b}, 0.45)`, '--amber-wash': `rgba(${r}, ${g}, ${b}, 0.1)`, '--sfx-glow': `rgba(${r}, ${g}, ${b}, 0.5)` });
 export const PALETTES = [
-  { floor: 1, name: 'The Sprawl', texture: 'rain', vars: { '--bg': '#0a0603', '--panel': '#110b05', '--panel-2': '#181006', '--inset': '#070402', '--text': '#f2e0b4', '--bright': '#fff2c8', '--muted': '#bc9c5e', '--dim': '#9e814f', '--amber': '#f4b437', '--amber-soft': '#d99a24', '--amber-deep': '#7e5311', ...line(244, 180, 55) } },
+  { floor: 1, name: 'The Sprawl', texture: 'haze', vars: { '--bg': '#0a0603', '--panel': '#110b05', '--panel-2': '#181006', '--inset': '#070402', '--text': '#f2e0b4', '--bright': '#fff2c8', '--muted': '#bc9c5e', '--dim': '#9e814f', '--amber': '#f4b437', '--amber-soft': '#d99a24', '--amber-deep': '#7e5311', ...line(244, 180, 55) } },
   { floor: 2, name: 'Backhaul', texture: 'sodium', vars: { '--bg': '#0b0602', '--panel': '#130b04', '--panel-2': '#1a0f05', '--inset': '#080401', '--text': '#f6dcb8', '--bright': '#fff0d8', '--muted': '#c99a62', '--dim': '#a57e52', '--amber': '#f3a33a', '--amber-soft': '#d98a24', '--amber-deep': '#7e4710', ...line(243, 163, 58) } },
   { floor: 3, name: 'The Stacks', texture: 'dust', vars: { '--bg': '#050804', '--panel': '#0a0f08', '--panel-2': '#10170c', '--inset': '#040603', '--text': '#d8e6c0', '--bright': '#eef8dc', '--muted': '#9fb27e', '--dim': '#809364', '--amber': '#a9c48a', '--amber-soft': '#8aa86c', '--amber-deep': '#3f5530', ...line(169, 196, 138) } },
   { floor: 4, name: 'Coldline', texture: 'frost', vars: { '--bg': '#02060a', '--panel': '#060e14', '--panel-2': '#0a141c', '--inset': '#02050a', '--text': '#dcecf4', '--bright': '#f2fbff', '--muted': '#94b4c4', '--dim': '#7896a6', '--amber': '#cfe9f7', '--amber-soft': '#a6cfe4', '--amber-deep': '#3d6278', ...line(207, 233, 247) } },
@@ -132,7 +132,7 @@ export function screenState(s, ctx = {}) {
 }
 
 // ---------- the DOM side ----------
-// Only these are ever written: <html>'s data-sfx / data-floor / data-sfx-tex and the palette's tokens, the
+// Only these are ever written: <html>'s data-sfx / data-sfx-floor / data-sfx-tex and the palette's tokens, the
 // backdrop, the bezel, the casing's lamps, and the virus picture. screenfx.test.mjs holds it to that list.
 export const TOUCHES = ['html', 'fx-back', 'crt-bezel', 'lamp-pwr', 'lamp-gate', 'lamp-wall', 'lamp-net', 'lamp-inst', 'lamp-dmn', 'virus-canvas'];
 export function createScreenFx(doc, { canMove = () => true } = {}) {
@@ -155,8 +155,8 @@ export function createScreenFx(doc, { canMove = () => true } = {}) {
         // The palette's tokens go on <html> (they win over style.css :root); home takes them back off.
         painted = key;
         for (const k of Object.keys(PALETTES[0].vars)) html.style.removeProperty(k);
-        if (p) { for (const [k, v] of Object.entries(varsOf(p, level))) html.style.setProperty(k, v); html.dataset.floor = String(p.floor); html.dataset.sfxTex = p.texture; }
-        else { delete html.dataset.floor; delete html.dataset.sfxTex; }
+        if (p) { for (const [k, v] of Object.entries(varsOf(p, level))) html.style.setProperty(k, v); html.dataset.sfxFloor = String(p.floor); html.dataset.sfxTex = p.texture; }
+        else { delete html.dataset.sfxFloor; delete html.dataset.sfxTex; }
       }
       $('fx-back')?.classList.toggle('low', !!st.low);
       $('crt-bezel')?.classList.toggle('low', !!st.low);

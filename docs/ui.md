@@ -199,7 +199,7 @@ interface**. CSS, the DOM and text only (no canvas, WebGL or PixiJS).
 
 | Floor | Structure | bg / panel (subtle) | Texture | dim, worst surface (subtle to bold) |
 | --- | --- | --- | --- | --- |
-| The Sprawl | `#f4b437` warm amber | `#0a0603` / `#110b05` | rain | 4.8 to 4.6 |
+| The Sprawl | `#f4b437` warm amber | `#0a0603` / `#110b05` | haze | 4.8 to 4.6 |
 | Backhaul | `#f3a33a` sodium | `#0b0602` / `#130b04` | sodium lamp light | 4.8 to 4.7 |
 | The Stacks | `#a9c48a` dusty green | `#050804` / `#0a0f08` | dust | 5.2 to 5.0 |
 | Coldline | `#cfe9f7` ice | `#02060a` / `#060e14` | frost at the edges | 5.4 to 5.2 |

@@ -76,7 +76,7 @@ test('the effects write only to the backdrop, the bezel, the lamps, the virus pi
   fx.blink('net');
   fx.apply(screenState(s, { module: 'net', loc: { depth: 4 }, health: 0.1, until: fx.until }));
   for (const id of touched) assert.ok(TOUCHES.includes(id), `touched #${id}`);
-  assert.equal(html.dataset.floor, '4');
+  assert.equal(html.dataset.sfxFloor, '4');
   assert.equal(html.dataset.sfxTex, 'frost');
   assert.equal(html.dataset.sfx, 'medium');
   assert.match(els['lamp-net'].className, /blink-once/);
@@ -254,4 +254,15 @@ test('nothing on the interface moves: no screen shake, no nudge, no jolt that sh
     assert.doesNotMatch(kf, /transform|translate|rotate/, `${name} doesn't move anything`);
   }
   assert.match(style, /\.virus-stage\.fx-punch canvas \{/, 'a punch moves the picture only');
+});
+
+test('the attributes screen effects put on <html> never match a click handler\'s [data-…] lookup (a click on the map is never a floor button)', () => {
+  const app = readFileSync(new URL('./dist/app.js', import.meta.url), 'utf8');
+  const sfx = readFileSync(new URL('./dist/screenfx.mjs', import.meta.url), 'utf8');
+  const kebab = (k) => k.replace(/[A-Z]/g, (c) => '-' + c.toLowerCase());
+  const written = new Set([...sfx.matchAll(/html\.dataset\.([a-zA-Z]+)\s*=/g)].map((m) => 'data-' + kebab(m[1])));
+  assert.ok(written.has('data-sfx-floor') && written.size >= 2, 'found what screen effects write');
+  // A bare closest('[data-x]') climbs to <html>; one scoped to an element (button[data-x]) never does.
+  const bare = new Set([...app.matchAll(/closest\??\.?\('\[(data-[a-z-]+)[\]=]/g)].map((m) => m[1]));
+  for (const a of written) assert.ok(!bare.has(a), `${a} on <html> would match closest('[${a}]') in app.js`);
 });

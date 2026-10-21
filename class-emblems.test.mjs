@@ -14,12 +14,14 @@ test('every class has an emblem, 19 by 8, mirror-symmetric', () => {
   }
 });
 
-test('the class picker shows each class with its emblem, what it does and its starting skills, and a Start button', () => {
+test('the class picker shows each class with its emblem, its archetype (no description) and its starting skills, and a Start button', () => {
   const html = classPickMarkup();
   for (const [k, a] of Object.entries(ARCHETYPES)) {
     assert.ok(html.includes(`data-pick-class="${k}"`), k);
-    assert.ok(html.includes(a.does.replace(/'/g, '&#39;')), `${k}: what it does`);
+    assert.ok(!html.includes(a.does.replace(/'/g, '&#39;')), `${k}: no description`);
+    for (const r of a.role) assert.ok(html.includes(`<span>${r}</span>`), `${k}: archetype ${r}`);
     for (const x of a.skills.slice(0, 2)) assert.ok(html.includes(x.name), `${k}: ${x.name}`);
   }
   assert.ok(html.includes('class="btn primary pk-go" disabled'));
+  assert.ok(html.includes('>Subclass</span>') && !/>Level \d+</.test(html), 'the subclass row is named Subclass');
 });

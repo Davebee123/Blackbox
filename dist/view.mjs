@@ -3264,7 +3264,7 @@ function marketMarkup(s, f, now) {
 }
 const GLYPH_OF_GOOD = { relay: 'relay', cracker: 'cracker', injector: 'injector', signal: 'signal', repair: 'repair', cipher: 'cipher', worm: 'worm', kernel: 'kernel', exploit: 'exploit', salvage: 'salvage', crate: 'crate', blueprint: 'blueprint' };
 
-// Your first class, picked right after you log in: a full-screen choice of four, each with its emblem, what it does,
+// Your first class, picked right after you log in: a choice of four on the screen, each with its emblem, its archetype,
 // its passive and Sync, the two skills it starts with and the subclasses it opens. Pick one, then start
 // (app.js pickClass). Switching is free until a class reaches LOADOUT.trialUntil (your level comes along).
 export function classPickMarkup() {
@@ -3275,12 +3275,11 @@ export function classPickMarkup() {
       <span class="pk-num">0${i + 1}</span>
       <span class="pk-plate"><pre class="pk-art" aria-hidden="true">${esc(EMBLEMS[k].join('\n'))}</pre></span>
       <span class="pk-name">${esc(a.name)}</span>
-      <span class="pk-does">${esc(a.does)}</span>
       <span class="pk-role">${a.role.map((r) => `<span>${esc(r)}</span>`).join('')}</span>
       <span class="pk-sec"><span class="pk-k">Passive</span><b>${esc(a.passive.name)}</b><small>${esc(a.passive.rule)}</small></span>
       <span class="pk-sec"><span class="pk-k">Sync</span><small>${esc(SYNC[k].rule)}</small></span>
       <span class="pk-sec"><span class="pk-k">Starts with</span><ul class="pk-skills">${first}</ul></span>
-      <span class="pk-sec pk-later"><span class="pk-k">Level ${SUBCLASS.from}</span><small>${subs}</small></span>
+      <span class="pk-sec pk-later"><span class="pk-k" title="${esc(`From level ${SUBCLASS.from}`)}">Subclass</span><small>${subs}</small></span>
     </button>`;
   }).join('');
   return `<div class="pk-scene" role="dialog" aria-label="Choose your class">

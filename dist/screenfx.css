@@ -26,12 +26,11 @@
 /* .fx-tex wears the accent through a mask: the pattern is the mask, so it takes the floor's colour. */
 #fx-back .fx-tex { background: var(--amber); -webkit-mask-repeat: repeat; mask-repeat: repeat; will-change: transform; }
 :root[data-sfx-tex] #fx-back .fx-tex { opacity: calc(0.07 * var(--sfx-k)); }
-/* The Sprawl: rain, falling. */
-:root[data-sfx-tex="rain"] #fx-back .fx-tex {
-  top: -200px; opacity: calc(0.11 * var(--sfx-k));
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='200'%3E%3Cg stroke='%23fff' stroke-linecap='round'%3E%3Cpath d='M12 8l-5 26' stroke-opacity='.9'/%3E%3Cpath d='M58 40l-4 20' stroke-opacity='.6'/%3E%3Cpath d='M104 4l-6 30'/%3E%3Cpath d='M140 70l-5 24' stroke-opacity='.7'/%3E%3Cpath d='M30 110l-5 26' stroke-opacity='.8'/%3E%3Cpath d='M84 128l-4 20' stroke-opacity='.5'/%3E%3Cpath d='M126 150l-6 30'/%3E%3Cpath d='M8 168l-4 22' stroke-opacity='.6'/%3E%3Cpath d='M70 84l-3 16' stroke-opacity='.4'/%3E%3C/g%3E%3C/svg%3E");
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='200'%3E%3Cg stroke='%23fff' stroke-linecap='round'%3E%3Cpath d='M12 8l-5 26' stroke-opacity='.9'/%3E%3Cpath d='M58 40l-4 20' stroke-opacity='.6'/%3E%3Cpath d='M104 4l-6 30'/%3E%3Cpath d='M140 70l-5 24' stroke-opacity='.7'/%3E%3Cpath d='M30 110l-5 26' stroke-opacity='.8'/%3E%3Cpath d='M84 128l-4 20' stroke-opacity='.5'/%3E%3Cpath d='M126 150l-6 30'/%3E%3Cpath d='M8 168l-4 22' stroke-opacity='.6'/%3E%3Cpath d='M70 84l-3 16' stroke-opacity='.4'/%3E%3C/g%3E%3C/svg%3E");
-  animation: sfx-fall 0.9s linear infinite; --fall: 200px;
+/* The Sprawl: neon haze, drifting slowly sideways. Nothing falls. */
+:root[data-sfx-tex="haze"] #fx-back .fx-tex {
+  left: -20%; right: -20%; -webkit-mask-image: none; mask-image: none; opacity: calc(0.08 * var(--sfx-k));
+  background: radial-gradient(ellipse 38% 22% at 28% 38%, var(--amber), transparent 70%), radial-gradient(ellipse 30% 18% at 74% 68%, var(--amber), transparent 70%);
+  animation: sfx-haze 40s ease-in-out infinite alternate;
 }
 /* Backhaul: sodium lamps passing overhead, a slow band of orange light. */
 :root[data-sfx-tex="sodium"] #fx-back .fx-tex {
@@ -148,6 +147,7 @@
 @keyframes sfx-rise { from { transform: translateY(0); } to { transform: translateY(var(--rise, -40px)); } }
 @keyframes sfx-drift { from { transform: translate(0, 0); } to { transform: translate(140px, 140px); } }
 @keyframes sfx-drip { from { transform: translateY(0); } to { transform: translateY(240px); } }
+@keyframes sfx-haze { from { transform: translateX(-6%); } to { transform: translateX(6%); } }
 @keyframes sfx-sweep { from { transform: translateY(-30%); } to { transform: translateY(30%); } }
 @keyframes sfx-breathe { 0%, 100% { filter: brightness(0.75); } 50% { filter: brightness(1.25); } }
 @keyframes sfx-pulse { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }

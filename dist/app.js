@@ -19,7 +19,6 @@ import { hubsOf, hubFound, hubTraceOf, FACTIONS } from './factions.mjs';
 import { WARES } from './market.mjs';
 import { logComms, commsOf, unseen, unseenAlert, seeAll, markDone, pruneComms, clearComms, clearOne } from './comms.mjs';
 import { nextTip, markSeen } from './tips.mjs';
-import { createRain } from './rain.mjs';
 import { createWindow } from './window.mjs';
 import { createIntro } from './intro.mjs';
 import { powerOn } from './poweron.mjs';
@@ -293,7 +292,6 @@ const pzFx = createPuzzleFx({ canMove: () => canMove(), sound: (sign, ms) => { f
 // The immersive shell (CRT, boot, status line). `?shell=plain` or `shell plain` turns it off.
 const shellParam = params.get('shell');
 const shellOn = () => (shellParam || campaign.settings.shell || 'immersive') !== 'plain';
-const rain = createRain({ canMove: () => canMove() });
 // The window behind the monitor (casing on, Window setting on): the slum outside, and its weather.
 const outside = createWindow({ canMove: () => canMove(), onThunder: (d) => feel.thunder(d), onWeather: (_, w) => { outsideRain = w.rain; feel.rain(outsideRain); } });
 let outsideRain = 0, outsideShown = false, lastVols = '';
@@ -1814,10 +1812,6 @@ function render(force = false) {
       applyMapZoom();
     }
   }
-  if (module === 'net' && campaign.run) {
-    rain.mount($('page-view'));
-    rain.mood({ tension: Math.max(0, 1 - campaign.run.integrity / campaign.run.max), hot: campaign.encounter?.mode === 'run' });
-  } else rain.stop();
   const netTray = module === 'net' && !!campaign.run;
   $('tray').hidden = !(combatLike || netTray);
   $('tray').classList.toggle('net-tray', netTray);
@@ -2373,7 +2367,7 @@ document.addEventListener('click', (e) => {
   if (mf) { mapFilter = mf.dataset.mapfilter === 'all' ? [] : [mf.dataset.mapfilter]; dirty = true; return; }
   const mv = e.target.closest('[data-mapview]');
   if (mv) { mapView = mv.dataset.mapview; mapSel = 'server'; feel.add('channel', null); dirty = true; return; }
-  const fb = e.target.closest('[data-floor]');
+  const fb = e.target.closest('button[data-floor]'); // a floor button (never <html>, which carries the screen effects' data-sfx-floor)
   if (fb) { mapFloor = Number(fb.dataset.floor) || 1; mapSel = null; mapPop = false; mapList = false; mapZoom.k = 1; mapView = 'mine'; if (module !== 'map') go('map'); feel.add('channel', null); dirty = true; return; }
   if (e.target.closest('[data-leads]')) { leadsOpen = !leadsOpen; dirty = true; return; }
   const lt = e.target.closest('[data-ltab]');
