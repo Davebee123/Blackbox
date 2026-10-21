@@ -1419,7 +1419,8 @@ function traceWays(s, h, via, kit) {
     : `The first clear of each room on ${at} traces the servers beside it. About ${need} more will finish this one. Mapping ${at} traces it the rest of the way.`;
   const main = `<div class="tw-main${per > 0 ? '' : ' dim'}" title="${esc(tip)}">${glyph('kill')}<span class="tw-what"><b>${esc(zone ? `Kills in ${at}` : `First clears on ${at}`)}</b>${pips(need)}</span><em>${per > 0 ? `+${per}%` : '—'}</em></div>`;
   const ways = [
-    row('spike', 'Beat its invader', `+${HIDDEN.winLead}%`, `If it sends an invasion, jack in and win to trace it ${HIDDEN.winLead}%. If your wall stops the invasion, it traces it ${HIDDEN.blockLead}%.`),
+    // Lit only while its invasion is on its way: until then there's nothing to beat.
+    row('spike', 'Beat its invader', `+${HIDDEN.winLead}%`, `If it sends an invasion, jack in and win to trace it ${HIDDEN.winLead}%. If your wall stops the invasion, it traces it ${HIDDEN.blockLead}%.`, s.invasion?.hidden === h.id ? 'on' : 'off'),
     relay
       ? row(FAM_GLYPH[h.family] || 'kill', `Kill any ${fam}`, `+${HIDDEN.killLead}%`, `Your relay on ${at} hears every ${fam} you kill, at home or on a run.`)
       : row('relay', 'Relay', `+${HIDDEN.killLead}% · +${HIDDEN.routeLead}%`, `A relay on ${at} adds ${HIDDEN.killLead}% for each kill of its family and ${HIDDEN.routeLead}% for its route file.`, 'off'),
