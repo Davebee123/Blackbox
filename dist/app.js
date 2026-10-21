@@ -3111,8 +3111,11 @@ function renderBreakout() {
 // Themed hover tips: every title="" in the game shows in the game's own card instead of the browser's.
 // The title moves to data-tt on first hover (so the browser's tip never shows) and the card follows the element.
 // "Name: the rest" leads with the name in bold, like the item cards. Touch has no hover, so it is left alone.
-const tt = { el: null, at: null, timer: 0 };
-function ttHide() { clearTimeout(tt.timer); tt.at = null; if (tt.el) tt.el.hidden = true; }
+const tt = { el: null, at: null, timer: 0, text: null, out: 0 };
+function ttHide() { clearTimeout(tt.timer); clearTimeout(tt.out); tt.at = null; if (tt.el) tt.el.hidden = true; }
+// A redraw replaces the element under a still pointer with a copy: the pointer leaves the old one and enters the new
+// one. Leaving waits a beat, and the same tip on the copy carries on, so a live page never blinks its tip.
+const ttSame = (a) => tt.el && !tt.el.hidden && a.dataset.tt === tt.text;
 function ttShow(anchor) {
   const text = anchor.dataset.tt;
   if (!text || !anchor.isConnected) return ttHide();
@@ -3120,6 +3123,7 @@ function ttShow(anchor) {
   const m = text.match(/^([^:.\n]{2,40}): ([\s\S]+)$/);
   const esc = (t) => t.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
   tt.el.innerHTML = m ? `<b>${esc(m[1])}</b>${esc(m[2][0].toUpperCase() + m[2].slice(1))}` : esc(text);
+  tt.text = text;
   tt.el.hidden = false;
   const r = anchor.getBoundingClientRect(), w = tt.el.offsetWidth, h = tt.el.offsetHeight, pad = 8;
   let x = Math.min(Math.max(pad, r.left + r.width / 2 - w / 2), innerWidth - w - pad), y = r.bottom + 8;
@@ -3132,10 +3136,14 @@ document.addEventListener('pointerover', (e) => {
   if (!a || a.closest('[data-ptip]') || a.matches('.mpkt')) return ttHide();
   if (a.hasAttribute('title')) { const t = a.getAttribute('title'); a.removeAttribute('title'); if (t) a.dataset.tt = t; }
   if (tt.at === a) return;
+  if (ttSame(a)) { clearTimeout(tt.out); tt.at = a; ttShow(a); return; } // the same tip on a redrawn copy: keep it up
   ttHide(); tt.at = a;
   tt.timer = setTimeout(() => tt.at === a && ttShow(a), 280);
 });
-document.addEventListener('pointerout', (e) => { if (tt.at && !tt.at.contains(e.relatedTarget)) ttHide(); });
+document.addEventListener('pointerout', (e) => {
+  if (!tt.at || tt.at.contains(e.relatedTarget)) return;
+  if (tt.el && !tt.el.hidden) { clearTimeout(tt.out); const was = tt.at; tt.out = setTimeout(() => tt.at === was && ttHide(), 60); } else ttHide();
+});
 for (const ev of ['pointerdown', 'keydown', 'scroll', 'blur']) addEventListener(ev, ttHide, true);
 // Touch has no hover: a tap on a fight's reading (a part's name cell, a tell chip, a gear chip) shows its card for a
 // few seconds. The board redraws on the tap (it targets the part), so the card finds its element again by a selector.
