@@ -260,3 +260,40 @@ test('the chit forecast knows a heavy hit breaks two', async () => {
   assert.equal(forecast(s, { ability: 'spike', target: p.id, ok: true }).chits[p.id], 1);
   assert.equal(forecast(s, { ability: 'overload', target: p.id, ok: true }).chits[p.id], 2);
 });
+
+// "It seems like I'm missing Overload a lot": a hit on a part that still wears ◆ breaks one (two for a heavy hit) and
+// deals no damage. The tray says so before you fire: a ◆ on each damaging key armor would take whole, read off the
+// ability data and the hit rule (combat.mjs armorTakes), never on the skills that break or ignore ◆.
+test('the ◆ badge: on a damaging key armor would absorb, aimed at an armored part; never on Crack and the armor breakers', async () => {
+  const { armorTakes } = await import('./dist/combat.mjs');
+  const s = start();
+  const enc = part(s, 'encryptor');
+  enc.armor = enc.maxArmor = 3;
+  const key = (html, id) => html.split('<button').find((k) => k.includes(`data-ability="${id}"`)).split('</button>')[0];
+  const html = trayMarkup(s, 'encryptor');
+  assert.match(key(html, 'overload'), /class="armd" title="Armor takes this hit: it breaks 2 ◆ and deals no damage\. Crack it first\."/, 'Overload is a heavy hit: two ◆');
+  assert.match(key(html, 'spike'), /class="armd" title="Armor takes this hit: it breaks 1 ◆/);
+  assert.match(key(html, 'flood'), /class="armd"/, 'Flood doubles only on a bare part: on ◆ it is absorbed like any hit');
+  for (const id of ['crack', 'shaped-charge', 'thermal-runaway', 'rm-rf', 'logic-bomb']) assert.doesNotMatch(key(html, id), /armd/, `${id}: breaks ◆, or no hit now`);
+  // The rule behind it: piercers, strippers and the skills that break 2 ◆ on armor never count; a bare part never does.
+  for (const id of ['backdoor', 'zero-day', 'side-channel', 'crack', 'shaped-charge', 'fork-bomb', 'rate-limit', 'reclaim', 'chain-reaction', 'bit-rot', 'inject', 'harden']) assert.equal(armorTakes(s, id, enc), 0, id);
+  assert.equal(armorTakes(s, 'overload', enc), 2);
+  assert.equal(armorTakes(s, 'exploit', enc), 1);
+  enc.armor = 1;
+  assert.equal(armorTakes(s, 'overload', enc), 1, 'one ◆ left: one to break');
+  enc.armor = 0;
+  assert.equal(armorTakes(s, 'overload', enc), 0);
+  assert.doesNotMatch(key(trayMarkup(s, 'encryptor'), 'overload'), /armd/, 'a bare part: Overload lands');
+  // No part selected: the key's own target (the last part you hit, else the soonest attacker), as Enter would fire it.
+  const pulse = part(s, 'pulse');
+  pulse.armor = pulse.maxArmor = 2;
+  s.encounter.lastAttack = 'spike pulse';
+  assert.match(key(trayMarkup(s), 'overload'), /armd/, 'aimed at the Pulse Node, which wears ◆');
+  // Queued: the queued target, and the board's Now chip carries the same ◆.
+  enc.armor = 2;
+  command(s, 'overload encryptor');
+  assert.match(key(trayMarkup(s, 'pulse'), 'overload'), /breaks 2 ◆/, 'the queued target, not the selection');
+  assert.match(boardMarkup(s, null), /<div class="intent mine"[^>]*>overload encryptor<span class="armd" title="Armor takes this hit/);
+  command(s, 'crack encryptor');
+  assert.doesNotMatch(boardMarkup(s, null).match(/<div class="intent mine"[^]*?<\/div>/)[0], /armd/, 'Crack queued: no badge');
+});

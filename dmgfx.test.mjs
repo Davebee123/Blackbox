@@ -171,3 +171,52 @@ test('a hit a Mutex\'s lock soaks: the lock\'s own number in the shield kind ("�
   assert.equal(absorbOf(through, ctx).text, '−12 absorbed', 'and the lock\'s number beside it');
   assert.equal(absorbOf({ id: 3, type: 'damage', target: 'encryptor', amount: 9 }, ctx), null, 'no lock, no absorbed number');
 });
+
+// A big hit spent on ◆ isn't a miss: armor takes it whole, breaks one ◆ (two for a heavy hit) and deals no damage. The
+// part floats ◆ ABSORBED in steel and the log names the skill; a real miss keeps its own MISS, dim, and its own line.
+test('a hit armor absorbs floats ◆ ABSORBED and logs "absorbed by"; a real miss keeps its MISS', async () => {
+  const { armorFloat, missFloat } = await import('./dist/dmgfx.mjs');
+  const { SIGNS } = await import('./dist/feel.mjs');
+  const { spikeName } = await import('./dist/combat.mjs');
+  const s = start('breaker');
+  const p = s.encounter.virus.parts[0];
+  Object.assign(p, { armor: 3, maxArmor: 3 });
+  const evs = act(s, `overload ${p.id}`);
+  const ab = evs.find((e) => e.type === 'armor');
+  assert.ok(ab?.absorbed, evs.map((e) => e.message).join(' | '));
+  assert.equal(ab.message, `Overload: absorbed by ${p.name}'s ◆ (2 broken, 1 left).`, 'one line, naming the skill and what broke');
+  assert.equal(evs.filter((e) => e.type === 'armor').length, 1, 'no second armor line');
+  assert.ok(!evs.some((e) => e.type === 'damage' && e.target === p.id) && !evs.some((e) => e.type === 'miss'), 'no damage line, and no miss');
+  assert.equal(p.armor, 1);
+  assert.deepEqual(armorFloat(ab), { sign: 'absorbed', text: '◆ ABSORBED' });
+  // Its last ◆: the patch countdown stays on the same line.
+  s.encounter.readyAt = {};
+  const last = act(s, `spike ${p.id}`).find((e) => e.type === 'armor');
+  assert.match(last.message, new RegExp(`^${spikeName(s)}: absorbed by ${p.name}'s ◆ \\(1 broken\\)\\. Its armor is broken, and it patches in \\d+ cycles?\\.$`));
+  // A ◆ broken some other way (Crack, a burn tick, an extra hit) stays CRACKED, with its old line.
+  Object.assign(p, { armor: 3, patchAt: null });
+  s.encounter.readyAt = {};
+  const crack = act(s, `crack ${p.id}`).find((e) => e.type === 'armor');
+  assert.ok(!crack.absorbed && /^Crack: /.test(crack.message));
+  assert.deepEqual(armorFloat(crack), { sign: 'chit', text: 'CRACKED' });
+  // A real miss: its own event, line and float, nothing about ◆.
+  const was = { misses: CONFIG.misses, baseMiss: CONFIG.baseMiss, maxMiss: CONFIG.maxMiss };
+  Object.assign(CONFIG, { misses: true, baseMiss: 1000, maxMiss: 100 }); // every hit misses, whatever the level gap
+  try {
+    Object.assign(p, { armor: 2, patchAt: null });
+    s.encounter.readyAt = {};
+    const out = act(s, `overload ${p.id}`);
+    const miss = out.find((e) => e.type === 'miss');
+    assert.ok(miss && /^Overload MISSES /.test(miss.message), out.map((e) => e.message).join(' | '));
+    assert.ok(!out.some((e) => e.type === 'armor' && e.target === p.id) && p.armor === 2, 'a miss breaks no ◆');
+    assert.deepEqual(missFloat(miss), { sign: 'miss', text: 'MISS' });
+    assert.equal(armorFloat(miss), null);
+    assert.notEqual(armorFloat(ab).text, missFloat(miss).text);
+    assert.notEqual(armorFloat(ab).sign, missFloat(miss).sign);
+  } finally { Object.assign(CONFIG, was); }
+  // The two signs look different: steel for armor, the dim struck-out word for a miss (feel.mjs).
+  assert.equal(SIGNS.absorbed.float, 'steel');
+  assert.notEqual(SIGNS.absorbed.float, SIGNS.miss.float);
+  assert.notEqual(SIGNS.absorbed.flash, SIGNS.miss.flash);
+  assert.ok(!/hot/.test(SIGNS.absorbed.float), 'never the red of a threat');
+});

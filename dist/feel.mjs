@@ -12,7 +12,7 @@ import { glyph } from './glyphs.mjs';
 // they land on the fresh elements. beat(ms) sets when the next ones land: a cycle's damage numbers
 // come one after another (dmgfx.mjs), each with its own flash, sound and number.
 
-const SIGNS = {
+export const SIGNS = {
   // You put something on a part: a mark (Exposed, Tagged, Hooked, Throttled, Quarantined), a burn, a helper.
   mark: { flash: 'fx-mark', float: 'mark', voice: 'mark', buzz: [6, 20, 6] },
   burn: { flash: 'fx-burn', float: 'burn', voice: 'burn', buzz: 10 },
@@ -51,6 +51,8 @@ const SIGNS = {
   absorb: { float: 'steel', voice: 'chit', buzz: 6 },
   // You broke an armor chit (no damage, but progress).
   chit: { flash: 'fx-hit', float: 'amber', voice: 'chit', buzz: 8 },
+  // Your command's whole hit went into a ◆ (◆ ABSORBED): steel, what protects a part, never a miss's dim or a threat's red.
+  absorbed: { flash: 'fx-hit', float: 'steel', voice: 'chit', buzz: 8 },
   // A part patched a chit back.
   patch: { flash: 'fx-enrage', float: 'hot', voice: 'patch', buzz: [10, 20] },
   // You pushed an attack back.

@@ -46,6 +46,16 @@ export function absorbOf(e, ctx = {}) {
   const where = ctx.partName?.(e.target) || '';
   return make('shield', `${minus(e.shield)} absorbed`, on(`${hitName(e, ctx)} ${minus(e.shield)} absorbed by the lock`, where), 'part', e.target);
 }
+// The word an armor event floats off its part (app.js), and the feel.mjs sign it plays as. Your command's whole hit
+// spent on ◆ (combat.mjs hit: absorbed) reads ◆ ABSORBED in steel, so a big hit on armor never looks like a MISS (its
+// own word, dim and struck through: missFloat). A ◆ broken any other way reads CRACKED; a Mutex's lock, LOCK BROKEN.
+export function armorFloat(e) {
+  if (e?.type !== 'armor' || !e.target) return null;
+  if (e.lock === 'broke') return { sign: 'absorb', text: 'LOCK BROKEN' };
+  if (e.absorbed) return { sign: 'absorbed', text: '◆ ABSORBED' };
+  return { sign: 'chit', text: 'CRACKED' };
+}
+export const missFloat = (e) => (e?.type === 'miss' ? { sign: 'miss', text: 'MISS' } : null);
 // The kind a hit on a part is: a crit first (whatever made it), then where it came from.
 function partKind(e) {
   if (e.crit) return 'crit';
