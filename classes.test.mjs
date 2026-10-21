@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, selectEncounter, resolveCycle, part, keyMap, barKeys, daemonSlots, timersHidden, intents, readyIn, momentumStacks, knownSkills } from './dist/combat.mjs';
-import { CONFIG, SKILLS, ABILITIES, LOADOUT, barSlots } from './dist/data.mjs';
+import { CONFIG, SKILLS, ABILITIES, LOADOUT, SUBCLASS, barSlots, defaultSub } from './dist/data.mjs';
 CONFIG.tells = false; // these check skill numbers; tells.test.mjs checks the tells
 // These tests check exact numbers: no crits (gear.test.mjs covers them).
 CONFIG.baseCrit = 0;
@@ -22,6 +22,7 @@ export const start = (cls, level = 22, id = 'cryptjack', seed = 7) => {
   s.loadout.archetype = cls;
   s.hackers = { [cls]: { level, xp: 0 } };
   s.loadout.devKit = { talents: [] }; // every class skill by its level, whichever subclass has it (mechanics tests)
+  if (level >= SUBCLASS.from) s.loadout.sub = { [cls]: defaultSub(cls) }; // the old-edge subclass, picked (its edge: Overkill, Grudge, Weak Spot, Last Gasp)
   selectEncounter(s, id, seed, { level: 6 }); // a mid-level enemy: the numbers these tests check
   command(s, 'engage');
   return s;
@@ -55,7 +56,7 @@ test('keys: 1 Spike, 2–9 and 0 equipped skills (7 slots, 8 at 22, 9 at 30), - 
   assert.equal(keyMap(s)['-'], 'sigint', 'everyone\'s interrupt, on its own key');
   assert.deepEqual(barKeys(s).map(([k]) => k), ['1', ...LOADOUT.keys.slice(0, n), '-']);
   for (const [lvl, n, last] of [[21, 7, '8'], [22, 8, '9'], [30, 9, '0']]) {
-    const t = fresh(); t.loadout.archetype = 'breaker'; t.hackers = { breaker: { level: lvl, xp: 0 } };
+    const t = fresh(); t.loadout.archetype = 'breaker'; t.hackers = { breaker: { level: lvl, xp: 0 } }; t.loadout.sub = { breaker: 'demolitionist' };
     const keys = barKeys(t).map(([k]) => k);
     assert.equal(keys.length, n + 2, `level ${lvl}: Spike, ${n} skills, SIGINT`);
     assert.equal(keys.at(-2), last, `level ${lvl}: the last skill is on ${last}`);
@@ -297,7 +298,8 @@ test('Spoof slips past one guard for one file; Light footprint makes return trip
   const s = fresh();
   s.loadout.archetype = 'infiltrator';
   s.hackers = { infiltrator: { level: 30, xp: 0 } };
-  s.loadout.equipped.infiltrator = ['inject', 'spoof'];
+  s.loadout.sub = { infiltrator: 'phantom' }; // Spoof is the Phantom's
+  s.loadout.equipped.phantom = ['inject', 'spoof'];
   command(s, 'developer location worm');
   Object.assign(s.locations[0], { template: 'relay', quirk: null });
   connect(s, s.locations[0].id);

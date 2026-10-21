@@ -1,11 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, selectEncounter, resolveCycle, part, attackAmount, defender, intents as intentsOf } from './dist/combat.mjs';
-import { STRAINS, strainsFor, createVirus, SERVER, variantFor, gradeFor } from './dist/data.mjs';
+import { STRAINS, strainsFor, createVirus, SERVER, variantFor, gradeFor, defaultSub } from './dist/data.mjs';
 
 const veteran = (arch = 'breaker', level = 14) => {
   const s = fresh();
   s.hackers = { breaker: { level, xp: 0 }, bastion: { level, xp: 0 }, infiltrator: { level, xp: 0 }, operator: { level, xp: 0 } };
+  s.loadout.sub = Object.fromEntries(['breaker', 'bastion', 'infiltrator', 'operator'].map((c) => [c, defaultSub(c)])); // each its old-edge subclass, picked
   if (arch !== 'breaker') command(s, 'archetype ' + arch);
   return s;
 };

@@ -14,9 +14,9 @@ CONFIG.powerPerLevel = 0; // flat numbers at every level (level tests turn it ba
 CONFIG.gap = { dealt: 0, taken: 0, floor: 1, below: 0 }; // and no level-gap scaling (combat.test.mjs tests it)
 (await import('./dist/data.mjs')).LOADOUT.specRanks = 0; // the kit talent's two free ranks (progression.mjs): off, for exact numbers
 
-// A level-25 Breaker, so every Breaker skill is on the bar.
+// A level-50 Demolitionist (picked), so every Breaker skill it uses is on the bar.
 // Its bar is the class core first (key 2 Overload), as these tests were written; the shipped presets have tests of their own.
-const veteran = () => { const s = fresh(); s.hackers = { breaker: { level: 50, xp: 0 }, infiltrator: { level: 50, xp: 0 } }; s.loadout.equipped.demolitionist = ['overload', 'flood', 'exploit', 'crack', 'shatter', 'fork-bomb', 'shaped-charge', 'thermal-runaway', 'logic-bomb']; return s; };
+const veteran = () => { const s = fresh(); s.hackers = { breaker: { level: 50, xp: 0 }, infiltrator: { level: 50, xp: 0 } }; s.loadout.sub = { breaker: 'demolitionist', infiltrator: 'phantom' }; s.loadout.equipped.demolitionist = ['overload', 'flood', 'exploit', 'crack', 'shatter', 'fork-bomb', 'shaped-charge', 'thermal-runaway', 'logic-bomb']; return s; };
 const start = (id = 'cryptjack', seed = 7) => {
   const s = veteran();
   selectEncounter(s, id, seed, { level: 6 }); // a mid-level enemy: the numbers these tests check

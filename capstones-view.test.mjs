@@ -16,10 +16,13 @@ test('each subclass keeps its own capstone, and the Loadout page draws the row w
   const ph = SUBS.phantom.capstones[1];
   assert.equal(capRank(s, ph.id), 2);
   const html = loadoutMarkup(s, 'infiltrator', 'skills');
-  assert.match(html, /<b>Capstone<\/b>/);
-  assert.match(html, new RegExp(ph.name));
-  assert.match(html, /data-command="talent infiltrator capstone a"/, 'the other one can be swapped in');
-  assert.match(html, /<b>Tier 3<\/b>/, 'the third tier is a tier again');
+  assert.match(html, /<span class="sk-tl lit"><i><\/i>Lv 45<\/span>/, 'the capstone row, open');
+  assert.match(html, new RegExp(`<button type="button" class="sk-tn pick cap" data-sk="t:${ph.id}" aria-pressed="false"><i class="sk-check" aria-hidden="true">✓</i><b>${ph.name}</b><span class="sk-pips" aria-label="2 of 2"><i class="on"></i><i class="on"></i></span>`), 'picked, its two rank pips lit');
+  assert.match(html, /<span class="sk-tl lit"><i><\/i>Tier 3<\/span>/, 'the third tier is a tier again');
+  const other = SUBS.phantom.capstones[0];
+  const panel = loadoutMarkup(s, 'infiltrator', 'skills', { sel: 't:' + other.id });
+  assert.match(panel, /data-command="talent infiltrator capstone a"[^>]*>Swap to this</, 'the other one can be swapped in, from its panel');
+  assert.match(loadoutMarkup(s, 'infiltrator', 'skills', { sel: 't:' + ph.id }), /Rank 2 at level 50/, 'its panel names its second rank');
   assert.doesNotMatch(html, /undefined|NaN/);
   // The other subclass's tree has its own row, unpicked.
   command(s, 'subclass payload');

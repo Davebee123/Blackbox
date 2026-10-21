@@ -24,17 +24,57 @@ test('every class has two subclasses, each with its own line, edge and full tree
   }
 });
 
-test('before level 10 a class has its core; at 10 it plays its default subclass until it picks', () => {
+test('before level 10 a class has its core; from 10 it plays its core alone until it picks: no default subclass', () => {
   const s = at('breaker', 9);
   assert.equal(subOf(s), null);
   assert.deepEqual(knownSkills(s, 'breaker'), ARCHETYPES.breaker.core);
   assert.match(command(s, 'subclass overclocker').at(-1).message, /comes at level 10/);
-  s.hackers.breaker.level = 10;
-  assert.equal(subOf(s), defaultSub('breaker'));
-  assert.ok(!subPicked(s));
+  for (const level of [10, 22, 40]) {
+    s.hackers.breaker.level = level;
+    assert.equal(subOf(s), null, `no subclass at ${level} until a pick`);
+    assert.ok(!subPicked(s));
+    assert.equal(kitOf(s), null, 'no line, tree or presets');
+    assert.deepEqual(knownSkills(s, 'breaker'), ARCHETYPES.breaker.core, 'the core alone');
+    assert.ok(equippedSkills(s, 'breaker').every((id) => ARCHETYPES.breaker.core.includes(id)), 'no default subclass key on the bar');
+    assert.ok(!edge(s, 'breaker'), 'and not the default\'s edge (Overkill)');
+  }
+  assert.match(command(s, 'equip shatter').at(-1).message, /Demolitionist skill/);
+  assert.match(command(s, 'talent add armor-cracker').at(-1).message, /with your subclass/);
+  assert.match(command(s, 'loadout list').at(-1).message, /Presets come with your subclass/);
+  assert.match(command(s, 'subclass').at(-1).message, /not picked yet/);
   s.hackers.breaker.level = 9; s.hackers.breaker.xp = 0;
   command(s, 'developer level 10');
-  assert.ok(s.logs.some((e) => e.type === 'level-up' && /Pick a subclass: Demolitionist \(subclass demolitionist\) or Overclocker/.test(e.message)));
+  const up = s.logs.find((e) => e.type === 'level-up' && /LEVEL 10/.test(e.message));
+  assert.match(up.message, /Choose a subclass: Demolitionist \(subclass demolitionist\) or Overclocker \(subclass overclocker\)\. Until you do, you play the Breaker core\./);
+  assert.doesNotMatch(up.message, /Overkill/, 'no edge comes before the pick');
+  assert.ok(up.gains.includes('a subclass to pick'));
+  // Every class, every level from 10: the same.
+  for (const cls of Object.keys(ARCHETYPES)) {
+    const x = at(cls, 30);
+    assert.equal(subOf(x), null, cls);
+    assert.ok(!edge(x, cls), cls);
+    assert.deepEqual(knownSkills(x, cls), ARCHETYPES[cls].core, cls);
+    command(x, `subclass ${defaultSub(cls)}`);
+    assert.equal(subOf(x), defaultSub(cls), 'a pick is what gives it');
+    assert.ok(edge(x, cls), `${cls}: its edge with the pick`);
+  }
+});
+
+test('equip <skill> <key>: a skill goes on that key, swapping places with one on the bar or sending one to the shelf', () => {
+  const s = at('breaker', 30);
+  command(s, 'subclass demolitionist');
+  const bar = () => equippedSkills(s, 'breaker');
+  const was = bar(), at6 = was[4];
+  assert.match(command(s, `equip ${was[0]} 6`).at(-1).message, new RegExp(`on key 6, .* to key 2`));
+  assert.equal(bar()[4], was[0]); assert.equal(bar()[0], at6, 'the two swap places');
+  const off = knownSkills(s, 'breaker').find((id) => !bar().includes(id));
+  const out = bar()[8];
+  assert.match(command(s, `equip ${off} 0`).at(-1).message, /goes to the shelf/);
+  assert.equal(bar()[8], off); assert.ok(!bar().includes(out));
+  assert.match(command(s, `equip ${off} 0`).at(-1).message, /is on key 0/);
+  const low = at('breaker', 12);
+  command(low, 'subclass demolitionist');
+  assert.match(command(low, 'equip crack 9').at(-1).message, /opens at level 22/);
 });
 
 test('subclass <id>: the first pick anywhere out of a fight, switching only at home; each keeps its own bar and tree', () => {
@@ -73,17 +113,19 @@ test('an old edge only works in its subclass; subclass skills unlock along the l
   assert.deepEqual(skillOrder('bastion', 'sysop'), [...ARCHETYPES.bastion.core, ...line]);
 });
 
-test('an old save: its talent ranks move into the default subclass, tier picks come back as free points', () => {
+test('an old save from before subclasses: its talent points all come back (no subclass picked, so no tree yet)', () => {
   const s = at('breaker', 20);
   s.loadout.ranks = { breaker: { 'armor-cracker': 2, overclocked: 1 } };
   s.loadout.picks = { breaker: [1, 0] };
   s.version = 30;
   const t = restore(JSON.parse(JSON.stringify(s)));
-  assert.deepEqual(t.loadout.ranks.demolitionist, { 'armor-cracker': 2, overclocked: 1 });
+  assert.equal(t.loadout.ranks.demolitionist, undefined, 'the default subclass no longer keeps them');
   assert.equal(t.loadout.ranks.breaker, undefined);
   assert.equal(t.loadout.picks.breaker, undefined);
-  assert.equal(rank(t, 'armor-cracker'), 2);
+  assert.equal(rank(t, 'armor-cracker'), 0);
   assert.ok(!hasTalent(t, 'hair-trigger'));
+  command(t, 'subclass demolitionist');
+  assert.equal(rank(t, 'armor-cracker'), 0, 'a fresh tree to spend in');
 });
 
 test('crew sim takes a subclass: a Sysop crewmate', async () => {
@@ -96,14 +138,14 @@ test('crew sim takes a subclass: a Sysop crewmate', async () => {
   assert.ok(knownSkills(nyx, 'bastion').includes('patch'));
 });
 
-test('a saved subclass that is not one of its class\'s (unknown, or another class\'s) plays the default, and restore drops it', () => {
+test('a saved subclass that is not one of its class\'s (unknown, or another class\'s) is no pick, and restore drops it', () => {
   for (const bad of ['bogus', 'sysop']) {
     const s = at('breaker', 22);
     s.loadout.sub = { breaker: bad };
-    assert.equal(subOf(s), 'demolitionist', bad);
+    assert.equal(subOf(s), null, bad);
     assert.ok(!subPicked(s), bad);
-    assert.ok(knownSkills(s, 'breaker').includes('shatter'), 'the default line, not just the core');
-    assert.equal(kitOf(s).name, 'Demolitionist');
+    assert.deepEqual(knownSkills(s, 'breaker'), ARCHETYPES.breaker.core, 'the core alone');
+    assert.equal(kitOf(s), null);
     assert.doesNotThrow(() => command(s, 'subclass'));
     const t = restore(JSON.parse(JSON.stringify(s)));
     assert.equal(t.loadout.sub.breaker, undefined, bad);
@@ -118,16 +160,14 @@ test('a saved subclass that is not one of its class\'s (unknown, or another clas
   assert.equal(subOf(t), 'overclocker');
 });
 
-test('an old save past level 10: its bar becomes the default subclass\'s, with what it knows in the slots the other line\'s skills left', () => {
+test('an old save from before subclasses, past level 10: its bar keeps its core keys and loses every subclass skill', () => {
   const s = at('breaker', 22);
   s.loadout.equipped = { breaker: ['overload', 'flood', 'exploit', 'crack', 'brace', 'shatter', 'segfault'] };
   s.version = 30;
   const t = restore(JSON.parse(JSON.stringify(s)));
-  const bar = equippedSkills(t, 'breaker'), known = knownSkills(t, 'breaker');
-  assert.equal(bar.length, 8, 'eight keys at level 22');
-  for (const id of ['overload', 'flood', 'exploit', 'crack', 'shatter']) assert.ok(bar.includes(id), `${id} kept`);
-  assert.ok(!bar.includes('brace') && !bar.includes('segfault'), 'the Overclocker\'s skills fall off');
-  assert.ok(bar.every((id) => known.includes(id)), 'what it knows fills the rest');
+  const bar = equippedSkills(t, 'breaker');
+  assert.deepEqual(bar, ['overload', 'flood', 'exploit', 'crack'], 'the core, in its keys');
+  assert.equal(subOf(t), null);
   // A save below 10 keeps its bar as it was.
   const low = at('bastion', 8);
   low.loadout.equipped = { bastion: ['rate-limit', 'firewall'] };

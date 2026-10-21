@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { fresh, restore, hackerLevel, classOf, subOf, talentPoints, pointsSpent, equippedSkills, presetKeys, maxSignal, active } from './dist/combat.mjs';
+import { fresh, restore, hackerLevel, classOf, subOf, subWaiting, talentPoints, pointsSpent, equippedSkills, presetKeys, maxSignal, active } from './dist/combat.mjs';
 import { protocolSlots, SLOT_KINDS } from './dist/gear.mjs';
 import { SUBS, ARCHETYPES, FLOORS, floorFor } from './dist/data.mjs';
 import { CAMPAIGN_KEY } from './dist/campaign.mjs';
@@ -117,7 +117,7 @@ test('bench phantom 10: an Infiltrator Phantom at 10, talents spent, level-10 bl
   assert.ok(!active(s));
 });
 
-test('bench at any level: the class only below 10, the deepest floor whose band holds the level, more slots deeper', () => {
+test('bench at any level: a class name is that class with no subclass picked (a subclass name picks it), the deepest floor whose band holds the level, more slots deeper', () => {
   const low = benched('phantom', 5).s;
   assert.equal(classOf(low), 'infiltrator'); assert.equal(subOf(low), null, 'below 10, the class only');
   assert.equal(low.floors.reached, 1);
@@ -130,7 +130,9 @@ test('bench at any level: the class only below 10, the deepest floor whose band 
   assert.ok(30 >= FLOORS[h.floors.at - 1].band[0] && 30 <= FLOORS[h.floors.at - 1].band[1]);
   assert.equal(h.gear.rigs.operator.length, protocolSlots(30));
   const c = benched('bastion', 50).s;
-  assert.equal(subOf(c), 'warden', 'a class from 10: its default subclass');
+  assert.equal(subOf(c), null, 'a class from 10: no subclass picked yet, the core alone');
+  assert.ok(subWaiting(c), 'its breakout waiting');
+  assert.equal(pointsSpent(c, 'bastion'), 0);
   assert.equal(c.floors.reached, FLOORS.length);
   for (const sub of Object.keys(SUBS)) assert.equal(subOf(benched(sub, 20).s), sub, sub);
   for (const cls of Object.keys(ARCHETYPES)) assert.equal(classOf(benched(cls, 12).s), cls, cls);

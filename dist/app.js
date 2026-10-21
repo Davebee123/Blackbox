@@ -1,8 +1,9 @@
 // BLACKBOX browser shell: modules, command line, clock, save, sound.
-import { CONFIG, ABILITIES, FAMILIES, xpToNext, spikeOf } from './data.mjs';
+import { CONFIG, ABILITIES, FAMILIES, xpToNext, spikeOf, SUBS, SUBCLASS, defaultSub } from './data.mjs';
 const FAMILY_NAMES = Object.fromEntries(Object.entries(FAMILIES).map(([k, f]) => [k, f.name]));
 import { selectEncounter, partKey, parse, validate, hooks, stepCycle, keyMap, hackerOf, classOf, cycleLength, fresh, restore, command, advance, active, alive, part, intents, suggestions, idleRegen, tickServices, topUpCost, defender, maxSignal, inSync } from './combat.mjs';
 import * as V from './view.mjs';
+import { subLater, subWaiting } from './combat.mjs';
 import { SHAPES, render as ascii3d } from './ascii3d.mjs';
 import { glyphMotion } from './protocol-glyphs.mjs';
 import { createArt } from './virus-art.mjs';
@@ -81,6 +82,8 @@ let noticeTimer = 0;
 let dirty = true;
 let archView = null; // archetype shown on the Loadout page (defaults to the equipped one)
 let loadoutTab = 'protocols'; // Loadout page: 'protocols' or 'skills' (skills and talents)
+let skillUi = { sel: null, sheet: false }; // Skills and talents (skills-view.mjs): the item its panel explains, and the phone's sheet
+let bo = null; // the subclass breakout while it's open: { arch, step, sel, lvl, sheet } (skills-view.mjs breakoutMarkup)
 const pd = { id: null, anchor: null, el: null, scrim: null, sheet: false, html: '', mine: false, timer: 0 }; // the Loadout's item datasheet popover (pdShow)
 let pdTouch = 0; // when a touch last came down: the click after it is a tap
 let compileFocus = null; // (old) the recipe picked on the Craft page's Protocols card
@@ -153,6 +156,7 @@ function load() {
     if (['breaker', 'bastion', 'infiltrator', 'operator'].includes(params.get('cls'))) s.loadout.archetype = params.get('cls'); // ?playtest=cryptjack&cls=infiltrator
     const lv = Number(params.get('level')); // ?playtest=random&level=12: that level, and the virus at it (tells scale with it)
     if (lv >= 1 && lv <= 50) s.hackers = { [s.loadout.archetype]: { level: lv, xp: 0 } };
+    if (lv >= SUBCLASS.from) { const sub = params.get('sub'); s.loadout.sub = { [s.loadout.archetype]: SUBS[sub]?.cls === s.loadout.archetype ? sub : defaultSub(s.loadout.archetype) }; } // a playtest picks its subclass (&sub=, else the class's default)
     // ?playtest=random&level=12&family=ransomware&seed=2: that family, that seed (a Mutex, a Lockbox, a Mirror on the board)
     const fam = params.get('family'), seed = Number(params.get('seed')) >>> 0;
     s.metAll = true; // a playtest plays a veteran: the parts roll (parts.mjs) brings its whole mix, as the measurement does
@@ -1776,13 +1780,14 @@ function render(force = false) {
       $('term').scrollTop = $('term').scrollHeight;
     }
   } else {
-    const pages = { rooms: (x) => roomsMarkup(x), campaign: (x) => campaignMarkup(x), room: (x) => roomMarkup(x), archive: (x) => archiveMarkup(x), breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), craft: (x) => V.craftMarkup(x, craftUi), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now()), server: (x) => V.serverMarkup(x, Date.now()), daemons: V.daemonsMarkup, codex: (x) => codexPageMarkup(x, codexSel, codexIdx), system: V.systemMarkup };
+    const pages = { rooms: (x) => roomsMarkup(x), campaign: (x) => campaignMarkup(x), room: (x) => roomMarkup(x), archive: (x) => archiveMarkup(x), breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab, skillUi), craft: (x) => V.craftMarkup(x, craftUi), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now()), server: (x) => V.serverMarkup(x, Date.now()), daemons: V.daemonsMarkup, codex: (x) => codexPageMarkup(x, codexSel, codexIdx), system: V.systemMarkup };
     // A page that throws shows what broke (and a way back) instead of stopping every render after it.
     const keep = module === 'breach' ? $('bx-scroll')?.scrollTop : null;
     const focusRoom = module === 'rooms' ? document.activeElement?.closest?.('.fp-room')?.dataset.room : null; // a redraw keeps a focused room focused
     const focusCx = module === 'codex' ? document.activeElement?.closest?.('[data-codex], [data-codex-fold]') : null; // and a Codex row its focus
     const focusCxKey = focusCx ? (focusCx.dataset.codex ?? 'fold') : null;
     const focusSilk = module === 'loadout' ? document.activeElement?.closest?.('[data-silk-sel]')?.dataset.silkSel : null; // and the board its pick
+    const focusSk = module === 'loadout' ? skFocusKey() : null; // and the Skills page its item
     const focusRow = module === 'loadout' ? document.activeElement?.closest?.('.silk-tile') : null; // and the stash its row, or the next once it's loaded
     const focusRowAt = focusRow ? [...focusRow.parentElement.children].indexOf(focusRow) : -1;
     if (!(module === 'hub' && mkDrag)) put('page-view', pageOrError(() => (pages[module] || pages.map)(campaign))); // not while you drag a ticket's slider
@@ -1790,6 +1795,7 @@ function render(force = false) {
     if (module === 'breach') breachScroll(keep);
     if (module === 'codex') codexDrawn(focusCxKey);
     if (focusSilk && !document.activeElement?.closest?.('[data-silk-sel]')) $('page-view').querySelector(`[data-silk-sel="${CSS.escape(focusSilk)}"]`)?.focus({ preventScroll: true });
+    if (focusSk) skRefocus($('page-view'), focusSk);
     if (focusRow && !focusRow.isConnected && !document.activeElement?.closest?.('.silk-tile')) {
       const rows = [...$('page-view').querySelectorAll('.silk-tiles > .silk-tile')], row = rows.find((r) => r.dataset.pdetail === focusRow.dataset.pdetail) || rows[Math.min(focusRowAt, rows.length - 1)];
       row?.querySelector('.silk-pick')?.focus({ preventScroll: true });
@@ -1821,6 +1827,7 @@ function render(force = false) {
   for (const b of document.querySelectorAll('#tray .ability.ready[data-ability]')) if (wasCooling.has(b.dataset.ability)) b.classList.add('just-ready');
   wasCooling = cooling;
   applySideMarks();
+  renderBreakout();
   showArmed();
   renderPrompt();
   placeTip();
@@ -2743,7 +2750,7 @@ document.addEventListener('keydown', (e) => {
 
 // Typing anywhere goes to the prompt.
 document.addEventListener('keydown', (e) => {
-  if (e.target === $('command-input') || e.target.closest?.('[data-select], [data-rooms], [data-fp-sel], [data-pdetail]') || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.target === $('command-input') || e.target.closest?.('[data-select], [data-rooms], [data-fp-sel], [data-pdetail], [data-sk], #breakout') || e.metaKey || e.ctrlKey || e.altKey) return;
   if (e.key.length === 1 && !/input|textarea|select/i.test(e.target.tagName)) $('command-input').focus();
 });
 
@@ -2973,6 +2980,116 @@ document.addEventListener('click', (e) => {
 }, true);
 addEventListener('scroll', () => pdPlace(), true);
 addEventListener('resize', () => (pd.sheet ? null : pdHide()));
+
+// ---------- Loadout → Skills and talents, and the subclass breakout (skills-view.mjs) ----------
+// The page's panel explains the item you picked (a click or Enter: skillUi.sel), and shows the one under the pointer
+// or the keyboard's focus while it's there, without a redraw. On a phone (900px and under) a tap opens it as a
+// bottom sheet; a tap on the scrim or × closes it. The breakout is its own screen inside the glass (#breakout).
+const skNarrow = () => matchMedia('(max-width: 900px)').matches;
+const skPanelOf = (el) => el?.closest?.('#breakout') ? $('breakout')?.querySelector('.sk-panel') : $('page-view')?.querySelector('.sk-panel');
+const skDetail = (inBo, key) => (inBo ? V.breakoutDetailMarkup(campaign, bo || {}, key) : V.skillDetailMarkup(campaign, archView, key));
+function skFocusKey() { const a = document.activeElement?.closest?.('[data-sk]'); return a && !a.closest('.sk-panel') ? a.dataset.sk : null; }
+function skRefocus(root, key) { if (document.activeElement?.closest?.('[data-sk]')) return; [...(root?.querySelectorAll('[data-sk]') || [])].find((n) => n.dataset.sk === key && !n.closest('.sk-panel'))?.focus({ preventScroll: true }); }
+// Show an item in the panel for a moment (hover, focus), or the picked one again. The panel is only rewritten when the
+// item changes, so a click on one of its buttons never loses its target to a redraw under the pointer.
+function skShow(panel, inBo, key) {
+  if (!panel || !key || panel.dataset.showing === key) return;
+  const html = skDetail(inBo, key);
+  if (!html) return;
+  panel.innerHTML = html;
+  panel.dataset.showing = key;
+}
+function skPeek(el) {
+  if (skNarrow()) return;
+  skShow(skPanelOf(el), !!el.closest('#breakout'), el.dataset.sk);
+}
+function skRestore(inBo) {
+  const panel = inBo ? $('breakout')?.querySelector('.sk-panel') : $('page-view')?.querySelector('.sk-panel');
+  if (!panel || skNarrow()) return;
+  const picked = panel.parentElement?.querySelector('[data-sk][aria-pressed="true"]')?.dataset.sk || (inBo ? bo?.sel : skillUi.sel);
+  skShow(panel, inBo, picked);
+}
+document.addEventListener('pointerover', (e) => {
+  if (e.pointerType === 'touch') return;
+  const a = e.target.closest?.('#page-view [data-sk], #breakout [data-sk]');
+  if (a && !a.closest('.sk-panel')) skPeek(a);
+});
+document.addEventListener('pointerout', (e) => {
+  if (e.pointerType === 'touch') return;
+  const a = e.target.closest?.('#page-view [data-sk], #breakout [data-sk]');
+  if (!a || a.closest('.sk-panel') || a.contains(e.relatedTarget)) return;
+  const to = e.relatedTarget?.closest?.('[data-sk]');
+  if (!to || to.closest('.sk-panel')) skRestore(!!a.closest('#breakout'));
+});
+document.addEventListener('focusin', (e) => { const a = e.target.closest?.('#page-view [data-sk], #breakout [data-sk]'); if (a && !a.closest('.sk-panel') && a.matches(':focus-visible')) skPeek(a); });
+document.addEventListener('focusout', (e) => { const a = e.target.closest?.('#page-view [data-sk], #breakout [data-sk]'); if (a && !a.closest('.sk-panel') && !e.relatedTarget?.closest?.('[data-sk], .sk-panel')) skRestore(!!a.closest('#breakout')); });
+document.addEventListener('click', (e) => {
+  const x = e.target.closest?.('[data-sk-close]');
+  if (x) { if (x.closest('#breakout')) bo.sheet = false; else skillUi.sheet = false; dirty = true; renderBreakout(); return; }
+  const a = e.target.closest?.('#page-view [data-sk], #breakout [data-sk]');
+  if (a) {
+    if (a.closest('#breakout')) { bo.sel = a.dataset.sk; bo.sheet = skNarrow(); renderBreakout(); }
+    else { skillUi = { sel: a.dataset.sk, sheet: skNarrow() }; dirty = true; }
+    feel.key('click');
+    return;
+  }
+  const open = e.target.closest?.('[data-bo-open]');
+  if (open) { boOpen(open.dataset.boOpen); return; }
+  if (!bo || !e.target.closest?.('#breakout')) return;
+  const st = e.target.closest('[data-bo-step]');
+  if (st) { bo = { ...bo, step: Number(st.dataset.boStep), sel: null, sheet: false }; feel.add('channel', null); renderBreakout(); $('breakout')?.scrollTo?.(0, 0); return; }
+  const lv = e.target.closest('[data-bo-lvl]');
+  if (lv) { bo.lvl = Number(lv.dataset.boLvl); feel.key('click'); renderBreakout(); return; }
+  if (e.target.closest('[data-bo-later]')) { boLater(); return; }
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  if (bo?.sheet) { bo.sheet = false; renderBreakout(); return; }
+  if (bo) { boLater(); return; }
+  if (skillUi.sheet) { skillUi.sheet = false; dirty = true; }
+});
+// The breakout: open (the page's Choose your subclass, or by itself: breakoutDue), Later, and closed by a pick.
+function boOpen(arch) {
+  bo = { arch: arch || classOf(campaign), step: 1, sel: null, lvl: null, sheet: false, fresh: true };
+  feel.add('unlock', null);
+  renderBreakout();
+}
+function boLater() {
+  if (!bo) return;
+  subLater(campaign, bo.arch);
+  bo = null;
+  save();
+  renderBreakout();
+  dirty = true;
+}
+// The screen is free for it: not in the intro, a fight or its result, a card or another full screen.
+function boFree() { return !introOn && !ended && !active(campaign) && $('spoils')?.hidden !== false && !gainOpen() && !payState && !document.querySelector('.class-pick') && !['combat', 'net'].includes(module); }
+function renderBreakout() {
+  let el = $('breakout');
+  if (bo && !subWaiting(campaign, bo.arch)) { // picked (here or by a command): the page shows the new subclass
+    const arch = bo.arch;
+    bo = null;
+    if (el) { el.hidden = true; el.innerHTML = ''; renderBreakout.html = ''; }
+    if (!CAMP) { archView = arch; loadoutTab = 'skills'; skillUi = { sel: null, sheet: false }; dirty = true; if (module !== 'loadout') go('loadout', true); }
+    return;
+  }
+  if (!bo && !CAMP && V.breakoutDue(campaign) && boFree()) {
+    bo = { arch: classOf(campaign), step: 1, sel: null, lvl: null, sheet: false, fresh: true };
+    loadoutTab = 'skills'; archView = classOf(campaign); skillUi = { sel: null, sheet: false };
+    notice('Choose your subclass.');
+    feel.add('unlock', null);
+    dirty = true;
+    if (module !== 'loadout') return go('loadout', true); // its render draws the breakout
+  }
+  if (!bo) { if (el) { el.hidden = true; el.innerHTML = ''; renderBreakout.html = ''; } return; }
+  if (!el) { el = document.createElement('div'); el.id = 'breakout'; el.className = 'breakout'; document.body.append(el); }
+  const html = V.breakoutMarkup(campaign, bo), focus = el.contains(document.activeElement) ? document.activeElement.closest('[data-sk], [data-bo-step], [data-bo-lvl]') : null;
+  const fk = focus && (focus.dataset.sk ? `[data-sk="${CSS.escape(focus.dataset.sk)}"]` : focus.dataset.boLvl ? `[data-bo-lvl="${focus.dataset.boLvl}"]` : null);
+  if (renderBreakout.html !== html || el.hidden) { el.innerHTML = html; renderBreakout.html = html; }
+  el.hidden = false;
+  if (fk && !el.contains(document.activeElement)) el.querySelector(fk)?.focus({ preventScroll: true });
+  if (bo.fresh) { bo.fresh = false; requestAnimationFrame(() => el.querySelector('.bo-next .primary')?.focus({ preventScroll: true })); } // the keyboard starts on the walk, not the prompt behind it
+}
 
 // Themed hover tips: every title="" in the game shows in the game's own card instead of the browser's.
 // The title moves to data-tt on first hover (so the browser's tip never shows) and the card follows the element.

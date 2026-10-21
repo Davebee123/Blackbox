@@ -419,6 +419,8 @@ test('talent tree: points come from levels, ranks open the tiers, swapping is fr
   assert.match(command(s, 'talent add overclocked').at(-1).message, /Talents start at level 10/);
   command(s, 'developer level 18'); // points at 10, 12, 14, 16, 18
   assert.equal(talentPoints(s), 5);
+  assert.match(command(s, 'talent add armor-cracker').at(-1).message, /with your subclass/, 'no tree before a subclass is picked');
+  command(s, 'subclass demolitionist');
   // The tree is your subclass's: its first row, then its second.
   const [[a, b], [c]] = kitOf(s).fillers;
   assert.match(command(s, 'talent 1 a').at(-1).message, /needs 3 points/);
@@ -451,24 +453,29 @@ test('the loadout page: Protocols (the board, the stash, the stats), then Skills
   assert.doesNotMatch(html, /silk-sheet|aria-label="Datasheet"/);
   assert.match(loadoutMarkup(s, 'operator'), /Protocols belong to the class in use/, 'another class: no protocol slots to change');
   html = loadoutMarkup(s, 'operator', 'skills');
-  assert.match(html, /<h1>Operator<\/h1><div class="class-xp"><b>Lv 1<\/b>/, 'level and XP under the class name');
-  assert.match(html, /Level 3/, 'later skills show the level they unlock at');
-  assert.doesNotMatch(html, /Level 22/, 'before a subclass, the class alone: its core');
-  assert.match(loadoutMarkup(s, 'operator/herder', 'skills'), /Level 22/, 'a subclass to preview shows its line');
-  assert.match(html, /class="ttree"/, 'the tree sits beside the skills');
-  assert.match(html, /0 free<\/b> · 0\/\d+ spent · 0 earned/, 'the tree shows its points, no explanation');
+  assert.match(html, /<h1>Operator<\/h1>\s*<div class="sk-lv"><b>Lv 1<\/b>/, 'level and XP under the class name');
+  assert.match(html, /<small>Lv 3<\/small><\/button>/, 'later skills show the level they unlock at');
+  assert.doesNotMatch(html, /Lv 10–38|Herder|Hijacker/, 'before a subclass, the class alone: its core');
+  assert.match(html, /class="sk-roots"/, 'the talents beside the skills: passive, sync, kit talent');
+  assert.doesNotMatch(html, /class="sk-tree"/, 'no tree before a subclass');
   command(s, 'archetype operator');
   command(s, 'developer level 18');
-  assert.doesNotMatch(loadoutMarkup(s, 'operator', 'skills'), /data-command="talent operator/, 'no subclass picked: no tree to spend in');
-  assert.doesNotMatch(loadoutMarkup(s, 'operator/herder', 'skills'), /data-command="talent operator/, 'a preview is read-only');
-  assert.match(loadoutMarkup(s, 'operator/herder', 'skills'), /data-command="subclass operator herder"/, 'with its Pick');
-  command(s, 'subclass operator herder');
-  assert.match(loadoutMarkup(s, 'operator', 'skills'), /data-command="talent operator add [a-z-]+"/);
-  assert.match(loadoutMarkup(s, 'operator', 'skills'), /data-command="unequip operator deploy"/);
-  command(s, 'encounter cryptjack'); command(s, 'engage');
   html = loadoutMarkup(s, 'operator', 'skills');
+  assert.doesNotMatch(html, /data-command="talent operator/, 'no subclass picked: no tree to spend in');
+  assert.match(html, /data-bo-open="operator">Choose your subclass</, 'and the way to pick one');
+  assert.doesNotMatch(loadoutMarkup(s, 'operator/herder', 'skills'), /data-arch="operator\/herder"/, 'no subclass to look at before the pick: the breakout shows them');
+  command(s, 'subclass operator herder');
+  html = loadoutMarkup(s, 'operator', 'skills');
+  assert.match(html, /<span>0 of 21 · 5 earned<\/span>/, 'the tree shows its points, no explanation');
+  const { SUBS } = await import('./dist/data.mjs');
+  const node = SUBS.herder.fillers[0][0].id;
+  assert.match(loadoutMarkup(s, 'operator', 'skills', { sel: 't:' + node }), new RegExp(`data-command="talent operator add ${node}"`));
+  assert.match(loadoutMarkup(s, 'operator', 'skills', { sel: 's:deploy' }), /data-command="unequip operator deploy"/);
+  assert.match(loadoutMarkup(s, 'operator/hijacker', 'skills'), /data-command="subclass operator hijacker"[^>]*>Switch</, 'the other subclass, to switch to');
+  command(s, 'encounter cryptjack'); command(s, 'engage');
+  html = loadoutMarkup(s, 'operator', 'skills', { sel: 't:' + node });
   assert.doesNotMatch(html, /data-command="talent/);
-  assert.match(html, /At home/);
+  assert.match(html, /Between fights/);
 });
 
 test('levels: each class starts at 1 with Spike and one skill; skills and cantrips unlock by level', async () => {
@@ -482,10 +489,12 @@ test('levels: each class starts at 1 with Spike and one skill; skills and cantri
   assert.deepEqual(Object.values(keyMap(s)), ['spike', 'overload', 'flood', 'exploit']);
   command(s, 'developer level 7');
   assert.ok(Object.values(keyMap(s)).includes('crack'), 'Crack, the armor stripper, at level 7');
-  // From 10 the subclass's line (the default one until you pick): its skills come at SUBCLASS.unlocks.
+  // From 10 the subclass's line, once you pick one (until then the core alone): its skills come at SUBCLASS.unlocks.
   const { SUBCLASS } = await import('./dist/data.mjs');
   const { kitOf } = await import('./dist/combat.mjs');
   command(s, 'developer level 10');
+  assert.equal(kitOf(s), null, 'no subclass until you pick one');
+  command(s, 'subclass demolitionist');
   const line = kitOf(s).skills;
   assert.match(command(s, `equip ${line[1]}`).at(-1).message, new RegExp(`level ${SUBCLASS.unlocks[1]}`));
   command(s, 'developer level 22');
@@ -549,7 +558,10 @@ test('saves from before the skill rework start each class on the new kit, and ol
   s.loadout.equipped = { breaker: ['overload', 'sudo', 'pass-the-hash', 'memory-leak', 'bypass'] };
   s.daemons = [{ name: 'warden', trigger: { type: 'attack', part: 'any' }, command: 'interrupt $', on: true }];
   const r = restore(JSON.parse(JSON.stringify(s)));
-  assert.deepEqual(equippedSkills(r, 'breaker'), defaultBar('breaker', 'demolitionist', 25), 'the default kit: the shipped rotation preset at its level (eight slots at 25)');
+  assert.deepEqual(equippedSkills(r, 'breaker'), defaultBar('breaker', null, 25), 'the default kit: no subclass picked, so the core');
+  assert.deepEqual(equippedSkills(r, 'breaker'), ['overload', 'flood', 'exploit', 'crack']);
+  command(r, 'subclass demolitionist');
+  assert.deepEqual(equippedSkills(r, 'breaker'), defaultBar('breaker', 'demolitionist', 25), 'a pick: the shipped rotation preset at its level (eight slots at 25)');
   assert.deepEqual(equippedSkills(r, 'breaker').slice(0, 4), ['crack', 'shatter', 'flood', 'overload']);
   assert.deepEqual(r.daemons, []);
   assert.deepEqual(r.daemonLv, {});
