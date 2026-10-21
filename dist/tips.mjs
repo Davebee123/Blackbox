@@ -158,6 +158,8 @@ export const TIPS = [
   { id: 'loadout-bar', page: 'loadout', at: '.keybar', text: 'This is your skill bar. Key 1 is your basic attack. Your class skills fill the other slots: seven at first, eight at level 22 and nine at 30.' },
   { id: 'loadout-classes', page: 'loadout', at: '.arch-tabs', text: 'There are four classes, and each one levels up separately. You can switch between them at home.' },
   { id: 'loadout-talents', page: 'loadout', at: '.ttree', when: (s) => hackerLevel(s) >= 10, text: 'From level 10 you earn a talent point every other level. Ranks add small bonuses, and each tier asks you to pick one of two. You can change picks at home for free.' },
+  // Your program (routines.mjs): the handler editor on Loadout → Program.
+  { id: 'program-editor', page: 'loadout', at: '.rt-editor', text: 'When the timer runs out, your program moves. Drag a WHEN, a DO and a TARGET chip onto a handler. The first handler that fits fires. If none fits, the rotation does.' },
 
   // ---------- daemons ----------
   { id: 'daemons', page: 'loadout', at: '.daemon-slots', text: 'Daemons come from invasions. A slotted daemon fights beside you, on its own cooldown or when its moment comes. A higher-level copy replaces the one you have.' },

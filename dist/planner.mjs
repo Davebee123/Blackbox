@@ -11,7 +11,9 @@ import { heatOf } from './parts.mjs';
 import { interruptMove, saveTick } from './interrupt.mjs';
 
 // Against a crew boss only the tank taunts (a taunt pulls its busters onto you): raid.mjs noTaunt.
-const ok = (s, text) => !toIntent(s, text).error && !(TAUNTS.has(text) && noTaunt(s));
+// veto: skills the planner may not pick this call (routines.mjs: a program's rotation never fires a long cooldown).
+let veto = null;
+const ok = (s, text) => !(veto && veto(String(text).split(' ')[0])) && !toIntent(s, text).error && !(TAUNTS.has(text) && noTaunt(s));
 const TAUNTS = new Set(['firewall', 'bulkhead']);
 // Skills built to answer a big move (tells.mjs BUILT, and Takeover): a class plan that fires one keeps it over a cut.
 const BUILT = new Set(['suspend', 'jam', 'spoofed-ack', 'hijack', 'blackhole', 'backfire', 'takeover', 'quarantine', 'revoke']);
@@ -79,6 +81,12 @@ function keyringNow(s) {
 // area hit, a bomb's blast) unpacks them all, so while they're on the board a player swaps either (a class's own plan
 // included) for a hit on a part that isn't a box.
 const AREA = new Set(['shatter', 'fork-bomb', 'garbage-collect', 'failover', 'multicast', 'rm-rf', 'logic-bomb', 'chain-reaction', 'mesh', 'outbreak', 'propagate', 'fan-out']);
+// The planner without some skills (veto(id) true: never picked), for a program's rotation (routines.mjs).
+export function plannerWithout(s, no) {
+  const was = veto;
+  veto = no;
+  try { return planner(s); } finally { veto = was; }
+}
 export function planner(s) {
   const plan = plan0(s);
   if (!plan || !shunning(s)) return plan;

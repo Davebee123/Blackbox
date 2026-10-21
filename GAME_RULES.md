@@ -1217,13 +1217,29 @@ Your class's sync bonus is on the Loadout page, as a root of the talent tree und
 
 **Infiltrator Surprise.** For an Infiltrator the first cycle of every fight always opens a wider window (15%), glowing blue instead of yellow. Fired in it, on top of the sync bonus: Inject ticks once at once (on top of its cycle's tick), Tag lasts 6 cycles and its burns tick +75% (not +50%), and Keepalive stretches burns 4 cycles (not 2).
 
-Auto-repeat (the cycle running out) and later steps of a `;` plan never sync. The window's spot comes from the fight and the cycle, not the game's dice, so it never changes other rolls.
+Auto-repeat (the cycle running out), your program's moves and later steps of a `;` plan never sync. The window's spot comes from the fight and the cycle, not the game's dice, so it never changes other rolls.
 
 ## Planning ahead
 
 Separate commands with `;` to plan up to 3 cycles: `exploit encryptor; overload encryptor; spike pulse`. The plan shows across the *You* row (dashed = later cycles). A new command always replaces the whole plan; `cancel` clears it. Later steps check cooldowns when they fire, and a step that can't fire is skipped with a warning.
 
-Who acts in a cycle, in order: **your queued command (or, with nothing typed, a Spike on the last part you hit) → your daemons that are ready → burns and helpers → the virus.**
+Who acts in a cycle, in order: **your queued command (or, with nothing typed, your program's move: Routines, below) → your daemons that are ready → burns and helpers → the virus.**
+
+## Routines: your program
+
+When the timer runs out and you typed nothing, your **program** moves for you (`dist/routines.mjs`; docs/routines.md R1). It replaces the old fallback (key 1 on the last part you hit), from level 1. Each class keeps one, and each subclass its own from level 10 (a subclass's first program starts as its class's). Loadout → **Program** edits it; `program` in the terminal says what it holds.
+
+- **The rotation:** with no handler that fits, it plays your class's priorities (the planner the balance bots play, `dist/planner.mjs`).
+- **Handlers:** an ordered stack checked top to bottom each cycle; the first that fits fires. A handler is three chips, dragged into place (a dropdown on each chip does the same on a phone): **WHEN** a condition, **DO** a skill on your bar, **TARGET** that part (the one the WHEN chip names), the soonest attacker, the lowest, or a part with no ◆. A skill that takes no target ignores it.
+- **WHEN chips come from your research** (Part research). A part you've met lists its chips; each opens at a tier: decoded (3) its name and health (*on the board*, *under half*, *no ◆*), rule (15) its timer and tell (*hits now*, *hits in 2*, *tell live*), mastered (60) prediction (*the cycle before its tell*, *Open*). Chips about the fight: *every cycle* and *you under half* (always), *2+ fragments* (a Replicator decoded), *encrypted 3+* (an Encryptor decoded), *any tell live* (any part at its rule), and a mutation once its rule is decoded. A part's Codex card has a **+ handler** button that adds one for it.
+- **What it reads:** only what the board shows. A veiled part's hidden timer never counts as *hits now*.
+- **What it can't do:** fire a skill with a cooldown of 6 or more (or once a fight) unless a handler names it, and the rotation never does; press Enter in the Sync Window (its move fires when the timer runs out, so it never syncs); read a tell (its moves count like auto-repeat: a tell's simple answer, never Open).
+- **RAM:** class level only for now, 4 at level 1 to 10 at 50 (8 at 30). A handler costs its WHEN chip's RAM, 1 plain, 2 a rule chip, 3 a mastered chip, and 1 more when its skill has a long cooldown. Handlers past your RAM sit out, top to bottom; an add past it is refused.
+- **Exceptions:** a part you haven't decoded (a third part's rule: until its rule tier), a mutation whose rule you haven't decoded, or a tell on a part you haven't mastered, that no handler names, throws an **exception**: the program holds its turn (no fallback move), the part's row turns red with a **!** in Now, the log says *EXCEPTION* and a cue sounds. Play it by hand, or press **`** on an empty line (or the *back* button under *You*, or `program resume`) to hand control back for what's on the board for the rest of the fight. A boss, a lair's boss, a Resident or a crew boss always throws, again at each new phase.
+- **On the board:** its next move sits ghosted in *You*'s Now cell (*⟳ crack encryptor*), with a dashed chip on the part it will hit; anything you type overrides it for that cycle. Its moves carry ⟳ in the log.
+- **Rewards:** a program's fight pays exactly what the same fight pays you. Attention still earns more where it always has: reads, the Sync Window and big cooldowns at the right moment.
+- **Rails:** **auto jack-out** (off by default, or 10, 20, 30, 40 or 50% Signal; `program jackout 30`): on a run, crossing the line jacks you out with your pack, in a fight (the emergency jack out) or out of one. **Stop before danger** (on by default; `program danger off`): a walk of more than one room never steps into an elite, a boss, the Resident or a vault guard that's up; it stops next door with a cue, and one step of your own goes in.
+- `program on|off` (off: the timer repeats your last hit, as before), `program add [when] [do] [target]`, `program set <n> when|do|target <chip>`, `program move <n> <to>`, `program remove <n>`, `program clear`.
 
 ## Daemons
 

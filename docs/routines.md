@@ -1,6 +1,6 @@
 # Routines: programs you write to fight for you
 
-Draft, October 20, 2026, for the designer's review. Nothing here is built.
+Draft, October 20, 2026, for the designer's review. Phase R1 is built (Build phases); the rest is not.
 
 You should be able to start something and look away, the way you can in RuneScape or World of Warcraft, without the game losing its nuance. Attention is a dial, not a switch. Looking away never costs you the run or your rewards. Paying attention earns more.
 
@@ -125,10 +125,20 @@ Parked, by the designer's call (October 20, 2026). Revisit with real multiplayer
 
 R1 waits for phase P1 of the parts plan: that's where the variety comes from.
 
-1. **R1:** programs with the drag-and-drop handler stack (WHEN, DO and TARGET chips from the Codex and your bar), per-subclass default rotations, the shown next move, override at any time, exceptions on unknown parts, the ⟳ mark, RAM from class level, the auto jack-out threshold and stop-before-danger. Tests: a program fires only visible conditions and only researched WHEN chips, never the sync bonus, never a long cooldown unless named; an unknown part throws an exception; programs pay normal rewards; the rails stop a run.
+1. **R1 (built):** programs with the drag-and-drop handler stack (WHEN, DO and TARGET chips from the Codex and your bar), per-subclass default rotations, the shown next move, override at any time, exceptions on unknown parts, the ⟳ mark, RAM from class level, the auto jack-out threshold and stop-before-danger. Tests: a program fires only visible conditions and only researched WHEN chips, never the sync bonus, never a long cooldown unless named; an unknown part throws an exception; programs pay normal rewards; the rails stop a run.
 2. **R2:** RAM from Codex mastery and gear, and the sandbox benchmark. Sound cues and the browser notification option.
 3. **R3:** the rarer chips (Predict, Chain, Hold, Watch) as loot and Codex rewards, share codes, the run queue, and the bigger variety bonus.
 4. **Later:** per-virus leaderboards and a weekly featured strain.
+
+**R1 as built** (`dist/routines.mjs`, `dist/routines-view.mjs`, `dist/routines-ui.mjs`, `routines.test.mjs`; GAME_RULES.md *Routines*). Where it settles what the plan leaves open:
+
+- **A cycle.** When the timer runs out and you typed nothing, the program first checks for an exception (it holds), then its handlers top to bottom (the first whose WHEN holds now, whose skill is ready and whose target exists fires), then the rotation: the planner with every long cooldown taken out (only a handler that names one fires it), and key 1 on the soonest attacker if that leaves nothing. It fires like auto-repeat: never synced, never a read of a tell. Off (`program off`), the old fallback comes back.
+- **Chips.** WHEN on a part: *on board*, *under half*, *no ◆* at decoded; *hits now*, *hits in 2*, *tell live* at rule; *before tell* (the cycle before a tell's window opens) and *Open* at mastered. About the fight: *every cycle*, *you under half*, *2+ fragments* (a Replicator decoded), *encrypted 3+* (an Encryptor decoded), *any tell live* (any part at its rule), and a mutation once its rule is decoded. A part is its Codex key (a second copy answers to the first's). TARGET: that part, soonest, lowest, no ◆. DO: the skills on your bar, Spike and SIGINT included.
+- **Long cooldown** means 6 or more, by your talents and gear, or once a fight.
+- **RAM.** 4 + 6 × (level − 1) / 49, rounded: 4 at 1, 5 at 6, 8 at 30, 10 at 50. A handler costs its WHEN chip's RAM (1, 2 or 3) and 1 more for a long cooldown. Handlers past the budget sit out, top to bottom.
+- **Exceptions.** A part is covered by a handler that names it, or by its research: decoded for a plain part, its rule tier for a part with a rule (a Lockbox, a Mutex, a Mimic, a guard's rule). A mutation by a handler on it or its rule decoded. A tell by a handler on that part's tells (or *any tell live*) or by mastery. A boss, lair, Resident or crew boss always throws, once a phase. Handing back covers what's on the board for the rest of the fight. The cue is an existing sound (escalate) for now.
+- **Rails.** Auto jack-out trips on a crossing (a run you start under the line never trips) and works mid-fight as the emergency jack out. Stop-before-danger applies to a walk of more than one room (`cd` to an address or a folder far off); one step you take yourself goes in.
+- **Saves.** `s.programs`, made on first use with the defaults (program on, auto jack-out off, stop-before-danger on, no handlers); no SAVE_VERSION change.
 
 ## Decisions
 

@@ -745,6 +745,7 @@ export function play(s, input) {
   const rest = restWords.join(' ');
   if (word === 'connect') return connect(s, rest);
   if (word === 'crew') return crewCommand(s, rest); // simulated co-op (crew.mjs)
+  if (word === 'program') return command(s, input); // routines.mjs: your program, anywhere
   if (word === 'consortium' || word === 'guild') return consortiumCommand(s, input.trim().replace(/^\S+\s*/, '')); // consortium.mjs (as typed: a name keeps its capitals)
   if (['online', 'who', 'friends', 'friend'].includes(word)) { const first = s.serial; presenceCommand(s, word, rest, emit, warn); return since(s, first); } // presence.mjs
   if (/^(finger|plan|titles?|banner)$/.test(word)) { const first = s.serial; profileCommand(s, input); return since(s, first); } // profile.mjs (as typed: a plan keeps its capitals)

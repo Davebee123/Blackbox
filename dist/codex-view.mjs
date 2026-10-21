@@ -11,6 +11,7 @@ import { attackAmount } from './combat.mjs';
 import { partRead } from './fightread.mjs';
 import { entries, entryOf, validKey, firstKey, tellKind, SET_CYCLES } from './codex.mjs';
 import { RESEARCH, TIER } from './research.mjs';
+import { refOf } from './routines.mjs';
 
 const UNKNOWN = '???';
 const every = (n) => (n >= 900 ? 'once' : n === 1 ? 'every cycle' : `every ${n} cycles`);
@@ -78,7 +79,9 @@ function partCard(level, x, tells = []) {
   } else rule = locked(`Research ${TIER.rule} to learn its rule, its answer and its tells.`);
   const loot = !p.loot ? '' : mast ? `<p class="cxp-loot">${glyph('salvage')}Drops ${esc(p.loot)}</p>` : locked(`Research ${RESEARCH.max} to learn its drop.`);
   const perk = mast ? `<p class="cxp-perk">Mastered. Its component drops ${Math.round((RESEARCH.perk.drop - 1) * 100)}% more often, and you deal ${Math.round((RESEARCH.perk.dmg - 1) * 100)}% more damage to it.</p>` : '';
-  return `<div class="cx-part t${x.tier}${mast ? ' mastered' : ''}">${head}${bar}${stats}${atk}${rule}${loot}${perk}</div>`;
+  // A handler for it (routines.mjs): a quick one on the Program tab, its WHEN chip on this part.
+  const handler = `<button type="button" class="btn small cx-handler" data-rt-goto="program add ${esc(refOf(x.virus, p))}:present" title="${esc(`Add a handler for the ${p.name} to your program`)}">${glyph('chain')}+ handler</button>`;
+  return `<div class="cx-part t${x.tier}${mast ? ' mastered' : ''}">${head}${bar}${stats}${atk}${rule}${loot}${perk}${handler}</div>`;
 }
 function setMarkup(x) {
   if (!x.faced) return `<div class="cx-set unknown"><div class="cxs-head"><b>${UNKNOWN}</b><small>Face it in a room to learn its timing.</small></div></div>`;
