@@ -14,7 +14,7 @@ import { GOODS } from './dist/store.mjs';
 import { FACTIONS } from './dist/factions.mjs';
 import { REWARDS } from './dist/content.mjs';
 import { play } from './dist/run.mjs';
-import { daemonsMarkup, spoilsOf } from './dist/view.mjs';
+import { daemonsMarkup, daemonUi, spoilsOf } from './dist/view.mjs';
 import STORY from './dist/content/story.mjs';
 
 CONFIG.baseCrit = 0;
@@ -216,19 +216,25 @@ test('the wall is priced in code: tiers from +3 and a written harden.sh, in unit
   assert.equal(s.sigs, undefined, 'a new save has none');
 });
 
-test('the Daemons tab: your slots, then each band with what you have found and ??? for the rest', () => {
+test('the Daemons tab: your party and its slots, the bench, and every daemon on the roster with ??? for the unfound', () => {
   const s = fresh();
   gainDaemon(s, 'sweeper', 6); gainDaemon(s, 'drill', 18);
   s.daemons = ['drill'];
+  Object.assign(daemonUi, { view: 'party', sel: null, cycle: 1 });
   const html = daemonsMarkup(s);
-  assert.match(html, /Daemons · 1\/2/);
-  assert.match(html, /Drill<\/b><span class="tag dim"[^>]*>lv 18/);
-  assert.ok(html.includes(daemonText('drill', 18)));
-  assert.match(html, /Band 1 · lv 1–9 <small>1\/8<\/small>/);
-  assert.match(html, /Band 3 · lv 16–28 <small>1\/8<\/small>/);
-  assert.equal((html.match(/<li>\?\?\?<\/li>/g) || []).length, Object.keys(DAEMONS).length - 2, 'the rest are ???');
-  assert.match(html, /Another slot at level 15/);
-  assert.ok(!html.includes('Breakpoint'), 'an undiscovered daemon keeps its name');
+  assert.match(html, /Party<small>1\/2<\/small>/);
+  assert.match(html, /data-dmn-sel="drill"[^>]*>[\s\S]*?<b>Drill<\/b><small>Lv 18 · /);
+  assert.match(html, /<aside class="dm-panel" aria-label="Drill">[\s\S]*<p class="dm-does">/, 'with nothing picked, the panel shows the first of your party');
+  assert.ok(html.slice(html.indexOf('<p class="dm-does">')).replace(/<[^>]+>/g, '').startsWith(daemonText('drill', 18)), 'what it does at its level');
+  assert.match(html, /Slot 3 · level 15/, 'another slot at level 15');
+  assert.match(html, /aria-label="Bench"[\s\S]*data-dmn-sel="sweeper"/);
+  daemonUi.view = 'roster';
+  const roster = daemonsMarkup(s);
+  assert.match(roster, /Levels 1–6<small>1\/8<\/small>/);
+  assert.match(roster, /Levels 16–25<small>1\/8<\/small>/);
+  assert.equal((roster.match(/<span class="dm-rn">\?\?\?<\/span>/g) || []).length, Object.keys(DAEMONS).length - 2, 'the rest are ???');
+  assert.ok(!roster.includes('Breakpoint'), 'an undiscovered daemon keeps its name');
+  daemonUi.view = 'party';
 });
 
 test('in a fight: the Airbag shields at the start, the Breakpoint lands on a cut, the Lifeline holds you at 1, the Leash slows an Exfil', () => {

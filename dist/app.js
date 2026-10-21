@@ -2330,6 +2330,7 @@ document.addEventListener('click', (e) => {
   }
 }, true);
 document.addEventListener('keydown', (e) => { if (payState && e.key === 'Escape') { payState = null; payDraw(); } });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && V.daemonUi.sel && document.querySelector('.dm-panel.open')) { V.daemonUi.sel = null; dirty = true; } }); // the Daemons tab's sheet
 document.addEventListener('click', (e) => {
   if (tip && !e.target.closest('#tip') && (e.target.closest(tip.cur.at) || (tip.cur.also && e.target.closest(tip.cur.also)))) advanceTip();
   if (e.target.closest('[data-spoils-go]')) { if (ended) leaveFight(); else hideSpoils(); return; }
@@ -2376,6 +2377,15 @@ document.addEventListener('click', (e) => {
   if (e.target.closest('[data-leads]')) { leadsOpen = !leadsOpen; dirty = true; return; }
   const lt = e.target.closest('[data-ltab]');
   if (lt) { loadoutTab = lt.dataset.ltab; feel.add('channel', null); dirty = true; return; }
+  // The Daemons tab (daemons-view.mjs): the party or the roster, a daemon for the panel (× clears it), a cycle's order.
+  const dmn = e.target.closest('[data-dmn-view], [data-dmn-sel], [data-dmn-cycle]');
+  if (dmn) {
+    const d = dmn.dataset, ui = V.daemonUi;
+    if (d.dmnView) ui.view = d.dmnView;
+    else if (d.dmnSel !== undefined) ui.sel = d.dmnSel || null;
+    else ui.cycle = Number(d.dmnCycle) || 1;
+    feel.key('click'); dirty = true; return;
+  }
   const snd = e.target.closest('[data-sound]');
   if (snd) { feel.preview(snd.dataset.sound); return; }
   const tog = e.target.closest('[data-toggle]');

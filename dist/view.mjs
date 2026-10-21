@@ -1672,24 +1672,12 @@ export function netTrayMarkup(actions) {
 }
 
 // ---------- daemons ----------
-// The Loadout's Daemons tab: your slots, then every band's daemons, the ones you've found as tiles (name, level,
-// its line at its level, when it acts) and the rest as ???.
+// The Loadout's Daemons tab is daemons-view.mjs (the party, the bench, the roster and the panel).
+import { daemonsMarkup, daemonUi } from './daemons-view.mjs';
+export { daemonsMarkup, daemonUi };
+// A daemon's glyph as a small icon (the Daemons tab draws sprites instead; daemon-sprites.mjs).
 const DAEMON_GLYPH = { breakpoint: 'cut', nudge: 'hit', drain: 'leech', kindle: 'burn', airbag: 'shield', crowbar: 'scrap', flare: 'crit', wiretap: 'ids', capacitor: 'shield', backscatter: 'countermeasures', drill: 'spike', afterburn: 'burn', lookout: 'watchman', checkpoint: 'snapshot', leash: 'upload', sieve: 'scrubber', ricochet: 'echo', spite: 'claw', domino: 'kill', rod: 'stun', overseer: 'hit', reaper: 'kill', broadcast: 'uplink', void: 'stall', pendulum: 'sync', sledge: 'damage', hotspare: 'repair', lifeline: 'heal', tandem: 'mirror', guillotine: 'cut' };
 export const daemonGlyph = (id, cls = 'badge') => glyph(DAEMON_GLYPH[id] || id, cls);
-const daemonBody = (s, id) => `<b class="iname">${daemonGlyph(id)}${esc(DAEMONS[id].name)}</b><span class="tag dim" title="Item level: its number grows with it">lv ${daemonLevel(s, id)}</span><small>${esc(daemonText(id, daemonLevel(s, id)))}</small><small class="dmn-when">${esc(daemonWhen(id))}</small>`;
-export function daemonsMarkup(s) {
-  const busy = active(s), slotted = slottedDaemons(s), n = daemonSlots(s), next = SERVER.daemonSlotsAt.find((l) => serverLevel(s) < l);
-  const slots = Array.from({ length: n }, (_, i) => slotted[i]).map((id, i) => id
-    ? `<li class="ptile"><span class="ptile-slot">${i + 1}</span>${daemonBody(s, id)}<button type="button" class="ptile-x" data-command="daemon unslot ${id}" ${busy ? 'disabled' : ''} title="Unslot" aria-label="Unslot ${esc(DAEMONS[id].name)}">×</button></li>`
-    : `<li class="ptile empty"><span class="ptile-slot">${i + 1}</span><span class="ptile-empty">empty</span></li>`).join('');
-  const bands = DAEMON_BANDS.map(([lo, hi], i) => {
-    const ids = bandDaemons(i + 1), found = ids.filter((id) => daemonLevel(s, id)), unknown = ids.length - found.length;
-    const tiles = found.map((id) => `<li class="ptile stash${slotted.includes(id) ? ' on' : ''}">${daemonBody(s, id)}<div class="ptile-acts">${slotted.includes(id) ? '<span class="tag you">slotted</span>' : `<button type="button" class="btn primary small" data-command="daemon slot ${id}" ${busy || slotted.length >= n ? 'disabled' : ''}>Slot</button>`}</div></li>`).join('');
-    const hidden = unknown ? `<ul class="dmn-unknown" aria-label="${unknown} not found yet">${'<li>???</li>'.repeat(unknown)}</ul>` : '';
-    return `<section class="card dmn-band"><h2 title="Invasions at level ${lo}–${hi} drop these">Band ${i + 1} · lv ${lo}–${hi} <small>${found.length}/${ids.length}</small></h2>${tiles ? `<ul class="ptiles stash">${tiles}</ul>` : ''}${hidden}</section>`;
-  }).join('');
-  return `<div class="page-grid gear-page"><section class="card daemon-slots"><h2>Daemons · ${slotted.length}/${n}</h2><ul class="ptiles">${slots}</ul>${next ? `<p class="svc-line">Another slot at level ${next}.</p>` : ''}</section>${bands}</div>`;
-}
 
 // ---------- mail: letters, the contract board and the Halcyon retainer ----------
 // sel: 'l<id>' a letter, 'j<id>' a contract (taken or on the board).

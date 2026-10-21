@@ -23,6 +23,27 @@ export const daemonText = (id, level) => DAEMONS[id].rule.replaceAll('{n}', Stri
 export const watchmanBar = (s) => scaled(s, 20);
 // When a cooldown daemon acts next (a cycle number), or null for a triggered one.
 export const daemonNext = (s, id) => (!DAEMONS[id].cd ? null : Math.max(s.encounter.cycle, s.encounter.daemonReady?.[id] || s.encounter.cycle));
+// The cycles of a fight's first n that a cooldown daemon acts in, by runDaemons' rule: in the first cycle it can (a
+// fight's cycle 1), then every cd cycles after it acts. [] for a triggered one. (When it has nothing to do, such as no
+// part burning for a Kindle, it waits a cycle and tries again; this is the schedule when it always can.)
+export function daemonCycles(id, n = 12) {
+  const cd = DAEMONS[id]?.cd, out = [];
+  if (!cd) return out;
+  for (let c = 1, ready = 1; c <= n; c++) if (c >= ready) { out.push(c); ready = c + cd; }
+  return out;
+}
+// The order of play in a cycle with your party (resolveCycle, GAME_RULES.md "Daemons"): what goes before you as a
+// fight starts (cycle 1: an Airbag), your command, the cooldown daemons that act this cycle in
+// party order (runDaemons walks your slots in order), burns and helpers, then the virus. armed: the triggered ones,
+// which act whenever their moment comes, in any step.
+export function playOrder(s, cycle) {
+  const party = slottedDaemons(s), on = (id) => DAEMONS[id].on;
+  return {
+    start: cycle === 1 ? party.filter((id) => on(id) === 'start') : [],
+    daemons: party.filter((id) => daemonCycles(id, cycle).includes(cycle)),
+    armed: party.filter((id) => !DAEMONS[id].cd && on(id) !== 'start'),
+  };
+}
 
 // ---------- in a fight ----------
 const lastTarget = (s) => { const t = s.encounter.lastAttack && part(s, s.encounter.lastAttack.split(' ')[1]); return alive(t) ? t : null; };
@@ -187,10 +208,11 @@ export const versionLevel = (s, v) => Math.max(1, serverLevel(s) - 2 * (3 - Math
 const idOf = (arg) => arg && Object.keys(DAEMONS).find((k) => k === arg || DAEMONS[k].name.toLowerCase().replace(/ /g, '') === arg.replace(/[- ]/g, ''));
 export function daemonCommand(s, text) {
   const [, word, arg] = text.match(/^daemons?(?: (\w+))?(?: (.+))?$/) || [];
+  if (word === 'swap') return daemonSwap(s, arg?.trim().toLowerCase() || '');
   const id = idOf(arg?.trim().toLowerCase());
   if (!word || word === 'list') return emit(s, 'info', `Daemons (${slottedDaemons(s).length}/${daemonSlots(s)} slotted): ${Object.keys(ownedOf(s)).filter((k) => daemonLevel(s, k)).map((k) => `${DAEMONS[k].name} lv ${daemonLevel(s, k)}${slottedDaemons(s).includes(k) ? ' (slotted)' : ''}`).join(', ') || 'none found yet. Invasions drop them'}.`);
   if (active(s)) return warn(s, 'Change daemons between fights.');
-  if (!id || !daemonLevel(s, id)) return warn(s, arg ? `You don't have a daemon called ${arg}.` : 'daemon slot <name> · daemon unslot <name>.');
+  if (!id || !daemonLevel(s, id)) return warn(s, arg ? `You don't have a daemon called ${arg}.` : USAGE);
   if (word === 'slot') {
     if (slottedDaemons(s).includes(id)) return warn(s, `${DAEMONS[id].name} is already slotted.`);
     if (slottedDaemons(s).length >= daemonSlots(s)) return warn(s, `All ${daemonSlots(s)} daemon slots are full. Unslot one first.`);
@@ -198,7 +220,24 @@ export function daemonCommand(s, text) {
     return emit(s, 'daemon-set', `${DAEMONS[id].name} slotted.`);
   }
   if (word === 'unslot') { s.daemons = slottedDaemons(s).filter((k) => k !== id); return emit(s, 'daemon-set', `${DAEMONS[id].name} unslotted.`); }
-  return warn(s, 'daemon slot <name> · daemon unslot <name>.');
+  return warn(s, USAGE);
+}
+
+const USAGE = 'daemon slot <name> · daemon unslot <name> · daemon swap <slotted> <other>.';
+// daemon swap <a> <b>: the slotted one of the two goes out and the other takes its place in the party, in either
+// order. Names of two words work too (daemon swap cron job drill): every split of the words is tried.
+function daemonSwap(s, arg) {
+  if (active(s)) return warn(s, 'Change daemons between fights.');
+  const words = arg.split(/\s+/).filter(Boolean);
+  let pair = null;
+  for (let i = 1; i < words.length && !pair; i++) { const a = idOf(words.slice(0, i).join(' ')), b = idOf(words.slice(i).join(' ')); if (a && b) pair = [a, b]; }
+  if (!pair) return warn(s, 'daemon swap <slotted> <other>: two daemons, one of them slotted.');
+  const party = slottedDaemons(s), [a, b] = pair, out = party.includes(a) ? a : party.includes(b) ? b : null, into = out === a ? b : a;
+  if (!out) return warn(s, `Neither ${DAEMONS[a].name} nor ${DAEMONS[b].name} is slotted.`);
+  if (out === into || party.includes(into)) return warn(s, `${DAEMONS[into].name} is already slotted.`);
+  if (!daemonLevel(s, into)) return warn(s, `You don't have a daemon called ${DAEMONS[into].name}.`);
+  s.daemons = party.map((k) => (k === out ? into : k));
+  return emit(s, 'daemon-set', `${DAEMONS[into].name} slotted in place of ${DAEMONS[out].name}.`);
 }
 
 // ---------- old saves ----------
