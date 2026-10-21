@@ -452,11 +452,17 @@ test('the loadout page: Protocols (the board, the stash, the stats), then Skills
   assert.match(loadoutMarkup(s, 'operator'), /Protocols belong to the class in use/, 'another class: no protocol slots to change');
   html = loadoutMarkup(s, 'operator', 'skills');
   assert.match(html, /<h1>Operator<\/h1><div class="class-xp"><b>Lv 1<\/b>/, 'level and XP under the class name');
-  assert.match(html, /Level 22/, 'later skills show the level they unlock at');
+  assert.match(html, /Level 3/, 'later skills show the level they unlock at');
+  assert.doesNotMatch(html, /Level 22/, 'before a subclass, the class alone: its core');
+  assert.match(loadoutMarkup(s, 'operator/herder', 'skills'), /Level 22/, 'a subclass to preview shows its line');
   assert.match(html, /class="ttree"/, 'the tree sits beside the skills');
   assert.match(html, /0 free<\/b> · 0\/\d+ spent · 0 earned/, 'the tree shows its points, no explanation');
   command(s, 'archetype operator');
   command(s, 'developer level 18');
+  assert.doesNotMatch(loadoutMarkup(s, 'operator', 'skills'), /data-command="talent operator/, 'no subclass picked: no tree to spend in');
+  assert.doesNotMatch(loadoutMarkup(s, 'operator/herder', 'skills'), /data-command="talent operator/, 'a preview is read-only');
+  assert.match(loadoutMarkup(s, 'operator/herder', 'skills'), /data-command="subclass operator herder"/, 'with its Pick');
+  command(s, 'subclass operator herder');
   assert.match(loadoutMarkup(s, 'operator', 'skills'), /data-command="talent operator add [a-z-]+"/);
   assert.match(loadoutMarkup(s, 'operator', 'skills'), /data-command="unequip operator deploy"/);
   command(s, 'encounter cryptjack'); command(s, 'engage');
