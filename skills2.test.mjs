@@ -237,6 +237,7 @@ test('run skills: Tap maps everything; Spoof cloaks once a run, and an Infiltrat
   const s = fresh();
   s.loadout.archetype = 'infiltrator';
   s.hackers = { infiltrator: { level: 50, xp: 0 } };
+  s.loadout.sub = { infiltrator: 'phantom' }; // Spoof and Tap are the Phantom's
   s.loadout.equipped.infiltrator = ['spoof', 'tap'];
   command(s, 'developer location worm');
   Object.assign(s.locations[0], { template: 'relay', quirk: null });

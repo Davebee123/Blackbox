@@ -96,7 +96,7 @@ test('drops: strains have trophies, uniques come from where they drop, rewards g
 
 test('class uniques: Tagged and burning targets, a shorter skill cooldown, and a lean toward their class', async () => {
   const { cooldownOf, uniqueFrom, UNIQUES } = await import('./dist/combat.mjs');
-  const { ABILITIES } = await import('./dist/data.mjs');
+  const { ABILITIES, EDGE } = await import('./dist/data.mjs');
   const s = vet();
   wear(s, 'tracking-pixel');
   fight(s);
@@ -112,7 +112,7 @@ test('class uniques: Tagged and burning targets, a shorter skill cooldown, and a
   assert.equal(cooldownOf(t, 'inject'), ABILITIES.inject.cooldown);
   // The lean: an Infiltrator finds Infiltrator uniques three times as often.
   const count = (cls) => {
-    const x = fresh(); x.loadout.archetype = cls; x.hackers = { [cls]: { level: 12, xp: 0 } }; x.rng = 7;
+    const x = fresh(); x.loadout.archetype = cls; x.hackers = { [cls]: { level: 12, xp: 0 } }; x.loadout.sub = { [cls]: EDGE[cls].sub }; x.rng = 7; // its old-edge subclass, picked
     let n = 0;
     for (let i = 0; i < 3000; i++) if (['payload', 'phantom'].includes(UNIQUES[uniqueFrom(x, { kind: 'sprawl' }, 12)?.id]?.lean)) n++;
     return n;

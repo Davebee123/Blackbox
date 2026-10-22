@@ -1,7 +1,7 @@
 // The test bench (?bench=<name>): a save of its own for playtesting any class or subclass at any level, so the real
 // game is never touched. A bench loads and saves under blackbox-bench-<name> (never the real save's key or the
 // campaign's), has developer mode on (as ?dev), and wears a BENCH tag in the top bar (app.js).
-//   bench <subclass|class> <level>   a ready character on this bench (below SUBCLASS.from the class only): build()
+//   bench <subclass|class> <level>   a ready character on this bench (a class: its core, no subclass picked): build()
 //                                    below, the subclass's rotation preset on the bar, the floors down to that level's
 //                                    with you on the deepest, a few servers traced there, full Signal and Integrity
 //   bench list                       the bench saves in this browser
@@ -52,8 +52,9 @@ export function build(s, cls, b, opts) {
   s.loadout.archetype = cls;
   s.metAll = true; // a veteran: every part met, so the parts roll (dist/parts.mjs) brings its whole mix, strangers and all
   s.hackers = { [cls]: { level: b.level, xp: 0 } };
-  // From SUBCLASS.from a subclass (opts.sub, else the class's default): its skill line and tree.
-  const sub = b.level >= SUBCLASS.from ? opts.sub || defaultSub(cls) : null, key = sub || cls, kit = SUBS[sub];
+  // From SUBCLASS.from a subclass, picked (opts.sub, else the class's default): its skill line and tree. opts.noSub:
+  // none picked yet, the class's core alone (the bench's `bench <class> <level>`, the breakout waiting).
+  const sub = b.level >= SUBCLASS.from && !opts.noSub ? opts.sub || defaultSub(cls) : null, key = sub || cls, kit = SUBS[sub];
   if (sub) s.loadout.sub = { [cls]: sub };
   if (!kit) { /* no tree before the subclass */ }
   else if (b.tree === 'full') { s.loadout.picks[key] = [0, 0, 0]; s.loadout.ranks[key] = Object.fromEntries(kit.fillers.flat().map((n) => [n.id, 3])); }
@@ -141,8 +142,8 @@ export function benchBuild(s, name, level) {
   s.tutorialCompleted = true;
   if (!keep.profile) s.settings.tips = false; // a new bench: no first-time tips (tips on brings them back)
   s.profile = keep.profile || { handle: 'bench', pwLen: 6, since: Date.now() };
-  const sub = L >= SUBCLASS.from ? kit.sub || defaultSub(kit.cls) : null;
-  build(s, kit.cls, { level: L }, { sub });
+  const sub = L >= SUBCLASS.from ? kit.sub : null; // a class from SUBCLASS.from: no subclass yet, its breakout waiting
+  build(s, kit.cls, { level: L }, { sub, noSub: !sub });
   if (sub) { s.loadout.equipped[sub] = presetKeys(s, kit.cls, 'rotation'); (s.loadout.follow ||= {})[sub] = 'rotation'; }
   const floor = benchFloors(s, L);
   openFarm(s); // KESSLER-FARM-00, from its level (rogue.mjs): on the map now, not a notice later
@@ -151,7 +152,7 @@ export function benchBuild(s, name, level) {
   s.server.integrity = s.server.max;
   s.server.credits = Math.max(s.server.credits, 500);
   const who = sub ? `${SUBS[sub].name} (${ARCHETYPES[kit.cls].name})` : ARCHETYPES[kit.cls].name;
-  const note = kit.sub && !sub ? ` Subclasses open at level ${SUBCLASS.from}, so this is a plain ${ARCHETYPES[kit.cls].name}.` : '';
+  const note = kit.sub && !sub ? ` Subclasses open at level ${SUBCLASS.from}, so this is a plain ${ARCHETYPES[kit.cls].name}.` : !sub && L >= SUBCLASS.from ? ' No subclass picked yet.' : '';
   return { ok: true, cls: kit.cls, sub, level: L, floor, message: `Bench: ${who}, level ${L}, on floor ${floor}.${note}` };
 }
 

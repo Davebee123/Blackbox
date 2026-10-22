@@ -188,10 +188,10 @@ export const TIPS = [
   { id: 'craft-plans', page: 'craft', at: '.craft-cats .craft-cat', text: 'Only recipes you know show here. New ones come as blueprints: viruses drop them, vaults hold them, and the Halcyon store sells sealed ones.' },
 
   // ---------- loadout ----------
-  { id: 'loadout-status', page: 'loadout', at: '.status-line .status', text: 'Your skills put this status on parts. Hover it to see what it does.' },
-  { id: 'loadout-bar', page: 'loadout', at: '.keybar', text: 'This is your skill bar. Key 1 is your basic attack. Your class skills fill the other slots: seven at first, eight at level 22 and nine at 30.' },
+  { id: 'loadout-status', page: 'loadout', at: '.sk-status', text: 'Your skills put this status on parts. Hover it to see what it does.' },
+  { id: 'loadout-bar', page: 'loadout', at: '.sk-bar', text: 'This is your skill bar. Key 1 is your basic attack. Your class skills fill the other slots: seven at first, eight at level 22 and nine at 30.' },
   { id: 'loadout-classes', page: 'loadout', at: '.arch-tabs', text: 'There are four classes, and each one levels up separately. You can switch between them at home.' },
-  { id: 'loadout-talents', page: 'loadout', at: '.ttree', when: (s) => hackerLevel(s) >= 10, text: 'From level 10 you earn a talent point every other level. Ranks add small bonuses, and each tier asks you to pick one of two. You can change picks at home for free.' },
+  { id: 'loadout-talents', page: 'loadout', at: '.sk-tree', when: (s) => hackerLevel(s) >= 10, text: 'From level 10 you earn a talent point every other level for your subclass\'s tree. Ranks add small bonuses, and each tier asks you to pick one of two. Changing picks at home is free.' },
   // Your program (routines.mjs): the handler editor on Loadout → Program.
   { id: 'program-editor', page: 'loadout', at: '.rt-editor', text: 'When the timer runs out, your program moves. Pick a virus, then a ready-made routine, or drag WHEN, DO and TARGET chips onto a handler. The first that fits fires, else the rotation.' },
 

@@ -66,6 +66,8 @@ import { daemonText } from './daemons.mjs';
 import { ROOMS as ROOMS_FP, kindRule, KIND_OF } from './floorplan.mjs'; // a server card's respawn timers, its type's rule
 import { threadRows, threadReader, tempNodes, tempNodeSvg, tempCard, serverMarkSvg, transitNodes, transitSvg } from './threads-view.mjs';
 import { threadById, serverMarks } from './threads.mjs';
+import { skillsTabMarkup } from './skills-view.mjs';
+export { skillDetailMarkup, breakoutMarkup, breakoutDetailMarkup, breakoutDue, breakoutLevels } from './skills-view.mjs';
 
 // WoW-style level colors: how an enemy's level compares with yours.
 export const conClass = (gap) => (gap >= 5 ? 'con-red' : gap >= 3 ? 'con-orange' : gap >= -2 ? 'con-yellow' : gap > -10 ? 'con-green' : 'con-gray');
@@ -1417,7 +1419,7 @@ function rewardChips(s, c) {
 // A filter's stats as chips (an icon and a number each); dim while it isn't in a slot.
 const FILTER_ICON = { strength: 'firewall', worm: 'worm', ransomware: 'cipher', ghostroot: 'kernel', frag: 'scrap', defrag: 'repair', grind: 'damage', chip: 'shield', tarpit: 'tarpit', sting: 'spike', evasion: 'evasion', sanitize: 'sanitize', reflect: 'honeypot', reduction: 'reduction', regen: 'regen', shield: 'shield', countermeasures: 'countermeasures' };
 // Behind (progression.mjs): a tag by your XP bar while kills pay +50% on a level running long.
-const behindTag = (s, arch) => { const b = behindOf(s, arch); if (!b) return ''; return b.on ? `<span class="tag warn behind" title="This level is past ${Math.round(b.after / 60000)} minutes of play (its target is ${Math.round(b.target / 60000)}). Kills pay +50% XP until the next level.">Behind · kills +50% XP</span>` : ''; };
+export const behindTag = (s, arch) => { const b = behindOf(s, arch); if (!b) return ''; return b.on ? `<span class="tag warn behind" title="This level is past ${Math.round(b.after / 60000)} minutes of play (its target is ${Math.round(b.target / 60000)}). Kills pay +50% XP until the next level.">Behind · kills +50% XP</span>` : ''; };
 function filterChips(s, f, on) {
   const lv = fwLevel(s);
   return Object.entries(f.stats).map(([k, v]) => {
@@ -1880,205 +1882,29 @@ export function storeMarkup(s, now = Date.now()) {
     <section class="card"><h2>Agency stock</h2><ul class="ptiles stash">${shelf || '<li class="quiet">The shelves are empty.</li>'}</ul></section></div>`;
 }
 
-// ---------- loadout: archetypes and talent tree ----------
-// `view` is the archetype being browsed; the equipped one is s.loadout.archetype.
-const TIER_NOTE = { picked: '', open: 'Pick one', locked: 'Needs a free point' };
-const TREE_MAX = TREE.reduce((n, r) => n + (r.kind === 'choice' ? 1 : r.kind === 'capstone' ? 0 : 6), 0); // the capstone row has its own points
-
-const TAG_INFO = { status: 'Makes this class’s shared status', payoff: 'Stronger against statuses, from any class', crew: 'Mainly helps the crew, but still useful solo', run: 'Used on runs, outside fights' };
-
-
+// ---------- loadout: the classes, then its tabs ----------
+// `view` is the archetype being browsed (class/subclass on Skills and talents); the equipped one is s.loadout.archetype.
 export const className = (id) => ARCHETYPES[id]?.name || id;
-// Presets above the bar (docs/kits.md 5.2): a chip for each, the one your bar follows lit, and the commands under them.
-function presetsHtml(s, id, equippedArch, mine, keysBusy) {
-  if (id !== equippedArch || !mine || !subOf(s, id)) return '';
-  const all = presetsOf(s, id), on = followOf(s, id);
-  const chip = (n) => {
-    const keys = presetKeys(s, id, n) || [];
-    const title = `${keys.map((k, i) => `${LOADOUT.keys[i]} ${ABILITIES[k]?.name || k}`).join(' · ')}${all[n].shipped ? ' (shipped)' : ''}`;
-    return `<button type="button" class="preset-chip${n === on ? ' on' : ''}" ${keysBusy || n === on ? 'disabled' : `data-command="loadout use ${esc(n)}"`} aria-pressed="${n === on}" title="${esc(title)}">${esc(n)}${all[n].shipped ? '' : ' <small>saved</small>'}</button>`;
-  };
-  return `<div class="presets" aria-label="Presets"><span class="presets-label">Presets</span>${Object.keys(all).map(chip).join('')}<button type="button" class="preset-chip save" data-prefill="loadout save " ${keysBusy ? 'disabled' : ''} title="Type a name to save this bar as a preset">Save bar as…</button>
-    <p class="presets-help">${keysBusy ? 'Presets change between fights.' : `loadout use ${esc(on || 'rotation')} · loadout save &lt;name&gt; · keys you swap in start your next fight cooling`}</p></div>`;
-}
 export const xpNeeded = (level) => xpToNext(level);
 
-export function loadoutMarkup(s, view, tab = 'protocols') {
+// ui: the Skills and talents page's own (skills-view.mjs): the item picked for its detail panel, and the phone's sheet.
+export function loadoutMarkup(s, view, tab = 'protocols', ui = {}) {
   const equippedArch = s.loadout?.archetype || 'breaker';
-  // view: a class, or class/subclass to look at that subclass's line and tree (class/core: the class alone).
-  const [vc, vs] = String(view || '').split('/');
+  const [vc] = String(view || '').split('/');
   const id = ARCHETYPES[vc] ? vc : equippedArch;
   const a = ARCHETYPES[id];
-  // The page opens on the subclass you picked, or on the class alone until you pick one. Any other subclass is a
-  // preview: its line and tree, read-only. (From level 10 a class that never picked plays its default subclass,
-  // activeSub, in fights: its bar keys from that line are marked as such, never as a subclass you picked.)
-  const activeSub = subOf(s, id), picked = subPicked(s, id) ? activeSub : null;
-  const shown = vs === 'core' ? null : SUBS[vs]?.cls === id ? vs : picked, kit = SUBS[shown] || null;
-  const previewing = !!shown && shown !== picked;
-  const fromDefault = (k) => !picked && activeSub && !a.core.includes(k) ? SUBS[activeSub].name : ''; // a key the default subclass gave you
-  const busy = active(s) || !!s.run; // talents and classes change at home, between fights
-  const keysBusy = active(s); // keys and presets change anywhere out of a fight
-  const points = talentPoints(s, id), spent = pointsSpent(s, id), picks = picksOf(s, id);
-  const lvl = hackerLevel(s, id), hk = hackerOf(s, id);
-  const known = knownSkills(s, id), equipped = equippedSkills(s, id);
-  const st = STATUSES[a.status];
+  const busy = active(s) || !!s.run; // classes change at home, between fights
+  const free = subOf(s, id) ? Math.max(0, talentPoints(s, id) - pointsSpent(s, id)) + (capState(s, id) === 'open' ? 1 : 0) : 0; // with no subclass, its points wait for the tree
 
-  // Each class card: click to look at it; Use (any class you aren't playing) switches to it, at home.
-  const tabs = Object.entries(ARCHETYPES).map(([k, x]) => `<div class="arch-card"><button type="button" class="arch${k === id ? ' on' : ''}" data-arch="${k}" aria-pressed="${k === id}">
-      <span class="arch-name">${esc(x.name)} <span class="tag dim">Lv ${hackerLevel(s, k)}</span>${k === equippedArch ? ' <span class="tag you">in use</span>' : ''}</span><span class="arch-idea">${x.role.map((r) => `<span class="tag dim">${esc(r)}</span>`).join(' ')}</span></button>${k === equippedArch ? '' : `<button type="button" class="btn small arch-use" data-command="archetype ${k}" ${busy ? 'disabled title="At home only"' : `title="Play ${esc(x.name)}"`}>Use</button>`}</div>`).join('');
-
-  // The bar you'll fight with: Spike, then your equipped skills (7 slots, 8 at 22, 9 at 30), then SIGINT (everyone's interrupt, from 10).
-  // Run skills (Spoof, Tap) take no slot.
-  const byId = Object.fromEntries(a.skills.map((x) => [x.id, x]));
-  const slots = barSlots(lvl), fightKnown = known.filter((k) => !isRunSkill(k));
-  const line = skillOrder(id, shown).map((k) => byId[k]).filter(Boolean); // the core, then the shown subclass's skills
-  const ahead = skillOrder(id, activeSub).map((k) => byId[k]).filter(Boolean); // what your bar will get next: your own kit's line
-  const cantrip = (c) => (unlockLevel(id, c.id) <= lvl
-    ? `<li class="slot cantrip" title="${esc(c.rule)}"><kbd>${c.key}</kbd><b>${glyph(c.id === 'spike' ? 'spike' : 'stun')}${esc(c.name)}</b><small>everyone</small></li>`
-    : `<li class="slot empty" title="${esc(c.rule)}"><kbd>${c.key}</kbd><b>${esc(c.name)}</b><small>Lv ${unlockLevel(id, c.id)}</small></li>`);
-  const bar = [
-    cantrip(cantripsOf(id)[0]),
-    ...Array.from({ length: LOADOUT.equipSlots }, (_, i) => {
-      const sk = byId[equipped[i]], key = LOADOUT.keys[i];
-      // A slot your level hasn't opened yet shows the level it opens at.
-      const opens = LOADOUT.bar.find(([, n]) => n > i)?.[0] ?? 1;
-      if (i >= slots) return `<li class="slot empty closed" title="This slot opens at level ${opens}"><kbd>${key}</kbd><b>slot</b><small>Lv ${opens}</small></li>`;
-      const future = ahead.filter((x) => !known.includes(x.id) && !isRunSkill(x.id))[i - equipped.length];
-      const ghost = future && fightKnown.length < slots;
-      // Before level 10 the next key after the core is the subclass's.
-      const subNext = !future && !subOf(s, id) && i === equipped.length && fightKnown.length < slots;
-      const note = (k) => (fromDefault(k) ? `${fromDefault(k)} skill: yours until you pick a subclass.` : '');
-      if (sk) return `<li class="slot on${note(sk.id) ? ' from-sub' : ''}" title="${esc(`${note(sk.id)} ${scaledText(s, sk.id, sk.rule, id)}`.trim())}"><kbd>${key}</kbd><b>${glyph(sk.verb, 'verb-' + sk.verb)}${esc(sk.name)}</b></li>`;
-      if (subNext) return `<li class="slot empty" title="${esc(`Subclass skills start at level ${SUBCLASS.from}`)}"><kbd>${key}</kbd><b>Subclass</b><small>Lv ${SUBCLASS.from}</small></li>`;
-      if (ghost) return `<li class="slot empty${note(future.id) ? ' from-sub' : ''}"${note(future.id) ? ` title="${esc(note(future.id))}"` : ''}><kbd>${key}</kbd><b>${esc(future.name)}</b><small>Lv ${unlockLevel(id, future.id, activeSub)}</small></li>`;
-      return `<li class="slot empty"><kbd>${key}</kbd><b>empty</b></li>`;
-    }),
-    ...CANTRIPS.slice(1).map(cantrip),
-  ].join('');
-
-  const VERB = { hit: 'hit', burn: 'burn', stun: 'stun', debuff: 'debuff', shield: 'shield', heal: 'heal', buff: 'buff', util: 'utility', run: 'run' };
-  // Its cooldown, as a little clock badge: cycles before you can use it again.
-  const cdHtml = (x) => {
-    const ab = ABILITIES[x.id];
-    if (!ab) return '';
-    if (ab.once) return '<span class="tag stag cd" title="Once per fight">1/fight</span>';
-    const n = id === classOf(s) ? cooldownOf(s, x.id) : ab.cooldown || 0;
-    return `<span class="tag stag cd${n ? '' : ' none'}" title="${n ? `Cooldown: ${n} ${n === 1 ? 'cycle' : 'cycles'} before you can use it again` : 'No cooldown'}">⟳ ${n || '—'}</span>`;
-  };
-  // A specialist carries the board it is built for (docs/kits.md 5.4): Fragments, Healers, Seals, Mimic…
-  const specTag = (x) => (kit?.tags?.[x.id] ? `<span class="tag stag spec" title="Best on this board, a bonus on top of its general use">${esc(kit.tags[x.id])}</span>` : '');
-  const tagHtml = (x) => `${specTag(x)}${cdHtml(x)}<span class="tag stag verb-${x.verb}" title="What it does">${VERB[x.verb] || x.verb}</span>`;
-  const lib = line.map((x) => {
-    // A previewed subclass's skill is never shown as yours, whatever the bar holds.
-    const peek = previewing && !a.core.includes(x.id);
-    const isEq = !peek && equipped.includes(x.id), isKnown = !peek && known.includes(x.id);
-    const state = peek ? 'locked preview' : isEq ? 'equipped' : isKnown ? 'known' : 'locked';
-    const action = peek ? `<span class="lvl-lock" title="${esc(`At level ${unlockLevel(id, x.id, shown)} as a ${kit.name}`)}">Level ${unlockLevel(id, x.id, shown)}</span>`
-      : keysBusy || previewing || (busy && id !== equippedArch) ? ''
-      : isEq ? btn(`unequip ${id} ${x.id}`, 'Unequip')
-      : isKnown && isRunSkill(x.id) ? '<span class="lvl-lock" title="Run skills take no slot. Type it on a run.">on runs</span>'
-      : isKnown ? `<button type="button" class="btn primary" data-command="equip ${id} ${x.id}" ${equipped.length >= slots ? `disabled title="All ${slots} slots full: unequip one first"` : ''}>Equip</button>`
-      : `<span class="lvl-lock">Level ${unlockLevel(id, x.id, shown)}</span>`;
-    return `<li class="skill ${state}${a.core.includes(x.id) ? '' : ' subskill'}" title="${esc(scaledText(s, x.id, x.rule, id))}"><div class="skill-top"><b>${isEq ? `<kbd>${LOADOUT.keys[equipped.indexOf(x.id)]}</kbd>` : state === 'locked' ? '<span class="lock" aria-hidden="true"></span>' : ''}${glyph(x.verb, 'badge verb-' + x.verb)}${esc(x.name)}</b><span class="stags">${tagHtml(x)}</span></div>
-      <div class="skill-foot"><p>${ruleHtml(scaledText(s, x.id, SKILL_TEXT[x.id]?.desc || ABILITIES[x.id]?.desc || ABILITIES[x.id]?.short || x.rule, id))}</p>${action}</div></li>`;
-  }).join('');
-  const libKnown = line.filter((x) => known.includes(x.id) && !(previewing && !a.core.includes(x.id))).length;
-
-  // The tree, top to bottom: ranked filler rows between the three choice tiers.
-  const ranks = s.loadout?.ranks?.[shown] || {};
-  const shownPicks = s.loadout?.picks?.[shown] || [];
-  const locked = busy || previewing; // talents change at home, on the subclass you play
-  const needNote = (i) => `${spentAbove(s, id, i)}/${TREE[i].need}`;
-  const tiers = !kit ? '' : TREE.map((row, i) => {
-    if (row.kind === 'capstone') {
-      // The capstone row: its own points (a pick at 45, its second rank at 50), never your talent points.
-      const caps = kit.capstones || [], cp = capstonePoints(s, id), pick = previewing ? s.loadout?.caps?.[shown] : capPickOf(s, id);
-      const has = pick === 0 || pick === 1;
-      const cs = previewing ? (has ? 'picked' : 'blocked') : busy && capState(s, id) !== 'picked' ? 'blocked' : capState(s, id);
-      const nodes = caps.map((c, j) => {
-        const on = has && pick === j, other = cs === 'picked' && !on, r = on ? Math.min(c.max, cp) : 0;
-        const can = !locked && (cs === 'open' || other);
-        const pips = Array.from({ length: c.max }, (_, k) => `<span class="rpip${k < r ? ' on' : ''}"></span>`).join('');
-        return `<button type="button" class="tnode tcap ${on ? 'picked' : other ? 'other' : cs}" ${can ? `data-command="talent ${id} capstone ${j ? 'b' : 'a'}"` : 'disabled'} aria-pressed="${on}">
-        <span class="tname">${on ? '<span class="tcheck" aria-hidden="true">✓</span>' : ''}${esc(c.name)}</span><span class="trule">${ruleHtml(c.rules[Math.max(0, r - 1)])}</span><span class="trule dim">Rank ${c.max} (level ${LOADOUT.capstoneAt[c.max - 1]}): ${ruleHtml(c.rules[c.max - 1])}</span><span class="rpips" aria-label="${r} of ${c.max}">${pips}</span>${other ? '<span class="tswap">swap</span>' : ''}</button>`;
-      }).join('<span class="tor" aria-hidden="true">or</span>');
-      const label = busy ? 'At home' : previewing ? '' : cs === 'locked' ? `Lv ${LOADOUT.capstoneAt[0]}` : cs === 'blocked' ? needNote(i) : cs === 'open' ? 'Pick one' : `${Math.min(2, cp)}/2`;
-      return `<li class="ttier tcaps ${cs}" title="${esc(`Capstone points: one at level ${LOADOUT.capstoneAt[0]} picks one, one at ${LOADOUT.capstoneAt[1]} gives it its second rank. Talent points never go here.`)}"><div class="tlabel"><b>Capstone</b><span>${label}</span></div><div class="tpair">${nodes}</div></li>`;
-    }
-    if (row.kind === 'filler') {
-      const rs = locked ? 'blocked' : rowState(s, id, i);
-      const nodes = kit.fillers[row.row].map((n) => {
-        const r = ranks[n.id] || 0, full = r >= n.max;
-        const can = !locked && rs === 'open' && !full;
-        const pips = Array.from({ length: n.max }, (_, k) => `<span class="rpip${k < r ? ' on' : ''}"></span>`).join('');
-        return `<div class="fnode ${r ? 'has' : ''} ${full ? 'full' : ''} ${can ? 'open' : rs}">
-          <button type="button" class="fadd" ${can ? `data-command="talent ${id} add ${n.id}"` : 'disabled'} title="${can ? 'Add a rank' : ''}"><span class="tname">${esc(n.name)}</span><span class="trule">${ruleHtml(n.rule)}</span><span class="rpips" aria-label="${r} of ${n.max}">${pips}</span></button>
-          ${r && !locked ? `<button type="button" class="fminus" data-command="talent ${id} remove ${n.id}" title="Take a rank back" aria-label="Take a rank back from ${esc(n.name)}">−</button>` : ''}
-        </div>`;
-      }).join('');
-      const label = busy ? 'At home' : previewing ? '' : rs === 'blocked' ? needNote(i) : '';
-      return `<li class="ttier frow ${rs}"><div class="tlabel"><b>Ranks</b><span>${label}</span></div><div class="fpair">${nodes}</div></li>`;
-    }
-    const t = row.tier, pair = kit.talents[t];
-    const ts = previewing ? (shownPicks[t] === 0 || shownPicks[t] === 1 ? 'picked' : 'blocked') : busy && tierState(s, id, t) !== 'picked' ? 'blocked' : tierState(s, id, t);
-    const nodes = pair.map((tal, j) => {
-      const picked = (previewing ? shownPicks : picks)[t] === j, other = ts === 'picked' && !picked;
-      const can = !locked && (ts === 'open' || other);
-      const cls = picked ? 'picked' : other ? 'other' : ts;
-      return `<button type="button" class="tnode ${cls}" ${can ? `data-command="talent ${id} ${t + 1} ${j ? 'b' : 'a'}"` : 'disabled'} aria-pressed="${picked}">
-        <span class="tname">${picked ? '<span class="tcheck" aria-hidden="true">✓</span>' : ''}${esc(tal.name)}</span><span class="trule">${ruleHtml(tal.rule)}</span>${other ? '<span class="tswap">swap</span>' : ''}</button>`;
-    }).join('<span class="tor" aria-hidden="true">or</span>');
-    const label = busy ? 'At home' : previewing ? '' : ts === 'blocked' ? needNote(i) : TIER_NOTE[ts];
-    return `<li class="ttier ${ts}"><div class="tlabel"><b>Tier ${t + 1}</b><span>${label}</span></div><div class="tpair">${nodes}</div></li>`;
-  }).join('');
-
-  // The subclass row over the page: the class alone, then each subclass, to look at; under it, the one on show
-  // (Preview, or yours) with its Pick or Switch.
-  const subTab = (key, name, small, on, mark = '') => `<button type="button" class="sub-tab${on ? ' on' : ''}" data-arch="${id}/${key}" aria-pressed="${on}"><b>${esc(name)}</b><small>${small}</small>${mark}</button>`;
-  const canPick = (x) => lvl >= SUBCLASS.from && x.id !== picked && !(busy && picked) && !active(s);
-  const pickWhy = lvl < SUBCLASS.from ? `Unlocks at level ${SUBCLASS.from}` : active(s) ? 'Between fights' : busy && picked ? 'At home' : `${picked ? 'Switch to' : 'Pick'} ${kit?.name}`;
-  const subLine = kit
-    ? `${previewing ? '<span class="tag preview">Preview</span>' : ''}<span class="sub-idea">${esc(kit.idea)}</span>${previewing ? `<button type="button" class="btn small${canPick(kit) ? ' primary' : ''}" ${canPick(kit) ? `data-command="subclass ${id} ${kit.id}"` : 'disabled'} title="${esc(pickWhy)}">${picked ? 'Switch' : 'Pick'}</button>` : ''}`
-    : `<span class="sub-idea">${esc(a.idea)}</span>${lvl < SUBCLASS.from ? `<span class="tag dim" title="${esc(`Subclasses unlock at level ${SUBCLASS.from}`)}">Subclass Lv ${SUBCLASS.from}</span>` : ''}`;
-  const subRow = `<div class="sub-row">
-      <nav class="sub-tabs" aria-label="Subclass">${subTab('core', a.name, 'Core', !kit)}${Object.values(a.subs).map((x) => subTab(x.id, x.name, x.role.map(esc).join(' · '), x.id === shown, x.id === picked ? '<span class="tag you">yours</span>' : '')).join('')}</nav>
-      <p class="sub-line">${subLine}</p>
-    </div>`;
-  // Under the kit talent: the subclass's edge, or (on the class alone) where the subclass goes.
-  const others = Object.values(a.subs).map((x) => x.name).join(' or ');
-  const subRoot = kit
-    ? `<li class="troot${lvl < SUBCLASS.from || previewing ? ' locked' : ''}"><span class="tag">${lvl < SUBCLASS.from ? `Lv ${SUBCLASS.from}` : 'edge'}</span><b>${esc(kit.edge.name)}</b><span class="trule">${ruleHtml(kit.edge.rule)}</span></li>`
-    : picked ? `<li class="troot tsub"><span class="tag">subclass</span><b>${esc(SUBS[picked].name)}</b><span class="trule">${esc(SUBS[picked].edge.name)}</span></li>`
-    : lvl < SUBCLASS.from ? `<li class="troot tsub locked"><span class="tag">Lv ${SUBCLASS.from}</span><b>Subclass</b><span class="trule">${esc(others)}</span></li>`
-    : `<li class="troot tsub" title="${esc(`Until you pick one, you fight with ${SUBS[activeSub].name}'s skills, edge and talents.`)}"><span class="tag">subclass</span><b>Not picked</b><span class="trule">${esc(others)}</span></li>`;
+  // The classes, one slim button each (its level, a teal lamp on the one in use): click to look at it. Looking at
+  // one you aren't playing, Use switches to it, at home (and while trying classes out, your level comes with you).
+  const tabs = Object.entries(ARCHETYPES).map(([k, x]) => `<button type="button" class="arch${k === id ? ' on' : ''}" data-arch="${k}" aria-pressed="${k === id}" title="${esc(x.role.join(' · '))}"><b>${esc(x.name)}</b><span>Lv ${hackerLevel(s, k)}</span>${k === equippedArch ? '<i class="arch-inuse" title="In use"></i>' : ''}</button>`).join('')
+    + (id === equippedArch ? '' : `<button type="button" class="btn small arch-use" data-command="archetype ${id}" ${busy ? 'disabled title="At home only"' : `title="Play ${esc(a.name)}"`}>Use ${esc(a.name)}</button>`);
 
   return `<div class="loadout">
     <nav class="arch-tabs" aria-label="Classes">${tabs}</nav>
-    <nav class="ltabs" role="tablist" aria-label="Loadout">${[['protocols', 'Protocols'], ['daemons', `Daemons${newOn(s, 'daemons') ? ` · ${newOn(s, 'daemons')} new` : ''}`], ['program', 'Program'], ['skills', `Skills and talents${Math.max(0, points - spent) + (capState(s, id) === 'open' ? 1 : 0) ? ` · ${Math.max(0, points - spent) + (capState(s, id) === 'open' ? 1 : 0)} free` : ''}`]].map(([k, l]) => (k === 'program' && !routinesOpen(s) ? `<button type="button" role="tab" class="ltab-locked" data-ltab="${k}" aria-selected="${tab === k}" aria-disabled="true" title="${esc(ROUTINES_LOCKED)}">${esc(l)}</button>` : `<button type="button" role="tab" data-ltab="${k}" aria-selected="${tab === k}">${esc(l)}</button>`)).join('')}</nav>
-    ${tab === 'daemons' ? daemonsMarkup(s) : tab === 'program' ? programMarkup(s) : tab === 'skills' ? `
-    ${subRow}
-    <div class="loadout-grid">
-      <section class="card skills-card">
-        <div class="thead"><div><h2>Skills</h2><h1>${esc(a.name)}</h1><div class="class-xp"><b>Lv ${lvl}</b>${lvl < LOADOUT.maxLevel ? `<span class="lvl-bar"><span style="width:${(hk.xp / xpToNext(lvl)) * 100}%"></span></span><span>${hk.xp}/${xpToNext(lvl)} XP</span>${behindTag(s, id)}` : '<span>max level</span>'}</div></div>
-          ${id === equippedArch ? '<span class="tag you">in use</span>' : busy ? '' : btn(`archetype ${id}`, `Use ${a.name}`, true)}</div>
-        <p class="status-line" title="${esc(st.rule)}"><span class="status-label">Applies</span> <span class="tag stag status">${esc(st.name)}</span></p>
-        ${presetsHtml(s, id, equippedArch, !!kit && !previewing, keysBusy)}
-        <ol class="keybar" aria-label="Your bar">${bar}</ol>
-        <div class="lib-head"><h2>Library · ${libKnown}/${line.length}</h2><small>${esc(a.name)} core${kit ? ` and ${esc(kit.name)}` : ''}${previewing ? ' (preview)' : ''}</small></div>
-        <ul class="library">${lib}</ul>
-      </section>
-      <section class="card ttree-card${previewing ? ' preview' : ''}"><div class="thead"><div><h2>Talent tree</h2><h1>${esc(kit ? kit.name : a.name)}${previewing ? ' <span class="tag preview">Preview</span>' : ''}</h1></div>
-        <div class="tpoints" title="A talent point every ${LOADOUT.talentEvery} levels from level ${LOADOUT.talentFrom}."><span class="tbar"><span style="width:${Math.min(100, (spent / TREE_MAX) * 100)}%"></span></span><span><b>${Math.max(0, points - spent)} free</b> · ${spent}/${TREE_MAX} spent · ${points} earned</span></div></div>
-        <ol class="ttree">
-          <li class="troot"><span class="tag">passive</span><b>${esc(a.passive.name)}</b><span class="trule">${ruleHtml(a.passive.rule)}</span></li>
-          <li class="troot tsync"><span class="tag sync">sync</span><b>Sync bonus</b><span class="trule">${ruleHtml(`Fired in a Sync Window, your command deals ${Math.round(CONFIG.sync.bonus * 100)}% more damage and ${SYNC[id].rule.replace(/^./, (c) => c.toLowerCase())}`)}</span></li>
-          <li class="troot tspec${lvl < LOADOUT.specFrom ? ' locked' : ''}" title="Part of the ${esc(a.name)} kit from level ${LOADOUT.specFrom}: ${LOADOUT.specRanks} ranks of ${esc(kitTalent(id).name)}"><span class="tag">Lv ${LOADOUT.specFrom}</span><b>${esc(kitTalent(id).name)}</b><span class="trule">${ruleHtml(specRule(kitTalent(id)))}</span></li>
-          ${subRoot}
-          ${tiers}
-        </ol>
-        ${spent && kit && !locked ? `<p class="tfoot">${btn(`talent reset ${id}`, 'Clear picks')}</p>` : ''}
-      </section>
-    </div>` : id === equippedArch ? `
+    <nav class="ltabs" role="tablist" aria-label="Loadout">${[['protocols', 'Protocols'], ['daemons', `Daemons${newOn(s, 'daemons') ? ` · ${newOn(s, 'daemons')} new` : ''}`], ['program', 'Program'], ['skills', `Skills and talents${free ? ` · ${free} free` : ''}`]].map(([k, l]) => (k === 'program' && !routinesOpen(s) ? `<button type="button" role="tab" class="ltab-locked" data-ltab="${k}" aria-selected="${tab === k}" aria-disabled="true" title="${esc(ROUTINES_LOCKED)}">${esc(l)}</button>` : `<button type="button" role="tab" data-ltab="${k}" aria-selected="${tab === k}">${esc(l)}</button>`)).join('')}</nav>
+    ${tab === 'daemons' ? daemonsMarkup(s) : tab === 'program' ? programMarkup(s) : tab === 'skills' ? skillsTabMarkup(s, view || id, ui) : id === equippedArch ? `
     <div class="loadout-protocols silk">${protocolGearMarkup(s)}</div>` : `
     <div class="loadout-protocols one"><section class="card"><h2>Protocols</h2><p class="svc-line"><span class="tag dim" title="Protocols belong to the class in use">${esc(a.name)} only</span></p></section></div>`}
     </div>`;

@@ -266,7 +266,8 @@ test('the chit forecast knows a heavy hit breaks two', async () => {
 // ability data and the hit rule (combat.mjs armorTakes), never on the skills that break or ignore ◆.
 test('the ◆ badge: on a damaging key armor would absorb, aimed at an armored part; never on Crack and the armor breakers', async () => {
   const { armorTakes } = await import('./dist/combat.mjs');
-  const s = start();
+  // A Demolitionist, picked: since level 10 no longer plays a default subclass, its line's keys need the pick.
+  const s = fresh(); s.hackers = { breaker: { level: 50, xp: 0 } }; command(s, 'subclass demolitionist'); selectEncounter(s, 'cryptjack', 7, { level: 6 }); command(s, 'engage');
   const enc = part(s, 'encryptor');
   enc.armor = enc.maxArmor = 3;
   const key = (html, id) => html.split('<button').find((k) => k.includes(`data-ability="${id}"`)).split('</button>')[0];

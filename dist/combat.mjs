@@ -51,7 +51,7 @@ import { PARTS, heatOf } from './parts.mjs';
 import { crewOf, factionAuthor, AUTHORS } from './authors.mjs';
 import { fightNet, noteKill, nativeRoll, biasCode, richMult, networkRestore, networkCommand, lairUniques, lairFell, lairBoss, mine, netOf, isNative, named, nameOf, nameNative, openLair } from './network.mjs';
 
-export const SAVE_VERSION = 45; // v45: sets, each loaded protocol stamped with when it went on and the storyline's LOWLIGHT Badge beat armed (sets.mjs setsRestore); v44: whole-number stats, Regen over 5 cycles and Payload flat (gear.mjs statsRestore); v43: threads, quests found in rooms (threads.mjs threadsRestore); v42: the long climb, XP into a level keeps its share (progression.mjs climbRestore); v41: layers become floors (floors.mjs floorsRestore, docs/servers.md R3); v40: outposts, buildings, plans, services, architecture and the dividend retire for sockets (sockets.mjs retireOutposts, netrooms.mjs socketRoomsRestore, docs/servers.md R2); v39: every server is a room graph (netrooms.mjs roomsRestore, docs/servers.md R1); v38: two shipped presets renamed (presetRenameRestore); v37: 15-key pools, reordered lines and presets (kitRestore); v36: networks (network.mjs networkRestore: a network seed for every save); v31: subclasses (retireClassTrees); v32: Payload is a percentage; v33: invasion kinds, bounties, signatures, and the firewall follows the network (invasionRestore, firewallRestore); v34: one level, no server XP, specialty, ports, home-fight services or greys (progression.mjs progressionRestore); v35: the nine-key bar, run skills off it, one-clock tells (barRestore)
+export const SAVE_VERSION = 46; // v46: no default subclass: a class past level 10 that never picked plays its core until it does (subRestore); v45: sets, each loaded protocol stamped with when it went on and the storyline's LOWLIGHT Badge beat armed (sets.mjs setsRestore); v44: whole-number stats, Regen over 5 cycles and Payload flat (gear.mjs statsRestore); v43: threads, quests found in rooms (threads.mjs threadsRestore); v42: the long climb, XP into a level keeps its share (progression.mjs climbRestore); v41: layers become floors (floors.mjs floorsRestore, docs/servers.md R3); v40: outposts, buildings, plans, services, architecture and the dividend retire for sockets (sockets.mjs retireOutposts, netrooms.mjs socketRoomsRestore, docs/servers.md R2); v39: every server is a room graph (netrooms.mjs roomsRestore, docs/servers.md R1); v38: two shipped presets renamed (presetRenameRestore); v37: 15-key pools, reordered lines and presets (kitRestore); v36: networks (network.mjs networkRestore: a network seed for every save); v31: subclasses (retireClassTrees); v32: Payload is a percentage; v33: invasion kinds, bounties, signatures, and the firewall follows the network (invasionRestore, firewallRestore); v34: one level, no server XP, specialty, ports, home-fight services or greys (progression.mjs progressionRestore); v35: the nine-key bar, run skills off it, one-clock tells (barRestore)
 
 // run.mjs registers callbacks here (it imports this file, so we can't import it).
 export const hooks = { flee: null, now: null };
@@ -190,12 +190,17 @@ export const spikeWord = (s) => spikeOf(classOf(s)).word;
 export const spikeName = (s) => spikeOf(classOf(s)).name;
 export const said = (s, text) => (text ? String(text).replace(/^spike(?= |$)/, spikeWord(s)) : text);
 export const classOf = (s) => s.loadout?.archetype || 'breaker';
-// Your subclass (SUBS in data.mjs; dist/classes/): from SUBCLASS.from, the one you picked, else your
-// class's old-edge subclass until you pick. Before that level, none: just the class's core.
-// A pick only counts if it names a subclass of that class (an unknown id plays the default).
+// Your subclass (SUBS in data.mjs; dist/classes/): from SUBCLASS.from, the one you picked. There is no default:
+// until you pick, a class plays its core alone (no subclass skills, edge, presets or tree), and the Loadout's
+// subclass breakout waits for you (skills-view.mjs). Before that level, none.
+// A pick only counts if it names a subclass of that class (an unknown id is no pick).
 const pickedSub = (s, arch) => { const x = s.loadout?.sub?.[arch]; return SUBS[x]?.cls === arch ? x : null; };
-export const subOf = (s, arch = classOf(s)) => (hackerLevel(s, arch) >= SUBCLASS.from ? pickedSub(s, arch) || defaultSub(arch) : null);
+export const subOf = (s, arch = classOf(s)) => (hackerLevel(s, arch) >= SUBCLASS.from ? pickedSub(s, arch) : null);
 export const subPicked = (s, arch = classOf(s)) => !!pickedSub(s, arch);
+// A class at SUBCLASS.from or past it that hasn't picked: the breakout's moment (skills-view.mjs breakoutDue).
+export const subWaiting = (s, arch = classOf(s)) => hackerLevel(s, arch) >= SUBCLASS.from && !pickedSub(s, arch);
+// "Later" on the breakout: it stops opening by itself for that class (s.loadout.subLater); the page keeps its entry.
+export function subLater(s, arch = classOf(s)) { (s.loadout.subLater ||= {})[arch] = true; }
 // Is this subclass's edge on? Class modules check their own edges with it.
 export const subEdge = (s, id) => CONFIG.edges !== false && subOf(s) === id;
 // Your subclass's tree and skill line (null before SUBCLASS.from).
@@ -1369,13 +1374,13 @@ export function gainXp(s, amount, why, kind = null, tally = kind) {
     const shelved = [...got.filter((g) => ABILITIES[g] && skillOrder(arch, sub).includes(g) && !isRunSkill(g) && !now.includes(g)), ...before.filter((g) => !now.includes(g))];
     const wants = (g) => Object.keys(presetsOf(s, arch)).filter((n) => { const x = presetsOf(s, arch)[n]; return (x.shipped ? presetKeys(s, arch, n) : x).includes(g); });
     const shelf = shelved.map((g) => `${ABILITIES[g].name} ${got.includes(g) ? 'goes on' : 'moves to'} the shelf${wants(g).length ? `: your ${andList(wants(g))} preset${wants(g).length === 1 ? ' uses' : 's use'} it (loadout use ${wants(g)[0]})` : ''}.`).join(' ');
-    const names = got.map((id) => (id === 'edge' ? `${SUBS[sub].edge.name} (${SUBS[sub].edge.rule.replace(/\.$/, '')})` : ARCHETYPES[arch].skills.find((x) => x.id === id)?.name || ABILITIES[id]?.name || id));
-    const pickSub = h.level === SUBCLASS.from && !subPicked(s, arch) ? ` Pick a subclass: ${Object.values(ARCHETYPES[arch].subs).map((x) => `${x.name} (subclass ${x.id})`).join(' or ')}. Until you do, you play ${SUBS[sub].name}.` : '';
+    const names = got.filter((id) => id !== 'edge' || sub).map((id) => (id === 'edge' ? `${SUBS[sub].edge.name} (${SUBS[sub].edge.rule.replace(/\.$/, '')})` : ARCHETYPES[arch].skills.find((x) => x.id === id)?.name || ABILITIES[id]?.name || id));
+    const pickSub = h.level === SUBCLASS.from && !subPicked(s, arch) ? ` Choose a subclass: ${Object.values(ARCHETYPES[arch].subs).map((x) => `${x.name} (subclass ${x.id})`).join(' or ')}. Until you do, you play the ${ARCHETYPES[arch].name} core.` : '';
     const talent = (gainsTalent(h.level) ? ' +1 talent point.' : '') + (h.level === LOADOUT.capstoneAt[0] ? ' +1 capstone point: pick a capstone (talent capstone a|b).' : h.level === LOADOUT.capstoneAt[1] ? ' Your capstone reaches rank 2.' : '') + pickSub;
-    // The banner lists what the level brings on every track, and the next level that brings something.
-    const subAt = (l) => (l >= SUBCLASS.from ? sub || defaultSub(arch) : null);
-    const skillsAt = (l) => newAtLevel(arch, l, subAt(l)).map((id) => (id === 'edge' ? SUBS[subAt(l)].edge.name : ARCHETYPES[arch].skills.find((x) => x.id === id)?.name || ABILITIES[id]?.name || CANTRIPS.find((c) => c.id === id)?.name || id));
-    const gains = [...skillsAt(h.level), ...(h.level === SUBCLASS.from && !subPicked(s, arch) ? ['a subclass to pick'] : []), ...levelGains(arch, h.level, top)];
+    // The banner lists what the level brings on every track, and the next level that brings something. With no
+    // subclass picked, the subclass level brings a subclass to pick, and later levels only what the core brings.
+    const skillsAt = (l) => newAtLevel(arch, l, l >= SUBCLASS.from ? sub : null).map((id) => (id === 'edge' ? (sub ? SUBS[sub].edge.name : 'a subclass to pick') : ARCHETYPES[arch].skills.find((x) => x.id === id)?.name || ABILITIES[id]?.name || CANTRIPS.find((c) => c.id === id)?.name || id));
+    const gains = [...skillsAt(h.level), ...levelGains(arch, h.level, top)];
     const next = nextGains(arch, h.level, Math.max(top, h.level), skillsAt);
     emit(s, 'level-up', `LEVEL ${h.level} ${ARCHETYPES[arch].name.toUpperCase()}.${names.length ? ' New: ' + names.join(', ') + '.' : ''}${shelf ? ' ' + shelf : ''}${talent} Power +4%.`, { level: h.level, unlocked: got, gains, next, server: h.level > top ? s.server.max : null });
   }
@@ -1389,8 +1394,8 @@ export function newAtLevel(arch, lvl, sub = null) {
 }
 // The next thing a class will unlock, for the "next at level N" hint.
 export function nextUnlock(s, arch = classOf(s)) {
-  const lvl = hackerLevel(s, arch), sub = subOf(s, arch) || defaultSub(arch);
-  const all = [...UNLOCKS.map((u) => ({ level: u.level, id: typeof u.what === 'number' ? ARCHETYPES[arch].core[u.what] : u.what })), ...lineOf(ARCHETYPES[arch].subs[sub])];
+  const lvl = hackerLevel(s, arch), sub = subOf(s, arch); // no subclass picked: the core's unlocks and the subclass itself
+  const all = [...UNLOCKS.map((u) => ({ level: u.level, id: typeof u.what === 'number' ? ARCHETYPES[arch].core[u.what] : u.what })), ...(sub ? lineOf(ARCHETYPES[arch].subs[sub]) : [])];
   const u = all.filter((x) => x.level > lvl).sort((a, b) => a.level - b.level)[0];
   if (!u) return null;
   return { level: u.level, id: u.id, name: u.id === 'edge' ? 'your subclass' : ARCHETYPES[arch].skills.find((x) => x.id === u.id)?.name || ABILITIES[u.id]?.name || u.id };
@@ -1420,6 +1425,31 @@ function retireClassTrees(s, was) {
       const known = knownSkills(s, arch), kept = L.equipped[arch].filter((id) => known.includes(id));
       L.equipped[sub] = [...kept, ...known.filter((id) => !kept.includes(id))].slice(0, slotsOf(s, arch));
     }
+  }
+}
+// v46: no default subclass. Before it, a class from level 10 that never picked played its default (EDGE[cls].sub:
+// Demolitionist, Warden, Phantom, Herder). Now it plays its core until you pick, so such a save loses what the
+// default lent it: its bar keeps its core keys (the default's keys go), the talent
+// points it spent in the default's tree come back (ranks, tier picks and the capstone cleared), and its program moves
+// to the class (the routines it wrote). Its presets stay, for a pick. The breakout opens the next time you're home
+// (no Later is set). A key the default's skill held goes back to a core skill that wasn't on the bar, else empty; a
+// bar the player trimmed stays trimmed.
+export function subRestore(s, was) {
+  if (was >= 46) return;
+  const L = (s.loadout ||= {});
+  for (const arch of Object.keys(ARCHETYPES)) {
+    if (!subWaiting(s, arch)) continue;
+    const d = defaultSub(arch), core = ARCHETYPES[arch].core;
+    const known = knownSkills(s, arch).filter((id) => !isRunSkill(id));
+    const old = L.equipped?.[d] || L.equipped?.[arch];
+    if (old) { // no bar saved: it's the core's default bar already
+      const kept = old.filter((id, i) => core.includes(id) && known.includes(id) && old.indexOf(id) === i), gone = old.length - kept.length;
+      (L.equipped ||= {})[arch] = [...kept, ...known.filter((id) => !kept.includes(id)).slice(0, gone)].slice(0, slotsOf(s, arch)); // a key the default held goes back to a core skill not on the bar, else empty
+    }
+    for (const k of ['equipped', 'follow', 'cooling', 'ranks', 'picks', 'caps']) if (L[k]) delete L[k][d];
+    if (L.follow) delete L.follow[arch];
+    const P = s.programs?.by;
+    if (P?.[d]) { P[arch] = JSON.parse(JSON.stringify(P[d])); delete P[d]; }
   }
 }
 // v34: the bar grows a slot at 22 and another at 30 (LOADOUT.bar), and run skills (Spoof, Tap) take none. A saved
@@ -1673,6 +1703,13 @@ export const spentAbove = (s, arch, i) => spentAboveWith(picksOf(s, arch), ranks
 function treeValid(picks, ranks, kit, cap) {
   return TREE.every((row, i) => !(row.kind === 'capstone' ? picked(cap) : rowSpent(picks, ranks, kit, row)) || spentAboveWith(picks, ranks, kit, i) >= row.need);
 }
+// Can a rank in this node come back without leaving a deeper pick short of the points above it?
+export function canTakeBack(s, arch, id) {
+  const kit = kitOf(s, arch), ranks = { ...ranksOf(s, arch) };
+  if (!kit || !ranks[id]) return false;
+  ranks[id]--;
+  return treeValid(picksOf(s, arch), ranks, kit, capPickOf(s, arch));
+}
 // Row state: 'open' (can spend here), 'locked' (open but no free points), 'blocked' (needs more points above).
 export function rowState(s, arch, i) {
   if (spentAbove(s, arch, i) < TREE[i].need) return 'blocked';
@@ -1699,7 +1736,7 @@ function subclassCommand(s, text) {
   const say = opts.map((x) => `${x.name} (subclass ${x.id}): ${x.idea}`).join(' Or ');
   if (hackerLevel(s, arch) < SUBCLASS.from) return warn(s, `Your ${ARCHETYPES[arch].name} subclass comes at level ${SUBCLASS.from}. ${say}`);
   const want = words.join(' ').toLowerCase();
-  if (!want) return emit(s, 'info', `${subPicked(s, arch) ? 'Subclass' : 'Subclass (not picked yet)'}: ${SUBS[subOf(s, arch)].name}. ${say}`);
+  if (!want) return emit(s, 'info', `${subPicked(s, arch) ? `Subclass: ${SUBS[subOf(s, arch)].name}.` : 'Subclass: not picked yet.'} ${say}`);
   const x = opts.find((o) => o.id === want || o.name.toLowerCase() === want);
   if (!x) return warn(s, `${ARCHETYPES[arch].name} subclasses: ${opts.map((o) => o.id).join(', ')}.`);
   if (active(s)) return warn(s, 'Finish the fight first.');
@@ -1717,10 +1754,12 @@ function loadoutCommand(s, text) {
   if (active(s)) return warn(s, words[0] === 'equip' || words[0] === 'unequip' ? 'Change your keys between fights. Finish this one first.' : 'Change your loadout at home, between fights.');
   if (s.run && !['equip', 'unequip'].includes(words[0])) return warn(s, 'Change your loadout at home, between fights.');
   if (['equip', 'unequip'].includes(words[0])) {
-    // equip|unequip [class] <skill>
+    // equip|unequip [class] <skill>, and equip [class] <skill> <key>: on that key (a skill already on the bar swaps
+    // places with the one there; one that isn't sends it to the shelf).
     let rest = words.slice(1);
     let arch = s.loadout.archetype;
     if (ARCHETYPES[rest[0]]) { arch = rest[0]; rest = rest.slice(1); }
+    const onKey = words[0] === 'equip' && rest.length > 1 && LOADOUT.keys.includes(rest.at(-1)) ? LOADOUT.keys.indexOf(rest.pop()) : -1;
     const skill = rest.length ? findSkill(arch, rest.join(' ')) : null;
     if (!skill) return warn(s, `usage: ${words[0]} <skill>. ${ARCHETYPES[arch].name} skills: ${skillOrder(arch, subOf(s, arch)).join(', ')}.`);
     const known = knownSkills(s, arch), equipped = [...equippedSkills(s, arch)];
@@ -1734,6 +1773,18 @@ function loadoutCommand(s, text) {
       return emit(s, 'loadout', `${skill.name} unequipped.`);
     }
     if (isRunSkill(skill.id)) return warn(s, `${skill.name} is a run skill and takes no slot. Type ${skill.id} on a run.`);
+    if (onKey >= 0) {
+      const slots = slotsOf(s, arch), from = equipped.indexOf(skill.id), there = equipped[onKey];
+      if (onKey >= slots) return warn(s, `Key ${slotKey(onKey)} opens at level ${LOADOUT.bar.find(([, n]) => n > onKey)?.[0]}.`);
+      if (from === onKey) return emit(s, 'info', `${skill.name} is on key ${slotKey(onKey)}.`);
+      const bar = [...equipped];
+      if (from >= 0 && there) { bar[from] = there; bar[onKey] = skill.id; } else if (from >= 0) { bar.splice(from, 1); bar.push(skill.id); } else if (there) bar[onKey] = skill.id; else bar.push(skill.id);
+      const cools = arch === classOf(s) && !equipped.includes(skill.id) && (cooldownOf(s, skill.id) || ABILITIES[skill.id]?.once);
+      if (arch === classOf(s)) setBar(s, arch, bar, null);
+      else { s.loadout.equipped[kitKey(s, arch)] = bar; (s.loadout.follow ||= {})[kitKey(s, arch)] = null; }
+      const moved = there && from >= 0 ? `, ${ABILITIES[there]?.name || there} to key ${slotKey(from)}` : there ? `; ${ABILITIES[there]?.name || there} goes to the shelf` : '';
+      return emit(s, 'loadout', `${skill.name} on key ${slotKey(bar.indexOf(skill.id))}${moved}.${cools ? ' It starts your next fight cooling.' : ''}`);
+    }
     if (equipped.includes(skill.id)) return warn(s, `${skill.name} is already on key ${slotKey(equipped.indexOf(skill.id))}.`);
     const slots = slotsOf(s, arch);
     if (equipped.length >= slots) return warn(s, `All ${slots} slots are full. Unequip one first.`);
@@ -4458,7 +4509,7 @@ function retireWall(s, was) {
   if (s.recipes) s.recipes = s.recipes.filter((k) => !RETIRED_SERVICES[k]);
 }
 export function restore(raw) {
-  if (!raw || ![6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, SAVE_VERSION].includes(raw.version)) return fresh();
+  if (!raw || ![6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, SAVE_VERSION].includes(raw.version)) return fresh();
   try {
     const s = bindRooms(structuredClone(raw));
     const was = s.version;
@@ -4611,6 +4662,7 @@ export function restore(raw) {
     hooks.threadsRestore?.(s, was); // v43: threads (threads.mjs): an older save starts with none
     statsRestore(s, was); // v44: whole-number stats: Regen five times over 5 cycles, Payload flat at each item's level (gear.mjs)
     setsRestore(s, was); // v45: sets: loaded protocols stamped in slot order, set pieces you hold found, the Badge beat armed (sets.mjs)
+    subRestore(s, was); // v46: no default subclass: a class past 10 that never picked plays its core (its default's keys and talent points back)
     if (s.encounter) s.encounter.plan ||= [];
     if (active(s)) { s.encounter.paused = true; s.encounter.autoPaused = true; } // resumes on the next order, or opening the Fight tab
     return s;

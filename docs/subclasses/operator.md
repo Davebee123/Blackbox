@@ -1,6 +1,6 @@
 # Operator subclasses: Herder and Hijacker
 
-Every Operator plays the same four skills up to level 10: Deploy, Hook, Spawn and Botnet. At level 10 you pick a subclass with `subclass herder` or `subclass hijacker`. The first pick works anywhere out of a fight, and switching afterwards is free at home. Each subclass has its own skill line, its own edge and its own talent tree, and each keeps its own bar and talent picks when you switch away and back. Until you pick, you play the Herder.
+Every Operator plays the same four skills up to level 10: Deploy, Hook, Spawn and Botnet. At level 10 you pick a subclass with `subclass herder` or `subclass hijacker`. The first pick works anywhere out of a fight, and switching afterwards is free at home. Each subclass has its own skill line, its own edge and its own talent tree, and each keeps its own bar and talent picks when you switch away and back. Until you pick, you play the Operator core alone (no subclass skills, edge or tree), and the Loadout's subclass breakout waits for you.
 
 Both subclasses keep the Operator passive, Extra thread, which gives you one more daemon slot.
 

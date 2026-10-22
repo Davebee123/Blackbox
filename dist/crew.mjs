@@ -61,13 +61,14 @@ function makeMate(host, { cls, sub, name, guest, level: own, rarity = 'stock' },
   m.who = name;
   Object.defineProperty(m, 'host', { value: host, enumerable: false, configurable: true });
   m.loadout.archetype = cls;
-  if (sub) m.loadout.sub = { [cls]: sub }; // a subclass, from level 10 (else its class's default)
   const level = own ?? hackerLevel(host);
+  const pick = sub || (level >= SUBCLASS.from ? defaultSub(cls) : null); // a bot picks its subclass at 10: the one named, else its class's default
+  if (pick) m.loadout.sub = { [cls]: pick };
   m.hackers = { [cls]: { level, xp: 0 } };
   m.rng = ((host.rng || 1) * 31 + i * 7919) >>> 0;
   // Its gear: a protocol of its rarity (Stock unless the crew entry says) in every slot, each carrying a
   // stat its subclass chases (SUBS[sub].chase) when the rarity has affixes.
-  const chase = SUBS[sub || (level >= SUBCLASS.from ? defaultSub(cls) : null)]?.chase;
+  const chase = SUBS[pick]?.chase;
   for (let k = 0; k < protocolSlots(level); k++) {
     const it = addItem(m, rollItem(seeded(level * 100 + k + i * 17), { level, rarity, group: SLOT_KINDS[k], stat: chaseStat(chase, k, rarity) }));
     command(m, 'load ' + it.id);
