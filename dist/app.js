@@ -74,6 +74,7 @@ let wasCooling = new Set(); // abilities on cooldown at the last render (the tra
 let mapView = 'mine'; // the Map: 'mine' (your network) or 'consortium' (the merged servers)
 let mailSel = null; // the open item on the Mail page: 'l<id>' a letter, 'j<id>' a contract
 let codexSel = null, codexIdx = false; // the Codex tab: the entry open ('family:worm'), and the phone's index unfolded
+let srvUi = { sel: null, open: false, preview: null, armed: null }; // the Server page (server-view.mjs): what's picked, the phone's sheet, the before and after showing and the one a tap armed
 let history = [];
 let historyIndex = -1;
 let suggestionList = [];
@@ -1352,6 +1353,7 @@ function go(name, quiet = false) {
   if (leaving) { campaign.encounter.paused = true; campaign.encounter.autoPaused = true; notice('Fight paused.'); }
   if (name === 'combat' && active(campaign) && campaign.encounter.autoPaused) { campaign.encounter.paused = false; campaign.encounter.autoPaused = false; }
   if (name !== module && !quiet) feel.add('channel', null);
+  if (name === 'server' && module !== 'server') srvUi = { ...srvUi, open: false, preview: null, armed: null }; // the sheet comes up when you pick something
   if (name !== 'combat') hideSpoils();
   if (gainOpen()) hideGain();
   if (name !== 'hub') { hubOpen = false; hubWin = null; }
@@ -1783,7 +1785,7 @@ function render(force = false) {
       $('term').scrollTop = $('term').scrollHeight;
     }
   } else {
-    const pages = { rooms: (x) => roomsMarkup(x), campaign: (x) => campaignMarkup(x), room: (x) => roomMarkup(x), archive: (x) => archiveMarkup(x), breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab, skillUi), craft: (x) => V.craftMarkup(x, craftUi), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now()), server: (x) => V.serverMarkup(x, Date.now()), daemons: V.daemonsMarkup, codex: (x) => codexPageMarkup(x, codexSel, codexIdx), system: V.systemMarkup };
+    const pages = { rooms: (x) => roomsMarkup(x), campaign: (x) => campaignMarkup(x), room: (x) => roomMarkup(x), archive: (x) => archiveMarkup(x), breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab, skillUi), craft: (x) => V.craftMarkup(x, craftUi), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now()), server: (x) => V.serverMarkup(x, Date.now(), srvUi), daemons: V.daemonsMarkup, codex: (x) => codexPageMarkup(x, codexSel, codexIdx), system: V.systemMarkup };
     // A page that throws shows what broke (and a way back) instead of stopping every render after it.
     const keep = module === 'breach' ? $('bx-scroll')?.scrollTop : null;
     const focusRoom = module === 'rooms' ? document.activeElement?.closest?.('.fp-room')?.dataset.room : null; // a redraw keeps a focused room focused
@@ -1804,6 +1806,7 @@ function render(force = false) {
       row?.querySelector('.silk-pick')?.focus({ preventScroll: true });
     }
     pdDrawn();
+    if (module === 'server') { const d = document.querySelector('.command-dock'); $('page-view').style.setProperty('--dock-h', `${Math.max(0, innerHeight - (d?.getBoundingClientRect().top ?? innerHeight))}px`); } // the phone's sheet sits just above the prompt
     if (module === 'rooms') { applyFpZoom(); fillClocks($('page-view')); placeRoomsPop(); pzFx.mounted(); renderOffer(); } // the countdowns tick in place: the markup only changes with the server
     // The Mail page opens the first unread item by itself: showing it in full counts as reading it.
     if (module === 'mail') { const o = $('page-view').querySelector('.mrow.open.unread'); if (o) { const k = o.dataset.mail, id = k[0] === 'l' ? k.slice(1) : campaign.mail?.list?.find((m) => m.job === Number(k.slice(1)))?.id; if (id != null) { command(campaign, 'mail read ' + id); save(); dirty = true; } } }
@@ -2340,6 +2343,36 @@ document.addEventListener('click', (e) => {
   }
 }, true);
 document.addEventListener('keydown', (e) => { if (payState && e.key === 'Escape') { payState = null; payDraw(); } });
+// The Server page (server-view.mjs). Pick anything on the card and the panel shows it (on a phone the sheet comes up;
+// × or Esc puts it away). Point at an action that changes the wall or the server, or focus it, and the panel shows
+// before and after; on a touch screen the first tap shows it and the second does it. Its buttons are real commands:
+// the click handler below runs them.
+let lastPointer = 'mouse';
+document.addEventListener('pointerdown', (e) => { lastPointer = e.pointerType || 'mouse'; }, true);
+const touchFirst = () => lastPointer === 'touch' || matchMedia('(hover: none)').matches;
+document.addEventListener('click', (e) => {
+  if (module !== 'server') return;
+  const pv = e.target.closest('button[data-preview]');
+  if (pv && !pv.disabled && touchFirst() && srvUi.armed !== pv.dataset.preview) {
+    e.preventDefault(); e.stopImmediatePropagation();
+    srvUi = { ...srvUi, sel: pv.closest('#hsv-panel') ? srvUi.sel : 'core', open: true, preview: pv.dataset.preview, armed: pv.dataset.preview };
+    dirty = true; return;
+  }
+  if (pv) { srvUi = { ...srvUi, armed: null }; return; } // a click, or the second tap: the command runs
+  const k = e.target.closest('button[data-svkey]');
+  if (k) { srvUi = { sel: k.dataset.svkey, open: true, preview: null, armed: null }; dirty = true; return; }
+  if (e.target.closest('button[data-hsv-close]')) { srvUi = { ...srvUi, open: false, preview: null, armed: null }; dirty = true; }
+}, true);
+document.addEventListener('pointerover', (e) => {
+  if (module !== 'server' || e.pointerType === 'touch') return;
+  const pv = e.target.closest?.('button[data-preview]:not(:disabled)'), want = pv ? pv.dataset.preview : srvUi.armed;
+  if ((want || null) !== srvUi.preview) { srvUi = { ...srvUi, preview: want || null }; dirty = true; }
+});
+document.addEventListener('focusin', (e) => {
+  const pv = module === 'server' && e.target.closest?.('button[data-preview]:not(:disabled)');
+  if (pv && srvUi.preview !== pv.dataset.preview) { srvUi = { ...srvUi, preview: pv.dataset.preview }; dirty = true; }
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && module === 'server' && (srvUi.open || srvUi.preview)) { srvUi = { ...srvUi, open: false, preview: null, armed: null }; dirty = true; } });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && V.daemonUi.sel && document.querySelector('.dm-panel.open')) { V.daemonUi.sel = null; dirty = true; } }); // the Daemons tab's sheet
 document.addEventListener('click', (e) => {
   if (tip && !e.target.closest('#tip') && (e.target.closest(tip.cur.at) || (tip.cur.also && e.target.closest(tip.cur.also)))) advanceTip();

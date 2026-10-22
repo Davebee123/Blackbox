@@ -11,7 +11,7 @@ import { isWild, relocks, rogueLayout, rogueSpawns, rogueMotd, liveRogue, ROGUE,
 import { findLocation, closest, command, selectEncounter, encounterVirus, active, emit, warn, hackerLevel, addLead, addLocation, disconnect, hooks, maxSignal, classOf, equippedSkills, knownSkills, serverLevel, gainXp, addItem, gearStat, regenRate, xpFor, deedXpFor, gainCode, learnBlueprint, UNIQUES, effectLine, loadoutSuggestions } from './combat.mjs';
 import { ZERO_DAYS, RARITIES, LOOT, uniqueItem, rollItem, seeded, statLine, itemLabel, MATERIALS, codeOf, vaultCode } from './gear.mjs';
 import { jackIn, developerNetwork, invasionsCommand, sabotageBlock } from './invasion.mjs';
-import { developerWall } from './firewall.mjs';
+import { developerWall, developerDamage } from './firewall.mjs';
 import { contractTakeover, bankCargo, payloadHome, wantedBy, title as contractTitle } from './mail.mjs';
 import { hiddenNodes, locate, flagged, bankRoute, hiddenLead, spawnHidden, HIDDEN, routed } from './hidden.mjs';
 import { hiddenNear, reached as floorsReached } from './floors.mjs';
@@ -754,7 +754,8 @@ export function play(s, input) {
   if (text === 'channel on' || text === 'channel off') { const first = s.serial; s.settings.channel = text === 'channel on'; emit(s, 'info', `#net ${muted(s) ? 'muted: its line is gone from the bottom of the screen' : 'on'}.`); return since(s, first); }
   if (text === 'jack in' || text === 'defend' || text === 'intercept') return jackIn(s, text === 'intercept' ? 'intercept' : 'jack in');
   if (text === 'invasions' || text === 'invasion') return invasionsCommand(s);
-  if (/^developer invade( \w+)?$/.test(text) || text === 'developer crash') return developerNetwork(s, text);
+  if (/^developer invade( \w+)?( road)?$/.test(text) || text === 'developer crash') return developerNetwork(s, text);
+  if (/^developer (frag|integrity) \d+$/.test(text)) { const first = s.serial; developerDamage(s, text); return since(s, first); } // a fragmented wall, a damaged server (firewall.mjs)
   if (/^developer wall (\d+|off)$/.test(text)) { const first = s.serial; developerWall(s, text); return since(s, first); } // pin your wall's base (firewall.mjs)
   if (/^(install|uninstall) /.test(text)) { const first = s.serial; if (sabotageBlock(s, text)) return since(s, first); } // a saboteur holds a service (invasion.mjs)
   if (/^threads?\b/.test(text)) return threadCommand(s, text); // threads, thread <id>, thread track|abandon|resume <id>, thread take <n> (threads.mjs)

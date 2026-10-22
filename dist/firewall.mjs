@@ -177,6 +177,13 @@ export function developerWall(s, text) {
   f.pin = Math.max(0, Number(arg) || 0);
   emit(s, 'info', `Developer: your wall's base is pinned at ${f.pin}.`);
 }
+// developer frag <n>: n of your home wall's blocks fragmented; developer integrity <n>: your server at n Integrity (testing).
+export function developerDamage(s, text) {
+  const [, what, arg] = text.split(' '), n = Number(arg) || 0;
+  if (what === 'frag') { fwOf(s).frag = Math.min(FIREWALL.blocks, n); return emit(s, 'info', `Developer: ${fwOf(s).frag} of your wall's blocks fragmented.`); }
+  s.server.integrity = Math.max(1, Math.min(s.server.max, n));
+  emit(s, 'info', `Developer: your server at ${s.server.integrity}/${s.server.max} Integrity.`);
+}
 
 // ---------- old saves ----------
 // v33: a wall was a level you climbed from 1 (the old price below). It becomes the tier nearest the

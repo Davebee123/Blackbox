@@ -181,6 +181,7 @@ star glyph in `--amber-soft` by its name, on the fight board and in the Codex, n
 | 35 | Top tabs, phone, eight tabs (the Codex, Craft and Run up together) | System ran off the screen's right edge | Two even rows of four (`.modules[data-tabs]`, set by app.js fitTopbar) |
 | 36 | Event cards on the map cards | A sentence per event and a row of plain buttons (Intercept, a button a faction) | One shell (kicker strip, time ring), each card its own picture with its action built in; the sentence is a tooltip |
 | 37 | Loadout → Skills and talents | Two cards of rule text (a library of skill cards, a tree of rule cards), a subclass tab row, four big class cards | One card of names and pips, a detail panel that holds every rule, a slim class row; the subclass breakout from level 10 |
+| 38 | Server page | Two columns of cards: a Firewall card with every rule as a line, a ruler, the filters list and the invasion; Safe read the senders' bare level | One card (a ring of sixteen blocks round the core, quiet rows) and a detail panel, a bottom sheet on a phone; its buttons are the real commands, each with a before and after worked out on a copy of the save; Safe counts each invader's grade |
 
 ## Screen effects (screenfx.mjs, screenfx.css)
 

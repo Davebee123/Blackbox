@@ -794,19 +794,9 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 .sheet dl > div.zero dt, .sheet dl > div.zero dd { color: var(--muted); opacity: 0.7; }
 .fpick { display: flex; align-items: center; gap: 10px; margin: 10px 0 4px; font: 600 11px var(--mono); letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
 .fpick select { font: 13px var(--mono); color: var(--bright); background: var(--inset); border: 1px solid var(--line-strong); border-radius: 4px; padding: 5px 8px; text-transform: none; letter-spacing: 0; }
-.fchips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 10px 0 6px; }
-.fchips-label { font: 600 11px var(--mono); letter-spacing: 1px; text-transform: uppercase; color: var(--muted); min-width: 52px; }
-.fchip { padding: 3px 9px; border: 1px solid var(--line-strong); border-radius: 12px; font: 12px var(--mono); color: var(--text); background: transparent; }
-.fchip:hover { border-color: var(--amber); }
-.fchip.on { border-color: var(--you); color: var(--you); background: rgba(127, 209, 199, 0.1); }
 .intent.cron { margin-top: 4px; padding: 2px 7px; font: 600 11px var(--mono); letter-spacing: 1px; }
 .gslot.locked { opacity: 0.55; border-style: dashed; background: transparent; }
 /* The wall (invasions) and Degraded mode. */
-.wall-card .invader { display: grid; gap: 6px; margin-top: 10px; padding: 10px; border: 1px solid var(--line-strong); border-left: 3px solid var(--amber); border-radius: 4px; background: var(--inset); }
-.wall-card .invader.breach { border-left-color: var(--hot); }
-.wall-card .invader.travel { border-left-style: dashed; }
-.wall-card .invader p { margin: 0; }
-.wall-card .invader small { color: var(--muted); }
 .wall-bar { height: 6px; border: 1px solid var(--line-strong); border-radius: 3px; background: var(--bg); overflow: hidden; }
 .wall-bar span { display: block; height: 100%; background: var(--amber); transition: width 0.9s linear; }
 .wall-bar.breach span { background: var(--hot); }
@@ -814,9 +804,6 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 .inv-tell { margin: 4px 0; color: var(--text); font-size: 13px; line-height: 1.4; }
 .inv-pay { margin: 4px 0; }
 .inv-pay .rw b { font: 600 12px var(--mono); }
-.inv-streak { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 0; }
-.inv-streak .tag .glyph { width: 12px; height: 12px; margin-right: 3px; vertical-align: -2px; }
-.wall-card .invader.watch { border-left-color: var(--hot); border-left-style: dotted; }
 .wall-bar.watch span { background: var(--hot); }
 .mnode.invader.watch .vbody { fill: rgba(255, 91, 61, 0.25); stroke: var(--hot); stroke-width: 1.2; }
 .gstash .svc.off { opacity: 0.7; border-style: dashed; }
@@ -2657,38 +2644,15 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .map-svg.mf .mbone, .map-svg.mf .mpkt.amb, .map-svg.mf:not(.mf-mine) .mpkt { opacity: 0.12; }
 
 /* The firewall: its level, what it's vulnerable to, and its blocks (firewall.mjs). */
-.fw-panel { display: grid; gap: 8px; margin: 6px 0 10px; }
-.fw-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .fw-lv { font: 700 22px var(--mono); color: var(--text); }
 .fw-base { color: var(--muted); font: 11px var(--mono); }
 .vuln { margin-left: auto; font: 600 11px var(--mono); letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 8px; border: 1px solid currentColor; border-radius: 3px; }
 .vuln.ok { color: var(--you); }
 .vuln.mid { color: var(--amber); }
 .vuln.low { color: var(--hot); }
-.fw-grid { display: grid; grid-template-columns: repeat(16, 1fr); gap: 3px; }
-.fw-grid i { height: 12px; background: var(--you); opacity: 0.75; border-radius: 1px; }
-.fw-grid i.frag { background: transparent; outline: 1px dashed rgba(127, 209, 199, 0.35); outline-offset: -1px; opacity: 1; transform: translateY(2px); }
-.fw-grid.defrag i { animation: fw-sweep 1.2s linear infinite; }
-.fw-grid.defrag i:nth-child(odd) { animation-delay: 0.3s; }
-.fw-grid.hard { padding: 3px; border: 1px solid var(--you); border-radius: 3px; box-shadow: 0 0 8px rgba(127, 209, 199, 0.35); }
-@keyframes fw-sweep { 50% { opacity: 0.25; } }
-.fw-acts { gap: 6px; flex-wrap: wrap; }
 .tag.warn { color: var(--amber); border-color: var(--amber); }
-.flt-panel { margin-top: 14px; }
-.flt-list { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 4px; }
-.flt-list .flt { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 2px 8px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px; background: var(--inset); }
-.flt-list .flt b { font-size: 13px; }
-.flt-list .flt small { grid-column: 1; grid-row: 2; color: var(--muted); font: 11px var(--mono); }
-.flt-list .flt .btn { grid-row: 1 / 3; }
-.flt-list .flt.on { border-color: var(--you); border-left: 3px solid var(--you); }
-.flt-list .flt.empty { grid-template-columns: 1fr; border-style: dashed; }
-.flt-list .flt.empty small { grid-row: 1; }
-.flt-panel .craft-sub small { color: var(--muted); font-weight: 400; margin-left: 6px; }
 .fw-mini { display: grid; gap: 6px; margin: 8px 0; padding: 8px; border: 1px solid var(--line); border-radius: 4px; background: var(--inset); }
 .fw-mini .fw-tag { display: inline-flex; align-items: center; gap: 4px; font: 600 12px var(--mono); }
-.fw-grid.small i { height: 7px; }
-.fw-up { display: inline-flex; flex-direction: column; align-items: flex-start; line-height: 1.15; }
-.fw-up small { font: 10px var(--mono); opacity: 0.8; }
 /* The map's toolbar: view and Show picker on the left, the zoom tools on the right. */
 .map-left { display: flex; align-items: center; gap: 8px; }
 .map-pick select { font: 11px var(--mono); color: var(--dim); background: var(--panel, #120f0a); border: 1px solid var(--line); border-radius: 2px; padding: 1px 18px 1px 7px; cursor: pointer; appearance: none; background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%); background-position: calc(100% - 9px) 55%, calc(100% - 5px) 55%; background-size: 4px 4px; background-repeat: no-repeat; }
@@ -2704,9 +2668,7 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .mem-join i.take { border-color: var(--amber); background: rgba(241, 185, 47, 0.35); animation: memtake 1.1s ease-in-out infinite; }
 @keyframes memtake { 50% { background: transparent; } }
 @media (prefers-reduced-motion: reduce) { .mem-join i.take { animation: none; background: transparent; border-style: dashed; } }
-.fw-up.on { border-color: var(--hot); color: var(--hot); box-shadow: 0 0 8px rgba(255, 91, 61, 0.3); }
 .tag.fw-ver { color: var(--you); border-color: var(--you); cursor: help; }
-.fw-up.major { border-color: var(--you); box-shadow: 0 0 8px rgba(127, 209, 199, 0.35); }
 
 /* The Craft page: categories · recipes · the one you picked (output, what it takes, Craft). */
 .craft-ui { display: grid; grid-template-columns: 170px minmax(220px, 1fr) minmax(280px, 1.25fr); gap: 12px; align-items: start; margin-bottom: 12px; }
@@ -2749,17 +2711,7 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .cd-cost li.short b { color: var(--hot); }
 .cd-name.r-tuned { color: var(--r-tuned); } .cd-name.r-zeroday { color: var(--r-zeroday); } .cd-name.r-custom { color: var(--r-custom); }
 /* Open ports: an on/off switch row under the firewall's ruler. */
-.ports-row { width: 100%; display: flex; align-items: center; gap: 10px; margin: 10px 0 4px; padding: 8px 10px; background: var(--inset); border: 1px solid var(--line); border-radius: 4px; color: var(--muted); cursor: pointer; text-align: left; }
-.ports-row b { color: var(--text); font-size: 13px; }
-.ports-row .pr-chips { margin-left: auto; display: flex; gap: 6px; }
-.ports-row .sw { width: 34px; height: 18px; flex: none; border-radius: 9px; background: rgba(255, 255, 255, 0.08); border: 1px solid var(--line-strong); position: relative; transition: background 0.2s; }
-.ports-row .sw i { position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--muted); transition: transform 0.2s, background 0.2s; }
-.ports-row.on { border-color: var(--hot); }
-.ports-row.on .sw { background: rgba(255, 91, 61, 0.25); border-color: var(--hot); }
-.ports-row.on .sw i { transform: translateX(16px); background: var(--hot); box-shadow: 0 0 6px var(--hot); }
-.ports-row:hover { border-color: var(--line-strong); }
 /* A button with a price: the label, a divider, then icon + number for each thing it takes. */
-.fw-up { flex-direction: row; align-items: center; gap: 0; }
 .bcost { display: inline-flex; align-items: center; gap: 8px; margin-left: 10px; padding-left: 10px; border-left: 1px solid currentColor; opacity: 0.85; font: 12px var(--mono); }
 .bcost span { display: inline-flex; align-items: center; gap: 3px; }
 .bcost .glyph { width: 12px; height: 12px; }
@@ -2814,22 +2766,12 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .cd-stats li .glyph { width: 15px; height: 15px; color: var(--you); }
 .cd-stats li b { font: 700 14px var(--mono); color: var(--bright); }
 .cd-out > .glyph { grid-row: 1 / 3; align-self: start; }
-/* Filter tiles: stats as icon chips; a filter out of its slot runs dim. */
-.flt-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.flt-head .tag .glyph { width: 12px; height: 12px; margin-right: 4px; vertical-align: -2px; }
-.fchips { display: flex; flex-wrap: wrap; gap: 4px 10px; }
-.fchip { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--muted); }
-.fchip .glyph { width: 13px; height: 13px; color: var(--you); }
-.fchip b { font: 700 13px var(--mono); color: var(--bright); }
-.flt.off .fchip .glyph { color: var(--dim); } .flt.off .fchip b { color: var(--muted); }
 /* A contract's pay: icon chips. */
 .rw-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
 .rw { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border: 1px solid var(--line); border-radius: 3px; background: var(--inset); }
 .rw .glyph { width: 14px; height: 14px; color: var(--amber); }
 .rw b { font: 700 13px var(--mono); color: var(--bright); }
 .rw.neg b { color: var(--hot); }
-.flt-list .flt .fchips { grid-column: 1; grid-row: 2; }
-.flt-list .flt .fchip small { grid-column: auto; grid-row: auto; font: 12px var(--sans, inherit); }
 
 /* Hover card for a file moving on the map. */
 .pkt-tip { position: fixed; z-index: 80; pointer-events: none; }
@@ -3415,8 +3357,6 @@ h1 .byline { font-size: 13px; vertical-align: middle; }
 /* ---- Pages never scroll sideways: a column can't be pushed wider than the page by its content. ---- */
 .page-grid > * { min-width: 0; }
 .page-grid > div:not([class]) { grid-template-columns: minmax(0, 1fr); }
-.ports-row { flex-wrap: wrap; row-gap: var(--s3); }
-.ports-row .pr-chips { flex-wrap: wrap; }
 
 /* ---- Item rows with an action on the right (collection, a network's natives): name over meta, action in its own column. ---- */
 .coll li, .net-native { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: var(--s4); row-gap: var(--s1); align-items: center; }
@@ -3636,12 +3576,6 @@ body.no-motion .recap { animation: none; }
 
 /* Firewall upgrade buttons carry their costs: they keep their padding, and in a narrow column (an outpost's Wall
    row) the costs drop under the label instead of running out of the card. */
-.fw-up { padding: 4px 10px; max-width: 100%; text-align: left; }
-.op-val .fw-up { flex-wrap: wrap; row-gap: 3px; }
-.op-val .fw-up .bcost { margin-left: 0; padding-left: 0; border-left: 0; flex-basis: 100%; flex-wrap: wrap; gap: 4px 8px; }
-.op-val .fw-head { row-gap: 4px; }
-.op-val .fw-up { justify-content: flex-start; }
-.op-val .fw-head .vuln { margin-left: 0; }
 
 /* The fight board takes the whole left column, so every part of the virus shows without scrolling. The log moves
    under the picture on the right. Rows are tighter, and if the parts still don't fit, app.js adds .dense and the

@@ -10,7 +10,7 @@ import { CONFIG, ELITE, codeUnit } from './dist/data.mjs';
 import { fwOf } from './dist/firewall.mjs';
 import { vaultFilter, filtersOf } from './dist/filters.mjs';
 import { logComms } from './dist/comms.mjs';
-import { invaderStatus, wallMarkup, threatsOf } from './dist/view.mjs';
+import { invaderStatus, serverMarkup, threatsOf } from './dist/view.mjs';
 
 CONFIG.baseCrit = 0;
 CONFIG.enemyCrit = 0;
@@ -194,7 +194,7 @@ test('a champion: elite-grade (the tells for elites apply), a level over its ser
   assert.ok(ev.some((e) => e.daemon && /leaves a capture/.test(e.message)));
   assert.equal(Object.keys(s.daemonLv).length, 1, 'a daemon, every time');
   assert.equal(Object.values(s.daemonLv)[0], inv.level, 'at the champion\'s level');
-  assert.ok(wallMarkup(s).includes('Firewall'));
+  assert.ok(serverMarkup(s).includes('Firewall'));
 });
 
 test('no saboteur and no thief since R2: no services to shut off, no outpost stores to rob; asked for, one comes as a raider', () => {

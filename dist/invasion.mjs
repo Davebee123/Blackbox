@@ -18,7 +18,7 @@ import { tickConsortium, consortiumOf, memberHelp, occupy, roam, CONSORTIUM } fr
 import { isLive } from './memory.mjs';
 import { effLevel, tickFirewall, fragment, ratingAt, firewallRestore, baseOf } from './firewall.mjs';
 import { filterStat } from './filters.mjs';
-import { CONFIG, SERVER, MUTATIONS, ROLLED_MUTATIONS, QUIRKS, quirkOf, createVirus, power, variantFor, codeUnit, DAEMON_DROP, restedGain, restedCap } from './data.mjs';
+import { CONFIG, SERVER, MUTATIONS, ROLLED_MUTATIONS, QUIRKS, quirkOf, createVirus, power, variantFor, gradeFor, codeUnit, DAEMON_DROP, restedGain, restedCap } from './data.mjs';
 import { gainDaemon, rollDaemon } from './daemons.mjs';
 import { SERVICES, codeOf, uniqueItem, MATERIALS } from './gear.mjs';
 import { pickOrigin, hiddenNode, hiddenLead, HIDDEN, connectedTo } from './hidden.mjs';
@@ -332,6 +332,30 @@ const clampLv = (L) => Math.max(1, Math.min(CONFIG.maxMobLevel, L));
 const tame = (s) => (s.locations || []).filter((l) => !l.rogue && !l.member && isLive(s, l) && !l.zone && connectedTo(l));
 // Whether invasions come for your wall at all: a server attached to your network that sends them.
 export const invasionsLive = (s) => tame(s).length > 0;
+
+// ---------- what reaches your wall: the Safe readout ----------
+// The servers that send invasions to your wall (one you hold at Root 3 or have only found sends none).
+export const sendersOf = (s) => tame(s);
+// The grade a server's invasions come at: its floor's, as unit() rolls them (variantFor, data.mjs gradeFor).
+export const senderGrade = (loc) => gradeFor(loc?.depth || 1);
+// The level an invader counts as at your wall, grade and all: its level, what pushes it (pushOf: its kind, a quirk,
+// a scout's map, a pack's waiting viruses) and GRADE_LEVELS for each grade over v1, as strength() weighs it.
+export const countsAt = (inv) => wallLevelOf(inv) + GRADE_LEVELS * ((inv?.grade || 1) - 1);
+// The level a plain invasion from a server counts as at your wall: its level and its floor's grade (a v2 two higher, a v3 four).
+export const sendsAt = (loc) => (loc?.level || 1) + GRADE_LEVELS * (senderGrade(loc) - 1);
+// The highest level a plain invasion from your network counts as at your wall (0 when nothing sends one).
+export const sendTop = (s) => Math.max(0, ...tame(s).map(sendsAt));
+// The Safe readout, everywhere it shows: Safe only while your wall blocks a plain invasion from every server that
+// sends one (grade and all) and the invasion out now by its own rule (a champion's push, a pack, a quirk, its
+// grade). state: 'ok' (Safe), 'mid' (the worst would be contested), 'low' (it would break through) or 'down'
+// (Degraded). vuln: the lowest level that gets past it. at: what the invasion out now counts as.
+export function wallSafety(s, bands = wallBands(s)) {
+  const top = sendTop(s), inv = s.invasion && s.invasion.kind !== 'thief' ? s.invasion : null;
+  const verdict = inv ? verdictOf(s, inv) : null, at = inv ? countsAt(inv) : 0;
+  if (s.degraded) return { state: 'down', top, at, verdict, vuln: null, blocks: 0, holds: 0 };
+  const state = bands.blocks >= top && (!verdict || verdict === 'blocked') ? 'ok' : bands.holds >= top && verdict !== 'breach' ? 'mid' : 'low';
+  return { state, top, at, verdict, vuln: state === 'ok' ? null : bands.blocks + 1, blocks: bands.blocks, holds: bands.holds };
+}
 // A service a saboteur can shut off: the best one you run.
 function serviceTarget(s) {
   const ids = Object.keys(s.services || {}).filter((id) => SERVICES[id] && s.services[id] > 0);
@@ -647,7 +671,7 @@ export function signatureRestore(s) {
 // developer invade [kind]: an invasion at your wall now (a thief sets out). developer crash: crash the server.
 export function developerNetwork(s, text) {
   const first = s.serial;
-  const kind = text.split(' ')[2];
+  const road = / road$/.test(text), kind = text.split(' ')[2] === 'road' ? undefined : text.split(' ')[2]; // road: it sets out on its road instead of arriving now
   if (text.startsWith('developer invade')) {
     if (kind && !KINDS[kind] && !QUIRKS[kind]) warn(s, `developer invade [${Object.keys(KINDS).join('|')}|${Object.keys(QUIRKS).join('|')}]`);
     else if (!s.locations?.length) warn(s, 'Find a location first (developer location worm).');
@@ -655,7 +679,7 @@ export function developerNetwork(s, text) {
     else {
       const q = QUIRKS[kind] ? kind : null, from = q ? tame(s).find((l) => quirkOf(l.family) === q) : null;
       if (q && !from) warn(s, `None of your servers has the ${QUIRKS[q].name} quirk.`);
-      else { const any = !q && !tame(s).length ? [...(s.locations || [])].filter((l) => !l.rogue && !l.member && !l.zone).sort((a, b) => (b.level || 1) - (a.level || 1))[0] : null; const inv = depart(s, q ? { kind: 'raider', quirk: q, from } : { kind, ...(any ? { from: any } : {}) }); if (inv && inv.kind !== 'thief') arrive(s); } // a developer's comes even from a server you've only found
+      else { const any = !q && !tame(s).length ? [...(s.locations || [])].filter((l) => !l.rogue && !l.member && !l.zone).sort((a, b) => (b.level || 1) - (a.level || 1))[0] : null; const inv = depart(s, q ? { kind: 'raider', quirk: q, from } : { kind, ...(any ? { from: any } : {}) }); if (inv && inv.kind !== 'thief' && !road) arrive(s); } // a developer's comes even from a server you've only found
     }
   } else if (text === 'developer crash') {
     if (active(s)) warn(s, 'Not mid-fight.');
