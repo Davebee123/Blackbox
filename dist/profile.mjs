@@ -13,7 +13,7 @@ import { PIECES } from './faction-gear.mjs';
 import { SETS, piecesOf, isPiece } from './sets.mjs';
 import { PRESENCE, profileOf as simOf, online, simOn, whereText } from './presence.mjs';
 import { uniqueItem, seeded } from './gear.mjs';
-import { tickAchievements, deedStickers, bannersOf, pointsOf, shownAchievements, achievements, DEED_STICKERS } from './achievements.mjs';
+import { tickAchievements, rewardStickers, bannersOf, pointsOf, shownAchievements, achievements, DEED_STICKERS } from './achievements.mjs';
 
 export const PROFILE = { rows: 4, cols: 24, plan: 60 };
 const clock = () => hooks.now?.() ?? Date.now();
@@ -223,7 +223,10 @@ export function stickersOf(s) {
   for (const id of setsDone(s)) out.push({ id: 'set-' + id, kind: 'set', label: SETS[id].name, color: '#7ee787', glyph: 'item', tip: `Every piece of ${SETS[id].name}` });
   for (let n = 2; n <= (s.floors?.reached || 1); n++) out.push({ id: 'floor-' + n, kind: 'floor', label: `F${n}`, color: '#9aa7b4', glyph: 'node', tip: `Reached floor ${n}` });
   for (const b of natives().filter((k) => won(s, k))) out.push({ id: 'lair-' + b, kind: 'lair', label: BOSSES[b].name, color: '#ff8a5c', glyph: 'kill', tip: `Beat ${BOSSES[b].name} in its lair` });
-  return out.concat(deedStickers(s)); // the few an achievement brings of its own (achievements.mjs)
+  // And every sticker an achievement you've earned brought (achievements.mjs), its own few among them: kept for good,
+  // so standing that slips later takes nothing back.
+  const have = new Set(out.map((x) => x.id));
+  return out.concat(rewardStickers(s).filter((id) => !have.has(id)).map(stickerById).filter(Boolean));
 }
 
 // Any sticker by its id, earned or not (an achievement's reward shows it before you have it).

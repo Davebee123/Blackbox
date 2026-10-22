@@ -140,7 +140,8 @@ const NEWS = {
   achievement: (s, e) => {
     const xs = (e.achievements || []).map(achById).filter(Boolean);
     if (!xs.length || e.record) return null;
-    const a = xs.at(-1), t = titleById(e.titles?.at(-1));
+    // Several at once: the one that brought a title speaks for them (its name and that title), else the last.
+    const a = xs.findLast((x) => x.reward?.title) || xs.at(-1), t = titleById(a.reward?.title);
     reactOne(s, 0.5, (h) => [`gz on [${a.name}]`, `[${a.name}]! nice`, `grats ${you(s)}`][Math.floor(hash(h, 9) * 3)], { achs: [a.name] });
     return post(s, { kind: 'feat', from: you(s), title: t?.name || shownTitle(s)?.name || null, text: t ? `earned [${a.name}] and is now ${t.name}.` : `earned [${a.name}].`, achs: [a.name] });
   },

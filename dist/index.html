@@ -19,6 +19,7 @@
   <link rel="stylesheet" href="screenfx.css">
   <link rel="stylesheet" href="coop.css">
   <link rel="stylesheet" href="achievements.css">
+  <link rel="stylesheet" href="casing.css">
 </head>
 <body>
 <div class="app" id="app">
@@ -131,10 +132,10 @@
 <!-- Immersive shell: the CRT and the boot screen (see shell.mjs). -->
 <div id="crt" aria-hidden="true"><div id="crt-sweep"></div><div id="crt-bezel"></div></div>
 <div id="boot" class="boot" aria-hidden="true" hidden></div>
-<!-- The monitor casing around the screen (desktop, immersive shell). Its lamps show real state. -->
+<!-- The monitor casing around the screen (desktop, immersive shell). Its lamps show real state; its plate and the stickers either side of it are yours (casing.mjs). -->
 <div id="casing">
   <div class="knobs"><button type="button" class="knob" id="knob-sound" title="Sound"><i></i></button><button type="button" class="knob" id="knob-speed" title="Speed"><i></i></button></div>
-  <div class="badge" aria-hidden="true">BLACKBOX · MODEL 7</div>
+  <div class="decals l"></div><div class="badge" aria-hidden="true">BLACKBOX · MODEL 7</div><div class="decals r"></div>
   <div class="lamps" aria-label="Status lamps">
     <span class="lamp" id="lamp-pwr"><i></i>PWR</span><span class="lamp" id="lamp-gate"><i></i>GATE</span><span class="lamp" id="lamp-wall"><i></i>WALL</span><span class="lamp" id="lamp-net"><i></i>NET</span><span class="lamp" id="lamp-inst"><i></i>INST</span><span class="lamp" id="lamp-dmn"><i></i>DMN</span>
   </div>

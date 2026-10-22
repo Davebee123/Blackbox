@@ -50,6 +50,7 @@ import * as PV from './profile-view.mjs';
 import { channelOf, muted as chanMuted, say as chanSay } from './channel.mjs';
 import { setBanner, setPlan, handleOf } from './profile.mjs';
 import { achById } from './achievements.mjs';
+import { casingLook, decalStrips } from './casing.mjs';
 import * as BN from './bench.mjs';
 import { PARTS } from './parts.mjs';
 import { installPrograms, noteExceptions } from './routines.mjs';
@@ -91,6 +92,7 @@ let archView = null; // archetype shown on the Loadout page (defaults to the equ
 let loadoutTab = 'protocols'; // Loadout page: 'protocols' or 'skills' (skills and talents)
 let systemTab = 'settings'; // System page: 'settings' or 'achievements' (view.mjs SYSTEM_TABS)
 let achUi = { cat: 'summary', focus: null }; // the Achievements page (achievements-view.mjs): the category shown, an achievement to light
+let caseUi = { slot: 0 }; // System → Casing (casing-view.mjs): the sticker slot picked
 let skillUi = { sel: null, sheet: false }; // Skills and talents (skills-view.mjs): the item its panel explains, and the phone's sheet
 let bo = null; // the subclass breakout while it's open: { arch, step, sel, lvl, sheet } (skills-view.mjs breakoutMarkup)
 const pd = { id: null, anchor: null, el: null, scrim: null, sheet: false, html: '', mine: false, timer: 0 }; // the Loadout's item datasheet popover (pdShow)
@@ -1893,7 +1895,7 @@ function render(force = false) {
       $('term').scrollTop = $('term').scrollHeight;
     }
   } else {
-    const pages = { rooms: (x) => roomsMarkup(x), campaign: (x) => campaignMarkup(x), room: (x) => roomMarkup(x), archive: (x) => archiveMarkup(x), breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab, skillUi), craft: (x) => V.craftMarkup(x, craftUi), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now()), server: (x) => V.serverMarkup(x, Date.now(), srvUi), daemons: V.daemonsMarkup, codex: (x) => codexPageMarkup(x, codexSel, codexIdx), system: (x) => V.systemMarkup(x, { coop: !!coop, tab: systemTab, ach: achUi }) };
+    const pages = { rooms: (x) => roomsMarkup(x), campaign: (x) => campaignMarkup(x), room: (x) => roomMarkup(x), archive: (x) => archiveMarkup(x), breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab, skillUi), craft: (x) => V.craftMarkup(x, craftUi), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now()), server: (x) => V.serverMarkup(x, Date.now(), srvUi), daemons: V.daemonsMarkup, codex: (x) => codexPageMarkup(x, codexSel, codexIdx), system: (x) => V.systemMarkup(x, { coop: !!coop, tab: systemTab, ach: achUi, cs: caseUi }) };
     // A page that throws shows what broke (and a way back) instead of stopping every render after it.
     const keep = module === 'breach' ? $('bx-scroll')?.scrollTop : null;
     const focusRoom = module === 'rooms' ? document.activeElement?.closest?.('.fp-room')?.dataset.room : null; // a redraw keeps a focused room focused
@@ -2074,6 +2076,29 @@ function casing() {
   $('knob-sound').style.transform = `rotate(${s.settings.sound ? 40 : -40}deg)`;
   $('knob-speed').style.transform = `rotate(${{ relaxed: -60, normal: 0, fast: 60 }[s.settings.speed || 'normal']}deg)`;
   $('knob-speed').title = `Speed: ${s.settings.speed || 'normal'}`;
+  casingLookUi(cased);
+}
+// The casing's cosmetics (casing.mjs): its colourway on <body> (casing.css: the plastic only), the plate's words and
+// the stickers in the chin's two strips. The strips' ends are measured from the knobs, the plate and the lamps, so a
+// sticker never sits on any of them (re-measured when the plate or the window changes).
+let caseKey = '';
+function casingLookUi(cased) {
+  const look = casingLook(campaign), body = document.body;
+  if (look.color) { if (body.dataset.case !== look.color) body.dataset.case = look.color; } else if (body.dataset.case) delete body.dataset.case;
+  const badge = document.querySelector('#casing .badge');
+  if (badge.textContent !== look.plate) badge.textContent = look.plate;
+  const strips = decalStrips(campaign), L = document.querySelector('#casing .decals.l'), R = document.querySelector('#casing .decals.r');
+  if (L.innerHTML !== strips.left) L.innerHTML = strips.left;
+  if (R.innerHTML !== strips.right) R.innerHTML = strips.right;
+  const key = `${cased}:${look.plate}:${innerWidth}:${innerHeight}`;
+  if (!cased || key === caseKey || !(strips.left || strips.right)) return;
+  const box = $('casing').getBoundingClientRect();
+  if (!box.width) return;
+  caseKey = key;
+  const knobs = document.querySelector('#casing .knobs').getBoundingClientRect(), plate = badge.getBoundingClientRect(), lamps = document.querySelector('#casing .lamps').getBoundingClientRect(), gap = 18;
+  const set = (k, v) => $('casing').style.setProperty(k, `${Math.max(0, Math.round(v))}px`);
+  set('--dz-l0', knobs.right - box.left + gap); set('--dz-l1', box.right - plate.left + gap);
+  set('--dz-r0', plate.right - box.left + gap); set('--dz-r1', box.right - lamps.left + gap);
 }
 // The screen's effects and the casing's lamps, from real state (screenfx.mjs). The floor whose palette is up: the map's
 // floor on the map, the server's on a run and in a fight there; home keeps the default amber.
@@ -2575,6 +2600,8 @@ document.addEventListener('click', (e) => {
   if (st) { systemTab = st.dataset.stab; achUi.focus = null; feel.add('channel', null); dirty = true; return; }
   const ac = e.target.closest('[data-ach-cat]'); // a category on the Achievements page
   if (ac) { achUi = { cat: ac.dataset.achCat, focus: null }; dirty = true; return; }
+  const csl = e.target.closest('[data-cs-slot]'); // a sticker slot on System → Casing
+  if (csl) { caseUi = { slot: Number(csl.dataset.csSlot) || 0 }; dirty = true; return; }
   // The Daemons tab (daemons-view.mjs): the party or the roster, a daemon for the panel (× clears it), a cycle's order.
   const dmn = e.target.closest('[data-dmn-view], [data-dmn-sel], [data-dmn-cycle]');
   if (dmn) {
@@ -2867,6 +2894,13 @@ $('profile').addEventListener('submit', (e) => {
   profileUi();
 });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && profileOn) { profileOn = null; profileUi(); } });
+// System → Casing: your own plate (casing.mjs). Empty puts the stock plate back.
+document.addEventListener('submit', (e) => {
+  if (!e.target.closest('[data-cs-plate]')) return;
+  e.preventDefault();
+  const t = $('cs-plate-in').value.trim();
+  run(t ? `casing plate text ${t}` : 'casing plate stock');
+});
 
 function setComms(open) {
   commsOpen = open;

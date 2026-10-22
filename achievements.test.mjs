@@ -98,7 +98,12 @@ test('earning: one quiet pager line that opens it, a #net line, the title it bri
   assert.equal(line.text, 'earned [Uncrowned] and is now Uncrowner.');
   tickProfile(s);
   assert.equal(since(s, ev[0].id).filter((e) => e.type === 'achievement').length, 0, 'earned once');
-  assert.equal(pointsOf(s), achById('c-relayking').pts);
+  // Several at once: one line, and #net names the one that brought the title.
+  s.floors.reached = 5; s.loadout.sub = { breaker: 'demolitionist' };
+  tickProfile(s);
+  tickChannel(s, 1000);
+  assert.equal(channelOf(s).lines.filter((l) => l.kind === 'feat').at(-1).text, 'earned [Core Sample] and is now Deepwalker.');
+  assert.equal(pointsOf(s), ['c-relayking', 'x-floor-2', 'x-floor-3', 'x-floor-4', 'x-floor-5', 'cl-sub'].reduce((n, id) => n + achById(id).pts, 0));
 });
 
 test('Combat: a boss beaten, a hundred fights won and elites counted as fights end', () => {

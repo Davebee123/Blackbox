@@ -1,10 +1,10 @@
 // Achievements: what you've done, kept for good, the way World of Warcraft keeps them. One system for every reward
 // the profile used to hand out on its own: each title (profile.mjs titles) and each sticker (profile.mjs stickersOf)
 // is now the reward of an achievement, earned by the same deed as before. Rewards are cosmetic only: a title, a
-// sticker, or a banner preset for your card. Nothing here touches a fight's numbers.
+// sticker, a banner preset for your card, or a casing colourway (casing.mjs). Nothing here touches a fight's numbers.
 //
 // Each achievement: { id, cat, name, rule, pts (5, 10, 25 or 50), group?, hidden? (??? and its hint until earned),
-// hint?, progress? (s → [n, of]), has (s → bool), reward? { title, sticker, banner } }.
+// hint?, progress? (s → [n, of]), has (s → bool), reward? { title, sticker, banner, casing } }.
 //
 // How they're checked (cheap): every second (invasion.mjs tickNetwork → profile.mjs tickProfile → tickAchievements)
 // only the ones not yet earned, each a look at state that is already kept. What a fight does that the state doesn't
@@ -72,7 +72,7 @@ const FARM = ['foreman', 'heatsink', 'coldwallet'];
 
 // The lairs (network.mjs: one native boss a network, its sticker profile.mjs's lair-<id>).
 const LAIR_NAMES = { 'nb-deadbolt': 'Bolt Cutter', 'nb-tripmine': 'Defused', 'nb-hashlord': 'Hash Collision', 'nb-backorifice': 'Port Closed', 'nb-patchday': 'Out of Band', 'nb-floodwall': 'Spillway', 'nb-mirrorshade': 'Seven Years', 'nb-sleepwalker': 'Wake-up Call', 'nb-echolalia': 'Last Word' };
-// The floors from 2 (their sticker floor-<n>). Floor 5 also gives Deepwalker.
+// The floors from 2 (their sticker floor-<n>). Floor 5 also gives Deepwalker, floor 8 the matte casing.
 const FLOOR_ACH = { 2: ['Down the Line', 5], 3: ['Stacked', 10], 4: ['Cold Open', 10], 5: ['Core Sample', 25], 6: ['Ring Zero', 25], 7: ['Sinker', 25], 8: ['Rock Bottom', 50] };
 const FACTION_ACH = { halcyon: 'Preferred Customer', glassjaw: 'Inner Circle', kestrel: 'Key Account', lantern: 'On the Signal', nullchoir: 'Cantor' };
 const CLASS_ACH = { breaker: 'Wrecking Ball', bastion: 'Five Nines', infiltrator: 'Ghost Protocol', operator: 'Orchestrated' };
@@ -90,7 +90,7 @@ let LIST = null;
 // Built on first use: data.mjs and factions.mjs may still be loading when this module is (the import cycle through combat.mjs).
 export const achievements = () => (LIST ||= [
   // ---------- Combat ----------
-  A('c-win-100', 'combat', 'Process Killer', 'Win 100 fights.', 10, { progress: (s) => of(wins(s), 100) }),
+  A('c-win-100', 'combat', 'Process Killer', 'Win 100 fights.', 10, { progress: (s) => of(wins(s), 100), reward: { casing: 'beige' } }),
   A('c-patient', 'combat', 'Long Uptime', 'Win a fight that ran 20 cycles or more.', 10, { has: (s) => titleHas(s, 'patient') || flag('c-patient')(s), reward: { title: 'patient' } }),
   A('c-elites', 'combat', 'Big Game', 'Beat 25 ◆ CREW elites.', 10, { progress: (s) => of(count('elites')(s), 25) }),
   A('c-relayking', 'combat', 'Uncrowned', 'Beat RELAY-KING.', 10, { has: (s) => titleHas(s, 'uncrowner'), reward: { title: 'uncrowner' } }),
@@ -106,7 +106,7 @@ export const achievements = () => (LIST ||= [
   A('x-taken-10', 'explore', 'Landlord', 'Take over 10 servers.', 25, { progress: (s) => of(takenN(s), 10) }),
   A('x-hubs', 'explore', 'Five Points', 'Find every faction hub.', 10, { progress: (s) => of(FACTION_IDS.filter((f) => hubFound(s, f)).length, FACTION_IDS.length) }),
   A('x-threads', 'explore', 'Loose Ends', 'Finish 5 threads.', 10, { progress: (s) => of((s.threads?.list || []).filter((t) => t.state === 'done').length, 5) }),
-  ...Object.entries(FLOOR_ACH).map(([n, [name, pts]]) => A('x-floor-' + n, 'explore', name, `Reach floor ${n}, ${FLOORS[n - 1].name}.`, pts, { group: 'Floors', has: (s) => floor(s) >= Number(n) || (n === '5' && titled(s, 'deepwalker')), reward: { sticker: 'floor-' + n, ...(n === '5' ? { title: 'deepwalker' } : {}) } })),
+  ...Object.entries(FLOOR_ACH).map(([n, [name, pts]]) => A('x-floor-' + n, 'explore', name, `Reach floor ${n}, ${FLOORS[n - 1].name}.`, pts, { group: 'Floors', has: (s) => floor(s) >= Number(n) || (n === '5' && titled(s, 'deepwalker')), reward: { sticker: 'floor-' + n, ...(n === '5' ? { title: 'deepwalker' } : {}), ...(n === '8' ? { casing: 'matte' } : {}) } })),
   // ---------- Collection ----------
   A('k-first', 'collect', 'Gold Star', 'Find a unique.', 5, { has: (s) => uniques(s) >= 1 }),
   A('k-collector', 'collect', 'Collector', 'Find 25 uniques.', 25, { progress: (s) => of(uniques(s), 25), has: (s) => titleHas(s, 'collector'), reward: { title: 'collector' } }),
@@ -116,7 +116,7 @@ export const achievements = () => (LIST ||= [
   A('k-matched', 'collect', 'Matched', 'Find every piece of a set.', 10, { has: (s) => titleHas(s, 'matched'), reward: { title: 'matched' } }),
   ...Object.values(SETS).filter((x) => !x.tier).map((x) => A('k-set-' + x.id, 'collect', x.name, `Find every piece of ${x.name}.`, BIG_SETS.has(x.id) ? 25 : 10, { group: 'Sets', progress: (s) => of(piecesOf(x.id).filter((p) => s.collection?.[p]).length, piecesOf(x.id).length), has: (s) => setDone(s, x.id), reward: { sticker: 'set-' + x.id } })),
   // ---------- Factions ----------
-  ...FACTION_IDS.map((f) => A('f-' + f, 'faction', FACTION_ACH[f], `Reach ${FACTIONS[f].tiers[4]} with ${FACTIONS[f].name}.`, 25, { has: (s) => top(s, f) || titled(s, 'of-' + f), reward: { title: 'of-' + f, sticker: 'f-' + f } })),
+  ...FACTION_IDS.map((f) => A('f-' + f, 'faction', FACTION_ACH[f], `Reach ${FACTIONS[f].tiers[4]} with ${FACTIONS[f].name}.`, 25, { has: (s) => top(s, f) || titled(s, 'of-' + f), reward: { title: 'of-' + f, sticker: 'f-' + f, casing: f } })),
   A('f-couriers', 'faction', "Courier's Bane", 'Intercept 10 couriers.', 10, { progress: (s) => of(deeds(s).couriers || 0, 10), has: (s) => titleHas(s, 'couriersbane'), reward: { title: 'couriersbane' } }),
   A('f-hunts', 'faction', 'Tracker', 'Collect 5 bounty hunts.', 10, { progress: (s) => of(deeds(s).hunts || 0, 5), has: (s) => titleHas(s, 'tracker'), reward: { title: 'tracker' } }),
   A('f-feuds', 'faction', 'Feudbreaker', 'Win 5 feuds.', 25, { progress: (s) => of(deeds(s).feuds || 0, 5), has: (s) => titleHas(s, 'feudbreaker'), reward: { title: 'feudbreaker' } }),
@@ -124,7 +124,7 @@ export const achievements = () => (LIST ||= [
   // ---------- Classes ----------
   A('cl-sub', 'class', 'Specialist', 'Pick a subclass.', 5, { has: (s) => Object.keys(ARCHETYPES).some((c) => picked(s, c)) }),
   A('cl-ten', 'class', 'Polyglot', 'Take all 4 classes to level 10.', 25, { progress: (s) => of(Object.keys(ARCHETYPES).filter((c) => level(s, c) >= 10).length, Object.keys(ARCHETYPES).length) }),
-  ...Object.keys(CLASS_ACH).map((c) => A('cl-' + c, 'class', CLASS_ACH[c], `Take a ${ARCHETYPES[c].name} to level 50.`, 50, { progress: (s) => of(level(s, c), 50), has: (s) => titleHas(s, 'max-' + c), reward: { title: 'max-' + c } })),
+  ...Object.keys(CLASS_ACH).map((c) => A('cl-' + c, 'class', CLASS_ACH[c], `Take ${/^[AEIOU]/.test(ARCHETYPES[c].name) ? 'an' : 'a'} ${ARCHETYPES[c].name} to level 50.`, 50, { progress: (s) => of(level(s, c), 50), has: (s) => titleHas(s, 'max-' + c), reward: { title: 'max-' + c } })),
   ...Object.values(SETS).filter((x) => x.tier).map((x) => A('cl-set-' + x.id, 'class', x.name, `Find every piece of ${x.name}.`, 25, { group: 'Tier sets', progress: (s) => of(piecesOf(x.id).filter((p) => s.collection?.[p]).length, piecesOf(x.id).length), has: (s) => setDone(s, x.id), reward: { sticker: 'set-' + x.id } })),
   // ---------- Daemons ----------
   A('d-ten', 'daemon', 'Process Table', 'Find 10 daemons.', 10, { progress: (s) => of(daemonsN(s), 10) }),
@@ -139,7 +139,7 @@ export const achievements = () => (LIST ||= [
   A('o-farm', 'coop', 'Farmhand', 'Beat the 3 crew bosses of KESSLER-FARM-00.', 25, { progress: (s) => of(FARM.filter((b) => won(s, b)).length, 3), has: (s) => titleHas(s, 'farmhand'), reward: { title: 'farmhand' } }),
   A('o-grid', 'coop', 'On the Grid', 'Reach Grid with a consortium of 12 servers.', 25, { progress: (s) => of(s.consortium ? (s.consortium.members || []).length + 1 : 0, 12), reward: { banner: 'mesh' } }),
   // ---------- Feats (one fight, one visit) ----------
-  A('t-untouched', 'feat', 'Untouchable', 'Win a fight of 8 cycles or more without taking damage.', 10, { has: flag('t-untouched') }),
+  A('t-untouched', 'feat', 'Untouchable', 'Win a fight of 8 cycles or more without taking damage.', 10, { has: flag('t-untouched'), reward: { casing: 'smoked' } }),
   A('t-cuts', 'feat', 'Short Circuit', 'Interrupt 3 moves in one fight.', 10, { has: flag('t-cuts') }),
   A('t-read', 'feat', 'Open Book', 'Read every tell in a fight in which 4 or more were said.', 25, { has: flag('t-read') }),
   A('t-chain', 'feat', 'Chain Reaction', 'Break every part of a virus of 3 parts or more in one cycle.', 25, { hidden: true, hint: 'Some things are better all at once.', has: flag('t-chain'), reward: { sticker: 'a-chain' } }),
@@ -165,6 +165,8 @@ export function rewardText(a) {
 }
 // The deed stickers you've earned (profile.mjs stickersOf adds them to the rest).
 export const deedStickers = (s) => achievements().filter((a) => a.reward?.sticker && DEED_STICKERS[a.reward.sticker] && earned(s, a.id)).map((a) => ({ id: a.reward.sticker, kind: 'deed', ...DEED_STICKERS[a.reward.sticker] }));
+// Every sticker an earned achievement brought, by id (profile.mjs stickersOf keeps them for good; casing.mjs's decals).
+export const rewardStickers = (s) => achievements().filter((a) => a.reward?.sticker && earned(s, a.id)).map((a) => a.reward.sticker);
 // The reward banners you've earned (profile.mjs: they join the twelve presets in your editor).
 export const bannersOf = (s) => achievements().filter((a) => a.reward?.banner && earned(s, a.id)).map((a) => a.reward.banner);
 // Your most recent, or the ones you pinned (up to 3): the profile card's row.

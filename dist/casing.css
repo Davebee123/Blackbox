@@ -1,0 +1,72 @@
+/* ---------- casing cosmetics (casing.mjs): the monitor's plastic, its plate and its stickers ----------
+   Only ever the casing: these rules set the casing's own colour variables (style.css reads them, each falling back to
+   the stock colour, so no colourway is today's casing exactly), place the stickers on the chin beside the plate (never
+   over the glass, the knobs or the lamps), and lay out System → Casing. The screen and the interface never change.
+   casing.test.mjs holds this file to that. */
+
+/* The colourways: the plastic (hi, mid, lo of its gradient), the frame's rim, the chin's print, the plate's engraving,
+   the knobs and, with the window on, the flat plastic around the glass. Set on body (and on a swatch) by data-case. */
+[data-case="beige"] { --case-ink-on: #4a4234; --case-hi: #d9cfb6; --case-mid: #bfb396; --case-lo: #9c9176; --case-rim: #6f6651; --case-ink: #6c624d; --case-badge: #5c5341; --case-knob-hi: #ece3ce; --case-knob-lo: #a99d81; --case-win: #b4a88c; }
+[data-case="matte"] { --case-hi: #1d1d1e; --case-mid: #131314; --case-lo: #0a0a0b; --case-rim: #050505; --case-ink: #4b4b4d; --case-badge: #5a5a5d; --case-knob-hi: #2b2b2d; --case-knob-lo: #0e0e0f; --case-win: #08080a; }
+[data-case="smoked"] { --case-hi: #3b424b; --case-mid: #242930; --case-lo: #15181d; --case-rim: #0d1013; --case-ink: #6c7581; --case-badge: #7e8996; --case-knob-hi: #4a535e; --case-knob-lo: #1a1e24; --case-win: #111419; }
+[data-case="halcyon"] { --case-hi: #25354b; --case-mid: #172334; --case-lo: #0d1520; --case-rim: #070b12; --case-ink: #5b6d87; --case-badge: #7085a4; --case-knob-hi: #35475f; --case-knob-lo: #121a26; --case-win: #0b111b; }
+[data-case="glassjaw"] { --case-hi: #3b2537; --case-mid: #261823; --case-lo: #160d14; --case-rim: #0c060b; --case-ink: #7b5b74; --case-badge: #8f6b87; --case-knob-hi: #4a3046; --case-knob-lo: #1a1018; --case-win: #130b11; }
+[data-case="kestrel"] { --case-hi: #27341f; --case-mid: #182214; --case-lo: #0e140b; --case-rim: #070a05; --case-ink: #607453; --case-badge: #728860; --case-knob-hi: #33432a; --case-knob-lo: #111909; --case-win: #0c1109; }
+[data-case="lantern"] { --case-hi: #4b3321; --case-mid: #2f2014; --case-lo: #1c130b; --case-rim: #0e0904; --case-ink: #8b6b4d; --case-badge: #9d7b59; --case-knob-hi: #5a3f2a; --case-knob-lo: #20160c; --case-win: #170f08; }
+[data-case="nullchoir"] { --case-hi: #3f1f27; --case-mid: #281319; --case-lo: #170a0e; --case-rim: #0c0507; --case-ink: #855760; --case-badge: #9b6771; --case-knob-hi: #4d2832; --case-knob-lo: #1b0b10; --case-win: #13080b; }
+/* The plastic of a colourway: the bezel's ring (the frame's own box, as style.css body.cased::before draws it) filled
+   in its colours, with the glass cut out of it exactly (the mask leaves only the padding: 14px over the screen, 18px
+   either side and the chin below). Behind the page (z-index -1, never over the screen, the plate, the knobs or the
+   lamps) and over the window outside, which would otherwise show through the bezel. The stock casing has none. */
+@media (min-width: 1100px) and (min-height: 720px) {
+  body.cased[data-case]::after { content: ''; position: fixed; z-index: -1; pointer-events: none; top: calc(var(--top) - 14px); bottom: calc(var(--desk) + 8px); left: calc(var(--side) - 18px); right: calc(var(--side) - 18px); box-sizing: border-box; padding: 14px 18px calc(var(--chin) - 8px); border-radius: 26px; background: radial-gradient(120% 90% at 50% 40%, var(--case-hi), var(--case-mid) 70%, var(--case-lo)); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); }
+  /* Smoked plastic: a soft sheen across the top of the bezel. */
+  body.cased[data-case="smoked"]::after { background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), transparent 22%), radial-gradient(120% 90% at 50% 40%, var(--case-hi), var(--case-mid) 70%, var(--case-lo)); }
+}
+/* On light plastic the plate's engraving reads dark, with its light edge below. */
+body.cased[data-case="beige"] #casing .badge { text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35), 0 -1px 0 rgba(0, 0, 0, 0.25); }
+
+/* The stickers: two strips on the chin, between the knobs and the plate and between the plate and the lamps (app.js
+   measures their ends, --dz-*). A strip is one row tall: a sticker that doesn't fit wraps out of sight, never onto
+   the plate. Each is a small printed label in its colour, a little crooked, and still. */
+#casing .decals { position: absolute; top: 50%; height: 18px; margin-top: -9px; display: flex; flex-wrap: wrap; align-content: flex-start; justify-content: space-evenly; gap: 18px 12px; overflow: hidden; pointer-events: none; }
+#casing .decals.l { left: var(--dz-l0, 0); right: var(--dz-l1, 100%); }
+#casing .decals.r { left: var(--dz-r0, 100%); right: var(--dz-r1, 0); }
+#casing .decals:empty { display: none; }
+#casing .decal { flex: none; display: inline-flex; align-items: center; gap: 4px; height: 16px; max-width: 128px; margin-top: 1px; padding: 0 6px 0 5px; color: var(--sc); background: color-mix(in srgb, var(--sc) 14%, #121110); border: 1px solid color-mix(in srgb, var(--sc) 60%, transparent); border-radius: 2px; font: 700 8px/1 var(--mono); letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transform: rotate(-2deg); box-shadow: 0 1px 1px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.06); pointer-events: auto; }
+#casing .decal:nth-child(2) { transform: rotate(1.6deg); }
+#casing .decal i { font-style: normal; opacity: 0.75; letter-spacing: 0; }
+
+/* ---------- System → Casing (casing-view.mjs) ---------- */
+.cs-page { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: var(--s5); align-items: start; }
+.cs-note { margin: 0 0 var(--s4); font: 12px var(--mono); color: var(--dim); }
+.cs-swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: var(--s3); }
+.cs-sw { position: relative; display: grid; justify-items: start; gap: var(--s3); padding: 8px; background: var(--inset); color: var(--text); border: 1px solid var(--line); border-radius: var(--r-card); font: 600 11px var(--mono); text-align: left; cursor: pointer; }
+.cs-sw[aria-pressed='true'] { border-color: var(--amber); color: var(--amber); }
+.cs-sw.locked { cursor: help; border-style: dashed; color: var(--dim); }
+.cs-sw.locked .cs-chip { opacity: 0.45; }
+.cs-sw .glyph { position: absolute; top: 8px; right: 8px; width: 11px; height: 11px; margin: 0; color: var(--dim); }
+/* A swatch is a little bezel: the colourway's plastic round a dark strip of glass. */
+.cs-chip { display: block; width: 100%; height: 34px; border-radius: 6px; background: radial-gradient(120% 90% at 50% 40%, var(--case-hi, #2a2724), var(--case-mid, #181614) 70%, var(--case-lo, #0e0d0c)); box-shadow: inset 0 0 0 1px var(--case-rim, #0b0a09); position: relative; }
+.cs-chip::after { content: ''; position: absolute; inset: 5px 7px 11px; border-radius: 3px; background: #070503; box-shadow: 0 0 0 1px #000; }
+.cs-plate { display: inline-block; padding: 6px 14px; font: 700 11px var(--mono); letter-spacing: 6px; color: var(--case-badge, #6b655c); background: radial-gradient(120% 90% at 50% 40%, var(--case-hi, #2a2724), var(--case-mid, #181614) 70%, var(--case-lo, #0e0d0c)); border-radius: var(--r-card); text-shadow: 0 1px 0 rgba(255, 255, 255, 0.07), 0 -1px 0 rgba(0, 0, 0, 0.8); white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.cs-plates { display: flex; flex-wrap: wrap; gap: var(--s3); margin: var(--s4) 0; }
+.cs-pl { min-height: var(--h-btn-sm); padding: 3px 8px; background: var(--inset); color: var(--text); border: 1px solid var(--line); border-radius: var(--r-btn); font: 600 10.5px var(--mono); letter-spacing: 1px; text-transform: uppercase; cursor: pointer; }
+.cs-pl[aria-pressed='true'] { border-color: var(--amber); color: var(--amber); }
+.cs-own { display: flex; gap: var(--s3); }
+.cs-own input { flex: 1; min-width: 0; height: var(--h-btn-sm); padding: 0 8px; background: var(--inset); color: var(--bright); border: 1px solid var(--line); border-radius: var(--r-btn); font: 600 12px var(--mono); letter-spacing: 2px; text-transform: uppercase; }
+.cs-own input:focus { outline: none; border-color: var(--amber); }
+/* The chin in miniature: four slots, two either side of the plate. */
+.cs-bezel { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: var(--s3); padding: 10px; border-radius: var(--r-card); background: radial-gradient(120% 90% at 50% 40%, var(--case-hi, #2a2724), var(--case-mid, #181614) 70%, var(--case-lo, #0e0d0c)); }
+.cs-bezel .cs-mini { font: 700 8px var(--mono); letter-spacing: 3px; color: var(--case-badge, #6b655c); white-space: nowrap; }
+.cs-slot { display: grid; place-items: center; min-width: 0; height: 30px; padding: 0 4px; background: rgba(0, 0, 0, 0.25); color: var(--dim); border: 1px dashed rgba(255, 255, 255, 0.14); border-radius: var(--r-btn); font: 600 11px var(--mono); cursor: pointer; overflow: hidden; }
+.cs-slot[aria-pressed='true'] { border: 1px solid var(--amber); }
+.cs-slot .decal, .cs-decal .decal { max-width: 100%; }
+.cs-row { display: flex; align-items: center; justify-content: space-between; gap: var(--s4); margin: var(--s4) 0 var(--s3); font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--muted); }
+.cs-decals { display: flex; flex-wrap: wrap; gap: var(--s3); }
+.cs-decal { padding: 4px; background: var(--inset); border: 1px solid var(--line); border-radius: var(--r-btn); cursor: pointer; }
+.cs-decal[aria-pressed='true'] { border-color: var(--amber); }
+.cs-decal:hover { border-color: var(--line-strong); }
+/* A decal off the casing (the page's copies): the same label. */
+.cs-page .decal { display: inline-flex; align-items: center; gap: 4px; height: 16px; padding: 0 6px 0 5px; color: var(--sc); background: color-mix(in srgb, var(--sc) 14%, #121110); border: 1px solid color-mix(in srgb, var(--sc) 60%, transparent); border-radius: 2px; font: 700 8px/1 var(--mono); letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transform: rotate(-2deg); }
+.cs-page .decal i { font-style: normal; opacity: 0.75; letter-spacing: 0; }

@@ -120,6 +120,8 @@ the number at each level) is in tooltips. The sprites' blink stops with Motion o
 
 **Achievements** (`achievements-view.mjs`, `achievements.css`: System → Achievements): categories down a fixed left column (name, *n/N*, an amber bar), rows beside them with the points on a medal in a fixed left column, the name, an amber bar and *n/N* while under way, the reward as itself (a title in amber italics, the sticker as it looks, the banner in miniature) and, once earned, the date and **Pin**. Earned rows are lit amber (what you've won is loot), the rest muted, a hidden one *???* with its hint in dim italics. No teal: teal is only ever you. The rule is the row's tooltip, never on the row. On a phone the categories wrap above the list and each row's reward and date drop under its name.
 
+**Casing cosmetics** (`casing.mjs`, `casing.css`: System → Casing): only the monitor's casing changes, never the screen. A colourway sets only `--case-*` variables (the plastic, its rim, the chin's print, the plate, the knobs), each read in style.css with today's colour as its fallback, and fills the bezel's frame behind the page with the glass cut out exactly. Stickers sit in two strips on the chin that end short of the knobs, the plate and the lamps, one row tall (one that doesn't fit is left off), still. `casing.test.mjs` holds every rule and element to the bezel.
+
 **Part research** (`codex-view.mjs` researchBar, `research.mjs`): a part card's research is a thin bar of 60 with a
 tick at 3, 15 and 60 (gray, amber once reached) and *n/60* in mono beside it; what a tier still hides reads **???** in
 gray mono with what unlocks it in `--dim`. A part researched to 100% carries the **mastered mark** (`.pmast`): a small

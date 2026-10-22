@@ -49,6 +49,10 @@
 .ach-rw-banner { display: inline-flex; align-items: center; gap: 6px; padding: 2px 7px 2px 4px; background: var(--panel); border: 1px solid var(--amber-deep); border-radius: var(--r-btn); }
 .ach-rw-banner pre { margin: 0; font: 600 3px/1.1 var(--mono); color: var(--amber); }
 .ach-rw-banner b { font: 600 10px var(--mono); letter-spacing: 0.6px; text-transform: uppercase; color: var(--amber); white-space: nowrap; }
+.ach-rw-case { display: inline-flex; align-items: center; gap: 6px; padding: 2px 7px 2px 3px; background: var(--panel); border: 1px solid var(--amber-deep); border-radius: var(--r-btn); }
+.ach-rw-case .cs-chip { width: 26px; height: 16px; border-radius: 3px; }
+.ach-rw-case .cs-chip::after { inset: 3px 4px 6px; border-radius: 1px; }
+.ach-rw-case b { font: 600 10px var(--mono); letter-spacing: 0.6px; text-transform: uppercase; color: var(--amber); white-space: nowrap; }
 .ach-side { display: grid; justify-items: end; gap: var(--s2); }
 .ach-side time { font: 11px var(--mono); color: var(--dim); white-space: nowrap; }
 .ach-pin { font: 600 10px var(--mono); letter-spacing: 0.5px; text-transform: uppercase; color: var(--dim); background: none; border: 1px solid var(--line); border-radius: var(--r-btn); padding: 1px 6px; cursor: pointer; }

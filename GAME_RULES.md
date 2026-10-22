@@ -759,13 +759,13 @@ Who you are to everyone else on the net, the way `finger` shows a Unix login. `f
 | of Halcyon, of GLASSJAW, of Kestrel, of LANTERN, of NULL CHOIR | that faction's top tier (75 rep: Preferred, Inner circle, Key account, Signal, Cantor) |
 | the Hammer, the Wall, the Quiet, the Conductor | a Breaker, Bastion, Infiltrator or Operator at level 50 |
 
-- **Stickers**, earned marks in their colours: one per faction at its top tier, per set completed, per floor reached from 2, per lair boss beaten, and four an achievement brings of its own (Chain, 0 exceptions, Solo, <5%). Each is the reward of an achievement, earned by the same deed. (Putting them on the rig's casing is a later step.)
+- **Stickers**, earned marks in their colours: one per faction at its top tier, per set completed, per floor reached from 2, per lair boss beaten, and four an achievement brings of its own (Chain, 0 exceptions, Solo, <5%). Each is the reward of an achievement, earned by the same deed, and kept for good once earned (a faction's stays if your standing slips). Up to four go on the monitor's casing (*The monitor casing*).
 - **Simulated hackers have cards too**, worked out from their handle: a preset banner, a title a hacker of their level could have earned, a plan in their voice, their class and level (and a second class from level 6), a couple of real uniques at their level, two or three faction marks, where they are now. `finger` on them works while `online sim` is on, or while their lines are still in #net.
 - **Saves:** new fields on `s.profile` (banner, title, plan, titles, deeds) and `s.channel`, with defaults; an older save starts with none of them and needs no migration.
 
 ## Achievements (achievements.mjs)
 
-What you've done, kept for good, the way World of Warcraft keeps it. One system for every cosmetic reward: each title and each sticker is the reward of an achievement (the same deed as before earns both), and a few achievements bring a banner preset for your card. Rewards are cosmetic only: no achievement changes a number in a fight, a drop or a price.
+What you've done, kept for good, the way World of Warcraft keeps it. One system for every cosmetic reward: each title and each sticker is the reward of an achievement (the same deed as before earns both), a few achievements bring a banner preset for your card, and eight bring a colourway for the monitor casing (see *The monitor casing*). Rewards are cosmetic only: no achievement changes a number in a fight, a drop or a price.
 
 - **90 achievements, 1,630 points**, in eight categories: Combat, Exploration, Collection, Factions, Classes (subclasses and the tier sets among them), Daemons, Co-op and Feats. Points are 5, 10, 25 or 50. Milestones count up with a bar (*64/100*); **Feats** are tricks done in one fight, or one visit. Three are **hidden**: *???* and a one-line hint until earned.
 - **Checked cheaply.** Every second (with the profile's deeds: invasion.mjs tickNetwork) only the ones not yet earned, each a look at state the game already keeps: the Codex's kills and bosses, the Collection, floors, standing, classes, daemons, the consortium, servers Mapped and taken over (and the log's takeovers and contracts delivered). What only a fight knows (an elite beaten, a crewmate beside you, your daemons' moves, a feat) is noted on the save as the fight ends (combat.mjs finish) and earned on the next tick. A loss counts for nothing and is never held against you. Nothing is time-limited and nothing can be missed for good: a lair boss, a set or a feat can always be done again.
@@ -780,7 +780,7 @@ What you've done, kept for good, the way World of Warcraft keeps it. One system 
 
 | Achievement | Earned by | Points | Reward |
 |---|---|---:|---|
-| Process Killer | Win 100 fights (progress) | 10 | — |
+| Process Killer | Win 100 fights (progress) | 10 | casing Beige box |
 | Long Uptime | Win a fight that ran 20 cycles or more | 10 | title *the Patient* |
 | Big Game | Beat 25 ◆ CREW elites (progress) | 10 | — |
 | Uncrowned | Beat RELAY-KING | 10 | title *Uncrowner* |
@@ -814,7 +814,7 @@ What you've done, kept for good, the way World of Warcraft keeps it. One system 
 | Core Sample · Floors | Reach floor 5, Deep Core | 25 | title *Deepwalker*, sticker F5 |
 | Ring Zero · Floors | Reach floor 6, Kernel Space | 25 | sticker F6 |
 | Sinker · Floors | Reach floor 7, The Sink | 25 | sticker F7 |
-| Rock Bottom · Floors | Reach floor 8, Bedrock | 50 | sticker F8 |
+| Rock Bottom · Floors | Reach floor 8, Bedrock | 50 | sticker F8, casing Matte black |
 
 **Collection** (23, 365 points)
 
@@ -848,11 +848,11 @@ What you've done, kept for good, the way World of Warcraft keeps it. One system 
 
 | Achievement | Earned by | Points | Reward |
 |---|---|---:|---|
-| Preferred Customer | Reach Preferred with Halcyon Mutual | 25 | title *of Halcyon*, sticker Preferred |
-| Inner Circle | Reach Inner circle with GLASSJAW | 25 | title *of GLASSJAW*, sticker Inner circle |
-| Key Account | Reach Key account with Kestrel Underwriting | 25 | title *of Kestrel*, sticker Key account |
-| On the Signal | Reach Signal with LANTERN | 25 | title *of LANTERN*, sticker Signal |
-| Cantor | Reach Cantor with NULL CHOIR | 25 | title *of NULL CHOIR*, sticker Cantor |
+| Preferred Customer | Reach Preferred with Halcyon Mutual | 25 | title *of Halcyon*, sticker Preferred, casing Halcyon blue |
+| Inner Circle | Reach Inner circle with GLASSJAW | 25 | title *of GLASSJAW*, sticker Inner circle, casing GLASSJAW plum |
+| Key Account | Reach Key account with Kestrel Underwriting | 25 | title *of Kestrel*, sticker Key account, casing Kestrel green |
+| On the Signal | Reach Signal with LANTERN | 25 | title *of LANTERN*, sticker Signal, casing LANTERN copper |
+| Cantor | Reach Cantor with NULL CHOIR | 25 | title *of NULL CHOIR*, sticker Cantor, casing NULL CHOIR wine |
 | Courier's Bane | Intercept 10 couriers (progress) | 10 | title *Courier's Bane* |
 | Tracker | Collect 5 bounty hunts (progress) | 10 | title *Tracker* |
 | Feudbreaker | Win 5 feuds (progress) | 25 | title *Feudbreaker* |
@@ -866,8 +866,8 @@ What you've done, kept for good, the way World of Warcraft keeps it. One system 
 | Polyglot | Take all 4 classes to level 10 (progress) | 25 | — |
 | Wrecking Ball | Take a Breaker to level 50 (progress) | 50 | title *the Hammer* |
 | Five Nines | Take a Bastion to level 50 (progress) | 50 | title *the Wall* |
-| Ghost Protocol | Take a Infiltrator to level 50 (progress) | 50 | title *the Quiet* |
-| Orchestrated | Take a Operator to level 50 (progress) | 50 | title *the Conductor* |
+| Ghost Protocol | Take an Infiltrator to level 50 (progress) | 50 | title *the Quiet* |
+| Orchestrated | Take an Operator to level 50 (progress) | 50 | title *the Conductor* |
 | Wrecking Crew · Tier sets | Find every piece of Wrecking Crew (progress) | 25 | sticker Wrecking Crew |
 | Strongbox · Tier sets | Find every piece of Strongbox (progress) | 25 | sticker Strongbox |
 | Palemask · Tier sets | Find every piece of Palemask (progress) | 25 | sticker Palemask |
@@ -897,7 +897,7 @@ What you've done, kept for good, the way World of Warcraft keeps it. One system 
 
 | Achievement | Earned by | Points | Reward |
 |---|---|---:|---|
-| Untouchable | Win a fight of 8 cycles or more without taking damage | 10 | — |
+| Untouchable | Win a fight of 8 cycles or more without taking damage | 10 | casing Smoked |
 | Short Circuit | Interrupt 3 moves in one fight | 10 | — |
 | Open Book | Read every tell in a fight in which 4 or more were said | 25 | — |
 | Chain Reaction (hidden) | Break every part of a virus of 3 parts or more in one cycle (until then: ???, *Some things are better all at once.*) | 25 | sticker Chain |
@@ -1725,7 +1725,14 @@ With the immersive shell on a desktop-sized window, the screen sits in a dark mo
 | INST | amber while an install runs (dim while Degraded) or a market transfer is on its way | a busy flicker while it works |
 | DMN | dim violet with a daemon slotted | bright violet a few times when a daemon fires |
 
-System → Casing turns it off; phones and small windows never show it.
+System → Settings → Casing turns it off (its cosmetics with it); phones and small windows never show it.
+
+**Casing cosmetics** (casing.mjs, casing.css; System → **Casing**, a tab beside Settings and Achievements). Only ever the casing: the screen, its colours, text and layout never change, nothing covers the glass, the knobs or the lamps, and nothing moves. All of it is an achievement's reward, cosmetic only.
+
+- **Colourway:** the plastic of the bezel, its frame's rim, the chin's print, the plate's engraving and the knobs. **Stock** (today's dark grey, the default) and eight more, each from an achievement: **Beige box** (*Process Killer*), **Matte black** (*Rock Bottom*, floor 8), **Smoked** (*Untouchable*), and one a faction at its top tier: **Halcyon blue** (*Preferred Customer*), **GLASSJAW plum** (*Inner Circle*), **Kestrel green** (*Key Account*), **LANTERN copper** (*On the Signal*), **NULL CHOIR wine** (*Cantor*). Swatches you haven't earned are dim and locked, the achievement on hover. `casing color <name>`. CSS variables only (`--case-*`): style.css reads each with today's colour as its fallback, so the stock casing is exactly as it was; a colourway also fills the bezel's frame behind the page (the glass cut out of it exactly), so it shows over the window outside.
+- **Nameplate:** the badge on the chin. **BLACKBOX · MODEL 7** (stock), **MODEL 7 · <a title you hold>** (*MODEL 7 · THE CONDUCTOR*), or your own words, 16 plain characters at most, shown in capitals. `casing plate <text>`, `casing plate title <title>`, `casing plate stock`.
+- **Stickers:** four slots on the chin, two between the knobs and the plate and two between the plate and the lamps, each holding a sticker you've earned (any achievement's sticker: a faction, a set, a floor, a lair boss, Chain, 0 exceptions, Solo, <5%), drawn as a small printed label in its colour with an ASCII mark (`##` a faction, `[]` a set, `\/` a floor, `x_x` a lair boss, `*` a deed), a little crooked and still. Their strips end short of the knobs, the plate and the lamps (measured as the plate changes), and a sticker that doesn't fit is left off rather than squeezed. On System → Casing: pick a slot on the chin in miniature, then a sticker. `casing sticker <1-4> <sticker>|off`; a sticker goes in one slot at a time.
+- **Saves:** `s.cosmetics` = `{ case, plate: null | { title } | { text }, decals: [4 ids or null] }`; an older save has none and shows the stock casing. No SAVE_VERSION change.
 
 ## Screen effects
 

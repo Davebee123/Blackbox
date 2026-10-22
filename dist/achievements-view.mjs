@@ -4,6 +4,7 @@
 import { glyph } from './glyphs.mjs';
 import { achievements, CATEGORIES, pointsOf, totalPoints, progressOf, rewardText } from './achievements.mjs';
 import { titleById, stickerById, REWARD_BANNERS } from './profile.mjs';
+import { COLORWAYS } from './casing.mjs';
 
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const dmy = (t) => new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -24,6 +25,7 @@ function rewardChips(a, open) {
   if (r.title) out.push(`<span class="ach-rw ach-rw-title" title="${esc(`Title: ${titleById(r.title)?.name}`)}">${esc(titleById(r.title)?.name || '')}</span>`);
   if (r.sticker) { const x = stickerById(r.sticker); if (x) out.push(`<span class="ach-rw pf-sticker k-${x.kind}" style="--sc:${x.color}" title="${esc(`Sticker: ${x.tip}`)}">${glyph(x.glyph)}<b>${esc(x.label)}</b></span>`); }
   if (r.banner && REWARD_BANNERS[r.banner]) out.push(`<span class="ach-rw ach-rw-banner" title="${esc(`Banner: ${REWARD_BANNERS[r.banner].name}`)}"><pre aria-hidden="true">${esc(REWARD_BANNERS[r.banner].rows.join('\n'))}</pre><b>${esc(REWARD_BANNERS[r.banner].name)}</b></span>`);
+  if (r.casing && COLORWAYS[r.casing]) out.push(`<span class="ach-rw ach-rw-case" data-case="${r.casing}" title="${esc(`Casing: ${COLORWAYS[r.casing].name}`)}"><i class="cs-chip" aria-hidden="true"></i><b>${esc(COLORWAYS[r.casing].name)}</b></span>`);
   return out.length ? `<span class="ach-rws${open ? '' : ' locked'}">${out.join('')}</span>` : '';
 }
 export function achRow(s, a, focus = null) {
