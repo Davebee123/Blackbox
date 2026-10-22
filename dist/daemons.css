@@ -22,7 +22,7 @@
 
 /* ---------- the head: your class, the party and the roster ---------- */
 .dm-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--s7); align-items: center; padding: var(--s6) 18px; border-bottom: 1px solid var(--line); }
-.dm-emblem { margin: 0; font: 500 11px/1.05 var(--mono); color: var(--amber-soft); white-space: pre; letter-spacing: 0; }
+.dm-emblem { margin: 0; max-height: none; overflow: visible; font: 500 11px/1.05 var(--mono); color: var(--amber-soft); white-space: pre; letter-spacing: 0; }
 .dm-id { min-width: 0; }
 .dm-id h2 { font: var(--kicker); letter-spacing: var(--kicker-track); text-transform: uppercase; color: var(--muted); }
 .dm-id h1 { margin: 2px 0 var(--s4); font-size: 26px; color: var(--bright); letter-spacing: 1px; }

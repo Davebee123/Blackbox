@@ -2737,7 +2737,7 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 @keyframes ptip-in { from { opacity: 0; transform: translateY(4px); } }
 .ptip-card { width: 290px; display: grid; gap: 8px; padding: 12px 14px; background: rgba(10, 8, 5, 0.97); border: 1px solid var(--line-strong); border-top: 2px solid currentColor; border-radius: 4px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); color: var(--r-stock); }
 .ptip-card.r-scrap { color: var(--r-scrap); } .ptip-card.r-tuned { color: var(--r-tuned); } .ptip-card.r-custom { color: var(--r-custom); } .ptip-card.r-zeroday, .ptip-card.r-indemnified { color: var(--r-zeroday); }
-.ptip-art { margin: 0; justify-self: center; font: 11px/1 var(--mono); letter-spacing: 0.05em; color: currentColor; text-shadow: 0 0 6px currentColor; opacity: 0.95; background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.04), transparent 70%); padding: 4px 6px; }
+.ptip-art { margin: 0; max-height: none; overflow: visible; justify-self: center; font: 11px/1 var(--mono); letter-spacing: 0.05em; color: currentColor; text-shadow: 0 0 6px currentColor; opacity: 0.95; background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.04), transparent 70%); padding: 4px 6px; }
 .ptip-body { display: grid; gap: 3px; color: var(--text); }
 .ptip-body .iname { font-size: 15px; }
 .ptip-body > small { color: var(--muted); font: 11px var(--mono); }
@@ -4119,7 +4119,7 @@ p.impl { margin: 6px 0 0; padding: 4px 2px; border-bottom: 1px dotted color-mix(
 .sk-card { padding: 0; display: grid; }
 .sk-ico { display: inline-block; flex: none; width: 18px; height: 18px; background: currentColor; -webkit-mask: var(--icon) center/contain no-repeat; mask: var(--icon) center/contain no-repeat; }
 .sk-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 22px; align-items: center; padding: 18px 22px; border-bottom: 1px solid var(--line); background: radial-gradient(60% 140% at 0% 0%, var(--amber-wash), transparent 70%); }
-.sk-emblem { margin: 0; font: 500 11px/1.05 var(--mono); color: var(--amber-soft); white-space: pre; letter-spacing: 0; text-shadow: 0 0 8px rgba(241, 185, 47, 0.25); }
+.sk-emblem { margin: 0; max-height: none; overflow: visible; font: 500 11px/1.05 var(--mono); color: var(--amber-soft); white-space: pre; letter-spacing: 0; text-shadow: 0 0 8px rgba(241, 185, 47, 0.25); }
 .sk-id { min-width: 0; }
 .sk-id h2 { font: var(--kicker); letter-spacing: var(--kicker-track); text-transform: uppercase; color: var(--muted); }
 .sk-id h1 { font-size: 28px; color: var(--bright); letter-spacing: 1px; margin: 2px 0 8px; display: flex; align-items: center; gap: var(--s4); flex-wrap: wrap; }

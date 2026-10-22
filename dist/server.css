@@ -14,7 +14,13 @@
 
 /* ---------- the header: the ring, who it is, Integrity and Repair, the vitals ---------- */
 .hsv-top { display: grid; grid-template-columns: 190px minmax(0, 1fr) auto; gap: var(--s7); align-items: center; padding: var(--s6) 22px; border-bottom: 1px solid var(--line); background: radial-gradient(60% 140% at 0% 0%, rgba(127, 209, 199, 0.06), transparent 70%); }
-.hsv-ringbtn { display: block; padding: 0; border: 1px solid transparent; border-radius: 50%; background: none; }
+.hsv-ringbtn { display: block; padding: 0; border: 1px solid transparent; border-radius: 50%; background: none; line-height: 0; }
+/* The ring is the button, so no button border on hover (the box is taller than wide, so it drew an oval): the pit lights instead. */
+.hsv-ringbtn:hover:not(:disabled) { border-color: transparent; }
+.hsv-ringbtn:hover:not(:disabled) .pit { stroke: var(--amber-soft); }
+/* The svg is taller than wide (room above for an invasion's road), so a focus ring on the box is an oval too: the pit lights instead. */
+.hsv-ringbtn.hsv-pick:focus-visible { outline: none; }
+.hsv-ringbtn:focus-visible .pit { stroke: var(--amber); stroke-width: 2; }
 .hsv-ringbtn[aria-pressed='true'] { box-shadow: none; background: none !important; border-color: transparent !important; }
 .hsv-ringbtn[aria-pressed='true'] .pit { stroke: var(--amber); }
 .hsv-ring { display: block; width: 100%; height: auto; overflow: visible; }
