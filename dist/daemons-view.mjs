@@ -7,11 +7,10 @@
 // (daemon-sprites.mjs). Nothing on the cards is a rule: a sticky panel says what the picked one does (a bottom sheet
 // on a phone), and it alone carries the rule's highlights (ruletext.mjs) and the Slot, Unslot and Swap buttons.
 // Styles: daemons.css. Clicks: app.js (data-dmn-sel, data-dmn-cycle, data-dmn-view; the buttons are data-command).
-import { DAEMONS, DAEMON_BANDS, DAEMON_DROP, bandDaemons, daemonBand, daemonN, codeUnit, SERVER, FLOORS, ARCHETYPES, SUBS, LOADOUT, xpToNext } from './data.mjs';
-import { active, serverLevel, classOf, hackerLevel, hackerOf, subOf } from './combat.mjs';
+import { DAEMONS, DAEMON_BANDS, DAEMON_DROP, bandDaemons, daemonBand, daemonN, codeUnit, SERVER, FLOORS, ARCHETYPES, SUBS } from './data.mjs';
+import { active, serverLevel, classOf, hackerLevel, subOf } from './combat.mjs';
 import { daemonLevel, daemonSlots, slottedDaemons, daemonText, daemonCycles, playOrder } from './daemons.mjs';
 import { ruleHtml } from './ruletext.mjs';
-import { EMBLEMS } from './class-emblems.mjs';
 import { spriteHtml, roleOf, ROLE_WORD } from './daemon-sprites.mjs';
 
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
@@ -96,14 +95,11 @@ const benchOf = (s) => ORDER.filter((id) => isFound(s, id) && !slottedDaemons(s)
 const pick = (id, shown) => { const on = id === shown, chosen = on && daemonUi.sel === id; return `data-dmn-sel="${id}" aria-pressed="${chosen}"${on && !chosen ? ' data-shown' : ''}`; };
 const cellsOf = (id) => new Set(daemonCycles(id, CYCLES));
 
+// The page opens straight on the daemons: a slim bar with Party and Roster (the class banner is the Skills page's).
 function head(s) {
-  const cls = classOf(s), a = ARCHETYPES[cls], sub = SUBS[subOf(s, cls)], lvl = hackerLevel(s, cls), xp = hackerOf(s, cls).xp || 0;
   const party = slottedDaemons(s).length, found = ORDER.filter((id) => isFound(s, id)).length, v = daemonUi.view;
-  const bar = lvl < LOADOUT.maxLevel ? `<span class="dm-xp" title="${xp}/${xpToNext(lvl)} XP to level ${lvl + 1}"><i style="width:${Math.min(100, (xp / xpToNext(lvl)) * 100).toFixed(1)}%"></i></span>` : '';
   const tab = (k, label, n, tip) => `<button type="button" data-dmn-view="${k}" aria-pressed="${v === k}" title="${esc(tip)}">${label}<small>${n}</small></button>`;
-  return `<header class="dm-head">${EMBLEMS[cls] ? `<pre class="dm-emblem" aria-hidden="true">${esc(EMBLEMS[cls].join('\n'))}</pre>` : ''}
-    <div class="dm-id"><h2>${esc(a.name)}</h2><h1>${esc(sub ? sub.name : a.name)}</h1><div class="dm-lv"><b>Lv ${lvl}</b>${bar}</div></div>
-    <nav class="dm-views" aria-label="Daemons">${tab('party', 'Party', `${party}/${daemonSlots(s)}`, `Daemons slotted, of your ${daemonSlots(s)} slots`)}${tab('roster', 'Roster', `${found}/${ORDER.length}`, `Daemons you've found, of all ${ORDER.length}`)}</nav></header>`;
+  return `<header class="dm-head"><nav class="dm-views" aria-label="Daemons">${tab('party', 'Party', `${party}/${daemonSlots(s)}`, `Daemons slotted, of your ${daemonSlots(s)} slots`)}${tab('roster', 'Roster', `${found}/${ORDER.length}`, `Daemons you've found, of all ${ORDER.length}`)}</nav></header>`;
 }
 
 // One row of the party: who, then a cell a cycle (lit where it acts) or a dashed lane with its trigger.
