@@ -940,19 +940,29 @@ function scan(s, arg) {
     traceAdd(s, SCAN.trace);
   } else (s.run.scanned ||= []).includes(v.id) || s.run.scanned.push(v.id);
   (s.run.unpack ||= []).includes(v.id) || s.run.unpack.push(v.id); // a Packer's rules show once you've scanned it (combat.mjs packerOn)
+  (s.run.named ||= []).includes(v.id) || s.run.named.push(v.id); // its rules show by name, on the card and in the fight (genome.mjs scannedRead)
   showCard(s, v, { deep, type: 'net-scan' });
 }
 
 // scan [room] on rooms: the genome card of what holds this room, or a room next to you that you've discovered (been in:
 // floorplan.mjs fog) and holds a fight. An unknown room can't be read from outside.
 // It costs SCAN.signal Signal (an Infiltrator scans quietly and for free, and reads deeper).
+// What scan reads on rooms: a room you've been in whose fight is up (a sealed Core never is).
+const scanReads = (s, room) => !!room && seenOf(s, room.id) === 'kind' && FIGHTS.includes(room.kind) && isUp(s, room) && !(room.kind === 'core' && !coreOpen(s));
+// The Scan button on a room's pop-up card (floorplan-view.mjs, through netrooms.mjs): a room next to you that scan
+// reads, out of a fight. It runs scan <room>, as the prompt does. Null where scan can't read it, your own room too.
+export function scanButton(s, room) {
+  const R = s.rooms;
+  if (!s.run?.rooms || !R?.at || active(s) || !room || room.id === R.at || !neighbours(R.graph, R.at).includes(room.id) || !scanReads(s, room)) return null;
+  const free = classOf(s) === 'infiltrator';
+  return { cmd: `scan ${room.dir}`, free, cost: free ? 0 : SCAN.signal, short: !free && s.run.integrity <= SCAN.signal };
+}
 function scanRoom(s, arg) {
   const R = s.rooms, g = R.graph, a = (arg || '').toLowerCase();
   const near = [R.at, ...neighbours(g, R.at)].map((id) => g.rooms[id]);
   const room = a ? near.find((x) => x.dir === a.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || x.path0 === a || x.path0 === '/' + a || x.path.toLowerCase() === a) : g.rooms[R.at];
   if (room && seenOf(s, room.id) !== 'kind') return err(s, `scan: you haven't been in that room. You can't read what's in it from outside.`);
-  const fights = room && FIGHTS.includes(room.kind) && isUp(s, room) && !(room.kind === 'core' && !coreOpen(s));
-  if (!fights) return err(s, a ? `Nothing to scan at ${arg}. Scan a room next to you that holds a fight.` : 'Nothing to scan here. scan <room> reads a fight next door.');
+  if (!scanReads(s, room)) return err(s, a ? `Nothing to scan at ${arg}. Scan a room next to you that holds a fight.` : 'Nothing to scan here. scan <room> reads a fight next door.');
   const f = fightOf(s, room), v = encounterVirus(s, f.key, f.seed, f.opts);
   const deep = classOf(s) === 'infiltrator';
   if (!deep) {
@@ -960,6 +970,8 @@ function scanRoom(s, arg) {
     s.run.integrity -= SCAN.signal;
   } else (s.run.scanned ||= []).includes(v.id) || s.run.scanned.push(v.id);
   (s.run.unpack ||= []).includes(v.id) || s.run.unpack.push(v.id); // a Packer's rules show once you've scanned it (combat.mjs packerOn)
+  (s.run.named ||= []).includes(v.id) || s.run.named.push(v.id); // its rules show by name, on the card and in the fight (genome.mjs scannedRead)
+  s.run.scans = (s.run.scans || 0) + 1; // the rooms tour's scan step (tips.mjs)
   showCard(s, v, { deep, type: 'net-scan' });
 }
 

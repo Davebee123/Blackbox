@@ -644,6 +644,9 @@ document.addEventListener('click', (e) => {
 // The chase's keys: the arrows move, space waits (not while you type).
 const CHASE_KEYS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', ' ': 'wait' };
 document.addEventListener('keydown', (e) => {
+  // SCAN on a room's chip (floorplan-view.mjs): Enter or space scans; the chip around it walks.
+  const sb = e.target.closest?.('.fp-scanbtn');
+  if (sb && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); if (sb.dataset.command) run(sb.dataset.command); return; }
   const g = e.target.closest?.('[data-rooms]');
   if (g && (e.key === 'Enter' || e.key === ' ') && g.tagName !== 'BUTTON') { e.preventDefault(); roomsClick(g.dataset.rooms, g.dataset.arg); return; }
   const t = e.target.closest?.('[data-fp-sel]');
@@ -1152,6 +1155,16 @@ function notice(text, bad = false, suggest = null, sticky = false) {
   if (text && !sticky) noticeTimer = setTimeout(() => (el.hidden = true), 4000); // sticky (help): stays until the next notice or command
 }
 
+// A card as the notice (a scan on a server's rooms): sticky, so it stays until the next command or a click.
+function noticeCard(html) {
+  const el = $('notice');
+  el.innerHTML = html;
+  el.classList.remove('bad');
+  el.classList.add('sticky');
+  el.hidden = false;
+  clearTimeout(noticeTimer);
+}
+
 // ---------- commands ----------
 const NAV = ['map', 'combat', 'net', 'server', 'craft', 'loadout', 'daemons', 'codex', 'system', 'campaign', 'room', 'archive'];
 const ALIAS = { vault: 'loadout', gear: 'loadout', protocols: 'loadout', stash: 'loadout', inventory: 'loadout', crafting: 'craft', workbench: 'craft', build: 'craft', services: 'server', ports: 'server', wall: 'server', talents: 'loadout', skills: 'loadout', archetypes: 'loadout', home: 'map', trace: 'map', leads: 'map', logs: 'system', settings: 'system', bestiary: 'codex', fight: 'combat', run: 'net' };
@@ -1266,6 +1279,12 @@ function run(raw) {
     // Rewards have their card; the corner keeps warnings and plain status (never "Server +N XP").
     const info = events.some((e) => e.type === 'contract-done') ? null : events.findLast((e) => ['info', 'repair', 'daemon-set', 'service'].includes(e.type) && !e.serverXp);
     if (info) notice(info.message);
+  }
+  // A server's rooms have no terminal: a scan's card (typed, or its Scan button on a room's card) goes up as the notice,
+  // and so does why one can't (run.mjs scanRoom). It stays until your next move, or a click.
+  if (campaign.rooms && module === 'rooms' && !active(campaign)) {
+    const card = events.findLast((e) => e.type === 'net-scan' && e.card), no = events.findLast((e) => e.type === 'net-err');
+    if (card) noticeCard(V.scanMarkup(card)); else if (no && !warning) notice(no.message, true);
   }
   // (a connect or hang-up has its own sound, so the channel change stays quiet)
   if ((wasAlert || events.some((e) => e.type === 'jack-in' || e.type === 'engage')) && active(campaign)) go('combat', events.some((e) => e.type === 'jack-in'));
@@ -2385,6 +2404,7 @@ document.addEventListener('click', (e) => {
   if (e.target.closest('.mk-go') && mkOrder) { const c = e.target.closest('.mk-go').dataset.command; setMkOrder({ ...mkOrder, n: 1 }); return run(c); }
   const payBtn = e.target.closest('[data-pay]');
   if (payBtn && !payBtn.disabled && !e.target.closest('#pay')) { payOpen(payBtn); return; }
+  if (e.target.closest('.fp-scanbtn[aria-disabled="true"]')) return; // SCAN short of Signal: a click on it never walks in
   const cmd = e.target.closest('[data-command]');
   if (cmd && !cmd.disabled) {
     // Irreversible buttons (scrapping good gear) ask with a second click.

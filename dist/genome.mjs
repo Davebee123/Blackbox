@@ -114,18 +114,20 @@ export function logSet(s, family, set) {
 // ---------- the genome card (scan) ----------
 // What you can tell about a virus: its author, body, grade and every gene chip, named if you've seen it, ??? with its
 // category otherwise. deep: an Infiltrator's scan, which shows the rule of genes you haven't decoded, for that fight.
+// read: a virus you scanned (scannedRead), whose rules all show by name, for that fight. What each does still waits for
+// the Codex (or deep).
 const one = (id) => CATS[GENES[id].cat].one;
-export function chipOf(s, id, src, deep = false) {
+export function chipOf(s, id, src, deep = false, read = false) {
   // A mutation's rule shows once you've met it, as it always has (every mutation is visible from the start).
   const g = GENES[id], state = geneState(s, id), named = state !== 'unknown', open = state === 'decoded' || deep || (g.mutation && named);
-  return { id, src, cat: g.cat, catName: one(id), axis: g.axis, axisName: AXES[g.axis].name, state, name: named || deep ? g.name : null, rule: open ? g.does : null, answer: open ? g.answer : null };
+  return { id, src, cat: g.cat, catName: one(id), axis: g.axis, axisName: AXES[g.axis].name, state, name: named || deep || read ? g.name : null, rule: open ? g.does : null, answer: open ? g.answer : null };
 }
 // A Packer standing in the fight (combat.mjs packerOn): the rolled genes read as ???, whatever your Codex knows.
 export const packedChip = (c) => ({ ...c, state: 'unknown', name: null, rule: null, answer: null, packed: true });
 export const packsGene = (s, v, g) => g.src !== 'core' && g.id !== 'packer' && packerOn(s, v);
 export function genomeCard(s, v, { deep = false } = {}) {
-  const fam = familyInfo(v.family);
-  const genes = virusGenes(v).map((g) => (packsGene(s, v, g) ? packedChip(chipOf(s, g.id, g.src, deep)) : chipOf(s, g.id, g.src, deep)));
+  const fam = familyInfo(v.family), read = scannedRead(s, v);
+  const genes = virusGenes(v).map((g) => (packsGene(s, v, g) ? packedChip(chipOf(s, g.id, g.src, deep, read)) : chipOf(s, g.id, g.src, deep, read)));
   const tells = tellGenes(v).map((id) => chipOf(s, id, 'tell', deep));
   return { name: v.name, author: v.author || null, authorName: authorName(v.author), style: AUTHORS[v.author]?.style || null, body: fam?.name || v.family, level: v.level, grade: v.grade || 1, strain: v.strain ? STRAINS[v.strain]?.name : null, genes, tells, deep };
 }
@@ -163,17 +165,19 @@ export function inspect(s, arg) {
   const p = ps.find((x) => key(x) === arg || x.name.toLowerCase() === arg) || ps.find((x) => key(x).startsWith(arg) || x.name.toLowerCase().startsWith(arg));
   if (!arg || !p) return warn(s, `inspect <part>: ${ps.map(key).join(', ')}.`);
   if (packed(s, e.virus, p)) return emit(s, 'info', `The Packer hides what the ${p.name} carries. Break the Packer to read it.`, { target: p.id, inspect: true });
-  const ids = partGenes(p), deep = scannedDeep(s, e.virus);
+  const ids = partGenes(p), deep = scannedDeep(s, e.virus), read = scannedRead(s, e.virus);
   if (!ids.length) return emit(s, 'info', `The ${p.name} carries no rule of its own.`, { target: p.id, inspect: true });
   const lines = ids.map((id) => {
-    const c = chipOf(s, id, 'part', deep);
+    const c = chipOf(s, id, 'part', deep, read);
     if (c.rule) return `${c.name} is ${an(c.catName)} ${c.catName} that presses on ${c.axisName}. ${c.rule} ${c.answer}`;
     return `You haven't learned ${c.name || `this ${c.catName}`} yet. Research the ${p.name} to ${RESEARCH.tiers[1]} to learn what it does.`;
   });
-  return emit(s, 'info', `The ${p.name}${alive(p) ? '' : ', broken,'} carries ${named(ids.map((id) => chipOf(s, id, 'part', deep)))}.\n${lines.join('\n')}`, { target: p.id, inspect: true });
+  return emit(s, 'info', `The ${p.name}${alive(p) ? '' : ', broken,'} carries ${named(ids.map((id) => chipOf(s, id, 'part', deep, read)))}.\n${lines.join('\n')}`, { target: p.id, inspect: true });
 }
 // An Infiltrator's scan reads deeper, for the fight it scanned.
 export const scannedDeep = (s, v) => !!(v && s.run?.scanned?.includes(v.id));
+// Any scan names every rule the virus carries, for the fight it scanned (run.mjs scan and scanRoom keep s.run.named).
+export const scannedRead = (s, v) => !!(v && s.run?.named?.includes(v.id));
 
 // ---------- scan ----------
 // The card for the virus you're facing (a fight at the gate, or under way): free, you can see it. On a run, scanning

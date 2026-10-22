@@ -42,7 +42,7 @@ import { itemLabel, uniqueItem } from './gear.mjs';
 import { strikeServer, clearedFor } from './factions.mjs';
 import { traceNear, hiddenLead, HIDDEN } from './hidden.mjs';
 import { hiddenNear } from './floors.mjs';
-import { zoneSpawns, spawnFight, levelOf, layoutOf, fileInfo, residentLevel, RESIDENT, bank, KING_ROOM, packGain, peopleIn } from './run.mjs';
+import { zoneSpawns, spawnFight, levelOf, layoutOf, fileInfo, residentLevel, RESIDENT, bank, KING_ROOM, packGain, peopleIn, scanButton } from './run.mjs';
 import { threadsConnect, threadsMoved, threadsStood, threadVerb, tempCoreOpen, tempKilled, threadsRestore } from './threads.mjs';
 
 export const KIND_OF = FP.KIND_OF;
@@ -554,6 +554,8 @@ FP.WORLD.view = {
   plantHere: (s, room) => { const loc = locOf(s); return loc ? payloadFor(s, loc, room) : null; },
   marks: (s) => { const loc = locOf(s); return loc ? roomMarks(s, loc, liveFights(s, loc)) : {}; },
   jobs: (s) => { const loc = locOf(s); return loc ? jobsOn(s, loc) : []; },
+  // A room next to you that scan reads (run.mjs scanRoom): its card's Scan button runs scan <room>.
+  scan: (s, room) => scanButton(s, room),
 };
 
 // The live viruses in the rooms you know on this server, as a contract reads a kill (roomKill's terms): the marks.

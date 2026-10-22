@@ -554,6 +554,8 @@ test('Packer: while it stands the virus\'s rolled rules read as ???; breaking it
   t.run.unpack.push(encounterVirus(t, 'random', 77, opts).id);
   selectEncounter(t, 'random', 77, opts);
   assert.ok(t.encounter.unpacked, 'scanned before: it hides nothing');
+  assert.ok(t.encounter.virus.parts.every((p) => !p.packedAs && p.name !== 'Packed part') && part(t, 'frontend').name === 'Front End', 'scanned: every part by its own name');
+  assert.doesNotMatch(boardMarkup(t), /Packed part|tag packed/);
 });
 test('Spare asleep: its ◆ take a big hit (the key\'s ◆ badge says so), the ◆ ABSORBED line fires, and they patch back', () => {
   const s = fight2(14, 'worm', ['spare']), sp = part(s, 'spare');
