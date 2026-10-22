@@ -17,14 +17,14 @@ export const abilities = {
   'shaped-charge': {
     cls: 'breaker', sub: 'demolitionist', verb: 'debuff', name: 'Shaped Charge', target: 'part', damage: 0, strip: 99, bareHit: 30, provoke: 1, scales: ['bareHit'], cooldown: 5, icon: 'shell-shield',
     short: 'Breaks all ◆; provokes',
-    help: 'shaped-charge <part> — Breaks all ◆ on the target, but provokes it: its next attack comes 1 cycle sooner. Against a target with no armor, deals 30 damage instead.',
+    help: 'shaped-charge <part> — Breaks all ◆ on the target. Provokes the target, so its next attack comes 1 cycle sooner. Against a target with no armor, deals 30 damage instead.',
     desc: 'Blows the casing off the target, breaking all its ◆ at once. The target lashes out, and its next attack comes 1 cycle sooner, so use it while that attack is still far off. Against a target with no armor, deals 30 damage instead.',
   },
   'logic-bomb': {
     cls: 'breaker', sub: 'demolitionist', verb: 'hit', name: 'Logic Bomb', target: 'part', damage: 0, bomb: 50, blast: 20, scales: ['bomb', 'blast'], fuse: 2, cooldown: 5, icon: 'event-warning',
     short: 'Bomb: 50, and 20 to all',
     help: 'logic-bomb <part> — Plants a bomb on the target that detonates after 2 cycles, dealing 50 damage to the target and 20 damage to every other part. A part the blast breaks cannot reboot, and a Tripwire it breaks stays quiet.',
-    desc: 'Plants a logic bomb in the target. 2 cycles later it detonates, dealing 50 damage to the target and 20 damage to every other part. A part the blast breaks stays down: a twin cannot reboot it, and a Tripwire caught in it stays quiet. If the target breaks first, the bomb goes off on the next part.',
+    desc: 'Plants a logic bomb in the target. 2 cycles later it detonates, dealing 50 damage to the target and 20 damage to every other part. A part the blast breaks stays down. A twin cannot reboot it, and a Tripwire caught in it stays quiet. If the target breaks first, the bomb goes off on the next part.',
   },
   'chain-reaction': {
     cls: 'breaker', sub: 'demolitionist', verb: 'hit', name: 'Chain Reaction', target: 'part', damage: 40, chits: 2, cycles: 3, blast: 30, scales: ['blast'], cooldown: 5, icon: 'expand',
@@ -47,8 +47,8 @@ export const abilities = {
   backfire: {
     cls: 'breaker', sub: 'demolitionist', verb: 'hit', name: 'Backfire', target: 'part', damage: 25, cap: 60, cooldown: 4, icon: 'event-warning',
     short: '25 damage; detonates charges',
-    help: 'backfire <part> — Deals 25 damage to the target. If the target is winding up a charge, the charge detonates early, dealing its bonus damage to the target instead (up to 60), and its attack lands uncharged.',
-    desc: 'Jams the target\'s own wind-up, dealing 25 damage. If the target is winding up a charge, the charge goes off inside it, dealing its bonus damage to the target instead, up to 60, and its attack lands uncharged.',
+    help: 'backfire <part> — Deals 25 damage to the target. If the target is winding up a charge, the charge detonates early. Its bonus damage hits the target instead, up to 60, and its attack lands uncharged.',
+    desc: 'Jams the target\'s own wind-up, dealing 25 damage. If the target is winding up a charge, the charge goes off inside it. Its bonus damage hits the target instead, up to 60, and its attack lands uncharged.',
   },
   'rm-rf': {
     cls: 'breaker', sub: 'demolitionist', verb: 'buff', name: 'rm -rf', target: 'none', damage: 0, cycles: 2, share: 0.5, cooldown: 10, icon: 'expand',

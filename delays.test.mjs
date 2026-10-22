@@ -146,6 +146,6 @@ test('a read: the stagger delays the attack once, and does nothing to an attack 
     return { moved: enc.attack.due - due, line: s.logs.find((x) => x.id > mark && x.type === 'read')?.message || '' };
   };
   const plain = read(false), held = read(true);
-  assert.equal(plain.moved, 1); assert.match(plain.line, /a cycle later/);
+  assert.equal(plain.moved, 1); assert.match(plain.line, /1 cycle later/);
   assert.equal(held.moved, 0); assert.match(held.line, /^READ: /); assert.doesNotMatch(held.line, /later/);
 });

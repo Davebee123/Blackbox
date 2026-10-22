@@ -9,6 +9,7 @@ import { AUTHORS } from './authors.mjs';
 import { STRAINS, FAMILIES, ROOM_FAMILIES, GUARDS } from './data.mjs';
 import { attackAmount } from './combat.mjs';
 import { partRead } from './fightread.mjs';
+import { ruleHtml } from './ruletext.mjs';
 import { entries, entryOf, validKey, firstKey, tellKind, SET_CYCLES } from './codex.mjs';
 import { RESEARCH, TIER } from './research.mjs';
 import { refOf, refBody, unlocked } from './routines.mjs';
@@ -75,7 +76,7 @@ function partCard(level, x, tells = [], withHandler = false) {
   if (n >= TIER.rule) {
     const r = partRead(null, x.virus, p, { tells: false });
     const rides = tells.length ? `<p class="cxp-rides">${tells.map((t) => `${TELL_VERB[t.kind] || 'Brings'} <b>${esc(t.name)}</b>${t.level ? ` <small>Lv ${t.level}+</small>` : t.elite ? ` <small>elite Lv ${t.elite}+</small>` : ''}.`).join(' ')}</p>` : '';
-    rule = `<p class="cxp-does">${esc(r.does)}</p><p class="cxp-answer">${esc(r.answer)}</p>${rides}`;
+    rule = `<p class="cxp-does">${ruleHtml(r.does)}</p>${r.answer ? `<p class="cxp-answer">${esc(r.answer)}</p>` : ''}${rides}`;
   } else rule = locked(`Research ${TIER.rule} to learn its rule, its answer and its tells.`);
   const loot = !p.loot ? '' : mast ? `<p class="cxp-loot">${glyph('salvage')}Drops ${esc(p.loot)}</p>` : locked(`Research ${RESEARCH.max} to learn its drop.`);
   const perk = mast ? `<p class="cxp-perk">Mastered. Its component drops ${Math.round((RESEARCH.perk.drop - 1) * 100)}% more often, and you deal ${Math.round((RESEARCH.perk.dmg - 1) * 100)}% more damage to it.</p>` : '';
@@ -98,7 +99,7 @@ function setMarkup(x) {
 const tellLv = (t) => (t.level == null && t.elite == null ? '' : t.level != null ? `<span class="tag dim" title="Viruses of level ${t.level} and up bring it">Lv ${t.level}+</span>` : `<span class="tag dim" title="Only an elite brings it, from level ${t.elite}">elite Lv ${t.elite}+</span>`);
 function tellMarkup(t) {
   if (!t.seen) return `<li class="cx-tell unknown"><div class="cxt-head"><b>${UNKNOWN}</b>${tellLv(t)}</div><p class="cxp-hint">Meet it in a fight to learn it.</p></li>`;
-  return `<li class="cx-tell"><div class="cxt-head"><b>${esc(t.name)}</b><span class="tag hot">${esc(tellKind(t.kind))}</span>${t.part ? `<small>on the ${esc(t.part)}</small>` : ''}${tellLv(t)}</div><p class="cxp-does">${esc(t.does)}</p><p class="cxp-answer">${esc(t.answer)}</p></li>`;
+  return `<li class="cx-tell"><div class="cxt-head"><b>${esc(t.name)}</b><span class="tag hot">${esc(tellKind(t.kind))}</span>${t.part ? `<small>on the ${esc(t.part)}</small>` : ''}${tellLv(t)}</div><p class="cxp-does">${ruleHtml(t.does)}</p><p class="cxp-answer">${esc(t.answer)}</p></li>`;
 }
 const section = (title, body, extra = '') => `<section class="cx-sec"><h3 class="cx-kick">${title}${extra}</h3>${body}</section>`;
 const stat = (label, value, cls = '', title = '') => `<div class="stat"${title ? ` title="${esc(title)}"` : ''}><span>${esc(label)}</span><strong class="${cls}">${value}</strong></div>`;
@@ -109,7 +110,7 @@ function bodyPage(s, e) {
   const head = `<header class="cx-head"><div class="cx-art" aria-hidden="true"><canvas id="cx-canvas" data-art="${esc(e.art?.id || '')}"></canvas></div><div class="cx-title"><h2>${groupName}</h2><h1>${esc(e.name)}</h1><p class="tagline">${tags}</p>
     <div class="stats">${stat('Your kills', e.kills, 'you')}${stat('Research', `${e.research}%`, e.research >= 100 ? 'full' : '', 'The average of its parts\' research')}${e.sets.length ? stat('Sets faced', `${faced}/${e.sets.length}`) : ''}</div>
     ${e.authors.length ? `<p class="cx-by"><span class="cx-label">Written by</span>${e.authors.map(byline).join('')}</p>` : ''}</div></header>`;
-  const rule = e.rule ? `<p class="cx-rule"${e.ice ? ' title="ICE: its rule shows as a tag in the fight"' : ''}>${esc(e.rule)}</p>` : '';
+  const rule = e.rule ? `<p class="cx-rule"${e.ice ? ' title="ICE: its rule shows as a tag in the fight"' : ''}>${ruleHtml(e.rule)}${e.answer ? `<span class="cx-ans">${esc(e.answer)}</span>` : ''}</p>` : '';
   const ridesOf = (x) => e.tells.filter((t) => t.part && t.part === (x.part?.name || x.spec.name)).map((t) => ({ name: t.name, kind: t.kind, level: t.level, elite: t.elite }));
   const parts = section('Parts', `<div class="cx-parts">${e.parts.map((x) => partCard(e.level, x, ridesOf(x), unlocked(s))).join('')}</div>`, ` <small>at <b class="you">Lv ${e.level}</b></small>`);
   const sets = e.sets.length ? section('Attack sets', `<div class="cx-sets">${e.sets.map(setMarkup).join('')}</div><p class="cx-foot">Each fight rolls its set, and nudges every part's first attack by up to 1 cycle.</p>`) : '';
@@ -151,7 +152,7 @@ function bossPage(s, e) {
     <div class="stats">${stat('Your fights', e.fought, 'you')}${stat('Your wins', e.won, 'you')}${e.parts.length ? stat('Research', `${pctOf(e.parts)}%`, pctOf(e.parts) >= 100 ? 'full' : '', 'The average of its parts\' research. They share it with its family or strain') : ''}${stat('Integrity', `×${e.hp}`, '', 'Its Integrity, against a plain virus of its level')}${stat('Enrages', `cycle ${e.enrageAt}`, '', 'From this cycle every attack lands every cycle, a quarter harder')}</div>
     ${e.authors.length ? `<p class="cx-by"><span class="cx-label">Written by</span>${e.authors.map(byline).join('')}</p>` : ''}</div></header>`;
   const about = e.about ? `<p class="cx-rule">${esc(e.about)}</p>` : '';
-  const sig = e.signature ? section('Signature', `<div class="cx-part"><div class="cxp-head"><b>${esc(e.signature.name)}</b></div><p class="cxp-does">${esc(e.signature.rule)}</p></div>`) : '';
+  const sig = e.signature ? section('Signature', `<div class="cx-part"><div class="cxp-head"><b>${esc(e.signature.name)}</b></div><p class="cxp-does">${ruleHtml(e.signature.rule)}</p></div>`) : '';
   const phases = e.phases.length ? section('Phases', `<ol class="cx-phases">${e.phases.map((ph) => `<li><b class="cxph-at">${Math.round(ph.at * 100)}%</b><div>${ph.name ? `<b>${esc(ph.name)}</b>` : ''}${ph.say ? `<p>${esc(ph.say)}</p>` : ''}${ph.mechs ? `<p class="cxph-mechs">${ph.mechs.map((m) => `<span class="tag">${esc(m)}</span>`).join('')}</p>` : ''}</div></li>`).join('')}</ol>${e.enrage ? `<p class="cx-foot">Past its timer: ${esc(e.enrage)}.</p>` : ''}`) : '';
   const tells = e.raid ? '' : section('Tells', e.tells.length ? `<ul class="cx-tells">${e.tells.map(tellMarkup).join('')}</ul>` : '<p class="cx-foot">Brings no tells.</p>', ` <small>at <b class="you">Lv ${e.level}</b></small>`);
   const lv = e.parts[0]?.level || e.level, rides = (x) => e.tells.filter((t) => t.part === x.part.name).map((t) => ({ name: t.name, kind: t.kind }));
@@ -162,7 +163,7 @@ function bossPage(s, e) {
 function mutationPage(s, e) {
   const head = `<header class="cx-head solo"><div class="cx-title"><h2>Mutation</h2><h1>${esc(e.name)}</h1><p class="tagline"><span class="tag" style="--ax:${e.axis.colour}" title="${esc(`${e.axis.name}: it punishes ${e.axis.punishes}.`)}">${glyph(e.axis.icon)}${esc(e.axis.name)}</span><span class="tag dim">Lv ${e.opens}+</span></p>
     <div class="stats">${stat('Kills of it', `${e.kills}/2`, 'you', 'Two kills of a virus that carries it decode it')}</div></div></header>`;
-  const rule = `<div class="cx-part"><div class="cxp-head"><b>${esc(e.name)}</b></div><p class="cxp-does">${esc(e.rule)}</p>${e.decoded ? `<p class="cxp-tele">${glyph('ids')}${esc(e.telegraph)}</p><p class="cxp-answer">${esc(e.answer)}</p>` : '<p class="cxp-hint">Beat two viruses that carry it to decode the answer.</p>'}</div>`;
+  const rule = `<div class="cx-part"><div class="cxp-head"><b>${esc(e.name)}</b></div><p class="cxp-does">${ruleHtml(e.rule)}</p>${e.decoded ? `<p class="cxp-tele">${glyph('ids')}${esc(e.telegraph)}</p><p class="cxp-answer">${esc(e.answer)}</p>` : '<p class="cxp-hint">Beat two viruses that carry it to decode the answer.</p>'}</div>`;
   const on = section('Seen on', e.on.length ? `<p class="cx-chips">${e.on.map((n) => `<span class="tag">${esc(n)}</span>`).join('')}</p>` : '<p class="cx-foot">Any wild virus can roll it.</p>');
   return head + section('Rule', rule) + on;
 }

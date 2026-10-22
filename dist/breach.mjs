@@ -93,11 +93,11 @@ export const DIG = { itemLevel: 1, unique: 0.1, gatePart: 0.4 };
 export const TRACE = { alarm: 30, hunt: 55, lose: 30, after: 15, elite: 20, open: 15, force: 35, bait: 25, quiet: -3, rest: -10, ice: -20, splice: 15, scrub: -30 };
 // Server kinds: one rule each (docs/roguelite.md 11), shown on the server's card and the breach's strip.
 export const KINDS = {
-  Mailhub: { rule: 'Spam floods', text: `Every fight brings a Spam Flood once your Trace reaches ${TRACE.alarm}: one more part, weak and quick.` },
+  Mailhub: { rule: 'Spam floods', text: `Once your Trace reaches ${TRACE.alarm}, every fight brings a Spam Flood, a weak and quick extra part.` },
   Archive: { rule: 'Deep storage', text: 'Every act holds two vaults and two keycards.' },
   Relay: { rule: 'Hops', text: 'Every act has two open shortcuts that skip a row.' },
   Mirror: { rule: 'Mirrors', text: 'One cache in every act is a mirror, with an elite behind it.' },
-  Lab: { rule: 'Overheat', text: 'From the 10th cycle of every fight, the rack burns you for 2% of your max Signal each cycle, and every part for 3% of its max Integrity.' },
+  Lab: { rule: 'Overheat', text: 'From cycle 10 of every fight, the rack deals 2% of your max Signal to you every cycle, and 3% of its max Integrity to every part.' },
 };
 export const OVERHEAT = { from: 10, share: 0.03, you: 0.02 };
 // What a switch takes down (docs/roguelite.md 11): the act's viruses, or its gate (the Resident in the last act).

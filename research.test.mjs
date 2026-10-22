@@ -181,9 +181,9 @@ test('the board by tier: ??? then its attack and cue at 3, then its rule and ans
   assert.ok(!knowsPart(s, v, p), 'research 2 is not decoded');
   s.research = { [key]: TIER.decoded };
   assert.ok(knowsPart(s, v, p));
-  assert.match(partTip(s, v, p), /^Encryptor: Encrypts you every \d+ cycles\. Each Encrypt adds \d+ damage a cycle until it breaks\.\nResearch 15 to learn its rule and answer\.$/);
+  assert.match(partTip(s, v, p), /^Encryptor: Encrypts you every \d+ cycles\. Each Encrypt deals \d+ damage to you every cycle until the Encryptor breaks\. A ◆ on you blocks one Encrypt\.\nResearch 15 to learn its rule and answer\.$/);
   s.research = { [key]: TIER.rule };
-  assert.match(partTip(s, v, p), /\nBreak it to end the encryption\. A ◆ on you stops one Encrypt\.$/);
+  assert.match(partTip(s, v, p), /\n▸ Break it to end the encryption\.$/, 'its answer on its own ▸ line');
   assert.doesNotMatch(boardMarkup(s, null), /pmast/);
   s.research = { [key]: TIER.mastered };
   const html = boardMarkup(s, null), row = html.split('data-target="').find((r) => r.startsWith('encryptor"'));

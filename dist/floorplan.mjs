@@ -121,7 +121,7 @@ export const KINDS = {
     dirs: ['www', 'private', 'html', 'assets', 'cdn', 'static', 'uploads', 'cgi-bin', 'logs', 'media', 'themes', 'vhosts', 'certs', 'cache', 'drafts', 'mirror', 'stage', 'public'] },
   Archive: { name: 'Archive', rule: 'Deep storage', text: 'Two vaults, each with its own key. Only the vault before the Core unseals it.', hunter: 'track', author: 'glassjaw',
     dirs: ['backups', 'srv', 'cold', 'dumps', 'snapshots', 'incr', 'full', 'catalog', 'index', 'offsite', 'restore', 'media', 'rotate', 'weekly', 'monthly', 'ledger', 'escrow', 'ltfs'] },
-  Lab: { name: 'Lab', rule: 'Overheat', text: 'From cycle 10 of a fight, the rack burns you for 2% of your max Signal a cycle and every part for 3% of its max Integrity. Its Tracker moves every move once awake.', hunter: 'track', fast: true, author: 'lantern',
+  Lab: { name: 'Lab', rule: 'Overheat', text: 'From cycle 10 of a fight, the rack deals 2% of your max Signal to you every cycle, and 3% of its max Integrity to every part. Once awake, its Tracker moves on every move.', hunter: 'track', fast: true, author: 'lantern',
     dirs: ['lab', 'tmp', 'bench', 'rig', 'sandbox', 'builds', 'cores', 'gpu', 'scratch', 'fuzz', 'harness', 'probe', 'samples', 'jit', 'debug', 'trace', 'cold', 'kiln'] },
 };
 export const KIND_IDS = Object.keys(KINDS);

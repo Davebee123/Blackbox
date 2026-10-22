@@ -3155,7 +3155,9 @@ function ttShow(anchor) {
   if (!tt.el) { tt.el = document.createElement('div'); tt.el.className = 'tt'; tt.el.setAttribute('role', 'tooltip'); document.body.append(tt.el); }
   const m = text.match(/^([^:.\n]{2,40}): ([\s\S]+)$/);
   const esc = (t) => t.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
-  tt.el.innerHTML = m ? `<b>${esc(m[1])}</b>${esc(m[2][0].toUpperCase() + m[2].slice(1))}` : esc(text);
+  // A line that starts with ▸ is the answer (fightread.mjs answerLine): muted, on its own line, like WoW's "Use:" line.
+  const body = (t) => esc(t).replace(/\n▸ ([^\n]*)/g, '<span class="tt-ans">▸ $1</span>');
+  tt.el.innerHTML = m ? `<b>${esc(m[1])}</b>${body(m[2][0].toUpperCase() + m[2].slice(1))}` : body(text);
   tt.text = text;
   tt.el.hidden = false;
   const r = anchor.getBoundingClientRect(), w = tt.el.offsetWidth, h = tt.el.offsetHeight, pad = 8;

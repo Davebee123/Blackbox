@@ -46,7 +46,7 @@ import { FIREWALL, fwOf, fwAt, ratingAt, effLevel, wallBonus, fragLevels, defrag
 import { filtersOf, equipped as filtersOn, slotsOf as filterSlots, filterLine, FILTER_STATS, CRAFTABLE, filterCost, FILTER_CAP, baseName as filterBase, filterRecipes } from './filters.mjs';
 import { situationOf } from './situations.mjs';
 import { SETS, setOf, setCard, activeSets, piecesOf, greenOf, sourceText, seesRare, tierLine } from './sets.mjs';
-import { tellTip, gearLive, cycleGear, gearOnParts, partTip, partCue, partRead, partLinks, lockOf, wardOf, GEAR_ICON, DAMPED } from './fightread.mjs';
+import { tellTip, gearLive, cycleGear, gearOnParts, partTip, partCue, partRead, partLinks, lockOf, wardOf, GEAR_ICON, DAMPED, answerLine } from './fightread.mjs';
 import { cutsNow, crossBy, BOSS_RULES, TICKS } from './interrupt.mjs';
 import { programMarkup, progNow, progTarget, progText, progOnPart, progExc, progFight, progTag } from './routines-view.mjs';
 import { unlocked as routinesOpen, LOCKED as ROUTINES_LOCKED } from './routines.mjs';
@@ -100,7 +100,7 @@ export function scaledText(s, id, text, arch = null) {
 // A strain's name (its rule on hover) and its live state: keystrokes logged, asleep.
 function strainTags(s, v) {
   const ice = GUARDS[v.family]?.ice && GUARDS[v.family];
-  if (ice) return ` <span class="tag tag-strain" data-strain="${v.family}" title="${esc(`${ice.name} (ICE). ${ice.rule}`)}">${esc(ice.name)} ICE</span>`;
+  if (ice) return ` <span class="tag tag-strain" data-strain="${v.family}" title="${esc(`${ice.name}: ICE. ${ice.rule}${answerLine(ice.answer)}`)}">${esc(ice.name)} ICE</span>`;
   const st = v.strain && STRAINS[v.strain];
   if (!st) return '';
   const e = s.encounter;
@@ -109,7 +109,7 @@ function strainTags(s, v) {
   const shade = v.parts.find((p) => p.phase && p.integrity > 0);
   const live = logger && fighting ? ` · ${e.keylog || 0}/3 logged` : v.dormant ? ' · asleep' : shade && fighting ? (e.cycle % 2 ? ' · out of phase' : ' · in phase') : '';
   const hot = logger && (e?.keylog || 0) >= 2;
-  return ` <span class="tag tag-strain${hot ? ' hot' : ''}" data-strain="${v.strain}" title="${esc(`${st.name} (${familyInfo(v.family).name} strain). ${st.rule}`)}">${esc(st.name)}${live}</span>`;
+  return ` <span class="tag tag-strain${hot ? ' hot' : ''}" data-strain="${v.strain}" title="${esc(`${st.name}: ${familyInfo(v.family).name} strain. ${st.rule}${answerLine(st.answer)}`)}">${esc(st.name)}${live}</span>`;
 }
 export const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
@@ -127,7 +127,7 @@ export function chitsMarkup(p, breaking = 0) {
   const going = Math.min(breaking, p.armor);
   return `<span class="chits" title="Armor: ${p.armor} of ${p.maxArmor}.${going ? ` ${going} breaks this cycle.` : ''} A hit on armor does no damage and breaks one ◆. Hits that ignore armor go through.">${'◆'.repeat(p.armor - going)}${going ? `<b class="going">${'◆'.repeat(going)}</b>` : ''}<i>${'◇'.repeat(p.maxArmor - p.armor)}</i></span>`;
 }
-const VEIL_NOTE = 'Veiled: timers stay hidden while its parts are armored. Strip the armor, or Tag a part to see its timer.';
+const VEIL_NOTE = 'Veiled: hides its timers while it wears ◆.\n▸ Strip its ◆, or Tag it to see its timer.';
 const hiddenNote = (s) => {
   const e = s.encounter;
   return VEIL_NOTE;
@@ -383,9 +383,9 @@ const heldMark = (i) => (i.held ? `<i class="held">${glyph('stall')}</i>` : '');
 // The P2 parts' (genes.mjs): a Scraper's takes-buffs mark, a Bad Block's cracked mark, a Cold Store's thaw, a Spare's boot.
 const chipCls = (i) => (i.packed ? '' : chipCls0(i)); // a packed part's chip (combat.mjs intents): no mark says what it is
 const chipCls0 = (i) => `${i.taps ? ` tap t${i.tap}${i.tap === 1 ? ' first' : ''}${i.tap === i.taps ? ' last' : ''}` : ''}${i.syn ? ' syn' : ''}${i.effect === 'fuse' ? ' fuse' : ''}${i.effect === 'buffer' ? ' bufup' : ''}${i.scrape ? ' scrape' : ''}${i.bad ? ' bad' : ''}${i.effect === 'thaw' ? ' thaw' : ''}${i.effect === 'boot' ? ' boot' : ''}`;
-const chipTip = (i) => (i.taps ? `\nHit ${i.tap} of ${i.taps} of one volley: a cut stops the rest, a delay moves them all.` : i.syn ? '\nSYN: the skill you fire this cycle cools down 2 cycles longer.' : i.effect === 'fuse' ? '\nThe fuse goes off: a ◆ or a shield takes it. Ending the fight first puts it out.' : i.effect === 'buffer' ? '\nIts shield takes your commands\' hits first. Burns and helpers go under it.'
-  : i.scrape ? '\nIt takes your shield, your ◆ and your timed buffs as it lands. It wears up to 2 of them as ◆.\nBuff after it lands, not before. Null Route makes it miss.' : i.bad ? '\nWhen it lands, your next heals lose up to a tenth of your max. Purge, Scrub, Rollback and Rotate Keys clear it.'
-  : i.effect === 'thaw' ? `\nFrozen until then: nothing reaches it. Its first hit, ${i.amount}, comes 2 cycles after it thaws.` : i.effect === 'boot' ? '\nThe signature broke. It boots with its attack and drops its ◆.\nBreak it before then and it never does.' : '');
+const chipTip = (i) => (i.taps ? `\nHit ${i.tap} of ${i.taps} of one volley. A cut stops the rest, and a delay moves all of it.` : i.syn ? '\nThe skill you fire this cycle cools down 2 cycles longer.' : i.effect === 'fuse' ? '\nThe fuse goes off. A ◆ or a shield absorbs the blast. Ending the fight first puts it out.' : i.effect === 'buffer' ? '\nIts shield absorbs your commands\' hits first. Burns and helpers bypass it.'
+  : i.scrape ? '\nRemoves your shield, your ◆ and your timed buffs as it lands. Gains up to 2 ◆ from them. Null Route makes it miss.\n▸ Buff after it lands, not before.' : i.bad ? '\nYour next heals lose up to 10% of your max health. Purge, Scrub, Rollback and Rotate Keys clear it.'
+  : i.effect === 'thaw' ? `\nFrozen and immune to damage until then. Its first hit deals ${i.amount}, 2 cycles after it thaws.` : i.effect === 'boot' ? '\nThe signature part broke, so it boots with its attack. Drops its ◆ as it boots.\n▸ Break it before then, or once it boots.' : '');
 function attackChip(i, c, k = '', to = null) {
   if (i.packed) i = { ...i, syn: false, scrape: false, bad: false, taps: 0 };
   return `<div class="intent ${c === 0 ? 'now' : c === 1 ? 'next' : ''}${i.held ? ' held' : ''}${chipCls(i)}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(i.name)}: ${effectLabel(i)} ${to ? `at ${esc(to)}` : i.packed && !['damage', 'fuse'].includes(i.effect) ? '' : effectTarget[i.effect] || ''}${heldTip(i)}${esc(i.packed ? '' : chipTip(i))}"><span class="ico" ${icon(ICON[i.effect])}></span>${heldMark(i)}<b${longChip(i) ? ' class="long"' : ''}>${esc(i.name)}</b><i class="code${longChip(i) ? ' long' : ''}">${esc(attackCode(i.name))}</i><small>${effectLabel(i)}</small>${i.syn ? '<em class="synmark">SYN</em>' : ''}${i.scrape ? `<em class="scrapemark" title="Takes your buffs">${glyph('scraper')}</em>` : ''}${i.bad ? '<em class="badmark" title="Cracks your next heals">▦</em>' : ''}${i.taps ? `<em class="tapmark">${i.tap}/${i.taps}</em>` : ''}${to ? `<small class="at">→ ${esc(to)}</small>` : ''}</div>`;
@@ -413,9 +413,9 @@ export const byline = (v) => (v?.author && AUTHORS[v.author] ? `<span class="byl
 // Its genes, as chips under its bar: the body's dim, what it rolled or was built with bright, ??? until seen. A
 // mutation's chip carries its tip (tips.mjs .tag-mut).
 export function geneChip(c, extra = '') {
-  const ax = AXES[c.axis], what = `${an(c.catName).toLowerCase()} ${c.catName} that presses on ${ax.name}`;
+  const ax = AXES[c.axis], what = `${an(c.catName)} ${c.catName} that presses on ${ax.name}`;
   const how = GENES[c.id]?.decode === 'part' ? `Research a part that carries it to ${TIER.rule} to learn its rule.` : GENES[c.id]?.decode === 'tell' ? 'Answer it once to learn its rule.' : 'Beat two viruses that carry it to learn its rule.';
-  const title = c.packed ? `Packed: ${an(c.catName)} ${c.catName} the Packer hides until it breaks. A scan before the fight reads it.` : !c.name ? `${an(c.catName)} ${c.catName} you haven't seen.` : c.rule ? `${c.name} is ${what}. ${c.rule} ${c.answer}` : `${c.name} is ${what}. ${how}`;
+  const title = c.packed ? `Packed: ${an(c.catName)} ${c.catName} the Packer hides until it breaks. A scan before the fight reads it.` : !c.name ? `${an(c.catName)} ${c.catName} you haven't seen.` : c.rule ? `${c.name}: ${what}. ${c.rule}${answerLine(c.answer)}` : `${c.name}: ${what}. ${how}`;
   return `<span class="gchip g-${c.src}${c.name ? '' : ' unknown'}${c.packed ? ' packed' : ''}"${c.name ? `style="--ax:${ax.colour}"` : ''} ${extra} title="${esc(title)}">${glyph(c.name ? ax.icon : CATS[c.cat].icon)}${esc(c.name ? c.name.toLowerCase() : '???')}</span>`;
 }
 function geneChips(s, v) {
@@ -493,11 +493,11 @@ export function collectionSets(s) {
 // What a component does and what answers it (fightread.mjs partRead), for the codex and the board. ??? until decoded.
 export function partAbout(p, v = null, s = null) {
   const r = partRead(s, v || { parts: [p] }, p);
-  return `${r.does} ${r.answer}`;
+  return `${r.does}${answerLine(r.answer)}`;
 }
 function partTags(s, p) {
   const e = s.encounter, tags = [], pk = packed(s, e.virus, p); // a Packer standing: a rolled part's rule reads as ???
-  if (pk && p.integrity > 0) tags.push(`<span class="tag packed" title="${esc('The Packer hides what this part is until it breaks.')}">${glyph('crate')}???</span>`);
+  if (pk && p.integrity > 0) tags.push(`<span class="tag packed" title="${esc('Packed: its name and rule are hidden until the Packer breaks.')}">${glyph('crate')}???</span>`);
   if (p.veiled && p.armor > 0) tags.push(`<span class="tag" title="${VEIL_NOTE}">veiled</span>`);
   if (p.exposedUntil >= e.cycle) tags.push(`<span class="tag you" title="Exposed: hits on it have a 25% higher chance to critically strike">exposed ${p.exposedUntil - e.cycle + 1}</span>`);
   if (e.virus.weakKnown && e.virus.weakPoint === p.id) tags.push('<span class="tag you" title="+50% damage for the rest of the fight">weak</span>');
@@ -505,38 +505,38 @@ function partTags(s, p) {
   if (p.hookedUntil >= e.cycle) tags.push(`<span class="tag you" title="Hooked: every hit on it deals 6 additional damage">hooked ${p.hookedUntil - e.cycle + 1}</span>`);
   if (p.throttledUntil >= e.cycle) tags.push(`<span class="tag you" title="Throttled: its attacks deal half damage">throttled ${p.throttledUntil - e.cycle + 1}</span>`);
   if (p.quarantinedUntil >= e.cycle) tags.push(`<span class="tag you" title="Quarantined: it takes 25% more damage while its attack waits">quarantined ${p.quarantinedUntil - e.cycle + 1}</span>`);
-  if (p.phase && p.integrity > 0) tags.push(e.cycle % 2 ? '<span class="tag hot" title="Out of phase: hits pass through it this cycle, and 15% of your command bounces back at you">phased out</span>' : '<span class="tag you" title="In phase: hit it now">in phase</span>');
-  if (p.attack?.windup && p.attack.due - e.cycle <= 2 && p.integrity > 0) tags.push(`<span class="tag hot" title="Winding up: deal ${p.attack.windup} damage before it lands to call it off">wind-up ${p.attack.wound || 0}/${p.attack.windup}</span>`);
-  if (p.enrage && p.integrity > 0 && p.integrity < p.max / 2) tags.push('<span class="tag hot" title="Below half: its attacks deal 30% more damage">enraged</span>');
+  if (p.phase && p.integrity > 0) tags.push(e.cycle % 2 ? '<span class="tag hot" title="Out of phase: your hits pass through it this cycle, and 15% of each command hits you">phased out</span>' : '<span class="tag you" title="In phase: takes damage this cycle">in phase</span>');
+  if (p.attack?.windup && p.attack.due - e.cycle <= 2 && p.integrity > 0) tags.push(`<span class="tag hot" title="Winding up: dealing ${p.attack.windup} damage to it before it lands calls it off">wind-up ${p.attack.wound || 0}/${p.attack.windup}</span>`);
+  if (p.enrage && p.integrity > 0 && p.integrity < p.max / 2) tags.push('<span class="tag hot" title="Enraged: deals 30% more damage below half Integrity">enraged</span>');
   // A Keyring's re-arm, a Mutex's lock and its relock: the tether between the rows says them (boardMarkup tethers).
-  if (p.attack?.grow && p.integrity > 0) tags.push(`<span class="tag hot" title="Its Trace-back deals more damage every cycle the fight lasts">+${p.attack.bonus || 0}</span>`);
-  if (p.ratchet && p.integrity > 0) { const now = heatOf(p, e.cycle); tags.push(`<span class="tag hot esc" title="${esc(`${p.ratchet.name}: from cycle ${p.ratchet.from + 1} it deals damage to you every cycle, ${p.ratchet.amount} more every ${p.ratchet.every} cycles it lives. Break it to end it; Purge or Rollback starts it over.`)}">▲ ratchet${now ? ` ${now}` : ''}</span>`); }
-  if (p.echo && p.integrity > 0) tags.push('<span class="tag hot" title="While this lives, every hit you take repeats next cycle at half damage">echoing</span>');
+  if (p.attack?.grow && p.integrity > 0) tags.push(`<span class="tag hot" title="Trace-back: deals more damage every cycle the fight lasts">+${p.attack.bonus || 0}</span>`);
+  if (p.ratchet && p.integrity > 0) { const now = heatOf(p, e.cycle); tags.push(`<span class="tag hot esc" title="${esc(`${p.ratchet.name}: from cycle ${p.ratchet.from + 1}, deals damage to you every cycle, ${p.ratchet.amount} more every ${p.ratchet.every} cycles while the ${p.name} stands. Purge or Rollback starts it over.${answerLine('Break it early to end the Ratchet.')}`)}">▲ ratchet${now ? ` ${now}` : ''}</span>`); }
+  if (p.echo && p.integrity > 0) tags.push('<span class="tag hot" title="Echoing: while it stands, every hit you take repeats 1 cycle later at half damage">echoing</span>');
   const ap = appraisedOf(s); // Kestrel's Appraisal (faction-gear.mjs): its next hit, and more damage to it until it breaks
   if (ap?.part === p.id && p.integrity > 0) tags.push(`<span class="tag you appraised" title="${esc(`${ap.name}: you deal ${ap.value}% more to it until it breaks.${p.attack ? ` Its next hit: ${blocked(s, attackAmount(p))}.` : ''}`)}">${glyph('f-kestrel')}${p.attack ? `−${blocked(s, attackAmount(p))}` : `+${ap.value}%`}</span>`);
   // A breach's rolled mutation lives on a part (breach.mjs): break the part and the rule ends.
-  for (const id of p.integrity > 0 ? p.carries || [] : []) tags.push(`<span class="tag hot carrier" title="${esc(`Carries ${GENES[id]?.name || id}. ${GENES[id]?.does || ''} Break this part and the rule ends.`)}">${esc((GENES[id]?.name || id).toLowerCase())}</span>`);
+  for (const id of p.integrity > 0 ? p.carries || [] : []) tags.push(`<span class="tag hot carrier" title="${esc(`${GENES[id]?.name || id}: ${GENES[id]?.does || ''} Breaking this part ends the rule.`)}">${esc((GENES[id]?.name || id).toLowerCase())}</span>`);
   // Mutations: an Adaptive part one more cycle of hits from hardening; damage a Rerouting virus moved here.
-  if (mutated(s, 'adaptive') && p.integrity > 0 && p.adaptRun >= 2 && p.adaptAt === e.cycle - 1) tags.push('<span class="tag hot" title="Hit it again this cycle and it gains a ◆ at the end of the cycle">adapting</span>');
-  if (p.rerouted && p.integrity > 0) tags.push(`<span class="tag hot" title="Rerouted from a broken part: its attack deals ${p.rerouted} more">+${p.rerouted} rerouted</span>`);
+  if (mutated(s, 'adaptive') && p.integrity > 0 && p.adaptRun >= 2 && p.adaptAt === e.cycle - 1) tags.push('<span class="tag hot" title="Adapting: gains 1 ◆ at the end of this cycle if your commands hit it again">adapting</span>');
+  if (p.rerouted && p.integrity > 0) tags.push(`<span class="tag hot" title="Rerouted: its attack deals ${p.rerouted} more damage, passed on from a broken part">+${p.rerouted} rerouted</span>`);
   // Parts that change the fight (data.mjs FAMILIES): a Tripwire, the C2 Node, the parts gone loud.
-  if (p.deadman && p.integrity > 0 && !pk) tags.push(`<span class="tag hot" title="Break it while the others stand and they go loud, dealing ${Math.round((CONFIG.tripwire.loud - 1) * 100)}% more damage and attacking a cycle sooner. Break it last.">tripwire</span>`);
-  if (p.loud && p.integrity > 0) tags.push(`<span class="tag hot" title="The Tripwire set it off: its attacks deal ${Math.round((CONFIG.tripwire.loud - 1) * 100)}% more damage">loud</span>`);
+  if (p.deadman && p.integrity > 0 && !pk) tags.push(`<span class="tag hot" title="${esc(`Tripwire: when broken while the others stand, they go loud. Loud parts deal ${Math.round((CONFIG.tripwire.loud - 1) * 100)}% more damage and attack 1 cycle sooner.${answerLine('Break it last.')}`)}">tripwire</span>`);
+  if (p.loud && p.integrity > 0) tags.push(`<span class="tag hot" title="Loud: deals ${Math.round((CONFIG.tripwire.loud - 1) * 100)}% more damage and attacks 1 cycle sooner">loud</span>`);
   // Fallback (combat.mjs): the part that takes over its partner's attack when the partner breaks first.
-  if (p.fallback && p.integrity > 0) { const t = e.virus.parts.find((x) => x.id === p.fallback); if (p.tookOver) tags.push(`<span class="tag hot" title="${esc(`It took over the ${t?.name || 'broken part'}'s ${t?.attack?.name || 'attack'} when the ${t?.name || 'other part'} broke.`)}">took over</span>`); else if (t && t.integrity > 0 && t.attack) tags.push(`<span class="tag hot" title="${esc(`Fallback: break the ${t.name} while the ${p.name} stands and the ${p.name} takes over its ${t.attack.name}.`)}">fallback</span>`); }
+  if (p.fallback && p.integrity > 0) { const t = e.virus.parts.find((x) => x.id === p.fallback); if (p.tookOver) tags.push(`<span class="tag hot" title="${esc(`Took over: took over the ${t?.name || 'broken part'}'s ${t?.attack?.name || 'attack'} when the ${t?.name || 'other part'} broke.`)}">took over</span>`); else if (t && t.integrity > 0 && t.attack) tags.push(`<span class="tag hot" title="${esc(`Fallback: if the ${t.name} breaks first, the ${p.name} takes over its ${t.attack.name}.`)}">fallback</span>`); }
   // The parts plan (data.mjs BASICS, genes.mjs): an Accumulator's charge, a Hotspot's glow, the Idle Timer's countdown on
   // the signature's row, an Obfuscator's smoke.
-  if (p.accum && p.attack && p.integrity > 0) { const n = Math.max(0, p.attack.due - e.cycle), k = p.attack.interval, f = Math.max(0, Math.min(k, k - n)); tags.push(`<span class="tag hot accum" title="${esc(`Charging its ${p.attack.name}: it lands ${n <= 0 ? 'this cycle' : n === 1 ? 'next cycle' : `in ${n} cycles`}, for ${blocked(s, attackAmount(p))}.`)}">${glyph('damage')}<i class="acc-bar"><b style="width:${Math.round((f / k) * 100)}%"></b></i></span>`); }
-  if (p.hotspot && p.integrity > 0 && !pk) tags.push(`<span class="tag hot hotspot" title="${esc('Hot: a hit from your command turns the virus\'s next attack 2 or more cycles away into a charge. Burns and helpers don\'t set it off.')}">${glyph('burn')}hot</span>`);
+  if (p.accum && p.attack && p.integrity > 0) { const n = Math.max(0, p.attack.due - e.cycle), k = p.attack.interval, f = Math.max(0, Math.min(k, k - n)); tags.push(`<span class="tag hot accum" title="${esc(`${p.attack.name}: lands ${n <= 0 ? 'this cycle' : n === 1 ? 'next cycle' : `in ${n} cycles`} and deals ${blocked(s, attackAmount(p))} damage to you.`)}">${glyph('damage')}<i class="acc-bar"><b style="width:${Math.round((f / k) * 100)}%"></b></i></span>`); }
+  if (p.hotspot && p.integrity > 0 && !pk) tags.push(`<span class="tag hot hotspot" title="${esc('Hot: when your command hits it, the virus\'s next attack 2 or more cycles away becomes a charge. Burns and helpers do not set it off.')}">${glyph('burn')}hot</span>`);
   const idler = p.special && p.integrity > 0 && e.virus.parts.find((x) => x.idle && x.integrity > 0 && !packed(s, e.virus, x));
   if (idler) { const left = Math.max(0, idler.idle - (e.cycle - (e.virus.idleHit || 0))); tags.push(`<span class="tag${left <= 2 ? ' hot' : ''} idlepips" title="${esc(`${idler.name}: ${left ? `every part re-arms to full ◆ in ${left} ${left === 1 ? 'cycle' : 'cycles'}` : 'every part re-arms at the end of this cycle'} unless your command hits the ${p.name}.`)}">${glyph('clock')}${'●'.repeat(left)}<i>${'○'.repeat(Math.max(0, idler.idle - left))}</i></span>`); }
-  if (p.obfuscate && p.integrity > 0) tags.push('<span class="tag" title="While it stands, every part hides its timers, ◆ or not. Tag still shows one.">smoke</span>');
+  if (p.obfuscate && p.integrity > 0) tags.push('<span class="tag" title="Smoke: while it stands, every part hides its timers, even with no ◆. Tag still reveals one.">smoke</span>');
   // The parts plan's P2: a Limiter's cap, a Spare on standby, a Damper's dropped kind, a Cold Store's thaw.
-  if (p.limit && p.integrity > 0 && !pk) tags.push(`<span class="tag limcap" title="${esc(`Limiter: no single hit takes more than ${limitOf(p)} of its Integrity. The rest is lost. Use many small hits.`)}">${glyph('shield')}cap ${limitOf(p)}</span>`);
-  if (asleep(p) && p.integrity > 0 && !pk) tags.push(`<span class="tag standby" title="${esc(p.bootAt ? `Booting: it comes up ${p.bootAt - e.cycle <= 0 ? 'at the end of this cycle' : `in ${p.bootAt - e.cycle} ${p.bootAt - e.cycle === 1 ? 'cycle' : 'cycles'}`} with the ${p.bootFrom?.name || 'signature'}'s attack, and drops its ◆.` : 'Standby: it sleeps under its ◆ until the signature part breaks. Then it boots with its attack and drops its ◆.')}">${glyph('snapshot')}${p.bootAt ? 'booting' : 'standby'}</span>`);
-  if (p.damper && p.integrity > 0 && !pk) { const k = DAMPED[p.damperKind] || DAMPED.burn; tags.push(`<span class="tag damper${p.armor > 0 ? '' : ' off'}" title="${esc(p.armor > 0 ? `Damper: while it wears ◆, ${k.many} deal it no damage. They still break its ◆.` : `Damper: stripped. ${k.many[0].toUpperCase() + k.many.slice(1)} hurt it again until its ◆ patches back.`)}">${glyph(k.icon)}<s>${esc(k.short)}</s></span>`); }
-  if (frozenNow(s, p) && !pk) { const k = p.thawAt ?? p.frozen, f = Math.max(0, Math.min(1, (e.cycle - 1) / k)), n = k - e.cycle + 1; tags.push(`<span class="tag frost" title="${esc(`Frozen: off the timeline, and nothing reaches it. It thaws ${n <= 1 ? 'at the end of this cycle' : `in ${n} cycles`}, and its first hit comes 2 cycles after.`)}">${glyph('clock')}<i class="thaw-bar"><b style="width:${Math.round(f * 100)}%"></b></i></span>`); }
-  if (p.command && p.integrity > 0) tags.push(`<span class="tag hot" title="While it lives, fragments gnaw ${Math.round(CONFIG.c2.gnaw * 100)}% harder. Break it and every fragment drops with it.">commands fragments</span>`);
+  if (p.limit && p.integrity > 0 && !pk) tags.push(`<span class="tag limcap" title="${esc(`Limiter: no single hit takes more than ${limitOf(p)} of its Integrity. Damage past the cap is lost.${answerLine('Use many small hits.')}`)}">${glyph('shield')}cap ${limitOf(p)}</span>`);
+  if (asleep(p) && p.integrity > 0 && !pk) tags.push(`<span class="tag standby" title="${esc(p.bootAt ? `Booting: boots ${p.bootAt - e.cycle <= 0 ? 'at the end of this cycle' : `in ${p.bootAt - e.cycle} ${p.bootAt - e.cycle === 1 ? 'cycle' : 'cycles'}`} with the ${p.bootFrom?.name || 'signature'}'s attack. Drops its ◆ as it boots.${answerLine('Break it first, or once it boots.')}` : `Standby: sleeps under its ◆ until the signature part breaks. Then boots with its attack and drops its ◆.${answerLine('Pay for its ◆ asleep, or its Integrity once booted.')}`)}">${glyph('snapshot')}${p.bootAt ? 'booting' : 'standby'}</span>`);
+  if (p.damper && p.integrity > 0 && !pk) { const k = DAMPED[p.damperKind] || DAMPED.burn; tags.push(`<span class="tag damper${p.armor > 0 ? '' : ' off'}" title="${esc(p.armor > 0 ? `Damper: while it wears ◆, immune to damage from ${k.many}. ${k.many[0].toUpperCase() + k.many.slice(1)} still break its ◆.` : `Damper: stripped. ${k.many[0].toUpperCase() + k.many.slice(1)} damage it again until its ◆ patches back.`)}">${glyph(k.icon)}<s>${esc(k.short)}</s></span>`); }
+  if (frozenNow(s, p) && !pk) { const k = p.thawAt ?? p.frozen, f = Math.max(0, Math.min(1, (e.cycle - 1) / k)), n = k - e.cycle + 1; tags.push(`<span class="tag frost" title="${esc(`Frozen: off the timeline and immune to damage. Thaws ${n <= 1 ? 'at the end of this cycle' : `in ${n} cycles`}. Its first hit lands 2 cycles after the thaw.`)}">${glyph('clock')}<i class="thaw-bar"><b style="width:${Math.round(f * 100)}%"></b></i></span>`); }
+  if (p.command && p.integrity > 0) tags.push(`<span class="tag hot" title="${esc(`${p.name}: fragments deal ${Math.round(CONFIG.c2.gnaw * 100)}% more damage while it stands. When it breaks, every fragment drops.`)}">commands fragments</span>`);
   const burn = (e.burns || []).filter((b) => b.target === p.id);
   // Burns, one tag per kind: the damage a cycle in all, and how many when there's more than one of a kind
   // (Inject is one a part: pressing it again refreshes it).

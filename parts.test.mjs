@@ -543,12 +543,12 @@ test('Scraper: its landing takes your ◆ (its hit goes past them) and what is l
 test('Packer: while it stands the virus\'s rolled rules read as ???; breaking it, or a scan before the fight, unpacks them', () => {
   const s = fight2(20, 'ghostroot', ['packer', 'frontend']), fe = part(s, 'frontend');
   s.research = { 'ghostroot:frontend': 60 };
-  assert.match(partTip(s, s.encounter.virus, fe), /Packed/);
+  assert.match(partTip(s, s.encounter.virus, fe), /hidden until the Packer breaks/);
   assert.match(boardMarkup(s), /tag packed/);
   assert.match(hudMarkup(s), /data-packed="1"/);
   assert.ok(s.encounter.virus.name.startsWith('PACKED'), 'it names the virus');
   hit(s, part(s, 'packer'), 99999, { pierce: true, server: true });
-  assert.doesNotMatch(partTip(s, s.encounter.virus, fe), /Packed/, 'broken: unpacked');
+  assert.doesNotMatch(partTip(s, s.encounter.virus, fe), /hidden until the Packer breaks/, 'broken: unpacked');
   const t = fresh(); t.metAll = true; t.run = { loc: 'sim', cwd: '/', integrity: 300, max: 300, pack: [], visited: ['/'], unpack: [] };
   const opts = { mode: 'run', room: '/x', level: 20, family: 'ghostroot', basic: 'pulse', genes: ['packer', 'frontend'], mutation: null, quiet: true };
   t.run.unpack.push(encounterVirus(t, 'random', 77, opts).id);

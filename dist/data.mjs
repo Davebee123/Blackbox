@@ -433,7 +433,7 @@ export const FAMILIES = {
     name: 'Ghostroot',
     stem: 'GHOSTROOT',
     threatens: 'Integrity',
-    summary: 'Its timers stay hidden while its parts are armored. The Scrambler hits you and Scrambles you for 2 cycles. While you are Scrambled, each of your attacks has a 25% chance to hit you instead, at half damage.',
+    summary: 'Its parts hide their timers while they wear ◆. The Scrambler hits you and Scrambles you for 2 cycles. While you are Scrambled, each of your attacks has a 25% chance to hit you instead, at half damage.',
     core: ['surge', 'scramble', 'veil'],
     basic: [['strobe', 1], ['prism', 3], ['obfuscator', 5]],
     third: ['decoymirror', 'hotspot', 'mimic', 'frontend', 'spare', 'packer', 'badblock'], // the Decoy from level 4, the Hotspot from 6, the Mimic from 8, the Front End from 10, the Spare from 14, the Packer from 20, the Bad Block from 21
@@ -455,58 +455,69 @@ const PULSE = (amount, first) => ({ id: 'pulse', name: 'Pulse Node', integrity: 
 export const STRAINS = {
   keylogger: {
     lineage: 'ghostroot', from: 4, depth: 2, name: 'Keylogger', genes: ['synclock', 'keystrokedump'], tell: { name: 'Keystorm', gene: 'overcharge' },
-    rule: 'A Sync Window opens every cycle. The Logger takes damage only from commands fired inside the window. Every command fired outside it is logged, and at 3 logs the Logger Dumps for 18 damage. It also Dumps on its own every 6 cycles.',
+    rule: 'A Sync Window opens every cycle. The Logger takes damage only from commands fired inside the window. The Logger logs every command fired outside it. At 3 logs, its Dump deals 18 damage to you. The Logger also Dumps every 6 cycles.',
+    answer: 'Fire inside the Sync Window.',
     parts: [PULSE(12, 3), { id: 'logger', name: 'Logger', integrity: 30, armor: 1, loot: 'Logger Spool', special: true, syncOnly: true, attack: { name: 'Dump', effect: 'damage', amount: 18, interval: 6, first: 6, dump: true } }],
   },
   hashrat: {
     lineage: 'ransomware', from: 5, depth: 2, name: 'Hashrat', genes: ['cycletax'], tell: { name: 'Overcharge', part: 'basic', gene: 'overcharge' },
-    rule: 'While the Miner lives, your cooldowns tick down only every other cycle. Once it is the last part left, it Overclocks for 4 damage every 2 cycles.',
+    rule: 'While the Miner stands, your cooldowns tick down only every other cycle. As the last part left, the Miner\'s Overclock deals 4 damage to you every 2 cycles.',
+    answer: 'Break the Miner first.',
     parts: [PULSE(12, 3), { id: 'miner', name: 'Miner', integrity: 30, armor: 0, loot: 'Miner Rig', special: true, tax: true, attack: { name: 'Overclock', effect: 'damage', amount: 4, interval: 2, first: 2, alone: true } }],
   },
   floodgate: {
     lineage: 'worm', from: 6, depth: 2, name: 'Floodgate', genes: ['floodramp'], tell: { name: 'Deluge', gene: 'overcharge' },
     rule: 'The Flooder attacks every cycle, dealing 1 more damage each time. Any delay resets it.',
+    answer: 'Delay the Flooder, or break it.',
     parts: [PULSE(12, 4), { id: 'flooder', name: 'Flooder', integrity: 28, armor: 0, loot: 'Flood Valve', special: true, attack: { name: 'Flood', effect: 'damage', amount: 2, interval: 1, first: 2, ramp: 1 } }],
   },
   leech: {
     lineage: 'worm', from: 8, depth: 2, name: 'Leech', genes: ['siphon'], tell: { name: 'Gorge', gene: 'hotfix' },
-    rule: 'The Tap\'s bite heals the most damaged part for all the damage it deals, and removes one burn from that part.',
+    rule: 'The Tap\'s Siphon heals the most damaged part for the damage it deals. It also removes 1 burn from that part.',
+    answer: 'Shrink the Siphon with shields, or break the Tap.',
     parts: [PULSE(12, 4), { id: 'tap', name: 'Tap', integrity: 28, armor: 1, loot: 'Tap Fang', special: true, attack: { name: 'Siphon', effect: 'damage', amount: 8, interval: 3, first: 3, siphon: true } }],
   },
   sleeper: {
     lineage: 'ghostroot', from: 10, depth: 2, name: 'Sleeper', genes: ['dormant'], tell: { name: 'Wake-up Call', gene: 'overcharge' }, dormant: 6,
-    rule: 'Stays dormant until you deal damage or cycle 6 begins. When it wakes, the Cell sounds an Alarm for 14 damage, and the Pulse Node attacks 1 cycle faster from then on.',
+    rule: 'Dormant until you deal damage or cycle 6 begins. When it wakes, the Cell\'s Alarm deals 14 damage to you. From then on, the Pulse Node attacks 1 cycle faster.',
+    answer: 'Set up before it wakes, then open big.',
     parts: [PULSE(14, 3), { id: 'cell', name: 'Cell', integrity: 32, armor: 1, loot: 'Cell Key', special: true, attack: { name: 'Alarm', effect: 'damage', amount: 14, interval: 5, first: 999, alarm: true } }],
   },
   // Wave 1b: six more for the early climb (levels 3–11), all from layer 2.
   patchwork: {
     lineage: 'worm', from: 3, depth: 2, name: 'Patchwork', genes: ['mend'], tell: { name: 'Hotfix', gene: 'hotfix' },
-    rule: 'Every 3 cycles, the Patcher heals the most damaged part for 12. Break the Pulse Node first and the Patcher drops its Patch and takes over the Surge (Fallback). Break the Patcher first, or burst the other part down between heals.',
+    rule: 'Every 3 cycles, the Patcher heals the most damaged part for 12. If the Pulse Node breaks first, the Patcher drops its Patch and takes over the Surge.',
+    answer: 'Break the Patcher first, or burst a part between heals.',
     parts: [PULSE(12, 4), { id: 'patcher', name: 'Patcher', integrity: 28, armor: 1, loot: 'Patch Kit', special: true, fallback: 'pulse', attack: { name: 'Patch', effect: 'heal', amount: 12, interval: 3, first: 3 } }],
   },
   flicker: {
     lineage: 'ghostroot', from: 4, depth: 2, name: 'Flicker', genes: ['phaseshift'], tell: { name: 'Blink', gene: 'overcharge' },
-    rule: 'The Shade is present only on even cycles, and it attacks only then. On odd cycles, your hits pass through it and 15% of the damage bounces back at you.',
+    rule: 'The Shade attacks only on even cycles. On odd cycles, your hits pass through the Shade and 15% of the damage hits you.',
+    answer: 'Hit the Shade on even cycles.',
     parts: [PULSE(13, 3), { id: 'shade', name: 'Shade', integrity: 22, armor: 1, loot: 'Shade Lens', special: true, phase: true, attack: { name: 'Fade', effect: 'damage', amount: 5, interval: 2, first: 2 } }],
   },
   extortion: {
     lineage: 'ransomware', from: 6, depth: 2, name: 'Extortion', genes: ['deadline'], tell: { name: 'Overcharge', part: 'basic', gene: 'overcharge' },
-    rule: 'The Demand winds up a Deadline for 26 damage. Dealing 14 damage to the Demand in the 2 cycles before it lands calls the Deadline off.',
+    rule: 'The Demand winds up a Deadline that deals 26 damage to you. Dealing 14 damage to the Demand in the 2 cycles before it lands calls the Deadline off.',
+    answer: 'Save a burst for the wind-up.',
     parts: [PULSE(12, 3), { id: 'demand', name: 'Demand', integrity: 40, armor: 0, loot: 'Ransom Note', special: true, attack: { name: 'Deadline', effect: 'damage', amount: 26, interval: 5, first: 4, windup: 14 } }],
   },
   echo: {
     lineage: 'ghostroot', from: 8, depth: 2, name: 'Echo', genes: ['echo'], tell: { name: 'Feedback', gene: 'overcharge' },
-    rule: 'While the Echo lives, every hit you take repeats 1 cycle later at half damage. The Echo also Reverbs for 6 damage every 4 cycles.',
+    rule: 'While the Echo stands, every hit you take repeats 1 cycle later at half damage. The Echo\'s Reverb also deals 6 damage to you every 4 cycles.',
+    answer: 'Break the Echo early.',
     parts: [PULSE(14, 3), { id: 'echo', name: 'Echo', integrity: 30, armor: 1, loot: 'Echo Chamber', special: true, echo: true, attack: { name: 'Reverb', effect: 'damage', amount: 6, interval: 4, first: 3 } }],
   },
   bricker: {
     lineage: 'ransomware', from: 9, depth: 2, name: 'Bricker', genes: ['rage'], tell: { name: 'Brick Wall', gene: 'overcharge' }, enrage: true,
-    rule: 'Each part deals 30% more damage once it drops below half Integrity. Take each part from healthy to broken in one burst.',
+    rule: 'Each part deals 30% more damage once it drops below half Integrity.',
+    answer: 'Take each part from healthy to broken in one burst.',
     parts: [PULSE(12, 3), { id: 'locker', name: 'Locker', integrity: 36, armor: 1, loot: 'Brick Key', special: true, attack: { name: 'Brick', effect: 'damage', amount: 10, interval: 3, first: 3 } }],
   },
   overrun: {
     lineage: 'worm', from: 11, depth: 2, name: 'Overrun', genes: ['hivebrood'], tell: { name: 'Swarm', spawn: 1, gene: 'massmailer' },
-    rule: 'The Hive spawns fragments whose bite deals 1 more damage every cycle they live. Clear them young, or break the Hive.',
+    rule: 'The Hive spawns fragments. Each fragment\'s bite deals 1 more damage every cycle it lives.',
+    answer: 'Clear fragments young, or break the Hive.',
     parts: [PULSE(10, 4), { id: 'hive', name: 'Hive', integrity: 34, armor: 1, loot: 'Hive Comb', special: true, overrun: true, attack: { name: 'Swarm', effect: 'replicate', amount: 1, interval: 4, first: 2 } }],
   },
 };
@@ -540,7 +551,7 @@ export const GUARDS = {
     threatens: 'Signal',
     guard: true,
     art: 'watchdog',
-    summary: 'A security program guarding a directory. The Tracker winds up one big hit.',
+    summary: 'A security program guarding a directory. Its Tracker lands one big hit every 5 cycles.',
     parts: [
       { id: 'sentry', name: 'Sentry', integrity: 24, armor: 0, loot: 'Sentry Lens', attack: { name: 'Sweep', effect: 'damage', amount: 6, interval: 3, first: 2 } },
       { id: 'tracker', name: 'Tracker', integrity: 28, armor: 1, loot: 'Tracker Core', special: true, attack: { name: 'Trace-back', effect: 'damage', amount: 16, interval: 5, first: 4 } },
@@ -552,7 +563,7 @@ export const GUARDS = {
     threatens: 'Signal',
     guard: true,
     art: 'ghostroot',
-    summary: 'A veiled security program. Its timers stay hidden while its parts are armored.',
+    summary: 'A veiled security program. Its parts hide their timers while they wear ◆.',
     parts: [
       { id: 'pulse', name: 'Lens', integrity: 24, armor: 1, veiled: true, loot: 'Sentinel Lens', attack: { name: 'Glare', effect: 'damage', amount: 10, interval: 4, first: 3 } },
       { id: 'scrambler', name: 'Lockout', integrity: 24, armor: 1, veiled: true, loot: 'Lockout Relay', special: true, attack: { name: 'Lockout', effect: 'damage', amount: 7, interval: 3, first: 2 } },
@@ -564,7 +575,7 @@ export const GUARDS = {
     threatens: 'Signal',
     guard: true,
     art: 'worm',
-    summary: 'A nesting guard. The Brood spawns fragments that gnaw your Signal every cycle. Break the Maw first and the Brood takes over its Bite.',
+    summary: 'A nesting guard. Its Brood spawns fragments that deal damage to your Signal every cycle. If the Maw breaks first, the Brood takes over its Bite.',
     parts: [
       { id: 'pulse', name: 'Maw', integrity: 24, armor: 0, loot: 'Crawler Maw', attack: { name: 'Bite', effect: 'damage', amount: 7, interval: 3, first: 2 } },
       { id: 'replicator', name: 'Brood', integrity: 28, armor: 1, loot: 'Brood Seed', special: true, fallback: 'pulse', attack: { name: 'Brood', effect: 'replicate', amount: 1, interval: 4, first: 3 } },
@@ -576,7 +587,7 @@ export const GUARDS = {
     threatens: 'Signal',
     guard: true,
     art: 'ransomware',
-    summary: 'An archive guard. The Shredder winds up one heavy strike on your Signal.',
+    summary: 'An archive guard. Its Shredder lands one heavy strike on your Signal every 5 cycles.',
     parts: [
       { id: 'pulse', name: 'Grinder', integrity: 26, armor: 1, loot: 'Grinder Core', attack: { name: 'Grind', effect: 'damage', amount: 9, interval: 4, first: 3 } },
       { id: 'encryptor', name: 'Shredder', integrity: 26, armor: 1, loot: 'Shredder Blade', special: true, attack: { name: 'Shred', effect: 'damage', amount: 14, interval: 5, first: 4 } },
@@ -591,8 +602,9 @@ export const GUARDS = {
     guard: true,
     ice: true,
     art: 'ransomware',
-    rule: 'Every 4 cycles, the Keyring re-arms the Gate to full armor. After 3 re-arms it overheats. The Keyring has no attack of its own, but break the Gate while it stands and the Keyring takes over its Ram (Fallback). Break the Gate between re-arms, or the Keyring first when the Gate\'s armor is too thick to get through in time.',
-    summary: 'ICE on the door. The Keyring keeps re-arming the Gate, and takes over its Ram if the Gate breaks first.',
+    rule: 'Every 4 cycles, the Keyring re-arms the Gate to full ◆. Overheats after 3 re-arms. The Keyring has no attack of its own. If the Gate breaks first, the Keyring takes over its Ram.',
+    answer: 'Break the Gate between re-arms.',
+    summary: 'ICE on the door. Its Keyring re-arms the Gate, and takes over its Ram if the Gate breaks first.',
     parts: [
       { id: 'pulse', name: 'Gate', integrity: 30, armor: 3, loot: 'Gate Hinge', attack: { name: 'Ram', effect: 'damage', amount: 10, interval: 3, first: 2 } },
       { id: 'encryptor', name: 'Keyring', integrity: 22, armor: 1, loot: 'Keyring', special: true, rearm: 4, fallback: 'pulse' },
@@ -605,7 +617,8 @@ export const GUARDS = {
     guard: true,
     ice: true,
     art: 'watchdog',
-    rule: 'Its Trace-back deals more damage every cycle the fight goes on. Race it.',
+    rule: 'The Tracker\'s Trace-back deals more damage every cycle the fight goes on.',
+    answer: 'Break the Tracker early.',
     summary: 'Trace ICE. Every cycle you spend brings it closer.',
     parts: [
       { id: 'sentry', name: 'Probe', integrity: 22, armor: 0, loot: 'Probe Lens', attack: { name: 'Ping', effect: 'damage', amount: 4, interval: 2, first: 2 } },
@@ -810,13 +823,13 @@ export const BOSSES = {
   foreman: { name: 'THE FOREMAN', family: 'ransomware', hp: 13, dmg: 0.45, enrageAt: 22, phases: [], raid: FOREMAN },
   heatsink: { name: 'HEATSINK', family: 'worm', hp: 17, dmg: 0.45, enrageAt: 25, phases: [], raid: HEATSINK },
   coldwallet: { name: 'COLDWALLET', family: 'ghostroot', hp: 8.8, dmg: 0.45, enrageAt: 18, phases: [], raid: COLDWALLET },
-  choir: { name: 'HOLLOW CHOIR', family: 'ghostroot', hp: 1.6, dmg: 1, enrageAt: 16, signature: { name: 'Harmony', rule: 'At half Integrity, its Decoy\'s mirror bounces back 50% of your command instead of 30%.' }, phases: [{ at: 0.5, do: ['harmony'], say: 'The Hollow Choir finds its harmony. On the Decoy\'s beat, half of what you fire now bounces back.' }] },
+  choir: { name: 'HOLLOW CHOIR', family: 'ghostroot', hp: 1.6, dmg: 1, enrageAt: 16, signature: { name: 'Harmony', rule: 'At half Integrity, the Decoy reflects 50% of your command instead of 30%.' }, phases: [{ at: 0.5, do: ['harmony'], say: 'The Hollow Choir finds its harmony. On the Decoy\'s beat, half of what you fire now bounces back.' }] },
   // Native bosses (network.mjs): each network rolls one of these for its lair, a rogue server of its own. Solo bosses
   // on the tells framework: every tell open at their level, a signature charge of their own (TELLS, TELL_SETS by id;
   // a strain boss renames its strain's charge), a third part they always bring (third), and phases. Their drops are
   // their network's native uniques (BOSS_LOOT odds and pity).
   'nb-deadbolt': { name: 'DEADBOLT', family: 'ransomware', third: 'mutex', native: true, lair: 'DEADBOLT-VAULT', hp: 1.25, dmg: 1, enrageAt: 18, about: 'A Mutex locks its Encryptor. At 60% Integrity it re-arms every part, and at 30% a second Mutex throws a fresh lock.', phases: [{ at: 0.6, do: ['rearm'], say: 'DEADBOLT re-arms every part.' }, { at: 0.3, do: ['spawn:mutex'], say: 'DEADBOLT throws a second Mutex. The Encryptor is locked again.' }] },
-  'nb-tripmine': { name: 'TRIPMINE', family: 'ransomware', third: 'tripwire', native: true, lair: 'TRIPMINE-YARD', hp: 1.6, dmg: 1, enrageAt: 18, about: 'If its Tripwire breaks first, the other parts go loud. Below level 20 it brings a Lockbox instead. At half Integrity, every attack comes a cycle sooner.', phases: [{ at: 0.5, do: ['faster'], say: 'TRIPMINE arms the yard. Every attack comes a cycle sooner.' }] },
+  'nb-tripmine': { name: 'TRIPMINE', family: 'ransomware', third: 'tripwire', native: true, lair: 'TRIPMINE-YARD', hp: 1.6, dmg: 1, enrageAt: 18, about: 'If its Tripwire breaks first, the other parts go loud. Below level 20 it brings a Lockbox instead. At half Integrity, every attack comes 1 cycle sooner.', phases: [{ at: 0.5, do: ['faster'], say: 'TRIPMINE arms the yard. Every attack comes a cycle sooner.' }] },
   // Since R1 (docs/servers.md 3.5) the interrupt answers a charge for every class, and a boss's charges and casts sit off
   // its ♛ part, so HASHLORD hits harder (dmg 1.5, was 1.1) and MIRRORSHADE too (1.15, was 0.9) to stay in the boss band.
   // Since gear follows one smooth curve (gear.mjs ITEM_CURVE) a player at their floors carries less Signal than the old
@@ -827,9 +840,9 @@ export const BOSSES = {
   'nb-hashlord': { name: 'HASHLORD', family: 'ransomware', strain: 'hashrat', native: true, lair: 'HASHLORD-RIG', charge: 'Difficulty Bomb', floor: 16, band: 'B',
     extra: [{ id: 'poollock', name: 'Pool Lock', integrity: 16, armor: 0, loot: 'Lock Pin', ward: 'miner', wardCommands: true }],
     signature: { name: 'Chain Fork', rule: 'At half Integrity, a second Miner spins up. Its cycle tax returns if the first Miner is gone, and the Pool Lock wards it too while the Lock stands.' },
-    hp: 3.9, dmg: 1.45, healerDmg: HASHLORD_LATE, enrageAt: 18, about: 'A Hashrat boss. While its Miner lives, your cooldowns tick down only every other cycle, and a Pool Lock wards the Miner against your commands. Burns and helpers get through at full. At 60% Integrity it re-arms every part, and at half the Chain Fork spins up a second Miner.', phases: [{ at: 0.6, do: ['rearm'], say: 'HASHLORD re-arms every part.' }, { at: 0.5, do: ['spawn:miner'], say: 'HASHLORD forks the chain. A second Miner spins up.' }] },
-  'nb-backorifice': { name: 'BACK ORIFICE', family: 'worm', third: 'c2', native: true, lair: 'BACKORIFICE-C2', hp: 1.3, dmg: 0.95, enrageAt: 17, about: 'A C2 Node commands its fragments. At half Integrity, every attack comes a cycle sooner, and at 25% a Mirror twins the Replicator.', phases: [{ at: 0.5, do: ['faster'], say: 'BACK ORIFICE opens every port. Every attack comes a cycle sooner.' }, { at: 0.25, do: ['spawn:mirror'], say: 'BACK ORIFICE spins up a Mirror. Break it and the Replicator together.' }] },
-  'nb-patchday': { name: 'PATCH TUESDAY', family: 'worm', strain: 'patchwork', native: true, lair: 'PATCHDAY-WSUS', charge: 'Rollup', hp: 2.2, dmg: 1.45, healerDmg: STRAIN_BOSS_LATE, enrageAt: 18, about: 'A Patchwork boss. Its Patcher heals the most damaged part, and takes over the Surge if its Pulse Node breaks first. At 60% Integrity it re-arms every part, and at 30% every attack comes a cycle sooner.', phases: [{ at: 0.6, do: ['rearm'], say: 'PATCH TUESDAY re-arms every part.' }, { at: 0.3, do: ['faster'], say: 'PATCH TUESDAY forces a reboot. Every attack comes a cycle sooner.' }] },
+    hp: 3.9, dmg: 1.45, healerDmg: HASHLORD_LATE, enrageAt: 18, about: 'A Hashrat boss. While its Miner stands, your cooldowns tick down only every other cycle. A Pool Lock wards the Miner against your commands. Burns and helpers deal full damage. At 60% Integrity it re-arms every part, and at half the Chain Fork spins up a second Miner.', phases: [{ at: 0.6, do: ['rearm'], say: 'HASHLORD re-arms every part.' }, { at: 0.5, do: ['spawn:miner'], say: 'HASHLORD forks the chain. A second Miner spins up.' }] },
+  'nb-backorifice': { name: 'BACK ORIFICE', family: 'worm', third: 'c2', native: true, lair: 'BACKORIFICE-C2', hp: 1.3, dmg: 0.95, enrageAt: 17, about: 'A C2 Node commands its fragments. At half Integrity, every attack comes 1 cycle sooner, and at 25% a Mirror twins the Replicator.', phases: [{ at: 0.5, do: ['faster'], say: 'BACK ORIFICE opens every port. Every attack comes a cycle sooner.' }, { at: 0.25, do: ['spawn:mirror'], say: 'BACK ORIFICE spins up a Mirror. Break it and the Replicator together.' }] },
+  'nb-patchday': { name: 'PATCH TUESDAY', family: 'worm', strain: 'patchwork', native: true, lair: 'PATCHDAY-WSUS', charge: 'Rollup', hp: 2.2, dmg: 1.45, healerDmg: STRAIN_BOSS_LATE, enrageAt: 18, about: 'A Patchwork boss. Its Patcher heals the most damaged part, and takes over the Surge if its Pulse Node breaks first. At 60% Integrity it re-arms every part, and at 30% every attack comes 1 cycle sooner.', phases: [{ at: 0.6, do: ['rearm'], say: 'PATCH TUESDAY re-arms every part.' }, { at: 0.3, do: ['faster'], say: 'PATCH TUESDAY forces a reboot. Every attack comes a cycle sooner.' }] },
   'nb-floodwall': { name: 'FLOODWALL', family: 'worm', strain: 'floodgate', native: true, lair: 'FLOODWALL-SLUICE', charge: 'Storm Surge', hp: 1.6, dmg: 0.95, healerDmg: STRAIN_BOSS_LATE, enrageAt: 18, about: 'A Floodgate boss. Its Flooder attacks every cycle, harder each time, and any delay resets it. At half Integrity it re-arms every part.', phases: [{ at: 0.5, do: ['rearm'], say: 'FLOODWALL re-arms every part.' }] },
   // MIRRORSHADE, rebuilt (docs/genome.md 7.5): NULL CHOIR's, from level 12. One feedback amplifier (the Mimic) on its Scramble,
   // a plain charge (Glass Cut), and the Doppelganger at half: the Mimic stops recording and takes the shape of the first part
@@ -840,8 +853,8 @@ export const BOSSES = {
     trim: { below: 14, part: 'scrambler', armor: 3, interval: 5 },
     signature: { name: 'Doppelganger', rule: 'At half Integrity, the Mimic stops recording and takes the shape of the first part you broke, with its attack and its ◆. If you have not broken one, it takes the shape of the Pulse Node.' },
     hp: 1.34, dmg: 1.08, mimic: 2, enrageAt: 17, about: 'A Mimic plays your commands back at you on its beat, at double damage while you are Scrambled. At 60% Integrity it re-arms every part, and at half the Mimic stops recording and becomes a Doppelganger of the first part you broke.', phases: [{ at: 0.6, do: ['rearm'], say: 'MIRRORSHADE re-arms every part.' }, { at: 0.5, do: ['doppelganger'], say: 'MIRRORSHADE\'s Mimic stops recording and takes a shape.' }] },
-  'nb-sleepwalker': { name: 'SLEEPWALKER', family: 'ghostroot', strain: 'sleeper', native: true, lair: 'SLEEPWALKER-WARD', charge: 'Night Terror', hp: 1.5, dmg: 1, healerDmg: STRAIN_BOSS_LATE, enrageAt: 18, about: 'A Sleeper boss. It stays dormant until you hit it, then its Cell sounds the Alarm. At half Integrity it re-arms every part.', phases: [{ at: 0.5, do: ['rearm'], say: 'SLEEPWALKER wakes all the way. Every part re-arms.' }] },
-  'nb-echolalia': { name: 'ECHOLALIA', family: 'ghostroot', strain: 'echo', native: true, lair: 'ECHOLALIA-CHAMBER', charge: 'Last Word', hp: 1.6, dmg: 1, healerDmg: STRAIN_BOSS_LATE, enrageAt: 18, about: 'An Echo boss. Every hit that gets through to you repeats 1 cycle later at half damage. At 60% Integrity it re-arms every part, and at 30% every attack comes a cycle sooner.', phases: [{ at: 0.6, do: ['rearm'], say: 'ECHOLALIA re-arms every part.' }, { at: 0.3, do: ['faster'], say: 'ECHOLALIA starts talking over you. Every attack comes a cycle sooner.' }] },
+  'nb-sleepwalker': { name: 'SLEEPWALKER', family: 'ghostroot', strain: 'sleeper', native: true, lair: 'SLEEPWALKER-WARD', charge: 'Night Terror', hp: 1.5, dmg: 1, healerDmg: STRAIN_BOSS_LATE, enrageAt: 18, about: 'A Sleeper boss. Dormant until you hit it. Then its Cell sounds the Alarm. At half Integrity it re-arms every part.', phases: [{ at: 0.5, do: ['rearm'], say: 'SLEEPWALKER wakes all the way. Every part re-arms.' }] },
+  'nb-echolalia': { name: 'ECHOLALIA', family: 'ghostroot', strain: 'echo', native: true, lair: 'ECHOLALIA-CHAMBER', charge: 'Last Word', hp: 1.6, dmg: 1, healerDmg: STRAIN_BOSS_LATE, enrageAt: 18, about: 'An Echo boss. Every hit that gets through to you repeats 1 cycle later at half damage. At 60% Integrity it re-arms every part, and at 30% every attack comes 1 cycle sooner.', phases: [{ at: 0.6, do: ['rearm'], say: 'ECHOLALIA re-arms every part.' }, { at: 0.3, do: ['faster'], say: 'ECHOLALIA starts talking over you. Every attack comes a cycle sooner.' }] },
 };
 export const NATIVE_BOSSES = Object.keys(BOSSES).filter((k) => BOSSES[k].native);
 export const ENRAGE = { dmg: 1.25, warn: 3 };
