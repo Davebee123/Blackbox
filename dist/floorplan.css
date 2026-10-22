@@ -502,3 +502,15 @@
 @keyframes fp-reveal { from { opacity: 0; } to { opacity: 1; } }
 /* A scan's card as the notice (app.js noticeCard): the notice is its frame. */
 .rooms-page .notice .scan-card { margin: 0; padding: 0; border: 0; background: none; white-space: normal; }
+/* SCAN on a room next to you that scan reads (floorplan-view.mjs): on the chip's bottom-right edge, where a down room's
+   ring sits, shown on hover or focus. Hidden, it takes no clicks, so the chip walks in from anywhere but the button.
+   On a phone's map (no hover) it always shows. Neutral: not teal (you), red (threat) or amber (loot). */
+.fp-scanbtn { opacity: 0; pointer-events: none; cursor: pointer; transition: opacity 0.12s; }
+.fp-scanbtn rect { fill: #0a0703; stroke: var(--muted); stroke-width: 1; }
+.fp-scanbtn text { font-size: 9px; letter-spacing: 0.5px; fill: var(--bright); font-variant-numeric: tabular-nums; }
+.fp-room:hover .fp-scanbtn, .fp-room:focus-within .fp-scanbtn, .fp-scanbtn.tip-target, .fp-svg.tall .fp-scanbtn { opacity: 1; pointer-events: auto; }
+.fp-scanbtn:hover rect, .fp-scanbtn:focus-visible rect { stroke: var(--bright); }
+.fp-scanbtn:focus { outline: none; }
+.fp-scanbtn.off { cursor: default; }
+.fp-scanbtn.off text { fill: var(--muted); }
+@media (hover: none) { .fp-scanbtn { opacity: 1; pointer-events: auto; } }

@@ -108,7 +108,8 @@ test('scan: the genome card before you engage costs 1 Signal (and Trace on a bre
   assert.ok(card?.card, 'a card');
   assert.equal(s.run.integrity, before - 1);
   assert.match(card.message, /stray nobody signs/);
-  assert.match(card.message, /Its body carries (two attack types you haven't seen|an attack type you haven't seen)/);
+  assert.match(card.message, /Its body carries [A-Z]/, 'a scan names what it carries, met or not');
+  assert.doesNotMatch(card.message, /you haven't seen/);
   assert.match(netTranscript(s), /class="scan-card"/);
   assert.equal(s.encounter, null, 'scanning starts nothing');
   // Scan a room next door on a traced server (no Trace since R1: the break-in Trace is cut).

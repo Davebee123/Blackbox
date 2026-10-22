@@ -390,9 +390,8 @@ function roomSvg(s, room, p, { reach, next, pop, near, G, marks, th = {}, files 
   // Its colour: you, a live threat, used up (or a plain room you've cleared), or something there for you.
   const tone = here ? 'you' : !kind ? 'fog' : room.nook ? (nookLive(s, room, th) ? 'amber' : 'gray') : live ? 'hot' : down || used || (['entry', 'junction', 'den', 'empty'].includes(room.kind) && R.cleared[room.id]) ? 'gray' : 'amber';
   const cls = ['fp-room', revealing(s, room.id) ? 'reveal' : '', `k-${kind ? room.kind : 'fog'}`, `t-${tone}`, prog ? `prog p-${prog}` : sock ? 'open' : '', prog && socketOff(s, room) ? 'off' : '', here ? 'here' : can ? 'reach' : kind ? 'seen' : 'shape', up ? 'up' : '', down ? 'down' : '', used ? 'used' : '', room.mirror && kind ? 'mirror' : '', sealed ? 'sealed' : '', hunted ? 'hunted' : '', pop === room.id ? 'sel' : ''].filter(Boolean).join(' ');
-  // A room you can walk into walks on one click (Enter too); any other room on the map opens its pop-up. A room next to
-  // you that scan reads opens its card first (Walk in, Scan), and a second click on it walks in.
-  const attrs = can && (pop === room.id || !net(s, 'scan', room)) ? ` data-rooms="go" data-arg="${esc(room.id)}" tabindex="0" role="button"` : ` data-fp-sel="${esc(room.id)}" tabindex="0" role="button" aria-haspopup="dialog"`;
+  // A room you can walk into walks on one click (Enter too); any other room on the map opens its pop-up.
+  const attrs = can ? ` data-rooms="go" data-arg="${esc(room.id)}" tabindex="0" role="button"` : ` data-fp-sel="${esc(room.id)}" tabindex="0" role="button" aria-haspopup="dialog"`;
   const hw = G.nw / 2, hh = G.nh / 2, x0 = n1(p.x - hw), y0 = n1(p.y - hh), pts = chipPts(p.x, p.y, hw, hh, G.ch);
   let out = `<g class="${cls}" data-room="${esc(room.id)}"${attrs}${pop === room.id ? '' : ` title="${esc(tileTip(s, room, marks))}"`} aria-label="${esc(kind ? labelOf(s, room) : 'Unknown room')}">`;
   // You: a soft teal glow and a pulsing outline. The hunter just out of sight next door: a red pulse.
@@ -437,8 +436,10 @@ function roomSvg(s, room, p, { reach, next, pop, near, G, marks, th = {}, files 
   // Bottom left: its address (C2), a small plate on the chip's bottom edge (clear of a program's badge), dim; amber with
   // the contract's mark when a job points here.
   const addr = addrOf(s, room.id), job = marks[room.id];
+  let addrEnd = x0; // where the address plate ends (SCAN keeps clear of it)
   if (addr) {
     const fs = G.afs, ph = fs + 4, mark = job ? fs + 1 : 0, pw = n1(addr.length * fs * 0.62 + 8 + (mark ? mark + 2 : 0)), px = n1(x0 + (prog ? 20 : 10)), py = n1(y0 + G.nh - ph / 2);
+    addrEnd = px + pw;
     out += `<g class="fp-addr${job ? ' job' : ''}"><rect x="${px}" y="${py}" width="${pw}" height="${ph}" rx="2"/><text x="${n1(px + 4)}" y="${n1(py + ph / 2 + fs * 0.36)}" font-size="${fs}">${esc(addr)}</text>`
       + (mark ? `<use href="#fp-i-contract" x="${n1(px + pw - mark - 3)}" y="${n1(py + (ph - mark) / 2)}" width="${mark}" height="${mark}"/>` : '') + '</g>';
   }
@@ -450,6 +451,16 @@ function roomSvg(s, room, p, { reach, next, pop, near, G, marks, th = {}, files 
     out += `<g class="fp-respawn ${stocked && !room.mirror ? 'amber' : 'hot'}"><circle class="bg" cx="${cx}" cy="${cy}" r="${r + 3}"/><circle class="track" cx="${cx}" cy="${cy}" r="${r}"/>`
       + `<circle class="arc" cx="${cx}" cy="${cy}" r="${r}" pathLength="100" transform="rotate(-90 ${cx} ${cy})" data-ring-from="${from}" data-ring-at="${back}"/>`
       + `<text x="${cx}" y="${n1(cy + r + 13)}" text-anchor="middle"><tspan data-at="${back}" data-fmt="s"></tspan></text></g>`;
+  }
+  // Bottom right: SCAN on a room next to you that scan reads (run.mjs scanButton, through netrooms.mjs), shown on hover
+  // or focus (always on a phone's map, floorplan.css). It runs scan <room>, as the prompt does. Its cost as the corner's
+  // is, −1, or FREE for an Infiltrator. A room that's down has its ring there instead, so it never shows on one. Where
+  // the address plate leaves no room on the edge (the tall map's bigger plate), it hangs just under the chip instead.
+  const sc = can && kind && net(s, 'scan', room);
+  if (sc) {
+    const t = `SCAN ${sc.free ? 'FREE' : `−${sc.cost}`}`, w = tagW(t) - 4, bx = n1(x0 + G.nw + 4 - w), by = n1(y0 + G.nh + (bx < addrEnd + 3 ? 10 : -8));
+    const tip = sc.short ? 'Not enough Signal to scan.' : `Scan: read its virus card before you walk in.\n${sc.free ? 'As an Infiltrator, you scan free and read deeper.' : `It costs ${sc.cost} Signal.`}`;
+    out += `<g class="fp-scanbtn${sc.short ? ' off' : ''}" ${sc.short ? 'aria-disabled="true"' : `data-command="${esc(sc.cmd)}"`} role="button" tabindex="0" title="${esc(tip)}" aria-label="${esc(sc.short ? tip : `Scan ${labelOf(s, room)}`)}"><rect x="${bx}" y="${by}" width="${w}" height="16" rx="2"/><text x="${n1(bx + w / 2)}" y="${n1(by + 12)}" text-anchor="middle">${t}</text></g>`;
   }
   // A thread's file in this room: its badge and Integrity on the chip's bottom edge.
   for (const f of files) if (f.at === room.id) out += fileSvg(s, p.x + G.nw * 0.2, y0 + G.nh + 8, f.t, G.nw > 100 ? 1.25 : 1.1); // under the chip, clear of its plate
@@ -667,16 +678,7 @@ function farCard(s, room) {
   } else if (who) body += note(esc(who));
   if (rule) body += note(esc(rule), /hunter is here|wakes the Tracker/.test(rule) ? 'hot' : 'dim');
   if (s.rooms.world && s.threads) { const th = threadCard(s, room, false, holder, note, btn); if (th.body) body = room.nook ? th.body : body + th.body; }
-  return cardOf(st, false, labelOf(s, room), jobNote(s, room) + body + hunterNote(s, room), scanActs(s, room), false, addrOf(s, room.id));
-}
-// A room next to you that scan reads (run.mjs scanRoom, through netrooms.mjs): Walk in, and Scan, which runs scan <room>
-// as the prompt does. Its cost shows as the other cards' costs do, free for an Infiltrator. Nothing where scan can't read.
-function scanActs(s, room) {
-  const sc = net(s, 'scan', room);
-  if (!sc) return '';
-  const cost = stepCost(s, room), walk = exits(s).some((x) => x.id === room.id) ? btn('go', 'Walk in', { arg: room.id, primary: true, note: cost ? `−${cost} Signal` : '' }) : '';
-  const tip = sc.short ? 'Not enough Signal to scan.' : `Read its virus card before you walk in. ${sc.free ? 'As an Infiltrator, you scan free and read deeper.' : `It costs ${sc.cost} Signal.`}`;
-  return walk + `<button type="button" class="btn fp-scan" data-command="${esc(sc.cmd)}"${sc.short ? ' disabled' : ''} title="${esc(tip)}">Scan<small>${esc(sc.free ? 'free' : `−${sc.cost} Signal`)}</small></button>`;
+  return cardOf(st, false, labelOf(s, room), jobNote(s, room) + body + hunterNote(s, room), '', false, addrOf(s, room.id));
 }
 // The Exfil, when it's in this room and you can see it: its name, running or cornered, and where it runs next.
 function exfilNote(s, room) {

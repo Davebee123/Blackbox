@@ -18,7 +18,7 @@ const home = (s) => s.encounter?.mode !== 'run';
 // A short guided tour of a server's room map (the Run tab), a step at a time, each pointing at the thing to do and
 // moving on when you do it (click it, or type its command): walk into a room, a virus's card, then Jack out once
 // you've won a fight. A cache, the hunter and the rest room get their step the first time you meet them (SPRAWL-00,
-// where you start, has none), and Scan the first time you open the card of a room next to you that scan reads. Got it
+// where you start, has none), and Scan the first time a room next to you that scan reads is on the map. Got it
 // closes a step, Skip tour ends them all, and tips off stops it. The tour is kept on the save (s.tour), so it shows
 // once a save. Each step: mark(s) is taken as it shows, done(s, mark) says you did it,
 // also is another click that does it (Step back, Leave it).
@@ -31,8 +31,9 @@ const TOUR_STEPS = [
     text: 'Click a room with a number on its corner to walk in. The number is the Signal your first step costs.' },
   { id: 'tour-engage', at: '#fp-pop [data-rooms="engage"]', also: '#fp-pop [data-rooms="back"]', after: ['tour-walk'], when: (s) => s.rooms?.screen?.kind === 'virus', done: (s) => s.rooms?.screen?.kind !== 'virus',
     text: 'A virus holds this room. Engage to fight it, or Step back the way you came.' },
-  // Scan: the first card of a room next to you that scan reads (floorplan-view.mjs scanActs; its chip opens it first).
-  { id: 'tour-scan', at: '#fp-pop .fp-scan:not([disabled])', also: '#fp-pop [data-rooms="go"]', after: ['tour-walk'], when: (s) => !!visitOf(s) && !!s.run?.rooms, mark: scansOf, done: (s, m) => scansOf(s) > m,
+  // Scan: the first time a room next to you that scan reads is on the map, its chip's SCAN (floorplan-view.mjs; it shows
+  // on hover, and while the step points at it). Walking into a room instead closes it too.
+  { id: 'tour-scan', at: '.fp-scanbtn:not([aria-disabled])', also: '.fp-room.reach', after: ['tour-walk'], when: (s) => !!visitOf(s) && !!s.run?.rooms, mark: scansOf, done: (s, m) => scansOf(s) > m,
     text: 'Scan a room next to you to read its virus before you walk in.', more: (s) => (classOf(s) === 'infiltrator' ? 'As an Infiltrator, you scan free and read deeper.' : 'It costs 1 Signal.') },
   { id: 'tour-cache', at: '#fp-pop [data-rooms="pull"]', also: '#fp-pop [data-fp-pop-close]', after: ['tour-walk'], when: (s) => hereKind(s) === 'cache' && !s.rooms.screen,
     mark: (s) => `${s.rooms.at}:${s.rooms.taken[s.rooms.at] ?? ''}`, done: (s, m) => `${s.rooms?.at}:${s.rooms?.taken[s.rooms?.at] ?? ''}` !== m,

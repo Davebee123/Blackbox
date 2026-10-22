@@ -940,6 +940,7 @@ function scan(s, arg) {
     traceAdd(s, SCAN.trace);
   } else (s.run.scanned ||= []).includes(v.id) || s.run.scanned.push(v.id);
   (s.run.unpack ||= []).includes(v.id) || s.run.unpack.push(v.id); // a Packer's rules show once you've scanned it (combat.mjs packerOn)
+  (s.run.named ||= []).includes(v.id) || s.run.named.push(v.id); // its rules show by name, on the card and in the fight (genome.mjs scannedRead)
   showCard(s, v, { deep, type: 'net-scan' });
 }
 
@@ -969,6 +970,7 @@ function scanRoom(s, arg) {
     s.run.integrity -= SCAN.signal;
   } else (s.run.scanned ||= []).includes(v.id) || s.run.scanned.push(v.id);
   (s.run.unpack ||= []).includes(v.id) || s.run.unpack.push(v.id); // a Packer's rules show once you've scanned it (combat.mjs packerOn)
+  (s.run.named ||= []).includes(v.id) || s.run.named.push(v.id); // its rules show by name, on the card and in the fight (genome.mjs scannedRead)
   s.run.scans = (s.run.scans || 0) + 1; // the rooms tour's scan step (tips.mjs)
   showCard(s, v, { deep, type: 'net-scan' });
 }

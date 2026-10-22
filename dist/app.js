@@ -644,6 +644,9 @@ document.addEventListener('click', (e) => {
 // The chase's keys: the arrows move, space waits (not while you type).
 const CHASE_KEYS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', ' ': 'wait' };
 document.addEventListener('keydown', (e) => {
+  // SCAN on a room's chip (floorplan-view.mjs): Enter or space scans; the chip around it walks.
+  const sb = e.target.closest?.('.fp-scanbtn');
+  if (sb && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); if (sb.dataset.command) run(sb.dataset.command); return; }
   const g = e.target.closest?.('[data-rooms]');
   if (g && (e.key === 'Enter' || e.key === ' ') && g.tagName !== 'BUTTON') { e.preventDefault(); roomsClick(g.dataset.rooms, g.dataset.arg); return; }
   const t = e.target.closest?.('[data-fp-sel]');
@@ -2401,6 +2404,7 @@ document.addEventListener('click', (e) => {
   if (e.target.closest('.mk-go') && mkOrder) { const c = e.target.closest('.mk-go').dataset.command; setMkOrder({ ...mkOrder, n: 1 }); return run(c); }
   const payBtn = e.target.closest('[data-pay]');
   if (payBtn && !payBtn.disabled && !e.target.closest('#pay')) { payOpen(payBtn); return; }
+  if (e.target.closest('.fp-scanbtn[aria-disabled="true"]')) return; // SCAN short of Signal: a click on it never walks in
   const cmd = e.target.closest('[data-command]');
   if (cmd && !cmd.disabled) {
     // Irreversible buttons (scrapping good gear) ask with a second click.

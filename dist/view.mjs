@@ -23,7 +23,7 @@ import { ABILITIES, CONFIG, FAMILIES, MUTATIONS, TICKER, QUIRKS, DAEMONS, STRAIN
 import { GENES, CATS, AXES } from './genes.mjs';
 import { AUTHORS } from './authors.mjs';
 import { PUZZLES } from './puzzles.mjs';
-import { chipOf, virusGenes, scannedDeep, packedChip, packsGene } from './genome.mjs';
+import { chipOf, virusGenes, scannedDeep, scannedRead, packedChip, packsGene } from './genome.mjs';
 import { mastered, RESEARCH, TIER } from './research.mjs';
 import { SFX, levelOf as sfxLevel } from './screenfx.mjs';
 // A loud run (connect <server> loud): what the button and the run tag say on hover.
@@ -419,8 +419,8 @@ export function geneChip(c, extra = '') {
 function geneChips(s, v) {
   const genes = virusGenes(v);
   if (!genes.length) return '';
-  const deep = scannedDeep(s, v);
-  return `<p class="gene-line">${genes.map((g) => (packsGene(s, v, g) ? geneChip(packedChip(chipOf(s, g.id, g.src, deep)), 'data-packed="1"') : geneChip(chipOf(s, g.id, g.src, deep), GENES[g.id].mutation && g.src !== 'boss' ? `data-mut="${g.id}"` : ''))).join('')}</p>`;
+  const deep = scannedDeep(s, v), read = scannedRead(s, v);
+  return `<p class="gene-line">${genes.map((g) => (packsGene(s, v, g) ? geneChip(packedChip(chipOf(s, g.id, g.src, deep, read)), 'data-packed="1"') : geneChip(chipOf(s, g.id, g.src, deep, read), GENES[g.id].mutation && g.src !== 'boss' ? `data-mut="${g.id}"` : ''))).join('')}</p>`;
 }
 // A scan on a run: the genome card in the terminal (genome.mjs genomeCard), and on a server's rooms the notice (app.js).
 export function scanMarkup(e) {
