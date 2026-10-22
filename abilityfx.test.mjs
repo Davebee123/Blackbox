@@ -1,11 +1,13 @@
 // Ability effects on the fight board (dist/abilityfx.mjs): one table maps an ability to its effect, an ability with no
 // row keeps the plain hit effect (hitfx.mjs), nothing plays at Screen effects off or with Motion off, the layer takes no
-// input and is hidden from screen readers, and no piece of any effect is ever laid over a part's name line (its name,
-// ◆ and Integrity), its tags or your label, at any point of its motion, on a roomy board or a dense one.
+// input and is hidden from screen readers. A part's effect lands on the part itself, over its name cell (the designer:
+// "as long as the effect is short, it's ok to put it over the component name"), so whatever crosses a part's name, ◆ or
+// Integrity is gone within the effect's short duration (1 s at most) and nothing stays behind; your side's effects
+// (Firewall) never cover a name line or your label. Checked on a roomy board and a dense one.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { RECIPES, MOTIONS, PARTICLES, keyOf, keyFor, recipeOf, idOfName, levelOf, countOf, layout, boxAt, keyAt, overlaps, rect, createAbilityFx } from './dist/abilityfx.mjs';
+import { RECIPES, MOTIONS, PARTICLES, CAP, keyOf, keyFor, recipeOf, idOfName, levelOf, countOf, layout, boxAt, keyAt, overlaps, rect, createAbilityFx } from './dist/abilityfx.mjs';
 import { SPIKE, ABILITIES } from './dist/data.mjs';
 
 const R = (s) => { const [l, t, w, h] = s.split(',').map(Number); return rect(l, t, w, h); };
@@ -79,10 +81,13 @@ test('an ability with no row falls back to the plain hit effect; events that are
   // app.js plays the strike for every hit the table doesn't take, and when an effect can't play.
   const app = readFileSync(new URL('./dist/app.js', import.meta.url), 'utf8');
   assert.match(app, /fxKey\.has\(key\) && abilityStrike\(fxKey\.get\(key\), e, \{ result, delay: delayOf\(e\), fallback: strike \}\)\) continue;\n\s+pendingStrikes\.push\(\(\) => later\(delayOf\(e\), strike\)\);/);
-  // A narrow board (no lane beside the name cell): no layout, so the plain hit effect plays.
+  // No part to land on (it left the board), or no row of yours for a shield: no layout, so the plain hit effect plays.
   const g = geoOf(roomy(), 0);
-  g.part = { ...g.part, row: { ...g.part.row, r: g.part.cell.r + 40 } };
-  assert.equal(layout(RECIPES.ban, g), null);
+  assert.equal(layout(RECIPES.ban, { ...g, part: null }), null);
+  assert.equal(layout(RECIPES.firewall, { ...g, you: null }), null);
+  // A narrow board still plays it: it lands on the name cell, which every board has.
+  g.part = { ...g.part, row: { ...g.part.row, r: g.part.cell.r + 20 } };
+  assert.ok(layout(RECIPES.ban, g));
 });
 
 test('Screen effects off or Motion off: nothing; subtle and medium: lighter than bold; bigger hits and crits throw more', () => {
@@ -134,29 +139,78 @@ test('the layer is hidden from screen readers and takes no input; its pieces hav
   assert.doesNotMatch(src, /board\.(classList|style)|row\.(classList|style)|canvas|PIXI/i);
 });
 
-test('no piece of any effect is laid over a part\'s name line, its tags or your label, at any point of its motion', () => {
-  let checked = 0;
-  for (const [name, board] of [['roomy', roomy()], ['dense', dense()]]) {
-    for (let i = 0; i < board.parts.length; i++) {
-      const g = geoOf(board, i);
-      for (const [k, r] of Object.entries(RECIPES)) {
-        for (const lvl of ['full', 'calm']) for (const opt of [{}, { crit: true, power: 1, result: 'crit' }, { result: 'chit', power: 0 }, { kind: 'crew' }]) for (const seed of [1, 7, 42]) {
-          const plan = layout(r, g, { lvl, rnd: seeded(seed), ...opt });
-          assert.ok(plan?.els.length, `${name} ${k}`);
-          for (const el of plan.els) {
-            for (let s = 0; s <= 40; s++) {
-              const key = keyAt(el, s / 40);
-              if (!(key.o > 0.02)) continue;
-              const box = boxAt(el, key), hit = board.keep.find((q) => overlaps(box, q));
-              assert.ok(!hit, `${name} part ${i} ${k} ${lvl} ${el.cls} "${el.text}" at ${s / 40}: ${JSON.stringify(box)} over ${JSON.stringify(hit)}`);
-              checked++;
-            }
-          }
-        }
-      }
+// Every point of a piece's motion where it shows (opacity over 0), with the ms it shows at.
+function* shown(el) {
+  for (let i = 0; i <= 40; i++) { const k = keyAt(el, i / 40); if (k.o > 0.02) yield { ms: el.delay + (el.dur * i) / 40, box: boxAt(el, k) }; }
+}
+const variants = (fn) => {
+  for (const [name, board] of [['roomy', roomy()], ['dense', dense()]]) for (let i = 0; i < board.parts.length; i++) {
+    const g = geoOf(board, i);
+    for (const [k, r] of Object.entries(RECIPES)) for (const lvl of ['full', 'calm']) for (const opt of [{}, { crit: true, power: 1, result: 'crit' }, { result: 'chit', power: 0 }, { kind: 'crew' }]) for (const seed of [1, 7, 42]) {
+      const plan = layout(r, g, { lvl, rnd: seeded(seed), ...opt });
+      assert.ok(plan?.els.length, `${name} ${k}`);
+      fn({ name, board, i, g, k, r, lvl, plan });
     }
   }
-  assert.ok(checked > 10000, `checked ${checked} points`);
+};
+
+test('whatever crosses a part\'s name, ◆ or Integrity is gone within the effect (1 s at most), and nothing stays behind', () => {
+  let over = 0, checked = 0;
+  variants(({ name, board, i, k, r, lvl, plan }) => {
+    assert.ok(plan.dur <= CAP && CAP <= 1000, `${k}: ${plan.dur} ms`);
+    for (const el of plan.els) {
+      const tag = `${name} part ${i} ${k} ${lvl} ${el.cls} "${el.text}"`;
+      assert.ok(el.delay >= 0 && el.delay + el.dur <= plan.dur, `${tag}: ends by the effect's end`);
+      assert.equal(el.keys[el.keys.length - 1].o, 0, `${tag}: ends unseen`);
+      assert.equal(el.keys[el.keys.length - 1].at, 1, tag);
+      for (const { ms, box } of shown(el)) {
+        checked++;
+        const hit = board.keep.find((q) => overlaps(box, q));
+        if (!hit) continue;
+        over++;
+        assert.ok(ms <= plan.dur, `${tag}: over a name at ${ms} ms, after the effect`);
+        // Your side's effects never cover a name line or your label.
+        assert.notEqual(r.on, 'you', `${tag}: ${JSON.stringify(box)} over ${JSON.stringify(hit)}`);
+      }
+    }
+  });
+  assert.ok(checked > 10000 && over > 1000, `checked ${checked} points, ${over} of them over a name`);
+  assert.ok(RECIPES.inject.dur >= 900 && RECIPES.inject.dur <= 1000, 'Inject burns about a second');
+});
+
+test('a part\'s effect lands on the part: on its name cell at impact (the hammer on its name and bar, the fire over its name)', () => {
+  for (const board of [roomy(), dense()]) for (let i = 0; i < board.parts.length; i++) {
+    const g = geoOf(board, i), cell = { ...g.part.cell }, name = g.part.name;
+    for (const [k, r] of Object.entries(RECIPES)) {
+      if (r.on === 'you') continue;
+      const plan = layout(r, g, { rnd: seeded(9) });
+      // At its impact (or for a burn, through it) something of it sits on the part's name cell.
+      const on = plan.els.some((el) => [...shown(el)].some(({ ms, box }) => ms >= r.impact && ms <= r.impact + 250 && overlaps(box, cell)));
+      assert.ok(on, `${k} on part ${i}`);
+      const overName = plan.els.some((el) => [...shown(el)].some(({ box }) => overlaps(box, name)));
+      assert.ok(overName, `${k} reaches the name line on part ${i}`);
+    }
+    // Ban's hammer head lands on the bar's line, over the middle of the name cell.
+    const hammer = layout(RECIPES.ban, g, { rnd: seeded(5) }).els[0], end = boxAt(hammer, keyAt(hammer, RECIPES.ban.impact / RECIPES.ban.dur));
+    const mid = (name.l + name.r) / 2;
+    assert.ok(Math.abs(end.b - (g.part.bar.t + g.part.bar.b) / 2) < 4 && end.l < mid && end.l > name.l, JSON.stringify(end));
+    // Inject's fire spans the name cell.
+    const fire = layout(RECIPES.inject, g, { rnd: seeded(5) }).els.map((el) => boxAt(el, el.keys[0]));
+    assert.ok(Math.min(...fire.map((b) => b.l)) < name.l + 40 && Math.max(...fire.map((b) => b.r)) > name.r - 40, 'across the name cell');
+  }
+});
+
+test('on the page: every piece is taken off the layer once its effect is over', () => {
+  const timers = [], was = globalThis.setTimeout;
+  globalThis.setTimeout = (f, ms) => { timers.push({ f, ms }); return timers.length; };
+  try {
+    const { fx, layer, row } = fakePage({ motion: true, level: 'full' });
+    for (const k of Object.keys(RECIPES)) assert.equal(fx.play(k, RECIPES[k].on === 'you' ? null : row), true, k);
+    assert.ok(layer.children.length > 50);
+    assert.ok(timers.every((t) => t.ms <= CAP + 60), `every removal by ${CAP + 60} ms: ${Math.max(...timers.map((t) => t.ms))}`);
+    for (const t of timers) t.f();
+    assert.equal(layer.children.length, 0, 'nothing stays behind');
+  } finally { globalThis.setTimeout = was; }
 });
 
 test('effects land on time: the piece arrives at impact, short pieces, teal unless a crit, a hit on ◆ or a crewmate', () => {
@@ -164,21 +218,17 @@ test('effects land on time: the piece arrives at impact, short pieces, teal unle
   for (const [k, r] of Object.entries(RECIPES)) {
     const plan = layout(r, g, { rnd: seeded(5) });
     assert.equal(plan.impact, r.impact, k);
-    assert.ok(plan.dur <= 1100, `${k}: ${plan.dur} ms`);
+    assert.ok(plan.dur <= CAP, `${k}: ${plan.dur} ms`);
     for (const el of plan.els) assert.ok(el.delay + el.dur <= plan.dur + 1, k);
   }
   const crit = layout(RECIPES.ban, g, { crit: true, result: 'crit', rnd: seeded(5) }), mate = layout(RECIPES.ban, g, { kind: 'crew', rnd: seeded(5) }), chit = layout(RECIPES.ban, g, { result: 'chit', rnd: seeded(5) });
   assert.ok(crit.els.every((e) => /\bcrit\b/.test(e.cls)));
   assert.ok(mate.els.every((e) => /\bcrew\b/.test(e.cls)));
   assert.ok(chit.els.some((e) => /\bchit\b/.test(e.cls)) && !/\bchit\b/.test(chit.els[0].cls), 'the shock off ◆ is steel, the hammer stays yours');
-  // Ban's hammer comes down onto the part's bar line, beside its name cell.
-  const hammer = layout(RECIPES.ban, g, { rnd: seeded(5) }).els[0], end = boxAt(hammer, keyAt(hammer, r0(RECIPES.ban)));
-  assert.ok(Math.abs(end.b - (g.part.bar.t + g.part.bar.b) / 2) < 4 && end.l >= g.part.cell.r, JSON.stringify(end));
   // Firewall stands between your row and the first part.
   const wall = layout(RECIPES.firewall, g, { rnd: seeded(5) }).els.filter((e) => /wall/.test(e.cls));
   for (const w of wall) { const b = boxAt(w, keyAt(w, 0.5)); assert.ok(b.b <= g.first.t && b.t >= g.you.row.t, JSON.stringify(b)); }
 });
-const r0 = (r) => r.impact / r.dur;
 
 // A page just big enough for createAbilityFx: a board, its rows, and elements that remember what's put on them.
 function fakePage({ motion = true, level = 'full' }) {

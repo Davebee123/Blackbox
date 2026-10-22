@@ -1,15 +1,17 @@
 // Ability effects on the fight board (the designer: "when an ability fires, something relevant animates toward or on
-// the target part"). Ban swings a hammer down onto the part, Inject burns 1s and 0s beside it for about a second, Ping
+// the target part"). Ban swings a hammer down onto the part, Inject burns 1s and 0s on it for about a second, Ping
 // sends a wave from your row down to it. One table (RECIPES) says what each ability's effect is made of: the piece
 // (ASCII art, one frame or several), how it moves (MOTIONS), what flies off it where it lands (PARTICLES), when it
 // lands and how long it plays. An ability with no row keeps the plain hit effect (hitfx.mjs). Adding one is a row.
 //
-// Where they play: in the open space of the part's row right of its name cell (the lane), along its bar (under its
-// name and numbers, never over them), and between your row and the part (a path from your Now cell, where your
-// command sits, down the lane to the part). Nothing is drawn over a part's name, its ◆ or its Integrity numbers:
-// layout() keeps every piece off each part's name line (and off your own label), at every point of its motion.
-// Nothing has a background, nothing dims the board, and the board never moves; the part's name only brightens as the
-// hit lands (hitfx.mjs jolt). Teal: you. A crit goes gold-white and a hit on ◆ throws steel; a crewmate's in violet,
+// Where they play: on the part itself, its name cell (the designer: "as long as the effect is short, it's ok to put
+// it over the component name; next to it isn't as immersive"). The hammer lands on its name and bar, the fire burns
+// on its name cell, the ram, the needle, the wave, the bolt and the helper travel to it (from your Now cell, where
+// your command sits, or in from the right), the blast goes off on it. A shield plays on your side, in the gap between
+// your row and the parts, and stays off every name line. Every piece is short and gone within its effect (CAP, 1 s at
+// most) and nothing stays behind: whatever crosses a part's name, ◆ or Integrity is there only for that moment.
+// Nothing has a background, nothing dims the board, and the board never moves; the part's name brightens as the hit
+// lands (hitfx.mjs jolt). Teal: you. A crit goes gold-white and a hit on ◆ throws steel; a crewmate's in violet,
 // as hitfx.mjs does.
 //
 // Screen effects bold: the whole thing. Subtle and medium (calm): the piece, half the characters, no flourishes.
@@ -20,6 +22,8 @@ import { SPIKE, ABILITIES } from './data.mjs';
 
 // Font metrics of the layer (style.css .afx): a monospace character is 0.6 of its size wide, a line 1.05 of it tall.
 export const CW = 0.6, LH = 1.05;
+// The longest any piece of an effect stays on the board (ms): nothing outlasts it.
+export const CAP = 1000;
 
 // ---------- the pieces ----------
 // Each is lines of plain ASCII, read at board size (10 to 14 px).
@@ -50,12 +54,12 @@ const BLAST = [
 // key: the ability's id; key 1 (id `spike`) by the class's own word for it (data.mjs SPIKE: bash, ban, poke, ping),
 // and `<id>:tick` for a burn's later ticks.
 //   label   what the playtest page (?playtest=fx) calls it
-//   on      'part' (the target's row) | 'you' (your side: a shield)
+//   on      'part' (on the target's name cell) | 'you' (your side: a shield)
 //   motion  how the piece moves (MOTIONS): swing · punch · dart · wave · bolt · walk · blast · wall · none
 //   art     the piece: lines of ASCII; frames: several, in turn every fms ms (loop: over and over)
 //   size    its font size (px)
 //   impact  ms from the start to when it lands (app.js starts it this long before the hit's number shows)
-//   dur     ms, all of it
+//   dur     ms, all of it (no piece outlasts CAP)
 //   burst   what flies where it lands: { style (PARTICLES), n (how many), per (more per the hit's share of the
 //           part's max), full (bold only) }
 export const RECIPES = {
@@ -160,7 +164,8 @@ function fill(el) {
   el.keys.forEach((k) => { if (k.e === undefined) delete k.e; });
   return el;
 }
-// Keep a piece off every name line: a key that would cover one moves right of it (or below it, along a bar).
+// Keep a piece off every name line (your side's effects, which have no part to land on): a key that would cover one
+// moves right of it (or below it, along a bar).
 function clear(el, keep) {
   for (const k of el.keys) {
     for (let pass = 0; pass < 4; pass++) {
@@ -177,17 +182,18 @@ function clear(el, keep) {
 // The points every motion works from. geo (layer pixels, from the page: createAbilityFx measure()):
 //   part  { row, cell (its name cell), name (its name line: name, ◆, Integrity), bar }   (on 'part')
 //   you   { row, cell, now (your Now cell, where your command sits), label (You) }
-//   keep  every name line on the board, every part's tags and your label: nothing covers them
+//   keep  every name line on the board, every part's tags and your label (your side's effects stay off them)
 //   first the first part's name line (your side: the gap between your row and it)
 export function pointsOf(geo) {
   const { part, you } = geo;
   if (!part) return null;
   const { row, cell, bar, name } = part;
-  const S = { x: cell.r + 6, y: (bar.t + bar.b) / 2 }; // where it lands: the bar's line, where the lane starts
-  const lane = { l: cell.r + 3, r: Math.min(row.r - 4, cell.r + 230), t: row.t + 1, b: row.b - 1 };
-  const floor = name.b + 1; // a piece along the bar stays under the name line
-  const O = you?.now ? { x: you.now.l + (you.now.r - you.now.l) * 0.45, y: (you.now.t + you.now.b) / 2 } : { x: S.x + 70, y: row.t - 50 };
-  return { S, lane, floor, O, bar, row, cell };
+  const S = { x: (name.l + name.r) / 2, y: (bar.t + bar.b) / 2 }; // where it lands: the bar's line under the middle of the name cell
+  const M = { x: S.x, y: ((name.t + name.b) / 2 + S.y) / 2 }; // the middle of the name cell, between its name line and its bar
+  const lane = { l: cell.r + 3, r: Math.max(cell.r + 60, Math.min(row.r - 4, cell.r + 230)), t: row.t + 1, b: row.b - 1 }; // the row right of it (a ram comes in from there)
+  const floor = name.b + 1;
+  const O = you?.now ? { x: you.now.l + (you.now.r - you.now.l) * 0.45, y: (you.now.t + you.now.b) / 2 } : { x: cell.r + 70, y: row.t - 50 };
+  return { S, M, lane, floor, O, bar, row, cell, name };
 }
 
 // ---------- the motions ----------
@@ -199,26 +205,26 @@ const at = (ms, dur) => Math.max(0, Math.min(1, ms / dur));
 
 export const MOTIONS = {
   none: () => [],
-  // A hammer swung down about its handle's end: the head lands on the bar's line beside the name, bounces, stays.
+  // A hammer swung down about its handle's end: its head lands on the part's name and bar, bounces, and is gone.
   swing(R, P, c) {
     const el = piece('art', R.art, R.size * c.grow, {});
     el.ox = el.w; el.oy = el.h * 0.5; // the handle's end
-    const x = P.lane.l + 1, y = P.S.y + 2 - el.h;
+    const x = P.S.x - 2.5 * R.size * c.grow * CW, y = P.S.y + 2 - el.h; // the head (its first 5 columns) over the middle of the name cell
     const I = at(R.impact, R.dur);
     el.keys = [{ at: 0, x, y, r: 52, o: 0, e: IN }, { at: I * 0.25, r: 46, o: 1, e: IN }, { at: I, r: 0, e: OUT }, { at: I + at(60, R.dur), r: -5 }, { at: I + at(130, R.dur), r: 0 }, { at: I + at(220, R.dur), o: 1 }, { at: 1, o: 0, y: y + 3 }];
     return [el];
   },
-  // A ram punched in from the lane's far end: it hits the name cell's edge, recoils a little, fades.
+  // A ram punched in from the right along the part's row: its head hits the middle of the name cell, recoils, fades.
   punch(R, P, c) {
     const el = piece('art', R.art, R.size * c.grow, {});
-    const x = P.lane.l + 1, y = P.S.y - el.h * 0.62, I = at(R.impact, R.dur);
-    el.keys = [{ at: 0, x: x + 140, y, o: 0, e: IN }, { at: I * 0.3, x: x + 110, o: 1, e: IN }, { at: I, x, e: OUT }, { at: I + at(50, R.dur), x: x + 8 }, { at: I + at(140, R.dur), x: x + 3 }, { at: I + at(200, R.dur), o: 1 }, { at: 1, x: x + 14, o: 0 }];
+    const x = P.S.x - 3 * R.size * CW, y = P.M.y - el.h / 2, I = at(R.impact, R.dur), far = Math.max(140, P.lane.r - x - el.w * 0.5);
+    el.keys = [{ at: 0, x: x + far, y, o: 0, e: IN }, { at: I * 0.3, x: x + far * 0.78, o: 1, e: IN }, { at: I, x, e: OUT }, { at: I + at(50, R.dur), x: x + 8 }, { at: I + at(140, R.dur), x: x + 3 }, { at: I + at(200, R.dur), o: 1 }, { at: 1, x: x + 14, o: 0 }];
     return [el];
   },
-  // A needle darted from your Now cell to the part: its tip sticks where it lands, quivers, pulls out.
+  // A needle darted from your Now cell into the part's name cell: its tip sticks, quivers, pulls out.
   dart(R, P, c) {
     const el = piece('art', R.art, R.size, {});
-    const T = { x: P.lane.l + 4, y: P.S.y }, a = Math.atan2(T.y - P.O.y, T.x - P.O.x), r = (a * 180) / Math.PI;
+    const T = P.M, a = Math.atan2(T.y - P.O.y, T.x - P.O.x), r = (a * 180) / Math.PI;
     const ux = Math.cos(a), uy = Math.sin(a);
     el.ox = el.w; el.oy = el.h / 2; // the tip
     const tip = (p) => ({ x: p.x - el.ox, y: p.y - el.oy });
@@ -232,7 +238,7 @@ export const MOTIONS = {
     const n = c.lvl === 'full' ? 3 : 2;
     for (let i = 0; i < n; i++) {
       const el = piece('art', R.art, R.size, {});
-      const T = { x: P.lane.l + Math.max(el.w, el.h) / 2 + 2, y: P.S.y }, a = Math.atan2(T.y - P.O.y, T.x - P.O.x), r = (a * 180) / Math.PI;
+      const T = P.M, a = Math.atan2(T.y - P.O.y, T.x - P.O.x), r = (a * 180) / Math.PI;
       const ctr = (p) => ({ x: p.x - el.w / 2, y: p.y - el.h / 2 });
       const travel = R.impact, dur = travel + 220;
       el.delay = i * 80; el.dur = dur;
@@ -242,10 +248,10 @@ export const MOTIONS = {
     }
     return out;
   },
-  // A bolt from your Now cell to the part: characters along a jagged line, lit tip-first, flickering out.
+  // A bolt from your Now cell into the part's name cell: characters along a jagged line, lit tip-first, flickering out.
   bolt(R, P, c) {
     const out = [];
-    const T = { x: P.lane.l + 8, y: P.S.y };
+    const T = P.M;
     const branches = c.lvl === 'full' ? 2 : 1;
     for (let k = 0; k < branches; k++) {
       const from = k ? { x: P.O.x + 26, y: P.O.y + 4 } : P.O;
@@ -268,22 +274,21 @@ export const MOTIONS = {
     }
     return out;
   },
-  // A helper scuttling from your Now cell down to the part: it walks there, settles beside its name, blinks out.
+  // A helper scuttling from your Now cell down to the part: it walks onto its name cell, settles, blinks out.
   walk(R, P, c) {
     const el = piece('art', R.frames[0], R.size, { frames: R.frames.map((f) => f.join('\n')), fms: R.fms, loop: R.loop });
     const ctr = (p) => ({ x: p.x - el.w / 2, y: p.y - el.h / 2 });
-    const T = { x: P.lane.l + el.w / 2 + 4, y: (P.row.t + P.row.b) / 2 };
+    const T = { x: P.S.x + el.w * 0.6, y: P.M.y };
     const a = ctr(P.O), b = ctr(T), I = at(R.impact, R.dur), keys = [{ at: 0, ...a, o: 0 }];
     for (let i = 1; i <= 6; i++) { const f = i / 6; keys.push({ at: I * f, x: lerp(a.x, b.x, f), y: lerp(a.y, b.y, f) - (i % 2 ? 3 : 0), o: 1 }); }
     keys.push({ at: I + at(80, R.dur), y: b.y - 2 }, { at: I + at(160, R.dur), y: b.y }, { at: 0.82, o: 1 }, { at: 1, o: 0 });
     el.keys = keys;
     return [el];
   },
-  // A blast where the part's burns went off: it grows through its frames in the lane and is gone.
+  // A blast where the part's burns went off: it grows through its frames on the name cell and is gone.
   blast(R, P, c) {
     const el = piece('art', R.frames[R.frames.length - 1], R.size * c.grow, { frames: R.frames.map((f) => f.join('\n')), fms: R.fms });
-    el.ox = 0; // it grows out from the name cell's edge, never back over it
-    const x = P.lane.l + 2, y = P.S.y - el.h / 2 - 2;
+    const x = P.M.x - el.w / 2, y = P.M.y - el.h / 2;
     el.keys = [{ at: 0, x, y, s: 0.7, o: 0 }, { at: 0.05, o: 1 }, { at: 0.35, s: 1.1 }, { at: 0.6, s: 1.25, o: 0.9 }, { at: 1, s: 1.35, o: 0 }];
     return [el];
   },
@@ -313,61 +318,64 @@ const pick = (s, rnd) => s[Math.floor(rnd() * s.length)];
 const mote = (cls, ch, size, x, y, delay, dur, keys) => fill({ cls, text: ch, size, w: size * CW, h: size * LH, x, y, delay, dur, keys: keys.map((k) => ({ ...k })) });
 
 export const PARTICLES = {
-  // The shock where it lands: dashes skid away along the bar (under the name) and out into the lane.
+  // The shock where it lands: dashes skid away both ways along the part's bar.
   shock(n, R, P, c) {
     const out = [], size = 9;
     for (let i = 0; i < n; i++) {
       const left = i % 2 === 0, d = 260 + c.rnd() * 140;
-      const y0 = left ? Math.max(P.S.y - (size * LH) / 2, P.floor) : P.S.y - 6 + c.rnd() * 10;
+      const y0 = P.S.y - (size * LH) / 2 + (c.rnd() - 0.5) * 4;
       const x0 = left ? P.S.x - 8 : P.S.x + 4;
-      const x1 = left ? Math.max(P.bar.l, x0 - 30 - c.rnd() * 120) : x0 + 22 + c.rnd() * 60;
+      const x1 = left ? Math.max(P.bar.l - 10, x0 - 30 - c.rnd() * 90) : x0 + 30 + c.rnd() * 90;
       out.push(mote('p shock', pick('-=~-', c.rnd), size, x0, y0, c.t0 + c.rnd() * 40, d, [{ at: 0, x: x0, y: y0, o: 1, s: 1.2, e: OUT }, { at: 1, x: x1, y: y0, o: 0, s: 0.8 }]));
     }
     return out;
   },
-  // Dust kicked up off the bar's line into the lane.
+  // Dust kicked up off the bar's line, either side of where it landed.
   dust(n, R, P, c) {
     const out = [];
     for (let i = 0; i < n; i++) {
-      const x0 = P.S.x + 2 + c.rnd() * 30, y0 = P.S.y - 6, d = 380 + c.rnd() * 220;
-      out.push(mote('p', pick("'.,`", c.rnd), 11, x0, y0, c.t0 + c.rnd() * 60, d, [{ at: 0, x: x0, y: y0, o: 1, e: OUT }, { at: 1, x: x0 + 6 + c.rnd() * 34, y: y0 - 10 - c.rnd() * 24, o: 0 }]));
+      const side = i % 2 ? 1 : -1, x0 = P.S.x + side * (6 + c.rnd() * 30), y0 = P.S.y - 6, d = 380 + c.rnd() * 220;
+      out.push(mote('p', pick("'.,`", c.rnd), 11, x0, y0, c.t0 + c.rnd() * 60, d, [{ at: 0, x: x0, y: y0, o: 1, e: OUT }, { at: 1, x: x0 + side * (6 + c.rnd() * 30), y: y0 - 10 - c.rnd() * 24, o: 0 }]));
     }
     return out;
   },
-  // 1s and 0s thrown out into the lane (never back over the name cell).
+  // 1s and 0s thrown out of the part every way.
   bits(n, R, P, c) {
     const out = [], reach = 40 + c.power * 60 + (c.crit ? 30 : 0);
     for (let i = 0; i < n; i++) {
-      const a = (c.rnd() - 0.5) * Math.PI * 0.8, d = 18 + c.rnd() * reach, size = 11 + Math.round(c.rnd() * 4);
-      const x0 = P.S.x + 2, y0 = P.S.y - (size * LH) / 2;
+      const a = c.rnd() * Math.PI * 2, d = 18 + c.rnd() * reach, size = 11 + Math.round(c.rnd() * 4);
+      const x0 = P.M.x - (size * CW) / 2, y0 = P.M.y - (size * LH) / 2;
       out.push(mote('p', bit(c.rnd), size, x0, y0, c.t0 + c.rnd() * 50, 450 + c.rnd() * 300, [{ at: 0, x: x0, y: y0, o: 1, s: 0.7, e: OUT }, { at: 0.6, o: 1 }, { at: 1, x: x0 + Math.cos(a) * d, y: y0 + Math.sin(a) * d * 0.7, o: 0, s: 1, r: (c.rnd() - 0.5) * 90 }]));
     }
     return out;
   },
-  // A few sparks right at the tip.
+  // A few sparks right where the tip went in.
   spark(n, R, P, c) {
     const out = [];
     for (let i = 0; i < n; i++) {
-      const x0 = P.S.x + 1, y0 = P.S.y - 6, d = 220 + c.rnd() * 160;
-      out.push(mote('p', pick("*'+.", c.rnd), 10, x0, y0, c.t0 + c.rnd() * 40, d, [{ at: 0, x: x0, y: y0, o: 1, e: OUT }, { at: 1, x: x0 + 4 + c.rnd() * 20, y: y0 + (c.rnd() - 0.5) * 20, o: 0 }]));
+      const x0 = P.M.x - 3, y0 = P.M.y - 5, d = 220 + c.rnd() * 160, a = c.rnd() * Math.PI * 2;
+      out.push(mote('p', pick("*'+.", c.rnd), 10, x0, y0, c.t0 + c.rnd() * 40, d, [{ at: 0, x: x0, y: y0, o: 1, e: OUT }, { at: 1, x: x0 + Math.cos(a) * (8 + c.rnd() * 16), y: y0 + Math.sin(a) * (6 + c.rnd() * 10), o: 0 }]));
     }
     return out;
   },
-  // The echo coming back: arcs spreading out into the lane from where the wave landed.
+  // The echo coming back: arcs spreading out both ways from where the wave landed, ( on the left and ) on the right.
   ring(n, R, P, c) {
     const out = [];
     for (let i = 0; i < n; i++) {
-      const size = 14 + i * 5, h = size * LH, x0 = P.lane.l + 6, y0 = P.S.y - h / 2;
-      out.push(mote('p ring', ')', size, x0, y0, c.t0 + i * 70, 380, [{ at: 0, x: x0, y: y0, o: 0.95, s: 0.7, e: OUT }, { at: 1, x: x0 + 14 + i * 16, y: y0, o: 0, s: 1.1 }]));
+      for (const side of [-1, 1]) {
+        const size = 14 + i * 5, w = size * CW, h = size * LH, x0 = P.M.x - w / 2 + side * 6, y0 = P.M.y - h / 2;
+        out.push(mote('p ring', side < 0 ? '(' : ')', size, x0, y0, c.t0 + i * 70, 380, [{ at: 0, x: x0, y: y0, o: 0.95, s: 0.7, e: OUT }, { at: 1, x: x0 + side * (16 + i * 18), y: y0, o: 0, s: 1.1 }]));
+      }
     }
     return out;
   },
-  // Flames of 1s and 0s: they rise off the bar's line in the lane (your side: off the wall's top) and go out.
+  // Flames of 1s and 0s: they rise off the part's bar up over its name (your side: off the wall's top) and go out.
   flame(n, R, P, c) {
     const out = [];
     const you = R.on === 'you';
-    // A fire's shape: most of it in the middle, tallest there; on a part it climbs to about its row's top.
-    const l = you ? P.wall.l : P.lane.l + 3, w = you ? P.wall.r - P.wall.l : Math.min(P.lane.r - P.lane.l - 6, R.size * CW * 10);
+    // A fire's shape: most of it in the middle, tallest there; on a part it spans its name cell and climbs to about
+    // its row's top.
+    const l = you ? P.wall.l : P.bar.l, w = you ? P.wall.r - P.wall.l : P.bar.r - P.bar.l;
     const base = you ? P.top : P.S.y + 4;
     const rise = you ? 18 : Math.max(18, base - P.row.t - 6) * (c.lvl === 'full' ? 1 : 0.7);
     const spread = Math.max(0, R.dur - c.t0 - 460);
@@ -381,7 +389,7 @@ export const PARTICLES = {
     }
     return out;
   },
-  // Embers on the part's bar: small 1s and 0s that flicker where they sit, under the name.
+  // Embers on the part's bar: small 1s and 0s that flicker where they sit.
   ember(n, R, P, c) {
     const out = [], size = 8;
     const spread = Math.max(0, R.dur - c.t0 - 500);
@@ -393,13 +401,13 @@ export const PARTICLES = {
   },
   // A flash of light where it lands.
   flash(n, R, P, c) {
-    const size = 22, h = size * LH, x0 = P.lane.l + 2, y0 = P.S.y - h / 2;
+    const size = 22, h = size * LH, x0 = P.M.x - (size * CW) / 2, y0 = P.M.y - h / 2;
     return [mote('p flash', '+', size, x0, y0, c.t0, 240, [{ at: 0, x: x0, y: y0, o: 1, s: 0.5, e: OUT }, { at: 1, o: 0, s: 1.6 }])];
   },
 };
 
 // ---------- the layout ----------
-// A recipe on a board → its pieces, or null if it can't play there (no lane beside the part, no row for you).
+// A recipe on a board → its pieces, or null if it can't play there (no part on the board, no row for you).
 // opts: lvl ('full' | 'calm'), power (0–1), crit, result ('hit' | 'crit' | 'chit'), kind ('you' | 'crew'), rnd.
 export function layout(R, geo, { lvl = 'full', power = 0.3, crit = false, result = 'hit', kind = 'you', rnd = Math.random } = {}) {
   if (!R || !lvl || !geo) return null;
@@ -410,10 +418,10 @@ export function layout(R, geo, { lvl = 'full', power = 0.3, crit = false, result
     // The gap between your row and the first part: the wall stands there, under your row's text and over theirs.
     const b = Math.min(geo.first ? geo.first.t - 2 : you.row.b + 14, you.row.b + 16);
     const l = you.cell.l, r = Math.min(you.row.r - 4, you.cell.r + 240);
-    P = { wall: { l, r, b }, S: { x: you.cell.r + 6, y: b }, lane: { l: you.cell.r + 3, r, t: you.row.t, b }, floor: b, bar: { l, r, t: b, b }, row: you.row, cell: you.cell, O: { x: l, y: b } };
+    P = { wall: { l, r, b }, S: { x: you.cell.r + 6, y: b }, M: { x: you.cell.r + 6, y: b }, lane: { l: you.cell.r + 3, r, t: you.row.t, b }, floor: b, bar: { l, r, t: b, b }, row: you.row, cell: you.cell, O: { x: l, y: b } };
   } else {
     P = pointsOf(geo);
-    if (!P || P.lane.r - P.lane.l < 70) return null; // no room beside the part (a narrow board): the plain hit effect
+    if (!P) return null;
   }
   const c = { lvl, power: Math.max(0, Math.min(1, power)), crit, rnd, t0: R.impact, grow: 1 + Math.min(1, power) * 0.12 };
   const tint = kind === 'crew' ? ' crew' : crit ? ' crit' : '';
@@ -431,8 +439,13 @@ export function layout(R, geo, { lvl = 'full', power = 0.3, crit = false, result
       els.push(el);
     }
   }
-  const keep = [...(geo.keep || [])];
-  for (const el of els) clear(el, keep);
+  // Every piece is gone by CAP, and ends unseen: nothing stays behind on a name.
+  for (const el of els) {
+    if (el.delay + el.dur > CAP) el.dur = Math.max(1, CAP - el.delay);
+    el.keys[el.keys.length - 1].o = 0;
+  }
+  // Your side's effects have no part to land on: they stay off every name line.
+  if (R.on === 'you') for (const el of els) clear(el, geo.keep || []);
   return { els, impact: R.impact, dur: Math.max(R.dur, ...els.map((e) => e.delay + e.dur)) };
 }
 

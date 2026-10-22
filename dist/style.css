@@ -2100,8 +2100,8 @@ body:has(.silk-stash .silk-tile[data-kind="implant"]:hover) .silk-fp[data-kind="
 @keyframes fx-jolt { 0% { filter: brightness(1.9); text-shadow: 0 0 8px currentColor; } 100% { filter: none; text-shadow: none; } } /* light, never movement */
 @keyframes fx-jolt-crit { 0%, 30% { filter: brightness(2.3); text-shadow: 0 0 12px rgba(255, 216, 92, 0.9); } 100% { filter: none; text-shadow: none; } }
 @keyframes fx-jolt-miss { 0%, 100% { opacity: 1; } 40% { opacity: 0.6; } }
-/* Ability effects (abilityfx.mjs), on a layer of their own over the board: ASCII pieces and characters that move
-   in the open space beside a part's name, along its bar and between your row and it. Text only, no background,
+/* Ability effects (abilityfx.mjs), on a layer of their own over the board: ASCII pieces and characters that land on
+   a part's name cell (for a moment: each is gone within a second) or play on your side. Text only, no background,
    no input. Teal: you; a crit gold-white; a hit on ◆ steel; a crewmate's violet (as .fx-bit.crew). Each piece
    is placed and moved by its own animation (layout() in abilityfx.mjs), so its box is exact: line-height and
    character width are the module's CW and LH. */
