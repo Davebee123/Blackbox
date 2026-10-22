@@ -36,7 +36,7 @@ Two players share a run and its fights with no server, each keeping their own sa
 
 - **Two tabs, one browser** (BroadcastChannel): open `/?bench=a&as=demolitionist&level=10` and `/?bench=b&as=sysop&level=10`, type `coop host` in the first and `coop join <code>` in the second (the room code shows in the Co-op panel).
 - **Two machines** (WebRTC, copy and paste): `coop` opens the panel. The host clicks *Make invite code* and sends it; the guest pastes it, clicks *Make reply code* and sends that back; the host pastes it and clicks *Connect*. Public STUN only (`stun:stun.l.google.com:19302`): some networks (symmetric NAT, strict firewalls) need a TURN relay, which is a server we don't have yet.
-- Then the host connects to a server; the guest's page follows onto its rooms and into its fights.
+- Then the host connects to a server; the guest's page follows onto its rooms and into its fights. Out of a run, *Go to <name>'s network* (`coop swap`) makes the guest the host, on the same link. Tests: `coop.test.mjs` (links, handshake), `coop-fight.test.mjs` (a shared fight), `coop-run.test.mjs` (a shared run, cache shares, the swap).
 
 ## Rooms playtest (R0)
 

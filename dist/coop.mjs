@@ -205,7 +205,7 @@ export function snapshot(s, g) {
     const enc = m.encounter || (m.ended && e && !active(s) ? m.ended : null);
     return { who: m.who, human: !!m.seat && !m.seat.bot, sig: mateSignal(s, m), max: maxSignal(m), enc: enc ? copy(omit(enc, 'virus')) : null, run: { integrity: m.run.integrity, max: m.run.max } };
   });
-  return { host: handleOf(s), you: g.name, speed: s.settings?.speed || 'normal', run: s.run ? { ...copy(s.run), pack: [] } : null, loc: copy(loc), enc: copy(e), party };
+  return { host: handleOf(s), you: g.name, speed: s.settings?.speed || 'normal', net: s.netSeed, run: s.run ? { ...copy(s.run), pack: [] } : null, loc: copy(loc), enc: copy(e), party };
 }
 export function hostGame(H) {
   const s = H.s;
@@ -327,6 +327,7 @@ export function viewOf(G, m) {
   V.run = { ...m.run, integrity: mine.integrity, max: mine.max, pack: [], crew };
   V.locations = m.loc && !m.loc.zone ? [m.loc] : [];
   if (m.loc?.zone) V.zone = m.loc;
+  V.netSeed = m.net ?? save.netSeed; // the server is on the host's network (its name, its natives' odds on the view)
   V.logs = G.log;
   V.serial = G.serial;
   V.encounter = null;
