@@ -500,3 +500,5 @@
   body:not(.no-motion) .fp-room.reveal, body:not(.no-motion) .fp-svg g.reveal { animation: fp-reveal 1.4s ease-out both; }
 }
 @keyframes fp-reveal { from { opacity: 0; } to { opacity: 1; } }
+/* A scan's card as the notice (app.js noticeCard): the notice is its frame. */
+.rooms-page .notice .scan-card { margin: 0; padding: 0; border: 0; background: none; white-space: normal; }

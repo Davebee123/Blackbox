@@ -422,8 +422,8 @@ function geneChips(s, v) {
   const deep = scannedDeep(s, v);
   return `<p class="gene-line">${genes.map((g) => (packsGene(s, v, g) ? geneChip(packedChip(chipOf(s, g.id, g.src, deep)), 'data-packed="1"') : geneChip(chipOf(s, g.id, g.src, deep), GENES[g.id].mutation && g.src !== 'boss' ? `data-mut="${g.id}"` : ''))).join('')}</p>`;
 }
-// A scan on a run: the genome card in the terminal (genome.mjs genomeCard).
-function scanMarkup(e) {
+// A scan on a run: the genome card in the terminal (genome.mjs genomeCard), and on a server's rooms the notice (app.js).
+export function scanMarkup(e) {
   const c = e.card, a = AUTHORS[c.author];
   const row = (label, chips) => (chips.length ? `<div class="sc-row"><span class="sc-k">${label}</span><span class="sc-chips">${chips.map((x) => geneChip(x)).join('')}</span></div>` : '');
   return `<div class="scan-card"><div class="sc-head"><b>${esc(c.name)}</b>${a ? `<span class="byline" style="--ac:${a.colour}">· ${esc(a.name)}</span>` : '<span class="byline stray">· unsigned</span>'}<small>Lv ${c.level} · ${esc(c.strain || c.body)}${c.grade > 1 ? ` · v${c.grade}` : ''}</small></div>${a ? `<p class="sc-style">${esc(a.style)}</p>` : ''}${row('body', c.genes.filter((x) => x.src === 'core'))}${row('rolled', c.genes.filter((x) => x.src !== 'core'))}${row('tells', c.tells)}${c.deep ? `<ul class="sc-deep">${[...c.genes, ...c.tells].filter((x) => x.rule && x.state !== 'decoded').map((x) => `<li><b>${esc(x.name)}</b> ${esc(x.rule)}</li>`).join('')}</ul>` : ''}</div>`;

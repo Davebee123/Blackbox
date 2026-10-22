@@ -67,7 +67,7 @@ const winRoom = (s) => { s.encounter.virus.parts.forEach((p) => { p.integrity = 
 const newPlayer = () => { const s = fresh(); s.tutorialCompleted = true; return s; };
 
 test('the rooms tour: every step one or two short sentences, on the rooms page, kept apart from the tips', () => {
-  assert.deepEqual(TOUR.map((t) => t.id), ['tour-walk', 'tour-engage', 'tour-cache', 'tour-hunter', 'tour-rest', 'tour-jackout']);
+  assert.deepEqual(TOUR.map((t) => t.id), ['tour-walk', 'tour-engage', 'tour-scan', 'tour-cache', 'tour-hunter', 'tour-rest', 'tour-jackout']);
   for (const t of TOUR) {
     assert.equal(t.page, 'rooms');
     assert.ok(t.done, `${t.id} moves on when you do it`);
