@@ -1,4 +1,4 @@
-// Rule text with its key facts picked out: the numbers with what they count (30 damage, 1 cycle sooner, 25% more
+// Rule text with its key facts picked out: the numbers with what they count (30 damage, 1 cycle sooner, cycle 5, 25% more
 // damage, ×3, up to 60), multipliers (double damage, twice, half), all its ◆, once per fight, critical strikes and
 // the statuses a rule hands out (Exposed, Tagged, burns, shields). ruleHtml escapes the text and wraps each fact in
 // <b class="hi">, which the page draws in --bright; the rest keeps its tone. For HTML only: a title="" tooltip is
@@ -13,6 +13,7 @@ const UNIT = String.raw`(?:\s(?:more|less|fewer|additional|extra|max|damage|cycl
 const NUM = String.raw`(?<![\w.×-])(?<!(?:[Ll]evel|[Ll]v|[Rr]ank|[Kk]ey|[Tt]ier|[Ss]lot|[Ff]loor) )(?<!\d of )[+−]?\d+(?:\.\d+)?%?(?![\w.]\d|\w)(?! of \d)`;
 const FACTS = [
   String.raw`×\d+(?:\.\d+)?|\d+(?:\.\d+)?×`, // multipliers written as ×3
+  String.raw`\bcycle \d+\b`, // a cycle named by its number (a part's rule: "Frozen until the end of cycle 5"), lit whole
   NUM + UNIT,
   String.raw`\b(?:[Dd]ouble|[Tt]riple|doubled|tripled|[Tt]wice|[Hh]alf|halves|halving|three times)\b${UNIT}`,
   String.raw`\ball (?:its |their |your )?◆`,

@@ -189,7 +189,7 @@ export const listenBoost = (s) => (s.listen && s.run?.loc && programsOn(findLoca
 export const SITES = {
   rich: { name: 'Rich', rule: 'Its caches pay double.' },
   legacy: { name: 'Legacy', rule: 'Its rare spawns come twice as often.' },
-  backbone: { name: 'Backbone', rule: 'One more socket room.' },
+  backbone: { name: 'Backbone', rule: 'Has 1 more socket room.' },
   hostile: { name: 'Hostile', rule: 'Its fight rooms respawn twice as fast.' },
   hardened: { name: 'Hardened', rule: 'Its Resident and guards are Armored.' },
 };

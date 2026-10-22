@@ -17,7 +17,7 @@ export const abilities = {
     cls: 'infiltrator', sub: 'payload', verb: 'burn', name: 'Wormable', target: 'part', damage: 0, tick: 8, ticks: 4, cooldown: 3, icon: 'mutation',
     short: 'Burn 8 ×4; spreads Inject',
     help: 'wormable <part> — Burns the target for 8 damage every cycle for 4 cycles, spreading to one more part each cycle. Your Inject on the target spreads with it.',
-    desc: 'Releases a burn that finds its own way through the virus. Every cycle the original ticks, it copies itself onto a part with no Wormable on it yet, with the time it has left, and carries your Inject on the target along with it. An Inject it carries onto a part that already has one refreshes it. The copies burn but do not spread.',
+    desc: 'Releases a burn that finds its own way through the virus. Every cycle the original ticks, it copies itself onto a part with no Wormable on it yet, with the time it has left. It carries your Inject on the target along with it. An Inject it carries onto a part that already has one refreshes it. The copies burn but do not spread.',
   },
   skim: {
     cls: 'infiltrator', sub: 'payload', verb: 'burn', name: 'Skim', target: 'part', damage: 0, tick: 9, ticks: 4, drain: 4, cooldown: 3, icon: 'clear',
@@ -41,7 +41,7 @@ export const abilities = {
     cls: 'infiltrator', sub: 'payload', verb: 'hit', name: 'IRQ Storm', target: 'none', damage: 0, cooldown: 4, icon: 'event-warning',
     short: 'Every burn ticks now',
     help: 'irq-storm — Every burn you have running ticks once immediately. Each part it reaches counts it as a hit from you, calling off a charge or counting toward interrupting a cast.',
-    desc: 'Floods the virus with interrupts. Every burn you have running ticks once immediately, on every part at once, and none of them runs out any sooner. Each part the storm reaches counts it as a hit from you, so it calls off a charge winding up on a burning part, or counts toward interrupting a cast.',
+    desc: 'Floods the virus with interrupts. Every burn you have running ticks once immediately, on every part at once, and none of them runs out any sooner. Each part the storm reaches counts it as a hit from you. It calls off a charge winding up on a burning part, or counts toward interrupting a cast.',
   },
   fuzz: {
     cls: 'infiltrator', sub: 'payload', verb: 'burn', name: 'Fuzz', target: 'part', damage: 12, tick: 8, ticks: 3, counts: 2, cooldown: 4, icon: 'event-warning',
@@ -65,8 +65,8 @@ export const abilities = {
   backstab: {
     cls: 'infiltrator', sub: 'phantom', verb: 'hit', name: 'Backstab', target: 'part', damage: 32, cooldown: 2, icon: 'behavior',
     short: '32 damage; crits busy parts',
-    help: 'backstab <part> — Deals 32 damage to the target. Always critically strikes a part busy with a tell: winding up a charge, compiling a cast, sealing or recording.',
-    desc: 'Strikes while the target is looking the other way, dealing 32 damage. Always critically strikes a part busy with a tell: winding up a charge, compiling a cast, sealing, or the Mimic recording. The hit counts as your answer to the tell.',
+    help: 'backstab <part> — Deals 32 damage to the target. Always critically strikes a part that is winding up a charge, compiling a cast, sealing or recording.',
+    desc: 'Strikes while the target is looking the other way, dealing 32 damage. Always critically strikes a part busy with a tell, whether it is winding up a charge, compiling a cast, sealing or recording. The hit counts as your answer to the tell.',
   },
   'shadow-copy': {
     cls: 'infiltrator', sub: 'phantom', verb: 'shield', name: 'Shadow Copy', target: 'none', ally: true, damage: 0, cooldown: 5, icon: 'behavior',

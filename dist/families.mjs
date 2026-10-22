@@ -29,7 +29,8 @@ import { ROOM_FAMILIES, FAMILIES, ABILITIES, CONFIG } from './data.mjs';
 Object.assign(ROOM_FAMILIES, {
   trojan: {
     name: 'Trojan', stem: 'TROJAN', threatens: 'Signal', art: 'worm', opens: 4, code: 'worm',
-    summary: "The Courier delivers Packages, and one is already on the board. While the Loader lives, any damage to a Package unpacks it into two Droppers, an unopened one unpacks on its own 5 cycles after delivery, and a broken Courier is redeployed 4 cycles later at half its Integrity. Break the Loader and the Courier stays down, and the Packages are inert boxes.",
+    summary: "The Courier delivers Packages, and one is already on the board. While the Loader stands, any damage to a Package unpacks it into two Droppers. An unopened Package unpacks on its own 5 cycles after delivery. While the Loader stands, a broken Courier redeploys 4 cycles later at half its Integrity. When the Loader breaks, the Courier stays down and every Package goes inert.",
+    answer: 'Break the Loader, and leave the Packages alone.',
     parts: [
       { id: 'courier', name: 'Courier', integrity: 34, armor: 1, loot: 'Courier Packet', special: true, attack: { name: 'Drop', effect: 'damage', amount: 10, interval: 5, first: 3 }, deliver: { interval: 3, first: 2 } },
       { id: 'loader', name: 'Loader', integrity: 30, armor: 2, loot: 'Loader Stub' },
@@ -37,7 +38,8 @@ Object.assign(ROOM_FAMILIES, {
   },
   cryptominer: {
     name: 'Cryptominer', stem: 'XMRIG', threatens: 'Signal', art: 'ransomware', opens: 6, code: 'cipher',
-    summary: 'The Rig hashes every 2 cycles, 2 harder each time it lands, and heats up every cycle. At 100 heat it overheats: it stops hashing and burns itself every cycle until it breaks. Break the Cooler and it heats two and a half times as fast, and every Hash lands 50% harder. Break the Rig first and the Cooler takes over its Hash, uncooled.',
+    summary: 'The Rig\'s Hash lands every 2 cycles, dealing 2 more each time, and the Rig heats up every cycle. At 100 heat, the Rig overheats, stops hashing and burns itself every cycle until it breaks. When the Cooler breaks, the Rig heats 2.5 times as fast, and every Hash deals 50% more damage. If the Rig breaks first, the Cooler takes over its Hash, uncooled.',
+    answer: 'Vent whichever part is left hashing, or let it cook.',
     parts: [
       { id: 'rig', name: 'Rig', integrity: 44, armor: 1, loot: 'ASIC Die', special: true, attack: { name: 'Hash', effect: 'damage', amount: 4, interval: 2, first: 2, ramp: 2 } },
       { id: 'cooler', name: 'Cooler', integrity: 26, armor: 1, loot: 'Heat Pipe', fallback: 'rig' }, // break the Rig first and the Cooler takes over its Hash, uncooled (Fallback)
@@ -45,7 +47,8 @@ Object.assign(ROOM_FAMILIES, {
   },
   wiper: {
     name: 'Wiper', stem: 'SHAMOON', threatens: 'Signal', art: 'ransomware', opens: 10, code: 'cipher',
-    summary: "The Eraser zeroes your Signal. The Degausser's Wipe hits and takes a key off your bar for a few cycles: it can't be pressed, and its cooldown stands still. Key 1 and SIGINT are never wiped.",
+    summary: "The Eraser zeroes your Signal. The Degausser's Wipe deals damage and takes a key off your bar for 2 or 3 cycles. A wiped key cannot be pressed, and its cooldown stands still. Never wipes key 1 or SIGINT.",
+    answer: 'Fire your big skill before the Wipe lands.',
     parts: [
       { id: 'eraser', name: 'Eraser', integrity: 34, armor: 1, loot: 'Zero Block', attack: { name: 'Zero', effect: 'damage', amount: 12, interval: 4, first: 3 } },
       { id: 'degausser', name: 'Degausser', integrity: 38, armor: 2, loot: 'Degauss Coil', special: true, attack: { name: 'Wipe', effect: 'damage', amount: 6, interval: 5, first: 4, wipe: 'strongest', wipeFor: 3 } },
@@ -56,7 +59,8 @@ Object.assign(ROOM_FAMILIES, {
   // upload, its Archive what it stole. Never rolled anywhere (runner: the Codex's own row).
   exfil: {
     name: 'Exfil', stem: 'EXFIL', threatens: 'Signal', art: 'worm', opens: 1, code: 'worm', runner: true,
-    summary: 'A process uploading a stolen archive off the server. It runs from you; corner it and break its Uplink before the upload finishes.',
+    summary: 'A process uploading a stolen archive off the server. It runs from you, and its Uplink carries the upload.',
+    answer: 'Corner it, then break its Uplink before the upload finishes.',
     parts: [
       { id: 'uplink', name: 'Uplink', integrity: 16, armor: 0, loot: 'Uplink Socket', attack: { name: 'Backchannel', effect: 'damage', amount: 4, interval: 2, first: 2 } },
       { id: 'archive', name: 'Archive', integrity: 20, armor: 1, loot: 'Archive Index', special: true, attack: { name: 'Checksum', effect: 'damage', amount: 5, interval: 3, first: 3 } },
@@ -388,9 +392,9 @@ hooks.roomCycle = (s) => {
 export function bodyTags(s, p) {
   const e = s.encounter, v = e?.virus, out = [];
   if (!v || !alive(p)) return out;
-  if (p.pkg) out.push(p.pkg.inert ? ['inert', 'An inert box: break it for a Payload Box.', ''] : [`opens ${Math.max(0, p.pkg.opensAt - e.cycle)}`, `Unpacks into two Droppers at the end of cycle ${p.pkg.opensAt}, or the moment anything damages it while the Loader lives.`, 'hot']);
-  if (p.id === 'loader' && v.family === 'trojan') { const down = redeployOf(s); out.push(down ? [`redeploys in ${Math.max(0, down.redeployAt - e.cycle)}`, `It redeploys the ${down.name} at the end of cycle ${down.redeployAt}, at half its Integrity. Break the Loader before then and the ${down.name} stays down. Its ticks delay the redeploy by ${BODY.loader} cycles.`, 'hot'] : ['loader', `While it lives, any damage to a Package unpacks it, and a broken Courier is redeployed ${BODY.redeploy.in} cycles later at half its Integrity. Its ticks delay the next delivery by ${BODY.loader} cycles.`, 'hot']); }
-  if (p === hasherOf(s)) out.push([v.overheated ? 'overheated' : `heat ${v.heat || 0}/${BODY.heat.at}`, v.overheated ? 'It burns itself every cycle until it breaks. Venting it starts it hashing again.' : `At ${BODY.heat.at} it overheats: it stops hashing and burns itself until it breaks. Its ticks vent it: heat and ramp back to nothing.`, v.overheated ? 'you' : 'hot']);
-  if (p.attack?.wipe) out.push([p.attack.wipe === 'last' ? 'wipes your last skill' : 'wipes your strongest', p.attack.wipe === 'last' ? `Its Wipe takes the skill you used last off your bar for ${p.attack.wipeFor} cycles.` : `Its Wipe takes your strongest ready skill off your bar for ${p.attack.wipeFor} cycles.`, 'hot']);
+  if (p.pkg) out.push(p.pkg.inert ? ['inert', 'Inert: holds a Payload Box of credits.\n▸ Break it for the credits.', ''] : [`opens ${Math.max(0, p.pkg.opensAt - e.cycle)}`, `Package: unpacks into two Droppers at the end of cycle ${p.pkg.opensAt}, or when anything damages it while the Loader stands.`, 'hot']);
+  if (p.id === 'loader' && v.family === 'trojan') { const down = redeployOf(s); out.push(down ? [`redeploys in ${Math.max(0, down.redeployAt - e.cycle)}`, `Redeploy: brings the ${down.name} back at the end of cycle ${down.redeployAt} at half its Integrity, unless the Loader breaks first. The Loader's ticks delay the redeploy by ${BODY.loader} cycles.\n▸ Break the Loader before then.`, 'hot'] : ['loader', `Loader: while it stands, any damage to a Package unpacks it. Redeploys a broken Courier ${BODY.redeploy.in} cycles later at half its Integrity. Its ticks delay the next delivery by ${BODY.loader} cycles.`, 'hot']); }
+  if (p === hasherOf(s)) out.push([v.overheated ? 'overheated' : `heat ${v.heat || 0}/${BODY.heat.at}`, v.overheated ? 'Overheated: burns itself every cycle until it breaks. Venting it starts it hashing again.' : `Heat: at ${BODY.heat.at}, overheats, stops hashing and burns itself until it breaks. Its ticks vent its heat and climb back to nothing.`, v.overheated ? 'you' : 'hot']);
+  if (p.attack?.wipe) out.push([p.attack.wipe === 'last' ? 'wipes your last skill' : 'wipes your strongest', p.attack.wipe === 'last' ? `Wipe: takes the skill you used last off your bar for ${p.attack.wipeFor} cycles.` : `Wipe: takes your strongest ready skill off your bar for ${p.attack.wipeFor} cycles.`, 'hot']);
   return out;
 }

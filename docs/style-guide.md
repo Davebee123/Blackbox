@@ -31,7 +31,8 @@ Both voices share the glossary (section 4) and the general rules (section 3).
 5. **Short lines lead with the number:** "38 damage, ×2 vs no armor", "Burn 20 ×4; refreshes", "+1 filter slot", "30% faster defrag".
 6. **No mechanic-speak.** Say what the player sees: "counts as a hit against a cast", not "counts as a hit on the cast"; "becomes usable", not "is lit" or "procs".
 7. **Item effects** are one sentence built by `fxText` (`dist/content.mjs`): the effect as a verb phrase (`FX_DO[].label`), then its trigger and condition. A rule affix reads "Name — Sentence." in the approved `help` shape: "Interrupt Handler — Increases your damage by 15% when the target is winding up a tell." Write a unique's `effect.text` only when the generated sentence reads badly, and write it in the same shape.
-8. **Library text** (`SKILL_TEXT` in `dist/lore.mjs`, and a subclass skill's `desc`) opens with the skill's hacker verb in the third person, then the mechanics in tooltip grammar: "Overclocks the target, dealing 40 damage. A critical strike resets the cooldown." Keep its numbers in step with `help`, because `scaledText` grows the same numbers with level.
+8. **A virus's rules read like a World of Warcraft tooltip** (docs/ui.md "Tooltip style (WoW grammar)"): a part's, a tell's, a gene's, a strain's or a boss's mechanics never give advice, and its answer is one short imperative on its own ▸ line. `style.test.mjs` holds every description to it.
+9. **Library text** (`SKILL_TEXT` in `dist/lore.mjs`, and a subclass skill's `desc`) opens with the skill's hacker verb in the third person, then the mechanics in tooltip grammar: "Overclocks the target, dealing 40 damage. A critical strike resets the cooldown." Keep its numbers in step with `help`, because `scaledText` grows the same numbers with level.
 
 ## 3. General rules (both voices)
 
