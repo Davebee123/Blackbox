@@ -1,5 +1,5 @@
 // BLACKBOX browser shell: modules, command line, clock, save, sound.
-import { CONFIG, ABILITIES, FAMILIES, xpToNext, spikeOf, SUBS, SUBCLASS, defaultSub } from './data.mjs';
+import { CONFIG, ABILITIES, FAMILIES, xpToNext, spikeOf, SUBS, SUBCLASS, defaultSub, partGenesFor } from './data.mjs';
 const FAMILY_NAMES = Object.fromEntries(Object.entries(FAMILIES).map(([k, f]) => [k, f.name]));
 import { selectEncounter, partKey, parse, validate, hooks, stepCycle, keyMap, hackerOf, classOf, cycleLength, fresh, restore, command, advance, active, alive, part, intents, suggestions, idleRegen, tickServices, topUpCost, defender, maxSignal, inSync } from './combat.mjs';
 import * as V from './view.mjs';
@@ -164,7 +164,7 @@ function load() {
     s.metAll = true; // a playtest plays a veteran: the parts roll (parts.mjs) brings its whole mix, as the measurement does
     // ?playtest=part:<id> (docs/parts-plan.md): a fight with that basic or third part, at the level it opens (or &level=).
     const pid = playtest.startsWith('part:') ? playtest.slice(5) : null, home = pid && Object.entries(FAMILIES).find(([, f]) => f.parts.some((x) => x.id === pid));
-    if (home) { const spec = home[1].parts.find((x) => x.id === pid), L = lv >= 1 && lv <= 50 ? lv : Math.max(spec.from || 1, 3); s.hackers = { [s.loadout.archetype]: { level: L, xp: 0 } }; selectEncounter(s, 'random', seed || 1, { level: L, family: home[0], mutation: null, ...(spec.pool === 'third' ? { genes: [spec.gene], basic: 'pulse' } : { basic: pid }) }); }
+    if (home) { const spec = home[1].parts.find((x) => x.id === pid), L = lv >= 1 && lv <= 50 ? lv : Math.max(spec.from || 1, 3); s.hackers = { [s.loadout.archetype]: { level: L, xp: 0 } }; selectEncounter(s, 'random', seed || 1, { level: L, family: home[0], mutation: null, ...(spec.pool === 'third' ? { genes: partGenesFor(home[0], spec, L), basic: 'pulse' } : { basic: pid }) }); }
     else if (playtest === 'random' && (fam || seed)) selectEncounter(s, 'random', seed || 1, { ...(lv >= 1 && lv <= 50 ? { level: lv } : {}), ...(/^[a-z]+$/.test(fam || '') ? { family: fam } : {}), mutation: null });
     else command(s, `encounter ${/^[a-z]+$/.test(playtest) ? playtest : 'cryptjack'}`); // any fixture or strain
     if (!s.encounter) command(s, 'encounter cryptjack');

@@ -56,6 +56,7 @@ import { giveScript, rollScript } from './scripts.mjs';
 import { AUTHOR_FAMILIES, OPENS, rollSet, applySet, jitterFirst, setsOf, familyName, setName } from './families.mjs';
 import { armTicks, bossRule, BOSS_RULES } from './interrupt.mjs';
 import { logSet } from './genome.mjs';
+import { weightOf, nativeFloor, PARTS } from './parts.mjs';
 import { deathRecap } from './recap.mjs';
 import { addrsOf, byAddr } from './address.mjs';
 import { PROGRAMS, SOCKET, buildProgram, uninstallProgram, gainComponents, familyComponents, programCost, buildBlock as programBlock, costLine as programCostLine, codebasesOf } from './sockets.mjs';
@@ -165,6 +166,8 @@ export const RESIDENT = 'nb-deadbolt';
 
 // ---------- the graph ----------
 const pick = (r, xs) => xs[Math.floor(r() * xs.length)];
+// Weighted (w(x) ≥ 0), one draw: the same number of rolls as pick, so a server's other dice stay where they were.
+const pickWeighted = (r, xs, w) => { let x = r() * xs.reduce((n, y) => n + w(y), 0); for (const y of xs) if ((x -= w(y)) < 0) return y; return xs.at(-1); };
 const key = (x, y) => `${x},${y}`;
 export const linksOf = (g) => [...g.links, ...(g.hops || [])];
 export const neighbours = (g, id) => linksOf(g).filter(([a, b]) => a === id || b === id).map(([a, b]) => (a === id ? b : a));
@@ -525,7 +528,7 @@ function assign(g, r, { size, kind, level, floor, author, hunter, N, L }) {
   fights.forEach((id, i) => {
     const family = i < order.length ? order[i] : pick(r, fams);
     const pool = (FAMILIES[family]?.parts || []).filter((p) => p.pool === 'third' && (!p.from || level >= p.from));
-    Object.assign(R[id], { family, author, set: rollSet(family, author, r), third: pool.length && r() < 0.6 ? pick(r, pool).gene : null });
+    Object.assign(R[id], { family, author, set: rollSet(family, author, r), third: pool.length && r() < 0.6 ? pickWeighted(r, pool, (x) => weightOf(x.gene, floor)).gene : null }); // a native weighs PARTS.floor on its own floor (parts.mjs)
   });
   for (const id of all) {
     R[id].seed = Math.floor(r() * 2 ** 31);
@@ -1299,14 +1302,22 @@ export function fightOf(s, room, as = null) {
   }
   if (room.kind === 'guard') return { key: room.guard, seed, opts: { mode: 'run', room: room.path, level }, size: 'guard', name: GUARDS[room.guard].name.toUpperCase(), level, family: room.guard, author: GUARDS[room.guard].ice ? 'kestrel' : null };
   // A nest: the Crawler with its brood already out (fight adds the fragments), an elite-lite fight.
-  if (room.kind === 'nest') return { key: 'crawler', seed, opts: { mode: 'run', room: room.path, level }, size: 'nest', name: null, level, family: 'crawler', author: null, brood: ROOMS.nest.brood, xp: ROOMS.nest.xp };
+  if (room.kind === 'nest') return { key: 'crawler', seed, opts: { mode: 'run', room: room.path, level, nest: true }, size: 'nest', name: null, level, family: 'crawler', author: null, brood: ROOMS.nest.brood, xp: ROOMS.nest.xp };
   if (room.kind === 'core') return { key: 'random', seed, opts: { mode: 'run', room: room.path, level, family: BOSSES[RESIDENT].family, boss: RESIDENT, mutation: null, name: BOSSES[RESIDENT].name, author: R.author }, size: 'boss', name: BOSSES[RESIDENT].name, level, family: BOSSES[RESIDENT].family, author: R.author };
   // A wild virus: its room's family, author, third part and set, and a mutation fresh with each respawn (one at most).
   const elite = room.kind === 'elite' || as === 'mirror';
   const r = seeded((seed * 31 + 5) >>> 0), mut = level >= 4 && r() < SERVER.mutationChance(level) ? ROLLED_MUTATIONS[Math.floor(r() * ROLLED_MUTATIONS.length)] : null;
-  const genes = [room.third].filter(Boolean);
-  const opts = { mode: 'run', room: room.path, level, family: room.family, author: room.author, mutation: mut, genes, ...(elite ? { elite: true, eliteHp: ROOMS.eliteHp } : {}) };
+  // An elite or a ★ rare spawn brings one of its floor's natives (parts.mjs PARTS.native) in place of the room's third.
+  const genes = (elite && PARTS.native.elite) || (rare && PARTS.native.rare) ? [nativeThird(room.family, level, R.floor || 1, seed) || room.third].filter(Boolean) : [room.third].filter(Boolean);
+  const opts = { mode: 'run', room: room.path, level, family: room.family, author: room.author, mutation: mut, genes, ...(elite ? { elite: true, eliteHp: ROOMS.eliteHp } : {}), ...(rare ? { rare: true } : {}) };
   return { key: 'random', seed, opts, size: elite ? 'elite' : 'process', name: null, level, family: room.family, author: room.author, set: room.pin || spawnSet(room.family, room.author, seed), mutation: mut, elite, rare };
+}
+// The native an elite or a ★ rare spawn brings in a server room (its floor's, open at its level; none there: the nearest
+// floor above's), by its own hash of the seed. null: its family has none open yet.
+export function nativeThird(family, level, floor, seed) {
+  const pool = (FAMILIES[family]?.parts || []).filter((p) => p.pool === 'third' && nativeFloor(p.gene) && (!p.from || level >= p.from));
+  for (let f = floor; f >= 1; f--) { const xs = pool.filter((p) => nativeFloor(p.gene) === f); if (xs.length) return xs[(Math.imul((seed >>> 0) ^ 0x1b873593, 2654435761) >>> 0) % xs.length].gene; }
+  return null;
 }
 // The Exfil's fight: a weak, quick runner at the server's level, its name its own (EXFIL-####), no set, no mutation.
 function exfilFight(s, room) {

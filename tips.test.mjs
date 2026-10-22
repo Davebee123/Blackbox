@@ -138,3 +138,30 @@ test('every threat on the map has a tip, and none speaks of outposts (gone in R2
   for (const sel of ['.mnode.intrusion', '.mnode.invader[data-select="invader"]', '.mnode.invader.siege[data-select="invader"]', '.mnode.invader.breach', '.mnode.hub.yours.threat']) assert.ok(has(sel), sel);
   for (const t of TIPS) assert.doesNotMatch(t.text, /outpost|bandwidth|salvage|take (it|the outpost) back|cut off/i, t.id);
 });
+
+// The parts plan's P2 (docs/parts-plan.md): one tip for each new board element, and each element is on the board in
+// a fight with its part (selectEncounter's forced genes, as ?playtest=part:<id> builds it).
+test('the P2 parts\' board elements each have a tip, and each shows in a fight with its part', async () => {
+  const { selectEncounter } = await import('./dist/combat.mjs');
+  const fight = (family, level, genes) => { const s = fresh(); s.metAll = true; selectEncounter(s, 'random', 77, { level, family, basic: 'pulse', genes, mutation: null, quiet: true }); command(s, 'engage'); return s; };
+  const cases = {
+    'fight-cap': ['ransomware', 13, ['limiter']],
+    'fight-standby': ['worm', 14, ['spare']],
+    'fight-shunt': ['worm', 17, ['shunt']],
+    'fight-scrape': ['ransomware', 19, ['scraper']],
+    'fight-packed': ['ghostroot', 20, ['packer', 'spare']],
+    'fight-cracked': ['ghostroot', 21, ['badblock']],
+    'fight-damper': ['worm', 23, ['damper']],
+    'fight-frost': ['ransomware', 24, ['coldstore']],
+  };
+  for (const [id, [family, level, genes]] of Object.entries(cases)) {
+    const t = TIPS.find((x) => x.id === id);
+    assert.ok(t?.pause && t.page === 'combat' && t.text.length <= 200, id);
+    const s = fight(family, level, genes);
+    if (id === 'fight-cracked') { s.server.integrity = Math.round(s.server.max / 2); s.encounter.badBlock = { left: 10, max: 10, source: 'badblock', name: 'Bad Block' }; }
+    const html = hudMarkup(s) + boardMarkup(s);
+    assert.ok(onPage(html)(t.at), `${id}: ${t.at} is on the board`);
+    const off = fight(family, level, []);
+    assert.ok(!onPage(hudMarkup(off) + boardMarkup(off))(t.at), `${id}: not without its part`);
+  }
+});

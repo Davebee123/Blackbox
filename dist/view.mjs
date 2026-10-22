@@ -23,7 +23,7 @@ import { ABILITIES, CONFIG, FAMILIES, MUTATIONS, TICKER, QUIRKS, DAEMONS, STRAIN
 import { GENES, CATS, AXES } from './genes.mjs';
 import { AUTHORS } from './authors.mjs';
 import { PUZZLES } from './puzzles.mjs';
-import { chipOf, virusGenes, scannedDeep } from './genome.mjs';
+import { chipOf, virusGenes, scannedDeep, packedChip, packsGene } from './genome.mjs';
 import { mastered, RESEARCH, TIER } from './research.mjs';
 import { SFX, levelOf as sfxLevel } from './screenfx.mjs';
 // A loud run (connect <server> loud): what the button and the run tag say on hover.
@@ -46,7 +46,7 @@ import { FIREWALL, fwOf, fwAt, ratingAt, effLevel, wallBonus, fragLevels, defrag
 import { filtersOf, equipped as filtersOn, slotsOf as filterSlots, filterLine, FILTER_STATS, CRAFTABLE, filterCost, FILTER_CAP, baseName as filterBase, filterRecipes } from './filters.mjs';
 import { situationOf } from './situations.mjs';
 import { SETS, setOf, setCard, activeSets, piecesOf, greenOf, sourceText, seesRare, tierLine } from './sets.mjs';
-import { tellTip, gearLive, cycleGear, gearOnParts, partTip, partCue, partRead, partLinks, lockOf, wardOf, GEAR_ICON } from './fightread.mjs';
+import { tellTip, gearLive, cycleGear, gearOnParts, partTip, partCue, partRead, partLinks, lockOf, wardOf, GEAR_ICON, DAMPED } from './fightread.mjs';
 import { cutsNow, crossBy, BOSS_RULES, TICKS } from './interrupt.mjs';
 import { programMarkup, progNow, progTarget, progText, progOnPart, progExc, progFight, progTag } from './routines-view.mjs';
 import { unlocked as routinesOpen, LOCKED as ROUTINES_LOCKED } from './routines.mjs';
@@ -57,7 +57,7 @@ import { RULES, LOOT, SLOTS, BASES, STATS, GROUPS, RARITIES, RARITY_ORDER, ZERO_
 import { raidIntents, raidMarks, raidOf, attackTarget } from './raid.mjs';
 import { EMBLEMS } from './class-emblems.mjs';
 import { ARCHETYPES, CANTRIPS, EDGE, SYNC, STATUSES, LOADOUT, TREE, SERVER, SKILLS, xpToNext, unlockLevel, power, SUBS, SUBCLASS, skillOrder, barSlots, isRunSkill } from './data.mjs';
-import { XP_KINDS, xpFor, cooldownOf, subOf, subPicked, kitTalent, specRule, skillBase, knowsPart, codexKey, previewDamage, ignoresArmor, armorTakes, parse, blocked, attackAmount, drawingFire, momentumStacks, momentumBonus, topUpCost, UNIQUES, bossChance, listenBoost, effectLine, implicitText, paceOf, keyMap, barKeys, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverClass, daemonSlots, procOpen, slottedDaemons, daemonNext, talentPoints, loaded, loadedOn, slotCount, maxSignal, compileCost, materialsOf, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, picksOf, ranksOf, freeSlot, rigOf, stashItem, knows, knownRecipes, pointsSpent, tierState, rowState, spentAbove, knownSkills, equippedSkills, cycleLength, familyInfo, defender, healCap, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, part, daemonLevel } from './combat.mjs';
+import { XP_KINDS, xpFor, cooldownOf, subOf, subPicked, kitTalent, specRule, skillBase, knowsPart, codexKey, previewDamage, ignoresArmor, armorTakes, parse, blocked, attackAmount, drawingFire, momentumStacks, momentumBonus, topUpCost, UNIQUES, bossChance, listenBoost, effectLine, implicitText, paceOf, keyMap, barKeys, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverClass, daemonSlots, procOpen, slottedDaemons, daemonNext, talentPoints, loaded, loadedOn, slotCount, maxSignal, compileCost, materialsOf, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, picksOf, ranksOf, freeSlot, rigOf, stashItem, knows, knownRecipes, pointsSpent, tierState, rowState, spentAbove, knownSkills, equippedSkills, cycleLength, familyInfo, defender, healCap, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, part, daemonLevel, packed, limitOf, asleep, frozenNow } from './combat.mjs';
 import { behindOf } from './progression.mjs';
 import { sigOf, named, lairOf, intelOf, knowsStrain, knowsEvent, knowsRich, nameOf, NETWORK, nativeChance, homeName, isNative, whoLabel, homeOf, netSeedOf, knownNets, NATIVE_POOL, awayChance } from './network.mjs';
 import { guardSetChance, lairChance, bossOdds, presetsOf, presetKeys, followOf, spikeName, said, mutated, capstonePoints, capPickOf, capState } from './combat.mjs';
@@ -113,10 +113,10 @@ function strainTags(s, v) {
 }
 export const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
-const ICON = { damage: 'server', encrypt: 'event-lock', scramble: 'scan', replicate: 'mutation', heal: 'shell-shield', mirror: 'interrupt', reboot: 'pulse-node', deliver: 'loot', unpack: 'mutation', redeploy: 'pulse-node', fuse: 'event-warning', buffer: 'shell-shield' };
+const ICON = { damage: 'server', encrypt: 'event-lock', scramble: 'scan', replicate: 'mutation', heal: 'shell-shield', mirror: 'interrupt', reboot: 'pulse-node', deliver: 'loot', unpack: 'mutation', redeploy: 'pulse-node', fuse: 'event-warning', buffer: 'shell-shield', thaw: 'event-warning', boot: 'pulse-node' };
 const icon = (name) => `style="--icon:url('ui/icons/${name}.svg')"`;
-const effectLabel = (i) => (i.effect === 'damage' ? `−${i.amount}` : i.effect === 'fuse' ? `−${i.amount}` : i.effect === 'buffer' ? `+${i.amount}` : (i.hit ? `−${i.hit} · ` : '') + (i.effect === 'encrypt' ? `+${i.amount}` : i.effect === 'scramble' ? `${i.amount} cyc` : i.effect === 'heal' ? `+${i.amount} hp` : i.effect === 'mirror' ? `${i.amount}% back` : i.effect === 'reboot' || i.effect === 'redeploy' ? `${i.amount} hp` : i.effect === 'deliver' ? '+box' : i.effect === 'unpack' ? `${i.amount} drop` : '+frag'));
-const TARGETS = { damage: 'Integrity', encrypt: 'damage every cycle, stacking, until it breaks', scramble: 'your attacks may hit you', replicate: 'spawns a fragment', heal: 'to its most damaged part', mirror: 'your command does nothing this cycle, and some bounces back', reboot: 'comes back, unless its twin is broken first', deliver: 'a Package on the board', unpack: 'two Droppers', redeploy: 'the Courier comes back, unless the Loader is broken first' };
+const effectLabel = (i) => (i.effect === 'damage' ? `−${i.amount}` : i.effect === 'fuse' ? `−${i.amount}` : i.effect === 'buffer' ? `+${i.amount}` : i.effect === 'thaw' ? 'joins' : i.effect === 'boot' ? `${i.amount} hp` : (i.hit ? `−${i.hit} · ` : '') + (i.effect === 'encrypt' ? `+${i.amount}` : i.effect === 'scramble' ? `${i.amount} cyc` : i.effect === 'heal' ? `+${i.amount} hp` : i.effect === 'mirror' ? `${i.amount}% back` : i.effect === 'reboot' || i.effect === 'redeploy' ? `${i.amount} hp` : i.effect === 'deliver' ? '+box' : i.effect === 'unpack' ? `${i.amount} drop` : '+frag'));
+const TARGETS = { damage: 'Integrity', encrypt: 'damage every cycle, stacking, until it breaks', scramble: 'your attacks may hit you', replicate: 'spawns a fragment', heal: 'to its most damaged part', mirror: 'your command does nothing this cycle, and some bounces back', reboot: 'comes back, unless its twin is broken first', deliver: 'a Package on the board', unpack: 'two Droppers', redeploy: 'the Courier comes back, unless the Loader is broken first', thaw: 'it thaws at the end of this cycle and joins the fight', boot: 'it boots with the signature\'s attack, unless you break it first' };
 let runMode = false;
 const effectTarget = new Proxy(TARGETS, { get: (t, k) => (k === 'damage' && runMode ? 'Signal' : t[k]) });
 
@@ -282,6 +282,8 @@ const claimMarks = (s, d) => { let at = d.integrity; return pendingClaims(s).map
 const lossMark = (now, max, loss) => (loss > 0 && max > 0 ? `<i class="loss" style="left:${((now - loss) / max) * 100}%;width:${(loss / max) * 100}%" title="−${loss} this cycle"></i>` : '');
 
 // In a breach, healing stops at the Signal you came into the fight with: the bar past it is fenced off.
+// A Bad Block (the parts plan's P2): the cells your next heals would fill are cracked, as far as it eats.
+const crackMark = (s, d) => { const bb = s.encounter?.badBlock; if (!(bb?.left > 0) || d.integrity >= d.max) return ''; const w = Math.min(bb.left, d.max - d.integrity); return `<i class="cracked-cells" style="left:${(d.integrity / d.max) * 100}%;width:${(w / d.max) * 100}%" title="${esc(`${bb.name}: your next heals lose up to ${bb.left}. Purge, Scrub, Rollback or Rotate Keys clears it.`)}"></i>`; };
 const capMark = (s, d) => { const cap = healCap(s); return cap < d.max ? `<i class="heal-cap" style="left:${(cap / d.max) * 100}%;width:${((d.max - cap) / d.max) * 100}%" title="Healing cap: ${cap}. Heals in this fight can't take you past the Signal you came in with. Rest at a defrag to raise it."></i>` : ''; };
 
 export function hudMarkup(s, { party = true, preview = null } = {}) {
@@ -302,7 +304,7 @@ export function hudMarkup(s, { party = true, preview = null } = {}) {
   const tags = `${v.champion ? '<span class="tag tag-crew" title="Champion: an elite-grade invader, sized for one. It is tougher, gives three times the XP, and leaves a capture when it falls: a sure daemon.">★ CHAMPION</span>' : v.elite ? '<span class="tag tag-crew" title="Elite: built for a crew. It is much tougher, gives three times the XP, and drops better loot.">◆ CREW</span>' : ''}${e.invader && s.invasion?.id === e.invader ? `<span class="tag hot">invasion · ${esc(s.invasion.fromName)}</span>` : ''}${m && !geneChips(s, v) ? `<span class="tag tag-mut" data-mut="${v.mutation}" title="${esc(m.rule)}">${esc(m.name)}</span>` : ''}${strainTags(s, v)}${weak ? `<span class="tag you">weak: ${esc(weak.name)}</span>` : ''}`;
   // Yours first (what you watch): your Signal with the crew under it; the virus's total at the right,
   // over its picture.
-  return `<div class="hud-left"><div class="hud-you"><div class="hud-bar mine ${level}"><div class="bar-top"><strong>${glyph(runMode ? 'signal' : 'integrity', 'bar-ico')}${mine}</strong><span>${d.integrity}<small>/${d.max}</small></span></div><div class="bigbar"><span style="width:${dp}%"></span>${capMark(s, d)}${lossMark(d.integrity, d.max, fc.you)}${claimMarks(s, d)}</div>${clockMeter(s)}</div></div>${statusPanel(s)}</div>
+  return `<div class="hud-left"><div class="hud-you"><div class="hud-bar mine ${level}"><div class="bar-top"><strong>${glyph(runMode ? 'signal' : 'integrity', 'bar-ico')}${mine}</strong><span>${d.integrity}<small>/${d.max}</small></span></div><div class="bigbar"><span style="width:${dp}%"></span>${capMark(s, d)}${crackMark(s, d)}${lossMark(d.integrity, d.max, fc.you)}${claimMarks(s, d)}</div>${clockMeter(s)}</div></div>${statusPanel(s)}</div>
     <div class="hud-bar enemy"><div class="bar-top"><span class="vname"><strong>${esc(v.name)}</strong>${byline(v)}<span class="meta">${levelTag(s, v.level)}${v.strain || GUARDS[v.family]?.ice ? '' : ' ' + esc(familyInfo(v.family).name)}</span></span><span>${hp.current}<small>/${hp.max}</small></span></div><div class="bigbar"><span style="width:${vp}%"></span>${lossMark(hp.current, hp.max, fc.total)}</div><p class="clock-line">${armor.max ? `<span class="chits">${'◆'.repeat(armor.current)}<i>${'◇'.repeat(armor.max - armor.current)}</i></span>` : ''}${tags}${roomBossTag(s)}${progFight(s)}</p>${geneChips(s, v)}</div>`;
 }
 // A Resident in a server room (interrupt.mjs BOSS_RULES): the rule it fights under, and (c)'s budget as pips.
@@ -378,10 +380,13 @@ const heldTip = (i) => (i.held ? '. It is already delayed, and no other delay mo
 const heldMark = (i) => (i.held ? `<i class="held">${glyph('stall')}</i>` : '');
 // The parts plan's marks on a chip (parts.mjs): a volley's hits joined by a bracket (tap 1 of 2…), a Backlog's SYN, a
 // Zip Bomb's fuse, a Buffer's next shield.
-const chipCls = (i) => `${i.taps ? ` tap t${i.tap}${i.tap === 1 ? ' first' : ''}${i.tap === i.taps ? ' last' : ''}` : ''}${i.syn ? ' syn' : ''}${i.effect === 'fuse' ? ' fuse' : ''}${i.effect === 'buffer' ? ' bufup' : ''}`;
-const chipTip = (i) => (i.taps ? `\nHit ${i.tap} of ${i.taps} of one volley: a cut stops the rest, a delay moves them all.` : i.syn ? '\nSYN: the skill you fire this cycle cools down 2 cycles longer.' : i.effect === 'fuse' ? '\nThe fuse goes off: a ◆ or a shield takes it. Ending the fight first puts it out.' : i.effect === 'buffer' ? '\nIts shield takes your commands\' hits first. Burns and helpers go under it.' : '');
+// The P2 parts' (genes.mjs): a Scraper's takes-shield mark, a Bad Block's cracked mark, a Cold Store's thaw, a Spare's boot.
+const chipCls = (i) => `${i.taps ? ` tap t${i.tap}${i.tap === 1 ? ' first' : ''}${i.tap === i.taps ? ' last' : ''}` : ''}${i.syn ? ' syn' : ''}${i.effect === 'fuse' ? ' fuse' : ''}${i.effect === 'buffer' ? ' bufup' : ''}${i.scrape ? ' scrape' : ''}${i.bad ? ' bad' : ''}${i.effect === 'thaw' ? ' thaw' : ''}${i.effect === 'boot' ? ' boot' : ''}`;
+const chipTip = (i) => (i.taps ? `\nHit ${i.tap} of ${i.taps} of one volley: a cut stops the rest, a delay moves them all.` : i.syn ? '\nSYN: the skill you fire this cycle cools down 2 cycles longer.' : i.effect === 'fuse' ? '\nThe fuse goes off: a ◆ or a shield takes it. Ending the fight first puts it out.' : i.effect === 'buffer' ? '\nIts shield takes your commands\' hits first. Burns and helpers go under it.'
+  : i.scrape ? '\nIt takes your ◆ and what is left of your shield as it lands, and wears up to 2 of them. Put them up after it lands. Null Route makes it miss.' : i.bad ? '\nWhen it lands, your next heals lose up to a tenth of your max. Purge, Scrub, Rollback and Rotate Keys clear it.'
+  : i.effect === 'thaw' ? `\nFrozen until then: nothing reaches it. Its first hit, ${i.amount}, comes 2 cycles after it thaws.` : i.effect === 'boot' ? '\nThe signature broke: the Spare boots with its attack. Break it before then and it never does.' : '');
 function attackChip(i, c, k = '', to = null) {
-  return `<div class="intent ${c === 0 ? 'now' : c === 1 ? 'next' : ''}${i.held ? ' held' : ''}${chipCls(i)}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(i.name)}: ${effectLabel(i)} ${to ? `at ${esc(to)}` : effectTarget[i.effect] || ''}${heldTip(i)}${esc(chipTip(i))}"><span class="ico" ${icon(ICON[i.effect])}></span>${heldMark(i)}<b${longChip(i) ? ' class="long"' : ''}>${esc(i.name)}</b><i class="code${longChip(i) ? ' long' : ''}">${esc(attackCode(i.name))}</i><small>${effectLabel(i)}</small>${i.syn ? '<em class="synmark">SYN</em>' : ''}${i.taps ? `<em class="tapmark">${i.tap}/${i.taps}</em>` : ''}${to ? `<small class="at">→ ${esc(to)}</small>` : ''}</div>`;
+  return `<div class="intent ${c === 0 ? 'now' : c === 1 ? 'next' : ''}${i.held ? ' held' : ''}${chipCls(i)}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(i.name)}: ${effectLabel(i)} ${to ? `at ${esc(to)}` : effectTarget[i.effect] || ''}${heldTip(i)}${esc(chipTip(i))}"><span class="ico" ${icon(ICON[i.effect])}></span>${heldMark(i)}<b${longChip(i) ? ' class="long"' : ''}>${esc(i.name)}</b><i class="code${longChip(i) ? ' long' : ''}">${esc(attackCode(i.name))}</i><small>${effectLabel(i)}</small>${i.syn ? '<em class="synmark">SYN</em>' : ''}${i.scrape ? `<em class="scrapemark" title="Takes your shield and ◆">${glyph('scraper')}</em>` : ''}${i.bad ? '<em class="badmark" title="Cracks your next heals">▦</em>' : ''}${i.taps ? `<em class="tapmark">${i.tap}/${i.taps}</em>` : ''}${to ? `<small class="at">→ ${esc(to)}</small>` : ''}</div>`;
 }
 
 // What you've put on a part, as marks by its name (an icon each) and a class on its row, so a
@@ -408,14 +413,14 @@ export const byline = (v) => (v?.author && AUTHORS[v.author] ? `<span class="byl
 export function geneChip(c, extra = '') {
   const ax = AXES[c.axis], what = `${an(c.catName).toLowerCase()} ${c.catName} that presses on ${ax.name}`;
   const how = GENES[c.id]?.decode === 'part' ? `Research a part that carries it to ${TIER.rule} to learn its rule.` : GENES[c.id]?.decode === 'tell' ? 'Answer it once to learn its rule.' : 'Beat two viruses that carry it to learn its rule.';
-  const title = !c.name ? `${an(c.catName)} ${c.catName} you haven't seen.` : c.rule ? `${c.name} is ${what}. ${c.rule} ${c.answer}` : `${c.name} is ${what}. ${how}`;
-  return `<span class="gchip g-${c.src}${c.name ? '' : ' unknown'}" ${c.name ? `style="--ax:${ax.colour}"` : ''} ${extra} title="${esc(title)}">${glyph(c.name ? ax.icon : CATS[c.cat].icon)}${esc(c.name ? c.name.toLowerCase() : '???')}</span>`;
+  const title = c.packed ? `Packed: ${an(c.catName)} ${c.catName} the Packer hides until it breaks. A scan before the fight reads it.` : !c.name ? `${an(c.catName)} ${c.catName} you haven't seen.` : c.rule ? `${c.name} is ${what}. ${c.rule} ${c.answer}` : `${c.name} is ${what}. ${how}`;
+  return `<span class="gchip g-${c.src}${c.name ? '' : ' unknown'}${c.packed ? ' packed' : ''}"${c.name ? `style="--ax:${ax.colour}"` : ''} ${extra} title="${esc(title)}">${glyph(c.name ? ax.icon : CATS[c.cat].icon)}${esc(c.name ? c.name.toLowerCase() : '???')}</span>`;
 }
 function geneChips(s, v) {
   const genes = virusGenes(v);
   if (!genes.length) return '';
   const deep = scannedDeep(s, v);
-  return `<p class="gene-line">${genes.map((g) => geneChip(chipOf(s, g.id, g.src, deep), GENES[g.id].mutation && g.src !== 'boss' ? `data-mut="${g.id}"` : '')).join('')}</p>`;
+  return `<p class="gene-line">${genes.map((g) => (packsGene(s, v, g) ? geneChip(packedChip(chipOf(s, g.id, g.src, deep)), 'data-packed="1"') : geneChip(chipOf(s, g.id, g.src, deep), GENES[g.id].mutation && g.src !== 'boss' ? `data-mut="${g.id}"` : ''))).join('')}</p>`;
 }
 // A scan on a run: the genome card in the terminal (genome.mjs genomeCard).
 function scanMarkup(e) {
@@ -489,7 +494,8 @@ export function partAbout(p, v = null, s = null) {
   return `${r.does} ${r.answer}`;
 }
 function partTags(s, p) {
-  const e = s.encounter, tags = [];
+  const e = s.encounter, tags = [], pk = packed(s, e.virus, p); // a Packer standing: a rolled part's rule reads as ???
+  if (pk && p.integrity > 0) tags.push(`<span class="tag packed" title="${esc('Packed: the Packer hides this part\'s rule until it breaks.')}">${glyph('crate')}???</span>`);
   if (p.veiled && p.armor > 0) tags.push(`<span class="tag" title="${VEIL_NOTE}">veiled</span>`);
   if (p.exposedUntil >= e.cycle) tags.push(`<span class="tag you" title="Exposed: hits on it have a 25% higher chance to critically strike">exposed ${p.exposedUntil - e.cycle + 1}</span>`);
   if (e.virus.weakKnown && e.virus.weakPoint === p.id) tags.push('<span class="tag you" title="+50% damage for the rest of the fight">weak</span>');
@@ -512,17 +518,22 @@ function partTags(s, p) {
   if (mutated(s, 'adaptive') && p.integrity > 0 && p.adaptRun >= 2 && p.adaptAt === e.cycle - 1) tags.push('<span class="tag hot" title="Hit it again this cycle and it gains a ◆ at the end of the cycle">adapting</span>');
   if (p.rerouted && p.integrity > 0) tags.push(`<span class="tag hot" title="Rerouted from a broken part: its attack deals ${p.rerouted} more">+${p.rerouted} rerouted</span>`);
   // Parts that change the fight (data.mjs FAMILIES): a Tripwire, the C2 Node, the parts gone loud.
-  if (p.deadman && p.integrity > 0) tags.push(`<span class="tag hot" title="Break it while the others stand and they go loud, dealing ${Math.round((CONFIG.tripwire.loud - 1) * 100)}% more damage and attacking a cycle sooner. Break it last.">tripwire</span>`);
+  if (p.deadman && p.integrity > 0 && !pk) tags.push(`<span class="tag hot" title="Break it while the others stand and they go loud, dealing ${Math.round((CONFIG.tripwire.loud - 1) * 100)}% more damage and attacking a cycle sooner. Break it last.">tripwire</span>`);
   if (p.loud && p.integrity > 0) tags.push(`<span class="tag hot" title="The Tripwire set it off: its attacks deal ${Math.round((CONFIG.tripwire.loud - 1) * 100)}% more damage">loud</span>`);
   // Fallback (combat.mjs): the part that takes over its partner's attack when the partner breaks first.
   if (p.fallback && p.integrity > 0) { const t = e.virus.parts.find((x) => x.id === p.fallback); if (p.tookOver) tags.push(`<span class="tag hot" title="${esc(`It took over the ${t?.name || 'broken part'}'s ${t?.attack?.name || 'attack'} when the ${t?.name || 'other part'} broke.`)}">took over</span>`); else if (t && t.integrity > 0 && t.attack) tags.push(`<span class="tag hot" title="${esc(`Fallback: break the ${t.name} while the ${p.name} stands and the ${p.name} takes over its ${t.attack.name}.`)}">fallback</span>`); }
   // The parts plan (data.mjs BASICS, genes.mjs): an Accumulator's charge, a Hotspot's glow, the Idle Timer's countdown on
   // the signature's row, an Obfuscator's smoke.
   if (p.accum && p.attack && p.integrity > 0) { const n = Math.max(0, p.attack.due - e.cycle), k = p.attack.interval, f = Math.max(0, Math.min(k, k - n)); tags.push(`<span class="tag hot accum" title="${esc(`Charging its ${p.attack.name}: it lands ${n <= 0 ? 'this cycle' : n === 1 ? 'next cycle' : `in ${n} cycles`}, for ${blocked(s, attackAmount(p))}.`)}">${glyph('damage')}<i class="acc-bar"><b style="width:${Math.round((f / k) * 100)}%"></b></i></span>`); }
-  if (p.hotspot && p.integrity > 0) tags.push(`<span class="tag hot hotspot" title="${esc('Hot: a hit from your command turns the virus\'s next attack 2 or more cycles away into a charge. Burns and helpers don\'t set it off.')}">${glyph('burn')}hot</span>`);
-  const idler = p.special && p.integrity > 0 && e.virus.parts.find((x) => x.idle && x.integrity > 0);
+  if (p.hotspot && p.integrity > 0 && !pk) tags.push(`<span class="tag hot hotspot" title="${esc('Hot: a hit from your command turns the virus\'s next attack 2 or more cycles away into a charge. Burns and helpers don\'t set it off.')}">${glyph('burn')}hot</span>`);
+  const idler = p.special && p.integrity > 0 && e.virus.parts.find((x) => x.idle && x.integrity > 0 && !packed(s, e.virus, x));
   if (idler) { const left = Math.max(0, idler.idle - (e.cycle - (e.virus.idleHit || 0))); tags.push(`<span class="tag${left <= 2 ? ' hot' : ''} idlepips" title="${esc(`${idler.name}: ${left ? `every part re-arms to full ◆ in ${left} ${left === 1 ? 'cycle' : 'cycles'}` : 'every part re-arms at the end of this cycle'} unless your command hits the ${p.name}.`)}">${glyph('clock')}${'●'.repeat(left)}<i>${'○'.repeat(Math.max(0, idler.idle - left))}</i></span>`); }
   if (p.obfuscate && p.integrity > 0) tags.push('<span class="tag" title="While it stands, every part hides its timers, ◆ or not. Tag still shows one.">smoke</span>');
+  // The parts plan's P2: a Limiter's cap, a Spare on standby, a Damper's dropped kind, a Cold Store's thaw.
+  if (p.limit && p.integrity > 0 && !pk) tags.push(`<span class="tag limcap" title="${esc(`Limiter: no single hit takes more than ${limitOf(p)} of its Integrity. The rest is lost. Use many small hits.`)}">${glyph('shield')}cap ${limitOf(p)}</span>`);
+  if (asleep(p) && p.integrity > 0 && !pk) tags.push(`<span class="tag standby" title="${esc(p.bootAt ? `Booting: it comes up ${p.bootAt - e.cycle <= 0 ? 'at the end of this cycle' : `in ${p.bootAt - e.cycle} ${p.bootAt - e.cycle === 1 ? 'cycle' : 'cycles'}`} with the ${p.bootFrom?.name || 'signature'}'s attack. Break it first.` : 'Standby: it sleeps until the signature part breaks, then boots with its attack. Break it while it sleeps.')}">${glyph('snapshot')}${p.bootAt ? 'booting' : 'standby'}</span>`);
+  if (p.damper && p.integrity > 0 && !pk) { const k = DAMPED[p.damperKind] || DAMPED.burn; tags.push(`<span class="tag damper${p.armor > 0 ? '' : ' off'}" title="${esc(p.armor > 0 ? `Damper: while it wears ◆, ${k.many} deal it no damage. They still break its ◆.` : `Damper: stripped. ${k.many[0].toUpperCase() + k.many.slice(1)} hurt it again until its ◆ patches back.`)}">${glyph(k.icon)}<s>${esc(k.short)}</s></span>`); }
+  if (frozenNow(s, p) && !pk) { const k = p.thawAt ?? p.frozen, f = Math.max(0, Math.min(1, (e.cycle - 1) / k)), n = k - e.cycle + 1; tags.push(`<span class="tag frost" title="${esc(`Frozen: off the timeline, and nothing reaches it. It thaws ${n <= 1 ? 'at the end of this cycle' : `in ${n} cycles`}, and its first hit comes 2 cycles after.`)}">${glyph('clock')}<i class="thaw-bar"><b style="width:${Math.round(f * 100)}%"></b></i></span>`); }
   if (p.command && p.integrity > 0) tags.push(`<span class="tag hot" title="While it lives, fragments gnaw ${Math.round(CONFIG.c2.gnaw * 100)}% harder. Break it and every fragment drops with it.">commands fragments</span>`);
   const burn = (e.burns || []).filter((b) => b.target === p.id);
   // Burns, one tag per kind: the damage a cycle in all, and how many when there's more than one of a kind
@@ -549,6 +560,7 @@ function youStanding(s) {
   if (slottedDaemons(s).includes('snapshot') && !e.once?.['dmn-snapshot']) add('Snapshot', 'you', daemonText('snapshot', daemonLevel(s, 'snapshot')));
   if (e.chits > 0) add('Armor', 'you', `${'◆'.repeat(e.chits)} The next attack on you does nothing, however big.`);
   if (e.shield > 0) add('Shield', 'you', `${e.shield}. Absorbs damage from attacks.`);
+  if (e.badBlock?.left > 0) add('Cracked', 'hot', `${e.badBlock.name}: your next heals lose up to ${e.badBlock.left}. Purge, Scrub, Rollback or Rotate Keys clears it.`);
   if (e.helpers?.length) add('Helpers', 'daemon', `${e.helpers.length} running. They hit after you each cycle.`);
   for (const x of raidMarks(s, s)) add(x.name, x.kind, x.tip); // a crew boss: Thermal Stress, Corruption, encrypted sectors, marks, aggro
   return out;
@@ -747,18 +759,20 @@ export function boardMarkup(s, selected, preview = null) {
     const cueTag = cue ? `<span class="pcue"${cue.link ? ` data-link="${esc(cue.link)}"` : ''}>${glyph(cue.icon, 'pcue-ico')}${esc(cue.text)}</span>` : '';
     const guard = alive(p) ? guardMarks(s, e.virus, p, fc) : '';
     const gearMark = onParts[p.id] ? `<span class="gpart" title="${esc(`${list2(onParts[p.id])}: live on the ${p.name} now.`)}">${glyph('protocol')}</span>` : '';
-    return `<button type="button"${fade} class="brow bpart ${dying(p) ? 'dying' : ''} ${selected === p.id ? 'selected' : ''} ${nowHit ? 'now' : ''} ${p.maxArmor && !p.armor ? 'cracked' : ''} ${marks.map((k) => 'm-' + k).join(' ')}${fighting && progExc(s, p) ? ' m-exc' : ''}" data-target="${esc(p.id)}" ${fighting ? '' : 'disabled'} title="Target ${esc(p.name)}: ${spike}">
-      <div class="bcell bname" title="${esc(partTip(s, e.virus, p))}">${ties[ri]}${pips(p.id)}<span class="part-top"><span class="part-name">${esc(p.name)}${known ? '' : '<sup class="unk">?</sup>'}${mastered(s, e.virus, p) ? masteredMark(p) : ''}</span>${gearMark}${marksMarkup(marks)}${chitsMarkup(p, fc.chits[p.id] || 0)}<span class="part-hp">${p.integrity}/${p.max}</span></span><span class="part-bar${guard ? ' guarded' : ''}"><span style="width:${pct}%"></span>${lossMark(p.integrity, p.max, fc.parts[p.id] || 0)}${guard}${ticksMarkup(s, p)}</span><span class="part-tags">${fighting ? progTag(s, p) : ''}${cueTag}${partTags(s, p)}</span></div>
+    return `<button type="button"${fade} class="brow bpart ${dying(p) ? 'dying' : ''} ${selected === p.id ? 'selected' : ''} ${nowHit ? 'now' : ''} ${p.maxArmor && !p.armor ? 'cracked' : ''}${frozenNow(s, p) ? ' frozen' : ''}${asleep(p) && alive(p) ? ' standby' : ''} ${marks.map((k) => 'm-' + k).join(' ')}${fighting && progExc(s, p) ? ' m-exc' : ''}" data-target="${esc(p.id)}" ${fighting ? '' : 'disabled'} title="Target ${esc(p.name)}: ${spike}">
+      <div class="bcell bname" title="${esc(partTip(s, e.virus, p))}">${ties[ri]}${pips(p.id)}<span class="part-top"><span class="part-name">${esc(p.name)}${known ? '' : '<sup class="unk">?</sup>'}${mastered(s, e.virus, p) ? masteredMark(p) : ''}</span>${gearMark}${marksMarkup(marks)}${chitsMarkup(p, fc.chits[p.id] || 0)}<span class="part-hp">${p.integrity}/${p.max}</span></span><span class="part-bar${guard ? ' guarded' : ''}"><span style="width:${pct}%"></span>${lossMark(p.integrity, p.max, fc.parts[p.id] || 0)}${guard}${capLine(s, p)}${ticksMarkup(s, p)}</span><span class="part-tags">${fighting ? progTag(s, p) : ''}${cueTag}${partTags(s, p)}</span></div>
       ${showCells ? cells : '<div class="bcell span4"></div>'}</button>`;
   }).join('');
   // A fight whose parts protect each other keeps the tethers' gutter after the last one goes, so the rows don't jump.
-  const keep = !ties.some(Boolean) && e.virus.parts.some((p) => p.lock || p.ward || p.wardsToo || p.twin || p.rearm || p.command || p.buffer || p.front || p.idle) ? '<i class="tether keep" hidden></i>' : '';
+  const keep = !ties.some(Boolean) && e.virus.parts.some((p) => p.lock || p.ward || p.wardsToo || p.twin || p.rearm || p.command || p.buffer || p.front || p.idle || p.shunt) ? '<i class="tether keep" hidden></i>' : '';
   const gone = broken.length ? `<div class="brow bbroken"><div class="bcell span5">Broken: ${broken.map((p) => esc(p.name)).join(', ')}</div></div>` : '';
   // Whose half is playing, across the top of the board (the board itself takes its colour: style.css).
   const ph = fighting ? phaseOf(s) : null, who = esc(e.virus.name.split('-')[0]);
   const strip = ph ? `<div class="phase-strip ph-${ph}" title="Each cycle, you move first, then the virus"><span class="ps-you">${ph === 'wait' ? 'Your move' : 'You'}</span><i>▸</i><span class="ps-them">${who}</span>${e.escapeAt ? `<b class="ps-esc" title="${esc(uploadTip(e))}">${uploadText(e)}</b>` : ''}</div>` : '';
   return strip + head + you() + raidRow(s) + escapeRow(s) + rows + gone + keep;
 }
+// A Limiter's cap line (the parts plan's P2): where one hit at most takes its bar down to.
+const capLine = (s, p) => (p.limit && alive(p) && !packed(s, s.encounter.virus, p) ? `<i class="capline" style="left:${Math.max(0, ((p.integrity - limitOf(p)) / p.max) * 100)}%" title="${esc(`Cap: one hit takes it down to ${Math.max(0, p.integrity - limitOf(p))} at most.`)}"></i>` : '');
 // A runner (the Exfil): its own row, "Upload 2/6", the fuse on the cycle its upload completes.
 const uploadText = (e) => `Upload ${Math.max(0, Math.min(e.escapeAt, e.cycle - 1))}/${e.escapeAt}`;
 const uploadTip = (e) => `Still up at the end of cycle ${e.escapeAt}, its upload completes and the archive is gone. Break its Uplink first.`;

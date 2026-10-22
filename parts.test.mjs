@@ -3,9 +3,10 @@
 // 300 wild fights a level, selectEncounter(s, 'random', seed, { level }).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fresh, selectEncounter, command, resolveCycle, active, part, livingParts, intents, timersHidden, partsMix, landingsOf, blocked, attackAmount } from './dist/combat.mjs';
-import { FAMILIES, CONFIG, createVirus, SERVER, nominal } from './dist/data.mjs';
-import { boardMarkup } from './dist/view.mjs';
+import { fresh, selectEncounter, command, resolveCycle, active, part, livingParts, intents, timersHidden, partsMix, landingsOf, blocked, attackAmount, alive, hit, heal, limitOf, shuntOf, frozenNow, toIntent, encounterVirus } from './dist/combat.mjs';
+import { FAMILIES, CONFIG, createVirus, SERVER, nominal, DAMPER_KINDS } from './dist/data.mjs';
+import { boardMarkup, hudMarkup } from './dist/view.mjs';
+import { partTip } from './dist/fightread.mjs';
 import { PARTS, signatureShare, rollParts, basicsOf, heatOf, along } from './dist/parts.mjs';
 import { GENES } from './dist/genes.mjs';
 import { findSource, tellsOf } from './dist/tells.mjs';
@@ -439,4 +440,191 @@ test('every parts number is one named constant, and developer parts shows and se
   } finally { PARTS.signature = was; PARTS.profile.ransomware.ramp = 152; }
   const r = rollParts({ family: 'worm', body: FAMILIES.worm, level: 1, rand: () => 0.1 });
   assert.equal(r.basic.id, 'pulse');
+});
+
+// ---------- phase P2: floors 3 and 4, natives ----------
+// The kinds you can meet from 13 to 26: the plan's "After" column less the Cryptominer's and the Wiper's own parts (the
+// Rig, the Cooler, the Degausser and the Eraser) and the Damper, which come with P3 (the Damper is built, on the Worm's
+// list for its playtest page, but rolls at weight 0 until its own families come: PARTS.weight).
+const KINDS2 = { 13: 24, 14: 25, 15: 25, 16: 26, 17: 27, 18: 27, 19: 28, 20: 29, 21: 30, 22: 30, 23: 30, 24: 31, 25: 31, 26: 31 };
+const M2 = {}, N2 = {};
+for (let L = 13; L <= 26; L++) { M2[L] = measure(L); N2[L] = measure(L, false); }
+test('P2: the kinds you can meet from 13 to 26, and something new every few levels (13, 14, 16, 17, 19, 20, 21, 24)', () => {
+  for (let L = 13; L <= 26; L++) {
+    assert.ok(M2[L].kinds.size >= KINDS2[L], `level ${L}: ${M2[L].kinds.size} kinds, want ${KINDS2[L]}`);
+    assert.ok(N2[L].kinds.size >= KINDS2[L] - 2, `a new player at ${L}: ${N2[L].kinds.size} kinds`);
+  }
+  const firstAt = {};
+  for (let L = 1; L <= 12; L++) for (const k of M[L].kinds) firstAt[k] ??= L;
+  for (let L = 13; L <= 26; L++) for (const k of M2[L].kinds) firstAt[k] ??= L;
+  for (const [id, L] of Object.entries({ limiter: 13, spare: 14, tripwire: 16, shunt: 17, scraper: 19, packer: 20, badblock: 21, coldstore: 24 })) assert.equal(firstAt[id], L, `${id} first at ${L}`);
+  assert.equal(firstAt.damper, undefined, 'the Damper waits for P3');
+  const news = new Set(Object.values(firstAt));
+  for (let L = 1; L + 3 <= 26; L++) assert.ok([L, L + 1, L + 2, L + 3].some((x) => news.has(x)), `nothing new from ${L} to ${L + 3}`);
+});
+test('P2: a share of fights have 4 parts from 16 (PARTS.count), and one stranger a fight still holds', () => {
+  for (let L = 16; L <= 26; L++) assert.ok(M2[L].counts[4] >= 50, `level ${L}: ${JSON.stringify(M2[L].counts)}`);
+  for (const L of [13, 15]) assert.ok(M2[L].counts[4] < M2[16].counts[4], `fewer 4-part fights at ${L}`);
+  assert.deepEqual(along(PARTS.count, 16), [0.1, 0.6, 0.3]);
+  for (let L = 13; L <= 26; L++) for (const v of N2[L].fights) {
+    const strangers = [...new Set(v.parts.filter((p) => p.id !== 'pulse' && !p.special && !p.copy).map((p) => p.id))];
+    assert.ok(strangers.length <= 1 && (!strangers.length || v.parts.length <= 3), `level ${L}: ${v.parts.map((p) => p.id).join()}`);
+  }
+});
+test('P2: the new thirds are genes with a cost, a level inside their floor\'s band and their floor, in their families\' pools; the Tripwire opens at 16', () => {
+  const NATIVE = { limiter: 3, spare: 3, shunt: 3, scraper: 4, badblock: 4, coldstore: 4 };
+  for (const id of ['limiter', 'spare', 'shunt', 'scraper', 'packer', 'badblock', 'damper', 'coldstore']) {
+    const g = GENES[id];
+    assert.ok(g.cost >= 1 && g.cost <= 3, id);
+    assert.equal(g.floor || null, NATIVE[id] || null, `${id}'s floor`);
+    if (g.floor) { const [lo, hi] = [[1, 8], [7, 14], [13, 20], [19, 26]][g.floor - 1]; assert.ok(g.opens >= lo && g.opens <= hi, `${id} opens inside floor ${g.floor}'s band`); }
+    assert.ok(Object.keys(g.parts).every((f) => FAMILIES[f].third.includes(id) && g.parts[f].loot && g.parts[f].from === g.opens), `${id} is in its families' pools`);
+  }
+  assert.equal(GENES.tripwire.opens, 16); assert.equal(FAMILIES.ransomware.parts.find((p) => p.id === 'tripwire').from, 16);
+  assert.ok(GENES.spare.sig, 'the Spare refers to the signature: never without it');
+  for (let L = 14; L <= 26; L++) for (const v of M2[L].fights) if (v.noSignature) assert.ok(!v.parts.some((p) => p.spare || p.idle), `${v.name}: no Spare or Idle Timer without the signature`);
+});
+
+// A forced fight at home (the playtest page's shape: the Pulse Node, the signature, the forced thirds), engaged.
+const fight2 = (level, family, genes) => { const s = fresh(); s.metAll = true; selectEncounter(s, 'random', 77, { level, family, basic: 'pulse', genes, mutation: null, quiet: true }); command(s, 'engage'); s.encounter.soft = 1; s.server.integrity = s.server.max = 9999; return s; };
+const still = (s) => { for (const p of livingParts(s)) if (p.attack) p.attack.due = 999; };
+test('Limiter: no single hit takes more than 20% of its max; burns tick under the cap', () => {
+  const s = fight2(13, 'ransomware', ['limiter']), p = part(s, 'limiter');
+  p.armor = 0;
+  const cap = limitOf(p), hp = p.integrity;
+  assert.equal(cap, Math.round(p.max * 0.2));
+  hit(s, p, 9999, { server: true });
+  assert.equal(hp - p.integrity, cap, 'a huge hit takes the cap');
+  hit(s, p, 1, { server: true });
+  assert.equal(hp - p.integrity, cap + 1, 'a small one takes what it deals');
+  assert.match(boardMarkup(s), /class="capline"/);
+});
+test('Spare: asleep off the timeline; when the signature breaks it boots 2 cycles later at 60% of its max with its attack; broken asleep, it never does', () => {
+  const s = fight2(14, 'worm', ['spare']), sp = part(s, 'spare'), sig = part(s, 'replicator');
+  assert.ok(!sp.attack && !intents(s, 4).some((i) => i.source === 'spare'), 'asleep: no attack, nothing on the timeline');
+  still(s);
+  const max = sig.max;
+  hit(s, sig, 99999, { pierce: true, server: true });
+  assert.ok(sp.bootAt === s.encounter.cycle + 2 && intents(s, 4).some((i) => i.source === 'spare' && i.effect === 'boot'), 'its Boot chip');
+  step(s); step(s); step(s);
+  assert.ok(sp.booted && sp.attack?.effect === 'replicate', 'booted with the Replicator\'s Replicate');
+  assert.equal(sp.max, Math.round(max * 0.6));
+  const t = fight2(14, 'worm', ['spare']), sp2 = part(t, 'spare');
+  hit(t, sp2, 99999, { pierce: true, server: true });
+  hit(t, part(t, 'replicator'), 99999, { pierce: true, server: true });
+  assert.ok(!sp2.bootAt && !alive(sp2), 'broken while it slept: no boot');
+});
+test('Shunt: while both live, half of what its partner takes moves onto it (after the partner\'s ◆); it shows as a tether', () => {
+  const s = fight2(17, 'worm', ['shunt']), sh = part(s, 'shunt'), sig = part(s, 'replicator');
+  assert.equal(shuntOf(s, sh), sig, 'its partner is the signature');
+  sig.armor = 0;
+  const a = sig.integrity, b = sh.integrity;
+  hit(s, sig, 20, { server: true });
+  assert.equal(a - sig.integrity, 10); assert.equal(b - sh.integrity, 10);
+  assert.match(boardMarkup(s), /tether k-shunt/);
+  sh.integrity = 0;
+  const c = sig.integrity; hit(s, sig, 20, { server: true });
+  assert.equal(c - sig.integrity, 20, 'with it broken, the partner takes it all');
+});
+test('Scraper: its landing takes your ◆ (its hit goes past them) and what is left of your shield, and wears up to 2 ◆ (2 in all)', () => {
+  const s = fight2(19, 'ransomware', ['scraper']), p = part(s, 'scraper');
+  still(s);
+  const a0 = p.armor;
+  Object.assign(s.encounter, { chits: 1, shield: 0 });
+  p.attack.due = s.encounter.cycle;
+  const hp = s.server.integrity;
+  step(s);
+  assert.equal(s.encounter.chits, 0);
+  assert.equal(p.armor, a0 + 1, 'a ◆ on itself');
+  assert.ok(hp - s.server.integrity > 0, 'its hit lands, past your ◆');
+  Object.assign(s.encounter, { shield: 999 }); p.attack.due = s.encounter.cycle;
+  const hp2 = s.server.integrity;
+  step(s);
+  assert.equal(s.server.integrity, hp2, 'the shield takes the hit');
+  assert.equal(s.encounter.shield, 0, 'and the Scraper takes what is left of it');
+  assert.equal(p.armor, a0 + 2);
+  Object.assign(s.encounter, { chits: 3 }); p.attack.due = s.encounter.cycle;
+  step(s);
+  assert.equal(p.armor, a0 + 2, 'never more than 2 in all');
+  assert.ok(intents(s, 4).filter((i) => i.source === 'scraper').every((i) => i.scrape), 'its cells carry the takes-shield mark');
+});
+test('Packer: while it stands the virus\'s rolled rules read as ???; breaking it, or a scan before the fight, unpacks them', () => {
+  const s = fight2(20, 'ghostroot', ['packer', 'frontend']), fe = part(s, 'frontend');
+  s.research = { 'ghostroot:frontend': 60 };
+  assert.match(partTip(s, s.encounter.virus, fe), /Packed/);
+  assert.match(boardMarkup(s), /tag packed/);
+  assert.match(hudMarkup(s), /data-packed="1"/);
+  assert.ok(s.encounter.virus.name.startsWith('PACKED'), 'it names the virus');
+  hit(s, part(s, 'packer'), 99999, { pierce: true, server: true });
+  assert.doesNotMatch(partTip(s, s.encounter.virus, fe), /Packed/, 'broken: unpacked');
+  const t = fresh(); t.metAll = true; t.run = { loc: 'sim', cwd: '/', integrity: 300, max: 300, pack: [], visited: ['/'], unpack: [] };
+  const opts = { mode: 'run', room: '/x', level: 20, family: 'ghostroot', basic: 'pulse', genes: ['packer', 'frontend'], mutation: null, quiet: true };
+  t.run.unpack.push(encounterVirus(t, 'random', 77, opts).id);
+  selectEncounter(t, 'random', 77, opts);
+  assert.ok(t.encounter.unpacked, 'scanned before: it hides nothing');
+});
+test('Bad Block: when it lands your next heals lose up to 10% of your max; it shows as cracked cells on your bar', () => {
+  const s = fight2(21, 'ghostroot', ['badblock']), p = part(s, 'badblock');
+  still(s);
+  s.server.max = 1000; s.server.integrity = 500;
+  p.attack.due = s.encounter.cycle; s.encounter.chits = 0; s.encounter.shield = 0;
+  step(s);
+  assert.equal(s.encounter.badBlock?.left, 100, '10% of your max');
+  assert.match(hudMarkup(s), /cracked-cells/);
+  const hp = s.server.integrity;
+  heal(s, 60, 'Test');
+  assert.equal(s.server.integrity, hp, 'the cracked cells eat it');
+  heal(s, 60, 'Test');
+  assert.equal(s.server.integrity, hp + 20, 'the rest of the heal gets through');
+  assert.ok(!s.encounter.badBlock);
+});
+test('Damper: while it wears ◆, the kind it drops deals nothing even through ◆, but still breaks one; stripped, it takes everything', () => {
+  const s = fight2(23, 'worm', ['damper']), d = part(s, 'damper');
+  assert.ok(DAMPER_KINDS.includes(d.damperKind));
+  d.damperKind = 'burn';
+  const a = d.armor, hp = d.integrity;
+  hit(s, d, 10, { dot: true, pierce: true });
+  assert.equal(d.integrity, hp, 'a burn through ◆: nothing');
+  assert.equal(d.armor, a - 1, 'it still breaks a ◆');
+  hit(s, d, 10, { src: 'helper', dot: true, pierce: true });
+  assert.ok(d.integrity < hp, 'a helper through ◆ gets in (it drops burns)');
+  d.armor = 0;
+  const h2 = d.integrity; hit(s, d, 5, { dot: true });
+  assert.ok(d.integrity < h2, 'stripped: burns hurt it');
+  assert.match(boardMarkup(s), /tag damper/);
+});
+test('Cold Store: frozen for 5 cycles, off the timeline and untouchable, with a Thaw chip; then it thaws and its Chill comes 2 cycles later', () => {
+  const s = fight2(24, 'ransomware', ['coldstore']), c = part(s, 'coldstore');
+  assert.ok(frozenNow(s, c) && !c.attack && c.chill, 'frozen, its Chill set aside');
+  assert.match(boardMarkup(s), /tag frost/);
+  const hp = c.integrity;
+  hit(s, c, 999, { mine: true, pierce: true });
+  assert.equal(c.integrity, hp, 'nothing reaches it');
+  assert.match(toIntent(s, 'spike coldstore').error || '', /frozen/);
+  still(s);
+  for (let i = 0; i < 4; i++) step(s);
+  assert.ok(intents(s, 4).some((i) => i.source === 'coldstore' && i.effect === 'thaw' && i.col === 0), 'its Thaw chip in Now on cycle 5');
+  step(s);
+  assert.ok(!frozenNow(s, c) && c.attack?.name === 'Chill' && c.attack.due >= s.encounter.cycle + 1, 'thawed; its Chill comes after');
+});
+test('natives: elites and ★ rare spawns always bring one of their floor\'s natives (the nearest floor above\'s when theirs has none open)', () => {
+  const floorOf = (v, p) => GENES[FAMILIES[v.family].parts.find((x) => x.id === p.id)?.gene || '']?.floor || 0;
+  for (const [L, F] of [[16, 3], [22, 4], [10, 2]]) {
+    let exact = 0, n = 0;
+    for (let seed = 1; seed <= 60; seed++) for (const flag of ['elite', 'rare']) {
+      const v = createVirus('random', seed, { threat: SERVER.threat(L), run: true, mutation: null, floor: F, [flag]: true });
+      const floors = v.parts.map((p) => floorOf(v, p)).filter(Boolean);
+      assert.ok(v.parts.length >= 3, `${flag}: 3 parts or more`);
+      assert.ok(floors.some((f) => f <= F), `${flag} ${v.name} at ${L} on floor ${F}: ${v.parts.map((p) => p.id).join()}`);
+      if (FAMILIES[v.family].parts.some((x) => x.pool === 'third' && GENES[x.gene].floor === F && x.from <= L)) { exact += floors.includes(F); n++; } // (the Worm has no floor-4 native in P2)
+    }
+    assert.ok(exact >= 0.75 * n, `floor ${F} at ${L}: its own natives in ${exact} of ${n} (the rest the floor above's: a Spare needs the signature)`);
+  }
+});
+test('Kestrel\'s Idle Timer: from floor 3, about half the guard posts and ICE bring one; none above it', () => {
+  const k = (L) => { let n = 0; for (let seed = 1; seed <= 100; seed++) { const s = fresh(); s.run = { loc: 'sim', cwd: '/', integrity: 300, max: 300, pack: [], visited: ['/'] }; selectEncounter(s, ['watchdog', 'sentinel', 'crawler', 'shredder', 'bouncer', 'tracer'][seed % 6], seed, { mode: 'run', room: '/x', level: L, quiet: true }); n += s.encounter.virus.parts.some((p) => p.id === 'idletimer'); } return n; };
+  assert.equal(k(10), 0, 'floor 2: none');
+  const n = k(18);
+  assert.ok(n >= 35 && n <= 65, `floor 3: ${n} of 100`);
+  assert.equal(PARTS.kestrel.floor, 3); assert.equal(PARTS.kestrel.share, 0.5);
 });

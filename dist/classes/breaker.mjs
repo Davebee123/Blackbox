@@ -204,6 +204,7 @@ const use = {
     const cleared = [];
     if (e.encrypt > 0 || e.burst) { e.encrypt = 0; e.burst = null; cleared.push('encryption'); }
     if (e.corrupt) { e.corrupt = null; cleared.push('Corrupted'); }
+    if (e.badBlock) { e.badBlock = null; cleared.push('cracked cells'); } // a Bad Block's (combat.mjs heal)
     if (e.scrambleUntil >= e.cycle) { e.scrambleUntil = 0; cleared.push('Scrambled'); }
     emit(s, 'status', `Vent: ${stacks ? `${stacks} Momentum ${stacks === 1 ? 'stack' : 'stacks'} dumped` : 'nothing to dump'}${cleared.length ? `, and ${cleared.join(' and ')} cleared` : ''}.`, { ability: 'vent' });
     heal(s, Math.round(healScaled(s, a.heal * Math.max(1, stacks)) * spendMult(s, stacks)), 'Vent');

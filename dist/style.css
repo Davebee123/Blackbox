@@ -4068,6 +4068,29 @@ p.impl { margin: 6px 0 0; padding: 4px 2px; border-bottom: 1px dotted color-mix(
 .tag.idlepips i { opacity: 0.4; font-style: normal; }
 .tether.k-front .tt-line { border-style: dashed; }
 
+/* The parts plan's P2 (docs/parts-plan.md): what protects a part in steel (a Limiter's cap line, a Damper's crossed
+   kind, a Cold Store's frost and its thaw bar, a Shunt's ⇄ tether), what threatens you in red (a Scraper's takes-shield
+   mark, a Bad Block's cracked cells on your bar, a thaw or a boot coming), a Spare asleep dim, a Packer's ??? grey. */
+.tag.limcap, .tag.damper, .tag.frost { display: inline-flex; align-items: center; gap: 3px; color: var(--steel); border-color: var(--steel); }
+.tag.limcap .glyph, .tag.damper .glyph, .tag.frost .glyph, .tag.standby .glyph, .tag.packed .glyph { width: 10px; height: 10px; margin: 0; }
+.tag.damper s { text-decoration-thickness: 1.5px; }
+.tag.damper.off { opacity: 0.5; }
+.part-bar .capline { position: absolute; top: -2px; bottom: -2px; width: 0; border-left: 2px solid var(--steel); box-shadow: 0 0 4px var(--steel-glow); pointer-events: auto; }
+.thaw-bar { position: relative; display: inline-block; width: 30px; height: 5px; border: 1px solid var(--steel); }
+.thaw-bar b { position: absolute; left: 0; top: 0; bottom: 0; background: var(--steel); }
+.brow.bpart.frozen { background-image: repeating-linear-gradient(45deg, rgba(134, 182, 198, 0.08) 0 6px, transparent 6px 12px); box-shadow: inset 3px 0 0 var(--steel); }
+.brow.bpart.frozen .part-bar > span:first-child { background: var(--steel); opacity: 0.6; }
+.brow.bpart.standby { opacity: 0.55; }
+.brow.bpart.standby:hover, .brow.bpart.standby.selected { opacity: 0.85; }
+.tag.standby, .tag.packed { display: inline-flex; align-items: center; gap: 3px; color: var(--gray); border-color: var(--gray); border-style: dashed; }
+.gchip.packed { border-style: dashed; color: var(--gray); }
+.intent .scrapemark, .intent .badmark { display: inline-flex; margin-left: 3px; font-style: normal; color: var(--hot); }
+.intent .scrapemark .glyph { width: 10px; height: 10px; margin: 0; }
+.intent.scrape, .intent.bad { border-color: var(--hot); }
+.intent.thaw, .intent.boot { border-style: dashed; border-color: var(--hot); color: var(--hot); background: transparent; }
+.bigbar .cracked-cells { position: absolute; top: 0; bottom: 0; background: repeating-linear-gradient(135deg, var(--hot-soft) 0 3px, rgba(255, 91, 61, 0.45) 3px 4px, transparent 4px 7px); border-left: 1px solid var(--hot); pointer-events: auto; }
+.tether.k-shunt .tt-line { border-style: double; }
+
 /* ---- The test bench (bench.mjs, ?bench=<name>): its tag in the top bar, and the dev panel in a drawer. ---- */
 .bench-tag { flex: none; padding: 2px 7px; border: 1px dashed var(--you); border-radius: var(--r-tag); color: var(--you); font: 600 11px/1.4 var(--mono); letter-spacing: 1.5px; white-space: nowrap; cursor: help; }
 .bench-panel { position: fixed; z-index: 50; left: var(--s5); bottom: 84px; max-width: min(560px, calc(100vw - 2 * var(--s5))); display: flex; flex-direction: column; align-items: flex-start; gap: var(--s3); font: 12px/1.3 var(--mono); }

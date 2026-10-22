@@ -939,6 +939,7 @@ function scan(s, arg) {
     s.run.integrity -= SCAN.signal;
     traceAdd(s, SCAN.trace);
   } else (s.run.scanned ||= []).includes(v.id) || s.run.scanned.push(v.id);
+  (s.run.unpack ||= []).includes(v.id) || s.run.unpack.push(v.id); // a Packer's rules show once you've scanned it (combat.mjs packerOn)
   showCard(s, v, { deep, type: 'net-scan' });
 }
 
@@ -958,6 +959,7 @@ function scanRoom(s, arg) {
     if (s.run.integrity <= SCAN.signal) return err(s, 'Not enough Signal to scan.');
     s.run.integrity -= SCAN.signal;
   } else (s.run.scanned ||= []).includes(v.id) || s.run.scanned.push(v.id);
+  (s.run.unpack ||= []).includes(v.id) || s.run.unpack.push(v.id); // a Packer's rules show once you've scanned it (combat.mjs packerOn)
   showCard(s, v, { deep, type: 'net-scan' });
 }
 

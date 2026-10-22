@@ -19,7 +19,7 @@ const FAMILIES = {
       // From level 8: the Mutex holds a lock on the Encryptor, a shield that comes back while the Mutex lives.
       { id: 'mutex', name: 'Mutex', integrity: 18, armor: 1, loot: 'Mutex Handle', lock: 'encryptor', from: 8, pool: 'third' },
       // From level 20: the Tripwire. Break it while the others live and they go loud.
-      { id: 'tripwire', name: 'Tripwire', integrity: 18, armor: 1, loot: 'Trip Coil', deadman: true, from: 20, pool: 'third', attack: { name: 'Ping', effect: 'damage', amount: 3, interval: 3, first: 3 } },
+      { id: 'tripwire', name: 'Tripwire', integrity: 18, armor: 1, loot: 'Trip Coil', deadman: true, from: 16, pool: 'third', attack: { name: 'Ping', effect: 'damage', amount: 3, interval: 3, first: 3 } },
     ],
   },
   worm: {

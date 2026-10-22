@@ -1,7 +1,7 @@
 // The scripted fight player: one planner for every class (finish what you can, answer what lands
 // now, strip, then finish), playing that class's own kit. Used by the balance scripts and by
 // simulated crewmates (crew.mjs). It reads the fight through the engine's own functions.
-import { classPlan, classFill, hooks, classOf, subOf, toIntent, intents, attackers, livingParts, alive, part, defender, previewDamage, ignoresArmor, readyIn, mirrorOn, usable, hookHit, wards, attackAmount, delayHeld, frontOf, bufferOn, signatureOf, cooldownOf } from './combat.mjs';
+import { classPlan, classFill, hooks, classOf, subOf, toIntent, intents, attackers, livingParts, alive, part, defender, previewDamage, ignoresArmor, readyIn, mirrorOn, usable, hookHit, wards, attackAmount, delayHeld, frontOf, bufferOn, signatureOf, cooldownOf, frozenNow, asleep } from './combat.mjs';
 import { ABILITIES, TELL, CONFIG } from './data.mjs';
 import { raidMove, raidFocus, noTaunt } from './raid.mjs';
 import { tellMove, tellFocus, answers, QUIET, chargeNow, echoesNow } from './tells.mjs';
@@ -24,7 +24,9 @@ const seen = (s) => intents(s).filter((i) => !i.tell || (answers() && TELL.bots.
 const landingNow = (s) => seen(s).filter((i) => i.col === 0 && !i.hidden);
 // The part to work on: the one whose (visible) attack lands soonest; hidden ones count as due in 2.
 const dueOf = (s, p) => (seen(s).find((i) => i.source === p.id && !i.hidden)?.col ?? (p.attack ? 2 : 9));
-export const soonest = (s) => attackers(s).sort((a, b) => dueOf(s, a) - dueOf(s, b) || b.max - a.max)[0] || livingParts(s)[0];
+// A Cold Store still frozen (combat.mjs frozenNow): nothing reaches it, so a player works on the others meanwhile.
+const reachable = (s, p) => ignores('coldstore') || !frozenNow(s, p);
+export const soonest = (s) => attackers(s).sort((a, b) => dueOf(s, a) - dueOf(s, b) || b.max - a.max)[0] || livingParts(s).find((p) => reachable(s, p)) || livingParts(s)[0];
 // How a player who reads the codex picks a target: the most threat per point of Integrity left
 // (attack size over interval; encryption stacks, fragments multiply, a heal undoes work), armor
 // counted as Integrity. Hidden timers don't matter: the codex says what each part does.
@@ -37,7 +39,7 @@ const invested = (s, p) => 1 + 0.6 * s.encounter.burns.filter((b) => b.target ==
 // A Zip Bomb goes last too (the fight ending puts its fuse out); a Hotspot late, by burns and helpers if it can.
 const others = (s, p) => livingParts(s).some((x) => x !== p && x.kind === 'system');
 const order = (s, p) => (p.core && p.ticks?.some((t) => !t.spent) && livingParts(s).some((x) => x !== p && x.attack) ? 0.4 : p.deadman && !ignores('tripwire') && others(s, p) ? 0.05 : p.fuse && !ignores('zipbomb') && others(s, p) ? 0.05 : p.hotspot && !ignores('hotspot') && others(s, p) ? 0.3 : p.command && !ignores('c2') && livingParts(s).filter((x) => x.kind === 'fragment').length >= 2 ? 4 : 1);
-export const mostThreat = (s) => livingParts(s).map((p) => ({ p, k: (threatOf(p) * invested(s, p) * order(s, p)) / (p.integrity + 10 * (p.armor || 0)) })).sort((a, b) => b.k - a.k || dueOf(s, a.p) - dueOf(s, b.p))[0]?.p || soonest(s);
+export const mostThreat = (s) => livingParts(s).filter((p) => reachable(s, p)).map((p) => ({ p, k: (threatOf(p) * invested(s, p) * order(s, p)) / (p.integrity + 10 * (p.armor || 0)) })).sort((a, b) => b.k - a.k || dueOf(s, a.p) - dueOf(s, b.p))[0]?.p || soonest(s);
 const bare = (p) => alive(p) && !p.armor;
 // A Trojan's Package while its Loader lives (families.mjs): any damage unpacks it, so a player leaves it alone.
 const shunned = (s, p) => !!p?.pkg && !p.pkg.inert && livingParts(s).some((x) => x.id === 'loader');
@@ -152,6 +154,11 @@ function play(s) {
   const loader = s.encounter.virus.parts.some((p) => p.redeployAt != null) ? livingParts(s).find((p) => p.id === 'loader' && s.encounter.virus.family === 'trojan') : null;
   if (loader && !raidFocus(s) && !tellFocus(s)) t0 = loader;
   let t = phasedOut(s, t0) ? livingParts(s).find((p) => !phasedOut(s, p)) || t0 : t0;
+  if (!reachable(s, t)) t = livingParts(s).filter((p) => reachable(s, p)).sort((a, b) => dueOf(s, a) - dueOf(s, b))[0] || t; // a frozen Cold Store: the others first
+  // The parts plan's P2. Spare: once the signature is down, break it before it boots (it does nothing until then). A
+  // Shunt needs no rule: what it takes off its partner still breaks it, so every hit counts either way.
+  const sp = !ignores('spare') && livingParts(s).find((p) => asleep(p) && reachable(s, p));
+  if (sp && sp.bootAt) t = sp;
   // Lockbox: a warded part soaks a burst, so break the Lockbox first. Mutex: its lock comes back while it lives,
   // so break it first too (a burn class chips under either anyway).
   const burst = classOf(s) === 'breaker' && subOf(s) === 'overclocker';
@@ -162,6 +169,9 @@ function play(s) {
   // Front End: a direct hit on its partner lands on it while it wears ◆. A Breaker or a Bastion strips it first; burns and helpers go past.
   const fe = !ignores('frontend') && livingParts(s).find((p) => p.front && p.armor > 0 && frontOf(s, p) === t);
   if (fe && ['breaker', 'bastion'].includes(classOf(s))) t = fe;
+  // The Infiltrator: an Inject on the partner goes past it; with none to fire, a direct hit would land on the Front End
+  // anyway, so it strips the Front End (the parts plan's answer: Inject the partner). The helper classes keep the plain plan.
+  else if (fe && classOf(s) === 'infiltrator') { const soft = first(s, [!injected(s, t) && 'inject ' + t.id]); if (soft) return soft; t = fe; }
   // Buffer: its shield takes direct hits; a Breaker or a Bastion breaks the bare Buffer first.
   const bf = !ignores('buffer') && t.bufHp > 0 ? bufferOn(s, t) : null;
   if (bf && !bf.armor && ['breaker', 'bastion'].includes(classOf(s))) t = bf;
@@ -200,14 +210,19 @@ function play(s) {
     if (k) return k;
   }
   // 2. Something lands now that we can't break: answer it.
+  // Cold Store: its first Chill comes a cycle or two after it thaws; a player saved a cut or a shield for it.
+  const thawed = !ignores('coldstore') && livingParts(s).find((p) => p.frozen && p.thawed && p.attack && !p.attack.n && p.attack.due - s.encounter.cycle <= 1 && !(p.throttledUntil >= s.encounter.cycle));
+  if (thawed) { const a = first(s, ['throttle ' + thawed.id, 'rate-limit ' + thawed.id, 'suspend ' + thawed.id, 'firewall']); if (a) return a; }
+  // Scraper: its Scrape takes your ◆ as it lands (and what's left of a shield), so no ◆ goes up into it.
+  const scrape = !ignores('scraper') && now.some((i) => i.scrape);
   const fuse = !ignores('zipbomb') && now.find((i) => i.effect === 'fuse');
-  if (fuse) { const cover = first(s, ['harden', 'firewall']); if (cover) return cover; } // a Zip Bomb's fuse: a ◆ or a shield takes it
+  if (fuse) { const cover = first(s, [!scrape && 'harden', 'firewall']); if (cover) return cover; } // a Zip Bomb's fuse: a ◆ or a shield takes it
   const big = now.filter((i) => i.effect !== 'tell' && i.effect !== 'buffer' && i.effect !== 'fuse' && (i.effect !== 'damage' || i.amount >= Math.max(6, defender(s).max * 0.08)) && !part(s, i.source)?.phase).sort((a, b) => b.amount - a.amount)[0]; // a Shade in phase: hit it instead (a tell that isn't a hit: tellMove)
   if (big) {
     // A Tripwire's own hit: soften it, but don't break it while the others stand.
     const trip = part(s, big.source)?.deadman && !ignores('tripwire') && livingParts(s).some((x) => x.id !== big.source && x.kind === 'system');
     const delayable = !delayHeld(part(s, big.source)); // already delayed once, a delay does nothing (combat.mjs delayAttack)
-    const answer = first(s, trip ? ['harden', 'firewall', 'null-route', 'throttle ' + big.source, 'brace'] : [
+    const answer = first(s, (trip ? ['harden', 'firewall', 'null-route', 'throttle ' + big.source, 'brace'] : [
       big.effect === 'damage' && s.encounter.chits === 0 && 'harden',
       big.effect === 'damage' && 'rate-limit ' + big.source, // hits harder when its attack is due, and halves it
       delayable && 'suspend ' + big.source,
@@ -218,11 +233,13 @@ function play(s) {
       big.effect === 'damage' && 'throttle ' + big.source,
       big.effect === 'damage' && 'brace',
       big.effect === 'damage' && helpersOn(s, part(s, big.source)) && 'barrier ' + big.source,
-    ]);
+    ]).filter((c) => !scrape || String(c).split(' ')[0] !== 'harden'));
     if (answer) return answer;
   }
   // 2b. Heavy encryption: purge it. Low health: patch, or hit back with what you're missing.
   if ((s.encounter.encrypt || 0) + livingParts(s).reduce((n, p) => n + heatOf(p, s.encounter.cycle), 0) >= 6 && ok(s, 'purge ' + t.id)) return 'purge ' + t.id;
+  // Bad Block: cracked cells eat your next heals; a class with a cleanse clears them before it heals.
+  if (s.encounter.badBlock?.left > 0 && !ignores('badblock') && d.integrity < d.max * 0.75) { const c = first(s, ['purge ' + t.id, 'scrub', 'rotate-keys']); if (c) return c; }
   if (d.integrity < d.max * 0.5) { const h = first(s, [d.integrity < d.max * 0.3 && 'patch', 'failover', 'reclaim ' + t.id]); if (h) return h; } // a healer keeps Patch for under 30% (bastion.mjs HEAL.solo)
   // A healer in a crew: patch whoever else is lowest, under half.
   const hurt = (hooks.crewAllies?.(s) || []).map((x) => ({ who: x.who, d: defender(x.st) })).filter((x) => x.d.integrity < x.d.max * 0.5).sort((a, b) => a.d.integrity / a.d.max - b.d.integrity / b.d.max)[0];

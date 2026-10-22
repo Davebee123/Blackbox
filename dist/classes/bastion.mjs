@@ -231,6 +231,7 @@ const use = {
     const cleared = [];
     if (e.encrypt > 0 || e.burst) { e.encrypt = 0; e.burst = null; cleared.push('encryption'); } // a Full Disk's burst too (tells.mjs)
     if (e.corrupt) { e.corrupt = null; cleared.push('corruption'); } // a landed tell's after-effect (tells.mjs)
+    if (e.badBlock) { e.badBlock = null; cleared.push('cracked cells'); } // a Bad Block's (combat.mjs heal)
     if (e.scrambleUntil >= e.cycle) { e.scrambleUntil = 0; cleared.push('Scrambled'); }
     if (cleared.length) emit(to, 'decrypted', `${label}: ${cleared.join(' and ')} cleared.`);
     if (to.encounter.virus?.raid) cleanse(to, ['dots', 'absorb']); // a crew boss's Corruption and encrypted sectors (raid.mjs)
@@ -240,6 +241,7 @@ const use = {
     const e = to.encounter, u = e.undo, label = to === s ? a.name : `${a.name} from ${s.who || 'you'}`;
     e.undo = null;
     if (e.corrupt) { e.corrupt = null; emit(to, 'decrypted', `${label}: Corrupted wiped.`); }
+    if (e.badBlock) { e.badBlock = null; emit(to, 'decrypted', `${label}: cracked cells cleared.`); }
     // A cast the virus just compiled rolls back too (tells.mjs): its buff ends.
     if (to === s && e.virus?.tells && undoCast(s)) emit(s, 'status', `${label}: the cast the virus compiled is rolled back.`, { mark: 'buff', ability: 'rollback' });
     if (u?.type === 'damage') mend(s, to, Math.round(u.amount * restoreMult(s)), label);

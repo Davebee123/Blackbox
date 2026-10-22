@@ -234,3 +234,29 @@ test('the index lists every family a player can meet, old and room bodies, with 
   assert.deepEqual([t.name, t.pct], ['Trojan', 3], 'two parts: 3 of 60 and 0 of 60, an average of 2.5%');
   assert.match(codexPageMarkup(s, 'family:trojan'), /<small class="cx-n" title="The average research of its parts">3%<\/small>/);
 });
+
+// The parts plan's P2 (docs/parts-plan.md): every new part has a card on its family's page with its research tiers
+// (??? until decoded, its numbers at 3, its rule and answer at 15, its drop at 60) and its own component, and the
+// guards' page has Kestrel's Idle Timer.
+test('the P2 parts: a card each, with research tiers and a component, and Kestrel\'s Idle Timer on every guard\'s page', () => {
+  const P2 = { ransomware: ['limiter', 'scraper', 'coldstore'], worm: ['spare', 'shunt', 'damper'], ghostroot: ['spare', 'packer', 'badblock'] };
+  const s = fresh();
+  s.hackers = { [s.loadout.archetype]: { level: 30, xp: 0 } };
+  s.met = { ransomware: true, worm: true, ghostroot: true, watchdog: true };
+  for (const [f, ids] of Object.entries(P2)) for (const id of ids) {
+    const x = partsOf(s, 'family', f).find((c) => c.spec.id === id);
+    assert.ok(x?.part, `${f} ${id} has a card`);
+    assert.ok(x.spec.loot && !FAMILIES[f].parts.some((p) => p !== x.spec && p.loot === x.spec.loot && p.id !== id), `${id} drops its own component, ${x.spec.loot}`);
+    const card = (n) => { s.research = { [`${f}:${id}`]: n }; return codexPageMarkup(s, `family:${f}`).split(/<div class="cx-part t\d+[^"]*">/).find((c) => c.includes(`<b>${x.spec.name}`)); };
+    assert.equal(card(0), undefined, `${id} at 0: ??? until you meet one`);
+    assert.match(card(3), /Integrity/, `${id} at 3: its numbers`);
+    assert.match(card(3), /Research 15 to learn its rule/);
+    assert.match(card(15), /cxp-answer/, `${id} at 15: its answer`);
+    assert.match(card(60), new RegExp(`Drops ${x.spec.loot}`), `${id} at 60: its drop`);
+    assert.doesNotMatch(card(60), /undefined|NaN/);
+  }
+  for (const g of Object.keys(GUARDS)) {
+    const x = partsOf(s, 'guard', g).find((c) => c.spec.id === 'idletimer');
+    assert.ok(x?.part && x.from === 13, `${g}: Kestrel's Idle Timer, from floor 3 (level 13)`);
+  }
+});

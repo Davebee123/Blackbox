@@ -122,6 +122,7 @@ export default {
       const cleared = [];
       if (e.encrypt > 0 || e.burst) { e.encrypt = 0; e.burst = null; cleared.push('encryption'); }
       if (e.corrupt) { e.corrupt = null; cleared.push('Corrupted'); }
+      if (e.badBlock) { e.badBlock = null; cleared.push('cracked cells'); }
       if (e.scrambleUntil >= e.cycle) { e.scrambleUntil = 0; cleared.push('Scrambled'); }
       mine(s).rotated = a.hits;
       emit(s, 'status', `Keys rotated${cleared.length ? `, and ${cleared.join(' and ')} cleared` : ''}. The next ${a.hits} hits on you deal ${Math.round(a.cut * 100)}% less damage, and each makes Opening usable.`, { mark: 'shield', ability: 'rotate-keys' });

@@ -243,3 +243,46 @@ test('migration (v41): an older save\'s layers become floors, every server kept 
   const u = restore(JSON.parse(JSON.stringify(t)));
   assert.deepEqual(u.locations.map((l) => [l.id, l.slot, l.depth, l.level]), t.locations.map((l) => [l.id, l.slot, l.depth, l.level]));
 });
+
+// The parts plan's P2 (docs/parts-plan.md, parts.mjs PARTS.floor): a native is first met on its floor (it opens inside
+// the floor's band) and weighs ×3 in the roll there, ×1 elsewhere once its level allows it. A fight's floor is its
+// server's; at home or with no server, your floor at the fight's level.
+test('natives weigh ×3 on their own floor: in the weights, in the wild roll and in the room thirds a server is built with', async () => {
+  const { GENES } = await import('./dist/genes.mjs');
+  const { PARTS, weightOf, floorWeight } = await import('./dist/parts.mjs');
+  const { createVirus, FAMILIES } = await import('./dist/data.mjs');
+  const natives = Object.values(GENES).filter((g) => g.floor);
+  assert.ok(natives.length >= 11, 'the P1 and P2 natives');
+  assert.equal(PARTS.floor, 3);
+  for (const g of natives) {
+    assert.ok(g.opens >= bandOf(g.floor)[0] && g.opens <= bandOf(g.floor)[1], `${g.name} opens inside floor ${g.floor}'s band`);
+    assert.equal(floorWeight(g.id, g.floor), PARTS.floor);
+    assert.equal(floorWeight(g.id, g.floor === 1 ? 2 : g.floor - 1), 1);
+    assert.equal(weightOf(g.id, g.floor), (PARTS.weight[g.id] ?? 1) * PARTS.floor);
+  }
+  // The wild roll: each P2 native, its own floor against the floor above, at the same level, 600 fights of its family
+  // (×3 in the weights is less in the fights: the roll draws at most two thirds, so a heavy one saturates).
+  for (const [id, family, L] of [['limiter', 'ransomware', 18], ['spare', 'worm', 18], ['shunt', 'worm', 18], ['scraper', 'ransomware', 22], ['badblock', 'ghostroot', 22], ['coldstore', 'ransomware', 25]]) {
+    const share = (floor) => { let n = 0; for (let seed = 1; seed <= 600; seed++) n += createVirus('random', seed, { family, threat: SERVER.threat(L), run: true, mutation: null, floor }).parts.some((p) => p.id === id); return n; };
+    const on = share(GENES[id].floor), off = share(GENES[id].floor - 1);
+    assert.ok(on > 1.5 * off && on >= 30, `${id} at ${L}: ${on} fights in 600 on floor ${GENES[id].floor}, ${off} on the floor above`);
+  }
+  // A server's fixed room thirds: its floor's natives come up more on it.
+  const thirds = (floor) => { const by = {}; for (let seed = 1; seed <= 30; seed++) { const s = fresh(); FP.startRooms(s, { seed, kind: 'Relay', size: 'large', level: 20, floor, author: 'glassjaw' }); for (const r of FP.roomList(s)) if (r.third) by[r.third] = (by[r.third] || 0) + 1; } return by; };
+  const f3 = thirds(3), f4 = thirds(4), n3 = ['limiter', 'spare', 'shunt'], n4 = ['scraper', 'badblock'];
+  const sum = (by, ids) => ids.reduce((n, id) => n + (by[id] || 0), 0);
+  assert.ok(sum(f3, n3) > 1.5 * sum(f4, n3), `floor 3's natives: ${sum(f3, n3)} on floor 3, ${sum(f4, n3)} on floor 4`);
+  assert.ok(sum(f4, n4) > 1.5 * sum(f3, n4), `floor 4's natives: ${sum(f4, n4)} on floor 4, ${sum(f3, n4)} on floor 3`);
+  assert.ok(Object.values(FAMILIES).every((f) => f.third.length >= 7));
+});
+test('a fight\'s floor: the server\'s on a run; at home and in a sim your floor at the fight\'s level; SPRAWL-00 is floor 1', async () => {
+  const { floorOfFight } = await import('./dist/combat.mjs');
+  const s = mk(18);
+  assert.equal(floorOfFight(s, 'home', {}, 18), floorFor(18));
+  assert.equal(floorOfFight(s, 'home', { floor: 2 }, 18), 2, 'opts.floor wins');
+  s.run = { loc: CONFIG.zone.id };
+  assert.equal(floorOfFight(s, 'run', {}, 4), 1);
+  const loc = addLocation(s, 'worm', 3);
+  s.run = { loc: loc.id };
+  assert.equal(floorOfFight(s, 'run', {}, loc.level || 18), loc.depth);
+});

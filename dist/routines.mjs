@@ -37,7 +37,7 @@
 // { handlers: [], confirmed, undo, armor } } } } } (armor: false when Break ◆ first is off; missing is on), made on
 // first use (an older save gets the defaults: no SAVE_VERSION change; an R1 save's single stack moves into its viruses'
 // routines, migrate). A fight's exceptions live on e.program.
-import { hooks, emit, warn, active, alive, part, livingParts, intents, toIntent, said, classOf, subOf, hackerLevel, barKeys, cooldownOf, codexKey, defender, maxSignal, timersHidden, armorTakes, frontOf, buffed } from './combat.mjs';
+import { hooks, emit, warn, active, alive, part, livingParts, intents, toIntent, said, classOf, subOf, hackerLevel, barKeys, cooldownOf, codexKey, defender, maxSignal, timersHidden, armorTakes, frontOf, buffed, frozenNow, packed } from './combat.mjs';
 import { ABILITIES, MUTATIONS, FAMILIES, ROOM_FAMILIES, GUARDS, STRAINS, BOSSES, ARCHETYPES, SUBS } from './data.mjs';
 import { researchAt, TIER } from './research.mjs';
 import { decoded as geneDecoded } from './genome.mjs';
@@ -323,8 +323,8 @@ const firstOf = (s, list) => list.find((p) => !leftForLast(s, p)) || list[0] || 
 const dueOf = (s, p) => shown(s).find((i) => i.source === p.id && !i.hidden && !i.tell)?.col ?? (p.attack ? 2 : 9);
 // ok: only parts it passes (Break ◆ first's no-◆ retarget); that part then picks among the parts the WHEN chip names.
 function targetOf(s, h, ps, ok = null) {
-  const live = ok ? livingParts(s).filter(ok) : livingParts(s);
-  if (h.target === 'that') return (ok ? (ps || []).filter(ok) : ps || [])[0] || null;
+  const live = (ok ? livingParts(s).filter(ok) : livingParts(s)).filter((p) => !frozenNow(s, p)); // a Cold Store still frozen: nothing reaches it
+  if (h.target === 'that') return (ok ? (ps || []).filter(ok) : ps || []).filter((p) => !frozenNow(s, p))[0] || null;
   if (h.target === 'soonest') return firstOf(s, [...live].sort((a, b) => dueOf(s, a) - dueOf(s, b) || b.max - a.max));
   if (h.target === 'lowest') return firstOf(s, [...live].sort((a, b) => a.integrity - b.integrity));
   if (h.target === 'bare') return firstOf(s, live.filter((p) => !(p.armor > 0)).sort((a, b) => a.integrity - b.integrity));
@@ -391,7 +391,7 @@ function without(s, ids, fn) {
 
 // ---------- exceptions ----------
 // Parts whose rule changes a decision (a third part, a guard's rule): the program covers one only at its rule tier.
-const RULED = ['ward', 'wardsToo', 'lock', 'twin', 'reflect', 'mimic', 'command', 'deadman', 'fuse', 'hotspot', 'idle', 'front', 'backlog', 'buffer', 'rearm', 'syncOnly', 'phase', 'echo', 'tax', 'pkg', 'obfuscate'];
+const RULED = ['ward', 'wardsToo', 'lock', 'twin', 'reflect', 'mimic', 'command', 'deadman', 'fuse', 'hotspot', 'idle', 'front', 'backlog', 'buffer', 'rearm', 'syncOnly', 'phase', 'echo', 'tax', 'pkg', 'obfuscate', 'limit', 'spare', 'shunt', 'scrape', 'packer', 'badblock', 'damper', 'frozen'];
 export const ruled = (p) => RULED.some((k) => p[k]);
 const named = (s, pred) => liveHandlers(s, fightBody(s)).some((h) => { const w = parseWhen(h.when); return !!w && pred(w); });
 export const EXCEPTION = { label: 'EXCEPTION', phrase: 'no available handler', tip: 'Your program has no handler for this part yet. Play it yourself, or research it in the Codex.', fight: 'Your program leaves this fight to you: a boss is always yours to play.' };
@@ -409,7 +409,8 @@ export function uncovered(s) {
     if (isFrag(p)) continue;
     const ref = refOf(v, p), n = researchOfRef(s, ref);
     const need = ruled(p) ? TIER.rule : TIER.decoded;
-    if (n < need && !named(s, (w) => w.kind === 'part' && w.ref === ref)) out.set(p.id, { key: `part:${p.id}`, kind: 'part', part: p.id, name: p.name });
+    // A Packer standing (combat.mjs packed): a rolled part's rule reads as ???, so no research covers it.
+    if ((n < need || packed(s, v, p)) && !named(s, (w) => w.kind === 'part' && w.ref === ref)) out.set(p.id, { key: `part:${p.id}`, kind: 'part', part: p.id, name: p.name });
   }
   for (const i of shown(s).filter((x) => x.tell)) {
     const p = part(s, i.source);

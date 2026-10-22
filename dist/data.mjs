@@ -393,6 +393,15 @@ function basicOf(family, id, from) {
   const sig = FAMILIES[family].parts.find((x) => x.special);
   return { id, ...rest, ...(family === 'ghostroot' ? { veiled: true } : {}), ...(attack ? { attack } : { fallback: sig.id }), from, pool: 'basic' };
 }
+// The genes a part's own fight brings (?playtest=part:<id>, developer fight part:<id>): its gene, and for a Packer a
+// second third open at that level, so there's a rule on the board for it to pack.
+export function partGenesFor(family, spec, level) {
+  if (!spec.packer) return [spec.gene];
+  const other = FAMILIES[family].parts.find((x) => x.pool === 'third' && x !== spec && !x.sig && (x.from || 1) <= level);
+  return other ? [spec.gene, other.gene] : [spec.gene];
+}
+// A Damper's dropped kind (genes.mjs damper), one of these by its virus's seed.
+export const DAMPER_KINDS = ['burn', 'helper', 'area'];
 export const FAMILIES = {
   ransomware: {
     name: 'Ransomware',
@@ -401,7 +410,7 @@ export const FAMILIES = {
     summary: 'Encrypts your server. Each Encrypt adds damage every cycle until you break the Encryptor, which holds the key.',
     core: ['surge', 'encrypt'],
     basic: [['accumulator', 1], ['buffer', 3], ['cipherblock', 5]],
-    third: ['ward', 'zipbomb', 'hotspot', 'mutexlock', 'idletimer', 'frontend', 'tripwire'], // the Lockbox from level 3, the Zip Bomb from 5, the Hotspot from 6, the Mutex from 8, the Idle Timer from 9, the Front End from 10, the Tripwire from 20
+    third: ['ward', 'zipbomb', 'hotspot', 'mutexlock', 'idletimer', 'frontend', 'limiter', 'tripwire', 'scraper', 'coldstore'], // the Lockbox from level 3, the Zip Bomb from 5, the Hotspot from 6, the Mutex from 8, the Idle Timer from 9, the Front End from 10, the Limiter from 13, the Tripwire from 16, the Scraper from 19, the Cold Store from 24
     parts: [
       { id: 'pulse', name: 'Pulse Node', integrity: 34, armor: 1, loot: 'Pulse Kernel', attack: { name: 'Surge', effect: 'damage', amount: 14, interval: 4, first: 3 } },
       { id: 'encryptor', name: 'Encryptor', integrity: 38, armor: 1, loot: 'Cipher Seed', special: true, attack: { name: 'Encrypt', effect: 'encrypt', amount: 4, interval: 5, first: 4 } },
@@ -414,7 +423,7 @@ export const FAMILIES = {
     summary: 'Spawns fragments that gnaw your server every cycle. The Replicator makes them.',
     core: ['surge', 'replicate'],
     basic: [['strobe', 1], ['repeater', 3], ['fanin', 5]],
-    third: ['twin', 'zipbomb', 'c2', 'backlog'], // the Mirror from level 3, the Zip Bomb from 5, the C2 Node from 8, the Backlog from 12
+    third: ['twin', 'zipbomb', 'c2', 'backlog', 'spare', 'shunt', 'damper'], // the Mirror from level 3, the Zip Bomb from 5, the C2 Node from 8, the Backlog from 12, the Spare from 14, the Shunt from 17, the Damper from 23
     parts: [
       { id: 'pulse', name: 'Pulse Node', integrity: 34, armor: 1, loot: 'Pulse Kernel', attack: { name: 'Surge', effect: 'damage', amount: 12, interval: 4, first: 4 } },
       { id: 'replicator', name: 'Replicator', integrity: 38, armor: 1, loot: 'Replication Seed', special: true, attack: { name: 'Replicate', effect: 'replicate', amount: 1, interval: 4, first: 3, hit: 4 } }, // a small Splice hit with each spawn
@@ -427,7 +436,7 @@ export const FAMILIES = {
     summary: 'Its timers stay hidden while its parts are armored. The Scrambler hits you and Scrambles you for 2 cycles. While you are Scrambled, each of your attacks has a 25% chance to hit you instead, at half damage.',
     core: ['surge', 'scramble', 'veil'],
     basic: [['strobe', 1], ['prism', 3], ['obfuscator', 5]],
-    third: ['decoymirror', 'hotspot', 'mimic', 'frontend'], // the Decoy from level 4, the Hotspot from 6, the Mimic from 8, the Front End from 10
+    third: ['decoymirror', 'hotspot', 'mimic', 'frontend', 'spare', 'packer', 'badblock'], // the Decoy from level 4, the Hotspot from 6, the Mimic from 8, the Front End from 10, the Spare from 14, the Packer from 20, the Bad Block from 21
     parts: [
       // The Scrambler carries the threat, not the Pulse: killing the Pulse first no longer halves the fight.
       { id: 'pulse', name: 'Pulse Node', integrity: 34, armor: 1, veiled: true, loot: 'Pulse Kernel', attack: { name: 'Surge', effect: 'damage', amount: 11, interval: 4, first: 3 } },
@@ -681,6 +690,8 @@ export function makePart(spec, kind, scale, extraArmor = 0) {
     ...(spec.accum ? { accum: true } : {}), ...(spec.taps ? { taps: spec.taps } : {}), ...(spec.buffer ? { buffer: { ...spec.buffer } } : {}),
     ...(spec.cipher ? { cipher: spec.cipher } : {}), ...(spec.fanin ? { fanin: spec.fanin } : {}), ...(spec.obfuscate ? { obfuscate: true } : {}),
     ...(spec.fuse ? { fuse: true } : {}), ...(spec.hotspot ? { hotspot: true } : {}), ...(spec.idle ? { idle: spec.idle } : {}), ...(spec.front ? { front: true } : {}), ...(spec.backlog ? { backlog: spec.backlog } : {}),
+    ...(spec.limit ? { limit: spec.limit } : {}), ...(spec.spare ? { spare: { ...spec.spare } } : {}), ...(spec.shunt ? { shunt: spec.shunt } : {}), ...(spec.scrape ? { scrape: spec.scrape } : {}),
+    ...(spec.packer ? { packer: true } : {}), ...(spec.badblock ? { badblock: spec.badblock } : {}), ...(spec.damper ? { damper: true } : {}), ...(spec.frozen ? { frozen: spec.frozen } : {}),
     ...(spec.wardCommands ? { wardCommands: true } : {}), // HASHLORD's Pool Lock: its ward holds back your commands only, not burns or helpers
     attack: spec.attack ? { ...spec.attack, due: spec.attack.first, amount: spec.attack.amount } : null,
     exposedUntil: 0,
@@ -979,7 +990,7 @@ export function genomeOf(parts, { strain = null, mutation = null, grade = 1, bos
 export function stemOf(family, genome = []) {
   const f = familyOf(family), stem = f?.stem || f?.name.toUpperCase() || String(family).toUpperCase();
   const rolled = genome.filter((g) => g.src === 'rolled' && GENES[g.id]);
-  const top = rolled.reduce((best, g) => (!best || GENES[g.id].cost > GENES[best.id].cost ? g : best), null);
+  const top = rolled.find((g) => g.id === 'packer') || rolled.reduce((best, g) => (!best || GENES[g.id].cost > GENES[best.id].cost ? g : best), null); // a Packer names it: PACKED (its other rules are hidden)
   return top ? `${GENES[top.id].adj.toUpperCase()} ${stem}` : stem;
 }
 // Who wrote it (authors.mjs): a boss's author, a named build's, Kestrel for ICE and the Sentinel, then whoever
@@ -1088,8 +1099,8 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   // signature and the forced genes' third (if any): { basic, signature, thirds } as the roll would have it.
   const forced2 = overrides.basic && random && !strain && !overrides.boss && FAMILIES[familyId] ? family.parts.find((x) => (x.pool === 'basic' || x.id === 'pulse') && x.id === overrides.basic) : null;
   const rolled2 = forced2 ? { basic: forced2, dup: false, signature: true, thirds: family.parts.filter((x) => x.pool === 'third' && genes?.includes(x.gene)), strangers: 0 }
-    : PARTS.on && !overrides.classic && random && !strain && !overrides.boss && !genes && FAMILIES[familyId] ? rollParts({ family: familyId, body: family, level, rand: rng((seed ^ 0x2545f491) >>> 0), elite: !!overrides.elite, seen: overrides.seen || null, extra: [...(mutation && MUTATIONS[mutation] ? [MUTATIONS[mutation].gene] : []), ...(grade >= 2 ? ['linked'] : [])] }) : null;
-  const open = (strain ? strain.parts : family.parts).filter((spec) => spec.pool !== 'basic' && (!spec.from || ((random || overrides.family) && level >= spec.from)));
+    : PARTS.on && !overrides.classic && random && !strain && !overrides.boss && !genes && FAMILIES[familyId] ? rollParts({ family: familyId, body: family, level, rand: rng((seed ^ 0x2545f491) >>> 0), elite: !!overrides.elite, rare: !!overrides.rare, floor: overrides.floor || floorFor(level), seen: overrides.seen || null, extra: [...(mutation && MUTATIONS[mutation] ? [MUTATIONS[mutation].gene] : []), ...(grade >= 2 ? ['linked'] : [])] }) : null;
+  const open = (strain ? strain.parts : family.parts).filter((spec) => spec.pool !== 'basic' && (!spec.from || ((random || overrides.family || spec.kestrel) && level >= spec.from)));
   // The third part: a gene's part (genes.mjs), one of those open at its level (the family's pool, in order), picked by its own hash of the
   // seed so it never moves the virus's other rolls. A boss keeps its family's first (the classic one).
   const pool = open.filter((spec) => spec.pool === 'third' && (!spec.plan || genes)); // the parts plan's thirds (plan) come only by its roll, or forced
@@ -1163,6 +1174,10 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   // Under its trim level a boss's budget trims a part: fewer ◆, a slower attack (MIRRORSHADE's Scrambler at 12 and 13).
   const cut = boss?.trim && level < boss.trim.below && parts.find((p) => p.id === boss.trim.part);
   if (cut) { cut.armor = cut.maxArmor = Math.min(cut.maxArmor, boss.trim.armor); if (cut.attack) cut.attack.interval = Math.max(cut.attack.interval, boss.trim.interval); }
+  // The parts plan's P2 parts, last, once every number is set: a Cold Store's attack waits (frozen) until it thaws,
+  // and a Damper drops one kind of hit, by its own hash of the seed (never moving the virus's other rolls).
+  for (const p of parts) if (p.frozen) { p.thawAt = p.frozen; p.chill = p.attack; p.attack = null; }
+  for (const p of parts) if (p.damper) p.damperKind = DAMPER_KINDS[(Math.imul((seed >>> 0) ^ 0x3c6ef372, 2654435761) >>> 0) % DAMPER_KINDS.length];
   const weakPoint = parts[Math.floor(next() * parts.length)].id;
   const srcs = specs.map((spec) => (spec.pool === 'third' || boss?.extra?.includes(spec) ? 'rolled' : null));
   const unsigned = rolled2 && !rolled2.signature ? { noSignature: true } : {}; // no signature this fight (tells.mjs skips its tells)
@@ -1238,6 +1253,9 @@ const fl = (floor) => FLOORS[Math.min(FLOORS.length, Math.max(1, floor || 1)) - 
 export const bandOf = (floor) => fl(floor).band;
 // Your floor: the deepest one whose band your level has reached (it replaced "your layer").
 export const floorFor = (level) => FLOORS.reduce((d, f, i) => (level >= f.band[0] ? i + 1 : d), 1);
+// Kestrel's Idle Timer (docs/parts-plan.md P2): from floor 3 (PARTS.kestrel), half the guard posts and ICE bring one
+// (combat.mjs encounterVirus, by their seed). It watches the guard's signature part, as a virus's does.
+for (const g of Object.values(GUARDS)) g.parts.push({ ...GENES.idletimer.parts.ransomware, gene: 'idletimer', plan: 2, kestrel: true, from: bandOf(PARTS.kestrel.floor)[0] });
 // Daemons keep their own five bands (an invasion drops its level's band, daemons.mjs): the old layers' bands.
 export const DAEMON_BANDS = [[1, 9], [7, 18], [16, 28], [26, 40], [38, 50]];
 // Content still names the five old layers (an item's vault or rogue source, `layer`; loot's depth bonus): a floor reads

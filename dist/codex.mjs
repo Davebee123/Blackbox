@@ -71,6 +71,7 @@ export function sampleOf(group, id, level, gene = null, raw = false, basic = nul
   const S = ROOMS.size[group === 'guard' ? 'guard' : group === 'runner' ? 'exfil' : 'process'];
   for (const p of v.parts) {
     p.max = p.integrity = Math.max(1, Math.round(p.max * S.hp));
+    if (p.chill && !p.attack) p.attack = { ...p.chill }; // a Cold Store's card shows the Chill it thaws with (combat.mjs keeps it off the timeline until then)
     const a = p.attack;
     if (a && ['damage', 'encrypt'].includes(a.effect)) a.amount = Math.max(1, Math.round(a.amount * S.dmg));
     if (a?.hit) a.hit = Math.max(1, Math.round(a.hit * S.dmg));
@@ -224,6 +225,7 @@ export function bossSample(s, id) {
   const S = ROOMS.size.boss;
   for (const p of v.parts) {
     p.max = p.integrity = Math.max(1, Math.round(p.max * S.hp));
+    if (p.chill && !p.attack) p.attack = { ...p.chill }; // a Cold Store's card shows the Chill it thaws with (combat.mjs keeps it off the timeline until then)
     const a = p.attack;
     if (a && ['damage', 'encrypt'].includes(a.effect)) a.amount = Math.max(1, Math.round(a.amount * S.dmg));
     if (a?.hit) a.hit = Math.max(1, Math.round(a.hit * S.dmg));

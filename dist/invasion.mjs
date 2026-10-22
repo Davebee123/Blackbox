@@ -325,8 +325,9 @@ function unit(s, loc, level, mutation) {
   if (mutation === undefined) mutation = rand(s) < SERVER.mutationChance(level) ? ROLLED_MUTATIONS[Math.floor(rand(s) * ROLLED_MUTATIONS.length)] : null;
   const key = INVADER[loc.family];
   const { strain, grade } = variantFor(loc.family, level, loc.depth || 1, seed, nativeStrain(s, 'you')); // deeper floors send bigger viruses, and strains
-  const virus = createVirus(key, seed, { threat: SERVER.threat(level), mutation, strain, grade });
-  return { key, seed, level, mutation, strain, grade, family: loc.family, name: virus.name };
+  const floor = loc.depth || 1; // its natives weigh on its source's floor (parts.mjs PARTS.floor)
+  const virus = createVirus(key, seed, { threat: SERVER.threat(level), mutation, strain, grade, floor });
+  return { key, seed, level, mutation, strain, grade, floor, family: loc.family, name: virus.name };
 }
 const clampLv = (L) => Math.max(1, Math.min(CONFIG.maxMobLevel, L));
 const tame = (s) => (s.locations || []).filter((l) => !l.rogue && !l.member && isLive(s, l) && !l.zone && connectedTo(l));
@@ -613,7 +614,7 @@ export function jackIn(s, verb = 'jack in') {
   else {
     const gate = s.encounter?.phase === 'alert' && s.encounter.mode !== 'run' ? s.encounter : s.gate;
     const champ = inv.kind === 'champion' && inv.name.startsWith('CHAMPION');
-    selectEncounter(s, inv.key, inv.seed, { level: inv.level, mutation: inv.mutation, strain: inv.strain, grade: inv.grade, quiet: true, ...(champ ? { elite: true, eliteHp: CHAMPION.hp, name: inv.name } : {}) });
+    selectEncounter(s, inv.key, inv.seed, { level: inv.level, mutation: inv.mutation, strain: inv.strain, grade: inv.grade, quiet: true, ...(inv.floor ? { floor: inv.floor } : {}), ...(champ ? { elite: true, eliteHp: CHAMPION.hp, name: inv.name } : {}) });
     s.gate = gate || null;
     const e = s.encounter;
     e.invader = inv.id;

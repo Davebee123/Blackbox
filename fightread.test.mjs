@@ -209,7 +209,7 @@ test('part reads stay true to the code: a Lockbox\'s cap, a Mirror\'s reboot, a 
   assert.match(partRead(null, worm, worm.parts.find((p) => p.twin)).does, /reboots at 40% 3 cycles later, once/);
   const gr = body('ghostroot', FAMILIES.ghostroot.parts);
   assert.match(partRead(null, gr, gr.parts.find((p) => p.reflect)).does, /^Every 4th cycle it mirrors your commands: they deal no damage, and 30% bounces back at you\./);
-  const bo = body('bouncer', GUARDS.bouncer.parts);
+  const bo = body('bouncer', GUARDS.bouncer.parts.filter((x) => !x.kestrel)); // the Bouncer as it stands (Kestrel's Idle Timer joins half of them from floor 3)
   assert.equal(partRead(null, bo, bo.parts.find((p) => p.rearm)).cue.text, 're-arms Gate');
   for (const fam of ['trojan', 'cryptominer', 'wiper']) {
     const b = body(fam, ROOM_FAMILIES[fam].parts);

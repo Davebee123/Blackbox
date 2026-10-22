@@ -12,7 +12,7 @@
 import { GENES, CATS, AXES, partGenes } from './genes.mjs';
 import { AUTHORS } from './authors.mjs';
 import { FAMILIES, ROOM_FAMILIES, STRAINS, GUARDS, genomeOf } from './data.mjs';
-import { emit, warn, alive, familyInfo, classOf } from './combat.mjs';
+import { emit, warn, alive, familyInfo, classOf, packerOn } from './combat.mjs';
 import { plannedTells } from './tells.mjs';
 import { RESEARCH, TIER } from './research.mjs';
 
@@ -120,9 +120,12 @@ export function chipOf(s, id, src, deep = false) {
   const g = GENES[id], state = geneState(s, id), named = state !== 'unknown', open = state === 'decoded' || deep || (g.mutation && named);
   return { id, src, cat: g.cat, catName: one(id), axis: g.axis, axisName: AXES[g.axis].name, state, name: named || deep ? g.name : null, rule: open ? g.does : null, answer: open ? g.answer : null };
 }
+// A Packer standing in the fight (combat.mjs packerOn): the rolled genes read as ???, whatever your Codex knows.
+export const packedChip = (c) => ({ ...c, state: 'unknown', name: null, rule: null, answer: null, packed: true });
+export const packsGene = (s, v, g) => g.src !== 'core' && g.id !== 'packer' && packerOn(s, v);
 export function genomeCard(s, v, { deep = false } = {}) {
   const fam = familyInfo(v.family);
-  const genes = virusGenes(v).map((g) => chipOf(s, g.id, g.src, deep));
+  const genes = virusGenes(v).map((g) => (packsGene(s, v, g) ? packedChip(chipOf(s, g.id, g.src, deep)) : chipOf(s, g.id, g.src, deep)));
   const tells = tellGenes(v).map((id) => chipOf(s, id, 'tell', deep));
   return { name: v.name, author: v.author || null, authorName: authorName(v.author), style: AUTHORS[v.author]?.style || null, body: fam?.name || v.family, level: v.level, grade: v.grade || 1, strain: v.strain ? STRAINS[v.strain]?.name : null, genes, tells, deep };
 }

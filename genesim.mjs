@@ -94,7 +94,7 @@ const probe = (opens, body, gene, extra = {}) => ({ opens, body, with: { ...body
 export const PROBES = {
   ward: probe(3, fam('ransomware'), 'ward', { genes: ['ward'] }),
   mutexlock: probe(8, fam('ransomware'), 'mutexlock', { genes: ['mutexlock'] }),
-  tripwire: probe(20, fam('ransomware'), 'tripwire', { genes: ['tripwire'] }),
+  tripwire: probe(16, fam('ransomware'), 'tripwire', { genes: ['tripwire'] }),
   twin: probe(3, fam('worm'), 'twin', { genes: ['twin'] }),
   c2: probe(8, fam('worm'), 'c2', { genes: ['c2'] }),
   decoymirror: probe(4, fam('ghostroot'), 'decoymirror', { genes: ['decoymirror'] }),
@@ -122,6 +122,15 @@ export const PROBES = {
   idletimer: probe(9, fam('ransomware'), 'idletimer', { genes: ['idletimer'] }),
   frontend: probe(10, fam('ghostroot'), 'frontend', { genes: ['frontend'] }),
   backlog: probe(12, fam('worm'), 'backlog', { genes: ['backlog'] }),
+  // The parts plan's P2 (floors 3 and 4).
+  limiter: probe(13, fam('ransomware'), 'limiter', { genes: ['limiter'] }),
+  spare: probe(14, fam('worm'), 'spare', { genes: ['spare'] }),
+  shunt: probe(17, fam('worm'), 'shunt', { genes: ['shunt'] }),
+  scraper: probe(19, fam('ransomware'), 'scraper', { genes: ['scraper'] }),
+  packer: probe(20, fam('ghostroot'), 'packer', { genes: ['packer'] }),
+  badblock: probe(21, fam('ghostroot'), 'badblock', { genes: ['badblock'] }),
+  damper: probe(23, fam('worm'), 'damper', { genes: ['damper'] }),
+  coldstore: probe(24, fam('ransomware'), 'coldstore', { genes: ['coldstore'] }),
 };
 // The named builds: each strain against its family's body. Keylogger's two genes share one probe.
 for (const [k, st] of Object.entries(STRAINS)) PROBES[st.genes[0]] = { opens: st.from, body: fam(st.lineage), with: { ...fam(st.lineage), strain: k }, gene: st.genes[0], build: k, also: st.genes.slice(1) };
@@ -129,7 +138,7 @@ export const PROBE_LEVELS = [5, 10, 18, 30];
 // Who plays a level: the four classes below SUBCLASS.from, every subclass from it.
 export const playersAt = (L) => (L >= SUBCLASS.from ? SUBS : Object.keys(ARCHETYPES).map((cls) => [cls, null]));
 // Genes the planner has a rule for, so ignoring them means something (planner.mjs, tells.mjs, the Sync Window here).
-export const ANSWERED = ['ward', 'mutexlock', 'tripwire', 'twin', 'c2', 'decoymirror', 'mimic', 'keyring', 'adaptive', 'phaseshift', 'synclock', 'overcharge', 'fulldisk', 'massmailer', 'possession', 'doubleextortion', 'selfupdate', 'persistence', 'rekey', 'batteringram', 'hotfix', 'zipbomb', 'hotspot', 'idletimer', 'frontend', 'backlog'];
+export const ANSWERED = ['ward', 'mutexlock', 'tripwire', 'twin', 'c2', 'decoymirror', 'mimic', 'keyring', 'adaptive', 'phaseshift', 'synclock', 'overcharge', 'fulldisk', 'massmailer', 'possession', 'doubleextortion', 'selfupdate', 'persistence', 'rekey', 'batteringram', 'hotfix', 'zipbomb', 'hotspot', 'idletimer', 'frontend', 'backlog', 'spare', 'scraper', 'badblock', 'coldstore']; // no rule of their own in the planner: the Limiter (its threat order already leaves it late), the Packer (a bot reads every rule anyway), the Damper (it strips ◆ first anyway) and the Shunt (what it takes still breaks it)
 
 // One probe fight: a run fight at the level, the planner reading (or ignoring one gene).
 export function probeFight(cfg, level, cls, sub, seed, { ignore = null } = {}) {
