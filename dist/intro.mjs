@@ -35,12 +35,13 @@ export function createIntro({ key = () => {}, sound = () => {}, reducedMotion = 
   }
   const line = (pre, text, cls = '') => { const d = document.createElement('div'); d.className = cls; d.textContent = text || ' '; pre.appendChild(d); key('char'); return d; };
 
-  // One prompt line with a real input on it. Resolves with what was typed.
+  // One prompt line with a real input on it. Resolves with what was typed. The password is a text field drawn as dots
+  // (.intro-secret), never a password-type input: a browser's password manager would offer to save the game's login later.
   function ask(pre, label, { secret = false, check } = {}) {
     return new Promise((resolve) => {
       const row = document.createElement('div');
       row.className = 'intro-ask';
-      row.innerHTML = `<label>${esc(label)}</label><span class="intro-field"><input ${secret ? 'type="password"' : 'type="text"'} autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="32"></span>`;
+      row.innerHTML = `<label>${esc(label)}</label><span class="intro-field"><input type="text"${secret ? ' class="intro-secret"' : ''} autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="32" data-1p-ignore data-lpignore="true" data-form-type="other"></span>`;
       pre.appendChild(row);
       const input = row.querySelector('input');
       const keep = () => setTimeout(() => input.isConnected && document.activeElement !== input && input.focus(), 0);
