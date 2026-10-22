@@ -313,6 +313,12 @@ test('effects land on time: on the page it starts early (or part-way in) so it l
   } finally { globalThis.setTimeout = was; }
 });
 
+test('on the page: a part\'s attack chip is its attack (or tell), not a routine\'s cue or your command beside it', () => {
+  const { fx, row } = fakePage({});
+  const chip = fx.measure(row).part.chip, want = roomy().parts[0].chip;
+  assert.deepEqual(chip, rect(want.l - 46, want.t - 211, want.r - want.l, want.b - want.t), 'measured in the board\'s pixels');
+});
+
 test('on the page: every piece is taken off the layer once its effect is over', () => {
   const timers = [], was = globalThis.setTimeout;
   globalThis.setTimeout = (f, ms) => { timers.push({ f, ms }); return timers.length; };
@@ -342,7 +348,7 @@ function fakePage({ motion = true, level = 'full' }) {
   board.offsetWidth = 788;
   const you = el('div', b.you.row);
   you.sel = { '.bname': el('div', b.you.cell), '.bcell:nth-child(2)': el('div', b.you.now), '.bname b': el('b', b.keep[b.keep.length - 1]) };
-  const rows = b.parts.map((p) => { const r = el('button', p.row); r.sel = { '.bname': el('div', p.cell), '.part-top': el('span', p.name), '.part-bar': el('span', p.bar) }; r.all = { '.intent': p.chip ? [el('div', p.chip)] : [] }; return r; });
+  const rows = b.parts.map((p) => { const r = el('button', p.row); r.sel = { '.bname': el('div', p.cell), '.part-top': el('span', p.name), '.part-bar': el('span', p.bar) }; r.all = { '.intent': p.chip ? [Object.assign(el('div', rect(300, p.row.t + 5, 90, 30)), { sel: {} }), Object.assign(el('div', p.chip), { sel: { '.ico': el('span') } })] : [] }; return r; }); // a cue chip first, then its attack
   board.sel = { '.brow.byou': you };
   board.all = { '.bpart': rows };
   const keys = tray.map((q) => el('button', q)), bar = el('div', hud.bar), nums = el('div', hud.nums);

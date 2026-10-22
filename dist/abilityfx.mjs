@@ -582,7 +582,8 @@ export function createAbilityFx(board, { canMove = () => true, level = () => 'fu
   const rowGeo = (f, row) => {
     const p = { row: local(f, row), cell: local(f, row.querySelector('.bname')), name: local(f, row.querySelector('.part-top')), bar: local(f, row.querySelector('.part-bar')) };
     if (!(p.row && p.cell && p.name && p.bar)) return null;
-    const chip = [...row.querySelectorAll('.intent')].find((x) => !x.classList?.contains('hidden') && shows(x));
+    // Its attack chip: an attack (its icon) or a tell, not a routine's cue, your command, a cut, a patch or a lock.
+    const chip = [...row.querySelectorAll('.intent')].find((x) => (x.classList?.contains('tell') || x.querySelector?.('.ico')) && shows(x));
     p.chip = chip ? local(f, chip) : null;
     return p;
   };
