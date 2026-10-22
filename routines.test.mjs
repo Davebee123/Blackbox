@@ -8,8 +8,8 @@
 // loads with the defaults, an R1 stack moved into its viruses' routines.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fresh, command, resolveCycle, advance, selectEncounter, part, livingParts, attackers, hooks, active, restore, cycleLength, codexKey, barKeys, finish } from './dist/combat.mjs';
-import { CONFIG, FAMILIES } from './dist/data.mjs';
+import { fresh, command, resolveCycle, advance, selectEncounter, part, livingParts, attackers, hooks, active, restore, cycleLength, codexKey, barKeys, finish, armorTakes as armorTakesHit } from './dist/combat.mjs';
+import { CONFIG, FAMILIES, ABILITIES } from './dist/data.mjs';
 import * as FP from './dist/floorplan.mjs';
 import { play } from './dist/run.mjs';
 import { planner } from './dist/planner.mjs';
@@ -139,6 +139,7 @@ test('a handler fires on what the board shows: the first that fits, top to botto
   const s = fight();
   const pulse = part(s, 'pulse');
   for (const p of attackers(s)) p.attack.due = 999;
+  command(s, 'program ransomware armor off'); // the handlers as written (Break ◆ first has its own tests)
   command(s, 'program ransomware add ransomware:pulse:due overload that');
   command(s, 'program ransomware add ransomware:encryptor:present crack that');
   assert.deepEqual(R.decide(s), { text: 'crack encryptor', handler: 1 }, 'the first handler waits, the second fits');
@@ -178,6 +179,7 @@ test('a long cooldown stays yours: the rotation never fires one (the planner wou
   assert.ok(long.length, `the planner fires a long cooldown (${[...used.planner].join(', ')})`);
   for (const id of long) assert.ok(!used.program.has(id), `the rotation never fires ${id}`);
   const s = fight();
+  command(s, 'program ransomware armor off'); // Flood itself, not a Crack first (Break ◆ first)
   command(s, 'program ransomware add always flood soonest');
   assert.equal(mine(cycle(s))[0].ability, 'flood');
 });
@@ -268,6 +270,7 @@ test('a broad TARGET leaves a Hotspot, a Tripwire or a Zip Bomb for last, as the
   const hot = livingParts(s).find((p) => p.hotspot);
   assert.ok(hot, 'a Hotspot in the fight');
   for (const p of livingParts(s)) if (p !== hot) p.integrity = Math.max(hot.integrity + 1, p.integrity);
+  command(s, 'program ransomware armor off'); // the TARGET alone (Break ◆ first would crack it)
   command(s, 'program ransomware add always spike lowest');
   assert.equal(R.leftForLast(s, hot), true);
   assert.notEqual(R.decide(s).text, `spike ${hot.id}`, 'not the lowest when that sets it off');
@@ -491,4 +494,179 @@ test('the Program tab: viruses down the left, the picked one\'s presets, stack, 
   const tip = TIPS.find((t) => t.id === 'program-editor');
   assert.ok(tip && tip.text.length <= 200);
   void barKeys;
+});
+
+// ---------- Break ◆ first ----------
+// A fight whose lowest part wears ◆ (the others well above it), nothing attacking: the handler's hit would be absorbed.
+function armored({ level = 14, seed = 7, family = 'ransomware' } = {}) {
+  const s = fight({ level, seed, family });
+  for (const p of attackers(s)) p.attack.due = 999;
+  const parts = livingParts(s), p = parts.find((x) => x.armor > 0);
+  for (const x of parts) if (x !== p) x.integrity = x.max = 500;
+  p.armor = 3;
+  return { s, p };
+}
+const absorbedHits = (ev) => ev.filter((e) => e.type === 'armor' && e.absorbed);
+
+test('Break ◆ first, on by default: a big hit a ◆ would take becomes Crack when it\'s ready, then the hit lands', () => {
+  const { s, p } = armored();
+  assert.equal(R.armorFirst(s, 'ransomware'), true, 'on for a new routine');
+  command(s, 'program ransomware add always overload lowest');
+  assert.ok(armorTakesHit(s, 'overload', p) > 0, 'Overload would be absorbed');
+  assert.deepEqual(R.decide(s), { text: `crack ${p.id}`, handler: 0, armor: 'break' });
+  assert.match(boardMarkup(s), /title="Your program(&#39;|')s next move \(handler 1, breaking ◆ first\)\.[^"]*">⟳ crack /, 'the ghost says so in its tooltip');
+  const ev = cycle(s);
+  assert.equal(mine(ev)[0].ability, 'crack');
+  assert.equal(mine(ev)[0].target, p.id);
+  assert.equal(absorbedHits(ev).length, 0, 'nothing absorbed');
+  assert.equal(p.armor, 0);
+  const next = mine(cycle(s))[0];
+  assert.equal(next.ability, 'overload', 'the hit itself, now that it lands');
+  assert.equal(next.target, p.id);
+  // The breaker is the best one ready, from the ability data: the most of its ◆, then the shortest cooldown.
+  const { s: t, p: q } = armored();
+  q.armor = 5;
+  assert.equal(R.breakerFor(t, q), `shaped-charge ${q.id}`, '5 ◆: Shaped Charge breaks them all');
+  q.armor = 2;
+  assert.equal(R.breakerFor(t, q), `crack ${q.id}`, '2 ◆: Crack, the shorter cooldown');
+  t.encounter.readyAt.crack = t.encounter.cycle + 2;
+  assert.equal(R.breakerFor(t, q), 'fork-bomb', 'Crack cooling: Fork Bomb (cooldown 4) before Shaped Charge (5); it takes no target');
+  for (const [id, a] of Object.entries(ABILITIES)) {
+    const want = a.pierce ? 0 : Math.max(a.strip || 0, a.chits > 1 ? a.chits : 0);
+    assert.equal(R.breaks(id), want, id);
+  }
+  assert.ok(R.breaks('crack') && R.breaks('fork-bomb') && R.breaks('chain-reaction') && R.breaks('rate-limit'));
+  assert.ok(!R.breaks('overload') && !R.breaks('spike') && !R.breaks('backdoor') && !R.breaks('shatter'));
+});
+
+test('Break ◆ first off: the old behaviour, the hit goes into the ◆', () => {
+  const { s, p } = armored();
+  command(s, 'program ransomware add always overload lowest');
+  command(s, 'program ransomware armor off');
+  assert.deepEqual(R.decide(s), { text: `overload ${p.id}`, handler: 0 });
+  const ev = cycle(s);
+  assert.equal(mine(ev)[0].ability, 'overload');
+  assert.equal(absorbedHits(ev).length, 1, 'absorbed');
+  assert.equal(p.armor, 1, 'a heavy hit breaks 2');
+});
+
+test('Break ◆ first with no breaker ready: soonest and lowest go at a part with no ◆, that part fires anyway', () => {
+  const { s, p } = armored();
+  const e = s.encounter;
+  for (const { id } of R.barSkills(s)) if (R.breaks(id)) e.readyAt[id] = e.cycle + 3;
+  const bare = livingParts(s).find((x) => x !== p);
+  bare.armor = 0;
+  command(s, 'program ransomware add always overload lowest');
+  assert.equal(R.breakerFor(s, p), null, 'nothing ready');
+  assert.deepEqual(R.decide(s), { text: `overload ${bare.id}`, handler: 0, armor: 'retarget' }, 'lowest: the lowest with no ◆');
+  R.routineOf(s, 'ransomware').handlers[0].target = 'soonest';
+  assert.equal(R.decide(s).text, `overload ${bare.id}`, 'soonest: the same');
+  // That part names the part: the hit goes in anyway.
+  R.routineOf(s, 'ransomware').handlers = [{ when: `${codexKey(e.virus, p)}:present`, do: 'overload', target: 'that' }];
+  assert.deepEqual(R.decide(s), { text: `overload ${p.id}`, handler: 0 });
+  // Every part armored: a broad TARGET has nowhere else to go, so it fires anyway.
+  for (const x of livingParts(s)) x.armor = Math.max(2, x.armor);
+  R.routineOf(s, 'ransomware').handlers = [{ when: 'always', do: 'overload', target: 'lowest' }];
+  assert.deepEqual(R.decide(s), { text: `overload ${p.id}`, handler: 0 });
+  assert.equal(absorbedHits(cycle(s)).length, 1);
+});
+
+test('Break ◆ first is free: it costs no RAM, so a routine keeps all its handlers; a cost, if the designer sets one, shows and counts', () => {
+  const { s } = armored({ level: 6 });
+  assert.equal(R.ROUTINES.armorRam, 0);
+  const budget = R.ramFor(s, 'ransomware');
+  for (let i = 0; i < budget; i++) command(s, 'program ransomware add always spike lowest');
+  assert.equal(R.ramUsed(s, 'ransomware'), budget, 'a full routine, the option on');
+  assert.ok(R.handlerRows(s, 'ransomware').every((r) => r.fits), 'every handler runs');
+  command(s, 'program ransomware armor off');
+  assert.equal(R.ramUsed(s, 'ransomware'), budget, 'off: the same RAM');
+  command(s, 'program ransomware armor on');
+  assert.doesNotMatch(programMarkup(s).match(/<button[^>]*rt-armor[\s\S]*?<\/button>/)[0], /rt-rc/, 'no cost circle');
+  // At 1 RAM it would count against the routine (the last handler sits out) and show as 1R.
+  R.ROUTINES.armorRam = 1;
+  try {
+    assert.equal(R.ramUsed(s, 'ransomware'), budget);
+    assert.equal(R.handlerRows(s, 'ransomware').at(-1).fits, false, 'the last handler sits out');
+    assert.match(programMarkup(s), /rt-armor on"[^>]*><span class="rt-rc" title="1 RAM"[^>]*>1R<\/span>/);
+    command(s, 'program ransomware armor off');
+    assert.match(warning(command(s, 'program ransomware armor on')), /needs \d+ RAM/, 'no room: refused');
+    for (const p of R.presetsFor(s, 'ransomware')) assert.ok(p.handlers.reduce((n, h) => n + R.handlerRam(s, h), 0) + 1 <= budget, `${p.name} fits with it`);
+  } finally { R.ROUTINES.armorRam = 0; }
+});
+
+test('the ready-made routines no longer waste hits on ◆: Focus the lowest and Before it hits in seeded fights', () => {
+  const count = (preset, armor) => {
+    const out = { hits: 0, absorbed: 0 };
+    for (const family of FAMS) for (let seed = 1; seed <= 12; seed++) {
+      const s = fight({ seed, family, opts: { classic: false } });
+      for (const p of s.encounter.virus.parts) s.research[codexKey(s.encounter.virus, p)] = TIER.mastered;
+      command(s, `program ${family} preset ${preset}`);
+      if (R.presetNow(s, family) !== preset) continue;
+      if (!armor) command(s, `program ${family} armor off`);
+      for (let i = 0; i < 60 && active(s); i++) {
+        const ev = cycle(s);
+        out.hits += ev.filter((e) => e.type === 'resolved' && e.auto === 'program' && e.ability === 'overload').length;
+        out.absorbed += ev.filter((e) => e.type === 'armor' && e.absorbed && e.ability === 'overload').length;
+      }
+    }
+    return out;
+  };
+  for (const preset of ['lowest', 'hits']) {
+    const off = count(preset, false), on = count(preset, true);
+    assert.ok(on.hits > 0 && off.hits > 0, `${preset}: Overloads fired`);
+    assert.ok(off.absorbed > 0, `${preset} off: some absorbed (${off.absorbed} of ${off.hits})`);
+    assert.ok(on.absorbed * 4 <= off.absorbed, `${preset} on: ${on.absorbed} of ${on.hits} absorbed, against ${off.absorbed} of ${off.hits}`);
+  }
+  // Their own handlers don't fight it: the signature first is just your best hit at it, the option breaks its ◆ (a
+  // Crack handler at "on board" would spend Crack on it once it's bare).
+  const s = fight();
+  const sig = R.presetsFor(s, 'ransomware').find((p) => p.id === 'signature');
+  assert.deepEqual(sig.handlers, [{ when: 'ransomware:encryptor:present', do: 'overload', target: 'that' }]);
+  assert.match(sig.tip, /Overload it, its ◆ broken first\./);
+});
+
+test('the toggle: a switch by the RAM meter, its command, saved per routine; it never makes a routine yours', () => {
+  const s = fight({ level: 14 });
+  const html = programMarkup(s);
+  const btn = html.match(/<button[^>]*class="rt-armor on"[\s\S]*?<\/button>/)?.[0];
+  assert.ok(btn, 'on, by default');
+  assert.ok(html.indexOf('rt-armor') > html.indexOf('rt-ram') && html.indexOf('rt-armor') < html.indexOf('rt-presets'), 'beside the RAM meter, above the stack');
+  assert.match(btn, /role="switch" aria-checked="true"/);
+  assert.match(btn, /data-command="program ransomware armor off"/);
+  assert.match(btn, /title="Break ◆ first: before a big hit would be absorbed by armor, your program cracks the armor first\."/);
+  assert.match(btn, /Break <span class="rt-dia">◆<\/span> first/);
+  const ev = command(s, 'program ransomware armor off');
+  assert.equal(ev.find((e) => e.type === 'info').message, 'Ransomware: break ◆ first off.');
+  assert.equal(R.armorFirst(s, 'ransomware'), false);
+  assert.equal(R.routineOf(s, 'ransomware').armor, false);
+  assert.equal(R.armorFirst(s, 'worm'), true, 'each routine its own');
+  assert.equal(R.confirmed(s, 'ransomware'), false, 'a setting, not a handler: nothing is left to you for it');
+  assert.match(programMarkup(s), /class="rt-armor"[^>]*aria-checked="false"[^>]*data-command="program ransomware armor on"/);
+  assert.match(command(s, 'program').find((e) => e.type === 'info').message, /break ◆ first off/);
+  assert.match(warning(command(s, 'program ransomware armor maybe')), /armor on or off/);
+  // Saved, and carried to a subclass's first program.
+  const back = restore(JSON.parse(JSON.stringify(s)));
+  assert.equal(R.armorFirst(back, 'ransomware'), false);
+  command(s, 'program armor on'); // no virus named: the one picked last
+  assert.equal(R.armorFirst(s, 'ransomware'), true);
+  command(s, 'program ransomware armor off');
+  const t = fight({ level: 5 });
+  command(t, 'program ransomware add always spike soonest');
+  command(t, 'program ransomware armor off');
+  FP.outfit(t, { cls: 'breaker', level: 14 });
+  assert.equal(R.armorFirst(t, 'ransomware'), false, 'a subclass starts from its class\'s routine');
+  // A ready-made routine comes with it on.
+  command(s, 'program ransomware preset lowest');
+  assert.equal(R.armorFirst(s, 'ransomware'), true);
+  // An older save's routines keep their handlers, with it on.
+  const old = JSON.parse(JSON.stringify(fight({ level: 14 })));
+  old.programs = { on: true, rails: { jackOut: 0, danger: true }, by: { demolitionist: { routines: { ransomware: { handlers: [{ when: 'always', do: 'overload', target: 'lowest' }], confirmed: true } } } } };
+  const o = restore(old);
+  assert.deepEqual(R.routineOf(o, 'ransomware').handlers, [{ when: 'always', do: 'overload', target: 'lowest' }]);
+  assert.equal(R.armorFirst(o, 'ransomware'), true);
+});
+
+test('a part whose own id ends in a number keeps it (the C2 Node); only a second copy answers as the first', () => {
+  assert.equal(R.refOf({ family: 'worm' }, { id: 'c2' }), 'worm:c2');
+  assert.equal(R.refOf({ family: 'ransomware' }, { id: 'cipherblock2', copy: true }), 'ransomware:cipherblock');
 });

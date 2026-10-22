@@ -157,3 +157,18 @@ body.rt-drag-when .rt-slot:not(.rt-s-when), body.rt-drag-do .rt-slot:not(.rt-s-d
 .aim.you.prog { outline: 1px dashed var(--you); outline-offset: 1px; opacity: 0.85; }
 .cx-handler { justify-self: start; margin-top: var(--s2); }
 @media (max-width: 600px) { .rt-exc-tag { letter-spacing: 0; padding: 1px 3px; } .intent.prog.exc strong, .intent.prog.exc-mark strong { font-size: 8px; letter-spacing: 0; } .intent.prog.exc, .intent.prog.exc-mark { padding: 0 2px; } }
+
+/* Break ◆ first (routines-view.mjs armorToggle): a small switch beside the RAM meter; the ◆ in steel, what protects a part. */
+.rt-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s4) var(--s5); }
+.rt-top .rt-ram { flex: 1 1 220px; min-width: 0; }
+.rt-armor { display: inline-flex; align-items: center; gap: 6px; height: var(--h-btn-sm); padding: 0 10px 0 6px; border: 1px solid var(--line-strong); border-radius: 13px; background: var(--inset); color: var(--muted); font: 500 11px var(--mono); cursor: pointer; white-space: nowrap; }
+.rt-armor:hover { border-color: var(--steel); }
+.rt-armor b { font-weight: 500; }
+.rt-dia { color: var(--steel); font-weight: 700; }
+.rt-sw { position: relative; flex: none; width: 22px; height: 12px; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--panel); }
+.rt-sw i { position: absolute; top: 1px; left: 1px; width: 8px; height: 8px; border-radius: 50%; background: var(--gray); transition: left 0.15s, background 0.15s; }
+.rt-armor.on { border-color: var(--steel); color: var(--text); }
+.rt-armor.on .rt-sw { border-color: var(--steel); background: rgba(134, 182, 198, 0.15); }
+.rt-armor.on .rt-sw i { left: 11px; background: var(--steel); box-shadow: 0 0 4px var(--steel-glow); }
+.rt-armor:not(.on) .rt-dia { color: var(--gray); }
+.rt-rc.off { border-color: var(--gray); color: var(--gray); }

@@ -14,6 +14,11 @@
 //              budget, top to bottom, sit out.
 //   presets    ready-made routines for a virus (presetsFor), built from its parts, your research and your bar, each
 //              fitting its RAM. Picking one replaces the stack; an edited stack can be got back with program undo.
+//   break ◆    an option on each routine, on by default (armorFirst): before a handler fires a hit that a ◆ on its
+//   first      target would take (combat.mjs armorTakes), the program fires your best ready armor-breaker at that part
+//              instead (breakerFor: the skills whose data breaks ◆, strip or chits); none ready, the hit goes at a part
+//              with no ◆ if the TARGET chip allows one (soonest, lowest; that part: another the WHEN chip names), else
+//              it fires anyway. It costs ROUTINES.armorRam (0: free). The rotation strips ◆ first on its own.
 //   can't      fire a skill with a cooldown of 6 or more (or once a fight) unless a handler names it; press Enter in
 //              the Sync Window (it fires when the timer runs out, so never synced); read what the board doesn't show
 //              (hidden timers, a veiled part's attack); read a tell (its moves count like auto-repeat: a tell's
@@ -29,9 +34,10 @@
 // Rewards: a program's fight pays exactly what the same fight pays you (nothing here touches XP or loot).
 //
 // State: s.programs = { on, focus, rails: { jackOut, danger }, by: { <class or subclass>: { routines: { <body>:
-// { handlers: [], confirmed, undo } } } } }, made on first use (an older save gets the defaults: no SAVE_VERSION change; an R1
-// save's single stack moves into its viruses' routines, migrate). A fight's exceptions live on e.program.
-import { hooks, emit, warn, active, alive, part, livingParts, intents, toIntent, said, classOf, subOf, hackerLevel, barKeys, cooldownOf, codexKey, defender, maxSignal, timersHidden } from './combat.mjs';
+// { handlers: [], confirmed, undo, armor } } } } } (armor: false when Break ◆ first is off; missing is on), made on
+// first use (an older save gets the defaults: no SAVE_VERSION change; an R1 save's single stack moves into its viruses'
+// routines, migrate). A fight's exceptions live on e.program.
+import { hooks, emit, warn, active, alive, part, livingParts, intents, toIntent, said, classOf, subOf, hackerLevel, barKeys, cooldownOf, codexKey, defender, maxSignal, timersHidden, armorTakes, frontOf, buffed } from './combat.mjs';
 import { ABILITIES, MUTATIONS, FAMILIES, ROOM_FAMILIES, GUARDS, STRAINS, BOSSES, ARCHETYPES, SUBS } from './data.mjs';
 import { researchAt, TIER } from './research.mjs';
 import { decoded as geneDecoded } from './genome.mjs';
@@ -46,6 +52,7 @@ export const ROUTINES = {
   low: 0.5, // "under half": a part's Integrity, your Signal
   fragments: 2, encrypted: 3,
   danger: ['elite', 'guard', 'core', 'boss'], // rooms a walk stops before
+  armorRam: 0, // what Break ◆ first costs a routine: free, since it's on by default (a cost would cut every routine's RAM, and push the last handler of a full one out)
 };
 export const LOCKED = `Routines unlock at level ${ROUTINES.unlockLevel}.`;
 export const unlocked = (s, arch = classOf(s)) => hackerLevel(s, arch) >= ROUTINES.unlockLevel;
@@ -111,8 +118,9 @@ function specOf(ref) {
 export const refName = (ref) => specOf(ref)?.name || String(ref).split(':')[1]?.replace(/-/g, ' ') || String(ref);
 export const bodyName = (body) => bodyDef(body)?.name || body;
 export const refBody = (ref) => String(ref).split(':')[0];
-// The key a part in a fight answers to: its Codex key, a second copy (Strobe 2, an id with a digit) as the first.
-export const refOf = (v, p) => codexKey(v, p).replace(/\d+$/, '');
+// The key a part in a fight answers to: its Codex key, a second copy (Strobe 2: copy, its id with a number) as the
+// first. Only a copy: a part whose own id ends in a number (the C2 Node) keeps it.
+export const refOf = (v, p) => (p.copy ? codexKey(v, p).replace(/\d+$/, '') : codexKey(v, p));
 const researchOfRef = (s, ref) => researchAt(s, ref);
 // The fight's virus: the body its parts' Codex keys name.
 export const fightBody = (s) => (s.encounter?.virus ? s.encounter.virus.strain || s.encounter.virus.family : null);
@@ -188,7 +196,7 @@ export function programOf(s, key = programKey(s)) {
   if (!P.by[key]) {
     // A subclass's first program starts as its class's (the routines you wrote before level 10).
     const from = SUBS[key] && P.by[SUBS[key].cls];
-    P.by[key] = { routines: Object.fromEntries(Object.entries(from?.routines || {}).map(([b, r]) => [b, { handlers: r.handlers.map((h) => ({ ...h })) }])) };
+    P.by[key] = { routines: Object.fromEntries(Object.entries(from?.routines || {}).map(([b, r]) => [b, { handlers: r.handlers.map((h) => ({ ...h })), ...(r.armor === false ? { armor: false } : {}) }])) };
   }
   P.by[key].routines ||= {};
   return P.by[key];
@@ -207,11 +215,14 @@ export function routineOf(s, body = currentBody(s), key = programKey(s)) {
   return (R[body] ||= { handlers: [] });
 }
 export const rails = (s) => programsOf(s).rails;
+// Break ◆ first: on unless you turned it off (a new routine, a preset and an older save's routine all have it on).
+export const armorFirst = (s, body = currentBody(s)) => routineOf(s, body).armor !== false;
+export const armorRam = (s, body = currentBody(s)) => (armorFirst(s, body) ? ROUTINES.armorRam : 0);
 // Your bar's skills (Spike, your slots, SIGINT): what a DO chip can be.
 export const barSkills = (s) => barKeys(s).map(([key, id]) => ({ key, id })).filter((x) => ABILITIES[x.id]);
 // Each handler with what it costs and whether it runs: in budget (top to bottom), its WHEN researched, its skill on your bar.
 export function handlerRows(s, body = currentBody(s)) {
-  const budget = ramFor(s, body), bar = new Set(barSkills(s).map((x) => x.id));
+  const budget = ramFor(s, body) - armorRam(s, body), bar = new Set(barSkills(s).map((x) => x.id));
   let used = 0;
   return routineOf(s, body).handlers.map((h, i) => {
     const ram = handlerRam(s, h), fits = used + ram <= budget;
@@ -220,7 +231,7 @@ export function handlerRows(s, body = currentBody(s)) {
     return { h, i, ram, fits, open, onBar, runs: fits && open && onBar };
   });
 }
-export const ramUsed = (s, body = currentBody(s)) => handlerRows(s, body).filter((r) => r.fits).reduce((n, r) => n + r.ram, 0);
+export const ramUsed = (s, body = currentBody(s)) => armorRam(s, body) + handlerRows(s, body).filter((r) => r.fits).reduce((n, r) => n + r.ram, 0);
 const liveHandlers = (s, body) => handlerRows(s, body).filter((r) => r.runs).map((r) => r.h);
 
 // ---------- presets ----------
@@ -231,7 +242,7 @@ const bestHit = (s) => partSkills(s).filter((id) => ABILITIES[id].verb === 'hit'
 const bestStrip = (s) => partSkills(s).filter((id) => ABILITIES[id].strip || ABILITIES[id].pierce).sort((a, b) => (ABILITIES[b].strip || 0) - (ABILITIES[a].strip || 0))[0] || null;
 const bestGuard = (s) => barSkills(s).map((x) => x.id).filter((id) => ABILITIES[id].verb === 'shield' && ABILITIES[id].target === 'none' && !isLong(s, id))[0] || null;
 export function presetsFor(s, body) {
-  const budget = ramFor(s, body), hit = bestHit(s), strip = bestStrip(s), guard = bestGuard(s);
+  const budget = ramFor(s, body) - ROUTINES.armorRam, hit = bestHit(s), strip = bestStrip(s), guard = bestGuard(s); // a preset comes with Break ◆ first on
   const specs = bodySpecs(body).filter((x, i, a) => a.findIndex((y) => y.id === x.id) === i);
   const at = (x, tier) => researchAt(s, `${body}:${x.id}`) >= tier;
   const sig = specs.find((x) => x.special && at(x, TIER.decoded)) || null;
@@ -249,9 +260,14 @@ export function presetsFor(s, body) {
     if (hs.length && !out.some((p) => same(p.handlers, hs))) out.push({ id, name, icon, tip, handlers: hs });
   };
   if (sig) {
-    const ref = `${body}:${sig.id}`;
-    add('signature', `${sig.name} first`, 'part', `The ${sig.name} before anything else: ${ABILITIES[strip || hit].name} it while it wears ◆${strip ? `, ${ABILITIES[hit].name} it once it's bare` : ''}.`,
-      [strip && { when: `${ref}:bare`, do: hit, target: 'that' }, { when: `${ref}:present`, do: strip || hit, target: 'that' }]);
+    // A preset comes with Break ◆ first on, so a skill that breaks ◆ needs no handler of its own (one at "on board"
+    // would spend it on the part once it's bare); a skill that goes through ◆ (Backdoor) keeps its handler.
+    const ref = `${body}:${sig.id}`, through = strip && !breaks(strip) ? strip : null;
+    const crackFirst = !through && barSkills(s).some((x) => breaks(x.id) && !isLong(s, x.id));
+    add('signature', `${sig.name} first`, 'part', through
+      ? `The ${sig.name} before anything else: ${ABILITIES[through].name} it while it wears ◆, ${ABILITIES[hit].name} it once it's bare.`
+      : `The ${sig.name} before anything else: ${ABILITIES[hit].name} it${crackFirst ? ', its ◆ broken first' : ''}.`,
+      through ? [{ when: `${ref}:bare`, do: hit, target: 'that' }, { when: `${ref}:present`, do: through, target: 'that' }] : [{ when: `${ref}:present`, do: hit, target: 'that' }]);
   }
   const hitters = specs.filter((x) => at(x, TIER.rule) && x.attack);
   if (hitters.length) add('hits', 'Before it hits', 'clock', `${ABILITIES[hit].name} each part whose attack lands this cycle, signature first.`, hitters.sort((a, b) => !!b.special - !!a.special).map((x) => ({ when: `${body}:${x.id}:due`, do: hit, target: 'that' })));
@@ -305,26 +321,56 @@ export const leftForLast = (s, p) => ((p.hotspot || p.deadman || p.fuse) && othe
 const firstOf = (s, list) => list.find((p) => !leftForLast(s, p)) || list[0] || null;
 // When a part's next attack lands, by the timers the board shows (a hidden one counts as 2, no attack as last).
 const dueOf = (s, p) => shown(s).find((i) => i.source === p.id && !i.hidden && !i.tell)?.col ?? (p.attack ? 2 : 9);
-function targetOf(s, h, ps) {
-  const live = livingParts(s);
-  if (h.target === 'that') return ps?.[0] || null;
+// ok: only parts it passes (Break ◆ first's no-◆ retarget); that part then picks among the parts the WHEN chip names.
+function targetOf(s, h, ps, ok = null) {
+  const live = ok ? livingParts(s).filter(ok) : livingParts(s);
+  if (h.target === 'that') return (ok ? (ps || []).filter(ok) : ps || [])[0] || null;
   if (h.target === 'soonest') return firstOf(s, [...live].sort((a, b) => dueOf(s, a) - dueOf(s, b) || b.max - a.max));
   if (h.target === 'lowest') return firstOf(s, [...live].sort((a, b) => a.integrity - b.integrity));
   if (h.target === 'bare') return firstOf(s, live.filter((p) => !(p.armor > 0)).sort((a, b) => a.integrity - b.integrity));
   return null;
 }
 const takesPart = (id) => !['none', 'aggro'].includes(ABILITIES[id]?.target);
-// The command a handler fires now, or null when it doesn't fit (its WHEN doesn't hold, its skill is cooling, no target).
-function handlerMove(s, h) {
+const fires = (s, text) => !toIntent(s, text).error;
+
+// ---------- Break ◆ first ----------
+// The ◆ a skill breaks on an armored part, from its data: strip (Crack, Shaped Charge, Fork Bomb) or chits (Chain
+// Reaction, Bit Rot, Rate Limit, Reclaim, Blowback: 2). A skill that goes through ◆ (Backdoor) breaks none.
+export const breaks = (id) => { const a = ABILITIES[id]; return a && !a.pierce ? Math.max(a.strip || 0, a.chits > 1 ? a.chits : 0) : 0; };
+// Your best ready armor-breaker at p, as a command, or null: the one that breaks the most of its ◆, then the shortest
+// cooldown, then the first on your bar. Never a long cooldown (only a handler that names one fires it).
+export function breakerFor(s, p) {
+  const list = barSkills(s).map((x) => x.id).filter((id) => breaks(id) && !isLong(s, id))
+    .map((id, i) => ({ id, i, n: Math.min(breaks(id), p.armor), cd: cooldownOf(s, id), text: takesPart(id) ? `${id} ${p.id}` : id }))
+    .filter((x) => fires(s, x.text));
+  return list.sort((a, b) => b.n - a.n || a.cd - b.cd || a.i - b.i)[0]?.text || null;
+}
+// The part a hit at p lands on: a Front End wearing ◆ takes a command at its partner (combat.mjs hit), Sudo aside.
+const landsOn = (s, p) => (buffed(s.encounter, 'sudo') ? null : livingParts(s).find((x) => x.front && x !== p && x.armor > 0 && frontOf(s, x) === p)) || p;
+// With Break ◆ first on: a hit a ◆ would take becomes your best breaker at that part; none ready, it goes at a part
+// with no ◆ its TARGET chip allows (soonest, lowest; that part: another the WHEN chip names); none, it fires anyway.
+function armorMove(s, h, ps, t, text) {
+  const at = landsOn(s, t);
+  if (!(armorTakes(s, h.do, at) > 0)) return { text };
+  const b = breakerFor(s, at);
+  if (b) return { text: b, armor: 'break' };
+  const alt = h.target === 'bare' ? null : targetOf(s, h, h.target === 'that' ? ps : null, (p) => !armorTakes(s, h.do, landsOn(s, p)));
+  if (alt && fires(s, `${h.do} ${alt.id}`)) return { text: `${h.do} ${alt.id}`, armor: 'retarget' };
+  return { text, armor: 'through' };
+}
+// The move a handler makes now ({ text, armor? }), or null when it doesn't fit (its WHEN doesn't hold, its skill is
+// cooling, no target).
+function handlerMove(s, h, body) {
   const w = parseWhen(h.when);
   if (!w || !whenOpen(s, h.when)) return null;
   const ps = holds(s, w);
   if (!ps) return null;
-  if (!takesPart(h.do)) return toIntent(s, h.do).error ? null : h.do;
+  if (!takesPart(h.do)) return fires(s, h.do) ? { text: h.do } : null;
   const t = targetOf(s, h, ps);
   if (!t) return null;
   const text = `${h.do} ${t.id}`;
-  return toIntent(s, text).error ? null : text;
+  if (!fires(s, text)) return null;
+  return armorFirst(s, body) ? armorMove(s, h, ps, t, text) : { text };
 }
 // The rotation: the planner without any long cooldown (only a handler that names one fires it). Key 1 on the
 // soonest attacker if that leaves it nothing.
@@ -413,8 +459,8 @@ export function decide(s) {
   return without(s, mine, () => {
     for (const r of handlerRows(s, body)) {
       if (!r.runs) continue;
-      const text = handlerMove(s, r.h);
-      if (text) return { text, handler: r.i };
+      const m = handlerMove(s, r.h, body);
+      if (m) return m.armor && m.armor !== 'through' ? { text: m.text, handler: r.i, armor: m.armor } : { text: m.text, handler: r.i };
     }
     return { text: rotation(s), handler: -1 };
   });
@@ -474,7 +520,8 @@ export function walkStop(s, room) {
 // ---------- the command ----------
 // program [<virus>] · program on|off · program [<virus>] add [when] [do] [target] · program [<virus>] set <n>
 // when|do|target <id> · program [<virus>] move <n> <to> · program [<virus>] remove <n> · program [<virus>] clear ·
-// program [<virus>] preset <id> · program [<virus>] undo · program [<virus>] confirm · program jackout off|10–50 · program danger on|off.
+// program [<virus>] preset <id> · program [<virus>] undo · program [<virus>] confirm · program [<virus>] armor on|off ·
+// program jackout off|10–50 · program danger on|off.
 // A virus named picks it (the Program tab opens on it); with none, the one picked last (focusBody).
 const line = (s, h) => `${whenLabel(h.when)} → ${said(s, h.do)} → ${TARGETS[h.target]?.label || h.target}`;
 export function programCommand(s, text) {
@@ -484,13 +531,13 @@ export function programCommand(s, text) {
   if (isBody(verb)) { P.focus = verb; [verb = '', ...args] = args; }
   const body = focusBody(s), R = routineOf(s, body), H = R.handlers, name = bodyName(body), budget = ramFor(s, body);
   const n = (x) => { const i = Number(x) - 1; return Number.isInteger(i) && i >= 0 && i < H.length ? i : -1; };
-  const fits = (list) => { const used = list.reduce((a, h) => a + handlerRam(s, h), 0); return used <= budget ? null : `That needs ${used} RAM. ${name} has ${budget}.`; };
+  const fits = (list, opt = armorRam(s, body)) => { const used = opt + list.reduce((a, h) => a + handlerRam(s, h), 0); return used <= budget ? null : `That needs ${used} RAM. ${name} has ${budget}.`; };
   const checkWhen = (id) => (!parseWhen(id) ? `No WHEN chip ${id}.` : !whenOpen(s, id) ? `${whenLabel(id)}: research it first.` : null);
   const bar = new Set(barSkills(s).map((x) => x.id));
   const checkDo = (id) => (!ABILITIES[id] ? `No skill ${id}.` : !bar.has(id) ? `${ABILITIES[id].name} is not on your bar.` : null);
   const checkTarget = (id) => (TARGETS[id] ? null : `No TARGET chip ${id}. Try: ${Object.keys(TARGETS).join(', ')}.`);
   const edited = () => { delete R.undo; R.confirmed = true; };
-  if (!verb) return emit(s, 'info', `${programName(s)} program: ${P.on ? 'on' : 'off'}. ${name}: ${ramUsed(s, body)}/${budget} RAM. ${H.length ? H.map((h, i) => `${i + 1}. ${line(s, h)}`).join('. ') + '.' : 'No handlers: the rotation plays.'}`);
+  if (!verb) return emit(s, 'info', `${programName(s)} program: ${P.on ? 'on' : 'off'}. ${name}: ${ramUsed(s, body)}/${budget} RAM, break ◆ first ${armorFirst(s, body) ? 'on' : 'off'}. ${H.length ? H.map((h, i) => `${i + 1}. ${line(s, h)}`).join('. ') + '.' : 'No handlers: the rotation plays.'}`);
   if (verb === 'on' || verb === 'off') { P.on = verb === 'on'; return emit(s, 'info', `Program ${verb}.${P.on ? '' : ' The timer repeats your last hit again.'}`); }
   if (verb === 'jackout') {
     const v = args[0] === 'off' ? 0 : Number(String(args[0]).replace('%', ''));
@@ -538,8 +585,15 @@ export function programCommand(s, text) {
     if (!p) return warn(s, `No preset ${args[0] || ''} for ${name}. Try: ${['rotation', ...presetsFor(s, body).map((x) => x.id)].join(', ')}.`);
     if (H.length && !presetNow(s, body)) R.undo = H.map((h) => ({ ...h })); // an edited stack: program undo brings it back
     H.splice(0, H.length, ...p.handlers.map((h) => ({ ...h })));
+    delete R.armor; // a ready-made routine comes with Break ◆ first on
     R.confirmed = true;
     return emit(s, 'info', `${name}: ${p.name}.${R.undo ? ' program undo brings your own back.' : ''}`);
+  }
+  // Break ◆ first: a setting of the routine, not a handler, so it doesn't make the routine yours (exceptions stay as they were).
+  if (verb === 'armor') {
+    if (!['on', 'off'].includes(args[0])) return warn(s, 'program [virus] armor on or off.');
+    if (args[0] === 'on') { const over = R.armor === false && fits(H, ROUTINES.armorRam); if (over) return warn(s, over); delete R.armor; } else R.armor = false;
+    return emit(s, 'info', `${name}: break ◆ first ${args[0]}.`);
   }
   if (verb === 'confirm') { R.confirmed = true; return emit(s, 'info', `${name}: routine confirmed. A part it doesn't cover is yours to play.`); }
   if (verb === 'undo') {
@@ -549,7 +603,7 @@ export function programCommand(s, text) {
     R.confirmed = true;
     return emit(s, 'info', `${name}: your own handlers are back.`);
   }
-  return warn(s, 'program [virus] [on|off|add|set|move|remove|clear|preset|undo|confirm|jackout|danger].');
+  return warn(s, 'program [virus] [on|off|add|set|move|remove|clear|preset|undo|confirm|armor|jackout|danger].');
 }
 
 // The palette for a virus: the fight-wide chips, then its parts you've met (research above 0) with their chips.

@@ -7,7 +7,7 @@ import { glyph } from './glyphs.mjs';
 import { ABILITIES } from './data.mjs';
 import { said, active, hackerLevel } from './combat.mjs';
 import { entries } from './codex.mjs';
-import { ROUTINES, LOCKED, EXCEPTION, confirmed, TARGETS, unlocked, programsOf, programName, routineOf, focusBody, bodyName, bodyDecoded, isBody, handlerRows, ramFor, ramUsed, barSkills, palette, presetsFor, presetNow, whenLabel, whenTip, whenIcon, whenRam, isLong, parseWhen, refName, live, preview, exceptionsOf, wholeFight } from './routines.mjs';
+import { ROUTINES, LOCKED, EXCEPTION, confirmed, TARGETS, unlocked, programsOf, programName, routineOf, focusBody, bodyName, bodyDecoded, isBody, handlerRows, ramFor, ramUsed, barSkills, palette, presetsFor, presetNow, armorFirst, whenLabel, whenTip, whenIcon, whenRam, isLong, parseWhen, refName, live, preview, exceptionsOf, wholeFight } from './routines.mjs';
 
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 // A RAM cost: a small circle on the left of a chip, "2R".
@@ -36,6 +36,13 @@ function slot(kind, i, chip, options, value, disabled = false) {
 }
 // RAM in use against the budget: one continuous meter, so it reads the same at 6 or 60.
 const ramMeter = (used, budget) => `<span class="rt-meter${used > budget ? ' over' : ''}" role="meter" aria-valuemin="0" aria-valuemax="${budget}" aria-valuenow="${used}"><i style="width:${budget ? Math.min(100, Math.round((used / budget) * 100)) : 0}%"></i></span>`;
+
+// Break ◆ first, on each routine: a small switch by the RAM meter (its cost circle, if it has one; routines.mjs ROUTINES.armorRam).
+const ARMOR_TIP = 'Break ◆ first: before a big hit would be absorbed by armor, your program cracks the armor first.';
+function armorToggle(s, body) {
+  const on = armorFirst(s, body), cost = ROUTINES.armorRam;
+  return `<button type="button" class="rt-armor${on ? ' on' : ''}" role="switch" aria-checked="${on}" aria-label="Break ◆ first" data-command="program ${esc(body)} armor ${on ? 'off' : 'on'}" title="${esc(ARMOR_TIP)}">${cost ? ramCost(cost, on ? '' : 'off') : ''}<span class="rt-sw" aria-hidden="true"><i></i></span><b>Break <span class="rt-dia">◆</span> first</b></button>`;
+}
 
 // ---------- the Program tab ----------
 // Below level 5: one locked card, your level against the one it opens at.
@@ -90,7 +97,7 @@ export function programMarkup(s) {
   const add = `<li class="rt-h rt-add" data-rt-drop="add"><button type="button" class="btn small" data-command="program ${esc(body)} add" ${used + 1 > budget ? `disabled title="Out of RAM"` : 'title="A new handler: every cycle, key 1, the soonest attacker. Drop chips on it."'}>+ Handler</button><span class="rt-drop-hint">${glyph('item')}</span></li>`;
   const stack = `<section class="card rt-stack"><div class="thead"><div><h2>${esc(programName(s))} program</h2><h1>${esc(bodyName(body))}</h1></div>
       <div class="settings-grid rt-power"><button type="button" class="btn small" data-command="program ${P.on ? 'off' : 'on'}" aria-pressed="${P.on}" title="${esc(P.on ? 'On: when the timer runs out, your program moves.' : 'Off: when the timer runs out, you repeat your last hit.')}">Program</button></div></div>
-    ${ramBar}${presetRow(s, body)}
+    <div class="rt-top">${ramBar}${armorToggle(s, body)}</div>${presetRow(s, body)}
     <ol class="rt-list" aria-label="Handlers, checked top to bottom">${list}${add}${rot}</ol></section>`;
   // The chips you can drag in: yours, the fight's, then this virus's parts you've met with their chips by research tier.
   const partRow = (p) => `<li class="rt-prow"><span class="rt-pname" title="${esc(`${p.name}: research ${p.n}`)}">${glyph('part')}${esc(p.name)}</span><span class="rt-pchips">${p.chips.map((c) => whenChip(s, c.id, { open: c.open, short: true })).join('')}</span></li>`;
@@ -116,7 +123,7 @@ export function progNow(s) {
   const d = preview(s);
   if (!d) return null;
   if (d.hold) return excMark('mine exc', d.whole ? EXCEPTION.fight : `${EXCEPTION.tip} Nothing fires when the timer runs out.`, ` data-k="you@${s.encounter.cycle}"`);
-  const by = d.handler >= 0 ? `handler ${d.handler + 1}` : 'rotation';
+  const by = d.handler >= 0 ? `handler ${d.handler + 1}${d.armor === 'break' ? ', breaking ◆ first' : d.armor === 'retarget' ? ', at a part with no ◆' : ''}` : 'rotation';
   return `<div class="intent mine prog ghost" data-k="you@${s.encounter.cycle}" data-at="${esc(d.target || '')}" title="${esc(`Your program's next move (${by}). Type anything to override it this cycle.`)}">⟳ ${esc(said(s, d.text))}</div>`;
 }
 // A boss, a lair's boss, a Resident or a crew boss: one mark on the fight's header, the whole fight is yours.
