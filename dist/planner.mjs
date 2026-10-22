@@ -89,7 +89,17 @@ export function plannerWithout(s, no) {
   veto = no;
   try { return planner(s); } finally { veto = was; }
 }
+// Scraper: its Scrape takes your shield, your ◆ and your timed buffs as it lands, so a player puts up no ◆ and no buff
+// into it (a shield still stops the hit itself, so Firewall stays).
+const BUFFING = new Set(['harden', 'brace', 'sudo', 'fork', 'debris-field', 'rm-rf', 'circuit-breaker', 'honeypot', 'maintenance-window', 'bulkhead', 'dmz', 'mesh']);
+const scrapeNow = (s) => !ignores('scraper') && landingNow(s).some((i) => part(s, i.source)?.scrape);
 export function planner(s) {
+  if (!scrapeNow(s)) return planner1(s);
+  const was = veto;
+  veto = (id) => BUFFING.has(id) || !!(was && was(id));
+  try { return planner1(s); } finally { veto = was; }
+}
+function planner1(s) {
   const plan = plan0(s);
   if (!plan || !shunning(s)) return plan;
   const [id, at] = plan.split(' '), aim = part(s, at);
@@ -155,10 +165,10 @@ function play(s) {
   if (loader && !raidFocus(s) && !tellFocus(s)) t0 = loader;
   let t = phasedOut(s, t0) ? livingParts(s).find((p) => !phasedOut(s, p)) || t0 : t0;
   if (!reachable(s, t)) t = livingParts(s).filter((p) => reachable(s, p)).sort((a, b) => dueOf(s, a) - dueOf(s, b))[0] || t; // a frozen Cold Store: the others first
-  // The parts plan's P2. Spare: once the signature is down, break it before it boots (it does nothing until then). A
-  // Shunt needs no rule: what it takes off its partner still breaks it, so every hit counts either way.
+  // The parts plan's P2. Spare: once the signature is down, break it before it boots if its ◆ are nearly gone (it does
+  // nothing until then); under more, let it boot and break it bare (it drops its ◆ as it boots).
   const sp = !ignores('spare') && livingParts(s).find((p) => asleep(p) && reachable(s, p));
-  if (sp && sp.bootAt) t = sp;
+  if (sp && sp.bootAt && sp.armor <= 1) t = sp;
   // Lockbox: a warded part soaks a burst, so break the Lockbox first. Mutex: its lock comes back while it lives,
   // so break it first too (a burn class chips under either anyway).
   const burst = classOf(s) === 'breaker' && subOf(s) === 'overclocker';
@@ -213,8 +223,8 @@ function play(s) {
   // Cold Store: its first Chill comes a cycle or two after it thaws; a player saved a cut or a shield for it.
   const thawed = !ignores('coldstore') && livingParts(s).find((p) => p.frozen && p.thawed && p.attack && !p.attack.n && p.attack.due - s.encounter.cycle <= 1 && !(p.throttledUntil >= s.encounter.cycle));
   if (thawed) { const a = first(s, ['throttle ' + thawed.id, 'rate-limit ' + thawed.id, 'suspend ' + thawed.id, 'firewall']); if (a) return a; }
-  // Scraper: its Scrape takes your ◆ as it lands (and what's left of a shield), so no ◆ goes up into it.
-  const scrape = !ignores('scraper') && now.some((i) => i.scrape);
+  // Scraper: its Scrape takes your ◆ as it lands (and your shield and timed buffs), so no ◆ goes up into it (planner).
+  const scrape = !ignores('scraper') && now.some((i) => part(s, i.source)?.scrape);
   const fuse = !ignores('zipbomb') && now.find((i) => i.effect === 'fuse');
   if (fuse) { const cover = first(s, [!scrape && 'harden', 'firewall']); if (cover) return cover; } // a Zip Bomb's fuse: a ◆ or a shield takes it
   const big = now.filter((i) => i.effect !== 'tell' && i.effect !== 'buffer' && i.effect !== 'fuse' && (i.effect !== 'damage' || i.amount >= Math.max(6, defender(s).max * 0.08)) && !part(s, i.source)?.phase).sort((a, b) => b.amount - a.amount)[0]; // a Shade in phase: hit it instead (a tell that isn't a hit: tellMove)

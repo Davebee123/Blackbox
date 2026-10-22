@@ -188,7 +188,13 @@ export const CANTRIP_IDS = ['spike', 'sigint'];
 // Key 1 under your class's own name (SPIKE in data.mjs): a command as you'd see it ("bash pulse" for "spike pulse").
 export const spikeWord = (s) => spikeOf(classOf(s)).word;
 export const spikeName = (s) => spikeOf(classOf(s)).name;
-export const said = (s, text) => (text ? String(text).replace(/^spike(?= |$)/, spikeWord(s)) : text);
+export const said = (s, text) => (text ? shownTargets(s, String(text).replace(/^spike(?= |$)/, spikeWord(s))) : text);
+// A command as you see it: a packed part (packParts) by its shown name, never its id.
+export const shownKey = (p) => (p.packedAs ? p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') : p.id);
+function shownTargets(s, text) {
+  for (const p of s.encounter?.virus?.parts || []) if (p.packedAs) text = text.replace(new RegExp(`(^|[ ;])${p.id}(?=$|[ ;.,])`, 'g'), `$1${shownKey(p)}`);
+  return text;
+}
 export const classOf = (s) => s.loadout?.archetype || 'breaker';
 // Your subclass (SUBS in data.mjs; dist/classes/): from SUBCLASS.from, the one you picked. There is no default:
 // until you pick, a class plays its core alone (no subclass skills, edge, presets or tree), and the Loadout's
@@ -401,8 +407,6 @@ export function previewDamage(s, abilityId, p) {
   let n = Math.floor((skillBase(s, abilityId, p) + gearStat(s, 'damage')) * damageMultiplier(s, p, { mine: true }) + 1e-9);
   const root = s.encounter && buffed(s.encounter, 'sudo');
   if (p.limit && !root) n = Math.min(n, limitOf(p)); // a Limiter's cap
-  const sh = !root && s.encounter && !p.shunt ? livingParts(s).find((x) => x.shunt && x !== p && shuntOf(s, x) === p) : null;
-  if (sh) n -= Math.floor(n * sh.shunt); // a Shunt takes half
   return Math.min(p.integrity, n);
 }
 // Armor takes this hit: the ◆ a damaging skill of yours would break on p instead of dealing its damage (hit below), or
@@ -1097,7 +1101,10 @@ export function tickServices(s, now = Date.now()) {
   return since(s, first);
 }
 
+// A packed part in a log line (packParts): "the packed part", whatever the line called it.
+const packedVoice = (m) => m.replace(/(^|[.!?]\s+|\n)(?:[Tt]he )?Packed part/g, '$1The packed part').replace(/\b(?:[Tt]he )?Packed part/g, 'the packed part');
 export function emit(s, type, message, detail = {}) {
+  if (typeof message === 'string' && message.includes('Packed part')) message = packedVoice(message);
   const event = { id: ++s.serial, cycle: s.encounter?.cycle || 0, type, message, ...(s.who ? { who: s.who } : {}), ...detail }; // who: a crewmate's name (crew.mjs)
   s.logs.push(event);
   if (s.logs.length > 600) s.logs.shift();
@@ -1133,6 +1140,7 @@ export function selectEncounter(s, key = 'cryptjack', seed = s.seed, opts = {}) 
   (s.met ||= {})[virus.strain || virus.family] = true; // the Codex names what you've met
   s.encounter = { phase: 'alert', mode, zone: !!opts.zone, wild: opts.wild || null, process: opts.process || null, room: opts.room || null, key, virus, seed, cycle: 1, elapsedMs: 0, paused: false, queue: null, plan: [], lastAttack: null, readyAt: {}, nextFragment: 1, metrics: null, breaks: 0, helpers: [], burns: [], buffs: {}, shield: 0, chits: 0, undo: null, encrypt: 0, scrambleUntil: 0, clock: 0, regenAcc: 0, leechAcc: 0, once: {}, soft: opts.zone && !opts.wild && !opts.process && (s.pace?.kills || 0) < CONFIG.zone.starterKills ? CONFIG.zone.starterHit : 1 }; // soft: your first kills in SPRAWL-00 hit softer, so you can learn the board
   if (s.run?.unpack?.includes(virus.id)) s.encounter.unpacked = true; // scanned before the fight: a Packer hides nothing (genes.mjs packer)
+  packParts(s);
   const signed = virus.author && AUTHORS[virus.author] ? ` ${AUTHORS[virus.author].name} wrote it.` : '';
   if (!opts.quiet) emit(s, 'intrusion', opts.zone
     ? `${virus.name} in ${opts.room}. Level ${virus.level} ${familyInfo(virus.family).name}.${signed}`
@@ -2408,9 +2416,11 @@ export function parse(s, input) {
   }
   const target = findPart(s, arg);
   if (!target) {
-    const near = closest(arg, livingParts(s).map((p) => p.id)) || livingParts(s).find((p) => p.name === closest(arg, livingParts(s).map((x) => x.name)))?.id;
+    const keyOf = (p) => (packed(s, s.encounter?.virus, p) ? partKey(s, p) : p.id), keys = livingParts(s).map(keyOf); // a packed part by its shown name
+    const named = livingParts(s).find((p) => p.name === closest(arg, livingParts(s).map((x) => x.name)));
+    const near = closest(arg, keys) || (named ? keyOf(named) : null);
     const suggest = near ? `${ability === 'spike' ? spikeWord(s) : words.slice(0, found.used).join(' ')} ${near}` : null;
-    return { error: `No part called "${arg}".${suggest ? ` Did you mean ${suggest}?` : ` Targets: ${livingParts(s).map((p) => p.id).join(', ')}.`}`, suggest };
+    return { error: `No part called "${arg}".${suggest ? ` Did you mean ${suggest}?` : ` Targets: ${keys.join(', ')}.`}`, suggest };
   }
   return { ability, target: target.id };
 }
@@ -2903,7 +2913,6 @@ export function hit(s, p, base, opts = {}) {
   const notes = [];
   // Limiter: no single hit takes more than its share of its max. The rest is lost.
   if (dealt > 0 && p.limit && !root) { const cap = limitOf(p); if (dealt > cap) { notes.push(`capped: ${dealt - cap} lost`); dealt = cap; } }
-  const raw0 = p.limit && !root ? Math.min(raw, limitOf(p)) : raw, dealt0 = dealt; // what the hit would deal past its Integrity (a Shunt's share comes out of it)
   // Lockbox: while it lives, the part it wards loses at most a quarter of its max a cycle, from everything. HASHLORD's Pool
   // Lock (wardCommands) holds back your commands only: burns and helpers go through at full.
   const crush = opts.mine && !opts.server ? 1 + (fxHas(s, 'lock-crush')?.fx.value || 0) / 100 : 1; // Lockpick (a native unique): locks and wards give way faster
@@ -2937,9 +2946,6 @@ export function hit(s, p, base, opts = {}) {
   if (p.exposedUntil >= e.cycle) notes.push('exposed');
   if (p.taggedUntil >= e.cycle) notes.push('tagged');
   if (e.virus.weakKnown && e.virus.weakPoint === p.id) notes.push('weak point');
-  // Shunt: while both live, half of what its partner takes moves onto it (after the partner's ◆, ward and shield).
-  const sh = dealt > 0 && !p.shunt && !root ? livingParts(s).find((x) => x.shunt && x !== p && shuntOf(s, x) === p) : null, want = raw0 - (dealt0 - dealt), moved = sh ? Math.floor(want * sh.shunt) : 0;
-  if (moved) { dealt = Math.min(p.integrity, want - moved); notes.push(`shunt: ${moved} moved`); }
   const above = p.integrity >= p.max / 4;
   p.integrity -= dealt;
   if (above && p.integrity > 0 && p.integrity < p.max / 4) daemonsOn(s, 'low', { part: p.id }); // Reaper
@@ -2964,12 +2970,6 @@ export function hit(s, p, base, opts = {}) {
   // shield: what the Mutex's lock took of it, from lockWas, with the part at hp after the hit (the board's lock segment
   // drains by it: view.mjs, app.js; dmgfx.mjs's number says it was absorbed).
   emit(s, 'damage', `${opts.by ? opts.by + ': ' : ''}${p.name} −${dealt}${notes.length ? ` (${notes.join(', ')})` : ''}. ${p.integrity}/${p.max}.`, { target: p.id, amount: dealt, crit, ...srcOf(e, opts), ...firedOf(fired), hp: p.integrity, ...(lockLost ? { shield: lockLost, lockWas } : {}) }); // hp: what's left after this hit (the board steps its bar down hit by hit)
-  if (moved && alive(sh)) {
-    const took = Math.min(sh.integrity, moved);
-    sh.integrity -= took; sh.lastDamaged = e.cycle;
-    emit(s, 'damage', `The ${sh.name} takes ${took} of it. ${sh.integrity}/${sh.max}.`, { target: sh.id, amount: took, src: 'shunt', from: p.id, hp: sh.integrity, shunt: true });
-    if (!sh.integrity) breakPart(s, sh);
-  }
   if (unlocked) emit(s, 'armor', `The ${p.name}'s lock breaks. The Mutex locks it again in ${CONFIG.mutex.every} cycles unless you break the Mutex.`, { target: p.id, left: p.armor, lock: 'broke' });
   // A server room's bodies' own rules on a hit (families.mjs: a Trojan's Package unpacks). 'gone': the part left the
   // board without breaking. Then the interrupt's ticks (interrupt.mjs), in every fight that has them.
@@ -3066,9 +3066,8 @@ export function belowOf(s, p) { const xs = sysParts(s).filter((x) => x !== p), a
 export const bufferOn = (s, p) => livingParts(s).find((x) => x.buffer && belowOf(s, x) === p) || null;
 export function frontOf(s, fe) { const xs = sysParts(s).filter((x) => x !== fe && !x.front); return xs.find((x) => x.special) || xs.find((x) => x.basic) || xs[0] || null; }
 export const signatureOf = (s) => livingParts(s).find((x) => x.special && x.kind === 'system') || null;
-// The parts plan's second wave (P2): the part a Shunt takes half of (as a Front End's partner), a Cold Store still
-// frozen (untouchable, off the timeline), a Spare still asleep, the kind of hit a Damper drops, and a Packer's ???.
-export function shuntOf(s, sh) { const xs = sysParts(s).filter((x) => x !== sh && !x.shunt); return xs.find((x) => x.special) || xs.find((x) => x.basic) || xs[0] || null; }
+// The parts plan's second wave (P2): a Cold Store still frozen (untouchable, off the timeline), a Spare still asleep,
+// the kind of hit a Damper drops, and a Packer's ???.
 export const frozenNow = (s, p) => !!p?.frozen && !p.thawed && (s.encounter?.cycle ?? 1) <= (p.thawAt ?? p.frozen);
 export const asleep = (p) => !!p?.spare && !p.booted;
 export const limitOf = (p) => Math.max(1, Math.round(p.max * p.limit));
@@ -3084,9 +3083,34 @@ export function hitKind(s, p, opts = {}) {
   if (opts.mine && c?.id && (ABILITIES[c.id]?.target === 'none' || (c.target && c.target !== p.id))) return 'area';
   return null;
 }
-// A living Packer, not unpacked (by a scan before the fight): the virus's rolled rules read as ???.
+// A living Packer, not unpacked (by a scan before the fight, or by breaking it): the virus's rolled parts hide who they
+// are. Each shows as a Packed part (A, B… when there are more), its attack's name as ???, its tags, telegraphs, rule
+// and inspect hidden; what it does still happens. p.packedAs keeps its own names until it unpacks.
 export const packerOn = (s, v = s?.encounter?.virus) => !!v && !s?.encounter?.unpacked && s?.encounter?.virus === v && v.parts.some((x) => x.packer && alive(x));
 export const packed = (s, v, p) => packerOn(s, v) && !!p && !p.packer && p.kind === 'system' && !p.special && !p.basic;
+export const PACKED_NAME = 'Packed part';
+export function packParts(s) {
+  const v = s.encounter?.virus;
+  if (!packerOn(s, v)) return;
+  const xs = v.parts.filter((p) => packed(s, v, p) && !p.packedAs);
+  xs.forEach((p, i) => {
+    p.packedAs = { name: p.name, attack: p.attack?.name ?? null };
+    p.name = xs.length > 1 ? `${PACKED_NAME} ${'ABCDEFGH'[i]}` : PACKED_NAME;
+    if (p.attack) p.attack.name = '???';
+  });
+}
+// The Packer broke (breakPart): every packed part takes its own names back. Returns the parts that unpacked.
+export function unpackParts(s) {
+  const out = [];
+  for (const p of s.encounter?.virus?.parts || []) {
+    if (!p.packedAs) continue;
+    p.name = p.packedAs.name;
+    if (p.attack?.name === '???' && p.packedAs.attack != null) p.attack.name = p.packedAs.attack;
+    delete p.packedAs;
+    out.push(p);
+  }
+  return out;
+}
 // A part that wards another (a Lockbox, HASHLORD's Pool Lock, which wards a forked Miner too).
 export const wards = (x, p) => !!p && (x.ward === p.id || !!x.wardsToo?.includes(p.id));
 // The Decoy whose beat is this cycle (it mirrors your commands), and a part's twin (Mirror).
@@ -3163,9 +3187,13 @@ function breakPart(s, p) {
   // Spare: the signature broke while a Spare sleeps: it boots a little later with the signature's attack (cycleClose).
   if (p.special && p.attack) for (const sp of livingParts(s).filter((x) => asleep(x) && !x.bootAt)) {
     sp.bootAt = e.cycle + sp.spare.in; sp.bootFrom = { id: p.id, name: p.name, max: p.max, attack: { ...p.attack } };
-    emit(s, 'warning', `The ${sp.name} boots in ${sp.spare.in} cycles with the ${p.name}'s ${p.attack.name}. Break it before then.`, { target: sp.id, boot: sp.bootAt });
+    emit(s, 'warning', `The ${sp.name} boots in ${sp.spare.in} cycles with the ${p.name}'s ${p.attack.name}. It drops its ◆ as it boots.`, { target: sp.id, boot: sp.bootAt });
   }
-  if (p.packer && livingParts(s).some((x) => x !== p)) emit(s, 'status', `The ${p.name} breaks, and the virus's rules unpack.`, { target: p.id, unpack: true });
+  if (p.packer && !livingParts(s).some((x) => x.packer)) { // the last Packer: everything it packed unpacks, for good
+    e.unpacked = true;
+    const xs = unpackParts(s);
+    if (livingParts(s).some((x) => x !== p)) emit(s, 'status', `The ${p.name} breaks, and the virus's rules unpack.${xs.length ? ` The packed ${xs.length === 1 ? 'part was' : 'parts were'} ${andList(xs.map((x) => `the ${x.name}`))}.` : ''}`, { target: p.id, unpack: true });
+  }
   if (p.loot) e.lastLoot = p.loot; // the part you broke last (a Harvester's and an elite's one more: floorplan.mjs)
   // Its component: 60% in a room fight, an elite's always, 35% elsewhere (sockets.mjs); a network rich in components
   // (network.mjs) and a part you've mastered (research.mjs, 25% more) on top.
@@ -3677,14 +3705,25 @@ function struckFx(s, atk) {
 }
 // A timed buff of a stat your gear runs now (Turbidity's Stealth).
 const buffStat = (s, stat) => (!s.encounter?.fxs?.buff ? 0 : uniqueFx(s).reduce((n, x) => n + (x.fx.do === 'buff' && x.fx.stat === stat && x.it?.unique ? fightStat(s, x.it.unique, x.fx, Number(x.id.split(':')[1] || 0), stat) : 0), 0));
-// A Scraper's landing (genes.mjs scraper): it takes your ◆ or your shield, and wears 1 ◆ for each kind it took, up to
-// p.scrape in all over the fight.
-function scrapeYou(s, p, atk, { chits = 0, shield = 0 }) {
-  const e = s.encounter, gain = Math.min(Math.max(0, p.scrape - (p.scraped || 0)), chits ? Math.min(chits, 2) : 1);
+// A Scraper's landing (genes.mjs scraper): it takes the buffs you put up before it landed. Your ◆ it takes as it lands
+// (so they don't stop its hit); your shield (what is left once its hit is through it) and your timed buffs (the
+// status strip's own: Momentum, Brace, Sudo…; not Null Route, which makes it miss) after. It wears 1 ◆ for each one
+// it took (2 for two ◆ or more), up to p.scrape in all over the fight.
+export function timedBuffs(s) {
+  const e = s.encounter, out = [];
+  if (momentumStacks(s)) out.push({ name: 'Momentum', take: () => { e.momentum = null; } });
+  for (const [k, until] of Object.entries(e.buffs || {})) if (k !== 'null-route' && until >= e.cycle) out.push({ name: k === 'sinkhole' ? 'Drawing fire' : k === 'stolen' ? 'Stolen cast' : ABILITIES[k]?.name || k, take: () => { delete e.buffs[k]; } });
+  return out;
+}
+function scrapeYou(s, p, atk, { chits = 0, shield = 0, buffs = [] }) {
+  const e = s.encounter, took = (chits ? Math.min(chits, 2) : 0) + (shield ? 1 : 0) + buffs.length;
+  const gain = Math.min(Math.max(0, p.scrape - (p.scraped || 0)), took);
   if (chits) e.chits = 0;
   if (shield) e.shield = 0;
+  for (const b of buffs) b.take();
   if (gain) { p.armor += gain; p.scraped = (p.scraped || 0) + gain; p.maxArmor = Math.max(p.maxArmor || 0, p.armor); p.patchAt = null; }
-  emit(s, 'blind', `${atk.name} scrapes off your ${chits ? `${chits} ◆` : `${shield} shield`}${gain ? `. The ${p.name} wears ${gain} more ◆` : ''}.`, { source: p.id, scrape: true, shield, chits, gain });
+  const what = [chits ? `${chits} ◆` : '', shield ? `${shield} shield` : '', ...buffs.map((b) => b.name)].filter(Boolean);
+  emit(s, 'blind', `${atk.name} scrapes off your ${andList(what)}${gain ? `. The ${p.name} wears ${gain} more ◆` : ''}.`, { source: p.id, scrape: true, shield, chits, buffs: buffs.map((b) => b.name), gain });
 }
 function landAttack(s, p) {
   const e = s.encounter;
@@ -3725,8 +3764,8 @@ function landAttack(s, p) {
   if (atk.dump) e.keylog = 0; // Keylogger: the log empties into the Dump
   // Null Route: this cycle's attacks miss (and Opening lights up).
   if (e.nullRoute > 0 || e.buffs['null-route'] >= e.cycle) { dodged(e); emit(s, 'blocked', `${atk.name} misses. You null-routed it.`, { source: p.id }); openProc(s, 'slipped'); return slipLonger(s); }
-  // Scraper: as it lands it takes your ◆ (so they don't stop its hit), and your shield once its hit is through it
-  // (scrapeShield, below), and wears up to 2 of them as ◆, 2 in all over the fight.
+  // Scraper: as it lands it takes your ◆ (so they don't stop its hit), then your shield once its hit is through it and
+  // your timed buffs (scrapeYou), and wears up to 2 of them as ◆, 2 in all over the fight.
   if (p.scrape && e.chits > 0) scrapeYou(s, p, atk, { chits: e.chits });
   // Retaliate lights up when a damage attack reaches you, whatever soaks it.
   if (hits) openProc(s, 'struck', { amount: Math.round(hitPower) });
@@ -3775,7 +3814,7 @@ function landAttack(s, p) {
     const dealt = takeDamage(s, absorbed(s, hitCapped(s, spikeCapped(s, Math.round(hitPower * sap * (hasTalent(s, 'unsafe-mode') ? 1.2 : 1) * tough * (crit ? CRIT.multiplier : 1) * cut * took * (e.virus.raid ? raidTaken(s) : 1)), atk)), atk, p), p.id, atk.name);
     struckFx(s, atk);
     if (dealt) classEach('struck', s, atk, dealt, p);
-    if (p.scrape && e.shield > 0) scrapeYou(s, p, atk, { shield: e.shield });
+    if (p.scrape && (e.shield > 0 || timedBuffs(s).length)) scrapeYou(s, p, atk, { shield: e.shield, buffs: timedBuffs(s) });
     // Bad Block: your next heals lose up to its share of your max (a fresh pool each time it lands, not a bigger one).
     if (p.badblock) {
       const n = Math.max(1, Math.round(defender(s).max * p.badblock));
@@ -4253,8 +4292,10 @@ function cycleClose(s, landed) {
     const from = p.bootFrom;
     p.booted = true; p.bootAt = null;
     p.max = p.integrity = Math.max(p.integrity, Math.round(from.max * p.spare.at));
+    const shed = p.armor; // it comes up soft: the ◆ it slept under drop, and none patch back
+    p.armor = 0; p.maxArmor = 0; p.patchAt = null;
     p.attack = { ...from.attack, due: e.cycle + 2, n: 0, tap: 0, volley: null, wound: 0 };
-    emit(s, 'spawn', `The ${p.name} BOOTS at ${p.integrity}/${p.max}, running the ${from.name}'s ${from.attack.name}.`, { target: p.id, booted: true });
+    emit(s, 'spawn', `The ${p.name} BOOTS at ${p.integrity}/${p.max}, running the ${from.name}'s ${from.attack.name}.${shed ? ` It drops its ${shed} ◆.` : ''}`, { target: p.id, booted: true });
   }
   // Cold Store: it thaws and joins the fight, its first Chill a cycle after the Thaw chip at the earliest.
   for (const p of livingParts(s).filter((x) => x.frozen && !x.thawed && e.cycle >= x.thawAt)) {
@@ -4475,6 +4516,9 @@ export function intents(s, columns = 4) {
   for (const p of livingParts(s)) if (asleep(p) && p.bootAt && p.bootAt - e.cycle >= 0 && p.bootAt - e.cycle < columns) out.push({ source: p.id, name: 'Boot', effect: 'boot', amount: Math.round((p.bootFrom?.max || 0) * p.spare.at), col: p.bootAt - e.cycle, hidden: false, kind: p.kind });
   out.push(...told);
   if (e.rooms && hooks.roomIntents) out.push(...hooks.roomIntents(s, columns)); // a room body's other moves (families.mjs: a Courier's deliveries)
+  // A packed part's chips (packParts): their timing and amount, named ???, marks off (view.mjs). Tells keep their own.
+  const pk = new Set(e.virus.parts.filter((p) => packed(s, e.virus, p)).map((p) => p.id));
+  if (pk.size) for (const i of out) if (pk.has(i.source) && !i.tell) Object.assign(i, { name: '???', packed: true });
   return out.sort((a, b) => a.col - b.col);
 }
 
@@ -4619,6 +4663,24 @@ function retireWall(s, was) {
   }
   if (s.configs) delete s.configs.firewall;
   if (s.recipes) s.recipes = s.recipes.filter((k) => !RETIRED_SERVICES[k]);
+}
+// The Shunt (a P2 third) was cut. A save that still holds one, in the fight under way or in a virus it keeps (a room's
+// guard, an invasion's), loses it: the fight's own becomes a plain part with no rule (its burns, helpers and orders on
+// it stay good), any other virus's leaves it, and no virus carries its gene. No SAVE_VERSION: it keys on the part.
+export function shuntRestore(s) {
+  const live = s.encounter?.virus, seen = new Set();
+  const walk = (o, depth) => {
+    if (!o || typeof o !== 'object' || seen.has(o) || depth > 12) return;
+    seen.add(o);
+    if (Array.isArray(o)) { for (const x of o) walk(x, depth + 1); return; }
+    if (Array.isArray(o.parts) && o.parts.some((p) => p && (p.id === 'shunt' || 'shunt' in p))) {
+      if (o === live) for (const p of o.parts) delete p?.shunt;
+      else o.parts = o.parts.filter((p) => !(p && (p.id === 'shunt' || 'shunt' in p)));
+    }
+    if (Array.isArray(o.genes) && o.parts) o.genes = o.genes.filter((g) => (g?.id ?? g) !== 'shunt');
+    for (const [k, v] of Object.entries(o)) if (k !== 'logs') walk(v, depth + 1);
+  };
+  walk(s, 0);
 }
 export function restore(raw) {
   if (!raw || ![6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, SAVE_VERSION].includes(raw.version)) return fresh();
@@ -4775,7 +4837,9 @@ export function restore(raw) {
     statsRestore(s, was); // v44: whole-number stats: Regen five times over 5 cycles, Payload flat at each item's level (gear.mjs)
     setsRestore(s, was); // v45: sets: loaded protocols stamped in slot order, set pieces you hold found, the Badge beat armed (sets.mjs)
     subRestore(s, was); // v46: no default subclass: a class past 10 that never picked plays its core (its default's keys and talent points back)
+    shuntRestore(s); // the Shunt was cut (docs/parts-plan.md): keyed on the part, not the version
     if (s.encounter) s.encounter.plan ||= [];
+    if (s.encounter?.virus) packParts(s); // a fight saved before packed parts hid their names
     if (active(s)) { s.encounter.paused = true; s.encounter.autoPaused = true; } // resumes on the next order, or opening the Fight tab
     return s;
   } catch (err) {
@@ -4800,7 +4864,7 @@ export function suggestions(s, input = '') {
     }
   }
   const base = active(s)
-    ? [...usable(s).map((id) => (id === 'spike' ? spikeWord(s) : id)), 'hold', 'pause', 'resume', 'cancel', 'status', 'scan', ...living.filter((p) => p.kind !== 'fragment').map((p) => `inspect ${p.id}`)]
+    ? [...usable(s).map((id) => (id === 'spike' ? spikeWord(s) : id)), 'hold', 'pause', 'resume', 'cancel', 'status', 'scan', ...living.filter((p) => p.kind !== 'fragment').map((p) => `inspect ${packed(s, s.encounter.virus, p) ? partKey(s, p) : p.id}`)]
     : ['engage', 'jack in', 'mail', 'repair', 'top up', 'protocols', 'compile', 'load', 'unload', 'encounter cryptjack', 'encounter splinter', 'encounter ghostroot', 'encounter random', 'status', 'developer reboot'];
   return base.filter((x) => x.startsWith(text));
 }

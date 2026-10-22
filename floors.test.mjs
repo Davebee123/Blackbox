@@ -252,7 +252,7 @@ test('natives weigh ×3 on their own floor: in the weights, in the wild roll and
   const { PARTS, weightOf, floorWeight } = await import('./dist/parts.mjs');
   const { createVirus, FAMILIES } = await import('./dist/data.mjs');
   const natives = Object.values(GENES).filter((g) => g.floor);
-  assert.ok(natives.length >= 11, 'the P1 and P2 natives');
+  assert.ok(natives.length >= 10, 'the P1 and P2 natives (less the Shunt, cut)');
   assert.equal(PARTS.floor, 3);
   for (const g of natives) {
     assert.ok(g.opens >= bandOf(g.floor)[0] && g.opens <= bandOf(g.floor)[1], `${g.name} opens inside floor ${g.floor}'s band`);
@@ -262,18 +262,18 @@ test('natives weigh ×3 on their own floor: in the weights, in the wild roll and
   }
   // The wild roll: each P2 native, its own floor against the floor above, at the same level, 600 fights of its family
   // (×3 in the weights is less in the fights: the roll draws at most two thirds, so a heavy one saturates).
-  for (const [id, family, L] of [['limiter', 'ransomware', 18], ['spare', 'worm', 18], ['shunt', 'worm', 18], ['scraper', 'ransomware', 22], ['badblock', 'ghostroot', 22], ['coldstore', 'ransomware', 25]]) {
+  for (const [id, family, L] of [['limiter', 'ransomware', 18], ['spare', 'worm', 18], ['scraper', 'ransomware', 22], ['badblock', 'ghostroot', 22], ['coldstore', 'ransomware', 25]]) {
     const share = (floor) => { let n = 0; for (let seed = 1; seed <= 600; seed++) n += createVirus('random', seed, { family, threat: SERVER.threat(L), run: true, mutation: null, floor }).parts.some((p) => p.id === id); return n; };
     const on = share(GENES[id].floor), off = share(GENES[id].floor - 1);
     assert.ok(on > 1.5 * off && on >= 30, `${id} at ${L}: ${on} fights in 600 on floor ${GENES[id].floor}, ${off} on the floor above`);
   }
   // A server's fixed room thirds: its floor's natives come up more on it.
   const thirds = (floor) => { const by = {}; for (let seed = 1; seed <= 30; seed++) { const s = fresh(); FP.startRooms(s, { seed, kind: 'Relay', size: 'large', level: 20, floor, author: 'glassjaw' }); for (const r of FP.roomList(s)) if (r.third) by[r.third] = (by[r.third] || 0) + 1; } return by; };
-  const f3 = thirds(3), f4 = thirds(4), n3 = ['limiter', 'spare', 'shunt'], n4 = ['scraper', 'badblock'];
+  const f3 = thirds(3), f4 = thirds(4), n3 = ['limiter', 'spare'], n4 = ['scraper', 'badblock'];
   const sum = (by, ids) => ids.reduce((n, id) => n + (by[id] || 0), 0);
   assert.ok(sum(f3, n3) > 1.5 * sum(f4, n3), `floor 3's natives: ${sum(f3, n3)} on floor 3, ${sum(f4, n3)} on floor 4`);
   assert.ok(sum(f4, n4) > 1.5 * sum(f3, n4), `floor 4's natives: ${sum(f4, n4)} on floor 4, ${sum(f3, n4)} on floor 3`);
-  assert.ok(Object.values(FAMILIES).every((f) => f.third.length >= 7));
+  assert.ok(Object.values(FAMILIES).every((f) => f.third.length >= 6)); // the Worm's 6 since the Shunt was cut
 });
 test('a fight\'s floor: the server\'s on a run; at home and in a sim your floor at the fight\'s level; SPRAWL-00 is floor 1', async () => {
   const { floorOfFight } = await import('./dist/combat.mjs');

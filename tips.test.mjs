@@ -147,9 +147,7 @@ test('the P2 parts\' board elements each have a tip, and each shows in a fight w
   const cases = {
     'fight-cap': ['ransomware', 13, ['limiter']],
     'fight-standby': ['worm', 14, ['spare']],
-    'fight-shunt': ['worm', 17, ['shunt']],
     'fight-scrape': ['ransomware', 19, ['scraper']],
-    'fight-packed': ['ghostroot', 20, ['packer', 'spare']],
     'fight-cracked': ['ghostroot', 21, ['badblock']],
     'fight-damper': ['worm', 23, ['damper']],
     'fight-frost': ['ransomware', 24, ['coldstore']],

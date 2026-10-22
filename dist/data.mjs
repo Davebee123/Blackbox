@@ -423,7 +423,7 @@ export const FAMILIES = {
     summary: 'Spawns fragments that gnaw your server every cycle. The Replicator makes them.',
     core: ['surge', 'replicate'],
     basic: [['strobe', 1], ['repeater', 3], ['fanin', 5]],
-    third: ['twin', 'zipbomb', 'c2', 'backlog', 'spare', 'shunt', 'damper'], // the Mirror from level 3, the Zip Bomb from 5, the C2 Node from 8, the Backlog from 12, the Spare from 14, the Shunt from 17, the Damper from 23
+    third: ['twin', 'zipbomb', 'c2', 'backlog', 'spare', 'damper'], // the Mirror from level 3, the Zip Bomb from 5, the C2 Node from 8, the Backlog from 12, the Spare from 14, the Damper from 23
     parts: [
       { id: 'pulse', name: 'Pulse Node', integrity: 34, armor: 1, loot: 'Pulse Kernel', attack: { name: 'Surge', effect: 'damage', amount: 12, interval: 4, first: 4 } },
       { id: 'replicator', name: 'Replicator', integrity: 38, armor: 1, loot: 'Replication Seed', special: true, attack: { name: 'Replicate', effect: 'replicate', amount: 1, interval: 4, first: 3, hit: 4 } }, // a small Splice hit with each spawn
@@ -658,7 +658,7 @@ function rng(seed) {
 export function makePart(spec, kind, scale, extraArmor = 0) {
   const max = Math.max(1, Math.round(spec.integrity * scale * (kind === 'fragment' ? 1 : CONFIG.partToughness)));
   const worn = (spec.armor || 0) + extraArmor;
-  const armor = worn >= 2 ? Math.round(worn * CONFIG.armorScale) : worn; // 2 → 3, 3 → 5, 4 → 6
+  const armor = spec.spare?.armor != null ? spec.spare.armor : worn >= 2 ? Math.round(worn * CONFIG.armorScale) : worn; // 2 → 3, 3 → 5, 4 → 6 (a Spare's sleeping ◆: as written, genes.mjs spare)
   return {
     id: spec.id,
     name: spec.name,
@@ -690,7 +690,7 @@ export function makePart(spec, kind, scale, extraArmor = 0) {
     ...(spec.accum ? { accum: true } : {}), ...(spec.taps ? { taps: spec.taps } : {}), ...(spec.buffer ? { buffer: { ...spec.buffer } } : {}),
     ...(spec.cipher ? { cipher: spec.cipher } : {}), ...(spec.fanin ? { fanin: spec.fanin } : {}), ...(spec.obfuscate ? { obfuscate: true } : {}),
     ...(spec.fuse ? { fuse: true } : {}), ...(spec.hotspot ? { hotspot: true } : {}), ...(spec.idle ? { idle: spec.idle } : {}), ...(spec.front ? { front: true } : {}), ...(spec.backlog ? { backlog: spec.backlog } : {}),
-    ...(spec.limit ? { limit: spec.limit } : {}), ...(spec.spare ? { spare: { ...spec.spare } } : {}), ...(spec.shunt ? { shunt: spec.shunt } : {}), ...(spec.scrape ? { scrape: spec.scrape } : {}),
+    ...(spec.limit ? { limit: spec.limit } : {}), ...(spec.spare ? { spare: { ...spec.spare } } : {}), ...(spec.scrape ? { scrape: spec.scrape } : {}),
     ...(spec.packer ? { packer: true } : {}), ...(spec.badblock ? { badblock: spec.badblock } : {}), ...(spec.damper ? { damper: true } : {}), ...(spec.frozen ? { frozen: spec.frozen } : {}),
     ...(spec.wardCommands ? { wardCommands: true } : {}), // HASHLORD's Pool Lock: its ward holds back your commands only, not burns or helpers
     attack: spec.attack ? { ...spec.attack, due: spec.attack.first, amount: spec.attack.amount } : null,
@@ -1128,8 +1128,9 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   if (rolled2 && alongParts(PARTS.armor, level)) {
     const worn = (spec) => { const w = (spec.armor || 0) + extra(spec) + (spec.special ? 0 : g.armor); return w >= 2 ? Math.round(w * CONFIG.armorScale) : w; };
     const want = [family.parts.find((x) => x.id === 'pulse'), family.parts.find((x) => x.special), ...(level >= PARTS.gentle ? [{ armor: 1 }] : [])].reduce((n, spec) => n + worn(spec), 0);
-    let lack = Math.round((want - parts.reduce((n, p) => n + p.armor, 0)) * alongParts(PARTS.armor, level));
-    const wearers = parts.filter((p) => p.armor > 0).sort((a, b) => b.max - a.max);
+    // (A Spare's sleeping ◆ are its own, on top: they drop when it boots, so they neither count nor take more.)
+    let lack = Math.round((want - parts.reduce((n, p) => n + (p.spare ? 0 : p.armor), 0)) * alongParts(PARTS.armor, level));
+    const wearers = parts.filter((p) => p.armor > 0 && !p.spare).sort((a, b) => b.max - a.max);
     if (!wearers.length) wearers.push(parts[0]);
     for (let i = 0; lack > 0; i++, lack--) { const p = PARTS.armorEven ? wearers.reduce((a, b) => (b.armor / b.max < a.armor / a.max ? b : a)) : wearers[i % wearers.length]; p.armor++; p.maxArmor = (p.maxArmor || 0) + 1; } // armorEven: each ◆ onto the part with the fewest for its size
   }

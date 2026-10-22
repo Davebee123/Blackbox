@@ -391,7 +391,7 @@ function without(s, ids, fn) {
 
 // ---------- exceptions ----------
 // Parts whose rule changes a decision (a third part, a guard's rule): the program covers one only at its rule tier.
-const RULED = ['ward', 'wardsToo', 'lock', 'twin', 'reflect', 'mimic', 'command', 'deadman', 'fuse', 'hotspot', 'idle', 'front', 'backlog', 'buffer', 'rearm', 'syncOnly', 'phase', 'echo', 'tax', 'pkg', 'obfuscate', 'limit', 'spare', 'shunt', 'scrape', 'packer', 'badblock', 'damper', 'frozen'];
+const RULED = ['ward', 'wardsToo', 'lock', 'twin', 'reflect', 'mimic', 'command', 'deadman', 'fuse', 'hotspot', 'idle', 'front', 'backlog', 'buffer', 'rearm', 'syncOnly', 'phase', 'echo', 'tax', 'pkg', 'obfuscate', 'limit', 'spare', 'scrape', 'packer', 'badblock', 'damper', 'frozen'];
 export const ruled = (p) => RULED.some((k) => p[k]);
 const named = (s, pred) => liveHandlers(s, fightBody(s)).some((h) => { const w = parseWhen(h.when); return !!w && pred(w); });
 export const EXCEPTION = { label: 'EXCEPTION', phrase: 'no available handler', tip: 'Your program has no handler for this part yet. Play it yourself, or research it in the Codex.', fight: 'Your program leaves this fight to you: a boss is always yours to play.' };

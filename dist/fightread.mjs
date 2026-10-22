@@ -12,7 +12,7 @@
 //   partLinks(s, v)        what protects what: one link a rule that reaches from one part to another (a Mutex's lock, a
 //                          Lockbox's ward, a Mirror's twin, a Keyring's re-arm), for the board's tethers
 //   lockOf(s, v, p)        the lock shield a part wears now (its bar's absorb segment), wardOf the most a ward lets it lose
-import { part, livingParts, gearFx, fxHolds, blocked, attackAmount, knowsPart, usable, fxOn, alive, wards, belowOf, frontOf, signatureOf, shuntOf, frozenNow, asleep, limitOf, packed } from './combat.mjs';
+import { part, livingParts, gearFx, fxHolds, blocked, attackAmount, knowsPart, usable, fxOn, alive, wards, belowOf, frontOf, signatureOf, frozenNow, asleep, limitOf, packed } from './combat.mjs';
 import { CONFIG, TELL, TELLS, BOSSES } from './data.mjs';
 import { fxText } from './content.mjs';
 import { tellsOf, tellIntents, partTells, NEW_TELLS } from './tells.mjs';
@@ -196,10 +196,9 @@ function readOf(s, v, p) {
   const sigOf = () => (s?.encounter?.virus === v ? signatureOf(s) : null) || v?.parts?.find((x) => x.special) || null;
   if (p.limit) return [`${attackRead(s, v, p)[0]} No single hit takes more than ${limitOf(p)} of its Integrity (${pct(p.limit)} of its max). The rest is lost.`, 'Many small hits: burns, helpers, Purge\'s ticks, Overvolt\'s two strikes, Shatter\'s shards.', { text: 'caps each hit', icon: 'shield', link: null }]; // (its cap N tag says how much)
   if (p.spare && p.booted && p.attack) return [`${attackRead(s, v, p)[0]} It booted with the ${p.bootFrom?.name || 'signature'}'s ${p.attack.name} when the ${p.bootFrom?.name || 'signature'} broke.`, 'Break it.', null];
-  if (p.spare) { const t = p.bootFrom || sigOf(); return [`Sleeps off the timeline. When ${t ? `the ${t.name}` : 'the signature part'} breaks, it boots ${cycles(p.spare.in)} later at ${pct(p.spare.at)} of ${t ? `the ${t.name}'s` : 'its'} max, with its ${t?.attack?.name || 'attack'}.`, 'Break it while it sleeps: it does nothing until it boots.', { text: t ? `boots as ${t.name}` : 'boots as the signature', icon: 'snapshot', link: t && alive(t) ? t.id : null }]; }
-  if (p.shunt) { const t = s?.encounter?.virus === v ? shuntOf(s, p) : v?.parts?.find((x) => x.special); return [`While both stand, ${p.shunt === 0.5 ? 'half' : pct(p.shunt)} of what ${t ? `the ${t.name}` : 'its partner'} takes moves onto it.`, 'Break it first, or hit both: area hits, or burns and helpers on both.', { text: t ? `shunts ${t.name}` : 'shunts its partner', icon: 'pipeline', link: t?.id || null }]; }
-  if (p.scrape) return [`${attackRead(s, v, p)[0]} When it lands, it takes your ◆ and what is left of your shield, and wears up to ${p.scrape} of them as ◆.`, 'Put up your ◆ and shields after it lands, not before. Null Route makes it miss.', { text: 'takes your shield', icon: 'scraper', link: null }];
-  if (p.packer) return ['While it stands, the virus\'s rolled rules show as ???, even ones your Codex knows.', 'Scan before you engage, or break it.', { text: 'packs the rules', icon: 'crate', link: null }];
+  if (p.spare) { const t = p.bootFrom || sigOf(); return [`Sleeps off the timeline under ${p.spare.armor ?? 0} ◆. When ${t ? `the ${t.name}` : 'the signature part'} breaks, it boots ${cycles(p.spare.in)} later at ${pct(p.spare.at)} of ${t ? `the ${t.name}'s` : 'its'} max, with its ${t?.attack?.name || 'attack'}. It drops its ◆ as it boots.`, 'Pay for its ◆ while it sleeps, or for its Integrity once it boots.', { text: t ? `boots as ${t.name}` : 'boots as the signature', icon: 'snapshot', link: t && alive(t) ? t.id : null }]; }
+  if (p.scrape) return [`${attackRead(s, v, p)[0]} When it lands, it takes your shield, your ◆ and your timed buffs. It wears up to ${p.scrape} of them as ◆.`, 'Buff after it lands, not before. Null Route makes it miss.', { text: 'takes your buffs', icon: 'scraper', link: null }];
+  if (p.packer) return ['While it stands, each rolled part shows as a Packed part, its attack as ???. The virus\'s rolled rules show as ???, even ones your Codex knows.', 'Scan before you engage, or break it.', { text: 'packs the rules', icon: 'crate', link: null }];
   if (p.badblock) return [`${attackRead(s, v, p)[0]} When it lands, your next heals lose up to ${pct(p.badblock)} of your max.`, 'Heal before it lands, or clear it: Purge, Scrub, Rollback and Rotate Keys do.', { text: 'cracks your heals', icon: 'heal', link: null }];
   if (p.damper) { const k = DAMPED[p.damperKind] || DAMPED.burn; return [`While it wears ◆, ${k.many} deal it no damage. They still break its ◆.`, `Strip its ◆ first, with anything (${k.many} too), then use anything.`, null]; } // (its tag crosses out the kind it drops)
   if (p.frozen && !p.thawed) { const a = p.chill ? attackRead(s, v, { ...p, attack: p.chill })[0].replace(/^Hits you/, 'hits you') : ''; return [`Frozen: off the timeline, and nothing reaches it, until the end of cycle ${p.thawAt ?? p.frozen}. Then it thaws and joins the fight${a ? `: it ${a}` : '.'}`, 'Break the others while it is frozen, and save a big hit or a shield for its thaw.', { text: `thaws after cycle ${p.thawAt ?? p.frozen}`, icon: 'clock', link: null }]; }
@@ -237,7 +236,7 @@ export function partRead(s, v, p, { tells: withTells = true } = {}) {
 // The part row's tooltip, by its research (research.mjs). Until it's decoded: ??? and how to research it. At 1: its
 // attack and timing. From 5: what it does, its tells, and what answers it.
 export function partTip(s, v, p) {
-  if (packed(s, v, p)) return `${p.name}: ${knowsPart(s, v, p) ? partAttack(s, v, p) : '???'}\nPacked: the Packer hides its rule until it breaks.`;
+  if (packed(s, v, p)) return `${p.name}: ${knowsPart(s, v, p) ? partAttack(s, v, p) : '???'}\nThe Packer hides what it is until it breaks.`;
   if (!knowsPart(s, v, p)) return `${p.name}: ???\nBreak one, cut it or answer its tell to decode it.`;
   if (!knows(s, v, p, TIER.rule)) return `${p.name}: ${partAttack(s, v, p)}\nResearch ${TIER.rule} to learn its rule and answer.`;
   const r = partRead(s, v, p);
@@ -265,7 +264,7 @@ export function gearOnParts(live) {
 //   up     the rule holds now (a lock standing, a ward, both twins up, re-arms left): the tether glows
 //   count  cycles until it comes back or fires (a broken lock relocking, the next re-arm, a broken twin's reboot), or null
 //   snap   the part it sits on just broke (a dissolving row: view.mjs passes stands): the tether snaps and goes
-export const LINK_ICON = { lock: 'lock', ward: 'shield', twin: 'mirror', rearm: 'repair', cool: 'scheduler', command: 'router', redeploy: 'upload', fallback: 'relay', buffer: 'shield', front: 'firewall', idle: 'clock', shunt: 'pipeline' };
+export const LINK_ICON = { lock: 'lock', ward: 'shield', twin: 'mirror', rearm: 'repair', cool: 'scheduler', command: 'router', redeploy: 'upload', fallback: 'relay', buffer: 'shield', front: 'firewall', idle: 'clock' };
 // The lock shield on p now: { cur, max, by } (the Mutex holding it), or null.
 export function lockOf(s, v, p) {
   if (!alive(p) || !(p.lockHp > 0)) return null;
@@ -318,7 +317,6 @@ function linkTip(s, v, l) {
   if (l.kind === 'buffer') { const t = to[0], n = t?.bufHp > 0 && t.bufBy === p.id ? t.bufHp : 0; return n ? `${p.name} shield: ${names} wears a ${n} shield that takes your commands' hits first.\nBurns and helpers go under it. Break the ${p.name} and it shields nothing more.` : `${p.name} shield: ${names} is shielded again ${upTo(l.count ?? 0)}.\nHit it before then, or break the ${p.name}.`; }
   if (l.kind === 'front') return l.up ? `${p.name} front: your single-target commands at ${names} land on the ${p.name} while it wears ◆.\nStrip its ◆, or use burns, helpers or hits on every part.` : `${p.name} front: stripped. Your hits reach ${names} again until its ◆ patches back.`;
   if (l.kind === 'idle') return `${p.name}: ${l.count === 0 ? 'every part re-arms at the end of this cycle' : `every part re-arms to full ◆ ${upTo(l.count)}`} unless your command hits ${names}.\nEach hit on ${names} starts the count over.`;
-  if (l.kind === 'shunt') return `${p.name} shunt: while both stand, ${p.shunt === 0.5 ? 'half' : pct(p.shunt)} of what ${names} takes moves onto the ${p.name}.\nBreak the ${p.name} first, or hit both.`;
   if (l.kind === 'command') return `${p.name} command: the fragments gnaw ${pct(CONFIG.c2.gnaw)} harder while it stands, and all of them drop when it breaks.\nBreak it once fragments are up.`;
   const r = partRead(s, v, p);
   return `${p.name}: ${r.does}\n${r.answer}`;
@@ -345,7 +343,6 @@ export function partLinks(s, v = s.encounter?.virus, { stands = alive } = {}) {
     if (p.buffer && alive(p)) { const t = belowOf(s, p); if (t) add('buffer', p, [t], { up: t.bufHp > 0 && t.bufBy === p.id, count: t.bufHp > 0 && t.bufBy === p.id ? null : (p.buffer.every - ((cycle - 1) % p.buffer.every)) % p.buffer.every }); }
     if (p.front && alive(p)) { const t = frontOf(s, p); if (t) add('front', p, [t], { up: p.armor > 0 }); }
     if (p.idle && alive(p)) { const t = signatureOf(s); if (t) add('idle', p, [t], { up: true, count: Math.max(0, p.idle - (cycle - (v.idleHit || 0))) }); }
-    if (p.shunt && alive(p)) { const t = shuntOf(s, p); if (t) add('shunt', p, [t], { up: true }); } // the parts plan's P2: a Shunt's ⇄ to its partner
     // A Trojan's Loader over its Courier: both up, a tether; the Courier down with its redeploy coming, a stub on the
     // Loader with the countdown (the Mirror's twin reboot, drawn the same way).
     if (v.family === 'trojan' && p.id === 'loader') {
@@ -373,6 +370,8 @@ export function partLinks(s, v = s.encounter?.virus, { stands = alive } = {}) {
     if (!t || !alive(t) || out.some((l) => l.from === p.id && l.to.includes(t.id))) continue;
     out.push({ kind: 'fallback', from: p.id, to: [t.id], icon: LINK_ICON.fallback, known: knowsPart(s, v, p), up: alive(p), count: null, snap: !alive(p) });
   }
-  for (const l of out) l.tip = linkTip(s, v, l);
-  return out;
+  // A packed part's rule draws no tether (combat.mjs packed): the Packer hides it.
+  const shown = out.filter((l) => !packed(s, v, v.parts.find((x) => x.id === l.from)));
+  for (const l of shown) l.tip = linkTip(s, v, l);
+  return shown;
 }

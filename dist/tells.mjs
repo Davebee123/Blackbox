@@ -56,7 +56,7 @@ const cycles = (n) => `${n} ${n === 1 ? 'cycle' : 'cycles'}`;
 const isSystem = (x) => x.kind === 'system' || !x.kind; // a part, or a part's spec (the codex)
 // A basic part (parts.mjs): never a third part's rule. A charge never rides an Accumulator (its Discharge is the big
 // hit already) or a volley (a Repeater's, a Prism's); the basic with the biggest plain hit carries it.
-const RULED = ['ward', 'lock', 'twin', 'reflect', 'mimic', 'command', 'deadman', 'fuse', 'hotspot', 'idle', 'front', 'backlog', 'limit', 'spare', 'shunt', 'scrape', 'packer', 'badblock', 'damper', 'frozen'];
+const RULED = ['ward', 'lock', 'twin', 'reflect', 'mimic', 'command', 'deadman', 'fuse', 'hotspot', 'idle', 'front', 'backlog', 'limit', 'spare', 'scrape', 'packer', 'badblock', 'damper', 'frozen'];
 const isBasic = (x) => isSystem(x) && !x.special && !RULED.some((k) => x[k]);
 const plainHit = (x) => (x.attack?.effect === 'damage' ? x.attack.amount : 0);
 export function findSource(v, def) {

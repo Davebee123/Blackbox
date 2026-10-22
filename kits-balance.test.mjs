@@ -64,7 +64,9 @@ const second = (sub) => {
 // healer fight has less healing left to Revoke, and the healers preset measures 1.3 worse there: held at -2.
 // Since the damage profiles (docs/parts-plan.md) the Overclocker's rules preset measures 6.5 worse on the generic fights
 // (fewer of them carry a Lockbox or a Mutex for Sudo to walk through): held at 7 until the kits are retuned for the mix.
-const DRIFT = { demolitionist: { generic: 6.5, suits: 1.5 }, sysop: { generic: 6.5, suits: -2 }, hijacker: { generic: 6.5, suits: 2.5 }, herder: { generic: 5, suits: 0 }, overclocker: { generic: 7, suits: 5 } };
+// Since the P2 rework (docs/parts-plan.md: the Shunt cut, so the Worm's rolls moved) the Hijacker's rules preset
+// measures 7.4 worse on the generic fights (6.1 before; 7.1 with the Shunt's cut alone): held at 8.
+const DRIFT = { demolitionist: { generic: 6.5, suits: 1.5 }, sysop: { generic: 6.5, suits: -2 }, hijacker: { generic: 8, suits: 2.5 }, herder: { generic: 5, suits: 0 }, overclocker: { generic: 7, suits: 5 } };
 test('each second preset is a real alternative: within 5 points of the rotation on the generic fights, and at least 5 points better on the fights it suits', () => {
   const off = [], line = [];
   for (const sub of ALL) {
@@ -90,8 +92,9 @@ test('the Demolitionist\'s second preset is area and the Phantom\'s is evasion',
 // pressed in 2 of 24: the interrupt stops most Replicates before they land, so there's less to collect. Held at 2.
 // Since the damage profiles the Warden's Throttle (half damage from a part) is pressed in 5 of 24 at Lv 30 (a fight's
 // steady share sits on fewer, bigger hitters it cuts or delays instead), and the Overclocker's Sudo (walk through the
-// parts' rules) in 5 (fewer Lockboxes and Mutexes than before P1). Held at 5.
-const RARE_KEYS = { 'garbage-collect': 2, throttle: 5, sudo: 5 };
+// parts' rules) in 5 (fewer Lockboxes and Mutexes than before P1). Held at 5. Since the P2 rework (the Shunt cut, and
+// the bot holding Bulkhead and its other buffs out of a landing Scrape) the Throttle is pressed in 4. Held at 4.
+const RARE_KEYS = { 'garbage-collect': 2, throttle: 4, sudo: 5 };
 test('every specialist key earns its slot: pressed in at least a quarter of the generic fights when it is on the bar', () => {
   const off = [];
   for (const sub of ALL) for (const id of SUBS[sub].layers.specialist) {

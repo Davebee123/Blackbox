@@ -539,6 +539,17 @@ test('Break ◆ first, on by default: a big hit a ◆ would take becomes Crack w
   assert.ok(!R.breaks('overload') && !R.breaks('spike') && !R.breaks('backdoor') && !R.breaks('shatter'));
 });
 
+test('Break ◆ first on a sleeping Spare: its 3 ◆ would take the hit, so the program breaks them first', () => {
+  const s = fight({ family: 'worm', opts: { genes: ['spare'] } });
+  for (const p of attackers(s)) p.attack.due = 999;
+  const sp = part(s, 'spare');
+  for (const x of livingParts(s)) if (x !== sp) x.integrity = x.max = 500;
+  assert.equal(sp.armor, 3);
+  command(s, 'program worm add always overload lowest');
+  assert.ok(armorTakesHit(s, 'overload', sp) > 0, 'Overload would be absorbed');
+  assert.equal(R.decide(s).armor, 'break');
+  assert.match(R.decide(s).text, new RegExp(`^(crack|shaped-charge) ${sp.id}$|^fork-bomb$`));
+});
 test('Break ◆ first off: the old behaviour, the hit goes into the ◆', () => {
   const { s, p } = armored();
   command(s, 'program ransomware add always overload lowest');

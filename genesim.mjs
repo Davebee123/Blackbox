@@ -125,7 +125,6 @@ export const PROBES = {
   // The parts plan's P2 (floors 3 and 4).
   limiter: probe(13, fam('ransomware'), 'limiter', { genes: ['limiter'] }),
   spare: probe(14, fam('worm'), 'spare', { genes: ['spare'] }),
-  shunt: probe(17, fam('worm'), 'shunt', { genes: ['shunt'] }),
   scraper: probe(19, fam('ransomware'), 'scraper', { genes: ['scraper'] }),
   packer: probe(20, fam('ghostroot'), 'packer', { genes: ['packer'] }),
   badblock: probe(21, fam('ghostroot'), 'badblock', { genes: ['badblock'] }),

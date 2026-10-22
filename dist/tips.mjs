@@ -143,10 +143,8 @@ export const TIPS = [
   { id: 'fight-accum', page: 'combat', pause: true, at: '.board .tag.accum', under: '#board', text: 'This bar fills toward one big hit. Break the part before it is full, or have ◆ or a shield up when it lands.' },
   // The parts plan's P2 (floors 3 and 4): one tip for each new board element, the first time it shows.
   { id: 'fight-cap', page: 'combat', pause: true, at: '.board .tag.limcap', under: '#board', text: 'No single hit takes more than this off the part. Use many small hits: burns, helpers and quick skills.' },
-  { id: 'fight-standby', page: 'combat', pause: true, at: '.board .tag.standby', under: '#board', text: 'This part sleeps until the signature part breaks, then boots with its attack. Break it while it sleeps.' },
-  { id: 'fight-shunt', page: 'combat', pause: true, at: '.board .tether.k-shunt', under: '#board', text: 'Half of what this part takes moves along the tether to the Shunt. Break the Shunt first, or hit both.' },
-  { id: 'fight-scrape', page: 'combat', pause: true, at: '.board .intent.scrape', under: '#board', text: 'When this lands, it takes your ◆ and what is left of your shield. Put them up after it lands, not before.' },
-  { id: 'fight-packed', page: 'combat', pause: true, at: '.board .tag.packed', under: '#board', text: 'The Packer hides this part\'s rule. Break the Packer to read it, or scan the next one before you engage.' },
+  { id: 'fight-standby', page: 'combat', pause: true, at: '.board .tag.standby', under: '#board', text: 'This part sleeps under heavy ◆ until the signature part breaks. Then it boots with its attack and drops its ◆. Break it now, or once it boots.' },
+  { id: 'fight-scrape', page: 'combat', pause: true, at: '.board .intent.scrape', under: '#board', text: 'When this lands, it takes your shield, your ◆ and your timed buffs. Buff after it lands, not before.' },
   { id: 'fight-cracked', page: 'combat', pause: true, at: '#hud .cracked-cells', text: 'Cracked cells: your next heals lose this much. Purge, Scrub, Rollback or Rotate Keys clears them.' },
   { id: 'fight-damper', page: 'combat', pause: true, at: '.board .tag.damper', under: '#board', text: 'While this part wears ◆, the crossed-out kind of hit deals it nothing. That kind still breaks ◆, so strip it first.' },
   { id: 'fight-frost', page: 'combat', pause: true, at: '.board .tag.frost', under: '#board', text: 'This part is frozen: nothing reaches it until the bar fills. Break the others now, and be ready when it thaws.' },

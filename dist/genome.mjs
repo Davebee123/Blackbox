@@ -12,7 +12,7 @@
 import { GENES, CATS, AXES, partGenes } from './genes.mjs';
 import { AUTHORS } from './authors.mjs';
 import { FAMILIES, ROOM_FAMILIES, STRAINS, GUARDS, genomeOf } from './data.mjs';
-import { emit, warn, alive, familyInfo, classOf, packerOn } from './combat.mjs';
+import { emit, warn, alive, familyInfo, classOf, packerOn, packed } from './combat.mjs';
 import { plannedTells } from './tells.mjs';
 import { RESEARCH, TIER } from './research.mjs';
 
@@ -158,8 +158,11 @@ export function inspect(s, arg) {
   const e = s.encounter;
   if (!e) return warn(s, 'inspect works in a fight: inspect <part>.');
   const ps = e.virus.parts.filter((p) => p.kind !== 'fragment');
-  const p = ps.find((x) => x.id === arg || x.name.toLowerCase() === arg) || ps.find((x) => x.id.startsWith(arg) || x.name.toLowerCase().startsWith(arg));
-  if (!arg || !p) return warn(s, `inspect <part>: ${ps.map((x) => x.id).join(', ')}.`);
+  // A packed part (combat.mjs packParts) answers to its shown name only.
+  const key = (x) => (packed(s, e.virus, x) ? x.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') : x.id);
+  const p = ps.find((x) => key(x) === arg || x.name.toLowerCase() === arg) || ps.find((x) => key(x).startsWith(arg) || x.name.toLowerCase().startsWith(arg));
+  if (!arg || !p) return warn(s, `inspect <part>: ${ps.map(key).join(', ')}.`);
+  if (packed(s, e.virus, p)) return emit(s, 'info', `The Packer hides what the ${p.name} carries. Break the Packer to read it.`, { target: p.id, inspect: true });
   const ids = partGenes(p), deep = scannedDeep(s, e.virus);
   if (!ids.length) return emit(s, 'info', `The ${p.name} carries no rule of its own.`, { target: p.id, inspect: true });
   const lines = ids.map((id) => {

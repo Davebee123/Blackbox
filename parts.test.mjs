@@ -3,9 +3,9 @@
 // 300 wild fights a level, selectEncounter(s, 'random', seed, { level }).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fresh, selectEncounter, command, resolveCycle, active, part, livingParts, intents, timersHidden, partsMix, landingsOf, blocked, attackAmount, alive, hit, heal, limitOf, shuntOf, frozenNow, toIntent, encounterVirus } from './dist/combat.mjs';
+import { fresh, selectEncounter, command, resolveCycle, active, part, livingParts, intents, timersHidden, partsMix, landingsOf, blocked, attackAmount, alive, hit, heal, limitOf, frozenNow, toIntent, encounterVirus, armorTakes, restore, suggestions } from './dist/combat.mjs';
 import { FAMILIES, CONFIG, createVirus, SERVER, nominal, DAMPER_KINDS } from './dist/data.mjs';
-import { boardMarkup, hudMarkup } from './dist/view.mjs';
+import { boardMarkup, hudMarkup, armorBadge, logMarkup } from './dist/view.mjs';
 import { partTip } from './dist/fightread.mjs';
 import { PARTS, signatureShare, rollParts, basicsOf, heatOf, along } from './dist/parts.mjs';
 import { GENES } from './dist/genes.mjs';
@@ -446,10 +446,10 @@ test('every parts number is one named constant, and developer parts shows and se
 // The kinds you can meet from 13 to 26: the plan's "After" column less the Cryptominer's and the Wiper's own parts (the
 // Rig, the Cooler, the Degausser and the Eraser) and the Damper, which come with P3 (the Damper is built, on the Worm's
 // list for its playtest page, but rolls at weight 0 until its own families come: PARTS.weight).
-const KINDS2 = { 13: 24, 14: 25, 15: 25, 16: 26, 17: 27, 18: 27, 19: 28, 20: 29, 21: 30, 22: 30, 23: 30, 24: 31, 25: 31, 26: 31 };
+const KINDS2 = { 13: 24, 14: 25, 15: 25, 16: 26, 17: 26, 18: 26, 19: 27, 20: 28, 21: 29, 22: 29, 23: 29, 24: 30, 25: 30, 26: 30 }; // the Shunt (17) was cut
 const M2 = {}, N2 = {};
 for (let L = 13; L <= 26; L++) { M2[L] = measure(L); N2[L] = measure(L, false); }
-test('P2: the kinds you can meet from 13 to 26, and something new every few levels (13, 14, 16, 17, 19, 20, 21, 24)', () => {
+test('P2: the kinds you can meet from 13 to 26, and something new every few levels (13, 14, 16, 19, 20, 21, 24)', () => {
   for (let L = 13; L <= 26; L++) {
     assert.ok(M2[L].kinds.size >= KINDS2[L], `level ${L}: ${M2[L].kinds.size} kinds, want ${KINDS2[L]}`);
     assert.ok(N2[L].kinds.size >= KINDS2[L] - 2, `a new player at ${L}: ${N2[L].kinds.size} kinds`);
@@ -457,7 +457,7 @@ test('P2: the kinds you can meet from 13 to 26, and something new every few leve
   const firstAt = {};
   for (let L = 1; L <= 12; L++) for (const k of M[L].kinds) firstAt[k] ??= L;
   for (let L = 13; L <= 26; L++) for (const k of M2[L].kinds) firstAt[k] ??= L;
-  for (const [id, L] of Object.entries({ limiter: 13, spare: 14, tripwire: 16, shunt: 17, scraper: 19, packer: 20, badblock: 21, coldstore: 24 })) assert.equal(firstAt[id], L, `${id} first at ${L}`);
+  for (const [id, L] of Object.entries({ limiter: 13, spare: 14, tripwire: 16, scraper: 19, packer: 20, badblock: 21, coldstore: 24 })) assert.equal(firstAt[id], L, `${id} first at ${L}`);
   assert.equal(firstAt.damper, undefined, 'the Damper waits for P3');
   const news = new Set(Object.values(firstAt));
   for (let L = 1; L + 3 <= 26; L++) assert.ok([L, L + 1, L + 2, L + 3].some((x) => news.has(x)), `nothing new from ${L} to ${L + 3}`);
@@ -472,8 +472,8 @@ test('P2: a share of fights have 4 parts from 16 (PARTS.count), and one stranger
   }
 });
 test('P2: the new thirds are genes with a cost, a level inside their floor\'s band and their floor, in their families\' pools; the Tripwire opens at 16', () => {
-  const NATIVE = { limiter: 3, spare: 3, shunt: 3, scraper: 4, badblock: 4, coldstore: 4 };
-  for (const id of ['limiter', 'spare', 'shunt', 'scraper', 'packer', 'badblock', 'damper', 'coldstore']) {
+  const NATIVE = { limiter: 3, spare: 3, scraper: 4, badblock: 4, coldstore: 4 };
+  for (const id of ['limiter', 'spare', 'scraper', 'packer', 'badblock', 'damper', 'coldstore']) {
     const g = GENES[id];
     assert.ok(g.cost >= 1 && g.cost <= 3, id);
     assert.equal(g.floor || null, NATIVE[id] || null, `${id}'s floor`);
@@ -499,9 +499,11 @@ test('Limiter: no single hit takes more than 20% of its max; burns tick under th
   assert.equal(hp - p.integrity, cap + 1, 'a small one takes what it deals');
   assert.match(boardMarkup(s), /class="capline"/);
 });
-test('Spare: asleep off the timeline; when the signature breaks it boots 2 cycles later at 60% of its max with its attack; broken asleep, it never does', () => {
+test('Spare: asleep off the timeline under 3 ◆; when the signature breaks it boots 2 cycles later at 60% of its max with its attack, its ◆ dropped; broken asleep, it never does', () => {
   const s = fight2(14, 'worm', ['spare']), sp = part(s, 'spare'), sig = part(s, 'replicator');
   assert.ok(!sp.attack && !intents(s, 4).some((i) => i.source === 'spare'), 'asleep: no attack, nothing on the timeline');
+  assert.equal(sp.armor, 3, 'it sleeps under 3 ◆');
+  assert.equal(sp.maxArmor, 3);
   still(s);
   const max = sig.max;
   hit(s, sig, 99999, { pierce: true, server: true });
@@ -509,22 +511,12 @@ test('Spare: asleep off the timeline; when the signature breaks it boots 2 cycle
   step(s); step(s); step(s);
   assert.ok(sp.booted && sp.attack?.effect === 'replicate', 'booted with the Replicator\'s Replicate');
   assert.equal(sp.max, Math.round(max * 0.6));
+  assert.ok(sp.armor === 0 && sp.maxArmor === 0 && sp.patchAt == null, 'it comes up soft: its ◆ dropped, none to patch back');
+  assert.match(s.logs.find((l) => l.booted)?.message || '', /drops its 3 ◆/);
   const t = fight2(14, 'worm', ['spare']), sp2 = part(t, 'spare');
   hit(t, sp2, 99999, { pierce: true, server: true });
   hit(t, part(t, 'replicator'), 99999, { pierce: true, server: true });
   assert.ok(!sp2.bootAt && !alive(sp2), 'broken while it slept: no boot');
-});
-test('Shunt: while both live, half of what its partner takes moves onto it (after the partner\'s ◆); it shows as a tether', () => {
-  const s = fight2(17, 'worm', ['shunt']), sh = part(s, 'shunt'), sig = part(s, 'replicator');
-  assert.equal(shuntOf(s, sh), sig, 'its partner is the signature');
-  sig.armor = 0;
-  const a = sig.integrity, b = sh.integrity;
-  hit(s, sig, 20, { server: true });
-  assert.equal(a - sig.integrity, 10); assert.equal(b - sh.integrity, 10);
-  assert.match(boardMarkup(s), /tether k-shunt/);
-  sh.integrity = 0;
-  const c = sig.integrity; hit(s, sig, 20, { server: true });
-  assert.equal(c - sig.integrity, 20, 'with it broken, the partner takes it all');
 });
 test('Scraper: its landing takes your ◆ (its hit goes past them) and what is left of your shield, and wears up to 2 ◆ (2 in all)', () => {
   const s = fight2(19, 'ransomware', ['scraper']), p = part(s, 'scraper');
@@ -562,6 +554,122 @@ test('Packer: while it stands the virus\'s rolled rules read as ???; breaking it
   t.run.unpack.push(encounterVirus(t, 'random', 77, opts).id);
   selectEncounter(t, 'random', 77, opts);
   assert.ok(t.encounter.unpacked, 'scanned before: it hides nothing');
+});
+test('Spare asleep: its ◆ take a big hit (the key\'s ◆ badge says so), the ◆ ABSORBED line fires, and they patch back', () => {
+  const s = fight2(14, 'worm', ['spare']), sp = part(s, 'spare');
+  still(s);
+  assert.ok(armorTakes(s, 'overload', sp) > 0, 'Overload would be absorbed');
+  assert.match(armorBadge(s, 'overload', sp), /class="armd"/);
+  assert.match(boardMarkup(s), /tag standby/);
+  s.encounter.commanding = { id: 'overload', target: sp.id };
+  const r = hit(s, sp, 999, { mine: true });
+  s.encounter.commanding = null;
+  assert.ok(r.absorbed && sp.armor < 3 && sp.integrity === sp.max, 'the ◆ took it whole');
+  assert.ok(s.logs.at(-1).absorbed && s.logs.at(-1).ability === 'overload', 'the ◆ ABSORBED float reads it (app.js)');
+  sp.armor = 0; sp.patchAt = s.encounter.cycle;
+  step(s);
+  assert.ok(sp.armor > 0, 'stripped and left, it patches back while it sleeps');
+});
+test('Shunt: cut. No gene, no part, no pool; a save with one (a fight under way, a virus kept elsewhere) loads clean', () => {
+  assert.equal(GENES.shunt, undefined);
+  for (const f of Object.values(FAMILIES)) { assert.ok(!f.parts.some((p) => p.id === 'shunt' || p.shunt), 'no part'); assert.ok(!f.third.includes('shunt'), 'no pool'); }
+  const s = fight2(17, 'worm', []), v = s.encounter.virus, sig = part(s, 'replicator');
+  // The shape a v46 save had: a Shunt in the fight, its gene on the virus, a burn on it; and one in a virus kept on a location.
+  v.parts.push({ ...structuredClone(sig), id: 'shunt', name: 'Shunt', special: false, attack: null, armor: 1, maxArmor: 1, integrity: 30, max: 30, loot: 'Shunt Strap', shunt: 0.5 });
+  v.genes = [...(v.genes || []), { id: 'shunt', src: 'rolled' }];
+  s.encounter.burns.push({ target: 'shunt', name: 'Inject', damage: 3, left: 2 });
+  s.zone = { ...(s.zone || {}), kept: { virus: { name: 'OLD WORM', genes: [{ id: 'shunt', src: 'rolled' }], parts: [{ id: 'pulse', name: 'Pulse Node', integrity: 9, max: 9 }, { id: 'shunt', name: 'Shunt', integrity: 9, max: 9, shunt: 0.5 }] } } };
+  const t = restore(JSON.parse(JSON.stringify(s)));
+  assert.ok(t.encounter, 'the fight survives the load');
+  const sh = t.encounter.virus.parts.find((p) => p.id === 'shunt');
+  assert.ok(sh && !('shunt' in sh), 'in the fight under way: a plain part with no rule');
+  assert.ok(!t.encounter.virus.genes.some((g) => g.id === 'shunt'), 'and the virus carries no Shunt gene');
+  assert.deepEqual(t.zone.kept.virus.parts.map((p) => p.id), ['pulse'], 'a kept virus loses it');
+  assert.ok(!t.zone.kept.virus.genes.length);
+  const html = boardMarkup(t) + hudMarkup(t);
+  assert.doesNotMatch(html, /k-shunt|undefined|NaN/);
+  command(t, 'resume'); step(t); step(t); // the fight plays on
+  hit(t, t.encounter.virus.parts.find((p) => p.id === 'replicator'), 5, { server: true });
+  assert.doesNotMatch(t.logs.slice(-6).map((l) => l.message).join(' '), /moved|Shunt takes/, 'nothing moves onto it');
+});
+test('Scraper: its Scrape takes your timed buffs too (Brace, Momentum), and wears them as ◆ within its 2; Null Route makes it miss', () => {
+  const s = fight2(19, 'ransomware', ['scraper']), p = part(s, 'scraper'), e = s.encounter;
+  still(s);
+  Object.assign(e, { chits: 0, shield: 0 });
+  e.buffs.brace = e.cycle + 3;
+  e.momentum = { stacks: 2, until: e.cycle + 3 };
+  p.attack.due = e.cycle;
+  step(s);
+  assert.ok(!(e.buffs.brace >= e.cycle) && !e.momentum, 'Brace and Momentum are gone');
+  assert.equal(p.scraped, 2, 'it wears them, 1 ◆ each (Brace\'s own counter broke one first)');
+  assert.match(s.logs.find((l) => l.scrape)?.message || '', /scrapes off your Momentum and Brace\. The Scraper wears 2 more ◆\./);
+  const a1 = p.armor;
+  // Its 2 are worn: a buff it takes after that is still taken, and wears nothing.
+  e.buffs.sudo = e.cycle + 3; p.attack.due = e.cycle;
+  step(s);
+  assert.ok(!(e.buffs.sudo >= e.cycle) && p.armor === a1 && p.scraped === 2, 'taken, nothing more worn');
+  // Null Route: it misses, and takes nothing.
+  const t = fight2(19, 'ransomware', ['scraper']), q = part(t, 'scraper'), f = t.encounter;
+  still(t);
+  f.buffs.brace = f.cycle + 3; f.buffs['null-route'] = f.cycle; q.attack.due = f.cycle;
+  const b0 = q.armor;
+  step(t);
+  assert.ok(f.buffs.brace >= f.cycle && q.armor === b0, 'null-routed: Brace stays, no ◆ worn');
+  assert.ok(t.logs.some((l) => /misses/.test(l.message)));
+  // Buffing after it lands keeps the buff.
+  q.attack.due = f.cycle + 4; f.buffs.brace = f.cycle + 1;
+  step(t);
+  assert.ok(f.buffs.brace >= f.cycle, 'up after it landed: kept');
+});
+test('Packer: a packed part shows as "Packed part": its name, its attack\'s name, tags, cap line, boot chip, tethers, rule and inspect hidden, nowhere in the markup or the log', () => {
+  const s = fight2(20, 'ghostroot', ['packer', 'frontend', 'spare']), v = s.encounter.virus, fe = part(s, 'frontend'), sp = part(s, 'spare');
+  s.research = { 'ghostroot:frontend': 60, 'ghostroot:spare': 60 };
+  const real = ['Front End', 'Spare', 'Proxy Card', 'Standby Board', 'fronts', 'standby', 'boots as', 'k-front'];
+  assert.match(fe.name, /^Packed part [AB]$/); assert.match(sp.name, /^Packed part [AB]$/);
+  const words = (html) => real.filter((w) => html.includes(w));
+  assert.deepEqual(words(boardMarkup(s) + hudMarkup(s)), [], 'the board and the HUD never name them, in text, titles or aria labels');
+  assert.match(boardMarkup(s), /tag packed/);
+  assert.match(partTip(s, v, fe), /^Packed part [AB]: /);
+  // Its behaviour still happens: hits on its partner still bend onto it, the log says "the packed part".
+  hit(s, fe, 3, { server: true });
+  assert.match(s.logs.at(-1).message, /packed part/i);
+  // A capped part packed (a Bad Block given a Limiter's cap): no cap line or cap tag, its Bad Write as ??? with its
+  // timing and amount, no cracked mark; the cap still holds.
+  const t = fight2(20, 'ghostroot', ['packer', 'badblock']);
+  const lim = part(t, 'badblock');
+  lim.limit = 0.2;
+  {
+    lim.armor = 0;
+    assert.doesNotMatch(boardMarkup(t), /capline|limcap|Bad Block|Bad Write|badmark|Cracked Platter/);
+    const chips = intents(t, 4).filter((i) => i.source === lim.id);
+    assert.ok(chips.length && chips.every((i) => i.name === '???' && i.packed && i.amount > 0), 'its attack: timing and amount, named ???');
+    const hp = lim.integrity; hit(t, lim, 9999, { server: true });
+    assert.equal(hp - lim.integrity, limitOf(lim), 'the cap still holds');
+    assert.match(t.logs.at(-1).message, /^The packed part −/);
+  }
+  // The boot chip: a packed Spare's boot shows ???.
+  hit(s, part(s, 'scrambler'), 99999, { pierce: true, server: true });
+  const boot = intents(s, 4).find((i) => i.source === sp.id && i.effect === 'boot');
+  assert.ok(boot && boot.name === '???', 'its Boot chip is ???');
+  assert.deepEqual(words(boardMarkup(s) + hudMarkup(s)), []);
+  // inspect, the targets list and the suggestions name it by what it shows.
+  command(s, `inspect ${fe.name.toLowerCase().replace(/ /g, '-')}`);
+  assert.match(s.logs.at(-1).message, /The Packer hides what the packed part [AB] carries/);
+  assert.ok(!suggestions(s, 'inspect ').some((x) => /frontend|spare/.test(x)));
+  command(s, 'overload frontnd');
+  assert.doesNotMatch(s.logs.at(-1).message, /frontend|Front End/);
+  command(s, `bash ${fe.id}`); // the bot's (and a guess's) way: by its id; what you see says its shown name
+  assert.match(s.logs.at(-1).message, /^Queued: bash packed-part-[ab]\.$/);
+  step(s);
+  assert.ok(!s.logs.some((l) => /\bfrontend\b/.test(l.message)), 'no command echo names its id');
+  assert.doesNotMatch(boardMarkup(s), /bash frontend|overload frontend/);
+  assert.deepEqual(words(s.logs.map((l) => l.message).join('\n')), [], 'the log never names them');
+  assert.deepEqual(words(logMarkup(s)), []);
+  // Breaking the Packer unpacks them, by name.
+  hit(s, part(s, 'packer'), 99999, { pierce: true, server: true });
+  assert.equal(fe.name, 'Front End'); assert.equal(sp.name, 'Spare');
+  assert.match(s.logs.find((l) => l.unpack)?.message || '', /The packed parts were the (Front End and the Spare|Spare and the Front End)\./);
+  assert.match(boardMarkup(s), /Front End/);
 });
 test('Bad Block: when it lands your next heals lose up to 10% of your max; it shows as cracked cells on your bar', () => {
   const s = fight2(21, 'ghostroot', ['badblock']), p = part(s, 'badblock');

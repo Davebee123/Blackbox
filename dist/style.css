@@ -4069,7 +4069,7 @@ p.impl { margin: 6px 0 0; padding: 4px 2px; border-bottom: 1px dotted color-mix(
 .tether.k-front .tt-line { border-style: dashed; }
 
 /* The parts plan's P2 (docs/parts-plan.md): what protects a part in steel (a Limiter's cap line, a Damper's crossed
-   kind, a Cold Store's frost and its thaw bar, a Shunt's ⇄ tether), what threatens you in red (a Scraper's takes-shield
+   kind, a Cold Store's frost and its thaw bar, a sleeping Spare's ◆), what threatens you in red (a Scraper's takes-buffs
    mark, a Bad Block's cracked cells on your bar, a thaw or a boot coming), a Spare asleep dim, a Packer's ??? grey. */
 .tag.limcap, .tag.damper, .tag.frost { display: inline-flex; align-items: center; gap: 3px; color: var(--steel); border-color: var(--steel); }
 .tag.limcap .glyph, .tag.damper .glyph, .tag.frost .glyph, .tag.standby .glyph, .tag.packed .glyph { width: 10px; height: 10px; margin: 0; }
@@ -4089,7 +4089,6 @@ p.impl { margin: 6px 0 0; padding: 4px 2px; border-bottom: 1px dotted color-mix(
 .intent.scrape, .intent.bad { border-color: var(--hot); }
 .intent.thaw, .intent.boot { border-style: dashed; border-color: var(--hot); color: var(--hot); background: transparent; }
 .bigbar .cracked-cells { position: absolute; top: 0; bottom: 0; background: repeating-linear-gradient(135deg, var(--hot-soft) 0 3px, rgba(255, 91, 61, 0.45) 3px 4px, transparent 4px 7px); border-left: 1px solid var(--hot); pointer-events: auto; }
-.tether.k-shunt .tt-line { border-style: double; }
 
 /* ---- The test bench (bench.mjs, ?bench=<name>): its tag in the top bar, and the dev panel in a drawer. ---- */
 .bench-tag { flex: none; padding: 2px 7px; border: 1px dashed var(--you); border-radius: var(--r-tag); color: var(--you); font: 600 11px/1.4 var(--mono); letter-spacing: 1.5px; white-space: nowrap; cursor: help; }

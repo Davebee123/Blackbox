@@ -380,13 +380,15 @@ const heldTip = (i) => (i.held ? '. It is already delayed, and no other delay mo
 const heldMark = (i) => (i.held ? `<i class="held">${glyph('stall')}</i>` : '');
 // The parts plan's marks on a chip (parts.mjs): a volley's hits joined by a bracket (tap 1 of 2…), a Backlog's SYN, a
 // Zip Bomb's fuse, a Buffer's next shield.
-// The P2 parts' (genes.mjs): a Scraper's takes-shield mark, a Bad Block's cracked mark, a Cold Store's thaw, a Spare's boot.
-const chipCls = (i) => `${i.taps ? ` tap t${i.tap}${i.tap === 1 ? ' first' : ''}${i.tap === i.taps ? ' last' : ''}` : ''}${i.syn ? ' syn' : ''}${i.effect === 'fuse' ? ' fuse' : ''}${i.effect === 'buffer' ? ' bufup' : ''}${i.scrape ? ' scrape' : ''}${i.bad ? ' bad' : ''}${i.effect === 'thaw' ? ' thaw' : ''}${i.effect === 'boot' ? ' boot' : ''}`;
+// The P2 parts' (genes.mjs): a Scraper's takes-buffs mark, a Bad Block's cracked mark, a Cold Store's thaw, a Spare's boot.
+const chipCls = (i) => (i.packed ? '' : chipCls0(i)); // a packed part's chip (combat.mjs intents): no mark says what it is
+const chipCls0 = (i) => `${i.taps ? ` tap t${i.tap}${i.tap === 1 ? ' first' : ''}${i.tap === i.taps ? ' last' : ''}` : ''}${i.syn ? ' syn' : ''}${i.effect === 'fuse' ? ' fuse' : ''}${i.effect === 'buffer' ? ' bufup' : ''}${i.scrape ? ' scrape' : ''}${i.bad ? ' bad' : ''}${i.effect === 'thaw' ? ' thaw' : ''}${i.effect === 'boot' ? ' boot' : ''}`;
 const chipTip = (i) => (i.taps ? `\nHit ${i.tap} of ${i.taps} of one volley: a cut stops the rest, a delay moves them all.` : i.syn ? '\nSYN: the skill you fire this cycle cools down 2 cycles longer.' : i.effect === 'fuse' ? '\nThe fuse goes off: a ◆ or a shield takes it. Ending the fight first puts it out.' : i.effect === 'buffer' ? '\nIts shield takes your commands\' hits first. Burns and helpers go under it.'
-  : i.scrape ? '\nIt takes your ◆ and what is left of your shield as it lands, and wears up to 2 of them. Put them up after it lands. Null Route makes it miss.' : i.bad ? '\nWhen it lands, your next heals lose up to a tenth of your max. Purge, Scrub, Rollback and Rotate Keys clear it.'
-  : i.effect === 'thaw' ? `\nFrozen until then: nothing reaches it. Its first hit, ${i.amount}, comes 2 cycles after it thaws.` : i.effect === 'boot' ? '\nThe signature broke: the Spare boots with its attack. Break it before then and it never does.' : '');
+  : i.scrape ? '\nIt takes your shield, your ◆ and your timed buffs as it lands. It wears up to 2 of them as ◆.\nBuff after it lands, not before. Null Route makes it miss.' : i.bad ? '\nWhen it lands, your next heals lose up to a tenth of your max. Purge, Scrub, Rollback and Rotate Keys clear it.'
+  : i.effect === 'thaw' ? `\nFrozen until then: nothing reaches it. Its first hit, ${i.amount}, comes 2 cycles after it thaws.` : i.effect === 'boot' ? '\nThe signature broke. It boots with its attack and drops its ◆.\nBreak it before then and it never does.' : '');
 function attackChip(i, c, k = '', to = null) {
-  return `<div class="intent ${c === 0 ? 'now' : c === 1 ? 'next' : ''}${i.held ? ' held' : ''}${chipCls(i)}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(i.name)}: ${effectLabel(i)} ${to ? `at ${esc(to)}` : effectTarget[i.effect] || ''}${heldTip(i)}${esc(chipTip(i))}"><span class="ico" ${icon(ICON[i.effect])}></span>${heldMark(i)}<b${longChip(i) ? ' class="long"' : ''}>${esc(i.name)}</b><i class="code${longChip(i) ? ' long' : ''}">${esc(attackCode(i.name))}</i><small>${effectLabel(i)}</small>${i.syn ? '<em class="synmark">SYN</em>' : ''}${i.scrape ? `<em class="scrapemark" title="Takes your shield and ◆">${glyph('scraper')}</em>` : ''}${i.bad ? '<em class="badmark" title="Cracks your next heals">▦</em>' : ''}${i.taps ? `<em class="tapmark">${i.tap}/${i.taps}</em>` : ''}${to ? `<small class="at">→ ${esc(to)}</small>` : ''}</div>`;
+  if (i.packed) i = { ...i, syn: false, scrape: false, bad: false, taps: 0 };
+  return `<div class="intent ${c === 0 ? 'now' : c === 1 ? 'next' : ''}${i.held ? ' held' : ''}${chipCls(i)}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(i.name)}: ${effectLabel(i)} ${to ? `at ${esc(to)}` : i.packed && !['damage', 'fuse'].includes(i.effect) ? '' : effectTarget[i.effect] || ''}${heldTip(i)}${esc(i.packed ? '' : chipTip(i))}"><span class="ico" ${icon(ICON[i.effect])}></span>${heldMark(i)}<b${longChip(i) ? ' class="long"' : ''}>${esc(i.name)}</b><i class="code${longChip(i) ? ' long' : ''}">${esc(attackCode(i.name))}</i><small>${effectLabel(i)}</small>${i.syn ? '<em class="synmark">SYN</em>' : ''}${i.scrape ? `<em class="scrapemark" title="Takes your buffs">${glyph('scraper')}</em>` : ''}${i.bad ? '<em class="badmark" title="Cracks your next heals">▦</em>' : ''}${i.taps ? `<em class="tapmark">${i.tap}/${i.taps}</em>` : ''}${to ? `<small class="at">→ ${esc(to)}</small>` : ''}</div>`;
 }
 
 // What you've put on a part, as marks by its name (an icon each) and a class on its row, so a
@@ -495,7 +497,7 @@ export function partAbout(p, v = null, s = null) {
 }
 function partTags(s, p) {
   const e = s.encounter, tags = [], pk = packed(s, e.virus, p); // a Packer standing: a rolled part's rule reads as ???
-  if (pk && p.integrity > 0) tags.push(`<span class="tag packed" title="${esc('Packed: the Packer hides this part\'s rule until it breaks.')}">${glyph('crate')}???</span>`);
+  if (pk && p.integrity > 0) tags.push(`<span class="tag packed" title="${esc('The Packer hides what this part is until it breaks.')}">${glyph('crate')}???</span>`);
   if (p.veiled && p.armor > 0) tags.push(`<span class="tag" title="${VEIL_NOTE}">veiled</span>`);
   if (p.exposedUntil >= e.cycle) tags.push(`<span class="tag you" title="Exposed: hits on it have a 25% higher chance to critically strike">exposed ${p.exposedUntil - e.cycle + 1}</span>`);
   if (e.virus.weakKnown && e.virus.weakPoint === p.id) tags.push('<span class="tag you" title="+50% damage for the rest of the fight">weak</span>');
@@ -531,7 +533,7 @@ function partTags(s, p) {
   if (p.obfuscate && p.integrity > 0) tags.push('<span class="tag" title="While it stands, every part hides its timers, ◆ or not. Tag still shows one.">smoke</span>');
   // The parts plan's P2: a Limiter's cap, a Spare on standby, a Damper's dropped kind, a Cold Store's thaw.
   if (p.limit && p.integrity > 0 && !pk) tags.push(`<span class="tag limcap" title="${esc(`Limiter: no single hit takes more than ${limitOf(p)} of its Integrity. The rest is lost. Use many small hits.`)}">${glyph('shield')}cap ${limitOf(p)}</span>`);
-  if (asleep(p) && p.integrity > 0 && !pk) tags.push(`<span class="tag standby" title="${esc(p.bootAt ? `Booting: it comes up ${p.bootAt - e.cycle <= 0 ? 'at the end of this cycle' : `in ${p.bootAt - e.cycle} ${p.bootAt - e.cycle === 1 ? 'cycle' : 'cycles'}`} with the ${p.bootFrom?.name || 'signature'}'s attack. Break it first.` : 'Standby: it sleeps until the signature part breaks, then boots with its attack. Break it while it sleeps.')}">${glyph('snapshot')}${p.bootAt ? 'booting' : 'standby'}</span>`);
+  if (asleep(p) && p.integrity > 0 && !pk) tags.push(`<span class="tag standby" title="${esc(p.bootAt ? `Booting: it comes up ${p.bootAt - e.cycle <= 0 ? 'at the end of this cycle' : `in ${p.bootAt - e.cycle} ${p.bootAt - e.cycle === 1 ? 'cycle' : 'cycles'}`} with the ${p.bootFrom?.name || 'signature'}'s attack, and drops its ◆.` : 'Standby: it sleeps under its ◆ until the signature part breaks. Then it boots with its attack and drops its ◆.')}">${glyph('snapshot')}${p.bootAt ? 'booting' : 'standby'}</span>`);
   if (p.damper && p.integrity > 0 && !pk) { const k = DAMPED[p.damperKind] || DAMPED.burn; tags.push(`<span class="tag damper${p.armor > 0 ? '' : ' off'}" title="${esc(p.armor > 0 ? `Damper: while it wears ◆, ${k.many} deal it no damage. They still break its ◆.` : `Damper: stripped. ${k.many[0].toUpperCase() + k.many.slice(1)} hurt it again until its ◆ patches back.`)}">${glyph(k.icon)}<s>${esc(k.short)}</s></span>`); }
   if (frozenNow(s, p) && !pk) { const k = p.thawAt ?? p.frozen, f = Math.max(0, Math.min(1, (e.cycle - 1) / k)), n = k - e.cycle + 1; tags.push(`<span class="tag frost" title="${esc(`Frozen: off the timeline, and nothing reaches it. It thaws ${n <= 1 ? 'at the end of this cycle' : `in ${n} cycles`}, and its first hit comes 2 cycles after.`)}">${glyph('clock')}<i class="thaw-bar"><b style="width:${Math.round(f * 100)}%"></b></i></span>`); }
   if (p.command && p.integrity > 0) tags.push(`<span class="tag hot" title="While it lives, fragments gnaw ${Math.round(CONFIG.c2.gnaw * 100)}% harder. Break it and every fragment drops with it.">commands fragments</span>`);
@@ -546,7 +548,8 @@ function partTags(s, p) {
   }
   if (e.helpers?.some((h) => h.target === p.id)) tags.push(`<span class="tag daemon" title="Your helper hits it every cycle">helper</span>`);
   for (const [text, tip, kind] of bodyTags(s, p)) tags.push(`<span class="tag ${kind}" title="${esc(tip)}">${esc(text)}</span>`); // a server room's bodies (families.mjs)
-  return tags.join('');
+  // A packed part: no tag of its own rule says what it is. Its ??? tag, its veil and what you put on it stay.
+  return (pk ? tags.filter((t) => /^<span class="tag (packed|you|daemon)\b/.test(t) || t.includes(`title="${VEIL_NOTE}"`)) : tags).join('');
 }
 
 // Your own effects: shields up, helpers running.
@@ -611,7 +614,7 @@ export const masteredMark = (p) => `<span class="pmast" title="${esc(`${p.name} 
 const unknownTip = (what, by) => `${what}: ???\nBreak one ${by.name} to decode what it does.`;
 function guardMarks(s, v, p, fc) {
   const max = p.max || 1, at = (n) => `${((Math.max(0, Math.min(max, n)) / max) * 100).toFixed(2)}%`;
-  const lk = lockOf(s, v, p), wd = wardOf(s, v, p);
+  const lk0 = lockOf(s, v, p), wd0 = wardOf(s, v, p), lk = lk0 && !packed(s, v, lk0.by) ? lk0 : null, wd = wd0 && !packed(s, v, wd0.by) ? wd0 : null; // a packed protector draws nothing
   let out = '';
   if (lk) {
     const from = Math.max(0, p.integrity - lk.cur), cur = Math.min(lk.cur, max - from), lose = Math.min(cur, fc.shield?.[p.id] || 0);
@@ -709,8 +712,8 @@ export function boardMarkup(s, selected, preview = null) {
     // While you type a command naming a part, your avatar previews it there (app.js previewAim).
     if (preview?.target) add(preview.target, s.profile?.handle || 'you', `you preview${preview.ok ? '' : ' bad'}`, preview.ok ? `${preview.text} (Enter to queue)` : preview.why);
     else if (!e.queue && progTarget(s)) add(progTarget(s), s.profile?.handle || 'you', 'you prog', progText(s));
-    else add(aimOf(e), s.profile?.handle || 'you', 'you', e.queue?.text || e.lastAttack);
-    for (const m of crew.filter(mateUp)) add(aimOf(m.encounter), m.who, 'crew', m.encounter.queue?.text);
+    else add(aimOf(e), s.profile?.handle || 'you', 'you', said(s, e.queue?.text || e.lastAttack));
+    for (const m of crew.filter(mateUp)) add(aimOf(m.encounter), m.who, 'crew', said(s, m.encounter.queue?.text));
   }
   const pips = (id) => (aims[id] ? `<span class="aim-pips">${aims[id].map((a) => `<span class="aim ${a.kind}" data-who="${esc(a.kind.startsWith('you') ? 'you' : a.who)}" title="${esc(a.who)}${a.text ? ': ' + esc(a.text) : ''}">${esc(initials(a.who))}</span>`).join('')}</span>` : '');
 
@@ -759,12 +762,12 @@ export function boardMarkup(s, selected, preview = null) {
     const cueTag = cue ? `<span class="pcue"${cue.link ? ` data-link="${esc(cue.link)}"` : ''}>${glyph(cue.icon, 'pcue-ico')}${esc(cue.text)}</span>` : '';
     const guard = alive(p) ? guardMarks(s, e.virus, p, fc) : '';
     const gearMark = onParts[p.id] ? `<span class="gpart" title="${esc(`${list2(onParts[p.id])}: live on the ${p.name} now.`)}">${glyph('protocol')}</span>` : '';
-    return `<button type="button"${fade} class="brow bpart ${dying(p) ? 'dying' : ''} ${selected === p.id ? 'selected' : ''} ${nowHit ? 'now' : ''} ${p.maxArmor && !p.armor ? 'cracked' : ''}${frozenNow(s, p) ? ' frozen' : ''}${asleep(p) && alive(p) ? ' standby' : ''} ${marks.map((k) => 'm-' + k).join(' ')}${fighting && progExc(s, p) ? ' m-exc' : ''}" data-target="${esc(p.id)}" ${fighting ? '' : 'disabled'} title="Target ${esc(p.name)}: ${spike}">
-      <div class="bcell bname" title="${esc(partTip(s, e.virus, p))}">${ties[ri]}${pips(p.id)}<span class="part-top"><span class="part-name">${esc(p.name)}${known ? '' : '<sup class="unk">?</sup>'}${mastered(s, e.virus, p) ? masteredMark(p) : ''}</span>${gearMark}${marksMarkup(marks)}${chitsMarkup(p, fc.chits[p.id] || 0)}<span class="part-hp">${p.integrity}/${p.max}</span></span><span class="part-bar${guard ? ' guarded' : ''}"><span style="width:${pct}%"></span>${lossMark(p.integrity, p.max, fc.parts[p.id] || 0)}${guard}${capLine(s, p)}${ticksMarkup(s, p)}</span><span class="part-tags">${fighting ? progTag(s, p) : ''}${cueTag}${partTags(s, p)}</span></div>
+    return `<button type="button"${fade} class="brow bpart ${dying(p) ? 'dying' : ''} ${selected === p.id ? 'selected' : ''} ${nowHit ? 'now' : ''} ${p.maxArmor && !p.armor ? 'cracked' : ''}${frozenNow(s, p) && !packed(s, e.virus, p) ? ' frozen' : ''}${asleep(p) && alive(p) && !packed(s, e.virus, p) ? ' standby' : ''} ${marks.map((k) => 'm-' + k).join(' ')}${fighting && progExc(s, p) ? ' m-exc' : ''}" data-target="${esc(p.id)}" ${fighting ? '' : 'disabled'} title="Target ${esc(p.name)}: ${spike}">
+      <div class="bcell bname" title="${esc(partTip(s, e.virus, p))}">${ties[ri]}${pips(p.id)}<span class="part-top"><span class="part-name">${esc(p.name)}${known ? '' : '<sup class="unk">?</sup>'}${mastered(s, e.virus, p) && !packed(s, e.virus, p) ? masteredMark(p) : ''}</span>${gearMark}${marksMarkup(marks)}${chitsMarkup(p, fc.chits[p.id] || 0)}<span class="part-hp">${p.integrity}/${p.max}</span></span><span class="part-bar${guard ? ' guarded' : ''}"><span style="width:${pct}%"></span>${lossMark(p.integrity, p.max, fc.parts[p.id] || 0)}${guard}${capLine(s, p)}${ticksMarkup(s, p)}</span><span class="part-tags">${fighting ? progTag(s, p) : ''}${cueTag}${partTags(s, p)}</span></div>
       ${showCells ? cells : '<div class="bcell span4"></div>'}</button>`;
   }).join('');
   // A fight whose parts protect each other keeps the tethers' gutter after the last one goes, so the rows don't jump.
-  const keep = !ties.some(Boolean) && e.virus.parts.some((p) => p.lock || p.ward || p.wardsToo || p.twin || p.rearm || p.command || p.buffer || p.front || p.idle || p.shunt) ? '<i class="tether keep" hidden></i>' : '';
+  const keep = !ties.some(Boolean) && e.virus.parts.some((p) => p.lock || p.ward || p.wardsToo || p.twin || p.rearm || p.command || p.buffer || p.front || p.idle) ? '<i class="tether keep" hidden></i>' : '';
   const gone = broken.length ? `<div class="brow bbroken"><div class="bcell span5">Broken: ${broken.map((p) => esc(p.name)).join(', ')}</div></div>` : '';
   // Whose half is playing, across the top of the board (the board itself takes its colour: style.css).
   const ph = fighting ? phaseOf(s) : null, who = esc(e.virus.name.split('-')[0]);
