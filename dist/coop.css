@@ -1,0 +1,28 @@
+/* The Co-op panel (coop-ui.mjs, docs/coop.md): a small window over the page, top right. You in teal, the other player
+   in the crew's violet, the codes in amber on the inset. */
+.coop-panel {
+  position: fixed; top: 64px; right: 16px; z-index: 60;
+  width: min(360px, calc(100vw - 32px)); max-height: calc(100vh - 96px); overflow: auto;
+  background: var(--panel); border: 1px solid var(--line-strong); border-radius: var(--r-card);
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.6); padding: 10px 12px; color: var(--text); font: 13px/1.4 var(--sans);
+}
+.coop-panel[hidden] { display: none; }
+.coop-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+.coop-head b { font: var(--kicker); letter-spacing: var(--kicker-track); text-transform: uppercase; color: var(--amber); }
+.coop-head small { color: var(--dim); font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; }
+.coop-x { margin-left: auto; background: none; border: 0; color: var(--muted); font-size: 18px; cursor: pointer; line-height: 1; }
+.coop-x:hover, .coop-x:focus-visible { color: var(--bright); }
+.coop-status { padding: 6px 8px; background: var(--inset); border-radius: var(--r-tag); margin-bottom: 8px; color: var(--muted); }
+.coop-mate { color: var(--daemon); font-weight: 600; }
+.coop-you { color: var(--you); font-weight: 600; }
+.coop-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 6px 0; }
+.coop-lab { display: block; color: var(--dim); font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; margin-top: 6px; }
+.coop-row .coop-lab { margin: 0; }
+.coop-room { font: 600 15px/1 var(--mono); letter-spacing: 2px; color: var(--amber); }
+.coop-in { width: 9ch; font: 600 13px/1 var(--mono); letter-spacing: 1px; background: var(--inset); color: var(--amber); border: 1px solid var(--line-strong); border-radius: var(--r-btn); padding: 6px 8px; }
+.coop-code { display: block; width: 100%; height: 54px; resize: vertical; box-sizing: border-box; background: var(--inset); color: var(--amber); border: 1px solid var(--line); border-radius: var(--r-btn); font: 11px/1.3 var(--mono); padding: 6px; word-break: break-all; }
+.coop-rtc hr { border: 0; border-top: 1px solid var(--line); margin: 10px 0 4px; }
+.coop-rtc[hidden] { display: none; }
+.coop-notes { list-style: none; margin: 8px 0 0; padding: 0; color: var(--muted); font-size: 12px; }
+.coop-notes li + li { margin-top: 2px; }
+.coop-card p { color: var(--muted); margin: 0 0 8px; }

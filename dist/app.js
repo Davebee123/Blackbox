@@ -53,6 +53,8 @@ import * as BN from './bench.mjs';
 import { PARTS } from './parts.mjs';
 import { installPrograms, noteExceptions } from './routines.mjs';
 import { wireRoutines } from './routines-ui.mjs';
+import { createCoop } from './coop-ui.mjs';
+import { humansReady } from './coop.mjs';
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -191,17 +193,22 @@ function load() {
   }
 }
 function newRng() { return (Math.random() * 2 ** 32) >>> 0; }
+// A co-op guest (coop.mjs, docs/coop.md): while the host is on a run, the page shows the guest's view of the host's world
+// (campaign) and keeps the guest's own save here. Saving always writes the real save, never the view.
+let realSave = null;
+const own = () => realSave || campaign;
+let coop = null; // the Co-op panel and session (coop-ui.mjs), with ?dev: set up below, once the page's functions exist
 let saveTimer = 0;
 function save() {
   if (playtest) return;
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
-    try { localStorage.setItem(KEY, JSON.stringify(campaign)); } catch { /* storage unavailable: play continues unsaved */ }
+    try { localStorage.setItem(KEY, JSON.stringify(own())); } catch { /* storage unavailable: play continues unsaved */ }
   }, 250);
 }
 
 // Closing the tab saves at once: nothing in flight is lost (or undone) with the page.
-addEventListener('pagehide', () => { if (playtest || (CAMP && !campaign.camp)) return; clearTimeout(saveTimer); try { localStorage.setItem(KEY, JSON.stringify(campaign)); } catch { /* storage unavailable */ } });
+addEventListener('pagehide', () => { if (playtest || (CAMP && !campaign.camp)) return; clearTimeout(saveTimer); try { localStorage.setItem(KEY, JSON.stringify(own())); } catch { /* storage unavailable */ } });
 
 const shown = () => campaign;
 
@@ -228,7 +235,7 @@ const ticked = (e) => !e.absorbed && /^[A-Z][\w-]*( [A-Z][\w-]*)*: /.test(e.mess
 // effects subtle or medium: lighter; off or Motion off: none (the strike's own rules).
 const abilityfx = createAbilityFx(document.getElementById('board'), { canMove: () => canMove(), level: () => fxLevel() });
 // The class a shooter plays: yours, or a crewmate's (crew.mjs), for key 1's name (Bash, Ban, Poke, Ping).
-const shooterClass = (who) => { if (!who) return classOf(campaign); const m = matesOf(campaign).find((x) => x.who === who); return m ? classOf(m.st) : null; };
+const shooterClass = (who) => { if (!who) return classOf(campaign); const m = matesOf(campaign).find((x) => x.who === who); return m ? classOf(m) : null; }; // matesOf: the crewmates' own states
 // The plain strike on a part (hitfx.mjs), for a hit no ability effect took.
 const plainStrike = (e, result) => () => hitfx.strike(partRow(e.target), { who: e.who || 'you', initials: initials(e.who || campaign.profile?.handle || 'you'), kind: e.who ? 'crew' : 'you', result });
 // Every command fired in a batch (combat.mjs resolved) with an effect to play: what it set off follows it, up to the
@@ -671,6 +678,7 @@ function leaveFight() { const to = ended === 'breach' ? 'breach' : ended === 'ro
 // A button on the rooms page: a move on the map, or the room's verb. A fight starts paused on the Fight page.
 function roomsClick(verb, arg) {
   feel.key('click');
+  if (realSave && coop?.intercept(`${verb} ${arg || ''}`.trim(), campaign)) return; // a co-op guest follows: the host moves the party
   if ($('notice').classList.contains('sticky')) notice(''); // a long one (ls, map) goes with your next move
   roomsDone(FP.act(campaign, verb, arg, { pause: true }));
 }
@@ -1246,6 +1254,9 @@ function run(raw) {
   if (!$('notice').hidden) notice(''); // a sticky notice (help) goes with the next command
   history = [text, ...history.filter((h) => h !== text)].slice(0, 40);
   historyIndex = -1;
+  // Co-op (coop-ui.mjs, docs/coop.md): a developer prototype for now. In a session nothing may swap the save out.
+  if (/^coop( |$)/.test(text)) return coop ? coop.command(text) : notice('Co-op is a developer prototype for now. Open the game with ?dev.', true);
+  if (coop?.live() && /^(reset game|new game|bench( |$))/.test(text)) return notice('Leave the co-op session first (coop leave).', true);
   if (/^bench( |$)/.test(text)) return benchRun(text); // the test bench (bench.mjs)
   // A server you found but never connected: typing connect asks first, on its map card.
   const join = text.match(/^connect (\S+)(?: (?:loud|\+loud|\+hot))?$/);
@@ -1334,6 +1345,8 @@ function run(raw) {
     return notice(`${text.split(' ')[0]}: not on the campaign. Type help.`, true);
   }
 
+  // A co-op guest: a fight command goes to the host, a loadout change to their own save (and on to the host).
+  if (coop?.intercept(text, realSave ? campaign : null)) { dirty = true; return; }
   const wasAlert = campaign.encounter?.phase === 'alert';
   const queuedBefore = campaign.encounter?.queue;
   let events = play(campaign, /^(consortium|guild|say|plan)\b/.test(text) || text.startsWith("'") ? raw.trim() : text); // a consortium's name, a line on #net and a plan keep their capitals
@@ -1343,7 +1356,8 @@ function run(raw) {
   const warning = events.findLast((e) => e.type === 'warning');
   // In a fight, an order you enter goes now: the cycle turns without waiting out the bar.
   const e = campaign.encounter;
-  if (fighting && !warning && active(campaign) && !e.paused && e.queue && e.queue !== queuedBefore) { const more = command(campaign, 'now'); react(more); events = [...events, ...more]; }
+  // (Co-op: once every human in the fight has a command in; else the timer turns it. coop.mjs humansReady.)
+  if (fighting && !warning && active(campaign) && !e.paused && e.queue && e.queue !== queuedBefore && (!coop?.hosting() || humansReady(campaign))) { const more = command(campaign, 'now'); react(more); events = [...events, ...more]; }
   if (warning) notice(warning.message, true, warning.suggest);
   else {
     // Rewards have their card; the corner keeps warnings and plain status (never "Server +N XP").
@@ -1438,7 +1452,7 @@ function go(name, quiet = false) {
   if (campaign.breach && (CAMP ? ['campaign', 'room'].includes(name) && !campaign.breach.result : name === 'map')) name = 'breach'; // a live breach is the page
   if (name === 'breach' && !campaign.breach) name = CAMP ? 'campaign' : 'map';
   // Stepping away from a live fight pauses it; coming back picks it up again.
-  const leaving = module === 'combat' && name !== 'combat' && active(campaign) && !campaign.encounter.paused;
+  const leaving = module === 'combat' && name !== 'combat' && active(campaign) && !campaign.encounter.paused && !coop?.live(); // (a shared fight runs on)
   if (leaving) { campaign.encounter.paused = true; campaign.encounter.autoPaused = true; notice('Fight paused.'); }
   if (name === 'combat' && active(campaign) && campaign.encounter.autoPaused) { campaign.encounter.paused = false; campaign.encounter.autoPaused = false; }
   if (name !== module && !quiet) feel.add('channel', null);
@@ -1874,7 +1888,7 @@ function render(force = false) {
       $('term').scrollTop = $('term').scrollHeight;
     }
   } else {
-    const pages = { rooms: (x) => roomsMarkup(x), campaign: (x) => campaignMarkup(x), room: (x) => roomMarkup(x), archive: (x) => archiveMarkup(x), breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab, skillUi), craft: (x) => V.craftMarkup(x, craftUi), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now()), server: (x) => V.serverMarkup(x, Date.now(), srvUi), daemons: V.daemonsMarkup, codex: (x) => codexPageMarkup(x, codexSel, codexIdx), system: V.systemMarkup };
+    const pages = { rooms: (x) => roomsMarkup(x), campaign: (x) => campaignMarkup(x), room: (x) => roomMarkup(x), archive: (x) => archiveMarkup(x), breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab, skillUi), craft: (x) => V.craftMarkup(x, craftUi), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now()), server: (x) => V.serverMarkup(x, Date.now(), srvUi), daemons: V.daemonsMarkup, codex: (x) => codexPageMarkup(x, codexSel, codexIdx), system: (x) => V.systemMarkup(x, { coop: !!coop }) };
     // A page that throws shows what broke (and a way back) instead of stopping every render after it.
     const keep = module === 'breach' ? $('bx-scroll')?.scrollTop : null;
     const focusRoom = module === 'rooms' ? document.activeElement?.closest?.('.fp-room')?.dataset.room : null; // a redraw keeps a focused room focused
@@ -2112,13 +2126,16 @@ function services() {
   const now = Date.now();
   // Active play time, for kills an hour (System page): the tab is open and you've touched it in the last 2 minutes.
   const dt = Math.min(5000, now - lastTick); lastTick = now;
-  if (!document.hidden && now - lastInput < 120000 && !playtest && !CAMP) tickPlay(campaign, dt); // and the clock of the level your class is on (Behind)
-  const hp = campaign.server.integrity;
-  const events = campaign.breach || campaign.roomsPlay ? [] : [...tickNetwork(campaign, now), ...tickServices(campaign, now)]; // a breach or rooms playtest has no network
-  if (campaign.rooms) { const ev = FP.tick(campaign, now); if (ev.length) react(ev); if (module === 'rooms' || ev.length) dirty = true; } // respawn timers count down on the map
+  // A co-op guest's own world goes on under the host's (coop.mjs): its clocks tick on the guest's own save, and the
+  // host's rooms on the host's game.
+  const S = own();
+  if (!document.hidden && now - lastInput < 120000 && !playtest && !CAMP) tickPlay(S, dt); // and the clock of the level your class is on (Behind)
+  const hp = S.server.integrity;
+  const events = S.breach || S.roomsPlay ? [] : [...tickNetwork(S, now), ...tickServices(S, now)]; // a breach or rooms playtest has no network
+  if (campaign.rooms && !realSave) { const ev = FP.tick(campaign, now); if (ev.length) react(ev); if (module === 'rooms' || ev.length) dirty = true; } // respawn timers count down on the map
   if (events.length) { react(events); save(); }
   // A siege or breach took a bite: the meter says so.
-  const bite = hp - campaign.server.integrity;
+  const bite = hp - S.server.integrity;
   if (bite > 0 && !events.some((e) => e.type === 'degraded')) feel.add('chip', '#meter-integrity', `−${bite}`);
   // An invader on the move, a siege or a breach, or Degraded mode: the map, the Server page and
   // the Integrity meter change a little every second.
@@ -2363,7 +2380,11 @@ function frame(now) {
   const delta = Math.min(1000, now - last);
   last = now;
   const wall = Date.now();
-  if (active(campaign)) {
+  if (realSave) {
+    // A co-op guest: the fight's clock is the host's. Only the timer bar moves here, between the host's snapshots.
+    const e = campaign.encounter;
+    if (active(campaign) && !e.paused && !e.steps) e.elapsedMs = Math.min(cycleLength(campaign) - 1, (e.elapsedMs || 0) + delta);
+  } else if (active(campaign)) {
     campaign.restAt = wall;
     const events = advance(campaign, delta);
     if (events.length) { react(events); save(); }
@@ -2374,7 +2395,8 @@ function frame(now) {
     campaign.restAt = wall;
     if (!CAMP && idleRegen(campaign, away)) { dirty = true; save(); }
   }
-  stepLoop();
+  if (!realSave) stepLoop();
+  coop?.tick();
   if (dirty) render();
   else tickUi();
   feel.flush();
@@ -2399,6 +2421,40 @@ function frame(now) {
   }
   requestAnimationFrame(frame);
 }
+
+// ---------- co-op (coop-ui.mjs, docs/coop.md) ----------
+// Developer mode only for now. A guest's page swaps its live state for its view of the host's world while the host is
+// on a run (coopShow), and back to its own save when the host is home or the session ends (coopHome).
+function coopShow(view, events) {
+  if (!view) { coopHome(); if (events.length) { react(events); save(); } return; }
+  const first = !realSave;
+  if (first) { realSave = campaign; ended = null; }
+  campaign = view;
+  if (events.length) react(events);
+  const w = events.findLast((e) => e.type === 'warning' && !e.who);
+  if (w) notice(w.message, true);
+  if (first) go(active(campaign) ? 'combat' : 'rooms', true);
+  else if (events.some((e) => e.type === 'engage') && active(campaign)) go('combat');
+  else if (module === 'combat' && !campaign.encounter && !ended) go('rooms', true);
+  save();
+  dirty = true;
+}
+function coopHome() {
+  if (!realSave) return;
+  campaign = realSave; realSave = null; ended = null;
+  if (['combat', 'rooms', 'net'].includes(module)) go('map', true);
+  dirty = true;
+}
+coop = DEV ? createCoop({
+  own,
+  show: coopShow,
+  home: coopHome,
+  react: (events) => { react(events); save(); dirty = true; },
+  notice: (text, bad = false) => notice(text, bad),
+  dirty: () => { dirty = true; },
+  ownCommand: (text) => { const ev = play(own(), text); react(ev); const w = ev.findLast((e) => e.type === 'warning'); notice(w ? w.message : ev.findLast((e) => e.type === 'info' || e.type === 'loadout')?.message || '', !!w); save(); dirty = true; },
+}) : null;
+if (DEV) Object.defineProperty(window, '__coop', { get: () => coop }); // dev only: the session, for tests
 
 // ---------- wiring ----------
 document.querySelector('.modules').addEventListener('click', (e) => {
@@ -2606,6 +2662,7 @@ $('command-form').addEventListener('submit', (e) => {
   if (!value.trim()) {
     if (tip) { advanceTip(); return; } // Enter moves a tip on (or closes it) first
     // Empty Enter in a fight: stop waiting and resolve this cycle now.
+    if (realSave) return; // a co-op guest: the cycle turns when everyone's in, or on the host's timer
     if (active(campaign) && !campaign.encounter.paused) { react(command(campaign, 'now')); save(); dirty = true; }
     else if (module === 'combat' && ended && !$('spoils').hidden && performance.now() - endedAt > 1200) leaveFight();
     return;
@@ -2669,7 +2726,7 @@ $('haptics').addEventListener('click', () => { campaign.settings.haptics = !camp
 $('motion').addEventListener('click', () => { campaign.settings.motion = !campaign.settings.motion; save(); dirty = true; });
 
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden && active(campaign) && !campaign.encounter.paused) {
+  if (document.hidden && active(campaign) && !campaign.encounter.paused && !coop?.live()) { // (a shared fight runs on)
     command(campaign, 'pause');
     campaign.encounter.autoPaused = true; // coming back to the Fight tab (or any order) resumes it
     save();

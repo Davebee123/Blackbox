@@ -897,7 +897,7 @@ Nothing on the interface ever moves for an effect: no screen shake, no nudge on 
 
 ## Co-op, simulated (crew.mjs)
 
-Online co-op comes later (a hosted server with logins). To try how it plays first (developer mode only, `?dev`), `crew sim bastion infiltrator` (up to three classes; `crew sim` alone takes the three you aren't) adds bot crewmates to your run fights (SPRAWL-00, rogue servers, guards). The sim crew comes at level 5; before that you run alone. `crew` lists them, `crew off` sends them home. Home intrusions stay solo.
+Online co-op comes later (a hosted server with logins; a peer-to-peer prototype is below). To try how it plays first (developer mode only, `?dev`), `crew sim bastion infiltrator` (up to three classes; `crew sim` alone takes the three you aren't) adds bot crewmates to your run fights (SPRAWL-00, rogue servers, guards). The sim crew comes at level 5; before that you run alone. `crew` lists them, `crew off` sends them home. Home intrusions stay solo.
 
 - Each crewmate is a player of its own: its class at its own level (a friend or consortium member at theirs; a `crew sim` bot at yours when it joined), which never moves when you switch class, a Stock protocol in every slot (a sim crew entry can carry another rarity, as the balance scripts' do: then each protocol carries a stat its subclass chases, like Restore for a Sysop), and its own Signal. A crewmate's Signal carries from fight to fight through a run, like yours. One that went down comes back at 25% for the next fight, and a new run starts everyone full. Your crew strip shows what each one has left. played by the same planner the balance scripts use.
 - Each cycle everyone acts (you, then the crew), then the virus. Statuses are shared: anyone's hits benefit from Exposed, Tagged, Throttled and Hooked.
@@ -913,6 +913,17 @@ Online co-op comes later (a hosted server with logins). To try how it plays firs
 - Crewmates' hits and breaks show on the board but stay quiet: the sounds are yours.
 - A crewmate at 0 Signal is down for the rest of the fight. You going down still ends it. Rewards are yours (the bots keep nothing).
 - On the fight screen each kind of crew information has one home. **Health**: a Crew column in the HUD, beside your Signal, a line per crewmate (name, bar with the blinking forecast slice, number; struck through when down; a *drawing fire* tag; lit on their turn; hover for their command). **Where they aim**: their avatar on the part's rail. **What happened**: the damage number on the part, the strike in their colour, and the log, where their lines carry their name.
+
+## Co-op, peer to peer (prototype: coop.mjs)
+
+Two players, two saves, no server. While it is a prototype it is developer mode only (`?dev`, or a test bench). docs/coop.md has the design and what a hosted world would add.
+
+- **Starting.** `coop` (or *Open Co-op* on the System page) opens the Co-op panel. The inviter hosts. *Host* shows a room code for another tab in the same browser, which joins with it. For another machine, *Make invite code* gives a code to send; the other player pastes it, *Make reply code*, and sends that back to paste in *Connect*. `coop host`, `coop join <code>` and `coop leave` do the same as commands. One guest a host.
+- **Who runs what.** The host's game runs the world: their network, their run, every fight. The guest's game sends the guest's character (class, subclass, level, bar, talents, presets, the protocols loaded for the class, daemons, routines, research) and their commands, and draws what the host's game sends back. Nothing else of either save crosses, and nothing personal: the handle is the only name. The guest fights as the host's crewmate, in place of a sim bot, so the crew rules hold: the virus grows with the party, turn order, threat, healing, kill XP split.
+- **What the guest sees.** The host's server and fights from their own side. They are "you", with their own Signal, bar and cooldowns; the host is a crewmate in the party column, in the crew's violet. Log lines carry the other player's name. The guest's home, mail, market and crafting stay their own, and their own world's clocks keep running underneath. Their loadout changes out of a fight go to their own save and on to the host for the next fight.
+- **Cycles.** A cycle turns when everyone in the fight has a command in, or when the timer runs out. Whoever has none falls back as they would alone: their routine, else auto-repeat. Only the host can jack out, pause or change the speed.
+- **Rewards.** Each player's game pays them on their own save. The guest's share of a kill is the party's XP share at their own level, plus code and a drop rolled on their own dice, straight into their bank and stash (no pack: the run is the host's).
+- **Drops.** A guest who drops (closed, or 10 seconds silent) is played by the planner to the end of that fight, then leaves. A host who drops sends the guest home with a note. Rewards already paid stay.
 
 ## Events (events.mjs)
 

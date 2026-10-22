@@ -2595,8 +2595,10 @@ function paceCard(s) {
   return `<section class="card"><h2>Pace</h2><p class="svc-line" title="Counts time while the game is open and you've used it in the last 2 minutes. Loot targets assume ${LOOT.killsPerHour} kills an hour.">${line}</p></section>`;
 }
 
-export function systemMarkup(s) {
-  return `<div class="page-grid"><div style="display:grid;gap:12px">${volumeCard(s)}${paceCard(s)}
+export function systemMarkup(s, { coop = false } = {}) {
+  // Co-op (coop-ui.mjs, docs/coop.md): a developer prototype, so only with ?dev.
+  const co = coop ? '<section class="card coop-card"><h2>Co-op</h2><p>Play a run with another player. Your game runs the world, theirs sends their character. Prototype.</p><div class="row"><button type="button" class="btn" data-run="coop">Open Co-op</button></div></section>' : '';
+  return `<div class="page-grid"><div style="display:grid;gap:12px">${co}${volumeCard(s)}${paceCard(s)}
     <section class="card settings-card"><h2>Settings</h2><div class="row settings-grid">
       <button type="button" class="btn" data-toggle="speed">Speed: ${esc(s.settings.speed || 'normal')} (${cycleLength(s) / 1000}s per cycle)</button>
       <button type="button" class="btn" data-toggle="sound" aria-pressed="${!!s.settings.sound}">Sound ${s.settings.sound ? 'on' : 'off'}</button>

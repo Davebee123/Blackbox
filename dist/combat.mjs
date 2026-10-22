@@ -1076,7 +1076,7 @@ export function gainCode(s, gains, why = '') {
 // What a kill of a family at a level drops (Scavenge adds to it).
 // On a network rich in a code, part of it comes as that code (network.mjs biasCode); a guard's goes in your pack and
 // leans when you bank it. A network rich in Exploits drops them more often.
-function codeFrom(s, family, level, source) {
+export function codeFrom(s, family, level, source) {
   const k = codeOf(family), who = fightNet(s);
   const out = {};
   if (k) out[k] = Math.round(codeDrop(level) * (source === 'guard' ? 1.5 : 1) * (1 + gearStat(s, 'scavenge', 'hacker') / 100) * outbreakMult(s, family));
@@ -2078,7 +2078,7 @@ function engage(s) {
 
 // Fast kills: beat your own usual pace (cycles per 100 Integrity of virus, kept per class) by a
 // quarter and the kill pays a quarter more XP. Measured against you, so every class can earn it.
-const PARTY_XP = 0.1; // a party splits the kill's XP, plus 10% per extra player
+export const PARTY_XP = 0.1; // a party splits the kill's XP, plus 10% per extra player
 export const FAST = { share: 0.75, bonus: 0.25, after: 5, weight: 0.2 };
 function fastKill(s, e) {
   const total = e.virus.parts.reduce((n, p) => n + p.max, 0);

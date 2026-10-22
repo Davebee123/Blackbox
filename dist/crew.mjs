@@ -21,6 +21,7 @@ import { planner } from './planner.mjs';
 import { raidDef, crewHp } from './raid.mjs';
 import { online, isFriend } from './presence.mjs';
 import { isMember } from './consortium.mjs';
+import { playerFrom } from './coop-char.mjs';
 
 export const CREW = {
   max: 3, // crewmates besides you
@@ -34,12 +35,17 @@ export const CREW = {
 };
 
 // The crewmates' states, rebuilt from s.crewSim when needed. Kept off the save (not enumerable).
+// Co-op (coop.mjs, docs/coop.md): a real player seated by the host (s._coop.seats, off the save too) is a crewmate
+// built from the character their game sent, and a co-op guest's view of the host's fight carries the other players
+// ready-made (s._coopMates).
+const seatsOf = (s) => (s._coop?.seats || []).map((x) => ({ name: x.name, cls: x.char.cls, level: x.char.level, char: x.char, rev: x.rev, seat: x }));
 export function matesOf(s) {
+  if (s._coopMates) return s._coopMates;
   // A crewmate's level is its own, fixed when it joined (an old save's crew keeps the level it has now).
   for (const x of s.crewSim || []) x.level ??= hackerLevel(s);
-  const want = [...(s.crewSim || []), ...(s.guests || [])]; // guests: consortium members who joined a fight on the consortium's ground
+  const want = [...(s.crewSim || []), ...seatsOf(s), ...(s.guests || [])]; // guests: consortium members who joined a fight on the consortium's ground
   let m = s._mates;
-  const key = want.map((x) => `${x.cls}:${x.sub || ''}:${x.name}:${x.level ?? hackerLevel(s)}:${x.rarity || ''}`).join(',');
+  const key = want.map((x) => `${x.cls}:${x.sub || ''}:${x.name}:${x.level ?? hackerLevel(s)}:${x.rarity || ''}:${x.rev ?? ''}`).join(',');
   if (!m || m.key !== key) {
     m = want.map((x, i) => makeMate(s, x, i));
     m.key = key;
@@ -50,12 +56,27 @@ export function matesOf(s) {
 const inFight = (s) => matesOf(s).filter((m) => m.encounter && active(m));
 // A crewmate's Signal between fights: what it carried out of the last one on this run, else full.
 export const mateSignal = (s, m) => {
-  const c = !m.guest && s.run?.crew?.[m.who];
+  const c = m.seat || (!m.guest && s.run?.crew?.[m.who]);
   return c && c.signal != null ? (c.signal > 0 ? Math.min(c.signal, maxSignal(m)) : Math.max(1, Math.round(maxSignal(m) * CREW.reboot))) : maxSignal(m);
 };
 export const mateUp = (m) => m.encounter && active(m) && m.run.integrity > 0;
 
-function makeMate(host, { cls, sub, name, guest, level: own, rarity = 'stock' }, i) {
+// A co-op seat's crewmate: the player's own character (coop-char.mjs), played by their commands (a human), or by the
+// planner once they drop (seat.bot).
+const human = (m) => !!m.seat && !m.seat.bot;
+function seatMate(host, { name, char, seat }, i) {
+  const m = playerFrom(char);
+  m.who = name;
+  Object.defineProperty(m, 'host', { value: host, enumerable: false, configurable: true });
+  Object.defineProperty(m, 'seat', { value: seat, enumerable: false, configurable: true });
+  m.rng = ((host.rng || 1) * 31 + i * 7919) >>> 0;
+  m.logs = host.logs;
+  Object.defineProperty(m, 'serial', { get: () => host.serial, set: (v) => { host.serial = v; }, enumerable: false, configurable: true });
+  m.run = { loc: 'crew', cwd: '/', integrity: maxSignal(m), max: maxSignal(m), pack: [], visited: [] };
+  return m;
+}
+function makeMate(host, { cls, sub, name, guest, level: own, rarity = 'stock', char, seat }, i) {
+  if (char) return seatMate(host, { name, char, seat }, i);
   const m = fresh();
   if (guest) m.guest = true;
   m.who = name;
@@ -80,9 +101,9 @@ function makeMate(host, { cls, sub, name, guest, level: own, rarity = 'stock' },
   return m;
 }
 
-// Next cycle's command for a crewmate: what the planner would do (it shows in their row).
+// Next cycle's command for a crewmate: what the planner would do (it shows in their row). A human's is their own.
 function decide(m) {
-  if (!mateUp(m) || !livingParts(m).length) return;
+  if (human(m) || !mateUp(m) || !livingParts(m).length) return;
   const text = planner(m) || 'hold';
   m.encounter.plan = [];
   command(m, text);
@@ -118,6 +139,7 @@ hooks.crewEngage = (s) => {
     m.run.integrity = mateSignal(s, m);
     m.encounter = { ...e, virus: e.virus, queue: null, plan: [], lastAttack: null, readyAt: {}, buffs: {}, burns: [], helpers: [], shield: 0, encrypt: 0, scrambleUntil: 0, echoes: [], once: {}, momentum: null, synced: false, keylog: 0, regenAcc: 0, leechAcc: 0, clock: 0, trace: 0, pendingTrace: 0, breaks: 0, undo: null, fxs: {},
       chits: 0, hardened: classOf(m) === 'bastion' ? SKILLS.hardened : 0, metrics: structuredClone(e.metrics), down: false };
+    m.ended = null;
     classEach('start', m); // subclass modules (dist/classes)
     decide(m);
   }
@@ -158,10 +180,11 @@ export function checkDown(s) {
 }
 hooks.crewHurt = checkDown;
 
-hooks.crewEnd = (s) => {
+hooks.crewEnd = (s, result) => {
   for (const m of matesOf(s)) {
-    const c = !m.guest && m.encounter && s.run?.crew?.[m.who];
+    const c = !m.guest && m.encounter && (m.seat || s.run?.crew?.[m.who]);
     if (c) c.signal = Math.max(0, m.run.integrity);
+    if (m.seat && m.encounter) { m.ended = m.encounter; hooks.coopEnd?.(s, m, result); } // a co-op player's share of the fight (coop.mjs)
     m.encounter = null;
   }
   s.guests = []; // guests go back to what they were doing

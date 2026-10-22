@@ -447,8 +447,9 @@ function acted(s, q) {
 }
 
 // ---------- a cycle ----------
-// Is a program running your fights? (The browser installs it; a crewmate never has one; it opens at level 5.)
-export const live = (s) => !!hooks.program && !s?.who && unlocked(s) && programsOf(s).on;
+// Is a program running your fights? (The browser installs it; a bot crewmate never has one, a co-op player seated as a
+// crewmate brings their own (crew.mjs m.seat, coop.mjs); it opens at level 5.)
+export const live = (s) => !!hooks.program && (!s?.who || !!s?.seat) && unlocked(s) && programsOf(s).on;
 // What the program does when the timer runs out: { text, handler } (handler: its index, or -1 for the rotation), or
 // { hold } when nothing is left for it (only parts that are yours, or a boss: the whole fight). null when it's off.
 export function decide(s) {
