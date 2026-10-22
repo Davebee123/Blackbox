@@ -67,6 +67,8 @@ import { ROOMS as ROOMS_FP, kindRule, KIND_OF } from './floorplan.mjs'; // a ser
 import { threadRows, threadReader, tempNodes, tempNodeSvg, tempCard, serverMarkSvg, transitNodes, transitSvg } from './threads-view.mjs';
 import { threadById, serverMarks } from './threads.mjs';
 import { skillsTabMarkup } from './skills-view.mjs';
+import { achievementsMarkup } from './achievements-view.mjs';
+import { pointsOf } from './achievements.mjs';
 export { skillDetailMarkup, breakoutMarkup, breakoutDetailMarkup, breakoutDue, breakoutLevels } from './skills-view.mjs';
 
 // WoW-style level colors: how an enemy's level compares with yours.
@@ -2595,10 +2597,14 @@ function paceCard(s) {
   return `<section class="card"><h2>Pace</h2><p class="svc-line" title="Counts time while the game is open and you've used it in the last 2 minutes. Loot targets assume ${LOOT.killsPerHour} kills an hour.">${line}</p></section>`;
 }
 
-export function systemMarkup(s, { coop = false } = {}) {
+// The System page's tabs: Settings (everything as it was) and Achievements (achievements-view.mjs).
+export const SYSTEM_TABS = [['settings', 'Settings'], ['achievements', 'Achievements']];
+const systemTabs = (s, tab) => `<nav class="ltabs sys-tabs" role="tablist" aria-label="System">${SYSTEM_TABS.map(([k, l]) => `<button type="button" role="tab" data-stab="${k}" aria-selected="${tab === k}">${esc(l)}${k === 'achievements' ? `<small class="sys-pts">${glyph('medal')}${pointsOf(s)}</small>` : ''}</button>`).join('')}</nav>`;
+export function systemMarkup(s, { coop = false, tab = 'settings', ach = {} } = {}) {
+  if (tab === 'achievements') return systemTabs(s, tab) + achievementsMarkup(s, ach);
   // Co-op (coop-ui.mjs, docs/coop.md): a developer prototype, so only with ?dev.
   const co = coop ? '<section class="card coop-card"><h2>Co-op</h2><p>Play a run with another player. Your game runs the world, theirs sends their character. Prototype.</p><div class="row"><button type="button" class="btn" data-run="coop">Open Co-op</button></div></section>' : '';
-  return `<div class="page-grid"><div style="display:grid;gap:12px">${co}${volumeCard(s)}${paceCard(s)}
+  return `${systemTabs(s, tab)}<div class="page-grid"><div style="display:grid;gap:12px">${co}${volumeCard(s)}${paceCard(s)}
     <section class="card settings-card"><h2>Settings</h2><div class="row settings-grid">
       <button type="button" class="btn" data-toggle="speed">Speed: ${esc(s.settings.speed || 'normal')} (${cycleLength(s) / 1000}s per cycle)</button>
       <button type="button" class="btn" data-toggle="sound" aria-pressed="${!!s.settings.sound}">Sound ${s.settings.sound ? 'on' : 'off'}</button>

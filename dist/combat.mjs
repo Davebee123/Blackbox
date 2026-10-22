@@ -46,6 +46,7 @@ import { fxText, fxList } from './content.mjs';
 import { deathRecap } from './recap.mjs';
 import { situationOf } from './situations.mjs';
 import { seeGenes, winGenes, genomeCommand, virusGenes, bylined, logFight, logWin, dexOf } from './genome.mjs';
+import { fightOver, achievementsRestore } from './achievements.mjs';
 import { researchOf, gainResearch, knows as knowsAt, masteryDmg, masteryDrop, TIER, researchAt } from './research.mjs';
 import { PARTS, heatOf } from './parts.mjs';
 import { crewOf, factionAuthor, AUTHORS } from './authors.mjs';
@@ -2039,6 +2040,7 @@ function engage(s) {
   if (!e || e.phase !== 'alert') return warn(s, 'No intrusion waiting.');
   e.phase = 'active';
   e.metrics = newMetrics(s);
+  e.serial0 = s.serial; // where the fight's log starts (achievements.mjs reads its last cycle)
   rollSync(s);
   // Bastion Hardened: start the fight with an armor chit of your own.
   e.chits = 0;
@@ -2183,6 +2185,7 @@ export function finish(s, result) {
   Object.assign(e.metrics, { cycles: e.cycle, endIntegrity: d.integrity, endCredits: s.server.credits, lead, result });
   s.reports.push(structuredClone(e.metrics));
   if (s.reports.length > 50) s.reports.shift();
+  fightOver(s, e, result); // what the fight did toward an achievement (achievements.mjs): counts and one-fight feats, nothing else
   // A breach node (breach.mjs): the kill's XP here. The draft, the pack and the map are the breach's.
   if (e.breach) {
     emit(s, result === 'victory' ? 'victory' : 'crashed', result === 'victory' ? `${e.virus.name} neutralized in ${e.cycle} cycles. ${!e.metrics.attackDamage ? 'Nothing got through.' : `Took ${e.metrics.attackDamage} damage.`} Signal ${d.integrity}/${d.max}.` : `${e.virus.name} burned your Signal to zero.`, { mode: 'breach' });
@@ -4838,6 +4841,7 @@ export function restore(raw) {
     setsRestore(s, was); // v45: sets: loaded protocols stamped in slot order, set pieces you hold found, the Badge beat armed (sets.mjs)
     subRestore(s, was); // v46: no default subclass: a class past 10 that never picked plays its core (its default's keys and talent points back)
     shuntRestore(s); // the Shunt was cut (docs/parts-plan.md): keyed on the part, not the version
+    try { achievementsRestore(s); } catch (err) { hooks.restoreError?.(err); } // achievements.mjs: an older save earns what it has already done (its titles and stickers too), quietly; never costs the save
     if (s.encounter) s.encounter.plan ||= [];
     if (s.encounter?.virus) packParts(s); // a fight saved before packed parts hid their names
     if (active(s)) { s.encounter.paused = true; s.encounter.autoPaused = true; } // resumes on the next order, or opening the Fight tab

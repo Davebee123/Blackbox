@@ -76,6 +76,8 @@ const MAP = {
   'consortium-siege': (e) => ({ kind: 'alert', label: 'Invasion', from: 'Consortium', text: e.message, go: e.location ? `map:${e.location}` : 'map:consortium', beep: true }),
   // A title earned (profile.mjs): a quiet line, no beep. It opens your card on its titles.
   title: (e) => ({ kind: 'standing', label: 'Title', from: 'Profile', text: e.message.replace(/^New titles?: /, ''), go: 'profile', beep: false }),
+  // An achievement earned (achievements.mjs): a quiet line, no beep, like a title. It opens the achievement.
+  achievement: (e) => ({ kind: 'standing', label: 'Achievement', from: 'Profile', text: e.message.replace(/^Achievements?: /, ''), go: e.achievements?.length ? `achieve:${e.achievements[0]}` : 'achieve', beep: false }),
   'wall-breach': (e) => ({ kind: 'alert', label: 'Breach', from: 'Wall', text: e.message, go: 'jack', beep: true, alert: true }),
 };
 

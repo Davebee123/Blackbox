@@ -13,6 +13,8 @@ const P = {
   critDamage: '<path d="M8 1.5l1.6 4.9 4.9 1.6-4.9 1.6L8 14.5l-1.6-4.9L1.5 8l4.9-1.6z"/>',
   // A part you've researched to 100% (research.mjs): a small star with a ring.
   mastered: '<path d="M8 3.2l1.1 3.7 3.7 1.1-3.7 1.1L8 12.8l-1.1-3.7L3.2 8l3.7-1.1z"/><circle cx="8" cy="8" r="6.5" opacity=".55"/>',
+  // An achievement (achievements.mjs): a medal on its ribbon.
+  medal: '<path d="M5 1.5h2.2L8 5l.8-3.5H11L9.6 6.4M6.4 6.4 5 1.5"/><circle cx="8" cy="10.2" r="4.2"/><path d="M8 8.3l.6 1.3 1.4.1-1 1 .3 1.4L8 11.4l-1.3.7.3-1.4-1-1 1.4-.1z"/>',
   accuracy: '<circle cx="8" cy="8" r="6"/><circle cx="8" cy="8" r="3"/><circle cx="8" cy="8" r=".6"/>',
   echo: '<path d="M6 5.5a3.5 3.5 0 0 1 0 5M9 3.5a6.5 6.5 0 0 1 0 9M12 1.8a9 9 0 0 1 0 12.4"/><circle cx="3" cy="8" r="1"/>',
   payload: '<path d="M8 1.8c2.8 3.6 4.2 5.8 4.2 7.9a4.2 4.2 0 0 1-8.4 0C3.8 7.6 5.2 5.4 8 1.8z"/>',

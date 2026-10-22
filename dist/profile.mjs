@@ -13,6 +13,7 @@ import { PIECES } from './faction-gear.mjs';
 import { SETS, piecesOf, isPiece } from './sets.mjs';
 import { PRESENCE, profileOf as simOf, online, simOn, whereText } from './presence.mjs';
 import { uniqueItem, seeded } from './gear.mjs';
+import { tickAchievements, deedStickers, bannersOf, pointsOf, shownAchievements, achievements, DEED_STICKERS } from './achievements.mjs';
 
 export const PROFILE = { rows: 4, cols: 24, plan: 60 };
 const clock = () => hooks.now?.() ?? Date.now();
@@ -100,6 +101,41 @@ export const BANNERS = {
   ] },
 };
 export const BANNER_IDS = Object.keys(BANNERS);
+// Five more, each the reward of an achievement (achievements.mjs): yours to pick once it's earned.
+export const REWARD_BANNERS = {
+  crown: { name: 'Crown', rows: [
+    '    .  /\\  /\\  /\\  .    ',
+    '      /  \\/  \\/  \\      ',
+    '     |  ()  ()  () |    ',
+    "     '=============='   ",
+  ] },
+  vault: { name: 'Vault door', rows: [
+    '  .------------------.  ',
+    '  |   .--.   [####]  |  ',
+    '  |  ( -+- ) [####]  |  ',
+    "  '---'--'-----------'  ",
+  ] },
+  hydra: { name: 'Pandemonium', rows: [
+    '  [o_o]  [o_o]  [o_o]   ',
+    '     \\     |     /      ',
+    '      \\----+----/       ',
+    '         [ ps ]         ',
+  ] },
+  mesh: { name: 'The grid', rows: [
+    ' o---o---o---o---o---o  ',
+    ' |\\ /|\\ /|\\ /|\\ /|\\ /|  ',
+    ' | X | X | X | X | X |  ',
+    ' o---o---o---o---o---o  ',
+  ] },
+  bedrock: { name: 'Bedrock', rows: [
+    '  ____________________  ',
+    ' /_/_/_/_/_/_/_/_/_/_/  ',
+    ' |_|_|_|_|_|_|_|_|_|_|  ',
+    ' ~~~~~~~~ F8 ~~~~~~~~~  ',
+  ] },
+};
+export const REWARD_BANNER_IDS = Object.keys(REWARD_BANNERS);
+export const anyBanner = (id) => BANNERS[id] || REWARD_BANNERS[id] || null;
 // Your own: printable ASCII only, at most PROFILE.rows rows of PROFILE.cols. Trailing spaces and blank rows at
 // either end are trimmed. Returns { rows } or { error }.
 export function checkBanner(text) {
@@ -112,7 +148,7 @@ export function checkBanner(text) {
   if (rows.some((r) => r.length > PROFILE.cols)) return { error: `${PROFILE.cols} characters a row at most.` };
   return { rows };
 }
-export const bannerRows = (b) => (Array.isArray(b) ? b : BANNERS[b]?.rows || BANNERS.crt.rows);
+export const bannerRows = (b) => (Array.isArray(b) ? b : anyBanner(b)?.rows || BANNERS.crt.rows);
 
 // ---------- titles ----------
 // Earned by deeds, never bought. lv: about the class level a simulated hacker could have it by.
@@ -161,8 +197,9 @@ export function shownTitle(s) {
   return titleById(id);
 }
 
-// Every second (invasion.mjs tickNetwork): the deeds in the log since last time, then any title just earned (one
-// pager line for all of them). A first look at an older save starts from now.
+// Every second (invasion.mjs tickNetwork): the deeds in the log since last time, then the achievements
+// (achievements.mjs), which hand out the titles: a new title comes with its achievement's pager line. A first look
+// at an older save starts from now.
 export function tickProfile(s) {
   const p = myProfile(s);
   if (p.seen == null) p.seen = s.serial || 0;
@@ -173,21 +210,33 @@ export function tickProfile(s) {
     if (e.card === 'hunt' || e.card === 'returning') p.deeds.hunts++;
   }
   p.seen = s.serial || 0;
-  const fresh = titles().filter((t) => !p.titles.includes(t.id) && t.has(s));
-  if (!fresh.length) return;
-  p.titles.push(...fresh.map((t) => t.id));
-  p.seen = emit(s, 'title', `New title${fresh.length > 1 ? 's' : ''}: ${fresh.map((t) => t.name).join(', ')}.`, { titles: fresh.map((t) => t.id) }).id;
+  tickAchievements(s);
+  p.seen = s.serial || 0;
 }
 
 // ---------- stickers ----------
-// Marks you earn and keep: a faction's top tier, a set completed, a floor reached (from 2), a lair boss beaten.
+// Marks you earn and keep: a faction's top tier, a set completed, a floor reached (from 2), a lair boss beaten, and a
+// few an achievement brings. Each is the reward of an achievement (achievements.mjs), earned by the same deed.
 export function stickersOf(s) {
   const out = [];
   for (const f of FACTION_IDS) if ((s.standing?.[f] ?? -1) >= REP_TIERS[4]) out.push({ id: 'f-' + f, kind: 'faction', label: FACTIONS[f].tiers[4], color: FACTIONS[f].color, glyph: 'f-' + f, tip: `${FACTIONS[f].tiers[4]} with ${FACTIONS[f].name}` });
   for (const id of setsDone(s)) out.push({ id: 'set-' + id, kind: 'set', label: SETS[id].name, color: '#7ee787', glyph: 'item', tip: `Every piece of ${SETS[id].name}` });
   for (let n = 2; n <= (s.floors?.reached || 1); n++) out.push({ id: 'floor-' + n, kind: 'floor', label: `F${n}`, color: '#9aa7b4', glyph: 'node', tip: `Reached floor ${n}` });
   for (const b of natives().filter((k) => won(s, k))) out.push({ id: 'lair-' + b, kind: 'lair', label: BOSSES[b].name, color: '#ff8a5c', glyph: 'kill', tip: `Beat ${BOSSES[b].name} in its lair` });
-  return out;
+  return out.concat(deedStickers(s)); // the few an achievement brings of its own (achievements.mjs)
+}
+
+// Any sticker by its id, earned or not (an achievement's reward shows it before you have it).
+export function stickerById(id) {
+  const m = String(id).match(/^(f|set|floor|lair)-(.+)$/);
+  if (DEED_STICKERS[id]) return { id, kind: 'deed', ...DEED_STICKERS[id] };
+  if (!m) return null;
+  const [, k, x] = m;
+  if (k === 'f' && FACTIONS[x]) return { id, kind: 'faction', label: FACTIONS[x].tiers[4], color: FACTIONS[x].color, glyph: id, tip: `${FACTIONS[x].tiers[4]} with ${FACTIONS[x].name}` };
+  if (k === 'set' && SETS[x]) return { id, kind: 'set', label: SETS[x].name, color: '#7ee787', glyph: 'item', tip: `Every piece of ${SETS[x].name}` };
+  if (k === 'floor') return { id, kind: 'floor', label: `F${x}`, color: '#9aa7b4', glyph: 'node', tip: `Reached floor ${x}` };
+  if (k === 'lair' && BOSSES[x]) return { id, kind: 'lair', label: BOSSES[x].name, color: '#ff8a5c', glyph: 'kill', tip: `Beat ${BOSSES[x].name} in its lair` };
+  return null;
 }
 
 // ---------- the card ----------
@@ -210,6 +259,7 @@ export function fingerOf(s, handle) {
       classes: Object.entries(s.hackers || {}).filter(([c, h]) => ARCHETYPES[c] && h.level >= 1).sort((a, b) => b[1].level - a[1].level).map(([c, h]) => ({ cls: c, level: h.level })),
       pieces: bestPieces(s), marks: FACTION_IDS.filter((f) => met(s, f)).map((f) => ({ f, tier: tierOf(rep(s, f)) })),
       stickers: stickersOf(s), since: p.since || null, where: 'on your server',
+      points: pointsOf(s), achievements: shownAchievements(s), got: s.achievements?.got || {}, // achievements.mjs: your points, and the few you pinned or earned last
     };
   }
   if (!PRESENCE.pool.includes(handle) || !(simOn(s) || (s.channel?.lines || []).some((l) => l.from === handle))) return null;
@@ -269,6 +319,8 @@ export function simCard(s, h) {
     stickers: (title?.faction ? [{ id: 'f-' + title.faction, kind: 'faction', label: FACTIONS[title.faction].tiers[4], color: FACTIONS[title.faction].color, glyph: 'f-' + title.faction, tip: `${FACTIONS[title.faction].tiers[4]} with ${FACTIONS[title.faction].name}` }] : [])
       .concat(p.level >= 12 ? [{ id: 'floor-2', kind: 'floor', label: 'F2', color: '#9aa7b4', glyph: 'node', tip: 'Reached floor 2' }] : []),
     since: null, where: here ? whereText(here.place) : 'offline',
+    // Their achievement points (a hacker of their level's, from the handle) and the one behind their title.
+    points: 5 * Math.round((p.level * 7 + hash(h, 90) * 60) / 5), achievements: title ? achievements().filter((a) => a.reward?.title === title.id).slice(0, 1) : [],
   };
 }
 
@@ -283,6 +335,11 @@ export function setPlan(s, text) {
 }
 export function setBanner(s, b) {
   if (typeof b === 'string' && !b.includes('\n') && BANNERS[b]) { myProfile(s).banner = b; return emit(s, 'info', `Banner: ${BANNERS[b].name}.`); }
+  if (typeof b === 'string' && REWARD_BANNERS[b]) { // an achievement's banner: yours once it's earned
+    if (!bannersOf(s).includes(b)) return warn(s, `${REWARD_BANNERS[b].name} comes with an achievement you haven't earned yet.`);
+    myProfile(s).banner = b;
+    return emit(s, 'info', `Banner: ${REWARD_BANNERS[b].name}.`);
+  }
   const c = checkBanner(b);
   if (c.error) return warn(s, c.error);
   myProfile(s).banner = c.rows;
@@ -314,8 +371,8 @@ export function profileCommand(s, raw) {
   }
   if (word === 'title') return rest ? setTitle(s, low) : emit(s, 'info', shownTitle(s) ? `Title: ${shownTitle(s).name}.` : 'No title shown.');
   if (word === 'banner') {
-    if (!rest || low === 'list') return emit(s, 'info', `Banners: ${BANNER_IDS.join(', ')}. banner <name>`);
-    if (!BANNERS[low]) return warn(s, `No banner called ${low}. banner list`);
+    if (!rest || low === 'list') return emit(s, 'info', `Banners: ${[...BANNER_IDS, ...bannersOf(s)].join(', ')}. banner <name>`);
+    if (!anyBanner(low)) return warn(s, `No banner called ${low}. banner list`);
     return setBanner(s, low);
   }
   return null;

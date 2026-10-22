@@ -736,9 +736,9 @@ The net talks to itself, like a MUD's gossip line or WoW's General chat. Every l
 
 Who you are to everyone else on the net, the way `finger` shows a Unix login. `finger` (or click your handle on the top bar) shows yours; `finger <handle>`, or a handle clicked in #net or People, shows theirs.
 
-- **The card:** handle and title; a **banner** (gamertag art, 4 rows of 24); the **plan** (one line); each class you've played with its emblem and level; your **best pieces** as their glyphs (faction pieces, then set pieces, then other uniques; four at most); a **mark** for each faction you've met, with its tier as four pips; your **stickers**; and when you've been on since. Explanations are tooltips only.
-- **Your editor**, beside your own card: **Banner** (12 presets: CRT, tape reel, circuit, moth, ghost, lantern, floppy, radio mast, carrier wave, cassette, keyboard, constellation; or draw your own in a 4×24 box: plain keyboard characters only, trailing spaces and blank rows trimmed; `banner <name>`, `banner list`), **Title** (the ones you've earned to pick from, *No title*, and the rest dimmed with their rule on hover; `titles`, `title <name>`, `title off`), **Plan** (60 characters; `plan <text>`, `plan clear`).
-- **Titles come from deeds** (checked every second; a new one is a quiet pager line that opens your card, and a line on #net; the first you earn shows until you pick):
+- **The card:** handle and title; a **banner** (gamertag art, 4 rows of 24); the **plan** (one line); each class you've played with its emblem and level; your **best pieces** as their glyphs (faction pieces, then set pieces, then other uniques; four at most); a **mark** for each faction you've met, with its tier as four pips; your **stickers**; your **achievement points** (a medal and the number) and the three achievements you pinned or earned last (each opens it); and when you've been on since. A simulated hacker's card has points for their level and the achievement behind their title. Explanations are tooltips only.
+- **Your editor**, beside your own card: **Banner** (12 presets: CRT, tape reel, circuit, moth, ghost, lantern, floppy, radio mast, carrier wave, cassette, keyboard, constellation; then the 5 an achievement brings, Crown, Vault door, Pandemonium, The grid and Bedrock, dim and locked with the achievement on hover until it's earned; or draw your own in a 4×24 box: plain keyboard characters only, trailing spaces and blank rows trimmed; `banner <name>`, `banner list`), **Title** (the ones you've earned to pick from, *No title*, and the rest dimmed with their rule on hover; `titles`, `title <name>`, `title off`), **Plan** (60 characters; `plan <text>`, `plan clear`).
+- **Titles come from deeds**, each the reward of an achievement (see *Achievements* below: the same deed earns the achievement and its title, and its pager line and #net line say both; the first title you earn shows until you pick):
 
 | Title | Earned by |
 |---|---|
@@ -759,9 +759,152 @@ Who you are to everyone else on the net, the way `finger` shows a Unix login. `f
 | of Halcyon, of GLASSJAW, of Kestrel, of LANTERN, of NULL CHOIR | that faction's top tier (75 rep: Preferred, Inner circle, Key account, Signal, Cantor) |
 | the Hammer, the Wall, the Quiet, the Conductor | a Breaker, Bastion, Infiltrator or Operator at level 50 |
 
-- **Stickers**, earned marks in their colours: one per faction at its top tier, per set completed, per floor reached from 2, per lair boss beaten. (Putting them on the rig's casing is a later step.)
+- **Stickers**, earned marks in their colours: one per faction at its top tier, per set completed, per floor reached from 2, per lair boss beaten, and four an achievement brings of its own (Chain, 0 exceptions, Solo, <5%). Each is the reward of an achievement, earned by the same deed. (Putting them on the rig's casing is a later step.)
 - **Simulated hackers have cards too**, worked out from their handle: a preset banner, a title a hacker of their level could have earned, a plan in their voice, their class and level (and a second class from level 6), a couple of real uniques at their level, two or three faction marks, where they are now. `finger` on them works while `online sim` is on, or while their lines are still in #net.
 - **Saves:** new fields on `s.profile` (banner, title, plan, titles, deeds) and `s.channel`, with defaults; an older save starts with none of them and needs no migration.
+
+## Achievements (achievements.mjs)
+
+What you've done, kept for good, the way World of Warcraft keeps it. One system for every cosmetic reward: each title and each sticker is the reward of an achievement (the same deed as before earns both), and a few achievements bring a banner preset for your card. Rewards are cosmetic only: no achievement changes a number in a fight, a drop or a price.
+
+- **90 achievements, 1,630 points**, in eight categories: Combat, Exploration, Collection, Factions, Classes (subclasses and the tier sets among them), Daemons, Co-op and Feats. Points are 5, 10, 25 or 50. Milestones count up with a bar (*64/100*); **Feats** are tricks done in one fight, or one visit. Three are **hidden**: *???* and a one-line hint until earned.
+- **Checked cheaply.** Every second (with the profile's deeds: invasion.mjs tickNetwork) only the ones not yet earned, each a look at state the game already keeps: the Codex's kills and bosses, the Collection, floors, standing, classes, daemons, the consortium, servers Mapped and taken over (and the log's takeovers and contracts delivered). What only a fight knows (an elite beaten, a crewmate beside you, your daemons' moves, a feat) is noted on the save as the fight ends (combat.mjs finish) and earned on the next tick. A loss counts for nothing and is never held against you. Nothing is time-limited and nothing can be missed for good: a lair boss, a set or a feat can always be done again.
+- **Earning one** is a quiet pager line (*Achievement: Uncrowned.*, no chirp, as a title was) that opens it, and a line on #net (*dana earned [Uncrowned] and is now Uncrowner.*, the name in amber with its rule on hover). Several at once share one line. No new sound.
+- **The page:** System → **Achievements** (a tab beside Settings, with your points; `achievements` opens it). The categories down the left, each with its count and a bar; *Summary* first (a tile a category, your last six, and the four nearest done). The category's achievements beside them, under their groups (Lairs, Floors, Sets, Tier sets): its points on a medal, its name, its bar and count while it's under way, what it brings (a title in its words, the sticker as it looks, the banner in miniature), and once earned the date and **Pin**. Earned rows are lit amber; the rest dim; a hidden one is *???* with its hint. Its rule is its tooltip (*Uncrowned: Beat RELAY-KING. 10 points. Rewards the title Uncrowner. Earned 22 Oct 2026.*). On a phone the categories wrap above the list.
+- **Pins:** `achieve pin <name>` (or **Pin** on its row) puts it on your card, up to three; `achieve unpin <name>`. Unpinned slots show your latest.
+- **An older save** gets everything it has already done when it loads, quietly: every title it holds and every sticker it shows keeps its achievement, nothing is lost, and the next tick says how many in one pager line (*Achievements: 23 earned from your record.*; nothing on #net). Contracts delivered and takeovers start from what the save holds.
+- **Saves:** `s.achievements` = `{ got: { id: when }, n: { elites, daemon, crew, contracts, takeovers }, flags: { feats done }, pins, seen }`, with defaults; a server's rooms note whether the visit that Mapped it rested (`mappedRest`). No SAVE_VERSION change.
+- `developer achieve <id|all|reset>` grants one, all, or starts over (developer mode only).
+
+**Combat** (17, 200 points)
+
+| Achievement | Earned by | Points | Reward |
+|---|---|---:|---|
+| Process Killer | Win 100 fights (progress) | 10 | — |
+| Long Uptime | Win a fight that ran 20 cycles or more | 10 | title *the Patient* |
+| Big Game | Beat 25 ◆ CREW elites (progress) | 10 | — |
+| Uncrowned | Beat RELAY-KING | 10 | title *Uncrowner* |
+| Repossessed | Beat REPO MAN | 10 | title *Repossessor* |
+| Dead Air (hidden) | Silence the HOLLOW CHOIR (until then: ???, *Something on the net is singing.*) | 25 | title *of the Last Note* |
+| Every Crown | Beat RELAY-KING, REPO MAN, THE FOREMAN, HEATSINK and COLDWALLET (progress) | 25 | banner Crown |
+| Lair-born · Lairs | Beat a lair boss | 10 | title *Lair-born* |
+| Bolt Cutter · Lairs | Beat DEADBOLT in its lair | 10 | sticker DEADBOLT |
+| Defused · Lairs | Beat TRIPMINE in its lair | 10 | sticker TRIPMINE |
+| Hash Collision · Lairs | Beat HASHLORD in its lair | 10 | sticker HASHLORD |
+| Port Closed · Lairs | Beat BACK ORIFICE in its lair | 10 | sticker BACK ORIFICE |
+| Out of Band · Lairs | Beat PATCH TUESDAY in its lair | 10 | sticker PATCH TUESDAY |
+| Spillway · Lairs | Beat FLOODWALL in its lair | 10 | sticker FLOODWALL |
+| Seven Years · Lairs | Beat MIRRORSHADE in its lair | 10 | sticker MIRRORSHADE |
+| Wake-up Call · Lairs | Beat SLEEPWALKER in its lair | 10 | sticker SLEEPWALKER |
+| Last Word · Lairs | Beat ECHOLALIA in its lair | 10 | sticker ECHOLALIA |
+
+**Exploration** (13, 235 points)
+
+| Achievement | Earned by | Points | Reward |
+|---|---|---:|---|
+| Cartographer | Map a server | 5 | — |
+| Mapper | Map 20 servers (progress) | 25 | title *Mapper* |
+| Change of Hands | Take over a server | 10 | — |
+| Landlord | Take over 10 servers (progress) | 25 | — |
+| Five Points | Find every faction hub (progress) | 10 | — |
+| Loose Ends | Finish 5 threads (progress) | 10 | — |
+| Down the Line · Floors | Reach floor 2, Backhaul | 5 | sticker F2 |
+| Stacked · Floors | Reach floor 3, The Stacks | 10 | sticker F3 |
+| Cold Open · Floors | Reach floor 4, Coldline | 10 | sticker F4 |
+| Core Sample · Floors | Reach floor 5, Deep Core | 25 | title *Deepwalker*, sticker F5 |
+| Ring Zero · Floors | Reach floor 6, Kernel Space | 25 | sticker F6 |
+| Sinker · Floors | Reach floor 7, The Sink | 25 | sticker F7 |
+| Rock Bottom · Floors | Reach floor 8, Bedrock | 50 | sticker F8 |
+
+**Collection** (23, 365 points)
+
+| Achievement | Earned by | Points | Reward |
+|---|---|---:|---|
+| Gold Star | Find a unique | 5 | — |
+| Collector | Find 25 uniques (progress) | 25 | title *Collector* |
+| Curator | Find 100 uniques (progress) | 50 | banner Vault door |
+| Assembled | Assemble a faction piece | 10 | title *the Assembler* |
+| Five of a Kind | Assemble all 5 faction pieces (progress) | 50 | — |
+| Matched | Find every piece of a set | 10 | title *the Matched* |
+| LOWLIGHT Kit · Sets | Find every piece of LOWLIGHT Kit (progress) | 10 | sticker LOWLIGHT Kit |
+| Boot Disk · Sets | Find every piece of Boot Disk (progress) | 10 | sticker Boot Disk |
+| Hive Mind · Sets | Find every piece of Hive Mind (progress) | 10 | sticker Hive Mind |
+| Kestrel Clearance · Sets | Find every piece of Kestrel Clearance (progress) | 10 | sticker Kestrel Clearance |
+| Night Shift · Sets | Find every piece of Night Shift (progress) | 10 | sticker Night Shift |
+| Choirbook · Sets | Find every piece of Choirbook (progress) | 10 | sticker Choirbook |
+| Patchwork · Sets | Find every piece of Patchwork (progress) | 10 | sticker Patchwork |
+| Lantern Route · Sets | Find every piece of Lantern Route (progress) | 10 | sticker Lantern Route |
+| Glass Ceiling · Sets | Find every piece of Glass Ceiling (progress) | 10 | sticker Glass Ceiling |
+| On-Call · Sets | Find every piece of On-Call (progress) | 10 | sticker On-Call |
+| Cold Storage · Sets | Find every piece of Cold Storage (progress) | 10 | sticker Cold Storage |
+| Overtime · Sets | Find every piece of Overtime (progress) | 10 | sticker Overtime |
+| Burst Buffer · Sets | Find every piece of Burst Buffer (progress) | 10 | sticker Burst Buffer |
+| Hot Spare · Sets | Find every piece of Hot Spare (progress) | 10 | sticker Hot Spare |
+| Mesh · Sets | Find every piece of Mesh (progress) | 25 | sticker Mesh |
+| Deep Archive · Sets | Find every piece of Deep Archive (progress) | 25 | sticker Deep Archive |
+| Bedrock · Sets | Find every piece of Bedrock (progress) | 25 | sticker Bedrock |
+
+**Factions** (9, 180 points)
+
+| Achievement | Earned by | Points | Reward |
+|---|---|---:|---|
+| Preferred Customer | Reach Preferred with Halcyon Mutual | 25 | title *of Halcyon*, sticker Preferred |
+| Inner Circle | Reach Inner circle with GLASSJAW | 25 | title *of GLASSJAW*, sticker Inner circle |
+| Key Account | Reach Key account with Kestrel Underwriting | 25 | title *of Kestrel*, sticker Key account |
+| On the Signal | Reach Signal with LANTERN | 25 | title *of LANTERN*, sticker Signal |
+| Cantor | Reach Cantor with NULL CHOIR | 25 | title *of NULL CHOIR*, sticker Cantor |
+| Courier's Bane | Intercept 10 couriers (progress) | 10 | title *Courier's Bane* |
+| Tracker | Collect 5 bounty hunts (progress) | 10 | title *Tracker* |
+| Feudbreaker | Win 5 feuds (progress) | 25 | title *Feudbreaker* |
+| On Retainer | Deliver 25 contracts (progress) | 10 | — |
+
+**Classes** (10, 330 points)
+
+| Achievement | Earned by | Points | Reward |
+|---|---|---:|---|
+| Specialist | Pick a subclass | 5 | — |
+| Polyglot | Take all 4 classes to level 10 (progress) | 25 | — |
+| Wrecking Ball | Take a Breaker to level 50 (progress) | 50 | title *the Hammer* |
+| Five Nines | Take a Bastion to level 50 (progress) | 50 | title *the Wall* |
+| Ghost Protocol | Take a Infiltrator to level 50 (progress) | 50 | title *the Quiet* |
+| Orchestrated | Take a Operator to level 50 (progress) | 50 | title *the Conductor* |
+| Wrecking Crew · Tier sets | Find every piece of Wrecking Crew (progress) | 25 | sticker Wrecking Crew |
+| Strongbox · Tier sets | Find every piece of Strongbox (progress) | 25 | sticker Strongbox |
+| Palemask · Tier sets | Find every piece of Palemask (progress) | 25 | sticker Palemask |
+| Load Balanced · Tier sets | Find every piece of Load Balanced (progress) | 25 | sticker Load Balanced |
+
+**Daemons** (5, 90 points)
+
+| Achievement | Earned by | Points | Reward |
+|---|---|---:|---|
+| Process Table | Find 10 daemons (progress) | 10 | — |
+| Pandemonium | Find every daemon (progress) | 50 | banner Pandemonium |
+| Full House | Slot 4 daemons at once | 10 | — |
+| Background Process | Your daemons act 500 times (progress) | 10 | — |
+| Unattended | Win a fight in which your daemons act 10 times | 10 | — |
+
+**Co-op** (5, 75 points)
+
+| Achievement | Earned by | Points | Reward |
+|---|---|---:|---|
+| Party Line | Win a fight with a crewmate beside you | 5 | — |
+| Full Stack | Win a fight with a crew of 3 beside you | 10 | — |
+| Drop-in | Win a fight a consortium member dropped into | 10 | — |
+| Farmhand | Beat the 3 crew bosses of KESSLER-FARM-00 (progress) | 25 | title *Farmhand* |
+| On the Grid | Reach Grid with a consortium of 12 servers (progress) | 25 | banner The grid |
+
+**Feats** (8, 155 points)
+
+| Achievement | Earned by | Points | Reward |
+|---|---|---:|---|
+| Untouchable | Win a fight of 8 cycles or more without taking damage | 10 | — |
+| Short Circuit | Interrupt 3 moves in one fight | 10 | — |
+| Open Book | Read every tell in a fight in which 4 or more were said | 25 | — |
+| Chain Reaction (hidden) | Break every part of a virus of 3 parts or more in one cycle (until then: ???, *Some things are better all at once.*) | 25 | sticker Chain |
+| Zero Exceptions | Win a fight with a routine you made that never threw an exception | 25 | sticker 0 exceptions |
+| Lone Wolf | Beat a ◆ CREW elite with no crew beside you | 25 | sticker Solo |
+| No Rest | Map a server on a visit in which you never rest | 25 | — |
+| By a Thread (hidden) | Win a fight with under 5% of your health left (until then: ???, *Closer than it looked.*) | 10 | sticker <5% |
 
 ## Consortium and the crew on a run (consortium.mjs, run.mjs)
 
@@ -1567,7 +1710,7 @@ The pager sits on the top bar, between the tabs and your meters (on narrower scr
 - Click it for **Comms**: the list, newest first (× on any entry clears just that one; Clear clears everything you have seen), filtered by All, Contracts (offers, contracts ready), Mail, Network (flags, relays, locations, invasions, swarms, breaches) or Money (retainer, pay, standing, the store). Each line has its sender, its age and a link to where it happened: the letter or contract in Mail, the server on the map, the Store, or Jack in for a breach. Opening it marks everything read.
 - **Handled** lines grey out and clear after 2 minutes: you handled one when you opened what it points at, or ticked it (✓). Lines with nothing to act on count as handled once seen. **Clear** removes everything you've seen.
 - An unanswered alert shakes the pager every 10 seconds until you open Comms. A **breach** makes the Integrity meter flash red with a pulsing BREACH badge, and pings every 15 seconds until it's dealt with.
-- It chirps for letters, offers, contracts ready, the retainer, flags, locations, invasions and dropped standing; pay for a delivery, rising standing, restocks, takeovers and a title earned only light it up. #net never touches it. While you're in a fight, only a breach chirps.
+- It chirps for letters, offers, contracts ready, the retainer, flags, locations, invasions and dropped standing; pay for a delivery, rising standing, restocks, takeovers and an achievement earned (a title with it) only light it up. #net never touches it. While you're in a fight, only a breach chirps.
 
 ## The monitor casing
 

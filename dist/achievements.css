@@ -1,0 +1,84 @@
+/* ---------- Achievements (achievements-view.mjs): System → Achievements, and their row on the profile card ----------
+   Amber is what you've earned and what it brings (loot and what you use); progress bars are amber; dim is not yet.
+   Teal stays yours alone, so nothing here is teal. The rule of each row is its tooltip. */
+.sys-tabs { margin-top: 0; }
+.sys-tabs .sys-pts { display: inline-flex; align-items: center; gap: 3px; margin-left: 8px; font: 600 11px var(--mono); letter-spacing: 0; color: var(--amber-soft); text-transform: none; }
+.sys-tabs .sys-pts .glyph { width: 12px; height: 12px; margin: 0; }
+
+.ach-page { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: var(--s5); align-items: start; }
+.ach-cats { display: grid; gap: var(--s2); position: sticky; top: 0; }
+.ach-cat, .ach-tile { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--s2) var(--s4); width: 100%; padding: 8px 10px; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: var(--r-card); font: 600 12px var(--mono); text-align: left; cursor: pointer; }
+.ach-cat span, .ach-tile span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ach-cat small, .ach-tile small { font: 600 11px var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.ach-cat .ach-bar, .ach-tile .ach-bar { grid-column: 1 / -1; }
+.ach-cat:hover, .ach-tile:hover { border-color: var(--line-strong); }
+.ach-cat[aria-pressed='true'] { border-color: var(--amber); color: var(--amber); box-shadow: inset 3px 0 0 var(--amber); }
+.ach-bar { display: block; height: 4px; background: var(--inset); border: 1px solid var(--line); border-radius: 2px; overflow: hidden; }
+.ach-bar b { display: block; height: 100%; background: var(--amber); }
+
+.ach-main { min-width: 0; }
+.ach-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s4); margin-bottom: var(--s4); }
+.ach-head h2 { margin: 0; }
+.ach-total { display: inline-flex; align-items: center; gap: 4px; color: var(--amber); font: 600 15px var(--mono); font-variant-numeric: tabular-nums; }
+.ach-total small { color: var(--dim); font-size: 12px; }
+.ach-total .glyph { width: 16px; height: 16px; margin: 0; }
+.ach-group { margin: var(--s5) 0 var(--s3); font: var(--kicker); letter-spacing: var(--kicker-track); text-transform: uppercase; color: var(--muted); }
+.ach-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--s3); }
+
+.ach-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s3); }
+.ach-row { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto auto; align-items: center; gap: var(--s3) var(--s5); padding: 8px 10px; background: var(--inset); border: 1px solid var(--line); border-radius: var(--r-card); }
+.ach-pts { display: grid; justify-items: center; gap: 1px; padding: 4px 0; color: var(--dim); border: 1px solid var(--line); border-radius: var(--r-btn); font: 600 12px var(--mono); font-variant-numeric: tabular-nums; }
+.ach-pts .glyph { width: 14px; height: 14px; margin: 0; }
+.ach-body { display: grid; gap: var(--s2); min-width: 0; }
+.ach-name { font: 600 13px var(--sans); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ach-prog { display: flex; align-items: center; gap: var(--s3); max-width: 280px; }
+.ach-prog .ach-bar { flex: 1; min-width: 60px; }
+.ach-prog small { font: 600 11px var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.ach-hint { font: italic 12px var(--sans); color: var(--dim); }
+.ach-row.hidden .ach-name { font-family: var(--mono); color: var(--dim); letter-spacing: 2px; }
+.ach-row.part .ach-name { color: var(--text); }
+.ach-row.got { border-color: var(--line-strong); background: color-mix(in srgb, var(--amber) 5%, var(--inset)); }
+.ach-row.got .ach-name { color: var(--bright); }
+.ach-row.got .ach-pts { color: var(--amber); border-color: var(--amber-deep); background: var(--amber-wash); }
+.ach-row.focus { border-color: var(--amber); box-shadow: 0 0 0 1px var(--amber), 0 0 14px rgba(241, 185, 47, 0.25); }
+
+.ach-rws { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: var(--s2) var(--s3); }
+.ach-rws.locked { opacity: 0.6; }
+.ach-rw-title { padding: 1px 6px; color: var(--amber); border: 1px dashed var(--amber-deep); border-radius: var(--r-btn); font: italic 600 11px var(--mono); white-space: nowrap; }
+.ach-rws .pf-sticker { font-size: 9.5px; }
+.ach-rw-banner { display: inline-flex; align-items: center; gap: 6px; padding: 2px 7px 2px 4px; background: var(--panel); border: 1px solid var(--amber-deep); border-radius: var(--r-btn); }
+.ach-rw-banner pre { margin: 0; font: 600 3px/1.1 var(--mono); color: var(--amber); }
+.ach-rw-banner b { font: 600 10px var(--mono); letter-spacing: 0.6px; text-transform: uppercase; color: var(--amber); white-space: nowrap; }
+.ach-side { display: grid; justify-items: end; gap: var(--s2); }
+.ach-side time { font: 11px var(--mono); color: var(--dim); white-space: nowrap; }
+.ach-pin { font: 600 10px var(--mono); letter-spacing: 0.5px; text-transform: uppercase; color: var(--dim); background: none; border: 1px solid var(--line); border-radius: var(--r-btn); padding: 1px 6px; cursor: pointer; }
+.ach-pin[aria-pressed='true'] { color: var(--amber); border-color: var(--amber-deep); }
+
+/* #net: an achievement's name, in brackets */
+.ch-ach { color: var(--amber); font-weight: 600; }
+
+/* the profile card's row: your points, and the ones you pinned or earned last */
+.pf-ach { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+.pf-pts { display: inline-flex; align-items: center; gap: 4px; color: var(--amber); font: 600 14px var(--mono); font-variant-numeric: tabular-nums; margin-right: 4px; }
+.pf-pts .glyph { width: 15px; height: 15px; margin: 0; }
+.pf-achs { display: flex; flex-wrap: wrap; gap: 4px 6px; min-width: 0; }
+.pf-ach-chip { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; padding: 2px 7px 2px 5px; color: var(--text); background: var(--inset); border: 1px solid var(--line); border-radius: var(--r-btn); font: 600 10.5px var(--mono); }
+.pf-ach-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pf-ach-chip .glyph { width: 11px; height: 11px; margin: 0; color: var(--amber); flex: none; }
+button.pf-ach-chip { cursor: pointer; }
+button.pf-ach-chip:hover { border-color: var(--line-strong); color: var(--bright); }
+/* a reward banner not earned yet, in the banner editor */
+.pf-preset.locked { position: relative; cursor: help; border-style: dashed; }
+.pf-preset.locked pre { color: var(--dim); opacity: 0.6; }
+.pf-preset.locked .glyph { position: absolute; right: 4px; top: 4px; width: 10px; height: 10px; margin: 0; color: var(--dim); }
+
+@media (max-width: 900px) {
+  .ach-page { grid-template-columns: minmax(0, 1fr); }
+  .ach-cats { position: static; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+}
+@media (max-width: 560px) {
+  .ach-row { grid-template-columns: 36px minmax(0, 1fr); }
+  .ach-rws, .ach-side { grid-column: 2; justify-content: flex-start; justify-items: start; }
+  .ach-side { grid-template-columns: auto auto; align-items: center; gap: var(--s4); }
+  .ach-name { white-space: normal; }
+}

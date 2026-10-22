@@ -14,6 +14,7 @@ import { FACTIONS, FACTION_IDS, hubFound, rep, REP_TIERS } from './factions.mjs'
 import { online, simOn } from './presence.mjs';
 import { handleOf, shownTitle, simTitle, voice, worldUniques, hash, titleById } from './profile.mjs';
 import { pieceOf } from './faction-gear.mjs';
+import { achById } from './achievements.mjs';
 
 export const CHANNEL = { keep: 80, everyMs: [20000, 90000], reactMs: [3000, 12000], say: 120, liveMs: 5 * 60000, feuds: 4 };
 const clock = () => hooks.now?.() ?? Date.now();
@@ -135,6 +136,14 @@ const NEWS = {
     reactOne(s, 0.5, () => `${t.name}, nice`);
     return post(s, { kind: 'feat', from: you(s), title: t.name, text: `is now ${t.name}.` });
   },
+  // An achievement (achievements.mjs): its name in brackets, and the title it brought. Your record on an old save says nothing.
+  achievement: (s, e) => {
+    const xs = (e.achievements || []).map(achById).filter(Boolean);
+    if (!xs.length || e.record) return null;
+    const a = xs.at(-1), t = titleById(e.titles?.at(-1));
+    reactOne(s, 0.5, (h) => [`gz on [${a.name}]`, `[${a.name}]! nice`, `grats ${you(s)}`][Math.floor(hash(h, 9) * 3)], { achs: [a.name] });
+    return post(s, { kind: 'feat', from: you(s), title: t?.name || shownTitle(s)?.name || null, text: t ? `earned [${a.name}] and is now ${t.name}.` : `earned [${a.name}].`, achs: [a.name] });
+  },
 };
 // A card that ended: a feud's result names its real winner (and who lost twice running), a hunt that got away, a
 // bounty or courier you took.
@@ -251,7 +260,7 @@ export function tickChannel(s, dt) {
   const due = c.queue.filter((q) => q.in <= 0);
   c.queue = c.queue.filter((q) => q.in > 0);
   const on = new Set(sims(s).map((x) => x.handle));
-  for (const q of due) if (on.has(q.from)) simSay(s, q.from, q.text, q.items ? { items: q.items } : {});
+  for (const q of due) if (on.has(q.from)) simSay(s, q.from, q.text, { ...(q.items ? { items: q.items } : {}), ...(q.achs ? { achs: q.achs } : {}) });
   if (c.next == null) c.next = between(s, CHANNEL.everyMs);
   c.next -= dt;
   if (c.next > 0) return;

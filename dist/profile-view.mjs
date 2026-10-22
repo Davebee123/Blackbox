@@ -8,10 +8,18 @@ import { FACTIONS } from './factions.mjs';
 import { channelOf, muted } from './channel.mjs';
 import { fingerOf, BANNERS, BANNER_IDS, titles, myProfile, shownTitle, PROFILE } from './profile.mjs';
 import { online, simOn, isFriend } from './presence.mjs';
+import { achievements, totalPoints, bannersOf } from './achievements.mjs';
+import { REWARD_BANNERS, REWARD_BANNER_IDS } from './profile.mjs';
 
 const hhmm = (t) => { const d = new Date(t); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
 // [Item] in a line: a unique's name in its gold, the rest as written.
-const linked = (l) => esc(l.text).replace(/\[([^\]]+)\]/g, (m, name) => ((l.items || []).includes(name.replace(/&#39;/g, "'").replace(/&amp;/g, '&')) ? `<b class="ch-item" title="Unique">[${name}]</b>` : m));
+// [Achievement] (achievements.mjs): its name in amber, its rule on hover.
+const linked = (l) => esc(l.text).replace(/\[([^\]]+)\]/g, (m, name) => {
+  const raw = name.replace(/&#39;/g, "'").replace(/&amp;/g, '&');
+  if ((l.items || []).includes(raw)) return `<b class="ch-item" title="Unique">[${name}]</b>`;
+  const a = (l.achs || []).includes(raw) && achievements().find((x) => x.name === raw);
+  return a ? `<b class="ch-ach" title="${esc(`${a.name}: ${a.rule}`)}">[${name}]</b>` : m;
+});
 // Who said it: a hacker's handle opens their card; a contact wears its faction's mark and colour; the wire is the wire.
 function who(s, l) {
   if (l.kind === 'wire') return '<span class="ch-from wire">wire</span>';
@@ -31,6 +39,17 @@ export const channelLinesMarkup = (s) => channelOf(s).lines.map((l) => lineMarku
 export const channelHead = (s) => `<span class="ch-name">#net</span><small>${simOn(s) ? `${online(s).length} online · simulated` : 'the wire and the hubs'}</small><span class="p-acts"><button type="button" class="act dim" data-run="channel ${muted(s) ? 'on' : 'off'}" title="${muted(s) ? 'Show #net\'s line over the prompt' : 'Hide #net\'s line over the prompt'}">${muted(s) ? 'Unmute' : 'Mute'}</button><button type="button" class="act" data-chan-close>Close</button></span>`;
 
 // ---------- the card ----------
+// Achievement points, then the few you pinned or earned last (achievements.mjs). Yours open the achievement.
+const dmy = (t) => new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+function achRow(f) {
+  if (f.points == null) return '';
+  const when = f.you ? f.got || {} : {};
+  const chip = (a) => {
+    const tip = `${a.name}: ${a.rule}${when[a.id] ? ` Earned ${dmy(when[a.id])}.` : ''}`;
+    return f.you ? `<button type="button" class="pf-ach-chip" data-go="achieve:${esc(a.id)}" title="${esc(tip)}">${glyph('medal')}<span>${esc(a.name)}</span></button>` : `<span class="pf-ach-chip" title="${esc(tip)}">${glyph('medal')}<span>${esc(a.name)}</span></span>`;
+  };
+  return `<div class="pf-ach"><span class="pf-pts" title="${esc(`Achievement points: ${f.points}${f.you ? ` of ${totalPoints()}` : ''}`)}">${glyph('medal')}<b>${f.points}</b></span>${(f.achievements || []).length ? `<span class="pf-achs">${f.achievements.map(chip).join('')}</span>` : ''}</div>`;
+}
 const tierPips = (i) => `<span class="pf-pips" aria-hidden="true">${[1, 2, 3, 4].map((k) => `<i class="${k <= i ? 'on' : ''}"></i>`).join('')}</span>`;
 function cardBody(s, f) {
   const classes = f.classes.map((c) => `<figure class="pf-class" title="${esc(ARCHETYPES[c.cls].name)} level ${c.level}"><pre aria-hidden="true">${esc(EMBLEMS[c.cls].join('\n'))}</pre><figcaption>${esc(ARCHETYPES[c.cls].name)} <b>${c.level}</b></figcaption></figure>`).join('');
@@ -44,6 +63,7 @@ function cardBody(s, f) {
     <div class="pf-classes">${classes}</div>
     ${pieces || marks ? `<div class="pf-row">${pieces ? `<div class="pf-pieces">${pieces}</div>` : ''}${marks ? `<div class="pf-marks">${marks}</div>` : ''}</div>` : ''}
     ${stickers ? `<div class="pf-stickers">${stickers}</div>` : ''}
+    ${achRow(f)}
     <footer class="pf-foot"><span>${esc(since)}</span>${f.you ? '' : isFriend(s, f.handle) ? '<span class="tag">friend</span>' : `<button type="button" class="act" data-run="friend add ${esc(f.handle)}">Add friend</button>`}</footer>`;
 }
 // The editor beside your own card: banner (a preset, or your own drawing), title, plan.
@@ -52,7 +72,12 @@ function editor(s, tab, draft, err) {
   const tabs = [['banner', 'Banner'], ['title', 'Title'], ['plan', 'Plan']].map(([k, l]) => `<button type="button" data-pf-tab="${k}" aria-pressed="${tab === k}">${l}</button>`).join('');
   let body = '';
   if (tab === 'banner') {
-    body = `<div class="pf-presets">${BANNER_IDS.map((id) => `<button type="button" class="pf-preset" data-run="banner ${id}" aria-pressed="${cur === id}" title="${esc(BANNERS[id].name)}"><pre aria-hidden="true">${esc(BANNERS[id].rows.join('\n'))}</pre></button>`).join('')}</div>
+    // The twelve, then the achievements' five: earned ones to pick, the rest dim with the achievement on hover.
+    const mine = bannersOf(s), from = (id) => achievements().find((a) => a.reward?.banner === id);
+    const extra = REWARD_BANNER_IDS.map((id) => (mine.includes(id)
+      ? `<button type="button" class="pf-preset" data-run="banner ${id}" aria-pressed="${cur === id}" title="${esc(`${REWARD_BANNERS[id].name}: from ${from(id)?.name}.`)}"><pre aria-hidden="true">${esc(REWARD_BANNERS[id].rows.join('\n'))}</pre></button>`
+      : `<span class="pf-preset locked" title="${esc(`${REWARD_BANNERS[id].name}: comes with ${from(id)?.hidden ? 'a hidden achievement' : from(id)?.name}.`)}"><pre aria-hidden="true">${esc(REWARD_BANNERS[id].rows.join('\n'))}</pre>${glyph('lock')}</span>`)).join('');
+    body = `<div class="pf-presets">${BANNER_IDS.map((id) => `<button type="button" class="pf-preset" data-run="banner ${id}" aria-pressed="${cur === id}" title="${esc(BANNERS[id].name)}"><pre aria-hidden="true">${esc(BANNERS[id].rows.join('\n'))}</pre></button>`).join('')}${extra}</div>
       <div class="pf-draw"><label for="pf-draw-box">Your own <small>${PROFILE.rows} × ${PROFILE.cols}</small></label><textarea id="pf-draw-box" class="pf-draw-box" rows="${PROFILE.rows}" cols="${PROFILE.cols}" spellcheck="false" autocapitalize="off" wrap="off">${esc(draft ?? (Array.isArray(p.banner) ? p.banner.join('\n') : ''))}</textarea>
       <div class="pf-draw-row">${err ? `<span class="pf-err">${esc(err)}</span>` : '<span></span>'}<button type="button" class="btn small primary" data-pf-draw>Use this</button></div></div>`;
   }

@@ -20,6 +20,7 @@ import { deal, developerChain, CARDS as EVENT_CARDS } from './events.mjs';
 import { crewCommand } from './crew.mjs';
 import { presenceCommand, at, simOn, PRESENCE, online } from './presence.mjs';
 import { profileCommand } from './profile.mjs';
+import { achieveCommand, developerAchieve } from './achievements.mjs';
 import { say, muted } from './channel.mjs';
 import { consortiumCommand, isGround, arrive, memberServers } from './consortium.mjs';
 import { isLive, joinCost, liveCount, memoryCap, memoryCommand } from './memory.mjs';
@@ -750,6 +751,8 @@ export function play(s, input) {
   if (word === 'consortium' || word === 'guild') return consortiumCommand(s, input.trim().replace(/^\S+\s*/, '')); // consortium.mjs (as typed: a name keeps its capitals)
   if (['online', 'who', 'friends', 'friend'].includes(word)) { const first = s.serial; presenceCommand(s, word, rest, emit, warn); return since(s, first); } // presence.mjs
   if (/^(finger|plan|titles?|banner)$/.test(word)) { const first = s.serial; profileCommand(s, input); return since(s, first); } // profile.mjs (as typed: a plan keeps its capitals)
+  if (word === 'achievements' || word === 'achieve') { const first = s.serial; achieveCommand(s, text); return since(s, first); } // achievements.mjs
+  if (/^developer achieve \S+$/.test(text)) { const first = s.serial; developerAchieve(s, text.split(' ')[2]); return since(s, first); }
   if (word === 'say' || input.trim().startsWith("'")) { const first = s.serial, r = say(s, input.trim().replace(/^(say\b|')\s*/i, '')); if (r.error) warn(s, r.error); return since(s, first); } // #net (channel.mjs)
   if (text === 'channel on' || text === 'channel off') { const first = s.serial; s.settings.channel = text === 'channel on'; emit(s, 'info', `#net ${muted(s) ? 'muted: its line is gone from the bottom of the screen' : 'on'}.`); return since(s, first); }
   if (text === 'jack in' || text === 'defend' || text === 'intercept') return jackIn(s, text === 'intercept' ? 'intercept' : 'jack in');

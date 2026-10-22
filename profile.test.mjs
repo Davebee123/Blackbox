@@ -53,9 +53,11 @@ test('titles come only from their deeds, one pager line, and you pick the one to
   assert.deepEqual(earned(s), ['patient']);
   const ev = s.logs.filter((e) => e.id > first);
   assert.equal(ev.length, 1);
-  assert.equal(ev[0].type, 'title');
+  assert.equal(ev[0].type, 'achievement', 'a title is an achievement\'s reward (achievements.mjs): its line says the achievement');
+  assert.deepEqual([ev[0].achievements, ev[0].titles], [['c-patient'], ['patient']]);
   const [c] = logComms(s, ev);
-  assert.equal(c.label, 'Title');
+  assert.equal(c.label, 'Achievement');
+  assert.equal(c.go, 'achieve:c-patient', 'it opens the achievement');
   assert.equal(c.beep, false, 'a small pager moment: a line, no beep');
   assert.equal(shownTitle(s).id, 'patient', 'shown until you pick another');
   tickProfile(s);
