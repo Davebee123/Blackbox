@@ -131,7 +131,8 @@ export function plan(events, ctx = {}, { stagger = true, start = 0 } = {}) {
   }
   const gap = stagger ? gapFor(beats) : 0;
   const delays = new Map();
-  let beat = -1, at = 0;
+  // An event before the batch's first number (a command resolving, a hit all on ◆) waits for the batch's start too.
+  let beat = -1, at = stagger ? Math.round(start) : 0;
   for (const e of events) {
     const f = floats.get(e.id);
     if (f) {

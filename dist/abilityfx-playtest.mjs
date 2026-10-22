@@ -1,7 +1,7 @@
 // The ability effects playtest (?playtest=fx): a paused fight with a few parts, and a panel of buttons that fire every
 // effect in abilityfx.mjs's table on a part, grouped by class and subclass, at each Screen effects level, with Motion on
-// or off, as a plain hit, a crit or a hit on ◆, small or big, from its key in the tray or from your bar. For reviewing
-// the look without a real fight. Developer only: nothing here is saved (a playtest never is), and the panel sits beside
+// or off, as a plain hit, a crit or a hit on ◆, small or big, from its key in the tray (or, to preview the fallback, as
+// if its key weren't on screen: from your bar). For reviewing the look without a real fight. Developer only: nothing here is saved (a playtest never is), and the panel sits beside
 // the board, never on it. &cls= picks the class whose tray shows (its keys are where a key's effect starts; an ability
 // that isn't on this tray starts from its first key instead, and the panel says so).
 
@@ -26,10 +26,10 @@ export function groupsOf() {
 }
 
 // api: parts() → [{ id, name }]; level() / setLevel(level) (the Screen effects level: off, subtle, medium, bold);
-// motion() / setMotion(on); fire(key, partId, { power, crit, result, origin }) → 'fx' | 'stand-in' | 'plain' | 'none'
+// motion() / setMotion(on); fire(key, partId, { power, crit, result, hidden }) → 'fx' | 'stand-in' | 'plain' | 'none'
 // (what played: 'stand-in' when a key's effect started from another key); plain(partId, { result }) the plain strike.
 export function mountFxPlaytest(api) {
-  const ui = { target: null, hit: 'hit', power: 0.3, origin: 'key', said: '' };
+  const ui = { target: null, hit: 'hit', power: 0.3, key: 'shown', said: '' };
   const panel = document.createElement('aside');
   panel.id = 'fx-playtest';
   panel.setAttribute('aria-label', 'Ability effects playtest');
@@ -42,7 +42,7 @@ export function mountFxPlaytest(api) {
     panel.innerHTML = `<h2>Ability effects <small>?playtest=fx</small></h2>
       ${seg('Screen effects', SFX.levels.map((l) => [l, l]), api.level())}
       ${seg('Motion', [['on', 'on'], ['off', 'off']], api.motion() ? 'on' : 'off')}
-      ${seg('From', [['key', 'its key'], ['bar', 'your bar']], ui.origin)}
+      ${seg('Its key', [['shown', 'on screen'], ['hidden', 'not on screen (from your bar)']], ui.key)}
       ${seg('Hit', [['hit', 'hit'], ['crit', 'crit'], ['chit', 'on ◆']], ui.hit)}
       ${seg('Size', [['0.15', 'small'], ['0.4', 'medium'], ['0.9', 'big']], ui.power)}
       ${seg('Part', parts.map((p) => [p.id, p.name]), ui.target)}
@@ -53,7 +53,7 @@ export function mountFxPlaytest(api) {
   }
   const say = (t) => { ui.said = t; const p = panel.querySelector('.fxp-said'); if (p) p.textContent = t; };
   function fire(key) {
-    const o = { power: ui.power, crit: ui.hit === 'crit', result: ui.hit, origin: ui.origin };
+    const o = { power: ui.power, crit: ui.hit === 'crit', result: ui.hit, hidden: ui.key === 'hidden' };
     if (!key) { api.plain(ui.target, o); return say('No recipe: the plain hit effect (hitfx.mjs).'); }
     const what = api.fire(key, ui.target, o), name = RECIPES[key].label;
     say(what === 'fx' ? `${name}: played.` : what === 'stand-in' ? `${name}: played, from the tray's first key (it isn't on this class's tray).` : what === 'plain' ? `${name}: no room here, the plain hit effect.` : `${name}: nothing at Screen effects ${api.level()}${api.motion() ? '' : ', Motion off'} (as in a fight).`);
@@ -67,7 +67,7 @@ export function mountFxPlaytest(api) {
       const k = b.dataset.fxp, v = b.dataset.v;
       if (k === 'Screen effects') api.setLevel(v);
       else if (k === 'Motion') api.setMotion(v === 'on');
-      else if (k === 'From') ui.origin = v;
+      else if (k === 'Its key') ui.key = v;
       else if (k === 'Hit') ui.hit = v;
       else if (k === 'Size') ui.power = Number(v);
       else if (k === 'Part') ui.target = v;
