@@ -51,6 +51,13 @@ export function createHitFx(board, { canMove = () => true } = {}) {
     }
     // A miss: a big MISS stamped across the part, so you can't overlook it.
     if (result === 'miss') add(`fx-miss ${kind}`, { left: n.l + n.w * 0.5 + 'px', top: n.t + n.h / 2 + 'px' }, 'MISS', 1100);
+    jolt(row, result);
+  }
+  // The part's name brightens as a hit lands (light only, it never moves): a strike's, or an ability effect's
+  // (abilityfx.mjs) when it lands.
+  function jolt(row, result = 'hit') {
+    const name = row?.isConnected && canMove() && row.querySelector('.bname');
+    if (!name) return;
     name.classList.remove('fx-jolt', 'crit', 'miss'); void name.offsetWidth;
     name.classList.add('fx-jolt'); if (result === 'crit' || result === 'miss') name.classList.add(result);
     setTimeout(() => name.classList.remove('fx-jolt', 'crit', 'miss'), 500);
@@ -69,5 +76,5 @@ export function createHitFx(board, { canMove = () => true } = {}) {
       }, Math.random() < 0.5 ? '0' : '1', 1700);
     }
   }
-  return { strike, dissolve };
+  return { strike, dissolve, jolt };
 }

@@ -26,6 +26,8 @@ import { powerOn } from './poweron.mjs';
 import { autoPay } from './salvage.mjs';
 import { relockLeft } from './rogue.mjs';
 import { createHitFx } from './hitfx.mjs';
+import { createAbilityFx, keyOf, recipeOf, levelOf as afxLevel } from './abilityfx.mjs';
+import { mountFxPlaytest } from './abilityfx-playtest.mjs';
 import { plan as dmgPlan, queueAfter, absorbOf, armorFloat, missFloat } from './dmgfx.mjs';
 import { recapMarkup } from './recap.mjs';
 import { createLash } from './lash.mjs';
@@ -165,6 +167,8 @@ function load() {
     // ?playtest=part:<id> (docs/parts-plan.md): a fight with that basic or third part, at the level it opens (or &level=).
     const pid = playtest.startsWith('part:') ? playtest.slice(5) : null, home = pid && Object.entries(FAMILIES).find(([, f]) => f.parts.some((x) => x.id === pid));
     if (home) { const spec = home[1].parts.find((x) => x.id === pid), L = lv >= 1 && lv <= 50 ? lv : Math.max(spec.from || 1, 3); s.hackers = { [s.loadout.archetype]: { level: L, xp: 0 } }; selectEncounter(s, 'random', seed || 1, { level: L, family: home[0], mutation: null, ...(spec.pool === 'third' ? { genes: partGenesFor(home[0], spec, L), basic: 'pulse' } : { basic: pid }) }); }
+    // ?playtest=fx (abilityfx-playtest.mjs): the ability effects playtest, on a three-part fight (&family=, &seed=, &level=).
+    else if (playtest === 'fx') { const L = lv >= 1 && lv <= 50 ? lv : 12; s.hackers = { [s.loadout.archetype]: { level: L, xp: 0 } }; selectEncounter(s, 'random', seed || 8, { level: L, family: /^[a-z]+$/.test(fam || '') ? fam : 'ransomware', mutation: null }); }
     else if (playtest === 'random' && (fam || seed)) selectEncounter(s, 'random', seed || 1, { ...(lv >= 1 && lv <= 50 ? { level: lv } : {}), ...(/^[a-z]+$/.test(fam || '') ? { family: fam } : {}), mutation: null });
     else command(s, `encounter ${/^[a-z]+$/.test(playtest) ? playtest : 'cryptjack'}`); // any fixture or strain
     if (!s.encounter) command(s, 'encounter cryptjack');
@@ -218,11 +222,38 @@ const partRow = (id) => document.querySelector(`#board .bpart[data-target="${CSS
 const initials = (h) => (h || '').replace(/[^a-z0-9]/gi, '').slice(0, 2).toUpperCase() || 'YO'; // as on the board (view.mjs)
 // Only commands: burns, helpers and other ticks ("Inject: …") don't strike. Crack's chits do.
 const ticked = (e) => !e.absorbed && /^[A-Z][\w-]*( [A-Z][\w-]*)*: /.test(e.message) && !e.message.startsWith('Crack: '); // absorbed: your command's own hit on a ◆ (it names the skill)
+// Ability effects (abilityfx.mjs): an ability with a row in its table plays its own effect in place of the strike
+// (Ban's hammer, Inject's burn, Ping's wave), landing as its number does; one with none keeps the strike. Screen
+// effects subtle or medium: lighter; off or Motion off: none.
+const abilityfx = createAbilityFx(document.getElementById('board'), { canMove: () => canMove(), level: () => fxLevel() });
+// The class a shooter plays: yours, or a crewmate's (crew.mjs), for key 1's name (Bash, Ban, Poke, Ping).
+const shooterClass = (who) => { if (!who) return classOf(campaign); const m = matesOf(campaign).find((x) => x.who === who); return m ? classOf(m.st) : null; };
+// One ability effect: on the part's row (or your side), its impact on its number's beat. false if it didn't play.
+function abilityStrike(key, e, { result = 'hit', delay = 0, fallback = null } = {}) {
+  const R = recipeOf(key);
+  if (!R || (R.on === 'you' && e.who)) return false; // a crewmate's shield is on their side, not yours
+  const pm = (e.target && part(campaign, e.target)?.max) || 50, power = e.amount ? Math.min(1, e.amount / pm) : 0.3;
+  const opts = { power, crit: result === 'crit', result, kind: e.who ? 'crew' : 'you', onImpact: R.on === 'you' ? null : () => hitfx.jolt(partRow(e.target), result) };
+  // No room for it (a narrow board): the strike, on the number's beat.
+  pendingStrikes.push(() => later(Math.max(0, delay - R.impact), () => abilityfx.play(key, R.on === 'you' ? null : partRow(e.target), opts) || (fallback && later(Math.min(R.impact, delay), fallback))));
+  return true;
+}
 function strikes(events, delayOf = () => 0) {
   if (module !== 'combat' || fxLevel() === 'minimal') return;
   const hits = new Map(); // who>part → the strongest result this batch
   const rank = { miss: 0, hit: 1, crit: 2, chit: 3 };
+  const afxOn = !!afxLevel({ level: fxLevel(), motion: canMove() });
+  const fxKey = new Map(); // who>part → the ability effect your command's hit plays there (abilityfx.mjs)
+  const once = new Set();
   for (const e of events) {
+    const k = afxOn ? keyOf(e, shooterClass(e.who)) : null;
+    if (k && recipeOf(k)) {
+      // A command's hit takes its strike's place; a cast with no hit (a burn, a helper, a shield), a burn's tick or a
+      // hit that names its skill (Detonate) plays on its own.
+      const own = (e.type === 'damage' && e.skill) || (e.type === 'armor' && e.absorbed);
+      if (own && e.target) fxKey.set((e.who || 'you') + '>' + e.target, k);
+      else if (!once.has(k + '>' + (e.who || '') + '>' + (e.target || ''))) { once.add(k + '>' + (e.who || '') + '>' + (e.target || '')); abilityStrike(k, e, { result: e.crit ? 'crit' : 'hit', delay: delayOf(e) }); }
+    }
     const result = e.type === 'damage' ? (e.crit ? 'crit' : 'hit') : e.type === 'miss' ? 'miss' : e.type === 'armor' ? 'chit' : null;
     if (!result || !e.target || ticked(e)) continue;
     const key = (e.who || 'you') + '>' + e.target, was = hits.get(key);
@@ -230,7 +261,11 @@ function strikes(events, delayOf = () => 0) {
   }
   // Played once the board has redrawn (rows can shift as commands change), from render().
   // Each lands with its own number (dmgfx.mjs: a cycle's hits come one after another).
-  for (const { e, result } of hits.values()) pendingStrikes.push(() => later(delayOf(e), () => hitfx.strike(partRow(e.target), { who: e.who || 'you', initials: initials(e.who || campaign.profile?.handle || 'you'), kind: e.who ? 'crew' : 'you', result })));
+  for (const [key, { e, result }] of hits) {
+    const strike = () => hitfx.strike(partRow(e.target), { who: e.who || 'you', initials: initials(e.who || campaign.profile?.handle || 'you'), kind: e.who ? 'crew' : 'you', result });
+    if (result !== 'miss' && fxKey.has(key) && abilityStrike(fxKey.get(key), e, { result, delay: delayOf(e), fallback: strike })) continue;
+    pendingStrikes.push(() => later(delayOf(e), strike));
+  }
 }
 const later = (ms, f) => (ms > 0 ? setTimeout(f, ms) : f());
 let pendingStrikes = [];
@@ -3227,3 +3262,24 @@ document.addEventListener('pointerover', (e) => {
   document.querySelectorAll('#board .bpart.linked').forEach((r) => { if (!ids.includes(r.dataset.target)) r.classList.remove('linked'); });
   for (const id of ids) document.querySelector(`#board .bpart[data-target="${CSS.escape(id)}"]`)?.classList.add('linked');
 });
+
+// The ability effects playtest (?playtest=fx, abilityfx-playtest.mjs): its panel fires each effect on a part of the
+// paused fight, through the same gate a fight's hits go through (Screen effects, Motion), falling back the same way.
+if (playtest === 'fx') {
+  const fxRow = (id) => partRow(id) || document.querySelector('#board .bpart');
+  mountFxPlaytest({
+    parts: () => (campaign.encounter?.virus?.parts || []).filter((p) => alive(p)).map((p) => ({ id: p.id, name: p.name })),
+    level: () => campaign.settings.screenFx || 'medium',
+    setLevel: (l) => { screenFxCommand(campaign, `screen fx ${l}`); dirty = true; },
+    motion: () => !!campaign.settings.motion,
+    setMotion: (on) => { campaign.settings.motion = on; dirty = true; },
+    plain: (id, { result }) => { if (fxLevel() !== 'minimal') hitfx.strike(fxRow(id), { kind: 'you', result }); },
+    fire: (key, id, { power, crit, result }) => {
+      if (fxLevel() === 'minimal' || !canMove()) return 'none';
+      const R = recipeOf(key), row = R?.on === 'you' ? null : fxRow(id);
+      if (abilityfx.play(key, row, { power, crit, result, onImpact: row ? () => hitfx.jolt(row, result) : null })) return 'fx';
+      if (row) setTimeout(() => hitfx.strike(row, { kind: 'you', result }), R?.impact || 0);
+      return 'plain';
+    },
+  });
+}
