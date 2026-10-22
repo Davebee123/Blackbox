@@ -2102,7 +2102,7 @@ body:has(.silk-stash .silk-tile[data-kind="implant"]:hover) .silk-fp[data-kind="
 @keyframes fx-jolt-miss { 0%, 100% { opacity: 1; } 40% { opacity: 0.6; } }
 /* Ability effects (abilityfx.mjs), on one layer over the whole page, fixed like #lash and placed at the board's corner
    and scaled with it (so its pixels are the board's): ASCII pieces and characters that travel from the ability's key in
-   the tray or from your bar to a part's name cell (for a moment: each is gone within about a second) or play on your
+   the tray (your bar when it isn't on screen) to a part's name cell (for a moment: each is gone within about a second) or play on your
    own bar. Text only, no background, no input. Teal: you; a crit gold-white; a hit on ◆ steel; a crewmate's violet
    (as .fx-bit.crew). Each piece is placed and moved by its own animation (layout() in abilityfx.mjs), so its box is
    exact: line-height and character width are the module's CW and LH. */

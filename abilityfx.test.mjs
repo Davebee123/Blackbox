@@ -1,10 +1,10 @@
 // Ability effects (dist/abilityfx.mjs, its table dist/abilityfx-table.mjs): every ability a player can fire has a row
-// (DELIBERATE lists any left on the plain strike), the effect starts at the ability's key in the tray when it was fired
-// from there and at your bar otherwise, travels to where it plays and lands with its number. Nothing plays at Screen
+// (DELIBERATE lists any left on the plain strike), the effect starts at the ability's key in the tray however it was
+// fired (at your bar only when that key isn't on screen), travels to where it plays and lands with its number. Nothing plays at Screen
 // effects off or with Motion off, the layer takes no input and is hidden from screen readers, every piece is gone
 // within CAP (1.2 s, travel included) and ends unseen, a piece may cross a part's name, ◆ or Integrity only for its own
 // moment, it never stops over a key's label or your bar's numbers, and your bar's effects never touch a part's name.
-// Checked on a roomy board and a dense one, from the key and from the bar.
+// Checked on a roomy board and a dense one, from the key and with no key on screen (from your bar).
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -45,10 +45,10 @@ function* shown(el, steps = 40) {
 // Every recipe on every board, every part, from the key and from the bar, at both levels, as a hit, a crit, a hit on ◆
 // and a crewmate's.
 const variants = (fn, { seeds = [1, 7] } = {}) => {
-  for (const [name, board] of [['roomy', roomy()], ['dense', dense()]]) for (let i = 0; i < board.parts.length; i++) for (const origin of ['key', 'bar']) {
-    const g = geoOf(board, i);
+  for (const [name, board] of [['roomy', roomy()], ['dense', dense()]]) for (let i = 0; i < board.parts.length; i++) for (const origin of ['key', 'no key']) {
+    const g = geoOf(board, i, origin === 'key' ? tray[3] : null);
     for (const [k, r] of Object.entries(RECIPES)) for (const lvl of ['full', 'calm']) for (const opt of [{}, { crit: true, power: 1, result: 'crit' }, { result: 'chit', power: 0 }, { kind: 'crew' }]) for (const seed of seeds) {
-      const plan = layout(r, g, { lvl, rnd: seeded(seed), origin: k.endsWith(':tick') ? 'here' : origin, ...opt });
+      const plan = layout(r, g, { lvl, rnd: seeded(seed), origin: k.endsWith(':tick') ? 'here' : 'key', ...opt });
       assert.ok(plan?.els.length, `${name} ${k}`);
       fn({ name, board, i, g, k, r, lvl, plan, origin });
     }
@@ -107,46 +107,49 @@ test('every ability a player can fire has a row: key 1 by each class\'s word, ev
   assert.equal(abilityOfKey('ban'), 'spike'); assert.equal(abilityOfKey('inject:tick'), 'inject');
 });
 
-test('it starts at the key when you fired it from the tray, and at your bar otherwise', () => {
-  const fired = (x) => ev('resolved', { ability: 'crack', target: 'p', auto: false, ...x });
-  const key = { id: 'crack', how: 'key' };
-  assert.equal(originOf(fired(), key), 'key', 'picked by its key, fired as picked');
-  assert.equal(originOf(fired(), { id: 'crack', how: 'typed' }), 'bar', 'typed');
-  assert.equal(originOf(fired(), null), 'bar', 'nothing queued from the tray');
-  assert.equal(originOf(fired(), { id: 'exploit', how: 'key' }), 'bar', 'the key picked another ability');
-  for (const auto of [true, 'program', 'daemon']) assert.equal(originOf(fired({ auto }), key), 'bar', `auto ${auto}: the timer's, a routine's, a daemon's`);
-  assert.equal(originOf(fired({ who: 'mate' }), key), 'bar', 'a crewmate\'s');
+test('it starts at the ability\'s key in the tray however it was fired, and at your bar only when that key isn\'t on screen', () => {
+  // Every fire source: from the tray, typed, the timer's auto-repeat, a routine, a daemon, a crewmate; key 1 and SIGINT too.
+  for (const x of [{ auto: false }, { auto: true }, { auto: 'program' }, { auto: 'daemon' }, { who: 'mate' }]) for (const ability of ['crack', 'spike', 'sigint', 'firewall']) {
+    assert.equal(originOf(ev('resolved', { ability, target: 'p', ...x })), 'key', `${ability} ${JSON.stringify(x)}`);
+  }
+  assert.equal(originOf(ev('damage', { target: 'p', amount: 20, src: 'burn', via: 'Inject' })), 'here', 'a burn\'s tick plays where it burns');
   // Laid out: from the key's middle when it's on screen, else from your bar.
   const g = geoOf(roomy(), 0), keyMid = { x: (g.key.l + g.key.r) / 2, y: g.key.t + (g.key.b - g.key.t) * 0.35 }, barMid = { x: (hud.bar.l + hud.bar.r) / 2, y: (hud.bar.t + hud.bar.b) / 2 };
   // How far where it starts is from a point (0 when its first box holds it).
   const startOf = (plan) => { const el = plan.els[0]; return boxAt(el, el.keys[0]); };
   const near = (q, p, d = 6) => Math.hypot(Math.max(q.l - p.x, 0, p.x - q.r), Math.max(q.t - p.y, 0, p.y - q.b)) < d;
-  for (const k of ['ban', 'bash', 'poke', 'ping', 'crack', 'inject', 'deploy', 'zero-day']) {
-    const fromKey = layout(RECIPES[k], g, { origin: 'key', rnd: seeded(2) }), fromBar = layout(RECIPES[k], g, { origin: 'bar', rnd: seeded(2) });
-    assert.equal(fromKey.from, 'key'); assert.equal(fromBar.from, 'bar');
-    assert.ok(near(startOf(fromKey), keyMid, 14), `${k} from the key: ${JSON.stringify(startOf(fromKey))}`);
-    assert.ok(near(startOf(fromBar), barMid, 14), `${k} from the bar: ${JSON.stringify(startOf(fromBar))}`);
+  for (const k of ['ban', 'bash', 'poke', 'ping', 'spike', 'sigint', 'crack', 'inject', 'deploy', 'zero-day', 'firewall', 'patch', 'brace']) {
+    const fromKey = layout(RECIPES[k], g, { origin: 'key', rnd: seeded(2) }), noKey = layout(RECIPES[k], { ...g, key: null }, { origin: 'key', rnd: seeded(2) });
+    assert.equal(fromKey.from, 'key'); assert.equal(noKey.from, 'bar');
+    assert.ok(near(startOf(fromKey), keyMid, 14), `${k} from its key: ${JSON.stringify(startOf(fromKey))}`);
     assert.ok(fromKey.travel >= TRAVEL.min && fromKey.travel <= TRAVEL.max, `${k}: ${fromKey.travel} ms on the way`);
     assert.equal(fromKey.impact, fromKey.travel + (RECIPES[k].land || 0), `${k}: it lands its land after it arrives`);
+    if (RECIPES[k].on !== 'you') assert.ok(near(startOf(noKey), barMid, 14), `${k} with no key on screen, from your bar: ${JSON.stringify(startOf(noKey))}`);
   }
-  // The key not on screen (a folded tray): your bar.
-  assert.equal(layout(RECIPES.ban, { ...g, key: null }, { origin: 'key' }).from, 'bar');
+  // Your bar's own effects come from the key too: a streak to the bar first, then they play there.
+  for (const k of ['firewall', 'patch', 'brace', 'harden']) {
+    const plan = layout(RECIPES[k], g, { origin: 'key', rnd: seeded(2) });
+    assert.ok(plan.travel > 0 && plan.els.some((el) => /\bstreak\b/.test(el.cls)), `${k}: a streak from the key`);
+    // With no key on screen they start on the bar itself: no travel.
+    assert.equal(layout(RECIPES[k], { ...g, key: null }, { origin: 'key' }).travel, 0, k);
+  }
   // A burn's tick plays where it burns: no travel.
   assert.equal(layout(RECIPES['inject:tick'], g, { origin: 'here' }).travel, 0);
-  // Your bar's own effects from your bar: no travel; from a key: a streak to the bar first.
-  assert.equal(layout(RECIPES.firewall, g, { origin: 'bar' }).travel, 0);
-  assert.ok(layout(RECIPES.firewall, g, { origin: 'key' }).travel > 0);
-  assert.ok(layout(RECIPES.firewall, g, { origin: 'key' }).els.some((el) => /\bstreak\b/.test(el.cls)));
   // Travel by distance, within its bounds.
   assert.equal(travelOf({ x: 0, y: 0 }, { x: 10, y: 0 }), 0);
   assert.equal(travelOf({ x: 0, y: 0 }, { x: 100, y: 0 }), TRAVEL.min);
   assert.equal(travelOf({ x: 0, y: 0 }, { x: 0, y: 2000 }), TRAVEL.max);
-  // app.js: a key in the tray (its click or its slot's key) picks it from the tray; the command line notes it on submit.
+  // app.js: every fired ability from its key; no record of how it was queued any more.
   const app = readFileSync(new URL('./dist/app.js', import.meta.url), 'utf8');
-  assert.match(app, /return prepare\(id, 'key'\);/, 'a click on a key');
-  assert.match(app, /prepare\(keyMap\(shown\(\)\)\[e\.key\], 'key'\);/, 'a key press');
-  assert.match(app, /noteQueued\(text\);/, 'submitting notes where it came from');
-  assert.match(app, /const origin = originOf\(e, queuedFrom\);/);
+  assert.match(app, /const origin = originOf\(e\);/);
+  assert.doesNotMatch(app, /queuedFrom|trayPick|noteQueued/);
+  // On the page: the key on screen (key 1's, SIGINT's), or none: the bar.
+  const { fx, row } = fakePage({});
+  assert.equal(fx.play('ban', row, { ability: 'spike' }).from, 'key');
+  assert.equal(fx.play('sigint', row, { ability: 'sigint' }).from, 'key');
+  assert.equal(fx.play('ban', row, { ability: 'spike', noKey: true }).from, 'bar', 'the playtest\'s fallback preview');
+  const bare = fakePage({ noKeys: true });
+  assert.equal(bare.fx.play('ban', bare.row, { ability: 'spike' }).from, 'bar', 'no key in the tray for it (or no tray on screen): your bar');
 });
 
 test('an ability that misses, or has no effect to play, keeps the plain strike; a hit no effect took still strikes', () => {
@@ -258,10 +261,10 @@ test('in flight it may cross anything for a moment, but it never stops over a ke
 });
 
 test('a part\'s effect lands on the part (its name cell, or its attack chip), your bar\'s on your bar, at impact', () => {
-  for (const board of [roomy(), dense()]) for (let i = 0; i < board.parts.length; i++) for (const origin of ['key', 'bar']) {
-    const g = geoOf(board, i), part = board.parts[i];
+  for (const board of [roomy(), dense()]) for (let i = 0; i < board.parts.length; i++) for (const origin of ['key', 'no key']) {
+    const g = geoOf(board, i, origin === 'key' ? tray[3] : null), part = board.parts[i];
     for (const [k, r] of Object.entries(RECIPES)) {
-      const plan = layout(r, g, { rnd: seeded(9), origin: k.endsWith(':tick') ? 'here' : origin });
+      const plan = layout(r, g, { rnd: seeded(9), origin: k.endsWith(':tick') ? 'here' : 'key' });
       const where = r.on === 'you' ? hud.bar : r.at === 'chip' && part.chip ? part.chip : r.motion === 'all' ? null : { l: part.cell.l, t: part.row.t, r: part.cell.r, b: part.row.b };
       const targets = where ? [where] : board.parts.map((p) => p.name);
       for (const q of targets) {
@@ -270,17 +273,17 @@ test('a part\'s effect lands on the part (its name cell, or its attack chip), yo
       }
     }
     // Ban's hammer head lands on the bar's line, over the middle of the name cell.
-    const plan = layout(RECIPES.ban, g, { rnd: seeded(5), origin }), hammer = plan.els[0], end = boxAt(hammer, keyAt(hammer, plan.impact / hammer.dur));
+    const plan = layout(RECIPES.ban, g, { rnd: seeded(5), origin: 'key' }), hammer = plan.els[0], end = boxAt(hammer, keyAt(hammer, plan.impact / hammer.dur));
     assert.ok(Math.abs(end.b - (part.bar.t + part.bar.b) / 2) < 4 && end.l < (part.name.l + part.name.r) / 2 && end.l > part.name.l, JSON.stringify(end));
   }
   // Firewall builds on your bar: its courses over the bar itself, end to end; your bar's effects never on the board.
   const g = geoOf(roomy(), 0);
-  const wall = layout(RECIPES.firewall, g, { rnd: seeded(5), origin: 'bar' }).els.filter((e) => /wall/.test(e.cls));
+  const wall = layout(RECIPES.firewall, g, { rnd: seeded(5), origin: 'key' }).els.filter((e) => /wall/.test(e.cls));
   assert.ok(wall.length >= 2);
   for (const w of wall) { const b = boxAt(w, keyAt(w, 0.5)); assert.ok(b.l >= hud.bar.l - 1 && b.r <= hud.bar.r + 1 && b.r - b.l > (hud.bar.r - hud.bar.l) * 0.9 && b.b <= hud.bar.b + 6 && b.t >= hud.nums.b, JSON.stringify(b)); } // under your bar's numbers, a little past the bar's foot
   for (const [k, r] of Object.entries(RECIPES)) {
     if (r.on !== 'you') continue;
-    for (const origin of ['key', 'bar']) for (const el of layout(r, g, { rnd: seeded(4), origin }).els) for (const { box } of shown(el)) {
+    for (const gg of [g, { ...g, key: null }]) for (const el of layout(r, gg, { rnd: seeded(4), origin: 'key' }).els) for (const { box } of shown(el)) {
       if (/\bstreak\b/.test(el.cls)) continue; // in flight from the key
       assert.ok(!g.keep.some((q) => overlaps(box, q)), `${k}: ${el.cls} on a part's name`);
     }
@@ -308,6 +311,10 @@ test('effects land on time: on the page it starts early (or part-way in) so it l
     const impactTimer = timers.find((t) => Math.abs(t.ms - 900) < 1);
     assert.ok(plan && impactTimer, 'onImpact at landIn');
     impactTimer.f(); assert.equal(at, 'hit');
+    // Its plan without playing it: app.js waits a batch's numbers that long (afxLead), so it is seen from its key.
+    assert.equal(fx.plan('ban', row, { ability: 'spike' }).impact, plan.impact);
+    const app = readFileSync(new URL('./dist/app.js', import.meta.url), 'utf8');
+    assert.match(app, /start: Math\.max\(queueAfter\(cueAt - performance\.now\(\)\), stack \? 0 : afxLead\(events\)\)/);
     const late = fx.play('ban', row, { origin: 'key', ability: 'spike', landIn: 50 });
     assert.ok(late, 'a number already due: it starts partly through');
   } finally { globalThis.setTimeout = was; }
@@ -335,7 +342,7 @@ test('on the page: every piece is taken off the layer once its effect is over', 
 
 // A page just big enough for createAbilityFx: a board, its rows, your bar, the tray, and elements that remember what's
 // put on them.
-function fakePage({ motion = true, level = 'full' }) {
+function fakePage({ motion = true, level = 'full', noKeys = false }) {
   const el = (tag, box = rect(0, 0, 0, 0)) => ({
     tag, children: [], attrs: {}, style: {}, className: '', textContent: '', isConnected: true, box, classList: { contains: () => false },
     setAttribute(k, v) { this.attrs[k] = String(v); }, appendChild(c) { this.children.push(c); c.parent = this; return c; },
@@ -353,6 +360,6 @@ function fakePage({ motion = true, level = 'full' }) {
   board.all = { '.bpart': rows };
   const keys = tray.map((q) => el('button', q)), bar = el('div', hud.bar), nums = el('div', hud.nums);
   globalThis.document = { createElement: (t) => el(t), body: el('body') };
-  const fx = createAbilityFx(board, { canMove: () => motion, level: () => level, mineBar: () => bar, mineNums: () => nums, keyEl: (id) => (id === 'spike' ? keys[0] : keys[3]), keys: () => keys });
+  const fx = createAbilityFx(board, { canMove: () => motion, level: () => level, mineBar: () => bar, mineNums: () => nums, keyEl: (id) => (noKeys ? null : id === 'spike' ? keys[0] : keys[3]), keys: () => (noKeys ? [] : keys) });
   return { fx, row: rows[0] };
 }
