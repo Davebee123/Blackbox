@@ -193,16 +193,16 @@ function tellLevels(group, id) {
   tellMemo.set(key, out);
   return out;
 }
-const what = { loud: `Every attack deals ${Math.round((TELL.loud - 1) * 100)}% more damage for ${TELL.castLasts} cycles.`, grow: `Every part grows ${Math.round(TELL.grow * 100)}% more Integrity.`, haste: `Every attack repeats 1 cycle faster for ${TELL.castLasts} cycles.` };
+const what = { loud: `Every attack deals ${Math.round((TELL.loud - 1) * 100)}% more damage for ${TELL.castLasts} cycles.`, grow: `Increases every part's Integrity by ${Math.round(TELL.grow * 100)}%.`, haste: `Every attack repeats 1 cycle faster for ${TELL.castLasts} cycles.` };
 export function tellDoes(def, p, level) {
   const T = tierOf(Math.max(6, level)), atk = p?.attack?.name || 'attack', x = `×${T.mult}`;
   if (def.kind === 'charge') {
-    const more = def.gene === 'fulldisk' ? `, with a burst of encryption for ${TELL.burst} cycles` : def.spawn ? `, and it hatches ${def.spawn + 1} at once` : def.longer ? `, and its Scramble lasts ${def.longer} cycles longer` : def.shred ? ', and it shreds a file in your pack' : '';
-    return `Powers up one of the ${p?.name || 'part'}'s ${atk}s to ${x}${more}.`;
+    const more = def.gene === 'fulldisk' ? ` Adds a burst of encryption for ${TELL.burst} cycles.` : def.spawn ? ` Hatches ${def.spawn + 1} fragments at once.` : def.longer ? ` The Scramble lasts ${def.longer} cycles longer.` : def.shred ? ' Shreds a file in your pack.' : '';
+    return `Powers up one of the ${p?.name || 'part'}'s ${/(s|sh|ch|x)$/.test(atk) ? `${atk}es` : `${atk}s`} to ${x}.${more}`;
   }
   if (def.kind === 'cast') return what[def.does] || 'Compiles a buff on the virus.';
-  if (def.kind === 'seal') return `Re-arms the ${p?.name || 'part'} to full with 1 ◆ more if it still wears ◆, and every stripped part gets 1 ◆ back.`;
-  if (def.kind === 'mimic') return `Plays the command you fire on its beat back at you, every ${TELLS.mimic.every} cycles from cycle ${TELLS.mimic.first}.`;
+  if (def.kind === 'seal') return `If the ${p?.name || 'part'} still wears ◆, re-arms it to full with 1 more ◆. Every stripped part gets 1 ◆ back.`;
+  if (def.kind === 'mimic') return `Every ${TELLS.mimic.every} cycles from cycle ${TELLS.mimic.first}, copies the command you fire and deals its direct damage to you.`;
   return '';
 }
 const cap = (t) => (t ? t[0].toUpperCase() + t.slice(1) : t);
@@ -267,8 +267,8 @@ export function entryOf(s, key) {
     const body = group === 'strain' ? STRAINS[id] : bodyOf(id), parts = partsOf(s, group, id);
     const lineage = group === 'strain' ? body.lineage : null;
     return {
-      ...base, name: body.name, stem: body.stem || null, threatens: body.threatens || (lineage ? bodyOf(lineage)?.threatens : null), summary: body.summary || null, escape: group === 'runner' ? CONFIG.exfil.escape : null,
-      rule: group === 'runner' ? `It runs from you, a room for each of your moves, and never through a live virus. Caught, its upload completes after ${CONFIG.exfil.escape} cycles and the archive is gone, unless you break it first.` : body.rule || null, ice: !!body.ice, lineage, opens: group === 'strain' ? body.from : group === 'family' ? OPENS[id] || 1 : null, depth: group === 'strain' ? body.depth || 2 : null,
+      ...base, name: body.name, stem: body.stem || null, threatens: body.threatens || (lineage ? bodyOf(lineage)?.threatens : null), summary: body.summary || null, escape: group === 'runner' ? CONFIG.exfil.escape : null, answer: body.answer || null,
+      rule: group === 'runner' ? `Runs from you, a room for each of your moves, and never through a live virus. Once caught, its upload completes after ${CONFIG.exfil.escape} cycles and the archive is gone.` : body.rule || null, ice: !!body.ice, lineage, opens: group === 'strain' ? body.from : group === 'family' ? OPENS[id] || 1 : null, depth: group === 'strain' ? body.depth || 2 : null,
       kills: killsOf(s, id), authors: authorsOf(group, id), parts, research: pctOf(parts.map((p) => p.research)), sets: group === 'family' ? setsOf(s, id) : [], tells: tellsOf(s, group, id),
       art: parts.find((x) => !x.gene)?.virus || parts[0]?.virus,
       setLoot: group === 'guard' ? guardSetTable(s, id) : null, // its set pieces (sets.mjs), ??? until found, with their odds and pity

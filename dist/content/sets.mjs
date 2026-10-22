@@ -113,7 +113,7 @@ export default {
           ]
         },
         "4": {
-          "text": "A hit for more than 15% of your max Signal marks its part: it takes 10% more from you for 3 cycles, and you heal 3% of max.",
+          "text": "A hit for more than 15% of your max Signal marks its part, which takes 10% more from you for 3 cycles. You heal 3% of max.",
           "fx": [
             {
               "when": "custom",
@@ -329,7 +329,7 @@ export default {
       ],
       "bonuses": {
         "2": {
-          "text": "+10% max Signal; Regen heals 1 more every 5 cycles.",
+          "text": "+10% max Signal. Regen heals 1 more every 5 cycles.",
           "fx": [
             {
               "when": "always",
@@ -629,7 +629,7 @@ export default {
           ]
         },
         "4": {
-          "text": "+10% Clock Speed while below half; once a fight, dropping below 25% heals 10% of max.",
+          "text": "+10% Clock Speed while below half. Once a fight, dropping below 25% heals 10% of max.",
           "fx": [
             {
               "when": "always",
@@ -946,7 +946,7 @@ export default {
           ]
         },
         "3": {
-          "text": "+10% Clock Speed; cooldowns start each fight 1 cycle shorter.",
+          "text": "+10% Clock Speed. Cooldowns start each fight 1 cycle shorter.",
           "fx": [
             {
               "when": "always",

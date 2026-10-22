@@ -222,7 +222,7 @@ test('◆ guards the ticks: a hit on ◆ crosses nothing, so strip the charging 
   quietParts(s);
   const enc = Object.assign(edge(s, 'encryptor'), { armor: 3, maxArmor: 3 });
   const t = tell(s, 'fulldisk', 'encryptor', 0);
-  assert.match(tellIntents(s).find((x) => x.id === t.id).answer, /3 ◆ first, or pierce/);
+  assert.match(tellIntents(s).find((x) => x.id === t.id).answer, /past its 3 ◆/);
   fire(s, 'spike encryptor');
   assert.equal(enc.armor, 2, 'the hit broke a ◆');
   assert.ok(s.logs.some((e) => e.tell === t.id && e.missed), 'and crossed nothing: it lands');
@@ -486,7 +486,7 @@ test('the board shows a tell in its attack\'s cell even while the part is veiled
   assert.match(html, new RegExp(`▸ Cut past ◆${sc.armor}<`), 'the cut, past its ◆ (the kick line says when)');
   assert.match(html, /<span class="tl-when">in 2<\/span>/);
   assert.doesNotMatch(html, /tl-win/, 'not on its cycle yet');
-  assert.match(html, new RegExp(`title="Possession: [^"]*\nCut it: take the Scrambler under 50% in 2 cycles \\(its ${sc.armor} ◆ first, or pierce\\)\\."`), 'the tooltip: what it does, then how to stop it and when');
+  assert.match(html, new RegExp(`title="Possession: [^"]*\n▸ Take the Scrambler under 50% in 2 cycles, past its ${sc.armor} ◆\\."`), 'the tooltip: what it does, then how to stop it and when');
   hold(s, 2);
   const now = boardMarkup(s, null);
   assert.match(now, /intent tell t-charge now win/, 'its cycle: the chip is lit');
@@ -498,7 +498,7 @@ test('the board shows a tell in its attack\'s cell even while the part is veiled
   tell(cast, 'extortion', 'encryptor', 1);
   const ch = boardMarkup(cast, null);
   assert.match(ch, /Casting[\s\S]*SIGINT or cut</);
-  assert.match(ch, /title="Double Extortion: Every attack deals 35% more damage for 4 cycles\.[^"]*\nSIGINT, or take the Encryptor under 50%\. Window: now until it lands next cycle\."/);
+  assert.match(ch, /title="Double Extortion: Every attack deals 35% more damage for 4 cycles\.[^"]* Can be interrupted now until it lands next cycle\.\n▸ SIGINT it, or take the Encryptor under 50%\."/);
   assert.match(ch, /tl-window live[^>]*><span class="tw-word">Window · <\/span>now/, 'the window marked on the timeline');
 });
 
@@ -700,27 +700,27 @@ test('the log\'s tell lines are as short as the chip\'s tooltip: what, when, on 
   const enc = part(s, 'encryptor');
   Object.assign(enc, { armor: 2, maxArmor: 2 });
   const t = tell(s, 'fulldisk', 'encryptor', 3);
-  assert.equal(sayOf(s, t), 'FULL DISK in 3: the Encryptor. Cut it on that cycle, past its 2 ◆.');
+  assert.equal(sayOf(s, t), 'The Encryptor\'s FULL DISK lands in 3 cycles. Cut it on that cycle, past its 2 ◆.');
   enc.armor = 0;
-  assert.equal(sayOf(s, t), 'FULL DISK in 3: the Encryptor. Cut it on that cycle.');
+  assert.equal(sayOf(s, t), 'The Encryptor\'s FULL DISK lands in 3 cycles. Cut it on that cycle.');
   // A cast, a seal, the breach's Lock, and the Mimic's beat.
   const c = fight({ level: 12, opts: { elite: true } }); quietParts(c);
-  assert.equal(sayOf(c, tell(c, 'extortion', 'encryptor', 2)), 'DOUBLE EXTORTION in 2: the Encryptor. SIGINT or cut it in its window.');
-  assert.equal(sayOf(c, tell(c, 'extortion', 'encryptor', 1)), 'DOUBLE EXTORTION in 1: the Encryptor. SIGINT or cut it in its window, open now.');
+  assert.equal(sayOf(c, tell(c, 'extortion', 'encryptor', 2)), 'The Encryptor\'s DOUBLE EXTORTION lands in 2 cycles. SIGINT or cut it in its window.');
+  assert.equal(sayOf(c, tell(c, 'extortion', 'encryptor', 1)), 'The Encryptor\'s DOUBLE EXTORTION lands next cycle. SIGINT or cut it in its window, open now.');
   retell(c, 4, ['fulldisk', 'extortion', 'keyrotation', 'lock']); quietParts(c);
   const armor = Object.assign(part(c, 'encryptor'), { armor: 3, maxArmor: 3 }).armor;
-  assert.equal(sayOf(c, tell(c, 'keyrotation', 'encryptor', 2)), `KEY ROTATION in 2: the Encryptor. Strip its ${armor} ◆ before then, or it re-arms.`);
-  assert.equal(sayOf(c, tell(c, 'lock', 'encryptor', 2)), 'LOCK in 2: the Encryptor. It locks your next command for 3 cycles. Break it, or feed it a cooling skill.');
+  assert.equal(sayOf(c, tell(c, 'keyrotation', 'encryptor', 2)), `The Encryptor's KEY ROTATION lands in 2 cycles. Strip its ${armor} ◆ before then, or it re-arms.`);
+  assert.equal(sayOf(c, tell(c, 'lock', 'encryptor', 2)), 'The Encryptor\'s LOCK lands in 2 cycles. It locks your next command for 3 cycles. Break it, or feed it a cooling skill.');
   const seed = Array.from({ length: 50 }, (_, i) => i + 1).find((x) => createVirus('random', x, { family: 'ghostroot', threat: 9 + 12, classic: true }).parts.some((p) => p.mimic));
   const m = fight({ level: 12, family: 'ghostroot', seed }); quietParts(m);
-  assert.equal(sayOf(m, tell(m, 'mimic', 'mimic', 2)), 'MIMIC in 2: the Mimic. It plays back what you fire. Go quiet, or cut it.');
+  assert.equal(sayOf(m, tell(m, 'mimic', 'mimic', 2)), 'The Mimic plays you back in 2 cycles. It copies what you fire then. Go quiet, or cut it.');
   // The cut, in a fight: the interrupt's line and the call-off.
   const g = fight({ level: 12, cls: 'bastion' }); quietParts(g); edge(g, 'encryptor');
   const tg = tell(g, 'fulldisk', 'encryptor', 0);
   const ev = fire(g, 'spike encryptor');
   assert.equal(ev.find((e) => e.tell === tg.id && e.answered).message, 'Cut: FULL DISK called off.');
   assert.match(ev.find((e) => e.type === 'cut').message, /^INTERRUPTED\. You take the Encryptor under half\. Its Full Disk is cancelled\.$/);
-  // Every announcement in real fights, every family: one short line (a tell's name, "in N", its part).
+  // Every announcement in real fights, every family: one short line (its part's tell, when it lands, the answer).
   for (const [family, level] of [['ransomware', 12], ['worm', 17], ['ghostroot', 12], ['ransomware', 8]]) {
     const r = fight({ level, family, seed: 3 });
     for (let i = 0; i < 14 && active(r); i++) hold(r);
@@ -728,9 +728,9 @@ test('the log\'s tell lines are as short as the chip\'s tooltip: what, when, on 
     assert.ok(said.length, `${family} ${level}: a tell was said`);
     for (const e of said) {
       assert.ok(e.message.length <= 100, `${family} ${level}: short (${e.message.length}): ${e.message}`);
-      assert.match(e.message, /^[A-Z][A-Z0-9' -]+ (in \d+|now): the [A-Za-z0-9 -]+\. /, e.message);
+      assert.match(e.message, /^The [A-Za-z0-9 -]+(?:'s [A-Z][A-Z0-9' -]+ lands| plays you back) (this cycle|next cycle|in \d+ cycles)\. /, e.message);
       assert.doesNotMatch(e.message, /Deal \d+|break \d+ ◆ in its window|hit it twice/, e.message);
-      assert.equal(e.name, e.message.split(/ (in \d+|now):/)[0], 'the event names the tell (app.js floats it)');
+      assert.ok(e.message.includes(e.name) || e.kind === 'mimic', `the event names the tell (app.js floats it): ${e.name}`);
     }
     for (const e of r.logs.filter((x) => x.type === 'telegraph' && x.tell && x.window)) assert.match(e.message, /^[A-Z][A-Z0-9' -]+'s window is open\.$/);
   }

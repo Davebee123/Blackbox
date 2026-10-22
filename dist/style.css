@@ -3321,6 +3321,7 @@ h1 .byline { font-size: 13px; vertical-align: middle; }
 /* Themed hover tips (app.js): every title in the game, in the game's own card. */
 .tt { position: fixed; z-index: 90; max-width: 300px; padding: 8px 11px; background: rgba(10, 8, 5, 0.97); color: var(--text); border: 1px solid var(--line-strong); border-top: 2px solid var(--amber); border-radius: 4px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55); font: 13px/1.45 var(--sans, inherit); pointer-events: none; white-space: pre-line; animation: ptip-in 0.12s ease-out; }
 .tt b { display: block; margin-bottom: 3px; color: var(--amber); font: 600 12px var(--mono); letter-spacing: 0.5px; }
+.tt .tt-ans { display: block; margin-top: 5px; padding-top: 4px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; } /* the answer line (fightread.mjs answerLine) */
 @media (prefers-reduced-motion: reduce) { .tt { animation: none; } }
 
 /* The Craft page's slot picker (craftCats): which slot a protocol compiles into, one segment each. */

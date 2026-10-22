@@ -43,12 +43,12 @@ test('the attack landing now is marked red on the timeline and its part', () => 
 
 test('veiled parts hide their timers until their armor is gone; a part with broken armor shows cracks and when it patches', () => {
   const s = start('ghostroot');
-  assert.match(boardMarkup(s), /timers stay hidden/);
+  assert.match(boardMarkup(s), /Veiled: hides its timers/);
   command(s, 'crack scrambler');
   resolveCycle(s);
   command(s, 'spike pulse');
   resolveCycle(s);
-  assert.doesNotMatch(boardMarkup(s), /timers stay hidden/);
+  assert.doesNotMatch(boardMarkup(s), /Veiled: hides its timers/);
   assert.match(boardMarkup(s), /◆ patch/);
   assert.match(boardMarkup(s), /bpart[^"]*cracked/, 'broken armor shows as cracks');
   assert.doesNotMatch(boardMarkup(s), /bare/i);

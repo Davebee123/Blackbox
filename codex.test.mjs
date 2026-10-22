@@ -107,7 +107,7 @@ test('a decoded part shows its numbers at your level, the same numbers a room fi
   assert.doesNotMatch(card, /cxp-answer/, 'its answer waits for research 15');
   assert.match(card, /Research 15 to learn its rule, its answer and its tells\./);
   s.research[`${v.family}:pulse`] = 15;
-  assert.match(cardOf(codexPageMarkup(s, `family:${v.family}`)), /cxp-answer">Break it, or delay its attack/, 'at 15, what answers it (fightread partRead)');
+  assert.match(cardOf(codexPageMarkup(s, `family:${v.family}`)), /cxp-answer">Delay it, or soften the hit with ◆ and shields\./, 'at 15, what answers it (fightread partRead)');
   s.research[`${v.family}:pulse`] = 60;
   assert.match(cardOf(codexPageMarkup(s, `family:${v.family}`)), /Drops Pulse Kernel/, 'at 60, what it drops');
   // The same part one level up hits harder: the numbers follow your level.
@@ -133,7 +133,7 @@ test('tells: ??? until one is said in your fight, then what it does and what ans
   assert.ok(tell?.seen, 'seen on its page');
   const html = codexPageMarkup(s, key);
   assert.match(html, new RegExp(`<li class="cx-tell"><div class="cxt-head"><b>${t.name}</b>`));
-  assert.match(html.split(`<b>${t.name}</b>`)[1], /cxp-does">[^<]+<\/p><p class="cxp-answer">[A-Z][^<]+\./, 'what it does and its answer');
+  assert.match(html.split(`<b>${t.name}</b>`)[1], /cxp-does">(?:[^<]|<\/?b[^>]*>)+<\/p><p class="cxp-answer">[A-Z][^<]+\./, 'what it does and its answer');
 });
 
 test("bosses are ??? until fought; then their phases, rule and tells' shape", () => {
@@ -159,7 +159,7 @@ test('mutations: named with their rule once met, and where you saw them; the dec
   assert.deepEqual(s.dex.muts.hasty, ['ghostroot']);
   const html = codexPageMarkup(s, 'mutation:hasty');
   assert.match(html, /<h1>Hasty<\/h1>/);
-  assert.match(html, /Every attack comes 1 cycle sooner/);
+  assert.match(html, /Every attack comes <b class="hi">1 cycle sooner<\/b>/, 'its rule, its facts lit (ruletext.mjs)');
   assert.match(html, /<span class="tag">Ghostroot<\/span>/, 'seen on');
   assert.match(html, /Beat two viruses that carry it to decode the answer\./);
   assert.ok(rowsOf(codexPageMarkup(s)).find((r) => r.key === 'mutation:adaptive').unknown, 'one you have not met stays ???');

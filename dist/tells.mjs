@@ -221,23 +221,23 @@ function say(s, t, p, next, n) {
 const when = (n) => (n <= 0 ? 'this cycle' : n === 1 ? 'next cycle' : `in ${n} cycles`);
 // The answer, exactly, for the chip's hover and the log: what counts, and when.
 export function answerOf(t, p) {
-  if (t.kind === 'charge') return `cut the ${p?.name} on its cycle${p?.armor > 0 ? ` (its ${p.armor} ◆ first, or pierce)` : ''}`;
+  if (t.kind === 'charge') return `cut the ${p?.name} on its cycle${p?.armor > 0 ? `, past its ${p.armor} ◆` : ''}`;
   if (t.kind === 'cast') return `SIGINT in its window, or cut the ${p?.name} in it`;
   if (t.kind === 'seal') return `strip the ${p?.name} before it lands`;
-  if (t.kind === 'lock') return `break the ${p?.name}, or let it land and feed it a skill that is cooling anyway`;
+  if (t.kind === 'lock') return `break the ${p?.name}, or feed it a skill already cooling`;
   return 'go quiet on the beat, or cut it then';
 }
 // When its window opens, as the log says it: 'now', or 'next cycle', 'in 2 cycles'.
 function windowWhen(s, t) { const w = windowOf(s, t); return w ? Math.max(0, w.from - s.encounter.cycle) : 0; }
 // What the log says when a tell is announced, as short as its chip's tooltip (fightread.mjs tellTip): what, when, on
-// which part, and the answer. FULL DISK in 3: the Encryptor. Cut it on that cycle.
+// which part, and the answer. The Encryptor's FULL DISK lands in 3 cycles. Cut it on that cycle.
 export function sayOf(s, t, p = sourceOf(s, t)) {
-  const n = tellNext(s, t) - s.encounter.cycle, L = label(t), head = `${L} ${n > 0 ? `in ${n}` : 'now'}: the ${p.name}.`;
+  const n = tellNext(s, t) - s.encounter.cycle, L = label(t), head = t.kind === 'mimic' ? `The ${p.name} plays you back ${when(n)}.` : `The ${p.name}'s ${L} lands ${when(n)}.`;
   if (t.kind === 'charge') return `${head} Cut it on that cycle${p.armor > 0 ? `, past its ${p.armor} ◆` : ''}.`;
   if (t.kind === 'cast') return `${head} SIGINT or cut it in its window${n > 0 && windowWhen(s, t) <= 0 ? ', open now' : ''}.`;
   if (t.kind === 'seal') return `${head} Strip its ${p.armor} ◆ before then, or it re-arms.`;
   if (t.kind === 'lock') return `${head} It locks your next command for ${cycles(t.cycles || 3)}. Break it, or feed it a cooling skill.`;
-  return `${head} It plays back what you fire. Go quiet, or cut it.`;
+  return `${head} It copies what you fire then. Go quiet, or cut it.`;
 }
 // A tell's window opens (a new cycle): the log says so, once.
 function windowOpens(s, t, p) {
@@ -295,7 +295,7 @@ function read(s, t, p, { open = false, skill = null, stagger = true } = {}) {
     // One delay a wind-up (combat.mjs delayAttack): the stagger adds to a delay the answering command just set (Quarantine),
     // and does nothing to one from before.
     const late = stagger && !riding && p.attack && p.attack.due >= e.cycle ? delayAttack(s, p, (e.virus.boss ? TELL.boss.delay ?? TELL.open.delay : TELL.open.delay) || 0, { extend: true }) : 0; // a solo boss keeps its clock (TELL.boss.delay)
-    emit(s, 'read', `READ: the ${p.name} is Open, +${Math.round((TELL.open.mult - 1) * 100)}% for ${cycles(n)}${late ? `, its ${p.attack.name} ${late === 1 ? 'a cycle' : cycles(late)} later` : ''}.`, { target: p.id, tell: t.id, open: true, stagger: late });
+    emit(s, 'read', `READ: the ${p.name} is Open, taking ${Math.round((TELL.open.mult - 1) * 100)}% more damage for ${cycles(n)}.${late ? ` Its ${p.attack.name} comes ${cycles(late)} later.` : ''}`, { target: p.id, tell: t.id, open: true, stagger: late });
   } else if (skill && ABILITIES[skill]) {
     delete e.readyAt[skill];
     emit(s, 'read', `READ: ${ABILITIES[skill].name} is ready again.`, { target: p?.id, tell: t.id, ability: skill });
@@ -386,14 +386,14 @@ function corrupt(s, t, p) {
   if (!k || clean(s)) return;
   const amount = Math.max(1, Math.round(defender(s).max * k));
   s.encounter.corrupt = { name: t.name, amount, left: 3, source: p.id };
-  emit(s, 'status', `${label(t)}: Corrupted, −${amount} a cycle for 3 cycles.`, { source: p.id, tell: t.id, mark: 'corrupt' });
+  emit(s, 'status', `${label(t)} leaves you Corrupted, dealing ${amount} damage to you every cycle for 3 cycles.`, { source: p.id, tell: t.id, mark: 'corrupt' });
 }
 // Your last skill (not Spike or SIGINT) is knocked offline: locked for that many cycles. From level 10 a charge or
 // a cast that lands hangs you too: your next command doesn't fire (tier.hang).
 function hang(s, t) {
   if (!tellsOf(s).tier.hang || clean(s)) return;
   s.encounter.hung = s.encounter.cycle + 1;
-  emit(s, 'status', `${label(t)}: Hung. Your next command won't fire.`, { tell: t.id, mark: 'hung' });
+  emit(s, 'status', `${label(t)} leaves you Hung. Your next command won't fire.`, { tell: t.id, mark: 'hung' });
 }
 function lockLast(s, t, why) {
   const e = s.encounter, n = tellsOf(s).tier.after;
@@ -435,7 +435,7 @@ export function tellLand(s) {
       // Full Disk: a burst of encryption on top of its Encrypt, for TELL.burst cycles (it goes when the part breaks, or with Purge).
       if (atk.burst && (s.encounter.encrypt || 0) > locked) { // its Encrypt got through (a ◆, Null Route or Sanitize stops both)
         s.encounter.burst = { name: t.name, amount: atk.burst, left: TELL.burst, source: p.id };
-        emit(s, 'encrypt', `${label(t)} lands: +${atk.burst} encryption a cycle for ${TELL.burst} cycles.`, { source: p.id, amount: atk.burst, tell: t.id, missed: true });
+        emit(s, 'encrypt', `${label(t)} lands. Your encryption deals ${atk.burst} more damage every cycle for ${TELL.burst} cycles.`, { source: p.id, amount: atk.burst, tell: t.id, missed: true });
         tally(s, t, 'cost', atk.burst * TELL.burst);
       }
       // A brood: more spawns on top of the charged one (up to the usual limit).
@@ -446,7 +446,7 @@ export function tellLand(s) {
       done();
     } else if (t.kind === 'seal') {
       if (p.armor > 0 && p.bkRot?.until >= e.cycle) { // Bit Rot (Demolitionist): a rotting part can't seal
-        emit(s, 'blocked', `${label(t)} fails: the ${p.name} is rotting.`, { source: p.id, tell: t.id, answered: true });
+        emit(s, 'blocked', `${label(t)} fails, because the ${p.name} is rotting.`, { source: p.id, tell: t.id, answered: true });
         read(s, t, p, { open: true }); credit(s, t, p);
       } else if (p.armor > 0 && p.poisonedUntil >= e.cycle) { // Cache Poison (Hijacker): the seal reads back poison
         emit(s, 'blocked', `${label(t)} fails on a poisoned cache and hits the ${p.name}.`, { source: p.id, tell: t.id, answered: true });
@@ -463,7 +463,7 @@ export function tellLand(s) {
         if (T.tier.after && !proof) corrupt(s, t, p);
         emit(s, 'patch', `${label(t)} lands: the ${p.name} re-arms to ${p.armor} ◆${re.length ? `, ${re.map((x) => x.name).join(' and ')} +1 ◆` : ''}.${mine}`, { target: p.id, tell: t.id, missed: true });
       } else {
-        emit(s, 'blocked', `${label(t)} fails: no ◆ to seal.`, { source: p.id, tell: t.id, answered: true });
+        emit(s, 'blocked', `${label(t)} fails. The ${p.name} has no ◆ to seal.`, { source: p.id, tell: t.id, answered: true });
         // The strip that did it, if it was a read (after the seal was said): that skill is ready again.
         const by = p.strippedBy;
         const who = by && by.cycle >= t.said ? [s, ...alliesOf(s).map((x) => x.st)].find((x) => (x.who || '') === by.who) : null;
@@ -471,14 +471,14 @@ export function tellLand(s) {
         credit(who || (by ? null : s), t, p); // the strip was yours (a crewmate's counts for them)
       }
     } else if (t.kind === 'cast' && t.does === 'grow' && p.revokedUntil >= e.cycle) { // Revoke (Sysop): it can't sign the update
-      emit(s, 'interrupt', `${label(t)} fails: the ${p.name} is revoked.`, { source: p.id, tell: t.id, answered: true });
+      emit(s, 'interrupt', `${label(t)} fails, because the ${p.name} is revoked.`, { source: p.id, tell: t.id, answered: true });
       read(s, t, p, { open: true }); credit(s, t, p);
     } else if (t.kind === 'cast') {
       castLands(s, t, p);
       if (t.does !== 'overclock') { lockLast(s, t, label(t)); corrupt(s, t, p); hang(s, t); } // Overclock's cost is the gamble itself
     } else if (t.kind === 'lock') {
       e.lockArmed = { at: e.cycle, name: t.name, cycles: t.cycles || 3, tell: t.id, source: p.id };
-      emit(s, 'status', `${label(t)} lands: your next command locks for ${cycles(t.cycles || 3)}.`, { source: p.id, tell: t.id, missed: true, mark: 'lock' });
+      emit(s, 'status', `${label(t)} lands. Your next command locks for ${cycles(t.cycles || 3)}.`, { source: p.id, tell: t.id, missed: true, mark: 'lock' });
     } else if (t.kind === 'mimic') {
       const r = mimicLands(s, t, p);
       if (r === true) return done(), true;
@@ -503,19 +503,19 @@ function castLands(s, t, p) {
   (v.buffs ||= {})[t.does] = until;
   if (t.does === 'loud') {
     if (fresh) for (const x of attackers(s)) boost(x, TELL.loud);
-    emit(s, 'phase', `${label(t)} compiles: +${Math.round((TELL.loud - 1) * 100)}% damage for ${cycles(lasts)}.`, { target: p.id, tell: t.id, missed: true });
+    emit(s, 'phase', `${label(t)} compiles. Every attack deals ${Math.round((TELL.loud - 1) * 100)}% more damage for ${cycles(lasts)}.`, { target: p.id, tell: t.id, missed: true });
   } else if (t.does === 'grow') {
     const all = livingParts(s).filter((x) => x.kind === 'system' && !implanted(s, x)); // a Rootkit Implant stops it growing
     for (const x of all) { const n = Math.round(x.max * TELL.grow); x.max += n; x.integrity += n; }
-    emit(s, 'phase', `${label(t)} compiles: ${all.length === 1 ? `the ${all[0].name}` : 'every part'} +${Math.round(TELL.grow * 100)}% Integrity.`, { target: p.id, tell: t.id, missed: true });
+    emit(s, 'phase', `${label(t)} compiles. ${all.length === 1 ? `The ${all[0].name}` : 'Every part'} grows ${Math.round(TELL.grow * 100)}% more Integrity.`, { target: p.id, tell: t.id, missed: true });
   } else if (t.does === 'overclock') {
     // Every attack still to come moves a cycle sooner (never onto this cycle, which is over), and every part takes double.
     if (fresh) for (const x of attackers(s)) if (x.attack.due < 900 && x.attack.due >= c + 2) x.attack.due--;
-    emit(s, 'phase', `${label(t)} compiles: ×2 damage both ways, attacks a cycle sooner, for ${cycles(lasts)}.`, { target: p.id, tell: t.id, missed: true });
+    emit(s, 'phase', `${label(t)} compiles. For ${cycles(lasts)}, every part takes double damage and every attack comes 1 cycle sooner.`, { target: p.id, tell: t.id, missed: true });
   } else if (t.does === 'haste') {
     // What's on the timeline stays where it is (nothing lands unannounced); the repeats after it come sooner.
     if (fresh) for (const x of attackers(s)) if (x.attack.interval > 2) { x.attack.hasted = true; x.attack.interval--; }
-    emit(s, 'phase', `${label(t)} compiles: attacks repeat a cycle faster for ${cycles(lasts)}.`, { target: p.id, tell: t.id, missed: true });
+    emit(s, 'phase', `${label(t)} compiles. Every attack repeats 1 cycle faster for ${cycles(lasts)}.`, { target: p.id, tell: t.id, missed: true });
   }
 }
 const boost = (x, k) => { const a = x.attack; if (!a) return; if (['damage', 'encrypt'].includes(a.effect)) a.amount = Math.max(1, Math.round(a.amount * k)); if (a.hit) a.hit = Math.max(1, Math.round(a.hit * k)); };
@@ -557,7 +557,7 @@ function mimicLands(s, t, p) {
   const id = last && last.cycle === e.cycle && !blind ? last.id : null, a = id && ABILITIES[id];
   const target = last && part(host, last.target);
   const direct = id ? mimicHit(host, id, target || p) / TELL.mimic : 0;
-  if (!direct) { emit(s, 'blocked', `The ${p.name} plays back ${a ? a.name : 'nothing'}: no hit to copy.`, { source: p.id, tell: t.id, answered: !!a }); return a ? 'quiet' : false; }
+  if (!direct) { emit(s, 'blocked', a ? `The ${p.name} copies your ${a.name}, but it has no hit to play back.` : `The ${p.name} has nothing to play back.`, { source: p.id, tell: t.id, answered: !!a }); return a ? 'quiet' : false; }
   // Reflector (a native unique): the playback lands on the Mimic instead, at a share of the hit. Echo Cancel: all of it.
   const turn = p.echoCancelUntil >= e.cycle ? { it: { name: 'Echo Cancel' }, fx: { value: 100 } } : fxOn(host, 'mimic-turn');
   if (turn) {
@@ -599,7 +599,7 @@ export function tellCast(s) {
 export function tellSigintCheck(s) {
   const t = tellCast(s);
   if (!t) return 'Nothing is compiling. SIGINT stops a cast.';
-  if (!inWindow(s, t)) return `Too early: ${t.name}'s window opens ${when(windowWhen(s, t))}. SIGINT only interrupts a cast in its window.`;
+  if (!inWindow(s, t)) return `Too early. ${t.name}'s window opens ${when(windowWhen(s, t))}. SIGINT only interrupts a cast in its window.`;
   return null;
 }
 export function tellSigint(s) {

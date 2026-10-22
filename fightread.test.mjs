@@ -47,28 +47,28 @@ test('tell tooltips: the tell\'s name, then what happens if it lands (with its n
   const pa = part(s, 'pulse').armor;
   const { i, tip } = chipOf(s);
   assert.equal(lines(tip).length, 2, tip);
-  assert.match(lines(tip)[0], new RegExp(`^Overcharge: Deals ${i.amount} damage to you\\. Leaves you Corrupted, and your last skill offline for 1 cycle\\.$`)); // R1: lighter after-effects (TELL.tiers)
-  assert.equal(lines(tip)[1], `Cut it: take the Pulse Node under 50% next cycle${pa ? ` (its ${pa} ◆ first, or pierce)` : ''}.`);
+  assert.match(lines(tip)[0], new RegExp(`^Overcharge: Deals ${i.amount} damage to you\\. Leaves you Corrupted\\. Takes your last skill offline for 1 cycle\\.$`)); // R1: lighter after-effects (TELL.tiers)
+  assert.equal(lines(tip)[1], `▸ Take the Pulse Node under 50% next cycle${pa ? `, past its ${pa} ◆` : ''}.`, 'the answer on its own ▸ line (app.js draws it muted)');
   // Full Disk: the Encrypt and the burst on top.
   const f = fight(); quiet(f); tell(f, 'fulldisk', 'encryptor', 2);
-  assert.match(chipOf(f).tip, /^Full Disk: Adds \d+ to your encryption, and a burst of \d+ damage a cycle for 3 cycles\./);
-  assert.match(chipOf(f).tip, /\nCut it: take the Encryptor under 50% in 2 cycles[ (◆a-z0-9,]*\)?\.$/);
+  assert.match(chipOf(f).tip, /^Full Disk: Adds \d+ to your encryption\. Deals a burst of \d+ damage to you every cycle for 3 cycles\./);
+  assert.match(chipOf(f).tip, /\n▸ Take the Encryptor under 50% in 2 cycles(, past its \d+ ◆)?\.$/);
   // A cast: SIGINT, or a cut, over its two-cycle window.
   const c = fight({ set: ['fulldisk', 'extortion'] }); quiet(c); tell(c, 'extortion', 'encryptor', 2);
   assert.match(chipOf(c).tip, /^Double Extortion: Every attack deals 35% more damage for 4 cycles\./);
-  assert.match(chipOf(c).tip, /\nSIGINT, or take the Encryptor under 50%\. Window: from next cycle until it lands in 2 cycles\.$/);
+  assert.match(chipOf(c).tip, / Can be interrupted from next cycle until it lands in 2 cycles\.\n▸ SIGINT it, or take the Encryptor under 50%\.$/);
   // A seal, the Mimic, and the breach's Overclock and Lock.
   const se = fight({ set: ['fulldisk', 'extortion', 'overcharge', 'keyrotation'] }); quiet(se); tell(se, 'keyrotation', 'encryptor', 2);
   const armor = part(se, 'encryptor').armor;
-  assert.match(chipOf(se).tip, new RegExp(`^Key Rotation: Re-arms the Encryptor to ${part(se, 'encryptor').maxArmor + 1} ◆, and every stripped part gets 1 ◆ back\\.[^\\n]*\\nStrip its ${armor} ◆ before it lands in 2 cycles\\.$`));
+  assert.match(chipOf(se).tip, new RegExp(`^Key Rotation: Re-arms the Encryptor to ${part(se, 'encryptor').maxArmor + 1} ◆, and every stripped part gets 1 ◆ back\\. Fails if the Encryptor wears no ◆\\.[^\\n]*\\n▸ Strip its ${armor} ◆ before it lands in 2 cycles\\.$`));
   const oc = fight({ set: ['fulldisk', 'overclock', 'lock'] }); quiet(oc); tell(oc, 'overclock', 'pulse', 1);
-  assert.match(chipOf(oc).tip, /^Overclock: Every part takes double damage and every attack comes 1 cycle sooner, for 2 cycles\.\nSIGINT, or take the Pulse Node under 50%\. Window: now until it lands next cycle\.$/);
+  assert.match(chipOf(oc).tip, /^Overclock: For 2 cycles, every part takes double damage and every attack comes 1 cycle sooner\. Can be interrupted now until it lands next cycle\.\n▸ SIGINT it, or take the Pulse Node under 50%\.$/);
   const lk = fight({ set: ['fulldisk', 'overclock', 'lock'] }); quiet(lk); tell(lk, 'lock', 'encryptor', 2);
-  assert.equal(chipOf(lk).tip, 'Lock: Locks the first command you fire after it for 3 cycles, key 1 included.\nBreak the Encryptor before it lands in 2 cycles, or feed it a skill that is cooling anyway.');
+  assert.equal(chipOf(lk).tip, 'Lock: Locks the first command you fire after it for 3 cycles, key 1 included.\n▸ Break the Encryptor first, or feed it a skill already cooling.');
   let mi = null;
   for (let seed = 1; seed < 400 && !mi; seed++) { const x = fight({ family: 'ghostroot', seed }); if (x.encounter.virus.parts.some((p) => p.mimic)) mi = x; }
   quiet(mi); tell(mi, 'mimic', mi.encounter.virus.parts.find((p) => p.mimic).id, 2);
-  assert.match(chipOf(mi).tip, /^Mimic: Plays the command you fire then back at you, its whole direct hit\.\nFire no direct hit on its beat \(in 2 cycles\): a debuff, a strip, a burn or a shield(, or take the Mimic under 50% then)?\.$/);
+  assert.match(chipOf(mi).tip, /^Mimic: Copies the command you fire in 2 cycles and deals its full direct damage to you\.\n▸ Fire no direct hit then(, or take the Mimic under 50%)?\.$/);
   // The chip and its tooltip don't say the same thing twice: the chip has the kind and NOW / in N; the tooltip the rest.
   const html = boardMarkup(s, null);
   const chip = html.match(/<div class="intent tell[^>]*>([\s\S]*?)<\/div><\/div>/)[1].replace(/<[^>]+>/g, ' ');
@@ -82,11 +82,11 @@ test('a tell\'s tooltip offers its part\'s next interrupt tick as the way to sto
   tell(s, 'fulldisk', 'encryptor', 2);
   assert.ok(s.encounter.ticked, 'a home fight has ticks too');
   part(s, 'encryptor').ticks = [{ at: 0.5, spent: false }, { at: 0.25, spent: false }];
-  assert.match(chipOf(s).tip, /Cut it: take the Encryptor under 50% in 2 cycles/);
+  assert.match(chipOf(s).tip, /\n▸ Take the Encryptor under 50% in 2 cycles/);
   part(s, 'encryptor').ticks[0].spent = true;
-  assert.match(chipOf(s).tip, /take the Encryptor under 25% in 2 cycles/);
+  assert.match(chipOf(s).tip, /Take the Encryptor under 25% in 2 cycles/);
   s.encounter.cutBudget = 0;
-  assert.match(chipOf(s).tip, /No tick left on the Encryptor: soften it/, 'no interrupts left this fight');
+  assert.match(chipOf(s).tip, /\n▸ Soften it with ◆, a shield or Brace\. The Encryptor has no tick left\./, 'no interrupts left this fight');
 });
 
 test('the gear row: only your equipped rules that wait on a condition, each lit exactly while it holds', () => {
@@ -186,16 +186,16 @@ test('part tooltips by research: ??? and how to decode it, then its attack and a
   assert.match(html, /<div class="bcell bname" title="Mutex: \?\?\?\nBreak one, cut it or answer its tell to decode it\.">/);
   assert.doesNotMatch(html, /class="pcue"/);
   s.research = { [codexKey(v, mutex)]: 3 };
-  assert.equal(partTip(s, v, mutex), 'Mutex: It has no attack of its own.\nResearch 15 to learn its rule and answer.', 'decoded: its attack, its rule waits');
+  assert.equal(partTip(s, v, mutex), 'Mutex: Has no attack of its own.\nResearch 15 to learn its rule and answer.', 'decoded: its attack, its rule waits');
   assert.match(boardMarkup(s, null), /<span class="pcue" data-link="encryptor">[\s\S]*?locks Encryptor<\/span>/, 'and its cue on its row');
   s.research = { [codexKey(v, mutex)]: 15 };
-  assert.equal(partTip(s, v, mutex), `Mutex: Locks the Encryptor behind a ${enc.lockMax} shield that takes every hit first. While the Mutex stands, the lock comes back ${CONFIG.mutex.every} cycles after you break it.\nBreak the Mutex first, or break the lock and finish the Encryptor within ${CONFIG.mutex.every} cycles.`);
+  assert.equal(partTip(s, v, mutex), `Mutex: Locks the Encryptor behind a shield that absorbs ${enc.lockMax} damage. The lock takes every hit first. While the Mutex stands, a broken lock returns ${CONFIG.mutex.every} cycles later.\n▸ Break the Mutex first, or burst through one lock.`, 'its mechanics, then its answer on its own ▸ line');
   html = boardMarkup(s, null);
   assert.match(html, /<span class="pcue" data-link="encryptor">[\s\S]*?locks Encryptor<\/span>/);
   // The rest of the board's parts read from what they are.
   const r = (p) => partRead(s, v, p);
-  assert.match(r(enc).does, /^Encrypts you every \d+ cycles\. Each Encrypt adds \d+ damage a cycle until it breaks\./);
-  assert.match(r(part(s, 'pulse')).does, /^Hits you for \d+ every 4 cycles\./);
+  assert.match(r(enc).does, /^Encrypts you every \d+ cycles\. Each Encrypt deals \d+ damage to you every cycle until the Encryptor breaks\./);
+  assert.match(r(part(s, 'pulse')).does, /^Deals \d+ damage to you every 4 cycles\./);
 });
 
 test('part reads stay true to the code: a Lockbox\'s cap, a Mirror\'s reboot, a Decoy\'s beat, a Keyring\'s partner, the rooms\' bodies', async () => {
@@ -206,9 +206,9 @@ test('part reads stay true to the code: a Lockbox\'s cap, a Mirror\'s reboot, a 
   const ran = body('ransomware', FAMILIES.ransomware.parts), lockbox = ran.parts.find((p) => p.ward);
   assert.match(partRead(null, ran, lockbox).does, new RegExp(`at most ${Math.round(38 * CONFIG.ward)} Integrity a cycle`));
   const worm = body('worm', FAMILIES.worm.parts);
-  assert.match(partRead(null, worm, worm.parts.find((p) => p.twin)).does, /reboots at 40% 3 cycles later, once/);
+  assert.match(partRead(null, worm, worm.parts.find((p) => p.twin)).does, /reboots 3 cycles later at 40% Integrity\. Reboots only once\./);
   const gr = body('ghostroot', FAMILIES.ghostroot.parts);
-  assert.match(partRead(null, gr, gr.parts.find((p) => p.reflect)).does, /^Every 4th cycle it mirrors your commands: they deal no damage, and 30% bounces back at you\./);
+  assert.match(partRead(null, gr, gr.parts.find((p) => p.reflect)).does, /^Every 4th cycle, reflects your commands\. A reflected command deals no damage, and 30% of it hits you\./);
   const bo = body('bouncer', GUARDS.bouncer.parts.filter((x) => !x.kestrel)); // the Bouncer as it stands (Kestrel's Idle Timer joins half of them from floor 3)
   assert.equal(partRead(null, bo, bo.parts.find((p) => p.rearm)).cue.text, 're-arms Gate');
   for (const fam of ['trojan', 'cryptominer', 'wiper']) {
@@ -351,7 +351,7 @@ test('the Trojan\'s redeploy and a fallback draw as tethers: Loader to Courier w
   assert.match(tt[0].tip, /^Loader: \?\?\?/, '??? until the Loader is decoded');
   s.research = { [codexKey(v, part(s, 'loader'))]: 15 };
   tt = tethersOf(boardMarkup(s, null), 'redeploy');
-  assert.match(tt[0].tip, /^Loader redeploy: break the Courier while the Loader stands and it comes back 4 cycles later at 50% Integrity, every time\./);
+  assert.match(tt[0].tip, /^Loader redeploy: a Courier broken while the Loader stands comes back 4 cycles later at 50% Integrity, every time\./);
   Object.assign(courier, { armor: 0, integrity: 1 });
   command(s, 'spike courier'); resolveCycle(s);
   assert.equal(courier.integrity, 0);
@@ -359,24 +359,24 @@ test('the Trojan\'s redeploy and a fallback draw as tethers: Loader to Courier w
   assert.equal(stub.length, 1);
   assert.match(stub[0].cls, /\bstub\b/); assert.match(stub[0].cls, /\bdown\b/);
   assert.match(stub[0].inner, new RegExp(`↻${courier.redeployAt - s.encounter.cycle}<`));
-  assert.match(stub[0].tip, /^Loader redeploy: the Courier comes back in \d cycles, at 50% Integrity\.\nBreak the Loader before then and it stays down\./);
+  assert.match(stub[0].tip, /^Loader redeploy: the Courier comes back in \d cycles at 50% Integrity, unless the Loader breaks first\.\n▸ Break the Loader before then\./);
   // The Redeploy chip on the Loader's row, and its tag.
   const html = boardMarkup(s, null);
   assert.match(html.split('data-target="loader"')[1].split('data-target=')[0], /title="Redeploy: \d+ hp the Courier comes back, unless the Loader is broken first"/, 'on the Loader\'s row');
   assert.match(html, /redeploys in \d/);
-  assert.match(partRead(s, v, part(s, 'loader')).does, /redeploys a broken Courier 4 cycles later at 50% Integrity, every time/);
+  assert.match(partRead(s, v, part(s, 'loader')).does, /Redeploys a broken Courier 4 cycles later at 50% Integrity, every time/);
   // A Crawler's Brood falls back on its Maw: a tether of its own, a fallback tag, and the read says it.
   const c = at(12); selectEncounter(c, 'crawler', 3); command(c, 'engage');
   const fb = tethersOf(boardMarkup(c, null), 'fallback');
   assert.ok(fb.length >= 2 && fb.every((t) => t.links === 'replicator pulse' && /\bup\b/.test(t.cls)));
-  assert.match(boardMarkup(c, null), /title="Fallback: break the Maw while the Brood stands and the Brood takes over its Bite\.">fallback</);
+  assert.match(boardMarkup(c, null), /title="Fallback: if the Maw breaks first, the Brood takes over its Bite\.">fallback</);
   const cv = c.encounter.virus;
-  assert.match(partRead(c, cv, part(c, 'replicator')).does, /Break the Maw while the Brood stands and its Brood hits you for the Maw's Bite too\./);
+  assert.match(partRead(c, cv, part(c, 'replicator')).does, /If the Maw breaks first, the Brood adds the Bite to its Brood\./);
   // A Bouncer's Keyring says it on its re-arm tether (no second tether to the same Gate), and the Patcher in its read.
   const b = at(12); selectEncounter(b, 'bouncer', 3); command(b, 'engage');
   b.research = { [codexKey(b.encounter.virus, part(b, 'encryptor'))]: 15 };
   assert.equal(tethersOf(boardMarkup(b, null), 'fallback').length, 0);
-  assert.match(tethersOf(boardMarkup(b, null), 'rearm')[0].tip, /Break the Gate while the Keyring stands and the Keyring takes over its Ram\./);
+  assert.match(tethersOf(boardMarkup(b, null), 'rearm')[0].tip, /If the Gate breaks first, the Keyring takes over its Ram\./);
   const p = at(12); selectEncounter(p, 'patchwork', 3, { level: 12, mutation: null }); command(p, 'engage');
-  assert.match(partRead(p, p.encounter.virus, part(p, 'patcher')).does, /Break the Pulse Node while the Patcher stands and the Patcher drops its Patch and takes over the Surge\./);
+  assert.match(partRead(p, p.encounter.virus, part(p, 'patcher')).does, /If the Pulse Node breaks first, the Patcher drops its Patch and takes over the Surge\./);
 });

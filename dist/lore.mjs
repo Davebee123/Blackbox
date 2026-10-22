@@ -43,7 +43,7 @@ export const SKILL_TEXT = {
   // Operator: write the script, let it run.
   deploy: { desc: 'Deploys a helper that deals 12 damage to the target every cycle for 4 cycles. It moves to another part if the target breaks.', lore: 'Push to prod. Let it do the work.' },
   hook: { desc: 'Hooks the target, dealing 10 damage. For 4 cycles, every hit on it deals 6 additional damage, including helpers and burns.', lore: 'Intercept every call and add a little something.' },
-  botnet: { desc: 'Points a botnet at the target: three small helpers that each deal 4 damage to it every cycle for 3 cycles.', lore: 'A thousand borrowed machines, all pointed one way.' },
+  botnet: { desc: 'Points a botnet at the target, sending three small helpers that each deal 4 damage to it every cycle for 3 cycles.', lore: 'A thousand borrowed machines, all pointed one way.' },
   spawn: { desc: 'Spawns a small helper that deals 7 damage to the target every cycle for 3 cycles.', lore: 'Another child process, another pair of hands.' },
   jam: { desc: 'Jams the target, dealing 15 damage. If one of your helpers is on it, spends that helper to delay its attack 1 cycle.', lore: 'Throw a worker in the gears. It was built for that.' },
   'kill-switch': { desc: 'Pulls the kill switch. All your helpers deal their remaining damage at once, plus their Last Gasp.', lore: 'Pull the pin on everything you’ve got running.' },

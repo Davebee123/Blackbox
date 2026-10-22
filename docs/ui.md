@@ -226,6 +226,7 @@ interface**. CSS, the DOM and text only (no canvas, WebGL or PixiJS).
 ## Rules for future UI work
 
 - **Show it, don't explain it** (docs/style-guide.md section 0, the designer's foundational rule). Cards are icons, numbers, bars, pips and states. Explanations go in tooltips, never in a paragraph on the card.
+- **Tooltips read like World of Warcraft's** (Tooltip style, below). The name is the title, the mechanics come first, and the answer sits on its own muted line.
 
 1. Use the tokens. A new padding or gap comes from the spacing scale; a new label uses `--label` or `--kicker`.
 2. Reach for an existing component before writing a new one: card, labelled rows, item row with action,
@@ -237,3 +238,24 @@ interface**. CSS, the DOM and text only (no canvas, WebGL or PixiJS).
 7. Don't centre text that people scan; centre only single numbers and banners.
 8. No new colours. If something needs a colour, it is one of the jobs in the table above. (A floor's palette, in Screen effects above, recolours the structure and surfaces, never a job.)
 9. Check with screenshots at 1440 and 390 wide, with no horizontal overflow and no page errors.
+
+## Tooltip style (WoW grammar)
+
+The designer's rule for every tooltip and Codex card that describes a part, a tell, a mutation or another rule of a virus: write it the way a World of Warcraft ability or creature tooltip reads. `partRead` and `tellTip` (dist/fightread.mjs), the genes' `does` and `answer` (dist/genes.mjs), the strains' and ICE's `rule` and `answer` (dist/data.mjs), and the server, site and quirk rules all follow it. `style.test.mjs` scans every part, tell, mutation and gene description for the banned patterns.
+
+1. **The name is the title.** The tooltip system bolds `Name: rest` (app.js `ttShow`). The body never repeats the name at its start.
+2. **Mechanics first.** Short, declarative, present-tense sentences with numerals and units: *Deals 28 damage to you every 5 cycles.* *Absorbs 30 damage.* *Immune to damage for 5 cycles.* *Breaks 1 ◆ on hit.* *Lasts 2 cycles.*
+3. **Lead with the verb or the effect:** *Deals…*, *Shields…*, *Heals…*, *Copies…*, *Reduces…*, *Increases…*, *While it stands, …*, *When broken, …*. A part breaks (the glossary's word), so it is *When broken*, not *When destroyed*.
+4. **One idea a sentence.** No colon chains (*Frozen: off the timeline, and nothing reaches it, …*), no semicolons, no sentence over 25 words. Name the target where *it* would be unclear: *the Encryptor*, *you*, *its partner*.
+5. **Second person only for the player as the target:** *Deals 6 damage to you.* The mechanics never give advice.
+6. **The answer goes on its own last line.** One imperative of 10 words or fewer, from the part's answer: *Break the others while it is frozen.* In a tooltip the line starts with `▸ ` (fightread.mjs `answerLine`), and `ttShow` draws it muted under a rule, like WoW's *Use:* line. On a Codex card it is its own teal paragraph with the same ▸. Cut it when it only repeats the mechanics.
+7. **Numbers** are the live, scaled values in a fight, and the base values on a Codex card.
+8. **Sentence case, plain English,** and no word the player hasn't met on the board.
+9. **Terms:** *cycle* and *cycles* for time, *◆* for armor, *Integrity* for a part's health, *Signal* for yours.
+
+| Before | After |
+|---|---|
+| Cold Store: Frozen: off the timeline, and nothing reaches it, until the end of cycle 5. Then it thaws and joins the fight: it hits you for 28 every 5 cycles. Break the others while it is frozen, and save a big hit or a shield for its thaw. | **Cold Store** Frozen until the end of cycle 5. Off the timeline and immune to damage while frozen. After it thaws, its Chill deals 28 damage to you every 5 cycles. The first Chill lands 2 cycles after the thaw. ▸ *Break the others while it is frozen.* |
+| Pulse Node: Hits you for 14 every 4 cycles. Break it, or delay its attack. ◆ and shields soften the hit. | **Pulse Node** Deals 14 damage to you every 4 cycles. ▸ *Delay it, or soften the hit with ◆ and shields.* |
+
+The highlighter (dist/ruletext.mjs) lights the facts of this grammar in a detail panel: *28 damage*, *5 cycles*, *1 ◆*, *50% more damage*, *Scrambled*. The Codex part cards, tells, signatures and mutation rules draw their mechanics through it.
