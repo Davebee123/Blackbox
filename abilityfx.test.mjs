@@ -1,6 +1,7 @@
 // Ability effects (dist/abilityfx.mjs, its table dist/abilityfx-table.mjs): every ability a player can fire has a row
 // (DELIBERATE lists any left on the plain strike), the effect starts at the ability's key in the tray however it was
-// fired (at your bar only when that key isn't on screen), travels to where it plays and lands with its number. Nothing plays at Screen
+// fired (at your bar only when that key isn't on screen; a crewmate's at their bar in the crew window), travels to
+// where it plays and lands with its number. Nothing plays at Screen
 // effects off or with Motion off, the layer takes no input and is hidden from screen readers, every piece is gone
 // within CAP (1.2 s, travel included) and ends unseen, a piece may cross a part's name, ◆ or Integrity only for its own
 // moment, it never stops over a key's label or your bar's numbers, and your bar's effects never touch a part's name.
@@ -17,6 +18,8 @@ const R = (s) => { const [l, t, w, h] = s.split(',').map(Number); return rect(l,
 // and the board: a roomy two-part fight (one part showing an attack chip) and a dense three-part one with tags.
 const hud = { bar: R('63,131,478,14'), nums: R('63,99,478,26') };
 const tray = Array.from({ length: 11 }, (_, i) => R(`${47 + i * 109.5},725,103,84`));
+// The crew window under your Signal: a crewmate's line, its name and class, its bar and its numbers.
+const crewWin = { name: R('63,158,60,14'), cls: R('130,158,90,12'), bar: R('63,176,300,4'), nums: R('370,170,50,12') };
 const roomy = () => {
   const you = { row: R('47,295,786,68'), cell: R('85,296,201,67'), now: R('286,296,134,67') };
   const parts = [
@@ -35,7 +38,7 @@ const dense = () => {
   return { you, parts, keep: [...parts.flatMap((p) => [p.name, p.tags].filter(Boolean)), R('91,328,28,20')] };
 };
 const pad = (q) => ({ l: q.l - 1, t: q.t - 1, r: q.r + 1, b: q.b + 1 });
-const geoOf = (b, i, key = tray[3]) => ({ keep: b.keep.map(pad), originKeep: [pad(hud.nums), ...tray.map(pad)], mine: { ...hud }, key, parts: b.parts, part: b.parts[i] });
+const geoOf = (b, i, key = tray[3], mate = null) => ({ keep: b.keep.map(pad), originKeep: [pad(hud.nums), ...tray.map(pad), pad(crewWin.name), pad(crewWin.cls), pad(crewWin.nums)], mine: { ...hud }, key, mate, parts: b.parts, part: b.parts[i] });
 const seeded = (n) => () => ((n = (n * 1103515245 + 12345) % 2 ** 31) / 2 ** 31);
 const ev = (type, x = {}) => ({ id: 1, type, message: '', ...x });
 // Every point of a piece's motion where it shows (opacity over 0), with the ms it shows at.
@@ -45,10 +48,11 @@ function* shown(el, steps = 40) {
 // Every recipe on every board, every part, from the key and from the bar, at both levels, as a hit, a crit, a hit on ◆
 // and a crewmate's.
 const variants = (fn, { seeds = [1, 7] } = {}) => {
-  for (const [name, board] of [['roomy', roomy()], ['dense', dense()]]) for (let i = 0; i < board.parts.length; i++) for (const origin of ['key', 'no key']) {
-    const g = geoOf(board, i, origin === 'key' ? tray[3] : null);
+  for (const [name, board] of [['roomy', roomy()], ['dense', dense()]]) for (let i = 0; i < board.parts.length; i++) for (const origin of ['key', 'no key', 'crew']) {
+    const g = geoOf(board, i, origin === 'key' ? tray[3] : null, origin === 'crew' ? crewWin.bar : null);
     for (const [k, r] of Object.entries(RECIPES)) for (const lvl of ['full', 'calm']) for (const opt of [{}, { crit: true, power: 1, result: 'crit' }, { result: 'chit', power: 0 }, { kind: 'crew' }]) for (const seed of seeds) {
-      const plan = layout(r, g, { lvl, rnd: seeded(seed), origin: k.endsWith(':tick') ? 'here' : 'key', ...opt });
+      if (origin === 'crew' && r.on === 'you') continue; // a crewmate's heal or shield is on their bar, not yours
+      const plan = layout(r, g, { lvl, rnd: seeded(seed), origin: k.endsWith(':tick') ? 'here' : origin === 'crew' ? 'crew' : 'key', ...(origin === 'crew' ? { kind: 'crew' } : {}), ...opt });
       assert.ok(plan?.els.length, `${name} ${k}`);
       fn({ name, board, i, g, k, r, lvl, plan, origin });
     }
@@ -109,9 +113,11 @@ test('every ability a player can fire has a row: key 1 by each class\'s word, ev
 
 test('it starts at the ability\'s key in the tray however it was fired, and at your bar only when that key isn\'t on screen', () => {
   // Every fire source: from the tray, typed, the timer's auto-repeat, a routine, a daemon, a crewmate; key 1 and SIGINT too.
-  for (const x of [{ auto: false }, { auto: true }, { auto: 'program' }, { auto: 'daemon' }, { who: 'mate' }]) for (const ability of ['crack', 'spike', 'sigint', 'firewall']) {
+  for (const x of [{ auto: false }, { auto: true }, { auto: 'program' }, { auto: 'daemon' }]) for (const ability of ['crack', 'spike', 'sigint', 'firewall']) {
     assert.equal(originOf(ev('resolved', { ability, target: 'p', ...x })), 'key', `${ability} ${JSON.stringify(x)}`);
   }
+  // A crewmate's, however they fired it: their own bar in the crew window.
+  for (const auto of [false, true, 'program']) assert.equal(originOf(ev('resolved', { ability: 'spike', target: 'p', who: 'nyx', auto })), 'crew');
   assert.equal(originOf(ev('damage', { target: 'p', amount: 20, src: 'burn', via: 'Inject' })), 'here', 'a burn\'s tick plays where it burns');
   // Laid out: from the key's middle when it's on screen, else from your bar.
   const g = geoOf(roomy(), 0), keyMid = { x: (g.key.l + g.key.r) / 2, y: g.key.t + (g.key.b - g.key.t) * 0.35 }, barMid = { x: (hud.bar.l + hud.bar.r) / 2, y: (hud.bar.t + hud.bar.b) / 2 };
@@ -125,6 +131,18 @@ test('it starts at the ability\'s key in the tray however it was fired, and at y
     assert.ok(fromKey.travel >= TRAVEL.min && fromKey.travel <= TRAVEL.max, `${k}: ${fromKey.travel} ms on the way`);
     assert.equal(fromKey.impact, fromKey.travel + (RECIPES[k].land || 0), `${k}: it lands its land after it arrives`);
     if (RECIPES[k].on !== 'you') assert.ok(near(startOf(noKey), barMid, 14), `${k} with no key on screen, from your bar: ${JSON.stringify(startOf(noKey))}`);
+  }
+  // A crewmate's starts at the middle of their bar in the crew window, in their violet; the crew window out of sight:
+  // your bar.
+  const mateMid = { x: (crewWin.bar.l + crewWin.bar.r) / 2, y: (crewWin.bar.t + crewWin.bar.b) / 2 };
+  for (const k of ['ban', 'bash', 'poke', 'ping', 'crack', 'inject', 'deploy', 'sigint']) {
+    const fromMate = layout(RECIPES[k], { ...g, mate: crewWin.bar }, { origin: 'crew', kind: 'crew', rnd: seeded(2) });
+    assert.equal(fromMate.from, 'crew');
+    assert.ok(near(startOf(fromMate), mateMid, 14), `${k} from the crewmate's bar: ${JSON.stringify(startOf(fromMate))}`);
+    assert.ok(fromMate.els.every((el) => /\bcrew\b/.test(el.cls)), `${k}: in their violet`);
+    const hidden = layout(RECIPES[k], { ...g, mate: null }, { origin: 'crew', kind: 'crew', rnd: seeded(2) });
+    assert.equal(hidden.from, 'bar', `${k}: the crew window out of sight`);
+    assert.ok(near(startOf(hidden), barMid, 14), `${k}: from your bar`);
   }
   // Your bar's own effects come from the key too: a streak to the bar first, then they play there.
   for (const k of ['firewall', 'patch', 'brace', 'harden']) {
@@ -140,9 +158,9 @@ test('it starts at the ability\'s key in the tray however it was fired, and at y
   assert.equal(travelOf({ x: 0, y: 0 }, { x: 100, y: 0 }), TRAVEL.min);
   assert.equal(travelOf({ x: 0, y: 0 }, { x: 0, y: 2000 }), TRAVEL.max);
   // app.js: every fired ability from its key; no record of how it was queued any more.
-  const app = readFileSync(new URL('./dist/app.js', import.meta.url), 'utf8');
-  assert.match(app, /const origin = originOf\(e\);/);
-  assert.doesNotMatch(app, /queuedFrom|trayPick|noteQueued/);
+  const appSrc = readFileSync(new URL('./dist/app.js', import.meta.url), 'utf8');
+  assert.match(appSrc, /const origin = originOf\(e\);/);
+  assert.doesNotMatch(appSrc, /queuedFrom|trayPick|noteQueued/);
   // On the page: the key on screen (key 1's, SIGINT's), or none: the bar.
   const { fx, row } = fakePage({});
   assert.equal(fx.play('ban', row, { ability: 'spike' }).from, 'key');
@@ -150,6 +168,14 @@ test('it starts at the ability\'s key in the tray however it was fired, and at y
   assert.equal(fx.play('ban', row, { ability: 'spike', noKey: true }).from, 'bar', 'the playtest\'s fallback preview');
   const bare = fakePage({ noKeys: true });
   assert.equal(bare.fx.play('ban', bare.row, { ability: 'spike' }).from, 'bar', 'no key in the tray for it (or no tray on screen): your bar');
+  // On the page: a crewmate's from their bar in the crew window; theirs out of sight (collapsed, or not their bar): yours.
+  assert.equal(fx.play('ban', row, { ability: 'spike', who: 'nyx', origin: 'crew', kind: 'crew' }).from, 'crew');
+  assert.equal(fx.play('ban', row, { ability: 'spike', who: 'kade', origin: 'crew', kind: 'crew' }).from, 'bar');
+  assert.equal(bare.fx.play('ban', bare.row, { ability: 'spike', who: 'nyx', origin: 'crew', kind: 'crew' }).from, 'bar', 'no crew window: your bar');
+  const app = readFileSync(new URL('./dist/app.js', import.meta.url), 'utf8');
+  assert.match(app, /origin: c\.origin, ability: e\.ability, who: e\.who \|\| null/, 'app.js says whose it is');
+  // A crewmate's class (for key 1's word): matesOf gives the crewmates' own states.
+  assert.match(app, /const m = matesOf\(campaign\)\.find\(\(x\) => x\.who === who\); return m \? classOf\(m\) : null;/);
 });
 
 test('an ability that misses, or has no effect to play, keeps the plain strike; a hit no effect took still strikes', () => {
@@ -360,6 +386,6 @@ function fakePage({ motion = true, level = 'full', noKeys = false }) {
   board.all = { '.bpart': rows };
   const keys = tray.map((q) => el('button', q)), bar = el('div', hud.bar), nums = el('div', hud.nums);
   globalThis.document = { createElement: (t) => el(t), body: el('body') };
-  const fx = createAbilityFx(board, { canMove: () => motion, level: () => level, mineBar: () => bar, mineNums: () => nums, keyEl: (id) => (noKeys ? null : id === 'spike' ? keys[0] : keys[3]), keys: () => (noKeys ? [] : keys) });
+  const fx = createAbilityFx(board, { canMove: () => motion, level: () => level, mineBar: () => bar, mineNums: () => nums, keyEl: (id) => (noKeys ? null : id === 'spike' ? keys[0] : keys[3]), keys: () => (noKeys ? [] : keys), mateBars: (who) => (noKeys || who !== 'nyx' ? [] : [el('span', crewWin.bar)]), crewText: () => (noKeys ? [] : [el('b', crewWin.name), el('small', crewWin.nums)]) });
   return { fx, row: rows[0] };
 }

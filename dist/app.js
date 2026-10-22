@@ -168,7 +168,7 @@ function load() {
     const pid = playtest.startsWith('part:') ? playtest.slice(5) : null, home = pid && Object.entries(FAMILIES).find(([, f]) => f.parts.some((x) => x.id === pid));
     if (home) { const spec = home[1].parts.find((x) => x.id === pid), L = lv >= 1 && lv <= 50 ? lv : Math.max(spec.from || 1, 3); s.hackers = { [s.loadout.archetype]: { level: L, xp: 0 } }; selectEncounter(s, 'random', seed || 1, { level: L, family: home[0], mutation: null, ...(spec.pool === 'third' ? { genes: partGenesFor(home[0], spec, L), basic: 'pulse' } : { basic: pid }) }); }
     // ?playtest=fx (abilityfx-playtest.mjs): the ability effects playtest, on a three-part fight (&family=, &seed=, &level=).
-    else if (playtest === 'fx') { const L = lv >= 1 && lv <= 50 ? lv : 12; s.hackers = { [s.loadout.archetype]: { level: L, xp: 0 } }; selectEncounter(s, 'random', seed || 8, { level: L, family: /^[a-z]+$/.test(fam || '') ? fam : 'ransomware', mutation: null }); }
+    else if (playtest === 'fx') { const L = lv >= 1 && lv <= 50 ? lv : 12; s.hackers = { [s.loadout.archetype]: { level: L, xp: 0 } }; if (/^[a-z ]+$/.test(params.get('crew') || '')) play(s, `crew sim ${params.get('crew')}`); selectEncounter(s, 'random', seed || 8, { level: L, family: /^[a-z]+$/.test(fam || '') ? fam : 'ransomware', mutation: null }); } // &crew=<class>: a crewmate in the crew window, to fire theirs
     else if (playtest === 'random' && (fam || seed)) selectEncounter(s, 'random', seed || 1, { ...(lv >= 1 && lv <= 50 ? { level: lv } : {}), ...(/^[a-z]+$/.test(fam || '') ? { family: fam } : {}), mutation: null });
     else command(s, `encounter ${/^[a-z]+$/.test(playtest) ? playtest : 'cryptjack'}`); // any fixture or strain
     if (!s.encounter) command(s, 'encounter cryptjack');
@@ -224,11 +224,12 @@ const initials = (h) => (h || '').replace(/[^a-z0-9]/gi, '').slice(0, 2).toUpper
 const ticked = (e) => !e.absorbed && /^[A-Z][\w-]*( [A-Z][\w-]*)*: /.test(e.message) && !e.message.startsWith('Crack: '); // absorbed: your command's own hit on a ◆ (it names the skill)
 // Ability effects (abilityfx.mjs): every ability you fire plays its own effect (Ban's hammer, Inject's burn, Ping's
 // waves, Crack shattering a ◆, Firewall's bricks on your bar), from its key in the tray however it was fired (from your
-// bar when that key isn't on screen), landing as its number does; it takes the strike's place on that part. Screen
+// bar when that key isn't on screen; a crewmate's from their bar in the crew window, in their violet), landing as its
+// number does; it takes the strike's place on that part. Screen
 // effects subtle or medium: lighter; off or Motion off: none (the strike's own rules).
 const abilityfx = createAbilityFx(document.getElementById('board'), { canMove: () => canMove(), level: () => fxLevel() });
 // The class a shooter plays: yours, or a crewmate's (crew.mjs), for key 1's name (Bash, Ban, Poke, Ping).
-const shooterClass = (who) => { if (!who) return classOf(campaign); const m = matesOf(campaign).find((x) => x.who === who); return m ? classOf(m.st) : null; };
+const shooterClass = (who) => { if (!who) return classOf(campaign); const m = matesOf(campaign).find((x) => x.who === who); return m ? classOf(m) : null; }; // matesOf: the crewmates' own states
 // The plain strike on a part (hitfx.mjs), for a hit no ability effect took.
 const plainStrike = (e, result) => () => hitfx.strike(partRow(e.target), { who: e.who || 'you', initials: initials(e.who || campaign.profile?.handle || 'you'), kind: e.who ? 'crew' : 'you', result });
 // Every command fired in a batch (combat.mjs resolved) with an effect to play: what it set off follows it, up to the
@@ -249,7 +250,7 @@ function afxCommands(events) {
     const mine = after.filter((x) => x.target === tgt && (x.type === 'damage' || x.type === 'armor'));
     const result = mine.some((x) => x.crit) ? 'crit' : mine.some((x) => x.type === 'armor' && x.absorbed) ? 'chit' : 'hit';
     const pm = (tgt && part(campaign, tgt)?.max) || 50, dealt = mine.reduce((n, x) => n + (x.type === 'damage' ? x.amount || 0 : 0), 0);
-    const origin = originOf(e); // its key in the tray, however it was fired (your bar when the key isn't on screen)
+    const origin = originOf(e); // its key in the tray, however it was fired (your bar when the key isn't on screen); a crewmate's: their bar
     out.push({ e, key, R, tgt, mine, result, origin, landEvt: mine[0] || after.find((x) => x.target === tgt) || e, power: dealt ? Math.min(1, dealt / pm) : 0.3 });
   }
   return out;
@@ -261,7 +262,7 @@ function afxLead(events) {
   if (module !== 'combat' || fxLevel() === 'minimal' || !afxLevel({ level: fxLevel(), motion: canMove() })) return 0;
   const c = afxCommands(events)[0];
   if (!c) return 0;
-  const plan = abilityfx.plan(c.key, afxRow(c), { origin: c.origin, ability: c.e.ability, kind: c.e.who ? 'crew' : 'you' });
+  const plan = abilityfx.plan(c.key, afxRow(c), { origin: c.origin, ability: c.e.ability, who: c.e.who || null, kind: c.e.who ? 'crew' : 'you' });
   return plan ? Math.min(600, Math.round(plan.impact)) : 0;
 }
 function strikes(events, delayOf = () => 0) {
@@ -285,7 +286,7 @@ function strikes(events, delayOf = () => 0) {
     if (tgt) taken.set((e.who || 'you') + '>' + tgt, strike);
     pendingStrikes.push(() => {
       const row = afxRow(c);
-      const played = abilityfx.play(key, row, { power: c.power, crit: result === 'crit', result, kind: e.who ? 'crew' : 'you', origin: c.origin, ability: e.ability, landIn: land, onImpact: row ? () => hitfx.jolt(row, result) : null });
+      const played = abilityfx.play(key, row, { power: c.power, crit: result === 'crit', result, kind: e.who ? 'crew' : 'you', origin: c.origin, ability: e.ability, who: e.who || null, landIn: land, onImpact: row ? () => hitfx.jolt(row, result) : null });
       if (!played && strike) later(land, strike); // no room for it: the strike, on the number's beat
     });
   }
@@ -3311,12 +3312,13 @@ if (playtest === 'fx') {
     plain: (id, { result }) => { if (fxLevel() !== 'minimal') hitfx.strike(fxRow(id), { kind: 'you', result }); },
     // From its key: the ability's own key on this tray, else the tray's first key standing in for it (said so); with the
     // key hidden, the fallback a fight uses when its key isn't on screen: your bar.
-    fire: (key, id, { power, crit, result, hidden }) => {
+    mates: () => matesOf(campaign).map((m) => m.who),
+    fire: (key, id, { power, crit, result, hidden, who }) => {
       if (fxLevel() === 'minimal' || !canMove()) return 'none';
       const R = recipeOf(key), row = R?.on === 'you' ? null : fxRow(id), ability = abilityOfKey(key), tick = key.endsWith(':tick');
       const own = ability && document.querySelector(`#tray .ability[data-ability="${CSS.escape(ability)}"]`), stand = !tick && !hidden && !own;
       const keyEl = stand ? document.querySelector('#tray .ability') : null;
-      const plan = abilityfx.play(key, row, { power, crit, result, ability, keyEl, noKey: !!hidden, origin: tick ? 'here' : 'key', onImpact: row ? () => hitfx.jolt(row, result) : null });
+      const plan = abilityfx.play(key, row, { power, crit, result, ability, keyEl, noKey: !!hidden, who: who || null, kind: who ? 'crew' : 'you', origin: tick ? 'here' : who ? 'crew' : 'key', onImpact: row ? () => hitfx.jolt(row, result) : null });
       if (plan) { window.__fxPlan = { travel: plan.travel, impact: plan.impact, dur: plan.dur, from: plan.from }; return stand && keyEl ? 'stand-in' : 'fx'; } // the playtest's last plan, for review captures
       if (row) hitfx.strike(row, { kind: 'you', result });
       return 'plain';

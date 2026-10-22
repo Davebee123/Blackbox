@@ -9,13 +9,15 @@
 // Where it comes from (originOf; the designer: "all ability effects need to come from their ability window"): from the
 // ability's key in the tray, however it was fired (a click, its number key, typed, a routine, the timer's auto-repeat,
 // a daemon). Only when that key isn't on screen (the ability isn't on your bar, or the tray is folded away on a phone)
-// does it start at your bar (your Signal; at home your server's Integrity). It travels from there to the part (TRAVEL:
+// does it start at your bar (your Signal; at home your server's Integrity). A crewmate's starts at their own bar in the
+// crew window under your Signal (their keys aren't on your screen), in their violet; with the crew window out of sight,
+// at your bar. It travels from there to the part (TRAVEL:
 // by distance), and an effect that plays where it lands (a burn, a blast, a mark, or on your bar a heal, a shield, a
 // buff) is taken there by a short streak first. A burn's later tick plays where it burns. Its impact still lands with
 // its number: the page starts it early by its travel.
 //
 // What it may cross: on its way it may pass over anything for a moment (it's in flight), but it never stops over a key
-// label in the tray or your bar's numbers; where it lands it may cover the part's name, ◆ and Integrity, but only for its
+// label in the tray, your bar's numbers or the crew window's names and numbers; where it lands it may cover the part's name, ◆ and Integrity, but only for its
 // own moment. Every piece is gone within CAP (1.2 s, travel included; most are under 1 s) and ends unseen: nothing stays
 // behind. Nothing has a background, nothing dims the page, and nothing on the page moves; the part's name brightens as
 // the hit lands (hitfx.mjs jolt). Teal: you. A crit goes gold-white and a hit on ◆ throws steel; a crewmate's in violet,
@@ -67,10 +69,11 @@ export function keyOf(e, cls) {
 }
 // The recipe for a key, or null (the plain hit effect then).
 export const recipeOf = (key) => (key && Object.hasOwn(RECIPES, key) ? RECIPES[key] : null);
-// Where it starts: the ability's key in the tray, whoever or whatever fired it (layout() falls back to your bar when
-// that key isn't on screen); a burn's tick where it burns.
+// Where it starts: your ability's key in the tray, whatever fired it (layout() falls back to your bar when that key
+// isn't on screen); a crewmate's at their bar in the crew window (your bar when it's out of sight); a burn's tick where
+// it burns.
 export function originOf(e) {
-  return tickKey(e) ? 'here' : 'key';
+  return tickKey(e) ? 'here' : e?.who ? 'crew' : 'key';
 }
 
 // ---------- how much ----------
@@ -153,11 +156,11 @@ function track(el, start, ks) {
 //   part   { row, cell (its name cell), name (its name line: name, ◆, Integrity), bar, chip (its attack chip) }
 //   parts  every part on the board, the same way (an effect on all of them)
 //   mine   { bar, nums }: your own bar in the HUD and its numbers
-//   key    the ability's key in the tray, when it's on screen
-//   keep   every name line on the board, every part's tags and your label; originKeep: every key's label and your
-//          bar's numbers (nothing stops over them)
-// opts.origin: 'key' (the ability's key; your bar when geo.key is null: not on screen) | 'bar' | 'here' (a burn's tick:
-// it starts where it plays).
+//   key    the ability's key in the tray, when it's on screen; mate: the crewmate's bar in the crew window, when it is
+//   keep   every name line on the board, every part's tags and your label; originKeep: every key's label, your bar's
+//          numbers and the crew window's names and numbers (nothing stops over them)
+// opts.origin: 'key' (the ability's key; your bar when geo.key is null: not on screen) | 'crew' (the crewmate's bar;
+// yours when geo.mate is null) | 'bar' | 'here' (a burn's tick: it starts where it plays).
 function pointsOf(R, geo, origin) {
   const ybar = geo.mine?.bar || null, Y = ybar ? mid(ybar) : null;
   let P;
@@ -177,9 +180,10 @@ function pointsOf(R, geo, origin) {
     P = { S, M, D: M, lane, floor: name.b + 1, bar, row, cell, name, chip: part.chip || null };
   }
   P.ybar = ybar; P.Y = Y || P.M;
-  // Where it starts: its key, else your bar, else (neither on screen) above the part.
-  const O = origin === 'here' ? P.D : origin === 'key' && geo.key ? { x: (geo.key.l + geo.key.r) / 2, y: geo.key.t + (geo.key.b - geo.key.t) * 0.35 } : Y || { x: P.D.x + 60, y: P.D.y - 120 };
-  P.O = O; P.from = origin === 'here' ? 'here' : origin === 'key' && geo.key ? 'key' : 'bar';
+  // Where it starts: its key (a crewmate's: their bar), else your bar, else (neither on screen) above the part.
+  const key = origin === 'key' && geo.key, mate = origin === 'crew' && geo.mate;
+  const O = origin === 'here' ? P.D : key ? { x: (geo.key.l + geo.key.r) / 2, y: geo.key.t + (geo.key.b - geo.key.t) * 0.35 } : mate ? mid(geo.mate) : Y || { x: P.D.x + 60, y: P.D.y - 120 };
+  P.O = O; P.from = origin === 'here' ? 'here' : key ? 'key' : mate ? 'crew' : 'bar';
   P.okeep = geo.originKeep || []; // the keys' labels and your bar's numbers: a piece that rests never rests on them
   P.T = travelOf(O, P.D);
   P.parts = (geo.parts || []).map((p) => { const S2 = { x: (p.name.l + p.name.r) / 2, y: (p.bar.t + p.bar.b) / 2 }; return { ...p, S: S2, M: { x: S2.x, y: ((p.name.t + p.name.b) / 2 + S2.y) / 2 } }; });
@@ -566,7 +570,9 @@ export function layout(R, geo, { lvl = 'full', power = 0.3, crit = false, result
 // its plan if it played (the plain hit effect then sits out), false if it didn't.
 //   keyEl(id): the ability's key in the tray (default: #tray's button for it), when it's on screen (no key, or a key
 //   that isn't on screen: it starts at your bar).
-export function createAbilityFx(board, { canMove = () => true, level = () => 'full', mineBar = () => document.querySelector('.hud-bar.mine .bigbar'), mineNums = () => document.querySelector('.hud-bar.mine .bar-top'), keyEl = (id) => document.querySelector(`#tray .ability[data-ability="${id}"]`), keys = () => [...document.querySelectorAll('#tray .ability')] } = {}) {
+//   mateBars(who): a crewmate's bars in the crew window (default: .pmate[data-mate] .pbar; the first on screen counts);
+//   crewText(): the crew window's names and numbers.
+export function createAbilityFx(board, { canMove = () => true, level = () => 'full', mineBar = () => document.querySelector('.hud-bar.mine .bigbar'), mineNums = () => document.querySelector('.hud-bar.mine .bar-top'), keyEl = (id) => document.querySelector(`#tray .ability[data-ability="${id}"]`), keys = () => [...document.querySelectorAll('#tray .ability')], mateBars = (who) => [...document.querySelectorAll('.pmate[data-mate] .pbar')].filter((x) => x.closest('.pmate')?.dataset.mate === who), crewText = () => [...document.querySelectorAll('.pmate b, .pmate small')] } = {}) {
   let layer = null;
   const ground = (f) => {
     if (!layer?.isConnected) { layer = document.createElement('div'); layer.id = 'abilityfx'; layer.setAttribute('aria-hidden', 'true'); document.body.appendChild(layer); }
@@ -591,16 +597,17 @@ export function createAbilityFx(board, { canMove = () => true, level = () => 'fu
     return p;
   };
   // The page as layout() reads it.
-  function measure(row, { ability = null, key = null, noKey = false } = {}) {
+  function measure(row, { ability = null, key = null, noKey = false, who = null } = {}) {
     const f = frame(), you = board.querySelector('.brow.byou'), rows = [...board.querySelectorAll('.bpart')];
     const label = you?.querySelector('.bname b');
     const keep = [...rows.flatMap((p) => [pad(local(f, p.querySelector('.part-top'))), pad(local(f, p.querySelector('.part-tags')))]), pad(local(f, label))].filter(Boolean);
     const bar = mineBar(), nums = mineNums(), k = key || (ability ? keyEl(ability) : null);
     const geo = {
       f, keep,
-      originKeep: [pad(local(f, nums)), ...keys().filter(shows).map((x) => pad(local(f, x)))].filter(Boolean),
+      originKeep: [pad(local(f, nums)), ...keys().filter(shows).map((x) => pad(local(f, x))), ...crewText().filter(shows).map((x) => pad(local(f, x)))].filter(Boolean),
       mine: bar && shows(bar) ? { bar: local(f, bar), nums: nums ? local(f, nums) : null } : null,
       key: !noKey && k && shows(k) ? local(f, k) : null,
+      mate: who ? (local(f, mateBars(who).find(shows)) || null) : null,
       parts: rows.filter((x) => !x.classList?.contains('dying')).map((x) => rowGeo(f, x)).filter(Boolean),
       part: row ? rowGeo(f, row) : null,
     };
@@ -634,15 +641,16 @@ export function createAbilityFx(board, { canMove = () => true, level = () => 'fu
     setTimeout(() => span.remove(), Math.max(0, delay + el.dur) + 60);
   }
   // key: the table's; row: the part's board row (null for your bar); opts: power, crit, result, kind, origin ('key' |
-  // 'bar' | 'here'), ability (its key in the tray), keyEl (a key to start from instead), noKey (as if its key weren't on
-  // screen: the playtest's preview of the fallback), landIn (ms from now its number shows: it lands then), onImpact.
+  // 'crew' | 'bar' | 'here'), ability (its key in the tray), who (a crewmate's: their bar), keyEl (a key to start from
+  // instead), noKey (as if its key weren't on screen: the playtest's preview of the fallback), landIn (ms from now its
+  // number shows: it lands then), onImpact.
   // Its plan (layout) on the page as it is now, without playing it: when it would land (app.js waits its numbers for it).
-  function plan(key, row, { power = 0.3, crit = false, result = 'hit', kind = 'you', origin = 'key', ability = null, keyEl: kEl = null, noKey = false, lvl: force } = {}) {
+  function plan(key, row, { power = 0.3, crit = false, result = 'hit', kind = 'you', origin = 'key', ability = null, who = null, keyEl: kEl = null, noKey = false, lvl: force } = {}) {
     const R = recipeOf(key);
     const lvl = force || levelOf({ level: level(), motion: canMove() });
     if (!R || !lvl) return null;
     if (R.on !== 'you' && !row?.isConnected) return null;
-    const geo = measure(R.on === 'you' ? null : row, { ability, key: kEl, noKey });
+    const geo = measure(R.on === 'you' ? null : row, { ability, key: kEl, noKey, who });
     const out = layout(R, geo, { lvl, power, crit, result, kind, origin });
     return out && Object.assign(out, { geo });
   }
