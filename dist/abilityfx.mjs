@@ -7,8 +7,8 @@
 // Where they play: on the part itself, its name cell (the designer: "as long as the effect is short, it's ok to put
 // it over the component name; next to it isn't as immersive"). The hammer lands on its name and bar, the fire burns
 // on its name cell, the ram, the needle, the wave, the bolt and the helper travel to it (from your Now cell, where
-// your command sits, or in from the right), the blast goes off on it. A shield plays on your side, in the gap between
-// your row and the parts, and stays off every name line. Every piece is short and gone within its effect (CAP, 1 s at
+// your command sits, or in from the right), the blast goes off on it. A shield plays on your side, on your own bar
+// (your Signal; at home your server's Integrity: the bar a virus's lash hits, lash.mjs), outside the board. Every piece is short and gone within its effect (CAP, 1 s at
 // most) and nothing stays behind: whatever crosses a part's name, ◆ or Integrity is there only for that moment.
 // Nothing has a background, nothing dims the board, and the board never moves; the part's name brightens as the hit
 // lands (hitfx.mjs jolt). Teal: you. A crit goes gold-white and a hit on ◆ throws steel; a crewmate's in violet,
@@ -54,7 +54,7 @@ const BLAST = [
 // key: the ability's id; key 1 (id `spike`) by the class's own word for it (data.mjs SPIKE: bash, ban, poke, ping),
 // and `<id>:tick` for a burn's later ticks.
 //   label   what the playtest page (?playtest=fx) calls it
-//   on      'part' (on the target's name cell) | 'you' (your side: a shield)
+//   on      'part' (on the target's name cell) | 'you' (on your own bar: a shield)
 //   motion  how the piece moves (MOTIONS): swing · punch · dart · wave · bolt · walk · blast · wall · none
 //   art     the piece: lines of ASCII; frames: several, in turn every fms ms (loop: over and over)
 //   size    its font size (px)
@@ -164,8 +164,8 @@ function fill(el) {
   el.keys.forEach((k) => { if (k.e === undefined) delete k.e; });
   return el;
 }
-// Keep a piece off every name line (your side's effects, which have no part to land on): a key that would cover one
-// moves right of it (or below it, along a bar).
+// Keep a piece off every name line (your side's effects, which have no part to land on, should one ever reach the
+// board): a key that would cover one moves right of it (or below it, along a bar).
 function clear(el, keep) {
   for (const k of el.keys) {
     for (let pass = 0; pass < 4; pass++) {
@@ -183,7 +183,7 @@ function clear(el, keep) {
 //   part  { row, cell (its name cell), name (its name line: name, ◆, Integrity), bar }   (on 'part')
 //   you   { row, cell, now (your Now cell, where your command sits), label (You) }
 //   keep  every name line on the board, every part's tags and your label (your side's effects stay off them)
-//   first the first part's name line (your side: the gap between your row and it)
+//   mine  { bar }: your own bar in the HUD, over the board (your Signal; at home your server's Integrity)
 export function pointsOf(geo) {
   const { part, you } = geo;
   if (!part) return null;
@@ -292,8 +292,7 @@ export const MOTIONS = {
     el.keys = [{ at: 0, x, y, s: 0.7, o: 0 }, { at: 0.05, o: 1 }, { at: 0.35, s: 1.1 }, { at: 0.6, s: 1.25, o: 0.9 }, { at: 1, s: 1.35, o: 0 }];
     return [el];
   },
-  // A firewall on your side: courses of bricks laid bottom-up (each settles onto the one under it) in the gap between
-  // your row and the parts.
+  // A firewall on your own bar: courses of bricks laid bottom-up over it (each settles onto the one under it).
   wall(R, P, c) {
     const out = [];
     const cols = Math.max(12, Math.floor((P.wall.r - P.wall.l) / (R.size * CW)));
@@ -369,7 +368,7 @@ export const PARTICLES = {
     }
     return out;
   },
-  // Flames of 1s and 0s: they rise off the part's bar up over its name (your side: off the wall's top) and go out.
+  // Flames of 1s and 0s: they rise off the part's bar up over its name (your bar: off the wall's top) and go out.
   flame(n, R, P, c) {
     const out = [];
     const you = R.on === 'you';
@@ -407,18 +406,17 @@ export const PARTICLES = {
 };
 
 // ---------- the layout ----------
-// A recipe on a board → its pieces, or null if it can't play there (no part on the board, no row for you).
+// A recipe on a board → its pieces, or null if it can't play there (no part on the board, no bar of yours).
 // opts: lvl ('full' | 'calm'), power (0–1), crit, result ('hit' | 'crit' | 'chit'), kind ('you' | 'crew'), rnd.
 export function layout(R, geo, { lvl = 'full', power = 0.3, crit = false, result = 'hit', kind = 'you', rnd = Math.random } = {}) {
   if (!R || !lvl || !geo) return null;
   let P;
   if (R.on === 'you') {
-    const you = geo.you;
-    if (!you?.row) return null;
-    // The gap between your row and the first part: the wall stands there, under your row's text and over theirs.
-    const b = Math.min(geo.first ? geo.first.t - 2 : you.row.b + 14, you.row.b + 16);
-    const l = you.cell.l, r = Math.min(you.row.r - 4, you.cell.r + 240);
-    P = { wall: { l, r, b }, S: { x: you.cell.r + 6, y: b }, M: { x: you.cell.r + 6, y: b }, lane: { l: you.cell.r + 3, r, t: you.row.t, b }, floor: b, bar: { l, r, t: b, b }, row: you.row, cell: you.cell, O: { x: l, y: b } };
+    const bar = geo.mine?.bar;
+    if (!bar || bar.r - bar.l < 20) return null;
+    // Your bar: the wall stands on it, its bottom course over the bar itself, the flames off its top.
+    const { l, r } = bar, b = bar.b + 1, mid = { x: (l + r) / 2, y: (bar.t + bar.b) / 2 };
+    P = { wall: { l, r, b }, S: mid, M: mid, lane: { l, r, t: bar.t - 30, b }, floor: b, bar, row: { l, r, t: bar.t - 30, b }, cell: bar, O: mid };
   } else {
     P = pointsOf(geo);
     if (!P) return null;
@@ -450,13 +448,21 @@ export function layout(R, geo, { lvl = 'full', power = 0.3, crit = false, result
 }
 
 // ---------- on the page ----------
-// The layer beside #board (as hitfx.mjs: the board redraws every step of a cycle), and play(): an effect on a part's
+// The layer beside #board (as hitfx.mjs: the board redraws every step of a cycle), a twin of it over the whole page for
+// what lands outside the board (your bar in the HUD: fixed on <body>, as lash.mjs's layer is, placed and scaled to match
+// the board layer, so one set of coordinates serves both), and play(): an effect on a part's
 // row (or on your row) → true if it played (the plain hit effect then sits out), false if it didn't.
-export function createAbilityFx(board, { canMove = () => true, level = () => 'full' } = {}) {
+export function createAbilityFx(board, { canMove = () => true, level = () => 'full', mineBar = () => document.querySelector('.hud-bar.mine .bigbar') } = {}) {
   const layer = document.createElement('div');
   layer.id = 'abilityfx';
   layer.setAttribute('aria-hidden', 'true');
   board.parentElement.appendChild(layer);
+  let top = null;
+  const over = (f) => {
+    if (!top?.isConnected) { top = document.createElement('div'); top.id = 'abilityfx-top'; top.setAttribute('aria-hidden', 'true'); document.body.appendChild(top); }
+    Object.assign(top.style, { left: f.box.left + 'px', top: f.box.top + 'px', transform: `scale(${f.scale})` });
+    return top;
+  };
 
   function frame() {
     const scale = board.getBoundingClientRect().width / (board.offsetWidth || 1) || 1;
@@ -476,9 +482,10 @@ export function createAbilityFx(board, { canMove = () => true, level = () => 'fu
     const label = you?.querySelector('.bname b');
     // Every part's name line (name, ◆, Integrity) and its tags under the bar, and your own label: never covered.
     const keep = [...parts.flatMap((p) => [pad(local(f, p.querySelector('.part-top'))), pad(local(f, p.querySelector('.part-tags')))]), pad(local(f, label))].filter(Boolean);
+    const bar = mineBar();
     const geo = {
       keep,
-      first: parts[0] ? local(f, parts[0].querySelector('.part-top')) : null,
+      mine: bar ? { bar: local(f, bar) } : null,
       you: you ? { row: local(f, you), cell: local(f, you.querySelector('.bname')), now: local(f, you.querySelector('.bcell:nth-child(2)')) } : null,
       part: null,
     };
@@ -486,17 +493,18 @@ export function createAbilityFx(board, { canMove = () => true, level = () => 'fu
       const p = { row: local(f, row), cell: local(f, row.querySelector('.bname')), name: local(f, row.querySelector('.part-top')), bar: local(f, row.querySelector('.part-bar')) };
       if (p.row && p.cell && p.name && p.bar) geo.part = p;
     }
+    geo.frame = f;
     return geo;
   }
   const ON = { full: 'full', calm: 'calm' };
-  function place(el) {
+  function place(el, onto = layer) {
     const span = document.createElement('span');
     span.className = 'afx ' + el.cls;
     span.style.fontSize = el.size + 'px';
     span.style.width = el.w.toFixed(1) + 'px';
     span.style.height = el.h.toFixed(1) + 'px';
     span.style.transformOrigin = `${(el.ox ?? el.w / 2).toFixed(1)}px ${(el.oy ?? el.h / 2).toFixed(1)}px`;
-    layer.appendChild(span);
+    onto.appendChild(span);
     const keys = el.keys.map((k) => ({ offset: k.at, opacity: k.o, transform: `translate(${k.x.toFixed(1)}px, ${k.y.toFixed(1)}px) rotate(${(k.r || 0).toFixed(1)}deg) scale(${(k.s ?? 1).toFixed(3)})`, ...(k.e ? { easing: k.e } : {}) }));
     try {
       span.animate(keys, { duration: el.dur, delay: el.delay, fill: 'forwards' }); // hidden (style.css .afx) until it starts
@@ -521,11 +529,13 @@ export function createAbilityFx(board, { canMove = () => true, level = () => 'fu
     const lvl = force || levelOf({ level: level(), motion: canMove() });
     if (!R || !lvl || !ON[lvl]) return false;
     if (R.on !== 'you' && !row?.isConnected) return false;
-    const plan = layout(R, measure(R.on === 'you' ? null : row), { lvl, power, crit, result, kind });
+    const geo = measure(R.on === 'you' ? null : row);
+    const plan = layout(R, geo, { lvl, power, crit, result, kind });
     if (!plan) return false;
-    for (const el of plan.els) place(el);
+    const onto = R.on === 'you' ? over(geo.frame) : layer; // your bar is outside the board: the twin over the page
+    for (const el of plan.els) place(el, onto);
     if (onImpact) setTimeout(onImpact, plan.impact);
     return true;
   }
-  return { play, measure, layer };
+  return { play, measure, layer, top: () => top };
 }

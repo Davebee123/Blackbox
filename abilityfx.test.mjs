@@ -3,7 +3,7 @@
 // input and is hidden from screen readers. A part's effect lands on the part itself, over its name cell (the designer:
 // "as long as the effect is short, it's ok to put it over the component name"), so whatever crosses a part's name, ◆ or
 // Integrity is gone within the effect's short duration (1 s at most) and nothing stays behind; your side's effects
-// (Firewall) never cover a name line or your label. Checked on a roomy board and a dense one.
+// (Firewall) build on your own bar in the HUD, never on a name line or your label. Checked on a roomy board and a dense one.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -18,7 +18,7 @@ const roomy = () => {
     { row: R('47,363,786,68'), cell: R('85,364,201,67'), name: R('91,383,189,21'), bar: R('91,408,189,5') },
     { row: R('47,431,786,68'), cell: R('85,432,201,67'), name: R('91,451,189,21'), bar: R('91,476,189,5') },
   ];
-  return { you, parts, keep: [...parts.map((p) => p.name), R('91,320,28,18')] };
+  return { you, parts, mine: R('63,131,478,14'), keep: [...parts.map((p) => p.name), R('91,320,28,18')] };
 };
 const dense = () => {
   const you = { row: R('47,295,786,86'), cell: R('85,296,201,85'), now: R('286,296,134,85') };
@@ -27,10 +27,10 @@ const dense = () => {
     { row: R('47,465,786,68'), cell: R('85,466,201,67'), name: R('91,485,189,21'), bar: R('91,510,189,5') },
     { row: R('47,533,786,69'), cell: R('85,534,201,68'), name: R('91,541,189,21'), bar: R('91,566,189,5'), tags: R('91,575,189,20') },
   ];
-  return { you, parts, keep: [...parts.flatMap((p) => [p.name, p.tags].filter(Boolean)), R('91,328,28,20')] };
+  return { you, parts, mine: R('63,131,478,14'), keep: [...parts.flatMap((p) => [p.name, p.tags].filter(Boolean)), R('91,328,28,20')] };
 };
 const pad = (q) => ({ l: q.l - 1, t: q.t - 1, r: q.r + 1, b: q.b + 1 });
-const geoOf = (b, i) => ({ keep: b.keep.map(pad), first: b.parts[0].name, you: b.you, part: b.parts[i] });
+const geoOf = (b, i) => ({ keep: b.keep.map(pad), mine: { bar: b.mine }, you: b.you, part: b.parts[i] });
 const seeded = (n) => () => ((n = (n * 1103515245 + 12345) % 2 ** 31) / 2 ** 31);
 
 const ev = (type, x = {}) => ({ id: 1, type, message: '', ...x });
@@ -81,10 +81,10 @@ test('an ability with no row falls back to the plain hit effect; events that are
   // app.js plays the strike for every hit the table doesn't take, and when an effect can't play.
   const app = readFileSync(new URL('./dist/app.js', import.meta.url), 'utf8');
   assert.match(app, /fxKey\.has\(key\) && abilityStrike\(fxKey\.get\(key\), e, \{ result, delay: delayOf\(e\), fallback: strike \}\)\) continue;\n\s+pendingStrikes\.push\(\(\) => later\(delayOf\(e\), strike\)\);/);
-  // No part to land on (it left the board), or no row of yours for a shield: no layout, so the plain hit effect plays.
+  // No part to land on (it left the board), or no bar of yours on screen for a shield: no layout, so nothing plays.
   const g = geoOf(roomy(), 0);
   assert.equal(layout(RECIPES.ban, { ...g, part: null }), null);
-  assert.equal(layout(RECIPES.firewall, { ...g, you: null }), null);
+  assert.equal(layout(RECIPES.firewall, { ...g, mine: null }), null);
   // A narrow board still plays it: it lands on the name cell, which every board has.
   g.part = { ...g.part, row: { ...g.part.row, r: g.part.cell.r + 20 } };
   assert.ok(layout(RECIPES.ban, g));
@@ -114,6 +114,7 @@ test('Screen effects off or Motion off: nothing; subtle and medium: lighter than
     assert.equal(fx.play('ban', row), false);
     assert.equal(fx.play('firewall', null), false);
     assert.equal(layer.children.length, 0);
+    assert.equal(fx.top(), null, 'nothing over the page either');
   }
   const { fx, layer, row } = fakePage({ motion: true, level: 'full' });
   assert.equal(fx.play('ban', row), true);
@@ -122,13 +123,17 @@ test('Screen effects off or Motion off: nothing; subtle and medium: lighter than
 });
 
 test('the layer is hidden from screen readers and takes no input; its pieces have no background', () => {
-  const { layer } = fakePage({});
+  const { fx, layer, row } = fakePage({});
   assert.equal(layer.id, 'abilityfx');
   assert.equal(layer.attrs['aria-hidden'], 'true');
+  assert.ok(fx.play('firewall', null) && fx.play('ban', row));
+  assert.equal(fx.top().id, 'abilityfx-top');
+  assert.equal(fx.top().attrs['aria-hidden'], 'true');
   const css = readFileSync(new URL('./dist/style.css', import.meta.url), 'utf8');
   assert.match(css, /#abilityfx \{[^}]*pointer-events: none/);
+  assert.match(css, /#abilityfx-top \{[^}]*pointer-events: none/);
   assert.match(css, /\.afx \{[^}]*pointer-events: none/);
-  assert.match(css, /\.no-motion #abilityfx \{ display: none; \}/);
+  assert.match(css, /\.no-motion #abilityfx, \.no-motion #abilityfx-top \{ display: none; \}/);
   for (const rule of css.match(/\.afx[^{]*\{[^}]*\}/g)) assert.doesNotMatch(rule, /background|backdrop|filter|mix-blend/, rule);
   // Teal is yours; a crewmate's violet, a hit on ◆ steel (docs/ui.md).
   assert.match(css, /\.afx \{[^}]*color: var\(--you\)/);
@@ -200,16 +205,34 @@ test('a part\'s effect lands on the part: on its name cell at impact (the hammer
   }
 });
 
+test('Firewall reaches your own bar at impact (the HUD bar a lash hits), never a part\'s name or your label', () => {
+  for (const board of [roomy(), dense()]) {
+    const g = geoOf(board, 0), bar = g.mine.bar, r = RECIPES.firewall;
+    for (const lvl of ['full', 'calm']) {
+      const plan = layout(r, g, { lvl, rnd: seeded(4) });
+      const at = plan.els.filter((el) => /wall/.test(el.cls)).some((el) => [...shown(el)].some(({ ms, box }) => ms >= r.impact && ms <= r.impact + 250 && overlaps(box, bar)));
+      assert.ok(at, `${lvl}: on the bar by ${r.impact + 250} ms`);
+      // Its flames flicker off the wall's top, over the bar, never down on the board.
+      for (const el of plan.els) for (const { box } of shown(el)) {
+        assert.ok(box.b <= bar.b + 2 && box.t >= bar.t - 40, `${el.cls}: ${JSON.stringify(box)}`);
+        assert.ok(!board.keep.some((q) => overlaps(box, q)), el.cls);
+      }
+    }
+  }
+});
+
 test('on the page: every piece is taken off the layer once its effect is over', () => {
   const timers = [], was = globalThis.setTimeout;
   globalThis.setTimeout = (f, ms) => { timers.push({ f, ms }); return timers.length; };
   try {
     const { fx, layer, row } = fakePage({ motion: true, level: 'full' });
     for (const k of Object.keys(RECIPES)) assert.equal(fx.play(k, RECIPES[k].on === 'you' ? null : row), true, k);
-    assert.ok(layer.children.length > 50);
+    const top = fx.top();
+    assert.ok(layer.children.length > 50 && top.children.length > 10, 'the part effects on the board, Firewall over the page');
+    assert.ok(top.children.every((c) => /\bwall\b|\bflame\b/.test(c.className)), 'only your side\'s effect goes outside the board');
     assert.ok(timers.every((t) => t.ms <= CAP + 60), `every removal by ${CAP + 60} ms: ${Math.max(...timers.map((t) => t.ms))}`);
     for (const t of timers) t.f();
-    assert.equal(layer.children.length, 0, 'nothing stays behind');
+    assert.equal(layer.children.length + top.children.length, 0, 'nothing stays behind');
   } finally { globalThis.setTimeout = was; }
 });
 
@@ -225,9 +248,11 @@ test('effects land on time: the piece arrives at impact, short pieces, teal unle
   assert.ok(crit.els.every((e) => /\bcrit\b/.test(e.cls)));
   assert.ok(mate.els.every((e) => /\bcrew\b/.test(e.cls)));
   assert.ok(chit.els.some((e) => /\bchit\b/.test(e.cls)) && !/\bchit\b/.test(chit.els[0].cls), 'the shock off ◆ is steel, the hammer stays yours');
-  // Firewall stands between your row and the first part.
-  const wall = layout(RECIPES.firewall, g, { rnd: seeded(5) }).els.filter((e) => /wall/.test(e.cls));
-  for (const w of wall) { const b = boxAt(w, keyAt(w, 0.5)); assert.ok(b.b <= g.first.t && b.t >= g.you.row.t, JSON.stringify(b)); }
+  // Firewall builds on your bar: its courses over the bar itself, across it, end to end.
+  const wall = layout(RECIPES.firewall, g, { rnd: seeded(5) }).els.filter((e) => /wall/.test(e.cls)), bar = g.mine.bar;
+  assert.ok(wall.length >= 2);
+  for (const w of wall) { const b = boxAt(w, keyAt(w, 0.5)); assert.ok(b.l >= bar.l - 1 && b.r <= bar.r + 1 && b.r - b.l > (bar.r - bar.l) * 0.9 && b.b <= bar.b + 2 && b.t >= bar.t - 30, JSON.stringify(b)); }
+  assert.ok(overlaps(boxAt(wall[0], keyAt(wall[0], 0.5)), bar), 'the bottom course covers the bar');
 });
 
 // A page just big enough for createAbilityFx: a board, its rows, and elements that remember what's put on them.
@@ -248,7 +273,8 @@ function fakePage({ motion = true, level = 'full' }) {
   const rows = b.parts.map((p) => { const r = el('button', p.row); r.sel = { '.bname': el('div', p.cell), '.part-top': el('span', p.name), '.part-bar': el('span', p.bar) }; return r; });
   board.sel = { '.brow.byou': you };
   board.all = { '.bpart': rows };
-  globalThis.document = { createElement: (t) => el(t) };
+  const mine = el('div', b.mine);
+  globalThis.document = { createElement: (t) => el(t), body: el('body'), querySelector: (s) => (s === '.hud-bar.mine .bigbar' ? mine : null) };
   globalThis.setTimeout ??= setTimeout;
   const fx = createAbilityFx(board, { canMove: () => motion, level: () => level });
   const layer = board.parentElement.children[0];

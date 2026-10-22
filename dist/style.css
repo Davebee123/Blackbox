@@ -2101,21 +2101,25 @@ body:has(.silk-stash .silk-tile[data-kind="implant"]:hover) .silk-fp[data-kind="
 @keyframes fx-jolt-crit { 0%, 30% { filter: brightness(2.3); text-shadow: 0 0 12px rgba(255, 216, 92, 0.9); } 100% { filter: none; text-shadow: none; } }
 @keyframes fx-jolt-miss { 0%, 100% { opacity: 1; } 40% { opacity: 0.6; } }
 /* Ability effects (abilityfx.mjs), on a layer of their own over the board: ASCII pieces and characters that land on
-   a part's name cell (for a moment: each is gone within a second) or play on your side. Text only, no background,
+   a part's name cell (for a moment: each is gone within a second) or on your own bar. Text only, no background,
    no input. Teal: you; a crit gold-white; a hit on ◆ steel; a crewmate's violet (as .fx-bit.crew). Each piece
    is placed and moved by its own animation (layout() in abilityfx.mjs), so its box is exact: line-height and
    character width are the module's CW and LH. */
 #abilityfx { position: absolute; pointer-events: none; z-index: 3; overflow: visible; }
+/* Its twin over the whole page, for what lands outside the board (Firewall on your bar): fixed like #lash, placed and
+   scaled by abilityfx.mjs to match the board's layer. */
+#abilityfx-top { position: fixed; left: 0; top: 0; width: 0; height: 0; z-index: 46; pointer-events: none; overflow: visible; transform-origin: 0 0; }
 .afx { position: absolute; display: block; left: 0; top: 0; margin: 0; padding: 0; opacity: 0; pointer-events: none; user-select: none; white-space: pre; font-family: var(--mono); font-weight: 700; line-height: 1.05; letter-spacing: 0; color: var(--you); text-shadow: 0 0 6px rgba(127, 209, 199, 0.75); will-change: transform, opacity; }
 .afx > i { position: absolute; left: 0; top: 0; font-style: normal; }
 .afx.art { text-shadow: 0 0 8px rgba(127, 209, 199, 0.85), 0 0 2px rgba(0, 0, 0, 0.9); }
 .afx.echo { color: rgba(127, 209, 199, 0.8); }
 .afx.flame.hot, .afx.flash { color: #e4fffb; text-shadow: 0 0 8px rgba(127, 209, 199, 1); }
 .afx.ember { font-weight: 600; }
+.afx.wall { color: #e4fffb; text-shadow: 0 0 2px rgba(0, 0, 0, 0.95), 0 0 6px rgba(127, 209, 199, 0.9); } /* Firewall's bricks: they read over your bar's teal fill */
 .afx.crit { color: #fff2c8; text-shadow: 0 0 8px rgba(255, 216, 92, 1); }
 .afx.chit { color: var(--steel); text-shadow: 0 0 6px var(--steel-glow); }
 .afx.crew { color: var(--daemon); text-shadow: 0 0 6px rgba(195, 166, 255, 0.85); }
-.no-motion #abilityfx { display: none; }
+.no-motion #abilityfx, .no-motion #abilityfx-top { display: none; }
 /* The ability effects playtest's panel (?playtest=fx, abilityfx-playtest.mjs): developer only, beside the board. */
 #fx-playtest { position: fixed; right: 16px; bottom: 16px; z-index: 60; width: min(380px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow: auto; padding: 12px; background: var(--panel); border: 1px solid var(--line-strong); border-radius: var(--r-card); font: 12px/1.3 var(--mono); color: var(--text); }
 #fx-playtest h2 { margin: 0 0 8px; font: var(--kicker); letter-spacing: var(--kicker-track); text-transform: uppercase; color: var(--amber); }
