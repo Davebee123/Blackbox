@@ -1818,8 +1818,8 @@ body:has(.silk-stash .silk-tile[data-kind="implant"]:hover) .silk-fp[data-kind="
 @keyframes pg-up { from { transform: translateY(40px); opacity: 0; } }
 .no-motion .pg-pop, .no-motion .pg-pop.sheet { animation: none; }
 @media (prefers-reduced-motion: reduce) { .pg-pop, .pg-pop.sheet { animation: none; } }
-.silk-head { display: flex; align-items: center; gap: 14px; }
-.silk-headtext { display: grid; gap: 6px; flex: 1; min-width: 0; }
+.silk-head { display: flex; align-items: flex-start; gap: 14px; } /* the title and its line sit at the top left, beside the art */
+.silk-headtext { display: grid; align-content: start; gap: 6px; flex: 1; min-width: 0; }
 .silk-plate { flex: none; display: grid; place-items: center; padding: 4px; background: #0c0905; border: 1px solid var(--line); border-radius: 3px; }
 .silk-title { margin: 0; font: 600 18px/1.25 var(--mono); overflow-wrap: break-word; text-wrap: balance; }
 .silk-sub { margin: 0; font: 12px var(--mono); color: var(--muted); }
@@ -4231,6 +4231,13 @@ p.impl { margin: 6px 0 0; padding: 4px 2px; border-bottom: 1px dotted color-mix(
 .sk-tn small { flex: none; font: 500 10px var(--mono); color: var(--dim); }
 .sk-check { font-style: normal; color: var(--you); flex: none; }
 .sk-pips { display: flex; gap: 3px; flex: none; }
+/* A ranks node with its − and + beside it: the node keeps its click (it opens the panel), the steps spend or take back. */
+.sk-tnw { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.sk-tnw .sk-tn { flex: 1; }
+.sk-step { display: flex; gap: 3px; flex: none; }
+.sk-sb { display: grid; place-items: center; width: 24px; height: 32px; padding: 0; border: 1px solid var(--line-strong); border-radius: var(--r-btn); background: var(--inset); color: var(--amber); font: 600 14px/1 var(--mono); }
+.sk-sb:hover:not(:disabled) { border-color: var(--amber); background: var(--amber-wash); }
+.sk-sb:disabled { color: var(--gray); border-style: dashed; cursor: default; }
 .sk-pips i { width: 10px; height: 3px; border-radius: 1px; background: var(--line-strong); }
 .sk-pips i.on { background: var(--you); }
 .sk-tn.has, .sk-tn.pick { border-color: rgba(127, 209, 199, 0.55); }

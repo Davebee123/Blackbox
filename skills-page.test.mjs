@@ -317,3 +317,22 @@ test('a class at 10 that never picks: the level-up says so, its bar holds the co
   }
   void LOADOUT;
 });
+
+test('a ranks row has its own − and + beside its pips, the same commands as the panel, off with the same reasons', () => {
+  const s = at('bastion', 14, 'warden');
+  const html = card(page(s, 'warden'));
+  const rows = [...html.matchAll(/<span class="sk-tnw">([\s\S]*?)<\/span><\/span>/g)].map((m) => m[1]);
+  assert.ok(rows.length >= 2, 'each ranks node gets the steps');
+  const first = rows[0], id = first.match(/data-sk="t:([^"]+)"/)[1];
+  const plus = first.match(/<button type="button" class="sk-sb" data-command="(talent \S+ add [^"]+)"/);
+  assert.ok(plus, '+ adds a rank while points are free');
+  assert.match(plus[1], new RegExp(`add ${id}$`));
+  assert.match(first, /class="sk-sb" disabled aria-label="Take a rank back from [^"]+" title="No ranks to take back">−<\/button>/, '− is off with no ranks');
+  const panel = panelOf(page(s, 'warden', { sel: 't:' + id }));
+  assert.ok(panel.includes(`data-command="${plus[1]}"`), 'the row and the panel run the same command');
+  command(s, plus[1]);
+  const after = card(page(s, 'warden')).match(/<span class="sk-tnw">([\s\S]*?)<\/span><\/span>/)[1];
+  assert.match(after, new RegExp(`data-command="talent \\S+ remove ${id}"[^>]*>−</button>`), '− takes a rank back once there is one');
+  // Looking at another class's tree, it is read only: no steps.
+  assert.doesNotMatch(card(page(s, 'breaker')), /sk-sb/);
+});

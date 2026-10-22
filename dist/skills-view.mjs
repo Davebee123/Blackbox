@@ -147,6 +147,14 @@ function nodeState(p, n, row, i, j) {
   const on = pk === j, other = cs === 'picked' && !on, r = on ? Math.min(n.max, capstonePoints(s, id)) : 0;
   return { on, other, r, max: n.max, cs, can: !ro && (cs === 'open' || other), cls: on ? 'pick' : other ? 'other' : cs === 'open' && !ro ? 'open' : 'locked', need: cs === 'blocked' && !p.previewing };
 }
+// A ranks node's − and + on the row itself, beside its pips (the panel has them too). The same commands and the same
+// reasons a step is off.
+function rankStep(p, n, st) {
+  const { s, id } = p, back = st.r > 0 && canTakeBack(s, id, n.id);
+  const minus = `<button type="button" class="sk-sb" ${back ? `data-command="talent ${id} remove ${n.id}"` : 'disabled'} aria-label="Take a rank back from ${esc(n.name)}" title="${!st.r ? 'No ranks to take back' : back ? 'Take a rank back' : 'A deeper pick needs this point. Take that back first.'}">−</button>`;
+  const plus = `<button type="button" class="sk-sb" ${st.can ? `data-command="talent ${id} add ${n.id}"` : 'disabled'} aria-label="Add a rank to ${esc(n.name)}" title="${st.can ? 'Add a rank' : st.r >= n.max ? 'Full' : st.need ? 'Needs points above it' : 'No free points'}">+</button>`;
+  return `<span class="sk-step">${minus}${plus}</span>`;
+}
 function treeHtml(p, sk) {
   const { s, id, kit } = p;
   const rows = TREE.map((row, i) => {
@@ -157,7 +165,8 @@ function treeHtml(p, sk) {
       const st = nodeState(p, n, row, i, j);
       const tail = row.kind === 'filler' ? pips(st.r, st.max) : row.kind === 'capstone' ? pips(st.r, st.max) : '';
       const need = st.need ? `<small>${above}/${row.need}</small>` : '';
-      return `<button type="button" class="sk-tn ${st.cls}${row.kind === 'capstone' ? ' cap' : ''}" ${sel('t:' + n.id, sk === 't:' + n.id)}>${st.on ? '<i class="sk-check" aria-hidden="true">✓</i>' : ''}<b>${esc(n.name)}</b>${need || tail}</button>`;
+      const btn = `<button type="button" class="sk-tn ${st.cls}${row.kind === 'capstone' ? ' cap' : ''}" ${sel('t:' + n.id, sk === 't:' + n.id)}>${st.on ? '<i class="sk-check" aria-hidden="true">✓</i>' : ''}<b>${esc(n.name)}</b>${need || tail}</button>`;
+      return row.kind === 'filler' && !p.busy && !p.previewing ? `<span class="sk-tnw">${btn}${rankStep(p, n, st)}</span>` : btn;
     };
     return `<span class="sk-tl${open ? ' lit' : ''}"><i></i>${label}</span>${node(nodes[0], 0)}<span class="sk-or">${row.kind === 'filler' ? '' : 'or'}</span>${node(nodes[1], 1)}`;
   }).join('');

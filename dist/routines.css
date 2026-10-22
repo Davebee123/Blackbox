@@ -34,7 +34,7 @@
 
 /* The ready-made routines: a row of pills, the current one lit. */
 .rt-presets { display: flex; flex-wrap: wrap; gap: var(--s3); align-items: center; }
-.rt-pre { display: inline-flex; align-items: center; gap: 5px; height: var(--h-btn-sm); padding: 0 10px; border: 1px solid var(--line-strong); border-radius: 13px; background: var(--inset); color: var(--text); font: 500 11px var(--mono); cursor: pointer; max-width: 100%; }
+.rt-pre { display: inline-flex; align-items: center; gap: 7px; height: var(--h-btn-sm); padding: 0 14px 0 8px; border: 1px solid var(--line-strong); border-radius: 13px; background: var(--inset); color: var(--text); font: 500 11px var(--mono); cursor: pointer; max-width: 100%; }
 .rt-pre b { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .rt-pre .glyph { width: 12px; height: 12px; flex: none; color: var(--amber); }
 .rt-pre:hover { border-color: var(--amber); }
@@ -57,8 +57,8 @@
 .rt-meter { position: relative; flex: 1 1 auto; max-width: 260px; height: 8px; border: 1px solid var(--line-strong); border-radius: 999px; overflow: hidden; }
 .rt-meter i { position: absolute; inset: 0 auto 0 0; background: var(--amber); box-shadow: 0 0 6px rgba(241, 185, 47, 0.35); }
 .rt-meter.over i { background: var(--hot); }
-.rt-rc { display: inline-flex; flex: none; align-items: center; justify-content: center; min-width: 22px; height: 18px; padding: 0 4px; border: 1px solid var(--amber-soft); border-radius: 999px; color: var(--amber); font-size: 10px; font-weight: 700; line-height: 1; letter-spacing: 0; }
-.rt-rc.over { border-color: var(--hot); color: var(--hot); }
+.rt-rc { display: inline-flex; flex: none; align-items: center; justify-content: center; min-width: 22px; height: 18px; padding: 0 4px; border: 1px solid var(--amber); border-radius: 999px; background: var(--amber); color: var(--bg); font-size: 10px; font-weight: 800; line-height: 1; letter-spacing: 0; }
+.rt-rc.over { border-color: var(--hot); background: var(--hot); color: var(--bg); }
 
 /* The stack: one handler a row, WHEN · DO · TARGET, checked top to bottom. */
 .rt-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s3); }
@@ -85,7 +85,7 @@ body[class*='rt-drag-'] .rt-slot { border-color: var(--line-strong); }
 body.rt-drag-when .rt-slot:not(.rt-s-when), body.rt-drag-do .rt-slot:not(.rt-s-do), body.rt-drag-target .rt-slot:not(.rt-s-target) { border-color: transparent; }
 
 /* A chip: an icon, a short label, its RAM. */
-.rt-chip { display: inline-flex; align-items: center; gap: 5px; min-width: 0; height: var(--h-chip); padding: 0 7px; border: 1px solid var(--line-strong); border-radius: var(--r-btn); background: var(--inset); font: 500 11px/1 var(--mono); color: var(--text); white-space: nowrap; }
+.rt-chip { display: inline-flex; align-items: center; gap: 6px; min-width: 0; height: var(--h-chip); padding: 0 10px 0 6px; border: 1px solid var(--line-strong); border-radius: var(--r-btn); background: var(--inset); font: 500 11px/1 var(--mono); color: var(--text); white-space: nowrap; }
 .rt-chip b { font-weight: 500; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .rt-chip .glyph { width: 12px; height: 12px; flex: none; }
 .rt-chip kbd { font: 600 9px var(--mono); color: var(--muted); border: 1px solid var(--line); border-radius: 2px; padding: 0 3px; }
@@ -97,7 +97,7 @@ body.rt-drag-when .rt-slot:not(.rt-s-when), body.rt-drag-do .rt-slot:not(.rt-s-d
 .rt-chip.rt-tgt { border-color: rgba(134, 182, 198, 0.5); color: var(--steel); }
 .rt-chip.rt-tgt.none { color: var(--dim); border-style: dashed; }
 .rt-chip.locked { color: var(--gray); border-style: dashed; border-color: rgba(125, 115, 98, 0.45); cursor: help; }
-.rt-chip.locked .rt-rc { border-color: var(--gray); color: var(--gray); }
+.rt-chip.locked .rt-rc { border-color: var(--gray); background: none; color: var(--gray); } /* off: an outline, not a fill */
 .rt-chip.rot { border-style: dashed; color: var(--you); cursor: help; }
 .rt-long { font: 600 9px var(--mono); color: var(--amber); }
 .rt-tier { font: 600 8px var(--mono); letter-spacing: 0.5px; color: var(--dim); text-transform: uppercase; }
@@ -161,7 +161,7 @@ body.rt-drag-when .rt-slot:not(.rt-s-when), body.rt-drag-do .rt-slot:not(.rt-s-d
 /* Break ◆ first (routines-view.mjs armorToggle): a small switch beside the RAM meter; the ◆ in steel, what protects a part. */
 .rt-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s4) var(--s5); }
 .rt-top .rt-ram { flex: 1 1 220px; min-width: 0; }
-.rt-armor { display: inline-flex; align-items: center; gap: 6px; height: var(--h-btn-sm); padding: 0 10px 0 6px; border: 1px solid var(--line-strong); border-radius: 13px; background: var(--inset); color: var(--muted); font: 500 11px var(--mono); cursor: pointer; white-space: nowrap; }
+.rt-armor { display: inline-flex; align-items: center; gap: 7px; height: var(--h-btn-sm); padding: 0 14px 0 8px; border: 1px solid var(--line-strong); border-radius: 13px; background: var(--inset); color: var(--muted); font: 500 11px var(--mono); cursor: pointer; white-space: nowrap; }
 .rt-armor:hover { border-color: var(--steel); }
 .rt-armor b { font-weight: 500; }
 .rt-dia { color: var(--steel); font-weight: 700; }
@@ -171,4 +171,4 @@ body.rt-drag-when .rt-slot:not(.rt-s-when), body.rt-drag-do .rt-slot:not(.rt-s-d
 .rt-armor.on .rt-sw { border-color: var(--steel); background: rgba(134, 182, 198, 0.15); }
 .rt-armor.on .rt-sw i { left: 11px; background: var(--steel); box-shadow: 0 0 4px var(--steel-glow); }
 .rt-armor:not(.on) .rt-dia { color: var(--gray); }
-.rt-rc.off { border-color: var(--gray); color: var(--gray); }
+.rt-rc.off { border-color: var(--gray); background: none; color: var(--gray); }
