@@ -47,6 +47,9 @@ export { RECIPES, TIER_UP, TIERS, FINISHERS, SUB_FINISHERS } from './abilityfx-t
 export const CW = 0.6, LH = 1.05;
 // The longest any piece of an effect stays on the page (ms), its travel included: nothing outlasts it.
 export const CAP = 1200;
+// How fast every effect plays: its pieces, its travel and its impact all run SPEED times as fast as the recipes'
+// timings (the designer: 50% faster), so a hit still lands with its number. CAP and TRAVEL are in recipe time.
+export const SPEED = 1.5;
 // The travel from where you fired it to where it plays: ms by distance (px), never under or over these.
 export const TRAVEL = { perPx: 0.75, min: 160, max: 340, near: 24 };
 export const travelOf = (a, b) => { const d = Math.hypot(b.x - a.x, b.y - a.y); return d < TRAVEL.near ? 0 : Math.round(Math.max(TRAVEL.min, Math.min(TRAVEL.max, d * TRAVEL.perPx))); };
@@ -684,7 +687,9 @@ export function layout(R, geo, { lvl = 'full', power = 0.3, crit = false, result
     if (el.delay + el.dur > CAP) el.dur = Math.max(1, CAP - el.delay);
     el.keys[el.keys.length - 1].o = 0;
   }
-  return { els, impact, travel: T, from: P.from, dur: Math.max(...els.map((e) => e.delay + e.dur)) };
+  // Played SPEED times as fast (keys are fractions of each piece's own time, so they keep their shape).
+  for (const el of els) { el.delay /= SPEED; el.dur /= SPEED; if (el.fms) el.fms /= SPEED; }
+  return { els, impact: impact / SPEED, travel: T / SPEED, from: P.from, dur: Math.max(...els.map((e) => e.delay + e.dur)) };
 }
 
 // ---------- break finishers ----------
