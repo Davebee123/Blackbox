@@ -1,0 +1,51 @@
+/* ---------- the level-up: a firmware update (levelup-view.mjs, levelup-ui.mjs) ----------
+   A compact flash screen under the top bar (docked over the prompt on a phone; app.js sets --lu-top and --lu-bottom
+   from the top bar's and the prompt's boxes). It only comes up while no fight is up (levelup-ui.mjs), so it never sits
+   over the fight board. An amber kicker strip, the level in a dot font (teal: yours) beside the flash's progress line,
+   then [ OK ] per unlock once the flash is done. Each row takes no room until it lands, so the panel grows a row at a
+   time and never shows an empty block. Amber for what you get, teal only for your level, violet for a daemon slot.
+   Continue (Enter), Esc or × close it. Motion off or reduced motion: everything is there at once. */
+.levelup { position: fixed; z-index: 50; top: var(--lu-top, 72px); left: 50%; transform: translateX(-50%); width: min(440px, calc(100vw - 32px)); display: grid; color: var(--text); font: 12.5px/1.45 var(--mono); background: var(--inset); border: 1px solid var(--line-strong); border-radius: var(--r-card); box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6), 0 14px 40px rgba(0, 0, 0, 0.65); overflow: hidden; transition: opacity 0.4s; }
+.levelup[hidden] { display: none; }
+.levelup.out { opacity: 0; }
+.levelup .lu-row { cursor: help; }
+.levelup .lu-x { flex: none; width: 22px; height: 22px; padding: 0; margin: -3px -4px -3px 6px; background: none; border: 0; color: inherit; font: 15px/1 var(--mono); cursor: pointer; opacity: 0.75; }
+.levelup .lu-x:hover { opacity: 1; }
+.levelup kbd { font: 600 9px var(--mono); letter-spacing: 1px; padding: 1px 4px; margin-left: 4px; border: 1px solid currentColor; border-radius: 2px; opacity: 0.7; }
+.levelup .lu-b-head { display: flex; align-items: center; justify-content: space-between; padding: 4px 10px; background: var(--amber); color: #120c03; font: var(--kicker); letter-spacing: var(--kicker-track); text-transform: uppercase; }
+.levelup .lu-b-top { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 16px; align-items: center; padding: 14px 16px 10px; border-bottom: 1px dashed var(--line); }
+.levelup .lu-b-big { margin: 0; font: 700 9px/9px var(--mono); letter-spacing: 0; color: var(--you); text-shadow: 0 0 6px rgba(127, 209, 199, 0.55); }
+.levelup .lu-b-big i { font-style: normal; color: rgba(127, 209, 199, 0.07); text-shadow: none; }
+.levelup .lu-b-flash { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 10px; align-items: center; min-width: 0; }
+.levelup .lu-b-ver { grid-column: 1 / -1; font: 600 12px var(--mono); color: var(--muted); }
+.levelup .lu-b-ver b { color: var(--you); }
+.levelup .lu-b-ver small { margin-left: 6px; font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--you); opacity: 0.8; }
+.levelup .lu-b-bar { position: relative; height: 10px; border: 1px solid var(--line-strong); padding: 1px; }
+.levelup .lu-b-bar i { display: block; height: 100%; background: repeating-linear-gradient(90deg, var(--amber) 0 6px, transparent 6px 8px); }
+.levelup .lu-b-pct { font: 600 11px var(--mono); color: var(--bright); font-variant-numeric: tabular-nums; }
+.levelup .lu-b-list { list-style: none; margin: 0; padding: 8px 16px 4px; display: grid; gap: 1px; }
+.levelup .lu-b-list li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: baseline; }
+.levelup .lu-ok { color: var(--amber); font-weight: 700; white-space: pre; }
+.levelup .lu-k { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.levelup .lu-v { color: var(--bright); font-weight: 600; }
+.levelup .k-daemon .lu-v { color: var(--daemon); }
+.levelup .lu-row:hover .lu-k { color: var(--bright); }
+.levelup .lu-b-next { margin: 0; padding: 2px 16px 8px; font: 11.5px var(--mono); color: var(--dim); cursor: help; }
+.levelup .lu-b-next span { margin-right: 6px; }
+.levelup .lu-b-acts { display: flex; justify-content: flex-end; gap: 6px; padding: 0 12px 12px; }
+.levelup.show .lu-b-bar i { animation: lu-b-flash 0.85s steps(24, end) both; }
+.levelup.show .lu-b-pct { animation: lu-pop 0.01s 0.85s both; }
+.levelup.show .lu-b-big { animation: lu-b-glow 0.6s 0.85s ease-out both; }
+/* A row (and the next line) lands after the flash, one every 120 ms: until then it has no height, so the list grows as
+   it fills. */
+.levelup.show .lu-b-list li, .levelup.show .lu-b-next { animation: lu-b-row 0.12s ease-out both; animation-delay: calc(0.9s + (var(--i, 0) + 1) * 120ms); }
+.levelup.show .lu-b-list { animation: lu-b-pad 0.01s 0.9s both; }
+@keyframes lu-b-flash { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes lu-b-glow { from { opacity: 0.25; text-shadow: none; } to { opacity: 1; } }
+@keyframes lu-b-row { from { max-height: 0; padding-top: 0; padding-bottom: 0; opacity: 0; overflow: hidden; } to { max-height: 3em; opacity: 1; overflow: hidden; } }
+@keyframes lu-b-pad { from { padding-top: 0; padding-bottom: 0; } to { padding-top: 8px; padding-bottom: 4px; } }
+@keyframes lu-pop { from { opacity: 0; } to { opacity: 1; } }
+@media (max-width: 900px) { .levelup { top: auto; bottom: var(--lu-bottom, 90px); } }
+
+.no-motion .levelup, .no-motion .levelup * { animation: none !important; transition: none !important; }
+@media (prefers-reduced-motion: reduce) { .levelup, .levelup * { animation: none !important; transition: none !important; } }

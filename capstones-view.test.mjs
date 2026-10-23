@@ -1,4 +1,4 @@
-// The capstone row on the Loadout page, and in the level-up banner (capstones.test.mjs has the rules; this file loads
+// The capstone row on the Loadout page, and in the level-up (capstones.test.mjs has the rules; this file loads
 // the page, whose imports install the network's fight hooks, so it runs on its own).
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -28,7 +28,7 @@ test('each subclass keeps its own capstone, and the Loadout page draws the row w
   command(s, 'subclass payload');
   assert.equal(capRank(s, ph.id), 0);
   assert.equal(capState(s, 'infiltrator'), 'blocked', 'a fresh tree');
-  // The level-up banner names them.
+  // The level-up names them.
   assert.ok(levelGains('breaker', 45).some((g) => /capstone point/.test(g)));
   assert.ok(levelGains('breaker', 50).some((g) => /second rank/.test(g)));
 });

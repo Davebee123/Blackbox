@@ -2292,7 +2292,7 @@ export function mapSelection(s, sel = 'server', view = 'mine') {
 }
 
 // What reaching a server level adds, in words: "a daemon slot"… Your server's level is
-// your highest class level, so these come with a level-up (its banner lists them: levelUpLines).
+// your highest class level, so these come with a level-up (levelup-view.mjs lists them).
 export function serverGains(lvl) {
   const out = [];
   if (SERVER.daemonSlotsAt.includes(lvl)) out.push('a daemon slot');
@@ -2303,15 +2303,6 @@ const andList = (xs) => (xs.length > 1 ? `${xs.slice(0, -1).join(', ')} and ${xs
 export function serverNext(lvl) {
   for (let l = lvl + 1; l <= SERVER.maxLevel; l++) { const g = serverGains(l); if (g.length) return `Lv ${l}: ${andList(g)}`; }
   return '';
-}
-// The level-up banner's lines (app.js levelUp): what the level brings on every track, then a ghost line
-// for the next level that brings something.
-export function levelUpLines(e) {
-  const out = [];
-  if (e.gains?.length) out.push({ text: e.gains.map((g) => g[0].toUpperCase() + g.slice(1)).join(' · ') });
-  out.push({ text: `Power +4%${e.server ? ` · Server Integrity ${e.server}` : ''}` });
-  if (e.next) out.push({ text: `Lv ${e.next.level}: ${e.next.gains.join(', ')}`, ghost: true });
-  return out;
 }
 
 // An event on a server (events.mjs): a mark on the map node, and what's happening on its card.

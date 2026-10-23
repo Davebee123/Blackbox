@@ -3,7 +3,9 @@ import { CONFIG, ABILITIES, FAMILIES, xpToNext, spikeOf, SUBS, SUBCLASS, default
 const FAMILY_NAMES = Object.fromEntries(Object.entries(FAMILIES).map(([k, f]) => [k, f.name]));
 import { selectEncounter, partKey, parse, validate, hooks, stepCycle, keyMap, hackerOf, classOf, cycleLength, fresh, restore, command, advance, active, alive, part, intents, suggestions, idleRegen, tickServices, topUpCost, defender, maxSignal, inSync } from './combat.mjs';
 import * as V from './view.mjs';
-import { subLater, subWaiting } from './combat.mjs';
+import { subLater, subWaiting, levelUpPreview, barKeys, hackerLevel as heroLevel } from './combat.mjs';
+import { luCalm } from './levelup-view.mjs';
+import { createLevelUpUi } from './levelup-ui.mjs';
 import { SHAPES, render as ascii3d } from './ascii3d.mjs';
 import { glyphMotion } from './protocol-glyphs.mjs';
 import { createArt } from './virus-art.mjs';
@@ -382,6 +384,13 @@ function flash(text) {
 }
 const feel = createFeel({ settings: () => campaign.settings, reducedMotion: () => !campaign.settings.motion || reducedMotion.matches });
 // A puzzle room's board: what a move did, played over it once it renders (puzzle-view.mjs), its sounds on their beats.
+// The level-up (levelup-ui.mjs): a firmware update under the top bar. It waits for a calm moment: no fight, no card
+// that waits for you, no breakout over the screen; after a won fight, once you have left it.
+const lu = createLevelUpUi({
+  feel, keys: () => barKeys(campaign), motion: () => canMove(),
+  fighting: () => active(campaign),
+  calm: () => luCalm({ fighting: active(campaign), ended: !!ended || ending, spoils: !$('spoils').hidden, gainModal: gainOpen(), booting: !!shell.booting || introOn || !!bo || !$('tip').hidden }),
+});
 const pzFx = createPuzzleFx({ canMove: () => canMove(), sound: (sign, ms) => { feel.beat(ms); feel.add(sign, null); feel.beat(0); } });
 // The immersive shell (CRT, boot, status line). `?shell=plain` or `shell plain` turns it off.
 const shellParam = params.get('shell');
@@ -888,6 +897,7 @@ document.addEventListener('click', (e) => {
   if (bxUi.pack && !e.target.closest?.('.bx-pop')) { bxUi.pack = false; dirty = true; }
 });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && bxUi.pack) { bxUi.pack = false; dirty = true; } });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && lu.showing()) lu.dismiss(); }); // the level-up (levelup-ui.mjs)
 // Keep the map where it was across redraws; when you move, bring your row into view.
 let bxAt;
 function breachScroll(keep) {
@@ -1104,13 +1114,9 @@ function react(events) {
       // Part research reaching a tier (research.mjs): a small float on the part; 100% flashes too.
       case 'research': feel.add('mark', `${row(e.target)} .part-top`, `RESEARCH ${e.tier}`, { noFlash: true, floatAt: `${row(e.target)} > .bcell:first-child` }); break;
       case 'mastered': flash('MASTERED'); feel.add('good', `${row(e.target)} .part-top`, 'MASTERED', { floatAt: `${row(e.target)} > .bcell:first-child` }); break;
-      case 'level-up': {
-        if (won) break;
-        // One banner for every track: what the level brings, and the next level that brings something.
-        levelUp(e.message.split('. ')[0].replace(/\.$/, ''), V.levelUpLines(e), (e.unlocked || []).some((id) => id !== 'edge')); // a new skill: a way to Loadout
-        feel.add('win', null);
-        break;
-      }
+      // What the level brings on every track, and the next level that brings something (levelup-ui.mjs): it waits for
+      // the fight's end, and its own sound plays when it comes up.
+      case 'level-up': lu.push(e); break;
       case 'behind-on': feel.add('good', null, 'BEHIND +50% XP'); break;
       case 'heal': if (e.target) feel.add('patch', row(e.target), f?.text, { src, stack }); else feel.add('good', MINE, f?.text || null, { src, stack, floatAt: BAR, x: 0.5 }); break; // a part patched: on it
       case 'blocked': if (e.shield) { feel.add('shield', MINE, f?.text || null, { src, stack, noFlash: true, floatAt: BAR, x: 0.5 }); break; } feel.add('interrupt', e.tell && e.source ? row(e.source) : MINE, e.tell && e.answered ? 'CALLED OFF' : 'BLOCKED'); break;
@@ -1199,7 +1205,7 @@ function react(events) {
   const carded = events.some((e) => ['takeover', 'root', 'streak', 'contract-done', 'crafted', 'bought', 'harvester', 'service-done'].includes(e.type));
   const xpOut = !won && !ended && !active(campaign) && !carded && events.filter((e) => e.type === 'xp');
   if (campaign.rooms) roomsSay(events); // the rooms playtest has no tty: what happens on the server goes up as a notice
-  if (xpOut?.length) { const why = String(xpOut[0].message.split('·')[1] || '').trim().replace(/\.$/, ''); showGain(why ? why[0].toUpperCase() + why.slice(1) : 'XP', '', V.spoilsOf(events.filter((x) => ['xp', 'fresh', 'code', 'level-up'].includes(x.type))), !events.some((x) => x.type === 'level-up')); }
+  if (xpOut?.length) { const why = String(xpOut[0].message.split('·')[1] || '').trim().replace(/\.$/, ''); showGain(why ? why[0].toUpperCase() + why.slice(1) : 'XP', '', V.spoilsOf(events.filter((x) => ['xp', 'fresh', 'code', 'level-up'].includes(x.type))), true); } // a toast: the level-up carries a level itself
   if (events.length) dirty = true;
 }
 
@@ -1211,26 +1217,14 @@ let endedAt = 0; // when it ended: an Enter typed in the moment after a win does
 let ending = false; // the last break is landing
 
 // ---------- notices ----------
-// A level-up gets its own banner, on any screen: a privilege escalation, read off the terminal. The level as a
-// big readout, the class beside it, each thing the level brings as its own +line, the next level ghosted under
-// them, and a bar that drains while it stays up.
-function levelUp(title, text, skill = false) {
-  const m = String(title).match(/LEVEL (\d+)\s*(.*)$/i), lv = m ? m[1] : '', cls = m ? m[2] : title;
-  const lines = Array.isArray(text) ? text : [{ text }];
-  const gains = lines.filter((l) => !l.ghost).flatMap((l) => l.text.split(' · ')).filter(Boolean);
-  const next = lines.find((l) => l.ghost);
-  const ms = skill ? 7000 : 5000, el = $('levelup');
-  el.innerHTML = `<div class="lu-head"><span>uid=0 · privileges escalated</span><span class="lu-dots" aria-hidden="true"><i></i><i></i><i></i></span></div>`
-    + `<div class="lu-body"><div class="lu-num"><small>LVL</small><b>${V.esc(lv)}</b></div><div class="lu-who"><b>${V.esc(cls)}</b><ul class="lu-list">${gains.map((g, i) => `<li style="--i:${i}">${V.esc(g)}</li>`).join('')}</ul></div></div>`
-    + (next ? `<p class="lu-next">next · ${V.esc(next.text)}</p>` : '')
-    + (skill ? '<button type="button" class="btn small primary lu-go" data-module="loadout">See it on Loadout</button>' : '')
-    + `<div class="lu-timer" style="--ms:${ms}ms"></div>`;
-  el.setAttribute('aria-label', `Level ${lv} ${cls}: ${gains.join(', ')}`);
-  el.style.setProperty('--lu-ms', ms + 'ms');
-  el.hidden = false;
-  el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
-  clearTimeout(levelUp.t);
-  levelUp.t = setTimeout(() => { el.hidden = true; }, ms);
+// developer levelup preview [<level>|all]: play the level-up now (levelup-ui.mjs). It changes nothing on the save: it is
+// your class's level-up at that level (your next one by default; all: every kind of unlock at once).
+function levelUpCommand(arg) {
+  const m = arg.match(/^preview(?: (\d+|all))?$/);
+  if (!m) return notice('developer levelup preview [level|all]', true);
+  const L = heroLevel(campaign), at = m[1] === 'all' ? [3, 5, 7, 10, 15, 30, 45, 50] : [Math.max(2, Math.min(50, Number(m[1]) || Math.min(50, L + 1)))];
+  lu.reset(); at.forEach((n) => lu.push(levelUpPreview(campaign, n)));
+  if (active(campaign)) notice('The level-up waits for the fight\'s end.');
 }
 function notice(text, bad = false, suggest = null, sticky = false) {
   const el = $('notice');
@@ -1335,6 +1329,7 @@ function run(raw) {
   if (text === 'achievements') return goTo('achieve'); // the page; achieve pin <name> and the rest go to the engine
   if (text === 'shell' || text.startsWith('shell ')) return shellCommand(text.slice(6).trim());
   { const said = screenFxCommand(campaign, text); if (said) { save(); dirty = true; return notice(said); } } // screen fx [off|subtle|medium|bold|next] / screen fx <effect> on|off (and the old effects calm|full|minimal)
+  if (/^developer levelup( |$)/.test(text)) return levelUpCommand(text.slice(17).trim());
   if (/^developer thread preview\b/.test(text)) return threadPreview(text.replace(/^developer thread preview\s*/, ''));
   if (text === 'casing on' || text === 'casing off') { campaign.settings.casing = text === 'casing on'; save(); dirty = true; return; }
   if (text === 'tips on' || text === 'tips off' || text === 'tips replay') {
@@ -1403,7 +1398,7 @@ function benchRun(text) {
   const events = BN.benchCommand(campaign, text, { bench: BENCH, dev: DEV, store });
   const built = events.find((e) => e.type === 'bench'), w = events.findLast((e) => e.type === 'warning');
   if (built) {
-    $('levelup').hidden = true;
+    lu.reset();
     ended = null; archView = null; selected = null; mapSel = null; mapFloor = built.bench.floor; mapPop = false; loadoutTab = 'protocols'; // the map opens on your floor
     cache.clear();
     if ($('bench-body')) $('bench-body').innerHTML = BN.panelMarkup(campaign); // its pickers start on the new character
@@ -1422,7 +1417,7 @@ function resetGame() {
     return notice('This wipes your server, class levels, locations, loot and upgrades (settings stay). Do it again within 10 seconds to confirm.', true);
   }
   resetGame.armed = 0;
-  $('levelup').hidden = true;
+  lu.reset();
   ended = null;
   const settings = campaign.settings;
   campaign = fresh();
@@ -2238,7 +2233,7 @@ const shownRect = (el) => { const r = el.getBoundingClientRect(); return r.width
 const shownEl = (sel) => [...document.querySelectorAll(sel)].find(shownRect) || null;
 function onScreen(sel) { return !!shownEl(sel); }
 function checkTips(now) {
-  if (tip || ending || introOn || !$('levelup').hidden || shell.booting || playtest || now < tipWait) return;
+  if (tip || ending || introOn || lu.showing() || shell.booting || playtest || now < tipWait) return;
   tipWait = now + 400;
   const t = nextTip(campaign, module, onScreen);
   if (!t) return;
@@ -2470,6 +2465,7 @@ function frame(now) {
   coop?.tick();
   if (dirty) render();
   else tickUi();
+  lu.tick();
   feel.flush();
   checkTips(now);
   shell.caret();
@@ -2736,6 +2732,7 @@ $('command-form').addEventListener('submit', (e) => {
   if (gainOpen()) hideGain(); // the Banked card goes with the next Enter, whatever it carries
   if (!value.trim()) {
     if (tip) { advanceTip(); return; } // Enter moves a tip on (or closes it) first
+    if (!active(campaign) && lu.dismiss()) return; // the level-up goes with an empty Enter
     // Empty Enter in a fight: stop waiting and resolve this cycle now.
     if (realSave) return; // a co-op guest: the cycle turns when everyone's in, or on the host's timer
     if (active(campaign) && !campaign.encounter.paused) { react(command(campaign, 'now')); save(); dirty = true; }
@@ -3350,7 +3347,7 @@ function boLater() {
   dirty = true;
 }
 // The screen is free for it: not in the intro, a fight or its result, a card or another full screen.
-function boFree() { return !introOn && !ended && !active(campaign) && $('spoils')?.hidden !== false && !gainOpen() && !payState && !document.querySelector('.class-pick') && !['combat', 'net'].includes(module); }
+function boFree() { return !introOn && !lu.showing() && !lu.pending() && !ended && !active(campaign) && $('spoils')?.hidden !== false && !gainOpen() && !payState && !document.querySelector('.class-pick') && !['combat', 'net'].includes(module); }
 function renderBreakout() {
   let el = $('breakout');
   if (bo && !subWaiting(campaign, bo.arch)) { // picked (here or by a command): the page shows the new subclass
@@ -3423,9 +3420,9 @@ let ttTap = null, ttTouch = false;
 document.addEventListener('pointerdown', (e) => { ttTouch = e.pointerType === 'touch'; }, true);
 document.addEventListener('click', (e) => {
   if (!ttTouch) return;
-  const a = e.target.closest?.('#board .bname[title], #board .bname[data-tt], #board .intent.tell, #hud .gfx');
+  const a = e.target.closest?.('#board .bname[title], #board .bname[data-tt], #board .intent.tell, #hud .gfx, #levelup .lu-row');
   if (!a) return;
-  const row = a.closest('[data-target]'), sel = a.matches('.gfx') ? `#hud .gfx[data-fx="${CSS.escape(a.dataset.fx)}"]` : a.matches('.intent.tell') ? `#board .intent.tell[data-k="${CSS.escape(a.dataset.k || '')}"]` : row ? `#board .bpart[data-target="${CSS.escape(row.dataset.target)}"] .bname` : null;
+  const row = a.closest('[data-target]'), sel = a.matches('.lu-row') ? `#levelup .lu-row[data-lu="${CSS.escape(a.dataset.lu)}"]` : a.matches('.gfx') ? `#hud .gfx[data-fx="${CSS.escape(a.dataset.fx)}"]` : a.matches('.intent.tell') ? `#board .intent.tell[data-k="${CSS.escape(a.dataset.k || '')}"]` : row ? `#board .bpart[data-target="${CSS.escape(row.dataset.target)}"] .bname` : null;
   if (sel) { ttTap = { sel, until: performance.now() + 3500, at: null }; requestAnimationFrame(ttTapTick); }
 });
 function ttTapTick() {
