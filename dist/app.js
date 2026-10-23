@@ -1476,11 +1476,16 @@ function go(name, quiet = false) {
   render(true);
   if (moved) $('page-view').scrollTop = 0; // a new page opens at its top
   shell.onModule(name);
-  $('command-input').focus();
+  focusPrompt();
 }
 
 // Fill the prompt the way a hotkey would; the player still presses Enter.
 const touch = () => matchMedia('(pointer: coarse)').matches;
+let lastPointer = 'mouse';
+document.addEventListener('pointerdown', (e) => { lastPointer = e.pointerType || 'mouse'; }, true);
+// Put the cursor on the prompt for typing, but never on a touch screen, where it pops the keyboard over the board
+// (a tap on the prompt itself still opens it). A key, a click or a suggestion only fills the prompt there.
+const focusPrompt = () => { if (touch() || lastPointer === 'touch' || lastPointer === 'pen') return; $('command-input').focus(); };
 // The phone layout draws a floor on its side (view.mjs mapLayout): the way down at the bottom.
 const portraitQ = matchMedia('(max-width: 900px)');
 V.setMapPortrait(portraitQ.matches);
@@ -1496,7 +1501,7 @@ function prepare(abilityId) {
   if (a.target === 'part') text += selected && alive(part(s, selected)) ? ` ${partKey(s, part(s, selected))}` : ' ';
   if (a.target === 'attack') text += selected && part(s, selected)?.attack && alive(part(s, selected)) ? ` ${partKey(s, part(s, selected))}` : '';
   input.value = text;
-  if (!touch()) input.focus(); // on a phone, focusing pops the keyboard over the board
+  focusPrompt();
   updateSuggestions();
 }
 
@@ -2263,9 +2268,9 @@ function hideTip(seen) {
   tipWait = Math.max(tipWait, performance.now() + (seen ? 6000 : 400)); // one at a time, with room to play between
   tipWait = performance.now() + 700; // a breath before the next one
 }
-$('tip-ok').addEventListener('click', () => { advanceTip(); $('command-input').focus(); });
+$('tip-ok').addEventListener('click', () => { advanceTip(); focusPrompt(); });
 $('tip-off').addEventListener('click', () => { campaign.settings.tips = false; hideTip(true); notice('Tips off. Turn them back on on the System page.'); dirty = true; });
-$('tip-skip').addEventListener('click', () => { skipTour(campaign); hideTip(false); save(); $('command-input').focus(); });
+$('tip-skip').addEventListener('click', () => { skipTour(campaign); hideTip(false); save(); focusPrompt(); });
 // A tour step you did (by a click or the prompt): it closes, and the next waits for its own thing.
 function tourCheck() { if (tip?.t.tour && tip.t.done?.(campaign, tip.base)) hideTip(true); }
 addEventListener('resize', () => placeTip());
@@ -2522,8 +2527,6 @@ document.addEventListener('keydown', (e) => { if (payState && e.key === 'Escape'
 // × or Esc puts it away). Point at an action that changes the wall or the server, or focus it, and the panel shows
 // before and after; on a touch screen the first tap shows it and the second does it. Its buttons are real commands:
 // the click handler below runs them.
-let lastPointer = 'mouse';
-document.addEventListener('pointerdown', (e) => { lastPointer = e.pointerType || 'mouse'; }, true);
 const touchFirst = () => lastPointer === 'touch' || matchMedia('(hover: none)').matches;
 document.addEventListener('click', (e) => {
   if (module !== 'server') return;
@@ -2572,7 +2575,7 @@ document.addEventListener('click', (e) => {
       return;
     }
     confirmArm = null;
-    if (cmd.classList.contains('ability') && !cmd.classList.contains('script')) { $('command-input').value = cmd.dataset.command; $('command-input').focus(); return; } // a script runs at once: it takes no cycle
+    if (cmd.classList.contains('ability') && !cmd.classList.contains('script')) { $('command-input').value = cmd.dataset.command; focusPrompt(); return; } // a script runs at once: it takes no cycle
     return run(cmd.dataset.command);
   }
   const loc = e.target.closest('[data-locate]');
@@ -2641,11 +2644,11 @@ document.addEventListener('click', (e) => {
   const rm = e.target.closest('[data-rooms]');
   if (rm && !rm.disabled) { roomsClick(rm.dataset.rooms, rm.dataset.arg); return; }
   const direct = e.target.closest('[data-run]');
-  if (direct) { run(direct.dataset.run); $('command-input').focus(); return; }
+  if (direct) { run(direct.dataset.run); focusPrompt(); return; }
   const pre = e.target.closest('[data-prefill]');
   if (pre) {
     const v = pre.dataset.prefill;
-    if (v.endsWith(' ')) { $('command-input').value = v; $('command-input').focus(); updateSuggestions(); } else run(v);
+    if (v.endsWith(' ')) { $('command-input').value = v; focusPrompt(); updateSuggestions(); } else run(v);
     return;
   }
   const ability = e.target.closest('[data-ability]');
@@ -2660,12 +2663,12 @@ document.addEventListener('click', (e) => {
     const input = $('command-input');
     const [word] = input.value.trim().split(' ');
     if (selected && ABILITIES[word] && ABILITIES[word].target !== 'none') input.value = `${word} ${partKey(campaign, part(campaign, selected))}`;
-    if (!touch()) input.focus();
+    focusPrompt();
     dirty = true;
     return;
   }
   const sug = e.target.closest('[data-suggestion]');
-  if (sug) { $('command-input').value = sug.dataset.suggestion + (ABILITIES[sug.dataset.suggestion]?.target === 'part' ? ' ' : ''); updateSuggestions(); $('command-input').focus(); return; }
+  if (sug) { $('command-input').value = sug.dataset.suggestion + (ABILITIES[sug.dataset.suggestion]?.target === 'part' ? ' ' : ''); updateSuggestions(); focusPrompt(); return; }
   const arch = e.target.closest('[data-arch]');
   if (arch) { archView = arch.dataset.arch; dirty = true; return; }
   // A found server's Connect: ask (its card shows the memory it takes), then yes or cancel.
@@ -2850,7 +2853,7 @@ $('channel-form').addEventListener('submit', (e) => {
   save(); channelUi();
 });
 document.addEventListener('click', (e) => { if (chanOpen && !e.target.closest('#channel, #net-line, #profile')) { chanOpen = false; dirty = true; } });
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && chanOpen && !profileOn) { setChan(false); $('command-input').focus(); } });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && chanOpen && !profileOn) { setChan(false); focusPrompt(); } });
 
 // The profile card (profile.mjs): finger <handle>, a handle clicked in #net or People, or your own from the handle
 // on the top bar. Yours has its editor beside it: a banner (a preset or your own drawing), a title, a plan.
