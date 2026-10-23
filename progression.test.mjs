@@ -8,7 +8,7 @@ import { CONFIG, CATCHUP, CLIMB, levelTarget, xpToNext, killXp, killsToNext, v41
 import { uniqueItem, rollItem, seeded, RULES, RARITIES, BASES, baseFor, primaries, SERVICES } from './dist/gear.mjs';
 const VERSIONS = [{ code: 12, credits: 120 }, { code: 40, credits: 600 }]; // what a service's v1 and v2 cost (the retired table)
 import { tickPlay, behindOf } from './dist/progression.mjs';
-import { levelUpLines } from './dist/view.mjs';
+import { levelUpSummary } from './dist/levelup-view.mjs';
 import { knowsFilter } from './dist/filters.mjs';
 
 // Exact numbers: no crits, no misses, flat numbers, no level gap.
@@ -45,8 +45,8 @@ test('one level: your server is at your highest class level, with no XP of its o
   assert.equal(b.level, 13);
   assert.ok(b.gains.some((g) => /\(floor 3\)$/.test(g)), 'its own tracks still count: a floor');
   assert.ok(!b.gains.includes('an outpost slot') && b.server === null, 'not the server\'s');
-  const lines = levelUpLines(up);
-  assert.ok(lines.length >= 3 && lines.at(-1).ghost, 'the banner: what it brings, the power line, then a ghost line for the next');
+  const sum = levelUpSummary([up]);
+  assert.ok(sum.items.length >= 3 && sum.items.at(-2).kind === 'power' && sum.items.at(-1).kind === 'integrity' && sum.next.level === up.next.level, 'the level-up: what it brings, the power line and the Integrity, then the next level');
 });
 
 test('the long climb: a level is CLIMB.kills kills of your level (straight between its points), always longer than the last; one-off deeds keep their share of a level', () => {

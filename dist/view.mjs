@@ -26,7 +26,6 @@ import { PUZZLES } from './puzzles.mjs';
 import { chipOf, virusGenes, scannedDeep, scannedRead, packedChip, packsGene } from './genome.mjs';
 import { mastered, RESEARCH, TIER } from './research.mjs';
 import { SFX, levelOf as sfxLevel } from './screenfx.mjs';
-import { LEVELUP_STYLES } from './levelup-view.mjs';
 // A loud run (connect <server> loud): what the button and the run tag say on hover.
 const LOUD_TIP = `Go in loud: every fight on this run has ${Math.round((HOT_RUN.hp - 1) * 100)}% more Integrity and hits ${Math.round((HOT_RUN.dmg - 1) * 100)}% harder. Every kill pays ${Math.round((HOT_RUN.xp - 1) * 100)}% more XP and rolls for loot once more.`;
 import { currentLocation, takeable, takenOf, liveSpawns, zoneRooms, signalNow, zoneSpawns, TRACE } from './run.mjs';
@@ -2304,7 +2303,7 @@ export function mapSelection(s, sel = 'server', view = 'mine') {
 }
 
 // What reaching a server level adds, in words: "a daemon slot"… Your server's level is
-// your highest class level, so these come with a level-up (its banner lists them: levelUpLines).
+// your highest class level, so these come with a level-up (levelup-view.mjs lists them).
 export function serverGains(lvl) {
   const out = [];
   if (SERVER.daemonSlotsAt.includes(lvl)) out.push('a daemon slot');
@@ -2315,15 +2314,6 @@ const andList = (xs) => (xs.length > 1 ? `${xs.slice(0, -1).join(', ')} and ${xs
 export function serverNext(lvl) {
   for (let l = lvl + 1; l <= SERVER.maxLevel; l++) { const g = serverGains(l); if (g.length) return `Lv ${l}: ${andList(g)}`; }
   return '';
-}
-// The level-up banner's lines (app.js levelUp): what the level brings on every track, then a ghost line
-// for the next level that brings something.
-export function levelUpLines(e) {
-  const out = [];
-  if (e.gains?.length) out.push({ text: e.gains.map((g) => g[0].toUpperCase() + g.slice(1)).join(' · ') });
-  out.push({ text: `Power +4%${e.server ? ` · Server Integrity ${e.server}` : ''}` });
-  if (e.next) out.push({ text: `Lv ${e.next.level}: ${e.next.gains.join(', ')}`, ghost: true });
-  return out;
 }
 
 // An event on a server (events.mjs): a mark on the map node, and what's happening on its card.
@@ -2603,7 +2593,7 @@ function paceCard(s) {
 // (casing-view.mjs: the monitor's colourway, plate and stickers).
 export const SYSTEM_TABS = [['settings', 'Settings'], ['achievements', 'Achievements'], ['casing', 'Casing']];
 const systemTabs = (s, tab) => `<nav class="ltabs sys-tabs" role="tablist" aria-label="System">${SYSTEM_TABS.map(([k, l]) => `<button type="button" role="tab" data-stab="${k}" aria-selected="${tab === k}">${esc(l)}${k === 'achievements' ? `<small class="sys-pts">${glyph('medal')}${pointsOf(s)}</small>` : ''}</button>`).join('')}</nav>`;
-export function systemMarkup(s, { coop = false, tab = 'settings', ach = {}, cs = {}, levelup = null } = {}) {
+export function systemMarkup(s, { coop = false, tab = 'settings', ach = {}, cs = {} } = {}) {
   if (tab === 'achievements') return systemTabs(s, tab) + achievementsMarkup(s, ach);
   if (tab === 'casing') return systemTabs(s, tab) + casingPageMarkup(s, cs);
   // Co-op (coop-ui.mjs, docs/coop.md): a developer prototype, so only with ?dev.
@@ -2626,7 +2616,6 @@ export function systemMarkup(s, { coop = false, tab = 'settings', ach = {}, cs =
       <button type="button" class="btn" data-run="tips ${s.settings.tips === false ? 'on' : 'off'}" aria-pressed="${s.settings.tips !== false}">Tips ${s.settings.tips === false ? 'off' : 'on'}</button>
       <button type="button" class="btn" data-run="tips replay">Replay tips</button>
       <button type="button" class="btn" data-run="channel ${s.settings.channel === false ? 'on' : 'off'}" aria-pressed="${s.settings.channel !== false}" title="#net's latest line over the prompt">#net ${s.settings.channel === false ? 'muted' : 'on'}</button>
-      ${levelup ? `<button type="button" class="btn" data-run="developer levelup next" title="Developer: the level-up prototypes a, b and c, or the current banner (developer levelup a|b|c|current)">Level-up: ${esc(LEVELUP_STYLES[levelup])}</button><button type="button" class="btn" data-run="developer levelup preview">Preview level-up</button><button type="button" class="btn" data-run="developer levelup preview all" title="Developer: every kind of unlock at once">Preview every unlock</button>` : ''}
     </div>
     <div class="row sound-test"><span class="next-label">Sound test</span>${[['hit', 'Hit'], ['break', 'Break'], ['hurt', 'Hurt'], ['unlock', 'Unlock'], ['pickup', 'Pickup'], ['good', 'Good news'], ['win', 'Win / level'], ['chit', 'Armor ◆'], ['patch', 'Patch'], ['interrupt', 'Interrupt'], ['nope', 'Refused'], ['prewarn', 'Warning'], ['daemon', 'Daemon'], ['channel', 'Channel change'], ['jackin', 'Connect'], ['hangup', 'Hang up'], ['lose', 'Crash'], ['mark', 'Mark'], ['burn', 'Burn'], ['helper', 'Helper'], ['shield', 'Shield'], ['buff', 'Buff']].map(([id, name]) => `<button type="button" class="btn" data-sound="${id}">${name}</button>`).join('')}</div></section>
     ${collectionMarkup(s)}

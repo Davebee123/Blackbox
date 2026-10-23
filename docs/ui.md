@@ -41,7 +41,7 @@ it sits on.
 **Card** (`.card`): kicker `h2`, then the name `h1`, then content. One border colour (`--line`); an alert card
 switches its border and kicker to `--hot`. On a map pop-up the close button is the card's only top-right item.
 
-**Kicker strip**: the tell chip's `.tl-kick`, the level-up's `.lu-head`. A coloured band across the top of a
+**Kicker strip**: the tell chip's `.tl-kick`, the level-up's `.lu-b-head`. A coloured band across the top of a
 card or chip, mono caps, an icon on the left and the timing on the right. Use it when the block is an event
 with a time attached; don't use it for static cards.
 
