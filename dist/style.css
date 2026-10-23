@@ -366,6 +366,8 @@ code { font-family: var(--mono); color: var(--amber); }
 .fulllog { font: 13px/1.6 var(--mono); color: var(--muted); max-height: 60vh; overflow: auto; margin: 0; padding: 0; list-style: none; }
 details summary { cursor: pointer; color: var(--muted); }
 pre { font: 12px var(--mono); color: var(--muted); white-space: pre-wrap; max-height: 300px; overflow: auto; }
+/* Art (every decorative pre is aria-hidden) never scrolls: only text that may run long does. */
+pre[aria-hidden="true"] { max-height: none; overflow: visible; }
 
 /* ---------- the net ---------- */
 .net-one { position: relative; height: 100%; display: flex; flex-direction: column; max-width: 1100px; margin: 0 auto; }
