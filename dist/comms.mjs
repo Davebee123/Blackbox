@@ -106,7 +106,7 @@ export function seeAll(s, now = Date.now()) { for (const c of commsOf(s)) { c.se
 // Handled (you opened what it pointed at, or ticked it off): greyed out, and gone after COMMS.doneMs.
 export function markDone(s, id, now = Date.now()) { const c = commsOf(s).find((x) => x.id === id); if (c && !c.done) { c.done = now; c.seen = true; } }
 // Still true? An offer still on the board, a contract still waiting, a swarm or invasion still on.
-function live(s, c) {
+export function live(s, c) {
   if (c.kind === 'offer') return c.ref == null || (s.mail?.offers || []).some((o) => o.id === c.ref);
   if (c.kind === 'ready') return c.ref == null || (s.mail?.jobs || []).some((j) => j.id === c.ref && !j.done);
   if (c.kind === 'alert') {

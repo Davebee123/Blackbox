@@ -131,6 +131,8 @@ const P = {
   memory: '<rect x="4" y="4" width="8" height="8" rx="1"/><path d="M6 2v2M8 2v2M10 2v2M6 12v2M8 12v2M10 12v2M2 6h2M2 10h2M12 6h2M12 10h2"/>',
   // Honeytoken: a jar with a drip, bait for trouble.
   lure: '<path d="M5 3.5h6M5.5 3.5v1.5c-1.5.8-2.5 2.3-2.5 4 0 2.5 2.2 4.5 5 4.5s5-2 5-4.5c0-1.7-1-3.2-2.5-4V3.5"/><path d="M8 7v2.5"/>',
+  // A letter (the pager's pages, pager-view.mjs): an envelope.
+  letter: '<rect x="2" y="4" width="12" height="8.5" rx="1"/><path d="M2.5 4.8 8 9.2l5.5-4.4"/>',
 };
 
 export const GLYPHS = P;

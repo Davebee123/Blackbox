@@ -1,0 +1,97 @@
+/* The trial pagers (pager-view.mjs): A · action, B · device, C · tray, and the Comms inbox they share. The classic
+   pager (style.css "the pager and Comms") stays the default. No new colours: amber is what you act on, red a threat,
+   the screens the classic pager's LCD green. Nothing here moves: the lamp blinks (light), a new page glows. */
+.pg { display: flex; align-items: center; gap: 6px; flex: none; }
+.pg[hidden] { display: none !important; }
+.campaign-mode #pg { display: none !important; }
+.pg + .meters { margin-left: -6px; }
+.pg .led { width: 7px; height: 7px; border-radius: 50%; background: #3a2c14; flex: none; }
+.pg .led.on { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+.pg .led.blink { animation: pagerblink 1.2s steps(1) infinite; }
+.pg .led.alert { background: var(--hot); box-shadow: 0 0 6px var(--hot); }
+.pg.fx-pager { animation: pagerbuzz 0.4s linear; }
+.no-motion .pg .led, .no-motion .pg.fx-pager { animation: none; }
+.pg button { font-family: var(--mono); }
+.pg button:focus-visible { outline: 1px solid var(--amber); outline-offset: 1px; }
+
+/* A · action: lamp, count, a still screen with the most urgent page, its button. */
+.pg-a { background: #1b1409; border: 1px solid #3a2c14; border-radius: 6px; padding: 3px 3px 3px 8px; gap: 7px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 1px 0 rgba(0, 0, 0, 0.6); }
+.pg-a .pg-face { display: flex; align-items: center; gap: 7px; min-width: 0; padding: 0; background: none; border: 0; color: var(--muted); cursor: pointer; }
+.pg-a .pg-n { min-width: 7px; font: 600 11px var(--mono); color: var(--amber); }
+.pg-a .pg-lcd { display: flex; align-items: center; gap: 4px; width: 128px; height: 20px; padding: 0 6px; overflow: hidden; white-space: nowrap; border-radius: 2px; background: #b7c48a; color: #1d2410; font: 600 11px/20px var(--mono); box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.4); }
+.pg-a .pg-lcd.idle { opacity: 0.55; }
+.pg-a .pg-lcd .glyph { width: 11px; height: 11px; margin: 0; }
+.pg-a .pg-what { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.pg-act { height: 22px; padding: 0 7px; font: 600 11px var(--mono); color: var(--amber); background: rgba(241, 185, 47, 0.1); border: 1px solid var(--amber); border-radius: 3px; cursor: pointer; white-space: nowrap; }
+.pg-act:hover { color: var(--bright); background: rgba(241, 185, 47, 0.18); }
+.pg-act.threat { color: var(--hot); border-color: var(--hot); background: var(--hot-soft); }
+
+/* B · device: a beeper. The case, the lamp, a two-line screen, a next key and an act key beside their lines. */
+.pgb-case { display: flex; align-items: center; gap: 5px; padding: 3px 4px 3px 6px; background: linear-gradient(#251b0c, #140e06); border: 1px solid #3a2c14; border-radius: 8px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 1px 0 rgba(0, 0, 0, 0.7); }
+.pgb-lcd { display: grid; grid-template-rows: 12px 12px; width: 148px; padding: 1px 5px; border: 0; border-radius: 2px; background: #b7c48a; color: #1d2410; font: 600 10px/12px var(--mono); text-align: left; text-transform: uppercase; letter-spacing: 0.02em; box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.45); cursor: pointer; }
+.pgb-lcd > span { display: flex; justify-content: space-between; gap: 6px; min-width: 0; white-space: nowrap; }
+.pgb-lcd b { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-weight: 700; }
+.pgb-lcd > span > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+.pgb-lcd i { flex: none; font-style: normal; }
+.pgb-lcd .l2 i { font-weight: 700; } /* what the act key does */
+.pgb-lcd.idle b { font-weight: 600; opacity: 0.8; }
+.pgb-keys { display: grid; grid-template-rows: 12px 12px; gap: 2px; align-items: center; justify-items: center; }
+.pgb-key { position: relative; width: 15px; height: 11px; padding: 0; border: 1px solid #4a3a1c; border-radius: 3px; background: linear-gradient(#3d2e15, #221809); box-shadow: 0 1px 0 rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.06); cursor: pointer; }
+.pgb-key.next::after { content: ''; position: absolute; left: 5px; top: 2px; border: 3px solid transparent; border-left: 4px solid var(--muted); border-right: 0; }
+.pgb-key.act { width: 12px; height: 12px; border-radius: 50%; border-color: var(--amber-deep); background: radial-gradient(circle at 40% 35%, var(--amber), var(--amber-deep)); }
+.pgb-key.act.threat { border-color: #7a2416; background: radial-gradient(circle at 40% 35%, var(--hot), #7a2416); }
+.pgb-key:active:not([disabled]) { box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6); } /* pressed: its shadow goes in, nothing moves */
+.pgb-key[disabled] { opacity: 0.45; cursor: default; }
+.pgb-key.act[disabled] { background: #3a2c14; border-color: #4a3a1c; }
+
+/* C · tray: the lamp, then one icon per page. */
+.pg-c { gap: 4px; min-height: 30px; padding: 3px 5px 3px 4px; background: #1b1409; border: 1px solid #3a2c14; border-radius: 6px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 1px 0 rgba(0, 0, 0, 0.6); }
+.pgc-lamp { display: flex; align-items: center; padding: 6px 4px; background: none; border: 0; cursor: pointer; }
+.pgc-tile { display: grid; place-items: center; width: 26px; height: 22px; padding: 0; color: var(--amber); background: rgba(241, 185, 47, 0.06); border: 1px solid var(--line-strong); border-radius: 3px; cursor: pointer; }
+.pgc-tile .glyph { width: 14px; height: 14px; margin: 0; }
+.pgc-tile:hover { background: rgba(241, 185, 47, 0.16); }
+.pgc-tile.new { border-color: var(--amber); box-shadow: 0 0 6px rgba(241, 185, 47, 0.35); }
+.pgc-tile.threat { color: var(--hot); border-color: rgba(255, 91, 61, 0.6); background: var(--hot-soft); }
+.pgc-tile.threat.new { border-color: var(--hot); box-shadow: 0 0 6px rgba(255, 91, 61, 0.45); }
+.pgc-more { padding: 0 3px; font: 600 11px var(--mono); color: var(--muted); background: none; border: 0; cursor: pointer; }
+
+/* The inbox (Comms for A, B and C): the pages with their buttons, the news folded under them. */
+.comms .pg-scroll { min-height: 0; overflow: auto; }
+.pg-inbox .pgi { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 12px; border-bottom: 1px solid rgba(241, 185, 47, 0.08); }
+.pg-inbox .pgi.unseen { background: rgba(241, 185, 47, 0.05); }
+.pgi-ico { display: grid; place-items: center; color: var(--amber); }
+.pgi-ico .glyph { width: 16px; height: 16px; margin: 0; }
+.pgi.threat .pgi-ico { color: var(--hot); }
+.pgi-main { display: grid; gap: 1px; min-width: 0; }
+.pgi-main b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 13px var(--mono); color: var(--bright); }
+.pgi-main small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 10px var(--mono); color: var(--dim); }
+.pgi-act { min-width: 76px; white-space: nowrap; }
+.pgi-act.hot { color: var(--hot); border-color: var(--hot); background: var(--hot-soft); }
+.pg-hist summary { padding: 8px 12px; font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--dim); cursor: pointer; }
+.pg-hist summary b { color: var(--muted); }
+.pg-hist[open] summary { border-bottom: 1px solid var(--line); }
+.pgh { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; align-items: baseline; padding: 5px 12px; font: 11px var(--mono); color: var(--muted); }
+.pgh-k { font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: var(--dim); }
+.pgh-t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pgh-age { font-size: 10px; color: var(--dim); }
+.pgh.done { opacity: 0.55; }
+
+/* Narrower top bars (the casing at 1440, a Fight or Run tab, more tabs): the screens give way first. */
+/* A keeps the page's icon on its screen (the name is the tooltip); B's screen narrows, its names end in …. */
+@media (max-width: 1700px) and (min-width: 901px) { .pg-a .pg-lcd { width: 108px; } .pgb-lcd { width: 128px; } }
+@media (max-width: 1520px) and (min-width: 901px) { .pg-a .pg-lcd { width: auto; padding: 0 5px; } .pg-a .pg-what { display: none; } .pgb-lcd { width: 116px; } }
+@media (max-width: 1700px) { .pgb-lcd .frm { display: none; } } /* the sender, when the screen has room for it */
+.ctx-tabs .pg-a .pg-lcd, .topbar.fit-3 .pg-a .pg-lcd { width: auto; padding: 0 5px; }
+.ctx-tabs .pg-a .pg-what, .topbar.fit-3 .pg-a .pg-what { display: none; }
+.ctx-tabs .pgb-lcd, .topbar.fit-3 .pgb-lcd { width: 108px; }
+.topbar.fit-4 .pg-a .pg-lcd { display: none; }
+.topbar.fit-4 .pgb-lcd { width: 96px; }
+/* Phone: the pager's cell on the top bar's first row. A: lamp, count, the page's icon and the button. B: the whole device, a smaller
+   screen. C: the lamp and up to three icons (app.js asks for three). */
+@media (max-width: 900px) {
+  .topbar .pg { grid-area: 1 / 2; margin: 0; justify-self: start; }
+  .pg + .meters { margin-left: 0; }
+  .pg-a .pg-lcd { width: auto; padding: 0 5px; }
+  .pg-a .pg-what { display: none; }
+  .pgb-lcd { width: 104px; }
+}

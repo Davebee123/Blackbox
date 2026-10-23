@@ -21,6 +21,7 @@ import { crewCommand } from './crew.mjs';
 import { presenceCommand, at, simOn, PRESENCE, online } from './presence.mjs';
 import { profileCommand } from './profile.mjs';
 import { achieveCommand, developerAchieve } from './achievements.mjs';
+import { developerPager } from './pager.mjs';
 import { casingCommand } from './casing.mjs';
 import { say, muted } from './channel.mjs';
 import { consortiumCommand, isGround, arrive, memberServers } from './consortium.mjs';
@@ -771,6 +772,7 @@ export function play(s, input) {
     else if (!deal(s, card)) warn(s, card ? `No ${EVENT_CARDS[card].name.toLowerCase()} fits now${EVENT_CARDS[card].from ? ` (from level ${EVENT_CARDS[card].from})` : ''}, or one is up already.` : 'No event fits now.');
     return since(s, first);
   }
+  if (/^developer pager( \w+)?$/.test(text)) { const first = s.serial; developerPager(s, text.split(' ')[2] || 'fill'); return since(s, first); } // a realistic mix on the pager, or none (pager.mjs)
   if (/^developer chain( \w+)?$/.test(text)) { const first = s.serial; developerChain(s, text.split(' ')[2] || 'counter'); return since(s, first); } // a follow-up now (events.mjs chains)
   // On rooms (R1): ls, cd, map, go, wait, back, engage, cat, pull, open, force, rest, slip, jack out (floorplan.mjs).
   // Mid-fight, jack out is the emergency escape, as on the old runs.

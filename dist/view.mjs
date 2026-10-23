@@ -38,6 +38,7 @@ import { online, inSprawl, whereText, simOn, friends, profileOf } from './presen
 import { consortiumOf, isGround, sizeOf, tiersOf, nextTier as nextConTier, serversOf, memberServers, memberLevel, CONSORTIUM, rebooting, consortiumWall, alertsOf, tiersOf as conTiers } from './consortium.mjs';
 import { FACTIONS, MAIL, TIERS, openContracts, doneContracts, offers as mailOffers, findJob, heldCount, boardOpen, indemnity, tierIndex, standing, tierOf, nextTier, retainer, unread, title as contractTitle, progress as contractProgress, rewardLine, ready as contractReady, nextPayIn } from './mail.mjs';
 import { commsOf, GROUPS as COMMS_GROUPS, groupOf as commsGroup } from './comms.mjs';
+import { pagerStyle, STYLE_LABEL } from './pager.mjs';
 import { LINE, GOODS, storeOf, lineName, lineAbout, goodsAbout, priceNow } from './store.mjs';
 import { shownHidden, flagged as hiddenFlagged, items as kitOf, HIDDEN, leadOf, knowsRelay, relayCost, canBuildRelay, connectedTo, viaName } from './hidden.mjs';
 import { floorsOf, graphOf, locAt, hiddenAt, exitOpen, floorOfSlot, floorName, FLOOR, canDescend, waypointOf } from './floors.mjs';
@@ -2625,6 +2626,7 @@ export function systemMarkup(s, { coop = false, tab = 'settings', ach = {}, cs =
       <button type="button" class="btn" data-run="tips ${s.settings.tips === false ? 'on' : 'off'}" aria-pressed="${s.settings.tips !== false}">Tips ${s.settings.tips === false ? 'off' : 'on'}</button>
       <button type="button" class="btn" data-run="tips replay">Replay tips</button>
       <button type="button" class="btn" data-run="channel ${s.settings.channel === false ? 'on' : 'off'}" aria-pressed="${s.settings.channel !== false}" title="#net's latest line over the prompt">#net ${s.settings.channel === false ? 'muted' : 'on'}</button>
+      <button type="button" class="btn" data-run="pager next" title="Which pager sits on the top bar. Classic scrolls the latest line. A shows the most urgent page and its button. B is a beeper with a next key and an act key. C shows one icon per page.">Pager: ${esc(STYLE_LABEL[pagerStyle(s)])}</button>
     </div>
     <div class="row sound-test"><span class="next-label">Sound test</span>${[['hit', 'Hit'], ['break', 'Break'], ['hurt', 'Hurt'], ['unlock', 'Unlock'], ['pickup', 'Pickup'], ['good', 'Good news'], ['win', 'Win / level'], ['chit', 'Armor ◆'], ['patch', 'Patch'], ['interrupt', 'Interrupt'], ['nope', 'Refused'], ['prewarn', 'Warning'], ['daemon', 'Daemon'], ['channel', 'Channel change'], ['jackin', 'Connect'], ['hangup', 'Hang up'], ['lose', 'Crash'], ['mark', 'Mark'], ['burn', 'Burn'], ['helper', 'Helper'], ['shield', 'Shield'], ['buff', 'Buff']].map(([id, name]) => `<button type="button" class="btn" data-sound="${id}">${name}</button>`).join('')}</div></section>
     ${collectionMarkup(s)}
