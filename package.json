@@ -1,0 +1,11 @@
+{
+  "name": "blackbox",
+  "private": true,
+  "description": "BLACKBOX, a browser game. Tests: npm test (the fast files, and the slow simulations the changes reach), npm run test:full (everything).",
+  "scripts": {
+    "test": "node scripts/test.mjs",
+    "test:full": "node scripts/test.mjs --full",
+    "test:fast": "node scripts/test.mjs --fast",
+    "test:plan": "node scripts/test.mjs --list"
+  }
+}
