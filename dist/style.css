@@ -1145,23 +1145,12 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 @media (max-width: 900px) { .store-page { grid-template-columns: 1fr; } }
 
 /* ---------- the pager and Comms ---------- */
-.pager { margin-left: auto; display: flex; align-items: center; gap: 7px; background: #1b1409; border: 1px solid #3a2c14; border-radius: 6px; padding: 4px 7px 4px 8px; cursor: pointer; color: var(--muted); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 1px 0 rgba(0, 0, 0, 0.6); }
+/* The pager itself (the tray: a lamp and one icon per page) is in pager.css. */
+.pager { margin-left: auto; }
 .pager + .meters { margin-left: -6px; }
-.pager:hover { border-color: var(--line-strong); }
-.pager[aria-expanded='true'] { border-color: var(--amber); }
-.pager .led { width: 7px; height: 7px; border-radius: 50%; background: #3a2c14; flex: none; }
-.pager .led.on { background: var(--amber); box-shadow: 0 0 6px var(--amber); animation: pagerblink 1.2s steps(1) infinite; }
-.pager .led.alert { background: var(--hot); box-shadow: 0 0 6px var(--hot); }
-.pager .lcd { position: relative; width: 110px; height: 20px; overflow: hidden; white-space: nowrap; border-radius: 2px; background: #b7c48a; color: #1d2410; font: 600 11px/20px var(--mono); box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.4); text-align: left; }
-.pager .lcd span { position: absolute; left: 0; padding: 0 6px; }
-.pager .lcd.long span { padding-left: 100%; animation: pagerscroll 11s linear infinite; }
-.pager .lcd.idle span { opacity: 0.5; }
-.pager .cnt { min-width: 14px; font: 600 11px var(--mono); color: var(--amber); text-align: right; }
 .pager.fx-pager { animation: pagerbuzz 0.4s linear; }
 @keyframes pagerblink { 50% { opacity: 0.25; } }
-@keyframes pagerscroll { to { transform: translateX(-100%); } }
 @keyframes pagerbuzz { 15%, 55% { box-shadow: 0 0 10px rgba(241, 185, 47, 0.55); } 35%, 75% { box-shadow: none; } }
-.no-motion .pager .lcd.long span { animation: none; padding-left: 6px; }
 .no-motion .pager.fx-pager { animation: none; }
 .comms { position: absolute; top: 52px; right: 20px; z-index: 60; width: 360px; max-width: calc(100% - 24px); max-height: min(70vh, 560px); display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line-strong); border-radius: 4px; box-shadow: 0 14px 34px rgba(0, 0, 0, 0.65); }
 .app { position: relative; }
@@ -1170,27 +1159,15 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 .comms-filters button { font: 11px var(--mono); background: none; color: var(--dim); border: 1px solid var(--line); border-radius: 2px; padding: 1px 7px; cursor: pointer; }
 .comms-filters button[aria-pressed='true'] { color: var(--amber); border-color: var(--amber); }
 .comms-list { list-style: none; margin: 0; padding: 0; overflow: auto; }
-.citem { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 2px 8px; align-items: center; padding: 8px 12px; border-bottom: 1px solid rgba(241, 185, 47, 0.08); }
-.citem.unseen { background: rgba(241, 185, 47, 0.05); }
-.citem p { grid-column: 1 / -1; margin: 0; font-size: 13px; color: var(--text); }
-.citem .cfrom { font: 10px var(--mono); color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.citem .cage { font: 10px var(--mono); color: var(--dim); }
-.citem .act { grid-column: 1 / -1; justify-self: start; }
 .comms .k { font: 600 9px var(--mono); letter-spacing: 1.2px; text-transform: uppercase; padding: 1px 5px; border: 1px solid currentColor; border-radius: 2px; white-space: nowrap; }
 .comms .k.offer { color: var(--amber); } .comms .k.mail { color: var(--bright); } .comms .k.ready { color: var(--you); } .comms .k.paid { color: var(--next); }
 .comms .k .glyph, .sb-alerts .k .glyph { width: 10px; height: 10px; margin: 0 4px 0 0; vertical-align: -1px; } /* an event's card icon (event-cards.mjs) */
 .comms .k.net { color: var(--daemon); } .comms .k.alert { color: var(--hot); } .comms .k.store { color: var(--muted); } .comms .k.standing { color: var(--you); }
 .comms .act { font: 600 11px var(--mono); color: var(--amber); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
 .comms .quiet { padding: 12px; }
-@media (min-width: 1700px) { .pager .lcd { width: 180px; } }
-@media (max-width: 1439px) and (min-width: 1101px) { .pager .lcd { width: 130px; } .ctx-tabs .pager .lcd { display: none; } .pager { padding: 6px 7px; } }
-@media (max-width: 1100px) and (min-width: 901px) { .pager .lcd, .ctx-tabs .pager .lcd { display: none; } .pager { padding: 6px 7px; } }
 @media (max-width: 1300px) and (min-width: 901px) { .modules button { padding: 6px 4px; } }
-@media (max-width: 900px) { .pager .lcd { width: 120px; } .comms { top: 96px; right: 12px; } }
+@media (max-width: 900px) { .comms { top: 96px; right: 12px; } }
 
-/* The pager folds to its lamp while a Fight or Run tab is up (the top bar is full). */
-.ctx-tabs .pager .lcd { width: 84px; }
-@media (min-width: 1700px) { .ctx-tabs .pager .lcd { width: 150px; } }
 
 /* Outposts */
 .mnode.loc.outpost .core { fill: var(--you); }
@@ -1250,7 +1227,7 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 @keyframes sp-fill { from { width: var(--from); } to { width: var(--to); } }
 @media (prefers-reduced-motion: reduce) { .spoils, .sp-card, .sp-xp, .sp-level, .sp-row, .sp-bar .sp-now { animation: none; opacity: 1; } }
 body.no-motion .spoils, body.no-motion .sp-card, body.no-motion .sp-xp, body.no-motion .sp-level, body.no-motion .sp-row, body.no-motion .sp-bar .sp-now { animation: none; opacity: 1; }
-/* Run and Fight tabs add width: tighten the tabs so the pager keeps its screen. */
+/* Run and Fight tabs add width: tighten the tabs. */
 @media (min-width: 1301px) { .ctx-tabs .modules button { padding-left: 7px; padding-right: 7px; } }
 
 /* ---------- juice: hits, shattered shields, hurts ---------- */
@@ -1545,11 +1522,9 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 .no-motion .meter-signal .sig-bars i { animation: none; }
 @media (max-width: 1700px) and (min-width: 901px) { .meters { gap: 14px; } .meter-integrity .meter-bar { width: 80px; } }
 @media (max-width: 1440px) and (min-width: 901px) { .meter-signal .meter-label { display: none; } .meter-integrity .meter-bar { width: 56px; } .meters { gap: 10px; } }
-@media (max-width: 1600px) and (min-width: 1440px) { .pager .lcd { width: 84px; } }
 @media (max-width: 1300px) and (min-width: 901px) { .meter-level .meter-bar { display: none; } }
 @media (max-width: 1700px) and (min-width: 901px) { .meter-level { min-width: 0; } .meter-level .meter-bar { width: 40px; } .topbar { gap: 6px 14px; } }
 @media (max-width: 1560px) and (min-width: 901px) { .meter-signal .meter-label { display: none; } }
-@media (max-width: 1520px) and (min-width: 901px) { .pager .lcd, .ctx-tabs .pager .lcd { display: none; } .pager { padding: 6px 7px; } }
 @media (max-width: 1320px) and (min-width: 901px) { .ctx-tabs .brand-name { display: none; } }
 /* Craft page lists; protocols on the Loadout page */
 .craft-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
@@ -2142,9 +2117,6 @@ body:has(.silk-stash .silk-tile[data-kind="implant"]:hover) .silk-fp[data-kind="
 .people-list .crew-slot { opacity: 0.55; border-style: dashed; }
 .people-list .crew-slot b { color: var(--muted); font-weight: 500; }
 
-/* Comms: handled entries grey out (and clear after 5 minutes). */
-.citem.done { opacity: 0.45; filter: grayscale(0.8); }
-.citem .cdone { margin-left: 6px; }
 .comms-head .p-acts { display: flex; gap: 10px; }
 
 /* A breach: the Integrity meter flashes red and its BREACH badge pulses (app.js pings every 15 s). */
@@ -2348,7 +2320,6 @@ body.with-sidebar .workspace { grid-template-columns: 200px minmax(0, 1fr); }
 #sidebar { padding: 8px 8px 8px 4px; }
 #sidebar .crewwin.docked .cw-head { padding-left: 6px; }
 #sidebar .crewwin.docked .cw-body { padding: 8px 6px 10px; }
-.citem .cclear { margin-left: 6px; width: 26px; padding: 0; display: inline-grid; place-items: center; font-size: 14px; line-height: 1; }
 .p-ico { width: 15px; height: 15px; flex: none; fill: none; stroke: var(--you); stroke-width: 1.5; stroke-linecap: round; filter: drop-shadow(0 0 3px color-mix(in srgb, var(--you) 60%, transparent)); }
 .people-btn.friends-on .p-ico { stroke: var(--daemon); }
 /* Top bar meters: the class level lives on the Loadout page now; every meter the same box. */
@@ -2372,14 +2343,6 @@ body.with-sidebar .workspace { grid-template-columns: 200px minmax(0, 1fr); }
 .pm-acts .act { padding: 2px 5px; font-size: 11px; }
 .cw-foot { display: flex; justify-content: flex-end; margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--line); }
 .cw-foot .act { font-size: 11px; }
-/* Pager entries: label, sender, then how long ago, all on the first line; a clear × pinned top right. */
-.citem { position: relative; grid-template-columns: auto auto auto minmax(0, 1fr); padding-right: 42px; }
-.citem .cfrom { font-size: 11px; color: var(--muted); }
-.citem .cage { font-size: 10px; color: var(--dim); }
-.citem .cage::before { content: '·'; margin-right: 6px; opacity: 0.6; }
-.citem .act.cclear { position: absolute; top: 7px; right: 8px; grid-column: auto; margin: 0; width: 24px; height: 24px; padding: 0; display: grid; place-items: center; font-size: 16px; line-height: 1; color: var(--text); border: 1px solid var(--line-strong, var(--line)); border-radius: 3px; background: var(--inset); opacity: 1; }
-.citem .act.cclear:hover { color: var(--hot); border-color: var(--hot); }
-.citem .act.cclear { text-decoration: none; }
 /* Whose half of the cycle: a strip across the top of the board names it; only the virus's half turns the board red. */
 .phase-strip { display: flex; align-items: center; gap: 10px; padding: 6px 14px; margin: -4px 0 4px; font: 600 11px var(--mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--dim); border-bottom: 1px solid var(--line); }
 .phase-strip i { font-style: normal; opacity: 0.6; }
@@ -2543,11 +2506,8 @@ body.phase-wait .cmdline, body.phase-wait #command-input { box-shadow: 0 0 0 1px
 .mk-th .mk-buy-h { grid-column: 6 / 8; text-align: left; padding-left: 12px; border-left: 1px solid var(--line-strong, var(--line)); color: var(--amber); }
 .mk-th span:last-child { text-align: left; }
 .mk-tr .btn.small { white-space: nowrap; }
-/* Tight top bar (a breach's chip, a long pager line): the pager's screen and who-you-are give way first. */
-.topbar.fit-2 .pager .lcd { width: 110px; }
-.topbar.fit-3 .pager .lcd { width: 72px; }
+/* Tight top bar (a breach's chip, a full pager): the pager's icons and who-you-are give way (pager.css has the pager's steps). */
 .topbar.fit-3 .whoami .who-dot, .topbar.fit-3 .whoami #who-class { display: none; }
-.topbar.fit-4 .pager .lcd { display: none; }
 /* A listing with several files to pull: one button takes them all. */
 .ls-all { margin: 2px 0 4px; }
 .ls-all .tok.act { font-weight: 600; }

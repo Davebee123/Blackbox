@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh } from './dist/combat.mjs';
-import { logComms, commsOf, unseen, unseenAlert, seeAll, groupOf, COMMS, clearOne, pruneComms } from './dist/comms.mjs';
+import { logComms, commsOf, unseen, unseenAlert, seeAll, COMMS, clearOne, pruneComms } from './dist/comms.mjs';
 
 test('world events go to the pager; fight chatter doesn’t', () => {
   const s = fresh();
@@ -16,7 +16,7 @@ test('world events go to the pager; fight chatter doesn’t', () => {
   assert.equal(mail.go, 'mail:l3');
   assert.equal(offer.go, 'mail:j9');
   assert.equal(offer.text, 'Turf: ORIN-MIRROR-07.');
-  assert.equal(groupOf(ret.kind), 'Money');
+  assert.equal(ret.label, 'Retainer');
   assert.equal(unseen(s), 3);
   seeAll(s);
   assert.equal(unseen(s), 0);

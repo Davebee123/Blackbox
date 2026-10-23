@@ -1,4 +1,4 @@
-// The trial pagers (pager.mjs, pager-view.mjs): which lines are pages, what one tap does, the order and the counts.
+// The pager (pager.mjs, pager-view.mjs): which lines are pages, what one tap does, the order, the counts, the tray.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -123,42 +123,42 @@ test('the count is the pages; the order is threat, clock, pay, the rest, letters
   assert.deepEqual(PG.lampOf(s), { on: false, blink: false, threat: false, n: 0 });
 });
 
-test('the style: classic by default, ?pager= or the setting picks a direction', () => {
-  const s = fresh();
-  assert.equal(PG.pagerStyle(s), 'classic');
-  assert.equal(PG.pagerStyle(s, 'b'), 'device');
-  s.settings.pager = 'tray';
-  assert.equal(PG.pagerStyle(s), 'tray');
-  assert.equal(PG.pagerStyle(s, 'a'), 'action', 'the address wins');
-  assert.equal(PG.pagerStyle(s, 'nonsense'), 'tray');
-  assert.deepEqual(['a', 'b', 'c', 'classic'].map(PG.styleName), ['action', 'device', 'tray', 'classic']);
-});
-
-test('the three pagers draw the pages: A the top one and its button, B a page at a time, C an icon each', () => {
+test('the tray draws the pages: an icon each, most urgent first, +n when more wait; Comms lists them with buttons', () => {
   const s = filled(), p = PG.pages(s);
-  const a = PGV.actionMarkup(s);
-  assert.match(a, new RegExp(`class="pg-act" data-pact="${p[0].id}"[^>]*>Intercept<`));
-  assert.equal((a.match(/data-pact=/g) || []).length, 1, 'one button: the most urgent page');
-  const b = PGV.deviceMarkup(s, p[2].id);
-  assert.match(b, /<i>3\/5<\/i>/, 'the page count beside the next key');
-  assert.match(b, new RegExp(`data-pact="${p[2].id}"[^>]*aria-label="Deliver"`), 'the act key does what line 2 says');
-  assert.match(PGV.deviceMarkup(s, 999), /<i>1\/5<\/i>/, 'a page gone: back to the most urgent');
-  const c = PGV.trayMarkup(s, 4);
-  assert.equal((c.match(/class="pgc-tile/g) || []).length, 3, 'three icons and +2');
-  assert.match(c, />\+2</);
-  assert.equal((PGV.trayMarkup(s, 6).match(/class="pgc-tile/g) || []).length, 5);
-  for (const html of [a, PGV.deviceMarkup(s), c]) assert.match(html, /title="Courier: [^"]+\n▸ Intercept"/, 'the tooltip is the line and its ▸ act');
+  const tray = PGV.trayMarkup(s, 4);
+  assert.equal((tray.match(/class="pg-tile/g) || []).length, 3, 'three icons and +2');
+  assert.match(tray, />\+2</);
+  assert.match(tray, new RegExp(`class="pg-tile new" data-pact="${p[0].id}" title="Courier: [^"]+\n▸ Intercept"`), 'the courier first: a tap intercepts it, the tooltip is the line and its ▸ act');
+  assert.equal((PGV.trayMarkup(s, 3).match(/class="pg-tile/g) || []).length, 2, 'a tight bar: two icons and +3');
+  assert.equal((PGV.trayMarkup(s, 6).match(/class="pg-tile/g) || []).length, 5, 'room for all five: no +n');
+  assert.doesNotMatch(PGV.trayMarkup(s, 6), /pg-more/);
+  seeAll(s);
+  assert.doesNotMatch(PGV.trayMarkup(s), /pg-tile[^"]* new/, 'seen: no glow');
   const inbox = PGV.inboxMarkup(s);
   assert.equal((inbox.match(/class="pgi[ "]/g) || []).length, 5, 'Comms lists the pages');
+  assert.equal((inbox.match(/data-pact=/g) || []).length, 5, 'each with its button');
   assert.match(inbox, /<details class="pg-hist"><summary>News <b>\d+<\/b>/, 'and folds the news under them');
   const empty = fresh();
-  assert.doesNotMatch(PGV.actionMarkup(empty) + PGV.deviceMarkup(empty) + PGV.trayMarkup(empty), /data-pact/, 'nothing to do: nothing to press');
+  assert.doesNotMatch(PGV.trayMarkup(empty) + PGV.inboxMarkup(empty), /data-pact/, 'nothing to do: nothing to press');
+  assert.match(PGV.trayMarkup(empty), /class="pg-lamp" data-pg-open/, 'the lamp always opens Comms');
 });
 
-test('the trial pagers keep the rules: no teal, nothing moves, no new sound', () => {
+test('one pager, no switch: the classic list, its filters and the trial styles are gone', () => {
+  const app = readFileSync(new URL('./dist/app.js', import.meta.url), 'utf8');
+  const html = readFileSync(new URL('./dist/index.html', import.meta.url), 'utf8');
+  assert.doesNotMatch(app, /params\.get\('pager'\)|pagerCommand|commsMarkup|data-cfilter/);
+  assert.doesNotMatch(html, /pager-lcd|id="pg"/);
+  assert.equal(PG.pagerStyle, undefined);
+  const s = fresh();
+  play(s, 'pager b');
+  assert.equal(s.settings.pager, undefined, 'pager b is no command');
+});
+
+test('the pager keeps the rules: no teal, nothing moves, the same chirp, only for a page', () => {
   const css = readFileSync(new URL('./dist/pager.css', import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
   assert.doesNotMatch(css, /--you|#7fd1c7/, 'teal is only ever you');
-  assert.doesNotMatch(css.replace(/text-transform/g, ''), /transform|translate|rotate|@keyframes/, 'nothing moves (the lamp reuses the classic blink)');
+  assert.doesNotMatch(css.replace(/text-transform/g, ''), /transform|translate|rotate|@keyframes/, 'nothing moves (the lamp reuses the blink)');
   const app = readFileSync(new URL('./dist/app.js', import.meta.url), 'utf8');
-  assert.match(app, /feel\.add\('pager', pgStyle\(\) === 'classic' \? '#pager' : '#pg'/, 'the pager beep is the classic one');
+  assert.match(app, /logComms\(campaign, events\)\.filter\(PG\.isPage\)/, 'news never chirps');
+  assert.match(app, /feel\.add\('pager', '#pager', null, \{ alert \}\)/, 'the pager chirp is the one it always had');
 });

@@ -1,21 +1,13 @@
 // The pager's pages: which of its lines ask something of you, what one tap does about each, and in what order.
 // comms.mjs keeps the lines (world events in, entries out); this sorts them. A *page* is a line you can act on (a
 // threat at your wall, a courier to intercept, a contract to deliver, a letter, an offer); *news* is a line that only
-// tells you something (pay, standing, a restock, a find). Pure: the save in, pages and acts out. The three trial
-// pagers (pager-view.mjs: action, device, tray) draw from it; the classic pager (view.mjs commsMarkup) doesn't.
+// tells you something (pay, standing, a restock, a find). Pure: the save in, pages and acts out. The pager on the top
+// bar (the tray: one icon per page) and Comms draw from it (pager-view.mjs).
 import { active, emit, warn } from './combat.mjs';
 import { STRAINS } from './data.mjs';
 import { commsOf, live } from './comms.mjs';
 import { MAIL, ready, heldCount, jobs, offers, offer, initMail, systemLetter, title } from './mail.mjs';
 import { deal, CARDS } from './events.mjs';
-
-// The pager styles. classic is today's (the scrolling line and the filtered list); the other three are the trial
-// directions the designer picks from. ?pager=a|b|c (or the names) on the URL, or the pager setting (pager <style>).
-export const PAGER_STYLES = ['classic', 'action', 'device', 'tray'];
-const ALIAS = { a: 'action', b: 'device', c: 'tray', classic: 'classic', action: 'action', device: 'device', tray: 'tray' };
-export const styleName = (v) => ALIAS[String(v || '').toLowerCase()] || null;
-export const pagerStyle = (s, param = null) => styleName(param) || styleName(s.settings?.pager) || 'classic';
-export const STYLE_LABEL = { classic: 'classic', action: 'A · action', device: 'B · device', tray: 'C · tray' };
 
 // A fight starts from a world event's card; what the tap says depends on the card.
 const FIGHT_VERB = { courier: 'Intercept', lantern: 'Intercept', bounty: 'Hunt', returning: 'Hunt', hunt: 'Hunt', choir: 'Engage', spotter: 'Engage', counter: 'Engage', zero: 'Engage', feud: 'Fight' };

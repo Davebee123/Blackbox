@@ -7,7 +7,8 @@ import { deal, eventsOf, tickEvents, CARDS, CHAIN, FEUD, HUNT, DIRECTOR, chainOf
 import { rep, FACTIONS } from './dist/factions.mjs';
 import { FACTION_FAMILY } from './dist/hubs.mjs';
 import { codeOf } from './dist/gear.mjs';
-import { mapMarkup, commsMarkup } from './dist/view.mjs';
+import { mapMarkup } from './dist/view.mjs';
+import { inboxMarkup } from './dist/pager-view.mjs';
 import { logComms, commsOf } from './dist/comms.mjs';
 import { play } from './dist/run.mjs';
 
@@ -74,7 +75,7 @@ test('a counter-raid: only after a feud you won a fight in; waits its delay, the
   logComms(s, s.logs.filter((e) => e.id > first));
   const line = commsOf(s).find((x) => x.event === c.id);
   assert.match(line.chain, /^Follows the feud/);
-  assert.match(commsMarkup(s), /class="cchain"[^>]*title="Follows the feud/);
+  assert.match(inboxMarkup(s), /class="cchain"[^>]*title="Follows the feud/);
   // Holding no server you've been on: it comes at your home.
   const t = world({ hubs: ['glassjaw'] });
   t.locations.forEach((l) => { l.runs = 0; });

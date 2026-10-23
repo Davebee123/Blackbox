@@ -18,7 +18,7 @@ import { consortiumOf, alertsOf } from './consortium.mjs';
 import { nextPayIn, boardOpen, storyAt, openContracts, ready } from './mail.mjs';
 import { hubsOf, hubFound, hubTraceOf, FACTIONS } from './factions.mjs';
 import { WARES } from './market.mjs';
-import { logComms, commsOf, unseen, unseenAlert, seeAll, markDone, pruneComms, clearComms, clearOne } from './comms.mjs';
+import { logComms, commsOf, unseenAlert, seeAll, markDone, pruneComms } from './comms.mjs';
 import { nextTip, markSeen, TOUR, tourDone, skipTour } from './tips.mjs';
 import { createWindow } from './window.mjs';
 import { createIntro } from './intro.mjs';
@@ -69,12 +69,8 @@ const playtest = params.get('playtest');
 // is never read, written or reset from a bench.
 const { key: KEY, bench: BENCH, camp: CAMP } = BN.pageSave(location.search, CP.CAMPAIGN_KEY);
 const DEV = params.has('dev') || !!BENCH; // developer commands (and window.__bb, for tests)
-// The pager style (pager.mjs): classic by default; ?pager=a|b|c on the address, or pager <style>, tries a direction.
-const pagerParam = params.get('pager');
-const pgStyle = () => PG.pagerStyle(campaign, pagerParam);
-const pagerEl = () => (pgStyle() === 'classic' ? $('pager') : $('pg'));
-const narrowBar = matchMedia('(max-width: 900px)');
-let pgCursor = null; // B · device: the page on its screen (null: the most urgent)
+// The pager's tray (pager-view.mjs): four slots (three icons and +n when more wait) on a desktop, three on a phone.
+const phoneBar = matchMedia('(max-width: 900px)');
 
 // ---------- state ----------
 let campaign = load();
@@ -372,7 +368,7 @@ document.addEventListener('keydown', (e) => {
 // ---------- events → feedback ----------
 // A breach: a ring fires out of the pager's lamp (twice, a beat apart), so you notice it.
 function ledRing() {
-  const led = pgStyle() === 'classic' ? $('pager-led') : document.querySelector('#pg .led');
+  const led = document.querySelector('#pager .led');
   if (!led || campaign.settings.motion === false) return;
   const r = led.getBoundingClientRect();
   for (const delay of [0, 280]) setTimeout(() => { const d = document.createElement('div'); d.className = 'led-ring'; d.style.left = r.left + r.width / 2 + 'px'; d.style.top = r.top + r.height / 2 + 'px'; document.body.appendChild(d); setTimeout(() => d.remove(), 950); }, delay);
@@ -1336,7 +1332,6 @@ function run(raw) {
   if (page === 'daemons' && !(fighting && ABILITIES[text])) { loadoutTab = 'daemons'; return go('loadout'); }
   if (NAV.includes(page) && !(fighting && ABILITIES[text])) { if (page === 'loadout') loadoutTab = text === 'talents' || text === 'skills' ? 'skills' : 'protocols'; if (page === 'system') systemTab = 'settings'; return go(page); }
   if (text === 'achievements') return goTo('achieve'); // the page; achieve pin <name> and the rest go to the engine
-  if (/^pager( \S+)?$/.test(text)) return pagerCommand(text.slice(6).trim()); // pager classic|a|b|c|next: which pager (pager.mjs)
   if (text === 'shell' || text.startsWith('shell ')) return shellCommand(text.slice(6).trim());
   { const said = screenFxCommand(campaign, text); if (said) { save(); dirty = true; return notice(said); } } // screen fx [off|subtle|medium|bold|next] / screen fx <effect> on|off (and the old effects calm|full|minimal)
   if (text === 'casing on' || text === 'casing off') { campaign.settings.casing = text === 'casing on'; save(); dirty = true; return; }
@@ -2453,7 +2448,7 @@ function frame(now) {
     if (pruneComms(campaign)) { save(); dirty = true; } // handled comms clear out after 5 minutes
     // Unanswered alerts shake the pager every 10 s; a breach pings every 15 s.
     const tickNow = Date.now();
-    if (unseenAlert(campaign) && !commsOpen && tickNow - (nag.pager || 0) >= 10000) { nag.pager = tickNow; const p = pagerEl(); p.classList.remove('fx-pager'); void p.offsetWidth; p.classList.add('fx-pager'); }
+    if (unseenAlert(campaign) && !commsOpen && tickNow - (nag.pager || 0) >= 10000) { nag.pager = tickNow; const p = $('pager'); p.classList.remove('fx-pager'); void p.offsetWidth; p.classList.add('fx-pager'); }
     const inv = campaign.invasion, breached = inv?.state === 'breach' && !campaign.degraded && !(active(campaign) && campaign.encounter.invader === inv.id);
     if (breached && tickNow - (nag.breach || 0) >= 15000) { nag.breach = tickNow; feel.add('prewarn', '#meter-integrity'); feel.flush(); }
     if (!breached) nag.breach = 0;
@@ -2783,67 +2778,33 @@ document.addEventListener('visibilitychange', () => {
 });
 
 // ---------- the pager ----------
-// World events land on the pager: it beeps (quietly, and only for alerts mid-fight), its lamp
-// blinks until you open it, and its screen scrolls the latest line. Open it for Comms, the list.
-let commsOpen = false, commsFilter = 'all', pagerLine = '';
+// World events land on the pager (comms.mjs); pager.mjs sorts them into pages (something to act on) and news. The
+// tray on the top bar is a lamp and one icon per page; tap one to do its thing. A new page chirps (only a threat
+// mid-fight); news only goes on the list. The lamp opens Comms: the pages with their buttons, the news folded.
+let commsOpen = false;
 function pagerReact(events) {
-  let added = logComms(campaign, events);
-  if (!added.length) return;
-  if (pgStyle() !== 'classic') { added = added.filter(PG.isPage); if (added.length) pgCursor = null; } // a trial pager goes off only for a page; the device shows the most urgent
+  const added = logComms(campaign, events).filter(PG.isPage);
+  if (!added.length) { save(); return; }
   const alert = added.some((c) => c.alert);
   const fighting = active(campaign) && module === 'combat';
-  if (alert || (!fighting && added.some((c) => c.beep))) feel.add('pager', pgStyle() === 'classic' ? '#pager' : '#pg', null, { alert });
+  if (alert || (!fighting && added.some((c) => c.beep))) feel.add('pager', '#pager', null, { alert });
   save();
-}
-function pagerCommand(arg) {
-  const order = PG.PAGER_STYLES, now = PG.styleName(campaign.settings.pager) || 'classic';
-  const to = arg === 'next' ? order[(order.indexOf(now) + 1) % order.length] : arg ? PG.styleName(arg) : null;
-  if (!to) return notice(arg ? 'pager classic|a|b|c (or action, device, tray), or pager next.' : `Pager: ${PG.STYLE_LABEL[pgStyle()]}.`, !!arg);
-  campaign.settings.pager = to; save(); cache.delete('pg'); cache.delete('comms'); dirty = true;
-  notice(`Pager: ${PG.STYLE_LABEL[to]}.${PG.styleName(pagerParam) && PG.styleName(pagerParam) !== to ? ' The address\'s ?pager= wins on this page.' : ''}`);
 }
 // One tap on a page: its command, or where it is (pager.mjs actOf). Going there handles it; a command leaves it up
 // until what it asked for is done (the contract delivered, the courier caught).
 function pagerAct(id) {
   const c = commsOf(campaign).find((x) => x.id === id), a = c && PG.actOf(campaign, c);
   if (!a) return;
-  c.seen = true; pgCursor = null;
+  c.seen = true;
   setComms(false);
   if (a.go) { markDone(campaign, id); save(); goTo(a.go); } else { save(); run(a.cmd); }
   dirty = true;
 }
-// B · device: the next key steps through the pages; the page you step to counts as seen.
-function pagerNext() {
-  const p = PG.pages(campaign);
-  if (p.length < 2) return;
-  const i = p.findIndex((c) => c.id === pgCursor), c = p[(Math.max(0, i) + 1) % p.length];
-  pgCursor = c.id; c.seen = true; save(); dirty = true;
-}
 function pagerUi() {
-  const style = pgStyle();
-  $('pager').hidden = style !== 'classic';
-  $('pg').hidden = style === 'classic';
-  if (style !== 'classic') {
-    const cls = `pg pg-${{ action: 'a', device: 'b', tray: 'c' }[style]}`;
-    if ($('pg').className.replace(/ fx-pager/, '') !== cls) $('pg').className = cls;
-    put('pg', style === 'action' ? PGV.actionMarkup(campaign) : style === 'device' ? PGV.deviceMarkup(campaign, pgCursor) : PGV.trayMarkup(campaign, narrowBar.matches ? 3 : 4));
-    $('comms').hidden = !commsOpen;
-    if (commsOpen) put('comms', PGV.inboxMarkup(campaign, Date.now()));
-    return;
-  }
-  const list = commsOf(campaign), last = list[0], n = unseen(campaign);
-  const line = last ? `${last.label.toUpperCase()}: ${last.text}` : 'NO MESSAGES';
-  if (line !== pagerLine) {
-    pagerLine = line;
-    $('pager-text').textContent = line;
-    $('pager-lcd').classList.toggle('idle', !last);
-    $('pager-lcd').classList.toggle('long', line.length > 30);
-  }
-  $('pager-led').className = `led${n ? ' on' : ''}${unseenAlert(campaign) ? ' alert' : ''}`;
-  $('pager-count').textContent = n ? String(n) : '';
+  put('pager', PGV.trayMarkup(campaign, phoneBar.matches ? 3 : 4));
   $('pager').setAttribute('aria-expanded', String(commsOpen));
   $('comms').hidden = !commsOpen;
-  if (commsOpen) put('comms', V.commsMarkup(campaign, commsFilter, Date.now()));
+  if (commsOpen) put('comms', PGV.inboxMarkup(campaign, Date.now()));
 }
 // People (presence.mjs): a button on the top bar with how many are online, and its panel.
 let peopleOpen = false, peopleTab = 'friends';
@@ -2955,31 +2916,20 @@ function setComms(open) {
   if (open) { seeAll(campaign); save(); }
   dirty = true;
 }
-$('pager').addEventListener('click', (e) => { e.stopPropagation(); setComms(!commsOpen); });
-$('pg').addEventListener('click', (e) => {
+$('pager').addEventListener('click', (e) => {
   e.stopPropagation();
   const a = e.target.closest('button[data-pact]');
   if (a) return pagerAct(Number(a.dataset.pact));
-  if (e.target.closest('button[data-pg-next]')) return pagerNext();
   if (e.target.closest('button[data-pg-open]')) setComms(!commsOpen);
 });
 $('comms').addEventListener('click', (e) => {
   e.stopPropagation();
-  const f = e.target.closest('[data-cfilter]');
-  if (f) { commsFilter = f.dataset.cfilter; dirty = true; return; }
   if (e.target.closest('[data-comms-close]')) { setComms(false); return; }
-  if (e.target.closest('[data-comms-clear]')) { if (pgStyle() === 'classic') clearComms(campaign); else PG.clearNews(campaign); save(); dirty = true; return; }
+  if (e.target.closest('[data-comms-clear]')) { PG.clearNews(campaign); save(); dirty = true; return; }
   const pa = e.target.closest('button[data-pact]');
   if (pa) return pagerAct(Number(pa.dataset.pact));
-  const cl = e.target.closest('[data-cclear]');
-  if (cl) { clearOne(campaign, Number(cl.dataset.cclear)); save(); dirty = true; return; }
-  const dn = e.target.closest('[data-cdone]');
-  if (dn) { markDone(campaign, Number(dn.dataset.cdone)); save(); dirty = true; return; }
-  const g = e.target.closest('[data-go]');
-  if (g?.dataset.cid) { markDone(campaign, Number(g.dataset.cid)); save(); } // opening it is handling it
-  if (!g) return;
-  setComms(false);
-  goTo(g.dataset.go);
+  const h = e.target.closest('li[data-hgo]'); // a line of news: where it happened (an achievement, a takeover, the store)
+  if (h) { markDone(campaign, Number(h.dataset.cid)); save(); setComms(false); goTo(h.dataset.hgo); }
 });
 // The top bar stays on one line: when it would wrap (more tabs, a narrow screen, the monitor
 // casing), it tightens a step at a time (style.css .fit-1 … .fit-4). Only re-measured when the
@@ -2992,7 +2942,7 @@ function fitTopbar() {
   if (tabs.dataset.tabs !== n) tabs.dataset.tabs = n; // how many tabs show: a phone sizes them down from seven (style.css)
   // Refit when the tabs, the width, or what the bar holds changes (a breach adds a chip, the pager an alert):
   // the bar's height after the last fit is part of the key, so growing onto a second row refits it.
-  const sig = () => [...document.querySelectorAll('.modules button')].map((b) => (b.hidden ? 0 : 1)).join('') + ':' + bar.clientWidth + ':' + bar.offsetHeight + ':' + ($('integrity-note')?.hidden ? 0 : $('integrity-note')?.textContent) + ':' + $('people')?.hidden + ':' + ($('pg').hidden ? '' : $('pg').textContent); // a trial pager's words (pager-view.mjs) change its width
+  const sig = () => [...document.querySelectorAll('.modules button')].map((b) => (b.hidden ? 0 : 1)).join('') + ':' + bar.clientWidth + ':' + bar.offsetHeight + ':' + ($('integrity-note')?.hidden ? 0 : $('integrity-note')?.textContent) + ':' + $('people')?.hidden + ':' + $('pager').childElementCount; // the pager's icons change its width
   if (sig() === fitKey) return;
   // Wrapped: something starts below where something else ends.
   const wraps = () => { const kids = [...bar.children].filter((x) => !x.hidden && x.offsetHeight); return kids.some((a) => kids.some((b) => a.offsetTop >= b.offsetTop + b.offsetHeight)); };
@@ -3025,7 +2975,7 @@ function goTo(target) {
   }
 }
 document.addEventListener('click', (e) => { const g = !e.target.closest('#comms') && e.target.closest('[data-go]'); if (g) { peopleOpen = false; goTo(g.dataset.go); } });
-document.addEventListener('click', (e) => { if (commsOpen && !e.target.closest('#comms, #pager, #pg')) setComms(false); });
+document.addEventListener('click', (e) => { if (commsOpen && !e.target.closest('#comms, #pager')) setComms(false); });
 document.addEventListener('click', (e) => {
   const o = e.target.closest('[data-hub-opt]'), c = e.target.closest('[data-hub-close]');
   if (o) pickHub(o.dataset.hubOpt);

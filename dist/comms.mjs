@@ -1,7 +1,7 @@
 // Comms: the pager's memory. World events (mail, the board, contracts, money, the network) become
 // short pager entries, kept on the save so what happened while you were away is still there.
-// Pure: events in, entries out. The pager itself (the top-bar widget and its list) lives in
-// view.mjs and app.js.
+// Pure: events in, entries out. Which entries are pages and what a tap does is pager.mjs; the pager
+// itself (the tray on the top bar and Comms) is pager-view.mjs and app.js.
 
 // The pager keeps what still matters. News (money, harvests, flags) times out on its own; things
 // to act on (an offer, a ready contract, a swarm) stay while they're true and go when they aren't.
@@ -12,10 +12,6 @@ export const COMMS = {
   actMs: 60 * 60000, // nothing waits longer than this
 };
 const NEWS = new Set(['paid', 'standing', 'store', 'net']);
-
-// Filters on the list, and which kinds sit under each.
-export const GROUPS = { Contracts: ['offer', 'ready', 'thread'], Mail: ['mail'], Network: ['net', 'alert'], Money: ['paid', 'standing', 'store'] };
-export const groupOf = (kind) => Object.keys(GROUPS).find((g) => GROUPS[g].includes(kind)) || 'Network';
 
 // event type → { kind, label, from, beep }. beep: whether the pager beeps (quiet ones only light up).
 const MAP = {
