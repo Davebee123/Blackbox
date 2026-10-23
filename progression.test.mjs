@@ -1,13 +1,13 @@
-// Progression (docs/progression.md): one headline level, a banner for every track, catch-up for a level that
-// runs long, uniques that keep up, rule affixes on every blue and yellow, the new world uniques, and the v34
+// Progression (docs/progression.md): one headline level, a banner for every track, no catch-up (Behind is gone),
+// uniques that keep up, rule affixes on every blue and yellow, the new world uniques, and the v34
 // migration that folded server XP, ports, the specialty, eight services and greys away.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, selectEncounter, resolveCycle, part, addItem, loaded, restore, serverLevel, syncServer, gainXp, hackerOf, finish, UNIQUES, fxAnswer, patchDelay, gearStat, daemonLevel, SAVE_VERSION, DECODE_XP, effectLine, previewDamage, bossTable } from './dist/combat.mjs';
-import { CONFIG, CATCHUP, CLIMB, levelTarget, xpToNext, killXp, killsToNext, v41XpToNext, deedScale, DEED, power, LOADOUT, BOSS_LOOT } from './dist/data.mjs';
+import { CONFIG, CLIMB, levelMinutes, xpToNext, killXp, killsToNext, v41XpToNext, deedScale, DEED, power, LOADOUT, BOSS_LOOT } from './dist/data.mjs';
 import { uniqueItem, rollItem, seeded, RULES, RARITIES, BASES, baseFor, primaries, SERVICES } from './dist/gear.mjs';
 const VERSIONS = [{ code: 12, credits: 120 }, { code: 40, credits: 600 }]; // what a service's v1 and v2 cost (the retired table)
-import { tickPlay, behindOf } from './dist/progression.mjs';
+import { tickPlay } from './dist/progression.mjs';
 import { levelUpSummary } from './dist/levelup-view.mjs';
 import { knowsFilter } from './dist/filters.mjs';
 
@@ -54,11 +54,11 @@ test('the long climb: a level is CLIMB.kills kills of your level (straight betwe
   const [[a, x], [b, y]] = [CLIMB.kills.find((p) => p[0] === 10), CLIMB.kills.find((p) => p[0] === 15)];
   assert.equal(killsToNext(12), x + ((y - x) * (12 - a)) / (b - a), 'straight between 10 and 15');
   for (let L = 2; L < LOADOUT.maxLevel; L++) assert.ok(xpToNext(L) > xpToNext(L - 1), `level ${L} takes more than ${L - 1}`);
-  for (let L = 2; L < LOADOUT.maxLevel; L++) assert.ok(levelTarget(L) >= levelTarget(L - 1), `Behind's target at ${L}`);
-  // About 100 hours of real play to 50 (CLIMB.minutes, Behind's targets), front-loaded: the table pacing.test.mjs holds the bot to.
-  const hours = (to) => { let m = 0; for (let L = 1; L < to; L++) m += levelTarget(L) / 60000; return m / 60; };
+  for (let L = 2; L < LOADOUT.maxLevel; L++) assert.ok(levelMinutes(L) >= levelMinutes(L - 1), `the pace table at ${L}`);
+  // About 100 hours of real play to 50 (CLIMB.minutes), front-loaded: the table loop.test.mjs holds the bot to (pacing.mjs PACE_TARGET).
+  const hours = (to) => { let m = 0; for (let L = 1; L < to; L++) m += levelMinutes(L); return m / 60; };
   for (const [L, h] of [[5, 1], [10, 4], [20, 15], [30, 35], [40, 65], [50, 100]]) assert.ok(Math.abs(hours(L) - h) / h < 0.1, `level ${L}: ${hours(L).toFixed(1)} hours of targets`);
-  assert.ok(levelTarget(1) <= 5 * 60000, 'the first level comes in minutes');
+  assert.ok(levelMinutes(1) <= 5, 'the first level comes in minutes');
   // A deed (first clear, Mapped, takeover, Root, decode, a puzzle board) is its old share of a kill times DEED.share of
   // how much longer the level is than it was, never less than a kill's share.
   assert.equal(deedScale(1), Math.max(1, DEED.share * (killsToNext(1) / 6.2)));
@@ -86,25 +86,23 @@ test('v42: an older save keeps every class\'s level, and its XP into the level k
   assert.equal(again.hackers.breaker.xp, s.hackers.breaker.xp);
 });
 
-test('Behind: once a level runs past 1.25× its target of play, kills pay +50% until the level ends', () => {
+test('no catch-up: a level that runs long pays its kills the same, the play clock is only kills an hour, and an old save\'s Behind fields go', () => {
   const kill = (s) => { fight(s); for (const p of s.encounter.virus.parts) Object.assign(p, { armor: 0, integrity: 1 }); const ev = []; for (const p of s.encounter.virus.parts) if (s.encounter.phase === 'active') { command(s, 'spike ' + p.id); ev.push(...resolveCycle(s)); } return ev; };
   const s = at({ breaker: 10 }), t = at({ breaker: 10 });
-  assert.equal(levelTarget(10), 48 * 60000, '48 minutes at level 10 (CLIMB.minutes)');
-  tickPlay(s, levelTarget(10) * CATCHUP.after - 60000);
-  assert.equal(behindOf(s).on, false, 'not yet');
-  tickPlay(s, 120000);
-  assert.equal(behindOf(s).on, true);
+  tickPlay(s, 10 * 3600000); // ten hours on a level of 48 minutes (CLIMB.minutes)
+  assert.equal(s.pace.ms, 10 * 3600000, 'the play clock counts toward kills an hour');
+  assert.equal(hackerOf(s).ms, undefined, 'no level clock');
   const ev = kill(s), plain = kill(t);
   const xp = (evs) => evs.filter((e) => e.type === 'xp').reduce((n, e) => n + e.amount, 0);
-  const behind = ev.find((e) => e.type === 'behind');
-  assert.ok(behind && ev.some((e) => e.type === 'behind-on'), 'said once, and on the spoils');
-  assert.equal(xp(ev) - xp(plain), behind.amount);
-  assert.equal(behind.amount, Math.round(killXp(10) * CATCHUP.bonus), '+50% of the kill');
-  // Only the class you play counts the time, and a new level starts its clock over.
-  const h = hackerOf(s);
-  gainXp(s, xpToNext(h.level) - h.xp, 'test');
-  assert.equal(behindOf(s).ms, 0);
-  assert.equal(behindOf(s).on, false);
+  assert.equal(xp(ev), xp(plain), 'a long level pays a kill the same');
+  assert.ok(!ev.some((e) => /^behind/.test(e.type)), 'no Behind row or note');
+  // A save from before: its level clock and once-a-level note are dropped on load.
+  const old = at({ breaker: 10, bastion: 4 });
+  Object.assign(old.hackers.breaker, { ms: 99 * 60000, behind: 10 });
+  Object.assign(old.hackers.bastion, { ms: 5000 });
+  const back = restore(JSON.parse(JSON.stringify(old)));
+  assert.deepEqual(back.hackers.breaker, { level: 10, xp: 0 });
+  assert.deepEqual(back.hackers.bastion, { level: 4, xp: 0 });
 });
 
 test('uniques keep up: their primaries are the best base at their item level times a yellow\'s 1.2, if that\'s higher', () => {

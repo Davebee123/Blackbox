@@ -9,7 +9,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { RECIPES, MOTIONS, PARTICLES, TRAVELS, CAP, TRAVEL, DELIBERATE, keyOf, keyFor, tickKey, recipeOf, idOfName, originOf, levelOf, countOf, layout, travelOf, boxAt, keyAt, overlaps, rect, createAbilityFx } from './dist/abilityfx.mjs';
+import { RECIPES, MOTIONS, PARTICLES, TRAVELS, CAP, TRAVEL, SPEED, DELIBERATE, keyOf, keyFor, tickKey, recipeOf, idOfName, originOf, levelOf, countOf, layout, travelOf, boxAt, keyAt, overlaps, rect, createAbilityFx } from './dist/abilityfx.mjs';
 import { groupsOf, abilityOfKey } from './dist/abilityfx-playtest.mjs';
 import { SPIKE, ABILITIES } from './dist/data.mjs';
 
@@ -128,8 +128,8 @@ test('it starts at the ability\'s key in the tray however it was fired, and at y
     const fromKey = layout(RECIPES[k], g, { origin: 'key', rnd: seeded(2) }), noKey = layout(RECIPES[k], { ...g, key: null }, { origin: 'key', rnd: seeded(2) });
     assert.equal(fromKey.from, 'key'); assert.equal(noKey.from, 'bar');
     assert.ok(near(startOf(fromKey), keyMid, 14), `${k} from its key: ${JSON.stringify(startOf(fromKey))}`);
-    assert.ok(fromKey.travel >= TRAVEL.min && fromKey.travel <= TRAVEL.max, `${k}: ${fromKey.travel} ms on the way`);
-    assert.equal(fromKey.impact, fromKey.travel + (RECIPES[k].land || 0), `${k}: it lands its land after it arrives`);
+    assert.ok(fromKey.travel >= TRAVEL.min / SPEED && fromKey.travel <= TRAVEL.max / SPEED, `${k}: ${fromKey.travel} ms on the way`);
+    assert.ok(Math.abs(fromKey.impact - (fromKey.travel + (RECIPES[k].land || 0) / SPEED)) < 1e-6, `${k}: it lands its land after it arrives (played SPEED times as fast)`);
     if (RECIPES[k].on !== 'you') assert.ok(near(startOf(noKey), barMid, 14), `${k} with no key on screen, from your bar: ${JSON.stringify(startOf(noKey))}`);
   }
   // A crewmate's starts at the middle of their bar in the crew window, in their violet; the crew window out of sight:

@@ -193,7 +193,7 @@ hooks.coopEnd = (s, m, result) => {
 // What the host sends: the run (without the host's pack), the server it is on, the fight (the host's encounter: the
 // virus and the clock), and each player: their Signal and their own encounter (their queue, cooldowns, buffs). Their
 // characters go once, and again when one changes. The guest's game turns it into its own view (viewOf).
-const KEEP_OUT = new Set(['xp', 'level-up', 'fresh', 'fast-kill', 'hot-kill', 'rested', 'behind', 'behind-on', 'set-xp', 'read-xp', 'drop', 'code', 'loot', 'gear',
+const KEEP_OUT = new Set(['xp', 'level-up', 'fresh', 'fast-kill', 'hot-kill', 'rested', 'set-xp', 'read-xp', 'drop', 'code', 'loot', 'gear',
   'jacked-out', 'contract-done', 'contract-taken', 'bought', 'crafted', 'world-event', 'rooms-good', 'rooms-bad', 'rooms-out', 'net-out', 'net-good', 'net-err', 'net-scan',
   'lead', 'located', 'takeover', 'root', 'streak', 'codex', 'research', 'mastered', 'puzzle', 'puzzle-end', 'thread', 'thread-talk', 'thread-start', 'thread-reward', 'rail', 'program']);
 const shared = (e) => !KEEP_OUT.has(e.type) && !(e.type === 'info' && !e.who);

@@ -1,0 +1,56 @@
+/* Terminal cosmetics (terminal.mjs, boots.mjs, terminal-view.mjs): the boot's looks, the home prompt's formats and the
+   cursor's shapes. Every rule here is for a look you picked, a still Preview or System → Terminal: the stock boot,
+   prompt and cursor at launch read nothing from it. */
+
+/* ---------- the boot's looks (shell.mjs plays them on #boot) ---------- */
+/* A faction's mark: its colour is the one accent, everything else is the boot's own ink. */
+.boot .boot-art { color: var(--fc, var(--amber)); text-shadow: 0 0 8px color-mix(in srgb, var(--fc, var(--amber)) 40%, transparent); line-height: 1.25; margin-bottom: 12px; white-space: pre; }
+/* Corrupted: a garbled line in a dimmer ink until it settles. It changes once; nothing flashes. */
+.boot pre .gl { color: var(--dim); text-shadow: none; }
+/* Minimal: the one line sits a little lower than the middle, like a bare tty. */
+.boot.boot-minimal pre { font-size: 16px; }
+/* Still (Motion off, or the OS asks for less): no fade, no blink. */
+.boot.still, .boot.still.out { transition: none; }
+.boot.still pre div:last-child::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .boot pre div:last-child::after { animation: none; } }
+
+/* ---------- the home prompt's formats (app.js renderPrompt: .prompt.pf-<id>) ---------- */
+/* Two lines in the height of one: smaller type, tight leading, so the command line keeps its height. */
+.prompt.pf-powerline .p-two { display: inline-grid; line-height: 14px; font-size: 12px; vertical-align: middle; }
+.prompt.pf-powerline .p-l1 { color: var(--muted); }
+.prompt.pf-arrow, .prompt.pf-lambda { font-size: 16px; }
+/* A phone shows the prompt's last mark only ($ for stock: style.css), so it stays one character wide. */
+@media (max-width: 900px) {
+  .prompt.pf-root:not(.run)::before { content: '#'; }
+  .prompt.pf-arrow:not(.run)::before { content: '>'; }
+  .prompt.pf-lambda:not(.run)::before { content: 'λ'; }
+}
+
+/* ---------- the cursor's shapes (on #caret: data-shape, data-steady) ---------- */
+.caret[data-shape='underline'] i { height: 0.14em; vertical-align: -0.3em; }
+.caret[data-shape='beam'] i { width: 2px; }
+.caret[data-steady] i { animation: none; }
+
+/* ---------- System → Terminal ---------- */
+.tm-page { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: var(--s5); align-items: start; }
+.tm-opts { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--s3); margin-bottom: var(--s4); }
+.tm-opt { position: relative; display: grid; align-content: space-between; justify-items: start; gap: var(--s3); min-height: 72px; padding: 8px; background: var(--inset); color: var(--text); border: 1px solid var(--line); border-radius: var(--r-card); font: 600 11px var(--mono); text-align: left; cursor: pointer; }
+.tm-opt[aria-pressed='true'] { border-color: var(--amber); color: var(--amber); }
+.tm-opt.locked { cursor: help; border-style: dashed; color: var(--dim); }
+.tm-opt.locked .tm-sample { opacity: 0.45; }
+.tm-opt .glyph { position: absolute; top: 8px; right: 8px; width: 11px; height: 11px; margin: 0; color: var(--dim); }
+.tm-sample { display: block; max-width: 100%; overflow: hidden; font: 500 10px/13px var(--mono); color: var(--muted); white-space: pre; }
+.tm-sample .tm-mark { color: var(--fc); }
+.tm-sample .tm-p { font: 600 12px/15px var(--mono); color: var(--amber); }
+.tm-sample .tm-p.two { display: inline-grid; font-size: 10px; line-height: 12px; }
+.tm-sample .tm-p.two span:first-child { color: var(--muted); }
+.tm-cur { display: inline-block; width: 0.6em; height: 1.1em; margin-left: 2px; vertical-align: -0.22em; background: var(--amber); opacity: 0.85; animation: caret-blink 1.06s steps(1) infinite; }
+.tm-cur[data-shape='underline'] { height: 0.14em; vertical-align: -0.3em; }
+.tm-cur[data-shape='beam'] { width: 2px; }
+.tm-cur[data-steady], .no-motion .tm-cur { animation: none; }
+@media (prefers-reduced-motion: reduce) { .tm-cur { animation: none; } }
+.tm-boots .tm-sample { min-height: 39px; }
+
+/* An achievement's terminal reward, by name (achievements-view.mjs). */
+.ach-rw-term { display: inline-flex; align-items: center; padding: 2px 7px; background: var(--panel); border: 1px solid var(--amber-deep); border-radius: var(--r-btn); }
+.ach-rw-term b { font: 600 10px var(--mono); letter-spacing: 0.6px; text-transform: uppercase; color: var(--amber); white-space: nowrap; }

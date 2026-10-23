@@ -31,7 +31,7 @@ import { prepareTicks, onHit as tickHit, BOSS_RULES } from './interrupt.mjs';
 import { TELL, ROOM_FAMILIES, DAMPER_KINDS, floorFor, partGenesFor } from './data.mjs';
 import { tickRoot, processWon } from './root.mjs';
 import { firewallCommand, wear, raidShare } from './firewall.mjs';
-import { levelGains, nextGains, behindBonus, levelStarted, progressionRestore, climbRestore, RETIRED } from './progression.mjs';
+import { levelGains, nextGains, progressionRestore, climbRestore, RETIRED } from './progression.mjs';
 import { portsCommand, invaderDown, invasionRestore, signatureRestore } from './invasion.mjs';
 import { runDaemons, daemonsOn, daemonsHurt, flushDaemons, lifeline, lifelineHeal, daemonCommand, daemonRestore, slottedDaemons, daemonAmount, watchmanBar, gainDaemon } from './daemons.mjs';
 export { daemonSlots, slottedDaemons, daemonLevel, daemonAmount, daemonNext, watchmanBar, gainDaemon } from './daemons.mjs';
@@ -50,6 +50,7 @@ import { fightOver, achievementsRestore } from './achievements.mjs';
 import { researchOf, gainResearch, knows as knowsAt, masteryDmg, masteryDrop, TIER, researchAt } from './research.mjs';
 import { PARTS, heatOf } from './parts.mjs';
 import { crewOf, factionAuthor, AUTHORS } from './authors.mjs';
+import { noteUse } from './mastery.mjs';
 import { fightNet, noteKill, nativeRoll, biasCode, richMult, networkRestore, networkCommand, lairUniques, lairFell, lairBoss, mine, netOf, isNative, named, nameOf, nameNative, openLair } from './network.mjs';
 
 export const SAVE_VERSION = 46; // v46: no default subclass: a class past level 10 that never picked plays its core until it does (subRestore); v45: sets, each loaded protocol stamped with when it went on and the storyline's LOWLIGHT Badge beat armed (sets.mjs setsRestore); v44: whole-number stats, Regen over 5 cycles and Payload flat (gear.mjs statsRestore); v43: threads, quests found in rooms (threads.mjs threadsRestore); v42: the long climb, XP into a level keeps its share (progression.mjs climbRestore); v41: layers become floors (floors.mjs floorsRestore, docs/servers.md R3); v40: outposts, buildings, plans, services, architecture and the dividend retire for sockets (sockets.mjs retireOutposts, netrooms.mjs socketRoomsRestore, docs/servers.md R2); v39: every server is a room graph (netrooms.mjs roomsRestore, docs/servers.md R1); v38: two shipped presets renamed (presetRenameRestore); v37: 15-key pools, reordered lines and presets (kitRestore); v36: networks (network.mjs networkRestore: a network seed for every save); v31: subclasses (retireClassTrees); v32: Payload is a percentage; v33: invasion kinds, bounties, signatures, and the firewall follows the network (invasionRestore, firewallRestore); v34: one level, no server XP, specialty, ports, home-fight services or greys (progression.mjs progressionRestore); v35: the nine-key bar, run skills off it, one-clock tells (barRestore)
@@ -1388,7 +1389,6 @@ export function gainXp(s, amount, why, kind = null, tally = kind) {
     h.xp -= xpToNext(h.level);
     const top = serverLevel(s); // your highest class level before this one (the server's level)
     h.level++;
-    levelStarted(s, h); // Behind: the new level's clock
     if (h.level > top) syncServer(s); // the server's level is your highest class level
     breadcrumb(s, h.level);
     // Rogue servers keep up with you inside their floor's band (rogue.mjs does it on a visit too).
@@ -2121,13 +2121,10 @@ function payKill(s, e, base, why) {
   if (read) emit(s, 'read-xp', `Read ${reads} ${reads === 1 ? 'tell' : 'tells'}: +${read} XP.${e.cleanRead ? ' You read every tell, so the loot rolls once more.' : ''}`, { amount: read, reads, clean: !!e.cleanRead });
   const rested = Math.floor(Math.min(s.rested || 0, xp)); // whole XP only; the fraction waits in s.rested
   if (rested) { s.rested -= rested; emit(s, 'rested', `Rested: +${rested} XP.`, { amount: rested }); }
-  // Behind (progression.mjs): a level running past its target pays kills half again until it ends.
-  const behind = behindBonus(s, xp);
-  if (behind) emit(s, 'behind', `Behind: +${behind} XP.`, { amount: behind });
   // LOWLIGHT Kit (2): the kill after a delivered contract pays more (s.killXp, a percentage; setDeliver).
   const kit = s.killXp ? Math.max(1, Math.round((xp * s.killXp) / 100)) : 0;
   if (kit) { emit(s, 'set-xp', `${s.killXpFrom || 'Set bonus'}: +${kit} XP.`, { amount: kit }); delete s.killXp; delete s.killXpFrom; }
-  gainXp(s, xp + bonus + hot + read + rested + behind + kit, why, 'fight', e.xpKind || 'fight'); // xpKind: what it tallies as (a held server's respawns: build, netrooms.mjs)
+  gainXp(s, xp + bonus + hot + read + rested + kit, why, 'fight', e.xpKind || 'fight'); // xpKind: what it tallies as (a held server's respawns: build, netrooms.mjs)
 }
 
 // A room fight won on the network (netrooms.mjs, docs/servers.md R1): what the kill pays besides its XP. wild: SPRAWL-00
@@ -3326,6 +3323,7 @@ function useAbility(s, intent, auto = false) {
   // helpers and burns already out, and the crew's Signal and shields. Only with a set piece loaded.
   const before = sxOf(s) ? { shield: e.shield || 0, parts: Object.fromEntries(livingParts(s).map((p) => [p.id, { jam: p.jammedUntil || 0, due: p.attack?.due }])), burns: new Set(e.burns), helpers: new Set(e.helpers), allies: alliesOf(s).map((a) => ({ who: a.who, st: a.st, integrity: defender(a.st)?.integrity || 0, shield: a.st.encounter?.shield || 0 })) } : null;
   e.metrics.actions[id] = (e.metrics.actions[id] || 0) + 1;
+  noteUse(s, id, auto, classOf(s)); // ability mastery (mastery.mjs): yours, not a daemon's or a crewmate's
   if (auto === 'daemon') e.metrics.daemon = (e.metrics.daemon || 0) + 1;
   else if (auto) e.metrics.auto++;
   if (!intent.ignoreCooldown) e.readyAt[id] = e.cycle + fxCooldown(s, id, a);
@@ -4833,6 +4831,7 @@ export function restore(raw) {
     signatureRestore(s); // signatures are gone: what you held becomes code (invasion.mjs)
     for (const l of [s.zone, ...(s.locations || [])].filter(Boolean)) delete l.drop; // dead drops became courier events (events.mjs)
     delete s.station;
+    for (const h of Object.values(s.hackers || {})) { delete h.ms; delete h.behind; } // the Behind catch-up is gone: its level clock and its once-a-level note
     s.collection ||= {}; for (const it of s.stash || []) if (it.unique) s.collection[it.unique] ||= 1; // what you already hold counts
     dexOf(s); // the Codex tab's record (genome.mjs): an older save starts it empty (its sets come from each server's floorplan codex)
     researchOf(s); // part research (research.mjs): an older save's decoded parts start decoded, and research on the old 1/5/20 scale is tripled once

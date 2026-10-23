@@ -28,14 +28,15 @@ import { powerOn } from './poweron.mjs';
 import { autoPay } from './salvage.mjs';
 import { relockLeft } from './rogue.mjs';
 import { createHitFx } from './hitfx.mjs';
-import { createAbilityFx, keyFor, tickKey, recipeOf, originOf, levelOf as afxLevel } from './abilityfx.mjs';
+import { createAbilityFx, keyFor, tickKey, recipeOf, originOf, idOfName, finisherBreak, levelOf as afxLevel } from './abilityfx.mjs';
+import { tierOf as masteryTier } from './mastery.mjs';
 import { mountFxPlaytest, abilityOfKey } from './abilityfx-playtest.mjs';
 import { plan as dmgPlan, queueAfter, absorbOf, armorFloat, missFloat } from './dmgfx.mjs';
 import { recapMarkup } from './recap.mjs';
 import { createLash } from './lash.mjs';
 import { online, simOn } from './presence.mjs';
 import { matesOf } from './crew.mjs';
-import { tickPlay, behindOf } from './progression.mjs';
+import { tickPlay } from './progression.mjs';
 import * as BR from './breach.mjs';
 import { breachMarkup, breachFocusY, bxUi, bxToggle, scriptTray } from './breach-view.mjs';
 import * as CP from './campaign.mjs';
@@ -54,6 +55,7 @@ import { channelOf, muted as chanMuted, say as chanSay } from './channel.mjs';
 import { setBanner, setPlan, handleOf } from './profile.mjs';
 import { achById } from './achievements.mjs';
 import { casingLook, decalStrips, districtOf, propsLook, propMarkup, propLayout } from './casing.mjs';
+import { promptLabel, cursorOf, bootOf, bootIds, BOOT_LOOKS, lookOpen } from './terminal.mjs';
 import * as BN from './bench.mjs';
 import { PARTS } from './parts.mjs';
 import { installPrograms, noteExceptions } from './routines.mjs';
@@ -62,6 +64,7 @@ import { createCoop } from './coop-ui.mjs';
 import { humansReady } from './coop.mjs';
 import * as PG from './pager.mjs';
 import * as PGV from './pager-view.mjs';
+import { noCarrier, NC } from './nocarrier.mjs';
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -250,6 +253,9 @@ const abilityfx = createAbilityFx(document.getElementById('board'), { canMove: (
 // The class a shooter plays: yours, or a crewmate's (crew.mjs), for key 1's name (Bash, Ban, Poke, Ping).
 const shooterClass = (who) => { if (!who) return classOf(campaign); const m = matesOf(campaign).find((x) => x.who === who); return m ? classOf(m) : null; }; // matesOf: the crewmates' own states
 // The plain strike on a part (hitfx.mjs), for a hit no ability effect took.
+// Its mastery tier (mastery.mjs): yours plays at the tier you chose for it (default the highest you've reached); a
+// crewmate's at tier 1.
+const afxTier = (e, id) => (e.who || !id ? 1 : masteryTier(campaign, classOf(campaign), id));
 const plainStrike = (e, result) => () => hitfx.strike(partRow(e.target), { who: e.who || 'you', initials: initials(e.who || campaign.profile?.handle || 'you'), kind: e.who ? 'crew' : 'you', result });
 // Every command fired in a batch (combat.mjs resolved) with an effect to play: what it set off follows it, up to the
 // next one (its hits, its marks, its interrupt). A miss keeps the strike's MISS; a crewmate's heal or shield is on their
@@ -281,7 +287,7 @@ function afxLead(events) {
   if (module !== 'combat' || fxLevel() === 'minimal' || !afxLevel({ level: fxLevel(), motion: canMove() })) return 0;
   const c = afxCommands(events)[0];
   if (!c) return 0;
-  const plan = abilityfx.plan(c.key, afxRow(c), { origin: c.origin, ability: c.e.ability, who: c.e.who || null, kind: c.e.who ? 'crew' : 'you' });
+  const plan = abilityfx.plan(c.key, afxRow(c), { origin: c.origin, ability: c.e.ability, who: c.e.who || null, kind: c.e.who ? 'crew' : 'you', tier: afxTier(c.e, c.e.ability) });
   return plan ? Math.min(600, Math.round(plan.impact)) : 0;
 }
 function strikes(events, delayOf = () => 0) {
@@ -297,7 +303,7 @@ function strikes(events, delayOf = () => 0) {
     if (!tk || !e.target || ticks.has(tk + '>' + e.target)) continue;
     ticks.add(tk + '>' + e.target);
     const land = delayOf(e);
-    pendingStrikes.push(() => abilityfx.play(tk, partRow(e.target), { origin: 'here', kind: e.who ? 'crew' : 'you', landIn: land }));
+    pendingStrikes.push(() => abilityfx.play(tk, partRow(e.target), { origin: 'here', kind: e.who ? 'crew' : 'you', landIn: land, tier: afxTier(e, idOfName(e.via)) }));
   }
   for (const c of afxOn ? afxCommands(events) : []) {
     const { e, key, tgt, mine, result } = c, land = delayOf(c.landEvt);
@@ -305,7 +311,7 @@ function strikes(events, delayOf = () => 0) {
     if (tgt) taken.set((e.who || 'you') + '>' + tgt, strike);
     pendingStrikes.push(() => {
       const row = afxRow(c);
-      const played = abilityfx.play(key, row, { power: c.power, crit: result === 'crit', result, kind: e.who ? 'crew' : 'you', origin: c.origin, ability: e.ability, who: e.who || null, landIn: land, onImpact: row ? () => hitfx.jolt(row, result) : null });
+      const played = abilityfx.play(key, row, { power: c.power, crit: result === 'crit', result, kind: e.who ? 'crew' : 'you', origin: c.origin, ability: e.ability, who: e.who || null, landIn: land, tier: afxTier(e, e.ability), onImpact: row ? () => hitfx.jolt(row, result) : null });
       if (!played && strike) later(land, strike); // no room for it: the strike, on the number's beat
     });
   }
@@ -323,6 +329,9 @@ function strikes(events, delayOf = () => 0) {
   }
 }
 const later = (ms, f) => (ms > 0 ? setTimeout(f, ms) : f());
+// A break finisher (abilityfx.mjs): your class's flourish (its subclass's, once you've picked one) on the part whose
+// break wins the fight, on its row only. Screen effects and Motion as every ability effect.
+const finisher = (e) => { const cls = classOf(campaign), sub = campaign.loadout?.sub?.[cls]; return !!abilityfx.finish(cls, heroLevel(campaign, cls) >= SUBCLASS.from ? sub : null, partRow(e.target)); };
 let pendingStrikes = [];
 const DISSOLVE_MS = 1000; // a broken part's last moment on the board
 
@@ -710,8 +719,9 @@ function roomsDone(events) {
   const warning = events.findLast((e) => e.type === 'warning');
   if (warning) notice(warning.message, true);
   if (events.some((e) => e.type === 'engage') && active(campaign)) { go('combat'); notice('Fight paused. Any order starts it.'); }
-  else if (events.some((e) => e.type === 'jacked-out' || e.type === 'disconnected') && !campaign.roomsPlay) go('map', true); // the network: home is the map
-  else if (module !== 'rooms' && !active(campaign)) go('rooms', true);
+  else if (events.some((e) => e.type === 'jacked-out') && !campaign.roomsPlay) go('map', true); // the network: home is the map
+  // (a disconnect: NO CARRIER, in react, takes you to the map under its static: nocarrier.mjs)
+  else if (module !== 'rooms' && !active(campaign) && !events.some((e) => e.type === 'disconnected')) go('rooms', true);
   save(); // the network's rooms are on your save (the playtest's never are: save skips it)
   dirty = true;
 }
@@ -977,6 +987,7 @@ function markFx(e, mate) {
 
 function react(events) {
   const won = events.find((e) => e.type === 'victory');
+  const fin = module === 'combat' ? finisherBreak(events) : null; // the break that wins the fight: your class's finisher (abilityfx.mjs)
   // The wall stopping a weak invasion is quiet: a log line and a pager entry, no sound or float (invasion.mjs).
   const hush = !active(campaign) && events.some((e) => e.type === 'invasion-cleared' && e.quiet);
   const fx = canMove();
@@ -1054,7 +1065,7 @@ function react(events) {
         const bp = part(campaign, e.target);
         // (It waits for the number of the hit that broke it.)
         const wait = split.delay(e);
-        if (bp && canMove()) { Object.defineProperty(bp, '_dyingUntil', { value: Date.now() + wait + DISSOLVE_MS, writable: true, configurable: true, enumerable: false }); setTimeout(() => { dirty = true; }, wait + DISSOLVE_MS + 50); pendingStrikes.push(() => later(wait, () => hitfx.dissolve(partRow(e.target)))); }
+        if (bp && canMove()) { Object.defineProperty(bp, '_dyingUntil', { value: Date.now() + wait + DISSOLVE_MS, writable: true, configurable: true, enumerable: false }); setTimeout(() => { dirty = true; }, wait + DISSOLVE_MS + 50); pendingStrikes.push(() => later(wait, () => { if (!(e === fin && finisher(e))) hitfx.dissolve(partRow(e.target)); })); } // the winning break plays your finisher in place of the dissolve's bits
       }
         artHit(e.target, 'break'); feel.add(() => flash(e.message)); feel.add('break', '.hud-bar.enemy', 'BROKEN'); if (selected === e.target) selected = null; break;
       case 'server-hit': {
@@ -1119,7 +1130,6 @@ function react(events) {
       // What the level brings on every track, and the next level that brings something (levelup-ui.mjs): it waits for
       // the fight's end, and its own sound plays when it comes up.
       case 'level-up': lu.push(e); break;
-      case 'behind-on': feel.add('good', null, 'BEHIND +50% XP'); break;
       case 'heal': if (e.target) feel.add('patch', row(e.target), f?.text, { src, stack }); else feel.add('good', MINE, f?.text || null, { src, stack, floatAt: BAR, x: 0.5 }); break; // a part patched: on it
       case 'blocked': if (e.shield) { feel.add('shield', MINE, f?.text || null, { src, stack, noFlash: true, floatAt: BAR, x: 0.5 }); break; } feel.add('interrupt', e.tell && e.source ? row(e.source) : MINE, e.tell && e.answered ? 'CALLED OFF' : 'BLOCKED'); break;
       case 'trap': flash('CANARY TRIPPED'); feel.add('hurt', null, `−${e.amount}`); break;
@@ -1184,12 +1194,16 @@ function react(events) {
         ending = true; hideTip(false); ended = e.mode || 'home'; endedAt = performance.now();
         setTimeout(() => { ending = false; }, 900);
         break;
-      case 'crashed': flash(e.mode === 'run' || e.mode === 'breach' || e.mode === 'rooms' ? 'SIGNAL LOST' : 'SERVER CRASHED'); feel.add('lose', MINE); if (e.invader && !active(campaign)) notice(e.message, true); if (e.mode === 'breach') { hideTip(false); setTimeout(() => go('breach'), 1600); } if (e.mode === 'rooms') { hideTip(false); setTimeout(() => { if (!active(campaign)) go('rooms'); }, 1600); } break;
+      case 'crashed': flash(e.mode === 'run' || e.mode === 'breach' || e.mode === 'rooms' ? 'SIGNAL LOST' : 'SERVER CRASHED'); feel.add('lose', MINE); if (e.invader && !active(campaign)) notice(e.message, true); if (e.mode === 'breach') { hideTip(false); setTimeout(() => go('breach'), 1600); } if (e.mode === 'rooms') { hideTip(false); setTimeout(() => { if (!active(campaign) && !lossHold && !document.querySelector('.nocarrier')) go('rooms'); }, 1600); } break;
       case 'cut': feel.add('good', e.target ? `#board .bpart[data-target="${CSS.escape(e.target)}"]` : null, f?.text || (e.phase ? 'PHASE' : e.vent ? 'VENTED' : e.delay ? 'DELAYED' : 'INTERRUPTED'), { src }); break;
       case 'escaped': flash('UPLOAD COMPLETE'); feel.add('nope', null); hideTip(false); setTimeout(() => { if (!active(campaign) && campaign.rooms) go('rooms', true); }, 1600); break; // a runner got away (the Exfil's upload completed): back to the rooms
       case 'floor': flash(`FLOOR ${e.floor}`); notice(e.message); break; // floors.mjs: you took an exit
       case 'tick-wasted': feel.add('chip', e.target ? `#board .bpart[data-target="${CSS.escape(e.target)}"]` : null, '−tick'); break;
-      case 'disconnected': feel.add('lose', null); hideTip(false); tipWait = performance.now() + 5000; setTimeout(() => { go('map'); lossCard(e); }, 1600); break; // a card like a win's, and no tip over it
+      case 'disconnected': // the board holds on the hit, the screen drops to NO CARRIER, the map comes up under it, then the card (no tip over it)
+        feel.add('lose', null); hideTip(false); tipWait = performance.now() + NC.done + 3400;
+        lossHold = true;
+        noCarrier($('app'), { where: e.where || '', motion: campaign.settings.motion !== false, onSwap: () => { lossHold = false; go('map'); }, onDone: () => lossCard(e) });
+        break;
     }
     if (e.type === 'located') { notice(e.message); mapSel = e.location; }
     if (typeof e.floor === 'number' && ['floor', 'info', 'located'].includes(e.type)) { mapFloor = e.floor; mapZoom.k = 1; } // floors.mjs: the floor you went to, or asked the map for
@@ -1330,6 +1344,7 @@ function run(raw) {
   if (NAV.includes(page) && !(fighting && ABILITIES[text])) { if (page === 'loadout') loadoutTab = text === 'talents' || text === 'skills' ? 'skills' : 'protocols'; if (page === 'system') systemTab = 'settings'; return go(page); }
   if (text === 'achievements') return goTo('achieve'); // the page; achieve pin <name> and the rest go to the engine
   if (text === 'shell' || text.startsWith('shell ')) return shellCommand(text.slice(6).trim());
+  if (text === 'terminal preview' || text.startsWith('terminal preview ')) return bootPreview(text.slice(17).trim()); // the rest of terminal … is the engine's (terminal.mjs)
   { const said = screenFxCommand(campaign, text); if (said) { save(); dirty = true; return notice(said); } } // screen fx [off|subtle|medium|bold|next] / screen fx <effect> on|off (and the old effects calm|full|minimal)
   if (/^developer levelup( |$)/.test(text)) return levelUpCommand(text.slice(17).trim());
   if (/^developer thread preview\b/.test(text)) return threadPreview(text.replace(/^developer thread preview\s*/, ''));
@@ -1435,6 +1450,15 @@ function resetGame() {
   if (!playtest) try { if (CAMP) localStorage.removeItem(KEY); else localStorage.setItem(KEY, JSON.stringify(campaign)); } catch { /* storage unavailable */ }
   go(CAMP ? 'campaign' : 'map');
   firstLogin();
+}
+
+// System → Terminal's Preview: the boot you picked (or one of yours by name) plays on the screen, no power-up first.
+// Skipped like the real one; Motion off shows it still.
+function bootPreview(arg) {
+  const id = arg ? bootIds().find((k) => k === arg || BOOT_LOOKS()[k].name.toLowerCase() === arg || BOOT_LOOKS()[k].faction === arg) : bootOf(campaign);
+  if (!id) return notice(`No boot called ${arg}.`, true);
+  if (!lookOpen(campaign, 'boot', id)) return notice(`${BOOT_LOOKS()[id].name} isn't yours yet.`, true);
+  shell.preview(id);
 }
 
 function shellCommand(arg) {
@@ -1681,9 +1705,7 @@ function renderMeters() {
   $('who-class').textContent = V.className(cls);
   $('who-lv').textContent = h.level;
   $('who-fill').style.width = (h.level >= 50 ? 100 : (h.xp / V.xpNeeded(h.level)) * 100) + '%';
-  const behind = behindOf(campaign)?.on; // Behind: the XP bar turns amber while kills pay +50% on a level running long
-  $('whoami').classList.toggle('behind', !!behind);
-  $('whoami').title = `${h.level >= 50 ? 'max' : `${h.xp}/${V.xpNeeded(h.level)} XP`}${behind ? ' · Behind: kills +50% XP until the next level' : ''}`;
+  $('whoami').title = h.level >= 50 ? 'max' : `${h.xp}/${V.xpNeeded(h.level)} XP`;
   const pct = (srv.integrity / srv.max) * 100;
   $('integrity-fill').style.width = pct + '%';
   $('integrity-value').textContent = srv.integrity;
@@ -1875,7 +1897,11 @@ document.addEventListener('click', (e) => {
   thPrev.qn = null; feel.key('click'); dirty = true; e.stopImmediatePropagation();
 }, true);
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && thPrev.open) { thPrev.open = false; dirty = true; e.stopImmediatePropagation(); } }, true);
+// Losing a fight: the screen holds its last frame (the board, on the hit) until NO CARRIER's static covers it
+// (nocarrier.mjs), though the fight itself is already gone from the state.
+let lossHold = false;
 function render(force = false) {
+  if (lossHold) return;
   if (force) cache.clear();
   renderMeters();
   renderOffer();
@@ -2014,10 +2040,16 @@ function renderPrompt() {
     el.className = 'prompt hub';
     el.innerHTML = `<span>${V.esc(campaign.profile?.handle || 'rookie')}@${V.esc(V.hubHost(campaign, hubSel))}:~$</span>`;
   } else {
-    el.className = 'prompt';
-    el.innerHTML = `<span>${V.esc(campaign.profile?.handle || 'rookie')}@blackbox:~$</span>`;
+    // At home the prompt is yours to style (System → Terminal: terminal.mjs). Stock is <handle>@blackbox:~$.
+    const P = promptLabel(campaign);
+    el.className = P.cls;
+    el.innerHTML = P.html;
     $('command-input').placeholder = '';
   }
+  // The cursor's look (terminal.mjs): data on the caret only, so the input itself never changes.
+  const c = $('caret'), cur = cursorOf(campaign);
+  if (cur.shape === 'block') delete c.dataset.shape; else c.dataset.shape = cur.shape;
+  if (cur.blink) delete c.dataset.steady; else c.dataset.steady = '';
 }
 
 // The Now band: every row's Now cell fills as the cycle runs, and turns red
@@ -2204,7 +2236,7 @@ function services() {
   // A co-op guest's own world goes on under the host's (coop.mjs): its clocks tick on the guest's own save, and the
   // host's rooms on the host's game.
   const S = own();
-  if (!document.hidden && now - lastInput < 120000 && !playtest && !CAMP) tickPlay(S, dt); // and the clock of the level your class is on (Behind)
+  if (!document.hidden && now - lastInput < 120000 && !playtest && !CAMP) tickPlay(S, dt);
   const hp = S.server.integrity;
   const events = S.breach || S.roomsPlay ? [] : [...tickNetwork(S, now), ...tickServices(S, now)]; // a breach or rooms playtest has no network
   if (campaign.rooms && !realSave) { const ev = FP.tick(campaign, now); if (ev.length) react(ev); if (module === 'rooms' || ev.length) dirty = true; } // respawn timers count down on the map
@@ -3401,7 +3433,8 @@ function ttShow(anchor) {
   const m = text.match(/^([^:.\n]{2,40}): ([\s\S]+)$/);
   const esc = (t) => t.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
   // A line that starts with ▸ is the answer (fightread.mjs answerLine): muted, on its own line, like WoW's "Use:" line.
-  const body = (t) => esc(t).replace(/\n▸ ([^\n]*)/g, '<span class="tt-ans">▸ $1</span>');
+  // A line that starts Mastery is an ability's mastery (mastery.mjs masteryLine): teal, on its own line, like WoW's progress lines.
+  const body = (t) => esc(t).replace(/\n▸ ([^\n]*)/g, '<span class="tt-ans">▸ $1</span>').replace(/\n(Mastery [1-3] · [^\n]*)/g, '<span class="tt-mastery">$1</span>');
   tt.el.innerHTML = m ? `<b>${esc(m[1])}</b>${body(m[2][0].toUpperCase() + m[2].slice(1))}` : body(text);
   tt.text = text;
   tt.el.hidden = false;
@@ -3467,14 +3500,21 @@ if (playtest === 'fx') {
     // From its key: the ability's own key on this tray, else the tray's first key standing in for it (said so); with the
     // key hidden, the fallback a fight uses when its key isn't on screen: your bar.
     mates: () => matesOf(campaign).map((m) => m.who),
-    fire: (key, id, { power, crit, result, hidden, who }) => {
+    fire: (key, id, { power, crit, result, hidden, who, tier = 1 }) => {
       if (fxLevel() === 'minimal' || !canMove()) return 'none';
       const R = recipeOf(key), row = R?.on === 'you' ? null : fxRow(id), ability = abilityOfKey(key), tick = key.endsWith(':tick');
       const own = ability && document.querySelector(`#tray .ability[data-ability="${CSS.escape(ability)}"]`), stand = !tick && !hidden && !own;
       const keyEl = stand ? document.querySelector('#tray .ability') : null;
-      const plan = abilityfx.play(key, row, { power, crit, result, ability, keyEl, noKey: !!hidden, who: who || null, kind: who ? 'crew' : 'you', origin: tick ? 'here' : who ? 'crew' : 'key', onImpact: row ? () => hitfx.jolt(row, result) : null });
+      const plan = abilityfx.play(key, row, { power, crit, result, ability, keyEl, noKey: !!hidden, who: who || null, kind: who ? 'crew' : 'you', origin: tick ? 'here' : who ? 'crew' : 'key', tier: who ? 1 : tier, onImpact: row ? () => hitfx.jolt(row, result) : null });
       if (plan) { window.__fxPlan = { travel: plan.travel, impact: plan.impact, dur: plan.dur, from: plan.from }; return stand && keyEl ? 'stand-in' : 'fx'; } // the playtest's last plan, for review captures
       if (row) hitfx.strike(row, { kind: 'you', result });
+      return 'plain';
+    },
+    // A break finisher on a part (its class's, or a subclass's), as the winning break plays it.
+    finish: (cls, sub, id) => {
+      if (fxLevel() === 'minimal' || !canMove()) return 'none';
+      const plan = abilityfx.finish(cls, sub || null, fxRow(id));
+      if (plan) { window.__fxPlan = { travel: 0, impact: plan.impact, dur: plan.dur, from: 'here' }; return 'fx'; }
       return 'plain';
     },
   });

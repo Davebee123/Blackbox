@@ -169,8 +169,8 @@ export function inspect(s, arg) {
   if (!ids.length) return emit(s, 'info', `The ${p.name} carries no rule of its own.`, { target: p.id, inspect: true });
   const lines = ids.map((id) => {
     const c = chipOf(s, id, 'part', deep, read);
-    if (c.rule) return `${c.name} is ${an(c.catName)} ${c.catName} that presses on ${c.axisName}. ${c.rule} ${c.answer}`;
-    return `You haven't learned ${c.name || `this ${c.catName}`} yet. Research the ${p.name} to ${RESEARCH.tiers[1]} to learn what it does.`;
+    if (c.rule) return `${c.name} is ${an(c.catName)} ${c.catName}. ${c.rule} ${c.answer}`;
+    return `You haven't learned ${c.name || `this ${c.catName}`} yet. Reach research ${RESEARCH.tiers[1]} on the ${p.name} to learn what it does.`;
   });
   return emit(s, 'info', `The ${p.name}${alive(p) ? '' : ', broken,'} carries ${named(ids.map((id) => chipOf(s, id, 'part', deep, read)))}.\n${lines.join('\n')}`, { target: p.id, inspect: true });
 }
