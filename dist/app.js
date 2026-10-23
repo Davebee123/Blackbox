@@ -54,6 +54,7 @@ import { channelOf, muted as chanMuted, say as chanSay } from './channel.mjs';
 import { setBanner, setPlan, handleOf } from './profile.mjs';
 import { achById } from './achievements.mjs';
 import { casingLook, decalStrips } from './casing.mjs';
+import { promptLabel, cursorOf, bootOf, bootIds, BOOT_LOOKS, lookOpen } from './terminal.mjs';
 import * as BN from './bench.mjs';
 import { PARTS } from './parts.mjs';
 import { installPrograms, noteExceptions } from './routines.mjs';
@@ -1330,6 +1331,7 @@ function run(raw) {
   if (NAV.includes(page) && !(fighting && ABILITIES[text])) { if (page === 'loadout') loadoutTab = text === 'talents' || text === 'skills' ? 'skills' : 'protocols'; if (page === 'system') systemTab = 'settings'; return go(page); }
   if (text === 'achievements') return goTo('achieve'); // the page; achieve pin <name> and the rest go to the engine
   if (text === 'shell' || text.startsWith('shell ')) return shellCommand(text.slice(6).trim());
+  if (text === 'terminal preview' || text.startsWith('terminal preview ')) return bootPreview(text.slice(17).trim()); // the rest of terminal … is the engine's (terminal.mjs)
   { const said = screenFxCommand(campaign, text); if (said) { save(); dirty = true; return notice(said); } } // screen fx [off|subtle|medium|bold|next] / screen fx <effect> on|off (and the old effects calm|full|minimal)
   if (/^developer levelup( |$)/.test(text)) return levelUpCommand(text.slice(17).trim());
   if (/^developer thread preview\b/.test(text)) return threadPreview(text.replace(/^developer thread preview\s*/, ''));
@@ -1435,6 +1437,15 @@ function resetGame() {
   if (!playtest) try { if (CAMP) localStorage.removeItem(KEY); else localStorage.setItem(KEY, JSON.stringify(campaign)); } catch { /* storage unavailable */ }
   go(CAMP ? 'campaign' : 'map');
   firstLogin();
+}
+
+// System → Terminal's Preview: the boot you picked (or one of yours by name) plays on the screen, no power-up first.
+// Skipped like the real one; Motion off shows it still.
+function bootPreview(arg) {
+  const id = arg ? bootIds().find((k) => k === arg || BOOT_LOOKS()[k].name.toLowerCase() === arg || BOOT_LOOKS()[k].faction === arg) : bootOf(campaign);
+  if (!id) return notice(`No boot called ${arg}.`, true);
+  if (!lookOpen(campaign, 'boot', id)) return notice(`${BOOT_LOOKS()[id].name} isn't yours yet.`, true);
+  shell.preview(id);
 }
 
 function shellCommand(arg) {
@@ -2014,10 +2025,16 @@ function renderPrompt() {
     el.className = 'prompt hub';
     el.innerHTML = `<span>${V.esc(campaign.profile?.handle || 'rookie')}@${V.esc(V.hubHost(campaign, hubSel))}:~$</span>`;
   } else {
-    el.className = 'prompt';
-    el.innerHTML = `<span>${V.esc(campaign.profile?.handle || 'rookie')}@blackbox:~$</span>`;
+    // At home the prompt is yours to style (System → Terminal: terminal.mjs). Stock is <handle>@blackbox:~$.
+    const P = promptLabel(campaign);
+    el.className = P.cls;
+    el.innerHTML = P.html;
     $('command-input').placeholder = '';
   }
+  // The cursor's look (terminal.mjs): data on the caret only, so the input itself never changes.
+  const c = $('caret'), cur = cursorOf(campaign);
+  if (cur.shape === 'block') delete c.dataset.shape; else c.dataset.shape = cur.shape;
+  if (cur.blink) delete c.dataset.steady; else c.dataset.steady = '';
 }
 
 // The Now band: every row's Now cell fills as the cycle runs, and turns red

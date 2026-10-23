@@ -766,7 +766,7 @@ Who you are to everyone else on the net, the way `finger` shows a Unix login. `f
 
 ## Achievements (achievements.mjs)
 
-What you've done, kept for good, the way World of Warcraft keeps it. One system for every cosmetic reward: each title and each sticker is the reward of an achievement (the same deed as before earns both), a few achievements bring a banner preset for your card, and eight bring a colourway for the monitor casing (see *The monitor casing*). Rewards are cosmetic only: no achievement changes a number in a fight, a drop or a price.
+What you've done, kept for good, the way World of Warcraft keeps it. One system for every cosmetic reward: each title and each sticker is the reward of an achievement (the same deed as before earns both), a few achievements bring a banner preset for your card, eight bring a colourway for the monitor casing (see *The monitor casing*), and fourteen a boot sequence, a prompt or a cursor (see *The terminal*). Rewards are cosmetic only: no achievement changes a number in a fight, a drop or a price.
 
 - **90 achievements, 1,630 points**, in eight categories: Combat, Exploration, Collection, Factions, Classes (subclasses and the tier sets among them), Daemons, Co-op and Feats. Points are 5, 10, 25 or 50. Milestones count up with a bar (*64/100*); **Feats** are tricks done in one fight, or one visit. Three are **hidden**: *???* and a one-line hint until earned.
 - **Checked cheaply.** Every second (with the profile's deeds: invasion.mjs tickNetwork) only the ones not yet earned, each a look at state the game already keeps: the Codex's kills and bosses, the Collection, floors, standing, classes, daemons, the consortium, servers Mapped and taken over (and the log's takeovers and contracts delivered). What only a fight knows (an elite beaten, a crewmate beside you, your daemons' moves, a feat) is noted on the save as the fight ends (combat.mjs finish) and earned on the next tick. A loss counts for nothing and is never held against you. Nothing is time-limited and nothing can be missed for good: a lair boss, a set or a feat can always be done again.
@@ -782,7 +782,7 @@ What you've done, kept for good, the way World of Warcraft keeps it. One system 
 | Achievement | Earned by | Points | Reward |
 |---|---|---:|---|
 | Process Killer | Win 100 fights (progress) | 10 | casing Beige box |
-| Long Uptime | Win a fight that ran 20 cycles or more | 10 | title *the Patient* |
+| Long Uptime | Win a fight that ran 20 cycles or more | 10 | title *the Patient*, boot POST |
 | Big Game | Beat 25 ◆ CREW elites (progress) | 10 | — |
 | Uncrowned | Beat RELAY-KING | 10 | title *Uncrowner* |
 | Repossessed | Beat REPO MAN | 10 | title *Repossessor* |
@@ -803,7 +803,7 @@ What you've done, kept for good, the way World of Warcraft keeps it. One system 
 
 | Achievement | Earned by | Points | Reward |
 |---|---|---:|---|
-| Cartographer | Map a server | 5 | — |
+| Cartographer | Map a server | 5 | cursor Underline |
 | Mapper | Map 20 servers (progress) | 25 | title *Mapper* |
 | Change of Hands | Take over a server | 10 | — |
 | Landlord | Take over 10 servers (progress) | 25 | — |
@@ -826,7 +826,7 @@ What you've done, kept for good, the way World of Warcraft keeps it. One system 
 | Curator | Find 100 uniques (progress) | 50 | banner Vault door |
 | Assembled | Assemble a faction piece | 10 | title *the Assembler* |
 | Five of a Kind | Assemble all 5 faction pieces (progress) | 50 | — |
-| Matched | Find every piece of a set | 10 | title *the Matched* |
+| Matched | Find every piece of a set | 10 | title *the Matched*, prompt Titled |
 | LOWLIGHT Kit · Sets | Find every piece of LOWLIGHT Kit (progress) | 10 | sticker LOWLIGHT Kit |
 | Boot Disk · Sets | Find every piece of Boot Disk (progress) | 10 | sticker Boot Disk |
 | Hive Mind · Sets | Find every piece of Hive Mind (progress) | 10 | sticker Hive Mind |
@@ -849,11 +849,11 @@ What you've done, kept for good, the way World of Warcraft keeps it. One system 
 
 | Achievement | Earned by | Points | Reward |
 |---|---|---:|---|
-| Preferred Customer | Reach Preferred with Halcyon Mutual | 25 | title *of Halcyon*, sticker Preferred, casing Halcyon blue |
-| Inner Circle | Reach Inner circle with GLASSJAW | 25 | title *of GLASSJAW*, sticker Inner circle, casing GLASSJAW plum |
-| Key Account | Reach Key account with Kestrel Underwriting | 25 | title *of Kestrel*, sticker Key account, casing Kestrel green |
-| On the Signal | Reach Signal with LANTERN | 25 | title *of LANTERN*, sticker Signal, casing LANTERN copper |
-| Cantor | Reach Cantor with NULL CHOIR | 25 | title *of NULL CHOIR*, sticker Cantor, casing NULL CHOIR wine |
+| Preferred Customer | Reach Preferred with Halcyon Mutual | 25 | title *of Halcyon*, sticker Preferred, casing Halcyon blue, boot Halcyon, prompt Root |
+| Inner Circle | Reach Inner circle with GLASSJAW | 25 | title *of GLASSJAW*, sticker Inner circle, casing GLASSJAW plum, boot GLASSJAW, prompt Root |
+| Key Account | Reach Key account with Kestrel Underwriting | 25 | title *of Kestrel*, sticker Key account, casing Kestrel green, boot Kestrel, prompt Root |
+| On the Signal | Reach Signal with LANTERN | 25 | title *of LANTERN*, sticker Signal, casing LANTERN copper, boot LANTERN, prompt Root |
+| Cantor | Reach Cantor with NULL CHOIR | 25 | title *of NULL CHOIR*, sticker Cantor, casing NULL CHOIR wine, boot NULL CHOIR, prompt Root |
 | Courier's Bane | Intercept 10 couriers (progress) | 10 | title *Courier's Bane* |
 | Tracker | Collect 5 bounty hunts (progress) | 10 | title *Tracker* |
 | Feudbreaker | Win 5 feuds (progress) | 25 | title *Feudbreaker* |
@@ -863,7 +863,7 @@ What you've done, kept for good, the way World of Warcraft keeps it. One system 
 
 | Achievement | Earned by | Points | Reward |
 |---|---|---:|---|
-| Specialist | Pick a subclass | 5 | — |
+| Specialist | Pick a subclass | 5 | prompt Two-line |
 | Polyglot | Take all 4 classes to level 10 (progress) | 25 | — |
 | Wrecking Ball | Take a Breaker to level 50 (progress) | 50 | title *the Hammer* |
 | Five Nines | Take a Bastion to level 50 (progress) | 50 | title *the Wall* |
@@ -878,7 +878,7 @@ What you've done, kept for good, the way World of Warcraft keeps it. One system 
 
 | Achievement | Earned by | Points | Reward |
 |---|---|---:|---|
-| Process Table | Find 10 daemons (progress) | 10 | — |
+| Process Table | Find 10 daemons (progress) | 10 | cursor Beam |
 | Pandemonium | Find every daemon (progress) | 50 | banner Pandemonium |
 | Full House | Slot 4 daemons at once | 10 | — |
 | Background Process | Your daemons act 500 times (progress) | 10 | — |
@@ -899,13 +899,13 @@ What you've done, kept for good, the way World of Warcraft keeps it. One system 
 | Achievement | Earned by | Points | Reward |
 |---|---|---:|---|
 | Untouchable | Win a fight of 8 cycles or more without taking damage | 10 | casing Smoked |
-| Short Circuit | Interrupt 3 moves in one fight | 10 | — |
+| Short Circuit | Interrupt 3 moves in one fight | 10 | prompt Arrow |
 | Open Book | Read every tell in a fight in which 4 or more were said | 25 | — |
 | Chain Reaction (hidden) | Break every part of a virus of 3 parts or more in one cycle (until then: ???, *Some things are better all at once.*) | 25 | sticker Chain |
-| Zero Exceptions | Win a fight with a routine you made that never threw an exception | 25 | sticker 0 exceptions |
+| Zero Exceptions | Win a fight with a routine you made that never threw an exception | 25 | sticker 0 exceptions, prompt Lambda |
 | Lone Wolf | Beat a ◆ CREW elite with no crew beside you | 25 | sticker Solo |
-| No Rest | Map a server on a visit in which you never rest | 25 | — |
-| By a Thread (hidden) | Win a fight with under 5% of your health left (until then: ???, *Closer than it looked.*) | 10 | sticker <5% |
+| No Rest | Map a server on a visit in which you never rest | 25 | boot Minimal |
+| By a Thread (hidden) | Win a fight with under 5% of your health left (until then: ???, *Closer than it looked.*) | 10 | sticker <5%, boot Corrupted |
 
 ## Consortium and the crew on a run (consortium.mjs, run.mjs)
 
@@ -1748,6 +1748,40 @@ System → Settings → Casing turns it off (its cosmetics with it); phones and 
 - **Nameplate:** the badge on the chin. **BLACKBOX · MODEL 7** (stock), **MODEL 7 · <a title you hold>** (*MODEL 7 · THE CONDUCTOR*), or your own words, 16 plain characters at most, shown in capitals. `casing plate <text>`, `casing plate title <title>`, `casing plate stock`.
 - **Stickers:** four slots on the chin, two between the knobs and the plate and two between the plate and the lamps, each holding a sticker you've earned (any achievement's sticker: a faction, a set, a floor, a lair boss, Chain, 0 exceptions, Solo, <5%), drawn as a small printed label in its colour with an ASCII mark (`##` a faction, `[]` a set, `\/` a floor, `x_x` a lair boss, `*` a deed), a little crooked and still. Their strips end short of the knobs, the plate and the lamps (measured as the plate changes), and a sticker that doesn't fit is left off rather than squeezed. On System → Casing: pick a slot on the chin in miniature, then a sticker. `casing sticker <1-4> <sticker>|off`; a sticker goes in one slot at a time.
 - **Saves:** `s.cosmetics` = `{ case, plate: null | { title } | { text }, decals: [4 ids or null] }`; an older save has none and shows the stock casing. No SAVE_VERSION change.
+
+## The terminal
+
+How the screen boots, what the prompt says and how the cursor looks (terminal.mjs, boots.mjs, terminal-view.mjs, terminal.css; System → **Terminal**, a tab beside Casing). Cosmetic only, each an achievement's reward (the achievements as they were, reused: their table lists it). The stock look is today's exactly, and nothing changes how the command line takes what you type.
+
+**Boot.** The lines after the power-up (the power-up itself, the first login and its transmission never change). Each is as long as Stock or shorter (about two seconds), any key or tap skips it, it reads only existing sounds (a tick a line), and with Motion off it's skipped at launch as before.
+
+| Boot | What plays | Comes with |
+|---|---|---|
+| Stock | Your server read back to you: memory, credits, integrity, your kit, origins, programs, then the login (the default) | — |
+| POST | A BIOS splash: the memory counting up to 640K, five devices answering `[ OK ]` (your server's integrity among them, `[ CRIT ]` in red under a quarter), the login | *Long Uptime* |
+| A faction's | Its mark in ASCII in its colour (the only accent), its name and top tier, one line in its voice, your integrity, the login. One each | its top-tier achievement (*Preferred Customer*, *Inner Circle*, *Key Account*, *On the Signal*, *Cantor*) |
+| Corrupted | Each line comes in garbled in a dimmer ink and settles into itself once (garbled the same way every time, the same length, so nothing jumps or flashes), then *fsck: 3 blocks recovered* and the login | *By a Thread* (hidden) |
+| Minimal | The cursor alone a moment, then one line: *<handle>@blackbox ready* | *No Rest* |
+
+Every boot but Minimal still says what waits for you (a run to resume, an intrusion at the gate, in red). **Preview** on System → Terminal (`terminal preview [boot]`) plays the one you picked on the screen without the power-up, skippable the same way; with Motion off it shows the boot still, every line as it ends up, until a key, a tap or two and a half seconds. A boot you haven't earned can't be picked or previewed.
+
+**Prompt.** The home prompt only: a run, a breach, a hub and a fight keep theirs (they carry where you are and your Signal). Always amber, always one line high: the command line keeps its height.
+
+| Prompt | Reads | Comes with |
+|---|---|---|
+| Stock | `dana@blackbox:~$` (the default) | — |
+| Root | `root@glassjaw#`: of the factions whose top tier you've earned, the one you stand highest with now | any faction's top-tier achievement |
+| Titled | `dana@matched:~$`: the title you show, as a host name (none shown: `blackbox`) | *Matched* |
+| Arrow | `>` | *Short Circuit* |
+| Lambda | `λ` | *Zero Exceptions* |
+| Two-line | `.-[dana]-[breaker 12]-[~]` over `'-$`, plain ASCII, in smaller type so both lines fit the height of one | *Specialist* |
+
+On a phone the prompt is its last mark, as before (`$`, or `#`, `>` and `λ` for Root, Arrow and Lambda).
+
+**Cursor.** The immersive shell's cursor (the plain shell keeps the browser's): **Block** (the default), **Underline** (*Cartographer*) or **Beam** (*Process Table*), and **Blink** on or off for everyone (a steady cursor is a comfort, not a reward). Motion off keeps it steady whatever you pick. Only the drawn cursor changes; the input, its focus rules and what it takes never do.
+
+- **Picking:** System → Terminal shows every look as itself (a boot's first lines or mark, a prompt as it reads, a cursor after `$ ls`); yours are buttons, the rest dim and dashed with a lock, what brings each in the tooltip (*POST: A memory count, the devices, a row of OK. Comes with Long Uptime.*; a hidden achievement stays hidden). `terminal boot|prompt|cursor <look>`, `terminal blink on|off`, `terminal` says what you run.
+- **Saves:** `s.cosmetics` (beside the casing's) gains `boot`, `prompt`, `cursor` and `steady`; stock leaves them off, an older save has none and shows the stock look, and a look you no longer hold shows stock. No SAVE_VERSION change.
 
 ## Screen effects
 
