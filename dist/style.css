@@ -927,8 +927,6 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
    speed) and labelled lamps that show real state: power, the gate, the wall, a run, an install,
    daemons. Lamps glow steady; nothing blinks. */
 #casing { display: none; }
-/* The window behind the monitor (window.mjs): always out of the page flow; only shown when the monitor is. */
-.window-out { position: fixed; inset: 0; width: 100vw; height: 100dvh; z-index: -1; pointer-events: none; display: none; }
 @media (min-width: 1100px) and (min-height: 720px) {
   /* The monitor is as wide as the screen inside it (at most 1800px of picture) and sits centered on
      the desk, so on a wide display the frame hugs the picture instead of the window edges. */
@@ -943,8 +941,6 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
   body.cased #casing .knob, body.cased #casing .lamp { pointer-events: auto; }
   /* The knobs are the sound and speed controls here; the header keeps only what the casing lacks. */
   body.cased .toggles #sound, body.cased .toggles #speed { display: none; }
-  /* The window: the monitor sits a little further in so the slum shows either side (window.mjs). */
-  .window-out { display: block; }
 }
 #casing .badge { position: absolute; left: 50%; transform: translateX(-50%); font: 700 11px var(--mono); letter-spacing: 6px; color: var(--case-badge, #6b655c); text-shadow: 0 1px 0 rgba(255, 255, 255, 0.07), 0 -1px 0 rgba(0, 0, 0, 0.8); pointer-events: none; }
 #casing .knobs { display: flex; gap: 10px; }
@@ -1634,6 +1630,16 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
   @media (min-height: 860px) { body.cased.window-on { --top: 46px; --desk: 30px; } }
   @media (min-height: 1000px) { body.cased.window-on { --top: 72px; --desk: 34px; } }
   body.cased.window-on .toggles { display: none; } /* all on the System page; the bar is narrower here */
+}
+/* Monitor size Roomy (System → Settings → Monitor, `monitor roomy`): the monitor stands smaller and centred, its frame
+   80% of the window each way, so the window (window.mjs) shows all round it. Never smaller than the screen of a
+   1121×720 window today (1069×646, the smallest the desktop layout runs at), so the layout inside keeps its size class
+   and the text its size: on a smaller window it gives less room. --vm is the margin above and below the frame (16px in
+   Full; the sill takes 44% of the rest), --side's 18px is the bezel either side. Full (the default) is everything above, unchanged. */
+@media (min-width: 1100px) and (min-height: 720px) {
+  body.cased.monitor-roomy { --side: max(calc((100vw - 1800px) / 2), calc(18px + max(8px, min(10vw, (100vw - 1105px) / 2)))); --vm: max(16px, min(20dvh, calc(100dvh - 704px))); --top: calc(22px + 0.56 * (var(--vm) - 16px)); --desk: calc(0.44 * (var(--vm) - 16px)); background: var(--case-win, #0b0a09); }
+  body.cased.monitor-roomy .toggles { display: none; } /* all on the System page; the bar is narrower here */
+  body.cased .levelup { top: calc(var(--top) + 50px); } /* on the screen, wherever the monitor sits */
 }
 
 /* Ability slots: the key sits in the bottom-right corner so the icon and name center in the slot. */

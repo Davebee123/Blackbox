@@ -1,5 +1,4 @@
 // Markup builders. Pure functions of state; they never change it.
-import { SURROUNDS, SURROUND_IDS, surroundKind } from './surround.mjs';
 import { SALVAGE_COSTS, stacks as salvageStacks, canAfford, costLabel as salvageLabel, payProblem, total as salvageTotal, slug } from './salvage.mjs';
 import { glyph } from './glyphs.mjs';
 import { TELL_ICON } from './recap.mjs';
@@ -2590,7 +2589,7 @@ function volumeCard(s) {
   const v = volumesOf(s);
   const row = (id, label, title) => `<label class="vol-row" title="${esc(title)}"><span class="vol-name">${label}</span><input type="range" min="0" max="100" step="1" value="${Math.round(v[id] * 100)}" data-volume="${id}" aria-label="${label} volume"><b class="vol-val" data-volume-val="${id}">${Math.round(v[id] * 100)}</b></label>`;
   return `<section class="card vol-card"><h2>Sound</h2>${s.settings.sound ? '' : '<p class="svc-line">Sound is off.</p>'}
-    ${row('music', 'Music', 'The soundtrack')}${row('ambience', 'Ambience', 'Radio chatter, rain, thunder, the street and the room tone')}${row('places', 'Places', 'Each floor\'s and hub\'s own sound, and a virus family\'s hum under a fight. 0 turns them off')}${row('sfx', 'Effects', 'Hits, keys, alerts and everything else the game plays')}</section>`;
+    ${row('music', 'Music', 'The soundtrack')}${row('ambience', 'Ambience', 'Radio chatter, rain, the street and the room tone')}${row('places', 'Places', 'Each floor\'s and hub\'s own sound, and a virus family\'s hum under a fight. 0 turns them off')}${row('sfx', 'Effects', 'Hits, keys, alerts and everything else the game plays')}</section>`;
 }
 
 function paceCard(s) {
@@ -2603,7 +2602,7 @@ function paceCard(s) {
 // (casing-view.mjs: the monitor's colourway, plate and stickers).
 export const SYSTEM_TABS = [['settings', 'Settings'], ['achievements', 'Achievements'], ['casing', 'Casing']];
 const systemTabs = (s, tab) => `<nav class="ltabs sys-tabs" role="tablist" aria-label="System">${SYSTEM_TABS.map(([k, l]) => `<button type="button" role="tab" data-stab="${k}" aria-selected="${tab === k}">${esc(l)}${k === 'achievements' ? `<small class="sys-pts">${glyph('medal')}${pointsOf(s)}</small>` : ''}</button>`).join('')}</nav>`;
-export function systemMarkup(s, { coop = false, tab = 'settings', ach = {}, cs = {}, room = surroundKind(s.settings) } = {}) {
+export function systemMarkup(s, { coop = false, tab = 'settings', ach = {}, cs = {} } = {}) {
   if (tab === 'achievements') return systemTabs(s, tab) + achievementsMarkup(s, ach);
   if (tab === 'casing') return systemTabs(s, tab) + casingPageMarkup(s, cs);
   // Co-op (coop-ui.mjs, docs/coop.md): a developer prototype, so only with ?dev.
@@ -2621,7 +2620,7 @@ export function systemMarkup(s, { coop = false, tab = 'settings', ach = {}, cs =
       <button type="button" class="btn" data-run="shell boot" ${s.settings.shell === 'plain' ? 'disabled' : ''}>Reboot screen</button>
       <button type="button" class="btn" data-run="casing ${s.settings.casing === false ? 'on' : 'off'}" aria-pressed="${s.settings.casing !== false}" ${s.settings.shell === 'plain' ? 'disabled' : ''} title="The monitor around the screen, on wide screens">Casing ${s.settings.casing === false ? 'off' : 'on'}</button>
       <button type="button" class="btn" data-run="window ${s.settings.window === false ? 'on' : 'off'}" aria-pressed="${s.settings.window !== false}" ${s.settings.shell === 'plain' || s.settings.casing === false ? 'disabled' : ''} title="The city outside, beside the monitor">Window ${s.settings.window === false ? 'off' : 'on'}</button>
-      <button type="button" class="btn" data-run="room style next" ${s.settings.shell === 'plain' || s.settings.casing === false || s.settings.window === false ? 'disabled' : ''} title="What shows around the monitor with the Window on: ${SURROUND_IDS.map((k) => `${SURROUNDS[k].name}, ${SURROUNDS[k].tip.replace(/\.$/, '').toLowerCase()}`).join('. ')}.">Room: ${esc(SURROUNDS[room]?.name || 'City')}</button>
+      <button type="button" class="btn" data-run="monitor ${s.settings.monitor === 'roomy' ? 'full' : 'roomy'}" aria-pressed="${s.settings.monitor === 'roomy'}" ${s.settings.shell === 'plain' || s.settings.casing === false ? 'disabled' : ''} title="Full: the monitor fills the window. Roomy: it stands smaller, with the window all round it">Monitor: ${s.settings.monitor === 'roomy' ? 'Roomy' : 'Full'}</button>
       <button type="button" class="btn" data-run="screen fx next" title="Light around the game (the backdrop, the screen's edges, the casing's lamps) and how much moves in a fight. Off: numbers and bars only. Subtle and medium: the number, the bar and who did it. Bold: impact bursts, sparks and flashes too">Screen effects: ${esc(sfxLevel(s))}</button>
       ${Object.entries(SFX.effects).map(([id, name]) => `<button type="button" class="btn" data-run="screen fx ${id} ${!s.settings.screenFxOff?.[id] ? 'off' : 'on'}" aria-pressed="${!s.settings.screenFxOff?.[id]}" ${s.settings.shell === 'plain' || sfxLevel(s) === 'off' ? 'disabled' : ''}>${name} ${!s.settings.screenFxOff?.[id] ? 'on' : 'off'}</button>`).join('')}
       <button type="button" class="btn" data-run="tips ${s.settings.tips === false ? 'on' : 'off'}" aria-pressed="${s.settings.tips !== false}">Tips ${s.settings.tips === false ? 'off' : 'on'}</button>

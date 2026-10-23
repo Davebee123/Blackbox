@@ -1,0 +1,74 @@
+/* ---------- the window behind the monitor (window.mjs) ----------
+   The city through the glass: one layer behind the page (z-index -2), shown only with the Window setting on and the
+   casing's window margins (1700px wide or more, or any desktop window with the monitor Roomy). Its mask cuts the monitor's frame out of it, 4px inside the frame's
+   rim, so nothing of it ever paints on the screen, the bezel, the plate, the knobs or the lamps, whatever the
+   colourway. Neutral darks, the screen's own amber and soft amber and rose neon; no job colour (teal, red, violet,
+   steel). What moves (the smog, the hour and the weather fading in) moves only with motion allowed. window.test.mjs
+   holds this file to that. */
+.window-view { display: none; position: fixed; inset: 0; z-index: -2; pointer-events: none; overflow: hidden; contain: strict; background: #070605;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='100%25' height='100%25' rx='30'/%3E%3C/svg%3E") no-repeat, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='100%25' height='100%25' rx='30'/%3E%3C/svg%3E") no-repeat exclude, linear-gradient(#000 0 0);
+  -webkit-mask-position: calc(var(--side) - 22px) calc(var(--top) - 18px), 0 0; mask-position: calc(var(--side) - 22px) calc(var(--top) - 18px), 0 0;
+  -webkit-mask-size: calc(100% - 2 * var(--side) + 44px) calc(100% - var(--top) - var(--desk) + 14px), 100% 100%; mask-size: calc(100% - 2 * var(--side) + 44px) calc(100% - var(--top) - var(--desk) + 14px), 100% 100%; }
+@media (min-width: 1700px) and (min-height: 720px) {
+  body.cased.window-on > .window-view { display: block; }
+}
+/* Monitor size Roomy (style.css): the monitor stands smaller, so the window shows round it on any desktop window. */
+@media (min-width: 1100px) and (min-height: 720px) {
+  body.cased.window-on.monitor-roomy > .window-view { display: block; }
+}
+.window-view i, .window-view svg { position: absolute; display: block; }
+/* The strips beside the monitor (to the frame's rim), and the sill under it. */
+.window-view .wv-l, .window-view .wv-r { position: absolute; top: 0; bottom: var(--desk); width: calc(var(--side) - 22px); overflow: hidden; }
+.window-view .wv-l { left: 0; }
+.window-view .wv-r { right: 0; }
+.window-view .wv-f { position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--desk) + 4px); overflow: hidden; }
+/* The screen's light on what's behind it: a glow round the monitor's frame. An outer shadow only, so it paints
+   nothing inside the frame (the mask cuts that anyway). */
+.window-view .wv-halo { left: calc(var(--side) - 18px); right: calc(var(--side) - 18px); top: calc(var(--top) - 14px); bottom: calc(var(--desk) + 8px); border-radius: 26px; box-shadow: 0 0 34px 2px rgba(241, 185, 47, 0.07), 0 0 120px 26px rgba(241, 185, 47, 0.05); }
+/* The city: the sky, the far towers, the smog over their tops. */
+.window-view .wv-sky { inset: 0; background: linear-gradient(180deg, #0d0a0b 0%, #120d0e 38%, #25160f 70%, #170e0b 86%, #090605 100%); }
+.window-view .wv-city { inset: 0; width: 100%; height: 100%; }
+.window-view .wv-far { fill: #17100f; }
+.window-view .wv-mid { fill: #0c090b; }
+.window-view .wv-mega { fill: #070608; }
+.window-view .wv-lit { fill: rgba(241, 170, 70, 0.34); }
+.window-view .wv-lit2 { fill: rgba(240, 224, 200, 0.16); }
+/* Smog drifting over the towers' tops: a tile of soft clouds, moved by exactly one tile so the loop never shows. */
+.window-view .wv-smog { top: 0; left: -960px; right: 0; height: 46%; background: radial-gradient(120px 50px at 140px 60%, rgba(96, 60, 44, 0.16), transparent), radial-gradient(200px 70px at 470px 30%, rgba(80, 52, 42, 0.13), transparent), radial-gradient(160px 60px at 780px 70%, rgba(110, 70, 48, 0.14), transparent); background-size: 960px 100%; }
+/* The hour: night is the sky as it is; dawn, day and dusk lay a light over it, and the windows dim by day. */
+.window-view .wv-tint { inset: 0; background-color: rgba(0, 0, 0, 0); }
+.window-view[data-tod="dawn"] .wv-tint { background-color: rgba(92, 84, 86, 0.14); }
+.window-view[data-tod="day"] .wv-tint { background-color: rgba(122, 110, 94, 0.2); }
+.window-view[data-tod="dusk"] .wv-tint { background-color: rgba(132, 66, 40, 0.15); }
+.window-view[data-tod="day"] .wv-lit, .window-view[data-tod="day"] .wv-lit2 { opacity: 0.4; }
+/* Up close: a tower face either side, a fire escape down the left one, a neon sign off each (marks, never words). */
+.window-view .wv-face { top: 34%; bottom: 0; background: #060506; box-shadow: inset -1px 0 0 rgba(255, 200, 160, 0.06); }
+.window-view .wv-l .wv-face { left: 0; width: 46%; }
+.window-view .wv-r .wv-face { right: 0; width: 42%; top: 28%; box-shadow: inset 1px 0 0 rgba(255, 200, 160, 0.06); }
+.window-view .wv-esc { top: 30px; bottom: 0; right: 2px; width: 22px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='56'%3E%3Cg fill='none' stroke='%231c1719' stroke-width='1'%3E%3Cpath d='M0 0.5h22M0 7.5h22M2 0v8M20 0v8M3 8l15 48'/%3E%3C/g%3E%3C/svg%3E") repeat-y; }
+.window-view .wv-sign { fill: none; stroke: rgba(243, 163, 58, 0.62); stroke-width: 1.3; stroke-linecap: round; filter: drop-shadow(0 0 3px rgba(243, 163, 58, 0.45)); }
+.window-view .wv-r .wv-sign { top: 34%; right: calc(42% + 3px); width: 14px; height: 117px; }
+.window-view .wv-l .wv-sign { top: 61%; left: 10%; width: 11px; height: 34px; }
+.window-view .wv-sign.rose { stroke: rgba(224, 154, 148, 0.45); filter: drop-shadow(0 0 3px rgba(224, 154, 148, 0.35)); }
+/* The weather, as haze only: clear, wet (drizzle, rain, a storm) or fog. Nothing falls. */
+.window-view .wv-haze { inset: 0; background: linear-gradient(rgba(30, 22, 26, 0.4), rgba(60, 40, 32, 0.5) 70%, rgba(20, 14, 12, 0.5)); opacity: 0.3; }
+.window-view[data-wx="wet"] .wv-haze { opacity: 0.6; }
+.window-view[data-wx="fog"] .wv-haze { opacity: 0.95; }
+/* The glass and its frame: grime on the pane, the posts at the window's ends, a transom, the blinds pulled up. */
+.window-view .wv-glass { inset: 0; background: url('ui/textures/grime-overlay-subtle.png'); opacity: 0.55; }
+.window-view .wv-post { top: 0; bottom: 0; width: 9px; background: #0d0b0a; }
+.window-view .wv-l .wv-post { left: 0; box-shadow: 1px 0 0 rgba(255, 230, 190, 0.05); }
+.window-view .wv-r .wv-post { right: 0; box-shadow: -1px 0 0 rgba(255, 230, 190, 0.05); }
+.window-view .wv-head { top: 0; left: 0; right: 0; height: 11px; background: linear-gradient(#0d0b0a 0 4px, #17140f 4px 5.5px, #0d0b0a 5.5px 7px, #17140f 7px 8.5px, #1b1712 8.5px 11px); box-shadow: 0 1px 0 rgba(0, 0, 0, 0.5), 0 2px 12px rgba(0, 0, 0, 0.35); }
+.window-view .wv-transom { top: 36%; left: 0; right: 0; height: 7px; background: #0d0b0a; box-shadow: inset 0 1px 0 rgba(255, 230, 190, 0.05); }
+.window-view .wv-sill { inset: 0; background: radial-gradient(42% 160% at 50% 0%, rgba(241, 185, 47, 0.1), transparent 75%), linear-gradient(#17130f, #0b0907 50%, #070605); box-shadow: inset 0 4px 0 #0b0a09, inset 0 5px 0 rgba(255, 225, 180, 0.06); }
+
+/* ---------- what moves: only with motion allowed (Motion on, no reduced-motion preference) ---------- */
+@keyframes wv-drift { to { transform: translateX(960px); } }
+@media (prefers-reduced-motion: no-preference) {
+  body:not(.no-motion) .window-view .wv-smog { animation: wv-drift 360s linear infinite; will-change: transform; }
+  body:not(.no-motion) .window-view .wv-tint, body:not(.no-motion) .window-view .wv-lit, body:not(.no-motion) .window-view .wv-lit2 { transition: background-color 90s linear, opacity 90s linear; }
+  body:not(.no-motion) .window-view .wv-haze { transition: opacity 40s linear; }
+}

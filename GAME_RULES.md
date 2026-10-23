@@ -1727,18 +1727,14 @@ With the immersive shell on a desktop-sized window, the screen sits in a dark mo
 
 System → Settings → Casing turns it off (its cosmetics with it); phones and small windows never show it.
 
-**The room around it** (window.mjs, surround.mjs, surround.css). With the Window setting on and a window 1700px wide or more, the strips beside, above and below the monitor show what's around it. System → Settings → **Room** steps through four while the designer picks one (`room style <city|desk|view|void|next>`; `?room=a|b|c` shows one for that visit only):
+**Monitor size** (System → Settings → Monitor, `monitor full|roomy`). **Full** (the default) is the monitor filling the window, as it always has. **Roomy** stands it smaller and centred, its frame 80% of the window each way (1152×720 on a 1440×900 window, its screen 1116×662), with the window behind it showing above, beside and below on any desktop-sized window, not only at 1700px. It never makes the screen smaller than the one a 1121×720 window gets today (1069×646, the smallest size the desktop layout runs at), so the layout inside keeps its size class and the text its size: nothing is scaled, and on a small window it gives less room. Saved as `settings.monitor` (none for Full).
 
-| Room | What shows | Moves |
-|---|---|---|
-| **City** (the default) | The slum outside the window, on a canvas: towers, lit windows, neon, a spinner, and weather that turns every five minutes (clear, fog, drizzle, rain, a storm with lightning) | the weather, the neon, the spinner |
-| **Desk** (A) | The monitor on a desk in a dark room: a lamp on low, a mug, a sticky note, a cable to the wall, a keyboard and the monitor's foot, all in silhouette, the screen's amber spilling onto the desk | nothing |
-| **View** (B) | The window, refined: far towers in three depths, a fire escape and a tower face up close, two soft neon signs (amber and rose), the sky tinted by the hour (night, dawn, day, dusk) and the weather only as haze (clear, wet or fog). Nothing falls, nothing flashes | the smog drifts, very slowly; the hour and the weather fade in |
-| **Void** (C) | A near-black room with only light: the screen's glow on the wall, its scanlines reflected in the desk, one distant light | the distant light breathes, slowly |
+**The window behind it** (window.mjs, window.css). With the Window setting on (System → Settings → Window, `window on|off`; on by default) and a window 1700px wide or more (any desktop window with the monitor Roomy), the strips beside, above and below the monitor look out through grimy glass onto the city: far towers in three depths with lit windows, a fire escape and a tower face up close, two soft neon signs (amber and rose, marks rather than words), the blinds pulled up, a transom and the sill the monitor stands on.
 
-- Only ever behind the casing: a room paints nothing inside the monitor's frame (the frame is cut out of it, its edge under the frame's rim), takes no clicks and never touches the screen, so every colourway sits on it unchanged. Neutral darks and the screen's amber: no teal, red, violet or steel.
-- Motion off or reduced motion: everything in it holds still. The street and the rain are heard only through a window (City, View, the rain at half in View); Desk and Void are quiet.
-- `weather <name>|auto` sets View's haze too. Saved as `settings.room` (none for City, so an older save and a new one show the city).
+- **The hour:** the sky follows your clock: night (21:00 to 05:00), dawn, day (the windows dim) and dusk.
+- **The weather** turns over every five minutes, from the clock (clear, fog, drizzle, rain, storm), and shows only as haze on the glass: clear, wet or fog. Nothing falls and nothing flashes. The rain is heard through the glass at half its level, under the street ten floors down. `weather <clear|fog|drizzle|rain|storm|auto>` holds one.
+- Only ever behind the casing: the window paints nothing inside the monitor's frame (the frame is cut out of it, its edge under the frame's rim), takes no clicks and never touches the screen, so every colourway sits on it unchanged. DOM, CSS and SVG, no canvas. Neutral darks, the screen's amber and the two signs: no teal, red, violet or steel.
+- What moves is slow: the smog drifts across the towers' tops, and a new hour or weather fades in over a minute or so. Motion off or reduced motion holds it all still.
 
 **Casing cosmetics** (casing.mjs, casing.css; System → **Casing**, a tab beside Settings and Achievements). Only ever the casing: the screen, its colours, text and layout never change, nothing covers the glass, the knobs or the lamps, and nothing moves. All of it is an achievement's reward, cosmetic only.
 
@@ -2172,7 +2168,7 @@ On floor 2 and deeper, about half the servers (fixed by the seed) swap their Wat
 
 ## Volume
 
-The System page has four sliders (0–100, default 80, the level the game was mixed at): **Music** (the soundtrack), **Ambience** (radio chatter, rain, thunder, the street ten floors down with its odd horn and passing siren, the room tone), **Places** (each floor's and hub's own sound, and a virus family's hum under a fight; 0 turns them off) and **Effects** (hits, keys, alerts and every other game sound, a virus family's attack and break among them). Dragging is heard live; letting go saves it. All of them sit under the Sound switch.
+The System page has four sliders (0–100, default 80, the level the game was mixed at): **Music** (the soundtrack), **Ambience** (radio chatter, rain, the street ten floors down with its odd horn and passing siren, the room tone), **Places** (each floor's and hub's own sound, and a virus family's hum under a fight; 0 turns them off) and **Effects** (hits, keys, alerts and every other game sound, a virus family's attack and break among them). Dragging is heard live; letting go saves it. All of them sit under the Sound switch.
 
 ### Places
 
