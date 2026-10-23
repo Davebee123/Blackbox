@@ -395,8 +395,10 @@ const pzFx = createPuzzleFx({ canMove: () => canMove(), sound: (sign, ms) => { f
 // The immersive shell (CRT, boot, status line). `?shell=plain` or `shell plain` turns it off.
 const shellParam = params.get('shell');
 const shellOn = () => (shellParam || campaign.settings.shell || 'immersive') !== 'plain';
-// The window behind the monitor (casing on, Window setting on): the slum outside, and its weather.
+// The window behind the monitor (casing on, Window setting on): the slum outside, and its weather. The sky follows the
+// clock's hour; `?tod=night|dawn|day|dusk` shows another.
 const outside = createWindow({ canMove: () => canMove(), onThunder: (d) => feel.thunder(d), onWeather: (_, w) => { outsideRain = w.rain; feel.rain(outsideRain); } });
+if (params.get('tod')) outside.hour(params.get('tod'));
 let outsideRain = 0, outsideShown = false, lastVols = '';
 // First launch (or after Reset game): log in, then Halcyon's transmission.
 const intro = createIntro({ key: (k) => feel.key(k), sound: (v) => { feel.add(v, null); feel.flush(); }, reducedMotion: () => !canMove() });
