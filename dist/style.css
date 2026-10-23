@@ -906,7 +906,7 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 @media (min-width: 1100px) and (min-height: 720px) {
   /* The monitor is as wide as the screen inside it (at most 1800px of picture) and sits centered on
      the desk, so on a wide display the frame hugs the picture instead of the window edges. */
-  body.cased { --side: max(26px, calc((100vw - 1800px) / 2)); --top: 22px; --chin: 52px; --desk: 0px; box-sizing: border-box; height: 100dvh; overflow: hidden; padding: var(--top) var(--side) calc(var(--chin) + var(--desk)); background: radial-gradient(120% 90% at 50% 40%, var(--case-hi, #2a2724), var(--case-mid, #181614) 70%, var(--case-lo, #0e0d0c)); } /* the plastic: casing.css colourways set these */
+  body.cased { --side: max(26px, 1.2vw); --top: 22px; --chin: 52px; --desk: 0px; box-sizing: border-box; height: 100dvh; overflow: hidden; padding: var(--top) var(--side) calc(var(--chin) + var(--desk)); background: radial-gradient(120% 90% at 50% 40%, var(--case-hi, #2a2724), var(--case-mid, #181614) 70%, var(--case-lo, #0e0d0c)); } /* the plastic: casing.css colourways set these */
   body.cased::before { content: ''; position: fixed; top: calc(var(--top) - 14px); bottom: calc(var(--desk) + 8px); left: calc(var(--side) - 18px); right: calc(var(--side) - 18px); border-radius: 26px; pointer-events: none; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), inset 0 -2px 0 rgba(0, 0, 0, 0.6), 0 0 0 8px var(--case-rim, #0b0a09); }
   body.cased .app { height: calc(100dvh - var(--top) - var(--chin) - var(--desk)); max-width: none; position: relative; overflow: hidden; border-radius: 18px; background: var(--bg) url('ui/textures/grime-overlay-subtle.png'); box-shadow: 0 0 0 2px #000, 0 0 30px 6px rgba(241, 185, 47, 0.08); }
   body.cased #crt, body.cased .boot, body.cased #fx-edge, body.cased .poweron, body.cased .class-pick, body.cased .breakout { inset: var(--top) var(--side) calc(var(--chin) + var(--desk)); border-radius: 18px; overflow: hidden; }
@@ -1578,10 +1578,10 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 
 /* The window beside the monitor needs the room: only on wide screens (window.mjs). */
 @media (min-width: 1700px) and (min-height: 720px) {
-  body.cased.window-on { --side: max(calc((100vw - 1800px) / 2), 5.5vw); background: var(--case-win, #0b0a09); }
+  body.cased.window-on { --side: max(48px, 3.5vw); background: var(--case-win, #0b0a09); } /* the monitor fills the window, with a strip of the city either side */
   /* Tall enough: window above the monitor too, and the desk it stands on below. */
   @media (min-height: 860px) { body.cased.window-on { --top: 46px; --desk: 30px; } }
-  @media (min-height: 1000px) { body.cased.window-on { --top: 72px; --desk: 34px; } }
+  @media (min-height: 1000px) { body.cased.window-on { --top: 56px; --desk: 34px; } }
   body.cased.window-on .toggles { display: none; } /* all on the System page; the bar is narrower here */
 }
 
