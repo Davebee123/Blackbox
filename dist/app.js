@@ -65,6 +65,7 @@ import { humansReady } from './coop.mjs';
 import * as PG from './pager.mjs';
 import * as PGV from './pager-view.mjs';
 import { noCarrier, NC } from './nocarrier.mjs';
+import * as UI from './uiscale.mjs';
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -774,18 +775,18 @@ function placeRoomsPop() {
   const pop = $('fp-pop');
   if (!pop) { fpPopAt = null; return; }
   const box = pop.parentElement, id = pop.dataset.pop;
-  const tile = [...box.querySelectorAll(`.fp-room[data-room="${CSS.escape(id)}"] .fp-body`)].map((t) => t.getBoundingClientRect()).find((r) => r.width > 0); // the chip itself: its pulsing ring and badges move
+  const tile = [...box.querySelectorAll(`.fp-room[data-room="${CSS.escape(id)}"] .fp-body`)].map((t) => zr(t.getBoundingClientRect())).find((r) => r.width > 0); // the chip itself: its pulsing ring and badges move
   if (!tile) { pop.style.visibility = 'hidden'; return; }
-  const c = box.getBoundingClientRect(), t = { l: tile.left - c.left, t: tile.top - c.top, r: tile.right - c.left, b: tile.bottom - c.top };
+  const c = zr(box.getBoundingClientRect()), t = { l: tile.left - c.left, t: tile.top - c.top, r: tile.right - c.left, b: tile.bottom - c.top };
   pop.style.maxHeight = '';
   const w = pop.offsetWidth, h = pop.offsetHeight;
   const key = [id, Math.round(c.width), Math.round(c.height), Math.round(t.l), Math.round(t.t), w, h].join('|');
   if (fpPopAt?.key === key) { pop.style.left = fpPopAt.left; pop.style.top = fpPopAt.top; pop.style.maxHeight = fpPopAt.maxHeight; pop.style.visibility = 'visible'; return; }
   const m = 8, gap = 12, W = c.width, H = c.height;
   // What you can see of the map: on a phone the strip sticks over its top and the prompt over its bottom.
-  const hud = box.parentElement.querySelector('.fp-hud')?.getBoundingClientRect(), form = $('command-form')?.getBoundingClientRect();
+  const hudEl = box.parentElement.querySelector('.fp-hud'), hud = hudEl && zr(hudEl.getBoundingClientRect()), formEl = $('command-form'), form = formEl && zr(formEl.getBoundingClientRect()), vh = innerHeight / Z();
   const seeTop = Math.max(m, (hud && getComputedStyle(box.parentElement.querySelector('.fp-hud')).position === 'sticky' ? hud.bottom : 0) - c.top + m);
-  const seeBot = Math.min(H - m, Math.min(innerHeight, form && form.top > 0 ? form.top : innerHeight) - c.top - m);
+  const seeBot = Math.min(H - m, Math.min(vh, form && form.top > 0 ? form.top : vh) - c.top - m);
   const clampX = (x) => Math.max(m, Math.min(W - w - m, x)), clampY = (y, lo, hi) => Math.max(lo, Math.min(hi - h, y));
   const sides = (lo, hi) => [
     { left: t.r + gap, top: clampY(t.t - 10, lo, hi), ok: t.r + gap + w <= W - m && h <= hi - lo },
@@ -794,7 +795,7 @@ function placeRoomsPop() {
     { left: clampX((t.l + t.r) / 2 - w / 2), top: t.t - gap - h, ok: t.t - gap - h >= lo },
   ];
   // Of the sides that fit, the one that hides the fewest other rooms you've seen (ties: right, left, below, above).
-  const tiles = [...box.querySelectorAll('.fp-room:not(.shape) .fp-body')].map((x) => x.getBoundingClientRect()).filter((r) => r.width > 0).map((r) => ({ l: r.left - c.left, t: r.top - c.top, r: r.right - c.left, b: r.bottom - c.top }));
+  const tiles = [...box.querySelectorAll('.fp-room:not(.shape) .fp-body')].map((x) => zr(x.getBoundingClientRect())).filter((r) => r.width > 0).map((r) => ({ l: r.left - c.left, t: r.top - c.top, r: r.right - c.left, b: r.bottom - c.top }));
   const hides = (x) => tiles.filter((r) => !(x.left + w <= r.l || x.left >= r.r || x.top + h <= r.t || x.top >= r.b)).length;
   const best = (list) => list.filter((x) => x.ok).map((x) => ({ ...x, n: hides(x) })).sort((p, q) => p.n - q.n)[0];
   let at = best(sides(seeTop, seeBot)) || best(sides(m, H - m));
@@ -1360,6 +1361,13 @@ function run(raw) {
   if (text === 'radio test') return feel.radioTest();
   if (text === 'sidebar on' || text === 'sidebar off') { campaign.settings.sidebar = text === 'sidebar on'; save(); dirty = true; return notice(`Crew window ${text.slice(8)}.`); }
   if (text === 'map names hover' || text === 'map names on') { campaign.settings.mapNames = text.endsWith('hover') ? 'hover' : 'on'; save(); dirty = true; return notice(text.endsWith('hover') ? 'Map names show on hover.' : 'Map names always show.'); }
+  // ui scale <auto|80–200%> (uiscale.mjs): the screen drawn larger or smaller; no argument steps to the next that fits.
+  if (/^ui scale( |$)/.test(text)) {
+    const arg = text.slice(9).trim(), set = arg ? UI.parseScale(arg) : UI.nextScale(campaign.settings.uiScale ?? 1, UI.ROOM.avail);
+    if (set == null) return notice('ui scale auto, or a percent from 80 to 200.', true);
+    campaign.settings.uiScale = set; uiScale(); save(); dirty = true;
+    return notice(`${UI.scaleLabel(set, UI.ROOM.avail)}.`);
+  }
   if (text === 'window on' || text === 'window off') { campaign.settings.window = text === 'window on'; save(); dirty = true; return notice(`Window ${text.slice(7)}.`); }
   if (text.startsWith('weather')) { const w = text.split(' ')[1]; outside.force(w === 'auto' ? null : w); return notice(`Weather: ${w && w !== 'auto' ? w : 'follows the clock'}.`); }
   if (text === 'reset game' || text === 'new game') return resetGame();
@@ -1623,10 +1631,10 @@ function placeMapPop() {
   const pop = $('map-pop'), canvas = pop?.closest('.map-canvas'), node = canvas?.querySelector('.mnode.selected .mhit');
   if (!pop) return;
   if (!node) { pop.style.visibility = 'hidden'; return; }
-  const c = canvas.getBoundingClientRect();
+  const c = zr(canvas.getBoundingClientRect());
   const key = [mapSel, mapZoom.k, mapZoom.cx, mapZoom.cy, Math.round(c.width), Math.round(c.height)].join('|');
   if (popAt?.key === key) { pop.style.left = popAt.left; pop.style.top = popAt.top; pop.style.visibility = 'visible'; return; }
-  const n = node.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight, gap = 14;
+  const n = zr(node.getBoundingClientRect()), w = pop.offsetWidth, h = pop.offsetHeight, gap = 14;
   if (!n.width) return;
   const cx = n.left + n.width / 2 - c.left, cy = n.top + n.height / 2 - c.top, r = n.width / 2;
   let left = cx + r + gap;
@@ -1826,7 +1834,7 @@ const saveCrewWin = () => { try { localStorage.setItem('bb-crewwin', JSON.string
 function placeCrewWin() {
   const el = $('crewwin'), area = $('page-view');
   if (!el || el.hidden || !area) return;
-  const r = area.getBoundingClientRect();
+  const r = zr(area.getBoundingClientRect());
   el.style.left = r.left + 12 + 'px';
   el.style.top = r.top + 12 + 'px';
 }
@@ -2129,6 +2137,23 @@ function fire(b) {
 
 // ---------- the monitor casing ----------
 // Desktop, immersive shell: the screen sits in a monitor whose bezel lamps show real state.
+// UI scale (uiscale.mjs): --ui on the page, from the setting and the room the screen has (the body's width less its
+// padding: the monitor's sides when cased). The top bar fits itself again when it changes.
+let uiShown = 0;
+// The scale in force. Under CSS zoom a rect is in screen px while left/top and offsetWidth are in the zoomed element's
+// own px: inside the screen (.app) a rect divides by it (zr); a zoomed pop-up on the page measures times it and
+// places divided by it.
+const Z = () => uiShown || 1;
+const zr = (r) => { const z = Z(); return { left: r.left / z, top: r.top / z, right: r.right / z, bottom: r.bottom / z, width: r.width / z, height: r.height / z }; };
+function uiScale() {
+  const cs = getComputedStyle(document.body), avail = document.body.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  UI.ROOM.avail = avail;
+  const z = UI.scaleFor(campaign.settings.uiScale ?? 1, avail);
+  if (z === uiShown) return;
+  uiShown = z;
+  document.documentElement.style.setProperty('--ui', String(z));
+  fitKey = ''; requestAnimationFrame(() => { fitKey = ''; fitTopbar(); });
+}
 function casing() {
   // The monitor and its window only fit a desktop-sized screen (style.css, the casing media query).
   const roomy = matchMedia('(min-width: 1100px) and (min-height: 720px)').matches;
@@ -2141,6 +2166,7 @@ function casing() {
   if (moved && win) outside.remeasure();
   if (win !== outsideShown || moved) { outsideShown = win; feel.rain(win ? outsideRain : 0); }
   if (moved) { fitKey = ''; requestAnimationFrame(() => { fitKey = ''; fitTopbar(); }); } // the screen's width changed (casing or window on or off): fit the top bar to it again
+  uiScale(); // the room changed with the casing: the scale that fits may too
   feel.street(win);
   screenFx();
   const s = campaign;
@@ -2314,7 +2340,7 @@ function placeTip() {
   if (!el) return hideTip(false); // it'll come back when its thing does
   document.querySelectorAll('.tip-target').forEach((x) => { if (x !== el) x.classList.remove('tip-target'); });
   el.classList.add('tip-target');
-  const box = $('tip'), r = el.getBoundingClientRect(), w = box.offsetWidth, h = box.offsetHeight;
+  const box = $('tip'), r = el.getBoundingClientRect(), z = Z(), w = box.offsetWidth * z, h = box.offsetHeight * z; // it zooms with the screen (style.css)
   // Under a container (the board): the thing it explains stays in view; the arrow still points at it.
   const u = (tip.cur.under && document.querySelector(tip.cur.under)?.getBoundingClientRect()) || r;
   // Keep it on the screen: inside the monitor's picture when it sits in its casing, else the window.
@@ -2324,10 +2350,10 @@ function placeTip() {
   const below = u.bottom + 14 + h < B - 8;
   const cx = r.left + Math.min(r.width, 240) / 2;
   const left = Math.max(L + 12, Math.min(R - w - 12, cx - w / 2));
-  box.style.left = left + 'px';
-  box.style.top = (below ? u.bottom + 14 : Math.max(T + 12, u.top - h - 14)) + 'px';
+  box.style.left = left / z + 'px';
+  box.style.top = (below ? u.bottom + 14 : Math.max(T + 12, u.top - h - 14)) / z + 'px';
   box.classList.toggle('above', !below);
-  box.style.setProperty('--arrow', Math.max(16, Math.min(w - 16, cx - left)) + 'px');
+  box.style.setProperty('--arrow', Math.max(16, Math.min(w - 16, cx - left)) / z + 'px');
 }
 function hideTip(seen) {
   if (!tip) return;
@@ -3022,7 +3048,7 @@ function fitTopbar() {
   for (let i = 1; i <= 4 && wraps(); i++) bar.classList.add('fit-' + i);
   fitKey = sig();
 }
-addEventListener('resize', () => { fitKey = ''; fitTopbar(); });
+addEventListener('resize', () => { fitKey = ''; fitTopbar(); uiScale(); });
 document.fonts?.ready.then(() => { fitKey = ''; fitTopbar(); });
 
 // "where:what" from a pager entry or a button elsewhere: a page, and what to show on it.
@@ -3187,10 +3213,10 @@ function showPtip(anchor) {
   step(performance.now());
 }
 function placePtip() {
-  const { anchor, el } = ptip, r = anchor.getBoundingClientRect(), w = el.offsetWidth, h = el.offsetHeight;
+  const { anchor, el } = ptip, r = anchor.getBoundingClientRect(), z = Z(), w = el.offsetWidth * z, h = el.offsetHeight * z; // it zooms with the screen (style.css)
   const left = r.right + 12 + w < innerWidth ? r.right + 12 : Math.max(8, r.left - w - 12);
-  el.style.left = left + 'px';
-  el.style.top = Math.max(8, Math.min(innerHeight - h - 8, r.top + r.height / 2 - h / 2)) + 'px';
+  el.style.left = left / z + 'px';
+  el.style.top = Math.max(8, Math.min(innerHeight - h - 8, r.top + r.height / 2 - h / 2)) / z + 'px';
 }
 function hidePtip() { if (!ptip) return; cancelAnimationFrame(ptip.raf); ptip.el.remove(); ptip = null; }
 document.addEventListener('mouseover', (e) => {
@@ -3238,7 +3264,7 @@ function pdPlace() {
   if (!pd.id || pd.sheet) return;
   const el = pd.el, a = pd.anchor.getBoundingClientRect(), pad = 8, gap = 12;
   const list = document.querySelector('#page-view .silk-stash .silk-tiles')?.getBoundingClientRect();
-  const w = el.offsetWidth, h = el.offsetHeight, beside = pd.anchor.closest('.silk-tiles') ? list : a;
+  const z = Z(), w = el.offsetWidth * z, h = el.offsetHeight * z, beside = pd.anchor.closest('.silk-tiles') ? list : a; // it zooms with the screen (style.css)
   const y = Math.max(pad, Math.min(innerHeight - h - pad, a.top + a.height / 2 - h / 2));
   const clear = (x, top) => !list || x >= list.right || x + w <= list.left || top >= list.bottom || top + h <= list.top;
   let x = [beside.left - w - gap, beside.right + gap].find((v) => v >= pad && v + w <= innerWidth - pad && clear(v, y)), top = y;
@@ -3247,7 +3273,7 @@ function pdPlace() {
     const ys = [a.top - gap - h, a.bottom + gap].filter((v) => v >= pad && v + h <= innerHeight - pad);
     top = ys.find((v) => clear(x, v)) ?? ys[0] ?? Math.max(pad, innerHeight - h - pad);
   }
-  el.style.left = x + 'px'; el.style.top = top + 'px';
+  el.style.left = x / z + 'px'; el.style.top = top / z + 'px';
 }
 // Focus from the keyboard keeps it open; focus a click left behind doesn't.
 const pdKeyed = (a) => a.contains(document.activeElement) && document.activeElement.matches(':focus-visible');

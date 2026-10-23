@@ -5,7 +5,7 @@
    then [ OK ] per unlock once the flash is done. Each row takes no room until it lands, so the panel grows a row at a
    time and never shows an empty block. Amber for what you get, teal only for your level, violet for a daemon slot.
    Continue (Enter), Esc or × close it. Motion off or reduced motion: everything is there at once. */
-.levelup { position: fixed; z-index: 50; top: var(--lu-top, 72px); left: 50%; transform: translateX(-50%); width: min(440px, calc(100vw - 32px)); display: grid; color: var(--text); font: 12.5px/1.45 var(--mono); background: var(--inset); border: 1px solid var(--line-strong); border-radius: var(--r-card); box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6), 0 14px 40px rgba(0, 0, 0, 0.65); overflow: hidden; transition: opacity 0.4s; }
+.levelup { position: fixed; z-index: 50; zoom: var(--ui, 1); top: var(--lu-top, 72px); left: calc(50vw / var(--ui, 1)); transform: translateX(-50%); width: min(440px, calc((100vw - 32px) / var(--ui, 1))); display: grid; color: var(--text); font: 12.5px/1.45 var(--mono); background: var(--inset); border: 1px solid var(--line-strong); border-radius: var(--r-card); box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6), 0 14px 40px rgba(0, 0, 0, 0.65); overflow: hidden; transition: opacity 0.4s; }
 .levelup[hidden] { display: none; }
 .levelup.out { opacity: 0; }
 .levelup .lu-row { cursor: help; }

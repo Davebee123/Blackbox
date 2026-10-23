@@ -16,7 +16,9 @@ export function createLevelUpUi({ calm, fighting, feel, keys = () => [], motion 
   // Where it sits: under the top bar; on a phone, docked over the prompt's box.
   function place() {
     const form = document.getElementById('command-form')?.getBoundingClientRect(), bar = document.querySelector('.topbar')?.getBoundingClientRect();
-    const set = (k, v) => host.style.setProperty(k, Math.round(v) + 'px');
+    // It zooms with the screen (uiscale.mjs, --ui): its top and bottom are in its own zoomed px.
+    const z = parseFloat(document.documentElement?.style?.getPropertyValue?.('--ui')) || 1; // app.js sets it on the page
+    const set = (k, v) => host.style.setProperty(k, Math.round(v / z) + 'px');
     if (form && form.width) set('--lu-bottom', innerHeight - form.top + 8);
     if (bar) set('--lu-top', bar.bottom + 10);
   }
