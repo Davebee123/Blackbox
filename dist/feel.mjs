@@ -200,8 +200,9 @@ export function createFeel({ settings, reducedMotion }) {
     radioTest() { track.test(); },
     // LANTERN read out a dead drop (only with Sound on).
     numbers() { if (settings().sound) track.numbers(); },
-    // Weather outside the window: the rain's level (only with Sound on).
+    // Weather outside the window: rain level and thunder (only with Sound on).
     rain(level) { track.rain(settings().sound ? level : 0); },
+    thunder(delay) { if (settings().sound) track.thunder(delay); },
     street(on) { track.street(on); },
     // Where you are (places.mjs placeOf): { on, bed, family }. The floor's or hub's bed, and a fight's family idle.
     places(opts) { places.set(opts); },

@@ -140,7 +140,7 @@ export function createSoundtrack(getCtx) {
   function setup() {
     ctx = getCtx();
     if (!ctx) return false;
-    // Two buses: music, and everything else here (radio, rain, the street).
+    // Two buses: music, and everything else here (radio, rain, thunder, the street).
     if (!out) { out = ctx.createGain(); out.connect(ctx.destination); mus = ctx.createGain(); mus.connect(ctx.destination); applyVol(); }
     return true;
   }
@@ -200,7 +200,7 @@ export function createSoundtrack(getCtx) {
     };
     next();
   }
-  // Weather through the glass: rain as a muffled hiss.
+  // Weather through the glass: rain as a muffled hiss, thunder a while after the flash.
   let rainBus = null, rainLevel = 0;
   function rainBed() {
     if (rainBus || !ctx) return;
@@ -321,6 +321,20 @@ export function createSoundtrack(getCtx) {
     if (!hornTimer || !(want.on && streetOn)) horns();
   }
 
+  function thunder(delay) {
+    if (!want.on || !setup() || ctx.state !== 'running') return;
+    const t = ctx.currentTime + delay, dur = 3 + Math.random() * 3, far = Math.min(1, delay / 3.4);
+    const len = Math.ceil(ctx.sampleRate * dur), b = ctx.createBuffer(1, len, ctx.sampleRate), d = b.getChannelData(0);
+    let br = 0;
+    for (let i = 0; i < len; i++) { br = (br + 0.02 * (Math.random() * 2 - 1)) / 1.02; d[i] = br * 3.5 * (1 + 0.6 * Math.sin(i / ctx.sampleRate * (2 + Math.random()) * 6.28)); }
+    const src = ctx.createBufferSource(), lp = ctx.createBiquadFilter(), gain = ctx.createGain();
+    src.buffer = b; lp.type = 'lowpass'; lp.frequency.value = 320 - far * 180;
+    const peak = 0.22 * (1 - far * 0.6);
+    gain.gain.setValueAtTime(0.0001, t); gain.gain.exponentialRampToValueAtTime(peak, t + 0.08 + far * 0.5);
+    gain.gain.setTargetAtTime(peak * 0.5, t + 0.6, 0.4); gain.gain.setTargetAtTime(0.0001, t + dur * 0.5, dur * 0.2);
+    src.connect(lp).connect(gain).connect(out); src.start(t); src.stop(t + dur + 0.1);
+  }
+
   if (typeof document !== 'undefined') {
     // Browsers hold play() until a click or key, so the first one after that starts the music.
     const wake = () => { if (want.on && setup()) { music(); radio(); weatherLevel(); applyStreet(); } };
@@ -338,10 +352,11 @@ export function createSoundtrack(getCtx) {
       if (!setup()) return;
       music(); radio(); weatherLevel(); applyStreet();
     },
-    // The window's weather: how hard it's raining (0–1).
+    // The window's weather: how hard it's raining (0–1), and a lightning strike `delay` seconds away.
     rain(level) { rainLevel = level; if (setup()) { weatherLevel(); streetLevel(); } },
     // The city outside the window (on while the window shows).
     street(on) { if (!!on === streetOn && (street || !on)) return; streetOn = !!on; if (setup()) applyStreet(); },
+    thunder,
     volumes(v = {}) { if (v.music != null) vol.music = v.music; if (v.ambience != null) vol.ambience = v.ambience; applyVol(); },
     test() { if (setup()) transmission(ctx, out, { level: 0.08 }); },
     // LANTERN's courier broadcast (events.mjs): a numbers transmission, a little louder.

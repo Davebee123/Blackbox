@@ -395,10 +395,8 @@ const pzFx = createPuzzleFx({ canMove: () => canMove(), sound: (sign, ms) => { f
 // The immersive shell (CRT, boot, status line). `?shell=plain` or `shell plain` turns it off.
 const shellParam = params.get('shell');
 const shellOn = () => (shellParam || campaign.settings.shell || 'immersive') !== 'plain';
-// The window behind the monitor (casing on, Window setting on): the city through the glass, the hour's light and the
-// weather's haze. The rain is heard at half, through the glass. `?tod=night|dawn|day|dusk` shows another hour.
-const outside = createWindow({ onWeather: (_, w) => { outsideRain = w.rain * 0.5; feel.rain(outsideRain); } });
-if (params.get('tod')) outside.hour(params.get('tod'));
+// The window behind the monitor (casing on, Window setting on): the slum outside, and its weather.
+const outside = createWindow({ canMove: () => canMove(), onThunder: (d) => feel.thunder(d), onWeather: (_, w) => { outsideRain = w.rain; feel.rain(outsideRain); } });
 let outsideRain = 0, outsideShown = false, lastVols = '';
 // First launch (or after Reset game): log in, then Halcyon's transmission.
 const intro = createIntro({ key: (k) => feel.key(k), sound: (v) => { feel.add(v, null); feel.flush(); }, reducedMotion: () => !canMove() });
@@ -1346,9 +1344,6 @@ function run(raw) {
   if (text === 'sidebar on' || text === 'sidebar off') { campaign.settings.sidebar = text === 'sidebar on'; save(); dirty = true; return notice(`Crew window ${text.slice(8)}.`); }
   if (text === 'map names hover' || text === 'map names on') { campaign.settings.mapNames = text.endsWith('hover') ? 'hover' : 'on'; save(); dirty = true; return notice(text.endsWith('hover') ? 'Map names show on hover.' : 'Map names always show.'); }
   if (text === 'window on' || text === 'window off') { campaign.settings.window = text === 'window on'; save(); dirty = true; return notice(`Window ${text.slice(7)}.`); }
-  // Monitor size: Full (the default: the monitor fills the window) or Roomy (smaller, the window all round it).
-  if (text === 'monitor full' || text === 'monitor roomy') { if (text === 'monitor roomy') campaign.settings.monitor = 'roomy'; else delete campaign.settings.monitor; save(); dirty = true; return notice(`Monitor: ${text === 'monitor roomy' ? 'Roomy' : 'Full'}.`); }
-  if (text === 'monitor') return notice(`Monitor: ${campaign.settings.monitor === 'roomy' ? 'Roomy' : 'Full'}. monitor full|roomy`);
   if (text.startsWith('weather')) { const w = text.split(' ')[1]; outside.force(w === 'auto' ? null : w); return notice(`Weather: ${w && w !== 'auto' ? w : 'follows the clock'}.`); }
   if (text === 'reset game' || text === 'new game') return resetGame();
   if (text === 'help' && !CAMP) return notice('In a fight, key 1 is your plain hit, keys 2 to 0 fire your skills, - is SIGINT, hold skips a move and now ends the cycle at once. On a run, use ls, cd, cat, pull, unlock, attack and jack out. For gear, use load, unload, compile, deconstruct and craft. For your server, use install, uninstall, firewall upgrade|defrag|harden and filter equip. On the net, use connect, relay, detach and mail. The pages are map, mail, server, craft, loadout and system. Change the screen with shell immersive|plain|boot, and start over with reset game.', false, null, true);
@@ -2104,14 +2099,13 @@ function casing() {
   // The monitor and its window only fit a desktop-sized screen (style.css, the casing media query).
   const roomy = matchMedia('(min-width: 1100px) and (min-height: 720px)').matches;
   const cased = shellOn() && campaign.settings.casing !== false, win = cased && roomy && campaign.settings.window !== false;
-  const small = cased && campaign.settings.monitor === 'roomy'; // Monitor: Roomy (style.css: smaller, centred)
-  const moved = document.body.classList.contains('cased') !== cased || document.body.classList.contains('window-on') !== win || document.body.classList.contains('monitor-roomy') !== small;
+  const moved = document.body.classList.contains('cased') !== cased || document.body.classList.contains('window-on') !== win;
   document.body.classList.toggle('cased', cased);
   document.body.classList.toggle('window-on', win);
-  document.body.classList.toggle('monitor-roomy', small);
   outside.set(win);
+  if (moved && win) outside.remeasure();
   if (win !== outsideShown || moved) { outsideShown = win; feel.rain(win ? outsideRain : 0); }
-  if (moved) { fitKey = ''; requestAnimationFrame(() => { fitKey = ''; fitTopbar(); }); } // the screen's width changed (casing on or off, Full or Roomy): fit the top bar to it again
+  if (moved) { fitKey = ''; requestAnimationFrame(() => { fitKey = ''; fitTopbar(); }); } // the screen's width changed (casing or window on or off): fit the top bar to it again
   feel.street(win);
   screenFx();
   const s = campaign;
@@ -2133,7 +2127,7 @@ function casingLookUi(cased) {
   const strips = decalStrips(campaign), L = document.querySelector('#casing .decals.l'), R = document.querySelector('#casing .decals.r');
   if (L.innerHTML !== strips.left) L.innerHTML = strips.left;
   if (R.innerHTML !== strips.right) R.innerHTML = strips.right;
-  const key = `${cased}:${campaign.settings.monitor}:${look.plate}:${innerWidth}:${innerHeight}`;
+  const key = `${cased}:${look.plate}:${innerWidth}:${innerHeight}`;
   if (!cased || key === caseKey || !(strips.left || strips.right)) return;
   const box = $('casing').getBoundingClientRect();
   if (!box.width) return;
