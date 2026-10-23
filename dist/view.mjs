@@ -1,4 +1,5 @@
 // Markup builders. Pure functions of state; they never change it.
+import { SURROUNDS, SURROUND_IDS, surroundKind } from './surround.mjs';
 import { SALVAGE_COSTS, stacks as salvageStacks, canAfford, costLabel as salvageLabel, payProblem, total as salvageTotal, slug } from './salvage.mjs';
 import { glyph } from './glyphs.mjs';
 import { TELL_ICON } from './recap.mjs';
@@ -2602,7 +2603,7 @@ function paceCard(s) {
 // (casing-view.mjs: the monitor's colourway, plate and stickers).
 export const SYSTEM_TABS = [['settings', 'Settings'], ['achievements', 'Achievements'], ['casing', 'Casing']];
 const systemTabs = (s, tab) => `<nav class="ltabs sys-tabs" role="tablist" aria-label="System">${SYSTEM_TABS.map(([k, l]) => `<button type="button" role="tab" data-stab="${k}" aria-selected="${tab === k}">${esc(l)}${k === 'achievements' ? `<small class="sys-pts">${glyph('medal')}${pointsOf(s)}</small>` : ''}</button>`).join('')}</nav>`;
-export function systemMarkup(s, { coop = false, tab = 'settings', ach = {}, cs = {} } = {}) {
+export function systemMarkup(s, { coop = false, tab = 'settings', ach = {}, cs = {}, room = surroundKind(s.settings) } = {}) {
   if (tab === 'achievements') return systemTabs(s, tab) + achievementsMarkup(s, ach);
   if (tab === 'casing') return systemTabs(s, tab) + casingPageMarkup(s, cs);
   // Co-op (coop-ui.mjs, docs/coop.md): a developer prototype, so only with ?dev.
@@ -2620,6 +2621,7 @@ export function systemMarkup(s, { coop = false, tab = 'settings', ach = {}, cs =
       <button type="button" class="btn" data-run="shell boot" ${s.settings.shell === 'plain' ? 'disabled' : ''}>Reboot screen</button>
       <button type="button" class="btn" data-run="casing ${s.settings.casing === false ? 'on' : 'off'}" aria-pressed="${s.settings.casing !== false}" ${s.settings.shell === 'plain' ? 'disabled' : ''} title="The monitor around the screen, on wide screens">Casing ${s.settings.casing === false ? 'off' : 'on'}</button>
       <button type="button" class="btn" data-run="window ${s.settings.window === false ? 'on' : 'off'}" aria-pressed="${s.settings.window !== false}" ${s.settings.shell === 'plain' || s.settings.casing === false ? 'disabled' : ''} title="The city outside, beside the monitor">Window ${s.settings.window === false ? 'off' : 'on'}</button>
+      <button type="button" class="btn" data-run="room style next" ${s.settings.shell === 'plain' || s.settings.casing === false || s.settings.window === false ? 'disabled' : ''} title="What shows around the monitor with the Window on: ${SURROUND_IDS.map((k) => `${SURROUNDS[k].name}, ${SURROUNDS[k].tip.replace(/\.$/, '').toLowerCase()}`).join('. ')}.">Room: ${esc(SURROUNDS[room]?.name || 'City')}</button>
       <button type="button" class="btn" data-run="screen fx next" title="Light around the game (the backdrop, the screen's edges, the casing's lamps) and how much moves in a fight. Off: numbers and bars only. Subtle and medium: the number, the bar and who did it. Bold: impact bursts, sparks and flashes too">Screen effects: ${esc(sfxLevel(s))}</button>
       ${Object.entries(SFX.effects).map(([id, name]) => `<button type="button" class="btn" data-run="screen fx ${id} ${!s.settings.screenFxOff?.[id] ? 'off' : 'on'}" aria-pressed="${!s.settings.screenFxOff?.[id]}" ${s.settings.shell === 'plain' || sfxLevel(s) === 'off' ? 'disabled' : ''}>${name} ${!s.settings.screenFxOff?.[id] ? 'on' : 'off'}</button>`).join('')}
       <button type="button" class="btn" data-run="tips ${s.settings.tips === false ? 'on' : 'off'}" aria-pressed="${s.settings.tips !== false}">Tips ${s.settings.tips === false ? 'off' : 'on'}</button>

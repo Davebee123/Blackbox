@@ -1,0 +1,106 @@
+/* ---------- the room around the monitor (surround.mjs): desk, view and void ----------
+   One layer behind the page (z-index -2, where the window's canvas sits), shown only with the Window setting on and
+   the casing's window margins (1700px wide or more). Its mask cuts the monitor's frame out of it, 4px inside the
+   frame's rim, so nothing of it ever paints on the screen, the bezel, the plate, the knobs or the lamps, whatever the
+   colourway. Neutral darks and the screen's own amber; no job colour (teal, red, violet, steel) anywhere. What moves
+   (View's smog, its hour and weather fading in, Void's distant light) moves only with motion allowed.
+   surround.test.mjs holds this file to that. */
+.surround { display: none; position: fixed; inset: 0; z-index: -2; pointer-events: none; overflow: hidden; contain: strict; background: #070605;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='100%25' height='100%25' rx='30'/%3E%3C/svg%3E") no-repeat, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='100%25' height='100%25' rx='30'/%3E%3C/svg%3E") no-repeat exclude, linear-gradient(#000 0 0);
+  -webkit-mask-position: calc(var(--side) - 22px) calc(var(--top) - 18px), 0 0; mask-position: calc(var(--side) - 22px) calc(var(--top) - 18px), 0 0;
+  -webkit-mask-size: calc(100% - 2 * var(--side) + 44px) calc(100% - var(--top) - var(--desk) + 14px), 100% 100%; mask-size: calc(100% - 2 * var(--side) + 44px) calc(100% - var(--top) - var(--desk) + 14px), 100% 100%; }
+@media (min-width: 1700px) and (min-height: 720px) {
+  body.cased.window-on > .surround { display: block; }
+}
+.surround i, .surround svg, .surround span { position: absolute; display: block; }
+/* The strips beside the monitor (to the frame's rim), and the desk under it. */
+.surround .sr-l, .surround .sr-r { position: absolute; top: 0; bottom: var(--desk); width: calc(var(--side) - 22px); overflow: hidden; }
+.surround .sr-l { left: 0; }
+.surround .sr-r { right: 0; }
+.surround .sr-f { position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--desk) + 4px); overflow: hidden; }
+.surround .sr-wall { inset: 0; background: url('ui/textures/grime-overlay-subtle.png'); opacity: 0.5; }
+/* The screen's light on what's behind it: a glow round the monitor's frame. An outer shadow only, so it paints
+   nothing inside the frame (the mask cuts that anyway). */
+.surround .sr-halo { left: calc(var(--side) - 18px); right: calc(var(--side) - 18px); top: calc(var(--top) - 14px); bottom: calc(var(--desk) + 8px); border-radius: 26px; box-shadow: 0 0 34px 2px rgba(241, 185, 47, 0.07), 0 0 120px 26px rgba(241, 185, 47, 0.05); }
+
+/* ---------- A: the desk ---------- */
+.surround[data-kind="desk"] { background: radial-gradient(120% 90% at 50% 42%, #0e0c0a, #090807 62%, #050404); }
+.surround[data-kind="desk"] .sr-halo { box-shadow: 0 0 34px 2px rgba(241, 185, 47, 0.08), 0 0 130px 30px rgba(241, 185, 47, 0.055); }
+.surround .sd-sil { fill: #110f0c; }
+.surround .sd-edge { fill: none; stroke: rgba(241, 185, 47, 0.16); stroke-width: 1; }
+.surround .sd-cable { fill: none; stroke: #0f0d0b; stroke-width: 2.2; stroke-linecap: round; }
+.surround .sd-mouth { fill: none; stroke: rgba(255, 205, 140, 0.4); stroke-width: 1.4; stroke-linecap: round; }
+/* A desk lamp left of the monitor, on low, its head turned to the desk. */
+.surround .sd-lamp { left: 8px; bottom: 0; width: 62px; height: 212px; }
+.surround .sd-pool { left: 0; right: 0; bottom: 0; height: 170px; background: radial-gradient(70% 80% at 55% 100%, rgba(255, 190, 110, 0.1), transparent 72%); }
+/* A sticky note on the wall, lit a little by the screen. */
+.surround .sd-note { top: 27%; left: 12px; width: 40px; padding: 6px 4px 8px; font: 600 7px/1.35 var(--mono); letter-spacing: 0.5px; color: #17130c; background: linear-gradient(160deg, #2e281b, #221d14); transform: rotate(-4deg); box-shadow: 1px 2px 3px rgba(0, 0, 0, 0.5); opacity: 0.9; }
+/* A mug right of the monitor, and a cable down the wall to a socket. */
+.surround .sd-mug { left: 12px; bottom: 0; width: 30px; height: 28px; }
+.surround .sd-plug { left: 0; bottom: 0; width: 80px; height: 280px; }
+/* The desk: worn, dark, the screen's amber spilling forward from under the monitor. */
+.surround .sd-top { inset: 0; background: radial-gradient(42% 160% at 50% 0%, rgba(241, 185, 47, 0.13), rgba(241, 185, 47, 0.035) 55%, transparent 80%), linear-gradient(#1c1712, #0f0c09 45%, #080605); box-shadow: inset 0 4px 0 #0b0a09, inset 0 5px 0 rgba(255, 225, 180, 0.07); }
+.surround .sd-foot { left: 50%; top: 0; width: min(260px, 14vw); height: 72%; transform: translateX(-50%); background: linear-gradient(#0f0d0b, #090807); clip-path: polygon(6% 0, 94% 0, 100% 100%, 0 100%); }
+.surround .sd-kb { left: 24%; width: 18%; top: 15px; height: 40px; border-radius: 3px 3px 0 0; background: repeating-linear-gradient(90deg, rgba(241, 185, 47, 0.06) 0 8px, transparent 8px 11px) 4px 3px / calc(100% - 8px) 1px no-repeat, repeating-linear-gradient(90deg, rgba(241, 185, 47, 0.045) 0 8px, transparent 8px 11px) 9px 9px / calc(100% - 16px) 1px no-repeat, #0c0a08; box-shadow: inset 0 1px 0 rgba(255, 225, 180, 0.07), 0 -1px 4px rgba(0, 0, 0, 0.4); }
+.surround .sd-lead { left: 50%; width: 26%; top: 0; height: 100%; }
+.surround .sd-lead .sd-cable { stroke-width: 2; }
+
+/* ---------- B: the view ---------- */
+.surround[data-kind="view"] { background: #0a0708; }
+.surround .sv-sky { inset: 0; background: linear-gradient(180deg, #0d0a0b 0%, #120d0e 38%, #25160f 70%, #170e0b 86%, #090605 100%); }
+.surround .sv-city { inset: 0; width: 100%; height: 100%; }
+.surround .sv-far { fill: #17100f; }
+.surround .sv-mid { fill: #0c090b; }
+.surround .sv-mega { fill: #070608; }
+.surround .sv-lit { fill: rgba(241, 170, 70, 0.34); }
+.surround .sv-lit2 { fill: rgba(240, 224, 200, 0.16); }
+/* Smog drifting over the towers' tops: a tile of soft clouds, moved by exactly one tile so the loop never shows. */
+.surround .sv-smog { top: 0; left: -960px; right: 0; height: 46%; background: radial-gradient(120px 50px at 140px 60%, rgba(96, 60, 44, 0.16), transparent), radial-gradient(200px 70px at 470px 30%, rgba(80, 52, 42, 0.13), transparent), radial-gradient(160px 60px at 780px 70%, rgba(110, 70, 48, 0.14), transparent); background-size: 960px 100%; }
+/* The hour: night is the sky as it is; dawn, day and dusk lay a light over it, and the windows dim by day. */
+.surround .sv-tint { inset: 0; background-color: rgba(0, 0, 0, 0); }
+.surround[data-tod="dawn"] .sv-tint { background-color: rgba(92, 84, 86, 0.14); }
+.surround[data-tod="day"] .sv-tint { background-color: rgba(122, 110, 94, 0.2); }
+.surround[data-tod="dusk"] .sv-tint { background-color: rgba(132, 66, 40, 0.15); }
+.surround[data-tod="day"] .sv-lit, .surround[data-tod="day"] .sv-lit2 { opacity: 0.4; }
+/* Up close: a tower face either side, a fire escape down the left one, a neon sign off each (marks, never words). */
+.surround .sv-face { top: 34%; bottom: 0; background: #060506; box-shadow: inset -1px 0 0 rgba(255, 200, 160, 0.06); }
+.surround .sr-l .sv-face { left: 0; width: 46%; }
+.surround .sr-r .sv-face { right: 0; width: 42%; top: 28%; box-shadow: inset 1px 0 0 rgba(255, 200, 160, 0.06); }
+.surround .sv-esc { top: 30px; bottom: 0; right: 2px; width: 22px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='56'%3E%3Cg fill='none' stroke='%231c1719' stroke-width='1'%3E%3Cpath d='M0 0.5h22M0 7.5h22M2 0v8M20 0v8M3 8l15 48'/%3E%3C/g%3E%3C/svg%3E") repeat-y; }
+.surround .sv-sign { fill: none; stroke: rgba(243, 163, 58, 0.62); stroke-width: 1.3; stroke-linecap: round; filter: drop-shadow(0 0 3px rgba(243, 163, 58, 0.45)); }
+.surround .sr-r .sv-sign { top: 34%; right: calc(42% + 3px); width: 14px; height: 117px; }
+.surround .sr-l .sv-sign { top: 61%; left: 10%; width: 11px; height: 34px; }
+.surround .sv-sign.rose { stroke: rgba(224, 154, 148, 0.45); filter: drop-shadow(0 0 3px rgba(224, 154, 148, 0.35)); }
+/* The weather, as haze only: clear, wet (drizzle, rain, a storm) or fog. Nothing falls. */
+.surround .sv-haze { inset: 0; background: linear-gradient(rgba(30, 22, 26, 0.4), rgba(60, 40, 32, 0.5) 70%, rgba(20, 14, 12, 0.5)); opacity: 0.3; }
+.surround[data-wx="wet"] .sv-haze { opacity: 0.6; }
+.surround[data-wx="fog"] .sv-haze { opacity: 0.95; }
+/* The glass and its frame: grime on the pane, the posts at the window's ends, a transom, the blinds pulled up. */
+.surround .sv-glass { inset: 0; background: url('ui/textures/grime-overlay-subtle.png'); opacity: 0.55; }
+.surround .sv-post { top: 0; bottom: 0; width: 9px; background: #0d0b0a; }
+.surround .sr-l .sv-post { left: 0; box-shadow: 1px 0 0 rgba(255, 230, 190, 0.05); }
+.surround .sr-r .sv-post { right: 0; box-shadow: -1px 0 0 rgba(255, 230, 190, 0.05); }
+.surround .sv-head { top: 0; left: 0; right: 0; height: 11px; background: linear-gradient(#0d0b0a 0 4px, #17140f 4px 5.5px, #0d0b0a 5.5px 7px, #17140f 7px 8.5px, #1b1712 8.5px 11px); box-shadow: 0 1px 0 rgba(0, 0, 0, 0.5), 0 2px 12px rgba(0, 0, 0, 0.35); }
+.surround .sv-transom { top: 36%; left: 0; right: 0; height: 7px; background: #0d0b0a; box-shadow: inset 0 1px 0 rgba(255, 230, 190, 0.05); }
+.surround .sv-sill { inset: 0; background: radial-gradient(42% 160% at 50% 0%, rgba(241, 185, 47, 0.1), transparent 75%), linear-gradient(#17130f, #0b0907 50%, #070605); box-shadow: inset 0 4px 0 #0b0a09, inset 0 5px 0 rgba(255, 225, 180, 0.06); }
+
+/* ---------- C: the void ---------- */
+.surround[data-kind="void"] { background: radial-gradient(110% 90% at 50% 44%, #0a0908, #050404 58%, #020202); }
+.surround[data-kind="void"] .sr-wall { opacity: 0.25; }
+.surround[data-kind="void"] .sr-halo { box-shadow: 0 0 40px 4px rgba(241, 185, 47, 0.065), 0 0 180px 50px rgba(241, 185, 47, 0.045); }
+/* One distant light, far off to the right. */
+.surround .sc-far { top: 23%; left: 58%; width: 3px; height: 3px; border-radius: 50%; background: rgba(255, 214, 160, 0.5); box-shadow: 0 0 6px 2px rgba(255, 200, 130, 0.22), 0 0 60px 20px rgba(255, 190, 110, 0.045); }
+/* The screen's picture, reflected in the desk: a blur of amber with its scanlines, fading forward. */
+.surround .sc-refl { left: calc(var(--side) - 10px); right: calc(var(--side) - 10px); top: 4px; bottom: 0; background: repeating-linear-gradient(180deg, rgba(0, 0, 0, 0.55) 0 1px, transparent 1px 3px), linear-gradient(rgba(241, 185, 47, 0.085), rgba(241, 185, 47, 0.025) 65%, transparent); -webkit-mask: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); mask: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); }
+
+/* ---------- what moves: only with motion allowed (Motion on, no reduced-motion preference) ---------- */
+@keyframes sr-drift { to { transform: translateX(960px); } }
+@keyframes sr-breathe { 50% { opacity: 0.55; } }
+@media (prefers-reduced-motion: no-preference) {
+  body:not(.no-motion) .surround .sv-smog { animation: sr-drift 360s linear infinite; will-change: transform; }
+  body:not(.no-motion) .surround .sv-tint, body:not(.no-motion) .surround .sv-lit, body:not(.no-motion) .surround .sv-lit2 { transition: background-color 90s linear, opacity 90s linear; }
+  body:not(.no-motion) .surround .sv-haze { transition: opacity 40s linear; }
+  body:not(.no-motion) .surround .sc-far { animation: sr-breathe 12s ease-in-out infinite; }
+}

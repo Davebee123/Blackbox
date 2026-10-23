@@ -21,6 +21,7 @@ import { WARES } from './market.mjs';
 import { logComms, commsOf, unseen, unseenAlert, seeAll, markDone, pruneComms, clearComms, clearOne } from './comms.mjs';
 import { nextTip, markSeen, TOUR, tourDone, skipTour } from './tips.mjs';
 import { createWindow } from './window.mjs';
+import { createSurround, surroundKind, surroundCommand } from './surround.mjs';
 import { createIntro } from './intro.mjs';
 import { powerOn } from './poweron.mjs';
 import { autoPay } from './salvage.mjs';
@@ -383,7 +384,12 @@ const shellParam = params.get('shell');
 const shellOn = () => (shellParam || campaign.settings.shell || 'immersive') !== 'plain';
 // The window behind the monitor (casing on, Window setting on): the slum outside, and its weather.
 const outside = createWindow({ canMove: () => canMove(), onThunder: (d) => feel.thunder(d), onWeather: (_, w) => { outsideRain = w.rain; feel.rain(outsideRain); } });
-let outsideRain = 0, outsideShown = false, lastVols = '';
+// Or the room around it instead (surround.mjs: desk, view or void), from System → Room or `?room=a|b|c` for this visit.
+const surround = createSurround({ onWeather: (_, w) => { outsideRain = w.rain * 0.5; feel.rain(outsideRain); } });
+let roomParam = params.get('room');
+if (params.get('tod')) surround.hour(params.get('tod'));
+const roomNow = () => surroundKind(campaign.settings, roomParam);
+let outsideRain = 0, outsideShown = '', lastVols = '';
 // First launch (or after Reset game): log in, then Halcyon's transmission.
 const intro = createIntro({ key: (k) => feel.key(k), sound: (v) => { feel.add(v, null); feel.flush(); }, reducedMotion: () => !canMove() });
 let introOn = false;
@@ -1343,7 +1349,8 @@ function run(raw) {
   if (text === 'sidebar on' || text === 'sidebar off') { campaign.settings.sidebar = text === 'sidebar on'; save(); dirty = true; return notice(`Crew window ${text.slice(8)}.`); }
   if (text === 'map names hover' || text === 'map names on') { campaign.settings.mapNames = text.endsWith('hover') ? 'hover' : 'on'; save(); dirty = true; return notice(text.endsWith('hover') ? 'Map names show on hover.' : 'Map names always show.'); }
   if (text === 'window on' || text === 'window off') { campaign.settings.window = text === 'window on'; save(); dirty = true; return notice(`Window ${text.slice(7)}.`); }
-  if (text.startsWith('weather')) { const w = text.split(' ')[1]; outside.force(w === 'auto' ? null : w); return notice(`Weather: ${w && w !== 'auto' ? w : 'follows the clock'}.`); }
+  { const said = surroundCommand(campaign.settings, text, roomNow()); if (said) { if (/^Room: \w+\.( |$)/.test(said) && text !== 'room style') roomParam = null; save(); dirty = true; return notice(said); } } // room style <city|desk|view|void|next>
+  if (text.startsWith('weather')) { const w = text.split(' ')[1]; outside.force(w === 'auto' ? null : w); surround.force(w === 'auto' ? null : w); return notice(`Weather: ${w && w !== 'auto' ? w : 'follows the clock'}.`); }
   if (text === 'reset game' || text === 'new game') return resetGame();
   if (text === 'help' && !CAMP) return notice('In a fight, key 1 is your plain hit, keys 2 to 0 fire your skills, - is SIGINT, hold skips a move and now ends the cycle at once. On a run, use ls, cd, cat, pull, unlock, attack and jack out. For gear, use load, unload, compile, deconstruct and craft. For your server, use install, uninstall, firewall upgrade|defrag|harden and filter equip. On the net, use connect, relay, detach and mail. The pages are map, mail, server, craft, loadout and system. Change the screen with shell immersive|plain|boot, and start over with reset game.', false, null, true);
   // The campaign: fights, your gear, skills and talents. The old game's commands (connect, mail, install…) sit out.
@@ -1895,7 +1902,7 @@ function render(force = false) {
       $('term').scrollTop = $('term').scrollHeight;
     }
   } else {
-    const pages = { rooms: (x) => roomsMarkup(x), campaign: (x) => campaignMarkup(x), room: (x) => roomMarkup(x), archive: (x) => archiveMarkup(x), breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab, skillUi), craft: (x) => V.craftMarkup(x, craftUi), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now()), server: (x) => V.serverMarkup(x, Date.now(), srvUi), daemons: V.daemonsMarkup, codex: (x) => codexPageMarkup(x, codexSel, codexIdx), system: (x) => V.systemMarkup(x, { coop: !!coop, tab: systemTab, ach: achUi, cs: caseUi }) };
+    const pages = { rooms: (x) => roomsMarkup(x), campaign: (x) => campaignMarkup(x), room: (x) => roomMarkup(x), archive: (x) => archiveMarkup(x), breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab, skillUi), craft: (x) => V.craftMarkup(x, craftUi), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now()), server: (x) => V.serverMarkup(x, Date.now(), srvUi), daemons: V.daemonsMarkup, codex: (x) => codexPageMarkup(x, codexSel, codexIdx), system: (x) => V.systemMarkup(x, { coop: !!coop, tab: systemTab, ach: achUi, cs: caseUi, room: roomNow() }) };
     // A page that throws shows what broke (and a way back) instead of stopping every render after it.
     const keep = module === 'breach' ? $('bx-scroll')?.scrollTop : null;
     const focusRoom = module === 'rooms' ? document.activeElement?.closest?.('.fp-room')?.dataset.room : null; // a redraw keeps a focused room focused
@@ -2066,10 +2073,14 @@ function casing() {
   const moved = document.body.classList.contains('cased') !== cased || document.body.classList.contains('window-on') !== win;
   document.body.classList.toggle('cased', cased);
   document.body.classList.toggle('window-on', win);
-  outside.set(win);
-  if (moved && win) outside.remeasure();
-  if (win !== outsideShown || moved) { outsideShown = win; feel.rain(win ? outsideRain : 0); }
-  feel.street(win);
+  // The room around the monitor: the city's canvas (window.mjs, the default) or one of surround.mjs's rooms.
+  const room = roomNow(), city = win && room === 'city';
+  outside.set(city);
+  if (moved && city) outside.remeasure();
+  surround.set(win && room !== 'city' ? room : null);
+  const heard = city || (win && room === 'view'), was = `${heard}:${room}`; // the street and the rain come through a window
+  if (was !== outsideShown || moved) { outsideShown = was; feel.rain(heard ? outsideRain : 0); }
+  feel.street(heard);
   screenFx();
   const s = campaign;
   $('knob-sound').classList.toggle('on', !!s.settings.sound);

@@ -1727,6 +1727,19 @@ With the immersive shell on a desktop-sized window, the screen sits in a dark mo
 
 System → Settings → Casing turns it off (its cosmetics with it); phones and small windows never show it.
 
+**The room around it** (window.mjs, surround.mjs, surround.css). With the Window setting on and a window 1700px wide or more, the strips beside, above and below the monitor show what's around it. System → Settings → **Room** steps through four while the designer picks one (`room style <city|desk|view|void|next>`; `?room=a|b|c` shows one for that visit only):
+
+| Room | What shows | Moves |
+|---|---|---|
+| **City** (the default) | The slum outside the window, on a canvas: towers, lit windows, neon, a spinner, and weather that turns every five minutes (clear, fog, drizzle, rain, a storm with lightning) | the weather, the neon, the spinner |
+| **Desk** (A) | The monitor on a desk in a dark room: a lamp on low, a mug, a sticky note, a cable to the wall, a keyboard and the monitor's foot, all in silhouette, the screen's amber spilling onto the desk | nothing |
+| **View** (B) | The window, refined: far towers in three depths, a fire escape and a tower face up close, two soft neon signs (amber and rose), the sky tinted by the hour (night, dawn, day, dusk) and the weather only as haze (clear, wet or fog). Nothing falls, nothing flashes | the smog drifts, very slowly; the hour and the weather fade in |
+| **Void** (C) | A near-black room with only light: the screen's glow on the wall, its scanlines reflected in the desk, one distant light | the distant light breathes, slowly |
+
+- Only ever behind the casing: a room paints nothing inside the monitor's frame (the frame is cut out of it, its edge under the frame's rim), takes no clicks and never touches the screen, so every colourway sits on it unchanged. Neutral darks and the screen's amber: no teal, red, violet or steel.
+- Motion off or reduced motion: everything in it holds still. The street and the rain are heard only through a window (City, View, the rain at half in View); Desk and Void are quiet.
+- `weather <name>|auto` sets View's haze too. Saved as `settings.room` (none for City, so an older save and a new one show the city).
+
 **Casing cosmetics** (casing.mjs, casing.css; System → **Casing**, a tab beside Settings and Achievements). Only ever the casing: the screen, its colours, text and layout never change, nothing covers the glass, the knobs or the lamps, and nothing moves. All of it is an achievement's reward, cosmetic only.
 
 - **Colourway:** the plastic of the bezel, its frame's rim, the chin's print, the plate's engraving and the knobs. **Stock** (today's dark grey, the default) and eight more, each from an achievement: **Beige box** (*Process Killer*), **Matte black** (*Rock Bottom*, floor 8), **Smoked** (*Untouchable*), and one a faction at its top tier: **Halcyon blue** (*Preferred Customer*), **GLASSJAW plum** (*Inner Circle*), **Kestrel green** (*Key Account*), **LANTERN copper** (*On the Signal*), **NULL CHOIR wine** (*Cantor*). Swatches you haven't earned are dim and locked, the achievement on hover. `casing color <name>`. CSS variables only (`--case-*`): style.css reads each with today's colour as its fallback, so the stock casing is exactly as it was; a colourway also fills the bezel's frame behind the page (the glass cut out of it exactly), so it shows over the window outside.
