@@ -416,9 +416,10 @@ export const byline = (v) => (v?.author && AUTHORS[v.author] ? `<span class="byl
 // Its genes, as chips under its bar: the body's dim, what it rolled or was built with bright, ??? until seen. A
 // mutation's chip carries its tip (tips.mjs .tag-mut).
 export function geneChip(c, extra = '') {
-  const ax = AXES[c.axis], what = `${an(c.catName)} ${c.catName} that presses on ${ax.name}`;
-  const how = GENES[c.id]?.decode === 'part' ? `Research a part that carries it to ${TIER.rule} to learn its rule.` : GENES[c.id]?.decode === 'tell' ? 'Answer it once to learn its rule.' : 'Beat two viruses that carry it to learn its rule.';
-  const title = c.packed ? `Packed: ${an(c.catName)} ${c.catName} the Packer hides until it breaks. A scan before the fight reads it.` : !c.name ? `${an(c.catName)} ${c.catName} you haven't seen.` : c.rule ? `${c.name}: ${what}. ${c.rule}${answerLine(c.answer)}` : `${c.name}: ${what}. ${how}`;
+  // WoW's grammar: its name, its kind on a line of its own (Attack type), what it does, then the answer, muted.
+  const ax = AXES[c.axis], what = c.catName[0].toUpperCase() + c.catName.slice(1);
+  const how = GENES[c.id]?.decode === 'part' ? `Reach research ${TIER.rule} on a part that carries it to learn its rule.` : GENES[c.id]?.decode === 'tell' ? 'Answer it once to learn its rule.' : 'Beat two viruses that carry it to learn its rule.';
+  const title = c.packed ? `Packed: ${an(c.catName)} ${c.catName} the Packer hides until it breaks. A scan before the fight reads it.` : !c.name ? `${an(c.catName)} ${c.catName} you haven't seen.` : c.rule ? `${c.name}: ${what}\n${c.rule}${answerLine(c.answer)}` : `${c.name}: ${what}\n${how}`;
   return `<span class="gchip g-${c.src}${c.name ? '' : ' unknown'}${c.packed ? ' packed' : ''}"${c.name ? `style="--ax:${ax.colour}"` : ''} ${extra} title="${esc(title)}">${glyph(c.name ? ax.icon : CATS[c.cat].icon)}${esc(c.name ? c.name.toLowerCase() : '???')}</span>`;
 }
 function geneChips(s, v) {
