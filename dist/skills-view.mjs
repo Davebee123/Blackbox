@@ -7,6 +7,9 @@
 // in white: the only place on the page they're lit), cooldown, key, level, kind, the other side of an OR choice, what
 // it works with, and its buttons (equip, a key to put it on, a rank, a pick). On a phone the panel is a bottom sheet.
 //
+// Ability mastery (mastery.mjs): a skill you have carries its tier as three pips on its chip and its key, and its
+// panel says where it stands (Mastery 2 · 340/1000, its bar) with the tier its effect plays at, any you've unlocked.
+//
 // No subclass shows before SUBCLASS.from. From it a class that hasn't picked plays its core alone (combat.mjs subOf),
 // and the breakout waits: a full-screen walk inside the screen's glass (Idea, Skills, Talents, Choose) with both
 // subclasses side by side and the detail panel for anything in it. app.js opens it once you're home and out of a fight
@@ -21,11 +24,14 @@ import { ruleHtml } from './ruletext.mjs';
 import { SKILL_TEXT } from './lore.mjs';
 import { EMBLEMS } from './class-emblems.mjs';
 import { scaledText, behindTag } from './view.mjs';
+import { masterable, progressOf, masteryLine } from './mastery.mjs';
 
 const fmt = (n) => Number(n).toLocaleString('en-GB');
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const ico = (name) => `<span class="sk-ico" style="--icon:url('ui/icons/${name}.svg')" aria-hidden="true"></span>`;
 const skIco = (id) => ico(ABILITIES[id]?.icon || (id === 'spike' ? 'spike' : id === 'sigint' ? 'interrupt' : 'command'));
+// A skill's mastery tier on its chip or key: three pips, its tier lit (mastery.mjs). Nothing for one with no effect.
+const tierMark = (p, x) => { if (!masterable(x, p.id)) return ''; const t = progressOf(p.s, p.id, x).tier; return `<span class="sk-mt" aria-label="Mastery ${t} of 3">${[1, 2, 3].map((k) => `<i${k <= t ? ' class="on"' : ''}></i>`).join('')}</span>`; };
 const pips = (n, max) => `<span class="sk-pips" aria-label="${n} of ${max}">${Array.from({ length: max }, (_, k) => `<i${k < n ? ' class="on"' : ''}></i>`).join('')}</span>`;
 const sel = (key, on) => `data-sk="${esc(key)}" aria-pressed="${on}"`;
 const picked = (x) => x === 0 || x === 1;
@@ -97,7 +103,7 @@ function keyHtml(p, i, sk) {
   const key = LOADOUT.keys[i], opens = LOADOUT.bar.find(([, n]) => n > i)?.[0] ?? 1;
   if (i >= p.slots) return `<li class="sk-key closed" title="${esc(`This slot opens at level ${opens}`)}"><kbd>${key}</kbd><b>Lv ${opens}</b></li>`;
   const x = p.equipped[i];
-  if (x) return `<li><button type="button" class="sk-key on" ${sel('s:' + x, sk === 's:' + x)}><kbd>${key}</kbd>${skIco(x)}<b>${esc(skillName(x))}</b></button></li>`;
+  if (x) return `<li><button type="button" class="sk-key on" ${sel('s:' + x, sk === 's:' + x)}><kbd>${key}</kbd>${skIco(x)}<b>${esc(skillName(x))}</b>${tierMark(p, x)}</button></li>`;
   // The next skill your line brings, ghosted where it will go.
   const ahead = skillOrder(p.id, p.mine).filter((y) => !p.known.includes(y) && !isRunSkill(y));
   const future = p.known.filter((y) => !isRunSkill(y)).length < p.slots ? ahead[i - p.equipped.length] : null;
@@ -107,7 +113,7 @@ function keyHtml(p, i, sk) {
 function cantripHtml(p, c, sk) {
   const at = unlockLevel(p.id, c.id);
   if (at > p.lvl) return `<li class="sk-key closed cantrip" title="${esc(`${c.name} at level ${at}`)}"><kbd>${c.key}</kbd><b>Lv ${at}</b></li>`;
-  return `<li><button type="button" class="sk-key cantrip" ${sel('k:' + c.id, sk === 'k:' + c.id)}><kbd>${c.key}</kbd>${skIco(c.id)}<b>${esc(c.name)}</b></button></li>`;
+  return `<li><button type="button" class="sk-key cantrip" ${sel('k:' + c.id, sk === 'k:' + c.id)}><kbd>${c.key}</kbd>${skIco(c.id)}<b>${esc(c.name)}</b>${tierMark(p, c.id)}</button></li>`;
 }
 // The presets over the bar (docs/kits.md 5.2): a chip for each, the one your bar follows lit, and + save bar.
 function presetsHtml(p) {
@@ -126,7 +132,7 @@ function chipHtml(p, x, sk) {
   const at = unlockLevel(p.id, x, p.shown), known = !peek && p.known.includes(x), k = !peek ? p.equipped.indexOf(x) : -1;
   const cls = peek ? 'preview' : k >= 0 ? 'eq' : known ? 'known' : 'locked';
   const tail = k >= 0 ? `<kbd>${LOADOUT.keys[k]}</kbd>` : known ? (isRunSkill(x) ? '<small>run</small>' : '') : `<small>Lv ${at}</small>`;
-  return `<button type="button" class="sk-chip ${cls}" ${sel('s:' + x, sk === 's:' + x)}>${skIco(x)}<b>${esc(skillName(x))}</b>${tail}</button>`;
+  return `<button type="button" class="sk-chip ${cls}" ${sel('s:' + x, sk === 's:' + x)}>${skIco(x)}<b>${esc(skillName(x))}</b>${tail}${known ? tierMark(p, x) : ''}</button>`;
 }
 // A tree row's nodes: their state (picked, the other side, open to spend, locked) and pips.
 function nodeState(p, n, row, i, j) {
@@ -267,7 +273,7 @@ function detailHtml(p, items, key) {
     const facts = [k && known ? `<span class="tag you">key ${k}</span>` : '', it.kind === 'skill' ? cooldownTag(p, x) : '', `<span class="tag">${VERB[ABILITIES[x]?.verb] || (it.kind === 'cantrip' ? 'everyone' : 'utility')}</span>`, `<span class="tag">${known ? `Lv ${at}` : `opens Lv ${at}`}</span>`, spec ? `<span class="tag" title="Best on this board, on top of its general use">${esc(spec)}</span>` : '', isRunSkill(x) ? '<span class="tag" title="Takes no slot: type it on a run">run</span>' : ''].join('');
     const kick = it.kind === 'cantrip' ? 'Everyone' : `${esc(sub ? SUBS[sub].name : ARCHETYPES[id].name)} skill`;
     const lore = SKILL_TEXT[x]?.lore;
-    return `${head(skIco(x), kick, it.name)}<div class="sk-facts">${facts}</div><p class="sk-rule">${ruleHtml(it.text)}</p>${lore ? `<p class="sk-lore">${esc(lore)}</p>` : ''}${it.kind === 'skill' && !it.preview ? skillActs(p, x, known, peek) : ''}${withHtml(p, items, key)}`;
+    return `${head(skIco(x), kick, it.name)}<div class="sk-facts">${facts}</div><p class="sk-rule">${ruleHtml(it.text)}</p>${lore ? `<p class="sk-lore">${esc(lore)}</p>` : ''}${known && !peek && !it.preview ? masteryHtml(p, x) : ''}${it.kind === 'skill' && !it.preview ? skillActs(p, x, known, peek) : ''}${withHtml(p, items, key)}`;
   }
   if (it.kind === 'root') {
     const locked = it.level && p.lvl < it.level;
@@ -283,6 +289,18 @@ function detailHtml(p, items, key) {
   const body = row.kind === 'capstone' ? `<p class="sk-rule">${ruleHtml(n.rules[0])}</p><p class="sk-rule">Rank ${n.max} at level ${LOADOUT.capstoneAt[n.max - 1]}: ${ruleHtml(n.rules[n.max - 1])}</p>` : `<p class="sk-rule">${ruleHtml(n.rule)}</p>`;
   const other = row.kind !== 'filler' && alt ? `<div class="sk-alt"><small>${st.on ? 'Instead of' : 'Or'}</small><b>${esc(alt.name)}</b><p>${esc(alt.rules?.[0] || alt.rule)}</p></div>` : '';
   return `${head(glyph(row.kind === 'filler' ? 'xp' : row.kind === 'choice' ? 'critDamage' : 'mastered'), kick, n.name)}${facts || need ? `<div class="sk-facts">${facts}${need}</div>` : ''}${body}${other}${it.preview ? '' : nodeActs(p, n, row, j, st)}${withHtml(p, items, key)}`;
+}
+// Its mastery (mastery.mjs): where it stands, in tooltip grammar, its bar to the next tier, and the tier its effect
+// plays at (any you've unlocked; the default is the highest).
+function masteryHtml(p, x) {
+  if (!masterable(x, p.id)) return '';
+  const m = progressOf(p.s, p.id, x), pct = m.next ? Math.min(100, (m.uses / m.next) * 100) : 100;
+  const tiers = [1, 2, 3].map((t) => {
+    const open = t <= m.tier, on = t === m.pick;
+    const title = !open ? `Tier ${t} at ${m.at[t]} uses` : on ? `Its effect plays at tier ${t}` : `Play its effect at tier ${t}`;
+    return `<button type="button" class="sk-tier${on ? ' on' : open ? '' : ' locked'}" ${open && !on ? `data-command="mastery ${p.id} ${x} ${t}"` : 'disabled'} aria-pressed="${on}" title="${esc(title)}">${t}</button>`;
+  }).join('');
+  return `<div class="sk-mastery"><p class="sk-mline">${esc(masteryLine(p.s, p.id, x))}</p><span class="sk-mbar" aria-hidden="true"><i style="width:${pct.toFixed(1)}%"></i></span><div class="sk-tiers" role="group" aria-label="Its effect plays at"><small>Effect</small>${tiers}</div></div>`;
 }
 // A skill's buttons: equip or unequip, and a key to put it on (a skill already on the bar swaps places with what's there).
 function skillActs(p, x, known, peek) {

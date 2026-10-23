@@ -21,6 +21,7 @@ import { crewCommand } from './crew.mjs';
 import { presenceCommand, at, simOn, PRESENCE, online } from './presence.mjs';
 import { profileCommand } from './profile.mjs';
 import { achieveCommand, developerAchieve } from './achievements.mjs';
+import { masteryCommand, developerMastery } from './mastery.mjs';
 import { developerPager } from './pager.mjs';
 import { casingCommand } from './casing.mjs';
 import { say, muted } from './channel.mjs';
@@ -755,6 +756,8 @@ export function play(s, input) {
   if (/^(finger|plan|titles?|banner)$/.test(word)) { const first = s.serial; profileCommand(s, input); return since(s, first); } // profile.mjs (as typed: a plan keeps its capitals)
   if (word === 'casing' && rest !== 'on' && rest !== 'off') { const first = s.serial; casingCommand(s, text); return since(s, first); } // casing.mjs: colourway, plate, stickers (casing on|off is app.js's)
   if (word === 'achievements' || word === 'achieve') { const first = s.serial; achieveCommand(s, text); return since(s, first); } // achievements.mjs
+  if (word === 'mastery') { const first = s.serial; masteryCommand(s, text, { emit, warn, classOf }); return since(s, first); } // mastery.mjs: an ability effect's tier
+  if (/^developer mastery /.test(text)) { const first = s.serial; developerMastery(s, text, { emit, warn, classOf }); return since(s, first); }
   if (/^developer achieve \S+$/.test(text)) { const first = s.serial; developerAchieve(s, text.split(' ')[2]); return since(s, first); }
   if (word === 'say' || input.trim().startsWith("'")) { const first = s.serial, r = say(s, input.trim().replace(/^(say\b|')\s*/i, '')); if (r.error) warn(s, r.error); return since(s, first); } // #net (channel.mjs)
   if (text === 'channel on' || text === 'channel off') { const first = s.serial; s.settings.channel = text === 'channel on'; emit(s, 'info', `#net ${muted(s) ? 'muted: its line is gone from the bottom of the screen' : 'on'}.`); return since(s, first); }

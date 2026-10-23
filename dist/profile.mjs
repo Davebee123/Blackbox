@@ -14,6 +14,7 @@ import { SETS, piecesOf, isPiece } from './sets.mjs';
 import { PRESENCE, profileOf as simOf, online, simOn, whereText } from './presence.mjs';
 import { uniqueItem, seeded } from './gear.mjs';
 import { tickAchievements, rewardStickers, bannersOf, pointsOf, shownAchievements, achievements, DEED_STICKERS } from './achievements.mjs';
+import { masteredN } from './mastery.mjs';
 
 export const PROFILE = { rows: 4, cols: 24, plan: 60 };
 const clock = () => hooks.now?.() ?? Date.now();
@@ -101,7 +102,7 @@ export const BANNERS = {
   ] },
 };
 export const BANNER_IDS = Object.keys(BANNERS);
-// Five more, each the reward of an achievement (achievements.mjs): yours to pick once it's earned.
+// Six more, each the reward of an achievement (achievements.mjs): yours to pick once it's earned.
 export const REWARD_BANNERS = {
   crown: { name: 'Crown', rows: [
     '    .  /\\  /\\  /\\  .    ',
@@ -126,6 +127,12 @@ export const REWARD_BANNERS = {
     ' |\\ /|\\ /|\\ /|\\ /|\\ /|  ',
     ' | X | X | X | X | X |  ',
     ' o---o---o---o---o---o  ',
+  ] },
+  keyone: { name: 'Key one', rows: [
+    "  .---.        )))      ",
+    '  |###|==o   ))) )))    ',
+    "  '---'   ---------->   ",
+    '    <[##]===   [ 1 ]    ',
   ] },
   bedrock: { name: 'Bedrock', rows: [
     '  ____________________  ',
@@ -174,6 +181,7 @@ export const titles = () => (TITLE_LIST ||= [
   { id: 'matched', name: 'the Matched', rule: 'Find every piece of a set.', lv: 14, has: (s) => setsDone(s).length > 0 },
   { id: 'collector', name: 'Collector', rule: 'Find 25 uniques.', lv: 16, has: (s) => Object.keys(s.collection || {}).length >= 25 },
   { id: 'deepwalker', name: 'Deepwalker', rule: 'Reach floor 5.', lv: 20, has: (s) => (s.floors?.reached || 1) >= 5 },
+  { id: 'virtuoso', name: 'the Virtuoso', rule: 'Reach Mastery 3 with 5 abilities.', lv: 40, has: (s) => masteredN(s) >= 5 },
   ...FACTION_IDS.map((f) => ({ id: 'of-' + f, name: `of ${FACTIONS[f].short}`, rule: `Reach ${FACTIONS[f].tiers[4]} with ${FACTIONS[f].name}.`, lv: 16, faction: f, has: (s) => (s.standing?.[f] ?? -1) >= REP_TIERS[4] })),
   ...Object.keys(CLASS_TITLE).map((c) => ({ id: 'max-' + c, name: CLASS_TITLE[c], rule: `Take a ${ARCHETYPES[c].name} to level 50.`, lv: 50, cls: c, has: (s) => (s.hackers?.[c]?.level || 0) >= 50 })),
 ]);
