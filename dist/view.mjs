@@ -58,7 +58,6 @@ import { raidIntents, raidMarks, raidOf, attackTarget } from './raid.mjs';
 import { EMBLEMS } from './class-emblems.mjs';
 import { ARCHETYPES, CANTRIPS, EDGE, SYNC, STATUSES, LOADOUT, TREE, SERVER, SKILLS, xpToNext, unlockLevel, power, SUBS, SUBCLASS, skillOrder, barSlots, isRunSkill } from './data.mjs';
 import { XP_KINDS, xpFor, cooldownOf, subOf, subPicked, kitTalent, specRule, skillBase, knowsPart, codexKey, previewDamage, ignoresArmor, armorTakes, parse, blocked, attackAmount, drawingFire, momentumStacks, momentumBonus, topUpCost, UNIQUES, bossChance, listenBoost, effectLine, implicitText, paceOf, keyMap, barKeys, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverClass, daemonSlots, procOpen, slottedDaemons, daemonNext, talentPoints, loaded, loadedOn, slotCount, maxSignal, compileCost, materialsOf, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, picksOf, ranksOf, freeSlot, rigOf, stashItem, knows, knownRecipes, pointsSpent, tierState, rowState, spentAbove, knownSkills, equippedSkills, cycleLength, familyInfo, defender, healCap, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, part, daemonLevel, packed, limitOf, asleep, frozenNow } from './combat.mjs';
-import { behindOf } from './progression.mjs';
 import { sigOf, named, lairOf, intelOf, knowsStrain, knowsEvent, knowsRich, nameOf, NETWORK, nativeChance, homeName, isNative, whoLabel, homeOf, netSeedOf, knownNets, NATIVE_POOL, awayChance } from './network.mjs';
 import { guardSetChance, lairChance, bossOdds, presetsOf, presetKeys, followOf, spikeName, said, mutated, capstonePoints, capPickOf, capState } from './combat.mjs';
 import { cantripsOf } from './data.mjs';
@@ -1395,8 +1394,6 @@ function rewardChips(s, c) {
     c.offBooks && chip('f-glassjaw', '+5', 'GLASSJAW rep'), r.rep && c.faction && chip('f-' + c.faction, `+${r.rep}`, `${FACTIONS[c.faction].short} rep`),
     r.relay && chip('relay', `×${r.relay}`, 'A relay'), r.blueprint && chip('blueprint', '+1', 'A blueprint'), (r.drop || r.daemon) && chip('item', '+1', 'A protocol, Tuned or better'), r.item && chip('item', '+1', 'A protocol')].filter(Boolean).join('');
 }
-// Behind (progression.mjs): a tag by your XP bar while kills pay +50% on a level running long.
-export const behindTag = (s, arch) => { const b = behindOf(s, arch); if (!b) return ''; return b.on ? `<span class="tag warn behind" title="This level is past ${Math.round(b.after / 60000)} minutes of play (its target is ${Math.round(b.target / 60000)}). Kills pay +50% XP until the next level.">Behind · kills +50% XP</span>` : ''; };
 // How to trace an unknown server, shown rather than explained (docs/style-guide.md section 0): the way that is
 // tracing it now on top, with pips for the kills or clears still needed; then every other way as an icon, a label and
 // what it adds, dim and locked until you have it. The sentences live in the rows' tooltips.
@@ -2629,7 +2626,6 @@ export function spoilsOf(events) {
     else if (e.type === 'hot-kill') add('Hot strain', `+${e.amount} XP`, 'fast', { text: `Hot strain +${e.amount} XP` });
     else if (e.type === 'xp' && / decoded$/.test(e.message?.split(' · ')[1]?.replace(/\.$/, '') || '')) add(`Decoded: ${e.message.split(' · ')[1].replace(/ decoded\.?$/, '')}`, `+${e.amount} XP`, 'fast', { text: `${e.message.split(' · ')[1]} +${e.amount} XP` });
     else if (e.type === 'rested') add('Rested', `+${e.amount} XP`, 'fast', { text: `Rested +${e.amount} XP` });
-    else if (e.type === 'behind') add('Behind', `+${e.amount} XP`, 'fast', { text: `Behind +${e.amount} XP`, sub: 'this level is running long' });
     else if (e.type === 'set-xp') { const who = String(e.message || '').split(':')[0].replace(/ \(\d\)$/, ''); add(who, `+${e.amount} XP`, 'fast', { text: `${who} +${e.amount} XP`, sub: 'the kill after a delivery' }); } // a set bonus (sets.mjs)
     else if (e.type === 'fresh') add(`Fresh: ${XP_KINDS[e.kind] || ''}`, `+${e.amount} XP`, 'fast', { text: `Fresh ${XP_KINDS[e.kind] || ''} +${e.amount} XP` });
     else if (e.type === 'level-up') add(`Level ${e.level}`, '', 'level', { sub: e.unlocked?.length ? 'New skill unlocked' : 'Power +4%' });

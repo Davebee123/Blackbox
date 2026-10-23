@@ -20,7 +20,7 @@ import { glyph } from './glyphs.mjs';
 import { ruleHtml } from './ruletext.mjs';
 import { SKILL_TEXT } from './lore.mjs';
 import { EMBLEMS } from './class-emblems.mjs';
-import { scaledText, behindTag } from './view.mjs';
+import { scaledText } from './view.mjs';
 
 const fmt = (n) => Number(n).toLocaleString('en-GB');
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -201,7 +201,7 @@ export function skillsTabMarkup(s, view, ui = {}) {
   } else if (p.waiting) side = `<button type="button" class="btn primary sk-choose" data-bo-open="${id}">Choose your subclass</button>`;
   const head = `<header class="sk-head"><pre class="sk-emblem" aria-hidden="true">${esc(EMBLEMS[id].join('\n'))}</pre>
     <div class="sk-id"><h2>${kit ? esc(a.name) : a.role.map(esc).join(' · ')}</h2><h1>${esc(kit ? kit.name : a.name)}${p.previewing ? ' <span class="tag preview">Preview</span>' : ''}</h1>
-      <div class="sk-lv"><b>Lv ${lvl}</b>${lvl < LOADOUT.maxLevel ? `<span class="lvl-bar" title="${fmt(hk.xp)} / ${fmt(next)} XP"><span style="width:${pct.toFixed(1)}%"></span></span><small>${Math.floor(pct)}%</small>` : '<small>max level</small>'}${behindTag(s, id)}<span class="tag stag status sk-status" title="${esc(`${st.name}: ${st.rule}`)}">${esc(st.name)}</span></div></div>
+      <div class="sk-lv"><b>Lv ${lvl}</b>${lvl < LOADOUT.maxLevel ? `<span class="lvl-bar" title="${fmt(hk.xp)} / ${fmt(next)} XP"><span style="width:${pct.toFixed(1)}%"></span></span><small>${Math.floor(pct)}%</small>` : '<small>max level</small>'}<span class="tag stag status sk-status" title="${esc(`${st.name}: ${st.rule}`)}">${esc(st.name)}</span></div></div>
     <div class="sk-side">${side}</div></header>`;
 
   const bar = `<section class="sk-sec sk-barsec"><h3>Bar</h3><div><ol class="sk-bar" aria-label="Your bar">${[cantripHtml(p, cantripsOf(id)[0], sk), ...Array.from({ length: LOADOUT.equipSlots }, (_, i) => keyHtml(p, i, sk)), ...cantripsOf(id).slice(1).map((c) => cantripHtml(p, c, sk))].join('')}</ol>${presetsHtml(p)}</div></section>`;

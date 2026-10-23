@@ -559,7 +559,7 @@ The bot earns about 2.3 kills of XP a fight. Room kills pay 1.25, elites more, a
 | Operator | 0.9 (9) | 4.1 (87) | 15 (362) | 36 (1,009) | 65 (1,965) | 104 (3,224) |
 | All four | 0.9 (−7%) | 4.2 (+4%) | 15 (+1%) | 35 (+1%) | 65 (+1%) | 105 (+5%) |
 
-The four classes stay close: 3.9 to 4.3 hours to 10, 32 to 37 to 30 and 102 to 107 to 50. Fights won or lost cost the same real time, and Behind runs on real play, so a slow class gets its +50% when a level runs past 1.25 times its target. 2% of fights were lost.
+The four classes stay close: 3.9 to 4.3 hours to 10, 32 to 37 to 30 and 102 to 107 to 50. Fights won or lost cost the same real time, and Behind ran on real play, so a slow class got its +50% when a level ran past 1.25 times its target (Behind has since been removed: *Behind removed*, below). 2% of fights were lost.
 
 ### The XP mix
 
@@ -592,7 +592,7 @@ None of these were retuned with the curve. A real player at 150 kills an hour me
 | SPRAWL-00 | strays every 90 seconds, RELAY-KING every 30 min | A player on SPRAWL-00 alone waits on its strays (the slow road, now 1.26–1.44× in real play). |
 | Invasions | one every 20–30 min online, 2–4 hours away | Same per hour. Late in the climb that is 5 to 10 a level, where before it was under one. Their XP is kill XP, so the share holds. |
 | Mail | an offer every 1–3 min (15 min life), the retainer every 30 min up to 8 hours | Unchanged. Retainer credits are per hour, so they are worth less against a level's prices. |
-| Behind | the level's `CLIMB.minutes` | **Retuned with the curve** (it is the curve's own clock). The old 6 + 2.2 × level minutes would have put every level of the long climb Behind. |
+| Behind | the level's `CLIMB.minutes` | **Retuned with the curve** (it is the curve's own clock). The old 6 + 2.2 × level minutes would have put every level of the long climb Behind. Since removed (below: *Behind removed*). |
 
 **Money and loot per level.** Credits, code, components and drops all come a kill at a time, so a level now brings about 15 to 20 times as much of each. Prices that follow your level (top-ups, programs, filters), and gear at your level, will feel cheap and plentiful within a level. Per hour nothing changed (`LOOT.per` is a kill at a time, at 150 an hour). The bot holds about 13,000 salvage pieces by level 30. Counting them was a third of its run time until `have` in salvage.mjs kept the count while the pile is unchanged.
 
@@ -707,3 +707,20 @@ Every subclass wins 85% or more with either pick and stays under its solo ceilin
 3. **Damage capstones don't show at 50.** Fights are too short for "+x% damage" to matter, so every pace pick here adds a target, strips ◆ or buys time. Crew bosses (long fights) are where raw damage would count, and they aren't measured at 50.
 4. **The Lv 50 solo floor.** Several subclasses are under 15% lost at 50 with or without a capstone. The floor could be dropped for 40 and up, or the level-50 fights made harder.
 5. **Lairs, KESSLER-FARM-00, SPRAWL-00 and rogue servers keep their own timers.** A lair boss is still an hour, its packs 30 minutes.
+
+### Behind removed (designer's call)
+
+The designer: *"The rested XP should be based off of logged-off time, not 'behind' time that expects your level to be reached after X minutes."* The catch-up (*Behind*: +50% XP on kills once a level ran past 1.25 times its `CLIMB.minutes` of active play) is gone, with its log line, spoils row, Loadout tag, amber XP line, `CATCHUP`, `behindOf` and `behindBonus`. A class no longer keeps a level clock (`h.ms`); an older save's `h.ms` and `h.behind` are dropped on load. Rested is unchanged and is the only XP bonus that time pays: it banks only from time safely logged off. `CLIMB.minutes` stays as the design's level-by-level pace (`levelMinutes`, its sum the table that `PACE_TARGET` holds the bot to), but nothing in play reads it now.
+
+Measured with the pacing bot on seed 7 to level 30 for the four classes (loop.test.mjs's run), real hours to each level, before → after:
+
+| Class | Lv 5 | Lv 10 | Lv 20 | Lv 30 |
+|---|---:|---:|---:|---:|
+| Target | 1 | 4 | 15 | 35 |
+| Breaker | 1.02 → 1.02 | 4.20 → 4.23 | 15.7 → 15.7 | 35.8 → 34.4 |
+| Bastion | 0.95 → 1.07 | 3.97 → 4.20 | 14.8 → 15.4 | 34.3 → 37.1 |
+| Infiltrator | 0.68 → 0.68 | 3.42 → 3.42 | 15.5 → 15.2 | 37.8 → 32.7 |
+| Operator | 1.13 → 1.07 | 4.13 → 4.02 | 13.7 → 16.0 | 31.4 → 34.6 |
+| Median | 0.98 (−2%) → 1.04 (+4%) | 4.05 (+1%) → 4.11 (+3%) | 15.1 (+1%) → 15.5 (+4%) | 35.0 (0%) → 34.5 (−1%) |
+
+Behind paid little on the real-play clock: 0.6% of the XP to 30 for the Breaker, Bastion and Operator and 1.3% for the Infiltrator. The moves above are the climb's own noise (one change early on and the seeds diverge), not a slower climb: the median stays within 4% of the table at every milestone and no class is more than 7% off from level 10. No limit in loop.test.mjs changed. Levels 40 and 50 were not re-measured; at under 1.5% of the XP the climb to 50 should move by about as much.

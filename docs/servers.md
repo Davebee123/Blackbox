@@ -663,7 +663,7 @@ The designer: more XP an hour from enemies, but *still a grind*. The plan is to 
 | Resident | 4× (with the takeover's 1.5 kills, as today) |
 | Mapped | 5 kills |
 | Home and invasion kills | As today |
-| Reading tells, Behind, Rested, Fresh, Hot strain, Fast kill | As today |
+| Reading tells, Rested, Fresh, Hot strain, Fast kill | As today (Behind, the catch-up, was removed later: Rested comes only from logged-off time) |
 
 Level L to L+1 was 5 + 1.2 × L kills of your level. The table below was this section's first plan, in the pacing bot's hours (its clock: about 30 room fights an hour, a fight 1 to 2 minutes with walking and resting):
 
@@ -681,10 +681,10 @@ Level L to L+1 was 5 + 1.2 × L kills of your level. The table below was this se
 | Level | 5 | 10 | 20 | 30 | 40 | 50 |
 |---|---:|---:|---:|---:|---:|---:|
 | Hours of real play | 1 | 4 | 15 | 35 | 65 | 100 |
-| Minutes for that level (`CLIMB.minutes`, Behind's target) | 28 | 48 | 95 | 160 | 200 | 220 (at 49) |
+| Minutes for that level (`CLIMB.minutes`, the pace table) | 28 | 48 | 95 | 160 | 200 | 220 (at 49) |
 | Kills of your level for that level (`CLIMB.kills`) | 210 | 215 | 575 | 900 | 1,120 | 1,330 (at 49) |
 
-The room bonus above stays. One-off deeds (first clears, Mapped, takeovers, Root levels, decodes, puzzle boards, first crafts) keep their kill shares from this table and grow with the climb (`deedScale`: 0.4 of how much longer the level is, about 5 to 9 times), so exploring still pays about a quarter of the XP; kills and contracts are not scaled. Behind's target is the real-play minutes of each level. `pacing.mjs` measures it (9.12), and loop.test.mjs holds levels 5 to 30 to the table.
+The room bonus above stays. One-off deeds (first clears, Mapped, takeovers, Root levels, decodes, puzzle boards, first crafts) keep their kill shares from this table and grow with the climb (`deedScale`: 0.4 of how much longer the level is, about 5 to 9 times), so exploring still pays about a quarter of the XP; kills and contracts are not scaled. `pacing.mjs` measures it (9.12), and loop.test.mjs holds levels 5 to 30 to the table.
 
 ## 8. Keep, cut or change
 
@@ -727,7 +727,7 @@ The room bonus above stays. One-off deeds (first clears, Mapped, takeovers, Root
 | SIGINT | Keep | |
 | Bosses, phases, enrage, boss uniques | Change | Phases on the core part's ticks (option a) |
 | Families, third parts, strains, grades, mutations | Keep | Plus ten families and attack sets. One mutation at most on a wild virus. |
-| Levels, XP, catch-up, Rested, Fresh, hot strain | Keep | The room bonus (7.2) |
+| Levels, XP, Rested, Fresh, hot strain | Keep (the catch-up, Behind, was removed later) | The room bonus (7.2) |
 | Layers and level bands | Change | Floors |
 | Uniques, collection, natives, the Listening Post | Keep | The Listening Post is a program |
 | Events, the pager, the store, buyout | Keep | Buyout loses its outpost uses |
@@ -1072,8 +1072,8 @@ The climb is where it was (seed to seed swings are wider than the change); puzzl
 
 The designer wants levelling to slow right down: about 100 hours of real play to level 50, front-loaded, so the game works as a long sandbox (7.2). Save v42. docs/progression.md section 7 has the full review: the model, the curve before and after, the timers and gates at the new pace, and the decisions.
 
-- *Real play, measured.* `bot.mjs` keeps a second clock beside its own. Real play (`REAL`) is 24 seconds a fight with its walk (`LOOT.killsPerHour`, 150), won or lost, plus 2 minutes a puzzle board and 1 a log sweep. The play clock (Behind, Fresh) runs on it. The bot's own clock runs about 20 times slower on the long climb, about 7 kills an hour. `pacing.mjs` prints both for the four classes on a few seeds, in parallel.
-- *The curve* (`CLIMB` in data.mjs). Kills of your level for a level, straight between points: 30 at 1, 210 at 4, 215 at 10, 575 at 20, 900 at 30, 1,120 at 40 and 1,330 at 49, where it was 5 + 1.2 × L. Real minutes for a level are Behind's target: 5 at 1, 48 at 10, 95 at 20, 160 at 30, 200 at 40 and 220 at 49, where it was 6 + 2.2 × L.
+- *Real play, measured.* `bot.mjs` keeps a second clock beside its own. Real play (`REAL`) is 24 seconds a fight with its walk (`LOOT.killsPerHour`, 150), won or lost, plus 2 minutes a puzzle board and 1 a log sweep. The play clock (Fresh; Behind too, until it was removed) runs on it. The bot's own clock runs about 20 times slower on the long climb, about 7 kills an hour. `pacing.mjs` prints both for the four classes on a few seeds, in parallel.
+- *The curve* (`CLIMB` in data.mjs). Kills of your level for a level, straight between points: 30 at 1, 210 at 4, 215 at 10, 575 at 20, 900 at 30, 1,120 at 40 and 1,330 at 49, where it was 5 + 1.2 × L. Real minutes for a level (`CLIMB.minutes`, then also Behind's target; Behind is gone now): 5 at 1, 48 at 10, 95 at 20, 160 at 30, 200 at 40 and 220 at 49, where it was 6 + 2.2 × L.
 - *Deeds* (`deedXpFor` in combat.mjs): first clears, Mapped, takeovers, Root levels, decodes, puzzle boards, log sweeps, first runs and vaults, and first crafts. Each pays its kill share above times `deedScale`, 0.4 of how much longer the level is (5 to 9 times). Kills, the room bonus and contracts are as they were.
 - *The bot* moves on from a server where a visit fought nothing (counted as a loss there at that level), and gives up at 150 hours of real play instead of 72 of its own. `unlockLevel` and `lineOf` (data.mjs), the salvage count (salvage.mjs) and the rooms getter's server lookup (combat.mjs) are kept between calls: about a third of a long climb's time went there.
 - *The breach campaign* keeps its own pace (about ten breaches to 10): its kills grow with `climbStretch`.

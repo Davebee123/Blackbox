@@ -35,7 +35,7 @@ import { recapMarkup } from './recap.mjs';
 import { createLash } from './lash.mjs';
 import { online, simOn } from './presence.mjs';
 import { matesOf } from './crew.mjs';
-import { tickPlay, behindOf } from './progression.mjs';
+import { tickPlay } from './progression.mjs';
 import * as BR from './breach.mjs';
 import { breachMarkup, breachFocusY, bxUi, bxToggle, scriptTray } from './breach-view.mjs';
 import * as CP from './campaign.mjs';
@@ -1119,7 +1119,6 @@ function react(events) {
       // What the level brings on every track, and the next level that brings something (levelup-ui.mjs): it waits for
       // the fight's end, and its own sound plays when it comes up.
       case 'level-up': lu.push(e); break;
-      case 'behind-on': feel.add('good', null, 'BEHIND +50% XP'); break;
       case 'heal': if (e.target) feel.add('patch', row(e.target), f?.text, { src, stack }); else feel.add('good', MINE, f?.text || null, { src, stack, floatAt: BAR, x: 0.5 }); break; // a part patched: on it
       case 'blocked': if (e.shield) { feel.add('shield', MINE, f?.text || null, { src, stack, noFlash: true, floatAt: BAR, x: 0.5 }); break; } feel.add('interrupt', e.tell && e.source ? row(e.source) : MINE, e.tell && e.answered ? 'CALLED OFF' : 'BLOCKED'); break;
       case 'trap': flash('CANARY TRIPPED'); feel.add('hurt', null, `−${e.amount}`); break;
@@ -1681,9 +1680,7 @@ function renderMeters() {
   $('who-class').textContent = V.className(cls);
   $('who-lv').textContent = h.level;
   $('who-fill').style.width = (h.level >= 50 ? 100 : (h.xp / V.xpNeeded(h.level)) * 100) + '%';
-  const behind = behindOf(campaign)?.on; // Behind: the XP bar turns amber while kills pay +50% on a level running long
-  $('whoami').classList.toggle('behind', !!behind);
-  $('whoami').title = `${h.level >= 50 ? 'max' : `${h.xp}/${V.xpNeeded(h.level)} XP`}${behind ? ' · Behind: kills +50% XP until the next level' : ''}`;
+  $('whoami').title = h.level >= 50 ? 'max' : `${h.xp}/${V.xpNeeded(h.level)} XP`;
   const pct = (srv.integrity / srv.max) * 100;
   $('integrity-fill').style.width = pct + '%';
   $('integrity-value').textContent = srv.integrity;
@@ -2198,7 +2195,7 @@ function services() {
   // A co-op guest's own world goes on under the host's (coop.mjs): its clocks tick on the guest's own save, and the
   // host's rooms on the host's game.
   const S = own();
-  if (!document.hidden && now - lastInput < 120000 && !playtest && !CAMP) tickPlay(S, dt); // and the clock of the level your class is on (Behind)
+  if (!document.hidden && now - lastInput < 120000 && !playtest && !CAMP) tickPlay(S, dt);
   const hp = S.server.integrity;
   const events = S.breach || S.roomsPlay ? [] : [...tickNetwork(S, now), ...tickServices(S, now)]; // a breach or rooms playtest has no network
   if (campaign.rooms && !realSave) { const ev = FP.tick(campaign, now); if (ev.length) react(ev); if (module === 'rooms' || ev.length) dirty = true; } // respawn timers count down on the map
