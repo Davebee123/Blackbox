@@ -11,7 +11,7 @@
 // 3600 / LOOT.killsPerHour seconds, the walk to it included (won or lost: 24 seconds at 150 kills an hour), a puzzle
 // board REAL.puzzle and a log sweep REAL.sweep; the rest (mail, connecting, resting, gearing) is inside the walk. The
 // world's timers (respawns, refills, the Resident, invasions) run on the bot's clock, the play clock (`tickPlay`:
-// Behind, Fresh) on real play. pacing.mjs prints both.
+// Fresh, kills an hour) on real play. pacing.mjs prints both.
 // node bot.mjs [class] [targetLevel] [seed]
 import { UNIQUES, topUpCost, tickServices, fresh, command, resolveCycle, active, hooks, hackerLevel, subWaiting, idleRegen, maxSignal, addLocation, finish, loaded, rigOf, stashItem, slotCount, loadedOn } from './dist/combat.mjs';
 import { RARITY_ORDER, SLOT_KINDS, groupOf, LOOT } from './dist/gear.mjs';
@@ -65,7 +65,6 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
   const note = (e) => {
     stats.events[e.type] = (stats.events[e.type] || 0) + 1;
     if (trace && e.type === 'collected') collected = e.unique;
-    if (trace && e.type === 'behind') { const h = here(); h.behind = (h.behind || 0) + e.amount; }
     if (trace && e.type === 'xp') { const x = here().xp, k = e.kind || 'other'; x[k] = (x[k] || 0) + e.amount; }
     if (trace && e.type === 'drop' && e.item) {
       const h = here(), it = e.item; h.drops[it.rarity] = (h.drops[it.rarity] || 0) + 1;
@@ -323,7 +322,7 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
     tickAt = t;
     if (book('invasion', invasion)) continue;
     if (book('runs', deadDrop)) continue;
-    tickPlay(s, real - (s.pace?.ms || 0)); // the play clock is real play (Fresh and Behind use it)
+    tickPlay(s, real - (s.pace?.ms || 0)); // the play clock is real play (Fresh uses it)
     mailWork();
     book('deconstruct', gearUp);
     restUp();

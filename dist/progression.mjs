@@ -1,17 +1,14 @@
-// Progression: one headline level, what each level brings on every track, catch-up for a level that
-// runs long, and the save migration that folded the extra tracks away (v34). docs/progression.md is the
-// review sheet.
+// Progression: one headline level, what each level brings on every track, the play clock, and the save
+// migration that folded the extra tracks away (v34). docs/progression.md is the review sheet.
 //   one level    your server's level is your highest class level (combat.mjs serverLevel). It has no XP
 //                of its own. Its gates (daemon slots, memory, base Integrity) read that.
 //   the banner   a level-up lists everything the level brings, on every track, and the next level that
 //                brings something (levelGains, nextGains; app.js levelUp).
-//   Behind       a level gets a target of CATCHUP.base + CATCHUP.per × level minutes of active play.
-//                Past CATCHUP.after times that, kills pay CATCHUP.bonus more until the level ends.
 //   v34          server XP, the specialty, ports, eight services and grey protocols are gone. What a save
 //                had in them comes back in kind (progressionRestore).
-import { emit, hackerOf, classOf, materialsOf, daemonLevel, UNIQUES, gainsTalent, kitTalent } from './combat.mjs';
+import { emit, materialsOf, daemonLevel, UNIQUES, gainsTalent, kitTalent } from './combat.mjs';
 import { versionLevel } from './daemons.mjs';
-import { CATCHUP, levelTarget, LOADOUT, SERVER, FLOORS, ARCHETYPES, xpToNext, v41XpToNext } from './data.mjs';
+import { LOADOUT, SERVER, FLOORS, ARCHETYPES, xpToNext, v41XpToNext } from './data.mjs';
 import { BASES, PROTOCOL_SLOTS, MATERIALS, primaries, uniqueItem, seeded, RULES, ruleValue, RARITIES } from './gear.mjs';
 import { MEMORY } from './memory.mjs';
 import { learnFilter } from './filters.mjs';
@@ -46,32 +43,13 @@ export function nextGains(arch, L, top, skillsAt) {
   return null;
 }
 
-// ---------- catch-up (Behind) ----------
+// ---------- the play clock ----------
 // Active play: the game open and used (app.js calls this once a second; bot.mjs as its clock runs). It
-// counts toward your kills an hour (s.pace) and toward the level the class in use is on (h.ms).
+// counts toward your kills an hour (s.pace), which Fresh runs on too (combat.mjs playMs).
 export function tickPlay(s, dt) {
   if (!(dt > 0)) return;
   (s.pace ||= { kills: 0, ms: 0 }).ms += dt;
-  const h = hackerOf(s);
-  h.ms = (h.ms || 0) + dt;
 }
-// Where a class's current level stands against its target: { ms, target, after, on } (null at the cap).
-export function behindOf(s, arch = classOf(s)) {
-  const h = hackerOf(s, arch);
-  if (h.level >= LOADOUT.maxLevel) return null;
-  const ms = h.ms || 0, target = levelTarget(h.level);
-  return { ms, target, after: target * CATCHUP.after, on: ms > target * CATCHUP.after };
-}
-// A kill's catch-up bonus on xp (0 when the level is on pace). Says so once a level, when it starts.
-export function behindBonus(s, xp) {
-  const b = behindOf(s);
-  if (!b?.on) return 0;
-  const h = hackerOf(s);
-  if (h.behind !== h.level) { h.behind = h.level; emit(s, 'behind-on', `Behind: level ${h.level} is running long. Kills pay +${Math.round(CATCHUP.bonus * 100)}% XP until you reach ${h.level + 1}.`, { level: h.level }); }
-  return Math.max(1, Math.round(xp * CATCHUP.bonus));
-}
-// A new level starts its clock.
-export const levelStarted = (s, h) => { h.ms = 0; delete h.behind; };
 
 // ---------- v34: one level, fewer tracks ----------
 // The services that left, what they cost (VERSIONS, by version) and what they became.
@@ -171,5 +149,4 @@ export function progressionRestore(s, was) {
     const v = ruleValue(it.rule, it.level || 1, r());
     if (v) it.ruleValue = v;
   }
-  // Behind: a class's level clock (h.ms) starts at 0 when it isn't there yet, so the level you're on counts from now.
 }

@@ -20,6 +20,7 @@ import { FACTIONS, FACTION_IDS, REP_TIERS, hubFound } from './factions.mjs';
 import { PIECES } from './faction-gear.mjs';
 import { SETS, piecesOf } from './sets.mjs';
 import { titleById, myProfile } from './profile.mjs';
+import { masteredN, keyOnesN, kitBest } from './mastery.mjs';
 
 const clock = () => hooks.now?.() ?? Date.now();
 export const POINTS = [5, 10, 25, 50];
@@ -83,6 +84,8 @@ export const DEED_STICKERS = {
   'a-noexc': { label: '0 exceptions', color: AMBER, glyph: 'config', tip: 'A clean routine' },
   'a-chain': { label: 'Chain', color: AMBER, glyph: 'chain', tip: 'Every part in one cycle' },
   'a-thread': { label: '<5%', color: AMBER, glyph: 'signal', tip: 'Won by a thread' },
+  'a-mastery': { label: 'Mastery 3', color: AMBER, glyph: 'mastered', tip: 'An ability at Mastery 3' },
+  'a-kit': { label: 'Repertoire', color: AMBER, glyph: 'mastered', tip: 'A whole kit at Mastery 3' },
 };
 
 const A = (id, cat, name, rule, pts, more = {}) => ({ id, cat, name, rule, pts, ...more });
@@ -125,6 +128,11 @@ export const achievements = () => (LIST ||= [
   A('cl-sub', 'class', 'Specialist', 'Pick a subclass.', 5, { has: (s) => Object.keys(ARCHETYPES).some((c) => picked(s, c)) }),
   A('cl-ten', 'class', 'Polyglot', 'Take all 4 classes to level 10.', 25, { progress: (s) => of(Object.keys(ARCHETYPES).filter((c) => level(s, c) >= 10).length, Object.keys(ARCHETYPES).length) }),
   ...Object.keys(CLASS_ACH).map((c) => A('cl-' + c, 'class', CLASS_ACH[c], `Take ${/^[AEIOU]/.test(ARCHETYPES[c].name) ? 'an' : 'a'} ${ARCHETYPES[c].name} to level 50.`, 50, { progress: (s) => of(level(s, c), 50), has: (s) => titleHas(s, 'max-' + c), reward: { title: 'max-' + c } })),
+  // Ability mastery (mastery.mjs): an ability's effect at its third tier. A handful, never one an ability.
+  A('cl-mastery', 'class', 'Second Nature', 'Reach Mastery 3 with an ability.', 10, { group: 'Mastery', has: (s) => masteredN(s) >= 1, reward: { sticker: 'a-mastery' } }),
+  A('cl-mastery-5', 'class', 'Muscle Memory', 'Reach Mastery 3 with 5 abilities.', 25, { group: 'Mastery', progress: (s) => of(masteredN(s), 5), has: (s) => masteredN(s) >= 5 || titled(s, 'virtuoso'), reward: { title: 'virtuoso' } }),
+  A('cl-mastery-keys', 'class', 'First Principles', 'Reach Mastery 3 with Bash, Ban, Poke and Ping.', 25, { group: 'Mastery', progress: (s) => of(keyOnesN(s), 4), reward: { banner: 'keyone' } }),
+  A('cl-mastery-kit', 'class', 'Full Repertoire', 'Reach Mastery 3 with key 1, the core and every skill of one subclass.', 50, { group: 'Mastery', progress: (s) => kitBest(s), reward: { sticker: 'a-kit' } }),
   ...Object.values(SETS).filter((x) => x.tier).map((x) => A('cl-set-' + x.id, 'class', x.name, `Find every piece of ${x.name}.`, 25, { group: 'Tier sets', progress: (s) => of(piecesOf(x.id).filter((p) => s.collection?.[p]).length, piecesOf(x.id).length), has: (s) => setDone(s, x.id), reward: { sticker: 'set-' + x.id } })),
   // ---------- Daemons ----------
   A('d-ten', 'daemon', 'Process Table', 'Find 10 daemons.', 10, { progress: (s) => of(daemonsN(s), 10) }),
@@ -161,6 +169,7 @@ export function rewardText(a) {
   if (r.sticker) out.push('a sticker');
   if (r.banner) out.push('a banner');
   if (r.casing) out.push('a casing colourway');
+  out.push(...terminalRewardWords(a.id)); // a boot sequence, a prompt, a cursor: the block at the end of this file
   return out.length ? `Rewards ${out.length > 1 ? `${out.slice(0, -1).join(', ')} and ${out.at(-1)}` : out[0]}.` : '';
 }
 // The deed stickers you've earned (profile.mjs stickersOf adds them to the rest).
@@ -291,4 +300,29 @@ export function developerAchieve(s, what) {
   if (!list.length) return warn(s, `developer achieve <${achievements().slice(0, 3).map((a) => a.id).join('|')}|…|all|reset>`);
   grant(s, list, clock());
   emit(s, 'achievement', `Achievement${list.length > 1 ? 's' : ''}: ${list.length > 3 ? `${list.length} granted` : list.map((a) => a.name).join(', ')}.`, { achievements: list.map((a) => a.id), titles: list.map((a) => a.reward?.title).filter(Boolean) });
+}
+
+// ---------- Terminal cosmetics (terminal.mjs): boot sequences, prompts and cursors ----------
+// A block of its own, so the list above merges cleanly. Each reward rides on an achievement above, reused as it is:
+// achievement id → { boot, prompt, cursor } (terminal.mjs BOOT_LOOKS, PROMPTS, CURSORS name them). Built on first use, like
+// the list (factions.mjs may still be loading when this module is).
+let TERMINAL = null;
+export const terminalRewards = () => (TERMINAL ||= {
+  'c-patient': { boot: 'bios' },
+  't-thread': { boot: 'glitch' },
+  't-norest': { boot: 'minimal' },
+  ...Object.fromEntries(FACTION_IDS.map((f) => ['f-' + f, { boot: 'f-' + f, prompt: 'root' }])),
+  'k-matched': { prompt: 'title' },
+  't-cuts': { prompt: 'arrow' },
+  't-program': { prompt: 'lambda' },
+  'cl-sub': { prompt: 'powerline' },
+  'x-mapped': { cursor: 'underline' },
+  'd-ten': { cursor: 'beam' },
+});
+export const terminalReward = (id) => terminalRewards()[id] || null;
+// The achievements that bring a look (kind: boot, prompt or cursor), and the words an achievement's tooltip adds.
+export const terminalFrom = (kind, look) => achievements().filter((a) => terminalReward(a.id)?.[kind] === look);
+function terminalRewardWords(id) {
+  const t = terminalReward(id) || {};
+  return [t.boot && 'a boot sequence', t.prompt && 'a prompt', t.cursor && 'a cursor'].filter(Boolean);
 }

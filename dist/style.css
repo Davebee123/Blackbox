@@ -366,6 +366,8 @@ code { font-family: var(--mono); color: var(--amber); }
 .fulllog { font: 13px/1.6 var(--mono); color: var(--muted); max-height: 60vh; overflow: auto; margin: 0; padding: 0; list-style: none; }
 details summary { cursor: pointer; color: var(--muted); }
 pre { font: 12px var(--mono); color: var(--muted); white-space: pre-wrap; max-height: 300px; overflow: auto; }
+/* Art (every decorative pre is aria-hidden) never scrolls: only text that may run long does. */
+pre[aria-hidden="true"] { max-height: none; overflow: visible; }
 
 /* ---------- the net ---------- */
 .net-one { position: relative; height: 100%; display: flex; flex-direction: column; max-width: 1100px; margin: 0 auto; }
@@ -2064,6 +2066,9 @@ body:has(.silk-stash .silk-tile[data-kind="implant"]:hover) .silk-fp[data-kind="
 .afx.ember { font-weight: 600; }
 .afx.cut, .afx.streak:not(.echo) { color: #e4fffb; text-shadow: 0 0 2px rgba(0, 0, 0, 0.9), 0 0 8px rgba(127, 209, 199, 1); }
 .afx.wall { color: #e4fffb; text-shadow: 0 0 2px rgba(0, 0, 0, 0.95), 0 0 6px rgba(127, 209, 199, 0.9); } /* Firewall's bricks: they read over your bar's teal fill */
+/* Mastery tiers (mastery.mjs): tier 3's particles brighter, its marks (a scar, a glint) and cinders white-hot; a break finisher's seal. A crit, a crewmate's and ◆ still win below. */
+.afx.bright { color: #c9fff6; text-shadow: 0 0 8px rgba(127, 209, 199, 1); }
+.afx.scar, .afx.glint, .afx.cinder, .afx.seal { color: #e4fffb; text-shadow: 0 0 2px rgba(0, 0, 0, 0.9), 0 0 10px rgba(127, 209, 199, 1); }
 .afx.crit { color: #fff2c8; text-shadow: 0 0 8px rgba(255, 216, 92, 1); }
 .afx.chit { color: var(--steel); text-shadow: 0 0 6px var(--steel-glow); }
 .afx.crew { color: var(--daemon); text-shadow: 0 0 6px rgba(195, 166, 255, 0.85); }
@@ -2425,7 +2430,6 @@ body.phase-wait .cmdline, body.phase-wait #command-input { box-shadow: 0 0 0 1px
 .whoami .who-dot { color: var(--dim); }
 .whoami .who-bar { grid-column: 1 / -1; height: 3px; background: rgba(127, 209, 199, 0.12); border-radius: 2px; overflow: hidden; }
 .whoami .who-bar span { display: block; height: 100%; background: var(--you); }
-.whoami.behind .who-bar span { background: var(--amber); } /* Behind: kills pay +50% XP on a level running long */
 /* The pager sits by the server's meters now, just left of Integrity. */
 .topbar .pager { margin-left: 0; }
 @media (max-width: 900px) { .whoami { display: none; } }
@@ -3291,6 +3295,7 @@ h1 .byline { font-size: 13px; vertical-align: middle; }
 /* Themed hover tips (app.js): every title in the game, in the game's own card. */
 .tt { position: fixed; z-index: 90; max-width: 300px; padding: 8px 11px; background: rgba(10, 8, 5, 0.97); color: var(--text); border: 1px solid var(--line-strong); border-top: 2px solid var(--amber); border-radius: 4px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55); font: 13px/1.45 var(--sans, inherit); pointer-events: none; white-space: pre-line; animation: ptip-in 0.12s ease-out; }
 .tt b { display: block; margin-bottom: 3px; color: var(--amber); font: 600 12px var(--mono); letter-spacing: 0.5px; }
+.tt .tt-mastery { display: block; margin-top: 4px; color: var(--you); font: 600 11px var(--mono); letter-spacing: 0.3px; } /* an ability's mastery line (mastery.mjs) */
 .tt .tt-ans { display: block; margin-top: 5px; padding-top: 4px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; } /* the answer line (fightread.mjs answerLine) */
 @media (prefers-reduced-motion: reduce) { .tt { animation: none; } }
 
@@ -4137,6 +4142,13 @@ p.impl { margin: 6px 0 0; padding: 4px 2px; border-bottom: 1px dotted color-mix(
 .sk-chip small { font: 500 10px var(--mono); color: var(--dim); }
 .sk-chip.locked, .sk-chip.preview { color: var(--gray); border-style: dashed; background: none; }
 .sk-chip.locked b, .sk-chip.preview b { color: var(--gray); }
+/* Ability mastery (mastery.mjs): a skill's tier as three small pips, lit teal; on a chip at its foot, on a key at its top right. */
+.sk-chip { position: relative; }
+.sk-mt { position: absolute; display: flex; gap: 2px; pointer-events: none; }
+.sk-mt i { width: 4px; height: 4px; border-radius: 50%; background: var(--line-strong); }
+.sk-mt i.on { background: var(--you); }
+.sk-chip .sk-mt { right: 10px; bottom: 3px; }
+.sk-key .sk-mt { top: 5px; right: 5px; }
 
 /* talents: the four roots, the points, the tree as name chips */
 .sk-roots { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; margin-bottom: 12px; }
@@ -4195,6 +4207,16 @@ p.impl { margin: 6px 0 0; padding: 4px 2px; border-bottom: 1px dotted color-mix(
 .sk-rule .hi { color: var(--bright); font-weight: 600; }
 .sk-rule + .sk-rule { font-size: 13.5px; color: var(--muted); }
 .sk-lore { font: italic 13px/1.45 var(--sans); color: var(--dim); padding-left: 10px; border-left: 2px solid var(--line); }
+.sk-mastery { display: grid; gap: 6px; }
+.sk-mline { font: 600 12px var(--mono); color: var(--you); letter-spacing: 0.3px; }
+.sk-mbar { display: block; height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; }
+.sk-mbar i { display: block; height: 100%; background: var(--you); }
+.sk-tiers { display: flex; align-items: center; gap: 3px; }
+.sk-tiers small { margin-right: var(--s2); font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--dim); }
+.sk-tier { width: 26px; height: var(--h-btn-sm); padding: 0; border: 1px solid var(--line-strong); border-radius: var(--r-btn); background: var(--inset); font: 600 11px var(--mono); color: var(--text); cursor: pointer; }
+.sk-tier:hover:not([disabled]) { border-color: var(--amber); color: var(--bright); }
+.sk-tier.on, .sk-tier.on:disabled { border-color: var(--you); color: var(--you); opacity: 1; cursor: default; }
+.sk-tier.locked { border-style: dashed; color: var(--gray); cursor: default; }
 .sk-acts { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s4); }
 .sk-keys { display: flex; flex-wrap: wrap; align-items: center; gap: 3px; }
 .sk-keys small { margin-right: var(--s2); font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--dim); }

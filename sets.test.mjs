@@ -218,7 +218,7 @@ test('LOWLIGHT Kit (2): delivering a contract fills your Signal, and your next k
   const bonus = a.find((l) => l.type === 'set-xp');
   assert.ok(bonus && bonus.amount > 0, 'the kill names the bonus');
   assert.equal(xpOf(a) - xpOf(b), bonus.amount);
-  assert.ok(Math.abs(bonus.amount / (xpOf(b) - (b.find((l) => l.type === 'behind')?.amount || 0))) - 0.25 < 0.05, `about 25%: ${bonus.amount} of ${xpOf(b)}`);
+  assert.ok(Math.abs(bonus.amount / xpOf(b)) - 0.25 < 0.05, `about 25%: ${bonus.amount} of ${xpOf(b)}`);
   assert.equal(s.killXp, undefined, 'one kill only');
   assert.equal(kill(s).find((l) => l.type === 'set-xp'), undefined);
   // On a run: your Signal fills.

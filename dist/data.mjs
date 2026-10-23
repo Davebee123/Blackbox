@@ -1319,7 +1319,8 @@ export const UNLOCKS = [
 // contracts), so it fights about 15,000 times on the way (pacing.mjs). The points were cut 10-23% when a Mapped or held
 // server's rooms began to respawn in minutes (docs/progression.md 7): the bot farms them, which pays less a fight than
 // exploring did, and the climb ran 11-33% long. CLIMB.minutes is the real play a level should
-// take (5 at level 1, 48 at 10, 95 at 20, 160 at 30, 200 at 40, 220 at 49): Behind's target, and the table's sum.
+// take (5 at level 1, 48 at 10, 95 at 20, 160 at 30, 200 at 40, 220 at 49): its sum is the pacing table (pacing.mjs
+// PACE_TARGET). Nothing in play reads it: it is the design's level-by-level pace (levelMinutes), checked in tests.
 // Before save v42 a level took 5 + 1.2 × L kills (V41_KILLS): about 1,700 to 50, 7 hours of real play.
 export const CLIMB = {
   kills: [[1, 23], [2, 62], [3, 130], [4, 160], [5, 170], [10, 172], [15, 366], [20, 523], [25, 673], [30, 818], [35, 909], [40, 1000], [45, 1068], [49, 1137]],
@@ -1348,13 +1349,10 @@ export const deedScale = (level) => Math.max(1, DEED.share * climbStretch(level)
 export const xpScale = (gap) => (gap >= 0 ? 1 + 0.05 * Math.min(gap, 5) : Math.max(0, 1 + 0.1 * gap));
 // Other XP, as shares of a kill at that level.
 export const XP = { home: 1, guard: 0.8, vault: 1.5, newLocation: 0.7 };
-// Catch-up (Behind): each level has a target of CLIMB.minutes of active play (28 at 5, 48 at 10, 95 at 20, 160 at
-// 30, 200 at 40). Once a level runs past `after` times its target, kills pay +bonus until the level ends. Only time
-// you played counts.
-export const CATCHUP = { after: 1.25, bonus: 0.5 };
-export const levelTarget = (level) => Math.round(along(CLIMB.minutes, Math.max(1, level)) * 60000);
-// Rested (World of Warcraft's rule): time safely away (no crash) banks 5% of a level every 8 hours, of the level you're on
-// when it banks, up to 1.5 levels (10 days away from empty). Kills spend it: each pays double until it runs out
+// The real play level L to L+1 should take, in minutes (CLIMB.minutes, straight between its points).
+export const levelMinutes = (level) => along(CLIMB.minutes, Math.max(1, level));
+// Rested (World of Warcraft's rule): only logged-off time counts. Time safely away (no crash) banks 5% of a level
+// every 8 hours, of the level you're on when it banks, up to 1.5 levels (10 days away from empty). Kills spend it: each pays double until it runs out
 // (combat.mjs payKill). A night away is about 5% of a level, a weekend about 30%.
 export const RESTED = { share: 0.05, everyMs: 8 * 3600000, cap: 1.5 };
 export const restedGain = (level, ms) => (xpToNext(level) * RESTED.share * ms) / RESTED.everyMs;

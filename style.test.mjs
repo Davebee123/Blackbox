@@ -125,7 +125,7 @@ test('the tell tooltips: what it does, then its answer on its own ▸ line, in t
 test('the Cold Store: frozen, then its Chill, all mechanics with no advice, and the answer on its own line', () => {
   const s = liveFight('coldstore'), cs = part(s, 'coldstore'), tip = tipOf(s, 'coldstore');
   const chill = s.encounter.virus.parts.find((p) => p.id === 'coldstore').chill;
-  assert.equal(tip, `Cold Store: Frozen until the end of cycle ${cs.thawAt ?? cs.frozen}. Off the timeline and immune to damage while frozen. After it thaws, its Chill deals ${tip.match(/Chill deals (\d+)/)[1]} damage to you every ${chill.interval} cycles. The first Chill lands 2 cycles after the thaw.\n▸ Break the others while it is frozen.`);
+  assert.equal(tip, `Cold Store: Frozen until the end of cycle ${cs.thawAt ?? cs.frozen}, off the timeline and immune to damage. After it thaws, its Chill deals ${tip.match(/Chill deals (\d+)/)[1]} damage to you every ${chill.interval} cycles. The first Chill lands 2 cycles after the thaw.\n▸ Break the others while it is frozen.`);
   const mech = mechanicsOf(tip);
   assert.doesNotMatch(mech, /\b(break the others|save|shield for|big hit)\b/i, 'no advice in the mechanics');
   for (const x of sentences(mech)) assert.doesNotMatch(x, ADVICE, x);
@@ -148,7 +148,7 @@ test('the Encryptor, the Packer, the Mimic and the Pulse Node read in the same g
 
 test('the highlighter lights the new wording\'s facts on a Codex card: the damage, the cycles, the ◆', () => {
   const lit = (t) => [...ruleHtml(t).matchAll(/<b class="hi">(.*?)<\/b>/g)].map((m) => m[1]);
-  assert.deepEqual(lit('Frozen until the end of cycle 5. Off the timeline and immune to damage while frozen. After it thaws, its Chill deals 28 damage to you every 5 cycles.'), ['cycle 5', '28 damage', '5 cycles']);
+  assert.deepEqual(lit('Frozen until the end of cycle 5, off the timeline and immune to damage. After it thaws, its Chill deals 28 damage to you every 5 cycles.'), ['cycle 5', '28 damage', '5 cycles']);
   assert.deepEqual(lit('Re-arms the Gate to full ◆ every 4 cycles, up to 3 times. Has no attack of its own.'), ['4 cycles', 'up to 3 times']);
   assert.deepEqual(lit('Encrypts you every 5 cycles. Each Encrypt deals 7 damage to you every cycle until the Encryptor breaks. A ◆ on you blocks one Encrypt.'), ['5 cycles', '7 damage']);
   assert.deepEqual(lit('When broken while other parts stand, the others go loud for the rest of the fight. Loud parts deal 25% more damage and attack 1 cycle sooner.'), ['25% more damage', '1 cycle sooner']);

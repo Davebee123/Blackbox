@@ -144,7 +144,7 @@ test('scan: the genome card before you engage costs 1 Signal (and Trace on a bre
   const plain = i.encounter.virus.parts.find((p) => p.attack?.effect === 'damage' && (p.basic || p.id === 'pulse')); // its basic (the parts roll picks it: dist/parts.mjs)
   command(i, 'inspect ' + plain.id);
   assert.equal(i.encounter.cycle, cycle, 'inspect takes no cycle');
-  assert.match(i.logs.slice(n).map((e) => e.message).join(' '), /Surge is an attack type that presses on Burst\. Deals a plain heavy hit/);
+  assert.match(i.logs.slice(n).map((e) => e.message).join(' '), /Surge is an attack type\. Deals a plain heavy hit/);
 });
 
 test('inspect: a part\'s rules, what each does once its research says so, and nothing spent', () => {
@@ -155,7 +155,7 @@ test('inspect: a part\'s rules, what each does once its research says so, and no
   command(s, 'inspect mirror');
   const say = s.logs.slice(n).map((e) => e.message).join('\n');
   assert.match(say, /The Mirror carries Twin/);
-  assert.match(say, /You haven't learned Twin yet\. Research the Mirror to 15 to learn what it does\./);
+  assert.match(say, /You haven't learned Twin yet\. Reach research 15 on the Mirror to learn what it does\./);
   assert.doesNotMatch(say, /gene/i);
   assert.equal(s.encounter.queue, null, 'no command queued');
   // A fight's card, free: scan mid-fight.

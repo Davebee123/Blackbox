@@ -14,7 +14,7 @@
 .levelup kbd { font: 600 9px var(--mono); letter-spacing: 1px; padding: 1px 4px; margin-left: 4px; border: 1px solid currentColor; border-radius: 2px; opacity: 0.7; }
 .levelup .lu-b-head { display: flex; align-items: center; justify-content: space-between; padding: 4px 10px; background: var(--amber); color: #120c03; font: var(--kicker); letter-spacing: var(--kicker-track); text-transform: uppercase; }
 .levelup .lu-b-top { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 16px; align-items: center; padding: 14px 16px 10px; border-bottom: 1px dashed var(--line); }
-.levelup .lu-b-big { margin: 0; font: 700 9px/9px var(--mono); letter-spacing: 0; color: var(--you); text-shadow: 0 0 6px rgba(127, 209, 199, 0.55); }
+.levelup .lu-b-big { margin: 0; max-height: none; overflow: visible; font: 700 9px/9px var(--mono); letter-spacing: 0; color: var(--you); text-shadow: 0 0 6px rgba(127, 209, 199, 0.55); }
 .levelup .lu-b-big i { font-style: normal; color: rgba(127, 209, 199, 0.07); text-shadow: none; }
 .levelup .lu-b-flash { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 10px; align-items: center; min-width: 0; }
 .levelup .lu-b-ver { grid-column: 1 / -1; font: 600 12px var(--mono); color: var(--muted); }

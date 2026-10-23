@@ -1,4 +1,5 @@
 // Markup builders. Pure functions of state; they never change it.
+import { masteryLine } from './mastery.mjs';
 import { SALVAGE_COSTS, stacks as salvageStacks, canAfford, costLabel as salvageLabel, payProblem, total as salvageTotal, slug } from './salvage.mjs';
 import { glyph } from './glyphs.mjs';
 import { TELL_ICON } from './recap.mjs';
@@ -58,7 +59,6 @@ import { raidIntents, raidMarks, raidOf, attackTarget } from './raid.mjs';
 import { EMBLEMS } from './class-emblems.mjs';
 import { ARCHETYPES, CANTRIPS, EDGE, SYNC, STATUSES, LOADOUT, TREE, SERVER, SKILLS, xpToNext, unlockLevel, power, SUBS, SUBCLASS, skillOrder, barSlots, isRunSkill } from './data.mjs';
 import { XP_KINDS, xpFor, cooldownOf, subOf, subPicked, kitTalent, specRule, skillBase, knowsPart, codexKey, previewDamage, ignoresArmor, armorTakes, parse, blocked, attackAmount, drawingFire, momentumStacks, momentumBonus, topUpCost, UNIQUES, bossChance, listenBoost, effectLine, implicitText, paceOf, keyMap, barKeys, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverClass, daemonSlots, procOpen, slottedDaemons, daemonNext, talentPoints, loaded, loadedOn, slotCount, maxSignal, compileCost, materialsOf, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, picksOf, ranksOf, freeSlot, rigOf, stashItem, knows, knownRecipes, pointsSpent, tierState, rowState, spentAbove, knownSkills, equippedSkills, cycleLength, familyInfo, defender, healCap, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, part, daemonLevel, packed, limitOf, asleep, frozenNow } from './combat.mjs';
-import { behindOf } from './progression.mjs';
 import { sigOf, named, lairOf, intelOf, knowsStrain, knowsEvent, knowsRich, nameOf, NETWORK, nativeChance, homeName, isNative, whoLabel, homeOf, netSeedOf, knownNets, NATIVE_POOL, awayChance } from './network.mjs';
 import { guardSetChance, lairChance, bossOdds, presetsOf, presetKeys, followOf, spikeName, said, mutated, capstonePoints, capPickOf, capState } from './combat.mjs';
 import { cantripsOf } from './data.mjs';
@@ -69,6 +69,7 @@ import { threadById, serverMarks } from './threads.mjs';
 import { skillsTabMarkup } from './skills-view.mjs';
 import { achievementsMarkup } from './achievements-view.mjs';
 import { casingPageMarkup } from './casing-view.mjs';
+import { terminalPageMarkup } from './terminal-view.mjs';
 import { pointsOf } from './achievements.mjs';
 export { skillDetailMarkup, breakoutMarkup, breakoutDetailMarkup, breakoutDue, breakoutLevels } from './skills-view.mjs';
 
@@ -416,9 +417,10 @@ export const byline = (v) => (v?.author && AUTHORS[v.author] ? `<span class="byl
 // Its genes, as chips under its bar: the body's dim, what it rolled or was built with bright, ??? until seen. A
 // mutation's chip carries its tip (tips.mjs .tag-mut).
 export function geneChip(c, extra = '') {
-  const ax = AXES[c.axis], what = `${an(c.catName)} ${c.catName} that presses on ${ax.name}`;
-  const how = GENES[c.id]?.decode === 'part' ? `Research a part that carries it to ${TIER.rule} to learn its rule.` : GENES[c.id]?.decode === 'tell' ? 'Answer it once to learn its rule.' : 'Beat two viruses that carry it to learn its rule.';
-  const title = c.packed ? `Packed: ${an(c.catName)} ${c.catName} the Packer hides until it breaks. A scan before the fight reads it.` : !c.name ? `${an(c.catName)} ${c.catName} you haven't seen.` : c.rule ? `${c.name}: ${what}. ${c.rule}${answerLine(c.answer)}` : `${c.name}: ${what}. ${how}`;
+  // WoW's grammar: its name, its kind on a line of its own (Attack type), what it does, then the answer, muted.
+  const ax = AXES[c.axis], what = c.catName[0].toUpperCase() + c.catName.slice(1);
+  const how = GENES[c.id]?.decode === 'part' ? `Reach research ${TIER.rule} on a part that carries it to learn its rule.` : GENES[c.id]?.decode === 'tell' ? 'Answer it once to learn its rule.' : 'Beat two viruses that carry it to learn its rule.';
+  const title = c.packed ? `Packed: ${an(c.catName)} ${c.catName} the Packer hides until it breaks. A scan before the fight reads it.` : !c.name ? `${an(c.catName)} ${c.catName} you haven't seen.` : c.rule ? `${c.name}: ${what}\n${c.rule}${answerLine(c.answer)}` : `${c.name}: ${what}\n${how}`;
   return `<span class="gchip g-${c.src}${c.name ? '' : ' unknown'}${c.packed ? ' packed' : ''}"${c.name ? `style="--ax:${ax.colour}"` : ''} ${extra} title="${esc(title)}">${glyph(c.name ? ax.icon : CATS[c.cat].icon)}${esc(c.name ? c.name.toLowerCase() : '???')}</span>`;
 }
 function geneChips(s, v) {
@@ -875,8 +877,9 @@ export function trayMarkup(s, selected = null) {
     const cd = cooldownOf(s, id), charge = dark ? 0 : !fighting || !wait ? 100 : cd ? Math.round((1 - wait / Math.max(cd, wait)) * 100) : 0;
     const count = fighting && wait ? `<span class="cd" aria-label="${wait} ${wait === 1 ? 'cycle' : 'cycles'} to go">${wait}</span>` : '';
     const help = id === 'spike' ? said(s, a.help).replace(/Spike/g, spikeName(s)) : a.help; // key 1 under your class's name
+    const ml = masteryLine(s, classOf(s), id); // its mastery, on its own line (mastery.mjs; app.js ttShow lights it)
     const armd = fighting && !dark && !offline && !wiped ? armorBadge(s, id, keyAim(s, id, selected)) : ''; // a key you can't press now says nothing of armor
-    return `<button type="button" class="ability ${cantrip ? 'cantrip' : ''} ${wait || dark ? 'cooling' : fighting ? 'ready' : ''} ${lit ? 'lit' : ''} ${moment ? 'moment' : ''} ${offline ? 'offline' : ''}${wiped ? ' wiped' : ''} ${queued ? 'queued' : ''}" data-ability="${id}" title="${esc(scaledText(s, id, help))}"><span class="ico" ${icon(a.icon)}></span><span class="name"><kbd>${key}</kbd>${esc(id === 'spike' ? spikeName(s) : a.name)}</span><span class="state">${state}</span>${count}${armd}<span class="charge" style="width:${charge}%"></span></button>`;
+    return `<button type="button" class="ability ${cantrip ? 'cantrip' : ''} ${wait || dark ? 'cooling' : fighting ? 'ready' : ''} ${lit ? 'lit' : ''} ${moment ? 'moment' : ''} ${offline ? 'offline' : ''}${wiped ? ' wiped' : ''} ${queued ? 'queued' : ''}" data-ability="${id}" title="${esc(scaledText(s, id, help) + (ml ? '\n' + ml : ''))}"><span class="ico" ${icon(a.icon)}></span><span class="name"><kbd>${key}</kbd>${esc(id === 'spike' ? spikeName(s) : a.name)}</span><span class="state">${state}</span>${count}${armd}<span class="charge" style="width:${charge}%"></span></button>`;
   });
   // The next thing your level will unlock, as a faint slot.
   const nx = nextUnlock(s);
@@ -1395,8 +1398,6 @@ function rewardChips(s, c) {
     c.offBooks && chip('f-glassjaw', '+5', 'GLASSJAW rep'), r.rep && c.faction && chip('f-' + c.faction, `+${r.rep}`, `${FACTIONS[c.faction].short} rep`),
     r.relay && chip('relay', `×${r.relay}`, 'A relay'), r.blueprint && chip('blueprint', '+1', 'A blueprint'), (r.drop || r.daemon) && chip('item', '+1', 'A protocol, Tuned or better'), r.item && chip('item', '+1', 'A protocol')].filter(Boolean).join('');
 }
-// Behind (progression.mjs): a tag by your XP bar while kills pay +50% on a level running long.
-export const behindTag = (s, arch) => { const b = behindOf(s, arch); if (!b) return ''; return b.on ? `<span class="tag warn behind" title="This level is past ${Math.round(b.after / 60000)} minutes of play (its target is ${Math.round(b.target / 60000)}). Kills pay +50% XP until the next level.">Behind · kills +50% XP</span>` : ''; };
 // How to trace an unknown server, shown rather than explained (docs/style-guide.md section 0): the way that is
 // tracing it now on top, with pips for the kills or clears still needed; then every other way as an icon, a label and
 // what it adds, dim and locked until you have it. The sentences live in the rows' tooltips.
@@ -2578,13 +2579,15 @@ function paceCard(s) {
   return `<section class="card"><h2>Pace</h2><p class="svc-line" title="Counts time while the game is open and you've used it in the last 2 minutes. Loot targets assume ${LOOT.killsPerHour} kills an hour.">${line}</p></section>`;
 }
 
-// The System page's tabs: Settings (everything as it was), Achievements (achievements-view.mjs) and Casing
-// (casing-view.mjs: the monitor's colourway, plate and stickers).
-export const SYSTEM_TABS = [['settings', 'Settings'], ['achievements', 'Achievements'], ['casing', 'Casing']];
+// The System page's tabs: Settings (everything as it was), Achievements (achievements-view.mjs), Casing
+// (casing-view.mjs: the monitor's colourway, plate and stickers) and Terminal (terminal-view.mjs: the boot, the
+// prompt and the cursor).
+export const SYSTEM_TABS = [['settings', 'Settings'], ['achievements', 'Achievements'], ['casing', 'Casing'], ['terminal', 'Terminal']];
 const systemTabs = (s, tab) => `<nav class="ltabs sys-tabs" role="tablist" aria-label="System">${SYSTEM_TABS.map(([k, l]) => `<button type="button" role="tab" data-stab="${k}" aria-selected="${tab === k}">${esc(l)}${k === 'achievements' ? `<small class="sys-pts">${glyph('medal')}${pointsOf(s)}</small>` : ''}</button>`).join('')}</nav>`;
 export function systemMarkup(s, { coop = false, tab = 'settings', ach = {}, cs = {} } = {}) {
   if (tab === 'achievements') return systemTabs(s, tab) + achievementsMarkup(s, ach);
   if (tab === 'casing') return systemTabs(s, tab) + casingPageMarkup(s, cs);
+  if (tab === 'terminal') return systemTabs(s, tab) + terminalPageMarkup(s);
   // Co-op (coop-ui.mjs, docs/coop.md): a developer prototype, so only with ?dev.
   const co = coop ? '<section class="card coop-card"><h2>Co-op</h2><p>Play a run with another player. Your game runs the world, theirs sends their character. Prototype.</p><div class="row"><button type="button" class="btn" data-run="coop">Open Co-op</button></div></section>' : '';
   return `${systemTabs(s, tab)}<div class="page-grid"><div style="display:grid;gap:12px">${co}${volumeCard(s)}${paceCard(s)}
@@ -2629,7 +2632,6 @@ export function spoilsOf(events) {
     else if (e.type === 'hot-kill') add('Hot strain', `+${e.amount} XP`, 'fast', { text: `Hot strain +${e.amount} XP` });
     else if (e.type === 'xp' && / decoded$/.test(e.message?.split(' · ')[1]?.replace(/\.$/, '') || '')) add(`Decoded: ${e.message.split(' · ')[1].replace(/ decoded\.?$/, '')}`, `+${e.amount} XP`, 'fast', { text: `${e.message.split(' · ')[1]} +${e.amount} XP` });
     else if (e.type === 'rested') add('Rested', `+${e.amount} XP`, 'fast', { text: `Rested +${e.amount} XP` });
-    else if (e.type === 'behind') add('Behind', `+${e.amount} XP`, 'fast', { text: `Behind +${e.amount} XP`, sub: 'this level is running long' });
     else if (e.type === 'set-xp') { const who = String(e.message || '').split(':')[0].replace(/ \(\d\)$/, ''); add(who, `+${e.amount} XP`, 'fast', { text: `${who} +${e.amount} XP`, sub: 'the kill after a delivery' }); } // a set bonus (sets.mjs)
     else if (e.type === 'fresh') add(`Fresh: ${XP_KINDS[e.kind] || ''}`, `+${e.amount} XP`, 'fast', { text: `Fresh ${XP_KINDS[e.kind] || ''} +${e.amount} XP` });
     else if (e.type === 'level-up') add(`Level ${e.level}`, '', 'level', { sub: e.unlocked?.length ? 'New skill unlocked' : 'Power +4%' });
