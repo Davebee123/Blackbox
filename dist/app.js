@@ -28,7 +28,8 @@ import { powerOn } from './poweron.mjs';
 import { autoPay } from './salvage.mjs';
 import { relockLeft } from './rogue.mjs';
 import { createHitFx } from './hitfx.mjs';
-import { createAbilityFx, keyFor, tickKey, recipeOf, originOf, levelOf as afxLevel } from './abilityfx.mjs';
+import { createAbilityFx, keyFor, tickKey, recipeOf, originOf, idOfName, finisherBreak, levelOf as afxLevel } from './abilityfx.mjs';
+import { tierOf as masteryTier } from './mastery.mjs';
 import { mountFxPlaytest, abilityOfKey } from './abilityfx-playtest.mjs';
 import { plan as dmgPlan, queueAfter, absorbOf, armorFloat, missFloat } from './dmgfx.mjs';
 import { recapMarkup } from './recap.mjs';
@@ -252,6 +253,9 @@ const abilityfx = createAbilityFx(document.getElementById('board'), { canMove: (
 // The class a shooter plays: yours, or a crewmate's (crew.mjs), for key 1's name (Bash, Ban, Poke, Ping).
 const shooterClass = (who) => { if (!who) return classOf(campaign); const m = matesOf(campaign).find((x) => x.who === who); return m ? classOf(m) : null; }; // matesOf: the crewmates' own states
 // The plain strike on a part (hitfx.mjs), for a hit no ability effect took.
+// Its mastery tier (mastery.mjs): yours plays at the tier you chose for it (default the highest you've reached); a
+// crewmate's at tier 1.
+const afxTier = (e, id) => (e.who || !id ? 1 : masteryTier(campaign, classOf(campaign), id));
 const plainStrike = (e, result) => () => hitfx.strike(partRow(e.target), { who: e.who || 'you', initials: initials(e.who || campaign.profile?.handle || 'you'), kind: e.who ? 'crew' : 'you', result });
 // Every command fired in a batch (combat.mjs resolved) with an effect to play: what it set off follows it, up to the
 // next one (its hits, its marks, its interrupt). A miss keeps the strike's MISS; a crewmate's heal or shield is on their
@@ -283,7 +287,7 @@ function afxLead(events) {
   if (module !== 'combat' || fxLevel() === 'minimal' || !afxLevel({ level: fxLevel(), motion: canMove() })) return 0;
   const c = afxCommands(events)[0];
   if (!c) return 0;
-  const plan = abilityfx.plan(c.key, afxRow(c), { origin: c.origin, ability: c.e.ability, who: c.e.who || null, kind: c.e.who ? 'crew' : 'you' });
+  const plan = abilityfx.plan(c.key, afxRow(c), { origin: c.origin, ability: c.e.ability, who: c.e.who || null, kind: c.e.who ? 'crew' : 'you', tier: afxTier(c.e, c.e.ability) });
   return plan ? Math.min(600, Math.round(plan.impact)) : 0;
 }
 function strikes(events, delayOf = () => 0) {
@@ -299,7 +303,7 @@ function strikes(events, delayOf = () => 0) {
     if (!tk || !e.target || ticks.has(tk + '>' + e.target)) continue;
     ticks.add(tk + '>' + e.target);
     const land = delayOf(e);
-    pendingStrikes.push(() => abilityfx.play(tk, partRow(e.target), { origin: 'here', kind: e.who ? 'crew' : 'you', landIn: land }));
+    pendingStrikes.push(() => abilityfx.play(tk, partRow(e.target), { origin: 'here', kind: e.who ? 'crew' : 'you', landIn: land, tier: afxTier(e, idOfName(e.via)) }));
   }
   for (const c of afxOn ? afxCommands(events) : []) {
     const { e, key, tgt, mine, result } = c, land = delayOf(c.landEvt);
@@ -307,7 +311,7 @@ function strikes(events, delayOf = () => 0) {
     if (tgt) taken.set((e.who || 'you') + '>' + tgt, strike);
     pendingStrikes.push(() => {
       const row = afxRow(c);
-      const played = abilityfx.play(key, row, { power: c.power, crit: result === 'crit', result, kind: e.who ? 'crew' : 'you', origin: c.origin, ability: e.ability, who: e.who || null, landIn: land, onImpact: row ? () => hitfx.jolt(row, result) : null });
+      const played = abilityfx.play(key, row, { power: c.power, crit: result === 'crit', result, kind: e.who ? 'crew' : 'you', origin: c.origin, ability: e.ability, who: e.who || null, landIn: land, tier: afxTier(e, e.ability), onImpact: row ? () => hitfx.jolt(row, result) : null });
       if (!played && strike) later(land, strike); // no room for it: the strike, on the number's beat
     });
   }
@@ -325,6 +329,9 @@ function strikes(events, delayOf = () => 0) {
   }
 }
 const later = (ms, f) => (ms > 0 ? setTimeout(f, ms) : f());
+// A break finisher (abilityfx.mjs): your class's flourish (its subclass's, once you've picked one) on the part whose
+// break wins the fight, on its row only. Screen effects and Motion as every ability effect.
+const finisher = (e) => { const cls = classOf(campaign), sub = campaign.loadout?.sub?.[cls]; return !!abilityfx.finish(cls, heroLevel(campaign, cls) >= SUBCLASS.from ? sub : null, partRow(e.target)); };
 let pendingStrikes = [];
 const DISSOLVE_MS = 1000; // a broken part's last moment on the board
 
@@ -980,6 +987,7 @@ function markFx(e, mate) {
 
 function react(events) {
   const won = events.find((e) => e.type === 'victory');
+  const fin = module === 'combat' ? finisherBreak(events) : null; // the break that wins the fight: your class's finisher (abilityfx.mjs)
   // The wall stopping a weak invasion is quiet: a log line and a pager entry, no sound or float (invasion.mjs).
   const hush = !active(campaign) && events.some((e) => e.type === 'invasion-cleared' && e.quiet);
   const fx = canMove();
@@ -1057,7 +1065,7 @@ function react(events) {
         const bp = part(campaign, e.target);
         // (It waits for the number of the hit that broke it.)
         const wait = split.delay(e);
-        if (bp && canMove()) { Object.defineProperty(bp, '_dyingUntil', { value: Date.now() + wait + DISSOLVE_MS, writable: true, configurable: true, enumerable: false }); setTimeout(() => { dirty = true; }, wait + DISSOLVE_MS + 50); pendingStrikes.push(() => later(wait, () => hitfx.dissolve(partRow(e.target)))); }
+        if (bp && canMove()) { Object.defineProperty(bp, '_dyingUntil', { value: Date.now() + wait + DISSOLVE_MS, writable: true, configurable: true, enumerable: false }); setTimeout(() => { dirty = true; }, wait + DISSOLVE_MS + 50); pendingStrikes.push(() => later(wait, () => { if (!(e === fin && finisher(e))) hitfx.dissolve(partRow(e.target)); })); } // the winning break plays your finisher in place of the dissolve's bits
       }
         artHit(e.target, 'break'); feel.add(() => flash(e.message)); feel.add('break', '.hud-bar.enemy', 'BROKEN'); if (selected === e.target) selected = null; break;
       case 'server-hit': {
@@ -3417,7 +3425,8 @@ function ttShow(anchor) {
   const m = text.match(/^([^:.\n]{2,40}): ([\s\S]+)$/);
   const esc = (t) => t.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
   // A line that starts with ▸ is the answer (fightread.mjs answerLine): muted, on its own line, like WoW's "Use:" line.
-  const body = (t) => esc(t).replace(/\n▸ ([^\n]*)/g, '<span class="tt-ans">▸ $1</span>');
+  // A line that starts Mastery is an ability's mastery (mastery.mjs masteryLine): teal, on its own line, like WoW's progress lines.
+  const body = (t) => esc(t).replace(/\n▸ ([^\n]*)/g, '<span class="tt-ans">▸ $1</span>').replace(/\n(Mastery [1-3] · [^\n]*)/g, '<span class="tt-mastery">$1</span>');
   tt.el.innerHTML = m ? `<b>${esc(m[1])}</b>${body(m[2][0].toUpperCase() + m[2].slice(1))}` : body(text);
   tt.text = text;
   tt.el.hidden = false;
@@ -3483,14 +3492,21 @@ if (playtest === 'fx') {
     // From its key: the ability's own key on this tray, else the tray's first key standing in for it (said so); with the
     // key hidden, the fallback a fight uses when its key isn't on screen: your bar.
     mates: () => matesOf(campaign).map((m) => m.who),
-    fire: (key, id, { power, crit, result, hidden, who }) => {
+    fire: (key, id, { power, crit, result, hidden, who, tier = 1 }) => {
       if (fxLevel() === 'minimal' || !canMove()) return 'none';
       const R = recipeOf(key), row = R?.on === 'you' ? null : fxRow(id), ability = abilityOfKey(key), tick = key.endsWith(':tick');
       const own = ability && document.querySelector(`#tray .ability[data-ability="${CSS.escape(ability)}"]`), stand = !tick && !hidden && !own;
       const keyEl = stand ? document.querySelector('#tray .ability') : null;
-      const plan = abilityfx.play(key, row, { power, crit, result, ability, keyEl, noKey: !!hidden, who: who || null, kind: who ? 'crew' : 'you', origin: tick ? 'here' : who ? 'crew' : 'key', onImpact: row ? () => hitfx.jolt(row, result) : null });
+      const plan = abilityfx.play(key, row, { power, crit, result, ability, keyEl, noKey: !!hidden, who: who || null, kind: who ? 'crew' : 'you', origin: tick ? 'here' : who ? 'crew' : 'key', tier: who ? 1 : tier, onImpact: row ? () => hitfx.jolt(row, result) : null });
       if (plan) { window.__fxPlan = { travel: plan.travel, impact: plan.impact, dur: plan.dur, from: plan.from }; return stand && keyEl ? 'stand-in' : 'fx'; } // the playtest's last plan, for review captures
       if (row) hitfx.strike(row, { kind: 'you', result });
+      return 'plain';
+    },
+    // A break finisher on a part (its class's, or a subclass's), as the winning break plays it.
+    finish: (cls, sub, id) => {
+      if (fxLevel() === 'minimal' || !canMove()) return 'none';
+      const plan = abilityfx.finish(cls, sub || null, fxRow(id));
+      if (plan) { window.__fxPlan = { travel: 0, impact: plan.impact, dur: plan.dur, from: 'here' }; return 'fx'; }
       return 'plain';
     },
   });
