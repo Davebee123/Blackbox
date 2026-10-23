@@ -3781,36 +3781,11 @@ body.no-motion .recap { animation: none; }
 .mrow.th-row.done { opacity: 0.55; }
 .mrow.th-row.done:hover, .mrow.th-row.done.open { opacity: 0.85; }
 .tag.th-tag { color: var(--amber); border-color: var(--amber); }
-.th-read .th-arc { color: var(--amber); }
-.th-read .th-reason { margin: 6px 0 12px; color: var(--muted); font-style: italic; }
-.th-steps { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 6px; }
-.th-step { display: grid; grid-template-columns: 14px minmax(0, 1fr); gap: 8px; align-items: baseline; color: var(--text); }
-.th-step .th-dot { width: 9px; height: 9px; border: 1px solid var(--amber); transform: rotate(45deg); translate: 0 -1px; }
-.th-step.done { color: var(--dim); text-decoration: line-through; text-decoration-color: rgba(185, 157, 97, 0.6); }
-.th-step.done .th-dot { background: var(--dim); border-color: var(--dim); }
-.th-step.now { color: var(--bright); }
-.th-step.now .th-dot { background: var(--amber); box-shadow: 0 0 6px rgba(241, 185, 47, 0.6); }
-.th-step.fog { color: var(--dim); font-family: var(--mono); }
 .th-lore { margin: 4px 0 10px; color: var(--bright); font-style: italic; }
 /* the reward: pick one of three */
 .gain.th-offer { z-index: 41; }
-.gain.th-offer .sp-card { width: min(720px, 100%); }
-.th-offer-card .th-lore { margin: 2px 0 6px; }
-.th-offer-card .th-pick { font: var(--kicker); letter-spacing: var(--kicker-track); text-transform: uppercase; color: var(--amber-soft); margin-bottom: 8px; }
-.th-items { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.th-item { position: relative; display: grid; align-content: start; gap: 4px; padding: 12px 12px 34px; text-align: left; border: 1px solid var(--line-strong); border-top: 2px solid var(--amber-deep); border-radius: var(--r-card); background: var(--inset); cursor: pointer; }
-.th-item.r-tuned { border-top-color: #4f8fd6; } .th-item.r-custom { border-top-color: #e2c14a; } .th-item.r-stock { border-top-color: var(--gray); }
-.th-item:hover { border-color: var(--amber); background: var(--amber-wash); }
-.th-item .th-n { position: absolute; top: 8px; right: 10px; font: 600 11px var(--mono); color: var(--dim); }
-.th-item b { font: 600 14px var(--sans); overflow-wrap: anywhere; padding-right: 14px; }
-.th-item small { font: 11px var(--mono); color: var(--muted); }
-.th-item small i { color: var(--amber); font-style: normal; }
-.th-item .th-stats { display: grid; gap: 1px; font: 12px var(--mono); color: var(--text); } /* one stat a line */
-.th-item .th-rule { font: 11px var(--mono); color: var(--amber-soft); }
-.th-item .th-take { position: absolute; left: 12px; bottom: 10px; font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--amber); }
 .th-later { opacity: 0.8; }
 .th-later small { color: var(--dim); font-size: 11px; margin-left: 6px; }
-@media (max-width: 640px) { .th-items { grid-template-columns: minmax(0, 1fr); } .th-item { padding-bottom: 30px; } }
 /* the floor map: a temporary server (an amber ?, gray once dark), its dashed link, a file in transit, a server's mark */
 .mnode.temp .tframe { fill: rgba(241, 185, 47, 0.06); stroke: var(--amber); stroke-width: 1.4; stroke-dasharray: 3 2.5; }
 .mnode.temp .tq { fill: var(--amber); font: 700 13px var(--mono); }

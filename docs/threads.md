@@ -63,10 +63,10 @@ log (Mail), next to Contracts.
   ▮▮▮▯ 72% · waits · Process 2*). The thread you track has one line on the strip and each step goes up on the pager.
   On the floor map: a ! or ? beside a server, the temporary servers, a file in transit moving down its route.
 - **The quest log.** Mail's **Threads** section lists every thread (tracked, set aside, done), and a thread opens
-  as its giver, its title, its reason, its steps (the done ones struck, the current one with its progress, the ones
-  ahead ???), its lore line at the end, and **Track** / **On map** / **Set aside** / **Pick it up** / **Pick your
+  as its giver, its title, its reason, its steps as a printed job (done, the current one with its progress, the
+  ones ahead encrypted), its lore line at the end, and **Track** / **On map** / **Set aside** / **Pick it up** / **Pick your
   reward**.
-- **The end.** The last lines first, then the reward card over the page: three items, *Take* one. **Later** puts it
+- **The end.** The last lines first (signed), then the reward card over the page, a signed receipt: three items, *Take* one. **Later** puts it
   off; it waits in Mail.
 - **The terminal.** `talk`, `talk 1`, `read`, `take`, `sweep <pid>` in a thread's room; `threads`, `thread <id>`,
   `thread track|abandon|resume <id>`, `thread take <n>` anywhere.
@@ -117,3 +117,28 @@ For a player a chain is about 20 to 45 minutes of play at its floor's level, pay
   only grows, and only when you visit.
 - Mirror copies your *most cleared* server (a held one first). Should it copy your home server's look instead, once
   home has rooms?
+
+## 7. The quest window: a transmission
+
+The designer's ask: *"I think the quest window can feel more immersive as well."* Three directions were prototyped (a
+transmission, a case file, a job ticket); the designer picked **the transmission**, now the only look. The quest
+window is the three screens a thread is read on: its **dialogue over the map** (the thread arriving at its start, a
+step's talk, its last lines with their choice, a temporary server's logs: `threadPanel`), its **page in Mail**
+(`threadReader`) and its **reward card** (`offerMarkup`). The room card's Talk, the strip's line and the map's ! and ?
+stay as they were. Code: `dist/quest-view.mjs`, `dist/quest.css`; tests in `quest-view.test.mjs`.
+
+| Moment | What it shows |
+|---|---|
+| A new thread (its opening) | *Incoming* · the room's address and server; the sender with their faction's mark (or a terminal, a file, a log); the title; the lines, the first resolving out of noise once; the steps as a printed job (`job 0003`, ✓ done, ▸ now, the ones ahead dim hex) |
+| A step's talk | *Channel open*, the lines |
+| The turn-in | *Last transmission*, the lines and their choice; once said, signed by who said them |
+| A log | *Log*, its lines (the process log's sweep as before) |
+| Mail | the giver and mark, the reason, the job, and at the end the lore line, signed |
+| The reward | a receipt: the steps, the lore line, *signed* and the thread's signature, *Pick one* of three, Later |
+
+Calm: the lines arrive once (opacity only); the decrypt plays only for a new quest's opening, once (a redraw while it
+plays carries it on where it was, `ageOf`, never starts it over; after about two seconds it is drawn still); Mail's
+page never animates (it redraws as its clocks tick); Motion off and reduced motion draw everything still. The hex for
+a step ahead is dim and smaller, a placeholder rather than noise. Nothing new is said: every line is the thread's own;
+the signature, the job number and the cipher are presentation. `developer thread preview [chain] [stage]` (dev only)
+shows any chain offered, under way, at its turn-in and its reward, without touching the save.

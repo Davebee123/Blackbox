@@ -301,18 +301,19 @@ export function threadVerb(s, loc, room, verb, arg = null) {
   const t = o.t, st = o.step;
   if (st.choice) {
     const n = Number(String(arg || '').trim());
-    if (!(n >= 1 && n <= st.choice.length)) { say(s, t, { who: st.who, icon: st.icon, lines: st.lines.map((x) => fill(s, t, x)), choices: st.choice.map((x) => x.label), room, loc }); return true; }
+    if (!(n >= 1 && n <= st.choice.length)) { say(s, t, { who: st.who, icon: st.icon, lines: st.lines.map((x) => fill(s, t, x)), choices: st.choice.map((x) => x.label), room, loc, at: t.step }); return true; }
     return choose(s, t, st, st.choice[n - 1], room, loc);
   }
-  say(s, t, { who: st.who, icon: st.icon, lines: st.lines.map((x) => fill(s, t, x)), room, loc });
+  say(s, t, { who: st.who, icon: st.icon, lines: st.lines.map((x) => fill(s, t, x)), room, loc, at: t.step });
   if (st.kill) killKnown(s, t, st.kill);
   complete(s, t);
   return true;
 }
 // What was said, for the dialogue panel (threads-view.mjs) and the terminal. Kept until the next thing said.
-function say(s, t, { who, icon = 'npc', lines = [], choices = null, room, loc, kind = 'talk', sweep = null }) {
+// at: the step it was said on (0 the opening, the last the turn-in), for the quest window's moment (quest-view.mjs).
+function say(s, t, { who, icon = 'npc', lines = [], choices = null, room, loc, kind = 'talk', sweep = null, at = null }) {
   const T = threadsOf(s);
-  T.said = { n: (T.said?.n || 0) + 1, tid: t?.id || null, who, icon, lines, choices, room: room?.id || null, loc: loc?.id || null, kind, title: t ? chainOf(t)?.title : null };
+  T.said = { n: (T.said?.n || 0) + 1, tid: t?.id || null, who, icon, lines, choices, room: room?.id || null, loc: loc?.id || null, kind, title: t ? chainOf(t)?.title : null, at };
   emit(s, 'thread-talk', [`${who}:`, ...lines, ...(choices ? choices.map((c, i) => `  talk ${i + 1}  ${c}`) : [])].join('\n'), { thread: t?.id || null, who, kind, sweep });
 }
 function begin(s, loc, room, o) {
@@ -324,14 +325,14 @@ function begin(s, loc, room, o) {
   for (const key of Object.keys(c.places || {})) placeOf(s, t, key);
   const first = c.steps[0];
   if (first.spawn) spawnTemp(s, t, first.spawn);
-  say(s, t, { who: first.who, icon: first.icon, lines: first.lines.map((x) => fill(s, t, x)), room, loc });
+  say(s, t, { who: first.who, icon: first.icon, lines: first.lines.map((x) => fill(s, t, x)), room, loc, at: 0 });
   emit(s, 'thread-start', `THREAD: ${c.title}.`, { thread: t.id });
   complete(s, t);
   return true;
 }
 function choose(s, t, st, ch, room, loc) {
   t.choice = ch.id;
-  say(s, t, { who: st.who, icon: st.icon, lines: ch.lines.map((x) => fill(s, t, x)), room, loc });
+  say(s, t, { who: st.who, icon: st.icon, lines: ch.lines.map((x) => fill(s, t, x)), room, loc, at: t.step });
   for (const [f, n] of Object.entries(ch.rep || {})) if (FACTIONS[f]) changeRep(s, f, n, chainOf(t).title);
   if (ch.credits) { const c = THREAD.credits(hackerLevel(s), ch.credits); s.server.credits += c; emit(s, 'rooms-good', `+${c} credits.`, { credits: c }); }
   complete(s, t);

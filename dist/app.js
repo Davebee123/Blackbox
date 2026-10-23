@@ -46,6 +46,7 @@ import { roomsMarkup, fillClocks, popOf, pickRoom, closePop } from './floorplan-
 import { createPuzzleFx, panelRoom, closePanel, openPanel, pzUi } from './puzzle-view.mjs';
 import { PUZZLES } from './puzzles.mjs';
 import { threadPanel, thUi, offerMarkup as thOfferMarkup } from './threads-view.mjs';
+import { PREVIEW, previewMarkup } from './quest-view.mjs';
 import * as PV from './profile-view.mjs';
 import { channelOf, muted as chanMuted, say as chanSay } from './channel.mjs';
 import { setBanner, setPlan, handleOf } from './profile.mjs';
@@ -1334,6 +1335,7 @@ function run(raw) {
   if (text === 'achievements') return goTo('achieve'); // the page; achieve pin <name> and the rest go to the engine
   if (text === 'shell' || text.startsWith('shell ')) return shellCommand(text.slice(6).trim());
   { const said = screenFxCommand(campaign, text); if (said) { save(); dirty = true; return notice(said); } } // screen fx [off|subtle|medium|bold|next] / screen fx <effect> on|off (and the old effects calm|full|minimal)
+  if (/^developer thread preview\b/.test(text)) return threadPreview(text.replace(/^developer thread preview\s*/, ''));
   if (text === 'casing on' || text === 'casing off') { campaign.settings.casing = text === 'casing on'; save(); dirty = true; return; }
   if (text === 'tips on' || text === 'tips off' || text === 'tips replay') {
     if (text === 'tips replay') { campaign.settings.seen = {}; delete campaign.tour; campaign.settings.tips = true; }
@@ -1847,10 +1849,40 @@ function renderOffer() {
   el.hidden = !want;
   if (want) put('th-offer', thOfferMarkup(campaign)); else if (cache.get('th-offer')) { cache.delete('th-offer'); el.innerHTML = ''; }
 }
+// developer thread preview [chain] [offer|progress|turnin|reward] (dev only): one thread at each stage of the quest
+// window, over the page (quest-view.mjs previewMarkup). Its own buttons switch the stage and the thread; nothing in
+// it acts on the game.
+const thPrev = { open: false, chain: 'night-operator', stage: 'offer' };
+function threadPreview(arg) {
+  for (const w of arg.split(/\s+/).filter(Boolean)) {
+    if (PREVIEW.chains.includes(w)) thPrev.chain = w;
+    else if (PREVIEW.stages.some(([k]) => k === w)) thPrev.stage = w;
+    else return notice(`developer thread preview: ${PREVIEW.chains.join(', ')}; ${PREVIEW.stages.map(([k]) => k).join(', ')}.`, true);
+  }
+  thPrev.open = true; thPrev.qn = null; dirty = true;
+}
+function renderPreview() {
+  const el = $('th-preview');
+  if (!el) return;
+  el.hidden = !thPrev.open;
+  if (thPrev.open) put('th-preview', previewMarkup(campaign, thPrev)); else if (cache.get('th-preview')) { cache.delete('th-preview'); el.innerHTML = ''; }
+}
+document.addEventListener('click', (e) => {
+  const p = e.target.closest?.('#th-preview');
+  if (!p) return;
+  const st = e.target.closest('[data-thp-stage]');
+  if (e.target.closest('[data-thp-close]')) thPrev.open = false;
+  else if (st) thPrev.stage = st.dataset.thpStage;
+  else if (e.target.closest('[data-thp-chain]')) thPrev.chain = PREVIEW.chains[(PREVIEW.chains.indexOf(thPrev.chain) + 1) % PREVIEW.chains.length];
+  else { e.stopImmediatePropagation(); return; } // the preview's own window: nothing in it acts on the game
+  thPrev.qn = null; feel.key('click'); dirty = true; e.stopImmediatePropagation();
+}, true);
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && thPrev.open) { thPrev.open = false; dirty = true; e.stopImmediatePropagation(); } }, true);
 function render(force = false) {
   if (force) cache.clear();
   renderMeters();
   renderOffer();
+  renderPreview();
   shell.apply(module);
   const combatLike = module === 'combat';
   const s = shown();
