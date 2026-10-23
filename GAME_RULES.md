@@ -766,12 +766,12 @@ Who you are to everyone else on the net, the way `finger` shows a Unix login. `f
 
 ## Achievements (achievements.mjs)
 
-What you've done, kept for good, the way World of Warcraft keeps it. One system for every cosmetic reward: each title and each sticker is the reward of an achievement (the same deed as before earns both), a few achievements bring a banner preset for your card, and eight bring a colourway for the monitor casing (see *The monitor casing*). Rewards are cosmetic only: no achievement changes a number in a fight, a drop or a price.
+What you've done, kept for good, the way World of Warcraft keeps it. One system for every cosmetic reward: each title and each sticker is the reward of an achievement (the same deed as before earns both), a few achievements bring a banner preset for your card, eight bring a colourway for the monitor casing, four a district for the window behind it and six a prop for the desk (see *The monitor casing*). Rewards are cosmetic only: no achievement changes a number in a fight, a drop or a price.
 
 - **90 achievements, 1,630 points**, in eight categories: Combat, Exploration, Collection, Factions, Classes (subclasses and the tier sets among them), Daemons, Co-op and Feats. Points are 5, 10, 25 or 50. Milestones count up with a bar (*64/100*); **Feats** are tricks done in one fight, or one visit. Three are **hidden**: *???* and a one-line hint until earned.
 - **Checked cheaply.** Every second (with the profile's deeds: invasion.mjs tickNetwork) only the ones not yet earned, each a look at state the game already keeps: the Codex's kills and bosses, the Collection, floors, standing, classes, daemons, the consortium, servers Mapped and taken over (and the log's takeovers and contracts delivered). What only a fight knows (an elite beaten, a crewmate beside you, your daemons' moves, a feat) is noted on the save as the fight ends (combat.mjs finish) and earned on the next tick. A loss counts for nothing and is never held against you. Nothing is time-limited and nothing can be missed for good: a lair boss, a set or a feat can always be done again.
 - **Earning one** is a quiet pager line (*Achievement: Uncrowned.*, no chirp, as a title was) that opens it, and a line on #net (*dana earned [Uncrowned] and is now Uncrowner.*, the name in amber with its rule on hover). Several at once share one line. No new sound.
-- **The page:** System → **Achievements** (a tab beside Settings, with your points; `achievements` opens it). The categories down the left, each with its count and a bar; *Summary* first (a tile a category, your last six, and the four nearest done). The category's achievements beside them, under their groups (Lairs, Floors, Sets, Tier sets): its points on a medal, its name, its bar and count while it's under way, what it brings (a title in its words, the sticker as it looks, the banner in miniature), and once earned the date and **Pin**. Earned rows are lit amber; the rest dim; a hidden one is *???* with its hint. Its rule is its tooltip (*Uncrowned: Beat RELAY-KING. 10 points. Rewards the title Uncrowner. Earned 22 Oct 2026.*). On a phone the categories wrap above the list.
+- **The page:** System → **Achievements** (a tab beside Settings, with your points; `achievements` opens it). The categories down the left, each with its count and a bar; *Summary* first (a tile a category, your last six, and the four nearest done). The category's achievements beside them, under their groups (Lairs, Floors, Sets, Tier sets): its points on a medal, its name, its bar and count while it's under way, what it brings (a title in its words, the sticker as it looks, the banner in miniature, a colourway as a swatch, a district as its skyline, a prop as itself), and once earned the date and **Pin**. Earned rows are lit amber; the rest dim; a hidden one is *???* with its hint. Its rule is its tooltip (*Uncrowned: Beat RELAY-KING. 10 points. Rewards the title Uncrowner. Earned 22 Oct 2026.*). On a phone the categories wrap above the list.
 - **Pins:** `achieve pin <name>` (or **Pin** on its row) puts it on your card, up to three; `achieve unpin <name>`. Unpinned slots show your latest.
 - **An older save** gets everything it has already done when it loads, quietly: every title it holds and every sticker it shows keeps its achievement, nothing is lost, and the next tick says how many in one pager line (*Achievements: 23 earned from your record.*; nothing on #net). Contracts delivered and takeovers start from what the save holds.
 - **Saves:** `s.achievements` = `{ got: { id: when }, n: { elites, daemon, crew, contracts, takeovers }, flags: { feats done }, pins, seen }`, with defaults; a server's rooms note whether the visit that Mapped it rested (`mappedRest`). No SAVE_VERSION change.
@@ -782,12 +782,12 @@ What you've done, kept for good, the way World of Warcraft keeps it. One system 
 | Achievement | Earned by | Points | Reward |
 |---|---|---:|---|
 | Process Killer | Win 100 fights (progress) | 10 | casing Beige box |
-| Long Uptime | Win a fight that ran 20 cycles or more | 10 | title *the Patient* |
+| Long Uptime | Win a fight that ran 20 cycles or more | 10 | title *the Patient*, desk prop Coffee mug |
 | Big Game | Beat 25 ◆ CREW elites (progress) | 10 | — |
 | Uncrowned | Beat RELAY-KING | 10 | title *Uncrowner* |
 | Repossessed | Beat REPO MAN | 10 | title *Repossessor* |
 | Dead Air (hidden) | Silence the HOLLOW CHOIR (until then: ???, *Something on the net is singing.*) | 25 | title *of the Last Note* |
-| Every Crown | Beat RELAY-KING, REPO MAN, THE FOREMAN, HEATSINK and COLDWALLET (progress) | 25 | banner Crown |
+| Every Crown | Beat RELAY-KING, REPO MAN, THE FOREMAN, HEATSINK and COLDWALLET (progress) | 25 | banner Crown, window Tar Beach |
 | Lair-born · Lairs | Beat a lair boss | 10 | title *Lair-born* |
 | Bolt Cutter · Lairs | Beat DEADBOLT in its lair | 10 | sticker DEADBOLT |
 | Defused · Lairs | Beat TRIPMINE in its lair | 10 | sticker TRIPMINE |
@@ -804,12 +804,12 @@ What you've done, kept for good, the way World of Warcraft keeps it. One system 
 | Achievement | Earned by | Points | Reward |
 |---|---|---:|---|
 | Cartographer | Map a server | 5 | — |
-| Mapper | Map 20 servers (progress) | 25 | title *Mapper* |
+| Mapper | Map 20 servers (progress) | 25 | title *Mapper*, window The Stacks |
 | Change of Hands | Take over a server | 10 | — |
 | Landlord | Take over 10 servers (progress) | 25 | — |
-| Five Points | Find every faction hub (progress) | 10 | — |
+| Five Points | Find every faction hub (progress) | 10 | desk prop Keycard |
 | Loose Ends | Finish 5 threads (progress) | 10 | — |
-| Down the Line · Floors | Reach floor 2, Backhaul | 5 | sticker F2 |
+| Down the Line · Floors | Reach floor 2, Backhaul | 5 | sticker F2, window Backhaul |
 | Stacked · Floors | Reach floor 3, The Stacks | 10 | sticker F3 |
 | Cold Open · Floors | Reach floor 4, Coldline | 10 | sticker F4 |
 | Core Sample · Floors | Reach floor 5, Deep Core | 25 | title *Deepwalker*, sticker F5 |
@@ -822,7 +822,7 @@ What you've done, kept for good, the way World of Warcraft keeps it. One system 
 | Achievement | Earned by | Points | Reward |
 |---|---|---:|---|
 | Gold Star | Find a unique | 5 | — |
-| Collector | Find 25 uniques (progress) | 25 | title *Collector* |
+| Collector | Find 25 uniques (progress) | 25 | title *Collector*, desk prop Floppy stack |
 | Curator | Find 100 uniques (progress) | 50 | banner Vault door |
 | Assembled | Assemble a faction piece | 10 | title *the Assembler* |
 | Five of a Kind | Assemble all 5 faction pieces (progress) | 50 | — |
@@ -852,7 +852,7 @@ What you've done, kept for good, the way World of Warcraft keeps it. One system 
 | Preferred Customer | Reach Preferred with Halcyon Mutual | 25 | title *of Halcyon*, sticker Preferred, casing Halcyon blue |
 | Inner Circle | Reach Inner circle with GLASSJAW | 25 | title *of GLASSJAW*, sticker Inner circle, casing GLASSJAW plum |
 | Key Account | Reach Key account with Kestrel Underwriting | 25 | title *of Kestrel*, sticker Key account, casing Kestrel green |
-| On the Signal | Reach Signal with LANTERN | 25 | title *of LANTERN*, sticker Signal, casing LANTERN copper |
+| On the Signal | Reach Signal with LANTERN | 25 | title *of LANTERN*, sticker Signal, casing LANTERN copper, window Coldline |
 | Cantor | Reach Cantor with NULL CHOIR | 25 | title *of NULL CHOIR*, sticker Cantor, casing NULL CHOIR wine |
 | Courier's Bane | Intercept 10 couriers (progress) | 10 | title *Courier's Bane* |
 | Tracker | Collect 5 bounty hunts (progress) | 10 | title *Tracker* |
@@ -898,14 +898,14 @@ What you've done, kept for good, the way World of Warcraft keeps it. One system 
 
 | Achievement | Earned by | Points | Reward |
 |---|---|---:|---|
-| Untouchable | Win a fight of 8 cycles or more without taking damage | 10 | casing Smoked |
+| Untouchable | Win a fight of 8 cycles or more without taking damage | 10 | casing Smoked, desk prop Cactus |
 | Short Circuit | Interrupt 3 moves in one fight | 10 | — |
 | Open Book | Read every tell in a fight in which 4 or more were said | 25 | — |
 | Chain Reaction (hidden) | Break every part of a virus of 3 parts or more in one cycle (until then: ???, *Some things are better all at once.*) | 25 | sticker Chain |
-| Zero Exceptions | Win a fight with a routine you made that never threw an exception | 25 | sticker 0 exceptions |
+| Zero Exceptions | Win a fight with a routine you made that never threw an exception | 25 | sticker 0 exceptions, desk prop Rubber duck |
 | Lone Wolf | Beat a ◆ CREW elite with no crew beside you | 25 | sticker Solo |
 | No Rest | Map a server on a visit in which you never rest | 25 | — |
-| By a Thread (hidden) | Win a fight with under 5% of your health left (until then: ???, *Closer than it looked.*) | 10 | sticker <5% |
+| By a Thread (hidden) | Win a fight with under 5% of your health left (until then: ???, *Closer than it looked.*) | 10 | sticker <5%, desk prop Lucky die |
 
 ## Consortium and the crew on a run (consortium.mjs, run.mjs)
 
@@ -1740,14 +1740,16 @@ System → Settings → Casing turns it off (its cosmetics with it); phones and 
 - **The hour:** the sky follows your clock: night (21:00 to 05:00, the city as it always was), dawn, day (a dull smoggy grey, most windows dark, the signs dimmer) and dusk. `?tod=night|dawn|day|dusk` shows another.
 
 - **The weather** turns over every five minutes, from the clock (clear, fog, drizzle, rain, storm), fading from one to the next over about 40 seconds: fine rain streaks outside in three depths and beads running down the glass, the signs and lamps smeared on the wet walls and street, fog and smog as haze, and in a storm lightning, with thunder a moment after through Ambience. `weather <clear|fog|drizzle|rain|storm|auto>` holds one.
-- A canvas behind the page, only ever around the monitor: it takes no clicks and the monitor covers its middle. About 20 frames a second; what doesn't move is drawn once and only what moves is drawn each frame. Motion off or reduced motion draws one still frame, and a hidden tab draws nothing.
+- **Districts.** The window looks out on one part of the city, drawn by the same engine in the same calm warm light (signals, status lights and bulbs in amber, peach and pale white; never teal, violet or a threat's red): **The Sprawl** (the city above, the default, always yours) and four more, each brought by an achievement. **Backhaul** (*Down the Line*, floor 2): the rail yards, the city low on the horizon under a wide sky, sawtooth depots, a power line on lattice pylons, floodlight masts with their heads up over the monitor, a signal gantry and the catenary in each strip, wet rails fanning out, a lit signal tower and signal box; every two to four minutes a slow train runs through behind the catenary's masts, its windows lit. **The Stacks** (*Mapper*): the server towers, windowless blocks with rack-like faces and tiny status lights, a rack face up close whose lights blink and whose hall glows through its vents, cable trays, cooling stacks venting steam. **Coldline** (*On the Signal*, LANTERN's top tier): the harbour, a far shore across black water, a lighthouse on its point sweeping the haze (long when it points along the shore, a flare when it turns to face you), cranes along the quay and one great crane straddling the view (its legs up close, its boom across the top with its lights), container stacks, quay lamps, fog of its own, and now and then a ship far out. **Tar Beach** (*Every Crown*): up on the roofs, the skyline across the way, roofs stepping down toward the glass, a big water tank close by with string lights from its stand, a bulkhead's lit door, a rooftop sign seen from behind with its bulbs chasing. Pick one on System → Settings → **Window** (the ones you haven't earned are dim, their achievement on hover) or with `district <name>`; a district you haven't earned can't be picked, and a save that names one shows the Sprawl. Kept on `s.cosmetics.district` (none is the Sprawl).
+- A canvas behind the page, only ever around the monitor: it takes no clicks and the monitor covers its middle. About 20 frames a second; what doesn't move is drawn once and only what moves is drawn each frame (a district's near layer, drawn once like the rest, sits over its movers). Motion off or reduced motion draws one still frame, and a hidden tab draws nothing, whatever the district.
 
 **Casing cosmetics** (casing.mjs, casing.css; System → **Casing**, a tab beside Settings and Achievements). Only ever the casing: the screen, its colours, text and layout never change, nothing covers the glass, the knobs or the lamps, and nothing moves. All of it is an achievement's reward, cosmetic only.
 
 - **Colourway:** the plastic of the bezel, its frame's rim, the chin's print, the plate's engraving and the knobs. **Stock** (today's dark grey, the default) and eight more, each from an achievement: **Beige box** (*Process Killer*), **Matte black** (*Rock Bottom*, floor 8), **Smoked** (*Untouchable*), and one a faction at its top tier: **Halcyon blue** (*Preferred Customer*), **GLASSJAW plum** (*Inner Circle*), **Kestrel green** (*Key Account*), **LANTERN copper** (*On the Signal*), **NULL CHOIR wine** (*Cantor*). Swatches you haven't earned are dim and locked, the achievement on hover. `casing color <name>`. CSS variables only (`--case-*`): style.css reads each with today's colour as its fallback, so the stock casing is exactly as it was; a colourway also fills the bezel's frame behind the page (the glass cut out of it exactly), so it shows over the window outside.
 - **Nameplate:** the badge on the chin. **BLACKBOX · MODEL 7** (stock), **MODEL 7 · <a title you hold>** (*MODEL 7 · THE CONDUCTOR*), or your own words, 16 plain characters at most, shown in capitals. `casing plate <text>`, `casing plate title <title>`, `casing plate stock`.
 - **Stickers:** four slots on the chin, two between the knobs and the plate and two between the plate and the lamps, each holding a sticker you've earned (any achievement's sticker: a faction, a set, a floor, a lair boss, Chain, 0 exceptions, Solo, <5%), drawn as a small printed label in its colour with an ASCII mark (`##` a faction, `[]` a set, `\/` a floor, `x_x` a lair boss, `*` a deed), a little crooked and still. Their strips end short of the knobs, the plate and the lamps (measured as the plate changes), and a sticker that doesn't fit is left off rather than squeezed. On System → Casing: pick a slot on the chin in miniature, then a sticker. `casing sticker <1-4> <sticker>|off`; a sticker goes in one slot at a time.
-- **Saves:** `s.cosmetics` = `{ case, plate: null | { title } | { text }, decals: [4 ids or null] }`; an older save has none and shows the stock casing. No SAVE_VERSION change.
+- **Desk props:** six small things for the desk, each from an achievement: a **Coffee mug** (*Long Uptime*; it steams while Motion is on), a **Rubber duck** (*Zero Exceptions*), a **Keycard** (*Five Points*), a **Cactus** (*Untouchable*), a **Floppy stack** (*Collector*) and a **Lucky die** (*By a Thread*). Two fixed spots, left and right: with the window, on the desk under the monitor (the left one short of the keyboard, the right one past the monitor's cable); without it, on the chin, one just past the knobs and one just short of the lamps, the stickers' strips starting or ending past them (a spot with no room before the plate stays empty). Never over the knobs, the lamps, the plate, a sticker or the screen. Small inline pictures, still but for the mug's steam (none with Motion off or reduced motion). On System → Casing → **Desk**: pick a spot, then a prop (the rest dim, their achievement on hover). `casing prop <1-2> <prop>|off`; a prop goes in one spot at a time. The desk starts bare.
+- **Saves:** `s.cosmetics` = `{ case, plate: null | { title } | { text }, decals: [4 ids or null], district?, props?: [2 ids or null] }`; an older save has none and shows the stock casing, the Sprawl and a bare desk. No SAVE_VERSION change.
 
 ## Screen effects
 

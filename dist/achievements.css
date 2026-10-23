@@ -53,6 +53,11 @@
 .ach-rw-case .cs-chip { width: 26px; height: 16px; border-radius: 3px; }
 .ach-rw-case .cs-chip::after { inset: 3px 4px 6px; border-radius: 1px; }
 .ach-rw-case b { font: 600 10px var(--mono); letter-spacing: 0.6px; text-transform: uppercase; color: var(--amber); white-space: nowrap; }
+.ach-rw-district, .ach-rw-prop { display: inline-flex; align-items: center; gap: 6px; padding: 2px 7px 2px 3px; background: var(--panel); border: 1px solid var(--amber-deep); border-radius: var(--r-btn); }
+.ach-rw-district .cs-mini-d { width: 40px; height: 16px; border-radius: 2px; }
+.ach-rw-prop svg { width: 20px; height: 17px; }
+.ach-rw-prop .steam { fill: none; stroke: rgba(236, 226, 214, 0.45); stroke-width: 1.1; stroke-linecap: round; }
+.ach-rw-district b, .ach-rw-prop b { font: 600 10px var(--mono); letter-spacing: 0.6px; text-transform: uppercase; color: var(--amber); white-space: nowrap; }
 .ach-side { grid-column: 4; display: flex; flex-wrap: nowrap; align-items: center; gap: var(--s4); } /* the date and Pin side by side on one line, in their own column even when a row has no reward */
 .ach-side time { font: 11px var(--mono); color: var(--dim); white-space: nowrap; }
 .ach-pin { font: 600 10px var(--mono); letter-spacing: 0.5px; text-transform: uppercase; color: var(--dim); background: none; border: 1px solid var(--line); border-radius: var(--r-btn); padding: 1px 6px; cursor: pointer; }

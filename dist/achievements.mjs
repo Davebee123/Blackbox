@@ -88,7 +88,7 @@ export const DEED_STICKERS = {
 const A = (id, cat, name, rule, pts, more = {}) => ({ id, cat, name, rule, pts, ...more });
 let LIST = null;
 // Built on first use: data.mjs and factions.mjs may still be loading when this module is (the import cycle through combat.mjs).
-export const achievements = () => (LIST ||= [
+const listed = () => (LIST ||= [ // the list as written; achievements() (below, with the window's and the desk's rewards) is what the game reads
   // ---------- Combat ----------
   A('c-win-100', 'combat', 'Process Killer', 'Win 100 fights.', 10, { progress: (s) => of(wins(s), 100), reward: { casing: 'beige' } }),
   A('c-patient', 'combat', 'Long Uptime', 'Win a fight that ran 20 cycles or more.', 10, { has: (s) => titleHas(s, 'patient') || flag('c-patient')(s), reward: { title: 'patient' } }),
@@ -161,6 +161,8 @@ export function rewardText(a) {
   if (r.sticker) out.push('a sticker');
   if (r.banner) out.push('a banner');
   if (r.casing) out.push('a casing colourway');
+  if (r.district) out.push(`the window district ${DISTRICT_NAMES[r.district] || r.district}`);
+  if (r.prop) out.push(`a desk prop, the ${PROP_NAMES[r.prop] || r.prop}`);
   return out.length ? `Rewards ${out.length > 1 ? `${out.slice(0, -1).join(', ')} and ${out.at(-1)}` : out[0]}.` : '';
 }
 // The deed stickers you've earned (profile.mjs stickersOf adds them to the rest).
@@ -178,6 +180,27 @@ export function shownAchievements(s, n = PIN_MAX) {
   const recent = Object.entries(A.got || {}).filter(([id]) => achById(id) && !pins.includes(id)).sort((a, b) => b[1] - a[1]).map(([id]) => id);
   return [...pins, ...recent].slice(0, n).map(achById);
 }
+
+// ---------- the window's districts and the desk's props ----------
+// Cosmetic rewards for the window behind the monitor (window.mjs DISTRICTS: casing.mjs districtOpen) and the props on
+// the desk (casing.mjs PROPS), added to achievements already in the list above. Kept in a block of their own: the
+// list's lines stay as they are, and achievements() is the list with these rewards added (the same objects every call).
+export const DECOR_REWARDS = {
+  'x-floor-2': { district: 'backhaul' }, // Down the Line: the line to the rail yards
+  'x-mapper': { district: 'stacks' }, // Mapper: twenty servers mapped, and the towers they run in
+  'f-lantern': { district: 'coldline' }, // On the Signal: LANTERN's harbour and its lighthouse
+  'c-crowns': { district: 'tarbeach' }, // Every Crown: up on the roofs
+  'c-patient': { prop: 'mug' }, // Long Uptime: a long night
+  't-program': { prop: 'duck' }, // Zero Exceptions: rubber-duck debugging
+  'x-hubs': { prop: 'keycard' }, // Five Points: a keycard for every hub
+  't-untouched': { prop: 'cactus' }, // Untouchable: nothing gets near it
+  'k-collector': { prop: 'floppies' }, // Collector: a stack of disks
+  't-thread': { prop: 'die' }, // By a Thread: luck
+};
+const DISTRICT_NAMES = { backhaul: 'Backhaul', stacks: 'The Stacks', coldline: 'Coldline', tarbeach: 'Tar Beach' };
+const PROP_NAMES = { mug: 'coffee mug', duck: 'rubber duck', keycard: 'keycard', cactus: 'cactus', floppies: 'floppy stack', die: 'lucky die' };
+let DECORATED = null;
+export const achievements = () => (DECORATED ||= listed().map((a) => (DECOR_REWARDS[a.id] ? { ...a, reward: { ...a.reward, ...DECOR_REWARDS[a.id] } } : a)));
 
 // ---------- earning ----------
 // Mark them earned and hand out their rewards (a title joins your titles: profile.mjs). quiet: no pager line.

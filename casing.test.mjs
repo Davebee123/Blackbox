@@ -11,6 +11,11 @@ import { achievements, earned, tickAchievements, developerAchieve } from './dist
 import { CASING, COLORWAYS, COLORWAY_IDS, casingLook, decalStrips, decalsOwned, cosmeticsOf, colorwayOpen, colorwayFrom } from './dist/casing.mjs';
 import { casingPageMarkup } from './dist/casing-view.mjs';
 import { systemMarkup } from './dist/view.mjs';
+import { DISTRICT_IDS, DISTRICTS } from './dist/window.mjs';
+import { districtOf, districtOpen, districtFrom, PROPS, PROP_IDS, PROP_BOX, propsLook, propsOwned, propOpen, propFrom, propLayout, propMarkup } from './dist/casing.mjs';
+import { DECOR_REWARDS, rewardText } from './dist/achievements.mjs';
+import { achRow } from './dist/achievements-view.mjs';
+import { districtCardMarkup } from './dist/casing-view.mjs';
 
 const read = (f) => readFileSync(new URL(f, import.meta.url), 'utf8');
 const strip = (css) => css.replace(/\/\*[\s\S]*?\*\//g, '');
@@ -40,10 +45,12 @@ test('nothing goes on the screen: every casing rule and element is on the bezel'
   const app = html.slice(html.indexOf('<div class="app"'), html.indexOf('<div id="casing">'));
   assert.ok(!/decal|cs-|data-case/.test(app), 'no casing element in the app');
   // casing.css: each rule is a colourway's variables, the body's plastic, the chin (#casing) or System → Casing's page.
-  const css = strip(read('./dist/casing.css')).replace(/@media \(min-width: 1100px\) and \(min-height: 720px\) \{/g, ''); // the casing's own media query (style.css): rules inside it are checked like the rest
+  // the casing's own media query (style.css) and the reduced-motion one (the mug's steam): rules inside them are checked
+  // like the rest; the steam's keyframes are its own (only #casing .prop .steam runs them)
+  const css = strip(read('./dist/casing.css')).replace(/@media \(min-width: 1100px\) and \(min-height: 720px\) \{|@media \(prefers-reduced-motion: reduce\) \{/g, '').replace(/@keyframes cs-steam \{(?:[^{}]*\{[^}]*\})*\s*\}/g, '');
   for (const m of css.matchAll(/([^{}]+)\{[^}]*\}/g)) {
     for (const sel of m[1].split(',').map((x) => x.trim()).filter(Boolean)) {
-      assert.ok(/^\[data-case="\w+"\]$/.test(sel) || /^body\.cased\[data-case(="\w+")?\](::after| #casing( \.[\w-]+)*)?$/.test(sel) || /^#casing\b/.test(sel) || /^\.cs-/.test(sel), `${sel} is on the casing or its page`);
+      assert.ok(/^\[data-case="\w+"\]$/.test(sel) || /^body\.cased\[data-case(="\w+")?\](::after| #casing( \.[\w-]+)*)?$/.test(sel) || /^(\.no-motion )?#casing\b/.test(sel) || /^\.cs-/.test(sel), `${sel} is on the casing or its page`);
       assert.ok(!/\.app|#crt|\.workspace|\.topbar|#fx-|\.page|\.board|\.lamp|\.knob/.test(sel.replace(/^\.cs-page/, '')), `${sel} never styles the screen, the lamps or the knobs`);
     }
   }
@@ -139,4 +146,131 @@ test('System → Casing: the swatches (locked with their achievement), the plate
   assert.ok(!all.includes('cs-sw locked'), 'every colourway open');
   assert.ok(achievements().filter((a) => a.reward?.casing).length === COLORWAY_IDS.length - 1);
   for (const id of COLORWAY_IDS) assert.ok(COLORWAYS[id].name && COLORWAYS[id].tip.endsWith('.'), id);
+});
+
+// ---------- the window's districts and the desk's props ----------
+test('defaults unchanged: the Sprawl out the window and a bare desk, for a new game and an older save', () => {
+  for (const s of [fresh(), restore(JSON.parse(JSON.stringify(fresh()))), me()]) {
+    assert.equal(districtOf(s), 'sprawl');
+    assert.deepEqual(propsLook(s), [null, null]);
+    assert.deepEqual(propsOwned(s), []);
+  }
+  assert.ok(districtOpen(fresh(), 'sprawl'), 'the Sprawl is always open');
+  assert.match(read('./dist/index.html'), /<div class="props" aria-hidden="true"><\/div>\n<\/div>/, 'the desk ships bare, in the casing');
+});
+
+test('districts: each from its achievement (a separate block of rewards), locked ones refused, kept for good', () => {
+  assert.deepEqual(DISTRICT_IDS.slice(1).map((id) => districtFrom(id)?.id), ['x-floor-2', 'x-mapper', 'f-lantern', 'c-crowns']);
+  assert.equal(districtFrom('sprawl'), null);
+  for (const [id, r] of Object.entries(DECOR_REWARDS)) assert.ok(achievements().find((a) => a.id === id)?.reward?.[r.district ? 'district' : 'prop'], `${id} carries its reward`);
+  const s = me();
+  for (const id of DISTRICT_IDS.slice(1)) {
+    const out = play(s, `district ${DISTRICTS[id].name}`);
+    assert.ok(warned(out), `${id} is locked`);
+    assert.ok(out.some((e) => e.message.includes(`comes with ${districtFrom(id).name}`)), `${id}: its achievement named`);
+  }
+  s.cosmetics = { district: 'coldline' }; // a save that names one not earned
+  assert.equal(districtOf(s), 'sprawl', 'one not yours shows the Sprawl');
+  s.floors.reached = 2;
+  tickAchievements(s);
+  assert.ok(earned(s, 'x-floor-2') && districtOpen(s, 'backhaul'));
+  assert.ok(!warned(play(s, 'district backhaul')));
+  assert.equal(districtOf(s), 'backhaul');
+  assert.ok(warned(play(s, 'district stacks')), 'the others still locked');
+  assert.equal(districtOf(s), 'backhaul', 'a refused pick changes nothing');
+  s.floors.reached = 1;
+  assert.equal(districtOf(s), 'backhaul', 'kept for good');
+  assert.ok(warned(play(s, 'district atlantis')));
+  play(s, 'district the sprawl');
+  assert.equal(districtOf(s), 'sprawl');
+  assert.equal(s.cosmetics.district, undefined, 'the Sprawl saves as nothing');
+  developerAchieve(s, 'all');
+  for (const id of DISTRICT_IDS) { play(s, `district ${id}`); assert.equal(districtOf(s), id); }
+  // app.js hands it to the window on every render
+  assert.match(read('./dist/app.js'), /outside\.district\(districtOf\(campaign\)\);/);
+});
+
+test('System → Settings → Window: the districts, yours to pick, the rest dim with their achievement; the reward shows as a chip', () => {
+  const s = me(), snap = JSON.stringify(s);
+  const html = systemMarkup(s);
+  assert.equal(JSON.stringify(s), snap, 'a view never writes the save');
+  assert.match(html, /<h2>Window<\/h2>/);
+  assert.match(html, /class="cs-dist" data-run="district sprawl" aria-pressed="true"/);
+  for (const id of DISTRICT_IDS.slice(1)) assert.ok(html.includes(`class="cs-dist locked" title="${DISTRICTS[id].name}: `) && html.includes(`Comes with ${districtFrom(id).name}.`), `${id} dim, with its achievement`);
+  developerAchieve(s, 'all');
+  play(s, 'district tarbeach');
+  const all = districtCardMarkup(s);
+  assert.ok(!all.includes('cs-dist locked'));
+  assert.match(all, /data-run="district tarbeach" aria-pressed="true"/);
+  const row = achRow(s, achievements().find((a) => a.id === 'x-floor-2'));
+  assert.match(row, /class="ach-rw ach-rw-district" title="Window: Backhaul\.[^"]*"><svg class="cs-mini-d"/);
+  assert.match(rewardText(achievements().find((a) => a.id === 'x-floor-2')), /the window district Backhaul/);
+  assert.match(achRow(s, achievements().find((a) => a.id === 'c-patient')), /class="ach-rw ach-rw-prop"[^>]*>.*Coffee mug/);
+});
+
+test('desk props: six, each from an achievement, two spots, only earned ones, one place each', () => {
+  assert.deepEqual(PROP_IDS, ['mug', 'duck', 'keycard', 'cactus', 'floppies', 'die']);
+  assert.deepEqual(PROP_IDS.map((id) => propFrom(id)?.id), ['c-patient', 't-program', 'x-hubs', 't-untouched', 'k-collector', 't-thread']);
+  for (const id of PROP_IDS) assert.ok(PROPS[id].name && PROPS[id].tip.endsWith('.'), id);
+  const s = me();
+  assert.ok(warned(play(s, 'casing prop 1 mug')), 'locked until earned');
+  assert.deepEqual(propsLook(s), [null, null]);
+  s.achievements = { flags: { 't-untouched': 1 } };
+  tickAchievements(s);
+  assert.ok(propOpen(s, 'cactus'));
+  play(s, 'casing prop 1 cactus');
+  assert.deepEqual(propsLook(s).map((p) => p?.id || null), ['cactus', null]);
+  play(s, 'casing prop 2 cactus');
+  assert.deepEqual(propsLook(s).map((p) => p?.id || null), [null, 'cactus'], 'moved, not copied');
+  assert.ok(warned(play(s, 'casing prop 3 cactus')), 'two spots');
+  assert.match(propMarkup(propsLook(s)[1], 1), /^<span class="prop p-cactus" data-prop-slot="1" title="Cactus\. [^"]*"><svg viewBox="0 0 30 26"/);
+  // System → Casing → Desk
+  const html = casingPageMarkup(s, { pslot: 1 });
+  assert.match(html, /<h2>Desk<\/h2>/);
+  assert.match(html, /data-cs-pslot="1" aria-pressed="true"/);
+  assert.match(html, /class="cs-prop" data-run="casing prop 2 cactus" aria-pressed="true"/);
+  assert.match(html, /class="cs-prop locked" title="Coffee mug: [^"]*Comes with Long Uptime\."/);
+  assert.match(html, /class="cs-prop locked" title="Lucky die: [^"]*Comes with a hidden achievement\."/, 'a hidden one stays hidden');
+  play(s, 'casing prop 2 off');
+  assert.deepEqual(propsLook(s), [null, null]);
+});
+
+test('props never cover the knobs, the lamps, the plate, a sticker or the screen, on the desk or the chin', () => {
+  const R = (x, y, w, h) => ({ left: x, top: y, right: x + w, bottom: y + h, width: w, height: h, x, y });
+  const overlap = (a, b) => a.x < b.right && b.left < a.x + a.w && a.y < b.bottom && b.top < a.y + a.h;
+  for (const [W, H] of [[1100, 720], [1280, 800], [1440, 900], [1700, 900], [1920, 1080], [2560, 1440], [3840, 2160]]) for (const win of [false, true]) for (const plateW of [234, 330]) {
+    const desk = win && W >= 1700 && H >= 860 ? (H >= 1000 ? 34 : 30) : 0, side = win && W >= 1700 ? Math.max(48, W * 0.035) : Math.max(26, W * 0.012);
+    const box = R(side + 20, H - desk - 52, W - 2 * (side + 20), 52);
+    const knobs = R(box.left, box.top + 17, 46, 18), lamps = R(box.right - 300, box.top + 20, 300, 12), plate = R(W / 2 - plateW / 2, box.top + 19, plateW, 14);
+    const screen = R(side, 22, W - 2 * side, H - 22 - 52 - desk);
+    const { spots, dz } = propLayout({ W, H, desk, box, knobs, plate, lamps }, [true, true]);
+    if (desk) assert.ok(spots[0] && spots[1], `${W}×${H}: both on the desk`);
+    else if (W >= 1440) assert.ok(spots[0] && spots[1], `${W}×${H}: both on the chin`);
+    for (const p of spots.filter(Boolean)) {
+      assert.equal(p.w, PROP_BOX.w); assert.equal(p.h, PROP_BOX.h);
+      for (const [name, r] of [['knobs', knobs], ['lamps', lamps], ['plate', plate], ['screen', screen]]) assert.ok(!overlap(p, r), `${W}×${H} window ${win}: a prop clear of the ${name}`);
+      assert.ok(p.x >= 0 && p.x + p.w <= W && p.y >= 0 && p.y + p.h <= H, 'on the page');
+      if (desk) {
+        assert.ok(p.y >= H - desk, 'on the desk, under the chin');
+        const fw = Math.min(260, W * 0.14); // clear of the keyboard, the monitor's foot and its cable, as the window draws them
+        assert.ok(p.x + p.w <= W * 0.2 || p.x >= W / 2 + fw * 1.2, `${W}: clear of the desk's keyboard, foot and cable`);
+      } else assert.ok(p.y >= box.top && p.y + p.h <= box.bottom, 'on the chin');
+      // the sticker strips (measured from the chin's edges) stay off it
+      const left = R(box.left + dz.l0, box.top + 17, box.width - dz.l0 - dz.l1, 18), right = R(box.left + dz.r0, box.top + 17, box.width - dz.r0 - dz.r1, 18);
+      for (const r of [left, right]) if (r.width > 0) assert.ok(!overlap(p, r), `${W}×${H}: no sticker under a prop`);
+    }
+    // with no props the strips are as they always were
+    const bare = propLayout({ W, H, desk, box, knobs, plate, lamps });
+    assert.deepEqual(bare.spots, [null, null]);
+    assert.deepEqual(bare.dz, { l0: knobs.right - box.left + 18, l1: box.right - plate.left + 18, r0: plate.right - box.left + 18, r1: box.right - lamps.left + 18 });
+  }
+  // app.js places them from that layout, inside #casing (never in .app); phones never show the casing
+  const js = read('./dist/app.js');
+  assert.match(js, /const \{ spots, dz \} = propLayout\(/);
+  assert.match(js, /document\.querySelector\('#casing \.props'\)/);
+  const css = read('./dist/casing.css');
+  assert.match(css, /#casing \.props \{ position: absolute; inset: 0; pointer-events: none; \}/);
+  assert.match(css, /\.no-motion #casing \.prop \.steam \{ animation: none; \}/, 'the steam rises only with Motion on');
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{ #casing \.prop \.steam \{ animation: none; \} \}/);
+  assert.match(strip(read('./dist/style.css')), /#casing \{ display: none; \}/, 'no casing, no props, on a phone');
 });
