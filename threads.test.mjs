@@ -380,9 +380,10 @@ test('the screens: the ! only once found and amber (never teal), Talk on the car
   const t = TH.activeThreads(s)[0];
   const mail = mailMarkup(s, t.id);
   assert.match(mail, /Threads · 1/);
-  assert.match(mail, /th-step done[^"]*"><span class="th-dot"[^>]*><\/span><span>Hear out the idle session\.<\/span>/, 'the done step struck');
-  assert.match(mail, /th-step now/);
-  assert.match(mail, /th-step fog[\s\S]*\?\?\?/, 'the steps ahead: ??? until you get there');
+  assert.match(mail, /<li class="done"><span class="qa-n">01<\/span><span class="qa-st" aria-hidden="true">✓<\/span><span class="qa-t">Hear out the idle session\.<\/span>/, 'the done step ticked');
+  assert.match(mail, /<li class="now">/);
+  assert.match(mail, /<li class="fog">[\s\S]*aria-label="Not yet"/, 'the steps ahead: encrypted until you get there');
+  assert.doesNotMatch(mail, /Carry payroll\.db/, 'never what, until it says');
   // The file on the map: its badge, its arrow, its Integrity on the strip.
   connect(s, locOf(s, t.places.file.loc));
   walk(s, t.places.file.room);
@@ -399,7 +400,7 @@ test('the screens: the ! only once found and amber (never teal), Talk on the car
   play(s, 'talk 1');
   const card = offerMarkup(s);
   assert.equal((card.match(/data-run="thread take \d"/g) || []).length, 3);
-  assert.match(card, /Thread done[\s\S]*The Night Operator[\s\S]*Pick one/);
+  assert.match(card, /Receipt[\s\S]*The Night Operator[\s\S]*signed[\s\S]*Pick one/);
 });
 
 test('the bots never start one: a whole visit leaves every thread where it was, and nothing a thread adds holds up Mapped', () => {

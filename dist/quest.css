@@ -1,0 +1,115 @@
+/* ---- the quest window (quest-view.mjs, docs/threads.md 7): a thread as an intercepted transmission. Its dialogue over
+   the map, its page in Mail, its reward card as a signed receipt. Amber is a thread's colour; teal only you; a
+   faction's mark in its own colour. Calm: a dialogue's lines arrive once (opacity only, nothing shifts) and the opening
+   line of a new quest resolves out of noise once; a re-render while it plays carries it on (--age), never starts it
+   over; after that, and with Motion off or reduced motion, everything is still. Mail's page never animates. ---- */
+.q-ic { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.q-mark { display: inline-grid; place-items: center; width: 20px; height: 20px; flex: none; color: var(--amber); }
+.q-mark.q-f { color: var(--fc); }
+.q-mark .glyph { width: 18px; height: 18px; margin: 0; }
+.q-panel .pz-card.q-card { width: min(580px, 100%); gap: var(--s5); }
+.q-panel .sweep { margin: 0; }
+
+/* the arrival */
+@keyframes q-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes qa-txt { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes qa-noise { from { clip-path: inset(0 0 0 0); } to { clip-path: inset(0 0 0 100%); } }
+.q-panel .qa-line, .q-panel .qa-sign, .q-panel .qa-job { animation: q-in 0.3s ease-out both; animation-delay: calc(var(--i, 0) * 0.3s + 0.15s - var(--age, 0ms)); }
+.no-motion .q-panel *, .q-panel.q-settled * { animation: none !important; }
+@media (prefers-reduced-motion: reduce) { .q-panel * { animation: none !important; } }
+
+/* the dialogue */
+.qa-head h1 { display: flex; align-items: center; gap: var(--s4); font: 600 18px/1.2 var(--mono); letter-spacing: 0.4px; min-width: 0; }
+.qa-head h1 span { min-width: 0; overflow-wrap: anywhere; }
+.qa-thread { font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--amber); }
+.qa-lines { display: grid; gap: var(--s3); padding: var(--s2) 0 var(--s2) var(--s5); border-left: 2px solid var(--amber-deep); font: 13px/1.55 var(--mono); color: var(--text); overflow-wrap: anywhere; }
+.qa-line { margin: 0; }
+.qa-line.sys { color: var(--muted); }
+.qa-line.quote { color: var(--bright); }
+.q-panel.k-log .qa-line { white-space: pre-wrap; }
+/* a new quest's opening line resolves out of noise, once: the text wipes in as the noise wipes out (still, the noise is
+   gone and the text is all there) */
+.qa-dec { display: grid; }
+.qa-dec > span { grid-area: 1 / 1; }
+.qa-noise { color: var(--amber-soft); clip-path: inset(0 0 0 100%); }
+.q-panel.m-open .qa-dec .qa-noise { animation: qa-noise 0.9s steps(18) both; animation-delay: calc(0.15s - var(--age, 0ms)); }
+.q-panel.m-open .qa-dec .qa-txt { animation: qa-txt 0.9s steps(18) both; animation-delay: calc(0.15s - var(--age, 0ms)); }
+.qa-sign { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s2) var(--s4); margin: var(--s3) 0 0; font: 12px var(--mono); color: var(--muted); }
+.qa-sign span { font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--dim); }
+.qa-sign b { color: var(--bright); font-weight: 600; }
+.qa-sign code { font: inherit; color: var(--amber); letter-spacing: 1px; }
+
+/* the job: the steps, printed */
+.qa-job { padding: var(--s4) var(--s5); border: 1px dashed var(--line-strong); border-radius: var(--r-card); background: var(--inset); font: 12.5px/1.5 var(--mono); }
+.qa-job-h { max-width: none; display: flex; justify-content: space-between; gap: var(--s4); margin: 0 0 var(--s3); padding-bottom: var(--s3); border-bottom: 1px dashed var(--line); font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--amber-soft); }
+.qa-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s2); font: 12.5px/1.5 var(--mono); }
+.qa-steps li { display: grid; grid-template-columns: 2.4ch 1.4ch minmax(0, 1fr); gap: var(--s4); align-items: baseline; }
+.qa-n { color: var(--dim); }
+.qa-steps .done { color: var(--muted); } .qa-steps .done .qa-st { color: var(--amber-soft); }
+.qa-steps .now { color: var(--bright); } .qa-steps .now .qa-st { color: var(--amber); }
+.qa-steps .fog .qa-st { color: var(--dim); }
+.qa-t { min-width: 0; overflow-wrap: anywhere; }
+/* a step ahead: still, dim hex, smaller, so it reads as a placeholder and not as noise */
+.qa-enc { font-size: 11.5px; color: var(--dim); opacity: 0.7; white-space: nowrap; overflow: hidden; letter-spacing: 0.5px; cursor: help; }
+
+/* in Mail (.card p sets a measure and a colour): full width, in their own colours */
+.q-read p { max-width: none; }
+.q-read .qa-from { display: flex; align-items: center; gap: var(--s3); }
+.q-read .qa-from small { font: inherit; color: var(--amber); }
+.qa-reason { margin: 0; font: 13px/1.5 var(--mono); color: var(--muted); }
+.qa-reason::before { content: '> '; color: var(--dim); }
+.q-read .qa-job-h { color: var(--amber-soft); }
+.qa-state, .q-read .qa-state { font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--gray); }
+
+/* the end: a signed receipt, pick one */
+.gain.th-offer .sp-card.qa-receipt, .thp-gain .sp-card.qa-receipt { width: min(600px, 100%); }
+.qa-receipt { display: grid; gap: var(--s4); }
+.qa-rhead { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px var(--s4); padding-bottom: var(--s4); border-bottom: 1px dashed var(--line); }
+.qa-rhead .sp-name { overflow-wrap: anywhere; }
+.qa-rno { grid-column: 2; grid-row: 1 / span 2; align-self: center; font: 11px var(--mono); color: var(--dim); }
+.qa-receipt .qa-steps { padding-bottom: var(--s4); border-bottom: 1px dashed var(--line); }
+.qa-receipt .th-lore { margin: 0; }
+.qa-receipt .qa-sign { margin: 0; padding-bottom: var(--s4); border-bottom: 1px dashed var(--line); }
+.qa-receipt .th-pick { margin: 0; font: var(--kicker); letter-spacing: var(--kicker-track); text-transform: uppercase; color: var(--amber-soft); }
+.qa-receipt .sp-go { margin-top: 0; }
+.qa-items { display: grid; gap: var(--s3); }
+.qa-item { display: grid; grid-template-columns: 2ch minmax(0, 1.25fr) minmax(0, 1fr) auto; gap: var(--s4); align-items: center; text-align: left; padding: var(--s4) var(--s5); border: 1px solid var(--line); border-left: 2px solid var(--amber-deep); border-radius: var(--r-btn); background: var(--inset); }
+.qa-item.r-tuned { border-left-color: var(--r-tuned); } .qa-item.r-custom { border-left-color: var(--r-custom); } .qa-item.r-stock { border-left-color: var(--gray); }
+.qa-item:hover, .qa-item:focus-visible { border-color: var(--amber); background: var(--amber-wash); outline: none; }
+.qa-item .qa-n { font: 600 11px var(--mono); color: var(--dim); }
+.qa-iw { display: grid; gap: 1px; min-width: 0; }
+.qa-iw b { font: 600 13.5px var(--sans); overflow-wrap: anywhere; }
+.qa-iw small { font: 11px var(--mono); color: var(--muted); }
+.qa-iw small i { font-style: normal; color: var(--amber); }
+.qa-is { display: grid; gap: 1px; min-width: 0; font: 11.5px var(--mono); color: var(--text); }
+.qa-is em { font-style: normal; color: var(--amber-soft); }
+.qa-take { font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--amber); }
+
+/* ---- developer thread preview (dev only): one thread offered, under way, at its turn-in and its reward ---- */
+.gain.th-preview { z-index: 42; place-items: stretch; padding: var(--s6); }
+.thp { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: var(--s5); width: min(1200px, 100%); min-height: 0; max-height: 100%; margin: 0 auto; }
+.thp-bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s3) var(--s5); padding: var(--s3) var(--s5); border: 1px dashed var(--line-strong); border-radius: var(--r-card); background: var(--panel); }
+.thp-k { font: var(--kicker); letter-spacing: var(--kicker-track); text-transform: uppercase; color: var(--amber-soft); }
+.thp-tabs { flex-wrap: wrap; margin: 0; border-bottom: 0; }
+.thp-tabs button { padding: 6px 8px; font-size: 11px; }
+.thp-x { margin-left: auto; }
+.thp-body { min-height: 0; overflow: auto; display: grid; place-items: center; }
+.thp-map { position: relative; width: 100%; height: 100%; min-height: 560px; border: 1px solid var(--line); border-radius: var(--r-card);
+  background: var(--inset) repeating-linear-gradient(0deg, transparent 0 39px, rgba(241, 185, 47, 0.04) 39px 40px), repeating-linear-gradient(90deg, transparent 0 39px, rgba(241, 185, 47, 0.04) 39px 40px); }
+.thp-mail { width: min(660px, 100%); }
+.thp-gain { width: 100%; display: grid; place-items: center; }
+.thp-gain .sp-card { max-height: none; }
+.thp-none { max-width: 50ch; text-align: center; }
+@media (max-width: 900px) {
+  .gain.th-preview { padding: var(--s4); }
+  .thp-body { place-items: start stretch; }
+  .thp-map { min-height: 0; height: auto; padding: var(--s3); background: var(--inset); }
+  .thp-map .pz-panel { position: static; display: block; }
+  .thp-map .pz-card { width: 100%; max-height: none; }
+}
+@media (max-width: 640px) {
+  .qa-item { grid-template-columns: 2ch minmax(0, 1fr) auto; }
+  .qa-is { grid-column: 2 / -1; grid-row: 2; }
+  .gain.th-preview { padding: var(--s6); }
+  .thp-map { padding: 0; border: 0; background: none; }
+}
