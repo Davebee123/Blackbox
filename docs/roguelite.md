@@ -427,7 +427,7 @@ Each author's tell list is part of how you learn it (genome 4.3):
 | Best heat on each server and each Resident | |
 | The Archive (6.6) | |
 
-XP is paid per kill as today, plus a capture bonus of a third of the run's kill XP. Today's catch-up (*Behind*) and fast-kill bonuses stay.
+XP is paid per kill as today, plus a capture bonus of a third of the run's kill XP. Today's fast-kill bonus stays (the catch-up, *Behind*, has since been removed from the game).
 
 ### 6.2 The unlock pool
 

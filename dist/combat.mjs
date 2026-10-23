@@ -31,7 +31,7 @@ import { prepareTicks, onHit as tickHit, BOSS_RULES } from './interrupt.mjs';
 import { TELL, ROOM_FAMILIES, DAMPER_KINDS, floorFor, partGenesFor } from './data.mjs';
 import { tickRoot, processWon } from './root.mjs';
 import { firewallCommand, wear, raidShare } from './firewall.mjs';
-import { levelGains, nextGains, behindBonus, levelStarted, progressionRestore, climbRestore, RETIRED } from './progression.mjs';
+import { levelGains, nextGains, progressionRestore, climbRestore, RETIRED } from './progression.mjs';
 import { portsCommand, invaderDown, invasionRestore, signatureRestore } from './invasion.mjs';
 import { runDaemons, daemonsOn, daemonsHurt, flushDaemons, lifeline, lifelineHeal, daemonCommand, daemonRestore, slottedDaemons, daemonAmount, watchmanBar, gainDaemon } from './daemons.mjs';
 export { daemonSlots, slottedDaemons, daemonLevel, daemonAmount, daemonNext, watchmanBar, gainDaemon } from './daemons.mjs';
@@ -1388,7 +1388,6 @@ export function gainXp(s, amount, why, kind = null, tally = kind) {
     h.xp -= xpToNext(h.level);
     const top = serverLevel(s); // your highest class level before this one (the server's level)
     h.level++;
-    levelStarted(s, h); // Behind: the new level's clock
     if (h.level > top) syncServer(s); // the server's level is your highest class level
     breadcrumb(s, h.level);
     // Rogue servers keep up with you inside their floor's band (rogue.mjs does it on a visit too).
@@ -2121,13 +2120,10 @@ function payKill(s, e, base, why) {
   if (read) emit(s, 'read-xp', `Read ${reads} ${reads === 1 ? 'tell' : 'tells'}: +${read} XP.${e.cleanRead ? ' You read every tell, so the loot rolls once more.' : ''}`, { amount: read, reads, clean: !!e.cleanRead });
   const rested = Math.floor(Math.min(s.rested || 0, xp)); // whole XP only; the fraction waits in s.rested
   if (rested) { s.rested -= rested; emit(s, 'rested', `Rested: +${rested} XP.`, { amount: rested }); }
-  // Behind (progression.mjs): a level running past its target pays kills half again until it ends.
-  const behind = behindBonus(s, xp);
-  if (behind) emit(s, 'behind', `Behind: +${behind} XP.`, { amount: behind });
   // LOWLIGHT Kit (2): the kill after a delivered contract pays more (s.killXp, a percentage; setDeliver).
   const kit = s.killXp ? Math.max(1, Math.round((xp * s.killXp) / 100)) : 0;
   if (kit) { emit(s, 'set-xp', `${s.killXpFrom || 'Set bonus'}: +${kit} XP.`, { amount: kit }); delete s.killXp; delete s.killXpFrom; }
-  gainXp(s, xp + bonus + hot + read + rested + behind + kit, why, 'fight', e.xpKind || 'fight'); // xpKind: what it tallies as (a held server's respawns: build, netrooms.mjs)
+  gainXp(s, xp + bonus + hot + read + rested + kit, why, 'fight', e.xpKind || 'fight'); // xpKind: what it tallies as (a held server's respawns: build, netrooms.mjs)
 }
 
 // A room fight won on the network (netrooms.mjs, docs/servers.md R1): what the kill pays besides its XP. wild: SPRAWL-00
@@ -4833,6 +4829,7 @@ export function restore(raw) {
     signatureRestore(s); // signatures are gone: what you held becomes code (invasion.mjs)
     for (const l of [s.zone, ...(s.locations || [])].filter(Boolean)) delete l.drop; // dead drops became courier events (events.mjs)
     delete s.station;
+    for (const h of Object.values(s.hackers || {})) { delete h.ms; delete h.behind; } // the Behind catch-up is gone: its level clock and its once-a-level note
     s.collection ||= {}; for (const it of s.stash || []) if (it.unique) s.collection[it.unique] ||= 1; // what you already hold counts
     dexOf(s); // the Codex tab's record (genome.mjs): an older save starts it empty (its sets come from each server's floorplan codex)
     researchOf(s); // part research (research.mjs): an older save's decoded parts start decoded, and research on the old 1/5/20 scale is tripled once
