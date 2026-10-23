@@ -117,3 +117,24 @@ For a player a chain is about 20 to 45 minutes of play at its floor's level, pay
   only grows, and only when you visit.
 - Mirror copies your *most cleared* server (a held one first). Should it copy your home server's look instead, once
   home has rooms?
+
+## 7. The quest window (prototype)
+
+The designer's ask: *"I think the quest window can feel more immersive as well."* The quest window here is the three
+screens a thread is read on: its **dialogue over the map** (the thread arriving at its start, a step's talk, its last
+lines with their choice: `threadPanel`), its **page in Mail** (`threadReader`) and its **reward card** (pick one of
+three: `offerMarkup`). The room card's Talk, the strip's line and the map's ! and ? stay as they are. Three directions,
+switchable (`?quest=a|b|c`, System → Settings → Quest window, `quest a|b|c|current`); the current look is the
+default until one is picked. Code: `dist/quest-view.mjs`, `dist/quest.css`; tests in `quest-view.test.mjs`.
+
+| | Direction | The thread arrives | Under way (Mail) | The end |
+|---|---|---|---|---|
+| A | Transmission | *Incoming*, the sender with their faction's mark, the first line resolving out of noise, the steps as a printed job (the ones ahead encrypted hex) | the same job, the reason as a decoded line | the last lines signed; the reward a receipt: the steps, the lore, *signed* and a signature, pick one |
+| B | Case file | a folder: the title on its tab, stamped *Open*, an ASCII face beside *Subject* and *Found*, the transcript, the steps ahead redacted | the file, stamped *Open* / *Set aside* / *Closed* | stamped *Closed*, the lore, three items |
+| C | Job ticket | `#0003`, *new*, *From*, the message, `[x]` / `[ ]` lines, a reward block (*pick 1 of 3*, its rarity, a faction's standing) | the ticket, *tracked* or *open* | *resolved*, every line `[x]`, the reward block opened into three rows |
+
+Each arrives once (lines in turn, opacity only; A's decrypt, B's stamp and lifting redaction, C's tick) and is still
+after: a re-render resumes the arrival where it was (`ageOf`), Motion off and reduced motion draw it still, and Mail's
+page never animates (it redraws as its clocks tick). Nothing new is said: every line is the thread's own; the
+signature, the ticket number and the cipher are presentation. `developer thread preview [chain] [stage]` shows any
+chain offered, under way, at its turn-in and its reward, in whichever direction is on, without touching the save.
