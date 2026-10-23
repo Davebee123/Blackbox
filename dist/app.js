@@ -62,6 +62,7 @@ import { createCoop } from './coop-ui.mjs';
 import { humansReady } from './coop.mjs';
 import * as PG from './pager.mjs';
 import * as PGV from './pager-view.mjs';
+import { noCarrier, NC } from './nocarrier.mjs';
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -710,8 +711,9 @@ function roomsDone(events) {
   const warning = events.findLast((e) => e.type === 'warning');
   if (warning) notice(warning.message, true);
   if (events.some((e) => e.type === 'engage') && active(campaign)) { go('combat'); notice('Fight paused. Any order starts it.'); }
-  else if (events.some((e) => e.type === 'jacked-out' || e.type === 'disconnected') && !campaign.roomsPlay) go('map', true); // the network: home is the map
-  else if (module !== 'rooms' && !active(campaign)) go('rooms', true);
+  else if (events.some((e) => e.type === 'jacked-out') && !campaign.roomsPlay) go('map', true); // the network: home is the map
+  // (a disconnect: NO CARRIER, in react, takes you to the map under its static: nocarrier.mjs)
+  else if (module !== 'rooms' && !active(campaign) && !events.some((e) => e.type === 'disconnected')) go('rooms', true);
   save(); // the network's rooms are on your save (the playtest's never are: save skips it)
   dirty = true;
 }
@@ -1184,12 +1186,16 @@ function react(events) {
         ending = true; hideTip(false); ended = e.mode || 'home'; endedAt = performance.now();
         setTimeout(() => { ending = false; }, 900);
         break;
-      case 'crashed': flash(e.mode === 'run' || e.mode === 'breach' || e.mode === 'rooms' ? 'SIGNAL LOST' : 'SERVER CRASHED'); feel.add('lose', MINE); if (e.invader && !active(campaign)) notice(e.message, true); if (e.mode === 'breach') { hideTip(false); setTimeout(() => go('breach'), 1600); } if (e.mode === 'rooms') { hideTip(false); setTimeout(() => { if (!active(campaign)) go('rooms'); }, 1600); } break;
+      case 'crashed': flash(e.mode === 'run' || e.mode === 'breach' || e.mode === 'rooms' ? 'SIGNAL LOST' : 'SERVER CRASHED'); feel.add('lose', MINE); if (e.invader && !active(campaign)) notice(e.message, true); if (e.mode === 'breach') { hideTip(false); setTimeout(() => go('breach'), 1600); } if (e.mode === 'rooms') { hideTip(false); setTimeout(() => { if (!active(campaign) && !lossHold && !document.querySelector('.nocarrier')) go('rooms'); }, 1600); } break;
       case 'cut': feel.add('good', e.target ? `#board .bpart[data-target="${CSS.escape(e.target)}"]` : null, f?.text || (e.phase ? 'PHASE' : e.vent ? 'VENTED' : e.delay ? 'DELAYED' : 'INTERRUPTED'), { src }); break;
       case 'escaped': flash('UPLOAD COMPLETE'); feel.add('nope', null); hideTip(false); setTimeout(() => { if (!active(campaign) && campaign.rooms) go('rooms', true); }, 1600); break; // a runner got away (the Exfil's upload completed): back to the rooms
       case 'floor': flash(`FLOOR ${e.floor}`); notice(e.message); break; // floors.mjs: you took an exit
       case 'tick-wasted': feel.add('chip', e.target ? `#board .bpart[data-target="${CSS.escape(e.target)}"]` : null, '−tick'); break;
-      case 'disconnected': feel.add('lose', null); hideTip(false); tipWait = performance.now() + 5000; setTimeout(() => { go('map'); lossCard(e); }, 1600); break; // a card like a win's, and no tip over it
+      case 'disconnected': // the board holds on the hit, the screen drops to NO CARRIER, the map comes up under it, then the card (no tip over it)
+        feel.add('lose', null); hideTip(false); tipWait = performance.now() + NC.done + 3400;
+        lossHold = true;
+        noCarrier($('app'), { where: e.where || '', motion: campaign.settings.motion !== false, onSwap: () => { lossHold = false; go('map'); }, onDone: () => lossCard(e) });
+        break;
     }
     if (e.type === 'located') { notice(e.message); mapSel = e.location; }
     if (typeof e.floor === 'number' && ['floor', 'info', 'located'].includes(e.type)) { mapFloor = e.floor; mapZoom.k = 1; } // floors.mjs: the floor you went to, or asked the map for
@@ -1875,7 +1881,11 @@ document.addEventListener('click', (e) => {
   thPrev.qn = null; feel.key('click'); dirty = true; e.stopImmediatePropagation();
 }, true);
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && thPrev.open) { thPrev.open = false; dirty = true; e.stopImmediatePropagation(); } }, true);
+// Losing a fight: the screen holds its last frame (the board, on the hit) until NO CARRIER's static covers it
+// (nocarrier.mjs), though the fight itself is already gone from the state.
+let lossHold = false;
 function render(force = false) {
+  if (lossHold) return;
   if (force) cache.clear();
   renderMeters();
   renderOffer();

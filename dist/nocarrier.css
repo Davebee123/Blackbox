@@ -1,0 +1,30 @@
+/* ---------- NO CARRIER (nocarrier.mjs): the screen drops to static when a fight takes you out ----------
+   Over the whole screen, under the tube's scanlines (#crt), for a second and a half after the fight is over; it is
+   gone before the Disconnected card shows. Grey static (no colour of its own), the words in red: the threat won. */
+.nocarrier { position: absolute; inset: 0; z-index: 45; display: grid; place-items: center; overflow: hidden; border-radius: inherit; background: #050403; cursor: pointer; animation: nc-in 0.32s steps(1, end) both; }
+.nocarrier > i { position: absolute; display: block; pointer-events: none; }
+/* The snow: fractal noise, jumping a tile's width each frame. */
+.nc-noise {
+  inset: -60px; opacity: 0.5;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.15' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+  animation: nc-snow 0.24s steps(1, end) infinite;
+}
+/* A brighter band rolling down the picture, as a tube that has lost its sync. */
+.nc-roll { left: 0; right: 0; top: 0; height: 18%; background: linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.09) 45%, rgba(255, 255, 255, 0.16) 50%, transparent); animation: nc-roll 0.9s linear infinite; }
+.nc-msg { position: relative; display: grid; justify-items: center; gap: 8px; padding: 14px 26px; background: rgba(5, 4, 3, 0.78); box-shadow: 0 0 40px 20px rgba(5, 4, 3, 0.7); }
+.nc-msg b { font: 700 30px/1 var(--mono); letter-spacing: 8px; padding-left: 8px; color: var(--hot); text-shadow: 0 0 14px rgba(255, 91, 61, 0.6), 2px 0 0 rgba(255, 91, 61, 0.35), -2px 0 0 rgba(160, 220, 255, 0.18); animation: nc-word 1.3s steps(1, end) infinite; }
+.nc-msg small { font: 600 11px var(--mono); letter-spacing: 3px; text-transform: uppercase; color: var(--muted); }
+/* Clearing: the static thins out and the screen under it comes through. */
+.nocarrier.nc-out { animation: nc-out 0.35s ease-in both; }
+.nocarrier.nc-out .nc-msg { opacity: 0; transition: opacity 0.15s; }
+/* Motion off: one still frame of snow, no roll, no flicker. */
+.nocarrier.still, .nocarrier.still .nc-noise, .nocarrier.still .nc-msg b { animation: none; }
+.nocarrier.still .nc-roll { display: none; }
+.nocarrier.still.nc-out { opacity: 0; transition: opacity 0.1s; }
+@keyframes nc-in { 0% { opacity: 0; } 25% { opacity: 0.85; } 45% { opacity: 0.25; } 60% { opacity: 1; } 100% { opacity: 1; } }
+@keyframes nc-snow { 0% { background-position: 0 0; } 25% { background-position: -53px 71px; } 50% { background-position: 97px -38px; } 75% { background-position: -121px -109px; } 100% { background-position: 0 0; } }
+@keyframes nc-roll { from { transform: translateY(-100%); } to { transform: translateY(560%); } }
+@keyframes nc-word { 0%, 100% { opacity: 1; } 47% { opacity: 0.55; } 50% { opacity: 1; } 83% { opacity: 0.8; } }
+@keyframes nc-out { 0% { opacity: 1; filter: brightness(1); } 30% { opacity: 1; filter: brightness(1.8); } 100% { opacity: 0; filter: brightness(1); } }
+@media (prefers-reduced-motion: reduce) { .nocarrier, .nc-noise, .nc-msg b { animation: none; } .nc-roll { display: none; } }
