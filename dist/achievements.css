@@ -42,7 +42,7 @@
 .ach-row.got .ach-pts { color: var(--amber); border-color: var(--amber-deep); background: var(--amber-wash); }
 .ach-row.focus { border-color: var(--amber); box-shadow: 0 0 0 1px var(--amber), 0 0 14px rgba(241, 185, 47, 0.25); }
 
-.ach-rws { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: var(--s2) var(--s3); }
+.ach-rws { display: flex; flex-wrap: nowrap; justify-content: flex-end; align-items: center; gap: var(--s3); } /* one line, never a wrap */
 .ach-rws.locked { opacity: 0.6; }
 .ach-rw-title { padding: 1px 6px; color: var(--amber); border: 1px dashed var(--amber-deep); border-radius: var(--r-btn); font: italic 600 11px var(--mono); white-space: nowrap; }
 .ach-rws .pf-sticker { font-size: 9.5px; }
@@ -53,7 +53,7 @@
 .ach-rw-case .cs-chip { width: 26px; height: 16px; border-radius: 3px; }
 .ach-rw-case .cs-chip::after { inset: 3px 4px 6px; border-radius: 1px; }
 .ach-rw-case b { font: 600 10px var(--mono); letter-spacing: 0.6px; text-transform: uppercase; color: var(--amber); white-space: nowrap; }
-.ach-side { display: grid; justify-items: end; gap: var(--s2); }
+.ach-side { grid-column: 4; display: flex; flex-wrap: nowrap; align-items: center; gap: var(--s4); } /* the date and Pin side by side on one line, in their own column even when a row has no reward */
 .ach-side time { font: 11px var(--mono); color: var(--dim); white-space: nowrap; }
 .ach-pin { font: 600 10px var(--mono); letter-spacing: 0.5px; text-transform: uppercase; color: var(--dim); background: none; border: 1px solid var(--line); border-radius: var(--r-btn); padding: 1px 6px; cursor: pointer; }
 .ach-pin[aria-pressed='true'] { color: var(--amber); border-color: var(--amber-deep); }
@@ -83,6 +83,6 @@ button.pf-ach-chip:hover { border-color: var(--line-strong); color: var(--bright
 @media (max-width: 560px) {
   .ach-row { grid-template-columns: 36px minmax(0, 1fr); }
   .ach-rws, .ach-side { grid-column: 2; justify-content: flex-start; justify-items: start; }
-  .ach-side { grid-template-columns: auto auto; align-items: center; gap: var(--s4); }
+  .ach-rws { flex-direction: column; align-items: flex-start; } /* a phone stacks the rewards, one a line */
   .ach-name { white-space: normal; }
 }
