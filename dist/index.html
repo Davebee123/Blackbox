@@ -20,6 +20,7 @@
   <link rel="stylesheet" href="coop.css">
   <link rel="stylesheet" href="achievements.css">
   <link rel="stylesheet" href="casing.css">
+  <link rel="stylesheet" href="levelup.css">
 </head>
 <body>
 <div class="app" id="app">
@@ -137,13 +138,15 @@
   <div class="knobs"><button type="button" class="knob" id="knob-sound" title="Sound"><i></i></button><button type="button" class="knob" id="knob-speed" title="Speed"><i></i></button></div>
   <div class="decals l"></div><div class="badge" aria-hidden="true">BLACKBOX · MODEL 7</div><div class="decals r"></div>
   <div class="lamps" aria-label="Status lamps">
-    <span class="lamp" id="lamp-pwr"><i></i>PWR</span><span class="lamp" id="lamp-gate"><i></i>GATE</span><span class="lamp" id="lamp-wall"><i></i>WALL</span><span class="lamp" id="lamp-net"><i></i>NET</span><span class="lamp" id="lamp-inst"><i></i>INST</span><span class="lamp" id="lamp-dmn"><i></i>DMN</span>
+    <span class="lv-plate" id="lv-plate" title="Your level" hidden></span><span class="lamp" id="lamp-pwr"><i></i>PWR</span><span class="lamp" id="lamp-gate"><i></i>GATE</span><span class="lamp" id="lamp-wall"><i></i>WALL</span><span class="lamp" id="lamp-net"><i></i>NET</span><span class="lamp" id="lamp-inst"><i></i>INST</span><span class="lamp" id="lamp-dmn"><i></i>DMN</span>
   </div>
 </div>
 <!-- finger <handle>: a hacker's profile card (profile.mjs). -->
 <div class="profile-scrim" id="profile" role="dialog" aria-modal="true" aria-label="Profile" hidden></div>
 <div id="fx-edge" aria-hidden="true"></div>
 <div id="levelup" class="levelup" role="status" aria-live="polite" hidden></div>
+<!-- The level-up prototypes (levelup-ui.mjs): docked to the prompt or under the top bar, never over the fight board. -->
+<div id="lu-proto" class="lu-proto" role="status" aria-live="polite" hidden></div>
 <div id="tip" class="tip" role="dialog" aria-live="polite" hidden><p id="tip-text"></p><div class="tip-row"><button type="button" class="btn small primary" id="tip-ok">Got it</button><span class="tip-step" id="tip-step"></span><button type="button" class="tip-off" id="tip-skip" hidden>Skip tour</button><button type="button" class="tip-off" id="tip-off">Turn tips off</button></div></div>
 <!-- A crit's tear across the virus picture (screenfx.css #virus-canvas.sfx-tear): a band of it slips sideways. -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">

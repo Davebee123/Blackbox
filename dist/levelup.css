@@ -1,0 +1,130 @@
+/* ---------- the level-up prototypes (levelup-view.mjs, levelup-ui.mjs) ----------
+   Three ways to show a level, beside the current banner (.levelup in style.css), switched by ?levelup=a|b|c or
+   developer levelup a|b|c|current. The host (#lu-proto) is outside the screen's panels and docked by app.js to the
+   prompt's box (--lu-left, --lu-right, --lu-bottom) or under the top bar (--lu-top). It only comes up while no fight
+   is up (levelup-ui.mjs), so it never sits over the fight board. Amber for what you get, teal only for you (your
+   level and class), violet for a daemon slot. Motion off or reduced motion: everything is there at once. */
+.lu-proto { position: fixed; z-index: 50; color: var(--text); font: 12.5px/1.45 var(--mono); transition: opacity 0.4s; }
+.lu-proto[hidden] { display: none; }
+.lu-proto.out { opacity: 0; }
+.lu-proto .lu-row { cursor: help; }
+.lu-proto .lu-x { flex: none; width: 22px; height: 22px; padding: 0; margin: -3px -4px -3px 6px; background: none; border: 0; color: inherit; font: 15px/1 var(--mono); cursor: pointer; opacity: 0.75; }
+.lu-proto .lu-x:hover { opacity: 1; }
+.lu-proto kbd { font: 600 9px var(--mono); letter-spacing: 1px; padding: 1px 4px; margin-left: 4px; border: 1px solid currentColor; border-radius: 2px; opacity: 0.7; }
+
+/* ---------- a: terminal broadcast ----------
+   A wall(1) message in the console, over the prompt's left end: the sender line, then the ASCII frame, each line
+   typing itself in from the left (one step a character). No card: the screen's own black, the console's own type. */
+.lu-proto.lu-a { left: var(--lu-left, 20px); bottom: var(--lu-bottom, 90px); max-width: calc(100vw - 32px); padding: 6px 10px 4px 8px; background: var(--bg); box-shadow: 0 0 0 1px var(--bg), 0 -10px 24px var(--bg); }
+.lu-a p, .lu-a ol { margin: 0; padding: 0; list-style: none; }
+.lu-a li, .lu-a .lu-a-who { white-space: pre; color: var(--amber-soft); }
+.lu-a .lu-a-who { color: var(--dim); white-space: pre-wrap; font-size: 11.5px; margin-bottom: 2px; }
+.lu-a .lu-lv { color: var(--you); font-weight: 700; text-shadow: 0 0 8px rgba(127, 209, 199, 0.45); }
+.lu-a .lu-cls { color: var(--you); font-weight: 600; }
+.lu-a .lu-plus { font-style: normal; color: var(--amber); font-weight: 700; }
+.lu-a .lu-k { color: var(--text); }
+.lu-a .lu-dots { font-style: normal; color: var(--dim); opacity: 0.6; }
+.lu-a .lu-v { color: var(--bright); font-weight: 600; }
+.lu-a .k-daemon .lu-v { color: var(--daemon); }
+.lu-a .lu-next span { color: var(--dim); cursor: help; }
+.lu-a .lu-row:hover .lu-k { color: var(--bright); }
+.lu-a .lu-a-cmd { display: flex; align-items: center; justify-content: flex-end; gap: 10px; width: 44ch; max-width: 100%; min-height: 22px; padding-right: 2px; } /* as wide as the frame (A_WIDTH + 2 characters) */
+.lu-a .lu-a-cmd .tok { font: 600 12px var(--mono); }
+.lu-a .lu-a-hint { font: 600 9px var(--mono); letter-spacing: 1px; color: var(--dim); text-transform: uppercase; padding: 1px 4px; border: 1px solid var(--line-strong); border-radius: 2px; }
+.lu-a.show li, .lu-a.show .lu-a-who { animation: lu-a-type calc(var(--n, 44) * 9ms) steps(var(--n, 44), end) both; animation-delay: calc(var(--k, 0) * 140ms); }
+.lu-a.show .lu-a-cmd { animation: lu-pop 0.01s both; animation-delay: calc(var(--k, 0) * 140ms + 0.2s); }
+@keyframes lu-a-type { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes lu-pop { from { opacity: 0; } to { opacity: 1; } }
+
+/* ---------- b: firmware update ----------
+   A flash screen under the top bar: an amber kicker strip, the level in a dot font (teal: yours) beside the flash's
+   progress line, then [ OK ] per unlock once the flash is done. Continue (Enter), Esc or × close it. */
+.lu-proto.lu-b { top: var(--lu-top, 72px); left: 50%; transform: translateX(-50%); width: min(440px, calc(100vw - 32px)); display: grid; background: var(--inset); border: 1px solid var(--line-strong); border-radius: var(--r-card); box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6), 0 14px 40px rgba(0, 0, 0, 0.65); overflow: hidden; }
+.lu-b .lu-b-head { display: flex; align-items: center; justify-content: space-between; padding: 4px 10px; background: var(--amber); color: #120c03; font: var(--kicker); letter-spacing: var(--kicker-track); text-transform: uppercase; }
+.lu-b .lu-b-top { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 16px; align-items: center; padding: 14px 16px 10px; border-bottom: 1px dashed var(--line); }
+.lu-b .lu-b-big { margin: 0; font: 700 9px/9px var(--mono); letter-spacing: 0; color: var(--you); text-shadow: 0 0 6px rgba(127, 209, 199, 0.55); }
+.lu-b .lu-b-big i { font-style: normal; color: rgba(127, 209, 199, 0.07); text-shadow: none; }
+.lu-b .lu-b-flash { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 10px; align-items: center; min-width: 0; }
+.lu-b .lu-b-ver { grid-column: 1 / -1; font: 600 12px var(--mono); color: var(--muted); }
+.lu-b .lu-b-ver b { color: var(--you); }
+.lu-b .lu-b-ver small { margin-left: 6px; font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--you); opacity: 0.8; }
+.lu-b .lu-b-bar { position: relative; height: 10px; border: 1px solid var(--line-strong); padding: 1px; }
+.lu-b .lu-b-bar i { display: block; height: 100%; background: repeating-linear-gradient(90deg, var(--amber) 0 6px, transparent 6px 8px); }
+.lu-b .lu-b-pct { font: 600 11px var(--mono); color: var(--bright); font-variant-numeric: tabular-nums; }
+.lu-b .lu-b-list { list-style: none; margin: 0; padding: 8px 16px 4px; display: grid; gap: 1px; }
+.lu-b .lu-b-list li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: baseline; }
+.lu-b .lu-ok { color: var(--amber); font-weight: 700; white-space: pre; }
+.lu-b .lu-k { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lu-b .lu-v { color: var(--bright); font-weight: 600; }
+.lu-b .k-daemon .lu-v { color: var(--daemon); }
+.lu-b .lu-row:hover .lu-k { color: var(--bright); }
+.lu-b .lu-b-next { margin: 0; padding: 2px 16px 8px; font: 11.5px var(--mono); color: var(--dim); cursor: help; }
+.lu-b .lu-b-next span { margin-right: 6px; }
+.lu-b .lu-b-acts { display: flex; justify-content: flex-end; gap: 6px; padding: 0 12px 12px; }
+.lu-b.show .lu-b-bar i { animation: lu-b-flash 0.85s steps(24, end) both; }
+.lu-b.show .lu-b-pct { animation: lu-pop 0.01s 0.85s both; }
+.lu-b.show .lu-b-big { animation: lu-b-glow 0.6s 0.85s ease-out both; }
+.lu-b.show .lu-b-list li, .lu-b.show .lu-b-next { animation: lu-pop 0.01s both; animation-delay: calc(0.9s + (var(--i, 0) + 1) * 120ms); }
+@keyframes lu-b-flash { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes lu-b-glow { from { opacity: 0.25; text-shadow: none; } to { opacity: 1; } }
+@media (max-width: 900px) { .lu-proto.lu-b { top: auto; bottom: var(--lu-bottom, 90px); } }
+
+/* ---------- c: casing moment ----------
+   The moment is on the monitor: a level plate in the chin beside the lamps (#lv-plate, shown while c is on) rolls
+   from the old level to the new one, and the lamps chase once in your colour, then go back to real state. On the
+   screen, only a quiet card in the corner over the prompt's right end: no glow, no kicker, a row an unlock. */
+#casing .lv-plate { display: inline-flex; align-items: center; gap: 4px; height: 16px; padding: 0 7px; margin-right: 2px; background: #080705; border-radius: 2px; box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.9), 0 1px 0 rgba(255, 255, 255, 0.05); font: 700 9px/1 var(--mono); letter-spacing: 1.5px; color: rgba(127, 209, 199, 0.55); pointer-events: auto; cursor: default; }
+#casing .lv-plate[hidden] { display: none; }
+#casing .lv-plate b, .lu-c-lv b { display: inline-block; height: 11px; overflow: hidden; color: var(--you); font: 700 11px/11px var(--mono); letter-spacing: 1px; text-shadow: 0 0 6px rgba(127, 209, 199, 0.6); vertical-align: middle; }
+.lv-roll span { display: block; height: 11px; }
+.lv-roll .lv-old { display: none; }
+.roll .lv-roll .lv-old { display: block; }
+.roll .lv-roll span { animation: lv-roll 0.6s 0.5s cubic-bezier(0.5, 0, 0.3, 1) both; }
+@keyframes lv-roll { from { transform: translateY(0); } to { transform: translateY(-100%); } }
+/* The lamps' chase: left to right in your teal, twice, a beat apart; then each lamp is what screenfx.mjs says again. */
+#casing .lamps.lu-chase .lamp i { animation: lu-chase 0.8s ease-out 2 both !important; }
+#casing .lamps.lu-chase .lamp:nth-child(3) i { animation-delay: 0.09s !important; }
+#casing .lamps.lu-chase .lamp:nth-child(4) i { animation-delay: 0.18s !important; }
+#casing .lamps.lu-chase .lamp:nth-child(5) i { animation-delay: 0.27s !important; }
+#casing .lamps.lu-chase .lamp:nth-child(6) i { animation-delay: 0.36s !important; }
+#casing .lamps.lu-chase .lamp:nth-child(7) i { animation-delay: 0.45s !important; }
+@keyframes lu-chase { 0%, 100% { } 20%, 45% { background: radial-gradient(circle at 40% 35%, #d8fff9, #7fd1c7 45%, #245f58); box-shadow: 0 0 8px 2px rgba(127, 209, 199, 0.5); } }
+
+.lu-proto.lu-c { right: var(--lu-right, 20px); bottom: var(--lu-bottom, 120px); width: 252px; max-width: calc(100vw - 32px); background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-card); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); font-size: 12px; overflow: hidden; }
+.lu-c .lu-c-head { display: flex; align-items: baseline; gap: 8px; padding: 8px 10px 4px; }
+.lu-c .lu-c-head b { color: var(--you); font: 700 13px var(--mono); }
+.lu-c .lu-c-head span { flex: 1; color: var(--muted); font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; }
+.lu-c .lu-c-list { list-style: none; margin: 0; padding: 2px 10px 4px; display: grid; gap: 2px; }
+.lu-c .lu-c-list li { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.lu-c .lu-c-list .glyph { width: 12px; height: 12px; margin: 0; color: var(--amber-soft); }
+.lu-c .k-daemon .glyph, .lu-c .k-daemon .lu-v { color: var(--daemon); }
+.lu-c .k-power .glyph, .lu-c .k-integrity .glyph { color: var(--dim); }
+.lu-c .lu-k { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lu-c .lu-v { color: var(--bright); font-weight: 600; }
+.lu-c .lu-row:hover .lu-k { color: var(--bright); }
+.lu-c .lu-c-next { margin: 0; padding: 4px 10px 8px; color: var(--dim); font-size: 11px; cursor: help; border-top: 1px dashed var(--line); }
+.lu-c .lu-c-acts { display: flex; justify-content: flex-end; padding: 0 10px 8px; margin-top: -2px; }
+.lu-c.show { animation: lu-c-in 0.35s ease-out both; }
+@keyframes lu-c-in { from { opacity: 0; } to { opacity: 1; } }
+/* No casing round the screen (a phone, the plain shell, Casing off): the card carries a strip of it, the plate and
+   six lamps, and the moment plays there. */
+.lu-c .lu-c-plate { display: flex; align-items: center; justify-content: space-between; height: 24px; padding: 0 10px; background: radial-gradient(120% 90% at 50% 40%, var(--case-hi, #2a2724), var(--case-mid, #181614) 70%, var(--case-lo, #0e0d0c)); border-bottom: 1px solid #000; }
+.lu-c .lu-c-lv { display: inline-flex; align-items: center; gap: 4px; height: 16px; padding: 0 7px; background: #080705; border-radius: 2px; box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.9); font: 700 9px/1 var(--mono); letter-spacing: 1.5px; color: rgba(127, 209, 199, 0.55); }
+.lu-c .lu-c-lamps { display: flex; gap: 9px; }
+.lu-c .lu-c-lamps i { width: 6px; height: 6px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #4a4540, #1a1816); box-shadow: inset 0 0 0 1px #0c0b0a; }
+.lu-c.show .lu-c-lv { }
+.lu-c.show .lu-c-lv .lv-roll .lv-old { display: block; }
+.lu-c.show .lu-c-lv .lv-roll span { animation: lv-roll 0.6s 0.5s cubic-bezier(0.5, 0, 0.3, 1) both; }
+.lu-c.show .lu-c-lamps i { animation: lu-chase 0.8s ease-out 2 both; }
+.lu-c.show .lu-c-lamps i:nth-child(2) { animation-delay: 0.09s; } .lu-c.show .lu-c-lamps i:nth-child(3) { animation-delay: 0.18s; }
+.lu-c.show .lu-c-lamps i:nth-child(4) { animation-delay: 0.27s; } .lu-c.show .lu-c-lamps i:nth-child(5) { animation-delay: 0.36s; }
+.lu-c.show .lu-c-lamps i:nth-child(6) { animation-delay: 0.45s; }
+@media (min-width: 1100px) and (min-height: 720px) { body.cased .lu-c .lu-c-plate { display: none; } }
+@media (max-width: 900px) { .lu-proto.lu-c { left: var(--lu-left, 12px); right: var(--lu-right, 12px); width: auto; } .lu-proto.lu-a { left: var(--lu-left, 12px); } .lu-a li, .lu-a .lu-a-cmd { font-size: 11.5px; } }
+
+.no-motion .lu-proto, .no-motion .lu-proto *, .no-motion #casing .lamps.lu-chase .lamp i, .no-motion .lv-plate * { animation: none !important; transition: none !important; }
+.no-motion .lu-c .lu-c-lv .lv-old, .no-motion .lv-plate .lv-old { display: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  .lu-proto, .lu-proto *, #casing .lamps.lu-chase .lamp i, .lv-plate * { animation: none !important; transition: none !important; }
+  .lu-c .lu-c-lv .lv-old, .lv-plate .lv-old { display: none !important; }
+}

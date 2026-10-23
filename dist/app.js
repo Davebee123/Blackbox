@@ -3,7 +3,9 @@ import { CONFIG, ABILITIES, FAMILIES, xpToNext, spikeOf, SUBS, SUBCLASS, default
 const FAMILY_NAMES = Object.fromEntries(Object.entries(FAMILIES).map(([k, f]) => [k, f.name]));
 import { selectEncounter, partKey, parse, validate, hooks, stepCycle, keyMap, hackerOf, classOf, cycleLength, fresh, restore, command, advance, active, alive, part, intents, suggestions, idleRegen, tickServices, topUpCost, defender, maxSignal, inSync } from './combat.mjs';
 import * as V from './view.mjs';
-import { subLater, subWaiting } from './combat.mjs';
+import { subLater, subWaiting, levelUpPreview, barKeys, hackerLevel as heroLevel } from './combat.mjs';
+import { levelUpStyle, LEVELUP_STYLES, LEVELUP_IDS, luCalm } from './levelup-view.mjs';
+import { createLevelUpUi } from './levelup-ui.mjs';
 import { SHAPES, render as ascii3d } from './ascii3d.mjs';
 import { glyphMotion } from './protocol-glyphs.mjs';
 import { createArt } from './virus-art.mjs';
@@ -377,6 +379,15 @@ function flash(text) {
 }
 const feel = createFeel({ settings: () => campaign.settings, reducedMotion: () => !campaign.settings.motion || reducedMotion.matches });
 // A puzzle room's board: what a move did, played over it once it renders (puzzle-view.mjs), its sounds on their beats.
+// The level-up prototypes (levelup-ui.mjs): ?levelup=a|b|c on this page, else developer levelup a|b|c (saved), else the
+// current banner. They wait for a calm moment: no fight, no card that waits for you, no breakout over the screen.
+let luParam = params.get('levelup');
+const luStyle = () => levelUpStyle(campaign.settings, luParam);
+const lu = createLevelUpUi({
+  style: luStyle, feel, who: () => campaign.profile?.handle || 'rookie', keys: () => barKeys(campaign), level: () => heroLevel(campaign), motion: () => canMove(),
+  fighting: () => active(campaign),
+  calm: () => luCalm({ fighting: active(campaign), ended: !!ended || ending, spoils: !$('spoils').hidden, gainModal: gainOpen(), booting: !!shell.booting || introOn || !!bo || !$('tip').hidden }),
+});
 const pzFx = createPuzzleFx({ canMove: () => canMove(), sound: (sign, ms) => { feel.beat(ms); feel.add(sign, null); feel.beat(0); } });
 // The immersive shell (CRT, boot, status line). `?shell=plain` or `shell plain` turns it off.
 const shellParam = params.get('shell');
@@ -883,6 +894,7 @@ document.addEventListener('click', (e) => {
   if (bxUi.pack && !e.target.closest?.('.bx-pop')) { bxUi.pack = false; dirty = true; }
 });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && bxUi.pack) { bxUi.pack = false; dirty = true; } });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && lu.showing()) lu.dismiss(); }); // a level-up prototype (levelup-ui.mjs)
 // Keep the map where it was across redraws; when you move, bring your row into view.
 let bxAt;
 function breachScroll(keep) {
@@ -1100,6 +1112,7 @@ function react(events) {
       case 'research': feel.add('mark', `${row(e.target)} .part-top`, `RESEARCH ${e.tier}`, { noFlash: true, floatAt: `${row(e.target)} > .bcell:first-child` }); break;
       case 'mastered': flash('MASTERED'); feel.add('good', `${row(e.target)} .part-top`, 'MASTERED', { floatAt: `${row(e.target)} > .bcell:first-child` }); break;
       case 'level-up': {
+        if (luStyle() !== 'current') { lu.push(e); break; } // a prototype: it waits for the fight's end (levelup-ui.mjs)
         if (won) break;
         // One banner for every track: what the level brings, and the next level that brings something.
         levelUp(e.message.split('. ')[0].replace(/\.$/, ''), V.levelUpLines(e), (e.unlocked || []).some((id) => id !== 'edge')); // a new skill: a way to Loadout
@@ -1194,7 +1207,7 @@ function react(events) {
   const carded = events.some((e) => ['takeover', 'root', 'streak', 'contract-done', 'crafted', 'bought', 'harvester', 'service-done'].includes(e.type));
   const xpOut = !won && !ended && !active(campaign) && !carded && events.filter((e) => e.type === 'xp');
   if (campaign.rooms) roomsSay(events); // the rooms playtest has no tty: what happens on the server goes up as a notice
-  if (xpOut?.length) { const why = String(xpOut[0].message.split('·')[1] || '').trim().replace(/\.$/, ''); showGain(why ? why[0].toUpperCase() + why.slice(1) : 'XP', '', V.spoilsOf(events.filter((x) => ['xp', 'fresh', 'code', 'level-up'].includes(x.type))), !events.some((x) => x.type === 'level-up')); }
+  if (xpOut?.length) { const why = String(xpOut[0].message.split('·')[1] || '').trim().replace(/\.$/, ''); showGain(why ? why[0].toUpperCase() + why.slice(1) : 'XP', '', V.spoilsOf(events.filter((x) => ['xp', 'fresh', 'code', 'level-up'].includes(x.type))), !events.some((x) => x.type === 'level-up') || luStyle() !== 'current'); } // a prototype carries the level itself: the XP card is a toast
   if (events.length) dirty = true;
 }
 
@@ -1226,6 +1239,26 @@ function levelUp(title, text, skill = false) {
   el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
   clearTimeout(levelUp.t);
   levelUp.t = setTimeout(() => { el.hidden = true; }, ms);
+}
+// developer levelup [a|b|c|current|next|preview [<level>|all]]: switch the level-up between the current banner and the
+// three prototypes (saved; ?levelup= on the page gives way to it), or play one now (levelup-view.mjs). A preview
+// changes nothing on the save: it is your class's level-up at that level (your next one by default; all: every kind
+// of unlock at once).
+function levelUpCommand(arg) {
+  const name = (id) => `${LEVELUP_STYLES[id]}${id === 'current' ? '' : ` (${id})`}`;
+  if (!arg) return notice(`Level-up: ${name(luStyle())}. Try developer levelup ${LEVELUP_IDS.join('|')}, next, or preview [level|all].`, false, null, true);
+  if (LEVELUP_IDS.includes(arg) || arg === 'next') {
+    const id = arg === 'next' ? LEVELUP_IDS[(LEVELUP_IDS.indexOf(luStyle()) + 1) % LEVELUP_IDS.length] : arg;
+    campaign.settings.levelup = id; luParam = null; lu.reset(); save(); dirty = true;
+    return notice(`Level-up: ${name(id)}. developer levelup preview plays one.`);
+  }
+  const m = arg.match(/^preview(?: (\d+|all))?$/);
+  if (!m) return notice('developer levelup a|b|c|current|next, or developer levelup preview [level|all].', true);
+  const L = heroLevel(campaign), at = m[1] === 'all' ? [3, 5, 7, 10, 15, 30, 45, 50] : [Math.max(2, Math.min(50, Number(m[1]) || Math.min(50, L + 1)))];
+  const evs = at.map((n) => levelUpPreview(campaign, n));
+  if (luStyle() === 'current') { const e = evs.at(-1); levelUp(e.message.split('. ')[0].replace(/\.$/, ''), V.levelUpLines(e), (e.unlocked || []).some((id) => id !== 'edge')); feel.add('win', null); return; }
+  lu.reset(); evs.forEach((e) => lu.push(e));
+  if (active(campaign)) notice('The level-up waits for the fight\'s end.');
 }
 function notice(text, bad = false, suggest = null, sticky = false) {
   const el = $('notice');
@@ -1330,6 +1363,7 @@ function run(raw) {
   if (text === 'achievements') return goTo('achieve'); // the page; achieve pin <name> and the rest go to the engine
   if (text === 'shell' || text.startsWith('shell ')) return shellCommand(text.slice(6).trim());
   { const said = screenFxCommand(campaign, text); if (said) { save(); dirty = true; return notice(said); } } // screen fx [off|subtle|medium|bold|next] / screen fx <effect> on|off (and the old effects calm|full|minimal)
+  if (/^developer levelup( |$)/.test(text)) return levelUpCommand(text.slice(17).trim());
   if (text === 'casing on' || text === 'casing off') { campaign.settings.casing = text === 'casing on'; save(); dirty = true; return; }
   if (text === 'tips on' || text === 'tips off' || text === 'tips replay') {
     if (text === 'tips replay') { campaign.settings.seen = {}; delete campaign.tour; campaign.settings.tips = true; }
@@ -1397,7 +1431,7 @@ function benchRun(text) {
   const events = BN.benchCommand(campaign, text, { bench: BENCH, dev: DEV, store });
   const built = events.find((e) => e.type === 'bench'), w = events.findLast((e) => e.type === 'warning');
   if (built) {
-    $('levelup').hidden = true;
+    $('levelup').hidden = true; lu.reset();
     ended = null; archView = null; selected = null; mapSel = null; mapFloor = built.bench.floor; mapPop = false; loadoutTab = 'protocols'; // the map opens on your floor
     cache.clear();
     if ($('bench-body')) $('bench-body').innerHTML = BN.panelMarkup(campaign); // its pickers start on the new character
@@ -1416,7 +1450,7 @@ function resetGame() {
     return notice('This wipes your server, class levels, locations, loot and upgrades (settings stay). Do it again within 10 seconds to confirm.', true);
   }
   resetGame.armed = 0;
-  $('levelup').hidden = true;
+  $('levelup').hidden = true; lu.reset();
   ended = null;
   const settings = campaign.settings;
   campaign = fresh();
@@ -1895,7 +1929,7 @@ function render(force = false) {
       $('term').scrollTop = $('term').scrollHeight;
     }
   } else {
-    const pages = { rooms: (x) => roomsMarkup(x), campaign: (x) => campaignMarkup(x), room: (x) => roomMarkup(x), archive: (x) => archiveMarkup(x), breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab, skillUi), craft: (x) => V.craftMarkup(x, craftUi), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now()), server: (x) => V.serverMarkup(x, Date.now(), srvUi), daemons: V.daemonsMarkup, codex: (x) => codexPageMarkup(x, codexSel, codexIdx), system: (x) => V.systemMarkup(x, { coop: !!coop, tab: systemTab, ach: achUi, cs: caseUi }) };
+    const pages = { rooms: (x) => roomsMarkup(x), campaign: (x) => campaignMarkup(x), room: (x) => roomMarkup(x), archive: (x) => archiveMarkup(x), breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab, skillUi), craft: (x) => V.craftMarkup(x, craftUi), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now()), server: (x) => V.serverMarkup(x, Date.now(), srvUi), daemons: V.daemonsMarkup, codex: (x) => codexPageMarkup(x, codexSel, codexIdx), system: (x) => V.systemMarkup(x, { coop: !!coop, tab: systemTab, ach: achUi, cs: caseUi, levelup: DEV ? luStyle() : null }) };
     // A page that throws shows what broke (and a way back) instead of stopping every render after it.
     const keep = module === 'breach' ? $('bx-scroll')?.scrollTop : null;
     const focusRoom = module === 'rooms' ? document.activeElement?.closest?.('.fp-room')?.dataset.room : null; // a redraw keeps a focused room focused
@@ -2197,7 +2231,7 @@ const shownRect = (el) => { const r = el.getBoundingClientRect(); return r.width
 const shownEl = (sel) => [...document.querySelectorAll(sel)].find(shownRect) || null;
 function onScreen(sel) { return !!shownEl(sel); }
 function checkTips(now) {
-  if (tip || ending || introOn || !$('levelup').hidden || shell.booting || playtest || now < tipWait) return;
+  if (tip || ending || introOn || !$('levelup').hidden || lu.showing() || shell.booting || playtest || now < tipWait) return;
   tipWait = now + 400;
   const t = nextTip(campaign, module, onScreen);
   if (!t) return;
@@ -2429,6 +2463,7 @@ function frame(now) {
   coop?.tick();
   if (dirty) render();
   else tickUi();
+  lu.tick();
   feel.flush();
   checkTips(now);
   shell.caret();
@@ -2697,6 +2732,7 @@ $('command-form').addEventListener('submit', (e) => {
   if (gainOpen()) hideGain(); // the Banked card goes with the next Enter, whatever it carries
   if (!value.trim()) {
     if (tip) { advanceTip(); return; } // Enter moves a tip on (or closes it) first
+    if (!active(campaign) && lu.dismiss()) return; // a level-up prototype goes with an empty Enter
     // Empty Enter in a fight: stop waiting and resolve this cycle now.
     if (realSave) return; // a co-op guest: the cycle turns when everyone's in, or on the host's timer
     if (active(campaign) && !campaign.encounter.paused) { react(command(campaign, 'now')); save(); dirty = true; }
@@ -3311,7 +3347,7 @@ function boLater() {
   dirty = true;
 }
 // The screen is free for it: not in the intro, a fight or its result, a card or another full screen.
-function boFree() { return !introOn && !ended && !active(campaign) && $('spoils')?.hidden !== false && !gainOpen() && !payState && !document.querySelector('.class-pick') && !['combat', 'net'].includes(module); }
+function boFree() { return !introOn && !lu.showing() && !lu.pending() && !ended && !active(campaign) && $('spoils')?.hidden !== false && !gainOpen() && !payState && !document.querySelector('.class-pick') && !['combat', 'net'].includes(module); }
 function renderBreakout() {
   let el = $('breakout');
   if (bo && !subWaiting(campaign, bo.arch)) { // picked (here or by a command): the page shows the new subclass
@@ -3384,9 +3420,9 @@ let ttTap = null, ttTouch = false;
 document.addEventListener('pointerdown', (e) => { ttTouch = e.pointerType === 'touch'; }, true);
 document.addEventListener('click', (e) => {
   if (!ttTouch) return;
-  const a = e.target.closest?.('#board .bname[title], #board .bname[data-tt], #board .intent.tell, #hud .gfx');
+  const a = e.target.closest?.('#board .bname[title], #board .bname[data-tt], #board .intent.tell, #hud .gfx, #lu-proto .lu-row');
   if (!a) return;
-  const row = a.closest('[data-target]'), sel = a.matches('.gfx') ? `#hud .gfx[data-fx="${CSS.escape(a.dataset.fx)}"]` : a.matches('.intent.tell') ? `#board .intent.tell[data-k="${CSS.escape(a.dataset.k || '')}"]` : row ? `#board .bpart[data-target="${CSS.escape(row.dataset.target)}"] .bname` : null;
+  const row = a.closest('[data-target]'), sel = a.matches('.lu-row') ? `#lu-proto .lu-row[data-lu="${CSS.escape(a.dataset.lu)}"]` : a.matches('.gfx') ? `#hud .gfx[data-fx="${CSS.escape(a.dataset.fx)}"]` : a.matches('.intent.tell') ? `#board .intent.tell[data-k="${CSS.escape(a.dataset.k || '')}"]` : row ? `#board .bpart[data-target="${CSS.escape(row.dataset.target)}"] .bname` : null;
   if (sel) { ttTap = { sel, until: performance.now() + 3500, at: null }; requestAnimationFrame(ttTapTick); }
 });
 function ttTapTick() {

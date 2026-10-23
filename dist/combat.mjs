@@ -1410,14 +1410,24 @@ export function gainXp(s, amount, why, kind = null, tally = kind) {
     const names = got.filter((id) => id !== 'edge' || sub).map((id) => (id === 'edge' ? `${SUBS[sub].edge.name} (${SUBS[sub].edge.rule.replace(/\.$/, '')})` : ARCHETYPES[arch].skills.find((x) => x.id === id)?.name || ABILITIES[id]?.name || id));
     const pickSub = h.level === SUBCLASS.from && !subPicked(s, arch) ? ` Choose a subclass: ${Object.values(ARCHETYPES[arch].subs).map((x) => `${x.name} (subclass ${x.id})`).join(' or ')}. Until you do, you play the ${ARCHETYPES[arch].name} core.` : '';
     const talent = (gainsTalent(h.level) ? ' +1 talent point.' : '') + (h.level === LOADOUT.capstoneAt[0] ? ' +1 capstone point: pick a capstone (talent capstone a|b).' : h.level === LOADOUT.capstoneAt[1] ? ' Your capstone reaches rank 2.' : '') + pickSub;
-    // The banner lists what the level brings on every track, and the next level that brings something. With no
-    // subclass picked, the subclass level brings a subclass to pick, and later levels only what the core brings.
-    const skillsAt = (l) => newAtLevel(arch, l, l >= SUBCLASS.from ? sub : null).map((id) => (id === 'edge' ? (sub ? SUBS[sub].edge.name : 'a subclass to pick') : ARCHETYPES[arch].skills.find((x) => x.id === id)?.name || ABILITIES[id]?.name || CANTRIPS.find((c) => c.id === id)?.name || id));
-    const gains = [...skillsAt(h.level), ...levelGains(arch, h.level, top)];
-    const next = nextGains(arch, h.level, Math.max(top, h.level), skillsAt);
-    emit(s, 'level-up', `LEVEL ${h.level} ${ARCHETYPES[arch].name.toUpperCase()}.${names.length ? ' New: ' + names.join(', ') + '.' : ''}${shelf ? ' ' + shelf : ''}${talent} Power +4%.`, { level: h.level, unlocked: got, gains, next, server: h.level > top ? s.server.max : null });
+    const { gains, next } = levelUpGains(arch, sub, h.level, top);
+    emit(s, 'level-up', `LEVEL ${h.level} ${ARCHETYPES[arch].name.toUpperCase()}.${names.length ? ' New: ' + names.join(', ') + '.' : ''}${shelf ? ' ' + shelf : ''}${talent} Power +4%.`, { level: h.level, arch, sub: sub || null, unlocked: got, gains, next, server: h.level > top ? s.server.max : null });
   }
   if (h.level >= LOADOUT.maxLevel) h.xp = 0;
+}
+// The banner lists what the level brings on every track, and the next level that brings something. With no
+// subclass picked, the subclass level brings a subclass to pick, and later levels only what the core brings.
+// top: your highest class level before this one (the server's level), so the server's gains count once.
+export function levelUpGains(arch, sub, L, top = L - 1) {
+  const skillsAt = (l) => newAtLevel(arch, l, l >= SUBCLASS.from ? sub : null).map((id) => (id === 'edge' ? (sub ? SUBS[sub].edge.name : 'a subclass to pick') : ARCHETYPES[arch].skills.find((x) => x.id === id)?.name || ABILITIES[id]?.name || CANTRIPS.find((c) => c.id === id)?.name || id));
+  return { gains: [...skillsAt(L), ...levelGains(arch, L, top)], next: nextGains(arch, L, Math.max(top, L), skillsAt) };
+}
+// A level-up as gainXp would log it, for the level-up prototypes' preview (developer levelup preview): nothing on
+// the save changes. The Integrity is what the server would have at that level.
+export function levelUpPreview(s, L) {
+  const arch = classOf(s), sub = L >= SUBCLASS.from ? subOf(s, arch) : null;
+  const { gains, next } = levelUpGains(arch, sub, L, L - 1);
+  return { type: 'level-up', preview: true, level: L, arch, sub: sub || null, unlocked: newAtLevel(arch, L, sub), gains, next, server: Math.round(100 * power(L)), message: `LEVEL ${L} ${ARCHETYPES[arch].name.toUpperCase()}.` };
 }
 // Skills and cantrips a class gains exactly at a level.
 export function newAtLevel(arch, lvl, sub = null) {
