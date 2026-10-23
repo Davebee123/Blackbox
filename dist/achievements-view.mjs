@@ -5,7 +5,9 @@ import { glyph } from './glyphs.mjs';
 import { achievements, CATEGORIES, pointsOf, totalPoints, progressOf, rewardText, terminalReward } from './achievements.mjs';
 import { BOOT_LOOKS, PROMPTS, CURSORS } from './terminal.mjs';
 import { titleById, stickerById, REWARD_BANNERS } from './profile.mjs';
-import { COLORWAYS } from './casing.mjs';
+import { COLORWAYS, PROPS, propSvg } from './casing.mjs';
+import { districtMini } from './casing-view.mjs';
+import { DISTRICTS } from './window.mjs';
 
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const dmy = (t) => new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -20,13 +22,16 @@ export function achTip(s, a) {
   const p = !got && progressOf(a, s);
   return [`${a.name}: ${a.rule}`, p ? `${p[0]} of ${p[1]}.` : '', `${a.pts} points.`, rewardText(a), got ? `Earned ${dmy(got)}.` : ''].filter(Boolean).join(' ');
 }
-// A reward as itself: the title in its words, the sticker as it looks, the banner in miniature.
+// A reward as itself: the title in its words, the sticker as it looks, the banner in miniature, the colourway as a
+// swatch, the window's district as its skyline and the desk's prop as itself.
 function rewardChips(a, open) {
   const r = a.reward || {}, out = [];
   if (r.title) out.push(`<span class="ach-rw ach-rw-title" title="${esc(`Title: ${titleById(r.title)?.name}`)}">${esc(titleById(r.title)?.name || '')}</span>`);
   if (r.sticker) { const x = stickerById(r.sticker); if (x) out.push(`<span class="ach-rw pf-sticker k-${x.kind}" style="--sc:${x.color}" title="${esc(`Sticker: ${x.tip}`)}">${glyph(x.glyph)}<b>${esc(x.label)}</b></span>`); }
   if (r.banner && REWARD_BANNERS[r.banner]) out.push(`<span class="ach-rw ach-rw-banner" title="${esc(`Banner: ${REWARD_BANNERS[r.banner].name}`)}"><pre aria-hidden="true">${esc(REWARD_BANNERS[r.banner].rows.join('\n'))}</pre><b>${esc(REWARD_BANNERS[r.banner].name)}</b></span>`);
   if (r.casing && COLORWAYS[r.casing]) out.push(`<span class="ach-rw ach-rw-case" data-case="${r.casing}" title="${esc(`Casing: ${COLORWAYS[r.casing].name}`)}"><i class="cs-chip" aria-hidden="true"></i><b>${esc(COLORWAYS[r.casing].name)}</b></span>`);
+  if (r.district && DISTRICTS[r.district]) out.push(`<span class="ach-rw ach-rw-district" title="${esc(`Window: ${DISTRICTS[r.district].name}. ${DISTRICTS[r.district].tip}`)}">${districtMini(r.district)}<b>${esc(DISTRICTS[r.district].name)}</b></span>`);
+  if (r.prop && PROPS[r.prop]) out.push(`<span class="ach-rw ach-rw-prop" title="${esc(`Desk: ${PROPS[r.prop].name}. ${PROPS[r.prop].tip}`)}">${propSvg(r.prop)}<b>${esc(PROPS[r.prop].name)}</b></span>`);
   const t = terminalReward(a.id) || {}; // a boot, a prompt, a cursor (terminal.mjs), by name
   if (t.boot && BOOT_LOOKS()[t.boot]) out.push(`<span class="ach-rw ach-rw-term" title="${esc(`Boot: ${BOOT_LOOKS()[t.boot].name}`)}"><b>${esc(BOOT_LOOKS()[t.boot].name)} boot</b></span>`);
   if (t.prompt && PROMPTS[t.prompt]) out.push(`<span class="ach-rw ach-rw-term" title="${esc(`Prompt: ${PROMPTS[t.prompt].name}`)}"><b>${esc(PROMPTS[t.prompt].name)} prompt</b></span>`);

@@ -54,7 +54,7 @@ import * as PV from './profile-view.mjs';
 import { channelOf, muted as chanMuted, say as chanSay } from './channel.mjs';
 import { setBanner, setPlan, handleOf } from './profile.mjs';
 import { achById } from './achievements.mjs';
-import { casingLook, decalStrips } from './casing.mjs';
+import { casingLook, decalStrips, districtOf, propsLook, propMarkup, propLayout } from './casing.mjs';
 import { promptLabel, cursorOf, bootOf, bootIds, BOOT_LOOKS, lookOpen } from './terminal.mjs';
 import * as BN from './bench.mjs';
 import { PARTS } from './parts.mjs';
@@ -102,7 +102,7 @@ let archView = null; // archetype shown on the Loadout page (defaults to the equ
 let loadoutTab = 'protocols'; // Loadout page: 'protocols' or 'skills' (skills and talents)
 let systemTab = 'settings'; // System page: 'settings' or 'achievements' (view.mjs SYSTEM_TABS)
 let achUi = { cat: 'summary', focus: null }; // the Achievements page (achievements-view.mjs): the category shown, an achievement to light
-let caseUi = { slot: 0 }; // System → Casing (casing-view.mjs): the sticker slot picked
+let caseUi = { slot: 0, pslot: 0 }; // System → Casing (casing-view.mjs): the sticker slot and the desk's spot picked
 let skillUi = { sel: null, sheet: false }; // Skills and talents (skills-view.mjs): the item its panel explains, and the phone's sheet
 let bo = null; // the subclass breakout while it's open: { arch, step, sel, lvl, sheet } (skills-view.mjs breakoutMarkup)
 const pd = { id: null, anchor: null, el: null, scrim: null, sheet: false, html: '', mine: false, timer: 0 }; // the Loadout's item datasheet popover (pdShow)
@@ -2136,6 +2136,7 @@ function casing() {
   const moved = document.body.classList.contains('cased') !== cased || document.body.classList.contains('window-on') !== win;
   document.body.classList.toggle('cased', cased);
   document.body.classList.toggle('window-on', win);
+  outside.district(districtOf(campaign)); // the district you picked (casing.mjs), drawn again only when it changes
   outside.set(win);
   if (moved && win) outside.remeasure();
   if (win !== outsideShown || moved) { outsideShown = win; feel.rain(win ? outsideRain : 0); }
@@ -2149,9 +2150,10 @@ function casing() {
   $('knob-speed').title = `Speed: ${s.settings.speed || 'normal'}`;
   casingLookUi(cased);
 }
-// The casing's cosmetics (casing.mjs): its colourway on <body> (casing.css: the plastic only), the plate's words and
-// the stickers in the chin's two strips. The strips' ends are measured from the knobs, the plate and the lamps, so a
-// sticker never sits on any of them (re-measured when the plate or the window changes).
+// The casing's cosmetics (casing.mjs): its colourway on <body> (casing.css: the plastic only), the plate's words,
+// the stickers in the chin's two strips and the desk's props. The strips' ends and the props' spots are measured from
+// the knobs, the plate and the lamps (casing.mjs propLayout), so neither sits on any of them, nor on each other, nor
+// on the screen (re-measured when the plate, the props or the window changes).
 let caseKey = '';
 function casingLookUi(cased) {
   const look = casingLook(campaign), body = document.body;
@@ -2161,15 +2163,19 @@ function casingLookUi(cased) {
   const strips = decalStrips(campaign), L = document.querySelector('#casing .decals.l'), R = document.querySelector('#casing .decals.r');
   if (L.innerHTML !== strips.left) L.innerHTML = strips.left;
   if (R.innerHTML !== strips.right) R.innerHTML = strips.right;
-  const key = `${cased}:${look.plate}:${innerWidth}:${innerHeight}`;
-  if (!cased || key === caseKey || !(strips.left || strips.right)) return;
+  const props = propsLook(campaign), PR = document.querySelector('#casing .props'), pk = props.map((p) => p?.id || '').join(',');
+  if (PR.dataset.k !== pk) { PR.innerHTML = props.map((p, i) => (p ? propMarkup(p, i) : '')).join(''); PR.dataset.k = pk; } // only on a change, so the mug's steam runs on
+  const desk = document.body.classList.contains('window-on') ? parseFloat(getComputedStyle(document.body).getPropertyValue('--desk')) || 0 : 0;
+  const key = `${cased}:${look.plate}:${innerWidth}:${innerHeight}:${desk}:${pk}`;
+  if (!cased || key === caseKey || !(strips.left || strips.right || pk !== ',')) return;
   const box = $('casing').getBoundingClientRect();
   if (!box.width) return;
   caseKey = key;
-  const knobs = document.querySelector('#casing .knobs').getBoundingClientRect(), plate = badge.getBoundingClientRect(), lamps = document.querySelector('#casing .lamps').getBoundingClientRect(), gap = 18;
+  const knobs = document.querySelector('#casing .knobs').getBoundingClientRect(), plate = badge.getBoundingClientRect(), lamps = document.querySelector('#casing .lamps').getBoundingClientRect();
+  const { spots, dz } = propLayout({ W: innerWidth, H: innerHeight, desk, box, knobs, plate, lamps }, props.map(Boolean));
   const set = (k, v) => $('casing').style.setProperty(k, `${Math.max(0, Math.round(v))}px`);
-  set('--dz-l0', knobs.right - box.left + gap); set('--dz-l1', box.right - plate.left + gap);
-  set('--dz-r0', plate.right - box.left + gap); set('--dz-r1', box.right - lamps.left + gap);
+  set('--dz-l0', dz.l0); set('--dz-l1', dz.l1); set('--dz-r0', dz.r0); set('--dz-r1', dz.r1);
+  PR.querySelectorAll('.prop').forEach((el) => { const p = spots[Number(el.dataset.propSlot)]; el.hidden = !p; if (p) { el.style.left = `${Math.round(p.x - box.left)}px`; el.style.top = `${Math.round(p.y - box.top)}px`; } });
 }
 // The screen's effects and the casing's lamps, from real state (screenfx.mjs). The floor whose palette is up: the map's
 // floor on the map, the server's on a run and in a fight there; home keeps the default amber.
@@ -2671,7 +2677,9 @@ document.addEventListener('click', (e) => {
   const ac = e.target.closest('[data-ach-cat]'); // a category on the Achievements page
   if (ac) { achUi = { cat: ac.dataset.achCat, focus: null }; dirty = true; return; }
   const csl = e.target.closest('[data-cs-slot]'); // a sticker slot on System → Casing
-  if (csl) { caseUi = { slot: Number(csl.dataset.csSlot) || 0 }; dirty = true; return; }
+  if (csl) { caseUi = { ...caseUi, slot: Number(csl.dataset.csSlot) || 0 }; dirty = true; return; }
+  const cps = e.target.closest('[data-cs-pslot]'); // a spot on the desk, System → Casing
+  if (cps) { caseUi = { ...caseUi, pslot: Number(cps.dataset.csPslot) || 0 }; dirty = true; return; }
   // The Daemons tab (daemons-view.mjs): the party or the roster, a daemon for the panel (× clears it), a cycle's order.
   const dmn = e.target.closest('[data-dmn-view], [data-dmn-sel], [data-dmn-cycle]');
   if (dmn) {

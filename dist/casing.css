@@ -37,6 +37,20 @@ body.cased[data-case="beige"] #casing .badge { text-shadow: 0 1px 0 rgba(255, 25
 #casing .decal:nth-child(2) { transform: rotate(1.6deg); }
 #casing .decal i { font-style: normal; opacity: 0.75; letter-spacing: 0; }
 
+/* The desk's props (casing.mjs PROPS): small pictures in two fixed spots, on the desk under the chin when the window
+   shows it, else on the chin past the knobs and short of the lamps (app.js places them: casing.mjs propLayout keeps
+   them off the knobs, the lamps, the plate, the stickers and the screen). Still, but for the mug's steam, which only
+   rises while Motion is on. */
+#casing .props { position: absolute; inset: 0; pointer-events: none; }
+#casing .prop { position: absolute; width: 30px; height: 26px; pointer-events: auto; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.6)); }
+#casing .prop[hidden] { display: none; }
+#casing .prop svg { display: block; overflow: visible; }
+#casing .prop .steam { fill: none; stroke: rgba(236, 226, 214, 0.55); stroke-width: 1.1; stroke-linecap: round; opacity: 0; animation: cs-steam 3.6s ease-in-out infinite; }
+#casing .prop .steam + .steam { animation-delay: -1.8s; }
+@keyframes cs-steam { 0% { opacity: 0; transform: translateY(2px); } 40% { opacity: 0.8; } 100% { opacity: 0; transform: translateY(-3px); } }
+.no-motion #casing .prop .steam { animation: none; }
+@media (prefers-reduced-motion: reduce) { #casing .prop .steam { animation: none; } }
+
 /* ---------- System → Casing (casing-view.mjs) ---------- */
 .cs-page { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: var(--s5); align-items: start; }
 .cs-note { margin: 0 0 var(--s4); font: 12px var(--mono); color: var(--dim); }
@@ -70,3 +84,26 @@ body.cased[data-case="beige"] #casing .badge { text-shadow: 0 1px 0 rgba(255, 25
 /* A decal off the casing (the page's copies): the same label. */
 .cs-page .decal { display: inline-flex; align-items: center; gap: 4px; height: 16px; padding: 0 6px 0 5px; color: var(--sc); background: color-mix(in srgb, var(--sc) 14%, #121110); border: 1px solid color-mix(in srgb, var(--sc) 60%, transparent); border-radius: 2px; font: 700 8px/1 var(--mono); letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transform: rotate(-2deg); }
 .cs-page .decal i { font-style: normal; opacity: 0.75; letter-spacing: 0; }
+
+/* System → Settings → Window (casing-view.mjs districtCardMarkup): the districts, each its skyline in miniature. */
+.cs-mini-d { display: block; background: linear-gradient(180deg, #1c1319, #241611 70%, #3a2016); }
+.cs-dists { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: var(--s3); }
+.cs-dist { position: relative; display: grid; justify-items: start; gap: var(--s3); padding: 8px; background: var(--inset); color: var(--text); border: 1px solid var(--line); border-radius: var(--r-card); font: 600 11px var(--mono); text-align: left; cursor: pointer; }
+.cs-dist .cs-mini-d { width: 100%; height: 34px; border-radius: 4px; box-shadow: inset 0 0 0 1px #000; }
+.cs-dist[aria-pressed='true'] { border-color: var(--amber); color: var(--amber); }
+.cs-dist.locked { cursor: help; border-style: dashed; color: var(--dim); }
+.cs-dist.locked .cs-mini-d { opacity: 0.4; filter: grayscale(0.6); }
+.cs-dist .glyph { position: absolute; top: 8px; right: 8px; width: 11px; height: 11px; margin: 0; color: var(--dim); }
+/* System → Casing → Desk (deskCardMarkup): the desk's two spots, then the props. */
+.cs-desk { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s3); padding: 10px; border-radius: var(--r-card); background: linear-gradient(180deg, #2a241c, #1a1510 30%, #0a0806); }
+.cs-pslot { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); height: 40px; padding: 0 10px; background: rgba(0, 0, 0, 0.25); color: var(--dim); border: 1px dashed rgba(255, 255, 255, 0.14); border-radius: var(--r-btn); font: 600 11px var(--mono); cursor: pointer; }
+.cs-pslot[aria-pressed='true'] { border: 1px solid var(--amber); }
+.cs-pslot small { font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; }
+.cs-props { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: var(--s3); }
+.cs-prop { position: relative; display: flex; align-items: center; gap: var(--s3); padding: 6px 8px; background: var(--inset); color: var(--text); border: 1px solid var(--line); border-radius: var(--r-btn); font: 600 11px var(--mono); text-align: left; cursor: pointer; }
+.cs-prop[aria-pressed='true'] { border-color: var(--amber); color: var(--amber); }
+.cs-prop.locked { cursor: help; border-style: dashed; color: var(--dim); }
+.cs-prop.locked svg { opacity: 0.4; filter: grayscale(0.7); }
+.cs-prop .glyph { position: absolute; top: 6px; right: 6px; width: 10px; height: 10px; margin: 0; color: var(--dim); }
+.cs-prop svg, .cs-pslot svg { flex: none; }
+.cs-prop .steam, .cs-pslot .steam { fill: none; stroke: rgba(236, 226, 214, 0.45); stroke-width: 1.1; stroke-linecap: round; }

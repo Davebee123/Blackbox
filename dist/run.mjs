@@ -23,7 +23,7 @@ import { profileCommand } from './profile.mjs';
 import { achieveCommand, developerAchieve } from './achievements.mjs';
 import { masteryCommand, developerMastery } from './mastery.mjs';
 import { developerPager } from './pager.mjs';
-import { casingCommand } from './casing.mjs';
+import { casingCommand, districtCommand } from './casing.mjs';
 import { terminalCommand } from './terminal.mjs';
 import { say, muted } from './channel.mjs';
 import { consortiumCommand, isGround, arrive, memberServers } from './consortium.mjs';
@@ -756,6 +756,7 @@ export function play(s, input) {
   if (['online', 'who', 'friends', 'friend'].includes(word)) { const first = s.serial; presenceCommand(s, word, rest, emit, warn); return since(s, first); } // presence.mjs
   if (/^(finger|plan|titles?|banner)$/.test(word)) { const first = s.serial; profileCommand(s, input); return since(s, first); } // profile.mjs (as typed: a plan keeps its capitals)
   if (word === 'casing' && rest !== 'on' && rest !== 'off') { const first = s.serial; casingCommand(s, text); return since(s, first); } // casing.mjs: colourway, plate, stickers (casing on|off is app.js's)
+  if (word === 'district') { const first = s.serial; districtCommand(s, text); return since(s, first); } // casing.mjs: the window's district
   if (word === 'terminal' && !/^preview\b/.test(rest)) { const first = s.serial; terminalCommand(s, text); return since(s, first); } // terminal.mjs: boot, prompt, cursor (terminal preview is app.js's)
   if (word === 'achievements' || word === 'achieve') { const first = s.serial; achieveCommand(s, text); return since(s, first); } // achievements.mjs
   if (word === 'mastery') { const first = s.serial; masteryCommand(s, text, { emit, warn, classOf }); return since(s, first); } // mastery.mjs: an ability effect's tier
