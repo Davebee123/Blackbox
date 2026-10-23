@@ -3,15 +3,13 @@
 // (its badge and its Integrity), the strip's line for the thread you track, the dialogue over the map (its lines, a
 // choice of two, a log's lines or its process log), the Threads list in Mail (its steps, the done ones struck), the
 // reward card (pick one of three), and on the floor map a temporary server and a file in transit.
-// Amber is every thread's colour: teal is only ever you. The dialogue, Mail's reader and the reward card are drawn in the
-// quest window's direction once one is picked (quest-view.mjs); the current look is this file's own.
+// Amber is every thread's colour: teal is only ever you. The dialogue, Mail's reader and the reward card are the quest
+// window, a transmission (quest-view.mjs).
 import { esc } from './view.mjs';
-import { statLine, itemLabel, SLOTS, RULES } from './gear.mjs';
 import { findLocation } from './combat.mjs';
 import { addrsOf } from './address.mjs';
 import * as FP from './floorplan.mjs';
-import * as QV from './quest-view.mjs';
-import { questStyle } from './quest-view.mjs';
+import { questPanel, questReader, questReward, modelOf, ageOf } from './quest-view.mjs';
 import { threadsOf, threadById, activeThreads, chainOf, chainDef, stepOf, objectiveOf, offerAt, verbOf, speakerOf, marksOn, serverMarks, escortsHere, escortNext, escortDest, tracked, tempsOn, transits, isDark, tempSweep, startHere } from './threads.mjs';
 
 // The line icons (24×24, the room map's sprite): a terminal (someone waiting), a file, a log.
@@ -100,8 +98,8 @@ export function threadCard(s, room, here, holder, note, btn) {
 export const threadAsks = (s, room) => nookLive(s, room, roomMarksOf(s));
 
 // ---------- the dialogue ----------
-// What was said last (threads.mjs say), over the map while you stand in its room, until you close it. Drawn in the
-// quest window's direction (quest-view.mjs: ?quest=a|b|c, the Quest window setting); this file's own look is current.
+// What was said last (threads.mjs say), over the map while you stand in its room, until you close it: a transmission
+// (quest-view.mjs questPanel). ui.closed: the line you closed; ui.qn/qt: when this line first drew (its arrival).
 export const thUi = { closed: null };
 export function threadPanel(s, ui = thUi, sweepBlock = null) {
   const T = s.threads, d = T?.said, R = s.rooms;
@@ -109,20 +107,8 @@ export function threadPanel(s, ui = thUi, sweepBlock = null) {
   const loc = locHere(s), addr = addrsOf(R.graph)[d.room] || '';
   const sweep = d.kind === 'sweep' && loc?.temp ? tempSweep(loc) : null;
   const body = sweep && sweepBlock ? sweepBlock(sweep, { solved: loc.temp.sweep.solved, tries: loc.temp.sweep.tries, key: loc.id }) : null;
-  const style = questStyle(s);
-  if (style !== 'current') { const t = d.tid && threadById(s, d.tid); return QV.panelQ(style, d, t && chainOf(t) ? QV.modelOf(s, t) : null, { addr, server: loc?.name || '', body, age: QV.ageOf(ui, d.n) }); }
-  return panelCurrent(d, addr, body);
-}
-// The current look: the room's address and the thread's title over who's speaking, their lines, a choice of two.
-export function panelCurrent(d, addr, body = null) {
-  const lines = d.lines.map((l, i) => `<p class="th-line${/^>/.test(l) ? ' sys' : /^"/.test(l) ? ' quote' : ''}" style="--i:${i}">${esc(l)}</p>`).join('');
-  const choices = d.choices ? `<div class="th-choices">${d.choices.map((c, i) => `<button type="button" class="btn th-choice" data-rooms="talk" data-arg="${i + 1}"><kbd>${i + 1}</kbd><span>${esc(c)}</span></button>`).join('')}</div>` : '';
-  return `<div class="pz-panel th-panel k-${esc(d.kind)}" id="th-panel" data-th-n="${d.n}" role="dialog" aria-label="${esc(d.who)}">
-    <section class="pz-card th-card"><i class="sp-corner tl"></i><i class="sp-corner tr"></i><i class="sp-corner bl"></i><i class="sp-corner br"></i>
-      <header class="pz-head th-head"><p class="pz-kick"><span class="pz-at">${esc(addr)}</span>${d.title ? ` · <span class="th-title">${esc(d.title)}</span>` : ''}</p><h1>${ic(d.icon, 'th-who')}${esc(d.who)}</h1>
-        <button type="button" class="btn small pz-x" data-th-close title="Close (Esc)" aria-label="Close">×</button></header>
-      ${body || `<div class="th-lines">${lines}</div>`}${choices || `<div class="row acts th-acts"><button type="button" class="btn" data-th-close>Close</button></div>`}
-    </section></div>`;
+  const t = d.tid && threadById(s, d.tid);
+  return questPanel(d, t && chainOf(t) ? modelOf(s, t) : null, { addr, server: loc?.name || '', body, age: ageOf(ui, d.n) });
 }
 
 // ---------- Mail: the Threads list ----------
@@ -133,7 +119,7 @@ export function threadRows(s, open) {
   const waiting = T?.offer ? '<span class="tag th-tag" title="A reward to pick">reward</span>' : '';
   return `<h2 title="Threads start in rooms: an amber ! once you've been in one.">Threads · ${(T?.list || []).filter((t) => t.state !== 'done').length} ${waiting}</h2>${rows ? `<ul class="mlist mthreads">${rows}</ul>` : '<p class="quiet" title="Threads start in rooms: an amber ! once you\'ve been in one.">None found.</p>'}`;
 }
-// One thread, read: who it's for and why, its steps (the done ones struck, the ones ahead ???), the lore line at its end.
+// One thread, read: who it's for and why, its steps as a job (the ones ahead encrypted), the lore line, signed, at its end.
 export function threadReader(s, t) {
   const T = s.threads, active = t.state === 'active';
   const where = active ? (() => { const st = stepOf(t), k = st?.at || st?.to, p = k && t.places[k], id = st?.kind === 'temp' ? t.temps?.[st.server] : st?.kind === 'escort' && t.esc ? t.esc.loc : p?.loc; return id ? findLocation(s, id) : null; })() : null;
@@ -144,34 +130,15 @@ export function threadReader(s, t) {
     t.state === 'abandoned' ? `<button type="button" class="btn primary" data-run="thread resume ${esc(t.id)}">Pick it up</button>` : '',
     T.offer?.tid === t.id ? '<button type="button" class="btn primary" data-th-offer>Pick your reward</button>' : '',
   ].join('');
-  const m = QV.modelOf(s, t), style = questStyle(s);
-  return style === 'current' ? readerCurrent(m, acts) : QV.readerQ(style, m, acts);
-}
-// The current look, from the quest window's model (quest-view.mjs modelOf).
-export function readerCurrent(m, acts = '') {
-  const list = m.steps.map((x) => `<li class="th-step${x.done ? ' done' : ''}${x.now ? ' now' : ''}${x.fog ? ' fog' : ''}"><span class="th-dot" aria-hidden="true"></span><span>${esc(x.fog ? '???' : x.text)}</span></li>`).join('');
-  return `<section class="card mread th-read"><h2>${esc(m.giver)}${m.short ? '' : ' · <span class="th-arc">chain</span>'}</h2><h1>${esc(m.title)}</h1>
-    <p class="th-reason">${esc(m.reason)}</p>
-    <ol class="th-steps">${list}</ol>
-    ${m.state === 'done' ? `<p class="th-lore">${esc(m.lore)}</p>${m.took ? `<p class="svc-line"><span class="tag dim">took</span> ${esc(m.took)}</p>` : ''}` : ''}
-    ${acts ? `<div class="row acts">${acts}</div>` : ''}</section>`;
+  return questReader(modelOf(s, t), acts);
 }
 
 // ---------- the reward ----------
-// Pick one of three (WoW's quest reward): each item's name in its rarity's colour, its slot and level, its stats.
+// Pick one of three (WoW's quest reward) on a signed receipt: each item's name in its rarity's colour, its slot, level, stats.
 export function offerMarkup(s) {
   const o = s.threads?.offer, t = o && threadById(s, o.tid);
   if (!o || !t) return '';
-  const style = questStyle(s);
-  return style === 'current' ? rewardCurrent(chainOf(t).title, t.lore || '', o.items) : QV.rewardQ(style, QV.modelOf(s, t), o.items);
-}
-// The current look: the lore line, three items to take one of, Later.
-export function rewardCurrent(title, lore, list) {
-  const items = list.map((it, i) => `<button type="button" class="th-item r-${it.rarity}" data-run="thread take ${i + 1}" title="Take it"><span class="th-n">${i + 1}</span><b class="iname r-${it.rarity}">${esc(itemLabel(it))}</b><small>${esc(SLOTS[it.group]?.name || it.group)} · lv ${it.level}${i === 0 ? ' · <i>for you</i>' : ''}</small><span class="th-stats">${Object.keys(it.stats || {}).map((k) => statLine({ [k]: it.stats[k] })).filter(Boolean).map((x) => `<span>${esc(x)}</span>`).join('')}</span>${it.rule && RULES[it.rule] ? `<span class="th-rule">${esc(RULES[it.rule].name)}</span>` : ''}<span class="th-take">Take</span></button>`).join('');
-  return `<div class="sp-card th-offer-card" role="dialog" aria-label="${esc(`${title}: pick one`)}"><i class="sp-corner tl"></i><i class="sp-corner tr"></i><i class="sp-corner bl"></i><i class="sp-corner br"></i>
-    <header class="sp-head"><span class="sp-kicker">Thread done</span><strong class="sp-name">${esc(title)}</strong></header>
-    <p class="th-lore">${esc(lore)}</p><p class="th-pick">Pick one</p><div class="th-items">${items}</div>
-    <button type="button" class="sp-go th-later" data-th-later>Later <small>it waits in Mail</small></button></div>`;
+  return questReward(modelOf(s, t), o.items);
 }
 
 // ---------- the floor map ----------

@@ -1,26 +1,24 @@
-/* ---- the quest window (quest-view.mjs, docs/threads.md 7): three directions for a thread's dialogue, its page in
-   Mail and its reward card. Amber is a thread's colour; teal only you; a faction's mark in its own colour. Nothing
-   moves once it has arrived: the arrival (lines in turn, the decrypt, a redaction lifting, a stamp, a [x]) runs once,
-   resumes where it was on a re-render (--age) and is still with Motion off. ---- */
+/* ---- the quest window (quest-view.mjs, docs/threads.md 7): a thread as an intercepted transmission. Its dialogue over
+   the map, its page in Mail, its reward card as a signed receipt. Amber is a thread's colour; teal only you; a
+   faction's mark in its own colour. Calm: a dialogue's lines arrive once (opacity only, nothing shifts) and the opening
+   line of a new quest resolves out of noise once; a re-render while it plays carries it on (--age), never starts it
+   over; after that, and with Motion off or reduced motion, everything is still. Mail's page never animates. ---- */
 .q-ic { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .q-mark { display: inline-grid; place-items: center; width: 20px; height: 20px; flex: none; color: var(--amber); }
 .q-mark.q-f { color: var(--fc); }
 .q-mark .glyph { width: 18px; height: 18px; margin: 0; }
 .q-panel .pz-card.q-card { width: min(580px, 100%); gap: var(--s5); }
+.q-panel .sweep { margin: 0; }
 
-/* the arrival: each line in turn (opacity only: nothing shifts) */
+/* the arrival */
 @keyframes q-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes qa-txt { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
 @keyframes qa-noise { from { clip-path: inset(0 0 0 0); } to { clip-path: inset(0 0 0 100%); } }
-@keyframes qb-lift { from { scale: 1 1; } to { scale: 0 1; } }
-@keyframes qb-stamp { 0% { opacity: 0; } 60% { opacity: 1; } 100% { opacity: 0.85; } }
-@keyframes qc-tick { from { color: var(--bright); text-shadow: 0 0 8px rgba(255, 216, 92, 0.8); } to { color: var(--amber-soft); text-shadow: none; } }
-.q-panel .qa-line, .q-panel .qa-sign, .q-panel .qa-job, .q-panel .qb-line, .q-panel .qb-steps, .q-panel .qc-line, .q-panel .qc-asks, .q-panel .qc-reward {
-  animation: q-in 0.3s ease-out both; animation-delay: calc(var(--i, 0) * 0.32s + 0.15s - var(--age, 0ms)); }
-.no-motion .q-panel *, .no-motion .q-panel *::after, .q-panel.q-settled *, .q-panel.q-settled *::after, .no-motion .qb-reward *, .no-motion .qc-done * { animation: none !important; }
-@media (prefers-reduced-motion: reduce) { .q-panel *, .q-panel *::after, .qb-reward *, .qc-done * { animation: none !important; } }
+.q-panel .qa-line, .q-panel .qa-sign, .q-panel .qa-job { animation: q-in 0.3s ease-out both; animation-delay: calc(var(--i, 0) * 0.3s + 0.15s - var(--age, 0ms)); }
+.no-motion .q-panel *, .q-panel.q-settled * { animation: none !important; }
+@media (prefers-reduced-motion: reduce) { .q-panel * { animation: none !important; } }
 
-/* ---- a: transmission ---- */
+/* the dialogue */
 .qa-head h1 { display: flex; align-items: center; gap: var(--s4); font: 600 18px/1.2 var(--mono); letter-spacing: 0.4px; min-width: 0; }
 .qa-head h1 span { min-width: 0; overflow-wrap: anywhere; }
 .qa-thread { font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--amber); }
@@ -28,16 +26,20 @@
 .qa-line { margin: 0; }
 .qa-line.sys { color: var(--muted); }
 .qa-line.quote { color: var(--bright); }
-/* the first line resolves out of noise: the same characters' places, the text wiping in as the noise wipes out */
+.q-panel.k-log .qa-line { white-space: pre-wrap; }
+/* a new quest's opening line resolves out of noise, once: the text wipes in as the noise wipes out (still, the noise is
+   gone and the text is all there) */
 .qa-dec { display: grid; }
 .qa-dec > span { grid-area: 1 / 1; }
 .qa-noise { color: var(--amber-soft); clip-path: inset(0 0 0 100%); }
-.q-panel .qa-dec .qa-noise { animation: qa-noise 0.9s steps(18) both; animation-delay: calc(0.15s - var(--age, 0ms)); }
-.q-panel .qa-dec .qa-txt { animation: qa-txt 0.9s steps(18) both; animation-delay: calc(0.15s - var(--age, 0ms)); }
+.q-panel.m-open .qa-dec .qa-noise { animation: qa-noise 0.9s steps(18) both; animation-delay: calc(0.15s - var(--age, 0ms)); }
+.q-panel.m-open .qa-dec .qa-txt { animation: qa-txt 0.9s steps(18) both; animation-delay: calc(0.15s - var(--age, 0ms)); }
 .qa-sign { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s2) var(--s4); margin: var(--s3) 0 0; font: 12px var(--mono); color: var(--muted); }
 .qa-sign span { font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--dim); }
 .qa-sign b { color: var(--bright); font-weight: 600; }
 .qa-sign code { font: inherit; color: var(--amber); letter-spacing: 1px; }
+
+/* the job: the steps, printed */
 .qa-job { padding: var(--s4) var(--s5); border: 1px dashed var(--line-strong); border-radius: var(--r-card); background: var(--inset); font: 12.5px/1.5 var(--mono); }
 .qa-job-h { max-width: none; display: flex; justify-content: space-between; gap: var(--s4); margin: 0 0 var(--s3); padding-bottom: var(--s3); border-bottom: 1px dashed var(--line); font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--amber-soft); }
 .qa-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s2); font: 12.5px/1.5 var(--mono); }
@@ -47,120 +49,43 @@
 .qa-steps .now { color: var(--bright); } .qa-steps .now .qa-st { color: var(--amber); }
 .qa-steps .fog .qa-st { color: var(--dim); }
 .qa-t { min-width: 0; overflow-wrap: anywhere; }
-.qa-enc { color: var(--dim); white-space: nowrap; overflow: hidden; letter-spacing: 1px; cursor: help; }
-/* in Mail */
-.th-read.q-a .qa-from { display: flex; align-items: center; gap: var(--s3); }
-.th-read.q-a .qa-from small { font: inherit; color: var(--amber); }
+/* a step ahead: still, dim hex, smaller, so it reads as a placeholder and not as noise */
+.qa-enc { font-size: 11.5px; color: var(--dim); opacity: 0.7; white-space: nowrap; overflow: hidden; letter-spacing: 0.5px; cursor: help; }
+
+/* in Mail (.card p sets a measure and a colour): full width, in their own colours */
+.q-read p { max-width: none; }
+.q-read .qa-from { display: flex; align-items: center; gap: var(--s3); }
+.q-read .qa-from small { font: inherit; color: var(--amber); }
 .qa-reason { margin: 0; font: 13px/1.5 var(--mono); color: var(--muted); }
 .qa-reason::before { content: '> '; color: var(--dim); }
-.qa-state { font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--gray); }
-/* the end: a signed receipt */
+.q-read .qa-job-h { color: var(--amber-soft); }
+.qa-state, .q-read .qa-state { font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--gray); }
+
+/* the end: a signed receipt, pick one */
 .gain.th-offer .sp-card.qa-receipt, .thp-gain .sp-card.qa-receipt { width: min(600px, 100%); }
 .qa-receipt { display: grid; gap: var(--s4); }
 .qa-rhead { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px var(--s4); padding-bottom: var(--s4); border-bottom: 1px dashed var(--line); }
 .qa-rhead .sp-name { overflow-wrap: anywhere; }
 .qa-rno { grid-column: 2; grid-row: 1 / span 2; align-self: center; font: 11px var(--mono); color: var(--dim); }
 .qa-receipt .qa-steps { padding-bottom: var(--s4); border-bottom: 1px dashed var(--line); }
-.qa-receipt .th-lore, .qb-reward .th-lore, .qc-ticket .th-lore { margin: 0; }
+.qa-receipt .th-lore { margin: 0; }
 .qa-receipt .qa-sign { margin: 0; padding-bottom: var(--s4); border-bottom: 1px dashed var(--line); }
-.qa-receipt .th-pick, .qb-reward .th-pick { margin: 0; font: var(--kicker); letter-spacing: var(--kicker-track); text-transform: uppercase; color: var(--amber-soft); }
+.qa-receipt .th-pick { margin: 0; font: var(--kicker); letter-spacing: var(--kicker-track); text-transform: uppercase; color: var(--amber-soft); }
+.qa-receipt .sp-go { margin-top: 0; }
 .qa-items { display: grid; gap: var(--s3); }
-.qa-item, .qc-item { display: grid; grid-template-columns: 2ch minmax(0, 1.25fr) minmax(0, 1fr) auto; gap: var(--s4); align-items: center; text-align: left; padding: var(--s4) var(--s5); border: 1px solid var(--line); border-left: 2px solid var(--amber-deep); border-radius: var(--r-btn); background: var(--inset); }
-.qa-item.r-tuned, .qc-item.r-tuned { border-left-color: var(--r-tuned); } .qa-item.r-custom, .qc-item.r-custom { border-left-color: var(--r-custom); } .qa-item.r-stock, .qc-item.r-stock { border-left-color: var(--gray); }
-.qa-item:hover, .qa-item:focus-visible, .qc-item:hover, .qc-item:focus-visible { border-color: var(--amber); background: var(--amber-wash); outline: none; }
-.qa-item .qa-n, .qc-n { font: 600 11px var(--mono); color: var(--dim); }
-.qa-iw, .qc-iw { display: grid; gap: 1px; min-width: 0; }
-.qa-iw b, .qc-iw b { font: 600 13.5px var(--sans); overflow-wrap: anywhere; }
-.qa-iw small, .qc-iw small { font: 11px var(--mono); color: var(--muted); }
-.qa-iw small i, .qc-iw small i { font-style: normal; color: var(--amber); }
+.qa-item { display: grid; grid-template-columns: 2ch minmax(0, 1.25fr) minmax(0, 1fr) auto; gap: var(--s4); align-items: center; text-align: left; padding: var(--s4) var(--s5); border: 1px solid var(--line); border-left: 2px solid var(--amber-deep); border-radius: var(--r-btn); background: var(--inset); }
+.qa-item.r-tuned { border-left-color: var(--r-tuned); } .qa-item.r-custom { border-left-color: var(--r-custom); } .qa-item.r-stock { border-left-color: var(--gray); }
+.qa-item:hover, .qa-item:focus-visible { border-color: var(--amber); background: var(--amber-wash); outline: none; }
+.qa-item .qa-n { font: 600 11px var(--mono); color: var(--dim); }
+.qa-iw { display: grid; gap: 1px; min-width: 0; }
+.qa-iw b { font: 600 13.5px var(--sans); overflow-wrap: anywhere; }
+.qa-iw small { font: 11px var(--mono); color: var(--muted); }
+.qa-iw small i { font-style: normal; color: var(--amber); }
 .qa-is { display: grid; gap: 1px; min-width: 0; font: 11.5px var(--mono); color: var(--text); }
 .qa-is em { font-style: normal; color: var(--amber-soft); }
-.qa-take, .qc-take { font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--amber); }
+.qa-take { font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--amber); }
 
-/* ---- b: case file ---- */
-.q-b .pz-card.qb-file, .sp-card.qb-reward { padding: 0; gap: 0; background: none; border: 0; box-shadow: none; overflow: visible; }
-.q-b .pz-card.qb-file { max-height: 100%; overflow: auto; }
-.sp-card.qb-reward::before, .q-b .pz-card.qb-file::before { display: none; }
-.th-read.q-b { padding: 0; gap: 0; background: none; border: 0; }
-.qb-tabs { position: relative; display: flex; align-items: flex-end; gap: var(--s4); min-height: 32px; padding-right: 40px; }
-.qb-tab { display: block; min-width: 0; max-width: 100%; margin: 0; padding: 6px 16px 5px; border: 1px solid var(--line-strong); border-bottom: 0; border-radius: var(--r-card) var(--r-card) 0 0;
-  background: #1b1307; font: 600 12.5px/1.3 var(--mono); letter-spacing: 0.6px; color: var(--amber); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; translate: 0 1px; }
-.card h1.qb-tab { font: 600 12.5px/1.3 var(--mono); letter-spacing: 0.6px; color: var(--amber); }
-.qb-kind { padding-bottom: 6px; font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--dim); }
-.qb-tabs .pz-x { position: absolute; right: 0; top: 0; }
-.qb-sheet { position: relative; display: grid; gap: var(--s5); padding: var(--s6); border: 1px solid var(--line-strong); border-radius: 0 var(--r-card) var(--r-card) var(--r-card);
-  background: linear-gradient(180deg, #1b1307, #100a04); box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6), 0 18px 60px rgba(0, 0, 0, 0.6); }
-.th-read.q-b .qb-sheet { box-shadow: none; }
-.qb-stamp { position: absolute; top: var(--s6); right: var(--s6); padding: 3px 10px; border: 2px solid currentColor; border-radius: 3px; font: 700 13px/1.2 var(--mono); letter-spacing: 2px; text-transform: uppercase; color: var(--amber); opacity: 0.85; rotate: -6deg; pointer-events: none; }
-.qb-stamp.s-closed { color: var(--amber-soft); } .qb-stamp.s-aside { color: var(--gray); }
-.q-panel .qb-stamp, .qb-reward .qb-stamp { animation: qb-stamp 0.5s ease-out both; animation-delay: calc(0.7s - var(--age, 0ms)); }
-.qb-id { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--s5); align-items: center; padding-right: 110px; }
-.qb-face { margin: 0; padding: var(--s3) var(--s4); border: 1px solid var(--line); border-radius: var(--r-btn); background: var(--inset); font: 11px/1.2 var(--mono); color: var(--amber-soft); }
-.qb-fields { margin: 0; display: grid; gap: var(--s3); min-width: 0; }
-.qb-fields div { display: grid; grid-template-columns: 8ch minmax(0, 1fr); gap: var(--s4); align-items: baseline; }
-.qb-fields dt { font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--dim); }
-.qb-fields dd { margin: 0; display: flex; align-items: center; gap: var(--s3); min-width: 0; color: var(--bright); overflow-wrap: anywhere; }
-.qb-fields dd .q-mark { width: 16px; height: 16px; } .qb-fields dd .q-mark .glyph { width: 15px; height: 15px; }
-.qb-transcript { display: grid; gap: var(--s3); padding-top: var(--s5); border-top: 1px solid var(--line); font: 14px/1.5 var(--sans); color: var(--text); overflow-wrap: anywhere; }
-.qb-line { margin: 0; }
-.qb-line.sys { font: 12.5px/1.5 var(--mono); color: var(--muted); }
-.qb-line.quote { font-style: italic; color: var(--bright); }
-.qb-steps { list-style: none; counter-reset: qb; margin: 0; padding: var(--s5) 0 0; border-top: 1px solid var(--line); display: grid; gap: var(--s3); font: 13px/1.45 var(--sans); }
-.qb-steps li { counter-increment: qb; display: grid; grid-template-columns: 3ch minmax(0, 1fr); gap: var(--s4); align-items: center; }
-.qb-steps li::before { content: counter(qb, decimal-leading-zero); font: 11px var(--mono); color: var(--dim); }
-.qb-t { position: relative; min-width: 0; overflow-wrap: anywhere; }
-.qb-steps .done .qb-t { color: var(--dim); text-decoration: line-through; text-decoration-color: rgba(185, 157, 97, 0.6); }
-.qb-steps .now .qb-t { color: var(--bright); }
-.qb-steps .now .qb-t::after { content: ''; position: absolute; inset: 0; background: var(--amber-deep); transform-origin: right center; scale: 0 1; pointer-events: none; }
-/* (Mail redraws its page as its clocks tick, so the page in Mail never animates: only the dialogue over the map does) */
-.q-panel .qb-steps .now .qb-t::after { animation: qb-lift 0.5s ease-in both; animation-delay: calc(1.1s - var(--age, 0ms)); }
-.qb-bar { display: block; width: min(var(--w), 100%); height: 0.95em; border-radius: 1px; background: var(--amber-deep); opacity: 0.85; cursor: help; }
-.qb-sheet > .row.acts, .qb-sheet > .th-acts { justify-content: flex-end; }
-.th-read.q-b .qb-sheet > .row.acts { justify-content: flex-start; }
-.gain.th-offer .sp-card.qb-reward, .thp-gain .sp-card.qb-reward { width: min(720px, 100%); }
-.qb-reward .qb-sheet { gap: var(--s4); }
-.qb-reward .qb-id { padding-right: 120px; }
-.qb-reward .sp-go { margin-top: 0; }
-
-/* ---- c: job ticket ---- */
-.q-c .pz-card.qc-ticket, .card.qc-ticket, .sp-card.qc-ticket { width: min(540px, 100%); padding: var(--s5); gap: var(--s4); font: 13px/1.45 var(--mono); }
-.card.qc-ticket { width: auto; }
-.gain.th-offer .sp-card.qc-ticket, .thp-gain .sp-card.qc-ticket { width: min(600px, 100%); }
-.qc-head { position: relative; display: flex; align-items: center; gap: var(--s4); margin: calc(-1 * var(--s5)) calc(-1 * var(--s5)) 0; padding: var(--s4) var(--s5); border-bottom: 1px solid var(--line-strong); background: var(--amber-wash); }
-.qc-no { flex: none; font: 600 12px var(--mono); color: var(--amber); letter-spacing: 0.5px; }
-.qc-title { flex: 1; min-width: 0; font: 600 14px/1.3 var(--sans); color: var(--bright); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.qc-state { flex: none; padding: 1px 6px; border: 1px solid var(--line-strong); border-radius: var(--r-tag); font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--amber); }
-.qc-state.s-resolved, .qc-state.s-set-aside { color: var(--muted); border-color: var(--line); }
-.qc-head .pz-x { position: static; flex: none; }
-.qc-from { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s3); margin: 0; }
-.qc-from b { color: var(--bright); font-weight: 600; overflow-wrap: anywhere; }
-.qc-k { min-width: 7ch; font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--dim); }
-.qc-at { margin-left: auto; font-size: 11.5px; color: var(--dim); }
-.qc-msg, .qc-desc { display: grid; gap: var(--s2); margin: 0; padding: var(--s4) var(--s5); border: 1px solid var(--line); border-radius: var(--r-btn); background: var(--inset); font: 13.5px/1.5 var(--sans); color: var(--text); overflow-wrap: anywhere; }
-.qc-desc { color: var(--muted); }
-.qc-line { margin: 0; }
-.qc-line.sys { font: 12px/1.5 var(--mono); color: var(--muted); }
-.qc-line.quote { font-style: italic; color: var(--bright); }
-.qc-asks { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s2); }
-.qc-asks li { display: grid; grid-template-columns: 3.5ch minmax(0, 1fr); gap: var(--s3); align-items: baseline; overflow-wrap: anywhere; }
-.qc-box { color: var(--amber); }
-.qc-asks .done { color: var(--muted); } .qc-asks .done .qc-box { color: var(--amber-soft); }
-.qc-asks .now { color: var(--bright); }
-.qc-asks .fog { color: var(--dim); } .qc-asks .fog .qc-box { color: var(--dim); }
-.q-panel .qc-asks .ticked .qc-box, .qc-done .qc-asks .ticked .qc-box { animation: qc-tick 1.2s ease-out both; animation-delay: calc(0.9s - var(--age, 0ms)); }
-.qc-reward { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s3) var(--s5); padding-top: var(--s4); border-top: 1px dashed var(--line); }
-.qc-rv { display: inline-flex; align-items: center; gap: var(--s3); color: var(--text); cursor: help; }
-.qc-rv .q-mark { width: 16px; height: 16px; } .qc-rv .q-mark .glyph { width: 15px; height: 15px; }
-.qc-r { display: inline-block; width: 9px; height: 9px; border-radius: 1px; background: var(--r-tuned); }
-.qc-r.r-stock { background: var(--r-stock); }
-.qc-items { display: grid; gap: var(--s2); }
-.qc-item { padding: var(--s3) var(--s4); }
-.qc-is { min-width: 0; font: 11.5px var(--mono); color: var(--text); overflow-wrap: anywhere; }
-.qc-ticket > .row.acts { justify-content: flex-end; }
-.th-read.qc-ticket > .row.acts { justify-content: flex-start; }
-.qc-ticket .sp-go { margin-top: 0; }
-
-/* ---- developer thread preview: one thread offered, under way, at its turn-in and its reward ---- */
+/* ---- developer thread preview (dev only): one thread offered, under way, at its turn-in and its reward ---- */
 .gain.th-preview { z-index: 42; place-items: stretch; padding: var(--s6); }
 .thp { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: var(--s5); width: min(1200px, 100%); min-height: 0; max-height: 100%; margin: 0 auto; }
 .thp-bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s3) var(--s5); padding: var(--s3) var(--s5); border: 1px dashed var(--line-strong); border-radius: var(--r-card); background: var(--panel); }
@@ -173,7 +98,7 @@
   background: var(--inset) repeating-linear-gradient(0deg, transparent 0 39px, rgba(241, 185, 47, 0.04) 39px 40px), repeating-linear-gradient(90deg, transparent 0 39px, rgba(241, 185, 47, 0.04) 39px 40px); }
 .thp-mail { width: min(660px, 100%); }
 .thp-gain { width: 100%; display: grid; place-items: center; }
-.thp-gain .sp-card { width: min(720px, 100%); max-height: none; }
+.thp-gain .sp-card { max-height: none; }
 .thp-none { max-width: 50ch; text-align: center; }
 @media (max-width: 900px) {
   .gain.th-preview { padding: var(--s4); }
@@ -183,19 +108,8 @@
   .thp-map .pz-card { width: 100%; max-height: none; }
 }
 @media (max-width: 640px) {
-  .qa-item, .qc-item { grid-template-columns: 2ch minmax(0, 1fr) auto; }
-  .qa-is, .qc-is { grid-column: 2 / -1; grid-row: 2; }
-  .qb-id { gap: var(--s4); padding-right: 0; }
-  .qb-face { font-size: 9.5px; padding: var(--s2) var(--s3); }
-  .qb-fields div { grid-template-columns: minmax(0, 1fr); gap: 0; }
-  .qb-sheet { padding: var(--s5); }
+  .qa-item { grid-template-columns: 2ch minmax(0, 1fr) auto; }
+  .qa-is { grid-column: 2 / -1; grid-row: 2; }
   .gain.th-preview { padding: var(--s6); }
   .thp-map { padding: 0; border: 0; background: none; }
-  .qb-stamp { position: static; justify-self: start; rotate: -3deg; }
-  .qb-reward .qb-id { padding-right: 0; }
-  .qc-at { margin-left: 0; flex-basis: 100%; }
 }
-.qc-is span { white-space: nowrap; }
-/* in Mail (.card p sets a measure and a colour): the ticket's and the job's lines run full width, in their own colours */
-.th-read.q-a p, .th-read.q-b p, .th-read.qc-ticket p { max-width: none; }
-.th-read .qa-job-h { color: var(--amber-soft); } .th-read .qa-state { color: var(--gray); }

@@ -46,7 +46,7 @@ import { roomsMarkup, fillClocks, popOf, pickRoom, closePop } from './floorplan-
 import { createPuzzleFx, panelRoom, closePanel, openPanel, pzUi } from './puzzle-view.mjs';
 import { PUZZLES } from './puzzles.mjs';
 import { threadPanel, thUi, offerMarkup as thOfferMarkup } from './threads-view.mjs';
-import { QUEST, PREVIEW, questCommand, previewMarkup } from './quest-view.mjs';
+import { PREVIEW, previewMarkup } from './quest-view.mjs';
 import * as PV from './profile-view.mjs';
 import { channelOf, muted as chanMuted, say as chanSay } from './channel.mjs';
 import { setBanner, setPlan, handleOf } from './profile.mjs';
@@ -68,8 +68,6 @@ const playtest = params.get('playtest');
 // is never read, written or reset from a bench.
 const { key: KEY, bench: BENCH, camp: CAMP } = BN.pageSave(location.search, CP.CAMPAIGN_KEY);
 const DEV = params.has('dev') || !!BENCH; // developer commands (and window.__bb, for tests)
-// The quest window's direction (quest-view.mjs): ?quest=a|b|c|current wins over the setting on this page.
-if (QUEST.styles.includes(params.get('quest'))) QUEST.forced = params.get('quest');
 
 // ---------- state ----------
 let campaign = load();
@@ -1333,7 +1331,6 @@ function run(raw) {
   if (text === 'achievements') return goTo('achieve'); // the page; achieve pin <name> and the rest go to the engine
   if (text === 'shell' || text.startsWith('shell ')) return shellCommand(text.slice(6).trim());
   { const said = screenFxCommand(campaign, text); if (said) { save(); dirty = true; return notice(said); } } // screen fx [off|subtle|medium|bold|next] / screen fx <effect> on|off (and the old effects calm|full|minimal)
-  if (text === 'quest' || text.startsWith('quest ')) { const said = questCommand(campaign, text.slice(6)); cache.clear(); save(); dirty = true; return notice(said); } // the quest window's direction (quest-view.mjs)
   if (/^developer thread preview\b/.test(text)) return threadPreview(text.replace(/^developer thread preview\s*/, ''));
   if (text === 'casing on' || text === 'casing off') { campaign.settings.casing = text === 'casing on'; save(); dirty = true; return; }
   if (text === 'tips on' || text === 'tips off' || text === 'tips replay') {
@@ -1848,9 +1845,9 @@ function renderOffer() {
   el.hidden = !want;
   if (want) put('th-offer', thOfferMarkup(campaign)); else if (cache.get('th-offer')) { cache.delete('th-offer'); el.innerHTML = ''; }
 }
-// developer thread preview [chain] [offer|progress|turnin|reward]: one thread at each stage, over the page, in the
-// quest window's direction (quest-view.mjs previewMarkup). Its own buttons switch the stage, the direction and the
-// thread; nothing in it acts on the game.
+// developer thread preview [chain] [offer|progress|turnin|reward] (dev only): one thread at each stage of the quest
+// window, over the page (quest-view.mjs previewMarkup). Its own buttons switch the stage and the thread; nothing in
+// it acts on the game.
 const thPrev = { open: false, chain: 'night-operator', stage: 'offer' };
 function threadPreview(arg) {
   for (const w of arg.split(/\s+/).filter(Boolean)) {
@@ -1869,10 +1866,9 @@ function renderPreview() {
 document.addEventListener('click', (e) => {
   const p = e.target.closest?.('#th-preview');
   if (!p) return;
-  const st = e.target.closest('[data-thp-stage]'), sy = e.target.closest('[data-thp-style]');
+  const st = e.target.closest('[data-thp-stage]');
   if (e.target.closest('[data-thp-close]')) thPrev.open = false;
   else if (st) thPrev.stage = st.dataset.thpStage;
-  else if (sy) { campaign.settings.quest = sy.dataset.thpStyle; if (QUEST.forced) QUEST.forced = sy.dataset.thpStyle; cache.clear(); save(); }
   else if (e.target.closest('[data-thp-chain]')) thPrev.chain = PREVIEW.chains[(PREVIEW.chains.indexOf(thPrev.chain) + 1) % PREVIEW.chains.length];
   else { e.stopImmediatePropagation(); return; } // the preview's own window: nothing in it acts on the game
   thPrev.qn = null; feel.key('click'); dirty = true; e.stopImmediatePropagation();
