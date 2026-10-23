@@ -61,8 +61,7 @@
 /* #net: an achievement's name, in brackets */
 .ch-ach { color: var(--amber); font-weight: 600; }
 
-/* the profile card's row: your points, and the ones you pinned or earned last */
-.pf-ach { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+/* the profile card's Achievements: your points by its label, and the ones you pinned or earned last under it */
 .pf-pts { display: inline-flex; align-items: center; gap: 4px; color: var(--amber); font: 600 14px var(--mono); font-variant-numeric: tabular-nums; margin-right: 4px; }
 .pf-pts .glyph { width: 15px; height: 15px; margin: 0; }
 .pf-achs { display: flex; flex-wrap: wrap; gap: 4px 6px; min-width: 0; }
