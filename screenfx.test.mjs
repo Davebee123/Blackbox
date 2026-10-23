@@ -36,12 +36,11 @@ test('every screen effect rule styles only the backdrop, the bezel, the lamps or
   // The subject (the last compound of each selector) must be one of these; the rest of the selector only says when.
   const ok = [/^#fx-back\b/, /^\.fx-(tex|static|vig|tear)$/, /^#crt-bezel\.(low|warn)(::after)?$/, /^\.lamp\b/, /^#virus-canvas\.sfx-tear$/];
   // The three exceptions, each limited to what it may set: :root's own variables, the map's empty field (its
-  // background, so the floor shows through it), the screen's own background and glow, and the window's z-index.
+  // background, so the floor shows through it), and the screen's own background and glow.
   const limited = [
     { re: /^:root(\[[^\]]+\])*$/, may: (p) => p.startsWith('--') },
     { re: /^\.map-canvas$/, may: (p) => p === 'background' },
     { re: /^\.app$/, may: (p) => p === 'background' || p === 'box-shadow' },
-    { re: /^\.window-out$/, may: (p) => p === 'z-index' },
   ];
   for (const r of all) {
     for (const sel of r.sel.split(',').map((x) => x.trim())) {
