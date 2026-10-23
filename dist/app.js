@@ -2111,6 +2111,7 @@ function casing() {
   document.body.classList.toggle('monitor-roomy', small);
   outside.set(win);
   if (win !== outsideShown || moved) { outsideShown = win; feel.rain(win ? outsideRain : 0); }
+  if (moved) { fitKey = ''; requestAnimationFrame(() => { fitKey = ''; fitTopbar(); }); } // the screen's width changed (casing on or off, Full or Roomy): fit the top bar to it again
   feel.street(win);
   screenFx();
   const s = campaign;

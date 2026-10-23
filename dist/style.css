@@ -1588,7 +1588,6 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 @media (min-width: 1100px) and (min-height: 720px) {
   body.cased.monitor-roomy { --side: max(calc((100vw - 1800px) / 2), calc(18px + max(8px, min(10vw, (100vw - 1105px) / 2)))); --vm: max(16px, min(20dvh, calc(100dvh - 704px))); --top: calc(22px + 0.56 * (var(--vm) - 16px)); --desk: calc(0.44 * (var(--vm) - 16px)); background: var(--case-win, #0b0a09); }
   body.cased.monitor-roomy .toggles { display: none; } /* all on the System page; the bar is narrower here */
-  body.cased .levelup { top: calc(var(--top) + 50px); } /* on the screen, wherever the monitor sits */
 }
 
 /* Ability slots: the key sits in the bottom-right corner so the icon and name center in the slot. */
