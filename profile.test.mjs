@@ -8,6 +8,8 @@ import { PRESENCE, profileOf as simOf } from './dist/presence.mjs';
 import { BANNERS, BANNER_IDS, PROFILE, checkBanner, setBanner, titles, titleById, tickProfile, myProfile, shownTitle, fingerOf, stickersOf, simCard, simTitle, voice } from './dist/profile.mjs';
 import { logComms } from './dist/comms.mjs';
 import { profileMarkup } from './dist/profile-view.mjs';
+import { esc } from './dist/view.mjs';
+import { ARCHETYPES } from './dist/data.mjs';
 
 const me = () => { const s = fresh(); s.tutorialCompleted = true; s.profile = { handle: 'dana', pwLen: 6, since: 1_700_000_000_000 }; s.hackers = { breaker: { level: 14, xp: 0 }, bastion: { level: 6, xp: 0 } }; return s; };
 const earned = (s) => myProfile(s).titles;
@@ -122,6 +124,32 @@ test('finger on you: banner, title, plan, classes, pieces, marks and stickers', 
   assert.equal(card.title, shownTitle(s).name);
   const html = profileMarkup(s, 'dana');
   for (const bit of ['pf-banner', 'pf-class', 'pglyph', 'pf-mark', 'pf-sticker', 'back at nine', 'data-pf-tab']) assert.ok(html.includes(bit), bit);
+});
+
+test('the card, a net ID badge: every field it holds, on yours and on theirs', () => {
+  const s = me();
+  s.standing = { halcyon: 30, kestrel: 80 };
+  s.floors = { reached: 3 };
+  s.dex.won = { 'nb-deadbolt': 1, relayking: 1 };
+  const u = Object.values(UNIQUES).find((x) => x.level <= 14 && !x.faction);
+  s.stash.push({ kind: 'protocol', unique: u.id, name: u.name, level: 14, rarity: 'zeroday', stats: { damage: 5 }, id: 'g1' });
+  tickProfile(s);
+  play(s, 'plan back at nine');
+  play(s, 'online sim');
+  const fields = (f) => [esc(f.handle), 'pf-banner', esc(f.banner[0]), 'data-profile-close', ...(f.title ? [esc(f.title)] : []), ...(f.plan ? [esc(f.plan)] : []),
+    ...f.classes.map((c) => `${ARCHETYPES[c.cls].name} <b>${c.level}</b>`), ...f.pieces.map((it) => `title="${esc(it.name)}"`), ...(f.pieces.length ? ['pglyph'] : []),
+    ...f.stickers.map((x) => `<b>${esc(x.label)}</b>`), `<b>${f.points}</b>`, ...f.achievements.map((a) => esc(a.name)),
+    f.you ? 'On since' : f.where === 'offline' ? 'Not logged on' : esc(`On ${f.where}`), ...(f.you ? ['data-pf-tab'] : ['Add friend'])];
+  for (const h of ['dana', 'nyx']) {
+    const f = fingerOf(s, h);
+    if (h === 'dana') assert.ok(f.stickers.length && f.pieces.length && f.marks.length && f.title && f.achievements.length, 'a full card');
+    const html = profileMarkup(s, h);
+    for (const bit of fields(f)) assert.ok(html.includes(bit), `${h}: ${bit}`);
+    assert.equal(html.split('class="pf-mark"').length - 1, f.marks.length, `${h}: every mark`);
+    assert.equal(html.split('class="pf-sticker ').length - 1, f.stickers.length, `${h}: every sticker`);
+    assert.ok(html.includes('class="pf-handle"') && html.includes('class="pf-bars"'), `${h}: the badge`);
+    assert.equal(html, profileMarkup(s, h), `${h}: the same badge every time`);
+  }
 });
 
 test('finger on a simulated hacker: a believable person, the same every time, only while they can be met', () => {

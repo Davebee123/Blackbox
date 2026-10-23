@@ -3924,37 +3924,54 @@ p.impl { margin: 6px 0 0; padding: 4px 2px; border-bottom: 1px dotted color-mix(
 .profile-scrim[hidden] { display: none; }
 .pf-wrap { display: flex; align-items: flex-start; gap: 12px; max-width: 100%; }
 .pf-card, .pf-edit { background: var(--panel); border: 1px solid var(--line-strong); border-radius: var(--r-card); box-shadow: 0 18px 44px rgba(0, 0, 0, 0.7); }
-.pf-card { width: 372px; max-width: 100%; padding: 12px 16px 12px; font: 12px var(--mono); color: var(--text); display: grid; gap: 10px; }
-.pf-head { display: flex; align-items: baseline; gap: 10px; }
-.pf-login { display: flex; align-items: baseline; gap: 8px; }
-.pf-login small, .pf-plan small { font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--dim); }
-.pf-login b { font: 600 17px var(--mono); color: var(--bright); letter-spacing: 0.04em; }
+/* The card is a net ID badge: an amber strip; a centred identity (the banner framed as the photo, teal corners for the
+   person; the handle large in teal, the title, the plan quoted); then sections on one column, each with the same
+   small label over it and the same rule above it; a bar code beside the date at the foot. One spacing scale: 4 and 8
+   inside a block, 12 between blocks, 16 at the sides. */
+.pf-card { width: 372px; max-width: 100%; padding: 0; font: 12px var(--mono); color: var(--text); display: grid; overflow: hidden; background: linear-gradient(155deg, rgba(241, 185, 47, 0.06), transparent 34%), var(--panel); }
+.pf-head { display: flex; align-items: center; justify-content: space-between; height: 28px; padding: 0 8px 0 16px; background: var(--amber); color: #120c03; }
+.pf-kicker { font: var(--kicker); letter-spacing: var(--kicker-track); text-transform: uppercase; }
+.pf-x { font: 600 18px/1 var(--mono); color: rgba(18, 12, 3, 0.65); background: none; border: 0; cursor: pointer; padding: 0 2px; }
+.pf-x:hover { color: #120c03; }
+.pf-face { display: grid; justify-items: center; gap: 4px; padding: 16px; text-align: center; min-width: 0; }
+.pf-photo { --tk: rgba(127, 209, 199, 0.7); max-width: 100%; padding: 6px; background:
+  linear-gradient(var(--tk), var(--tk)) top left / 10px 1px, linear-gradient(var(--tk), var(--tk)) top left / 1px 10px,
+  linear-gradient(var(--tk), var(--tk)) top right / 10px 1px, linear-gradient(var(--tk), var(--tk)) top right / 1px 10px,
+  linear-gradient(var(--tk), var(--tk)) bottom left / 10px 1px, linear-gradient(var(--tk), var(--tk)) bottom left / 1px 10px,
+  linear-gradient(var(--tk), var(--tk)) bottom right / 10px 1px, linear-gradient(var(--tk), var(--tk)) bottom right / 1px 10px; background-repeat: no-repeat; }
+.pf-banner { display: block; width: max-content; max-width: 100%; margin: 0; padding: 10px 14px; font: 600 14px/1.15 var(--mono); color: var(--amber); text-shadow: 0 0 0.5em rgba(241, 185, 47, 0.35); background: var(--inset); border: 1px solid var(--line); border-radius: var(--r-card); white-space: pre; overflow: hidden; }
+.pf-handle { margin-top: 8px; font: 600 24px/1.1 var(--mono); color: var(--you); letter-spacing: 0.06em; text-shadow: 0 0 0.6em rgba(127, 209, 199, 0.3); overflow-wrap: anywhere; }
 .pf-title { color: var(--amber); font: 600 12px var(--mono); }
-.pf-x { margin-left: auto; font: 600 18px/1 var(--mono); color: var(--dim); background: none; border: 0; cursor: pointer; padding: 0 2px; }
-.pf-x:hover { color: var(--amber); }
-.pf-banner { justify-self: center; width: max-content; max-width: 100%; margin: 0; padding: 10px 14px; font: 600 14px/1.15 var(--mono); color: var(--amber); text-shadow: 0 0 0.5em rgba(241, 185, 47, 0.35); background: var(--inset); border: 1px solid var(--line); border-radius: var(--r-card); white-space: pre; overflow: hidden; }
-.pf-plan { display: flex; align-items: baseline; gap: 10px; margin: 0; font-size: 12.5px; color: var(--bright); }
-.pf-plan .quiet { color: var(--dim); }
-.pf-classes { display: flex; flex-wrap: wrap; gap: 12px; }
-.pf-class { margin: 0; display: grid; justify-items: center; gap: 3px; }
+.pf-plan { max-width: 100%; margin: 4px 0 0; font: italic 12px/1.5 var(--mono); color: var(--muted); overflow-wrap: anywhere; text-wrap: balance; }
+.pf-plan.quiet { color: var(--dim); }
+.pf-sec { display: grid; gap: 8px; min-width: 0; padding: 12px 16px; border-top: 1px solid var(--line); }
+.pf-sec-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 16px; }
+.pf-sec h3, .pf-group h3 { margin: 0; font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--dim); }
+.pf-classes { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+.pf-class { margin: 0; display: grid; justify-items: center; align-content: start; gap: 8px; padding: 8px 4px 6px; background: var(--inset); border: 1px solid var(--line); border-radius: var(--r-btn); }
 .pf-class pre { margin: 0; font: 600 5.4px/1.05 var(--mono); color: var(--you); text-shadow: 0 0 0.6em rgba(127, 209, 199, 0.35); }
-.pf-class figcaption { font: 600 10px var(--mono); letter-spacing: 0.5px; text-transform: uppercase; color: var(--muted); }
+.pf-class figcaption { font: 600 10px var(--mono); letter-spacing: 0.5px; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
 .pf-class figcaption b { color: var(--bright); }
-.pf-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding-top: 8px; border-top: 1px solid var(--line); }
-.pf-pieces { display: flex; gap: 2px; }
+.pf-groups { display: flex; flex-wrap: wrap; align-items: start; gap: 12px 24px; }
+.pf-group { display: grid; align-content: start; gap: 8px; }
+.pf-pieces { display: flex; gap: 8px; }
 .pf-piece .pglyph { --pg-size: 3.6px; padding: 0.3em; }
-.pf-marks { display: flex; gap: 10px; }
-.pf-mark { display: grid; justify-items: center; gap: 3px; color: var(--fc); }
+.pf-marks { display: flex; gap: 12px; }
+.pf-mark { display: grid; justify-items: center; gap: 4px; color: var(--fc); }
 .pf-mark .glyph { width: 16px; height: 16px; margin: 0; }
 .pf-pips { display: flex; gap: 2px; }
 .pf-pips i { width: 4px; height: 4px; border: 1px solid currentColor; opacity: 0.45; }
 .pf-pips i.on { background: currentColor; opacity: 1; }
-.pf-stickers { display: flex; flex-wrap: wrap; gap: 6px 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+.pf-stickers, .pf-sec .pf-achs { display: flex; flex-wrap: wrap; gap: 8px; }
 .pf-sticker { display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px 2px 5px; color: var(--sc); background: color-mix(in srgb, var(--sc) 12%, var(--inset)); border: 1px solid color-mix(in srgb, var(--sc) 70%, transparent); border-radius: var(--r-btn); font: 600 10px var(--mono); letter-spacing: 0.6px; text-transform: uppercase; transform: rotate(-1.5deg); }
 .pf-sticker:nth-child(3n + 2) { transform: rotate(1.2deg); } .pf-sticker:nth-child(3n) { transform: rotate(-0.4deg); }
 .pf-sticker .glyph { width: 11px; height: 11px; margin: 0; }
-.pf-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 11px; color: var(--dim); }
-.pf-foot .act { font: 600 11px var(--mono); color: var(--amber); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.pf-stickers .pf-sticker, .pf-sec .pf-ach-chip { height: 22px; box-sizing: border-box; padding: 0 8px 0 6px; line-height: 1; transform: none; }
+.pf-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px 16px; border-top: 1px solid var(--line); font: 11px/14px var(--mono); color: var(--dim); }
+.pf-since { min-width: 0; }
+.pf-bars { flex: none; height: 14px; color: var(--muted); opacity: 0.6; }
+.pf-foot .act, .pf-foot .tag { margin-left: auto; flex: none; white-space: nowrap; }
+.pf-foot .act { font: 600 11px/14px var(--mono); color: var(--amber); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
 .pf-edit { width: 336px; max-width: 100%; display: grid; gap: 10px; padding: 0 0 12px; }
 .pf-edit .comms-filters { padding: 8px 12px; }
 .pf-presets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 0 12px; }

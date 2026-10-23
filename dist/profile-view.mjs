@@ -6,7 +6,7 @@ import { EMBLEMS } from './class-emblems.mjs';
 import { ARCHETYPES } from './data.mjs';
 import { FACTIONS } from './factions.mjs';
 import { channelOf, muted } from './channel.mjs';
-import { fingerOf, BANNERS, BANNER_IDS, titles, myProfile, shownTitle, PROFILE } from './profile.mjs';
+import { fingerOf, BANNERS, BANNER_IDS, titles, myProfile, shownTitle, PROFILE, hash } from './profile.mjs';
 import { online, simOn, isFriend } from './presence.mjs';
 import { achievements, totalPoints, bannersOf } from './achievements.mjs';
 import { REWARD_BANNERS, REWARD_BANNER_IDS } from './profile.mjs';
@@ -41,30 +41,48 @@ export const channelHead = (s) => `<span class="ch-name">#net</span><small>${sim
 // ---------- the card ----------
 // Achievement points, then the few you pinned or earned last (achievements.mjs). Yours open the achievement.
 const dmy = (t) => new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-function achRow(f) {
+const section = (label, body, head = '') => `<section class="pf-sec"><header class="pf-sec-h"><h3>${label}</h3>${head}</header>${body}</section>`;
+function achSection(f) {
   if (f.points == null) return '';
   const when = f.you ? f.got || {} : {};
   const chip = (a) => {
     const tip = `${a.name}: ${a.rule}${when[a.id] ? ` Earned ${dmy(when[a.id])}.` : ''}`;
     return f.you ? `<button type="button" class="pf-ach-chip" data-go="achieve:${esc(a.id)}" title="${esc(tip)}">${glyph('medal')}<span>${esc(a.name)}</span></button>` : `<span class="pf-ach-chip" title="${esc(tip)}">${glyph('medal')}<span>${esc(a.name)}</span></span>`;
   };
-  return `<div class="pf-ach"><span class="pf-pts" title="${esc(`Achievement points: ${f.points}${f.you ? ` of ${totalPoints()}` : ''}`)}">${glyph('medal')}<b>${f.points}</b></span>${(f.achievements || []).length ? `<span class="pf-achs">${f.achievements.map(chip).join('')}</span>` : ''}</div>`;
+  const pts = `<span class="pf-pts" title="${esc(`Achievement points: ${f.points}${f.you ? ` of ${totalPoints()}` : ''}`)}">${glyph('medal')}<b>${f.points}</b></span>`;
+  return section('Achievements', (f.achievements || []).length ? `<div class="pf-achs">${f.achievements.map(chip).join('')}</div>` : '', pts);
 }
 const tierPips = (i) => `<span class="pf-pips" aria-hidden="true">${[1, 2, 3, 4].map((k) => `<i class="${k <= i ? 'on' : ''}"></i>`).join('')}</span>`;
+// The badge's bar code: drawn from the handle, so the same person always has the same one (decoration, no data).
+function barcode(h) {
+  let x = 0;
+  const stops = [];
+  for (let i = 0; i < 18; i++) {
+    const w = 1 + Math.floor(hash(h, 100 + i) * 3), gap = 1 + Math.floor(hash(h, 200 + i) * 2);
+    stops.push(`currentColor ${x}px ${x + w}px`, `transparent ${x + w}px ${x + w + gap}px`);
+    x += w + gap;
+  }
+  return `<span class="pf-bars" aria-hidden="true" style="width:${x}px;background-image:linear-gradient(90deg,${stops.join(',')})"></span>`;
+}
+// The card as a net ID badge: an amber strip; a centred identity (the banner framed as the photo, the handle large in
+// teal, the title, the plan quoted under them); then labelled sections on one column (classes; gear and marks;
+// stickers; achievements); a bar code beside the date at the foot.
 function cardBody(s, f) {
   const classes = f.classes.map((c) => `<figure class="pf-class" title="${esc(ARCHETYPES[c.cls].name)} level ${c.level}"><pre aria-hidden="true">${esc(EMBLEMS[c.cls].join('\n'))}</pre><figcaption>${esc(ARCHETYPES[c.cls].name)} <b>${c.level}</b></figcaption></figure>`).join('');
   const pieces = f.pieces.map((it) => `<span class="pf-piece" title="${esc(it.name)}">${glyphMarkup(it, 'sm')}</span>`).join('');
   const marks = f.marks.map((m) => `<span class="pf-mark" style="--fc:${FACTIONS[m.f].color}" title="${esc(`${FACTIONS[m.f].name}: ${FACTIONS[m.f].tiers[m.tier]}`)}">${glyph('f-' + m.f)}${tierPips(m.tier)}</span>`).join('');
   const stickers = f.stickers.map((x) => `<span class="pf-sticker k-${x.kind}" style="--sc:${x.color}" title="${esc(x.tip)}">${glyph(x.glyph)}<b>${esc(x.label)}</b></span>`).join('');
   const since = f.you && f.since ? `On since ${new Date(f.since).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}` : f.where === 'offline' ? 'Not logged on' : `On ${f.where}`;
-  return `<header class="pf-head"><span class="pf-login"><small>Login</small><b>${esc(f.handle)}</b></span>${f.title ? `<span class="pf-title">${esc(f.title)}</span>` : ''}<button type="button" class="act pf-x" data-profile-close aria-label="Close">×</button></header>
-    <pre class="pf-banner" aria-label="${esc(f.handle)}'s banner">${esc(f.banner.join('\n'))}</pre>
-    <p class="pf-plan"><small>Plan</small>${f.plan ? `<span>${esc(f.plan)}</span>` : '<span class="quiet">—</span>'}</p>
-    <div class="pf-classes">${classes}</div>
-    ${pieces || marks ? `<div class="pf-row">${pieces ? `<div class="pf-pieces">${pieces}</div>` : ''}${marks ? `<div class="pf-marks">${marks}</div>` : ''}</div>` : ''}
-    ${stickers ? `<div class="pf-stickers">${stickers}</div>` : ''}
-    ${achRow(f)}
-    <footer class="pf-foot"><span>${esc(since)}</span>${f.you ? '' : isFriend(s, f.handle) ? '<span class="tag">friend</span>' : `<button type="button" class="act" data-run="friend add ${esc(f.handle)}">Add friend</button>`}</footer>`;
+  const group = (label, body) => `<div class="pf-group"><h3>${label}</h3>${body}</div>`;
+  return `<header class="pf-head"><span class="pf-kicker">Net ID</span><button type="button" class="act pf-x" data-profile-close aria-label="Close">×</button></header>
+    <div class="pf-face"><div class="pf-photo"><pre class="pf-banner" aria-label="${esc(f.handle)}'s banner">${esc(f.banner.join('\n'))}</pre></div>
+      <b class="pf-handle">${esc(f.handle)}</b>${f.title ? `<span class="pf-title">${esc(f.title)}</span>` : ''}
+      <p class="pf-plan${f.plan ? '' : ' quiet'}" title="Plan">${f.plan ? `“${esc(f.plan)}”` : 'No plan.'}</p></div>
+    ${section('Classes', `<div class="pf-classes">${classes}</div>`)}
+    ${pieces || marks ? `<section class="pf-sec pf-groups">${pieces ? group('Gear', `<div class="pf-pieces">${pieces}</div>`) : ''}${marks ? group('Marks', `<div class="pf-marks">${marks}</div>`) : ''}</section>` : ''}
+    ${stickers ? section('Stickers', `<div class="pf-stickers">${stickers}</div>`) : ''}
+    ${achSection(f)}
+    <footer class="pf-foot">${barcode(f.handle)}<span class="pf-since">${esc(since)}</span>${f.you ? '' : isFriend(s, f.handle) ? '<span class="tag">friend</span>' : `<button type="button" class="act" data-run="friend add ${esc(f.handle)}">Add friend</button>`}</footer>`;
 }
 // The editor beside your own card: banner (a preset, or your own drawing), title, plan.
 function editor(s, tab, draft, err) {
