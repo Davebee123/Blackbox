@@ -69,6 +69,7 @@ import { threadById, serverMarks } from './threads.mjs';
 import { skillsTabMarkup } from './skills-view.mjs';
 import { achievementsMarkup } from './achievements-view.mjs';
 import { casingPageMarkup } from './casing-view.mjs';
+import { terminalPageMarkup } from './terminal-view.mjs';
 import { pointsOf } from './achievements.mjs';
 export { skillDetailMarkup, breakoutMarkup, breakoutDetailMarkup, breakoutDue, breakoutLevels } from './skills-view.mjs';
 
@@ -2579,13 +2580,15 @@ function paceCard(s) {
   return `<section class="card"><h2>Pace</h2><p class="svc-line" title="Counts time while the game is open and you've used it in the last 2 minutes. Loot targets assume ${LOOT.killsPerHour} kills an hour.">${line}</p></section>`;
 }
 
-// The System page's tabs: Settings (everything as it was), Achievements (achievements-view.mjs) and Casing
-// (casing-view.mjs: the monitor's colourway, plate and stickers).
-export const SYSTEM_TABS = [['settings', 'Settings'], ['achievements', 'Achievements'], ['casing', 'Casing']];
+// The System page's tabs: Settings (everything as it was), Achievements (achievements-view.mjs), Casing
+// (casing-view.mjs: the monitor's colourway, plate and stickers) and Terminal (terminal-view.mjs: the boot, the
+// prompt and the cursor).
+export const SYSTEM_TABS = [['settings', 'Settings'], ['achievements', 'Achievements'], ['casing', 'Casing'], ['terminal', 'Terminal']];
 const systemTabs = (s, tab) => `<nav class="ltabs sys-tabs" role="tablist" aria-label="System">${SYSTEM_TABS.map(([k, l]) => `<button type="button" role="tab" data-stab="${k}" aria-selected="${tab === k}">${esc(l)}${k === 'achievements' ? `<small class="sys-pts">${glyph('medal')}${pointsOf(s)}</small>` : ''}</button>`).join('')}</nav>`;
 export function systemMarkup(s, { coop = false, tab = 'settings', ach = {}, cs = {} } = {}) {
   if (tab === 'achievements') return systemTabs(s, tab) + achievementsMarkup(s, ach);
   if (tab === 'casing') return systemTabs(s, tab) + casingPageMarkup(s, cs);
+  if (tab === 'terminal') return systemTabs(s, tab) + terminalPageMarkup(s);
   // Co-op (coop-ui.mjs, docs/coop.md): a developer prototype, so only with ?dev.
   const co = coop ? '<section class="card coop-card"><h2>Co-op</h2><p>Play a run with another player. Your game runs the world, theirs sends their character. Prototype.</p><div class="row"><button type="button" class="btn" data-run="coop">Open Co-op</button></div></section>' : '';
   return `${systemTabs(s, tab)}<div class="page-grid"><div style="display:grid;gap:12px">${co}${volumeCard(s)}${paceCard(s)}

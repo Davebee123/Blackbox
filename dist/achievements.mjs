@@ -161,6 +161,7 @@ export function rewardText(a) {
   if (r.sticker) out.push('a sticker');
   if (r.banner) out.push('a banner');
   if (r.casing) out.push('a casing colourway');
+  out.push(...terminalRewardWords(a.id)); // a boot sequence, a prompt, a cursor: the block at the end of this file
   return out.length ? `Rewards ${out.length > 1 ? `${out.slice(0, -1).join(', ')} and ${out.at(-1)}` : out[0]}.` : '';
 }
 // The deed stickers you've earned (profile.mjs stickersOf adds them to the rest).
@@ -291,4 +292,29 @@ export function developerAchieve(s, what) {
   if (!list.length) return warn(s, `developer achieve <${achievements().slice(0, 3).map((a) => a.id).join('|')}|…|all|reset>`);
   grant(s, list, clock());
   emit(s, 'achievement', `Achievement${list.length > 1 ? 's' : ''}: ${list.length > 3 ? `${list.length} granted` : list.map((a) => a.name).join(', ')}.`, { achievements: list.map((a) => a.id), titles: list.map((a) => a.reward?.title).filter(Boolean) });
+}
+
+// ---------- Terminal cosmetics (terminal.mjs): boot sequences, prompts and cursors ----------
+// A block of its own, so the list above merges cleanly. Each reward rides on an achievement above, reused as it is:
+// achievement id → { boot, prompt, cursor } (terminal.mjs BOOT_LOOKS, PROMPTS, CURSORS name them). Built on first use, like
+// the list (factions.mjs may still be loading when this module is).
+let TERMINAL = null;
+export const terminalRewards = () => (TERMINAL ||= {
+  'c-patient': { boot: 'bios' },
+  't-thread': { boot: 'glitch' },
+  't-norest': { boot: 'minimal' },
+  ...Object.fromEntries(FACTION_IDS.map((f) => ['f-' + f, { boot: 'f-' + f, prompt: 'root' }])),
+  'k-matched': { prompt: 'title' },
+  't-cuts': { prompt: 'arrow' },
+  't-program': { prompt: 'lambda' },
+  'cl-sub': { prompt: 'powerline' },
+  'x-mapped': { cursor: 'underline' },
+  'd-ten': { cursor: 'beam' },
+});
+export const terminalReward = (id) => terminalRewards()[id] || null;
+// The achievements that bring a look (kind: boot, prompt or cursor), and the words an achievement's tooltip adds.
+export const terminalFrom = (kind, look) => achievements().filter((a) => terminalReward(a.id)?.[kind] === look);
+function terminalRewardWords(id) {
+  const t = terminalReward(id) || {};
+  return [t.boot && 'a boot sequence', t.prompt && 'a prompt', t.cursor && 'a cursor'].filter(Boolean);
 }

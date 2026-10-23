@@ -2,7 +2,8 @@
 // category's achievements beside them. Pure functions of state. Each row shows; its rule is its tooltip.
 //   ui: { cat: 'summary' | a category id, focus: an achievement id to light (a pager line opened it) }
 import { glyph } from './glyphs.mjs';
-import { achievements, CATEGORIES, pointsOf, totalPoints, progressOf, rewardText } from './achievements.mjs';
+import { achievements, CATEGORIES, pointsOf, totalPoints, progressOf, rewardText, terminalReward } from './achievements.mjs';
+import { BOOT_LOOKS, PROMPTS, CURSORS } from './terminal.mjs';
 import { titleById, stickerById, REWARD_BANNERS } from './profile.mjs';
 import { COLORWAYS } from './casing.mjs';
 
@@ -26,6 +27,10 @@ function rewardChips(a, open) {
   if (r.sticker) { const x = stickerById(r.sticker); if (x) out.push(`<span class="ach-rw pf-sticker k-${x.kind}" style="--sc:${x.color}" title="${esc(`Sticker: ${x.tip}`)}">${glyph(x.glyph)}<b>${esc(x.label)}</b></span>`); }
   if (r.banner && REWARD_BANNERS[r.banner]) out.push(`<span class="ach-rw ach-rw-banner" title="${esc(`Banner: ${REWARD_BANNERS[r.banner].name}`)}"><pre aria-hidden="true">${esc(REWARD_BANNERS[r.banner].rows.join('\n'))}</pre><b>${esc(REWARD_BANNERS[r.banner].name)}</b></span>`);
   if (r.casing && COLORWAYS[r.casing]) out.push(`<span class="ach-rw ach-rw-case" data-case="${r.casing}" title="${esc(`Casing: ${COLORWAYS[r.casing].name}`)}"><i class="cs-chip" aria-hidden="true"></i><b>${esc(COLORWAYS[r.casing].name)}</b></span>`);
+  const t = terminalReward(a.id) || {}; // a boot, a prompt, a cursor (terminal.mjs), by name
+  if (t.boot && BOOT_LOOKS()[t.boot]) out.push(`<span class="ach-rw ach-rw-term" title="${esc(`Boot: ${BOOT_LOOKS()[t.boot].name}`)}"><b>${esc(BOOT_LOOKS()[t.boot].name)} boot</b></span>`);
+  if (t.prompt && PROMPTS[t.prompt]) out.push(`<span class="ach-rw ach-rw-term" title="${esc(`Prompt: ${PROMPTS[t.prompt].name}`)}"><b>${esc(PROMPTS[t.prompt].name)} prompt</b></span>`);
+  if (t.cursor && CURSORS[t.cursor]) out.push(`<span class="ach-rw ach-rw-term" title="${esc(`Cursor: ${CURSORS[t.cursor].name}`)}"><b>${esc(CURSORS[t.cursor].name)} cursor</b></span>`);
   return out.length ? `<span class="ach-rws${open ? '' : ' locked'}">${out.join('')}</span>` : '';
 }
 export function achRow(s, a, focus = null) {

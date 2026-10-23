@@ -5,6 +5,8 @@
 // Everything that moves is skipped when Motion is off; `shell plain` turns it all off.
 
 import { powerOn } from './poweron.mjs';
+import { bootScript } from './boots.mjs';
+import { bootOf } from './terminal.mjs';
 
 const BOOTED_KEY = 'blackbox-booted';
 const SPARK = '▁▂▃▄▅▆▇█';
@@ -19,39 +21,27 @@ export function createShell({ getState, isOn, canMove, tick, sound, tear }) {
   let lastModule = null;
 
   // ---------- boot ----------
-  // The boot reads your server back to you, so it's a status report as well as a mood.
-  function bootLines(s) {
-    const dots = (label, value, ok = 'ok') => `${label} ${'.'.repeat(Math.max(2, 26 - label.length))} ${value}${ok ? `  [ ${ok} ]` : ''}`;
-    const cls = s.loadout?.archetype || 'breaker';
-    const lvl = s.hackers?.[cls]?.level || 1;
-    const lines = [
-      { t: 'BLACKBOX/OS 0.9.4 · tty1', c: 'b' },
-      { t: dots('memory check', '640K') },
-      { t: dots('credits', `${s.server.credits}`, 'ok') },
-      { t: dots('integrity', `${s.server.integrity}/${s.server.max}`, s.server.integrity / s.server.max <= 0.25 ? 'crit' : 'ok'), c: s.server.integrity / s.server.max <= 0.25 ? 'h' : '' },
-      { t: dots(`loading kit: ${cls}`, `lv ${lvl}`) },
-      { t: dots('origins traced', String(s.locations?.length || 0), '') },
-      { t: dots('programs', `${(s.locations || []).reduce((n, l) => n + Object.keys(l.floorplan?.programs || {}).length, 0)} running`, 'ok') },
-    ];
-    const who = s.profile?.handle || 'rookie';
-    if (s.run) lines.push({ t: `resuming session: ssh ${who}@${s.run.loc}`, c: 'y' });
-    if (s.encounter?.phase === 'alert') lines.push({ t: `!! intrusion at the gate: ${s.encounter.virus.name}`, c: 'h' });
-    else if (s.encounter?.phase === 'active') lines.push({ t: `!! live intrusion: ${s.encounter.virus.name}, cycle ${s.encounter.cycle}`, c: 'h' });
-    lines.push({ t: '' }, { t: `login: ${who}`, c: 'y' }, { t: `password: ${'•'.repeat(s.profile?.pwLen || 8)}` }, { t: `last login: ${new Date().toDateString()} from 127.0.0.1` });
-    return lines;
-  }
-
+  // The boot reads your server back to you, so it's a status report as well as a mood. Which look plays is yours
+  // (System → Terminal: terminal.mjs bootOf); its lines are boots.mjs's.
   function boot(force = false) {
     if (!isOn() || !canMove()) return;
     try { if (!force && sessionStorage.getItem(BOOTED_KEY)) return; sessionStorage.setItem(BOOTED_KEY, '1'); } catch { /* storage blocked: boot every load */ }
     // The monitor comes on first (poweron.mjs); the boot lines run once a key starts it.
     $('boot').hidden = false;
     booting = true; // tips and the like hold off from the power-up on
-    powerOn({ sound, reducedMotion: () => !canMove() }).then(bootLinesRun);
+    powerOn({ sound, reducedMotion: () => !canMove() }).then(() => bootLinesRun(bootOf(getState())));
   }
-  function bootLinesRun() {
+  // A look played on its own (System → Terminal's Preview): no power-up first. Motion off shows it still, all at once.
+  function preview(id) {
+    if (booting) return;
+    bootLinesRun(id || bootOf(getState()), !canMove());
+  }
+  function bootLinesRun(id = 'stock', still = false) {
     const el = $('boot');
-    const lines = bootLines(getState());
+    const script = bootScript(getState(), id);
+    el.className = `boot ${script.cls}${still ? ' still' : ''}`;
+    if (script.fc) el.style.setProperty('--fc', script.fc); else el.style.removeProperty('--fc');
+    el.dataset.boot = script.id;
     el.innerHTML = `<pre></pre><small>${matchMedia('(pointer: coarse)').matches ? 'tap' : 'any key'} to skip</small>`;
     el.hidden = false;
     booting = true;
@@ -61,25 +51,47 @@ export function createShell({ getState, isOn, canMove, tick, sound, tear }) {
       if (!booting) return;
       booting = false;
       clearTimeout(boot.t);
+      clearTimeout(boot.fix);
+      clearInterval(boot.count);
       el.classList.add('out');
       const app = $('app');
-      app.classList.remove('power-on'); void app.offsetWidth; app.classList.add('power-on');
-      setTimeout(() => { el.hidden = true; el.classList.remove('out'); app.classList.remove('power-on'); }, 420);
+      if (!still) { app.classList.remove('power-on'); void app.offsetWidth; app.classList.add('power-on'); }
+      setTimeout(() => { el.hidden = true; el.className = 'boot'; el.style.removeProperty('--fc'); delete el.dataset.boot; app.classList.remove('power-on'); }, still ? 0 : 420);
       removeEventListener('keydown', done, true);
       removeEventListener('pointerdown', done, true);
     };
     addEventListener('keydown', done, true);
     addEventListener('pointerdown', done, true);
+    // One step as it ends up (still, or skipped to), or as it comes in: a garbled line settles once, a count runs up.
+    const put = (l, now) => {
+      if (l.art) { const d = document.createElement('div'); d.className = 'boot-art m'; d.textContent = l.art.join('\n'); pre.appendChild(d); return; }
+      const row = l.same && pre.lastElementChild ? pre.lastElementChild : pre.appendChild(document.createElement('div'));
+      row.className = l.c || '';
+      const text = l.count != null ? `${l.t}${l.count}${l.unit || ''}` : l.t || ' ';
+      if (now || (l.garble == null && l.count == null)) { row.textContent = text; return; }
+      if (l.garble != null) {
+        row.textContent = l.garble;
+        row.classList.add('gl');
+        boot.fix = setTimeout(() => { row.textContent = text; row.classList.remove('gl'); }, Math.round((l.ms ?? 160) * 0.75));
+        return;
+      }
+      const frames = 8, by = Math.max(1, Math.ceil(l.count / frames));
+      let n = 0;
+      row.textContent = `${l.t}0K`;
+      boot.count = setInterval(() => { n = Math.min(l.count, n + by); row.textContent = n >= l.count ? text : `${l.t}${n}K`; if (n >= l.count) clearInterval(boot.count); }, Math.max(20, Math.floor(((l.ms ?? 160) * 0.8) / frames)));
+    };
+    if (still) {
+      for (const l of script.steps) put(l, true);
+      boot.t = setTimeout(done, 2400);
+      return;
+    }
     const next = () => {
       if (!booting) return;
-      if (i >= lines.length) { boot.t = setTimeout(done, 380); return; }
-      const l = lines[i++];
-      const row = document.createElement('div');
-      row.className = l.c || '';
-      row.textContent = l.t || ' ';
-      pre.appendChild(row);
+      if (i >= script.steps.length) { boot.t = setTimeout(done, script.hold); return; }
+      const l = script.steps[i++];
+      put(l, false);
       tick?.(); // the boot lines tick in (heard only once audio is allowed)
-      boot.t = setTimeout(next, l.c === 'h' ? 260 : 70 + Math.random() * 90);
+      boot.t = setTimeout(next, l.ms ?? (l.c === 'h' ? 260 : 70 + Math.random() * 90));
     };
     boot.t = setTimeout(next, 250);
   }
@@ -193,7 +205,7 @@ export function createShell({ getState, isOn, canMove, tick, sound, tear }) {
 
   function mount() { /* key sounds live in sound.mjs now (see app.js) */ }
 
-  return { mount, boot, glitch, react, onModule, apply, second, caret, typeIn, get booting() { return booting; } };
+  return { mount, boot, preview, glitch, react, onModule, apply, second, caret, typeIn, get booting() { return booting; } };
 }
 
 const esc = (x) => String(x).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
