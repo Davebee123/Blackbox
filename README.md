@@ -372,6 +372,7 @@ node playtest.mjs      # kill orders vs enemies → docs/PLAYTEST.md
 node balance.mjs       # one scripted player per class at five points on the level curve → docs/BALANCE.md
 node farmsim.mjs 18 30 # crews in the farm, with and without a Sysop and a Warden
 node lootsim.mjs 30 3  # loot a kill at a time against the WoW-model targets (LOOT.per in gear.mjs)
+node solved.mjs        # how solved fights are: the planner against a blind player (first ready skill, first part), by class and level
 node pacing.mjs 50 3   # hours of real play to 5/10/20/30/40/50 for the four classes (about 100 to 50; loop.test.mjs holds 5-30)
 # balance.test.mjs and loop.test.mjs guard the class band, the pacing table and the fight mix; targets not met yet are `todo` tests
 ```

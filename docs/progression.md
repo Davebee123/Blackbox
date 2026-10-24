@@ -724,3 +724,34 @@ Measured with the pacing bot on seed 7 to level 30 for the four classes (loop.te
 | Median | 0.98 (−2%) → 1.04 (+4%) | 4.05 (+1%) → 4.11 (+3%) | 15.1 (+1%) → 15.5 (+4%) | 35.0 (0%) → 34.5 (−1%) |
 
 Behind paid little on the real-play clock: 0.6% of the XP to 30 for the Breaker, Bastion and Operator and 1.3% for the Infiltrator. The moves above are the climb's own noise (one change early on and the seeds diverge), not a slower climb: the median stays within 4% of the table at every milestone and no class is more than 7% off from level 10. No limit in loop.test.mjs changed. Levels 40 and 50 were not re-measured; at under 1.5% of the XP the climb to 50 should move by about as much.
+
+## How solved fights are (measured October 2026)
+
+`node solved.mjs` plays the class-balance fights (20 wild fights and the four guards a bracket) twice: once with the
+planner, which reads every rule, tell and timer, and once with a blind player, who fires the first ready skill on
+the bar at the first part on the board and Spike when nothing else is ready.
+
+| Level | Class | Planner wins | Blind wins | Planner Signal lost | Blind Signal lost |
+|---|---|---|---|---|---|
+| 10 | Breaker | 96% | 88% | 39% | 49% |
+| 10 | Bastion | 100% | 79% | 31% | 47% |
+| 10 | Infiltrator | 92% | 79% | 40% | 57% |
+| 10 | Operator | 100% | 100% | 17% | 11% |
+| 18 | Breaker | 100% | 88% | 23% | 55% |
+| 18 | Bastion | 100% | 92% | 25% | 46% |
+| 18 | Infiltrator | 100% | 29% | 26% | 91% |
+| 18 | Operator | 100% | 100% | 19% | 25% |
+| 30 | Breaker | 100% | 96% | 25% | 45% |
+| 30 | Bastion | 100% | 79% | 25% | 46% |
+| 30 | Infiltrator | 100% | 46% | 18% | 80% |
+| 30 | Operator | 100% | 100% | 16% | 27% |
+| 50 | Breaker | 100% | 96% | 20% | 32% |
+| 50 | Bastion | 100% | 92% | 22% | 45% |
+| 50 | Infiltrator | 100% | 63% | 7% | 75% |
+| 50 | Operator | 100% | 100% | 13% | 20% |
+
+What it says: for the Breaker, the Bastion and the Operator, a player who never reads the virus still wins 79–100%
+of fights; reading pays only in Signal (about half as much lost), and for the Operator hardly even that. Only the
+Infiltrator's kit punishes playing blind. Fights reward attention as efficiency, not as the difference between
+winning and losing, and nothing about that changes from level 10 to 50: the same blind rotation works throughout.
+A fight that is a puzzle should lose a blind player more often than not, at least from level 18 on.
