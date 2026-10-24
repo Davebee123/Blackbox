@@ -1,6 +1,7 @@
 // Renders the BLACKBOX sound preview pack (see clips.js) to MP3s, loudness-matched.
 //   node tools/sound-preview/render.mjs [outDir] [clipId...]
 //   SET=2 node tools/sound-preview/render.mjs /home/user/Blackbox/sound-preview/round2   (round 2)
+//   SET=3 node tools/sound-preview/render.mjs <outDir>   (round 3: the bodies without a set; demo.mjs mixes their demos)
 // FORMAT=ogg encodes Ogg Vorbis instead, for the game (dist/sfx): the chosen clips, rendered again
 // with the same levels. A loop's sample count is kept exactly, so it repeats without a gap.
 //   FORMAT=ogg node tools/sound-preview/render.mjs dist/sfx floor-4-coldline-b hub-halcyon ...
@@ -19,6 +20,9 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const OUT = path.resolve(process.argv[2] || '/home/user/Blackbox/sound-preview');
 const ONLY = process.argv.slice(3);
 const TARGET = { loop: -23, shot: -16 }; // LUFS: integrated for loops, momentary max for one-shots
+// Peak ceiling, dBFS: half a dB under -1, since the limiter holds sample peaks and the encoder's true peaks
+// land a little higher.
+const CEIL = -1.5;
 const QUIET = { 'floor-6-kernel-space-a': -31, 'floor-6-kernel-space-b': -28 }; // near-silence on purpose
 const FORMAT = process.env.FORMAT === 'ogg' ? 'ogg' : 'mp3';
 // Vorbis quality: loops sit far under the music, so they can go lean; one-shots get a little more.
@@ -49,7 +53,7 @@ page.on('pageerror', (e) => console.error('page:', e.message));
 await page.goto(`${base}/__index`);
 await page.evaluate(async (b) => { window.R = await import(`${b}/tools/sound-preview/runner.js`); }, base);
 
-const SET = Number(process.env.SET || 1); // 1: the first pack, 2: round 2 (into <outDir>, e.g. sound-preview/round2)
+const SET = Number(process.env.SET || 1); // 1: the first pack, 2: round 2 (into <outDir>, e.g. sound-preview/round2), 3: round 3
 const clips = (await page.evaluate((set) => window.R.list(set), SET)).filter((c) => !ONLY.length || ONLY.includes(c.id));
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'bbsp-'));
 const results = [];
@@ -64,16 +68,20 @@ for (const c of clips) {
   // loudness gates most of a short sound away.
   const I = c.shot ? Math.max(...[...res.matchAll(/ M:\s*(-?[\d.]+)/g)].map((m) => parseFloat(m[1]))) : parseFloat(/I:\s+(-?[\d.]+) LUFS/.exec(sum)?.[1]);
   const target = QUIET[c.id] ?? (c.shot ? TARGET.shot : TARGET.loop);
-  // Gain to the target, but never more than 4 dB into a brickwall limiter at -1 dBFS.
-  const gain = Math.min(target - I, -1 - TP + (c.shot ? 4 : 0));
-  const limit = gain > -1 - TP;
+  // Gain to the target, but never more than 4 dB into a brickwall limiter at CEIL.
+  const gain = Math.min(target - I, CEIL - TP + (c.shot ? 4 : 0));
+  const limit = gain > CEIL - TP;
   const dir = path.join(OUT, c.group); fs.mkdirSync(dir, { recursive: true });
   const mp3 = path.join(dir, `${c.id}.${FORMAT}`);
   if (FORMAT === 'ogg' && !c.shot) fs.writeFileSync(w, padLoop(fs.readFileSync(w)));
   const codec = FORMAT === 'ogg' ? ['-c:a', 'libvorbis', '-q:a', OGG_Q[c.shot ? 'shot' : 'loop']] : ['-c:a', 'libmp3lame', '-q:a', '4'];
-  execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-i', w, '-af', `volume=${gain.toFixed(2)}dB${limit ? ',alimiter=limit=0.891:attack=1:release=40:level=disabled' : ''}`, ...codec, mp3]);
+  const af = `volume=${gain.toFixed(2)}dB${limit ? `,alimiter=limit=${(10 ** (CEIL / 20)).toFixed(3)}:attack=1:release=40:level=disabled` : ''}`;
+  execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-i', w, '-af', af, ...codec, mp3]);
+  // The levelled clip as raw 32-bit float stereo too, for demo.mjs to mix and for checking a loop's seam.
+  const raw = path.join(tmp, `${c.id}.f32`);
+  execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-i', w, '-af', af, '-f', 'f32le', '-ac', '2', '-ar', '44100', raw]);
   const kb = Math.round(fs.statSync(mp3).size / 1024);
-  results.push({ ...c, used, I, TP, gain, kb, target });
+  results.push({ ...c, used, I, TP, gain, kb, target, file: mp3, raw });
   console.log(`${c.group}/${c.id}.${FORMAT}  ${kb} KB  measured ${I} LUFS / ${TP} dBTP  -> ${gain.toFixed(1)} dB (target ${target}${gain < target - I - 0.05 ? ', peak-capped' : ''}${limit ? ', limited' : ''})  ${((Date.now() - t0) / 1000).toFixed(1)}s  [${used.join(' ')}]`);
 }
 fs.writeFileSync(path.join(tmp, 'results.json'), JSON.stringify(results, null, 1));

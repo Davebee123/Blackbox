@@ -2,10 +2,11 @@
 import { SR, seed, kit, loadSamples, USED } from './lib.js';
 import { GROUPS } from './clips.js';
 import { GROUPS2 } from './clips2.js';
+import { GROUPS3 } from './clips3.js';
 import { renderBoard } from '/dist/sound.mjs';
 import * as soundtrack from '/dist/soundtrack.mjs';
 
-const ALL = [[1, GROUPS], [2, GROUPS2]].flatMap(([set, G]) => Object.entries(G).flatMap(([g, l]) => l.map((c) => ({ ...c, group: g, set }))));
+const ALL = [[1, GROUPS], [2, GROUPS2], [3, GROUPS3]].flatMap(([set, G]) => Object.entries(G).flatMap(([g, l]) => l.map((c) => ({ ...c, group: g, set }))));
 // Offline rendering must not have nodes torn down by the live-game cleanup timers.
 window.setTimeout = () => 0;
 
@@ -51,7 +52,7 @@ export async function render(id) {
   await c.build(K, soundtrack);
   const out = await ctx.startRendering();
   let L = out.getChannelData(0), R = out.getChannelData(1);
-  if (c.shot) [L, R] = trimShot(L, R, c.set === 2 ? c.len : c.group === 'tells' ? 1.5 : c.len + 0.6);
+  if (c.shot) [L, R] = trimShot(L, R, c.set >= 2 ? c.len : c.group === 'tells' ? 1.5 : c.len + 0.6);
   else {
     // fold the tail over the head: equal-power crossfade, so the end runs straight into the start
     const p = Math.floor(P * SR), n = Math.floor(c.len * SR), x = Math.floor(X * SR);
