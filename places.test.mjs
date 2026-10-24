@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { FLOORS } from './dist/data.mjs';
 import { FACTIONS } from './dist/factions.mjs';
-import { FLOOR_BEDS, HUB_BEDS, FAMILY_SOUNDS, LEVEL, FADE, CHIP, LOOP_PAD, LOOP_SECONDS, seal, placeOf, familyCues, realAttack, runFloor, createPlaces } from './dist/places.mjs';
+import { FLOOR_BEDS, HUB_BEDS, FAMILY_SOUNDS, soundOf, LEVEL, FADE, CHIP, LOOP_PAD, LOOP_SECONDS, seal, placeOf, familyCues, realAttack, runFloor, createPlaces } from './dist/places.mjs';
 
 // ---------- states ----------
 const loc = (id, floor) => ({ id, name: id.toUpperCase(), slot: `f${floor}s3`, depth: floor });
@@ -17,7 +17,7 @@ const fight = (s, family = 'ransomware', mode = 'run', extra = {}) => Object.ass
 test('every floor, hub and family file ships in dist/sfx as Ogg, and is credited', () => {
   assert.deepEqual(Object.keys(FLOOR_BEDS).map(Number), FLOORS.map((_, i) => i + 1), 'a bed for each of the eight floors');
   assert.deepEqual(Object.keys(HUB_BEDS).sort(), Object.keys(FACTIONS).filter((f) => FACTIONS[f].hub).sort(), 'a bed for each faction hub');
-  assert.deepEqual(Object.keys(FAMILY_SOUNDS).sort(), ['ghostroot', 'ransomware', 'worm']);
+  assert.deepEqual(Object.keys(FAMILY_SOUNDS).sort(), ['crawler', 'cryptominer', 'exfil', 'ghostroot', 'ice', 'ransomware', 'trojan', 'wiper', 'worm']);
   const files = [...Object.values(FLOOR_BEDS), ...Object.values(HUB_BEDS), ...Object.values(FAMILY_SOUNDS).flatMap((f) => Object.values(f))];
   const credits = fs.readFileSync('dist/sfx/CREDITS.md', 'utf8');
   let total = 0;
@@ -30,7 +30,7 @@ test('every floor, hub and family file ships in dist/sfx as Ogg, and is credited
     total += buf.length;
   }
   assert.ok(total < 2.5 * 1024 * 1024, `modest: ${Math.round(total / 1024)} KB`);
-  for (const dir of ['floors', 'hubs', 'families']) assert.deepEqual(fs.readdirSync(`dist/sfx/${dir}`).sort(), files.filter((f) => f.startsWith(dir + '/')).map((f) => f.split('/')[1]).sort(), `nothing extra in ${dir}/`);
+  for (const dir of ['floors', 'hubs', 'families', 'bodies']) assert.deepEqual(fs.readdirSync(`dist/sfx/${dir}`).sort(), files.filter((f) => f.startsWith(dir + '/')).map((f) => f.split('/')[1]).sort(), `nothing extra in ${dir}/`);
 });
 
 test('the bed: the floor on the map, the run\'s floor (and a fight\'s on it), a hub\'s while its session shows; home has none', () => {
@@ -58,9 +58,10 @@ test('the bed: the floor on the map, the run\'s floor (and a fight\'s on it), a 
   assert.equal(placeOf(noSlot).bed, FLOOR_BEDS[6], 'a server with no slot goes by its depth');
 });
 
-test('the family idle: only in a live fight with a Ransomware, a Worm or a Ghostroot', () => {
-  for (const f of ['ransomware', 'worm', 'ghostroot']) assert.equal(placeOf(fight(base(), f)).family, f);
-  for (const f of ['cryptominer', 'trojan', 'wiper', null]) assert.equal(placeOf(fight(base(), f)).family, null, `${f}: keeps the current sounds`);
+test('the family idle: only in a live fight, each body its own set, every other guard the ICE\'s', () => {
+  for (const f of ['ransomware', 'worm', 'ghostroot', 'cryptominer', 'trojan', 'wiper', 'exfil', 'crawler']) assert.equal(placeOf(fight(base(), f)).family, f);
+  for (const f of ['watchdog', 'tracer']) assert.equal(placeOf(fight(base(), f)).family, 'ice', `${f}: the ICE's set`);
+  assert.equal(placeOf(fight(base(), null)).family, null, 'a virus with no family: the current sounds');
   const s = fight(base(), 'worm'); s.encounter.phase = 'alert';
   assert.equal(placeOf(s).family, null, 'not before the fight starts');
   s.encounter.phase = 'won';
@@ -99,7 +100,8 @@ test('the break one-shot: a part of the family breaking, the last one too; not o
   assert.equal(familyCues(s, [br]).size, 1, 'the batch that wins the fight keeps its break');
   s.encounter.phase = 'alert';
   assert.equal(familyCues(s, [br]).size, 0);
-  assert.equal(familyCues(fight(base(), 'cryptominer'), [br]).size, 0, 'a rooms-engine family: the current break only');
+  assert.equal(familyCues(fight(base(), 'cryptominer'), [br]).size, 1, 'a room body breaks with its own set');
+  assert.equal(familyCues(fight(base(), null), [br]).size, 0, 'no family: the current break only');
   assert.equal(familyCues(base(), [br]).size, 0, 'no fight');
 });
 
@@ -163,7 +165,7 @@ test('a change of floor crossfades over FADE; loops play between the pads; each 
   assert.equal(A.log.length, 3, 'the same place again: nothing restarts');
   P.set({ family: 'ransomware' }); await settle();
   assert.equal(P.playing().family, FAMILY_SOUNDS.ransomware.idle);
-  P.shot('ransomware', 'attack'); P.shot('ransomware', 'break'); P.shot('cryptominer', 'attack'); await settle();
+  P.shot('ransomware', 'attack'); P.shot('ransomware', 'break'); P.shot('nonesuch', 'attack'); await settle();
   assert.deepEqual(shots, [[FAMILY_SOUNDS.ransomware.attack, LEVEL.shot], [FAMILY_SOUNDS.ransomware.break, LEVEL.shot]], 'one-shots through the effects chain; none for other families');
   P.set({ family: null }); await settle();
   assert.equal(P.playing().family, null, 'the fight over: the idle fades');
@@ -213,4 +215,15 @@ test('the System page has a Places slider beside the others, 80 by default', asy
   s.settings.volume = { places: 0 };
   assert.equal(volumesOf(s).places, 0);
   assert.equal(volumesOf(s).music, 0.8, 'the others keep their defaults');
+});
+
+// The designer heard Ghostroot alone: half the fights on Ransomware and Worm servers were bodies with no set (a
+// Cryptominer, a Trojan, a Crawler nest, a guard). Every fight a server's rooms make now carries one.
+test('every body a server room fights has a set: the families, the room bodies, the Crawler and the ICE', async () => {
+  const { ROOM_FAMILIES, GUARDS, FAMILIES } = await import('./dist/data.mjs');
+  await import('./dist/families.mjs');
+  for (const f of [...Object.keys(FAMILIES), ...Object.keys(ROOM_FAMILIES), ...Object.keys(GUARDS)]) assert.ok(soundOf(f), `${f} has a set`);
+  assert.equal(soundOf('crawler'), 'crawler');
+  for (const g of Object.keys(GUARDS).filter((x) => x !== 'crawler')) assert.equal(soundOf(g), 'ice', `${g}: the ICE's set`);
+  assert.equal(soundOf('nonesuch'), null);
 });

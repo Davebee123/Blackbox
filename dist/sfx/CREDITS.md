@@ -23,10 +23,10 @@ in `sound.mjs`; they are not samples.
 - `city-ambience.mp3`: "Small city ambience with traffic, motors, horn, siren, slight passerby hubbub" by felix.blume, https://freesound.org/people/felix.blume/sounds/705049/ (Freesound HQ preview)
 - `horn-double.mp3`: "Car horn beep beep two beeps honk honk" by AmishRob, https://freesound.org/people/AmishRob/sounds/423990/ (Freesound HQ preview)
 
-## Places and virus families (`floors/`, `hubs/`, `families/`, Ogg Vorbis)
+## Places, virus families and bodies (`floors/`, `hubs/`, `families/`, `bodies/`, Ogg Vorbis)
 
 Synthesized for BLACKBOX: rendered offline with Web Audio by `tools/sound-preview/` (`FORMAT=ogg node
-tools/sound-preview/render.mjs dist/sfx <clip>…`, `SET=2` for the round-two clips), loudness-matched (loops at
+tools/sound-preview/render.mjs dist/sfx <clip>…`, `SET=2` for the round-two clips, `SET=3` for the bodies), loudness-matched (loops at
 −23 LUFS integrated, Kernel Space at −28 on purpose; one-shots at −16 LUFS on their loudest 400 ms) and saved as
 44.1 kHz stereo Ogg Vorbis. No licence is involved in the synthesized part. Some clips also layer the CC0
 samples above (heavily resampled, pitched, reversed or cut into grains); nothing new was downloaded. Each loop
@@ -50,6 +50,12 @@ file carries 50 ms of wrap-around before and after the loop, which the game play
 | families/ransomware-b-press-idle, -attack, -break | Ransomware, the hydraulic press: building pressure; a bolt driven home; a line bursting | tin, metal-l, punch-h; punch-m, plate-l; punch-h, glass-l, metal-l |
 | families/worm-a-insect-idle, -attack, -break | Worm, insectoid: a swarm of chitin clicks; a lunge and a bite; a carapace cracking | click, key, scratch; key, soft-h, punch-m; glass-l, punch-h, key, click |
 | families/ghostroot-a-whisper-idle, -attack, -break | Ghostroot, the whisper: whispering and reversed glass; a reversed breath and a hit; glass shattering backwards | glass-h, shimmer, bell; punch-h; glass-l, glass-h |
+| bodies/trojan-b-idle, -attack, -break | Trojan, the sealed case: something knocking inside, loose latches; two latches snapping and a blow; the latches bursting, trapped air, the lid clattering, something scrabbling away | soft-h, soft-m, metal-h, tin; relay, punch-h, plate-h; relay, punch-h, soft-h, plate-h, scratch |
+| bodies/cryptominer-b-idle, -attack, -break | Cryptominer, the heat: a hot transformer hum, a cooler pump and bubbles, metal ticking; an electric arc; a capacitor popping, steam, the hum sinking | tin; punch-h; punch-m, punch-h, tin |
+| bodies/wiper-b-idle, -attack, -break | Wiper, the shredder: a soft hiss with grinding passes; a fast rip cut off clean; the shredder jamming | scratch; scratch, soft-h, punch-m; mining, punch-h, tin, scratch |
+| bodies/exfil-b-idle, -attack, -break | Exfil, the spool: a tape reel at fast-forward, a fluttering motor, tape chatter; a whip-pan rush and a snap; the tape snapping, its end slapping the reel | key, glitch; punch-m, tick, glitch; punch-m, soft-h |
+| bodies/crawler-b-idle, -attack, -break | Crawler, in the duct: many small metal legs in a ringing steel duct; a scuttling rush and a hollow boom; a shell cracking, fragments scuttling off | tin, metal-h, glass-l; tin, metal-h, plate-l, punch-h; glass-l, punch-m, plate-h, metal-h, tin |
+| bodies/ice-b-idle, -attack, -break | ICE (every guard and hunter but the Crawler), the cameras: servos turning and clicking still, a cold read chirp, a slow pulse; a servo whipping round, a strike and a sting; a servo grinding down, a lens cracking, sparks | tick; tick, punch-h, metal-l; glass-h, punch-m, tin |
 
 Credits for the samples these layer in (all CC0 1.0, public domain; credited anyway):
 

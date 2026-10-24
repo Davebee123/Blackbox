@@ -3,15 +3,16 @@
 //             plays while the map shows that floor, and on a run or a fight on one of its servers. Home (every
 //             other screen) keeps the room tone and the home music, with no bed of its own.
 //   HUBS      each faction's hub has its own bed while its session is open. It takes over from the floor's.
-//   FAMILIES  in a fight with a Ransomware, a Worm or a Ghostroot, the family's idle loop sits very quietly under
+//   FAMILIES  in a fight with a Ransomware, a Worm or a Ghostroot (or a Trojan, a Cryptominer, a Wiper, an Exfil, a
+//             Crawler, or any other guard or hunter, which share the ICE's set), the family's idle loop sits very quietly under
 //             the fight; its attack one-shot lands with a real attack on you (with the hurt, not instead of it),
 //             and its break one-shot with a part breaking (with the break). Chip damage (a fragment gnawing, an
 //             echo, a hit that bounces back, any hit under CHIP of your bar) only has the hurt.
-// The files are in dist/sfx/floors, hubs and families (Ogg Vorbis, synthesized; see sfx/CREDITS.md). They load
+// The files are in dist/sfx/floors, hubs, families and bodies (Ogg Vorbis, synthesized; see sfx/CREDITS.md). They load
 // the first time they're wanted, never at start-up, and each is decoded once. Loops play from Web Audio buffers,
 // so they repeat without a gap; a change of place crossfades over FADE seconds. Nothing plays before audio is
 // unlocked by a click or a key (the power-on screen does that), with Sound off, or with the Places slider at 0.
-import { CONFIG } from './data.mjs';
+import { CONFIG, GUARDS } from './data.mjs';
 import { active, findLocation } from './combat.mjs';
 import { floorOfSlot } from './floors.mjs';
 
@@ -34,6 +35,12 @@ export const HUB_BEDS = {
 };
 const fam = (id) => ({ idle: `families/${id}-idle.ogg`, attack: `families/${id}-attack.ogg`, break: `families/${id}-break.ogg` });
 export const FAMILY_SOUNDS = { ransomware: fam('ransomware-b-press'), worm: fam('worm-a-insect'), ghostroot: fam('ghostroot-a-whisper') };
+// The bodies a server's rooms bring (families.mjs ROOM_FAMILIES), the Crawler and the ICE: a set each in sfx/bodies,
+// picked by the designer from round 3 (tools/sound-preview/clips3.js, the B candidates).
+const body = (id) => ({ idle: `bodies/${id}-b-idle.ogg`, attack: `bodies/${id}-b-attack.ogg`, break: `bodies/${id}-b-break.ogg` });
+Object.assign(FAMILY_SOUNDS, { trojan: body('trojan'), cryptominer: body('cryptominer'), wiper: body('wiper'), exfil: body('exfil'), crawler: body('crawler'), ice: body('ice') });
+// The set a fight's virus carries: its own, the Crawler's, or the ICE's for every other guard and hunter. null: none.
+export const soundOf = (family) => (FAMILY_SOUNDS[family] ? family : GUARDS[family] ? 'ice' : null);
 
 // Levels. The files sit at −23 LUFS (loops) and −16 LUFS (one-shots); the music plays at about −35 in the mix.
 // A bed sits several dB under the music, a family's idle further down still (texture, not a cue).
@@ -42,7 +49,7 @@ export const FADE = 2; // seconds: a change of place crossfades
 export const LOOP_PAD = 0.05; // seconds of wrap-around each loop file carries before and after the loop (render.mjs)
 // How long each kind of loop is. A loop plays from LOOP_PAD to LOOP_PAD + its length, never to the file's end: a
 // browser's Vorbis decoder can hand back a few ms more than the file holds at the end (Chromium does).
-export const LOOP_SECONDS = { floors: 20, hubs: 15, families: 6 };
+export const LOOP_SECONDS = { floors: 20, hubs: 15, families: 6, bodies: 6 };
 export const loopOf = (url) => LOOP_SECONDS[String(url).split('/')[0]] || null;
 export const CHIP = 0.05; // a hit under this share of your bar is chip damage: no attack one-shot
 // While a game sound plays, the beds dip so they never mask it: the bed to DUCK.bed, a family idle to DUCK.family.
@@ -63,8 +70,8 @@ export function runFloor(s) {
   const loc = s.run.loc === CONFIG.zone.id ? { zone: true } : findLocation({ locations: [], ...s }, s.run.loc);
   return floorOfLoc(loc);
 }
-// The family whose sounds a fight carries: one of FAMILY_SOUNDS (a rooms-engine family or a boss without one: null).
-export const fightFamily = (s) => (active(s) && FAMILY_SOUNDS[s.encounter.virus?.family] ? s.encounter.virus.family : null);
+// The set a fight carries: one of FAMILY_SOUNDS (soundOf; a boss without a family of its own: null).
+export const fightFamily = (s) => (active(s) ? soundOf(s.encounter.virus?.family) : null);
 
 // What should be playing. view: { hub: the faction whose session is open and showing (or null), map: the floor the
 // map shows (or null when the map isn't the screen, or shows the consortium) }.
@@ -85,7 +92,7 @@ export function placeOf(s, view = {}) {
 // pile them up. A hit on a crewmate has no attack one-shot (a part a crewmate breaks still has its break).
 // Returns a Map of event → { family, kind }.
 export function familyCues(s, events, max = null) {
-  const out = new Map(), e0 = s.encounter, family = e0 && e0.phase !== 'alert' && FAMILY_SOUNDS[e0.virus?.family] ? e0.virus.family : null;
+  const out = new Map(), e0 = s.encounter, family = e0 && e0.phase !== 'alert' ? soundOf(e0.virus?.family) : null;
   if (!family) return out; // (the batch that wins a fight ends it: its last break still counts)
   const parts = s.encounter.virus.parts || [];
   const bar = max || (s.encounter.mode === 'run' ? s.run?.max : s.server?.max) || 100;
