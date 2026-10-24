@@ -1,0 +1,41 @@
+# Working on BLACKBOX
+
+A browser hacking game: `dist/` is the game (plain ES modules, no build), `*.test.mjs` the tests, GAME_RULES.md the
+rules as built, README.md the code map, `docs/` the design docs (docs/style-guide.md and docs/ui.md for the look).
+
+## Workflow
+
+- **Tests.** `npm test` before every commit. It runs every fast test file, and a slow balance simulation only when
+  something it loads changed (scripts/test.mjs; `npm run test:plan` says what runs and why). It takes about a minute.
+  Run `npm run test:full` (about 13 minutes) before pushing a batch that touches combat, balance, progression or
+  loot, and once after merging agents' branches. Commit or push only on `# fail 0`. The two balance TODO tests in
+  the full suite are expected. When reading a test log, grep for its totals and its `not ok` lines; never read the
+  whole log.
+- **Docs.** Keep GAME_RULES.md and README.md in sync with the code and with each other, in the same commit.
+- **Agents.** Use worktree agents for big features only; do small fixes directly. Tell an agent to read narrowly
+  (grep for the function, read that part of a file), to run `npm test -- --base main` in its worktree, and to merge
+  main before its final test run. Merge agents' branches into main one at a time. Never cd into an agent's worktree.
+- **Sessions.** Start a fresh session for each batch of work, after the last one is pushed. A long session re-reads
+  its whole context on every step, and that is most of the token cost.
+- **Screenshots.** One good set per feature, looked at before showing. Scripts and screenshots go in the session's
+  scratchpad, never in the repo. Chromium is preinstalled for Playwright; never run `playwright install`.
+- **Processes.** Never `pkill -f`; kill by PID.
+- **Commits.** No pull requests unless asked. No model names in code, comments, commits or PR text.
+
+## The designer's standing rules
+
+- **Show it, don't explain it.** Explanations go in tooltips, not on the screen.
+- **Tooltips use WoW's grammar:** a name, its kind, what it does, then the answer, muted. Use sentence case and good
+  grammar: whole sentences, never cryptic labels.
+- **Colours keep one meaning each:** teal is only ever the player, red is threat, amber is loot and what you use,
+  violet is daemons, steel is armor.
+- **Friction, not spikes.** No loss aversion; reward attention, never punish its absence.
+- **No intrusion metaphors** (keyhole, way in, backdoor).
+- **No canvas or PixiJS for new UI.** Screen effects never cover or interfere with the UI, and there is no rain on
+  the screen.
+- **Busy designs get rejected.** Improve by aligning and spacing, not by adding decoration. Keep the original map.
+- **Sounds:** the designer hears a sound before it is added.
+- **Design choices:** for a look with real alternatives, show two or three options as screenshots and let the
+  designer pick.
+- **Backlog:** Silos, more event cards, a death recap on the Disconnected card, parts plan P3 and P4, and co-op's
+  rough edges.
