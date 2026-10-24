@@ -256,6 +256,8 @@ About 1 in 6 servers you trace is **rogue** (never your first two, and never mor
 
 Every traced server has its family's quirk: one rule, a tag on its map card (hover it for the rule), and a line in the run strip's tooltip. Each plays on the room map (`QUIRKS` in data.mjs; the rooms in floorplan.mjs and netrooms.mjs).
 
+A traced server a faction owns shows its owner on its map card: the faction's mark and name, then a chip in each faction's colour for the standing that beating its Resident moves (−15 with the owner, +8 with each of its rivals; `OWNED.takeoverHit` in factions.mjs). Hover the line for the sentence.
+
 | Family | Quirk | Rule |
 |---|---|---|
 | Ransomware | Hoard | Caches pay 50% more, but the guards are Armored. |

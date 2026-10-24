@@ -2400,6 +2400,14 @@ function floorCard(s, node) {
     : `<button type="button" class="btn primary" data-command="descend" ${node.open && !active(s) ? '' : `disabled title="${active(s) ? 'Finish the fight first' : 'Locate a server it hangs off'}"`}>Go down</button>`;
   return `<section class="card floor-card"><h2>Exit · floor ${to - 1}</h2><h1>Floor ${to}${been ? ` · ${esc(floorName(to))}` : ''}</h1><p class="tagline">${bandLine(s, to)}</p><div class="row">${go}</div></section>`;
 }
+// Who owns a traced server, and what taking it costs and earns: its mark, then the standing it moves, a chip a
+// faction in its own colour (the sentence is the tooltip).
+function ownerLine(f) {
+  const F = FX[f], hit = OWNED.takeoverHit, gain = Math.round(hit * 0.5), rivals = F.rivals.map((r) => FX[r]);
+  const chip = (x, n) => `<span class="rep-chip fl-rep" style="--fc:${x.color}">${glyph('f-' + x.id)}${n > 0 ? '+' : '−'}${Math.abs(n)}</span>`;
+  const tip = `${F.short}: Owner\nBeating its Resident takes the server from ${F.short}, for −${hit} standing with ${F.short}${rivals.length ? ` and +${gain} with ${rivals.map((r) => r.short).join(' and ')}, its ${rivals.length > 1 ? 'rivals' : 'rival'}` : ''}.`;
+  return `<p class="svc-line fline" style="--fc:${F.color}" title="${esc(tip)}">${fIcon(f)}<b>${esc(F.short)}</b><span class="fl-reps">${chip({ ...F, id: f }, -hit)}${F.rivals.map((r) => chip({ ...FX[r], id: r }, gain)).join('')}</span></p>`;
+}
 function mapSide(s, sel, node) {
   const e = gateOf(s), srv = s.server;
   const busy = active(s) || s.run;
@@ -2531,7 +2539,7 @@ function mapSide(s, sel, node) {
     ${rotLine(s, l)}
     ${rareLine(s, l)}
     ${consortiumLine(s, l)}
-    ${l.faction ? `<p class="svc-line fline" style="--fc:${FX[l.faction].color}">${fIcon(l.faction)}<b>${esc(FX[l.faction].short)}</b> runs it · beating its Resident takes it: ${esc(FX[l.faction].short)} −${OWNED.takeoverHit}${FX[l.faction].rivals.length ? `, ${FX[l.faction].rivals.map((r) => esc(FX[r].short)).join(' and ')} +${Math.round(OWNED.takeoverHit * 0.5)}` : ''}</p>` : ''}
+    ${l.faction ? ownerLine(l.faction) : ''}
     ${dropLine(s, l)}
     ${programsLine(s, l)}
     ${l.takenOver && !l.relay && !kitOf(s).relay ? `<p class="op-hint">${boardOpen(s) ? knowsRelay(s) ? 'You can install a relay here once you have one. Craft one on the Craft page, or buy one in Halcyon\'s store.' : 'You can install a relay here once you have one. Buy one in Halcyon\'s store, or earn one from a contract. Some contracts pay the Relay plan, so you can craft your own.' : 'You can install a relay here once you have one. Halcyon Mutual sells them once you start working for them.'}</p>` : ''}
