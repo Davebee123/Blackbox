@@ -37,5 +37,31 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
 - **Sounds:** the designer hears a sound before it is added.
 - **Design choices:** for a look with real alternatives, show two or three options as screenshots and let the
   designer pick.
+
+## Decisions so far (don't undo these without asking)
+
+- **Picked looks:**
+  - quest window: the *Transmission*;
+  - level-up: the *Firmware update*;
+  - pager: the *Tray*;
+  - player card: the *NET ID badge*.
+- **Rejected looks:**
+  - the *View* background behind the monitor; keep the original city, with more detail at the same size;
+  - card-first clicks on the rooms map; one click walks;
+  - Roomy, the extra monitor size.
+- **The monitor** takes up most of the screen. UI scale is a setting, 100% by default.
+- **Ability effects:**
+  - short, and drawn over the part's name;
+  - played at 1.5× speed;
+  - each starts from its ability key, or from the bar when the key isn't visible;
+  - a crewmate's starts from their own bar;
+  - Firewall plays on your bar.
+- **Rested XP** comes only from time logged off. There is no catch-up XP.
+- **Unlocks:** cosmetic unlocks (districts, boots, prompts, desk props, mastery looks) come from achievements, not
+  from server floors.
+- **Phones:** combat on a phone never opens the keyboard.
+
+## Backlog
+
 - **Backlog:** Silos, more event cards, a death recap on the Disconnected card, parts plan P3 and P4, and co-op's
   rough edges.
