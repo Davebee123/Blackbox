@@ -60,6 +60,8 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
 - **Unlocks:** cosmetic unlocks (districts, boots, prompts, desk props, mastery looks) come from achievements, not
   from server floors.
 - **Phones:** combat on a phone never opens the keyboard.
+- **Fights** (docs/puzzle-fights.md): every fight is a little tricky, elites and bosses harder, and the game challenging.
+  Puzzles, never walls. A blind player loses; watching or a correct routine wins.
 
 ## Backlog
 

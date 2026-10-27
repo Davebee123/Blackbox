@@ -1,6 +1,7 @@
-# Puzzle fights: fights that need you watching
+# Puzzle fights: fights you read, or prepare for
 
-Draft, October 27, 2026, for the designer's review. Nothing in it is built.
+Draft, October 27, 2026. The designer answered the first round of questions the same day (section 8). Nothing in it
+is built.
 
 docs/progression.md "How solved fights are" measured the class-balance fights twice: once with the planner, which
 reads every rule, tell and timer, and once with a blind player, who fires the first ready key on its bar at the first
@@ -8,6 +9,10 @@ part on the board. For three classes of four, the blind player still wins 79–1
 reading pays only in Signal. It ended on a target: *a fight that is a puzzle should lose a blind player more often
 than not, at least from level 18 on.* This sheet says which fights that should be, why today's fights don't do it,
 and what would.
+
+The designer's direction: every fight should be a little tricky, elites and bosses harder, and the game challenging.
+A puzzle, never a wall. A blind player should lose, and two things should win: paying attention, and having written
+the right routine.
 
 The measurements come from `node solved.mjs` and throwaway scripts run against the current code (the balance
 harness's 24 fights a bracket, its Tuned gear and its planner). Prototype numbers come from in-memory patches in
@@ -17,13 +22,15 @@ those scripts. No game file was changed.
 
 | Question | Answer in this design |
 |---|---|
-| Which fights should be puzzles? | The fights worth the most: Residents, solo bosses, lair bosses and feuds (docs/routines.md, the designer's decisions 1 and 5: *ordinary fights can run on a program; bosses can't*). Ordinary wild fights stay as they are. |
-| Are they puzzles today? | No. A blind Breaker, Bastion or Operator wins 83–100% of Resident fights at levels 18 and 30. It pays in Signal: a blind Breaker loses 69% of its Signal to a level-18 Resident, the planner 20%. |
+| Which fights should be puzzles? | All of them, in two tiers. Ordinary fights (wild viruses, guards, invasions) are a little tricky: one conflict a fight. Elites and bosses (Residents, solo bosses, lair bosses, feuds) are hard: two or three. |
+| Are they puzzles today? | No. For three classes of four, a blind player wins 79–100% of ordinary fights, and 83–100% of Resident fights at levels 18 and 30. Reading pays in Signal: a blind Breaker loses 69% of its Signal to a level-18 Resident, the planner 20%. The elites are walls: they beat the planner too. |
 | Why does the blind player win? | Its default move is usually the right one. It answers half the tells by accident, because hitting a part and breaking it are the answers. Fights end in 5 to 14 cycles, with one to three tells said. A landed tell costs a lot of Signal but never ends the fight. |
 | Would bigger numbers fix it? | No. Charges five times the plain hit change almost nothing. Doubling every part's Integrity cuts the blind Breaker to 58% wins, and the planner pays for it too: 13 more points of Signal a fight for the Breaker and 20 for the Infiltrator. The blind Operator still wins every fight. |
 | What makes a puzzle, then? | A conflict: a moment when the default move is the wrong one. Hold on a beat, break the parts in an order, leave a part standing, spend a key early, answer two clocks with one plan. Most of the pieces exist already (the Mimic, seals, the Tripwire, the Spare, tethers, boss phases). |
-| How is it measured? | `solved.mjs` grows a misreader (blind on 30% of cycles) and a set of puzzle fights. From level 18: the planner wins 85% or more, the misreader 60% or more, the blind player 40% or less. |
-| What does it cost the player? | Nothing new. A puzzle fight is a boss you choose to engage, telegraphed as today, and losing it is the boss loss it already is. Wild fights don't change. |
+| What wins one? | Watching, or the right routine. An ordinary fight's conflict can always be answered by a handler built from your research, so preparing pays as much as watching. Elites need a mastered part's chips. Bosses are yours alone, as today. |
+| And the Operator? | Its helpers count. A helper's hit on a beat is played back, a helper that breaks the wrong part sets it off, and a helper on a boss's ♛ part starts its phases. The Operator's puzzle is where its helpers will be in three cycles. |
+| How is it measured? | `solved.mjs` grows a misreader (blind on 30% of cycles), a routine player and the elite and boss sets. From level 18 the blind player wins 60% or less of ordinary fights and 40% or less of elites and bosses, and lower is better. |
+
 
 ## 1. What was measured
 
@@ -77,8 +84,8 @@ Signal but rarely the fight: one beat a fight, played back once.
 ### 1.4 The fights worth the most
 
 Wins for the planner · the misreader (blind on 30% of its cycles, docs/genome.md 11.2) · the blind player. Elites:
-12 fights a cell. The Resident: 6. Solo bosses: DEADBOLT, TRIPMINE, RELAY-KING, MIRRORSHADE, PATCH TUESDAY and HOLLOW CHOIR,
-two seeds each.
+12 fights a cell. The Resident: 6. Solo bosses: DEADBOLT, TRIPMINE, RELAY-KING, MIRRORSHADE, PATCH TUESDAY and
+HOLLOW CHOIR, two seeds each.
 
 | Level | Fight | Breaker | Bastion | Infiltrator | Operator |
 |---|---|---|---|---|---|
@@ -115,117 +122,173 @@ A puzzle has to come from the decisions, not from the numbers.
 
 ## 2. What a puzzle fight is
 
-- **The fights worth the most, and only those.** Residents, solo bosses, lair bosses and feuds. Ordinary wild fights,
-  guards and invasions stay as they are: a rotation wins them, and reading pays in Signal and in the read bonus. That
-  keeps the designer's rule (*reward attention, never punish its absence*): you choose to engage a boss, and the
-  ordinary game never asks you to watch.
-- **The default move is wrong at least once a fight.** Every puzzle fight has a moment when the move a rotation makes
-  (hit the part in front of you with the first ready key) loses the fight or comes close. Reading the board is how you
+- **Every fight, in two tiers.** Ordinary fights (wild viruses, guards, invasions) carry one conflict. Elites and
+  bosses (Residents, solo bosses, lair bosses, feuds) carry two or three. Levels 1 to 5 stay as they are: they have no
+  tells yet, and the ticks are the lesson.
+- **The default move is wrong at least once a fight.** Every fight has a moment when the move a rotation makes (hit
+  the part in front of you with the first ready key) costs the fight or comes close. Reading the board is how you
   find that moment.
+- **Two ways to win: watch, or prepare.** In an ordinary fight, the conflict can always be answered by a handler
+  built from your research of that virus's parts, so a player who writes the right routine wins as often as one who
+  watches. A player who does neither loses more often. That is the designer's answer to *reward attention, never
+  punish its absence* (docs/routines.md decision 1): what costs you is skipping both the attention and the
+  preparation. Elites need a mastered part's chips to be routine-played. Bosses stay yours alone.
+- **A puzzle, never a wall.** A fight you lose to should be one you could see how to win. The planner wins 85% or
+  more of every fight at its level, elites and bosses included. A fight that only a crew or a higher level beats is a
+  crew fight, and is labelled one.
 - **Everything is on the board.** The answer can be found from what the board shows: tells, timers, tethers and the
   part's tooltip. A veiled part keeps its answer (strip it, or Tag it). The same boss is the same fight every time
   (docs/genome.md 7), so a fight you lost is a fight you can learn.
 - **Every class has an answer** (docs/genome.md rule 4, docs/parts-plan.md "Principles"), from its core skills and
   SIGINT, not only from a subclass line.
-- **A misread is telegraphed.** A puzzle fight loses you by a move you could see coming three cycles out, never by
-  a surprise. The tell's chip and its ▸ line stay as they are.
+- **A misread is telegraphed.** A fight loses you by a move you could see coming three cycles out, never by a
+  surprise. The tell's chip and its ▸ line stay as they are.
 - **Show it, don't explain it.** A puzzle fight looks like any fight. Its conflicts read as board marks (tells,
   tethers, a beat), and the sentences live in tooltips and the Codex.
 
 ## 3. The levers: conflicts
 
 Each lever is a moment when the default move is wrong. Most of them are rules that exist in one place today; a
-puzzle fight uses them on purpose and more than once.
+puzzle fight uses them on purpose.
 
-| Lever | The conflict | What a blind player does | Built from |
-|---|---|---|---|
-| **The beat** | Fire nothing with a direct hit this cycle. | Fires into it, and its hit comes back at it. | The Mimic (Ghostroot, from 8). A puzzle fight's beat comes every few cycles, not once. |
-| **The order** | Break the parts in a given order. The wrong one first sets something off. | Breaks whatever is first on the board. | The Tripwire (16), the Spare (14), the Mirror's twin, the Mutex's lock, the Lockbox's ward. |
-| **The one to leave** | A part that must stand until a phase is done. Its ticks start phases and cut nothing. | Hits it from the start, so its phases come before the other parts are dealt with. | A boss's ♛ part (the boss rule). |
-| **Two clocks** | Two tells due on the same cycle, on different parts. One cut a cycle, so one has to be answered early: delay it, strip ahead of it, or SIGINT it. | Answers one, by accident. | The tells as built. Today's *no pile-ups* rule forbids it; a puzzle fight lifts the rule, and every such fight is checked to be winnable (section 5). |
-| **Strip before** | A seal that re-arms every part if its part still wears ◆ when it lands. | Strips the part it happens to be hitting. | Seals (elites and bosses, from 6). A puzzle fight's seal sits on a part the rotation doesn't reach first. |
-| **Save the key** | A cast only SIGINT answers (its part can't be cut in its window), so SIGINT spent on the wrong thing loses it. | Fires SIGINT when it's ready, or never. | Casts and SIGINT (from 10). |
-| **Phases** | The fight runs as three or four phases of a few cycles each, so three or four tells get their turn. | Lives long enough to meet them. | Boss phases. This replaces "more Integrity" (1.5): the fight is longer because it has more to read, not because the parts are bigger. |
+| Lever | The conflict | What a blind player does | The routine's answer | Built from |
+|---|---|---|---|---|
+| **The beat** | Fire nothing with a direct hit this cycle. | Fires into it, and its hit comes back at it. | WHEN *beat in 1*, DO Hold. Needs the Hold chip (docs/routines.md R3), brought forward. | The Mimic (Ghostroot, from 8). An elite's or a boss's beat comes every few cycles, not once. |
+| **The order** | Break the parts in a given order. The wrong one first sets something off. | Breaks whatever is first on the board. | A preset that names the order (*Encryptor first*), or TARGET *that part*. | The Tripwire (16), the Spare (14), the Mirror's twin, the Mutex's lock, the Lockbox's ward. |
+| **Strip before** | A seal that re-arms every part if its part still wears ◆ when it lands. | Strips the part it happens to be hitting. | WHEN *tell live*, DO an armor-breaker, TARGET *that part*. | Seals (elites and bosses, from 6). The seal sits on a part the rotation doesn't reach first. |
+| **Save the key** | A cast only SIGINT answers (its part can't be cut in its window), so SIGINT spent on the wrong thing loses it. | Fires SIGINT when it's ready, or never. | WHEN *tell live* on that part, DO SIGINT. | Casts and SIGINT (from 10). |
+| **Two clocks** | Two tells due on the same cycle, on different parts. One cut a cycle, so one has to be answered early: delay it, strip ahead of it, or SIGINT it. | Answers one, by accident. | WHEN *the cycle before its tell* (a mastered part's chip). | The tells as built, with *no pile-ups* lifted (elites and bosses only). Every such fight is checked to be winnable (section 5). |
+| **The one to leave** | A part that must stand until a phase is done. Its ticks start phases and cut nothing. | Hits it from the start, so its phases come before the other parts are dealt with. | None: bosses are yours alone. | A boss's ♛ part (the boss rule). |
+| **Phases** | The fight runs as three or four phases of a few cycles each, so three or four tells get their turn. | Lives long enough to meet them. | None: bosses are yours alone. | Boss phases. This replaces "more Integrity" (1.5): the fight is longer because it has more to read, not because the parts are bigger. |
 
-A puzzle fight uses two or three levers, never all of them: one beat or one order, plus the clocks. One rule a part
-still holds (docs/parts-plan.md "One part, one rule").
+An ordinary fight takes one of the first four, the ones a routine can answer with a decoded or rule-tier chip. An
+elite takes two, and may use two clocks. A boss takes two or three. One rule a part still holds (docs/parts-plan.md
+"One part, one rule").
 
-**The Operator** is the hard case. Its helpers hit every cycle, so they cut, strip and break things on
-their own, and an order or a beat can be broken by a helper the player never aimed. Two ways to handle it: helpers
-respect a beat (they hold on it, and a helper's hit on a beat plays back like yours), or the Operator's puzzle fights
-lean on the levers helpers can't trip (two clocks, save the key). Section 8 asks.
+**The rotation stays general.** A virus with no routine of yours plays the rotation, and the rotation is the planner
+(`dist/planner.mjs`): it reads tells and already leaves a Tripwire for last. If it keeps doing that, the default
+program solves every ordinary fight's conflict, and nobody needs to watch or prepare. So the rotation knows your kit,
+not the virus: the answer to each lever moves out of the rotation and into the presets and handlers, which open with
+research. Section 8 asks.
+
+### 3.1 The Operator: helpers count
+
+Every other class's question is what to fire this cycle. The Operator's is where its helpers will be in three cycles:
+a Deploy is four cycles of hits on one part, set going now. The blind Operator wins because nothing a helper does can
+be wrong. The Mimic plays back only a command's direct hit, and helpers give it nothing (`dist/tells.mjs`,
+`mimicHit`). Tells die with their parts, and helpers break parts.
+
+So instead of exempting the helpers, every lever counts them as yours:
+
+| Lever | What a helper does | The Operator's answer, from its own keys |
+|---|---|---|
+| The beat | Each helper's hit on that part on the beat is played back at you, at its size. Only helpers sent after the beat was said count, so a beat never catches a helper you couldn't have planned around. | Don't send helpers into a beat you can see. Barrier one into a shield, Reroute them to another part, or let them run out first. |
+| The order | A helper that breaks the wrong part first sets it off, like your own hit. When its part breaks, the board shows where it will go next, as a dashed tether. | Send helpers to the part that breaks first. Reroute before the break. |
+| Strip before | Helper hits break ◆ as today, so helpers on the sealing part are an answer. | Put helpers on the part with the seal. |
+| Save the key | No change: Reroute's arrivals count as hits, so two helpers stop a cast. | SIGINT, or Reroute two helpers onto the casting part. |
+| The one to leave | A helper's tick on a boss's ♛ part starts its phases like your own. | Keep helpers off it until the phase is due. |
+
+What the board needs: each helper's remaining ticks as small teal pips in its part's timeline columns, and a tick
+that lands on a beat edged in red, so the plan can be read three cycles out like a tell. Nothing new to type: Barrier,
+Reroute and Jam already move, spend or cancel helpers, and they become the Operator's answers rather than spare keys.
+
+What it should do, to be checked in P0: the blind Operator, which fires Deploy, Botnet and Spawn as they come
+ready, should lose to beats and orders as the other blind players do. A reading Operator keeps its helpers and its
+identity. The first measurement is how much of the blind Operator's 94% of tells answered comes from helpers cutting
+and how much from short fights.
 
 ## 4. Where they live
 
-| Option | What it is | For | Against |
+| Tier | Fights | Conflicts | Planner's Signal lost |
 |---|---|---|---|
-| **A. The bosses** (recommended first) | Residents, solo bosses, lair bosses and feuds become puzzle fights. | Already the fights worth the most, already authored, already the same fight every time. The routines design promised it. | A Resident stands between you and a server. A puzzle there is a gate for a player who doesn't want one. |
-| **B. A fifth puzzle room** | *Debugger, Step through it*: a seeded fight board in a room at the end of a branch, like the four puzzle rooms. A loss ends the board (FAILED until it refills) and costs no Signal and no pack. | A place to learn puzzle fights with no stakes. It fits the puzzle rooms' one rule (*played to its end, won or lost, done until it refills*). | A fight that isn't a fight. It needs its own end card. |
-| **C. Elites** | Turn the elites from walls into puzzles: less Integrity, more conflicts. | They hold the vault key, so every server has one. | They're on the main road of a server. Needs its own balance pass (1.4 says they beat the planner today). |
-| **D. Every fight from level 18** | What progression.md's line could be read as asking for. | One rule everywhere. | Punishes the absence of attention in the ordinary game, which the designer ruled out. Not recommended. |
+| Ordinary | Wild viruses, guards and invasions, from level 6 (the first tells) | One, that a routine can answer | The solo band, as today (15–50%) |
+| Hard | Elites, Residents, solo bosses, lair bosses and feuds | Two or three | The boss band |
 
-Recommended: A, starting with two Residents and two solo bosses, then B if the designer wants a place to practise. C
-waits for its own measurement.
+**Elites become puzzles.** In the harness today they beat the planner (17–67% wins for the Breaker). Their Integrity
+comes down until the planner wins 85% or more, and the difficulty comes back as conflicts. They hold the vault key, so
+every server has one: every server has a hard puzzle on its main road.
 
-If A makes a Resident too much of a gate, the Resident can keep a fallback: a player who loses to it twice on a visit
-meets it without its puzzle the third time. Section 8 asks.
+**Residents keep their puzzle every time.** No fallback after a loss: a Resident is the same fight until you beat it.
+
+**The Debugger room** (a fifth puzzle room: a seeded fight board whose loss costs no Signal or pack) is parked. The
+designer didn't pick it, and with every fight a puzzle it's less needed as a place to practise.
+
+**What it costs the player.** Losing costs what it costs today: on a run you're disconnected and lose your unbanked
+pack. Ordinary fights get harder only for a player who neither watches nor sets up a routine. Nothing is taken from a
+fight a routine plays.
 
 ## 5. How it's measured
 
-`solved.mjs` today plays the planner against the blind player on the class-balance fights. It grows three things:
+`solved.mjs` today plays the planner against the blind player on the class-balance fights. It grows four things:
 
 1. **The misreader**, blind on 30% of its cycles (docs/genome.md 11.2): the stand-in for a person.
-2. **The rotation player**, blind to the virus but not to its own kit: it plays its subclass's `rotation` preset in
-   order, at the part that attacks soonest. It separates reading the virus from playing your kit, which the
-   Infiltrator's numbers mix up today (1.2).
-3. **The puzzle set**: every puzzle fight, at its own level, +4 and +10 levels, every subclass, six seeds.
+2. **The routine player**: the program as a player would set it up, with the virus's presets and handlers from the
+   research its tier allows (decoded and rule chips for ordinary fights, mastered chips for elites). It answers
+   question 6: a correct routine wins.
+3. **The kit player**, blind to the virus but not to its own kit: it plays its subclass's `rotation` preset in order,
+   at the part that attacks soonest. It separates reading the virus from playing your kit, which the Infiltrator's
+   numbers mix up today (1.2).
+4. **The elite and boss sets**: every elite roll's conflicts, every boss at its floor, +4 and +10 levels, every
+   subclass, six seeds.
 
-| Fights | Planner wins | Misreader wins | Blind and rotation wins | Planner's Signal lost |
+| Fights | Planner wins | Routine wins | Misreader wins | Blind and kit wins |
 |---|---|---|---|---|
-| Wild, guards, invasions | 85% or more (as today) | — | No bound | The solo band (15–50%), as today |
-| Puzzle fights, levels 10–17 | 85% or more | 60% or more | 60% or less | The boss band |
-| Puzzle fights, from 18 | 85% or more | 60% or more | 40% or less | The boss band |
+| Ordinary, levels 6–17 | 85% or more | 85% or more | 70% or more | 75% or less |
+| Ordinary, from 18 | 85% or more | 85% or more | 70% or more | 60% or less |
+| Elites, from 10 | 85% or more | 60% or more (mastered chips) | 60% or more | 40% or less, aiming for 25% |
+| Bosses, from 10 | 85% or more | — (yours alone) | 60% or more | 40% or less, aiming for 25% |
 
-A puzzle fight that misses its row doesn't ship. Like the Hunter chase's dens (*every den is searched first*), a fight
-that lifts *no pile-ups* is checked when it's authored: the planner must win it on every class at its level, so two
-clocks never become two clocks with no answer. The checks go in a `puzzlefights.test.mjs`, slow-suite like the
-balance simulation.
+Lower is better on the last column, as long as the planner and misreader rows hold: the misreader is the line that
+keeps "challenging" from becoming "unfair". A fight that misses its row doesn't ship.
 
-**Routines.** A routine playing a puzzle fight should score like the rotation player: it survives some, badly, and it
-can't farm them (docs/routines.md section 2). Its rails (auto jack-out, stop before danger) carry the cost, as today.
+Like the Hunter chase's dens (*every den is searched first*), a fight that lifts *no pile-ups* is checked when it's
+made: the planner must win it on every class at its level, so two clocks never become two clocks with no answer. An
+elite is rolled, not authored, so the check runs on its roll, and a roll that fails is rerolled from the next seed.
+The checks go in a `puzzlefights.test.mjs`, slow-suite like the balance simulation.
 
 ## 6. What it pays
 
-Nothing is taken away for not reading, in puzzle fights or anywhere else. Reading already pays: each tell read adds a
-tenth of the kill's XP, up to 40%, and reading every tell in a fight rolls its loot once more. A puzzle fight keeps
-those and adds:
+Nothing is taken away for not reading, and a routine's fight pays what yours does. Reading already pays: each tell
+read adds a tenth of the kill's XP, up to 40%, and reading every tell in a fight rolls its loot once more. Puzzle
+fights keep those and add:
 
 - **Solved**, on the win card, when every tell was read and none landed: a row like *Clean*. What it pays is the
   read bonus and the second loot roll it already counts; the row says you found the answer.
-- **Achievements**, cosmetic only: a boss solved, every Resident on a floor solved, a puzzle fight solved by each
-  class.
+- **Achievements**, cosmetic only: an elite solved, a boss solved, every Resident on a floor solved, a fight solved by
+  each class, and one for a routine that wins a fight with a conflict it has a handler for.
 
 ## 7. Build phases
 
 | Phase | What ships | Done when |
 |---|---|---|
-| P0 | `solved.mjs`: the misreader, the rotation player and the boss set. No game change. | Section 1.4's table, with the rotation player's column, is in progression.md. |
-| P1 | The levers as boss rules: a beat that repeats, *no pile-ups* lifted for puzzle fights, phases. Two Residents and two solo bosses rebuilt as puzzle fights. | Their rows meet section 5's targets, and the designer has played them. |
-| P2 | The rest of the solo bosses, lair bosses and feuds. | Every puzzle fight meets its row. |
-| P3 | The Debugger room, if picked. | Its board, end card and tests, as the puzzle rooms. |
-| P4 | Elites, if picked. | Their own balance pass. |
+| P0 | `solved.mjs`: the misreader, the routine player, the kit player, and the elite and boss sets. How much of the blind Operator's wins comes from helpers. No game change. | Section 1.4's table, with the new players' columns, is in progression.md. |
+| P1 | The rotation made general (the levers' answers move into presets and handlers). The Hold chip brought forward from R3, and the *beat in 1* chip. Helpers count on every lever, with their pips on the board. | The routine player wins as often as the planner on today's fights, and the rotation alone doesn't. |
+| P2 | Ordinary fights: each wild roll, guard and invasion gets one conflict from the first four levers. | Ordinary fights meet their rows. |
+| P3 | Elites: Integrity down, two conflicts, *no pile-ups* lifted and checked on the roll. | Elites meet their row. |
+| P4 | Bosses: the levers as boss rules (a beat that repeats, phases, the one to leave). Two Residents and two solo bosses first, then the rest, lair bosses and feuds. | Every boss meets its row, and the designer has played the first four. |
 
-## 8. Decisions for the designer
+Each phase is played by the designer before the next starts: P2 changes every fight in the game.
 
-1. **Which fights are puzzles.** Bosses only (recommended), or bosses plus the Debugger room, plus elites?
-2. **The bar.** Blind wins 40% or less from level 18, or the line's *more often than not* (under 50%)?
-3. **Residents as gates.** Keep a Resident's puzzle every time, or meet it without its puzzle after two losses on a
-   visit?
-4. **The Operator.** Helpers respect a beat (they hold on it, and a helper's hit on a beat plays back), or the
-   Operator's puzzle fights lean on the levers helpers can't trip?
-5. **Pile-ups.** Lift *no pile-ups* in puzzle fights only, checked fight by fight?
-6. **The Infiltrator in ordinary fights.** Its kit loses ordinary wild fights blind (29–63% wins from 18), which the
-   other classes don't. Is that the class's identity, or the absence of attention punished where it shouldn't be?
-   Its rotation preset run blind (P0) will say how much is the kit and how much is key order.
-7. **Elites.** They beat the planner too in the harness (17–67% wins for the Breaker). Walls for a crew or a higher
-   level, or puzzles?
+## 8. Decided, and still open
+
+October 27, 2026, from the designer:
+
+1. **Which fights.** *"Most fights should be slightly tricky, with bosses and elites being harder."* Two tiers
+   (section 4).
+2. **The bar.** *"40% is good, but lower the better. I want the game to be challenging."* Blind wins 40% or less on
+   elites and bosses, aiming for 25%, held up by the misreader's row (section 5).
+3. **Residents as gates.** No fallback: a Resident keeps its puzzle every time.
+4. **The Operator.** The designer wasn't sure and asked for an approach. Section 3.1 is the proposal: helpers count on every lever, and the Operator's puzzle is planning where they'll be.
+5. **Pile-ups.** Lifted, for elites and bosses, checked fight by fight.
+6. **The Infiltrator, and routines.** *"Paying attention should be rewarded, but also making the correct routine
+   should also be rewarded."* The Infiltrator's blind losses stand. A correct routine wins ordinary fights (section 2).
+7. **Elites.** *"Puzzles versus walls always."* Elites become puzzles (section 4).
+
+Still open:
+
+1. **The rotation.** Make it general, so the default program no longer answers a virus's levers by itself (section
+   3)? Without it, nobody needs to watch or prepare for an ordinary fight.
+2. **The Operator's approach** (section 3.1): helpers count on every lever. Yes, or something else after P0's
+   measurement?
+3. **The Hold chip.** Bring it forward from routines R3, so a routine can answer a beat?
+4. **The ordinary tier's bar.** Blind 60% or less from 18 and 75% or less from 6 to 17, or lower?
