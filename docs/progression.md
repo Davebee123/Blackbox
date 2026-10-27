@@ -755,3 +755,6 @@ of fights; reading pays only in Signal (about half as much lost), and for the Op
 Infiltrator's kit punishes playing blind. Fights reward attention as efficiency, not as the difference between
 winning and losing, and nothing about that changes from level 10 to 50: the same blind rotation works throughout.
 A fight that is a puzzle should lose a blind player more often than not, at least from level 18 on.
+
+docs/puzzle-fights.md is the design that follows: which fights should be puzzles, why bigger numbers don't make one,
+and the levers that do.
