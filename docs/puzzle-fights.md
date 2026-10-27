@@ -2,8 +2,8 @@
 
 October 27, 2026. Every question this sheet raised has the designer's answer (section 8). P0 is built: `solved.mjs`
 measures it, and docs/progression.md "How solved fights are" has its numbers. P1 is built (section 7): the program
-fits the trick, and the Operator's helpers count. P2 is being redesigned in docs/puzzle-levers.md (decision 13), a
-draft for the designer's review.
+fits the trick, and the Operator's helpers count. P2 was redesigned in docs/puzzle-levers.md (decision 13), signed
+off, and is being built.
 
 docs/progression.md "How solved fights are" measured the class-balance fights twice: once with the planner, which
 reads every rule, tell and timer, and once with a blind player, who fires the first ready key on its bar at the first
@@ -357,6 +357,9 @@ checks every row against the bar below:
 | Bosses, levels 18–29 | 85% or more | — (yours alone) | 20% · 50% · 85% or more | 5% or less |
 | Bosses, level 30 and up | 85% or more | — (yours alone) | 20% · 50% · 85% or more | 2% or less |
 
+**Since P2 (decision 13) the blind and kit column is information, not a bar**: `solved.mjs` checks the floors only,
+and the no-fixed-rule test (docs/puzzle-levers.md 6) and the designer's play judge a lever. As first set:
+
 The blind column falls fast with level because there are more mechanics to not understand: more tells live at once,
 casts and seals, more parts with rules. The designer asked for blind players at about 30% of ordinary fights at high
 levels, then for a steeper ramp: this table reaches 30% at level 18 and keeps falling. Elites and bosses are where
@@ -470,8 +473,9 @@ October 27, 2026, from the designer:
 13. **Nuance, not a bot's bar.** At P2's start: *"I worry that it's not going to be beneficial to put it against a bot
     since the bot is biased. I think that, in a vacuum, the mechanics just need to be more complex and nuanced."* Then:
     design doc first, no code. docs/puzzle-levers.md reworks the levers so no fixed rule answers them, and proposes
-    replacing section 5's blind and kit ceilings with a no-fixed-rule test and the designer's play. Its questions are
-    open.
+    replacing section 5's blind and kit ceilings with a no-fixed-rule test and the designer's play. The designer's
+    answers: *"Copy everything. To answer all questions, just lean on the notion of the more difficult choice. I will
+    test them out."* So the blind and kit ceilings of section 5 are gone (decision 2's numbers no longer bind); the
+    planner, routine and learner floors stay (docs/puzzle-levers.md 9).
 
-P0 is done, P1 is built (section 7). P2 is redesigned in docs/puzzle-levers.md, waiting on the designer's answers to
-its section 9.
+P0 is done, P1 is built (section 7). P2 is being built from docs/puzzle-levers.md, for the designer to play.
