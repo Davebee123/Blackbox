@@ -904,3 +904,43 @@ caught beat costs it about 3 Signal, and the planner Herder stays where it was (
 15% floor today too). The Hijacker's bigger helpers cost it 2–6 points, nearly all of it from helpers on a Mimic left
 standing alone, where hitting it without them takes longer than the playback costs. On their own, rules 2 and 3 cost
 the blind Operator Signal, not fights: rule 1 (the order, the ♛ part) has to carry the rest.
+
+### The program fits the trick (docs/puzzle-fights.md P1, the routine half, October 2026)
+
+P1 made the rotation the kit player (routines.mjs `rotation`, planner.mjs `kitPlanner`: no tell, no gene's rule) and
+gave a routine what it needs to answer a lever: a preset for each lever (*Quiet on the beat*, *Tripwire last*, *Lockbox
+first*), the DO chips **Rotation** (your rotation's move at the TARGET part) and **Hold**, the beat chips and the
+TARGETs *no beat* and *other parts*. A lever, a seal or a cast that no handler names is an exception. The routine
+player now prepares as a player would (solved.mjs `prepare`: the preset of each lever in the fight, then *Answer the
+tells*, as RAM allows). Ordinary fights, wins · Signal lost, %:
+
+| Level | Class | Planner | Routine | Rotation (= kit) | Blind |
+|---|---|---|---|---|---|
+| 10 | Breaker | 96 · 39 | 83 · 56 | 83 · 58 | 88 · 49 |
+| 10 | Bastion | 100 · 31 | 96 · 33 | 96 · 38 | 79 · 47 |
+| 10 | Infiltrator | 92 · 40 | 92 · 42 | 79 · 59 | 79 · 57 |
+| 10 | Operator | 100 · 17 | 100 · 18 | 96 · 24 | 100 · 11 |
+| 18 | Breaker | 100 · 23 | 100 · 32 | 96 · 33 | 88 · 55 |
+| 18 | Bastion | 100 · 25 | 100 · 35 | 100 · 32 | 92 · 46 |
+| 18 | Infiltrator | 100 · 26 | 96 · 31 | 96 · 30 | 29 · 91 |
+| 18 | Operator | 100 · 19 | 100 · 23 | 100 · 24 | 100 · 25 |
+| 30 | Breaker | 100 · 25 | 92 · 34 | 96 · 32 | 96 · 45 |
+| 30 | Bastion | 100 · 25 | 92 · 39 | 96 · 33 | 79 · 46 |
+| 30 | Infiltrator | 100 · 18 | 100 · 16 | 96 · 21 | 46 · 80 |
+| 30 | Operator | 100 · 16 | 100 · 19 | 100 · 18 | 100 · 27 |
+
+**What it says.**
+
+- **The routine player wins about what the planner wins** (83–100% against 92–100%; the Breaker at 10 is the gap, and
+  there the kit player itself wins 83%). It loses a few more points of Signal: a handler's tell chip holds on the
+  cycle the tell lands, too late for the planner's strip ahead.
+- **The rotation alone still wins today's fights.** It is now the kit player (79–100%), and today's fights have few
+  levers in them: the kit loses little by not reading them. P2 puts one conflict in every ordinary fight, and that is
+  where the rotation alone should fall to the bar.
+- **How a preset answers a lever decides what it costs.** First drafts that fired your best hit at a named part every
+  cycle cost the Operator a quarter of its wins (no Deploys), and a *Tripwire last* built by naming every other part in
+  order cost the Bastion 40 points of Signal in some fights. The presets now say where (that part, the other parts,
+  no beat) and leave what to your rotation. SIGINT has its own preset: fired by a handler into the cycle a kill was
+  due, it cost the kill and a landed charge (−102 Signal in one fight).
+- **Elites are still walls** for every player (at 18 the planner wins 17–50%, the routine player 0–33%): P3 cuts their
+  Integrity first.

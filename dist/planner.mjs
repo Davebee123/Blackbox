@@ -6,7 +6,7 @@ import { ABILITIES, TELL, CONFIG } from './data.mjs';
 import { raidMove, raidFocus, noTaunt } from './raid.mjs';
 import { tellMove, tellFocus, answers, QUIET, chargeNow, echoesNow, beatOn, beatBlind } from './tells.mjs';
 // genesim.mjs: a gene the sim ignores (genes.mjs GENE_BOTS) is played as if it weren't there, one gene at a time.
-import { ignores } from './genes.mjs';
+import { ignores, GENES, GENE_BOTS } from './genes.mjs';
 import { heatOf } from './parts.mjs';
 import { interruptMove, saveTick } from './interrupt.mjs';
 
@@ -89,6 +89,24 @@ export function plannerWithout(s, no) {
   veto = no;
   try { return planner(s); } finally { veto = was; }
 }
+// The kit player (docs/puzzle-fights.md 3.1): it plays your kit well and reads the timers, but reads nothing of the
+// virus: no tell (TELL.bots.answer off) and no gene's rule (every gene in GENE_BOTS.ignore, the Buffer's too). A
+// program's rotation (routines.mjs), and solved.mjs's kit player. read: genes it reads after all (a routine's beat
+// chip fires the rotation on a beat: the chip is the reading, so it goes quiet on it).
+const UNREAD = new Set([...Object.keys(GENES), 'buffer']);
+export function kitPlanner(s, no = null, read = null) {
+  const answer = TELL.bots.answer, ignore = GENE_BOTS.ignore;
+  TELL.bots.answer = !!read?.length && answer; GENE_BOTS.ignore = read?.length ? new Set([...UNREAD].filter((g) => !read.includes(g))) : UNREAD;
+  try { return no ? plannerWithout(s, no) : planner(s); } finally { TELL.bots.answer = answer; GENE_BOTS.ignore = ignore; }
+}
+// The kit player aimed at one part (routines.mjs, the Rotation chip): it works on that part, and still sees the rest of
+// the board (what lands now, a part it can break first, your health).
+let focus = null;
+export function kitPlannerAt(s, p, no = null, read = null) {
+  const was = focus;
+  focus = p;
+  try { return kitPlanner(s, no, read); } finally { focus = was; }
+}
 // Scraper: its Scrape takes your shield, your ◆ and your timed buffs as it lands, so a player puts up no ◆ and no buff
 // into it (a shield still stops the hit itself, so Firewall stays).
 const BUFFING = new Set(['harden', 'brace', 'sudo', 'fork', 'debris-field', 'rm-rf', 'circuit-breaker', 'honeypot', 'maintenance-window', 'bulkhead', 'dmz', 'mesh']);
@@ -158,7 +176,7 @@ function play(s) {
   // A tell (tells.mjs): a charge or cast whose wind-up it can reach, or a part about to seal.
   // A part left Open by a tell you read (tells.mjs): +50% from everyone for 2 cycles, so cash it in.
   const open = !raidFocus(s) && ['breaker', 'bastion'].includes(classOf(s)) && livingParts(s).find((p) => p.openUntil >= s.encounter.cycle && !p.deadman);
-  let t0 = raidFocus(s) || tellFocus(s) || open || key || (classOf(s) === 'infiltrator' ? soonest(s) : mostThreat(s));
+  let t0 = (alive(focus) && focus) || raidFocus(s) || tellFocus(s) || open || key || (classOf(s) === 'infiltrator' ? soonest(s) : mostThreat(s));
   if (shunned(s, t0)) t0 = livingParts(s).filter((p) => !shunned(s, p)).sort((a, b) => dueOf(s, a) - dueOf(s, b))[0] || t0;
   // A Trojan's Loader (families.mjs): while a broken Courier waits on its redeploy, it's the part to break.
   const loader = s.encounter.virus.parts.some((p) => p.redeployAt != null) ? livingParts(s).find((p) => p.id === 'loader' && s.encounter.virus.family === 'trojan') : null;
