@@ -26,10 +26,11 @@
 //               board, Spike when nothing else is ready.
 import { POLICIES, fight, at, policyOf } from './balance.mjs';
 import { player, playOut, HOME } from './genesim.mjs';
-import { livingParts, barKeys, readyIn, toIntent, hooks, selectEncounter, fresh } from './dist/combat.mjs';
-import { GENES } from './dist/genes.mjs';
+import { livingParts, barKeys, readyIn, toIntent, hooks, selectEncounter, fresh, part, mirrorOn } from './dist/combat.mjs';
+import { GENES, GENE_BOTS } from './dist/genes.mjs';
+import { beatOn } from './dist/tells.mjs';
 import { ARCHETYPES, BOSSES, TELL } from './dist/data.mjs';
-import { planner, plannerWithout, kitPlanner } from './dist/planner.mjs';
+import { planner, plannerWithout, kitPlanner, quietOf } from './dist/planner.mjs';
 import { seeded } from './dist/gear.mjs';
 import { TIER } from './dist/research.mjs';
 import * as R from './dist/routines.mjs';
@@ -161,6 +162,20 @@ export function misses(tier, L, w) {
 // Each P2 rule adds its own entry beside its code's tests (docs/puzzle-levers.md 8).
 export const FIXED = {};
 export const FIXED_MARGIN = 5; // a side must lose this many more points of Signal than the planner on some class
+// A move with a gene unread for this one call (the planner, blind to that part's rule).
+export const unread = (gene, move) => (s) => { const was = GENE_BOTS.ignore; GENE_BOTS.ignore = new Set([...was, gene]); try { return move(s); } finally { GENE_BOTS.ignore = was; } };
+// The beats (docs/puzzle-levers.md 3.1, 3.8): quiet on every beat, or fire on every beat (the planner's move with the beat
+// unread). Quiet is hold on the Mimic's (it copies everything else), and on the Decoy's nothing it can bend (planner.mjs quietOf).
+const mimicNow = (s) => { const b = beatOn(s); return !!b && b.t.next === s.encounter.cycle; };
+FIXED.mimic = { name: 'the Mimic', gene: 'mimic', family: 'ghostroot', from: 8, sides: {
+  'quiet on every beat': (move) => (s) => (mimicNow(s) ? 'hold' : move(s)),
+  'fire on every beat': (move) => (s) => (mimicNow(s) ? unread('mimic', move)(s) : move(s)),
+} };
+const quietNow = (s) => quietOf(s).find((c) => !toIntent(s, c).error) || 'hold';
+FIXED.decoy = { name: 'the Decoy', gene: 'decoymirror', family: 'ghostroot', from: 6, sides: {
+  'quiet on every beat': (move) => (s) => (mirrorOn(s) ? quietNow(s) : move(s)),
+  'fire on every beat': (move) => (s) => (mirrorOn(s) ? unread('decoymirror', move)(s) : move(s)),
+} };
 // The wild rolls of a family at a level that carry a gene: the first n seeds, built as balance.mjs fight builds them.
 export function rolledWith(gene, family, L, n = 6) {
   const out = [];

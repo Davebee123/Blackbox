@@ -1,10 +1,10 @@
 // The scripted fight player: one planner for every class (finish what you can, answer what lands
 // now, strip, then finish), playing that class's own kit. Used by the balance scripts and by
 // simulated crewmates (crew.mjs). It reads the fight through the engine's own functions.
-import { classPlan, classFill, hooks, classOf, subOf, toIntent, intents, attackers, livingParts, alive, part, defender, previewDamage, ignoresArmor, readyIn, mirrorOn, usable, hookHit, wards, attackAmount, delayHeld, frontOf, bufferOn, signatureOf, cooldownOf, frozenNow, asleep, scaled } from './combat.mjs';
+import { classPlan, classFill, hooks, classOf, subOf, toIntent, intents, attackers, livingParts, alive, part, defender, previewDamage, ignoresArmor, readyIn, skillBase, mirrorOn, bendOf, bendBad, timersHidden, usable, hookHit, wards, attackAmount, delayHeld, frontOf, bufferOn, signatureOf, cooldownOf, frozenNow, asleep, scaled } from './combat.mjs';
 import { ABILITIES, TELL, CONFIG } from './data.mjs';
 import { raidMove, raidFocus, noTaunt } from './raid.mjs';
-import { tellMove, tellFocus, answers, QUIET, chargeNow, echoesNow, beatOn, beatBlind } from './tells.mjs';
+import { tellMove, tellFocus, answers, QUIET, chargeNow, echoesNow, beatOn, beatBlind, copyCost, paceOf, tellsOf } from './tells.mjs';
 // genesim.mjs: a gene the sim ignores (genes.mjs GENE_BOTS) is played as if it weren't there, one gene at a time.
 import { ignores, GENES, GENE_BOTS } from './genes.mjs';
 import { heatOf } from './parts.mjs';
@@ -83,6 +83,9 @@ function keyringNow(s) {
 // area hit, a bomb's blast) unpacks them all, so while they're on the board a player swaps either (a class's own plan
 // included) for a hit on a part that isn't a box.
 const AREA = new Set(['shatter', 'fork-bomb', 'garbage-collect', 'failover', 'multicast', 'rm-rf', 'logic-bomb', 'chain-reaction', 'mesh', 'outbreak', 'propagate', 'fan-out']);
+// What a Decoy's beat can't bend (combat.mjs bendCommand: only a command at one part bends): a shield or a buff on you,
+// an area command, then hold. The planner's move on a beat it won't fire into, and solved.mjs's always-quiet side.
+export const quietOf = () => [...QUIET.filter((id) => !['patch', 'null-route', 'sudo', 'fork', 'mesh'].includes(id)), 'fork-bomb', 'garbage-collect', 'failover', 'irq-storm', 'cron-storm', 'outbreak', 'kill-switch', 'patch', 'brace', 'hold'];
 // The planner without some skills (veto(id) true: never picked), for a program's rotation (routines.mjs).
 export function plannerWithout(s, no) {
   const was = veto;
@@ -112,10 +115,50 @@ export function kitPlannerAt(s, p, no = null, read = null) {
 const BUFFING = new Set(['harden', 'brace', 'sudo', 'fork', 'debris-field', 'rm-rf', 'circuit-breaker', 'honeypot', 'maintenance-window', 'bulkhead', 'dmz', 'mesh']);
 const scrapeNow = (s) => !ignores('scraper') && landingNow(s).some((i) => part(s, i.source)?.scrape);
 export function planner(s) {
-  if (!scrapeNow(s)) return heedHelpers(s, spareFuse(s, planner1(s)));
+  if (!scrapeNow(s)) return heedBend(s, heedHelpers(s, spareFuse(s, planner1(s))));
   const was = veto;
   veto = (id) => BUFFING.has(id) || !!(was && was(id));
-  try { return heedHelpers(s, spareFuse(s, planner1(s))); } finally { veto = was; }
+  try { return heedBend(s, heedHelpers(s, spareFuse(s, planner1(s)))); } finally { veto = was; }
+}
+// The Decoy (docs/puzzle-levers.md 3.8): on its beat a command at one part goes to the part it points at (combat.mjs
+// bendCommand). Pointing at a part to break last while others stand, nothing that bends fires: a shield, a buff, an area
+// command (quietOf). Pointing at itself, part of a hit bounces back, so it goes quiet when the bounce costs more than the
+// half cycle quiet gives up. Veiled (the pointer doesn't show), it weighs where the pointer may be: any standing part but
+// the one the last beat pointed at (the log said where that beat sent you). Else the command goes where it points: it
+// lands there anyway. The cycle before a beat, it unveils a veiled Decoy when one command does it (a strip, or Tag).
+// Sudo, Unmask and Echo Cancel go through it.
+const bends = (s, id, to) => { const a = ABILITIES[id]; return !!a && (a.target === 'part' || (a.target === 'attack' && !!to?.attack)); };
+function heedBend(s, move) {
+  const e = s.encounter, [id, at] = String(move || '').split(' '), dec = mirrorOn(s);
+  if (ignores('decoymirror')) return move;
+  const next = !dec && mirrorOn(s, e.cycle + 1);
+  const busy = tellsOf(s)?.list.some((t) => t.told && t.kind !== 'mimic'); // a tell to answer comes first
+  if (next && !busy && timersHidden(s, next) && !(part(s, at) && killing(s, move, part(s, at)))) {
+    const strip = next.armor <= 1 ? ['spike', 'crack', 'exploit'] : next.armor <= 3 ? ['crack'] : [];
+    const unveil = first(s, [...['shaped-charge', ...strip, 'tag'].map((k) => `${k} ${next.id}`), next.armor <= 3 && 'fork-bomb']);
+    if (unveil) return unveil;
+  }
+  if (!dec || !at || dec.unmaskUntil >= e.cycle || e.buffs?.sudo >= e.cycle) return move;
+  const b = bendOf(s, dec), aim = part(s, at);
+  if (!b?.to || !aim || !bends(s, id, b.to)) return move;
+  // What the command is worth where it lands, in Signal: what it deals there, counted in your key 1's hits, each worth a
+  // cycle of the virus's pace (on a part with no attack, half: it can wait; on ◆, a lesser move's worth), less what
+  // bounces back. A command with no hit is worth a cycle where it lands. Quiet is worth half a cycle (TELL.copy.lesser),
+  // hold nothing.
+  const pace = paceOf(s), a = ABILITIES[id], hits = a.damage > 0 || a.hit > 0 || a.bareHit > 0 || a.verb === 'hit';
+  const plan = Math.max(1, previewDamage(s, id, aim) || skillBase(s, id, aim)), base = skillBase(s, a.damage > 0 ? id : 'spike', aim) || 0;
+  const key1 = Math.max(1, skillBase(s, 'spike', aim));
+  const worth = (x) => {
+    if (bendBad(s, dec, x) && x !== dec) return -Infinity; // a part to break last: never
+    const k = x.attack ? 1 : TELL.copy.lesser;
+    if (!hits) return k * pace;
+    const dealt = x.armor > 0 && !ignoresArmor(s, id) ? key1 * TELL.copy.lesser : Math.min(plan, previewDamage(s, id, x));
+    return k * (dealt / key1) * pace - (x === dec ? (dec.bounce ?? CONFIG.mirrorBounce) * base : 0);
+  };
+  const left = livingParts(s).filter((x) => x.kind === 'system' && x.id !== b.was), pool = b.shown ? [b.to] : left.length ? left : [dec];
+  const fire = pool.reduce((n, x) => n + worth(x), 0) / pool.length, quiet = first(s, quietOf(s));
+  if (quiet && fire < (quiet === 'hold' ? 0 : pace * TELL.copy.lesser)) return quiet;
+  return b.shown && b.to !== aim && ok(s, `${id} ${b.to.id}`) ? `${id} ${b.to.id}` : move;
 }
 // A Zip Bomb goes last (order, below), and no hit of a plan made for something else breaks it early: one that would
 // finish it, or one a set's sure crit makes do so (Palemask: a part under half takes your next hit as a crit). The same
@@ -184,8 +227,8 @@ function play(s) {
   const raid = raidMove(s);
   if (raid && ok(s, raid)) return raid;
   // A tell (tells.mjs): a charge or cast whose wind-up it can reach, or a part about to seal.
-  // A part left Open by a tell you read (tells.mjs): +50% from everyone for 2 cycles, so cash it in.
-  const open = !raidFocus(s) && ['breaker', 'bastion'].includes(classOf(s)) && livingParts(s).find((p) => p.openUntil >= s.encounter.cycle && !p.deadman);
+  // A part left Open by a tell you read (tells.mjs): +50% from everyone for 2 cycles, so cash it in (not the Mimic while others stand: it has no attack).
+  const open = !raidFocus(s) && ['breaker', 'bastion'].includes(classOf(s)) && livingParts(s).find((p) => p.openUntil >= s.encounter.cycle && !p.deadman && !(p.mimic && others(s, p)));
   let t0 = (alive(focus) && focus) || raidFocus(s) || tellFocus(s) || open || key || (classOf(s) === 'infiltrator' ? soonest(s) : mostThreat(s));
   if (shunned(s, t0)) t0 = livingParts(s).filter((p) => !shunned(s, p)).sort((a, b) => dueOf(s, a) - dueOf(s, b))[0] || t0;
   // A Trojan's Loader (families.mjs): while a broken Courier waits on its redeploy, it's the part to break.
@@ -219,8 +262,6 @@ function play(s) {
   // Twins: work on the healthier of the pair, so both go down close together.
   const twin = livingParts(s).find((p) => p !== t && (p.twin === t.id || t.twin === p.id));
   if (twin && !ignores('twin') && (twin.integrity / twin.max > t.integrity / t.max + 0.2 || (burnsOn(s, t) >= 2 && burnsOn(s, twin) < burnsOn(s, t)))) t = twin; // burns too: spread them over both
-  // Decoy: on its beat your commands are mirrored, so set up instead (burns, helpers, defence).
-  if (mirrorOn(s) && !ignores('decoymirror') && !(mirrorOn(s).unmaskUntil >= s.encounter.cycle)) { const quiet = first(s, [...QUIET.filter((id) => !['patch', 'null-route', 'sudo', 'fork', 'mesh'].includes(id)), 'fan-out ' + t.id, 'inject ' + t.id, 'deploy ' + t.id, 'spawn ' + t.id, 'botnet ' + t.id, 'tag ' + t.id, 'patch', 'brace', 'hold']); if (quiet) return quiet; }
   // Adaptive: a third cycle in a row on the same part hardens it. Switch, unless this hit breaks it.
   const wary = (p) => s.encounter.virus.mutation === 'adaptive' && !ignores('adaptive') && p.adaptRun >= 2 && p.adaptAt === s.encounter.cycle - 1;
   if (wary(t) && !killNow(s, t)) t = livingParts(s).filter((p) => p !== t && !wary(p) && !phasedOut(s, p)).sort((a, b) => dueOf(s, a) - dueOf(s, b))[0] || t;
@@ -338,7 +379,9 @@ function heedHelpers(s, move) {
   if (heeding || !move) return move;
   const e = s.encounter, c = e.cycle, b = answers() && !ignores('mimic') ? beatOn(s) : null;
   const [id, at] = String(move).split(' ');
-  if (b && b.t.next === c && !beatBlind(s, b.p, c) && !(at === b.p.id && killing(s, move, b.p)) && e.helpers.some((h) => h.target === b.p.id && h.left > 0 && h.sent >= b.t.said) && ok(s, 'kill-switch')) return 'kill-switch';
+  // The helpers it would catch cost their hits; Kill Switch cashes them in, and its own copy is a hit too (tells.mjs copyOf).
+  const caught = b ? e.helpers.filter((h) => h.target === b.p.id && h.left > 0 && h.sent >= b.t.said).reduce((n, h) => n + h.damage, 0) : 0;
+  if (b && b.t.next === c && !beatBlind(s, b.p, c) && !(at === b.p.id && killing(s, move, b.p)) && caught > 0 && copyCost(s, 'kill-switch') < copyCost(s, move) + caught && ok(s, 'kill-switch')) return 'kill-switch';
   if (!HELPS.has(id)) return move;
   const a = ABILITIES[id], off = [];
   if (b && (at === b.p.id || id === 'fan-out') && b.t.next <= c + (a.ticks || 1) - 1 && !beatBlind(s, b.p, b.t.next)) off.push(b.p); // its hits run c to c + ticks - 1

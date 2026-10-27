@@ -713,7 +713,7 @@ test('the log\'s tell lines are as short as the chip\'s tooltip: what, when, on 
   assert.equal(sayOf(c, tell(c, 'lock', 'encryptor', 2)), 'The Encryptor\'s LOCK lands in 2 cycles. It locks your next command for 3 cycles. Break it, or feed it a cooling skill.');
   const seed = Array.from({ length: 50 }, (_, i) => i + 1).find((x) => createVirus('random', x, { family: 'ghostroot', threat: 9 + 12, classic: true }).parts.some((p) => p.mimic));
   const m = fight({ level: 12, family: 'ghostroot', seed }); quietParts(m);
-  assert.equal(sayOf(m, tell(m, 'mimic', 'mimic', 2)), 'The Mimic plays you back in 2 cycles. It copies what you fire then. Go quiet, or cut it.');
+  assert.equal(sayOf(m, tell(m, 'mimic', 'mimic', 2)), 'The Mimic plays you back in 2 cycles. It copies what you fire then and turns it on you. Fire what costs least to have copied, or cut it.');
   // The cut, in a fight: the interrupt's line and the call-off.
   const g = fight({ level: 12, cls: 'bastion' }); quietParts(g); edge(g, 'encryptor');
   const tg = tell(g, 'fulldisk', 'encryptor', 0);

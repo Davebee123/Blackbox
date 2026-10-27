@@ -9,7 +9,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, resolveCycle, advance, selectEncounter, part, livingParts, attackers, hooks, active, restore, cycleLength, codexKey, barKeys, finish, intents, armorTakes as armorTakesHit } from './dist/combat.mjs';
-import { mimicHit } from './dist/tells.mjs';
+import { copyOf, dearCopy } from './dist/tells.mjs';
 import { CONFIG, FAMILIES, ABILITIES } from './dist/data.mjs';
 import * as FP from './dist/floorplan.mjs';
 import { play } from './dist/run.mjs';
@@ -325,7 +325,7 @@ test('presets: ready-made routines from the virus\'s parts, each fitting its RAM
     const s = fight({ level, research, family: body });
     const ps = R.presetsFor(s, body), bar = new Set(R.doSkills(s).map((x) => x.id)), plain = ps.filter((p) => !p.part);
     assert.ok(plain.length >= 2 && plain.length <= R.ROUTINES.presets, `${body} at ${level}: ${plain.length} presets`);
-    for (const p of ps.filter((x) => x.part)) assert.ok(p.handlers.some((h) => h.when.startsWith(`${body}:${p.part}:`) || h.when.startsWith('beat')), `${p.name} names its part, or its beat`);
+    for (const p of ps.filter((x) => x.part)) assert.ok(p.handlers.some((h) => h.when.startsWith(`${body}:${p.part}:`) || h.when.startsWith('beat') || ['dearcopy', 'bent'].includes(h.when)), `${p.name} names its part, or its beat`);
     for (const p of ps) {
       assert.ok(p.handlers.reduce((n, h) => n + R.handlerRam(s, h), 0) <= R.ramFor(s, body), `${p.name} fits`);
       for (const h of p.handlers) {
@@ -740,29 +740,29 @@ test('a handler that names its part but can\'t fire aims the rotation there; oth
   }
 });
 
-test('the rotation reads nothing of the virus: it fires into a beat; Quiet on the beat answers it, and a beat no handler names is yours', () => {
+test('the rotation reads nothing of the virus: it fires into a beat; Hold on a dear copy answers the Mimic, and a beat no handler names is yours', () => {
   const s = fight({ level: 14, family: 'ghostroot', opts: { genes: ['mimic'] } });
   const mimic = livingParts(s).find((p) => p.mimic), ref = codexKey(s.encounter.virus, mimic);
   assert.ok(mimic, 'a Mimic in the fight');
   for (const p of livingParts(s)) p.integrity = p.max = 999; // a long fight: beats to read
   assert.equal(R.leverOf(mimic), 'beat');
-  assert.ok(R.whenOpen(s, 'beat1') && R.whenOpen(s, 'beat2'), 'the beat chips open with its rule');
+  assert.ok(R.whenOpen(s, 'beat1') && R.whenOpen(s, 'beat2') && R.whenOpen(s, 'dearcopy'), 'the beat chips and dear copy open with its rule');
   toBeat(s);
-  const [id, at] = R.decide(s).text.split(' ');
-  assert.ok(mimicHit(s, id, part(s, at) || mimic) > 0, `no routine: the rotation fires a direct hit into the beat (${id})`);
-  const [pid, pat] = planner(s).split(' ');
-  assert.equal(mimicHit(s, pid, part(s, pat) || mimic), 0, 'the planner reads it and goes quiet');
+  const copy = (text) => { const [id, at] = text.split(' '); return copyOf(s, id, part(s, at)); };
+  const rot = R.decide(s).text;
+  assert.ok(dearCopy(s, copy(rot)), `no routine: the rotation fires a dear copy into the beat (${rot})`);
+  const smart = planner(s);
+  assert.ok(smart === 'hold' || copy(smart).cost < copy(rot).cost, `the planner reads it: a cheaper copy (${smart})`);
   command(s, 'program ghostroot confirm');
   assert.deepEqual(R.exceptionsOf(s).filter((x) => x.part === mimic.id).map((x) => x.kind), ['lever'], 'a beat no handler names is yours');
   const pre = R.presetsFor(s, 'ghostroot').find((p) => p.id === `beat:${mimic.id}`);
-  assert.equal(pre.name, 'Quiet on the beat');
-  assert.deepEqual(pre.handlers, [{ when: 'beat1', do: 'rotation', target: 'nobeat' }]);
+  assert.equal(pre.name, 'Hold on a dear copy');
+  assert.deepEqual(pre.handlers, [{ when: 'dearcopy', do: 'hold', target: 'that' }]);
   command(s, `program ghostroot preset beat:${mimic.id}`);
-  assert.ok(!R.exceptionsOf(s).some((x) => x.part === mimic.id), 'the beat chip covers it');
-  const d = R.decide(s), [qid, qat] = d.text.split(' ');
+  assert.ok(!R.exceptionsOf(s).some((x) => x.part === mimic.id), 'dear copy covers it');
+  const d = R.decide(s);
   assert.equal(d.handler, 0);
-  assert.equal(mimicHit(s, qid, part(s, qat) || mimic), 0, `its Rotation reads the beat: quiet (${d.text})`);
-  assert.notEqual(qat, mimic.id, 'no beat: at another part');
+  assert.equal(d.text, 'hold', 'a dear copy: it holds');
   // Off the beat, the handler waits and the rotation plays.
   cycle(s);
   assert.ok(!beatNow(s));
