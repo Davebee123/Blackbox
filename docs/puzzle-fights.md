@@ -2,7 +2,8 @@
 
 October 27, 2026. Every question this sheet raised has the designer's answer (section 8). P0 is built: `solved.mjs`
 measures it, and docs/progression.md "How solved fights are" has its numbers. P1 is built (section 7): the program
-fits the trick, and the Operator's helpers count. P2 is next.
+fits the trick, and the Operator's helpers count. P2 is being redesigned in docs/puzzle-levers.md (decision 13), a
+draft for the designer's review.
 
 docs/progression.md "How solved fights are" measured the class-balance fights twice: once with the planner, which
 reads every rule, tell and timer, and once with a blind player, who fires the first ready key on its bar at the first
@@ -391,7 +392,7 @@ fights keep those and add:
 |---|---|---|
 | P0 | `solved.mjs`: the learner at three misread shares, the routine player, the kit player, and the elite and boss sets. How much of the blind Operator's wins comes from helpers. No game change. | Section 1.4's table, with the new players' columns, is in progression.md. **Done.** |
 | P1 | The rotation made general (the levers' answers move into presets and handlers), a preset per lever, and a lever's part with no handler as an exception. The Hold chip from level 8, and the *beat in 1* and *beat in 2* chips. Helpers count on every lever (section 3.2's rules), with their pips and the move-on tether on the board, and the *no beat* target. The planner taught the helper rules. **Built:** all of it. The routine half (below, *What P1 built*), and helpers count on every lever, their pips and the move-on tether, and the planner taught the helper rules (section 3.2, *In the game*). The routine player now wins about what the planner wins; the rotation alone still wins today's fights, which have few levers (P2 adds them). | The routine player wins as often as the planner on today's fights, and the rotation alone doesn't. |
-| P2 | Ordinary fights: each wild roll, guard and invasion gets one conflict from the first four levers. | Ordinary fights meet their rows. |
+| P2 | Ordinary fights: each wild roll, guard and invasion gets one conflict from the first four levers, each lever reworked so its answer depends on the board (docs/puzzle-levers.md). | docs/puzzle-levers.md section 6, once signed off. |
 | P3 | Elites: Integrity down, two conflicts, *no pile-ups* lifted and checked on the roll. | Elites meet their row. |
 | P4 | Bosses: the levers as boss rules (a beat that repeats, phases, the one to leave). Two Residents and two solo bosses first, then the rest, lair bosses and feuds. | Every boss meets its row, and the designer has played the first four. |
 
@@ -466,4 +467,11 @@ October 27, 2026, from the designer:
     scripts that change how a build answers a lever (a beat or a Tripwire that is good news for the right build) come
     after, as their own design.
 
-Nothing is open. P0 is done, P1 is built (section 7); P2 is next, in its own session, once the designer has played P1.
+13. **Nuance, not a bot's bar.** At P2's start: *"I worry that it's not going to be beneficial to put it against a bot
+    since the bot is biased. I think that, in a vacuum, the mechanics just need to be more complex and nuanced."* Then:
+    design doc first, no code. docs/puzzle-levers.md reworks the levers so no fixed rule answers them, and proposes
+    replacing section 5's blind and kit ceilings with a no-fixed-rule test and the designer's play. Its questions are
+    open.
+
+P0 is done, P1 is built (section 7). P2 is redesigned in docs/puzzle-levers.md, waiting on the designer's answers to
+its section 9.
