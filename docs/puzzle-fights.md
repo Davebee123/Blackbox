@@ -362,8 +362,10 @@ October 27, 2026, from the designer:
    ordinary fights 60%, 45% and 30% (levels 6–17, 18–29, 30 and up); elites and bosses 40%, 25% and 15%. The
    planner, routine and misreader columns hold them up (section 5).
 3. **Residents as gates.** No fallback: a Resident keeps its puzzle every time.
-4. **The Operator.** The designer wasn't sure and asked for the approach in detail. Section 3.2 is the proposal:
-   helpers count on every lever, and the Operator's puzzle is planning where they'll be.
+4. **The Operator.** The designer asked for the approach in detail, then approved it: section 3.2's rules. Helpers
+   count on every lever, a beat catches only the helpers on its part sent after it was said, where helpers move on is
+   shown, and helpers still never cut a tell on their own. The Operator's puzzle is planning where they'll be. P0
+   still measures the Herder's cost in Ghostroot fights before P1 builds it.
 5. **Pile-ups.** Lifted, for elites and bosses, checked fight by fight.
 6. **The Infiltrator, and routines.** *"Paying attention should be rewarded, but also making the correct routine
    should also be rewarded."* The Infiltrator's blind losses stand. A correct routine wins ordinary fights (section 2).
@@ -373,8 +375,6 @@ October 27, 2026, from the designer:
 
 Still open:
 
-1. **The Operator's rules** (section 3.2): helpers count on every lever, a beat catches only the helpers on its part
-   sent after it was said, and where helpers move on is shown. Yes, or something else after P0's measurement?
-2. **The Hold chip** (section 3.1): every program has it from level 8, rather than as an R3 drop?
-3. **The steps between.** The 30% is the designer's; the 60% and 45% before it, and the elite and boss column
+1. **The Hold chip** (section 3.1): every program has it from level 8, rather than as an R3 drop?
+2. **The steps between.** The 30% is the designer's; the 60% and 45% before it, and the elite and boss column
    (40%, 25%, 15%), are this sheet's guesses at a ramp. Right, or steeper?
