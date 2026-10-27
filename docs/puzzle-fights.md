@@ -29,7 +29,7 @@ those scripts. No game file was changed.
 | What makes a puzzle, then? | A conflict: a moment when the default move is the wrong one. Hold on a beat, break the parts in an order, leave a part standing, spend a key early, answer two clocks with one plan. Most of the pieces exist already (the Mimic, seals, the Tripwire, the Spare, tethers, boss phases). |
 | What wins one? | Watching, or the right routine. The default program knows your kit, not the virus: you fit each virus's routine to its trick, with handlers that cost RAM and open with research. An ordinary fight's trick always has such a handler, so preparing pays as much as watching. Elites need a mastered part's chips. Bosses are yours alone, as today. |
 | And the Operator? | Its helpers count. A helper on a beat's part is played back, a helper that breaks the wrong part sets it off, and a helper on a boss's ♛ part starts its phases. Only helpers sent after a beat was said are caught. The Operator's puzzle is where its helpers will be in three cycles, and each subclass already has the keys to answer it (section 3.2). |
-| How is it measured? | `solved.mjs` grows a misreader (blind on 30% of cycles), a routine player and the elite and boss sets. From level 18 the blind player wins 60% or less of ordinary fights and 40% or less of elites and bosses, and lower is better. |
+| How is it measured? | `solved.mjs` grows a misreader (blind on 30% of cycles), a routine player and the elite and boss sets. The blind player's wins fall with level: at level 30 and up, 30% or less of ordinary fights and 15% or less of elites and bosses. The planner, a correct routine and the misreader still win. |
 
 
 ## 1. What was measured
@@ -305,13 +305,23 @@ fight a routine plays.
 
 | Fights | Planner wins | Routine wins | Misreader wins | Blind and kit wins |
 |---|---|---|---|---|
-| Ordinary, levels 6–17 | 85% or more | 85% or more | 70% or more | 75% or less |
-| Ordinary, from 18 | 85% or more | 85% or more | 70% or more | 60% or less |
-| Elites, from 10 | 85% or more | 60% or more (mastered chips) | 60% or more | 40% or less, aiming for 25% |
-| Bosses, from 10 | 85% or more | — (yours alone) | 60% or more | 40% or less, aiming for 25% |
+| Ordinary, levels 6–17 | 85% or more | 85% or more | 70% or more | 60% or less |
+| Ordinary, levels 18–29 | 85% or more | 85% or more | 70% or more | 45% or less |
+| Ordinary, level 30 and up | 85% or more | 85% or more | 70% or more | 30% or less |
+| Elites and bosses, levels 10–17 | 85% or more | Elites 60% or more (mastered chips); bosses are yours alone | 60% or more | 40% or less |
+| Elites and bosses, levels 18–29 | 85% or more | As above | 60% or more | 25% or less |
+| Elites and bosses, level 30 and up | 85% or more | As above | 60% or more | 15% or less |
 
-Lower is better on the last column, as long as the planner and misreader rows hold: the misreader is the line that
-keeps "challenging" from becoming "unfair". A fight that misses its row doesn't ship.
+The blind column falls with level because there are more mechanics to not understand: more tells live at once,
+casts and seals, more parts with rules. The designer's bar is the ordinary tier's: *blind players more like 30% at
+high levels, from not understanding the mechanics.* Elites and bosses stay harder than that at every level.
+
+Lower is better on the last column, as long as the planner, routine and misreader columns hold. Those are what keep
+"challenging" from becoming "unfair": a player who understands the mechanics, by watching or by a routine, wins
+again. A fight that misses its row doesn't ship.
+
+Today's blind player wins 79–100% of ordinary fights at level 30 for three classes of four, and section 1.5 shows
+bigger numbers won't take it to 30%. Only the levers can, so P2 is where that bar is tested first.
 
 Like the Hunter chase's dens (*every den is searched first*), a fight that lifts *no pile-ups* is checked when it's
 made: the planner must win it on every class at its level, so two clocks never become two clocks with no answer. An
@@ -347,10 +357,12 @@ October 27, 2026, from the designer:
 
 1. **Which fights.** *"Most fights should be slightly tricky, with bosses and elites being harder."* Two tiers
    (section 4).
-2. **The bar.** *"40% is good, but lower the better. I want the game to be challenging."* Blind wins 40% or less on
-   elites and bosses, aiming for 25%, held up by the misreader's row (section 5).
+2. **The bar.** *"40% is good, but lower the better. I want the game to be challenging."* Then, for ordinary fights:
+   *"blind players more like 30% at high levels from not understanding the mechanics."* Blind wins fall with level:
+   ordinary fights 60%, 45% and 30% (levels 6–17, 18–29, 30 and up); elites and bosses 40%, 25% and 15%. The
+   planner, routine and misreader columns hold them up (section 5).
 3. **Residents as gates.** No fallback: a Resident keeps its puzzle every time.
-4. **The Operator.** The designer wasn't sure and asked for the approach in detail. Section 3.1 is the proposal:
+4. **The Operator.** The designer wasn't sure and asked for the approach in detail. Section 3.2 is the proposal:
    helpers count on every lever, and the Operator's puzzle is planning where they'll be.
 5. **Pile-ups.** Lifted, for elites and bosses, checked fight by fight.
 6. **The Infiltrator, and routines.** *"Paying attention should be rewarded, but also making the correct routine
@@ -364,4 +376,5 @@ Still open:
 1. **The Operator's rules** (section 3.2): helpers count on every lever, a beat catches only the helpers on its part
    sent after it was said, and where helpers move on is shown. Yes, or something else after P0's measurement?
 2. **The Hold chip** (section 3.1): every program has it from level 8, rather than as an R3 drop?
-3. **The ordinary tier's bar.** Blind 60% or less from 18 and 75% or less from 6 to 17, or lower?
+3. **The steps between.** The 30% is the designer's; the 60% and 45% before it, and the elite and boss column
+   (40%, 25%, 15%), are this sheet's guesses at a ramp. Right, or steeper?
