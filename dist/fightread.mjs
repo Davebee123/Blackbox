@@ -11,11 +11,13 @@
 //                          rule and answer from 5
 //   partLinks(s, v)        what protects what: one link a rule that reaches from one part to another (a Mutex's lock, a
 //                          Lockbox's ward, a Mirror's twin, a Keyring's re-arm), for the board's tethers
+//   helperPlan(s, fc)      your helpers' schedule: a pip for each hit they have left (Now to +3) on the part it lands on,
+//                          the ones that trip a lever, and where helpers move on from a part breaking this cycle
 //   lockOf(s, v, p)        the lock shield a part wears now (its bar's absorb segment), wardOf the most a ward lets it lose
-import { part, livingParts, gearFx, fxHolds, blocked, attackAmount, knowsPart, usable, fxOn, alive, wards, belowOf, frontOf, signatureOf, frozenNow, asleep, limitOf, packed } from './combat.mjs';
+import { part, livingParts, gearFx, fxHolds, blocked, attackAmount, knowsPart, usable, fxOn, alive, wards, belowOf, frontOf, signatureOf, frozenNow, asleep, limitOf, packed, active, attackers, hookHit } from './combat.mjs';
 import { CONFIG, TELL, TELLS, BOSSES, STRAINS } from './data.mjs';
 import { fxText } from './content.mjs';
-import { tellsOf, tellIntents, partTells, NEW_TELLS } from './tells.mjs';
+import { tellsOf, tellIntents, partTells, NEW_TELLS, beatOn, beatBlind } from './tells.mjs';
 import { nextTick } from './interrupt.mjs';
 import { BODY } from './families.mjs';
 import { situationOf } from './situations.mjs';
@@ -383,4 +385,57 @@ export function partLinks(s, v = s.encounter?.virus, { stands = alive } = {}) {
   const shown = out.filter((l) => !packed(s, v, v.parts.find((x) => x.id === l.from)));
   for (const l of shown) l.tip = linkTip(s, v, l);
   return shown;
+}
+
+// ---------- your helpers' schedule (docs/puzzle-fights.md 3.2) ----------
+// Each helper's hits left, a pip a column (Now to +3) on the part it lands on then, played forward from the preview: your
+// command first (fc, view.mjs forecast), then burns, then each helper in order, a hit on ◆ breaking one. A part that
+// breaks sends its helpers on to the part that attacks soonest (combat.mjs). A pip trips a lever when the Mimic's beat
+// would play it back (a helper sent once the beat was said) or when it breaks a Tripwire while other parts stand.
+// moves: where the helpers of a part breaking this cycle go next (the board's move-on tether).
+const whenOf = (c) => (c === 0 ? 'this cycle' : c === 1 ? 'next cycle' : `in ${c} cycles`);
+export function helperPlan(s, fc = {}) {
+  const e = s.encounter, out = { pips: [], moves: [] };
+  if (!e?.helpers?.length || !active(s)) return out;
+  const b = beatOn(s), hp = {}, armor = {}, broke = {};
+  for (const p of livingParts(s)) {
+    hp[p.id] = p.integrity - (fc.parts?.[p.id] || 0);
+    armor[p.id] = Math.max(0, (p.armor || 0) - (fc.chits?.[p.id] || 0));
+    if (hp[p.id] <= 0) broke[p.id] = 0;
+  }
+  const up = (id) => hp[id] > 0;
+  const next = (not) => attackers(s).filter((p) => up(p.id) && p.id !== not).sort((x, y) => x.attack.due - y.attack.due || y.attack.amount - x.attack.amount)[0] || livingParts(s).find((p) => up(p.id) && p.id !== not) || null;
+  const at = e.helpers.map((h) => h.target), moves = new Map();
+  for (let c = 0; c < 4; c++) {
+    for (const x of e.burns) if (x.left > c && up(x.target) && !(armor[x.target] > 0)) { hp[x.target] -= x.damage; if (!up(x.target)) broke[x.target] ??= c; }
+    e.helpers.forEach((h, k) => {
+      if (h.left <= c) return;
+      if (!up(at[k])) {
+        const n = next(at[k]);
+        if (!n) return;
+        if (broke[at[k]] === 0) { const key = `${at[k]}>${n.id}`; moves.set(key, { from: at[k], to: n.id, helpers: (moves.get(key)?.helpers || 0) + 1 }); }
+        at[k] = n.id;
+      }
+      const id = at[k], p = part(s, id), dmg = h.damage + hookHit(s, p);
+      let trips = null;
+      if (armor[id] > 0) armor[id]--;
+      else {
+        hp[id] -= dmg;
+        if (!up(id)) {
+          broke[id] ??= c;
+          if (p.deadman && !p.quiet && !(e.buffs?.sudo >= e.cycle + c) && livingParts(s).some((x) => x !== p && x.kind === 'system' && up(x.id))) trips = 'order';
+        }
+      }
+      if (b && id === b.p.id && b.t.next === e.cycle + c && h.sent != null && h.sent >= b.t.said && !beatBlind(s, b.p, b.t.next)) trips = 'beat';
+      const name = h.by ? `${h.by}: Helper. ` : 'Helper: ';
+      const tip = trips === 'beat' ? `${name}Hits the ${p.name} for ${dmg} on its beat.${answerLine(`The ${p.name} plays it back at you. Move it or cash it in first.`)}`
+        : trips === 'order' ? `${name}Breaks the ${p.name} ${whenOf(c)} while other parts stand.${answerLine('The others go loud. Break them first, or move it.')}`
+        : `${name}Hits the ${p.name} for ${dmg} ${whenOf(c)}.`;
+      out.pips.push({ helper: k, part: id, col: c, damage: dmg, trips, tip });
+    });
+    // The beat lands after the helpers: a Mimic they break this cycle plays nothing back.
+    for (const x of out.pips) if (x.col === c && x.trips === 'beat' && !up(x.part)) Object.assign(x, { trips: null, tip: `${x.tip.split('\n')[0].replace(/ on its beat\.$/, ` ${whenOf(c)}.`)}` });
+  }
+  out.moves = [...moves.values()];
+  return out;
 }

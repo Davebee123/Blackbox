@@ -1,13 +1,13 @@
 // solved.mjs's players and bar (docs/puzzle-fights.md section 5): the kit player reads nothing of the virus and leaves the
-// switches as it found them, a learner on 0% is the planner, the routine player's fights are its program's, the beat's
-// prototype catches only helpers sent after the beat was said, and the bar's floors and ceilings.
+// switches as it found them, a learner on 0% is the planner, the routine player's fights are its program's, the Operator's
+// report counts the beats that caught helpers, and the bar's floors and ceilings.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { at, fight, POLICIES } from './balance.mjs';
 import { TELL } from './dist/data.mjs';
 import { GENE_BOTS } from './dist/genes.mjs';
 import { hooks } from './dist/combat.mjs';
-import { kit, learner, play, misses, barOf, beatCatchesHelpers, moverOf } from './solved.mjs';
+import { kit, learner, play, misses, barOf, mimicCost } from './solved.mjs';
 
 test('the kit player reads no tell and no gene, and puts both switches back', () => {
   const b = at(18), r = play('Breaker', 'kit', 'random', b, { seed: 3, mode: 'run', zone: true });
@@ -42,33 +42,12 @@ test("the routine player's fights are played by its program, which is uninstalle
   assert.ok(r.win, 'a prepared program wins an ordinary fight at its level');
 });
 
-test("the beat's prototype catches helpers sent after the beat was said, never before", () => {
-  // A Herder at 18 against Ghostroot with a Mimic: its planner sends helpers onto the Mimic on some seeds.
-  let caught = 0, early = 0;
-  for (let seed = 1; seed <= 6; seed++) {
-    const c = beatCatchesHelpers(), smart = POLICIES.Operator;
-    POLICIES.Operator = moverOf('planner', seed);
-    try {
-      fight('Operator', 'random', at(18), { sub: 'herder', seed, mode: 'run', zone: true, family: 'ghostroot', genes: ['mimic'], before: c.before, after: (s, ev) => {
-        const n = s.serial;
-        c.after(s, ev);
-        if (s.logs.some((x) => x.id > n && /Helpers \(mimicked\)/.test(x.message || ''))) caught++;
-      } });
-    } finally { POLICIES.Operator = smart; }
-    // The same fight with every helper counted as sent before its beat was said: nothing is caught.
-    const d = beatCatchesHelpers();
-    POLICIES.Operator = moverOf('planner', seed);
-    try {
-      fight('Operator', 'random', at(18), { sub: 'herder', seed, mode: 'run', zone: true, family: 'ghostroot', genes: ['mimic'], before: (s) => { const t = s.encounter.virus.tells?.list.find((x) => x.kind === 'mimic'); if (t?.told) t.said += 100; d.before(s); if (t?.told) t.said -= 100; }, after: (s, ev) => {
-        const t = s.encounter?.virus.tells?.list.find((x) => x.kind === 'mimic'), n = s.serial;
-        if (t?.told) t.said += 100;
-        try { d.after(s, ev); } finally { if (t?.told) t.said -= 100; }
-        if (s.logs.some((x) => x.id > n && /Helpers \(mimicked\)/.test(x.message || ''))) early++;
-      } });
-    } finally { POLICIES.Operator = smart; }
-  }
-  assert.ok(caught > 0, 'some beat caught a helper');
-  assert.equal(early, 0);
+test("the Operator's report: the Mimic's beat catches the blind player's helpers, and the planner keeps its own off it", () => {
+  // A Herder at 18 against Ghostroot with a Mimic (the game's rule, tells.mjs mimicLands; helper-rules.test.mjs has the rule).
+  const blind = mimicCost('herder', 'blind', 18, { seeds: 3 }), smart = mimicCost('herder', 'planner', 18, { seeds: 3 });
+  assert.ok(blind.caught > 0, 'some beat caught a blind helper');
+  assert.ok(smart.caught <= blind.caught, `the planner's helpers are caught no more often (${smart.caught} vs ${blind.caught})`);
+  assert.equal(smart.wins, 100);
 });
 
 test('the bar: floors for the planner, routine and learner, a ceiling for the kit and blind players that falls with level', () => {

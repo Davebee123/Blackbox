@@ -48,7 +48,7 @@ import { FIREWALL, fwOf, fwAt, ratingAt, effLevel, wallBonus, fragLevels, defrag
 import { filtersOf, equipped as filtersOn, slotsOf as filterSlots, filterLine, FILTER_STATS, CRAFTABLE, filterCost, FILTER_CAP, baseName as filterBase, filterRecipes } from './filters.mjs';
 import { situationOf } from './situations.mjs';
 import { SETS, setOf, setCard, activeSets, piecesOf, greenOf, sourceText, seesRare, tierLine } from './sets.mjs';
-import { tellTip, gearLive, cycleGear, gearOnParts, partTip, partCue, partRead, partLinks, lockOf, wardOf, GEAR_ICON, DAMPED, answerLine } from './fightread.mjs';
+import { tellTip, gearLive, cycleGear, gearOnParts, partTip, partCue, partRead, partLinks, lockOf, wardOf, GEAR_ICON, DAMPED, answerLine, helperPlan } from './fightread.mjs';
 import { cutsNow, crossBy, BOSS_RULES, TICKS } from './interrupt.mjs';
 import { programMarkup, progNow, progTarget, progText, progOnPart, progExc, progFight, progTag } from './routines-view.mjs';
 import { unlocked as routinesOpen, LOCKED as ROUTINES_LOCKED } from './routines.mjs';
@@ -677,6 +677,14 @@ export function boardMarkup(s, selected, preview = null) {
   runMode = e.mode === 'run';
   const fighting = active(s);
   const fc = forecast(s, preview);
+  // Your helpers' hits (fightread.mjs helperPlan): a row of small teal pips a helper, in the columns it hits a part, edged
+  // red where a hit trips a lever. The rows line up across the columns, so a helper's schedule reads like a part's.
+  const hplan = fighting ? helperPlan(s, fc) : { pips: [], moves: [] }, hrows = {};
+  for (const x of hplan.pips) (hrows[x.part] ||= new Set()).add(x.helper);
+  const pipCell = (p, c) => {
+    const rows = [...(hrows[p.id] || [])].sort((a, b) => a - b);
+    return rows.length ? `<span class="hpips">${rows.map((k) => { const x = hplan.pips.find((y) => y.part === p.id && y.col === c && y.helper === k); return x ? `<i class="hpip${x.trips ? ' trip' : ''}" title="${esc(x.tip)}"></i>` : '<i class="hpip none"></i>'; }).join('')}</span>` : '';
+  };
   // Damage on the timeline is what you'll actually take after your Reduction.
   const list = fighting ? intents(s, 4).map((i) => (i.effect === 'damage' ? { ...i, amount: blocked(s, i.amount) } : i.hit ? { ...i, hit: blocked(s, i.hit) } : i)) : [];
   const hidden = fighting && timersHidden(s);
@@ -730,7 +738,12 @@ export function boardMarkup(s, selected, preview = null) {
   const patchList = fighting ? patches(s, 4) : [];
   // What protects what, between the rows (a dissolving part's tether snaps with it).
   const since = (p) => Math.max(0, Math.round(1000 - ((p._dyingUntil || 0) - Date.now())));
-  const ties = tethers(living, partLinks(s, e.virus, { stands: (p) => alive(p) || dying(p) }), since);
+  // And where the helpers of a part breaking this cycle move on to: a dashed teal tether (docs/puzzle-fights.md 3.2).
+  const moveOn = hplan.moves.filter((m) => living.some((p) => p.id === m.from) && living.some((p) => p.id === m.to)).map((m) => {
+    const from = part(s, m.from), to = part(s, m.to);
+    return { kind: 'moveon', from: m.from, to: [m.to], icon: 'relay', known: true, up: true, count: null, snap: false, tip: `Helpers: The ${from.name} breaks this cycle. ${m.helpers === 1 ? 'Its helper moves' : `Its ${m.helpers} helpers move`} on to the ${to.name}, the part that attacks soonest.` };
+  });
+  const ties = tethers(living, [...partLinks(s, e.virus, { stands: (p) => alive(p) || dying(p) }), ...moveOn], since);
   const rows = living.map((p, ri) => {
     const mine = list.filter((i) => i.source === p.id);
     const nowHit = mine.some((i) => i.col === 0 && i.effect !== 'buffer'); // a Buffer's shield isn't an attack
@@ -748,16 +761,16 @@ export function boardMarkup(s, selected, preview = null) {
       // A tell shows whatever the part hides (tells.mjs): nothing big lands unannounced.
       const told = mine.filter((i) => i.tell && i.col === c).map((i) => tellChip(s, i, c, `tell:${p.id}:${i.id}@${e.cycle + c}`, crew.length && i.effect === 'damage' ? sink || 'all' : null)).join('')
         + mine.filter((i) => i.tell && i.winFrom != null && c >= i.winFrom && c < i.col).map((i) => tellSpan(s, i, c)).join(''); // a window longer than a cycle (tells.mjs)
-      if (timersHidden(s, p) && p.attack) return `<div class="bcell">${cryptChip}${escChip}${told || '<div class="intent hidden">?</div>'}${c === 0 ? cutChip(s, p) + progOnPart(s, p) : ''}${patchChip}</div>`;
+      if (timersHidden(s, p) && p.attack) return `<div class="bcell">${cryptChip}${escChip}${told || '<div class="intent hidden">?</div>'}${c === 0 ? cutChip(s, p) + progOnPart(s, p) : ''}${patchChip}${pipCell(p, c)}</div>`;
       const hit = mine.find((i) => i.col === c && !i.tell);
       // With a crew, a damage attack lands on everyone, or on whoever is drawing fire; a crew boss's part with a
       // target rule (raid.mjs) on the one player it's aiming at.
       const aimed = crew.length && hit?.effect === 'damage' && !sink && p.attack.target ? attackTarget(s, p) : null;
       const to = crew.length && hit?.effect === 'damage' ? sink || (aimed ? aimed.who || 'you' : 'all') : null;
-      return `<div class="bcell">${cryptChip}${escChip}${told}${hit && !(p.attack ? false : hit.hidden) ? attackChip(hit, c, `${p.id}@${e.cycle + c}`, to) : ''}${c === 0 ? cutChip(s, p) + progOnPart(s, p) : ''}${patchChip}</div>`;
+      return `<div class="bcell">${cryptChip}${escChip}${told}${hit && !(p.attack ? false : hit.hidden) ? attackChip(hit, c, `${p.id}@${e.cycle + c}`, to) : ''}${c === 0 ? cutChip(s, p) + progOnPart(s, p) : ''}${patchChip}${pipCell(p, c)}</div>`;
     }).join('');
     // A part with no attack of its own (a Mutex, a Mimic) still shows its row's cells when a tell or a beat sits there.
-    const showCells = p.attack || p.ratchet || mine.some((i) => i.tell || !i.hidden || i.effect === 'fuse');
+    const showCells = p.attack || p.ratchet || hrows[p.id] || mine.some((i) => i.tell || !i.hidden || i.effect === 'fuse');
     const spike = p.armor > 0 ? 'spike breaks a ◆' : `spike deals ${previewDamage(s, 'spike', p)}`;
     const marks = partMarks(s, p);
     // A redraw mid-dissolve picks the fade up where it was (a negative delay), not from the start.
@@ -773,7 +786,7 @@ export function boardMarkup(s, selected, preview = null) {
       ${showCells ? cells : '<div class="bcell span4"></div>'}</button>`;
   }).join('');
   // A fight whose parts protect each other keeps the tethers' gutter after the last one goes, so the rows don't jump.
-  const keep = !ties.some(Boolean) && e.virus.parts.some((p) => p.lock || p.ward || p.wardsToo || p.twin || p.rearm || p.command || p.buffer || p.front || p.idle) ? '<i class="tether keep" hidden></i>' : '';
+  const keep = !ties.some(Boolean) && (e.virus.parts.some((p) => p.lock || p.ward || p.wardsToo || p.twin || p.rearm || p.command || p.buffer || p.front || p.idle) || (fighting && e.helpers?.length)) ? '<i class="tether keep" hidden></i>' : ''; // helpers out: room for their move-on tether
   const gone = broken.length ? `<div class="brow bbroken"><div class="bcell span5">Broken: ${broken.map((p) => esc(p.name)).join(', ')}</div></div>` : '';
   // Whose half is playing, across the top of the board (the board itself takes its colour: style.css).
   const ph = fighting ? phaseOf(s) : null, who = esc(e.virus.name.split('-')[0]);
