@@ -100,6 +100,16 @@ are first guesses for the harness to tune.
   already spread.
 - **On the board.** When the preview shows the Tripwire breaking, the other parts' attacks show their loud numbers and
   their ◆ show falling, so you see the trade before you make it.
+- **As built** (October 2026; `CONFIG.tripwire`, `order.mjs` `loudWins`). Loud parts deal 25% more and every attack comes
+  a cycle sooner *for real*: the next one (one due next cycle lands in the cycle you trip it, the alarm) and every one
+  after it (each interval a cycle shorter, 2 at the fastest). Before, only the next attack moved, and only if it was two
+  cycles out; with that, tripping first won every class at 30. They take 40% more damage and drop their ◆ for good.
+  *Loud wins* (the chip, the planner, the board): breaking the Tripwire and then the others loud takes no more of your
+  next 5 cycles (`window`) than breaking them as they are, and no attack it pulls into this cycle goes uncovered.
+  `node solved.mjs rules 18 30`: no fixed rule wins. Signal lost, planner / always trip early / never trip: at 18 Breaker
+  32/30/36, Bastion 28/55/43, Infiltrator 38/44/33, Operator 23/34/24; at 30 Breaker 37/7/46, Bastion 40/51/44,
+  Infiltrator 20/47/22, Operator 27/20/28. The Breaker still does best tripping at once at 30 (Shatter's shards on the
+  bared parts end the fight), which the planner's race doesn't foresee.
 
 ### 3.3 The Zip Bomb: the blast hits both sides
 
@@ -114,6 +124,15 @@ are first guesses for the harness to tune.
   then bursts. The Operator's helpers finish what the blast leaves. The Infiltrator leaves it last when its burns are
   already doing that work.
 - **On the board.** The fuse chip counts down 2, 1. When it's lit, each part's bar shows the blast's bite as a ghost.
+- **As built** (`CONFIG.zipbomb.parts` 20%, `order.mjs` `blastPays`). The blast lands at the start of the virus's half:
+  yours first (a ◆ or a shield takes it), then each part a ◆ and 20% of its max through its ◆, never a crit; a blast
+  that breaks the last part wins the fight. *Blast pays*: the Zip Bomb breaks this cycle, its blast would break another
+  part, and a ◆ or a shield covers the fuse. `node solved.mjs rules 10 18 30`: **a fixed rule wins at 10 and 18**
+  (always last; the planner matches it on every class), none at 30. Always early loses 20 to 70 points (the cycles spent
+  on it let charges land), but no reading found an early break that pays: with the blast at 35% or 50%, with the Zip
+  Bomb at 6 Integrity, and with the best switch cycle chosen afterwards per fight, the planner gains under 5 on every
+  class but one at one level. The tempo the Zip Bomb costs and the interrupt ticks the blast spends off-cycle outweigh
+  it. Open for the designer: a cheaper Zip Bomb, a bigger blast, or a blast that also cuts.
 
 ### 3.4 The Lockbox: held, not lost
 
@@ -126,6 +145,12 @@ are first guesses for the harness to tune.
   chip kits barely use it, so the timing differs by class.
 - **On the board.** The Lockbox row shows the damage it holds, in your teal, and the partner's bar shows where that
   would leave it.
+- **As built** (`CONFIG.wardHeld` 50%, `order.mjs` `cashIn`, `heldOf`). What the cap holds back goes into the Lockbox,
+  per partner; when it breaks, half lands on the partner at once, through its ◆, never a crit. *Cash in*: half of what
+  it holds breaks the partner; the planner breaks the Lockbox then, a burn class too, and otherwise plays as before.
+  `node solved.mjs rules 10 18 30`: no fixed rule wins. Planner / Lockbox first / Lockbox last: at 10 Breaker 36/43/88,
+  Bastion 35/35/4, Infiltrator 87/91/53, Operator 30/35/36; at 18 22/19/19, 26/40/23, 18/8/44, 26/51/29; at 30
+  29/78/53, 26/29/51, 37/1/47, 24/44/27 (5 or 6 fights a row, so single fights swing a cell by 15 or more).
 
 ### 3.5 Seals: a dial, not a switch
 

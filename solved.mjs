@@ -29,7 +29,7 @@ import { player, playOut, HOME } from './genesim.mjs';
 import { livingParts, barKeys, readyIn, toIntent, hooks, selectEncounter, fresh } from './dist/combat.mjs';
 import { GENES } from './dist/genes.mjs';
 import { ARCHETYPES, BOSSES, TELL } from './dist/data.mjs';
-import { planner, plannerWithout, kitPlanner } from './dist/planner.mjs';
+import { planner, plannerWithout, kitPlanner, preferring } from './dist/planner.mjs';
 import { seeded } from './dist/gear.mjs';
 import { TIER } from './dist/research.mjs';
 import * as R from './dist/routines.mjs';
@@ -48,7 +48,7 @@ export const blind = (s) => {
 export const kit = (s) => kitPlanner(s); // the planner with every tell and gene unread (planner.mjs kitPlanner)
 export const learner = (share, seed) => { const r = seeded((seed * 2654435761 + 0x1ea7) >>> 0); return (s) => (r() < share ? kit(s) : planner(s)); };
 // The program: research at a tier on every part of the fight's virus and (prepared) its routine fitted to the trick:
-// the preset of each lever in the fight (Hold on the beat, Tripwire last, Lockbox first), then Answer the tells, as
+// the preset of each lever in the fight (Quiet on the beat, Trip when loud wins, Cash in), then Answer the tells, as
 // many handlers as its RAM holds (routines.mjs presetsFor). Set up on its first cycle, then it types nothing and the
 // timer runs the program.
 export function prepare(s) {
@@ -56,8 +56,10 @@ export function prepare(s) {
   if (!R.isBody(body)) return null;
   const here = new Set(s.encounter.virus.parts.map((p) => p.id)), ps = R.presetsFor(s, body);
   const lever = (k) => ps.filter((p) => p.part && here.has(p.part) && p.id.startsWith(k + ':'));
-  // What fits, by need: the levers (a part to break first, a beat, a part to break last, twins), then the tells.
-  const want = [...['first', 'beat', 'last', 'together'].flatMap(lever), ps.find((p) => p.id === 'tells')].filter(Boolean).flatMap((p) => p.handlers);
+  // What fits, by need: the levers (a part to break first, a beat, a part to break last, twins), then the tells. An order
+  // lever's reading preset (cash in, loud wins, blast pays: docs/puzzle-levers.md 7) comes in place of its plain one.
+  const levers = ['cash', 'loud', 'blast', 'first', 'beat', 'last', 'together'].flatMap(lever).filter((p, i, a) => a.findIndex((q) => q.part === p.part) === i);
+  const want = [...levers, ps.find((p) => p.id === 'tells')].filter(Boolean).flatMap((p) => p.handlers);
   const hs = [], budget = R.ramFor(s, body);
   let used = 0;
   for (const h of want) {
@@ -161,6 +163,24 @@ export function misses(tier, L, w) {
 // Each P2 rule adds its own entry beside its code's tests (docs/puzzle-levers.md 8).
 export const FIXED = {};
 export const FIXED_MARGIN = 5; // a side must lose this many more points of Signal than the planner on some class
+// Two ways to take one side of an order lever (a part to break early or late), as wrappers of a move function:
+//   aimAt(gene)      while a part carrying the gene stands, it is the player's target (planner.mjs preferring): it
+//                    still answers what lands now and the tells, and works on that part the rest of the time
+//   leaveLast(gene)  while anything else stands, the part is out of the player's sight, so nothing it plans goes at it
+const leverPart = (s, gene) => livingParts(s).find((p) => GENES[gene].carried(p));
+export const aimAt = (gene) => (move) => (s) => preferring(leverPart(s, gene) || null, () => move(s));
+export const leaveLast = (gene) => (move) => (s) => {
+  const p = leverPart(s, gene);
+  if (!p || !livingParts(s).some((x) => x !== p && x.kind === 'system')) return move(s);
+  const hp = p.integrity;
+  p.integrity = 0;
+  try { return move(s); } finally { p.integrity = hp; }
+};
+// The order levers (docs/puzzle-levers.md 3.2 to 3.4): the Tripwire (loud both ways), the Zip Bomb (the blast hits both
+// sides), the Lockbox (held, not lost).
+FIXED.tripwire = { name: 'Tripwire', gene: 'tripwire', family: 'ransomware', from: 16, sides: { 'always trip early': aimAt('tripwire'), 'never trip': leaveLast('tripwire') } };
+FIXED.zipbomb = { name: 'Zip Bomb', gene: 'zipbomb', family: 'worm', from: 6, sides: { 'always early': aimAt('zipbomb'), 'always last': leaveLast('zipbomb') } };
+FIXED.lockbox = { name: 'Lockbox', gene: 'ward', family: 'ransomware', from: 6, sides: { 'Lockbox first': aimAt('ward'), 'Lockbox last': leaveLast('ward') } };
 // The wild rolls of a family at a level that carry a gene: the first n seeds, built as balance.mjs fight builds them.
 export function rolledWith(gene, family, L, n = 6) {
   const out = [];

@@ -85,7 +85,7 @@ export const GENES = {
 
   // ---------- part behaviours ----------
   ward: { name: 'Ward', adj: 'Warded', lever: 'first', cat: 'part', axis: 'shell', role: 'primary', cost: 2, opens: 3, decode: 'part', suits: 'Ransomware, TOLLGATE',
-    does: 'While the ward stands, its partner loses at most 25% of its max Integrity each cycle.', telegraph: 'A warded tag on the partner shows the damage held back.', answer: 'Break the ward first, or chip under the cap. Lockpick, Keyjam, Sudo and Zero-day get through it.',
+    does: 'While the ward stands, its partner loses at most 25% of its max Integrity each cycle. The ward holds the damage past the cap, and when it breaks, half of what it holds lands on the partner at once.', telegraph: 'The damage it holds, in your colour, and a ghost on the partner\'s bar of where half of it would leave it.', answer: 'Break the ward the cycle half of what it holds finishes the partner, first if you burst, or chip under the cap. Lockpick, Keyjam, Sudo and Zero-day get through it.',
     implicit: 'Your hits get through a ward\'s cap more.', carried: (p) => !!p.ward, bot: { focus: 'first' }, counter: 'mutexlock',
     parts: { ransomware: { id: 'lockbox', name: 'Lockbox', integrity: 16, armor: 0, loot: 'Lock Pin', ward: 'encryptor', from: 3, pool: 'third', sig: true } } },
   mutexlock: { name: 'Mutex lock', adj: 'Locked', lever: 'first', cat: 'part', axis: 'shell', role: 'primary', cost: 3, opens: 8, decode: 'part', suits: 'Ransomware, TOLLGATE',
@@ -93,7 +93,7 @@ export const GENES = {
     implicit: 'Locks take more from you.', carried: (p) => !!p.lock, bot: { focus: 'first' }, counter: 'limiter',
     parts: { ransomware: { id: 'mutex', name: 'Mutex', integrity: 18, armor: 1, loot: 'Mutex Handle', lock: 'encryptor', from: 8, pool: 'third', sig: true } } },
   tripwire: { name: 'Tripwire', adj: 'Wired', lever: 'last', cat: 'part', axis: 'order', role: 'primary', cost: 2, opens: 16, decode: 'part', suits: 'Ransomware, TOLLGATE',
-    does: 'When broken while other parts stand, the others go loud for the rest of the fight. Loud parts deal 25% more damage and attack 1 cycle sooner.', telegraph: 'A tripwire tag, then a loud tag on the others.', answer: 'Break it last. Quiet Wire, Logic Bomb and Sudo keep it quiet, and Throttle silences a loud part.',
+    does: 'When broken while other parts stand, the others go loud for the rest of the fight, both ways. Loud parts deal 25% more damage and attack 1 cycle sooner, and they take 40% more damage and drop their ◆.', telegraph: 'A tripwire tag. When your move would break it, the others\' attacks at their loud numbers and their ◆ falling.', answer: 'Break it last, or first when you can finish the rest before their attacks add up. Quiet Wire, Logic Bomb and Sudo keep it quiet, and Throttle silences a loud part.',
     implicit: 'Loud parts hit you less.', carried: (p) => !!p.deadman, bot: { focus: 'last' }, counter: 'zipbomb',
     parts: { ransomware: { id: 'tripwire', name: 'Tripwire', integrity: 18, armor: 1, loot: 'Trip Coil', deadman: true, from: 16, pool: 'third', attack: { name: 'Ping', effect: 'damage', amount: 3, interval: 3, first: 3 } } } },
   twin: { name: 'Twin', adj: 'Twinned', lever: 'together', cat: 'part', axis: 'order', role: 'primary', cost: 2, opens: 3, decode: 'part', suits: 'Worm, SWARMLINE',
@@ -115,7 +115,7 @@ export const GENES = {
   // The parts plan's first wave (docs/parts-plan.md P1): third parts for levels 1 to 12. sig: it refers to the
   // signature part, so a fight without its signature never rolls it (parts.mjs).
   zipbomb: { name: 'Zip bomb', adj: 'Fused', lever: 'last', cat: 'part', axis: 'burst', role: 'primary', cost: 2, opens: 5, floor: 1, decode: 'part', suits: 'Ransomware, Worm, TOLLGATE',
-    does: 'When broken, lights a 2-cycle fuse. The blast deals 20% of your max health to you. A shield or ◆ absorbs the blast. Ending the fight puts the fuse out.', telegraph: 'A fuse chip on its row that counts down 2, 1.', answer: 'Break it last, or have a shield or ◆ up when the fuse runs out.',
+    does: 'When broken, lights a 2-cycle fuse. The blast deals 20% of your max health to you. It also takes 20% of each virus part\'s own max and a ◆ from each. A shield or ◆ absorbs your share. Ending the fight puts the fuse out.', telegraph: 'A fuse chip on its row that counts down 2, 1, and the blast\'s bite as a ghost on every other bar.', answer: 'Break it last, or early when its blast breaks a part and a shield or ◆ is up when the fuse runs out.',
     implicit: 'Fuses on you deal less.', carried: (p) => !!p.fuse, bot: { focus: 'last' },
     parts: { ransomware: { id: 'zipbomb', plan: 1, name: 'Zip Bomb', integrity: 14, armor: 0, loot: 'Fuse Wire', fuse: true, from: 5, pool: 'third' }, worm: { id: 'zipbomb', plan: 1, name: 'Zip Bomb', integrity: 14, armor: 0, loot: 'Fuse Wire', fuse: true, from: 5, pool: 'third' } } },
   hotspot: { name: 'Hotspot', adj: 'Heated', lever: 'last', cat: 'part', axis: 'burst', role: 'amplifier', cost: 1, opens: 6, floor: 1, decode: 'part', suits: 'Ransomware, Ghostroot',

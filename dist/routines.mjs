@@ -51,6 +51,7 @@ import { decoded as geneDecoded } from './genome.mjs';
 import { kitPlanner, kitPlannerAt, soonest } from './planner.mjs';
 import { GENES } from './genes.mjs';
 import { isUp } from './floorplan.mjs';
+import { loudWins, blastPays, cashIn } from './order.mjs';
 
 export const ROUTINES = {
   unlockLevel: 5, // the class level routines open at; below it the timer repeats your last hit
@@ -82,7 +83,13 @@ export const PART_WHEN = {
   tell: { tier: TIER.rule, ram: 2, icon: 'counter', short: 'tell live', label: (n) => `${n} tell live`, tip: (n) => `A tell on the ${n} can be answered this cycle.` },
   pretell: { tier: TIER.mastered, ram: 3, icon: 'mastered', short: 'before tell', label: (n) => `before ${n} tell`, tip: (n) => `The cycle before a tell on the ${n} can be answered.` },
   open: { tier: TIER.mastered, ram: 3, icon: 'mastered', short: 'Open', label: (n) => `${n} Open`, tip: (n) => `The ${n} is Open: you read its tell.` },
+  // The order levers (docs/puzzle-levers.md 7; order.mjs reads them): each only on the part whose gene it reads.
+  loudwins: { tier: TIER.rule, ram: 2, icon: 'trace', short: 'loud wins', gene: 'tripwire', label: (n) => `${n} loud wins`, tip: (n) => `Breaking the ${n} now, then every other part loud, takes no more of your cycles than breaking them as they are, and pulls no attack into this cycle that nothing of yours would take.` },
+  blastpays: { tier: TIER.rule, ram: 2, icon: 'payload', short: 'blast pays', gene: 'zipbomb', label: (n) => `${n} blast pays`, tip: (n) => `The ${n} breaks this cycle, its blast would break another part, and a ◆ or a shield of yours covers its fuse.` },
+  cashin: { tier: TIER.rule, ram: 2, icon: 'unlock', short: 'cash in', gene: 'ward', label: (n) => `${n} cash in`, tip: (n) => `Half of the damage the ${n} holds would break its partner the moment it breaks.` },
 };
+// A part chip that reads one gene's rule fits only the parts that carry it.
+const chipFits = (cond, spec) => !PART_WHEN[cond]?.gene || !!(spec && GENES[PART_WHEN[cond].gene].carried(spec));
 // WHEN chips about the fight or you. open(s): whether your research has it.
 const anyKey = (s, end, tier) => Object.keys(s.research || {}).some((k) => k.endsWith(':' + end) && researchAt(s, k) >= tier);
 export const GLOBAL_WHEN = {
@@ -152,7 +159,7 @@ export function parseWhen(id) {
   if (GLOBAL_WHEN[w]) return { kind: 'global', id: w, def: GLOBAL_WHEN[w] };
   if (w.startsWith('mut:') && MUTATIONS[w.slice(4)] && !MUTATIONS[w.slice(4)].retired) return { kind: 'mutation', id: w, mut: w.slice(4), def: MUT_WHEN };
   const i = w.lastIndexOf(':'), ref = w.slice(0, i), cond = w.slice(i + 1);
-  if (i > 0 && ref.includes(':') && PART_WHEN[cond]) return { kind: 'part', id: w, ref, cond, def: PART_WHEN[cond] };
+  if (i > 0 && ref.includes(':') && PART_WHEN[cond] && chipFits(cond, specOf(ref))) return { kind: 'part', id: w, ref, cond, def: PART_WHEN[cond] };
   return null;
 }
 // Is this WHEN chip yours to use (researched)?
@@ -313,6 +320,10 @@ export function presetsFor(s, body) {
   for (const x of specs.filter((y) => leverOf(y) && at(y, TIER.rule)).sort((a, b) => here.has(b.id) - here.has(a.id))) {
     const ref = `${body}:${x.id}`, lever = leverOf(x);
     if (lever === 'beat') add(`beat:${x.id}`, 'Quiet on the beat', 'echo', `On the ${x.name}'s beat, your rotation fires nothing with a direct hit: a shield, a strip, a burn, or nothing.`, [{ when: 'beat1', do: ROTATE.id, target: 'nobeat' }], x.id);
+    // The order levers' reading presets (docs/puzzle-levers.md 7): the lever's chip first, then its plain answer.
+    if (x.deadman) add(`loud:${x.id}`, 'Trip when loud wins', 'trace', `Your rotation on the ${x.name} when loud wins, else on the other parts while it stands.`, [{ when: `${ref}:loudwins`, do: ROTATE.id, target: 'that' }, { when: `${ref}:present`, do: ROTATE.id, target: 'others' }], x.id);
+    if (x.fuse) add(`blast:${x.id}`, 'Blast when it pays', 'payload', `Your rotation on the ${x.name} when its blast pays, else on the other parts while it stands.`, [{ when: `${ref}:blastpays`, do: ROTATE.id, target: 'that' }, { when: `${ref}:present`, do: ROTATE.id, target: 'others' }], x.id);
+    if (x.ward) add(`cash:${x.id}`, 'Cash in', 'unlock', `Your rotation on the ${x.name} when half of what it holds would break its partner. Until then, your rotation plays the rest.`, [{ when: `${ref}:cashin`, do: ROTATE.id, target: 'that' }], x.id);
     if (lever === 'last') add(`last:${x.id}`, `${x.name} last`, 'part', `Your rotation on the other parts while the ${x.name} stands, then on it.`, [{ when: `${ref}:present`, do: ROTATE.id, target: 'others' }], x.id);
     if (lever === 'together') add(`together:${x.id}`, 'Twins together', 'part', `Your rotation on whichever of the ${x.name} and its twin has more left, so they break close together.`, [{ when: `${ref}:present`, do: ROTATE.id, target: 'twins' }], x.id);
     if (lever === 'first') add(`first:${x.id}`, `${x.name} first`, 'part', `Your rotation on the ${x.name} before the other parts.`, [{ when: `${ref}:present`, do: ROTATE.id, target: 'that' }], x.id);
@@ -375,6 +386,9 @@ function holds(s, w) {
       case 'tell': return mine.some((i) => i.tell && i.open && !isBeat(i));
       case 'pretell': return mine.some((i) => i.tell && !i.open && i.winFrom === 1 && !isBeat(i));
       case 'open': return p.openUntil >= e.cycle;
+      case 'loudwins': return loudWins(s)?.part === p;
+      case 'blastpays': return blastPays(s)?.part === p;
+      case 'cashin': return cashIn(s)?.part === p;
       default: return false;
     }
   });
@@ -708,7 +722,7 @@ export function palette(s, body = focusBody(s)) {
   const glob = Object.keys(GLOBAL_WHEN).map((id) => ({ id, open: whenOpen(s, id) }));
   const muts = Object.keys(MUTATIONS).filter((m) => !MUTATIONS[m].retired).map((m) => ({ id: 'mut:' + m, open: whenOpen(s, 'mut:' + m) })).filter((x) => x.open);
   const refs = bodyRefs(body).filter((k) => researchAt(s, k) > 0);
-  const parts = refs.map((ref) => ({ ref, name: refName(ref), body: bodyName(body), n: researchAt(s, ref), chips: Object.keys(PART_WHEN).map((c) => ({ id: `${ref}:${c}`, cond: c, open: researchAt(s, ref) >= PART_WHEN[c].tier, tier: PART_WHEN[c].tier })) }));
+  const parts = refs.map((ref) => ({ ref, name: refName(ref), body: bodyName(body), n: researchAt(s, ref), chips: Object.keys(PART_WHEN).filter((c) => chipFits(c, specOf(ref))).map((c) => ({ id: `${ref}:${c}`, cond: c, open: researchAt(s, ref) >= PART_WHEN[c].tier, tier: PART_WHEN[c].tier })) }));
   return { glob, muts, parts };
 }
 

@@ -57,13 +57,20 @@ export const CONFIG = {
   runDamage: 2.1, // × enemy attacks
   thirdTrim: 0.85, // a family's third part (Lockbox, Mirror, Decoy) comes out of the other two's Integrity
   ward: 0.25, // Lockbox: the warded part loses at most this share of its max a cycle
+  wardHeld: 0.5, // Lockbox: what the cap holds back isn't lost; the Lockbox holds it, and when it breaks this share lands on the partner at once (docs/puzzle-levers.md 3.4)
   twinReboot: { in: 3, at: 0.4, max: 1 }, // Mirror: a twin reboots this many cycles later at 40% with its armor, once
   mirrorBounce: 0.3, // Decoy: a mirrored command does nothing and this share bounces back
   // The third parts that change the fight (FAMILIES, pool 'third'; GAME_RULES.md Families):
   mutex: { share: 0.25, every: 4 }, // Mutex: the part it locks carries a shield of a quarter of its max, back to full 4 cycles after it breaks
-  tripwire: { loud: 1.25 }, // Tripwire: break it while the others live and they hit 25% harder, each attack a cycle sooner
+  // Tripwire: break it while the others live and they go loud, both ways (docs/puzzle-levers.md 3.2): they hit 25% harder
+  // (loud) and every attack comes a cycle sooner (sooner: off each interval, 2 at the fastest), and they take 40% more
+  // damage (taken) and drop their ◆ for good. Loud wins (the planner's and the routine chip's reading, order.mjs): the
+  // others' Integrity is under what your next `window` cycles deal them loud.
+  tripwire: { loud: 1.25, sooner: 1, taken: 1.4, window: 5 },
   c2: { gnaw: 0.5 }, // C2 Node: while it lives, fragments gnaw 50% harder; break it and they drop with it
-  zipbomb: { fuse: 2, share: 0.2 }, // Zip Bomb: break it and it goes off 2 cycles later for 20% of your max (a ◆ or a shield takes it)
+  // Zip Bomb: break it and it goes off 2 cycles later, on both sides (docs/puzzle-levers.md 3.3): 20% of your max to you (a
+  // ◆ or a shield takes it), and to every part of the virus 20% of its own max and one ◆ (parts).
+  zipbomb: { fuse: 2, share: 0.2, parts: 0.2 },
   runEarly: [1, 1, 1.35, 1.5, 1.45, 1.45, 1.45, 1.45, 1.45, 1.45, 1.45, 1.45, 1.35, 1.25, 1.15, 1.05], // and this on top, by enemy level (1 past 16): levels 5–12 hit hardest, before gear catches up
   // ...and from level 10 a late step on top of that (linear between the points, flat after the last): your
   // subclass, talents, a fifth and sixth protocol slot and v2–v3 services outgrow the 4% a level, so without
