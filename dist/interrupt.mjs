@@ -129,6 +129,15 @@ function wasted(s, p, t, why) {
   e.metrics.wasted = (e.metrics.wasted || 0) + 1;
   emit(s, 'tick-wasted', `The ${p.name} crosses ${pct(t.at)} ${why}. That tick is spent.`, { target: p.id, tick: t.at, wasted: true });
 }
+// The attack due now is cancelled (a cut, or SIGINT on a charge riding it: tells.mjs tellSigint). Its schedule goes on
+// as if it had landed.
+export function cancelAttack(s, p) {
+  const e = s.encounter, a = p.attack;
+  a.due = a.tap ? Math.max(e.cycle + 1, a.volley + a.interval) : e.cycle + a.interval; // a volley cut mid-way: the rest of it goes too
+  a.tap = 0; a.volley = null;
+  a.n = (a.n || 0) + 1;
+  if (a.windup) a.wound = 0;
+}
 // Cancel what the part has due now. Its schedule goes on as if it had landed.
 function cancel(s, p, due, t) {
   const e = s.encounter, names = [];
@@ -140,10 +149,7 @@ function cancel(s, p, due, t) {
       const charge = (tellsOf(s)?.list || []).find((x) => x.told && x.kind === 'charge' && x.part === p.id && x.n === (a.n || 0));
       if (charge) { tellAnswer(s, charge, p, `Cut: ${charge.name.toUpperCase()} called off.`, { stagger: false }); names.push(charge.name); }
       else names.push(a.name);
-      a.due = a.tap ? Math.max(e.cycle + 1, a.volley + a.interval) : e.cycle + a.interval; // a volley cut mid-way: the rest of it goes too
-      a.tap = 0; a.volley = null;
-      a.n = (a.n || 0) + 1;
-      if (a.windup) a.wound = 0;
+      cancelAttack(s, p);
     } else if (d.kind === 'deliver') { p.deliver.due = e.cycle + p.deliver.interval; names.push('delivery'); }
     else if (d.kind === 'tell') { tellAnswer(s, d.t, p, `You cut the ${p.name} on its cycle: ${d.t.name.toUpperCase()} is stopped.`, { stagger: false }); names.push(d.t.name); }
   }

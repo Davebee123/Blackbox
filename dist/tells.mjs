@@ -8,8 +8,9 @@
 //           the charge `lead` cycles ahead and it lands exactly when that attack was due. Delaying the attack moves
 //           the charge with it. It rides the attack's landing count (attack.n), not a cycle.
 //   cast    compiling a buff on the virus, from level 10: a marked cell on its part's row, `lead` cycles ahead.
-//   seal    if its part still wears ◆ when it lands, it re-arms with one ◆ more and every stripped part gets one
-//           back. A marked cell, `lead` ahead.
+//   seal    a dial (docs/puzzle-levers.md 3.5): each ◆ its part still wears when it lands gives one ◆ back to every
+//           part (TELL.seal), never past that part's max. A full strip costs nothing, a half strip half. A marked
+//           cell, `lead` ahead, that shows the ◆ it would hand out.
 //   mimic   the Mimic's beat (every 4 cycles): it plays the command you fire then back at you.
 // Each tell sits on a fixed part (the family's signature part for its charge and seal, its basic part for its
 // cast), shown on the chip and in the codex. No pile-ups: a charge never lands with another part's heavy attack
@@ -17,8 +18,10 @@
 //
 // The answers (3.5). A charge: an interrupt on its part on its cycle (interrupt.mjs: the attack it rides is cancelled,
 // and the charge with it), or a skill built for it (Suspend, Jam, Spoofed ACK, Hijack, Blackhole, Backfire); ◆, a
-// shield, Brace and Bulkhead soften it. A cast: SIGINT in its 2-cycle window, an interrupt on its part in the window,
-// or a built answer (Quarantine, Hijack, Revoke). A seal: strip the part before it lands. The Mimic: fire no direct
+// shield, Brace and Bulkhead soften it; SIGINT cuts it on its cycle too. A cast: SIGINT in its 2-cycle window, an
+// interrupt on its part in the window, or a built answer (Quarantine, Hijack, Revoke). One SIGINT, two clocks: each
+// cast and charge shows its price (tellPrice), and SIGINT goes on the dearer one (docs/puzzle-levers.md 3.6). A seal:
+// strip the part before it lands, as far as it pays. The Mimic: fire no direct
 // hit on its beat, or interrupt it then. Reading pays: a charge, a cast or the Mimic answered staggers the part (Open,
 // +50% from everyone for 2 cycles) and adds XP to the kill; reading every tell in a fight rolls its loot once more.
 // Ignoring hurts: a tell that lands leaves an after-effect (your last skill locked, Corrupted, Hung) by level.
@@ -32,13 +35,14 @@
 //         opened, once logged) }]
 //   tier  the level tier's numbers (count, live, lead, mult, cap, dot, after, burn, hang), with an elite's or a
 //         boss's extra cap
-import { hit, implanted, emit, alive, part, livingParts, attackers, defender, hackerLevel, skillBase, gearStat, attackAmount, strikeWith, toIntent, usable, readyIn, alliesOf, fxAnswer, fxOn, cooldownOf } from './combat.mjs';
+import { hit, implanted, emit, alive, part, livingParts, attackers, defender, hackerLevel, skillBase, gearStat, attackAmount, strikeWith, toIntent, usable, readyIn, alliesOf, fxAnswer, fxOn, cooldownOf, armorTakes, ignoresArmor } from './combat.mjs';
 import { CONFIG, TELL, TELLS, TELL_SETS, SEAL_FROM, STRAINS, ABILITIES, BOSSES } from './data.mjs';
 import { previewDamage, delayAttack } from './combat.mjs';
 import { raidDef } from './raid.mjs';
 import { readGene, seeGene, logTell } from './genome.mjs';
 import { gainResearch } from './research.mjs';
 import { daemonsOn } from './daemons.mjs';
+import { cancelAttack, crossBy, interruptMove, nextTick } from './interrupt.mjs';
 import { ignores } from './genes.mjs';
 
 // What a fight's tells did, on its metrics (the gap test reads them): said, answered, read (answered by a command
@@ -141,7 +145,7 @@ export function tellStart(s) {
   const elite = v.elite && !v.champion;
   const list = plannedTells(v);
   const cap = tier.cap * (elite ? TELL.elite.cap : v.champion ? TELL.champion.cap : v.boss ? TELL.boss.cap : 1);
-  v.tells = { list: list.map((t, i) => ({ ...t, told: false, next: null, n: null, said: null, count: 0, after: t.kind === 'mimic' ? t.first : TELL.first + (t.kind === 'seal' ? 3 : i ? 1 : 0) })), tier: { ...tier, cap, dot: tier.dot * (cap / tier.cap) } };
+  v.tells = { list: list.map((t, i) => ({ ...t, told: false, next: null, n: null, said: null, count: 0, after: t.kind === 'mimic' ? t.first : TELL.first + (t.kind === 'seal' ? TELL.sealAfter : i ? 1 : 0) })), tier: { ...tier, cap, dot: tier.dot * (cap / tier.cap) } };
   for (const t of v.tells.list) if (t.kind !== 'mimic') t.after += jitter(v, t);
   announce(s);
 }
@@ -221,7 +225,7 @@ function say(s, t, p, next, n) {
 const when = (n) => (n <= 0 ? 'this cycle' : n === 1 ? 'next cycle' : `in ${n} cycles`);
 // The answer, exactly, for the chip's hover and the log: what counts, and when.
 export function answerOf(t, p) {
-  if (t.kind === 'charge') return `cut the ${p?.name} on its cycle${p?.armor > 0 ? `, past its ${p.armor} ◆` : ''}`;
+  if (t.kind === 'charge') return `cut the ${p?.name} on its cycle${p?.armor > 0 ? `, past its ${p.armor} ◆` : ''}${TELL.sigintCharge ? ', or SIGINT it then' : ''}`;
   if (t.kind === 'cast') return `SIGINT in its window, or cut the ${p?.name} in it`;
   if (t.kind === 'seal') return `strip the ${p?.name} before it lands`;
   if (t.kind === 'lock') return `break the ${p?.name}, or feed it a skill already cooling`;
@@ -235,7 +239,7 @@ export function sayOf(s, t, p = sourceOf(s, t)) {
   const n = tellNext(s, t) - s.encounter.cycle, L = label(t), head = t.kind === 'mimic' ? `The ${p.name} plays you back ${when(n)}.` : `The ${p.name}'s ${L} lands ${when(n)}.`;
   if (t.kind === 'charge') return `${head} Cut it on that cycle${p.armor > 0 ? `, past its ${p.armor} ◆` : ''}.`;
   if (t.kind === 'cast') return `${head} SIGINT or cut it in its window${n > 0 && windowWhen(s, t) <= 0 ? ', open now' : ''}.`;
-  if (t.kind === 'seal') return `${head} Strip its ${p.armor} ◆ before then, or it re-arms.`;
+  if (t.kind === 'seal') return `${head} Each ◆ it still wears then comes back on every part: strip its ${p.armor} ◆ first.`;
   if (t.kind === 'lock') return `${head} It locks your next command for ${cycles(t.cycles || 3)}. Break it, or feed it a cooling skill.`;
   return `${head} It copies what you fire then. Go quiet, or cut it.`;
 }
@@ -381,8 +385,8 @@ function chargeAttack(s, t, p) {
 // until it runs out or you cleanse it (Purge, Scrub, Rollback).
 // Sandman (a native unique): a tell that lands leaves nothing behind.
 const clean = (s) => !!fxOn(s.host || s, 'no-after');
-function corrupt(s, t, p) {
-  const k = tellsOf(s).tier.burn;
+function corrupt(s, t, p, share = 1) {
+  const k = tellsOf(s).tier.burn * share; // a seal: the share of its ◆ still on when it lands
   if (!k || clean(s)) return;
   const amount = Math.max(1, Math.round(defender(s).max * k));
   s.encounter.corrupt = { name: t.name, amount, left: 3, source: p.id };
@@ -453,15 +457,17 @@ export function tellLand(s) {
         tally(s, t, 'answered'); read(s, t, p, { open: true }); credit(s, t, p);
         hit(s, p, 2 * (p.poison || 15), { by: 'Cache Poison', pierce: true });
       } else if (p.armor > 0) {
-        // It re-arms to full with one ◆ more for the rest of the fight, and every stripped part gets a ◆ back. Your ◆ and shield go too.
-        p.maxArmor += 1; p.armor = p.maxArmor; p.patchAt = null;
-        const re = livingParts(s).filter((x) => x !== p && x.maxArmor > 0 && x.armor < x.maxArmor);
-        for (const x of re) { x.armor++; x.patchAt = null; }
+        // A dial (docs/puzzle-levers.md 3.5): each ◆ it still wears gives one ◆ back to every part, itself included, never
+        // past a part's max. What it does to you scales the same way: the share of its ◆ still on (sealShare) of your ◆
+        // and shield goes, and you're Corrupted at that share. A full strip costs nothing, a half strip half.
+        const got = sealGives(s, p).filter((x) => x.n > 0), share = sealShare(p);
+        for (const { x, n } of got) { x.armor += n; x.patchAt = null; }
         const proof = !!fxOn(s, 'seal-proof'); // Write Blocker (a native unique): it writes nothing back to you
-        const mine = T.tier.after && !proof && (e.chits || e.shield) ? ' Your ◆ and shield go.' : '';
-        if (mine) { e.chits = 0; e.shield = 0; }
-        if (T.tier.after && !proof) corrupt(s, t, p);
-        emit(s, 'patch', `${label(t)} lands: the ${p.name} re-arms to ${p.armor} ◆${re.length ? `, ${re.map((x) => x.name).join(' and ')} +1 ◆` : ''}.${mine}`, { target: p.id, tell: t.id, missed: true });
+        const lose = (n) => Math.round((n || 0) * share);
+        const mine = T.tier.after && !proof && (lose(e.chits) || lose(e.shield)) ? (share >= 1 ? ' Your ◆ and shield go.' : ` You lose ${Math.round(share * 100)}% of your ◆ and shield.`) : '';
+        if (T.tier.after && !proof) { e.chits = (e.chits || 0) - lose(e.chits); e.shield = (e.shield || 0) - lose(e.shield); }
+        if (T.tier.after && !proof) corrupt(s, t, p, share);
+        emit(s, 'patch', `${label(t)} lands: ${got.length ? got.map(({ x, n }) => `the ${x.name} +${n} ◆`).join(', ') : 'every part is already at its max ◆'}.${mine}`, { target: p.id, tell: t.id, missed: true, armor: got.reduce((n, x) => n + x.n, 0) });
       } else {
         emit(s, 'blocked', `${label(t)} fails. The ${p.name} has no ◆ to seal.`, { source: p.id, tell: t.id, answered: true });
         // The strip that did it, if it was a read (after the seal was said): that skill is ready again.
@@ -506,8 +512,8 @@ function castLands(s, t, p) {
     emit(s, 'phase', `${label(t)} compiles. Every attack deals ${Math.round((TELL.loud - 1) * 100)}% more damage for ${cycles(lasts)}.`, { target: p.id, tell: t.id, missed: true });
   } else if (t.does === 'grow') {
     const all = livingParts(s).filter((x) => x.kind === 'system' && !implanted(s, x)); // a Rootkit Implant stops it growing
-    for (const x of all) { const n = Math.round(x.max * TELL.grow); x.max += n; x.integrity += n; }
-    emit(s, 'phase', `${label(t)} compiles. ${all.length === 1 ? `The ${all[0].name}` : 'Every part'} grows ${Math.round(TELL.grow * 100)}% more Integrity.`, { target: p.id, tell: t.id, missed: true });
+    const grown = all.map((x) => { const n = growOf(x, t); x.max += n; x.integrity += n; return n; }).reduce((a, b) => a + b, 0);
+    emit(s, 'phase', `${label(t)} compiles. ${all.length === 1 ? `The ${all[0].name} grows` : 'Every part grows'} by ${Math.round((t.grow ?? TELL.grow) * 100)}% of the Integrity it has left, ${grown} in all.`, { target: p.id, tell: t.id, missed: true });
   } else if (t.does === 'overclock') {
     // Every attack still to come moves a cycle sooner (never onto this cycle, which is over), and every part takes double.
     if (fresh) for (const x of attackers(s)) if (x.attack.due < 900 && x.attack.due >= c + 2) x.attack.due--;
@@ -608,31 +614,114 @@ function shred(s, p, t) {
   }
 }
 
-// ---------- SIGINT on a solo cast ----------
-// The cast compiling now (the one landing soonest), for SIGINT.
+// ---------- SIGINT: one key, two clocks (docs/puzzle-levers.md 3.6) ----------
+// The tells SIGINT can stop: a told cast, and a told charge (TELL.sigintCharge), soonest first.
+// The breach build keeps its own rules (GAME_RULES.md "Tells"): there SIGINT stops casts only.
+export const sigintCharges = (s) => !!TELL.sigintCharge && !s.encounter?.breach;
+const sigintable = (s) => (tellsOf(s)?.list || []).filter((t) => t.told && (t.kind === 'cast' || (t.kind === 'charge' && sigintCharges(s))) && alive(sourceOf(s, t))).sort((a, b) => tellNext(s, a) - tellNext(s, b));
+// The cast compiling now (the one landing soonest).
 export function tellCast(s) {
   const T = tellsOf(s);
   return T ? T.list.filter((t) => t.kind === 'cast' && t.told).sort((a, b) => a.next - b.next)[0] || null : null;
 }
-// Why SIGINT can't fire on a solo fight now, or null: nothing compiling, or the cast's window isn't open yet.
+// What SIGINT would stop now: the cast or charge in its window that lands first, or null.
+export const sigintTarget = (s) => sigintable(s).find((t) => inWindow(s, t)) || null;
+// Why SIGINT can't fire on a solo fight now, or null: nothing compiling or charging, or no window open yet.
 export function tellSigintCheck(s) {
-  const t = tellCast(s);
-  if (!t) return 'Nothing is compiling. SIGINT stops a cast.';
-  if (!inWindow(s, t)) return `Too early. ${t.name}'s window opens ${when(windowWhen(s, t))}. SIGINT only interrupts a cast in its window.`;
-  return null;
+  if (sigintTarget(s)) return null;
+  const t = sigintable(s)[0];
+  const what = sigintCharges(s) ? 'a cast or a charge' : 'a cast';
+  if (!t) return `Nothing is compiling${sigintCharges(s) ? ' or charging' : ''}. SIGINT stops ${what}.`;
+  return `Too early. ${t.name}'s window opens ${when(windowWhen(s, t))}. SIGINT only stops ${what} in its window.`;
 }
 export function tellSigint(s) {
-  const t = tellCast(s);
-  if (!t || !inWindow(s, t)) return false;
+  const t = sigintTarget(s), e = s.encounter;
+  if (!t) return false;
   const p = sourceOf(s, t);
   t.interrupted = (t.interrupted || 0) + 1;
-  s.encounter.metrics.interrupts++;
+  e.metrics.interrupts++;
+  // A charge: SIGINT cuts it as a cut on its part does (interrupt.mjs cancelAttack): the attack it rides is cancelled,
+  // charge and all, and its schedule goes on as if it had landed.
+  if (t.kind === 'charge') {
+    tellAnswer(s, t, p, `SIGINT cuts ${label(t)}: the ${p.name}'s ${p.attack?.name || 'attack'} is cancelled.`, { stagger: false });
+    if (p.attack) cancelAttack(s, p);
+    return true;
+  }
   emit(s, 'interrupt', `SIGINT stops ${label(t)}.`, { target: p?.id, tell: t.id, answered: true });
-  if ((s.encounter.commanding?.at ?? s.encounter.cycle) >= t.said) read(s, t, p, { open: true });
-  rest(s, t, s.encounter.cycle, true);
+  if ((e.commanding?.at ?? e.cycle) >= t.said) read(s, t, p, { open: true });
+  rest(s, t, e.cycle, true);
   if (p) credit(s, t, p);
   return true;
 }
+
+// ---------- prices (docs/puzzle-levers.md 3.5, 3.6) ----------
+// What each tell would cost you if it lands, as its cell shows it.
+// The ◆ a seal landing now would hand out, part by part: each ◆ its part still wears gives TELL.seal back to every
+// part, itself included, never past that part's max.
+export const sealGives = (s, p) => livingParts(s).filter((x) => (x.maxArmor ?? 0) > 0).map((x) => ({ x, n: Math.max(0, Math.min((p?.armor || 0) * TELL.seal, x.maxArmor - (x.armor || 0))) }));
+// What a seal landing now does to you, as a share of the full cost: the ◆ its part still wears of its max.
+export const sealShare = (p) => Math.min(1, (p?.armor || 0) / Math.max(1, p?.maxArmor || p?.armor || 1));
+// Self-Update: a part grows by TELL.grow of the Integrity it has left.
+export const growOf = (x, t = null) => Math.round(Math.max(0, x.integrity) * (t?.grow ?? TELL.grow)); // a cast may carry its own share (TELLS: a boss's)
+// What one landing of a part's attack costs you: its hit (an Encrypt's encryption).
+const hitOf = (x) => (x.attack?.effect === 'damage' ? attackAmount(x) : x.attack?.hit || (x.attack?.effect === 'encrypt' ? x.attack.amount : 0));
+// The landings of an attack from cycle `from` to `to`: its timer, then every `every` cycles (a hasted one's after the first).
+function landingsIn(a, from, to, every = a.interval) {
+  if (!a || a.due >= 900) return 0;
+  let c = a.due;
+  while (c < from) c += Math.max(1, a.interval);
+  let n = 0;
+  for (; c <= to; c += Math.max(1, every)) n++;
+  return n;
+}
+// Integrity the virus gains, as your Signal: the cycles it takes you to deal it at your pace so far (Spike's at the
+// least), times what the virus deals you a cycle.
+export function hpAsSignal(s, hp, p = null) {
+  const e = s.encounter, v = e.virus;
+  const dealt = v.parts.filter((x) => x.kind === 'system').reduce((n, x) => n + Math.max(0, x.max - Math.max(0, x.integrity)), 0);
+  const spike = p && alive(p) ? previewDamage(s, 'spike', p) : 0;
+  const pace = Math.max(1, spike, dealt / Math.max(1, e.cycle - 1));
+  const incoming = attackers(s).filter((x) => x.attack.due < 900).reduce((n, x) => n + hitOf(x) / Math.max(1, x.attack.interval), 0);
+  return Math.round((hp / pace) * incoming);
+}
+const lastsOf = (s, t) => Math.max(1, (t.lasts ?? TELL.castLasts) - (fxOn(s, 'cast-short')?.fx.value || 0));
+// A tell's price: { signal } for a charge or a cast (a Self-Update adds hp, the Integrity it grows), { armor } for a
+// seal (the ◆ it hands out in all), or null. A charge: its whole landing (SIGINT or a cut cancels the attack). Double
+// Extortion and Persistence: the Signal they'd add from the attacks due in their cycles. The after-effects are the same
+// for every tell, so they're left out.
+export function tellPrice(s, t) {
+  const p = t && sourceOf(s, t);
+  if (!t?.told || !alive(p)) return null;
+  const at = tellNext(s, t);
+  if (t.kind === 'charge') {
+    if (!p.attack) return null;
+    const atk = chargeAttack(s, t, p), enr = p.enrage && p.integrity < p.max / 2 ? CONFIG.enrage : 1;
+    if (atk.effect === 'damage') return { signal: Math.round(atk.amount * enr) };
+    if (atk.effect === 'encrypt') return { signal: atk.amount + (atk.burst || 0) * TELL.burst };
+    if (atk.effect === 'heal') return { signal: hpAsSignal(s, atk.amount, p), hp: atk.amount };
+    return { signal: atk.hit || 0 };
+  }
+  if (t.kind === 'cast') {
+    const from = at + 1, to = at + lastsOf(s, t), xs = attackers(s).filter((x) => x.attack.due < 900);
+    if (t.does === 'loud') return { signal: xs.reduce((n, x) => n + landingsIn(x.attack, from, to) * Math.round(hitOf(x) * (TELL.loud - 1)), 0) };
+    if (t.does === 'haste') return { signal: xs.filter((x) => x.attack.interval > 2).reduce((n, x) => n + (landingsIn(x.attack, from, to, x.attack.interval - 1) - landingsIn(x.attack, from, to)) * hitOf(x), 0) };
+    if (t.does === 'grow') { const hp = livingParts(s).filter((x) => x.kind === 'system' && !implanted(s, x)).reduce((n, x) => n + growOf(x, t), 0); return { signal: hpAsSignal(s, hp, p), hp }; }
+    return { signal: 0 };
+  }
+  if (t.kind === 'seal') return { armor: sealGives(s, p).reduce((n, x) => n + x.n, 0) };
+  return null;
+}
+// The live tells SIGINT could stop, dearest first (the planner and the dearer chip read it).
+export const pricedTells = (s) => sigintable(s).map((t) => ({ t, p: sourceOf(s, t), price: tellPrice(s, t)?.signal ?? 0 })).sort((a, b) => b.price - a.price);
+// SIGINT's key (view.mjs): each live cast and charge, its window in cycles from now (from, to), its price, and whether
+// SIGINT is ready before that window closes (reach).
+export function sigintWindows(s) {
+  if (!tellsOf(s) || s.encounter.phase !== 'active') return [];
+  const c = s.encounter.cycle, wait = readyIn(s, 'sigint');
+  return sigintable(s).map((t) => { const w = windowOf(s, t); return w && { t, name: t.name, kind: t.kind, from: Math.max(0, w.from - c), to: w.to - c, price: tellPrice(s, t)?.signal ?? 0, wait, reach: wait <= w.to - c }; }).filter((x) => x && x.to >= 0);
+}
+// This tell costs more than every other live one SIGINT could stop (or it's the only one).
+export const dearest = (s, t) => { const xs = pricedTells(s), me = xs.find((x) => x.t === t); return !!me && xs.every((x) => x.t === t || x.price < me.price); };
 // A charge riding the attack due now on p, and what it would hit for (Hijack, Replay: dist/classes/operator.mjs).
 export function chargeSize(s, p) {
   const t = tellOn(s, p, 'charge');
@@ -673,6 +762,11 @@ export function tellIntents(s, columns = 4) {
       if (t.spawn) x.spawn = t.spawn + 1;
       x.plain = p.attack.name;
     }
+    // Its price (tellPrice): the Signal a charge or a cast would cost you, a Self-Update's Integrity, a seal's ◆ a part.
+    const price = tellPrice(s, t);
+    if (price?.signal != null) x.price = price.signal;
+    if (price?.hp != null) x.grow = price.hp;
+    if (t.kind === 'seal') { x.give = p.armor * TELL.seal; x.armorOut = price?.armor || 0; }
     out.push(x);
   }
   return out;
@@ -695,18 +789,17 @@ function kills(s, planned) {
   const [id, at] = (planned || '').split(' '), p = at && part(s, at);
   return !!(p && alive(p) && ABILITIES[id] && !(p.armor > 0) && previewDamage(s, id, p) >= p.integrity);
 }
-// Stripping a part in one command: Spike on its last ◆, Crack or Shaped Charge on more.
-const quickStrip = (s, p) => p.armor <= 1 || (p.armor <= 3 && usable(s).includes('crack') && readyIn(s, 'crack') === 0) || (usable(s).includes('shaped-charge') && readyIn(s, 'shaped-charge') === 0);
 // The commands that strip every ◆ off p, one a cycle, within `within` cycles (a skill's cooldown counted), strongest
 // first: Shaped Charge all of them, Crack its strip, a heavy hit or Overvolt two, any other hit one. null if it can't.
 const STRIPS = ['shaped-charge', 'crack', 'overvolt', 'fork-bomb', 'flood', 'overload', 'exploit', 'spike'];
+const stripOff = (id, left) => (id === 'shaped-charge' ? left : ABILITIES[id]?.strip || (id === 'overvolt' ? 2 : (ABILITIES[id]?.damage || 0) >= CONFIG.heavyHit ? 2 : 1));
 function stripPlan(s, p, within) {
   if (p.lockHp > 0 || livingParts(s).some((x) => x.ward === p.id)) return null; // a lock or a ward soaks the cut anyway
   let left = p.armor;
   const out = [], used = {};
   for (let k = 0; k < within && left > 0; k++) {
     const can = STRIPS.filter((id) => usable(s).includes(id) || id === 'spike').filter((id) => readyIn(s, id) <= k && !(used[id] != null && k - used[id] < Math.max(1, cooldownOf(s, id))));
-    const off = (id) => (id === 'shaped-charge' ? left : ABILITIES[id]?.strip || (id === 'overvolt' ? 2 : (ABILITIES[id]?.damage || 0) >= CONFIG.heavyHit ? 2 : 1));
+    const off = (id) => stripOff(id, left);
     const best = can.filter((id) => ok(s, ABILITIES[id]?.target === 'none' ? id : `${id} ${p.id}`) || k > 0).sort((a, b) => off(b) - off(a))[0];
     if (!best) return null;
     used[best] = k;
@@ -714,6 +807,66 @@ function stripPlan(s, p, within) {
     out.push(ABILITIES[best]?.target === 'none' ? best : `${best} ${p.id}`);
   }
   return left <= 0 ? out : null;
+}
+// SIGINT on the dearer tell (docs/puzzle-levers.md 3.6): the tell SIGINT would stop now, if it costs more than every
+// other live tell SIGINT could stop (or is the only one), and the planned command doesn't answer it already (a cut on a
+// charge's part, a kill, a skill built for it). Else null.
+const BUILT_CHARGE = ['hijack', 'blackhole', 'backfire']; // they stop the whole move; a delay that drains the charge (Suspend, Jam, Spoofed ACK) still lets the plain attack land
+function sigintNow(s, planned = null) {
+  if (TELL.bots.sigint === false || hackerLevel(s) < TELL.castFrom || !ok(s, 'sigint')) return null;
+  const t = sigintTarget(s);
+  if (!t || ignores(t.gene)) return null;
+  const [id, at] = (planned || '').split(' '), p = sourceOf(s, t);
+  if (t.kind === 'charge' && at === p.id && ABILITIES[id] && (BUILT_CHARGE.includes(id) || kills(s, planned) || ['cut', 'both'].includes(crossBy(s, id, p)))) return null;
+  // A fixed habit (solved.mjs FIXED.sigint, TELL.bots.sigintOn): SIGINT every tell of one kind, and none of the other.
+  const only = TELL.bots.sigintOn;
+  if (only) return t.kind === only ? t : null;
+  // A cut on its part answers it now as well: the cut goes, and SIGINT stays for the other.
+  const cut = interruptMove(s, planned);
+  if (cut && cut.split(' ')[1] === p.id) return null;
+  // The dearer one, of what SIGINT would be needed for: another live tell whose part a cut can still reach on its cycle
+  // (a tick left, no more than one ◆ in the way) needs no SIGINT, so it doesn't count against this one.
+  const mine = tellPrice(s, t).signal;
+  return pricedTells(s).every((x) => x.t === t || x.price < mine || cuttable(s, x.p)) ? t : null;
+}
+// A part a cut can still reach: the fight has the interrupt, the part has a tick left and no more than one ◆.
+const cuttable = (s, p) => !!s.encounter.ticked && alive(p) && !p.core && !!nextTick(p) && !((p.armor || 0) > 1) && !(s.encounter.cutBudget != null && s.encounter.cutBudget <= 0);
+// A seal (a dial, docs/puzzle-levers.md 3.5), weighed in ◆ on the board: the ◆ it would hand out with k ◆ on its part,
+// and what it takes from you as TELL.weigh.sealYou ◆ at full share. A strip that takes ◆ off its part changes both
+// (its own room grows as it's stripped, so a part strip can cost more than none).
+function sealCost(s, p, k) {
+  const was = p.armor;
+  p.armor = Math.max(0, k);
+  try { return sealGives(s, p).reduce((n, x) => n + x.n, 0) + (tellsOf(s).tier.after && !fxOn(s, 'seal-proof') ? TELL.weigh.sealYou * sealShare(p) : 0); } finally { p.armor = was; }
+}
+// The ◆ a command takes off p: a strip skill's (Shaped Charge all of them), a skill's ◆ count, else what its hit breaks.
+export function stripBy(s, id, p) {
+  const a = ABILITIES[id];
+  if (!a || !(p?.armor > 0)) return 0;
+  if (id === 'shaped-charge') return p.armor;
+  if (a.strip || a.chits > 1) return Math.min(p.armor, Math.max(a.strip || 0, a.chits > 1 ? a.chits : 0));
+  return Math.min(p.armor, armorTakes(s, id, p));
+}
+// Your best strip at p now: the ready command that takes the most ◆ off it (the shorter cooldown on a tie), or null.
+export function bestStrip(s, p) {
+  if (!alive(p) || !(p.armor > 0)) return null;
+  return usable(s).filter((id) => id !== 'sigint' && readyIn(s, id) === 0)
+    .map((id) => ({ id, n: stripBy(s, id, p), text: ['none', 'aggro'].includes(ABILITIES[id].target) ? id : `${id} ${p.id}` }))
+    .filter((x) => x.n > 0 && ok(s, x.text)).sort((a, b) => b.n - a.n || cooldownOf(s, a.id) - cooldownOf(s, b.id))[0] || null;
+}
+// The strip to fire on a sealing part now, or null. The commands left before it lands (this one included) are counted
+// at your best strip's rate. The planner waits while it has commands to spare, keeps a plan that strips the part as
+// well, and strips when what that saves (sealCost) is at least TELL.weigh.sealCmd ◆ for each command it takes.
+function sealStrip(s, t, p, planned = null) {
+  const left = tellNext(s, t) - s.encounter.cycle + 1, best = bestStrip(s, p);
+  if (left < 1 || !best) return null;
+  const [id, at] = String(planned || '').split(' ');
+  if ((at === p.id || (ABILITIES[id] && ['none', 'aggro'].includes(ABILITIES[id].target))) && stripBy(s, id, p) >= best.n) return null; // the plan strips it as well
+  if (at === p.id && ABILITIES[id] && (ignoresArmor(s, id) || !(p.armor > 0)) && previewDamage(s, id, p) >= p.integrity) return null; // or breaks it through its ◆
+  const need = Math.ceil(p.armor / best.n);
+  if (need < left) return null; // time to spare: strip later, as late as it can be done
+  const k = Math.max(0, p.armor - best.n * left);
+  return sealCost(s, p, p.armor) - sealCost(s, p, k) >= TELL.weigh.sealCmd * Math.min(need, left) ? best.text : null;
 }
 // A command the Mimic would play back this cycle (its beat is now, and the command has a direct hit): the planner
 // keeps its cuts out of the beat too.
@@ -753,10 +906,11 @@ export function tellMove(s, t0 = null, planned = null) {
   const prep = soon(s, 3).filter((t) => t.kind === 'charge' && TELL.bots.strip !== false && s.encounter.virus.level >= TELL.castFrom && alive(sourceOf(s, t)) && sourceOf(s, t).armor > 0 && sourceOf(s, t).ticks?.some((x) => !x.spent) && tellNext(s, t) > c)
     .map((t) => stripPlan(s, sourceOf(s, t), tellNext(s, t) - c)?.length === tellNext(s, t) - c && stripPlan(s, sourceOf(s, t), tellNext(s, t) - c)[0]).find(Boolean);
   if (prep && livingParts(s).length > 1 && !echoes(prep) && ok(s, prep)) return prep;
-  // A kill comes first: a cast landing this cycle on another part is SIGINTed first, while the virus has more than it.
+  // A kill comes first: the dearer tell landing this cycle on another part is SIGINTed first, while the virus has more
+  // than it.
   if (kills(s, planned)) {
-    const cast = soon(s, 0).find((t) => t.kind === 'cast' && inWindow(s, t) && t.part !== (planned || '').split(' ')[1]);
-    if (cast && livingParts(s).length > 1 && TELL.bots.sigint !== false && ok(s, 'sigint')) return 'sigint';
+    const last = sigintNow(s, planned);
+    if (last && tellNext(s, last) === c && last.part !== (planned || '').split(' ')[1] && livingParts(s).length > 1) return 'sigint';
     return null;
   }
   for (const t of soon(s, 3).sort((a, b) => tellNext(s, a) - tellNext(s, b))) {
@@ -767,11 +921,13 @@ export function tellMove(s, t0 = null, planned = null) {
       // A skill built for a cast answers it and does something besides (a stun, a buff): keep SIGINT for the next one.
       const own = first(s, ['quarantine ' + p.id, s.encounter.helpers.some((h) => h.target === p.id) && 'hijack ' + p.id]);
       if (own && !echoes(own)) return own;
-      if (TELL.bots.sigint !== false && hackerLevel(s) >= TELL.castFrom && ok(s, 'sigint')) return 'sigint';
     }
-    // A seal: strip its part before it lands, when one command does it.
-    if (t.kind === 'seal' && TELL.bots.strip !== false && next - c <= 1 && p.armor > 0 && quickStrip(s, p)) {
-      const strip = first(s, [p.armor >= 2 && 'shaped-charge ' + p.id, p.armor >= 2 && 'crack ' + p.id, p.armor >= 2 && 'rate-limit ' + p.id, p.armor <= 2 && 'overvolt ' + p.id, p.armor <= 1 && 'spike ' + p.id]);
+    // SIGINT goes on the dearer tell (docs/puzzle-levers.md 3.6): a cast in its window, or a charge on its cycle that
+    // the plan doesn't cut, when it costs more than every other live one. The cheaper one is cut, or let land.
+    if (sigintNow(s, planned) === t) return 'sigint';
+    // A seal (a dial, 3.5): strip its part when that saves enough of what it would hand out (sealStrip).
+    if (t.kind === 'seal' && TELL.bots.strip !== false && TELL.bots.seal !== false && p.armor > 0) {
+      const strip = sealStrip(s, t, p, planned);
       if (strip && !echoes(strip)) return strip;
     }
     // A charge on an armored part: strip it over the lead, as late as it can be done, so the cut lands on its cycle

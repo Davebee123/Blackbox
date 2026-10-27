@@ -234,6 +234,8 @@ code { font-family: var(--mono); color: var(--amber); }
 .intent.tell .tl-main { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 6px; padding: 4px 7px 2px; min-width: 0; }
 .intent.tell .tl-main b { font-weight: 600; color: var(--tc); }
 .intent.tell .tl-what { margin-left: 0; color: var(--muted); }
+.intent.tell .tl-what.tl-price { color: var(--hot); font-weight: 600; } /* what it costs you (tells.mjs tellPrice): threat */
+.intent.tell .tl-what.tl-armor { color: var(--steel); font-weight: 600; } /* the ◆ a seal would hand out */
 .intent.tell .tl-ans { display: flex; align-items: baseline; gap: 6px; padding: 1px 7px 5px; color: var(--amber); font: 600 11px var(--mono); white-space: nowrap; }
 .intent.tell .tl-prog { margin-left: auto; color: var(--muted); font-weight: 400; }
 .intent.tell.now { background: var(--tc-soft); }
@@ -333,6 +335,13 @@ code { font-family: var(--mono); color: var(--amber); }
    nothing moves when it comes and goes; steel is what protects a part (docs/ui.md). */
 .ability .armd, .intent .armd { position: absolute; top: 2px; right: 4px; font: 700 11px/1 var(--mono); color: var(--steel); text-shadow: 0 0 4px var(--steel-glow); cursor: help; }
 .intent .armd { top: -6px; right: -4px; padding: 0 2px; background: var(--panel); border: 1px solid var(--steel); border-radius: var(--r-tag); font-size: 9px; line-height: 11px; }
+/* SIGINT against both clocks (view.mjs sigintKey): a pip per live cast or charge, the cycles until its window closes;
+   struck through when SIGINT won't be ready in time. Red: they're the virus's. */
+.ability .sg-wins { display: inline-flex; gap: 4px; vertical-align: middle; }
+.ability .sg-w { display: inline-flex; align-items: center; gap: 3px; padding: 0 4px; border: 1px solid var(--hot); border-radius: var(--r-tag); color: var(--hot); font: 700 10px/14px var(--mono); font-style: normal; cursor: help; }
+.ability .sg-w .ico { grid-row: auto; width: 9px; height: 9px; background: var(--hot); filter: none; }
+.ability .sg-w.late { border-color: var(--line); color: var(--dim); text-decoration: line-through; }
+.ability .sg-w.late .ico { background: var(--dim); }
 .pips { letter-spacing: 2px; color: var(--amber); font-family: var(--mono); }
 .ability.emergency { border-style: dashed; border-color: var(--line-strong); }
 .ability.emergency .ico { background: var(--next); }

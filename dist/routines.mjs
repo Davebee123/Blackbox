@@ -45,11 +45,12 @@
 // first use (an older save gets the defaults: no SAVE_VERSION change; an R1 save's single stack moves into its viruses'
 // routines, migrate). A fight's exceptions live on e.program.
 import { hooks, emit, warn, active, alive, part, livingParts, intents, toIntent, said, classOf, subOf, hackerLevel, barKeys, cooldownOf, codexKey, defender, maxSignal, timersHidden, armorTakes, frontOf, buffed, frozenNow, packed } from './combat.mjs';
-import { ABILITIES, MUTATIONS, FAMILIES, ROOM_FAMILIES, GUARDS, STRAINS, BOSSES, ARCHETYPES, SUBS } from './data.mjs';
+import { ABILITIES, MUTATIONS, FAMILIES, ROOM_FAMILIES, GUARDS, STRAINS, BOSSES, ARCHETYPES, SUBS, TELLS, TELL_SETS } from './data.mjs';
 import { researchAt, TIER } from './research.mjs';
 import { decoded as geneDecoded } from './genome.mjs';
 import { kitPlanner, kitPlannerAt, soonest } from './planner.mjs';
 import { GENES } from './genes.mjs';
+import { sigintTarget, dearest } from './tells.mjs';
 import { isUp } from './floorplan.mjs';
 
 export const ROUTINES = {
@@ -59,6 +60,7 @@ export const ROUTINES = {
   jackOut: [0, 10, 20, 30, 40, 50], // the auto jack-out line, % of your max Signal (0: off)
   low: 0.5, // "under half": a part's Integrity, your Signal
   fragments: 2, encrypted: 3,
+  sealDear: 2, sealOut: 2, // seal dear (docs/puzzle-levers.md 7): a seal that lands within sealOut cycles on a part still wearing sealDear ◆ or more
   danger: ['elite', 'guard', 'core', 'boss'], // rooms a walk stops before
   presets: 5, // the most plain presets a virus shows (a lever's preset comes on top, one per lever researched)
   holdFrom: 8, // the Hold chip (a DO that fires nothing) opens at this class level, with the Mimic's first beats
@@ -82,6 +84,8 @@ export const PART_WHEN = {
   tell: { tier: TIER.rule, ram: 2, icon: 'counter', short: 'tell live', label: (n) => `${n} tell live`, tip: (n) => `A tell on the ${n} can be answered this cycle.` },
   pretell: { tier: TIER.mastered, ram: 3, icon: 'mastered', short: 'before tell', label: (n) => `before ${n} tell`, tip: (n) => `The cycle before a tell on the ${n} can be answered.` },
   open: { tier: TIER.mastered, ram: 3, icon: 'mastered', short: 'Open', label: (n) => `${n} Open`, tip: (n) => `The ${n} is Open: you read its tell.` },
+  // A seal's lever (docs/puzzle-levers.md 3.5, 7): it would hand out a lot.
+  sealdear: { tier: TIER.rule, ram: 2, icon: 'cracker', short: 'seal dear', label: (n) => `${n} seal dear`, tip: (n) => `A seal on the ${n} lands within ${ROUTINES.sealOut} cycles while it still wears ${ROUTINES.sealDear} ◆ or more.` },
 };
 // WHEN chips about the fight or you. open(s): whether your research has it.
 const anyKey = (s, end, tier) => Object.keys(s.research || {}).some((k) => k.endsWith(':' + end) && researchAt(s, k) >= tier);
@@ -93,6 +97,8 @@ export const GLOBAL_WHEN = {
   anytell: { ram: 2, icon: 'counter', label: 'any tell live', tip: 'A tell on any part can be answered this cycle.', open: (s) => Object.keys(s.research || {}).some((k) => researchAt(s, k) >= TIER.rule) },
   beat1: { ram: 2, icon: 'echo', label: 'beat in 1', tip: 'A beat lands this cycle: what you fire now is played back.', open: (s) => beatKnown(s) },
   beat2: { ram: 2, icon: 'echo', label: 'beat in 2', tip: 'A beat lands this cycle or the next.', open: (s) => beatKnown(s) },
+  // SIGINT's lever (docs/puzzle-levers.md 3.6, 7): open at the rule tier, as any tell live is.
+  dearer: { ram: 2, icon: 'interrupt', label: 'dearer', tip: 'The cast or charge SIGINT would stop now costs more than every other one on the board, or is the only one.', open: (s) => Object.keys(s.research || {}).some((k) => researchAt(s, k) >= TIER.rule) },
 };
 // A beat (docs/puzzle-fights.md 3): a part that plays your command back on its cycle (the Mimic, a Decoy's mirror).
 // The beat chips open with any such part's rule.
@@ -317,6 +323,13 @@ export function presetsFor(s, body) {
     if (lever === 'together') add(`together:${x.id}`, 'Twins together', 'part', `Your rotation on whichever of the ${x.name} and its twin has more left, so they break close together.`, [{ when: `${ref}:present`, do: ROTATE.id, target: 'twins' }], x.id);
     if (lever === 'first') add(`first:${x.id}`, `${x.name} first`, 'part', `Your rotation on the ${x.name} before the other parts.`, [{ when: `${ref}:present`, do: ROTATE.id, target: 'that' }], x.id);
   }
+  // A seal (docs/puzzle-levers.md 3.5, 7), for a virus that brings one: your best strip on a part whose seal would
+  // hand out a lot (seal dear → your strip → that part), as a lever's preset.
+  const sealer = sealsOf(body) && specs.find((x) => x.special && at(x, TIER.rule));
+  if (sealer) {
+    const breaker = partSkills(s).filter((id) => breaks(id) > 0).sort((a, b) => breaks(b) - breaks(a))[0] || hit;
+    add(`seal:${sealer.id}`, 'Seal dear: strip it', 'cracker', `${ABILITIES[breaker].name} the ${sealer.name} when its seal lands within ${ROUTINES.sealOut} cycles while it still wears ${ROUTINES.sealDear} ◆ or more.`, [{ when: `${body}:${sealer.id}:sealdear`, do: breaker, target: 'that' }], sealer.id);
+  }
   if (sig) {
     // A preset comes with Break ◆ first on, so a skill that breaks ◆ needs no handler of its own (one at "on board"
     // would spend it on the part once it's bare); a skill that goes through ◆ (Backdoor) keeps its handler.
@@ -328,10 +341,10 @@ export function presetsFor(s, body) {
       through ? [{ when: `${ref}:bare`, do: hit, target: 'that' }, { when: `${ref}:present`, do: through, target: 'that' }] : [{ when: `${ref}:present`, do: hit, target: 'that' }]);
   }
   // Tells: your rotation on the part whose tell can be answered (it cuts a charge or a cast on its cycle, strips a
-  // sealing part, or breaks it). SIGINT a cast: its own preset, since SIGINT fired into a cycle a kill was due costs
-  // the kill.
+  // sealing part, or breaks it). SIGINT on the dearer of a cast and a charge (docs/puzzle-levers.md 3.6, 7): its own
+  // preset, since SIGINT fired into a cycle a kill was due costs the kill.
   add('tells', 'Answer the tells', 'counter', 'Your rotation on a part whose tell can be answered.', [{ when: 'anytell', do: ROTATE.id, target: 'that' }]);
-  if (barSkills(s).some((x) => x.id === 'sigint')) add('sigint', 'SIGINT the cast', 'counter', 'SIGINT a cast in its window. SIGINT fires nothing outside one.', [{ when: 'anytell', do: 'sigint', target: 'that' }]);
+  if (barSkills(s).some((x) => x.id === 'sigint')) add('sigint', 'SIGINT the dearer', 'interrupt', 'SIGINT the cast or charge you can stop now when it costs more than the other one on the board.', [{ when: 'dearer', do: 'sigint', target: 'that' }]);
   const hitters = specs.filter((x) => at(x, TIER.rule) && x.attack);
   if (hitters.length) add('hits', 'Before it hits', 'clock', `${ABILITIES[hit].name} each part whose attack lands this cycle, signature first.`, hitters.sort((a, b) => !!b.special - !!a.special).map((x) => ({ when: `${body}:${x.id}:due`, do: hit, target: 'that' })));
   if (guard) add('guard', 'Guard when low', 'signal', `${ABILITIES[guard].name} when you're under half, else focus the lowest.`, [{ when: 'hurt', do: guard, target: 'soonest' }, { when: 'always', do: hit, target: 'lowest' }]);
@@ -340,6 +353,8 @@ export function presetsFor(s, body) {
   return [...levers, ...out.slice(0, ROUTINES.presets)];
 }
 const same = (a, b) => a.length === b.length && a.every((h, i) => h.when === b[i].when && h.do === b[i].do && h.target === b[i].target);
+// A body whose tells include a seal (data.mjs TELL_SETS: a family's, a strain's lineage's, a guard's).
+const sealsOf = (body) => (TELL_SETS[body] || TELL_SETS[STRAINS[body]?.lineage] || []).some((id) => TELLS[id]?.kind === 'seal');
 // The preset the stack is now, or null (edited, or empty: the rotation).
 export const presetNow = (s, body) => (routineOf(s, body).handlers.length ? presetsFor(s, body).find((p) => same(p.handlers, routineOf(s, body).handlers))?.id || null : null);
 
@@ -361,6 +376,8 @@ function holds(s, w) {
     if (w.id === 'encrypted') return (e.encrypt || 0) >= ROUTINES.encrypted ? [] : null;
     if (w.id === 'anytell') { const ps = list.filter((i) => i.tell && i.open && !isBeat(i)).map((i) => part(s, i.source)).filter(alive); return ps.length ? ps : null; } // a beat isn't answered by a hit: the beat chips
     if (w.id === 'beat1' || w.id === 'beat2') { const ps = beatParts(s, w.id === 'beat1' ? 0 : 1); return ps.length ? ps : null; }
+    // dearer: the part of the cast or charge SIGINT would stop now, when it costs the most of those on the board (tells.mjs).
+    if (w.id === 'dearer') { const t = sigintTarget(s), p = t && part(s, t.part); return t && alive(p) && dearest(s, t) ? [p] : null; }
     return null;
   }
   if (w.kind === 'mutation') return e.virus.mutation === w.mut ? [] : null;
@@ -375,6 +392,7 @@ function holds(s, w) {
       case 'tell': return mine.some((i) => i.tell && i.open && !isBeat(i));
       case 'pretell': return mine.some((i) => i.tell && !i.open && i.winFrom === 1 && !isBeat(i));
       case 'open': return p.openUntil >= e.cycle;
+      case 'sealdear': return p.armor >= ROUTINES.sealDear && mine.some((i) => i.tell === 'seal' && i.col <= ROUTINES.sealOut);
       default: return false;
     }
   });
@@ -507,7 +525,8 @@ export function uncovered(s) {
     // The rotation reads no tell. A charge is covered once mastered (it lands or is cut by chance, as a hit); a seal or
     // a cast is a lever (strip before it, save SIGINT for it), answered only by a handler: a tell chip on its part, or
     // any tell live. A beat: a beat chip, or a handler that names its part.
-    if ((i.tell === 'charge' && researchOfRef(s, ref) >= TIER.mastered) || named(s, (w) => (isBeat(i) ? BEATS.has(w.id) || (w.kind === 'part' && w.ref === ref) : w.id === 'anytell' || (w.kind === 'part' && w.ref === ref && ['tell', 'pretell'].includes(w.cond))))) continue;
+    // A seal is covered by seal dear too, a cast by dearer (SIGINT on the dearer one).
+    if ((i.tell === 'charge' && researchOfRef(s, ref) >= TIER.mastered) || named(s, (w) => (isBeat(i) ? BEATS.has(w.id) || (w.kind === 'part' && w.ref === ref) : w.id === 'anytell' || (i.tell === 'cast' && w.id === 'dearer') || (w.kind === 'part' && w.ref === ref && ['tell', 'pretell', ...(i.tell === 'seal' ? ['sealdear'] : [])].includes(w.cond))))) continue;
     out.set(p.id, { key: `part:${p.id}`, kind: 'tell', part: p.id, name: p.name, tell: i.name });
   }
   return [...out.values()];

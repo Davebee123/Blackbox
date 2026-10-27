@@ -7,7 +7,7 @@ import { bossBand, bossFight, geneCheck, PROBES, ANSWERED, SUBS, playersAt, play
 import { strainsAt } from './balance.mjs';
 import { selectEncounter, command, resolveCycle, active } from './dist/combat.mjs';
 import { planner } from './dist/planner.mjs';
-import { BOSSES } from './dist/data.mjs';
+import { BOSSES, TELL } from './dist/data.mjs';
 import { GENES, GENE_IDS } from './dist/genes.mjs';
 
 const SEEDS12 = Array.from({ length: 12 }, (_, i) => i + 1);
@@ -122,8 +122,12 @@ test('the spike cap: a solo boss lands at most 60% of your max in one hit, a wil
     const r = bossFight(id, Math.max(L, BOSSES[id].floor || 0), cls, sub, 1);
     assert.ok(r.spike <= 0.6, `${id} at ${L}, ${sub}: ${r.spike.toFixed(2)} (${r.spikeBy})`);
   }
+  // Since SIGINT cuts charges too (docs/puzzle-levers.md 3.6), the planner here keeps it for casts, so enough charges
+  // land to measure the cap.
   let charges = 0;
-  for (const L of [10, 30]) for (const [cls, sub] of SUBS) {
+  const was = TELL.bots.sigintOn;
+  TELL.bots.sigintOn = 'cast';
+  try { for (const L of [10, 30]) for (const [cls, sub] of SUBS) {
     const fights = [...strainsAt(L).map((strain, i) => ({ strain, seed: 100 + i })), ...[0, 1, 2].map((i) => ({ elite: true, seed: 950 + i }))];
     for (const f of fights) {
       const s = player(cls, sub, L), max = s.run.max;
@@ -136,6 +140,6 @@ test('the spike cap: a solo boss lands at most 60% of your max in one hit, a wil
         for (const x of resolveCycle(s)) if (x.type === 'server-hit' && x.tell && !x.who) { charges++; assert.ok(x.amount <= 0.45 * max + 1, `${sub} at ${L}, ${JSON.stringify(f)}: ${x.message} (max ${max})`); }
       }
     }
-  }
+  } } finally { TELL.bots.sigintOn = was; }
   assert.ok(charges > 20, `charges landed: ${charges}`);
 });

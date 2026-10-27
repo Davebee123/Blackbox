@@ -48,11 +48,11 @@ test('tell tooltips: the tell\'s name, then what happens if it lands (with its n
   const { i, tip } = chipOf(s);
   assert.equal(lines(tip).length, 2, tip);
   assert.match(lines(tip)[0], new RegExp(`^Overcharge: Deals ${i.amount} damage to you\\. Leaves you Corrupted\\. Takes your last skill offline for 1 cycle\\.$`)); // R1: lighter after-effects (TELL.tiers)
-  assert.equal(lines(tip)[1], `▸ Take the Pulse Node under 50% next cycle${pa ? `, past its ${pa} ◆` : ''}.`, 'the answer on its own ▸ line (app.js draws it muted)');
+  assert.equal(lines(tip)[1], `▸ Take the Pulse Node under 50% next cycle${pa ? `, past its ${pa} ◆` : ''}, or SIGINT it.`, 'the answer on its own ▸ line (app.js draws it muted)');
   // Full Disk: the Encrypt and the burst on top.
   const f = fight(); quiet(f); tell(f, 'fulldisk', 'encryptor', 2);
   assert.match(chipOf(f).tip, /^Full Disk: Adds \d+ to your encryption\. Deals a burst of \d+ damage to you every cycle for 3 cycles\./);
-  assert.match(chipOf(f).tip, /\n▸ Take the Encryptor under 50% in 2 cycles(, past its \d+ ◆)?\.$/);
+  assert.match(chipOf(f).tip, /\n▸ Take the Encryptor under 50% in 2 cycles(, past its \d+ ◆)?, or SIGINT it\.$/);
   // A cast: SIGINT, or a cut, over its two-cycle window.
   const c = fight({ set: ['fulldisk', 'extortion'] }); quiet(c); tell(c, 'extortion', 'encryptor', 2);
   assert.match(chipOf(c).tip, /^Double Extortion: Every attack deals 35% more damage for 4 cycles\./);
@@ -60,7 +60,7 @@ test('tell tooltips: the tell\'s name, then what happens if it lands (with its n
   // A seal, the Mimic, and the breach's Overclock and Lock.
   const se = fight({ set: ['fulldisk', 'extortion', 'overcharge', 'keyrotation'] }); quiet(se); tell(se, 'keyrotation', 'encryptor', 2);
   const armor = part(se, 'encryptor').armor;
-  assert.match(chipOf(se).tip, new RegExp(`^Key Rotation: Re-arms the Encryptor to ${part(se, 'encryptor').maxArmor + 1} ◆, and every stripped part gets 1 ◆ back\\. Fails if the Encryptor wears no ◆\\.[^\\n]*\\n▸ Strip its ${armor} ◆ before it lands in 2 cycles\\.$`));
+  assert.match(chipOf(se).tip, new RegExp(`^Key Rotation: Gives every part 1 ◆ back for each ◆ the Encryptor still wears when it lands, never past a part's max\\. That is ${armor} ◆ a part now, \\d+ in all\\.[^\\n]* Fails if the Encryptor wears no ◆\\.\\n▸ Strip its ${armor} ◆ before it lands in 2 cycles\\.$`));
   const oc = fight({ set: ['fulldisk', 'overclock', 'lock'] }); quiet(oc); tell(oc, 'overclock', 'pulse', 1);
   assert.match(chipOf(oc).tip, /^Overclock: For 2 cycles, every part takes double damage and every attack comes 1 cycle sooner\. Can be interrupted now until it lands next cycle\.\n▸ SIGINT it, or take the Pulse Node under 50%\.$/);
   const lk = fight({ set: ['fulldisk', 'overclock', 'lock'] }); quiet(lk); tell(lk, 'lock', 'encryptor', 2);
@@ -86,7 +86,7 @@ test('a tell\'s tooltip offers its part\'s next interrupt tick as the way to sto
   part(s, 'encryptor').ticks[0].spent = true;
   assert.match(chipOf(s).tip, /Take the Encryptor under 25% in 2 cycles/);
   s.encounter.cutBudget = 0;
-  assert.match(chipOf(s).tip, /\n▸ Soften it with ◆, a shield or Brace\. The Encryptor has no tick left\./, 'no interrupts left this fight');
+  assert.match(chipOf(s).tip, /\n▸ SIGINT it in 2 cycles, or soften it with ◆, a shield or Brace\./, 'no interrupts left this fight: SIGINT, or soften it');
 });
 
 test('the gear row: only your equipped rules that wait on a condition, each lit exactly while it holds', () => {
