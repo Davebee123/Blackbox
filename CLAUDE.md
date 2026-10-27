@@ -61,7 +61,8 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
   from server floors.
 - **Phones:** combat on a phone never opens the keyboard.
 - **Fights** (docs/puzzle-fights.md): every fight is a little tricky, elites and bosses harder, and the game challenging.
-  Puzzles, never walls. A blind player loses; watching or a correct routine wins.
+  Puzzles, never walls: hard and rewarding to learn, like Elden Ring. A blind player loses; watching or a correct
+  routine wins.
 
 ## Backlog
 

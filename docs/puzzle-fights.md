@@ -29,7 +29,7 @@ those scripts. No game file was changed.
 | What makes a puzzle, then? | A conflict: a moment when the default move is the wrong one. Hold on a beat, break the parts in an order, leave a part standing, spend a key early, answer two clocks with one plan. Most of the pieces exist already (the Mimic, seals, the Tripwire, the Spare, tethers, boss phases). |
 | What wins one? | Watching, or the right routine. The default program knows your kit, not the virus: you fit each virus's routine to its trick, with handlers that cost RAM and open with research. An ordinary fight's trick always has such a handler, so preparing pays as much as watching. Elites need a mastered part's chips. Bosses are yours alone, as today. |
 | And the Operator? | Its helpers count. A helper on a beat's part is played back, a helper that breaks the wrong part sets it off, and a helper on a boss's ♛ part starts its phases. Only helpers sent after a beat was said are caught. The Operator's puzzle is where its helpers will be in three cycles, and each subclass already has the keys to answer it (section 3.2). |
-| How is it measured? | `solved.mjs` grows a misreader (blind on 30% of cycles), a routine player and the elite and boss sets. The blind player's wins fall with level: at level 30 and up, 30% or less of ordinary fights and 15% or less of elites and bosses. The planner, a correct routine and the misreader still win. |
+| How is it measured? | `solved.mjs` grows a learner (blind on 30%, 15% or 5% of cycles), a routine player and the elite and boss sets. The blind player's wins fall fast with level: from 18, 30% or less of ordinary fights, 10% of elites and 5% of bosses. A person loses most first tries at an elite or a boss and wins once they've learned it, like Elden Ring. |
 
 
 ## 1. What was measured
@@ -145,6 +145,28 @@ A puzzle has to come from the decisions, not from the numbers.
   surprise. The tell's chip and its ▸ line stay as they are.
 - **Show it, don't explain it.** A puzzle fight looks like any fight. Its conflicts read as board marks (tells,
   tethers, a beat), and the sentences live in tooltips and the Codex.
+
+### 2.1 Hard to learn, rewarding to learn
+
+The designer: *the mechanics should be difficult and rewarding to learn. Think Elden Ring.* What that asks of a fight:
+
+- **You lose before you win, and the loss teaches.** A first try at an elite or a boss usually fails. Every loss is to
+  a move the board showed coming, and the next try is the same fight (docs/genome.md 7), so the second try starts
+  from what the first one taught. The backlog's *death recap on the Disconnected card* is where that lesson lands: the
+  move that took you out, and its ▸ answer.
+- **Hard, never unfair.** The planner, which knows the fight, still wins 85% of it. Nothing is hidden that research
+  or a strip can't show, and nothing lands unannounced. Difficulty comes from what you have to notice and do in
+  time, not from numbers you can't see (1.5).
+- **What you learn stays learned.** Part research in the Codex keeps counting across tries, and each tier shows more
+  of the part on the board and opens its routine chips. Learning a boss also teaches its parts everywhere else.
+- **Learning shows.** A learned player beats the fight cleanly: *Solved* on the win card, the read bonus, the second
+  loot roll, and the achievements (section 6).
+- **Help is there, at a price.** Levels above the fight and a crew make it easier, as summons and levels do in Elden
+  Ring, but the conflicts stay: a higher level makes a misread survivable, not unnecessary.
+- **Trying again is quick.** Learning by losing only works if a try is cheap. Today a loss on a run costs the unbanked
+  pack, a wait (the server takes you back 30 seconds later, 15 more for each disconnect, up to 2 minutes) and the walk
+  back. The wait and the walk are fine; losing the pack on every learning try is the loss aversion the designer's
+  rules rule out. Section 8 asks.
 
 ## 3. The levers: conflicts
 
@@ -293,7 +315,9 @@ fight a routine plays.
 
 `solved.mjs` today plays the planner against the blind player on the class-balance fights. It grows four things:
 
-1. **The misreader**, blind on 30% of its cycles (docs/genome.md 11.2): the stand-in for a person.
+1. **The learner**: the misreader of docs/genome.md 11.2, blind on a share of its cycles, played at three shares
+   for three stages of learning a fight: 30% (a first try), 15% (a few tries in) and 5% (learned). It's the stand-in
+   for a person, and its three numbers are the learning curve.
 2. **The routine player**: the program as a player would set it up, with the virus's presets and handlers from the
    research its tier allows (decoded and rule chips for ordinary fights, mastered chips for elites). It answers
    question 6: a correct routine wins.
@@ -303,25 +327,30 @@ fight a routine plays.
 4. **The elite and boss sets**: every elite roll's conflicts, every boss at its floor, +4 and +10 levels, every
    subclass, six seeds.
 
-| Fights | Planner wins | Routine wins | Misreader wins | Blind and kit wins |
+| Fights | Planner wins | Routine wins | Learner wins (30% · 15% · 5% misread) | Blind and kit wins |
 |---|---|---|---|---|
-| Ordinary, levels 6–17 | 85% or more | 85% or more | 70% or more | 60% or less |
-| Ordinary, levels 18–29 | 85% or more | 85% or more | 70% or more | 45% or less |
-| Ordinary, level 30 and up | 85% or more | 85% or more | 70% or more | 30% or less |
-| Elites and bosses, levels 10–17 | 85% or more | Elites 60% or more (mastered chips); bosses are yours alone | 60% or more | 40% or less |
-| Elites and bosses, levels 18–29 | 85% or more | As above | 60% or more | 25% or less |
-| Elites and bosses, level 30 and up | 85% or more | As above | 60% or more | 15% or less |
+| Ordinary, levels 6–17 | 85% or more | 85% or more | 70% · 80% · 85% or more | 40% or less |
+| Ordinary, levels 18–29 | 85% or more | 85% or more | 70% · 80% · 85% or more | 30% or less |
+| Ordinary, level 30 and up | 85% or more | 85% or more | 70% · 80% · 85% or more | 20% or less |
+| Elites, levels 10–17 | 85% or more | 60% or more (mastered chips) | 35% · 60% · 85% or more | 20% or less |
+| Elites, levels 18–29 | 85% or more | 60% or more (mastered chips) | 35% · 60% · 85% or more | 10% or less |
+| Elites, level 30 and up | 85% or more | 60% or more (mastered chips) | 35% · 60% · 85% or more | 5% or less |
+| Bosses, levels 10–17 | 85% or more | — (yours alone) | 20% · 50% · 85% or more | 10% or less |
+| Bosses, levels 18–29 | 85% or more | — (yours alone) | 20% · 50% · 85% or more | 5% or less |
+| Bosses, level 30 and up | 85% or more | — (yours alone) | 20% · 50% · 85% or more | 2% or less |
 
-The blind column falls with level because there are more mechanics to not understand: more tells live at once,
-casts and seals, more parts with rules. The designer's bar is the ordinary tier's: *blind players more like 30% at
-high levels, from not understanding the mechanics.* Elites and bosses stay harder than that at every level.
+The blind column falls fast with level because there are more mechanics to not understand: more tells live at once,
+casts and seals, more parts with rules. The designer asked for blind players at about 30% of ordinary fights at high
+levels, then for a steeper ramp: this table reaches 30% at level 18 and keeps falling. Elites and bosses are where
+the game is hard to learn: a blind player almost never beats one, and a person usually loses a first try.
 
-Lower is better on the last column, as long as the planner, routine and misreader columns hold. Those are what keep
-"challenging" from becoming "unfair": a player who understands the mechanics, by watching or by a routine, wins
-again. A fight that misses its row doesn't ship.
+The learner's columns are the other half of the bar, and they matter as much. An ordinary fight is a little tricky:
+a first try already wins most of the time. An elite or a boss is learned: a first try usually fails, a few tries in
+it's a coin flip, and once learned it's won as reliably as the planner wins it. A fight whose learned column falls
+short is a wall, and doesn't ship. Neither does one whose first-try column is too high: that one isn't hard to learn.
 
 Today's blind player wins 79–100% of ordinary fights at level 30 for three classes of four, and section 1.5 shows
-bigger numbers won't take it to 30%. Only the levers can, so P2 is where that bar is tested first.
+bigger numbers won't take it to 20%. Only the levers can, so P2 is where that bar is tested first.
 
 Like the Hunter chase's dens (*every den is searched first*), a fight that lifts *no pile-ups* is checked when it's
 made: the planner must win it on every class at its level, so two clocks never become two clocks with no answer. An
@@ -343,7 +372,7 @@ fights keep those and add:
 
 | Phase | What ships | Done when |
 |---|---|---|
-| P0 | `solved.mjs`: the misreader, the routine player, the kit player, and the elite and boss sets. How much of the blind Operator's wins comes from helpers. No game change. | Section 1.4's table, with the new players' columns, is in progression.md. |
+| P0 | `solved.mjs`: the learner at three misread shares, the routine player, the kit player, and the elite and boss sets. How much of the blind Operator's wins comes from helpers. No game change. | Section 1.4's table, with the new players' columns, is in progression.md. |
 | P1 | The rotation made general (the levers' answers move into presets and handlers), a preset per lever, and a lever's part with no handler as an exception. The Hold chip from level 8, and the *beat in 1* and *beat in 2* chips. Helpers count on every lever (section 3.2's rules), with their pips and the move-on tether on the board, and the *no beat* target. The planner taught the helper rules. | The routine player wins as often as the planner on today's fights, and the rotation alone doesn't. |
 | P2 | Ordinary fights: each wild roll, guard and invasion gets one conflict from the first four levers. | Ordinary fights meet their rows. |
 | P3 | Elites: Integrity down, two conflicts, *no pile-ups* lifted and checked on the roll. | Elites meet their row. |
@@ -359,8 +388,10 @@ October 27, 2026, from the designer:
    (section 4).
 2. **The bar.** *"40% is good, but lower the better. I want the game to be challenging."* Then, for ordinary fights:
    *"blind players more like 30% at high levels from not understanding the mechanics."* Blind wins fall with level:
-   ordinary fights 60%, 45% and 30% (levels 6–17, 18–29, 30 and up); elites and bosses 40%, 25% and 15%. The
-   planner, routine and misreader columns hold them up (section 5).
+   ordinary fights, steeper still: *"they should be steeper. The mechanics should be difficult and rewarding to
+   learn. Think Elden Ring."* Blind wins fall to 30% of ordinary fights by level 18, 10% of elites and 5% of bosses,
+   and lower from 30. A learner's curve holds them up: elites and bosses are lost on a first try and won once learned
+   (sections 2.1 and 5).
 3. **Residents as gates.** No fallback: a Resident keeps its puzzle every time.
 4. **The Operator.** The designer asked for the approach in detail, then approved it: section 3.2's rules. Helpers
    count on every lever, a beat catches only the helpers on its part sent after it was said, where helpers move on is
@@ -370,11 +401,15 @@ October 27, 2026, from the designer:
 6. **The Infiltrator, and routines.** *"Paying attention should be rewarded, but also making the correct routine
    should also be rewarded."* The Infiltrator's blind losses stand. A correct routine wins ordinary fights (section 2).
 7. **Elites.** *"Puzzles versus walls always."* Elites become puzzles (section 4).
-8. **The program.** *"The default program should have players allocate the program to fit the trick."* The rotation
+8. **The Hold chip.** Every program has it from level 8 (section 3.1).
+9. **The program.** *"The default program should have players allocate the program to fit the trick."* The rotation
    knows your kit, not the virus; each lever's answer is a handler that costs RAM (section 3.1).
 
 Still open:
 
-1. **The Hold chip** (section 3.1): every program has it from level 8, rather than as an R3 drop?
-2. **The steps between.** The 30% is the designer's; the 60% and 45% before it, and the elite and boss column
-   (40%, 25%, 15%), are this sheet's guesses at a ramp. Right, or steeper?
+1. **A learning try's cost.** Losing a fight on a run costs the unbanked pack. With elites and bosses lost on most
+   first tries, that is a real loss on every learning try. One option: walking into an elite's or a boss's room banks
+   your pack first, the way a site of grace sits before an Elden Ring boss. The wait and the walk back stay.
+2. **The ramp's numbers.** "Steeper" read as: blind 30% of ordinary fights by level 18 (not 30) and 20% from 30;
+   elites 20%, 10%, 5%; bosses 10%, 5%, 2%. And the learner's curve: elites 35%, 60%, 85% and bosses 20%, 50%, 85% at
+   30%, 15% and 5% misread. Right, or steeper still?
