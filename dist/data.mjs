@@ -1120,7 +1120,7 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   const own = overrides.boss && pool.find((spec) => spec.id === BOSSES[overrides.boss]?.third); // a native boss brings its own (data BOSSES nb-*)
   const third = genes ? pool.find((spec) => genes.includes(spec.gene)) || null : pool.length ? own || pool[overrides.boss ? 0 : (Math.imul((seed >>> 0) ^ 0x7f4a7c15, 2246822519) >>> 0) % pool.length] : null;
   // A forced basic (overrides.basic: the Codex's sample, a probe) takes the Pulse Node's place.
-  let specs = [...open.filter((spec) => spec.pool !== 'third' || spec === third), ...(BOSSES[overrides.boss]?.extra || [])]; // a boss's own parts (HASHLORD's Pool Lock)
+  let specs = [...open.filter((spec) => spec.pool !== 'third' || spec === third || (GUARDS[familyId] && genes?.includes(spec.gene))), ...(BOSSES[overrides.boss]?.extra || [])]; // a boss's own parts (HASHLORD's Pool Lock)
   let share = (spec) => (spec.pool === 'third' ? 1 : specs.some((x) => x.pool === 'third') ? CONFIG.thirdTrim : 1);
   if (rolled2) {
     const r = rolled2, sig = family.parts.find((x) => x.special), copy = { ...r.basic, id: r.basic.id + '2', name: r.basic.name + ' 2', copy: true };
@@ -1270,6 +1270,9 @@ export const floorFor = (level) => FLOORS.reduce((d, f, i) => (level >= f.band[0
 // Kestrel's Idle Timer (docs/parts-plan.md P2): from floor 3 (PARTS.kestrel), half the guard posts and ICE bring one
 // (combat.mjs encounterVirus, by their seed). It watches the guard's signature part, as a virus's does.
 for (const g of Object.values(GUARDS)) g.parts.push({ ...GENES.idletimer.parts.ransomware, gene: 'idletimer', plan: 2, kestrel: true, from: bandOf(PARTS.kestrel.floor)[0] });
+// A guard's lever (docs/puzzle-levers.md 5): from PARTS.lever every guard but the Sentinel (its lever is its seal, the
+// Blacklist) brings a Zip Bomb (combat.mjs encounterVirus).
+for (const [id, g] of Object.entries(GUARDS)) if (id !== 'sentinel') g.parts.push({ ...GENES.zipbomb.parts.ransomware, gene: 'zipbomb', plan: 1, kestrel: true, from: PARTS.lever });
 // Daemons keep their own five bands (an invasion drops its level's band, daemons.mjs): the old layers' bands.
 export const DAEMON_BANDS = [[1, 9], [7, 18], [16, 28], [26, 40], [38, 50]];
 // Content still names the five old layers (an item's vault or rogue source, `layer`; loot's depth bonus): a floor reads

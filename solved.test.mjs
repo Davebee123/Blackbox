@@ -50,13 +50,12 @@ test("the Operator's report: the Mimic's beat catches the blind player's helpers
   assert.equal(smart.wins, 100);
 });
 
-test('the bar: floors for the planner, routine and learner, a ceiling for the kit and blind players that falls with level', () => {
-  assert.deepEqual([barOf('ordinary', 10).blind, barOf('ordinary', 18).blind, barOf('ordinary', 30).blind], [40, 30, 20]);
-  assert.deepEqual([barOf('elites', 10).blind, barOf('elites', 18).blind, barOf('elites', 30).blind], [20, 10, 5]);
-  assert.deepEqual([barOf('bosses', 10).blind, barOf('bosses', 18).blind, barOf('bosses', 30).blind], [10, 5, 2]);
+test('the bar: floors for the planner, routine and learner; the kit and blind players have no ceiling (docs/puzzle-levers.md 9)', () => {
+  for (const tier of ['ordinary', 'elites', 'bosses']) for (const L of [10, 18, 30]) assert.equal(barOf(tier, L).blind, null);
   const ok = { planner: 90, routine: 88, rotation: 50, 'learner 30': 72, 'learner 15': 81, 'learner 5': 86, kit: 30, blind: 20 };
   assert.deepEqual(misses('ordinary', 18, ok), []);
-  assert.deepEqual(misses('ordinary', 30, ok), ['kit 30 > 20']);
+  assert.deepEqual(misses('ordinary', 30, { ...ok, kit: 100, blind: 100 }), []);
+  assert.deepEqual(misses('ordinary', 30, { ...ok, planner: 80 }), ['planner 80 < 85']);
   assert.deepEqual(misses('elites', 18, { ...ok, kit: 5, blind: 5 }), ['learner 30 72 > 50'], 'a hard fight whose first try usually wins is not hard to learn');
-  assert.deepEqual(misses('bosses', 18, { ...ok, routine: null, 'learner 30': 20, kit: 5, blind: 6 }), ['blind 6 > 5']);
+  assert.deepEqual(misses('bosses', 18, { ...ok, routine: null, 'learner 30': 20, kit: 5, blind: 6 }), []);
 });

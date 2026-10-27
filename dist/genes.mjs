@@ -19,6 +19,9 @@
 //   parts         a third part's spec, by family (data.mjs FAMILIES pulls them into their pools)
 //   mutation      a passive rule a wild virus rolls as its mutation (data.mjs MUTATIONS)
 //   bot           how the planner answers it (planner.mjs, tells.mjs): focus, quiet, strip, window, delay, switch
+//   lever         a part whose rule makes the default move the wrong one (docs/puzzle-fights.md 3, docs/puzzle-levers.md):
+//                 'beat' (the Mimic, the Decoy), 'last' (the Tripwire, the Zip Bomb, the Hotspot), 'first' (the Lockbox,
+//                 the Mutex, the C2 Node, the Packer), 'together' (the Mirror and its twin). A wild roll carries one from level 6 (parts.mjs PARTS.lever)
 //   counter       the gene ACTUARY brings when this one is beaten often (phase 5)
 // New genes (Exfiltrate, SYN Flood, Front End…) join this table with the same shape. Breach nodes roll genomes from
 // these (rollGenome, below): their third parts and mutations, from the author's toolkit by the budget (budgetFor).
@@ -81,41 +84,41 @@ export const GENES = {
     implicit: 'More damage on fragments and adds.', carried: (p) => !!p.overrun },
 
   // ---------- part behaviours ----------
-  ward: { name: 'Ward', adj: 'Warded', cat: 'part', axis: 'shell', role: 'primary', cost: 2, opens: 3, decode: 'part', suits: 'Ransomware, TOLLGATE',
+  ward: { name: 'Ward', adj: 'Warded', lever: 'first', cat: 'part', axis: 'shell', role: 'primary', cost: 2, opens: 3, decode: 'part', suits: 'Ransomware, TOLLGATE',
     does: 'While the ward stands, its partner loses at most 25% of its max Integrity each cycle.', telegraph: 'A warded tag on the partner shows the damage held back.', answer: 'Break the ward first, or chip under the cap. Lockpick, Keyjam, Sudo and Zero-day get through it.',
     implicit: 'Your hits get through a ward\'s cap more.', carried: (p) => !!p.ward, bot: { focus: 'first' }, counter: 'mutexlock',
     parts: { ransomware: { id: 'lockbox', name: 'Lockbox', integrity: 16, armor: 0, loot: 'Lock Pin', ward: 'encryptor', from: 3, pool: 'third', sig: true } } },
-  mutexlock: { name: 'Mutex lock', adj: 'Locked', cat: 'part', axis: 'shell', role: 'primary', cost: 3, opens: 8, decode: 'part', suits: 'Ransomware, TOLLGATE',
+  mutexlock: { name: 'Mutex lock', adj: 'Locked', lever: 'first', cat: 'part', axis: 'shell', role: 'primary', cost: 3, opens: 8, decode: 'part', suits: 'Ransomware, TOLLGATE',
     does: 'While the Mutex stands, its partner wears a shield of 25% of the partner\'s max Integrity. A broken shield returns 4 cycles later.', telegraph: 'A lock tag on the partner, then a countdown to the relock.', answer: 'Break the Mutex, or burst through one lock. Lockpick, Thermal Throttle and Sudo get through it.',
     implicit: 'Locks take more from you.', carried: (p) => !!p.lock, bot: { focus: 'first' }, counter: 'limiter',
     parts: { ransomware: { id: 'mutex', name: 'Mutex', integrity: 18, armor: 1, loot: 'Mutex Handle', lock: 'encryptor', from: 8, pool: 'third', sig: true } } },
-  tripwire: { name: 'Tripwire', adj: 'Wired', cat: 'part', axis: 'order', role: 'primary', cost: 2, opens: 16, decode: 'part', suits: 'Ransomware, TOLLGATE',
+  tripwire: { name: 'Tripwire', adj: 'Wired', lever: 'last', cat: 'part', axis: 'order', role: 'primary', cost: 2, opens: 16, decode: 'part', suits: 'Ransomware, TOLLGATE',
     does: 'When broken while other parts stand, the others go loud for the rest of the fight. Loud parts deal 25% more damage and attack 1 cycle sooner.', telegraph: 'A tripwire tag, then a loud tag on the others.', answer: 'Break it last. Quiet Wire, Logic Bomb and Sudo keep it quiet, and Throttle silences a loud part.',
     implicit: 'Loud parts hit you less.', carried: (p) => !!p.deadman, bot: { focus: 'last' }, counter: 'zipbomb',
     parts: { ransomware: { id: 'tripwire', name: 'Tripwire', integrity: 18, armor: 1, loot: 'Trip Coil', deadman: true, from: 16, pool: 'third', attack: { name: 'Ping', effect: 'damage', amount: 3, interval: 3, first: 3 } } } },
-  twin: { name: 'Twin', adj: 'Twinned', cat: 'part', axis: 'order', role: 'primary', cost: 2, opens: 3, decode: 'part', suits: 'Worm, SWARMLINE',
+  twin: { name: 'Twin', adj: 'Twinned', lever: 'together', cat: 'part', axis: 'order', role: 'primary', cost: 2, opens: 3, decode: 'part', suits: 'Worm, SWARMLINE',
     does: 'A twin broken while the other stands reboots 3 cycles later at 40% Integrity. Reboots only once.', telegraph: 'A Reboot chip on the board.', answer: 'Break both close together. Split Brain and Logic Bomb stop the reboot.',
     implicit: 'A twin reboots with less.', carried: (p) => !!p.twin, bot: { focus: 'together' }, counter: 'spare',
     parts: { worm: { id: 'mirror', name: 'Mirror', integrity: 18, armor: 1, loot: 'Mirror Shard', twin: 'replicator', from: 3, pool: 'third', sig: true, attack: { name: 'Splice', effect: 'damage', amount: 3, interval: 4, first: 3 } } } },
-  c2: { name: 'C2 command', adj: 'Commanded', cat: 'part', axis: 'swarm', role: 'amplifier', cost: 2, opens: 8, decode: 'part', suits: 'Worm, SWARMLINE',
+  c2: { name: 'C2 command', adj: 'Commanded', lever: 'first', cat: 'part', axis: 'swarm', role: 'amplifier', cost: 2, opens: 8, decode: 'part', suits: 'Worm, SWARMLINE',
     does: 'Fragments deal 50% more damage while the C2 Node stands. When it breaks, every fragment drops.', telegraph: 'A commands-fragments tag.', answer: 'Break it once fragments are up.',
     implicit: 'More damage on a part that commands others.', carried: (p) => !!p.command, bot: { focus: 'first' },
     parts: { worm: { id: 'c2', name: 'C2 Node', integrity: 18, armor: 1, loot: 'C2 Beacon', command: true, from: 8, pool: 'third', attack: { name: 'Beacon', effect: 'damage', amount: 3, interval: 4, first: 3 } } } },
-  decoymirror: { name: 'Decoy mirror', adj: 'Mirrored', cat: 'part', axis: 'feedback', role: 'amplifier', beat: 'global', cost: 2, opens: 4, decode: 'part', suits: 'Ghostroot, PALEMASK',
+  decoymirror: { name: 'Decoy mirror', adj: 'Mirrored', lever: 'beat', cat: 'part', axis: 'feedback', role: 'amplifier', beat: 'global', cost: 2, opens: 4, decode: 'part', suits: 'Ghostroot, PALEMASK',
     does: 'Every 4th cycle, your commands deal no damage, and 30% of the damage reflects back to you. Hides its timers.', telegraph: 'A Mirror chip in its column, once it is visible.', answer: 'Fire nothing direct on its beat, or break it. Mirror Maze and Sudo get through.',
     implicit: 'Bounces and mirrors hit you less.', carried: (p) => !!p.reflect, bot: { quiet: 'beat' }, counter: 'phaseshift',
     parts: { ghostroot: { id: 'decoy', name: 'Decoy', integrity: 18, armor: 1, veiled: true, loot: 'Decoy Shell', reflect: 4, from: 4, pool: 'third' } } },
-  mimic: { name: 'Mimic', adj: 'Mimicking', cat: 'part', axis: 'feedback', role: 'amplifier', beat: 'global', cost: 3, opens: 8, decode: 'part', suits: 'Ghostroot, NULL CHOIR',
+  mimic: { name: 'Mimic', adj: 'Mimicking', lever: 'beat', cat: 'part', axis: 'feedback', role: 'amplifier', beat: 'global', cost: 3, opens: 8, decode: 'part', suits: 'Ghostroot, NULL CHOIR',
     does: 'Every 4 cycles, copies the command you fire and deals its direct damage to you.', telegraph: 'Its beat chip is always on the board.', answer: 'Go quiet on its beat, or break it. A debuff, strip, burn, helper, shield or hold is quiet. Reflector, Log Wipe and Sudo also beat it.',
     implicit: 'Playback on you deals less.', carried: (p) => !!p.mimic, bot: { quiet: 'beat' }, counter: 'handshake',
     parts: { ghostroot: { id: 'mimic', name: 'Mimic', integrity: 18, armor: 1, veiled: true, loot: 'Mimic Mask', mimic: true, from: 8, pool: 'third' } } },
   // The parts plan's first wave (docs/parts-plan.md P1): third parts for levels 1 to 12. sig: it refers to the
   // signature part, so a fight without its signature never rolls it (parts.mjs).
-  zipbomb: { name: 'Zip bomb', adj: 'Fused', cat: 'part', axis: 'burst', role: 'primary', cost: 2, opens: 5, floor: 1, decode: 'part', suits: 'Ransomware, Worm, TOLLGATE',
+  zipbomb: { name: 'Zip bomb', adj: 'Fused', lever: 'last', cat: 'part', axis: 'burst', role: 'primary', cost: 2, opens: 5, floor: 1, decode: 'part', suits: 'Ransomware, Worm, TOLLGATE',
     does: 'When broken, lights a 2-cycle fuse. The blast deals 20% of your max health to you. A shield or ◆ absorbs the blast. Ending the fight puts the fuse out.', telegraph: 'A fuse chip on its row that counts down 2, 1.', answer: 'Break it last, or have a shield or ◆ up when the fuse runs out.',
     implicit: 'Fuses on you deal less.', carried: (p) => !!p.fuse, bot: { focus: 'last' },
     parts: { ransomware: { id: 'zipbomb', plan: 1, name: 'Zip Bomb', integrity: 14, armor: 0, loot: 'Fuse Wire', fuse: true, from: 5, pool: 'third' }, worm: { id: 'zipbomb', plan: 1, name: 'Zip Bomb', integrity: 14, armor: 0, loot: 'Fuse Wire', fuse: true, from: 5, pool: 'third' } } },
-  hotspot: { name: 'Hotspot', adj: 'Heated', cat: 'part', axis: 'burst', role: 'amplifier', cost: 1, opens: 6, floor: 1, decode: 'part', suits: 'Ransomware, Ghostroot',
+  hotspot: { name: 'Hotspot', adj: 'Heated', lever: 'last', cat: 'part', axis: 'burst', role: 'amplifier', cost: 1, opens: 6, floor: 1, decode: 'part', suits: 'Ransomware, Ghostroot',
     does: 'When your command hits it, the virus\'s next attack 2 or more cycles away becomes a charge. Burns and helpers do not set it off.', telegraph: 'An amber glow on its row, then a charge chip on the attack it powers up.', answer: 'Hit it with burns and helpers. Command hits are safe when the charge lands on a part you can cut.',
     implicit: 'Charges a hit of yours sets off deal less.', carried: (p) => !!p.hotspot, bot: { quiet: 'part' },
     parts: { ransomware: { id: 'hotspot', plan: 1, name: 'Hotspot', integrity: 14, armor: 0, loot: 'Thermal Pad', hotspot: true, from: 6, pool: 'third' }, ghostroot: { id: 'hotspot', plan: 1, name: 'Hotspot', integrity: 14, armor: 0, loot: 'Thermal Pad', hotspot: true, from: 6, pool: 'third' } } },
@@ -146,7 +149,7 @@ export const GENES = {
     does: 'When its Scrape lands, it removes your shield, your ◆ and your timed buffs, and gains up to 2 ◆ from what it takes.', telegraph: 'A takes-buffs mark on its cell.', answer: 'Buff after it lands, not before. Null Route makes it miss.',
     implicit: 'Scrapes take fewer of your buffs.', carried: (p) => !!p.scrape, bot: { quiet: 'buff' },
     parts: { ransomware: { id: 'scraper', plan: 2, name: 'Scraper', integrity: 22, armor: 1, loot: 'Burr Blade', scrape: 2, from: 19, pool: 'third', attack: { name: 'Scrape', effect: 'damage', amount: 4, interval: 4, first: 3 } } } },
-  packer: { name: 'Packer', adj: 'Packed', cat: 'rule', axis: 'fog', role: 'amplifier', cost: 1, opens: 20, decode: 'part', suits: 'Ghostroot, the Cryptominer, LANTERN',
+  packer: { name: 'Packer', adj: 'Packed', lever: 'first', cat: 'rule', axis: 'fog', role: 'amplifier', cost: 1, opens: 20, decode: 'part', suits: 'Ghostroot, the Cryptominer, LANTERN',
     does: 'While it stands, each rolled part shows as a Packed part. Its name, tags and rule are hidden, and its attack reads ???. The virus\'s rolled rules show as ???, even ones your Codex knows.', telegraph: 'Packed parts and ??? chips that unpack when it breaks.', answer: 'Scan before you engage, or break the Packer.',
     implicit: 'Packed rules unpack when you scan.', carried: (p) => !!p.packer, bot: { focus: 'first' },
     parts: { ghostroot: { id: 'packer', plan: 2, name: 'Packer', integrity: 20, armor: 1, veiled: true, loot: 'Shrink Wrap', packer: true, from: 20, pool: 'third' } } },
@@ -241,7 +244,7 @@ export const GENES = {
     does: 'If its part still wears ◆ when the seal lands, re-arms that part to full with 1 more ◆. Every stripped part gets 1 ◆ back.', telegraph: 'A Sealing cell.', answer: 'Strip its part before it lands. Bit Rot, Cache Poison and Write Blocker also beat it.',
     implicit: 'Seals that land leave more of your ◆ and shield.', bot: { strip: true } },
 };
-for (const [id, g] of Object.entries(GENES)) { g.id = id; g.beat ||= null; g.bot ||= null; }
+for (const [id, g] of Object.entries(GENES)) { g.id = id; g.beat ||= null; g.bot ||= null; g.lever ||= null; }
 export const GENE_IDS = Object.keys(GENES);
 
 // The genes a part carries: what its spec or its flags say, and Surge for a plain damage attacker that carries

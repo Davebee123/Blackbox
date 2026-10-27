@@ -1,6 +1,7 @@
-// node solved.mjs: how solved fights are (docs/puzzle-fights.md section 5). A fight that rewards reading it should lose a
-// blind player, and both watching (the learner) and preparing (the routine player) should win it. docs/progression.md
-// "How solved fights are" has the measurements.
+// node solved.mjs: how solved fights are (docs/puzzle-fights.md section 5, docs/puzzle-levers.md 6). A fight that rewards
+// reading it is won by watching (the learner) and by preparing (the routine player), never a wall for the planner, and
+// no fixed rule plays its lever as well as reading the board does. docs/progression.md "How solved fights are" has the
+// measurements.
 //
 //   node solved.mjs [levels]            ordinary fights, elites, Residents and the six solo bosses, every player, by
 //                                       class (about 4 minutes for 10, 18 and 30)
@@ -8,6 +9,8 @@
 //   node solved.mjs bosses [seeds]      the boss set: every solo boss at its floor, +4 and +10, every subclass, six seeds
 //                                       (about 15 minutes)
 //   node solved.mjs operator            the Operator's helpers, and what the Mimic's beat costs each sub (section 3.2)
+//   node solved.mjs rules [levels]      no fixed rule wins (docs/puzzle-levers.md 6): each lever's fights, the planner
+//                                       against players that always take one side of it (FIXED)
 //
 // The players, each on the same fights and seeds:
 //   planner     reads every rule, tell and timer (dist/planner.mjs)
@@ -23,7 +26,8 @@
 //               board, Spike when nothing else is ready.
 import { POLICIES, fight, at, policyOf } from './balance.mjs';
 import { player, playOut, HOME } from './genesim.mjs';
-import { livingParts, barKeys, readyIn, toIntent, hooks, selectEncounter } from './dist/combat.mjs';
+import { livingParts, barKeys, readyIn, toIntent, hooks, selectEncounter, fresh } from './dist/combat.mjs';
+import { GENES } from './dist/genes.mjs';
 import { ARCHETYPES, BOSSES, TELL } from './dist/data.mjs';
 import { planner, plannerWithout, kitPlanner } from './dist/planner.mjs';
 import { seeded } from './dist/gear.mjs';
@@ -52,8 +56,8 @@ export function prepare(s) {
   if (!R.isBody(body)) return null;
   const here = new Set(s.encounter.virus.parts.map((p) => p.id)), ps = R.presetsFor(s, body);
   const lever = (k) => ps.filter((p) => p.part && here.has(p.part) && p.id.startsWith(k + ':'));
-  // What fits, by need: the levers (a part to break first, a beat, a part to break last), then the tells.
-  const want = [...['first', 'beat', 'last'].flatMap(lever), ps.find((p) => p.id === 'tells')].filter(Boolean).flatMap((p) => p.handlers);
+  // What fits, by need: the levers (a part to break first, a beat, a part to break last, twins), then the tells.
+  const want = [...['first', 'beat', 'last', 'together'].flatMap(lever), ps.find((p) => p.id === 'tells')].filter(Boolean).flatMap((p) => p.handlers);
   const hs = [], budget = R.ramFor(s, body);
   let used = 0;
   for (const h of want) {
@@ -126,14 +130,15 @@ export function cell(set, cls, L, players = PLAYERS) {
   return out;
 }
 
-// ---------- the bar (docs/puzzle-fights.md section 5) ----------
-// Floors for the planner, the routine player and the learner (30, 15, 5), and a ceiling for the kit and blind players,
-// which falls with level. A hard fight's first try usually fails, so there its learner 30 is also under 50%.
+// ---------- the bar (docs/puzzle-fights.md section 5, docs/puzzle-levers.md 6) ----------
+// Floors for the planner, the routine player and the learner (30, 15, 5): no fight is a wall. A hard fight's first try
+// usually fails, so there its learner 30 is also under 50%. The kit and blind players have no ceiling any more (the
+// designer: the bot is biased): their columns are information, and the no-fixed-rule test (FIXED, below) and the
+// designer's play say whether a lever is a puzzle.
 export function barOf(tier, L) {
-  const by = (a, b, c) => (L < 18 ? a : L < 30 ? b : c);
-  if (tier === 'ordinary') return { planner: 85, routine: 85, learner: [70, 80, 85], blind: by(40, 30, 20) };
-  if (tier === 'elites') return { planner: 85, routine: 60, learner: [35, 60, 85], blind: by(20, 10, 5), firstTry: 50 };
-  return { planner: 85, routine: null, learner: [20, 50, 85], blind: by(10, 5, 2), firstTry: 50 };
+  if (tier === 'ordinary') return { planner: 85, routine: 85, learner: [70, 80, 85], blind: null };
+  if (tier === 'elites') return { planner: 85, routine: 60, learner: [35, 60, 85], blind: null, firstTry: 50 };
+  return { planner: 85, routine: null, learner: [20, 50, 85], blind: null, firstTry: 50 };
 }
 // What a row misses of its bar: [] when it meets it.
 export function misses(tier, L, w) {
@@ -143,6 +148,39 @@ export function misses(tier, L, w) {
   floor('planner', B.planner); floor('routine', B.routine);
   ['learner 30', 'learner 15', 'learner 5'].forEach((k, i) => floor(k, B.learner[i]));
   ceil('learner 30', B.firstTry); ceil('kit', B.blind); ceil('blind', B.blind);
+  return out;
+}
+
+// ---------- no fixed rule wins (docs/puzzle-levers.md 6) ----------
+// A lever is a puzzle when its right move depends on the board: two players that always take one side of it (always trip
+// the Tripwire, never trip it) each play its fights worse than the planner, which reads the board. FIXED[id]:
+//   name      the lever, for the report
+//   gene      the gene it is (genes.mjs), and family: the family whose wild rolls carry it
+//   from      the lowest level it is measured at (its gene's opens, or later)
+//   sides     { label: (move) => move }: wraps the planner's move function into one that always takes that side
+// Each P2 rule adds its own entry beside its code's tests (docs/puzzle-levers.md 8).
+export const FIXED = {};
+export const FIXED_MARGIN = 5; // a side must lose this many more points of Signal than the planner on some class
+// The wild rolls of a family at a level that carry a gene: the first n seeds, built as balance.mjs fight builds them.
+export function rolledWith(gene, family, L, n = 6) {
+  const out = [];
+  for (let seed = 1; seed <= 400 && out.length < n; seed++) {
+    const s = fresh();
+    selectEncounter(s, 'random', seed, { mode: 'run', room: '/sim', level: L, zone: true, family, quiet: true });
+    if (s.encounter?.virus.parts.some((p) => GENES[gene].carried(p))) out.push(seed);
+  }
+  return out;
+}
+// One lever at one level: Signal lost by the planner and by each side, per class, and the sides that fail the test
+// (no class where they lose FIXED_MARGIN more than the planner).
+export function fixedRow(id, L, n = 6, classes = CLASSES) {
+  const F = FIXED[id], b = at(L), seeds = rolledWith(F.gene, F.family, L, n), out = { planner: {}, sides: {}, seeds: seeds.length };
+  const run = (cls, move) => { const smart = POLICIES[cls]; POLICIES[cls] = move; try { return seeds.map((seed) => fight(cls, 'random', b, { seed, mode: 'run', zone: true, family: F.family })); } finally { POLICIES[cls] = smart; } };
+  for (const C of classes) {
+    out.planner[C] = lost(run(C, planner));
+    for (const [side, wrap] of Object.entries(F.sides)) (out.sides[side] ||= {})[C] = lost(run(C, wrap(planner)));
+  }
+  out.fails = Object.entries(out.sides).filter(([, by]) => !classes.some((C) => by[C] - out.planner[C] >= FIXED_MARGIN)).map(([k]) => k);
   return out;
 }
 
@@ -225,6 +263,17 @@ if (isMain) {
       const w = bossRow(id, L, seeds);
       rows.push({ boss: BOSSES[id].name, level: L, ...Object.fromEntries(Object.entries(w).map(([k, v]) => [short(k), v])), bar: misses('bosses', L, w).join('; ') || 'met' });
     }
+    console.table(rows);
+  }
+  if (what === 'rules') {
+    const rows = [];
+    for (const id of Object.keys(FIXED)) for (const L of nums.length ? nums : [10, 18, 30]) {
+      if (L < FIXED[id].from) continue;
+      const r = fixedRow(id, L);
+      for (const C of CLASSES) rows.push({ lever: FIXED[id].name, level: L, class: C, planner: r.planner[C], ...Object.fromEntries(Object.entries(r.sides).map(([k, by]) => [k, by[C]])) });
+      rows.push({ lever: FIXED[id].name, level: L, class: '—', planner: `${r.seeds} fights`, verdict: r.fails.length ? `a fixed rule wins: ${r.fails.join(', ')}` : 'no fixed rule wins' });
+    }
+    console.log('No fixed rule wins (docs/puzzle-levers.md 6): Signal lost, the planner against each side that never reads the board');
     console.table(rows);
   }
   if (what === 'operator') {

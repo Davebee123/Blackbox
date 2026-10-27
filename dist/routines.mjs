@@ -105,6 +105,7 @@ export const TARGETS = {
   lowest: { icon: 'kill', label: 'lowest', tip: 'The part with the least Integrity left.' },
   bare: { icon: 'cracker', label: 'no ◆', tip: 'The lowest part with no armor. None: the handler waits.' },
   nobeat: { icon: 'echo', label: 'no beat', tip: 'The part whose attack lands soonest, of those with no beat on the board.' },
+  twins: { icon: 'chain', label: 'the twins', tip: 'Whichever of a pair of twins has more of its Integrity left, so they break close together. No twins: the handler waits.' },
   others: { icon: 'chain', label: 'other parts', tip: 'Any part but the ones the WHEN chip names: Rotation plays with them out of its sight. None left: the handler waits.' },
 };
 
@@ -265,22 +266,18 @@ const liveHandlers = (s, body) => handlerRows(s, body).filter((r) => r.runs).map
 
 // ---------- the levers ----------
 // A lever (docs/puzzle-fights.md 3) is a part whose rule makes the default move the wrong one: a beat (fire nothing
-// on it), a part to break last (a Tripwire, a Zip Bomb, a Hotspot, a Limiter), a part to break first (a Lockbox, a
-// Mutex, a C2 Node, a Packer). Each gene says how a player answers it (genes.mjs bot: quiet on the beat, focus last
-// or first). The rotation answers none of them: a handler that names the part does (a beat chip, for a beat).
+// on it), a part to break last (a Tripwire, a Zip Bomb, a Hotspot), a part to break first (a Lockbox, a Mutex, a C2
+// Node, a Packer), twins to break together (the Mirror). Each gene says which (genes.mjs lever). The rotation answers none of them: a handler that names
+// the part does (a beat chip, for a beat).
 export const LEVERS = {
   beat: { label: 'beat', tip: 'Fire nothing on its beat.' },
   last: { label: 'break it last', tip: 'Break it after the other parts.' },
   first: { label: 'break it first', tip: 'Break it before the other parts.' },
+  together: { label: 'break both together', tip: 'Break it and its twin close together.' },
 };
 export function leverOf(p) {
   if (!p) return null;
-  for (const g of Object.values(GENES)) {
-    if (!g.bot || !g.carried?.(p)) continue;
-    if (g.bot.quiet === 'beat') return 'beat';
-    if (g.bot.focus === 'last' || g.bot.quiet === 'part') return 'last';
-    if (g.bot.focus === 'first') return 'first';
-  }
+  for (const g of Object.values(GENES)) if (g.lever && g.carried?.(p)) return g.lever;
   return null;
 }
 
@@ -317,6 +314,7 @@ export function presetsFor(s, body) {
     const ref = `${body}:${x.id}`, lever = leverOf(x);
     if (lever === 'beat') add(`beat:${x.id}`, 'Quiet on the beat', 'echo', `On the ${x.name}'s beat, your rotation fires nothing with a direct hit: a shield, a strip, a burn, or nothing.`, [{ when: 'beat1', do: ROTATE.id, target: 'nobeat' }], x.id);
     if (lever === 'last') add(`last:${x.id}`, `${x.name} last`, 'part', `Your rotation on the other parts while the ${x.name} stands, then on it.`, [{ when: `${ref}:present`, do: ROTATE.id, target: 'others' }], x.id);
+    if (lever === 'together') add(`together:${x.id}`, 'Twins together', 'part', `Your rotation on whichever of the ${x.name} and its twin has more left, so they break close together.`, [{ when: `${ref}:present`, do: ROTATE.id, target: 'twins' }], x.id);
     if (lever === 'first') add(`first:${x.id}`, `${x.name} first`, 'part', `Your rotation on the ${x.name} before the other parts.`, [{ when: `${ref}:present`, do: ROTATE.id, target: 'that' }], x.id);
   }
   if (sig) {
@@ -396,6 +394,7 @@ function targetOf(s, h, ps, ok = null) {
   if (h.target === 'bare') return live.filter((p) => !(p.armor > 0)).sort((a, b) => a.integrity - b.integrity)[0] || null;
   if (h.target === 'nobeat') { const beat = new Set(beatParts(s, 3)); return soon(live.filter((p) => !beat.has(p))); }
   if (h.target === 'others') { const named = new Set(ps || []); return soon(live.filter((p) => !named.has(p))); }
+  if (h.target === 'twins') { const tw = live.filter((p) => p.twin || live.some((x) => x.twin === p.id)); return tw.length === 2 ? [...tw].sort((a, b) => b.integrity / b.max - a.integrity / a.max)[0] : null; }
   return null;
 }
 const fires = (s, text) => !toIntent(s, text).error;

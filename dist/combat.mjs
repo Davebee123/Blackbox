@@ -1199,6 +1199,8 @@ export function encounterVirus(s, key, seed, opts = {}) {
   if (opts.rare) over.rare = true;
   // Kestrel's Idle Timer (PARTS.kestrel): from floor 3, half the guard posts and ICE bring one, by their seed.
   if (PARTS.on && GUARDS[key] && mode === 'run' && !opts.nest && !opts.genes && over.floor >= PARTS.kestrel.floor && ((Math.imul((seed >>> 0) ^ 0x6a09e667, 2246822519) >>> 0) / 2 ** 32) < PARTS.kestrel.share) over.genes = ['idletimer'];
+  // A guard's lever (docs/puzzle-levers.md 5): from PARTS.lever, a Zip Bomb on every guard but the Sentinel (data.mjs GUARDS).
+  if (PARTS.on && GUARDS[key] && key !== 'sentinel' && mode === 'run' && !opts.nest && !opts.genes && (lvl ?? 1) >= PARTS.lever) over.genes = [...(over.genes || []), 'zipbomb'];
   const by = placeAuthor(s, mode, opts);
   if (by !== undefined) over.author = by;
   // One stranger a fight (parts.mjs): a part you've never met (research 0) comes alone. A sim plays a veteran (s.metAll).

@@ -1,7 +1,7 @@
 # Levers with answers: puzzle fights P2, redesigned
 
-October 27, 2026. A draft for the designer's review: nothing here is built. It replaces P2 of docs/puzzle-fights.md
-(section 7) and, if the designer signs it off, section 5's ceilings for the blind and kit players.
+October 27, 2026. Signed off (section 9) and being built. It replaces P2 of docs/puzzle-fights.md (section 7) and section
+5's ceilings for the blind and kit players.
 
 The designer, on starting P2: *"I worry that it's not going to be beneficial to put it against a bot since the bot is
 biased. I think that, in a vacuum, the mechanics just need to be more complex and nuanced."* Then: design doc first,
@@ -235,13 +235,18 @@ Preparing still pays as much as watching (decision 6): the routine that fits the
 
 P3 (elites) builds on section 4's pairs: two levers that pull against each other, plus the Integrity cut.
 
-## 9. Questions for the designer
+## 9. Decided
 
-1. **The Mimic:** copy everything you fire (section 3.1's table), or only hits, strips and burns (simpler to read)?
-2. **The Tripwire:** loud parts take more damage and drop their ◆. Both, or only the damage?
-3. **The Zip Bomb:** a share of each part's max, and a ◆ off each?
-4. **SIGINT on charges:** it changes SIGINT from "the cast key" to "the key you save". All right?
-5. **The Lockbox:** all of the held damage on the partner, or half?
-6. **The Decoy:** the bent beat (close to the Front End's bend), or keep today's reflect?
-7. **The bar:** drop the blind and kit ceilings for the no-fixed-rule test and your play? That changes decision 2 of
-   docs/puzzle-fights.md.
+October 27, 2026, from the designer: *"Copy everything. To answer all questions, just lean on the notion of the more
+difficult choice. I will test them out."* The harder choice, question by question:
+
+1. **The Mimic** copies everything you fire (section 3.1's table).
+2. **The Tripwire:** loud parts take more damage *and* drop their ◆, so tripping it is a real temptation.
+3. **The Zip Bomb:** the blast takes a share of each part's max *and* a ◆ off each.
+4. **SIGINT** answers a charge too: one key, two clocks.
+5. **The Lockbox:** half the held damage lands on the partner, so cashing it in pays less.
+6. **The Decoy:** the bent beat, more to read.
+7. **The bar:** the blind and kit ceilings go; the no-fixed-rule test and the designer's play replace them (decision 2
+   of docs/puzzle-fights.md changes with this).
+
+All of P2 (a, b and c) is built for the designer to play.

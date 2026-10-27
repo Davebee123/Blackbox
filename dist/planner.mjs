@@ -112,10 +112,20 @@ export function kitPlannerAt(s, p, no = null, read = null) {
 const BUFFING = new Set(['harden', 'brace', 'sudo', 'fork', 'debris-field', 'rm-rf', 'circuit-breaker', 'honeypot', 'maintenance-window', 'bulkhead', 'dmz', 'mesh']);
 const scrapeNow = (s) => !ignores('scraper') && landingNow(s).some((i) => part(s, i.source)?.scrape);
 export function planner(s) {
-  if (!scrapeNow(s)) return heedHelpers(s, planner1(s));
+  if (!scrapeNow(s)) return heedHelpers(s, spareFuse(s, planner1(s)));
   const was = veto;
   veto = (id) => BUFFING.has(id) || !!(was && was(id));
-  try { return heedHelpers(s, planner1(s)); } finally { veto = was; }
+  try { return heedHelpers(s, spareFuse(s, planner1(s))); } finally { veto = was; }
+}
+// A Zip Bomb goes last (order, below), and no hit of a plan made for something else breaks it early: one that would
+// finish it, or one a set's sure crit makes do so (Palemask: a part under half takes your next hit as a crit). The same
+// skill goes onto another part instead, or it waits.
+function spareFuse(s, plan) {
+  const [id, at] = String(plan || '').split(' '), p = part(s, at);
+  if (!p?.fuse || p.fuseAt || ignores('zipbomb') || !others(s, p)) return plan;
+  const sure = p.sxCrit && Object.values(p.sxCrit).some(Boolean);
+  if (!sure && !((bare(p) || ignoresArmor(s, id)) && previewDamage(s, id, p) >= p.integrity)) return plan;
+  return first(s, livingParts(s).filter((x) => x !== p && x.kind === 'system' && !frozenNow(s, x)).map((x) => `${id} ${x.id}`)) || 'hold'; // nothing else to hit (a Cold Store still frozen): wait
 }
 function planner1(s) {
   const plan = plan0(s);

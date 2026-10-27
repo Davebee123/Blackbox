@@ -11,6 +11,7 @@
 //              they break a compatibility rule
 //   strangers  a fight never holds more than one part you've never met (research 0), Pulse Node and signature aside,
 //              and a fight with one is never 4 parts
+//   lever      from PARTS.lever, exactly one third whose rule makes the default move the wrong one (genes.mjs lever)
 //
 // Every number a playtest might move is one named entry in PARTS (`developer parts` shows and sets them at runtime).
 import { rollGenome, compatible, GENES } from './genes.mjs';
@@ -71,6 +72,7 @@ export const PARTS = {
   native: { elite: true, rare: true }, // elites and ★ rare spawns always bring one of their floor's natives (none open there: the nearest floor above's)
   rare: { min: 3, budget: 2 }, // a ★ rare spawn brings at least this many parts, and this many more budget points for its thirds
   kestrel: { floor: 3, share: 0.5 }, // from this floor, this share of guard posts and ICE bring Kestrel's Idle Timer (data.mjs GUARDS)
+  lever: 6, // from this level an ordinary fight carries exactly one lever (docs/puzzle-levers.md 5): wild rolls here, guards a Zip Bomb (data.mjs GUARDS) or the Sentinel's seal
 };
 // A level's value on a step table [[level, value], …]: the last step it has reached.
 export const along = (pts, level) => pts.reduce((v, [L, x]) => (level >= L ? x : v), pts[0][1]);
@@ -160,8 +162,37 @@ export function rollParts({ family, body, level, rand, elite = false, rare = fal
       strangers = thirds.filter(stranger).length + (stranger(basic) ? 1 : 0);
     }
   }
+  // One lever a fight (docs/puzzle-levers.md 5): from PARTS.lever an ordinary fight carries exactly one part whose rule
+  // makes the default move the wrong one (genes.mjs lever). None rolled: one comes in a free slot, else in the doubled
+  // basic's, else on top (up to the most its level rolls), else in the last other third's, so the rolled kinds stay. Two or more: the
+  // first stays, and each other is rolled again from the thirds that bring none (kept when none fits: below level 9
+  // every third open is a lever, and a 4-part fight keeps its 4). Elites bring two that pull against each other (P3).
+  let lever = null;
+  if (!elite && level >= PARTS.lever) {
+    const isLever = (spec) => !!GENES[spec.gene]?.lever && weigh(spec.gene) > 0;
+    const most = 2 + along(PARTS.count, level).findLastIndex((x) => x > 0); // the most parts the level's count rolls
+    const count = () => 1 + (dup ? 1 : 0) + (signature ? 1 : 0) + thirds.length;
+    const ok = (spec, others) => !others.includes(spec) && (!spec.sig || signature) && !compatible([...(body.core || []), ...extra, ...others.map((t) => t.gene), spec.gene]).length && (!stranger(spec) || others.filter(stranger).length + (stranger(basic) ? 1 : 0) < 1);
+    for (const t of thirds.filter(isLever).slice(1)) {
+      const rest = thirds.filter((x) => x !== t), swap = pool.filter((spec) => !isLever(spec) && weigh(spec.gene) > 0 && ok(spec, rest));
+      if (swap.length) thirds[thirds.indexOf(t)] = pickBy(rand, swap, (x) => weigh(x.gene));
+    }
+    lever = thirds.find(isLever) || null;
+    if (!lever) {
+      const room = count() < n || dup || count() < Math.max(n, most);
+      const other = (t) => t !== forced && nativeFloor(t.gene) !== floor; // a floor's natives are its own: the lever spares them
+      const drop = room ? null : thirds.findLast(other) || thirds.findLast((t) => t !== forced) || null, keep = thirds.filter((t) => t !== drop);
+      const can = pool.filter((spec) => isLever(spec) && ok(spec, keep)); // none you've met, with a stranger already here: the stranger is the fight's lesson
+      if (can.length) {
+        lever = pickBy(rand, can, (x) => weigh(x.gene));
+        if (drop) thirds[thirds.indexOf(drop)] = lever;
+        else { if (count() >= n && dup) dup = false; thirds.push(lever); }
+      }
+    }
+    strangers = thirds.filter(stranger).length + (stranger(basic) ? 1 : 0);
+  }
   // A new kind's first fight has 2 or 3 parts, never 4.
   let total = 1 + (dup ? 1 : 0) + (signature ? 1 : 0) + thirds.length;
-  if (strangers && total > 3) { const i = thirds.findLastIndex((t) => !stranger(t) && t !== forced); if (i >= 0) thirds.splice(i, 1); else dup = false; total--; }
-  return { basic, dup, signature, thirds, strangers, native: forced || null };
+  if (strangers && total > 3) { const i = thirds.findLastIndex((t) => !stranger(t) && t !== forced && t !== lever); if (i >= 0) thirds.splice(i, 1); else dup = false; total--; }
+  return { basic, dup, signature, thirds, strangers, native: forced || null, lever };
 }
