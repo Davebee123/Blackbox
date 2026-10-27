@@ -1,7 +1,7 @@
 # Puzzle fights: fights you read, or prepare for
 
-Draft, October 27, 2026. The designer answered the first round of questions the same day (section 8). Nothing in it
-is built.
+October 27, 2026. Every question this sheet raised has the designer's answer (section 8). Nothing in it is built yet;
+section 7 is the build order.
 
 docs/progression.md "How solved fights are" measured the class-balance fights twice: once with the planner, which
 reads every rule, tell and timer, and once with a blind player, who fires the first ready key on its bar at the first
@@ -163,10 +163,11 @@ The designer: *the mechanics should be difficult and rewarding to learn. Think E
   loot roll, and the achievements (section 6).
 - **Help is there, at a price.** Levels above the fight and a crew make it easier, as summons and levels do in Elden
   Ring, but the conflicts stay: a higher level makes a misread survivable, not unnecessary.
-- **Trying again is quick.** Learning by losing only works if a try is cheap. Today a loss on a run costs the unbanked
-  pack, a wait (the server takes you back 30 seconds later, 15 more for each disconnect, up to 2 minutes) and the walk
-  back. The wait and the walk are fine; losing the pack on every learning try is the loss aversion the designer's
-  rules rule out. Section 8 asks.
+- **You choose the risk.** A loss on a run costs what it does today: the unbanked pack, a wait (the server takes you
+  back 30 seconds later, 15 more for each disconnect, up to 2 minutes) and the walk back. That stays. An elite or a
+  boss shows on the map before you walk in (and *stop before danger* stops a program's walk next door), so you know the
+  risk before the fight, and `jack out` banks your pack before you take it on. The designer: *you know the risk of the
+  fight before entering. You can always jack out before combat.*
 
 ## 3. The levers: conflicts
 
@@ -405,11 +406,8 @@ October 27, 2026, from the designer:
 9. **The program.** *"The default program should have players allocate the program to fit the trick."* The rotation
    knows your kit, not the virus; each lever's answer is a handler that costs RAM (section 3.1).
 
-Still open:
+10. **A learning try's cost.** Unchanged: a loss costs the unbanked pack. *"You know the risk of the fight before
+    entering. You can always jack out before combat."* (section 2.1)
+11. **The ramp's numbers.** *"They seem steep enough."* The blind and learner columns in section 5 stand.
 
-1. **A learning try's cost.** Losing a fight on a run costs the unbanked pack. With elites and bosses lost on most
-   first tries, that is a real loss on every learning try. One option: walking into an elite's or a boss's room banks
-   your pack first, the way a site of grace sits before an Elden Ring boss. The wait and the walk back stay.
-2. **The ramp's numbers.** "Steeper" read as: blind 30% of ordinary fights by level 18 (not 30) and 20% from 30;
-   elites 20%, 10%, 5%; bosses 10%, 5%, 2%. And the learner's curve: elites 35%, 60%, 85% and bosses 20%, 50%, 85% at
-   30%, 15% and 5% misread. Right, or steeper still?
+Nothing is open. P0 (section 7) is next, in its own session.
