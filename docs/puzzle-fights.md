@@ -400,6 +400,28 @@ Each phase is played by the designer before the next starts: P2 changes every fi
   kit player beats it by 19–27 points: its answers to their rules cost more than ignoring them. P4 needs those answers
   fixed before its planner floor of 85% means anything.
 
+**What P1 built, the routine half** (docs/progression.md "The program fits the trick"):
+
+- **The rotation is the kit player.** It plays your kit and reads the timers, and reads no tell and no part's rule.
+  Broad TARGETs (soonest, lowest, no ◆) do what they say: none leaves a Tripwire for last on its own any more.
+- **Two DO chips that aren't skills.** *Hold* (from level 8, no RAM of its own) fires nothing. *Rotation* (always
+  there, no RAM of its own) is your rotation's move at the TARGET part, so a handler says where and your kit says
+  what. Fired by a beat chip, the Rotation reads the beat and goes quiet. A handler that names its part but can't
+  fire (its skill cooling) aims the rotation there too.
+- **New chips:** WHEN *beat in 1* and *beat in 2* (a Mimic's or a Decoy's beat, open with either part's rule); TARGET
+  *no beat* and *other parts* (any part but the ones the WHEN chip names).
+- **A preset for each lever** whose part's rule you've researched, listed first, the one in the fight first. A lever is
+  a part whose gene's bot hint says how to answer it (genes.mjs `bot`): *Quiet on the beat* (the Mimic, the Decoy:
+  *beat in 1 → Rotation → no beat*), *Tripwire last* (the Zip Bomb, the Hotspot, the Limiter: *on board → Rotation →
+  other parts*), *Lockbox first* (the Mutex, the C2 Node, the Packer: *on board → Rotation → that part*). Then *Answer
+  the tells* (*any tell live → Rotation → that part*) and *SIGINT the cast*, beside the plain presets.
+- **Exceptions:** in a routine that's yours, a lever no handler names is yours to play however well researched, and so
+  is a seal or a cast on the board. A charge is still covered once mastered.
+- **Where it differs from section 3.1.** The beat's preset is *Quiet on the beat*, not *Hold on the beat*: holding wasted
+  the cycle, and the Bastion lost fights to it that its rotation won; Hold stays as a chip. SIGINT is its own preset,
+  not part of answering the tells: fired by a handler into a cycle a kill was due, it cost the kill. The twin and the
+  Spare are not levers yet (their answers are *together* and *asleep*, not first or last); P2 decides.
+
 ## 8. Decided, and still open
 
 October 27, 2026, from the designer:

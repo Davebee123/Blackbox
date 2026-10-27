@@ -12,9 +12,9 @@
 // The players, each on the same fights and seeds:
 //   planner     reads every rule, tell and timer (dist/planner.mjs)
 //   routine     your program, prepared: research at the fight's tier (rule chips for ordinary fights, mastered for
-//               elites), the routine confirmed with a tell handler (any tell live: your best hit, that part); the
+//               elites), the routine fitted to the trick (prepare: each lever's preset, then Answer the tells); the
 //               rotation does the rest. Not on a boss or the Resident: those are yours alone.
-//   rotation    your program unprepared: no routine for the virus, so the rotation plays it all, as it does today
+//   rotation    your program unprepared: no routine for the virus, so the rotation (the kit player) plays it all
 //   learner N   the misreader (docs/genome.md 11.2): the kit player's move on N% of its cycles, the planner's on the
 //               rest. 30, 15 and 5 stand for a first try, a few tries in, and learned.
 //   kit         blind to the virus, not to its own kit: the planner with every tell and gene unread (TELL.bots.answer
@@ -25,8 +25,7 @@ import { POLICIES, fight, at, policyOf } from './balance.mjs';
 import { player, playOut, HOME } from './genesim.mjs';
 import { livingParts, barKeys, readyIn, toIntent, hooks, selectEncounter, part, defender, strikeWith, alive } from './dist/combat.mjs';
 import { ARCHETYPES, BOSSES, TELL, ABILITIES } from './dist/data.mjs';
-import { GENES, GENE_BOTS } from './dist/genes.mjs';
-import { planner, plannerWithout } from './dist/planner.mjs';
+import { planner, plannerWithout, kitPlanner } from './dist/planner.mjs';
 import { tellsOf } from './dist/tells.mjs';
 import { seeded } from './dist/gear.mjs';
 import { TIER } from './dist/research.mjs';
@@ -43,16 +42,29 @@ export const blind = (s) => {
   for (const id of ids) { if (readyIn(s, id) > 0) continue; for (const c of [`${id} ${t.id}`, id]) if (!toIntent(s, c).error) return c; }
   return 'hold';
 };
-// Everything the planner reads off the virus: every gene (genes.mjs GENE_BOTS) and the Buffer's rule.
-const UNREAD = new Set([...Object.keys(GENES), 'buffer']);
-export function kit(s) {
-  const answer = TELL.bots.answer, ignore = GENE_BOTS.ignore;
-  TELL.bots.answer = false; GENE_BOTS.ignore = UNREAD;
-  try { return planner(s); } finally { TELL.bots.answer = answer; GENE_BOTS.ignore = ignore; }
-}
+export const kit = (s) => kitPlanner(s); // the planner with every tell and gene unread (planner.mjs kitPlanner)
 export const learner = (share, seed) => { const r = seeded((seed * 2654435761 + 0x1ea7) >>> 0); return (s) => (r() < share ? kit(s) : planner(s)); };
-// The program: research at a tier on every part of the fight's virus, and (prepared) its routine confirmed with a tell
-// handler. Set up on its first cycle, then it types nothing and the timer runs the program.
+// The program: research at a tier on every part of the fight's virus and (prepared) its routine fitted to the trick:
+// the preset of each lever in the fight (Hold on the beat, Tripwire last, Lockbox first), then Answer the tells, as
+// many handlers as its RAM holds (routines.mjs presetsFor). Set up on its first cycle, then it types nothing and the
+// timer runs the program.
+export function prepare(s) {
+  const body = R.fightBody(s);
+  if (!R.isBody(body)) return null;
+  const here = new Set(s.encounter.virus.parts.map((p) => p.id)), ps = R.presetsFor(s, body);
+  const lever = (k) => ps.filter((p) => p.part && here.has(p.part) && p.id.startsWith(k + ':'));
+  // What fits, by need: the levers (a part to break first, a beat, a part to break last), then the tells.
+  const want = [...['first', 'beat', 'last'].flatMap(lever), ps.find((p) => p.id === 'tells')].filter(Boolean).flatMap((p) => p.handlers);
+  const hs = [], budget = R.ramFor(s, body);
+  let used = 0;
+  for (const h of want) {
+    if (hs.some((x) => x.when === h.when && x.do === h.do && x.target === h.target)) continue;
+    if (used + R.handlerRam(s, h) > budget) continue;
+    used += R.handlerRam(s, h);
+    hs.push({ ...h });
+  }
+  return Object.assign(R.routineOf(s, body), { handlers: hs, confirmed: true });
+}
 function program(tier, prepared) {
   let ready = null;
   return (s) => {
@@ -61,8 +73,7 @@ function program(tier, prepared) {
       ready = e;
       s.research = {}; s.researchScale = 3;
       for (const p of e.virus.parts) s.research[R.refOf(e.virus, p)] = tier;
-      const body = R.fightBody(s), hit = R.presetsFor(s, body).find((p) => p.id === 'lowest')?.handlers[0].do || 'spike';
-      if (prepared && R.isBody(body)) Object.assign(R.routineOf(s, body), { handlers: [{ when: 'anytell', do: hit, target: 'that' }], confirmed: true });
+      if (prepared) prepare(s);
     }
     return 'program';
   };
