@@ -1,7 +1,8 @@
 # Puzzle fights: fights you read, or prepare for
 
-October 27, 2026. Every question this sheet raised has the designer's answer (section 8). Nothing in it is built yet;
-section 7 is the build order.
+October 27, 2026. Every question this sheet raised has the designer's answer (section 8). P0 is built: `solved.mjs`
+measures it, and docs/progression.md "How solved fights are" has its numbers. Nothing else is built yet; section 7 is
+the build order.
 
 docs/progression.md "How solved fights are" measured the class-balance fights twice: once with the planner, which
 reads every rule, tell and timer, and once with a blind player, who fires the first ready key on its bar at the first
@@ -287,10 +288,13 @@ The blind Operator fires Deploy, Botnet, Spawn and Fan-out at the first part on 
 these rules its helpers sit on a beat's part, break parts out of order and start a boss's phases early, so it should
 lose as the other blind players do. A reading Operator keeps its swarm and its identity.
 
-The risk is the Herder in Ghostroot fights: its strength is volume, and a beat that catches five helpers is five
-hits. Rule 2's cap and rule 3's grace hold it down, and P0 measures it before anything ships: the planner Herder's
-Signal lost must stay in the solo band. The planner has to learn the rules too (where a helper may go, when to cash
-in), or its row fails for the wrong reason.
+The risk was the Herder in Ghostroot fights: its strength is volume, and a beat that catches five helpers is five
+hits. P0 measured it with rules 2 and 3 prototyped in the harness and the planner taught them (no helper onto the
+Mimic while a beat it would reach is on the board and other parts stand, Kill Switch on the beat). The risk didn't
+show: the Herder's helpers are small, so a caught beat costs it about 3 Signal, and the planner Herder's Signal lost in
+Mimic fights moved by a point at most (14% at 18). The Hijacker's bigger helpers cost it 2–6 points. The blind Operator
+lost 3–11 more points of Signal and no fights: rules 2 and 3 alone don't make it lose, so rule 1 (the order, the ♛
+part) has to carry the rest.
 
 ## 4. Where they live
 
@@ -314,19 +318,21 @@ fight a routine plays.
 
 ## 5. How it's measured
 
-`solved.mjs` today plays the planner against the blind player on the class-balance fights. It grows four things:
+`solved.mjs` played the planner against the blind player on the class-balance fights. P0 grew it four things, and
+checks every row against the bar below:
 
-1. **The learner**: the misreader of docs/genome.md 11.2, blind on a share of its cycles, played at three shares
-   for three stages of learning a fight: 30% (a first try), 15% (a few tries in) and 5% (learned). It's the stand-in
-   for a person, and its three numbers are the learning curve.
-2. **The routine player**: the program as a player would set it up, with the virus's presets and handlers from the
-   research its tier allows (decoded and rule chips for ordinary fights, mastered chips for elites). It answers
-   question 6: a correct routine wins.
-3. **The kit player**, blind to the virus but not to its own kit: it plays its subclass's `rotation` preset in order,
-   at the part that attacks soonest. It separates reading the virus from playing your kit, which the Infiltrator's
-   numbers mix up today (1.2).
-4. **The elite and boss sets**: every elite roll's conflicts, every boss at its floor, +4 and +10 levels, every
-   subclass, six seeds.
+1. **The learner**: the misreader of docs/genome.md 11.2, blind to the virus on a share of its cycles (there it plays
+   the kit player's move), at three shares for three stages of learning a fight: 30% (a first try), 15% (a few tries
+   in) and 5% (learned). It's the stand-in for a person, and its three numbers are the learning curve.
+2. **The routine player**: the program as a player would set it up, with research at its tier (rule chips for
+   ordinary fights, mastered chips for elites) and a handler for each trick. Today that's one handler, *any tell live*,
+   your best hit, *that part*: the presets of today replace the rotation's play and lose fights. P1's lever presets go
+   here. It answers question 6: a correct routine wins. Beside it, the rotation alone (no routine for the virus).
+3. **The kit player**, blind to the virus but not to its own kit: the planner with every tell and gene unread. It
+   separates reading the virus from playing your kit, which the Infiltrator's numbers mix up today (1.2), and it's
+   what section 3.1 says the rotation should become.
+4. **The elite and boss sets**: 12 elite rolls; every boss at its floor, +4 and +10 levels, every subclass, six seeds.
+   Each elite roll's conflicts come with P3.
 
 | Fights | Planner wins | Routine wins | Learner wins (30% · 15% · 5% misread) | Blind and kit wins |
 |---|---|---|---|---|
@@ -373,13 +379,26 @@ fights keep those and add:
 
 | Phase | What ships | Done when |
 |---|---|---|
-| P0 | `solved.mjs`: the learner at three misread shares, the routine player, the kit player, and the elite and boss sets. How much of the blind Operator's wins comes from helpers. No game change. | Section 1.4's table, with the new players' columns, is in progression.md. |
+| P0 | `solved.mjs`: the learner at three misread shares, the routine player, the kit player, and the elite and boss sets. How much of the blind Operator's wins comes from helpers. No game change. | Section 1.4's table, with the new players' columns, is in progression.md. **Done.** |
 | P1 | The rotation made general (the levers' answers move into presets and handlers), a preset per lever, and a lever's part with no handler as an exception. The Hold chip from level 8, and the *beat in 1* and *beat in 2* chips. Helpers count on every lever (section 3.2's rules), with their pips and the move-on tether on the board, and the *no beat* target. The planner taught the helper rules. | The routine player wins as often as the planner on today's fights, and the rotation alone doesn't. |
 | P2 | Ordinary fights: each wild roll, guard and invasion gets one conflict from the first four levers. | Ordinary fights meet their rows. |
 | P3 | Elites: Integrity down, two conflicts, *no pile-ups* lifted and checked on the roll. | Elites meet their row. |
 | P4 | Bosses: the levers as boss rules (a beat that repeats, phases, the one to leave). Two Residents and two solo bosses first, then the rest, lair bosses and feuds. | Every boss meets its row, and the designer has played the first four. |
 
 Each phase is played by the designer before the next starts: P2 changes every fight in the game.
+
+**What P0 found for the phases after it** (docs/progression.md "Every player, every tier"):
+
+- **No fight meets its bar today**, and the kit player is why: reading neither tells nor genes, it wins 83–100% of
+  ordinary fights and of the Residents. Today's tells and gene rules don't decide fights; P2's levers have to.
+- **There's no learning curve yet.** The learner at 30% wins about what it wins at 5%, except on MIRRORSHADE.
+- **The rotation alone wins ordinary fights** as often as the planner, so preparing pays nothing until P1 makes the
+  rotation the kit player.
+- **Elites are walls.** At 10 the planner wins 0–33% of them. P3's Integrity cut comes first.
+- **The planner falls short on some bosses** (RELAY-KING at every level, PATCH TUESDAY at 10, FLOODWALL at 10 and
+  14, BACK ORIFICE at 14, HASHLORD at 20 and 26, SLEEPWALKER at 20), and on SLEEPWALKER, FLOODWALL and HASHLORD the
+  kit player beats it by 19–27 points: its answers to their rules cost more than ignoring them. P4 needs those answers
+  fixed before its planner floor of 85% means anything.
 
 ## 8. Decided, and still open
 
@@ -397,7 +416,7 @@ October 27, 2026, from the designer:
 4. **The Operator.** The designer asked for the approach in detail, then approved it: section 3.2's rules. Helpers
    count on every lever, a beat catches only the helpers on its part sent after it was said, where helpers move on is
    shown, and helpers still never cut a tell on their own. The Operator's puzzle is planning where they'll be. P0
-   still measures the Herder's cost in Ghostroot fights before P1 builds it.
+   measured the Herder's cost in Ghostroot fights: about a point of Signal for the planner (section 3.2).
 5. **Pile-ups.** Lifted, for elites and bosses, checked fight by fight.
 6. **The Infiltrator, and routines.** *"Paying attention should be rewarded, but also making the correct routine
    should also be rewarded."* The Infiltrator's blind losses stand. A correct routine wins ordinary fights (section 2).
@@ -410,4 +429,4 @@ October 27, 2026, from the designer:
     entering. You can always jack out before combat."* (section 2.1)
 11. **The ramp's numbers.** *"They seem steep enough."* The blind and learner columns in section 5 stand.
 
-Nothing is open. P0 (section 7) is next, in its own session.
+Nothing is open. P0 is done; P1 (section 7) is next, in its own session.

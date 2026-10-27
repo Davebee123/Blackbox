@@ -1,0 +1,83 @@
+// solved.mjs's players and bar (docs/puzzle-fights.md section 5): the kit player reads nothing of the virus and leaves the
+// switches as it found them, a learner on 0% is the planner, the routine player's fights are its program's, the beat's
+// prototype catches only helpers sent after the beat was said, and the bar's floors and ceilings.
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { at, fight, POLICIES } from './balance.mjs';
+import { TELL } from './dist/data.mjs';
+import { GENE_BOTS } from './dist/genes.mjs';
+import { hooks } from './dist/combat.mjs';
+import { kit, learner, play, misses, barOf, beatCatchesHelpers, moverOf } from './solved.mjs';
+
+test('the kit player reads no tell and no gene, and puts both switches back', () => {
+  const b = at(18), r = play('Breaker', 'kit', 'random', b, { seed: 3, mode: 'run', zone: true });
+  assert.ok(r.cycles > 0);
+  assert.equal(TELL.bots.answer, true);
+  assert.equal(GENE_BOTS.ignore.size, 0);
+  let seen = null;
+  const smart = POLICIES.Breaker;
+  POLICIES.Breaker = (s) => { const was = TELL.bots.answer; const t = kit(s); seen ??= was; return t; };
+  try { fight('Breaker', 'random', b, { seed: 3, mode: 'run', zone: true }); } finally { POLICIES.Breaker = smart; }
+  assert.equal(seen, true, 'between moves the switches are as they were');
+});
+
+test('a learner that never misreads plays the planner; one that always does plays the kit player', () => {
+  const b = at(18), o = { seed: 5, mode: 'run', zone: true, family: 'ghostroot' };
+  const same = (a, c) => assert.deepEqual([a.win, a.cycles, a.lostPct], [c.win, c.cycles, c.lostPct]);
+  for (const C of ['Breaker', 'Operator']) {
+    const smart = POLICIES[C];
+    POLICIES[C] = learner(0, 1); const l0 = fight(C, 'random', b, o);
+    POLICIES[C] = learner(1, 1); const l1 = fight(C, 'random', b, o);
+    POLICIES[C] = smart;
+    same(l0, play(C, 'planner', 'random', b, o));
+    same(l1, play(C, 'kit', 'random', b, o));
+  }
+});
+
+test("the routine player's fights are played by its program, which is uninstalled after", () => {
+  const was = hooks.program;
+  const r = play('Bastion', 'routine', 'random', at(18), { seed: 2, mode: 'run', zone: true });
+  assert.ok(r.uses.program >= r.cycles - 1, 'it typed nothing');
+  assert.equal(hooks.program, was);
+  assert.ok(r.win, 'a prepared program wins an ordinary fight at its level');
+});
+
+test("the beat's prototype catches helpers sent after the beat was said, never before", () => {
+  // A Herder at 18 against Ghostroot with a Mimic: its planner sends helpers onto the Mimic on some seeds.
+  let caught = 0, early = 0;
+  for (let seed = 1; seed <= 6; seed++) {
+    const c = beatCatchesHelpers(), smart = POLICIES.Operator;
+    POLICIES.Operator = moverOf('planner', seed);
+    try {
+      fight('Operator', 'random', at(18), { sub: 'herder', seed, mode: 'run', zone: true, family: 'ghostroot', genes: ['mimic'], before: c.before, after: (s, ev) => {
+        const n = s.serial;
+        c.after(s, ev);
+        if (s.logs.some((x) => x.id > n && /Helpers \(mimicked\)/.test(x.message || ''))) caught++;
+      } });
+    } finally { POLICIES.Operator = smart; }
+    // The same fight with every helper counted as sent before its beat was said: nothing is caught.
+    const d = beatCatchesHelpers();
+    POLICIES.Operator = moverOf('planner', seed);
+    try {
+      fight('Operator', 'random', at(18), { sub: 'herder', seed, mode: 'run', zone: true, family: 'ghostroot', genes: ['mimic'], before: (s) => { const t = s.encounter.virus.tells?.list.find((x) => x.kind === 'mimic'); if (t?.told) t.said += 100; d.before(s); if (t?.told) t.said -= 100; }, after: (s, ev) => {
+        const t = s.encounter?.virus.tells?.list.find((x) => x.kind === 'mimic'), n = s.serial;
+        if (t?.told) t.said += 100;
+        try { d.after(s, ev); } finally { if (t?.told) t.said -= 100; }
+        if (s.logs.some((x) => x.id > n && /Helpers \(mimicked\)/.test(x.message || ''))) early++;
+      } });
+    } finally { POLICIES.Operator = smart; }
+  }
+  assert.ok(caught > 0, 'some beat caught a helper');
+  assert.equal(early, 0);
+});
+
+test('the bar: floors for the planner, routine and learner, a ceiling for the kit and blind players that falls with level', () => {
+  assert.deepEqual([barOf('ordinary', 10).blind, barOf('ordinary', 18).blind, barOf('ordinary', 30).blind], [40, 30, 20]);
+  assert.deepEqual([barOf('elites', 10).blind, barOf('elites', 18).blind, barOf('elites', 30).blind], [20, 10, 5]);
+  assert.deepEqual([barOf('bosses', 10).blind, barOf('bosses', 18).blind, barOf('bosses', 30).blind], [10, 5, 2]);
+  const ok = { planner: 90, routine: 88, rotation: 50, 'learner 30': 72, 'learner 15': 81, 'learner 5': 86, kit: 30, blind: 20 };
+  assert.deepEqual(misses('ordinary', 18, ok), []);
+  assert.deepEqual(misses('ordinary', 30, ok), ['kit 30 > 20']);
+  assert.deepEqual(misses('elites', 18, { ...ok, kit: 5, blind: 5 }), ['learner 30 72 > 50'], 'a hard fight whose first try usually wins is not hard to learn');
+  assert.deepEqual(misses('bosses', 18, { ...ok, routine: null, 'learner 30': 20, kit: 5, blind: 6 }), ['blind 6 > 5']);
+});
