@@ -1003,7 +1003,7 @@ They follow the unique rules (the best base at their item level ×1.2), and they
 |---|---|---|
 | DEADBOLT | Ransomware, a Mutex | Its charge is Deadbolt. Re-arms at 60%; at 30% a second Mutex re-locks the Encryptor |
 | TRIPMINE | Ransomware, a Tripwire (a Lockbox below 20) | Claymore on the Pulse Node. Every attack a cycle sooner at half |
-| HASHLORD | The Hashrat strain, GLASSJAW's | From level 16. A Pool Lock wards its Miner against your commands (burns and helpers go through). Difficulty Bomb, and Block Reward (a Self-Update on the Miner). Re-arms at 60%; at half the Chain Fork spins up a second Miner |
+| HASHLORD | The Hashrat strain, GLASSJAW's | From level 16. A Pool Lock wards its Miner against your commands (burns and helpers go through). Difficulty Bomb, and Block Reward (a Self-Update on the Miner that grows each part by half of what it has left). Re-arms at 60%; at half the Chain Fork spins up a second Miner |
 | BACK ORIFICE | Worm, a C2 Node | Spam Run hatches two. Sooner at half; at 25% a Mirror twins the Replicator |
 | PATCH TUESDAY | The Patchwork strain | Rollup. Re-arms at 60%, sooner at 30%. Break its Pulse Node first and the Patcher takes over the Surge (Fallback) |
 | FLOODWALL | The Floodgate strain | Storm Surge. Re-arms at half |
