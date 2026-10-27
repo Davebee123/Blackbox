@@ -27,8 +27,8 @@ those scripts. No game file was changed.
 | Why does the blind player win? | Its default move is usually the right one. It answers half the tells by accident, because hitting a part and breaking it are the answers. Fights end in 5 to 14 cycles, with one to three tells said. A landed tell costs a lot of Signal but never ends the fight. |
 | Would bigger numbers fix it? | No. Charges five times the plain hit change almost nothing. Doubling every part's Integrity cuts the blind Breaker to 58% wins, and the planner pays for it too: 13 more points of Signal a fight for the Breaker and 20 for the Infiltrator. The blind Operator still wins every fight. |
 | What makes a puzzle, then? | A conflict: a moment when the default move is the wrong one. Hold on a beat, break the parts in an order, leave a part standing, spend a key early, answer two clocks with one plan. Most of the pieces exist already (the Mimic, seals, the Tripwire, the Spare, tethers, boss phases). |
-| What wins one? | Watching, or the right routine. An ordinary fight's conflict can always be answered by a handler built from your research, so preparing pays as much as watching. Elites need a mastered part's chips. Bosses are yours alone, as today. |
-| And the Operator? | Its helpers count. A helper's hit on a beat is played back, a helper that breaks the wrong part sets it off, and a helper on a boss's ♛ part starts its phases. The Operator's puzzle is where its helpers will be in three cycles. |
+| What wins one? | Watching, or the right routine. The default program knows your kit, not the virus: you fit each virus's routine to its trick, with handlers that cost RAM and open with research. An ordinary fight's trick always has such a handler, so preparing pays as much as watching. Elites need a mastered part's chips. Bosses are yours alone, as today. |
+| And the Operator? | Its helpers count. A helper on a beat's part is played back, a helper that breaks the wrong part sets it off, and a helper on a boss's ♛ part starts its phases. Only helpers sent after a beat was said are caught. The Operator's puzzle is where its helpers will be in three cycles, and each subclass already has the keys to answer it (section 3.2). |
 | How is it measured? | `solved.mjs` grows a misreader (blind on 30% of cycles), a routine player and the elite and boss sets. From level 18 the blind player wins 60% or less of ordinary fights and 40% or less of elites and bosses, and lower is better. |
 
 
@@ -153,7 +153,7 @@ puzzle fight uses them on purpose.
 
 | Lever | The conflict | What a blind player does | The routine's answer | Built from |
 |---|---|---|---|---|
-| **The beat** | Fire nothing with a direct hit this cycle. | Fires into it, and its hit comes back at it. | WHEN *beat in 1*, DO Hold. Needs the Hold chip (docs/routines.md R3), brought forward. | The Mimic (Ghostroot, from 8). An elite's or a boss's beat comes every few cycles, not once. |
+| **The beat** | Fire nothing with a direct hit this cycle. | Fires into it, and its hit comes back at it. | WHEN *beat in 1*, DO Hold (section 3.1). | The Mimic (Ghostroot, from 8). An elite's or a boss's beat comes every few cycles, not once. |
 | **The order** | Break the parts in a given order. The wrong one first sets something off. | Breaks whatever is first on the board. | A preset that names the order (*Encryptor first*), or TARGET *that part*. | The Tripwire (16), the Spare (14), the Mirror's twin, the Mutex's lock, the Lockbox's ward. |
 | **Strip before** | A seal that re-arms every part if its part still wears ◆ when it lands. | Strips the part it happens to be hitting. | WHEN *tell live*, DO an armor-breaker, TARGET *that part*. | Seals (elites and bosses, from 6). The seal sits on a part the rotation doesn't reach first. |
 | **Save the key** | A cast only SIGINT answers (its part can't be cut in its window), so SIGINT spent on the wrong thing loses it. | Fires SIGINT when it's ready, or never. | WHEN *tell live* on that part, DO SIGINT. | Casts and SIGINT (from 10). |
@@ -165,37 +165,109 @@ An ordinary fight takes one of the first four, the ones a routine can answer wit
 elite takes two, and may use two clocks. A boss takes two or three. One rule a part still holds (docs/parts-plan.md
 "One part, one rule").
 
-**The rotation stays general.** A virus with no routine of yours plays the rotation, and the rotation is the planner
-(`dist/planner.mjs`): it reads tells and already leaves a Tripwire for last. If it keeps doing that, the default
-program solves every ordinary fight's conflict, and nobody needs to watch or prepare. So the rotation knows your kit,
-not the virus: the answer to each lever moves out of the rotation and into the presets and handlers, which open with
-research. Section 8 asks.
+### 3.1 The program fits the trick
 
-### 3.1 The Operator: helpers count
+A virus with no routine of yours plays the rotation, and the rotation is the planner (`dist/planner.mjs`): today it
+reads tells and leaves a Tripwire, a Hotspot or a Zip Bomb for last on its own. Left like that, the default program
+would solve every ordinary fight's trick, and nobody would need to watch or prepare.
 
-Every other class's question is what to fire this cycle. The Operator's is where its helpers will be in three cycles:
-a Deploy is four cycles of hits on one part, set going now. The blind Operator wins because nothing a helper does can
-be wrong. The Mimic plays back only a command's direct hit, and helpers give it nothing (`dist/tells.mjs`,
-`mimicHit`). Tells die with their parts, and helpers break parts.
+The designer's decision: *the default program should have players allocate the program to fit the trick.* So:
 
-So instead of exempting the helpers, every lever counts them as yours:
+- **The rotation knows your kit, not the virus.** It plays your skills well (combos, cooldowns, Break ◆ first) and
+  aims at the part that attacks soonest. It answers no lever: it doesn't hold on a beat, keep an order, strip a part
+  ahead of its seal or save SIGINT for a cast. Leaving a Tripwire for last moves out of the rotation and into a preset.
+- **The answer is a handler, and a handler costs RAM.** Each virus's routine has its own RAM (4 at level 1 to 10 at 50),
+  and each lever's answer is a handler of 1 to 3 RAM (a rule chip 2, a mastered chip 3). Fitting the program to the
+  trick is choosing which handlers that virus's RAM goes on. An ordinary fight's one trick fits easily; an elite's two,
+  one of them a mastered chip, fill most of a mid-level routine.
+- **Presets make it quick.** The Program tab's presets are built from your research and your bar, and each lever
+  brings one once its part's rule is decoded (*Hold on the beat*, *Tripwire last*, *Strip the sealer*, *SIGINT the
+  cast*). Picking one is the preparation, and it shows you what the handler does.
+- **The Hold chip.** docs/routines.md plans Hold for R3, as a rare chip from loot and the Codex: a DO chip that fires
+  nothing that cycle (*skip a cycle to line up a combo*). It's the routine's version of typing `hold`, and the only way
+  a routine can answer a beat. A lever every routine must answer can't wait on a drop, so Hold comes forward: every
+  program has it from level 8, when the Mimic first appears, and it costs no RAM of its own (its handler pays for its
+  WHEN chip, as any handler does).
+- **A trick with no handler is an exception.** Today a decoded part with a rule that no handler names is yours to
+  play (*EXCEPTION · no available handler*). A part that brings a lever works the same way: if your routine has no
+  handler for it, the program plays the rest of the fight and leaves that part, and its lever, to you.
 
-| Lever | What a helper does | The Operator's answer, from its own keys |
+### 3.2 The Operator: helpers count
+
+#### Why the Operator is the hard case
+
+A helper hits one part every cycle, after your command, until it runs out. When its part breaks it moves on to the
+part whose attack lands soonest. Helpers alone never call off a tell (only Kill Switch and Reroute turn their hits
+into yours), and they give the Mimic nothing: it plays back only a command's direct hit (`dist/tells.mjs`,
+`mimicHit`). So nothing a helper does can be wrong. The blind Operator answers 94% of its tells because helpers break
+parts fast and a tell dies with its part, not because it reads anything.
+
+#### The idea: a helper is a commitment
+
+Every other class asks what to fire this cycle. A Deploy is four cycles of hits on one part, set going now, so the
+Operator's question is where its helpers will be in three cycles. That is the same skill as reading a tell, aimed at
+your own side of the board. The Operator's puzzle is its schedule: which part each helper is on, when it runs out,
+and where it goes when its part breaks.
+
+#### The rules
+
+1. **A helper's hit is your hit, on every lever.** A helper that breaks a part out of order sets it off, like your
+   own hit. A helper's tick on a boss's ♛ part starts its phases. A helper that wakes a Spare wakes it. Helper hits
+   already break ◆, so helpers on a sealing part are an answer to its seal.
+2. **The beat counts the helpers on its part.** On a beat, each helper on the beat's part (the Mimic, or the part
+   carrying an elite's or boss's beat) has its hit played back at you, at its own size. Helpers on other parts are
+   free. One beat's playback never passes the tell ceiling (`TELL.ceiling`), however many helpers it catches.
+3. **Only helpers you sent after the beat was said.** A beat is said two cycles ahead and a Deploy runs four, so a
+   helper you placed before you could see the beat is never caught. The misread is sending a helper onto a part whose
+   beat is on the board.
+4. **Where a helper moves on is shown.** When the preview shows a part breaking this cycle, a dashed teal tether runs
+   from it to the part its helpers will move on to. If that part must not break yet, you can see it coming.
+5. **Helpers still never cut a tell on their own.** A cut needs your command, or a skill that makes their hits yours
+   (Kill Switch, Reroute). This stays: it is what keeps the Operator reading.
+
+#### What each Operator answers with
+
+Below level 10 the Operator plays its core (Deploy, Hook, Spawn, Botnet), with no key that moves or ends a helper.
+Its answer is placement, and rule 3 keeps that fair: don't send helpers onto a part whose beat you can see, and don't
+put more on a part than it needs to break when you want it broken.
+
+| Lever | Herder (from 10) | Hijacker (from 10) |
 |---|---|---|
-| The beat | Each helper's hit on that part on the beat is played back at you, at its size. Only helpers sent after the beat was said count, so a beat never catches a helper you couldn't have planned around. | Don't send helpers into a beat you can see. Barrier one into a shield, Reroute them to another part, or let them run out first. |
-| The order | A helper that breaks the wrong part first sets it off, like your own hit. When its part breaks, the board shows where it will go next, as a dashed tether. | Send helpers to the part that breaks first. Reroute before the break. |
-| Strip before | Helper hits break ◆ as today, so helpers on the sealing part are an answer. | Put helpers on the part with the seal. |
-| Save the key | No change: Reroute's arrivals count as hits, so two helpers stop a cast. | SIGINT, or Reroute two helpers onto the casting part. |
-| The one to leave | A helper's tick on a boss's ♛ part starts its phases like your own. | Keep helpers off it until the phase is due. |
+| The beat | Kill Switch the cycle before: the helpers cash in early, as your hit, and none is left on the beat. OOM Kill (34) ends them all for health. | Barrier (20) turns the helper into a shield. Echo-cancel (30) sends the Mimic's beat back at the virus. Jam, Hijack and Blackhole each spend the helper. |
+| The order | Fan-out puts a helper on every part, so it's the wrong key when one part must break last: Deploy and Botnet on the right part instead. | Reroute (34) moves every helper before the break. Spend the helper on the part that must stay. |
+| Strip before | Fork (18): the ◆ the swarm breaks on the sealer makes more helpers on it. | Spawn a helper onto the sealer; Cache Poison (22) makes its seal fail. |
+| Save the key | Kill Switch's hits count as yours, so it calls off a charge on every part a helper is on. SIGINT for a cast. | Reroute: two arrivals stop a cast. Hijack takes the cast for you. |
+| Two clocks | Kill Switch answers both charges at once if a helper is on each part. | Jam and Spoofed ACK push one clock back a cycle. |
+| The one to leave | Keep Fan-out off the boss: aim the swarm at the other parts. | Takeover (26) turns the ♛ part's attacks on its own side without hitting it. |
 
-What the board needs: each helper's remaining ticks as small teal pips in its part's timeline columns, and a tick
-that lands on a beat edged in red, so the plan can be read three cycles out like a tell. Nothing new to type: Barrier,
-Reroute and Jam already move, spend or cancel helpers, and they become the Operator's answers rather than spare keys.
+So each subclass already owns its answers. The Herder's are about timing the cash-in; the Hijacker's are about
+spending helpers on the right part. The proposal changes no skill.
 
-What it should do, to be checked in P0: the blind Operator, which fires Deploy, Botnet and Spawn as they come
-ready, should lose to beats and orders as the other blind players do. A reading Operator keeps its helpers and its
-identity. The first measurement is how much of the blind Operator's 94% of tells answered comes from helpers cutting
-and how much from short fights.
+#### On the board
+
+- **Helper pips.** Each helper's remaining hits show as small teal pips in its part's timeline columns (Now, +1, +2,
+  +3), one row of pips a helper, so the schedule reads like the tells on the same row.
+- **A pip that trips a lever is edged red:** a hit on a beat, or the hit that would break a part out of order. Its
+  tooltip, in WoW grammar: *Deploy*, *Helper*, *Hits the Mimic for 12 on its beat.*, then muted *▸ The Mimic plays it
+  back at you. Move it or cash it in first.*
+- **The move-on tether**, dashed teal, from a part about to break to where its helpers go next (rule 4).
+
+#### In a routine
+
+An Operator's handlers can answer helper levers too, with chips that exist plus one: WHEN *beat in 2* (a rule-tier
+chip), DO Kill Switch or Barrier, TARGET *that part*. Deploy, Spawn and Botnet handlers take a TARGET that avoids a
+part with a beat on the board (*no beat*), as Break ◆ first avoids armor today.
+
+#### What it should do, and the risk
+
+The blind Operator fires Deploy, Botnet, Spawn and Fan-out at the first part on the board as they come ready. Under
+these rules its helpers sit on a beat's part, break parts out of order and start a boss's phases early, so it should
+lose as the other blind players do. A reading Operator keeps its swarm and its identity.
+
+The risk is the Herder in Ghostroot fights: its strength is volume, and a beat that catches five helpers is five
+hits. Rule 2's cap and rule 3's grace hold it down, and P0 measures it before anything ships: the planner Herder's
+Signal lost must stay in the solo band. The planner has to learn the rules too (where a helper may go, when to cash
+in), or its row fails for the wrong reason.
 
 ## 4. Where they live
 
@@ -262,7 +334,7 @@ fights keep those and add:
 | Phase | What ships | Done when |
 |---|---|---|
 | P0 | `solved.mjs`: the misreader, the routine player, the kit player, and the elite and boss sets. How much of the blind Operator's wins comes from helpers. No game change. | Section 1.4's table, with the new players' columns, is in progression.md. |
-| P1 | The rotation made general (the levers' answers move into presets and handlers). The Hold chip brought forward from R3, and the *beat in 1* chip. Helpers count on every lever, with their pips on the board. | The routine player wins as often as the planner on today's fights, and the rotation alone doesn't. |
+| P1 | The rotation made general (the levers' answers move into presets and handlers), a preset per lever, and a lever's part with no handler as an exception. The Hold chip from level 8, and the *beat in 1* and *beat in 2* chips. Helpers count on every lever (section 3.2's rules), with their pips and the move-on tether on the board, and the *no beat* target. The planner taught the helper rules. | The routine player wins as often as the planner on today's fights, and the rotation alone doesn't. |
 | P2 | Ordinary fights: each wild roll, guard and invasion gets one conflict from the first four levers. | Ordinary fights meet their rows. |
 | P3 | Elites: Integrity down, two conflicts, *no pile-ups* lifted and checked on the roll. | Elites meet their row. |
 | P4 | Bosses: the levers as boss rules (a beat that repeats, phases, the one to leave). Two Residents and two solo bosses first, then the rest, lair bosses and feuds. | Every boss meets its row, and the designer has played the first four. |
@@ -278,17 +350,18 @@ October 27, 2026, from the designer:
 2. **The bar.** *"40% is good, but lower the better. I want the game to be challenging."* Blind wins 40% or less on
    elites and bosses, aiming for 25%, held up by the misreader's row (section 5).
 3. **Residents as gates.** No fallback: a Resident keeps its puzzle every time.
-4. **The Operator.** The designer wasn't sure and asked for an approach. Section 3.1 is the proposal: helpers count on every lever, and the Operator's puzzle is planning where they'll be.
+4. **The Operator.** The designer wasn't sure and asked for the approach in detail. Section 3.1 is the proposal:
+   helpers count on every lever, and the Operator's puzzle is planning where they'll be.
 5. **Pile-ups.** Lifted, for elites and bosses, checked fight by fight.
 6. **The Infiltrator, and routines.** *"Paying attention should be rewarded, but also making the correct routine
    should also be rewarded."* The Infiltrator's blind losses stand. A correct routine wins ordinary fights (section 2).
 7. **Elites.** *"Puzzles versus walls always."* Elites become puzzles (section 4).
+8. **The program.** *"The default program should have players allocate the program to fit the trick."* The rotation
+   knows your kit, not the virus; each lever's answer is a handler that costs RAM (section 3.1).
 
 Still open:
 
-1. **The rotation.** Make it general, so the default program no longer answers a virus's levers by itself (section
-   3)? Without it, nobody needs to watch or prepare for an ordinary fight.
-2. **The Operator's approach** (section 3.1): helpers count on every lever. Yes, or something else after P0's
-   measurement?
-3. **The Hold chip.** Bring it forward from routines R3, so a routine can answer a beat?
-4. **The ordinary tier's bar.** Blind 60% or less from 18 and 75% or less from 6 to 17, or lower?
+1. **The Operator's rules** (section 3.2): helpers count on every lever, a beat catches only the helpers on its part
+   sent after it was said, and where helpers move on is shown. Yes, or something else after P0's measurement?
+2. **The Hold chip** (section 3.1): every program has it from level 8, rather than as an R3 drop?
+3. **The ordinary tier's bar.** Blind 60% or less from 18 and 75% or less from 6 to 17, or lower?
