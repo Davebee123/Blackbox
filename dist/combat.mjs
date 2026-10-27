@@ -3418,7 +3418,7 @@ function useAbility(s, intent, auto = false) {
     if (id === 'botnet') { if (hasTalent(s, 'extra-nodes')) count = 4; dmg += rank(s, 'node-pool'); }
     dmg = scaled(s, dmg);
     count = Math.min(count, helperCap(s) - e.helpers.length);
-    for (let k = 0; k < count; k++) e.helpers.push({ target: target.id, damage: dmg, left: n, synced: !!e.synced });
+    for (let k = 0; k < count; k++) e.helpers.push({ target: target.id, damage: dmg, left: n, synced: !!e.synced, sent: e.cycle, by: a.name });
     emit(s, 'status', count > 0 ? `${count === 1 ? 'A helper' : count + ' helpers'} on the ${target.name}, dealing ${dmg} every cycle for ${n} cycles.` : `Helper cap reached (${helperCap(s)}).`, { target: target.id, mark: count > 0 ? 'helper' : null, ability: id });
   }
   // Jam and Barrier spend one of your helpers on that part.
@@ -3480,7 +3480,7 @@ function useAbility(s, intent, auto = false) {
     emit(s, 'status', `Propagate: ${n} ${n === 1 ? 'burn' : 'burns'} copied to the other parts${livingParts(s).some((p) => p.kind === 'fragment') ? ', fragments at double' : ''}.`, { mark: 'burn', ability: id });
   }
   if (id === 'reroute') {
-    for (const h of e.helpers) { h.target = target.id; hit(s, target, h.damage, { by: 'Helper', dot: true, src: 'helper' }); if (!alive(target)) break; }
+    for (const h of e.helpers) { h.target = target.id; h.sent = e.cycle; hit(s, target, h.damage, { by: 'Helper', dot: true, src: 'helper' }); if (!alive(target)) break; } // sent there now (the Mimic's beat counts it: tells.mjs)
   }
   if (id === 'cron-storm') {
     for (const h of [...e.helpers]) { const t = alive(part(s, h.target)) ? part(s, h.target) : soonestAttacker(s); if (t) hit(s, t, h.damage, { by: 'Cron Storm', dot: true, src: 'helper' }); if (virusIntegrity(s).current === 0) break; }
@@ -4031,14 +4031,19 @@ export function playerPhase(s, phase = 'all') {
     if (!b.left && alive(t)) daemonsOn(s, 'burnout', { part: t.id }); // Afterburn
   }
   e.burns = e.burns.filter((b) => b.left > 0 && alive(part(s, b.target)));
+  // What each helper hit this cycle, for the Mimic's beat (tells.mjs mimicLands: it plays back the helpers on its part
+  // that were sent once the beat was said). Plain data: the encounter is saved.
+  e.helperHits = { cycle: e.cycle, list: [] };
   for (const h of [...e.helpers]) {
     if (virusIntegrity(s).current === 0) break;
+    h.sent ??= e.cycle; // a helper from somewhere that didn't stamp it: sent this cycle
     let t = part(s, h.target);
     if (!alive(t)) { t = soonestAttacker(s); if (t) h.target = t.id; }
+    if (t) e.helperHits.list.push({ target: t.id, damage: h.damage, sent: h.sent, by: h.by || null });
     const r = t ? hit(s, t, h.damage, { by: 'Helper', dot: true, synced: h.synced, src: 'helper' }) : null;
     h.left--;
     // Fork (Herder): a ◆ a helper breaks while it runs starts another helper on that part (up to the cap).
-    if (t && r?.absorbed && !r.dealt && buffed(e, 'fork') && alive(t) && e.helpers.length < helperCap(s)) { e.helpers.push({ target: t.id, damage: h.damage, left: 3 }); emit(s, 'status', `Fork: a ◆ breaks, and a helper splits off on the ${t.name}.`, { target: t.id, mark: 'helper' }); }
+    if (t && r?.absorbed && !r.dealt && buffed(e, 'fork') && alive(t) && e.helpers.length < helperCap(s)) { e.helpers.push({ target: t.id, damage: h.damage, left: 3, sent: e.cycle, by: ABILITIES.fork.name }); emit(s, 'status', `Fork: a ◆ breaks, and a helper splits off on the ${t.name}.`, { target: t.id, mark: 'helper' }); }
     // Last Gasp (Operator's edge): one more hit as it expires.
     if (!h.left && t && alive(t) && edge(s, 'operator')) hit(s, t, h.damage, { by: 'Last Gasp', dot: true, synced: h.synced, src: 'helper' });
     if (!h.left) helperGone(s);
@@ -4269,7 +4274,7 @@ function cycleFx(s) {
     const t = soonestAttacker(s);
     if (!beat(x) || e.helpers.length || !alive(t)) continue;
     const n = Math.max(1, Number(x.fx.cycles) || 2), dmg = scaled(s, ABILITIES.deploy.helper);
-    e.helpers.push({ target: t.id, damage: dmg, left: n, synced: false });
+    e.helpers.push({ target: t.id, damage: dmg, left: n, synced: false, sent: e.cycle, by: x.name || x.it.name });
     emit(s, 'status', `${x.name || x.it.name}: a helper joins you on the ${t.name}, dealing ${dmg} every cycle for ${n} cycles.`, { target: t.id, mark: 'helper', ...firedOf([x]) });
   }
   noteSignal(s);

@@ -7,7 +7,7 @@
 //   node solved.mjs ordinary|hard [levels]   one half of that
 //   node solved.mjs bosses [seeds]      the boss set: every solo boss at its floor, +4 and +10, every subclass, six seeds
 //                                       (about 15 minutes)
-//   node solved.mjs operator            the blind Operator's helpers, and the Herder's beat (section 3.2), prototyped here
+//   node solved.mjs operator            the Operator's helpers, and what the Mimic's beat costs each sub (section 3.2)
 //
 // The players, each on the same fights and seeds:
 //   planner     reads every rule, tell and timer (dist/planner.mjs)
@@ -23,11 +23,10 @@
 //               board, Spike when nothing else is ready.
 import { POLICIES, fight, at, policyOf } from './balance.mjs';
 import { player, playOut, HOME } from './genesim.mjs';
-import { livingParts, barKeys, readyIn, toIntent, hooks, selectEncounter, part, defender, strikeWith, alive } from './dist/combat.mjs';
-import { ARCHETYPES, BOSSES, TELL, ABILITIES } from './dist/data.mjs';
+import { livingParts, barKeys, readyIn, toIntent, hooks, selectEncounter } from './dist/combat.mjs';
+import { ARCHETYPES, BOSSES, TELL } from './dist/data.mjs';
 import { GENES, GENE_BOTS } from './dist/genes.mjs';
 import { planner, plannerWithout } from './dist/planner.mjs';
-import { tellsOf } from './dist/tells.mjs';
 import { seeded } from './dist/gear.mjs';
 import { TIER } from './dist/research.mjs';
 import * as R from './dist/routines.mjs';
@@ -177,68 +176,18 @@ export function helperShare(cls, name, L, opts = {}) {
   }
   return acc;
 }
-// Rules 2 and 3, prototyped (not in the game): on the Mimic's beat, each helper on its part that was sent once the beat
-// was on the board has its hit played back at you, at its own size times TELL.mimic. With your command's playback it
-// never passes TELL.ceiling of your max. Sudo, Unmask, Echo Cancel and a Honeypot blind it to helpers too.
-export function beatCatchesHelpers() {
-  const born = new WeakMap();
-  let beat = null, before = [];
-  return {
-    before: (s) => {
-      const e = s.encounter, c = e.cycle;
-      for (const h of e.helpers) if (!born.has(h)) born.set(h, c - 1); // already out: sent last cycle at the latest
-      before = [...e.helpers];
-      const t = tellsOf(s)?.list.find((x) => x.kind === 'mimic' && x.told && x.next === c);
-      beat = t && alive(part(s, t.part)) && part(s, t.part).mimic ? { c, said: t.said, p: part(s, t.part) } : null;
-    },
-    after: (s, ev) => {
-      const e = s.encounter;
-      if (!beat || !e || e.phase !== 'active') return;
-      for (const h of e.helpers) if (!born.has(h)) born.set(h, beat.c);
-      const { c, said, p } = beat;
-      if (e.buffs?.sudo >= c || p.unmaskUntil >= c || p.echoCancelUntil >= c || ev.some((x) => x.tell === 'mimic' && /honeypot|turns it/.test(x.message || ''))) return;
-      const ran = [...new Set([...e.helpers, ...before.filter((h) => h.left === 0)])];
-      const caught = ran.filter((h) => h.target === p.id && born.get(h) >= said);
-      if (!caught.length) return;
-      const max = defender(s).max, played = ev.filter((x) => x.type === 'server-hit' && /\(mimicked\)/.test(x.message || '')).reduce((n, x) => n + (x.amount || 0), 0);
-      const amount = Math.round(Math.min(TELL.ceiling * max - played, caught.reduce((n, h) => n + h.damage, 0) * TELL.mimic));
-      if (amount > 0) strikeWith(s, p, { name: 'Helpers (mimicked)', effect: 'damage', amount, interval: 99, noCrit: true, tell: 'mimic' });
-    },
-  };
-}
-// The planner taught rule 3: while other parts stand, no helper goes onto the Mimic's part if its hits would still run
-// on a beat already on the board (the plan is made with that part out of the board, Fan-out vetoed). Helpers sent right
-// after a beat, short enough to end before the next one, are free. With the Mimic alone it sends them anyway: the
-// playback costs less than the cycles a kill without them takes. On the beat, Kill Switch cashes in the helpers it
-// would catch.
-const HELPS = new Set(Object.keys(ABILITIES).filter((id) => ABILITIES[id].helper));
-export function heedsBeat(move) {
-  const born = new WeakMap();
-  return (s) => {
-    const e = s.encounter, c = e.cycle, t = tellsOf(s)?.list.find((x) => x.kind === 'mimic' && x.told && x.next >= c);
-    for (const h of e.helpers) if (!born.has(h)) born.set(h, c - 1);
-    const p = t && part(s, t.part);
-    const text = move(s);
-    if (!alive(p) || !p.mimic) return text;
-    if (t.next === c && e.helpers.some((h) => h.target === p.id && h.left > 0 && born.get(h) >= t.said) && !toIntent(s, 'kill-switch').error) return 'kill-switch';
-    const [id, at] = String(text).split(' ');
-    if (!(HELPS.has(id) && (at === p.id || id === 'fan-out')) || t.next > c + (ABILITIES[id].ticks || 1) - 1) return text;
-    if (livingParts(s).length === 1) return text; // the Mimic alone: the playback costs less than the cycles it would take without helpers
-    const hp = p.integrity;
-    p.integrity = 0;
-    try { return plannerWithout(s, (k) => k === 'fan-out') || 'hold'; } finally { p.integrity = hp; }
-  };
-}
-// Ghostroot fights with a Mimic: a sub's wins and Signal lost, today and with the beat catching its helpers.
-export function mimicCost(sub, name, L, { rule = false, taught = false, seeds = 12 } = {}) {
+// Ghostroot fights with a Mimic: a sub's wins, Signal lost, and the beats that caught its helpers (tells.mjs mimicLands
+// plays back each helper on the Mimic's part that was sent once its beat was said; the planner keeps its helpers off it).
+export function mimicCost(sub, name, L, { seeds = 12 } = {}) {
   const b = at(L), cls = policyOf(sub), rs = [];
+  let caught = 0;
   for (let seed = 1; seed <= seeds; seed++) {
-    const catches = rule ? beatCatchesHelpers() : null, smart = POLICIES[cls];
-    const move = moverOf(name, seed * 97 + L);
-    POLICIES[cls] = taught ? heedsBeat(move) : move;
-    try { rs.push(fight(cls, 'random', b, { sub, seed, mode: 'run', zone: true, family: 'ghostroot', genes: ['mimic'], ...(catches || {}) })); } finally { POLICIES[cls] = smart; }
+    const smart = POLICIES[cls];
+    POLICIES[cls] = moverOf(name, seed * 97 + L);
+    const after = (s, ev) => { caught += ev.filter((x) => x.tell && x.helpers > 0).length; };
+    try { rs.push(fight(cls, 'random', b, { sub, seed, mode: 'run', zone: true, family: 'ghostroot', genes: ['mimic'], after })); } finally { POLICIES[cls] = smart; }
   }
-  return { wins: pct(rs, (r) => r.win), lost: lost(rs) };
+  return { wins: pct(rs, (r) => r.win), lost: lost(rs), caught };
 }
 
 // ---------- the command line ----------
@@ -276,12 +225,12 @@ if (isMain) {
     console.log('The Operator (the Herder) on the class-balance fights: what its helpers do');
     console.table(rows);
     const cost = [];
-    for (const L of nums.length ? nums : [10, 18, 30]) for (const sub of ['herder', 'hijacker']) for (const [label, name, taught] of [['planner', 'planner', false], ['planner, taught', 'planner', true], ['learner 30, taught', 'learner 30', true], ['blind', 'blind', false]]) {
+    for (const L of nums.length ? nums : [10, 18, 30]) for (const sub of ['herder', 'hijacker']) for (const name of ['planner', 'learner 30', 'kit', 'blind']) {
       if (L < 10 && sub === 'hijacker') continue;
-      const now = mimicCost(sub, name, L), rule = mimicCost(sub, name, L, { rule: true, taught });
-      cost.push({ level: L, sub, player: label, 'wins today': now.wins, 'wins, rule': rule.wins, 'lost today': now.lost, 'lost, rule': rule.lost });
+      const x = mimicCost(sub, name, L);
+      cost.push({ level: L, sub, player: name, wins: x.wins, 'Signal lost': x.lost, 'beats that caught helpers': x.caught });
     }
-    console.log('Ghostroot fights with a Mimic (12 a cell): today, and with the beat catching helpers sent after it was said');
+    console.log('Ghostroot fights with a Mimic (12 a cell): its beat plays back the helpers on its part sent after it was said');
     console.table(cost);
   }
 }

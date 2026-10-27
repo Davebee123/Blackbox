@@ -545,8 +545,24 @@ export function mimicHit(s, id, target) {
   if (a?.hit && a.verb === 'hit') return Math.round((a.hit * (a.hits || 1) * (skillBase(s, 'spike', target) / ABILITIES.spike.damage) + gearStat(s, 'damage')) * TELL.mimic); // Overvolt's two hits
   return a && a.damage > 0 && a.verb === 'hit' ? Math.round((skillBase(s, id, target) + gearStat(s, 'damage')) * TELL.mimic) : 0;
 }
-// The Mimic plays back the command you fired this cycle: its direct damage, at you. true if the fight ended,
-// 'quiet' if you gave it nothing (a read: it opens).
+// The Mimic's beat on the board (said, still to land) and its part, or null (planner.mjs, the board's helper pips).
+export function beatOn(s) {
+  const c = s.encounter?.cycle, t = tellsOf(s)?.list.find((x) => x.kind === 'mimic' && x.told && x.next >= c);
+  const p = t && sourceOf(s, t);
+  return t && alive(p) && p.mimic ? { t, p } : null;
+}
+// Nothing of you reaches the Mimic on cycle c: Sudo, Unmask, Log Wipe, a Honeypot or Echo Cancel.
+export const beatBlind = (s, p, c) => { const e = (s.host || s).encounter; return e.buffs?.sudo >= c || !!e.mimicBlind || e.buffs?.honeypot >= c || p.unmaskUntil >= c || p.echoCancelUntil >= c; };
+// The helpers the Mimic's beat catches (docs/puzzle-fights.md 3.2, rules 2 and 3): each helper that hit its part this
+// cycle (combat.mjs helperHits), if it was sent on or after the cycle the beat was said. One placed before you could see
+// the beat is never caught.
+export function caughtHelpers(s, t, p) {
+  const e = (s.host || s).encounter, x = e.helperHits;
+  return x && x.cycle === e.cycle ? x.list.filter((h) => h.target === p.id && h.sent != null && h.sent >= t.said) : [];
+}
+// The Mimic plays back the command you fired this cycle (its direct damage) and the helpers it catches (each at its own
+// size), at you, in one hit that never passes the tell ceiling. true if the fight ended, 'quiet' if you gave it nothing
+// (a read: it opens).
 function mimicLands(s, t, p) {
   if (!p.mimic) return false; // it stopped recording (MIRRORSHADE's Doppelganger)
   const host = s.host || s, e = host.encounter, last = e.lastCmd;
@@ -557,23 +573,26 @@ function mimicLands(s, t, p) {
   const id = last && last.cycle === e.cycle && !blind ? last.id : null, a = id && ABILITIES[id];
   const target = last && part(host, last.target);
   const direct = id ? mimicHit(host, id, target || p) / TELL.mimic : 0;
-  if (!direct) { emit(s, 'blocked', a ? `The ${p.name} copies your ${a.name}, but it has no hit to play back.` : `The ${p.name} has nothing to play back.`, { source: p.id, tell: t.id, answered: !!a }); return a ? 'quiet' : false; }
+  // Echo Cancel blinds it to your helpers too (it turns your command on the Mimic, below).
+  const caught = blind || p.echoCancelUntil >= e.cycle ? [] : caughtHelpers(s, t, p), swarm = caught.reduce((n, h) => n + h.damage, 0);
+  if (!direct && !swarm) { emit(s, 'blocked', a ? `The ${p.name} copies your ${a.name}, but it has no hit to play back.` : `The ${p.name} has nothing to play back.`, { source: p.id, tell: t.id, answered: !!a }); return a ? 'quiet' : false; }
+  const what = !swarm ? `your ${a.name}` : `${direct ? `your ${a.name} and ` : 'your '}${caught.length === 1 ? 'helper' : `${caught.length} helpers`}`;
   // Reflector (a native unique): the playback lands on the Mimic instead, at a share of the hit. Echo Cancel: all of it.
   const turn = p.echoCancelUntil >= e.cycle ? { it: { name: 'Echo Cancel' }, fx: { value: 100 } } : fxOn(host, 'mimic-turn');
   if (turn) {
     tally(s, t, 'answered');
-    emit(s, 'blocked', `The ${p.name} plays your ${a.name} back, and ${turn.it.name} turns it on the ${p.name}.`, { source: p.id, tell: t.id, answered: true });
-    hit(host, p, Math.max(1, Math.round((direct * turn.fx.value) / 100)), { by: turn.it.name, pierce: true });
+    emit(s, 'blocked', `The ${p.name} plays ${what} back, and ${turn.it.name} turns it on the ${p.name}.`, { source: p.id, tell: t.id, answered: true });
+    hit(host, p, Math.max(1, Math.round(((direct + swarm) * turn.fx.value) / 100)), { by: turn.it.name, pierce: true });
     return false;
   }
   tally(s, t, 'landed');
   // A boss's Mimic that sits on its Scramble (BOSSES mimic, MIRRORSHADE's): while you're Scrambled it plays your hit
   // back that many times over, still under the ceiling.
   const loud = s.encounter.scrambleUntil >= s.encounter.cycle ? BOSSES[e.virus.boss]?.mimic || 1 : 1;
-  const amount = Math.max(1, Math.round(Math.min(ceilingOf(s) * defender(host).max, direct * TELL.mimic * loud)));
-  emit(s, 'status', loud > 1 ? `You're Scrambled, and the ${p.name} plays your ${a.name} back at you ${loud === 2 ? 'twice' : `${loud} times`} over.` : `The ${p.name} plays your ${a.name} back at you.`, { source: p.id, tell: t.id, missed: true });
-  const over = strikeWith(s, p, { name: `${a.name} (mimicked)`, effect: 'damage', amount, interval: 99, noCrit: true, tell: t.id });
-  if (!over) { lockLast(s, t, 'MIMIC'); corrupt(s, t, p); }
+  const amount = Math.max(1, Math.round(Math.min(ceilingOf(s) * defender(host).max, direct * TELL.mimic * loud + swarm * TELL.mimic)));
+  emit(s, 'status', loud > 1 && direct ? `You're Scrambled, and the ${p.name} plays ${what} back at you ${loud === 2 ? 'twice' : `${loud} times`} over.` : `The ${p.name} plays ${what} back at you.`, { source: p.id, tell: t.id, missed: true, ...(swarm ? { helpers: caught.length } : {}) });
+  const over = strikeWith(s, p, { name: `${direct ? a.name : 'Helpers'}${direct && swarm ? ' and helpers' : ''} (mimicked)`, effect: 'damage', amount, interval: 99, noCrit: true, tell: t.id });
+  if (!over) { if (direct) lockLast(s, t, 'MIMIC'); corrupt(s, t, p); } // your command's skill goes offline; helpers alone lock nothing
   return over;
 }
 // The Shredder's Deep Shred: it shreds the newest code or credits file in your pack (never a protocol, a blueprint or a key).

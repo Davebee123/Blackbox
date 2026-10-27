@@ -1,10 +1,10 @@
 // The scripted fight player: one planner for every class (finish what you can, answer what lands
 // now, strip, then finish), playing that class's own kit. Used by the balance scripts and by
 // simulated crewmates (crew.mjs). It reads the fight through the engine's own functions.
-import { classPlan, classFill, hooks, classOf, subOf, toIntent, intents, attackers, livingParts, alive, part, defender, previewDamage, ignoresArmor, readyIn, mirrorOn, usable, hookHit, wards, attackAmount, delayHeld, frontOf, bufferOn, signatureOf, cooldownOf, frozenNow, asleep } from './combat.mjs';
+import { classPlan, classFill, hooks, classOf, subOf, toIntent, intents, attackers, livingParts, alive, part, defender, previewDamage, ignoresArmor, readyIn, mirrorOn, usable, hookHit, wards, attackAmount, delayHeld, frontOf, bufferOn, signatureOf, cooldownOf, frozenNow, asleep, scaled } from './combat.mjs';
 import { ABILITIES, TELL, CONFIG } from './data.mjs';
 import { raidMove, raidFocus, noTaunt } from './raid.mjs';
-import { tellMove, tellFocus, answers, QUIET, chargeNow, echoesNow } from './tells.mjs';
+import { tellMove, tellFocus, answers, QUIET, chargeNow, echoesNow, beatOn, beatBlind } from './tells.mjs';
 // genesim.mjs: a gene the sim ignores (genes.mjs GENE_BOTS) is played as if it weren't there, one gene at a time.
 import { ignores } from './genes.mjs';
 import { heatOf } from './parts.mjs';
@@ -94,10 +94,10 @@ export function plannerWithout(s, no) {
 const BUFFING = new Set(['harden', 'brace', 'sudo', 'fork', 'debris-field', 'rm-rf', 'circuit-breaker', 'honeypot', 'maintenance-window', 'bulkhead', 'dmz', 'mesh']);
 const scrapeNow = (s) => !ignores('scraper') && landingNow(s).some((i) => part(s, i.source)?.scrape);
 export function planner(s) {
-  if (!scrapeNow(s)) return planner1(s);
+  if (!scrapeNow(s)) return heedHelpers(s, planner1(s));
   const was = veto;
   veto = (id) => BUFFING.has(id) || !!(was && was(id));
-  try { return planner1(s); } finally { veto = was; }
+  try { return heedHelpers(s, planner1(s)); } finally { veto = was; }
 }
 function planner1(s) {
   const plan = plan0(s);
@@ -288,5 +288,42 @@ function play(s) {
     ...classFill(s, t),
     'spike ' + t.id,
   ]);
+}
+
+// ---------- the Operator's helpers (docs/puzzle-fights.md 3.2) ----------
+// A helper's hit is your hit on every lever, and the Mimic's beat plays back the helpers on its part that were sent once
+// it was said. So no helper goes onto the Mimic's part if its hits would still run on a beat on the board (one sent right
+// after a beat, short enough to end before the next, is free), and none whose hits would break a Tripwire while other
+// parts stand. The move is planned again with that part off the board and Fan-out vetoed (with the Mimic alone, with no
+// helper skill). On the beat, Kill Switch cashes in the helpers it would catch.
+const HELPS = new Set(Object.keys(ABILITIES).filter((id) => ABILITIES[id].helper));
+let heeding = false;
+// Every hit the helpers on p have left, with one more helper skill's on top: do they break it (a hit on ◆ breaks one)?
+function helpersBreak(s, p, a) {
+  const e = s.encounter, hits = e.helpers.filter((h) => h.target === p.id).flatMap((h) => Array(h.left).fill(h.damage));
+  hits.push(...Array((a.helpers || 1) * (a.ticks || 1)).fill(scaled(s, a.helper)));
+  let armor = p.armor || 0, dmg = e.burns.filter((b) => b.target === p.id).reduce((n, b) => n + b.damage * b.left, 0);
+  for (const d of hits) { if (armor > 0) armor--; else dmg += d + hookHit(s, p); }
+  return dmg >= p.integrity;
+}
+function heedHelpers(s, move) {
+  if (heeding || !move) return move;
+  const e = s.encounter, c = e.cycle, b = answers() && !ignores('mimic') ? beatOn(s) : null;
+  const [id, at] = String(move).split(' ');
+  if (b && b.t.next === c && !beatBlind(s, b.p, c) && !(at === b.p.id && killing(s, move, b.p)) && e.helpers.some((h) => h.target === b.p.id && h.left > 0 && h.sent >= b.t.said) && ok(s, 'kill-switch')) return 'kill-switch';
+  if (!HELPS.has(id)) return move;
+  const a = ABILITIES[id], off = [];
+  if (b && (at === b.p.id || id === 'fan-out') && b.t.next <= c + (a.ticks || 1) - 1 && !beatBlind(s, b.p, b.t.next)) off.push(b.p); // its hits run c to c + ticks - 1
+  const trip = !ignores('tripwire') && !(e.buffs?.sudo >= c) && livingParts(s).find((p) => p.deadman && !p.quiet && others(s, p) && (at === p.id || id === 'fan-out'));
+  if (trip && helpersBreak(s, trip, a)) off.push(trip);
+  if (!off.length) return move;
+  const hp = off.map((p) => p.integrity), was = veto, alone = livingParts(s).every((p) => off.includes(p));
+  heeding = true;
+  // Those parts off the board, or with nothing else standing (the Mimic alone: it has no attack, so waiting costs
+  // nothing), no helper skill at all this cycle.
+  if (!alone) off.forEach((p) => { p.integrity = 0; });
+  let next;
+  try { next = plannerWithout(s, (k) => (alone ? HELPS.has(k) : k === 'fan-out') || !!(was && was(k))) || 'hold'; } finally { off.forEach((p, i) => { p.integrity = hp[i]; }); heeding = false; }
+  return echoesNow(s, next) ? 'hold' : next; // nothing quiet left for the beat: hold
 }
 

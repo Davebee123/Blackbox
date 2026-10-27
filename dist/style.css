@@ -4037,6 +4037,18 @@ p.impl { margin: 6px 0 0; padding: 4px 2px; border-bottom: 1px dotted color-mix(
 .tag.idlepips .glyph { width: 10px; height: 10px; margin: 0 2px 0 0; }
 .tag.idlepips i { opacity: 0.4; font-style: normal; }
 .tether.k-front .tt-line { border-style: dashed; }
+/* Your helpers (docs/puzzle-fights.md 3.2, view.mjs boardMarkup): a teal pip for each hit a helper has left, in the
+   column it lands, one row of pips a helper at the foot of its part's cells, so the rows line up across the columns. A
+   pip that trips a lever (a hit on the Mimic's beat, a Tripwire broken while others stand) is edged red. The move-on
+   tether is a teal dashed line, from a part breaking this cycle to where its helpers go next. */
+.bcell .hpips { display: flex; flex-direction: column; gap: 2px; margin-top: auto; padding-top: 2px; }
+.hpip { display: block; width: 8px; height: 8px; border-radius: 1px; background: var(--you); cursor: help; }
+.hpip.trip { box-shadow: 0 0 0 2px var(--hot), 0 0 6px var(--hot); }
+.hpip.none { visibility: hidden; }
+.tether.k-moveon { --tt: var(--you); color: var(--you); transform: translateY(5px); } /* a little under the steel ones, so their arms never overlap */
+.tether.k-moveon .tt-line { background: repeating-linear-gradient(180deg, var(--tt) 0 4px, transparent 4px 7px); }
+.tether.k-moveon .tt-arm { background: repeating-linear-gradient(90deg, var(--tt) 0 4px, transparent 4px 7px); }
+.tether.k-moveon.up .tt-line, .tether.k-moveon.up .tt-arm, .tether.k-moveon.up .tt-node { animation: none; box-shadow: none; }
 
 /* The parts plan's P2 (docs/parts-plan.md): what protects a part in steel (a Limiter's cap line, a Damper's crossed
    kind, a Cold Store's frost and its thaw bar, a sleeping Spare's ◆), what threatens you in red (a Scraper's takes-buffs

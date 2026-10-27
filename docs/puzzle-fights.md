@@ -296,6 +296,16 @@ Mimic fights moved by a point at most (14% at 18). The Hijacker's bigger helpers
 lost 3–11 more points of Signal and no fights: rules 2 and 3 alone don't make it lose, so rule 1 (the order, the ♛
 part) has to carry the rest.
 
+**In the game (P1).** Rules 2 to 5 are built (`tells.mjs` `caughtHelpers`, the pips and the tether from `fightread.mjs`
+`helperPlan`), and rule 1 already held: a helper's break sets off a Tripwire and boots a Spare, and its tick crosses a
+♛ part's phase tick, because those rules never asked whose hit it was (`helper-rules.test.mjs` pins it). The planner
+keeps its helpers off a beat (with the Mimic alone too: it has no attack, so waiting costs nothing), cashes caught ones
+in with Kill Switch, and sends none that would break a Tripwire while others stand. `node solved.mjs operator`, Signal
+lost in Ghostroot fights with a Mimic at 10, 18 and 30, before the rule and now: the planner Herder 20, 14, 19 → 20, 16,
+19; the planner Hijacker 23, 35, 20 → 25, 37, 21; the blind Herder 20, 59, 63 → 31, 64, 66; the blind Hijacker 72, 44,
+49 → 73, 46, 49. Every planner still wins them all. What the planner still meets is a helper moving on onto the Mimic
+when its own part breaks, which the tether shows.
+
 ## 4. Where they live
 
 | Tier | Fights | Conflicts | Planner's Signal lost |
@@ -380,7 +390,7 @@ fights keep those and add:
 | Phase | What ships | Done when |
 |---|---|---|
 | P0 | `solved.mjs`: the learner at three misread shares, the routine player, the kit player, and the elite and boss sets. How much of the blind Operator's wins comes from helpers. No game change. | Section 1.4's table, with the new players' columns, is in progression.md. **Done.** |
-| P1 | The rotation made general (the levers' answers move into presets and handlers), a preset per lever, and a lever's part with no handler as an exception. The Hold chip from level 8, and the *beat in 1* and *beat in 2* chips. Helpers count on every lever (section 3.2's rules), with their pips and the move-on tether on the board, and the *no beat* target. The planner taught the helper rules. | The routine player wins as often as the planner on today's fights, and the rotation alone doesn't. |
+| P1 | The rotation made general (the levers' answers move into presets and handlers), a preset per lever, and a lever's part with no handler as an exception. The Hold chip from level 8, and the *beat in 1* and *beat in 2* chips. Helpers count on every lever (section 3.2's rules), with their pips and the move-on tether on the board, and the *no beat* target. The planner taught the helper rules. **Built so far:** helpers count on every lever, their pips and the move-on tether, and the planner taught the helper rules (section 3.2, *In the game*). | The routine player wins as often as the planner on today's fights, and the rotation alone doesn't. |
 | P2 | Ordinary fights: each wild roll, guard and invasion gets one conflict from the first four levers. | Ordinary fights meet their rows. |
 | P3 | Elites: Integrity down, two conflicts, *no pile-ups* lifted and checked on the roll. | Elites meet their row. |
 | P4 | Bosses: the levers as boss rules (a beat that repeats, phases, the one to leave). Two Residents and two solo bosses first, then the rest, lair bosses and feuds. | Every boss meets its row, and the designer has played the first four. |
