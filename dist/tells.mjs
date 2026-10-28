@@ -758,8 +758,8 @@ export function tellCast(s) {
   const T = tellsOf(s);
   return T ? T.list.filter((t) => t.kind === 'cast' && t.told).sort((a, b) => a.next - b.next)[0] || null : null;
 }
-// What SIGINT would stop now: the cast or charge in its window that lands first, or null.
-export const sigintTarget = (s) => sigintable(s).find((t) => inWindow(s, t)) || null;
+// What SIGINT would stop now: the cast in its window, else the charge on its cycle, or null.
+export const sigintTarget = (s) => { const xs = sigintable(s).filter((t) => inWindow(s, t)); return xs.find((t) => t.kind === 'cast') || xs[0] || null; }; // a cast first: a charge open with it can still be cut
 // Why SIGINT can't fire on a solo fight now, or null: nothing compiling or charging, or no window open yet.
 export function tellSigintCheck(s) {
   if (sigintTarget(s)) return null;
@@ -962,10 +962,17 @@ function sigintNow(s, planned = null) {
   // The dearer one, of what SIGINT would be needed for: another live tell whose part a cut can still reach on its cycle
   // (a tick left, no more than one ◆ in the way) needs no SIGINT, so it doesn't count against this one.
   const mine = tellPrice(s, t).signal;
-  return pricedTells(s).every((x) => x.t === t || x.price < mine || cuttable(s, x.p)) ? t : null;
+  return pricedTells(s).every((x) => x.t === t || x.price < mine || cuttable(s, x.p, x.t)) ? t : null;
 }
-// A part a cut can still reach: the fight has the interrupt, the part has a tick left and no more than one ◆.
-const cuttable = (s, p) => !!s.encounter.ticked && alive(p) && !p.core && !!nextTick(p) && !((p.armor || 0) > 1) && !(s.encounter.cutBudget != null && s.encounter.cutBudget <= 0);
+// A part a cut can still reach on a tell's cycle: the fight has the interrupt, the part has a tick left, and no more than
+// one ◆ is in the way, or the planner can strip it bare by then (stripPlan, as it does for a charge ahead of its cut).
+function cuttable(s, p, t) {
+  const e = s.encounter;
+  if (!e.ticked || !alive(p) || p.core || !nextTick(p) || (e.cutBudget != null && e.cutBudget <= 0)) return false;
+  if (!((p.armor || 0) > 1)) return true;
+  const by = tellNext(s, t) - e.cycle;
+  return by > 0 && TELL.bots.strip !== false && e.virus.level >= TELL.castFrom && (stripPlan(s, p, by)?.length || 99) <= by;
+}
 // A seal (a dial, docs/puzzle-levers.md 3.5), weighed in ◆ on the board: the ◆ it would hand out with k ◆ on its part,
 // and what it takes from you as TELL.weigh.sealYou ◆ at full share. A strip that takes ◆ off its part changes both
 // (its own room grows as it's stripped, so a part strip can cost more than none).

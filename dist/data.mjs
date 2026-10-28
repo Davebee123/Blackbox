@@ -192,7 +192,7 @@ export const CONFIG = {
 // target: 'part' | 'attack' (a part with an attack; optional) | 'none'. pierce: goes through armor chits. bare: only on a part with no armor.
 export const ABILITIES = {
   // cantrips: everyone
-  sigint: { verb: 'stun', name: 'SIGINT', target: 'none', damage: 0, cooldown: 8, icon: 'interrupt', short: 'Stops a cast or a charge', help: 'sigint — Interrupts a cast that is compiling on a virus part or a crew boss, or cuts a virus part\'s charge on the cycle it lands. With both in their windows, it stops the one that lands first. Some casts can\'t be interrupted, and a crew boss you interrupt casts its next one sooner. 8 cycle cooldown.' },
+  sigint: { verb: 'stun', name: 'SIGINT', target: 'none', damage: 0, cooldown: 8, icon: 'interrupt', short: 'Stops a cast or a charge', help: 'sigint — Interrupts a cast that is compiling on a virus part or a crew boss, or cuts a virus part\'s charge on the cycle it lands. With both in their windows, it stops the cast. Some casts can\'t be interrupted, and a crew boss you interrupt casts its next one sooner. 8 cycle cooldown.' },
   // Key 1: every class's plain hit, with a name of its own (SPIKE below). Typing `spike` works for every class.
   spike: { verb: 'hit', name: 'Spike', target: 'part', damage: 25, cooldown: 0, icon: 'spike', short: '25 damage', help: 'spike <part> — Deals 25 damage to the target. With no target, Spike hits the last part you hit.' },
   // Every class skill is simple, with one twist: a burn (damage over cycles), a proc (something
@@ -1423,7 +1423,7 @@ export const spikeOf = (arch) => SPIKE[arch] || { word: 'spike', name: 'Spike', 
 export const cantripsOf = (arch) => CANTRIPS.map((c) => (c.id === 'spike' ? { ...c, name: spikeOf(arch).name, word: spikeOf(arch).word, rule: spikeOf(arch).rule } : c));
 export const CANTRIPS = [
   { key: '1', id: 'spike', name: 'Spike', rule: 'Deals 25 damage to the target. With no target, Spike hits the last part you hit.' },
-  { key: '-', id: 'sigint', name: 'SIGINT', rule: 'Interrupts a cast that is compiling on a virus part or a crew boss, or cuts a virus part\'s charge on the cycle it lands. With both in their windows, it stops the one that lands first. Some casts can\'t be interrupted, and a crew boss you interrupt casts its next one sooner. 8 cycle cooldown.' },
+  { key: '-', id: 'sigint', name: 'SIGINT', rule: 'Interrupts a cast that is compiling on a virus part or a crew boss, or cuts a virus part\'s charge on the cycle it lands. With both in their windows, it stops the cast. Some casts can\'t be interrupted, and a crew boss you interrupt casts its next one sooner. 8 cycle cooldown.' },
 ];
 // Edge: each class's signature passive, from level 10 (the root of its talent tree).
 export const EDGE = {

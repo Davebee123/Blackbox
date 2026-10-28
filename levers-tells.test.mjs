@@ -133,7 +133,7 @@ test('each cast shows its price: Double Extortion and Persistence the Signal the
   parts.forEach((p, k) => assert.equal(p.integrity - before[k][1], Math.round(before[k][1] * TELL.grow), `${p.name} grows a quarter of what it had`));
 });
 
-test('SIGINT cuts a charge on its cycle as a cut does; with a cast and a charge both open, it stops the one that lands first', () => {
+test('SIGINT cuts a charge on its cycle as a cut does; with a cast and a charge both open, it stops the cast', () => {
   const s = fight();
   deal(s, ['fulldisk', 'extortion']); quiet(s);
   const enc = part(s, 'encryptor'), c = s.encounter.cycle;
@@ -146,13 +146,13 @@ test('SIGINT cuts a charge on its cycle as a cut does; with a cast and a charge 
   assert.equal(s.server.integrity, hp0, 'nothing lands: the attack it rode is cancelled');
   assert.equal(enc.attack.n, n + 1, 'and its schedule goes on as if it had landed');
   assert.equal(enc.attack.due, c + 1 + enc.attack.interval);
-  // Both open: the charge lands this cycle, the cast next. SIGINT now stops the charge; the cast's window stays open.
+  // Both open: the charge lands this cycle, the cast next. SIGINT stops the cast; the charge is the cut's to answer.
   const b = fight();
   deal(b, ['fulldisk', 'extortion']); quiet(b);
   const tc = tell(b, 'fulldisk', 'encryptor', 0), tx = tell(b, 'extortion', 'pulse', 1);
-  assert.equal(sigintTarget(b), tc);
+  assert.equal(sigintTarget(b), tx);
   fire(b, 'sigint');
-  assert.ok(!tc.told && tx.told);
+  assert.ok(!tx.told);
 });
 
 test('the planner SIGINTs the dearer tell, and cuts or lets land the cheaper one', () => {

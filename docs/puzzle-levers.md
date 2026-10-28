@@ -207,7 +207,7 @@ are first guesses for the harness to tune.
 - **As built.** Prices (`tellPrice`): a charge its whole landing (a Full Disk's encryption and burst together), Double
   Extortion and Persistence the extra their part's attacks due in their 4 cycles would deal, Self-Update the Integrity
   it adds (`TELL.grow` 0.25 of each part's current Integrity), turned into Signal at your pace so far for the planner.
-  SIGINT stops the open tell that lands first (`sigintTarget`); on a charge it cancels the attack it rides, as a cut
+  SIGINT stops the cast in its window, else the charge on its cycle (`sigintTarget`: with both open, the charge can still be cut); on a charge it cancels the attack it rides, as a cut
   does. It cuts charges from level 17 (`TELL.sigintChargeFrom`), where a charge and a cast are live together: below
   it a lone charge took SIGINT every time, a free answer that halved what a fight at 10 cost the Bastions and the
   Phantom and pushed the Herder and the Payload under their solo band (balance.test.mjs). The breach build keeps casts
