@@ -1725,6 +1725,10 @@ export const daemonGlyph = (id, cls = 'badge') => glyph(DAEMON_GLYPH[id] || id, 
 const jobTag = (s, c) => (c.done ? ['Done', 'dim'] : contractReady(s, c) ? ['Ready', 'you'] : c.offBooks ? ['Off books', 'hot'] : c.story !== undefined ? ['LOWLIGHT', ''] : ['Active', '']);
 // Where a contract's work is: its server, an unknown one it points at, or SPRAWL-00 (the WoW quest tracker).
 const trackGo = (c) => (c.loc ? `map:${c.loc}` : c.hidden ? `map:${c.hidden}` : c.type === 'bounty' || c.where === 'sprawl' ? 'map:sprawl' : null);
+// A contract's icon, by its kind (the mail's contract card and the map's tracker).
+const jobIcon = (c) => ({ kill: 'kill', strain: 'kill', bounty: 'bounty', takeover: 'takeover', materials: 'materials', item: 'item', side: 'f-' + c.faction, install: 'canary', defuse: 'lock', sweep: 'trace', exfil: 'upload', heist: 'stealth', rooms: 'trace', map: 'trace' }[c.type] || 'item');
+// Whose contract it is: its faction, Halcyon's board, or none for LOWLIGHT (the mail's rows and the map's tracker).
+const jobFaction = (c) => c.faction || (c.story !== undefined || /LOWLIGHT/.test(c.from) ? null : 'halcyon');
 function jobBox(s, c, now) {
   const isOffer = c.expiresAt != null;
   const pr = contractProgress(s, c), ok = contractReady(s, c);
@@ -1733,7 +1737,7 @@ function jobBox(s, c, now) {
     ? `<button type="button" class="btn primary" data-command="mail accept ${c.id}" ${full ? `disabled title="You hold ${MAIL.take} contracts. Deliver or drop one first."` : ''}>Take</button>`
     : `<button type="button" class="btn primary" data-command="mail deliver ${c.id}" ${ok ? '' : 'disabled'}>Deliver</button>${trackGo(c) && !ok ? `<button type="button" class="btn" data-go="${esc(trackGo(c))}">${glyph('trace')}Show on map</button>` : ''}${c.story === undefined ? `<button type="button" class="btn" data-command="mail drop ${c.id}">Drop</button>` : ''}`;
   return `<div class="contract${ok ? ' ready' : ''}${c.done ? ' done' : ''}${isOffer ? ' offer' : ''}">
-    <div class="c-head"><b>${glyph({ kill: 'kill', strain: 'kill', bounty: 'bounty', takeover: 'takeover', materials: 'materials', item: 'item', side: 'f-' + c.faction, install: 'canary', defuse: 'lock', sweep: 'trace', exfil: 'upload', heist: 'stealth' }[c.type] || 'item', 'badge')}${esc(contractTitle(s, c))}</b>${c.offBooks ? '<span class="tag hot">Off the books</span>' : ''}${isOffer && c.type !== 'side' && !c.waits ? `<small class="c-exp">expires in ${fmtTime(c.expiresAt - now)}</small>` : isOffer && c.type === 'side' ? '<span class="tag you">your call</span>' : ''}</div>
+    <div class="c-head"><b>${glyph(jobIcon(c), 'badge')}${esc(contractTitle(s, c))}</b>${c.offBooks ? '<span class="tag hot">Off the books</span>' : ''}${isOffer && c.type !== 'side' && !c.waits ? `<small class="c-exp">expires in ${fmtTime(c.expiresAt - now)}</small>` : isOffer && c.type === 'side' ? '<span class="tag you">your call</span>' : ''}</div>
     ${isOffer ? '' : `<div class="lvl-row"><span class="lvl-bar"><span style="width:${Math.round(pr.part * 100)}%"></span></span><small>${esc(pr.text)}</small></div>`}
     <div class="rw-chips" title="${c.done ? 'Paid' : 'Pays'}: ${esc(rewardLine(s, c))}">${rewardChips(s, c)}</div>
     ${acts ? `<div class="row">${acts}</div>` : ''}
@@ -1759,11 +1763,11 @@ export function mailMarkup(s, sel = null, now = Date.now()) {
   const taken = new Set((s.mail?.jobs || []).map((j) => j.id));
   const unreadJob = new Set(letters.filter((m) => m.job != null && taken.has(m.job) && !m.read).map((m) => m.job));
   const unreadLetters = letters.filter((m) => !m.read && !(m.job != null && taken.has(m.job))).length;
-  const heldRows = held.map((c) => { const [t, cls] = jobTag(s, c); return row('j' + c.id, c.from, contractTitle(s, c), t, cls, '', unreadJob.has(c.id), c.faction || (c.story !== undefined || /LOWLIGHT/.test(c.from) ? null : 'halcyon')); }).join('');
+  const heldRows = held.map((c) => { const [t, cls] = jobTag(s, c); return row('j' + c.id, c.from, contractTitle(s, c), t, cls, '', unreadJob.has(c.id), jobFaction(c)); }).join('');
   const boardRows = board.map((c) => row('j' + c.id, c.from, c.subject, c.offBooks ? '<span title="GLASSJAW work through Halcyon\'s board: pays 1.6× the credits, costs Halcyon standing">Off books</span>' : '', c.offBooks ? 'hot' : '', `<small class="mexp">${c.type === 'side' ? '<span title="A side offer: take this one or its rival. It never expires.">pick one</span>' : c.waits ? '<span title="A room contract: it waits until you take it.">waits</span>' : fmtTime(c.expiresAt - now)}</small>`, false, c.faction || 'halcyon')).join('');
   const letterRows = letters.filter((m) => m.job == null || !taken.has(m.job)).map((m) => row('l' + m.id, m.from, m.subject, '', '', '', !m.read)).join('');
   const done = doneContracts(s);
-  const doneRows = done.map((c) => row('j' + c.id, c.from, contractTitle(s, c), c.story !== undefined ? '<span title="A job from LOWLIGHT, your crew: the storyline">LOWLIGHT</span>' : '', 'dim', '', false, c.faction || (c.story !== undefined || /LOWLIGHT/.test(c.from) ? null : 'halcyon'))).join('');
+  const doneRows = done.map((c) => row('j' + c.id, c.from, contractTitle(s, c), c.story !== undefined ? '<span title="A job from LOWLIGHT, your crew: the storyline">LOWLIGHT</span>' : '', 'dim', '', false, jobFaction(c))).join('');
   const st = standing(s), tier = tierOf(s), next = nextTier(s);
   // A faction's chip shows once you've met it: found its hub, or found one of its servers.
   const met = hubsOf(s).length ? FACTION_IDS.filter((f) => f !== 'halcyon' && (hubFound(s, f) || (s.locations || []).some((l) => l.faction === f))) : [];
@@ -2136,10 +2140,42 @@ function railOf(s, ev, l) {
   if (ev.card === 'spotter') return { name: ev.name, tag: lv, where: 'your wall' };
   return { name: ev.name, tag: lv, where };
 }
+// The map's left column: the threat rail, then the contract tracker under it (the selected server's contract lit).
+function mapLeft(s, sel) {
+  const col = threatRail(s) + contractTracker(s, sel);
+  return col ? `<div class="map-lcol">${col}</div>` : '';
+}
 function threatRail(s) {
   const list = threatsOf(s);
   if (!list.length) return '';
   return `<aside class="threat-rail" aria-label="Threats and timers">${list.map((x) => { const pct = x.pct != null ? x.pct : x.total ? Math.max(0, Math.min(1, 1 - (x.left || 0) / x.total)) : 1; return `<button type="button" class="tr-row ${x.cls}" data-select="${esc(x.sel)}">${glyph(x.icon)}<span class="tr-txt"><b>${esc(x.name)}${x.tag ? ` <small>${esc(x.tag)}</small>` : ''}</b><small>${esc(x.where)}</small></span><span class="tr-t">${x.left != null ? fmtTime(x.left) : x.pct != null ? `${Math.round(x.pct * 100)}%` : ''}</span><span class="tr-bar"><i style="width:${(pct * 100).toFixed(0)}%"></i></span></button>`; }).join('')}</aside>`;
+}
+
+// The contract tracker (WoW's objective tracker): the contracts you hold and haven't delivered, each with its name, whose
+// it is and how far along: a count as pips (a long one as a bar and n/N), anything else as a bar and its few words.
+// Click one to centre the map on its server and select it (app.js data-locate), or for Mail when it has no server.
+export function trackedJobs(s) {
+  return openContracts(s).map((c) => {
+    const pr = contractProgress(s, c), ok = contractReady(s, c), place = trackGo(c);
+    // The tooltip in plain sentences: "15 of 18 rooms cleared.", "Pays 95 credits, 240 XP and 5 Halcyon standing."
+    const said = pr.of && /^Rooms /.test(pr.text) ? `${pr.n} of ${pr.of} rooms cleared` : pr.text.replace(/^(\d+)\/(\d+)/, '$1 of $2');
+    const sentence = (x) => (x ? x[0].toUpperCase() + x.slice(1) + (/[.!?]$/.test(x) ? '' : '.') : '');
+    const pays = rewardLine(s, c).split(' · ').map((x) => x.replace(/^(.+) ([+-])(\d+)$/, (_, who, sign, n) => `${sign === '-' ? '−' : ''}${n} ${who} ${who === 'Halcyon' ? 'standing' : 'rep'}`));
+    const paid = pays.length > 1 ? `${pays.slice(0, -1).join(', ')} and ${pays.at(-1)}` : pays[0];
+    const tip = `${contractTitle(s, c)}: Contract for ${c.from}. ${ok ? 'Ready to deliver.' : sentence(said)} Pays ${paid}.\n▸ ${place ? 'Show it on the map.' : ok ? 'Deliver it in Mail.' : 'Open it in Mail.'}`;
+    return { id: c.id, icon: jobIcon(c), name: contractTitle(s, c), from: c.from, faction: jobFaction(c), ready: ok, text: pr.text, part: Math.max(0, Math.min(1, pr.part || 0)), n: pr.n, of: pr.of, locate: place ? place.slice(4) : null, go: place ? null : `mail:j${c.id}`, tip };
+  });
+}
+function contractTracker(s, sel = null) {
+  const list = trackedJobs(s);
+  if (!list.length) return '';
+  const prog = (j) => j.ready ? `<span class="ct-done">✓ Ready</span>`
+    : j.of && j.of <= 10 ? `<span class="ct-pips" aria-label="${j.n} of ${j.of}">${Array.from({ length: j.of }, (_, i) => `<i${i < j.n ? ' class="on"' : ''}></i>`).join('')}</span>`
+    : j.of ? `<span class="ct-bar"><i style="width:${(j.part * 100).toFixed(0)}%"></i></span><small class="ct-n">${j.n}/${j.of}</small>`
+    : `<small class="ct-n ct-say">${esc(j.text)}</small>`;
+  const mark = (f) => (f && FX[f] ? `<span class="fmark-i ct-f" style="--fc:${FX[f].color}">${glyph('f-' + f)}</span>` : '');
+  const rows = list.map((j) => `<button type="button" class="ct-row${j.ready ? ' ready' : ''}${j.locate && j.locate === sel ? ' on' : ''}" ${j.locate ? `data-locate="${esc(j.locate)}"` : `data-go="${esc(j.go)}"`} title="${esc(j.tip)}">${glyph(j.icon)}<span class="ct-txt"><b>${esc(j.name)}</b><small class="ct-for">${mark(j.faction)}${esc(j.from)}</small></span><span class="ct-prog">${prog(j)}</span></button>`).join('');
+  return `<section class="ctrack" aria-label="Contracts"><h3 class="ct-head">${glyph('contract')}Contracts<small>${heldCount(s)}/${MAIL.take}</small></h3>${rows}</section>`;
 }
 
 // Traffic on the net: files moving between servers, as dots along the links. Your market orders
@@ -2335,7 +2371,7 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
   // List mode (MOO2's planets list): every server as a row, sortable, the filters apply; the
   // selected one's card sits beside the list.
   if (list && !con) return `<div class="map-page map-list-page"><section class="panel map-canvas map-list">${tabs}${serverList(s, sel, filter, sort)}</section><aside class="map-side">${mapSide(s, sel, find(sel))}</aside></div>`;
-  return `<div class="map-page${side ? '' : ' no-side'}"><section class="panel map-canvas">${tabs}${con ? '' : threatRail(s)}${con ? '' : floorLift(s, fl)}${svg}${card}</section>${side ? `<aside class="map-side">${mapSide(s, sel, find(sel))}</aside>` : ''}</div>`;
+  return `<div class="map-page${side ? '' : ' no-side'}"><section class="panel map-canvas">${tabs}${con ? '' : mapLeft(s, none ? null : sel)}${con ? '' : floorLift(s, fl)}${svg}${card}</section>${side ? `<aside class="map-side">${mapSide(s, sel, find(sel))}</aside>` : ''}</div>`;
 }
 // The floor panel, a lift's buttons down the side of the map: the floors you've reached lit (the one on the map marked),
 // the next one dim with its band, the rest dark. A teal pip on the floor you're connected to.

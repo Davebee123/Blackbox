@@ -2664,7 +2664,7 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .bcost span { display: inline-flex; align-items: center; gap: 3px; }
 .bcost .glyph { width: 12px; height: 12px; }
 /* The threat rail: the left of the map, everything coming for you, soonest first. */
-.threat-rail { position: absolute; top: 44px; left: 10px; z-index: 3; width: 230px; max-height: calc(100% - 60px); overflow-y: auto; display: grid; gap: 5px; pointer-events: auto; }
+.threat-rail { display: grid; gap: 5px; }
 .tr-row { display: grid; grid-template-columns: 16px 1fr auto; grid-template-rows: auto 3px; gap: 4px 8px; align-items: center; padding: 6px 8px; background: rgba(12, 10, 6, 0.88); border: 1px solid var(--line); border-left: 3px solid var(--line-strong); border-radius: 3px; color: var(--text); text-align: left; cursor: pointer; backdrop-filter: blur(2px); }
 .tr-row:hover { border-color: var(--line-strong); }
 .tr-row > .glyph { width: 14px; height: 14px; color: var(--muted); }
@@ -2679,7 +2679,35 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .tr-row.warn { border-left-color: var(--amber); } .tr-row.warn > .glyph, .tr-row.warn .tr-t { color: var(--amber); } .tr-row.warn .tr-bar i { background: var(--amber); }
 .tr-row.drop { border-left-color: var(--you); } .tr-row.drop > .glyph { color: var(--you); } .tr-row.drop .tr-bar i { background: var(--you); }
 .tr-row.dim { opacity: 0.8; }
-@media (max-width: 900px) { .threat-rail { position: static; width: auto; margin: 44px 8px 0; } }
+/* The contract tracker (view.mjs contractTracker): the contracts you hold, each with its name, whose it is and its
+   progress in amber (what you use), a count as pips. Never teal: teal is only ever you. */
+.ctrack { display: grid; gap: var(--s2); pointer-events: auto; min-width: 0; }
+.ct-head { display: flex; align-items: center; gap: var(--s3); margin: 0; padding: 0 2px; font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--amber); }
+.ct-head .glyph { width: 12px; height: 12px; }
+.ct-head small { margin-left: auto; font: inherit; color: var(--muted); }
+.ct-row { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 4px 8px; align-items: center; padding: 6px 8px; background: rgba(12, 10, 6, 0.88); border: 1px solid var(--line); border-left: 3px solid var(--amber-deep); border-radius: var(--r-btn); color: var(--text); font: inherit; text-align: left; cursor: pointer; backdrop-filter: blur(2px); }
+.ct-row:hover, .ct-row:focus-visible { border-color: var(--line-strong); border-left-color: var(--amber); }
+.ct-row.on { border-color: var(--amber); background: rgba(40, 30, 10, 0.92); }
+.ct-row > .glyph { width: 14px; height: 14px; color: var(--amber-soft); align-self: start; margin-top: 2px; }
+.ct-txt { display: grid; min-width: 0; }
+.ct-txt b { font-size: 12px; font-weight: 600; color: var(--bright); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ct-for { display: flex; align-items: center; min-width: 0; font: 10px var(--mono); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ct-for .glyph { width: 10px; height: 10px; }
+.ct-prog { grid-column: 2; display: flex; align-items: center; gap: var(--s3); min-width: 0; min-height: 10px; }
+.ct-bar { flex: 1 1 30px; min-width: 24px; height: 3px; background: rgba(255, 255, 255, 0.06); border-radius: 2px; overflow: hidden; }
+.ct-bar i { display: block; height: 100%; background: var(--amber); }
+.ct-n { flex: 0 1 auto; min-width: 0; font: 600 10px var(--mono); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ct-n.ct-say { white-space: normal; font-weight: 400; color: var(--muted); line-height: 1.35; }
+.ct-pips { display: flex; flex-wrap: wrap; gap: 3px; }
+.ct-pips i { width: 9px; height: 9px; border: 1px solid var(--amber-deep); border-radius: 1px; }
+.ct-pips i.on { background: var(--amber); border-color: var(--amber); }
+.ct-done { font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--amber); }
+.ct-row.ready { border-color: var(--amber-deep); border-left-color: var(--amber); background: rgba(40, 30, 10, 0.92); }
+.ct-row.ready > .glyph { color: var(--amber); }
+/* The rail and the tracker share the map's left column; the rail keeps its own rows. */
+.map-lcol { position: absolute; top: 44px; left: 10px; z-index: 3; width: 230px; display: grid; align-content: start; gap: var(--s5); max-height: calc(100% - 60px); overflow-y: auto; pointer-events: none; }
+.map-lcol > * { pointer-events: auto; }
+@media (max-width: 900px) { .map-lcol { position: static; width: auto; max-height: none; overflow: visible; margin: 44px 8px 0; gap: var(--s4); } }
 /* Item hover card: a spinning ASCII model of the item's kind, in its rarity colour, over its details. */
 .ptip { position: fixed; z-index: 80; zoom: var(--ui, 1); pointer-events: none; animation: ptip-in 0.14s ease-out; } /* zooms with the screen (app.js placePtip) */
 @keyframes ptip-in { from { opacity: 0; transform: translateY(4px); } }
@@ -3706,7 +3734,7 @@ body.no-motion .recap { animation: none; }
   .fl-btn .fl-you { left: 50%; top: -3px; margin: 0 0 0 -3.5px; }
   /* The tools row flows above the rail and the floor strip instead of floating over them (it wrapped off the right edge). */
   .map-tools { position: static; flex-wrap: wrap; row-gap: 6px; padding: 8px 8px 0; }
-  .threat-rail { margin-top: 6px; }
+  .map-lcol { margin-top: 6px; }
 }
 /* An exit (▼) and an up-link (▲): lit through the fog. Its label carries the floor's band in WoW colours. */
 .mnode.exit .exit-mark, .mnode.entry .exit-mark { fill: rgba(241, 185, 47, 0.12); stroke: var(--amber); stroke-width: 1.4; stroke-linejoin: round; }

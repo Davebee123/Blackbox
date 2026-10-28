@@ -642,16 +642,16 @@ function hunt(s, c) {
   if (!flagged(s, n)) return { text: 'Not flagged yet. Put a relay on a server next to it.', part: 0 };
   return { text: `Flagged past ${locName(s, n.via)} · traced ${n.lead}%`, part: 0.1 + 0.3 * (n.lead / 100) };
 }
-// What's left to do, in a few words, and how far along it is (0–1).
+// What's left to do, in a few words, and how far along it is (0–1); a job that counts also gives n of `of` (the map's tracker draws those as pips).
 export function progress(s, c) {
   if (c.done) return { text: 'Delivered', part: 1 };
-  if (c.type === 'kill' || c.type === 'strain') return { text: `${c.got}/${c.count} neutralized`, part: c.got / c.count };
+  if (c.type === 'kill' || c.type === 'strain') return { text: `${c.got}/${c.count} neutralized`, part: c.got / c.count, n: c.got, of: c.count };
   if (c.type === 'bounty') return { text: c.got ? 'Neutralized' : c.room ? `In SPRAWL-00, ${sprawlRoom(s, c.room)}` : 'Somewhere in SPRAWL-00', part: c.got ? 1 : 0 };
-  if (c.type === 'rooms') return { text: `${c.got}/${c.count} rooms cleared`, part: c.got / c.count };
+  if (c.type === 'rooms') return { text: `${c.got}/${c.count} rooms cleared`, part: c.got / c.count, n: c.got, of: c.count };
   if (c.type === 'map') {
     if (c.got) return { text: 'Mapped', part: 1 };
     const R = s.locations.find((x) => x.id === c.loc)?.floorplan, all = R ? Object.values(R.graph.rooms).filter((x) => !x.nook && !x.optional) : [], n = all.length, done = all.filter((x) => R.cleared[x.id]).length; // Rooms n/N, as the strip counts them
-    return { text: R ? `Rooms ${done}/${n}` : 'Not connected yet', part: n ? done / n : 0 };
+    return R ? { text: `Rooms ${done}/${n}`, part: n ? done / n : 0, n: done, of: n } : { text: 'Not connected yet', part: 0 };
   }
   if (c.type === 'takeover') {
     if (c.any) return c.took ? { text: `${locName(s, c.took)} is yours`, part: 1 } : { text: s.locations.length ? 'Open the vault of any server you have traced' : 'Trace a server first', part: 0 };
@@ -660,7 +660,7 @@ export function progress(s, c) {
     const R = l?.floorplan, vault = R?.graph.vaults[0] && R.opened[R.graph.vaults[0]];
     return { text: l?.takenOver ? 'Taken over' : vault ? 'Vault open: the Resident waits in the Core' : 'Vault shut', part: l?.takenOver ? 1 : vault ? 0.7 : 0.45 };
   }
-  if (c.type === 'materials') { const have = materialsOf(s)[c.material] || 0; return { text: `${Math.min(have, c.amount)}/${c.amount} in stock`, part: Math.min(1, have / c.amount) }; }
+  if (c.type === 'materials') { const have = materialsOf(s)[c.material] || 0; return { text: `${Math.min(have, c.amount)}/${c.amount} in stock`, part: Math.min(1, have / c.amount), n: Math.min(have, c.amount), of: c.amount }; }
   if (c.type === 'item') {
     if (ready(s, c)) return { text: 'Banked', part: 1 };
     if (!c.loc) return hunt(s, c);
@@ -669,7 +669,7 @@ export function progress(s, c) {
   }
   if (c.type === 'side') return { text: `${FACTIONS[c.faction].short} +${c.reward.rep}, ${FACTIONS[c.against].short} turns against you`, part: 1 };
   if (c.type === 'install') return c.got ? { text: 'Installed', part: 1 } : c.carry === 'pack' && s.run?.loc === c.loc ? { text: `In your pack. Install it at ${c.addr}.`, part: 0.6 } : { text: `In your stash. It goes in your pack on ${locName(s, c.loc)}.`, part: 0.25 };
-  if (c.type === 'defuse') return { text: `${c.got}/${c.count} broken before they Encrypt`, part: c.got / c.count };
+  if (c.type === 'defuse') return { text: `${c.got}/${c.count} broken before they Encrypt`, part: c.got / c.count, n: c.got, of: c.count };
   if (c.type === 'exfil') return c.got ? { text: 'Archive recovered', part: 1 } : { text: 'Any rogue server: break its Uplink before the upload lands', part: 0 };
   if (c.type === 'sweep') {
     if (c.got) return { text: 'Mapped without a rest', part: 1 };
@@ -677,7 +677,7 @@ export function progress(s, c) {
     if (!on || !R) return { text: 'One visit: every room but the Core, nothing live, no rest', part: 0 };
     if (rested(R)) return { text: 'You rested this visit. Next visit starts again.', part: 0 };
     const all = sweepRooms(R.graph), n = all.filter((id) => R.visit?.stood?.[id]).length;
-    return { text: `${n}/${all.length} rooms this visit, no rest`, part: n / all.length };
+    return { text: `${n}/${all.length} rooms this visit, no rest`, part: n / all.length, n, of: all.length };
   }
   if (c.type === 'heist') {
     if (ready(s, c)) return { text: 'Banked', part: 1 };
