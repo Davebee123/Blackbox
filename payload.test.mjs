@@ -10,16 +10,16 @@ const T0 = 1_000_000_000_000;
 const open = () => {
   const s = fresh(); s.tutorialCompleted = true; command(s, 'mail'); s.mail.boardOpen = true; s.hubFound = { glassjaw: true, kestrel: true, lantern: true, nullchoir: true }; s.server.credits = 5000;
   Object.assign(materialsOf(s), { cipher: 50, worm: 50, exploit: 2 });
-  s.salvage = Array.from({ length: 20 }, () => ({ name: 'Scrap', virus: 't', seed: 0 }));
+  s.components = 20;
   return s;
 };
 
-test('compiling costs credits, code and salvage; an Exploit arms it; you hold three at most', () => {
+test('compiling costs credits, code and components; an Exploit arms it; you hold three at most', () => {
   const s = open();
   compilePayload(s, 'exfil');
   assert.equal(builtOf(s).length, 1);
   assert.equal(materialsOf(s).cipher, 50 - PAYLOAD.code);
-  assert.equal(s.salvage.length, 20 - PAYLOAD.salvage);
+  assert.equal(s.components, 20 - PAYLOAD.salvage);
   compilePayload(s, 'wiper', true);
   assert.equal(materialsOf(s).exploit, 1);
   assert.ok(builtOf(s)[1].power > builtOf(s)[0].power);

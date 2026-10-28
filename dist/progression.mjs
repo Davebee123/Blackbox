@@ -6,6 +6,7 @@
 //                brings something (levelGains, nextGains; app.js levelUp).
 //   v34          server XP, the specialty, ports, eight services and grey protocols are gone. What a save
 //                had in them comes back in kind (progressionRestore).
+import { gainComponents } from './salvage.mjs';
 import { emit, materialsOf, daemonLevel, UNIQUES, gainsTalent, kitTalent } from './combat.mjs';
 import { versionLevel } from './daemons.mjs';
 import { LOADOUT, SERVER, FLOORS, ARCHETYPES, xpToNext, v41XpToNext } from './data.mjs';
@@ -76,7 +77,7 @@ function payBack(s, c, into) {
     if (!n) continue;
     into[k] = (into[k] || 0) + n;
     if (k === 'credits') s.server.credits += n;
-    else if (k === 'salvage') for (let i = 0; i < n; i++) (s.salvage ||= []).push({ name: 'Scrap', virus: 'refund', seed: 0 }); // components since v40 (sockets.mjs)
+    else if (k === 'salvage') gainComponents(s, n); // components (salvage.mjs)
     else materialsOf(s)[k] = (materialsOf(s)[k] || 0) + n;
   }
 }

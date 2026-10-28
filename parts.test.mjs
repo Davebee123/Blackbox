@@ -738,3 +738,28 @@ test('Kestrel\'s Idle Timer: from floor 3, about half the guard posts and ICE br
   assert.ok(n >= 35 && n <= 65, `floor 3: ${n} of 100`);
   assert.equal(PARTS.kestrel.floor, 3); assert.equal(PARTS.kestrel.share, 0.5);
 });
+
+// docs/puzzle-levers.md 5: from PARTS.lever every ordinary fight carries one lever (a part whose rule makes the default
+// move the wrong one); a second one only when nothing else can take its slot (below level 9 every third is a lever). A
+// fight that already brings a part you've never met may have none: one stranger a fight, and it is the lesson.
+test('one lever a fight: every wild roll from level 6, every guard but the Sentinel (its seal), none before', async () => {
+  const { leverOf } = await import('./dist/routines.mjs');
+  const levers = (v) => v.parts.filter((p) => leverOf(p)).length;
+  assert.equal(PARTS.lever, 6);
+  for (let L = 6; L <= 12; L++) {
+    assert.ok(M[L].fights.every((v) => levers(v) >= 1), `level ${L}: a fight with no lever`);
+    assert.ok(M[L].fights.filter((v) => levers(v) === 1).length >= 200, `level ${L}: one lever in most fights`);
+    assert.ok(N[L].fights.every((v) => levers(v) >= 1 || v.parts.some((p) => p.id !== 'pulse' && !SIGS.has(p.id))), `level ${L}, a new player: no lever, and no stranger`);
+  }
+  for (const L of [18, 30, 45]) {
+    let one = 0;
+    for (let seed = 1; seed <= 200; seed++) { const s = fresh(); s.metAll = true; selectEncounter(s, 'random', seed, { level: L, quiet: true }); const n = levers(s.encounter.virus); assert.ok(n >= 1, `level ${L}, seed ${seed}`); one += n === 1; }
+    assert.ok(one >= 180, `level ${L}: ${one} of 200 fights with exactly one lever`);
+  }
+  assert.ok(M[5].fights.some((v) => !levers(v)), 'level 5: no lever needed yet');
+  for (const g of ['watchdog', 'sentinel', 'crawler', 'shredder', 'bouncer', 'tracer']) {
+    const at = (L) => { const s = fresh(); selectEncounter(s, g, 1, { mode: 'run', room: '/sim', level: L }); return s.encounter.virus.parts.some((p) => p.fuse); };
+    assert.equal(at(18), g !== 'sentinel', `${g} at 18`);
+    assert.equal(at(5), false, `${g} at 5`);
+  }
+});

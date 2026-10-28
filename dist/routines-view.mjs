@@ -7,13 +7,12 @@ import { glyph } from './glyphs.mjs';
 import { ABILITIES } from './data.mjs';
 import { said, active, hackerLevel } from './combat.mjs';
 import { entries } from './codex.mjs';
-import { ROUTINES, LOCKED, EXCEPTION, confirmed, TARGETS, unlocked, programsOf, programName, routineOf, focusBody, bodyName, bodyDecoded, isBody, handlerRows, ramFor, ramUsed, barSkills, palette, presetsFor, presetNow, armorFirst, whenLabel, whenTip, whenIcon, whenRam, isLong, parseWhen, refName, live, preview, exceptionsOf, wholeFight } from './routines.mjs';
+import { ROUTINES, LOCKED, EXCEPTION, confirmed, TARGETS, unlocked, programsOf, programName, routineOf, focusBody, bodyName, bodyDecoded, isBody, handlerRows, ramFor, ramUsed, doSkills, takesPart, HOLD, ROTATE, palette, presetsFor, presetNow, armorFirst, whenLabel, whenTip, whenIcon, whenRam, isLong, parseWhen, refName, live, preview, exceptionsOf, wholeFight } from './routines.mjs';
 
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 // A RAM cost: a small circle on the left of a chip, "2R".
 const ramCost = (n, cls = '') => `<span class="rt-rc${cls ? ' ' + cls : ''}" title="${n} RAM" aria-label="${n} RAM">${n}R</span>`;
-const takesPart = (id) => !['none', 'aggro'].includes(ABILITIES[id]?.target);
-const skillName = (s, id) => (id === 'spike' ? said(s, 'spike').replace(/^./, (c) => c.toUpperCase()) : ABILITIES[id]?.name || id);
+const skillName = (s, id) => (id === 'spike' ? said(s, 'spike').replace(/^./, (c) => c.toUpperCase()) : id === HOLD.id ? HOLD.name : id === ROTATE.id ? ROTATE.name : ABILITIES[id]?.name || id);
 const verbOf = (id) => ABILITIES[id]?.verb || 'hit';
 const BODY_GROUPS = ['family', 'strain', 'guard', 'runner'];
 
@@ -24,6 +23,9 @@ function whenChip(s, id, { drag = true, open = true, extra = '', short = false, 
   return `<span class="rt-chip rt-when${open ? '' : ' locked'}"${drag && open ? ` draggable="true" data-rt-drag="when:${esc(id)}"` : ''} title="${esc(tip)}">${cost ? ramCost(ram) : ''}${glyph(open ? whenIcon(id) : 'lock')}<b>${esc(label)}</b>${extra}</span>`;
 }
 function doChip(s, x, { drag = true } = {}) {
+  // Hold (nothing fired) and Rotation (your rotation's move at the part): no skill of their own, no RAM of their own.
+  const own = x.id === HOLD.id ? HOLD : x.id === ROTATE.id ? ROTATE : null;
+  if (own) return `<span class="rt-chip rt-do verb-${own.id}"${drag ? ` draggable="true" data-rt-drag="do:${own.id}"` : ''} title="${esc(`${own.name}: ${own.tip}`)}">${glyph(own.icon, 'verb-' + own.id)}<b>${own.name}</b></span>`;
   const long = isLong(s, x.id);
   return `<span class="rt-chip rt-do verb-${esc(verbOf(x.id))}"${drag ? ` draggable="true" data-rt-drag="do:${esc(x.id)}"` : ''} title="${esc(`${skillName(s, x.id)}: ${ABILITIES[x.id]?.short || ''}${long ? ' A long cooldown: the rotation never fires it, a handler can (+1 RAM).' : ''}`)}">${x.key ? `<kbd>${esc(x.key)}</kbd>` : ''}${glyph(verbOf(x.id), 'verb-' + verbOf(x.id))}<b>${esc(skillName(s, x.id))}</b>${long ? '<small class="rt-long">⟳6+</small>' : ''}</span>`;
 }
@@ -76,9 +78,9 @@ function presetRow(s, body) {
 export function programMarkup(s) {
   if (!unlocked(s)) return lockedMarkup(s);
   const P = programsOf(s), body = focusBody(s), rows = handlerRows(s, body), budget = ramFor(s, body), used = ramUsed(s, body);
-  const pal = palette(s, body), bar = barSkills(s);
+  const pal = palette(s, body), bar = doSkills(s);
   const whenOpts = [...pal.glob.filter((x) => x.open).map((x) => x.id), ...pal.muts.map((x) => x.id), ...pal.parts.flatMap((p) => p.chips.filter((c) => c.open).map((c) => c.id))].map((id) => [id, whenLabel(id)]);
-  const doOpts = bar.map((x) => [x.id, `${x.key} ${skillName(s, x.id)}`]);
+  const doOpts = bar.map((x) => [x.id, `${x.key ? x.key + ' ' : ''}${skillName(s, x.id)}`]);
   const tgtOpts = Object.keys(TARGETS).map((id) => [id, TARGETS[id].label]);
   const ramBar = `<div class="rt-ram" title="${esc(`RAM: ${used} of ${budget} in use. Each virus's routine has its own. Your class level gives it: ${ROUTINES.ram[0]} at level 1, ${ROUTINES.ram[1]} at 50.`)}"><span class="rt-label">RAM</span><b class="rt-ramnum${used > budget ? ' over' : ''}">${used}<small> / ${budget}</small></b>${ramMeter(used, budget)}</div>`;
   const list = rows.map((r) => {
@@ -93,7 +95,7 @@ export function programMarkup(s) {
       ${slot('target', r.i, noTgt ? '<span class="rt-chip rt-tgt none"><b>—</b></span>' : targetChip(h.target, { drag: false }), tgtOpts, h.target, noTgt)}
       <button type="button" class="rt-x" data-command="program ${esc(body)} remove ${r.i + 1}" aria-label="Remove handler ${r.i + 1}" title="Remove">×</button></li>`;
   }).join('');
-  const rot = `<li class="rt-h rt-rot" title="${esc(`When no handler fits: your ${programName(s)} rotation, the priorities the balance bots play. It never fires a cooldown of ${ROUTINES.long} or more.`)}"><span class="rt-grip" aria-hidden="true"></span><span class="rt-n">⟳</span><span class="rt-chip rt-when rot">${glyph('cron')}<b>else</b></span><span class="rt-chip rt-do rot">${glyph('chain')}<b>${esc(programName(s))} rotation</b></span></li>`;
+  const rot = `<li class="rt-h rt-rot" title="${esc(`When no handler fits: your ${programName(s)} rotation. It plays your kit well and reads the timers, but nothing of the virus: no tell and no part's rule. It never fires a cooldown of ${ROUTINES.long} or more.`)}"><span class="rt-grip" aria-hidden="true"></span><span class="rt-n">⟳</span><span class="rt-chip rt-when rot">${glyph('cron')}<b>else</b></span><span class="rt-chip rt-do rot">${glyph('chain')}<b>${esc(programName(s))} rotation</b></span></li>`;
   const add = `<li class="rt-h rt-add" data-rt-drop="add"><button type="button" class="btn small" data-command="program ${esc(body)} add" ${used + 1 > budget ? `disabled title="Out of RAM"` : 'title="A new handler: every cycle, key 1, the soonest attacker. Drop chips on it."'}>+ Handler</button><span class="rt-drop-hint">${glyph('item')}</span></li>`;
   const stack = `<section class="card rt-stack"><div class="thead"><div><h2>${esc(programName(s))} program</h2><h1>${esc(bodyName(body))}</h1></div>
       <div class="settings-grid rt-power"><button type="button" class="btn small" data-command="program ${P.on ? 'off' : 'on'}" aria-pressed="${P.on}" title="${esc(P.on ? 'On: when the timer runs out, your program moves.' : 'Off: when the timer runs out, you repeat your last hit.')}">Program</button></div></div>
@@ -137,6 +139,13 @@ export function progTarget(s) {
   const d = preview(s);
   return d && !d.hold ? d.target || null : null;
 }
+// The program's next move as a command ({ ability, target }): what the Mimic's beat cell previews (view.mjs).
+export function progMove(s) {
+  const d = live(s) && active(s) && !s.encounter.queue ? preview(s) : null;
+  if (!d || d.hold) return null;
+  const [ability, target] = d.text.split(' ');
+  return { ability, target: target || null };
+}
 export function progText(s) {
   const d = live(s) && active(s) && !s.encounter.queue ? preview(s) : null;
   return d && !d.hold ? '⟳ ' + said(s, d.text) : null;
@@ -151,7 +160,7 @@ export function progOnPart(s, p) {
   const [id] = d.text.split(' ');
   return `<div class="intent prog ghost-on" title="${esc(`Your program's next move: ${said(s, d.text)}.`)}">⟳ ${esc(skillName(s, id))}</div>`;
 }
-const excTip = (x) => (x.kind === 'tell' ? `${EXCEPTION.tip} Its ${x.tell} is on the board.` : EXCEPTION.tip);
+const excTip = (x) => (x.kind === 'tell' ? `${EXCEPTION.tip} Its ${x.tell} is on the board.` : x.kind === 'lever' ? EXCEPTION.lever : EXCEPTION.tip);
 // On a part's tag line (beside FALLBACK, SHIELDS …): the full label, when that part is yours to play.
 export function progTag(s, p) {
   if (!live(s) || !active(s)) return '';

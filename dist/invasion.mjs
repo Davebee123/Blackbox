@@ -16,6 +16,7 @@ import { tickRetake } from './hubs.mjs';
 import { tickEvents } from './events.mjs';
 import { tickConsortium, consortiumOf, memberHelp, occupy, roam, CONSORTIUM } from './consortium.mjs';
 import { isLive } from './memory.mjs';
+import { gainComponents } from './salvage.mjs';
 import { effLevel, tickFirewall, fragment, ratingAt, firewallRestore, baseOf } from './firewall.mjs';
 import { filterStat } from './filters.mjs';
 import { CONFIG, SERVER, MUTATIONS, ROLLED_MUTATIONS, QUIRKS, quirkOf, createVirus, power, variantFor, gradeFor, codeUnit, DAEMON_DROP, restedGain, restedCap } from './data.mjs';
@@ -499,7 +500,7 @@ export function breakStreak(s, why) {
 // The wall stopped it: outright on arrival, or worn down by a siege.
 function stopped(s, inv, how) {
   const blocked = how === 'blocked', quiet = blocked;
-  s.salvage.push({ name: `${inv.name} fragment`, virus: inv.name, seed: inv.seed });
+  gainComponents(s, inv.open ? 2 : 1);
   // A filter of Reflection: it drops some of its family's code.
   const k = filterStat(s, 'reflect') && codeOf(inv.family);
   if (k) gainCode(s, { [k]: filterStat(s, 'reflect') }, 'Reflection: ');

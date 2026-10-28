@@ -122,7 +122,7 @@ test('Install: the item waits in your stash, goes in your pack on its server, in
   assert.ok(!['entry', 'core', 'stash'].includes(g.rooms[c.room].kind) && sweepRooms(g).includes(c.room), 'a room you can reach');
   assert.equal(FP.known({ rooms: loc.floorplan }, c.room), false, 'its room is one you have never been in');
   assert.match(progress(s, c).text, /In your stash/);
-  assert.match(rewardLine(s, c), /credits · \d+ Indemnity · \d+ XP · Halcyon \+7/);
+  assert.match(rewardLine(s, c), /^\d+ credits · \d+ XP · Halcyon \+7/);
   // On another server, it stays home.
   play(s, 'connect sprawl');
   assert.ok(!s.run.pack.some((f) => f.kind === 'payload'));

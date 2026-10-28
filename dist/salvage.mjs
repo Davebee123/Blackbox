@@ -1,111 +1,27 @@
-// Components (still s.salvage on a save) work like mana: most costs take ANY component, and a few also need a
-// SPECIFIC one (a Pulse Kernel, a guard's component, a server's own: sockets.mjs). They pile into named stacks.
-// (Plain Scrap went in R2: everything that gave it gives components.)
+// Components: one currency, a count on the save (s.components). Every broken part drops the same kind
+// (docs/variety-plan.md 4), and every cost that takes components takes any of them. The family codes
+// (Cipher, Worm and Kernel code, and Exploits) stay apart: they're s.materials.
 //
-// A payment is { stackName: count }. You can choose it yourself (the picker, or `... pay
-// pulse-kernel:1,scrap:3` on the command line); otherwise autoPay spends plain scrap first, then
-// pieces no recipe asks for, then the most plentiful, and keeps what a recipe needs.
-import { CONFIG } from './data.mjs';
+// Until v47 they were a list of named pieces in s.salvage (Fuse Wire, Thermal Pad, Pulse Kernel…), and a few
+// costs named one (a zero-day protocol 2 guard components, a socket its server's own); they take plain ones
+// now. componentsRestore turns an older save's pile into its count, so nothing is lost.
 
-// Guard components: what the guards on runs leave behind.
-export const GUARD_PARTS = ['Sentry Lens', 'Tracker Core', 'Sentinel Lens', 'Lockout Relay', 'Crawler Maw', 'Brood Seed', 'Shredder Blade', 'Grinder Core'];
-
-// Recipes' salvage costs. any: generic pieces. need: [{ label, names, n }].
-export const SALVAGE_COSTS = {
-  protocol: (n) => ({ any: n, need: [] }),
-  zeroday: (n) => ({ any: Math.max(0, n - 2), need: [{ label: 'guard component', names: GUARD_PARTS, n: 2 }] }),
-  filter: () => ({ any: 4, need: [] }),
-  relay: () => ({ any: 4, need: [] }),
-};
-const WANTED = new Set(Object.values(SALVAGE_COSTS).flatMap((f) => f(4).need.flatMap((x) => x.names)));
-export const isComponent = (name) => WANTED.has(name);
-
-const plural = (x) => (x.n > 1 && !/s$/.test(x.label) ? x.label + 's' : x.label);
-export const slug = (name) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-export const total = (cost) => cost.any + cost.need.reduce((n, x) => n + x.n, 0);
-export const costLabel = (cost) => [cost.any ? `${cost.any} components` : '', ...cost.need.map((x) => `${x.n} ${plural(x)}`)].filter(Boolean).join(' + ');
-
-// Your salvage as stacks, components first, then by size.
-export function stacks(s) {
-  const m = new Map();
-  for (const p of s.salvage || []) m.set(p.name, (m.get(p.name) || 0) + 1);
-  return [...m].map(([name, n]) => ({ name, n, component: isComponent(name) })).sort((a, b) => b.component - a.component || b.n - a.n || a.name.localeCompare(b.name));
+export const componentsOf = (s) => s.components || 0;
+export function gainComponents(s, n) {
+  s.components = componentsOf(s) + n;
+  return n;
 }
-// Counts by name, in stacks' order (a fresh copy each time: autoPay spends from it). A long climb holds thousands of
-// pieces and a socket's cost is checked every step, so the count is kept until the pile changes (every change to it
-// is a push or a splice, so its length or its last piece moves).
-const counted = new WeakMap();
-const have = (s) => {
-  const pile = s.salvage || [], last = pile[pile.length - 1], c = counted.get(pile);
-  if (c && c.n === pile.length && c.first === pile[0] && c.last === last) return { ...c.h };
-  const m = new Map();
-  for (const p of pile) m.set(p.name, (m.get(p.name) || 0) + 1);
-  const h = Object.fromEntries([...m].sort((a, b) => isComponent(b[0]) - isComponent(a[0]) || b[1] - a[1] || a[0].localeCompare(b[0])));
-  if (s.salvage) counted.set(pile, { n: pile.length, first: pile[0], last, h });
-  return { ...h };
-};
-
-// Does this payment cover the cost with pieces you actually have? Returns null if so, or what's wrong.
-export function payProblem(s, cost, pay) {
-  const h = have(s);
-  let count = 0;
-  for (const [name, n] of Object.entries(pay)) {
-    if (n < 0 || (h[name] || 0) < n) return `You don't have ${n} ${name}.`;
-    count += n;
-  }
-  const left = { ...pay };
-  for (const need of cost.need) {
-    let got = 0;
-    for (const name of need.names) { const take = Math.min(left[name] || 0, need.n - got); got += take; left[name] = (left[name] || 0) - take; }
-    if (got < need.n) return `Needs ${need.n} ${plural(need)}.`;
-  }
-  if (count !== total(cost)) return count < total(cost) ? `Needs ${total(cost) - count} more components.` : `That's ${count - total(cost)} more components than it takes.`;
-  return null;
+export const canAfford = (s, n) => componentsOf(s) >= n;
+export const costLabel = (n) => `${n} component${n === 1 ? '' : 's'}`;
+// Settle a cost: null when you hold enough, or a string saying why not.
+export const payProblem = (s, n) => (canAfford(s, n) ? null : `Needs ${costLabel(n)}. You have ${componentsOf(s)}.`);
+export function spend(s, n) {
+  s.components = Math.max(0, componentsOf(s) - n);
 }
 
-// The default payment, or null if you can't cover it.
-export function autoPay(s, cost) {
-  const h = have(s), pay = {};
-  const take = (name, n) => { const t = Math.min(n, h[name] || 0); if (t) { h[name] -= t; pay[name] = (pay[name] || 0) + t; } return t; };
-  for (const need of cost.need) {
-    let want = need.n;
-    for (const name of [...need.names].sort((a, b) => (h[b] || 0) - (h[a] || 0))) want -= take(name, want);
-    if (want > 0) return null;
-  }
-  let want = cost.any;
-  const order = Object.keys(h).sort((a, b) => isComponent(a) - isComponent(b) || (h[b] || 0) - (h[a] || 0));
-  for (const name of order) { if (!want) break; want -= take(name, want); }
-  return want > 0 ? null : pay;
+// v47: an older save's pile of named pieces becomes its count. Keyed on the field, so it runs once.
+export function componentsRestore(s) {
+  if (Array.isArray(s.salvage)) s.components = componentsOf(s) + s.salvage.length;
+  delete s.salvage;
+  s.components ||= 0;
 }
-
-// "pulse-kernel:1,scrap:3" → { 'Pulse Kernel': 1, Scrap: 3 } (names resolved against your stacks).
-export function parsePay(s, text) {
-  const bySlug = Object.fromEntries(stacks(s).map((x) => [slug(x.name), x.name]));
-  const pay = {};
-  for (const part of text.split(',').map((x) => x.trim()).filter(Boolean)) {
-    const [k, v = '1'] = part.split(':');
-    const name = bySlug[slug(k)];
-    if (!name) return null;
-    pay[name] = (pay[name] || 0) + Math.max(0, Number(v) || 0);
-  }
-  return pay;
-}
-// Split "compile evasion pay a:1,b:2" into the command and the payment text.
-export const splitPay = (text) => { const i = text.indexOf(' pay '); return i < 0 ? [text, null] : [text.slice(0, i), text.slice(i + 5)]; };
-
-// Settle a cost: the chosen payment (checked) or the default. Returns the payment, or a string saying why not.
-export function settle(s, cost, payText) {
-  const pay = payText != null ? parsePay(s, payText) : autoPay(s, cost);
-  if (!pay) return payText != null ? 'That payment names components you don\'t have.' : `Needs ${costLabel(cost)}.`;
-  const why = payProblem(s, cost, pay);
-  return why || pay;
-}
-export function spend(s, pay) {
-  for (const [name, n] of Object.entries(pay)) {
-    for (let i = 0; i < n; i++) {
-      const at = s.salvage.findIndex((p) => p.name === name);
-      if (at >= 0) s.salvage.splice(at, 1);
-    }
-  }
-}
-export const canAfford = (s, cost) => !!autoPay(s, cost);

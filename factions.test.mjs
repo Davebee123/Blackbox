@@ -67,12 +67,12 @@ test('faction servers: some traced servers belong to a faction; opening the vaul
   assert.ok(loc);
 });
 
-test('faction contracts: posted by the faction, paid in its rep (no Indemnity)', () => {
+test('faction contracts: posted by the faction, paid in its rep (no Halcyon standing)', () => {
   const s = open();
   let o = null;
   for (let i = 0; i < 60 && !o; i++) { const x = offer(s); if (['kestrel', 'lantern', 'nullchoir'].includes(x.faction)) o = x; }
   assert.ok(o, 'other factions post work once the hubs are up');
-  assert.ok(o.reward.rep > 0 && !o.reward.indemnity && !o.reward.standing);
+  assert.ok(o.reward.rep > 0 && !o.reward.standing);
   assert.equal(o.from, FACTIONS[o.faction].name);
   if (o.type === 'materials') {
     mailCommand(s, `mail accept ${o.id}`);

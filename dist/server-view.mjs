@@ -18,6 +18,7 @@ import { MATERIALS } from './gear.mjs';
 import { sigOf } from './network.mjs';
 import { PROGRAMS, programsOn, SOCKET } from './sockets.mjs';
 import { play } from './run.mjs';
+import { componentsOf } from './salvage.mjs';
 
 // Read without the game's lazy defaults (sockets.mjs codebasesOf): drawing the page
 // never writes to the save.
@@ -227,7 +228,7 @@ function filtersSec(s, M, ui) {
 function codeSec(s, M, ui) {
   const mats = materialsOf(s);
   const chips = ['cipher', 'worm', 'kernel', 'exploit'].map((k) => pickBtn('code', `${glyph(k)}<b>${fmt(mats[k] || 0)}</b><small>${esc(MATERIALS[k]?.short || k)}</small>`, ui, 'hsv-chip code', MATERIALS[k]?.name || k)).join('')
-    + pickBtn('code', `${glyph('salvage')}<b>${fmt(s.salvage?.length || 0)}</b><small>Components</small>`, ui, 'hsv-chip code', 'Components');
+    + pickBtn('code', `${glyph('salvage')}<b>${fmt(componentsOf(s))}</b><small>Components</small>`, ui, 'hsv-chip code', 'Components');
   const known = codebasesOf(s).filter((id) => PROGRAMS[id]), where = runsOn(s);
   const cbs = known.map((id) => pickBtn('codebases', `${glyph('module')}<b>${esc(PROGRAMS[id].name)}</b><small>${where[id] ? `×${where[id].length}` : PROGRAMS[id].weight}</small>`, ui, 'hsv-chip cb', where[id] ? `Running on ${where[id].join(', ')}` : PROGRAMS[id].weight)).join('');
   return sec('Code', '', `<div class="hsv-chips">${chips}</div><h4 class="hsv-subh">Codebases · ${known.length}</h4><div class="hsv-chips">${cbs || pickBtn('codebases', '<span></span><b>none yet</b>', ui, 'hsv-chip empty')}</div>`);
@@ -308,7 +309,7 @@ function detail(s, M, key, ui) {
   }
   if (k === 'code') {
     const mats = materialsOf(s);
-    return head('materials', 'Your server', 'Code') + `<ul class="hsv-stats">${['cipher', 'worm', 'kernel', 'exploit'].map((c) => `<li>${glyph(c)}<b>${fmt(mats[c] || 0)}</b><span>${esc(MATERIALS[c]?.name || c)}</span></li>`).join('')}<li>${glyph('salvage')}<b>${fmt(s.salvage?.length || 0)}</b><span>Components</span></li></ul>`
+    return head('materials', 'Your server', 'Code') + `<ul class="hsv-stats">${['cipher', 'worm', 'kernel', 'exploit'].map((c) => `<li>${glyph(c)}<b>${fmt(mats[c] || 0)}</b><span>${esc(MATERIALS[c]?.name || c)}</span></li>`).join('')}<li>${glyph('salvage')}<b>${fmt(componentsOf(s))}</b><span>Components</span></li></ul>`
       + para("Invasions pay their family's code. The wall is where it goes: tiers from +3. Programs and crafting take components.", 'quiet');
   }
   if (k === 'codebases') {

@@ -211,7 +211,7 @@ export function tellsOf(s, group, id) {
   const L = levelOf(s), lv = tellLevels(group, id);
   return [...lv.entries()].map(([name, { level, elite, def, gene }]) => {
     const at = Math.max(L, level ?? elite), v = sampleOf(group, id, at, gene), p = findSource(v, def) || v.parts.find((q) => q.id === def.part);
-    return { name, kind: def.kind, part: p?.name || null, level, elite, seen: tellSeen(s, name), does: tellDoes(def, p, at), answer: cap(answerOf(def, p)) + '.' };
+    return { name, kind: def.kind, part: p?.name || null, level, elite, seen: tellSeen(s, name), does: tellDoes(def, p, at), answer: cap(answerOf(def, p, TELL.sigintCharge && at >= TELL.sigintChargeFrom)) + '.' };
   });
 }
 // A solo boss as a fight builds it at your level (its floor, if that's later), sized as a boss room: its parts share
@@ -253,7 +253,7 @@ function bossTells(s, id) {
   const v = createVirus(st ? B.strain : 'random', 4821, { family: B.family || 'ransomware', threat: SERVER.threat(L), run: true, mutation: null, boss: id, ...(B.strain ? { strain: B.strain } : {}) });
   return plannedTells(v).map((t) => {
     const p = v.parts.find((q) => q.id === t.part);
-    return { name: t.name, kind: t.kind, part: p?.name || null, level: null, elite: null, seen: tellSeen(s, t.name), does: tellDoes(t, p, L), answer: cap(answerOf(t, p)) + '.' };
+    return { name: t.name, kind: t.kind, part: p?.name || null, level: null, elite: null, seen: tellSeen(s, t.name), does: tellDoes(t, p, L), answer: cap(answerOf(t, p, TELL.sigintCharge && L >= TELL.sigintChargeFrom)) + '.' };
   });
 }
 

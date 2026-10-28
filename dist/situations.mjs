@@ -2,7 +2,7 @@
 // whose moment is on the board right now and says what it is in a word or two, so the bar reads the fight with
 // you. The planners (dist/classes/*.mjs) answer the same moments on their own terms.
 import { livingParts, alive, part, defender, momentumStacks, helpersOn, burnsOn, intents, active } from './combat.mjs';
-import { tellOn } from './tells.mjs';
+import { tellOn, sigintTarget } from './tells.mjs';
 
 const parts = (s) => livingParts(s);
 const frags = (s) => parts(s).filter((p) => p.kind === 'fragment').length;
@@ -15,7 +15,7 @@ const dirty = (s) => { const e = s.encounter; return !!(e.corrupt || e.encrypt |
 
 // id → (s) => a short label when its moment is on the board, else null.
 export const SITUATIONS = {
-  sigint: (s) => (told(s, 'cast') ? 'cast' : null),
+  sigint: (s) => sigintTarget(s)?.kind || (told(s, 'cast') ? 'cast' : null), // what it would stop now (a cast or a charge in its window), or a cast compiling
   segfault: (s) => (parts(s).some((p) => tellOn(s, p, 'charge') && !(p.armor > 0)) ? 'charging ×3' : null),
   backstab: (s) => (parts(s).some((p) => tellOn(s, p) && !(p.armor > 0)) ? 'busy: crit' : null),
   overvolt: (s) => (told(s, 'cast') ? 'stops a cast' : null),

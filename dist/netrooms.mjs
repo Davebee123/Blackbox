@@ -33,7 +33,8 @@ import { AUTHOR_FAMILIES, familyName } from './families.mjs';
 import { zoneOf, zoneRooms } from './zone.mjs';
 import { ROGUE, FARM, rogueRooms, rogueSpawns, rogueKill, relocks, clock, inRuns } from './rogue.mjs';
 import { lairOpen, NETWORK } from './network.mjs';
-import { sizeOf, learnCodebase, familyComponents, gainComponents, AUTHOR_CODEBASES, SITES } from './sockets.mjs';
+import { sizeOf, learnCodebase, AUTHOR_CODEBASES, SITES } from './sockets.mjs';
+import { gainComponents } from './salvage.mjs';
 import { consortiumSockets } from './consortium.mjs';
 import { owned, rootOf, ROOT, ROOT_PERKS } from './root.mjs';
 import { contractTakeover, contractRooms, contractMapped, contractConnect, contractInstall, contractStood, contractExfil, payloadFor, roomMarks, jobsOn } from './mail.mjs';
@@ -341,7 +342,7 @@ function takeover(s, loc, room) {
   loc.root ||= { level: 1, cleared: 0, n: 0, nextAt: null, proc: null };
   R.held = now();
   // Its Resident's first fall: a codebase from its author's list (4 components if you know them all).
-  if (!loc.residentFell) { loc.residentFell = now(); learnCodebase(s, null, `${loc.name}'s Resident carried `, { from: AUTHOR_CODEBASES[R.author] || null, pool: familyComponents(loc.family), r: seeded(((loc.seed || 1) * 53 + 11) >>> 0) }); }
+  if (!loc.residentFell) { loc.residentFell = now(); learnCodebase(s, null, `${loc.name}'s Resident carried `, { from: AUTHOR_CODEBASES[R.author] || null, r: seeded(((loc.seed || 1) * 53 + 11) >>> 0) }); }
 }
 // Root: respawned fight rooms cleared on a server you hold climb its pips (root.mjs ROOT.need).
 export function rootClear(s, loc) {
@@ -462,7 +463,7 @@ WORLD_hook('puzzlePay', (s, room, { credits = 0, code = 0, parts = 0, material =
   if (won) setDrop(s, { kind: 'puzzle', id: room.kind }, levelOf(loc), `the ${PUZZLES[room.kind]?.name || room.kind} board`, { pack: true, path: `${room.path}/#set-${n}` }); // Overtime's pieces (sets.mjs), a board won
   if (credits) packFile(s, { path: `${room.path}/#puzzle-${n}`, name: 'cache.dat', kind: 'credits', amount: credits });
   if (code) packFile(s, { path: `${room.path}/#puzzle-code-${n}`, name: `${material}.code`, kind: 'code', material, amount: code });
-  if (parts) gainComponents(s, parts, familyComponents(loc?.family), room.path);
+  if (parts) gainComponents(s, parts);
 });
 WORLD_hook('cache', (s, room, { credits, code, material }) => {
   const n = s.serial;
@@ -584,7 +585,7 @@ WORLD_hook('mapped', (s) => {
   contractMapped(s, loc);
   // Mapped: every ? linked to it is traced the rest of the way (floors.mjs), so a floor always opens outward.
   if (!loc.zone && !loc.member && HIDDEN.opens) for (const n of hiddenNear(s, loc)) hiddenLead(s, n, 100 - n.lead, 'Mapped: ');
-  if (s.rooms.type === 'server') learnCodebase(s, null, 'Mapped: ', { pool: familyComponents(loc.family), r: seeded(((loc.seed || 1) * 59 + 3) >>> 0) }); // a codebase you don't know
+  if (s.rooms.type === 'server') learnCodebase(s, null, 'Mapped: ', { r: seeded(((loc.seed || 1) * 59 + 3) >>> 0) }); // a codebase you don't know
 });
 
 // ---------- reading a server (the network map's card) ----------

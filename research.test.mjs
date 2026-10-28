@@ -117,7 +117,7 @@ test('tiers: a log line and a float event at 3, 15 and 60, nothing in between', 
   gainResearch(s, v, p, 'tell');
   const last = lines().at(-1);
   assert.equal(last.type, 'mastered');
-  assert.equal(last.message, 'Encryptor mastered: research 60. Its component drops 25% more often, and you deal 3% more damage to it.');
+  assert.equal(last.message, 'Encryptor mastered: research 60. It drops components 25% more often, and you deal 3% more damage to it.');
   assert.equal(last.target, 'encryptor', 'on the part: the board floats it there');
 });
 
@@ -140,15 +140,15 @@ test('the Codex reveals by tier: name and what it hits, then numbers, then rule,
   const c5 = card(TIER.rule);
   assert.match(c5, /<p class="cxp-does">Encrypts you/); assert.match(c5, /<p class="cxp-answer">Break it to end the encryption/);
   assert.match(c5, /<p class="cxp-rides">Charges <b>Full Disk<\/b>/, 'the tells it can ride');
-  assert.match(c5, /Research 60 to learn its drop\./); assert.doesNotMatch(c5, /Drops /); assert.doesNotMatch(c5, /pmast/);
+  assert.match(c5, /Research 60 to learn its drop chance\./); assert.doesNotMatch(c5, /Drops /); assert.doesNotMatch(c5, /pmast/);
   const c20 = card(TIER.mastered);
-  assert.match(c20, /cx-part t60 mastered/); assert.match(c20, /class="pmast"/); assert.match(c20, /Drops Cipher Seed/);
-  assert.match(c20, /Mastered\. Its component drops 25% more often, and you deal 3% more damage to it\./);
+  assert.match(c20, /cx-part t60 mastered/); assert.match(c20, /class="pmast"/); assert.match(c20, /Drops components 75% of the time in a room fight/);
+  assert.match(c20, /Mastered\. It drops components 25% more often, and you deal 3% more damage to it\./);
   assert.match(c20, /<small class="cxr-n full">60\/60<\/small>/);
   // The loot list opens at 60 too.
-  assert.match(codexPageMarkup(s, 'family:ransomware'), /<li class=""><svg[^>]*>[\s\S]*?<\/svg><b>Cipher Seed<\/b><small>Encryptor<\/small><\/li>/);
+  assert.match(codexPageMarkup(s, 'family:ransomware'), /<li class="" title="Drops components[^"]*"><svg[^>]*>[\s\S]*?<\/svg><b>Encryptor<\/b><small>75% in a room fight<\/small><\/li>/);
   s.research = { 'ransomware:encryptor': 59 };
-  assert.match(codexPageMarkup(s, 'family:ransomware'), /<li class="unknown"><svg[^>]*>[\s\S]*?<\/svg><b>\?\?\?<\/b><small>Encryptor<\/small><\/li>/);
+  assert.match(codexPageMarkup(s, 'family:ransomware'), /<li class="unknown" title="Research 60 to learn its drop chance\."><svg[^>]*>[\s\S]*?<\/svg><b>Encryptor<\/b><small>\?\?\?<\/small><\/li>/);
 });
 
 test('a body\'s research is the average of its parts\', each capped at 60: on its index row and its header; strains, guards and bosses too', () => {
@@ -157,7 +157,7 @@ test('a body\'s research is the average of its parts\', each capped at 60: on it
   s.dex.fought['nb-deadbolt'] = 1;
   s.research = { 'ransomware:pulse': 60, 'ransomware:encryptor': 30 };
   const n = entries(s).find((g) => g.id === 'family').rows.find((r) => r.id === 'ransomware').pct;
-  const parts = 15; // Pulse Node, Encryptor, its three basics (dist/parts.mjs) and its ten third parts
+  const parts = 22; // Pulse Node, Encryptor, its three basics (dist/parts.mjs), its ten third parts and the mechanics list's seven
   assert.equal(n, Math.round(((1 + 0.5) / parts) * 100));
   const html = codexPageMarkup(s, 'family:ransomware');
   assert.match(html, new RegExp(`<small class="cx-n" title="The average research of its parts">${n}%</small>`));
@@ -187,7 +187,7 @@ test('the board by tier: ??? then its attack and cue at 3, then its rule and ans
   assert.doesNotMatch(boardMarkup(s, null), /pmast/);
   s.research = { [key]: TIER.mastered };
   const html = boardMarkup(s, null), row = html.split('data-target="').find((r) => r.startsWith('encryptor"'));
-  assert.match(row, /<span class="pmast" title="Encryptor mastered: research 60\. Its component drops 25% more often, and you deal 3% more damage to it\.">/);
+  assert.match(row, /<span class="pmast" title="Encryptor mastered: research 60\. It drops components 25% more often, and you deal 3% more damage to it\.">/);
   assert.equal((html.match(/class="pmast"/g) || []).length, 1, 'only on the part you mastered');
   const css = readFileSync('./dist/style.css', 'utf8').match(/\.pmast \{[^}]*\}/)[0];
   assert.match(css, /color: var\(--amber-soft\)/);
@@ -216,7 +216,7 @@ test('the perk: +3% from all your damage on that part only, in every preview on 
   assert.equal(was - p.integrity, d20);
 });
 
-test('the perk: its component drops 25% more often (×1.25 on whatever the chance is)', () => {
+test('the perk: it drops components 25% more often (×1.25 on whatever the chance is)', () => {
   // A roll between the plain chance and the mastered one: no drop at research 0, a drop at 60.
   let rng = 1;
   const roll = (x) => { const t = { rng: x }; let v = (t.rng = ((t.rng >>> 0) + 0x6d2b79f5) >>> 0); v = Math.imul(v ^ (v >>> 15), v | 1); v ^= v + Math.imul(v ^ (v >>> 7), v | 61); return ((v ^ (v >>> 14)) >>> 0) / 4294967296; };
@@ -233,8 +233,8 @@ test('the perk: its component drops 25% more often (×1.25 on whatever the chanc
   };
   assert.deepEqual(drop(0), [], `a roll of ${roll(rng).toFixed(3)} misses ${lo}`);
   assert.deepEqual(drop(58), [], 'research 58 (59 with this break) is not mastery');
-  assert.deepEqual(drop(60), ['Cipher Seed recovered.'], `and makes ${hi.toFixed(4)} mastered`);
-  assert.deepEqual(drop(59), ['Cipher Seed recovered.'], 'the break that takes it to 60 already rolls with the perk');
+  assert.deepEqual(drop(60), ['Component recovered.'], `and makes ${hi.toFixed(4)} mastered`);
+  assert.deepEqual(drop(59), ['Component recovered.'], 'the break that takes it to 60 already rolls with the perk');
   // Over many breaks the rate is the chance × 1.25.
   let a = 0, b = 0;
   for (let i = 1; i <= 2000; i++) { const r = roll(i * 7919); if (r < lo) a++; if (r < hi) b++; }

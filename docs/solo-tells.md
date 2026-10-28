@@ -108,7 +108,7 @@ Nothing one-shots. One hit never takes more than half your max, or the plain hit
 |---|---|---|---|
 | Charge | The part's next scheduled attack, made much bigger, in that attack's cell. | A burst into the part in its window (a share of its max, or ◆2), or a built answer in the window. Called off, the attack still lands, plain, a cycle later. Short of the burst it lands softer. You can also soften it: a ◆, a shield, Brace, Bulkhead, Throttle, Heartbeat. | ×2 to ×3 the plain hit, the extra capped by level (table below). Charges never crit. Then the after-effects, unless you burst half of it (it lands plain). |
 | Cast | *Casting*: a buff on the whole virus for 4 cycles. From level 10, when you get SIGINT. | SIGINT or two command hits on the part in its window (its last two cycles), a built answer, or breaking the part. | Double Extortion makes every attack 35% harder. Persistence and Call Home make every attack repeat a cycle faster (what is already on the board stays put). Self-Update gives every part a quarter more Integrity. Then the after-effects. |
-| Seal | The part re-arms if it still wears ◆ when the seal lands. From level 6, on elites, bosses and the Sentinel. | Strip the part first, or Bit Rot or Cache Poison it. | The part goes back to full ◆ with one more for the rest of the fight, every part you had stripped gets a ◆ back, your own ◆ and shield go, and you are Corrupted. |
+| Seal | A dial since P2 (docs/puzzle-levers.md 3.5): each ◆ its part still wears when the seal lands gives one ◆ back to every part. From level 6, on elites, bosses and the Sentinel. | Strip the part first, all of it or some, or Bit Rot or Cache Poison it. | Every part gets back as many ◆ as the sealer still wore (never past its max), and you lose that share of your own ◆ and shield and are Corrupted at that share. A full strip costs nothing. |
 | Mimic | The Mimic part records you. On its beat (every 4 cycles from cycle 3) it plays back whatever command you fire that cycle. | Go quiet on the beat. | Your command's whole direct hit comes back at you. |
 
 ## By level
@@ -135,9 +135,9 @@ Nothing one-shots. One hit never takes more than half your max, or the plain hit
 | Ransomware | **Full Disk** | Charge | Encryptor | 1 | Its Encrypt, much bigger, plus a burst of encryption on top for 3 cycles | Burst the Encryptor in its window. Purge, Scrub, Rollback or breaking the Encryptor clears the burst |
 | Ransomware | **Double Extortion** | Cast | Encryptor | 10 | Every attack hits 35% harder for 4 cycles | SIGINT, or hit the Encryptor twice, in its window |
 | Ransomware | **Overcharge** | Charge | Pulse Node | 17 | Its Surge, much bigger | Burst the Pulse Node in its window |
-| Ransomware | **Key Rotation** | Seal | Encryptor | 6 (elites) | The part re-arms with one ◆ more, and stripped parts get a ◆ back | Strip it first |
+| Ransomware | **Key Rotation** | Seal | Encryptor | 6 (elites) | Each ◆ it still wears gives every part a ◆ back (a dial, docs/puzzle-levers.md 3.5) | Strip it first, all of it or some |
 | Worm | **Mass Mailer** | Charge | Replicator | 1 | A Replicate that hatches two fragments (within the limit) | Burst the Replicator in its window. A Warden's DMZ makes the spawns fizzle |
-| Worm | **Self-Update** | Cast | Replicator | 10 | Every part grows a quarter more Integrity, for good | SIGINT, or hit the Replicator twice, in its window |
+| Worm | **Self-Update** | Cast | Replicator | 10 | Every part grows a quarter of its *current* Integrity, for good (docs/puzzle-levers.md 3.6), so it's cheap late | SIGINT, or hit the Replicator twice, in its window |
 | Worm | **Overcharge** | Charge | Pulse Node | 17 | Its Surge, much bigger | Burst the Pulse Node in its window |
 | Worm | **Resync** | Seal | Replicator | 6 (elites) | As Key Rotation | Strip it first |
 | Ghostroot | **Possession** | Charge | Scrambler | 1 | Its Scramble, plus two more cycles of scrambling (Scrub cleanses it) | Burst the Scrambler in its window |
@@ -196,7 +196,7 @@ The board shows these parts: the Mutex's lock as a steel segment on the Encrypto
 
 ## SIGINT in solo fights
 
-SIGINT moved to the - key, so it keeps the same key all game. It answers a solo cast in its window as well as a crew boss's cast, at the price of your command for the cycle, and a cast is the only tell it answers. Fired before the window it is refused, and its cooldown kept. An interrupted solo cast no longer comes back sooner. SIGINT is ready every 8 cycles and casts come about every 7, so a class with a skill built for casts (Quarantine, Overvolt, Thermal Runaway, Hijack, Reroute) keeps SIGINT for the next one. Charges and seals never accept SIGINT.
+SIGINT moved to the - key, so it keeps the same key all game. It answers a solo cast in its window as well as a crew boss's cast, at the price of your command for the cycle, and since P2 it also cuts a charge in its window against viruses of level 17 or more, where a charge and a cast are live together (docs/puzzle-levers.md 3.6; with both open it stops the cast). Fired before the window it is refused, and its cooldown kept. An interrupted solo cast no longer comes back sooner. SIGINT is ready every 8 cycles and casts come about every 7, so a class with a skill built for casts (Quarantine, Overvolt, Thermal Runaway, Hijack, Reroute) keeps SIGINT for the next one. Charges and seals never accept SIGINT.
 
 ## The bots
 

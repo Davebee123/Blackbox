@@ -25,7 +25,7 @@ import { nextTip, markSeen, TOUR, tourDone, skipTour } from './tips.mjs';
 import { createWindow } from './window.mjs';
 import { createIntro } from './intro.mjs';
 import { powerOn } from './poweron.mjs';
-import { autoPay } from './salvage.mjs';
+import { componentsOf } from './salvage.mjs';
 import { relockLeft } from './rogue.mjs';
 import { createHitFx } from './hitfx.mjs';
 import { createAbilityFx, keyFor, tickKey, recipeOf, originOf, idOfName, finisherBreak, levelOf as afxLevel } from './abilityfx.mjs';
@@ -2621,33 +2621,6 @@ document.querySelector('.modules').addEventListener('click', (e) => {
   const b = e.target.closest('[data-module]');
   if (b) go(b.dataset.module);
 });
-// The salvage picker: crafting buttons with data-pay open it, so you choose which salvage pays.
-let payState = null; // { cmd, key, title, pay }
-function payOpen(btn) {
-  const key = btn.dataset.pay, [id, n] = key.split(':');
-  const cost = V.payCost(campaign, key);
-  payState = { cmd: btn.dataset.command, key, title: btn.dataset.payTitle || 'Build', pay: autoPay(campaign, cost) || {} };
-  payDraw();
-}
-function payDraw() {
-  let el = $('pay');
-  if (!payState) { if (el) el.hidden = true; return; }
-  if (!el) { el = document.createElement('div'); el.id = 'pay'; el.className = 'pay'; document.body.appendChild(el); }
-  el.innerHTML = V.payMarkup(campaign, payState.key, payState.pay, payState.title);
-  el.hidden = false;
-}
-document.addEventListener('click', (e) => {
-  const pel = e.target.closest('#pay');
-  if (payState && pel) {
-    const st = e.target.closest('[data-pay-step]');
-    if (st) { const k = st.dataset.payStep; payState.pay[k] = Math.max(0, (payState.pay[k] || 0) + Number(st.dataset.d)); feel.key('click'); payDraw(); return; }
-    if (e.target.closest('[data-pay-cancel]')) { payState = null; payDraw(); return; }
-    if (e.target.closest('[data-pay-go]')) { const c = `${payState.cmd} pay ${V.paySlugs(payState.pay)}`; payState = null; payDraw(); run(c); return; }
-    if (e.target === pel) { payState = null; payDraw(); }
-    return;
-  }
-}, true);
-document.addEventListener('keydown', (e) => { if (payState && e.key === 'Escape') { payState = null; payDraw(); } });
 // The Server page (server-view.mjs). Pick anything on the card and the panel shows it (on a phone the sheet comes up;
 // × or Esc puts it away). Point at an action that changes the wall or the server, or focus it, and the panel shows
 // before and after; on a touch screen the first tap shows it and the second does it. Its buttons are real commands:
@@ -2682,12 +2655,10 @@ document.addEventListener('click', (e) => {
   if (e.target.closest('[data-spoils-go]')) { if (ended) leaveFight(); else hideSpoils(); return; }
   if (e.target.closest('[data-gain-go]')) { hideGain(); return; }
   const pick = e.target.closest('[data-mk-pick]');
-  if (pick) { const w = pick.dataset.mkPick; setMkOrder(mkOrder?.w === w && mkOrder.f === hubSel ? null : { f: hubSel, w, side: (w === 'salvage' ? campaign.salvage.length : campaign.materials?.[w] || 0) > 0 ? 'sell' : 'buy', n: 1 }); return; }
+  if (pick) { const w = pick.dataset.mkPick; setMkOrder(mkOrder?.w === w && mkOrder.f === hubSel ? null : { f: hubSel, w, side: (w === 'salvage' ? componentsOf(campaign) : campaign.materials?.[w] || 0) > 0 ? 'sell' : 'buy', n: 1 }); return; }
   const side = e.target.closest('[data-mk-side]');
   if (side && mkOrder) { setMkOrder({ ...mkOrder, side: side.dataset.mkSide, n: 1 }); return; }
   if (e.target.closest('.mk-go') && mkOrder) { const c = e.target.closest('.mk-go').dataset.command; setMkOrder({ ...mkOrder, n: 1 }); return run(c); }
-  const payBtn = e.target.closest('[data-pay]');
-  if (payBtn && !payBtn.disabled && !e.target.closest('#pay')) { payOpen(payBtn); return; }
   if (e.target.closest('.fp-scanbtn[aria-disabled="true"]')) return; // SCAN short of Signal: a click on it never walks in
   const cmd = e.target.closest('[data-command]');
   if (cmd && !cmd.disabled) {

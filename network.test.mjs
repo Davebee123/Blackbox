@@ -346,17 +346,19 @@ test('native effects: Open, locks and wards, the Tripwire, twins, reads, after-e
     };
     assert.equal(left(true), 0, 'nothing behind');
     assert.ok(left(false) > 0, 'without it, something stays behind');
-    // Mirror Maze: on the Decoy's beat your command goes through at half.
+    // Mirror Maze: on the Decoy's beat your command goes through unbent, at half.
     const mz = (maze) => {
       const x = at(40); if (maze) wear(x, 'mirror-maze', 40);
       fight(x, 'random', 40, { family: 'ghostroot', classic: true }); // the classic shape: a Pulse Node beside the signature
-      const dec = x.encounter.virus.parts.find((q) => q.reflect);
-      if (!dec) { x.encounter.virus.parts.push({ ...part(x, 'pulse'), id: 'decoy', name: 'Decoy', reflect: 4, attack: null }); }
-      x.encounter.cycle = 8;
-      const tgt = part(x, 'pulse'); Object.assign(tgt, { armor: 0, integrity: 9999, max: 9999 });
-      const was = tgt.integrity; hit(x, tgt, 40, { mine: true }); return was - tgt.integrity;
+      let dec = x.encounter.virus.parts.find((q) => q.reflect);
+      if (!dec) { dec = { ...part(x, 'pulse'), id: 'decoy', name: 'Decoy', reflect: 4, reflectOff: 0, attack: null }; x.encounter.virus.parts.push(dec); }
+      x.encounter.cycle = 8 - (dec.reflectOff || 0);
+      for (const q of x.encounter.virus.parts) { q.armor = 0; if (q.attack) q.attack.due = 99; }
+      dec.bend = { at: x.encounter.cycle, to: dec.id, was: null }; // its beat points at itself
+      const tgt = part(x, 'pulse'); Object.assign(tgt, { integrity: 9999, max: 9999 });
+      const was = tgt.integrity; command(x, 'spike pulse'); resolveCycle(x); return was - tgt.integrity;
     };
-    assert.equal(mz(false), 0, 'mirrored');
+    assert.equal(mz(false), 0, 'bent onto the Decoy');
     assert.ok(mz(true) > 0, 'through');
     // Policy Engine: rules count half again.
     const h = at(20);

@@ -1,14 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fresh, command, resolveCycle, active, hooks, restore, tickServices, addLocation } from './dist/combat.mjs';
+import { fresh, command, resolveCycle, active, hooks, restore, tickServices, addLocation, hackerLevel, SAVE_VERSION } from './dist/combat.mjs';
 import { graphOf, locAt, neighbours, hiddenNear } from './dist/floors.mjs';
 import { play, layoutOf } from './dist/run.mjs';
 import * as FP from './dist/floorplan.mjs';
 import { CONFIG } from './dist/data.mjs';
 import { tickNetwork } from './dist/invasion.mjs';
-import { boardOpen, MAIL, STORY_LENGTH, standing, tierOf, openContracts, offers, heldCount, ready, tickMail, retainer, offer, indemnity } from './dist/mail.mjs';
+import { boardOpen, MAIL, STORY_LENGTH, standing, tierOf, openContracts, offers, heldCount, ready, tickMail, retainer, offer } from './dist/mail.mjs';
 import { HIDDEN, hiddenNodes, flagged, items } from './dist/hidden.mjs';
-import { storeOf, LINE } from './dist/store.mjs';
+import { storeOf, LINE, chaseRate } from './dist/store.mjs';
 CONFIG.baseCrit = 0;
 CONFIG.enemyCrit = 0;
 CONFIG.misses = false;
@@ -78,7 +78,7 @@ test('the storyline: kills, code, a named process, a takeover, then a ledger on 
   const credits = s.server.credits;
   deliver(s);
   assert.equal(s.server.credits, credits + 60);
-  assert.equal(indemnity(s), 1, 'contracts pay Indemnity too');
+  assert.ok(!('indemnity' in s), 'no Indemnity: it is retired');
   assert.equal(standing(s), MAIL.startStanding + 3);
   assert.ok(!(s.stash || []).some((it) => it.unique === 'wicks-old-toolkit'), "wick's toolkit waits for claimjack");
   // code
@@ -218,13 +218,12 @@ test('a crash on your own server costs Halcyon standing, but a breach alone neve
   assert.equal(standing(t), 1);
 });
 
-test('GLASSJAW pays for the risk (2.5x credits, 1.5x XP, a protocol; no Indemnity), and doing its work costs Halcyon standing', () => {
+test('GLASSJAW pays for the risk (2.5x credits, 1.5x XP, a protocol), and doing its work costs Halcyon standing', () => {
   const s = contractor();
   s.standing.halcyon = 40;
   let o, h;
   for (let i = 0; i < 400 && !(o && h); i++) { const x = offer(s, T0); if (x.type === 'materials') { if (x.offBooks) o ||= x; else if (!x.faction || x.faction === 'halcyon') h ||= x; } }
   assert.ok(o && h);
-  assert.equal(o.reward.indemnity, 0);
   assert.ok(o.reward.credits >= h.reward.credits * 2.4, `${o.reward.credits} vs ${h.reward.credits}`);
   assert.ok(o.reward.xp > h.reward.xp);
   assert.ok(o.reward.drop, 'a protocol on delivery');
@@ -280,7 +279,7 @@ test('a vault’s trace record puts part of a trace on one of the ? servers link
   assert.deepEqual(hiddenNodes(s).filter((n) => before.includes(n.id)).map((n) => n.lead).sort((a, b) => b - a)[0], HIDDEN.recordLead);
 });
 
-test('the store: Halcyon’s line, chase protocols for Indemnity by tier, and agency stock that turns over', () => {
+test('the store: Halcyon’s line, chase protocols for credits by tier, and agency stock that turns over', () => {
   const s = contractor();
   tickServices(s, T0);
   const st = storeOf(s);
@@ -289,11 +288,14 @@ test('the store: Halcyon’s line, chase protocols for Indemnity by tier, and ag
   s.server.credits = 10000;
   command(s, 'buy relay');
   assert.equal(items(s).relay, 1);
-  // chase: Contractor can buy Deductible, not Subrogation
-  assert.match(command(s, 'buy deductible').at(-1).message, /costs 30 Indemnity/);
-  s.indemnity = 100;
+  // chase: Contractor can buy Deductible, not Subrogation; it costs a lot of credits
+  const price = LINE.find((x) => x.id === 'deductible').credits(hackerLevel(s));
+  assert.ok(price >= 30 * 40, `about 40 credits per old Indemnity (${price})`);
+  s.server.credits = price - 1;
+  assert.match(command(s, 'buy deductible').at(-1).message, new RegExp(`costs ${price} credits`));
+  s.server.credits = price + 10000;
   command(s, 'buy deductible');
-  assert.equal(s.indemnity, 70);
+  assert.equal(s.server.credits, 10000);
   const it = s.stash.at(-1);
   assert.equal(it.zeroDay, 'deductible');
   assert.equal(it.rarity, 'indemnified');
@@ -310,7 +312,7 @@ test('the store: Halcyon’s line, chase protocols for Indemnity by tier, and ag
 
 test('Deductible: the first attack that lands each fight does nothing', () => {
   const s = contractor();
-  s.indemnity = 30;
+  s.server.credits = 1e6;
   command(s, 'buy deductible');
   const it = s.stash.at(-1);
   command(s, 'load ' + it.id);
@@ -341,7 +343,7 @@ test('an old save keeps its open contracts and gets a hidden network', () => {
 
 test('Total Loss, the Preferred weapon: breaking a part hits every other part for a quarter of its max', () => {
   const s = contractor();
-  s.indemnity = 100;
+  s.server.credits = 1e6;
   assert.match(command(s, 'buy total-loss').at(-1).message, /Preferred/);
   s.standing.halcyon = 80;
   command(s, 'buy total-loss');
@@ -398,4 +400,42 @@ test('a save whose board opened before side offers existed gets them on the next
   const n = offers(s).filter((o) => o.type === 'side').length;
   tickMail(s, T0 + 60000);
   assert.equal(offers(s).filter((o) => o.type === 'side').length, n, 'only once');
+});
+
+test('Indemnity is retired: no contract on the board pays it, or extra credits in its place', () => {
+  const s = contractor();
+  s.standing.halcyon = 60;
+  for (let i = 0; i < 300; i++) {
+    const o = offer(s, T0);
+    assert.ok(!o || !('indemnity' in o.reward), `${o?.type} pays no Indemnity`);
+  }
+  assert.ok(!('indemnity' in s));
+  // A chase protocol is credits, by tier, and climbs with your level like the rest of the store.
+  const dd = LINE.find((x) => x.id === 'deductible'), tl = LINE.find((x) => x.id === 'total-loss');
+  assert.ok(LINE.every((x) => typeof x.credits === 'function' && !('indemnity' in x)));
+  assert.ok(Math.abs(dd.credits(1) - 30 * 40) <= 30 * 40 * 0.1, `${dd.credits(1)} is about 40× 30`);
+  assert.ok(tl.credits(30) > tl.credits(10) && tl.credits(10) > dd.credits(10));
+});
+
+test('an older save’s Indemnity becomes credits once, with a letter from Halcyon', () => {
+  const s = contractor();
+  s.indemnity = 25;
+  s.server.credits = 100;
+  s.mail.jobs.push({ id: 900, type: 'kill', family: 'worm', count: 3, got: 0, reward: { credits: 50, indemnity: 2, standing: 5, xp: 1 } });
+  s.version = SAVE_VERSION - 1;
+  const r = restore(JSON.parse(JSON.stringify(s)));
+  assert.equal(r.version, SAVE_VERSION);
+  const paid = Math.round(25 * chaseRate(hackerLevel(r)));
+  assert.equal(r.server.credits, 100 + paid);
+  assert.ok(!('indemnity' in r), 'the field is gone');
+  assert.ok(!('indemnity' in r.mail.jobs.find((j) => j.id === 900).reward), 'a held contract stops promising it');
+  const l = r.mail.list[0];
+  assert.ok(l.system && /Indemnity/.test(l.subject) && l.body.join(' ').includes(String(paid)));
+  const again = restore(JSON.parse(JSON.stringify(r)));
+  assert.equal(again.server.credits, r.server.credits, 'only once');
+  assert.equal(again.mail.list.filter((x) => /Indemnity/.test(x.subject)).length, 1);
+  // None held: no letter.
+  const t = contractor(); t.indemnity = 0; t.version = SAVE_VERSION - 1;
+  const u = restore(JSON.parse(JSON.stringify(t)));
+  assert.ok(!('indemnity' in u) && !u.mail.list.some((x) => /Indemnity/.test(x.subject)));
 });

@@ -15,6 +15,11 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
 - **Agents.** Use worktree agents for big features only; do small fixes directly. Tell an agent to read narrowly
   (grep for the function, read that part of a file), to run `npm test -- --base main` in its worktree, and to merge
   main before its final test run. Merge agents' branches into main one at a time. Never cd into an agent's worktree.
+- **Lean first.** A new or reworked mechanic ships lean: the rule, its board mark and tooltip, a unit test, and the
+  docs. Teach the planner only enough to keep the balance tests green. Routine chips and presets, the no-fixed-rule
+  tuning and screenshot sets wait until the designer has played it and kept it. Batch many mechanics per session, use
+  one agent at most, and run the full suite once at the end. The designer's play is the bar; never tune against the
+  bots to pass it.
 - **Sessions.** Start a fresh session for each batch of work, after the last one is pushed. A long session re-reads
   its whole context on every step, and that is most of the token cost.
 - **Screenshots.** One good set per feature, looked at before showing. Scripts and screenshots go in the session's
@@ -61,6 +66,9 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
 - **Unlocks:** cosmetic unlocks (districts, boots, prompts, desk props, mastery looks) come from achievements, not
   from server floors.
 - **Phones:** combat on a phone never opens the keyboard.
+- **Fights** (docs/puzzle-fights.md): every fight is a little tricky, elites and bosses harder, and the game challenging.
+  Puzzles, never walls: hard and rewarding to learn, like Elden Ring. A blind player loses; watching or a correct
+  routine wins.
 
 ## Backlog
 

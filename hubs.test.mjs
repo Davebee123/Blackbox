@@ -16,7 +16,7 @@ const T0 = 1_000_000_000_000;
 const open = () => {
   const s = fresh(); s.tutorialCompleted = true; command(s, 'mail'); s.mail.boardOpen = true; s.hubFound = { glassjaw: true, kestrel: true, lantern: true, nullchoir: true }; s.server.credits = 50000;
   Object.assign(materialsOf(s), { cipher: 200, worm: 200, kernel: 200, exploit: 20 });
-  s.salvage = Array.from({ length: 60 }, () => ({ name: 'Scrap', virus: 't', seed: 0 }));
+  s.components = 60;
   return s;
 };
 const strike = (s, kind, f, at) => { compilePayload(s, kind); const p = builtOf(s).at(-1); p.power = 999; deployPayload(s, p.id, f, at); return resolveStrike(s, flyingOf(s).at(-1), at); };
@@ -168,8 +168,8 @@ test('no round-trip profit at a held hub (no spread)', () => {
     const c0 = s.server.credits;
     trade(s, 'buy', 'kestrel', w, 40, T0);
     const spent = c0 - s.server.credits;
-    const n0 = materialsOf(s)[w] ?? s.salvage.length;
-    materialsOf(s)[w] = (materialsOf(s)[w] || 0) + 40; if (w === 'salvage') for (let i = 0; i < 40; i++) s.salvage.push({ name: 'x' });
+    const n0 = materialsOf(s)[w] ?? s.components;
+    materialsOf(s)[w] = (materialsOf(s)[w] || 0) + 40; if (w === 'salvage') s.components += 40;
     trade(s, 'sell', 'kestrel', w, 40, T0);
     const t = s.market.transfers.at(-1);
     assert.ok(t.credits <= spent, `${w}: sold for ${t.credits}, bought for ${spent}`);

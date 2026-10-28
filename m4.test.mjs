@@ -70,11 +70,11 @@ test('a swarm only comes for a hub you hold (a held server has nothing to steal 
   let t = T0; s.net.wall = t;
   for (let i = 0; i < FLEET.travelMs / 1000 + 5; i++) tickNetwork(s, (t += 1000));
   assert.equal(s.fleet.state, 'siege');
-  const n = s.fleet.ships, had = s.salvage.length;
+  const n = s.fleet.ships, had = s.components;
   for (let i = 0; i < n; i++) { command(s, 'swarm engage'); win(s); }
   assert.equal(s.fleet, null);
   assert.ok(!s.hubs.kestrel.captured.lockdown);
-  assert.ok(s.salvage.length >= had + n, 'a component a process');
+  assert.ok(s.components >= had + n, 'a component a process');
 });
 
 test('an undefended swarm puts the hub in lockdown', async () => {
