@@ -167,6 +167,13 @@
 @keyframes fp-blink { 50% { opacity: 0.45; } }
 @keyframes fp-bit { 0% { opacity: 0; transform: translate(0, 0); } 15% { opacity: 0.45; } 70% { opacity: 0.2; } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)); } }
 
+/* a step between rooms (travelfx.mjs): you travel the trace as teal code, then a scan line loads you into the room */
+.fp-travel { pointer-events: none; }
+.fp-travel text { font-size: 9px; font-weight: 600; fill: var(--you); filter: drop-shadow(0 0 2px var(--you)); }
+.fp-travel-lit { fill: none; stroke: var(--you); stroke-width: 2.4; stroke-linecap: round; filter: drop-shadow(0 0 3px var(--you)); }
+.fp-travel-head { fill: #eafffb; filter: drop-shadow(0 0 4px var(--you)); }
+.fp-travel-scan { stroke: var(--you); stroke-width: 1.4; opacity: 0; filter: drop-shadow(0 0 3px var(--you)); }
+
 /* ---- the pop-up: the room you're in, a room you clicked, home ---- */
 .fp-map .fp-pop { z-index: 5; width: 320px; }
 .fp-pop .fp-screen > :first-child { padding-right: 34px; }

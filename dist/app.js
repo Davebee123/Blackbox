@@ -45,7 +45,7 @@ import { roomMarkup } from './room-view.mjs';
 import { patchRules } from './skillrules.mjs';
 import { runScript, scriptsOf, SCRIPTS } from './scripts.mjs';
 import * as FP from './floorplan.mjs';
-import { roomsMarkup, fillClocks, popOf, pickRoom, closePop } from './floorplan-view.mjs';
+import { roomsMarkup, fillClocks, popOf, pickRoom, closePop, stepPath } from './floorplan-view.mjs';
 import { createPuzzleFx, panelRoom, closePanel, openPanel, pzUi } from './puzzle-view.mjs';
 import { PUZZLES } from './puzzles.mjs';
 import { threadPanel, thUi, offerMarkup as thOfferMarkup } from './threads-view.mjs';
@@ -66,6 +66,7 @@ import * as PG from './pager.mjs';
 import * as PGV from './pager-view.mjs';
 import { noCarrier, NC } from './nocarrier.mjs';
 import * as UI from './uiscale.mjs';
+import { playTravel } from './travelfx.mjs';
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -771,6 +772,7 @@ document.addEventListener('keydown', (e) => {
 // covering the room (on a phone it spans the map, so below or above). Measured again only when the room, the map's
 // size or the card's size changes, so a scroll or a redraw never moves it.
 let fpPopAt = null;
+let fpWasAt = null; // the room you stood in at the last redraw: a step plays its travel (travelfx.mjs)
 function placeRoomsPop() {
   const pop = $('fp-pop');
   if (!pop) { fpPopAt = null; return; }
@@ -1910,6 +1912,12 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && thPrev.o
 let lossHold = false;
 function render(force = false) {
   if (lossHold) return;
+  // A step into the next room, on the rooms page: you travel its trace as code (travelfx.mjs; ?travel= picks the look
+  // while the designer chooses). A step that starts a fight goes straight to the fight; Screen effects off or Motion
+  // off, none.
+  const at = campaign.rooms?.at || null;
+  if (module === 'rooms' && at && fpWasAt && at !== fpWasAt && canMove() && fxLevel() !== 'minimal') playTravel({ wide: stepPath(campaign, fpWasAt, at, false), tall: stepPath(campaign, fpWasAt, at, true) }, params.get('travel') || 'bits');
+  fpWasAt = at;
   if (force) cache.clear();
   renderMeters();
   renderOffer();

@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { fresh, hooks, active, finish, stashItem } from './dist/combat.mjs';
 import { CONFIG, GUARDS } from './dist/data.mjs';
 import * as FP from './dist/floorplan.mjs';
-import { roomsMarkup, popOf, pickRoom, closePop } from './dist/floorplan-view.mjs';
+import { roomsMarkup, popOf, pickRoom, closePop, stepPath } from './dist/floorplan-view.mjs';
 import { runServer } from './roomsim.mjs';
 
 CONFIG.enemyCrit = 0; CONFIG.misses = false;
@@ -708,4 +708,19 @@ test('after a lost fight, home shows your Signal resting from 0, and Connect wai
   tick(5 * 60000);
   FP.connect(s);
   assert.equal(R.at, R.graph.entry);
+});
+
+test('a step\'s travel runs along the trace the map draws: either way along a link, a hop\'s curve, nothing between rooms with no trace', () => {
+  const s = server({ kind: 'Relay' }), g = s.rooms.graph;
+  for (const tall of [false, true]) {
+    for (const [a, b] of FP.linksOf(g)) {
+      const there = stepPath(s, a, b, tall), back = stepPath(s, b, a, tall), hop = (g.hops || []).some(([x, y]) => x === a && y === b);
+      assert.ok(there && back, `${a}-${b}: a path both ways`);
+      assert.equal(there.d, back.d, 'the same trace');
+      assert.equal(there.rev, false); assert.equal(back.rev, true);
+      assert.equal(there.d.includes('Q'), hop, `${a}-${b}: a hop bows, a link runs straight`);
+    }
+    const ids = FP.roomList(s).map((r) => r.id), far = ids.find((id) => id !== g.entry && !FP.neighbours(g, g.entry).includes(id));
+    assert.equal(stepPath(s, g.entry, far, tall), null, 'no trace, no travel');
+  }
 });
