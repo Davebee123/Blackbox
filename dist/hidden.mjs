@@ -85,7 +85,7 @@ export function huntKill(s, family) {
 }
 
 // Relays -------------------------------------------------------------------------------------
-export const items = (s) => (s.items ||= { relay: 0, cracker: 0, injector: 0, harden: 0 });
+export const items = (s) => (s.items ||= { relay: 0, cracker: 0, injector: 0 });
 export const flagged = (s, n) => !!n.pinged && targetedHidden(s, n.id);
 
 export function installRelay(s, id) {

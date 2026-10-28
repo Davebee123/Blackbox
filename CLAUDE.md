@@ -24,7 +24,8 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
 
 ## The designer's standing rules
 
-- **Show it, don't explain it.** Explanations go in tooltips, not on the screen.
+- **Show, don't tell. Always reduce verbiage.** Numbers, tags, bars and icons on the screen; the rule behind them goes in
+  a tooltip, never a paragraph. Cut every word the screen can do without, in new UI and whenever you touch old UI.
 - **Tooltips use WoW's grammar:** a name, its kind, what it does, then the answer, muted. Use sentence case and good
   grammar: whole sentences, never cryptic labels.
 - **Colours keep one meaning each:** teal is only ever the player, red is threat, amber is loot and what you use,

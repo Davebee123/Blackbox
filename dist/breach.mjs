@@ -69,7 +69,7 @@ export const BREACH = {
   // Rolled genomes (docs/genome.md 5, genes.mjs rollGenome): every wild and elite virus rolls its genes from its
   // author's toolkit within the budget. geneBonus: budget points on top (Testbed adds its own). Off: the phase 0 roll.
   genomes: true, geneBonus: -2,
-  // Heat 1, Loud: a breach is ten fights on one Signal bar, so its loud is a step, not the old run's cliff (HOT_RUN).
+  // Heat 1, Loud: a breach is ten fights on one Signal bar, so its loud is a step, not a cliff.
   loud: { hp: 1.15, dmg: 1.1 },
   // Enrage: a virus, an elite or a gate still up at this cycle hits first 50% harder, then a quarter more every 4
   // cycles. Outlasting a fight isn't a plan; a burst is. A Resident keeps the enrage it has (data.mjs BOSSES enrageAt).

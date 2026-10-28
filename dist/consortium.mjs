@@ -14,7 +14,7 @@
 // - Size: each merged server makes the network bigger and the consortium better (CONSORTIUM.tiers).
 // - Leaving (or being kicked) cuts the trunk line. You lose nothing of your own.
 // Pure: state in, events out. run.mjs routes the `consortium` command (and `guild`, the old name).
-import { emit, warn, rand, hooks, hackerLevel, selectEncounter, command, gainCode, gainXp, xpFor, active, holding } from './combat.mjs';
+import { emit, warn, rand, hooks, hackerLevel, selectEncounter, command, gainCode, gainXp, xpFor, active, holding, syncRunSignal } from './combat.mjs';
 import { createLocation, SERVER, FAMILIES, variantFor, BOSSES } from './data.mjs';
 import { seeded, codeOf, MATERIALS } from './gear.mjs';
 import { profileOf, PRESENCE, online, simOn } from './presence.mjs';
@@ -162,6 +162,7 @@ export function occupationCleared(s, loc) {
   gainXp(s, xpFor(s, loc.level || 1, 2), `${loc.name} cleared`, 'fight');
   if (!loc.member) {
     s.degraded = null;
+    syncRunSignal(s);
     return emit(s, 'rebooted', 'OCCUPATION CLEARED: your server is back online.');
   }
   pay(s, loc.level || 1, 1, loc.family, `${loc.member}'s server is back online thanks to you.`);

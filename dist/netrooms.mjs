@@ -208,13 +208,13 @@ export function spawnOf(s, room, loc = locOf(s)) {
 
 // ---------- connecting ----------
 // The run starts on a server's rooms (run.mjs connect, after its checks): the entry, the visit, the run's Signal.
-export function enterRooms(s, loc, { signal, hot = false } = {}) {
+export function enterRooms(s, loc, { signal } = {}) {
   const R = roomsFor(s, loc);
   if (isWild(loc)) spawnsOf(s, loc);
   if (!isWild(loc)) { R.level = levelOf(loc); extraSockets(s, loc); }
   s.run = { loc: loc.id, rooms: true, cwd: R.graph.rooms[R.graph.entry].path, integrity: signal, max: maxSignal(s), pack: [], visited: [] };
+  if (s.occupation?.id === loc.id) { s.run.max = maxSignal(s); s.run.integrity = Math.min(s.run.max, s.signal ?? s.run.max); } // your own occupied server: no reboot sickness in it
   s.run.crew = Object.fromEntries((s.crewSim || []).map((x) => [x.name, { cwd: s.run.cwd, link: 'you' }]));
-  if (hot) s.run.hot = true;
   // A key cracker on this server (hidden.mjs): you walk in holding its vault's key, this visit.
   const keys = loc.passwordKnown && R.graph.vaults[0] && !FP.opened(s, R.graph.rooms[R.graph.vaults[0]]) ? [R.graph.vaults[0]] : [];
   threadsConnect(s, loc); // threads (threads.mjs): this server's start pinned, a file in transit at its entry, a temporary server grown
@@ -431,7 +431,7 @@ WORLD_hook('exfil', (s, t) => {
   return seed;
 });
 // Its archive, recovered: CONFIG.exfil.credits Stashes' worth of credits and one item at the server's level (the best of two flat
-// rolls, else a white: about twice a kill's blue chance, never a guaranteed blue, nothing else stacked on: no loud run,
+// rolls, else a white: about twice a kill's blue chance, never a guaranteed blue, nothing else stacked on: no
 // clean read or Pit roll), and now and then one of the server's uniques (its kind's and floor's, as its folders drop).
 // A trash kill's odds (LOOT.odds.trash) and a sure white: plain loot, under a rare spawn's, by design.
 WORLD_hook('exfilWon', (s, room, e) => {

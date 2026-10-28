@@ -5,7 +5,7 @@
 // Pure like the combat engine: state in, events out.
 import { vaultFilter, addFilter, filterLine } from './filters.mjs';
 import { vaultCodebase, learnCodebase, familyComponents, gainComponents } from './sockets.mjs';
-import { HOT_RUN, CONFIG, FAMILIES, GUARDS, QUIRKS, MONTHS, SKILLS, SERVER, XP, BOSSES, layerOf } from './data.mjs';
+import { CONFIG, FAMILIES, GUARDS, QUIRKS, MONTHS, SKILLS, SERVER, XP, BOSSES, layerOf } from './data.mjs';
 import { sweepFile, showSweep, sweepCommand } from './forensics.mjs';
 import { isWild, relocks, rogueLayout, rogueSpawns, rogueMotd, liveRogue, ROGUE, relockLeft, clock, farmFile } from './rogue.mjs';
 import { findLocation, closest, command, selectEncounter, encounterVirus, active, emit, warn, hackerLevel, addLead, addLocation, disconnect, hooks, maxSignal, classOf, equippedSkills, knownSkills, serverLevel, gainXp, addItem, gearStat, regenRate, xpFor, deedXpFor, gainCode, learnBlueprint, UNIQUES, effectLine, loadoutSuggestions } from './combat.mjs';
@@ -388,9 +388,6 @@ const near = (s, text, word, names, cmd) => { const n = closest(word, names); re
 export const LEGACY = { files: false };
 export function connect(s, id) {
   const first = s.serial;
-  const LOUD = /\s(?:loud|\+loud|\+hot)$/; // connect <server> loud (HOT_RUN in data.mjs); +hot still works
-  const hot = LOUD.test(id);
-  id = id.replace(LOUD, '');
   const zone = id === CONFIG.zone.id || id === CONFIG.zone.name.toLowerCase();
   const loc = zone ? zoneOf(s) : findLocation(s, id) || [...s.locations, ...memberServers(s)].find((l) => l.name.toLowerCase() === id);
   const signal = signalNow(s);
@@ -415,13 +412,12 @@ export function connect(s, id) {
     arrive(s, loc, fileInfo); // a member's server: its natives come back after a while (consortium.mjs)
     const firstVisit = !loc.runs && !zone;
     loc.runs = (loc.runs || 0) + 1;
-    if (LEGACY.files) connectFiles(s, loc, signal, hot, zone);
+    if (LEGACY.files) connectFiles(s, loc, signal, zone);
     else {
       // R1: the server's rooms (netrooms.mjs). Your crew comes along, linked to you.
-      const R = enterRooms(s, loc, { signal, hot });
+      const R = enterRooms(s, loc, { signal });
       const counted = Object.values(R.graph.rooms).filter((x) => !x.nook && !x.optional), rooms = ` Rooms ${counted.filter((x) => R.cleared[x.id]).length}/${counted.length}.`;
       emit(s, 'run-start', `CONNECTED to ${loc.name}${zone ? ', a rogue server' : loc.member ? `, ${loc.member}'s server` : loc.rogue ? `, a rogue server (${ROGUE.kinds[loc.rogue.kind].name})` : ''}.${rooms}${rootOf(loc) ? ` Root ${rootOf(loc)}.` : ''}`, { location: loc.id, rooms: true });
-      if (hot) emit(s, 'warning', `LOUD RUN. You went in loud: every fight here has ${Math.round((HOT_RUN.hp - 1) * 100)}% more Integrity and hits ${Math.round((HOT_RUN.dmg - 1) * 100)}% harder. Every kill pays ${Math.round((HOT_RUN.xp - 1) * 100)}% more XP and rolls for loot once more.`);
     }
     if (firstVisit) gainXp(s, deedXpFor(s, levelOf(loc), XP.newLocation), `first run on ${loc.name}`, 'breakin');
     return since(s, first);
@@ -429,19 +425,17 @@ export function connect(s, id) {
   return since(s, first);
 }
 // The old file-system connect (LEGACY.files), kept for the code R5 deletes.
-function connectFiles(s, loc, signal, hot, zone) {
+function connectFiles(s, loc, signal, zone) {
   {
     if (zone) zoneSpawns(s);
     if (loc.rogue) rogueSpawns(s, loc);
     s.run = { loc: loc.id, cwd: '/', integrity: signal, max: maxSignal(s), pack: [], visited: ['/'] };
     s.run.crew = Object.fromEntries((s.crewSim || []).map((x) => [x.name, { cwd: '/', link: 'you' }]));
-    if (hot) s.run.hot = true;
     const q = QUIRKS[loc.quirk];
     if (zone) emit(s, 'run-start', `CONNECTED to ${loc.name}, a rogue server. ${liveSpawns(s)} ${liveSpawns(s) === 1 ? 'virus' : 'viruses'} running.`, { location: loc.id });
     else if (loc.occupied) emit(s, 'run-start', `CONNECTED to ${loc.name}${loc.member ? `, ${loc.member}'s server` : ', your server'}, rebooting and occupied by ${liveRogue(loc)} ${liveRogue(loc) === 1 ? 'virus' : 'viruses'} in its folders. Clear them all to bring it back up.`, { location: loc.id });
     else if (loc.rogue) emit(s, 'run-start', `CONNECTED to ${loc.name}, a rogue server (${ROGUE.kinds[loc.rogue.kind].name}): ${ROGUE.kinds[loc.rogue.kind].rule} ${liveRogue(loc)} ${liveRogue(loc) === 1 ? 'virus' : 'viruses'} running.`, { location: loc.id });
     else emit(s, 'run-start', `CONNECTED to ${loc.name}${loc.member ? `, ${loc.member}'s server` : ''}${loc.depth > 1 ? ` (floor ${loc.depth})` : ''}.${rootOf(loc) ? ` Root ${rootOf(loc)}.` : ''}${procOf(loc) ? ` ${procOf(loc).rare ? '★' : '↻'} ${procOf(loc).name} in ${procOf(loc).room}.` : ''}${q ? ` ${q.name}: ${q.rule}` : ''}${loc.passwordKnown ? ` Vault key (Perfect Trace): ${loc.password}.` : ''}`, { location: loc.id });
-    if (hot) emit(s, 'warning', `LOUD RUN. You went in loud: every fight here has ${Math.round((HOT_RUN.hp - 1) * 100)}% more Integrity and hits ${Math.round((HOT_RUN.dmg - 1) * 100)}% harder. Every kill pays ${Math.round((HOT_RUN.xp - 1) * 100)}% more XP and rolls for loot once more.`);
     ls(s);
   }
 }

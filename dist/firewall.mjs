@@ -3,19 +3,17 @@
 //              BASE_GAP (an outpost's or a hub's, that holding's own level). It moves with what you
 //              attach and detach, for free: keeping level with your network is no longer a bill.
 //   tier       upgrades buy a margin on top, +1 to +6 (TIERS), each a real price; tiers carry perks
-//              (TIER_PERKS: filter slots, a sturdier server, a faster defrag, slower wear, a longer
-//              harden.sh). The Filter Bay and the RAID Array were services once; they live here now.
+//              (TIER_PERKS: filter slots, a sturdier server, a faster defrag, slower wear). The Filter
+//              Bay and the RAID Array were services once; they live here now.
 //   fragments  an invasion that gets past it (contested: a block, a breach: two) fragments it (a
 //              16-block grid); each 4 fragmented blocks cost it a level. Buying a tier leaves it
 //              whole; Defrag restores it without one, running weaker for a few minutes meanwhile.
-//   hardening  harden.sh (a hub-shop consumable, or written from code): +3 levels for 8 hours.
-//   prices     credits and code; from +3 a tier, and a harden.sh you write, take code in units (data.mjs codeUnit)
+//   prices     credits and code; from +3 a tier takes code in units (data.mjs codeUnit)
 //              at the base: what invasions pay in, so the wall is where their code goes.
 // Filters and the +N chip (architecture, the consortium's Grid, a Firewall Node, Root 5) add on top.
 // Its effective level is what it blocks outright: an invader at or under it bounces.
 import { emit, warn, hooks, syncServer } from './combat.mjs';
 import { CONFIG, power, codeUnit } from './data.mjs';
-import { items } from './hidden.mjs';
 import { filterStat } from './filters.mjs';
 import { FACTIONS } from './factions.mjs';
 import { rootWall } from './root.mjs';
@@ -29,7 +27,6 @@ export const FIREWALL = {
   perLevel: 4, // fragmented blocks per level lost
   frag: { blocked: 0, siege: 1, breach: 2 }, // blocks fragmented by a threat it meets (invasion.mjs cracks a block at a time)
   defragMs: 3 * 60000, defragLoss: 2, // a defrag's time, and the levels it runs down meanwhile
-  harden: { plus: 3, ms: 8 * 3600000, units: 2 }, // units: what writing a harden.sh costs when you hold none, in units of each of Cipher, Worm and Kernel at the base
 };
 export const BASE_GAP = 2; // your home wall's base: your highest attached server's level, less this (never under 1)
 export const TIERS = 6; // +1 to +6 on top of the base
@@ -45,7 +42,7 @@ export const TIER_PERKS = [
   { tier: 4, perk: 'wear', name: '25% slower fragmentation' },
   { tier: 5, perk: 'slot', name: '+1 filter slot' },
   { tier: 5, perk: 'raid', name: '+5% max Integrity' },
-  { tier: 6, perk: 'harden', name: '2× harden.sh duration' },
+  { tier: 6, perk: 'slot', name: '+1 filter slot' },
 ];
 export const perksAt = (tier) => TIER_PERKS.filter((p) => p.tier <= tier);
 
@@ -53,11 +50,11 @@ export const perksAt = (tier) => TIER_PERKS.filter((p) => p.tier <= tier);
 export const netTop = (s) => Math.max(0, ...(s.locations || []).filter((l) => !l.rogue && !l.member && isLive(s, l) && connectedTo(l)).map((l) => l.level || 1));
 
 const clock = () => hooks.now?.() ?? Date.now();
-export const fwOf = (s) => (s.firewall ||= { plus: 0, frag: 0, defragUntil: 0, hardenUntil: 0 });
+export const fwOf = (s) => (s.firewall ||= { plus: 0, frag: 0, defragUntil: 0 });
 // Every outpost has its own, based on that server's level; a hub you hold (hubs.mjs: its captured
 // record, with the hub's level) has one too. A Firewall Node module adds NODE_PLUS levels. loc null: your home server.
 export const NODE_PLUS = 3;
-const fresh = () => ({ plus: 0, frag: 0, defragUntil: 0, hardenUntil: 0 });
+const fresh = () => ({ plus: 0, frag: 0, defragUntil: 0 });
 export const fwAt = (s, loc = null) => (!loc ? fwOf(s) : loc.outpost ? (loc.outpost.fw ||= fresh()) : (loc.fw ||= fresh()));
 // The level it starts from: the network's (home) or the holding's own. pin: a fixed base, for
 // testing (developer wall <n>, and the tests).
@@ -70,7 +67,7 @@ export const tierOf = (s, loc = null) => Math.min(TIERS, fwAt(s, loc).plus || 0)
 export const tierPerk = (s, id, loc = null) => perksAt(tierOf(s, loc)).filter((p) => p.perk === id).length;
 export const tierSlots = (s) => tierPerk(s, 'slot'); // your home firewall's extra filter slots
 export const raidShare = (s) => RAID_PERK * tierPerk(s, 'raid'); // your server's extra max Integrity, as a share
-// Its level before filters, the +N chip, fragmentation and hardening: base + tier.
+// Its level before filters, the +N chip and fragmentation: base + tier.
 export const fwLevel = (s, loc = null) => baseOf(s, loc) + tierOf(s, loc);
 
 // What tier t costs (from t − 1), on a base of B: credits and code that grow with the base and the
@@ -80,28 +77,24 @@ export const tierCost = (t, B) => {
   const L = Math.max(1, B), more = t >= 3 ? (t - 2) * codeUnit(L) : 0;
   return { credits: Math.round((25 + 6 * L) * t), cipher: Math.round((2 + L / 3) * t) + more, worm: Math.ceil(t * (1 + L / 10)) + more, kernel: Math.ceil(t * (1 + L / 10)) + more };
 };
-// What writing a harden.sh takes when you hold none: code, a couple of units of each at this firewall's base.
-export const hardenCost = (s, loc = null) => { const n = FIREWALL.harden.units * codeUnit(baseOf(s, loc)); return { cipher: n, worm: n, kernel: n }; };
 // The next tier's price for this firewall (null at +6).
 export const upgradeCost = (s, loc = null) => (tierOf(s, loc) >= TIERS ? null : tierCost(tierOf(s, loc) + 1, baseOf(s, loc)));
 const MATS = ['cipher', 'worm', 'kernel', 'exploit'];
 export const canPay = (s, c) => !!c && s.server.credits >= (c.credits || 0) && MATS.every((m) => (s.materials?.[m] || 0) >= (c[m] || 0));
-const codeLine = (c) => ['cipher', 'worm', 'kernel'].filter((m) => c[m]).map((m) => `${c[m]} ${m[0].toUpperCase() + m.slice(1)}`).join(', ');
 // A defrag: credits for every fragmented block, more on a bigger firewall.
 export const defragCost = (s, loc = null) => Math.max(5, Math.round(fwAt(s, loc).frag * (3 + fwLevel(s, loc))));
 
 export const fragLevels = (s, loc = null) => Math.floor(fwAt(s, loc).frag / FIREWALL.perLevel);
 export const defragging = (s, at = clock(), loc = null) => fwAt(s, loc).defragUntil > at;
-export const hardenLeft = (s, at = clock(), loc = null) => Math.max(0, fwAt(s, loc).hardenUntil - at);
 // What it blocks outright right now (against a family, its filters' bonus for that family too).
 // Filters are your home firewall's; an outpost's has its Firewall Node instead.
-// The wall is three knobs you turn (its tier, filters, harden.sh) on a base the network sets;
+// The wall is two knobs you turn (its tier, filters) on a base the network sets;
 // everything else that adds levels shows as one "+N": architecture and consortium at home, a
 // Firewall Node and Root 5 on an outpost.
 export const wallBonus = (s, loc = null) => (loc ? ((loc.buildings || []).includes('node') ? NODE_PLUS : 0) + ((loc.buildings || []).includes('citadel') ? 2 * NODE_PLUS : 0) + rootWall(loc) : consortiumWall(s)); // (architecture went with outposts in R2)
 export function effLevel(s, at = clock(), family = null, loc = null) {
   const kit = loc ? 0 : filterStat(s, 'strength') + (family ? filterStat(s, family) : 0);
-  return Math.max(0, fwLevel(s, loc) + kit + wallBonus(s, loc) - fragLevels(s, loc) - (defragging(s, at, loc) ? FIREWALL.defragLoss : 0) + (hardenLeft(s, at, loc) ? FIREWALL.harden.plus : 0));
+  return Math.max(0, fwLevel(s, loc) + kit + wallBonus(s, loc) - fragLevels(s, loc) - (defragging(s, at, loc) ? FIREWALL.defragLoss : 0));
 }
 // Filters: slower fragmentation, a faster defrag (each capped at 80%).
 const less = (s, k) => 1 - Math.min(0.8, filterStat(s, k) / 100);
@@ -129,7 +122,7 @@ export function tickFirewall(s, at = clock()) {
 // threats at or under its effective level outright.
 export const ratingAt = (s, loc, family = null, at = clock()) => { const L = effLevel(s, at, family, loc); return L < 1 ? 100 * CONFIG.invasion.wall : 100 * power(L) * CONFIG.invasion.block; };
 
-// firewall upgrade|defrag|harden [server]: your home firewall, or an outpost's.
+// firewall upgrade|defrag [server]: your home firewall, or an outpost's.
 export function firewallCommand(s, text, at = clock()) {
   const [, verb0, id] = text.split(' '), verb = text === 'defrag' ? 'defrag' : verb0;
   // A server (your outpost) or a faction (a hub you hold).
@@ -160,15 +153,16 @@ export function firewallCommand(s, text, at = clock()) {
     f.defragUntil = at + ms;
     return emit(s, 'firewall', `${where}: defragmenting for ${price} credits, ${Math.round(ms / 6000) / 10} minutes, ${FIREWALL.defragLoss} levels down meanwhile.`, loc ? { location: loc.id } : {});
   }
-  if (verb === 'harden') {
-    // No script on hand: write one from code (the answer to a big invasion you can see coming).
-    const write = !items(s).harden, hc = hardenCost(s, loc);
-    if (write && !canPay(s, hc)) return warn(s, `You have no hardening script. Hub shops sell harden.sh, or you can write one from ${codeLine(hc)} code.`);
-    if (write) { for (const m of MATS) if (hc[m]) s.materials[m] -= hc[m]; } else items(s).harden--;
-    f.hardenUntil = Math.max(at, f.hardenUntil) + FIREWALL.harden.ms * (tierPerk(s, 'harden', loc) ? 2 : 1);
-    return emit(s, 'firewall', `harden.sh${write ? `, written from ${codeLine(hc)} code` : ''}: ${where} +${FIREWALL.harden.plus} levels for ${Math.round(hardenLeft(s, at, loc) / 3600000)} hours.`, loc ? { location: loc.id } : {});
-  }
-  return warn(s, 'firewall upgrade|defrag|harden [server]');
+  return warn(s, 'firewall upgrade|defrag [server]');
+}
+// harden.sh is gone: a script you held comes back as the credits a hub shop asked for it, and one running stops.
+// Keyed on the field, not the version.
+export function hardenRestore(s) {
+  const held = s.items?.harden || 0;
+  if (s.items) delete s.items.harden;
+  if (s.store?.slots) s.store.slots = s.store.slots.filter((x) => x.id !== 'harden'); // Halcyon's stock
+  for (const f of [s.firewall, ...Object.values(s.hubs || {}).map((h) => h.captured?.wall)]) if (f) delete f.hardenUntil;
+  if (held > 0 && s.server) s.server.credits += held * (70 + 6 * baseOf(s));
 }
 // developer wall <n>|off: pin your home wall's base at a level (testing), or let it follow the network again.
 export function developerWall(s, text) {

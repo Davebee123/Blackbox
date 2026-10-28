@@ -1,4 +1,4 @@
-// The firewall (firewall.mjs): a base that follows your network, tiers you buy on top, fragmentation, defrag, hardening.
+// The firewall (firewall.mjs): a base that follows your network, tiers you buy on top, fragmentation and defrag.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, hooks } from './dist/combat.mjs';
@@ -62,7 +62,7 @@ test('old saves: a climbed wall becomes the tier nearest its margin over the new
   s.locations[0].level = 12;
   const old = JSON.parse(JSON.stringify(s));
   old.version = 32;
-  old.firewall = { level: 14, frag: 0, defragUntil: 0, hardenUntil: 0 };
+  old.firewall = { level: 14, frag: 0, defragUntil: 0 };
   old.server.credits = 0; old.materials = { cipher: 0, worm: 0, kernel: 0, exploit: 0 };
   const r = restore(old);
   assert.equal(r.firewall.plus, 4, 'level 14 over a base of 10');
@@ -102,16 +102,20 @@ test('threats fragment it, a level per 4 blocks; a defrag costs credits, runs we
   hooks.now = null;
 });
 
-test('harden.sh: +3 levels for 8 hours, one script each', () => {
+test('harden.sh is gone: the command does nothing, and a script an older save held comes back as credits', async () => {
+  const { hardenRestore } = await import('./dist/firewall.mjs');
   const s = fresh(); at(0);
   fwOf(s).pin = 4;
   command(s, 'firewall harden', 0);
-  assert.equal(effLevel(s, 0), 4, 'no script, no hardening');
-  items(s).harden = 1;
-  command(s, 'firewall harden', 0);
-  assert.equal(items(s).harden, 0);
-  assert.equal(effLevel(s, 7 * 60 * MIN), 7);
-  assert.equal(effLevel(s, 8 * 60 * MIN + 1), 4, 'and then it wears off');
+  assert.equal(effLevel(s, 0), 4, 'no hardening');
+  items(s).harden = 2; fwOf(s).hardenUntil = 8 * 60 * MIN;
+  s.store = { slots: [{ id: 'harden', price: 90 }, { id: 'relay', price: 120 }], serial: 2 };
+  const credits = s.server.credits;
+  hardenRestore(s);
+  assert.equal(s.items.harden, undefined);
+  assert.equal(fwOf(s).hardenUntil, undefined);
+  assert.equal(s.server.credits, credits + 2 * (70 + 6 * 4), 'what a hub shop asked for each');
+  assert.deepEqual(s.store.slots.map((x) => x.id), ['relay'], "Halcyon's stock drops it");
   hooks.now = null;
 });
 
@@ -221,29 +225,7 @@ test('fragmentation comes from events: Integrity lost wears nothing, an upgrade 
   hooks.now = null;
 });
 
-test('harden.sh can be written from code when you hold no script: two units of each code at the base', async () => {
-  const { hardenCost } = await import('./dist/firewall.mjs');
-  const { codeUnit } = await import('./dist/data.mjs');
-  const s = fresh(); at(0);
-  fwOf(s).pin = 4;
-  const c = hardenCost(s), n = 2 * codeUnit(4);
-  assert.deepEqual(c, { cipher: n, worm: n, kernel: n });
-  s.materials = { cipher: n, worm: n, kernel: n - 1, exploit: 0 };
-  command(s, 'firewall harden', 0);
-  assert.equal(effLevel(s, 0), 4, 'not enough code');
-  assert.match(s.logs.at(-1).message, new RegExp(`${n} Cipher, ${n} Worm, ${n} Kernel code`));
-  s.materials.kernel = n + 1;
-  command(s, 'firewall harden', 0);
-  assert.deepEqual([s.materials.cipher, s.materials.worm, s.materials.kernel], [0, 0, 1]);
-  assert.equal(effLevel(s, 0), 7);
-  items(s).harden = 1;
-  command(s, 'firewall harden', 0);
-  assert.equal(items(s).harden, 0, 'a script you hold goes first');
-  assert.equal(s.materials.kernel, 1);
-  hooks.now = null;
-});
-
-test('away: a long passive clock (one invasion every 2-4 hours); open ports speeds them up online', async () => {
+test('away: a long passive clock (one invasion every 2-4 hours); Open ports is gone', async () => {
   const { tickNetwork, AWAY } = await import('./dist/invasion.mjs');
   const T0 = 1_800_000_000_000;
   const s = fresh();
@@ -253,23 +235,21 @@ test('away: a long passive clock (one invasion every 2-4 hours); open ports spee
   tickNetwork(s, T0 + 8 * 3600000);
   const n = s.logs.filter((e) => e.type === 'invader').length;
   assert.ok(n >= 2 && n <= 4, `2-4 in eight hours away (${n})`);
-  // Open ports: online, the next one comes 2.5× sooner; logging off closes them.
+  // Open ports is gone: the command changes nothing.
   const o = fresh();
   found(o, 'worm');
   tickNetwork(o, T0);
   o.net.next = 10 * 60000;
   command(o, 'open ports');
-  assert.equal(o.net.open, true);
-  assert.equal(o.net.next, 4 * 60000);
-  tickNetwork(o, T0 + 3 * 3600000);
-  assert.equal(o.net.open, false, 'closed while you were away');
+  assert.equal(o.net.open, undefined);
+  assert.equal(o.net.next, 10 * 60000);
   assert.ok(AWAY.everyMs[0] >= 2 * 3600000);
 });
 
-test('tier perks: +1, +3 and +5 a filter slot and +5% max Integrity each, +2 defrags faster, +4 fragments slower, +6 a longer harden.sh', async () => {
+test('tier perks: +1, +3 and +5 a filter slot and +5% max Integrity each, +2 defrags faster, +4 fragments slower, +6 one more filter slot', async () => {
   const { defragMs, tierPerk, TIER_PERKS } = await import('./dist/firewall.mjs');
   const { slotsOf } = await import('./dist/filters.mjs');
-  assert.deepEqual(TIER_PERKS.map((p) => `${p.tier}${p.perk}`), ['1slot', '1raid', '2defrag', '3slot', '3raid', '4wear', '5slot', '5raid', '6harden']);
+  assert.deepEqual(TIER_PERKS.map((p) => `${p.tier}${p.perk}`), ['1slot', '1raid', '2defrag', '3slot', '3raid', '4wear', '5slot', '5raid', '6slot']);
   const s = fresh();
   fwOf(s).pin = 9;
   s.server.credits = 99999; s.materials = { cipher: 999, worm: 999, kernel: 999, exploit: 0 };
@@ -290,10 +270,11 @@ test('tier perks: +1, +3 and +5 a filter slot and +5% max Integrity each, +2 def
   assert.equal(fwOf(s).plus, 3);
   assert.deepEqual([s.materials.cipher, s.materials.worm, s.materials.kernel], [0, 0, 0]);
   assert.equal(slotsOf(s), 4, '+3: one more');
-  fwOf(s).plus = 6;
+  fwOf(s).plus = 5;
   assert.equal(slotsOf(s), 5);
+  fwOf(s).plus = 6;
+  assert.equal(slotsOf(s), 6, '+6: one more');
   assert.equal(tierPerk(s, 'raid'), 3, '+15% max Integrity at +5 and up, what a RAID Array v3 gave');
-  assert.equal(tierPerk(s, 'harden'), 1);
   assert.equal(tierPerk(s, 'wear'), 1);
 });
 

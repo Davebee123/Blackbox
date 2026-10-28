@@ -813,6 +813,7 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 .degraded { display: flex; justify-content: space-between; align-items: center; margin: 8px 0; padding: 6px 10px; border: 1px solid var(--hot); border-radius: 4px; background: rgba(255, 91, 61, 0.08); font: 600 12px var(--mono); letter-spacing: 1px; cursor: help; }
 .degraded b { color: var(--hot); }
 .degraded span { color: var(--text); }
+.degraded em { margin-left: auto; margin-right: 10px; font-style: normal; color: var(--hot); }
 /* The wall's three bands: what it blocks, holds at a siege, and what breaks through. */
 .bands { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin: 8px 0 4px; }
 .band { padding: 5px 8px; border: 1px solid var(--line-strong); border-radius: 3px; font: 600 12px var(--mono); text-align: center; cursor: help; }
@@ -2593,6 +2594,9 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .sl-status { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
 .sl-status .tag { font-size: 10px; line-height: 16px; padding: 0 5px; }
 .sl-status .ls-job { margin: 0; }
+.sl-wall { display: inline-flex; cursor: help; }
+.sl-wall .glyph { width: 14px; height: 14px; }
+.sl-wall.you { color: var(--you); } .sl-wall.warn { color: var(--amber); } .sl-wall.hot { color: var(--hot); }
 @media (max-width: 1100px) { .map-list-page { grid-template-columns: 1fr; } }
 /* List mode: section heads, and the locate button at the end of each row. */
 .sl-sec { margin: 18px 8px 4px; font: 600 10px var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); }
@@ -2683,7 +2687,6 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .cd-cost li.short { border-color: rgba(255, 91, 61, 0.5); }
 .cd-cost li.short b { color: var(--hot); }
 .cd-name.r-tuned { color: var(--r-tuned); } .cd-name.r-zeroday { color: var(--r-zeroday); } .cd-name.r-custom { color: var(--r-custom); }
-/* Open ports: an on/off switch row under the firewall's ruler. */
 /* A button with a price: the label, a divider, then icon + number for each thing it takes. */
 .bcost { display: inline-flex; align-items: center; gap: 8px; margin-left: 10px; padding-left: 10px; border-left: 1px solid currentColor; opacity: 0.85; font: 12px var(--mono); }
 .bcost span { display: inline-flex; align-items: center; gap: 3px; }
@@ -2805,6 +2808,8 @@ details.map-pick { pointer-events: auto; }
 .tag.tag-crew { color: #1a1206; background: var(--gold, #e8b54a); border-color: var(--gold, #e8b54a); font-weight: 700; letter-spacing: 0.06em; box-shadow: 0 0 0 1px rgba(232, 181, 74, 0.35), 0 0 8px rgba(232, 181, 74, 0.25); }
 
 .sig-eta { color: var(--dim); font-size: 11px; font-variant-numeric: tabular-nums; margin-left: 4px; }
+/* Reboot sickness: what's off your max Signal while your server reboots. */
+.sig-sick, .meter small.sig-sick { color: var(--hot); font: 600 11px var(--mono); font-style: normal; font-variant-numeric: tabular-nums; margin-left: 4px; }
 .meter-signal.weak .sig-eta { color: var(--amber); }
 .sp-row.k-lost { border-left-color: var(--hot); } .sp-row.k-lost .sp-ico { color: var(--hot); }
 .sp-row.k-time .sp-qty { font-variant-numeric: tabular-nums; }
@@ -3189,13 +3194,6 @@ button.evc-link:active { transform: translateY(1px); }
 .op-buildlist .bl-why { color: var(--warn, #e0a030) !important; }
 .cd-meta .cd-lines { grid-column: auto; } /* inside the meta block it's one column: don't push the text into an implicit second one */
 .coll-set { margin: 4px 0 8px; color: var(--amber); font-size: 12px; letter-spacing: 1px; }
-/* Go loud (a loud run): a hazard-taped switch, not a plain button. The numbers are on hover (LOUD_TIP). */
-.hot-btn { position: relative; display: inline-flex; align-items: center; gap: 7px; color: var(--hot); border-color: var(--hot); font: 700 12px var(--mono); letter-spacing: 1.5px; text-transform: uppercase; padding-left: 16px; overflow: hidden; }
-.hot-btn::before { content: ''; position: absolute; inset: 0 auto 0 0; width: 7px; background: repeating-linear-gradient(135deg, var(--hot) 0 3px, transparent 3px 6px); opacity: 0.85; }
-.hot-btn .loud-ico { width: 13px; height: 13px; background: currentColor; -webkit-mask: url('ui/icons/event-warning.svg') center/contain no-repeat; mask: url('ui/icons/event-warning.svg') center/contain no-repeat; }
-.hot-btn:hover:not(:disabled), .hot-btn:focus-visible { background: repeating-linear-gradient(135deg, var(--hot-soft) 0 8px, transparent 8px 16px); color: var(--hot); }
-.hot-btn:disabled::before { opacity: 0.35; }
-.net-hot { align-self: center; }
 .coll li.heard { outline: 1px solid var(--hot); }
 .coll .coll-listen { float: right; margin-top: -30px; font-size: 11px; padding: 1px 6px; }
 /* The subclass row over Skills and talents: the class alone and its two subclasses, to look at; the one on show
@@ -3316,7 +3314,6 @@ h1 .byline { font-size: 13px; vertical-align: middle; }
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--s3); min-height: var(--h-btn); padding: 0 14px; line-height: 1.2; border-radius: var(--r-btn); text-align: center; }
 .btn.small { min-height: var(--h-btn-sm); padding: 0 9px; font-size: 12px; }
 .btn .glyph { flex: none; }
-.btn.hot-btn { padding-left: 18px; }
 /* A row of actions: one gap, wraps cleanly, never a lone giant button beside a small one. */
 .row { gap: var(--s3); }
 
@@ -3430,7 +3427,7 @@ h1 .byline { font-size: 13px; vertical-align: middle; }
 .mrow .mrow-none::before { content: ''; width: 5px; height: 5px; border: 1px solid var(--dim); transform: rotate(45deg); }
 
 /* ---- Action rows (.row.acts): the buttons share each line edge to edge, so a wrapped row is never ragged. ---- */
-.row.acts > .btn, .row.acts > .hot-btn { flex: 1 1 auto; }
+.row.acts > .btn { flex: 1 1 auto; }
 .srv-card .row.acts { margin-top: var(--s4); }
 
 /* ---- Phone with a crew: the crew column stacks over the page instead of squeezing it to a strip. ---- */

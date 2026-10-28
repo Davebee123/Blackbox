@@ -145,7 +145,6 @@ export const CONFIG = {
     chip: 1, // % of max Integrity a breach takes per minute (a siege less, down to 0 at the block line)
     grind: [4, 20], // % of the invader a siege wears down per minute, from the breach line to the block line
     blockedXp: 0.25, // share of a kill's XP when the wall stops one (plus one salvage)
-    open: { pace: 0.4, reward: 1.5 }, // Open ports (online only): invasions 2.5× as often, each worth +50%
   },
   // Resting: between fights the server repairs itself, 2% of its max a minute (empty to full in
   // about 50 minutes), offline too, at half that while an invasion is contested or breaching at your wall.
@@ -170,6 +169,9 @@ export const CONFIG = {
   // Crash: the server reboots at half Integrity and runs degraded for 10 real minutes.
   reboot: 0.5,
   degradedMs: 10 * 60000,
+  // Reboot sickness: while it reboots, your max Signal and your damage are this much lower, by the deepest floor you've
+  // reached (floor 1 first). Each floor deeper costs more, by less each time, up to 95% on Bedrock.
+  rebootSick: [0.2, 0.4, 0.6, 0.75, 0.85, 0.9, 0.93, 0.95],
 };
 
 // Every ability that works in a fight. Each does ONE thing (a verb):
@@ -307,7 +309,7 @@ export const DAEMONS = {
 export const SPARE_EXPLOIT = { home: 0.0025, guard: 0.01 };
 export const DAEMON_DROP = { you: 0.35, intercept: 0.5, wall: 0.15, capture: 1, pity: 0.05, earlier: 0.25 };
 // A unit of code at a level: what a point of invasion bounty pays (invasion.mjs), what a scrapped daemon gives,
-// and what the wall's prices count in (firewall.mjs: its tiers from +3, harden.sh, a crafted filter).
+// and what the wall's prices count in (firewall.mjs: its tiers from +3, a crafted filter).
 export const codeUnit = (level) => 4 + Math.floor(Math.max(1, level) / 3);
 export const daemonBand = (level) => DAEMON_BANDS.reduce((d, [lo], i) => (level >= lo ? i + 1 : d), 1); // an invasion's band: the deepest DAEMON_BANDS entry its level has reached
 export const bandDaemons = (band) => Object.keys(DAEMONS).filter((id) => DAEMONS[id].band === band);
@@ -858,9 +860,6 @@ export const BOSSES = {
 };
 export const NATIVE_BOSSES = Object.keys(BOSSES).filter((k) => BOSSES[k].native);
 export const ENRAGE = { dmg: 1.25, warn: 3 };
-// A loud run (connect <server> loud; called a hot run in the code): friction you choose. Every fight on it has more Integrity and hits
-// harder; every kill pays more XP and rolls for loot once more.
-export const HOT_RUN = { hp: 1.25, dmg: 1.2, xp: 1.25, rolls: 1 };
 // A boss's loot (WoW's dungeon bosses, combat.mjs bossLoot): one item every kill, a blue at its level or a yellow
 // `yellow` of the time, and its uniques (two each, content/items.mjs source kind 'boss'; a native boss, its network's):
 // `chance` a kill, `pity` more for each kill that gave none, back to `chance` on a drop (the log, the Collection and

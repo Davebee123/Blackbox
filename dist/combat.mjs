@@ -2,7 +2,7 @@
 // Rendering never advances the simulation. This file is written so it can
 // later run on a shared server unchanged.
 import { onFound, memoryCommand, isLive, joinCost, memoryRestore } from './memory.mjs';
-import { barSlots, isRunSkill, SUBCLASS, SUBS, defaultSub, HOT_RUN, ELITE, BOSS_LOOT, BOSSES, ENRAGE, makePart, EDGE, SYNC, CONFIG, ABILITIES, SKILLS, DAEMONS, SPARE_EXPLOIT, FAMILIES, FIXTURES, GUARDS, MUTATIONS, STRAINS, SERVER, TEMPLATES, layerOf, floorOfLayer, createVirus, createLocation, ARCHETYPES, CANTRIPS, LOADOUT, TREE, UNLOCKS, XP, xpToNext, killXp, xpScale, deedScale, power, mobPower, skillOrder, unlockLevel, lineOf, presetBar, shippedPresets, spikeOf, SPIKE } from './data.mjs';
+import { barSlots, isRunSkill, SUBCLASS, SUBS, defaultSub, ELITE, BOSS_LOOT, BOSSES, ENRAGE, makePart, EDGE, SYNC, CONFIG, ABILITIES, SKILLS, DAEMONS, SPARE_EXPLOIT, FAMILIES, FIXTURES, GUARDS, MUTATIONS, STRAINS, SERVER, TEMPLATES, layerOf, floorOfLayer, createVirus, createLocation, ARCHETYPES, CANTRIPS, LOADOUT, TREE, UNLOCKS, XP, xpToNext, killXp, xpScale, deedScale, power, mobPower, skillOrder, unlockLevel, lineOf, presetBar, shippedPresets, spikeOf, SPIKE } from './data.mjs';
 // The subclasses' engine side (dist/classes/<class>.mjs): what their skills, talents and edges do.
 import BREAKER_FX, { momentumCap } from './classes/breaker.mjs';
 import BASTION_FX from './classes/bastion.mjs';
@@ -30,9 +30,9 @@ import { tellStart, tellCycle, tellLand, tellBroke, chargeNow, tellIntents, tell
 import { prepareTicks, onHit as tickHit, BOSS_RULES } from './interrupt.mjs';
 import { TELL, ROOM_FAMILIES, DAMPER_KINDS, floorFor, partGenesFor } from './data.mjs';
 import { tickRoot, processWon } from './root.mjs';
-import { firewallCommand, wear, raidShare } from './firewall.mjs';
+import { firewallCommand, wear, raidShare, hardenRestore } from './firewall.mjs';
 import { levelGains, nextGains, progressionRestore, climbRestore, RETIRED } from './progression.mjs';
-import { portsCommand, invaderDown, invasionRestore, signatureRestore } from './invasion.mjs';
+import { invaderDown, invasionRestore, signatureRestore } from './invasion.mjs';
 import { runDaemons, daemonsOn, daemonsHurt, flushDaemons, lifeline, lifelineHeal, daemonCommand, daemonRestore, slottedDaemons, daemonAmount, watchmanBar, gainDaemon } from './daemons.mjs';
 export { daemonSlots, slottedDaemons, daemonLevel, daemonAmount, daemonNext, watchmanBar, gainDaemon } from './daemons.mjs';
 import { filterCommand, CRAFTABLE, knowsFilter, learnFilter, filterStat, FILTER_STATS, rollFilter, addFilter } from './filters.mjs';
@@ -319,7 +319,7 @@ export function damageMultiplier(s, p, opts = {}) {
   if (opts.dot) for (const x of fxFire(s, 'custom', { do: 'dot%' })) m *= 1 + x.value / 100;
   // Burns or helpers alone, on a part that meets the condition (Brackish, Riptide). A helper's hit carries src 'helper'.
   if (opts.dot && !opts.server) for (const x of fxFire(s, 'hit', { target: p, do: opts.src === 'helper' ? 'helper%' : 'burn%' })) m *= 1 + x.value / 100;
-  if (!opts.server) m *= classMult('dealt', s, p, opts);
+  if (!opts.server) m *= classMult('dealt', s, p, opts) * (1 - rebootSick(s)); // reboot sickness: your server is rebooting
   m *= masteryDmg(s, e.virus, p); // a part you've mastered takes 3% more from all of yours (research.mjs; never a crewmate's)
   return m;
 }
@@ -826,8 +826,7 @@ export const tierOf = (ctx) => ctx.tier || (ctx.rare ? 'rare' : ctx.elite || ctx
 // drop rolls none here: bossLoot gives its item. A strain also has its own trophy: 1 in LOOT.trophy kills of that strain.
 export function rollDrop(s, ctx, level) {
   if (typeof ctx === 'string') ctx = { kind: ctx === 'guard' ? 'guard' : 'home' };
-  const rolls = ctx.boss && sureDrop(ctx.boss) ? 0 : (ctx.rolls || LOOT.rolls[ctx.kind] || 1) + (ctx.flat ? 0 : (s.encounter?.virus?.hot && s.encounter.phase !== 'active' ? HOT_RUN.rolls : 0) // a hot run's kill rolls once more
-    + (s.encounter?.cleanRead && s.encounter.phase !== 'active' ? TELL.read.rolls : 0)); // every tell in the fight read: once more (tells.mjs). flat: its rolls and no more (the Exfil's)
+  const rolls = ctx.boss && sureDrop(ctx.boss) ? 0 : (ctx.rolls || LOOT.rolls[ctx.kind] || 1) + (ctx.flat ? 0 : (s.encounter?.cleanRead && s.encounter.phase !== 'active' ? TELL.read.rolls : 0)); // every tell in the fight read: once more (tells.mjs). flat: its rolls and no more (the Exfil's)
   const tier = tierOf(ctx);
   let best = null;
   for (let i = 0; i < rolls; i++) {
@@ -1204,14 +1203,6 @@ export function encounterVirus(s, key, seed, opts = {}) {
   // One stranger a fight (parts.mjs): a part you've never met (research 0) comes alone. A sim plays a veteran (s.metAll).
   if (key === 'random' && !s.metAll) over.seen = (spec, family) => researchAt(s, `${family}:${spec.id}`) > 0;
   const virus = (hooks.createVirus || createVirus)(key, seed, over); // hooks.createVirus: golden.test.mjs plays the same fight on the builder from before genes
-  if (mode === 'run' && s.run?.hot) { // a hot run (HOT_RUN): tougher fights
-    virus.hot = true;
-    for (const p of virus.parts) {
-      p.max = p.integrity = Math.round(p.max * HOT_RUN.hp);
-      if (p.attack && ['damage', 'encrypt'].includes(p.attack.effect)) p.attack.amount = Math.max(1, Math.round(p.attack.amount * HOT_RUN.dmg));
-      if (p.attack?.hit) p.attack.hit = Math.max(1, Math.round(p.attack.hit * HOT_RUN.dmg));
-    }
-  }
   if (opts.name) virus.name = opts.name; // a fight with a name already on screen (a boss, a bounty)
   return virus;
 }
@@ -1913,7 +1904,21 @@ function loadoutCommand(s, text) {
 // ---------- upgrades ----------
 // Max Signal%: set pieces and bonuses (sets.mjs) and Bedframe, Firmware (max-signal%) raise the whole of it.
 const signalOf = (s) => Math.round(CONFIG.maxSignal * powerOf(s)) + gearStat(s, 'signal') + 4 * rank(s, 'redundancy') + 3 * rank(s, 'onion-routing') + 3 * rank(s, 'extra-memory');
-export const maxSignal = (s) => { const n = signalOf(s), pct = (piecesOn(s) ? setSignal(s) : 0) + fxSum(s, 'always', 'max-signal%'); return pct ? n + Math.round((n * pct) / 100) : n; };
+export const maxSignal = (s) => {
+  const n = signalOf(s), pct = (piecesOn(s) ? setSignal(s) : 0) + fxSum(s, 'always', 'max-signal%'), sick = rebootSick(s), m = pct ? n + Math.round((n * pct) / 100) : n;
+  return sick ? Math.max(1, Math.round(m * (1 - sick))) : m;
+};
+// Reboot sickness (CONFIG.rebootSick): while your server reboots (Degraded), your max Signal and the damage you deal are
+// down by a share that grows with the deepest floor you've reached. Clearing your own occupied server (a crash while
+// away) is how you bring it back sooner, so it doesn't count there.
+export const rebootSick = (s) => (!s.degraded || (s.occupation && s.run?.loc === s.occupation.id) ? 0 : CONFIG.rebootSick[Math.min(CONFIG.rebootSick.length, s.floors?.reached || 1) - 1]);
+// A run's Signal follows reboot sickness as it comes and goes: its max drops at a crash (Signal with it) and comes
+// back when the server is back online (Signal doesn't).
+export function syncRunSignal(s) {
+  if (!s.run) return;
+  s.run.max = maxSignal(s);
+  s.run.integrity = Math.min(s.run.integrity, s.run.max);
+}
 
 // Protocols at home: protocols · load <protocol> · unload <protocol|slot> · scrap <protocol> ·
 // compile [stat] · compile <zero-day>.
@@ -2106,7 +2111,7 @@ function payKill(s, e, base, why) {
   // A party splits the kill's XP, with a small bonus per extra player (PARTY_XP). Members who dropped in
   // (consortium guests) take their share of the damage they dealt, so joining late pays only for what
   // you did; you and your own crew split the rest evenly.
-  const n = e.party || 1, pool = xpFor(s, e.virus.level, base) * (e.virus.elite ? ELITE.xp : 1) * (e.virus.hot ? HOT_RUN.xp : 1) * (1 + PARTY_XP * (n - 1));
+  const n = e.party || 1, pool = xpFor(s, e.virus.level, base) * (e.virus.elite ? ELITE.xp : 1) * (1 + PARTY_XP * (n - 1));
   const dealt = e.virus.dealt || {}, total = Object.values(dealt).reduce((a, b) => a + b, 0);
   const guests = n > 1 ? e.guests || [] : [];
   const guestShare = total ? guests.reduce((a, g) => a + (dealt[g] || 0), 0) / total : 0;
@@ -2295,7 +2300,6 @@ export function finish(s, result) {
     if (!hid) huntKill(s, e.virus.family);
     payKill(s, e, XP.home, `${e.virus.name} neutralized`);
     gainCode(s, codeFrom(s, e.virus.family, e.virus.level, 'home'), 'Code: ');
-    if (inv?.open) { const k = codeOf(e.virus.family); if (k) gainCode(s, { [k]: Math.max(1, Math.round(codeDrop(e.virus.level) * (CONFIG.invasion.open.reward - 1) * 2)) }, 'Open ports bonus: '); gainXp(s, xpFor(s, e.virus.level, CONFIG.invasion.open.reward - 1), 'open ports', 'fight'); }
     const item = rollDrop(s, { kind: 'home', family: e.virus.family, strain: e.virus.strain, layer: e.virus.grade || 1, elite: !!e.virus.elite, boss: e.virus.boss || null }, e.virus.level);
     if (item) addItem(s, item);
     nativeDrop(s, e); // network.mjs: its own dice
@@ -2324,8 +2328,9 @@ export function finish(s, result) {
 export function crashServer(s, ms = CONFIG.degradedMs, since = null) {
   s.server.integrity = Math.max(1, Math.round(s.server.max * CONFIG.reboot));
   s.degraded = { since, until: since == null ? null : since + ms, ms };
+  syncRunSignal(s);
   standingCrash(s);
-  emit(s, 'degraded', `REBOOTED at ${s.server.integrity}/${s.server.max}. Degraded for ${ms >= 3600000 ? `${ms / 3600000} hours` : `${ms / 60000} minutes`}.`);
+  emit(s, 'degraded', `REBOOTED at ${s.server.integrity}/${s.server.max}. Degraded for ${ms >= 3600000 ? `${ms / 3600000} hours` : `${ms / 60000} minutes`}: −${Math.round(rebootSick(s) * 100)}% max Signal and damage.`);
 }
 // When the next invader sets out: some logged-on minutes from now.
 export function scheduleInvasion(s) {
@@ -2489,6 +2494,7 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
       s.server.integrity = s.server.max;
       s.server.credits = Math.max(s.server.credits, 160);
       s.degraded = null;
+      syncRunSignal(s);
       emit(s, 'info', 'Developer reboot: Integrity and test credits restored.');
     }
   } else if (text === 'developer refill') { // Signal and Integrity to full, in a fight or out (the test bench's panel)
@@ -2496,6 +2502,7 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     s.signal = null; // full: whatever your max is
     if (s.run) s.run.integrity = s.run.max;
     s.degraded = null;
+    if (s.run) s.run.integrity = s.run.max = maxSignal(s);
     emit(s, 'info', 'Developer: Signal and Integrity full.');
   } else if (/^developer credits \d+$/.test(text)) {
     const n = Math.min(1e6, Number(text.split(' ')[2]));
@@ -2598,10 +2605,8 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     emit(s, 'info', `Developer: server level ${serverLevel(s)} (a floor under your highest class level, for testing).`);
   } else if (/^filter (equip|unequip|scrap) \d+$/.test(text) || /^filter craft( \w+)?( pay .*)?$/.test(text)) {
     filterCommand(s, text);
-  } else if (/^firewall (upgrade|defrag|harden)( \S+)?$/.test(text) || text === 'defrag') {
+  } else if (/^firewall (upgrade|defrag)( \S+)?$/.test(text) || text === 'defrag') {
     firewallCommand(s, text, now);
-  } else if (text === 'open ports' || text === 'close ports') {
-    portsCommand(s, text);
   } else if (/^hub( |$)/.test(text)) {
     hubCommand(s, text);
   } else if (/^payload( |$)/.test(text)) {
@@ -4849,6 +4854,7 @@ export function restore(raw) {
     statsRestore(s, was); // v44: whole-number stats: Regen five times over 5 cycles, Payload flat at each item's level (gear.mjs)
     setsRestore(s, was); // v45: sets: loaded protocols stamped in slot order, set pieces you hold found, the Badge beat armed (sets.mjs)
     subRestore(s, was); // v46: no default subclass: a class past 10 that never picked plays its core (its default's keys and talent points back)
+    hardenRestore(s); // harden.sh is gone: scripts you held come back as credits (firewall.mjs)
     shuntRestore(s); // the Shunt was cut (docs/parts-plan.md): keyed on the part, not the version
     try { achievementsRestore(s); } catch (err) { hooks.restoreError?.(err); } // achievements.mjs: an older save earns what it has already done (its titles and stickers too), quietly; never costs the save
     if (s.encounter) s.encounter.plan ||= [];
