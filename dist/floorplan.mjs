@@ -1127,12 +1127,12 @@ export function act(s, verb, arg = null, opts = {}) {
     if (done !== undefined) return out(s, first);
     if (verb === 'plant') { deny(s, 'plant: you carry nothing to install here.'); return out(s, first); }
   }
-  // A socket you've cleared: build a program in it (its codebase known, paid from what you carry), or take it out.
+  // A socket you've cleared: build a program in it (its codebase known, paid in credits and code), or take it out.
   if ((verb === 'build' || verb === 'install') && isSocket(s, here)) {
     if (!socketOpen(s, here)) deny(s, 'Clear the socket first.');
     else if (socketOff(s, here)) deny(s, WORLD.view?.offNote?.(s, here) || 'This socket is offline.');
     else if (!arg) say(s, buildLines(s, here).join('\n'), 'rooms-out');
-    else { const id = progId(arg); if (buildProgram(s, R, here, id, opts.pay ?? null)) clear(s, here); }
+    else { const id = progId(arg); if (buildProgram(s, R, here, id)) clear(s, here); }
     return out(s, first);
   }
   if ((verb === 'uninstall' || verb === 'remove') && isSocket(s, here)) { uninstallProgram(s, R, here); return out(s, first); }

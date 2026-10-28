@@ -108,7 +108,7 @@ export const BASES = {
   'polymorphic-engine': { slot: 'script', name: 'Polymorphic Engine', level: 26, primary: { damage: 13, signal: 55, payload: 5.4 }, flavour: 'Never the same twice.' },
   'living-off-the-land': { slot: 'script', name: 'Living off the Land', level: 34, primary: { damage: 21, signal: 89, payload: 9.7 }, flavour: 'Every tool it needs was already installed.' },
   'metamorphic-engine': { slot: 'script', name: 'Metamorphic Engine', level: 42, primary: { damage: 34, signal: 142, payload: 17.0 }, flavour: 'It rewrites itself, and the rewrite rewrites itself.' },
-  implant: { slot: 'implant', name: 'Implant', level: 15, primary: { damage: 6, signal: 30 }, flavour: 'Resident. Quiet. Yours.' }, // drops and compiles from item level 15 (the first Implant slot)
+  implant: { slot: 'implant', name: 'Implant', level: 15, primary: { damage: 6, signal: 30 }, flavour: 'Resident. Quiet. Yours.' }, // drops from item level 15 (the first Implant slot)
   bootkit: { slot: 'implant', name: 'Bootkit', level: 34, primary: { damage: 12.5, signal: 62 }, flavour: 'Loads before anything that could notice it.' },
   'firmware-rootkit': { slot: 'implant', name: 'Firmware Rootkit', level: 42, primary: { damage: 20, signal: 100 }, flavour: 'Lives in the chip. Survives the disk.' },
 };
@@ -254,12 +254,12 @@ export const DECONSTRUCT = {
 };
 
 // Zero-day protocols: a Custom protocol plus one special effect. One of each per loadout.
-// Found on runs (rarely ready-made, more often as source you bank and compile at home).
+// Found ready-made in deeper vaults (a .src file).
 export const ZERO_DAYS = {
   rootkit: { name: 'Rootkit', effect: 'Your first hit in each fight ignores armor.' },
   'race-condition': { name: 'Race Condition', effect: 'Resets the cooldown of the first skill that misses in each fight.' },
   'buffer-overflow': { name: 'Buffer Overflow', effect: 'Makes your next hit a critical strike whenever you break a part.' },
-  // Sold only by Halcyon Mutual (chase items: never found, never compiled).
+  // Sold only by Halcyon Mutual (chase items: never found).
   deductible: { name: 'Deductible', effect: 'The first attack that lands on you in each fight deals no damage.', chase: true, group: 'survival' },
   subrogation: { name: 'Subrogation', effect: 'When a part hits you, your next skill hit on it deals double damage.', chase: true, group: 'offense' },
   'total-loss': { name: 'Total Loss', effect: 'When you break a part, deals damage to every other part equal to 25% of the broken part\'s max Integrity. Armor absorbs it as usual, and a part this breaks sets it off again.', chase: true, group: 'offense' },
@@ -287,8 +287,8 @@ export const LOOT = {
   trophy: 10000, // a strain's own unique: 1 in this many kills of that strain
   vault: { stock: 94, tuned: 6, custom: 0.4, zeroday: 0.03 }, // a vault's protocol (kit.bin), white or better: a treasure chest
   vaultKit: 0.5, // share of vaults holding a protocol (kit.bin)
-  vaultBlueprint: 0.25, // share holding a blueprint (blueprint.bp)
-  vaultSource: 0.25, // share of layer-2+ vaults holding source (.src)
+  vaultTokens: 0.5, // share holding spare credits (tokens.dat: where blueprints and codebases were)
+  vaultSource: 0.25, // share of layer-2+ vaults holding a Zero-day protocol (its .src)
   quest: 0.1, // a quest's item (a contract's bonus, the storyline) is a yellow this often, else a blue
   minor: 0.5, // a small reward's item (Mapped, a dead drop) is a blue this often, else a white
   rolls: { bounty: 2 }, // a contract's named target rolls twice (the best kept), the rest once (a Pit's folders roll again after: rogue.mjs)
@@ -304,11 +304,6 @@ export const magicFind = (scavenge) => { const x = Math.max(0, scavenge) / 100; 
 // it carries, at most 15% (rollItem). Uniques and set pieces keep theirs: they are the deliberate magic-find pieces.
 export const SCAVENGE_COST = { per: 1, max: 15 };
 export const scavengeCut = (scavenge) => Math.min(SCAVENGE_COST.max, Math.max(0, scavenge || 0) * SCAVENGE_COST.per);
-// Compiling at home: a blue with the stat you chose. A Zero-day needs its source first.
-export const COMPILE = {
-  cost: (level) => ({ credits: 60 + 15 * level, salvage: 8 }),
-  zeroDayCost: (level) => ({ credits: 400 + 30 * level, salvage: 16 }),
-};
 export const STASH_CAP = 40;
 export const CRIT = { multiplier: 1.5 };
 export const ECHO = { share: 0.5 }; // an echo hits for half
@@ -354,12 +349,12 @@ export function primaries(baseId, level, mult, rand) {
 }
 const addStats = (into, more) => { for (const [k, v] of Object.entries(more || {})) into[k] = round(k, (into[k] || 0) + v); return into; };
 
-// Roll one item. opts: level, rarity (or source: 'compile'), slot (or legacy group), stat (an
+// Roll one item. opts: level, rarity (or source: 'vault'), slot (or legacy group), stat (an
 // affix it must have), zeroDay (a found or Halcyon Zero-day).
 export function rollItem(rand, opts = {}) {
   const level = Math.max(1, opts.level || 1);
   let zeroDay = opts.zeroDay || null;
-  let rarity = opts.rarity || (opts.source === 'compile' ? 'tuned' : opts.source === 'vault' ? pickWeighted(rand, LOOT.vault) : 'stock');
+  let rarity = opts.rarity || (opts.source === 'vault' ? pickWeighted(rand, LOOT.vault) : 'stock');
   if (rarity === 'scrap') rarity = 'stock'; // no grey protocols
   if (rarity === 'zeroday' && !zeroDay) rarity = 'custom'; // a random gold is a unique: see uniqueItem
   if (zeroDay) rarity = ZERO_DAYS[zeroDay].chase ? 'indemnified' : 'zeroday';
@@ -475,14 +470,3 @@ export const vaultCode = (level) => 12 + Math.floor(Math.max(1, level) / 2);
 export const SERVICES = {};
 export const SERVICE_SOURCES = [];
 
-// ---------- blueprints ----------
-// Nothing is buildable at the start. Every regular service, and every protocol recipe (compile a
-// protocol built around one stat), is a blueprint you find once: one waits in a quarter of the
-// vaults (blueprint.bp, always in your first server's), and kills drop one rarely. The first you
-// find is always the Firewall.
-// Special services and Zero-days still come from source (.src) in deeper vaults.
-export const recipeId = (stat) => 'recipe:' + stat;
-export const recipeStat = (id) => (id?.startsWith('recipe:') ? id.slice(7) : null);
-export const BLUEPRINTS = PROTOCOL_STATS.map(recipeId);
-export const BLUEPRINT_CHANCE = { home: 0.008, guard: 0.02 }; // the pool is every kind of recipe (combat.mjs learnBlueprint)
-export const blueprintName = (id) => (recipeStat(id) ? `${PROTOCOL_NAMES[recipeStat(id)]} recipe` : `${id} blueprint`);

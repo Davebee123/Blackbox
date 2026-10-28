@@ -1,19 +1,18 @@
 // Sockets (docs/servers.md 6, R2): the building system, small and local. A server's socket rooms are bus slots guarded
 // by a process on your first visit (floorplan.mjs: kind 'socket'). Clear one and it's yours to build in: inject a
-// program whose codebase you know, paid in components, the server's code and Exploits. A program changes how its own
+// program whose codebase you know, paid in credits, the server's code and Exploits. A program changes how its own
 // server plays for as long as it runs, and never reaches another server.
 //
 //   socket rooms  small 1, medium 2, large 3 (floorplan.mjs ROOMS.sockets), +1 on a Backbone server, +1 at Root 4, +1 on
 //                 every traced server in a Grid consortium (netrooms.mjs), and a held server's Core is its core socket.
-//   codebases     you start knowing the Harvester. Vaults (one in three, your first always), a Resident's first fall
-//                 (its author's list), Mapped, and hub shops by rep tier teach the rest. One you know banks as 4
-//                 components instead. The Build card lists only codebases you know.
-//   costs         light: 20 components + 15 of the server's code. Medium: 40 components (10 of them the server's own,
-//                 named) + 30 code + 1 Exploit. A quarter more a layer past the first. Paid through salvage.mjs's picker.
-//   one of each   a program once per server; instant; uninstall gives back half the components and code.
+//   codebases     you start knowing the Harvester. Halcyon's store and the hub shops sell the rest, by standing and
+//                 rep tier. The Build card lists only codebases you know.
+//   costs         light: 140 credits + 15 of the server's code. Medium: 280 credits + 30 code + 1 Exploit. A quarter
+//                 more a layer past the first.
+//   one of each   a program once per server; instant; uninstall gives back half the credits and code.
 //   components    what a broken part drops (Pulse Kernel, Cipher Seed, a Heat Pipe): 60% a part in a room fight, an
 //                 elite's parts always and one more at the kill, 35% anywhere else; a mastered part's 25% more
-//                 (research.mjs). They live in s.salvage (the old name), and pay every cost that took salvage.
+//                 (research.mjs). They live in s.salvage (the old name). They only sell, at a hub's market.
 //
 // No upkeep and nothing to defend: programs aren't income, so nothing raids them (section 10, answer 7). This file holds
 // the catalogue, codebases, costs and payment, components, and the save's retirement of outposts (retireOutposts).
@@ -22,7 +21,6 @@
 import { emit, warn, rand, hooks, materialsOf, gainCode, findLocation } from './combat.mjs';
 import { FAMILIES, ROOM_FAMILIES, GUARDS } from './data.mjs';
 import { seeded, MATERIALS, codeOf } from './gear.mjs';
-import { settle, spend, costLabel, autoPay } from './salvage.mjs';
 import { consortiumLinked } from './consortium.mjs';
 
 // ---------- the catalogue (6.4: the first eight) ----------
@@ -43,21 +41,14 @@ export const LATER = { bulkhead: 'Bulkhead', turret: 'Sentry Turret', patch: 'Pa
 export const codebaseName = (id) => PROGRAMS[id]?.name || LATER[id] || id;
 
 export const SOCKET = {
-  cost: { light: { any: 20, named: 0, code: 15, exploit: 0 }, medium: { any: 30, named: 10, code: 30, exploit: 1 } },
+  cost: { light: { credits: 140, code: 15, exploit: 0 }, medium: { credits: 280, code: 30, exploit: 1 } }, // credits: what its components sold for (7 each)
   floor: 0.25, // costs grow by a quarter a layer past the first
-  refund: 0.5, // uninstall: half the components and code back
+  refund: 0.5, // uninstall: half the credits and code back
   drop: { room: 0.6, elite: 1 }, // a part's component in a room fight (elsewhere CONFIG.salvageChance, 35%)
   linked: 1.1, // a Linked consortium: components drop 10% more on members' servers
-  known: 4, // a codebase you already know banks as this many components
-  vault: 1 / 3, // vaults holding a codebase (your first always does)
   rest: 0.25, snare: 4, siphon: 3, // the Defrag Bay's rest, the Snare's hold, the Code Siphon's code
   start: ['harvester'],
   price: { light: (L) => 200 + 10 * L, medium: (L) => 400 + 15 * L }, // credits at a hub
-};
-// Who teaches what when its Resident first falls.
-export const AUTHOR_CODEBASES = {
-  tollgate: ['siphon', 'cron', 'mill'], swarmline: ['harvester', 'cron', 'tunnel'], palemask: ['snare', 'tunnel', 'defrag'],
-  glassjaw: ['siphon', 'mill', 'post'], lantern: ['post', 'tunnel', 'defrag'], nullchoir: ['cron', 'snare', 'post'], kestrel: ['snare', 'defrag'],
 };
 // The hubs' shelves (6.2), each codebase at a rep tier (index in REP_TIERS; Halcyon's in its store's standing tiers).
 export const CODEBASE_SHOPS = {
@@ -72,25 +63,13 @@ export const CODEBASE_SHOPS = {
 export const codebasesOf = (s) => (s.codebases ||= [...SOCKET.start]);
 export const knowsCodebase = (s, id) => codebasesOf(s).includes(id);
 export const unknownCodebases = (s) => PROGRAM_IDS.filter((id) => !knowsCodebase(s, id));
-// Learn a codebase. id null: one you don't know (from `from`, else any), by the dice r. Known already (or nothing left
-// to learn): SOCKET.known components from `pool` instead. Returns the id learnt, or null.
-export function learnCodebase(s, id, why = '', { from = null, pool = null, r = () => rand(s) } = {}) {
-  if (id == null) {
-    const left = (from || PROGRAM_IDS).filter((x) => !knowsCodebase(s, x));
-    const any = left.length ? left : from ? unknownCodebases(s) : [];
-    id = any.length ? any[Math.floor(r() * any.length)] : null;
-  }
-  if (!id || knowsCodebase(s, id)) {
-    gainComponents(s, SOCKET.known, pool);
-    emit(s, 'info', `${why}${id ? `the ${codebaseName(id)} codebase, already known` : 'a codebase you already know'}: +${SOCKET.known} components.`);
-    return null;
-  }
+// Learn a codebase (bought: a shop's, by its id). Returns the id learnt, or null if you knew it.
+export function learnCodebase(s, id, why = '') {
+  if (!PROGRAMS[id] || knowsCodebase(s, id)) return null;
   codebasesOf(s).push(id);
-  emit(s, 'drop', `${why}the ${codebaseName(id)} codebase. ${PROGRAMS[id] ? `Build it in any socket you've cleared.` : 'Its program comes later.'}`, { codebase: id });
+  emit(s, 'drop', `${why}the ${codebaseName(id)} codebase. Build it in any socket you've cleared.`, { codebase: id });
   return id;
 }
-// A vault's codebase file (run.mjs layoutOf), fixed by its seed: one vault in three, your first server's always.
-export const vaultCodebase = (loc) => !!loc && !loc.zone && !loc.rogue && (!!loc.starter || seeded(((loc.seed || 1) * 37 + 13) >>> 0)() < SOCKET.vault);
 // A hub's codebases: [{ id, name, tier, price, known }].
 export const shopCodebases = (s, f, L) => (CODEBASE_SHOPS[f] || []).filter(([id]) => PROGRAMS[id]).map(([id, tier]) => ({ id, name: `${PROGRAMS[id].name} codebase`, tier, price: SOCKET.price[PROGRAMS[id].weight](L), known: knowsCodebase(s, id) }));
 
@@ -116,24 +95,14 @@ export function componentChance(s, e, base) {
 const linkedOn = (s) => consortiumLinked(s);
 
 // ---------- costs ----------
-// What a program costs on a server: { any, need, code: { kind: n }, exploit }. R: the server's rooms (floorplan.mjs).
+// What a program costs on a server: { credits, code: { kind: n }, exploit }. R: the server's rooms (floorplan.mjs).
 export function programCost(R, id) {
   const P = PROGRAMS[id], c = SOCKET.cost[P?.weight || 'light'], m = 1 + SOCKET.floor * Math.max(0, (R?.floor || 1) - 1);
-  const named = Math.round(c.named * m), names = serverComponents(R);
-  return {
-    any: Math.round((c.any + c.named) * m) - named, // the total rounds once (40 × 1.25 = 50, 13 of them named)
-    need: named ? [{ label: `${R?.name || 'server'} component`, names, n: named }] : [],
-    code: { [serverCode(R)]: Math.round(c.code * m) },
-    exploit: c.exploit,
-  };
+  return { credits: Math.round(c.credits * m), code: { [serverCode(R)]: Math.round(c.code * m) }, exploit: c.exploit };
 }
-// The server's own components (its fight rooms' families'), and its code.
-export function serverComponents(R) {
-  const fams = new Set(Object.values(R?.graph?.rooms || {}).map((x) => x.family).filter(Boolean));
-  return [...new Set([...fams].flatMap(familyComponents))];
-}
+// The server's code.
 export const serverCode = (R) => R?.code || codeOf(R?.family) || codeOf(Object.values(R?.graph?.rooms || {}).find((x) => x.family && codeOf(x.family))?.family) || 'cipher';
-export const costLine = (c) => [costLabel({ any: c.any, need: c.need }).replace(/salvage/g, 'components'), ...Object.entries(c.code).map(([k, n]) => `${n} ${MATERIALS[k].name}`), c.exploit ? `${c.exploit} Exploit${c.exploit > 1 ? 's' : ''}` : ''].filter(Boolean).join(', ');
+export const costLine = (c) => [`${c.credits} credits`, ...Object.entries(c.code).map(([k, n]) => `${n} ${MATERIALS[k].name}`), c.exploit ? `${c.exploit} Exploit${c.exploit > 1 ? 's' : ''}` : ''].filter(Boolean).join(', ');
 // Why you can't build this program in this socket now (or null). on: the programs already in the server's sockets.
 export function buildBlock(s, R, room, id) {
   if (!PROGRAMS[id]) return 'No such program.';
@@ -141,25 +110,23 @@ export function buildBlock(s, R, room, id) {
   if (Object.values(R.programs || {}).includes(id)) return `${R.name} already runs a ${PROGRAMS[id].name}.`;
   if (R.programs?.[room.id]) return `${PROGRAMS[R.programs[room.id]].name} runs here. Uninstall it first.`;
   const c = programCost(R, id), m = materialsOf(s);
-  if (Object.entries(c.code).some(([k, n]) => (m[k] || 0) < n) || (m.exploit || 0) < c.exploit || !autoPay(s, { any: c.any, need: c.need })) return `It costs ${costLine(c)}.`;
+  if (Object.entries(c.code).some(([k, n]) => (m[k] || 0) < n) || (m.exploit || 0) < c.exploit || (s.server?.credits || 0) < c.credits) return `It costs ${costLine(c)}.`;
   return null;
 }
-// Build it: pay (the picker's payment, or the default) and inject it. Returns true when it's in.
-export function buildProgram(s, R, room, id, payText = null) {
+// Build it: pay and inject it. Returns true when it's in.
+export function buildProgram(s, R, room, id) {
   const why = buildBlock(s, R, room, id);
   if (why) { warn(s, `${PROGRAMS[id]?.name || id}: ${why}`); return false; }
   const c = programCost(R, id), m = materialsOf(s);
-  const pay = settle(s, { any: c.any, need: c.need }, payText);
-  if (typeof pay === 'string') { warn(s, `${PROGRAMS[id].name}: ${pay.replace(/salvage/g, 'components')}`); return false; }
-  spend(s, pay);
+  s.server.credits -= c.credits;
   for (const [k, n] of Object.entries(c.code)) m[k] -= n;
   m.exploit = (m.exploit || 0) - c.exploit;
   (R.programs ||= {})[room.id] = id;
-  (R.paid ||= {})[room.id] = { pay, code: c.code };
+  (R.paid ||= {})[room.id] = { credits: c.credits, code: c.code };
   emit(s, 'program', `${PROGRAMS[id].name} injected into ${room.path}. ${PROGRAMS[id].rule}`, { program: id, room: room.id });
   return true;
 }
-// Uninstall: free, half of its components and code back.
+// Uninstall: free, half of its credits and code back (one built before credits: half its components).
 export function uninstallProgram(s, R, room) {
   const id = R.programs?.[room.id];
   if (!id) { warn(s, 'Nothing runs here.'); return false; }
@@ -171,9 +138,11 @@ export function uninstallProgram(s, R, room) {
   for (const [name, n] of paidList) for (let i = 0; i < Math.floor(n * SOCKET.refund); i++) comps.push(name);
   for (const [name, n] of paidList) if (comps.length < want && n % 2) comps.push(name); // the odd ones, until it's half
   for (const name of comps) s.salvage.push({ name, virus: 'refund', seed: 0 });
+  const credits = Math.floor((paid?.credits || 0) * SOCKET.refund);
+  s.server.credits += credits;
   for (const [k, n] of Object.entries(paid?.code || {})) back[k] = Math.floor(n * SOCKET.refund);
   gainCode(s, back, '');
-  emit(s, 'program', `${PROGRAMS[id].name} uninstalled from ${room.path}: ${comps.length} components${Object.values(back).some(Boolean) ? `, ${Object.entries(back).filter(([, n]) => n).map(([k, n]) => `${n} ${MATERIALS[k].name}`).join(', ')}` : ''} back.`, { program: id, room: room.id, off: true });
+  emit(s, 'program', `${PROGRAMS[id].name} uninstalled from ${room.path}: ${credits ? `${credits} credits` : `${comps.length} components`}${Object.values(back).some(Boolean) ? `, ${Object.entries(back).filter(([, n]) => n).map(([k, n]) => `${n} ${MATERIALS[k].name}`).join(', ')}` : ''} back.`, { program: id, room: room.id, off: true });
   return true;
 }
 
@@ -250,7 +219,7 @@ export function retireOutposts(s, was) {
   for (const n of Object.values(s.modStock || {})) back.credits += 150 * n;
   delete s.harvesters; delete s.modStock; delete s.harvKinds;
   for (const p of s.plans || []) teach(p);
-  s.plans = (s.plans || []).includes('relay') ? ['relay'] : []; // the Relay plan still crafts relays (hidden.mjs)
+  s.plans = (s.plans || []).includes('relay') ? ['relay'] : []; // the Relay plan (v47 turns it into credits: retireCrafting)
   // Services: each version they ran, and the one installing, paid back.
   const svc = Object.entries(s.services || {}).filter(([id]) => OLD_SERVICES[id]).map(([id, v]) => [id, 1, v]);
   if (s.install && OLD_SERVICES[s.install.id]) svc.push([s.install.id, s.install.v, s.install.v]);

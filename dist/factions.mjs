@@ -9,7 +9,7 @@
 // comes back on its own: you earn it back by hitting a faction's rivals, working for its allies,
 // or donating (dearer the deeper you are, and only as far as Neutral).
 import { emit, warn, rand, hackerLevel, materialsOf, hooks } from './combat.mjs';
-import { GOODS, codeAmount, priceNow } from './store.mjs';
+import { GOODS, codeAmount, priceNow, premiumOf, premiumPrice, premiumBlock, takePremium } from './store.mjs';
 import { seeded } from './gear.mjs';
 import { sendGood } from './market.mjs';
 import { CODEBASE_SHOPS, PROGRAMS, SOCKET, knowsCodebase } from './sockets.mjs';
@@ -33,7 +33,7 @@ export const FACTIONS = {
     tiers: ['Burned', 'Unknown', 'Asset', 'Partner', 'Inner circle'],
     allies: [], rivals: ['halcyon', 'lantern'],
     hub: { name: 'GLASSJAW-ANNEX-07', level: 8 },
-    shop: ['cracker', 'crate', 'blueprint', 'cb-siphon'],
+    shop: ['cracker', 'crate', 'cb-siphon'],
   },
   kestrel: {
     name: 'Kestrel Underwriting', short: 'Kestrel', kind: 'corp', color: '#8fd46b', start: 10,
@@ -57,7 +57,7 @@ export const FACTIONS = {
     tiers: ['Marked', 'Outsider', 'Fellow', 'Choir', 'Cantor'],
     allies: ['lantern'], rivals: ['halcyon', 'kestrel'],
     hub: { name: 'NULLCHOIR-SQUAT-13', level: 12 },
-    shop: ['blueprint', 'crate', 'cracker', 'harden', 'cb-cron'],
+    shop: ['crate', 'cracker', 'harden', 'cb-cron'],
   },
 };
 export const FACTION_IDS = Object.keys(FACTIONS);
@@ -156,12 +156,27 @@ export function shopOf(s, f, at = now()) {
     return { id, name: g.name, about: g.about || (g.code ? `${codeAmount(L)} of its code.` : ''), price, left: known ? 0 : g.codebase ? Math.min(1, h.stock[id] ?? 1) : h.stock[id] || 0, known, locked: !mine && t.i < Math.max(1, need), need: Math.max(1, need), codebase: g.codebase || null };
   });
 }
+// Its premium protocol (store.mjs premiumOf): a step above what drops, with this faction's implicit, at the shop's
+// price for your tier. [{ it, i, price }].
+export function hubPremium(s, f) {
+  const t = repTier(s, f), mine = captured(s, f), L = hackerLevel(s);
+  return premiumOf(s, f).map((it, i) => ({ it, i, price: Math.round(premiumPrice(it, L) * (mine ? SHOP.atCost : 1 - SHOP.discount * Math.max(0, t.i - 1))) }));
+}
 // deliver: store.mjs's delivery for shared goods; faction goods handled here.
 export function buyFrom(s, f, id, at = now()) {
   if (!FACTIONS[f] || f === 'halcyon') return warn(s, 'Halcyon sells through its store.');
   if (!hubOf(s, f)) return warn(s, 'Faction hubs open with the contract board.');
   if (hostile(s, f)) return warn(s, `${FACTIONS[f].short} won’t trade with you (${repTier(s, f).name}).`);
   if ((s.hubs?.[f]?.offlineUntil || 0) > at) return warn(s, `${FACTIONS[f].hub.name} is offline.`);
+  if (id.startsWith('premium-')) {
+    const p = hubPremium(s, f)[Number(id.slice(8))];
+    if (!p) return warn(s, 'That’s not on the shelf any more.');
+    const why = premiumBlock(s, p.price);
+    if (why) return warn(s, why);
+    s.server.credits -= p.price;
+    takePremium(s, f, p.i);
+    return sendGood(s, f, 'premium', p.it.name, p.price, hackerLevel(s), at, p.it);
+  }
   const item = shopOf(s, f, at).find((x) => x.id === id);
   if (!item) return warn(s, `${FACTIONS[f].short} doesn’t sell that.`);
   if (item.locked) return warn(s, `${item.name} is for ${FACTIONS[f].tiers[item.need]} and up.`);

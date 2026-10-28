@@ -8,7 +8,6 @@ import { DAEMONS, DAEMON_DROP, DAEMON_BANDS as BANDS, bandDaemons, daemonN, daem
 import { rollDaemon, daemonText } from './dist/daemons.mjs';
 import { tickNetwork, daemonChance, daemonDrop, bountyOf } from './dist/invasion.mjs';
 import { tierCost, hardenCost, fwOf, TIERS } from './dist/firewall.mjs';
-import { filterCost } from './dist/filters.mjs';
 import { layoutOf, fileInfo } from './dist/run.mjs';
 import { GOODS } from './dist/store.mjs';
 import { FACTIONS } from './dist/factions.mjs';
@@ -211,8 +210,6 @@ test('the wall is priced in code: tiers from +3 and a written harden.sh, in unit
   const s = fresh();
   fwOf(s).pin = B;
   assert.deepEqual(hardenCost(s), { cipher: 2 * u, worm: 2 * u, kernel: 2 * u });
-  assert.equal(filterCost(B).sigs, undefined);
-  assert.equal(filterCost(B).code.worm, codeUnit(B));
   assert.equal(s.sigs, undefined, 'a new save has none');
 });
 

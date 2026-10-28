@@ -6,14 +6,15 @@
 //     effect you can't find or compile anywhere else.
 //   Other agencies' stock, resold through Halcyon: four slots that turn over on their own uneven
 //     clocks. Each has a supplier, a price that drifts ±25% and a small quantity. This is where
-//     the exploring kit (key crackers, trace injectors, cheap relays), code, repairs and the odd
-//     blueprint turn up. (Daemons only come from invasions.)
-import { ZERO_DAYS, rollItem, MATERIALS } from './gear.mjs';
-import { emit, warn, rand, hackerLevel, addItem, learnBlueprint, materialsOf, gainCode, maxSignal, hooks } from './combat.mjs';
+//     the exploring kit (key crackers, trace injectors, cheap relays), code and repairs turn up.
+//     (Daemons only come from invasions.) Above it, the premium shelf: two protocols rolled for
+//     your level, a step above what drops (PREMIUM; a hub's shop holds one, factions.mjs).
+import { ZERO_DAYS, rollItem, MATERIALS, seeded, SLOT_KINDS, STASH_CAP } from './gear.mjs';
+import { emit, warn, rand, hackerLevel, addItem, gainCode, maxSignal, hooks, classOf, slotCount } from './combat.mjs';
 import { tierIndex, TIERS, indemnity, boardOpen } from './mail.mjs';
 import { items } from './hidden.mjs';
 import { bestSell } from './market.mjs';
-import { shopCodebases, learnCodebase, gainComponents } from './sockets.mjs';
+import { shopCodebases, learnCodebase } from './sockets.mjs';
 
 const now = () => hooks.now?.() ?? Date.now();
 export const STORE = {
@@ -46,17 +47,15 @@ export const GOODS = {
   worm: { name: 'Worm code lot', code: 'worm', credits: (L) => 45 + 5 * L, qty: [1, 3] },
   kernel: { name: 'Kernel code lot', code: 'kernel', credits: (L) => 45 + 5 * L, qty: [1, 3] },
   exploit: { name: 'Exploit', about: 'Grants 1 Exploit. Medium programs and the wall\'s top tiers take them.', credits: (L) => 150 + 10 * L, qty: [1, 1] },
-  salvage: { name: 'Component lot', about: 'Grants 5 components.', credits: (L) => 30 + 3 * L, qty: [2, 4] },
   crate: { name: 'Sealed item', about: 'Opens into a Tuned (blue) item at your level.', credits: (L) => 180 + 14 * L, qty: [1, 1] },
-  blueprint: { name: 'Sealed blueprint', about: 'Teaches you a blueprint you do not have yet.', credits: (L) => 250 + 15 * L, qty: [1, 1], tier: 2 },
 };
 // The daemon image's weight went to a second Sealed item.
-const WEIGHTS = { harden: 2, relay: 2, cracker: 3, injector: 3, signal: 3, repair: 2, cipher: 2, worm: 2, kernel: 2, exploit: 1, salvage: 2, crate: 2, blueprint: 1 };
+const WEIGHTS = { harden: 2, relay: 2, cracker: 3, injector: 3, signal: 3, repair: 2, cipher: 2, worm: 2, kernel: 2, exploit: 1, crate: 2 };
 export const codeAmount = (L) => 3 + Math.floor(L / 5);
-// What a lot of tradeable goods (code, an Exploit, salvage) costs now: its shelf price, but never
+// What a lot of tradeable goods (code, an Exploit) costs now: its shelf price, but never
 // less than 10% over what the best hub market would pay for its contents.
 export function priceNow(s, id, price, L = hackerLevel(s)) {
-  const units = id === 'salvage' ? 5 : id === 'exploit' ? 1 : GOODS[id]?.code ? codeAmount(L) : 0;
+  const units = id === 'exploit' ? 1 : GOODS[id]?.code ? codeAmount(L) : 0;
   return units ? Math.max(price, Math.ceil(bestSell(s, id) * units * 1.1)) : price;
 }
 export const goodsAbout = (g, L) => g.about || `Get ${codeAmount(L)} ${MATERIALS[g.code].name}.`;
@@ -115,6 +114,7 @@ export function buy(s, what) {
     emit(s, 'bought', `Bought the ${cb.name} for ${cb.price} credits.`, { codebase: cb.id });
     return learnCodebase(s, cb.id, 'Halcyon: ');
   }
+  if (what?.startsWith('premium-')) return buyPremium(s, 'halcyon', Number(what.slice(8)));
   const slot = storeOf(s).slots.find((x) => x.key === what);
   if (!slot) return warn(s, 'That’s not on the shelf any more.');
   const price = priceNow(s, slot.id, slot.price, L);
@@ -132,10 +132,68 @@ export function deliverGoods(s, id, L, f = 'halcyon') {
   if (['relay', 'cracker', 'injector', 'harden'].includes(id)) { items(s)[id] = (items(s)[id] || 0) + 1; return; }
   if (g.code) return gainCode(s, { [g.code]: codeAmount(L) }, 'Bought: ');
   if (id === 'exploit') return gainCode(s, { exploit: 1 }, 'Bought: ');
-  if (id === 'salvage') { gainComponents(s, 5, null, 'store'); return; }
   if (GOODS[id]?.codebase) return learnCodebase(s, GOODS[id].codebase, 'Unsealed: ');
   if (id === 'signal') { s.signal = maxSignal(s); if (s.run) s.run.integrity = s.run.max; return emit(s, 'heal', 'Signal patched to full.'); }
   if (id === 'repair') { s.server.integrity = s.server.max; return emit(s, 'heal', `Server back to ${s.server.max}/${s.server.max}.`); }
   if (id === 'crate') return addItem(s, rollItem(() => rand(s), { level: L, rarity: 'tuned', faction: f }), 'Unsealed: ');
-  if (id === 'blueprint') return learnBlueprint(s, 'Unsealed: ');
+}
+
+// ---------- the premium shelf ----------
+// Protocols rolled for your level, a step above the drop curve: a Tuned (blue) two levels up, or a Custom (yellow) at
+// your level. Never a unique or a set piece. Priced at hours of credits at your level (incomeAt, measured with
+// econ.mjs). No clock: a new level brings new stock, and buying one puts a comparable one in its place.
+export const PREMIUM = {
+  halcyon: 2, hub: 1, // how many each shelf holds
+  kinds: [{ rarity: 'tuned', up: 2, hours: 3.5 }, { rarity: 'custom', up: 0, hours: 4.5 }],
+};
+// Credits an hour at level L, taking contracts (The economy): about 300 to level 10, 500–900 over the climb to 20, and
+// 40 more a level past it (econ.mjs: a level earns about three times the credits from 20 to 30 as from 10 to 20).
+export const incomeAt = (L) => (L <= 10 ? 300 : L <= 20 ? 300 + 60 * (L - 10) : 900 + 40 * (L - 20));
+const kindOf = (it) => PREMIUM.kinds.find((k) => k.rarity === it.rarity) || PREMIUM.kinds[0];
+// Its price at your level, before a hub's tier discount.
+export const premiumPrice = (it, L) => Math.round((kindOf(it).hours * incomeAt(L)) / 10) * 10;
+const SELLERS = ['halcyon', 'glassjaw', 'kestrel', 'lantern', 'nullchoir'];
+// The shelf's dice: fixed by the save's seed, the seller, the level and how many it has sold (never the game's dice, so
+// looking at a shelf never changes anything else).
+const premiumDice = (s, f, L, n) => seeded((((s.seed || 1) * 7919 + (SELLERS.indexOf(f) + 1) * 104729 + L * 131 + n * 977) >>> 0) || 1);
+// k: its kind (PREMIUM.kinds): Halcyon's shelf holds one of each, a hub's one at random; a sold one's is the same again.
+function rollPremium(s, f, L, shelf, k = null) {
+  const r = premiumDice(s, f, L, shelf.n++);
+  const open = [...new Set(SLOT_KINDS.slice(0, slotCount(s)))], taken = shelf.items.map((x) => x.group);
+  const free = open.filter((g) => !taken.includes(g)), pool = free.length ? free : open;
+  k ||= f === 'halcyon' ? PREMIUM.kinds[shelf.items.length % PREMIUM.kinds.length] : PREMIUM.kinds[Math.floor(r() * PREMIUM.kinds.length)];
+  return rollItem(r, { level: L + k.up, rarity: k.rarity, slot: pool[Math.floor(r() * pool.length)], cls: classOf(s), faction: f });
+}
+// A seller's premium protocols, rolled for your level (a new level re-rolls them).
+export function premiumOf(s, f = 'halcyon') {
+  const L = hackerLevel(s), box = (s.premium ||= {});
+  if (box[f]?.level !== L) box[f] = { level: L, n: 0, items: [] };
+  const shelf = box[f], want = f === 'halcyon' ? PREMIUM.halcyon : PREMIUM.hub;
+  while (shelf.items.length < want) shelf.items.push(rollPremium(s, f, L, shelf));
+  return shelf.items;
+}
+// Why you can't buy it now (or null): price is what it costs here.
+export function premiumBlock(s, price) {
+  if ((s.stash || []).length >= STASH_CAP) return `Your stash is full (${STASH_CAP}).`;
+  if (s.server.credits < price) return `It costs ${price} credits. You have ${s.server.credits}.`;
+  return null;
+}
+// Halcyon's: straight into your stash. A hub's comes by transfer (factions.mjs buyFrom); either way a comparable one
+// takes its place on the shelf.
+export function takePremium(s, f, i) {
+  const shelf = s.premium?.[f], it = shelf?.items[i];
+  if (!it) return null;
+  shelf.items.splice(i, 1);
+  shelf.items.splice(i, 0, rollPremium(s, f, shelf.level, shelf, kindOf(it))); // a comparable one in its place
+  return it;
+}
+function buyPremium(s, f, i) {
+  const L = hackerLevel(s), it = premiumOf(s, f)[i];
+  if (!it) return warn(s, 'That’s not on the shelf any more.');
+  const price = premiumPrice(it, L), why = premiumBlock(s, price);
+  if (why) return warn(s, why);
+  s.server.credits -= price;
+  takePremium(s, f, i);
+  emit(s, 'bought', `Bought ${it.name} from Halcyon for ${price} credits.`, { item: 'premium' });
+  return addItem(s, it, 'Halcyon: ');
 }

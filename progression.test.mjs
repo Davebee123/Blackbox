@@ -7,9 +7,8 @@ import { fresh, command, selectEncounter, resolveCycle, part, addItem, loaded, r
 import { CONFIG, CLIMB, levelMinutes, xpToNext, killXp, killsToNext, v41XpToNext, deedScale, DEED, power, LOADOUT, BOSS_LOOT } from './dist/data.mjs';
 import { uniqueItem, rollItem, seeded, RULES, RARITIES, BASES, baseFor, primaries, SERVICES } from './dist/gear.mjs';
 const VERSIONS = [{ code: 12, credits: 120 }, { code: 40, credits: 600 }]; // what a service's v1 and v2 cost (the retired table)
-import { tickPlay } from './dist/progression.mjs';
+import { tickPlay, CRAFT_REFUND } from './dist/progression.mjs';
 import { levelUpSummary } from './dist/levelup-view.mjs';
-import { knowsFilter } from './dist/filters.mjs';
 
 // Exact numbers: no crits, no misses, flat numbers, no level gap.
 Object.assign(CONFIG, { baseCrit: 0, enemyCrit: 0, misses: false, partToughness: 1, enemyRamp: 0 });
@@ -279,10 +278,10 @@ test('v34: server XP, ports, the specialty, eight services and grey protocols fo
   assert.equal(daemonLevel(s, 'cron'), 26, 'Cron Job is a daemon now, at a level from its version (v3: your level)');
   assert.equal(daemonLevel(s, 'snapshot'), 22, 'a Snapshot source you held is the daemon too (as a v1: four under)');
   const paid = VERSIONS[0].credits * 3 + VERSIONS[1].credits * 2 + VERSIONS[0].credits + VERSIONS[0].credits; // Filter Bay v1–v2, RAID v1, Kernel v1–v2, the Scrubber's install; v40 the Uplink v1
-  assert.equal(s.server.credits, credits + paid, 'everything they cost, back');
+  assert.equal(s.server.credits, credits + paid + 3 * CRAFT_REFUND.filter(26), 'everything they cost, back, and (v47) the three filter recipes their blueprints became, as credits');
   assert.equal(s.materials.worm, worm + VERSIONS[0].code, 'the RAID Array\'s Worm code');
-  assert.ok(knowsFilter(s, 'reduction') && knowsFilter(s, 'shield') && knowsFilter(s, 'regen'), 'their blueprints are filter recipes now');
-  assert.deepEqual(s.recipes, [], 'the Uplink\'s blueprint went with it');
+  assert.equal(s.filterRecipes, undefined, 'no recipes: crafting went (v47)');
+  assert.equal(s.recipes, undefined, 'the Uplink\'s blueprint went with it');
   assert.equal(s.loadout.spec, undefined, 'the specialty is gone');
   const grey = s.stash.find((x) => x.id === 'g1');
   assert.equal(grey.rarity, 'stock');

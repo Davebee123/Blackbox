@@ -51,7 +51,6 @@ import { puzzlePanel } from './puzzle-view.mjs';
 import { PROGRAMS, SOCKET, programCost, buildBlock, codebasesOf, costLine as programCostLine } from './sockets.mjs';
 import { materialsOf } from './combat.mjs';
 import { MATERIALS } from './gear.mjs';
-import { stacks } from './salvage.mjs';
 import { TH_ICONS, roomMarksOf, nookIcon, nookLive, questSvg, fileSvg, filesHere, threadHud, threadCard, threadAsks, threadPanel, thUi } from './threads-view.mjs';
 import { sweepBlock } from './view.mjs';
 
@@ -685,17 +684,15 @@ function socketCard(s, room) {
   }
   if (socketOff(s, room)) return { body: note(esc(WORLD.view?.offNote?.(s, room) || 'Offline.'), 'hot'), acts: '' };
   const known = codebasesOf(s).filter((id) => PROGRAMS[id]);
-  const have = Object.fromEntries(stacks(s).map((x) => [x.name, x.n])), m = materialsOf(s), comps = (s.salvage || []).length;
+  const m = materialsOf(s), cash = s.server?.credits || 0;
   const rows = known.map((id) => {
-    const P = PROGRAMS[id], c = programCost(R, id), why = buildBlock(s, R, room, id), total = c.any + (c.need[0]?.n || 0);
-    const named = c.need[0] ? c.need[0].names.reduce((n, nm) => n + (have[nm] || 0), 0) : 0;
+    const P = PROGRAMS[id], c = programCost(R, id), why = buildBlock(s, R, room, id);
     const chip = (ok, label, tip) => `<span class="bc${ok ? ' ok' : ''}" title="${esc(tip)}">${label}</span>`;
-    const chips = [chip(comps >= total, `${glyph('salvage')}${total}`, `${total} components (you hold ${comps})`),
-      ...(c.need[0] ? [chip(named >= c.need[0].n, `${c.need[0].n} named`, `${c.need[0].n} of them this server's own: ${c.need[0].names.join(', ')} (you hold ${named})`)] : []),
+    const chips = [chip(cash >= c.credits, `${glyph('credits')}${c.credits}`, `${c.credits} credits (you hold ${cash})`),
       ...Object.entries(c.code).map(([k, n]) => chip((m[k] || 0) >= n, `${glyph(k)}${n}`, `${n} ${MATERIALS[k].name} (you hold ${m[k] || 0})`)),
       ...(c.exploit ? [chip((m.exploit || 0) >= c.exploit, `${glyph('exploit')}${c.exploit}`, `${c.exploit} Exploit (you hold ${m.exploit || 0})`)] : [])].join('');
     const blocked = why && !/costs/.test(why);
-    return `<li class="bp-prog${why ? ' short' : ''}"><span class="bp-ic">${ic(id)}</span><span class="bp-txt"><b>${esc(P.name)}</b><small>${esc(P.rule)}</small><span class="bp-cost">${chips}</span></span><button type="button" class="btn small${why ? '' : ' primary'}" data-command="build ${id}" data-pay="program:${id}" data-pay-title="${esc(P.name)}" ${why ? `disabled title="${esc(blocked ? why : `Short: ${programCostLine(c)}`)}"` : `title="Build: inject it now. Choose which components pay."`}>Build</button></li>`;
+    return `<li class="bp-prog${why ? ' short' : ''}"><span class="bp-ic">${ic(id)}</span><span class="bp-txt"><b>${esc(P.name)}</b><small>${esc(P.rule)}</small><span class="bp-cost">${chips}</span></span><button type="button" class="btn small${why ? '' : ' primary'}" data-command="build ${id}" ${why ? `disabled title="${esc(blocked ? why : `Short: ${programCostLine(c)}`)}"` : `title="Build: inject it now."`}>Build</button></li>`;
   }).join('');
   return { body: `<ul class="bp-list">${rows || '<li class="quiet">You know no codebase yet.</li>'}</ul>`, acts: '' };
 }

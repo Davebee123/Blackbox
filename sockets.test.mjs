@@ -39,7 +39,7 @@ function playtest({ seed = 7, size = 'medium', kind = 'Mailhub', hunter = null }
   const sock = sockets(s)[0];
   s.rooms.cleared[sock.id] = clock;
   s.codebases = [...SK.PROGRAM_IDS];
-  SK.gainComponents(s, 200, SK.serverComponents(s.rooms));
+  s.server.credits = 5000;
   Object.assign(materialsOf(s), { cipher: 500, worm: 500, kernel: 500, exploit: 20 });
   return { s, sock };
 }
@@ -80,7 +80,7 @@ test('socket rooms: small 1, medium 2, large 3, leaves at the ends of branches, 
   assert.match(ls, /^[A-Z]+\d+  Socket( \d)?  \[socket\]/);
 });
 
-test('codebases: you start with the Harvester; the Build list shows only what you know; a known one banks as 4 components', () => {
+test('codebases: you start with the Harvester; the Build list shows only what you know; one you know isn\'t learnt twice', () => {
   const s = fresh();
   assert.deepEqual(SK.codebasesOf(s), ['harvester']);
   const { s: p, sock } = playtest();
@@ -92,53 +92,44 @@ test('codebases: you start with the Harvester; the Build list shows only what yo
   const html = roomsMarkup(p);
   assert.match(html, /data-rooms="build"|data-command="build harvester"/, 'a Build card in the socket\'s pop-up');
   assert.doesNotMatch(html, /Cron Spawner/);
-  const before = p.salvage.length;
   assert.equal(SK.learnCodebase(p, 'snare', ''), null, 'already known');
-  assert.equal(p.salvage.length, before + SK.SOCKET.known, '4 components instead');
+  assert.deepEqual(p.codebases, ['harvester', 'snare']);
   assert.equal(SK.learnCodebase(p, 'cron', ''), 'cron');
   assert.ok(SK.knowsCodebase(p, 'cron'));
-  // Every one known: a codebase you don't know is 4 components.
-  p.codebases = [...SK.PROGRAM_IDS];
-  const n = p.salvage.length;
-  assert.equal(SK.learnCodebase(p, null, ''), null);
-  assert.equal(p.salvage.length, n + 4);
 });
 
-test('codebases come from vaults (one in three, your first always), a Resident\'s first fall (its author\'s list), Mapped and the hubs\' shelves', () => {
-  // Vaults: fixed by the seed, about a third; your first server's always.
-  let n = 0;
-  for (let seed = 1; seed <= 300; seed++) if (SK.vaultCodebase({ seed })) n++;
-  assert.ok(n > 70 && n < 130, `about a third of vaults (${n}/300)`);
-  assert.equal(SK.vaultCodebase({ seed: 1, starter: true }), true);
-  assert.equal(SK.vaultCodebase({ seed: 1, rogue: { kind: 'nest' } }), false);
-  // Banked from a vault: one you don't know.
+test('codebases are bought (Halcyon\'s store, the hubs\' shelves): a vault, a Resident\'s first fall and Mapped pay credits and a protocol instead', async () => {
+  const { NET } = await import('./dist/netrooms.mjs');
+  // A vault: spare credits where a codebase was (your first server's always).
   const { s, loc } = traced();
   loc.starter = true;
   play(s, 'connect ' + loc.id);
   const R = s.rooms, v = R.graph.vaults[0];
   place(s, v);
   FP.act(s, 'force');
-  assert.ok(s.run.pack.some((f) => f.kind === 'codebase'), 'the codebase file goes in the pack');
+  assert.ok(!s.run.pack.some((f) => f.kind === 'codebase'), 'no codebase file');
+  assert.ok(s.run.pack.some((f) => f.name === 'tokens.dat' && f.kind === 'credits'), 'spare credits');
   play(s, 'jack out');
-  assert.equal(SK.codebasesOf(s).length, 2, 'banked: a second codebase');
-  // The Resident's first fall: one from its author's list.
+  assert.deepEqual(SK.codebasesOf(s), ['harvester'], 'still only the Harvester');
+  // The Resident's first fall: a protocol, Tuned or better.
   clock += 60000; loc.lockUntil = 0;
   play(s, 'connect ' + loc.id);
   place(s, s.rooms.graph.core);
   FP.go(s, s.rooms.graph.vaults[0]); FP.go(s, s.rooms.graph.core);
   if (s.rooms.screen?.kind === 'virus') FP.act(s, 'engage');
+  const stash = s.stash.length;
   win(s);
   assert.ok(loc.takenOver, 'taken over');
-  const list = SK.AUTHOR_CODEBASES[s.rooms.author];
-  assert.ok(SK.codebasesOf(s).slice(2).some((id) => list.includes(id)) || list.every((id) => SK.knowsCodebase(s, id)), 'from its author\'s list');
-  // Mapped: one you don't know.
-  const had = SK.codebasesOf(s).length;
+  assert.ok(s.stash.slice(stash).some((it) => ['tuned', 'custom'].includes(it.rarity)), 'its Resident carried a protocol');
+  // Mapped: credits.
   for (const x of FP.roomList(s)) s.rooms.cleared[x.id] ||= clock;
   delete s.rooms.cleared[s.rooms.graph.entry];
   FP.jackOut(s); clock += 60000; loc.lockUntil = 0;
-  play(s, 'connect ' + loc.id);
+  const c0 = s.server.credits;
+  const evs = play(s, 'connect ' + loc.id);
   assert.ok(s.rooms.mapped, 'Mapped');
-  assert.equal(SK.codebasesOf(s).length, had + 1, 'Mapped teaches one');
+  assert.ok(evs.some((e) => /^Mapped: \+\d+ credits/.test(e.message || '')) && s.server.credits >= c0 + NET.mapped(loc.level), 'Mapped pays credits');
+  assert.deepEqual(SK.codebasesOf(s), ['harvester'], 'and teaches nothing');
   // Halcyon's store and the faction hubs sell theirs by tier.
   assert.deepEqual(SK.CODEBASE_SHOPS.halcyon.map(([id]) => id), ['harvester', 'defrag', 'mill']);
   assert.ok(FACTION_GOODS['cb-snare'] && FACTION_GOODS['cb-post'] && FACTION_GOODS['cb-tunnel'] && FACTION_GOODS['cb-siphon'] && FACTION_GOODS['cb-cron']);
@@ -275,20 +266,18 @@ test('the Listening Post: on its server, the unique you name rolls twice as ofte
   assert.equal(listenBoost(s), 1, 'not off the server');
 });
 
-test('building: one of each a server, paid from what you carry (the server\'s own components for a medium one), instant, uninstall half back; the terminal does it all', () => {
+test('building: one of each a server, paid in credits, code and (a medium one) an Exploit, instant, uninstall half back; the terminal does it all', () => {
   const { s, sock } = playtest();
   const R = s.rooms;
   const c = SK.programCost(R, 'snare');
-  assert.equal(c.any + c.need[0].n, Math.round(40 * 1.25), 'a medium program: 40 components on floor 1, a quarter more on floor 2');
-  assert.equal(c.need[0].n, Math.round(10 * 1.25), '10 of them named');
-  assert.ok(c.need[0].names.every((nm) => SK.serverComponents(R).includes(nm)), 'named: the server\'s own families\'');
+  assert.equal(c.credits, Math.round(280 * 1.25), 'a medium program: 280 credits on floor 1, a quarter more on floor 2');
   assert.equal(c.exploit, 1);
-  assert.equal(SK.programCost(R, 'harvester').any, 25, 'light: 20 components, ×1.25 on floor 2');
-  const n0 = s.salvage.length, ex0 = materialsOf(s).exploit;
+  assert.equal(SK.programCost(R, 'harvester').credits, 175, 'light: 140 credits, ×1.25 on floor 2');
+  const n0 = s.server.credits, ex0 = materialsOf(s).exploit;
   place(s, sock.id);
   const ev = FP.roomsCommand(s, 'build snare');
   assert.ok(ev.some((e) => e.type === 'program'), 'built from the terminal');
-  assert.equal(s.salvage.length, n0 - 50);
+  assert.equal(s.server.credits, n0 - 350);
   assert.equal(materialsOf(s).exploit, ex0 - 1);
   const other = sockets(s)[1];
   s.rooms.cleared[other.id] = clock;
@@ -297,12 +286,12 @@ test('building: one of each a server, paid from what you carry (the server\'s ow
   place(s, sock.id);
   FP.roomsCommand(s, 'uninstall');
   assert.equal(FP.programIn(s, sock.id), null);
-  assert.equal(s.salvage.length, n0 - 50 + 25, 'half the components back');
+  assert.equal(s.server.credits, n0 - 350 + 175, 'half the credits back');
   // Short of it: it says what it costs. Unknown: it says so.
   const { s: poor, sock: k } = playtest({ seed: 9 });
-  poor.salvage = []; poor.codebases = ['harvester'];
+  poor.server.credits = 0; poor.codebases = ['harvester'];
   place(poor, k.id);
-  assert.match(FP.roomsCommand(poor, 'build harvester').map((e) => e.message).join(' '), /It costs 25 components, 19 \w+ code/);
+  assert.match(FP.roomsCommand(poor, 'build harvester').map((e) => e.message).join(' '), /It costs 175 credits, 19 \w+ code/);
   assert.match(FP.roomsCommand(poor, 'build tunnel').map((e) => e.message).join(' '), /need the Tunnel codebase/);
   // A guarded socket can't take one.
   const { s: g } = playtest({ seed: 10 });
@@ -328,7 +317,7 @@ test('a held server: its Core is its core socket; Root 4 adds a socket room; a G
   loc.takenOver = true; loc.root = { level: 1, cleared: 0 };
   assert.equal(FP.isSocket(s, core), true, 'held: the core socket');
   assert.equal(FP.socketOpen(s, core), true);
-  s.codebases = ['harvester']; SK.gainComponents(s, 60, SK.serverComponents(R)); Object.assign(materialsOf(s), { cipher: 99, worm: 99, kernel: 99 });
+  s.codebases = ['harvester']; s.server.credits = 500; Object.assign(materialsOf(s), { cipher: 99, worm: 99, kernel: 99 });
   place(s, core.id);
   FP.act(s, 'build', 'harvester');
   assert.equal(FP.programIn(s, core.id), 'harvester', 'a program in the Core (core programs come in R4)');
@@ -385,14 +374,14 @@ test('the save (v40): outposts, buildings, plans, services, architecture and the
   s.version = 39;
   const t = restore(JSON.parse(JSON.stringify(s)));
   assert.equal(t.version, SAVE_VERSION);
-  assert.equal(SAVE_VERSION, 46); // v41: floors (R3) came after, v42 the long climb, v43 threads, v44 whole-number stats, v45 sets, v46 no default subclass
+  assert.equal(SAVE_VERSION, 47); // v41: floors (R3) came after, v42 the long climb, v43 threads, v44 whole-number stats, v45 sets, v46 no default subclass, v47 crafting goes
   const l2 = t.locations.find((x) => x.id === loc.id);
   for (const k of ['buildings', 'build', 'outpost']) assert.equal(l2[k], undefined, `${k} gone`);
   assert.ok(l2.takenOver, 'still yours');
   // Refunds: 3 buildings and the build (credits 150+350+200+250), their code, their salvage as components; services
   // (Edge Router v1+v2, Scheduler v1, the Route Logger installing); the store.
   const want = 150 + 350 + 200 + 250 + 40 + (120 + 600) + 120 + 120;
-  assert.equal(t.server.credits, credits + want, 'credits back');
+  assert.equal(t.server.credits, credits + want + 128, 'credits back, and (v47) the Relay plan as a relay\'s price (progression.mjs CRAFT_REFUND.plan at level 1)');
   const code = SK.retireOutposts ? (t.materials.cipher - m.cipher) + (t.materials.worm - m.worm) + (t.materials.kernel - m.kernel) : 0;
   assert.ok(code >= 10 + 18 + 12 + 12 + 7 + 12 + 40 + 12 + 12 + 4, `code back (${code})`);
   assert.equal(t.materials.exploit - m.exploit, 1, 'the Exploit a v2 took');
@@ -401,7 +390,7 @@ test('the save (v40): outposts, buildings, plans, services, architecture and the
   assert.ok(t.salvage.some((p) => p.name === 'Tracker Core'), 'a guard\'s component stays itself');
   // Plans and buildings became codebases (and a program still to come keeps its codebase).
   for (const id of ['harvester', 'siphon', 'snare', 'mill', 'post', 'bulkhead', 'honeytoken', 'relay']) assert.ok(t.codebases.includes(id), `${id} codebase`);
-  assert.deepEqual(t.plans, ['relay'], 'the Relay plan still crafts relays');
+  assert.equal(t.plans, undefined, 'the Relay plan went with crafting (v47): credits');
   assert.deepEqual(t.services, {}); assert.equal(t.install, null); assert.equal(t.architecture, null);
   assert.equal(t.fleet, null, 'the swarm at the outpost is gone');
   assert.equal(t.consortium.servers[0].held, undefined, 'the member\'s outpost is just their server');

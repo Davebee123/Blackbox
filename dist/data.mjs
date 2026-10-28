@@ -307,7 +307,7 @@ export const DAEMONS = {
 export const SPARE_EXPLOIT = { home: 0.0025, guard: 0.01 };
 export const DAEMON_DROP = { you: 0.35, intercept: 0.5, wall: 0.15, capture: 1, pity: 0.05, earlier: 0.25 };
 // A unit of code at a level: what a point of invasion bounty pays (invasion.mjs), what a scrapped daemon gives,
-// and what the wall's prices count in (firewall.mjs: its tiers from +3, harden.sh, a crafted filter).
+// and what the wall's prices count in (firewall.mjs: its tiers from +3 and harden.sh).
 export const codeUnit = (level) => 4 + Math.floor(Math.max(1, level) / 3);
 export const daemonBand = (level) => DAEMON_BANDS.reduce((d, [lo], i) => (level >= lo ? i + 1 : d), 1); // an invasion's band: the deepest DAEMON_BANDS entry its level has reached
 export const bandDaemons = (band) => Object.keys(DAEMONS).filter((id) => DAEMONS[id].band === band);
@@ -1336,7 +1336,7 @@ export const killsToNext = (level) => along(CLIMB.kills, Math.max(1, level));
 export const xpToNext = (level) => Math.round(killXp(level) * killsToNext(level));
 export const V41_KILLS = (level) => 5 + 1.2 * Math.max(1, level);
 export const v41XpToNext = (level) => Math.round(killXp(level) * V41_KILLS(level)); // the curve before save v42 (its migration)
-// One-off deeds (a first clear, a Mapped server, a takeover, a Root level, a decode, a puzzle board, a first craft) grow
+// One-off deeds (a first clear, a Mapped server, a takeover, a Root level, a decode, a puzzle board) grow
 // with the climb, so exploring still pays its part: their kill shares (ROOMS.xp, XP, ...) are the old curve's times
 // DEED.share of how much longer the level is than before v42 (climbStretch): about 6.5 at level 4, 4.3 at 9, 7.1 at 19,
 // 7.9 at 29, 7.1 at 49. A full share kept deeds' part of a level, but the long climb finishes every floor where the old

@@ -1,6 +1,5 @@
 // Markup builders. Pure functions of state; they never change it.
 import { masteryLine } from './mastery.mjs';
-import { SALVAGE_COSTS, stacks as salvageStacks, canAfford, costLabel as salvageLabel, payProblem, total as salvageTotal, slug } from './salvage.mjs';
 import { glyph } from './glyphs.mjs';
 import { TELL_ICON } from './recap.mjs';
 import { glyphMarkup } from './protocol-glyphs.mjs';
@@ -15,11 +14,11 @@ import { WARES, WARE_IDS, CONDITIONS, HUB_CONDITION, eventOf, quote, priceOf, tr
 let order = null;
 export const setOrder = (o) => { order = o; };
 import { PIECES, PARTS, pieceState, isFactionPiece, pendingClaims, appraisedOf, cleanStacks } from './faction-gear.mjs';
-import { FACTIONS as FX, FACTION_IDS, rep, repTier, REP_TIERS, hubsOf, hubOf, shopOf, hostile, OWNED, captured, donationOf, hubFound, hubTraceOf } from './factions.mjs';
+import { FACTIONS as FX, FACTION_IDS, rep, repTier, REP_TIERS, hubsOf, hubOf, shopOf, hubPremium, hostile, OWNED, captured, donationOf, hubFound, hubTraceOf } from './factions.mjs';
 import { GLYPHS } from './glyphs.mjs';
 import { SKILL_TEXT } from './lore.mjs';
 import { ruleHtml } from './ruletext.mjs';
-import { postsOf, siteLabel, sizeOf as serverSize, PROGRAMS, programsOn, codebasesOf, shopCodebases, codebaseName, programCost } from './sockets.mjs';
+import { postsOf, siteLabel, sizeOf as serverSize, PROGRAMS, programsOn, shopCodebases } from './sockets.mjs';
 import { ABILITIES, CONFIG, FAMILIES, MUTATIONS, TICKER, QUIRKS, DAEMONS, STRAINS, GUARDS, BOSSES, HOT_RUN, STRAIN_NATIVE, DAEMON_BANDS, bandDaemons, daemonWhen, daemonBand, FLOORS, bandOf, floorOfLayer } from './data.mjs';
 import { GENES, CATS, AXES } from './genes.mjs';
 import { AUTHORS } from './authors.mjs';
@@ -40,12 +39,12 @@ import { online, inSprawl, whereText, simOn, friends, profileOf } from './presen
 import { consortiumOf, isGround, sizeOf, tiersOf, nextTier as nextConTier, serversOf, memberServers, memberLevel, CONSORTIUM, rebooting, consortiumWall, alertsOf, tiersOf as conTiers } from './consortium.mjs';
 import { FACTIONS, MAIL, TIERS, openContracts, doneContracts, offers as mailOffers, findJob, heldCount, boardOpen, indemnity, tierIndex, standing, tierOf, nextTier, retainer, unread, title as contractTitle, progress as contractProgress, rewardLine, ready as contractReady, nextPayIn } from './mail.mjs';
 import { commsOf } from './comms.mjs';
-import { LINE, GOODS, storeOf, lineName, lineAbout, goodsAbout, priceNow } from './store.mjs';
-import { shownHidden, flagged as hiddenFlagged, items as kitOf, HIDDEN, leadOf, knowsRelay, relayCost, canBuildRelay, connectedTo, viaName } from './hidden.mjs';
+import { LINE, GOODS, storeOf, lineName, lineAbout, goodsAbout, priceNow, premiumOf, premiumPrice, premiumBlock } from './store.mjs';
+import { shownHidden, flagged as hiddenFlagged, items as kitOf, HIDDEN, leadOf, connectedTo, viaName } from './hidden.mjs';
 import { floorsOf, graphOf, locAt, hiddenAt, exitOpen, floorOfSlot, floorName, FLOOR, canDescend, waypointOf } from './floors.mjs';
 import { ROOT, ROOT_PERKS, rootOf, rootProgress, procOf, freeOfMemory } from './root.mjs';
 import { FIREWALL, fwOf, fwAt, ratingAt, effLevel, wallBonus, fragLevels, defragging, hardenLeft, upgradeCost, canPay, defragMs, defragCost, perksAt, TIER_PERKS, BASE_GAP, baseOf, tierOf as fwTierOf, fwLevel, hardenCost } from './firewall.mjs';
-import { filtersOf, equipped as filtersOn, slotsOf as filterSlots, filterLine, FILTER_STATS, CRAFTABLE, filterCost, FILTER_CAP, baseName as filterBase, filterRecipes } from './filters.mjs';
+import { filtersOf, equipped as filtersOn, slotsOf as filterSlots, filterLine, FILTER_STATS, FILTER_CAP, baseName as filterBase } from './filters.mjs';
 import { situationOf } from './situations.mjs';
 import { SETS, setOf, setCard, activeSets, piecesOf, greenOf, sourceText, seesRare, tierLine } from './sets.mjs';
 import { tellTip, gearLive, cycleGear, gearOnParts, partTip, partCue, partRead, partLinks, lockOf, wardOf, GEAR_ICON, DAMPED, answerLine } from './fightread.mjs';
@@ -55,11 +54,11 @@ import { unlocked as routinesOpen, LOCKED as ROUTINES_LOCKED } from './routines.
 import { bodyTags } from './families.mjs';
 import { heatOf } from './parts.mjs';
 import { wallRating, wallBands, ratioOf, outcome, chipRate, grindRate, fighting, degradedLeft, fmtLeft, bountyOf, tellOf, quirkLine, labelOf, verdictOf, wallLevelOf, strength, streakOf, streakMult, STREAK, SCOUT, daemonChance, SCOUTED, KINDS as INV_KINDS, scoutedLine, sendTop, countsAt, wallSafety } from './invasion.mjs';
-import { RULES, LOOT, SLOTS, BASES, STATS, GROUPS, RARITIES, RARITY_ORDER, ZERO_DAYS, STASH_CAP, PROTOCOL_SLOTS, PROTOCOL_STATS, SERVICES, MATERIALS, statLine, itemLabel, fmtStat, sideStats, BLUEPRINTS, PROTOCOL_NAMES, recipeStat, SLOT_KINDS, groupOf, codeOf, uniqueItem, seeded, IMPLICITS } from './gear.mjs';
+import { RULES, LOOT, SLOTS, BASES, STATS, GROUPS, RARITIES, RARITY_ORDER, ZERO_DAYS, STASH_CAP, PROTOCOL_SLOTS, SERVICES, MATERIALS, statLine, itemLabel, fmtStat, sideStats, SLOT_KINDS, groupOf, codeOf, uniqueItem, seeded, IMPLICITS } from './gear.mjs';
 import { raidIntents, raidMarks, raidOf, attackTarget } from './raid.mjs';
 import { EMBLEMS } from './class-emblems.mjs';
 import { ARCHETYPES, CANTRIPS, EDGE, SYNC, STATUSES, LOADOUT, TREE, SERVER, SKILLS, xpToNext, unlockLevel, power, SUBS, SUBCLASS, skillOrder, barSlots, isRunSkill } from './data.mjs';
-import { XP_KINDS, xpFor, cooldownOf, subOf, subPicked, kitTalent, specRule, skillBase, knowsPart, codexKey, previewDamage, ignoresArmor, armorTakes, parse, blocked, attackAmount, drawingFire, momentumStacks, momentumBonus, topUpCost, UNIQUES, bossChance, listenBoost, effectLine, implicitText, paceOf, keyMap, barKeys, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverClass, daemonSlots, procOpen, slottedDaemons, daemonNext, talentPoints, loaded, loadedOn, slotCount, maxSignal, compileCost, materialsOf, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, picksOf, ranksOf, freeSlot, rigOf, stashItem, knows, knownRecipes, pointsSpent, tierState, rowState, spentAbove, knownSkills, equippedSkills, cycleLength, familyInfo, defender, healCap, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, part, daemonLevel, packed, limitOf, asleep, frozenNow } from './combat.mjs';
+import { XP_KINDS, xpFor, cooldownOf, subOf, subPicked, kitTalent, specRule, skillBase, knowsPart, codexKey, previewDamage, ignoresArmor, armorTakes, parse, blocked, attackAmount, drawingFire, momentumStacks, momentumBonus, topUpCost, UNIQUES, bossChance, listenBoost, effectLine, implicitText, paceOf, keyMap, barKeys, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverClass, daemonSlots, procOpen, slottedDaemons, daemonNext, talentPoints, loaded, loadedOn, slotCount, maxSignal, materialsOf, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, picksOf, ranksOf, freeSlot, rigOf, stashItem, pointsSpent, tierState, rowState, spentAbove, knownSkills, equippedSkills, cycleLength, familyInfo, defender, healCap, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, part, daemonLevel, packed, limitOf, asleep, frozenNow } from './combat.mjs';
 import { sigOf, named, lairOf, intelOf, knowsStrain, knowsEvent, knowsRich, nameOf, NETWORK, nativeChance, homeName, isNative, whoLabel, homeOf, netSeedOf, knownNets, NATIVE_POOL, awayChance } from './network.mjs';
 import { guardSetChance, lairChance, bossOdds, presetsOf, presetKeys, followOf, spikeName, said, mutated, capstonePoints, capPickOf, capState } from './combat.mjs';
 import { cantripsOf } from './data.mjs';
@@ -920,7 +919,8 @@ export function nativeHome(s, it) {
 // wireframe, which app.js spins), in its rarity colour, over its name, rarity, kind, level, stats one a line and effect.
 export function itemTipMarkup(s, ref) {
   const f = ref?.startsWith('f:') ? filtersOf(s)[Number(ref.slice(2))] : null;
-  const it = f || stashItem(s, ref);
+  const shelf = ref?.startsWith('p:') ? shelfOf(s, ref) : null; // a premium protocol on a shelf: p:<seller>:<i>
+  const it = f || shelf?.it || stashItem(s, ref);
   if (!it) return '';
   const kind = f ? 'filter' : groupOf(it), r = it.rarity;
   const stats = f ? `<span>${esc(filterLine(f))}</span>` : invStats(it);
@@ -928,7 +928,18 @@ export function itemTipMarkup(s, ref) {
   const flavour = !f && (it.unique ? UNIQUES[it.unique]?.flavour : BASES[it.base]?.flavour);
   const vs = f || loadedOn(s, it.id) === classOf(s) ? '' : swapCompare(s, it);
   const home = !f && it.unique && isNative(it.unique) ? nativeHome(s, it) : null;
-  return `<div class="ptip-card r-${r}">${f ? `<pre class="ptip-art" data-shape="${kind}" aria-hidden="true"></pre>` : `<span class="ptip-glyph">${glyphMarkup(it, 'tip')}</span>`}<div class="ptip-body"><b class="iname r-${r}">${esc(f ? f.name : itemLabel(it))}</b><small>${esc(RARITIES[r]?.name || '')} ${esc(f ? 'filter' : SLOTS[kind]?.name || '')} · Lv ${it.level}</small>${where}${home ? `<span class="tag native" title="About ten times as likely on its home network as anywhere else">Native · ${esc(home)}</span>` : ''}<div class="ptip-stats">${stats}</div>${!f ? implicitRow(it) : ''}${!f && (it.zeroDay || it.unique || it.rule) ? itemEffect(it) : ''}${!f && it.unique && setOf(it.unique) ? setLines(s, it.unique) : ''}${flavour ? `<em>${esc(flavour)}</em>` : ''}${vs}</div></div>`;
+  return `<div class="ptip-card r-${r}">${f ? `<pre class="ptip-art" data-shape="${kind}" aria-hidden="true"></pre>` : `<span class="ptip-glyph">${glyphMarkup(it, 'tip')}</span>`}<div class="ptip-body"><b class="iname r-${r}">${esc(f ? f.name : itemLabel(it))}</b><small>${esc(RARITIES[r]?.name || '')} ${esc(f ? 'filter' : SLOTS[kind]?.name || '')} · Lv ${it.level}</small>${where}${home ? `<span class="tag native" title="About ten times as likely on its home network as anywhere else">Native · ${esc(home)}</span>` : ''}<div class="ptip-stats">${stats}</div>${!f ? implicitRow(it) : ''}${!f && (it.zeroDay || it.unique || it.rule) ? itemEffect(it) : ''}${!f && it.unique && setOf(it.unique) ? setLines(s, it.unique) : ''}${flavour ? `<em>${esc(flavour)}</em>` : ''}${vs}${shelf ? `<small class="ptip-ans">${esc(premiumBlock(s, shelf.price) || `${shelf.price} credits. You have ${s.server.credits}.`)}</small>` : ''}</div></div>`;
+}
+// A premium protocol by its tooltip ref (p:<seller>:<i>): { it, price }, at that seller's price.
+const shelfOf = (s, ref) => { const [, f, i] = ref.split(':'); return f === 'halcyon' ? ((it) => it && { it, price: premiumPrice(it, hackerLevel(s)) })(premiumOf(s)[+i]) : hubPremium(s, f)[+i] || null; };
+// A premium shelf's tile: the glyph, the name in its rarity colour, its kind and level, its three biggest stats (▲ ▼
+// against what its slot runs now), the price and Buy. Its card (itemTipMarkup) has the rest.
+function premiumTile(s, f, { it, i, price }, cmd, kicker = '') {
+  const out = loadOut(s, it), vs = loadSlot(s, it) >= 0, why = premiumBlock(s, price);
+  const top = Object.entries(it.stats).filter(([k]) => STATS[k]).sort(([a, x], [b, y]) => Math.abs(y) / STATS[b].base - Math.abs(x) / STATS[a].base).slice(0, 3);
+  const stats = top.map(([k, v]) => { const d = v - (out?.stats?.[k] || 0); return `<span class="silk-st${v < 0 ? ' neg' : ''}">${glyph(k)}<b>${v < 0 ? '−' : '+'}${fmtStat(k, Math.abs(v))}</b><span class="sr-only"> ${esc(STATS[k].name)}</span>${vs && Math.abs(d) > 1e-9 ? `<i class="${d > 0 ? 'up' : 'down'}">${d > 0 ? '▲' : '▼'}</i>` : ''}</span>`; }).join('');
+  return `<li class="ptile prem ${rarityClass(it)}" data-ptip="p:${f}:${i}">${kicker ? `<span class="agency">${esc(kicker)}</span>` : ''}<span class="prem-glyph">${glyphMarkup(it, 'sm')}</span><b class="iname ${rarityClass(it)}">${esc(itemLabel(it))}</b><small>${esc(RARITIES[it.rarity]?.name || '')} ${esc(SLOTS[groupOf(it)]?.name || '')} · Lv ${it.level}</small><span class="silk-sts">${stats}</span>
+      <div class="ptile-acts"><span class="price">${price} credits</span><button type="button" class="btn small ${why ? '' : 'primary'}" data-command="${cmd}" ${why ? `disabled title="${esc(why)}"` : ''}>Buy</button></div></li>`;
 }
 // The name of an item's effect (its Zero-day's, the unique's own, its rule's), or ''.
 const fxName = (x) => x && (x.zeroDay ? ZERO_DAYS[x.zeroDay].name : x.unique ? x.name : x.rule ? RULES[x.rule]?.name || '' : '');
@@ -1003,9 +1014,8 @@ function statSheet(s, side) {
   return `<div class="sheet">${groups}</div>`;
 }
 
-// focus: the stat you want on what you compile (null: any), chosen on the page.
-function protocolsParts(s, focus = null) {
-  const srv = s.server, lvl = hackerLevel(s), busy = active(s) || !!s.run;
+function protocolsParts(s) {
+  const lvl = hackerLevel(s), busy = active(s) || !!s.run;
   const cls = ARCHETYPES[classOf(s)].name;
   const stash = s.stash || [], pick = silkPick(s);
   // The stash's order: the biggest gain against its slot first (Best), or the highest level, or the rarest.
@@ -1019,17 +1029,7 @@ function protocolsParts(s, focus = null) {
   const sorts = `<div class="inv-filters pg-sort" role="group" aria-label="Sort">${[['up', '▲ Best'], ['level', 'Lv'], ['rarity', 'Rarity']].map(([k, l]) => `<button type="button" data-stash-sort="${k}" aria-pressed="${(stashUi.sort || 'up') === k}">${esc(l)}</button>`).join('')}</div>`;
   const counts = Object.fromEntries(SLOT_KINDS.filter((k, i, a) => a.indexOf(k) === i).map((k) => [k, spare.filter((it) => groupOf(it) === k).length]));
   const filters = `<div class="inv-filters" role="group" aria-label="Show">${[['all', 'All', spare.length], ...Object.entries(counts).map(([k, c]) => [k, SLOTS[k]?.name || k, c])].map(([k, l, c]) => `<button type="button" data-stash-filter="${k}" aria-pressed="${stashUi.filter === k}" ${c || k === 'all' ? '' : 'disabled'}>${esc(l)} <span>${c}</span></button>`).join('')}</div>`;
-  const c = compileCost(s), zc = compileCost(s, true);
-  const ccost = SALVAGE_COSTS.protocol(c.salvage), zcost = SALVAGE_COSTS.zeroday(zc.salvage);
-  const can = (x) => !busy && srv.credits >= x.credits && canAfford(s, x === zc ? zcost : ccost);
-  const optLabel = (k) => STATS[k].name + (STATS[k].group === 'survival' ? ' (runs)' : '');
-  const opt = (k) => `<option value="${k}" ${focus === k ? 'selected' : ''}>${esc(optLabel(k))}</option>`;
-  const mine = knownRecipes(s);
-  if (focus && !mine.includes(focus)) focus = null;
-  const group = (g, title) => { const ks = mine.filter((k) => STATS[k].group === g); return ks.length ? `<optgroup label="${esc(title)}">${ks.map(opt).join('')}</optgroup>` : ''; };
-  const picker = `<label class="fpick"><span>Recipe</span><select data-focus-select>${mine.length > 1 ? '<option value="">Any of mine</option>' : ''}${group('offense', 'Offense')}${group('survival', 'Defense')}${group('utility', 'Utility')}</select></label>`;
-  const recipes = (s.recipes || []).filter((z) => ZERO_DAYS[z]).map((z) => `<li><span><b class="iname r-zeroday">${esc(ZERO_DAYS[z].name)}</b><br><small>${esc(ZERO_DAYS[z].effect)} · ${zc.credits}c + ${esc(salvageLabel(zcost))}</small></span><button type="button" class="btn primary small" data-command="compile ${z}" data-pay="zeroday:${zc.salvage}" data-pay-title="${esc(ZERO_DAYS[z].name)}" ${can(zc) ? '' : 'disabled'}>Compile</button></li>`).join('');
-  return { tiles, filters, sorts, shown, spare, stash, cls, lvl, busy, pick, counts, c, zc, ccost, zcost, can, picker, mine, recipes, focus };
+  return { tiles, filters, sorts, shown, spare, stash, cls, lvl, busy, pick, counts };
 }
 
 // ---------- the protocol board (Loadout → Protocols) ----------
@@ -1161,96 +1161,16 @@ export function protocolStashCard(s) {
 export const protocolGearMarkup = (s) => protocolSlotsCard(s) + protocolStashCard(s) + protocolStatsCard(s);
 export const protocolsMarkup = (s) => `<div class="page-grid gear-page"><div style="display:grid;gap:12px;align-content:start">${protocolGearMarkup(s)}</div></div>`;
 
-// ---------- crafting: everything you build at home, in one place ----------
-// What a recipe takes, as have/need chips: red when you're short. cost: { credits, code: { m: n }, salvage }.
+// ---------- costs ----------
+// What something takes, as have/need chips: red when you're short. cost: { credits, code: { m: n }, salvage }.
 export function needChips(s, cost) {
   const chip = (icon, have, need, name) => `<span class="need ${have >= need ? 'ok' : 'short'}" title="${esc(name)}: you have ${have}, it takes ${need}">${glyph(icon)}<b>${have}</b>/${need}</span>`;
-  const mats = materialsOf(s), st = Object.fromEntries(salvageStacks(s).map((x) => [x.name, x.n]));
-  const out = [];
+  const mats = materialsOf(s), out = [];
   if (cost.credits) out.push(chip('credits', s.server.credits, cost.credits, 'Credits'));
   for (const [m, n] of Object.entries(cost.code || {})) if (n) out.push(chip(m, mats[m] || 0, n, MATERIALS[m].name));
-
-  if (cost.salvage) {
-    if (salvageTotal(cost.salvage)) out.push(chip('salvage', s.salvage.length, salvageTotal(cost.salvage), 'Salvage (any)'));
-    for (const x of cost.salvage.need) out.push(chip('crate', x.names.reduce((n, k) => n + (st[k] || 0), 0), x.n, x.label));
-  }
+  if (cost.salvage?.any) out.push(chip('salvage', (s.salvage || []).length, cost.salvage.any, 'Components'));
   return `<span class="needs">${out.join('')}</span>`;
 }
-// What you have to build with: a grid of counts (Craft and Server pages).
-export function matGrid(s) {
-  const mats = materialsOf(s);
-  const tile = (icon, n, name) => `<li class="mat ${n ? '' : 'zero'}" title="${esc(name)}">${glyph(icon)}<b>${n}</b><small>${esc(name)}</small></li>`;
-  return `<ul class="mat-grid">${tile('credits', s.server.credits, 'Credits')}${tile('salvage', s.salvage.length, 'Components')}${Object.keys(MATERIALS).map((m) => tile(m, mats[m] || 0, MATERIALS[m].short)).join('')}</ul>`;
-}
-// A craft section: collapsible, its purpose in one line under the title.
-// Which ones you folded stay folded (s.settings.craftShut).
-const craftSection = (s, key, title, purpose, body, open = !(s.settings?.craftShut || []).includes(key)) => `<details class="card craft-sec" data-sec="${key}" ${open ? 'open' : ''}><summary><h2 title="${esc(purpose)}">${title}</h2></summary>${body}</details>`;
-
-// The Craft page: categories down the side, the recipes in the one you pick, and the one you pick
-// on the right: what comes out, what it takes (have/need), and the button. ui: { cat, pick }.
-export function craftCats(s, ui = {}) {
-  const p = protocolsParts(s), srv = s.server, busy = p.busy, L = hackerLevel(s);
-  // The slot a protocol compiles into: picked on the recipe (ui.slot), Implant from level 15.
-  const slots = Object.keys(SLOTS).filter((k) => k !== 'implant' || L >= 15), slot = slots.includes(ui.slot) ? ui.slot : 'exploit';
-  const zds = (s.recipes || []).filter((z) => ZERO_DAYS[z]);
-  const fc = filterCost(L), fOk = !busy && srv.credits >= fc.credits && Object.entries(fc.code).every(([m, n]) => (materialsOf(s)[m] || 0) >= n) && canAfford(s, SALVAGE_COSTS.filter()) && filtersOf(s).length < FILTER_CAP;
-  const cats = [];
-  // Protocols: one recipe per stat you know, or any of them.
-  cats.push({ id: 'protocols', name: 'Protocols', icon: 'protocol', items: p.mine.length ? [...(p.mine.length > 1 ? [null] : []), ...p.mine].map((k) => ({
-    id: k || 'any', name: k ? PROTOCOL_NAMES[k] : 'Any of your recipes', sub: k ? STATS[k].name : `${p.mine.length} recipes`, icon: k ? 'protocol' : 'item', ready: p.can(p.c),
-    picker: `<h3 class="craft-sub">Slot</h3><div class="cd-slots" role="group" aria-label="Slot">${slots.map((x) => `<button type="button" class="cd-slot${x === slot ? ' on' : ''}" data-craft-slot="${x}" aria-pressed="${x === slot}" title="${esc(SLOTS[x].about)}">${esc(SLOTS[x].name)}</button>`).join('')}</div>`,
-    out: { title: `${k ? PROTOCOL_NAMES[k] : 'A'} ${SLOTS[slot].name}`, rarity: 'tuned', level: L, tags: [['item', SLOTS[slot].name, SLOTS[slot].about]], stats: [k ? [k, '', STATS[k].name + (STATS[k].group === 'survival' ? ' (runs)' : ''), STATS[k].about] : ['item', '?', 'one of yours', 'Built around one of your recipes, at random']] },
-    cost: { credits: p.c.credits, salvage: p.ccost }, cmd: `compile${k ? ' ' + k : ''} ${slot}`, pay: `protocol:${p.c.salvage}` })) : [], empty: 'No recipes yet. Blueprints teach them.' });
-  if (zds.length) cats.push({ id: 'zeroday', name: 'Zero-days', icon: 'source', items: zds.map((z) => ({ id: z, name: ZERO_DAYS[z].name, sub: 'source', icon: 'source', ready: p.can(p.zc), out: { title: ZERO_DAYS[z].name, rarity: 'zeroday', level: L, lines: [ZERO_DAYS[z].effect] }, cost: { credits: p.zc.credits, salvage: p.zcost }, cmd: `compile ${z}`, pay: `zeroday:${p.zc.salvage}` })) });
-  // Filters: always craftable; a stat to build around, or any.
-  const knownF = filterRecipes(s);
-  // Only the recipes you've found: nothing shows until a blueprint teaches it.
-  if (knownF.length) cats.push({ id: 'filters', name: 'Filters', icon: 'firewall', items: [...(knownF.length > 1 ? [null] : []), ...CRAFTABLE.filter((k) => knownF.includes(k))].map((k) => ({
-    id: k || 'any', name: k ? FILTER_STATS[k].label.replace(/^of /, '') : 'Any of your recipes', sub: k ? `+${FILTER_STATS[k].range.join('–')}${FILTER_STATS[k].name}` : `${knownF.length} recipes`, icon: 'firewall',
-    locked: k ? !knownF.includes(k) : !knownF.length, lock: 'Its blueprint drops from viruses', lockTag: 'blueprint', ready: fOk && (k ? knownF.includes(k) : knownF.length > 0),
-    out: { title: k ? `${FILTER_STATS[k].kind === 'prefix' ? FILTER_STATS[k].label + ' ' : ''}${filterBase(L)}${FILTER_STATS[k].kind === 'suffix' ? ' ' + FILTER_STATS[k].label : ''}` : `A ${filterBase(L)}`, rarity: 'tuned', level: L, stats: [['firewall', `+${Math.max(1, Math.round((1 + L / 10) * 1.1))}`, 'firewall lv', 'Levels on your firewall while it sits in a slot'], k ? filterStatRow(k) : ['item', '?', 'one of yours', 'Built around one of your recipes, at random']],
-      foot: `<span class="tag dim" title="Filters you hold">${glyph('item')}${filtersOf(s).length}/${FILTER_CAP}</span>${filterSlots(s) ? slotPips('firewall', filtersOn(s).length, filterSlots(s), 'Filter slots') : `<span class="tag hot" title="No filter slots yet. Firewall tiers +1, +3 and +5 each add one.">${glyph('firewall')}0 slots</span>`}` },
-    cost: { credits: fc.credits, code: fc.code, salvage: SALVAGE_COSTS.filter() }, cmd: `filter craft ${k || 'any'}`, pay: 'filter' })) });
-  if (knowsRelay(s)) cats.push({ id: 'relays', name: 'Relays', icon: 'relay', items: [{ id: 'relay', name: 'Relay', sub: `${kitOf(s).relay || 0} in your kit`, icon: 'relay', ready: !busy && canBuildRelay(s),
-    out: { title: 'Relay', tags: [['relay', `${kitOf(s).relay || 0} in your kit`, 'Relays you have, ready to install']], lines: ['Install it on a server you’ve taken over. It pings the unknown servers next to it and flags a contract’s signal.'] }, cost: relayCost(s), cmd: 'relay craft', pay: 'relay' }] });
-  return cats;
-}
-// What comes out: rarity and level as chips, stats as icon rows, then any rule text and a footer.
-const filterStatRow = (k) => { const x = FILTER_STATS[k], [a, b] = x.range; return x.family ? [{ ransomware: 'cipher', ghostroot: 'kernel' }[k] || k, `+${a}–${b}`, x.name.replace(/^ lv /, 'lv '), `More levels against ${x.name.replace(/^ lv vs /, '')} invaders only`] : [{ frag: 'scrap', defrag: 'repair', grind: 'damage', chip: 'shield', tarpit: 'tarpit', sting: 'spike' }[k] || 'item', `${Math.max(1, Math.round(a))}–${Math.round(b)}${/^%/.test(x.name) ? '%' : ''}`, x.name.replace(/^% /, '').trim(), '']; }; // whole numbers, and % only on a percentage
-function outBody(o) {
-  const tags = [o.rarity && `<span class="tag cd-rar r-${o.rarity}">${esc(RARITIES[o.rarity]?.name || o.rarity)}</span>`, o.level && `<span class="tag dim" title="Item level">Lv ${o.level}</span>`, ...(o.tags || []).map(([ic, txt, tip]) => `<span class="tag dim" title="${esc(tip || '')}">${glyph(ic)}${esc(txt)}</span>`)].filter(Boolean).join('');
-  const stats = (o.stats || []).map(([ic, v, name, tip]) => `<li title="${esc(tip || '')}">${glyph(ic)}${v ? `<b>${esc(v)}</b>` : ''}<span>${esc(name)}</span></li>`).join('');
-  return `<div class="cd-meta">${tags ? `<div class="cd-tags">${tags}</div>` : ''}${stats ? `<ul class="cd-stats">${stats}</ul>` : ''}${(o.lines || []).length ? `<ul class="cd-lines">${o.lines.map((l) => `<li>${esc(l)}</li>`).join('')}</ul>` : ''}${o.foot ? `<div class="cd-foot">${o.foot}</div>` : ''}</div>`;
-}
-// What a recipe takes, a row each: the icon, the name, what you have / what it takes (red when short).
-function costRows(s, cost, cls = '') {
-  const mats = materialsOf(s), st = Object.fromEntries(salvageStacks(s).map((x) => [x.name, x.n])), rows = [];
-  const row = (icon, name, have, need) => rows.push(`<li class="${have >= need ? 'ok' : 'short'}">${glyph(icon)}<span>${esc(name)}</span><b>${have}<small>/${need}</small></b></li>`);
-  if (cost.credits) row('credits', 'Credits', s.server.credits, cost.credits);
-  for (const [m, n] of Object.entries(cost.code || {})) if (n) row(m, MATERIALS[m].name, mats[m] || 0, n);
-
-  if (cost.salvage) {
-    if (salvageTotal(cost.salvage)) row('salvage', 'Salvage (any)', s.salvage.length, salvageTotal(cost.salvage));
-    for (const x of cost.salvage.need) row('crate', x.label, x.names.reduce((n, k) => n + (st[k] || 0), 0), x.n);
-  }
-  if (cost.level > 1) row('server', 'Level (your highest class)', serverLevel(s), cost.level);
-  return `<ul class="cd-cost${cls ? ' ' + cls : ''}">${rows.join('')}</ul>`;
-}
-export function craftMarkup(s, ui = {}) {
-  const cats = craftCats(s, ui), busy = active(s) || !!s.run;
-  const why = s.run ? 'Craft at home. Jack out first.' : active(s) ? 'Finish the fight first' : '';
-  const cat = cats.find((c) => c.id === ui.cat) || cats[0];
-  const item = cat.items.find((x) => x.id === ui.pick) || cat.items.find((x) => x.ready) || cat.items.find((x) => !x.locked) || cat.items[0];
-  const nav = `<nav class="craft-cats" aria-label="What to craft">${cats.map((c) => { const n = c.items.filter((x) => x.ready).length; return `<button type="button" class="craft-cat${c === cat ? ' on' : ''}" data-craft-cat="${c.id}" aria-pressed="${c === cat}">${glyph(c.icon)}<span>${esc(c.name)}</span>${n ? `<b class="cc-n" title="${n} you can craft now">${n}</b>` : ''}</button>`; }).join('')}</nav>`;
-  const list = `<ul class="craft-items">${cat.items.length ? cat.items.map((x) => `<li><button type="button" class="craft-item${x === item ? ' on' : ''}${x.locked ? ' locked' : ''}${x.ready ? ' ready' : ''}" data-craft-pick="${esc(x.id)}">${glyph(x.icon)}<span class="ci-txt"><b>${esc(x.name)}</b><small>${esc(x.sub || '')}</small></span>${x.locked ? `<span class="tag dim plan-lock" title="${esc(x.lock || '')}">${glyph('blueprint')}${x.lockTag || 'plan'}</span>` : x.done ? '<span class="tag you">owned</span>' : x.ready ? '<i class="ci-dot" title="You can craft it"></i>' : ''}</button></li>`).join('') : `<li class="craft-empty">${esc(cat.empty || 'Nothing here yet.')}</li>`}</ul>`;
-  const detail = !item ? `<section class="craft-detail card"><p class="quiet">${esc(cat.empty || '')}</p></section>`
-    : `<section class="craft-detail card"><h2>${esc(cat.name)}</h2><div class="cd-out${item.out.rarity ? ' r-' + item.out.rarity : ''}">${glyph(item.icon, 'badge')}<h1 class="cd-name${item.out.rarity ? ' r-' + item.out.rarity : ''}">${esc(item.out.title)}</h1>${outBody(item.out)}</div>
-      ${item.locked ? `<p class="cd-lock"><span class="tag dim plan-lock">${glyph('blueprint')}${item.lockTag || 'plan'}</span> ${esc(item.lock || '')}</p>` : item.done ? '<p class="cd-lock"><span class="tag you">owned</span></p>' : `${item.picker || ''}<h3 class="craft-sub">Takes</h3>${costRows(s, item.cost)}${item.extra || ''}
-      <button type="button" class="btn primary cd-go" data-command="${esc(item.cmd)}"${item.pay ? ` data-pay="${esc(item.pay)}" data-pay-title="${esc(item.out.title)}"` : ''} ${item.ready ? '' : 'disabled'} ${why ? `title="${esc(why)}"` : item.ready ? '' : 'title="Not enough of something above"'}>Craft</button>`}</section>`;
-  return `<div class="craft-ui${busy ? ' busy' : ''}">${nav}${list}${detail}</div>`;
-}
-export const vaultMarkup = protocolsMarkup;
-export const gearMarkup = protocolsMarkup;
 
 // ---------- the server (services) ----------
 export const fmtTime = (ms) => (ms >= 3600000 ? `${Math.floor(Math.ceil(ms / 60000) / 60)}h ${Math.ceil(ms / 60000) % 60}m` : ms >= 60000 ? `${Math.ceil(ms / 60000)} min` : `${Math.max(0, Math.ceil(ms / 1000))}s`);
@@ -1397,7 +1317,7 @@ function rewardChips(s, c) {
     r.xp && chip('xp', xpFor(s, hackerLevel(s), r.xp), 'XP'),
     r.standing && chip('f-halcyon', `${r.standing > 0 ? '+' : ''}${r.standing}`, 'Halcyon standing', r.standing < 0 ? 'neg' : ''),
     c.offBooks && chip('f-glassjaw', '+5', 'GLASSJAW rep'), r.rep && c.faction && chip('f-' + c.faction, `+${r.rep}`, `${FACTIONS[c.faction].short} rep`),
-    r.relay && chip('relay', `×${r.relay}`, 'A relay'), r.blueprint && chip('blueprint', '+1', 'A blueprint'), (r.drop || r.daemon) && chip('item', '+1', 'A protocol, Tuned or better'), r.item && chip('item', '+1', 'A protocol')].filter(Boolean).join('');
+    r.relay && chip('relay', `×${r.relay}`, 'A relay'), (r.drop || r.daemon) && chip('item', '+1', 'A protocol, Tuned or better'), r.item && chip('item', '+1', 'A protocol')].filter(Boolean).join('');
 }
 // How to trace an unknown server, shown rather than explained (docs/style-guide.md section 0): the way that is
 // tracing it now on top, with pips for the kills or clears still needed; then every other way as an icon, a label and
@@ -1792,7 +1712,7 @@ export function storeMarkup(s, now = Date.now()) {
     const g = GOODS[slot.id], x = { ...slot, price: priceNow(s, slot.id, slot.price, L) };
     const trend = x.drift > 1.08 ? '<i class="up" title="Above its usual price">▲</i>' : x.drift < 0.92 ? '<i class="down" title="Below its usual price">▼</i>' : '';
     return `<li class="ptile stash"><span class="agency">${esc(x.agency)}</span><b class="iname">${glyph({ signal: 'booster', crate: 'protocol' }[x.id] || x.id, 'badge')}${esc(g.name)}</b><small>${esc(goodsAbout(g, L))}</small>
-      <div class="ptile-acts"><span class="price">${x.price} credits ${trend}</span><small class="qty">×${x.qty} · ${fmtTime(x.until - now)}</small><button type="button" class="btn ${credits >= x.price ? 'primary' : ''} small" data-command="buy ${x.key}" ${credits >= x.price && x.qty ? '' : 'disabled'}>Buy</button></div></li>`;
+      <div class="ptile-acts"><span class="price">${x.price} credits ${trend}</span><small class="qty">×${x.qty}</small><button type="button" class="btn ${credits >= x.price ? 'primary' : ''} small" data-command="buy ${x.key}" ${credits >= x.price && x.qty ? '' : 'disabled'}>Buy</button></div></li>`;
   }).join('');
   const kit = [['relay', 'Relays'], ['cracker', 'Key crackers'], ['injector', 'Trace injectors']].map(([k, n]) => stat(n, have[k] || 0)).join('');
   return `<div class="page-grid store-page"><div class="stack"><section class="card"><h2>Halcyon Mutual</h2>
@@ -1800,7 +1720,7 @@ export function storeMarkup(s, now = Date.now()) {
       <ul class="ptiles">${line}</ul></section>
     <section class="card"><h2>Codebases</h2><ul class="plan-shelf">${shopCodebases(s, 'halcyon', L).map((x) => `<li class="${x.known ? 'known' : ''}"><span class="iname" title="${esc(PROGRAMS[x.id].rule)}">${glyph('module')}${esc(PROGRAMS[x.id].name)}</span><span class="tag dim">${PROGRAMS[x.id].weight}</span>${x.known ? '<span class="tag dim">known</span>' : tierAt < x.tier ? `<span class="tag dim">${esc(TIERS[x.tier].name)}</span>` : `<span class="price">${x.price}</span><button type="button" class="btn small ${credits >= x.price ? 'primary' : ''}" data-command="buy codebase-${x.id}" ${credits >= x.price ? '' : 'disabled'}>Buy</button>`}</li>`).join('')}</ul></section>
     <section class="card"><h2>Your kit</h2><div class="stats">${kit}</div></section></div>
-    <section class="card"><h2>Agency stock</h2><ul class="ptiles stash">${shelf || '<li class="quiet">The shelves are empty.</li>'}</ul></section></div>`;
+    <section class="card"><h2>Agency stock</h2><ul class="ptiles stash">${premiumOf(s).map((it, i) => premiumTile(s, 'halcyon', { it, i, price: premiumPrice(it, L) }, `buy premium-${i}`, 'Premium')).join('')}${shelf}</ul></section></div>`;
 }
 
 // ---------- loadout: the classes, then its tabs ----------
@@ -2433,7 +2353,7 @@ function mapSide(s, sel, node) {
         ${s.degraded ? srvLine('firewall', 'Firewall', '<span class="tag warn">down</span>', '', 'Your wall is down while the server is degraded') : wallRow(s, 'firewall', 'Firewall', wallBands(s))}
         ${degradedMarkup(s)}${awayLine(s)}
         ${!MEMORY.on ? '' : srvLine('memory', 'Memory', '', `${Math.max(0, memoryCap(s) - liveCount(s))}<small>/${memoryCap(s)} free</small>`, `${liveCount(s)} servers on your network`)}
-        ${srvLine('salvage', 'Components', '', `${s.salvage.length}`, 'What broken parts drop. Programs and crafting take them.')}
+        ${srvLine('salvage', 'Components', '', `${s.salvage.length}`, 'Components: what broken parts leave behind. Sell them at a hub\'s market.')}
 
         ${s.invasion ? `<div class="invader-line ${s.invasion.state}"><b>${esc(s.invasion.name)}</b>${levelTag(s, s.invasion.level)}<span>${esc(invaderShort(s))}</span></div>${s.invasion.state !== 'travel' ? `<div class="row acts">${jackInButton(invaderStatus(s))}</div>` : ''}` : ''}
         ${homeEvents(s)}
@@ -2542,7 +2462,7 @@ function mapSide(s, sel, node) {
     ${l.faction ? ownerLine(l.faction) : ''}
     ${dropLine(s, l)}
     ${programsLine(s, l)}
-    ${l.takenOver && !l.relay && !kitOf(s).relay ? `<p class="op-hint">${boardOpen(s) ? knowsRelay(s) ? 'You can install a relay here once you have one. Craft one on the Craft page, or buy one in Halcyon\'s store.' : 'You can install a relay here once you have one. Buy one in Halcyon\'s store, or earn one from a contract. Some contracts pay the Relay plan, so you can craft your own.' : 'You can install a relay here once you have one. Halcyon Mutual sells them once you start working for them.'}</p>` : ''}
+    ${l.takenOver && !l.relay && !kitOf(s).relay ? `<p class="op-hint">${boardOpen(s) ? 'You can install a relay here once you have one. Buy one in Halcyon\'s store, or earn one from a contract.' : 'You can install a relay here once you have one. Halcyon Mutual sells them once you start working for them.'}</p>` : ''}
     <div class="row">${l.takenOver && !l.relay ? `<button type="button" class="btn" data-command="relay ${esc(l.id)}" ${kitOf(s).relay ? '' : 'disabled title="You have no relay yet."'}>Install relay${kitOf(s).relay ? ` (${kitOf(s).relay})` : ''}</button>` : ''}${!l.takenOver && !l.member && !l.passwordKnown && kitOf(s).cracker ? `<button type="button" class="btn" data-command="use cracker ${esc(l.id)}">Key cracker (${kitOf(s).cracker})</button>` : ''}${st === 'here' ? btn('net', 'Back to the run', true) : `<button type="button" class="btn ${st !== 'done' ? 'primary' : ''}" data-command="connect ${esc(l.id)}" ${busy ? 'disabled title="Finish what you are doing first"' : relockLeft(l) ? 'disabled title="Still tracing your last connection"' : ''}>${relockLeft(l) ? `Connect · ${relockLeft(l)}s` : 'Connect'}</button>${st !== 'done' ? `<button type="button" class="btn hot-btn" data-command="connect ${esc(l.id)} loud" ${busy || relockLeft(l) ? 'disabled' : ''} title="${esc(LOUD_TIP)}"><span class="loud-ico" aria-hidden="true"></span>Go loud</button>` : ''}`}${!l.member && !l.trunk && s.locations.includes(l) && MEMORY.on && !freeOfMemory(l) ? `<button type="button" class="btn small mem-x" data-command="detach ${esc(l.id)}" data-confirm="Click again to detach" ${busy ? 'disabled' : ''} title="Free a memory slot. Frozen until you attach it again.">${glyph('memory')}Detach · ${memoryCost(l)}</button>` : ''}${st !== 'here' ? deathMark(l.deaths) : ''}</div></section>`;
 }
 
@@ -2652,8 +2572,8 @@ export function spoilsOf(events) {
       // A daemon from an invasion: its name and level, and its line (or that it scrapped for code, a row of its own).
       if (!e.scrap) add(`${DAEMONS[e.daemon].name} lv ${e.level}`, '', 'daemon', { sub: daemonText(e.daemon, e.level), text: `Daemon: ${DAEMONS[e.daemon].name} lv ${e.level}` });
     } else if (e.type === 'drop') {
-      const what = e.item ? itemLabel(e.item) : e.recipe || /blueprint/i.test(e.message || '') ? 'Blueprint' : 'Drop';
-      const kind = e.item ? 'item' : what === 'Daemon' ? 'daemon' : what === 'Blueprint' ? 'blueprint' : 'item';
+      const what = e.item ? itemLabel(e.item) : 'Drop';
+      const kind = e.item ? 'item' : what === 'Daemon' ? 'daemon' : 'item';
       add(what, '', kind, { pack: !!e.pack, rarity: e.item?.rarity, sub: e.item ? statLine(e.item.stats) : '' });
     } else if (e.type === 'lead') {
       // Say where the trace leads: the server that sent this family, an unknown server, or a hub.
@@ -2725,42 +2645,10 @@ export function gainMarkup(kicker, name, rows, go = true, lead = '') {
     ${go ? `<button type="button" class="sp-go" data-gain-go style="--i:${rows.length + 1}">Continue <kbd>Enter</kbd></button>` : ''}</div>`;
 }
 
-// Components as stacks: the ones a recipe asks for by name marked.
-export function salvageStacksMarkup(s) {
-  const st = salvageStacks(s);
-  if (!st.length) return '';
-  return `<h3 class="sv-head">${glyph('salvage')}Components</h3><ul class="sv-rows">${st.map((x) => `<li class="${x.component ? 'comp' : ''}" title="${esc(x.component ? `${x.name}: pays any cost, and some recipes ask for it by name.` : `${x.name}: pays any cost.`)}"><span class="sv-name">${esc(x.name)}</span>${x.component ? '<span class="tag sv-tag">named</span>' : '<span></span>'}<b>${x.n}</b></li>`).join('')}</ul>`;
-}
-
-// The payment picker: which salvage pays for this. key: a SALVAGE_COSTS key with an optional
-// ':n' (the generic amount). pay: { name: n } chosen so far.
-// A pay picker's cost, by its key: a recipe's (protocol:8, zeroday:6, filter, relay) or a program's in the socket you
-// stand in (program:harvester, sockets.mjs).
-export function payCost(s, key) {
-  const [id, n] = key.split(':');
-  if (id === 'program') { const c = programCost(s.rooms, n); return { any: c.any, need: c.need }; }
-  return SALVAGE_COSTS[id](Number(n) || 0);
-}
-export function payMarkup(s, key, pay, title) {
-  const cost = payCost(s, key);
-  const st = salvageStacks(s);
-  const used = Object.values(pay).reduce((a, b) => a + b, 0), need = salvageTotal(cost);
-  const problem = payProblem(s, cost, pay);
-  const reqs = cost.need.map((x) => { const got = x.names.reduce((a, nm) => a + (pay[nm] || 0), 0); return `<span class="pay-req ${got >= x.n ? 'ok' : ''}">${esc(x.label)} <b>${Math.min(got, x.n)}/${x.n}</b></span>`; });
-  const wanted = new Set(cost.need.flatMap((x) => x.names));
-  return `<div class="pay-card" role="dialog" aria-label="Pay components for ${esc(title)}">
-    <header><span class="sp-kicker">Pay components</span><strong>${esc(title)}</strong><small>${esc(salvageLabel(cost))}</small></header>
-    <div class="pay-reqs">${reqs.join('')}<span class="pay-req ${used === need ? 'ok' : ''}">Total <b>${used}/${need}</b></span></div>
-    <ul class="pay-stacks">${st.map((x) => { const k = pay[x.name] || 0; return `<li class="${wanted.has(x.name) ? 'wanted' : x.component ? 'comp' : ''}${k ? ' on' : ''}"><span class="pay-name">${esc(x.name)}${wanted.has(x.name) ? ' <em>needed</em>' : ''}</span><span class="pay-step"><button type="button" data-pay-step="${esc(x.name)}" data-d="-1" ${k ? '' : 'disabled'} aria-label="One less ${esc(x.name)}">−</button><b>${k}</b><button type="button" data-pay-step="${esc(x.name)}" data-d="1" ${k < x.n && used < need ? '' : 'disabled'} aria-label="One more ${esc(x.name)}">+</button></span><small>of ${x.n}</small></li>`; }).join('')}</ul>
-    <footer><span class="pay-why ${problem ? '' : 'ok'}">${esc(problem || 'Ready.')}</span><button type="button" class="btn" data-pay-cancel>Cancel</button><button type="button" class="btn primary" data-pay-go ${problem ? 'disabled' : ''}>Build</button></footer></div>`;
-}
-export const paySlugs = (pay) => Object.entries(pay).filter(([, n]) => n).map(([k, n]) => `${slug(k)}:${n}`).join(',');
-
-// "New" counts on the Loadout, Craft and Daemons tabs: what arrived since you last opened each.
+// "New" counts on the Loadout and Daemons tabs: what arrived since you last opened each.
 // s.seen keeps what you've seen; a save from before badges starts with everything seen.
 const NEW_TABS = {
   loadout: (s) => (s.stash || []).map((it) => it.id),
-  craft: (s) => [...(s.recipes || [])],
   daemons: (s) => Object.entries(s.daemonLv || {}).map(([id, v]) => `${id}:${v}`),
   skills: (s) => knownSkills(s, classOf(s)).map((id) => `${classOf(s)}:${id}`), // a level that unlocked a skill: shown on Loadout
 };
@@ -2924,7 +2812,8 @@ function shopMarkup(s, f, now) {
     return `<li class="ptile stash${g.locked ? ' locked' : ''}"><b class="iname">${glyph(g.id === 'bootleg' ? 'firewall' : GLYPH_OF_GOOD[g.id] || 'crate', 'badge')}${esc(g.name)}</b><small>${esc(g.about)}</small>
       <div class="ptile-acts"><span class="price">${g.price} credits</span><small class="qty">×${g.left}</small>${g.locked ? `<span class="tag dim">${esc(F.tiers[g.need])}</span>` : `<button type="button" class="btn small ${can ? 'primary' : ''}" data-command="buy ${f} ${g.id}" ${can ? '' : 'disabled'}>Buy</button>`}</div></li>`;
   }).join('');
-  return `<ul class="ptiles stash">${tiles || '<li class="quiet">Nothing on the shelf.</li>'}</ul>`;
+  const prem = hubPremium(s, f).map((p) => premiumTile(s, f, p, `buy ${f} premium-${p.i}`)).join('');
+  return `<ul class="ptiles stash">${prem}${tiles}</ul>`;
 }
 function workMarkup(s, f) {
   const offers = mailOffers(s).filter((o) => (o.faction || 'halcyon') === f);
@@ -3028,7 +2917,7 @@ export function ticketNumbers(s, f, w, side, n) {
   return { max, n: q.n, total: `${q.credits >= 0 ? '+' : '−'}${Math.abs(q.credits)}`, after: q.after, each: q.first === q.last ? `${q.first}` : `${q.first} → ${q.last}`, vs: `${q.vs >= 0 ? '+' : '−'}${Math.abs(q.vs)}`, vsUp: q.vs > 0, cmd: `market ${side} ${f} ${w} ${q.n}`, minutes: q.minutes };
 }
 function orderTicket(s, f, w) {
-  const side = order.side || 'sell', k = ticketNumbers(s, f, w, side, order.n || 1);
+  const side = WARES[w].sellOnly ? 'sell' : order.side || 'sell', k = ticketNumbers(s, f, w, side, order.n || 1);
   const tab = (x, label) => `<button type="button" class="mk-side${side === x ? ' on' : ''}" data-mk-side="${x}" aria-pressed="${side === x}">${label}</button>`;
   const body = !k.max
     ? `<p class="mk-none">${side === 'sell' ? 'None to sell' : 'Not enough credits'}</p>`
@@ -3040,7 +2929,7 @@ function orderTicket(s, f, w) {
         <span><small>Credits after</small><b data-mk-out="after">${k.after}</b></span>
       </div>
       <button type="button" class="btn primary mk-go" data-command="${k.cmd}" data-mk-out="cmd" title="Arrives in ${k.minutes} min">${side === 'sell' ? 'Sell' : 'Buy'} <span data-mk-out="n2">${k.n}</span></button>`;
-  return `<div class="mk-ticket"><div class="mk-sides">${tab('sell', 'Sell')}${tab('buy', 'Buy')}</div>${body}</div>`;
+  return `<div class="mk-ticket"><div class="mk-sides">${tab('sell', 'Sell')}${WARES[w].sellOnly ? '' : tab('buy', 'Buy')}</div>${body}</div>`;
 }
 function marketMarkup(s, f, now) {
   if (hostile(s, f)) return '<p class="quiet">Shut to you.</p>';
@@ -3061,7 +2950,7 @@ function marketMarkup(s, f, now) {
       <span class="mk-name" title="${esc(WARES[w].name)}">${glyph(GLYPH_OF_GOOD[w])}<b>${esc(WARES[w].name.replace(/ code$/, ''))}</b></span>
       <span class="mk-num mk-held${n ? '' : ' zero'}">${n}</span>
       <span class="mk-sellp"><b class="mk-price">${q.sell}</b><span class="mk-d ${dir}" title="Against the ${Math.round(avg)}-credit average across hubs${why ? ` · ${esc(why)}` : ''}">${dir === 'up' ? '▲' : dir === 'down' ? '▼' : '='}${Math.abs(d)}%</span></span>
-      <span class="mk-buyp">${q.buy}</span>
+      <span class="mk-buyp"${WARES[w].sellOnly ? ` title="Hubs buy ${esc(WARES[w].name.toLowerCase())} but don't sell them."` : ''}>${WARES[w].sellOnly ? '—' : q.buy}</span>
     </button>${open ? orderTicket(s, f, w) : ''}`;
   }).join('');
   const head = `<div class="mk-tr mk-th"><span>Ware</span><span class="mk-num">Held</span><span class="mk-sell-h">Sell here</span><span class="mk-buy-h">Buy here</span></div>`;

@@ -13,9 +13,7 @@
 // Relays: an item you install on a server you've taken over. It pings that server's ? neighbours (their family shows);
 // the one carrying a contract's signal is flagged.
 import { FAMILIES, CONFIG, xpScale } from './data.mjs';
-import { emit, warn, rand, addLocation, materialsOf, hackerLevel } from './combat.mjs';
-import { MATERIALS } from './gear.mjs';
-import { SALVAGE_COSTS, settle, spend, canAfford } from './salvage.mjs';
+import { emit, warn, rand, addLocation, hackerLevel } from './combat.mjs';
 import { isLive } from './memory.mjs';
 import { quietAtRoot } from './root.mjs';
 import { targetedHidden, contractLocated } from './mail.mjs';
@@ -158,28 +156,3 @@ export function pickOrigin(s) {
 }
 export const levelOfHidden = (n) => Math.min(50, n.level);
 
-// Crafting a relay (the Craft page, `relay craft`): once a contract has paid you the Relay plan (s.plans). Credits, Kernel
-// code and components. (It was outpost.mjs's; outposts are gone, relays stay until the Relay program comes, R4.)
-export const RELAY_CRAFT = { credits: 60, code: 6, material: 'kernel' };
-export const knowsRelay = (s) => (s.plans || []).includes('relay');
-export const relayCost = () => ({ credits: RELAY_CRAFT.credits, code: { [RELAY_CRAFT.material]: RELAY_CRAFT.code }, salvage: SALVAGE_COSTS.relay() });
-export const canBuildRelay = (s) => { const c = relayCost(s); return knowsRelay(s) && s.server.credits >= c.credits && (materialsOf(s)[RELAY_CRAFT.material] || 0) >= RELAY_CRAFT.code && canAfford(s, c.salvage); };
-export function craftRelay(s, payText = null) {
-  if (!knowsRelay(s)) return warn(s, 'You don\'t have the Relay plan. Some Halcyon contracts pay it.');
-  const c = relayCost(s), k = RELAY_CRAFT.material, have = materialsOf(s);
-  if (s.server.credits < c.credits || (have[k] || 0) < RELAY_CRAFT.code) return warn(s, `A relay costs ${c.credits} credits, ${RELAY_CRAFT.code} ${MATERIALS[k].name} and ${c.salvage.any} components.`);
-  const pay = settle(s, c.salvage, payText);
-  if (typeof pay === 'string') return warn(s, `Relay: ${pay.replace(/salvage/g, 'components')}`);
-  spend(s, pay);
-  s.server.credits -= c.credits;
-  have[k] -= RELAY_CRAFT.code;
-  items(s).relay += 1;
-  emit(s, 'harvester', `Crafted a relay (${items(s).relay} in your kit). Install it from a server you've taken over.`, { relay: true });
-}
-// The Relay plan (a Halcyon contract's bonus): learn it once; again, 2 components.
-export function learnRelayPlan(s, why = '') {
-  s.plans ||= [];
-  if (s.plans.includes('relay')) { s.salvage ||= []; for (let i = 0; i < 2; i++) s.salvage.push({ name: ['Pulse Kernel', 'Signal Key'][i], virus: 'plan', seed: 0 }); return emit(s, 'info', `${why}the Relay plan, already known: +2 components.`); }
-  s.plans.push('relay');
-  emit(s, 'drop', `${why}the Relay plan. You can craft relays on the Craft page.`, { plan: 'relay' });
-}

@@ -346,10 +346,9 @@ function detail(s, M, key, ui) {
   if (k === 'slot') {
     const off = M.held.map((f, j) => [f, j]).filter(([, j]) => !M.on.includes(j)), n = slotsOf(s), nextSlot = TIER_PERKS.find((p) => p.perk === 'slot' && p.tier > tierOf(s))?.tier;
     return head('firewall', `Filter · slot ${+i + 1}`, 'Empty slot') + facts([tag(`${M.on.length}/${n} in use`), tag(`${M.held.length}/${FILTER_CAP} held`, 'dim')])
-      + para(off.length ? `You hold ${off.length} ${off.length === 1 ? 'filter' : 'filters'} that could go here.` : 'You hold none. About one vault in seven has a filter.flt, or craft one.')
+      + para(off.length ? `You hold ${off.length} ${off.length === 1 ? 'filter' : 'filters'} that could go here.` : 'You hold none. Vaults, events and hub shops have them.')
       + (off.length ? `<ul class="hsv-list">${off.map(([f, j]) => `<li><b class="iname r-${f.rarity}">${esc(f.name)}</b><span>${statChips(f).map((c) => `${glyph(c.icon)}${esc(c.label)}`).join(' ')}</span>${act('Put in', `filter equip ${j + 1}`, { actId: 'filter-in', why: M.busy })}</li>`).join('')}</ul>` : '')
-      + (nextSlot ? para(`One more slot at tier +${nextSlot}.`, 'quiet') : '')
-      + acts([`<button type="button" class="btn" data-go="craft:filters">Craft a filter</button>`]);
+      + (nextSlot ? para(`One more slot at tier +${nextSlot}.`, 'quiet') : '');
   }
   if (k === 'daemon') {
     const id = slottedDaemons(s)[+i];
@@ -383,7 +382,7 @@ function detail(s, M, key, ui) {
   if (k === 'code') {
     const mats = materialsOf(s);
     return head('materials', 'Your server', 'Code') + `<ul class="hsv-stats">${['cipher', 'worm', 'kernel', 'exploit'].map((c) => `<li>${glyph(c)}<b>${fmt(mats[c] || 0)}</b><span>${esc(MATERIALS[c]?.name || c)}</span></li>`).join('')}<li>${glyph('salvage')}<b>${fmt(s.salvage?.length || 0)}</b><span>Components</span></li></ul>`
-      + para("Invasions pay their family's code. The wall is where it goes: tiers from +3 and a harden.sh you write. Programs and crafting take components.", 'quiet');
+      + para("Invasions pay their family's code. The wall is where it goes: tiers from +3 and a harden.sh you write. Programs take it too. Hubs buy components.", 'quiet');
   }
   if (k === 'codebases') {
     const known = codebasesOf(s).filter((id) => PROGRAMS[id]), where = runsOn(s);
