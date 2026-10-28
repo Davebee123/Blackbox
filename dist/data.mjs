@@ -919,6 +919,7 @@ export const TELL = {
   grow: 0.25, // Self-Update: every part grows a quarter of its current Integrity (cheap late in a fight)
   seal: 1, // a seal that lands gives every part this many ◆ back for each ◆ its own part still wears (never past a part's max)
   sigintCharge: true, // SIGINT cuts a charge on its cycle as well as a cast in its window: one key, two clocks (docs/puzzle-levers.md 3.6)
+  sigintChargeFrom: 17, // from the virus level two tells are live at once (a charge and a cast compete for it); below it SIGINT stops casts only, since an idle SIGINT on every lone charge made a fight at 10 to 16 about half as costly (balance.test.mjs)
   mimic: 1, // the Mimic hits you with your last command's direct damage, all of it
   // Reading pays: a charge, a cast or the Mimic answered in its window staggers the part. It's Open (×mult from
   // everyone for `cycles`) and its next attack lands `delay` cycles later. A seal stopped readies the skill that

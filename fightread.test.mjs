@@ -52,7 +52,7 @@ test('tell tooltips: the tell\'s name, then what happens if it lands (with its n
   // Full Disk: the Encrypt and the burst on top.
   const f = fight(); quiet(f); tell(f, 'fulldisk', 'encryptor', 2);
   assert.match(chipOf(f).tip, /^Full Disk: Adds \d+ to your encryption\. Deals a burst of \d+ damage to you every cycle for 3 cycles\./);
-  assert.match(chipOf(f).tip, /\n▸ Take the Encryptor under 50% in 2 cycles(, past its \d+ ◆)?, or SIGINT it\.$/);
+  assert.match(chipOf(f).tip, /\n▸ Take the Encryptor under 50% in 2 cycles(, past its \d+ ◆)?\.$/, 'below 17 SIGINT stops casts only');
   // A cast: SIGINT, or a cut, over its two-cycle window.
   const c = fight({ set: ['fulldisk', 'extortion'] }); quiet(c); tell(c, 'extortion', 'encryptor', 2);
   assert.match(chipOf(c).tip, /^Double Extortion: Every attack deals 35% more damage for 4 cycles\./);
@@ -86,7 +86,7 @@ test('a tell\'s tooltip offers its part\'s next interrupt tick as the way to sto
   part(s, 'encryptor').ticks[0].spent = true;
   assert.match(chipOf(s).tip, /Take the Encryptor under 25% in 2 cycles/);
   s.encounter.cutBudget = 0;
-  assert.match(chipOf(s).tip, /\n▸ SIGINT it in 2 cycles, or soften it with ◆, a shield or Brace\./, 'no interrupts left this fight: SIGINT, or soften it');
+  assert.match(chipOf(s).tip, /\n▸ Soften it with ◆, a shield or Brace\. The Encryptor has no tick left\./, 'no interrupts left this fight');
 });
 
 test('the gear row: only your equipped rules that wait on a condition, each lit exactly while it holds', () => {

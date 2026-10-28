@@ -177,6 +177,9 @@ are first guesses for the harness to tune.
   (window 1, 50% louder, lasting the fight), SIGINT's cooldown (5 or 12), the tells' rest and where the cast sits didn't
   move it. For the designer: SIGINT's lever needs fights where tells outlive their part (P3's elites), or casts a cut
   can't answer.
+- **HASHLORD.** With the seal a dial and Self-Update on current Integrity, a player who ignores its tells won 95% of it
+  at 16 (80% before), as many as the planner. Its Block Reward now grows each part by half of what it has left
+  (`TELLS.blockreward.grow`), and its Integrity is ×4.3 (was ×3.9): the planner 89%, the misreader 82%, blind 79%.
 
 ### 3.7 The rest already depend on the board
 

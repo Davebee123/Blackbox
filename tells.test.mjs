@@ -484,10 +484,10 @@ test('the board shows a tell in its attack\'s cell even while the part is veiled
   const html = boardMarkup(s, null);
   assert.match(html, /intent tell t-charge/);
   assert.match(html, /POSSESSION|Possession/);
-  assert.match(html, new RegExp(`▸ Cut past ◆${sc.armor} or SIGINT<`), 'the cut, past its ◆, or SIGINT (the kick line says when)');
+  assert.match(html, new RegExp(`▸ Cut past ◆${sc.armor}<`), 'the cut, past its ◆ (the kick line says when; SIGINT cuts charges from 17)');
   assert.match(html, /<span class="tl-when">in 2<\/span>/);
   assert.doesNotMatch(html, /tl-win/, 'not on its cycle yet');
-  assert.match(html, new RegExp(`title="Possession: [^"]*\n▸ Take the Scrambler under 50% in 2 cycles, past its ${sc.armor} ◆, or SIGINT it\\."`), 'the tooltip: what it does, then how to stop it and when');
+  assert.match(html, new RegExp(`title="Possession: [^"]*\n▸ Take the Scrambler under 50% in 2 cycles, past its ${sc.armor} ◆\\."`), 'the tooltip: what it does, then how to stop it and when');
   hold(s, 2);
   const now = boardMarkup(s, null);
   assert.match(now, /intent tell t-charge now win/, 'its cycle: the chip is lit');

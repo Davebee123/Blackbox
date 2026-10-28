@@ -224,8 +224,9 @@ function say(s, t, p, next, n) {
 }
 const when = (n) => (n <= 0 ? 'this cycle' : n === 1 ? 'next cycle' : `in ${n} cycles`);
 // The answer, exactly, for the chip's hover and the log: what counts, and when.
-export function answerOf(t, p) {
-  if (t.kind === 'charge') return `cut the ${p?.name} on its cycle${p?.armor > 0 ? `, past its ${p.armor} ◆` : ''}${TELL.sigintCharge ? ', or SIGINT it then' : ''}`;
+// sig: SIGINT cuts this charge too (sigintCharges, from TELL.sigintChargeFrom).
+export function answerOf(t, p, sig = false) {
+  if (t.kind === 'charge') return `cut the ${p?.name} on its cycle${p?.armor > 0 ? `, past its ${p.armor} ◆` : ''}${sig ? ', or SIGINT it then' : ''}`;
   if (t.kind === 'cast') return `SIGINT in its window, or cut the ${p?.name} in it`;
   if (t.kind === 'seal') return `strip the ${p?.name} before it lands`;
   if (t.kind === 'lock') return `break the ${p?.name}, or feed it a skill already cooling`;
@@ -616,8 +617,9 @@ function shred(s, p, t) {
 
 // ---------- SIGINT: one key, two clocks (docs/puzzle-levers.md 3.6) ----------
 // The tells SIGINT can stop: a told cast, and a told charge (TELL.sigintCharge), soonest first.
-// The breach build keeps its own rules (GAME_RULES.md "Tells"): there SIGINT stops casts only.
-export const sigintCharges = (s) => !!TELL.sigintCharge && !s.encounter?.breach;
+// SIGINT cuts charges from TELL.sigintChargeFrom (a virus's level), where a charge and a cast compete for it. The breach
+// build keeps its own rules (GAME_RULES.md "Tells"): there SIGINT stops casts only.
+export const sigintCharges = (s) => !!TELL.sigintCharge && !s.encounter?.breach && (s.encounter?.virus?.level || 0) >= (TELL.sigintChargeFrom || 0);
 const sigintable = (s) => (tellsOf(s)?.list || []).filter((t) => t.told && (t.kind === 'cast' || (t.kind === 'charge' && sigintCharges(s))) && alive(sourceOf(s, t))).sort((a, b) => tellNext(s, a) - tellNext(s, b));
 // The cast compiling now (the one landing soonest).
 export function tellCast(s) {
@@ -750,7 +752,7 @@ export function tellIntents(s, columns = 4) {
     // The window, in the board's columns: winFrom (the first column it can be answered in) to col; open: it is now.
     const w = windowOf(s, t);
     const winFrom = Math.max(0, (w?.from ?? next) - e.cycle);
-    const x = { source: p.id, name: t.name, tell: t.kind, id: t.id, gene: t.gene || null, col, hidden: false, kind: p.kind, does: t.does || null, effect: 'tell', amount: 0, answer: answerOf(t, p),
+    const x = { source: p.id, name: t.name, tell: t.kind, id: t.id, gene: t.gene || null, col, hidden: false, kind: p.kind, does: t.does || null, effect: 'tell', amount: 0, answer: answerOf(t, p, sigintCharges(s)),
       winFrom, open: winFrom === 0, armored: p.armor > 0 };
     if (t.kind === 'charge' && p.attack) {
       const atk = chargeAttack(s, t, p);
