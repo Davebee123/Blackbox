@@ -917,7 +917,8 @@ export function tellMove(s, t0 = null, planned = null) {
       // A skill built for a cast answers it and does something besides (a stun, a buff): keep SIGINT for the next one.
       const own = first(s, ['quarantine ' + p.id, s.encounter.helpers.some((h) => h.target === p.id) && 'hijack ' + p.id]);
       if (own && !echoes(own)) return own;
-      if (TELL.bots.sigint !== false && hackerLevel(s) >= TELL.castFrom && ok(s, 'sigint')) return 'sigint';
+      // On the Mimic's beat SIGINT is copied (it Hangs you): with the window open next cycle too, it waits a cycle.
+      if (TELL.bots.sigint !== false && hackerLevel(s) >= TELL.castFrom && !(recording && next > c) && ok(s, 'sigint')) return 'sigint';
     }
     // A seal: strip its part before it lands, when one command does it.
     if (t.kind === 'seal' && TELL.bots.strip !== false && next - c <= 1 && p.armor > 0 && quickStrip(s, p)) {

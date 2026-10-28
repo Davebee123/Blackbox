@@ -161,6 +161,16 @@ test('the planner reads the copy: it fires a cheap one, and goes off a dear one'
   assert.ok(cost(planner(k)) <= cost(R.decide(k).text) + 1e-9, 'never a dearer copy than the rotation\'s');
 });
 
+test('a cast whose window outlasts the Mimic\'s beat: the planner SIGINTs it the cycle after, not into the copy', () => {
+  const s = fight('mimic', { level: 14 });
+  const t = other(s), e = s.encounter;
+  tellsOf(s).list.push({ kind: 'cast', name: 'Persistence', gene: 'persistence', does: 'haste', id: 'persistence', part: t.id, told: true, said: e.cycle, next: e.cycle + 1, n: null, after: 999, opened: null, count: 0 });
+  beat(s);
+  assert.notEqual(planner(s), 'sigint', 'not on the beat');
+  fire(s, planner(s));
+  assert.equal(planner(s), 'sigint', 'the cycle after, still in its window');
+});
+
 test('dear copy: the Mimic\'s chip holds when the copy of your rotation\'s move costs a tenth of your max; its preset holds', () => {
   const s = fight('mimic', { level: 14 });
   s.research = {}; s.researchScale = 3;
