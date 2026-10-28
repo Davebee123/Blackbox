@@ -207,21 +207,23 @@ are first guesses for the harness to tune.
 - **As built.** Prices (`tellPrice`): a charge its whole landing (a Full Disk's encryption and burst together), Double
   Extortion and Persistence the extra their part's attacks due in their 4 cycles would deal, Self-Update the Integrity
   it adds (`TELL.grow` 0.25 of each part's current Integrity), turned into Signal at your pace so far for the planner.
-  SIGINT stops the cast in its window, else the charge on its cycle (`sigintTarget`: with both open, the charge can still be cut); on a charge it cancels the attack it rides, as a cut
-  does. It cuts charges from level 17 (`TELL.sigintChargeFrom`), where a charge and a cast are live together: below
-  it a lone charge took SIGINT every time, a free answer that halved what a fight at 10 cost the Bastions and the
-  Phantom and pushed the Herder and the Payload under their solo band (balance.test.mjs). The breach build keeps casts
-  only. The SIGINT key's state line shows a pip a tell, struck through when SIGINT
-  won't be ready in time. The planner SIGINTs the open tell when it costs more than every other live one SIGINT could
-  stop, counting one whose part a cut can still reach as cheap, and cuts first when a cut answers it. In a crew it saves nothing: every bar has a SIGINT. WHEN chip
-  *dearer* (rule tier, 2 RAM); preset *SIGINT the dearer* (*dearer → SIGINT*), which replaces *SIGINT the cast*.
-  `node solved.mjs rules` (32 wild fights with a charge and a cast): **a fixed rule wins.** At 18 *every cast* and
-  *only charges* stay within 3 points of the planner on every class; at 30 *every cast* loses 6 on the Bastion, *only
-  charges* nowhere. SIGINT itself is worth under 5 points in these fights at 18 (the planner with no SIGINT at all
-  loses at most 4 more), because a tell's part usually breaks, or a cut answers it, before it lands. Tuning the cast
-  (window 1, 50% louder, lasting the fight), SIGINT's cooldown (5 or 12), the tells' rest and where the cast sits didn't
-  move it. For the designer: SIGINT's lever needs fights where tells outlive their part (P3's elites), or casts a cut
-  can't answer.
+  SIGINT stops the cast in its window, else the charge on its cycle (`sigintTarget`; with both open the charge can
+  still be cut); on a charge it cancels the attack it rides, as a cut does. It cuts charges from level 17
+  (`TELL.sigintChargeFrom`), where a charge and a cast are live together: below it a lone charge took SIGINT every
+  time, a free answer that halved what a fight at 10 cost the Bastions and the Phantom and pushed the Herder and the
+  Payload under their solo band (balance.test.mjs). The breach build keeps casts only. The SIGINT key's state line
+  shows a pip a tell, struck through when SIGINT won't be ready in time. The planner SIGINTs the open tell when it
+  costs more than every other live one SIGINT could stop, counting one as cheap when a cut can still reach its part
+  (a tick left, and its ◆ strippable by then), and cuts first when a cut answers it; in a crew it saves nothing, every
+  bar has a SIGINT. WHEN chip *dearer* (rule tier, 2 RAM); preset *SIGINT the dearer* (*dearer → SIGINT*), which
+  replaces *SIGINT the cast*; the routine player takes it after *Answer the tells* when the fight brings a cast.
+  `node solved.mjs rules` (32 wild fights with a charge and a cast): **a fixed rule wins.** At 18 *every cast* loses 7
+  points on the Bastion, but *only charges* stays within 2 of the planner on every class; at 30 both stay within 3.
+  SIGINT itself is worth under 5 points in these fights at 18 (the planner with no SIGINT at all loses at most 4
+  more), because a tell's part usually breaks, or a cut answers it, before it lands. Tuning the cast (window 1, 50%
+  louder, lasting the fight), SIGINT's cooldown (5 or 12), the tells' rest and where the cast sits didn't move it.
+  For the designer: SIGINT's lever needs fights where tells outlive their part (P3's elites), or casts a cut can't
+  answer.
 - **HASHLORD.** With the seal a dial and Self-Update on current Integrity, a player who ignores its tells won 95% of it
   at 16 (80% before), as many as the planner. Its Block Reward now grows each part by half of what it has left
   (`TELLS.blockreward.grow`), and its Integrity is ×4.3 (was ×3.9): the planner 89%, the misreader 82%, blind 79%.

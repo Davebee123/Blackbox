@@ -57,12 +57,12 @@ export function prepare(s) {
   if (!R.isBody(body)) return null;
   const here = new Set(s.encounter.virus.parts.map((p) => p.id)), ps = R.presetsFor(s, body);
   const lever = (k) => ps.filter((p) => p.part && here.has(p.part) && p.id.startsWith(k + ':'));
-  // What fits, by need: the levers (a part to break first, a beat, a part to break last, twins), the tells' levers when
-  // the fight brings them (Seal dear: strip it; SIGINT the dearer), then the tells. An order lever's reading preset (cash
+  // What fits, by need: the levers (a part to break first, a beat, a part to break last, twins), a seal's lever when the
+  // fight brings one (Seal dear: strip it), the tells, then SIGINT the dearer when it brings a cast, as RAM allows. An order lever's reading preset (cash
   // in, loud wins, blast pays: docs/puzzle-levers.md 7) comes in place of its plain one.
   const levers = ['cash', 'loud', 'blast', 'first', 'beat', 'last', 'together'].flatMap(lever).filter((p, i, a) => a.findIndex((q) => q.part === p.part) === i);
   const kinds = new Set(plannedTells(s.encounter.virus).map((t) => t.kind)), tell = (id, ...k) => (k.some((x) => kinds.has(x)) ? ps.find((p) => p.id === id) : null);
-  const want = [...levers, ...(kinds.has('seal') ? lever('seal') : []), tell('sigint', 'cast', 'charge'), ps.find((p) => p.id === 'tells')].filter(Boolean).flatMap((p) => p.handlers);
+  const want = [...levers, ...(kinds.has('seal') ? lever('seal') : []), ps.find((p) => p.id === 'tells'), tell('sigint', 'cast')].filter(Boolean).flatMap((p) => p.handlers);
   const hs = [], budget = R.ramFor(s, body);
   let used = 0;
   for (const h of want) {
