@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { fresh, hooks, active, finish, stashItem } from './dist/combat.mjs';
 import { CONFIG, GUARDS } from './dist/data.mjs';
 import * as FP from './dist/floorplan.mjs';
-import { roomsMarkup, popOf, pickRoom, closePop, stepPath } from './dist/floorplan-view.mjs';
+import { roomsMarkup, popOf, pickRoom, closePop, stepPath, traceHop, TRACE } from './dist/floorplan-view.mjs';
 import { runServer } from './roomsim.mjs';
 
 CONFIG.enemyCrit = 0; CONFIG.misses = false;
@@ -723,4 +723,29 @@ test('a step\'s travel runs along the trace the map draws: either way along a li
     const ids = FP.roomList(s).map((r) => r.id), far = ids.find((id) => id !== g.entry && !FP.neighbours(g, g.entry).includes(id));
     assert.equal(stepPath(s, g.entry, far, tall), null, 'no trace, no travel');
   }
+});
+
+test('the traceroute: a hop for each step, the last few at the map\'s foot, its latency climbing with the hunter near; a new visit starts it over', () => {
+  const s = server(), R = s.rooms, g = R.graph, ui = { trail: { visit: null, hops: [] } }, a = g.entry, b = FP.neighbours(g, a)[0];
+  for (let i = 0; i < 5; i++) traceHop(s, i % 2 ? b : a, i % 2 ? a : b, ui);
+  assert.equal(ui.trail.hops.length, TRACE.show, 'the last few');
+  assert.deepEqual(ui.trail.hops.map((x) => x.n), [3, 4, 5], 'numbered in order');
+  const html = roomsMarkup(s, ui);
+  assert.match(html, /class="fp-trace" title="Traceroute: /);
+  assert.match(html, new RegExp(`hop 5</span><span>${FP.addrOf(s, a)} → ${FP.addrOf(s, b)}</span>`));
+  // The hunter in the room you step into: the latency climbs, and shows red.
+  const h = FP.hunterOf(s), far = { ...ui, trail: { visit: null, hops: [] } }, near = { trail: { visit: null, hops: [] } };
+  if (h) {
+    const at = h.at;
+    h.at = FP.roomList(s).map((r) => r.id).find((id) => id !== b && !FP.neighbours(g, id).includes(b) && !FP.neighbours(g, id).some((x) => FP.neighbours(g, x).includes(b)));
+    traceHop(s, a, b, far);
+    h.at = b; traceHop(s, a, b, near);
+    h.at = at;
+    assert.equal(near.trail.hops[0].ms - far.trail.hops[0].ms, TRACE.near[0], 'the hunter on it');
+    assert.ok(near.trail.hops[0].hot && !far.trail.hops[0].hot);
+  }
+  R.visits++;
+  assert.doesNotMatch(roomsMarkup(s, ui), /fp-trace/, 'a new visit has no route yet');
+  traceHop(s, a, b, ui);
+  assert.deepEqual(ui.trail.hops.map((x) => x.n), [1]);
 });

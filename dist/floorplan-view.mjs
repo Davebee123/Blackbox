@@ -57,7 +57,24 @@ import { sweepBlock } from './view.mjs';
 
 // The pop-up's state, a view (never saved): the room you clicked, and where you stood when you clicked it (a step
 // or a wait drops it), and the decision you closed (it stays closed until a new one comes up).
-export const fpUi = { sel: null, selAt: null, closed: null };
+export const fpUi = { sel: null, selAt: null, closed: null, trail: { visit: null, hops: [] } };
+// The traceroute (app.js calls traceHop on each step you take): the last few hops of this visit at the map's foot,
+// each with its latency. A few ms, more on an Archive's cold storage, and it climbs when the hunter is within two rooms
+// of where you stepped (out of sight too: the map already pulses red for that).
+export const TRACE = { show: 3, base: 4, spread: 9, archive: 9, near: [26, 21, 10] }; // ms by the hunter's distance: 0, 1, 2
+export function traceHop(s, from, to, ui = fpUi) {
+  const R = s.rooms, visit = `${R.id}:${R.visits}`, h = hunterOf(s), g = R.graph;
+  if (ui.trail?.visit !== visit) ui.trail = { visit, hops: [] };
+  const d = h && !h.down ? distOf(g, to, h.at) : null, n = (ui.trail.hops.at(-1)?.n || 0) + 1;
+  const ms = TRACE.base + (hashOf(`${visit}:${n}:${to}`) % TRACE.spread) + (R.kind === 'Archive' ? TRACE.archive : 0) + (d != null && d <= 2 ? TRACE.near[d] : 0);
+  ui.trail.hops = [...ui.trail.hops, { n, from: addrOf(s, from), to: addrOf(s, to), ms, hot: d != null && d <= 2 }].slice(-TRACE.show);
+}
+function traceMarkup(s, ui) {
+  const R = s.rooms;
+  if (!R.at || ui.trail?.visit !== `${R.id}:${R.visits}` || !ui.trail.hops.length) return '';
+  const hops = ui.trail.hops, tip = 'Traceroute: your route through this server, one hop for each step you take, and how long it took.\n▸ The latency climbs when the hunter is near.';
+  return `<div class="fp-trace" title="${esc(tip)}">${hops.map((x, i) => `<div class="hop${i === hops.length - 1 ? ' last' : ''}" style="--age:${hops.length - 1 - i}"><span class="n">hop ${x.n}</span><span>${esc(x.from)} → ${esc(x.to)}</span><span class="ms${x.hot ? ' hot' : ''}">${x.ms} ms</span></div>`).join('')}</div>`;
+}
 const icon = (name) => `style="--icon:url('ui/icons/${name}.svg')"`;
 const now = () => Date.now();
 const fightKind = (room) => ['process', 'elite', 'guard', 'core', 'socket', 'nest'].includes(room.kind);
@@ -745,6 +762,6 @@ export function roomsMarkup(s, ui = fpUi) {
   const pop = id ? `<div class="map-pop fp-pop" id="fp-pop" data-pop="${esc(id)}" role="dialog" aria-label="${esc(R.at || id !== R.graph.entry ? (known(s, id) ? labelOf(s, R.graph.rooms[id]) : 'Unknown room') : 'Home')}" style="visibility:hidden"><button type="button" class="btn small map-pop-x" data-fp-pop-close title="Close (Esc)" aria-label="Close">×</button>${popCard(s, id)}</div>` : '';
   return `<div class="fp${R.at ? '' : ' home'}">
     ${sprite()}${hudMarkup(s)}
-    <section class="panel fp-map${pz ? ' pz-on' : ''}" data-pane="map"><div class="fp-scroll">${mapSvg(s, false, id)}${mapSvg(s, true, id)}</div><button type="button" class="btn small fp-zoom" data-fp-zoom title="Fit the server (double-click the map too). Scroll to zoom, drag to pan." aria-label="Fit the server">⤢</button>${pop}${pz}</section>
+    <section class="panel fp-map${pz ? ' pz-on' : ''}" data-pane="map"><div class="fp-scroll">${mapSvg(s, false, id)}${mapSvg(s, true, id)}</div><button type="button" class="btn small fp-zoom" data-fp-zoom title="Fit the server (double-click the map too). Scroll to zoom, drag to pan." aria-label="Fit the server">⤢</button>${traceMarkup(s, ui)}${pop}${pz}</section>
   </div>`;
 }

@@ -45,7 +45,7 @@ import { roomMarkup } from './room-view.mjs';
 import { patchRules } from './skillrules.mjs';
 import { runScript, scriptsOf, SCRIPTS } from './scripts.mjs';
 import * as FP from './floorplan.mjs';
-import { roomsMarkup, fillClocks, popOf, pickRoom, closePop, stepPath } from './floorplan-view.mjs';
+import { roomsMarkup, fillClocks, popOf, pickRoom, closePop, stepPath, traceHop } from './floorplan-view.mjs';
 import { createPuzzleFx, panelRoom, closePanel, openPanel, pzUi } from './puzzle-view.mjs';
 import { PUZZLES } from './puzzles.mjs';
 import { threadPanel, thUi, offerMarkup as thOfferMarkup } from './threads-view.mjs';
@@ -67,6 +67,7 @@ import * as PGV from './pager-view.mjs';
 import { noCarrier, NC } from './nocarrier.mjs';
 import * as UI from './uiscale.mjs';
 import { playTravel } from './travelfx.mjs';
+import { startTraffic } from './traffic.mjs';
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -252,6 +253,7 @@ const ticked = (e) => !e.absorbed && /^[A-Z][\w-]*( [A-Z][\w-]*)*: /.test(e.mess
 // number does; it takes the strike's place on that part. Screen
 // effects subtle or medium: lighter; off or Motion off: none (the strike's own rules).
 const abilityfx = createAbilityFx(document.getElementById('board'), { canMove: () => canMove(), level: () => fxLevel() });
+startTraffic(() => (module === 'rooms' && campaign.rooms && canMove() && fxLevel() !== 'minimal' ? campaign : null)); // the server's own traffic on the room map (traffic.mjs)
 // The class a shooter plays: yours, or a crewmate's (crew.mjs), for key 1's name (Bash, Ban, Poke, Ping).
 const shooterClass = (who) => { if (!who) return classOf(campaign); const m = matesOf(campaign).find((x) => x.who === who); return m ? classOf(m) : null; }; // matesOf: the crewmates' own states
 // The plain strike on a part (hitfx.mjs), for a hit no ability effect took.
@@ -772,7 +774,8 @@ document.addEventListener('keydown', (e) => {
 // covering the room (on a phone it spans the map, so below or above). Measured again only when the room, the map's
 // size or the card's size changes, so a scroll or a redraw never moves it.
 let fpPopAt = null;
-let fpWasAt = null; // the room you stood in at the last redraw: a step plays its travel (travelfx.mjs)
+let fpWas = {}; // where you and the hunter stood at the last redraw, on which visit: a step plays its travel (travelfx.mjs)
+let fpFresh = []; // rooms seen or discovered since the last redraw of the rooms page: they resolve on it
 function placeRoomsPop() {
   const pop = $('fp-pop');
   if (!pop) { fpPopAt = null; return; }
@@ -1912,12 +1915,23 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && thPrev.o
 let lossHold = false;
 function render(force = false) {
   if (lossHold) return;
-  // A step into the next room, on the rooms page: you travel its trace as code (travelfx.mjs; ?travel= picks the look
-  // while the designer chooses). A step that starts a fight goes straight to the fight; Screen effects off or Motion
-  // off, none.
-  const at = campaign.rooms?.at || null;
-  if (module === 'rooms' && at && fpWasAt && at !== fpWasAt && canMove() && fxLevel() !== 'minimal') playTravel({ wide: stepPath(campaign, fpWasAt, at, false), tall: stepPath(campaign, fpWasAt, at, true) }, params.get('travel') || 'bits');
-  fpWasAt = at;
+  // A step into the next room: a hop on the traceroute (floorplan-view.mjs) and, on the rooms page, you travel its trace
+  // as code (travelfx.mjs; ?travel= picks the look while the designer chooses). The hunter's step plays the same way, in
+  // red, when you see it before or after it. A step that starts a fight goes straight to the fight; Screen effects off
+  // or Motion off, no travel.
+  {
+    const R = campaign.rooms, visit = R ? `${R.id}:${R.visits}` : null, at = R?.at || null, h = FP.hunterOf(campaign), hAt = h && !h.down ? h.at : null, hSeen = !!hAt && FP.hunterSeen(campaign, h);
+    const was = fpWas.visit === visit ? fpWas : {}, play = module === 'rooms' && canMove() && fxLevel() !== 'minimal';
+    const paths = (a, b) => ({ wide: stepPath(campaign, a, b, false), tall: stepPath(campaign, a, b, true) });
+    if (at && was.at && at !== was.at && stepPath(campaign, was.at, at, false)) traceHop(campaign, was.at, at); // the traceroute (floorplan-view.mjs)
+    if (play && at && was.at && at !== was.at) playTravel(paths(was.at, at), params.get('travel') || 'bits');
+    if (play && hAt && was.hAt && hAt !== was.hAt && (hSeen || was.hSeen) && FP.seenOf(campaign, hAt) && FP.seenOf(campaign, was.hAt)) playTravel(paths(was.hAt, hAt), 'hunt', 'hunter');
+    // Rooms you've just seen or just discovered resolve on the map (floorplan.css .resolve), never the map you connect to.
+    const seen = R ? { ...R.seen } : {};
+    if (fpWas.visit !== visit) fpFresh = [];
+    if (was.seen) fpFresh.push(...Object.keys(seen).filter((id) => seen[id] !== was.seen[id]));
+    fpWas = { visit, at, hAt, hSeen, seen };
+  }
   if (force) cache.clear();
   renderMeters();
   renderOffer();
@@ -1997,6 +2011,7 @@ function render(force = false) {
     }
     pdDrawn();
     if (module === 'server') { const d = document.querySelector('.command-dock'); $('page-view').style.setProperty('--dock-h', `${Math.max(0, innerHeight - (d?.getBoundingClientRect().top ?? innerHeight))}px`); } // the phone's sheet sits just above the prompt
+    if (module === 'rooms') { for (const id of fpFresh.splice(0)) for (const g of $('page-view').querySelectorAll(`.fp-room[data-room="${CSS.escape(id)}"]`)) g.classList.add('resolve'); } // a room just seen resolves
     if (module === 'rooms') { applyFpZoom(); fillClocks($('page-view')); placeRoomsPop(); pzFx.mounted(); renderOffer(); } // the countdowns tick in place: the markup only changes with the server
     // The Mail page opens the first unread item by itself: showing it in full counts as reading it.
     if (module === 'mail') { const o = $('page-view').querySelector('.mrow.open.unread'); if (o) { const k = o.dataset.mail, id = k[0] === 'l' ? k.slice(1) : campaign.mail?.list?.find((m) => m.job === Number(k.slice(1)))?.id; if (id != null) { command(campaign, 'mail read ' + id); save(); dirty = true; } } }

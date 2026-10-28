@@ -2,6 +2,7 @@
 //   node tools/sound-preview/render.mjs [outDir] [clipId...]
 //   SET=2 node tools/sound-preview/render.mjs /home/user/Blackbox/sound-preview/round2   (round 2)
 //   SET=3 node tools/sound-preview/render.mjs <outDir>   (round 3: the bodies without a set; demo.mjs mixes their demos)
+//   SET=4 node tools/sound-preview/render.mjs <outDir>   (round 4: a step between rooms, clips4.js)
 // FORMAT=ogg encodes Ogg Vorbis instead, for the game (dist/sfx): the chosen clips, rendered again
 // with the same levels. A loop's sample count is kept exactly, so it repeats without a gap.
 //   FORMAT=ogg node tools/sound-preview/render.mjs dist/sfx floor-4-coldline-b hub-halcyon ...
@@ -53,7 +54,7 @@ page.on('pageerror', (e) => console.error('page:', e.message));
 await page.goto(`${base}/__index`);
 await page.evaluate(async (b) => { window.R = await import(`${b}/tools/sound-preview/runner.js`); }, base);
 
-const SET = Number(process.env.SET || 1); // 1: the first pack, 2: round 2 (into <outDir>, e.g. sound-preview/round2), 3: round 3
+const SET = Number(process.env.SET || 1); // 1: the first pack, 2: round 2 (into <outDir>, e.g. sound-preview/round2), 3: round 3, 4: round 4
 const clips = (await page.evaluate((set) => window.R.list(set), SET)).filter((c) => !ONLY.length || ONLY.includes(c.id));
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'bbsp-'));
 const results = [];
