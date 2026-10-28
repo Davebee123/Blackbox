@@ -15,7 +15,7 @@
 // file in a server's vault: open it, bank the file, deliver it), and since R1 (docs/servers.md 8.1) rooms (clear N
 // rooms on a server, first clears) and map (map a server: every room cleared). A takeover or item contract can point at
 // a server you haven't found: a relay on its neighbour flags it, and you trace it yourself
-// (see hidden.mjs). Contracts pay credits and Indemnity, Halcyon's store scrip.
+// (see hidden.mjs). Contracts pay credits.
 //
 // Room contracts (ROOM_JOBS): install (carry Halcyon's item to a room's grid address on a server and install it there;
 // lose your Signal while it's in your pack and it's gone, the job with it), defuse (break N Encryptors before they
@@ -50,7 +50,7 @@ export const MAIL = {
   offBooksXp: 1.5,
   offBooksChance: 0.2,
   factionShare: 0.5, // of the rest of the board, once the hubs are up: other factions' work
-  factionPay: 1.2, // they pay a little better than Halcyon, in credits and their own rep (no Indemnity)
+  factionPay: 1.2, // they pay a little better than Halcyon, in credits and their own rep (no Halcyon standing)
   startStanding: 10,
   roomEvery: [8 * 60 * 1000, 20 * 60 * 1000], // a room contract arrives somewhere in here after the last one was taken
 };
@@ -77,7 +77,6 @@ export const nextTier = (s) => TIERS.find((t) => t.min > standing(s)) || null;
 export const retainer = (s) => tierOf(s).pay(serverLevel(s));
 export const unread = (s) => (s.mail?.list || []).filter((m) => !m.read).length;
 export const cargo = (s) => (s.cargo ||= []);
-export const indemnity = (s) => s.indemnity || 0;
 export const jobs = (s) => s.mail?.jobs || [];
 export const offers = (s) => s.mail?.offers || [];
 export const openContracts = (s) => jobs(s).filter((j) => !j.done);
@@ -93,7 +92,6 @@ export function initMail(s, at = now()) {
   s.standing ||= { halcyon: MAIL.startStanding };
   s.retainer ||= { at };
   s.cargo ||= [];
-  s.indemnity ||= 0;
   postStory(s, at);
   return s.mail;
 }
@@ -106,10 +104,9 @@ function migrateMail(s, at) {
     if (!c) continue;
     delete l.contract;
     if (c.done) continue;
-    m.jobs.push({ ...c, id: l.id, from: l.from, subject: l.subject, body: l.body, reward: { indemnity: 0, ...c.reward } });
+    m.jobs.push({ ...c, id: l.id, from: l.from, subject: l.subject, body: l.body, reward: { ...c.reward } });
     l.job = l.id;
   }
-  s.indemnity ||= 0;
   return m;
 }
 
@@ -210,7 +207,7 @@ export function storyAt(s, id, at = now()) {
   s.mail = { list: [], next: 1, story: k, posted: before.map((b) => b.id), jobs: [], offers: [], nextOfferAt: null, boardOpen: before.some((b) => b.opensBoard) };
   s.standing ||= { halcyon: MAIL.startStanding };
   s.standing.halcyon = Math.max(s.standing.halcyon, MAIL.startStanding + before.reduce((n, b) => n + (b.reward?.standing || 0), 0));
-  s.retainer = { at }; s.cargo ||= []; s.indemnity ||= 0;
+  s.retainer = { at }; s.cargo ||= [];
   if (!s.locations.length) addLocation(s, 'worm', 1);
   if (before.some((b) => b.job?.type === 'takeover')) { const loc = s.locations[0]; loc.takenOver = true; s.mail.took = loc.id; if (before.some((b) => b.reward?.relay)) items(s).relay += 1; }
   if (s.mail.boardOpen) { for (let i = 0; i < 3; i++) offer(s, at); s.mail.nextOfferAt = at + gap(s); postSides(s, at); }
@@ -302,34 +299,33 @@ export function offer(s, at = now()) {
   const type = !off && strainsOpen.length && rand(s) < 0.25 ? 'strain' : pick(s, kinds);
   const fam = pick(s, Object.keys(CREWS));
   const pay = (base, per) => Math.round((base + per * L) * (off ? MAIL.offBooksPay : theirs ? MAIL.factionPay : 1));
-  const ind = (n) => (off || theirs ? 0 : n + Math.floor(L / 12));
   const hit = off ? { standing: -MAIL.offBooksHit } : {};
   const repFor = (n) => (theirs ? { standing: 0, rep: n } : {}); // other factions pay in their own rep
   const T = CONTRACT_TEXT;
   let j;
   if (type === 'strain') {
     const count = 3 + (L >= 15 ? 1 : 0) + (L >= 30 ? 1 : 0);
-    j = { type, strain: pick(s, strainsOpen), count, reward: { credits: pay(40, 6), indemnity: ind(1), standing: 5, xp: 2, ...repFor(5) } };
+    j = { type, strain: pick(s, strainsOpen), count, reward: { credits: pay(40, 6), standing: 5, xp: 2, ...repFor(5) } };
   } else if (type === 'kill') {
     const count = 3 + (L >= 10 ? 1 : 0) + (L >= 30 ? 1 : 0);
-    j = { type, family: fam, count, reward: { credits: pay(30, 5), indemnity: ind(1), standing: 5, xp: 1.5, ...hit, ...repFor(5) } };
+    j = { type, family: fam, count, reward: { credits: pay(30, 5), standing: 5, xp: 1.5, ...hit, ...repFor(5) } };
   } else if (type === 'bounty') {
     const name = `${pick(s, T.bountyNames?.length ? T.bountyNames : ['lapsejack'])}-${String(1000 + Math.floor(rand(s) * 9000))}`;
-    j = { type, family: fam, name, reward: { credits: pay(40, 6), indemnity: ind(2), standing: 5, xp: 2, ...repFor(5) } };
+    j = { type, family: fam, name, reward: { credits: pay(40, 6), standing: 5, xp: 2, ...repFor(5) } };
   } else if (type === 'materials') {
     const m = pick(s, CODES), amount = 2 + Math.floor(L / 8);
-    j = { type, material: m, amount, reward: { credits: pay(35, 6), indemnity: ind(1), standing: 5, xp: 1, ...hit, ...repFor(5) } };
+    j = { type, material: m, amount, reward: { credits: pay(35, 6), standing: 5, xp: 1, ...hit, ...repFor(5) } };
   } else if (type === 'rooms') {
     const count = 4 + Math.floor(L / 10);
-    j = { type, loc: roomsAt.id, count, reward: { credits: pay(35, 6), indemnity: ind(1), standing: 5, xp: 2, ...hit, ...repFor(5) } };
+    j = { type, loc: roomsAt.id, count, reward: { credits: pay(35, 6), standing: 5, xp: 2, ...hit, ...repFor(5) } };
   } else if (type === 'map') {
-    j = { type, loc: mapAt.id, reward: { credits: pay(60, 10), indemnity: ind(3), standing: 7, xp: 3, ...repFor(7) } };
+    j = { type, loc: mapAt.id, reward: { credits: pay(60, 10), standing: 7, xp: 3, ...repFor(7) } };
   } else if (type === 'takeover') {
-    j = { type, ...target, reward: { credits: pay(60, 10), indemnity: ind(4), standing: 8, xp: 3, ...repFor(8) } };
+    j = { type, ...target, reward: { credits: pay(60, 10), standing: 8, xp: 3, ...repFor(8) } };
   } else {
     const f = pick(s, T.files?.length ? T.files : [{ file: 'policy.db', label: 'a stolen policy database', line: 'binary: policy records.' }]);
     j = { type, ...target, file: f.file, label: f.label, text: [f.line, off ? 'GLASSJAW wants it. Halcyon wants it more.' : 'pull it and bank it, then deliver it from Mail.'],
-      reward: { credits: pay(50, 8), indemnity: ind(3), standing: 6, xp: 2.5, ...hit, ...repFor(6) } };
+      reward: { credits: pay(50, 8), standing: 6, xp: 2.5, ...hit, ...repFor(6) } };
   }
   // GLASSJAW's work is worth the standing it costs: more XP, and a protocol on delivery.
   if (off) { j.reward.xp = Math.round(j.reward.xp * MAIL.offBooksXp * 10) / 10; j.reward.drop = true; }
@@ -394,7 +390,7 @@ const tracedOf = (s) => (s.locations || []).filter((l) => !l.rogue && !l.member 
 const roomsOfLoc = (s, l) => { try { return l.floorplan || hooks.roomsFor?.(s, l) || null; } catch { return null; } };
 const inRunsLoc = (l) => !!l.rogue && ['nest', 'pit', 'gauntlet'].includes(l.rogue.kind) && !l.occupied && !l.lair && !l.farm;
 function roomJob(s, kind) {
-  const L = hackerLevel(s), pay = (base, per) => Math.round(base + per * L), ind = (n) => n + Math.floor(L / 12), busy = busyLoc(s), T = CONTRACT_TEXT;
+  const L = hackerLevel(s), pay = (base, per) => Math.round(base + per * L), busy = busyLoc(s), T = CONTRACT_TEXT;
   const free = tracedOf(s).filter((l) => !busy.has(l.id));
   if (kind === 'install') {
     const pool = free.map((l) => ({ l, R: roomsOfLoc(s, l) })).filter((x) => x.R?.graph);
@@ -402,21 +398,21 @@ function roomJob(s, kind) {
     const { l, R } = pick(s, pool), g = R.graph, ok = sweepRooms(g).filter((id) => id !== g.entry && !['stash', 'core'].includes(g.rooms[id].kind) && !g.rooms[id].extra);
     if (!ok.length) return null;
     const room = pick(s, ok), it = pick(s, T.installs?.length ? T.installs : INSTALLS);
-    return { type: kind, loc: l.id, room, addr: addrsOf(g)[room], file: it.file, label: it.label, carry: 'stash', reward: { credits: pay(55, 9), indemnity: ind(3), standing: 7, xp: 3, ...(rand(s) < 1 / 3 ? { codebase: true } : {}) } };
+    return { type: kind, loc: l.id, room, addr: addrsOf(g)[room], file: it.file, label: it.label, carry: 'stash', reward: { credits: pay(55, 9), standing: 7, xp: 3, ...(rand(s) < 1 / 3 ? { codebase: true } : {}) } };
   }
-  if (kind === 'defuse') return { type: kind, count: 3 + (L >= 20 ? 1 : 0), reward: { credits: pay(40, 7), indemnity: ind(2), standing: 6, xp: 2.5 } };
-  if (kind === 'exfil') return (s.locations || []).some(inRunsLoc) ? { type: kind, reward: { credits: pay(45, 7), indemnity: ind(2), standing: 6, xp: 2.5 } } : null;
+  if (kind === 'defuse') return { type: kind, count: 3 + (L >= 20 ? 1 : 0), reward: { credits: pay(40, 7), standing: 6, xp: 2.5 } };
+  if (kind === 'exfil') return (s.locations || []).some(inRunsLoc) ? { type: kind, reward: { credits: pay(45, 7), standing: 6, xp: 2.5 } } : null;
   if (kind === 'sweep') {
     const pool = free.filter((l) => (l.level || 1) <= L).map((l) => ({ l, R: roomsOfLoc(s, l) })).filter((x) => x.R?.graph && ['small', 'medium'].includes(x.R.size));
     if (!pool.length) return null;
     const { l, R } = pick(s, pool), k = R.size === 'medium' ? 1.3 : 1;
-    return { type: kind, loc: l.id, reward: { credits: Math.round(pay(70, 11) * k), indemnity: ind(3), standing: 8, xp: Math.round(4 * k * 10) / 10, drop: true } };
+    return { type: kind, loc: l.id, reward: { credits: Math.round(pay(70, 11) * k), standing: 8, xp: Math.round(4 * k * 10) / 10, drop: true } };
   }
   if (kind === 'heist') {
     const pool = free.filter((l) => { const g = roomsOfLoc(s, l)?.graph; return g?.hunter === 'track' && g.vaults?.[0]; });
     if (!pool.length) return null;
     const l = pick(s, pool), f = pick(s, T.files?.length ? T.files : [{ file: 'policy.db', label: 'a stolen policy database', line: 'binary: policy records.' }]);
-    return { type: kind, loc: l.id, file: f.file, label: f.label, text: [f.line, 'past the Tracker: bank it from a visit it never reached you.'], reward: { credits: pay(65, 10), indemnity: ind(3), standing: 8, xp: 3.5, ...(rand(s) < 0.5 ? { drop: true } : {}) } };
+    return { type: kind, loc: l.id, file: f.file, label: f.label, text: [f.line, 'past the Tracker: bank it from a visit it never reached you.'], reward: { credits: pay(65, 10), standing: 8, xp: 3.5, ...(rand(s) < 0.5 ? { drop: true } : {}) } };
   }
   return null;
 }
@@ -692,7 +688,6 @@ export function progress(s, c) {
 }
 export const rewardLine = (s, c) => [
   `${c.reward.credits} credits`,
-  c.reward.indemnity ? `${c.reward.indemnity} Indemnity` : '',
   c.reward.xp ? `${xpFor(s, hackerLevel(s), c.reward.xp)} XP` : '',
   c.reward.standing > 0 ? `Halcyon +${c.reward.standing}` : c.reward.standing < 0 ? `Halcyon ${c.reward.standing}` : '',
   c.reward.rep && c.faction ? `${FACTIONS[c.faction].short} +${c.reward.rep}` : '',
@@ -703,7 +698,7 @@ export const rewardLine = (s, c) => [
 export function mailCommand(s, text, at = now()) {
   initMail(s, at);
   const [, word, arg] = text.match(/^mail(?: (\w+))?(?: (\d+))?$/) || [];
-  if (!word) return emit(s, 'info', `Mail: ${unread(s)} unread. Contracts: ${heldCount(s)}/${MAIL.take} taken, ${offers(s).length} on the board. Halcyon standing ${standing(s)} (${tierOf(s).name}), ${indemnity(s)} Indemnity; retainer ${retainer(s)} credits every 30 minutes.`);
+  if (!word) return emit(s, 'info', `Mail: ${unread(s)} unread. Contracts: ${heldCount(s)}/${MAIL.take} taken, ${offers(s).length} on the board. Halcyon standing ${standing(s)} (${tierOf(s).name}); retainer ${retainer(s)} credits every 30 minutes.`);
   const id = Number(arg);
   if (word === 'read') { const l = s.mail.list.find((m) => m.id === id); if (l) l.read = true; return; }
   if (word === 'accept') {
@@ -739,14 +734,12 @@ export function mailCommand(s, text, at = now()) {
   let fifth = false;
   if (c.type === 'strain') { const sl = (s.slayer ||= { streak: 0 }); sl.streak++; fifth = sl.streak % SLAYER.every === 0; if (fifth) c.reward = { ...c.reward, credits: c.reward.credits * 2, xp: c.reward.xp * 2 }; }
   s.server.credits += c.reward.credits;
-  s.indemnity = indemnity(s) + (c.reward.indemnity || 0);
   // What it paid, for the delivered card (app.js shows it in the middle of the screen). XP is at the
   // level the contract was posted at.
   const paidAt = c.lvN ? Math.round(c.lvSum / c.lvN) : c.level ?? hackerLevel(s);
   const xp = c.reward.xp ? xpFor(s, paidAt, c.reward.xp) : 0, fname = (f) => FACTIONS[f]?.short || f;
   const gains = [
     c.reward.credits && { label: 'Credits', qty: `+${c.reward.credits}`, kind: 'credits', text: `${c.reward.credits} credits` },
-    c.reward.indemnity && { label: 'Indemnity', qty: `+${c.reward.indemnity}`, kind: 'loot', text: `${c.reward.indemnity} Indemnity` },
     xp && { label: 'XP', qty: `+${xp}`, kind: 'xp', text: `${xp} XP` },
     c.reward.standing && { label: `${fname('halcyon')} standing`, qty: `+${c.reward.standing}`, kind: 'found', text: `${c.reward.standing} standing` },
     c.offBooks && { label: `${fname('glassjaw')} rep`, qty: '+5', kind: 'found', text: '5 rep' },
@@ -758,7 +751,7 @@ export function mailCommand(s, text, at = now()) {
     c.reward.item && { label: 'Protocol', qty: '', kind: 'item', text: 'a protocol' },
     (c.reward.drop || c.reward.daemon) && { label: 'Protocol', qty: '', kind: 'item', text: 'a protocol' },
   ].filter(Boolean);
-  emit(s, 'contract-done', `DELIVERED: ${title(s, c)}. +${c.reward.credits} credits${c.reward.indemnity ? `, +${c.reward.indemnity} Indemnity` : ''}.`, { contract: c.id, credits: c.reward.credits, gains, name: title(s, c) });
+  emit(s, 'contract-done', `DELIVERED: ${title(s, c)}. +${c.reward.credits} credits.`, { contract: c.id, credits: c.reward.credits, gains, name: title(s, c) });
   if (xp) gainXp(s, xp, 'contract', null, CONTRACT_KIND[c.type] || 'fight'); // no Fresh bonus: it counts as the work behind it
   setDeliver(s); // set bonuses on a delivery (LOWLIGHT Kit: your Signal full, the next kill's XP up; sets.mjs)
   if (fifth) { emit(s, 'streak', `Streak ${s.slayer.streak}. ${title(s, c)} pays double.`, { streak: s.slayer.streak }); const it = rollDrop(s, { kind: 'rogue', strain: c.strain, rolls: 3, trophy: true }, paidAt); if (it) addItem(s, it, 'Streak reward: '); }

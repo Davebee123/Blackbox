@@ -1116,7 +1116,6 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 .c-exp { grid-column: auto; }
 .mail-page .inbox h2 { margin-top: 4px; }
 .contract.offer { border-left-color: var(--line-strong); }
-.ind { color: var(--amber); font-weight: 600; }
 .store-page { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 .store-page .stack { display: grid; gap: 12px; align-content: start; }
 .store-page .ptile .price { font: 600 12px var(--mono); color: var(--bright); margin-right: auto; }

@@ -335,7 +335,7 @@ test('never timed, nothing missable: set a thread aside and pick it up again (fr
 });
 
 test('the save (v43): an older save starts with no threads and pins starts as you connect; a save keeps threads, a temporary server and a file mid-walk', () => {
-  assert.equal(SAVE_VERSION, 47); // v44 (whole-number stats), v45 (sets), v46 (no default subclass) and v47 (one kind of component) came after
+  assert.equal(SAVE_VERSION, 48); // v44 (whole-number stats), v45 (sets), v46 (no default subclass), v47 (one kind of component) and v48 (Indemnity retires) came after
   const old = setup(6, { n1: 4 });
   delete old.threads; old.version = 42;
   const back = restore(JSON.parse(JSON.stringify(old)));

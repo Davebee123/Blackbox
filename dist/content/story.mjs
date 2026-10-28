@@ -25,7 +25,6 @@ export default {
       },
       "reward": {
         "credits": 60,
-        "indemnity": 1,
         "standing": 3,
         "xp": 1
       }
@@ -45,7 +44,6 @@ export default {
       },
       "reward": {
         "credits": 80,
-        "indemnity": 1,
         "standing": 3,
         "xp": 1
       }
@@ -72,7 +70,6 @@ export default {
       "reward": {
         "item": "wicks-old-toolkit",
         "credits": 100,
-        "indemnity": 2,
         "standing": 3,
         "xp": 2
       }
@@ -92,7 +89,6 @@ export default {
       },
       "reward": {
         "credits": 150,
-        "indemnity": 3,
         "standing": 4,
         "xp": 3,
         "blueprint": true,
@@ -123,7 +119,6 @@ export default {
       },
       "reward": {
         "credits": 150,
-        "indemnity": 4,
         "standing": 4,
         "xp": 3,
         "drop": true
@@ -136,7 +131,7 @@ export default {
       "body": [
         "Your probation is over. LOWLIGHT stays your crew, but we will send work to you directly from now on.",
         "Our board carries up to five offers at a time. Take up to three, and drop any you like. Nothing is held against you.",
-        "Contracts pay credits and Indemnity. Indemnity is only good at our store, where you will also find relays.",
+        "Contracts pay credits. Spend them at our store, where you will find relays, and our own protocols for those we trust.",
         "Your retainer grows with your standing. A breach on your own server costs standing, and so does working for our competitors."
       ],
       "opensBoard": true

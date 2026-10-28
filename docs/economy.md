@@ -43,9 +43,10 @@ the collection log's chase items never trade.
 
 ### What goes
 
-- **Indemnity.** Halcyon's store prices in credits, its tiers still gated by standing as now. A contract that paid
-  Indemnity pays its value in credits instead (a starting rate of 50 credits an Indemnity, to tune). An old save's
-  unspent Indemnity becomes credits at the same rate.
+- **Indemnity.** *Done (v48).* Halcyon's store prices in credits, its tiers still gated by standing as now. The chase
+  protocols are a credit sink: 40 × (1 + L/15) credits for each point of their old Indemnity price. Contracts stop
+  paying Indemnity and pay no extra credits in its place. An old save's unspent Indemnity becomes credits once, at
+  the protocols' rate.
 - **Scripts.** Off the ability bar and out of the drops. What dropped them pays code. An old save's scripts become code.
 - **Random-stat crafting.** Compiling a protocol around a stat goes. Gear is found, not rolled at a bench. What stays on
   the Craft page is one item per recipe: a Zero-day from its source, the Relay from its plan.
@@ -189,6 +190,6 @@ Real trade waits for a backend; until then it's built and tested against simulat
 
 ## Open questions
 
-- Indemnity's rate (50 credits) and the patch prices need the re-measure in step 2.
+- The chase protocols' rate (40 × (1 + L/15) credits an old Indemnity) and the patch prices need the re-measure in step 2.
 - Rootkit at 75% may make Signal on a held server meaningless; the cap may be 50%.
 - Botnet's helper damage needs a number against the room fights' budget.
