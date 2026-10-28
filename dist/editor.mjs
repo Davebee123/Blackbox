@@ -114,7 +114,7 @@ function beatForm(i) {
       ${field('Text', text(p + '.body', b.body), 'A blank line starts a new paragraph. Click a blank to insert it.')}${chips(beatVars(b))}
     </section>
     <section class="ed-sec"><h2>Job</h2><div class="ed-row">${field('Type', select(p + '.job.type', j.type, JOB_NAMES))}</div>${jobFields}</section>
-    ${b.job ? `<section class="ed-sec"><h2>Reward</h2><div class="ed-row">${['credits', 'indemnity', 'standing', 'xp', 'relay'].map((k) => field(REWARDS[k], num(`${p}.reward.${k}`, r[k], 'min="0" step="any"'))).join('')}</div>
+    ${b.job ? `<section class="ed-sec"><h2>Reward</h2><div class="ed-row">${['credits', 'indemnity', 'standing', 'relay'].map((k) => field(REWARDS[k], num(`${p}.reward.${k}`, r[k], 'min="0" step="any"'))).join('')}</div>
       <div class="ed-row">${field('A unique item', select(p + '.reward.item', r.item || '', { '': 'None', ...Object.fromEntries(items.uniques.map((u) => [u.id, `${u.name} (lv ${u.level})`])) }), 'Given at the player\'s level when they deliver.')}</div>
       <div class="ed-row">${['blueprint', 'drop'].map((k) => `<label class="ed-check"><input type="checkbox" data-path="${p}.reward.${k}" ${r[k] ? 'checked' : ''}> ${REWARDS[k]}</label>`).join('')}</div></section>` : ''}
     <section class="ed-sec"><h2>Arrives</h2><div class="ed-row">${field('Not before level', num(p + '.when.level', b.when?.level, 'min="1" max="50" placeholder="any"'))}${field('Minutes after the beat before', num(p + '.when.delay', b.when?.delay, 'min="0" placeholder="0"'))}</div>
@@ -173,7 +173,7 @@ function jobLine(b) {
   const j = b.job; if (!j) return b.opensBoard ? '<div class="ed-job">Opens the contract board and the store.</div>' : '';
   const what = { kill: `Kill ${j.count} ${j.family ? FAMILIES[j.family] : ''} processes${j.family ? '' : ' in SPRAWL-00'}`, bounty: `Kill ${j.name} (${j.room})`, materials: `Deliver ${j.amount} ${CODES[j.material]}`, takeover: 'Take over a server', item: `Recover ${j.file}` }[j.type] || '';
   const r = b.reward || {};
-  const pay = [r.credits && `${r.credits} credits`, r.indemnity && `${r.indemnity} Indemnity`, r.standing && `+${r.standing} standing`, r.xp && `${r.xp}× XP`, r.relay && `${r.relay} relay`, r.blueprint && 'a blueprint', r.drop && 'a protocol'].filter(Boolean).join(' · ');
+  const pay = [r.credits && `${r.credits} credits`, r.indemnity && `${r.indemnity} Indemnity`, r.standing && `+${r.standing} standing`, r.relay && `${r.relay} relay`, r.blueprint && 'a blueprint', r.drop && 'a protocol'].filter(Boolean).join(' · ');
   return `<div class="ed-job"><b>${esc(what)}</b><br>${esc(pay || 'No reward')}${b.opensBoard ? '<br>Opens the contract board and the store.' : ''}</div>`;
 }
 function renderSide() {

@@ -38,8 +38,8 @@
 //   fog         a room is unknown (a "?" chip) until you've been in it; then it's discovered for good (look, below).
 //   progress    rooms cleared at least once, for good: a fight room when you first beat it, an interactable when you
 //               first use it, a junction when you first walk it. At 50% the whole graph is drawn (the rooms you haven't
-//               been in as unknown chips); at 100% the server is Mapped (an item roll two levels over it, and 5 kills'
-//               worth of XP).
+//               been in as unknown chips); at 100% the server is Mapped (an item roll two levels over it, and a lump
+//               of XP: mappedShare). Caches and puzzle rooms refill in two hours, so they never count (counted).
 //   visits      connect at the entry, jack out from any room (the pack banks), rest at home (Signal back at
 //               CONFIG.signalRest a minute), reconnect after ROOMS.reconnect. Lose a fight and you're disconnected: the
 //               unbanked pack lost (XP and banked gear stay), and CONFIG.deathWait.each more on the wait for each
@@ -58,6 +58,7 @@ import { armTicks, bossRule, BOSS_RULES } from './interrupt.mjs';
 import { logSet } from './genome.mjs';
 import { weightOf, nativeFloor, PARTS } from './parts.mjs';
 import { deathRecap } from './recap.mjs';
+import { contractDid } from './mail.mjs';
 import { addrsOf, byAddr } from './address.mjs';
 import { PROGRAMS, SOCKET, buildProgram, uninstallProgram, gainComponents, familyComponents, programCost, buildBlock as programBlock, costLine as programCostLine, codebasesOf } from './sockets.mjs';
 import { PUZZLES, PUZZLE_KINDS, isPuzzle, newPuzzle, puzzleMove, puzzleScore, puzzleStarted, cellOf, boardLines, moveLine } from './puzzles.mjs';
@@ -79,9 +80,10 @@ export const ROOMS = {
   speed: 1, // the playtest runs the clocks ten times as fast (app.js)
   reconnect: 30000, // after you leave, the server takes you back this much later
   rare: 0.04, rareLevel: 2, // one respawn in 25 is a ★ rare spawn (it was one in ten: 11% of all kills on the long climb and 70% of the blues)
-  // XP (7.2): a room kill pays 1.25 kills (an elite three times that, via ELITE.xp), a first clear half again, a rare
-  // spawn five times (twice when one respawn in ten was one: fewer of them, each worth more, the climb's pace kept), the
-  // Resident four times, the hunter twice; Mapped pays 5 kills.
+  // XP (7.2): a room kill pays 1.25 kills (an elite three times that, via ELITE.xp), a rare spawn five times (twice when
+  // one respawn in ten was one: fewer of them, each worth more, the climb's pace kept), the Resident four times, the
+  // hunter twice. Mapped pays 5 kills and what the server's first clears paid before they were folded into it: half of
+  // each counted fight room's kill (first), in one lump.
   xp: { room: 1.25, first: 0.5, rare: 5, boss: 4, hunter: 2, mapped: 5 },
   // Each fight's size in a room, on top of the run sizes every Signal fight has (CONFIG.runHp, runDamage): a process at
   // your level costs 20–30% of your Signal, an elite 45–60%, the Resident wins about one fight in three (2.5).
@@ -98,8 +100,8 @@ export const ROOMS = {
   junctions: 0.2, // about a fifth of the rooms
   sockets: { small: 1, medium: 2, large: 3 }, // socket rooms by size (6.1), a process's room first: clear it and it's yours to build in
   // Puzzle rooms (9.11): one, and a second this often by size; what each pays (L: the server's level). A board played
-  // to its end (won or lost) stays done until it refills, a cache's two hours. XP: half a kill for a win (intel).
-  puzzles: { second: { small: 0.25, medium: 0.5, large: 0.75 }, worm: 3, chase: 2, xp: 0.5,
+  // to its end (won or lost) stays done until it refills, a cache's two hours. XP: a kill for a win (intel).
+  puzzles: { second: { small: 0.25, medium: 0.5, large: 0.75 }, worm: 3, chase: 2, xp: 1,
     code: (L) => 6 + Math.floor(L / 2), // Quarantine: the whole board's worth of the server's code (a node's share of it, ★ three)
     parts: 3, spare: 2, // Cascade: components, and this many more for each tap left over
     cache: 1, budget: 0.25, // Ping sweep: a cache's credits and code, a quarter more for each of the budget left
@@ -153,8 +155,12 @@ export const MARKS = { nest: '▦', secret: '▧', socket: '⊕', entry: '⌂', 
 export const STOCKED = ['cache', 'stash', 'purse', 'secret', ...PUZZLE_KINDS];
 export { PUZZLES, PUZZLE_KINDS, isPuzzle };
 export const FIGHTS = ['process', 'elite', 'guard', 'core', 'boss', 'socket', 'nest']; // a socket: guarded by a process until its first clear, then never again
-// Optional rooms (a quirk's: the nest, the hidden room) and a thread's room never count toward Rooms n/N or Mapped.
-export const counted = (x) => !x.nook && !x.optional;
+// Optional rooms (a quirk's: the nest, the hidden room), a thread's room and the rooms on a long refill (caches and
+// puzzle rooms, back in two hours) never count toward Rooms n/N or Mapped.
+export const LONG_REFILL = ['cache', ...PUZZLE_KINDS];
+export const counted = (x) => !x.nook && !x.optional && !LONG_REFILL.includes(x.kind);
+hooks.counted = counted; // for mail.mjs, which this module imports (its contracts read Rooms n/N)
+hooks.familiesAt = (L) => Object.keys(OPENS).filter((f) => OPENS[f] <= L); // the virus families open at level L (a Grind contract's)
 // A hidden room stays off the map until it opens (revealSecret): no link, no fog, no path, no address, no chip.
 export const onMap = (x) => !x.concealed;
 export const HUNTERS = {
@@ -697,9 +703,12 @@ function clear(s, room, quiet = false) {
   if (!FIGHTS.includes(room.kind)) revealSecret(s, room); // a hidden room beside a room that isn't a fight: its first clear opens it
   return true;
 }
-// Silt Map (a unique, explore-xp%): first clears and Mapped servers pay more XP.
+// Silt Map (a unique, explore-xp%): Mapped servers pay more XP.
 const exploreMult = (s) => 1 + fxPct(s, 'explore-xp%') / 100;
-// 100%: Mapped. An item roll two levels over the server, and 5 kills' worth of XP.
+// What Mapped pays, in kills (deed shares): 5, and half of each counted fight room's kill, its first clear's old pay.
+export const mappedShare = (rooms) => rooms.filter((x) => counted(x) && FIGHTS.includes(x.kind))
+  .reduce((n, x) => n + ROOMS.xp.first * ROOMS.xp.room * (['core', 'boss'].includes(x.kind) ? ROOMS.xp.boss : x.kind === 'elite' ? ELITE.xp : 1), ROOMS.xp.mapped);
+// 100%: Mapped. An item roll two levels over the server, and its lump of XP.
 function mapped(s) {
   const R = s.rooms;
   R.mapped = nowOf();
@@ -707,7 +716,7 @@ function mapped(s) {
   for (const x of roomList(s)) R.seen[x.id] = 'kind'; // Mapped: every room discovered (one cleared from afar, too)
   const r = rnd(R, 77), it = addItem(s, rollItem(r, { level: R.level + 2, rarity: r() < LOOT.minor ? 'tuned' : 'stock', cls: classOf(s) }), 'Mapped: ');
   if (it) R.banked.push(it.id);
-  const xp = Math.round(deedXpFor(s, R.level, ROOMS.xp.mapped) * exploreMult(s));
+  const xp = Math.round(deedXpFor(s, R.level, mappedShare(roomList(s))) * exploreMult(s));
   gainXp(s, xp, `${R.name} Mapped`, 'breakin'); // exploration XP (the old break-ins' share): finishing a server
   say(s, `MAPPED. ${it ? `${itemLabel(it)} goes in your bank. ` : ''}+${xp} XP.`, 'rooms-good');
   say(s, `${R.name}'s rooms now respawn fast: a fight room in ${ROOMS.respawn.process} minutes, a guard post in ${ROOMS.respawn.guard}, an elite in ${ROOMS.respawn.elite}.`, 'rooms-good');
@@ -906,9 +915,10 @@ export function enter(s, now = nowOf(), { keys = [] } = {}) {
   R.visit = { n: R.visits, walked: { [R.graph.entry]: true }, keys: [...keys], rested: false, moves: 0, hunter: newHunter(s), slipped: false, back: null, xp0: xpTotal(s) };
   R.screen = null;
   look(s);
-  clear(s, R.graph.rooms[R.graph.entry], true);
+  const fresh = clear(s, R.graph.rooms[R.graph.entry], true);
   stood(s, R.graph.rooms[R.graph.entry]);
   say(s, `CONNECTED to ${R.name}, visit ${R.visits}.${R.visit.hunter ? ` A ${HUNTERS[R.visit.hunter.kind].name} walks this server.` : ''}`);
+  if (!fresh && !R.mapped) { const p = progressOf(s); if (p.done === p.total) mapped(s); } // done before caches and boards stopped counting
   if (R.world) { const seed = ask('exfil', s, now); if (seed) spawnExfil(s, seed); } // an Exfil this visit (netrooms.mjs: rogue servers, your cooldown)
 }
 // Jack out from any room: home, with the pack banked. A key you didn't use goes back to its post, guard and all.
@@ -1238,7 +1248,7 @@ function playPuzzle(s, room, text, opts = {}) {
 //   Ping sweep  a cache (credits and code) for the caches found, a quarter more for each of the budget left.
 //   The chase   a win: half a cache, and the Tracker loses your trail for the rest of the visit. A loss: it's on you, and
 //               the fight starts here.
-// A win pays half a kill's XP (intel).
+// A win pays a kill's XP (intel).
 function finishPuzzle(s, room, b, opts = {}) {
   const R = s.rooms, P = ROOMS.puzzles, L = (R.world ? ask('level', s) : undefined) ?? R.level, sc = puzzleScore(b), won = b.done === 'won', now = nowOf();
   const had = R.puzzles[room.id];
@@ -1254,8 +1264,9 @@ function finishPuzzle(s, room, b, opts = {}) {
   if (room.kind === 'chase' && won) { const c = cache(); pay.credits = Math.round(c.credits * P.trail); pay.code = Math.max(1, Math.round(c.code * P.trail)); }
   if (R.world) ask('puzzlePay', s, room, { ...pay, won }); // into the pack (credits, code), components at once, and a won board's set roll (netrooms.mjs)
   else { R.credits += pay.credits; s.server.credits += pay.credits; if (pay.code) gainCode(s, { [pay.material]: pay.code }, `${room.path}: `); if (pay.parts) gainComponents(s, pay.parts, null, room.path); }
-  const xp = won ? Math.round(deedXpFor(s, L, P.xp)) : 0; // a board takes minutes: it pays like the fights it stands in for
+  const xp = won ? xpFor(s, L, P.xp) : 0; // a kill's worth: a contract (Solve) is what pays for the minutes
   if (xp) gainXp(s, xp, `${room.path} solved`, 'intel');
+  if (won) contractDid(s, 'solve', room.kind); // a Solve contract: any board, or the one it names
   // A won board deep down may hold one of its floor's uniques (combat.mjs puzzleUnique): into the pack, as a vault's item.
   const gold = won && R.world ? puzzleUnique(s, R.floor || 1, L) : null, got = gold ? addItem(s, gold, `${room.path}: `) : null;
   if (got) { ask('packItem', s, got); say(s, `${itemLabel(got)} goes in your pack.`, 'rooms-good'); }
@@ -1487,12 +1498,8 @@ hooks.roomEnd = (s, result) => {
   // One respawn in 25 is a rare spawn (ROOMS.rare): it waits until you kill it (a held server's Root 5, a Legacy server's twice).
   R.rare[room.id] = FIGHTS.includes(room.kind) && !['core', 'boss', 'socket', 'nest'].includes(room.kind) && !room.wild && rnd(R, 31)() < ROOMS.rare * ((R.world && ask('rare', s)) || 1);
   programsPay(s, room, e);
-  // First clear: half that fight's XP again (7.2).
-  if (!R.cleared[room.id]) {
-    const xp = Math.round(deedXpFor(s, e.virus.level, (e.roomsXp || 1) * ROOMS.xp.first * (e.virus.elite ? ELITE.xp : 1)) * exploreMult(s));
-    gainXp(s, xp, `${room.path} first clear`, 'breakin'); // progress on a server: exploration XP, like the old break-ins
-    clear(s, room);
-  }
+  // First clear: progress toward Mapped (its XP comes in Mapped's lump).
+  if (!R.cleared[room.id]) clear(s, room);
   // The key: beat the guard while its vault is shut and it goes in your pack, for this visit.
   if (room.kind === 'guard' && room.key && !R.opened[room.key] && !R.visit.keys.includes(room.key)) { R.visit.keys.push(room.key); say(s, `You take the ${R.graph.rooms[room.key].path} key.`, 'rooms-good'); }
   if (room.kind === 'socket' && first) say(s, `${room.path} is open: a socket. Build a program in it.`, 'rooms-good');

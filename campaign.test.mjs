@@ -304,7 +304,8 @@ test('the breach page: while you pick a node, the lit nodes show beside the map 
 
 // ---------- the bot ----------
 // docs/roguelite.md 11 has the full table (campaignsim.mjs, 12 seeds a class): about ten breaches to level 10, and every
-// class winning 55 to 75% of its breaches. Three seeds a class here, with bands wide enough for that sample.
+// class winning 55 to 75% of its breaches. Three seeds a class here, with bands wide enough for that sample. Since a
+// decode pays a kill (not a deed's 4 to 8) the climb is a little longer: 11 to 16 breaches a class on these seeds (12 to 13 before).
 test('campaignsim: every class reaches level 10 from level 1 within a bounded number of breaches', { timeout: 600000 }, () => {
   const runs = CLASSES.flatMap((cls) => [1, 2, 3].map((seed) => runCampaign({ cls, seed, to: 10, max: 30 })));
   for (const r of runs) {
@@ -312,7 +313,7 @@ test('campaignsim: every class reaches level 10 from level 1 within a bounded nu
     assert.ok(r.log.length <= 22, `${r.cls}: ${r.log.length} breaches to level 10`);
     assert.ok(r.reached[2].breaches <= 2, `${r.cls}: the first level comes fast`);
   }
-  for (const cls of CLASSES) { const rs = runs.filter((r) => r.cls === cls), n = rs.reduce((k, r) => k + r.log.length, 0) / rs.length; assert.ok(n >= 7 && n <= 15, `${cls}: ${n.toFixed(1)} breaches to level 10 on average`); }
+  for (const cls of CLASSES) { const rs = runs.filter((r) => r.cls === cls), n = rs.reduce((k, r) => k + r.log.length, 0) / rs.length; assert.ok(n >= 7 && n <= 17, `${cls}: ${n.toFixed(1)} breaches to level 10 on average`); }
   const rep = report(runs);
   for (const r of rep) assert.ok(r.win >= 45 && r.win <= 90, `${r.cls} wins ${r.win}% of its breaches`); // campaignsim.mjs prints the full table
   // Loot is a chase (the designer: "WAY too much loot per run"): one to three items banked a breach, and past the first

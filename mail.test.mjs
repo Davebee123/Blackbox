@@ -152,7 +152,9 @@ test('the storyline: kills, code, a named process, a takeover, then a ledger on 
   assert.equal(offers(s).filter((o) => o.type === 'side').length, 2, 'with a side to pick');
 });
 
-test('the board: offers arrive at uneven times up to five and expire; take three, count only what you took', () => {
+test('the board: offers arrive at uneven times up to ten and expire; take six, count only what you took', () => {
+  assert.equal(MAIL.offers, 10);
+  assert.equal(MAIL.take, 6);
   const s = contractor();
   const times = [];
   for (let t = T0; t < T0 + 3 * 60 * 60 * 1000 && times.length < 12; t += 30 * 1000) {
@@ -172,16 +174,16 @@ test('the board: offers arrive at uneven times up to five and expire; take three
   assert.ok(!offers(s2).includes(first), 'an untaken offer runs out');
   // taking
   const s3 = contractor();
-  for (let i = 0; i < 5; i++) offer(s3, T0);
+  for (let i = 0; i < MAIL.take + 2; i++) offer(s3, T0);
   const kill = offers(s3).find((o) => o.type === 'kill') || offer(s3, T0);
   s3.zone = null;
-  for (const o of [...offers(s3)].slice(0, 3)) command(s3, `mail accept ${o.id}`);
-  assert.equal(heldCount(s3), 3);
-  const fourth = offers(s3)[0];
-  assert.match(command(s3, `mail accept ${fourth.id}`).at(-1).message, /already hold 3/);
-  const held = openContracts(s3)[0];
+  for (const o of [...offers(s3)].filter((x) => x.type !== 'side').slice(0, MAIL.take)) command(s3, `mail accept ${o.id}`);
+  assert.equal(heldCount(s3), MAIL.take);
+  const seventh = offers(s3).find((x) => x.type !== 'side');
+  assert.match(command(s3, `mail accept ${seventh.id}`).at(-1).message, /already hold 6/);
+  const held = openContracts(s3).find((x) => x.story === undefined);
   command(s3, `mail drop ${held.id}`);
-  assert.equal(heldCount(s3), 2);
+  assert.equal(heldCount(s3), MAIL.take - 1);
   assert.equal(standing(s3), 30, 'dropping is free');
   if (!openContracts(s3).includes(kill)) assert.equal(kill.got, 0, 'an offer you did not take counts nothing');
 });
@@ -398,4 +400,61 @@ test('a save whose board opened before side offers existed gets them on the next
   const n = offers(s).filter((o) => o.type === 'side').length;
   tickMail(s, T0 + 60000);
   assert.equal(offers(s).filter((o) => o.type === 'side').length, n, 'only once');
+});
+
+test('contract XP, WoW-style: fixed when posted, its minutes of farming at that level (farmXp) times MAIL.xpShare; slow kinds pay more', async () => {
+  const { minutesOf, contractXp } = await import('./dist/mail.mjs');
+  const { farmXp, xpToNext, levelMinutes } = await import('./dist/data.mjs');
+  assert.equal(farmXp(20), xpToNext(20) / levelMinutes(20));
+  const s = contractor();
+  s.hackers = { breaker: { level: 20, xp: 0 } };
+  addLocation(s, 'worm', 20); // a traced server: invasions come from it
+  const by = {};
+  for (let i = 0; i < 400; i++) { const o = offer(s, T0); if (!o.offBooks && o.faction === 'halcyon') by[o.type] ||= o; }
+  for (const o of Object.values(by)) {
+    assert.equal(o.minutes, minutesOf(o), o.type);
+    assert.equal(o.reward.xp, Math.round(MAIL.xpShare * minutesOf(o) * farmXp(20)), `${o.type}: a fixed amount`);
+  }
+  assert.ok(by.kill && by.hold && by.hold.reward.xp > by.kill.reward.xp, 'an invasion held pays more than a few kills');
+  assert.equal(contractXp(30, by.kill) > contractXp(20, by.kill), true, 'the same job pays more posted higher');
+  // Delivered later, at a higher level: what it was posted for.
+  const k = by.kill;
+  s.mail.offers = [k];
+  command(s, `mail accept ${k.id}`);
+  k.got = k.count;
+  s.hackers.breaker.level = 25;
+  const mark = s.serial;
+  command(s, `mail deliver ${k.id}`);
+  assert.equal(s.logs.filter((x) => x.id > mark && x.type === 'xp').reduce((n, x) => n + x.amount, 0), k.reward.xp);
+});
+
+test('activity contracts: each from its level, and each counts what it wraps', async () => {
+  const { contractDid, contractKill, ACTIVITY } = await import('./dist/mail.mjs');
+  const kinds = (level) => { const s = contractor(); s.hackers = { breaker: { level, xp: 0 } }; const seen = new Set(); for (let i = 0; i < 600; i++) seen.add(offer(s, T0).type); return seen; };
+  const at9 = kinds(9), at12 = kinds(12);
+  assert.ok(!at9.has('interrupt') && at12.has('interrupt'), 'Interrupt from level 10, with SIGINT');
+  for (const k of ['grind', 'decode', 'solve']) assert.ok(at12.has(k), `${k} at 12`);
+  assert.equal(ACTIVITY.interrupt.from, 10);
+  const s = contractor();
+  const job = (type, more) => { const j = { id: s.mail.next++, type, got: 0, reward: { credits: 1 }, ...more }; s.mail.jobs.push(j); return j; };
+  const solve = job('solve', { count: 2 }), named = job('solve', { count: 1, kind: 'cascade' }), decode = job('decode', { count: 1 }), sweeps = job('sweeps', { count: 1 }), intr = job('interrupt', { count: 2 }), hold = job('hold', { count: 1 });
+  contractDid(s, 'solve', 'quarantine');
+  assert.equal(named.got, 0, 'a named board only counts its kind');
+  contractDid(s, 'solve', 'cascade');
+  assert.ok(ready(s, solve) && ready(s, named));
+  for (const what of ['decode', 'sweeps', 'interrupt', 'interrupt', 'hold']) contractDid(s, what);
+  assert.ok(ready(s, decode) && ready(s, sweeps) && ready(s, intr) && ready(s, hold));
+  const grind = job('grind', { virus: 'cryptominer', count: 2, level: 10 });
+  contractKill(s, { family: 'ransomware', virus: 'wiper', level: 10 });
+  contractKill(s, { family: 'ransomware', virus: 'cryptominer', level: 3 });
+  assert.equal(grind.got, 0, 'another family, or 4+ levels under it, counts nothing');
+  contractKill(s, { family: 'ransomware', virus: 'cryptominer', level: 10 });
+  contractKill(s, { family: 'ransomware', virus: 'cryptominer', level: 11 });
+  assert.ok(ready(s, grind), 'its own virus, by its family (not its lineage)');
+  const loc = addLocation(s, 'worm', 10);
+  loc.takenOver = true; loc.root = { level: 2, cleared: 5 };
+  const root = job('root', { loc: loc.id, root: 3, fights: 10 });
+  assert.ok(!ready(s, root));
+  loc.root.level = 3;
+  assert.ok(ready(s, root), 'Root 3 reached on a server you hold');
 });

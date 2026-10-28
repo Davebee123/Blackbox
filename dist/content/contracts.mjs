@@ -215,6 +215,76 @@ export default {
       }
     ]
   },
+  "grind": {
+    "halcyon": [
+      {
+        "subject": "Cull order: {virus}",
+        "body": [
+          "Our clients are drowning in {virus}. Neutralize {count} of them at your level, wherever they turn up."
+        ]
+      }
+    ]
+  },
+  "solve": {
+    "halcyon": [
+      {
+        "subject": "Locked stores",
+        "body": [
+          "Clients keep finding their stores locked behind puzzle boards. Win {boards}, on any server."
+        ]
+      }
+    ]
+  },
+  "decode": {
+    "halcyon": [
+      {
+        "subject": "Know the enemy",
+        "body": [
+          "Actuarial wants to know what it insures against. Decode {count} virus parts in your fights."
+        ]
+      }
+    ]
+  },
+  "sweeps": {
+    "halcyon": [
+      {
+        "subject": "Incident reports",
+        "body": [
+          "Our adjusters need the logs read. Sweep {logs} and name what happened."
+        ]
+      }
+    ]
+  },
+  "interrupt": {
+    "halcyon": [
+      {
+        "subject": "Live response",
+        "body": [
+          "We pay for incidents that never happen. Answer {count} attacks before they land."
+        ]
+      }
+    ]
+  },
+  "root": {
+    "halcyon": [
+      {
+        "subject": "Deeper access",
+        "body": [
+          "Halcyon wants more of {server}. Take it to Root {root}."
+        ]
+      }
+    ]
+  },
+  "hold": {
+    "halcyon": [
+      {
+        "subject": "Hold the line",
+        "body": [
+          "The crews hit back at anyone who works for us. Stop the next invasion that comes for your server."
+        ]
+      }
+    ]
+  },
   "installs": [
     {
       "file": "canary.ko",

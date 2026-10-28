@@ -564,7 +564,7 @@ function liveFights(s, loc) {
   for (const room of FP.roomList(s)) {
     if (!['process', 'elite', 'guard', 'core'].includes(room.kind) || room.mirror || !FP.known(s, room.id) || !FP.isUp(s, room)) continue;
     const v = FP.virusOf(s, room), sp = room.wild ? spawnOf(s, room, loc) : null;
-    out.push({ id: room.id, family: lineageOf(v.family), zone: !!loc.zone, name: sp?.bounty ? sp.name : null, level: v.level, strain: v.strain || null,
+    out.push({ id: room.id, family: lineageOf(v.family), virus: v.family, zone: !!loc.zone, name: sp?.bounty ? sp.name : null, level: v.level, strain: v.strain || null,
       encrypts: v.parts.some((p) => p.attack?.effect === 'encrypt'), core: room.kind === 'core', server: s.rooms.type === 'server' });
   }
   return out;

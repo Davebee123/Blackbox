@@ -453,7 +453,7 @@ test('the terminal: ls names the exits and the hunter, cd moves, map draws what 
   assert.equal(R.at, first.id);
   if (R.screen?.kind === 'virus') FP.roomsCommand(s, 'back');
   const map = FP.roomsCommand(s, 'map').find((e) => e.type === 'rooms-out').message;
-  assert.match(map, new RegExp(`rooms \\d+/${12 + FP.ROOMS.sockets.medium}`), 'twelve rooms and two socket rooms');
+  assert.match(map, new RegExp(`rooms \\d+/${12 + FP.ROOMS.sockets.medium - 2}`), 'twelve rooms and two socket rooms, less the two caches (they refill)');
   FP.roomsCommand(s, 'developer bossrule c');
   assert.equal(R.bossRule, 'c');
   FP.roomsCommand(s, 'jack out');
@@ -748,4 +748,25 @@ test('the traceroute: a hop for each step, the last few at the map\'s foot, its 
   assert.doesNotMatch(roomsMarkup(s, ui), /fp-trace/, 'a new visit has no route yet');
   traceHop(s, a, b, ui);
   assert.deepEqual(ui.trail.hops.map((x) => x.n), [1]);
+});
+
+test('XP for exploring: a first clear pays nothing on its own; Mapped pays 5 kills and the first clears\' half-fights in one lump, once its fights, the vault and its other rooms are done (caches and puzzle rooms never count)', async () => {
+  const { deedXpFor } = await import('./dist/combat.mjs');
+  const s = server({ size: 'medium' }), R = s.rooms;
+  assert.ok(FP.roomList(s).some((x) => x.kind === 'cache') && !FP.roomList(s).filter((x) => x.kind === 'cache').some(FP.counted), 'caches never count');
+  assert.equal(FP.mappedShare([{ kind: 'process' }, { kind: 'elite' }, { kind: 'core' }, { kind: 'cache' }]), 5 + 0.625 * (1 + 3 + 4), '5, and half of each fight room\'s 1.25 kills (an elite 3x, the Core 4x)');
+  const fights = FP.roomList(s).filter((x) => FP.counted(x) && ['process', 'guard', 'elite'].includes(x.kind));
+  for (const x of FP.roomList(s)) if (FP.counted(x) && !fights.includes(x)) R.cleared[x.id] = clock; // all but its fights
+  const xp = (re) => s.logs.filter((x) => x.type === 'xp' && re.test(x.message)).reduce((n, x) => n + x.amount, 0);
+  for (const [i, room] of fights.entries()) {
+    place(s, FP.neighbours(R.graph, room.id)[0]);
+    s.signal = s.rooms.max; R.signal = R.max;
+    FP.fight(s, room); win(s);
+    if (i < fights.length - 1) assert.ok(!R.mapped, 'not yet');
+  }
+  assert.equal(xp(/first clear/), 0, 'no first-clear XP');
+  assert.ok(R.mapped, 'its last fight room Maps it');
+  const want = deedXpFor(s, R.level, FP.mappedShare(FP.roomList(s)));
+  const got = xp(/Mapped/) - s.logs.filter((x) => x.type === 'fresh').reduce((n, x) => n + x.amount, 0);
+  assert.ok(Math.abs(got - want) <= 1, `Mapped: ${got} XP, ${want} wanted`);
 });
