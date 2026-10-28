@@ -61,7 +61,8 @@ import { EMBLEMS } from './class-emblems.mjs';
 import { ARCHETYPES, CANTRIPS, EDGE, SYNC, STATUSES, LOADOUT, TREE, SERVER, SKILLS, xpToNext, unlockLevel, power, SUBS, SUBCLASS, skillOrder, barSlots, isRunSkill } from './data.mjs';
 import { XP_KINDS, xpFor, cooldownOf, subOf, subPicked, kitTalent, specRule, skillBase, knowsPart, codexKey, previewDamage, ignoresArmor, armorTakes, parse, blocked, attackAmount, drawingFire, momentumStacks, momentumBonus, topUpCost, UNIQUES, bossChance, listenBoost, effectLine, implicitText, paceOf, keyMap, barKeys, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverClass, daemonSlots, procOpen, slottedDaemons, daemonNext, talentPoints, loaded, loadedOn, slotCount, maxSignal, compileCost, materialsOf, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, picksOf, ranksOf, freeSlot, rigOf, stashItem, knows, knownRecipes, pointsSpent, tierState, rowState, spentAbove, knownSkills, equippedSkills, cycleLength, familyInfo, defender, healCap, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, part, daemonLevel, packed, limitOf, asleep, frozenNow } from './combat.mjs';
 import { sigOf, named, lairOf, intelOf, knowsStrain, knowsEvent, knowsRich, nameOf, NETWORK, nativeChance, homeName, isNative, whoLabel, homeOf, netSeedOf, knownNets, NATIVE_POOL, awayChance } from './network.mjs';
-import { guardSetChance, lairChance, bossOdds, presetsOf, presetKeys, followOf, spikeName, said, mutated, capstonePoints, capPickOf, capState } from './combat.mjs';
+import { guardSetChance, lairChance, bossOdds, presetsOf, presetKeys, followOf, spikeName, said, mutated, capstonePoints, capPickOf, capState, blastOf, livingParts } from './combat.mjs';
+import { tripwireOf, zipOf, heldOf } from './order.mjs';
 import { cantripsOf, TELL } from './data.mjs';
 import { daemonText } from './daemons.mjs';
 import { ROOMS as ROOMS_FP, kindRule, KIND_OF } from './floorplan.mjs'; // a server card's respawn timers, its type's rule
@@ -400,8 +401,9 @@ const heldMark = (i) => (i.held ? `<i class="held">${glyph('stall')}</i>` : '');
 // Zip Bomb's fuse, a Buffer's next shield.
 // The P2 parts' (genes.mjs): a Scraper's takes-buffs mark, a Bad Block's cracked mark, a Cold Store's thaw, a Spare's boot.
 const chipCls = (i) => (i.packed ? '' : chipCls0(i)); // a packed part's chip (combat.mjs intents): no mark says what it is
-const chipCls0 = (i) => `${i.taps ? ` tap t${i.tap}${i.tap === 1 ? ' first' : ''}${i.tap === i.taps ? ' last' : ''}` : ''}${i.syn ? ' syn' : ''}${i.effect === 'fuse' ? ' fuse' : ''}${i.effect === 'buffer' ? ' bufup' : ''}${i.scrape ? ' scrape' : ''}${i.bad ? ' bad' : ''}${i.effect === 'thaw' ? ' thaw' : ''}${i.effect === 'boot' ? ' boot' : ''}`;
-const chipTip = (i) => (i.taps ? `\nHit ${i.tap} of ${i.taps} of one volley. A cut stops the rest, and a delay moves all of it.` : i.syn ? '\nThe skill you fire this cycle cools down 2 cycles longer.' : i.effect === 'fuse' ? '\nThe fuse goes off. A ◆ or a shield absorbs the blast. Ending the fight first puts it out.' : i.effect === 'buffer' ? '\nIts shield absorbs your commands\' hits first. Burns and helpers bypass it.'
+const chipCls0 = (i) => `${i.taps ? ` tap t${i.tap}${i.tap === 1 ? ' first' : ''}${i.tap === i.taps ? ' last' : ''}` : ''}${i.syn ? ' syn' : ''}${i.effect === 'fuse' ? ' fuse' : ''}${i.effect === 'buffer' ? ' bufup' : ''}${i.scrape ? ' scrape' : ''}${i.bad ? ' bad' : ''}${i.effect === 'thaw' ? ' thaw' : ''}${i.effect === 'boot' ? ' boot' : ''}${i.loud ? ' loud' : ''}`;
+const chipTip = (i) => (i.loud ? `\nLoud: if the ${i.loud.by} breaks this cycle, it deals ${i.loud.amount} instead of ${i.loud.was}${i.loud.from > i.col ? ` and lands ${i.col === 0 ? 'this cycle' : i.col === 1 ? 'next cycle' : `in ${i.col} cycles`}` : ''}.` : '') + chipTip0(i);
+const chipTip0 = (i) => (i.taps ? `\nHit ${i.tap} of ${i.taps} of one volley. A cut stops the rest, and a delay moves all of it.` : i.syn ? '\nThe skill you fire this cycle cools down 2 cycles longer.' : i.effect === 'fuse' ? `\nThe fuse goes off on both sides: a ◆ or a shield of yours absorbs your share, and every part of the virus loses a ◆ and ${Math.round(CONFIG.zipbomb.parts * 100)}% of its max. Ending the fight first puts it out.` : i.effect === 'buffer' ? '\nIts shield absorbs your commands\' hits first. Burns and helpers bypass it.'
   : i.scrape ? '\nRemoves your shield, your ◆ and your timed buffs as it lands. Gains up to 2 ◆ from them. Null Route makes it miss.\n▸ Buff after it lands, not before.' : i.bad ? '\nYour next heals lose up to 10% of your max health. Purge, Scrub, Rollback and Rotate Keys clear it.'
   : i.effect === 'thaw' ? `\nFrozen and immune to damage until then. Its first hit deals ${i.amount}, 2 cycles after it thaws.` : i.effect === 'boot' ? '\nThe signature part broke, so it boots with its attack. Drops its ◆ as it boots.\n▸ Break it before then, or once it boots.' : '');
 // The Decoy's beat (combat.mjs bendCommand): a red Bend chip in the column it lands, saying where the pointer is once
@@ -552,8 +554,11 @@ function partTags(s, p) {
   if (mutated(s, 'adaptive') && p.integrity > 0 && p.adaptRun >= 2 && p.adaptAt === e.cycle - 1) tags.push('<span class="tag hot" title="Adapting: gains 1 ◆ at the end of this cycle if your commands hit it again">adapting</span>');
   if (p.rerouted && p.integrity > 0) tags.push(`<span class="tag hot" title="Rerouted: its attack deals ${p.rerouted} more damage, passed on from a broken part">+${p.rerouted} rerouted</span>`);
   // Parts that change the fight (data.mjs FAMILIES): a Tripwire, the C2 Node, the parts gone loud.
-  if (p.deadman && p.integrity > 0 && !pk) tags.push(`<span class="tag hot" title="${esc(`Tripwire: when broken while the others stand, they go loud. Loud parts deal ${Math.round((CONFIG.tripwire.loud - 1) * 100)}% more damage and attack 1 cycle sooner.${answerLine('Break it last.')}`)}">tripwire</span>`);
-  if (p.loud && p.integrity > 0) tags.push(`<span class="tag hot" title="Loud: deals ${Math.round((CONFIG.tripwire.loud - 1) * 100)}% more damage and attacks 1 cycle sooner">loud</span>`);
+  const T = CONFIG.tripwire, pc = (k) => Math.round((k - 1) * 100);
+  if (p.deadman && p.integrity > 0 && !pk) tags.push(`<span class="tag hot" title="${esc(`Tripwire: when broken while the others stand, they go loud, both ways: they deal ${pc(T.loud)}% more damage and attack a cycle sooner, and they take ${pc(T.taken)}% more damage and drop their ◆.${answerLine('Break it last, or first when you can finish the rest before their attacks add up.')}`)}">tripwire</span>`);
+  if (p.loud && p.integrity > 0) tags.push(`<span class="tag hot" title="${esc(`Loud: deals ${pc(T.loud)}% more damage and attacks a cycle sooner. Takes ${pc(T.taken)}% more damage, and its ◆ are gone.`)}">loud</span>`);
+  // A Lockbox's held damage (docs/puzzle-levers.md 3.4): yours, in your teal.
+  for (const h of p.integrity > 0 && !pk ? heldOf(s, p) : []) tags.push(`<span class="tag you held" title="${esc(`Held: the ${p.name} holds ${h.held} of your damage on the ${h.partner.name}. When it breaks, half of it, ${h.land}, lands on the ${h.partner.name} at once.`)}">${glyph('unlock')}held ${h.held}</span>`);
   // Fallback (combat.mjs): the part that takes over its partner's attack when the partner breaks first.
   if (p.fallback && p.integrity > 0) { const t = e.virus.parts.find((x) => x.id === p.fallback); if (p.tookOver) tags.push(`<span class="tag hot" title="${esc(`Took over: took over the ${t?.name || 'broken part'}'s ${t?.attack?.name || 'attack'} when the ${t?.name || 'other part'} broke.`)}">took over</span>`); else if (t && t.integrity > 0 && t.attack) tags.push(`<span class="tag hot" title="${esc(`Fallback: if the ${t.name} breaks first, the ${p.name} takes over its ${t.attack.name}.`)}">fallback</span>`); }
   // The parts plan (data.mjs BASICS, genes.mjs): an Accumulator's charge, a Hotspot's glow, the Idle Timer's countdown on
@@ -725,7 +730,23 @@ export function boardMarkup(s, selected, preview = null) {
     return rows.length ? `<span class="hpips">${rows.map((k) => { const x = hplan.pips.find((y) => y.part === p.id && y.col === c && y.helper === k); return x ? `<i class="hpip${x.trips ? ' trip' : ''}" title="${esc(x.tip)}"></i>` : '<i class="hpip none"></i>'; }).join('')}</span>` : '';
   };
   // Damage on the timeline is what you'll actually take after your Reduction.
-  const list = fighting ? intents(s, 4).map((i) => (i.effect === 'damage' ? { ...i, amount: blocked(s, i.amount) } : i.hit ? { ...i, hit: blocked(s, i.hit) } : i)) : [];
+  const list0 = fighting ? intents(s, 4).map((i) => (i.effect === 'damage' ? { ...i, amount: blocked(s, i.amount) } : i.hit ? { ...i, hit: blocked(s, i.hit) } : i)) : [];
+  // The order levers on the board (order.mjs, docs/puzzle-levers.md 3.2 to 3.4). A Tripwire your move breaks this cycle
+  // (the forecast): the other parts' attacks show their loud numbers, a cycle sooner, and their ◆ blink as falling.
+  const trip = fighting ? tripwireOf(s) : null;
+  const tripping = !!trip && (fc.parts[trip.id] || 0) >= trip.integrity && !(trip.armor > 0) && !((e.buffs?.sudo ?? -1) >= e.cycle) && knowsPart(s, e.virus, trip);
+  const loudAt = (x) => tripping && x.id !== trip.id && x.kind === 'system' && alive(x);
+  const list = !tripping ? list0 : list0.map((i) => {
+    const x = part(s, i.source);
+    if (!loudAt(x) || i.tell || i.hidden || !['damage', 'encrypt'].includes(i.effect) && !i.hit) return i;
+    const k = CONFIG.tripwire.loud, amt = ['damage', 'encrypt'].includes(i.effect) ? 'amount' : 'hit';
+    return { ...i, [amt]: Math.max(1, Math.round(i[amt] * k)), col: Math.max(0, i.col - CONFIG.tripwire.sooner), loud: { by: trip.name, was: i[amt], amount: Math.max(1, Math.round(i[amt] * k)), from: i.col } };
+  });
+  if (tripping) for (const x of e.virus.parts.filter(loudAt)) if (x.armor > 0) fc.chits[x.id] = x.armor;
+  // A Zip Bomb lit, or one your move breaks this cycle: every other part's bar shows the blast's bite as a ghost.
+  const zip = fighting ? zipOf(s) : null;
+  const blast = zip && knowsPart(s, e.virus, zip) && (zip.fuseAt ? zip.fuseAt - e.cycle : alive(zip) && (fc.parts[zip.id] || 0) >= zip.integrity && !(zip.armor > 0) ? CONFIG.zipbomb.fuse : null);
+  const ghosts = (p) => (alive(p) ? orderMarks(s, p, fc, blast != null && p !== zip ? { zip, in: blast } : null) : '');
   const hidden = fighting && timersHidden(s);
   const remaining = Math.max(0, (cycleLength(s) - e.elapsedMs) / 1000);
   const quietCol = (c) => fighting && !hidden && !list.some((i) => i.col === c);
@@ -821,7 +842,7 @@ export function boardMarkup(s, selected, preview = null) {
     const guard = alive(p) ? guardMarks(s, e.virus, p, fc) : '';
     const gearMark = onParts[p.id] ? `<span class="gpart" title="${esc(`${list2(onParts[p.id])}: live on the ${p.name} now.`)}">${glyph('protocol')}</span>` : '';
     return `<button type="button"${fade} class="brow bpart ${dying(p) ? 'dying' : ''} ${selected === p.id ? 'selected' : ''} ${nowHit ? 'now' : ''} ${p.maxArmor && !p.armor ? 'cracked' : ''}${frozenNow(s, p) && !packed(s, e.virus, p) ? ' frozen' : ''}${asleep(p) && alive(p) && !packed(s, e.virus, p) ? ' standby' : ''} ${marks.map((k) => 'm-' + k).join(' ')}${fighting && progExc(s, p) ? ' m-exc' : ''}" data-target="${esc(p.id)}" ${fighting ? '' : 'disabled'} title="Target ${esc(p.name)}: ${spike}">
-      <div class="bcell bname" title="${esc(partTip(s, e.virus, p))}">${ties[ri]}${pips(p.id)}<span class="part-top"><span class="part-name">${esc(p.name)}${known ? '' : '<sup class="unk">?</sup>'}${mastered(s, e.virus, p) && !packed(s, e.virus, p) ? masteredMark(p) : ''}</span>${gearMark}${marksMarkup(marks)}${chitsMarkup(p, fc.chits[p.id] || 0)}<span class="part-hp">${p.integrity}/${p.max}</span></span><span class="part-bar${guard ? ' guarded' : ''}"><span style="width:${pct}%"></span>${lossMark(p.integrity, p.max, fc.parts[p.id] || 0)}${guard}${capLine(s, p)}${ticksMarkup(s, p)}</span><span class="part-tags">${fighting ? progTag(s, p) : ''}${cueTag}${partTags(s, p)}</span></div>
+      <div class="bcell bname" title="${esc(partTip(s, e.virus, p))}">${ties[ri]}${pips(p.id)}<span class="part-top"><span class="part-name">${esc(p.name)}${known ? '' : '<sup class="unk">?</sup>'}${mastered(s, e.virus, p) && !packed(s, e.virus, p) ? masteredMark(p) : ''}</span>${gearMark}${marksMarkup(marks)}${chitsMarkup(p, fc.chits[p.id] || 0)}<span class="part-hp">${p.integrity}/${p.max}</span></span><span class="part-bar${guard ? ' guarded' : ''}"><span style="width:${pct}%"></span>${lossMark(p.integrity, p.max, fc.parts[p.id] || 0)}${ghosts(p)}${guard}${capLine(s, p)}${ticksMarkup(s, p)}</span><span class="part-tags">${fighting ? progTag(s, p) : ''}${cueTag}${partTags(s, p)}</span></div>
       ${showCells ? cells : '<div class="bcell span4"></div>'}</button>`;
   }).join('');
   // A fight whose parts protect each other keeps the tethers' gutter after the last one goes, so the rows don't jump.
@@ -831,6 +852,28 @@ export function boardMarkup(s, selected, preview = null) {
   const ph = fighting ? phaseOf(s) : null, who = esc(e.virus.name.split('-')[0]);
   const strip = ph ? `<div class="phase-strip ph-${ph}" title="Each cycle, you move first, then the virus"><span class="ps-you">${ph === 'wait' ? 'Your move' : 'You'}</span><i>▸</i><span class="ps-them">${who}</span>${e.escapeAt ? `<b class="ps-esc" title="${esc(uploadTip(e))}">${uploadText(e)}</b>` : ''}</div>` : '';
   return strip + head + you() + raidRow(s) + escapeRow(s) + rows + gone + keep;
+}
+// The order levers' ghosts on a part's bar (order.mjs, docs/puzzle-levers.md 3.3 and 3.4), past this cycle's slice:
+// a Zip Bomb's blast (its bite, when the fuse runs out) hatched in white, and the damage a Lockbox holds for its partner
+// (half of it lands when the Lockbox breaks) in your teal. Each says it in its tooltip; the board shows the number.
+function orderMarks(s, p, fc, blast) {
+  const max = p.max || 1, loss = Math.min(p.integrity, fc.parts[p.id] || 0), at = (n) => `${((Math.max(0, Math.min(max, n)) / max) * 100).toFixed(2)}%`;
+  let out = '', left = p.integrity - loss;
+  if (blast) {
+    const bite = Math.min(left, Math.floor(blastOf(p) * (p.loud ? CONFIG.tripwire.taken : 1))), when = blast.in <= 0 ? 'this cycle' : blast.in === 1 ? 'next cycle' : `in ${blast.in} cycles`;
+    const tip = `Blast: the ${blast.zip.name}'s fuse runs out ${when}. The ${p.name} loses ${p.armor > 0 ? 'a ◆ and ' : ''}${bite} Integrity${bite >= left ? ', and breaks' : ''}.${answerLine(blast.zip.fuseAt ? 'A ◆ or a shield of yours takes your share. Ending the fight first puts the fuse out.' : 'Have a ◆ or a shield up for its fuse.')}`;
+    if (bite > 0) out += `<i class="blastghost${bite >= left ? ' breaks' : ''}" style="left:${at(left - bite)};width:${at(bite)}" title="${esc(tip)}"></i>`;
+    left -= bite;
+  }
+  for (const box of livingParts(s).filter((x) => x.held?.[p.id])) {
+    const h = heldOf(s, box).find((x) => x.partner === p);
+    if (!h || !(h.land > 0) || left <= 0) continue;
+    const land = Math.min(left, h.land);
+    const tip = `Held: the ${box.name} holds ${h.held} of your damage on the ${p.name}. When it breaks, half of it, ${h.land}, lands at once${h.land >= left ? ' and breaks it' : `, leaving it at ${left - land}`}.${answerLine(h.land >= left ? `Break the ${box.name} now.` : `Fill it more, or break the ${box.name} when half is enough.`)}`;
+    out += `<i class="heldghost${h.land >= left ? ' breaks' : ''}" style="left:${at(left - land)};width:${at(land)}" title="${esc(tip)}"></i>`;
+    left -= land;
+  }
+  return out;
 }
 // A Limiter's cap line (the parts plan's P2): where one hit at most takes its bar down to.
 const capLine = (s, p) => (p.limit && alive(p) && !packed(s, s.encounter.virus, p) ? `<i class="capline" style="left:${Math.max(0, ((p.integrity - limitOf(p)) / p.max) * 100)}%" title="${esc(`Cap: one hit takes it down to ${Math.max(0, p.integrity - limitOf(p))} at most.`)}"></i>` : '');

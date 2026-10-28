@@ -446,12 +446,15 @@ test('Mutex: the Encryptor carries a lock (a shield) that takes hits first, come
 test('Tripwire: break it while the others stand and they go loud (harder, a cycle sooner); break it last and nothing happens', () => {
   const s = fight({ level: 22, seed: withPart('ransomware', 'tripwire') });
   const trip = part(s, 'tripwire'), pulse = part(s, 'pulse');
-  const amount = pulse.attack.amount, due = pulse.attack.due;
+  const amount = pulse.attack.amount, interval = pulse.attack.interval;
+  pulse.attack.due = s.encounter.cycle + 3; // not due yet: it comes a cycle sooner, and every one after it too
+  const due = pulse.attack.due;
   Object.assign(trip, { armor: 0, integrity: 1 });
   fire(s, 'spike tripwire');
   assert.ok(pulse.loud);
   assert.equal(pulse.attack.amount, Math.round(amount * CONFIG.tripwire.loud));
-  assert.ok(pulse.attack.due <= due, 'and sooner');
+  assert.equal(pulse.attack.due, due - CONFIG.tripwire.sooner, 'and sooner');
+  assert.equal(pulse.attack.interval, Math.max(2, interval - CONFIG.tripwire.sooner), 'every attack after it too'); // levers-order.test.mjs has the rest (loud both ways)
   assert.ok(s.logs.some((e) => e.tripwire));
   // Last: nothing left to set off.
   const s2 = fight({ level: 22, seed: withPart('ransomware', 'tripwire') });

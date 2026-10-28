@@ -4029,6 +4029,18 @@ p.impl { margin: 6px 0 0; padding: 4px 2px; border-bottom: 1px dotted color-mix(
 @keyframes fuse-spark { from { box-shadow: 0 0 2px var(--hot); } to { box-shadow: 0 0 9px var(--hot); } }
 .no-motion .intent.fuse, body[data-fx="minimal"] .intent.fuse { animation: none; }
 @media (prefers-reduced-motion: reduce) { .intent.fuse { animation: none; } }
+/* The order levers (view.mjs, docs/puzzle-levers.md 3.2 to 3.4). A Tripwire your move breaks: the other parts' attacks at
+   their loud numbers, a cycle sooner, edged as a preview. A Zip Bomb's blast on each bar: a hatched ghost past this
+   cycle's slice. A Lockbox's held damage: your teal, its number on the Lockbox's row and the ghost on its partner's bar. */
+.intent.loud { border-style: dashed; border-color: var(--hot); }
+.intent.loud small { color: var(--hot); font-weight: 700; }
+.part-bar .blastghost, .part-bar .heldghost { position: absolute; top: 0; bottom: 0; display: block; cursor: help; pointer-events: auto; }
+.part-bar .blastghost { background: repeating-linear-gradient(90deg, rgba(255, 248, 230, 0.75) 0 2px, rgba(255, 248, 230, 0.18) 2px 4px); }
+.part-bar .heldghost { background: repeating-linear-gradient(90deg, var(--you) 0 2px, rgba(127, 209, 199, 0.3) 2px 4px); }
+.part-bar .blastghost.breaks, .part-bar .heldghost.breaks { box-shadow: 0 0 6px currentColor; }
+.part-bar .heldghost.breaks { color: var(--you); }
+.part-bar .blastghost.breaks { color: rgba(255, 248, 230, 0.8); }
+.tag.held .glyph { width: 11px; height: 11px; margin-right: 3px; vertical-align: -1px; }
 .intent.bufup { border-style: dashed; border-color: var(--steel); color: var(--steel); background: transparent; }
 .tag.hotspot { display: inline-flex; align-items: center; gap: 3px; color: var(--amber); border-color: var(--amber); box-shadow: 0 0 6px var(--amber-wash); }
 .tag.hotspot .glyph { width: 10px; height: 10px; margin: 0; }
