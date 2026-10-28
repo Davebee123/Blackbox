@@ -35,6 +35,7 @@
 .fp-stat b { font: 600 13px var(--mono); color: var(--bright); white-space: nowrap; }
 .fp-stat .fp-ic { width: 15px; height: 15px; }
 .fp-keys .fp-ic { color: var(--next); } .fp-keys b { color: var(--next); }
+.fp-reboot.on b { color: var(--hot); } /* the rooms are coming back */
 .fp-hunt .fp-ic, .fp-hunt b { color: var(--hot); }
 .fp-hunt.out .fp-ic, .fp-hunt.out b { color: var(--gray); }
 .fp-exfilstat .fp-ic, .fp-exfilstat b { color: var(--next); }

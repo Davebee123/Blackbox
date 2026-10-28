@@ -47,7 +47,7 @@ import { threadsConnect, threadsMoved, threadsStood, threadVerb, tempCoreOpen, t
 
 export const KIND_OF = FP.KIND_OF;
 export const NET = {
-  hostile: 0.5, // a Hostile server's fight rooms come back twice as fast
+  hostile: 0.5, // a Hostile server's fight rooms come back twice as fast (its reboot too)
   rich: 2, hoard: 1.5, // caches pay this much more on a Rich server, a Hoard
   quiet: [2, 4], // a rogue server's quiet rooms (Empty and Stash), from its seed
   purseCode: 0.2, // a Stash's 1 code of the server's family, one time in five
@@ -254,6 +254,7 @@ WORLD_hook('respawn', (s, room) => {
   const loc = locOf(s), base = FP.respawnBase(s, room);
   return loc?.trait === 'hostile' ? base * NET.hostile : base;
 });
+WORLD_hook('reboot', (s) => (locOf(s)?.trait === 'hostile' ? FP.ROOMS.reboot.minutes * NET.hostile : undefined)); // and its reboot
 WORLD_hook('level', (s) => { const loc = locOf(s); return loc ? levelOf(loc) : undefined; });
 // A server you hold: its Core is its core socket (6.1). (Core programs come with R4; until then it takes any program.)
 WORLD_hook('coreSocket', (s) => { const loc = locOf(s); return !!loc && owned(loc) && s.rooms?.type === 'server'; });

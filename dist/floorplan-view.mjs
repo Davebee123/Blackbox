@@ -46,7 +46,7 @@ import { AUTHORS } from './authors.mjs';
 import { SCRIPTS, TIER, scriptsOf, slotsOf, scriptTip } from './scripts.mjs';
 import { BOSS_RULES } from './interrupt.mjs';
 import { familyName } from './families.mjs';
-import { ROOMS, KINDS, kindName, HUNTERS, RESIDENT, WORLD, STOCKED, farmed, respawnMs, roomList, hereOf, neighbours, linksOf, seenOf, isUp, backAt, downAt, cacheFull, refillAt, isBait, coreOpen, opened, signalNow, sigOf, progressOf, fmtLeft, hunterOf, hunterNext, paceOf, moveCost, fightOf, exits, hunterLine, xpEarned, virusName, exfilOf, exfilNext, exfilSeen, exfilLine, known, nameOf, hunterSeen, isSocket, socketOpen, socketOff, programIn, roomRuns, tunnelOf, addrOf, PUZZLES, isPuzzle, puzzleState } from './floorplan.mjs';
+import { ROOMS, KINDS, kindName, HUNTERS, RESIDENT, WORLD, STOCKED, farmed, respawnMs, rebootOf, roomList, hereOf, neighbours, linksOf, seenOf, isUp, backAt, downAt, cacheFull, refillAt, isBait, coreOpen, opened, signalNow, sigOf, progressOf, fmtLeft, hunterOf, hunterNext, paceOf, moveCost, fightOf, exits, hunterLine, xpEarned, virusName, exfilOf, exfilNext, exfilSeen, exfilLine, known, nameOf, hunterSeen, isSocket, socketOpen, socketOff, programIn, roomRuns, tunnelOf, addrOf, PUZZLES, isPuzzle, puzzleState } from './floorplan.mjs';
 import { puzzlePanel } from './puzzle-view.mjs';
 import { PROGRAMS, SOCKET, programCost, buildBlock, codebasesOf, costLine as programCostLine } from './sockets.mjs';
 import { materialsOf } from './combat.mjs';
@@ -478,6 +478,9 @@ function hudMarkup(s) {
   const keys = R.at && R.visit?.keys.length ? `<span class="fp-stat fp-keys" title="Keys: each opens its vault, this visit only. Jack out and it goes back to the elite that held it.">${ic('key')}<b>${R.visit.keys.length}</b></span>` : '';
   const packed = R.world ? (s.run?.pack || []).map((f) => net(s, 'packLine', f)) : R.pack.map((id) => itemLabel(stashItem(s, id) || { name: '?' }));
   const pack = packed.length ? `<span class="fp-stat" title="${esc(`Pack: ${packed.join(', ')}.\nBanks when you jack out. Lost if your Signal hits 0.`)}"><span class="lbl">Pack</span><b>${packed.length}</b></span>` : '';
+  // The reboot (ROOMS.reboot): the fight rooms still up, or its countdown once every one is down.
+  const rb = rebootOf(s);
+  const reboot = rb ? `<span class="fp-stat fp-reboot${rb.pending ? ' on' : ''}" title="${esc(`Reboot: fallen fight rooms stay down until every one has fallen. Then ${R.name} reboots, and ${fmtLeft(rb.ms)} later they all come back.\n${rb.pending ? 'Rebooting now.' : `${rb.up} ${rb.up === 1 ? 'fight room is' : 'fight rooms are'} still up.`}`)}"><span class="lbl">Reboot</span><b>${rb.pending ? `<span data-at="${rb.at}"></span>` : `${rb.up} up`}</b></span>` : '';
   // Contracts on this server, and how far along each is.
   const jobs = net(s, 'jobs') || [];
   const job = jobs.length ? `<span class="fp-stat fp-jobs${jobs.some((j) => j.ready) ? ' ready' : ''}" title="${esc(jobs.map((j) => `${j.title}: ${j.text}`).join('\n'))}">${ic('contract')}<span class="lbl">Contract${jobs.length > 1 ? 's' : ''}</span><b>${jobs.length > 1 ? jobs.length : esc(jobs[0].ready ? 'ready' : jobs[0].text.split('.')[0].slice(0, 28))}</b></span>` : '';
@@ -492,7 +495,7 @@ function hudMarkup(s) {
     <span class="fp-id" title="${esc(net(s, 'idTip') ?? `${R.name}: ${author} ${kindName(R.kind)}, level ${R.level}, floor ${R.floor}.\n${K.rule}: ${K.text}`)}"><span class="ico" ${icon('server')}></span><b>${esc(R.name)}</b><small>${esc(net(s, 'idLine') ?? `${kindName(R.kind)} · lv ${R.level} · ${K.rule}`)}</small></span>
     <div class="fp-sig ${lvl}" title="${esc(`Signal: carries from fight to fight and rests back at home.\nA room's first step each visit costs ${step}, or ${stepNew} into one you've never been in.`)}"><span class="lbl">Signal</span><span class="sigbar"><span style="width:${(f * 100).toFixed(1)}%"></span></span><strong>${sig}</strong><small>/${max}</small></div>
     <div class="fp-prog" title="${esc(`Rooms cleared for good: at ${Math.ceil(prog.total / 2)} the whole map is drawn, at ${prog.total} the server is Mapped.`)}"><span class="lbl">Rooms</span><span class="pbar"><span style="width:${(prog.done / prog.total) * 100}%"></span><i style="left:50%"></i></span><b>${prog.done}/${prog.total}</b>${R.mapped ? '<small class="fp-mapped">MAPPED</small>' : ''}</div>
-    ${keys}${hunt}${ml}${pack}${job}${R.world && s.threads ? threadHud(s) : ''}
+    ${keys}${reboot}${hunt}${ml}${pack}${job}${R.world && s.threads ? threadHud(s) : ''}
     <span class="fp-tools">${R.world ? '' : `<span class="fp-rules" role="group" aria-label="Boss rule"><span class="lbl" title="${esc(`Boss rule: how ${BOSSES[RESIDENT].name}'s ticks work. It applies to your next fight with it.`)}">Boss</span>${rule}</span>`}
     <ul class="fp-perks" aria-label="Scripts"><li class="lbl" title="Scripts: run one a fight, from the fight's tray. It takes no cycle.">Scripts ${bag.length}/${slotsOf(s)}</li>${scripts}</ul>
     <span class="fp-acts">${acts}</span></span>
@@ -584,7 +587,7 @@ function hereCard(s) {
     ({ body, acts } = socketCard(s, room));
   } else if (fightKind(room)) {
     const k = whoOf(s, room);
-    body = holder(iconOf(s, room), k.short, k.sub, '', 'down') + (R.down[room.id] != null ? note(esc(net(s, 'downNote', room) || `Back ${fmtLeft(respawnMs(s, room))} after it falls${farmed(s) ? ' (fast: this server is Mapped or yours)' : ', faster once the server is Mapped'}. Never while you stand in it.`), 'dim') : '');
+    body = holder(iconOf(s, room), k.short, k.sub, '', 'down') + (R.down[room.id] != null ? note(esc(net(s, 'downNote', room) || (rebootOf(s) ? `Down until ${R.name} reboots, ${fmtLeft(rebootOf(s).ms)} after its last fight room falls.` : null) || `Back ${fmtLeft(respawnMs(s, room))} after it falls${farmed(s) ? ' (fast: this server is Mapped or yours)' : ', faster once the server is Mapped'}. Never while you stand in it.`), 'dim') : '');
   } else if (room.kind === 'cache') {
     // Standing in it, you see what it is: take it or leave it.
     const full = cacheFull(s, room), bait = !room.mirror && isBait(s, room), lose = pctOf(s, ROOMS.bait);
