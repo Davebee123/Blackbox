@@ -2,8 +2,9 @@
 // reads one fact the board shows, and the planner (planner.mjs), the routine's WHEN chips (routines.mjs) and the board's
 // marks (view.mjs, fightread.mjs) all read it here, so the three agree.
 //
-//   loudWins(s)     the Tripwire: the other parts' Integrity is under what your next CONFIG.tripwire.window cycles deal
-//                   them once loud (they take more and drop their ◆), so tripping it now is a race you win
+//   loudWins(s)     the Tripwire: breaking it now and then the others loud (they take more and drop their ◆) ends them no
+//                   later within CONFIG.tripwire.window cycles, and costs you no more on the way, than leaving it: a race
+//                   you win
 //   blastPays(s)    the Zip Bomb: its blast would break a part, and a ◆ or a shield of yours covers the fuse
 //   cashIn(s)       the Lockbox: half of what it holds breaks its partner the moment it breaks
 //   heldOf(s, p)    what a Lockbox holds, for which partner, and what lands when it breaks
@@ -29,7 +30,7 @@ function dmgOn(s, id, p, loud, left = 1) {
 // window). A skill used is ready again after its cooldown. The burns and helpers already out tick on their parts first.
 // A proc is ready while lit (Shatter: the cycle after you break a part's last ◆, its shards on every other bare part).
 // The cycles it takes to break every part (Infinity: not within n). Crits and the virus's moves aren't guessed.
-export function race(s, list, n) {
+export function race(s, list, n, out = null) {
   const e = s.encounter;
   if (!e) return Infinity;
   const ids = usable(s).filter((id) => ABILITIES[id]?.target === 'part');
@@ -38,6 +39,8 @@ export function race(s, list, n) {
   const left = list.map((x) => ({ ...x, armor: x.loud ? 0 : x.p.armor || 0, hp: x.p.integrity }));
   for (const b of [...(e.burns || []), ...(e.helpers || [])]) { const x = left.find((y) => y.p.id === b.target); if (x) x.hp -= Math.round(b.damage * (x.loud ? CONFIG.tripwire.taken : 1)) * Math.min(n, b.left); }
   for (let c = 0; c < n; c++) {
+    for (const y of left) if (y.hp <= 0 && y.at == null) y.at = c; // the cycle it breaks in (the one before this)
+    if (out && c === 0) out.push(...left);
     const x = left.find((y) => y.hp > 0);
     if (!x) return c;
     const can = ids.filter((id) => ready[id] <= c);
@@ -57,7 +60,29 @@ export function race(s, list, n) {
     // Shards (Shatter): every other part with no ◆ takes them too.
     if (use && ABILITIES[use].shards) for (const y of left) if (y !== x && y.hp > 0 && !(y.armor > 0)) y.hp -= Math.round(scaled(s, ABILITIES[use].shards) * (y.loud ? CONFIG.tripwire.taken : 1));
   }
+  for (const y of left) if (y.hp <= 0 && y.at == null) y.at = n;
   return left.every((y) => y.hp <= 0) ? n : Infinity;
+}
+// What the virus's visible attacks deal you over the next n cycles, its parts breaking as a race played them (each item's
+// `at`: its attacks stop the cycle it breaks in). From trip (the cycle the Tripwire breaks), the loud ones hit harder and
+// sooner (CONFIG.tripwire). Your ◆ and shield take what they would; Block and crits aren't guessed.
+function taken(s, items, n, trip = null) {
+  const e = s.encounter, c0 = e.cycle, T = CONFIG.tripwire, hits = [];
+  for (const y of items) {
+    const a = y.p.attack;
+    if (!a || !(a.interval > 0) || a.due >= 900) continue;
+    const end = Math.min(n, y.at ?? n), amt = attackAmount(y.p);
+    let k = a.due - c0, iv = a.interval, moved = false;
+    while (k < end) {
+      if (y.loud && trip != null && k > trip && !moved) { k = Math.max(trip, k - T.sooner); iv = Math.max(2, iv - T.sooner); moved = true; if (k >= end) break; }
+      hits.push([k, y.loud && trip != null && k >= trip ? Math.round(amt * T.loud) : amt]);
+      k += iv;
+    }
+  }
+  // Your ◆ take the first hits whole, then your shield soaks what it can.
+  hits.sort((x, y) => x[0] - y[0]);
+  const total = hits.slice(e.chits || 0).reduce((n2, h) => n2 + h[1], 0);
+  return Math.max(0, total - (e.shield || 0));
 }
 
 // ---------- the Tripwire: loud both ways ----------
@@ -75,10 +100,19 @@ export function loudWins(s) {
   // A trip this cycle pulls the attacks due next cycle into this one: with nothing up to take them, not now.
   const pulled = alarmOf(s, rest);
   if (pulled.length && race(s, [{ p: t, loud: false }], 1) === 1 && !(s.encounter.chits >= pulled.length) && (s.encounter.shield || 0) < pulled.reduce((k, p) => k + attackAmount(p) * CONFIG.tripwire.loud, 0)) return null;
-  const loud = race(s, [{ p: t, loud: false }, ...rest.map((p) => ({ p, loud: true }))], n);
+  // The race both ways: tripping it must end the others no later, and cost you no more on the way, than leaving it.
+  const L = [], Q = [];
+  const loud = race(s, [{ p: t, loud: false }, ...rest.map((p) => ({ p, loud: true }))], n, L);
   if (loud === Infinity) return null;
-  const quiet = race(s, rest.map((p) => ({ p, loud: false })), n);
-  return loud <= quiet ? { part: t, rest, loud, quiet } : null;
+  const quiet = race(s, rest.map((p) => ({ p, loud: false })), n, Q);
+  if (loud > quiet) return null;
+  const trip = L[0]?.at ?? 0;
+  if (taken(s, L, n, trip) > taken(s, [...Q, { p: t, loud: false }], n)) return null;
+  // And no big hit (a tenth of your max or more) lands while you're still on the Tripwire: those cycles are the race's
+  // cost, spent while the parts that hit hardest stand.
+  const big = defender(s).max * 0.1, c0 = s.encounter.cycle;
+  if (trip > 0 && rest.some((p) => p.attack && p.attack.due - c0 < trip && attackAmount(p) >= big)) return null;
+  return { part: t, rest, loud, quiet };
 }
 
 // ---------- the Zip Bomb: the blast hits both sides ----------

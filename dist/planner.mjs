@@ -248,7 +248,9 @@ function play(s) {
   const sure = livingParts(s).find((p) => p.sxCrit?.[s.who || ''] && !doomed(s, p) && !(p.armor > 0) && reachable(s, p) && !phasedOut(s, p) && !shunned(s, p) && !keptLast(s, p));
   if (sure) { const c = HITS.map((id) => id + ' ' + sure.id).filter((c) => ok(s, c) && previewDamage(s, c.split(' ')[0], sure) > 0).sort((a, b) => previewDamage(s, b.split(' ')[0], sure) - previewDamage(s, a.split(' ')[0], sure))[0]; if (c) return c; }
   const own = classPlan(s, t);
-  const astray = pick && t === pick && own && String(own).split(' ')[1] && String(own).split(' ')[1] !== pick.id; // an order lever says now: a class's own plan goes at it too
+  // An order lever says now: a class's own plan goes at it too, and no Sudo makes a Tripwire's trip quiet (loud is the
+  // point: the others drop their ◆ and take more).
+  const astray = pick && t === pick && own && ((String(own).split(' ')[1] && String(own).split(' ')[1] !== pick.id) || (pick.deadman && String(own).split(' ')[0] === 'sudo'));
   if (own && ok(s, own) && !astray) return own;
   const d = defender(s);
   // 0. A lit proc: use it while it's the biggest hit you have on the part (it still takes your command).

@@ -104,12 +104,14 @@ are first guesses for the harness to tune.
   a cycle sooner *for real*: the next one (one due next cycle lands in the cycle you trip it, the alarm) and every one
   after it (each interval a cycle shorter, 2 at the fastest). Before, only the next attack moved, and only if it was two
   cycles out; with that, tripping first won every class at 30. They take 40% more damage and drop their ◆ for good.
-  *Loud wins* (the chip, the planner, the board): breaking the Tripwire and then the others loud takes no more of your
-  next 5 cycles (`window`) than breaking them as they are, and no attack it pulls into this cycle goes uncovered.
-  `node solved.mjs rules 18 30`: no fixed rule wins. Signal lost, planner / always trip early / never trip: at 18 Breaker
-  32/30/36, Bastion 28/55/43, Infiltrator 38/44/33, Operator 23/34/24; at 30 Breaker 37/7/46, Bastion 40/51/44,
-  Infiltrator 20/47/22, Operator 27/20/28. The Breaker still does best tripping at once at 30 (Shatter's shards on the
-  bared parts end the fight), which the planner's race doesn't foresee.
+  *Loud wins* (the chip, the planner, the board; `order.mjs` `race` plays your next cycles out on the parts): breaking
+  the Tripwire and then the others loud takes no more of your next 5 cycles (`window`) than breaking them as they are and
+  costs you no more on the way, no big hit (a tenth of your max) lands while you're still on the Tripwire, and no attack
+  it pulls into this cycle goes uncovered. `node solved.mjs rules 18 30`: no fixed rule wins. Signal lost, planner /
+  always trip early / never trip: at 18 Breaker 26/30/36, Bastion 28/55/43, Infiltrator 36/44/33, Operator 23/34/24; at
+  30 Breaker 51/7/46, Bastion 39/51/44, Infiltrator 20/47/22, Operator 27/20/28. The Breaker does best tripping at once
+  at 30 (Shatter's shards on the bared parts end the fight), which the planner's race reads as too risky while the Pulse
+  Node's Surge is coming.
 
 ### 3.3 The Zip Bomb: the blast hits both sides
 

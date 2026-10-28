@@ -815,7 +815,7 @@ export function boardMarkup(s, selected, preview = null) {
   return strip + head + you() + raidRow(s) + escapeRow(s) + rows + gone + keep;
 }
 // The order levers' ghosts on a part's bar (order.mjs, docs/puzzle-levers.md 3.3 and 3.4), past this cycle's slice:
-// a Zip Bomb's blast (its bite, when the fuse runs out) in the virus's red, and the damage a Lockbox holds for its partner
+// a Zip Bomb's blast (its bite, when the fuse runs out) hatched in white, and the damage a Lockbox holds for its partner
 // (half of it lands when the Lockbox breaks) in your teal. Each says it in its tooltip; the board shows the number.
 function orderMarks(s, p, fc, blast) {
   const max = p.max || 1, loss = Math.min(p.integrity, fc.parts[p.id] || 0), at = (n) => `${((Math.max(0, Math.min(max, n)) / max) * 100).toFixed(2)}%`;

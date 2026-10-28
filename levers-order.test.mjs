@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { fresh, command, resolveCycle, selectEncounter, part, livingParts, active, codexKey, damageMultiplier, blastOf, hit } from './dist/combat.mjs';
 import { CONFIG } from './dist/data.mjs';
 import * as FP from './dist/floorplan.mjs';
-import { planner, kitPlanner } from './dist/planner.mjs';
+import { planner } from './dist/planner.mjs';
 import * as R from './dist/routines.mjs';
 import * as O from './dist/order.mjs';
 import { boardMarkup } from './dist/view.mjs';
@@ -76,10 +76,9 @@ test('loud wins: the trip and then every other part, loud, within the window, an
   s.encounter.chits = 0; still(s);
   for (const p of rest) Object.assign(p, { armor: 0, integrity: 5000 });
   assert.equal(O.loudWins(s), null, 'a slow kill: leave it');
-  assert.equal(O.loudWins(Object.assign(s, {})) && null, null);
 });
 
-test('the planner trips it when loud wins and leaves it last when not; the kit player reads neither', () => {
+test('the planner trips it when loud wins and leaves it last when not', () => {
   const s = fight({ gene: 'tripwire' }), t = lever(s, 'deadman');
   still(s);
   const rest = livingParts(s).filter((p) => p !== t);
@@ -89,7 +88,6 @@ test('the planner trips it when loud wins and leaves it last when not; the kit p
   for (const p of rest) Object.assign(p, { integrity: 5 }); // their ◆ would take three cycles each; loud, none
   assert.ok(O.loudWins(s));
   assert.equal(planner(s).split(' ')[1], t.id, 'loud wins: trip it');
-  assert.ok(typeof kitPlanner(s) === 'string');
 });
 
 // ---------- the Zip Bomb ----------

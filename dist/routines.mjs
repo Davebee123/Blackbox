@@ -84,7 +84,7 @@ export const PART_WHEN = {
   pretell: { tier: TIER.mastered, ram: 3, icon: 'mastered', short: 'before tell', label: (n) => `before ${n} tell`, tip: (n) => `The cycle before a tell on the ${n} can be answered.` },
   open: { tier: TIER.mastered, ram: 3, icon: 'mastered', short: 'Open', label: (n) => `${n} Open`, tip: (n) => `The ${n} is Open: you read its tell.` },
   // The order levers (docs/puzzle-levers.md 7; order.mjs reads them): each only on the part whose gene it reads.
-  loudwins: { tier: TIER.rule, ram: 2, icon: 'trace', short: 'loud wins', gene: 'tripwire', label: (n) => `${n} loud wins`, tip: (n) => `Breaking the ${n} now, then every other part loud, takes no more of your cycles than breaking them as they are, and pulls no attack into this cycle that nothing of yours would take.` },
+  loudwins: { tier: TIER.rule, ram: 2, icon: 'trace', short: 'loud wins', gene: 'tripwire', label: (n) => `${n} loud wins`, tip: (n) => `Breaking the ${n} now, then every other part loud, ends the others no later and costs you no more than leaving it. No big hit lands while you're still on it.` },
   blastpays: { tier: TIER.rule, ram: 2, icon: 'payload', short: 'blast pays', gene: 'zipbomb', label: (n) => `${n} blast pays`, tip: (n) => `The ${n} breaks this cycle, its blast would break another part, and a ◆ or a shield of yours covers its fuse.` },
   cashin: { tier: TIER.rule, ram: 2, icon: 'unlock', short: 'cash in', gene: 'ward', label: (n) => `${n} cash in`, tip: (n) => `Half of the damage the ${n} holds would break its partner the moment it breaks.` },
 };
