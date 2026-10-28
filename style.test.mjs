@@ -143,7 +143,7 @@ test('the Encryptor, the Packer, the Mimic and the Pulse Node read in the same g
   assert.ok(packed, 'the Packer\'s page packs a part');
   assert.match(tipOf(pk, packed.id), /^Packed part: .*\nIts name and rule are hidden until the Packer breaks\.$/, 'a packed part says so plainly');
   const mi = liveFight('mimic');
-  assert.match(tipOf(mi, 'mimic'), /^Mimic: Every 4 cycles, copies the command you fire and deals its full direct damage to you\. Hides its timers while it wears ◆\.\n▸ On its beat, fire a debuff, strip, burn or shield\.$/);
+  assert.match(tipOf(mi, 'mimic'), /^Mimic: Every 4 cycles, copies the command you fire and turns it on you\. A hit hits you, and a strip strips your ◆ and shield\. .* SIGINT or a stun Hangs you\. Hides its timers while it wears ◆\.\n▸ Fire what is cheapest to have copied, or hold\.$/);
 });
 
 test('the highlighter lights the new wording\'s facts on a Codex card: the damage, the cycles, the ◆', () => {

@@ -302,11 +302,13 @@ export const gapDealt = (g) => (g > 0 ? Math.max(CONFIG.gap.floor, 1 - CONFIG.ga
 export const gapTaken = (g) => (g > 0 ? 1 + CONFIG.gap.taken * over(g) : Math.max(0.7, 1 - CONFIG.gap.below * -g));
 export function damageMultiplier(s, p, opts = {}) {
   const e = s.encounter;
+  if (opts.flat) return 1; // damage already counted once (a Lockbox's held damage landing)
   let m = opts.server ? 1 : gapDealt(levelGap(s));
   if (opts.dot && on(s, p, 'tagged')) m *= SKILLS.tagged + (p.tagBoost || 0) + 0.1 * rank(s, 'persistent-tag');
   if (on(s, p, 'quarantined')) m *= SKILLS.quarantined;
   if (on(s, p, 'open')) m *= TELL.open.mult; // a tell read: the part is open (tells.mjs)
   m *= overclockMult(s); // an Overclock that landed: every part takes double (tells.mjs, breaches only)
+  if (p.loud) m *= CONFIG.tripwire.taken; // a Tripwire tripped: the loud parts take more from everything (loud both ways)
   if (e.virus.weakKnown && e.virus.weakPoint === p.id) m *= CONFIG.weakMultiplier;
   if (opts.mine) {
     m *= 1 + 0.03 * rank(s, 'overclocked');
@@ -315,6 +317,7 @@ export function damageMultiplier(s, p, opts = {}) {
     if (e.synced) m *= 1 + CONFIG.sync.bonus;
     for (const x of fxFire(s, 'hit', { target: p, do: 'damage%', cmd: !opts.dot && !opts.by ? e.commanding?.id : null })) m *= 1 + x.value / 100;
     m *= buffMult(s); // a timed buff from a break (Floodgate, Fuse Map)
+    if (!opts.dot && e.throttledUntil >= e.cycle) m *= TELL.copy.throttled; // a debuff the Mimic copied onto you (tells.mjs): your hits deal half
   }
   if (opts.dot) for (const x of fxFire(s, 'custom', { do: 'dot%' })) m *= 1 + x.value / 100;
   // Burns or helpers alone, on a part that meets the condition (Brackish, Riptide). A helper's hit carries src 'helper'.
@@ -2832,19 +2835,15 @@ export function hit(s, p, base, opts = {}) {
     if (took) emit(s, 'server-hit', `The static bounces back off the ${p.name}: −${took}.`, { source: p.id, amount: took, bounce: true });
     return { dealt: 0, overflow: 0, absorbed: true };
   }
-  // Decoy: on its beat your own commands are mirrored. They do nothing, and some bounces back
-  // (never your last point). Burns, helpers and your server's hits get through.
-  const decoy = mirrorOn(s);
+  // Decoy (docs/puzzle-levers.md 3.8): its beat bent your command onto the part it points at (bendCommand). Pointing at
+  // itself, each hit of that command lands on the Decoy and part of it bounces back at you (never your last point;
+  // HOLLOW CHOIR's Harmony raises it). Mirror Maze (a native unique) let the command through unbent, at its share.
   const root = opts.mine && !opts.server && (buffed(e, 'sudo') || opts.unlock); // Sudo (Overclocker): the parts' rules don't hold you; Zero-day goes through locks
-  const maze = decoy && opts.mine && !opts.dot && !opts.by && !opts.server && fxHas(s, 'decoy-pass'); // Mirror Maze (a native unique): it lets you through
-  if (maze && base > 0 && !buffed(e, 'sudo')) { base = Math.max(1, Math.round((base * maze.fx.value) / 100)); emit(s, 'status', `${maze.it.name} gets through the ${decoy.name}'s mirror at ${maze.fx.value}%.`, { target: p.id }); }
-  else if (decoy && decoy.unmaskUntil >= e.cycle && opts.mine && !opts.dot && !opts.by && !opts.server && base > 0) { /* Unmask, Echo Cancel: its beat has nothing of you to mirror */ }
-  else if (decoy && opts.mine && !opts.dot && !opts.by && !opts.server && base > 0 && !buffed(e, 'sudo')) {
-    const back = Math.min(Math.max(1, Math.round(base * (decoy.bounce ?? CONFIG.mirrorBounce))), defender(s).integrity - 1); // HOLLOW CHOIR's Harmony raises it
-    const took = back > 0 ? takeDamage(s, back, decoy.id, `${decoy.name} mirror`) : 0;
-    emit(s, 'status', `The ${decoy.name} mirrors your command, and it does nothing.`, { target: p.id });
-    if (took) emit(s, 'server-hit', `It bounces back: −${took}.`, { source: decoy.id, amount: took, bounce: true });
-    return { dealt: 0, overflow: 0, absorbed: true };
+  if (cmd && e.commanding?.maze) base = Math.max(1, Math.round((base * e.commanding.maze) / 100));
+  if (cmd && e.commanding?.bounce === p.id) {
+    const back = Math.min(Math.max(1, Math.round(base * (p.bounce ?? CONFIG.mirrorBounce))), defender(s).integrity - 1);
+    const took = back > 0 ? takeDamage(s, back, p.id, `${p.name} bounce`) : 0;
+    if (took) emit(s, 'server-hit', `Part of it bounces back off the ${p.name}: −${took}.`, { source: p.id, amount: took, bounce: true });
   }
   // A crew boss's firewall phase (raid.mjs): while its shield is up, every hit on the boss lands on the shield,
   // armor or not.
@@ -2910,7 +2909,7 @@ export function hit(s, p, base, opts = {}) {
   if (forced && e.forceCrit) e.forceCrit = false;
   // Exposed: every hit on it, from anyone, has a better crit chance.
   const chance = critChance(s) + (opts.server ? 0 : classSum('crit', s, p, opts)) + (on(s, p, 'exposed') ? SKILLS.exposed + 5 * rank(s, 'exploit-kit') : 0) + (opts.mine ? fxFire(s, 'hit', { target: p, do: 'crit%' }).reduce((n, x) => n + x.value, 0) : 0);
-  const crit = forced || (raw > 0 && chance > 0 && rand(s) * 100 < chance);
+  const crit = forced || (raw > 0 && !opts.flat && !opts.blast && chance > 0 && rand(s) * 100 < chance); // a held cash-in or a blast never crits
   let doubled = false;
   if (crit) {
     let mult = critMultiplier(s) * (opts.server ? 1 : classMult('critDealt', s, p, opts)), flat = opts.server ? 0 : gearStat(s, 'critDamage'); // critDealt: Burst Buffer (sets.mjs)
@@ -2928,12 +2927,14 @@ export function hit(s, p, base, opts = {}) {
   // Lockbox: while it lives, the part it wards loses at most a quarter of its max a cycle, from everything. HASHLORD's Pool
   // Lock (wardCommands) holds back your commands only: burns and helpers go through at full.
   const crush = opts.mine && !opts.server ? 1 + (fxHas(s, 'lock-crush')?.fx.value || 0) / 100 : 1; // Lockpick (a native unique): locks and wards give way faster
-  if (dealt > 0 && !root && livingParts(s).some((x) => wards(x, p) && !(x.wardCommands && opts.dot))) {
+  // What the cap holds back isn't lost: the Lockbox holds it, for its partner when it breaks (breakPart; docs/puzzle-levers.md 3.4).
+  const warder = dealt > 0 && !root ? livingParts(s).find((x) => wards(x, p) && !(x.wardCommands && opts.dot)) : null;
+  if (warder) {
     const cap = Math.max(1, Math.round(p.max * CONFIG.ward * crush)), used = p.wardAt === e.cycle ? p.wardUsed : 0;
     const was = dealt;
     dealt = Math.max(0, Math.min(dealt, cap - used));
     p.wardAt = e.cycle; p.wardUsed = used + dealt;
-    if (dealt < was) notes.push(`warded: ${was - dealt} held back`);
+    if (dealt < was) { (warder.held ||= {})[p.id] = (warder.held[p.id] || 0) + was - dealt; notes.push(`warded: ${was - dealt} held`); }
   }
   // Mutex: while it lives, the part it locks carries a shield (its lock) that takes the hit first.
   let unlocked = false, soaked = 0, lockWas = 0, lockLost = 0;
@@ -3044,7 +3045,7 @@ function bossPhases(s) {
         if (p.lock) { const t = part(s, p.lock); if (alive(t)) { t.lockMax = t.lockHp = Math.max(1, Math.round(t.max * CONFIG.mutex.share)); t.lockAt = null; } } // a Mutex that joins locks its part at once
         for (const w of livingParts(s).filter((x) => x.ward === spec.id && p.id !== spec.id)) (w.wardsToo ||= []).push(p.id); // HASHLORD's Pool Lock wards the forked Miner too
       }
-      if (act === 'harmony') { const d = livingParts(s).find((x) => x.reflect); if (d) d.bounce = 0.5; else say = 'The Hollow Choir reaches for its harmony, but its Decoy is broken.'; }
+      if (act === 'harmony') { const d = livingParts(s).find((x) => x.reflect); if (d) d.bounce = CONFIG.decoy.harmony; else say = 'The Hollow Choir reaches for its harmony, but its Decoy is broken.'; }
       if (act === 'doppelganger') say = doppelganger(s);
     }
     emit(s, 'phase', `PHASE ${v.phases.filter((x) => x.done).length + 1}. ${say}`, { boss: v.boss });
@@ -3127,6 +3128,27 @@ export function unpackParts(s) {
 export const wards = (x, p) => !!p && (x.ward === p.id || !!x.wardsToo?.includes(p.id));
 // The Decoy whose beat is this cycle (it mirrors your commands), and a part's twin (Mirror).
 export const mirrorOn = (s, cycle = s.encounter?.cycle) => livingParts(s).find((x) => x.reflect && (cycle + (x.reflectOff || 0)) % x.reflect === 0) || null;
+// The Decoy's pointer (docs/puzzle-levers.md 3.8, decided 9.6): where its next beat (this cycle's, if it's on) bends your
+// hit. It moves each beat: a part picked by the fight's seed and the beat's cycle among the standing system parts, never
+// the one the last beat pointed at (the Decoy itself is one of them). It shows on the board (a dashed red tether) once
+// the Decoy's timers do: its ◆ stripped, or Tagged. { decoy, at (the beat's cycle), to (the part), was (the last beat's part), shown, bad }, or null.
+const beatFrom = (d, c) => { let k = c; while ((k + (d.reflectOff || 0)) % d.reflect) k++; return k; };
+export function bendOf(s, d = livingParts(s).find((x) => x.reflect)) {
+  const e = s.encounter;
+  if (!e || !d?.reflect || !alive(d)) return null;
+  const at = beatFrom(d, e.cycle), ps = livingParts(s).filter((x) => x.kind === 'system' && !frozenNow(s, x));
+  let b = d.bend;
+  if (!b || b.at !== at || !ps.some((x) => x.id === b.to)) {
+    const was = !b ? null : b.at !== at ? b.to : b.was, pool = ps.filter((x) => x.id !== was);
+    const k = (Math.imul(((e.seed || 0) + 0x9e37) >>> 0, 2654435761) ^ Math.imul(at + 1, 40503)) >>> 0;
+    b = d.bend = { at, to: (pool[k % Math.max(1, pool.length)] || d).id, was };
+  }
+  const to = part(s, b.to);
+  return { decoy: d, at, to, was: b.was, shown: !timersHidden(s, d), bad: bendBad(s, d, to) };
+}
+// A part the Decoy's bend must not put your hit on now: the Decoy itself (part of it bounces back), or a part to break
+// last (a Tripwire, a Zip Bomb, a Hotspot) while another part stands.
+export const bendBad = (s, d, p) => !!p && (p === d || ((!!p.deadman || !!p.fuse || !!p.hotspot) && livingParts(s).some((x) => x !== p && x.kind === 'system' && !x.deadman && !x.fuse && !x.hotspot)));
 const twinOf = (s, p) => parts(s).find((x) => x !== p && (x.twin === p.id || p.twin === x.id)) || null;
 
 // The living part whose attack lands soonest (ties: the bigger hit).
@@ -3222,6 +3244,14 @@ function breakPart(s, p) {
   if (p.attack?.effect === 'encrypt' && !p.encrypted) contractDefuse(s); // broken before it ever encrypted you (a contract counts it: mail.mjs)
   if (e.virus.raid) raidBroke(s); // a crew boss's adds go down with it
   if (e.virus.tells) tellBroke(s, p); // its tells stop with it (tells.mjs)
+  // Lockbox: held, not lost (docs/puzzle-levers.md 3.4). Half of what its ward held back lands on each partner at once.
+  for (const [id, n] of Object.entries(p.held || {})) {
+    const t = part(s, id), land = Math.floor(n * CONFIG.wardHeld);
+    if (!alive(t) || land <= 0) continue;
+    emit(s, 'status', `The ${p.name} breaks open: ${land} of the ${n} it held lands on the ${t.name}.`, { target: t.id, from: p.id, held: land });
+    hit(s, t, land, { by: p.name, server: true, pierce: true, flat: true, held: true });
+  }
+  if (p.held) p.held = null;
   // Mutex: its lock goes with it.
   // (A lock it had already lost doesn't come back either: its relock countdown goes too.)
   if (p.lock) { const t = part(s, p.lock); if (t && !livingParts(s).some((x) => x.lock === t.id)) t.lockAt = null; if (t?.lockHp) { t.lockHp = 0; emit(s, 'status', `The ${t.name}'s lock is gone with the Mutex.`, { target: t.id, lock: 'gone', from: p.id }); } }
@@ -3235,16 +3265,21 @@ function breakPart(s, p) {
   const hush = p.deadman && !p.quiet && !buffed(e, 'sudo') && fxHas(s, 'quiet-trip'); // Quiet Wire (a native unique)
   if (p.deadman && (buffed(e, 'sudo') || p.quiet || hush)) emit(s, 'status', `The ${p.name} breaks without a sound. ${p.quiet ? 'The Logic Bomb took it clean' : hush ? `${hush.it.name} cut it quietly` : 'Root access kept it quiet'}.`, { target: p.id });
   else if (p.deadman) {
+    // Loud both ways (docs/puzzle-levers.md 3.2): they also take more damage (damageMultiplier) and drop their ◆ for good.
     const loud = livingParts(s).filter((x) => x.kind === 'system');
+    let shed = 0;
     for (const x of loud) {
       x.loud = true;
+      if (x.armor > 0) { shed += x.armor; x.armor = 0; }
+      x.patchAt = null;
       const a = x.attack;
       if (!a) continue;
       if (['damage', 'encrypt'].includes(a.effect)) a.amount = Math.max(1, Math.round(a.amount * CONFIG.tripwire.loud));
       if (a.hit) a.hit = Math.max(1, Math.round(a.hit * CONFIG.tripwire.loud));
-      if (a.due > e.cycle + 1 && a.due < 900) a.due--;
+      if (a.due > e.cycle && a.due < 900) a.due = Math.max(e.cycle, a.due - CONFIG.tripwire.sooner); // its next attack a cycle sooner: one due next cycle lands this one
+      if (a.interval > 2) { const cut = Math.min(CONFIG.tripwire.sooner, a.interval - 2); a.interval -= cut; a.loudCut = cut; } // every attack after it a cycle sooner too (2 at the fastest)
     }
-    if (loud.length) emit(s, 'phase', `TRIPWIRE. ${loud.map((x) => x.name).join(' and ')} ${loud.length === 1 ? 'goes' : 'go'} loud, dealing ${Math.round((CONFIG.tripwire.loud - 1) * 100)}% more damage, and every attack comes a cycle sooner.`, { target: loud[0].id, tripwire: true });
+    if (loud.length) emit(s, 'phase', `TRIPWIRE. ${andList(loud.map((x) => x.name))} ${loud.length === 1 ? 'goes' : 'go'} loud: ${Math.round((CONFIG.tripwire.loud - 1) * 100)}% more damage dealt and every attack a cycle sooner, ${Math.round((CONFIG.tripwire.taken - 1) * 100)}% more damage taken${shed ? ` and ${shed} ◆ dropped` : ''}.`, { target: loud[0].id, tripwire: true, shed });
   }
   // Linked parts (every v2 or bigger virus; the old Rerouting mutation too): a third of the broken part's hit
   // goes to the survivor that attacks next (WoW council fights). A survivor whose attack isn't a hit
@@ -3300,6 +3335,28 @@ function fxCooldown(s, id, a) {
   if (a?.helper && st?.helperCd) { off += st.helperCd; st.helperCd = 0; }
   return off ? Math.max(1, cd - off) : cd;
 }
+// The Decoy's beat (docs/puzzle-levers.md 3.8, decided 9.6): your command at one part goes to the part its pointer is on
+// (bendOf), whatever it is: a hit, a strip, a burn, a helper, a debuff. Pointing at itself, a hit lands on the Decoy and
+// part of it bounces back (hit). Area commands and the ones on you aren't bent; a command at an attack bends only onto a
+// part with one, and one that couldn't fire there isn't bent. Sudo, Unmask and Echo Cancel go straight through; Mirror
+// Maze (a native unique) lets it through unbent, its hits at its share.
+function bendCommand(s, intent) {
+  const e = s.encounter, a = ABILITIES[intent.ability], d = mirrorOn(s);
+  if (!d || !intent.target || !['part', 'attack'].includes(a?.target) || buffed(e, 'sudo') || d.unmaskUntil >= e.cycle) return intent;
+  const to = bendOf(s, d)?.to, self = to === d;
+  if (!to || (to.id === intent.target && !self)) return intent;
+  const maze = fxHas(s, 'decoy-pass');
+  if (maze) {
+    if (e.commanding) e.commanding.maze = maze.fx.value;
+    emit(s, 'status', `${maze.it.name} gets through the ${d.name}'s bend at ${maze.fx.value}%.`, { target: intent.target });
+    return intent;
+  }
+  const bent = { ...intent, target: to.id, text: `${intent.ability} ${to.id}` };
+  if (to.id !== intent.target && validate(s, bent)) return intent;
+  if (to.id !== intent.target) emit(s, 'status', `The ${d.name} bends your ${intent.ability === 'spike' ? spikeName(s) : a.name} onto ${self ? 'itself' : `the ${to.name}`}.`, { target: to.id, from: intent.target, bent: true });
+  if (e.commanding) Object.assign(e.commanding, { target: to.id, bounce: self ? d.id : null });
+  return bent;
+}
 function useAbility(s, intent, auto = false) {
   const e = s.encounter;
   if (intent.ability === 'hold') {
@@ -3318,6 +3375,7 @@ function useAbility(s, intent, auto = false) {
     emit(s, 'warning', `${auto === 'program' ? '⟳ Your program' : auto ? 'Auto-repeat' : 'Command'} failed: ${error}`);
     return;
   }
+  if (auto !== 'daemon') intent = bendCommand(s, intent);
   const id = intent.ability;
   const a = id === 'spike' ? { ...ABILITIES.spike, name: spikeName(s) } : ABILITIES[id];
   const target = part(s, intent.target);
@@ -3388,7 +3446,7 @@ function useAbility(s, intent, auto = false) {
     // Throttle (Warden) on a part gone loud: longer, and the loud wears off.
     if (id === 'throttle' && (target.loud || e.virus.buffs?.loud >= e.cycle || (target.enrage && target.integrity < target.max / 2))) {
       n = a.loud;
-      if (target.loud && target.attack) { const k = CONFIG.tripwire.loud; for (const f of ['amount', 'hit']) if (target.attack[f] && (f === 'hit' || ['damage', 'encrypt'].includes(target.attack.effect))) target.attack[f] = Math.max(1, Math.round(target.attack[f] / k)); target.loud = false; emit(s, 'status', `${target.name} quiets down: it isn't loud any more.`, { target: target.id }); }
+      if (target.loud && target.attack) { const k = CONFIG.tripwire.loud; for (const f of ['amount', 'hit']) if (target.attack[f] && (f === 'hit' || ['damage', 'encrypt'].includes(target.attack.effect))) target.attack[f] = Math.max(1, Math.round(target.attack[f] / k)); if (target.attack.loudCut) { target.attack.interval += target.attack.loudCut; target.attack.loudCut = 0; } target.loud = false; emit(s, 'status', `${target.name} quiets down: it isn't loud any more.`, { target: target.id }); }
     }
     target[a.status + 'Until'] = id === 'rate-limit' ? Math.max(target[a.status + 'Until'] || 0, e.cycle + n) : e.cycle + n;
     emit(s, 'status', id === 'rate-limit' ? `${target.name} ${STATUS_WORD[a.status]} for its next attack.` : `${target.name} ${id === 'tag' && target.tagBoost ? `Tagged (burns +${Math.round((CONFIG.surprise.tagged - 1) * 100)}%, timer visible)` : STATUS_WORD[a.status]} for ${n} ${n === 1 ? 'cycle' : 'cycles'}.`, { target: target.id, mark: a.status, ability: id });
@@ -4193,16 +4251,28 @@ function cycleStart(s) {
     }
   }
 
-  // A Zip Bomb's fuse runs out: 20% of your max, unless a ◆ or a shield takes it (Block doesn't).
+  // A Zip Bomb's fuse runs out, on both sides (docs/puzzle-levers.md 3.3): 20% of your max, unless a ◆ or a shield
+  // takes it (Block doesn't); then every part of the virus loses a ◆ and takes its share of its own max (blastOf),
+  // through ◆. A blast that breaks the last part wins the fight.
   for (const z of parts(s).filter((x) => x.fuseAt && x.fuseAt <= e.cycle && !x.fused)) {
     z.fused = true;
     const n = Math.max(1, Math.round(defender(s).max * CONFIG.zipbomb.share));
-    if (e.chits > 0) { e.chits--; emit(s, 'blocked', `The ${z.name} goes off on your ◆ and does nothing${e.chits ? ` (${e.chits} left)` : ''}.`, { source: z.id, fuse: true }); continue; }
-    const soak = Math.min(e.shield || 0, n);
-    if (soak) e.shield -= soak;
-    const dealt = n - soak > 0 ? takeDamage(s, n - soak, z.id, `${z.name} fuse`) : 0;
-    emit(s, 'server-hit', `The ${z.name} goes off: −${dealt}${soak ? ` (${soak} on your shield)` : ''}.`, { source: z.id, amount: dealt, atk: 'Fuse', fuse: true });
-    if (defender(s).integrity <= 0) { finish(s, 'crashed'); return true; }
+    if (e.chits > 0) { e.chits--; emit(s, 'blocked', `The ${z.name} goes off on your ◆ and does nothing to you${e.chits ? ` (${e.chits} left)` : ''}.`, { source: z.id, fuse: true }); }
+    else {
+      const soak = Math.min(e.shield || 0, n);
+      if (soak) e.shield -= soak;
+      const dealt = n - soak > 0 ? takeDamage(s, n - soak, z.id, `${z.name} fuse`) : 0;
+      emit(s, 'server-hit', `The ${z.name} goes off: −${dealt}${soak ? ` (${soak} on your shield)` : ''}.`, { source: z.id, amount: dealt, atk: 'Fuse', fuse: true });
+      if (defender(s).integrity <= 0) { finish(s, 'crashed'); return true; }
+    }
+    const hitBy = livingParts(s).filter((x) => !frozenNow(s, x));
+    if (hitBy.length) emit(s, 'phase', `The blast hits the virus too: every part loses a ◆ and ${Math.round(CONFIG.zipbomb.parts * 100)}% of its max.`, { source: z.id, blast: true });
+    for (const x of hitBy) {
+      if (!alive(x)) continue; // broken by the blast already (a part's own rule on breaking)
+      if (x.armor > 0) { x.armor--; if (!x.armor) x.patchAt = e.cycle + patchDelay(s); }
+      hit(s, x, blastOf(x), { by: `${z.name} blast`, server: true, pierce: true, blast: true });
+    }
+    if (virusIntegrity(s).current === 0) { finish(s, 'victory'); return true; }
   }
 
   // Echoes of last cycle's hits (Echo strain): they land first, and die with the Echo.
@@ -4220,6 +4290,8 @@ function cycleStart(s) {
 
   return false;
 }
+// What a Zip Bomb's blast deals a part of the virus: its share of the part's own max (docs/puzzle-levers.md 3.3).
+export const blastOf = (p) => Math.max(1, Math.round((p?.max || 0) * CONFIG.zipbomb.parts));
 // Attacks due now, soonest first.
 // A part that only attacks alone (the Hashrat's Miner) waits a cycle at a time while it has company.
 const dueNow = (s) => {
@@ -4526,8 +4598,12 @@ export function intents(s, columns = 4) {
   for (const b of livingParts(s).filter((x) => x.buffer)) for (let col = 0; col < columns; col++) if ((e.cycle + col - 1) % b.buffer.every === 0) { const t = belowOf(s, b); if (t) out.push({ source: b.id, name: 'Shield', effect: 'buffer', amount: Math.max(1, Math.round(b.max * b.buffer.share)), col, hidden: false, kind: b.kind, to: t.id }); }
   const echo = livingParts(s).find((x) => x.echo);
   if (echo) for (const x of e.echoes || []) if (x.due - e.cycle >= 0 && x.due - e.cycle < columns) out.push({ source: echo.id, name: x.name + ' echo', effect: 'damage', amount: x.amount, col: x.due - e.cycle, hidden: false, kind: echo.kind });
-  // The Decoy's beat (your commands mirrored), and a broken twin's reboot: chips on the board like attacks.
-  for (const decoy of livingParts(s).filter((x) => x.reflect)) for (let col = 0; col < columns; col++) if ((e.cycle + col + (decoy.reflectOff || 0)) % decoy.reflect === 0) out.push({ source: decoy.id, name: 'Mirror', effect: 'mirror', amount: Math.round(CONFIG.mirrorBounce * 100), col, hidden: timersHidden(s, decoy), kind: decoy.kind });
+  // The Decoy's beat (your hit bent), and a broken twin's reboot: chips on the board like attacks. The beat always shows;
+  // where its next one points (to) only once the Decoy's timers do (veiled: not yet).
+  for (const decoy of livingParts(s).filter((x) => x.reflect)) {
+    const b = bendOf(s, decoy);
+    for (let col = 0; col < columns; col++) if ((e.cycle + col + (decoy.reflectOff || 0)) % decoy.reflect === 0) out.push({ source: decoy.id, name: 'Bend', effect: 'mirror', amount: Math.round((decoy.bounce ?? CONFIG.mirrorBounce) * 100), col, hidden: false, veiled: !b.shown, to: b.shown && b.at === e.cycle + col ? b.to.id : null, toName: b.shown && b.at === e.cycle + col ? b.to.name : null, self: b.to === decoy, harm: b.shown && b.at === e.cycle + col ? b.bad : null, kind: decoy.kind });
+  }
   for (const p of parts(s)) if (p.rebootAt && p.integrity === 0 && p.rebootAt - e.cycle >= 0 && p.rebootAt - e.cycle < columns) out.push({ source: p.id, name: 'Reboot', effect: 'reboot', amount: Math.round(p.max * CONFIG.twinReboot.at), col: p.rebootAt - e.cycle, hidden: false, kind: p.kind });
   // A Cold Store's thaw and a Spare's boot (the parts plan's P2): on the cycle each joins the fight.
   for (const p of livingParts(s)) if (p.frozen && !p.thawed && p.thawAt - e.cycle >= 0 && p.thawAt - e.cycle < columns) out.push({ source: p.id, name: 'Thaw', effect: 'thaw', amount: p.chill ? attackAmount({ ...p, attack: p.chill }) : 0, col: p.thawAt - e.cycle, hidden: false, kind: p.kind });

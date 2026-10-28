@@ -139,6 +139,13 @@ export function progTarget(s) {
   const d = preview(s);
   return d && !d.hold ? d.target || null : null;
 }
+// The program's next move as a command ({ ability, target }): what the Mimic's beat cell previews (view.mjs).
+export function progMove(s) {
+  const d = live(s) && active(s) && !s.encounter.queue ? preview(s) : null;
+  if (!d || d.hold) return null;
+  const [ability, target] = d.text.split(' ');
+  return { ability, target: target || null };
+}
 export function progText(s) {
   const d = live(s) && active(s) && !s.encounter.queue ? preview(s) : null;
   return d && !d.hold ? '⟳ ' + said(s, d.text) : null;

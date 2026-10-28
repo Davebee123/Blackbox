@@ -44,14 +44,16 @@
 // { handlers: [], confirmed, undo, armor } } } } } (armor: false when Break ◆ first is off; missing is on), made on
 // first use (an older save gets the defaults: no SAVE_VERSION change; an R1 save's single stack moves into its viruses'
 // routines, migrate). A fight's exceptions live on e.program.
-import { hooks, emit, warn, active, alive, part, livingParts, intents, toIntent, said, classOf, subOf, hackerLevel, barKeys, cooldownOf, codexKey, defender, maxSignal, timersHidden, armorTakes, frontOf, buffed, frozenNow, packed } from './combat.mjs';
-import { ABILITIES, MUTATIONS, FAMILIES, ROOM_FAMILIES, GUARDS, STRAINS, BOSSES, ARCHETYPES, SUBS, TELLS, TELL_SETS } from './data.mjs';
+import { hooks, emit, warn, active, alive, part, livingParts, intents, toIntent, said, classOf, subOf, hackerLevel, barKeys, cooldownOf, codexKey, defender, maxSignal, timersHidden, armorTakes, frontOf, buffed, frozenNow, packed, mirrorOn, bendOf } from './combat.mjs';
+import { copyOf, dearCopy, beatOn, beatBlind } from './tells.mjs';
+import { ABILITIES, MUTATIONS, FAMILIES, ROOM_FAMILIES, GUARDS, STRAINS, BOSSES, ARCHETYPES, SUBS, TELL, TELLS, TELL_SETS } from './data.mjs';
 import { researchAt, TIER } from './research.mjs';
 import { decoded as geneDecoded } from './genome.mjs';
 import { kitPlanner, kitPlannerAt, soonest } from './planner.mjs';
 import { GENES } from './genes.mjs';
 import { sigintTarget, dearest } from './tells.mjs';
 import { isUp } from './floorplan.mjs';
+import { loudWins, blastPays, cashIn } from './order.mjs';
 
 export const ROUTINES = {
   unlockLevel: 5, // the class level routines open at; below it the timer repeats your last hit
@@ -84,9 +86,15 @@ export const PART_WHEN = {
   tell: { tier: TIER.rule, ram: 2, icon: 'counter', short: 'tell live', label: (n) => `${n} tell live`, tip: (n) => `A tell on the ${n} can be answered this cycle.` },
   pretell: { tier: TIER.mastered, ram: 3, icon: 'mastered', short: 'before tell', label: (n) => `before ${n} tell`, tip: (n) => `The cycle before a tell on the ${n} can be answered.` },
   open: { tier: TIER.mastered, ram: 3, icon: 'mastered', short: 'Open', label: (n) => `${n} Open`, tip: (n) => `The ${n} is Open: you read its tell.` },
+  // The order levers (docs/puzzle-levers.md 7; order.mjs reads them): each only on the part whose gene it reads.
+  loudwins: { tier: TIER.rule, ram: 2, icon: 'trace', short: 'loud wins', gene: 'tripwire', label: (n) => `${n} loud wins`, tip: (n) => `Breaking the ${n} now, then every other part loud, ends the others no later and costs you no more than leaving it. No big hit lands while you're still on it.` },
+  blastpays: { tier: TIER.rule, ram: 2, icon: 'payload', short: 'blast pays', gene: 'zipbomb', label: (n) => `${n} blast pays`, tip: (n) => `The ${n} breaks this cycle, its blast would break another part, and a ◆ or a shield of yours covers its fuse.` },
+  cashin: { tier: TIER.rule, ram: 2, icon: 'unlock', short: 'cash in', gene: 'ward', label: (n) => `${n} cash in`, tip: (n) => `Half of the damage the ${n} holds would break its partner the moment it breaks.` },
   // A seal's lever (docs/puzzle-levers.md 3.5, 7): it would hand out a lot.
   sealdear: { tier: TIER.rule, ram: 2, icon: 'cracker', short: 'seal dear', label: (n) => `${n} seal dear`, tip: (n) => `A seal on the ${n} lands within ${ROUTINES.sealOut} cycles while it still wears ${ROUTINES.sealDear} ◆ or more.` },
 };
+// A part chip that reads one gene's rule fits only the parts that carry it.
+const chipFits = (cond, spec) => !PART_WHEN[cond]?.gene || !!(spec && GENES[PART_WHEN[cond].gene].carried(spec));
 // WHEN chips about the fight or you. open(s): whether your research has it.
 const anyKey = (s, end, tier) => Object.keys(s.research || {}).some((k) => k.endsWith(':' + end) && researchAt(s, k) >= tier);
 export const GLOBAL_WHEN = {
@@ -97,13 +105,18 @@ export const GLOBAL_WHEN = {
   anytell: { ram: 2, icon: 'counter', label: 'any tell live', tip: 'A tell on any part can be answered this cycle.', open: (s) => Object.keys(s.research || {}).some((k) => researchAt(s, k) >= TIER.rule) },
   beat1: { ram: 2, icon: 'echo', label: 'beat in 1', tip: 'A beat lands this cycle: what you fire now is played back.', open: (s) => beatKnown(s) },
   beat2: { ram: 2, icon: 'echo', label: 'beat in 2', tip: 'A beat lands this cycle or the next.', open: (s) => beatKnown(s) },
+  // Each beat's own chip (docs/puzzle-levers.md 7) reads the fact that decides it. dear copy, the Mimic's: the copy of
+  // your rotation's move costs a tenth of your max or more (tells.mjs copyOf). bent onto a lever, the Decoy's: its beat
+  // this cycle points at a part that must not take a hit (combat.mjs bendBad), and the board shows where.
+  dearcopy: { ram: 2, icon: 'echo', label: 'dear copy', tip: `On the Mimic's beat, the copy of your rotation's move costs ${Math.round(TELL.copy.dear * 100)}% of your max or more.`, open: (s) => beatKnown(s, (p) => !!p.mimic) },
+  bent: { ram: 2, icon: 'echo', label: 'bent onto a lever', tip: 'The Decoy\'s beat this cycle points at a part that must not be hit now: the Decoy itself, or a part to break last.', open: (s) => beatKnown(s, (p) => !!p.reflect) },
   // SIGINT's lever (docs/puzzle-levers.md 3.6, 7): open at the rule tier, as any tell live is.
   dearer: { ram: 2, icon: 'interrupt', label: 'dearer', tip: 'The cast or charge SIGINT would stop now costs more than every other one on the board, or is the only one.', open: (s) => Object.keys(s.research || {}).some((k) => researchAt(s, k) >= TIER.rule) },
 };
-// A beat (docs/puzzle-fights.md 3): a part that plays your command back on its cycle (the Mimic, a Decoy's mirror).
-// The beat chips open with any such part's rule.
+// A beat (docs/puzzle-fights.md 3): a part that plays your command back on its cycle (the Mimic, the Decoy's bend).
+// The beat chips open with any such part's rule; a beat's own chip with its part's.
 const beating = (p) => !!p && (!!p.mimic || !!p.reflect);
-const beatKnown = (s) => Object.keys(s.research || {}).some((k) => beating(specOf(k)) && researchAt(s, k) >= TIER.rule);
+const beatKnown = (s, kind = beating) => Object.keys(s.research || {}).some((k) => !!specOf(k) && kind(specOf(k)) && researchAt(s, k) >= TIER.rule);
 const MUT_WHEN = { ram: 2, icon: 'debuff' };
 export const TARGETS = {
   that: { icon: 'part', label: 'that part', tip: 'The part the WHEN chip names (a tell: its part; fragments: the lowest).' },
@@ -158,7 +171,7 @@ export function parseWhen(id) {
   if (GLOBAL_WHEN[w]) return { kind: 'global', id: w, def: GLOBAL_WHEN[w] };
   if (w.startsWith('mut:') && MUTATIONS[w.slice(4)] && !MUTATIONS[w.slice(4)].retired) return { kind: 'mutation', id: w, mut: w.slice(4), def: MUT_WHEN };
   const i = w.lastIndexOf(':'), ref = w.slice(0, i), cond = w.slice(i + 1);
-  if (i > 0 && ref.includes(':') && PART_WHEN[cond]) return { kind: 'part', id: w, ref, cond, def: PART_WHEN[cond] };
+  if (i > 0 && ref.includes(':') && PART_WHEN[cond] && chipFits(cond, specOf(ref))) return { kind: 'part', id: w, ref, cond, def: PART_WHEN[cond] };
   return null;
 }
 // Is this WHEN chip yours to use (researched)?
@@ -318,7 +331,15 @@ export function presetsFor(s, body) {
   const here = new Set(active(s) && fightBody(s) === body ? s.encounter.virus.parts.map((p) => p.id) : []);
   for (const x of specs.filter((y) => leverOf(y) && at(y, TIER.rule)).sort((a, b) => here.has(b.id) - here.has(a.id))) {
     const ref = `${body}:${x.id}`, lever = leverOf(x);
-    if (lever === 'beat') add(`beat:${x.id}`, 'Quiet on the beat', 'echo', `On the ${x.name}'s beat, your rotation fires nothing with a direct hit: a shield, a strip, a burn, or nothing.`, [{ when: 'beat1', do: ROTATE.id, target: 'nobeat' }], x.id);
+    // A beat (docs/puzzle-levers.md 7): the Mimic's, hold when the copy of your rotation's move would be dear; the
+    // Decoy's, when its beat points at a part that must not be hit, your rotation fires nothing it can bend.
+    if (lever === 'beat' && x.mimic && holdOpen(s)) add(`beat:${x.id}`, 'Hold on a dear copy', 'echo', `On the ${x.name}'s beat, hold when the copy of your rotation's move would cost ${Math.round(TELL.copy.dear * 100)}% of your max or more.`, [{ when: 'dearcopy', do: HOLD.id, target: 'that' }], x.id);
+    else if (lever === 'beat' && x.reflect) add(`beat:${x.id}`, 'Quiet when bent', 'echo', `When the ${x.name}'s beat points at a part that must not be hit, your rotation fires nothing it can bend: a shield, a buff or an area command.`, [{ when: 'bent', do: ROTATE.id, target: 'nobeat' }], x.id);
+    else if (lever === 'beat') add(`beat:${x.id}`, 'Quiet on the beat', 'echo', `On the ${x.name}'s beat, your rotation fires what costs least to have copied.`, [{ when: 'beat1', do: ROTATE.id, target: 'nobeat' }], x.id);
+    // The order levers' reading presets (docs/puzzle-levers.md 7): the lever's chip first, then its plain answer.
+    if (x.deadman) add(`loud:${x.id}`, 'Trip when loud wins', 'trace', `Your rotation on the ${x.name} when loud wins, else on the other parts while it stands.`, [{ when: `${ref}:loudwins`, do: ROTATE.id, target: 'that' }, { when: `${ref}:present`, do: ROTATE.id, target: 'others' }], x.id);
+    if (x.fuse) add(`blast:${x.id}`, 'Blast when it pays', 'payload', `Your rotation on the ${x.name} when its blast pays, else on the other parts while it stands.`, [{ when: `${ref}:blastpays`, do: ROTATE.id, target: 'that' }, { when: `${ref}:present`, do: ROTATE.id, target: 'others' }], x.id);
+    if (x.ward) add(`cash:${x.id}`, 'Cash in', 'unlock', `Your rotation on the ${x.name} when half of what it holds would break its partner. Until then, your rotation plays the rest.`, [{ when: `${ref}:cashin`, do: ROTATE.id, target: 'that' }], x.id);
     if (lever === 'last') add(`last:${x.id}`, `${x.name} last`, 'part', `Your rotation on the other parts while the ${x.name} stands, then on it.`, [{ when: `${ref}:present`, do: ROTATE.id, target: 'others' }], x.id);
     if (lever === 'together') add(`together:${x.id}`, 'Twins together', 'part', `Your rotation on whichever of the ${x.name} and its twin has more left, so they break close together.`, [{ when: `${ref}:present`, do: ROTATE.id, target: 'twins' }], x.id);
     if (lever === 'first') add(`first:${x.id}`, `${x.name} first`, 'part', `Your rotation on the ${x.name} before the other parts.`, [{ when: `${ref}:present`, do: ROTATE.id, target: 'that' }], x.id);
@@ -362,7 +383,7 @@ export const presetNow = (s, body) => (routineOf(s, body).handlers.length ? pres
 const isFrag = (p) => p.kind === 'fragment';
 const partsFor = (s, ref) => livingParts(s).filter((p) => !isFrag(p) && refOf(s.encounter.virus, p) === ref);
 const shown = (s) => intents(s, 4);
-// A beat the board shows (the Mimic's, a Decoy's mirror), up to `upto` columns out: the parts it's on.
+// A beat the board shows (the Mimic's, the Decoy's bend), up to `upto` columns out: the parts it's on.
 const beatParts = (s, upto) => [...new Set(shown(s).filter((i) => (i.tell === 'mimic' || i.effect === 'mirror') && !i.hidden && i.col <= upto).map((i) => part(s, i.source)))].filter(alive);
 const isBeat = (i) => i.tell === 'mimic';
 const attackNow = (i, upto) => !i.tell && !i.hidden && i.col <= upto && ['damage', 'encrypt', 'replicate', 'scramble', 'heal', 'fuse'].includes(i.effect);
@@ -376,6 +397,13 @@ function holds(s, w) {
     if (w.id === 'encrypted') return (e.encrypt || 0) >= ROUTINES.encrypted ? [] : null;
     if (w.id === 'anytell') { const ps = list.filter((i) => i.tell && i.open && !isBeat(i)).map((i) => part(s, i.source)).filter(alive); return ps.length ? ps : null; } // a beat isn't answered by a hit: the beat chips
     if (w.id === 'beat1' || w.id === 'beat2') { const ps = beatParts(s, w.id === 'beat1' ? 0 : 1); return ps.length ? ps : null; }
+    if (w.id === 'dearcopy') { // the Mimic's beat this cycle, and the copy of your rotation's move is dear (tells.mjs copyOf)
+      const b = beatOn(s);
+      if (!b || b.t.next !== e.cycle || beatBlind(s, b.p, e.cycle)) return null;
+      const text = rotation(s), [id, at] = text.split(' ');
+      return dearCopy(s, copyOf(s, id, part(s, at))) ? [b.p] : null;
+    }
+    if (w.id === 'bent') { const d = mirrorOn(s), b = d && bendOf(s, d); return b?.shown && b.bad ? [d] : null; } // the Decoy's beat this cycle, on a part that must not be hit (combat.mjs bendBad)
     // dearer: the part of the cast or charge SIGINT would stop now, when it costs the most of those on the board (tells.mjs).
     if (w.id === 'dearer') { const t = sigintTarget(s), p = t && part(s, t.part); return t && alive(p) && dearest(s, t) ? [p] : null; }
     return null;
@@ -392,6 +420,9 @@ function holds(s, w) {
       case 'tell': return mine.some((i) => i.tell && i.open && !isBeat(i));
       case 'pretell': return mine.some((i) => i.tell && !i.open && i.winFrom === 1 && !isBeat(i));
       case 'open': return p.openUntil >= e.cycle;
+      case 'loudwins': return loudWins(s)?.part === p;
+      case 'blastpays': return blastPays(s)?.part === p;
+      case 'cashin': return cashIn(s)?.part === p;
       case 'sealdear': return p.armor >= ROUTINES.sealDear && mine.some((i) => i.tell === 'seal' && i.col <= ROUTINES.sealOut);
       default: return false;
     }
@@ -451,9 +482,9 @@ function handlerMove(s, h, body) {
   if (!ps) return null;
   if (!takesPart(h.do)) return fires(s, h.do) ? { text: h.do } : null;
   // Rotation at no beat, with only beat parts left: at the beat's part (a beat chip's Rotation reads the beat anyway).
-  const t = targetOf(s, h, ps) || (h.do === ROTATE.id && h.target === 'nobeat' && BEATS.has(w.id) ? ps[0] : null);
+  const t = targetOf(s, h, ps) || (h.do === ROTATE.id && h.target === 'nobeat' && READS.has(w.id) ? ps[0] : null);
   if (!t) return null;
-  if (h.do === ROTATE.id) { const text = h.target === 'others' ? without(s, new Set((ps || []).map((p) => p.id)), () => rotation(s)) : aimed(s, t, BEATS.has(w.id) ? BEAT_GENES : null); return fires(s, text) ? { text } : null; }
+  if (h.do === ROTATE.id) { const text = h.target === 'others' ? without(s, new Set((ps || []).map((p) => p.id)), () => rotation(s)) : aimed(s, t, READS.has(w.id) ? BEAT_GENES : null); return fires(s, text) ? { text } : null; }
   const text = `${h.do} ${t.id}`;
   if (!fires(s, text)) return null;
   return armorFirst(s, body) ? armorMove(s, h, ps, t, text) : { text };
@@ -494,6 +525,10 @@ function without(s, ids, fn) {
 const RULED = ['ward', 'wardsToo', 'lock', 'twin', 'reflect', 'mimic', 'command', 'deadman', 'fuse', 'hotspot', 'idle', 'front', 'backlog', 'buffer', 'rearm', 'syncOnly', 'phase', 'echo', 'tax', 'pkg', 'obfuscate', 'limit', 'spare', 'scrape', 'packer', 'badblock', 'damper', 'frozen'];
 export const ruled = (p) => RULED.some((k) => p[k]);
 const BEATS = new Set(['beat1', 'beat2']);
+// A beat chip, or a beat's own chip (its rule's: the Mimic's dear copy, the Decoy's bent onto a lever): what covers its part's
+// lever, and what makes the Rotation it fires read the beat.
+const READS = new Set([...BEATS, 'dearcopy', 'bent']);
+const coversBeat = (w, p) => BEATS.has(w.id) || (w.id === 'dearcopy' && !!p?.mimic) || (w.id === 'bent' && !!p?.reflect);
 const named = (s, pred) => liveHandlers(s, fightBody(s)).some((h) => { const w = parseWhen(h.when); return !!w && pred(w); });
 export const EXCEPTION = { label: 'EXCEPTION', phrase: 'no available handler', tip: 'Your program has no handler for this part yet. Play it yourself, or research it in the Codex.', lever: 'Your program has no handler for this part\'s rule. Play it yourself, or pick its preset in the Program tab.', fight: 'Your program leaves this fight to you: a boss is always yours to play.' };
 // What the program doesn't cover on the board now: [{ key, kind, part, name }], before the parts you've acted on.
@@ -511,7 +546,7 @@ export function uncovered(s) {
     const ref = refOf(v, p), n = researchOfRef(s, ref);
     // A lever (a beat, a part to break first or last): only a handler that names it covers it, a beat chip for a beat.
     if (leverOf(p)) {
-      if (!named(s, (w) => (w.kind === 'part' && w.ref === ref) || (leverOf(p) === 'beat' && BEATS.has(w.id)))) out.set(p.id, { key: `part:${p.id}`, kind: 'lever', part: p.id, name: p.name, lever: leverOf(p) });
+      if (!named(s, (w) => (w.kind === 'part' && w.ref === ref) || (leverOf(p) === 'beat' && coversBeat(w, p)))) out.set(p.id, { key: `part:${p.id}`, kind: 'lever', part: p.id, name: p.name, lever: leverOf(p) });
       continue;
     }
     const need = ruled(p) ? TIER.rule : TIER.decoded;
@@ -525,8 +560,8 @@ export function uncovered(s) {
     // The rotation reads no tell. A charge is covered once mastered (it lands or is cut by chance, as a hit); a seal or
     // a cast is a lever (strip before it, save SIGINT for it), answered only by a handler: a tell chip on its part, or
     // any tell live. A beat: a beat chip, or a handler that names its part.
-    // A seal is covered by seal dear too, a cast by dearer (SIGINT on the dearer one).
-    if ((i.tell === 'charge' && researchOfRef(s, ref) >= TIER.mastered) || named(s, (w) => (isBeat(i) ? BEATS.has(w.id) || (w.kind === 'part' && w.ref === ref) : w.id === 'anytell' || (i.tell === 'cast' && w.id === 'dearer') || (w.kind === 'part' && w.ref === ref && ['tell', 'pretell', ...(i.tell === 'seal' ? ['sealdear'] : [])].includes(w.cond))))) continue;
+    // A seal is covered by its part's seal dear too, a cast by dearer (SIGINT on the dearer one).
+    if ((i.tell === 'charge' && researchOfRef(s, ref) >= TIER.mastered) || named(s, (w) => (isBeat(i) ? coversBeat(w, p) || (w.kind === 'part' && w.ref === ref) : w.id === 'anytell' || (i.tell === 'cast' && w.id === 'dearer') || (w.kind === 'part' && w.ref === ref && ['tell', 'pretell', ...(i.tell === 'seal' ? ['sealdear'] : [])].includes(w.cond))))) continue;
     out.set(p.id, { key: `part:${p.id}`, kind: 'tell', part: p.id, name: p.name, tell: i.name });
   }
   return [...out.values()];
@@ -727,7 +762,7 @@ export function palette(s, body = focusBody(s)) {
   const glob = Object.keys(GLOBAL_WHEN).map((id) => ({ id, open: whenOpen(s, id) }));
   const muts = Object.keys(MUTATIONS).filter((m) => !MUTATIONS[m].retired).map((m) => ({ id: 'mut:' + m, open: whenOpen(s, 'mut:' + m) })).filter((x) => x.open);
   const refs = bodyRefs(body).filter((k) => researchAt(s, k) > 0);
-  const parts = refs.map((ref) => ({ ref, name: refName(ref), body: bodyName(body), n: researchAt(s, ref), chips: Object.keys(PART_WHEN).map((c) => ({ id: `${ref}:${c}`, cond: c, open: researchAt(s, ref) >= PART_WHEN[c].tier, tier: PART_WHEN[c].tier })) }));
+  const parts = refs.map((ref) => ({ ref, name: refName(ref), body: bodyName(body), n: researchAt(s, ref), chips: Object.keys(PART_WHEN).filter((c) => chipFits(c, specOf(ref))).map((c) => ({ id: `${ref}:${c}`, cond: c, open: researchAt(s, ref) >= PART_WHEN[c].tier, tier: PART_WHEN[c].tier })) }));
   return { glob, muts, parts };
 }
 

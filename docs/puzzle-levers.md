@@ -85,6 +85,21 @@ are first guesses for the harness to tune.
   Operator's helpers are caught, so it Kill Switches before the beat (P1).
 - **On the board.** The beat cell shows what your selected command would copy, as a red ghost on your Signal bar or
   ◆. The tooltip names it: *Mimic*, *Beat*, *Copies your Crack: strips 2 ◆ from you.*
+- **As built** (tells.mjs `copyOf`, `TELL.copy`). Each copy as the table says, by the skill's data (`copyKind`): a hit
+  at its whole direct hit (a hit with no listed damage as key 1), never past the tell ceiling, and a ◆ on you takes it;
+  a strip takes that many of your ◆ and your whole shield (Exploit counts as a strip); a burn (a helper's hits count as
+  its ticks) leaves you Corrupted for its ticks at **a quarter** of each (`copy.burn` 0.25), so Purge, Scrub and
+  Rollback cleanse it; a debuff Throttles you for its cycles (`copy.throttled` 0.5: your hits half, burns and helpers
+  full); a shield or buff re-arms the Mimic with **1 ◆** (`copy.gift`); a heal heals the most damaged part; SIGINT, a
+  stun or a utility Hangs you. Each copy has a cost in Signal (a lost cycle costs the virus's pace, `paceOf`); one
+  under **a tenth of your max** (`copy.dear` 0.1) is a read and opens the Mimic. The planner (`beatMove`) fires its
+  plan when the copy is cheap, else the command whose copy costs least for what it does (another command worth half a
+  cycle, `copy.lesser`), or hold; it no longer chases an Open Mimic while others stand. Kill Switch on the beat only
+  when the helpers it saves cost more than its own copy. *dear copy → Hold* is the preset. The board: the beat chip's
+  number (*−45*, *−2◆*, *9×4*, *Throttled 4*, red when dear), a red ghost on your Signal bar, a red count on your Armor
+  and Shield. **The rules test** (`node solved.mjs rules 10 18 30`, Signal lost): no fixed rule wins at 10, 18 and 30.
+  Quiet (hold every beat) loses most on the Breaker at 10 (52 against 37) and the Bastion at 18 and 30 (57 against
+  20, 48 against 31); fire (the plan, the beat unread) on every class (the Bastion 68, 71 and 79 against 37, 20 and 31).
 
 ### 3.2 The Tripwire: loud both ways
 
@@ -100,6 +115,18 @@ are first guesses for the harness to tune.
   already spread.
 - **On the board.** When the preview shows the Tripwire breaking, the other parts' attacks show their loud numbers and
   their ◆ show falling, so you see the trade before you make it.
+- **As built** (October 2026; `CONFIG.tripwire`, `order.mjs` `loudWins`). Loud parts deal 25% more and every attack comes
+  a cycle sooner *for real*: the next one (one due next cycle lands in the cycle you trip it, the alarm) and every one
+  after it (each interval a cycle shorter, 2 at the fastest). Before, only the next attack moved, and only if it was two
+  cycles out; with that, tripping first won every class at 30. They take 40% more damage and drop their ◆ for good.
+  *Loud wins* (the chip, the planner, the board; `order.mjs` `race` plays your next cycles out on the parts): breaking
+  the Tripwire and then the others loud takes no more of your next 5 cycles (`window`) than breaking them as they are and
+  costs you no more on the way, no big hit (a tenth of your max) lands while you're still on the Tripwire, and no attack
+  it pulls into this cycle goes uncovered. `node solved.mjs rules 18 30`: no fixed rule wins. Signal lost, planner /
+  always trip early / never trip: at 18 Breaker 26/30/36, Bastion 28/55/43, Infiltrator 36/44/33, Operator 23/34/24; at
+  30 Breaker 51/7/46, Bastion 39/51/44, Infiltrator 20/47/22, Operator 27/20/28. The Breaker does best tripping at once
+  at 30 (Shatter's shards on the bared parts end the fight), which the planner's race reads as too risky while the Pulse
+  Node's Surge is coming.
 
 ### 3.3 The Zip Bomb: the blast hits both sides
 
@@ -114,6 +141,15 @@ are first guesses for the harness to tune.
   then bursts. The Operator's helpers finish what the blast leaves. The Infiltrator leaves it last when its burns are
   already doing that work.
 - **On the board.** The fuse chip counts down 2, 1. When it's lit, each part's bar shows the blast's bite as a ghost.
+- **As built** (`CONFIG.zipbomb.parts` 20%, `order.mjs` `blastPays`). The blast lands at the start of the virus's half:
+  yours first (a ◆ or a shield takes it), then each part a ◆ and 20% of its max through its ◆, never a crit; a blast
+  that breaks the last part wins the fight. *Blast pays*: the Zip Bomb breaks this cycle, its blast would break another
+  part, and a ◆ or a shield covers the fuse. `node solved.mjs rules 10 18 30`: **a fixed rule wins at 10 and 18**
+  (always last; the planner matches it on every class), none at 30. Always early loses 20 to 70 points (the cycles spent
+  on it let charges land), but no reading found an early break that pays: with the blast at 35% or 50%, with the Zip
+  Bomb at 6 Integrity, and with the best switch cycle chosen afterwards per fight, the planner gains under 5 on every
+  class but one at one level. The tempo the Zip Bomb costs and the interrupt ticks the blast spends off-cycle outweigh
+  it. Open for the designer: a cheaper Zip Bomb, a bigger blast, or a blast that also cuts.
 
 ### 3.4 The Lockbox: held, not lost
 
@@ -126,6 +162,12 @@ are first guesses for the harness to tune.
   chip kits barely use it, so the timing differs by class.
 - **On the board.** The Lockbox row shows the damage it holds, in your teal, and the partner's bar shows where that
   would leave it.
+- **As built** (`CONFIG.wardHeld` 50%, `order.mjs` `cashIn`, `heldOf`). What the cap holds back goes into the Lockbox,
+  per partner; when it breaks, half lands on the partner at once, through its ◆, never a crit. *Cash in*: half of what
+  it holds breaks the partner; the planner breaks the Lockbox then, a burn class too, and otherwise plays as before.
+  `node solved.mjs rules 10 18 30`: no fixed rule wins. Planner / Lockbox first / Lockbox last: at 10 Breaker 36/43/88,
+  Bastion 35/35/4, Infiltrator 87/91/53, Operator 30/35/36; at 18 22/19/19, 26/40/23, 18/8/44, 26/51/29; at 30
+  29/78/53, 26/29/51, 37/1/47, 24/44/27 (5 or 6 fights a row, so single fights swing a cell by 15 or more).
 
 ### 3.5 Seals: a dial, not a switch
 
@@ -203,6 +245,23 @@ bot hint says *last*), so it leaves routines.mjs `leverOf`.
   each beat. The pointer is a dashed red tether, shown once its ◆ is stripped or it's Tagged. Fire when it points at a
   part you want hit. Go quiet, or hit every part, when it points at the Zip Bomb, the Tripwire or the sealer.
 - **The catch.** It's close to the Front End's bend. Question 6.
+- **As built** (combat.mjs `bendOf`, `bendCommand`; `CONFIG.mirrorBounce`, `CONFIG.decoy`). The whole command at one
+  part bends (a hit, a strip, a burn, a helper, a debuff); area commands and the ones on you don't, a command at an
+  attack bends only onto a part with one. The pointer is picked from the fight's seed and the beat's cycle among the
+  standing parts but the last one, the Decoy itself among them. Pointing at itself, the command lands on the Decoy and
+  **half** of a hit bounces back (`mirrorBounce` 0.5, up from 0.3; HOLLOW CHOIR's Harmony now 0.75). Its beat is every
+  4 cycles from **cycle 3** (`decoy.first`, as the Mimic's), and its veil is **one ◆ at any level** (`decoy.veil`), so
+  one command (or Tag) shows the pointer. The beat always shows (a red dashed *Bend* chip: *→ Pulse Node*, *→
+  itself*, *→ ?*); the pointer is a dashed red tether. The planner (`heedBend`) goes quiet (a shield, a buff, an area
+  command) when the pointer is on itself or on a part to break last, aims where it points otherwise, weighs the bounce
+  by the chance it's on itself while veiled, and unveils a veiled Decoy the cycle before a beat when one command does
+  it. Its chip is *bent onto a lever* (the pointer, shown, on itself or a part to break last), its preset *bent onto a
+  lever → Rotation* (*Quiet when bent*). **The rules test** (Signal lost): no fixed rule wins at 10 and 18 (quiet
+  loses on the Infiltrator at 10, 77 against 44, and the Breaker at 18, 40 against 34; fire on the Bastion, 69 and 92
+  against 58 and 47). At 30 quiet comes out even (the Breaker's 48 against 44 is the closest, short of the margin of
+  5): by 30 every class has a shield or a buff as good as its hit, and a one-lever fight gives the Decoy nothing to
+  point at that must not be hit but itself. Over 24 seeds the planner and quiet are even at 30 too. A question
+  for the designer (it was the optional lever): accept quiet as its answer late, or give it more to read (the P3 pairs).
 
 ## 4. Rules that pull against each other
 
@@ -249,6 +308,7 @@ one WHEN chip that reads its deciding fact, at the rule tier (2 RAM):
 | Lever | WHEN chip | A preset with it |
 |---|---|---|
 | Mimic | *dear copy*: on the beat, the copy of your rotation's move costs a tenth of your max or more | dear copy → Hold |
+| Decoy | *bent onto a lever*: the Decoy's beat points at a part that must not be hit now (itself, or a part to break last) | bent onto a lever → Rotation (as built) |
 | Tripwire | *loud wins*: the other parts' Integrity is under what your next 3 cycles deal | loud wins → Rotation → the Tripwire |
 | Zip Bomb | *blast pays*: the blast breaks a part, and your shield covers the fuse | blast pays → Rotation → the Zip Bomb |
 | Lockbox | *cash in*: the held damage breaks the partner | cash in → Rotation → the Lockbox |

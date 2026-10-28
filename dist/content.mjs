@@ -204,7 +204,7 @@ export const FX_DO = {
   'quiet-trip': { when: ['custom'], label: 'keeps a Tripwire you break quiet' },
   'cast-short': { when: ['custom'], label: "shortens a compiled cast's effect by X cycles", value: true },
   'no-after': { when: ['custom'], label: 'stops a tell that lands from taking a skill offline, Corrupting you or leaving you Hung' },
-  'decoy-pass': { when: ['custom'], label: "lets your commands through the Decoy's mirror at X% of their damage, and nothing bounces back", value: true },
+  'decoy-pass': { when: ['custom'], label: "lets your commands through the Decoy's bend where you aim them, at X% of their damage, and nothing bounces back", value: true },
   // The deep uniques (levels 39-50, docs/loot-plan.md Batch 1). Stats first: what they add, and to what.
   'stat+': { when: ['always'], label: 'adds X to your stat', value: true, stat: true },
   'stat%': { when: ['always'], label: 'increases your stat by X%', value: true, stat: true },

@@ -68,7 +68,7 @@ test('tell tooltips: the tell\'s name, then what happens if it lands (with its n
   let mi = null;
   for (let seed = 1; seed < 400 && !mi; seed++) { const x = fight({ family: 'ghostroot', seed }); if (x.encounter.virus.parts.some((p) => p.mimic)) mi = x; }
   quiet(mi); tell(mi, 'mimic', mi.encounter.virus.parts.find((p) => p.mimic).id, 2);
-  assert.match(chipOf(mi).tip, /^Mimic: Copies the command you fire in 2 cycles and deals its full direct damage to you\.\n▸ Fire no direct hit then(, or take the Mimic under 50%)?\.$/);
+  assert.match(chipOf(mi).tip, /^Mimic: Beat, in 2 cycles\. Copies the command you fire then and turns it on you\.( Copies your [^:\n]+: [^\n]+\.)?\n▸ Fire what costs you least to have copied, or hold(, or take the Mimic under 50%)?\.$/);
   // The chip and its tooltip don't say the same thing twice: the chip has the kind and NOW / in N; the tooltip the rest.
   const html = boardMarkup(s, null);
   const chip = html.match(/<div class="intent tell[^>]*>([\s\S]*?)<\/div><\/div>/)[1].replace(/<[^>]+>/g, ' ');
@@ -208,7 +208,7 @@ test('part reads stay true to the code: a Lockbox\'s cap, a Mirror\'s reboot, a 
   const worm = body('worm', FAMILIES.worm.parts);
   assert.match(partRead(null, worm, worm.parts.find((p) => p.twin)).does, /reboots 3 cycles later at 40% Integrity\. Reboots only once\./);
   const gr = body('ghostroot', FAMILIES.ghostroot.parts);
-  assert.match(partRead(null, gr, gr.parts.find((p) => p.reflect)).does, /^Every 4th cycle, reflects your commands\. A reflected command deals no damage, and 30% of it hits you\./);
+  assert.match(partRead(null, gr, gr.parts.find((p) => p.reflect)).does, /^Every 4 cycles, bends your command at one part onto the part it points at\. It points at another part each beat\. Pointing at itself, the command lands on the Decoy and 50% of a hit bounces back at you\./);
   const bo = body('bouncer', GUARDS.bouncer.parts.filter((x) => !x.kestrel)); // the Bouncer as it stands (Kestrel's Idle Timer joins half of them from floor 3)
   assert.equal(partRead(null, bo, bo.parts.find((p) => p.rearm)).cue.text, 're-arms Gate');
   for (const fam of ['trojan', 'cryptominer', 'wiper']) {
