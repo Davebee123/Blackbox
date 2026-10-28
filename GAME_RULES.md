@@ -657,6 +657,27 @@ A takeover or recovery contract points at a server you've found and haven't take
 
 **The initiate storyline** (LOWLIGHT's jobs, in order; they can't be dropped and don't count toward your three): kill three processes in SPRAWL-00 (60 credits, 1 Indemnity); hand over two Worm code (80, 1); kill the named process `claimjack` in /var/log, an elite (1 level above you but never above level 4, unmutated, grade 2: +15% Integrity, +10% damage; it stays put if you lose, and after two losses it's worn down to v1) (100, 2, wick's Old Toolkit); take over any server you've traced (150, 3, a blueprint and your first **relay**); recover Halcyon's stolen claims ledger, `claims.db`, from an unknown server next to the one you took (150, 4, a protocol, Tuned or better): put the relay up, then trace the flagged server. Each pays standing (+3, +3, +3, +4, +4), so you finish at Contractor. The board and the store open with the turf letter. At level 22 wick writes once more (*crew colours*): take over one more server for the crew (400 credits, +4 standing, the **LOWLIGHT Badge** and wick's Old Toolkit rebuilt at your level: the two pieces of the LOWLIGHT Kit set, see Sets).
 
+## Floor jobs (arcs.mjs)
+
+Each floor has its own fixed chain of contracts, a short storyline that breaks up the board's random offers (WoW's zone quests). The chains carry the LOWLIGHT storyline on: wick read the claims ledger, and its trail leads down the floors. A floor's chain opens once you've reached that floor and Halcyon's board is open (the tick after the letter that opens it). One step is open at a time; delivering it brings the next as a letter. Floor jobs never expire, can't be dropped, and don't count toward the three contracts you hold. The words are in `dist/content/contracts.mjs` (`floors`).
+
+| Floor | Chain | From | Steps |
+|---|---|---|---|
+| 1 The Sprawl | Page nine | wick | named process in SPRAWL-00 · Map · Recover a file · puzzle board |
+| 2 Backhaul | Carrier | LANTERN | Install · Rooms · Past the Tracker · Map without resting · lair boss |
+| 3 The Stacks | Underwriting | Halcyon Claims | Map · Recover a file · Takeover · puzzle board · Takeover |
+| 4 Coldline | Cold storage | Kestrel | Rooms · Install · Past the Tracker · Map without resting · Takeover |
+| 5 Deep Core | Static | NULL CHOIR | puzzle board · Recover a file · Rooms · Install · lair boss |
+| 6 Kernel Space | Ring zero | wick | Map · Past the Tracker · Takeover · lair boss |
+| 7 The Sink | Minutes | Halcyon Claims | Install · Rooms · Recover a file · Map without resting · Takeover |
+| 8 Bedrock | Bedrock | wick | Map · puzzle board · Past the Tracker · Install · Takeover · lair boss |
+
+- **Steps** are the board's contract types with fixed targets (see the table above in Mail and contracts), plus two of their own: **Win a puzzle board** on a named server (any puzzle room on it, won after the step arrived) and **Beat the lair boss** in that floor's lair (beaten after the step arrived).
+- **Targets** come from the floor's diagram, so a network always gives the same ones: the landing server, a server along the floor's main road (from the entry toward the exit; never a rogue server or the lair) by its place, the first main-road server with a Tracker from there (a Mirror, an Archive or a Lab), or the lair. A chain's steps go to different servers where the road allows. A target you haven't located yet reads *the server 2 links past ORIN-CACHE-57* (or *the ? past …* with its trace) until you locate it; then it's the plain contract. A Past the Tracker step whose server turns out to have no Tracker becomes a plain recovery.
+- **Pay** at your level L when the step arrives: credits (40 + 7L up to 120 + 16L by step), Halcyon standing (or the sender's rep: LANTERN, Kestrel, NULL CHOIR), Indemnity on Halcyon's and wick's chains, and contract XP paid like the board's (its `reward.xp` in kills times `MAIL.xp` by level, at your level on delivery).
+- **A pick of three** on a chain's last step, and on some middle steps: three protocols at your level, each a different slot, the first for your class and the stat your subclass chases. The last step's are **Custom** (yellow), a rarity over a contract's Tuned item; a middle step's are **Tuned** (blue). Never a unique or a set piece. It comes up as the Transmission's signed receipt once you're off the fight and the gain card; **Later** puts it off, and Mail's **Pick your reward** brings it back (`mail take <n>`).
+- **In Mail** floor jobs have their own list, **Floor jobs**, over Contracts: a row a floor (the floor's number in an amber frame, the sender, the chain's title, its steps done, n/N, or **Ready**). Its page is the quest window: the sender's mark, the chain and why, its steps as a job (✓ done, ▸ the one you're on, the ones ahead encrypted), then the step's letter and its contract with its pay and **Deliver**. Delivered steps go to Completed, tagged with their floor.
+
 ## Threads (threads.mjs)
 
 Quests you stumble on in server rooms, more involved than a contract: each sends you off to do other things, for someone or something that needs it. Never given, never timed. The design and the chains still to come are in [`docs/threads.md`](docs/threads.md); the content is `dist/content/threads.mjs`.

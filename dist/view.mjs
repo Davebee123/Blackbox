@@ -66,6 +66,7 @@ import { cantripsOf } from './data.mjs';
 import { daemonText } from './daemons.mjs';
 import { ROOMS as ROOMS_FP, kindRule, KIND_OF } from './floorplan.mjs'; // a server card's respawn timers, its type's rule
 import { threadRows, threadReader, tempNodes, tempNodeSvg, tempCard, serverMarkSvg, transitNodes, transitSvg } from './threads-view.mjs';
+import { arcRows, arcReader } from './arcs-view.mjs';
 import { threadById, serverMarks } from './threads.mjs';
 import { skillsTabMarkup } from './skills-view.mjs';
 import { achievementsMarkup } from './achievements-view.mjs';
@@ -1397,7 +1398,7 @@ function rewardChips(s, c) {
     r.xp && chip('xp', xpFor(s, hackerLevel(s), r.xp), 'XP'),
     r.standing && chip('f-halcyon', `${r.standing > 0 ? '+' : ''}${r.standing}`, 'Halcyon standing', r.standing < 0 ? 'neg' : ''),
     c.offBooks && chip('f-glassjaw', '+5', 'GLASSJAW rep'), r.rep && c.faction && chip('f-' + c.faction, `+${r.rep}`, `${FACTIONS[c.faction].short} rep`),
-    r.relay && chip('relay', `×${r.relay}`, 'A relay'), r.blueprint && chip('blueprint', '+1', 'A blueprint'), (r.drop || r.daemon) && chip('item', '+1', 'A protocol, Tuned or better'), r.item && chip('item', '+1', 'A protocol')].filter(Boolean).join('');
+    r.relay && chip('relay', `×${r.relay}`, 'A relay'), r.blueprint && chip('blueprint', '+1', 'A blueprint'), (r.drop || r.daemon) && chip('item', '+1', 'A protocol, Tuned or better'), r.item && chip('item', '+1', 'A protocol'), r.pick && chip('item', '1 of 3', `Pick one of three ${RARITIES[r.pick]?.name || ''} protocols at your level.`, `pick r-${r.pick}`)].filter(Boolean).join('');
 }
 // How to trace an unknown server, shown rather than explained (docs/style-guide.md section 0): the way that is
 // tracing it now on top, with pips for the kills or clears still needed; then every other way as an icon, a label and
@@ -1616,6 +1617,7 @@ export const daemonGlyph = (id, cls = 'badge') => glyph(DAEMON_GLYPH[id] || id, 
 // ---------- mail: letters, the contract board and the Halcyon retainer ----------
 // sel: 'l<id>' a letter, 'j<id>' a contract (taken or on the board).
 const jobTag = (s, c) => (c.done ? ['Done', 'dim'] : contractReady(s, c) ? ['Ready', 'you'] : c.offBooks ? ['Off books', 'hot'] : c.story !== undefined ? ['LOWLIGHT', ''] : ['Active', '']);
+const floorTag = (c) => `<span title="A floor job: floor ${c.chain}'s own chain">Floor ${c.chain}</span>`;
 // Where a contract's work is: its server, an unknown one it points at, or SPRAWL-00 (the WoW quest tracker).
 const trackGo = (c) => (c.loc ? `map:${c.loc}` : c.hidden ? `map:${c.hidden}` : c.type === 'bounty' || c.where === 'sprawl' ? 'map:sprawl' : null);
 function jobBox(s, c, now) {
@@ -1624,9 +1626,9 @@ function jobBox(s, c, now) {
   const full = heldCount(s) >= MAIL.take;
   const acts = c.done ? '' : isOffer
     ? `<button type="button" class="btn primary" data-command="mail accept ${c.id}" ${full ? `disabled title="You hold ${MAIL.take} contracts. Deliver or drop one first."` : ''}>Take</button>`
-    : `<button type="button" class="btn primary" data-command="mail deliver ${c.id}" ${ok ? '' : 'disabled'}>Deliver</button>${trackGo(c) && !ok ? `<button type="button" class="btn" data-go="${esc(trackGo(c))}">${glyph('trace')}Show on map</button>` : ''}${c.story === undefined ? `<button type="button" class="btn" data-command="mail drop ${c.id}">Drop</button>` : ''}`;
+    : `<button type="button" class="btn primary" data-command="mail deliver ${c.id}" ${ok ? '' : 'disabled'}>Deliver</button>${trackGo(c) && !ok ? `<button type="button" class="btn" data-go="${esc(trackGo(c))}">${glyph('trace')}Show on map</button>` : ''}${c.story === undefined && !c.chain ? `<button type="button" class="btn" data-command="mail drop ${c.id}">Drop</button>` : ''}`;
   return `<div class="contract${ok ? ' ready' : ''}${c.done ? ' done' : ''}${isOffer ? ' offer' : ''}">
-    <div class="c-head"><b>${glyph({ kill: 'kill', strain: 'kill', bounty: 'bounty', takeover: 'takeover', materials: 'materials', item: 'item', side: 'f-' + c.faction, install: 'canary', defuse: 'lock', sweep: 'trace', exfil: 'upload', heist: 'stealth' }[c.type] || 'item', 'badge')}${esc(contractTitle(s, c))}</b>${c.offBooks ? '<span class="tag hot">Off the books</span>' : ''}${isOffer && c.type !== 'side' && !c.waits ? `<small class="c-exp">expires in ${fmtTime(c.expiresAt - now)}</small>` : isOffer && c.type === 'side' ? '<span class="tag you">your call</span>' : ''}</div>
+    <div class="c-head"><b>${glyph({ kill: 'kill', strain: 'kill', bounty: 'bounty', takeover: 'takeover', materials: 'materials', item: 'item', side: 'f-' + c.faction, install: 'canary', defuse: 'lock', sweep: 'trace', exfil: 'upload', heist: 'stealth', puzzle: 'cipher', lair: 'bounty' }[c.type] || 'item', 'badge')}${esc(contractTitle(s, c))}</b>${c.offBooks ? '<span class="tag hot">Off the books</span>' : ''}${isOffer && c.type !== 'side' && !c.waits ? `<small class="c-exp">expires in ${fmtTime(c.expiresAt - now)}</small>` : isOffer && c.type === 'side' ? '<span class="tag you">your call</span>' : ''}</div>
     ${isOffer ? '' : `<div class="lvl-row"><span class="lvl-bar"><span style="width:${Math.round(pr.part * 100)}%"></span></span><small>${esc(pr.text)}</small></div>`}
     <div class="rw-chips" title="${c.done ? 'Paid' : 'Pays'}: ${esc(rewardLine(s, c))}">${rewardChips(s, c)}</div>
     ${acts ? `<div class="row">${acts}</div>` : ''}
@@ -1652,11 +1654,11 @@ export function mailMarkup(s, sel = null, now = Date.now()) {
   const taken = new Set((s.mail?.jobs || []).map((j) => j.id));
   const unreadJob = new Set(letters.filter((m) => m.job != null && taken.has(m.job) && !m.read).map((m) => m.job));
   const unreadLetters = letters.filter((m) => !m.read && !(m.job != null && taken.has(m.job))).length;
-  const heldRows = held.map((c) => { const [t, cls] = jobTag(s, c); return row('j' + c.id, c.from, contractTitle(s, c), t, cls, '', unreadJob.has(c.id), c.faction || (c.story !== undefined || /LOWLIGHT/.test(c.from) ? null : 'halcyon')); }).join('');
+  const heldRows = held.filter((c) => !c.chain).map((c) => { const [t, cls] = jobTag(s, c); return row('j' + c.id, c.from, contractTitle(s, c), t, cls, '', unreadJob.has(c.id), c.faction || (c.story !== undefined || /LOWLIGHT/.test(c.from) ? null : 'halcyon')); }).join('');
   const boardRows = board.map((c) => row('j' + c.id, c.from, c.subject, c.offBooks ? '<span title="GLASSJAW work through Halcyon\'s board: pays 1.6× the credits, costs Halcyon standing">Off books</span>' : '', c.offBooks ? 'hot' : '', `<small class="mexp">${c.type === 'side' ? '<span title="A side offer: take this one or its rival. It never expires.">pick one</span>' : c.waits ? '<span title="A room contract: it waits until you take it.">waits</span>' : fmtTime(c.expiresAt - now)}</small>`, false, c.faction || 'halcyon')).join('');
   const letterRows = letters.filter((m) => m.job == null || !taken.has(m.job)).map((m) => row('l' + m.id, m.from, m.subject, '', '', '', !m.read)).join('');
   const done = doneContracts(s);
-  const doneRows = done.map((c) => row('j' + c.id, c.from, contractTitle(s, c), c.story !== undefined ? '<span title="A job from LOWLIGHT, your crew: the storyline">LOWLIGHT</span>' : '', 'dim', '', false, c.faction || (c.story !== undefined || /LOWLIGHT/.test(c.from) ? null : 'halcyon'))).join('');
+  const doneRows = done.map((c) => row('j' + c.id, c.from, contractTitle(s, c), c.chain ? floorTag(c) : c.story !== undefined ? '<span title="A job from LOWLIGHT, your crew: the storyline">LOWLIGHT</span>' : '', 'dim', '', false, c.faction || (c.story !== undefined || /LOWLIGHT/.test(c.from) ? null : 'halcyon'))).join('');
   const st = standing(s), tier = tierOf(s), next = nextTier(s);
   // A faction's chip shows once you've met it: found its hub, or found one of its servers.
   const met = hubsOf(s).length ? FACTION_IDS.filter((f) => f !== 'halcyon' && (hubFound(s, f) || (s.locations || []).some((l) => l.faction === f))) : [];
@@ -1671,9 +1673,11 @@ export function mailMarkup(s, sel = null, now = Date.now()) {
   else if (item) {
     const j = open.job || (open.letter.job != null ? findJob(s, open.letter.job) : null);
     const body = item.body?.length ? item.body : letters.find((m) => m.job === item.id)?.body || []; // a contract reads as its letter
-    reader = `<section class="card mread"><h2>${esc(item.from)}</h2><h1>${esc(item.subject)}</h1><div class="mbody">${body.filter(Boolean).map((l) => `<p>${esc(l)}</p>`).join('')}</div>${j ? jobBox(s, j, now) : ''}</section>`;
+    if (j?.chain && j === item) reader = arcReader(s, j, jobBox(s, j, now)); // a floor job: the chain's page (arcs-view.mjs)
+    else reader = `<section class="card mread"><h2>${esc(item.from)}</h2><h1>${esc(item.subject)}</h1><div class="mbody">${body.filter(Boolean).map((l) => `<p>${esc(l)}</p>`).join('')}</div>${j ? jobBox(s, j, now) : ''}</section>`;
   }
   return `<div class="page-grid mail-page"><section class="card inbox">${head}
+    ${arcRows(s, open.job?.id ?? null, unreadJob)}
     <h2>Contracts · ${heldCount(s)}/${MAIL.take}</h2>${heldRows ? `<ul class="mlist">${heldRows}</ul>` : '<p class="quiet">None taken.</p>'}
     ${threadRows(s, open.thread?.id || null)}
     ${boardOpen(s) ? `<h2>Board · ${board.length}</h2>${boardRows ? `<ul class="mlist mboard">${boardRows}</ul>` : '<p class="quiet">Nothing on offer right now.</p>'}` : ''}

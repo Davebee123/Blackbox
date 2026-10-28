@@ -34,6 +34,7 @@ import { learnRelayPlan } from './hidden.mjs';
 import { FACTIONS, changeRep, rippleRep, hostile, captured, rivalServers, hubsOf, hubFound } from './factions.mjs';
 import { addrsOf, sweepRooms } from './address.mjs';
 import { learnCodebase, familyComponents } from './sockets.mjs';
+import { arcTick, arcTitle, arcProgress, arcReady, arcDelivered, arcTake } from './arcs.mjs';
 
 export const MAIL = {
   periodMs: 30 * 60 * 1000, // the retainer pays every 30 minutes, offline too
@@ -83,7 +84,7 @@ export const jobs = (s) => s.mail?.jobs || [];
 export const offers = (s) => s.mail?.offers || [];
 export const openContracts = (s) => jobs(s).filter((j) => !j.done);
 export const doneContracts = (s) => jobs(s).filter((j) => j.done).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0)); // newest first
-export const heldCount = (s) => openContracts(s).filter((j) => j.story === undefined).length;
+export const heldCount = (s) => openContracts(s).filter((j) => j.story === undefined && !j.chain).length; // a floor's chain (arcs.mjs) doesn't count either
 export const findJob = (s, id) => [...jobs(s), ...offers(s)].find((j) => j.id === id) || null;
 export const boardOpen = (s) => !!s.mail?.boardOpen || (s.mail?.story || 0) >= STORY.length;
 
@@ -119,7 +120,7 @@ export function systemLetter(s, { from, subject, body }, at = now()) {
   if (!s.mail?.list) return null;
   return letter(s, { from: SENDERS[from], subject, body, system: true }, at);
 }
-function letter(s, msg, at = now()) {
+export function letter(s, msg, at = now()) {
   const m = { id: s.mail.next++, at, read: false, ...msg };
   s.mail.list.unshift(m);
   // Keep the inbox short: old letters whose job is finished go first.
@@ -241,7 +242,7 @@ function pickTarget(s) {
 export const targetedHidden = (s, id) => openContracts(s).some((j) => j.hidden === id && !j.loc);
 
 // Taking a contract sets things up in the world: the named process, the planted file, the flags.
-function arm(s, j) {
+export function arm(s, j) {
   // "Take over any server": one you already hold counts.
   if (j.type === 'takeover' && j.any && !j.took) { const mine = s.locations.find((l) => l.takenOver); if (mine) { j.took = mine.id; s.mail.took = mine.id; } }
   if (j.type === 'bounty') {
@@ -540,7 +541,7 @@ const cap = (x) => (x ? x[0].toUpperCase() + x.slice(1) : '');
 // Strain contracts: every fifth one in a row pays double and rolls for the strain's trophy; dropping one resets it.
 export const SLAYER = { every: 5 };
 // What a contract's XP counts as in the XP mix (combat.mjs gainXp): the activity behind it.
-const CONTRACT_KIND = { side: null, strain: 'fight', kill: 'fight', bounty: 'fight', materials: 'fight', takeover: 'breakin', item: 'breakin', rooms: 'fight', map: 'breakin', install: 'breakin', defuse: 'fight', sweep: 'breakin', exfil: 'fight', heist: 'breakin' };
+const CONTRACT_KIND = { puzzle: 'intel', lair: 'fight', side: null, strain: 'fight', kill: 'fight', bounty: 'fight', materials: 'fight', takeover: 'breakin', item: 'breakin', rooms: 'fight', map: 'breakin', install: 'breakin', defuse: 'fight', sweep: 'breakin', exfil: 'fight', heist: 'breakin' };
 // A kill contract counts kills no more than 4 levels under the level it was posted at.
 export const KILL_RANGE = 4;
 const inRange = (c, level) => level == null || c.level == null || level >= c.level - KILL_RANGE;
@@ -620,10 +621,12 @@ export function ready(s, c) {
   if (c.type === 'defuse') return c.got >= c.count;
   if (['install', 'sweep', 'exfil'].includes(c.type)) return !!c.got;
   if (c.type === 'side') return true; // picking a side is the whole job
-  return false;
+  return c.chain ? arcReady(s, c) : false;
 }
 const locName = (s, id) => s.locations.find((l) => l.id === id)?.name || null;
 export function title(s, c) {
+  const own = c.chain && arcTitle(s, c); // a floor's chain: its target not located yet, or a kind of its own (arcs.mjs)
+  if (own) return own;
   if (c.type === 'strain') return `Neutralize ${c.count} ${STRAINS[c.strain]?.name || ''}` + (c.level > KILL_RANGE + 1 ? `, Lv ${c.level - KILL_RANGE}+` : '');
   if (c.type === 'kill') return (c.where === 'sprawl' ? `Kill ${c.count} viruses in SPRAWL-00` : `Kill ${c.count} ${FAMILIES[c.family]?.name || ''} viruses`) + (c.level > KILL_RANGE + 1 ? `, Lv ${c.level - KILL_RANGE}+` : '');
   if (c.type === 'bounty') return `Kill ${c.name}`;
@@ -650,6 +653,8 @@ function hunt(s, c) {
 // What's left to do, in a few words, and how far along it is (0–1).
 export function progress(s, c) {
   if (c.done) return { text: 'Delivered', part: 1 };
+  const own = c.chain && arcProgress(s, c);
+  if (own) return own;
   if (c.type === 'kill' || c.type === 'strain') return { text: `${c.got}/${c.count} neutralized`, part: c.got / c.count };
   if (c.type === 'bounty') return { text: c.got ? 'Neutralized' : c.room ? `In SPRAWL-00, ${sprawlRoom(s, c.room)}` : 'Somewhere in SPRAWL-00', part: c.got ? 1 : 0 };
   if (c.type === 'rooms') return { text: `${c.got}/${c.count} rooms cleared`, part: c.got / c.count };
@@ -698,7 +703,7 @@ export const rewardLine = (s, c) => [
   c.reward.xp ? `${contractXp(s, hackerLevel(s), c)} XP` : '',
   c.reward.standing > 0 ? `Halcyon +${c.reward.standing}` : c.reward.standing < 0 ? `Halcyon ${c.reward.standing}` : '',
   c.reward.rep && c.faction ? `${FACTIONS[c.faction].short} +${c.reward.rep}` : '',
-  c.reward.relay ? 'a relay' : '', c.reward.plan ? 'the Relay plan' : '', c.reward.drop || c.reward.daemon ? 'a protocol, Tuned or better' : '', c.reward.blueprint ? 'a blueprint' : '', c.reward.codebase ? 'a codebase' : '',
+  c.reward.relay ? 'a relay' : '', c.reward.plan ? 'the Relay plan' : '', c.reward.drop || c.reward.daemon ? 'a protocol, Tuned or better' : '', c.reward.blueprint ? 'a blueprint' : '', c.reward.codebase ? 'a codebase' : '', c.reward.pick ? 'a pick of three protocols' : '',
 ].filter(Boolean).join(' · ');
 
 // ---------- commands ----------
@@ -708,6 +713,7 @@ export function mailCommand(s, text, at = now()) {
   if (!word) return emit(s, 'info', `Mail: ${unread(s)} unread. Contracts: ${heldCount(s)}/${MAIL.take} taken, ${offers(s).length} on the board. Halcyon standing ${standing(s)} (${tierOf(s).name}), ${indemnity(s)} Indemnity; retainer ${retainer(s)} credits every 30 minutes.`);
   const id = Number(arg);
   if (word === 'read') { const l = s.mail.list.find((m) => m.id === id); if (l) l.read = true; return; }
+  if (word === 'take') return arcTake(s, id); // a floor job's reward: one of three (arcs.mjs)
   if (word === 'accept') {
     const o = offers(s).find((x) => x.id === id);
     if (!o) return warn(s, 'That offer is gone.');
@@ -722,7 +728,7 @@ export function mailCommand(s, text, at = now()) {
   const c = jobs(s).find((x) => x.id === id);
   if (!c || c.done) return warn(s, 'No such contract.');
   if (word === 'drop') {
-    if (c.story !== undefined) return warn(s, 'LOWLIGHT jobs can’t be dropped. Take your time with it.');
+    if (c.story !== undefined || c.chain) return warn(s, `${c.chain ? 'Floor' : 'LOWLIGHT'} jobs can’t be dropped. Take your time with it.`);
     if (c.type === 'strain' && s.slayer?.streak) { s.slayer.streak = 0; emit(s, 'info', 'Strain streak reset.'); }
     disarm(s, c);
     s.mail.jobs.splice(s.mail.jobs.indexOf(c), 1);
@@ -776,6 +782,7 @@ export function mailCommand(s, text, at = now()) {
   if (c.reward.drop || c.reward.daemon) { const r = seeded((c.id * 7919 + paidAt) >>> 0); addItem(s, rollItem(r, { level: paidAt, rarity: r() < LOOT.quest ? 'custom' : 'tuned', faction: c.story !== undefined ? null : c.offBooks ? 'glassjaw' : c.faction || 'halcyon' }), c.offBooks ? 'GLASSJAW paid in kind: ' : c.story !== undefined ? 'LOWLIGHT bonus: ' : 'Contract bonus: '); }
   if (c.reward.item) giveUnique(s, c.reward.item, `${c.story !== undefined ? 'LOWLIGHT' : 'Contract'} reward: `);
   for (const id of c.reward.items || []) giveUnique(s, id, `${c.story !== undefined ? 'LOWLIGHT' : 'Contract'} reward: `); // more than one (the Badge's beat: the Badge and wick's Old Toolkit rebuilt at your level)
+  if (c.chain) arcDelivered(s, c, at); // a floor's chain: its pick of three, then its next step (arcs.mjs)
   if (c.story !== undefined) { s.mail.waiting = 'armed'; s.mail.waitFrom = at; const next = postStory(s, at); if (next) emit(s, 'mail', `New mail from ${next.from}: ${next.subject}.`, { letter: next.id, from: next.from, subject: next.subject }); }
 }
 
@@ -793,6 +800,7 @@ export function tickMail(s, at = now()) {
     }
   }
   const m = s.mail;
+  arcTick(s, at); // the floors' chains (arcs.mjs), once the board is open: the tick after the letter that opens it
   storyTick(s, at);
   if (!boardOpen(s)) {
     const stuck = m.jobs.find((j) => j.story !== undefined && !j.done && STORY.find((b) => b.id === j.beat)?.boardAfterHour);
