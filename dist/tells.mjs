@@ -10,7 +10,7 @@
 //   cast    compiling a buff on the virus, from level 10: a marked cell on its part's row, `lead` cycles ahead.
 //   seal    if its part still wears ◆ when it lands, it re-arms with one ◆ more and every stripped part gets one
 //           back. A marked cell, `lead` ahead.
-//   mimic   the Mimic's beat (every 4 cycles): it plays the command you fire then back at you.
+//   mimic   the Mimic's beat (every 4 cycles): it copies the command you fire then and turns it on you (copyOf).
 // Each tell sits on a fixed part (the family's signature part for its charge and seal, its basic part for its
 // cast), shown on the chip and in the codex. No pile-ups: a charge never lands with another part's heavy attack
 // or on a Mimic's beat, below level 17 one tell is live at a time, from 17 two, never on the same cycle.
@@ -18,8 +18,8 @@
 // The answers (3.5). A charge: an interrupt on its part on its cycle (interrupt.mjs: the attack it rides is cancelled,
 // and the charge with it), or a skill built for it (Suspend, Jam, Spoofed ACK, Hijack, Blackhole, Backfire); ◆, a
 // shield, Brace and Bulkhead soften it. A cast: SIGINT in its 2-cycle window, an interrupt on its part in the window,
-// or a built answer (Quarantine, Hijack, Revoke). A seal: strip the part before it lands. The Mimic: fire no direct
-// hit on its beat, or interrupt it then. Reading pays: a charge, a cast or the Mimic answered staggers the part (Open,
+// or a built answer (Quarantine, Hijack, Revoke). A seal: strip the part before it lands. The Mimic: fire what costs
+// least to have copied on its beat, or interrupt it then. Reading pays: a charge, a cast or the Mimic answered staggers the part (Open,
 // +50% from everyone for 2 cycles) and adds XP to the kill; reading every tell in a fight rolls its loot once more.
 // Ignoring hurts: a tell that lands leaves an after-effect (your last skill locked, Corrupted, Hung) by level.
 //
@@ -34,7 +34,7 @@
 //         boss's extra cap
 import { hit, implanted, emit, alive, part, livingParts, attackers, defender, hackerLevel, skillBase, gearStat, attackAmount, strikeWith, toIntent, usable, readyIn, alliesOf, fxAnswer, fxOn, cooldownOf } from './combat.mjs';
 import { CONFIG, TELL, TELLS, TELL_SETS, SEAL_FROM, STRAINS, ABILITIES, BOSSES } from './data.mjs';
-import { previewDamage, delayAttack } from './combat.mjs';
+import { previewDamage, delayAttack, blocked, scaled } from './combat.mjs';
 import { raidDef } from './raid.mjs';
 import { readGene, seeGene, logTell } from './genome.mjs';
 import { gainResearch } from './research.mjs';
@@ -237,7 +237,7 @@ export function sayOf(s, t, p = sourceOf(s, t)) {
   if (t.kind === 'cast') return `${head} SIGINT or cut it in its window${n > 0 && windowWhen(s, t) <= 0 ? ', open now' : ''}.`;
   if (t.kind === 'seal') return `${head} Strip its ${p.armor} ◆ before then, or it re-arms.`;
   if (t.kind === 'lock') return `${head} It locks your next command for ${cycles(t.cycles || 3)}. Break it, or feed it a cooling skill.`;
-  return `${head} It copies what you fire then. Go quiet, or cut it.`;
+  return `${head} It copies what you fire then and turns it on you. Fire what costs least to have copied, or cut it.`;
 }
 // A tell's window opens (a new cycle): the log says so, once.
 function windowOpens(s, t, p) {
@@ -538,13 +538,105 @@ function castsEnd(s, quiet = false) {
     if (!quiet) emit(s, 'status', `${v.name}'s ${k === 'loud' ? 'extortion' : k === 'grow' ? 'update' : k === 'overclock' ? 'overclock' : 'persistence'} runs out.`, {});
   }
 }
-// What the Mimic would play back of a command: its direct hit (a skill's listed damage, at your size, times
-// TELL.mimic; burns, helpers, shields and debuffs give it nothing), before your Block and shields.
+// ---------- the Mimic copies everything (docs/puzzle-levers.md 3.1, decided 9.1) ----------
+// On its beat the Mimic copies the command you fire and turns it on you, whatever it is (TELL.copy):
+//   hit     hits you for its direct damage (mimicHit), a ◆ on you stops it whole
+//   strip   strips that many of your ◆, and your shield (Crack, Exploit, Shaped Charge: all of them)
+//   burn    leaves you Corrupted for its ticks, each a share of one of its own (a helper's hits count as its ticks)
+//   debuff  leaves you Throttled for its cycles: your hits deal half
+//   gift    a shield or a buff on you: the Mimic re-arms with a ◆
+//   heal    heals the virus's most damaged part the same amount
+//   hang    a stun, SIGINT or a utility: you're Hung, and your next command doesn't fire
+//   hold    nothing, but the cycle is gone
+// No copy is free, so which one is cheap depends on the board. copyOf says what a command would copy and what that
+// costs you in Signal: the planner, the dear copy chip (routines.mjs) and the board's beat cell all read it.
+export function copyKind(id) {
+  const a = ABILITIES[id];
+  if (!a || id === 'hold') return 'hold';
+  if (a.strip > 0 || TELL.copy.strips.includes(id)) return 'strip';
+  if (a.verb === 'stun' || a.verb === 'util') return 'hang';
+  return { hit: 'hit', burn: 'burn', debuff: 'debuff', heal: 'heal' }[a.verb] || 'gift'; // a shield or a buff
+}
+// What the Mimic would play back of a command as a hit: its direct hit (a skill's listed damage, at your size, times
+// TELL.mimic), before your Block and shields. A hit with no listed damage of its own copies as your key 1.
 export function mimicHit(s, id, target) {
   const a = ABILITIES[id];
-  if (a?.hit && a.verb === 'hit') return Math.round((a.hit * (a.hits || 1) * (skillBase(s, 'spike', target) / ABILITIES.spike.damage) + gearStat(s, 'damage')) * TELL.mimic); // Overvolt's two hits
-  return a && a.damage > 0 && a.verb === 'hit' ? Math.round((skillBase(s, id, target) + gearStat(s, 'damage')) * TELL.mimic) : 0;
+  if (!a || copyKind(id) !== 'hit') return 0;
+  if (a.hit) return Math.round((a.hit * (a.hits || 1) * (skillBase(s, 'spike', target) / ABILITIES.spike.damage) + gearStat(s, 'damage')) * TELL.mimic); // Overvolt's two hits
+  return Math.round((skillBase(s, a.damage > 0 ? id : 'spike', target) + gearStat(s, 'damage')) * TELL.mimic);
 }
+// The virus's pace: the damage its attacks deal you a cycle, on the average (after your Block). A cycle you lose costs this.
+export function paceOf(s) {
+  return attackers(s).reduce((n, p) => {
+    const a = p.attack, hits = a.effect === 'damage' ? attackAmount(p) : a.hit || 0;
+    return n + (hits > 0 && a.interval < 900 ? blocked(s, hits) / Math.max(1, a.interval) : 0);
+  }, 0);
+}
+// The attack a ◆ on you stops next: the soonest hit on the board (what a ◆ you lose would have saved).
+const nextHit = (s) => {
+  const p = attackers(s).filter((x) => x.attack.effect === 'damage' || x.attack.hit).sort((a, b) => a.attack.due - b.attack.due)[0];
+  return p ? blocked(s, p.attack.effect === 'damage' ? attackAmount(p) : p.attack.hit) : 0;
+};
+// Your hits' share of your damage (your bar's listed damage a cycle, hits against burns and helpers, key 1 aside): what
+// Throttled takes from you.
+const hitShare = (s) => {
+  let hits = 0, rest = 0;
+  for (const id of usable(s).filter((x) => x !== 'spike')) {
+    const a = ABILITIES[id], per = 1 / (Math.max(1, a.cooldown || 0) + 1);
+    if (a.verb === 'hit') hits += (a.damage || a.hit * (a.hits || 1) || 0) * per;
+    else if (a.verb === 'burn') rest += (a.tick || a.helper || 0) * (a.helpers || 1) * Math.min(a.ticks || 1, 9) * per;
+  }
+  return hits + rest > 0 ? hits / (hits + rest) : 1;
+};
+const CLEANSE = ['purge', 'scrub', 'rollback'];
+const mimicOf = (s) => livingParts(s).find((x) => x.mimic) || null;
+// What firing `id` (at `target`) on the Mimic's beat would copy onto you, or null with no Mimic:
+//   { kind, id, name, cost, text, short, ... }: cost is the Signal it takes from you, now or by the cycles it costs (a
+//   lost cycle costs the virus's pace); text says what it does, after "Copies your Crack: " ("strips 2 ◆ from
+//   you"), short the board's chip ("−2◆").
+export function copyOf(s, id, target = null) {
+  const host = s.host || s, e = host.encounter, m = mimicOf(host);
+  if (!e || !m) return null;
+  const a = ABILITIES[id], kind = copyKind(id), C = TELL.copy, max = defender(host).max, top = ceilingOf(host) * max, pace = paceOf(host);
+  const name = id === 'spike' ? 'key 1' : a?.name || 'hold', out = { kind, id, name, cost: 0, text: '', short: '' };
+  if (kind === 'hold') return { ...out, cost: pace, text: 'copies nothing, and the cycle is gone', short: 'nothing' };
+  if (kind === 'hit') {
+    // A boss's Mimic that sits on its Scramble (BOSSES mimic, MIRRORSHADE's): while you're Scrambled it plays your hit
+    // back that many times over, still under the ceiling.
+    const loud = e.scrambleUntil >= e.cycle ? BOSSES[e.virus.boss]?.mimic || 1 : 1;
+    const amount = Math.max(1, Math.round(Math.min(top, mimicHit(host, id, target || m) * loud)));
+    const T = tellsOf(host)?.tier, after = T?.burn && !clean(host) ? Math.round(max * T.burn) * 3 : 0; // Corrupted after it
+    if (e.chits > 0) return { ...out, amount, loud, cost: nextHit(host), text: `hits you for ${amount}, and a ◆ on you takes it`, short: '−1◆' };
+    return { ...out, amount, loud, cost: amount + after, text: `deals ${amount} damage to you`, short: `−${amount}` };
+  }
+  if (kind === 'strip') {
+    const n = Math.min(e.chits || 0, a.strip === 99 ? e.chits || 0 : a.strip || 1), shield = e.shield || 0;
+    const what = [n ? `${n} ◆` : '', shield ? `your ${shield} shield` : ''].filter(Boolean).join(' and ');
+    const short = [n ? `−${n}◆` : '', shield ? `−${shield} shield` : ''].filter(Boolean).join(' ') || 'nothing';
+    return { ...out, chits: n, shield, cost: n * nextHit(host) + shield, text: what ? `strips ${what} from you` : 'finds nothing on you to strip', short };
+  }
+  if (kind === 'burn') {
+    const each = (a.tick || a.helper || a.hit || 0) * (a.helpers || 1), ticks = Math.min(a.ticks || 1, 9); // a Rootkit Implant's endless burn: a long one
+    const per = Math.max(1, Math.round(scaled(host, each) * C.burn)), total = Math.min(top, per * ticks);
+    // A cleanse ready by next cycle (Purge, Scrub, Rollback) takes it off after one tick.
+    const wash = CLEANSE.some((k) => k !== id && usable(host).includes(k) && readyIn(host, k) <= 1);
+    return { ...out, per, ticks, total, cost: wash ? per : total, text: `burns you for ${per} a cycle for ${cycles(ticks)}`, short: `${per}×${ticks}` };
+  }
+  if (kind === 'debuff') {
+    const n = a.cycles || 1;
+    return { ...out, cycles: n, cost: Math.round(n * (1 - C.throttled) * hitShare(host) * pace), text: `Throttles you for ${cycles(n)}, so your hits deal ${Math.round(C.throttled * 100)}%`, short: `Throttled ${n}` };
+  }
+  if (kind === 'heal') {
+    const amount = scaled(host, (a.heal || 0) + (a.tick || 0) * (a.ticks || 0) || ABILITIES.spike.damage);
+    const hurt = livingParts(host).filter((x) => x.integrity < x.max).sort((x, y) => (x.integrity - x.max) - (y.integrity - y.max))[0];
+    const got = hurt ? Math.min(amount, hurt.max - hurt.integrity) : 0;
+    return { ...out, amount: got, part: hurt?.id || null, cost: Math.round((got / Math.max(1, scaled(host, ABILITIES.spike.damage))) * pace), text: got ? `heals the ${hurt.name} for ${got}` : 'finds every part whole, and heals nothing', short: got ? `+${got} hp` : 'nothing' };
+  }
+  if (kind === 'hang') return { ...out, cost: pace, text: 'Hangs you, so your next command doesn\'t fire', short: 'Hung' };
+  return { ...out, gift: C.gift, cost: Math.round(C.gift * C.giftCost * pace), text: `re-arms the ${m.name} with ${C.gift} ◆`, short: `+${C.gift}◆ to it` }; // a shield or a buff
+}
+// A copy is dear when it costs a tenth of your max or more (TELL.copy.dear): the dear copy chip's line.
+export const dearCopy = (s, c) => !!c && c.cost >= TELL.copy.dear * defender(s.host || s).max;
 // The Mimic's beat on the board (said, still to land) and its part, or null (planner.mjs, the board's helper pips).
 export function beatOn(s) {
   const c = s.encounter?.cycle, t = tellsOf(s)?.list.find((x) => x.kind === 'mimic' && x.told && x.next >= c);
@@ -560,9 +652,9 @@ export function caughtHelpers(s, t, p) {
   const e = (s.host || s).encounter, x = e.helperHits;
   return x && x.cycle === e.cycle ? x.list.filter((h) => h.target === p.id && h.sent != null && h.sent >= t.said) : [];
 }
-// The Mimic plays back the command you fired this cycle (its direct damage) and the helpers it catches (each at its own
-// size), at you, in one hit that never passes the tell ceiling. true if the fight ended, 'quiet' if you gave it nothing
-// (a read: it opens).
+// The Mimic copies the command you fired this cycle (copyOf) and turns it on you, and plays back the helpers it catches
+// (each at its own size) as a hit, never past the tell ceiling. true if the fight ended, 'quiet' if the copy cost you
+// little (a read: it opens).
 function mimicLands(s, t, p) {
   if (!p.mimic) return false; // it stopped recording (MIRRORSHADE's Doppelganger)
   const host = s.host || s, e = host.encounter, last = e.lastCmd;
@@ -571,29 +663,69 @@ function mimicLands(s, t, p) {
   const blind = e.buffs?.sudo >= e.cycle || e.mimicBlind || honey || p.unmaskUntil >= e.cycle; // Sudo, Log Wipe, Unmask: it has nothing of you
   if (e.mimicBlind) delete e.mimicBlind;
   const id = last && last.cycle === e.cycle && !blind ? last.id : null, a = id && ABILITIES[id];
-  const target = last && part(host, last.target);
-  const direct = id ? mimicHit(host, id, target || p) / TELL.mimic : 0;
+  const copy = a ? copyOf(host, id, part(host, last.target)) : null;
   // Echo Cancel blinds it to your helpers too (it turns your command on the Mimic, below).
   const caught = blind || p.echoCancelUntil >= e.cycle ? [] : caughtHelpers(s, t, p), swarm = caught.reduce((n, h) => n + h.damage, 0);
-  if (!direct && !swarm) { emit(s, 'blocked', a ? `The ${p.name} copies your ${a.name}, but it has no hit to play back.` : `The ${p.name} has nothing to play back.`, { source: p.id, tell: t.id, answered: !!a }); return a ? 'quiet' : false; }
-  const what = !swarm ? `your ${a.name}` : `${direct ? `your ${a.name} and ` : 'your '}${caught.length === 1 ? 'helper' : `${caught.length} helpers`}`;
-  // Reflector (a native unique): the playback lands on the Mimic instead, at a share of the hit. Echo Cancel: all of it.
+  const direct = copy?.kind === 'hit' ? copy.amount : 0;
+  if (!copy && !swarm) { emit(s, 'blocked', `The ${p.name} has nothing to copy.`, { source: p.id, tell: t.id }); return false; }
+  const what = !swarm ? `your ${copy.name}` : `${copy ? `your ${copy.name} and ` : 'your '}${caught.length === 1 ? 'helper' : `${caught.length} helpers`}`;
+  // Reflector (a native unique): a played-back hit lands on the Mimic instead, at a share of it. Echo Cancel: all of it,
+  // and whatever else it copied comes to nothing.
   const turn = p.echoCancelUntil >= e.cycle ? { it: { name: 'Echo Cancel' }, fx: { value: 100 } } : fxOn(host, 'mimic-turn');
-  if (turn) {
+  if (turn && (direct + swarm > 0 || p.echoCancelUntil >= e.cycle)) {
     tally(s, t, 'answered');
-    emit(s, 'blocked', `The ${p.name} plays ${what} back, and ${turn.it.name} turns it on the ${p.name}.`, { source: p.id, tell: t.id, answered: true });
-    hit(host, p, Math.max(1, Math.round(((direct + swarm) * turn.fx.value) / 100)), { by: turn.it.name, pierce: true });
+    emit(s, 'blocked', `The ${p.name} copies ${what}, and ${turn.it.name} turns it on the ${p.name}.`, { source: p.id, tell: t.id, answered: true });
+    if (direct + swarm > 0) hit(host, p, Math.max(1, Math.round(((direct + swarm) * turn.fx.value) / 100)), { by: turn.it.name, pierce: true });
     return false;
   }
+  // The copy, unless it is a hit (that lands with the helpers, below).
+  const cheap = copy && !dearCopy(host, copy) && !swarm;
+  if (copy && copy.kind !== 'hit') {
+    landCopy(s, t, p, copy);
+    if (!swarm) { if (cheap) return 'quiet'; tally(s, t, 'landed'); return false; }
+  }
   tally(s, t, 'landed');
-  // A boss's Mimic that sits on its Scramble (BOSSES mimic, MIRRORSHADE's): while you're Scrambled it plays your hit
-  // back that many times over, still under the ceiling.
-  const loud = s.encounter.scrambleUntil >= s.encounter.cycle ? BOSSES[e.virus.boss]?.mimic || 1 : 1;
-  const amount = Math.max(1, Math.round(Math.min(ceilingOf(s) * defender(host).max, direct * TELL.mimic * loud + swarm * TELL.mimic)));
-  emit(s, 'status', loud > 1 && direct ? `You're Scrambled, and the ${p.name} plays ${what} back at you ${loud === 2 ? 'twice' : `${loud} times`} over.` : `The ${p.name} plays ${what} back at you.`, { source: p.id, tell: t.id, missed: true, ...(swarm ? { helpers: caught.length } : {}) });
+  const amount = Math.max(1, Math.round(Math.min(ceilingOf(s) * defender(host).max, direct + swarm * TELL.mimic)));
+  const loud = copy?.loud > 1 && direct;
+  emit(s, 'status', loud ? `You're Scrambled, and the ${p.name} plays ${what} back at you ${copy.loud === 2 ? 'twice' : `${copy.loud} times`} over.` : `The ${p.name} plays ${what} back at you.`, { source: p.id, tell: t.id, missed: true, ...(swarm ? { helpers: caught.length } : {}) });
   const over = strikeWith(s, p, { name: `${direct ? a.name : 'Helpers'}${direct && swarm ? ' and helpers' : ''} (mimicked)`, effect: 'damage', amount, interval: 99, noCrit: true, tell: t.id });
   if (!over) { if (direct) lockLast(s, t, 'MIMIC'); corrupt(s, t, p); } // your command's skill goes offline; helpers alone lock nothing
   return over;
+}
+// A copy that isn't a hit lands on you (or, a shield or a heal, on its side).
+function landCopy(s, t, p, c) {
+  const host = s.host || s, e = host.encounter, src = { source: p.id, tell: t.id, copy: c.kind };
+  if (c.kind === 'hold') return;
+  const say = (type, msg, o = {}) => emit(s, type, `The ${p.name} copies your ${c.name} and ${msg}`, { ...src, ...o });
+  if (c.kind === 'strip') {
+    if (!c.chits && !c.shield) return say('blocked', `${c.text}.`, { answered: true });
+    e.chits -= c.chits; e.shield -= c.shield;
+    return say('blind', `${c.text}.`, { missed: true });
+  }
+  if (c.kind === 'burn') {
+    const was = e.corrupt?.left > 0 ? e.corrupt : null;
+    e.corrupt = { name: 'Mimic', amount: c.per + (was?.amount || 0), left: Math.max(c.ticks, was?.left || 0), source: p.id };
+    return say('status', `leaves you Corrupted, ${c.per} damage every cycle for ${cycles(c.ticks)}.`, { mark: 'corrupt', missed: true });
+  }
+  if (c.kind === 'debuff') {
+    e.throttledUntil = Math.max(e.throttledUntil || 0, e.cycle + c.cycles);
+    return say('status', `Throttles you for ${cycles(c.cycles)}, so your hits deal ${Math.round(TELL.copy.throttled * 100)}%.`, { mark: 'throttled', missed: true });
+  }
+  if (c.kind === 'gift') {
+    p.armor = (p.armor || 0) + c.gift; p.maxArmor = Math.max(p.maxArmor || 0, p.armor); p.patchAt = null;
+    return say('patch', `re-arms to ${p.armor} ◆.`, { target: p.id, missed: true });
+  }
+  if (c.kind === 'heal') {
+    const x = c.part && part(host, c.part);
+    if (!x || !alive(x) || !c.amount) return say('blocked', `${c.text}.`, { answered: true });
+    const got = Math.min(c.amount, x.max - x.integrity);
+    x.integrity += got;
+    return say('heal', `heals the ${x.name} for ${got}.`, { target: x.id, amount: got, missed: true });
+  }
+  if (c.kind === 'hang') {
+    e.hung = e.cycle + 1;
+    return say('status', 'Hangs you. Your next command won\'t fire.', { mark: 'hung', missed: true });
+  }
 }
 // The Shredder's Deep Shred: it shreds the newest code or credits file in your pack (never a protocol, a blueprint or a key).
 function shred(s, p, t) {
@@ -687,9 +819,8 @@ export const answers = () => TELL.bots.answer !== false;
 const ok = (s, text) => !!text && !toIntent(s, text).error;
 const first = (s, list) => list.find((c) => ok(s, c)) || null;
 const soon = (s, lag) => (tellsOf(s)?.list || []).filter((t) => t.told && !ignores(t.gene) && tellNext(s, t) - s.encounter.cycle <= lag); // a gene the sim ignores (genes.mjs GENE_BOTS) goes unanswered
-// Commands that deal no direct damage: what you fire on the Mimic's beat.
+// Commands that deal no direct damage, aimed at no part: the quiet moves (a Scramble's, the Decoy's beat: planner.mjs quietOf; the Mimic's beat weighs them too, beatMove).
 export const QUIET = ['harden', 'firewall', 'bulkhead', 'dmz', 'heartbeat', 'shadow-copy', 'log-wipe', 'turbo-boost', 'malloc', 'brace', 'patch', 'null-route', 'sudo', 'fork', 'debris-field', 'rm-rf', 'vent', 'circuit-breaker', 'honeypot', 'maintenance-window', 'logic-trap', 'rotate-keys', 'vanish', 'load-shed', 'multicast', 'mesh'];
-const quietFor = (s, t) => [...QUIET, ...['crack', 'shaped-charge', 'bit-rot', 'exploit', 'tag', 'hook', 'inject', 'deploy', 'spawn', 'botnet', 'fan-out', 'purge', 'thermal-runaway', 'keepalive', 'wormable', 'polymorph', 'skim', 'thrash', 'cache-poison'].map((id) => id + ' ' + t.id), 'hold'];
 // A planned command that breaks a part: nothing a tell asks for is worth more.
 function kills(s, planned) {
   const [id, at] = (planned || '').split(' '), p = at && part(s, at);
@@ -715,13 +846,32 @@ function stripPlan(s, p, within) {
   }
   return left <= 0 ? out : null;
 }
-// A command the Mimic would play back this cycle (its beat is now, and the command has a direct hit): the planner
-// keeps its cuts out of the beat too.
-export function echoesNow(s, text) {
-  if (!text || !answers() || !tellsOf(s)) return false;
+// The Mimic recording this cycle (its beat lands now, and it sees you), or null.
+function recordingNow(s) {
   const c = s.encounter.cycle, e0 = s.encounter, blind = (p) => !p || p.unmaskUntil >= c || p.echoCancelUntil >= c || e0.mimicBlind || e0.buffs?.honeypot >= c || e0.buffs?.sudo >= c;
-  const rec = soon(s, 0).find((t) => t.kind === 'mimic' && !blind(sourceOf(s, t)));
-  return !!rec && mimicHit(s, text.split(' ')[0], part(s, text.split(' ')[1]) || sourceOf(s, rec)) > 0;
+  return soon(s, 0).find((t) => t.kind === 'mimic' && !blind(sourceOf(s, t))) || null;
+}
+// What a command fired now would cost you on the Mimic's beat (copyOf).
+export const copyCost = (s, text) => (!text || text === 'hold' ? paceOf(s) : copyOf(s, text.split(' ')[0], part(s, text.split(' ')[1]))?.cost || 0);
+// A command whose copy would be dear on the Mimic's beat this cycle (copyOf, TELL.copy.dear): the planner keeps its cuts
+// out of the beat too.
+export function echoesNow(s, text) {
+  if (!text || !answers() || !tellsOf(s) || !recordingNow(s)) return false;
+  return dearCopy(s, copyOf(s, text.split(' ')[0], part(s, text.split(' ')[1])));
+}
+// On the Mimic's beat: the planned command, or the one whose copy costs least for what it does. Every copy costs
+// something (copyOf), and what a command does is worth cycles of the virus's pace: the plan a cycle (two when it breaks
+// a part), another of your commands half of one (TELL.copy.lesser), hold nothing (its copy is the cycle it loses).
+const BEAT_ALTS = ['crack', 'shaped-charge', 'bit-rot', 'exploit', 'tag', 'hook', 'throttle', 'inject', 'deploy', 'spawn', 'botnet', 'fan-out', 'purge', 'thermal-runaway', 'keepalive', 'wormable', 'polymorph', 'skim', 'thrash', 'cache-poison', 'spike'];
+function beatMove(s, planned, t) {
+  const m = sourceOf(s, recordingNow(s)), pace = paceOf(s), at = t && alive(t) && t !== m ? t : livingParts(s).find((x) => x !== m) || m;
+  let best = { text: planned, net: copyCost(s, planned) - pace * (kills(s, planned) ? 2 : 1) };
+  for (const text of [...QUIET, ...BEAT_ALTS.map((id) => id + ' ' + at.id), 'hold']) {
+    if (text === planned || !ok(s, text)) continue;
+    const net = text === 'hold' ? 0 : copyCost(s, text) - pace * TELL.copy.lesser;
+    if (net < best.net) best = { text, net };
+  }
+  return best.text;
 }
 // A command that answers a tell right now, or null. A kill still comes first.
 //   cast:   SIGINT in its window (a skill built for it first, when it has one), or a cut (interruptMove)
@@ -739,15 +889,15 @@ export function tellMove(s, t0 = null, planned = null) {
       .map((id) => (['part', 'attack'].includes(ABILITIES[id].target) ? `${id} ${at}` : id)).find((x) => ok(s, x));
     if (feed) return feed;
   }
-  // A Mimic with nothing to copy this beat (Unmask, Echo Cancel, Log Wipe, Honeypot, Sudo): no need to go quiet.
-  const e0 = s.encounter, blind = (p) => !p || p.unmaskUntil >= c || p.echoCancelUntil >= c || e0.mimicBlind || e0.buffs?.honeypot >= c || e0.buffs?.sudo >= c;
-  const recording = soon(s, 0).find((t) => t.kind === 'mimic' && !blind(sourceOf(s, t)));
-  // The Mimic's beat comes first: a hit fired into it comes straight back, a kill too (unless it ends the fight).
+  // The Mimic's beat comes first: whatever you fire comes back at you (copyOf), so fire the command whose copy costs
+  // least (a kill that ends the fight still fires). A Mimic with nothing to copy (Unmask, Echo Cancel, Log Wipe,
+  // Honeypot, Sudo) asks nothing.
+  const recording = recordingNow(s);
   if (recording && TELL.bots.quiet !== false && planned && !(kills(s, planned) && livingParts(s).length === 1)) {
-    const id = planned.split(' ')[0], m = sourceOf(s, recording);
-    if (mimicHit(s, id, part(s, planned.split(' ')[1]) || m) > 0) return first(s, quietFor(s, t0 && alive(t0) ? t0 : livingParts(s).find((x) => x !== m) || m));
+    const best = beatMove(s, planned, t0);
+    if (best !== planned) return best;
   }
-  const echoes = (text) => !!(text && recording && mimicHit(s, text.split(' ')[0], part(s, text.split(' ')[1]) || sourceOf(s, recording)) > 0);
+  const echoes = (text) => echoesNow(s, text);
   // A charge whose part has to be stripped starting now to bare it for the cut (see below) comes before a kill.
   // (Below level 10 a kit has three or four keys: stripping ahead costs more than the charge, so it doesn't.)
   const prep = soon(s, 3).filter((t) => t.kind === 'charge' && TELL.bots.strip !== false && s.encounter.virus.level >= TELL.castFrom && alive(sourceOf(s, t)) && sourceOf(s, t).armor > 0 && sourceOf(s, t).ticks?.some((x) => !x.spent) && tellNext(s, t) > c)
@@ -767,7 +917,8 @@ export function tellMove(s, t0 = null, planned = null) {
       // A skill built for a cast answers it and does something besides (a stun, a buff): keep SIGINT for the next one.
       const own = first(s, ['quarantine ' + p.id, s.encounter.helpers.some((h) => h.target === p.id) && 'hijack ' + p.id]);
       if (own && !echoes(own)) return own;
-      if (TELL.bots.sigint !== false && hackerLevel(s) >= TELL.castFrom && ok(s, 'sigint')) return 'sigint';
+      // On the Mimic's beat SIGINT is copied (it Hangs you): with the window open next cycle too, it waits a cycle.
+      if (TELL.bots.sigint !== false && hackerLevel(s) >= TELL.castFrom && !(recording && next > c) && ok(s, 'sigint')) return 'sigint';
     }
     // A seal: strip its part before it lands, when one command does it.
     if (t.kind === 'seal' && TELL.bots.strip !== false && next - c <= 1 && p.armor > 0 && quickStrip(s, p)) {

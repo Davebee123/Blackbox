@@ -6,7 +6,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, selectEncounter, resolveCycle, part, active, livingParts, defender } from './dist/combat.mjs';
 import { CONFIG, TELL, createVirus } from './dist/data.mjs';
-import { tellsOf } from './dist/tells.mjs';
+import { tellsOf, copyCost } from './dist/tells.mjs';
 import { planner } from './dist/planner.mjs';
 import { boardMarkup } from './dist/view.mjs';
 import { helperPlan } from './dist/fightread.mjs';
@@ -136,11 +136,14 @@ test('the planner sends no helper onto the Mimic while a beat it would reach is 
     step(s, move);
     if (e.cycle > 3) break;
   }
-  // A caught helper on the beat: Kill Switch cashes it in.
+  // Caught helpers on the beat: Kill Switch cashes them in when they would cost more than its own copy (the Mimic copies
+  // everything: a Kill Switch is a hit, like key 1's; tells.mjs copyOf).
   const k = fight({ level: 18, seed: mimicSeed(), sub: 'herder' });
+  k.server.max = k.server.integrity = 300;
   for (const p of livingParts(k)) Object.assign(p, { integrity: 300, max: 300 });
   const t = beat(k, 0);
-  k.encounter.helpers.push({ target: 'mimic', damage: 12, left: 3, synced: false, sent: t.said, by: 'Deploy' });
+  for (let i = 0; i < 4; i++) k.encounter.helpers.push({ target: 'mimic', damage: 40, left: 3, synced: false, sent: t.said, by: 'Deploy' });
+  assert.ok(copyCost(k, 'kill-switch') < 160, 'its own copy costs less than the helpers it saves');
   assert.equal(planner(k), 'kill-switch');
 });
 

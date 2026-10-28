@@ -221,7 +221,7 @@ function rng(seed) {
 function makePart(spec, kind, scale, extraArmor = 0) {
   const max = Math.max(1, Math.round(spec.integrity * scale * (kind === 'fragment' ? 1 : CONFIG.partToughness)));
   const worn = (spec.armor || 0) + extraArmor;
-  const armor = worn >= 2 ? Math.round(worn * CONFIG.armorScale) : worn; // 2 → 3, 3 → 5, 4 → 6
+  const armor = spec.reflect ? Math.min(worn, CONFIG.decoy.veil) : worn >= 2 ? Math.round(worn * CONFIG.armorScale) : worn; // 2 → 3, 3 → 5, 4 → 6; the Decoy's veil stays one ◆ (puzzle levers P2)
   return {
     id: spec.id,
     name: spec.name,
@@ -242,7 +242,8 @@ function makePart(spec, kind, scale, extraArmor = 0) {
     rearm: spec.rearm || 0, // Bouncer's Keyring: re-arms the other part every N cycles
     ward: spec.ward || null, // Lockbox: the part it wards loses at most CONFIG.ward of its max a cycle
     twin: spec.twin || null, // Mirror: its twin; break one while the other lives and it reboots
-    reflect: spec.reflect || 0, // Decoy: every Nth cycle your commands are mirrored
+    reflect: spec.reflect || 0, // Decoy: every Nth cycle its beat bends your command, the first on cycle CONFIG.decoy.first
+    reflectOff: spec.reflect ? (spec.reflect - (CONFIG.decoy.first % spec.reflect)) % spec.reflect : 0,
     lock: spec.lock || null, // Mutex: the part it holds a lock (a shield) on
     deadman: !!spec.deadman, // Tripwire: break it while the others live and they go loud
     command: !!spec.command, // C2 Node: fragments gnaw harder while it lives, and drop when it breaks

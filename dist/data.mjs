@@ -58,7 +58,11 @@ export const CONFIG = {
   thirdTrim: 0.85, // a family's third part (Lockbox, Mirror, Decoy) comes out of the other two's Integrity
   ward: 0.25, // Lockbox: the warded part loses at most this share of its max a cycle
   twinReboot: { in: 3, at: 0.4, max: 1 }, // Mirror: a twin reboots this many cycles later at 40% with its armor, once
-  mirrorBounce: 0.3, // Decoy: a mirrored command does nothing and this share bounces back
+  mirrorBounce: 0.5, // Decoy: pointing at itself, this share of a hit bounces back at you
+  // Decoy (docs/puzzle-levers.md 3.8): its beat bends your command (mirrorBounce: the share of a hit that bounces back when it
+  // points at itself). veil: the ◆ it wears at any level (the pointer shows once they're stripped); first: its first
+  // beat's cycle (then every 4, as the Mimic's); harmony: HOLLOW CHOIR's bounce at half Integrity.
+  decoy: { veil: 1, first: 3, harmony: 0.75 },
   // The third parts that change the fight (FAMILIES, pool 'third'; GAME_RULES.md Families):
   mutex: { share: 0.25, every: 4 }, // Mutex: the part it locks carries a shield of a quarter of its max, back to full 4 cycles after it breaks
   tripwire: { loud: 1.25 }, // Tripwire: break it while the others live and they hit 25% harder, each attack a cycle sooner
@@ -671,7 +675,7 @@ function rng(seed) {
 export function makePart(spec, kind, scale, extraArmor = 0) {
   const max = Math.max(1, Math.round(spec.integrity * scale * (kind === 'fragment' ? 1 : CONFIG.partToughness)));
   const worn = (spec.armor || 0) + extraArmor;
-  const armor = spec.spare?.armor != null ? spec.spare.armor : worn >= 2 ? Math.round(worn * CONFIG.armorScale) : worn; // 2 → 3, 3 → 5, 4 → 6 (a Spare's sleeping ◆: as written, genes.mjs spare)
+  const armor = spec.spare?.armor != null ? spec.spare.armor : spec.reflect ? Math.min(worn, CONFIG.decoy.veil) : worn >= 2 ? Math.round(worn * CONFIG.armorScale) : worn; // 2 → 3, 3 → 5, 4 → 6 (a Spare's sleeping ◆: as written, genes.mjs spare)
   return {
     id: spec.id,
     name: spec.name,
@@ -692,7 +696,8 @@ export function makePart(spec, kind, scale, extraArmor = 0) {
     rearm: spec.rearm || 0, // Bouncer's Keyring: re-arms the other part every N cycles
     ward: spec.ward || null, // Lockbox: the part it wards loses at most CONFIG.ward of its max a cycle
     twin: spec.twin || null, // Mirror: its twin; break one while the other lives and it reboots
-    reflect: spec.reflect || 0, // Decoy: every Nth cycle your commands are mirrored
+    reflect: spec.reflect || 0, // Decoy: every Nth cycle its beat bends your command (combat.mjs bendCommand), the first on cycle CONFIG.decoy.first
+    reflectOff: spec.reflect ? (spec.reflect - (CONFIG.decoy.first % spec.reflect)) % spec.reflect : 0,
     lock: spec.lock || null, // Mutex: the part it holds a lock (a shield) on
     deadman: !!spec.deadman, // Tripwire: break it while the others live and they go loud
     command: !!spec.command, // C2 Node: fragments gnaw harder while it lives, and drop when it breaks
@@ -815,7 +820,7 @@ export const BOSSES = {
   relayking: { name: 'RELAY-KING', family: 'worm', hp: 1.6, dmg: 1, enrageAt: 16, phases: [{ at: 0.5, do: ['faster'], say: 'RELAY-KING speeds up. Every attack comes a cycle sooner.' }] },
   // REPO MAN (events.mjs): the bounty from level 8.
   repoman: { name: 'REPO MAN', family: 'ransomware', hp: 1.6, dmg: 1, enrageAt: 18, phases: [{ at: 0.6, do: ['rearm'], say: 'REPO MAN re-arms every part.' }, { at: 0.3, do: ['faster'], say: 'REPO MAN gets desperate. Every attack comes a cycle sooner.' }] },
-  // HOLLOW CHOIR (events.mjs): a ghostroot boss from level 10. At half its Decoy's bounce rises from 30% to 50% (Harmony), in
+  // HOLLOW CHOIR (events.mjs): a ghostroot boss from level 10. At half its Decoy's bounce rises from 50% to 75% (Harmony), in
   // place of the second Decoy it used to split off on the off-beat: one global beat, as the compatibility rules ask (genes.mjs).
   // KESSLER-FARM-00 (rogue.mjs FARM), the crew dungeon: crew bosses on the group boss framework (raid.mjs).
   // Sized for a crew of four (smaller crews get a smaller boss: crewHp in raid.mjs). Their own parts hit
@@ -823,7 +828,7 @@ export const BOSSES = {
   foreman: { name: 'THE FOREMAN', family: 'ransomware', hp: 13, dmg: 0.45, enrageAt: 22, phases: [], raid: FOREMAN },
   heatsink: { name: 'HEATSINK', family: 'worm', hp: 17, dmg: 0.45, enrageAt: 25, phases: [], raid: HEATSINK },
   coldwallet: { name: 'COLDWALLET', family: 'ghostroot', hp: 8.8, dmg: 0.45, enrageAt: 18, phases: [], raid: COLDWALLET },
-  choir: { name: 'HOLLOW CHOIR', family: 'ghostroot', hp: 1.6, dmg: 1, enrageAt: 16, signature: { name: 'Harmony', rule: 'At half Integrity, the Decoy reflects 50% of your command instead of 30%.' }, phases: [{ at: 0.5, do: ['harmony'], say: 'The Hollow Choir finds its harmony. On the Decoy\'s beat, half of what you fire now bounces back.' }] },
+  choir: { name: 'HOLLOW CHOIR', family: 'ghostroot', hp: 1.6, dmg: 1, enrageAt: 16, signature: { name: 'Harmony', rule: 'At half Integrity, the Decoy bounces 75% of a hit back at you instead of 50%.' }, phases: [{ at: 0.5, do: ['harmony'], say: 'The Hollow Choir finds its harmony. When the Decoy\'s beat points at itself, three quarters of a hit now bounce back.' }] },
   // Native bosses (network.mjs): each network rolls one of these for its lair, a rogue server of its own. Solo bosses
   // on the tells framework: every tell open at their level, a signature charge of their own (TELLS, TELL_SETS by id;
   // a strain boss renames its strain's charge), a third part they always bring (third), and phases. Their drops are
@@ -883,7 +888,7 @@ export const ELITE = { hp: 5.2, dmg: 1.3, armor: 1, xp: 3, share: 1 / 3, goneMs:
 //           interrupt on its part in the window.
 //   seal    if the part still wears ◆ when it lands, it re-arms to full with one ◆ more, and every stripped part
 //           gets a ◆ back (and from level 6 your ◆ and shield go). Strip it before then.
-//   mimic   the Mimic plays the command you fire on its beat back at you (its direct damage). Go quiet then, or cut it.
+//   mimic   the Mimic copies the command you fire on its beat and turns it on you (tells.mjs copyOf). Fire what costs least then.
 // Breaking a tell's part always stops it.
 export const TELL = {
   // By the virus's level: how many tells it brings (count: none to level 5, the ticks are the lesson; one from 6;
@@ -916,6 +921,20 @@ export const TELL = {
   loud: 1.35, // Double Extortion: its attacks hit 35% harder
   grow: 0.25, // Self-Update: every part grows a quarter more Integrity
   mimic: 1, // the Mimic hits you with your last command's direct damage, all of it
+  // The Mimic copies everything you fire on its beat and turns it on you (docs/puzzle-levers.md 3.1, tells.mjs copyOf). A
+  // hit hits you (mimic, above); a hit with no listed damage of its own (a cash-in, a proc, an area hit) copies as your
+  // key 1. The rest:
+  copy: {
+    strips: ['exploit'], // a strip: a skill with strip in its data, and these. It strips that many of your ◆, and your shield
+    burn: 0.25, // a burn (a helper's hits count as its ticks): you're Corrupted for its ticks, each this share of one of its ticks
+    throttled: 0.5, // a debuff: you're Throttled for its cycles, and your hits deal this share
+    gift: 1, // a shield or a buff on you: the Mimic re-arms with this many ◆
+    giftCost: 0.25, // what such a ◆ costs you, in cycles: a hit on the Mimic once you get to it, mostly when little else stands
+    // a heal heals the virus's most damaged part the same amount; a stun, SIGINT or a utility leaves you Hung (your next
+    // command doesn't fire); hold copies nothing, and costs the cycle.
+    dear: 0.1, // a copy that costs you this share of your max or more is dear (the dear copy chip, routines.mjs); under it, a read
+    lesser: 0.5, // the planner's sum (tells.mjs beatMove): a command other than its plan does this share of a cycle's worth
+  },
   // Reading pays: a charge, a cast or the Mimic answered in its window staggers the part. It's Open (×mult from
   // everyone for `cycles`) and its next attack lands `delay` cycles later. A seal stopped readies the skill that
   // did it. Each read adds xp of the kill's XP (up to xpMax), and reading every tell in a fight (two or more said)
