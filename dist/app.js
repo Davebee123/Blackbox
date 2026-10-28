@@ -1,5 +1,5 @@
 // BLACKBOX browser shell: modules, command line, clock, save, sound.
-import { CONFIG, ABILITIES, FAMILIES, xpToNext, spikeOf, SUBS, SUBCLASS, defaultSub, partGenesFor } from './data.mjs';
+import { CONFIG, CLIMB, ABILITIES, FAMILIES, xpToNext, spikeOf, SUBS, SUBCLASS, defaultSub, partGenesFor } from './data.mjs';
 const FAMILY_NAMES = Object.fromEntries(Object.entries(FAMILIES).map(([k, f]) => [k, f.name]));
 import { selectEncounter, partKey, parse, validate, hooks, stepCycle, keyMap, hackerOf, classOf, cycleLength, fresh, restore, command, advance, active, alive, part, intents, suggestions, idleRegen, tickServices, topUpCost, defender, maxSignal, inSync } from './combat.mjs';
 import * as V from './view.mjs';
@@ -70,8 +70,13 @@ import * as UI from './uiscale.mjs';
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const playtest = params.get('playtest');
-// The server reboot (FP.ROOMS.reboot), an experiment: ?reboot=<minutes> turns it on in this browser until ?reboot=0.
-try { if (params.has('reboot')) localStorage.setItem('bb-reboot', params.get('reboot')); const m = Number(localStorage.getItem('bb-reboot')); if (m > 0) Object.assign(FP.ROOMS.reboot, { on: true, minutes: m }); } catch { /* storage unavailable */ }
+// The server reboot (FP.ROOMS.reboot), on by default: ?reboot=0 turns it off in this browser (each room's own respawn, and
+// the climb without its stretch, CLIMB.reboot), ?reboot=<minutes> back on at that length. ?reboot (no number) forgets it.
+try {
+  if (params.has('reboot')) { if (params.get('reboot') === '') localStorage.removeItem('bb-reboot'); else localStorage.setItem('bb-reboot', params.get('reboot')); }
+  const m = localStorage.getItem('bb-reboot');
+  if (m === '0') { FP.ROOMS.reboot.on = false; CLIMB.reboot = null; } else if (Number(m) > 0) FP.ROOMS.reboot.minutes = Number(m);
+} catch { /* storage unavailable */ }
 // The breach campaign (campaign.mjs, ?campaign=breach): its own save under its own key. The old game's save is never
 // read, written or migrated from here, and the old game's systems (map, mail, server, hubs, invasions, timers) sit out.
 // A test bench (bench.mjs, ?bench=<name>): its own save under blackbox-bench-<name>, developer mode on. The real save

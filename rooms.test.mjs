@@ -28,6 +28,8 @@ const lose = (s) => { s.run.integrity = 0; finish(s, 'crashed'); FP.settle(s); }
 // Put the player in a room directly (tests of what a room does, not of the walk).
 const place = (s, id) => { s.rooms.at = id; s.rooms.visit.walked[id] = true; s.rooms.screen = null; FP.look(s); };
 const SIZES = ['small', 'medium', 'large'];
+// Each room on its own respawn timer: the server reboot off (FP.ROOMS.reboot, on by default; reboot.test.mjs has it).
+const perRoom = (fn) => () => { FP.ROOMS.reboot.on = false; try { return fn(); } finally { FP.ROOMS.reboot.on = true; } };
 
 test('the generator: the same seed builds the same server, and other seeds build others', () => {
   for (const kind of FP.KIND_IDS) for (const size of SIZES) {
@@ -133,7 +135,7 @@ test('a live virus holds its room: engage or step back, and the move in is spent
   assert.ok(active(s) && s.encounter.rooms.room === fightRoom.id);
 });
 
-test('respawns: a fallen room comes back on its timer (never while you stand in it), and a cache refills', () => {
+test('respawns: a fallen room comes back on its timer (never while you stand in it), and a cache refills', perRoom(() => {
   const s = server({ size: 'medium', hunter: 'patrol' }), R = s.rooms;
   const room = roomOfKind(s, 'process');
   place(s, room.id);
@@ -179,9 +181,9 @@ test('respawns: a fallen room comes back on its timer (never while you stand in 
   // The server card's soonest timer names a room.
   const t = FP.soonest(fast);
   assert.equal(t, null, 'nothing down on a fresh server');
-});
+}));
 
-test('progress: rooms cleared at least once, for good; it never goes down', () => {
+test('progress: rooms cleared at least once, for good; it never goes down', perRoom(() => {
   const s = server({ size: 'medium', hunter: 'patrol' }), R = s.rooms;
   let last = FP.progressOf(s).done;
   assert.equal(last, 1, 'the entry counts once you\'re in');
@@ -210,7 +212,7 @@ test('progress: rooms cleared at least once, for good; it never goes down', () =
   assert.ok(FP.roomList(s).every((x) => R.seen[x.id]), 'the whole graph is drawn');
   // Drawn, not discovered: a room you've never been in is still an unknown shape.
   for (const x of FP.roomList(s)) if (!R.cleared[x.id] && x.id !== R.at) assert.equal(R.seen[x.id], 'shape', `${x.path}: unknown`);
-});
+}));
 
 test('the key walk: beat the guard post for the key, walk it to the vault, open it, and /core unseals', () => {
   const s = server({ size: 'medium', hunter: 'patrol' }), R = s.rooms, g = R.graph;
@@ -478,7 +480,7 @@ test('the page draws home, a room, a fight room and the map in both orientations
 const chipOf = (html, id) => { const i = html.indexOf(`data-room="${id}"`); if (i < 0) return ''; const from = html.lastIndexOf('<g class="fp-room', i), rest = html.slice(i); const end = rest.search(/<g class="fp-room|<path class="fp-route|<g class="fp-bits|<\/svg>/); return html.slice(from, i + end); };
 const wideOf = (html) => html.match(/<svg class="fp-svg wide"[\s\S]*?<\/svg>/)[0];
 
-test('the map chips: one badge language for state, countdowns and rings that tick in place, tooltips that say each thing once', () => {
+test('the map chips: one badge language for state, countdowns and rings that tick in place, tooltips that say each thing once', perRoom(() => {
   const s = server(), R = s.rooms, g = R.graph;
   const tile = (html, id) => chipOf(wideOf(html), id);
   const tip = (html, id) => tile(html, id).match(/title="([^"]*)"/)?.[1] || '';
@@ -523,9 +525,9 @@ test('the map chips: one badge language for state, countdowns and rings that tic
   }
   // The log: no Signal readout the strip already shows.
   assert.ok(!R.log.some((l) => new RegExp(`${R.max}\\b`).test(l) && /\/\d+/.test(l)), R.log.join(' | '));
-});
+}));
 
-test('Schematic HD: chips by kind and colour, KEY, LOCKED and SEALED, the hunter\'s skull and its one arrow, traces without vias', () => {
+test('Schematic HD: chips by kind and colour, KEY, LOCKED and SEALED, the hunter\'s skull and its one arrow, traces without vias', perRoom(() => {
   const s = server({ hunter: 'patrol' }), R = s.rooms, g = R.graph;
   for (const id of Object.keys(g.rooms)) R.seen[id] = 'kind';
   let html = roomsMarkup(s), wide = wideOf(html);
@@ -601,7 +603,7 @@ test('Schematic HD: chips by kind and colour, KEY, LOCKED and SEALED, the hunter
   assert.match(html, /data-fp-zoom/);
   assert.match(html, /<svg class="fp-svg wide" viewBox="([^"]+)" data-vb="\1"/);
   assert.doesNotMatch(html, /undefined|NaN/);
-});
+}));
 
 test('the page is the map and a pop-up: it opens on a decision and on a click, closes until the next one, and Wait and Jack out sit on the strip', () => {
   const s = server({ hunter: 'patrol' }), R = s.rooms, g = R.graph, ui = { sel: null, selAt: null, closed: null };

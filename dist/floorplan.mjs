@@ -82,7 +82,7 @@ export const ROOMS = {
   // above run per room. On, the pacing bot climbs about twice as fast (to level 20: 823 fights against 2,266 on seed 7,
   // breaker): nothing respawns behind you while you explore, so first clears and Mapped come far cheaper, and a held
   // server's farm (building XP, 52% of it) falls to 7%.
-  reboot: { on: false, minutes: 2 },
+  reboot: { on: true, minutes: 2 },
   speed: 1, // the playtest runs the clocks ten times as fast (app.js)
   reconnect: 30000, // after you leave, the server takes you back this much later
   rare: 0.04, rareLevel: 2, // one respawn in 25 is a ★ rare spawn (it was one in ten: 11% of all kills on the long climb and 70% of the blues)

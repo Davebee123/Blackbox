@@ -1325,6 +1325,13 @@ export const UNLOCKS = [
 export const CLIMB = {
   kills: [[1, 23], [2, 62], [3, 130], [4, 160], [5, 170], [10, 172], [15, 366], [20, 523], [25, 673], [30, 818], [35, 909], [40, 1000], [45, 1068], [49, 1137]],
   minutes: [[1, 5], [4, 27], [5, 28], [9, 44], [10, 48], [19, 84], [20, 95], [29, 145], [30, 160], [39, 200], [49, 220]],
+  // The server reboot (floorplan.mjs ROOMS.reboot): nothing respawns behind you while you explore a server, so its first
+  // clears and Mapped come with far fewer fights and the climb ran about twice as fast. A level takes this many times
+  // CLIMB.kills' XP (straight between its points). Deeds aren't stretched (climbStretch reads CLIMB.kills), so past a
+  // floor's first clears the climb is farming: a player rotates among a floor's servers while one reboots. null: no
+  // stretch (the app's ?reboot=0, back to each room's own respawn). A first cut, for playtesting: 2 from level 15 ran
+  // the bot about 30% long to level 20 (before its farm rotation worked), so 1.5; not yet measured past 20.
+  reboot: [[1, 1.4], [5, 1.2], [10, 1.6], [15, 1.5]],
 };
 const along = (pts, L) => {
   if (L <= pts[0][0]) return pts[0][1];
@@ -1333,7 +1340,8 @@ const along = (pts, L) => {
 };
 export const killXp = (level) => 20 + 10 * Math.max(1, level);
 export const killsToNext = (level) => along(CLIMB.kills, Math.max(1, level));
-export const xpToNext = (level) => Math.round(killXp(level) * killsToNext(level));
+export const rebootStretch = (level) => (CLIMB.reboot ? along(CLIMB.reboot, Math.max(1, level)) : 1);
+export const xpToNext = (level) => Math.round(killXp(level) * killsToNext(level) * rebootStretch(level));
 export const V41_KILLS = (level) => 5 + 1.2 * Math.max(1, level);
 export const v41XpToNext = (level) => Math.round(killXp(level) * V41_KILLS(level)); // the curve before save v42 (its migration)
 // One-off deeds (a first clear, a Mapped server, a takeover, a Root level, a decode, a puzzle board, a first craft) grow

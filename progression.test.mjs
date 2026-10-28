@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, selectEncounter, resolveCycle, part, addItem, loaded, restore, serverLevel, syncServer, gainXp, hackerOf, finish, UNIQUES, fxAnswer, patchDelay, gearStat, daemonLevel, SAVE_VERSION, DECODE_XP, effectLine, previewDamage, bossTable } from './dist/combat.mjs';
-import { CONFIG, CLIMB, levelMinutes, xpToNext, killXp, killsToNext, v41XpToNext, deedScale, DEED, power, LOADOUT, BOSS_LOOT } from './dist/data.mjs';
+import { CONFIG, CLIMB, rebootStretch, levelMinutes, xpToNext, killXp, killsToNext, v41XpToNext, deedScale, DEED, power, LOADOUT, BOSS_LOOT } from './dist/data.mjs';
 import { uniqueItem, rollItem, seeded, RULES, RARITIES, BASES, baseFor, primaries, SERVICES } from './dist/gear.mjs';
 const VERSIONS = [{ code: 12, credits: 120 }, { code: 40, credits: 600 }]; // what a service's v1 and v2 cost (the retired table)
 import { tickPlay } from './dist/progression.mjs';
@@ -50,7 +50,9 @@ test('one level: your server is at your highest class level, with no XP of its o
 });
 
 test('the long climb: a level is CLIMB.kills kills of your level (straight between its points), always longer than the last; one-off deeds keep their share of a level', () => {
-  for (const [L, k] of CLIMB.kills) assert.equal(xpToNext(L), Math.round(killXp(L) * k), `level ${L}`);
+  for (const [L, k] of CLIMB.kills) assert.equal(xpToNext(L), Math.round(killXp(L) * k * rebootStretch(L)), `level ${L}`);
+  // The server reboot's stretch (CLIMB.reboot): a level takes more XP, its deeds don't (they read CLIMB.kills).
+  assert.ok(rebootStretch(20) > 1);
   const [[a, x], [b, y]] = [CLIMB.kills.find((p) => p[0] === 10), CLIMB.kills.find((p) => p[0] === 15)];
   assert.equal(killsToNext(12), x + ((y - x) * (12 - a)) / (b - a), 'straight between 10 and 15');
   for (let L = 2; L < LOADOUT.maxLevel; L++) assert.ok(xpToNext(L) > xpToNext(L - 1), `level ${L} takes more than ${L - 1}`);

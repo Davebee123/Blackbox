@@ -103,6 +103,7 @@ test('a discovered room keeps its icon, name, badges, live light and ring from a
   place(s, post.id); place(s, p.id); place(s, g.entry);
   assert.ok(FP.known(s, post.id) && FP.known(s, p.id));
   R.down[p.id] = clock; R.cleared[p.id] = clock;
+  R.rebootFrom = clock; R.rebootAt = clock + FP.rebootOf(s).ms; // a reboot under way: its ring (ROOMS.reboot)
   let chip = tile(s, post.id);
   assert.match(chip, /class="fp-room k-guard t-hot/);
   assert.match(chip, /href="#fp-i-elite"/);

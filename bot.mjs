@@ -31,6 +31,8 @@ import * as FP from './dist/floorplan.mjs';
 import { CONFIG, STRAINS, FAMILIES, GUARDS, ROOM_FAMILIES, BOSSES, power, bandOf, defaultSub } from './dist/data.mjs';
 import { canDescend, floorsOf, hiddenNear } from './dist/floors.mjs';
 
+// A farm that beat it twice sits out this long on the bot's clock (the reboot's rotation).
+const FARM_BENCH = 2 * 3600000;
 // How full the bot rests its Signal before it goes back out (a share of your max): 1 waits for full.
 export const REST = { to: 1 };
 // Real play, in milliseconds (see the header): a fight with its walk, a puzzle board, a log sweep.
@@ -52,7 +54,7 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
   const policy = POLICIES[cls[0].toUpperCase() + cls.slice(1)];
   const stats = { fights: {}, wins: 0, losses: 0, xp: {}, levelAt: { 1: 0 }, realAt: { 1: 0 }, fightsAt: { 1: 0 }, puzzles: 0, runs: 0, vaults: 0, events: {}, crashes: 0, mins: 0, drops: {}, firstAt: {}, bountyLosses: 0, did: { run: 0, rogue: 0, sprawl: 0, sprawlOverLevel: 0 } };
   let real = 0; // real play so far, ms (REAL)
-  const seen = new Set(), losses = {}, lostIn = {}; // lostIn: fights lost in each room, by server and your level: a room that beat it twice is walked around until it levels
+  const seen = new Set(), losses = {}, lostIn = {}, lostAt = {}; // lostAt: its last loss on each server, by your level. lostIn: fights lost in each room, by server and your level: a room that beat it twice is walked around until it levels
   BUILD.log = (x, id) => { (stats.built ||= []).push(`${id}@lv${hackerLevel(x)}`); }; // what it builds in the sockets it clears (sockets.mjs)
   // The ledger: what came in, by where it came from (positive changes only; the bot spends nothing but code on contracts).
   const purse = () => ({ credits: s.server.credits, code: ['cipher', 'worm', 'kernel'].reduce((n, k) => n + (s.materials?.[k] || 0), 0), exploit: s.materials?.exploit || 0, salvage: (s.salvage || []).length });
@@ -122,7 +124,7 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
     real += REAL.fight;
     const r = s.reports.at(-1);
     if (sig0 != null && inRoom) (stats.roomFights ||= []).push({ L: L0, kind, gap, won: r?.result === 'victory', lost: r ? (sig0 - Math.max(0, r.endIntegrity)) / Math.max(1, max0) : 1, cycles: r?.cycles || 0, key, where, rare, boss: v.boss || null }); // room fights: for the R1 gate
-    if (r?.result === 'victory') { stats.wins++; (stats.winsAt ||= {})[L0] = (stats.winsAt[L0] || 0) + 1; if (at) at.wins++; } else { stats.losses++; if (where) losses[where + '@' + hackerLevel(s)] = (losses[where + '@' + hackerLevel(s)] || 0) + 1; if (where && roomId) { const x = (lostIn[where + '@' + hackerLevel(s)] ||= {}); x[roomId] = (x[roomId] || 0) + 1; } if (openContracts(s).some((c) => c.type === 'bounty' && c.name === v.name)) stats.bountyLosses++; if (log) console.log('lost to', key); }
+    if (r?.result === 'victory') { stats.wins++; (stats.winsAt ||= {})[L0] = (stats.winsAt[L0] || 0) + 1; if (at) at.wins++; } else { stats.losses++; if (where) { losses[where + '@' + hackerLevel(s)] = (losses[where + '@' + hackerLevel(s)] || 0) + 1; lostAt[where + '@' + hackerLevel(s)] = t; } if (where && roomId) { const x = (lostIn[where + '@' + hackerLevel(s)] ||= {}); x[roomId] = (x[roomId] || 0) + 1; } if (openContracts(s).some((c) => c.type === 'bounty' && c.name === v.name)) stats.bountyLosses++; if (log) console.log('lost to', key); }
     if (s.encounter && !active(s)) command(s, '');
     lvlCheck();
   };
@@ -341,7 +343,17 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
     // With the reboot on (FP.ROOMS.reboot), they come back together once its reboot has run.
     const back = (R, x) => (FP.ROOMS.reboot.on ? R.rebootAt != null && t >= R.rebootAt && R.down[x.id] < R.rebootAt : t >= R.down[x.id] + FP.ROOMS.respawn[x.kind === 'guard' ? 'guard' : x.kind === 'elite' ? 'elite' : 'process'] * 60000);
     const respawned = (l) => { const R = l.floorplan; return R ? Object.values(R.graph.rooms).filter((x) => FP.FIGHTS.includes(x.kind) && x.kind !== 'core' && R.down[x.id] != null && back(R, x)).length : 0; };
-    const rot = s.locations.filter((l) => (procOf(l, t) && procOf(l, t).level <= L + 3) || (l.floorplan && l.takenOver && !l.member && (l.root?.level || 1) < 5 && (l.level || 1) >= L - 3 && respawned(l) >= 3)).filter((l) => open(l) && (losses[l.id + '@' + L] || 0) < 2).sort((a, b) => (b.level || 1) - (a.level || 1))[0];
+    // With the reboot on, a floor is farmed in rotation (a player's loop): any Mapped or held server near its level whose
+    // rooms are back, cleared to the last room so it reboots, while the next one's reboot runs.
+    // Two losses bench a farm for FARM_BENCH of its clock, not the whole level (a level is long): then it tries again,
+    // the rooms that beat it too, as a player rotating back to it would.
+    const farm = (l) => {
+      if (!(FP.ROOMS.reboot.on && l.floorplan && !l.member && (l.floorplan.mapped || l.takenOver) && (l.level || 1) >= L - 3 && respawned(l) >= 1)) return false;
+      const k = l.id + '@' + L;
+      if ((losses[k] || 0) >= 2 && t - (lostAt[k] || 0) > FARM_BENCH) { delete losses[k]; delete lostIn[k]; }
+      return true;
+    };
+    const rot = s.locations.filter((l) => (procOf(l, t) && procOf(l, t).level <= L + 3) || farm(l) || (l.floorplan && l.takenOver && !l.member && (l.root?.level || 1) < 5 && (l.level || 1) >= L - 3 && respawned(l) >= 3)).filter((l) => open(l) && (losses[l.id + '@' + L] || 0) < 2).sort((a, b) => (b.level || 1) - (a.level || 1))[0];
     const rogue = s.locations.filter((l) => l.rogue && !l.farm && open(l) && l.level <= L + 2 && l.level >= L - 3 && (losses[l.id + '@' + L] || 0) < 2).sort((a, b) => b.level - a.level)[0];
     const hunt = contracts && stats.bountyLosses < 2 && openContracts(s).some((c) => c.type === 'bounty' && !c.got);
     let did = false;

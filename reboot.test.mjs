@@ -8,7 +8,6 @@ import * as FP from './dist/floorplan.mjs';
 import { roomsMarkup } from './dist/floorplan-view.mjs';
 
 CONFIG.enemyCrit = 0; CONFIG.misses = false;
-FP.ROOMS.reboot.on = true; // off by default (the app turns it on with ?reboot=<minutes>)
 let clock = Date.UTC(2026, 0, 1);
 hooks.now = () => clock;
 const tick = (ms) => { clock += ms; };
@@ -27,6 +26,7 @@ const kill = (s, room) => { place(s, room.id); FP.fight(s, room); win(s); };
 const resets = (s) => FP.roomList(s).filter((x) => FP.FIGHTS.includes(x.kind) && x.kind !== 'socket' && FP.counted(x));
 
 test('a fallen fight room stays down until the whole server reboots', () => {
+  assert.equal(FP.ROOMS.reboot.on, true, 'on by default');
   assert.equal(FP.ROOMS.reboot.minutes, 2, 'two minutes by default');
   const s = server(), R = s.rooms, rooms = resets(s), procs = rooms.filter((x) => x.kind === 'process');
   assert.ok(FP.rebooting(s));
