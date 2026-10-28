@@ -4,7 +4,8 @@
 // Trace, quirk folders) no longer runs on the real game; phase R5 deletes it with the breach code.
 // Pure like the combat engine: state in, events out.
 import { vaultFilter, addFilter, filterLine } from './filters.mjs';
-import { vaultCodebase, learnCodebase, familyComponents, gainComponents } from './sockets.mjs';
+import { vaultCodebase, learnCodebase } from './sockets.mjs';
+import { gainComponents } from './salvage.mjs';
 import { HOT_RUN, CONFIG, FAMILIES, GUARDS, QUIRKS, MONTHS, SKILLS, SERVER, XP, BOSSES, layerOf } from './data.mjs';
 import { sweepFile, showSweep, sweepCommand } from './forensics.mjs';
 import { isWild, relocks, rogueLayout, rogueSpawns, rogueMotd, liveRogue, ROGUE, relockLeft, clock, farmFile } from './rogue.mjs';
@@ -684,7 +685,7 @@ export function bank(s, loc, why = '') {
   for (const f of pack) {
     (loc.state ||= { cleared: {}, unlocked: {}, taken: {} }).taken[f.path] = true;
     if (f.kind === 'credits') credits += f.amount;
-    if (f.kind === 'item') gainComponents(s, 1, familyComponents(loc.family), loc.name); // an old file system's salvage file: a component
+    if (f.kind === 'item') gainComponents(s, 1); // an old file system's salvage file: a component
   }
   const gear = pack.filter((f) => f.kind === 'gear');
   const sources = pack.filter((f) => f.kind === 'source');
@@ -716,10 +717,10 @@ export function bank(s, loc, why = '') {
   for (const f of gear) addItem(s, f.item, 'Banked: ');
   for (const f of sources) {
     s.recipes ||= [];
-    if (s.recipes.includes(f.zeroDay)) { gainComponents(s, 3, familyComponents(loc.family), loc.name); emit(s, 'info', `You already have ${sourceName(f.zeroDay)} source: +3 components.`); }
+    if (s.recipes.includes(f.zeroDay)) { gainComponents(s, 3); emit(s, 'info', `You already have ${sourceName(f.zeroDay)} source: +3 components.`); }
     else { s.recipes.push(f.zeroDay); emit(s, 'drop', `Source banked. You can compile ${sourceName(f.zeroDay)} at home, on the Craft page.`, { recipe: f.zeroDay }); }
   }
-  for (const f of pack.filter((x) => x.kind === 'codebase')) learnCodebase(s, null, 'Codebase banked: ', { pool: familyComponents(loc.family) }); // one you don't know (sockets.mjs)
+  for (const f of pack.filter((x) => x.kind === 'codebase')) learnCodebase(s, null, 'Codebase banked: '); // one you don't know (sockets.mjs)
   for (const f of pack.filter((x) => x.kind === 'filter')) addFilter(s, f.filter, 'Filter banked: ');
   for (const f of blueprints) learnBlueprint(s, 'Blueprint banked: ');
 

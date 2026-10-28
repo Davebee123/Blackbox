@@ -88,10 +88,10 @@ test('the wall: no firewall means a breach; a level-6 invader is contested by a 
 
   const v2 = world({ fw: 1 });
   v2.net.next = 0;
-  const salvage = v2.salvage.length;
+  const had = v2.components;
   const ev = wait(v2, 5000 + travelMs(v2));
   assert.equal(v2.invasion, null, 'blocked outright');
-  assert.equal(v2.salvage.length, salvage + 1);
+  assert.equal(v2.components, had + 1);
   assert.ok(ev.some((e) => e.type === 'invasion-cleared' && e.blocked));
   assert.ok(ev.some((e) => e.type === 'xp'), 'a trickle of XP');
   assert.ok(v2.net.next >= I.everyMs[0] && v2.net.next <= I.everyMs[1], 'the next one sets out 20–30 minutes later');

@@ -13,7 +13,8 @@ import { emit, warn, rand, hackerLevel, addItem, learnBlueprint, materialsOf, ga
 import { tierIndex, TIERS, indemnity, boardOpen } from './mail.mjs';
 import { items } from './hidden.mjs';
 import { bestSell } from './market.mjs';
-import { shopCodebases, learnCodebase, gainComponents } from './sockets.mjs';
+import { shopCodebases, learnCodebase } from './sockets.mjs';
+import { gainComponents } from './salvage.mjs';
 
 const now = () => hooks.now?.() ?? Date.now();
 export const STORE = {
@@ -132,7 +133,7 @@ export function deliverGoods(s, id, L, f = 'halcyon') {
   if (['relay', 'cracker', 'injector', 'harden'].includes(id)) { items(s)[id] = (items(s)[id] || 0) + 1; return; }
   if (g.code) return gainCode(s, { [g.code]: codeAmount(L) }, 'Bought: ');
   if (id === 'exploit') return gainCode(s, { exploit: 1 }, 'Bought: ');
-  if (id === 'salvage') { gainComponents(s, 5, null, 'store'); return; }
+  if (id === 'salvage') { gainComponents(s, 5); return; }
   if (GOODS[id]?.codebase) return learnCodebase(s, GOODS[id].codebase, 'Unsealed: ');
   if (id === 'signal') { s.signal = maxSignal(s); if (s.run) s.run.integrity = s.run.max; return emit(s, 'heal', 'Signal patched to full.'); }
   if (id === 'repair') { s.server.integrity = s.server.max; return emit(s, 'heal', `Server back to ${s.server.max}/${s.server.max}.`); }

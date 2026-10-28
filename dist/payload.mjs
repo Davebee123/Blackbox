@@ -1,4 +1,4 @@
-// Payloads: viruses you write to hit a faction hub. You compile one (code, salvage, credits; an
+// Payloads: viruses you write to hit a faction hub. You compile one (code, components, credits; an
 // Exploit arms it), deploy it at a hub, and it uploads like a file transfer. When it arrives it
 // executes on its own against the hub's defence:
 //   blocked  (under 70% of the defence): nothing gets through, the hub notices;
@@ -10,6 +10,7 @@
 // defence climbs, then eases back over the hours.
 // Backdoor takes a hub for you, but only one that's offline when it executes: Wiper first, then
 // get a Backdoor in before it comes back up. A hub you hold: see hubs.mjs.
+import { canAfford, spend } from './salvage.mjs';
 import { emit, warn, materialsOf, hackerLevel, hooks } from './combat.mjs';
 import { FACTIONS, hubsOf, changeRep, captured, hubFound } from './factions.mjs';
 import { HUB_CONDITION, CONDITIONS, travelMs } from './market.mjs';
@@ -65,9 +66,9 @@ export function compilePayload(s, kind, armed = false) {
   if (m.built.length >= PAYLOAD.maxBuilt) return warn(s, `You can hold ${PAYLOAD.maxBuilt} payloads. Deploy one first.`);
   if (s.server.credits < credits) return warn(s, `A ${P.name} costs ${credits} credits.`);
   if ((mats[P.code] || 0) < PAYLOAD.code) return warn(s, `A ${P.name} takes ${PAYLOAD.code} ${P.code} code.`);
-  if ((s.salvage || []).length < PAYLOAD.salvage) return warn(s, `A ${P.name} takes ${PAYLOAD.salvage} components.`);
+  if (!canAfford(s, PAYLOAD.salvage)) return warn(s, `A ${P.name} takes ${PAYLOAD.salvage} components.`);
   if (armed && (mats.exploit || 0) < 1) return warn(s, 'Arming it takes an Exploit.');
-  s.server.credits -= credits; mats[P.code] -= PAYLOAD.code; s.salvage.splice(0, PAYLOAD.salvage);
+  s.server.credits -= credits; mats[P.code] -= PAYLOAD.code; spend(s, PAYLOAD.salvage);
   if (armed) mats.exploit -= 1;
   const p = { id: ++m.serial, kind, level: L, armed: !!armed, power: Math.round(PAYLOAD.power(L) * (armed ? PAYLOAD.armed : 1)) };
   m.built.push(p);

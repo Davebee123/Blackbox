@@ -71,11 +71,11 @@ test("Deadman's Switch: Signal at 0 jacks you out with your pack, then waits 90 
     const { connect } = await import('./dist/run.mjs');
     connect(s, s.locations[0].id);
     s.run.pack.push({ path: '/x', name: 'x.dat', kind: 'item', item: 'Thing' });
-    const before = s.salvage.length;
+    const before = s.components;
     const { disconnect } = await import('./dist/combat.mjs');
     disconnect(s, 'test');
     assert.equal(s.run, null);
-    assert.equal(s.salvage.length, before + 1, 'the pack was banked');
+    assert.equal(s.components, before + 1, 'the pack was banked');
     assert.ok(s.fxCooldown['deadmans-switch'] > t, 'rearming');
   } finally { delete hooks.now; }
 });

@@ -33,7 +33,7 @@
 // Sockets (R2): a socket room is a bus slot, red while its guard is up, amber once open; a program in it takes the chip
 // (its icon, its name on the plate, a small slot badge bottom left), and a held server's Core shows the program it
 // runs as that badge. A Tunnel's link to the entry is a dashed amber arc. Its pop-up card is the Build card: every
-// codebase you know, what it costs here and what you hold, and Build (the pay picker, app.js).
+// codebase you know, what it costs here and what you hold, and Build.
 // Countdowns are empty <… data-at> slots (and rings with data-ring-*) that fillClocks writes every second (app.js), so
 // the markup only changes when the server does and a hovered chip keeps its tooltip.
 import { esc, deathMark } from './view.mjs';
@@ -51,7 +51,7 @@ import { puzzlePanel } from './puzzle-view.mjs';
 import { PROGRAMS, SOCKET, programCost, buildBlock, codebasesOf, costLine as programCostLine } from './sockets.mjs';
 import { materialsOf } from './combat.mjs';
 import { MATERIALS } from './gear.mjs';
-import { stacks } from './salvage.mjs';
+import { componentsOf } from './salvage.mjs';
 import { TH_ICONS, roomMarksOf, nookIcon, nookLive, questSvg, fileSvg, filesHere, threadHud, threadCard, threadAsks, threadPanel, thUi } from './threads-view.mjs';
 import { sweepBlock } from './view.mjs';
 
@@ -634,7 +634,7 @@ function hereCard(s) {
   return cardOf(st, true, labelOf(s, room), jobNote(s, room) + body + hunterNote(s, room), acts, !!sc, addrOf(s, room.id));
 }
 // A socket you stand in (sockets.mjs): what runs in it, or the Build card. Each codebase you know is a row: its icon and
-// name, its rule in a line, what it costs here (each part lit when you hold it), and Build (the pay picker).
+// name, its rule in a line, what it costs here (each part lit when you hold it), and Build.
 function socketCard(s, room) {
   const R = s.rooms, p = programIn(s, room.id);
   if (p) {
@@ -647,17 +647,15 @@ function socketCard(s, room) {
   }
   if (socketOff(s, room)) return { body: note(esc(WORLD.view?.offNote?.(s, room) || 'Offline.'), 'hot'), acts: '' };
   const known = codebasesOf(s).filter((id) => PROGRAMS[id]);
-  const have = Object.fromEntries(stacks(s).map((x) => [x.name, x.n])), m = materialsOf(s), comps = (s.salvage || []).length;
+  const m = materialsOf(s), comps = componentsOf(s);
   const rows = known.map((id) => {
-    const P = PROGRAMS[id], c = programCost(R, id), why = buildBlock(s, R, room, id), total = c.any + (c.need[0]?.n || 0);
-    const named = c.need[0] ? c.need[0].names.reduce((n, nm) => n + (have[nm] || 0), 0) : 0;
+    const P = PROGRAMS[id], c = programCost(R, id), why = buildBlock(s, R, room, id), total = c.components;
     const chip = (ok, label, tip) => `<span class="bc${ok ? ' ok' : ''}" title="${esc(tip)}">${label}</span>`;
     const chips = [chip(comps >= total, `${glyph('salvage')}${total}`, `${total} components (you hold ${comps})`),
-      ...(c.need[0] ? [chip(named >= c.need[0].n, `${c.need[0].n} named`, `${c.need[0].n} of them this server's own: ${c.need[0].names.join(', ')} (you hold ${named})`)] : []),
       ...Object.entries(c.code).map(([k, n]) => chip((m[k] || 0) >= n, `${glyph(k)}${n}`, `${n} ${MATERIALS[k].name} (you hold ${m[k] || 0})`)),
       ...(c.exploit ? [chip((m.exploit || 0) >= c.exploit, `${glyph('exploit')}${c.exploit}`, `${c.exploit} Exploit (you hold ${m.exploit || 0})`)] : [])].join('');
     const blocked = why && !/costs/.test(why);
-    return `<li class="bp-prog${why ? ' short' : ''}"><span class="bp-ic">${ic(id)}</span><span class="bp-txt"><b>${esc(P.name)}</b><small>${esc(P.rule)}</small><span class="bp-cost">${chips}</span></span><button type="button" class="btn small${why ? '' : ' primary'}" data-command="build ${id}" data-pay="program:${id}" data-pay-title="${esc(P.name)}" ${why ? `disabled title="${esc(blocked ? why : `Short: ${programCostLine(c)}`)}"` : `title="Build: inject it now. Choose which components pay."`}>Build</button></li>`;
+    return `<li class="bp-prog${why ? ' short' : ''}"><span class="bp-ic">${ic(id)}</span><span class="bp-txt"><b>${esc(P.name)}</b><small>${esc(P.rule)}</small><span class="bp-cost">${chips}</span></span><button type="button" class="btn small${why ? '' : ' primary'}" data-command="build ${id}" ${why ? `disabled title="${esc(blocked ? why : `Short: ${programCostLine(c)}`)}"` : `title="Build: inject it now. Choose which components pay."`}>Build</button></li>`;
   }).join('');
   return { body: `<ul class="bp-list">${rows || '<li class="quiet">You know no codebase yet.</li>'}</ul>`, acts: '' };
 }

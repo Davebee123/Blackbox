@@ -33,7 +33,7 @@ import { fill } from './content.mjs';
 import { learnRelayPlan } from './hidden.mjs';
 import { FACTIONS, changeRep, rippleRep, hostile, captured, rivalServers, hubsOf, hubFound } from './factions.mjs';
 import { addrsOf, sweepRooms } from './address.mjs';
-import { learnCodebase, familyComponents } from './sockets.mjs';
+import { learnCodebase } from './sockets.mjs';
 
 export const MAIL = {
   periodMs: 30 * 60 * 1000, // the retainer pays every 30 minutes, offline too
@@ -768,7 +768,7 @@ export function mailCommand(s, text, at = now()) {
   if (c.reward.relay) { items(s).relay += c.reward.relay; emit(s, 'drop', 'Halcyon sent a relay. Install it on a server you’ve taken over (its map card).'); }
   if (c.reward.plan) learnRelayPlan(s, 'Halcyon bonus: ');
   if (c.reward.blueprint) learnBlueprint(s, 'Halcyon bonus: ');
-  if (c.reward.codebase) learnCodebase(s, null, 'Halcyon bonus: ', { pool: familyComponents(s.locations.find((l) => l.id === c.loc)?.family || 'ransomware') }); // one you don't know (4 components if you know them all)
+  if (c.reward.codebase) learnCodebase(s, null, 'Halcyon bonus: '); // one you don't know (4 components if you know them all)
   // A protocol, Tuned or better (a contract that paid a daemon once pays this: daemons only come from invasions), with its
   // faction's implicit (gear.mjs IMPLICITS); the storyline's carries none.
   if (c.reward.drop || c.reward.daemon) { const r = seeded((c.id * 7919 + paidAt) >>> 0); addItem(s, rollItem(r, { level: paidAt, rarity: r() < LOOT.quest ? 'custom' : 'tuned', faction: c.story !== undefined ? null : c.offBooks ? 'glassjaw' : c.faction || 'halcyon' }), c.offBooks ? 'GLASSJAW paid in kind: ' : c.story !== undefined ? 'LOWLIGHT bonus: ' : 'Contract bonus: '); }

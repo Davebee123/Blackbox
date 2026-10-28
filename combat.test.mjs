@@ -118,7 +118,7 @@ test('breaking a part stops its attack; the others are unchanged', () => {
   assert.equal(part(s, 'encryptor').integrity, 0);
   assert.ok(!intents(s).some((i) => i.source === 'encryptor'));
   assert.equal(part(s, 'pulse').attack.amount, pulseBefore);
-  assert.equal(s.salvage[0].name, 'Cipher Seed');
+  assert.equal(s.components, 1, 'a component, not a named piece');
 });
 
 test('breaking a part on the cycle it fires wins the race', () => {

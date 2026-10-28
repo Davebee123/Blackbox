@@ -73,10 +73,10 @@ test('the nest fights a Crawler and its brood (elite-lite), pays components, res
   assert.ok(v.parts.some((p) => p.id === 'replicator'), 'and its Brood, spawning more');
   assert.equal(s.encounter.rooms.size, 'nest');
   assert.ok(FP.ROOMS.size.nest.hp > FP.ROOMS.size.process.hp, 'bigger than a process');
-  const parts0 = (s.salvage || []).length, xp = s.encounter.roomsXp;
+  const parts0 = s.components, xp = s.encounter.roomsXp;
   assert.equal(xp, FP.ROOMS.xp.room * FP.ROOMS.nest.xp, 'twice a room kill\'s XP');
   const ev = (() => { const first = s.serial; win(s); return s.logs.filter((e) => e.id > first); })();
-  assert.ok((s.salvage || []).length >= parts0 + FP.ROOMS.nest.parts, 'a cache\'s worth of components');
+  assert.ok(s.components >= parts0 + FP.ROOMS.nest.parts, 'a cache\'s worth of components');
   assert.ok(ev.some((e) => e.type === 'loot' && /The nest gives up 6 components/.test(e.message)));
   assert.ok(FP.ROOMS.nest.parts > 2, 'more than a process room\'s one or two');
   assert.ok(s.rooms.cleared[nest.id] && !FP.isUp(s, nest));

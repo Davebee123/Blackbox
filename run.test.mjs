@@ -569,10 +569,10 @@ test('saves from before the skill rework start each class on the new kit, and ol
 
 test('Signal boosters are retired: no crafting (top up instead); one you still carry works on a run', () => {
   const s = fresh();
-  s.salvage = Array.from({ length: 4 }, () => ({ name: 'Pulse Kernel' }));
+  s.components = 4;
   say(s, 'craft booster');
   assert.equal(s.items?.booster || 0, 0, 'nothing crafted');
-  assert.equal(s.salvage.length, 4, 'nothing spent');
+  assert.equal(s.components, 4, 'nothing spent');
   s.items = { ...(s.items || {}), booster: 1 };
   say(s, 'connect sprawl');
   s.run.integrity = 5;

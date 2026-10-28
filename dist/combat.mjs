@@ -16,13 +16,13 @@ import { tickMarket, marketCommand } from './market.mjs';
 import { tickPayloads, payloadCommand } from './payload.mjs';
 import { tickHubs, hubCommand, hubWon } from './hubs.mjs';
 import { IMPLICIT_HOOKS } from './faction-gear.mjs';
-import { SALVAGE_COSTS, settle, spend, splitPay, canAfford } from './salvage.mjs';
+import { gainComponents, payProblem, spend, componentsRestore } from './salvage.mjs';
 // Configs are gone (service side-grades; Triage was the last). A save that owned any is refunded.
 const RETIRED_CONFIGS = ['stateful', 'reflective', 'inspection', 'adaptive', 'sticky', 'toll', 'beacon', 'tar', 'sting', 'triage'];
 const CONFIG_REFUND = 250;
 import { fleetCommand, fleetWon } from './fleet.mjs';
 import { eventCommand, eventWon, outbreakMult, eventKill } from './events.mjs';
-import { siteTrait, postsOf, listenBoost as postBoost, componentChance, gainComponents, retireOutposts, retireLetter, PROGRAM_IDS, codebasesOf } from './sockets.mjs';
+import { siteTrait, postsOf, listenBoost as postBoost, componentChance, retireOutposts, retireLetter, PROGRAM_IDS, codebasesOf } from './sockets.mjs';
 import { consortiumWon } from './consortium.mjs';
 import { rollRogue, rogueKill } from './rogue.mjs';
 import { raidStart, raidLand, raidCycle, raidShield, raidBroke, raidTaken, raidAbsorb, noteDealt, noteHeal, cleanse, attackTarget, sigint, sigintCheck } from './raid.mjs';
@@ -54,7 +54,7 @@ import { crewOf, factionAuthor, AUTHORS } from './authors.mjs';
 import { noteUse } from './mastery.mjs';
 import { fightNet, noteKill, nativeRoll, biasCode, richMult, networkRestore, networkCommand, lairUniques, lairFell, lairBoss, mine, netOf, isNative, named, nameOf, nameNative, openLair } from './network.mjs';
 
-export const SAVE_VERSION = 46; // v46: no default subclass: a class past level 10 that never picked plays its core until it does (subRestore); v45: sets, each loaded protocol stamped with when it went on and the storyline's LOWLIGHT Badge beat armed (sets.mjs setsRestore); v44: whole-number stats, Regen over 5 cycles and Payload flat (gear.mjs statsRestore); v43: threads, quests found in rooms (threads.mjs threadsRestore); v42: the long climb, XP into a level keeps its share (progression.mjs climbRestore); v41: layers become floors (floors.mjs floorsRestore, docs/servers.md R3); v40: outposts, buildings, plans, services, architecture and the dividend retire for sockets (sockets.mjs retireOutposts, netrooms.mjs socketRoomsRestore, docs/servers.md R2); v39: every server is a room graph (netrooms.mjs roomsRestore, docs/servers.md R1); v38: two shipped presets renamed (presetRenameRestore); v37: 15-key pools, reordered lines and presets (kitRestore); v36: networks (network.mjs networkRestore: a network seed for every save); v31: subclasses (retireClassTrees); v32: Payload is a percentage; v33: invasion kinds, bounties, signatures, and the firewall follows the network (invasionRestore, firewallRestore); v34: one level, no server XP, specialty, ports, home-fight services or greys (progression.mjs progressionRestore); v35: the nine-key bar, run skills off it, one-clock tells (barRestore)
+export const SAVE_VERSION = 47; // v47: one kind of component: an older save's pile of named pieces (s.salvage) becomes its count, s.components (salvage.mjs componentsRestore); v46: no default subclass: a class past level 10 that never picked plays its core until it does (subRestore); v45: sets, each loaded protocol stamped with when it went on and the storyline's LOWLIGHT Badge beat armed (sets.mjs setsRestore); v44: whole-number stats, Regen over 5 cycles and Payload flat (gear.mjs statsRestore); v43: threads, quests found in rooms (threads.mjs threadsRestore); v42: the long climb, XP into a level keeps its share (progression.mjs climbRestore); v41: layers become floors (floors.mjs floorsRestore, docs/servers.md R3); v40: outposts, buildings, plans, services, architecture and the dividend retire for sockets (sockets.mjs retireOutposts, netrooms.mjs socketRoomsRestore, docs/servers.md R2); v39: every server is a room graph (netrooms.mjs roomsRestore, docs/servers.md R1); v38: two shipped presets renamed (presetRenameRestore); v37: 15-key pools, reordered lines and presets (kitRestore); v36: networks (network.mjs networkRestore: a network seed for every save); v31: subclasses (retireClassTrees); v32: Payload is a percentage; v33: invasion kinds, bounties, signatures, and the firewall follows the network (invasionRestore, firewallRestore); v34: one level, no server XP, specialty, ports, home-fight services or greys (progression.mjs progressionRestore); v35: the nine-key bar, run skills off it, one-clock tells (barRestore)
 
 // run.mjs registers callbacks here (it imports this file, so we can't import it).
 export const hooks = { flee: null, now: null };
@@ -107,7 +107,7 @@ export function fresh() {
     loadout: { archetype: 'breaker', picks: {}, ranks: {}, equipped: {} },
     // Each class levels on its own and starts at 1. The server's level is your highest class's.
     hackers: {},
-    salvage: [],
+    components: 0, // salvage.mjs
     logs: [],
     reports: [],
     serial: 0,
@@ -578,7 +578,7 @@ export function addItem(s, item, why = 'Loot: ') {
 export function deconstruct(s, item, out = null) {
   const d = DECONSTRUCT[item.rarity] || DECONSTRUCT.stock;
   const n = d.salvage[0] + Math.floor(rand(s) * (d.salvage[1] - d.salvage[0] + 1)) + Math.floor((item.level || 1) / 10);
-  gainComponents(s, n, null, itemLabel(item)); // components (sockets.mjs): Scrap is gone
+  gainComponents(s, n); // components (salvage.mjs)
   const code = item.from && codeOf(item.from) ? codeOf(item.from) : ['cipher', 'worm', 'kernel'][Math.floor(rand(s) * 3)];
   const mats = materialsOf(s);
   if (d.code) mats[code] = (mats[code] || 0) + d.code;
@@ -1048,7 +1048,7 @@ export function fxAnswer(s, p = null) {
 export const knows = (s, id) => (s.recipes || []).includes(id);
 export const knownRecipes = (s) => PROTOCOL_STATS.filter((k) => knows(s, recipeId(k)));
 // Learn a blueprint you don't have yet: the Firewall first, then any other. Every one known:
-// it's salvage instead.
+// it's components instead.
 // A blueprint teaches something you don't know yet, from every kind of recipe: a protocol recipe or
 // a filter recipe. The first is
 // always the Firewall.
@@ -1059,7 +1059,7 @@ export function learnBlueprint(s, why = '') {
     ...CRAFTABLE.filter((k) => !knowsFilter(s, k)).map((k) => () => learnFilter(s, k, why)),
   ];
   if (!left.length && !others.length) {
-    gainComponents(s, 2, null, 'blueprint');
+    gainComponents(s, 2);
     return emit(s, 'info', `${why}a blueprint you already know: +2 components.`);
   }
   const k = Math.floor(rand(s) * (left.length + others.length));
@@ -1927,8 +1927,7 @@ export const compileCost = (s, zd = false) => {
   const c = zd ? COMPILE.zeroDayCost(hackerLevel(s)) : COMPILE.cost(hackerLevel(s));
   return { credits: c.credits, salvage: Math.max(1, c.salvage) };
 };
-function protocolCommand(s, full) {
-  const [text, payText] = splitPay(full);
+function protocolCommand(s, text) {
   const [word, ...restWords] = text.split(' ');
   const arg = restWords.join(' ').trim();
   if (word === 'protocols' || word === 'gear') {
@@ -1989,13 +1988,13 @@ function protocolCommand(s, full) {
     if (!zd && !stat) stat = mine[Math.floor(rand(s) * mine.length)];
     const c = compileCost(s, !!zd);
     if (s.server.credits < c.credits) return warn(s, `Compiling needs ${c.credits} credits. You have ${s.server.credits}c.`);
-    const pay = settle(s, zd ? SALVAGE_COSTS.zeroday(c.salvage) : SALVAGE_COSTS.protocol(c.salvage), payText);
-    if (typeof pay === 'string') return warn(s, `Compiling: ${pay}`);
+    const why = payProblem(s, c.salvage);
+    if (why) return warn(s, `Compiling: ${why}`);
     s.server.credits -= c.credits;
-    spend(s, pay);
+    spend(s, c.salvage);
     const lvl = hackerLevel(s); // you compile protocols at your own level
     const made = rollItem(() => rand(s), zd ? { level: lvl, zeroDay: zd } : { level: lvl, stat: AFFIX_FOR[stat] ? stat : null, source: 'compile', slot });
-    made.compiled = true; // breaks down for salvage and code, never Exploits (no compile-to-sell loop)
+    made.compiled = true; // breaks down for components and code, never Exploits (no compile-to-sell loop)
     addItem(s, made, 'Compiled: ');
     return firstTime(s, 'compile-' + (zd || stat), `first ${zd ? ZERO_DAYS[zd].name : PROTOCOL_NAMES[stat]} compiled`);
   }
@@ -2540,7 +2539,7 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     emit(s, 'info', `Boss rule ${s.bossRule}: ${BOSS_RULES[s.bossRule].name}. From your next boss fight.`);
   } else if (/^developer (codebases|components \d+)$/.test(text)) { // sockets.mjs: every codebase, or components to build with
     if (text.endsWith('codebases')) { for (const id of PROGRAM_IDS) if (!codebasesOf(s).includes(id)) codebasesOf(s).push(id); emit(s, 'info', 'Developer: every codebase learned.'); }
-    else { const n = gainComponents(s, Number(text.split(' ')[2]), null, 'developer'); emit(s, 'info', `Developer: +${n} components.`); }
+    else { const n = gainComponents(s, Number(text.split(' ')[2])); emit(s, 'info', `Developer: +${n} components.`); }
   } else if (/^developer location (ransomware|worm|ghostroot)$/.test(text)) {
     const had = new Set(s.locations.map((l) => l.id));
     addLocation(s, text.split(' ')[2], Math.min(reached(s), SERVER.floorFor(hackerLevel(s)))); // the next ? of that family on your floor (floors.mjs pickSlot)
@@ -2577,7 +2576,7 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     s.recipes = [...new Set([...(s.recipes || []), ...BLUEPRINTS])];
     emit(s, 'info', 'Developer: every blueprint learned.');
   } else if (/^developer salvage \d+$/.test(text)) {
-    const n = gainComponents(s, Number(text.split(' ')[2]), null, 'developer');
+    const n = gainComponents(s, Number(text.split(' ')[2]));
     emit(s, 'info', `Developer: +${n} components.`);
   } else if (/^developer daemon( |$)/.test(text)) {
     // developer daemon <id|all> [level]: a daemon at a level (testing; only invasions drop them in play).
@@ -2605,7 +2604,7 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     s.devServer = Math.max(1, Math.min(SERVER.maxLevel, Number(text.split(' ')[2])));
     syncServer(s);
     emit(s, 'info', `Developer: server level ${serverLevel(s)} (a floor under your highest class level, for testing).`);
-  } else if (/^filter (equip|unequip|scrap) \d+$/.test(text) || /^filter craft( \w+)?( pay .*)?$/.test(text)) {
+  } else if (/^filter (equip|unequip|scrap) \d+$/.test(text) || /^filter craft( \w+)?$/.test(text)) {
     filterCommand(s, text);
   } else if (/^firewall (upgrade|defrag|harden)( \S+)?$/.test(text) || text === 'defrag') {
     firewallCommand(s, text, now);
@@ -2636,11 +2635,11 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     genomeCommand(s, text); // genome.mjs: a part's genes (free, no cycle), or the card of what you're facing
   } else if (text.startsWith('config ') || text.startsWith('craft config ')) {
     warn(s, 'Configs are gone: services run as they come.');
-  } else if (/^(outpost build relay|relay craft)( pay .*)?$/.test(text)) {
-    craftRelay(s, splitPay(text)[1]);
+  } else if (/^(outpost build relay|relay craft)$/.test(text)) {
+    craftRelay(s);
   } else if (text.startsWith('outpost ') || /^build( |$)/.test(text)) {
     warn(s, 'Outposts are gone. Build in a server\'s socket rooms: connect, clear a socket, and build there.');
-  } else if (/^craft( booster)?( pay .*)?$/.test(text)) {
+  } else if (/^craft( booster)?$/.test(text)) {
     warn(s, 'Signal boosters are gone. Top up your Signal with credits at home.');
   } else if (/^relay \S+$/.test(text)) {
     installRelay(s, text.split(' ')[1]);
@@ -3234,13 +3233,13 @@ function breakPart(s, p) {
     const xs = unpackParts(s);
     if (livingParts(s).some((x) => x !== p)) emit(s, 'status', `The ${p.name} breaks, and the virus's rules unpack.${xs.length ? ` The packed ${xs.length === 1 ? 'part was' : 'parts were'} ${andList(xs.map((x) => `the ${x.name}`))}.` : ''}`, { target: p.id, unpack: true });
   }
-  if (p.loot) e.lastLoot = p.loot; // the part you broke last (a Harvester's and an elite's one more: floorplan.mjs)
-  // Its component: 60% in a room fight, an elite's always, 35% elsewhere (sockets.mjs); a network rich in components
+  if (p.loot) e.lastLoot = p.loot; // a part that drops components broke (a Harvester's and an elite's one more: floorplan.mjs)
+  // Components: 60% in a room fight, an elite's always, 35% elsewhere (sockets.mjs); a network rich in components
   // (network.mjs) and a part you've mastered (research.mjs, 25% more) on top.
   if (p.loot && rand(s) < componentChance(s, e, CONFIG.salvageChance) * richMult(s, fightNet(s), 'salvage') * masteryDrop(s, e.virus, p)) {
-    s.salvage.push({ name: p.loot, virus: e.virus.name, seed: e.seed });
+    gainComponents(s, 1);
     e.metrics?.loot?.push(p.loot);
-    emit(s, 'loot', `${p.loot} recovered.`, { target: p.id });
+    emit(s, 'loot', 'Component recovered.', { target: p.id });
   }
   if (e.lastAttack && e.lastAttack.endsWith(' ' + p.id)) {
     e.lastAttack = null;
@@ -4807,7 +4806,7 @@ export function shuntRestore(s) {
   walk(s, 0);
 }
 export function restore(raw) {
-  if (!raw || ![6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, SAVE_VERSION].includes(raw.version)) return fresh();
+  if (!raw || ![6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, SAVE_VERSION].includes(raw.version)) return fresh();
   try {
     const s = bindRooms(structuredClone(raw));
     const was = s.version;
@@ -4962,6 +4961,7 @@ export function restore(raw) {
     statsRestore(s, was); // v44: whole-number stats: Regen five times over 5 cycles, Payload flat at each item's level (gear.mjs)
     setsRestore(s, was); // v45: sets: loaded protocols stamped in slot order, set pieces you hold found, the Badge beat armed (sets.mjs)
     subRestore(s, was); // v46: no default subclass: a class past 10 that never picked plays its core (its default's keys and talent points back)
+    componentsRestore(s); // v47: a pile of named components becomes its count (salvage.mjs); keyed on the field
     shuntRestore(s); // the Shunt was cut (docs/parts-plan.md): keyed on the part, not the version
     try { achievementsRestore(s); } catch (err) { hooks.restoreError?.(err); } // achievements.mjs: an older save earns what it has already done (its titles and stickers too), quietly; never costs the save
     if (s.encounter) s.encounter.plan ||= [];

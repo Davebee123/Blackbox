@@ -516,7 +516,7 @@ test('compile: pick the stat, pay credits and components, get a protocol at your
   s.recipes = ['recipe:crit'];
   assert.match(command(s, 'compile damage').at(-1).message, /recipe/, 'only recipes you have');
   assert.match(command(s, 'compile crit').at(-1).message, /components/);
-  for (let i = 0; i < 10; i++) s.salvage.push({ name: 'x' });
+  s.components = 10;
   command(s, 'compile crit');
   const it = s.stash.at(-1);
   assert.equal(it.kind, 'protocol');
@@ -525,30 +525,31 @@ test('compile: pick the stat, pay credits and components, get a protocol at your
   assert.match(command(s, 'compile integrity').at(-1).message, /server/, 'server stats come from the server');
   assert.notEqual(it.rarity, 'zeroday');
   assert.equal(s.server.credits, 1000 - COMPILE.cost(3).credits);
-  assert.equal(s.salvage.length, 10 - COMPILE.cost(3).salvage);
+  assert.equal(s.components, 10 - COMPILE.cost(3).salvage);
   assert.match(command(s, 'compile rootkit').at(-1).message, /source/, 'Zero-days need their source first');
   s.recipes = ['rootkit'];
-  for (let i = 0; i < 20; i++) s.salvage.push({ name: 'x' });
-  assert.match(command(s, 'compile rootkit').at(-1).message, /guard component/, 'a Zero-day also needs guard components');
-  s.salvage.push({ name: 'Tracker Core' }, { name: 'Sentry Lens' });
+  s.components = COMPILE.zeroDayCost(3).salvage - 1;
+  assert.match(command(s, 'compile rootkit').at(-1).message, /Needs 16 components\. You have 15\./, 'any components: no guard ones by name');
+  s.components += 1;
   command(s, 'compile rootkit');
+  assert.equal(s.components, 0);
   assert.equal(s.stash.at(-1).zeroDay, 'rootkit');
   assert.equal(compileCost(s).credits, COMPILE.cost(3).credits, 'no Build Farm any more: the list price');
 });
 
-test('deconstruct: an item breaks into salvage, code and Exploits by rarity (a loaded one comes off first)', () => {
+test('deconstruct: an item breaks into components, code and Exploits by rarity (a loaded one comes off first)', () => {
   const s = fresh();
   const it = give(s, { damage: 5 }, { rarity: 'custom', from: 'worm', group: 'exploit' });
   const worm = s.materials.worm || 0, ex = s.materials.exploit || 0;
   command(s, 'deconstruct ' + it.id);
   assert.equal(s.stash.length, 0);
   assert.equal(loaded(s).length, 0);
-  assert.equal(s.salvage.length, DECONSTRUCT.custom.salvage[0]);
+  assert.equal(s.components, DECONSTRUCT.custom.salvage[0]);
   assert.equal(s.materials.worm - worm, DECONSTRUCT.custom.code, 'code from where it dropped');
   assert.equal(s.materials.exploit - ex, DECONSTRUCT.custom.exploit);
   const g = give(s, { damage: 1 }, { rarity: 'scrap', group: 'exploit' });
   command(s, 'scrap ' + g.id);
-  assert.ok(s.salvage.length > DECONSTRUCT.custom.salvage[0], 'scrap still works as a word');
+  assert.ok(s.components > DECONSTRUCT.custom.salvage[0], 'scrap still works as a word');
 });
 
 test('a full stash deconstructs new items instead', () => {
@@ -556,7 +557,7 @@ test('a full stash deconstructs new items instead', () => {
   for (let i = 0; i < STASH_CAP; i++) addItem(s, item({ damage: 1 }));
   addItem(s, item({ damage: 9 }, { rarity: 'tuned' }));
   assert.equal(s.stash.length, STASH_CAP);
-  assert.ok(s.salvage.length >= DECONSTRUCT.tuned.salvage[0] && s.salvage.length <= DECONSTRUCT.tuned.salvage[1]);
+  assert.ok(s.components >= DECONSTRUCT.tuned.salvage[0] && s.components <= DECONSTRUCT.tuned.salvage[1]);
 });
 
 test('runs: your first vault holds a protocol kit and a code cache; deeper vaults can hold source you bank', () => {
@@ -716,10 +717,9 @@ test('blueprints: nothing is buildable at first; each teaches something new; eve
   for (let i = 1; i < all; i++) learnBlueprint(s);
   assert.ok(BLUEPRINTS.every((id) => knows(s, id)));
   assert.ok(CRAFTABLE.every((k) => knowsFilter(s, k)), 'filter recipes');
-  const salvage = s.salvage.length;
+  const had = s.components;
   learnBlueprint(s);
-  assert.equal(s.salvage.length, salvage + 2, 'one you know already is 2 components');
-  assert.ok(s.salvage.slice(-2).every((p) => !/scrap/i.test(p.name)), 'components, not Scrap');
+  assert.equal(s.components, had + 2, 'one you know already is 2 components');
   command(s, 'developer location worm');
   const vault = Object.values(layoutOf(s.locations[0])).find((d) => d.locked);
   assert.ok(vault.files.includes('blueprint.bp'));
@@ -760,17 +760,27 @@ test('resting: between fights the server repairs 1% of its max every 10 seconds,
   CONFIG.restRegen = 0;
 });
 
-test('components pay like mana: any for the rest, named ones where a cost asks, a chosen payment is honoured', async () => {
-  const { SALVAGE_COSTS, autoPay, payProblem, parsePay } = await import('./dist/salvage.mjs');
+test('components are one currency: every cost takes any of them, and an older save\'s pile becomes its count', async () => {
+  const { payProblem, spend, canAfford, componentsRestore } = await import('./dist/salvage.mjs');
   const s = fresh();
-  s.salvage = [{ name: 'Pulse Kernel' }, { name: 'Pulse Kernel' }, { name: 'Sentry Lens' }, { name: 'Sentry Lens' }, { name: 'Sentry Lens' }, { name: 'Mask Shard' }];
-  const cost = SALVAGE_COSTS.zeroday(5); // 3 any + 2 guard components
-  s.salvage.push({ name: 'Pulse Kernel' }, { name: 'Pulse Kernel' });
-  assert.deepEqual(autoPay(s, cost), { 'Sentry Lens': 2, 'Pulse Kernel': 3 }, 'the named ones it asks for, then what no recipe names, and it keeps the spare guard component');
-  assert.equal(payProblem(s, cost, { 'Pulse Kernel': 3, 'Mask Shard': 2 }), "You don't have 2 Mask Shard.");
-  assert.match(payProblem(s, cost, { 'Pulse Kernel': 4, 'Mask Shard': 1 }), /guard component/);
-  const mine = parsePay(s, 'sentry-lens:2,pulse-kernel:2,mask-shard:1');
-  assert.equal(payProblem(s, cost, mine), null);
+  assert.equal(s.components, 0);
+  s.components = 5;
+  assert.ok(canAfford(s, 5) && !canAfford(s, 6));
+  assert.equal(payProblem(s, 6), 'Needs 6 components. You have 5.');
+  spend(s, 5);
+  assert.equal(s.components, 0);
+  // A v46 save: a pile of named pieces (part components, plain Scrap, a guard's) becomes as many components.
+  const old = fresh();
+  delete old.components;
+  old.version = 46;
+  old.salvage = [{ name: 'Pulse Kernel' }, { name: 'Scrap' }, { name: 'Sentry Lens' }, { name: 'Fuse Wire' }];
+  const back = restore(JSON.parse(JSON.stringify(old)));
+  assert.equal(back.components, 4, 'nothing lost');
+  assert.equal(back.salvage, undefined, 'the pile is gone');
+  assert.equal(back.version, SAVE_VERSION);
+  const twice = { components: 3 };
+  componentsRestore(twice);
+  assert.equal(twice.components, 3, 'a save that already counts keeps its count');
 });
 
 test('Uplink trace is gone: old saves swap Traceroute for Keepalive and the Tracer daemon for Stall', () => {
@@ -792,7 +802,7 @@ test('a recipe with a capital in its id compiles (commands are lowercased: compi
   assert.ok(ids.length, 'there are camelCase recipes');
   for (const id of ids) {
     const s = fresh();
-    s.recipes = [recipeId(id)]; s.server.credits = 1e5; s.salvage = Array.from({ length: 40 }, () => ({ name: 'Scrap', virus: 't', seed: 0 }));
+    s.recipes = [recipeId(id)]; s.server.credits = 1e5; s.components = 40;
     const n = (s.stash || []).length;
     command(s, `compile ${id}`);
     assert.equal((s.stash || []).length, n + 1, `compile ${id}`);
@@ -806,7 +816,7 @@ test('compile <recipe> <slot>: you pick the slot the protocol compiles into; Imp
   command(s, 'developer level 5');
   s.server.credits = 100000;
   s.recipes = ['recipe:crit'];
-  for (let i = 0; i < 200; i++) s.salvage.push({ name: 'x' });
+  s.components = 200;
   for (const slot of ['exploit', 'proxy', 'shell', 'script']) {
     command(s, `compile crit ${slot}`);
     assert.equal(groupOf(s.stash.at(-1)), slot, slot);

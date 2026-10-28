@@ -306,7 +306,7 @@ test('crafting a filter: a Tuned one at your level, built around the stat you pi
   assert.equal(c.sigs, undefined, 'no signatures');
   assert.ok(c.code.worm > 0 && c.code.kernel > 0 && c.code.cipher > c.code.worm, 'Cipher, and a unit of each code');
   command(s, 'filter craft grind');
-  assert.equal(filtersOf(s).length, 0, 'not without salvage');
+  assert.equal(filtersOf(s).length, 0, 'not without components');
   command(s, 'developer salvage 4');
   command(s, 'filter craft grind');
   assert.equal(filtersOf(s).length, 0, 'not without its recipe');
@@ -316,7 +316,7 @@ test('crafting a filter: a Tuned one at your level, built around the stat you pi
   const f = filtersOf(s)[0];
   assert.equal(f.rarity, 'tuned'); assert.equal(f.level, 10);
   assert.ok(f.stats.grind > 0, 'built around the stat you picked');
-  assert.equal(s.server.credits, 0); assert.deepEqual([s.materials.cipher, s.materials.worm, s.materials.kernel], [0, 0, 0]); assert.equal(s.salvage.length, 0);
+  assert.equal(s.server.credits, 0); assert.deepEqual([s.materials.cipher, s.materials.worm, s.materials.kernel], [0, 0, 0]); assert.equal(s.components, 0);
   s.server.credits = c.credits; s.materials.cipher = c.code.cipher; command(s, 'developer salvage 4');
   command(s, 'filter craft grind');
   assert.equal(filtersOf(s).length, 1, 'not without the Worm and Kernel');

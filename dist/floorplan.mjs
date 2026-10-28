@@ -59,7 +59,8 @@ import { logSet } from './genome.mjs';
 import { weightOf, nativeFloor, PARTS, mechRolls } from './parts.mjs';
 import { deathRecap } from './recap.mjs';
 import { addrsOf, byAddr } from './address.mjs';
-import { PROGRAMS, SOCKET, buildProgram, uninstallProgram, gainComponents, familyComponents, programCost, buildBlock as programBlock, costLine as programCostLine, codebasesOf } from './sockets.mjs';
+import { gainComponents } from './salvage.mjs';
+import { PROGRAMS, SOCKET, buildProgram, uninstallProgram, programCost, buildBlock as programBlock, costLine as programCostLine, codebasesOf } from './sockets.mjs';
 import { PUZZLES, PUZZLE_KINDS, isPuzzle, newPuzzle, puzzleMove, puzzleScore, puzzleStarted, cellOf, boardLines, moveLine } from './puzzles.mjs';
 
 // ---------- tuning ----------
@@ -1132,7 +1133,7 @@ export function act(s, verb, arg = null, opts = {}) {
     if (!socketOpen(s, here)) deny(s, 'Clear the socket first.');
     else if (socketOff(s, here)) deny(s, WORLD.view?.offNote?.(s, here) || 'This socket is offline.');
     else if (!arg) say(s, buildLines(s, here).join('\n'), 'rooms-out');
-    else { const id = progId(arg); if (buildProgram(s, R, here, id, opts.pay ?? null)) clear(s, here); }
+    else { const id = progId(arg); if (buildProgram(s, R, here, id)) clear(s, here); }
     return out(s, first);
   }
   if ((verb === 'uninstall' || verb === 'remove') && isSocket(s, here)) { uninstallProgram(s, R, here); return out(s, first); }
@@ -1253,7 +1254,7 @@ function finishPuzzle(s, room, b, opts = {}) {
   if (room.kind === 'sweep' && sc.found) { const c = cache(), k = (sc.found / sc.caches) * P.cache * (1 + P.budget * sc.left); pay.credits = Math.round(c.credits * k); pay.code = Math.max(1, Math.round(c.code * k)); }
   if (room.kind === 'chase' && won) { const c = cache(); pay.credits = Math.round(c.credits * P.trail); pay.code = Math.max(1, Math.round(c.code * P.trail)); }
   if (R.world) ask('puzzlePay', s, room, { ...pay, won }); // into the pack (credits, code), components at once, and a won board's set roll (netrooms.mjs)
-  else { R.credits += pay.credits; s.server.credits += pay.credits; if (pay.code) gainCode(s, { [pay.material]: pay.code }, `${room.path}: `); if (pay.parts) gainComponents(s, pay.parts, null, room.path); }
+  else { R.credits += pay.credits; s.server.credits += pay.credits; if (pay.code) gainCode(s, { [pay.material]: pay.code }, `${room.path}: `); if (pay.parts) gainComponents(s, pay.parts); }
   const xp = won ? Math.round(deedXpFor(s, L, P.xp)) : 0; // a board takes minutes: it pays like the fights it stands in for
   if (xp) gainXp(s, xp, `${room.path} solved`, 'intel');
   // A won board deep down may hold one of its floor's uniques (combat.mjs puzzleUnique): into the pack, as a vault's item.
@@ -1503,25 +1504,23 @@ hooks.roomEnd = (s, result) => {
   revealSecret(s, room); // a hidden room beside it opens (a Ghostroot server's: addSecret)
   if (R.at === room.id && !R.screen) stood(s, room);
 };
-// A nest's kill: a cache's worth of components, the Crawler's own and the server's family's (straight into your stock).
+// A nest's kill: a cache's worth of components (straight into your stock).
 function nestPay(s, room) {
-  const n = ROOMS.nest.parts, pool = [...familyComponents('crawler'), ...familyComponents(lineOf(serverFamily(s)))];
-  gainComponents(s, n, pool, room.path);
+  const n = ROOMS.nest.parts;
+  gainComponents(s, n);
   emit(s, 'loot', `The nest gives up ${n} components.`, { harvest: n });
 }
-const serverFamily = (s) => roomList(s).find((x) => x.family && FAMILIES[x.family])?.family || 'worm';
-const lineOf = (f) => (FAMILIES[f] ? f : 'worm');
 // XP the playtest character has earned in all (its level's bars and what's in the current one): the server card's
 // count is the difference since you started.
 export const xpTotal = (s) => { const h = hackerOf(s); let n = h.xp; for (let l = 1; l < h.level; l++) n += xpToNext(l); return n; };
 export const xpEarned = (s) => xpTotal(s) - (s.rooms?.xpStart ?? xpTotal(s));
 // What a kill in a fight room pays besides its own drops: an elite's one more component, a Harvester's one more (each
-// from the part you broke last), a Code Siphon's 3 of the server's code (into the pack on the network).
+// once a part that drops them broke), a Code Siphon's 3 of the server's code (into the pack on the network).
 function programsPay(s, room, e) {
   const R = s.rooms, last = e.lastLoot;
   const elite = !!e.virus.elite || ['elite', 'guard'].includes(e.rooms?.size);
   const more = (elite ? 1 : 0) + (runs(s, 'harvester') ? 1 : 0);
-  if (last && more) { gainComponents(s, more, [last], e.virus.name); emit(s, 'loot', `${last} ×${more} recovered${runs(s, 'harvester') ? ' (Harvester)' : ''}.`, { harvest: more }); }
+  if (last && more) { gainComponents(s, more); emit(s, 'loot', `+${more} component${more > 1 ? 's' : ''}${runs(s, 'harvester') ? ' (Harvester)' : ''}.`, { harvest: more }); }
   if (runs(s, 'siphon') && FIGHTS.includes(room.kind)) {
     const material = R.code || serverCodeOf(s), n = SOCKET.siphon;
     if (R.world && s.run) s.run.pack.push({ path: `${room.path}/#siphon-${s.serial}`, name: `${material}.code`, kind: 'code', material, amount: n });
@@ -1628,8 +1627,7 @@ export function roomsCommand(s, text) {
   if (['talk', 'read', 'take'].includes(word) && R.at && R.world) return act(s, word, arg || null); // a thread's room (threads.mjs): talk, talk 1, read
   if (word === 'sweep' && R.at && R.world && hereOf(s)?.log === 'sweep') return act(s, 'sweep', arg || null); // a process log's answer (a temporary server's)
   if (['build', 'install', 'plant', 'uninstall', 'remove'].includes(word) && R.at) {
-    const i = arg.indexOf(' pay '), what = i < 0 ? arg : arg.slice(0, i), pay = i < 0 ? null : arg.slice(i + 5);
-    return act(s, word === 'remove' ? 'uninstall' : word, what || null, { pay }); // install: a contract's item here, else a program (act)
+    return act(s, word === 'remove' ? 'uninstall' : word, arg || null); // install: a contract's item here, else a program (act)
   }
   if (word === 'developer' && rest[0] === 'bossrule') { setBossRule(s, rest[1]); return out(s, first); }
   if (word === 'developer' && rest[0] === 'exfil') { // with ?dev (app.js): an Exfil now, cooldown or not
