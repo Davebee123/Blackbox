@@ -171,8 +171,7 @@ are first guesses for the harness to tune.
   Phantom and pushed the Herder and the Payload under their solo band (balance.test.mjs). The breach build keeps casts
   only. The SIGINT key's state line shows a pip a tell, struck through when SIGINT
   won't be ready in time. The planner SIGINTs the open tell when it costs more than every other live one SIGINT could
-  stop, counting one whose part a cut can still reach as cheap and one whose window hasn't opened at half its price
-  (`TELL.weigh.later`), and cuts first when a cut answers it. In a crew it saves nothing: every bar has a SIGINT. WHEN chip
+  stop, counting one whose part a cut can still reach as cheap, and cuts first when a cut answers it. In a crew it saves nothing: every bar has a SIGINT. WHEN chip
   *dearer* (rule tier, 2 RAM); preset *SIGINT the dearer* (*dearer → SIGINT*), which replaces *SIGINT the cast*.
   `node solved.mjs rules` (32 wild fights with a charge and a cast): **a fixed rule wins.** At 18 *every cast* and
   *only charges* stay within 3 points of the planner on every class; at 30 *every cast* loses 6 on the Bastion, *only

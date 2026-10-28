@@ -929,9 +929,8 @@ export const TELL = {
   read: { xp: 0.1, xpMax: 0.4, rolls: 1, min: 2 },
   bots: { answer: true }, // sim switch (balance.mjs): a bot that plays as if it can't see tells
   // How the planner weighs a seal (tells.mjs sealStrip), in ◆ on the board: what a seal that lands at full share takes
-  // from you (your ◆ and shield, Corrupted) counts as sealYou ◆, and a strip command must save sealCmd ◆. How it
-  // weighs SIGINT (tells.mjs sigintNow): a tell whose window hasn't opened counts at `later` of its price.
-  weigh: { sealYou: 3, sealCmd: 1.5, later: 0.5 },
+  // from you (your ◆ and shield, Corrupted) counts as sealYou ◆, and a strip command must save sealCmd ◆.
+  weigh: { sealYou: 3, sealCmd: 1.5 },
   sim: { only: null }, // sim switch (genesim.mjs): only the tells of these genes (tells.mjs plannedTells)
 };
 // The library. part: the fixed part it sits on ('special', the family's signature part; 'basic'; or a part id),
