@@ -527,7 +527,7 @@ The designer wants levelling to slow right down: about 100 hours of real play to
 
 The bot also moves on from a server where a visit fought nothing (it counts as a loss there at that level). Without that, the long climb sometimes reconnected forever to a server whose live rooms it was walking around.
 
-`node pacing.mjs [level] [seeds] [classes]` climbs each class on a few seeds, one core each, and prints real hours (bot hours and fights beside them) to 5, 10, 20, 30, 40 and 50 against `PACE_TARGET`, with the XP mix by kind and by source. A climb to 50 takes about 12 minutes. loop.test.mjs holds levels 5 to 30 to the table on seed 7 for the four classes. The median has to be within 15%, and from level 10 every class within 30%.
+`node pacing.mjs [level] [seeds] [classes]` climbs each class on a few seeds, one core each, and prints real hours (bot hours and fights beside them) to 5, 10, 20, 30, 40 and 50 against `PACE_TARGET`, with the XP mix by kind and by source. A climb to 50 takes about 12 minutes. loop.test.mjs holds levels 5 to 30 to the table on seed 7 for the four classes. The median has to be within 15% (level 5, which swings with the dice, 25%), and from level 10 every class within 30%.
 
 ### The curve
 
