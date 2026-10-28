@@ -150,6 +150,13 @@ are first guesses for the harness to tune.
   Bomb at 6 Integrity, and with the best switch cycle chosen afterwards per fight, the planner gains under 5 on every
   class but one at one level. The tempo the Zip Bomb costs and the interrupt ticks the blast spends off-cycle outweigh
   it. Open for the designer: a cheaper Zip Bomb, a bigger blast, or a blast that also cuts.
+- **After the merge: the blast cuts** (the harder choice). What each part has due on the cycle the fuse runs out is cut
+  (interrupt.mjs `blastCut`: an attack cancelled, a charge called off, a cast or a seal stopped), and the blast spends no
+  interrupt tick. *Blast pays* also holds when the blast would cut a charge or a cast your own cuts can't reach (its part
+  has no tick left, or 2 ◆ or more) that costs more than the blast (order.mjs `blastCuts`). The rules test still finds
+  always last as good as the planner at 10 and 18 (planner / early / last, Signal lost, at 10: Breaker 15/21/15, Bastion
+  20/31/13, Infiltrator 25/56/25, Operator 13/36/14; at 18: 23/50/24, 16/60/16, 33/40/19, 14/51/14): the planner cuts
+  most charges itself, so the blast rarely saves what nothing else would. Open for the designer's play.
 
 ### 3.4 The Lockbox: held, not lost
 

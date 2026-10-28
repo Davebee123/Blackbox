@@ -27,7 +27,7 @@ import { consortiumWon } from './consortium.mjs';
 import { rollRogue, rogueKill } from './rogue.mjs';
 import { raidStart, raidLand, raidCycle, raidShield, raidBroke, raidTaken, raidAbsorb, noteDealt, noteHeal, cleanse, attackTarget, sigint, sigintCheck } from './raid.mjs';
 import { tellStart, tellCycle, tellLand, tellBroke, chargeNow, tellIntents, tellSigint, tellSigintCheck, tellOn, tellsOf, overclockMult, hotCharge } from './tells.mjs';
-import { prepareTicks, onHit as tickHit, BOSS_RULES } from './interrupt.mjs';
+import { prepareTicks, onHit as tickHit, blastCut, BOSS_RULES } from './interrupt.mjs';
 import { TELL, ROOM_FAMILIES, DAMPER_KINDS, floorFor, partGenesFor } from './data.mjs';
 import { tickRoot, processWon } from './root.mjs';
 import { firewallCommand, wear, raidShare } from './firewall.mjs';
@@ -4253,7 +4253,8 @@ function cycleStart(s) {
 
   // A Zip Bomb's fuse runs out, on both sides (docs/puzzle-levers.md 3.3): 20% of your max, unless a ◆ or a shield
   // takes it (Block doesn't); then every part of the virus loses a ◆ and takes its share of its own max (blastOf),
-  // through ◆. A blast that breaks the last part wins the fight.
+  // through ◆, and what each has due this cycle is cut (interrupt.mjs blastCut). A blast that breaks the last part wins
+  // the fight.
   for (const z of parts(s).filter((x) => x.fuseAt && x.fuseAt <= e.cycle && !x.fused)) {
     z.fused = true;
     const n = Math.max(1, Math.round(defender(s).max * CONFIG.zipbomb.share));
@@ -4269,6 +4270,7 @@ function cycleStart(s) {
     if (hitBy.length) emit(s, 'phase', `The blast hits the virus too: every part loses a ◆ and ${Math.round(CONFIG.zipbomb.parts * 100)}% of its max.`, { source: z.id, blast: true });
     for (const x of hitBy) {
       if (!alive(x)) continue; // broken by the blast already (a part's own rule on breaking)
+      blastCut(s, x, z.name);
       if (x.armor > 0) { x.armor--; if (!x.armor) x.patchAt = e.cycle + patchDelay(s); }
       hit(s, x, blastOf(x), { by: `${z.name} blast`, server: true, pierce: true, blast: true });
     }

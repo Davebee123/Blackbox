@@ -105,6 +105,23 @@ test('Zip Bomb: when the fuse runs out every part of the virus loses a ◆ and i
   assert.equal(blastOf(rest[0]), Math.round(rest[0].max * CONFIG.zipbomb.parts));
 });
 
+test('Zip Bomb: the blast cuts what each part has due as it lands, and spends no interrupt tick', () => {
+  const s = fight({ gene: 'zipbomb', family: 'worm', level: 18 }), z = lever(s, 'fuse');
+  still(s);
+  const rest = livingParts(s).filter((p) => p !== z), q = rest.find((p) => p.attack);
+  Object.assign(z, { armor: 0, integrity: 1 });
+  step(s, `spike ${z.id}`);
+  q.attack.due = z.fuseAt; // its attack lands on the cycle the fuse runs out
+  const n = q.attack.n || 0, ticks = (q.ticks || []).filter((t) => t.spent).length, hp = () => s.server.integrity;
+  step(s);
+  const before = hp(), ev = step(s);
+  assert.ok(ev.some((x) => x.type === 'cut' && x.blast && x.target === q.id), 'a blast cut on its part');
+  assert.equal(q.attack.n, n + 1, 'its attack is cancelled, its schedule going on as if it had landed');
+  assert.ok(!ev.some((x) => x.type === 'server-hit' && x.source === q.id), 'it lands nothing on you');
+  assert.equal((q.ticks || []).filter((t) => t.spent).length, ticks, 'no tick spent');
+  assert.ok(before - hp() > 0, 'the blast itself still lands on you');
+});
+
 test('Zip Bomb: a blast that breaks the last part wins the fight; a ◆ of yours still takes your share', () => {
   const s = fight({ gene: 'zipbomb', family: 'worm', level: 18 }), z = lever(s, 'fuse');
   still(s);

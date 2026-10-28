@@ -5,11 +5,14 @@
 //   loudWins(s)     the Tripwire: breaking it now and then the others loud (they take more and drop their ◆) ends them no
 //                   later within CONFIG.tripwire.window cycles, and costs you no more on the way, than leaving it: a race
 //                   you win
-//   blastPays(s)    the Zip Bomb: its blast would break a part, and a ◆ or a shield of yours covers the fuse
+//   blastPays(s)    the Zip Bomb: its blast would break a part with a ◆ or a shield of yours covering the fuse, or cut
+//                   a charge or a cast dearer than the blast (blastCuts)
 //   cashIn(s)       the Lockbox: half of what it holds breaks its partner the moment it breaks
 //   heldOf(s, p)    what a Lockbox holds, for which partner, and what lands when it breaks
 //   race(s, list, n)  your next n cycles played out on a list of parts, one at a time in order: whether they all break
-import { ABILITIES, CONFIG } from './data.mjs';
+import { ABILITIES, CONFIG, TELL } from './data.mjs';
+import { tellsOf, tellNext, tellPrice } from './tells.mjs';
+import { nextTick } from './interrupt.mjs';
 import { livingParts, part, alive, frozenNow, usable, readyIn, cooldownOf, previewDamage, defender, blastOf, scaled, ignoresArmor, attackAmount, toIntent, intents } from './combat.mjs';
 
 const others = (s, p) => livingParts(s).filter((x) => x !== p && x.kind === 'system' && !frozenNow(s, x));
@@ -135,15 +138,28 @@ export function blastBreaks(s, z = zipOf(s)) {
   if (!z) return [];
   return livingParts(s).filter((x) => x !== z && !frozenNow(s, x) && x.integrity <= Math.floor(blastOf(x) * (x.loud ? CONFIG.tripwire.taken : 1)));
 }
-// Blast pays: the Zip Bomb breaks this cycle (one hit of yours does it), its blast would break another part (its bar under
-// the bite) when the fuse runs out, and a ◆ or a shield of yours covers the fuse.
+// What its blast would cut (interrupt.mjs blastCut): the told charges and casts on the other parts due on the cycle the
+// fuse runs out (a cast anywhere in its window) that a cut of yours can't reach, with what each would cost you
+// (tells.mjs tellPrice).
+export function blastCuts(s, z = zipOf(s)) {
+  if (!z) return [];
+  const at = z.fuseAt || s.encounter.cycle + CONFIG.zipbomb.fuse;
+  return (tellsOf(s)?.list || []).filter((t) => t.told && ['charge', 'cast'].includes(t.kind) && t.part !== z.id && alive(part(s, t.part)) && !part(s, t.part).core)
+    .filter((t) => { const n = tellNext(s, t); return t.kind === 'cast' ? at <= n && at >= n - TELL.castWindow + 1 : n === at; })
+    .filter((t) => { const q = part(s, t.part); return !nextTick(q) || (q.armor || 0) >= 2; }) // only what a cut of yours can't reach: no tick left, or too much ◆
+    .map((t) => ({ t, price: tellPrice(s, t)?.signal ?? 0 }));
+}
+// Blast pays: the Zip Bomb breaks this cycle (one hit of yours does it), and when the fuse runs out its blast would break
+// another part (its bar under the bite) with a ◆ or a shield of yours covering the fuse, or cut a charge or a cast that
+// would cost you more than the blast does (all of it uncovered, nothing covered).
 export function blastPays(s) {
   const z = zipOf(s);
   if (!z || !alive(z) || !others(s, z).length) return null;
-  const breaks = blastBreaks(s, z);
-  if (!breaks.length || race(s, [{ p: z, loud: false }], 1) !== 1) return null;
-  const cover = coverFor(s);
-  return cover ? { part: z, breaks, cover } : null;
+  const breaks = blastBreaks(s, z), cuts = blastCuts(s, z);
+  if ((!breaks.length && !cuts.length) || race(s, [{ p: z, loud: false }], 1) !== 1) return null;
+  const cover = coverFor(s), saved = cuts.reduce((n, x) => n + x.price, 0);
+  if (breaks.length && cover) return { part: z, breaks, cuts, cover };
+  return cuts.length && saved > (cover ? 0 : biteOf(s)) ? { part: z, breaks, cuts, cover } : null;
 }
 
 // ---------- the Lockbox: held, not lost ----------
