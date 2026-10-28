@@ -338,7 +338,9 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
     const push = L >= bandOf(floorsOf(s).reached + 1)[0] && !canDescend(s);
     const scout = (push || !todo) && s.locations.filter((l) => !l.rogue && !l.member && l.slot && l.depth === floorsOf(s).reached && open(l) && !l.floorplan?.mapped && deep(l) && l.level <= L + 2 && (losses[l.id + '@' + L] || 0) < 6).sort((a, b) => deep(b) - deep(a))[0]; // the way forward: it tries harder (the rooms that beat it twice are walked around)
     // A server you hold, its rooms respawned (rotations before R1): their clears climb its Root (root.mjs, 2.8).
-    const respawned = (l) => { const R = l.floorplan; return R ? Object.values(R.graph.rooms).filter((x) => FP.FIGHTS.includes(x.kind) && x.kind !== 'core' && R.down[x.id] != null && t >= R.down[x.id] + FP.ROOMS.respawn[x.kind === 'guard' ? 'guard' : x.kind === 'elite' ? 'elite' : 'process'] * 60000).length : 0; };
+    // With the reboot on (FP.ROOMS.reboot), they come back together once its reboot has run.
+    const back = (R, x) => (FP.ROOMS.reboot.on ? R.rebootAt != null && t >= R.rebootAt && R.down[x.id] < R.rebootAt : t >= R.down[x.id] + FP.ROOMS.respawn[x.kind === 'guard' ? 'guard' : x.kind === 'elite' ? 'elite' : 'process'] * 60000);
+    const respawned = (l) => { const R = l.floorplan; return R ? Object.values(R.graph.rooms).filter((x) => FP.FIGHTS.includes(x.kind) && x.kind !== 'core' && R.down[x.id] != null && back(R, x)).length : 0; };
     const rot = s.locations.filter((l) => (procOf(l, t) && procOf(l, t).level <= L + 3) || (l.floorplan && l.takenOver && !l.member && (l.root?.level || 1) < 5 && (l.level || 1) >= L - 3 && respawned(l) >= 3)).filter((l) => open(l) && (losses[l.id + '@' + L] || 0) < 2).sort((a, b) => (b.level || 1) - (a.level || 1))[0];
     const rogue = s.locations.filter((l) => l.rogue && !l.farm && open(l) && l.level <= L + 2 && l.level >= L - 3 && (losses[l.id + '@' + L] || 0) < 2).sort((a, b) => b.level - a.level)[0];
     const hunt = contracts && stats.bountyLosses < 2 && openContracts(s).some((c) => c.type === 'bounty' && !c.got);
