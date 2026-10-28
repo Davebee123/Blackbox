@@ -1916,16 +1916,15 @@ let lossHold = false;
 function render(force = false) {
   if (lossHold) return;
   // A step into the next room: a hop on the traceroute (floorplan-view.mjs) and, on the rooms page, you travel its trace
-  // as code (travelfx.mjs; ?travel= picks the look while the designer chooses). The hunter's step plays the same way, in
-  // red, when you see it before or after it. A step that starts a fight goes straight to the fight; Screen effects off
+  // as code (travelfx.mjs). The hunter's step travels its trace too, in red, when you see it before or after it. A step that starts a fight goes straight to the fight; Screen effects off
   // or Motion off, no travel.
   {
     const R = campaign.rooms, visit = R ? `${R.id}:${R.visits}` : null, at = R?.at || null, h = FP.hunterOf(campaign), hAt = h && !h.down ? h.at : null, hSeen = !!hAt && FP.hunterSeen(campaign, h);
     const was = fpWas.visit === visit ? fpWas : {}, play = module === 'rooms' && canMove() && fxLevel() !== 'minimal';
     const paths = (a, b) => ({ wide: stepPath(campaign, a, b, false), tall: stepPath(campaign, a, b, true) });
     if (at && was.at && at !== was.at && stepPath(campaign, was.at, at, false)) traceHop(campaign, was.at, at); // the traceroute (floorplan-view.mjs)
-    if (play && at && was.at && at !== was.at) playTravel(paths(was.at, at), params.get('travel') || 'bits');
-    if (play && hAt && was.hAt && hAt !== was.hAt && (hSeen || was.hSeen) && FP.seenOf(campaign, hAt) && FP.seenOf(campaign, was.hAt)) playTravel(paths(was.hAt, hAt), 'hunt', 'hunter');
+    if (play && at && was.at && at !== was.at) playTravel(paths(was.at, at));
+    if (play && hAt && was.hAt && hAt !== was.hAt && (hSeen || was.hSeen) && FP.seenOf(campaign, hAt) && FP.seenOf(campaign, was.hAt)) playTravel(paths(was.hAt, hAt), 'hunter');
     // Rooms you've just seen or just discovered resolve on the map (floorplan.css .resolve), never the map you connect to.
     const seen = R ? { ...R.seen } : {};
     if (fpWas.visit !== visit) fpFresh = [];

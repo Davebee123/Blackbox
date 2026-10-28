@@ -178,11 +178,10 @@
 /* a step between rooms (travelfx.mjs): you travel the trace as teal code, then a scan line loads you into the room */
 .fp-travel { pointer-events: none; }
 .fp-travel text { font-size: 9px; font-weight: 600; fill: var(--you); filter: drop-shadow(0 0 2px var(--you)); }
-.fp-travel-lit { fill: none; stroke: var(--you); stroke-width: 2.4; stroke-linecap: round; filter: drop-shadow(0 0 3px var(--you)); }
-.fp-travel-head { fill: #eafffb; filter: drop-shadow(0 0 4px var(--you)); }
 .fp-travel-scan { stroke: var(--you); stroke-width: 1.4; opacity: 0; filter: drop-shadow(0 0 3px var(--you)); }
-.fp-travel.hunt .fp-travel-lit { stroke: var(--hot); stroke-width: 2; filter: drop-shadow(0 0 3px var(--hot)); }
-.fp-travel.hunt .fp-travel-head { fill: #ffb4a0; filter: drop-shadow(0 0 4px var(--hot)); }
+/* the hunter's step, when you see it: a glitching red head drags a lit trace */
+.fp-travel-lit { fill: none; stroke: var(--hot); stroke-width: 2; stroke-linecap: round; filter: drop-shadow(0 0 3px var(--hot)); }
+.fp-travel-head { fill: #ffb4a0; filter: drop-shadow(0 0 4px var(--hot)); }
 /* the server's own traffic (traffic.mjs): faint gray packets on traces you aren't on; a Mailhub's are envelopes */
 .fp-pkt { fill: var(--gray); pointer-events: none; }
 .fp-pkt.heavy { fill: #8d8778; }

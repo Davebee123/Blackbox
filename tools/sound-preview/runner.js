@@ -3,11 +3,10 @@ import { SR, seed, kit, loadSamples, USED } from './lib.js';
 import { GROUPS } from './clips.js';
 import { GROUPS2 } from './clips2.js';
 import { GROUPS3 } from './clips3.js';
-import { GROUPS4 } from './clips4.js';
 import { renderBoard } from '/dist/sound.mjs';
 import * as soundtrack from '/dist/soundtrack.mjs';
 
-const ALL = [[1, GROUPS], [2, GROUPS2], [3, GROUPS3], [4, GROUPS4]].flatMap(([set, G]) => Object.entries(G).flatMap(([g, l]) => l.map((c) => ({ ...c, group: g, set }))));
+const ALL = [[1, GROUPS], [2, GROUPS2], [3, GROUPS3]].flatMap(([set, G]) => Object.entries(G).flatMap(([g, l]) => l.map((c) => ({ ...c, group: g, set }))));
 // Offline rendering must not have nodes torn down by the live-game cleanup timers.
 window.setTimeout = () => 0;
 
