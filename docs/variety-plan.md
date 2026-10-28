@@ -118,8 +118,8 @@ it before its upload completes, `e.escapeAt`). Four more, each something a serve
 
 **One trick a fight.** From level 6, every ordinary fight carries exactly one *lever*: a part whose rule makes the
 obvious move the wrong one (the Tripwire, the Zip Bomb, the Mimic, the Lockbox…; docs/puzzle-levers.md 5). With an
-objective on half the fights, the question is whether those fights also bring a lever. **Recommendation: an objective
-takes the lever's place.** The objective is that fight's trick, and a fight with both an objective and a lever reads
+objective on half the fights, the question is whether those fights also bring a lever. **Decided (the designer: try it): an
+objective takes the lever's place.** The objective is that fight's trick, and a fight with both an objective and a lever reads
 busy. The other half of fights keep their lever, so nothing about the puzzles is lost.
 
 ## 3. The collection log (C)
@@ -161,7 +161,7 @@ guard components, a socket wants a server's own, and a hidden room's relay gives
   becomes "it drops components 25% more often".
 - A save's pile becomes its count, so nothing is lost.
 - The family codes (Cipher, Worm and Kernel code, and Exploits) stay as they are. They pay for protocols and payloads,
-  not parts. Collapsing them too is a separate question (section 5).
+  not parts. The designer keeps them.
 
 This comes before the collection log, so the log never lists components.
 
@@ -218,18 +218,16 @@ push.*
 screenshots, and build the picked one. Add Backup and Clean run to objectives.mjs, with a unit test each and the docs.
 Full suite once at the end, then push.*
 
-## 6. Answers so far, and what's still open
+## 6. The designer's answers
 
-**Answered by the designer:**
 - The eleven pairings stand.
 - Strains spread their parts to adjacent viruses (1.2).
 - Objectives appear in one fight room in two.
 - The bonus is drop chance, XP and components.
 - The Backup gets its own look.
 - The log leaves daemons out (they have their own) and covers uniques and sets.
-- Part components become one currency.
+- Part components become one currency. The family codes (Cipher, Worm and Kernel code, Exploits) stay as they are.
+- An objective takes the lever's place in its fight (try it, and see how it plays).
+- The mutated strains (1.3) are a third wave, with their eleven pairings.
 
-**Still open:**
-1. **Levers:** does an objective take the lever's place in its fight (the recommendation in section 2)?
-2. **Mutated strains (1.3):** keep this third wave, and its eleven pairings?
-3. **Family codes:** collapse Cipher, Worm and Kernel code into one as well, or keep them?
+Nothing is open. A session asks the designer only where its own section says to show options.
