@@ -57,7 +57,24 @@ import { sweepBlock } from './view.mjs';
 
 // The pop-up's state, a view (never saved): the room you clicked, and where you stood when you clicked it (a step
 // or a wait drops it), and the decision you closed (it stays closed until a new one comes up).
-export const fpUi = { sel: null, selAt: null, closed: null };
+export const fpUi = { sel: null, selAt: null, closed: null, trail: { visit: null, hops: [] } };
+// The traceroute (app.js calls traceHop on each step you take): the last few hops of this visit at the map's foot,
+// each with its latency. A few ms, more on an Archive's cold storage, and it climbs when the hunter is within two rooms
+// of where you stepped (out of sight too: the map already pulses red for that).
+export const TRACE = { show: 3, base: 4, spread: 9, archive: 9, near: [26, 21, 10] }; // ms by the hunter's distance: 0, 1, 2
+export function traceHop(s, from, to, ui = fpUi) {
+  const R = s.rooms, visit = `${R.id}:${R.visits}`, h = hunterOf(s), g = R.graph;
+  if (ui.trail?.visit !== visit) ui.trail = { visit, hops: [] };
+  const d = h && !h.down ? distOf(g, to, h.at) : null, n = (ui.trail.hops.at(-1)?.n || 0) + 1;
+  const ms = TRACE.base + (hashOf(`${visit}:${n}:${to}`) % TRACE.spread) + (R.kind === 'Archive' ? TRACE.archive : 0) + (d != null && d <= 2 ? TRACE.near[d] : 0);
+  ui.trail.hops = [...ui.trail.hops, { n, from: addrOf(s, from), to: addrOf(s, to), ms, hot: d != null && d <= 2 }].slice(-TRACE.show);
+}
+function traceMarkup(s, ui) {
+  const R = s.rooms;
+  if (!R.at || ui.trail?.visit !== `${R.id}:${R.visits}` || !ui.trail.hops.length) return '';
+  const hops = ui.trail.hops, tip = 'Traceroute: your route through this server, one hop for each step you take, and how long it took.\n▸ The latency climbs when the hunter is near.';
+  return `<div class="fp-trace" title="${esc(tip)}">${hops.map((x, i) => `<div class="hop${i === hops.length - 1 ? ' last' : ''}" style="--age:${hops.length - 1 - i}"><span class="n">hop ${x.n}</span><span>${esc(x.from)} → ${esc(x.to)}</span><span class="ms${x.hot ? ' hot' : ''}">${x.ms} ms</span></div>`).join('')}</div>`;
+}
 const icon = (name) => `style="--icon:url('ui/icons/${name}.svg')"`;
 const now = () => Date.now();
 const fightKind = (room) => ['process', 'elite', 'guard', 'core', 'socket', 'nest'].includes(room.kind);
@@ -278,6 +295,27 @@ const n1 = (v) => +v.toFixed(1);
 // A chip's outline: a rectangle with its corners cut.
 const chipPts = (x, y, hw, hh, c) => [[x - hw + c, y - hh], [x + hw - c, y - hh], [x + hw, y - hh + c], [x + hw, y + hh - c], [x + hw - c, y + hh], [x - hw + c, y + hh], [x - hw, y + hh - c], [x - hw, y - hh + c]].map(([a, b]) => `${n1(a)},${n1(b)}`).join(' ');
 const hashOf = (str) => { let x = 7; for (const c of str) x = (x * 31 + c.charCodeAt(0)) % 233280; return x; };
+// A hop's trace bows out; a Tunnel's arc, from the entry to its room, bows a little less.
+const hopD = (p, q) => `M${p.x} ${p.y} Q${n1((p.x + q.x) / 2 + (q.y - p.y) * 0.35)} ${n1((p.y + q.y) / 2 - (q.x - p.x) * 0.35)} ${q.x} ${q.y}`;
+const tunnelD = (e, t) => `M${e.x} ${e.y} Q${n1((e.x + t.x) / 2 + (t.y - e.y) * 0.3)} ${n1((e.y + t.y) / 2 - (t.x - e.x) * 0.3)} ${t.x} ${t.y}`;
+// The trace a step from one room into the next runs along, for the step's effect (travelfx.mjs): its path as the map
+// draws it, whether you walk it backwards (rev), both rooms' centres and a chip's half size. Null when no trace joins them.
+export function stepPath(s, from, to, tall) {
+  const g = s.rooms?.graph;
+  if (!g?.rooms[from] || !g.rooms[to]) return null;
+  const { at, G } = frame(s, tall), hw = G.nw / 2, hh = G.nh / 2, a = at(g.rooms[from]), b = at(g.rooms[to]);
+  const link = linksOf(g).find(([x, y]) => (x === from && y === to) || (x === to && y === from));
+  if (link) {
+    const [x, y] = link, p = at(g.rooms[x]), q = at(g.rooms[y]), hop = (g.hops || []).some(([u, v]) => (u === x && v === y) || (u === y && v === x));
+    return { d: hop ? hopD(p, q) : `M${p.x} ${p.y} L${q.x} ${q.y}`, rev: x !== from, a, b, hw, hh };
+  }
+  const tun = tunnelOf(s);
+  if (tun && ((from === g.entry && to === tun) || (from === tun && to === g.entry))) {
+    const e = at(g.rooms[g.entry]), t = at(g.rooms[tun]);
+    return { d: tunnelD(e, t), rev: from !== g.entry, a, b, hw, hh };
+  }
+  return null;
+}
 function mapSvg(s, tall, pop = null) {
   const R = s.rooms, g = R.graph, { at, G, width, height } = frame(s, tall), here = R.at, h = hunterOf(s);
   const reach = new Set(exits(s).map((x) => x.id)), walked = R.visit?.walked || {};
@@ -293,14 +331,14 @@ function mapSvg(s, tall, pop = null) {
   const lines = linksOf(g).filter(([a, b]) => shown(a) && shown(b)).map(([a, b]) => {
     const p = at(g.rooms[a]), q = at(g.rooms[b]), hop = (g.hops || []).some(([x, y]) => (x === a && y === b) || (x === b && y === a));
     const live = !!here && ((a === here && reach.has(b)) || (b === here && reach.has(a))), fog = !live && (!found(a) || !found(b)), trod = R.at && walked[a] && walked[b];
-    const d = hop ? `M${p.x} ${p.y} Q${n1((p.x + q.x) / 2 + (q.y - p.y) * 0.35)} ${n1((p.y + q.y) / 2 - (q.x - p.x) * 0.35)} ${q.x} ${q.y}` : '';
+    const d = hop ? hopD(p, q) : '';
     const shape = (cls) => (hop ? `<path class="${cls}" d="${d}"/>` : `<line class="${cls}" x1="${p.x}" y1="${p.y}" x2="${q.x}" y2="${q.y}"/>`);
     const out = shape(`fp-bed${beat.has([a, b].sort().join('|')) ? ' beat' : ''}`) + (live ? shape('fp-under') : '') + shape(`fp-link ${fog ? 'fog' : live ? 'live' : trod ? 'walked' : 'seen'}${hop ? ' hop' : ''}`);
     return revealing(s, a) || revealing(s, b) ? `<g class="reveal">${out}</g>` : out; // a hidden room's trace fades in with it
   }).join('');
   // A Tunnel's link to the entry (a program, R2): a dashed amber arc, yours to walk free; the hunter never takes it.
   const tun = tunnelOf(s), tg = tun && shown(tun) && shown(g.entry) ? [at(g.rooms[g.entry]), at(g.rooms[tun])] : null;
-  const tunnel = tg ? `<path class="fp-tunnel" d="M${tg[0].x} ${tg[0].y} Q${n1((tg[0].x + tg[1].x) / 2 + (tg[1].y - tg[0].y) * 0.3)} ${n1((tg[0].y + tg[1].y) / 2 - (tg[1].x - tg[0].x) * 0.3)} ${tg[1].x} ${tg[1].y}"><title>Tunnel: a free step to the entry</title></path>` : '';
+  const tunnel = tg ? `<path class="fp-tunnel" d="${tunnelD(tg[0], tg[1])}"><title>Tunnel: a free step to the entry</title></path>` : '';
   // The hunter's next step: one red dashed arrow, bowed off the trace, from its room into the next; the Exfil's, amber.
   const next = huntStep(s), exfil = exfilShown(s), flee = exfilStep(s);
   let arrow = next ? routeSvg(at(g.rooms[h.at]), at(g.rooms[next]), G, '') : '';
@@ -724,6 +762,6 @@ export function roomsMarkup(s, ui = fpUi) {
   const pop = id ? `<div class="map-pop fp-pop" id="fp-pop" data-pop="${esc(id)}" role="dialog" aria-label="${esc(R.at || id !== R.graph.entry ? (known(s, id) ? labelOf(s, R.graph.rooms[id]) : 'Unknown room') : 'Home')}" style="visibility:hidden"><button type="button" class="btn small map-pop-x" data-fp-pop-close title="Close (Esc)" aria-label="Close">×</button>${popCard(s, id)}</div>` : '';
   return `<div class="fp${R.at ? '' : ' home'}">
     ${sprite()}${hudMarkup(s)}
-    <section class="panel fp-map${pz ? ' pz-on' : ''}" data-pane="map"><div class="fp-scroll">${mapSvg(s, false, id)}${mapSvg(s, true, id)}</div><button type="button" class="btn small fp-zoom" data-fp-zoom title="Fit the server (double-click the map too). Scroll to zoom, drag to pan." aria-label="Fit the server">⤢</button>${pop}${pz}</section>
+    <section class="panel fp-map${pz ? ' pz-on' : ''}" data-pane="map"><div class="fp-scroll">${mapSvg(s, false, id)}${mapSvg(s, true, id)}</div><button type="button" class="btn small fp-zoom" data-fp-zoom title="Fit the server (double-click the map too). Scroll to zoom, drag to pan." aria-label="Fit the server">⤢</button>${traceMarkup(s, ui)}${pop}${pz}</section>
   </div>`;
 }

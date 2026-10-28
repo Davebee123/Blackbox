@@ -63,6 +63,14 @@
 .fp-svg.tall { display: none; }
 .fp-svg.zoomed { cursor: grab; touch-action: none; }
 .fp-zoom { position: absolute; right: var(--s5); top: var(--s5); z-index: 4; min-width: 30px; }
+/* the traceroute (floorplan-view.mjs traceMarkup): the last few hops at the map's foot, older ones dimmer */
+.fp-trace { position: absolute; left: var(--s5); bottom: var(--s4); z-index: 3; display: grid; gap: 2px; font: 10px var(--mono); color: var(--dim); font-variant-numeric: tabular-nums; cursor: help; }
+.fp-trace .hop { display: grid; grid-template-columns: 7ch 9ch 6ch; gap: var(--s3); opacity: calc(1 - var(--age) * 0.3); }
+.fp-trace .hop.last { color: var(--gray); }
+.fp-trace .ms { text-align: right; }
+.fp-trace .ms.hot { color: var(--hot); }
+.fp-map.pz-on .fp-trace { visibility: hidden; }
+@media (max-width: 700px) { .fp-trace { display: none; } }
 /* traces: a dark bed and a thin line */
 .fp-bed { fill: none; stroke: #050302; stroke-width: 9; stroke-linecap: round; }
 .fp-bed.beat { stroke: #260b06; }
@@ -166,6 +174,18 @@
 @keyframes fp-ring { 0% { opacity: 0.9; transform: scale(1); } 100% { opacity: 0; transform: scale(1.18); } }
 @keyframes fp-blink { 50% { opacity: 0.45; } }
 @keyframes fp-bit { 0% { opacity: 0; transform: translate(0, 0); } 15% { opacity: 0.45; } 70% { opacity: 0.2; } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)); } }
+
+/* a step between rooms (travelfx.mjs): you travel the trace as teal code, then a scan line loads you into the room */
+.fp-travel { pointer-events: none; }
+.fp-travel text { font-size: 9px; font-weight: 600; fill: var(--you); filter: drop-shadow(0 0 2px var(--you)); }
+.fp-travel-scan { stroke: var(--you); stroke-width: 1.4; opacity: 0; filter: drop-shadow(0 0 3px var(--you)); }
+/* the hunter's step, when you see it: a glitching red head drags a lit trace */
+.fp-travel-lit { fill: none; stroke: var(--hot); stroke-width: 2; stroke-linecap: round; filter: drop-shadow(0 0 3px var(--hot)); }
+.fp-travel-head { fill: #ffb4a0; filter: drop-shadow(0 0 4px var(--hot)); }
+/* the server's own traffic (traffic.mjs): faint gray packets on traces you aren't on; a Mailhub's are envelopes */
+.fp-pkt { fill: var(--gray); pointer-events: none; }
+.fp-pkt.heavy { fill: #8d8778; }
+.fp-pkt.mail { fill: #15110a; stroke: var(--gray); stroke-width: 0.9; stroke-linejoin: round; }
 
 /* ---- the pop-up: the room you're in, a room you clicked, home ---- */
 .fp-map .fp-pop { z-index: 5; width: 320px; }
@@ -484,6 +504,11 @@
   body:not(.no-motion) .fp-room.reveal, body:not(.no-motion) .fp-svg g.reveal { animation: fp-reveal 1.4s ease-out both; }
 }
 @keyframes fp-reveal { from { opacity: 0; } to { opacity: 1; } }
+/* a room you've just seen or just discovered resolves top to bottom, a line at a time (app.js adds .resolve) */
+@media (prefers-reduced-motion: no-preference) {
+  body:not(.no-motion) .fp-room.resolve { animation: fp-resolve 0.42s steps(8, end) both; }
+}
+@keyframes fp-resolve { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0 0 0 0); } }
 /* A scan's card as the notice (app.js noticeCard): the notice is its frame. */
 .rooms-page .notice .scan-card { margin: 0; padding: 0; border: 0; background: none; white-space: normal; }
 /* SCAN on a room next to you that scan reads (floorplan-view.mjs): on the chip's bottom-right edge, where a down room's
