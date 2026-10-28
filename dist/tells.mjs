@@ -826,10 +826,13 @@ function sigintNow(s, planned = null) {
   // A cut on its part answers it now as well: the cut goes, and SIGINT stays for the other.
   const cut = interruptMove(s, planned);
   if (cut && cut.split(' ')[1] === p.id) return null;
+  // In a crew there's a SIGINT on every bar: nothing to save it for.
+  if (alliesOf(s).length) return t;
   // The dearer one, of what SIGINT would be needed for: another live tell whose part a cut can still reach on its cycle
-  // (a tick left, no more than one ◆ in the way) needs no SIGINT, so it doesn't count against this one.
+  // (a tick left, no more than one ◆ in the way) needs no SIGINT, so it doesn't count against this one, and one whose
+  // window hasn't opened yet counts at TELL.weigh.later of its price (its part may break or be cut first).
   const mine = tellPrice(s, t).signal;
-  return pricedTells(s).every((x) => x.t === t || x.price < mine || cuttable(s, x.p)) ? t : null;
+  return pricedTells(s).every((x) => x.t === t || cuttable(s, x.p) || x.price * (inWindow(s, x.t) ? 1 : TELL.weigh.later) < mine) ? t : null;
 }
 // A part a cut can still reach: the fight has the interrupt, the part has a tick left and no more than one ◆.
 const cuttable = (s, p) => !!s.encounter.ticked && alive(p) && !p.core && !!nextTick(p) && !((p.armor || 0) > 1) && !(s.encounter.cutBudget != null && s.encounter.cutBudget <= 0);

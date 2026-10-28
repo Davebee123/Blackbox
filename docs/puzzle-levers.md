@@ -143,7 +143,7 @@ are first guesses for the harness to tune.
   (`TELL.sealAfter` 1, was 3), so it lands mid-fight in the Sentinel's short fights. Its cell shows the ◆ it would hand
   out in all, in steel (*+4 ◆*: a partial strip can hand out more than none, since the sealer gains room). The
   planner strips it with its best strip (`bestStrip`) when the commands left before it lands are all it needs and that
-  saves at least a ◆ a command, weighing what it takes from you as 3 ◆ at full share (`TELL.weigh`). WHEN chip *seal
+  saves at least 1.5 ◆ a command, weighing what it takes from you as 3 ◆ at full share (`TELL.weigh`). WHEN chip *seal
   dear* (the sealing part's, rule tier, 2 RAM: it lands within 2 cycles while it wears 2 ◆ or more); preset *Seal
   dear: strip it*. `node solved.mjs rules`: no fixed rule wins at 10, 18 and 30 (the Sentinel at your level, 6
   fights). *Always strip* loses 7 to 30 points on some class at every level, *never strip* (never a ◆ off the sealer
@@ -166,9 +166,13 @@ are first guesses for the harness to tune.
   Extortion and Persistence the extra their part's attacks due in their 4 cycles would deal, Self-Update the Integrity
   it adds (`TELL.grow` 0.25 of each part's current Integrity), turned into Signal at your pace so far for the planner.
   SIGINT stops the open tell that lands first (`sigintTarget`); on a charge it cancels the attack it rides, as a cut
-  does. The breach build keeps casts only. The SIGINT key's state line shows a pip a tell, struck through when SIGINT
+  does. It cuts charges from level 17 (`TELL.sigintChargeFrom`), where a charge and a cast are live together: below
+  it a lone charge took SIGINT every time, a free answer that halved what a fight at 10 cost the Bastions and the
+  Phantom and pushed the Herder and the Payload under their solo band (balance.test.mjs). The breach build keeps casts
+  only. The SIGINT key's state line shows a pip a tell, struck through when SIGINT
   won't be ready in time. The planner SIGINTs the open tell when it costs more than every other live one SIGINT could
-  stop, counting one whose part a cut can still reach as cheap, and cuts first when a cut answers it. WHEN chip
+  stop, counting one whose part a cut can still reach as cheap and one whose window hasn't opened at half its price
+  (`TELL.weigh.later`), and cuts first when a cut answers it. In a crew it saves nothing: every bar has a SIGINT. WHEN chip
   *dearer* (rule tier, 2 RAM); preset *SIGINT the dearer* (*dearer → SIGINT*), which replaces *SIGINT the cast*.
   `node solved.mjs rules` (32 wild fights with a charge and a cast): **a fixed rule wins.** At 18 *every cast* and
   *only charges* stay within 3 points of the planner on every class; at 30 *every cast* loses 6 on the Bastion, *only

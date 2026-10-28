@@ -163,6 +163,7 @@ test('the planner SIGINTs the dearer tell, and cuts or lets land the cheaper one
   const enc = Object.assign(part(s, 'encryptor'), { armor: 5, maxArmor: 5, integrity: 900, max: 900 });
   Object.assign(part(s, 'pulse'), { armor: 0, maxArmor: 0, integrity: 900, max: 900 });
   enc.attack = { name: 'Encrypt', effect: 'damage', amount: 60, interval: 6, due: 999 };
+  s.server.max = s.server.integrity = 400; // a server of a usual size: what a landed tell leaves behind weighs as it would
   const tx = tell(s, 'extortion', 'pulse', 0), tc = tell(s, 'fulldisk', 'encryptor', 1);
   assert.ok(tellPrice(s, tc).signal > tellPrice(s, tx).signal, 'the charge is dearer');
   assert.ok(!dearest(s, tx) && dearest(s, tc));
