@@ -5,7 +5,9 @@
 // won or lost, a puzzle board 2 minutes, a log sweep 1; mail, connecting, resting and gearing are inside the walk.
 // The bot's own clock (12-second cycles, 3 seconds a step, every rest and reconnect wait) runs about 20 times slower
 // on the long climb, so its hours are not a player's. Climbs run in parallel, one per core (`climbs`, for the tests too).
-// node pacing.mjs [targetLevel] [seeds] [classes, comma-separated] [spend: none|topup]
+// The table is a farmer's pace: the bot takes no contracts (contracts: false). Working them is the faster road, about
+// 1.5x the XP an hour (mail.mjs MAIL.xp); `contracts` on shows it.
+// node pacing.mjs [targetLevel] [seeds] [classes, comma-separated] [spend: none|topup] [contracts: off|on]
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
 import { cpus } from 'node:os';
 
@@ -18,24 +20,24 @@ const DEEDS = /first clear|Mapped|taken over|^Root|decoded|solved|first run|vaul
 
 // One climb, summed up: real and bot hours and fights to each level reached, the XP mix (s.xpMix, by kind), the XP by
 // source (kills, deeds, contracts) and the fight mix by level (stats.mix). sprawlOnly: nothing traces past the server
-// wick hands you at level 4 (loop.test.mjs's slow road).
-export async function climb({ cls, seed, target = 50, spend = 'none', sprawlOnly = false }) {
+// wick hands you at level 4 (loop.test.mjs's slow road). contracts: the bot takes and works the board's contracts.
+export async function climb({ cls, seed, target = 50, spend = 'none', sprawlOnly = false, contracts = false }) {
   const { simulate } = await import('./bot.mjs');
   if (sprawlOnly) {
     const { CONFIG } = await import('./dist/data.mjs'), { HIDDEN } = await import('./dist/hidden.mjs');
     CONFIG.leadBase = 0; Object.assign(HIDDEN, { firstClear: 0, recordLead: 0, opens: false });
   }
   const t0 = Date.now();
-  const { s, stats } = simulate({ cls, seed, target, spend });
+  const { s, stats } = simulate({ cls, seed, target, spend, contracts });
   const at = (by) => Object.fromEntries(MILESTONES.filter((L) => by[L] != null).map((L) => [L, by[L]]));
   const xs = Object.entries(stats.xp), sum = (re) => xs.filter(([k]) => re.test(k)).reduce((n, [, v]) => n + v, 0), all = xs.reduce((n, [, v]) => n + v, 0) || 1;
-  const deeds = sum(DEEDS), contracts = sum(/^contract/);
+  const deeds = sum(DEEDS), fromContracts = sum(/^contract/);
   return {
     cls, seed, sprawlOnly, level: stats.level, ms: Date.now() - t0,
     real: Object.fromEntries(Object.entries(at(stats.realAt)).map(([L, m]) => [L, m / 60])),
     bot: Object.fromEntries(Object.entries(at(stats.levelAt)).map(([L, m]) => [L, m / 60])),
     fights: at(stats.fightsAt), wins: stats.wins, losses: stats.losses, puzzles: stats.puzzles,
-    mix: s.xpMix || {}, from: { kills: (all - deeds - contracts) / all, deeds: deeds / all, contracts: contracts / all },
+    mix: s.xpMix || {}, from: { kills: (all - deeds - fromContracts) / all, deeds: deeds / all, contracts: fromContracts / all },
     fightMix: stats.mix || {}, levelAt: stats.levelAt, realAt: stats.realAt, fightsAt: stats.fightsAt,
   };
 }
@@ -61,16 +63,16 @@ export const medianAt = (runs, key, L) => med(runs.map((r) => r[key][L]));
 export const hoursTo = (runs, L) => med([...new Set(runs.map((r) => r.cls))].map((c) => medianAt(runs.filter((x) => x.cls === c), 'real', L)));
 
 async function main() {
-  const [target = '50', nSeeds = '3', clsArg = CLASSES.join(','), spend = 'none'] = process.argv.slice(2);
+  const [target = '50', nSeeds = '3', clsArg = CLASSES.join(','), spend = 'none', con = 'off'] = process.argv.slice(2);
   const classes = clsArg.split(','), seeds = Array.from({ length: +nSeeds }, (_, i) => 7 + i * 13);
-  const jobs = classes.flatMap((cls) => seeds.map((seed) => ({ cls, seed, target: +target, spend })));
+  const jobs = classes.flatMap((cls) => seeds.map((seed) => ({ cls, seed, target: +target, spend, contracts: con === 'on' })));
   const runs = await climbs(jobs, cpus().length, (r) => console.error(`  ${r.cls} seed ${r.seed}: level ${r.level}, ${r.wins + r.losses} fights, ${(r.ms / 1000).toFixed(0)} s`));
   const Ls = MILESTONES.filter((L) => L <= +target);
   const f1 = (x) => (x == null ? '—' : x < 10 ? x.toFixed(1) : x.toFixed(0));
   const pct = (x) => `${(100 * x).toFixed(0)}%`;
   const row = (cells) => `| ${cells.join(' | ')} |`;
   const vs = (h, want) => (h == null ? '—' : `${h >= want ? '+' : ''}${Math.round((100 * (h - want)) / want)}%`);
-  console.log(`\nHours to each level, median of ${seeds.length} seed${seeds.length > 1 ? 's' : ''} (spend: ${spend}). Real play first, the bot's clock in brackets, then fights.\n`);
+  console.log(`\nHours to each level, median of ${seeds.length} seed${seeds.length > 1 ? 's' : ''} (spend: ${spend}, contracts: ${con}). Real play first, the bot's clock in brackets, then fights.\n`);
   console.log(row(['Class', ...Ls.map((L) => `Lv ${L}`)]));
   console.log(row(['---', ...Ls.map(() => '---:')]));
   console.log(row(['Target (real)', ...Ls.map((L) => f1(PACE_TARGET[L]))]));

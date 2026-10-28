@@ -21,7 +21,7 @@
 // lose your Signal while it's in your pack and it's gone, the job with it), defuse (break N Encryptors before they
 // Encrypt), sweep (one visit, every room but the Core, no rest), exfil (catch an Exfil) and heist (a vault's file past a
 // Tracker). No clock: one waits on the board at a time until you take it, outside the five.
-import { FAMILIES, CONFIG, STRAINS } from './data.mjs';
+import { FAMILIES, CONFIG, STRAINS, along } from './data.mjs';
 import { LOOT, MATERIALS, rollItem, seeded } from './gear.mjs';
 import { emit, warn, hackerLevel, serverLevel, gainXp, xpFor, deedXpFor, learnBlueprint, materialsOf, rand, hooks, addLocation, giveUnique, rollDrop, addItem, setDeliver } from './combat.mjs';
 import { zoneOf, zoneRooms } from './zone.mjs';
@@ -53,6 +53,7 @@ export const MAIL = {
   factionPay: 1.2, // they pay a little better than Halcyon, in credits and their own rep (no Indemnity)
   startStanding: 10,
   roomEvery: [8 * 60 * 1000, 20 * 60 * 1000], // a room contract arrives somewhere in here after the last one was taken
+  xp: [[1, 3], [5, 8], [10, 13], [20, 13], [30, 11]], // a contract's XP: its reward.xp (kills' worth at the level it was posted) times this, by that level (straight between its points)
 };
 
 export { FACTIONS }; // the factions live in factions.mjs now (Halcyon is the first of them)
@@ -690,10 +691,11 @@ export function progress(s, c) {
   }
   return { text: '', part: 0 };
 }
+const contractXp = (s, level, c) => xpFor(s, level, c.reward.xp * along(MAIL.xp, level));
 export const rewardLine = (s, c) => [
   `${c.reward.credits} credits`,
   c.reward.indemnity ? `${c.reward.indemnity} Indemnity` : '',
-  c.reward.xp ? `${xpFor(s, hackerLevel(s), c.reward.xp)} XP` : '',
+  c.reward.xp ? `${contractXp(s, hackerLevel(s), c)} XP` : '',
   c.reward.standing > 0 ? `Halcyon +${c.reward.standing}` : c.reward.standing < 0 ? `Halcyon ${c.reward.standing}` : '',
   c.reward.rep && c.faction ? `${FACTIONS[c.faction].short} +${c.reward.rep}` : '',
   c.reward.relay ? 'a relay' : '', c.reward.plan ? 'the Relay plan' : '', c.reward.drop || c.reward.daemon ? 'a protocol, Tuned or better' : '', c.reward.blueprint ? 'a blueprint' : '', c.reward.codebase ? 'a codebase' : '',
@@ -743,7 +745,7 @@ export function mailCommand(s, text, at = now()) {
   // What it paid, for the delivered card (app.js shows it in the middle of the screen). XP is at the
   // level the contract was posted at.
   const paidAt = c.lvN ? Math.round(c.lvSum / c.lvN) : c.level ?? hackerLevel(s);
-  const xp = c.reward.xp ? xpFor(s, paidAt, c.reward.xp) : 0, fname = (f) => FACTIONS[f]?.short || f;
+  const xp = c.reward.xp ? contractXp(s, paidAt, c) : 0, fname = (f) => FACTIONS[f]?.short || f;
   const gains = [
     c.reward.credits && { label: 'Credits', qty: `+${c.reward.credits}`, kind: 'credits', text: `${c.reward.credits} credits` },
     c.reward.indemnity && { label: 'Indemnity', qty: `+${c.reward.indemnity}`, kind: 'loot', text: `${c.reward.indemnity} Indemnity` },
