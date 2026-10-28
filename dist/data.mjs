@@ -1365,7 +1365,7 @@ export const CLIMB = {
   kills: [[1, 23], [2, 62], [3, 130], [4, 160], [5, 170], [10, 172], [15, 366], [20, 523], [25, 673], [30, 818], [35, 909], [40, 1000], [45, 1068], [49, 1137]],
   minutes: [[1, 5], [4, 27], [5, 28], [9, 44], [10, 48], [19, 84], [20, 95], [29, 145], [30, 160], [39, 200], [49, 220]],
 };
-const along = (pts, L) => {
+export const along = (pts, L) => {
   if (L <= pts[0][0]) return pts[0][1];
   for (let i = 1; i < pts.length; i++) if (L <= pts[i][0]) { const [a, x] = pts[i - 1], [b, y] = pts[i]; return x + ((y - x) * (L - a)) / (b - a); }
   return pts.at(-1)[1];
