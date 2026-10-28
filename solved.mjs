@@ -26,10 +26,10 @@
 //               board, Spike when nothing else is ready.
 import { POLICIES, fight, at, policyOf } from './balance.mjs';
 import { player, playOut, HOME } from './genesim.mjs';
-import { livingParts, barKeys, readyIn, toIntent, hooks, selectEncounter, fresh, part, mirrorOn } from './dist/combat.mjs';
+import { livingParts, barKeys, readyIn, toIntent, hooks, selectEncounter, fresh, part, usable, mirrorOn } from './dist/combat.mjs';
 import { GENES, GENE_BOTS } from './dist/genes.mjs';
-import { beatOn } from './dist/tells.mjs';
-import { ARCHETYPES, BOSSES, TELL } from './dist/data.mjs';
+import { beatOn, plannedTells, tellsOf, sigintTarget, bestStrip, stripBy } from './dist/tells.mjs';
+import { ARCHETYPES, BOSSES, TELL, ABILITIES } from './dist/data.mjs';
 import { planner, plannerWithout, kitPlanner, quietOf, preferring } from './dist/planner.mjs';
 import { seeded } from './dist/gear.mjs';
 import { TIER } from './dist/research.mjs';
@@ -49,7 +49,7 @@ export const blind = (s) => {
 export const kit = (s) => kitPlanner(s); // the planner with every tell and gene unread (planner.mjs kitPlanner)
 export const learner = (share, seed) => { const r = seeded((seed * 2654435761 + 0x1ea7) >>> 0); return (s) => (r() < share ? kit(s) : planner(s)); };
 // The program: research at a tier on every part of the fight's virus and (prepared) its routine fitted to the trick:
-// the preset of each lever in the fight (Quiet on the beat, Trip when loud wins, Cash in), then Answer the tells, as
+// the preset of each lever in the fight (Quiet on the beat, Trip when loud wins, Cash in; a seal's, SIGINT's), then Answer the tells, as
 // many handlers as its RAM holds (routines.mjs presetsFor). Set up on its first cycle, then it types nothing and the
 // timer runs the program.
 export function prepare(s) {
@@ -57,10 +57,12 @@ export function prepare(s) {
   if (!R.isBody(body)) return null;
   const here = new Set(s.encounter.virus.parts.map((p) => p.id)), ps = R.presetsFor(s, body);
   const lever = (k) => ps.filter((p) => p.part && here.has(p.part) && p.id.startsWith(k + ':'));
-  // What fits, by need: the levers (a part to break first, a beat, a part to break last, twins), then the tells. An order
-  // lever's reading preset (cash in, loud wins, blast pays: docs/puzzle-levers.md 7) comes in place of its plain one.
+  // What fits, by need: the levers (a part to break first, a beat, a part to break last, twins), a seal's lever when the
+  // fight brings one (Seal dear: strip it), the tells, then SIGINT the dearer when it brings a cast, as RAM allows. An order lever's reading preset (cash
+  // in, loud wins, blast pays: docs/puzzle-levers.md 7) comes in place of its plain one.
   const levers = ['cash', 'loud', 'blast', 'first', 'beat', 'last', 'together'].flatMap(lever).filter((p, i, a) => a.findIndex((q) => q.part === p.part) === i);
-  const want = [...levers, ps.find((p) => p.id === 'tells')].filter(Boolean).flatMap((p) => p.handlers);
+  const kinds = new Set(plannedTells(s.encounter.virus).map((t) => t.kind)), tell = (id, ...k) => (k.some((x) => kinds.has(x)) ? ps.find((p) => p.id === id) : null);
+  const want = [...levers, ...(kinds.has('seal') ? lever('seal') : []), ps.find((p) => p.id === 'tells'), tell('sigint', 'cast')].filter(Boolean).flatMap((p) => p.handlers);
   const hs = [], budget = R.ramFor(s, body);
   let used = 0;
   for (const h of want) {
@@ -158,11 +160,54 @@ export function misses(tier, L, w) {
 // A lever is a puzzle when its right move depends on the board: two players that always take one side of it (always trip
 // the Tripwire, never trip it) each play its fights worse than the planner, which reads the board. FIXED[id]:
 //   name      the lever, for the report
-//   gene      the gene it is (genes.mjs), and family: the family whose wild rolls carry it
+//   gene      the gene it is (genes.mjs), and family: the family whose wild rolls carry it (a part's lever), or
+//   fights    (L) => [[key, opts]]: its fights' balance.mjs fight options instead (a tell's lever: a guard key with
+//             { mode: 'run', guard }, or 'random' wild rolls), and has (v) => bool: only the ones whose virus carries
+//             it (tells are dealt at engage, so has reads tells.mjs plannedTells)
+//   n         how many fights a level (6 by default)
 //   from      the lowest level it is measured at (its gene's opens, or later)
 //   sides     { label: (move) => move }: wraps the planner's move function into one that always takes that side
 // Each P2 rule adds its own entry beside its code's tests (docs/puzzle-levers.md 8).
-export const FIXED = {};
+// The tells' levers (docs/puzzle-levers.md 3.5, 3.6). A seal: always strip its part while it's said, or never touch it
+// then. SIGINT: always on a cast, or only on charges.
+const sealOn = (s) => { const t = (tellsOf(s)?.list || []).find((x) => x.told && x.kind === 'seal'), p = t && part(s, t.part); return p && p.integrity > 0 && p.armor > 0 ? p : null; };
+const fires = (s, text) => !!text && !toIntent(s, text).error;
+const sigintHabit = (kind, move) => (s) => { const was = TELL.bots.sigintOn; TELL.bots.sigintOn = kind; try { return move(s); } finally { TELL.bots.sigintOn = was; } };
+export const FIXED = {
+  seal: {
+    name: 'Seal', from: 6, n: 6,
+    // The Sentinel guard at your level (its Blacklist from SEAL_FROM), and any wild roll that carries a seal.
+    fights: (L) => [...runs(6, (seed) => ['sentinel', { seed, mode: 'run', guard: L }]), ...runs(40, (seed) => ['random', { seed, mode: 'run', zone: true }])],
+    has: (v) => plannedTells(v).some((t) => t.kind === 'seal'),
+    sides: {
+      // Strips the sealing part while the seal is said, with the best strip it has ready (tells.mjs bestStrip).
+      'always strip': (move) => (s) => { const p = sealOn(s); return (p && bestStrip(s, p)?.text) || move(s); },
+      // Never strips the sealing part while the seal is said: the planner's command goes at another part, or the best
+      // command that takes no ◆ off it, or it waits (it plays as if the seal weren't said otherwise).
+      'never strip': (move) => (s) => {
+        const was = TELL.bots.seal;
+        TELL.bots.seal = false;
+        try {
+          const m = move(s), p = sealOn(s), id = String(m || '').split(' ')[0];
+          if (!p || !(stripBy(s, id, p) > 0) || (String(m).split(' ')[1] && String(m).split(' ')[1] !== p.id)) return m;
+          return livingParts(s).filter((x) => x !== p).map((x) => `${id} ${x.id}`).find((x) => fires(s, x)) || plannerWithout(s, (k) => stripBy(s, k, p) > 0) || 'hold';
+        } finally { TELL.bots.seal = was; }
+      },
+    },
+  },
+  sigint: {
+    name: 'SIGINT', from: 17, n: 32,
+    // Wild rolls from 17: a charge and a cast.
+    fights: () => runs(80, (seed) => ['random', { seed, mode: 'run', zone: true }]),
+    has: (v) => { const k = plannedTells(v).map((t) => t.kind); return k.includes('charge') && k.includes('cast'); },
+    sides: {
+      // The planner with a fixed SIGINT habit (tells.mjs TELL.bots.sigintOn): every cast in its window, never a charge;
+      // or every charge on its cycle, never a cast.
+      'every cast': (move) => sigintHabit('cast', move),
+      'only charges': (move) => sigintHabit('charge', move),
+    },
+  },
+};
 export const FIXED_MARGIN = 5; // a side must lose this many more points of Signal than the planner on some class
 // A move with a gene unread for this one call (the planner, blind to that part's rule).
 export const unread = (gene, move) => (s) => { const was = GENE_BOTS.ignore; GENE_BOTS.ignore = new Set([...was, gene]); try { return move(s); } finally { GENE_BOTS.ignore = was; } };
@@ -206,11 +251,25 @@ export function rolledWith(gene, family, L, n = 6) {
   }
   return out;
 }
+// The virus a fight's options would put up (balance.mjs fight's encounter, before engage), for a FIXED entry's has.
+function virusOf(key, opts, L) {
+  const s = fresh(), b = at(L);
+  s.run = { loc: 'sim', cwd: '/', integrity: 100, max: 100, pack: [], visited: ['/'] };
+  selectEncounter(s, key, opts.seed ?? 42, opts.zone ? { mode: 'run', room: '/sim', level: b.level, zone: true, family: opts.family, quiet: true } : { mode: 'run', room: '/sim', level: opts.guard || b.guard || b.level, quiet: true });
+  return s.encounter?.virus || null;
+}
+// A lever's fights at a level: [key, opts] for balance.mjs fight, the first n that carry it.
+export function leverFights(F, L, n = F.n || 6) {
+  if (!F.fights) return rolledWith(F.gene, F.family, L, n).map((seed) => ['random', { seed, mode: 'run', zone: true, family: F.family }]);
+  const out = [];
+  for (const [key, opts] of F.fights(L)) { if (out.length >= n) break; const v = virusOf(key, opts, L); if (v && (!F.has || F.has(v))) out.push([key, opts]); }
+  return out;
+}
 // One lever at one level: Signal lost by the planner and by each side, per class, and the sides that fail the test
 // (no class where they lose FIXED_MARGIN more than the planner).
-export function fixedRow(id, L, n = 6, classes = CLASSES) {
-  const F = FIXED[id], b = at(L), seeds = rolledWith(F.gene, F.family, L, n), out = { planner: {}, sides: {}, seeds: seeds.length };
-  const run = (cls, move) => { const smart = POLICIES[cls]; POLICIES[cls] = move; try { return seeds.map((seed) => fight(cls, 'random', b, { seed, mode: 'run', zone: true, family: F.family })); } finally { POLICIES[cls] = smart; } };
+export function fixedRow(id, L, n = FIXED[id].n || 6, classes = CLASSES) {
+  const F = FIXED[id], b = at(L), list = leverFights(F, L, n), out = { planner: {}, sides: {}, seeds: list.length };
+  const run = (cls, move) => { const smart = POLICIES[cls]; POLICIES[cls] = move; try { return list.map(([key, opts]) => fight(cls, key, b, opts)); } finally { POLICIES[cls] = smart; } };
   for (const C of classes) {
     out.planner[C] = lost(run(C, planner));
     for (const [side, wrap] of Object.entries(F.sides)) (out.sides[side] ||= {})[C] = lost(run(C, wrap(planner)));

@@ -17,7 +17,7 @@
 import { part, livingParts, bendOf, gearFx, fxHolds, blocked, attackAmount, knowsPart, usable, fxOn, alive, wards, belowOf, frontOf, signatureOf, frozenNow, asleep, limitOf, packed, active, attackers, hookHit } from './combat.mjs';
 import { CONFIG, TELL, TELLS, BOSSES, STRAINS } from './data.mjs';
 import { fxText } from './content.mjs';
-import { tellsOf, tellIntents, partTells, NEW_TELLS, beatOn, beatBlind, copyOf, dearCopy } from './tells.mjs';
+import { tellsOf, tellIntents, partTells, NEW_TELLS, beatOn, beatBlind, copyOf, dearCopy, sigintCharges } from './tells.mjs';
 import { nextTick } from './interrupt.mjs';
 import { BODY } from './families.mjs';
 import { situationOf } from './situations.mjs';
@@ -70,13 +70,21 @@ function landsLine(s, i, p, to, c) {
     const lasts = Math.max(1, (i.does === 'overclock' ? NEW_TELLS.overclock.lasts : TELL.castLasts) - (fxOn(s, 'cast-short')?.fx.value || 0));
     const win = ` Can be interrupted ${windowWords(i, c)}.`;
     if (i.does === 'overclock') return `For ${cycles(lasts)}, every part takes double damage and every attack comes 1 cycle sooner.${win}`;
-    const what = i.does === 'loud' ? `Every attack deals ${pct(TELL.loud - 1)} more damage for ${cycles(lasts)}.` : i.does === 'grow' ? `Increases every part's Integrity by ${pct(TELL.grow)}.` : `Every attack repeats 1 cycle faster for ${cycles(lasts)}.`;
+    // Its price (tells.mjs tellPrice): the Signal the attacks due in its cycles would add, or the Integrity it grows.
+    const cost = i.price != null ? ` That is ${i.price} more damage to ${you} from the attacks due then.` : '';
+    const what = i.does === 'loud' ? `Every attack deals ${pct(TELL.loud - 1)} more damage for ${cycles(lasts)}.${cost}`
+      : i.does === 'grow' ? `Increases each part's Integrity by ${pct(TELLS[i.id]?.grow ?? TELL.grow)} of what it has left, ${i.grow || 0} in all. At your pace that costs you about ${i.price || 0} Signal.`
+      : `Every attack repeats 1 cycle faster for ${cycles(lasts)}.${cost}`;
     return what + afterOf(s) + win;
   }
   if (i.tell === 'seal') {
     const T = tellsOf(s)?.tier, proof = fxOn(s, 'seal-proof');
-    const mine = T?.after && !proof ? ` Removes your ◆ and shield.${T.burn ? ' Leaves you Corrupted.' : ''}` : '';
-    return `Re-arms the ${p?.name} to ${(p?.maxArmor || 0) + 1} ◆, and every stripped part gets 1 ◆ back. Fails if the ${p?.name} wears no ◆.${mine}`;
+    // A dial (tells.mjs sealGives, sealShare): each ◆ its part still wears gives TELL.seal back to every part, and what
+    // it takes from you scales with the share of its ◆ still on.
+    const left = `${p?.armor || 0} of its ${p?.maxArmor || 0}`;
+    const mine = T?.after && !proof ? ` It takes the same share of your ◆ and shield as the ◆ it still wears (${left})${T.burn ? ', and leaves you Corrupted at that share' : ''}.` : '';
+    const each = TELL.seal === 1 ? '1 ◆' : `${TELL.seal} ◆`;
+    return `Gives every part ${each} back for each ◆ the ${p?.name} still wears when it lands, never past a part's max. That is ${i.give || 0} ◆ a part now, ${i.armorOut || 0} in all.${mine} Fails if the ${p?.name} wears no ◆.`;
   }
   if (i.tell === 'lock') return `Locks the first command you fire after it for ${cycles(NEW_TELLS.lock.cycles)}, key 1 included.`;
   const twice = BOSSES[s.encounter?.virus?.boss]?.mimic > 1 ? ' A hit comes back twice over while you are Scrambled.' : '';
@@ -87,7 +95,8 @@ function landsLine(s, i, p, to, c) {
 function stopLine(s, i, p, c) {
   const name = p?.name || 'part', t = cutOf(s, p), under = t ? `take the ${name} under ${pct(t.at)}` : '';
   const armor = p?.armor > 0 ? `, past its ${p.armor} ◆` : '';
-  if (i.tell === 'charge') return t ? `Take the ${name} under ${pct(t.at)} ${when(c)}${armor}.` : `Soften it with ◆, a shield or Brace. The ${name} has no tick left.`;
+  const sig = sigintCharges(s) && usable(s).includes('sigint') ? ` or SIGINT it` : '';
+  if (i.tell === 'charge') return t ? `Take the ${name} under ${pct(t.at)} ${when(c)}${armor}${sig ? `,${sig}` : ''}.` : sig ? `SIGINT it ${when(c)}, or soften it with ◆, a shield or Brace.` : `Soften it with ◆, a shield or Brace. The ${name} has no tick left.`;
   if (i.tell === 'cast') return `SIGINT it${t ? `, or ${under}` : ''}.`;
   if (i.tell === 'seal') return p?.armor > 0 ? `Strip its ${p.armor} ◆ before it lands ${when(c)}.` : `Keep the ${name} stripped until it lands ${when(c)}.`;
   if (i.tell === 'lock') return `Break the ${name} first, or feed it a skill already cooling.`;

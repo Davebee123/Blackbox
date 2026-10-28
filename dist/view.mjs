@@ -64,6 +64,8 @@ import { sigOf, named, lairOf, intelOf, knowsStrain, knowsEvent, knowsRich, name
 import { guardSetChance, lairChance, bossOdds, presetsOf, presetKeys, followOf, spikeName, said, mutated, capstonePoints, capPickOf, capState, blastOf, livingParts } from './combat.mjs';
 import { tripwireOf, zipOf, heldOf } from './order.mjs';
 import { cantripsOf, TELL } from './data.mjs';
+import { usable } from './combat.mjs';
+import { sigintWindows, sigintCharges } from './tells.mjs';
 import { daemonText } from './daemons.mjs';
 import { ROOMS as ROOMS_FP, kindRule, KIND_OF } from './floorplan.mjs'; // a server card's respawn timers, its type's rule
 import { threadRows, threadReader, tempNodes, tempNodeSvg, tempCard, serverMarkSvg, transitNodes, transitSvg } from './threads-view.mjs';
@@ -373,18 +375,22 @@ const TELL_KICK = { charge: 'Charged', cast: 'Casting', seal: 'Sealing', mimic: 
 function tellChip(s, i, c, k = '', to = null) {
   const p = part(s, i.source);
   const open = i.open ?? c === 0;
-  // What it does, as short as an attack chip's number.
-  const what = i.tell === 'charge' ? (i.effect === 'damage' ? `−${i.amount}` : i.effect === 'encrypt' ? `+${i.amount} · burst` : i.effect === 'replicate' ? `+${i.spawn || 2} frags` : i.effect === 'scramble' ? `−${i.hit || 0} · scramble` : `+${i.amount} hp`)
-    : i.tell === 'cast' ? (i.does === 'loud' ? '+35% hits' : i.does === 'grow' ? '+25% hp' : i.does === 'overclock' ? '×2 both ways' : 'faster')
-    : i.tell === 'seal' ? '+◆' : i.tell === 'lock' ? 'locks a key' : i.copy ? i.copy.short : 'copies you'; // the Mimic: what your selected command would copy
+  // What it does, as short as an attack chip's number: a charge's hit, a cast's price (the Signal its attacks would add,
+  // a Self-Update's Integrity), the ◆ a seal would hand out in all (tells.mjs tellPrice).
+  const what = i.tell === 'charge' ? (i.effect === 'damage' ? `−${i.amount}` : i.effect === 'encrypt' ? `−${i.price ?? i.amount}` : i.effect === 'replicate' ? `+${i.spawn || 2} frags` : i.effect === 'scramble' ? `−${i.hit || 0} · scramble` : `+${i.amount} hp`)
+    : i.tell === 'cast' ? (i.does === 'grow' ? `+${i.grow ?? 0} hp` : i.does === 'overclock' ? '×2 both ways' : `−${i.price ?? 0}`)
+    : i.tell === 'seal' ? `+${i.armorOut ?? 0} ◆` : i.tell === 'lock' ? 'locks a key' : i.copy ? i.copy.short : 'copies you'; // the Mimic: what your selected command would copy
   // The answer as an order, without its timing: the kick line has that (NOW, or when it lands).
-  const answer = i.tell === 'charge' ? `Cut${i.armored ? ` past ◆${p?.armor || 0}` : ''}`
+  const sig = sigintCharges(s) && usable(s).includes('sigint');
+  const answer = i.tell === 'charge' ? `Cut${i.armored ? ` past ◆${p?.armor || 0}` : ''}${sig ? ' or SIGINT' : ''}`
     : i.tell === 'cast' ? 'SIGINT or cut'
-    : i.tell === 'seal' ? `Strip ◆${p?.armor || 0}` : i.tell === 'lock' ? 'Feed it a cooldown' : 'Pick a cheap copy';
+    : i.tell === 'seal' ? (p?.armor > 0 ? `Strip ◆${p.armor}` : 'Keep it bare') : i.tell === 'lock' ? 'Feed it a cooldown' : 'Pick a cheap copy';
   const progress = '';
+  // A price in your Signal reads in threat red, a seal's ◆ in steel.
+  const kindOf = i.tell === 'seal' ? ' tl-armor' : (i.tell === 'charge' && ['damage', 'encrypt'].includes(i.effect)) || (i.tell === 'cast' && ['loud', 'haste'].includes(i.does)) ? ' tl-price' : '';
   return `<div class="intent tell t-${esc(i.tell)} ${c === 0 ? 'now' : ''} ${open ? 'win' : ''}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(tellTip(s, i, c, to))}">`
     + `<div class="tl-kick"><span class="ico" ${icon(TELL_ICON[i.tell])}></span><span class="tl-kind">${TELL_KICK[i.tell] || ''}</span>${open ? '<b class="tl-win">NOW</b>' : `<span class="tl-when">${c ? `in ${c}` : 'now'}</span>`}</div>`
-    + `<div class="tl-main"><b>${esc(i.name)}</b><small class="tl-what${i.copy ? ` copy${i.copy.dear ? ' dear' : ''}` : ''}">${esc(what)}</small></div>`
+    + `<div class="tl-main"><b>${esc(i.name)}</b><small class="tl-what${kindOf}${i.copy ? ` copy${i.copy.dear ? ' dear' : ''}` : ''}">${esc(what)}</small></div>`
     + `<div class="tl-ans">▸ ${esc(answer)}${progress ? `<span class="tl-prog">${esc(progress)}</span>` : ''}</div>`
     + `${to ? `<small class="at">→ ${esc(to)}</small>` : ''}</div>`;
 }
@@ -945,6 +951,20 @@ export function armorBadge(s, id, p) {
   return `<span class="armd" title="${esc(tip)}" aria-label="${esc(tip)}">◆</span>`;
 }
 
+// SIGINT's key against the live windows (tells.mjs sigintWindows; docs/puzzle-levers.md 3.6): on its state line, a pip
+// for each cast and charge it could stop, with the cycles until its window closes, struck through when SIGINT won't be
+// ready in time. Its count of cycles to go stays where every key has it.
+function sigintKey(s) {
+  const ws = sigintWindows(s);
+  if (!ws.length) return '';
+  const pips = ws.map((w) => {
+    const kind = w.kind === 'cast' ? 'Cast' : 'Charge', open = w.from === 0 ? (w.to === 0 ? 'Its window is open this cycle' : `Its window is open until it lands ${w.to === 1 ? 'next cycle' : `in ${w.to} cycles`}`) : `Its window opens ${w.from === 1 ? 'next cycle' : `in ${w.from} cycles`}`;
+    const ready = w.reach ? (w.wait ? `SIGINT is ready in ${w.wait} ${w.wait === 1 ? 'cycle' : 'cycles'}, in time.` : 'SIGINT is ready.') : `SIGINT is ready in ${w.wait} cycles, too late for it.`;
+    const tip = `${w.name}: ${kind}. ${open}. If it lands, it costs you ${w.price} Signal.${answerLine(ready)}`;
+    return `<i class="sg-w${w.reach ? '' : ' late'}" title="${esc(tip)}"><span class="ico" ${icon(TELL_ICON[w.kind])}></span>${w.to}</i>`;
+  }).join('');
+  return `<span class="sg-wins">${pips}</span>`;
+}
 // selected: the part you picked on the board (app.js), the one a key prefills.
 export function trayMarkup(s, selected = null) {
   const e = s.encounter;
@@ -975,7 +995,8 @@ export function trayMarkup(s, selected = null) {
     const help = id === 'spike' ? said(s, a.help).replace(/Spike/g, spikeName(s)) : a.help; // key 1 under your class's name
     const ml = masteryLine(s, classOf(s), id); // its mastery, on its own line (mastery.mjs; app.js ttShow lights it)
     const armd = fighting && !dark && !offline && !wiped ? armorBadge(s, id, keyAim(s, id, selected)) : ''; // a key you can't press now says nothing of armor
-    return `<button type="button" class="ability ${cantrip ? 'cantrip' : ''} ${wait || dark ? 'cooling' : fighting ? 'ready' : ''} ${lit ? 'lit' : ''} ${moment ? 'moment' : ''} ${offline ? 'offline' : ''}${wiped ? ' wiped' : ''} ${queued ? 'queued' : ''}" data-ability="${id}" title="${esc(scaledText(s, id, help) + (ml ? '\n' + ml : ''))}"><span class="ico" ${icon(a.icon)}></span><span class="name"><kbd>${key}</kbd>${esc(id === 'spike' ? spikeName(s) : a.name)}</span><span class="state">${state}</span>${count}${armd}<span class="charge" style="width:${charge}%"></span></button>`;
+    const sgk = fighting && id === 'sigint' && !queued && !offline && !wiped ? sigintKey(s) : ''; // SIGINT against the live windows, in place of its state line
+    return `<button type="button" class="ability ${cantrip ? 'cantrip' : ''} ${wait || dark ? 'cooling' : fighting ? 'ready' : ''} ${lit ? 'lit' : ''} ${moment ? 'moment' : ''} ${offline ? 'offline' : ''}${wiped ? ' wiped' : ''} ${queued ? 'queued' : ''}" data-ability="${id}" title="${esc(scaledText(s, id, help) + (ml ? '\n' + ml : ''))}"><span class="ico" ${icon(a.icon)}></span><span class="name"><kbd>${key}</kbd>${esc(id === 'spike' ? spikeName(s) : a.name)}</span><span class="state">${sgk || state}</span>${count}${armd}<span class="charge" style="width:${charge}%"></span></button>`;
   });
   // The next thing your level will unlock, as a faint slot.
   const nx = nextUnlock(s);

@@ -179,6 +179,17 @@ are first guesses for the harness to tune.
   saves a ◆ on every part. A strip on your target may end it before the seal matters. Your strip cooldowns and the
   seal's countdown decide it.
 - **On the board.** The seal's cell shows how many ◆ it will hand out.
+- **As built.** `TELL.seal` 1: each ◆ left gives one ◆ back to every part, the sealer included, never past a part's
+  max (no more ◆ on its max). What it takes from you scales the same way: the share of its ◆ still on (`sealShare`) of
+  your ◆ and shield, and Corrupted at that share. The seal's first now lands one cycle after the first tell can
+  (`TELL.sealAfter` 1, was 3), so it lands mid-fight in the Sentinel's short fights. Its cell shows the ◆ it would hand
+  out in all, in steel (*+4 ◆*: a partial strip can hand out more than none, since the sealer gains room). The
+  planner strips it with its best strip (`bestStrip`) when the commands left before it lands are all it needs and that
+  saves at least 1.5 ◆ a command, weighing what it takes from you as 3 ◆ at full share (`TELL.weigh`). WHEN chip *seal
+  dear* (the sealing part's, rule tier, 2 RAM: it lands within 2 cycles while it wears 2 ◆ or more); preset *Seal
+  dear: strip it*. `node solved.mjs rules`: no fixed rule wins at 10, 18 and 30 (the Sentinel at your level, 6
+  fights). *Always strip* loses 7 to 30 points on some class at every level, *never strip* (never a ◆ off the sealer
+  while it's said) 7 to 29.
 
 ### 3.6 Casts and SIGINT: one key, two clocks
 
@@ -193,6 +204,29 @@ are first guesses for the harness to tune.
   hits on its part, a shield, or by letting it land when it's cheap.
 - **On the board.** The cast's cell and the charge's chip each show what they'd cost you. The SIGINT key shows its
   cooldown against both windows.
+- **As built.** Prices (`tellPrice`): a charge its whole landing (a Full Disk's encryption and burst together), Double
+  Extortion and Persistence the extra their part's attacks due in their 4 cycles would deal, Self-Update the Integrity
+  it adds (`TELL.grow` 0.25 of each part's current Integrity), turned into Signal at your pace so far for the planner.
+  SIGINT stops the cast in its window, else the charge on its cycle (`sigintTarget`; with both open the charge can
+  still be cut); on a charge it cancels the attack it rides, as a cut does. It cuts charges from level 17
+  (`TELL.sigintChargeFrom`), where a charge and a cast are live together: below it a lone charge took SIGINT every
+  time, a free answer that halved what a fight at 10 cost the Bastions and the Phantom and pushed the Herder and the
+  Payload under their solo band (balance.test.mjs). The breach build keeps casts only. The SIGINT key's state line
+  shows a pip a tell, struck through when SIGINT won't be ready in time. The planner SIGINTs the open tell when it
+  costs more than every other live one SIGINT could stop, counting one as cheap when a cut can still reach its part
+  (a tick left, and its ◆ strippable by then), and cuts first when a cut answers it; in a crew it saves nothing, every
+  bar has a SIGINT. WHEN chip *dearer* (rule tier, 2 RAM); preset *SIGINT the dearer* (*dearer → SIGINT*), which
+  replaces *SIGINT the cast*; the routine player takes it after *Answer the tells* when the fight brings a cast.
+  `node solved.mjs rules` (32 wild fights with a charge and a cast): **a fixed rule wins.** At 18 *every cast* loses 7
+  points on the Bastion, but *only charges* stays within 2 of the planner on every class; at 30 both stay within 3.
+  SIGINT itself is worth under 5 points in these fights at 18 (the planner with no SIGINT at all loses at most 4
+  more), because a tell's part usually breaks, or a cut answers it, before it lands. Tuning the cast (window 1, 50%
+  louder, lasting the fight), SIGINT's cooldown (5 or 12), the tells' rest and where the cast sits didn't move it.
+  For the designer: SIGINT's lever needs fights where tells outlive their part (P3's elites), or casts a cut can't
+  answer.
+- **HASHLORD.** With the seal a dial and Self-Update on current Integrity, a player who ignores its tells won 95% of it
+  at 16 (80% before), as many as the planner. Its Block Reward now grows each part by half of what it has left
+  (`TELLS.blockreward.grow`), and its Integrity is ×4.3 (was ×3.9): the planner 89%, the misreader 82%, blind 79%.
 
 ### 3.7 The rest already depend on the board
 

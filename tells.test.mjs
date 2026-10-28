@@ -299,18 +299,19 @@ test('a cast: SIGINT in its window stops it and the part is Open; a cut in it st
   assert.match(command(s4, 'sigint').at(-1).message, /Nothing is compiling/);
 });
 
-test('a seal: if its part still wears ◆ when it lands it re-arms with one more and every stripped part gets one back; strip it first and the strip is ready again', () => {
+test('a seal is a dial: each ◆ its part still wears when it lands gives one ◆ back to every part, never past its max; strip it first and the strip is ready again', () => {
   const s = fight({ level: 18, opts: { elite: true } });
   retell(s, 2);
   quietParts(s);
   const enc = part(s, 'encryptor'), pulse = part(s, 'pulse');
   tell(s, 'keyrotation', 'encryptor', 1);
   const max = enc.maxArmor;
-  enc.armor = 1; pulse.armor = 0; pulse.patchAt = 99;
+  assert.ok(max >= 4, `the Encryptor wears ${max} ◆`);
+  enc.armor = 2; pulse.armor = 0; pulse.maxArmor = 3; pulse.patchAt = 99;
   hold(s, 2);
-  assert.equal(enc.maxArmor, max + 1);
-  assert.equal(enc.armor, max + 1);
-  assert.equal(pulse.armor, 1, 'the stripped Pulse Node gets a ◆ back');
+  assert.equal(enc.maxArmor, max, 'no ◆ more on its max');
+  assert.equal(enc.armor, 4, 'its own 2 ◆ come back on it');
+  assert.equal(pulse.armor, 2, 'and on the stripped Pulse Node, 2 of its 3');
   // Stripped first, with Crack: the seal fails, and Crack is ready again.
   const s2 = fight({ level: 18, opts: { elite: true } });
   retell(s2, 2);
@@ -486,7 +487,7 @@ test('the board shows a tell in its attack\'s cell even while the part is veiled
   const html = boardMarkup(s, null);
   assert.match(html, /intent tell t-charge/);
   assert.match(html, /POSSESSION|Possession/);
-  assert.match(html, new RegExp(`▸ Cut past ◆${sc.armor}<`), 'the cut, past its ◆ (the kick line says when)');
+  assert.match(html, new RegExp(`▸ Cut past ◆${sc.armor}<`), 'the cut, past its ◆ (the kick line says when; SIGINT cuts charges from 17)');
   assert.match(html, /<span class="tl-when">in 2<\/span>/);
   assert.doesNotMatch(html, /tl-win/, 'not on its cycle yet');
   assert.match(html, new RegExp(`title="Possession: [^"]*\n▸ Take the Scrambler under 50% in 2 cycles, past its ${sc.armor} ◆\\."`), 'the tooltip: what it does, then how to stop it and when');
@@ -712,7 +713,7 @@ test('the log\'s tell lines are as short as the chip\'s tooltip: what, when, on 
   assert.equal(sayOf(c, tell(c, 'extortion', 'encryptor', 1)), 'The Encryptor\'s DOUBLE EXTORTION lands next cycle. SIGINT or cut it in its window, open now.');
   retell(c, 4, ['fulldisk', 'extortion', 'keyrotation', 'lock']); quietParts(c);
   const armor = Object.assign(part(c, 'encryptor'), { armor: 3, maxArmor: 3 }).armor;
-  assert.equal(sayOf(c, tell(c, 'keyrotation', 'encryptor', 2)), `The Encryptor's KEY ROTATION lands in 2 cycles. Strip its ${armor} ◆ before then, or it re-arms.`);
+  assert.equal(sayOf(c, tell(c, 'keyrotation', 'encryptor', 2)), `The Encryptor's KEY ROTATION lands in 2 cycles. Each ◆ it still wears then comes back on every part: strip its ${armor} ◆ first.`);
   assert.equal(sayOf(c, tell(c, 'lock', 'encryptor', 2)), 'The Encryptor\'s LOCK lands in 2 cycles. It locks your next command for 3 cycles. Break it, or feed it a cooling skill.');
   const seed = Array.from({ length: 50 }, (_, i) => i + 1).find((x) => createVirus('random', x, { family: 'ghostroot', threat: 9 + 12, classic: true }).parts.some((p) => p.mimic));
   const m = fight({ level: 12, family: 'ghostroot', seed }); quietParts(m);

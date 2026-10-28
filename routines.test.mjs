@@ -795,5 +795,5 @@ test('a seal or a cast needs a handler (the rotation reads no tell); a charge is
   command(t, 'program ransomware preset tells');
   assert.deepEqual(R.routineOf(t, 'ransomware').handlers, [{ when: 'anytell', do: 'rotation', target: 'that' }]);
   for (let i = 0; i < 14 && active(t); i++) { assert.ok(!R.exceptionsOf(t).some((y) => y.kind === 'tell'), 'any tell live covers them'); cycle(t); }
-  assert.ok(R.presetsFor(t, 'ransomware').some((p) => p.id === 'sigint' && p.name === 'SIGINT the cast'), 'SIGINT has its own preset');
+  assert.ok(R.presetsFor(t, 'ransomware').some((p) => p.id === 'sigint' && p.name === 'SIGINT the dearer' && p.handlers[0].when === 'dearer'), 'SIGINT has its own preset, on the dearer tell');
 });

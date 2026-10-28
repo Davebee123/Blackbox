@@ -235,13 +235,13 @@ export const GENES = {
     does: 'Compiles a cast that makes every attack deal 35% more damage for 4 cycles.', telegraph: 'A Compiling… cell that shows NOW in its window.', answer: 'Interrupt it with SIGINT, or two hits on its part in its window. Quarantine, Overvolt, Thermal Runaway, Hijack, Reroute, Kill Switch and IRQ Storm also interrupt it.',
     implicit: 'Casts on the virus run shorter.' },
   selfupdate: { name: 'Self-Update', adj: 'Updating', cat: 'tell', axis: 'sustain', role: 'amplifier', cost: 2, opens: 10, decode: 'tell', suits: 'Worm',
-    does: 'Compiles a cast that increases every part\'s Integrity by 25%.', telegraph: 'A Compiling… cell.', answer: 'Interrupt it the same way as Double Extortion.',
+    does: 'Compiles a cast that increases every part\'s Integrity by a quarter of what it has left.', telegraph: 'A Compiling… cell.', answer: 'Interrupt it the same way as Double Extortion.',
     implicit: 'Casts on the virus run shorter.' },
   persistence: { name: 'Persistence', adj: 'Persistent', cat: 'tell', axis: 'clock', role: 'amplifier', cost: 2, opens: 10, decode: 'tell', suits: 'Ghostroot, every guard (as Call Home)',
     does: 'Compiles a cast that makes every attack repeat 1 cycle faster for 4 cycles.', telegraph: 'A Compiling… cell.', answer: 'Interrupt it the same way as Double Extortion.',
     implicit: 'Casts on the virus run shorter.' },
   rekey: { name: 'Re-key', adj: 'Re-keyed', cat: 'tell', axis: 'shell', role: 'amplifier', cost: 2, opens: 6, decode: 'tell', suits: 'Elites, bosses and the Sentinel',
-    does: 'If its part still wears ◆ when the seal lands, re-arms that part to full with 1 more ◆. Every stripped part gets 1 ◆ back.', telegraph: 'A Sealing cell.', answer: 'Strip its part before it lands. Bit Rot, Cache Poison and Write Blocker also beat it.',
+    does: 'When the seal lands, each ◆ its part still wears gives 1 ◆ back to every part, never past a part\'s max.', telegraph: 'A Sealing cell that shows the ◆ it will hand out.', answer: 'Strip its part before it lands, as far as it pays. Bit Rot, Cache Poison and Write Blocker also beat it.',
     implicit: 'Seals that land leave more of your ◆ and shield.', bot: { strip: true } },
 };
 for (const [id, g] of Object.entries(GENES)) { g.id = id; g.beat ||= null; g.bot ||= null; g.lever ||= null; }

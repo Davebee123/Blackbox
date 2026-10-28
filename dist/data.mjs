@@ -192,7 +192,7 @@ export const CONFIG = {
 // target: 'part' | 'attack' (a part with an attack; optional) | 'none'. pierce: goes through armor chits. bare: only on a part with no armor.
 export const ABILITIES = {
   // cantrips: everyone
-  sigint: { verb: 'stun', name: 'SIGINT', target: 'none', damage: 0, cooldown: 8, icon: 'interrupt', short: 'Interrupts a cast', help: 'sigint — Interrupts a cast that is compiling on a virus part or a crew boss. Some casts can\'t be interrupted, and a crew boss you interrupt casts its next one sooner. 8 cycle cooldown.' },
+  sigint: { verb: 'stun', name: 'SIGINT', target: 'none', damage: 0, cooldown: 8, icon: 'interrupt', short: 'Stops a cast or a charge', help: 'sigint — Interrupts a cast that is compiling on a virus part or a crew boss, or cuts a virus part\'s charge on the cycle it lands. With both in their windows, it stops the cast. Some casts can\'t be interrupted, and a crew boss you interrupt casts its next one sooner. 8 cycle cooldown.' },
   // Key 1: every class's plain hit, with a name of its own (SPIKE below). Typing `spike` works for every class.
   spike: { verb: 'hit', name: 'Spike', target: 'part', damage: 25, cooldown: 0, icon: 'spike', short: '25 damage', help: 'spike <part> — Deals 25 damage to the target. With no target, Spike hits the last part you hit.' },
   // Every class skill is simple, with one twist: a burn (damage over cycles), a proc (something
@@ -852,7 +852,8 @@ export const BOSSES = {
   'nb-hashlord': { name: 'HASHLORD', family: 'ransomware', strain: 'hashrat', native: true, lair: 'HASHLORD-RIG', charge: 'Difficulty Bomb', floor: 16, band: 'B',
     extra: [{ id: 'poollock', name: 'Pool Lock', integrity: 16, armor: 0, loot: 'Lock Pin', ward: 'miner', wardCommands: true }],
     signature: { name: 'Chain Fork', rule: 'At half Integrity, a second Miner spins up. Its cycle tax returns if the first Miner is gone, and the Pool Lock wards it too while the Lock stands.' },
-    hp: 3.9, dmg: 1.45, healerDmg: HASHLORD_LATE, enrageAt: 18, about: 'A Hashrat boss. While its Miner stands, your cooldowns tick down only every other cycle. A Pool Lock wards the Miner against your commands. Burns and helpers deal full damage. At 60% Integrity it re-arms every part, and at half the Chain Fork spins up a second Miner.', phases: [{ at: 0.6, do: ['rearm'], say: 'HASHLORD re-arms every part.' }, { at: 0.5, do: ['spawn:miner'], say: 'HASHLORD forks the chain. A second Miner spins up.' }] },
+    // hp 3.9 → 4.3 with the seal a dial and Block Reward on current Integrity (docs/puzzle-levers.md 3.5, 3.6): its band holds (genesim.test.mjs)
+    hp: 4.3, dmg: 1.45, healerDmg: HASHLORD_LATE, enrageAt: 18, about: 'A Hashrat boss. While its Miner stands, your cooldowns tick down only every other cycle. A Pool Lock wards the Miner against your commands. Burns and helpers deal full damage. At 60% Integrity it re-arms every part, and at half the Chain Fork spins up a second Miner.', phases: [{ at: 0.6, do: ['rearm'], say: 'HASHLORD re-arms every part.' }, { at: 0.5, do: ['spawn:miner'], say: 'HASHLORD forks the chain. A second Miner spins up.' }] },
   'nb-backorifice': { name: 'BACK ORIFICE', family: 'worm', third: 'c2', native: true, lair: 'BACKORIFICE-C2', hp: 1.3, dmg: 0.95, enrageAt: 17, about: 'A C2 Node commands its fragments. At half Integrity, every attack comes 1 cycle sooner, and at 25% a Mirror twins the Replicator.', phases: [{ at: 0.5, do: ['faster'], say: 'BACK ORIFICE opens every port. Every attack comes a cycle sooner.' }, { at: 0.25, do: ['spawn:mirror'], say: 'BACK ORIFICE spins up a Mirror. Break it and the Replicator together.' }] },
   'nb-patchday': { name: 'PATCH TUESDAY', family: 'worm', strain: 'patchwork', native: true, lair: 'PATCHDAY-WSUS', charge: 'Rollup', hp: 2.2, dmg: 1.45, healerDmg: STRAIN_BOSS_LATE, enrageAt: 18, about: 'A Patchwork boss. Its Patcher heals the most damaged part, and takes over the Surge if its Pulse Node breaks first. At 60% Integrity it re-arms every part, and at 30% every attack comes 1 cycle sooner.', phases: [{ at: 0.6, do: ['rearm'], say: 'PATCH TUESDAY re-arms every part.' }, { at: 0.3, do: ['faster'], say: 'PATCH TUESDAY forces a reboot. Every attack comes a cycle sooner.' }] },
   'nb-floodwall': { name: 'FLOODWALL', family: 'worm', strain: 'floodgate', native: true, lair: 'FLOODWALL-SLUICE', charge: 'Storm Surge', hp: 1.6, dmg: 0.95, healerDmg: STRAIN_BOSS_LATE, enrageAt: 18, about: 'A Floodgate boss. Its Flooder attacks every cycle, harder each time, and any delay resets it. At half Integrity it re-arms every part.', phases: [{ at: 0.5, do: ['rearm'], say: 'FLOODWALL re-arms every part.' }] },
@@ -892,9 +893,9 @@ export const ELITE = { hp: 5.2, dmg: 1.3, armor: 1, xp: 3, share: 1 / 3, goneMs:
 //           interrupt on its part on its cycle (interrupt.mjs) calls it off, or a skill built for it.
 //   cast    compiling a buff on the virus (does) for castLasts cycles, from level 10: a marked cell on its part's
 //           row. SIGINT in its window (castWindow cycles, ending the cycle it lands) stops it, and so does an
-//           interrupt on its part in the window.
-//   seal    if the part still wears ◆ when it lands, it re-arms to full with one ◆ more, and every stripped part
-//           gets a ◆ back (and from level 6 your ◆ and shield go). Strip it before then.
+//           interrupt on its part in the window. From level 17 SIGINT cuts a charge on its cycle too (sigintCharge).
+//   seal    a dial (docs/puzzle-levers.md 3.5): each ◆ its part still wears when it lands gives one ◆ back to every
+//           part, never past that part's max (and from level 6 that share of your ◆ and shield go). A full strip costs nothing.
 //   mimic   the Mimic copies the command you fire on its beat and turns it on you (tells.mjs copyOf). Fire what costs least then.
 // Breaking a tell's part always stops it.
 export const TELL = {
@@ -919,14 +920,18 @@ export const TELL = {
   champion: { cap: 1.1 }, // a champion invasion (elite-grade, but sized for one): the usual tells, its charges a little bigger
 
   castFrom: 10, // casts come with SIGINT
-  first: 3, // the first tell lands no sooner than this cycle (a cast and a second charge one later, a seal three)
+  first: 3, // the first tell lands no sooner than this cycle (a cast and a second charge one later, a seal sealAfter later)
+  sealAfter: 1, // a seal's first lands this many cycles after TELL.first (docs/puzzle-levers.md 3.5: it lands mid-fight, while parts are stripped)
   rest: { charge: 7, cast: 7, seal: 7 }, // after a tell lands or is answered, the next of its kind may land this many cycles on, plus a seeded 0..jitter (a charge 4 before R1: a cut answers it now, and a part has two ticks a fight)
   jitter: 2,
   heavy: 0.06, // another part's attack this big (a share of your max) on the same cycle: a charge waits for the next one
   burst: 3, // Full Disk: its burst of encryption lasts this many cycles
   castLasts: 4, // a cast's buff lasts this many cycles (another one starts the clock over, it doesn't stack)
   loud: 1.35, // Double Extortion: its attacks hit 35% harder
-  grow: 0.25, // Self-Update: every part grows a quarter more Integrity
+  grow: 0.25, // Self-Update: every part grows a quarter of its current Integrity (cheap late in a fight)
+  seal: 1, // a seal that lands gives every part this many ◆ back for each ◆ its own part still wears (never past a part's max)
+  sigintCharge: true, // SIGINT cuts a charge on its cycle as well as a cast in its window: one key, two clocks (docs/puzzle-levers.md 3.6)
+  sigintChargeFrom: 17, // from the virus level two tells are live at once (a charge and a cast compete for it); below it SIGINT stops casts only, since an idle SIGINT on every lone charge made a fight at 10 to 16 about half as costly (balance.test.mjs)
   mimic: 1, // the Mimic hits you with your last command's direct damage, all of it
   // The Mimic copies everything you fire on its beat and turns it on you (docs/puzzle-levers.md 3.1, tells.mjs copyOf). A
   // hit hits you (mimic, above); a hit with no listed damage of its own (a cash-in, a proc, an area hit) copies as your
@@ -949,6 +954,9 @@ export const TELL = {
   open: { mult: 1.5, cycles: 2, delay: 1 },
   read: { xp: 0.1, xpMax: 0.4, rolls: 1, min: 2 },
   bots: { answer: true }, // sim switch (balance.mjs): a bot that plays as if it can't see tells
+  // How the planner weighs a seal (tells.mjs sealStrip), in ◆ on the board: what a seal that lands at full share takes
+  // from you (your ◆ and shield, Corrupted) counts as sealYou ◆, and a strip command must save sealCmd ◆.
+  weigh: { sealYou: 3, sealCmd: 1.5 },
   sim: { only: null }, // sim switch (genesim.mjs): only the tells of these genes (tells.mjs plannedTells)
 };
 // The library. part: the fixed part it sits on ('special', the family's signature part; 'basic'; or a part id),
@@ -965,10 +973,10 @@ export const TELLS = {
   ram: { kind: 'charge', name: 'Battering Ram', gene: 'batteringram', part: 'basic' }, // Bouncer (only its Gate attacks): the Gate wears ◆, so it mostly asks for ◆2 in the window
   // Casts (from level 10): SIGINT or a cut in its window, or break the part.
   extortion: { kind: 'cast', name: 'Double Extortion', gene: 'doubleextortion', part: 'special', does: 'loud' }, // its attacks hit 35% harder for 4 cycles
-  selfupdate: { kind: 'cast', name: 'Self-Update', gene: 'selfupdate', part: 'special', does: 'grow' }, // every part grows a quarter more Integrity
+  selfupdate: { kind: 'cast', name: 'Self-Update', gene: 'selfupdate', part: 'special', does: 'grow' }, // every part grows a quarter of its current Integrity
   persistence: { kind: 'cast', name: 'Persistence', gene: 'persistence', part: 'special', does: 'haste' }, // its attacks repeat a cycle faster for 4 cycles
   callhome: { kind: 'cast', name: 'Call Home', gene: 'persistence', part: 'special', does: 'haste' }, // guards
-  // Seals: strip the part before it lands, or it re-arms with one ◆ more.
+  // Seals: strip the part before it lands, or each ◆ it still wears comes back on every part.
   keyrotation: { kind: 'seal', name: 'Key Rotation', gene: 'rekey', part: 'special' },
   resync: { kind: 'seal', name: 'Resync', gene: 'rekey', part: 'special' },
   godark: { kind: 'seal', name: 'Go Dark', gene: 'rekey', part: 'special' },
@@ -982,7 +990,7 @@ export const TELLS = {
   doppelganger: { kind: 'charge', name: 'Doppelganger', gene: 'possession', part: 'special', longer: 2 }, // MIRRORSHADE's before its rebuild
   glasscut: { kind: 'charge', name: 'Glass Cut', gene: 'overcharge', part: 'special' }, // MIRRORSHADE: a plain Overcharge on the Scrambler
   difficultybomb: { kind: 'charge', name: 'Difficulty Bomb', gene: 'overcharge', part: 'basic' }, // HASHLORD: on the Pulse Node
-  blockreward: { kind: 'cast', name: 'Block Reward', gene: 'selfupdate', part: 'miner', does: 'grow' }, // HASHLORD: a Self-Update on the Miner
+  blockreward: { kind: 'cast', name: 'Block Reward', gene: 'selfupdate', part: 'miner', does: 'grow', grow: 0.5 }, // HASHLORD: a Self-Update on the Miner that grows each part by half of what it has left (since Self-Update reads current Integrity, docs/puzzle-levers.md 3.6, its band needed it: genesim.test.mjs)
 };
 // Which tells each virus brings, in order: a tier's count takes the first ones open at the virus's level
 // (a cast from TELL.castFrom; a seal from SEAL_FROM, on a part that wears ◆). Strains bring their own charge
@@ -1415,7 +1423,7 @@ export const spikeOf = (arch) => SPIKE[arch] || { word: 'spike', name: 'Spike', 
 export const cantripsOf = (arch) => CANTRIPS.map((c) => (c.id === 'spike' ? { ...c, name: spikeOf(arch).name, word: spikeOf(arch).word, rule: spikeOf(arch).rule } : c));
 export const CANTRIPS = [
   { key: '1', id: 'spike', name: 'Spike', rule: 'Deals 25 damage to the target. With no target, Spike hits the last part you hit.' },
-  { key: '-', id: 'sigint', name: 'SIGINT', rule: 'Interrupts a cast that is compiling on a virus part or a crew boss. Some casts can\'t be interrupted, and a crew boss you interrupt casts its next one sooner. 8 cycle cooldown.' },
+  { key: '-', id: 'sigint', name: 'SIGINT', rule: 'Interrupts a cast that is compiling on a virus part or a crew boss, or cuts a virus part\'s charge on the cycle it lands. With both in their windows, it stops the cast. Some casts can\'t be interrupted, and a crew boss you interrupt casts its next one sooner. 8 cycle cooldown.' },
 ];
 // Edge: each class's signature passive, from level 10 (the root of its talent tree).
 export const EDGE = {
