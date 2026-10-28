@@ -84,3 +84,78 @@ In one fresh session, as one batch:
 - **Stunned and a Scraper.** The Scraper takes the ◆ that would save you from the stun.
 - **Harvester and the Corrupted from seals and landed tells.** The debuffs you already live with become a big hit.
 - **Countdown, Leak and the Mimic.** Holding is the only way to stall the Countdown, and two parts punish it.
+
+## As built (October 28, 2026)
+
+All twenty are built lean in `dist/mechanics.mjs` (the rules and their `MECH` start numbers), each a gene in genes.mjs
+with a third-part spec carrying `mech`, a tooltip, a cue under its name, red statuses on your strip, a unit test
+(`mechanics.test.mjs`) and a playtest page. GAME_RULES.md has the table. Where the build reads the list its own way:
+
+- **Spite is the Vendetta.** Spite is already a daemon's name.
+- **Lag's gene is Latency.** The gene library wants a name longer than three letters. The status on you still reads Lag.
+- **Exposed shares its name** with the Exposed you put on a part (+25% critical strike chance). The two read alike
+  (you're easier to hurt), but the designer may want another word.
+- **Lag runs only in a solo fight.** A Lagged cycle plays the virus's half first, then your command.
+- **Leak never takes your last point**, and Junk process holds one key at a time, never key 1 or SIGINT. The dead key
+  clears even while it's cooling.
+- **Harvester's stacks** are the cycles your Corrupted has left. **Swap** moves the three statuses with a meaning on a
+  part: Throttled, Exposed, and Corrupted as a burn (never a Volatile one).
+- **The Opportunist stays awake** once woken. **The Amplifier** gives each part one boost at most, spent as it lands.
+  **The Bodyguard's** shield is the Buffer's: it takes your commands only.
+- **They don't roll yet** (`PARTS.mech` 0, as the Damper). They roll in no wild fight, breach node or server room. The
+  playtest pages are how to meet them. At half weight they came in about 40% of wild fights from level 10. Four of the
+  full suite's balance tests moved: the Overclocker's Sudo, crew-leaning kits, the Operator's solo pace and two sets.
+  Bending the planner to those would be tuning against the bots. Once the designer keeps a part, give it a weight in
+  `PARTS.weight` and run the full suite. `developer parts mech 0.5` rolls them all for a session.
+- **A roll bug to fix when they roll.** An elite or ★ rare spawn holding two levers can swap away the floor native it
+  must bring. This happens when a non-lever third is open to take the lever's place (parts.mjs). Today no such third
+  is open where it matters. With the list rolling, the natives test fails. Fix: keep the forced native, and swap the
+  other lever.
+
+**The bots' check** (genesim, level 18, one seed, every subclass): Signal lost a fight against the body alone. Every one
+is under the 25-point bound and the planner still wins. These are not tuning targets.
+
+| Component | Points | Component | Points | Component | Points | Component | Points |
+|---|---|---|---|---|---|---|---|
+| Exposed | +10.3 | Predator | +22.4 | Amplifier | +12.5 | Countdown | +6.5 |
+| Lag | +6.0 | Opportunist | +18.1 | Bodyguard | +20.0 | Backtrace | +6.4 |
+| Leak | +21.5 | Feeder | +2.4 | Vendetta | +5.8 | Swap | −2.0 |
+| Sandboxed | +9.0 | Punisher | −1.4 | Thorns | +18.5 | Turncoat | +3.1 |
+| Stunned | +8.4 | Harvester | +9.5 | | | | |
+| Junk process | +19.9 | Volatile | +14.8 | | | | |
+
+Swap helps the bot: passing Throttled onto a part is a free debuff. Punisher and Harvester barely fire, because the
+planner answers the tells that would Hang or Corrupt it. Feeder and Backtrace are small where the planner keeps clean.
+
+## Do combinations need to spawn together?
+
+The question is the abilities (7 to 12) and the two that read your statuses (Backtrace, Swap). The six statuses on you
+and the four buffs stand alone: each part brings its own trigger. The rest fall into three kinds:
+
+| Kind | Components | How they're fed today |
+|---|---|---|
+| Self-fed | Volatile, Thorns, Swap, Turncoat, Countdown, and the ten above | Their own attack or your own play triggers them. They work in any fight. |
+| Fed by the body | Predator (Encrypted), Opportunist (Scrambled), Feeder, Backtrace (any debuff) | Built with `sig: true`: they roll only when the signature does, so the feeder is always there. |
+| Fed by your mistakes | Punisher (Hung, Stunned), Harvester (Corrupted) | Landed tells, seals and the Mimic. They fire only when you miss a tell, and the playtest page brings a feeder part. |
+
+**Option A: spawn rules.** A dependent part rolls only beside a part that feeds it (a `needs` list in the roll). Each
+part stays one clean idea, and the combination is the lesson. The cost is slots: most wild fights roll one or two
+thirds, the one-lever rule takes one, and a pair takes the rest. Pairs get rarer, every fight with one looks alike,
+and the Codex has to explain parts in pairs.
+
+**Option B: self-sufficient.** Every dependent part carries a small trigger of its own (a Predator whose Bite
+Corrupts). It works in any fight, but each part becomes two rules, and the discovery (the Scramble wakes the
+Opportunist) turns routine. Tooltips get busier, which the designer has rejected before.
+
+**Option C, the recommendation: feed by the board, pair by hand.**
+- **Keep the body-fed four on `sig`.** It costs nothing and is already built: the signature is in more than half of
+  fights.
+- **Widen Punisher and Harvester's triggers rather than pairing them.** The Punisher reads any command you lose: Hung,
+  Stunned, or refused by Sandboxed. The Harvester reads any damage over time on you: Corrupted, or Encrypted stacks
+  consumed for a big hit. Both then feed off what most fights already do, with no new part and no spawn rule.
+- **Keep true pairs for authored fights.** The list's hard combinations (Opportunist with a Scrambler, Countdown with
+  Leak and the Mimic, Stunned with a Scraper) suit elites, ★ rare spawns and floor natives. There a pair is the
+  designed lesson, and a slot is spent on purpose. Wild rolls stay independent, and the rare fight where two parts
+  meet is a surprise, not a rule.
+
+This needs the designer's call before the trigger change: it reshapes what the Punisher and the Harvester ask of you.

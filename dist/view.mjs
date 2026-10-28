@@ -63,6 +63,7 @@ import { XP_KINDS, xpFor, cooldownOf, subOf, subPicked, kitTalent, specRule, ski
 import { sigOf, named, lairOf, intelOf, knowsStrain, knowsEvent, knowsRich, nameOf, NETWORK, nativeChance, homeName, isNative, whoLabel, homeOf, netSeedOf, knownNets, NATIVE_POOL, awayChance } from './network.mjs';
 import { guardSetChance, lairChance, bossOdds, presetsOf, presetKeys, followOf, spikeName, said, mutated, capstonePoints, capPickOf, capState, blastOf, livingParts } from './combat.mjs';
 import { tripwireOf, zipOf, heldOf } from './order.mjs';
+import { youMarks, junkKey } from './mechanics.mjs';
 import { cantripsOf, TELL } from './data.mjs';
 import { usable } from './combat.mjs';
 import { sigintWindows, sigintCharges } from './tells.mjs';
@@ -627,6 +628,7 @@ export function statusSpans(s) {
   for (const [id, until] of Object.entries(e.locked || {})) add(`${ABILITIES[id]?.name || id} offline`, until, 'hot', 'A tell landed and knocked this skill offline.');
   if (e.lockArmed) add('Lock armed', e.cycle, 'hot', 'The first command you fire is locked for 3 cycles, key 1 included. Feed it a skill that is cooling anyway.');
   if (e.virus?.buffs?.overclock >= e.cycle) add('Overclocked', e.virus.buffs.overclock, 'hot', 'Every part of the virus takes double damage, and every attack comes a cycle sooner.', '×2');
+  for (const x of youMarks(s)) add(x.name, x.until, 'hot', x.title, x.value || ''); // the mechanics list's statuses on you (mechanics.mjs)
   add('Scrambled', e.scrambleUntil ?? -1, 'hot', `Each of your attacks has a ${Math.round(CONFIG.scramble.chance * 100)}% chance to hit you instead, at ${Math.round(CONFIG.scramble.self * 100)}% damage.`, `${Math.round(CONFIG.scramble.chance * 100)}% self-hit`);
   return out;
 }
@@ -988,7 +990,8 @@ export function trayMarkup(s, selected = null) {
     const moment = fighting && !wait && !dark ? situationOf(s, id) : null;
     const offline = fighting && e.locked?.[id] >= e.cycle;
     const wiped = fighting && e.wiped?.[id] >= e.cycle; // a Wiper's Wipe (families.mjs)
-    const state = !fighting ? short : queued ? 'queued' : wiped ? `WIPED ${e.wiped[id] - e.cycle + 1}` : offline ? 'OFFLINE' : dark ? 'waiting for its moment' : lit ? 'LIT' : moment ? moment.toUpperCase() : wait ? (wait === 1 ? 'ready next cycle' : `ready in ${wait} cycles`) : short;
+    const junk = fighting && junkKey(s) === id; // a Junker's junk process (mechanics.mjs): firing the key clears it
+    const state = !fighting ? short : queued ? 'queued' : junk ? 'JUNK' : wiped ? `WIPED ${e.wiped[id] - e.cycle + 1}` : offline ? 'OFFLINE' : dark ? 'waiting for its moment' : lit ? 'LIT' : moment ? moment.toUpperCase() : wait ? (wait === 1 ? 'ready next cycle' : `ready in ${wait} cycles`) : short;
     // The charge bar along the bottom: full when it's ready, filling back up while it recharges.
     const cd = cooldownOf(s, id), charge = dark ? 0 : !fighting || !wait ? 100 : cd ? Math.round((1 - wait / Math.max(cd, wait)) * 100) : 0;
     const count = fighting && wait ? `<span class="cd" aria-label="${wait} ${wait === 1 ? 'cycle' : 'cycles'} to go">${wait}</span>` : '';
@@ -996,7 +999,7 @@ export function trayMarkup(s, selected = null) {
     const ml = masteryLine(s, classOf(s), id); // its mastery, on its own line (mastery.mjs; app.js ttShow lights it)
     const armd = fighting && !dark && !offline && !wiped ? armorBadge(s, id, keyAim(s, id, selected)) : ''; // a key you can't press now says nothing of armor
     const sgk = fighting && id === 'sigint' && !queued && !offline && !wiped ? sigintKey(s) : ''; // SIGINT against the live windows, in place of its state line
-    return `<button type="button" class="ability ${cantrip ? 'cantrip' : ''} ${wait || dark ? 'cooling' : fighting ? 'ready' : ''} ${lit ? 'lit' : ''} ${moment ? 'moment' : ''} ${offline ? 'offline' : ''}${wiped ? ' wiped' : ''} ${queued ? 'queued' : ''}" data-ability="${id}" title="${esc(scaledText(s, id, help) + (ml ? '\n' + ml : ''))}"><span class="ico" ${icon(a.icon)}></span><span class="name"><kbd>${key}</kbd>${esc(id === 'spike' ? spikeName(s) : a.name)}</span><span class="state">${sgk || state}</span>${count}${armd}<span class="charge" style="width:${charge}%"></span></button>`;
+    return `<button type="button" class="ability ${cantrip ? 'cantrip' : ''} ${wait || dark ? 'cooling' : fighting ? 'ready' : ''} ${lit ? 'lit' : ''} ${moment ? 'moment' : ''} ${offline || junk ? 'offline' : ''}${wiped ? ' wiped' : ''} ${queued ? 'queued' : ''}" data-ability="${id}" title="${esc((junk ? 'Junk process: a dead key holds this skill. Fire it to clear the junk, and that is your command this cycle.\n' : '') + scaledText(s, id, help) + (ml ? '\n' + ml : ''))}"><span class="ico" ${icon(a.icon)}></span><span class="name"><kbd>${key}</kbd>${esc(id === 'spike' ? spikeName(s) : a.name)}</span><span class="state">${sgk || state}</span>${count}${armd}<span class="charge" style="width:${charge}%"></span></button>`;
   });
   // The next thing your level will unlock, as a faint slot.
   const nx = nextUnlock(s);

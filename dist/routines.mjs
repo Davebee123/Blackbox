@@ -522,7 +522,7 @@ function without(s, ids, fn) {
 
 // ---------- exceptions ----------
 // Parts whose rule changes a decision (a third part, a guard's rule): the program covers one only at its rule tier.
-const RULED = ['ward', 'wardsToo', 'lock', 'twin', 'reflect', 'mimic', 'command', 'deadman', 'fuse', 'hotspot', 'idle', 'front', 'backlog', 'buffer', 'rearm', 'syncOnly', 'phase', 'echo', 'tax', 'pkg', 'obfuscate', 'limit', 'spare', 'scrape', 'packer', 'badblock', 'damper', 'frozen'];
+const RULED = ['ward', 'wardsToo', 'lock', 'twin', 'reflect', 'mimic', 'command', 'deadman', 'fuse', 'hotspot', 'idle', 'front', 'backlog', 'buffer', 'rearm', 'syncOnly', 'phase', 'echo', 'tax', 'pkg', 'obfuscate', 'limit', 'spare', 'scrape', 'packer', 'badblock', 'damper', 'frozen', 'mech'];
 export const ruled = (p) => RULED.some((k) => p[k]);
 const BEATS = new Set(['beat1', 'beat2']);
 // A beat chip, or a beat's own chip (its rule's: the Mimic's dear copy, the Decoy's bent onto a lever): what covers its part's

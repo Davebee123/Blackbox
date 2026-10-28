@@ -35,6 +35,7 @@ import { GUARDS, STRAINS, TELL, SUBS, LOADOUT, SUBCLASS, defaultSub, ARCHETYPES,
 import { seeded, rollItem, itemLabel, protocolSlots, SLOT_KINDS, chaseStat } from './gear.mjs';
 import { SUBSYSTEMS, REWRITES } from './rewrites.mjs';
 import { GENES, rollGenome, partGenes, compatible } from './genes.mjs';
+import { mechRolls } from './parts.mjs';
 import { AUTHORS } from './authors.mjs';
 import { decoded } from './genome.mjs';
 import { heatRules } from './heat.mjs';
@@ -192,7 +193,7 @@ export function digInto(g, gene, family) {
 export function genomeOfNode(r, level, family, author, elite = false, strain = false, gen = {}) {
   const A = AUTHORS[author] || {}, body = FAMILIES[family]?.parts || [];
   const core = body.filter((p) => p.pool !== 'third').flatMap((p) => partGenes(p));
-  let genes = rollGenome({ rand: r, level, family, core, signature: A.signature || [], toolkit: A.toolkit || [], elite, bonus: BREACH.geneBonus + (gen.bonus || 0), known: gen.known || null });
+  let genes = rollGenome({ rand: r, level, family, core, signature: A.signature || [], toolkit: A.toolkit || [], elite, bonus: BREACH.geneBonus + (gen.bonus || 0), known: gen.known || null, allow: mechRolls }); // the mechanics list's wait for PARTS.mech (parts.mjs)
   if (strain) genes = genes.filter((id) => GENES[id].mutation);
   return { third: genes.find((id) => GENES[id].parts) || null, muts: genes.filter((id) => GENES[id].mutation), genes };
 }

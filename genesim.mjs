@@ -131,6 +131,12 @@ export const PROBES = {
   damper: probe(23, fam('worm'), 'damper', { genes: ['damper'] }),
   coldstore: probe(24, fam('ransomware'), 'coldstore', { genes: ['coldstore'] }),
 };
+// The mechanics list (docs/mechanics-list.md): one level and one seed each (CLAUDE.md "Lean first"), the check that a
+// component works and isn't absurd, not its tuning. The designer's play tunes them.
+for (const [id, g] of Object.entries(GENES)) {
+  const [family, spec] = Object.entries(g.parts || {})[0] || [];
+  if (spec?.mech) PROBES[id] = { ...probe(g.opens, fam(family), id, { genes: [id] }), levels: [18], seeds: [1] };
+}
 // The named builds: each strain against its family's body. Keylogger's two genes share one probe.
 for (const [k, st] of Object.entries(STRAINS)) PROBES[st.genes[0]] = { opens: st.from, body: fam(st.lineage), with: { ...fam(st.lineage), strain: k }, gene: st.genes[0], build: k, also: st.genes.slice(1) };
 export const PROBE_LEVELS = [5, 10, 18, 30];
@@ -158,7 +164,8 @@ const avg = (xs) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
 // alone (cost, and per cost point), and with it ignored over it answered (answer), and each player's wins either way.
 export function geneCheck(id, { seeds = SEEDS, levels = PROBE_LEVELS, answer = true } = {}) {
   const P = PROBES[id], out = { id, cost: GENES[id].cost, levels: {}, subs: {} };
-  const Ls = levels.filter((L) => L >= P.opens);
+  const Ls = (P.levels || levels).filter((L) => L >= P.opens);
+  if (P.seeds) seeds = P.seeds; // a lean probe's own (the mechanics list's)
   const all = { body: [], with: [], ignore: [] };
   for (const L of Ls) {
     const row = { body: [], with: [], ignore: [] };

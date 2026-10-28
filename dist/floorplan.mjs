@@ -56,7 +56,7 @@ import { giveScript, rollScript } from './scripts.mjs';
 import { AUTHOR_FAMILIES, OPENS, rollSet, applySet, jitterFirst, setsOf, familyName, setName } from './families.mjs';
 import { armTicks, bossRule, BOSS_RULES } from './interrupt.mjs';
 import { logSet } from './genome.mjs';
-import { weightOf, nativeFloor, PARTS } from './parts.mjs';
+import { weightOf, nativeFloor, PARTS, mechRolls } from './parts.mjs';
 import { deathRecap } from './recap.mjs';
 import { addrsOf, byAddr } from './address.mjs';
 import { PROGRAMS, SOCKET, buildProgram, uninstallProgram, gainComponents, familyComponents, programCost, buildBlock as programBlock, costLine as programCostLine, codebasesOf } from './sockets.mjs';
@@ -527,7 +527,7 @@ function assign(g, r, { size, kind, level, floor, author, hunter, N, L }) {
   const order = [...fams].sort(() => r() - 0.5);
   fights.forEach((id, i) => {
     const family = i < order.length ? order[i] : pick(r, fams);
-    const pool = (FAMILIES[family]?.parts || []).filter((p) => p.pool === 'third' && (!p.from || level >= p.from));
+    const pool = (FAMILIES[family]?.parts || []).filter((p) => p.pool === 'third' && (!p.from || level >= p.from) && mechRolls(p.gene));
     Object.assign(R[id], { family, author, set: rollSet(family, author, r), third: pool.length && r() < 0.6 ? pickWeighted(r, pool, (x) => weightOf(x.gene, floor)).gene : null }); // a native weighs PARTS.floor on its own floor (parts.mjs)
   });
   for (const id of all) {

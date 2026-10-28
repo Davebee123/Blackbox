@@ -157,7 +157,7 @@ test('a body\'s research is the average of its parts\', each capped at 60: on it
   s.dex.fought['nb-deadbolt'] = 1;
   s.research = { 'ransomware:pulse': 60, 'ransomware:encryptor': 30 };
   const n = entries(s).find((g) => g.id === 'family').rows.find((r) => r.id === 'ransomware').pct;
-  const parts = 15; // Pulse Node, Encryptor, its three basics (dist/parts.mjs) and its ten third parts
+  const parts = 22; // Pulse Node, Encryptor, its three basics (dist/parts.mjs), its ten third parts and the mechanics list's seven
   assert.equal(n, Math.round(((1 + 0.5) / parts) * 100));
   const html = codexPageMarkup(s, 'family:ransomware');
   assert.match(html, new RegExp(`<small class="cx-n" title="The average research of its parts">${n}%</small>`));

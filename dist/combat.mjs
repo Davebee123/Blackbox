@@ -29,6 +29,7 @@ import { raidStart, raidLand, raidCycle, raidShield, raidBroke, raidTaken, raidA
 import { tellStart, tellCycle, tellLand, tellBroke, chargeNow, tellIntents, tellSigint, tellSigintCheck, tellOn, tellsOf, overclockMult, hotCharge } from './tells.mjs';
 import { prepareTicks, onHit as tickHit, blastCut, BOSS_RULES } from './interrupt.mjs';
 import { TELL, ROOM_FAMILIES, DAMPER_KINDS, floorFor, partGenesFor } from './data.mjs';
+import { mechValidate, mechIntercept, mechFired, mechPower, exposedCut, mechLanded, mechCommandHit, mechStart, mechClose, mechBroke, lagged, stunnedNow, missedTurn } from './mechanics.mjs';
 import { tickRoot, processWon } from './root.mjs';
 import { firewallCommand, wear, raidShare } from './firewall.mjs';
 import { levelGains, nextGains, progressionRestore, climbRestore, RETIRED } from './progression.mjs';
@@ -2443,6 +2444,9 @@ export function parse(s, input) {
 export function validate(s, intent) {
   const e = s.encounter;
   const a = ABILITIES[intent.ability];
+  if (e?.junk === intent.ability) return null; // the junked key: firing it clears the junk (mechanics.mjs)
+  const why = mechValidate(s, intent); // Sandboxed: no direct hits
+  if (why) return why;
   const wait = intent.ignoreCooldown ? 0 : readyIn(s, intent.ability);
   if (wait) return `${a.name} is ready in ${wait} ${wait === 1 ? 'cycle' : 'cycles'}.`;
   if (a.target !== 'none' && !alive(part(s, intent.target))) return 'That part is already broken.';
@@ -2813,6 +2817,7 @@ export function hit(s, p, base, opts = {}) {
   if (cmd && p.special) e.virus.idleHit = e.cycle; // the Idle Timer counts from the signature's last command hit
   // Hotspot: a command hit on it powers up the virus's next attack 2 or more cycles away (tells.mjs).
   if (cmd && p.hotspot && p.hotAt !== e.cycle) { p.hotAt = e.cycle; hotCharge(s, p); }
+  if (cmd) mechCommandHit(s, p); // Thorns, a Swap passing your statuses on, the Bodyguard's target (mechanics.mjs)
   // Adaptive (mutation): count the cycles in a row your commands hit this part (the chit comes at cycle end).
   if (mutated(s, 'adaptive') && opts.mine && !opts.dot && !opts.server && base > 0 && p.adaptAt !== e.cycle) {
     p.adaptRun = p.adaptAt === e.cycle - 1 ? (p.adaptRun || 0) + 1 : 1;
@@ -3076,7 +3081,7 @@ function doppelganger(s) {
 // a Front End stands in front of (the signature, else the basic, else the next part), the signature an Idle Timer watches.
 const sysParts = (s) => livingParts(s).filter((x) => x.kind === 'system');
 export function belowOf(s, p) { const xs = sysParts(s).filter((x) => x !== p), all = parts(s); return xs.find((x) => all.indexOf(x) > all.indexOf(p)) || xs.at(-1) || null; }
-export const bufferOn = (s, p) => livingParts(s).find((x) => x.buffer && belowOf(s, x) === p) || null;
+export const bufferOn = (s, p) => livingParts(s).find((x) => (x.buffer && belowOf(s, x) === p) || (x.mech === 'bodyguard' && p.bufBy === x.id)) || null; // a Bodyguard's shield too (mechanics.mjs)
 export function frontOf(s, fe) { const xs = sysParts(s).filter((x) => x !== fe && !x.front); return xs.find((x) => x.special) || xs.find((x) => x.basic) || xs[0] || null; }
 export const signatureOf = (s) => livingParts(s).find((x) => x.special && x.kind === 'system') || null;
 // The parts plan's second wave (P2): a Cold Store still frozen (untouchable, off the timeline), a Spare still asleep,
@@ -3168,6 +3173,7 @@ function breakPart(s, p) {
   p.brokeOnce = true;
   e.metrics.breakOrder.push(p.id);
   if (p.kind !== 'fragment') e.breaks = (e.breaks || 0) + 1;
+  mechBroke(s, p); // Vendetta (mechanics.mjs)
   // Mirror: break one twin while the other lives, and it reboots a few cycles later (at most twice).
   const tw = twinOf(s, p);
   if (tw && alive(tw) && (p.reboots || 0) < CONFIG.twinReboot.max && !p.quiet && !fxHas(s, 'no-reboot')) { p.rebootAt = e.cycle + CONFIG.twinReboot.in; emit(s, 'status', `${p.name} is down, but its twin ${tw.name} will reboot it in ${CONFIG.twinReboot.in} cycles. Break both.`, { target: p.id }); }
@@ -3800,7 +3806,7 @@ function landAttack(s, p) {
   const e = s.encounter;
   const atk = p.attack;
   liftOf(s);
-  const power = attackAmount(p) * c2Gnaw(s, p) * (e.soft || 1) * gapTaken(levelGap(s)) * (p.boosted ? CONFIG.reactiveBonus : 1) * (on(s, p, 'throttled') ? (hasTalent(s, 'backpressure') ? 0.25 : SKILLS.throttled) : 1);
+  const power = attackAmount(p) * c2Gnaw(s, p) * (e.soft || 1) * gapTaken(levelGap(s)) * (p.boosted ? CONFIG.reactiveBonus : 1) * (on(s, p, 'throttled') ? (hasTalent(s, 'backpressure') ? 0.25 : SKILLS.throttled) : 1) * mechPower(s, p, true);
   // A hit: a damage attack, or a special that also hits (the Scrambler's Scramble). Its size is `hit`, scaled like the rest.
   const hits = atk.effect === 'damage' || !!atk.hit, hitPower = atk.hit ? (power * atk.hit) / Math.max(1, atk.amount) : power;
   p.boosted = false;
@@ -3881,10 +3887,12 @@ function landAttack(s, p) {
     let cut = half ? 0.5 : 1;
     if (!half && e.hardened > 0) { e.hardened--; cut = 1 - SKILLS.hardenedCut; emit(s, 'blocked', `Hardened: ${atk.name} deals ${Math.round(SKILLS.hardenedCut * 100)}% less damage.`, { source: p.id }); }
     for (const x of fxFire(s, 'struck', { do: 'taken%', atk, amount: pre, lands })) { cut *= Math.max(0, 1 - x.value / 100); emit(s, 'blocked', `${x.name || x.it.name}: ${atk.name} deals ${x.value}% less damage.`, { source: p.id, ...firedOf([x]) }); } // Read-Only
+    cut *= exposedCut(s); // Exposed (a Prober, mechanics.mjs): this hit deals more, and the status clears
     // Blindside (Ghostroot): a hit you couldn't see coming lands harder.
     const dealt = takeDamage(s, absorbed(s, hitCapped(s, spikeCapped(s, Math.round(hitPower * sap * (hasTalent(s, 'unsafe-mode') ? 1.2 : 1) * tough * (crit ? CRIT.multiplier : 1) * cut * took * (e.virus.raid ? raidTaken(s) : 1)), atk)), atk, p), p.id, atk.name);
     struckFx(s, atk);
     if (dealt) classEach('struck', s, atk, dealt, p);
+    if (p.mech) mechLanded(s, p, atk); // the status it leaves on you, or what it cashes in (mechanics.mjs)
     if (p.scrape && (e.shield > 0 || timedBuffs(s).length)) scrapeYou(s, p, atk, { shield: e.shield, buffs: timedBuffs(s) });
     // Bad Block: your next heals lose up to its share of your max (a fresh pool each time it lands, not a bigger one).
     if (p.badblock) {
@@ -4027,10 +4035,14 @@ export function playerPhase(s, phase = 'all') {
   // the timer falls back to auto-repeat as before.
   const prog = !e.queue && hooks.program ? hooks.program(s) : null;
   // Hung (a tell that landed, tells.mjs): this cycle's command doesn't fire.
-  if (e.hung === e.cycle && (e.queue || e.lastAttack || prog)) {
-    emit(s, 'hung', 'HUNG. Your command does not fire this cycle.', {});
+  // Stunned (a Stunner, mechanics.mjs) the same; either way the Punisher gets its free attack.
+  if ((e.hung === e.cycle || stunnedNow(s)) && (e.queue || e.lastAttack || prog)) {
+    emit(s, 'hung', e.hung === e.cycle ? 'HUNG. Your command does not fire this cycle.' : 'STUNNED. Your command does not fire this cycle.', {});
+    missedTurn(s);
     e.metrics.holds++;
     e.lastCmd = { id: 'hold', cycle: e.cycle };
+  } else if (e.queue && mechIntercept(s, e.queue.ability)) { // the junked key cleared, or a direct hit Sandboxed (mechanics.mjs)
+    e.metrics.holds++;
   } else if (e.queue) {
     const q = e.queue;
     e.surprise = !!(e.synced && e.sync?.surprise && q.ability !== 'hold'); // Infiltrator Surprise (see CONFIG.surprise)
@@ -4046,6 +4058,7 @@ export function playerPhase(s, phase = 'all') {
   else if (e.lastAttack) {
     const intent = parse(s, e.lastAttack);
     if (intent.error) emit(s, 'hold', 'Auto-repeat had no target. Nothing fired.');
+    else if (mechIntercept(s, intent.ability)) e.metrics.holds++;
     else {
       intent.text = `${intent.ability} ${intent.target}`;
       e.commanding = { id: intent.ability, target: intent.target || null, auto: true }; // auto-repeat never answers a tell
@@ -4064,6 +4077,7 @@ export function playerPhase(s, phase = 'all') {
     if (e.keylog >= 3 && logger.attack.due > e.cycle + 1) { logger.attack.due = e.cycle + 1; emit(s, 'status', `The ${logger.name} has logged 3 keystrokes. It Dumps next cycle.`, { target: logger.id }); }
     else if (e.keylog < 3) emit(s, 'status', `The ${logger.name} logs a keystroke (${e.keylog}/3).`, { target: logger.id });
   }
+  mechFired(s); // Leak's price, the Countdown's count, a Volatile Corrupted cleansed (mechanics.mjs)
   e.synced = false;
   flushDaemons(s); // what your command set off (daemons.mjs)
   }
@@ -4133,6 +4147,7 @@ export function resolveCycle(s) {
   // 1. The players act first, so breaking a part on its last cycle stops its attack.
   const turns = virusIntegrity(s).current > 0 ? hooks.crewTurns?.(s) || 0 : 0;
   if (!turns) { // solo
+    if (lagged(s)) return lagCycle(s, first); // Lag (mechanics.mjs): the virus acts first
     if (!playerPhase(s)) return since(s, first);
     // Stepped (the browser): the virus answers a beat later, as its own step, when it has an attack due.
     if (hooks.stepped && virusIntegrity(s).current > 0 && dueNow(s).length) { e.steps = { order: [], next: 0, of: 0, after: true }; return since(s, first); }
@@ -4290,7 +4305,7 @@ function cycleStart(s) {
     }
   }
 
-  return false;
+  return mechStart(s); // the Punisher's free attack, the Countdown's big turn (mechanics.mjs)
 }
 // What a Zip Bomb's blast deals a part of the virus: its share of the part's own max (docs/puzzle-levers.md 3.3).
 export const blastOf = (p) => Math.max(1, Math.round((p?.max || 0) * CONFIG.zipbomb.parts));
@@ -4428,6 +4443,7 @@ function cycleClose(s, landed) {
     for (const x of re) { x.armor = x.maxArmor; x.patchAt = null; }
     emit(s, 'patch', re.length ? `IDLE. The ${it.name} re-arms ${re.map((x) => x.name).join(' and ')} to full ◆.` : `IDLE. The ${it.name} times out, but every part still wears its ◆.`, { target: (re[0] || it).id, idle: true });
   }
+  mechClose(s); // the mechanics list's parts at the cycle's end: Predator, Opportunist, Feeder, Amplifier, Bodyguard, Backtrace
   // Mutex: a broken lock comes back while the Mutex lives.
   for (const p of livingParts(s).filter((x) => x.lockAt != null && e.cycle >= x.lockAt)) {
     p.lockAt = null;
@@ -4477,6 +4493,18 @@ function cycleClose(s, landed) {
   if (e.virus.raid) raidCycle(s); // a crew boss: its phase, then what it announces (raid.mjs)
   if (e.virus.tells) { tellCycle(s); flushDaemons(s); } // a solo fight's tells: what it announces now (tells.mjs); a Lookout's hit
   hooks.programCycle?.(s); // routines.mjs: a part that's yours to play, and the auto jack-out rail
+}
+// A lagged cycle (a Jitter's Lag, mechanics.mjs): the virus's attacks land, then your command, then the cycle closes.
+function lagCycle(s, first) {
+  if (cycleStart(s)) return since(s, first);
+  let landed = 0;
+  for (const p of dueNow(s)) { if (p.attack?.due > s.encounter.cycle) continue; landed++; if (strike(s, p)) return since(s, first); }
+  if (s.encounter.virus.tells && tellLand(s)) return since(s, first);
+  emit(s, 'status', 'LAG. Your command lands after the virus acts.', { lag: true });
+  if (!playerPhase(s)) return since(s, first);
+  if (virusIntegrity(s).current === 0) { finish(s, 'victory'); return since(s, first); }
+  cycleClose(s, landed);
+  return since(s, first);
 }
 function endCycle(s, first) {
   if (cycleStart(s)) return since(s, first);
@@ -4589,7 +4617,7 @@ export function intents(s, columns = 4) {
       const col = due - e.cycle;
       if (a.grow) a.bonus = (bonus0 || 0) + a.grow * Math.max(0, col);
       const tap = p.taps ? { tap: ((a.tap || 0) + k) % p.taps + 1, taps: p.taps } : {}; // which hit of its volley
-      if (col >= 0 && !charged.has(`${p.id}@${col}`)) out.push({ source: p.id, name: a.name, effect: a.effect, amount: Math.round(attackAmount(p) * c2Gnaw(s, p) * (boosted ? CONFIG.reactiveBonus : 1)), ...(a.hit ? { hit: Math.round(a.hit * (boosted ? CONFIG.reactiveBonus : 1)) } : {}), col, hidden, kind: p.kind, ...tap, ...(p.backlog ? { syn: true } : {}), ...(p.scrape ? { scrape: true } : {}), ...(p.badblock ? { bad: true } : {}), ...(due === a.due && delayHeld(p) ? { held: true } : {}) }); // held: already delayed, it lands there
+      if (col >= 0 && !charged.has(`${p.id}@${col}`)) out.push({ source: p.id, name: a.name, effect: a.effect, amount: Math.round(attackAmount(p) * c2Gnaw(s, p) * (boosted ? CONFIG.reactiveBonus : 1) * mechPower(s, p, false, k > 0)), ...(a.hit ? { hit: Math.round(a.hit * (boosted ? CONFIG.reactiveBonus : 1)) } : {}), col, hidden, kind: p.kind, ...tap, ...(p.backlog ? { syn: true } : {}), ...(p.scrape ? { scrape: true } : {}), ...(p.badblock ? { bad: true } : {}), ...(due === a.due && delayHeld(p) ? { held: true } : {}) }); // held: already delayed, it lands there
       if (a.ramp) a.step = (a.step || 0) + 1;
       boosted = false;
     });

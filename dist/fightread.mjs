@@ -22,6 +22,7 @@ import { nextTick } from './interrupt.mjs';
 import { BODY } from './families.mjs';
 import { situationOf } from './situations.mjs';
 import { knows, TIER } from './research.mjs';
+import { mechRead } from './mechanics.mjs';
 
 const when = (n) => (n <= 0 ? 'this cycle' : n === 1 ? 'next cycle' : `in ${n} cycles`);
 const cycles = (n) => `${n} ${n === 1 ? 'cycle' : 'cycles'}`;
@@ -229,6 +230,7 @@ function readOf(s, v, p) {
   if (p.damper) { const k = DAMPED[p.damperKind] || DAMPED.burn; return [`While it wears ◆, it is immune to damage from ${k.many}. ${k.many[0].toUpperCase() + k.many.slice(1)} still break its ◆.`, 'Strip its ◆ first, then use anything.', null]; } // (its tag crosses out the kind it drops)
   // A Cold Store: a Codex card carries its Chill as its attack (codex.mjs sampleOf), sized as its attack line.
   if (p.frozen && !p.thawed) { const at = p.thawAt ?? p.frozen, c = p.attack ? p : p.chill ? { ...p, attack: p.chill } : null; return [`Frozen until the end of cycle ${at}, off the timeline and immune to damage.${c ? ` After it thaws, its ${c.attack.name} deals ${hitOf(s, c)} damage to you ${every(c.attack.interval)}. The first ${c.attack.name} lands 2 cycles after the thaw.` : ''}`, 'Break the others while it is frozen.', { text: `thaws after cycle ${at}`, icon: 'clock', link: null }]; }
+  if (p.mech) return mechRead(s, p, p.attack ? attackRead(s, v, p)[0] : ''); // the mechanics list (mechanics.mjs)
   if (p.overrun) return [`Spawns a fragment${p.attack ? ` ${every(p.attack.interval)}` : ''}. Each fragment's bite deals 1 more damage every cycle it lives.`, 'Clear fragments young, or break it.', null];
   // A server room's bodies (families.mjs).
   if (fam === 'trojan' && p.id === 'courier') return [`${deals(p.attack ? hitOf(s, p) : 0)} ${every(p.attack?.interval || 5)}. Delivers a Package ${every((p.deliver || p.redeploy?.deliver)?.interval || 3)}. A Package unpacks into two Droppers ${cycles(BODY.package.opens)} after delivery, or when anything damages it while the Loader stands. While the Loader stands, a broken Courier redeploys ${cycles(BODY.redeploy.in)} later at ${pct(BODY.redeploy.at)} Integrity.`, 'Break the Loader, and leave the Packages alone.', null];

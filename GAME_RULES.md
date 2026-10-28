@@ -2114,6 +2114,31 @@ A basic with no attack (the Buffer, the Obfuscator) is its signature's **fallbac
 
 The Decoy costs 2 budget points now (it was 3).
 
+**The mechanics list** (docs/mechanics-list.md, `dist/mechanics.mjs`, every number a *start* in `MECH`): twenty more third parts, built lean for the designer to play. Each is a gene with a third-part spec (its `mech`), a tooltip, a cue under its name and a playtest page (`?playtest=part:<id>`). Like the Damper, they don't roll yet (`PARTS.mech` 0): no wild fight, breach node or server room brings one until the designer has played it and kept it. Then it rolls like any third from its level. `developer parts mech 0.5` rolls them all for a session (about 40% of wild fights from level 10). A ◆ on you stops a status the way it stops a Scramble. Statuses on you show red on your strip.
+
+| Family | Part (level) | What it does |
+|---|---|---|
+| Ransomware | **Prober** (4): Probe 3 every 3 | Leaves you **Exposed**: your next incoming hit deals 50% more, then it clears. |
+| Worm | **Jitter** (7): Jitter 3 every 4 | **Lag** for 2 cycles: your command lands after the virus acts (a solo fight's cycle runs virus first), so it can't cut or race an attack due then. |
+| Ransomware | **Leaker** (9): Drip 3 every 4 | **Leak** for 3 cycles: each command you fire costs 3% of your max (never your last point). Holding is free. |
+| Ghostroot | **Sandbox** (11): Contain 3 every 4 | **Sandboxed** for 1 cycle: a direct hit (the Mimic's *hit* copy) is refused at the prompt, and one queued before doesn't fire. Strips, burns, helpers, shields and buffs go. |
+| Ghostroot | **Stunner** (12): Jolt 3 every 5 | **Stunned**: your next command doesn't fire, as Hung. |
+| Worm | **Junker** (14): Junk 3 every 4 | A **junk process** holds one of your bar's keys (never key 1 or SIGINT): the key reads JUNK. Firing it, even cooling, clears the junk, and that is your command. One at a time. |
+| Ransomware | **Predator** (6, with the Encryptor): Bite 3 every 3 | While you're Encrypted or Corrupted, its next attack is at most a cycle away: it attacks every cycle. |
+| Ghostroot | **Opportunist** (8, with the Scrambler): Pounce 4 every 3 | Asleep off the timeline until you carry any debuff (`youDebuffs`: Encrypted, Corrupted, Scrambled, Hung, Throttled, Cracked, a skill offline and this list's six). Then it wakes for good and attacks the next cycle. |
+| Ransomware, Ghostroot | **Feeder** (10, with the signature): no attack | At each cycle's end, heals the most damaged part 2% of that part's max for each debuff you carry. |
+| Ghostroot | **Punisher** (13): Punish 4 every 4 | A cycle your command doesn't fire because you're Hung or Stunned, it lands a free extra attack (its timer untouched). Its playtest brings a Stunner. |
+| Ransomware | **Harvester** (15): Reap 3 every 4 | Its Reap consumes your Corrupted for an extra hit of 4% of your max for each cycle it had left. Its playtest brings a Volatile. |
+| Ransomware | **Volatile** (17): Unstable 3 every 4 | Leaves you Corrupted, 2% of your max a cycle for 3 cycles (stacking onto a Corrupted already there). Cleansing it, by anything, deals what it had left at once; running out is free. |
+| Worm | **Amplifier** (5): no attack | Each cycle it boosts another attacker's next attack by 50%, in turn (one boost a part, spent as it lands; the board's cell shows it). |
+| Worm | **Bodyguard** (9): no attack | At each cycle's end, shields the part your command hit (not itself) for 15% of that part's max, a Buffer's shield: it takes your commands only. |
+| Worm | **Vendetta** (11): no attack | While it stands, each other part you break makes the rest hit 20% harder for the fight (`e.virus.vendetta`). Breaking it first adds nothing. |
+| Worm | **Thorns** (7): Prick 3 every 4 | Each command that hits it (once a cycle) leaves you Corrupted, a stack of 1% of your max a cycle for 3 cycles. Burns and helpers don't. |
+| Worm | **Countdown** (13): no attack | Counts the commands you fire (holds and lost commands don't). At 10, every part attacks at once at the start of the virus's half, and the count starts over. |
+| Ransomware, Ghostroot | **Backtrace** (16, with the signature): no attack | At each cycle's end, each debuff you carry adds a stack. At 5, it calls in a fragment (a Replicate's, within the cap and outside a DMZ), and the stacks start over. |
+| Ghostroot | **Swap** (18): Pass 3 every 4 | Its Pass Throttles you for 2 cycles. While it stands, your next command hit moves your Throttled, Exposed (as the part's Exposed) or Corrupted (as a burn on it; not a Volatile one) onto the part it hits. |
+| Ghostroot | **Turncoat** (10): Turn 3 every 3 | Below half your Signal its Turn Scrambles you for 2 cycles too. |
+
 Guards on runs are lighter (you have 50 Signal): Watchdog (Sentry 24 bare, Sweep 6 every 3; Tracker 28 ◆, Trace-back 16 every 5), Sentinel (Lens and Lockout, 24 ◆ each, both veiled), Crawler (Maw 24 bare; Brood 28 ◆ spawns fragments, and once the Maw is down it bites for the Maw's Bite with each spawn: *Fallback*), Shredder (Grinder 26 ◆, Grind 9 every 4; Shredder 26 ◆, Shred 14 every 5).
 
 **Enemy level** is set by the server level (home) or the server level plus the layer (guards). Beyond size, the signature part gains a chit at level 5 and again at 7, the basic part gains one at 10, and from level 9 first attacks come a cycle sooner (never on cycle 1). Test fights and the tables above use level 6.

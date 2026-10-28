@@ -405,8 +405,10 @@ function basicOf(family, id, from) {
   return { id, ...rest, ...(family === 'ghostroot' ? { veiled: true } : {}), ...(attack ? { attack } : { fallback: sig.id }), from, pool: 'basic' };
 }
 // The genes a part's own fight brings (?playtest=part:<id>, developer fight part:<id>): its gene, and for a Packer a
-// second third open at that level, so there's a rule on the board for it to pack.
+// second third open at that level, so there's a rule on the board for it to pack. A part whose rule reads a status only
+// a tell or another part puts on you (spec.feed: the Punisher's Stunner, the Harvester's Volatile) brings that part.
 export function partGenesFor(family, spec, level) {
+  if (spec.feed) return [spec.gene, spec.feed];
   if (!spec.packer) return [spec.gene];
   const other = FAMILIES[family].parts.find((x) => x.pool === 'third' && x !== spec && !x.sig && (x.from || 1) <= level);
   return other ? [spec.gene, other.gene] : [spec.gene];
@@ -421,7 +423,7 @@ export const FAMILIES = {
     summary: 'Encrypts your server. Each Encrypt adds damage every cycle until you break the Encryptor, which holds the key.',
     core: ['surge', 'encrypt'],
     basic: [['accumulator', 1], ['buffer', 3], ['cipherblock', 5]],
-    third: ['ward', 'zipbomb', 'hotspot', 'mutexlock', 'idletimer', 'frontend', 'limiter', 'tripwire', 'scraper', 'coldstore'], // the Lockbox from level 3, the Zip Bomb from 5, the Hotspot from 6, the Mutex from 8, the Idle Timer from 9, the Front End from 10, the Limiter from 13, the Tripwire from 16, the Scraper from 19, the Cold Store from 24
+    third: ['ward', 'zipbomb', 'hotspot', 'mutexlock', 'idletimer', 'frontend', 'limiter', 'tripwire', 'scraper', 'coldstore', 'exposed', 'predator', 'leak', 'feeder', 'harvester', 'backtrace', 'volatile'], // the Lockbox from level 3, the Zip Bomb from 5, the Hotspot from 6, the Mutex from 8, the Idle Timer from 9, the Front End from 10, the Limiter from 13, the Tripwire from 16, the Scraper from 19, the Cold Store from 24; the mechanics list's (docs/mechanics-list.md): the Prober from 4, the Predator from 6, the Leaker from 9, the Feeder from 10, the Harvester from 15, the Backtrace from 16, the Volatile from 17
     parts: [
       { id: 'pulse', name: 'Pulse Node', integrity: 34, armor: 1, loot: 'Pulse Kernel', attack: { name: 'Surge', effect: 'damage', amount: 14, interval: 4, first: 3 } },
       { id: 'encryptor', name: 'Encryptor', integrity: 38, armor: 1, loot: 'Cipher Seed', special: true, attack: { name: 'Encrypt', effect: 'encrypt', amount: 4, interval: 5, first: 4 } },
@@ -434,7 +436,7 @@ export const FAMILIES = {
     summary: 'Spawns fragments that gnaw your server every cycle. The Replicator makes them.',
     core: ['surge', 'replicate'],
     basic: [['strobe', 1], ['repeater', 3], ['fanin', 5]],
-    third: ['twin', 'zipbomb', 'c2', 'backlog', 'spare', 'damper'], // the Mirror from level 3, the Zip Bomb from 5, the C2 Node from 8, the Backlog from 12, the Spare from 14, the Damper from 23
+    third: ['twin', 'zipbomb', 'c2', 'backlog', 'spare', 'damper', 'amplifier', 'lag', 'thorns', 'bodyguard', 'vendetta', 'countdown', 'junk'], // the Mirror from level 3, the Zip Bomb from 5, the C2 Node from 8, the Backlog from 12, the Spare from 14, the Damper from 23; the mechanics list's: the Amplifier from 5, the Jitter and the Thorns from 7, the Bodyguard from 9, the Vendetta from 11, the Countdown from 13, the Junker from 14
     parts: [
       { id: 'pulse', name: 'Pulse Node', integrity: 34, armor: 1, loot: 'Pulse Kernel', attack: { name: 'Surge', effect: 'damage', amount: 12, interval: 4, first: 4 } },
       { id: 'replicator', name: 'Replicator', integrity: 38, armor: 1, loot: 'Replication Seed', special: true, attack: { name: 'Replicate', effect: 'replicate', amount: 1, interval: 4, first: 3, hit: 4 } }, // a small Splice hit with each spawn
@@ -447,7 +449,7 @@ export const FAMILIES = {
     summary: 'Its parts hide their timers while they wear ◆. The Scrambler hits you and Scrambles you for 2 cycles. While you are Scrambled, each of your attacks has a 25% chance to hit you instead, at half damage.',
     core: ['surge', 'scramble', 'veil'],
     basic: [['strobe', 1], ['prism', 3], ['obfuscator', 5]],
-    third: ['decoymirror', 'hotspot', 'mimic', 'frontend', 'spare', 'packer', 'badblock'], // the Decoy from level 4, the Hotspot from 6, the Mimic from 8, the Front End from 10, the Spare from 14, the Packer from 20, the Bad Block from 21
+    third: ['decoymirror', 'hotspot', 'mimic', 'frontend', 'spare', 'packer', 'badblock', 'opportunist', 'feeder', 'turncoat', 'sandboxed', 'stunned', 'punisher', 'backtrace', 'swap'], // the Decoy from level 4, the Hotspot from 6, the Mimic from 8, the Front End from 10, the Spare from 14, the Packer from 20, the Bad Block from 21; the mechanics list's: the Opportunist from 8, the Feeder and the Turncoat from 10, the Sandbox from 11, the Stunner from 12, the Punisher from 13, the Backtrace from 16, the Swap from 18
     parts: [
       // The Scrambler carries the threat, not the Pulse: killing the Pulse first no longer halves the fight.
       { id: 'pulse', name: 'Pulse Node', integrity: 34, armor: 1, veiled: true, loot: 'Pulse Kernel', attack: { name: 'Surge', effect: 'damage', amount: 11, interval: 4, first: 3 } },
@@ -717,6 +719,7 @@ export function makePart(spec, kind, scale, extraArmor = 0) {
     ...(spec.fuse ? { fuse: true } : {}), ...(spec.hotspot ? { hotspot: true } : {}), ...(spec.idle ? { idle: spec.idle } : {}), ...(spec.front ? { front: true } : {}), ...(spec.backlog ? { backlog: spec.backlog } : {}),
     ...(spec.limit ? { limit: spec.limit } : {}), ...(spec.spare ? { spare: { ...spec.spare } } : {}), ...(spec.scrape ? { scrape: spec.scrape } : {}),
     ...(spec.packer ? { packer: true } : {}), ...(spec.badblock ? { badblock: spec.badblock } : {}), ...(spec.damper ? { damper: true } : {}), ...(spec.frozen ? { frozen: spec.frozen } : {}),
+    ...(spec.mech ? { mech: spec.mech } : {}), // the mechanics list (mechanics.mjs): its rule, by id
     ...(spec.wardCommands ? { wardCommands: true } : {}), // HASHLORD's Pool Lock: its ward holds back your commands only, not burns or helpers
     attack: spec.attack ? { ...spec.attack, due: spec.attack.first, amount: spec.attack.amount } : null,
     exposedUntil: 0,
