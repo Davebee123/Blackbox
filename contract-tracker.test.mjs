@@ -41,7 +41,7 @@ test('only the contracts you hold: not the board, not the delivered ones', () =>
   const html = mapMarkup(s);
   assert.equal(rows(html).length, 3, 'three held, the delivered one and the offer left out');
   assert.deepEqual(trackedJobs(s).map((j) => j.id), openContracts(s).map((c) => c.id));
-  assert.match(tracker(html), /Contracts<small>3\/3<\/small>/, 'the kicker counts them against the hand');
+  assert.match(tracker(html), /Contracts<small>3\/6<\/small>/, 'the kicker counts them against the hand (six held)');
   // Its name, who it's for and its progress, on the row itself.
   const [kill, take, item] = rows(html);
   assert.match(kill, /<b>Kill 5 Ransomware viruses, Lv 8\+<\/b>/);
@@ -89,12 +89,12 @@ test('a click centres the map on its server and selects it; with no server, it o
 test('its tooltip reads in the house grammar: the name, its kind, its progress and pay, then the answer muted', () => {
   const { s, loc } = setup();
   s.mail.jobs.push(
-    { id: 1, type: 'kill', family: 'ransomware', count: 5, got: 3, level: 12, from: 'Halcyon Mutual · Claims', reward: { credits: 90, standing: 2 } },
-    { id: 2, type: 'item', loc: loc.id, file: 'ledger.db', from: 'wick · LOWLIGHT', reward: { credits: 60 } },
+    { id: 1, type: 'kill', family: 'ransomware', count: 5, got: 3, level: 12, from: 'Halcyon Mutual · Claims', minutes: 10, reward: { credits: 90, xp: 40, standing: 2 } }, // XP fixed when posted (mail.mjs xpOf)
+    { id: 2, type: 'item', loc: loc.id, file: 'ledger.db', from: 'wick · LOWLIGHT', minutes: 25, reward: { credits: 60, xp: 120 } },
   );
   const tips = rows(mapMarkup(s)).map((r) => unesc(r.match(/title="([^"]*)"/)[1]));
-  assert.equal(tips[0], 'Kill 5 Ransomware viruses, Lv 8+: Contract for Halcyon Mutual · Claims. 3 of 5 neutralized. Pays 90 credits and 2 Halcyon standing.\n▸ Open it in Mail.');
-  assert.equal(tips[1], `Recover ledger.db: Contract for wick · LOWLIGHT. In the vault on ${loc.name}. Pays 60 credits.\n▸ Show it on the map.`);
+  assert.equal(tips[0], 'Kill 5 Ransomware viruses, Lv 8+: Contract for Halcyon Mutual · Claims. 3 of 5 neutralized. Pays 90 credits, 40 XP and 2 Halcyon standing.\n▸ Open it in Mail.');
+  assert.equal(tips[1], `Recover ledger.db: Contract for wick · LOWLIGHT. In the vault on ${loc.name}. Pays 60 credits and 120 XP.\n▸ Show it on the map.`);
   for (const t of tips) {
     const [body, answer] = t.split('\n');
     assert.doesNotMatch(body, /;/, 'no semicolon chains');
