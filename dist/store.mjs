@@ -1,9 +1,9 @@
-// The Halcyon store. Opens with the Contractor letter (the end of the storyline).
+// The Halcyon store. Opens with the contract board (boardOpen).
 //
 // Two shelves:
 //   Halcyon's own line, always there: relays and the chase protocols (gated by standing tier, and
 //     priced high: they're the credit sink). A chase protocol is Indemnified: bigger rolls and a
-//     signature effect you can't find or compile anywhere else.
+//     signature effect nothing else has.
 //   Other agencies' stock, resold through Halcyon: four slots that turn over on their own uneven
 //     clocks. Each has a supplier, a price that drifts ±25% and a small quantity. This is where
 //     the exploring kit (key crackers, trace injectors, cheap relays), code and repairs turn up.
@@ -49,7 +49,7 @@ export const GOODS = {
   cipher: { name: 'Cipher code lot', code: 'cipher', credits: (L) => 45 + 5 * L, qty: [1, 3] },
   worm: { name: 'Worm code lot', code: 'worm', credits: (L) => 45 + 5 * L, qty: [1, 3] },
   kernel: { name: 'Kernel code lot', code: 'kernel', credits: (L) => 45 + 5 * L, qty: [1, 3] },
-  exploit: { name: 'Exploit', about: 'Grants 1 Exploit. Medium programs and the wall\'s top tiers take them.', credits: (L) => 150 + 10 * L, qty: [1, 1] },
+  exploit: { name: 'Exploit', about: 'Grants 1 Exploit. Medium socket programs take them.', credits: (L) => 150 + 10 * L, qty: [1, 1] },
   crate: { name: 'Sealed item', about: 'Opens into a Tuned (blue) item at your level.', credits: (L) => 180 + 14 * L, qty: [1, 1] },
 };
 // The daemon image's weight went to a second Sealed item.

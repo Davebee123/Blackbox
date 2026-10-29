@@ -1346,7 +1346,7 @@ export const LOADOUT = { equipSlots: 9, bar: [[1, 7], [22, 8], [30, 9]], keys: [
 // What unlocks at each hacker level (same shape for every class; `order` fills the skill steps).
 export const UNLOCKS = [
   { level: 1, what: 'spike' }, { level: 1, what: 0 }, { level: 3, what: 1 }, { level: 5, what: 2 },
-  // Your 4th skill (Crack, Retaliate, Backdoor, Botnet) comes before Backtrace: armor needs an answer early.
+  // Your 4th skill comes before Backtrace: armor needs an answer early.
   { level: 7, what: 3 }, { level: 10, what: 'edge' }, // the edge comes with your subclass; its skills at SUBCLASS.unlocks
   { level: 10, what: 'sigint' }, // everyone's interrupt, for casts: a crew boss's (raid.mjs), a solo tell's (tells.mjs)
 ];
@@ -1499,7 +1499,7 @@ export const ARCHETYPES = {
   infiltrator: {
     name: 'Infiltrator', role: ['DPS', 'Damage over time', 'Stealth runs'], idea: 'Know where to hit, and slip through runs.', does: 'Deals precise damage and damage over time. It gets the crew past guards on runs.', solo: 'Precision damage and the easiest runs.', crew: 'Tags targets and gets the crew past guards.',
     status: 'tagged',
-    passive: { name: 'Ghost', rule: 'Slips you past one guard per run without a fight. Every fight opens with a blue Surprise window, and Inject, Tag and Keepalive fired in it are stronger. Return trips on runs are free.' },
+    passive: { name: 'Ghost', rule: 'Slips you past the hunter once a visit, without a fight. Every fight opens with a blue Surprise window, and Inject, Tag and Keepalive fired in it are stronger.' },
     core: ['inject', 'backdoor', 'keepalive', 'tag'], // levels 1–7; the rest of a kit is its subclass's (subs)
     spec: [f('heap-spray', 'Heap Spray', 'Increases the damage of each Inject tick by 3 per rank.', 3), f('recon', 'Recon', 'Increases the damage of Opening by 5 per rank.', 5)], // the level-5 specialty: one of these, two free ranks
     subs: subsOf('infiltrator'),

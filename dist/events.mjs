@@ -154,7 +154,7 @@ export const CARDS = {
     where: (s) => (s.locations || []).filter((l) => !l.rogue && !l.takenOver && !l.passwordKnown && !l.member),
     make: () => ({}),
     start: (s, ev, loc) => { loc.passwordKnown = true; loc.leaked = true; }, // leaked: its card shows the key as a tile until the vault's open
-    text: (ev, where) => `Someone leaked the vault key of ${where}. Its vault opens without the password now.`,
+    text: (ev, where) => `Someone leaked the vault key of ${where}. You start your next visit there holding it.`,
   },
   // A native unique from another network, for sale (network.mjs): one of the slow ways to one that isn't yours.
   // It names the unique, so a Listening Post can tune to it after.

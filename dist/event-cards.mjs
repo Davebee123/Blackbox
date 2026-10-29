@@ -135,7 +135,7 @@ export function darknetCard(s, ev) {
 }
 // Leak (no clock: it's at once): the vault key as a tile on its server's card, until the vault's open.
 export function leakCard(s, l) {
-  return `<section class="evc evc-leak" aria-label="Leak"><header class="evc-head" title="${esc(`Someone leaked the vault key of ${l.name}. Its vault opens without the password.`)}">${glyph(EVENT_ICON.leak)}<b>Leak</b><span class="evc-sub"></span></header><div class="evc-body"><div class="lk-tile" title="The vault's password: it opens without a fight for it"><span class="lk-key">${glyph('cracker')}</span><code>${esc(l.password)}</code><span class="lk-vault">${glyph('unlock')}<small>open</small></span></div></div></section>`;
+  return `<section class="evc evc-leak" aria-label="Leak"><header class="evc-head" title="${esc(`Someone leaked the vault key of ${l.name}. You start your next visit there holding it.`)}">${glyph(EVENT_ICON.leak)}<b>Leak</b><span class="evc-sub"></span></header><div class="evc-body"><div class="lk-tile" title="The vault's password: it opens without a fight for it"><span class="lk-key">${glyph('cracker')}</span><code>${esc(l.password)}</code><span class="lk-vault">${glyph('unlock')}<small>open</small></span></div></div></section>`;
 }
 // Your server's card after a spotter's down: the next invasion, known.
 export function toldCard(s) {

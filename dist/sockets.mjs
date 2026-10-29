@@ -8,7 +8,7 @@
 //   codebases     you start knowing the Harvester. Halcyon's store and the hub shops sell the rest, by standing and
 //                 rep tier. The Build card lists only codebases you know.
 //   costs         light: 140 credits + 15 of the server's code. Medium: 280 credits + 30 code + 1 Exploit. A quarter
-//                 more a layer past the first.
+//                 more a floor past the first.
 //   one of each   a program once per server; instant; uninstall gives back half the credits and code.
 //   components    what a broken part drops (one currency, a count: salvage.mjs): 60% a part in a room fight, an
 //                 elite's parts always and one more at the kill, 35% anywhere else; a mastered part's 25% more
@@ -42,7 +42,7 @@ export const codebaseName = (id) => PROGRAMS[id]?.name || LATER[id] || id;
 
 export const SOCKET = {
   cost: { light: { credits: 140, code: 15, exploit: 0 }, medium: { credits: 280, code: 30, exploit: 1 } }, // credits: what its components sold for (7 each)
-  floor: 0.25, // costs grow by a quarter a layer past the first
+  floor: 0.25, // costs grow by a quarter a floor past the first
   refund: 0.5, // uninstall: half the credits and code back
   drop: { room: 0.6, elite: 1 }, // a part's components in a room fight (elsewhere CONFIG.salvageChance, 35%)
   linked: 1.1, // a Linked consortium: components drop 10% more on members' servers
