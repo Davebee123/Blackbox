@@ -9,8 +9,8 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
   something it loads changed (scripts/test.mjs; `npm run test:plan` says what runs and why). It takes about a minute.
   The Tests workflow on GitHub runs `npm run test:full` on every push to main and to a `claude/` branch (a branch
   merged with main first). Check it when a session starts: a red main is the first thing to fix. A cloud session
-  takes about two hours over the full suite, so leave it to the workflow. Commit or land only on `# fail 0`. The two
-  balance TODO tests in the full suite are expected. When reading a test log, grep for its totals and its `not ok`
+  takes about two hours over the full suite, so leave it to the workflow. Commit or land only on `# fail 0`. The `todo`
+  tests in the full suite are expected. When reading a test log, grep for its totals and its `not ok`
   lines; never read the whole log.
 - **Landing.** Every session lands its own work: commit on its branch, then `node scripts/land.mjs`. It merges
   origin/main in, tests the merged tree, pushes it to main, and starts over if main moved meanwhile. Resolve its
@@ -85,5 +85,4 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
 
 ## Backlog
 
-- **Backlog:** Silos, more event cards, a death recap on the Disconnected card, parts plan P3 and P4, and co-op's
-  rough edges.
+- **Backlog:** Silos, more event cards, parts plan P3 and P4, and co-op's rough edges.

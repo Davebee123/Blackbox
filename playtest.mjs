@@ -1,6 +1,6 @@
 // Automated strategy playtest. These are scripted policies, not human players:
-// they check that no single kill order dominates, not whether the game is fun.
-import fs from 'node:fs';
+// they check that no single kill order dominates, not whether the game is fun. node playtest.mjs prints the tables;
+// combat.test.mjs runs the fixtures.
 import { fresh, selectEncounter, command, resolveCycle, active, livingParts, attackers, readyIn, intents, alive, part, usable } from './dist/combat.mjs';
 
 // Kill-order strategies test the enemies, not the classes (a level-1 Breaker: Spike and Overload).
@@ -46,13 +46,10 @@ if (isMain) {
   const wins = {};
   for (const b of Object.values(best)) wins[b.strategy] = (wins[b.strategy] || 0) + 1;
 
-  let md = '# BLACKBOX automated strategy playtest\n\nKill-order strategies against each enemy (a level-4 Breaker: Spike, Overload, Crack, Interrupt, Trace; the scripts only use Spike, Overload and Trace). For class balance see BALANCE.md. Scripted policies, not people. They check that no single kill order always wins; they cannot tell you whether a fight is fun or readable in five seconds.\n\n';
+  let md = '# BLACKBOX automated strategy playtest\n\nKill-order strategies against each enemy (a level-4 Breaker: Spike, Overload, Crack, Interrupt, Trace; the scripts only use Spike, Overload and Trace). For class balance see docs/BALANCE.md. Scripted policies, not people. They check that no single kill order always wins; they cannot tell you whether a fight is fun or readable in five seconds.\n\n';
   md += '## Fixtures\n\n| Fixture | Start | Strategy | Result | Cycles | Integrity lost | Trace | Break order |\n|---|---:|---|---|---:|---:|---:|---|\n';
   for (const r of rows) md += `| ${r.fixture} | ${r.start} | ${r.strategy} | ${r.result} | ${r.cycles} | ${r.lost} | ${r.trace}% | ${r.order} |\n`;
   md += '\n## Best strategy across 30 random variants\n\nScore = victory, then Integrity left, then fewer cycles.\n\n| Strategy | Variants where it was best |\n|---|---:|\n';
   for (const [k, v] of Object.entries(wins).sort((a, b) => b[1] - a[1])) md += `| ${k} | ${v} |\n`;
-  fs.mkdirSync('docs', { recursive: true });
-  fs.writeFileSync('docs/PLAYTEST.md', md);
-  fs.writeFileSync('docs/playtest-results.json', JSON.stringify({ rows, variants }, null, 2));
   console.log(md);
 }
