@@ -1,4 +1,4 @@
-// The Server page (docs/ui.md, GAME_RULES.md "The pages, at a glance"): your home server as one quiet card and a
+// The Server page (docs/ui.md "The pages, at a glance", GAME_RULES.md "Home"): your home server as one quiet card and a
 // detail panel beside it. The card is names, numbers, pips and state: a header with the firewall drawn as a ring of
 // sixteen blocks round your server's core (its Integrity the inner ring), then a row each for the threat, the wall,
 // filters and your code. Pick anything and the panel says
