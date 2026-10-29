@@ -2079,8 +2079,8 @@ function threatRail(s) {
   return `<aside class="threat-rail" aria-label="Threats and timers">${list.map((x) => { const pct = x.pct != null ? x.pct : x.total ? Math.max(0, Math.min(1, 1 - (x.left || 0) / x.total)) : 1; return `<button type="button" class="tr-row ${x.cls}" data-select="${esc(x.sel)}">${glyph(x.icon)}<span class="tr-txt"><b>${esc(x.name)}${x.tag ? ` <small>${esc(x.tag)}</small>` : ''}</b><small>${esc(x.where)}</small></span><span class="tr-t">${x.left != null ? fmtTime(x.left) : x.pct != null ? `${Math.round(x.pct * 100)}%` : ''}</span><span class="tr-bar"><i style="width:${(pct * 100).toFixed(0)}%"></i></span></button>`; }).join('')}</aside>`;
 }
 
-// The contract tracker (WoW's objective tracker): the contracts you hold and haven't delivered, each with its name, whose
-// it is and how far along: a count as pips (a long one as a bar and n/N), anything else as a bar and its few words.
+// The contract tracker (WoW's objective tracker): the contracts you hold and haven't delivered, each with whose it is
+// over its name, and how far along: a count as pips (a long one as a bar and n/N), anything else as a bar and its few words.
 // Click one to centre the map on its server and select it (app.js data-locate), or for Mail when it has no server.
 export function trackedJobs(s) {
   return openContracts(s).map((c) => {
@@ -2100,7 +2100,7 @@ function contractTracker(s, sel = null) {
     : j.of ? `<span class="ct-bar"><i style="width:${(j.part * 100).toFixed(0)}%"></i></span><small class="ct-n">${j.n}/${j.of}</small>`
     : `<small class="ct-n ct-say">${esc(j.text)}</small>`;
   const mark = (f) => (f && FX[f] ? `<span class="fmark-i ct-f" style="--fc:${FX[f].color}">${glyph('f-' + f)}</span>` : '');
-  const rows = list.map((j) => `<button type="button" class="ct-row${j.ready ? ' ready' : ''}${j.locate && j.locate === sel ? ' on' : ''}" ${j.locate ? `data-locate="${esc(j.locate)}"` : `data-go="${esc(j.go)}"`} title="${esc(j.tip)}">${j.pay ? `<template class="tt-more">${j.pay}</template>` : ''}${glyph(j.icon)}<span class="ct-txt"><b>${esc(j.name)}</b><small class="ct-for">${mark(j.faction)}${esc(j.from)}</small></span><span class="ct-prog">${prog(j)}</span></button>`).join('');
+  const rows = list.map((j) => `<button type="button" class="ct-row${j.ready ? ' ready' : ''}${j.locate && j.locate === sel ? ' on' : ''}" ${j.locate ? `data-locate="${esc(j.locate)}"` : `data-go="${esc(j.go)}"`} title="${esc(j.tip)}">${j.pay ? `<template class="tt-more">${j.pay}</template>` : ''}${glyph(j.icon)}<span class="ct-txt"><small class="ct-for">${mark(j.faction)}${esc(j.from)}</small><b>${esc(j.name)}</b></span><span class="ct-prog">${prog(j)}</span></button>`).join('');
   return `<section class="ctrack" aria-label="Contracts"><h3 class="ct-head">${glyph('contract')}Contracts<small>${heldCount(s)}/${MAIL.take}</small></h3>${rows}</section>`;
 }
 
