@@ -40,19 +40,24 @@ export function fight(policy, key, b, opts = {}) {
   const guard = opts.mode === 'run';
   if (guard) s.run = { loc: 'sim', cwd: '/', integrity: maxSignal(s), max: maxSignal(s), pack: [], visited: ['/'] };
   const startHp = guard ? s.run.max : s.server.max; // health lost is a share of your own max
-  selectEncounter(s, key, opts.seed ?? 42, opts.zone ? { mode: 'run', room: '/sim', level: b.level + (opts.levelUp || 0), zone: true, family: opts.family, grade: opts.grade, strain: opts.strain, ...(opts.classic ? { classic: true } : {}), ...(opts.mutation !== undefined ? { mutation: opts.mutation } : {}), ...(opts.elite ? { elite: true } : {}), ...(opts.boss ? { boss: opts.boss } : {}) } : guard ? { mode: 'run', room: '/sim', level: opts.guard || b.guard || b.level } : {});
+  selectEncounter(s, key, opts.seed ?? 42, opts.zone ? { mode: 'run', room: '/sim', level: b.level + (opts.levelUp || 0), zone: true, family: opts.family, grade: opts.grade, strain: opts.strain, ...(opts.classic ? { classic: true } : {}), ...(opts.mutation !== undefined ? { mutation: opts.mutation } : {}), ...(opts.elite ? { elite: true } : {}), ...(opts.boss ? { boss: opts.boss } : {}), ...(opts.genes ? { genes: opts.genes } : {}) } : guard ? { mode: 'run', room: '/sim', level: opts.guard || b.guard || b.level } : {});
   if (s.encounter) s.encounter.soft = 1; // measure the class, not SPRAWL's mercy for new players (CONFIG.zone.starterHit)
   command(s, 'engage');
   const uses = {};
+  // A policy may return 'program': type nothing, and your program (routines.mjs, when installed) plays the cycle.
+  // opts.before(s) and opts.after(s, events) run around each cycle (solved.mjs's measurements and prototypes).
   for (let n = 0; n < 80 && active(s); n++) {
-    const text = POLICIES[policy](s) || 'hold';
+    const text = POLICIES[policy](s) || 'hold', typed = text !== 'hold' && text !== 'program';
     uses[text.split(' ')[0]] = (uses[text.split(' ')[0]] || 0) + 1;
-    command(s, text);
-    // Against a Keylogger a player has to fire on the beat; the sim always does (its window opens every cycle).
-    if (s.encounter?.sync && s.encounter.virus.parts.some((p) => p.syncOnly && p.integrity > 0)) s.encounter.synced = text !== 'hold';
+    if (text !== 'program') command(s, text);
+    // Against a Keylogger a player has to fire on the beat; the sim always does (its window opens every cycle). A
+    // program never does: it fires when the timer runs out.
+    if (s.encounter?.sync && s.encounter.virus.parts.some((p) => p.syncOnly && p.integrity > 0)) s.encounter.synced = typed;
     // Infiltrator Surprise: a player fires into the first cycle's blue window.
-    if (s.encounter?.sync?.surprise) s.encounter.synced = text !== 'hold';
-    resolveCycle(s);
+    if (s.encounter?.sync?.surprise) s.encounter.synced = typed;
+    opts.before?.(s);
+    const ev = resolveCycle(s);
+    opts.after?.(s, ev);
   }
   // A fight still going after 80 cycles is a stalemate: count it as a loss.
   const r = s.reports.at(-1) || { result: 'stalemate', cycles: 80, endIntegrity: defender(s).integrity };

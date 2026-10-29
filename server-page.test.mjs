@@ -28,7 +28,7 @@ function deep({ L = 20, wall = 20 } = {}) {
   s.locations = s.locations.filter((l) => !l.zone).slice(0, 1);
   for (const l of s.locations) { Object.assign(l, { level: L, depth: 4, runs: 1 }); delete l.rogue; delete l.member; }
   s.hidden = [];
-  s.firewall = { pin: wall, plus: 0, frag: 0, defragUntil: 0, hardenUntil: 0 };
+  s.firewall = { pin: wall, plus: 0, frag: 0, defragUntil: 0 };
   syncServer(s);
   s.server.integrity = s.server.max;
   s.clock = 0;
@@ -132,12 +132,12 @@ test('the ring: hollow, cracked blocks for fragmentation, an amber arc at the wa
 
 test('every action button on the page issues its real command, and doing it does what it says', () => {
   const s = bench({ invade: 'champion' });
-  const keys = ['core', 'wall', 'blocks', 'harden', 'ports', 'inv', `filter:0`, 'slot:1'];
+  const keys = ['core', 'wall', 'blocks', 'inv', `filter:0`, 'slot:1'];
   const seen = new Map();
   for (const k of keys) for (const a of actions(panelOf(serverMarkup(s, T, { sel: k })))) if (a.act) seen.set(a.act, a);
   const header = actions(serverMarkup(s, T).slice(0, serverMarkup(s, T).indexOf('<aside')));
   assert.deepEqual(header.map((a) => [a.act, a.cmd]), [['repair', 'repair']], 'the header\'s Repair');
-  const want = { repair: 'repair', upgrade: 'firewall upgrade', defrag: 'firewall defrag', harden: 'firewall harden', ports: 'open ports', jack: 'jack in', 'filter-out': /^filter unequip \d+$/, 'filter-in': /^filter equip \d+$/ };
+  const want = { repair: 'repair', upgrade: 'firewall upgrade', defrag: 'firewall defrag', jack: 'jack in', 'filter-out': /^filter unequip \d+$/, 'filter-in': /^filter equip \d+$/ };
   for (const [act, cmd] of Object.entries(want)) {
     const a = seen.get(act);
     assert.ok(a, `${act} is on the page`);
@@ -150,8 +150,6 @@ test('every action button on the page issues its real command, and doing it does
   did(seen.get('repair').cmd, (c) => assert.equal(c.server.integrity, c.server.max));
   did(seen.get('upgrade').cmd, (c) => assert.equal(fwOf(c).plus, 1));
   did(seen.get('defrag').cmd, (c) => assert.ok(fwOf(c).defragUntil > T));
-  did(seen.get('harden').cmd, (c) => assert.ok(fwOf(c).hardenUntil > T));
-  did(seen.get('ports').cmd, (c) => assert.equal(c.net.open, true));
   did(seen.get('jack').cmd, (c) => assert.equal(c.encounter?.invader, s.invasion.id));
   did(seen.get('filter-out').cmd, (c) => assert.equal(c.filters.on.length, s.filters.on.length - 1));
   // A held filter's own panel: Put in, and Scrap (asked twice).
@@ -165,7 +163,7 @@ test('every action button on the page issues its real command, and doing it does
 
 test('a preview never touches the real save, and shows exactly what the action then does', () => {
   const s = bench({ invade: 'champion', frag: 9, hp: 90 });
-  const cmds = ['repair', 'firewall defrag', 'firewall harden', 'open ports', 'filter unequip 1', 'filter equip 1', 'firewall upgrade'];
+  const cmds = ['repair', 'firewall defrag', 'filter unequip 1', 'filter equip 1', 'firewall upgrade'];
   for (const cmd of cmds) {
     assert.ok(previewable(cmd), cmd);
     const before = JSON.stringify(s);
@@ -191,19 +189,21 @@ test('a preview never touches the real save, and shows exactly what the action t
   assert.match(serverMarkup(t, T, { sel: 'core', preview: 'repair' }), /hsv-refused/);
 });
 
-test('the page keeps what the old one offered: the network signature card, codebases, held filters, daemons, senders with their grade', () => {
+test('the page keeps the wall, filters and code, and repeats nothing: daemons, senders and the network card live elsewhere', () => {
   const s = bench();
   command(s, 'developer daemon flare 27');
   command(s, 'daemon slot flare');
   const page = serverMarkup(s, T);
-  assert.match(page, /data-svkey="network"/);
-  assert.match(panelOf(serverMarkup(s, T, { sel: 'network' })), /class="card net-card"/);
   assert.match(page, /Codebases · \d/);
   assert.match(panelOf(serverMarkup(s, T, { sel: 'codebases' })), /Harvester/);
-  assert.match(page, /data-svkey="daemon:0"[^>]*>.*Flare/);
   assert.match(page, /Held · 1/);
-  assert.match(page, /<small>lv \d+ v3<\/small>/, 'a sender\'s grade beside its level');
-  assert.match(page, /data-svkey="senders"/, 'more senders than fit: the rest in the panel');
+  for (const k of ['network', 'daemon:0', 'dslot', 'sender:0', 'senders', 'harden', 'ports']) assert.doesNotMatch(page, new RegExp(`data-svkey="${k}"`), k);
+  assert.doesNotMatch(page, /Open ports|harden\.sh/);
+  // The map's list marks every server that sends invasions with what your wall does to a plain one.
+  const list = mapMarkup(s, null, 'mine', { list: true });
+  const marks = list.match(/class="sl-wall (you|warn|hot)"/g) || [];
+  assert.ok(marks.length >= 1, 'senders marked in the list');
+  assert.match(list, /class="sl-wall [^"]+" title="Sends invasions/);
   // Rule highlights only in the panel.
   const card = page.slice(0, page.indexOf('<aside'));
   assert.doesNotMatch(card, /class="hi"/);

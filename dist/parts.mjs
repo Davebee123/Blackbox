@@ -11,9 +11,10 @@
 //              they break a compatibility rule
 //   strangers  a fight never holds more than one part you've never met (research 0), Pulse Node and signature aside,
 //              and a fight with one is never 4 parts
+//   lever      from PARTS.lever, exactly one third whose rule makes the default move the wrong one (genes.mjs lever)
 //
 // Every number a playtest might move is one named entry in PARTS (`developer parts` shows and sets them at runtime).
-import { rollGenome, compatible, GENES } from './genes.mjs';
+import { rollGenome, compatible, GENES, MECH_GENES } from './genes.mjs';
 
 export const PARTS = {
   on: true, // the roll (off: every wild virus is built as before the parts plan; golden.test.mjs compares that builder)
@@ -36,7 +37,12 @@ export const PARTS = {
   // rule, it was in a third of the fights at every level past 5, over every floor's natives. The Damper at 0: built, on
   // the Worm's list for its playtest page, its Codex card and the room probes, but it rolls only once its own families
   // (the Cryptominer and the Wiper) come with P3 (on the Worm the harness measured it free: -1.8 points a fight).
+  // The mechanics list's twenty (docs/mechanics-list.md) at PARTS.mech: 0, as the Damper. They're built, with their
+  // playtest pages, Codex cards and probes, but a wild virus rolls none until the designer has played one and kept it
+  // (give it its own weight here). At 0.5 they came in about 40% of wild fights from level 10, and the kits', crew,
+  // pace and sets balance tests moved with them. `developer parts mech 0.5` rolls them all for a session.
   weight: { mimic: 4, coldstore: 0.5, tripwire: 1.5, zipbomb: 0.5, damper: 0 },
+  mech: 0,
   carve: 1, // the share of the thirds' Integrity that comes out of the basic's and the signature's (0: thirds come on top)
   thirdMax: 1.15, // a third part's Integrity never grows past this share of its own (the basic and the signature take the rest)
   // Damage profiles (docs/parts-plan.md "Damage profiles"): every family deals the same over a typical fight at its
@@ -71,6 +77,7 @@ export const PARTS = {
   native: { elite: true, rare: true }, // elites and ★ rare spawns always bring one of their floor's natives (none open there: the nearest floor above's)
   rare: { min: 3, budget: 2 }, // a ★ rare spawn brings at least this many parts, and this many more budget points for its thirds
   kestrel: { floor: 3, share: 0.5 }, // from this floor, this share of guard posts and ICE bring Kestrel's Idle Timer (data.mjs GUARDS)
+  lever: 6, // from this level an ordinary fight carries exactly one lever (docs/puzzle-levers.md 5): wild rolls here, guards a Zip Bomb (data.mjs GUARDS) or the Sentinel's seal
 };
 // A level's value on a step table [[level, value], …]: the last step it has reached.
 export const along = (pts, level) => pts.reduce((v, [L, x]) => (level >= L ? x : v), pts[0][1]);
@@ -94,7 +101,9 @@ const pick = (rand, xs) => xs[Math.min(xs.length - 1, Math.floor(rand() * xs.len
 // A third's weight in the roll: its own (PARTS.weight), times PARTS.floor on the floor it's native to.
 export const nativeFloor = (gene) => GENES[gene]?.floor || null;
 export const floorWeight = (gene, floor) => (floor && nativeFloor(gene) === floor ? PARTS.floor : 1);
-export const weightOf = (gene, floor = null) => (PARTS.weight[gene] ?? 1) * floorWeight(gene, floor);
+export const weightOf = (gene, floor = null) => (PARTS.weight[gene] ?? (MECH_GENES.has(gene) ? PARTS.mech : 1)) * floorWeight(gene, floor);
+// A mechanics-list gene rolls (a wild fight, a breach node, a server room) only while PARTS.mech is above 0.
+export const mechRolls = (gene) => !MECH_GENES.has(gene) || PARTS.mech > 0;
 const pickBy = (rand, xs, w) => { let x = rand() * xs.reduce((n, y) => n + w(y), 0); for (const y of xs) if ((x -= w(y)) < 0) return y; return xs.at(-1); };
 const pickShare = (rand, shares) => { let x = rand() * shares.reduce((a, b) => a + b, 0); for (let i = 0; i < shares.length; i++) if ((x -= shares[i]) < 0) return i; return shares.length - 1; };
 
@@ -123,7 +132,7 @@ export function rollParts({ family, body, level, rand, elite = false, rare = fal
   const basic = pick(rand, signature ? basics : basics.filter((p) => p.attack));
   if (stranger(basic)) strangers++;
   let dup = n >= 3 && !!basic.attack && rand() < along(PARTS.duplicate, level); // only a basic that attacks doubles
-  const pool = thirdsOf(body, level);
+  const pool = thirdsOf(body, level).filter((spec) => weigh(spec.gene) > 0); // a third at weight 0 (the Damper, the mechanics list's) never rolls, even as the last pick left
   const thirds = [];
   const fits = (spec) => !thirds.includes(spec) && (!stranger(spec) || strangers < 1);
   // No signature: a third that doesn't refer to it takes its slot, free. None open: the signature comes after all.
@@ -160,8 +169,37 @@ export function rollParts({ family, body, level, rand, elite = false, rare = fal
       strangers = thirds.filter(stranger).length + (stranger(basic) ? 1 : 0);
     }
   }
+  // One lever a fight (docs/puzzle-levers.md 5): from PARTS.lever an ordinary fight carries exactly one part whose rule
+  // makes the default move the wrong one (genes.mjs lever). None rolled: one comes in a free slot, else in the doubled
+  // basic's, else on top (up to the most its level rolls), else in the last other third's, so the rolled kinds stay. Two or more: the
+  // first stays, and each other is rolled again from the thirds that bring none (kept when none fits: below level 9
+  // every third open is a lever, and a 4-part fight keeps its 4). Elites bring two that pull against each other (P3).
+  let lever = null;
+  if (!elite && level >= PARTS.lever) {
+    const isLever = (spec) => !!GENES[spec.gene]?.lever && weigh(spec.gene) > 0;
+    const most = 2 + along(PARTS.count, level).findLastIndex((x) => x > 0); // the most parts the level's count rolls
+    const count = () => 1 + (dup ? 1 : 0) + (signature ? 1 : 0) + thirds.length;
+    const ok = (spec, others) => !others.includes(spec) && (!spec.sig || signature) && !compatible([...(body.core || []), ...extra, ...others.map((t) => t.gene), spec.gene]).length && (!stranger(spec) || others.filter(stranger).length + (stranger(basic) ? 1 : 0) < 1);
+    for (const t of thirds.filter(isLever).slice(1)) {
+      const rest = thirds.filter((x) => x !== t), swap = pool.filter((spec) => !isLever(spec) && weigh(spec.gene) > 0 && ok(spec, rest));
+      if (swap.length) thirds[thirds.indexOf(t)] = pickBy(rand, swap, (x) => weigh(x.gene));
+    }
+    lever = thirds.find(isLever) || null;
+    if (!lever) {
+      const room = count() < n || dup || count() < Math.max(n, most);
+      const other = (t) => t !== forced && nativeFloor(t.gene) !== floor; // a floor's natives are its own: the lever spares them
+      const drop = room ? null : thirds.findLast(other) || thirds.findLast((t) => t !== forced) || null, keep = thirds.filter((t) => t !== drop);
+      const can = pool.filter((spec) => isLever(spec) && ok(spec, keep)); // none you've met, with a stranger already here: the stranger is the fight's lesson
+      if (can.length) {
+        lever = pickBy(rand, can, (x) => weigh(x.gene));
+        if (drop) thirds[thirds.indexOf(drop)] = lever;
+        else { if (count() >= n && dup) dup = false; thirds.push(lever); }
+      }
+    }
+    strangers = thirds.filter(stranger).length + (stranger(basic) ? 1 : 0);
+  }
   // A new kind's first fight has 2 or 3 parts, never 4.
   let total = 1 + (dup ? 1 : 0) + (signature ? 1 : 0) + thirds.length;
-  if (strangers && total > 3) { const i = thirds.findLastIndex((t) => !stranger(t) && t !== forced); if (i >= 0) thirds.splice(i, 1); else dup = false; total--; }
-  return { basic, dup, signature, thirds, strangers, native: forced || null };
+  if (strangers && total > 3) { const i = thirds.findLastIndex((t) => !stranger(t) && t !== forced && t !== lever); if (i >= 0) thirds.splice(i, 1); else dup = false; total--; }
+  return { basic, dup, signature, thirds, strangers, native: forced || null, lever };
 }

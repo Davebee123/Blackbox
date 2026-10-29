@@ -7,7 +7,7 @@ import { fresh, command, resolveCycle, active, restore, selectEncounter, part, s
 import { DAEMONS, DAEMON_DROP, DAEMON_BANDS as BANDS, bandDaemons, daemonN, daemonBand, codeUnit, CONFIG, power } from './dist/data.mjs';
 import { rollDaemon, daemonText } from './dist/daemons.mjs';
 import { tickNetwork, daemonChance, daemonDrop, bountyOf } from './dist/invasion.mjs';
-import { tierCost, hardenCost, fwOf, TIERS } from './dist/firewall.mjs';
+import { tierCost, fwOf, TIERS } from './dist/firewall.mjs';
 import { filterCost } from './dist/filters.mjs';
 import { layoutOf, fileInfo } from './dist/run.mjs';
 import { GOODS } from './dist/store.mjs';
@@ -32,7 +32,7 @@ function world({ level = 8, fw = 0 } = {}) {
   command(s, 'developer level ' + level); // after the finds, so the level-4 breadcrumb doesn't add a third
   for (const l of s.locations) Object.assign(l, { level, depth: 1, runs: 1 }); // connected: they send invasions
   s.hidden = []; // just the two: no unknown servers behind them (floors.mjs links each to its ?s)
-  s.firewall = { pin: fw, plus: 0, frag: 0, defragUntil: 0, hardenUntil: 0 };
+  s.firewall = { pin: fw, plus: 0, frag: 0, defragUntil: 0 };
   syncServer(s);
   s.server.integrity = s.server.max;
   s.clock = 0;
@@ -200,7 +200,7 @@ test('only invasions drop daemons: no vault daemon.exe, no kill or guard drops, 
   assert.ok(!JSON.stringify(STORY).includes('"daemon"'), 'nor can the storyline');
 });
 
-test('the wall is priced in code: tiers from +3 and a written harden.sh, in units of what invasions pay; no signatures anywhere', () => {
+test('the wall is priced in code: tiers from +3, in units of what invasions pay; no signatures anywhere', () => {
   const B = 12, u = codeUnit(B);
   for (let t = 1; t <= TIERS; t++) assert.equal(tierCost(t, B).sigs, undefined);
   assert.equal(tierCost(4, B).worm - Math.ceil(4 * (1 + B / 10)), 2 * u, '+4: two units more of each code');
@@ -210,7 +210,6 @@ test('the wall is priced in code: tiers from +3 and a written harden.sh, in unit
   assert.ok(all / per > 25, `a full wall is a long code goal: ${all} code, ${Math.round(all / per)} raiders' bounties`);
   const s = fresh();
   fwOf(s).pin = B;
-  assert.deepEqual(hardenCost(s), { cipher: 2 * u, worm: 2 * u, kernel: 2 * u });
   assert.equal(filterCost(B).sigs, undefined);
   assert.equal(filterCost(B).code.worm, codeUnit(B));
   assert.equal(s.sigs, undefined, 'a new save has none');

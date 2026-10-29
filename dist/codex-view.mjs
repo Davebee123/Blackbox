@@ -6,7 +6,8 @@
 import { esc, masteredMark } from './view.mjs';
 import { glyph } from './glyphs.mjs';
 import { AUTHORS } from './authors.mjs';
-import { STRAINS, FAMILIES, ROOM_FAMILIES, GUARDS } from './data.mjs';
+import { STRAINS, FAMILIES, ROOM_FAMILIES, GUARDS, CONFIG } from './data.mjs';
+import { SOCKET } from './sockets.mjs';
 import { attackAmount } from './combat.mjs';
 import { partRead } from './fightread.mjs';
 import { ruleHtml } from './ruletext.mjs';
@@ -53,7 +54,7 @@ function hitsWord(p) {
 }
 // Its research: a bar of 60 with marks at 3, 15 and 60 (each lit once reached), and n/60.
 function researchBar(n) {
-  const marks = RESEARCH.tiers.map((t) => `<i class="cxr-mk${n >= t ? ' on' : ''}" style="left:${(t / RESEARCH.max) * 100}%" title="${esc(t === TIER.decoded ? `Research ${t}: its numbers` : t === TIER.rule ? `Research ${t}: its rule, its answer and its tells` : `Research ${t}: its loot and its mastery`)}"></i>`).join('');
+  const marks = RESEARCH.tiers.map((t) => `<i class="cxr-mk${n >= t ? ' on' : ''}" style="left:${(t / RESEARCH.max) * 100}%" title="${esc(t === TIER.decoded ? `Research ${t}: its numbers` : t === TIER.rule ? `Research ${t}: its rule, its answer and its tells` : `Research ${t}: its drop chance and its mastery`)}"></i>`).join('');
   return `<div class="cxp-res" title="${esc(`Research ${n}/${RESEARCH.max}. Break it +${RESEARCH.points.break}, cut its move with a tick +${RESEARCH.points.cut}, answer a tell it rides +${RESEARCH.points.tell}.`)}"><span class="cx-label">Research</span><span class="cxr-bar"><b style="width:${(Math.min(n, RESEARCH.max) / RESEARCH.max) * 100}%"></b>${marks}</span><small class="cxr-n${n >= RESEARCH.max ? ' full' : ''}">${n}/${RESEARCH.max}</small></div>`;
 }
 const locked = (text) => `<p class="cxp-lock"><span>${UNKNOWN}</span>${esc(text)}</p>`;
@@ -78,8 +79,8 @@ function partCard(level, x, tells = [], withHandler = false) {
     const rides = tells.length ? `<p class="cxp-rides">${tells.map((t) => `${TELL_VERB[t.kind] || 'Brings'} <b>${esc(t.name)}</b>${t.level ? ` <small>Lv ${t.level}+</small>` : t.elite ? ` <small>elite Lv ${t.elite}+</small>` : ''}.`).join(' ')}</p>` : '';
     rule = `<p class="cxp-does">${ruleHtml(r.does)}</p>${r.answer ? `<p class="cxp-answer">${esc(r.answer)}</p>` : ''}${rides}`;
   } else rule = locked(`Research ${TIER.rule} to learn its rule, its answer and its tells.`);
-  const loot = !p.loot ? '' : mast ? `<p class="cxp-loot">${glyph('salvage')}Drops ${esc(p.loot)}</p>` : locked(`Research ${RESEARCH.max} to learn its drop.`);
-  const perk = mast ? `<p class="cxp-perk">Mastered. Its component drops ${Math.round((RESEARCH.perk.drop - 1) * 100)}% more often, and you deal ${Math.round((RESEARCH.perk.dmg - 1) * 100)}% more damage to it.</p>` : '';
+  const loot = !p.loot ? '' : mast ? `<p class="cxp-loot">${glyph('salvage')}${esc(dropLine())}</p>` : locked(`Research ${RESEARCH.max} to learn its drop chance.`);
+  const perk = mast ? `<p class="cxp-perk">Mastered. It drops components ${Math.round((RESEARCH.perk.drop - 1) * 100)}% more often, and you deal ${Math.round((RESEARCH.perk.dmg - 1) * 100)}% more damage to it.</p>` : '';
   // A handler for it (routines.mjs, from level 5): the Program tab opens on its virus, with a handler on this part.
   const ref = refOf(x.virus, p);
   const handler = withHandler ? `<button type="button" class="btn small cx-handler" data-rt-goto="program ${esc(refBody(ref))} add ${esc(ref)}:present" title="${esc(`Add a handler for the ${p.name} to its virus's routine`)}">${glyph('chain')}+ handler</button>` : '';
@@ -128,8 +129,11 @@ function setLootTable(t) {
   return `<ul class="cx-loot">${rows}</ul>${odds}`;
 }
 
-// The pieces its parts drop: each one ??? until that part is at research 60 (mastered).
-const lootList = (parts) => `<ul class="cx-loot">${parts.filter((x) => x.spec.loot).map((x) => { const open = x.research >= RESEARCH.max; return `<li class="${open ? '' : 'unknown'}">${glyph('salvage')}<b>${esc(open ? x.spec.loot : UNKNOWN)}</b><small>${esc(x.named ? x.spec.name : UNKNOWN)}</small></li>`; }).join('')}</ul>`;
+// A mastered part's chance to drop components when it breaks (combat.mjs breakPart), mastery's perk on.
+const dropPct = (x) => `${Math.round(Math.min(1, x * RESEARCH.perk.drop) * 100)}%`;
+const dropLine = () => `Drops components ${dropPct(SOCKET.drop.room)} of the time in a room fight (an elite's always), and ${dropPct(CONFIG.salvageChance)} elsewhere.`;
+// The parts that drop components: each one's chance ??? until that part is at research 60 (mastered).
+const lootList = (parts) => `<ul class="cx-loot">${parts.filter((x) => x.spec.loot).map((x) => { const open = x.research >= RESEARCH.max; return `<li class="${open ? '' : 'unknown'}" title="${esc(open ? dropLine() : `Research ${RESEARCH.max} to learn its drop chance.`)}">${glyph('salvage')}<b>${esc(x.named ? x.spec.name : UNKNOWN)}</b><small>${open ? `${dropPct(SOCKET.drop.room)} in a room fight` : UNKNOWN}</small></li>`; }).join('')}</ul>`;
 const pctOf = (parts) => (parts.length ? Math.round((parts.reduce((n, x) => n + Math.min(x.research, RESEARCH.max) / RESEARCH.max, 0) / parts.length) * 100) : 0);
 
 // A boss's loot table (the dungeon journal): what every kill drops, its uniques (??? until found, a native boss's until

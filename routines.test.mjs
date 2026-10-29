@@ -8,7 +8,8 @@
 // loads with the defaults, an R1 stack moved into its viruses' routines.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fresh, command, resolveCycle, advance, selectEncounter, part, livingParts, attackers, hooks, active, restore, cycleLength, codexKey, barKeys, finish, armorTakes as armorTakesHit } from './dist/combat.mjs';
+import { fresh, command, resolveCycle, advance, selectEncounter, part, livingParts, attackers, hooks, active, restore, cycleLength, codexKey, barKeys, finish, intents, armorTakes as armorTakesHit } from './dist/combat.mjs';
+import { copyOf, dearCopy } from './dist/tells.mjs';
 import { CONFIG, FAMILIES, ABILITIES } from './dist/data.mjs';
 import * as FP from './dist/floorplan.mjs';
 import { play } from './dist/run.mjs';
@@ -213,6 +214,8 @@ test('an exception hands over only its part: the program plays the rest and neve
   const s = fight({ level: 6 });
   s.research['ransomware:encryptor'] = 0; // the Encryptor: never researched, the rest mastered
   command(s, 'program ransomware confirm');
+  // A lever (the Lockbox, to break first) needs a handler that names it, mastered or not: the routine names it.
+  for (const p of livingParts(s).filter(R.leverOf)) command(s, `program ransomware add ${codexKey(s.encounter.virus, p)}:present spike that`);
   assert.deepEqual(R.exceptionsOf(s).map((x) => x.part), ['encryptor']);
   const html = boardMarkup(s);
   assert.match(html, /m-exc[^>]*data-target="encryptor"/, 'its row is marked');
@@ -265,31 +268,43 @@ test('an exception hands over only its part: the program plays the rest and neve
   assert.equal(R.exceptionsOf(t).length, 0, 'named by a handler: covered');
 });
 
-test('a broad TARGET leaves a Hotspot, a Tripwire or a Zip Bomb for last, as the rotation does; that part still hits it', () => {
+test('a broad TARGET does what it says; a lever\'s preset leaves a Hotspot for last: your rotation on the other parts', () => {
   const s = fight({ level: 14, opts: { genes: ['hotspot'] } });
   const hot = livingParts(s).find((p) => p.hotspot);
   assert.ok(hot, 'a Hotspot in the fight');
+  assert.equal(R.leverOf(hot), 'last');
   for (const p of livingParts(s)) if (p !== hot) p.integrity = Math.max(hot.integrity + 1, p.integrity);
   command(s, 'program ransomware armor off'); // the TARGET alone (Break ◆ first would crack it)
   command(s, 'program ransomware add always spike lowest');
-  assert.equal(R.leftForLast(s, hot), true);
-  assert.notEqual(R.decide(s).text, `spike ${hot.id}`, 'not the lowest when that sets it off');
-  R.routineOf(s, 'ransomware').handlers = [{ when: `ransomware:${hot.id}:present`, do: 'spike', target: 'that' }];
-  assert.equal(R.decide(s).text, `spike ${hot.id}`, 'named, it is hit');
+  assert.deepEqual(R.exceptionsOf(s).map((x) => [x.part, x.kind]), [[hot.id, 'lever']], 'a lever no handler names is yours');
+  R.routineOf(s, 'ransomware').handlers.push({ when: `ransomware:${hot.id}:low`, do: 'spike', target: 'that' });
+  assert.equal(R.decide(s).text, `spike ${hot.id}`, 'named, the lowest is the lowest: the chip knows your kit, not the virus');
+  R.routineOf(s, 'ransomware').handlers.pop();
+  const pre = R.presetsFor(s, 'ransomware').find((p) => p.id === `last:${hot.id}`);
+  assert.ok(pre, 'its preset, once its rule is researched');
+  assert.equal(pre.name, 'Hotspot last');
+  assert.deepEqual(pre.handlers, [{ when: `ransomware:${hot.id}:present`, do: 'rotation', target: 'others' }], 'while it stands, your rotation on the other parts');
+  command(s, `program ransomware preset last:${hot.id}`);
+  assert.notEqual(R.decide(s).target, hot.id);
+  assert.notEqual(R.decide(s).text.split(' ')[1], hot.id, 'the others first');
+  assert.ok(!R.exceptionsOf(s).length, 'named: covered');
   for (const p of livingParts(s)) if (p !== hot) p.integrity = 0;
-  assert.equal(R.leftForLast(s, hot), false, 'alone, it is fair game');
+  assert.equal(R.decide(s).text.split(' ')[1], hot.id, 'alone, it is next');
 });
 
-test('a mutation is the program\'s; a rule part needs its rule; a tell needs mastery; a boss is wholly yours', () => {
+test('a mutation is the program\'s; a rule part needs its rule; a lever needs a handler; a charge needs mastery; a boss is wholly yours', () => {
   const s = fight({ level: 14, opts: { mutation: 'hasty' } });
   command(s, 'program ransomware confirm');
+  for (const p of livingParts(s).filter(R.leverOf)) command(s, `program ransomware add ${codexKey(s.encounter.virus, p)}:present spike that`);
   assert.ok(!R.exceptionsOf(s).length, 'an undecoded mutation hands nothing over');
   const t = fight({ research: TIER.decoded, opts: { genes: ['mutexlock'] } });
   command(t, 'program ransomware confirm');
-  const mutex = livingParts(t).find((p) => p.lock);
+  const mutex = livingParts(t).find((p) => p.lock), ref = codexKey(t.encounter.virus, mutex);
   assert.ok(R.exceptionsOf(t).some((x) => x.part === mutex.id), 'its rule is not researched');
-  t.research[codexKey(t.encounter.virus, mutex)] = TIER.rule;
-  assert.ok(!R.exceptionsOf(t).some((x) => x.part === mutex.id && x.kind === 'part'));
+  t.research[ref] = TIER.mastered;
+  assert.deepEqual(R.exceptionsOf(t).filter((x) => x.part === mutex.id).map((x) => x.kind), ['lever'], 'a lever: research alone never covers it');
+  command(t, `program ransomware add ${ref}:present spike that`);
+  assert.ok(!R.exceptionsOf(t).some((x) => x.part === mutex.id), 'a handler that names it does');
   // A boss: the whole fight is yours, one mark on its header; nothing fires.
   const b = fresh();
   FP.outfit(b, { cls: 'breaker', level: 14 });
@@ -308,8 +323,9 @@ test('a mutation is the program\'s; a rule part needs its rule; a tell needs mas
 test('presets: ready-made routines from the virus\'s parts, each fitting its RAM with only chips you\'ve opened and skills on your bar', () => {
   for (const [level, research] of [[5, TIER.decoded], [14, TIER.rule], [30, TIER.mastered], [6, 0]]) for (const body of FAMS) {
     const s = fight({ level, research, family: body });
-    const ps = R.presetsFor(s, body), bar = new Set(R.barSkills(s).map((x) => x.id));
-    assert.ok(ps.length >= 2 && ps.length <= 4, `${body} at ${level}: ${ps.length} presets`);
+    const ps = R.presetsFor(s, body), bar = new Set(R.doSkills(s).map((x) => x.id)), plain = ps.filter((p) => !p.part);
+    assert.ok(plain.length >= 2 && plain.length <= R.ROUTINES.presets, `${body} at ${level}: ${plain.length} presets`);
+    for (const p of ps.filter((x) => x.part)) assert.ok(p.handlers.some((h) => h.when.startsWith(`${body}:${p.part}:`) || h.when.startsWith('beat') || ['dearcopy', 'bent'].includes(h.when)), `${p.name} names its part, or its beat`);
     for (const p of ps) {
       assert.ok(p.handlers.reduce((n, h) => n + R.handlerRam(s, h), 0) <= R.ramFor(s, body), `${p.name} fits`);
       for (const h of p.handlers) {
@@ -319,7 +335,7 @@ test('presets: ready-made routines from the virus\'s parts, each fitting its RAM
         const w = R.parseWhen(h.when);
         if (w.kind === 'part') assert.equal(R.refBody(w.ref), body, 'its own parts');
       }
-      assert.match(p.name, /^[A-Z][^A-Z]*( [A-Z][a-z]+)?[^A-Z]*$/, `sentence case: ${p.name}`);
+      assert.match(p.name.replace(/^SIGINT\b/, 'Sigint'), /^[A-Z][^A-Z]*( [A-Z][a-z]+)?[^A-Z]*$/, `sentence case: ${p.name}`);
     }
     if (research >= TIER.decoded) assert.ok(ps.some((p) => p.id === 'signature'), `${body}: its signature part first`);
   }
@@ -615,7 +631,8 @@ test('the ready-made routines no longer waste hits on ◆: Focus the lowest and 
       if (R.presetNow(s, family) !== preset) continue;
       if (!armor) command(s, `program ${family} armor off`);
       for (let i = 0; i < 60 && active(s); i++) {
-        const ev = cycle(s);
+        const d = R.preview(s), ev = cycle(s);
+        if (!(d?.handler >= 0)) continue; // the preset's own handlers (the rotation plays your kit, blind to the virus)
         out.hits += ev.filter((e) => e.type === 'resolved' && e.auto === 'program' && e.ability === 'overload').length;
         out.absorbed += ev.filter((e) => e.type === 'armor' && e.absorbed && e.ability === 'overload').length;
       }
@@ -680,4 +697,103 @@ test('the toggle: a switch by the RAM meter, its command, saved per routine; it 
 test('a part whose own id ends in a number keeps it (the C2 Node); only a second copy answers as the first', () => {
   assert.equal(R.refOf({ family: 'worm' }, { id: 'c2' }), 'worm:c2');
   assert.equal(R.refOf({ family: 'ransomware' }, { id: 'cipherblock2', copy: true }), 'ransomware:cipherblock');
+});
+
+// ---------- puzzle fights P1 (docs/puzzle-fights.md 3.1): the program fits the trick ----------
+const beatNow = (s) => intents(s, 4).some((i) => i.tell === 'mimic' && i.col === 0);
+const toBeat = (s) => { for (let i = 0; i < 12 && active(s) && !beatNow(s); i++) cycle(s); assert.ok(beatNow(s), 'the Mimic\'s beat is this cycle'); };
+
+test('Hold opens at level 8 and Rotation is always there: DO chips with no skill and no RAM of their own', () => {
+  const low = fight({ level: 6 });
+  assert.ok(!R.doSkills(low).some((x) => x.id === 'hold'));
+  assert.match(warning(command(low, 'program ransomware add always hold')), /^Hold opens at level 8\.$/);
+  const s = fight({ level: 14 });
+  assert.deepEqual(R.doSkills(s).filter((x) => !x.key).map((x) => x.id), ['rotation', 'hold']);
+  command(s, 'program ransomware add always hold');
+  assert.equal(R.handlerRam(s, R.routineOf(s, 'ransomware').handlers[0]), 1, 'only its WHEN chip');
+  assert.deepEqual(R.decide(s), { text: 'hold', handler: 0 });
+  const ev = cycle(s);
+  assert.equal(mine(ev).length, 0, 'nothing fired');
+  assert.ok(ev.some((e) => e.type === 'hold' && /No command fired/.test(e.message)));
+  // Rotation: your rotation's move, aimed at that part.
+  R.routineOf(s, 'ransomware').handlers = [{ when: 'ransomware:encryptor:present', do: 'rotation', target: 'that' }];
+  assert.equal(R.handlerRam(s, R.routineOf(s, 'ransomware').handlers[0]), 1);
+  const d = R.preview(s);
+  assert.equal(d.handler, 0);
+  assert.equal(d.target, 'encryptor');
+  assert.match(programMarkup(s), /rt-do verb-rotation[^>]*title="Rotation: Your rotation&#39;s move, at that part\."/, 'its chip in the palette');
+});
+
+test('a handler that names its part but can\'t fire aims the rotation there; other parts keeps the named part out of its sight', () => {
+  const s = fight({ level: 14 });
+  command(s, 'program ransomware armor off');
+  R.routineOf(s, 'ransomware').handlers = [{ when: 'ransomware:encryptor:present', do: 'overload', target: 'that' }];
+  s.encounter.readyAt.overload = s.encounter.cycle + 3;
+  const d = R.decide(s);
+  assert.equal(d.handler, -1, 'the rotation plays');
+  assert.equal(d.aim, 'encryptor', 'at the part the handler named');
+  R.routineOf(s, 'ransomware').handlers = [{ when: 'ransomware:encryptor:present', do: 'rotation', target: 'others' }];
+  for (let i = 0; i < 6 && active(s); i++) {
+    const p = R.preview(s);
+    if (livingParts(s).some((x) => x.id === 'encryptor') && livingParts(s).length > 1) assert.notEqual(p.target, 'encryptor', 'never the Encryptor while another stands');
+    cycle(s);
+  }
+});
+
+test('the rotation reads nothing of the virus: it fires into a beat; Hold on a dear copy answers the Mimic, and a beat no handler names is yours', () => {
+  const s = fight({ level: 14, family: 'ghostroot', opts: { genes: ['mimic'] } });
+  const mimic = livingParts(s).find((p) => p.mimic), ref = codexKey(s.encounter.virus, mimic);
+  assert.ok(mimic, 'a Mimic in the fight');
+  for (const p of livingParts(s)) p.integrity = p.max = 999; // a long fight: beats to read
+  assert.equal(R.leverOf(mimic), 'beat');
+  assert.ok(R.whenOpen(s, 'beat1') && R.whenOpen(s, 'beat2') && R.whenOpen(s, 'dearcopy'), 'the beat chips and dear copy open with its rule');
+  toBeat(s);
+  const copy = (text) => { const [id, at] = text.split(' '); return copyOf(s, id, part(s, at)); };
+  const rot = R.decide(s).text;
+  assert.ok(dearCopy(s, copy(rot)), `no routine: the rotation fires a dear copy into the beat (${rot})`);
+  const smart = planner(s);
+  assert.ok(smart === 'hold' || copy(smart).cost < copy(rot).cost, `the planner reads it: a cheaper copy (${smart})`);
+  command(s, 'program ghostroot confirm');
+  assert.deepEqual(R.exceptionsOf(s).filter((x) => x.part === mimic.id).map((x) => x.kind), ['lever'], 'a beat no handler names is yours');
+  const pre = R.presetsFor(s, 'ghostroot').find((p) => p.id === `beat:${mimic.id}`);
+  assert.equal(pre.name, 'Hold on a dear copy');
+  assert.deepEqual(pre.handlers, [{ when: 'dearcopy', do: 'hold', target: 'that' }]);
+  command(s, `program ghostroot preset beat:${mimic.id}`);
+  assert.ok(!R.exceptionsOf(s).some((x) => x.part === mimic.id), 'dear copy covers it');
+  const d = R.decide(s);
+  assert.equal(d.handler, 0);
+  assert.equal(d.text, 'hold', 'a dear copy: it holds');
+  // Off the beat, the handler waits and the rotation plays.
+  cycle(s);
+  assert.ok(!beatNow(s));
+  assert.equal(R.decide(s).handler, -1);
+  // beat in 2 holds the cycle before too; no beat never picks the Mimic while its beat is on the board.
+  R.routineOf(s, 'ghostroot').handlers = [{ when: 'beat2', do: 'spike', target: 'nobeat' }, { when: `${ref}:present`, do: 'spike', target: 'that' }];
+  for (let i = 0; i < 8 && active(s) && livingParts(s).length > 1; i++) {
+    const cols = intents(s, 4).filter((x) => x.tell === 'mimic').map((x) => x.col), m = R.decide(s);
+    if (cols.some((c) => c <= 1)) { assert.equal(m.handler, 0, 'beat in 2 holds'); assert.notEqual(m.text.split(' ')[1], mimic.id); }
+    cycle(s);
+  }
+});
+
+test('a seal or a cast needs a handler (the rotation reads no tell); a charge is covered once mastered', () => {
+  const s = fight({ level: 18 });
+  command(s, 'program ransomware confirm');
+  for (const p of livingParts(s).filter(R.leverOf)) command(s, `program ransomware add ${codexKey(s.encounter.virus, p)}:present rotation others`);
+  const kinds = new Set();
+  for (let i = 0; i < 14 && active(s); i++) {
+    for (const t of intents(s, 4).filter((x) => x.tell && x.open)) {
+      kinds.add(t.tell);
+      const x = R.exceptionsOf(s).find((y) => y.part === t.source && y.kind === 'tell');
+      if (t.tell === 'charge') assert.ok(!x, 'a charge: mastered, the program plays it');
+      if (t.tell === 'cast' || t.tell === 'seal') assert.ok(x, `a ${t.tell}: yours, with no handler`);
+    }
+    cycle(s);
+  }
+  assert.ok(kinds.has('cast') || kinds.has('seal'), `a cast or a seal came (${[...kinds]})`);
+  const t = fight({ level: 18 });
+  command(t, 'program ransomware preset tells');
+  assert.deepEqual(R.routineOf(t, 'ransomware').handlers, [{ when: 'anytell', do: 'rotation', target: 'that' }]);
+  for (let i = 0; i < 14 && active(t); i++) { assert.ok(!R.exceptionsOf(t).some((y) => y.kind === 'tell'), 'any tell live covers them'); cycle(t); }
+  assert.ok(R.presetsFor(t, 'ransomware').some((p) => p.id === 'sigint' && p.name === 'SIGINT the dearer' && p.handlers[0].when === 'dearer'), 'SIGINT has its own preset, on the dearer tell');
 });

@@ -13,7 +13,7 @@ import { FACTIONS, captured } from './factions.mjs';
 import { ratingAt } from './firewall.mjs';
 import { strength, outcome, grindRate } from './invasion.mjs';
 import { HUBS, FACTION_FAMILY, hubWall, lockedDown } from './hubs.mjs';
-import { gainComponents, familyComponents } from './sockets.mjs';
+import { gainComponents } from './salvage.mjs';
 
 export const FLEET = {};
 const SHIP = { ransomware: 'cryptjack', worm: 'splinter', ghostroot: 'ghostroot' };
@@ -98,7 +98,7 @@ export function fleetWon(s, e) {
   // The haul: code from every process, a component a process, and a bonus kill's worth of XP.
   const k = codeOf(f.family);
   if (k) gainCode(s, { [k]: f.total * codeDrop(f.level) * 2 }, 'Swarm broken: ');
-  gainComponents(s, f.total, familyComponents(f.family), 'swarm');
+  gainComponents(s, f.total);
   gainXp(s, xpFor(s, f.level, f.total * 0.5), 'swarm broken', 'fight');
   emit(s, 'hub-held', `SWARM BROKEN. ${f.total} viruses killed: ${FACTIONS[f.hub].hub.name} holds: +${f.total} components.`, where);
 }

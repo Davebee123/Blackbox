@@ -33,10 +33,10 @@
 // Sockets (R2): a socket room is a bus slot, red while its guard is up, amber once open; a program in it takes the chip
 // (its icon, its name on the plate, a small slot badge bottom left), and a held server's Core shows the program it
 // runs as that badge. A Tunnel's link to the entry is a dashed amber arc. Its pop-up card is the Build card: every
-// codebase you know, what it costs here and what you hold, and Build (the pay picker, app.js).
+// codebase you know, what it costs here and what you hold, and Build.
 // Countdowns are empty <… data-at> slots (and rings with data-ring-*) that fillClocks writes every second (app.js), so
 // the markup only changes when the server does and a hovered chip keeps its tooltip.
-import { esc, deathMark } from './view.mjs';
+import { esc, deathMark, sickPct, sickTip } from './view.mjs';
 import { glyph } from './glyphs.mjs';
 import { recapMarkup } from './recap.mjs';
 import { GUARDS, BOSSES, CONFIG } from './data.mjs';
@@ -51,7 +51,7 @@ import { puzzlePanel } from './puzzle-view.mjs';
 import { PROGRAMS, SOCKET, programCost, buildBlock, codebasesOf, costLine as programCostLine } from './sockets.mjs';
 import { materialsOf } from './combat.mjs';
 import { MATERIALS } from './gear.mjs';
-import { stacks } from './salvage.mjs';
+import { componentsOf } from './salvage.mjs';
 import { TH_ICONS, roomMarksOf, nookIcon, nookLive, questSvg, fileSvg, filesHere, threadHud, threadCard, threadAsks, threadPanel, thUi } from './threads-view.mjs';
 import { sweepBlock } from './view.mjs';
 
@@ -528,7 +528,7 @@ function hudMarkup(s) {
     : btn('connect', 'Connect', { small: true, primary: true, disabled: !c.can, tip: c.can ? `Connect to ${R.name}.` : c.wait > 0 ? `${R.name} takes you back in ${fmtLeft(c.wait)}.` : `You need ${c.need} Signal to connect.` });
   return `<header class="fp-hud" aria-label="The server">
     <span class="fp-id" title="${esc(net(s, 'idTip') ?? `${R.name}: ${author} ${kindName(R.kind)}, level ${R.level}, floor ${R.floor}.\n${K.rule}: ${K.text}`)}"><span class="ico" ${icon('server')}></span><b>${esc(R.name)}</b><small>${esc(net(s, 'idLine') ?? `${kindName(R.kind)} · lv ${R.level} · ${K.rule}`)}</small></span>
-    <div class="fp-sig ${lvl}" title="${esc(`Signal: carries from fight to fight and rests back at home.\nA room's first step each visit costs ${step}, or ${stepNew} into one you've never been in.`)}"><span class="lbl">Signal</span><span class="sigbar"><span style="width:${(f * 100).toFixed(1)}%"></span></span><strong>${sig}</strong><small>/${max}</small></div>
+    <div class="fp-sig ${lvl}" title="${esc(`Signal: carries from fight to fight and rests back at home.\nA room's first step each visit costs ${step}, or ${stepNew} into one you've never been in.`)}"><span class="lbl">Signal</span><span class="sigbar"><span style="width:${(f * 100).toFixed(1)}%"></span></span><strong>${sig}</strong><small>/${max}</small>${R.world && sickPct(s) ? `<em class="sig-sick" title="${esc(sickTip(s))}">−${sickPct(s)}%</em>` : ''}</div>
     <div class="fp-prog" title="${esc(`Rooms cleared for good: at ${Math.ceil(prog.total / 2)} the whole map is drawn, at ${prog.total} the server is Mapped.`)}"><span class="lbl">Rooms</span><span class="pbar"><span style="width:${(prog.done / prog.total) * 100}%"></span><i style="left:50%"></i></span><b>${prog.done}/${prog.total}</b>${R.mapped ? '<small class="fp-mapped">MAPPED</small>' : ''}</div>
     ${keys}${hunt}${ml}${pack}${job}${R.world && s.threads ? threadHud(s) : ''}
     <span class="fp-tools">${R.world ? '' : `<span class="fp-rules" role="group" aria-label="Boss rule"><span class="lbl" title="${esc(`Boss rule: how ${BOSSES[RESIDENT].name}'s ticks work. It applies to your next fight with it.`)}">Boss</span>${rule}</span>`}
@@ -672,7 +672,7 @@ function hereCard(s) {
   return cardOf(st, true, labelOf(s, room), jobNote(s, room) + body + hunterNote(s, room), acts, !!sc, addrOf(s, room.id));
 }
 // A socket you stand in (sockets.mjs): what runs in it, or the Build card. Each codebase you know is a row: its icon and
-// name, its rule in a line, what it costs here (each part lit when you hold it), and Build (the pay picker).
+// name, its rule in a line, what it costs here (each part lit when you hold it), and Build.
 function socketCard(s, room) {
   const R = s.rooms, p = programIn(s, room.id);
   if (p) {
@@ -685,17 +685,15 @@ function socketCard(s, room) {
   }
   if (socketOff(s, room)) return { body: note(esc(WORLD.view?.offNote?.(s, room) || 'Offline.'), 'hot'), acts: '' };
   const known = codebasesOf(s).filter((id) => PROGRAMS[id]);
-  const have = Object.fromEntries(stacks(s).map((x) => [x.name, x.n])), m = materialsOf(s), comps = (s.salvage || []).length;
+  const m = materialsOf(s), comps = componentsOf(s);
   const rows = known.map((id) => {
-    const P = PROGRAMS[id], c = programCost(R, id), why = buildBlock(s, R, room, id), total = c.any + (c.need[0]?.n || 0);
-    const named = c.need[0] ? c.need[0].names.reduce((n, nm) => n + (have[nm] || 0), 0) : 0;
+    const P = PROGRAMS[id], c = programCost(R, id), why = buildBlock(s, R, room, id), total = c.components;
     const chip = (ok, label, tip) => `<span class="bc${ok ? ' ok' : ''}" title="${esc(tip)}">${label}</span>`;
     const chips = [chip(comps >= total, `${glyph('salvage')}${total}`, `${total} components (you hold ${comps})`),
-      ...(c.need[0] ? [chip(named >= c.need[0].n, `${c.need[0].n} named`, `${c.need[0].n} of them this server's own: ${c.need[0].names.join(', ')} (you hold ${named})`)] : []),
       ...Object.entries(c.code).map(([k, n]) => chip((m[k] || 0) >= n, `${glyph(k)}${n}`, `${n} ${MATERIALS[k].name} (you hold ${m[k] || 0})`)),
       ...(c.exploit ? [chip((m.exploit || 0) >= c.exploit, `${glyph('exploit')}${c.exploit}`, `${c.exploit} Exploit (you hold ${m.exploit || 0})`)] : [])].join('');
     const blocked = why && !/costs/.test(why);
-    return `<li class="bp-prog${why ? ' short' : ''}"><span class="bp-ic">${ic(id)}</span><span class="bp-txt"><b>${esc(P.name)}</b><small>${esc(P.rule)}</small><span class="bp-cost">${chips}</span></span><button type="button" class="btn small${why ? '' : ' primary'}" data-command="build ${id}" data-pay="program:${id}" data-pay-title="${esc(P.name)}" ${why ? `disabled title="${esc(blocked ? why : `Short: ${programCostLine(c)}`)}"` : `title="Build: inject it now. Choose which components pay."`}>Build</button></li>`;
+    return `<li class="bp-prog${why ? ' short' : ''}"><span class="bp-ic">${ic(id)}</span><span class="bp-txt"><b>${esc(P.name)}</b><small>${esc(P.rule)}</small><span class="bp-cost">${chips}</span></span><button type="button" class="btn small${why ? '' : ' primary'}" data-command="build ${id}" ${why ? `disabled title="${esc(blocked ? why : `Short: ${programCostLine(c)}`)}"` : `title="Build: inject it now. Choose which components pay."`}>Build</button></li>`;
   }).join('');
   return { body: `<ul class="bp-list">${rows || '<li class="quiet">You know no codebase yet.</li>'}</ul>`, acts: '' };
 }

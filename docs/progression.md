@@ -727,9 +727,9 @@ Behind paid little on the real-play clock: 0.6% of the XP to 30 for the Breaker,
 
 ## How solved fights are (measured October 2026)
 
-`node solved.mjs` plays the class-balance fights (20 wild fights and the four guards a bracket) twice: once with the
-planner, which reads every rule, tell and timer, and once with a blind player, who fires the first ready skill on
-the bar at the first part on the board and Spike when nothing else is ready.
+The first measurement played the class-balance fights (20 wild fights and the four guards a bracket) twice: once
+with the planner, which reads every rule, tell and timer, and once with a blind player, who fires the first ready skill
+on the bar at the first part on the board and Spike when nothing else is ready.
 
 | Level | Class | Planner wins | Blind wins | Planner Signal lost | Blind Signal lost |
 |---|---|---|---|---|---|
@@ -755,6 +755,195 @@ of fights; reading pays only in Signal (about half as much lost), and for the Op
 Infiltrator's kit punishes playing blind. Fights reward attention as efficiency, not as the difference between
 winning and losing, and nothing about that changes from level 10 to 50: the same blind rotation works throughout.
 A fight that is a puzzle should lose a blind player more often than not, at least from level 18 on.
+
+docs/puzzle-fights.md is the design that follows: which fights should be puzzles, why bigger numbers don't make one,
+and the levers that do.
+
+### Every player, every tier (docs/puzzle-fights.md P0, October 2026)
+
+`node solved.mjs` now plays each fight with eight players, on the same fights and seeds, and checks each row against
+its bar (docs/puzzle-fights.md section 5):
+
+- **Planner**: reads every rule, tell and timer, as above.
+- **Routine**: your program, prepared. Research on the fight's parts at its tier (rule for ordinary fights, mastered for
+  elites) and the routine confirmed with one handler: *any tell live*, your best hit, *that part*. The rotation does the
+  rest. It never plays a boss or the Resident, which are yours alone.
+- **Rotation**: your program unprepared. No routine for the virus, so the rotation plays the whole fight, as it does
+  for anyone who never opened the Program tab.
+- **Learner 30, 15 and 5**: plays the kit player's move on that share of its cycles and the planner's on the rest: a
+  first try, a few tries in, and learned. Its misread cycles read neither tells nor genes. docs/genome.md 11.2's
+  misreader only stopped reading tells, so the 30 column differs from section 1.4's misreader.
+- **Kit**: blind to the virus but not to its own kit. It's the planner with every tell and every gene unread
+  (TELL.bots.answer off, every gene in GENE_BOTS.ignore). It still plays its skills well, reads timers and leaves a
+  boss's ♛ part with phases to come for later. This is what docs/puzzle-fights.md 3.1 says the rotation should become.
+- **Blind**: the first ready key at the first part, as above.
+
+The fights are section 1.4's: the class-balance fights (Ordinary), 12 elite rolls, 6 Residents and the six solo bosses
+at two seeds each, on each class's default subclass. Wins, %:
+
+| Level | Fight | Class | Planner | Routine | Rotation | Learner 30 · 15 · 5 | Kit | Blind |
+|---|---|---|---:|---:|---:|---|---:|---:|
+| 10 | Ordinary | Breaker | 96 | 88 | 88 | 100 · 100 · 100 | 83 | 88 |
+| 10 | Ordinary | Bastion | 100 | 100 | 100 | 96 · 100 · 100 | 96 | 79 |
+| 10 | Ordinary | Infiltrator | 92 | 79 | 100 | 88 · 92 · 92 | 83 | 79 |
+| 10 | Ordinary | Operator | 100 | 96 | 100 | 100 · 100 · 100 | 96 | 100 |
+| 10 | Elites | Breaker | 0 | 0 | 0 | 0 · 0 · 0 | 0 | 0 |
+| 10 | Elites | Bastion | 33 | 58 | 50 | 33 · 33 · 25 | 50 | 33 |
+| 10 | Elites | Infiltrator | 8 | 0 | 0 | 8 · 8 · 8 | 0 | 0 |
+| 10 | Elites | Operator | 17 | 0 | 0 | 17 · 17 · 17 | 17 | 17 |
+| 10 | Resident | Breaker | 83 | — | — | 83 · 83 · 83 | 100 | 67 |
+| 10 | Resident | Bastion | 100 | — | — | 100 · 100 · 100 | 100 | 67 |
+| 10 | Resident | Infiltrator | 100 | — | — | 100 · 100 · 100 | 100 | 83 |
+| 10 | Resident | Operator | 100 | — | — | 100 · 100 · 100 | 100 | 100 |
+| 10 | Solo bosses | Breaker | 67 | — | — | 67 · 67 · 67 | 50 | 67 |
+| 10 | Solo bosses | Bastion | 100 | — | — | 100 · 100 · 100 | 92 | 50 |
+| 10 | Solo bosses | Infiltrator | 58 | — | — | 58 · 58 · 58 | 83 | 50 |
+| 10 | Solo bosses | Operator | 100 | — | — | 100 · 100 · 100 | 83 | 100 |
+| 18 | Ordinary | Breaker | 100 | 100 | 100 | 100 · 100 · 100 | 96 | 88 |
+| 18 | Ordinary | Bastion | 100 | 96 | 100 | 100 · 100 · 100 | 100 | 92 |
+| 18 | Ordinary | Infiltrator | 100 | 92 | 92 | 100 · 100 · 100 | 96 | 29 |
+| 18 | Ordinary | Operator | 100 | 100 | 100 | 100 · 100 · 100 | 100 | 100 |
+| 18 | Elites | Breaker | 17 | 0 | 0 | 17 · 17 · 17 | 8 | 0 |
+| 18 | Elites | Bastion | 50 | 33 | 33 | 50 · 67 · 67 | 58 | 25 |
+| 18 | Elites | Infiltrator | 17 | 0 | 0 | 25 · 17 · 8 | 33 | 0 |
+| 18 | Elites | Operator | 33 | 8 | 17 | 42 · 33 · 33 | 42 | 42 |
+| 18 | Resident | Breaker | 100 | — | — | 100 · 100 · 100 | 100 | 100 |
+| 18 | Resident | Bastion | 83 | — | — | 83 · 83 · 83 | 83 | 83 |
+| 18 | Resident | Infiltrator | 100 | — | — | 100 · 100 · 100 | 100 | 0 |
+| 18 | Resident | Operator | 100 | — | — | 100 · 100 · 100 | 100 | 100 |
+| 18 | Solo bosses | Breaker | 83 | — | — | 83 · 83 · 83 | 92 | 92 |
+| 18 | Solo bosses | Bastion | 100 | — | — | 100 · 100 · 100 | 83 | 67 |
+| 18 | Solo bosses | Infiltrator | 92 | — | — | 83 · 83 · 92 | 83 | 0 |
+| 18 | Solo bosses | Operator | 100 | — | — | 100 · 100 · 100 | 100 | 100 |
+| 30 | Ordinary | Breaker | 100 | 100 | 100 | 96 · 96 · 100 | 96 | 96 |
+| 30 | Ordinary | Bastion | 100 | 96 | 100 | 100 · 100 · 100 | 100 | 79 |
+| 30 | Ordinary | Infiltrator | 100 | 100 | 100 | 100 · 100 · 100 | 96 | 46 |
+| 30 | Ordinary | Operator | 100 | 100 | 100 | 100 · 100 · 100 | 100 | 100 |
+| 30 | Elites | Breaker | 67 | 25 | 50 | 58 · 58 · 58 | 50 | 0 |
+| 30 | Elites | Bastion | 100 | 33 | 67 | 92 · 100 · 100 | 58 | 25 |
+| 30 | Elites | Infiltrator | 50 | 42 | 42 | 58 · 50 · 50 | 67 | 0 |
+| 30 | Elites | Operator | 33 | 33 | 17 | 33 · 33 · 42 | 42 | 33 |
+| 30 | Resident | Breaker | 100 | — | — | 100 · 100 · 100 | 100 | 83 |
+| 30 | Resident | Bastion | 83 | — | — | 83 · 83 · 83 | 100 | 83 |
+| 30 | Resident | Infiltrator | 100 | — | — | 100 · 100 · 100 | 100 | 17 |
+| 30 | Resident | Operator | 100 | — | — | 100 · 100 · 100 | 100 | 100 |
+| 30 | Solo bosses | Breaker | 100 | — | — | 100 · 100 · 100 | 100 | 92 |
+| 30 | Solo bosses | Bastion | 92 | — | — | 92 · 92 · 92 | 75 | 83 |
+| 30 | Solo bosses | Infiltrator | 92 | — | — | 92 · 92 · 92 | 83 | 0 |
+| 30 | Solo bosses | Operator | 100 | — | — | 100 · 100 · 100 | 100 | 92 |
+
+`node solved.mjs bosses` plays the boss set: every solo boss (the Resident and the event bosses too, not the crew
+bosses) at its floor, 4 and 10 levels up, on every subclass, six seeds. A boss's floor here is its own, or 10 (where
+the boss rows of the bar start). Wins, %, at the three levels:
+
+| Boss | Levels | Planner | Learner 30 | Learner 15 | Learner 5 | Kit | Blind |
+|---|---|---|---|---|---|---|---|
+| Resident | 10 · 14 · 20 | 88 · 85 · 90 | 88 · 88 · 88 | 85 · 85 · 88 | 88 · 85 · 88 | 81 · 88 · 88 | 67 · 65 · 58 |
+| RELAY-KING | 10 · 14 · 20 | 81 · 73 · 81 | 83 · 69 · 79 | 83 · 71 · 83 | 81 · 71 · 83 | 81 · 63 · 75 | 40 · 48 · 54 |
+| REPO MAN | 10 · 14 · 20 | 100 · 100 · 98 | 100 · 100 · 98 | 100 · 100 · 98 | 100 · 100 · 98 | 100 · 100 · 100 | 100 · 100 · 85 |
+| HOLLOW CHOIR | 10 · 14 · 20 | 100 · 100 · 100 | 100 · 100 · 100 | 100 · 100 · 100 | 100 · 100 · 100 | 98 · 100 · 100 | 100 · 94 · 94 |
+| DEADBOLT | 10 · 14 · 20 | 98 · 94 · 94 | 98 · 94 · 94 | 98 · 94 · 94 | 98 · 94 · 94 | 96 · 90 · 96 | 96 · 79 · 67 |
+| TRIPMINE | 10 · 14 · 20 | 100 · 98 · 94 | 100 · 98 · 94 | 100 · 98 · 94 | 100 · 98 · 94 | 100 · 100 · 88 | 100 · 100 · 81 |
+| HASHLORD | 16 · 20 · 26 | 88 · 63 · 77 | 94 · 77 · 90 | 92 · 67 · 83 | 88 · 65 · 81 | 98 · 71 · 96 | 98 · 75 · 90 |
+| BACK ORIFICE | 10 · 14 · 20 | 85 · 79 · 100 | 85 · 85 · 100 | 85 · 85 · 100 | 85 · 81 · 100 | 88 · 94 · 98 | 33 · 31 · 52 |
+| PATCH TUESDAY | 10 · 14 · 20 | 65 · 88 · 88 | 79 · 92 · 90 | 69 · 92 · 92 | 67 · 90 · 90 | 79 · 96 · 98 | 60 · 81 · 79 |
+| FLOODWALL | 10 · 14 · 20 | 81 · 63 · 88 | 81 · 69 · 90 | 83 · 69 · 88 | 83 · 69 · 88 | 85 · 90 · 98 | 94 · 92 · 81 |
+| MIRRORSHADE | 12 · 16 · 22 | 90 · 88 · 94 | 81 · 77 · 79 | 83 · 83 · 85 | 88 · 85 · 92 | 65 · 63 · 71 | 17 · 15 · 17 |
+| SLEEPWALKER | 10 · 14 · 20 | 94 · 98 · 73 | 94 · 98 · 79 | 94 · 98 · 79 | 94 · 98 · 77 | 94 · 98 · 100 | 100 · 96 · 81 |
+| ECHOLALIA | 10 · 14 · 20 | 100 · 98 · 98 | 100 · 100 · 98 | 100 · 98 · 98 | 100 · 98 · 98 | 100 · 100 · 100 | 100 · 98 · 71 |
+
+**What it says.**
+
+- **No row meets its bar.** Every row misses on the kit and blind columns. Every Resident and boss row misses on its
+  first-try column too (a first try should usually lose), and the elites miss their floors.
+- **Playing your kit is what wins today, not reading the virus.** The kit player wins 83–100% of ordinary fights,
+  83–100% of the Resident fights and 50–100% of the solo bosses. From level 18 its Signal lost on ordinary fights is
+  within 10 points of the planner's (at 10, 7 to 18). The blind Infiltrator's losses (section 1.2 of the design) are its
+  kit: played well, the same Infiltrator wins 96%.
+- **There's no learning curve.** The learner wins about what the planner wins at every share of misreads, on every
+  tier. A first try at a boss is as good as a learned one. MIRRORSHADE is the exception: a first try wins 77–81%,
+  learned 85–92%, the planner 88–94%.
+- **The default program already solves ordinary fights.** The rotation alone wins 88–100% of them, about what the
+  planner and the routine player win (the routine Infiltrator at 10: 79%). Preparing a routine pays nothing yet.
+- **Elites are walls, not puzzles.** At 10 the planner wins 0–33% of them, at 18 17–50%, and at 30 33–100%. Below 30 the
+  planner wins at most 25 points more of them than the blind player.
+- **Some bosses punish reading.** On SLEEPWALKER at 20, FLOODWALL at 14 and HASHLORD at 26 the kit player beats the
+  planner by 19–27 points: the planner's answers to their rules cost more than ignoring them. Only MIRRORSHADE (its
+  Mimic) holds the blind player well under half (15–17%). BACK ORIFICE and RELAY-KING hold it to 31–54%, and every
+  other boss lets it win 58% or more.
+
+**The Operator's helpers** (`node solved.mjs operator`). The Herder on the class-balance fights: the share of its
+damage that comes from helpers, and the tells it answers by breaking the part (a tell dies with its part) that a
+helper's hit broke.
+
+| Level | Player | Wins | Helper damage | Tells said · answered | Died with a part · a helper broke it |
+|---|---|---:|---:|---|---|
+| 10 | Blind | 100% | 78% | 20 · 18 | 11 · 6 |
+| 10 | Planner | 100% | 51% | 23 · 18 | 14 · 4 |
+| 18 | Blind | 100% | 66% | 36 · 34 | 20 · 13 |
+| 18 | Planner | 100% | 58% | 42 · 40 | 19 · 11 |
+| 30 | Blind | 100% | 59% | 36 · 34 | 27 · 12 |
+| 30 | Planner | 100% | 56% | 42 · 42 | 33 · 8 |
+
+Helpers deal 59–78% of the blind Herder's damage, and a third of the tells it answers (35–38% at 18 and 30) die
+with a part a helper broke: it answers by accident, as section 3.2 of the design says.
+
+The same command prototypes rules 2 and 3 of that section in the harness (no game change): on the Mimic's beat, each
+helper on its part sent once the beat was on the board has its hit played back, never past the tell ceiling. The
+taught planner keeps helpers off the Mimic while a beat they would reach is on the board and other parts stand, and
+cashes in with Kill Switch on the beat. Ghostroot fights with a Mimic, 12 a cell, Signal lost today → with the rule:
+
+| Level | Herder planner | Herder planner, taught | Herder learner 30 | Herder blind | Hijacker planner, taught | Hijacker blind |
+|---|---|---|---|---|---|---|
+| 10 | 20 → 20 | 20 → 20 | 28 → 28 | 20 → 31 | 23 → 25 | 72 → 71 |
+| 18 | 14 → 14 | 14 → 14 | 18 → 20 | 59 → 64 | 35 → 41 | 44 → 46 |
+| 30 | 19 → 20 | 19 → 19 | 19 → 20 | 63 → 66 | 20 → 24 | 49 → 49 |
+
+No player's wins move (100%, the blind Hijacker at 10 58%). The Herder's risk didn't show: its helpers are small, so a
+caught beat costs it about 3 Signal, and the planner Herder stays where it was (14% at 18 sits under the solo band's
+15% floor today too). The Hijacker's bigger helpers cost it 2–6 points, nearly all of it from helpers on a Mimic left
+standing alone, where hitting it without them takes longer than the playback costs. On their own, rules 2 and 3 cost
+the blind Operator Signal, not fights: rule 1 (the order, the ♛ part) has to carry the rest.
+
+### The program fits the trick (docs/puzzle-fights.md P1, the routine half, October 2026)
+
+P1 made the rotation the kit player (routines.mjs `rotation`, planner.mjs `kitPlanner`: no tell, no gene's rule) and
+gave a routine what it needs to answer a lever: a preset for each lever (*Quiet on the beat*, *Tripwire last*, *Lockbox
+first*), the DO chips **Rotation** (your rotation's move at the TARGET part) and **Hold**, the beat chips and the
+TARGETs *no beat* and *other parts*. A lever, a seal or a cast that no handler names is an exception. The routine
+player now prepares as a player would (solved.mjs `prepare`: the preset of each lever in the fight, then *Answer the
+tells*, as RAM allows). Ordinary fights, wins · Signal lost, %:
+
+| Level | Class | Planner | Routine | Rotation (= kit) | Blind |
+|---|---|---|---|---|---|
+| 10 | Breaker | 96 · 39 | 83 · 56 | 83 · 58 | 88 · 49 |
+| 10 | Bastion | 100 · 31 | 96 · 33 | 96 · 38 | 79 · 47 |
+| 10 | Infiltrator | 92 · 40 | 92 · 42 | 79 · 59 | 79 · 57 |
+| 10 | Operator | 100 · 17 | 100 · 18 | 96 · 24 | 100 · 11 |
+| 18 | Breaker | 100 · 23 | 100 · 32 | 96 · 33 | 88 · 55 |
+| 18 | Bastion | 100 · 25 | 100 · 35 | 100 · 32 | 92 · 46 |
+| 18 | Infiltrator | 100 · 26 | 96 · 31 | 96 · 30 | 29 · 91 |
+| 18 | Operator | 100 · 19 | 100 · 23 | 100 · 24 | 100 · 25 |
+| 30 | Breaker | 100 · 25 | 92 · 34 | 96 · 32 | 96 · 45 |
+| 30 | Bastion | 100 · 25 | 92 · 39 | 96 · 33 | 79 · 46 |
+| 30 | Infiltrator | 100 · 18 | 100 · 16 | 96 · 21 | 46 · 80 |
+| 30 | Operator | 100 · 16 | 100 · 19 | 100 · 18 | 100 · 27 |
+
+**What it says.**
+
+- **The routine player wins about what the planner wins** (83–100% against 92–100%; the Breaker at 10 is the gap, and
+  there the kit player itself wins 83%). It loses a few more points of Signal: a handler's tell chip holds on the
+  cycle the tell lands, too late for the planner's strip ahead.
+- **The rotation alone still wins today's fights.** It is now the kit player (79–100%), and today's fights have few
+  levers in them: the kit loses little by not reading them. P2 puts one conflict in every ordinary fight, and that is
+  where the rotation alone should fall to the bar.
+- **How a preset answers a lever decides what it costs.** First drafts that fired your best hit at a named part every
+  cycle cost the Operator a quarter of its wins (no Deploys), and a *Tripwire last* built by naming every other part in
+  order cost the Bastion 40 points of Signal in some fights. The presets now say where (that part, the other parts,
+  no beat) and leave what to your rotation. SIGINT has its own preset: fired by a handler into the cycle a kill was
+  due, it cost the kill and a landed charge (−102 Signal in one fight).
+- **Elites are still walls** for every player (at 18 the planner wins 17–50%, the routine player 0–33%): P3 cuts their
+  Integrity first.
 
 ## XP anchored by activities (October 2026)
 

@@ -97,9 +97,9 @@ export function dueOf(s, p) {
 export function nextTick(p) { return (p.ticks || []).find((t) => !t.spent) || null; }
 export const toCross = (p, t = nextTick(p)) => (t ? Math.max(1, p.integrity - Math.floor(t.at * p.max)) : null);
 // Damage landed on a part (combat.mjs hit, hooks.roomHit): the ticks it crossed, and what they do.
-export function onHit(s, p, was, dealt) {
+export function onHit(s, p, was, dealt, opts = {}) {
   const e = s.encounter, v = e?.virus;
-  if (!ticked(e) || dealt <= 0) return;
+  if (!ticked(e) || dealt <= 0 || opts.blast) return; // a Zip Bomb's blast cuts on its own (blastCut), and spends no tick
   if (!p.ticks && hasTicks(v, p)) p.ticks = fresh();
   if (!p.ticks) return;
   const crossed = p.ticks.filter((t) => !t.spent && was > t.at * p.max && p.integrity <= t.at * p.max);
@@ -129,6 +129,15 @@ function wasted(s, p, t, why) {
   e.metrics.wasted = (e.metrics.wasted || 0) + 1;
   emit(s, 'tick-wasted', `The ${p.name} crosses ${pct(t.at)} ${why}. That tick is spent.`, { target: p.id, tick: t.at, wasted: true });
 }
+// The attack due now is cancelled (a cut, or SIGINT on a charge riding it: tells.mjs tellSigint). Its schedule goes on
+// as if it had landed.
+export function cancelAttack(s, p) {
+  const e = s.encounter, a = p.attack;
+  a.due = a.tap ? Math.max(e.cycle + 1, a.volley + a.interval) : e.cycle + a.interval; // a volley cut mid-way: the rest of it goes too
+  a.tap = 0; a.volley = null;
+  a.n = (a.n || 0) + 1;
+  if (a.windup) a.wound = 0;
+}
 // Cancel what the part has due now. Its schedule goes on as if it had landed.
 function cancel(s, p, due, t) {
   const e = s.encounter, names = [];
@@ -140,10 +149,7 @@ function cancel(s, p, due, t) {
       const charge = (tellsOf(s)?.list || []).find((x) => x.told && x.kind === 'charge' && x.part === p.id && x.n === (a.n || 0));
       if (charge) { tellAnswer(s, charge, p, `Cut: ${charge.name.toUpperCase()} called off.`, { stagger: false }); names.push(charge.name); }
       else names.push(a.name);
-      a.due = a.tap ? Math.max(e.cycle + 1, a.volley + a.interval) : e.cycle + a.interval; // a volley cut mid-way: the rest of it goes too
-      a.tap = 0; a.volley = null;
-      a.n = (a.n || 0) + 1;
-      if (a.windup) a.wound = 0;
+      cancelAttack(s, p);
     } else if (d.kind === 'deliver') { p.deliver.due = e.cycle + p.deliver.interval; names.push('delivery'); }
     else if (d.kind === 'tell') { tellAnswer(s, d.t, p, `You cut the ${p.name} on its cycle: ${d.t.name.toUpperCase()} is stopped.`, { stagger: false }); names.push(d.t.name); }
   }
@@ -155,6 +161,28 @@ function cancel(s, p, due, t) {
   emit(s, 'cut', `INTERRUPTED. You take the ${p.name} under ${pct(t.at)}. Its ${what} cancelled.${e.cutBudget != null ? ` ${e.cutBudget} of ${TICKS.budget} interrupts left this fight.` : ''}`, { target: p.id, tick: t.at, cut: true });
   gainResearch(s, e.virus, p, 'cut'); // +1 research on the part you cut (research.mjs; a crewmate's cut is theirs)
   daemonsOn(s, 'cut', { part: p.id }); // Breakpoint, Guillotine
+}
+
+// A Zip Bomb's blast cuts (docs/puzzle-levers.md 3.3): what a part has due on the cycle it goes off is cancelled, a
+// charge riding it called off and a cast or a seal landing then stopped, as a cut would, with no tick and no interrupt
+// spent. A boss's ♛ part isn't cut (its ticks start phases). Returns the names of what it cut.
+export function blastCut(s, p, by) {
+  const e = s.encounter, due = alive(p) && !p.core ? dueOf(s, p) : [];
+  if (!due.length) return [];
+  const names = [];
+  for (const d of due) {
+    if (d.kind === 'attack') {
+      const a = p.attack, charge = (tellsOf(s)?.list || []).find((x) => x.told && x.kind === 'charge' && x.part === p.id && x.n === (a.n || 0));
+      if (charge) { tellAnswer(s, charge, p, `The ${by} blast cuts the ${p.name}: ${charge.name.toUpperCase()} called off.`, { stagger: false }); names.push(charge.name); } else names.push(a.name);
+      cancelAttack(s, p);
+    } else if (d.kind === 'deliver') { p.deliver.due = e.cycle + p.deliver.interval; names.push('delivery'); }
+    else { tellAnswer(s, d.t, p, `The ${by} blast cuts the ${p.name} on its cycle: ${d.t.name.toUpperCase()} is stopped.`, { stagger: false }); names.push(d.t.name); }
+  }
+  e.metrics.cuts = (e.metrics.cuts || 0) + 1;
+  p.cutAt = e.cycle;
+  const what = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)} are` : `${names[0]} is`;
+  emit(s, 'cut', `The ${by} blast cuts the ${p.name}. Its ${what} cancelled.`, { target: p.id, blast: true });
+  return names;
 }
 
 // ---------- reading it ----------

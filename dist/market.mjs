@@ -13,7 +13,8 @@ import { FACTIONS, hubsOf, hostile, repTier, buyFrom, hubFound } from './faction
 import { seeded } from './gear.mjs';
 import { deliverGoods } from './store.mjs';
 import { deal, shockMult } from './events.mjs';
-import { learnCodebase, gainComponents } from './sockets.mjs';
+import { learnCodebase } from './sockets.mjs';
+import { gainComponents, componentsOf, spend } from './salvage.mjs';
 
 const now = () => hooks.now?.() ?? Date.now();
 
@@ -78,7 +79,7 @@ export function quote(s, f, w) {
   const p = priceOf(s, f, w);
   return { sell: Math.max(1, Math.floor(p * (1 - MARKET.spread + edge))), buy: Math.max(1, Math.ceil(p * (1 + MARKET.spread - edge))), mult: p / WARES[w].base };
 }
-const have = (s, w) => (w === 'salvage' ? (s.salvage || []).length : materialsOf(s)[w] || 0);
+const have = (s, w) => (w === 'salvage' ? componentsOf(s) : materialsOf(s)[w] || 0);
 const relays = (s) => (s.locations || []).filter((l) => l.relay).length;
 export const travelMs = (s, f) => Math.round(MARKET.travelMin[f] * 60000 * (1 - Math.min(0.4, MARKET.relayCut * relays(s))));
 
@@ -99,7 +100,7 @@ export function trade(s, side, f, w, n, at = now()) {
     // exactly undoes buying it (never a profit on the round trip, even with no spread).
     let credits = 0;
     for (let i = 0; i < n; i++) { m.pressure[f][w] += 1; credits += quote(s, f, w).sell; }
-    if (w === 'salvage') s.salvage.splice(0, n); else materialsOf(s)[w] -= n;
+    if (w === 'salvage') spend(s, n); else materialsOf(s)[w] -= n;
     const t = { id: ++m.serial, side, f, w, n, credits, sentAt: at, landsAt: at + travelMs(s, f) };
     m.transfers.push(t);
     firstTime(s, 'trade-' + f, `first trade with ${FACTIONS[f].short}`, 'trade');
@@ -159,7 +160,6 @@ export function tickMarket(s, at = now()) {
     m.eventUntil = at + MARKET.eventMs;
     if (!first) emit(s, 'market-event', `Market: ${EVENTS[m.event].name}. ${EVENTS[m.event].about}`, {});
   }
-  s.salvage ||= [];
   for (const t of m.transfers.filter((x) => at >= x.landsAt)) {
     m.transfers.splice(m.transfers.indexOf(t), 1);
     if (t.side === 'good') {
@@ -172,7 +172,7 @@ export function tickMarket(s, at = now()) {
     }
     if (t.side === 'sell') { s.server.credits += t.credits; emit(s, 'transfer-in', `Transfer complete to ${FACTIONS[t.f].short}: +${t.credits} credits for ${t.n} ${WARES[t.w].name}.`, { faction: t.f }); }
     else {
-      if (t.w === 'salvage') gainComponents(s, t.n, null, 'market');
+      if (t.w === 'salvage') gainComponents(s, t.n);
       else materialsOf(s)[t.w] = (materialsOf(s)[t.w] || 0) + t.n;
       emit(s, 'transfer-in', `Transfer complete from ${FACTIONS[t.f].short}: +${t.n} ${WARES[t.w].name}.`, { faction: t.f });
     }

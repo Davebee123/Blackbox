@@ -1,19 +1,20 @@
 // The Halcyon store. Opens with the Contractor letter (the end of the storyline).
 //
 // Two shelves:
-//   Halcyon's own line, always there: relays (credits) and the chase protocols (Indemnity only,
-//     gated by standing tier). A chase protocol is Indemnified: bigger rolls and a signature
-//     effect you can't find or compile anywhere else.
+//   Halcyon's own line, always there: relays and the chase protocols (gated by standing tier, and
+//     priced high: they're the credit sink). A chase protocol is Indemnified: bigger rolls and a
+//     signature effect you can't find or compile anywhere else.
 //   Other agencies' stock, resold through Halcyon: four slots that turn over on their own uneven
 //     clocks. Each has a supplier, a price that drifts ±25% and a small quantity. This is where
 //     the exploring kit (key crackers, trace injectors, cheap relays), code, repairs and the odd
 //     blueprint turn up. (Daemons only come from invasions.)
 import { ZERO_DAYS, rollItem, MATERIALS } from './gear.mjs';
 import { emit, warn, rand, hackerLevel, addItem, learnBlueprint, materialsOf, gainCode, maxSignal, hooks } from './combat.mjs';
-import { tierIndex, TIERS, indemnity, boardOpen } from './mail.mjs';
+import { tierIndex, TIERS, boardOpen, systemLetter } from './mail.mjs';
 import { items } from './hidden.mjs';
 import { bestSell } from './market.mjs';
-import { shopCodebases, learnCodebase, gainComponents } from './sockets.mjs';
+import { shopCodebases, learnCodebase } from './sockets.mjs';
+import { gainComponents } from './salvage.mjs';
 
 const now = () => hooks.now?.() ?? Date.now();
 export const STORE = {
@@ -23,13 +24,17 @@ export const STORE = {
 };
 export const AGENCIES = ['Kestrel Underwriting', 'Norrland Re', 'Blue Ledger Security', 'Mimir Actuarial', 'Quayside Claims', 'Vesper Risk'];
 
+// What a chase protocol costs per unit of its old Indemnity price (Indemnity retired in v48): 40
+// credits, rising with your level the way the rest of the store does.
+export const chaseRate = (L) => 40 * (1 + L / 15);
+const chase = (n) => (L) => Math.round((n * chaseRate(L)) / 10) * 10;
 // Halcyon's own line. tier: the standing tier (index in TIERS) it takes to buy.
 export const LINE = [
   { id: 'relay', name: 'Relay', about: 'Pings the unknown servers next to a server you have taken over, and flags a contract’s signal. Install it on a server you hold.', credits: (L) => 120 + 8 * L, tier: 1 },
-  { id: 'deductible', chase: true, indemnity: 30, tier: 2 },
-  { id: 'subrogation', chase: true, indemnity: 45, tier: 3 },
-  { id: 'actuarial', chase: true, indemnity: 45, tier: 3 },
-  { id: 'total-loss', chase: true, indemnity: 80, tier: 4 }, // the Preferred weapon
+  { id: 'deductible', chase: true, credits: chase(30), tier: 2 },
+  { id: 'subrogation', chase: true, credits: chase(45), tier: 3 },
+  { id: 'actuarial', chase: true, credits: chase(45), tier: 3 },
+  { id: 'total-loss', chase: true, credits: chase(80), tier: 4 }, // the Preferred weapon
 ];
 export const lineName = (x) => x.name || ZERO_DAYS[x.id].name;
 export const lineAbout = (x) => x.about || ZERO_DAYS[x.id].effect;
@@ -40,7 +45,6 @@ export const GOODS = {
   cracker: { name: 'Key cracker', about: 'Reveals the vault key of a server you have found. Use it from the server’s map card.', credits: (L) => 60 + 6 * L, qty: [1, 3] },
   injector: { name: 'Trace injector', about: 'Adds 30% to the trace on an unknown server. Use it from the server’s map card.', credits: (L) => 80 + 6 * L, qty: [1, 2] },
   signal: { name: 'Signal patch', about: 'Refills your Signal at once.', credits: (L) => 30 + 3 * L, qty: [2, 4] },
-  harden: { name: 'harden.sh', about: 'Raises your firewall by 3 levels for 8 hours.', credits: (L) => 70 + 6 * L, qty: [1, 2] },
   repair: { name: 'Hot-swap kit', about: 'Repairs your server’s Integrity at once.', credits: (L) => 40 + 5 * L, qty: [1, 3] },
   cipher: { name: 'Cipher code lot', code: 'cipher', credits: (L) => 45 + 5 * L, qty: [1, 3] },
   worm: { name: 'Worm code lot', code: 'worm', credits: (L) => 45 + 5 * L, qty: [1, 3] },
@@ -51,7 +55,7 @@ export const GOODS = {
   blueprint: { name: 'Sealed blueprint', about: 'Teaches you a blueprint you do not have yet.', credits: (L) => 250 + 15 * L, qty: [1, 1], tier: 2 },
 };
 // The daemon image's weight went to a second Sealed item.
-const WEIGHTS = { harden: 2, relay: 2, cracker: 3, injector: 3, signal: 3, repair: 2, cipher: 2, worm: 2, kernel: 2, exploit: 1, salvage: 2, crate: 2, blueprint: 1 };
+const WEIGHTS = { relay: 2, cracker: 3, injector: 3, signal: 3, repair: 2, cipher: 2, worm: 2, kernel: 2, exploit: 1, salvage: 2, crate: 2, blueprint: 1 };
 export const codeAmount = (L) => 3 + Math.floor(L / 5);
 // What a lot of tradeable goods (code, an Exploit, salvage) costs now: its shelf price, but never
 // less than 10% over what the best hub market would pay for its contents.
@@ -91,16 +95,14 @@ export function buy(s, what) {
   const line = LINE.find((x) => x.id === what);
   if (line) {
     if (tierIndex(s) < line.tier) return warn(s, `${lineName(line)} is for ${TIERS[line.tier].name} standing and up.`);
-    if (line.chase) {
-      if (indemnity(s) < line.indemnity) return warn(s, `${lineName(line)} costs ${line.indemnity} Indemnity. You have ${indemnity(s)}.`);
-      s.indemnity -= line.indemnity;
-      const item = rollItem(() => rand(s), { level: L, zeroDay: line.id });
-      emit(s, 'bought', `Bought ${lineName(line)} for ${line.indemnity} Indemnity.`, { item: line.id });
-      return addItem(s, item, 'Halcyon: ');
-    }
     const price = line.credits(L);
     if (s.server.credits < price) return warn(s, `${lineName(line)} costs ${price} credits.`);
     s.server.credits -= price;
+    if (line.chase) {
+      const item = rollItem(() => rand(s), { level: L, zeroDay: line.id });
+      emit(s, 'bought', `Bought ${lineName(line)} for ${price} credits.`, { item: line.id });
+      return addItem(s, item, 'Halcyon: ');
+    }
     items(s)[line.id] = (items(s)[line.id] || 0) + 1;
     return emit(s, 'bought', `Bought a ${lineName(line).toLowerCase()} for ${price} credits. You have ${items(s)[line.id]}.`, { item: line.id });
   }
@@ -129,13 +131,27 @@ export function buy(s, what) {
 // f: the faction that sold it (a hub's goods land through market.mjs): its sealed item carries its implicit (gear.mjs IMPLICITS).
 export function deliverGoods(s, id, L, f = 'halcyon') {
   const g = GOODS[id];
-  if (['relay', 'cracker', 'injector', 'harden'].includes(id)) { items(s)[id] = (items(s)[id] || 0) + 1; return; }
+  if (['relay', 'cracker', 'injector'].includes(id)) { items(s)[id] = (items(s)[id] || 0) + 1; return; }
   if (g.code) return gainCode(s, { [g.code]: codeAmount(L) }, 'Bought: ');
   if (id === 'exploit') return gainCode(s, { exploit: 1 }, 'Bought: ');
-  if (id === 'salvage') { gainComponents(s, 5, null, 'store'); return; }
+  if (id === 'salvage') { gainComponents(s, 5); return; }
   if (GOODS[id]?.codebase) return learnCodebase(s, GOODS[id].codebase, 'Unsealed: ');
   if (id === 'signal') { s.signal = maxSignal(s); if (s.run) s.run.integrity = s.run.max; return emit(s, 'heal', 'Signal patched to full.'); }
   if (id === 'repair') { s.server.integrity = s.server.max; return emit(s, 'heal', `Server back to ${s.server.max}/${s.server.max}.`); }
   if (id === 'crate') return addItem(s, rollItem(() => rand(s), { level: L, rarity: 'tuned', faction: f }), 'Unsealed: ');
   if (id === 'blueprint') return learnBlueprint(s, 'Unsealed: ');
+}
+
+// v48: Indemnity is retired. An older save's unspent Indemnity becomes credits once, at the rate the
+// chase protocols are priced at your level, so it buys what it would have; a letter from Halcyon says
+// so. Contracts held from before stop promising it. Keyed on the field, so it runs once.
+export function indemnityRestore(s) {
+  for (const j of [...(s.mail?.jobs || []), ...(s.mail?.offers || [])]) if (j.reward) delete j.reward.indemnity;
+  if (!('indemnity' in s)) return 0;
+  const n = s.indemnity || 0, credits = Math.round(n * chaseRate(hackerLevel(s)));
+  delete s.indemnity;
+  if (!credits || !s.server) return 0;
+  s.server.credits = (s.server.credits || 0) + credits;
+  systemLetter(s, { from: 'claims', subject: 'Indemnity, settled', body: [`We no longer issue Indemnity. Your ${n} has been settled in credits: ${credits}, paid to your server.`, 'Our own protocols are still on the shelf, for credits now, and your standing still decides which ones you can buy.'] });
+  return credits;
 }
