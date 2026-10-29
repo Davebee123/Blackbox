@@ -34,9 +34,8 @@ session's scratchpad, never in the repo), shown as screenshots, before any of it
   once with storm-touched viruses that drop more, so finished servers are where it pays.
 - **Par.** A move count for a clear of a Mapped server. Only from a solver's true shortest walk (doubling back
   included), shown only once Mapped, and missing it shows nothing.
-- **Fight ideas, not yet discussed:** weaknesses by damage shape (burst, burn, helpers, spread, reactive) shown once
-  researched; fixtures (a neutral prop on the board: a capacitor, a coolant line, a loose cache); wired parts (break both
-  within 2 cycles to short them); *Engage hot* (a visible third part for a better drop).
+- **Fight ideas, not yet discussed:** fixtures (a neutral prop on the board: a capacitor, a coolant line, a loose
+  cache); wired parts (break both within 2 cycles to short them); *Engage hot* (a visible third part for a better drop).
 
 ## Cut (don't offer again)
 
@@ -49,6 +48,7 @@ session's scratchpad, never in the repo), shown as screenshots, before any of it
 | Overclock rack (pick a buff for the next fights) | Belongs to games where you blow everything up; this isn't one |
 | Ripening cache | Feature creep |
 | Class-flavoured server moods | Push people to switch class |
+| Weaknesses by damage shape (burst, burn, helpers, spread, reactive) | A part weak to one shape favours the class that deals it |
 | Trace-back after an invasion | Repeats systems already there |
 | Daily seed | Out of scope for now |
 | Home layout as tower defense | The house is a cosmetic, not a defence game |
