@@ -7,10 +7,23 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
 
 - **Tests.** `npm test` before every commit. It runs every fast test file, and a slow balance simulation only when
   something it loads changed (scripts/test.mjs; `npm run test:plan` says what runs and why). It takes about a minute.
-  Run `npm run test:full` (about 13 minutes) before pushing a batch that touches combat, balance, progression or
-  loot, and once after merging agents' branches. Commit or push only on `# fail 0`. The two balance TODO tests in
-  the full suite are expected. When reading a test log, grep for its totals and its `not ok` lines; never read the
-  whole log.
+  The Tests workflow on GitHub runs `npm run test:full` on every push to main and to a `claude/` branch (a branch
+  merged with main first). Check it when a session starts: a red main is the first thing to fix. A cloud session
+  takes about two hours over the full suite, so leave it to the workflow. Commit or land only on `# fail 0`. The two
+  balance TODO tests in the full suite are expected. When reading a test log, grep for its totals and its `not ok`
+  lines; never read the whole log.
+- **Landing.** Every session lands its own work: commit on its branch, then `node scripts/land.mjs`. It merges
+  origin/main in, tests the merged tree, pushes it to main, and starts over if main moved meanwhile. Resolve its
+  conflicts yourself, keeping both sides' intent. Where two changes collide in design (one removes what the other
+  reworks), stop and ask the designer. A session never leaves its branch for a later merge.
+- **Parallel sessions.** A session that writes prompts for others gives each one a lane (the system and files it
+  owns), what it must not touch, and a landing order. Two sessions that change the same system (economy, XP and
+  pacing, the save, combat rules) run one after the other, never side by side.
+- **Saves.** Key a save migration on the field it converts, so it is safe to run twice (like `hardenRestore`). Raise
+  `SAVE_VERSION` only when landing, after main is merged in: one more than main's. land.mjs stops if both sides
+  raised it.
+- **Branches.** Start from a fresh main and land before the session ends. Work that can't land yet (an experiment the
+  designer hasn't kept) goes on a `wip/` branch, so it isn't mistaken for outstanding work.
 - **Docs.** Keep GAME_RULES.md and README.md in sync with the code and with each other, in the same commit.
 - **Agents.** Use worktree agents for big features only; do small fixes directly. Tell an agent to read narrowly
   (grep for the function, read that part of a file), to run `npm test -- --base main` in its worktree, and to merge
