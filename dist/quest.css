@@ -115,8 +115,8 @@
 }
 
 /* ---- floor jobs (arcs-view.mjs): a floor's own chain in Mail, in the same window. The row's mark is the floor's number
-   in an amber frame (a thread's is a filled hexagon); the page is the chain, then the step's letter and its contract. ---- */
-.mrow .arc-f { display: inline-grid; place-items: center; width: 17px; height: 17px; border: 1px solid var(--amber); border-radius: var(--r-tag); color: var(--amber); font: 700 11px/1 var(--mono); }
+   on a filled amber flag, its point down (a thread's is a filled hexagon); the page is the chain, then the step's letter and its contract. ---- */
+.mrow .arc-f { display: inline-grid; place-items: center; width: 17px; height: 19px; padding-bottom: 3px; box-sizing: border-box; background: var(--amber); color: #1a1002; clip-path: polygon(0 0, 100% 0, 100% 70%, 50% 100%, 0 70%); font: 700 11px/1 var(--mono); }
 .mrow.arc-row .tag.arc-n { color: var(--amber-soft); border-color: var(--line-strong); }
 .arc-step { display: grid; gap: var(--s4); padding-top: var(--s4); border-top: 1px dashed var(--line); }
 .arc-step .arc-subj { margin: 0; font: var(--kicker); letter-spacing: var(--kicker-track); text-transform: uppercase; color: var(--amber); }
