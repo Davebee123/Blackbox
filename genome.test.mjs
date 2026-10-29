@@ -1,4 +1,4 @@
-// The genome in play (genome.mjs, docs/genome.md phase 1): names and bylines, what the rules' chips know (a part's rule
+// The genome in play (genome.mjs, GAME_RULES.md "Rules and authors"): names and bylines, what the rules' chips know (a part's rule
 // by its research, research.mjs; a tell's once answered; a mutation's at two kills), `scan` and `inspect`, and
 // HASHLORD's and MIRRORSHADE's lairs opening at their floors.
 import test from 'node:test';

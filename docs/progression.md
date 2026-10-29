@@ -73,13 +73,3 @@ thirds of the time.
    from 40, or make the level-50 fights harder.
 8. **The contract share.** Working contracts measures 1.76× farming; a lower share gives 1.5× but puts the contract
    worker about 27% behind `PACE_TARGET`.
-
-## Old sections, cited in code
-
-| Section | Now |
-|---|---|
-| 1–6 (the v34 review: tables, diagnosis, options, what changed) | Built; GAME_RULES *Levels*. Effective keys (kits.md, balance.mjs) is one over the sum of squared key shares, Spike and SIGINT included. |
-| Power spikes | GAME_RULES *Items* (base power follows item level, no step at a tier) |
-| 7 (the curve, the XP mix, timers, the save v42, Behind removed, capstones) | Above, and GAME_RULES *Levels*, *Classes and loadout* (capstones), *Runs* (respawns) |
-| How solved fights are; Every player, every tier; The program fits the trick | docs/puzzle-fights.md 5 |
-| XP anchored by activities | 7, above |

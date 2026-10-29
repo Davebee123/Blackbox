@@ -186,7 +186,7 @@ export function blastCut(s, p, by) {
 }
 
 // ---------- reading it ----------
-// Every part with a move due now and a tick to cross: what crossing takes (the board's Now column, docs/servers.md 3.3).
+// Every part with a move due now and a tick to cross: what crossing takes (the board's Now column, GAME_RULES.md "The interrupt").
 // Returns [{ part, need, armor, verb }]; need null when no tick is left.
 export function cutsNow(s) {
   const e = s.encounter;

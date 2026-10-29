@@ -1,4 +1,4 @@
-// The rooms playtest (docs/servers.md R0, floorplan.mjs): the room graph and its generator, moving and its Signal cost,
+// The rooms playtest (GAME_RULES.md "Runs: servers as rooms", floorplan.mjs): the room graph and its generator, moving and its Signal cost,
 // respawn timers, progress, the key walk and the vault, the hunters (a Patroller's loop, a Tracker's den), fog, the
 // terminal, the page, and the bot mapping a server. The interrupt: interrupt.test.mjs. The bodies and attack sets:
 // families.test.mjs.

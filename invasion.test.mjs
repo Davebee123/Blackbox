@@ -18,7 +18,7 @@ const I = CONFIG.invasion;
 function world({ level = 1, family = 'worm', depth = 1, services = {}, fw = 0 } = {}) {
   const s = fresh();
   command(s, `developer location ${family}`);
-  Object.assign(s.locations[0], { level, depth, runs: 1 }); // connected: only servers you've connected to send invasions (docs/servers.md 5.3)
+  Object.assign(s.locations[0], { level, depth, runs: 1 }); // connected: only servers you've connected to send invasions (GAME_RULES.md "Invasions and the wall")
   s.services = { ...services };
   s.firewall = { pin: fw, plus: 0, frag: 0, defragUntil: 0 };
   syncServer(s);
@@ -53,7 +53,7 @@ test('invaders only come from servers you have connected to; the network plays o
   assert.equal(s.invasion, null, 'nothing found, nothing comes');
   command(s, 'developer location worm');
   wait(s, 20 * MIN);
-  assert.equal(s.invasion, null, 'found but never connected to: nothing comes (docs/servers.md 5.3)');
+  assert.equal(s.invasion, null, 'found but never connected to: nothing comes (GAME_RULES.md "Invasions and the wall")');
   s.locations[0].runs = 1;
   wait(s, I.firstMs - 5000);
   assert.equal(s.invasion, null);

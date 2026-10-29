@@ -465,7 +465,7 @@ export const EXPLOIT_CHANCE = { home: 0.04, guard: 0.08 };
 export const vaultCode = (level) => 12 + Math.floor(Math.max(1, level) / 2);
 
 // ---------- services (retired) ----------
-// Services went with outposts in R2 (docs/servers.md 8.1): a save that ran one got what it cost back (sockets.mjs
+// Services went with outposts in R2 (GAME_RULES.md "Sockets and programs"): a save that ran one got what it cost back (sockets.mjs
 // retireOutposts). SERVICES stays, empty, for the old saves' migrations that still read it.
 export const SERVICES = {};
 export const SERVICE_SOURCES = [];

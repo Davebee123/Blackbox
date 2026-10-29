@@ -155,7 +155,7 @@ function load() {
     BR.startBreach(s, { seed: Number(params.get('seed')) || (newRng() % 100000) + 1, level: lv, heat: Math.max(0, Math.min(8, Number(params.get('heat')) || 0)) });
     return s;
   }
-  // The rooms playtest (floorplan.mjs, docs/servers.md R0): one server as a room graph, on a fresh character that is
+  // The rooms playtest (floorplan.mjs, GAME_RULES.md "Developer tools"): one server as a room graph, on a fresh character that is
   // never saved. ?playtest=rooms&class=…&level=…&kind=Mailhub|Relay|Mirror|Archive|Lab&seed=…&size=small|medium|large
   // &boss=a|b|c&hunter=patrol|track&author=…&sub=…. The clocks run ten times as fast.
   if (playtest === 'rooms') {

@@ -350,7 +350,7 @@ hooks.roomIntents = (s, columns) => {
 };
 // The end of a room fight's cycle: deliveries and unpacking, a Rig's heat, an elite's enrage, a Lab's overheat.
 export const ROOM_RULES = {
-  enrage: { elite: 9, first: 1.5, step: 1.25, every: 3 }, // an elite still up at cycle 9 hits 50% harder, then a quarter more every 3 (docs/servers.md 8.2)
+  enrage: { elite: 9, first: 1.5, step: 1.25, every: 3 }, // an elite still up at cycle 9 hits 50% harder, then a quarter more every 3 (GAME_RULES.md "Families")
   overheat: { from: 10, you: 0.02, parts: 0.03 }, // a Lab: from the 10th cycle the rack burns you and every part
 };
 hooks.roomCycle = (s) => {

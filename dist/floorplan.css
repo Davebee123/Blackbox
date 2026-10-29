@@ -1,4 +1,4 @@
-/* The rooms page (floorplan-view.mjs, docs/servers.md R0): the server strip on top (Wait and Jack out at its right), and
+/* The rooms page (floorplan-view.mjs, GAME_RULES.md "Runs: servers as rooms"): the server strip on top (Wait and Jack out at its right), and
    the room map filling the rest, with the network map's pop-up card (.map-pop, style.css) beside a room. docs/ui.md tokens: amber is structure and what you can click,
    teal is you, hot is what bites (a live virus, the hunter), gray is down or out of sight.
    The map is Schematic HD: chips and traces, its tokens below. */

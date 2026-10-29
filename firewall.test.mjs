@@ -5,7 +5,7 @@ import { fresh, command, hooks } from './dist/combat.mjs';
 import { FIREWALL, fwOf, effLevel, fragment, tickFirewall, upgradeCost, tierCost, baseOf, fwLevel, BASE_GAP, TIERS } from './dist/firewall.mjs';
 import { wallBands } from './dist/invasion.mjs';
 import { items } from './dist/hidden.mjs';
-// A server found and connected to (only those send invasions, and the wall follows them: docs/servers.md 5.3).
+// A server found and connected to (only those send invasions, and the wall follows them: GAME_RULES.md "Invasions and the wall").
 const found = (s, family) => { command(s, `developer location ${family}`); s.locations.at(-1).runs = 1; return s.locations.at(-1); };
 
 const MIN = 60000;

@@ -26,7 +26,7 @@ const nameOk = (a, b) => {
   return adj.some((x) => a.name === want.replace(/^(ELITE )?/, (m) => `${m}${x} `));
 };
 const strip = (v) => { const o = structuredClone(v); for (const k of ADDED) delete o[k]; return o; };
-// Phase 1 rebuilt three bosses on purpose (docs/genome.md 7.5 and 5.3): HASHLORD, MIRRORSHADE and HOLLOW CHOIR's Harmony.
+// Phase 1 rebuilt three bosses on purpose (GAME_RULES.md "Solo bosses", docs/genome.md 5.3): HASHLORD, MIRRORSHADE and HOLLOW CHOIR's Harmony.
 // genesim.test.mjs holds them to their designs and their band; every other boss is the same fight it was.
 const REBUILT = ['nb-hashlord', 'nb-mirrorshade', 'choir'];
 const SOLO = Object.keys(BOSSES).filter((k) => !BOSSES[k].raid && !REBUILT.includes(k));

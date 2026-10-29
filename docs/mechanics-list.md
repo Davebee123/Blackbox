@@ -1,7 +1,7 @@
 # Mechanics list: 20 parts for the designer to play
 
 **Status.** Twenty new part mechanics for the designer to test. Built, all twenty, lean: `dist/mechanics.mjs` (rules
-and `MECH` start numbers), a gene each, playtest pages `?playtest=part:<id>`; GAME_RULES.md *Families and mutations*
+and `MECH` start numbers), a gene each, playtest pages `?playtest=part:<id>`; GAME_RULES.md *Families*
 has the table. Left: none rolls yet (`PARTS.mech` 0), the roll bug below, and the designer's call on combinations.
 
 October 28, 2026. The designer: *"Adding more mechanics for me to test primarily is going to save a lot."* And: *"You

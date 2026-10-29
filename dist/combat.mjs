@@ -54,7 +54,7 @@ import { crewOf, factionAuthor, AUTHORS } from './authors.mjs';
 import { noteUse } from './mastery.mjs';
 import { fightNet, noteKill, nativeRoll, biasCode, richMult, networkRestore, networkCommand, lairUniques, lairFell, lairBoss, mine, netOf, isNative, named, nameOf, nameNative, openLair } from './network.mjs';
 
-export const SAVE_VERSION = 49; // v49: crafting is gone: recipes, plans and their files become credits, Zero-day source the Zero-day (progression.mjs craftRestore); v48: Indemnity retires: an older save's unspent Indemnity becomes credits once, with a letter from Halcyon (store.mjs indemnityRestore); v47: one kind of component: an older save's pile of named pieces (s.salvage) becomes its count, s.components (salvage.mjs componentsRestore); v46: no default subclass: a class past level 10 that never picked plays its core until it does (subRestore); v45: sets, each loaded protocol stamped with when it went on and the storyline's LOWLIGHT Badge beat armed (sets.mjs setsRestore); v44: whole-number stats, Regen over 5 cycles and Payload flat (gear.mjs statsRestore); v43: threads, quests found in rooms (threads.mjs threadsRestore); v42: the long climb, XP into a level keeps its share (progression.mjs climbRestore); v41: layers become floors (floors.mjs floorsRestore, docs/servers.md R3); v40: outposts, buildings, plans, services, architecture and the dividend retire for sockets (sockets.mjs retireOutposts, netrooms.mjs socketRoomsRestore, docs/servers.md R2); v39: every server is a room graph (netrooms.mjs roomsRestore, docs/servers.md R1); v38: two shipped presets renamed (presetRenameRestore); v37: 15-key pools, reordered lines and presets (kitRestore); v36: networks (network.mjs networkRestore: a network seed for every save); v31: subclasses (retireClassTrees); v32: Payload is a percentage; v33: invasion kinds, bounties, signatures, and the firewall follows the network (invasionRestore, firewallRestore); v34: one level, no server XP, specialty, ports, home-fight services or greys (progression.mjs progressionRestore); v35: the nine-key bar, run skills off it, one-clock tells (barRestore)
+export const SAVE_VERSION = 49; // v49: crafting is gone: recipes, plans and their files become credits, Zero-day source the Zero-day (progression.mjs craftRestore); v48: Indemnity retires: an older save's unspent Indemnity becomes credits once, with a letter from Halcyon (store.mjs indemnityRestore); v47: one kind of component: an older save's pile of named pieces (s.salvage) becomes its count, s.components (salvage.mjs componentsRestore); v46: no default subclass: a class past level 10 that never picked plays its core until it does (subRestore); v45: sets, each loaded protocol stamped with when it went on and the storyline's LOWLIGHT Badge beat armed (sets.mjs setsRestore); v44: whole-number stats, Regen over 5 cycles and Payload flat (gear.mjs statsRestore); v43: threads, quests found in rooms (threads.mjs threadsRestore); v42: the long climb, XP into a level keeps its share (progression.mjs climbRestore); v41: layers become floors (floors.mjs floorsRestore); v40: outposts, buildings, plans, services, architecture and the dividend retire for sockets (sockets.mjs retireOutposts, netrooms.mjs socketRoomsRestore, GAME_RULES.md "Saves"); v39: every server is a room graph (netrooms.mjs roomsRestore, GAME_RULES.md "Runs: servers as rooms"); v38: two shipped presets renamed (presetRenameRestore); v37: 15-key pools, reordered lines and presets (kitRestore); v36: networks (network.mjs networkRestore: a network seed for every save); v31: subclasses (retireClassTrees); v32: Payload is a percentage; v33: invasion kinds, bounties, signatures, and the firewall follows the network (invasionRestore, firewallRestore); v34: one level, no server XP, specialty, ports, home-fight services or greys (progression.mjs progressionRestore); v35: the nine-key bar, run skills off it, one-clock tells (barRestore)
 
 // run.mjs registers callbacks here (it imports this file, so we can't import it).
 export const hooks = { flee: null, now: null };
@@ -466,7 +466,7 @@ export function loadedOn(s, id) {
 }
 
 // ---------- the server ----------
-// (Services retired with outposts in save v40, docs/servers.md R2: a save that ran one got what it cost back, sockets.mjs
+// (Services retired with outposts in save v40, GAME_RULES.md "Saves": a save that ran one got what it cost back, sockets.mjs
 // retireOutposts. The server runs no rules of its own; the firewall, its filters and the daemons are its kit.)
 const baseMax = (s) => Math.round(CONFIG.maxIntegrity * power(serverLevel(s)));
 
@@ -2079,7 +2079,7 @@ function payKill(s, e, base, why) {
   gainXp(s, xp + bonus + hot + read + rested + kit, why, 'fight', e.xpKind || 'fight'); // xpKind: what it tallies as (a held server's respawns: build, netrooms.mjs)
 }
 
-// A room fight won on the network (netrooms.mjs, docs/servers.md R1): what the kill pays besides its XP. wild: SPRAWL-00
+// A room fight won on the network (netrooms.mjs, GAME_RULES.md "Runs: servers as rooms"): what the kill pays besides its XP. wild: SPRAWL-00
 // or a rogue server, straight into your bank as their folders always paid; otherwise a traced server's, into the run's
 // pack (banked when you jack out, lost if you're disconnected), like a guard's drops. guard: a guard post, an elite, a
 // boss: an elite's odds (a boss with a sure drop rolls none: bossLoot). rare: a ★ rare spawn's. family: the lineage the kill counts as (contracts, leads, code). Returns what a Pit's
@@ -2474,7 +2474,7 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     const nums = Object.entries(PARTS).filter(([x]) => x !== 'native').map(([x, v]) => `${x} ${v && typeof v === 'object' && !Array.isArray(v) ? Object.entries(v).map(([g, w]) => `${g}:${w && typeof w === 'object' ? Object.values(w).join('/') : w}`).join(' ') : Array.isArray(v) && !Array.isArray(v[0]) ? v.join(' to ') : Array.isArray(v) ? v.map(([l, y]) => `${l}:${Array.isArray(y) ? y.map((z) => Math.round(z * 100)).join('/') : Math.round(y * 1000) / 1000}`).join(' ') : v}`).join(' · ');
     emit(s, 'info', `Parts: ${nums}.`);
     emit(s, 'info', `Mix at level ${L} (${m.n} fights): ${m.kinds} kinds, signature in ${Math.round(m.sig * 100)}%, ${m.counts.map((n, i) => `${i + 2} parts ${Math.round((n / m.n) * 100)}%`).join(', ')}, a doubled basic in ${Math.round(m.dup * 100)}%. ${m.top}.`);
-  } else if (/^developer bossrule [abc]$/.test(text)) { // the boss rule for every boss fight (interrupt.mjs, docs/servers.md 3.4)
+  } else if (/^developer bossrule [abc]$/.test(text)) { // the boss rule for every boss fight (interrupt.mjs, GAME_RULES.md "Solo bosses")
     s.bossRule = text.split(' ')[2];
     emit(s, 'info', `Boss rule ${s.bossRule}: ${BOSS_RULES[s.bossRule].name}. From your next boss fight.`);
   } else if (/^developer (codebases|components \d+)$/.test(text)) { // sockets.mjs: every codebase, or components

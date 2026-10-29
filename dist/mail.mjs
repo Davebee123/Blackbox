@@ -12,7 +12,7 @@
 //
 // Contract types: kill (N of a family, or anything in the Sprawl), bounty (one named process in
 // a SPRAWL-00 room), takeover (take a server over: its vault, then its Resident), materials (hand over code), item (a
-// file in a server's vault: open it, bank the file, deliver it), and since R1 (docs/servers.md 8.1) rooms (clear N
+// file in a server's vault: open it, bank the file, deliver it), and since R1 (GAME_RULES.md "Contracts") rooms (clear N
 // rooms on a server, first clears) and map (map a server: every room cleared). A takeover or item contract can point at
 // a server you haven't found: a relay on its neighbour flags it, and you trace it yourself
 // (see hidden.mjs). Contracts pay credits.

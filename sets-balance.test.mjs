@@ -1,4 +1,4 @@
-// Set pieces keep the class bands (sets.mjs, docs/genome.md 9.1). Its own file, like natives.test.mjs: other test files
+// Set pieces keep the class bands (sets.mjs, GAME_RULES.md "Sets"). Its own file, like natives.test.mjs: other test files
 // load run.mjs, whose hooks change how a bare balance fight runs.
 import test from 'node:test';
 import assert from 'node:assert/strict';

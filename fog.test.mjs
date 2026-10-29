@@ -1,4 +1,4 @@
-// Rooms are unknown until you discover them (docs/servers.md 2.6, 9.7; floorplan.mjs look, known, inSight, fogRestore):
+// Rooms are unknown until you discover them (GAME_RULES.md "Walking and fog"; floorplan.mjs look, known, inSight, fogRestore):
 // a room you've never been in is a "?" chip with only its cost when you can walk in, the rooms next to you included;
 // once you've been in it, it's discovered for good and shows everything from anywhere. The hunter and the Exfil show
 // in your room, next to you and in a discovered room. Everywhere rooms show: the playtest, traced servers, SPRAWL-00,

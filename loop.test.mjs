@@ -44,7 +44,7 @@ test('strains and ICE are at least 15% of fights from level 12', () => {
 
 // Fights were held under 70% before R3. A floor holds a fixed set of servers at fixed levels (floors.mjs), so a climb
 // finds fewer new ones than the old endless traces did and outgrows the ones it holds: more of its XP is respawns
-// (the pacing bot over six seeds a class: 63-72% fights, the Bastion highest; docs/servers.md 9.10). On the long climb
+// (the pacing bot over six seeds a class: 63-72% fights, the Bastion highest). On the long climb
 // a held server's respawns (tallied as building) carry more of it again: on seed 7 to 30 fights are 13-27% by kind and
 // building 50-65%, and by source kills (fights and those respawns) are 67-74%, one-off deeds (DEED in data.mjs) 23-29%
 // (to 50 on three seeds: kills 70-75%, deeds 21-24%). Since contracts pay minutes of farming and first clears, puzzle

@@ -1,4 +1,4 @@
-// The rooms page (floorplan.mjs, docs/servers.md R0 and R1): a strip of the server across the top (with Wait and Jack
+// The rooms page (floorplan.mjs, GAME_RULES.md "Runs: servers as rooms"): a strip of the server across the top (with Wait and Jack
 // out, or Connect at home on the playtest; on the network you connect from the network map), and the room map filling
 // the rest. A pop-up card, like the network map's, sits beside a room:
 // it opens by itself on the room you're in when something there wants a decision (a live virus, a stocked cache, a

@@ -100,7 +100,7 @@ test('a floor\'s finds stay on it: the floor bounds them, and a full floor spill
   assert.equal(new Set(s.locations.map((l) => l.slot)).size, s.locations.length, 'one a slot');
 });
 
-// Since R1 (docs/servers.md 2.8) respawns are what rotations were: Root counts the respawned fight rooms you clear on a
+// Since R1 (GAME_RULES.md "Respawns and progress") respawns are what rotations were: Root counts the respawned fight rooms you clear on a
 // server you hold (5 for Root 2, 15, 30, 50), and a server on rooms never rotates.
 test('root access: respawned fight rooms cleared on a server you hold raise Root, which pays off', async () => {
   const R = await import('./dist/root.mjs');

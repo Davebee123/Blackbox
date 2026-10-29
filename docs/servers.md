@@ -1,7 +1,7 @@
 # Servers: rooms, floors and sockets
 
 **Status.** The design for servers as room graphs, the network as floors and socket programs. Built: R0 to R3 and the
-puzzle rooms (GAME_RULES.md *Rooms playtest (R0)*, *Runs*, *Puzzle rooms*, *Floors (R3)*, *Sockets and programs (R2)*,
+puzzle rooms (GAME_RULES.md *Runs: servers as rooms*, *Runs*, *Puzzle rooms*, *Floors*, *Sockets and programs*,
 *Root access*, *Tells*; the table at the end maps the old sections). Left: R4 (seven families, nest rooms, Linked tells,
 help requests, the other programs) and R5 (the cut).
 
@@ -58,8 +58,7 @@ its chip listing two or three requirements with a check box each. Each unmet req
 
 ## 4. Virus variety
 
-Attack sets and the Trojan, Cryptominer and Wiper are built (GAME_RULES *Rooms playtest (R0)*, *Families and
-mutations*). The seven families below are not.
+Attack sets and the Trojan, Cryptominer and Wiper are built (GAME_RULES *Runs: servers as rooms*, *Families*). The seven families below are not.
 
 ### 4.2 The seven families still to build
 
@@ -195,7 +194,7 @@ A floor's holder (docs/content.md 3.1) decides most of its families.
 
 ## 6.4 Programs still to build
 
-The eight built programs are in GAME_RULES *Sockets and programs (R2)*. The ones still to build (Bulkhead, Sentry
+The eight built programs are in GAME_RULES *Sockets and programs*. The ones still to build (Bulkhead, Sentry
 Turret, Patch Injector, Lure, Honeytoken, Relay, and the core programs Range and Jump Host) are in one list with the
 economy's in **docs/economy.md, Programs still to build**.
 
@@ -208,29 +207,3 @@ economy's in **docs/economy.md, Programs still to build**.
 
 Each phase ends with the balance checks: every class at 85%+ wins against a same-level room fight at 20–30% Signal
 lost, and every new family passing rule 4 with the per-gene harness (genesim.mjs).
-
-## Old sections, cited in code
-
-What these sections held is built; the rules live in GAME_RULES.md.
-
-| § | Was | Now in GAME_RULES.md |
-|---|---|---|
-| 0, 1, 2, 2.1–2.7, 2.10–2.11 | Rooms, the generator, movement, keys, the hunter, fog, respawns, the core | *Rooms playtest (R0)*, *Runs* |
-| 2.8 | Progress, Mapped and Root | *Runs* (Progress), *Root access* |
-| 3, 3.1–3.3 | The interrupt and how it shows | *Rooms playtest (R0)* (The interrupt), `interrupt.mjs` |
-| 3.4 | The three boss rules | *Rooms playtest (R0)* (DEADBOLT and the boss rules) |
-| 3.5 | Tells | *Tells* (Linked tells: above) |
-| 4, 4.1, 4.3 (1–3) | Attack sets; the Trojan, Cryptominer and Wiper | *Rooms playtest (R0)*, *Families and mutations*, *The codex* |
-| 5, 5.1–5.3 | Floors, exits, how the old pieces fit | *Floors (R3)*, *The hidden network*, *Invasions and the wall* |
-| 6, 6.1–6.3, 6.5 | Sockets, codebases, costs | *Sockets and programs (R2)* |
-| 7 | Materials and XP | *Components*, *Code*, *Levels* |
-| 8, 8.1, 8.2 | Keep, cut or change | Done; what stayed is in GAME_RULES |
-| 9, R0, 9.4 | The slice | *Rooms playtest (R0)* |
-| R1, 9.5 | Into the old game | *Runs* |
-| 9.6, 9.7 | Quiet rooms, runs, the Exfil, unknown rooms | *Rogue servers*, *Runs* |
-| R2, 9.8 | Sockets | *Sockets and programs (R2)* |
-| 9.9 | Room addresses and room contracts | *Runs* (Addresses), *Mail and contracts* |
-| R3, 9.10 | Floors | *Floors (R3)* |
-| 9.11 | Puzzle rooms | *Puzzle rooms* |
-| 9.12 | The long climb | *Levels*; docs/progression.md 7 |
-| 10 | Open questions | All answered (Decided, above) |

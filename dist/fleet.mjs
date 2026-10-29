@@ -1,5 +1,5 @@
 // Swarms (internally "fleets"): a hub's old owner wants it back (hubs.mjs). Outposts' swarms and natives went with
-// outposts in R2 (docs/servers.md 8.1: programs have nothing to steal and nothing to defend), so a swarm only ever
+// outposts in R2 (GAME_RULES.md "Sockets and programs": programs have nothing to steal and nothing to defend), so a swarm only ever
 // comes for a hub you hold.
 //
 // It gathers and travels on real time (logging off doesn't dodge it), then meets the hub's firewall (firewall.mjs):

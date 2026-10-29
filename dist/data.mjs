@@ -670,7 +670,7 @@ export const FIXTURES = {
 };
 
 // Bodies that live only in server rooms (dist/families.mjs registers the Trojan, the Cryptominer and the Wiper here for
-// the rooms playtest, docs/servers.md R0). They are kept out of FAMILIES so nothing in the old game rolls them.
+// the rooms playtest, GAME_RULES.md "Developer tools"). They are kept out of FAMILIES so nothing in the old game rolls them.
 export const ROOM_FAMILIES = {};
 const familyOf = (id) => FAMILIES[id] || GUARDS[id] || ROOM_FAMILIES[id];
 
@@ -851,7 +851,7 @@ export const BOSSES = {
   // its ♛ part, so HASHLORD hits harder (dmg 1.5, was 1.1) and MIRRORSHADE too (1.15, was 0.9) to stay in the boss band.
   // Since gear follows one smooth curve (gear.mjs ITEM_CURVE) a player at their floors carries less Signal than the old
   // tiers gave there (about 5% at 16 and 15% at 12, just after the tier at 11), so they hit a little less: 1.45 and 1.08.
-  // HASHLORD, rebuilt (docs/genome.md 7.5): GLASSJAW's Hashrat build, from level 16. A Pool Lock wards its Miner, but only
+  // HASHLORD, rebuilt (GAME_RULES.md "Solo bosses"): GLASSJAW's Hashrat build, from level 16. A Pool Lock wards its Miner, but only
   // against your commands: burns and helpers go through at full. Block Reward (a Self-Update on the Miner) and the Chain Fork
   // at half, when a second Miner spins up (the tax comes back if the first is gone, and the Pool Lock wards it too).
   'nb-hashlord': { name: 'HASHLORD', family: 'ransomware', strain: 'hashrat', native: true, lair: 'HASHLORD-RIG', charge: 'Difficulty Bomb', floor: 16, band: 'B',
@@ -862,7 +862,7 @@ export const BOSSES = {
   'nb-backorifice': { name: 'BACK ORIFICE', family: 'worm', third: 'c2', native: true, lair: 'BACKORIFICE-C2', hp: 1.3, dmg: 0.95, enrageAt: 17, about: 'A C2 Node commands its fragments. At half Integrity, every attack comes 1 cycle sooner, and at 25% a Mirror twins the Replicator.', phases: [{ at: 0.5, do: ['faster'], say: 'BACK ORIFICE opens every port. Every attack comes a cycle sooner.' }, { at: 0.25, do: ['spawn:mirror'], say: 'BACK ORIFICE spins up a Mirror. Break it and the Replicator together.' }] },
   'nb-patchday': { name: 'PATCH TUESDAY', family: 'worm', strain: 'patchwork', native: true, lair: 'PATCHDAY-WSUS', charge: 'Rollup', hp: 2.2, dmg: 1.45, healerDmg: STRAIN_BOSS_LATE, enrageAt: 18, about: 'A Patchwork boss. Its Patcher heals the most damaged part, and takes over the Surge if its Pulse Node breaks first. At 60% Integrity it re-arms every part, and at 30% every attack comes 1 cycle sooner.', phases: [{ at: 0.6, do: ['rearm'], say: 'PATCH TUESDAY re-arms every part.' }, { at: 0.3, do: ['faster'], say: 'PATCH TUESDAY forces a reboot. Every attack comes a cycle sooner.' }] },
   'nb-floodwall': { name: 'FLOODWALL', family: 'worm', strain: 'floodgate', native: true, lair: 'FLOODWALL-SLUICE', charge: 'Storm Surge', hp: 1.6, dmg: 0.95, healerDmg: STRAIN_BOSS_LATE, enrageAt: 18, about: 'A Floodgate boss. Its Flooder attacks every cycle, harder each time, and any delay resets it. At half Integrity it re-arms every part.', phases: [{ at: 0.5, do: ['rearm'], say: 'FLOODWALL re-arms every part.' }] },
-  // MIRRORSHADE, rebuilt (docs/genome.md 7.5): NULL CHOIR's, from level 12. One feedback amplifier (the Mimic) on its Scramble,
+  // MIRRORSHADE, rebuilt (GAME_RULES.md "Solo bosses"): NULL CHOIR's, from level 12. One feedback amplifier (the Mimic) on its Scramble,
   // a plain charge (Glass Cut), and the Doppelganger at half: the Mimic stops recording and takes the shape of the first part
   // you broke, or of the Pulse Node. At 12 and 13 its Scrambler is trimmed (trim): ◆3, and a Scramble every 5 cycles.
   // mimic: while you're Scrambled its Mimic plays your hit back twice over (tells.mjs mimicLands). Its beats fall in the
@@ -1232,7 +1232,7 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   const srcs = specs.map((spec) => (spec.pool === 'third' || boss?.extra?.includes(spec) ? 'rolled' : null));
   const unsigned = rolled2 && !rolled2.signature ? { noSignature: true } : {}; // no signature this fight (tells.mjs skips its tells)
   const genome = genomeOf(parts, { strain: strainId, mutation, grade, boss: overrides.boss || null, ice: !!family.ice, srcs, linked: !!genes?.includes('linked') });
-  // Its name (docs/genome.md 5.4): the adjective of its costliest rolled gene, its body's stem or its build's name, its
+  // Its name (GAME_RULES.md "Rules and authors"): the adjective of its costliest rolled gene, its body's stem or its build's name, its
   // tag (the seed's four digits, or its file's) and its grade: WARDED CRYPTJACK-4821 v2. Named fixtures keep theirs.
   const tagNo = overrides.tag ? String(overrides.tag).slice(-4).padStart(4, '0') : String(seed >>> 0).slice(-4).padStart(4, '0');
   const name = (overrides.elite ? 'ELITE ' : '') + (strain ? strain.name.toUpperCase() + '-' + tagNo : random ? stemOf(familyId, genome) + '-' + tagNo : fixture.name) + (grade > 1 ? ` v${grade}` : '');

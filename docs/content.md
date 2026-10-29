@@ -77,7 +77,7 @@ refilled, the farm's bosses, a supply order waiting), each with its locate butto
 | Nest rooms, Linked tells, help requests | docs/servers.md 9.1 (R4) | 1.5 kills a nest | All |
 | Fourteen more solo bosses | docs/genome.md 7.4 | Uniques and set pieces | 1–8 |
 | ACTUARY, the adaptive author, and UNDERWRITER | docs/genome.md 4.4 | Its floor's loot | 5 |
-| The log sweep as a terminal room | GAME_RULES.md *Log sweep* | Trace, a kill of XP | All |
+| The log sweep as a terminal room | old file system only (run.mjs `LEGACY`) | Trace, a kill of XP | All |
 | Reflash | docs/genome.md 6 | A new network | 8 |
 | Trade between players | docs/economy.md | Credits | Needs a server |
 

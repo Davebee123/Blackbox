@@ -1,5 +1,5 @@
 // Invasions: the idle layer. While you're logged on, servers you've connected to send an invasion back
-// along the network to your server about every 20–30 minutes, at their level (docs/servers.md 5.3): 2 minutes on the
+// along the network to your server about every 20–30 minutes, at their level (GAME_RULES.md "Invasions and the wall"): 2 minutes on the
 // road from floor 1, a minute more a floor down, and a deeper floor's servers send bigger grades and strains. Each one is an event of a kind
 // (KINDS): a raider, a pack, a pair, a champion, a saboteur, a thief or a scout, sometimes carrying
 // its server's quirk. Your wall (the firewall) meets it, comparing its rating with the invasion's
@@ -111,7 +111,7 @@ export function wallBands(s, rating = wallRating(s)) {
   }
   return { blocks, holds };
 }
-// Travel time from a server: 2 minutes from floor 1, a minute more a floor down (docs/servers.md 5.3), longer still behind a Tarpit.
+// Travel time from a server: 2 minutes from floor 1, a minute more a floor down (GAME_RULES.md "Invasions and the wall"), longer still behind a Tarpit.
 export const travelMs = (s, floor = 1) => Math.round((I().travelMs + I().perFloorMs * (Math.max(1, floor) - 1)) * (1 + filterStat(s, 'tarpit') / 100));
 export const fighting = (s, inv = s.invasion) => !!inv && active(s) && s.encounter.invader === inv.id;
 export const degradedLeft = (s, now = Date.now()) => (s.degraded ? (s.degraded.until ? Math.max(0, s.degraded.until - now) : CONFIG.degradedMs) : 0);

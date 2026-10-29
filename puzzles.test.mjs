@@ -1,4 +1,4 @@
-// Puzzle rooms (docs/servers.md 9.11, puzzles.mjs and its rooms in floorplan.mjs/netrooms.mjs): each board the same
+// Puzzle rooms (GAME_RULES.md "Puzzle rooms", puzzles.mjs and its rooms in floorplan.mjs/netrooms.mjs): each board the same
 // from its seed, every chase winnable in 5 to 12 with walking straight at the door losing, every cascade clearable in
 // its fewest taps, quarantine's spread and its scoring, the sweep's distances and budget, deeper boards from floor 4,
 // what each pays (once), the one lock rule (done until it refills), where they go on a server (and where they never

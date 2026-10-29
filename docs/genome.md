@@ -172,22 +172,3 @@ its own; a lair boss still rolls the network's natives at the elite rate.
 | Pieces and where they drop | 2 pieces | 3 pieces |
 |---|---|---|
 | Crowbar (exploit, REPO MAN), Ledger (script, DEADBOLT), Meter (shell, SHAKEDOWN) | Encryption ticking on you also ticks the Encryptor for the same amount. | When you break a Lockbox, Mutex or Tripwire you take its rule for 3 cycles: a ward on you (no hit takes more than 25% of your max), a lock of 15% of your max, or a quiet virus (its parts deal 25% less for the fight). |
-
-## Old sections, cited in code
-
-| § | Was | Now |
-|---|---|---|
-| 0, 1, 2, 3 (3.1–3.8) | The model, the gene library and its tables | `genes.mjs` (each rule's does, telegraph, answer); GAME_RULES *Rules and authors*, *Part research* |
-| 4.1–4.3 | Authors, the roster, learning an author | `authors.mjs`; GAME_RULES *Rules and authors*. Sectors became floors and their holders (docs/content.md 3.1) |
-| 5, 5.1, 5.2, 5.5 | Budget, the roll, seeding | `genes.mjs` `BUDGET`, `MUTATION_CAP`, `rollGenome`; rolled builds on breaches (GAME_RULES *Side modes*) |
-| 5.4 | Names and tags | GAME_RULES *Rules and authors* (Names and tags) |
-| rule 1–5 | The compatibility rules | 5.3, above |
-| 7.5 | HASHLORD and MIRRORSHADE, rebuilt | GAME_RULES *The Resident and bosses* |
-| 8 | Loot, implicits, banes | GAME_RULES *Items* (faction implicits replaced gene implicits) |
-| 9, 9.1, 9.3 | Sets | GAME_RULES *Sets*, `sets.mjs`, docs/loot-plan.md |
-| 9.2 | The ten sets | The loot plan's 21 replaced them; Tollbooth, above, is the one still planned |
-| 10 | The gene codex, `scan` | Part research replaced it (GAME_RULES *Part research*) |
-| 11, 11.1, 11.3 | The balance harness | `genesim.mjs` |
-| 11.2 | The misreading bot | Plays as if blind on a seeded share of its cycles (30%): `genesim.mjs`, `solved.mjs` |
-| 12, 13, 14 | Implementation, open decisions | Done or decided (above) |
-| 15, 15.1–15.8, phase 0–3, "What shipped" | What shipped | Built; GAME_RULES *Rules and authors*, *The Resident and bosses*, *Side modes* |

@@ -92,7 +92,7 @@ function buildNet(s, h) {
   for (let i = 0; i < n; i++) {
     let seed = strSeed(h, 10 + i) % 100000;
     const family = leanPick(s, h, r()); // their network's lean (network.mjs)
-    const floor = SERVER.floorFor(L); // a member's servers sit on their own floors (docs/servers.md 5.3)
+    const floor = SERVER.floorFor(L); // a member's servers sit on their own floors (GAME_RULES.md "Consortium")
     let loc = createLocation(family, seed, floor);
     while (taken.has(loc.id)) loc = createLocation(family, ++seed, floor);
     taken.add(loc.id);

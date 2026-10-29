@@ -1,4 +1,4 @@
-// Quiet rooms and the Exfil (GAME_RULES.md "Rogue servers", docs/servers.md 9.6, 9.7): a rogue server's rooms are a tree from
+// Quiet rooms and the Exfil (GAME_RULES.md "Rogue servers"): a rogue server's rooms are a tree from
 // its seed with 2 to 4 quiet rooms woven in (Empty, and Stash: a few credits), it runs in clears (a cleared room stays
 // down until the full clear reboots it), and each run rolls once for the Exfil, a process smuggling a stolen archive
 // out that runs from you, on a cooldown of your own. floorplan.mjs (the Exfil's moves and fight), netrooms.mjs (the

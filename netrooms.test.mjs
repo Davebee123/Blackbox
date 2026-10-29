@@ -1,4 +1,4 @@
-// Servers as rooms on the real game (docs/servers.md R1, netrooms.mjs): a fresh level-1 character connects to
+// Servers as rooms on the real game (GAME_RULES.md "Runs: servers as rooms", netrooms.mjs): a fresh level-1 character connects to
 // SPRAWL-00's rooms, a traced server plays as the R0 generator's graph from its seed (the key, the vault and its files
 // into the pack, the Resident in the Core, the takeover), wild servers are all fights on their folders' own timers,
 // jacking out banks the pack, contracts point at rooms, and an old save moves to rooms in place. The R0 mechanics
@@ -106,7 +106,7 @@ test('a traced server is the R0 generator\'s graph from its seed: the key, the v
   const R = loc.floorplan, g = R.graph;
   assert.ok(R && s.rooms === R, 'its rooms live on it');
   assert.equal(R.kind, 'Mailhub');
-  assert.deepEqual(FP.generate(loc.seed, { size: R.size, kind: 'Mailhub', level: R.level, floor: R.floor, author: R.author }).links, g.links.filter((l) => !l.some((id) => FP.isPuzzle(g.rooms[id].kind))), 'from its seed (its puzzle rooms hang off it, docs/servers.md 9.11)');
+  assert.deepEqual(FP.generate(loc.seed, { size: R.size, kind: 'Mailhub', level: R.level, floor: R.floor, author: R.author }).links, g.links.filter((l) => !l.some((id) => FP.isPuzzle(g.rooms[id].kind))), 'from its seed (its puzzle rooms hang off it, GAME_RULES.md "Puzzle rooms")');
   assert.equal(FP.coreOpen(s), false);
   // The guard post holds the key: beat it, take the key, open the vault.
   const post = Object.values(g.rooms).find((r) => r.kind === 'guard' && r.key === g.vaults[0]);

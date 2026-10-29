@@ -1,4 +1,4 @@
-// The genome harness (docs/genome.md section 11): the boss bands, the spike cap, and the per-gene cost and answer checks.
+// The genome harness (GAME_RULES.md "Balance targets"): the boss bands, the spike cap, and the per-gene cost and answer checks.
 // Scripted players, not people: the planner over every subclass (the four classes below level 10), in blues, at a level.
 //   read      the planner, reading every tell and answering every gene it has a rule for
 //   misread   plays as if blind on a seeded 30% of its cycles (a stand-in for a person)
@@ -13,7 +13,7 @@ import { planner } from './dist/planner.mjs';
 import { build } from './balance.mjs';
 
 export const SUBS = Object.entries(ARCHETYPES).flatMap(([cls, a]) => Object.keys(a.subs).map((sub) => [cls, sub]));
-export const SEEDS = Array.from({ length: Number(process.env.GENESIM_SEEDS) || 6 }, (_, i) => i + 1); // six a cell, as docs/genome.md measured
+export const SEEDS = Array.from({ length: Number(process.env.GENESIM_SEEDS) || 6 }, (_, i) => i + 1); // six a cell
 const dice = (seed) => { let t = (seed * 2654435761) >>> 0; return () => { t = (t + 0x6d2b79f5) >>> 0; let x = Math.imul(t ^ (t >>> 15), t | 1); x ^= x + Math.imul(x ^ (x >>> 7), x | 61); return ((x ^ (x >>> 14)) >>> 0) / 4294967296; }; };
 // A move by the planner, read, misread or blind.
 function mover(mode, seed) {
@@ -84,7 +84,7 @@ export function bossBand(id, level, modes = ['read', 'misread', 'blind'], seeds 
 const pct = (x) => `${Math.round(x * 100)}%`;
 export const bandLine = (b) => `${BOSSES[b.id].name} at ${b.level}: read ${pct(b.read)}, misread ${pct(b.misread)}, blind ${pct(b.blind)} · spike ${pct(b.spike)}, three ${pct(b.three)} · ${Object.entries(b.subs).map(([k, v]) => `${k} ${v}/${b.seeds}`).join(' ')}`;
 
-// ---------- the per-gene checks (docs/genome.md 11.1) ----------
+// ---------- the per-gene checks ----------
 // A probe is the body plus one gene, against the body alone, on the same seeds. Each gene in play today has one:
 // a third part or a mutation on its family's body, Linked on a v1, a named build against its family's body, a guard's
 // rule against a guard of the same shape, a tell alone against no tells (TELL.sim.only). The body's own genes

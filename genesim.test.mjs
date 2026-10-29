@@ -1,4 +1,4 @@
-// The genome harness (genesim.mjs, docs/genome.md section 11) as tests: the rebuilt HASHLORD and MIRRORSHADE sit in the
+// The genome harness (genesim.mjs, GAME_RULES.md "Balance targets") as tests: the rebuilt HASHLORD and MIRRORSHADE sit in the
 // boss band at their floors, and every gene in play today has its cost and its answer measured, gene by gene. Targets
 // the content doesn't meet yet are `todo` tests: they run and report the misfits, like the class band in balance.test.mjs.
 import test from 'node:test';
@@ -95,7 +95,7 @@ test('no rolled gene or tell runs away: at most 25 points a fight with it, and a
   assert.deepEqual(off, []);
 });
 
-// The calibration targets (docs/genome.md 3.2 and 11.1): about 3 to 4 points of Signal a fight per cost point (2 to 6
+// The calibration targets (genesim.mjs): about 3 to 4 points of Signal a fight per cost point (2 to 6
 // here, over noise), answering a gene worth at least 3 points, ignoring one costing no more than 20, and every
 // subclass owning an answer that wins at least as often as ignoring (rule 4). Named builds are measured against their
 // family's body, which they replace a part of, so they're reported in genesim.mjs and left out of the point target.

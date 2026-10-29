@@ -1,4 +1,4 @@
-// Room addresses (docs/servers.md 9.9): every room's short grid address, a column letter and a row number (C2), from
+// Room addresses (GAME_RULES.md "Room addresses"): every room's short grid address, a column letter and a row number (C2), from
 // where it sits on its server's graph (as the desktop map draws it: x left to right, y top to bottom). No imports, so
 // mail.mjs and floorplan.mjs can both use it.
 //

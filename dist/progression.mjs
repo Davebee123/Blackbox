@@ -1,5 +1,5 @@
 // Progression: one headline level, what each level brings on every track, the play clock, and the save
-// migration that folded the extra tracks away (v34). docs/progression.md is the review sheet.
+// migration that folded the extra tracks away (v34). The rules: GAME_RULES.md "Levels".
 //   one level    your server's level is your highest class level (combat.mjs serverLevel). It has no XP
 //                of its own. Its gates (daemon slots, memory, base Integrity) read that.
 //   the banner   a level-up lists everything the level brings, on every track, and the next level that

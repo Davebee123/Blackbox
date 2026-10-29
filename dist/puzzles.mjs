@@ -1,4 +1,4 @@
-// Puzzle rooms (docs/servers.md 9.11): four rooms that aren't fights. Pure: a seed in, a board out, a move in, what
+// Puzzle rooms (GAME_RULES.md "Puzzle rooms"): four rooms that aren't fights. Pure: a seed in, a board out, a move in, what
 // happened out. The rooms engine (floorplan.mjs) keeps each room's board on the server (R.puzzles) and pays the end;
 // the page (puzzle-view.mjs) draws it. Every board here is JSON (a save holds it as it is).
 //   quarantine  "Wall it in": a 7×9 node grid with a Worm outbreak. Firewall a node; the worm then copies into ONE

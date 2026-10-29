@@ -1,4 +1,4 @@
-// Room addresses and room contracts (docs/servers.md 9.9, GAME_RULES.md "Room addresses" and "Mail and contracts"):
+// Room addresses and room contracts (GAME_RULES.md "Room addresses" and "Mail and contracts"):
 // every room has a grid address (C2) from where it sits on its server, stable and unique, on every chip (an unknown
 // room's too, never its kind), in its card, ls and map, and `go`/`cd` take it. The room contracts (mail.mjs ROOM_JOBS):
 // Install (an item carried to an address and installed there; a disconnect loses it and fails the job, a jack out

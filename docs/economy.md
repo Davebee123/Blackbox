@@ -1,7 +1,7 @@
 # The economy
 
 **Status.** The plan for what code, credits and components are for. Built: the currencies, programs, codebases and
-the stores as they stand (GAME_RULES.md *The economy*, *Components*, *Code*, *Sockets and programs (R2)*, *The Halcyon
+the stores as they stand (GAME_RULES.md *The economy*, *Components*, *Code*, *Sockets and programs*, *The Halcyon
 store*); Indemnity is retired (v48) and crafting is gone (v49). Left: patches, supply orders, consortium projects,
 the four-rank Root, the programs still to build, and player trade.
 
@@ -25,7 +25,7 @@ and what dropped them pays code; an old save's scripts become code. The stash ro
 
 ## 1. Programs
 
-A program goes in a socket room and changes that server's rules (GAME_RULES *Sockets and programs (R2)*). Each
+A program goes in a socket room and changes that server's rules (GAME_RULES *Sockets and programs*). Each
 family's code builds the programs that family would write. Installing costs credits and the server's code every time
 (the running cost); a program's **version** is network-wide (2, Patches).
 

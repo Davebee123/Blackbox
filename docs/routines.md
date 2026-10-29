@@ -1,7 +1,7 @@
 # Routines: programs you write to fight for you
 
 **Status.** The plan for programs that play your moves when you look away. Built: R1, programs from level 5 with a
-routine per virus, presets, exceptions, RAM from class level and the rails (GAME_RULES.md *Routines: your program*).
+routine per virus, presets, exceptions, RAM from class level and the rails (GAME_RULES.md *Routines*).
 Left: R2 (RAM from mastery and gear, the benchmark, cues) and R3 (rarer chips, share codes, the run queue).
 
 You should be able to start something and look away, the way you can in RuneScape or World of Warcraft, without the game losing its nuance. Attention is a dial, not a switch. Looking away never costs you the run or your rewards. Paying attention earns more.

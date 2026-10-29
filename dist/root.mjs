@@ -1,7 +1,7 @@
 // Root access: a server you've taken over keeps paying you back if you keep coming back to it
 // (RuneScape's player-owned house, WoW's dailies and rare spawns).
 //
-// Since R1 (docs/servers.md 2.8) a server is rooms, and respawns are what rotations were: Root counts the respawned
+// Since R1 (GAME_RULES.md "Root access") a server is rooms, and respawns are what rotations were: Root counts the respawned
 // fight rooms you clear on a server you hold (netrooms.mjs rootClear), ROOT.need of them for each pip:
 //   Root 1  taken over
 //   Root 2  (5 clears) a stash room opens by the Core: the server's code, refilled every two hours

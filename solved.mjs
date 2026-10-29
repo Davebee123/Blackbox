@@ -18,7 +18,7 @@
 //               elites), the routine fitted to the trick (prepare: each lever's preset, then Answer the tells); the
 //               rotation does the rest. Not on a boss or the Resident: those are yours alone.
 //   rotation    your program unprepared: no routine for the virus, so the rotation (the kit player) plays it all
-//   learner N   the misreader (docs/genome.md 11.2): the kit player's move on N% of its cycles, the planner's on the
+//   learner N   the misreader: the kit player's move on N% of its cycles, the planner's on the
 //               rest. 30, 15 and 5 stand for a first try, a few tries in, and learned.
 //   kit         blind to the virus, not to its own kit: the planner with every tell and gene unread (TELL.bots.answer
 //               off, every gene in GENE_BOTS.ignore). It plays its skills well and reads timers, and answers no lever.

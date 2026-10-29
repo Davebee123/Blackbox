@@ -688,7 +688,7 @@ Rooms n/N, Mapped or a no-rest job. Invasions carry the quirk too (Invasions).
 
 ### Puzzle rooms
 
-Rooms that aren't fights (`puzzles.mjs`, docs/servers.md 9.11). Every traced server has one, or two (a quarter of small
+Rooms that aren't fights (`puzzles.mjs`). Every traced server has one, or two (a quarter of small
 servers, half of medium, three in four large), never two of a kind, each at the end of a branch. **Quarantine** turns up
 three times as often on a Worm server, the **Hunter chase** only beside a sleeping Tracker's den, **Cascade** and **Ping
 sweep** anywhere. SPRAWL-00, rogue servers, lairs and the farm have none.

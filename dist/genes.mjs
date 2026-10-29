@@ -369,7 +369,7 @@ export function compatible(genes, { boss = false } = {}) {
   return out;
 }
 
-// ---------- the budget (docs/genome.md 5.1), for phase 3's rolled genes ----------
+// ---------- the budget (GAME_RULES.md "Rules and authors"), for phase 3's rolled genes ----------
 // Points a wild virus spends on rolled genes at a level and grade. The body and its tells are free. Breach nodes roll
 // by it (rollGenome); the old game's wild viruses still roll one third part or strain and maybe one mutation (data.mjs).
 export const BUDGET = { wild: [[1, 0], [4, 2], [8, 4], [13, 5], [17, 6], [25, 7], [33, 8]], grade: { 2: 1, 3: 2 }, elite: 3, champion: 2 };
@@ -378,7 +378,7 @@ export function budgetFor(level, { grade = 1, elite = false, champion = false } 
   return base + (BUDGET.grade[grade] || 0) + (elite ? BUDGET.elite : 0) + (champion ? BUDGET.champion : 0);
 }
 
-// ---------- the roll (docs/genome.md 5.2), for breach nodes (breach.mjs) ----------
+// ---------- the roll (GAME_RULES.md "Side modes"), for breach nodes (breach.mjs) ----------
 // How many genes a wild virus rolls at a level (an elite one more), and how many of them may be mutations (rule
 // genes): one on a wild virus, two on an elite (the designer's cap). A third part is a gene too, and a body has room
 // for one.

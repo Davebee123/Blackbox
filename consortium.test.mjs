@@ -12,7 +12,7 @@ import { rogueSpawns } from './dist/rogue.mjs';
 import * as FP from './dist/floorplan.mjs';
 
 const world = () => { const s = fresh(); s.hackers = { breaker: { level: 6, xp: 0 } }; play(s, 'online sim'); return s; };
-// A server found and connected to (only those send invasions: docs/servers.md 5.3).
+// A server found and connected to (only those send invasions: GAME_RULES.md "Invasions and the wall").
 const found = (s, family) => { command(s, `developer location ${family}`); s.locations.at(-1).runs = 1; return s.locations.at(-1); };
 const win = (s) => {
   for (const p of s.encounter.virus.parts) Object.assign(p, { armor: 0, integrity: 1, attack: null });

@@ -63,7 +63,7 @@ test('a Resident that beats you is a level stronger for 6 hours, up to three', (
   } finally { hooks.now = null; }
 });
 
-test('a boss has phases (docs/servers.md 3.4, rule a): taking the Resident\'s core part across its 50% tick re-arms every part', () => {
+test('a boss has phases (GAME_RULES.md "Solo bosses", rule a): taking the Resident\'s core part across its 50% tick re-arms every part', () => {
   const s = onRun();
   openVault(s);
   toCore(s);

@@ -1,4 +1,4 @@
-// Who writes the viruses (docs/genome.md section 4). Viruses are written, not grown: a crew builds one to take a
+// Who writes the viruses (GAME_RULES.md "Rules and authors"). Viruses are written, not grown: a crew builds one to take a
 // server, with the tools it knows. Data with no imports; data.mjs gives every virus its author.
 //
 // An author:

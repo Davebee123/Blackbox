@@ -1,4 +1,4 @@
-// The hidden network: the unknown servers along your floors' links (floors.mjs, docs/servers.md 5.3).
+// The hidden network: the unknown servers along your floors' links (floors.mjs, GAME_RULES.md "The hidden network").
 //
 // Every server on a floor links to its neighbours on that floor's diagram. A linked server you haven't located shows
 // as ? with its link (a hidden node: s.hidden, one per slot, its id h<n>): a neighbour of a server you've found, or of
@@ -141,7 +141,7 @@ export function useItem(s, text) {
   hiddenLead(s, n, routed(s, 30), 'Trace injector: ');
 }
 
-// Pick an invader's origin: a server you've connected to, or (sometimes) a ? behind one (docs/servers.md 5.3: what
+// Pick an invader's origin: a server you've connected to, or (sometimes) a ? behind one (GAME_RULES.md "The hidden network": what
 // you've connected to sets what comes at you). Only servers attached to your network send them (memory.mjs).
 export const connectedTo = (l) => !!l && ((l.runs || 0) > 0 || !!l.takenOver);
 // A ? sends one through a server it's linked to that you've connected to: that one becomes the server it hangs off.

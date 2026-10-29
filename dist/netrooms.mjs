@@ -1,4 +1,4 @@
-// The network's servers as room graphs (docs/servers.md R1): every server you connect to on the real save plays as
+// The network's servers as room graphs (GAME_RULES.md "Runs: servers as rooms"): every server you connect to on the real save plays as
 // the rooms of floorplan.mjs, kept on its location for good (loc.floorplan). Two shapes:
 //   a server   a traced server (yours, a member's, a faction's): the R0 generator from its seed, its template's kind
 //              (relay Relay, mailhub Mailhub, mirror Mirror, archive Archive, lab Lab), its size, its family's crew as
@@ -310,7 +310,7 @@ WORLD_hook('drops', () => {}); // what a kill drops comes with what it pays (won
 WORLD_hook('won', (s, room, e, { first = false, mirror = false, rare = false } = {}) => {
   const loc = locOf(s), R = s.rooms;
   if (!loc) return;
-  // A first clear on a server traces the ? servers linked to it on its floor (floors.mjs, docs/servers.md 5.3).
+  // A first clear on a server traces the ? servers linked to it on its floor (floors.mjs, GAME_RULES.md "The hidden network").
   if (first && !loc.zone && !loc.member) traceNear(s, loc, HIDDEN.firstClear, `${room.path} cleared: `);
   if (room.wild) return wildWon(s, loc, room, e);
   const guard = room.kind === 'guard' || room.kind === 'elite' || room.kind === 'core' || mirror || !!e.virus.elite;
