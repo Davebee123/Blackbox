@@ -46,8 +46,7 @@ test('only the contracts you hold: not the board, not the delivered ones', () =>
   const [kill, take, item] = rows(html);
   assert.match(kill, /<b>Kill 5 Ransomware viruses, Lv 8\+<\/b>/);
   assert.match(kill, /Halcyon Mutual · Claims/);
-  assert.equal((kill.match(/<i class="on"><\/i>/g) || []).length, 3, 'a count as pips: 3 lit');
-  assert.equal((kill.match(/<i><\/i>/g) || []).length, 2, 'and 2 to go');
+  assert.match(kill, /ct-say">3\/5 viruses killed</, 'a count as its numbers and words, not pips');
   assert.match(take, new RegExp(`Take over ${loc.name}`));
   assert.match(take, /ct-say">Vault shut</, 'anything else as its few words');
   assert.match(item, /<b>Recover ledger\.db<\/b>/);
@@ -58,7 +57,7 @@ test('only the contracts you hold: not the board, not the delivered ones', () =>
   assert.equal(rows(mapMarkup(s)).length, 2);
 });
 
-test('a long count is a bar and n/N; a ready one says so, in amber', () => {
+test('a long count is a bar and n/N; a done one turns in at a click, in green', () => {
   const { s } = setup();
   s.mail.jobs.push({ id: 1, type: 'kill', family: 'ransomware', count: 12, got: 9, level: 12, from: 'Halcyon Mutual · Claims', reward: { credits: 90 } });
   let [row] = rows(mapMarkup(s));
@@ -66,7 +65,9 @@ test('a long count is a bar and n/N; a ready one says so, in amber', () => {
   s.mail.jobs[0].got = 12;
   [row] = rows(mapMarkup(s));
   assert.match(row, /class="ct-row ready/);
-  assert.match(row, /✓ Ready/);
+  assert.match(row, /<span class="ct-turn">Turn in<\/span>/);
+  assert.match(row, /data-command="mail deliver 1"/, 'a click turns it in');
+  assert.match(fs.readFileSync('dist/style.css', 'utf8'), /\.ct-row\.ready \{[^}]*var\(--ready\)/, 'a green border');
 });
 
 test('a click centres the map on its server and selects it; with no server, it opens in Mail', () => {
@@ -86,7 +87,7 @@ test('a click centres the map on its server and selects it; with no server, it o
   assert.doesNotMatch(rows(mapMarkup(s, 'server'))[0], /ct-row on/);
 });
 
-test('its tooltip reads in the house grammar: the name, its kind, its progress and pay, then the answer muted', () => {
+test('its tooltip reads in the house grammar: the name, its kind, its progress, its pay as icons, then the answer muted', () => {
   const { s, loc } = setup();
   s.mail.jobs.push(
     { id: 1, type: 'kill', family: 'ransomware', count: 5, got: 3, level: 12, from: 'Halcyon Mutual · Claims', reward: { credits: 90, standing: 2 } },
@@ -94,13 +95,17 @@ test('its tooltip reads in the house grammar: the name, its kind, its progress a
   );
   const tips = rows(mapMarkup(s)).map((r) => unesc(r.match(/title="([^"]*)"/)[1]));
   const [kill, item] = s.mail.jobs;
-  assert.equal(tips[0], `Kill 5 Ransomware viruses, Lv 8+: Contract for Halcyon Mutual · Claims. 3 of 5 neutralized. Pays 90 credits, ${xpOf(s, kill)} XP and 2 Halcyon standing.\n▸ Open it in Mail.`);
-  assert.equal(tips[1], `Recover ledger.db: Contract for wick · LOWLIGHT. In the vault on ${loc.name}. Pays 60 credits and ${xpOf(s, item)} XP.\n▸ Show it on the map.`);
+  assert.equal(tips[0], `Kill 5 Ransomware viruses, Lv 8+: Contract for Halcyon Mutual · Claims. 3 of 5 viruses killed.\n▸ Open it in Mail.`);
+  assert.equal(tips[1], `Recover ledger.db: Contract for wick · LOWLIGHT. In the vault on ${loc.name}.\n▸ Show it on the map.`);
   for (const t of tips) {
     const [body, answer] = t.split('\n');
     assert.doesNotMatch(body, /;/, 'no semicolon chains');
     assert.ok(answer.startsWith('▸ ') && answer.split(' ').length <= 11, 'one short answer on its own line');
+    assert.doesNotMatch(body, /Pays|credits/, 'the pay is icons, not words');
   }
+  const pay = rows(mapMarkup(s))[0].match(/<template class="tt-more">(.*?)<\/template>/)[1];
+  assert.match(pay, /class="rw "[^>]*title="Credits">.*<b>90<\/b>/, 'credits as an icon chip');
+  assert.match(pay, /title="Halcyon standing">.*<b>\+2<\/b>/, 'standing as an icon chip');
 });
 
 test('amber for the work, never teal: teal is only ever you', () => {

@@ -1073,7 +1073,7 @@ function swapCompare(s, it) {
     .map(([k, d]) => `<span class="${d > 0 ? 'up' : 'down'}">${d > 0 ? '▲ +' : '▼ −'}${fmtStat(k, Math.abs(d))} ${esc(STATS[k].name)}</span>`);
   if (fxName(out) && fxName(out) !== fxName(it)) rows.push(`<span class="down">▼ ${esc(fxName(out))}</span>`);
   if (out?.implicit && out.implicit !== it.implicit) rows.push(`<span class="down">▼ ${esc(IMPLICITS[out.implicit]?.name || '')}</span>`); // its faction implicit
-  return `<div class="ptip-vs"><small>${out ? `vs ${esc(itemLabel(out))}` : 'into an empty slot'}</small>${rows.length ? rows.join('') : '<span class="dim">no change</span>'}</div>`;
+  return `<div class="ptip-vs">${out ? `<small>vs ${esc(itemLabel(out))}</small>` : ''}${rows.length ? rows.join('') : '<span class="dim">no change</span>'}</div>`;
 }
 
 // The stash's filter, order and the board's pick (screen state only). sel: 'slot:<i>' (silkPick); sort: 'up' (the
@@ -1238,7 +1238,7 @@ function itemSheet(s, it, vs = null, acts = '') {
   const effect = fxHead ? `<h4 class="silk-kicker">Effect</h4><p class="silk-fx">${fxRest.length ? `<b>${esc(fxHead)}</b> — ${esc(fxRest.join(' — '))}` : esc(fxHead)}</p>` : '';
   return `<div class="silk-head"><div class="silk-headtext"><h3 class="silk-title iname ${rarityClass(it)}">${esc(itemLabel(it))}</h3>
     <p class="silk-sub">${esc(RARITIES[it.rarity]?.name || '')} · ${esc(SLOTS[groupOf(it)]?.name || '')} · Lv ${it.level}${where && where !== classOf(s) ? ` <span class="tag dim">on ${esc(ARCHETYPES[where].name)}</span>` : ''}${home ? ` <span class="tag native" title="About ten times as likely on its home network as anywhere else">Native · ${esc(home)}</span>` : ''}</p>${acts}</div><div class="silk-plate">${glyphMarkup(it, 'lg')}</div></div>
-    <h4 class="silk-kicker">${vs ? (out ? `Stats · vs ${esc(itemLabel(out))}` : 'Stats · into an empty slot') : 'Stats'}</h4><dl class="silk-stats${vs ? ' vs' : ''}">${rows}</dl>${implicitRow(it, 'p')}${lost}${effect}${it.unique && setOf(it.unique) ? setLines(s, it.unique) : ''}${flavour ? `<em class="silk-flavour">${esc(flavour)}</em>` : ''}`;
+    <h4 class="silk-kicker">${vs ? (out ? `Stats · vs ${esc(itemLabel(out))}` : 'Stats') : 'Stats'}</h4><dl class="silk-stats${vs ? ' vs' : ''}">${rows}</dl>${implicitRow(it, 'p')}${lost}${effect}${it.unique && setOf(it.unique) ? setLines(s, it.unique) : ''}${flavour ? `<em class="silk-flavour">${esc(flavour)}</em>` : ''}`;
 }
 
 // An item's datasheet, for its popover (app.js: beside a stash row or a filled slot on hover or focus; a bottom sheet
@@ -2079,30 +2079,28 @@ function threatRail(s) {
   return `<aside class="threat-rail" aria-label="Threats and timers">${list.map((x) => { const pct = x.pct != null ? x.pct : x.total ? Math.max(0, Math.min(1, 1 - (x.left || 0) / x.total)) : 1; return `<button type="button" class="tr-row ${x.cls}" data-select="${esc(x.sel)}">${glyph(x.icon)}<span class="tr-txt"><b>${esc(x.name)}${x.tag ? ` <small>${esc(x.tag)}</small>` : ''}</b><small>${esc(x.where)}</small></span><span class="tr-t">${x.left != null ? fmtTime(x.left) : x.pct != null ? `${Math.round(x.pct * 100)}%` : ''}</span><span class="tr-bar"><i style="width:${(pct * 100).toFixed(0)}%"></i></span></button>`; }).join('')}</aside>`;
 }
 
-// The contract tracker (WoW's objective tracker): the contracts you hold and haven't delivered, each with its name, whose
-// it is and how far along: a count as pips (a long one as a bar and n/N), anything else as a bar and its few words.
-// Click one to centre the map on its server and select it (app.js data-locate), or for Mail when it has no server.
+// The contract tracker (WoW's objective tracker): the contracts you hold and haven't delivered, each with whose it is
+// over its name, and how far along: its few words ("3/5 viruses killed"), a long count as a bar and n/N.
+// Click one to centre the map on its server and select it (app.js data-locate), or for Mail when it has no server; a
+// done one turns in at a click (mail deliver).
 export function trackedJobs(s) {
   return openContracts(s).map((c) => {
     const pr = contractProgress(s, c), ok = contractReady(s, c), place = trackGo(c);
-    // The tooltip in plain sentences: "15 of 18 rooms cleared.", "Pays 95 credits, 240 XP and 5 Halcyon standing."
+    // The tooltip: its name, kind and progress in a sentence ("15 of 18 rooms cleared."), its pay as icon chips, the answer.
     const said = pr.of && /^Rooms /.test(pr.text) ? `${pr.n} of ${pr.of} rooms cleared` : pr.text.replace(/^(\d+)\/(\d+)/, '$1 of $2');
     const sentence = (x) => (x ? x[0].toUpperCase() + x.slice(1) + (/[.!?]$/.test(x) ? '' : '.') : '');
-    const pays = rewardLine(s, c).split(' · ').map((x) => x.replace(/^(.+) ([+-])(\d+)$/, (_, who, sign, n) => `${sign === '-' ? '−' : ''}${n} ${who} ${who === 'Halcyon' ? 'standing' : 'rep'}`));
-    const paid = pays.length > 1 ? `${pays.slice(0, -1).join(', ')} and ${pays.at(-1)}` : pays[0];
-    const tip = `${contractTitle(s, c)}: Contract for ${c.from}. ${ok ? 'Ready to deliver.' : sentence(said)} Pays ${paid}.\n▸ ${place ? 'Show it on the map.' : ok ? 'Deliver it in Mail.' : 'Open it in Mail.'}`;
-    return { id: c.id, icon: jobIcon(c), name: contractTitle(s, c), from: c.from, faction: jobFaction(c), ready: ok, text: pr.text, part: Math.max(0, Math.min(1, pr.part || 0)), n: pr.n, of: pr.of, locate: place ? place.slice(4) : null, go: place ? null : `mail:j${c.id}`, tip };
+    const tip = `${contractTitle(s, c)}: Contract for ${c.from}. ${ok ? 'Done.' : sentence(said)}\n▸ ${ok ? 'Turn it in.' : place ? 'Show it on the map.' : 'Open it in Mail.'}`;
+    return { id: c.id, icon: jobIcon(c), name: contractTitle(s, c), from: c.from, faction: jobFaction(c), ready: ok, text: pr.text, part: Math.max(0, Math.min(1, pr.part || 0)), n: pr.n, of: pr.of, locate: place && !ok ? place.slice(4) : null, go: place || ok ? null : `mail:j${c.id}`, command: ok ? `mail deliver ${c.id}` : null, tip, pay: rewardChips(s, c) };
   });
 }
 function contractTracker(s, sel = null) {
   const list = trackedJobs(s);
   if (!list.length) return '';
-  const prog = (j) => j.ready ? `<span class="ct-done">✓ Ready</span>`
-    : j.of && j.of <= 10 ? `<span class="ct-pips" aria-label="${j.n} of ${j.of}">${Array.from({ length: j.of }, (_, i) => `<i${i < j.n ? ' class="on"' : ''}></i>`).join('')}</span>`
-    : j.of ? `<span class="ct-bar"><i style="width:${(j.part * 100).toFixed(0)}%"></i></span><small class="ct-n">${j.n}/${j.of}</small>`
+  const prog = (j) => j.ready ? `<span class="ct-turn">Turn in</span>`
+    : j.of && j.of > 10 ? `<span class="ct-bar"><i style="width:${(j.part * 100).toFixed(0)}%"></i></span><small class="ct-n">${j.n}/${j.of}</small>`
     : `<small class="ct-n ct-say">${esc(j.text)}</small>`;
   const mark = (f) => (f && FX[f] ? `<span class="fmark-i ct-f" style="--fc:${FX[f].color}">${glyph('f-' + f)}</span>` : '');
-  const rows = list.map((j) => `<button type="button" class="ct-row${j.ready ? ' ready' : ''}${j.locate && j.locate === sel ? ' on' : ''}" ${j.locate ? `data-locate="${esc(j.locate)}"` : `data-go="${esc(j.go)}"`} title="${esc(j.tip)}">${glyph(j.icon)}<span class="ct-txt"><b>${esc(j.name)}</b><small class="ct-for">${mark(j.faction)}${esc(j.from)}</small></span><span class="ct-prog">${prog(j)}</span></button>`).join('');
+  const rows = list.map((j) => `<button type="button" class="ct-row${j.ready ? ' ready' : ''}${j.locate && j.locate === sel ? ' on' : ''}" ${j.command ? `data-command="${esc(j.command)}"` : j.locate ? `data-locate="${esc(j.locate)}"` : `data-go="${esc(j.go)}"`} title="${esc(j.tip)}">${j.pay ? `<template class="tt-more">${j.pay}</template>` : ''}${glyph(j.icon)}<span class="ct-txt"><small class="ct-for">${mark(j.faction)}${esc(j.from)}</small><b>${esc(j.name)}</b></span><span class="ct-prog">${prog(j)}</span></button>`).join('');
   return `<section class="ctrack" aria-label="Contracts"><h3 class="ct-head">${glyph('contract')}Contracts<small>${heldCount(s)}/${MAIL.take}</small></h3>${rows}</section>`;
 }
 

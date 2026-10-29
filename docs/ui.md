@@ -21,6 +21,7 @@ emoji markers, nothing centred that is meant to be scanned.
 | `--exception` (orchid) | a part your program leaves to you (*EXCEPTION · no available handler*): its row, the Now cell, the log line, a boss fight's header |
 | `--steel` | armor and what protects a virus part: a hit on ◆, a Mutex's lock, a Lockbox's cap, the tethers between parts |
 | `--gray` / `--dim` | broken, unavailable, small print |
+| `--ready` (green) | done and waiting on you: a contract to turn in (the map's tracker) |
 | `--r-set` (set green) | a set (sets.mjs): its name, its lit pieces and bonuses, in tooltips, the Loadout's Set bonuses and the Collection. It sits with the rarity colours (`--r-stock` … `--r-indemnified`, D2's white, blue, yellow, gold and orange), warmed to the amber screen (`#b6cf55`). A piece's own name stays gold. |
 
 A colour never means two things on one screen. A tag takes the colour of what it labels, not of the card it sits on.
@@ -48,9 +49,10 @@ teal, violet or a threat's red.
   poster, a boss frame), a feud's two faction halves over its bar, a price tile, a price tag. Rewards are an icon and a
   number. The card's sentence is the strip's tooltip. Motion is locked to the clock (`--ph`) so a redraw never restarts
   it. The map pop-up widens to 376px while it holds one.
-- **Contract tracker** (`.ctrack`, `view.mjs` `contractTracker`): under the threat rail; an icon column, the name over
-  who it's for, the progress in amber (pips to 10, then a bar with *n/N*, else a few words, **✓ Ready**). A row is a
-  button (`data-locate`, or `data-go` to Mail). No teal.
+- **Contract tracker** (`.ctrack`, `view.mjs` `contractTracker`): under the threat rail; an icon column, who it's for over
+  the name, the progress in amber (its few words, *3/5 viruses killed*; past 10 a bar
+  with *n/N*); a done one has a green border and **Turn in**. A row is a
+  button (`data-locate`, `data-go` to Mail, or a done one's `mail deliver`); its tooltip shows the pay as icon chips. No teal.
 - **Labelled rows** (`.op-row`, `.net-row`, `.srv-line`): a fixed label column (`--label`, `--dim`) and the value
   beside it, every row in a block at one label width.
 - **Rows with an icon:** the icon has its own fixed left column on every row; a row with nothing to show keeps the slot
@@ -281,7 +283,8 @@ interface**. CSS, the DOM and text only (no canvas, WebGL or PixiJS on the scree
 3. Icons live in a fixed left column. If some rows have no icon, keep the column with a neutral mark.
 4. Anything that can wrap must look right wrapped: test the phone width (390px) and a crew fight (narrow board).
 5. One primary button per card. Risky actions use `.hot-btn`. Tags never act as buttons.
-6. Every hover explanation goes through `title` (the themed `.tt` shows it).
+6. Every hover explanation goes through `title` (the themed `.tt` shows it). Icons it can't carry (pay, costs) go in a
+   `<template class="tt-more">` inside the element, drawn as chips above the answer line.
 7. Don't centre text that people scan; centre only single numbers and banners.
 8. No new colours. If something needs a colour, it is one of the jobs above (a floor's palette recolours the structure
    and surfaces, never a job).

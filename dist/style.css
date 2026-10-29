@@ -33,6 +33,7 @@
   --steel: #86b6c6; /* what protects a virus part: a lock, a ward, the tethers between parts (docs/ui.md) */
   --steel-glow: rgba(134, 182, 198, 0.6);
   --gray: #7d7362;
+  --ready: #8fd46b; /* done and waiting on you: a contract to turn in (docs/ui.md) */
   --sans: 'Inter Tight', 'IBM Plex Sans', system-ui, sans-serif;
   --mono: 'IBM Plex Mono', 'Cascadia Mono', ui-monospace, monospace;
   /* The UI system (docs/ui.md). Spacing: one scale, nothing between the steps. */
@@ -2634,12 +2635,12 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .ct-bar i { display: block; height: 100%; background: var(--amber); }
 .ct-n { flex: 0 1 auto; min-width: 0; font: 600 10px var(--mono); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ct-n.ct-say { white-space: normal; font-weight: 400; color: var(--muted); line-height: 1.35; }
-.ct-pips { display: flex; flex-wrap: wrap; gap: 3px; }
-.ct-pips i { width: 9px; height: 9px; border: 1px solid var(--amber-deep); border-radius: 1px; }
-.ct-pips i.on { background: var(--amber); border-color: var(--amber); }
-.ct-done { font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--amber); }
-.ct-row.ready { border-color: var(--amber-deep); border-left-color: var(--amber); background: rgba(40, 30, 10, 0.92); }
-.ct-row.ready > .glyph { color: var(--amber); }
+.ct-turn { padding: 2px 7px; border: 1px solid var(--ready); border-radius: 3px; font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--ready); white-space: nowrap; }
+.ct-row.ready { grid-template-columns: 16px minmax(0, 1fr) auto; border-color: var(--ready); background: rgba(20, 32, 12, 0.92); }
+.ct-row.ready .ct-prog { grid-column: 3; grid-row: 1 / span 2; }
+.ct-row.ready .ct-txt b { white-space: normal; }
+.ct-row.ready:hover .ct-turn, .ct-row.ready:focus-visible .ct-turn { background: var(--ready); color: var(--bg); }
+.ct-row.ready > .glyph { color: var(--ready); }
 /* The rail and the tracker share the map's left column; the rail keeps its own rows. */
 .map-lcol { position: absolute; top: 44px; left: 10px; z-index: 3; width: 230px; display: grid; align-content: start; gap: var(--s5); max-height: calc(100% - 60px); overflow-y: auto; pointer-events: none; }
 .map-lcol > * { pointer-events: auto; }
@@ -3217,6 +3218,8 @@ h1 .byline { font-size: 13px; vertical-align: middle; }
 .tt { position: fixed; z-index: 90; max-width: calc(300px * var(--ui, 1)); padding: calc(8px * var(--ui, 1)) calc(11px * var(--ui, 1)); background: rgba(10, 8, 5, 0.97); color: var(--text); border: 1px solid var(--line-strong); border-top: 2px solid var(--amber); border-radius: 4px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55); font: calc(13px * var(--ui, 1))/1.45 var(--sans, inherit); pointer-events: none; white-space: pre-line; animation: ptip-in 0.12s ease-out; }
 .tt b { display: block; margin-bottom: 3px; color: var(--amber); font: 600 calc(12px * var(--ui, 1)) var(--mono); letter-spacing: 0.5px; }
 .tt .tt-mastery { display: block; margin-top: 4px; color: var(--you); font: 600 11px var(--mono); letter-spacing: 0.3px; } /* an ability's mastery line (mastery.mjs) */
+.tt .tt-more { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; white-space: normal; } /* icon chips under the text (a contract's pay) */
+.tt .tt-more b { display: inline; margin: 0; color: var(--bright); font: 700 12px var(--mono); letter-spacing: 0; }
 .tt .tt-ans { display: block; margin-top: 5px; padding-top: 4px; border-top: 1px solid var(--line); color: var(--muted); font-size: calc(12px * var(--ui, 1)); } /* the answer line (fightread.mjs answerLine) */
 @media (prefers-reduced-motion: reduce) { .tt { animation: none; } }
 
