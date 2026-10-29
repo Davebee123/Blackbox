@@ -2,7 +2,8 @@
 
 How the screens are put together, and the rules that keep them consistent. Everything here lives in
 `dist/style.css`: the tokens on `:root` at the top, and the shared components in the **UI SYSTEM** block at
-the end of the file. Later rules in that block deliberately win over the per-feature rules above them.
+the end of the file. Later rules in that block deliberately win over the per-feature rules above them. The rules the
+player meets are in GAME_RULES.md (*The screen*); the voice is docs/style-guide.md.
 
 The look is an amber CRT terminal: IBM Plex Mono for anything the machine says (labels, numbers, kickers,
 logs), a sans (Inter Tight) for prose and names. Square corners, hairlines, no gradients on surfaces, no
@@ -12,217 +13,233 @@ emoji markers, nothing centred that is meant to be scanned.
 
 | Token | Job |
 | --- | --- |
-| `--amber` | structure and interaction (borders you can click, kickers, the prompt) |
-| `--hot` | lands this cycle, a breach, a loss, a destructive action |
+| `--amber` | the structure colour (kickers, borders you can click, the prompt) and loot and what you use (a cache, the vault, a reward, an earned achievement) |
+| `--hot` | threat: lands this cycle, a breach, a loss, a destructive action |
 | `--next` | lands next cycle |
-| `--you` (teal) | you: your command, your bars, your level, what is on and yours |
+| `--you` (teal) | only ever you: your command, your bars, your level, what is on and yours |
 | `--daemon` (violet) | your daemons and your crew acting for you |
-| `--exception` (orchid) | a part your program leaves to you: *EXCEPTION · no available handler* (routines.mjs), on its row, the Now cell, the log line and a boss fight's header. Never red (a threat), teal (you) or amber (what you use) |
-| `--steel` (steel teal) | what protects a virus part: a Mutex's lock on its partner's bar, a Lockbox's cap, the tethers between parts |
+| `--exception` (orchid) | a part your program leaves to you (*EXCEPTION · no available handler*): its row, the Now cell, the log line, a boss fight's header |
+| `--steel` | armor and what protects a virus part: a hit on ◆, a Mutex's lock, a Lockbox's cap, the tethers between parts |
 | `--gray` / `--dim` | broken, unavailable, small print |
-| `--r-set` (set green) | a set (sets.mjs): its name, its lit pieces and its bonuses once on, under a piece in its tooltip and rows, the Loadout's Set bonuses and the Collection's Sets. It sits with the rarity colours (`--r-stock` … `--r-indemnified`, D2's white, blue, yellow, gold and orange): D2's set green, warmed to the amber screen (`#b6cf55`). A piece's own name stays gold (it is a unique); greyed lines are `--gray`. Never teal: teal is only ever you. |
+| `--r-set` (set green) | a set (sets.mjs): its name, its lit pieces and bonuses, in tooltips, the Loadout's Set bonuses and the Collection. It sits with the rarity colours (`--r-stock` … `--r-indemnified`, D2's white, blue, yellow, gold and orange), warmed to the amber screen (`#b6cf55`). A piece's own name stays gold. |
 
-A colour never means two things on one screen. A tag takes the colour of what it labels, not of the card
-it sits on.
+A colour never means two things on one screen. A tag takes the colour of what it labels, not of the card it sits on.
+Signs, lamps and cosmetics outside the glass (the window, the casing) use amber, peach, rose and pale white: never
+teal, violet or a threat's red.
 
 ## Tokens
 
 - **Spacing**: `--s1` 2px, `--s2` 4px, `--s3` 6px, `--s4` 8px, `--s5` 12px, `--s6` 16px, `--s7` 24px.
-  Gaps and paddings come from this scale. Inside a row: `--s3`. Between blocks in a card: `--s4` to `--s5`.
-  Card padding: 16px 18px.
+  Inside a row: `--s3`. Between blocks in a card: `--s4` to `--s5`. Card padding: 16px 18px.
 - **Corners**: `--r-tag` 2px, `--r-btn` 3px, `--r-card` 4px. Nothing rounder, except the preset chips (pills)
   and status lamps (circles).
-- **Type roles**: `--kicker` (600 11px mono, `--kicker-track` 1.5px, caps): the line over a block, like a card's
-  `h2`. `--label` (600 10px mono, `--label-track` 1px, caps): a row label beside its value, or a stat tile's label.
+- **Type roles**: `--kicker` (600 11px mono, `--kicker-track` 1.5px, caps): the line over a block. `--label` (600 10px
+  mono, `--label-track` 1px, caps): a row label beside its value, or a stat tile's label.
 - **Control heights**: `--h-btn` 32px, `--h-btn-sm` 26px, `--h-chip` 20px.
 
 ## Components
 
-**Card** (`.card`): kicker `h2`, then the name `h1`, then content. One border colour (`--line`); an alert card
-switches its border and kicker to `--hot`. On a map pop-up the close button is the card's only top-right item.
+- **Card** (`.card`): kicker `h2`, then the name `h1`, then content; one border colour (`--line`); an alert card turns
+  its border and kicker `--hot`. On a map pop-up the close button is the card's only top-right item.
+- **Kicker strip** (`.tl-kick`, `.lu-b-head`): a coloured band across the top of a card or chip, mono caps, an icon left
+  and the timing right. Only for a block that is an event with a time attached.
+- **Event cards** (`.evc`, `event-cards.mjs`): a kicker strip (icon and name in event violet, a ring that drains with
+  the time left), then a picture with its action built in, always a real button: a target tile (a courier, a bounty
+  poster, a boss frame), a feud's two faction halves over its bar, a price tile, a price tag. Rewards are an icon and a
+  number. The card's sentence is the strip's tooltip. Motion is locked to the clock (`--ph`) so a redraw never restarts
+  it. The map pop-up widens to 376px while it holds one.
+- **Contract tracker** (`.ctrack`, `view.mjs` `contractTracker`): under the threat rail; an icon column, the name over
+  who it's for, the progress in amber (pips to 10, then a bar with *n/N*, else a few words, **✓ Ready**). A row is a
+  button (`data-locate`, or `data-go` to Mail). No teal.
+- **Labelled rows** (`.op-row`, `.net-row`, `.srv-line`): a fixed label column (`--label`, `--dim`) and the value
+  beside it, every row in a block at one label width.
+- **Rows with an icon:** the icon has its own fixed left column on every row; a row with nothing to show keeps the slot
+  with a neutral dim mark (`.mrow-none`).
+- **Item row with an action** (`.coll li`, `.net-native`): the name over its meta, one small framed action in its own
+  column on the right.
+- **Tag line** (`.tagline`): a level, then tags, as a flex row with a gap.
+- **Tags** (`.tag`): 11px caps mono, 1px border, the colour of what they label (`.hot`, `.you`, `.warn`, `.dim`,
+  `.daemon`). Tags label; a tag that opens something should be a button.
+- **Buttons** (`.btn`): two heights, inline-flex with a 6px gap. `.primary` (amber wash) is the one thing the card wants
+  you to do; `.hot-btn` (hazard tape on the left edge) the one risky choice. A row that may wrap gets `.row.acts`.
+- **Toggles** (`.settings-grid`): buttons with `aria-pressed`, each with a lamp (lit amber = on). On/off is never only a
+  word.
+- **Stat tiles** (`.stats` > `.stat`): label over value; they wrap and fill their row.
+- **Tiles** (`.ptile`): daemons, protocols, shop wares; the action row sits on the tile's floor.
+- **Hover tips** (`.tt`): every `title` shows in the game's own card (amber top rule, mono title line); never the
+  browser's default.
+- **Card and detail panel** (`.sk-page`, `skills-view.mjs`; the Server page too): a card of picks (names and state
+  only) beside one sticky panel that explains the picked, hovered or focused item, the only place its facts are lit. On
+  a phone the panel is a bottom sheet.
+- **Tethers** (`.tether`, `view.mjs` `tethers`, `fightread.mjs` `partLinks`): one look for every rule that reaches from
+  one part to another. A steel bracket in the board's left gutter from the part the rule sits on (a square) to the part
+  it reaches (an arrow), drawn a piece per row; a round node mid-span carries the rule's icon, or **?** until the codex
+  knows the part, and a dashed **↻ N** when it comes back in N cycles. It glows while the rule holds, goes dashed while
+  it's down, and snaps as its part dissolves; hovering it lights both rows. The gutter (`--gut`: 38px, 56px with one
+  lane, 68px with two) stays to the end of the fight. On the bar a Mutex's lock is an absorb segment (`.lockseg`,
+  hatched steel with a padlock) and a Lockbox's ward a cap line (`.wardcap`).
+- **Part research** (`codex-view.mjs` researchBar): a thin bar of 60 with ticks at 3, 15 and 60 and *n/60* beside it;
+  what a tier still hides reads **???** with what unlocks it in `--dim`. A mastered part carries the **mastered mark**
+  (`.pmast`), a small star in `--amber-soft`, never teal.
+- **The Daemons tab** (`daemons-view.mjs`): rows with the sprite in a fixed left column; a cycle bar lights a cell
+  (violet) where a daemon acts and a short teal bar for your command; a trigger is a dashed lane.
+- **Achievements** (`achievements-view.mjs`): categories down a fixed left column, rows with the points on a medal, the
+  reward shown as itself, earned rows lit amber (loot), the rest muted. No teal.
 
-**Kicker strip**: the tell chip's `.tl-kick`, the level-up's `.lu-b-head`. A coloured band across the top of a
-card or chip, mono caps, an icon on the left and the timing on the right. Use it when the block is an event
-with a time attached; don't use it for static cards.
+## The fight board
 
-**Event cards** (`.evc`, `event-cards.mjs`): every event (events.mjs) is one small panel on a kicker strip: the card's
-icon and name in event violet, its level or a faction mark, and a ring that drains with the time left (the minutes on
-hover). The card's sentence is the strip's tooltip; nothing on the card is a sentence. Its body is a picture with the
-action built in, always a real button with hover, focus and pressed states: a **target tile** (a framed portrait, the
-name and level, the pay as icons; a reticle closes on the portrait on hover) for a courier, a bounty (a pinned poster)
-and the Hollow Choir (a boss frame); a feud's two **faction halves** over its stacked bar; a market shock's **price
-tile**; a darknet listing's **price tag**. Rewards are an icon and a number (credits, a faction mark and +rep, an item's
-glyph in its rarity's colour). Its motion (a feud's clash, a hunt's quarry, a courier's packet) is locked to the clock
-(`--ph`) so a redraw never restarts it, and stops with Motion off or reduced motion. The map pop-up widens to 376px
-while it holds one (desktop only).
+- **The HUD**, left to right: your Signal (your server at home) with your crew's bars under it; **Status**, everything on
+  you, names in their colours (teal yours, red against you, violet helpers), each with its rule on hover; under it
+  **Gear**, a chip for each equipped rule that waits on a condition (`fightread.mjs` gearLive), lit teal while it holds,
+  struck through once a once-a-fight one is spent; and the virus, its name and level over its bar, its tags and the
+  rules' chips under it.
+- **Whose half.** A strip names it (`YOUR MOVE`, `YOU`, then the virus's name); the virus's half turns the board red
+  (a faint wash and border) for about 1.3 s, and the prompt reads `<VIRUS> acts…`. The *You* row shows your queued
+  command; the Now column is a band with a playhead that turns red 1.5 s before the cycle ends.
+- **Who's aiming where:** round initials in a rail down each row's left edge (yours teal, a crewmate's violet). While
+  you type a command that names a part, your avatar moves there first (dashed if it would go through, red if not).
+- **Previews:** before a cycle resolves, every bar shows what it's about to lose as a blinking white slice (the chits
+  about to break blink too), following what you're typing. Timeline chips name the attack, or a three-letter code where
+  the name won't fit (Surge → SRG), never an ellipsis.
+- **Hits land on the thing hit** (hitfx.mjs): the part's cell flashes and a burst of 1s and 0s flies out (amber yours,
+  violet a crewmate's); a crit bursts gold-white; a hit spent on ◆ floats *◆ ABSORBED* in steel; a miss stamps MISS. A
+  status on you shows big, then flies into the Status column. A broken part dissolves into rising 1s and 0s.
+- **Ability effects** (abilityfx.mjs, abilityfx-table.mjs): each ability plays its own short effect, at 1.5× its
+  recipe's speed (none outlasts 0.8 s), in teal (a crit gold-white, a hit on ◆ steel, a crewmate's violet), drawn over
+  the part's name. It starts from its key in the tray however it was fired, or from your bar when the key isn't on
+  screen; a crewmate's from their own bar. A heal or shield travels to your bar (Firewall's bricks play on your bar).
+  The damage numbers wait for it to land. It never stops over a key's label, your bar's numbers or the crew's names,
+  has no background and takes no input. **Mastery tiers** (`tierRecipe`): tier 2 more particles and a spark burst, tier
+  3 a glint and each iconic skill's own flourish; a crewmate's always plays tier 1. **Break finishers**
+  (`FINISHERS`, `SUB_FINISHERS`): the break that wins plays your class's flourish on that row within 0.9 s (shards,
+  a `[ SEALED ]` stamp, a name falling into bits, helpers meeting), varied by subclass. `?playtest=fx` reviews them all.
+- **Damage numbers** (dmgfx.mjs): every source its own number with an icon (a hit, a crit, a burn, a helper or daemon,
+  a reflect, a shield's soak, a heal, encryption, an interrupt, a virus's claw), landing one after another in the
+  order they resolved (0.45 s apart for two, faster for more, a batch never over 2.2 s), the bars dropping with each.
+- **The lash** (lash.mjs): a virus attack throws a whip of the attacking part's characters into your Signal bar, which
+  flares and splits its colours (it never moves); bigger hits and charges whip harder; encryption scrambles hex across
+  your bar. About half a second.
+- **The tray:** a charge bar on every key (full amber when ready); on cooldown striped, dimmed, with a big countdown; a
+  key off cooldown flashes once; a steel ◆ in the corner when armor would take the hit.
+- **How much moves** follows Screen effects: subtle and medium show the number, the bar and the strike (a crewmate's
+  quieter); bold adds impact bursts, sparks and row flashes; off shows numbers and bars only, a soft red edge when you're
+  hit, and a cycle's numbers stacked at once. Nothing on the interface moves: no screen shake, no nudge; flashes keep
+  their light and lose their movement.
+- **On a phone** the board shows Now, +1 and +2, chips drop their icon, and a part's name sits on its own line.
 
-**Contract tracker** (`.ctrack`, `view.mjs` `contractTracker`): the contracts you hold, under the threat rail in the map's
-left column (`.map-lcol`). A row is an icon column, the name over who it's for (the faction's mark), then the progress in
-amber: pips for a count of 10 or fewer, a bar with *n/N* past that, a few muted words otherwise, **✓ Ready** once done.
-The sentence is the row's tooltip. A row is a button: `data-locate` centres the map on its server and selects it (lit
-`.on` while selected), `data-go` opens Mail when it has no server. No teal.
+## Feedback language
 
-**Labelled rows** (`.op-row`, `.net-row`, `.srv-line`): a fixed label column (`--label` type, `--dim`) and the
-value beside it. Every row in a block uses the same label width. This is the pattern for any "what is on this
-thing" section (the outpost on the map card, a network's signature, the server card).
+Every kind of event has one signature: a flash on the thing it happened to, a floating number, an optional sound and a
+short vibration on phones that have it.
 
-**Rows with an icon**: the icon has its own fixed left column on every row, including rows that have nothing
-to show there (the mail list puts a neutral dim diamond in that slot: `.mrow-none`). Never let the icon float
-in the text.
+| Event | Signature |
+|---|---|
+| You hit a part | its row flashes gold, damage floats up, a punch with a sub thump |
+| You break an armor chit | −◆ floats up, a clink of plate; a bare part shows faint cracks until it patches |
+| A part patches a chit | its row pulses red, +◆, a rising re-lock |
+| A part breaks | a bright flash, BROKEN, metal giving way, glass scattering |
+| You get hit | the lash into your bar, a heavy body blow |
+| A delay | the row glows teal, DELAYED; an attack already delayed keeps a teal pause mark |
+| A cycle ends | the timeline turns over (chips slide a column left), the Now band flashes, a clock-relay tick |
+| A contested or breached wall bites | the Integrity meter flashes red with the amount |
+| Connect or jack in / jack out | a teal flash, a glitch and a modem handshake / a relay letting go |
+| Typing | a mechanical key per keystroke, a heavier Enter |
+| A daemon acts | your row glows violet, a soft tick |
+| A skill lights up | its key glows and pulses, a soft chime |
+| Command refused | the prompt's box lights red, a buzz |
+| Win / crash | a big flash / a red screen edge, a long buzz |
 
-**Item row with an action** (`.coll li`, `.net-native`): the name over its meta on the left, one small framed
-action on the right in its own column. The action never floats over the text.
+## The pages, at a glance
 
-**Tag line** (`.tagline`): a level, then tags, as a flex row with a gap. Any line that starts with
-`levelTag()` and carries tags after it uses `class="tagline"`, so a tag can never butt into the level.
-
-**Tags** (`.tag`): 11px caps mono, 1px border, 2px radius, the colour of what they label (`.hot`, `.you`,
-`.warn`, `.dim`, `.daemon`). Tags label; they are not buttons. A tag that opens something should be a button.
-
-**Buttons** (`.btn`): two sizes (`--h-btn`, `.small` = `--h-btn-sm`), inline-flex with a 6px gap so an icon and a
-label line up. `.primary` (amber wash) is the one thing the card wants you to do; a card has at most one.
-`.hot-btn` (hazard tape on the left edge) is for the one risky choice. A row of actions that may wrap gets
-`.row.acts`, so its buttons fill each line edge to edge instead of leaving a ragged line.
-
-**Toggles** (`.settings-grid`): a grid of buttons with `aria-pressed`, each with a lamp (lit amber = on), like the
-casing's lamps. On/off is never only a word in the label.
-
-**Stat tiles** (`.stats` > `.stat`): label over value. They wrap and fill their row, so a lone tile never sits
-at half width with a gap beside it.
-
-**Tiles** (`.ptile`): daemons, protocols, shop wares. The action row sits on the tile's floor
-(`margin-top: auto`), so buttons line up across a row of tiles.
-
-**Hover tips** (`.tt`): every `title` in the game shows in the game's own card (amber top rule, mono title
-line). Never rely on the browser's default tooltip.
-
-**Card and detail panel** (`.sk-page`, `skills-view.mjs`: Loadout → Skills and talents, and the subclass breakout): a
-card of picks (keys, chips, name chips with pips; names and state only) and, beside it, one sticky panel that explains
-the picked, hovered or focused item ([data-sk]: the full rule with `ruleHtml`'s facts lit, the only place on the page
-they are, its facts as tags, *Works with*, and its buttons). On a phone the panel is a bottom sheet: a tap opens it, a
-tap on the scrim or × closes it. A full-screen step (the breakout) sits inside the glass like the class picker
-(`.breakout`, cased).
-
-**Tethers** (`.tether`, `view.mjs` `tethers`, `fightread.mjs` `partLinks`): one look for every rule that reaches
-from one virus part to another (a Mutex's lock, a Lockbox's ward, a Mirror's twin, a Keyring's re-arm, the Cooler
-on the Rig, the C2 Node over its fragments). A steel bracket in the board's left gutter runs from the part the rule
-sits on (a square) to the part it reaches (an arrow), drawn a piece per row so it follows any row height (dense, a
-phone). A round node mid-span carries the rule's icon (lock, ward, twin, re-arm), or **?** until the codex knows
-the part (its tooltip is *???* then), and a dashed **↻ N** beside it when the rule comes back or fires in N cycles.
-It glows while the rule holds, goes dashed while it's down, and snaps (a flash, the line pulling apart) as the part
-it hangs from dissolves. Hovering it lights both rows. The board's gutter widens when a fight has one (`--gut`:
-38px, 56px with one lane, 68px with two; 46/58px on a phone) and keeps it to the end of that fight. On the bar:
-a Mutex's lock is an absorb segment (`.lockseg`: hatched steel over the end of the fill, as wide as the lock on
-the bar's scale, a padlock at the edge hits drain it from; the preview slice blinks on it, white then bare, while a
-hit would only take lock); a Lockbox's ward is a cap line (`.wardcap`) at the most the part can still lose this
-cycle. The segment drains (a steel trail) and shatters (steel shards) with the hit (`app.js` `juice.lockDrain`).
-Screen effects off, Motion off or reduced motion: no glow pulse, no snap, no trail or shards; the static look stays.
-
-**The Daemons tab** (`daemons-view.mjs`, `daemons.css`): direction C, the party. Rows put a daemon's sprite in a
-fixed left column (`.dm-face`), its name over its level. A cycle bar lights a cell (violet) where a daemon acts and a
-short teal bar for your command in every cycle; a trigger is a dashed lane. The panel is the only place a rule's key
-facts are lit; its labels are plain (*Acts*, *Gets stronger*, *Found in*, *Scrap for*) and the precise detail (drop odds,
-the number at each level) is in tooltips. The sprites' blink stops with Motion off or reduced motion.
-
-**Achievements** (`achievements-view.mjs`, `achievements.css`: System → Achievements): categories down a fixed left column (name, *n/N*, an amber bar), rows beside them with the points on a medal in a fixed left column, the name, an amber bar and *n/N* while under way, the reward as itself (a title in amber italics, the sticker as it looks, the banner in miniature) and, once earned, the date and **Pin**. Earned rows are lit amber (what you've won is loot), the rest muted, a hidden one *???* with its hint in dim italics. No teal: teal is only ever you. The rule is the row's tooltip, never on the row. On a phone the categories wrap above the list and each row's reward and date drop under its name.
-
-**Casing cosmetics** (`casing.mjs`, `casing.css`: System → Casing): only the monitor's casing changes, never the screen. A colourway sets only `--case-*` variables (the plastic, its rim, the chin's print, the plate, the knobs), each read in style.css with today's colour as its fallback, and fills the bezel's frame behind the page with the glass cut out exactly. Stickers sit in two strips on the chin that end short of the knobs, the plate and the lamps, one row tall (one that doesn't fit is left off), still. `casing.test.mjs` holds every rule and element to the bezel.
-
-**The window behind the monitor** (`window.mjs`; GAME_RULES.md *The window behind it*): a canvas of the slum outside behind the page (`.window-out`, z-index −2, no pointer events), shown with the casing and the Window on at 1700px and wider, where the monitor stands in a little to leave strips either side. Dark and slow: about 20 frames a second, painted only in the strips beside the monitor, the band above it and the desk, so nothing reaches the screen. Four depths with atmospheric perspective (each further one hazier toward the smog's colour), the near tower's face in detail, signs with their light on the wall and, in the rain, on the wet; the sky tinted by the hour (night is the original). Neutral darks, the screen's amber and sodium light, and the signs in rose, peach, amber and a pale warm white: no teal, violet or threat red. Cheap: every still layer (the sky, the city, the wet sheen, the glass) is drawn once on a build and cut to the pieces around the monitor, a frame copies those and draws only what moves; the loop stops with Motion off, reduced motion, a hidden tab or no wall showing. `window.test.mjs` holds its show rule, its weather, its hours, its colours and its loop.
-
-**Part research** (`codex-view.mjs` researchBar, `research.mjs`): a part card's research is a thin bar of 60 with a
-tick at 3, 15 and 60 (gray, amber once reached) and *n/60* in mono beside it; what a tier still hides reads **???** in
-gray mono with what unlocks it in `--dim`. A part researched to 100% carries the **mastered mark** (`.pmast`): a small
-star glyph in `--amber-soft` by its name, on the fight board and in the Codex, never teal (teal is you).
+- **The top bar:** the pages on the left; in the middle your handle · class · level with the class's XP as a thin bar;
+  on the right the people button, the pager, then Integrity, Signal and credits (each with its **+**). At 1440 with the
+  casing the pager's tray tightens so the class name keeps its place.
+- **The map** shows one floor at a time. A server's level is the number under it in WoW colours; servers that ask
+  nothing of you draw as dim dots without labels until hovered, selected or zoomed. Labels never overlap: the more
+  important one keeps its label (selected, then threats, then where you are, then a contract or fresh find). Scroll
+  zooms (up to 5×), drag pans, double-click or ⤢ fits. A **Show** picker (**Mine**, **Targets**, **Threats**) dims the
+  rest. **Map · List** toggles a sortable list of every server (name, family, level, floor, explored, status), then hubs
+  and leads, each with a **locate** button.
+- **The threat rail** (down the map's left): everything coming for you, hottest first, then soonest; red for what's
+  hitting you, amber for what's on its way. Under it the contract tracker.
+- **Map cards** pop up beside the node you click (never over it): the server card (level, Integrity, the wall as one
+  line each), a hub, an invasion. `×`, Esc or a click on empty map closes them. **Traffic:** your market orders run as
+  teal files between home and the hub, hub trade in the sender's colour; hover any moving file for its card.
+- **The room map** (*Schematic HD*, floorplan-view.mjs, floorplan.css): each room a **chip** (cut corners, a depth
+  gradient, its line icon over a name plate, its address in a dim plate on its bottom edge); teal only for your chip
+  (a pulsing outline, a *YOU* tab). Red a live threat, amber loot and what you use, gray cleared; an unknown room a
+  dashed ghost with a ?. Badges: a red live light, the step's Signal cost, a respawn ring with its m:ss, and tags (KEY,
+  LOCKED, KEY FITS, SEALED, ★, WAKES). Links are traces, the ones out of your room flowing amber. Your step travels its
+  trace as teal 1s and 0s and a scan line runs down the chip you enter (travelfx.mjs, about two thirds of a second,
+  never holding a click); the hunter's step travels in red. Faint gray packets cross discovered traces (traffic.mjs,
+  three at most, each server kind its own). The **traceroute** at the map's foot lists the last three hops with their
+  milliseconds (red near the hunter; hidden on a phone). Notices pop up in the bottom-right corner for a few seconds,
+  clicks going through. The pop-up card opens by itself when the room wants a decision (**Engage**/**Step back**,
+  **Fight it**/**Slip past**, **Take it**/**Leave it**, **Open**/**Force it**, **Rest**), never covers its room and
+  stays on screen at phone width. On a phone the map stands up, the spine top to bottom. With Screen effects off, Motion
+  off or reduced motion nothing on it moves.
+- **Puzzle boards** are drawn like the room map (chips and traces): the worm and the Tracker red, firewalls steel, data
+  nodes and caches gold, you teal. A board boots in with a line, each action has its own small animation and sound, and
+  the end is a card like a reward's. Motion off: the board just changes.
+- **The Server page** (`server-view.mjs`, `server.css`): one card and a detail panel (a bottom sheet on a phone). The
+  card's header draws your firewall as a ring of sixteen blocks round your server's core (whole blocks solid teal,
+  fragmented ones hollow, an amber arc while an invasion is at the wall, a red marker coming down its road), the
+  Integrity ring inside. Then quiet rows: Threat, Wall (level, tier pips, the readout), Filters, Code. Pointing at a
+  button that changes the wall shows before and after, run on a copy of the save.
+- **The wall's ruler:** each level a cell, teal for what it blocks, amber contested, red hatching what breaks through,
+  your server and the incoming invasion marked.
+- **The quest window** (the *Transmission*, quest-view.mjs): a thread or floor job read as an intercepted message,
+  its opening line resolving out of noise once, its steps as a job (`job 0003`, ✓, ▸, the rest dim hex). The reward
+  card is a signed receipt. Calm: lines arrive once, Mail's page never animates.
+- **The level-up** (the *Firmware update*, levelup-view.mjs): an amber *Firmware update · <class>.rom* strip, the
+  level in teal dot-font digits, `[ OK ]` a row at a time with a tick each; it waits for a calm moment.
+- **The pager** (the *Tray*): a lamp and one icon per page (up to four on a desktop, three on a phone, then **+n**),
+  amber, red for a threat, a soft glow on one you haven't seen; its tooltip is the line and, muted, ▸ what the tap does.
+- **The player card** (the *NET ID badge*, profile-view.mjs): an amber NET ID strip, the banner framed as a photo
+  (teal corners), the handle large in teal, the title amber, the plan a quiet italic quote, sections on one column,
+  a bar code at the foot.
+- **Paused** is a strip across the top of the board (*PAUSED · any order resumes*). **The crew column** sits on the
+  left of every page while you have a crew; it outlines red when they're hit, never shakes.
+- **A page that fails to draw** shows a red card with the error and a Back to the map button.
 
 ## Layout rules
 
-- **No sideways scroll, ever.** `.app` clips horizontal overflow (`overflow-x: clip`: no scroll box, sticky and
-  fixed children still work). That clip is a safety net for transient effects (a hit's shake), not a fix:
-  content must still fit. Grid columns are `minmax(0, 1fr)`; anything with `nowrap` inside a cell also gets
-  `min-width: 0` and an ellipsis.
-- **Phone (≤ 900px)**: one column. Side windows (a hub's shop or market, the crew column) stack above or below
-  their page; nothing is squeezed beside it. The top bar is a grid: brand, pager and credits; Integrity and
-  Signal; then the tabs.
-- **Narrow columns**: board cells are size containers (`container-type: inline-size`); a chip tightens its
-  padding and drops its icon below 132px instead of cutting words off.
-- **Map labels**: one label per spot. The crowding pass in `mapMarkup` ranks every labelled node (selected,
-  threats, contracts, outposts, then the rest) and hides any label that would overlap a more important one or
-  be cut by the scope's edge; it comes back on hover, selection or zoom.
-- **Pane titles** (`[ ssh … ]`) sit on a panel's top edge; the page leaves room above so they are never cut.
-- **Balance the columns** of a two-column page: the long cards should not all stack on one side.
-
-## Fixes in this pass (before → after)
-
-| # | Where | Before | After |
-| --- | --- | --- | --- |
-| 1 | Map cards (invasion, rogue, server, fleet…) | Level and tags in a `<p>` with literal spaces: a tag could touch the level | `.tagline` flex row with a gap on every level line |
-| 2 | Map | Labels piled on each other (a lead over a server, a swarm's sub-line over a server, two Unknowns stacked) | Every labelled node takes part in the crowding pass; HOME's label is reserved; edge-cut labels wait for hover |
-| 3 | Server page, phone | Cards 17px wider than the screen (the Open ports row) | Page grid columns can't be pushed wider than the page; the row wraps |
-| 4 | Collection, Network card | "listen" was plain text under the item, or floated over it with a negative margin | Item row with an action column; the action is a small framed button |
-| 5 | System → Settings | Fifteen identical buttons, on/off only in the label; the sound test looked the same | A grid of lamp toggles; the sound test is its own block with small keys |
-| 6 | Loadout class cards, phone | Two columns; the level tag ran under the Use button | One column; the head sits at the top; Use pinned top right |
-| 7 | Loadout key bar | Names cut off ("Rate Limi") | Icon over the name; the name wraps |
-| 8 | Ability tray (11+ keys) | Names clipped; each key's text centred at a different height | A size down when crowded; top-aligned; state clamped to three lines |
-| 9 | Hub market, phone | The market window squeezed beside the terminal, its Buy column cut off | Hub windows stack above the terminal; phone column widths |
-| 10 | Build panel | Building names ran into their role tags; "Build" a large unstyled heading; six cramped columns | Tag drops to its own line when needed; the kicker style; wider cards |
-| 11 | Server page | Left column three times the right's height; Uninstall floating mid-row | Running, Install queue and Architecture move to the right; actions top right |
-| 12 | Home card on the map | Jack in, then Services + Repair, then Top up alone: ragged | `.row.acts`: each line filled edge to edge |
-| 13 | Top bar, phone | Meters in three ragged rows; dividers misaligned | A grid: brand, pager, credits; Integrity, Signal; tabs |
-| 14 | Map, phone | The scope squeezed to 236px under the threat rail | The scope keeps 380px under the rail |
-| 15 | Fight HUD, phone | Server, status and virus in three cramped columns | Your side and statuses on one row, the virus under them |
-| 16 | Paused fight | The PAUSED banner sat on top of "Your move" | It sits in the phase strip's empty right end |
-| 17 | Run with a crew, phone | The crew column squeezed the run to a 150px strip that overflowed | The crew column stacks above the page |
-| 18 | Fights, phone | A hit's shake and a long chip label widened the page to 510px | `.app` clips; chip labels ellipsize |
-| 19 | Tell chips in a narrow board | Kicker and answer cut off; the "→ all" tab clipped | Container query tightens the chip; the tab shows |
-| 20 | Mail | Rows with no faction left a hole in the icon column | A neutral mark keeps the column |
-| 21 | Error card | Its kicker in the normal muted colour | Alert colour, a hot rule on the trace |
-| 22 | Run and hub panes | The `[ ssh … ]` title cut at the top of the page; the fight log's first line cut under its title | Room above the pane; the log fades under its title |
-| 23 | Buttons everywhere | Heights from ad hoc paddings (28 to 36px), icon and label misaligned | Two heights, inline-flex, one gap |
-| 24 | Stat tiles | Auto-fit grid left a lone tile at half width; labels in sans | Wrap and fill; labels in `--label` type |
-| 25 | Hub session, phone | The faction's ASCII mark wrapped into broken lines | The mark never wraps or shrinks; a size down on phones |
-| 26 | Fight board, phone | A part's HP overlapped its wrapped name; armor chits ran into the Now column | Name on its own line, armor and HP under it |
-| 27 | Attack chips, phone | The damage number cut to "−…" | Tighter chip padding in part rows |
-| 28 | Pause banner, phone | Floated over the board's column heads | In the flow, above the phase strip |
-| 29 | Disconnect card | Red kicker in an amber frame | The whole card goes hot: frame, corners, glow |
-| 30 | Top tabs, phone | With Consortium up, Loadout and System scrolled off screen | A size down when seven tabs show |
-| 31 | Map list, phone | Layer, Explored and Status cut off; rows of different heights | Two lines per row: name, family, level; then progress and status |
-| 32 | Network natives | Three cramped columns broke names onto two lines beside "listen" | Wider columns |
-| 33 | Settings, desktop | "Speed: relaxed (12s per cycle)" ran out of its cell | Speed spans two cells; labels ellipsize |
-| 34 | Fight board, parts that protect parts | A *lock 12* tag and a cue under the Mutex's name; nothing joined the two rows | A tether between the rows, the lock as an absorb segment on the partner's bar, a ward's cap line |
-| 35 | Top tabs, phone, eight tabs (the Codex, Craft and Run up together) | System ran off the screen's right edge | Two even rows of four (`.modules[data-tabs]`, set by app.js fitTopbar) |
-| 36 | Event cards on the map cards | A sentence per event and a row of plain buttons (Intercept, a button a faction) | One shell (kicker strip, time ring), each card its own picture with its action built in; the sentence is a tooltip |
-| 37 | Loadout → Skills and talents | Two cards of rule text (a library of skill cards, a tree of rule cards), a subclass tab row, four big class cards | One card of names and pips, a detail panel that holds every rule, a slim class row; the subclass breakout from level 10 |
-| 38 | Server page | Two columns of cards: a Firewall card with every rule as a line, a ruler, the filters list and the invasion; Safe read the senders' bare level | One card (a ring of sixteen blocks round the core, quiet rows) and a detail panel, a bottom sheet on a phone; its buttons are the real commands, each with a before and after worked out on a copy of the save; Safe counts each invader's grade |
+- **No sideways scroll, ever.** `.app` clips horizontal overflow (`overflow-x: clip`); that's a safety net, not a fix:
+  content must still fit. Grid columns are `minmax(0, 1fr)`; a `nowrap` inside a cell also gets `min-width: 0` and an
+  ellipsis.
+- **Phone (≤ 900px)**: one column. Side windows (a hub's shop or market, the crew column) stack above or below their
+  page. The top bar is a grid: brand, pager and credits; Integrity and Signal; then the tabs (two rows of four when
+  eight show).
+- **Narrow columns**: board cells are size containers; a chip tightens and drops its icon below 132px instead of
+  cutting words.
+- **Map labels**: one label per spot. The crowding pass in `mapMarkup` ranks every labelled node (selected, threats,
+  contracts, then the rest) and hides a label that would overlap a more important one or be cut by the edge.
+- **Pane titles** (`[ ssh … ]`) sit on a panel's top edge; the page leaves room above them.
+- **Balance the columns** of a two-column page.
+- **UI scale** (uiscale.mjs) scales the screen as a whole, tooltips and pop-ups included, only while it stays 1700px
+  wide in its own pixels.
 
 ## Screen effects (screenfx.mjs, screenfx.css)
 
 The designer's rules for anything that sets a mood: **everything is light on glass**, and **nothing interferes with the
-interface**. CSS, the DOM and text only (no canvas, WebGL or PixiJS).
+interface**. CSS, the DOM and text only (no canvas, WebGL or PixiJS on the screen).
 
-- An effect lives behind or around the interface: the backdrop (`#fx-back`, a layer at z-index -1 inside `.app` that
-  carries the screen's own background, so it shows between and behind the panels and through the map's field), the
-  tube's edge (`#crt-bezel`), the casing's lamps, and the virus picture (`#virus-canvas`, a crit's tear through the
-  `#sfx-tear-a/b` SVG filters in index.html). `screenfx.test.mjs` fails on any rule that styles anything else.
-- Text, numbers, bars, chips and the board never move, dim, blur or get covered, and no effect shifts layout or takes a
-  click. A big hit tears the backdrop, not `.app`. The old screen shakes are gone (the whole-screen glitch, the nudge on
-  your hits, the jolt when you're hit, the lash's full-screen glitch); flashes on the interface (a hurt, a strike, a
-  part's name, a refused command, the pager) keep their light and never translate. `screenfx.test.mjs` checks it.
-- Your health shows only on the screen's edge, one look per strength: under a half a faint warm line (medium, bold),
-  under a quarter a thin red burning into a grey haze, breathing (subtle: still). It replaced a red glow 180px deep over
-  the interface.
-- Strength is one setting, off / subtle / medium (default) / bold, as `--sfx-k` on `<html data-sfx>`, with each effect
-  switchable on its own. It also sets how much moves on the fight board (the old Effects setting: off minimal, subtle
-  and medium calm, bold full; `effects ...` is an alias and saves migrate). Motion off (`.no-motion`) and `prefers-reduced-motion` stop every animation in the file.
+- An effect lives behind or around the interface: the backdrop (`#fx-back`, z-index −1 inside `.app`, carrying the
+  screen's own background), the tube's edge (`#crt-bezel`), the casing's lamps, and the virus picture (`#virus-canvas`,
+  a crit's tear through the `#sfx-tear-a/b` SVG filters). `screenfx.test.mjs` fails on any rule that styles anything
+  else.
+- Text, numbers, bars, chips and the board never move, dim, blur or get covered; no effect shifts layout or takes a
+  click. A big hit tears the backdrop, not `.app`. Flashes on the interface keep their light and never translate.
+- Your health shows only on the screen's edge: under half a faint warm line (medium, bold), under a quarter a thin red
+  burning into grey haze, breathing (subtle: still).
+- Strength is one setting, off / subtle / medium (default) / bold, as `--sfx-k` on `<html data-sfx>`, each effect
+  switchable on its own; it also sets how much moves on the fight board. Motion off (`.no-motion`) and
+  `prefers-reduced-motion` stop every animation in the file.
 - **Floor palettes** are the one exception to *No new colours*, approved by the designer. A floor swaps the surface
-  tokens (`--bg`, `--panel`, `--panel-2`, `--inset`), the structure colour (`--amber` and its soft, deep, line and wash
-  forms) and the text tints (`--text`, `--bright`, `--muted`, `--dim`) inline on `<html>`; the job colours (`--hot`,
-  `--next`, `--you`, `--daemon`, `--exception`, `--steel`, `--gray`) never change. At medium and bold the accent tints `--panel` and
-  `--panel-2` (3.5%, 6%) and `--inset` a little less, so the floor reads beyond the gaps; subtle keeps the palette's own
-  panels. Each tint keeps 4.5:1 on the floor's bg, both panels (tinted, at every strength) and the textured backdrop
-  (body text 7:1), checked in `screenfx.test.mjs`. Hues sit away from the job colours: Coldline's
-  ice is paler than steel and bluer than teal, The Sink's rose is far paler than hot red, Deep Core's magenta pinker
-  than the daemons' violet.
+  tokens (`--bg`, `--panel`, `--panel-2`, `--inset`), the structure colour (`--amber` and its forms) and the text tints
+  inline on `<html>`; the job colours (`--hot`, `--next`, `--you`, `--daemon`, `--exception`, `--steel`, `--gray`) never
+  change. At medium and bold the accent tints the panels (3.5%, 6%). Each tint keeps 4.5:1 on every surface (body text
+  7:1), checked in `screenfx.test.mjs`. Hues sit away from the job colours.
 
 | Floor | Structure | bg / panel (subtle) | Texture | dim, worst surface (subtle to bold) |
 | --- | --- | --- | --- | --- |
@@ -235,39 +252,60 @@ interface**. CSS, the DOM and text only (no canvas, WebGL or PixiJS).
 | The Sink | `#e09a94` blood rose | `#0a0303` / `#130606` | drips | 4.9 to 4.8 |
 | Bedrock | `#cfc7b4` stone | `#080807` / `#0f0f0d` | heavy static | 4.9 to 4.6 |
 
+## The casing and the window
+
+- **The monitor casing** (immersive shell, desktop): BLACKBOX · MODEL 7, two knobs (sound, speed) and labelled lamps
+  (PWR, GATE, WALL, NET, INST, DMN) that glow with real state and blink at medium and bold.
+- **Casing cosmetics** (`casing.mjs`, `casing.css`): only the casing changes, never the screen. A colourway sets only
+  `--case-*` variables, each read in style.css with the stock colour as its fallback, and fills the bezel's frame with
+  the glass cut out exactly. Stickers sit in two strips on the chin that end short of the knobs, the plate and the lamps,
+  still, a little crooked; one that doesn't fit is left off. Desk props sit on the desk under the monitor (or on the
+  chin without the window), still but for the mug's steam. `casing.test.mjs` holds them to the bezel.
+- **The window behind the monitor** (`window.mjs`): a canvas of the original city behind the page (`.window-out`,
+  z-index −2, no pointer events), with the casing and the Window on at 1700px and wider, painted only in the strips
+  beside and above the monitor and the desk. Four depths with atmospheric perspective, the near tower's face in detail,
+  vertical signs with their light on the wall; the sky follows the clock (night is the original), the weather turns
+  every five minutes. Each district (the rail yards, the server towers, the harbour, the rooftops) is the same engine.
+  About 20 frames a second, every still layer drawn once; the loop stops with Motion off, reduced motion or a hidden
+  tab. `window.test.mjs` holds its show rule, weather, hours, colours and loop.
+
 ## Rules for future UI work
 
-- **Show it, don't explain it** (docs/style-guide.md section 0, the designer's foundational rule). Cards are icons, numbers, bars, pips and states. Explanations go in tooltips, never in a paragraph on the card.
-- **Tooltips read like World of Warcraft's** (Tooltip style, below). The name is the title, the mechanics come first, and the answer sits on its own muted line.
+- **Show it, don't explain it** (docs/style-guide.md section 0). Cards are icons, numbers, bars, pips and states;
+  explanations go in tooltips, never a paragraph on the card.
+- **Tooltips read like World of Warcraft's** (below): the name is the title, the mechanics come first, the answer sits
+  on its own muted line.
 
 1. Use the tokens. A new padding or gap comes from the spacing scale; a new label uses `--label` or `--kicker`.
-2. Reach for an existing component before writing a new one: card, labelled rows, item row with action,
-   tag line, tiles, `.row.acts`, toggles.
+2. Reach for an existing component before writing a new one.
 3. Icons live in a fixed left column. If some rows have no icon, keep the column with a neutral mark.
 4. Anything that can wrap must look right wrapped: test the phone width (390px) and a crew fight (narrow board).
 5. One primary button per card. Risky actions use `.hot-btn`. Tags never act as buttons.
-6. Every hover explanation goes through `title` (the themed `.tt` shows it), never a browser default.
+6. Every hover explanation goes through `title` (the themed `.tt` shows it).
 7. Don't centre text that people scan; centre only single numbers and banners.
-8. No new colours. If something needs a colour, it is one of the jobs in the table above. (A floor's palette, in Screen effects above, recolours the structure and surfaces, never a job.)
+8. No new colours. If something needs a colour, it is one of the jobs above (a floor's palette recolours the structure
+   and surfaces, never a job).
 9. Check with screenshots at 1440 and 390 wide, with no horizontal overflow and no page errors.
 
 ## Tooltip style (WoW grammar)
 
-The designer's rule for every tooltip and Codex card that describes a part, a tell, a mutation or another rule of a virus: write it the way a World of Warcraft ability or creature tooltip reads. `partRead` and `tellTip` (dist/fightread.mjs), the genes' `does` and `answer` (dist/genes.mjs), the strains' and ICE's `rule` and `answer` (dist/data.mjs), and the server, site and quirk rules all follow it. `style.test.mjs` scans every part, tell, mutation and gene description for the banned patterns.
+Every tooltip and Codex card that describes a virus's part, tell, mutation or rule reads like a World of Warcraft
+ability or creature tooltip. `partRead` and `tellTip` (fightread.mjs), the genes' `does` and `answer` (genes.mjs), the
+strains' and ICE's `rule` and `answer` (data.mjs), and the server, site and quirk rules follow it; `style.test.mjs` scans
+them. docs/style-guide.md section 2 has the grammar for skills, items and the rest.
 
-1. **The name is the title.** The tooltip system bolds `Name: rest` (app.js `ttShow`). The body never repeats the name at its start.
-2. **Mechanics first.** Short, declarative, present-tense sentences with numerals and units: *Deals 28 damage to you every 5 cycles.* *Absorbs 30 damage.* *Immune to damage for 5 cycles.* *Breaks 1 ◆ on hit.* *Lasts 2 cycles.*
-3. **Lead with the verb or the effect:** *Deals…*, *Shields…*, *Heals…*, *Copies…*, *Reduces…*, *Increases…*, *While it stands, …*, *When broken, …*. A part breaks (the glossary's word), so it is *When broken*, not *When destroyed*.
-4. **One idea a sentence.** No colon chains (*Frozen: off the timeline, and nothing reaches it, …*), no semicolons, no sentence over 25 words. Name the target where *it* would be unclear: *the Encryptor*, *you*, *its partner*.
-5. **Second person only for the player as the target:** *Deals 6 damage to you.* The mechanics never give advice.
-6. **The answer goes on its own last line.** One imperative of 10 words or fewer, from the part's answer: *Break the others while it is frozen.* In a tooltip the line starts with `▸ ` (fightread.mjs `answerLine`), and `ttShow` draws it muted under a rule, like WoW's *Use:* line. On a Codex card it is its own teal paragraph with the same ▸. Cut it when it only repeats the mechanics.
-7. **Numbers** are the live, scaled values in a fight, and the base values on a Codex card.
-8. **Sentence case, plain English,** and no word the player hasn't met on the board.
-9. **Terms:** *cycle* and *cycles* for time, *◆* for armor, *Integrity* for a part's health, *Signal* for yours.
+1. **The name is the title** (`ttShow` bolds `Name: rest`); the body never repeats it.
+2. **Mechanics first,** in short present-tense sentences with numerals: *Deals 28 damage to you every 5 cycles.*
+3. **Lead with the verb or the effect:** *Deals…*, *Shields…*, *While it stands, …*, *When broken, …*.
+4. **One idea a sentence:** no colon chains, no semicolons, nothing over 25 words. Name the target where *it* would be
+   unclear.
+5. **Second person only for the player as the target.** The mechanics never give advice.
+6. **The answer goes on its own last line:** one imperative of 10 words or fewer, starting `▸ ` (`answerLine`), drawn
+   muted under a rule like WoW's *Use:* line; on a Codex card its own teal paragraph. Cut it when it only repeats the
+   mechanics.
+7. **Numbers** are the live, scaled values in a fight and the base values on a Codex card.
+8. **Sentence case, plain English,** no word the player hasn't met on the board; *cycle*, *◆*, *Integrity* for a part's
+   health, *Signal* for yours.
 
-| Before | After |
-|---|---|
-| Cold Store: Frozen: off the timeline, and nothing reaches it, until the end of cycle 5. Then it thaws and joins the fight: it hits you for 28 every 5 cycles. Break the others while it is frozen, and save a big hit or a shield for its thaw. | **Cold Store** Frozen until the end of cycle 5. Off the timeline and immune to damage while frozen. After it thaws, its Chill deals 28 damage to you every 5 cycles. The first Chill lands 2 cycles after the thaw. ▸ *Break the others while it is frozen.* |
-| Pulse Node: Hits you for 14 every 4 cycles. Break it, or delay its attack. ◆ and shields soften the hit. | **Pulse Node** Deals 14 damage to you every 4 cycles. ▸ *Delay it, or soften the hit with ◆ and shields.* |
-
-The highlighter (dist/ruletext.mjs) lights the facts of this grammar in a detail panel: *28 damage*, *5 cycles*, *1 ◆*, *50% more damage*, *Scrambled*. The Codex part cards, tells, signatures and mutation rules draw their mechanics through it.
+The highlighter (`ruletext.mjs`) lights the facts of this grammar in a detail panel: *28 damage*, *5 cycles*, *1 ◆*,
+*Scrambled*.
