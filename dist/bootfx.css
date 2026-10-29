@@ -18,3 +18,6 @@
 .bootfx-console div { white-space: pre; overflow: hidden; text-overflow: clip; opacity: 0; }
 .bootfx-console .hot { color: var(--hot); text-shadow: 0 0 8px rgba(255, 91, 61, 0.7); }
 @media (min-width: 1100px) and (min-height: 720px) { body.cased .bootfx-black { position: absolute; border-radius: inherit; } }
+/* Leaving a won fight (Channel cut): the teal line the page folds into, and the ring on your room. */
+.bootfx > .bootfx-tline { inset: auto; height: 2px; background: #bff3ec; box-shadow: 0 0 12px 3px var(--you), 0 0 40px 8px rgba(127, 209, 199, 0.45); border-radius: 0; }
+.bootfx > .bootfx-ring { inset: auto; border: 2px solid var(--you); border-radius: 6px; box-shadow: 0 0 14px 2px rgba(127, 209, 199, 0.7), inset 0 0 14px rgba(127, 209, 199, 0.4); }

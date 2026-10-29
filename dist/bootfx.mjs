@@ -5,8 +5,10 @@
 // console stutters through your system where the board will be (your bar, class, keys, the virus, the clock), and
 // then your panels catch one by one like tubes, your bar filling. Any key or click ends it at once (and still acts).
 // No canvas: the real panels flicker (opacity and clip-path through the Web Animations API, held steps, no fades), with
-// a black layer behind them and the console, noise and flare on top (bootfx.css). Screen effects off,
-// Motion off or reduced motion: none (app.js doesn't call it).
+// a black layer behind them and the console, noise and flare on top (bootfx.css).
+// Leaving a won fight (app.js leaveFight, the designer's pick, Channel cut): the page collapses to a teal line, then a
+// dot, like a tube switching channel; the page you go back to opens out of the line, and your room rings teal.
+// Screen effects off, Motion off or reduced motion: neither plays (app.js doesn't call them).
 
 // When each beat comes, in ms; without the brackets (not from the rooms page) everything comes LOCK sooner.
 export const BOOT = {
@@ -128,5 +130,55 @@ export function playBoot(app, held, lines) {
   };
   current = end;
   timer = setTimeout(end, at(BOOT.done));
+  addEventListener('keydown', end, true); addEventListener('pointerdown', end, true);
+}
+
+// Leaving a won fight, in ms: the page collapses (cut), the next page takes its place (swap), opens out of the line
+// (open, for openFor) and your room rings (ring).
+export const CUT = { cut: 240, swap: 300, open: 330, openFor: 220, ring: 470, done: 860 };
+let cutting = null;
+export const leaving = () => !!cutting;
+export function stopCut() { cutting?.(); }
+
+// Play it. regions: the page's parts that collapse and open (the workspace, the command dock); swap: goes to the next
+// page; room: finds your room's chip on it, or null.
+export function playCut(app, regions, swap, room) {
+  stopCut();
+  const els = regions.filter(Boolean), anims = [], nodes = [], timers = [];
+  const play = (el, frames, delay, duration, easing = 'linear') => { const a = el.animate(frames, { delay, duration, easing, fill: 'both' }); anims.push(a); return a; };
+  const add = (parent, cls, before = null) => { const d = document.createElement('div'); d.className = cls; d.setAttribute('aria-hidden', 'true'); parent.insertBefore(d, before); nodes.push(d); return d; };
+  // Every part folds to the same line: the middle of all of them together.
+  const rs = els.map((el) => el.getBoundingClientRect()), top = Math.min(...rs.map((r) => r.top)), bottom = Math.max(...rs.map((r) => r.bottom));
+  const left = Math.min(...rs.map((r) => r.left)), right = Math.max(...rs.map((r) => r.right)), cx = (left + right) / 2, cy = (top + bottom) / 2;
+  const origin = (el, r) => { const k = r.width / (el.offsetWidth || r.width) || 1; return `${(cx - r.left) / k}px ${(cy - r.top) / k}px`; };
+  const black = add(app, 'bootfx-black', app.querySelector('#fx-back')?.nextSibling || app.firstChild);
+  play(black, [{ opacity: 1 }, { opacity: 1 }], 0, CUT.open + CUT.openFor);
+  const layer = add(app, 'bootfx'), lr = layer.getBoundingClientRect(), lk = lr.width / (layer.offsetWidth || lr.width) || 1;
+  const line = add(layer, 'bootfx-tline');
+  Object.assign(line.style, { left: `${(left - lr.left) / lk}px`, top: `${(cy - lr.top) / lk - 1}px`, width: `${(right - left) / lk}px` });
+  play(line, [{ opacity: 0, transform: 'scaleX(1)' }, { opacity: 1, transform: 'scaleX(1)', offset: 0.25 }, { opacity: 1, transform: 'scaleX(.01)', offset: 0.65 }, { opacity: 0, transform: 'scaleX(1)', offset: 0.8 }, { opacity: 0, transform: 'scaleX(1)' }], 100, 260);
+  const folds = els.map((el, i) => play(el, [{ transform: 'scale(1, 1)', transformOrigin: origin(el, rs[i]), filter: 'brightness(1)' }, { transform: 'scale(1, .004)', transformOrigin: origin(el, rs[i]), filter: 'brightness(4) saturate(0)', offset: 0.7 }, { transform: 'scale(0, .004)', transformOrigin: origin(el, rs[i]), filter: 'brightness(4) saturate(0)' }], 0, CUT.cut, 'cubic-bezier(.6,0,.9,.5)'));
+
+  let swapped = false;
+  const toNext = () => {
+    if (swapped) return;
+    swapped = true; folds.forEach((a) => a.cancel());
+    swap();
+    const chip = room?.(), cr = chip?.getBoundingClientRect(); // measured before the page starts opening
+    els.forEach((el) => { const r = el.getBoundingClientRect(); play(el, [{ transform: 'scale(1, .004)', transformOrigin: origin(el, r), filter: 'brightness(4)', opacity: 0 }, { opacity: 1, offset: 0.01 }, { transform: 'scale(1, 1.02)', transformOrigin: origin(el, r), filter: 'brightness(1.3)', offset: 0.7 }, { transform: 'scale(1, 1)', transformOrigin: origin(el, r), filter: 'brightness(1)', opacity: 1 }], CUT.open - CUT.swap, CUT.openFor, 'cubic-bezier(.2,.8,.3,1)'); });
+    if (cr?.width) {
+      const ring = add(layer, 'bootfx-ring');
+      Object.assign(ring.style, { left: `${(cr.left - lr.left) / lk - 6}px`, top: `${(cr.top - lr.top) / lk - 6}px`, width: `${cr.width / lk + 12}px`, height: `${cr.height / lk + 12}px` });
+      play(ring, [{ opacity: 0, transform: 'scale(1.25)' }, { opacity: 1, transform: 'scale(1)', offset: 0.35 }, { opacity: 0, transform: 'scale(1)' }], CUT.ring - CUT.swap, 380, 'ease-out');
+    }
+  };
+  const end = () => {
+    if (cutting !== end) return;
+    cutting = null; timers.forEach(clearTimeout);
+    removeEventListener('keydown', end, true); removeEventListener('pointerdown', end, true);
+    toNext(); anims.forEach((a) => a.cancel()); nodes.forEach((n) => n.remove());
+  };
+  cutting = end;
+  timers.push(setTimeout(toNext, CUT.swap), setTimeout(end, CUT.done));
   addEventListener('keydown', end, true); addEventListener('pointerdown', end, true);
 }

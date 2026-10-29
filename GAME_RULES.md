@@ -2102,7 +2102,9 @@ moves.
 
 **A new fight boots in.** The first time you see a fight, the screen cuts to black and the virus comes on first, alone
 at the centre, before dropping into its panel; a boot console checks your system and your panels flicker on. About two
-seconds; any key or click ends it (and still acts). Screen effects off or Motion off: straight in.
+seconds; any key or click ends it (and still acts). Leaving a won fight, the page folds to a teal line like a tube
+switching channel and the map opens back out of it, your room ringing. Screen effects off or Motion off: straight in
+and out.
 
 ### The monitor casing
 

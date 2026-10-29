@@ -67,7 +67,7 @@ import * as PGV from './pager-view.mjs';
 import { noCarrier, NC } from './nocarrier.mjs';
 import * as UI from './uiscale.mjs';
 import { playTravel } from './travelfx.mjs';
-import { playBoot, stopBoot, capture as bootHold, bootLines } from './bootfx.mjs';
+import { playBoot, stopBoot, capture as bootHold, bootLines, playCut, stopCut, leaving } from './bootfx.mjs';
 let bootFor = null; // the fight the screen last booted into (go)
 import { startTraffic } from './traffic.mjs';
 
@@ -708,7 +708,16 @@ function decode(node) {
   step();
 }
 // After a won fight: back where you came from (the run, or the map).
-function leaveFight() { const to = ended === 'breach' ? 'breach' : ended === 'rooms' || campaign.rooms ? 'rooms' : ended === 'run' && campaign.run ? 'net' : CAMP ? 'campaign' : 'map'; ended = null; go(to); }
+// Back from a won fight's kill screen. The page folds to a teal line and the next one opens out of it (bootfx.mjs,
+// Channel cut); Screen effects off or Motion off: straight there. A second press mid-cut finishes it.
+function leaveFight() {
+  if (leaving()) return stopCut();
+  const to = ended === 'breach' ? 'breach' : ended === 'rooms' || campaign.rooms ? 'rooms' : ended === 'run' && campaign.run ? 'net' : CAMP ? 'campaign' : 'map';
+  const swap = () => { ended = null; go(to); };
+  if (module !== 'combat' || !canMove() || fxLevel() === 'minimal') return swap();
+  const at = campaign.rooms?.at;
+  playCut($('app'), [$('workspace'), document.querySelector('.command-dock')], swap, () => (at && to === 'rooms' ? [...$('page-view').querySelectorAll(`[data-room="${CSS.escape(at)}"]`)].find((c) => c.getBoundingClientRect().width) : null));
+}
 // ---------- the rooms playtest (floorplan.mjs) ----------
 // A button on the rooms page: a move on the map, or the room's verb. A fight starts paused on the Fight page.
 function roomsClick(verb, arg) {
