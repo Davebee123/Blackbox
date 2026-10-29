@@ -179,7 +179,7 @@ test('the board: offers arrive at uneven times up to five and expire; take three
   assert.equal(heldCount(s3), 3);
   const fourth = offers(s3)[0];
   assert.match(command(s3, `mail accept ${fourth.id}`).at(-1).message, /already hold 3/);
-  const held = openContracts(s3)[0];
+  const held = openContracts(s3).find((c) => !c.chain); // not floor 1's chain job (arcs.mjs): those can't be dropped
   command(s3, `mail drop ${held.id}`);
   assert.equal(heldCount(s3), 2);
   assert.equal(standing(s3), 30, 'dropping is free');

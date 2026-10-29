@@ -77,9 +77,9 @@ export function cipher(len, seed = 7) {
 // ---------- the job: a thread's steps, printed ----------
 function job(m, i0 = 0) {
   const rows = m.steps.map((x, k) => `<li class="${x.done ? 'done' : x.now ? 'now' : 'fog'}"><span class="qa-n">${String(k + 1).padStart(2, '0')}</span><span class="qa-st" aria-hidden="true">${x.done ? '✓' : x.now ? '▸' : '·'}</span>${x.fog
-    ? `<span class="qa-t qa-enc" role="img" aria-label="Not yet" title="Not yet: the thread tells you when you get there.">${esc(cipher(Math.min(36, Math.max(12, x.len)), m.num * 131 + k))}</span>`
+    ? `<span class="qa-t qa-enc" role="img" aria-label="Not yet" title="${esc(m.fogTip || 'Not yet: the thread tells you when you get there.')}">${esc(cipher(Math.min(36, Math.max(12, x.len)), m.num * 131 + k))}</span>`
     : `<span class="qa-t">${esc(x.text)}</span>`}</li>`).join('');
-  return `<div class="qa-job" style="--i:${i0}"><p class="qa-job-h"><span>job ${pad4(m.num)}</span><span>${m.steps.filter((x) => x.done).length}/${m.steps.length}</span></p><ol class="qa-steps">${rows}</ol></div>`;
+  return `<div class="qa-job" style="--i:${i0}"><p class="qa-job-h"><span>${esc(m.jobLabel || `job ${pad4(m.num)}`)}</span><span>${m.steps.filter((x) => x.done).length}/${m.steps.length}</span></p><ol class="qa-steps">${rows}</ol></div>`;
 }
 const sign = (who, sig, i = 0) => `<p class="qa-sign" style="--i:${i}"><span>signed</span><b>${esc(who)}</b><code>${esc(sig)}</code></p>`;
 
@@ -99,20 +99,22 @@ export function questPanel(d, m, ctx = {}) {
 }
 
 // ---------- its page in Mail ----------
-export function questReader(m, acts = '') {
-  return `<section class="card mread th-read q-read"><h2 class="qa-from">${mark(m, m.icon)}<span>${esc(m.giver)}</span>${m.short ? '' : '<small>· chain</small>'}</h2><h1>${esc(m.title)}</h1>
-    <p class="qa-reason">${esc(m.reason)}</p>${job(m)}
+// extra: what follows the job (a floor job's letter and its contract: arcs-view.mjs); m.tag: the line by the giver.
+export function questReader(m, acts = '', extra = '') {
+  return `<section class="card mread th-read q-read"><h2 class="qa-from">${mark(m, m.icon)}<span>${esc(m.giver)}</span>${m.tag != null ? `<small>· ${esc(m.tag)}</small>` : m.short ? '' : '<small>· chain</small>'}</h2><h1>${esc(m.title)}</h1>
+    <p class="qa-reason">${esc(m.reason)}</p>${job(m)}${extra}
     ${m.state === 'done' ? `<p class="th-lore">${esc(m.lore)}</p>${sign(m.giver, m.sig)}${tookLine(m)}` : m.state === 'abandoned' ? '<p class="qa-state">Set aside</p>' : ''}
     ${acts ? `<div class="row acts">${acts}</div>` : ''}</section>`;
 }
 
 // ---------- the reward: a signed receipt, pick one of three (WoW's quest reward) ----------
-export function questReward(m, items) {
-  const rows = items.map((it, i) => { const b = bits(it, i); return `<button type="button" class="qa-item r-${b.rarity}" data-run="thread take ${b.n}" title="Take it"><span class="qa-n">${b.n}</span><span class="qa-iw"><b class="iname r-${b.rarity}">${esc(b.name)}</b><small>${esc(b.slot)} · lv ${b.level}${b.mine ? ' · <i>for you</i>' : ''}</small></span><span class="qa-is">${b.stats.map((x) => `<span>${esc(x)}</span>`).join('')}${b.rule ? `<em>${esc(b.rule)}</em>` : ''}</span><span class="qa-take">Take</span></button>`; }).join('');
+// take: the command that takes item n (a floor job's is mail take: arcs.mjs).
+export function questReward(m, items, take = 'thread take') {
+  const rows = items.map((it, i) => { const b = bits(it, i); return `<button type="button" class="qa-item r-${b.rarity}" data-run="${esc(take)} ${b.n}" title="Take it"><span class="qa-n">${b.n}</span><span class="qa-iw"><b class="iname r-${b.rarity}">${esc(b.name)}</b><small>${esc(b.slot)} · lv ${b.level}${b.mine ? ' · <i>for you</i>' : ''}</small></span><span class="qa-is">${b.stats.map((x) => `<span>${esc(x)}</span>`).join('')}${b.rule ? `<em>${esc(b.rule)}</em>` : ''}</span><span class="qa-take">Take</span></button>`; }).join('');
   return `<div class="sp-card th-offer-card qa-receipt" role="dialog" aria-label="${esc(`${m.title}: pick one`)}">
-    <header class="qa-rhead"><span class="sp-kicker">Receipt</span><strong class="sp-name">${esc(m.title)}</strong><span class="qa-rno">job ${pad4(m.num)}</span></header>
+    <header class="qa-rhead"><span class="sp-kicker">Receipt</span><strong class="sp-name">${esc(m.title)}</strong><span class="qa-rno">${esc(m.rno || `job ${pad4(m.num)}`)}</span></header>
     <ol class="qa-steps">${m.steps.map((x, k) => `<li class="done"><span class="qa-n">${String(k + 1).padStart(2, '0')}</span><span class="qa-st" aria-hidden="true">✓</span><span class="qa-t">${esc(x.text)}</span></li>`).join('')}</ol>
-    <p class="th-lore">${esc(m.lore)}</p>${sign(m.giver, m.sig)}
+    ${m.lore ? `<p class="th-lore">${esc(m.lore)}</p>` : ''}${sign(m.giver, m.sig)}
     <p class="th-pick">Pick one</p><div class="qa-items">${rows}</div>${later}</div>`;
 }
 

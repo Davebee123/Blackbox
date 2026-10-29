@@ -49,6 +49,7 @@ import { roomsMarkup, fillClocks, popOf, pickRoom, closePop, stepPath, traceHop 
 import { createPuzzleFx, panelRoom, closePanel, openPanel, pzUi } from './puzzle-view.mjs';
 import { PUZZLES } from './puzzles.mjs';
 import { threadPanel, thUi, offerMarkup as thOfferMarkup } from './threads-view.mjs';
+import { arcOfferMarkup } from './arcs-view.mjs';
 import { PREVIEW, previewMarkup } from './quest-view.mjs';
 import * as PV from './profile-view.mjs';
 import { channelOf, muted as chanMuted, say as chanSay } from './channel.mjs';
@@ -1171,6 +1172,9 @@ function react(events) {
       case 'thread-dark': feel.add('break', null); break;
       case 'thread-done': feel.add('win', null); thOffer.later = null; break;
       case 'thread-reward': feel.add('pickup', null); if (e.name) showGain('Thread reward', '', [{ kind: 'item', label: e.name, qty: '', text: e.name }], true); break;
+      case 'arc-reward': feel.add('pickup', null); if (e.name) showGain('Floor job reward', '', [{ kind: 'item', label: e.name, qty: '', text: e.name }], true); break; // arcs.mjs
+      case 'arc-offer': thOffer.later = null; break;
+      case 'arc-done': feel.add('win', null); notice(e.message); break;
       case 'standing-down': feel.add('nope', null); break;
       case 'contract-taken': feel.add('good', null); notice(e.message); break;
       case 'bought': feel.add('pickup', null); rewardCard('Bought', e, events, true); break;
@@ -1878,12 +1882,14 @@ const fitBoard = { key: null }; // the fight whose board went dense (render)
 // A thread's reward (threads.mjs): pick one of three, over the page until you pick one or put it off (Later; it waits
 // in Mail, where Pick your reward brings it back).
 const thOffer = { later: null };
+// A floor job's pick (arcs.mjs) comes up the same way, after any thread's.
+const offerKey = () => (campaign.threads?.offer ? campaign.threads.offer.tid : campaign.arcs?.offers?.[0] ? `arc:${campaign.arcs.offers[0].floor}:${campaign.arcs.offers[0].step}` : null);
 function renderOffer() {
-  const el = $('th-offer'), o = campaign.threads?.offer;
+  const el = $('th-offer'), o = offerKey() && { tid: offerKey() };
   const want = !!o && thOffer.later !== o.tid && module !== 'combat' && !active(campaign) && !gainOpen() && !CAMP && !campaign.roomsPlay && !document.getElementById('th-panel'); // the last lines first: it comes up once you close them
   if (!el) return;
   el.hidden = !want;
-  if (want) put('th-offer', thOfferMarkup(campaign)); else if (cache.get('th-offer')) { cache.delete('th-offer'); el.innerHTML = ''; }
+  if (want) put('th-offer', campaign.threads?.offer ? thOfferMarkup(campaign) : arcOfferMarkup(campaign)); else if (cache.get('th-offer')) { cache.delete('th-offer'); el.innerHTML = ''; }
 }
 // developer thread preview [chain] [offer|progress|turnin|reward] (dev only): one thread at each stage of the quest
 // window, over the page (quest-view.mjs previewMarkup). Its own buttons switch the stage and the thread; nothing in
@@ -2737,7 +2743,7 @@ document.addEventListener('click', (e) => {
   if (sf) { V.sweepUi.filter = sf.dataset.sweepFilter; feel.key('click'); dirty = true; return; }
   const bx = e.target.closest('[data-breach]');
   if (bx && !bx.disabled) { breachClick(bx.dataset.breach, bx.dataset.arg); return; }
-  if (e.target.closest('[data-th-later]')) { thOffer.later = campaign.threads?.offer?.tid ?? null; feel.key('click'); dirty = true; return; } // a thread's reward, put off (threads-view.mjs)
+  if (e.target.closest('[data-th-later]')) { thOffer.later = offerKey(); feel.key('click'); dirty = true; return; } // a thread's reward, put off (threads-view.mjs)
   if (e.target.closest('[data-th-offer]')) { thOffer.later = null; feel.key('click'); dirty = true; return; }
   const rm = e.target.closest('[data-rooms]');
   if (rm && !rm.disabled) { roomsClick(rm.dataset.rooms, rm.dataset.arg); return; }
