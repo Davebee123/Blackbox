@@ -57,7 +57,7 @@ test('only the contracts you hold: not the board, not the delivered ones', () =>
   assert.equal(rows(mapMarkup(s)).length, 2);
 });
 
-test('a long count is a bar and n/N; a ready one says so, in amber', () => {
+test('a long count is a bar and n/N; a done one turns in at a click, in green', () => {
   const { s } = setup();
   s.mail.jobs.push({ id: 1, type: 'kill', family: 'ransomware', count: 12, got: 9, level: 12, from: 'Halcyon Mutual · Claims', reward: { credits: 90 } });
   let [row] = rows(mapMarkup(s));
@@ -65,7 +65,9 @@ test('a long count is a bar and n/N; a ready one says so, in amber', () => {
   s.mail.jobs[0].got = 12;
   [row] = rows(mapMarkup(s));
   assert.match(row, /class="ct-row ready/);
-  assert.match(row, /✓ Ready/);
+  assert.match(row, /<span class="ct-turn">Turn in<\/span>/);
+  assert.match(row, /data-command="mail deliver 1"/, 'a click turns it in');
+  assert.match(fs.readFileSync('dist/style.css', 'utf8'), /\.ct-row\.ready \{[^}]*var\(--ready\)/, 'a green border');
 });
 
 test('a click centres the map on its server and selects it; with no server, it opens in Mail', () => {

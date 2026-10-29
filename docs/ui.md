@@ -21,6 +21,7 @@ emoji markers, nothing centred that is meant to be scanned.
 | `--exception` (orchid) | a part your program leaves to you (*EXCEPTION · no available handler*): its row, the Now cell, the log line, a boss fight's header |
 | `--steel` | armor and what protects a virus part: a hit on ◆, a Mutex's lock, a Lockbox's cap, the tethers between parts |
 | `--gray` / `--dim` | broken, unavailable, small print |
+| `--ready` (green) | done and waiting on you: a contract to turn in (the map's tracker) |
 | `--r-set` (set green) | a set (sets.mjs): its name, its lit pieces and bonuses, in tooltips, the Loadout's Set bonuses and the Collection. It sits with the rarity colours (`--r-stock` … `--r-indemnified`, D2's white, blue, yellow, gold and orange), warmed to the amber screen (`#b6cf55`). A piece's own name stays gold. |
 
 A colour never means two things on one screen. A tag takes the colour of what it labels, not of the card it sits on.
@@ -50,8 +51,8 @@ teal, violet or a threat's red.
   it. The map pop-up widens to 376px while it holds one.
 - **Contract tracker** (`.ctrack`, `view.mjs` `contractTracker`): under the threat rail; an icon column, who it's for over
   the name, the progress in amber (its few words, *3/5 viruses killed*; past 10 a bar
-  with *n/N*; **✓ Ready**). A row is a
-  button (`data-locate`, or `data-go` to Mail); its tooltip shows the pay as icon chips. No teal.
+  with *n/N*); a done one has a green border and **Turn in**. A row is a
+  button (`data-locate`, `data-go` to Mail, or a done one's `mail deliver`); its tooltip shows the pay as icon chips. No teal.
 - **Labelled rows** (`.op-row`, `.net-row`, `.srv-line`): a fixed label column (`--label`, `--dim`) and the value
   beside it, every row in a block at one label width.
 - **Rows with an icon:** the icon has its own fixed left column on every row; a row with nothing to show keeps the slot

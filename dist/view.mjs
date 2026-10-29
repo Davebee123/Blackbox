@@ -2081,25 +2081,26 @@ function threatRail(s) {
 
 // The contract tracker (WoW's objective tracker): the contracts you hold and haven't delivered, each with whose it is
 // over its name, and how far along: its few words ("3/5 viruses killed"), a long count as a bar and n/N.
-// Click one to centre the map on its server and select it (app.js data-locate), or for Mail when it has no server.
+// Click one to centre the map on its server and select it (app.js data-locate), or for Mail when it has no server; a
+// done one turns in at a click (mail deliver).
 export function trackedJobs(s) {
   return openContracts(s).map((c) => {
     const pr = contractProgress(s, c), ok = contractReady(s, c), place = trackGo(c);
     // The tooltip: its name, kind and progress in a sentence ("15 of 18 rooms cleared."), its pay as icon chips, the answer.
     const said = pr.of && /^Rooms /.test(pr.text) ? `${pr.n} of ${pr.of} rooms cleared` : pr.text.replace(/^(\d+)\/(\d+)/, '$1 of $2');
     const sentence = (x) => (x ? x[0].toUpperCase() + x.slice(1) + (/[.!?]$/.test(x) ? '' : '.') : '');
-    const tip = `${contractTitle(s, c)}: Contract for ${c.from}. ${ok ? 'Ready to deliver.' : sentence(said)}\n▸ ${place ? 'Show it on the map.' : ok ? 'Deliver it in Mail.' : 'Open it in Mail.'}`;
-    return { id: c.id, icon: jobIcon(c), name: contractTitle(s, c), from: c.from, faction: jobFaction(c), ready: ok, text: pr.text, part: Math.max(0, Math.min(1, pr.part || 0)), n: pr.n, of: pr.of, locate: place ? place.slice(4) : null, go: place ? null : `mail:j${c.id}`, tip, pay: rewardChips(s, c) };
+    const tip = `${contractTitle(s, c)}: Contract for ${c.from}. ${ok ? 'Done.' : sentence(said)}\n▸ ${ok ? 'Turn it in.' : place ? 'Show it on the map.' : 'Open it in Mail.'}`;
+    return { id: c.id, icon: jobIcon(c), name: contractTitle(s, c), from: c.from, faction: jobFaction(c), ready: ok, text: pr.text, part: Math.max(0, Math.min(1, pr.part || 0)), n: pr.n, of: pr.of, locate: place && !ok ? place.slice(4) : null, go: place || ok ? null : `mail:j${c.id}`, command: ok ? `mail deliver ${c.id}` : null, tip, pay: rewardChips(s, c) };
   });
 }
 function contractTracker(s, sel = null) {
   const list = trackedJobs(s);
   if (!list.length) return '';
-  const prog = (j) => j.ready ? `<span class="ct-done">✓ Ready</span>`
+  const prog = (j) => j.ready ? `<span class="ct-turn">Turn in</span>`
     : j.of && j.of > 10 ? `<span class="ct-bar"><i style="width:${(j.part * 100).toFixed(0)}%"></i></span><small class="ct-n">${j.n}/${j.of}</small>`
     : `<small class="ct-n ct-say">${esc(j.text)}</small>`;
   const mark = (f) => (f && FX[f] ? `<span class="fmark-i ct-f" style="--fc:${FX[f].color}">${glyph('f-' + f)}</span>` : '');
-  const rows = list.map((j) => `<button type="button" class="ct-row${j.ready ? ' ready' : ''}${j.locate && j.locate === sel ? ' on' : ''}" ${j.locate ? `data-locate="${esc(j.locate)}"` : `data-go="${esc(j.go)}"`} title="${esc(j.tip)}">${j.pay ? `<template class="tt-more">${j.pay}</template>` : ''}${glyph(j.icon)}<span class="ct-txt"><small class="ct-for">${mark(j.faction)}${esc(j.from)}</small><b>${esc(j.name)}</b></span><span class="ct-prog">${prog(j)}</span></button>`).join('');
+  const rows = list.map((j) => `<button type="button" class="ct-row${j.ready ? ' ready' : ''}${j.locate && j.locate === sel ? ' on' : ''}" ${j.command ? `data-command="${esc(j.command)}"` : j.locate ? `data-locate="${esc(j.locate)}"` : `data-go="${esc(j.go)}"`} title="${esc(j.tip)}">${j.pay ? `<template class="tt-more">${j.pay}</template>` : ''}${glyph(j.icon)}<span class="ct-txt"><small class="ct-for">${mark(j.faction)}${esc(j.from)}</small><b>${esc(j.name)}</b></span><span class="ct-prog">${prog(j)}</span></button>`).join('');
   return `<section class="ctrack" aria-label="Contracts"><h3 class="ct-head">${glyph('contract')}Contracts<small>${heldCount(s)}/${MAIL.take}</small></h3>${rows}</section>`;
 }
 
