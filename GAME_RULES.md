@@ -18,7 +18,7 @@ was set up for you and that wick of LOWLIGHT will write. Then you pick a class (
 1. `connect sprawl`: **SPRAWL-00**, the starter server, six rooms of strays at your level (never above 5, now and
    then one a level higher). Walk into a room and `engage`. Your first two kills there hit at 60%
    (`CONFIG.zone.starterHit`). A kill pays at once. A stray you kill stays down until nothing in SPRAWL-00 is left
-   alive, RELAY-KING included while he's up; then every stray is back.
+   alive; then it **reboots** and every stray is back. Its Core opens from level 3, after its first reboot.
 2. The network is a stack of eight **floors**; SPRAWL-00 is floor 1's entry. The servers linked to what you know show
    as **?**: kills and first clears **trace** them, and at 100% one is located (Floors, The hidden network).
 3. `connect <server>` starts a run. Out on the net your health is **Signal** (100 × your power, plus gear). It carries
@@ -433,7 +433,7 @@ quiet for good. Lose and you're disconnected, and for 6 hours it is a level stro
 
 | Boss | Where | From | Integrity | Phase | Enrages |
 |---|---|---|---|---|---|
-| RELAY-KING (worm) | SPRAWL-00's relay room, a Core sealed until level 3; back 30 minutes after it falls | level 3 | 1.6× | every attack a cycle sooner | cycle 16 |
+| RELAY-KING (worm) | SPRAWL-00's relay room, a Core sealed until level 3 and SPRAWL-00's first reboot; back 30 minutes after it falls | level 3 | 1.6× | every attack a cycle sooner | cycle 16 |
 | REPO MAN (ransomware) | The Bounty event from level 8 | level 8 | 1.6× | 60%: re-arms every part; 30%: every attack a cycle sooner | cycle 18 |
 | HOLLOW CHOIR (ghostroot) | Its own event, from level 10 | level 10 | 1.6× | Harmony: when its Decoy points at itself, 75% of a hit bounces back | cycle 16 |
 
@@ -622,8 +622,8 @@ for the visit. An Infiltrator can `slip` past it once a visit.
   medium server; `mappedShare`). A first clear pays no XP of its own. Caches, puzzle rooms, thread rooms and quirk
   rooms never count.
 - **Wild servers** (SPRAWL-00, a lair, the farm) can't be taken over: each room is a fight, and kills pay straight
-  into your bank. SPRAWL-00 runs in clears: its strays come back together once nothing in it is alive (RELAY-KING keeps
-  his 30 minutes); a lair's and the farm's rooms keep their own timers. Rogue servers run in clears too.
+  into your bank. SPRAWL-00 runs in clears: its strays come back together once nothing in it is alive, RELAY-KING
+  included while he's up (he keeps his own 30 minutes); a lair's and the farm's rooms keep their own timers. Rogue servers run in clears too.
 
 ### Visits
 

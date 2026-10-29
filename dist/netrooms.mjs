@@ -43,7 +43,7 @@ import { itemLabel, uniqueItem } from './gear.mjs';
 import { strikeServer, clearedFor } from './factions.mjs';
 import { traceNear, hiddenLead, HIDDEN } from './hidden.mjs';
 import { hiddenNear } from './floors.mjs';
-import { zoneSpawns, zoneCleared, spawnFight, levelOf, layoutOf, fileInfo, residentLevel, RESIDENT, bank, KING_ROOM, packGain, peopleIn, scanButton } from './run.mjs';
+import { zoneSpawns, zoneCleared, kingOpen, spawnFight, levelOf, layoutOf, fileInfo, residentLevel, RESIDENT, bank, KING_ROOM, packGain, peopleIn, scanButton } from './run.mjs';
 import { threadsConnect, threadsMoved, threadsStood, threadVerb, tempCoreOpen, tempKilled, threadsRestore } from './threads.mjs';
 
 export const KIND_OF = FP.KIND_OF;
@@ -265,7 +265,7 @@ WORLD_hook('rare', (s) => { const loc = locOf(s); return (rootOf(loc) >= 5 ? 2 :
 WORLD_hook('coreOpen', (s) => {
   const loc = locOf(s), R = s.rooms;
   if (!loc) return undefined;
-  if (loc.zone) return hackerLevel(s) >= 3; // RELAY-KING holds the Core from level 3
+  if (loc.zone) return kingOpen(s, loc); // RELAY-KING holds the Core from level 3 and SPRAWL-00's first reboot
   if (loc.farm) return !!loc.state?.unlocked?.['/ledger'];
   if (loc.lair) return lairOpen(s, loc);
   if (loc.temp) return tempCoreOpen(loc); // a temporary server's kill switch: once you know it (threads.mjs)
@@ -394,7 +394,7 @@ function wildWon(s, loc, room, e) {
   if (sp) { sp.diedAt = t; if (named) delete sp.bounty; }
   if (loc.zone) {
     if (sp) { sp.alive = false; sp.respawnAt = sp.boss ? t + CONFIG.zone.bossRespawnMs : null; } // a stray: down until the clear (run.mjs zoneSpawns)
-    if (zoneCleared(loc)) emit(s, 'info', 'SPRAWL-00 cleared. The strays are back.');
+    if (zoneCleared(loc)) emit(s, 'info', `SPRAWL-00 reboots. The strays are back${!loc.reboots && hackerLevel(s) >= 3 ? ', and the Core is open' : ''}.`);
   }
   else if (rogueKill(s, loc, room.path0, t, () => { const more = ctx?.more?.(); if (more) addItem(s, more, 'The Pit gives up more: '); }) && s.run) {
     // The full clear: the server reboots. You're out with your pack, it's offline a minute, then every room is back fresh.
@@ -528,7 +528,7 @@ WORLD_hook('entryPull', (s) => {
 
 // ---------- the page's words (floorplan-view.mjs) ----------
 const RULES = {
-  sprawl: { rule: 'Strays', text: 'Five rooms of strays at your level (to level 5) and RELAY-KING in the Core from level 3. A stray stays down until every room is cleared; RELAY-KING comes back 30 minutes after he falls.' },
+  sprawl: { rule: 'Strays', text: 'Five rooms of strays at your level (to level 5) and RELAY-KING in the Core from level 3. A stray stays down until every room is cleared; then SPRAWL-00 reboots and they are all back. The Core opens after its first reboot, and RELAY-KING comes back 30 minutes after he falls.' },
   nest: { rule: 'Nest', text: ROGUE.kinds.nest.rule }, pit: { rule: 'Pit', text: ROGUE.kinds.pit.rule }, gauntlet: { rule: 'Gauntlet', text: 'Clear every fight room for a bonus cache.' },
   lair: { rule: 'Lair', text: 'The network\'s native boss holds the Core, back an hour after it falls.' },
   farm: { rule: 'Crew dungeon', text: 'Built for a crew. Three crew bosses; the ledger opens once the Foreman and the Heatsink are down.' },
@@ -547,7 +547,7 @@ FP.WORLD.view = {
     const by = (AUTHORS[R.author]?.name || R.author).toUpperCase(), site = SITES[loc.trait], q = QUIRKS[loc.quirk];
     return `${loc.name}: a ${by} ${FP.kindName(R.kind)}, level ${levelOf(loc)}, ${R.size}.\n${FP.kindRule(R.kind)}${site ? `\n${site.name}: ${site.rule}` : ''}${q ? `\n${q.name}: ${q.rule}` : ''}${loc.takenOver ? '\nYours: its Core is quiet.' : ''}`;
   },
-  sealed: (s) => { const loc = locOf(s); return loc?.zone ? 'RELAY-KING holds it from level 3.' : loc?.farm ? 'Behind the ledger.' : loc?.lair ? `${BOSSES[loc.lair]?.name || 'Its boss'} holds it from level ${BOSSES[loc.lair]?.floor || 1}.` : undefined; },
+  sealed: (s) => { const loc = locOf(s); return loc?.zone ? (hackerLevel(s) < 3 ? 'RELAY-KING holds it from level 3, once SPRAWL-00 has rebooted.' : 'It opens when SPRAWL-00 reboots. Clear every room.') : loc?.farm ? 'Behind the ledger.' : loc?.lair ? `${BOSSES[loc.lair]?.name || 'Its boss'} holds it from level ${BOSSES[loc.lair]?.floor || 1}.` : undefined; },
   elite: (s, room) => { const sp = spawnOf(s, room); return !!(sp?.elite || sp?.bounty); },
   packLine: (s, f) => (f.kind === 'credits' ? `${f.amount} credits` : f.kind === 'code' ? `${f.amount} ${MATERIALS[f.material]?.name || f.material}` : f.kind === 'gear' ? itemLabel(f.item) : f.label || f.name),
   fightNote: (s, room) => { const sp = room.wild ? spawnOf(s, room) : null; return sp?.bounty ? 'A named target: a contract wants it.' : sp?.boss && BOSSES[sp.boss]?.raid ? 'A crew boss, sized for your crew.' : room.kind === 'core' && s.rooms.type === 'server' ? 'Beat it and the server is yours.' : ''; },

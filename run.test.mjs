@@ -198,7 +198,7 @@ test('the rogue server: viruses sit in its folders; attack one for a home-style 
   hooks.now = () => 1000;
   say(s, 'connect sprawl');
   assert.equal(s.run.loc, 'sprawl');
-  assert.equal(liveSpawns(s), 6, 'every folder has a virus');
+  assert.equal(liveSpawns(s), 5, 'every folder has a virus, the sealed Core aside');
   say(s, 'cd tmp');
   const ls = say(s, 'ls').find((e) => e.type === 'net-ls');
   const virus = ls.entries.find((x) => x.kind === 'virus');
@@ -212,12 +212,12 @@ test('the rogue server: viruses sit in its folders; attack one for a home-style 
   assert.ok(events.some((e) => e.type === 'victory'));
   assert.ok(events.some((e) => e.type === 'xp'), 'XP right away');
   assert.ok(hiddenNear(s, { id: 'sprawl' }).some((n) => n.lead > 0), 'a lead toward one of its ? servers');
-  assert.equal(liveSpawns(s), 5);
+  assert.equal(liveSpawns(s), 4);
   zoneSpawns(s, 1000 + 3600000);
-  assert.equal(liveSpawns(s), 5, 'down until every room is cleared');
+  assert.equal(liveSpawns(s), 4, 'down until every room is cleared');
   for (const sp of Object.values(s.zone.spawns)) if (sp.alive) Object.assign(sp, { alive: false, respawnAt: null });
   zoneSpawns(s, 1000 + 3600000);
-  assert.equal(liveSpawns(s), 6, 'the clear: every stray back');
+  assert.equal(liveSpawns(s), 5, 'the reboot: every stray back');
   hooks.now = null;
 });
 
@@ -226,6 +226,7 @@ test('SPRAWL-00 runs in clears: a live RELAY-KING holds the strays down; one on 
   const s = fresh();
   s.hackers[s.loadout.archetype].level = 3;
   const z = zoneOf(s);
+  z.reboots = 1;
   zoneSpawns(s, 1000);
   assert.equal(z.spawns[KING_ROOM].boss, 'relayking');
   for (const [room, sp] of Object.entries(z.spawns)) if (room !== KING_ROOM) Object.assign(sp, { alive: false, respawnAt: null });
@@ -807,7 +808,7 @@ test('attack <name> matches in any case: attack relay-king finds RELAY-KING.exe'
   const { KING_ROOM, zoneSpawns } = await import('./dist/run.mjs');
   const s = fresh();
   s.hackers = { breaker: { level: 4, xp: 0 } };
-  zoneSpawns(s);
+  zoneSpawns(s); s.zone.reboots = 1;
   say(s, 'connect sprawl'); say(s, 'cd net'); say(s, 'cd relay');
   assert.equal(s.run.cwd, KING_ROOM);
   say(s, 'attack relay-king');

@@ -85,21 +85,27 @@ export const LAYOUTS = {
 LAYOUTS.sprawl = SPRAWL;
 const ZONE_FAMILIES = ['ransomware', 'worm', 'ghostroot'];
 // Fill empty folders. SPRAWL-00 runs in clears: a stray you kill (respawnAt null) stays down until nothing in it is
-// left alive, then every stray is back; RELAY-KING keeps his own timer. Each spawn is a plain virus of a home family at
+// left alive, then it reboots (z.reboots) and every stray is back. Its Core is sealed, and empty, until level 3 and
+// its first reboot; then it holds RELAY-KING, on his own timer. Each spawn is a plain virus of a home family at
 // your level, up to CONFIG.zone.maxLevel: past that, the fights worth having are on the servers you trace. Below
 // level 3 no Ghostroot (it's veiled): your first fights show you what's coming (Slay the Spire).
+export const kingOpen = (s, z = zoneOf(s)) => hackerLevel(s) >= 3 && (z.reboots || 0) > 0;
 export const zoneCleared = (z) => !Object.values(z.spawns || {}).some((x) => x.alive);
 export function zoneSpawns(s, now = clock()) {
-  const z = zoneOf(s), clear = zoneCleared(z);
+  const z = zoneOf(s);
+  if (!kingOpen(s, z)) delete z.spawns[KING_ROOM]; // a sealed Core holds nothing (a save from before held a stray, or the king)
+  const clear = zoneCleared(z);
+  if (clear && Object.keys(z.spawns).length) z.reboots = (z.reboots || 0) + 1;
   for (const room of zoneRooms()) {
     const sp = z.spawns[room];
     if (sp?.alive || (sp && (sp.respawnAt == null ? !clear : sp.respawnAt > now))) continue;
+    if (room === KING_ROOM && !kingOpen(s, z)) continue;
     const n = ++z.serial;
     const pool = hackerLevel(s) < 3 ? ZONE_FAMILIES.filter((f) => f !== 'ghostroot') : ZONE_FAMILIES;
     const family = pool[(n + room.length) % pool.length];
     const lvl = Math.min(CONFIG.zone.maxLevel, Math.max(1, hackerLevel(s) + (n % 4 === 0 ? 1 : 0))); // a starter area: never past CONFIG.zone.maxLevel
-    // From level 3, /net/relay holds RELAY-KING, a boss (BOSSES.relayking), back half an hour after you beat it.
-    if (room === KING_ROOM && hackerLevel(s) >= 3) { z.spawns[room] = { alive: true, bornAt: now, family: 'worm', level: Math.min(CONFIG.zone.maxLevel + 2, hackerLevel(s)), seed: (z.seed * 97 + n * 131) >>> 0, name: 'RELAY-KING', boss: 'relayking' }; continue; }
+    // Once open, /net/relay holds RELAY-KING, a boss (BOSSES.relayking), back half an hour after you beat it.
+    if (room === KING_ROOM) { z.spawns[room] = { alive: true, bornAt: now, family: 'worm', level: Math.min(CONFIG.zone.maxLevel + 2, hackerLevel(s)), seed: (z.seed * 97 + n * 131) >>> 0, name: 'RELAY-KING', boss: 'relayking' }; continue; }
     z.spawns[room] = { alive: true, bornAt: now, family, level: lvl, seed: (z.seed * 97 + n * 131) >>> 0, name: `${FAMILIES[family].stem.toLowerCase()}-${String(1000 + ((n * 7919) % 9000)).slice(-4)}` }; // the body's stem: the fight is CRYPTJACK-4821 (data.mjs stemOf)
   }
   return z.spawns;

@@ -70,7 +70,7 @@ test('a fresh level-1 character: connect sprawl plays SPRAWL-00 as rooms, its fo
   assert.equal(FP.isUp(s, room), true, 'back once you have left');
   assert.ok(Object.values(s.zone.spawns).every((x) => x.alive), 'every stray back');
   // Level 3: RELAY-KING in the Core, a boss under boss rule a.
-  s.hackers[s.loadout.archetype].level = 3; s.zone.spawns = {};
+  s.hackers[s.loadout.archetype].level = 3; s.zone.spawns = {}; s.zone.reboots = 1;
   play(s, 'cd /'); play(s, 'cd net'); if (s.rooms.screen) { play(s, 'attack'); win(s); }
   play(s, 'cd relay');
   assert.equal(s.rooms.screen?.kind, 'virus');
@@ -236,7 +236,7 @@ test('developer bossrule a|b|c switches the rule for every boss fight on the net
   play(s, 'developer bossrule b');
   assert.equal(s.bossRule, 'b');
   s.hackers[s.loadout.archetype].level = 3;
-  play(s, 'connect sprawl'); s.zone.spawns['/net'] = { alive: false, respawnAt: clock + 1e9 };
+  play(s, 'connect sprawl'); s.zone.reboots = 1; s.zone.spawns['/net'] = { alive: false, respawnAt: clock + 1e9 };
   play(s, 'cd net/relay'); play(s, 'attack');
   assert.equal(s.encounter.bossRule, 'b');
 });
