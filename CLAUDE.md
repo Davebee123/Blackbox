@@ -38,6 +38,8 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
 - **Sounds:** the designer hears a sound before it is added.
 - **Design choices:** for a look with real alternatives, show two or three options as screenshots and let the
   designer pick.
+- **Prototype first.** A new activity or feature is built as standalone applets (pages in the scratchpad) and shown as
+  screenshots before any of it is implemented. docs/activities.md lists what's wanted and what was cut.
 
 ## Decisions so far (don't undo these without asking)
 
