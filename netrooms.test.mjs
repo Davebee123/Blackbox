@@ -50,7 +50,7 @@ test('a fresh level-1 character: connect sprawl plays SPRAWL-00 as rooms, its fo
   assert.match(play(s, 'ls').find((e) => e.type === 'rooms-out').message, new RegExp(`${net.path}  \\[fight · \\w+ lv 1\\]`), 'been in: discovered');
   Object.assign(s.zone.spawns['/net'], { alive: false, respawnAt: clock + 3600000 });
   assert.match(play(s, 'cd /net/relay').map((e) => e.message).join(' '), /The Core is sealed\. RELAY-KING holds it from level 3/);
-  // A stray: a fight, its first clear, its timer (90 seconds), then back.
+  // A stray: a fight, its first clear, down until every room is cleared, then back.
   play(s, 'cd /'); play(s, 'cd tmp');
   assert.equal(s.run.cwd, Object.values(g.rooms).find((r) => r.path0 === '/tmp').path);
   play(s, 'attack');
@@ -60,10 +60,15 @@ test('a fresh level-1 character: connect sprawl plays SPRAWL-00 as rooms, its fo
   const room = FP.hereOf(s);
   assert.ok(s.rooms.cleared[room.id], 'cleared for good');
   assert.equal(FP.isUp(s, room), false);
-  clock += CONFIG.zone.respawnMs + 1000;
+  clock += 3600000;
+  assert.equal(FP.isUp(s, room), false, 'down while others still stand, however long');
+  assert.equal(FP.WORLD.view.downNote(s, room), 'Down until every room is cleared.');
+  // The last one falls: every stray is back (never while you stand in its room).
+  for (const sp of Object.values(s.zone.spawns)) Object.assign(sp, { alive: false, respawnAt: null });
   assert.equal(FP.isUp(s, room), false, 'never back while you stand in it');
   play(s, 'cd ..');
   assert.equal(FP.isUp(s, room), true, 'back once you have left');
+  assert.ok(Object.values(s.zone.spawns).every((x) => x.alive), 'every stray back');
   // Level 3: RELAY-KING in the Core, a boss under boss rule a.
   s.hackers[s.loadout.archetype].level = 3; s.zone.spawns = {};
   play(s, 'cd /'); play(s, 'cd net'); if (s.rooms.screen) { play(s, 'attack'); win(s); }

@@ -19,7 +19,7 @@ Open http://127.0.0.1:4173. The content editor is at `/editor.html`.
 ## How a session goes
 
 - **SPRAWL-00** is where you start: a rogue server of six rooms with a stray in each. Kill them to trace the servers
-  linked to it.
+  linked to it. A stray stays down until the last one falls; then they're all back.
 - **Floors.** The network is a stack of eight floors. Each server you trace sits on one, at a fixed level; each floor
   has an exit down.
 - **Rooms.** `connect` to a server and walk its rooms: fight what holds them, take the vault's key from its elite, beat

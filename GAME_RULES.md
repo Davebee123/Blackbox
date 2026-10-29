@@ -17,7 +17,8 @@ was set up for you and that wick of LOWLIGHT will write. Then you pick a class (
 
 1. `connect sprawl`: **SPRAWL-00**, the starter server, six rooms of strays at your level (never above 5, now and
    then one a level higher). Walk into a room and `engage`. Your first two kills there hit at 60%
-   (`CONFIG.zone.starterHit`). A kill pays at once, and the room fills again 90 seconds later.
+   (`CONFIG.zone.starterHit`). A kill pays at once. A stray you kill stays down until nothing in SPRAWL-00 is left
+   alive, RELAY-KING included while he's up; then every stray is back.
 2. The network is a stack of eight **floors**; SPRAWL-00 is floor 1's entry. The servers linked to what you know show
    as **?**: kills and first clears **trace** them, and at 100% one is located (Floors, The hidden network).
 3. `connect <server>` starts a run. Out on the net your health is **Signal** (100 × your power, plus gear). It carries
@@ -620,8 +621,9 @@ for the visit. An Infiltrator can `slip` past it once a visit.
   room's kill, an elite's three times and the Core's four, times the deed scale: about 40 kills of your level on a
   medium server; `mappedShare`). A first clear pays no XP of its own. Caches, puzzle rooms, thread rooms and quirk
   rooms never count.
-- **Wild servers** (SPRAWL-00, a lair, the farm) can't be taken over: each room is a fight on its own timer (SPRAWL-00's
-  90 seconds, RELAY-KING's 30 minutes), and kills pay straight into your bank. Rogue servers run in clears.
+- **Wild servers** (SPRAWL-00, a lair, the farm) can't be taken over: each room is a fight, and kills pay straight
+  into your bank. SPRAWL-00 runs in clears: its strays come back together once nothing in it is alive (RELAY-KING keeps
+  his 30 minutes); a lair's and the farm's rooms keep their own timers. Rogue servers run in clears too.
 
 ### Visits
 

@@ -84,14 +84,16 @@ export const LAYOUTS = {
 // The rogue server lives in zone.mjs (mail.mjs needs it too); its layout joins the rest here.
 LAYOUTS.sprawl = SPRAWL;
 const ZONE_FAMILIES = ['ransomware', 'worm', 'ghostroot'];
-// Fill empty folders whose timer is up. Each spawn is a plain virus of a home family at your level,
-// up to CONFIG.zone.maxLevel: past that, the fights worth having are on the servers you trace. Below
+// Fill empty folders. SPRAWL-00 runs in clears: a stray you kill (respawnAt null) stays down until nothing in it is
+// left alive, then every stray is back; RELAY-KING keeps his own timer. Each spawn is a plain virus of a home family at
+// your level, up to CONFIG.zone.maxLevel: past that, the fights worth having are on the servers you trace. Below
 // level 3 no Ghostroot (it's veiled): your first fights show you what's coming (Slay the Spire).
+export const zoneCleared = (z) => !Object.values(z.spawns || {}).some((x) => x.alive);
 export function zoneSpawns(s, now = clock()) {
-  const z = zoneOf(s);
+  const z = zoneOf(s), clear = zoneCleared(z);
   for (const room of zoneRooms()) {
     const sp = z.spawns[room];
-    if (sp?.alive || (sp && sp.respawnAt > now)) continue;
+    if (sp?.alive || (sp && (sp.respawnAt == null ? !clear : sp.respawnAt > now))) continue;
     const n = ++z.serial;
     const pool = hackerLevel(s) < 3 ? ZONE_FAMILIES.filter((f) => f !== 'ghostroot') : ZONE_FAMILIES;
     const family = pool[(n + room.length) % pool.length];

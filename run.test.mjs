@@ -213,9 +213,28 @@ test('the rogue server: viruses sit in its folders; attack one for a home-style 
   assert.ok(events.some((e) => e.type === 'xp'), 'XP right away');
   assert.ok(hiddenNear(s, { id: 'sprawl' }).some((n) => n.lead > 0), 'a lead toward one of its ? servers');
   assert.equal(liveSpawns(s), 5);
-  zoneSpawns(s, 1000 + CONFIG.zone.respawnMs + 1);
-  assert.equal(liveSpawns(s), 6, 'it came back');
+  zoneSpawns(s, 1000 + 3600000);
+  assert.equal(liveSpawns(s), 5, 'down until every room is cleared');
+  for (const sp of Object.values(s.zone.spawns)) if (sp.alive) Object.assign(sp, { alive: false, respawnAt: null });
+  zoneSpawns(s, 1000 + 3600000);
+  assert.equal(liveSpawns(s), 6, 'the clear: every stray back');
   hooks.now = null;
+});
+
+test('SPRAWL-00 runs in clears: a live RELAY-KING holds the strays down; one on his timer does not', () => {
+  const { zoneOf, zoneSpawns, KING_ROOM } = runMod;
+  const s = fresh();
+  s.hackers[s.loadout.archetype].level = 3;
+  const z = zoneOf(s);
+  zoneSpawns(s, 1000);
+  assert.equal(z.spawns[KING_ROOM].boss, 'relayking');
+  for (const [room, sp] of Object.entries(z.spawns)) if (room !== KING_ROOM) Object.assign(sp, { alive: false, respawnAt: null });
+  zoneSpawns(s, 1000 + 3600000);
+  assert.equal(Object.values(z.spawns).filter((x) => x.alive).length, 1, 'only the king: the strays wait for him');
+  Object.assign(z.spawns[KING_ROOM], { alive: false, respawnAt: 1000 + CONFIG.zone.bossRespawnMs });
+  zoneSpawns(s, 2000);
+  assert.equal(Object.values(z.spawns).filter((x) => x.alive).length, 5, 'the strays back, the king on his own timer');
+  assert.equal(z.spawns[KING_ROOM].alive, false);
 });
 
 test('Signal carries between connections and rests back up; too weak and you cannot connect', async () => {

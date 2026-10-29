@@ -43,7 +43,7 @@ import { itemLabel, uniqueItem } from './gear.mjs';
 import { strikeServer, clearedFor } from './factions.mjs';
 import { traceNear, hiddenLead, HIDDEN } from './hidden.mjs';
 import { hiddenNear } from './floors.mjs';
-import { zoneSpawns, spawnFight, levelOf, layoutOf, fileInfo, residentLevel, RESIDENT, bank, KING_ROOM, packGain, peopleIn, scanButton } from './run.mjs';
+import { zoneSpawns, zoneCleared, spawnFight, levelOf, layoutOf, fileInfo, residentLevel, RESIDENT, bank, KING_ROOM, packGain, peopleIn, scanButton } from './run.mjs';
 import { threadsConnect, threadsMoved, threadsStood, threadVerb, tempCoreOpen, tempKilled, threadsRestore } from './threads.mjs';
 
 export const KIND_OF = FP.KIND_OF;
@@ -392,7 +392,10 @@ function wildWon(s, loc, room, e) {
   const named = sp?.bounty ? sp.name : null;
   const ctx = roomKill(s, e, { wild: true, sprawl: !!loc.zone, bounty: named, family: lineageOf(e.virus.family), loc, guard: !!(e.virus.elite || e.virus.boss) });
   if (sp) { sp.diedAt = t; if (named) delete sp.bounty; }
-  if (loc.zone) { if (sp) { sp.alive = false; sp.respawnAt = t + (sp.boss ? CONFIG.zone.bossRespawnMs : CONFIG.zone.respawnMs); } }
+  if (loc.zone) {
+    if (sp) { sp.alive = false; sp.respawnAt = sp.boss ? t + CONFIG.zone.bossRespawnMs : null; } // a stray: down until the clear (run.mjs zoneSpawns)
+    if (zoneCleared(loc)) emit(s, 'info', 'SPRAWL-00 cleared. The strays are back.');
+  }
   else if (rogueKill(s, loc, room.path0, t, () => { const more = ctx?.more?.(); if (more) addItem(s, more, 'The Pit gives up more: '); }) && s.run) {
     // The full clear: the server reboots. You're out with your pack, it's offline a minute, then every room is back fresh.
     FP.jackOut(s, 'SERVER REBOOTING.');
@@ -525,7 +528,7 @@ WORLD_hook('entryPull', (s) => {
 
 // ---------- the page's words (floorplan-view.mjs) ----------
 const RULES = {
-  sprawl: { rule: 'Strays', text: 'Five rooms of strays at your level (to level 5) and RELAY-KING in the Core from level 3. They come back 90 seconds after they fall.' },
+  sprawl: { rule: 'Strays', text: 'Five rooms of strays at your level (to level 5) and RELAY-KING in the Core from level 3. A stray stays down until every room is cleared; RELAY-KING comes back 30 minutes after he falls.' },
   nest: { rule: 'Nest', text: ROGUE.kinds.nest.rule }, pit: { rule: 'Pit', text: ROGUE.kinds.pit.rule }, gauntlet: { rule: 'Gauntlet', text: 'Clear every fight room for a bonus cache.' },
   lair: { rule: 'Lair', text: 'The network\'s native boss holds the Core, back an hour after it falls.' },
   farm: { rule: 'Crew dungeon', text: 'Built for a crew. Three crew bosses; the ledger opens once the Foreman and the Heatsink are down.' },
@@ -550,7 +553,7 @@ FP.WORLD.view = {
   fightNote: (s, room) => { const sp = room.wild ? spawnOf(s, room) : null; return sp?.bounty ? 'A named target: a contract wants it.' : sp?.boss && BOSSES[sp.boss]?.raid ? 'A crew boss, sized for your crew.' : room.kind === 'core' && s.rooms.type === 'server' ? 'Beat it and the server is yours.' : ''; },
   vaultLeft: (s, room) => { const loc = locOf(s); if (!loc || room.id !== s.rooms.graph.vaults[0]) return 0; return vaultFiles(loc).filter(({ dir, name }) => { const info = fileInfo(loc, dir, name); return info && !['text', 'trap', 'sweep'].includes(info.kind) && !loc.state?.taken?.[`${dir}/${name}`] && !s.run?.pack.some((f) => f.path === `${dir}/${name}`); }).length; },
   entryFiles: (s) => entryFiles(s, locOf(s)).length,
-  downNote: (s, room) => (room.wild && inRuns(locOf(s)) ? 'Down until the server reboots.' : undefined),
+  downNote: (s, room) => (!room.wild ? undefined : inRuns(locOf(s)) ? 'Down until the server reboots.' : locOf(s)?.zone && !spawnOf(s, room)?.boss ? 'Down until every room is cleared.' : undefined),
   offNote: (s, room) => (room.extra === 'grid' ? 'A Grid consortium\'s socket: offline outside one.' : undefined),
   // Contracts on this server (mail.mjs): the item you carry for this room, the rooms a job marks, each job's progress.
   plantHere: (s, room) => { const loc = locOf(s); return loc ? payloadFor(s, loc, room) : null; },

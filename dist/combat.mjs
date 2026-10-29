@@ -2168,7 +2168,7 @@ export function finish(s, result) {
     const keep = (spawn?.bounty || spawn?.boss) && result !== 'victory'; // a boss you lost to stays too
     // A named target that beat you twice is worn down too: it drops back to v1.
     if (keep && (spawn.losses = (spawn.losses || 0) + 1) >= 2 && spawn.grade > 1) { delete spawn.grade; emit(s, 'info', `${spawn.name} is worn down and drops back to v1.`); }
-    if (spawn && !keep) { spawn.alive = false; spawn.respawnAt = now + (spawn.boss ? CONFIG.zone.bossRespawnMs : CONFIG.zone.respawnMs); }
+    if (spawn && !keep) { spawn.alive = false; spawn.respawnAt = spawn.boss ? now + CONFIG.zone.bossRespawnMs : result === 'victory' ? null : now + CONFIG.zone.respawnMs; } // a stray you beat: down until the clear (run.mjs zoneSpawns)
     // A Pit elite that beats you (or that you run from) moves on: no retrying it until it's gone.
     const elite = wild && !wild.farm && e.virus.elite && result !== 'victory' && wild.spawns?.[e.room]; // the farm's are a crew's job: they stay
     if (elite?.alive && elite.elite) { elite.alive = false; elite.respawnAt = now + ELITE.goneMs; emit(s, 'info', `${elite.name} moved on. The folder fills again in about ${Math.round(ELITE.goneMs / 60000)} minutes.`); }
