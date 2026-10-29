@@ -623,6 +623,11 @@ test('top up: pay to fill Signal or the server now; less missing costs less; not
   s.signal = 0; s.server.credits = 2;
   say(s, 'top up');
   assert.ok(s.signal > 0 && s.signal < maxSignal(s) && s.server.credits <= 2);
+  // Credits only: code never pays for it.
+  s.signal = 0; s.server.credits = 0; s.materials = { cipher: 50, worm: 50, kernel: 50, exploit: 0 };
+  say(s, 'top up');
+  assert.equal(s.signal, 0, 'no credits, no Signal');
+  assert.deepEqual(s.materials, { cipher: 50, worm: 50, kernel: 50, exploit: 0 }, 'and no code taken');
   // On a run it's a booster or a store patch instead.
   s.signal = null;
   say(s, 'connect sprawl');

@@ -147,7 +147,7 @@ function model(s, now) {
 function header(s, M, ui) {
   const sv = s.server, lvl = serverLevel(s), cls = serverClass(s), sub = subOf(s, cls), share = sv.integrity / Math.max(1, sv.max);
   const tone = share < 0.3 ? 'hot' : share < 0.6 ? 'warn' : 'you', cost = topUpCost(s, 'server');
-  const why = sv.integrity <= 0 ? 'Crashed: it reboots on its own' : !cost ? 'Integrity is full' : M.busy;
+  const why = sv.integrity <= 0 ? 'Crashed: it reboots on its own' : !cost ? 'Integrity is full' : sv.credits <= 0 ? 'No credits' : M.busy;
   const repair = `<button type="button" class="btn small hsv-repair" data-command="repair" data-preview="repair" data-act="repair"${why ? ` disabled title="${esc(why)}"` : ` title="Integrity full now: ${cost} credits"`}>Repair${cost ? pcost(s, { credits: cost }) : ''}</button>`;
   const next = serverNext(lvl), inv = M.inv;
   const third = inv
@@ -264,7 +264,7 @@ function detail(s, M, key, ui) {
       s.degraded ? tag(`Degraded · ${fmtTime(degradedLeft(s, now))}`, 'hot', sickTip(s, now)) : '', sickPct(s) ? tag(`−${sickPct(s)}% Signal, damage`, 'hot', sickTip(s, now)) : '',
       toFull ? tag(`+${Math.round(rest * 1000) / 10}%/min · full in ${fmtTime(toFull)}`, 'dim', rest < CONFIG.restRegen ? 'Rests at half while something is at the wall' : 'Rests back between fights, offline too') : ''])
       + `<div class="hsv-bar ${tone}"><i style="width:${pct(sv.integrity, sv.max)}"></i></div>`
-      + acts([act('Repair', 'repair', { cost: cost ? { credits: cost } : null, s, primary: true, actId: 'repair', why: sv.integrity <= 0 ? 'Crashed: it reboots on its own' : !cost ? 'Integrity is full' : M.busy, tip: 'Integrity full now' })]);
+      + acts([act('Repair', 'repair', { cost: cost ? { credits: cost } : null, s, primary: true, actId: 'repair', why: sv.integrity <= 0 ? 'Crashed: it reboots on its own' : !cost ? 'Integrity is full' : sv.credits <= 0 ? 'No credits' : M.busy, tip: 'Integrity full now' })]);
   }
   if (k === 'wall') {
     const t = tierOf(s), fp = filterStat(s, 'strength'), bonus = wallBonus(s), fl = fragLevels(s), mend = defragging(s, now), up = upgradeCost(s);

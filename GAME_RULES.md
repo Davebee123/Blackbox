@@ -1436,8 +1436,7 @@ kills. `node econ.mjs` measures it.
 - **Health is the everyday sink.** Signal rests back 20% of max a minute, your server 2% a minute (half that while an
   invasion is contested or breaching), offline too. Or pay now: a full Signal bar costs 8 + 1.5 × your level, a full
   server 10 + 2 × its level; less missing costs less. Click the meter's **+**, or `top up` / `repair [n]`. Short of
-  credits, the rest comes out of your biggest pile of code at 8 credits a unit. On a run the store's Signal patch fills
-  it.
+  credits, you get what they buy. On a run the store's Signal patch fills it.
 - **Building:** programs and codebases (Sockets and programs). **Gear:** the store's sealed item and premium shelf.
 
 | Sink | Price |
