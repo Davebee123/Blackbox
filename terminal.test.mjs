@@ -325,11 +325,9 @@ test('System → Terminal: yours to pick, the rest dim and locked with what brin
   for (const m of strip(read('./dist/terminal.css')).matchAll(/([^{}]+)\{([^}]*var\(--fc[^}]*)\}/g)) assert.match(m[1], /\.boot-art|\.tm-mark/, m[1]);
 });
 
-test('GAME_RULES.md and README.md say it', () => {
-  for (const f of ['./GAME_RULES.md', './README.md']) {
-    const md = read(f);
-    assert.match(md, /System → \*\*Terminal\*\*/, f);
-    for (const w of ['POST', 'Corrupted', 'Minimal', 'Two-line', 'Underline', 'Beam', '`terminal preview']) assert.ok(md.includes(w), `${f}: ${w}`);
-  }
-  assert.match(read('./README.md'), /\| `dist\/terminal\.mjs` \|/);
+test('GAME_RULES.md says it, and README.md maps it', () => {
+  const md = read('./GAME_RULES.md');
+  assert.match(md, /System → \*\*Terminal\*\*/);
+  for (const w of ['POST', 'Corrupted', 'Minimal', 'Two-line', 'Underline', 'Beam', '`terminal preview']) assert.ok(md.includes(w), w);
+  assert.match(read('./README.md'), /\| `dist\/terminal\.mjs`/);
 });

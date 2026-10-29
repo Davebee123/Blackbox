@@ -6,7 +6,7 @@
 //   Root 1  taken over
 //   Root 2  (5 clears) a stash room opens by the Core: the server's code, refilled every two hours
 //   Root 3  (15) it stops sending invasions, and stops costing memory
-//   Root 4  (30) one more socket room once sockets come (R2); until then one more building slot
+//   Root 4  (30) one more socket room, beside the Core, open at once (netrooms.mjs extraSockets)
 //   Root 5  (50) its rare spawns come twice as often
 // The old log rotations (a process in a folder, a rotated cache) only ran on the file-system servers; nothing on rooms
 // rotates (tickRoot skips them).
@@ -121,4 +121,4 @@ export function processWon(s, e) {
     gainXp(s, deedXpFor(s, loc.level || 1, ROOT.levelXp), `Root ${r.level} on ${loc.name}`, 'build');
   }
 }
-export const ROOT_PERKS = { 1: 'taken over', 2: 'a stash room opens by the Core, its code back every two hours', 3: 'it stops sending invasions', 4: 'one more building slot (a socket room, once sockets come)', 5: 'its rare spawns come twice as often' };
+export const ROOT_PERKS = { 1: 'taken over', 2: 'a stash room opens by the Core, its code back every two hours', 3: 'it stops sending invasions', 4: 'one more socket room, beside the Core, open at once', 5: 'its rare spawns come twice as often' };

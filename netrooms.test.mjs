@@ -187,9 +187,9 @@ test('respawns run at real speed: a process room 15 minutes, a guard post 20, an
   assert.equal(FP.isUp(s, r0), false, 'still down this run');
 });
 
-test('root: respawned rooms cleared on a held server climb its pips (2.8); Root 4 says sockets come in R2', () => {
+test('root: respawned rooms cleared on a held server climb its pips (2.8); Root 4 is one more socket room', () => {
   assert.deepEqual(ROOT.need, [0, 0, 5, 15, 30, 50]);
-  assert.match(ROOT_PERKS[4], /socket room, once sockets come/);
+  assert.match(ROOT_PERKS[4], /one more socket room/);
 });
 
 test('contracts point at rooms: clear N new rooms on a server, map a server; the storyline\'s named target never sits in the sealed Core', async () => {

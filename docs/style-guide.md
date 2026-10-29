@@ -6,17 +6,15 @@ How every line a player reads is written: tooltips, item effects, log lines, mai
 
 **The designer's rule, and it outranks everything below.** The screen shows; it does not explain. If a player has to read a paragraph to understand a card, the card is wrong.
 
-- **No explanatory nuggets.** No "Also: …", no "(each kill +12%, sold by …)", no sentence that walks the player through a mechanic on the card itself.
-- **Use the visual vocabulary first:** an icon, a number, a bar, pips, a state (lit, dim, locked, done), a colour, a position. *What adds how much* is an icon and a number on one row. *How many are left* is pips or a bar. *Not available yet* is a dim, locked row.
-- **Words are labels, not instructions:** a short name for a row ("Relay", "Trace injector"), not a sentence about it.
-- **The detail lives one step away:** a hover tooltip (or a tap on a phone), in the plain-sentence voice below. The card stays readable at a glance without it.
-- **A sentence on the card is the last resort**, used only when nothing visual can carry it, and then it is one short line.
+- **Visual vocabulary first:** an icon, a number, a bar, pips, a state (lit, dim, locked, done), a colour, a position. *What adds how much* is an icon and a number on one row; *how many are left* is pips or a bar; *not available yet* is a dim, locked row.
+- **Words are labels, not instructions:** "Relay", "Trace injector". No "Also: …", no sentence that walks the player through a mechanic on the card.
+- **The detail lives one step away,** in a tooltip (a tap on a phone). A sentence on the card is the last resort, and then one short line.
 
-Everything below (tooltip grammar, plain sentences) is how the text in tooltips, logs, mail and tips is written. It is not a licence to put that text on the card.
+Everything below is how the text in tooltips, logs, mail and tips is written. It is not a licence to put that text on the card.
 
 ## 1. Two voices
 
-**Tooltip grammar** is for anything that describes a mechanic: skills, talents, edges, statuses, item effects, rule affixes, zero-days, stats, daemons, filters, firewall tiers, buildings, architectures, a part's rules, strains, guards, bosses and tells.
+**Tooltip grammar** is for anything that describes a mechanic: skills, talents, edges, statuses, item effects, rule affixes, zero-days, stats, daemons, filters, firewall tiers, programs, a part's rules, strains, guards, bosses and tells.
 
 **Plain sentences** are for everything else: log lines, mail, contracts, story, tips, tutorial steps, warnings and hover text.
 
@@ -24,23 +22,30 @@ Both voices share the glossary (section 4) and the general rules (section 3).
 
 ## 2. Tooltip grammar
 
-1. **Lead with a third-person verb, and use plain numbers.** "Deals 38 damage to the target." "Heals you for 4." "Breaks 3 ◆ on the target." "Grants you 1 ◆ at the start of each fight." Not "A hit for 38", not "Heal 4", not "two ◆".
-2. **The effect comes first, the condition after it.** "Increases your damage by 50% when the target is below half Integrity." "Heals you for 6 when you land a critical strike." A condition that limits use gets its own sentence: "Usable only for 1 cycle after you break the target's last ◆." "Usable once per fight." "In a crew, can target a crewmate."
-3. **Passive effects that fire on their own say how often in their own sentence:** "Works once per fight." "Works once per run." "Works again 90 minutes later." Skills you fire say "Usable once per fight."
-4. **"The target" is the part you name.** An item effect on a hit also says "the target". A part you did not name is "a part", "every other part" or "the part whose attack lands soonest".
-5. **Short lines lead with the number:** "38 damage, ×2 vs no armor", "Burn 20 ×4; refreshes", "+1 filter slot", "30% faster defrag".
-6. **No mechanic-speak.** Say what the player sees: "counts as a hit against a cast", not "counts as a hit on the cast"; "becomes usable", not "is lit" or "procs".
-7. **Item effects** are one sentence built by `fxText` (`dist/content.mjs`): the effect as a verb phrase (`FX_DO[].label`), then its trigger and condition. A rule affix reads "Name — Sentence." in the approved `help` shape: "Interrupt Handler — Increases your damage by 15% when the target is winding up a tell." Write a unique's `effect.text` only when the generated sentence reads badly, and write it in the same shape.
-8. **A virus's rules read like a World of Warcraft tooltip** (docs/ui.md "Tooltip style (WoW grammar)"): a part's, a tell's, a gene's, a strain's or a boss's mechanics never give advice, and its answer is one short imperative on its own ▸ line. `style.test.mjs` holds every description to it.
-9. **Library text** (`SKILL_TEXT` in `dist/lore.mjs`, and a subclass skill's `desc`) opens with the skill's hacker verb in the third person, then the mechanics in tooltip grammar: "Overclocks the target, dealing 40 damage. A critical strike resets the cooldown." Keep its numbers in step with `help`, because `scaledText` grows the same numbers with level.
+The one full statement of how a tooltip reads (CLAUDE.md and docs/ui.md point here). A tooltip reads like World of
+Warcraft's: **a name, its kind, what it does, then the answer, muted.** `style.test.mjs` holds every part, tell,
+mutation and gene description to it.
+
+1. **The name is the title.** The tooltip system bolds `Name: rest` (app.js `ttShow`); the body never repeats the name.
+2. **Lead with a third-person verb, and use plain numbers.** "Deals 38 damage to the target." "Heals you for 4." "Breaks 3 ◆ on the target." Not "A hit for 38", not "Heal 4", not "two ◆". A part breaks, so it is *When broken*, not *When destroyed*.
+3. **The effect comes first, the condition after it.** "Increases your damage by 50% when the target is below half Integrity." A condition that limits use gets its own sentence: "Usable once per fight." "In a crew, can target a crewmate."
+4. **One idea a sentence.** Short, present tense. No colon chains, no semicolons, no sentence over 25 words. Name the target where *it* would be unclear: *the Encryptor*, *you*, *its partner*.
+5. **Passive effects say how often in their own sentence:** "Works once per fight." "Works again 90 minutes later."
+6. **"The target" is the part you name.** A part you did not name is "a part", "every other part" or "the part whose attack lands soonest". Second person only for the player as the target: "Deals 6 damage to you."
+7. **The mechanics never give advice. The answer goes on its own last line:** one imperative of 10 words or fewer, starting with `▸ ` (fightread.mjs `answerLine`), drawn muted under a rule like WoW's *Use:* line. On a Codex card it is its own paragraph with the same ▸. Cut it when it only repeats the mechanics.
+8. **Short lines lead with the number:** "38 damage, ×2 vs no armor", "Burn 20 ×4; refreshes", "+1 filter slot".
+9. **No mechanic-speak.** Say what the player sees: "becomes usable", not "is lit" or "procs".
+10. **Numbers** are the live, scaled values in a fight and the base values on a Codex card.
+11. **Item effects** are one sentence built by `fxText` (`dist/content.mjs`): the effect as a verb phrase, then its trigger and condition. A rule affix reads "Name — Sentence.": "Interrupt Handler — Increases your damage by 15% when the target is winding up a tell." Write a unique's `effect.text` only when the generated sentence reads badly.
+12. **Library text** (`SKILL_TEXT` in `dist/lore.mjs`, a subclass skill's `desc`) opens with the skill's hacker verb, then the mechanics: "Overclocks the target, dealing 40 damage. A critical strike resets the cooldown." Keep its numbers in step with `help`, because `scaledText` grows them with level.
 
 ## 3. General rules (both voices)
 
 - **Show, don't tell.** Say what happens, not that it is good or clever.
-- **Full sentences.** No "Label: fragment" (write "Ports open. Invasions come 2.5× as often.", not "Ports open: invasions 2.5×"). A source name before a full sentence in the combat log is fine ("Purge clears your encryption." or "Deductible: the Surge is covered.").
+- **Full sentences.** No "Label: fragment" (write "Burns on it deal 50% more damage.", not "Burns: +50%"). A source name before a full sentence in the combat log is fine ("Purge clears your encryption." or "Deductible: the Surge is covered.").
 - **No semicolon chains.** Split them into sentences, or join with "and" or "but".
 - **No aphorisms** outside flavour lines (item `flavour`, skill `lore`), which keep their own voice.
-- **Hacker-flavoured names** for things you name: skills, daemons, items, buildings.
+- **Hacker-flavoured names** for things you name: skills, daemons, items, programs.
 - **One name per concept** (section 4). Do not swap in a synonym for variety.
 - **Numbers:** digits for game numbers ("1 cycle", "3 ◆", "25%"), words only in flavour and narrative ("three bugs, one door").
 - **Status readouts** (the `network` sheet, `status`, the damage line's notes, "+12 XP") may stay as labelled data. They are readouts, not prose.
@@ -81,61 +86,17 @@ Both voices share the glossary (section 4) and the general rules (section 3).
 
 ## 5. Before and after
 
-### Skills and talents
-- Before: "Overclock a part, dealing 40 damage. Critical hits reset the cooldown."
-  After: "Overclocks the target, dealing 40 damage. A critical strike resets the cooldown."
-- Before: "Opening stays lit for 2 cycles."
-  After: "Opening stays usable for 2 cycles."
-- Before: "Your first hit on each part's bare code crits (not through armor)."
-  After: "Your first hit that damages each part is a critical strike. A hit that pierces armor to get there does not count."
-
-### Item effects and rule affixes
-- Before: "When you break a part: all your cooldowns drop by 1."
-  After: "Reduces all your cooldowns by 1 cycle when you break a part."
-- Before: "On a crit: heal 6."
-  After: "Heals you for 6 when you land a critical strike."
-- Before: "Interrupt Handler: +15% damage when the target is winding up a tell."
-  After: "Interrupt Handler — Increases your damage by 15% when the target is winding up a tell."
-
-### Stats, daemons, filters and tiers
-- Before: "Chance a hit that does damage crits (everyone starts at 5%)."
-  After: "Increases the chance that a damaging hit is a critical strike. Everyone starts at 5%."
-- Before: "Once per fight: shields you for 15 the first time you drop below half."
-  After: "Shields you for 15 the first time you drop below half health. Works once per fight."
-- Before: "Defrag 30% faster"
-  After: "30% faster defrag"
-
-### Genes, strains, guards and bosses
-- Before: "A plain heavy hit every 3 to 5 cycles."
-  After: "Deals a plain heavy hit every 3 to 5 cycles."
-- Before: "The Flooder hits every cycle, one harder each time; any delay resets it."
-  After: "The Flooder attacks every cycle, dealing 1 more damage each time. Any delay resets it."
-- Before: "A Patchwork boss: its Patcher heals the most damaged part. At 60% it re-arms, at 30% every attack comes a cycle sooner."
-  After: "A Patchwork boss. Its Patcher heals the most damaged part. At 60% Integrity it re-arms every part, and at 30% every attack comes a cycle sooner."
-
-### Log lines
-- Before: "Shatter isn't lit. Break a part's last ◆ first."
-  After: "Shatter isn't usable yet. Break a part's last ◆ first."
-- Before: "Scramble: you're SCRAMBLED for 2 cycles. Each attack has a 25% chance to hit you instead."
-  After: "Scramble lands, and you are SCRAMBLED for 2 cycles. Each of your attacks has a 25% chance to hit you instead."
-- Before: "Finishing it now costs 80 credits; you have 40."
-  After: "Finishing it now costs 80 credits. You have 40."
-
-### Narrative, mail and tips
-- Before: "Our board carries up to five offers at a time. Take up to three; drop any you like, and nothing is held against you."
-  After: "Our board carries up to five offers at a time. Take up to three, and drop any you like. Nothing is held against you."
-- Before: "This is your skill bar. Everyone has the first three, and you choose up to five class skills as they unlock."
-  After: "This is your skill bar. Key 1 is your class's plain hit, and from level 10 the - key is SIGINT. You fill the other slots with class skills as they unlock: seven slots, eight at level 22 and nine at 30."
-
-### UI labels and hover text
-- Before: "Tagged: +25% damage from anyone; its timer shows even if it's veiled"
-  After: "Tagged: burns on it deal 50% more damage, and its timer shows through a veil"
-- Before: "Elite: built for a crew. Much tougher; three times the XP, three loot rolls, a blue at least."
-  After: "Elite: built for a crew. It is much tougher, gives three times the XP, and rolls for loot three times, a blue at least."
+- Skill: "Overclock a part, dealing 40 damage. Critical hits reset the cooldown." → "Overclocks the target, dealing 40 damage. A critical strike resets the cooldown."
+- Item effect: "On a crit: heal 6." → "Heals you for 6 when you land a critical strike."
+- Stat: "Once per fight: shields you for 15 the first time you drop below half." → "Shields you for 15 the first time you drop below half health. Works once per fight."
+- Virus rule: "The Flooder hits every cycle, one harder each time; any delay resets it." → "The Flooder attacks every cycle, dealing 1 more damage each time. Any delay resets it."
+- Log line: "Shatter isn't lit. Break a part's last ◆ first." → "Shatter isn't usable yet. Break a part's last ◆ first."
+- Mail: "Take up to three; drop any you like, and nothing is held against you." → "Take up to three, and drop any you like. Nothing is held against you."
+- Hover text: "Elite: built for a crew. Much tougher; three times the XP, three loot rolls, a blue at least." → "Elite: built for a crew. It is much tougher, gives three times the XP, and rolls for loot three times, a blue at least."
 
 ## 6. Checking a line
 
 1. Is it a mechanic? Then: verb first, number plain, effect before condition, the glossary's nouns.
 2. Does it state a number? Check it against the code that implements it (`dist/data.mjs`, `dist/combat.mjs`, `dist/classes/*.mjs`, `dist/tells.mjs`). Text that is wrong about a mechanic is a bug.
 3. Does a test match it? Update the test to the new wording and keep what it checks.
-4. Does `GAME_RULES.md` or `README.md` quote it? Keep them in step.
+4. Does `GAME_RULES.md` quote it? Keep it in step.
