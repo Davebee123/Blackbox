@@ -1,4 +1,4 @@
-// A breach: one run through one server on a branching map (docs/roguelite.md, phase 0: "one breach, playable end to
+// A breach: one run through one server on a branching map (GAME_RULES.md "Side modes", phase 0: "one breach, playable end to
 // end"). Pure like the combat engine: state in, events out. It lives on s.breach, which only a playtest campaign
 // carries (app.js ?playtest=breach), or the breach campaign (campaign.mjs).
 //
@@ -9,7 +9,7 @@
 // you started it with. A subsystem's fight rewrites it (rewrites.mjs): the rewrite is the server's output once you
 // capture it. Beating a gate banks the pack. Losing costs the unbanked pack; XP, banked gear and your scripts stay.
 //
-// Your build is yours (docs/roguelite.md 11: no power inside a run): talents, subclass, gear and its rules
+// Your build is yours (GAME_RULES.md "Side modes": no power inside a run): talents, subclass, gear and its rules
 // (skillrules.mjs), uniques, presets. What a breach adds is the map, as a dungeon:
 //   keys and vaults  a keycard rides on a virus (beat it, take the card); a vault on another branch opens with one, or
 //                    can be forced, loudly. Vaults hold the good stuff: a better gear roll or a script, and a log.
@@ -23,7 +23,7 @@
 //                    Resident drop them now and then; brokers sell them for tokens, and tokens come from caches.
 // Loot is a chase: gear comes from elites, gates, vaults and the Resident (BREACH.loot), about one to three items a
 // breach.
-// Phase 3 (docs/roguelite.md 9.3): every wild and elite node rolls its genome (genomeOfNode, applyMutations), and a
+// Phase 3 (GAME_RULES.md "Side modes"): every wild and elite node rolls its genome (genomeOfNode, applyMutations), and a
 // breach has a heat (heat.mjs).
 //
 // Fights are ordinary run fights (combat.mjs selectEncounter, mode 'run'), flagged e.breach: combat.mjs finish hands
@@ -63,7 +63,7 @@ export const BREACH = {
   // node kind (its parts' Integrity and its attacks), on top of the run sizes every Signal fight already has. The
   // hunter is a Tracer ICE; a switch's ICE is a small watchdog.
   size: { virus: { hp: 0.85, dmg: 0.55 }, elite: { hp: 0.8, dmg: 0.45 }, gate: { hp: 0.9, dmg: 0.75 }, boss: { hp: 0.85, dmg: 0.6 }, hunter: { hp: 0.7, dmg: 0.55 }, ice: { hp: 0.6, dmg: 0.5 } },
-  // A wild virus brings one tell kind, an elite two, one of them a charge: answer it with a burst (docs/roguelite.md
+  // A wild virus brings one tell kind, an elite two, one of them a charge: answer it with a burst (GAME_RULES.md "Side modes"
   // 11). Overclock and Lock are the new ones; the family's seal stays in the mix.
   tells: { charge: 4, overclock: 2, lock: 2, seal: 2 },
   lockFrom: 5, // Lock waits until your bar has a cooldown worth feeding it
@@ -75,12 +75,12 @@ export const BREACH = {
   // Enrage: a virus, an elite or a gate still up at this cycle hits first 50% harder, then a quarter more every 4
   // cycles. Outlasting a fight isn't a plan; a burst is. A Resident keeps the enrage it has (data.mjs BOSSES enrageAt).
   enrage: { virus: 8, elite: 9, gate: 10, first: 1.5, step: 1.25, every: 3 },
-  // A subclass's (or, under level 10, a class's) own sizing on breaches (docs/roguelite.md 11): its fights' Integrity
+  // A subclass's (or, under level 10, a class's) own sizing on breaches (GAME_RULES.md "Side modes"): its fights' Integrity
   // and what they hit for. The Bastion's in-fight sustain still outlasts fights the others can't, so they hit it
   // harder. The Phantom, a burst class with no strip, meets thinner parts that hit softer. The rest even out the
   // classes' runs from level 1 (campaignsim.mjs).
   classSize: { bastion: { dmg: 1.15 }, breaker: { dmg: 0.9 }, infiltrator: { dmg: 0.85 }, payload: { dmg: 1 }, phantom: { hp: 0.85, dmg: 0.8 }, operator: { dmg: 1.05 } },
-  // Loot (docs/roguelite.md 11: about one to three items banked a breach, a real upgrade every two or three). gear: the
+  // Loot (GAME_RULES.md "Side modes": about one to three items banked a breach, a real upgrade every two or three). gear: the
   // odds an elite or a gate drops a protocol (the Resident always does); custom and white: a yellow's and a white's
   // share of it (blue otherwise); script: a script's odds.
   loot: { elite: { gear: 0.12, custom: 0.3, script: 0.25 }, gate: { gear: 0.08, white: 0.4, custom: 0.1 }, boss: { white: 0.45, custom: 0.1, script: 0.5 }, vault: { gear: 0.35, custom: 0.4 } },
@@ -88,11 +88,11 @@ export const BREACH = {
 // A dig in (world.mjs): what it pays on its breaches (item levels on gear, added odds on the Resident's unique roll),
 // and the size of the part its gene adds to a gate (of a part the gate's own size would have).
 export const DIG = { itemLevel: 1, unique: 0.1, gatePart: 0.4 };
-// Trace on a breach (from run.mjs TRACE, docs/roguelite.md 2.1): how loud you've been, 0 to 100. alarm: a Mailhub's
+// Trace on a breach (from run.mjs TRACE, GAME_RULES.md "Side modes"): how loud you've been, 0 to 100. alarm: a Mailhub's
 // spam floods start; hunt: a hunter ICE drops onto the map; lose: under it, a hunter on the map loses you; after: where
 // beating the hunter leaves it. The rest is what moves it. An Infiltrator raises it half as fast.
 export const TRACE = { alarm: 30, hunt: 55, lose: 30, after: 15, elite: 20, open: 15, force: 35, bait: 25, quiet: -3, rest: -10, ice: -20, splice: 15, scrub: -30 };
-// Server kinds: one rule each (docs/roguelite.md 11), shown on the server's card and the breach's strip.
+// Server kinds: one rule each (GAME_RULES.md "Side modes"), shown on the server's card and the breach's strip.
 export const KINDS = {
   Mailhub: { rule: 'Spam floods', text: `Once your Trace reaches ${TRACE.alarm}, every fight brings a Spam Flood, a weak and quick extra part.` },
   Archive: { rule: 'Deep storage', text: 'Every act holds two vaults and two keycards.' },
@@ -101,7 +101,7 @@ export const KINDS = {
   Lab: { rule: 'Overheat', text: 'From cycle 10 of every fight, the rack deals 2% of your max Signal to you every cycle, and 3% of its max Integrity to every part.' },
 };
 export const OVERHEAT = { from: 10, share: 0.03, you: 0.02 };
-// What a switch takes down (docs/roguelite.md 11): the act's viruses, or its gate (the Resident in the last act).
+// What a switch takes down (GAME_RULES.md "Side modes"): the act's viruses, or its gate (the Resident in the last act).
 export const SWITCHES = {
   armor: { name: 'Patch server', text: 'Every virus left in this act loses 1 ◆ on every part.' },
   gate: { name: 'Gate relay', text: '{Next} starts with 20% less Integrity, and its first attack 2 cycles late.' },
@@ -197,7 +197,7 @@ export function genomeOfNode(r, level, family, author, elite = false, strain = f
   if (strain) genes = genes.filter((id) => GENES[id].mutation);
   return { third: genes.find((id) => GENES[id].parts) || null, muts: genes.filter((id) => GENES[id].mutation), genes };
 }
-// The map's dungeon pieces in one act (docs/roguelite.md 11): a switch, keycards on viruses, vaults on other branches,
+// The map's dungeon pieces in one act (GAME_RULES.md "Side modes"): a switch, keycards on viruses, vaults on other branches,
 // a Mirror's mirrored cache, a Relay's shortcuts. A three-row act (the tutorial) has none of them.
 function dungeon(r, actNodes, act, rows, card, edges, shortcuts, author) {
   if (rows < 4) return;
@@ -321,7 +321,7 @@ export function generateMap(seed, level = 10, card = SERVER_CARD, { heat = 0, ge
   }
   return { nodes, edges, shortcuts, seed, acts, rows };
 }
-// Server kinds lean the map a little too (docs/roguelite.md 2.2): an Archive holds caches twice as often.
+// Server kinds lean the map a little too (GAME_RULES.md "Side modes"): an Archive holds caches twice as often.
 export const KIND_WEIGHTS = { Archive: { cache: 20 } };
 function shuffle(r, xs) { const a = [...xs]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 export const nodeList = (map) => Object.values(map.nodes);
@@ -378,7 +378,7 @@ export const EVENTS = {
     ],
   },
 };
-// Brokers: a faction's stall (docs/roguelite.md 2.5). Scripts and a Signal patch, for tokens; LANTERN sells the map
+// Brokers: a faction's stall (GAME_RULES.md "Side modes"). Scripts and a Signal patch, for tokens; LANTERN sells the map
 // ahead, Kestrel scrubs your Trace. stock: how many scripts (floor: the lowest rarity it carries). patch: its price.
 export const BROKERS = {
   glassjaw: { name: 'GLASSJAW', sells: 'Scripts', stock: 3, patch: 45 },
@@ -496,7 +496,7 @@ export function startBreach(s, { seed = 1, level = hackerLevel(s), card = SERVER
   }
   return b;
 }
-// What your captured servers do on this breach (rewrites.mjs output, docs/roguelite.md 3.2). Each rewrite once, at
+// What your captured servers do on this breach (rewrites.mjs output, GAME_RULES.md "Side modes"). Each rewrite once, at
 // its best tier; the campaign works out which ones reach this server (Spam Cannon only from a linked server).
 function applyOutputs(s, b, out) {
   const t = (id) => out[id] || 0;
@@ -697,7 +697,7 @@ export function fight(s, n, { pause = false, sample = null, as = null } = {}) {
   const rage = BREACH.enrage[as === 'mirror' ? 'elite' : as ? null : n.kind];
   if (typeof rage === 'number') e.enrageAt = rage;
   // A campaign kill pays its own XP (campaign.mjs CAMPAIGN.xp): the Resident three times over, a gate half again.
-  // The campaign keeps its own pace (about ten breaches to level 10, docs/roguelite.md 11): its kills grow with the long
+  // The campaign keeps its own pace (about ten breaches to level 10, GAME_RULES.md "Side modes"): its kills grow with the long
   // climb (climbStretch), and so does the capture's third of them.
   if (b.xpMult) e.breachXp = b.xpMult * (n.kind === 'boss' && !as ? 3 : (n.kind === 'gate' && !as) || as === 'hunter' ? 1.5 : 1) * climbStretch(hackerLevel(s));
   const by = e.virus.author ? ` ${e.virus.author.toUpperCase()}.` : '';
@@ -1068,7 +1068,7 @@ function lose(s, why) {
 function capture(s) {
   const b = s.breach, card = cardOf(s);
   bank(s);
-  // The capture bonus: a third of the breach's kill XP (docs/roguelite.md 6.1). Only the campaign pays it.
+  // The capture bonus: a third of the breach's kill XP (GAME_RULES.md "Side modes"). Only the campaign pays it.
   if (b.xpMult && b.xp > 0) gainXp(s, Math.round(b.xp / 3), `${card.name} captured`);
   b.result = 'won';
   b.screen = { kind: 'result' };

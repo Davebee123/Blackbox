@@ -1,4 +1,4 @@
-// LOWLIGHT's back room (docs/world.md 2, first slice W0): after every breach the room opens. wick says one line about
+// LOWLIGHT's back room (GAME_RULES.md "Side modes"): after every breach the room opens. wick says one line about
 // the breach you just played, picked from its debrief by priority, and a lead when the world turn put a dead drop on
 // the map. The board carries what moved on the network. Pure: the campaign's state in, the visit out.
 //
@@ -41,7 +41,7 @@ export function debriefOf(s, b, report = {}) {
     lostOn: result === 'won' ? null : id,
   };
 }
-// The facts wick has lines for, most important first (docs/world.md 2.4): 1 a Resident's first fall, 4 a loss by
+// The facts wick has lines for, most important first (GAME_RULES.md "Side modes"): 1 a Resident's first fall, 4 a loss by
 // where it ended, 5 a choice you made in the run, 6 a rewrite the first time you take it. Priorities 2 (a world event
 // resolved), 3 (contracts and bounties) and 7 (heat, in the Claims desk's voice) come with standing and the Claims
 // desk (W1). vars fill the line's blanks.

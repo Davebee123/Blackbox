@@ -359,7 +359,7 @@ export const SKILLS = {
 // carry: CRYPTJACK-4821), and its pool of third parts. A third part is a gene's part (genes.mjs GENES[id].parts);
 // a wild virus brings one of those open at its level, picked by its seed, in the pool's order.
 const thirds = (family, ids) => ids.map((g) => ({ ...GENES[g].parts[family], gene: g }));
-// The basic slot (docs/parts-plan.md "Basic parts"): each family's plain attackers and guards beside the Pulse Node,
+// The basic slot (GAME_RULES.md "Viruses"): each family's plain attackers and guards beside the Pulse Node,
 // free because each is pressure-matched to its family's Pulse Node (k: its hit as a share of the Pulse Node's;
 // parts.test.mjs holds the match within 5% after a level's Block). A basic keeps its own timing under any attack set.
 //   accum      Accumulator: one big Discharge, never a charge (tells.mjs)
@@ -1185,8 +1185,8 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   }
   // A doubled basic: each copy hits for PARTS.copy of one, the second a cycle behind.
   if (rolled2?.dup) for (const p of parts.filter((x) => x.id === rolled2.basic.id + '2' || x.id === rolled2.basic.id)) { if (p.attack) p.attack.amount *= PARTS.copy; if (p.copy && p.attack) { p.attack.first += 1; p.attack.due += 1; } }
-  // Its damage, like its Integrity, is its family's: the family's profile (PARTS.profile, docs/parts-plan.md "Damage
-  // profiles"), shared out by role (shareProfile).
+  // Its damage, like its Integrity, is its family's: the family's profile (PARTS.profile, GAME_RULES.md
+  // "Viruses"), shared out by role (shareProfile).
   if (rolled2) shareProfile(familyId, family, specs, parts, rolled2, level);
   const step = overrides.run ? (CONFIG.runEarly[level - 1] ?? 1) * (overrides.boss || overrides.elite ? 1 : runLate(level)) : 1;
   const dmgScale = mobPower(level) * (1 + CONFIG.enemyRamp * (level - 1)) * g.dmg * (overrides.run ? CONFIG.runDamage * step : 1);

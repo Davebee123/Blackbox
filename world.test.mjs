@@ -1,4 +1,4 @@
-// The world, first slice (docs/world.md W0: world.mjs, room.mjs, room-view.mjs, content/room.mjs): LOWLIGHT's back
+// The world, first slice (GAME_RULES.md "Side modes": world.mjs, room.mjs, room-view.mjs, content/room.mjs): LOWLIGHT's back
 // room after every breach (wick's line by priority, a lead, the board's news), the world turn with dig in and its
 // pressure rules, dead drops from leads, and the campaign save's v4.
 import test from 'node:test';

@@ -26,7 +26,7 @@ const icon = (name) => `style="--icon:url('ui/icons/${name}.svg')"`;
 const plural = (n, one, many = one + 's') => `${n} ${n === 1 ? one : many}`;
 
 // ---------- the map ----------
-// room: the band above layer 1 where LOWLIGHT's back room sits (docs/world.md 2.1), linked to SPRAWL-00.
+// room: the band above layer 1 where LOWLIGHT's back room sits (GAME_RULES.md "Side modes"), linked to SPRAWL-00.
 const G = { band: 150, head: 34, pad: 16, room: 52 };
 const xOf = (srv) => 12 + (srv.col * 76) / 3;
 const yOf = (srv) => G.pad + G.room + (srv.layer - 1) * G.band + G.head + (G.band - G.head) / 2;

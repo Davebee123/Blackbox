@@ -1,4 +1,4 @@
-// Scripts (docs/roguelite.md 11): one-shot programs you carry from breach to breach, like a potion or a scroll. They
+// Scripts (GAME_RULES.md "Side modes"): one-shot programs you carry from breach to breach, like a potion or a scroll. They
 // were CVEs, relics that lasted a breach; the best of them became scripts. You carry up to SCRIPT.slots (Archive, a
 // captured backup subsystem, adds slots). In a fight, `script <n> [part]` (or its button on the tray) runs one: it
 // takes no cycle, and one script a fight. They drop rarely (a vault, an elite, the hunter, the Resident), a bounty

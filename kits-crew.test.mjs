@@ -17,7 +17,7 @@ test('crew-leaning damage dealers carry a crew: over Lv 18 and 30, more boss tri
   const line = Object.entries(r).map(([sub, x]) => `${sub} ${Math.round(x.won * 100)}% low ${x.low.toFixed(0)}%`).join(' / ');
   const crew = dps.filter((sub) => SUBS[sub].lean === 'crew'), solo = dps.filter((sub) => SUBS[sub].lean === 'solo');
   for (const c of crew) {
-    // Known drift (docs/solo-tells.md, "Decisions for the designer"): since tells are answered in a window, the
+    // Known drift (GAME_RULES.md "Fights", tells): since tells are answered in a window, the
     // Hijacker carries less (75% of tries over Lv 18 and 30). The crew bosses bring no tells, so it moved through the
     // packs before them: with the packs' tells off, the old and the new code give the same 81%. Held at 70% and to
     // beating the Overclocker until its kit is looked at. Since R1 (the farm's packs carry the interrupt, and their

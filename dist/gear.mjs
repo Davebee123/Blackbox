@@ -191,7 +191,7 @@ export const RULES = {
   daemonize: { tier: 'major', cls: 'operator', skill: 'deploy', name: 'Daemonize', value: [8, 14], patch: (v) => ({ helper: v, ticks: 40 }), short: (v) => `Helper: ${v} until done`, text: (v) => `Deploy's helper deals ${v} damage each cycle and stays for the rest of the fight.` },
 };
 // Faction implicits: one fixed line an item from a faction carries (a feud runner's drop, its contracts' items, its
-// Shop's sealed item, its servers' vaults; docs/loot-plan.md Faction gear), in that faction's mark and colour, on top of
+// Shop's sealed item, its servers' vaults; GAME_RULES.md "Items"), in that faction's mark and colour, on top of
 // its primaries, affixes and rule. Never on a unique, a set piece or a Zero-day; a faction piece carries its own at
 // IMPLICIT.piece times the number. Each is a small mechanic in its faction's voice, a minor rule's strength, written in
 // effect blocks (faction-gear.mjs IMPLICIT_HOOKS runs the new kinds; a damage% block the engine's own). value: [at item

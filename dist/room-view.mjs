@@ -1,4 +1,4 @@
-// LOWLIGHT's back room (room.mjs): one page, no windows (docs/world.md 2.6). The room's sentence, wick's line and
+// LOWLIGHT's back room (room.mjs): one page, no windows (GAME_RULES.md "Side modes"). The room's sentence, wick's line and
 // lead, and the board's news. docs/ui.md tokens: teal is you and yours (the room is yours), amber is what you click.
 // Standing, the Claims desk and the fence come in W1, so the board shows only news.
 import { esc } from './view.mjs';

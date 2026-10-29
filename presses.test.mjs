@@ -1,4 +1,4 @@
-// Press diversity (docs/skills.md): no one key carries a subclass, and every subclass skill gets pressed in the
+// Press diversity (docs/kits.md 7): no one key carries a subclass, and every subclass skill gets pressed in the
 // moment it's built for. Scripted players (balance.mjs), so this checks the planners read the board the way the
 // skills ask them to, and that no skill is dead weight on the bar.
 import test from 'node:test';

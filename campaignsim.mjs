@@ -1,9 +1,9 @@
-// Campaign sim (docs/roguelite.md 9.1, phase 2): a bot plays the breach campaign from level 1, one class at a time, the
+// Campaign sim (GAME_RULES.md "Side modes"): a bot plays the breach campaign from level 1, one class at a time, the
 // way a sensible player would. It breaches the lowest open server it hasn't captured; when that one is more than a
 // level over it, it re-images the deepest server it holds for XP first (and for better rewrites). A failed breach
 // retries from its checkpoint. It takes the first bounty on a card, spends talents as it levels, and fights, drafts and
 // walks the map like breachsim.mjs's bot.
-// The world (world.mjs, docs/world.md 6.4): the bot follows wick's leads (a dead drop on a server near its level is its
+// The world (world.mjs, GAME_RULES.md "Side modes"): the bot follows wick's leads (a dead drop on a server near its level is its
 // next breach, when it has a script slot free) and skips a server under pressure half the time when a clean one is as
 // close. Each breach records what the world did: new events, servers under pressure, the clean-server rule, and any
 // move after a loss.
@@ -96,7 +96,7 @@ export function runCampaign({ cls = 'breaker', seed = 1, to = 20, max = 80, trac
     // breach (playOut equips as it goes) or after it.
     gearUp(s);
     row.upgrades = rigOf(s).filter((x, k) => x && x !== rig.split(',')[k]).length;
-    // A real upgrade (docs/roguelite.md 9.3): a rarity step, or 3 item levels or more, in a slot.
+    // A real upgrade (GAME_RULES.md "Side modes"): a rarity step, or 3 item levels or more, in a slot.
     const RANK = { stock: 1, tuned: 2, custom: 3, zeroday: 4, indemnified: 4 }, was = rig.split(',');
     row.real = rigOf(s).filter((x, k) => { const a = stashItem(s, was[k]), c = x && stashItem(s, x); return c && x !== was[k] && (!a || RANK[c.rarity] > RANK[a.rarity] || c.level >= a.level + 3); }).length;
   }
@@ -124,7 +124,7 @@ export function report(runs) {
   return out;
 }
 
-// The world's numbers (docs/world.md 6.4), over every breach once the world has turned: new events a breach (mean and
+// The world's numbers (GAME_RULES.md "Side modes"), over every breach once the world has turned: new events a breach (mean and
 // most), live events, servers under pressure (most, and how many breaches end with 0, 1 or 2), the clean-server rule,
 // moves after a loss (never), dead drops placed and pulled, and the win rate on pressured breaches against clean ones.
 export function worldReport(runs) {

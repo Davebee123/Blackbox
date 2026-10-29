@@ -1,4 +1,4 @@
-// The breach prototype (docs/roguelite.md phase 0 and 11: breach.mjs, rewrites.mjs, the Overclock and Lock tells): the
+// The breach prototype (GAME_RULES.md "Side modes": breach.mjs, rewrites.mjs, the Overclock and Lock tells): the
 // map generator, fog, rewrites (output only), the two new tells, losing, capturing, the page, and the bot winning a
 // fair share of breaches with every class. The map's dungeon pieces, scripts and skill rules: mapmech.test.mjs.
 import test from 'node:test';
@@ -367,7 +367,7 @@ test('the page: a run strip, one decision, the rewrites in the gutter, the pack 
 });
 
 // ---------- the bot ----------
-// docs/roguelite.md 9.1 asks 50 to 70% a class at heat 0 in blues; 11 has the measured table (breachsim.mjs). The band
+// The target is 50 to 70% a class at heat 0 in blues (breachsim.mjs measures it). The band
 // here is wider so the test is stable at 16 breaches a class, with the subclasses the campaign bot picks, and it
 // guards the floor and the ceiling: every class can win a fair share, and the Bastion no longer wins them all.
 test('breachsim: every class at level 10 wins a fair share of breaches, and none wins nearly all', { timeout: 300000 }, () => {

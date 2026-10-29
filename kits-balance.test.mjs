@@ -53,7 +53,7 @@ const second = (sub) => {
   const set = MATCHED[MATCH_OF[sub]], pol = policyOf(sub);
   return { name, suits: setScore(sub, b, rot, set).lost - setScore(sub, b, alt, set).lost, generic: score(pol, b, { sub, bar: alt }).lost - score(pol, b, { sub, bar: rot }).lost };
 };
-// Known drift (docs/solo-tells.md, "Decisions for the designer"): since a tell can only be answered in its window
+// Known drift (GAME_RULES.md "Fights", tells): since a tell can only be answered in its window
 // and a charge asks for a burst, three presets measure outside the line and wait on a kit retune. Each is held to
 // what it measures now (generic within 6.5, suited at least 2.5), so it can't drift further unnoticed: the
 // Demolitionist's area preset (5.2 better on the generic fights, 4.1 on its own), the Sysop's healers (5.4 better on

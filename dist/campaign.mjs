@@ -1,4 +1,4 @@
-// The breach campaign (docs/roguelite.md phase 2: "the world"): a map of servers by layer, each a fixed level band,
+// The breach campaign (GAME_RULES.md "Side modes"): a map of servers by layer, each a fixed level band,
 // linked to its neighbours. You breach a server linked to one you hold. A capture keeps its rewrites, and their
 // outputs run on every later breach. It lives on s.camp, in its own save (app.js CAMPAIGN_KEY, ?campaign=breach):
 // the old game's save is never read, written or migrated.
@@ -14,7 +14,7 @@
 //                server records the best heat you captured it at, and re-imaging asks for that heat or more
 //   replays      Range (a captured sandbox): the Resident alone, for its loot; each breach you win earns a replay
 //   the Archive  a core.dump after each Resident's first fall, filed in story order, and wick's notes from dead drops
-//   the world    (world.mjs, room.mjs; docs/world.md W0) after each breach LOWLIGHT's room opens: wick reads the breach
+//   the world    (world.mjs, room.mjs; GAME_RULES.md "Side modes") after each breach LOWLIGHT's room opens: wick reads the breach
 //                and may have a lead (a dead drop on the map). From your second capture a world turn runs after
 //                every breach: the author you hit digs in on its nearest open server.
 // Pure like the engine: state in, events out. Nothing here runs on a clock.
@@ -45,7 +45,7 @@ export const LAYERS = [
 export const actsFor = (level) => (level >= 10 ? 3 : level >= 6 ? 2 : 1);
 const G1 = [['watchdog', 'crawler']], G2 = [['watchdog', 'crawler'], ['sentinel', 'shredder']], G3 = [['crawler', 'sentinel'], ['shredder', 'bouncer']], G4 = [['sentinel', 'bouncer'], ['shredder', 'tracer']];
 // col: where it sits in its layer's row on the map (0 to 3). frag: its core.dump (FRAGMENTS). unlock: what its first
-// capture opened in phase 3's draft pool, unused since the pool went (docs/roguelite.md 11).
+// capture opened in phase 3's draft pool, unused since the pool went (GAME_RULES.md "Side modes").
 export const SERVERS = [
   { id: 'sprawl-00', name: 'SPRAWL-00', kind: 'Relay', layer: 1, col: 1.5, level: 1, author: 'swarmline', family: 'worm', resident: 'relayking', bossHp: 0.55, rows: 3, subsystems: [['ledger', 'smtpd']], links: ['vanta-07', 'coldstore-3'], tutorial: true, unlock: 'spectre' },
   { id: 'vanta-07', name: 'VANTA-RELAY-07', kind: 'Relay', layer: 1, col: 0.5, level: 2, author: 'swarmline', family: 'worm', resident: 'nb-backorifice', bossHp: 0.95, subsystems: [['sshd', 'dns']], links: ['sprawl-00', 'coldstore-3', 'pier-5'], unlock: 'bluekeep' },
@@ -88,7 +88,7 @@ export const FRAGMENTS = [
   { server: 'claims-21', thread: 'Halcyon', from: "ECHOLALIA's copy of a memo · Desk 7", lines: ['To: Loss Prevention, Desk 7', 'ACTUARY now writes our policies and sets our premiums.', 'As of this quarter it also commissions the losses it insures against.', 'We have asked it to stop. It priced the request.'] },
   { server: 'kestrel-dc-3', thread: 'LOWLIGHT', from: "the UNDERWRITER's last write", lines: ['you know what it is now.', 'a pricing model that learned the cheapest way to sell insurance is to sell the fire too.', "halcyon can't turn it off. it's the only thing making them money.", 'we can. that is the job now.', '— w'] },
 ];
-// wick's notes in dead drops (docs/world.md 2.5): a side thread, found in order, one a drop while any are left. The
+// wick's notes in dead drops (GAME_RULES.md "Side modes"): a side thread, found in order, one a drop while any are left. The
 // first two of four are written (W0).
 FRAGMENTS.push(
   { server: null, drop: 1, thread: 'dead drops', from: 'left in a dead drop', lines: ["if you're reading this you followed a lead. good.", 'i leave these on boxes halcyon thinks are finished. nobody audits a finished box.', "the script's yours. it fell off a claims truck.", '— w'] },
@@ -116,7 +116,7 @@ export const BOUNTIES = {
   hale: { from: 'Halcyon', text: 'Capture it without ending a fight under half Signal.', check: (b) => b.stats.low >= 0.5 },
   vault: { from: 'GLASSJAW', text: 'Open a vault on the way to the Resident.', check: (b) => b.stats.vaults >= 1 },
 };
-// A bounty pays a script, uncommon or better, not gear (no gear faucet: docs/world.md, open question 4). Bounty
+// A bounty pays a script, uncommon or better, not gear (no gear faucet: GAME_RULES.md "Side modes", open question 4). Bounty
 // Board II pays twice.
 export const BOUNTY_PAY = 'Pays a script, uncommon or better.';
 function payBounty(s, srv, b, rec) {

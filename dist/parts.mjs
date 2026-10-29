@@ -45,7 +45,7 @@ export const PARTS = {
   mech: 0,
   carve: 1, // the share of the thirds' Integrity that comes out of the basic's and the signature's (0: thirds come on top)
   thirdMax: 1.15, // a third part's Integrity never grows past this share of its own (the basic and the signature take the rest)
-  // Damage profiles (docs/parts-plan.md "Damage profiles"): every family deals the same over a typical fight at its
+  // Damage profiles (GAME_RULES.md "Viruses"): every family deals the same over a typical fight at its
   // level, and only the shape differs. The budget is the average of the three families' pre-P1 fights (the Pulse Node
   // and the signature) over PARTS.horizon cycles, in data.mjs nominal's units before the level's damage scale
   // (data.mjs profileBudget), times PARTS.budget; each family splits it into three shapes, its pre-P1 fight's split over

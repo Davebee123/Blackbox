@@ -1,4 +1,4 @@
-// LOWLIGHT's back room (docs/world.md 2): what wick says after a breach, wick's leads, and the sentence at the top of
+// LOWLIGHT's back room (GAME_RULES.md "Side modes"): what wick says after a breach, wick's leads, and the sentence at the top of
 // the room. Safe to edit by hand: it's JSON after 'export default', like story.mjs. dist/room.mjs picks from it.
 //   names      wick's word for each server
 //   rooms      the sentence at the top of the room, by story beat (the last one whose fragment you hold wins)
