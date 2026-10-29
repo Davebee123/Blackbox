@@ -278,6 +278,7 @@ and `style.test.mjs` the tooltip grammar.
 | [`docs/rivals.md`](docs/rivals.md) | Rivals: the roster and the picked look (designed, not built). |
 | [`docs/loot-plan.md`](docs/loot-plan.md) | Sets and uniques. |
 | [`docs/house.md`](docs/house.md) | Your house and its furniture (decided, not built). |
+| [`docs/leanings.md`](docs/leanings.md) | Leanings: a server's one positive rule (picked, not built). |
 | [`docs/threads.md`](docs/threads.md), [`docs/director.md`](docs/director.md) | Threads, and the event director. |
 | [`docs/invasions.md`](docs/invasions.md), [`docs/networks.md`](docs/networks.md), [`docs/bosses.md`](docs/bosses.md) | Review sheets: invasions, network signatures, crew bosses. |
 | [`docs/coop.md`](docs/coop.md) | Co-op, peer to peer. |
