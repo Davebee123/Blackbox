@@ -1,14 +1,7 @@
 # The event director: a living net
 
-Draft, October 17, 2026. For agreement before any code. Builds on `dist/events.mjs` (the director and its deck) and the four cards being added now: Feud, Bounty hunt, Market shock and Scout.
-
-## 0. The short version
-
-The director becomes one of the game's pillars: the thing that makes the net feel like it moves without you. Three changes:
-
-1. **Chains.** What you do with an event deals the next one. A feud you settled sends a counter-raid, a bounty that got away comes back with a name, and a run of intercepted couriers gets LANTERN's attention.
-2. **Three sizes.** Small **blips** every few minutes, the **events** we have now, and rare **crises** that change a floor for an hour.
-3. **Inside runs.** The director also deals into the server you're on: a Surge room (waves), an Escort and a hunter pack.
+**Status.** The plan to make the net move without you. Built: the director, its deck and chains (D1; GAME_RULES.md
+*Events*, *Chains*). Left: blips (D2), run cards (D3) and crises (D4).
 
 What it does **not** do: read how you're doing. It never looks at your Signal, deaths, streaks or gear (section 6).
 
@@ -24,36 +17,20 @@ What it does **not** do: read how you're doing. It never looks at your Signal, d
 
 ## 2. Chains
 
-**Built (D1).** `dist/events.mjs` (`CHAIN`, the follow-up cards `counter`, `returning`, `lantern` and `zero`, `schedule`, `dealChain`, `eventKill`), their cards in `dist/event-cards.mjs`, tests in `chains.test.mjs`. `developer chain [counter|returning|lantern|zero]` deals one now with a made-up cause.
+**Built (D1).** The rules are in GAME_RULES *Chains*; the code is `dist/events.mjs` (`CHAIN`, `dealChain`), tested in
+`chains.test.mjs`. What still governs them:
 
-A chain is a follow-up card that one outcome schedules. The director keeps a short list of pending follow-ups on the save, each with what caused it, a delay and an expiry. When a follow-up is due, it is dealt like any card (it takes one of the two event slots) and its card shows a small link icon; hovering it names the event that caused it.
-
-### The first chains
-
-| Cause | Follow-up | Delay | What it is | Pays |
-|---|---|---|---|---|
-| You won at least one fight in a **Feud** (for the side you backed) | **Counter-raid** | 20–40 min | The side you fought sends a runner at a server you hold (a traced server you've been on), or your home if you hold none. A fight at your level in that side's colour and family, sized like a feud's runner (an elite, ×1.5 Integrity). Ignoring it costs nothing: the runner leaves (15 min), and nobody's rep moves. | Half a bounty's credits (40 + 7.5×level), +2 rep with the side you backed (no ripple), and the grudge ends |
-| A **Bounty hunt** got away | **Returning bounty** | 30–60 min | Back once: the same name, at the level it got away at, on one of your servers for 20 min, with a *last chance* tag. If it gets away again it's gone for good. No marked version: anything that rewarded letting a hunt go would be farmed. | What the hunt would have paid when it got away (never more), and +2 rep with its hunter |
-| You killed 3 **Couriers** (a running count, reset when the offer is dealt) | **LANTERN's offer** | at once | For now a special courier in LANTERN's colour and mark (a fight like a courier's, 15 min). It becomes LANTERN's courier asking for an Escort through one of your servers (section 4) in D3. | +5 LANTERN rep (Halcyon standing until LANTERN's hub is located) and a Custom protocol |
-| You won a **Spotter** fight | **Invasion foreshadowed** | (the invasion's own clock) | The next invasion's kind shows on the wall and the pager ahead of time, and it comes in weaker. Already built with the Spotter card (invasion.mjs `scoutNext`); not on the follow-up list. | — |
-| 15 kills of the family during an **Outbreak** | **Patient zero** | at once | The outbreak's source, an elite of that family at your level, turns up on one of your servers for 15 min. Kill it and the outbreak ends early. If the outbreak ends before it's dealt, it goes too. | A code cache of that family (a vault's: 12 + level/2) and the elite's loot |
-
-Ignoring a card never starts a chain. A bounty hunt that "got away" counts only if you fought it at least once and left, or it had made all three hops while you were on a run on its floor. Otherwise it simply leaves. A returning bounty gets away the same way: you fought it and left, or it left while you were on a run on its floor. Ignoring a follow-up costs nothing and starts nothing.
-
-Each follow-up's card shows a chain-link mark in its strip (a button to the server the cause happened on, while it's on your map), and its pager line the same mark; hovering either names the event that caused it. The follow-ups roll only the director's dice (delays, servers, names, the marked bounty's unique) and pay from the event's own seed.
-
-### Limits
-
-- At most 3 pending follow-ups, one per chain kind. A new cause for a chain that's already pending doesn't stack.
-- A follow-up expires quietly if it isn't dealt within 3 hours of logged-on time (counted from when it was scheduled). When it's due and both event slots are full, it waits for one to free while its expiry runs. The list ticks on logged-on time only, so offline time never piles follow-ups up.
-- Chains never pay more than the cards they come from, and nothing pays for letting an event get away: a follow-up that rewarded failing on purpose would be farmed. (A marked bounty with a named drop after two escapes was built and taken out for that reason.)
+- Ignoring a card never starts a chain, and ignoring a follow-up costs nothing and starts nothing.
+- Chains never pay more than the cards they come from, and nothing pays for letting an event get away (a marked bounty
+  with a named drop after two escapes was built and taken out for that reason).
+- LANTERN's offer is a courier fight until D3's Escort (section 4) replaces it.
 
 ## 3. Three sizes
 
 | Size | How often | Lasts | On screen | Examples |
 |---|---|---|---|---|
 | **Blip** | about every 5 min logged on (4–6) | 2–8 min | A pager line and a short mark on the map | A stray cache, a price flicker, a rumour, a rare-spawn sighting |
-| **Event** | every 15–30 min (as now) | 10–30 min | A card on the server or hub | Courier, Bounty, Feud, Bounty hunt, Market shock, Scout, Outbreak, Leak, Darknet listing, Hollow Choir |
+| **Event** | every 15–30 min (as now) | 10–30 min | A card on the server or hub | Courier, Bounty, Feud, Bounty hunt, Market shock, Spotter, Outbreak, Leak, Darknet listing, Hollow Choir |
 | **Crisis** | about every 3 hours, from level 8 | 45–90 min | A banner on the floor panel and the map tinted for that floor | Strain bloom, Turf war, Blackout |
 
 Blips don't count toward the two-event limit. At most one crisis is up at a time, and a crisis holds its own slot.
@@ -73,7 +50,7 @@ One floor, for most of a session. Each has a clear way to end it early and a rew
 
 - **Strain bloom.** A strain spreads across a floor: every few minutes it takes another server, whose rooms then carry the strain's mutation (the map shows the spread in its colour). Its source is one server; clear that server's core and the bloom ends. Pays the strain's trophy table and the codex entry.
 - **Turf war.** Two rival factions contest a floor. Faction servers on it flip colour as the war moves, Feud cards on that floor come up three times as often, and your feud wins tip the balance. The side that holds more of the floor at the end puts its goods on sale for a day (and the loser is simply back to normal). Backing the loser costs you nothing.
-- **Blackout.** A floor's hubs go dark: their markets close, salvage pays ×1.5 and every run on that floor has one more rest room. It ends on its own. Restore a relay on the floor (a puzzle room, marked) to end it early and get the hub's thanks (+3 rep).
+- **Blackout.** A floor's hubs go dark: their markets close, components drop 50% more often and every run on that floor has one more rest room. It ends on its own. Restore a relay on the floor (a puzzle room, marked) to end it early and get the hub's thanks (+3 rep).
 
 ## 4. Inside runs
 
@@ -102,7 +79,7 @@ It never reads your Signal, deaths, win streaks, gear or play time per session. 
 
 ## 7. Build order
 
-1. **D1: chains** (built): the follow-up list, the link icon, and the five chains above (LANTERN's offer as a courier until D3's Escort).
+1. **D1: chains**: built.
 2. **D2: blips**, all four, and the history list.
 3. **D3: run cards**: the Surge room first, then Escort, then hunter packs.
 4. **D4: crises**: Strain bloom first (strains already exist), then Turf war, then Blackout.

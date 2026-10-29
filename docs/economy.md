@@ -1,106 +1,70 @@
 # The economy
 
-A design sheet, agreed in conversation with the designer; nothing here is built yet. It replaces the scattered
-currencies with four, each with one job. Code becomes the thing you build the world with: programs on the servers you
-hold, patches that improve a program everywhere, the factions' supply orders and your consortium's projects. Nothing
-in it puts a button on the ability bar, and nothing in it is random. Access to content (a floor, a vault, a lair) is
-earned by playing, never bought.
+**Status.** The plan for what code, credits and components are for. Built: the currencies, programs, codebases and
+the stores as they stand (GAME_RULES.md *The economy*, *Components*, *Code*, *Sockets and programs (R2)*, *The Halcyon
+store*); Indemnity is retired (v48) and crafting is gone (v49). Left: patches, supply orders, consortium projects,
+the four-rank Root, the programs still to build, and player trade.
 
-## What's wrong today
+Agreed with the designer: nothing here puts a button on the ability bar, and nothing in it is random. Access to content
+(a floor, a vault, a lair) is earned by playing, never bought.
 
-Measured with the pacing bot (`node econ.mjs`, topping up its Signal with credits, seed 7):
-
-| Run | Time | Code held | Exploits | Components | Credits earned |
-|---|---|---|---|---|---|
-| Breaker to 5 | 35 min | 13 Cipher, 5 Worm | 0 | 30 | 371 |
-| Breaker to 15 | 3 h | 55 Cipher, 52 Worm, 10 Kernel | 5 | 112 | 1,629 |
-| Bastion to 15 | 5.1 h | 176 Cipher, 134 Worm, 28 Kernel | 9 | 130 | 2,644 |
-| Infiltrator to 15 | 3.1 h | 59 Cipher, 49 Worm, 19 Kernel | 14 | 95 | 1,472 |
-| Breaker to 25 | 8.7 h | 139 Cipher, 422 Worm, 10 Kernel | 27 | 264 | 4,435 |
-
-- **Everything piles up.** About 40–65 code, 25–50 components and 500 credits an hour come in; topping up Signal is
-  the only steady sink (40% of credits for this bot), and a bot that never pays banks all of it.
-- **Too many currencies with overlapping jobs**: credits, three codes, Exploits, dozens of named components, Indemnity,
-  standing, five reps, research, daemons, blueprints, codebases.
-- **Nothing to trade.** The markets are with factions only and no round trip profits (right for solo). In multiplayer
-  nobody needs anybody's goods.
-- **A network already specialises**: the Breaker to 25 held 42 Worm code for every Kernel. That's the seed of trade.
-
-The bot doesn't hold servers or build programs, so these are what a player *could* spend, not what they do. The first
-build step re-measures with programs in.
-
-## Four currencies, one job each
+## Currencies, one job each
 
 | Currency | Its job | Tradeable between players |
 |---|---|---|
-| **Credits** | Topping up Signal and repairs, codebases, the stores, the market's fees, the consortium bank | Yes |
+| **Credits** | Topping up Signal and repairs, programs, codebases, the stores, the market's fees, the consortium bank | Yes |
 | **Code** (Cipher, Worm, Kernel) **and Exploits** | Programs, patches, the firewall, supply orders, consortium projects | Yes |
-| **Components** | Programs, Zero-days | Yes |
+| **Components** | Sold at hubs; NULL CHOIR's supply order | Yes |
 | **Progress**: standing, research, levels | What you've earned; never spent | No |
 
-Gear comes from drops, the stores and (later) other players. Ordinary drops trade until you equip them; boss uniques and
-the collection log's chase items never trade.
+Ordinary drops trade until you equip them; boss uniques and the collection log's chase items never trade.
 
-### What goes
+**Still to cut.** Scripts (still dropped in rooms: caches, vaults, elites, hunters, the Resident) leave the drops,
+and what dropped them pays code; an old save's scripts become code. The stash room goes with Root's fourth rank
+(below). Gear is never rerolled or upgraded: better gear drops.
 
-- **Indemnity.** *Done (v48).* Halcyon's store prices in credits, its tiers still gated by standing as now. The chase
-  protocols are a credit sink: 40 × (1 + L/15) credits for each point of their old Indemnity price. Contracts stop
-  paying Indemnity and pay no extra credits in its place. An old save's unspent Indemnity becomes credits once, at
-  the protocols' rate.
-- **Scripts.** Off the ability bar and out of the drops. What dropped them pays code. An old save's scripts become code.
-- **Random-stat crafting.** Compiling a protocol around a stat goes. Gear is found, not rolled at a bench. What stays on
-  the Craft page is one item per recipe: a Zero-day from its source, the Relay from its plan.
-- **The stash room** (Root 2's free code every two hours). Root becomes four ranks (below).
-- **Gear rerolls and upgrades.** Never: better gear drops, as daemons do.
+## 1. Programs
 
-## Code's four uses
+A program goes in a socket room and changes that server's rules (GAME_RULES *Sockets and programs (R2)*). Each
+family's code builds the programs that family would write. Installing costs credits and the server's code every time
+(the running cost); a program's **version** is network-wide (2, Patches).
 
-### 1. Programs: installed per server
+### Programs still to build
 
-A program goes in a socket room on a server you hold, as today. Each family's code builds the programs that family
-would write. Installing costs that code and components every time (the running cost); a program's **version** is
-network-wide (next section).
+One list: the servers design's catalogue and this sheet's. Light and medium cost what the built ones do (140 or 280
+credits, 15 or 30 of the server's code, a medium an Exploit, ×1.25 a floor past the first). Core programs go only in a
+held server's core socket.
 
-**Worm code: what spreads and repeats**
-
-| Program | Weight | v1 | v2 | v3 |
+| Program | Code | Weight | Codebase | v1 (v2, v3 by patch) |
 |---|---|---|---|---|
-| Cron Spawner *(today)* | light | fight rooms respawn ×1.5 as fast | ×2 | ×2.5 |
-| Seeder | light | market transfers from your network 10% faster (with other Seeders, up to 40%) | 20% | 30% |
-| Botnet | medium | a fight here starts with 1 helper on the weakest part | 2 | 3 |
-| Crawler *(with floors)* | light | walking into a room reveals 1 neighbour's kind | 2 | all |
+| **Seeder** | Worm | light | | Market transfers from your network 10% faster, with other Seeders up to 40% (20%, 30%) |
+| **Botnet** | Worm | medium | | A fight here starts with 1 helper on the weakest part (2, 3) |
+| **Crawler** | Worm | light | | Walking into a room reveals 1 neighbour's kind (2, all) |
+| **Escrow** | Cipher | light | | Contracts on this server pay +15% (+30%, +45%) |
+| **Lockdown** | Cipher | medium | | Invasions this server sends lose a process (and arrive a level lower; lose two) |
+| **Rootkit** | Kernel | light | | Moves here cost 25% less Signal (50%, 75%) |
+| **Bulkhead** | any | medium | Kestrel | The hunter can't pass through this room. Fights here and next door start with a shield of 10% of your max Signal. |
+| **Sentry Turret** | any | medium | Kestrel | In fights here and next door, deals 6% of a part's max Integrity to the part whose move lands soonest every 3 cycles. Its hits count toward interrupts. |
+| **Patch Injector** | any | medium | GLASSJAW | Viruses on this server respawn with 1 ◆ less on every part |
+| **Honeytoken** | any | medium | GLASSJAW | Viruses here respawn a grade higher, 1 in 4 as an elite. Kills pay 50% more XP and roll for loot once more. |
+| **Lure** | any | medium | NULL CHOIR | Fight rooms here respawn as the family or strain you name, one you've met |
+| **Relay** | any | medium | LANTERN | Pings the unknown servers linked to this one: each room you clear here traces each 15% more, and it flags the one a contract points at |
+| **Range** | any | core | | Holds a solo boss you've beaten, with its own loot table and pity. Back an hour after it falls. |
+| **Jump Host** | any | core | | Connecting to this server starts you in any room you've been in |
 
-**Cipher code: locks, vaults and value**
+**Where they go matters.** The Turret and the Bulkhead cover their room and its neighbours. **Stacking on one server**
+is the build: a Lure, a Cron Spawner and a Harvester make one server your farm for one strain; a Honeytoken, a Turret
+and a Bulkhead make a hard server you can survive.
 
-| Program | Weight | v1 | v2 | v3 |
-|---|---|---|---|---|
-| Cache Mill *(today)* | light | caches refill twice as fast and pay +25% | +50% | +75% |
-| Escrow | light | contracts on this server pay +15% | +30% | +45% |
-| Lockdown | medium | invasions this server sends lose a process | and arrive a level lower | lose two |
+**Versions of the built ones.** Cron Spawner ×1.5, ×2, ×2.5 as fast. Cache Mill +25%, +50%, +75%. Code Siphon +3, +5,
++8 code a room. Defrag Bay 25%, 35%, 50% Signal. Tunnel: a second link at v2; at v3 the hunter never steps into a
+tunneled room. Snare holds 4, 6, 8 moves. The Harvester has no versions. **The Listening Post** has none either: one on
+your whole network, quiet once its unique drops, and retuning it costs its install again.
 
-**Kernel code: control and stealth**
+## 2. Patches: network-wide, bought once
 
-| Program | Weight | v1 | v2 | v3 |
-|---|---|---|---|---|
-| Rootkit | light | moves here cost 25% less Signal | 50% | 75% |
-| Tunnel *(today)* | medium | a free link to the entry the hunter can't use | a second link | the links hide you: the hunter never steps into a tunneled room |
-| Snare *(today)* | medium | holds the hunter 4 of your moves, once a visit | 6 | 8 |
-| Listening Post *(today, changed)* | medium | the unique you name drops twice as often here | no versions | |
-
-The Listening Post is the one exception: **one on your whole network**, and it **goes quiet once its unique drops**.
-Retuning it to a new unique costs its install again. That makes it a step in a chase, not a program every server runs.
-
-**The server's own code** (whatever its family): Harvester (+1 component a kill), Code Siphon (+3 code a room, v2 +5,
-v3 +8), Defrag Bay (a rest room for 25% Signal, v2 35%, v3 50%). Their patches take any code.
-
-**Install cost.** Today's numbers stand: a light program 15 code and 20 components, a medium one 30 code, 40 components
-(10 the server's own) and an Exploit, ×1.25 a layer deeper. Deeper servers cost more to fill, so installing never stops
-being a sink while you climb.
-
-### 2. Patches: network-wide, bought once
-
-Patching a program to v2 or v3 upgrades **every copy of it on every server you hold**, and every copy you install later.
-It's a one-off goal, priced to take a long time:
+Patching a program to v2 or v3 upgrades every copy on every server you hold, and every copy you install later. A
+one-off goal, priced to take a long time:
 
 | Patch | Code (its family) | Components | Exploits | Needs |
 |---|---|---|---|---|
@@ -109,15 +73,13 @@ It's a one-off goal, priced to take a long time:
 | v3 light | 400 | 60 | 1 | level 20 |
 | v3 medium | 600 | 80 | 2 | level 20 |
 
-At the measured rate a network makes 20–40 of its main code an hour and 5–10 of the others. A v2 is a few hours of its
-family's code, a v3 about a day's, and patching all twelve-odd programs is over a hundred hours of code: unless you
-trade for the families your network doesn't make. Maxing out is fine: installs, supply orders and consortium projects
-keep taking code after the last patch. New programs come as you level (codebases at hubs and drops), and v4 can come
-with a higher level cap.
+A v2 is a few hours of its family's code, a v3 about a day's, and patching every program is over a hundred hours of
+code unless you trade for the families your network doesn't make. Installs, supply orders and projects keep taking
+code after the last patch. The server's own programs (Harvester, Code Siphon, Defrag Bay) patch with any code.
 
-### 3. Supply orders: the factions
+## 3. Supply orders: the factions
 
-Each faction keeps a **standing order** for what its market condition wants, one at a time, never on a clock:
+Each faction keeps a **standing order**, one at a time, never on a clock:
 
 | Faction | Wants |
 |---|---|
@@ -128,14 +90,13 @@ Each faction keeps a **standing order** for what its market condition wants, one
 | GLASSJAW | Exploits |
 
 An order asks for 10 + level/2 (an Exploit order 1 + level/15) and pays its market value ×1.25 in credits and +4
-standing. The next order arrives an hour after you deliver. Standing still unlocks each faction's store, so supply
-orders are how you climb a faction you don't do contracts for. The storyline's "hand over two Worm code" is the first.
+standing. The next arrives an hour after you deliver. Supply orders are how you climb a faction you don't do contracts
+for.
 
-### 4. Consortium projects: everyone's
+## 4. Consortium projects: everyone's
 
-Today's size tiers become projects the consortium **funds together**. Each needs the consortium at a size first, then
-its price, paid by anyone in any share (the consortium page shows who gave what). Every project works for **every
-member, on every network**.
+Today's size tiers become projects the consortium **funds together**: the consortium at a size first, then the price,
+paid by anyone in any share (the page shows who gave what). Every project works for every member, on every network.
 
 | Project | Needs | Price (each code, credits) | Effect for every member |
 |---|---|---|---|
@@ -146,12 +107,12 @@ member, on every network**.
 | Consortium Firewall | 8 | 800 each, 8,000 | Every member's wall counts the members' firewall levels together |
 | Grid | 12 | 1,200 each, 12,000 | +1 socket room on every member's server, firewall +2 *(today's tier)* |
 
-Every project takes all three codes, so a consortium of mixed networks funds them far faster than one of a single
-family. Simulated members contribute at a steady rate until real players do.
+Every project takes all three codes, so a consortium of mixed networks funds them faster. Simulated members
+contribute at a steady rate until real players do.
 
 ## Root: four ranks
 
-Root still rewards coming back to a server you hold (cleared respawns), but no longer opens a stash room:
+Root still rewards cleared respawns on a server you hold, but no longer opens a stash room:
 
 | Root | After | Perk |
 |---|---|---|
@@ -160,36 +121,30 @@ Root still rewards coming back to a server you hold (cleared respawns), but no l
 | 3 | 15 | +1 socket room beside the Core *(today's Root 4)* |
 | 4 | 30 | rare spawns twice as often *(today's Root 5)* |
 
-An old save keeps its count; its rank follows the new table, and a stash room it had goes.
-
-## Access is earned, never bought
-
-Opening content is a progression system, not a price: anything everyone would buy is a tax.
-- **Floors** (R3): reach a floor once and a visit can start there (a waypoint).
-- **The vault**: unchanged. The key hunt each visit is the loop.
+An old save keeps its count; its rank follows the new table, and its stash room goes.
 
 ## Trading between players (needs a server)
 
-Real trade waits for a backend; until then it's built and tested against simulated players.
-- **Order books at the hubs**: players post buy and sell orders; a 2% fee to list and an 8% cut of each sale (the
-  credit sink that grows with the economy). The factions' own prices stay as a floor and a ceiling, so a thin market
-  never crashes. Each hub's transfer times and conditions make buying at one and selling at another a small game.
+Built and tested against simulated players until there's a backend.
+- **Order books at the hubs**: buy and sell orders; a 2% fee to list and an 8% cut of each sale. The factions' prices
+  stay as a floor and a ceiling, so a thin market never crashes.
 - **Consortium trades** go through the Trunk Relay: instant, no fee.
 - **Bound**: standing, research, levels, boss uniques and the collection log's chase items.
 
 ## Build order
 
-1. **The cuts and their refunds**: Indemnity, scripts, random-stat crafting, the stash room, Root's ranks. Old saves get
-   what they had back as credits and code.
-2. **Programs and patches**: the new programs, versions, the Listening Post's rule, the patch page. Re-measure code
-   income and spending with the bot holding servers, and tune the prices above.
+1. **Cuts**: scripts out of the drops, the stash room, Root's four ranks. Old saves get what they had as credits and code.
+2. **Programs and patches**: the programs above, versions, the Listening Post's rule, the patch page. Re-measure code
+   income and spending with the bot holding servers (`node econ.mjs`), and tune the prices.
 3. **Supply orders.**
 4. **Consortium projects**, funded by you and simulated members.
-5. **Floors' waypoints**, with the R3 work.
-6. **The player market and trade rules**, once there's a backend.
+5. **The player market**, once there's a backend.
 
 ## Open questions
 
-- The chase protocols' rate (40 × (1 + L/15) credits an old Indemnity) and the patch prices need the re-measure in step 2.
+- Patch prices (set before v49 took components out of installs) need the re-measure in step 2.
 - Rootkit at 75% may make Signal on a held server meaningless; the cap may be 50%.
 - Botnet's helper damage needs a number against the room fights' budget.
+- Where core codebases come from: lair bosses' first falls taught them in the design, but codebases are only bought
+  since v49.
+- Names: *Botnet* is also a family (docs/servers.md 4.3) and an Operator skill; *Rootkit* a family and a Zero-day.

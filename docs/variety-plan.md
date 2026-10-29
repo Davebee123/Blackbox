@@ -1,9 +1,13 @@
 # Variety plan: strains, objectives and the collection log
 
+**Status.** The designer's current plan against burnout, cut into sessions. Built: one kind of component (session 1,
+v47; GAME_RULES.md *Components*). Left: sessions 2 to 8: the collection log, 22 new and mutated strains, and
+objectives.
+
 October 28, 2026. The designer: *"I still think variety is going to be the most important factor to prevent burnout."*
-They picked three things from the suggestions: more strains, different objectives, and a collection log. Then, on the
-first draft, they added a fourth: one kind of component instead of a named one for every part. This is the plan, cut
-into sessions. Each session ships lean (CLAUDE.md "Lean first"), on its own branch, and ends pushed.
+They picked three things from the suggestions: more strains, different objectives, and a collection log, then added a
+fourth: one kind of component instead of a named one for every part. Each session ships lean (CLAUDE.md "Lean
+first"), on its own branch, and ends pushed.
 
 ## Why these
 
@@ -12,10 +16,9 @@ into sessions. Each session ships lean (CLAUDE.md "Lean first"), on its own bran
   roll nowhere yet (`PARTS.mech` 0). Strains are how they arrive.
 - **Every fight asks the same thing.** Every fight but the Exfil is "break every part". A new objective makes a virus
   you know feel new, with no new art.
-- **The grind has no visible shape.** Uniques, sets, research and achievements exist, but nothing shows what you've
-  collected and what is still missing.
-- **The loot is Diablo's, not a crafting game's.** Named components (Fuse Wire, Thermal Pad…) suggest crafting the
-  game doesn't build into.
+- **The grind has no visible shape.** Uniques, sets, research and achievements exist, but no one page shows them
+  together, per family, strain, guard, boss and floor. (The System page's Collection lists uniques, faction pieces
+  and sets only.)
 
 ## 1. Strains (S)
 
@@ -134,7 +137,7 @@ one leaves them out.
 - **Beaten:** the strain, its mutated form, and each objective done against it.
 - **Feats:** its achievements.
 
-There are no component slots: components become one currency (section 4).
+There are no component slots.
 
 **Each slot** shows ??? and a one-line hint until you get it, then the item and the date it first came. A count, n of N,
 on every entry and in the index. The first time a slot fills, one pager line says so.
@@ -145,25 +148,16 @@ earns an achievement, whose reward is a title, a sticker, a banner or a casing c
 **Data.** A save keeps `s.collection = { [slot]: when }`. An older save fills it on load from what it already holds
 (uniques and set pieces it owns, research at 60, achievements earned), quietly, with one pager line.
 
+**Open point for the designer.** The Collection on the System page exists (GAME_RULES *Collection log*), and
+`s.collection` already holds `{ [unique]: when }` for it. The log either grows out of that card (slots keyed so a
+unique's slot is its id) or replaces it; it must not keep two collections.
+
 **Where it lives.** A tab of the Codex. The look has real alternatives, so session 1 shows two or three as
 screenshots first: a grid of item slots per entry, a list with progress bars, or slots on each Codex page.
 
 ## 4. One kind of component (K)
 
-Today each part drops its own named component (`p.loot`: Fuse Wire, Thermal Pad, Pulse Kernel…) into `s.salvage`, a
-list of named pieces. Nearly every cost already takes any component. A few name one: a zero-day protocol wants 2
-guard components, a socket wants a server's own, and a hidden room's relay gives two named ones.
-
-**The change:** one currency, *Components*, a count.
-- A broken part drops components (its chance and amount as today), never a named piece.
-- The costs that named one take plain components (a zero-day protocol: 2 more).
-- The Codex's "Drops Fuse Wire" line becomes the part's drop chance. Mastery's "its component drops 25% more often"
-  becomes "it drops components 25% more often".
-- A save's pile becomes its count, so nothing is lost.
-- The family codes (Cipher, Worm and Kernel code, and Exploits) stay as they are. They pay for protocols and payloads,
-  not parts. The designer keeps them.
-
-This comes before the collection log, so the log never lists components.
+**Done (v47).** Components are one currency, a count (GAME_RULES *Components*). The collection log never lists them.
 
 ## 5. Sessions
 
@@ -172,7 +166,7 @@ The prompt to paste is under each.
 
 | # | Session | Depends on | Size |
 |---|---|---|---|
-| 1 | One kind of component (section 4) | nothing | small |
+| 1 | One kind of component (section 4): **done** | nothing | small |
 | 2 | Collection log: the look, as screenshots | 1 | small |
 | 3 | Collection log: build the picked look | 2 and the designer's pick | medium |
 | 4 | Strains wave 1: Lurker to Bodysnatcher, and the spread rule | nothing | medium |
@@ -181,11 +175,7 @@ The prompt to paste is under each.
 | 7 | Objectives: the engine, the Exfil on it, Priority and Uptime, one room in two | the answer on levers | medium |
 | 8 | Objectives: Backup (its look first, as screenshots) and Clean run | 7 merged | medium |
 
-Sessions 1, 4 and 7 touch different files and can run side by side. Sessions 5 and 6 can too, once 4 is merged.
-
-**Session 1.** *Read docs/variety-plan.md section 4. Collapse part components into one currency, Components: a count
-on the save, drops and every cost in it, the Codex's drop line and mastery's perk, and an older save's pile turned into
-its count. Unit tests and docs. Full suite once at the end, then push.*
+Sessions 2, 4 and 7 touch different files and can run side by side. Sessions 5 and 6 can too, once 4 is merged.
 
 **Session 2.** *Read docs/variety-plan.md section 3. Show the designer two or three looks for the collection log as
 screenshots, using real data (a fresh save and a veteran's). Don't build the system yet: mock the page with real
@@ -226,7 +216,6 @@ Full suite once at the end, then push.*
 - The bonus is drop chance, XP and components.
 - The Backup gets its own look.
 - The log leaves daemons out (they have their own) and covers uniques and sets.
-- Part components become one currency. The family codes (Cipher, Worm and Kernel code, Exploits) stay as they are.
 - An objective takes the lever's place in its fight (try it, and see how it plays).
 - The mutated strains (1.3) are a third wave, with their eleven pairings.
 
