@@ -394,11 +394,11 @@ function wildWon(s, loc, room, e) {
   if (sp) { sp.diedAt = t; if (named) delete sp.bounty; }
   if (loc.zone) {
     if (sp) { sp.alive = false; sp.respawnAt = sp.boss ? t + CONFIG.zone.bossRespawnMs : null; } // a stray: down until the clear (run.mjs zoneSpawns)
-    if (zoneCleared(loc)) emit(s, 'info', `SPRAWL-00 reboots. The strays are back${!loc.reboots && hackerLevel(s) >= 3 ? ', and the Core is open' : ''}.`);
+    if (zoneCleared(loc) && s.run) { FP.jackOut(s, 'SERVER CLEARED. Reboot in progress.'); loc.rebootAt = loc.lockUntil = t + CONFIG.zone.rebootMs; } // offline a moment, then every stray back
   }
   else if (rogueKill(s, loc, room.path0, t, () => { const more = ctx?.more?.(); if (more) addItem(s, more, 'The Pit gives up more: '); }) && s.run) {
     // The full clear: the server reboots. You're out with your pack, it's offline a minute, then every room is back fresh.
-    FP.jackOut(s, 'SERVER REBOOTING.');
+    FP.jackOut(s, 'SERVER CLEARED. Reboot in progress.');
     if (!loc.member && HIDDEN.opens) for (const n of hiddenNear(s, loc)) hiddenLead(s, n, 100 - n.lead, 'Full clear: '); // a full clear opens its links, as Mapped does
     loc.lockUntil = t + ROGUE.rebootMs;
   }

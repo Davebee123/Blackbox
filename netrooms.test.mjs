@@ -63,11 +63,16 @@ test('a fresh level-1 character: connect sprawl plays SPRAWL-00 as rooms, its fo
   clock += 3600000;
   assert.equal(FP.isUp(s, room), false, 'down while others still stand, however long');
   assert.equal(FP.WORLD.view.downNote(s, room), 'Down until every room is cleared.');
-  // The last one falls: every stray is back (never while you stand in its room).
-  for (const sp of Object.values(s.zone.spawns)) Object.assign(sp, { alive: false, respawnAt: null });
-  assert.equal(FP.isUp(s, room), false, 'never back while you stand in it');
-  play(s, 'cd ..');
-  assert.equal(FP.isUp(s, room), true, 'back once you have left');
+  // The last one falls: you're jacked out, it reboots for half a minute, then every stray is back.
+  for (const [p, sp] of Object.entries(s.zone.spawns)) if (p !== '/srv') Object.assign(sp, { alive: false, respawnAt: null });
+  play(s, 'cd ..'); play(s, 'cd /srv'); play(s, 'attack'); win(s);
+  assert.equal(s.run, null, 'the clear jacks you out');
+  assert.ok(s.logs.some((e) => e.type === 'jacked-out' && /SERVER CLEARED\. Reboot in progress/.test(e.message)));
+  assert.match(play(s, 'connect sprawl').map((e) => e.message).join(' '), /is rebooting\. Back in 30s/);
+  assert.ok(Object.values(s.zone.spawns).every((x) => !x.alive), 'nothing back while it reboots');
+  clock += CONFIG.zone.rebootMs;
+  play(s, 'connect sprawl');
+  assert.ok(s.run, 'back up');
   assert.ok(Object.values(s.zone.spawns).every((x) => x.alive), 'every stray back');
   // Level 3: RELAY-KING in the Core, a boss under boss rule a.
   s.hackers[s.loadout.archetype].level = 3; s.zone.spawns = {}; s.zone.reboots = 1;

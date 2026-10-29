@@ -18,7 +18,7 @@ was set up for you and that wick of LOWLIGHT will write. Then you pick a class (
 1. `connect sprawl`: **SPRAWL-00**, the starter server, six rooms of strays at your level (never above 5, now and
    then one a level higher). Walk into a room and `engage`. Your first two kills there hit at 60%
    (`CONFIG.zone.starterHit`). A kill pays at once. A stray you kill stays down until nothing in SPRAWL-00 is left
-   alive; then it **reboots** and every stray is back. Its Core opens from level 3, after its first reboot.
+   alive; then it **reboots** (**SERVER CLEARED**): you're jacked out, and 30 seconds later every stray is back. Its Core opens from level 3, after its first reboot.
 2. The network is a stack of eight **floors**; SPRAWL-00 is floor 1's entry. The servers linked to what you know show
    as **?**: kills and first clears **trace** them, and at 100% one is located (Floors, The hidden network).
 3. `connect <server>` starts a run. Out on the net your health is **Signal** (100 × your power, plus gear). It carries
@@ -723,7 +723,7 @@ as you walk in, 1 code one time in five). No vault, nothing to take over, no puz
 | Gauntlet | Mixed families; the full clear pays a bonus cache (60 + 12×level credits, code, XP), once a run |
 
 **It runs in clears.** A fight room you clear stays down for the run. Clear them all and the server reboots (**SERVER
-REBOOTING**): you're jacked out with your pack banked, and it's offline a minute, then fresh. A run you leave half done
+CLEARED**): you're jacked out with your pack banked, and it's offline a minute, then fresh. A run you leave half done
 keeps its progress and reboots on its own 30 minutes after you last left. Your runs are your own.
 
 **The Exfil.** Each run rolls once as it starts: 25% (`CONFIG.exfil`) for an **Exfil**, a process smuggling an archive

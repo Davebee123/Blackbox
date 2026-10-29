@@ -19,7 +19,8 @@ Open http://127.0.0.1:4173. The content editor is at `/editor.html`.
 ## How a session goes
 
 - **SPRAWL-00** is where you start: a rogue server of six rooms with a stray in each. Kill them to trace the servers
-  linked to it. A stray stays down until the last one falls; then it reboots and they're all back. Its Core
+  linked to it. A stray stays down until the last one falls; then you're jacked out, it reboots for 30
+  seconds, and they're all back. Its Core
   (RELAY-KING) opens from level 3, after the first reboot.
 - **Floors.** The network is a stack of eight floors. Each server you trace sits on one, at a fixed level; each floor
   has an exit down.

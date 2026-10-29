@@ -55,6 +55,8 @@ export const isWild = (loc) => !!(loc?.zone || loc?.rogue);
 export const relocks = (loc) => !!loc;
 // Seconds until a wild server lets you reconnect (0 = now).
 export const clock = () => hooks.now?.() ?? Date.now();
+// Until when a cleared server is rebooting (a rogue server's run, SPRAWL-00's loc.rebootAt), or 0.
+export const rebootingUntil = (loc) => Math.max(loc?.rogueRun?.rebootAt || 0, loc?.rebootAt || 0);
 export const relockLeft = (loc, now = clock()) => Math.max(0, Math.ceil(((loc?.lockUntil || 0) - now) / 1000));
 
 // Decide, when a server is traced, whether it's rogue (fixed by its seed, with the pity rule).

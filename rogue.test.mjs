@@ -90,7 +90,7 @@ test('a kill empties the room for the rest of the run; the full clear pays the G
     assert.ok(loc.rogueRun.paid, 'the Gauntlet paid');
     assert.ok(s.server.credits > credits0);
     assert.equal(s.run, null, 'the full clear jacks you out');
-    assert.ok(s.logs.some((e) => e.type === 'jacked-out' && /SERVER REBOOTING/.test(e.message)));
+    assert.ok(s.logs.some((e) => e.type === 'jacked-out' && /SERVER CLEARED\. Reboot in progress/.test(e.message)));
     assert.equal(relockLeft(loc, t), ROGUE.rebootMs / 1000, 'offline a minute');
     play(s, `connect ${loc.id}`);
     assert.ok(!s.run, 'still rebooting');
