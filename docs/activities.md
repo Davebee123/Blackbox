@@ -28,6 +28,25 @@ session's scratchpad, never in the repo), shown as screenshots, before any of it
 | **Dead runner** | A room where a crashed hacker's session sits: their rig (a real build: class, subclass, loadout), one item from their stash, and their last log, which says what killed them (a hint about this server's Resident or an elite's tells). Sometimes their ghost session starts a thread. With real players, later: a player's disconnect leaves one. **Picked (prototype):** a **rare room** (★ like a rare spawn): one server in 25, at most one a server, never on your first servers; the stash (3 protocols, take 1) rolls like a rare spawn's loot. Chip: a cracked NET ID badge, the runner's handle on the plate, amber until taken. Card: the *session dump* (rig and log in one terminal block, cycle-stamped, their voice, no advice; the stash as rows with Take). | The log's lines per Resident and elite |
 | **Off-map servers** | Small handmade servers found only from clues (the scanner, a dead runner's log, a cryptogram, wick), never by tracing. The Museum (retired viruses from old builds), a LOWLIGHT safehouse, a dev box (debug viruses with every number shown), the Graveyard (dead runners' sessions), a pirate station (the scanner's broadcasts). | How many; how a clue puts one on the floor map |
 
+## Virus roster (wanted: prototype these)
+
+Variety across viruses, one rule each, with an answer in every kit.
+
+| Virus | Kind | Rule | Note |
+|---|---|---|---|
+| **Adware** | Family, floors 1–2 | Spawns Ad parts that never attack; each live ad makes its main part hit harder; a broken ad pays a few credits | Must not be farmable: ads cap at 3 alive, stop spawning at cycle 12, and only the first 4 a fight pay |
+| **Scareware** | Family | Some tells are bluffs; a bluff's chip flickers off the beat. Answer the real ones | — |
+| **Spyware** | Family | A skill used twice in a row is learned (an icon on its part) and does less to it | — |
+| **Journaler** | Strain | Every 5 cycles it rewinds its parts to 3 cycles before; a ghost bar shows where to | — |
+| **Molter** | Strain | At cycle 8 it molts into its v2 form: re-armed, one part more, better loot | — |
+| **Cocoon** | Part | No attack; hatches into a stronger part at cycle 6 | Needs more ◆ or Integrity than a usual third, or it's always broken first |
+| **Anchor** | Part | While it lives, no other part drops below 1 | — |
+| **Mesh node** | Room virus | A part more for each live room beside it, its links drawn on the map | — |
+| **Burner** (rework) | Strain | Each part lives 3 cycles, then is thrown away for a fresh one, its damage gone; a part broken in time isn't replaced | Was "deletes itself at cycle 10": boring |
+| **Cavity** (rework) | Strain | A pressure gauge: each skill fills it, key 1 drains it. Over the line it heals; under it, it's Open. Pace yourself | Was "heals when you fire no skill": you always fire skills |
+| **Museum classics** | Named elites | CREEPER, ELK, BRAIN, CHERNOBYL, SLAMMER, MORRIS: wanted, but each needs a mechanic not already discussed | — |
+| **Rare daemons** | Daemons | A ★ rare and a legendary tier beside the common 40: sidegrades with a rule no common has | Profiles and sources under discussion |
+
 ## Kept for later
 
 - **Signal storm.** A front that crosses a floor over an hour. On a Mapped or held server it brings every room back at
@@ -53,3 +72,10 @@ session's scratchpad, never in the repo), shown as screenshots, before any of it
 | Daily seed | Out of scope for now |
 | Home layout as tower defense | The house is a cosmetic, not a defence game |
 | Port knocking | An intrusion metaphor |
+| Rabbit (tiny copies that breed) | Too close to the Replicator |
+| Negotiator (a deal at half Integrity) | Not wanted |
+| Coalesce (fragments merge) | No decision: you kill the fragment every time |
+| Beacon (calls allies for more loot) | Farmable |
+| Held item (a visible protocol on a part) | Not wanted |
+| Ballast (slows attacks while alive) | Not wanted |
+| Magpie (gets richer the longer you wait) | Rewards waiting |
