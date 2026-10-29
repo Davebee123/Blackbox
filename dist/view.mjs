@@ -2080,7 +2080,7 @@ function threatRail(s) {
 }
 
 // The contract tracker (WoW's objective tracker): the contracts you hold and haven't delivered, each with whose it is
-// over its name, and how far along: a count as pips (a long one as a bar and n/N), anything else as a bar and its few words.
+// over its name, and how far along: its few words ("3/5 viruses killed"), a long count as a bar and n/N.
 // Click one to centre the map on its server and select it (app.js data-locate), or for Mail when it has no server.
 export function trackedJobs(s) {
   return openContracts(s).map((c) => {
@@ -2096,8 +2096,7 @@ function contractTracker(s, sel = null) {
   const list = trackedJobs(s);
   if (!list.length) return '';
   const prog = (j) => j.ready ? `<span class="ct-done">✓ Ready</span>`
-    : j.of && j.of <= 10 ? `<span class="ct-pips" aria-label="${j.n} of ${j.of}">${Array.from({ length: j.of }, (_, i) => `<i${i < j.n ? ' class="on"' : ''}></i>`).join('')}</span>`
-    : j.of ? `<span class="ct-bar"><i style="width:${(j.part * 100).toFixed(0)}%"></i></span><small class="ct-n">${j.n}/${j.of}</small>`
+    : j.of && j.of > 10 ? `<span class="ct-bar"><i style="width:${(j.part * 100).toFixed(0)}%"></i></span><small class="ct-n">${j.n}/${j.of}</small>`
     : `<small class="ct-n ct-say">${esc(j.text)}</small>`;
   const mark = (f) => (f && FX[f] ? `<span class="fmark-i ct-f" style="--fc:${FX[f].color}">${glyph('f-' + f)}</span>` : '');
   const rows = list.map((j) => `<button type="button" class="ct-row${j.ready ? ' ready' : ''}${j.locate && j.locate === sel ? ' on' : ''}" ${j.locate ? `data-locate="${esc(j.locate)}"` : `data-go="${esc(j.go)}"`} title="${esc(j.tip)}">${j.pay ? `<template class="tt-more">${j.pay}</template>` : ''}${glyph(j.icon)}<span class="ct-txt"><small class="ct-for">${mark(j.faction)}${esc(j.from)}</small><b>${esc(j.name)}</b></span><span class="ct-prog">${prog(j)}</span></button>`).join('');

@@ -719,7 +719,7 @@ export function progress(s, c) {
   if (c.done) return { text: 'Delivered', part: 1 };
   const own = c.chain && arcProgress(s, c);
   if (own) return own;
-  if (c.type === 'kill' || c.type === 'strain') return { text: `${c.got}/${c.count} neutralized`, part: c.got / c.count, n: c.got, of: c.count };
+  if (c.type === 'kill' || c.type === 'strain') return { text: `${c.got}/${c.count} viruses killed`, part: c.got / c.count, n: c.got, of: c.count };
   if (c.type === 'bounty') return { text: c.got ? 'Neutralized' : c.room ? `In SPRAWL-00, ${sprawlRoom(s, c.room)}` : 'Somewhere in SPRAWL-00', part: c.got ? 1 : 0 };
   if (c.type === 'rooms') return { text: `${c.got}/${c.count} rooms cleared`, part: c.got / c.count, n: c.got, of: c.count };
   if (c.type === 'map') {
@@ -758,7 +758,7 @@ export function progress(s, c) {
     return (r.level || 1) >= c.root ? { text: `Root ${c.root}`, part: 1 } : { text: `${r.cleared || 0}/${need} fight rooms cleared again`, part: Math.min(1, (r.cleared || 0) / Math.max(1, need)) };
   }
   if (ACTIVITY[c.type]) {
-    const what = { grind: 'neutralized', solve: c.kind ? 'solved' : 'boards solved', decode: 'parts decoded', sweeps: 'logs swept', interrupt: 'attacks answered', hold: 'invasions stopped' }[c.type];
+    const what = { grind: 'viruses killed', solve: c.kind ? 'solved' : 'boards solved', decode: 'parts decoded', sweeps: 'logs swept', interrupt: 'attacks answered', hold: 'invasions stopped' }[c.type];
     return { text: `${c.got}/${c.count} ${what}`, part: c.got / c.count };
   }
   if (c.type === 'heist') {
