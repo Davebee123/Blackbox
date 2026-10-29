@@ -275,6 +275,7 @@ and `style.test.mjs` the tooltip grammar.
 | [`docs/kits.md`](docs/kits.md), [`docs/subclasses/`](docs/subclasses/) | Class kits and the eight subclasses. |
 | [`docs/routines.md`](docs/routines.md) | Routines. |
 | [`docs/progression.md`](docs/progression.md), [`docs/economy.md`](docs/economy.md), [`docs/content.md`](docs/content.md), [`docs/variety-plan.md`](docs/variety-plan.md) | Pacing, the economy, activities and variety. |
+| [`docs/rivals.md`](docs/rivals.md) | Rivals: the roster and the picked look (designed, not built). |
 | [`docs/loot-plan.md`](docs/loot-plan.md) | Sets and uniques. |
 | [`docs/leanings.md`](docs/leanings.md) | Leanings: a server's one positive rule (picked, not built). |
 | [`docs/threads.md`](docs/threads.md), [`docs/director.md`](docs/director.md) | Threads, and the event director. |
