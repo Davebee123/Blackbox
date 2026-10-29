@@ -23,7 +23,7 @@ test(`the pacing bot reaches level ${TO} with every class`, () => {
 // Measured (seed 7): see docs/progression.md section 7; pacing.mjs prints the whole table to 50 on more seeds. Working
 // contracts, level 10 is the one a class can miss: the board opens late in the storyline, and a class slow from 5 to 10
 // gains little (the Infiltrator 4.0 hours against 2.7, the others 2.4 to 3.3), so each class has 50% there.
-test('the long climb: real hours to levels 5, 10, 20 and 30 within 15% of the table (median of the four classes), every class within 30% from level 20 (50% at 10)', { todo: 'pacing waits on the designer\'s play since contracts pay minutes of farming (the Bastion 13.8 hours to 20)' }, () => {
+test('the long climb: real hours to levels 5, 10, 20 and 30 within 15% of the table (median of the four classes), every class within 30% from level 20 (50% at 10)', { todo: 'pacing waits on the designer\'s play since contract XP was reworked (a kind\'s baseline, size and level) (the Bastion 13.8 hours to 20)' }, () => {
   const off = [];
   for (const L of [5, 10, 20, 30]) {
     const h = hoursTo(runs, L), want = PACE_TARGET[L];
@@ -77,7 +77,7 @@ test('no one kind of play carries the climb: fights stay under 76% of XP (the bo
 // Both roads farm here (no contracts): working contracts, SPRAWL-only keeps its kill, grind and decode jobs and comes out
 // 0.85-1.0x, as contracts carry the first levels either way. Farming (first clears folded into Mapped): 1.85x, 1.78x, 1.41x, 1.71x.
 const SLOW_TO = 8;
-test(`fighting alone is the slow road: SPRAWL-only takes 1.25x as long to level ${SLOW_TO} as mixed play for every class (the Breaker, which leans solo, 1.0x, the Bastion 1.2x), 1.35x on average (median of 7 seeds: 5 swung with which uniques dropped)`, { todo: 'pacing waits on the designer\'s play since contracts pay minutes of farming (the Operator 1.09x: its SPRAWL-only run now Maps wick\'s server and traces on from invasions)' }, async () => {
+test(`fighting alone is the slow road: SPRAWL-only takes 1.25x as long to level ${SLOW_TO} as mixed play for every class (the Breaker, which leans solo, 1.0x, the Bastion 1.2x), 1.35x on average (median of 7 seeds: 5 swung with which uniques dropped)`, { todo: 'pacing waits on the designer\'s play since contract XP was reworked (a kind\'s baseline, size and level) (the Operator 1.09x: its SPRAWL-only run now Maps wick\'s server and traces on from invasions)' }, async () => {
   const med = (a) => [...a].sort((x, y) => x - y)[Math.floor(a.length / 2)];
   const seeds = [1, 2, 3, 4, 5, 6, 7];
   const jobs = CLASSES.flatMap((cls) => [true, false].flatMap((sprawlOnly) => seeds.map((seed) => ({ cls, seed, target: SLOW_TO, sprawlOnly, contracts: false }))));

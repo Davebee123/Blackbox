@@ -22,15 +22,15 @@
 // sweeps), interrupt (N attacks answered), root (the next Root level on a server you hold) and hold (an invasion
 // stopped). contractDid counts them.
 //
-// XP (WoW's quests): a fixed amount, set when it's posted by the level then and its kind: its minutes (MINUTES, the
-// real play it takes, so slow kinds pay more) of farming at that level (data.mjs farmXp), times MAIL.xpShare. It comes
-// on top of what the work pays on its own, so working contracts is about 1.5x the XP an hour of farming the same servers.
+// XP (WoW's quests): a fixed amount, set when it's posted: its kind's baseline in kills' worth (BASE, from what the job
+// asks), times its size (SIZE: a job that counts something pays more for more of it, 15 kills more than 5), times the
+// level curve (MAIL.xp) at the level it was posted (contractXp). It comes on top of what the work pays on its own.
 //
 // Room contracts (ROOM_JOBS): install (carry Halcyon's item to a room's grid address on a server and install it there;
 // lose your Signal while it's in your pack and it's gone, the job with it), defuse (break N Encryptors before they
 // Encrypt), sweep (one visit, every room but the Core, no rest), exfil (catch an Exfil) and heist (a vault's file past a
 // Tracker). No clock: one waits on the board at a time until you take it, outside the five.
-import { FAMILIES, ROOM_FAMILIES, CONFIG, STRAINS, farmXp } from './data.mjs';
+import { FAMILIES, ROOM_FAMILIES, CONFIG, STRAINS, along, killXp } from './data.mjs';
 import { ROOT } from './root.mjs';
 import { PUZZLES } from './puzzles.mjs';
 import { LOOT, MATERIALS, rollItem, seeded } from './gear.mjs';
@@ -63,7 +63,7 @@ export const MAIL = {
   factionPay: 1.2, // they pay a little better than Halcyon, in credits and their own rep (no Halcyon standing)
   startStanding: 10,
   roomEvery: [8 * 60 * 1000, 20 * 60 * 1000], // a room contract arrives somewhere in here after the last one was taken
-  xpShare: 0.2, // a contract's XP: its minutes (MINUTES) of farming at the level it was posted (farmXp), times this
+  xp: [[1, 3], [5, 8], [10, 13], [20, 13], [30, 11]], // the level curve: a contract's baseline (BASE × SIZE, kills' worth) times this, by the level it was posted at (straight between its points)
 };
 
 export { FACTIONS }; // the factions live in factions.mjs now (Halcyon is the first of them)
@@ -201,7 +201,7 @@ function postStory(s, at = now(), force = false) {
   const l = letter(s, msg, at);
   if (job) {
     const j = { id: l.id, from: msg.from, subject: msg.subject, body: msg.body, got: 0, at, ...job };
-    j.minutes = minutesOf(j); j.reward.xp = contractXp(hackerLevel(s), j); // like the board's: its kind, at your level
+    j.xpFixed = true; j.reward.xp = contractXp(hackerLevel(s), j); // like the board's: its kind and size, at your level
     m.jobs.push(j);
     l.job = j.id;
     arm(s, j);
@@ -345,8 +345,8 @@ export function offer(s, at = now()) {
     j = { type, ...target, file: f.file, label: f.label, text: [f.line, off ? 'GLASSJAW wants it. Halcyon wants it more.' : 'pull it and bank it, then deliver it from Mail.'],
       reward: { credits: pay(50, 8), standing: 6, ...hit, ...repFor(6) } };
   }
-  // Its XP, fixed now (MINUTES at this level). GLASSJAW's work is worth the standing it costs: more XP, and a protocol on delivery.
-  j.minutes = minutesOf(j); j.reward.xp = contractXp(L, j);
+  // Its XP, fixed now (its kind and size at this level). GLASSJAW's work is worth the standing it costs: more XP, and a protocol on delivery.
+  j.xpFixed = true; j.reward.xp = contractXp(L, j);
   if (off) { j.reward.xp = Math.round(j.reward.xp * MAIL.offBooksXp); j.reward.drop = true; }
   // Halcyon sends a relay with one server job at a time, while you have none.
   if (faction === 'halcyon' && !off && ['takeover', 'item'].includes(type) && !items(s).relay && ![...openContracts(s), ...offers(s)].some((c) => c.reward?.relay)) j.reward.relay = 1;
@@ -480,7 +480,7 @@ export function roomOffer(s, at = now(), want = null) {
     const j = roomJob(s, kind);
     if (!j) continue;
     const v = pick(s, CONTRACT_TEXT[kind]?.halcyon?.length ? CONTRACT_TEXT[kind].halcyon : [{ subject: kind, body: [''] }]), vars = jobVars(s, j);
-    j.minutes = minutesOf(j); j.reward.xp = contractXp(L, j);
+    j.xpFixed = true; j.reward.xp = contractXp(L, j);
     const o = { id: s.mail.next++, from: v.from ? SENDERS[v.from] : SENDERS.claims, got: 0, at, level: L, expiresAt: at + 10 * 365 * 24 * 3600000, waits: true, faction: 'halcyon',
       subject: fill(v.subject, vars), body: (v.body || []).map((p) => fill(p, vars)).filter(Boolean), ...j };
     s.mail.offers.push(o);
@@ -768,21 +768,28 @@ export function progress(s, c) {
   }
   return { text: '', part: 0 };
 }
-// What a contract takes, in minutes of real play (FIGHT: a fight with its walk, at LOOT.killsPerHour): what it pays XP
-// for. A kill job's family turns up in about every other fight; a strain only on its servers.
-const FIGHT = 60 / LOOT.killsPerHour;
-export const MINUTES = {
-  kill: (c) => c.count * FIGHT * 2, strain: (c) => c.count * FIGHT * 5, bounty: () => 5, materials: (c) => c.amount * FIGHT * 2,
-  rooms: (c) => c.count * FIGHT * 3, map: () => 20, takeover: () => 30, item: (c) => (c.loc ? 25 : 40), side: () => 0,
-  install: () => 15, defuse: (c) => c.count * 3, sweep: (c) => (c.size === 'medium' ? 30 : 25), exfil: () => 15, heist: () => 30,
-  grind: (c) => c.count * FIGHT * 2, solve: (c) => (c.kind ? 15 : c.count * 8), decode: (c) => c.count * 5, sweeps: (c) => c.count * 10,
-  interrupt: (c) => c.count, root: (c) => c.fights * FIGHT * 1.5, hold: () => 25, puzzle: () => 15, lair: () => 20,
+// A contract's XP: its kind's baseline in kills' worth (what the job asks: a takeover more than a few kills), times its
+// size, times the level curve (MAIL.xp) at level L. A kind that counts something (kills, rooms, code, boards…) is small,
+// medium or large by how many it asks (SIZE: from the first number medium, from the second large), ×1, ×2 or ×3.
+export const BASE = {
+  kill: 1.5, strain: 2, bounty: 2, materials: 1, rooms: 2, map: 3, takeover: 3, item: 2.5, side: 0,
+  install: 3, defuse: 2.5, sweep: 4, exfil: 2.5, heist: 3.5,
+  grind: 1.5, solve: 2, decode: 1.5, sweeps: 2, interrupt: 1.5, root: 3, hold: 2.5,
+  puzzle: 2, lair: 4, // a floor job's own steps (arcs.mjs): a board won on its server, the floor's lair boss beaten
 };
-export const minutesOf = (c) => Math.max(0, MINUTES[c.type]?.(c) ?? 0);
-// The XP it pays, posted at level L: its minutes of farming there (data.mjs farmXp) times MAIL.xpShare.
-export const contractXp = (L, c) => Math.round(MAIL.xpShare * minutesOf(c) * farmXp(L));
-// Fixed when it was posted (reward.xp); one from before that, its kind's at the level it was posted.
-export const xpOf = (s, c) => (c.minutes != null ? c.reward?.xp || 0 : Math.round(contractXp(c.level ?? hackerLevel(s), c) * (c.offBooks ? MAIL.offBooksXp : 1)));
+export const SIZE = {
+  mult: [1, 2, 3],
+  kill: [6, 12], strain: [6, 12], grind: [6, 12], rooms: [6, 10], materials: [4, 7], defuse: [4, 6],
+  solve: [3, 5], decode: [3, 5], sweeps: [2, 3], interrupt: [8, 12], root: [6, 15],
+};
+const amountOf = (c) => (c.type === 'materials' ? c.amount : c.type === 'root' ? c.fights : c.count) || 0;
+// 0 small, 1 medium, 2 large.
+export const sizeOf = (c) => { const cut = SIZE[c.type]; return !cut ? 0 : amountOf(c) >= cut[1] ? 2 : amountOf(c) >= cut[0] ? 1 : 0; };
+// The XP it pays, posted at level L (a sweep of a medium server 1.3 times a small one's).
+export const contractXp = (L, c) => Math.round(killXp(L) * (BASE[c.type] ?? 2) * SIZE.mult[sizeOf(c)] * along(MAIL.xp, L) * (c.type === 'sweep' && c.size === 'medium' ? 1.3 : 1));
+// Fixed when it was posted (reward.xp: marked xpFixed, or minutes when contracts paid minutes of farming); one from
+// before either, its kind and size at the level it was posted.
+export const xpOf = (s, c) => (c.xpFixed || c.minutes != null ? c.reward?.xp || 0 : Math.round(contractXp(c.level ?? hackerLevel(s), c) * (c.offBooks ? MAIL.offBooksXp : 1)));
 export const rewardLine = (s, c) => [
   `${c.reward.credits} credits`,
   xpOf(s, c) ? `${xpOf(s, c)} XP` : '',
@@ -830,7 +837,7 @@ export function mailCommand(s, text, at = now()) {
   s.mail.jobs = s.mail.jobs.filter((x) => !x.done || x.story !== undefined || keep.has(x));
   // A strain contract streak: every fifth in a row pays double and rolls for the strain's trophy.
   let fifth = false;
-  if (c.type === 'strain') { const sl = (s.slayer ||= { streak: 0 }); sl.streak++; fifth = sl.streak % SLAYER.every === 0; if (fifth) { c.reward = { ...c.reward, credits: c.reward.credits * 2, xp: xpOf(s, c) * 2 }; c.minutes ??= minutesOf(c); } }
+  if (c.type === 'strain') { const sl = (s.slayer ||= { streak: 0 }); sl.streak++; fifth = sl.streak % SLAYER.every === 0; if (fifth) { c.reward = { ...c.reward, credits: c.reward.credits * 2, xp: xpOf(s, c) * 2 }; c.xpFixed = true; } }
   s.server.credits += c.reward.credits;
   // What it paid, for the delivered card (app.js shows it in the middle of the screen). XP was fixed when it was
   // posted; a protocol it pays rolls at the level of the kills that filled it.

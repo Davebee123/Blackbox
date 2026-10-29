@@ -13,8 +13,9 @@
 //            first main-road server with a Tracker from there (a Mirror, an Archive or a Lab), or the lair. A target
 //            you haven't located yet is the ? at its slot, or further out: the step says how many links past what
 //            you've found, and becomes the plain contract once you locate it.
-//   rewards  credits, Halcyon standing (or the sender's rep) and contract XP, all paid by mail.mjs's delivery (the same
-//            XP helper as the board's). A step marked pick offers one of three items at your level (WoW's quest
+//   rewards  credits, Halcyon standing (or the sender's rep) and contract XP, all paid by mail.mjs's delivery. The XP is
+//            fixed when the step is posted: its kind's baseline and size at your level (mail.mjs BASE, SIZE,
+//            contractXp), as the board's. A step marked pick offers one of three items at your level (WoW's quest
 //            reward): the last step's are yellows, one rarity over a contract's blue; a middle step's are blues. Never
 //            a unique or a set piece.
 // State: s.arcs = { [floor]: { step, at, done, doneAt, titles }, offers: [{ floor, step, items }] }. The jobs themselves
@@ -26,7 +27,7 @@ import { graphOf, locAt, hiddenAt, neighbours, floorName, reached, serverSlot } 
 import { lairBoss, NETWORK } from './network.mjs';
 import { addrsOf, sweepRooms } from './address.mjs';
 import { zoneOf, zoneRooms } from './zone.mjs';
-import { letter, arm, boardOpen, openContracts, title, CREWS, minutesOf, contractXp } from './mail.mjs';
+import { letter, arm, boardOpen, openContracts, title, CREWS, contractXp } from './mail.mjs';
 import { FACTIONS } from './factions.mjs';
 import { fill } from './content.mjs';
 import STORY_TEXT from './content/story.mjs';
@@ -106,7 +107,7 @@ function post(s, n, k, at) {
   const msg = { from: from(c), subject: fill(step.subject, vars), body: (step.body || []).map((p) => fill(p, vars)) };
   const l = letter(s, msg, at);
   const j = { id: l.id, ...msg, got: 0, at, faction: c.faction || 'halcyon', ...job, reward: pay(s, n, step) };
-  j.minutes = minutesOf(j); j.reward.xp = contractXp(hackerLevel(s), j); // fixed now, as the board's are (mail.mjs MINUTES)
+  j.xpFixed = true; j.reward.xp = contractXp(hackerLevel(s), j); // its XP, fixed now: its kind and size at your level, like the board's
   l.job = j.id;
   s.mail.jobs.push(j);
   if (j.type === 'bounty') arm(s, j);

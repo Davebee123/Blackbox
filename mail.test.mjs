@@ -442,20 +442,24 @@ test('an older save’s Indemnity becomes credits once, with a letter from Halcy
   assert.ok(!('indemnity' in u) && !u.mail.list.some((x) => /Indemnity/.test(x.subject)));
 });
 
-test('contract XP, WoW-style: fixed when posted, its minutes of farming at that level (farmXp) times MAIL.xpShare; slow kinds pay more', async () => {
-  const { minutesOf, contractXp } = await import('./dist/mail.mjs');
-  const { farmXp, xpToNext, levelMinutes } = await import('./dist/data.mjs');
-  assert.equal(farmXp(20), xpToNext(20) / levelMinutes(20));
+test('contract XP: its kind\'s baseline, times its size, times the level curve, fixed when posted', async () => {
+  const { contractXp, sizeOf, BASE, SIZE } = await import('./dist/mail.mjs');
+  const { killXp, along } = await import('./dist/data.mjs');
   const s = contractor();
   s.hackers = { breaker: { level: 20, xp: 0 } };
   addLocation(s, 'worm', 20); // a traced server: invasions come from it
   const by = {};
   for (let i = 0; i < 400; i++) { const o = offer(s, T0); if (!o.offBooks && o.faction === 'halcyon') by[o.type] ||= o; }
   for (const o of Object.values(by)) {
-    assert.equal(o.minutes, minutesOf(o), o.type);
-    assert.equal(o.reward.xp, Math.round(MAIL.xpShare * minutesOf(o) * farmXp(20)), `${o.type}: a fixed amount`);
+    assert.ok(o.xpFixed, o.type);
+    assert.equal(o.reward.xp, Math.round(killXp(20) * BASE[o.type] * SIZE.mult[sizeOf(o)] * along(MAIL.xp, 20) * (o.type === 'sweep' && o.size === 'medium' ? 1.3 : 1)), `${o.type}: baseline × size × level`);
   }
-  assert.ok(by.kill && by.hold && by.hold.reward.xp > by.kill.reward.xp, 'an invasion held pays more than a few kills');
+  // A job that counts more pays more: 15 kills against 5.
+  const kill = (count) => ({ type: 'kill', count });
+  assert.deepEqual([4, 5, 6, 11, 12, 15].map((n) => sizeOf(kill(n))), [0, 0, 1, 1, 2, 2]);
+  assert.equal(contractXp(20, kill(15)), 3 * contractXp(20, kill(5)), 'a large job ×3');
+  assert.equal(contractXp(20, kill(8)), 2 * contractXp(20, kill(5)), 'a medium one ×2');
+  assert.ok(contractXp(20, { type: 'takeover' }) > contractXp(20, kill(5)), 'a takeover pays more than a few kills');
   assert.equal(contractXp(30, by.kill) > contractXp(20, by.kill), true, 'the same job pays more posted higher');
   // Delivered later, at a higher level: what it was posted for.
   const k = by.kill;

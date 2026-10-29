@@ -328,6 +328,6 @@ test('campaignsim: every class reaches level 10 from level 1 within a bounded nu
   assert.ok(w && w.breaches > 20, 'the world turned');
   assert.ok(w.eventsMax <= 1 && w.liveMax <= 3 && w.pressureMax <= 2 && w.clean === 1 && w.afterLoss === 0, JSON.stringify(w));
 });
-test('campaignsim: every class wins 45 to 90% of its breaches', { timeout: 600000, todo: 'pacing waits on the designer\'s play since contracts pay minutes of farming (the Operator 91%)' }, () => {
+test('campaignsim: every class wins 45 to 90% of its breaches', { timeout: 600000, todo: 'pacing waits on the designer\'s play since contract XP was reworked (a kind\'s baseline, size and level) (the Operator 91%)' }, () => {
   for (const r of report(campaignRuns())) assert.ok(r.win >= 45 && r.win <= 90, `${r.cls} wins ${r.win}% of its breaches`); // campaignsim.mjs prints the full table
 });

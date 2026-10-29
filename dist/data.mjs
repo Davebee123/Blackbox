@@ -1359,7 +1359,7 @@ export const UNLOCKS = [
 // server's rooms began to respawn in minutes (docs/progression.md 7): the bot farms them, which pays less a fight than
 // exploring did, and the climb ran 11-33% long. CLIMB.minutes is the real play a level should
 // take (5 at level 1, 48 at 10, 95 at 20, 160 at 30, 200 at 40, 220 at 49): its sum is the pacing table (pacing.mjs
-// PACE_TARGET, a player who works contracts). Contracts read it (farmXp): their pay is minutes of play at that pace.
+// PACE_TARGET, a player who works contracts).
 // Before save v42 a level took 5 + 1.2 × L kills (V41_KILLS): about 1,700 to 50, 7 hours of real play.
 export const CLIMB = {
   kills: [[1, 23], [2, 62], [3, 130], [4, 160], [5, 170], [10, 172], [15, 366], [20, 523], [25, 673], [30, 818], [35, 909], [40, 1000], [45, 1068], [49, 1137]],
@@ -1380,7 +1380,8 @@ export const v41XpToNext = (level) => Math.round(killXp(level) * V41_KILLS(level
 // DEED.share of how much longer the level is than before v42 (climbStretch): about 6.5 at level 4, 4.3 at 9, 7.1 at 19,
 // 7.9 at 29, 7.1 at 49. A full share kept deeds' part of a level, but the long climb finishes every floor where the old
 // one outgrew half of it, so deeds came to 80% of the XP; at 0.4 they are about a quarter (pacing.mjs). Kills are not
-// scaled, nor are puzzle boards, decodes and log sweeps (a kill each); contracts pay minutes of farming (farmXp).
+// scaled, nor are puzzle boards, decodes and log sweeps (a kill each); contracts pay their kind's baseline and size on
+// a level curve (mail.mjs contractXp).
 export const climbStretch = (level) => killsToNext(level) / V41_KILLS(level); // how much longer a level is than before v42
 export const DEED = { share: 0.4 };
 export const deedScale = (level) => Math.max(1, DEED.share * climbStretch(level));
@@ -1390,8 +1391,6 @@ export const xpScale = (gap) => (gap >= 0 ? 1 + 0.05 * Math.min(gap, 5) : Math.m
 export const XP = { home: 1, guard: 0.8, vault: 1.5, newLocation: 0.7 };
 // The real play level L to L+1 should take, in minutes (CLIMB.minutes, straight between its points).
 export const levelMinutes = (level) => along(CLIMB.minutes, Math.max(1, level));
-// A minute of farming at level L, in XP: the level's XP over its minutes. What a contract's minutes pay (mail.mjs).
-export const farmXp = (level) => xpToNext(level) / levelMinutes(level);
 // Rested (World of Warcraft's rule): only logged-off time counts. Time safely away (no crash) banks 5% of a level
 // every 8 hours, of the level you're on when it banks, up to 1.5 levels (10 days away from empty). Kills spend it: each pays double until it runs out
 // (combat.mjs payKill). A night away is about 5% of a level, a weekend about 30%.

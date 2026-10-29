@@ -6,8 +6,8 @@
 // The bot's own clock (12-second cycles, 3 seconds a step, every rest and reconnect wait) runs about 20 times slower
 // on the long climb, so its hours are not a player's. Climbs run in parallel, one per core (`climbs`, for the tests too).
 // The table is the pace of a player who works contracts: the bot takes and works them (contracts on, the default).
-// Contracts pay about half again what farming the same servers does (mail.mjs MINUTES, MAIL.xpShare), so it is the
-// farmer's (FARM_TARGET, data.mjs CLIMB.minutes, about 100 hours to 50) over 1.5; `contracts` off holds the bot to that.
+// Contracts pay on top of what the work pays (mail.mjs contractXp: a kind's baseline and size on a level curve); the
+// table is the farmer's (FARM_TARGET, data.mjs CLIMB.minutes, about 100 hours to 50) over 1.5; `contracts` off holds the bot to that.
 // node pacing.mjs [targetLevel] [seeds] [classes, comma-separated] [spend: none|topup] [contracts: on|off]
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
 import { cpus } from 'node:os';

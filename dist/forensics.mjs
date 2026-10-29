@@ -16,7 +16,7 @@ import { contractDid } from './mail.mjs';
 import { routed } from './hidden.mjs';
 import { seeded } from './gear.mjs';
 
-export const SWEEP = { share: 0.5, rewards: [40, 25, 15, 10], xpShare: 1 }; // a sweep pays a kill's XP (a contract, Sweep, pays for the minutes)
+export const SWEEP = { share: 0.5, rewards: [40, 25, 15, 10], xpShare: 1 }; // a sweep pays a kill's XP (a Sweep contract pays its own on top)
 export const SWEEP_FILES = { auth: 'breach.log', exfil: 'transfer.log', proc: 'ps.snapshot' };
 
 const pick = (r, a) => a[Math.floor(r() * a.length)];

@@ -55,7 +55,7 @@ export const CONTRACT_KINDS = {
   hold: { name: 'Stop an invasion', sides: ['halcyon'] },
 };
 export const SIDES = { halcyon: 'Halcyon (on the books)', glassjaw: 'GLASSJAW (off the books)' };
-// (A job's XP comes from its kind and your level, as the board's do: mail.mjs MINUTES.)
+// (A job's XP comes from its kind, its size and your level, as the board's do: mail.mjs BASE, SIZE.)
 export const REWARDS = { credits: 'Credits', standing: 'Standing', relay: 'Relays', drop: 'A protocol, Tuned or better' };
 
 // Fill {blanks}. Unknown ones are left as typed so they're easy to spot.
