@@ -631,7 +631,7 @@ test('a class set: anyone wears its 2- and 3-piece and the 4-piece\'s base line;
 });
 
 test('Kestrel pieces held from save v45 keep working, as the retuned set', () => {
-  assert.equal(SAVE_VERSION, 46, 'no save bump since v45 for sets (v46 is the subclass pick): a piece reads its bonuses from its unique, and its id and stats are unchanged');
+  assert.equal(SAVE_VERSION, 48, 'no save bump since v45 for sets (v46 is the subclass pick, v47 components, v48 Indemnity): a piece reads its bonuses from its unique, and its id and stats are unchanged');
   const s = at(12);
   const items = wear(s, KESTREL);
   (s.pity ||= {})['set:bouncer'] = 3;
@@ -763,7 +763,7 @@ test('a tier set drop comes up three times as often for your own class, pieces y
 });
 
 test('tier pieces held from the floor 3 to 6 version keep their item level and stats, and work as the set', () => {
-  assert.equal(SAVE_VERSION, 46, 'no save bump since v45 for sets (v46 is the subclass pick): a held piece keeps its stats and reads its bonuses from its unique and its set');
+  assert.equal(SAVE_VERSION, 48, 'no save bump since v45 for sets (v46 is the subclass pick, v47 components, v48 Indemnity): a held piece keeps its stats and reads its bonuses from its unique and its set');
   // A Wrecking Crew found before, at its old levels and bases.
   const OLD = { crowbar: ['exploit-chain', 15, { damage: [15, 19] }], 'det-cord': ['loader', 20, { damage: 9, signal: 40, payload: 4 }], 'hard-hat': ['ghost-shell', 26, { signal: 70, regen: 15, restore: 30 }], 'blast-map': ['implant', 32, { damage: 6, signal: 30 }] };
   const s = as('breaker', 'demolitionist', 32);

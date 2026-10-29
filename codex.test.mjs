@@ -109,7 +109,8 @@ test('a decoded part shows its numbers at your level, the same numbers a room fi
   s.research[`${v.family}:pulse`] = 15;
   assert.match(cardOf(codexPageMarkup(s, `family:${v.family}`)), /cxp-answer">Delay it, or soften the hit with ◆ and shields\./, 'at 15, what answers it (fightread partRead)');
   s.research[`${v.family}:pulse`] = 60;
-  assert.match(cardOf(codexPageMarkup(s, `family:${v.family}`)), /Drops Pulse Kernel/, 'at 60, what it drops');
+  assert.match(cardOf(codexPageMarkup(s, `family:${v.family}`)), /Drops components 75% of the time in a room fight \(an elite&#39;s always\), and 44% elsewhere\./, 'at 60, its drop chance (mastery on), never a named piece');
+  assert.doesNotMatch(cardOf(codexPageMarkup(s, `family:${v.family}`)), /Pulse Kernel/);
   // The same part one level up hits harder: the numbers follow your level.
   const lower = sampleOf('family', v.family, 1, null).parts.find((p) => p.id === 'pulse');
   assert.ok(x.part.max > lower.max && x.part.attack.amount > lower.attack.amount, 'level 10 numbers, not level 1');
@@ -252,7 +253,7 @@ test('the P2 parts: a card each, with research tiers and a component, and Kestre
     assert.match(card(3), /Integrity/, `${id} at 3: its numbers`);
     assert.match(card(3), /Research 15 to learn its rule/);
     assert.match(card(15), /cxp-answer/, `${id} at 15: its answer`);
-    assert.match(card(60), new RegExp(`Drops ${x.spec.loot}`), `${id} at 60: its drop`);
+    assert.match(card(60), /Drops components \d+% of the time/, `${id} at 60: its drop chance`);
     assert.doesNotMatch(card(60), /undefined|NaN/);
   }
   for (const g of Object.keys(GUARDS)) {

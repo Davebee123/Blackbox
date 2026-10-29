@@ -7,13 +7,14 @@
 //   tiers     0 met: its name and what it hits · 1 decoded: Integrity, ◆, its attack and timing at your level, its
 //             tooltip and cue on the board · 5: its rule, its answer and the tells it can ride · 20 (100%): its loot,
 //             and the mastery perk
-//   mastery   that part only: its component drops 25% more often (combat.mjs breakPart), and every hit of yours on it
+//   mastery   that part only: it drops components 25% more often (combat.mjs breakPart), and every hit of yours on it
 //             deals 3% more (combat.mjs damageMultiplier, so every preview on the board counts it too)
 //
 // State is s.research ({ key: n }, n capped at 20). fresh() starts it empty and the save restore adds it to an older
 // save (no SAVE_VERSION change, as the Codex's s.dex): every part that save had decoded (s.codex) starts decoded (research 3), and
 // nothing else is granted.
-import { emit, gainXp, deedXpFor, DECODE_XP, codexKey as keyOf } from './combat.mjs';
+import { emit, gainXp, xpFor, DECODE_XP, codexKey as keyOf } from './combat.mjs';
+import { contractDid } from './mail.mjs';
 
 export const RESEARCH = {
   max: 60,
@@ -54,7 +55,7 @@ export const pctOf = (ns) => (ns.length ? Math.round((ns.reduce((a, n) => a + sh
 // What each tier says when you reach it, as the log puts it (tooltip grammar's plain voice: terse).
 export const tierLine = (name, tier) => (tier === TIER.decoded ? `${name} decoded: research ${tier}. Hover it to see its numbers.`
   : tier === TIER.rule ? `${name} research ${tier}: its rule and answers are in the Codex.`
-    : `${name} mastered: research ${tier}. Its component drops ${Math.round((RESEARCH.perk.drop - 1) * 100)}% more often, and you deal ${Math.round((RESEARCH.perk.dmg - 1) * 100)}% more damage to it.`);
+    : `${name} mastered: research ${tier}. It drops components ${Math.round((RESEARCH.perk.drop - 1) * 100)}% more often, and you deal ${Math.round((RESEARCH.perk.dmg - 1) * 100)}% more damage to it.`);
 
 // Research earned on a part in your fight: how (break, cut or tell). Returns the tier it reached, or 0. Reaching the
 // first tier decodes the part, and that pays its XP (combat.mjs DECODE_XP), as the first break always did.
@@ -70,7 +71,8 @@ export function gainResearch(s, v, p, how) {
   for (const t of hit) {
     const type = t === TIER.decoded ? 'codex' : t === TIER.mastered ? 'mastered' : 'research';
     emit(s, type, tierLine(p.name, t), { target: p.id, research: now, tier: t, how });
-    if (t === TIER.decoded && s.encounter) gainXp(s, deedXpFor(s, v.level, DECODE_XP), `${p.name} decoded`, 'intel');
+    if (t === TIER.decoded && s.encounter) gainXp(s, xpFor(s, v.level, DECODE_XP), `${p.name} decoded`, 'intel');
+    if (s.encounter) contractDid(s, 'decode'); // a Decode contract counts each tier
   }
   return hit.at(-1) || 0;
 }

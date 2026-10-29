@@ -56,6 +56,12 @@ glyph in its rarity's colour). Its motion (a feud's clash, a hunt's quarry, a co
 (`--ph`) so a redraw never restarts it, and stops with Motion off or reduced motion. The map pop-up widens to 376px
 while it holds one (desktop only).
 
+**Contract tracker** (`.ctrack`, `view.mjs` `contractTracker`): the contracts you hold, under the threat rail in the map's
+left column (`.map-lcol`). A row is an icon column, the name over who it's for (the faction's mark), then the progress in
+amber: pips for a count of 10 or fewer, a bar with *n/N* past that, a few muted words otherwise, **✓ Ready** once done.
+The sentence is the row's tooltip. A row is a button: `data-locate` centres the map on its server and selects it (lit
+`.on` while selected), `data-go` opens Mail when it has no server. No teal.
+
 **Labelled rows** (`.op-row`, `.net-row`, `.srv-line`): a fixed label column (`--label` type, `--dim`) and the
 value beside it. Every row in a block uses the same label width. This is the pattern for any "what is on this
 thing" section (the outpost on the map card, a network's signature, the server card).

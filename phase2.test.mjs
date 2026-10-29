@@ -232,7 +232,7 @@ test('Phase 4: a hot strain every 4 hours (the same for everyone), first decodes
   assert.equal(HOT.everyMs, 4 * 3600000);
   assert.equal(DECODE_XP, 1, 'a first decode pays one kill (it was two, and paid half the XP of levels 1–5)');
   const { xpToNext } = await import('./dist/data.mjs');
-  const r = at(10); r.firewall = { pin: 60, plus: 0, frag: 0, defragUntil: 0, hardenUntil: 0 };
+  const r = at(10); r.firewall = { pin: 60, plus: 0, frag: 0, defragUntil: 0 };
   tickNetwork(r, T); tickNetwork(r, T + 8 * 3600000);
   assert.ok(Math.abs(r.rested / (0.05 * xpToNext(10)) - 1) < 0.01, `a safe night away (8 hours): 5% of the level banked (${r.rested}, ${(r.rested / killXp(10)).toFixed(1)} kills)`);
 });
@@ -242,7 +242,7 @@ test('Rested is World of Warcraft\'s rule: 5% of a level every 8 hours safely aw
   const { xpToNext, RESTED, restedCap, restedGain } = await import('./dist/data.mjs');
   const { gainXp } = await import('./dist/combat.mjs');
   assert.deepEqual(RESTED, { share: 0.05, everyMs: 8 * 3600000, cap: 1.5 });
-  const T = 1_800_000_000_000, safe = (s) => { s.firewall = { pin: 60, plus: 0, frag: 0, defragUntil: 0, hardenUntil: 0 }; return s; };
+  const T = 1_800_000_000_000, safe = (s) => { s.firewall = { pin: 60, plus: 0, frag: 0, defragUntil: 0 }; return s; };
   // A day away: three nights' worth, 15% of the level (the day is played out a minute at a time).
   const a = safe(at(20)); tickNetwork(a, T); tickNetwork(a, T + 24 * 3600000);
   assert.ok(Math.abs(a.rested / (0.15 * xpToNext(20)) - 1) < 0.01, `a day: 15% of level 20 (${a.rested})`);

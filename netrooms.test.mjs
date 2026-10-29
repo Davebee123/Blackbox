@@ -80,7 +80,7 @@ test('the terminal on rooms: ls, cd, cd .., map, go, wait, back, engage, pack, h
   const R = s.rooms;
   const said = (t) => play(s, t).map((e) => e.message).join('\n');
   assert.match(said('ls'), /^[A-Z]+\d+  Entry  \[entry\]/); // your room's address first
-  assert.match(said('map'), new RegExp(`/ ${loc.name} · rooms 1/${Object.keys(R.graph.rooms).length}`));
+  assert.match(said('map'), new RegExp(`/ ${loc.name} · rooms 1/${Object.values(R.graph.rooms).filter(FP.counted).length}`)); // caches and puzzle rooms never count
   assert.match(said('help'), /go <room>[\s\S]*jack out/);
   assert.match(said('pack'), /pack is empty/);
   const next = FP.neighbours(R.graph, R.at).map((id) => R.graph.rooms[id]).find((r) => FP.isUp(s, r));
@@ -221,7 +221,8 @@ test('the room page on the network: the strip names the server, its rule and lev
   // The map card reads its rooms without connecting.
   play(t, 'jack out');
   const sum = summaryOf(t, loc);
-  assert.equal(sum.total, Object.keys(loc.floorplan.graph.rooms).length);
+  assert.equal(sum.total, Object.values(loc.floorplan.graph.rooms).filter(FP.counted).length); // caches and puzzle rooms never count
+  assert.ok(sum.total < Object.keys(loc.floorplan.graph.rooms).length);
   assert.match(mapMarkup(t, loc.id, 'net'), /Rooms<\/span><strong>\d+\/\d+/);
 });
 

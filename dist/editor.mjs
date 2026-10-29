@@ -19,11 +19,11 @@ let story = null, contracts = null, items = null, saved = '', sel = { kind: 'bea
 // ---------- templates: every new piece starts as working text ----------
 const BEAT_TEMPLATES = {
   none: { from: 'wick', subject: 'word from the crew', body: ['{handle}. Quick one.', 'Write what happens next here. Each blank line starts a new paragraph.'] },
-  kill: { from: 'wick', subject: 'pest control', body: ['{crew} keeps leaving {family} processes on the net.', 'Kill {count} of them. Anywhere you find them.'], job: { type: 'kill', family: 'worm', count: 4 }, reward: { credits: 80, indemnity: 1, standing: 3, xp: 1 } },
-  bounty: { from: 'claims', subject: 'Flagged process', body: ['A process called {name} has been seen in SPRAWL-00, in {room}.', 'It is tougher than the strays. Neutralize it.'], job: { type: 'bounty', family: 'ghostroot', name: 'lapse-0101', room: '/tmp' }, reward: { credits: 100, indemnity: 2, standing: 3, xp: 2 } },
-  materials: { from: 'claims', subject: 'Sample request', body: ['Our actuaries need fresh {material}.', 'Send {amount} units.'], job: { type: 'materials', material: 'cipher', amount: 3 }, reward: { credits: 90, indemnity: 1, standing: 3, xp: 1 } },
-  takeover: { from: 'claims', subject: 'A change of hands', body: ['We would like another server to change hands.', 'Pick any server you have traced, get past its guard, open its vault, and beat the Resident in /core.'], job: { type: 'takeover', any: true }, reward: { credits: 150, indemnity: 3, standing: 4, xp: 3 } },
-  item: { from: 'wick', subject: 'lost and found', body: ['Somebody walked off with {label}: {file}.', 'Its signal is near {took}. Put a relay up, trace the server, pull the file and bank it.'], job: { type: 'item', near: 'took', family: 'ransomware', file: 'lost.db', label: 'a lost database', text: ['binary: describe what the file is when the player cats it.', 'pull it and bank it, then deliver it from Mail.'] }, reward: { credits: 150, indemnity: 4, standing: 4, xp: 3 } },
+  kill: { from: 'wick', subject: 'pest control', body: ['{crew} keeps leaving {family} processes on the net.', 'Kill {count} of them. Anywhere you find them.'], job: { type: 'kill', family: 'worm', count: 4 }, reward: { credits: 80, standing: 3, xp: 1 } },
+  bounty: { from: 'claims', subject: 'Flagged process', body: ['A process called {name} has been seen in SPRAWL-00, in {room}.', 'It is tougher than the strays. Neutralize it.'], job: { type: 'bounty', family: 'ghostroot', name: 'lapse-0101', room: '/tmp' }, reward: { credits: 100, standing: 3, xp: 2 } },
+  materials: { from: 'claims', subject: 'Sample request', body: ['Our actuaries need fresh {material}.', 'Send {amount} units.'], job: { type: 'materials', material: 'cipher', amount: 3 }, reward: { credits: 90, standing: 3, xp: 1 } },
+  takeover: { from: 'claims', subject: 'A change of hands', body: ['We would like another server to change hands.', 'Pick any server you have traced, get past its guard, open its vault, and beat the Resident in /core.'], job: { type: 'takeover', any: true }, reward: { credits: 150, standing: 4, xp: 3 } },
+  item: { from: 'wick', subject: 'lost and found', body: ['Somebody walked off with {label}: {file}.', 'Its signal is near {took}. Put a relay up, trace the server, pull the file and bank it.'], job: { type: 'item', near: 'took', family: 'ransomware', file: 'lost.db', label: 'a lost database', text: ['binary: describe what the file is when the player cats it.', 'pull it and bank it, then deliver it from Mail.'] }, reward: { credits: 150, standing: 4, xp: 3 } },
 };
 const VARIANT_TEMPLATE = (kind, side) => ({ subject: side === 'glassjaw' ? 'A quiet job' : 'New work', body: [`Write it here. Blanks: ${Object.keys(JOB_VARS[kind]).map((k) => `{${k}}`).join(' ') || '(none for this kind)'}.`] });
 const newId = (base) => { let n = 1, id = base; while (story.beats.some((b) => b.id === id)) id = `${base}-${++n}`; return id; };
@@ -114,7 +114,7 @@ function beatForm(i) {
       ${field('Text', text(p + '.body', b.body), 'A blank line starts a new paragraph. Click a blank to insert it.')}${chips(beatVars(b))}
     </section>
     <section class="ed-sec"><h2>Job</h2><div class="ed-row">${field('Type', select(p + '.job.type', j.type, JOB_NAMES))}</div>${jobFields}</section>
-    ${b.job ? `<section class="ed-sec"><h2>Reward</h2><div class="ed-row">${['credits', 'indemnity', 'standing', 'xp', 'relay'].map((k) => field(REWARDS[k], num(`${p}.reward.${k}`, r[k], 'min="0" step="any"'))).join('')}</div>
+    ${b.job ? `<section class="ed-sec"><h2>Reward</h2><div class="ed-row">${['credits', 'standing', 'relay'].map((k) => field(REWARDS[k], num(`${p}.reward.${k}`, r[k], 'min="0" step="any"'))).join('')}</div>
       <div class="ed-row">${field('A unique item', select(p + '.reward.item', r.item || '', { '': 'None', ...Object.fromEntries(items.uniques.map((u) => [u.id, `${u.name} (lv ${u.level})`])) }), 'Given at the player\'s level when they deliver.')}</div>
       <div class="ed-row">${['blueprint', 'drop'].map((k) => `<label class="ed-check"><input type="checkbox" data-path="${p}.reward.${k}" ${r[k] ? 'checked' : ''}> ${REWARDS[k]}</label>`).join('')}</div></section>` : ''}
     <section class="ed-sec"><h2>Arrives</h2><div class="ed-row">${field('Not before level', num(p + '.when.level', b.when?.level, 'min="1" max="50" placeholder="any"'))}${field('Minutes after the beat before', num(p + '.when.delay', b.when?.delay, 'min="0" placeholder="0"'))}</div>
@@ -173,7 +173,7 @@ function jobLine(b) {
   const j = b.job; if (!j) return b.opensBoard ? '<div class="ed-job">Opens the contract board and the store.</div>' : '';
   const what = { kill: `Kill ${j.count} ${j.family ? FAMILIES[j.family] : ''} processes${j.family ? '' : ' in SPRAWL-00'}`, bounty: `Kill ${j.name} (${j.room})`, materials: `Deliver ${j.amount} ${CODES[j.material]}`, takeover: 'Take over a server', item: `Recover ${j.file}` }[j.type] || '';
   const r = b.reward || {};
-  const pay = [r.credits && `${r.credits} credits`, r.indemnity && `${r.indemnity} Indemnity`, r.standing && `+${r.standing} standing`, r.xp && `${r.xp}× XP`, r.relay && `${r.relay} relay`, r.blueprint && 'a blueprint', r.drop && 'a protocol'].filter(Boolean).join(' · ');
+  const pay = [r.credits && `${r.credits} credits`, r.standing && `+${r.standing} standing`, r.relay && `${r.relay} relay`, r.blueprint && 'a blueprint', r.drop && 'a protocol'].filter(Boolean).join(' · ');
   return `<div class="ed-job"><b>${esc(what)}</b><br>${esc(pay || 'No reward')}${b.opensBoard ? '<br>Opens the contract board and the store.' : ''}</div>`;
 }
 function renderSide() {

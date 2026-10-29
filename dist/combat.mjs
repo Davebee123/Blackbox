@@ -2,7 +2,7 @@
 // Rendering never advances the simulation. This file is written so it can
 // later run on a shared server unchanged.
 import { onFound, memoryCommand, isLive, joinCost, memoryRestore } from './memory.mjs';
-import { barSlots, isRunSkill, SUBCLASS, SUBS, defaultSub, HOT_RUN, ELITE, BOSS_LOOT, BOSSES, ENRAGE, makePart, EDGE, SYNC, CONFIG, ABILITIES, SKILLS, DAEMONS, SPARE_EXPLOIT, FAMILIES, FIXTURES, GUARDS, MUTATIONS, STRAINS, SERVER, TEMPLATES, layerOf, floorOfLayer, createVirus, createLocation, ARCHETYPES, CANTRIPS, LOADOUT, TREE, UNLOCKS, XP, xpToNext, killXp, xpScale, deedScale, power, mobPower, skillOrder, unlockLevel, lineOf, presetBar, shippedPresets, spikeOf, SPIKE } from './data.mjs';
+import { barSlots, isRunSkill, SUBCLASS, SUBS, defaultSub, ELITE, BOSS_LOOT, BOSSES, ENRAGE, makePart, EDGE, SYNC, CONFIG, ABILITIES, SKILLS, DAEMONS, SPARE_EXPLOIT, FAMILIES, FIXTURES, GUARDS, MUTATIONS, STRAINS, SERVER, TEMPLATES, layerOf, floorOfLayer, createVirus, createLocation, ARCHETYPES, CANTRIPS, LOADOUT, TREE, UNLOCKS, XP, xpToNext, killXp, xpScale, deedScale, power, mobPower, skillOrder, unlockLevel, lineOf, presetBar, shippedPresets, spikeOf, SPIKE } from './data.mjs';
 // The subclasses' engine side (dist/classes/<class>.mjs): what their skills, talents and edges do.
 import BREAKER_FX, { momentumCap } from './classes/breaker.mjs';
 import BASTION_FX from './classes/bastion.mjs';
@@ -10,29 +10,30 @@ import INFILTRATOR_FX from './classes/infiltrator.mjs';
 import OPERATOR_FX from './classes/operator.mjs';
 
 import { contractKill, contractTakeover, standingCrash, mailCommand, tickMail, initMail, openContracts, systemLetter, contractPackLost, contractDefuse, contractLocated } from './mail.mjs';
-import { tickStore, buy } from './store.mjs';
+import { tickStore, buy, indemnityRestore } from './store.mjs';
 import { buyFrom, claimServer, reclaimCheck, clearedFor, strikeServer } from './factions.mjs';
 import { tickMarket, marketCommand } from './market.mjs';
 import { tickPayloads, payloadCommand } from './payload.mjs';
 import { tickHubs, hubCommand, hubWon } from './hubs.mjs';
 import { IMPLICIT_HOOKS } from './faction-gear.mjs';
-import { SALVAGE_COSTS, settle, spend, splitPay, canAfford } from './salvage.mjs';
+import { gainComponents, payProblem, spend, componentsRestore } from './salvage.mjs';
 // Configs are gone (service side-grades; Triage was the last). A save that owned any is refunded.
 const RETIRED_CONFIGS = ['stateful', 'reflective', 'inspection', 'adaptive', 'sticky', 'toll', 'beacon', 'tar', 'sting', 'triage'];
 const CONFIG_REFUND = 250;
 import { fleetCommand, fleetWon } from './fleet.mjs';
 import { eventCommand, eventWon, outbreakMult, eventKill } from './events.mjs';
-import { siteTrait, postsOf, listenBoost as postBoost, componentChance, gainComponents, retireOutposts, retireLetter, PROGRAM_IDS, codebasesOf } from './sockets.mjs';
+import { siteTrait, postsOf, listenBoost as postBoost, componentChance, retireOutposts, retireLetter, PROGRAM_IDS, codebasesOf } from './sockets.mjs';
 import { consortiumWon } from './consortium.mjs';
 import { rollRogue, rogueKill } from './rogue.mjs';
 import { raidStart, raidLand, raidCycle, raidShield, raidBroke, raidTaken, raidAbsorb, noteDealt, noteHeal, cleanse, attackTarget, sigint, sigintCheck } from './raid.mjs';
 import { tellStart, tellCycle, tellLand, tellBroke, chargeNow, tellIntents, tellSigint, tellSigintCheck, tellOn, tellsOf, overclockMult, hotCharge } from './tells.mjs';
-import { prepareTicks, onHit as tickHit, BOSS_RULES } from './interrupt.mjs';
+import { prepareTicks, onHit as tickHit, blastCut, BOSS_RULES } from './interrupt.mjs';
 import { TELL, ROOM_FAMILIES, DAMPER_KINDS, floorFor, partGenesFor } from './data.mjs';
+import { mechValidate, mechIntercept, mechFired, mechPower, exposedCut, mechLanded, mechCommandHit, mechStart, mechClose, mechBroke, lagged, stunnedNow, missedTurn } from './mechanics.mjs';
 import { tickRoot, processWon } from './root.mjs';
-import { firewallCommand, wear, raidShare } from './firewall.mjs';
+import { firewallCommand, wear, raidShare, hardenRestore } from './firewall.mjs';
 import { levelGains, nextGains, progressionRestore, climbRestore, RETIRED } from './progression.mjs';
-import { portsCommand, invaderDown, invasionRestore, signatureRestore } from './invasion.mjs';
+import { invaderDown, invasionRestore, signatureRestore } from './invasion.mjs';
 import { runDaemons, daemonsOn, daemonsHurt, flushDaemons, lifeline, lifelineHeal, daemonCommand, daemonRestore, slottedDaemons, daemonAmount, watchmanBar, gainDaemon } from './daemons.mjs';
 export { daemonSlots, slottedDaemons, daemonLevel, daemonAmount, daemonNext, watchmanBar, gainDaemon } from './daemons.mjs';
 import { filterCommand, CRAFTABLE, knowsFilter, learnFilter, filterStat, FILTER_STATS, rollFilter, addFilter } from './filters.mjs';
@@ -53,7 +54,7 @@ import { crewOf, factionAuthor, AUTHORS } from './authors.mjs';
 import { noteUse } from './mastery.mjs';
 import { fightNet, noteKill, nativeRoll, biasCode, richMult, networkRestore, networkCommand, lairUniques, lairFell, lairBoss, mine, netOf, isNative, named, nameOf, nameNative, openLair } from './network.mjs';
 
-export const SAVE_VERSION = 46; // v46: no default subclass: a class past level 10 that never picked plays its core until it does (subRestore); v45: sets, each loaded protocol stamped with when it went on and the storyline's LOWLIGHT Badge beat armed (sets.mjs setsRestore); v44: whole-number stats, Regen over 5 cycles and Payload flat (gear.mjs statsRestore); v43: threads, quests found in rooms (threads.mjs threadsRestore); v42: the long climb, XP into a level keeps its share (progression.mjs climbRestore); v41: layers become floors (floors.mjs floorsRestore, docs/servers.md R3); v40: outposts, buildings, plans, services, architecture and the dividend retire for sockets (sockets.mjs retireOutposts, netrooms.mjs socketRoomsRestore, docs/servers.md R2); v39: every server is a room graph (netrooms.mjs roomsRestore, docs/servers.md R1); v38: two shipped presets renamed (presetRenameRestore); v37: 15-key pools, reordered lines and presets (kitRestore); v36: networks (network.mjs networkRestore: a network seed for every save); v31: subclasses (retireClassTrees); v32: Payload is a percentage; v33: invasion kinds, bounties, signatures, and the firewall follows the network (invasionRestore, firewallRestore); v34: one level, no server XP, specialty, ports, home-fight services or greys (progression.mjs progressionRestore); v35: the nine-key bar, run skills off it, one-clock tells (barRestore)
+export const SAVE_VERSION = 48; // v48: Indemnity retires: an older save's unspent Indemnity becomes credits once, with a letter from Halcyon (store.mjs indemnityRestore); v47: one kind of component: an older save's pile of named pieces (s.salvage) becomes its count, s.components (salvage.mjs componentsRestore); v46: no default subclass: a class past level 10 that never picked plays its core until it does (subRestore); v45: sets, each loaded protocol stamped with when it went on and the storyline's LOWLIGHT Badge beat armed (sets.mjs setsRestore); v44: whole-number stats, Regen over 5 cycles and Payload flat (gear.mjs statsRestore); v43: threads, quests found in rooms (threads.mjs threadsRestore); v42: the long climb, XP into a level keeps its share (progression.mjs climbRestore); v41: layers become floors (floors.mjs floorsRestore, docs/servers.md R3); v40: outposts, buildings, plans, services, architecture and the dividend retire for sockets (sockets.mjs retireOutposts, netrooms.mjs socketRoomsRestore, docs/servers.md R2); v39: every server is a room graph (netrooms.mjs roomsRestore, docs/servers.md R1); v38: two shipped presets renamed (presetRenameRestore); v37: 15-key pools, reordered lines and presets (kitRestore); v36: networks (network.mjs networkRestore: a network seed for every save); v31: subclasses (retireClassTrees); v32: Payload is a percentage; v33: invasion kinds, bounties, signatures, and the firewall follows the network (invasionRestore, firewallRestore); v34: one level, no server XP, specialty, ports, home-fight services or greys (progression.mjs progressionRestore); v35: the nine-key bar, run skills off it, one-clock tells (barRestore)
 
 // run.mjs registers callbacks here (it imports this file, so we can't import it).
 export const hooks = { flee: null, now: null };
@@ -106,7 +107,7 @@ export function fresh() {
     loadout: { archetype: 'breaker', picks: {}, ranks: {}, equipped: {} },
     // Each class levels on its own and starts at 1. The server's level is your highest class's.
     hackers: {},
-    salvage: [],
+    components: 0, // salvage.mjs
     logs: [],
     reports: [],
     serial: 0,
@@ -302,11 +303,13 @@ export const gapDealt = (g) => (g > 0 ? Math.max(CONFIG.gap.floor, 1 - CONFIG.ga
 export const gapTaken = (g) => (g > 0 ? 1 + CONFIG.gap.taken * over(g) : Math.max(0.7, 1 - CONFIG.gap.below * -g));
 export function damageMultiplier(s, p, opts = {}) {
   const e = s.encounter;
+  if (opts.flat) return 1; // damage already counted once (a Lockbox's held damage landing)
   let m = opts.server ? 1 : gapDealt(levelGap(s));
   if (opts.dot && on(s, p, 'tagged')) m *= SKILLS.tagged + (p.tagBoost || 0) + 0.1 * rank(s, 'persistent-tag');
   if (on(s, p, 'quarantined')) m *= SKILLS.quarantined;
   if (on(s, p, 'open')) m *= TELL.open.mult; // a tell read: the part is open (tells.mjs)
   m *= overclockMult(s); // an Overclock that landed: every part takes double (tells.mjs, breaches only)
+  if (p.loud) m *= CONFIG.tripwire.taken; // a Tripwire tripped: the loud parts take more from everything (loud both ways)
   if (e.virus.weakKnown && e.virus.weakPoint === p.id) m *= CONFIG.weakMultiplier;
   if (opts.mine) {
     m *= 1 + 0.03 * rank(s, 'overclocked');
@@ -315,11 +318,12 @@ export function damageMultiplier(s, p, opts = {}) {
     if (e.synced) m *= 1 + CONFIG.sync.bonus;
     for (const x of fxFire(s, 'hit', { target: p, do: 'damage%', cmd: !opts.dot && !opts.by ? e.commanding?.id : null })) m *= 1 + x.value / 100;
     m *= buffMult(s); // a timed buff from a break (Floodgate, Fuse Map)
+    if (!opts.dot && e.throttledUntil >= e.cycle) m *= TELL.copy.throttled; // a debuff the Mimic copied onto you (tells.mjs): your hits deal half
   }
   if (opts.dot) for (const x of fxFire(s, 'custom', { do: 'dot%' })) m *= 1 + x.value / 100;
   // Burns or helpers alone, on a part that meets the condition (Brackish, Riptide). A helper's hit carries src 'helper'.
   if (opts.dot && !opts.server) for (const x of fxFire(s, 'hit', { target: p, do: opts.src === 'helper' ? 'helper%' : 'burn%' })) m *= 1 + x.value / 100;
-  if (!opts.server) m *= classMult('dealt', s, p, opts);
+  if (!opts.server) m *= classMult('dealt', s, p, opts) * (1 - rebootSick(s)); // reboot sickness: your server is rebooting
   m *= masteryDmg(s, e.virus, p); // a part you've mastered takes 3% more from all of yours (research.mjs; never a crewmate's)
   return m;
 }
@@ -574,7 +578,7 @@ export function addItem(s, item, why = 'Loot: ') {
 export function deconstruct(s, item, out = null) {
   const d = DECONSTRUCT[item.rarity] || DECONSTRUCT.stock;
   const n = d.salvage[0] + Math.floor(rand(s) * (d.salvage[1] - d.salvage[0] + 1)) + Math.floor((item.level || 1) / 10);
-  gainComponents(s, n, null, itemLabel(item)); // components (sockets.mjs): Scrap is gone
+  gainComponents(s, n); // components (salvage.mjs)
   const code = item.from && codeOf(item.from) ? codeOf(item.from) : ['cipher', 'worm', 'kernel'][Math.floor(rand(s) * 3)];
   const mats = materialsOf(s);
   if (d.code) mats[code] = (mats[code] || 0) + d.code;
@@ -826,8 +830,7 @@ export const tierOf = (ctx) => ctx.tier || (ctx.rare ? 'rare' : ctx.elite || ctx
 // drop rolls none here: bossLoot gives its item. A strain also has its own trophy: 1 in LOOT.trophy kills of that strain.
 export function rollDrop(s, ctx, level) {
   if (typeof ctx === 'string') ctx = { kind: ctx === 'guard' ? 'guard' : 'home' };
-  const rolls = ctx.boss && sureDrop(ctx.boss) ? 0 : (ctx.rolls || LOOT.rolls[ctx.kind] || 1) + (ctx.flat ? 0 : (s.encounter?.virus?.hot && s.encounter.phase !== 'active' ? HOT_RUN.rolls : 0) // a hot run's kill rolls once more
-    + (s.encounter?.cleanRead && s.encounter.phase !== 'active' ? TELL.read.rolls : 0)); // every tell in the fight read: once more (tells.mjs). flat: its rolls and no more (the Exfil's)
+  const rolls = ctx.boss && sureDrop(ctx.boss) ? 0 : (ctx.rolls || LOOT.rolls[ctx.kind] || 1) + (ctx.flat ? 0 : (s.encounter?.cleanRead && s.encounter.phase !== 'active' ? TELL.read.rolls : 0)); // every tell in the fight read: once more (tells.mjs). flat: its rolls and no more (the Exfil's)
   const tier = tierOf(ctx);
   let best = null;
   for (let i = 0; i < rolls; i++) {
@@ -1044,7 +1047,7 @@ export function fxAnswer(s, p = null) {
 export const knows = (s, id) => (s.recipes || []).includes(id);
 export const knownRecipes = (s) => PROTOCOL_STATS.filter((k) => knows(s, recipeId(k)));
 // Learn a blueprint you don't have yet: the Firewall first, then any other. Every one known:
-// it's salvage instead.
+// it's components instead.
 // A blueprint teaches something you don't know yet, from every kind of recipe: a protocol recipe or
 // a filter recipe. The first is
 // always the Firewall.
@@ -1055,7 +1058,7 @@ export function learnBlueprint(s, why = '') {
     ...CRAFTABLE.filter((k) => !knowsFilter(s, k)).map((k) => () => learnFilter(s, k, why)),
   ];
   if (!left.length && !others.length) {
-    gainComponents(s, 2, null, 'blueprint');
+    gainComponents(s, 2);
     return emit(s, 'info', `${why}a blueprint you already know: +2 components.`);
   }
   const k = Math.floor(rand(s) * (left.length + others.length));
@@ -1199,19 +1202,13 @@ export function encounterVirus(s, key, seed, opts = {}) {
   if (opts.rare) over.rare = true;
   // Kestrel's Idle Timer (PARTS.kestrel): from floor 3, half the guard posts and ICE bring one, by their seed.
   if (PARTS.on && GUARDS[key] && mode === 'run' && !opts.nest && !opts.genes && over.floor >= PARTS.kestrel.floor && ((Math.imul((seed >>> 0) ^ 0x6a09e667, 2246822519) >>> 0) / 2 ** 32) < PARTS.kestrel.share) over.genes = ['idletimer'];
+  // A guard's lever (docs/puzzle-levers.md 5): from PARTS.lever, a Zip Bomb on every guard but the Sentinel (data.mjs GUARDS).
+  if (PARTS.on && GUARDS[key] && key !== 'sentinel' && mode === 'run' && !opts.nest && !opts.genes && (lvl ?? 1) >= PARTS.lever) over.genes = [...(over.genes || []), 'zipbomb'];
   const by = placeAuthor(s, mode, opts);
   if (by !== undefined) over.author = by;
   // One stranger a fight (parts.mjs): a part you've never met (research 0) comes alone. A sim plays a veteran (s.metAll).
   if (key === 'random' && !s.metAll) over.seen = (spec, family) => researchAt(s, `${family}:${spec.id}`) > 0;
   const virus = (hooks.createVirus || createVirus)(key, seed, over); // hooks.createVirus: golden.test.mjs plays the same fight on the builder from before genes
-  if (mode === 'run' && s.run?.hot) { // a hot run (HOT_RUN): tougher fights
-    virus.hot = true;
-    for (const p of virus.parts) {
-      p.max = p.integrity = Math.round(p.max * HOT_RUN.hp);
-      if (p.attack && ['damage', 'encrypt'].includes(p.attack.effect)) p.attack.amount = Math.max(1, Math.round(p.attack.amount * HOT_RUN.dmg));
-      if (p.attack?.hit) p.attack.hit = Math.max(1, Math.round(p.attack.hit * HOT_RUN.dmg));
-    }
-  }
   if (opts.name) virus.name = opts.name; // a fight with a name already on screen (a boss, a bounty)
   return virus;
 }
@@ -1913,7 +1910,21 @@ function loadoutCommand(s, text) {
 // ---------- upgrades ----------
 // Max Signal%: set pieces and bonuses (sets.mjs) and Bedframe, Firmware (max-signal%) raise the whole of it.
 const signalOf = (s) => Math.round(CONFIG.maxSignal * powerOf(s)) + gearStat(s, 'signal') + 4 * rank(s, 'redundancy') + 3 * rank(s, 'onion-routing') + 3 * rank(s, 'extra-memory');
-export const maxSignal = (s) => { const n = signalOf(s), pct = (piecesOn(s) ? setSignal(s) : 0) + fxSum(s, 'always', 'max-signal%'); return pct ? n + Math.round((n * pct) / 100) : n; };
+export const maxSignal = (s) => {
+  const n = signalOf(s), pct = (piecesOn(s) ? setSignal(s) : 0) + fxSum(s, 'always', 'max-signal%'), sick = rebootSick(s), m = pct ? n + Math.round((n * pct) / 100) : n;
+  return sick ? Math.max(1, Math.round(m * (1 - sick))) : m;
+};
+// Reboot sickness (CONFIG.rebootSick): while your server reboots (Degraded), your max Signal and the damage you deal are
+// down by a share that grows with the deepest floor you've reached. Clearing your own occupied server (a crash while
+// away) is how you bring it back sooner, so it doesn't count there.
+export const rebootSick = (s) => (!s.degraded || (s.occupation && s.run?.loc === s.occupation.id) ? 0 : CONFIG.rebootSick[Math.min(CONFIG.rebootSick.length, s.floors?.reached || 1) - 1]);
+// A run's Signal follows reboot sickness as it comes and goes: its max drops at a crash (Signal with it) and comes
+// back when the server is back online (Signal doesn't).
+export function syncRunSignal(s) {
+  if (!s.run) return;
+  s.run.max = maxSignal(s);
+  s.run.integrity = Math.min(s.run.integrity, s.run.max);
+}
 
 // Protocols at home: protocols · load <protocol> · unload <protocol|slot> · scrap <protocol> ·
 // compile [stat] · compile <zero-day>.
@@ -1921,8 +1932,7 @@ export const compileCost = (s, zd = false) => {
   const c = zd ? COMPILE.zeroDayCost(hackerLevel(s)) : COMPILE.cost(hackerLevel(s));
   return { credits: c.credits, salvage: Math.max(1, c.salvage) };
 };
-function protocolCommand(s, full) {
-  const [text, payText] = splitPay(full);
+function protocolCommand(s, text) {
   const [word, ...restWords] = text.split(' ');
   const arg = restWords.join(' ').trim();
   if (word === 'protocols' || word === 'gear') {
@@ -1983,13 +1993,13 @@ function protocolCommand(s, full) {
     if (!zd && !stat) stat = mine[Math.floor(rand(s) * mine.length)];
     const c = compileCost(s, !!zd);
     if (s.server.credits < c.credits) return warn(s, `Compiling needs ${c.credits} credits. You have ${s.server.credits}c.`);
-    const pay = settle(s, zd ? SALVAGE_COSTS.zeroday(c.salvage) : SALVAGE_COSTS.protocol(c.salvage), payText);
-    if (typeof pay === 'string') return warn(s, `Compiling: ${pay}`);
+    const why = payProblem(s, c.salvage);
+    if (why) return warn(s, `Compiling: ${why}`);
     s.server.credits -= c.credits;
-    spend(s, pay);
+    spend(s, c.salvage);
     const lvl = hackerLevel(s); // you compile protocols at your own level
     const made = rollItem(() => rand(s), zd ? { level: lvl, zeroDay: zd } : { level: lvl, stat: AFFIX_FOR[stat] ? stat : null, source: 'compile', slot });
-    made.compiled = true; // breaks down for salvage and code, never Exploits (no compile-to-sell loop)
+    made.compiled = true; // breaks down for components and code, never Exploits (no compile-to-sell loop)
     addItem(s, made, 'Compiled: ');
     return firstTime(s, 'compile-' + (zd || stat), `first ${zd ? ZERO_DAYS[zd].name : PROTOCOL_NAMES[stat]} compiled`);
   }
@@ -2106,7 +2116,7 @@ function payKill(s, e, base, why) {
   // A party splits the kill's XP, with a small bonus per extra player (PARTY_XP). Members who dropped in
   // (consortium guests) take their share of the damage they dealt, so joining late pays only for what
   // you did; you and your own crew split the rest evenly.
-  const n = e.party || 1, pool = xpFor(s, e.virus.level, base) * (e.virus.elite ? ELITE.xp : 1) * (e.virus.hot ? HOT_RUN.xp : 1) * (1 + PARTY_XP * (n - 1));
+  const n = e.party || 1, pool = xpFor(s, e.virus.level, base) * (e.virus.elite ? ELITE.xp : 1) * (1 + PARTY_XP * (n - 1));
   const dealt = e.virus.dealt || {}, total = Object.values(dealt).reduce((a, b) => a + b, 0);
   const guests = n > 1 ? e.guests || [] : [];
   const guestShare = total ? guests.reduce((a, g) => a + (dealt[g] || 0), 0) / total : 0;
@@ -2139,7 +2149,7 @@ function packExploit(s, path, who) {
 }
 export function roomKill(s, e, { wild = false, sprawl = false, guard = false, bounty = null, family = e.virus.family, loc = null, rare = false } = {}) {
   const v = e.virus, lvl = v.level;
-  contractKill(s, { family, zone: sprawl, bounty, level: lvl, strain: v.strain });
+  contractKill(s, { family, zone: sprawl, bounty, level: lvl, strain: v.strain, virus: v.family }); // virus: its own family (a Grind job's), family its lineage
   eventKill(s, family); // an outbreak's source (events.mjs chains)
   huntKill(s, family);
   // SPRAWL-00's strays trace one of its ? servers (floors.mjs), falling with the level gap like XP (not guards or bosses).
@@ -2295,7 +2305,6 @@ export function finish(s, result) {
     if (!hid) huntKill(s, e.virus.family);
     payKill(s, e, XP.home, `${e.virus.name} neutralized`);
     gainCode(s, codeFrom(s, e.virus.family, e.virus.level, 'home'), 'Code: ');
-    if (inv?.open) { const k = codeOf(e.virus.family); if (k) gainCode(s, { [k]: Math.max(1, Math.round(codeDrop(e.virus.level) * (CONFIG.invasion.open.reward - 1) * 2)) }, 'Open ports bonus: '); gainXp(s, xpFor(s, e.virus.level, CONFIG.invasion.open.reward - 1), 'open ports', 'fight'); }
     const item = rollDrop(s, { kind: 'home', family: e.virus.family, strain: e.virus.strain, layer: e.virus.grade || 1, elite: !!e.virus.elite, boss: e.virus.boss || null }, e.virus.level);
     if (item) addItem(s, item);
     nativeDrop(s, e); // network.mjs: its own dice
@@ -2324,8 +2333,9 @@ export function finish(s, result) {
 export function crashServer(s, ms = CONFIG.degradedMs, since = null) {
   s.server.integrity = Math.max(1, Math.round(s.server.max * CONFIG.reboot));
   s.degraded = { since, until: since == null ? null : since + ms, ms };
+  syncRunSignal(s);
   standingCrash(s);
-  emit(s, 'degraded', `REBOOTED at ${s.server.integrity}/${s.server.max}. Degraded for ${ms >= 3600000 ? `${ms / 3600000} hours` : `${ms / 60000} minutes`}.`);
+  emit(s, 'degraded', `REBOOTED at ${s.server.integrity}/${s.server.max}. Degraded for ${ms >= 3600000 ? `${ms / 3600000} hours` : `${ms / 60000} minutes`}: −${Math.round(rebootSick(s) * 100)}% max Signal and damage.`);
 }
 // When the next invader sets out: some logged-on minutes from now.
 export function scheduleInvasion(s) {
@@ -2438,6 +2448,9 @@ export function parse(s, input) {
 export function validate(s, intent) {
   const e = s.encounter;
   const a = ABILITIES[intent.ability];
+  if (e?.junk === intent.ability) return null; // the junked key: firing it clears the junk (mechanics.mjs)
+  const why = mechValidate(s, intent); // Sandboxed: no direct hits
+  if (why) return why;
   const wait = intent.ignoreCooldown ? 0 : readyIn(s, intent.ability);
   if (wait) return `${a.name} is ready in ${wait} ${wait === 1 ? 'cycle' : 'cycles'}.`;
   if (a.target !== 'none' && !alive(part(s, intent.target))) return 'That part is already broken.';
@@ -2489,6 +2502,7 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
       s.server.integrity = s.server.max;
       s.server.credits = Math.max(s.server.credits, 160);
       s.degraded = null;
+      syncRunSignal(s);
       emit(s, 'info', 'Developer reboot: Integrity and test credits restored.');
     }
   } else if (text === 'developer refill') { // Signal and Integrity to full, in a fight or out (the test bench's panel)
@@ -2496,6 +2510,7 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     s.signal = null; // full: whatever your max is
     if (s.run) s.run.integrity = s.run.max;
     s.degraded = null;
+    if (s.run) s.run.integrity = s.run.max = maxSignal(s);
     emit(s, 'info', 'Developer: Signal and Integrity full.');
   } else if (/^developer credits \d+$/.test(text)) {
     const n = Math.min(1e6, Number(text.split(' ')[2]));
@@ -2531,7 +2546,7 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     emit(s, 'info', `Boss rule ${s.bossRule}: ${BOSS_RULES[s.bossRule].name}. From your next boss fight.`);
   } else if (/^developer (codebases|components \d+)$/.test(text)) { // sockets.mjs: every codebase, or components to build with
     if (text.endsWith('codebases')) { for (const id of PROGRAM_IDS) if (!codebasesOf(s).includes(id)) codebasesOf(s).push(id); emit(s, 'info', 'Developer: every codebase learned.'); }
-    else { const n = gainComponents(s, Number(text.split(' ')[2]), null, 'developer'); emit(s, 'info', `Developer: +${n} components.`); }
+    else { const n = gainComponents(s, Number(text.split(' ')[2])); emit(s, 'info', `Developer: +${n} components.`); }
   } else if (/^developer location (ransomware|worm|ghostroot)$/.test(text)) {
     const had = new Set(s.locations.map((l) => l.id));
     addLocation(s, text.split(' ')[2], Math.min(reached(s), SERVER.floorFor(hackerLevel(s)))); // the next ? of that family on your floor (floors.mjs pickSlot)
@@ -2568,7 +2583,7 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     s.recipes = [...new Set([...(s.recipes || []), ...BLUEPRINTS])];
     emit(s, 'info', 'Developer: every blueprint learned.');
   } else if (/^developer salvage \d+$/.test(text)) {
-    const n = gainComponents(s, Number(text.split(' ')[2]), null, 'developer');
+    const n = gainComponents(s, Number(text.split(' ')[2]));
     emit(s, 'info', `Developer: +${n} components.`);
   } else if (/^developer daemon( |$)/.test(text)) {
     // developer daemon <id|all> [level]: a daemon at a level (testing; only invasions drop them in play).
@@ -2596,12 +2611,10 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     s.devServer = Math.max(1, Math.min(SERVER.maxLevel, Number(text.split(' ')[2])));
     syncServer(s);
     emit(s, 'info', `Developer: server level ${serverLevel(s)} (a floor under your highest class level, for testing).`);
-  } else if (/^filter (equip|unequip|scrap) \d+$/.test(text) || /^filter craft( \w+)?( pay .*)?$/.test(text)) {
+  } else if (/^filter (equip|unequip|scrap) \d+$/.test(text) || /^filter craft( \w+)?$/.test(text)) {
     filterCommand(s, text);
-  } else if (/^firewall (upgrade|defrag|harden)( \S+)?$/.test(text) || text === 'defrag') {
+  } else if (/^firewall (upgrade|defrag)( \S+)?$/.test(text) || text === 'defrag') {
     firewallCommand(s, text, now);
-  } else if (text === 'open ports' || text === 'close ports') {
-    portsCommand(s, text);
   } else if (/^hub( |$)/.test(text)) {
     hubCommand(s, text);
   } else if (/^payload( |$)/.test(text)) {
@@ -2627,11 +2640,11 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     genomeCommand(s, text); // genome.mjs: a part's genes (free, no cycle), or the card of what you're facing
   } else if (text.startsWith('config ') || text.startsWith('craft config ')) {
     warn(s, 'Configs are gone: services run as they come.');
-  } else if (/^(outpost build relay|relay craft)( pay .*)?$/.test(text)) {
-    craftRelay(s, splitPay(text)[1]);
+  } else if (/^(outpost build relay|relay craft)$/.test(text)) {
+    craftRelay(s);
   } else if (text.startsWith('outpost ') || /^build( |$)/.test(text)) {
     warn(s, 'Outposts are gone. Build in a server\'s socket rooms: connect, clear a socket, and build there.');
-  } else if (/^craft( booster)?( pay .*)?$/.test(text)) {
+  } else if (/^craft( booster)?$/.test(text)) {
     warn(s, 'Signal boosters are gone. Top up your Signal with credits at home.');
   } else if (/^relay \S+$/.test(text)) {
     installRelay(s, text.split(' ')[1]);
@@ -2808,6 +2821,7 @@ export function hit(s, p, base, opts = {}) {
   if (cmd && p.special) e.virus.idleHit = e.cycle; // the Idle Timer counts from the signature's last command hit
   // Hotspot: a command hit on it powers up the virus's next attack 2 or more cycles away (tells.mjs).
   if (cmd && p.hotspot && p.hotAt !== e.cycle) { p.hotAt = e.cycle; hotCharge(s, p); }
+  if (cmd) mechCommandHit(s, p); // Thorns, a Swap passing your statuses on, the Bodyguard's target (mechanics.mjs)
   // Adaptive (mutation): count the cycles in a row your commands hit this part (the chit comes at cycle end).
   if (mutated(s, 'adaptive') && opts.mine && !opts.dot && !opts.server && base > 0 && p.adaptAt !== e.cycle) {
     p.adaptRun = p.adaptAt === e.cycle - 1 ? (p.adaptRun || 0) + 1 : 1;
@@ -2830,19 +2844,15 @@ export function hit(s, p, base, opts = {}) {
     if (took) emit(s, 'server-hit', `The static bounces back off the ${p.name}: −${took}.`, { source: p.id, amount: took, bounce: true });
     return { dealt: 0, overflow: 0, absorbed: true };
   }
-  // Decoy: on its beat your own commands are mirrored. They do nothing, and some bounces back
-  // (never your last point). Burns, helpers and your server's hits get through.
-  const decoy = mirrorOn(s);
+  // Decoy (docs/puzzle-levers.md 3.8): its beat bent your command onto the part it points at (bendCommand). Pointing at
+  // itself, each hit of that command lands on the Decoy and part of it bounces back at you (never your last point;
+  // HOLLOW CHOIR's Harmony raises it). Mirror Maze (a native unique) let the command through unbent, at its share.
   const root = opts.mine && !opts.server && (buffed(e, 'sudo') || opts.unlock); // Sudo (Overclocker): the parts' rules don't hold you; Zero-day goes through locks
-  const maze = decoy && opts.mine && !opts.dot && !opts.by && !opts.server && fxHas(s, 'decoy-pass'); // Mirror Maze (a native unique): it lets you through
-  if (maze && base > 0 && !buffed(e, 'sudo')) { base = Math.max(1, Math.round((base * maze.fx.value) / 100)); emit(s, 'status', `${maze.it.name} gets through the ${decoy.name}'s mirror at ${maze.fx.value}%.`, { target: p.id }); }
-  else if (decoy && decoy.unmaskUntil >= e.cycle && opts.mine && !opts.dot && !opts.by && !opts.server && base > 0) { /* Unmask, Echo Cancel: its beat has nothing of you to mirror */ }
-  else if (decoy && opts.mine && !opts.dot && !opts.by && !opts.server && base > 0 && !buffed(e, 'sudo')) {
-    const back = Math.min(Math.max(1, Math.round(base * (decoy.bounce ?? CONFIG.mirrorBounce))), defender(s).integrity - 1); // HOLLOW CHOIR's Harmony raises it
-    const took = back > 0 ? takeDamage(s, back, decoy.id, `${decoy.name} mirror`) : 0;
-    emit(s, 'status', `The ${decoy.name} mirrors your command, and it does nothing.`, { target: p.id });
-    if (took) emit(s, 'server-hit', `It bounces back: −${took}.`, { source: decoy.id, amount: took, bounce: true });
-    return { dealt: 0, overflow: 0, absorbed: true };
+  if (cmd && e.commanding?.maze) base = Math.max(1, Math.round((base * e.commanding.maze) / 100));
+  if (cmd && e.commanding?.bounce === p.id) {
+    const back = Math.min(Math.max(1, Math.round(base * (p.bounce ?? CONFIG.mirrorBounce))), defender(s).integrity - 1);
+    const took = back > 0 ? takeDamage(s, back, p.id, `${p.name} bounce`) : 0;
+    if (took) emit(s, 'server-hit', `Part of it bounces back off the ${p.name}: −${took}.`, { source: p.id, amount: took, bounce: true });
   }
   // A crew boss's firewall phase (raid.mjs): while its shield is up, every hit on the boss lands on the shield,
   // armor or not.
@@ -2908,7 +2918,7 @@ export function hit(s, p, base, opts = {}) {
   if (forced && e.forceCrit) e.forceCrit = false;
   // Exposed: every hit on it, from anyone, has a better crit chance.
   const chance = critChance(s) + (opts.server ? 0 : classSum('crit', s, p, opts)) + (on(s, p, 'exposed') ? SKILLS.exposed + 5 * rank(s, 'exploit-kit') : 0) + (opts.mine ? fxFire(s, 'hit', { target: p, do: 'crit%' }).reduce((n, x) => n + x.value, 0) : 0);
-  const crit = forced || (raw > 0 && chance > 0 && rand(s) * 100 < chance);
+  const crit = forced || (raw > 0 && !opts.flat && !opts.blast && chance > 0 && rand(s) * 100 < chance); // a held cash-in or a blast never crits
   let doubled = false;
   if (crit) {
     let mult = critMultiplier(s) * (opts.server ? 1 : classMult('critDealt', s, p, opts)), flat = opts.server ? 0 : gearStat(s, 'critDamage'); // critDealt: Burst Buffer (sets.mjs)
@@ -2926,12 +2936,14 @@ export function hit(s, p, base, opts = {}) {
   // Lockbox: while it lives, the part it wards loses at most a quarter of its max a cycle, from everything. HASHLORD's Pool
   // Lock (wardCommands) holds back your commands only: burns and helpers go through at full.
   const crush = opts.mine && !opts.server ? 1 + (fxHas(s, 'lock-crush')?.fx.value || 0) / 100 : 1; // Lockpick (a native unique): locks and wards give way faster
-  if (dealt > 0 && !root && livingParts(s).some((x) => wards(x, p) && !(x.wardCommands && opts.dot))) {
+  // What the cap holds back isn't lost: the Lockbox holds it, for its partner when it breaks (breakPart; docs/puzzle-levers.md 3.4).
+  const warder = dealt > 0 && !root ? livingParts(s).find((x) => wards(x, p) && !(x.wardCommands && opts.dot)) : null;
+  if (warder) {
     const cap = Math.max(1, Math.round(p.max * CONFIG.ward * crush)), used = p.wardAt === e.cycle ? p.wardUsed : 0;
     const was = dealt;
     dealt = Math.max(0, Math.min(dealt, cap - used));
     p.wardAt = e.cycle; p.wardUsed = used + dealt;
-    if (dealt < was) notes.push(`warded: ${was - dealt} held back`);
+    if (dealt < was) { (warder.held ||= {})[p.id] = (warder.held[p.id] || 0) + was - dealt; notes.push(`warded: ${was - dealt} held`); }
   }
   // Mutex: while it lives, the part it locks carries a shield (its lock) that takes the hit first.
   let unlocked = false, soaked = 0, lockWas = 0, lockLost = 0;
@@ -3042,7 +3054,7 @@ function bossPhases(s) {
         if (p.lock) { const t = part(s, p.lock); if (alive(t)) { t.lockMax = t.lockHp = Math.max(1, Math.round(t.max * CONFIG.mutex.share)); t.lockAt = null; } } // a Mutex that joins locks its part at once
         for (const w of livingParts(s).filter((x) => x.ward === spec.id && p.id !== spec.id)) (w.wardsToo ||= []).push(p.id); // HASHLORD's Pool Lock wards the forked Miner too
       }
-      if (act === 'harmony') { const d = livingParts(s).find((x) => x.reflect); if (d) d.bounce = 0.5; else say = 'The Hollow Choir reaches for its harmony, but its Decoy is broken.'; }
+      if (act === 'harmony') { const d = livingParts(s).find((x) => x.reflect); if (d) d.bounce = CONFIG.decoy.harmony; else say = 'The Hollow Choir reaches for its harmony, but its Decoy is broken.'; }
       if (act === 'doppelganger') say = doppelganger(s);
     }
     emit(s, 'phase', `PHASE ${v.phases.filter((x) => x.done).length + 1}. ${say}`, { boss: v.boss });
@@ -3073,7 +3085,7 @@ function doppelganger(s) {
 // a Front End stands in front of (the signature, else the basic, else the next part), the signature an Idle Timer watches.
 const sysParts = (s) => livingParts(s).filter((x) => x.kind === 'system');
 export function belowOf(s, p) { const xs = sysParts(s).filter((x) => x !== p), all = parts(s); return xs.find((x) => all.indexOf(x) > all.indexOf(p)) || xs.at(-1) || null; }
-export const bufferOn = (s, p) => livingParts(s).find((x) => x.buffer && belowOf(s, x) === p) || null;
+export const bufferOn = (s, p) => livingParts(s).find((x) => (x.buffer && belowOf(s, x) === p) || (x.mech === 'bodyguard' && p.bufBy === x.id)) || null; // a Bodyguard's shield too (mechanics.mjs)
 export function frontOf(s, fe) { const xs = sysParts(s).filter((x) => x !== fe && !x.front); return xs.find((x) => x.special) || xs.find((x) => x.basic) || xs[0] || null; }
 export const signatureOf = (s) => livingParts(s).find((x) => x.special && x.kind === 'system') || null;
 // The parts plan's second wave (P2): a Cold Store still frozen (untouchable, off the timeline), a Spare still asleep,
@@ -3125,6 +3137,27 @@ export function unpackParts(s) {
 export const wards = (x, p) => !!p && (x.ward === p.id || !!x.wardsToo?.includes(p.id));
 // The Decoy whose beat is this cycle (it mirrors your commands), and a part's twin (Mirror).
 export const mirrorOn = (s, cycle = s.encounter?.cycle) => livingParts(s).find((x) => x.reflect && (cycle + (x.reflectOff || 0)) % x.reflect === 0) || null;
+// The Decoy's pointer (docs/puzzle-levers.md 3.8, decided 9.6): where its next beat (this cycle's, if it's on) bends your
+// hit. It moves each beat: a part picked by the fight's seed and the beat's cycle among the standing system parts, never
+// the one the last beat pointed at (the Decoy itself is one of them). It shows on the board (a dashed red tether) once
+// the Decoy's timers do: its ◆ stripped, or Tagged. { decoy, at (the beat's cycle), to (the part), was (the last beat's part), shown, bad }, or null.
+const beatFrom = (d, c) => { let k = c; while ((k + (d.reflectOff || 0)) % d.reflect) k++; return k; };
+export function bendOf(s, d = livingParts(s).find((x) => x.reflect)) {
+  const e = s.encounter;
+  if (!e || !d?.reflect || !alive(d)) return null;
+  const at = beatFrom(d, e.cycle), ps = livingParts(s).filter((x) => x.kind === 'system' && !frozenNow(s, x));
+  let b = d.bend;
+  if (!b || b.at !== at || !ps.some((x) => x.id === b.to)) {
+    const was = !b ? null : b.at !== at ? b.to : b.was, pool = ps.filter((x) => x.id !== was);
+    const k = (Math.imul(((e.seed || 0) + 0x9e37) >>> 0, 2654435761) ^ Math.imul(at + 1, 40503)) >>> 0;
+    b = d.bend = { at, to: (pool[k % Math.max(1, pool.length)] || d).id, was };
+  }
+  const to = part(s, b.to);
+  return { decoy: d, at, to, was: b.was, shown: !timersHidden(s, d), bad: bendBad(s, d, to) };
+}
+// A part the Decoy's bend must not put your hit on now: the Decoy itself (part of it bounces back), or a part to break
+// last (a Tripwire, a Zip Bomb, a Hotspot) while another part stands.
+export const bendBad = (s, d, p) => !!p && (p === d || ((!!p.deadman || !!p.fuse || !!p.hotspot) && livingParts(s).some((x) => x !== p && x.kind === 'system' && !x.deadman && !x.fuse && !x.hotspot)));
 const twinOf = (s, p) => parts(s).find((x) => x !== p && (x.twin === p.id || p.twin === x.id)) || null;
 
 // The living part whose attack lands soonest (ties: the bigger hit).
@@ -3144,6 +3177,7 @@ function breakPart(s, p) {
   p.brokeOnce = true;
   e.metrics.breakOrder.push(p.id);
   if (p.kind !== 'fragment') e.breaks = (e.breaks || 0) + 1;
+  mechBroke(s, p); // Vendetta (mechanics.mjs)
   // Mirror: break one twin while the other lives, and it reboots a few cycles later (at most twice).
   const tw = twinOf(s, p);
   if (tw && alive(tw) && (p.reboots || 0) < CONFIG.twinReboot.max && !p.quiet && !fxHas(s, 'no-reboot')) { p.rebootAt = e.cycle + CONFIG.twinReboot.in; emit(s, 'status', `${p.name} is down, but its twin ${tw.name} will reboot it in ${CONFIG.twinReboot.in} cycles. Break both.`, { target: p.id }); }
@@ -3204,13 +3238,13 @@ function breakPart(s, p) {
     const xs = unpackParts(s);
     if (livingParts(s).some((x) => x !== p)) emit(s, 'status', `The ${p.name} breaks, and the virus's rules unpack.${xs.length ? ` The packed ${xs.length === 1 ? 'part was' : 'parts were'} ${andList(xs.map((x) => `the ${x.name}`))}.` : ''}`, { target: p.id, unpack: true });
   }
-  if (p.loot) e.lastLoot = p.loot; // the part you broke last (a Harvester's and an elite's one more: floorplan.mjs)
-  // Its component: 60% in a room fight, an elite's always, 35% elsewhere (sockets.mjs); a network rich in components
+  if (p.loot) e.lastLoot = p.loot; // a part that drops components broke (a Harvester's and an elite's one more: floorplan.mjs)
+  // Components: 60% in a room fight, an elite's always, 35% elsewhere (sockets.mjs); a network rich in components
   // (network.mjs) and a part you've mastered (research.mjs, 25% more) on top.
   if (p.loot && rand(s) < componentChance(s, e, CONFIG.salvageChance) * richMult(s, fightNet(s), 'salvage') * masteryDrop(s, e.virus, p)) {
-    s.salvage.push({ name: p.loot, virus: e.virus.name, seed: e.seed });
+    gainComponents(s, 1);
     e.metrics?.loot?.push(p.loot);
-    emit(s, 'loot', `${p.loot} recovered.`, { target: p.id });
+    emit(s, 'loot', 'Component recovered.', { target: p.id });
   }
   if (e.lastAttack && e.lastAttack.endsWith(' ' + p.id)) {
     e.lastAttack = null;
@@ -3220,6 +3254,14 @@ function breakPart(s, p) {
   if (p.attack?.effect === 'encrypt' && !p.encrypted) contractDefuse(s); // broken before it ever encrypted you (a contract counts it: mail.mjs)
   if (e.virus.raid) raidBroke(s); // a crew boss's adds go down with it
   if (e.virus.tells) tellBroke(s, p); // its tells stop with it (tells.mjs)
+  // Lockbox: held, not lost (docs/puzzle-levers.md 3.4). Half of what its ward held back lands on each partner at once.
+  for (const [id, n] of Object.entries(p.held || {})) {
+    const t = part(s, id), land = Math.floor(n * CONFIG.wardHeld);
+    if (!alive(t) || land <= 0) continue;
+    emit(s, 'status', `The ${p.name} breaks open: ${land} of the ${n} it held lands on the ${t.name}.`, { target: t.id, from: p.id, held: land });
+    hit(s, t, land, { by: p.name, server: true, pierce: true, flat: true, held: true });
+  }
+  if (p.held) p.held = null;
   // Mutex: its lock goes with it.
   // (A lock it had already lost doesn't come back either: its relock countdown goes too.)
   if (p.lock) { const t = part(s, p.lock); if (t && !livingParts(s).some((x) => x.lock === t.id)) t.lockAt = null; if (t?.lockHp) { t.lockHp = 0; emit(s, 'status', `The ${t.name}'s lock is gone with the Mutex.`, { target: t.id, lock: 'gone', from: p.id }); } }
@@ -3233,16 +3275,21 @@ function breakPart(s, p) {
   const hush = p.deadman && !p.quiet && !buffed(e, 'sudo') && fxHas(s, 'quiet-trip'); // Quiet Wire (a native unique)
   if (p.deadman && (buffed(e, 'sudo') || p.quiet || hush)) emit(s, 'status', `The ${p.name} breaks without a sound. ${p.quiet ? 'The Logic Bomb took it clean' : hush ? `${hush.it.name} cut it quietly` : 'Root access kept it quiet'}.`, { target: p.id });
   else if (p.deadman) {
+    // Loud both ways (docs/puzzle-levers.md 3.2): they also take more damage (damageMultiplier) and drop their ◆ for good.
     const loud = livingParts(s).filter((x) => x.kind === 'system');
+    let shed = 0;
     for (const x of loud) {
       x.loud = true;
+      if (x.armor > 0) { shed += x.armor; x.armor = 0; }
+      x.patchAt = null;
       const a = x.attack;
       if (!a) continue;
       if (['damage', 'encrypt'].includes(a.effect)) a.amount = Math.max(1, Math.round(a.amount * CONFIG.tripwire.loud));
       if (a.hit) a.hit = Math.max(1, Math.round(a.hit * CONFIG.tripwire.loud));
-      if (a.due > e.cycle + 1 && a.due < 900) a.due--;
+      if (a.due > e.cycle && a.due < 900) a.due = Math.max(e.cycle, a.due - CONFIG.tripwire.sooner); // its next attack a cycle sooner: one due next cycle lands this one
+      if (a.interval > 2) { const cut = Math.min(CONFIG.tripwire.sooner, a.interval - 2); a.interval -= cut; a.loudCut = cut; } // every attack after it a cycle sooner too (2 at the fastest)
     }
-    if (loud.length) emit(s, 'phase', `TRIPWIRE. ${loud.map((x) => x.name).join(' and ')} ${loud.length === 1 ? 'goes' : 'go'} loud, dealing ${Math.round((CONFIG.tripwire.loud - 1) * 100)}% more damage, and every attack comes a cycle sooner.`, { target: loud[0].id, tripwire: true });
+    if (loud.length) emit(s, 'phase', `TRIPWIRE. ${andList(loud.map((x) => x.name))} ${loud.length === 1 ? 'goes' : 'go'} loud: ${Math.round((CONFIG.tripwire.loud - 1) * 100)}% more damage dealt and every attack a cycle sooner, ${Math.round((CONFIG.tripwire.taken - 1) * 100)}% more damage taken${shed ? ` and ${shed} ◆ dropped` : ''}.`, { target: loud[0].id, tripwire: true, shed });
   }
   // Linked parts (every v2 or bigger virus; the old Rerouting mutation too): a third of the broken part's hit
   // goes to the survivor that attacks next (WoW council fights). A survivor whose attack isn't a hit
@@ -3298,6 +3345,28 @@ function fxCooldown(s, id, a) {
   if (a?.helper && st?.helperCd) { off += st.helperCd; st.helperCd = 0; }
   return off ? Math.max(1, cd - off) : cd;
 }
+// The Decoy's beat (docs/puzzle-levers.md 3.8, decided 9.6): your command at one part goes to the part its pointer is on
+// (bendOf), whatever it is: a hit, a strip, a burn, a helper, a debuff. Pointing at itself, a hit lands on the Decoy and
+// part of it bounces back (hit). Area commands and the ones on you aren't bent; a command at an attack bends only onto a
+// part with one, and one that couldn't fire there isn't bent. Sudo, Unmask and Echo Cancel go straight through; Mirror
+// Maze (a native unique) lets it through unbent, its hits at its share.
+function bendCommand(s, intent) {
+  const e = s.encounter, a = ABILITIES[intent.ability], d = mirrorOn(s);
+  if (!d || !intent.target || !['part', 'attack'].includes(a?.target) || buffed(e, 'sudo') || d.unmaskUntil >= e.cycle) return intent;
+  const to = bendOf(s, d)?.to, self = to === d;
+  if (!to || (to.id === intent.target && !self)) return intent;
+  const maze = fxHas(s, 'decoy-pass');
+  if (maze) {
+    if (e.commanding) e.commanding.maze = maze.fx.value;
+    emit(s, 'status', `${maze.it.name} gets through the ${d.name}'s bend at ${maze.fx.value}%.`, { target: intent.target });
+    return intent;
+  }
+  const bent = { ...intent, target: to.id, text: `${intent.ability} ${to.id}` };
+  if (to.id !== intent.target && validate(s, bent)) return intent;
+  if (to.id !== intent.target) emit(s, 'status', `The ${d.name} bends your ${intent.ability === 'spike' ? spikeName(s) : a.name} onto ${self ? 'itself' : `the ${to.name}`}.`, { target: to.id, from: intent.target, bent: true });
+  if (e.commanding) Object.assign(e.commanding, { target: to.id, bounce: self ? d.id : null });
+  return bent;
+}
 function useAbility(s, intent, auto = false) {
   const e = s.encounter;
   if (intent.ability === 'hold') {
@@ -3316,6 +3385,7 @@ function useAbility(s, intent, auto = false) {
     emit(s, 'warning', `${auto === 'program' ? '⟳ Your program' : auto ? 'Auto-repeat' : 'Command'} failed: ${error}`);
     return;
   }
+  if (auto !== 'daemon') intent = bendCommand(s, intent);
   const id = intent.ability;
   const a = id === 'spike' ? { ...ABILITIES.spike, name: spikeName(s) } : ABILITIES[id];
   const target = part(s, intent.target);
@@ -3386,7 +3456,7 @@ function useAbility(s, intent, auto = false) {
     // Throttle (Warden) on a part gone loud: longer, and the loud wears off.
     if (id === 'throttle' && (target.loud || e.virus.buffs?.loud >= e.cycle || (target.enrage && target.integrity < target.max / 2))) {
       n = a.loud;
-      if (target.loud && target.attack) { const k = CONFIG.tripwire.loud; for (const f of ['amount', 'hit']) if (target.attack[f] && (f === 'hit' || ['damage', 'encrypt'].includes(target.attack.effect))) target.attack[f] = Math.max(1, Math.round(target.attack[f] / k)); target.loud = false; emit(s, 'status', `${target.name} quiets down: it isn't loud any more.`, { target: target.id }); }
+      if (target.loud && target.attack) { const k = CONFIG.tripwire.loud; for (const f of ['amount', 'hit']) if (target.attack[f] && (f === 'hit' || ['damage', 'encrypt'].includes(target.attack.effect))) target.attack[f] = Math.max(1, Math.round(target.attack[f] / k)); if (target.attack.loudCut) { target.attack.interval += target.attack.loudCut; target.attack.loudCut = 0; } target.loud = false; emit(s, 'status', `${target.name} quiets down: it isn't loud any more.`, { target: target.id }); }
     }
     target[a.status + 'Until'] = id === 'rate-limit' ? Math.max(target[a.status + 'Until'] || 0, e.cycle + n) : e.cycle + n;
     emit(s, 'status', id === 'rate-limit' ? `${target.name} ${STATUS_WORD[a.status]} for its next attack.` : `${target.name} ${id === 'tag' && target.tagBoost ? `Tagged (burns +${Math.round((CONFIG.surprise.tagged - 1) * 100)}%, timer visible)` : STATUS_WORD[a.status]} for ${n} ${n === 1 ? 'cycle' : 'cycles'}.`, { target: target.id, mark: a.status, ability: id });
@@ -3418,7 +3488,7 @@ function useAbility(s, intent, auto = false) {
     if (id === 'botnet') { if (hasTalent(s, 'extra-nodes')) count = 4; dmg += rank(s, 'node-pool'); }
     dmg = scaled(s, dmg);
     count = Math.min(count, helperCap(s) - e.helpers.length);
-    for (let k = 0; k < count; k++) e.helpers.push({ target: target.id, damage: dmg, left: n, synced: !!e.synced });
+    for (let k = 0; k < count; k++) e.helpers.push({ target: target.id, damage: dmg, left: n, synced: !!e.synced, sent: e.cycle, by: a.name });
     emit(s, 'status', count > 0 ? `${count === 1 ? 'A helper' : count + ' helpers'} on the ${target.name}, dealing ${dmg} every cycle for ${n} cycles.` : `Helper cap reached (${helperCap(s)}).`, { target: target.id, mark: count > 0 ? 'helper' : null, ability: id });
   }
   // Jam and Barrier spend one of your helpers on that part.
@@ -3480,7 +3550,7 @@ function useAbility(s, intent, auto = false) {
     emit(s, 'status', `Propagate: ${n} ${n === 1 ? 'burn' : 'burns'} copied to the other parts${livingParts(s).some((p) => p.kind === 'fragment') ? ', fragments at double' : ''}.`, { mark: 'burn', ability: id });
   }
   if (id === 'reroute') {
-    for (const h of e.helpers) { h.target = target.id; hit(s, target, h.damage, { by: 'Helper', dot: true, src: 'helper' }); if (!alive(target)) break; }
+    for (const h of e.helpers) { h.target = target.id; h.sent = e.cycle; hit(s, target, h.damage, { by: 'Helper', dot: true, src: 'helper' }); if (!alive(target)) break; } // sent there now (the Mimic's beat counts it: tells.mjs)
   }
   if (id === 'cron-storm') {
     for (const h of [...e.helpers]) { const t = alive(part(s, h.target)) ? part(s, h.target) : soonestAttacker(s); if (t) hit(s, t, h.damage, { by: 'Cron Storm', dot: true, src: 'helper' }); if (virusIntegrity(s).current === 0) break; }
@@ -3740,7 +3810,7 @@ function landAttack(s, p) {
   const e = s.encounter;
   const atk = p.attack;
   liftOf(s);
-  const power = attackAmount(p) * c2Gnaw(s, p) * (e.soft || 1) * gapTaken(levelGap(s)) * (p.boosted ? CONFIG.reactiveBonus : 1) * (on(s, p, 'throttled') ? (hasTalent(s, 'backpressure') ? 0.25 : SKILLS.throttled) : 1);
+  const power = attackAmount(p) * c2Gnaw(s, p) * (e.soft || 1) * gapTaken(levelGap(s)) * (p.boosted ? CONFIG.reactiveBonus : 1) * (on(s, p, 'throttled') ? (hasTalent(s, 'backpressure') ? 0.25 : SKILLS.throttled) : 1) * mechPower(s, p, true);
   // A hit: a damage attack, or a special that also hits (the Scrambler's Scramble). Its size is `hit`, scaled like the rest.
   const hits = atk.effect === 'damage' || !!atk.hit, hitPower = atk.hit ? (power * atk.hit) / Math.max(1, atk.amount) : power;
   p.boosted = false;
@@ -3821,10 +3891,12 @@ function landAttack(s, p) {
     let cut = half ? 0.5 : 1;
     if (!half && e.hardened > 0) { e.hardened--; cut = 1 - SKILLS.hardenedCut; emit(s, 'blocked', `Hardened: ${atk.name} deals ${Math.round(SKILLS.hardenedCut * 100)}% less damage.`, { source: p.id }); }
     for (const x of fxFire(s, 'struck', { do: 'taken%', atk, amount: pre, lands })) { cut *= Math.max(0, 1 - x.value / 100); emit(s, 'blocked', `${x.name || x.it.name}: ${atk.name} deals ${x.value}% less damage.`, { source: p.id, ...firedOf([x]) }); } // Read-Only
+    cut *= exposedCut(s); // Exposed (a Prober, mechanics.mjs): this hit deals more, and the status clears
     // Blindside (Ghostroot): a hit you couldn't see coming lands harder.
     const dealt = takeDamage(s, absorbed(s, hitCapped(s, spikeCapped(s, Math.round(hitPower * sap * (hasTalent(s, 'unsafe-mode') ? 1.2 : 1) * tough * (crit ? CRIT.multiplier : 1) * cut * took * (e.virus.raid ? raidTaken(s) : 1)), atk)), atk, p), p.id, atk.name);
     struckFx(s, atk);
     if (dealt) classEach('struck', s, atk, dealt, p);
+    if (p.mech) mechLanded(s, p, atk); // the status it leaves on you, or what it cashes in (mechanics.mjs)
     if (p.scrape && (e.shield > 0 || timedBuffs(s).length)) scrapeYou(s, p, atk, { shield: e.shield, buffs: timedBuffs(s) });
     // Bad Block: your next heals lose up to its share of your max (a fresh pool each time it lands, not a bigger one).
     if (p.badblock) {
@@ -3967,10 +4039,14 @@ export function playerPhase(s, phase = 'all') {
   // the timer falls back to auto-repeat as before.
   const prog = !e.queue && hooks.program ? hooks.program(s) : null;
   // Hung (a tell that landed, tells.mjs): this cycle's command doesn't fire.
-  if (e.hung === e.cycle && (e.queue || e.lastAttack || prog)) {
-    emit(s, 'hung', 'HUNG. Your command does not fire this cycle.', {});
+  // Stunned (a Stunner, mechanics.mjs) the same; either way the Punisher gets its free attack.
+  if ((e.hung === e.cycle || stunnedNow(s)) && (e.queue || e.lastAttack || prog)) {
+    emit(s, 'hung', e.hung === e.cycle ? 'HUNG. Your command does not fire this cycle.' : 'STUNNED. Your command does not fire this cycle.', {});
+    missedTurn(s);
     e.metrics.holds++;
     e.lastCmd = { id: 'hold', cycle: e.cycle };
+  } else if (e.queue && mechIntercept(s, e.queue.ability)) { // the junked key cleared, or a direct hit Sandboxed (mechanics.mjs)
+    e.metrics.holds++;
   } else if (e.queue) {
     const q = e.queue;
     e.surprise = !!(e.synced && e.sync?.surprise && q.ability !== 'hold'); // Infiltrator Surprise (see CONFIG.surprise)
@@ -3986,6 +4062,7 @@ export function playerPhase(s, phase = 'all') {
   else if (e.lastAttack) {
     const intent = parse(s, e.lastAttack);
     if (intent.error) emit(s, 'hold', 'Auto-repeat had no target. Nothing fired.');
+    else if (mechIntercept(s, intent.ability)) e.metrics.holds++;
     else {
       intent.text = `${intent.ability} ${intent.target}`;
       e.commanding = { id: intent.ability, target: intent.target || null, auto: true }; // auto-repeat never answers a tell
@@ -4004,6 +4081,7 @@ export function playerPhase(s, phase = 'all') {
     if (e.keylog >= 3 && logger.attack.due > e.cycle + 1) { logger.attack.due = e.cycle + 1; emit(s, 'status', `The ${logger.name} has logged 3 keystrokes. It Dumps next cycle.`, { target: logger.id }); }
     else if (e.keylog < 3) emit(s, 'status', `The ${logger.name} logs a keystroke (${e.keylog}/3).`, { target: logger.id });
   }
+  mechFired(s); // Leak's price, the Countdown's count, a Volatile Corrupted cleansed (mechanics.mjs)
   e.synced = false;
   flushDaemons(s); // what your command set off (daemons.mjs)
   }
@@ -4031,14 +4109,19 @@ export function playerPhase(s, phase = 'all') {
     if (!b.left && alive(t)) daemonsOn(s, 'burnout', { part: t.id }); // Afterburn
   }
   e.burns = e.burns.filter((b) => b.left > 0 && alive(part(s, b.target)));
+  // What each helper hit this cycle, for the Mimic's beat (tells.mjs mimicLands: it plays back the helpers on its part
+  // that were sent once the beat was said). Plain data: the encounter is saved.
+  e.helperHits = { cycle: e.cycle, list: [] };
   for (const h of [...e.helpers]) {
     if (virusIntegrity(s).current === 0) break;
+    h.sent ??= e.cycle; // a helper from somewhere that didn't stamp it: sent this cycle
     let t = part(s, h.target);
     if (!alive(t)) { t = soonestAttacker(s); if (t) h.target = t.id; }
+    if (t) e.helperHits.list.push({ target: t.id, damage: h.damage, sent: h.sent, by: h.by || null });
     const r = t ? hit(s, t, h.damage, { by: 'Helper', dot: true, synced: h.synced, src: 'helper' }) : null;
     h.left--;
     // Fork (Herder): a ◆ a helper breaks while it runs starts another helper on that part (up to the cap).
-    if (t && r?.absorbed && !r.dealt && buffed(e, 'fork') && alive(t) && e.helpers.length < helperCap(s)) { e.helpers.push({ target: t.id, damage: h.damage, left: 3 }); emit(s, 'status', `Fork: a ◆ breaks, and a helper splits off on the ${t.name}.`, { target: t.id, mark: 'helper' }); }
+    if (t && r?.absorbed && !r.dealt && buffed(e, 'fork') && alive(t) && e.helpers.length < helperCap(s)) { e.helpers.push({ target: t.id, damage: h.damage, left: 3, sent: e.cycle, by: ABILITIES.fork.name }); emit(s, 'status', `Fork: a ◆ breaks, and a helper splits off on the ${t.name}.`, { target: t.id, mark: 'helper' }); }
     // Last Gasp (Operator's edge): one more hit as it expires.
     if (!h.left && t && alive(t) && edge(s, 'operator')) hit(s, t, h.damage, { by: 'Last Gasp', dot: true, synced: h.synced, src: 'helper' });
     if (!h.left) helperGone(s);
@@ -4068,6 +4151,7 @@ export function resolveCycle(s) {
   // 1. The players act first, so breaking a part on its last cycle stops its attack.
   const turns = virusIntegrity(s).current > 0 ? hooks.crewTurns?.(s) || 0 : 0;
   if (!turns) { // solo
+    if (lagged(s)) return lagCycle(s, first); // Lag (mechanics.mjs): the virus acts first
     if (!playerPhase(s)) return since(s, first);
     // Stepped (the browser): the virus answers a beat later, as its own step, when it has an attack due.
     if (hooks.stepped && virusIntegrity(s).current > 0 && dueNow(s).length) { e.steps = { order: [], next: 0, of: 0, after: true }; return since(s, first); }
@@ -4186,16 +4270,30 @@ function cycleStart(s) {
     }
   }
 
-  // A Zip Bomb's fuse runs out: 20% of your max, unless a ◆ or a shield takes it (Block doesn't).
+  // A Zip Bomb's fuse runs out, on both sides (docs/puzzle-levers.md 3.3): 20% of your max, unless a ◆ or a shield
+  // takes it (Block doesn't); then every part of the virus loses a ◆ and takes its share of its own max (blastOf),
+  // through ◆, and what each has due this cycle is cut (interrupt.mjs blastCut). A blast that breaks the last part wins
+  // the fight.
   for (const z of parts(s).filter((x) => x.fuseAt && x.fuseAt <= e.cycle && !x.fused)) {
     z.fused = true;
     const n = Math.max(1, Math.round(defender(s).max * CONFIG.zipbomb.share));
-    if (e.chits > 0) { e.chits--; emit(s, 'blocked', `The ${z.name} goes off on your ◆ and does nothing${e.chits ? ` (${e.chits} left)` : ''}.`, { source: z.id, fuse: true }); continue; }
-    const soak = Math.min(e.shield || 0, n);
-    if (soak) e.shield -= soak;
-    const dealt = n - soak > 0 ? takeDamage(s, n - soak, z.id, `${z.name} fuse`) : 0;
-    emit(s, 'server-hit', `The ${z.name} goes off: −${dealt}${soak ? ` (${soak} on your shield)` : ''}.`, { source: z.id, amount: dealt, atk: 'Fuse', fuse: true });
-    if (defender(s).integrity <= 0) { finish(s, 'crashed'); return true; }
+    if (e.chits > 0) { e.chits--; emit(s, 'blocked', `The ${z.name} goes off on your ◆ and does nothing to you${e.chits ? ` (${e.chits} left)` : ''}.`, { source: z.id, fuse: true }); }
+    else {
+      const soak = Math.min(e.shield || 0, n);
+      if (soak) e.shield -= soak;
+      const dealt = n - soak > 0 ? takeDamage(s, n - soak, z.id, `${z.name} fuse`) : 0;
+      emit(s, 'server-hit', `The ${z.name} goes off: −${dealt}${soak ? ` (${soak} on your shield)` : ''}.`, { source: z.id, amount: dealt, atk: 'Fuse', fuse: true });
+      if (defender(s).integrity <= 0) { finish(s, 'crashed'); return true; }
+    }
+    const hitBy = livingParts(s).filter((x) => !frozenNow(s, x));
+    if (hitBy.length) emit(s, 'phase', `The blast hits the virus too: every part loses a ◆ and ${Math.round(CONFIG.zipbomb.parts * 100)}% of its max.`, { source: z.id, blast: true });
+    for (const x of hitBy) {
+      if (!alive(x)) continue; // broken by the blast already (a part's own rule on breaking)
+      blastCut(s, x, z.name);
+      if (x.armor > 0) { x.armor--; if (!x.armor) x.patchAt = e.cycle + patchDelay(s); }
+      hit(s, x, blastOf(x), { by: `${z.name} blast`, server: true, pierce: true, blast: true });
+    }
+    if (virusIntegrity(s).current === 0) { finish(s, 'victory'); return true; }
   }
 
   // Echoes of last cycle's hits (Echo strain): they land first, and die with the Echo.
@@ -4211,8 +4309,10 @@ function cycleStart(s) {
     }
   }
 
-  return false;
+  return mechStart(s); // the Punisher's free attack, the Countdown's big turn (mechanics.mjs)
 }
+// What a Zip Bomb's blast deals a part of the virus: its share of the part's own max (docs/puzzle-levers.md 3.3).
+export const blastOf = (p) => Math.max(1, Math.round((p?.max || 0) * CONFIG.zipbomb.parts));
 // Attacks due now, soonest first.
 // A part that only attacks alone (the Hashrat's Miner) waits a cycle at a time while it has company.
 const dueNow = (s) => {
@@ -4269,7 +4369,7 @@ function cycleFx(s) {
     const t = soonestAttacker(s);
     if (!beat(x) || e.helpers.length || !alive(t)) continue;
     const n = Math.max(1, Number(x.fx.cycles) || 2), dmg = scaled(s, ABILITIES.deploy.helper);
-    e.helpers.push({ target: t.id, damage: dmg, left: n, synced: false });
+    e.helpers.push({ target: t.id, damage: dmg, left: n, synced: false, sent: e.cycle, by: x.name || x.it.name });
     emit(s, 'status', `${x.name || x.it.name}: a helper joins you on the ${t.name}, dealing ${dmg} every cycle for ${n} cycles.`, { target: t.id, mark: 'helper', ...firedOf([x]) });
   }
   noteSignal(s);
@@ -4347,6 +4447,7 @@ function cycleClose(s, landed) {
     for (const x of re) { x.armor = x.maxArmor; x.patchAt = null; }
     emit(s, 'patch', re.length ? `IDLE. The ${it.name} re-arms ${re.map((x) => x.name).join(' and ')} to full ◆.` : `IDLE. The ${it.name} times out, but every part still wears its ◆.`, { target: (re[0] || it).id, idle: true });
   }
+  mechClose(s); // the mechanics list's parts at the cycle's end: Predator, Opportunist, Feeder, Amplifier, Bodyguard, Backtrace
   // Mutex: a broken lock comes back while the Mutex lives.
   for (const p of livingParts(s).filter((x) => x.lockAt != null && e.cycle >= x.lockAt)) {
     p.lockAt = null;
@@ -4396,6 +4497,18 @@ function cycleClose(s, landed) {
   if (e.virus.raid) raidCycle(s); // a crew boss: its phase, then what it announces (raid.mjs)
   if (e.virus.tells) { tellCycle(s); flushDaemons(s); } // a solo fight's tells: what it announces now (tells.mjs); a Lookout's hit
   hooks.programCycle?.(s); // routines.mjs: a part that's yours to play, and the auto jack-out rail
+}
+// A lagged cycle (a Jitter's Lag, mechanics.mjs): the virus's attacks land, then your command, then the cycle closes.
+function lagCycle(s, first) {
+  if (cycleStart(s)) return since(s, first);
+  let landed = 0;
+  for (const p of dueNow(s)) { if (p.attack?.due > s.encounter.cycle) continue; landed++; if (strike(s, p)) return since(s, first); }
+  if (s.encounter.virus.tells && tellLand(s)) return since(s, first);
+  emit(s, 'status', 'LAG. Your command lands after the virus acts.', { lag: true });
+  if (!playerPhase(s)) return since(s, first);
+  if (virusIntegrity(s).current === 0) { finish(s, 'victory'); return since(s, first); }
+  cycleClose(s, landed);
+  return since(s, first);
 }
 function endCycle(s, first) {
   if (cycleStart(s)) return since(s, first);
@@ -4508,7 +4621,7 @@ export function intents(s, columns = 4) {
       const col = due - e.cycle;
       if (a.grow) a.bonus = (bonus0 || 0) + a.grow * Math.max(0, col);
       const tap = p.taps ? { tap: ((a.tap || 0) + k) % p.taps + 1, taps: p.taps } : {}; // which hit of its volley
-      if (col >= 0 && !charged.has(`${p.id}@${col}`)) out.push({ source: p.id, name: a.name, effect: a.effect, amount: Math.round(attackAmount(p) * c2Gnaw(s, p) * (boosted ? CONFIG.reactiveBonus : 1)), ...(a.hit ? { hit: Math.round(a.hit * (boosted ? CONFIG.reactiveBonus : 1)) } : {}), col, hidden, kind: p.kind, ...tap, ...(p.backlog ? { syn: true } : {}), ...(p.scrape ? { scrape: true } : {}), ...(p.badblock ? { bad: true } : {}), ...(due === a.due && delayHeld(p) ? { held: true } : {}) }); // held: already delayed, it lands there
+      if (col >= 0 && !charged.has(`${p.id}@${col}`)) out.push({ source: p.id, name: a.name, effect: a.effect, amount: Math.round(attackAmount(p) * c2Gnaw(s, p) * (boosted ? CONFIG.reactiveBonus : 1) * mechPower(s, p, false, k > 0)), ...(a.hit ? { hit: Math.round(a.hit * (boosted ? CONFIG.reactiveBonus : 1)) } : {}), col, hidden, kind: p.kind, ...tap, ...(p.backlog ? { syn: true } : {}), ...(p.scrape ? { scrape: true } : {}), ...(p.badblock ? { bad: true } : {}), ...(due === a.due && delayHeld(p) ? { held: true } : {}) }); // held: already delayed, it lands there
       if (a.ramp) a.step = (a.step || 0) + 1;
       boosted = false;
     });
@@ -4519,8 +4632,12 @@ export function intents(s, columns = 4) {
   for (const b of livingParts(s).filter((x) => x.buffer)) for (let col = 0; col < columns; col++) if ((e.cycle + col - 1) % b.buffer.every === 0) { const t = belowOf(s, b); if (t) out.push({ source: b.id, name: 'Shield', effect: 'buffer', amount: Math.max(1, Math.round(b.max * b.buffer.share)), col, hidden: false, kind: b.kind, to: t.id }); }
   const echo = livingParts(s).find((x) => x.echo);
   if (echo) for (const x of e.echoes || []) if (x.due - e.cycle >= 0 && x.due - e.cycle < columns) out.push({ source: echo.id, name: x.name + ' echo', effect: 'damage', amount: x.amount, col: x.due - e.cycle, hidden: false, kind: echo.kind });
-  // The Decoy's beat (your commands mirrored), and a broken twin's reboot: chips on the board like attacks.
-  for (const decoy of livingParts(s).filter((x) => x.reflect)) for (let col = 0; col < columns; col++) if ((e.cycle + col + (decoy.reflectOff || 0)) % decoy.reflect === 0) out.push({ source: decoy.id, name: 'Mirror', effect: 'mirror', amount: Math.round(CONFIG.mirrorBounce * 100), col, hidden: timersHidden(s, decoy), kind: decoy.kind });
+  // The Decoy's beat (your hit bent), and a broken twin's reboot: chips on the board like attacks. The beat always shows;
+  // where its next one points (to) only once the Decoy's timers do (veiled: not yet).
+  for (const decoy of livingParts(s).filter((x) => x.reflect)) {
+    const b = bendOf(s, decoy);
+    for (let col = 0; col < columns; col++) if ((e.cycle + col + (decoy.reflectOff || 0)) % decoy.reflect === 0) out.push({ source: decoy.id, name: 'Bend', effect: 'mirror', amount: Math.round((decoy.bounce ?? CONFIG.mirrorBounce) * 100), col, hidden: false, veiled: !b.shown, to: b.shown && b.at === e.cycle + col ? b.to.id : null, toName: b.shown && b.at === e.cycle + col ? b.to.name : null, self: b.to === decoy, harm: b.shown && b.at === e.cycle + col ? b.bad : null, kind: decoy.kind });
+  }
   for (const p of parts(s)) if (p.rebootAt && p.integrity === 0 && p.rebootAt - e.cycle >= 0 && p.rebootAt - e.cycle < columns) out.push({ source: p.id, name: 'Reboot', effect: 'reboot', amount: Math.round(p.max * CONFIG.twinReboot.at), col: p.rebootAt - e.cycle, hidden: false, kind: p.kind });
   // A Cold Store's thaw and a Spare's boot (the parts plan's P2): on the cycle each joins the fight.
   for (const p of livingParts(s)) if (p.frozen && !p.thawed && p.thawAt - e.cycle >= 0 && p.thawAt - e.cycle < columns) out.push({ source: p.id, name: 'Thaw', effect: 'thaw', amount: p.chill ? attackAmount({ ...p, attack: p.chill }) : 0, col: p.thawAt - e.cycle, hidden: false, kind: p.kind });
@@ -4694,7 +4811,7 @@ export function shuntRestore(s) {
   walk(s, 0);
 }
 export function restore(raw) {
-  if (!raw || ![6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, SAVE_VERSION].includes(raw.version)) return fresh();
+  if (!raw || ![6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, SAVE_VERSION].includes(raw.version)) return fresh();
   try {
     const s = bindRooms(structuredClone(raw));
     const was = s.version;
@@ -4778,7 +4895,7 @@ export function restore(raw) {
     if (was < 19) { s.daemons = []; s.daemonsOwned = {}; s.loadout.equipped = {}; s.loadout.picks = {}; if (s.encounter) s.encounter = null; }
     // v20: Mail, contracts and the Halcyon retainer. A server whose vault you already opened is yours.
     if (was < 20) for (const l of s.locations || []) if (Object.keys(l.state?.unlocked || {}).length) l.takenOver = true;
-    // v21: the hidden network, the contract board and Indemnity. Found servers get their unknown neighbours.
+    // v21: the hidden network and the contract board (and Indemnity, retired in v48). Found servers get their unknown neighbours.
     if (was < 21) for (const l of s.locations || []) spawnHidden(s, l);
     // v22: Interrupt and Trace left the shared keys; each kit has a level-5 skill and seven slots.
     if (was < 22) for (const [arch, eq] of Object.entries(s.loadout.equipped || {})) {
@@ -4836,6 +4953,7 @@ export function restore(raw) {
     dexOf(s); // the Codex tab's record (genome.mjs): an older save starts it empty (its sets come from each server's floorplan codex)
     researchOf(s); // part research (research.mjs): an older save's decoded parts start decoded, and research on the old 1/5/20 scale is tripled once
     initMail(s);
+    indemnityRestore(s); // v48: Indemnity retires: what you held becomes credits, once (store.mjs); keyed on the field
     { const back = retireOutposts(s, was); const l = back && s.locations?.length ? retireLetter(back) : null; if (l) systemLetter(s, l); } // v40: outposts, services and the rest retire (sockets.mjs)
     syncFlags(s); // servers a relay already pings get their route files
     s.version = SAVE_VERSION;
@@ -4849,6 +4967,8 @@ export function restore(raw) {
     statsRestore(s, was); // v44: whole-number stats: Regen five times over 5 cycles, Payload flat at each item's level (gear.mjs)
     setsRestore(s, was); // v45: sets: loaded protocols stamped in slot order, set pieces you hold found, the Badge beat armed (sets.mjs)
     subRestore(s, was); // v46: no default subclass: a class past 10 that never picked plays its core (its default's keys and talent points back)
+    hardenRestore(s); // harden.sh is gone: scripts you held come back as credits (firewall.mjs)
+    componentsRestore(s); // v47: a pile of named components becomes its count (salvage.mjs); keyed on the field
     shuntRestore(s); // the Shunt was cut (docs/parts-plan.md): keyed on the part, not the version
     try { achievementsRestore(s); } catch (err) { hooks.restoreError?.(err); } // achievements.mjs: an older save earns what it has already done (its titles and stickers too), quietly; never costs the save
     if (s.encounter) s.encounter.plan ||= [];

@@ -30,7 +30,7 @@ function world({ level = 8, fw = 0, services = { raid: 1, firewall: 1 } } = {}) 
   for (const l of s.locations) Object.assign(l, { level, depth: 1, runs: 1 }); // connected: they send invasions
   s.hidden = []; // just the two: no unknown servers behind them (floors.mjs links each to its ?s)
   s.services = { ...services };
-  s.firewall = { pin: fw, plus: 0, frag: 0, defragUntil: 0, hardenUntil: 0 };
+  s.firewall = { pin: fw, plus: 0, frag: 0, defragUntil: 0 };
   syncServer(s);
   s.server.integrity = s.server.max;
   s.clock = 0;
@@ -58,7 +58,7 @@ function win(s) {
   return resolveCycle(s);
 }
 
-test('pacing: the first a few minutes after your first find, then one every 20-30 minutes online; open ports 8-12; away 2-4 hours', () => {
+test('pacing: the first a few minutes after your first find, then one every 20-30 minutes online; away 2-4 hours', () => {
   assert.deepEqual(I.everyMs, [20 * MIN, 30 * MIN]);
   assert.equal(I.firstMs, 3 * MIN);
   assert.deepEqual(AWAY.everyMs, [2 * 3600000, 4 * 3600000]);
@@ -72,8 +72,6 @@ test('pacing: the first a few minutes after your first find, then one every 20-3
   wait(s, 5 * 60 * MIN);
   const n = s.logs.filter((e) => e.type === 'invader').length - n0;
   assert.ok(n >= 9 && n <= 15, `${n} in five hours`);
-  command(s, 'open ports');
-  assert.ok(s.net.next <= 30 * MIN * I.open.pace, 'open ports: 8-12 minutes');
 });
 
 test('the wall handles weak invasions quietly: no alert, no beep, a pager entry and a little pay', () => {

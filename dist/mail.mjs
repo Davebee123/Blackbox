@@ -6,24 +6,35 @@
 // standing with it holds. Contracts raise standing; a crash on your own server lowers it, and
 // so does work for Halcyon's competitors (GLASSJAW, off the books).
 //
-// The board: up to five offers at a time, arriving and expiring at uneven intervals. You take up
-// to three; only a taken contract counts. Dropping one costs nothing. The storyline's jobs sit
-// beside the board and don't count toward the three.
+// The board: up to ten offers at a time, arriving and expiring at uneven intervals. You take up
+// to six; only a taken contract counts. Dropping one costs nothing. The storyline's jobs sit
+// beside the board and don't count toward the six.
 //
 // Contract types: kill (N of a family, or anything in the Sprawl), bounty (one named process in
 // a SPRAWL-00 room), takeover (take a server over: its vault, then its Resident), materials (hand over code), item (a
 // file in a server's vault: open it, bank the file, deliver it), and since R1 (docs/servers.md 8.1) rooms (clear N
 // rooms on a server, first clears) and map (map a server: every room cleared). A takeover or item contract can point at
 // a server you haven't found: a relay on its neighbour flags it, and you trace it yourself
-// (see hidden.mjs). Contracts pay credits and Indemnity, Halcyon's store scrip.
+// (see hidden.mjs). Contracts pay credits.
+//
+// Activity contracts (ACTIVITY), wrapping what the game already has, each from its level: grind (many kills of one
+// virus family), solve (N puzzle boards, or one of a named kind), decode (N parts researched a tier), sweeps (N log
+// sweeps), interrupt (N attacks answered), root (the next Root level on a server you hold) and hold (an invasion
+// stopped). contractDid counts them.
+//
+// XP (WoW's quests): a fixed amount, set when it's posted by the level then and its kind: its minutes (MINUTES, the
+// real play it takes, so slow kinds pay more) of farming at that level (data.mjs farmXp), times MAIL.xpShare. It comes
+// on top of what the work pays on its own, so working contracts is about 1.5x the XP an hour of farming the same servers.
 //
 // Room contracts (ROOM_JOBS): install (carry Halcyon's item to a room's grid address on a server and install it there;
 // lose your Signal while it's in your pack and it's gone, the job with it), defuse (break N Encryptors before they
 // Encrypt), sweep (one visit, every room but the Core, no rest), exfil (catch an Exfil) and heist (a vault's file past a
 // Tracker). No clock: one waits on the board at a time until you take it, outside the five.
-import { FAMILIES, CONFIG, STRAINS, along } from './data.mjs';
+import { FAMILIES, ROOM_FAMILIES, CONFIG, STRAINS, farmXp } from './data.mjs';
+import { ROOT } from './root.mjs';
+import { PUZZLES } from './puzzles.mjs';
 import { LOOT, MATERIALS, rollItem, seeded } from './gear.mjs';
-import { emit, warn, hackerLevel, serverLevel, gainXp, xpFor, deedXpFor, learnBlueprint, materialsOf, rand, hooks, addLocation, giveUnique, rollDrop, addItem, setDeliver } from './combat.mjs';
+import { emit, warn, hackerLevel, serverLevel, gainXp, deedXpFor, learnBlueprint, materialsOf, rand, hooks, addLocation, giveUnique, rollDrop, addItem, setDeliver } from './combat.mjs';
 import { zoneOf, zoneRooms } from './zone.mjs';
 import { hiddenNodes, hiddenNode, syncFlags, items, flagged, spawnHidden } from './hidden.mjs';
 import { hiddenNear } from './floors.mjs';
@@ -33,15 +44,15 @@ import { fill } from './content.mjs';
 import { learnRelayPlan } from './hidden.mjs';
 import { FACTIONS, changeRep, rippleRep, hostile, captured, rivalServers, hubsOf, hubFound } from './factions.mjs';
 import { addrsOf, sweepRooms } from './address.mjs';
-import { learnCodebase, familyComponents } from './sockets.mjs';
+import { learnCodebase } from './sockets.mjs';
 import { arcTick, arcTitle, arcProgress, arcReady, arcDelivered, arcTake } from './arcs.mjs';
 
 export const MAIL = {
   periodMs: 30 * 60 * 1000, // the retainer pays every 30 minutes, offline too
   boardAfterMs: 60 * 60 * 1000, // a storyline job marked boardAfterHour (the named process, the first takeover), held this long, opens the board anyway
   maxPeriods: 16, // up to 8 hours of it builds up while you're away
-  offers: 5, // offers on the board at once
-  take: 3, // contracts you can hold at once (storyline jobs don't count)
+  offers: 10, // offers on the board at once
+  take: 6, // contracts you can hold at once (storyline jobs don't count)
   offerEvery: [1 * 60 * 1000, 3 * 60 * 1000], // a new offer arrives somewhere in here (2 min on average)
   burst: 0.15, // sometimes two arrive together
   offerLife: [15 * 60 * 1000, 15 * 60 * 1000], // an offer nobody takes is gone after 15 minutes
@@ -51,10 +62,10 @@ export const MAIL = {
   offBooksXp: 1.5,
   offBooksChance: 0.2,
   factionShare: 0.5, // of the rest of the board, once the hubs are up: other factions' work
-  factionPay: 1.2, // they pay a little better than Halcyon, in credits and their own rep (no Indemnity)
+  factionPay: 1.2, // they pay a little better than Halcyon, in credits and their own rep (no Halcyon standing)
   startStanding: 10,
   roomEvery: [8 * 60 * 1000, 20 * 60 * 1000], // a room contract arrives somewhere in here after the last one was taken
-  xp: [[1, 3], [5, 8], [10, 13], [20, 13], [30, 11]], // a contract's XP: its reward.xp (kills' worth at the level it was posted) times this, by that level (straight between its points)
+  xpShare: 0.2, // a contract's XP: its minutes (MINUTES) of farming at the level it was posted (farmXp), times this
 };
 
 export { FACTIONS }; // the factions live in factions.mjs now (Halcyon is the first of them)
@@ -79,7 +90,6 @@ export const nextTier = (s) => TIERS.find((t) => t.min > standing(s)) || null;
 export const retainer = (s) => tierOf(s).pay(serverLevel(s));
 export const unread = (s) => (s.mail?.list || []).filter((m) => !m.read).length;
 export const cargo = (s) => (s.cargo ||= []);
-export const indemnity = (s) => s.indemnity || 0;
 export const jobs = (s) => s.mail?.jobs || [];
 export const offers = (s) => s.mail?.offers || [];
 export const openContracts = (s) => jobs(s).filter((j) => !j.done);
@@ -95,7 +105,6 @@ export function initMail(s, at = now()) {
   s.standing ||= { halcyon: MAIL.startStanding };
   s.retainer ||= { at };
   s.cargo ||= [];
-  s.indemnity ||= 0;
   postStory(s, at);
   return s.mail;
 }
@@ -108,10 +117,9 @@ function migrateMail(s, at) {
     if (!c) continue;
     delete l.contract;
     if (c.done) continue;
-    m.jobs.push({ ...c, id: l.id, from: l.from, subject: l.subject, body: l.body, reward: { indemnity: 0, ...c.reward } });
+    m.jobs.push({ ...c, id: l.id, from: l.from, subject: l.subject, body: l.body, reward: { ...c.reward } });
     l.job = l.id;
   }
-  s.indemnity ||= 0;
   return m;
 }
 
@@ -152,7 +160,9 @@ function jobVars(s, j = {}) {
     name: j.name, room: j.room ? sprawlRoom(s, j.room) : j.room, amount: j.amount, material: j.material ? lower(MATERIALS[j.material]?.name) : undefined,
     server: loc?.name || (j.any ? 'any server you have traced' : 'a server you haven’t found yet'), owner: loc?.owner,
     file: j.file, label, Label: label ? label[0].toUpperCase() + label.slice(1) : '', strain: j.strain ? STRAINS[j.strain]?.name : undefined,
-    addr: j.addr,
+    addr: j.addr, virus: j.virus ? lower(familyName(j.virus)) : undefined, root: j.root,
+    boards: j.type === 'solve' ? (j.kind ? `a ${PUZZLES[j.kind]?.name} board` : `${j.count} puzzle boards`) : undefined,
+    logs: j.type === 'sweeps' ? (j.count === 1 ? 'a server\'s incident log' : `${j.count} servers' incident logs`) : undefined,
   };
 }
 // Turn a written beat into a letter and its job.
@@ -193,6 +203,7 @@ function postStory(s, at = now(), force = false) {
   const l = letter(s, msg, at);
   if (job) {
     const j = { id: l.id, from: msg.from, subject: msg.subject, body: msg.body, got: 0, at, ...job };
+    j.minutes = minutesOf(j); j.reward.xp = contractXp(hackerLevel(s), j); // like the board's: its kind, at your level
     m.jobs.push(j);
     l.job = j.id;
     arm(s, j);
@@ -212,7 +223,7 @@ export function storyAt(s, id, at = now()) {
   s.mail = { list: [], next: 1, story: k, posted: before.map((b) => b.id), jobs: [], offers: [], nextOfferAt: null, boardOpen: before.some((b) => b.opensBoard) };
   s.standing ||= { halcyon: MAIL.startStanding };
   s.standing.halcyon = Math.max(s.standing.halcyon, MAIL.startStanding + before.reduce((n, b) => n + (b.reward?.standing || 0), 0));
-  s.retainer = { at }; s.cargo ||= []; s.indemnity ||= 0;
+  s.retainer = { at }; s.cargo ||= [];
   if (!s.locations.length) addLocation(s, 'worm', 1);
   if (before.some((b) => b.job?.type === 'takeover')) { const loc = s.locations[0]; loc.takenOver = true; s.mail.took = loc.id; if (before.some((b) => b.reward?.relay)) items(s).relay += 1; }
   if (s.mail.boardOpen) { for (let i = 0; i < 3; i++) offer(s, at); s.mail.nextOfferAt = at + gap(s); postSides(s, at); }
@@ -298,43 +309,47 @@ export function offer(s, at = now()) {
   const target = rivals.length && rand(s) < 0.6 ? { loc: pick(s, rivals).id } : pickTarget(s);
   // Named processes live in SPRAWL-00: posted only while it's still your level (it tops out at CONFIG.zone.maxLevel).
   const roomsAt = roomsTarget(s), mapAt = mapTarget(s);
-  const kinds = (off ? ['materials', 'item', 'kill', 'rooms'] : ['kill', 'kill', 'bounty', 'bounty', 'materials', 'takeover', 'item', 'item', 'rooms', 'rooms', 'map']).filter((k) => (target || !['takeover', 'item'].includes(k)) && (k !== 'bounty' || L <= CONFIG.zone.maxLevel + 2) && (k !== 'rooms' || roomsAt) && (k !== 'map' || mapAt));
+  const rootAt = rootTarget(s), logs = unswept(s);
+  const acts = Object.keys(ACTIVITY).filter((k) => L >= ACTIVITY[k].from && (k !== 'root' || rootAt) && (k !== 'sweeps' || logs.length) && (k !== 'hold' || tracedOf(s).length));
+  const kinds = (off ? ['materials', 'item', 'kill', 'rooms'] : ['kill', 'kill', 'bounty', 'bounty', 'materials', 'takeover', 'item', 'item', 'rooms', 'rooms', 'map', ...acts]).filter((k) => (target || !['takeover', 'item'].includes(k)) && (k !== 'bounty' || L <= CONFIG.zone.maxLevel + 2) && (k !== 'rooms' || roomsAt) && (k !== 'map' || mapAt));
   // Strain contracts (RuneScape Slayer): once strains are open at your level, a quarter of the board.
   const strainsOpen = Object.keys(STRAINS).filter((k) => STRAINS[k].from <= L && L >= CONFIG.zone.maxLevel + 2);
   const type = !off && strainsOpen.length && rand(s) < 0.25 ? 'strain' : pick(s, kinds);
   const fam = pick(s, Object.keys(CREWS));
   const pay = (base, per) => Math.round((base + per * L) * (off ? MAIL.offBooksPay : theirs ? MAIL.factionPay : 1));
-  const ind = (n) => (off || theirs ? 0 : n + Math.floor(L / 12));
   const hit = off ? { standing: -MAIL.offBooksHit } : {};
   const repFor = (n) => (theirs ? { standing: 0, rep: n } : {}); // other factions pay in their own rep
   const T = CONTRACT_TEXT;
   let j;
   if (type === 'strain') {
     const count = 3 + (L >= 15 ? 1 : 0) + (L >= 30 ? 1 : 0);
-    j = { type, strain: pick(s, strainsOpen), count, reward: { credits: pay(40, 6), indemnity: ind(1), standing: 5, xp: 2, ...repFor(5) } };
+    j = { type, strain: pick(s, strainsOpen), count, reward: { credits: pay(40, 6), standing: 5, ...repFor(5) } };
   } else if (type === 'kill') {
     const count = 3 + (L >= 10 ? 1 : 0) + (L >= 30 ? 1 : 0);
-    j = { type, family: fam, count, reward: { credits: pay(30, 5), indemnity: ind(1), standing: 5, xp: 1.5, ...hit, ...repFor(5) } };
+    j = { type, family: fam, count, reward: { credits: pay(30, 5), standing: 5, ...hit, ...repFor(5) } };
   } else if (type === 'bounty') {
     const name = `${pick(s, T.bountyNames?.length ? T.bountyNames : ['lapsejack'])}-${String(1000 + Math.floor(rand(s) * 9000))}`;
-    j = { type, family: fam, name, reward: { credits: pay(40, 6), indemnity: ind(2), standing: 5, xp: 2, ...repFor(5) } };
+    j = { type, family: fam, name, reward: { credits: pay(40, 6), standing: 5, ...repFor(5) } };
   } else if (type === 'materials') {
     const m = pick(s, CODES), amount = 2 + Math.floor(L / 8);
-    j = { type, material: m, amount, reward: { credits: pay(35, 6), indemnity: ind(1), standing: 5, xp: 1, ...hit, ...repFor(5) } };
+    j = { type, material: m, amount, reward: { credits: pay(35, 6), standing: 5, ...hit, ...repFor(5) } };
   } else if (type === 'rooms') {
     const count = 4 + Math.floor(L / 10);
-    j = { type, loc: roomsAt.id, count, reward: { credits: pay(35, 6), indemnity: ind(1), standing: 5, xp: 2, ...hit, ...repFor(5) } };
+    j = { type, loc: roomsAt.id, count, reward: { credits: pay(35, 6), standing: 5, ...hit, ...repFor(5) } };
   } else if (type === 'map') {
-    j = { type, loc: mapAt.id, reward: { credits: pay(60, 10), indemnity: ind(3), standing: 7, xp: 3, ...repFor(7) } };
+    j = { type, loc: mapAt.id, reward: { credits: pay(60, 10), standing: 7, ...repFor(7) } };
   } else if (type === 'takeover') {
-    j = { type, ...target, reward: { credits: pay(60, 10), indemnity: ind(4), standing: 8, xp: 3, ...repFor(8) } };
+    j = { type, ...target, reward: { credits: pay(60, 10), standing: 8, ...repFor(8) } };
+  } else if (ACTIVITY[type]) {
+    j = { type, ...ACTIVITY[type].job(s, L, { rootAt, logs }), reward: { credits: pay(35, 6), standing: 5, ...repFor(5) } };
   } else {
     const f = pick(s, T.files?.length ? T.files : [{ file: 'policy.db', label: 'a stolen policy database', line: 'binary: policy records.' }]);
     j = { type, ...target, file: f.file, label: f.label, text: [f.line, off ? 'GLASSJAW wants it. Halcyon wants it more.' : 'pull it and bank it, then deliver it from Mail.'],
-      reward: { credits: pay(50, 8), indemnity: ind(3), standing: 6, xp: 2.5, ...hit, ...repFor(6) } };
+      reward: { credits: pay(50, 8), standing: 6, ...hit, ...repFor(6) } };
   }
-  // GLASSJAW's work is worth the standing it costs: more XP, and a protocol on delivery.
-  if (off) { j.reward.xp = Math.round(j.reward.xp * MAIL.offBooksXp * 10) / 10; j.reward.drop = true; }
+  // Its XP, fixed now (MINUTES at this level). GLASSJAW's work is worth the standing it costs: more XP, and a protocol on delivery.
+  j.minutes = minutesOf(j); j.reward.xp = contractXp(L, j);
+  if (off) { j.reward.xp = Math.round(j.reward.xp * MAIL.offBooksXp); j.reward.drop = true; }
   // Halcyon pays the Relay plan on one server job at a time, until you know it.
   if (faction === 'halcyon' && !off && ['takeover', 'item'].includes(type) && !(s.plans || []).includes('relay') && ![...openContracts(s), ...offers(s)].some((c) => c.reward?.plan)) j.reward.plan = 'relay';
   // The words: a variant from content/contracts.mjs, for this kind and side.
@@ -355,9 +370,46 @@ export function offer(s, at = now()) {
 // A server with first clears left for a rooms job (yours, rogue or not, SPRAWL-00 aside), and one to map: a traced
 // server not Mapped yet, never a rogue server's (they keep up with you).
 const busyLoc = (s) => new Set([...jobs(s), ...offers(s)].filter((j) => !j.done).map((j) => j.loc).filter(Boolean));
-const roomsLeft = (l) => { const R = l.floorplan; return R ? Object.values(R.graph.rooms).filter((x) => !R.cleared[x.id] && !x.nook && !x.optional).length : 6; };
+const roomsLeft = (l) => { const R = l.floorplan; return R ? Object.values(R.graph.rooms).filter((x) => !R.cleared[x.id] && counted(x)).length : 6; };
 function roomsTarget(s) { const busy = busyLoc(s), pool = (s.locations || []).filter((l) => !l.member && !l.farm && !busy.has(l.id) && !(l.fresh && l.detached) && roomsLeft(l) >= 4); return pool.length ? pool[Math.floor(rand(s) * pool.length)] : null; }
 function mapTarget(s) { const busy = busyLoc(s), pool = (s.locations || []).filter((l) => !l.rogue && !l.member && !busy.has(l.id) && !(l.fresh && l.detached) && !l.floorplan?.mapped); return pool.length ? pool[Math.floor(rand(s) * pool.length)] : null; }
+
+// ---------- activity contracts ----------
+// Each from its level, posted only when there's something to do it on. job: what it asks, at level L.
+//   grind      many kills of one virus family open at your level (families.mjs OPENS), 4 levels under at most
+//   solve      N puzzle boards won, or one of a kind a server you've traced has (PUZZLES)
+//   decode     N parts researched a tier (research.mjs: decoded, its rule, mastered)
+//   sweeps     a log sweep, or two: posted while a thread's temporary server has a process log unswept
+//   interrupt  N attacks answered: a cast stopped, a charge or a seal blocked (tells.mjs)
+//   root       the next Root level on a server you hold (root.mjs ROOT.need)
+//   hold       an invasion stopped, at your wall or by you (invasion.mjs)
+// (Rooms n/N and the families open at a level come through hooks: floorplan.mjs, which imports this module.)
+const counted = (x) => (hooks.counted ? hooks.counted(x) : !x.nook && !x.optional), familyName = (id) => (FAMILIES[id] || ROOM_FAMILIES[id])?.name || id;
+const puzzleKindsHeld = (s) => [...new Set(tracedOf(s).flatMap((l) => Object.values(roomsOfLoc(s, l)?.graph?.rooms || {}).map((x) => x.kind)).filter((k) => PUZZLES[k]))];
+export const ACTIVITY = {
+  grind: { from: 3, job: (s, L) => ({ virus: pick(s, hooks.familiesAt?.(L) || Object.keys(FAMILIES)), count: 12 + 2 * Math.floor(L / 5) }) },
+  decode: { from: 2, job: (s, L) => ({ count: 2 + Math.floor(L / 15) }) },
+  solve: { from: 4, job: (s, L) => { const named = puzzleKindsHeld(s); return named.length && rand(s) < 0.4 ? { kind: pick(s, named), count: 1 } : { count: 2 + (L >= 20 ? 1 : 0) }; } },
+  sweeps: { from: 4, job: (s, L, { logs }) => ({ count: Math.min(2, logs.length) }) },
+  hold: { from: 5, job: () => ({ count: 1 }) },
+  root: { from: 5, job: (s, L, { rootAt: l }) => { const r = l.root || { level: 1, cleared: 0 }; return { loc: l.id, root: r.level + 1, fights: Math.max(1, ROOT.need[r.level + 1] - (r.cleared || 0)) }; } },
+  interrupt: { from: 10, job: (s, L) => ({ count: 6 + Math.floor(L / 10) }) },
+};
+// A server you hold with a Root level still to reach (and no root job on it), and the logs waiting to be swept: a
+// thread's temporary server's process log (threads.mjs; the old file system's incident files count too, forensics.mjs).
+const heldLoc = (l) => !!l.takenOver && !l.rogue && !l.member && !l.zone && !l.trunk;
+function rootTarget(s) { const busy = busyLoc(s), pool = (s.locations || []).filter((l) => heldLoc(l) && (l.root?.level || 1) < ROOT.max && !busy.has(l.id)); return pool.length ? pick(s, pool) : null; }
+const unswept = (s) => (s.locations || []).filter((l) => l.temp?.sweep && !l.temp.sweep.solved);
+// One more of an activity (contractDid's what: solve, decode, sweeps, interrupt, hold); arg: the puzzle kind a Solve
+// job may name. A crewmate's state (s.who) never counts.
+export function contractDid(s, what, arg = null) {
+  if (!s?.mail?.jobs || s.who) return;
+  for (const c of openContracts(s)) {
+    if (c.type !== what || c.got >= c.count || (c.kind && c.kind !== arg)) continue;
+    c.got++;
+    if (c.got === c.count) emit(s, 'contract-ready', `Contract ready: ${title(s, c)}. Deliver it from Mail.`, { contract: c.id });
+  }
+}
 // A room cleared for the first time (netrooms.mjs): rooms jobs on that server count it.
 export function contractRooms(s, loc) {
   for (const c of openContracts(s)) {
@@ -396,7 +448,7 @@ const tracedOf = (s) => (s.locations || []).filter((l) => !l.rogue && !l.member 
 const roomsOfLoc = (s, l) => { try { return l.floorplan || hooks.roomsFor?.(s, l) || null; } catch { return null; } };
 const inRunsLoc = (l) => !!l.rogue && ['nest', 'pit', 'gauntlet'].includes(l.rogue.kind) && !l.occupied && !l.lair && !l.farm;
 function roomJob(s, kind) {
-  const L = hackerLevel(s), pay = (base, per) => Math.round(base + per * L), ind = (n) => n + Math.floor(L / 12), busy = busyLoc(s), T = CONTRACT_TEXT;
+  const L = hackerLevel(s), pay = (base, per) => Math.round(base + per * L), busy = busyLoc(s), T = CONTRACT_TEXT;
   const free = tracedOf(s).filter((l) => !busy.has(l.id));
   if (kind === 'install') {
     const pool = free.map((l) => ({ l, R: roomsOfLoc(s, l) })).filter((x) => x.R?.graph);
@@ -404,21 +456,21 @@ function roomJob(s, kind) {
     const { l, R } = pick(s, pool), g = R.graph, ok = sweepRooms(g).filter((id) => id !== g.entry && !['stash', 'core'].includes(g.rooms[id].kind) && !g.rooms[id].extra);
     if (!ok.length) return null;
     const room = pick(s, ok), it = pick(s, T.installs?.length ? T.installs : INSTALLS);
-    return { type: kind, loc: l.id, room, addr: addrsOf(g)[room], file: it.file, label: it.label, carry: 'stash', reward: { credits: pay(55, 9), indemnity: ind(3), standing: 7, xp: 3, ...(rand(s) < 1 / 3 ? { codebase: true } : {}) } };
+    return { type: kind, loc: l.id, room, addr: addrsOf(g)[room], file: it.file, label: it.label, carry: 'stash', reward: { credits: pay(55, 9), standing: 7, ...(rand(s) < 1 / 3 ? { codebase: true } : {}) } };
   }
-  if (kind === 'defuse') return { type: kind, count: 3 + (L >= 20 ? 1 : 0), reward: { credits: pay(40, 7), indemnity: ind(2), standing: 6, xp: 2.5 } };
-  if (kind === 'exfil') return (s.locations || []).some(inRunsLoc) ? { type: kind, reward: { credits: pay(45, 7), indemnity: ind(2), standing: 6, xp: 2.5 } } : null;
+  if (kind === 'defuse') return { type: kind, count: 3 + (L >= 20 ? 1 : 0), reward: { credits: pay(40, 7), standing: 6 } };
+  if (kind === 'exfil') return (s.locations || []).some(inRunsLoc) ? { type: kind, reward: { credits: pay(45, 7), standing: 6 } } : null;
   if (kind === 'sweep') {
     const pool = free.filter((l) => (l.level || 1) <= L).map((l) => ({ l, R: roomsOfLoc(s, l) })).filter((x) => x.R?.graph && ['small', 'medium'].includes(x.R.size));
     if (!pool.length) return null;
     const { l, R } = pick(s, pool), k = R.size === 'medium' ? 1.3 : 1;
-    return { type: kind, loc: l.id, reward: { credits: Math.round(pay(70, 11) * k), indemnity: ind(3), standing: 8, xp: Math.round(4 * k * 10) / 10, drop: true } };
+    return { type: kind, loc: l.id, size: R.size, reward: { credits: Math.round(pay(70, 11) * k), standing: 8, drop: true } };
   }
   if (kind === 'heist') {
     const pool = free.filter((l) => { const g = roomsOfLoc(s, l)?.graph; return g?.hunter === 'track' && g.vaults?.[0]; });
     if (!pool.length) return null;
     const l = pick(s, pool), f = pick(s, T.files?.length ? T.files : [{ file: 'policy.db', label: 'a stolen policy database', line: 'binary: policy records.' }]);
-    return { type: kind, loc: l.id, file: f.file, label: f.label, text: [f.line, 'past the Tracker: bank it from a visit it never reached you.'], reward: { credits: pay(65, 10), indemnity: ind(3), standing: 8, xp: 3.5, ...(rand(s) < 0.5 ? { drop: true } : {}) } };
+    return { type: kind, loc: l.id, file: f.file, label: f.label, text: [f.line, 'past the Tracker: bank it from a visit it never reached you.'], reward: { credits: pay(65, 10), standing: 8, ...(rand(s) < 0.5 ? { drop: true } : {}) } };
   }
   return null;
 }
@@ -430,6 +482,7 @@ export function roomOffer(s, at = now(), want = null) {
     const j = roomJob(s, kind);
     if (!j) continue;
     const v = pick(s, CONTRACT_TEXT[kind]?.halcyon?.length ? CONTRACT_TEXT[kind].halcyon : [{ subject: kind, body: [''] }]), vars = jobVars(s, j);
+    j.minutes = minutesOf(j); j.reward.xp = contractXp(L, j);
     const o = { id: s.mail.next++, from: v.from ? SENDERS[v.from] : SENDERS.claims, got: 0, at, level: L, expiresAt: at + 10 * 365 * 24 * 3600000, waits: true, faction: 'halcyon',
       subject: fill(v.subject, vars), body: (v.body || []).map((p) => fill(p, vars)).filter(Boolean), ...j };
     s.mail.offers.push(o);
@@ -541,15 +594,19 @@ const cap = (x) => (x ? x[0].toUpperCase() + x.slice(1) : '');
 // Strain contracts: every fifth one in a row pays double and rolls for the strain's trophy; dropping one resets it.
 export const SLAYER = { every: 5 };
 // What a contract's XP counts as in the XP mix (combat.mjs gainXp): the activity behind it.
-const CONTRACT_KIND = { puzzle: 'intel', lair: 'fight', side: null, strain: 'fight', kill: 'fight', bounty: 'fight', materials: 'fight', takeover: 'breakin', item: 'breakin', rooms: 'fight', map: 'breakin', install: 'breakin', defuse: 'fight', sweep: 'breakin', exfil: 'fight', heist: 'breakin' };
+const CONTRACT_KIND = { puzzle: 'intel', lair: 'fight', side: null, strain: 'fight', kill: 'fight', bounty: 'fight', materials: 'fight', takeover: 'breakin', item: 'breakin', rooms: 'fight', map: 'breakin', install: 'breakin', defuse: 'fight', sweep: 'breakin', exfil: 'fight', heist: 'breakin', grind: 'fight', solve: 'intel', decode: 'intel', sweeps: 'intel', interrupt: 'fight', root: 'build', hold: 'fight' };
 // A kill contract counts kills no more than 4 levels under the level it was posted at.
 export const KILL_RANGE = 4;
 const inRange = (c, level) => level == null || c.level == null || level >= c.level - KILL_RANGE;
-export function wantedBy(s, { family, zone, name = null, level = null, strain = null }) {
-  return openContracts(s).filter((c) => (c.type === 'strain' && c.got < c.count && strain === c.strain && inRange(c, level)) || (c.type === 'kill' && c.got < c.count && inRange(c, level) && (c.where === 'sprawl' ? zone : !c.family || c.family === family)) || (c.type === 'bounty' && !c.got && name && name === c.name));
+export function wantedBy(s, { family, zone, name = null, level = null, strain = null, virus = family }) {
+  return openContracts(s).filter((c) => (c.type === 'grind' && c.got < c.count && inRange(c, level) && c.virus === virus) || (c.type === 'strain' && c.got < c.count && strain === c.strain && inRange(c, level)) || (c.type === 'kill' && c.got < c.count && inRange(c, level) && (c.where === 'sprawl' ? zone : !c.family || c.family === family)) || (c.type === 'bounty' && !c.got && name && name === c.name));
 }
-export function contractKill(s, { family, zone, bounty: tag, level = null, strain = null }) {
+export function contractKill(s, { family, zone, bounty: tag, level = null, strain = null, virus = family }) {
   for (const c of openContracts(s)) {
+    if (c.type === 'grind' && c.got < c.count && inRange(c, level) && c.virus === virus) {
+      c.got++;
+      if (c.got === c.count) emit(s, 'contract-ready', `Contract ready: ${title(s, c)}. Deliver it from Mail.`, { contract: c.id });
+    }
     if (c.type === 'strain' && c.got < c.count && strain === c.strain && inRange(c, level)) {
       c.got++;
       if (c.got === c.count) emit(s, 'contract-ready', `Contract ready: ${title(s, c)}. Deliver it from Mail.`, { contract: c.id });
@@ -620,6 +677,8 @@ export function ready(s, c) {
   if (c.type === 'item' || c.type === 'heist') return cargo(s).some((x) => x.contract === c.id);
   if (c.type === 'defuse') return c.got >= c.count;
   if (['install', 'sweep', 'exfil'].includes(c.type)) return !!c.got;
+  if (c.type === 'root') { const l = s.locations.find((x) => x.id === c.loc); return !!l && heldLoc(l) && (l.root?.level || 1) >= c.root; }
+  if (ACTIVITY[c.type]) return c.got >= c.count; // grind, solve, decode, sweeps, interrupt, hold
   if (c.type === 'side') return true; // picking a side is the whole job
   return c.chain ? arcReady(s, c) : false;
 }
@@ -641,6 +700,13 @@ export function title(s, c) {
   if (c.type === 'sweep') return `Map ${locName(s, c.loc) || 'a server'} without resting`;
   if (c.type === 'exfil') return 'Catch an Exfil';
   if (c.type === 'heist') return `Recover ${c.file} past the Tracker`;
+  if (c.type === 'grind') return `Kill ${c.count} ${familyName(c.virus)} viruses` + (c.level > KILL_RANGE + 1 ? `, Lv ${c.level - KILL_RANGE}+` : '');
+  if (c.type === 'solve') return c.kind ? `Solve a ${PUZZLES[c.kind]?.name || 'puzzle'} board` : `Solve ${c.count} puzzle boards`;
+  if (c.type === 'decode') return `Decode ${c.count} parts`;
+  if (c.type === 'sweeps') return c.count === 1 ? 'Sweep a server\'s log' : `Sweep ${c.count} servers' logs`;
+  if (c.type === 'interrupt') return `Answer ${c.count} attacks`;
+  if (c.type === 'root') return `Reach Root ${c.root} on ${locName(s, c.loc) || 'a server you hold'}`;
+  if (c.type === 'hold') return 'Stop an invasion';
   return 'Contract';
 }
 // Where an unknown target stands: not heard yet, flagged (with its trace), or found.
@@ -650,18 +716,18 @@ function hunt(s, c) {
   if (!flagged(s, n)) return { text: 'Not flagged yet. Put a relay on a server next to it.', part: 0 };
   return { text: `Flagged past ${locName(s, n.via)} · traced ${n.lead}%`, part: 0.1 + 0.3 * (n.lead / 100) };
 }
-// What's left to do, in a few words, and how far along it is (0–1).
+// What's left to do, in a few words, and how far along it is (0–1); a job that counts also gives n of `of` (the map's tracker draws those as pips).
 export function progress(s, c) {
   if (c.done) return { text: 'Delivered', part: 1 };
   const own = c.chain && arcProgress(s, c);
   if (own) return own;
-  if (c.type === 'kill' || c.type === 'strain') return { text: `${c.got}/${c.count} neutralized`, part: c.got / c.count };
+  if (c.type === 'kill' || c.type === 'strain') return { text: `${c.got}/${c.count} neutralized`, part: c.got / c.count, n: c.got, of: c.count };
   if (c.type === 'bounty') return { text: c.got ? 'Neutralized' : c.room ? `In SPRAWL-00, ${sprawlRoom(s, c.room)}` : 'Somewhere in SPRAWL-00', part: c.got ? 1 : 0 };
-  if (c.type === 'rooms') return { text: `${c.got}/${c.count} rooms cleared`, part: c.got / c.count };
+  if (c.type === 'rooms') return { text: `${c.got}/${c.count} rooms cleared`, part: c.got / c.count, n: c.got, of: c.count };
   if (c.type === 'map') {
     if (c.got) return { text: 'Mapped', part: 1 };
-    const R = s.locations.find((x) => x.id === c.loc)?.floorplan, all = R ? Object.values(R.graph.rooms).filter((x) => !x.nook && !x.optional) : [], n = all.length, done = all.filter((x) => R.cleared[x.id]).length; // Rooms n/N, as the strip counts them
-    return { text: R ? `Rooms ${done}/${n}` : 'Not connected yet', part: n ? done / n : 0 };
+    const R = s.locations.find((x) => x.id === c.loc)?.floorplan, all = R ? Object.values(R.graph.rooms).filter(counted) : [], n = all.length, done = all.filter((x) => R.cleared[x.id]).length; // Rooms n/N, as the strip counts them
+    return R ? { text: `Rooms ${done}/${n}`, part: n ? done / n : 0, n: done, of: n } : { text: 'Not connected yet', part: 0 };
   }
   if (c.type === 'takeover') {
     if (c.any) return c.took ? { text: `${locName(s, c.took)} is yours`, part: 1 } : { text: s.locations.length ? 'Open the vault of any server you have traced' : 'Trace a server first', part: 0 };
@@ -670,7 +736,7 @@ export function progress(s, c) {
     const R = l?.floorplan, vault = R?.graph.vaults[0] && R.opened[R.graph.vaults[0]];
     return { text: l?.takenOver ? 'Taken over' : vault ? 'Vault open: the Resident waits in the Core' : 'Vault shut', part: l?.takenOver ? 1 : vault ? 0.7 : 0.45 };
   }
-  if (c.type === 'materials') { const have = materialsOf(s)[c.material] || 0; return { text: `${Math.min(have, c.amount)}/${c.amount} in stock`, part: Math.min(1, have / c.amount) }; }
+  if (c.type === 'materials') { const have = materialsOf(s)[c.material] || 0; return { text: `${Math.min(have, c.amount)}/${c.amount} in stock`, part: Math.min(1, have / c.amount), n: Math.min(have, c.amount), of: c.amount }; }
   if (c.type === 'item') {
     if (ready(s, c)) return { text: 'Banked', part: 1 };
     if (!c.loc) return hunt(s, c);
@@ -679,7 +745,7 @@ export function progress(s, c) {
   }
   if (c.type === 'side') return { text: `${FACTIONS[c.faction].short} +${c.reward.rep}, ${FACTIONS[c.against].short} turns against you`, part: 1 };
   if (c.type === 'install') return c.got ? { text: 'Installed', part: 1 } : c.carry === 'pack' && s.run?.loc === c.loc ? { text: `In your pack. Install it at ${c.addr}.`, part: 0.6 } : { text: `In your stash. It goes in your pack on ${locName(s, c.loc)}.`, part: 0.25 };
-  if (c.type === 'defuse') return { text: `${c.got}/${c.count} broken before they Encrypt`, part: c.got / c.count };
+  if (c.type === 'defuse') return { text: `${c.got}/${c.count} broken before they Encrypt`, part: c.got / c.count, n: c.got, of: c.count };
   if (c.type === 'exfil') return c.got ? { text: 'Archive recovered', part: 1 } : { text: 'Any rogue server: break its Uplink before the upload lands', part: 0 };
   if (c.type === 'sweep') {
     if (c.got) return { text: 'Mapped without a rest', part: 1 };
@@ -687,7 +753,15 @@ export function progress(s, c) {
     if (!on || !R) return { text: 'One visit: every room but the Core, nothing live, no rest', part: 0 };
     if (rested(R)) return { text: 'You rested this visit. Next visit starts again.', part: 0 };
     const all = sweepRooms(R.graph), n = all.filter((id) => R.visit?.stood?.[id]).length;
-    return { text: `${n}/${all.length} rooms this visit, no rest`, part: n / all.length };
+    return { text: `${n}/${all.length} rooms this visit, no rest`, part: n / all.length, n, of: all.length };
+  }
+  if (c.type === 'root') {
+    const l = s.locations.find((x) => x.id === c.loc), r = l?.root || { level: 1, cleared: 0 }, need = ROOT.need[c.root] ?? 0;
+    return (r.level || 1) >= c.root ? { text: `Root ${c.root}`, part: 1 } : { text: `${r.cleared || 0}/${need} fight rooms cleared again`, part: Math.min(1, (r.cleared || 0) / Math.max(1, need)) };
+  }
+  if (ACTIVITY[c.type]) {
+    const what = { grind: 'neutralized', solve: c.kind ? 'solved' : 'boards solved', decode: 'parts decoded', sweeps: 'logs swept', interrupt: 'attacks answered', hold: 'invasions stopped' }[c.type];
+    return { text: `${c.got}/${c.count} ${what}`, part: c.got / c.count };
   }
   if (c.type === 'heist') {
     if (ready(s, c)) return { text: 'Banked', part: 1 };
@@ -696,11 +770,24 @@ export function progress(s, c) {
   }
   return { text: '', part: 0 };
 }
-const contractXp = (s, level, c) => xpFor(s, level, c.reward.xp * along(MAIL.xp, level));
+// What a contract takes, in minutes of real play (FIGHT: a fight with its walk, at LOOT.killsPerHour): what it pays XP
+// for. A kill job's family turns up in about every other fight; a strain only on its servers.
+const FIGHT = 60 / LOOT.killsPerHour;
+export const MINUTES = {
+  kill: (c) => c.count * FIGHT * 2, strain: (c) => c.count * FIGHT * 5, bounty: () => 5, materials: (c) => c.amount * FIGHT * 2,
+  rooms: (c) => c.count * FIGHT * 3, map: () => 20, takeover: () => 30, item: (c) => (c.loc ? 25 : 40), side: () => 0,
+  install: () => 15, defuse: (c) => c.count * 3, sweep: (c) => (c.size === 'medium' ? 30 : 25), exfil: () => 15, heist: () => 30,
+  grind: (c) => c.count * FIGHT * 2, solve: (c) => (c.kind ? 15 : c.count * 8), decode: (c) => c.count * 5, sweeps: (c) => c.count * 10,
+  interrupt: (c) => c.count, root: (c) => c.fights * FIGHT * 1.5, hold: () => 25, puzzle: () => 15, lair: () => 20,
+};
+export const minutesOf = (c) => Math.max(0, MINUTES[c.type]?.(c) ?? 0);
+// The XP it pays, posted at level L: its minutes of farming there (data.mjs farmXp) times MAIL.xpShare.
+export const contractXp = (L, c) => Math.round(MAIL.xpShare * minutesOf(c) * farmXp(L));
+// Fixed when it was posted (reward.xp); one from before that, its kind's at the level it was posted.
+export const xpOf = (s, c) => (c.minutes != null ? c.reward?.xp || 0 : Math.round(contractXp(c.level ?? hackerLevel(s), c) * (c.offBooks ? MAIL.offBooksXp : 1)));
 export const rewardLine = (s, c) => [
   `${c.reward.credits} credits`,
-  c.reward.indemnity ? `${c.reward.indemnity} Indemnity` : '',
-  c.reward.xp ? `${contractXp(s, hackerLevel(s), c)} XP` : '',
+  xpOf(s, c) ? `${xpOf(s, c)} XP` : '',
   c.reward.standing > 0 ? `Halcyon +${c.reward.standing}` : c.reward.standing < 0 ? `Halcyon ${c.reward.standing}` : '',
   c.reward.rep && c.faction ? `${FACTIONS[c.faction].short} +${c.reward.rep}` : '',
   c.reward.relay ? 'a relay' : '', c.reward.plan ? 'the Relay plan' : '', c.reward.drop || c.reward.daemon ? 'a protocol, Tuned or better' : '', c.reward.blueprint ? 'a blueprint' : '', c.reward.codebase ? 'a codebase' : '', c.reward.pick ? 'a pick of three protocols' : '',
@@ -710,7 +797,7 @@ export const rewardLine = (s, c) => [
 export function mailCommand(s, text, at = now()) {
   initMail(s, at);
   const [, word, arg] = text.match(/^mail(?: (\w+))?(?: (\d+))?$/) || [];
-  if (!word) return emit(s, 'info', `Mail: ${unread(s)} unread. Contracts: ${heldCount(s)}/${MAIL.take} taken, ${offers(s).length} on the board. Halcyon standing ${standing(s)} (${tierOf(s).name}), ${indemnity(s)} Indemnity; retainer ${retainer(s)} credits every 30 minutes.`);
+  if (!word) return emit(s, 'info', `Mail: ${unread(s)} unread. Contracts: ${heldCount(s)}/${MAIL.take} taken, ${offers(s).length} on the board. Halcyon standing ${standing(s)} (${tierOf(s).name}); retainer ${retainer(s)} credits every 30 minutes.`);
   const id = Number(arg);
   if (word === 'read') { const l = s.mail.list.find((m) => m.id === id); if (l) l.read = true; return; }
   if (word === 'take') return arcTake(s, id); // a floor job's reward: one of three (arcs.mjs)
@@ -745,16 +832,14 @@ export function mailCommand(s, text, at = now()) {
   s.mail.jobs = s.mail.jobs.filter((x) => !x.done || x.story !== undefined || keep.has(x));
   // A strain contract streak: every fifth in a row pays double and rolls for the strain's trophy.
   let fifth = false;
-  if (c.type === 'strain') { const sl = (s.slayer ||= { streak: 0 }); sl.streak++; fifth = sl.streak % SLAYER.every === 0; if (fifth) c.reward = { ...c.reward, credits: c.reward.credits * 2, xp: c.reward.xp * 2 }; }
+  if (c.type === 'strain') { const sl = (s.slayer ||= { streak: 0 }); sl.streak++; fifth = sl.streak % SLAYER.every === 0; if (fifth) { c.reward = { ...c.reward, credits: c.reward.credits * 2, xp: xpOf(s, c) * 2 }; c.minutes ??= minutesOf(c); } }
   s.server.credits += c.reward.credits;
-  s.indemnity = indemnity(s) + (c.reward.indemnity || 0);
-  // What it paid, for the delivered card (app.js shows it in the middle of the screen). XP is at the
-  // level the contract was posted at.
+  // What it paid, for the delivered card (app.js shows it in the middle of the screen). XP was fixed when it was
+  // posted; a protocol it pays rolls at the level of the kills that filled it.
   const paidAt = c.lvN ? Math.round(c.lvSum / c.lvN) : c.level ?? hackerLevel(s);
-  const xp = c.reward.xp ? contractXp(s, paidAt, c) : 0, fname = (f) => FACTIONS[f]?.short || f;
+  const xp = xpOf(s, c), fname = (f) => FACTIONS[f]?.short || f;
   const gains = [
     c.reward.credits && { label: 'Credits', qty: `+${c.reward.credits}`, kind: 'credits', text: `${c.reward.credits} credits` },
-    c.reward.indemnity && { label: 'Indemnity', qty: `+${c.reward.indemnity}`, kind: 'loot', text: `${c.reward.indemnity} Indemnity` },
     xp && { label: 'XP', qty: `+${xp}`, kind: 'xp', text: `${xp} XP` },
     c.reward.standing && { label: `${fname('halcyon')} standing`, qty: `+${c.reward.standing}`, kind: 'found', text: `${c.reward.standing} standing` },
     c.offBooks && { label: `${fname('glassjaw')} rep`, qty: '+5', kind: 'found', text: '5 rep' },
@@ -766,7 +851,7 @@ export function mailCommand(s, text, at = now()) {
     c.reward.item && { label: 'Protocol', qty: '', kind: 'item', text: 'a protocol' },
     (c.reward.drop || c.reward.daemon) && { label: 'Protocol', qty: '', kind: 'item', text: 'a protocol' },
   ].filter(Boolean);
-  emit(s, 'contract-done', `DELIVERED: ${title(s, c)}. +${c.reward.credits} credits${c.reward.indemnity ? `, +${c.reward.indemnity} Indemnity` : ''}.`, { contract: c.id, credits: c.reward.credits, gains, name: title(s, c) });
+  emit(s, 'contract-done', `DELIVERED: ${title(s, c)}. +${c.reward.credits} credits.`, { contract: c.id, credits: c.reward.credits, gains, name: title(s, c) });
   if (xp) gainXp(s, xp, 'contract', null, CONTRACT_KIND[c.type] || 'fight'); // no Fresh bonus: it counts as the work behind it
   setDeliver(s); // set bonuses on a delivery (LOWLIGHT Kit: your Signal full, the next kill's XP up; sets.mjs)
   if (fifth) { emit(s, 'streak', `Streak ${s.slayer.streak}. ${title(s, c)} pays double.`, { streak: s.slayer.streak }); const it = rollDrop(s, { kind: 'rogue', strain: c.strain, rolls: 3, trophy: true }, paidAt); if (it) addItem(s, it, 'Streak reward: '); }
@@ -776,7 +861,7 @@ export function mailCommand(s, text, at = now()) {
   if (c.reward.relay) { items(s).relay += c.reward.relay; emit(s, 'drop', 'Halcyon sent a relay. Install it on a server you’ve taken over (its map card).'); }
   if (c.reward.plan) learnRelayPlan(s, 'Halcyon bonus: ');
   if (c.reward.blueprint) learnBlueprint(s, 'Halcyon bonus: ');
-  if (c.reward.codebase) learnCodebase(s, null, 'Halcyon bonus: ', { pool: familyComponents(s.locations.find((l) => l.id === c.loc)?.family || 'ransomware') }); // one you don't know (4 components if you know them all)
+  if (c.reward.codebase) learnCodebase(s, null, 'Halcyon bonus: '); // one you don't know (4 components if you know them all)
   // A protocol, Tuned or better (a contract that paid a daemon once pays this: daemons only come from invasions), with its
   // faction's implicit (gear.mjs IMPLICITS); the storyline's carries none.
   if (c.reward.drop || c.reward.daemon) { const r = seeded((c.id * 7919 + paidAt) >>> 0); addItem(s, rollItem(r, { level: paidAt, rarity: r() < LOOT.quest ? 'custom' : 'tuned', faction: c.story !== undefined ? null : c.offBooks ? 'glassjaw' : c.faction || 'halcyon' }), c.offBooks ? 'GLASSJAW paid in kind: ' : c.story !== undefined ? 'LOWLIGHT bonus: ' : 'Contract bonus: '); }

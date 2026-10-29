@@ -25,7 +25,7 @@ import { nextTip, markSeen, TOUR, tourDone, skipTour } from './tips.mjs';
 import { createWindow } from './window.mjs';
 import { createIntro } from './intro.mjs';
 import { powerOn } from './poweron.mjs';
-import { autoPay } from './salvage.mjs';
+import { componentsOf } from './salvage.mjs';
 import { relockLeft } from './rogue.mjs';
 import { createHitFx } from './hitfx.mjs';
 import { createAbilityFx, keyFor, tickKey, recipeOf, originOf, idOfName, finisherBreak, levelOf as afxLevel } from './abilityfx.mjs';
@@ -1290,7 +1290,7 @@ function run(raw) {
   if (coop?.live() && /^(reset game|new game|bench( |$))/.test(text)) return notice('Leave the co-op session first (coop leave).', true);
   if (/^bench( |$)/.test(text)) return benchRun(text); // the test bench (bench.mjs)
   // A server you found but never connected: typing connect asks first, on its map card.
-  const join = text.match(/^connect (\S+)(?: (?:loud|\+loud|\+hot))?$/);
+  const join = text.match(/^connect (\S+)$/);
   const found = join && campaign.locations?.find((l) => (l.id === join[1] || l.name.toLowerCase() === join[1]) && l.fresh && l.detached);
   if (found && memYes !== found.id) { mapSel = found.id; mapPop = true; V.setMemAsk(found.id); go('map'); dirty = true; return; }
   // Hub sessions: connect <hub> opens one; inside it, a number or a word picks from its menu.
@@ -1380,7 +1380,7 @@ function run(raw) {
   if (text === 'window on' || text === 'window off') { campaign.settings.window = text === 'window on'; save(); dirty = true; return notice(`Window ${text.slice(7)}.`); }
   if (text.startsWith('weather')) { const w = text.split(' ')[1]; outside.force(w === 'auto' ? null : w); return notice(`Weather: ${w && w !== 'auto' ? w : 'follows the clock'}.`); }
   if (text === 'reset game' || text === 'new game') return resetGame();
-  if (text === 'help' && !CAMP) return notice('In a fight, key 1 is your plain hit, keys 2 to 0 fire your skills, - is SIGINT, hold skips a move and now ends the cycle at once. On a run, use ls, cd, cat, pull, unlock, attack and jack out. For gear, use load, unload, compile, deconstruct and craft. For your server, use install, uninstall, firewall upgrade|defrag|harden and filter equip. On the net, use connect, relay, detach and mail. The pages are map, mail, server, craft, loadout and system. Change the screen with shell immersive|plain|boot, and start over with reset game.', false, null, true);
+  if (text === 'help' && !CAMP) return notice('In a fight, key 1 is your plain hit, keys 2 to 0 fire your skills, - is SIGINT, hold skips a move and now ends the cycle at once. On a run, use ls, cd, cat, pull, unlock, attack and jack out. For gear, use load, unload, compile, deconstruct and craft. For your server, use install, uninstall, firewall upgrade|defrag and filter equip. On the net, use connect, relay, detach and mail. The pages are map, mail, server, craft, loadout and system. Change the screen with shell immersive|plain|boot, and start over with reset game.', false, null, true);
   // The campaign: fights, your gear, skills and talents. The old game's commands (connect, mail, install…) sit out.
   if (CAMP && !fighting && !/^(load|unload|equip|unequip|talent|untalent|respec|subclass|archetype|loadout|preset|deconstruct|scan|codex|collection|hold|now)\b/.test(text)) {
     if (text === 'help') return notice('On the campaign map, pick a server and breach it. On a breach, use ls, cd <n>, tree and the screen\'s verbs (pick, cat, pull, rest, reslot, buy, patch, service, open, force, fight, splice, leave, choose). In a breach fight, script <n> runs one of your scripts. In a fight, key 1 is your plain hit, keys 2 to 0 fire your skills and - is SIGINT. For gear and skills, use load, unload, equip and unequip. The pages are campaign, room, loadout, archive and system.', false, null, true);
@@ -1734,6 +1734,7 @@ function renderMeters() {
   $('meter-integrity').classList.toggle('noted', !!note);
   $('integrity-note').textContent = note;
   $('integrity-note').className = 'meter-note ' + (campaign.degraded ? 'degraded' : inv?.state || '');
+  $('integrity-note').title = campaign.degraded ? V.sickTip(campaign) : '';
   $('meter-integrity').classList.toggle('breaching', !campaign.degraded && !onIt && inv?.state === 'breach'); // a breach: the meter itself flashes
   // Click a meter that isn't full to pay for the rest (topUp in data.mjs); the hover says what it costs.
   const meterBuy = (el, cmd, cost, base) => {
@@ -1754,6 +1755,9 @@ function renderMeters() {
     const m = $('meter-signal');
     m.hidden = !!campaign.run || active(campaign) || !!campaign.breach || !!campaign.rooms; // a fight has its own bars, a breach and the rooms their own page
     $('signal-value').textContent = sig;
+    const sick = V.sickPct(campaign); // reboot sickness: your server is rebooting
+    $('signal-sick').hidden = !sick;
+    if (sick) { $('signal-sick').textContent = `−${sick}%`; $('signal-sick').title = V.sickTip(campaign); }
     const lit = Math.ceil(f * 5 - 1e-9);
     m.querySelectorAll('.sig-bars i').forEach((b, i) => b.classList.toggle('on', i < lit));
     m.classList.toggle('weak', f < need);
@@ -2623,33 +2627,6 @@ document.querySelector('.modules').addEventListener('click', (e) => {
   const b = e.target.closest('[data-module]');
   if (b) go(b.dataset.module);
 });
-// The salvage picker: crafting buttons with data-pay open it, so you choose which salvage pays.
-let payState = null; // { cmd, key, title, pay }
-function payOpen(btn) {
-  const key = btn.dataset.pay, [id, n] = key.split(':');
-  const cost = V.payCost(campaign, key);
-  payState = { cmd: btn.dataset.command, key, title: btn.dataset.payTitle || 'Build', pay: autoPay(campaign, cost) || {} };
-  payDraw();
-}
-function payDraw() {
-  let el = $('pay');
-  if (!payState) { if (el) el.hidden = true; return; }
-  if (!el) { el = document.createElement('div'); el.id = 'pay'; el.className = 'pay'; document.body.appendChild(el); }
-  el.innerHTML = V.payMarkup(campaign, payState.key, payState.pay, payState.title);
-  el.hidden = false;
-}
-document.addEventListener('click', (e) => {
-  const pel = e.target.closest('#pay');
-  if (payState && pel) {
-    const st = e.target.closest('[data-pay-step]');
-    if (st) { const k = st.dataset.payStep; payState.pay[k] = Math.max(0, (payState.pay[k] || 0) + Number(st.dataset.d)); feel.key('click'); payDraw(); return; }
-    if (e.target.closest('[data-pay-cancel]')) { payState = null; payDraw(); return; }
-    if (e.target.closest('[data-pay-go]')) { const c = `${payState.cmd} pay ${V.paySlugs(payState.pay)}`; payState = null; payDraw(); run(c); return; }
-    if (e.target === pel) { payState = null; payDraw(); }
-    return;
-  }
-}, true);
-document.addEventListener('keydown', (e) => { if (payState && e.key === 'Escape') { payState = null; payDraw(); } });
 // The Server page (server-view.mjs). Pick anything on the card and the panel shows it (on a phone the sheet comes up;
 // × or Esc puts it away). Point at an action that changes the wall or the server, or focus it, and the panel shows
 // before and after; on a touch screen the first tap shows it and the second does it. Its buttons are real commands:
@@ -2684,12 +2661,10 @@ document.addEventListener('click', (e) => {
   if (e.target.closest('[data-spoils-go]')) { if (ended) leaveFight(); else hideSpoils(); return; }
   if (e.target.closest('[data-gain-go]')) { hideGain(); return; }
   const pick = e.target.closest('[data-mk-pick]');
-  if (pick) { const w = pick.dataset.mkPick; setMkOrder(mkOrder?.w === w && mkOrder.f === hubSel ? null : { f: hubSel, w, side: (w === 'salvage' ? campaign.salvage.length : campaign.materials?.[w] || 0) > 0 ? 'sell' : 'buy', n: 1 }); return; }
+  if (pick) { const w = pick.dataset.mkPick; setMkOrder(mkOrder?.w === w && mkOrder.f === hubSel ? null : { f: hubSel, w, side: (w === 'salvage' ? componentsOf(campaign) : campaign.materials?.[w] || 0) > 0 ? 'sell' : 'buy', n: 1 }); return; }
   const side = e.target.closest('[data-mk-side]');
   if (side && mkOrder) { setMkOrder({ ...mkOrder, side: side.dataset.mkSide, n: 1 }); return; }
   if (e.target.closest('.mk-go') && mkOrder) { const c = e.target.closest('.mk-go').dataset.command; setMkOrder({ ...mkOrder, n: 1 }); return run(c); }
-  const payBtn = e.target.closest('[data-pay]');
-  if (payBtn && !payBtn.disabled && !e.target.closest('#pay')) { payOpen(payBtn); return; }
   if (e.target.closest('.fp-scanbtn[aria-disabled="true"]')) return; // SCAN short of Signal: a click on it never walks in
   const cmd = e.target.closest('[data-command]');
   if (cmd && !cmd.disabled) {

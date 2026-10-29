@@ -24,9 +24,7 @@ export default {
               40,
               7
             ],
-            "xp": 2,
-            "rep": 3,
-            "indemnity": 1
+            "rep": 3
           }
         },
         {
@@ -42,9 +40,7 @@ export default {
               50,
               8
             ],
-            "xp": 3,
-            "rep": 3,
-            "indemnity": 1
+            "rep": 3
           }
         },
         {
@@ -64,9 +60,7 @@ export default {
               50,
               8
             ],
-            "xp": 3,
-            "rep": 4,
-            "indemnity": 2
+            "rep": 4
           }
         },
         {
@@ -83,9 +77,7 @@ export default {
               80,
               12
             ],
-            "xp": 4,
             "rep": 6,
-            "indemnity": 3,
             "pick": true
           }
         }
@@ -114,7 +106,6 @@ export default {
               50,
               8
             ],
-            "xp": 3,
             "rep": 4
           }
         },
@@ -133,7 +124,6 @@ export default {
               50,
               8
             ],
-            "xp": 3,
             "rep": 4
           }
         },
@@ -154,7 +144,6 @@ export default {
               70,
               11
             ],
-            "xp": 3.5,
             "rep": 6,
             "pick": true
           }
@@ -173,7 +162,6 @@ export default {
               60,
               10
             ],
-            "xp": 4,
             "rep": 5
           }
         },
@@ -190,7 +178,6 @@ export default {
               100,
               14
             ],
-            "xp": 5,
             "rep": 10,
             "pick": true
           }
@@ -218,9 +205,7 @@ export default {
               50,
               8
             ],
-            "xp": 3,
-            "rep": 4,
-            "indemnity": 2
+            "rep": 4
           }
         },
         {
@@ -240,9 +225,7 @@ export default {
               50,
               8
             ],
-            "xp": 3,
-            "rep": 4,
-            "indemnity": 2
+            "rep": 4
           }
         },
         {
@@ -259,9 +242,7 @@ export default {
               70,
               11
             ],
-            "xp": 3.5,
             "rep": 5,
-            "indemnity": 3,
             "pick": true
           }
         },
@@ -279,9 +260,7 @@ export default {
               50,
               8
             ],
-            "xp": 3,
-            "rep": 4,
-            "indemnity": 2
+            "rep": 4
           }
         },
         {
@@ -298,9 +277,7 @@ export default {
               100,
               14
             ],
-            "xp": 5,
             "rep": 8,
-            "indemnity": 4,
             "pick": true
           }
         }
@@ -329,7 +306,6 @@ export default {
               50,
               8
             ],
-            "xp": 3,
             "rep": 4
           }
         },
@@ -348,7 +324,6 @@ export default {
               50,
               8
             ],
-            "xp": 3,
             "rep": 4
           }
         },
@@ -369,7 +344,6 @@ export default {
               70,
               11
             ],
-            "xp": 3.5,
             "rep": 6,
             "pick": true
           }
@@ -388,7 +362,6 @@ export default {
               60,
               10
             ],
-            "xp": 4,
             "rep": 5
           }
         },
@@ -405,7 +378,6 @@ export default {
               100,
               14
             ],
-            "xp": 5,
             "rep": 10,
             "pick": true
           }
@@ -434,7 +406,6 @@ export default {
               50,
               8
             ],
-            "xp": 3,
             "rep": 4
           }
         },
@@ -455,7 +426,6 @@ export default {
               50,
               8
             ],
-            "xp": 3,
             "rep": 5
           }
         },
@@ -473,7 +443,6 @@ export default {
               50,
               8
             ],
-            "xp": 3,
             "rep": 4
           }
         },
@@ -493,7 +462,6 @@ export default {
               70,
               11
             ],
-            "xp": 3.5,
             "rep": 6,
             "pick": true
           }
@@ -511,7 +479,6 @@ export default {
               100,
               14
             ],
-            "xp": 5,
             "rep": 10,
             "pick": true
           }
@@ -540,9 +507,7 @@ export default {
               50,
               8
             ],
-            "xp": 3,
-            "rep": 4,
-            "indemnity": 2
+            "rep": 4
           }
         },
         {
@@ -562,9 +527,7 @@ export default {
               70,
               11
             ],
-            "xp": 3.5,
             "rep": 5,
-            "indemnity": 3,
             "pick": true
           }
         },
@@ -581,9 +544,7 @@ export default {
               60,
               10
             ],
-            "xp": 4,
-            "rep": 4,
-            "indemnity": 2
+            "rep": 4
           }
         },
         {
@@ -599,9 +560,7 @@ export default {
               100,
               14
             ],
-            "xp": 5,
             "rep": 8,
-            "indemnity": 4,
             "pick": true
           }
         }
@@ -631,9 +590,7 @@ export default {
               50,
               8
             ],
-            "xp": 3,
-            "rep": 4,
-            "indemnity": 2
+            "rep": 4
           }
         },
         {
@@ -650,9 +607,7 @@ export default {
               50,
               8
             ],
-            "xp": 3,
-            "rep": 4,
-            "indemnity": 2
+            "rep": 4
           }
         },
         {
@@ -672,9 +627,7 @@ export default {
               70,
               11
             ],
-            "xp": 3.5,
             "rep": 5,
-            "indemnity": 3,
             "pick": true
           }
         },
@@ -692,9 +645,7 @@ export default {
               60,
               10
             ],
-            "xp": 4,
-            "rep": 4,
-            "indemnity": 2
+            "rep": 4
           }
         },
         {
@@ -711,9 +662,7 @@ export default {
               100,
               14
             ],
-            "xp": 5,
             "rep": 8,
-            "indemnity": 4,
             "pick": true
           }
         }
@@ -740,9 +689,7 @@ export default {
               50,
               8
             ],
-            "xp": 3,
-            "rep": 4,
-            "indemnity": 2
+            "rep": 4
           }
         },
         {
@@ -759,9 +706,7 @@ export default {
               50,
               8
             ],
-            "xp": 3,
-            "rep": 4,
-            "indemnity": 2
+            "rep": 4
           }
         },
         {
@@ -781,9 +726,7 @@ export default {
               70,
               11
             ],
-            "xp": 3.5,
-            "rep": 5,
-            "indemnity": 3
+            "rep": 5
           }
         },
         {
@@ -802,9 +745,7 @@ export default {
               70,
               11
             ],
-            "xp": 3.5,
             "rep": 5,
-            "indemnity": 3,
             "pick": true
           }
         },
@@ -821,9 +762,7 @@ export default {
               80,
               12
             ],
-            "xp": 4,
-            "rep": 5,
-            "indemnity": 3
+            "rep": 5
           }
         },
         {
@@ -839,9 +778,7 @@ export default {
               120,
               16
             ],
-            "xp": 6,
             "rep": 10,
-            "indemnity": 5,
             "pick": true
           }
         }
@@ -1059,6 +996,76 @@ export default {
         "body": [
           "{Label} sits in the vault on {server}, as {file}. Its Tracker walks the way there.",
           "Bank it from a visit the Tracker never reaches you. If it does, the file is flagged: it goes back, and you try again."
+        ]
+      }
+    ]
+  },
+  "grind": {
+    "halcyon": [
+      {
+        "subject": "Cull order: {virus}",
+        "body": [
+          "Our clients are drowning in {virus}. Neutralize {count} of them at your level, wherever they turn up."
+        ]
+      }
+    ]
+  },
+  "solve": {
+    "halcyon": [
+      {
+        "subject": "Locked stores",
+        "body": [
+          "Clients keep finding their stores locked behind puzzle boards. Win {boards}, on any server."
+        ]
+      }
+    ]
+  },
+  "decode": {
+    "halcyon": [
+      {
+        "subject": "Know the enemy",
+        "body": [
+          "Actuarial wants to know what it insures against. Decode {count} virus parts in your fights."
+        ]
+      }
+    ]
+  },
+  "sweeps": {
+    "halcyon": [
+      {
+        "subject": "Incident reports",
+        "body": [
+          "Our adjusters need the logs read. Sweep {logs} and name what happened."
+        ]
+      }
+    ]
+  },
+  "interrupt": {
+    "halcyon": [
+      {
+        "subject": "Live response",
+        "body": [
+          "We pay for incidents that never happen. Answer {count} attacks before they land."
+        ]
+      }
+    ]
+  },
+  "root": {
+    "halcyon": [
+      {
+        "subject": "Deeper access",
+        "body": [
+          "Halcyon wants more of {server}. Take it to Root {root}."
+        ]
+      }
+    ]
+  },
+  "hold": {
+    "halcyon": [
+      {
+        "subject": "Hold the line",
+        "body": [
+          "The crews hit back at anyone who works for us. Stop the next invasion that comes for your server."
         ]
       }
     ]

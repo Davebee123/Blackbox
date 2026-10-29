@@ -20,7 +20,7 @@ function world({ level = 1, family = 'worm', depth = 1, services = {}, fw = 0 } 
   command(s, `developer location ${family}`);
   Object.assign(s.locations[0], { level, depth, runs: 1 }); // connected: only servers you've connected to send invasions (docs/servers.md 5.3)
   s.services = { ...services };
-  s.firewall = { pin: fw, plus: 0, frag: 0, defragUntil: 0, hardenUntil: 0 };
+  s.firewall = { pin: fw, plus: 0, frag: 0, defragUntil: 0 };
   syncServer(s);
   s.server.integrity = s.server.max;
   s.clock = 0;
@@ -88,10 +88,10 @@ test('the wall: no firewall means a breach; a level-6 invader is contested by a 
 
   const v2 = world({ fw: 1 });
   v2.net.next = 0;
-  const salvage = v2.salvage.length;
+  const had = v2.components;
   const ev = wait(v2, 5000 + travelMs(v2));
   assert.equal(v2.invasion, null, 'blocked outright');
-  assert.equal(v2.salvage.length, salvage + 1);
+  assert.equal(v2.components, had + 1);
   assert.ok(ev.some((e) => e.type === 'invasion-cleared' && e.blocked));
   assert.ok(ev.some((e) => e.type === 'xp'), 'a trickle of XP');
   assert.ok(v2.net.next >= I.everyMs[0] && v2.net.next <= I.everyMs[1], 'the next one sets out 20–30 minutes later');
@@ -100,7 +100,7 @@ test('the wall: no firewall means a breach; a level-6 invader is contested by a 
 test('wall bands: what your wall blocks and holds, by invader level', () => {
   const s = fresh();
   command(s, 'developer server 10');
-  s.firewall = { pin: 0, plus: 0, frag: 0, defragUntil: 0, hardenUntil: 0 };
+  s.firewall = { pin: 0, plus: 0, frag: 0, defragUntil: 0 };
   assert.deepEqual(wallBands(s), { blocks: 0, holds: 0 }, 'no firewall to speak of');
   s.firewall.pin = 1;
   assert.deepEqual(wallBands(s), { blocks: 1, holds: 13 }, 'it blocks its own level; the server level adds nothing');
@@ -228,6 +228,41 @@ test('crash: a breach chips you to zero, the server reboots at half and runs deg
   const hp = t.server.integrity;
   wait(t, 2 * MIN);
   assert.ok(t.server.integrity < hp, 'and keeps on');
+});
+
+test('reboot sickness: while the server reboots, max Signal and your damage are down by the deepest floor you have reached', async () => {
+  const { maxSignal, rebootSick, damageMultiplier } = await import('./dist/combat.mjs');
+  assert.deepEqual(CONFIG.rebootSick, [0.2, 0.4, 0.6, 0.75, 0.85, 0.9, 0.93, 0.95], '20/40/60/75, then less a floor, up to 95%');
+  const s = world();
+  const full = maxSignal(s);
+  assert.equal(rebootSick(s), 0, 'nothing while it runs');
+  play(s, 'connect ' + s.locations[0].id);
+  assert.equal(s.run.max, full);
+  s.floors.reached = 3;
+  play(s, 'developer crash');
+  assert.equal(rebootSick(s), 0.6, 'floor 3: 60%');
+  assert.equal(maxSignal(s), Math.round(full * 0.4));
+  assert.equal(s.run.max, maxSignal(s), 'the run\'s max drops at once');
+  assert.ok(s.run.integrity <= s.run.max, 'and Signal with it');
+  assert.match(s.logs.find((e) => e.type === 'degraded').message, /−60% max Signal and damage/);
+  const h = world();
+  h.floors.reached = 3;
+  command(h, 'encounter cryptjack');
+  const p = h.encounter.virus.parts[0], well = damageMultiplier(h, p, { mine: true });
+  h.degraded = { since: null, until: null, ms: 10 * MIN };
+  assert.ok(Math.abs(damageMultiplier(h, p, { mine: true }) / well - 0.4) < 1e-9, 'your hits deal 40% of what they would');
+  s.floors.reached = 8;
+  assert.equal(rebootSick(s), 0.95, 'Bedrock: 95%');
+  // Back online: the max comes back; Signal doesn't jump.
+  s.floors.reached = 3;
+  const sig = s.run.integrity;
+  wait(s, 5000);
+  s.clock += 10 * MIN;
+  tickNetwork(s, s.clock);
+  assert.equal(s.degraded, null);
+  assert.equal(rebootSick(s), 0);
+  assert.equal(s.run.max, full);
+  assert.equal(s.run.integrity, sig);
 });
 
 test('Degraded mode pauses the network: a hub\'s swarm waits while the server reboots (the install queue went in R2)', async () => {

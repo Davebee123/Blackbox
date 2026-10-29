@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, rank, kitTalent, active, listenBoost, bossChance, UNIQUES } from './dist/combat.mjs';
 import { play } from './dist/run.mjs';
-import { LOADOUT, HOT_RUN, ARCHETYPES } from './dist/data.mjs';
+import { LOADOUT, ARCHETYPES } from './dist/data.mjs';
 import { deal, eventText, DIRECTOR } from './dist/events.mjs';
 import { PROGRAMS } from './dist/sockets.mjs';
 
@@ -20,18 +20,6 @@ test('the kit talent: from level 5 every class has the first of its first-row ta
   s.loadout.ranks = { warden: { 'patch-notes': 3 } }; s.loadout.sub = { bastion: 'warden' }; s.hackers.bastion.level = 12;
   assert.equal(rank(s, 'patch-notes'), 5, 'the kit\'s two ranks come on top of any you buy');
   for (const c of Object.keys(ARCHETYPES)) assert.ok(kitTalent(c)?.id, c);
-});
-
-test('a loud run: connect <server> loud makes every fight tougher and every kill pay more', () => {
-  const plain = fresh(), hot = fresh();
-  for (const s of [plain, hot]) s.hackers = { breaker: { level: 5, xp: 0 } };
-  play(plain, 'connect sprawl'); play(hot, 'connect sprawl loud');
-  assert.ok(hot.run.hot && !plain.run.hot);
-  assert.ok(hot.logs.some((e) => /LOUD RUN/.test(e.message)));
-  for (const s of [plain, hot]) { play(s, 'cd var'); play(s, 'attack'); }
-  const hp = (s) => s.encounter.virus.parts.reduce((n, p) => n + p.max, 0);
-  assert.ok(Math.abs(hp(hot) / hp(plain) - HOT_RUN.hp) < 0.05, `${hp(hot)} vs ${hp(plain)}`);
-  assert.ok(hot.encounter.virus.hot);
 });
 
 test('the Listening Post (a program): listen <unique> makes it twice as likely on the post\'s server, bosses included', () => {

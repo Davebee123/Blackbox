@@ -16,16 +16,18 @@ import { tickRetake } from './hubs.mjs';
 import { tickEvents } from './events.mjs';
 import { tickConsortium, consortiumOf, memberHelp, occupy, roam, CONSORTIUM } from './consortium.mjs';
 import { isLive } from './memory.mjs';
+import { gainComponents } from './salvage.mjs';
 import { effLevel, tickFirewall, fragment, ratingAt, firewallRestore, baseOf } from './firewall.mjs';
 import { filterStat } from './filters.mjs';
 import { CONFIG, SERVER, MUTATIONS, ROLLED_MUTATIONS, QUIRKS, quirkOf, createVirus, power, variantFor, gradeFor, codeUnit, DAEMON_DROP, restedGain, restedCap } from './data.mjs';
 import { gainDaemon, rollDaemon } from './daemons.mjs';
 import { SERVICES, codeOf, uniqueItem, MATERIALS } from './gear.mjs';
 import { pickOrigin, hiddenNode, hiddenLead, HIDDEN, connectedTo } from './hidden.mjs';
-import { emit, warn, rand, active, holding, selectEncounter, crashServer, endInvasion, gainXp, xpFor, command, gainCode, hackerLevel, syncServer, addItem, UNIQUES, listenBoost } from './combat.mjs';
+import { emit, warn, rand, active, holding, selectEncounter, crashServer, endInvasion, gainXp, xpFor, command, gainCode, hackerLevel, syncServer, addItem, UNIQUES, listenBoost, syncRunSignal } from './combat.mjs';
 import { nativeStrain } from './network.mjs';
 import { tickProfile } from './profile.mjs';
 import { tickChannel } from './channel.mjs';
+import { contractDid } from './mail.mjs';
 
 const I = () => CONFIG.invasion;
 const since = (s, first) => s.logs.filter((e) => e.id > first);
@@ -123,7 +125,7 @@ const pct = (x) => `${Math.round(x * 10) / 10}%`;
 export const bountyCode = (inv) => codeOf(inv?.family) || 'cipher';
 export function bountyOf(s, inv = s.invasion) {
   if (!inv) return null;
-  const base = inv.bounty ?? kindOf(inv).bounty, mult = streakMult(s) * (inv.open ? I().open.reward : 1), unit = codeUnit(inv.level);
+  const base = inv.bounty ?? kindOf(inv).bounty, mult = streakMult(s), unit = codeUnit(inv.level);
   const r = (n) => Math.max(1, Math.round(n * mult * unit));
   return { base, code: bountyCode(inv), now: r(base + Math.floor(inv.grown || 0)), max: r(base * (1 + BOUNTY.cap)), blocked: r(Math.ceil(base * BOUNTY.blocked)), wall: r(base), capture: !!kindOf(inv).capture, mult };
 }
@@ -185,6 +187,7 @@ export function tickNetwork(s, now = Date.now()) {
     if (s.install && paused) { s.install.startedAt += paused; s.install.doneAt += paused; }
     if (now < d.until) return since(s, first); // the network waits too
     s.degraded = null;
+    syncRunSignal(s); // reboot sickness is over
     emit(s, 'rebooted', 'BACK ONLINE.');
   }
   stepInvasion(s, dt);
@@ -199,7 +202,6 @@ function rest(s, ms) {
 }
 // The time you were logged off, a minute at a time (up to a day; Rested banks for all of it).
 function away(s, from, to) {
-  if (s.net.open) { s.net.open = false; emit(s, 'firewall', 'Ports closed while you were away.'); } // Open ports is an online thing
   const start = Math.max(from, to - AWAY.maxMs);
   if (!s.degraded) rest(s, start - from); // past a day: nothing is played out, and nothing crashed you
   for (let t = start + AWAY.stepMs; t <= to; t += AWAY.stepMs) {
@@ -208,6 +210,7 @@ function away(s, from, to) {
       if (d.until == null) { d.since = t; d.until = t + (d.ms ?? CONFIG.degradedMs); }
       if (t < d.until) continue;
       s.degraded = null;
+      syncRunSignal(s);
       emit(s, 'rebooted', 'Your server came back online while you were away.');
     }
     // Swarms and hubs' old owners gather at a quarter pace while you're away (their schedules slip).
@@ -241,8 +244,8 @@ function stepInvasion(s, dt, at = null) {
       return;
     }
     if (net.next == null) net.next = I().firstMs;
-    net.next -= net.open ? dt / I().open.pace : dt; // Open ports: they come 2.5× as often
-    if (net.next <= 0) { const inv = depart(s); if (inv && net.open) inv.open = true; }
+    net.next -= dt;
+    if (net.next <= 0) depart(s);
     return;
   }
   if (inv.state === 'travel') {
@@ -259,7 +262,7 @@ function stepInvasion(s, dt, at = null) {
   }
   const r = ratioOf(s, inv);
   const o = outcome(r);
-  // The wall got stronger since it arrived (a Firewall, a new version, harden.sh).
+  // The wall got stronger since it arrived (a tier, a filter, a defrag done).
   if (o === 'blocked') return stopped(s, inv, 'blocked');
   if (o !== inv.state) {
     inv.state = o;
@@ -498,7 +501,7 @@ export function breakStreak(s, why) {
 // The wall stopped it: outright on arrival, or worn down by a siege.
 function stopped(s, inv, how) {
   const blocked = how === 'blocked', quiet = blocked;
-  for (let i = 0; i < (inv.open ? 2 : 1); i++) s.salvage.push({ name: `${inv.name} fragment`, virus: inv.name, seed: inv.seed });
+  gainComponents(s, inv.open ? 2 : 1);
   // A filter of Reflection: it drops some of its family's code.
   const k = filterStat(s, 'reflect') && codeOf(inv.family);
   if (k) gainCode(s, { [k]: filterStat(s, 'reflect') }, 'Reflection: ');
@@ -507,7 +510,8 @@ function stopped(s, inv, how) {
   const bk = bountyCode(inv), n = payOut(s, inv, blocked ? 'blocked' : 'wall');
   endInvasion(s, `${blocked ? `${where} stopped ${inv.name} (level ${inv.level}${kind}) from ${inv.fromName}` : `${where} wore ${inv.name} down to nothing`}: +${codeText(n, bk)}, +1 component.`, { blocked, quiet, gains: { [bk]: n } });
   unsabotage(s);
-  gainXp(s, xpFor(s, inv.level, I().blockedXp * (inv.open ? I().open.reward : 1)), `${inv.name} stopped at the wall`, 'fight');
+  contractDid(s, 'hold'); // a Hold contract: an invasion stopped, at the wall or by you
+  gainXp(s, xpFor(s, inv.level, I().blockedXp), `${inv.name} stopped at the wall`, 'fight');
   if (inv.hidden) hiddenLead(s, hiddenNode(s, inv.hidden), HIDDEN.blockLead, 'Its route: ');
 }
 
@@ -518,6 +522,7 @@ export function invaderDown(s, inv) {
   const intercepted = inv.state === 'travel', k = bountyCode(inv), n = bountyOf(s, inv).now;
   emit(s, 'code', `Bounty: +${codeText(n, k)}.`, { gains: { [k]: n } }); // its row on the fight's card
   payOut(s, inv, 'you', intercepted);
+  contractDid(s, 'hold');
   endInvasion(s, `${inv.name} is gone ${intercepted ? `before it reached ${targetOf(s, inv)?.name || 'your outpost'}` : 'from your wall'}: +${codeText(n, k)}.`, {});
   unsabotage(s);
 }
@@ -588,16 +593,6 @@ export function capture(s, level, why) {
   return null;
 }
 
-// Open ports: online only, invasions come 2.5× as often and each is worth +50%. Closes when you log off.
-export function portsCommand(s, text) {
-  const on = text === 'open ports';
-  if (on && !(s.locations || []).some((l) => !l.rogue && isLive(s, l) && connectedTo(l))) return warn(s, 'Nothing sends them yet. Invasions come from servers you have connected to.');
-  if (!!s.net?.open === on) return warn(s, on ? 'Your ports are already open.' : 'Your ports are closed.');
-  (s.net ||= {}).open = on;
-  if (on && s.net.next > 0) s.net.next = Math.round(s.net.next * I().open.pace);
-  emit(s, 'firewall', on ? 'Ports open. Invasions come 2.5× as often, and each is worth 50% more. They close when you log off.' : 'Ports closed.');
-}
-
 // ---------- jacking in ----------
 // Fight the invader at the wall yourself: worn down as the siege left it, armor intact, a full
 // kill's worth. A thief you meet on its way (intercept). A waiting gate intrusion is parked and
@@ -641,7 +636,7 @@ export function invasionsCommand(s) {
     lines.push(`${labelOf(inv)}: ${inv.name}, level ${inv.level}, from ${inv.fromName}. It is ${where}.`);
     if (tellOf(s, inv)) lines.push(tellOf(s, inv));
     lines.push(`Kill it for ${codeText(b.now, b.code)} (up to ${b.max} if it sits contested). The wall alone gets ${b.wall}, an outright block ${b.blocked}.${b.capture ? ' A daemon comes with your kill.' : ''}`);
-  } else if (s.net?.next > 0) lines.push(`The next invasion sets out in about ${fmtLeft(s.net.next * (s.net.open ? I().open.pace : 1))}.${s.net.mark ? ` A scout mapped your wall, so it counts ${s.net.mark} levels higher.` : ''}${scoutedLine(s)}`);
+  } else if (s.net?.next > 0) lines.push(`The next invasion sets out in about ${fmtLeft(s.net.next)}.${s.net.mark ? ` A scout mapped your wall, so it counts ${s.net.mark} levels higher.` : ''}${scoutedLine(s)}`);
   lines.push(`Streak ${streakOf(s)}. The next stop pays ${Math.round((streakMult(s) - 1) * 100)}% more.`);
   for (const l of lines) emit(s, 'info', l);
   return since(s, first);

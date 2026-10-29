@@ -321,12 +321,12 @@ test('what each pays: Cascade components (more for a tap left over), Ping sweep 
   {
     const { s, loc, room } = serverWith('cascade');
     play(s, `connect ${loc.name}`); walkIn(s, room.id);
-    const b = FP.boardOf(s, room), parts = s.salvage.length;
+    const b = FP.boardOf(s, room), parts = s.components;
     let end;
     while (!b.done) end = FP.act(s, 'play', PZ.botMove(b)).find((e) => e.type === 'puzzle-end') || end;
     assert.equal(b.used, b.best, 'the solver used the fewest');
-    assert.equal(s.salvage.length - parts, FP.ROOMS.puzzles.parts + FP.ROOMS.puzzles.spare, 'components, one tap spare');
-    assert.equal(end.pay.parts, s.salvage.length - parts);
+    assert.equal(s.components - parts, FP.ROOMS.puzzles.parts + FP.ROOMS.puzzles.spare, 'components, one tap spare');
+    assert.equal(end.pay.parts, s.components - parts);
   }
   {
     const { s, loc, room } = serverWith('sweep');

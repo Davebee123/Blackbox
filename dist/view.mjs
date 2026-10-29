@@ -1,6 +1,6 @@
 // Markup builders. Pure functions of state; they never change it.
 import { masteryLine } from './mastery.mjs';
-import { SALVAGE_COSTS, stacks as salvageStacks, canAfford, costLabel as salvageLabel, payProblem, total as salvageTotal, slug } from './salvage.mjs';
+import { canAfford, costLabel as salvageLabel, componentsOf } from './salvage.mjs';
 import { glyph } from './glyphs.mjs';
 import { TELL_ICON } from './recap.mjs';
 import { glyphMarkup } from './protocol-glyphs.mjs';
@@ -19,8 +19,8 @@ import { FACTIONS as FX, FACTION_IDS, rep, repTier, REP_TIERS, hubsOf, hubOf, sh
 import { GLYPHS } from './glyphs.mjs';
 import { SKILL_TEXT } from './lore.mjs';
 import { ruleHtml } from './ruletext.mjs';
-import { postsOf, siteLabel, sizeOf as serverSize, PROGRAMS, programsOn, codebasesOf, shopCodebases, codebaseName, programCost } from './sockets.mjs';
-import { ABILITIES, CONFIG, FAMILIES, MUTATIONS, TICKER, QUIRKS, DAEMONS, STRAINS, GUARDS, BOSSES, HOT_RUN, STRAIN_NATIVE, DAEMON_BANDS, bandDaemons, daemonWhen, daemonBand, FLOORS, bandOf, floorOfLayer } from './data.mjs';
+import { postsOf, siteLabel, sizeOf as serverSize, PROGRAMS, programsOn, codebasesOf, shopCodebases, codebaseName } from './sockets.mjs';
+import { ABILITIES, CONFIG, FAMILIES, MUTATIONS, TICKER, QUIRKS, DAEMONS, STRAINS, GUARDS, BOSSES, STRAIN_NATIVE, DAEMON_BANDS, bandDaemons, daemonWhen, daemonBand, FLOORS, bandOf, floorOfLayer } from './data.mjs';
 import { GENES, CATS, AXES } from './genes.mjs';
 import { AUTHORS } from './authors.mjs';
 import { PUZZLES } from './puzzles.mjs';
@@ -28,8 +28,6 @@ import * as UI from './uiscale.mjs';
 import { chipOf, virusGenes, scannedDeep, scannedRead, packedChip, packsGene } from './genome.mjs';
 import { mastered, RESEARCH, TIER } from './research.mjs';
 import { SFX, levelOf as sfxLevel } from './screenfx.mjs';
-// A loud run (connect <server> loud): what the button and the run tag say on hover.
-const LOUD_TIP = `Go in loud: every fight on this run has ${Math.round((HOT_RUN.hp - 1) * 100)}% more Integrity and hits ${Math.round((HOT_RUN.dmg - 1) * 100)}% harder. Every kill pays ${Math.round((HOT_RUN.xp - 1) * 100)}% more XP and rolls for loot once more.`;
 import { currentLocation, takeable, takenOf, liveSpawns, zoneRooms, signalNow, zoneSpawns, TRACE } from './run.mjs';
 import { ROGUE, rogueSpawns, rogueRooms, relockLeft, FARM_UNIQUES, clock as rogueClock } from './rogue.mjs';
 import { eventsAt, eventsOf, eventText, eventMinutes, CARDS as EVENT_CARDS, HUNT, shockOf, hopLeft, feudShare } from './events.mjs';
@@ -38,31 +36,35 @@ import { matesOf, mateUp, mateSignal } from './crew.mjs';
 import { momentumCap } from './classes/breaker.mjs';
 import { online, inSprawl, whereText, simOn, friends, profileOf } from './presence.mjs';
 import { consortiumOf, isGround, sizeOf, tiersOf, nextTier as nextConTier, serversOf, memberServers, memberLevel, CONSORTIUM, rebooting, consortiumWall, alertsOf, tiersOf as conTiers } from './consortium.mjs';
-import { FACTIONS, MAIL, TIERS, openContracts, doneContracts, offers as mailOffers, findJob, heldCount, boardOpen, indemnity, tierIndex, standing, tierOf, nextTier, retainer, unread, title as contractTitle, progress as contractProgress, rewardLine, ready as contractReady, nextPayIn } from './mail.mjs';
+import { FACTIONS, MAIL, TIERS, openContracts, doneContracts, offers as mailOffers, findJob, heldCount, boardOpen, tierIndex, standing, tierOf, nextTier, retainer, unread, title as contractTitle, progress as contractProgress, rewardLine, ready as contractReady, nextPayIn, xpOf } from './mail.mjs';
 import { commsOf } from './comms.mjs';
 import { LINE, GOODS, storeOf, lineName, lineAbout, goodsAbout, priceNow } from './store.mjs';
 import { shownHidden, flagged as hiddenFlagged, items as kitOf, HIDDEN, leadOf, knowsRelay, relayCost, canBuildRelay, connectedTo, viaName } from './hidden.mjs';
 import { floorsOf, graphOf, locAt, hiddenAt, exitOpen, floorOfSlot, floorName, FLOOR, canDescend, waypointOf } from './floors.mjs';
 import { ROOT, ROOT_PERKS, rootOf, rootProgress, procOf, freeOfMemory } from './root.mjs';
-import { FIREWALL, fwOf, fwAt, ratingAt, effLevel, wallBonus, fragLevels, defragging, hardenLeft, upgradeCost, canPay, defragMs, defragCost, perksAt, TIER_PERKS, BASE_GAP, baseOf, tierOf as fwTierOf, fwLevel, hardenCost } from './firewall.mjs';
+import { FIREWALL, fwOf, fwAt, ratingAt, effLevel, wallBonus, fragLevels, defragging, upgradeCost, canPay, defragMs, defragCost, perksAt, TIER_PERKS, BASE_GAP, baseOf, tierOf as fwTierOf, fwLevel } from './firewall.mjs';
 import { filtersOf, equipped as filtersOn, slotsOf as filterSlots, filterLine, FILTER_STATS, CRAFTABLE, filterCost, FILTER_CAP, baseName as filterBase, filterRecipes } from './filters.mjs';
 import { situationOf } from './situations.mjs';
 import { SETS, setOf, setCard, activeSets, piecesOf, greenOf, sourceText, seesRare, tierLine } from './sets.mjs';
-import { tellTip, gearLive, cycleGear, gearOnParts, partTip, partCue, partRead, partLinks, lockOf, wardOf, GEAR_ICON, DAMPED, answerLine } from './fightread.mjs';
+import { tellTip, gearLive, cycleGear, gearOnParts, partTip, partCue, partRead, partLinks, lockOf, wardOf, GEAR_ICON, DAMPED, answerLine, helperPlan, beatCopy } from './fightread.mjs';
 import { cutsNow, crossBy, BOSS_RULES, TICKS } from './interrupt.mjs';
-import { programMarkup, progNow, progTarget, progText, progOnPart, progExc, progFight, progTag } from './routines-view.mjs';
+import { programMarkup, progNow, progTarget, progText, progMove, progOnPart, progExc, progFight, progTag } from './routines-view.mjs';
 import { unlocked as routinesOpen, LOCKED as ROUTINES_LOCKED } from './routines.mjs';
 import { bodyTags } from './families.mjs';
 import { heatOf } from './parts.mjs';
-import { wallRating, wallBands, ratioOf, outcome, chipRate, grindRate, fighting, degradedLeft, fmtLeft, bountyOf, tellOf, quirkLine, labelOf, verdictOf, wallLevelOf, strength, streakOf, streakMult, STREAK, SCOUT, daemonChance, SCOUTED, KINDS as INV_KINDS, scoutedLine, sendTop, countsAt, wallSafety } from './invasion.mjs';
+import { wallRating, wallBands, ratioOf, outcome, chipRate, grindRate, fighting, degradedLeft, fmtLeft, bountyOf, tellOf, quirkLine, labelOf, verdictOf, strength, sendersOf, senderGrade, sendsAt, streakOf, streakMult, STREAK, SCOUT, daemonChance, SCOUTED, KINDS as INV_KINDS, scoutedLine, sendTop, countsAt, wallSafety } from './invasion.mjs';
 import { RULES, LOOT, SLOTS, BASES, STATS, GROUPS, RARITIES, RARITY_ORDER, ZERO_DAYS, STASH_CAP, PROTOCOL_SLOTS, PROTOCOL_STATS, SERVICES, MATERIALS, statLine, itemLabel, fmtStat, sideStats, BLUEPRINTS, PROTOCOL_NAMES, recipeStat, SLOT_KINDS, groupOf, codeOf, uniqueItem, seeded, IMPLICITS } from './gear.mjs';
 import { raidIntents, raidMarks, raidOf, attackTarget } from './raid.mjs';
 import { EMBLEMS } from './class-emblems.mjs';
 import { ARCHETYPES, CANTRIPS, EDGE, SYNC, STATUSES, LOADOUT, TREE, SERVER, SKILLS, xpToNext, unlockLevel, power, SUBS, SUBCLASS, skillOrder, barSlots, isRunSkill } from './data.mjs';
-import { XP_KINDS, xpFor, cooldownOf, subOf, subPicked, kitTalent, specRule, skillBase, knowsPart, codexKey, previewDamage, ignoresArmor, armorTakes, parse, blocked, attackAmount, drawingFire, momentumStacks, momentumBonus, topUpCost, UNIQUES, bossChance, listenBoost, effectLine, implicitText, paceOf, keyMap, barKeys, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverClass, daemonSlots, procOpen, slottedDaemons, daemonNext, talentPoints, loaded, loadedOn, slotCount, maxSignal, compileCost, materialsOf, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, picksOf, ranksOf, freeSlot, rigOf, stashItem, knows, knownRecipes, pointsSpent, tierState, rowState, spentAbove, knownSkills, equippedSkills, cycleLength, familyInfo, defender, healCap, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, part, daemonLevel, packed, limitOf, asleep, frozenNow } from './combat.mjs';
+import { XP_KINDS, rebootSick, cooldownOf, subOf, subPicked, kitTalent, specRule, skillBase, knowsPart, codexKey, previewDamage, ignoresArmor, armorTakes, parse, blocked, attackAmount, drawingFire, momentumStacks, momentumBonus, topUpCost, UNIQUES, bossChance, listenBoost, effectLine, implicitText, paceOf, keyMap, barKeys, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverClass, daemonSlots, procOpen, slottedDaemons, daemonNext, talentPoints, loaded, loadedOn, slotCount, maxSignal, compileCost, materialsOf, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, picksOf, ranksOf, freeSlot, rigOf, stashItem, knows, knownRecipes, pointsSpent, tierState, rowState, spentAbove, knownSkills, equippedSkills, cycleLength, familyInfo, defender, healCap, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, part, daemonLevel, packed, limitOf, asleep, frozenNow } from './combat.mjs';
 import { sigOf, named, lairOf, intelOf, knowsStrain, knowsEvent, knowsRich, nameOf, NETWORK, nativeChance, homeName, isNative, whoLabel, homeOf, netSeedOf, knownNets, NATIVE_POOL, awayChance } from './network.mjs';
-import { guardSetChance, lairChance, bossOdds, presetsOf, presetKeys, followOf, spikeName, said, mutated, capstonePoints, capPickOf, capState } from './combat.mjs';
-import { cantripsOf } from './data.mjs';
+import { guardSetChance, lairChance, bossOdds, presetsOf, presetKeys, followOf, spikeName, said, mutated, capstonePoints, capPickOf, capState, blastOf, livingParts } from './combat.mjs';
+import { tripwireOf, zipOf, heldOf } from './order.mjs';
+import { youMarks, junkKey } from './mechanics.mjs';
+import { cantripsOf, TELL } from './data.mjs';
+import { usable } from './combat.mjs';
+import { sigintWindows, sigintCharges } from './tells.mjs';
 import { daemonText } from './daemons.mjs';
 import { ROOMS as ROOMS_FP, kindRule, KIND_OF } from './floorplan.mjs'; // a server card's respawn timers, its type's rule
 import { threadRows, threadReader, tempNodes, tempNodeSvg, tempCard, serverMarkSvg, transitNodes, transitSvg } from './threads-view.mjs';
@@ -122,7 +124,7 @@ export const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&a
 const ICON = { damage: 'server', encrypt: 'event-lock', scramble: 'scan', replicate: 'mutation', heal: 'shell-shield', mirror: 'interrupt', reboot: 'pulse-node', deliver: 'loot', unpack: 'mutation', redeploy: 'pulse-node', fuse: 'event-warning', buffer: 'shell-shield', thaw: 'event-warning', boot: 'pulse-node' };
 const icon = (name) => `style="--icon:url('ui/icons/${name}.svg')"`;
 const effectLabel = (i) => (i.effect === 'damage' ? `−${i.amount}` : i.effect === 'fuse' ? `−${i.amount}` : i.effect === 'buffer' ? `+${i.amount}` : i.effect === 'thaw' ? 'joins' : i.effect === 'boot' ? `${i.amount} hp` : (i.hit ? `−${i.hit} · ` : '') + (i.effect === 'encrypt' ? `+${i.amount}` : i.effect === 'scramble' ? `${i.amount} cyc` : i.effect === 'heal' ? `+${i.amount} hp` : i.effect === 'mirror' ? `${i.amount}% back` : i.effect === 'reboot' || i.effect === 'redeploy' ? `${i.amount} hp` : i.effect === 'deliver' ? '+box' : i.effect === 'unpack' ? `${i.amount} drop` : '+frag'));
-const TARGETS = { damage: 'Integrity', encrypt: 'damage every cycle, stacking, until it breaks', scramble: 'your attacks may hit you', replicate: 'spawns a fragment', heal: 'to its most damaged part', mirror: 'your command does nothing this cycle, and some bounces back', reboot: 'comes back, unless its twin is broken first', deliver: 'a Package on the board', unpack: 'two Droppers', redeploy: 'the Courier comes back, unless the Loader is broken first', thaw: 'it thaws at the end of this cycle and joins the fight', boot: 'it boots with the signature\'s attack, unless you break it first' };
+const TARGETS = { damage: 'Integrity', encrypt: 'damage every cycle, stacking, until it breaks', scramble: 'your attacks may hit you', replicate: 'spawns a fragment', heal: 'to its most damaged part', mirror: 'your command at one part goes to the part it points at', reboot: 'comes back, unless its twin is broken first', deliver: 'a Package on the board', unpack: 'two Droppers', redeploy: 'the Courier comes back, unless the Loader is broken first', thaw: 'it thaws at the end of this cycle and joins the fight', boot: 'it boots with the signature\'s attack, unless you break it first' };
 let runMode = false;
 const effectTarget = new Proxy(TARGETS, { get: (t, k) => (k === 'damage' && runMode ? 'Signal' : t[k]) });
 
@@ -286,6 +288,14 @@ export function forecast(s, preview = null) {
 // Halcyon's Claims (faction-gear.mjs): each claim pending as a pip past your Signal, its payout and when on hover.
 const claimMarks = (s, d) => { let at = d.integrity; return pendingClaims(s).map((c) => { const w = Math.min(c.amount, Math.max(0, d.max - at)), x = at; at += w; const n = c.at - s.encounter.cycle; return w > 0 ? `<i class="claim" style="left:${(x / d.max) * 100}%;width:${(w / d.max) * 100}%" title="${esc(`${c.name}: +${c.amount} ${n <= 0 ? 'this cycle' : n === 1 ? 'next cycle' : `in ${n} cycles`}`)}"></i>` : ''; }).join(''); };
 const lossMark = (now, max, loss) => (loss > 0 && max > 0 ? `<i class="loss" style="left:${((now - loss) / max) * 100}%;width:${(loss / max) * 100}%" title="−${loss} this cycle"></i>` : '');
+// The Mimic's beat this cycle (fightread.mjs beatCopy): what the copy of your selected command takes from your Signal, a
+// red ghost past the slice this cycle's attacks take (a hit, all of it; a burn, all its ticks). The ◆ and shield it would
+// strip sit on your status (statusPanel).
+function copyGhost(d, loss, cp) {
+  if (cp?.col !== 0 || !d.max) return '';
+  const n = cp.kind === 'hit' && cp.short !== '−1◆' ? cp.amount : cp.kind === 'burn' ? cp.total : 0, w = Math.min(n, Math.max(0, d.integrity - loss));
+  return w > 0 ? `<i class="copy-ghost" style="left:${((d.integrity - loss - w) / d.max) * 100}%;width:${(w / d.max) * 100}%" title="${esc(`Mimic: Beat, this cycle. Copies your ${cp.name}: ${cp.text}.`)}"></i>` : '';
+}
 
 // In a breach, healing stops at the Signal you came into the fight with: the bar past it is fenced off.
 // A Bad Block (the parts plan's P2): the cells your next heals would fill are cracked, as far as it eats.
@@ -305,12 +315,13 @@ export function hudMarkup(s, { party = true, preview = null } = {}) {
   const weak = v.weakKnown ? part(s, v.weakPoint) : null;
   const armor = armorLeft(s);
   const fc = forecast(s, preview);
+  const cp = active(s) ? beatCopy(s, selectedCmd(s, preview)) : null; // the Mimic's beat: what it would copy of your command
   // No title of its own: the virus's name labels its health bar, its tags sit under the bar with
   // its armor. Your bar and the crew's window come first; the virus's bar is at the right.
   const tags = `${v.champion ? '<span class="tag tag-crew" title="Champion: an elite-grade invader, sized for one. It is tougher, gives three times the XP, and leaves a capture when it falls: a sure daemon.">★ CHAMPION</span>' : v.elite ? '<span class="tag tag-crew" title="Elite: built for a crew. It is much tougher, gives three times the XP, and drops better loot.">◆ CREW</span>' : ''}${e.invader && s.invasion?.id === e.invader ? `<span class="tag hot">invasion · ${esc(s.invasion.fromName)}</span>` : ''}${m && !geneChips(s, v) ? `<span class="tag tag-mut" data-mut="${v.mutation}" title="${esc(m.rule)}">${esc(m.name)}</span>` : ''}${strainTags(s, v)}${weak ? `<span class="tag you">weak: ${esc(weak.name)}</span>` : ''}`;
   // Yours first (what you watch): your Signal with the crew under it; the virus's total at the right,
   // over its picture.
-  return `<div class="hud-left"><div class="hud-you"><div class="hud-bar mine ${level}"><div class="bar-top"><strong>${glyph(runMode ? 'signal' : 'integrity', 'bar-ico')}${mine}</strong><span>${d.integrity}<small>/${d.max}</small></span></div><div class="bigbar"><span style="width:${dp}%"></span>${capMark(s, d)}${crackMark(s, d)}${lossMark(d.integrity, d.max, fc.you)}${claimMarks(s, d)}</div>${clockMeter(s)}</div></div>${statusPanel(s)}</div>
+  return `<div class="hud-left"><div class="hud-you"><div class="hud-bar mine ${level}"><div class="bar-top"><strong>${glyph(runMode ? 'signal' : 'integrity', 'bar-ico')}${mine}</strong><span>${d.integrity}<small>/${d.max}</small></span></div><div class="bigbar"><span style="width:${dp}%"></span>${capMark(s, d)}${crackMark(s, d)}${lossMark(d.integrity, d.max, fc.you)}${copyGhost(d, fc.you, cp)}${claimMarks(s, d)}</div>${clockMeter(s)}</div></div>${statusPanel(s, cp)}</div>
     <div class="hud-bar enemy"><div class="bar-top"><span class="vname"><strong>${esc(v.name)}</strong>${byline(v)}<span class="meta">${levelTag(s, v.level)}${v.strain || GUARDS[v.family]?.ice ? '' : ' ' + esc(familyInfo(v.family).name)}</span></span><span>${hp.current}<small>/${hp.max}</small></span></div><div class="bigbar"><span style="width:${vp}%"></span>${lossMark(hp.current, hp.max, fc.total)}</div><p class="clock-line">${armor.max ? `<span class="chits">${'◆'.repeat(armor.current)}<i>${'◇'.repeat(armor.max - armor.current)}</i></span>` : ''}${tags}${roomBossTag(s)}${progFight(s)}</p>${geneChips(s, v)}</div>`;
 }
 // A Resident in a server room (interrupt.mjs BOSS_RULES): the rule it fights under, and (c)'s budget as pips.
@@ -333,12 +344,16 @@ function clockMeter(s) {
 // Everything on you right now, between your bar and the virus's: timed effects (with the cycles
 // they have left) and standing ones (encryption, shield, armor, Clock Speed, …). Was a row on the
 // board and tags in your row; here it sits by your health.
-function statusPanel(s) {
+function statusPanel(s, cp = null) {
   if (!active(s)) return '<div class="hud-status"></div>';
   // Just the names, in their colours; the numbers, how long and the rule in a quick tooltip.
   const timed = statusSpans(s).map((x) => ({ name: x.name, kind: x.kind, tip: `${x.value ? x.value + ' · ' : ''}${x.cycles} ${x.cycles === 1 ? 'cycle' : 'cycles'} left${x.title ? `\n${x.title}` : ''}` }));
   const all = [...timed, ...youStanding(s)];
-  const chips = all.map((x) => `<span class="st ${x.kind}" data-tip="${esc(x.tip)}" tabindex="0">${esc(x.name)}</span>`).join('');
+  // The Mimic's beat this cycle strips your ◆ and shield if you fire a strip (fightread.mjs beatCopy): a red ghost on
+  // them, its tooltip in the beat's words.
+  const strip = cp?.col === 0 && cp.kind === 'strip' ? cp : null;
+  const ghost = (x) => (strip && x.name === 'Armor' && strip.chits ? `−${strip.chits}◆` : strip && x.name === 'Shield' && strip.shield ? `−${strip.shield}` : '');
+  const chips = all.map((x) => { const g = ghost(x); return `<span class="st ${x.kind}${g ? ' ghosted' : ''}" data-tip="${esc(x.tip + (g ? `\nMimic: Beat, this cycle. Copies your ${strip.name}: ${strip.text}.` : ''))}" tabindex="0">${esc(x.name)}${g ? `<b class="st-ghost">${esc(g)}</b>` : ''}</span>`; }).join('');
   return `<div class="hud-status"><div class="bar-top"><strong>Status</strong></div><div class="st-list">${chips || '<small class="quiet">nothing on you</small>'}</div>${gearRow(s)}</div>`;
 }
 // Your gear's conditional rules (fightread.mjs gearLive): a chip each, lit while its condition holds, dim while it
@@ -360,18 +375,22 @@ const TELL_KICK = { charge: 'Charged', cast: 'Casting', seal: 'Sealing', mimic: 
 function tellChip(s, i, c, k = '', to = null) {
   const p = part(s, i.source);
   const open = i.open ?? c === 0;
-  // What it does, as short as an attack chip's number.
-  const what = i.tell === 'charge' ? (i.effect === 'damage' ? `−${i.amount}` : i.effect === 'encrypt' ? `+${i.amount} · burst` : i.effect === 'replicate' ? `+${i.spawn || 2} frags` : i.effect === 'scramble' ? `−${i.hit || 0} · scramble` : `+${i.amount} hp`)
-    : i.tell === 'cast' ? (i.does === 'loud' ? '+35% hits' : i.does === 'grow' ? '+25% hp' : i.does === 'overclock' ? '×2 both ways' : 'faster')
-    : i.tell === 'seal' ? '+◆' : i.tell === 'lock' ? 'locks a key' : 'copies you';
+  // What it does, as short as an attack chip's number: a charge's hit, a cast's price (the Signal its attacks would add,
+  // a Self-Update's Integrity), the ◆ a seal would hand out in all (tells.mjs tellPrice).
+  const what = i.tell === 'charge' ? (i.effect === 'damage' ? `−${i.amount}` : i.effect === 'encrypt' ? `−${i.price ?? i.amount}` : i.effect === 'replicate' ? `+${i.spawn || 2} frags` : i.effect === 'scramble' ? `−${i.hit || 0} · scramble` : `+${i.amount} hp`)
+    : i.tell === 'cast' ? (i.does === 'grow' ? `+${i.grow ?? 0} hp` : i.does === 'overclock' ? '×2 both ways' : `−${i.price ?? 0}`)
+    : i.tell === 'seal' ? `+${i.armorOut ?? 0} ◆` : i.tell === 'lock' ? 'locks a key' : i.copy ? i.copy.short : 'copies you'; // the Mimic: what your selected command would copy
   // The answer as an order, without its timing: the kick line has that (NOW, or when it lands).
-  const answer = i.tell === 'charge' ? `Cut${i.armored ? ` past ◆${p?.armor || 0}` : ''}`
+  const sig = sigintCharges(s) && usable(s).includes('sigint');
+  const answer = i.tell === 'charge' ? `Cut${i.armored ? ` past ◆${p?.armor || 0}` : ''}${sig ? ' or SIGINT' : ''}`
     : i.tell === 'cast' ? 'SIGINT or cut'
-    : i.tell === 'seal' ? `Strip ◆${p?.armor || 0}` : i.tell === 'lock' ? 'Feed it a cooldown' : 'Go quiet';
+    : i.tell === 'seal' ? (p?.armor > 0 ? `Strip ◆${p.armor}` : 'Keep it bare') : i.tell === 'lock' ? 'Feed it a cooldown' : 'Pick a cheap copy';
   const progress = '';
+  // A price in your Signal reads in threat red, a seal's ◆ in steel.
+  const kindOf = i.tell === 'seal' ? ' tl-armor' : (i.tell === 'charge' && ['damage', 'encrypt'].includes(i.effect)) || (i.tell === 'cast' && ['loud', 'haste'].includes(i.does)) ? ' tl-price' : '';
   return `<div class="intent tell t-${esc(i.tell)} ${c === 0 ? 'now' : ''} ${open ? 'win' : ''}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(tellTip(s, i, c, to))}">`
     + `<div class="tl-kick"><span class="ico" ${icon(TELL_ICON[i.tell])}></span><span class="tl-kind">${TELL_KICK[i.tell] || ''}</span>${open ? '<b class="tl-win">NOW</b>' : `<span class="tl-when">${c ? `in ${c}` : 'now'}</span>`}</div>`
-    + `<div class="tl-main"><b>${esc(i.name)}</b><small class="tl-what">${esc(what)}</small></div>`
+    + `<div class="tl-main"><b>${esc(i.name)}</b><small class="tl-what${kindOf}${i.copy ? ` copy${i.copy.dear ? ' dear' : ''}` : ''}">${esc(what)}</small></div>`
     + `<div class="tl-ans">▸ ${esc(answer)}${progress ? `<span class="tl-prog">${esc(progress)}</span>` : ''}</div>`
     + `${to ? `<small class="at">→ ${esc(to)}</small>` : ''}</div>`;
 }
@@ -388,11 +407,25 @@ const heldMark = (i) => (i.held ? `<i class="held">${glyph('stall')}</i>` : '');
 // Zip Bomb's fuse, a Buffer's next shield.
 // The P2 parts' (genes.mjs): a Scraper's takes-buffs mark, a Bad Block's cracked mark, a Cold Store's thaw, a Spare's boot.
 const chipCls = (i) => (i.packed ? '' : chipCls0(i)); // a packed part's chip (combat.mjs intents): no mark says what it is
-const chipCls0 = (i) => `${i.taps ? ` tap t${i.tap}${i.tap === 1 ? ' first' : ''}${i.tap === i.taps ? ' last' : ''}` : ''}${i.syn ? ' syn' : ''}${i.effect === 'fuse' ? ' fuse' : ''}${i.effect === 'buffer' ? ' bufup' : ''}${i.scrape ? ' scrape' : ''}${i.bad ? ' bad' : ''}${i.effect === 'thaw' ? ' thaw' : ''}${i.effect === 'boot' ? ' boot' : ''}`;
-const chipTip = (i) => (i.taps ? `\nHit ${i.tap} of ${i.taps} of one volley. A cut stops the rest, and a delay moves all of it.` : i.syn ? '\nThe skill you fire this cycle cools down 2 cycles longer.' : i.effect === 'fuse' ? '\nThe fuse goes off. A ◆ or a shield absorbs the blast. Ending the fight first puts it out.' : i.effect === 'buffer' ? '\nIts shield absorbs your commands\' hits first. Burns and helpers bypass it.'
+const chipCls0 = (i) => `${i.taps ? ` tap t${i.tap}${i.tap === 1 ? ' first' : ''}${i.tap === i.taps ? ' last' : ''}` : ''}${i.syn ? ' syn' : ''}${i.effect === 'fuse' ? ' fuse' : ''}${i.effect === 'buffer' ? ' bufup' : ''}${i.scrape ? ' scrape' : ''}${i.bad ? ' bad' : ''}${i.effect === 'thaw' ? ' thaw' : ''}${i.effect === 'boot' ? ' boot' : ''}${i.loud ? ' loud' : ''}`;
+const chipTip = (i) => (i.loud ? `\nLoud: if the ${i.loud.by} breaks this cycle, it deals ${i.loud.amount} instead of ${i.loud.was}${i.loud.from > i.col ? ` and lands ${i.col === 0 ? 'this cycle' : i.col === 1 ? 'next cycle' : `in ${i.col} cycles`}` : ''}.` : '') + chipTip0(i);
+const chipTip0 = (i) => (i.taps ? `\nHit ${i.tap} of ${i.taps} of one volley. A cut stops the rest, and a delay moves all of it.` : i.syn ? '\nThe skill you fire this cycle cools down 2 cycles longer.' : i.effect === 'fuse' ? `\nThe fuse goes off on both sides: a ◆ or a shield of yours absorbs your share, and every part of the virus loses a ◆ and ${Math.round(CONFIG.zipbomb.parts * 100)}% of its max. Ending the fight first puts it out.` : i.effect === 'buffer' ? '\nIts shield absorbs your commands\' hits first. Burns and helpers bypass it.'
   : i.scrape ? '\nRemoves your shield, your ◆ and your timed buffs as it lands. Gains up to 2 ◆ from them. Null Route makes it miss.\n▸ Buff after it lands, not before.' : i.bad ? '\nYour next heals lose up to 10% of your max health. Purge, Scrub, Rollback and Rotate Keys clear it.'
   : i.effect === 'thaw' ? `\nFrozen and immune to damage until then. Its first hit deals ${i.amount}, 2 cycles after it thaws.` : i.effect === 'boot' ? '\nThe signature part broke, so it boots with its attack. Drops its ◆ as it boots.\n▸ Break it before then, or once it boots.' : '');
+// The Decoy's beat (combat.mjs bendCommand): a red Bend chip in the column it lands, saying where the pointer is once
+// the Decoy's timers show (its ◆ stripped, or Tagged), ? while it's veiled. Its tooltip: the rule, and when to fire.
+const bendWhen = (c) => (c === 0 ? 'this cycle' : c === 1 ? 'next cycle' : `in ${c} cycles`);
+function bendChip(i, c, k = '') {
+  const self = i.to && i.to === i.source, label = !i.to ? '→ ?' : self ? '→ itself' : `→ ${i.toName}`;
+  const head = `Decoy: Bend, ${bendWhen(c)}. Your command at one part goes to the part the Decoy points at. Area commands and the ones on you aren't bent.`;
+  const tip = !i.to ? `${head} ${i.veiled ? 'It hides where while it wears ◆.' : 'Where it points next shows after this beat.'}${answerLine(i.veiled ? 'Strip its ◆, or Tag it, to see where.' : 'Read it after this beat.')}`
+    : self ? `${head} It points at itself: the command lands on the Decoy, and ${i.amount}% of a hit bounces back at you.${answerLine('Fire nothing at one part then: a shield, a buff or an area command.')}`
+      : i.harm ? `${head} It points at the ${i.toName}, a part that must not be hit now.${answerLine('Fire nothing at one part then: a shield, a buff or an area command.')}`
+        : `${head} It points at the ${i.toName}.${answerLine(`Fire then if you want the ${i.toName} hit.`)}`;
+  return `<div class="intent bend${c === 0 ? ' now' : c === 1 ? ' next' : ''}${self || i.harm ? ' harm' : ''}${i.to ? '' : ' veiled'}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(tip)}"><span class="ico" ${icon(ICON.mirror)}></span><b class="bend-to">${esc(label)}</b></div>`;
+}
 function attackChip(i, c, k = '', to = null) {
+  if (i.effect === 'mirror') return bendChip(i, c, k);
   if (i.packed) i = { ...i, syn: false, scrape: false, bad: false, taps: 0 };
   return `<div class="intent ${c === 0 ? 'now' : c === 1 ? 'next' : ''}${i.held ? ' held' : ''}${chipCls(i)}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(i.name)}: ${effectLabel(i)} ${to ? `at ${esc(to)}` : i.packed && !['damage', 'fuse'].includes(i.effect) ? '' : effectTarget[i.effect] || ''}${heldTip(i)}${esc(i.packed ? '' : chipTip(i))}"><span class="ico" ${icon(ICON[i.effect])}></span>${heldMark(i)}<b${longChip(i) ? ' class="long"' : ''}>${esc(i.name)}</b><i class="code${longChip(i) ? ' long' : ''}">${esc(attackCode(i.name))}</i><small>${effectLabel(i)}</small>${i.syn ? '<em class="synmark">SYN</em>' : ''}${i.scrape ? `<em class="scrapemark" title="Takes your buffs">${glyph('scraper')}</em>` : ''}${i.bad ? '<em class="badmark" title="Cracks your next heals">▦</em>' : ''}${i.taps ? `<em class="tapmark">${i.tap}/${i.taps}</em>` : ''}${to ? `<small class="at">→ ${esc(to)}</small>` : ''}</div>`;
 }
@@ -527,8 +560,11 @@ function partTags(s, p) {
   if (mutated(s, 'adaptive') && p.integrity > 0 && p.adaptRun >= 2 && p.adaptAt === e.cycle - 1) tags.push('<span class="tag hot" title="Adapting: gains 1 ◆ at the end of this cycle if your commands hit it again">adapting</span>');
   if (p.rerouted && p.integrity > 0) tags.push(`<span class="tag hot" title="Rerouted: its attack deals ${p.rerouted} more damage, passed on from a broken part">+${p.rerouted} rerouted</span>`);
   // Parts that change the fight (data.mjs FAMILIES): a Tripwire, the C2 Node, the parts gone loud.
-  if (p.deadman && p.integrity > 0 && !pk) tags.push(`<span class="tag hot" title="${esc(`Tripwire: when broken while the others stand, they go loud. Loud parts deal ${Math.round((CONFIG.tripwire.loud - 1) * 100)}% more damage and attack 1 cycle sooner.${answerLine('Break it last.')}`)}">tripwire</span>`);
-  if (p.loud && p.integrity > 0) tags.push(`<span class="tag hot" title="Loud: deals ${Math.round((CONFIG.tripwire.loud - 1) * 100)}% more damage and attacks 1 cycle sooner">loud</span>`);
+  const T = CONFIG.tripwire, pc = (k) => Math.round((k - 1) * 100);
+  if (p.deadman && p.integrity > 0 && !pk) tags.push(`<span class="tag hot" title="${esc(`Tripwire: when broken while the others stand, they go loud, both ways: they deal ${pc(T.loud)}% more damage and attack a cycle sooner, and they take ${pc(T.taken)}% more damage and drop their ◆.${answerLine('Break it last, or first when you can finish the rest before their attacks add up.')}`)}">tripwire</span>`);
+  if (p.loud && p.integrity > 0) tags.push(`<span class="tag hot" title="${esc(`Loud: deals ${pc(T.loud)}% more damage and attacks a cycle sooner. Takes ${pc(T.taken)}% more damage, and its ◆ are gone.`)}">loud</span>`);
+  // A Lockbox's held damage (docs/puzzle-levers.md 3.4): yours, in your teal.
+  for (const h of p.integrity > 0 && !pk ? heldOf(s, p) : []) tags.push(`<span class="tag you held" title="${esc(`Held: the ${p.name} holds ${h.held} of your damage on the ${h.partner.name}. When it breaks, half of it, ${h.land}, lands on the ${h.partner.name} at once.`)}">${glyph('unlock')}held ${h.held}</span>`);
   // Fallback (combat.mjs): the part that takes over its partner's attack when the partner breaks first.
   if (p.fallback && p.integrity > 0) { const t = e.virus.parts.find((x) => x.id === p.fallback); if (p.tookOver) tags.push(`<span class="tag hot" title="${esc(`Took over: took over the ${t?.name || 'broken part'}'s ${t?.attack?.name || 'attack'} when the ${t?.name || 'other part'} broke.`)}">took over</span>`); else if (t && t.integrity > 0 && t.attack) tags.push(`<span class="tag hot" title="${esc(`Fallback: if the ${t.name} breaks first, the ${p.name} takes over its ${t.attack.name}.`)}">fallback</span>`); }
   // The parts plan (data.mjs BASICS, genes.mjs): an Accumulator's charge, a Hotspot's glow, the Idle Timer's countdown on
@@ -564,6 +600,7 @@ function partTags(s, p) {
 function youStanding(s) {
   const e = s.encounter, out = [];
   const add = (name, kind, tip) => out.push({ name, kind, tip });
+  if (rebootSick(s)) add('Reboot sickness', 'hot', `−${sickPct(s)}% max Signal and damage\nYour server is rebooting. Back online in ${fmtLeft(degradedLeft(s))}.`);
   if (e.encrypt > 0) add('Encrypted', 'hot', `−${e.encrypt} every cycle until the Encryptor breaks. Purge, Scrub or Rollback wipes it, and a ◆ stops the next Encrypt.`);
   for (const p of e.virus.parts) { const heat = alive(p) ? heatOf(p, e.cycle) : 0; if (heat) add('Ratcheted', 'hot', `−${heat} every cycle, ${p.ratchet.amount} more every ${p.ratchet.every} cycles, until you break the ${p.name}. Purge or Rollback starts it over.`); }
   if (rootkitReady(s)) add('Rootkit', 'you', 'Your first hit this fight ignores armor.');
@@ -587,9 +624,11 @@ export function statusSpans(s) {
   // What a tell that landed left on you (tells.mjs): Corrupted, a hung command, a skill knocked offline.
   if (e.corrupt) add('Corrupted', e.cycle + e.corrupt.left - 1, 'hot', `${e.corrupt.name} got through, and deals ${e.corrupt.amount} damage every cycle. Purge, Scrub or Rollback cleanses it.`, `−${e.corrupt.amount}`);
   if (e.hung >= e.cycle) add('Hung', e.hung, 'hot', 'A tell landed, and your command does not fire that cycle.');
+  add('Throttled', e.throttledUntil ?? -1, 'hot', `The Mimic copied a debuff onto you. Your hits deal ${Math.round(TELL.copy.throttled * 100)}% damage. Burns and helpers deal full damage.`, `${Math.round(TELL.copy.throttled * 100)}% hits`);
   for (const [id, until] of Object.entries(e.locked || {})) add(`${ABILITIES[id]?.name || id} offline`, until, 'hot', 'A tell landed and knocked this skill offline.');
   if (e.lockArmed) add('Lock armed', e.cycle, 'hot', 'The first command you fire is locked for 3 cycles, key 1 included. Feed it a skill that is cooling anyway.');
   if (e.virus?.buffs?.overclock >= e.cycle) add('Overclocked', e.virus.buffs.overclock, 'hot', 'Every part of the virus takes double damage, and every attack comes a cycle sooner.', '×2');
+  for (const x of youMarks(s)) add(x.name, x.until, 'hot', x.title, x.value || ''); // the mechanics list's statuses on you (mechanics.mjs)
   add('Scrambled', e.scrambleUntil ?? -1, 'hot', `Each of your attacks has a ${Math.round(CONFIG.scramble.chance * 100)}% chance to hit you instead, at ${Math.round(CONFIG.scramble.self * 100)}% damage.`, `${Math.round(CONFIG.scramble.chance * 100)}% self-hit`);
   return out;
 }
@@ -617,7 +656,7 @@ function cutChip(s, p) {
 // cycle would only take lock, the blinking preview slice sits on the segment, not the Integrity. A Lockbox's ward: a cap
 // line at the most the part can still lose this cycle. Both show before the protector is decoded (??? in the tooltip).
 // A part you've researched to 100% (research.mjs): a small amber star by its name, here and in the Codex.
-export const masteredMark = (p) => `<span class="pmast" title="${esc(`${p.name} mastered: research ${RESEARCH.max}. Its component drops ${Math.round((RESEARCH.perk.drop - 1) * 100)}% more often, and you deal ${Math.round((RESEARCH.perk.dmg - 1) * 100)}% more damage to it.`)}">${glyph('mastered')}</span>`;
+export const masteredMark = (p) => `<span class="pmast" title="${esc(`${p.name} mastered: research ${RESEARCH.max}. It drops components ${Math.round((RESEARCH.perk.drop - 1) * 100)}% more often, and you deal ${Math.round((RESEARCH.perk.dmg - 1) * 100)}% more damage to it.`)}">${glyph('mastered')}</span>`;
 const unknownTip = (what, by) => `${what}: ???\nBreak one ${by.name} to decode what it does.`;
 function guardMarks(s, v, p, fc) {
   const max = p.max || 1, at = (n) => `${((Math.max(0, Math.min(max, n)) / max) * 100).toFixed(2)}%`;
@@ -673,13 +712,49 @@ function tethers(rows, links, dying) {
 }
 
 // Rows = parts, columns = cycles. Health and timing on the same line.
+// The command you have selected this cycle: what you're typing (when it would go), your queued command, your program's
+// next move, or the auto-repeat. The Mimic's beat cell previews its copy (fightread.mjs beatCopy).
+function selectedCmd(s, preview) {
+  const e = s.encounter;
+  if (preview?.ok && preview.ability) return { ability: preview.ability, target: preview.target || null };
+  if (e.queue) return { ability: e.queue.ability, target: e.queue.target || null };
+  const p = progMove(s);
+  if (p) return p;
+  const [ability, target] = (e.lastAttack || '').split(' ');
+  return ability ? { ability, target: target || null } : null;
+}
 export function boardMarkup(s, selected, preview = null) {
   const e = s.encounter;
   runMode = e.mode === 'run';
   const fighting = active(s);
   const fc = forecast(s, preview);
+  const cp = fighting ? beatCopy(s, selectedCmd(s, preview)) : null; // what the Mimic's beat would copy of your command
+  // Your helpers' hits (fightread.mjs helperPlan): a row of small teal pips a helper, in the columns it hits a part, edged
+  // red where a hit trips a lever. The rows line up across the columns, so a helper's schedule reads like a part's.
+  const hplan = fighting ? helperPlan(s, fc) : { pips: [], moves: [] }, hrows = {};
+  for (const x of hplan.pips) (hrows[x.part] ||= new Set()).add(x.helper);
+  const pipCell = (p, c) => {
+    const rows = [...(hrows[p.id] || [])].sort((a, b) => a - b);
+    return rows.length ? `<span class="hpips">${rows.map((k) => { const x = hplan.pips.find((y) => y.part === p.id && y.col === c && y.helper === k); return x ? `<i class="hpip${x.trips ? ' trip' : ''}" title="${esc(x.tip)}"></i>` : '<i class="hpip none"></i>'; }).join('')}</span>` : '';
+  };
   // Damage on the timeline is what you'll actually take after your Reduction.
-  const list = fighting ? intents(s, 4).map((i) => (i.effect === 'damage' ? { ...i, amount: blocked(s, i.amount) } : i.hit ? { ...i, hit: blocked(s, i.hit) } : i)) : [];
+  const list0 = fighting ? intents(s, 4).map((i) => (i.effect === 'damage' ? { ...i, amount: blocked(s, i.amount) } : i.hit ? { ...i, hit: blocked(s, i.hit) } : i)) : [];
+  // The order levers on the board (order.mjs, docs/puzzle-levers.md 3.2 to 3.4). A Tripwire your move breaks this cycle
+  // (the forecast): the other parts' attacks show their loud numbers, a cycle sooner, and their ◆ blink as falling.
+  const trip = fighting ? tripwireOf(s) : null;
+  const tripping = !!trip && (fc.parts[trip.id] || 0) >= trip.integrity && !(trip.armor > 0) && !((e.buffs?.sudo ?? -1) >= e.cycle) && knowsPart(s, e.virus, trip);
+  const loudAt = (x) => tripping && x.id !== trip.id && x.kind === 'system' && alive(x);
+  const list = !tripping ? list0 : list0.map((i) => {
+    const x = part(s, i.source);
+    if (!loudAt(x) || i.tell || i.hidden || !['damage', 'encrypt'].includes(i.effect) && !i.hit) return i;
+    const k = CONFIG.tripwire.loud, amt = ['damage', 'encrypt'].includes(i.effect) ? 'amount' : 'hit';
+    return { ...i, [amt]: Math.max(1, Math.round(i[amt] * k)), col: Math.max(0, i.col - CONFIG.tripwire.sooner), loud: { by: trip.name, was: i[amt], amount: Math.max(1, Math.round(i[amt] * k)), from: i.col } };
+  });
+  if (tripping) for (const x of e.virus.parts.filter(loudAt)) if (x.armor > 0) fc.chits[x.id] = x.armor;
+  // A Zip Bomb lit, or one your move breaks this cycle: every other part's bar shows the blast's bite as a ghost.
+  const zip = fighting ? zipOf(s) : null;
+  const blast = zip && knowsPart(s, e.virus, zip) && (zip.fuseAt ? zip.fuseAt - e.cycle : alive(zip) && (fc.parts[zip.id] || 0) >= zip.integrity && !(zip.armor > 0) ? CONFIG.zipbomb.fuse : null);
+  const ghosts = (p) => (alive(p) ? orderMarks(s, p, fc, blast != null && p !== zip ? { zip, in: blast } : null) : '');
   const hidden = fighting && timersHidden(s);
   const remaining = Math.max(0, (cycleLength(s) - e.elapsedMs) / 1000);
   const quietCol = (c) => fighting && !hidden && !list.some((i) => i.col === c);
@@ -731,7 +806,12 @@ export function boardMarkup(s, selected, preview = null) {
   const patchList = fighting ? patches(s, 4) : [];
   // What protects what, between the rows (a dissolving part's tether snaps with it).
   const since = (p) => Math.max(0, Math.round(1000 - ((p._dyingUntil || 0) - Date.now())));
-  const ties = tethers(living, partLinks(s, e.virus, { stands: (p) => alive(p) || dying(p) }), since);
+  // And where the helpers of a part breaking this cycle move on to: a dashed teal tether (docs/puzzle-fights.md 3.2).
+  const moveOn = hplan.moves.filter((m) => living.some((p) => p.id === m.from) && living.some((p) => p.id === m.to)).map((m) => {
+    const from = part(s, m.from), to = part(s, m.to);
+    return { kind: 'moveon', from: m.from, to: [m.to], icon: 'relay', known: true, up: true, count: null, snap: false, tip: `Helpers: The ${from.name} breaks this cycle. ${m.helpers === 1 ? 'Its helper moves' : `Its ${m.helpers} helpers move`} on to the ${to.name}, the part that attacks soonest.` };
+  });
+  const ties = tethers(living, [...partLinks(s, e.virus, { stands: (p) => alive(p) || dying(p) }), ...moveOn], since);
   const rows = living.map((p, ri) => {
     const mine = list.filter((i) => i.source === p.id);
     const nowHit = mine.some((i) => i.col === 0 && i.effect !== 'buffer'); // a Buffer's shield isn't an attack
@@ -747,18 +827,18 @@ export function boardMarkup(s, selected, preview = null) {
       const escChip = !heat ? '' : c === 0 ? `<div class="intent crypt esc" title="${esc(`${p.ratchet.name}: you lose ${heat} this cycle, ${p.ratchet.amount} more every ${p.ratchet.every} cycles ${p.name} lives. Break it to end it.`)}">−${heat} <small>ratchet</small></div>` : `<div class="crypt-line esc" data-label="−${heat} ratchet"></div>`;
       const patchChip = patch?.col === c ? `<div class="intent patch" data-k="patch:${esc(p.id)}@${e.cycle + c}" title="${esc(p.name)} patches one ◆ back at the end of ${c === 0 ? 'this cycle' : `cycle ${e.cycle + c}`}, unless you break it first">◆ patch</div>` : '';
       // A tell shows whatever the part hides (tells.mjs): nothing big lands unannounced.
-      const told = mine.filter((i) => i.tell && i.col === c).map((i) => tellChip(s, i, c, `tell:${p.id}:${i.id}@${e.cycle + c}`, crew.length && i.effect === 'damage' ? sink || 'all' : null)).join('')
+      const told = mine.filter((i) => i.tell && i.col === c).map((i) => tellChip(s, i.tell === 'mimic' ? { ...i, copy: cp } : i, c, `tell:${p.id}:${i.id}@${e.cycle + c}`, crew.length && i.effect === 'damage' ? sink || 'all' : null)).join('')
         + mine.filter((i) => i.tell && i.winFrom != null && c >= i.winFrom && c < i.col).map((i) => tellSpan(s, i, c)).join(''); // a window longer than a cycle (tells.mjs)
-      if (timersHidden(s, p) && p.attack) return `<div class="bcell">${cryptChip}${escChip}${told || '<div class="intent hidden">?</div>'}${c === 0 ? cutChip(s, p) + progOnPart(s, p) : ''}${patchChip}</div>`;
+      if (timersHidden(s, p) && p.attack) return `<div class="bcell">${cryptChip}${escChip}${told || '<div class="intent hidden">?</div>'}${c === 0 ? cutChip(s, p) + progOnPart(s, p) : ''}${patchChip}${pipCell(p, c)}</div>`;
       const hit = mine.find((i) => i.col === c && !i.tell);
       // With a crew, a damage attack lands on everyone, or on whoever is drawing fire; a crew boss's part with a
       // target rule (raid.mjs) on the one player it's aiming at.
       const aimed = crew.length && hit?.effect === 'damage' && !sink && p.attack.target ? attackTarget(s, p) : null;
       const to = crew.length && hit?.effect === 'damage' ? sink || (aimed ? aimed.who || 'you' : 'all') : null;
-      return `<div class="bcell">${cryptChip}${escChip}${told}${hit && !(p.attack ? false : hit.hidden) ? attackChip(hit, c, `${p.id}@${e.cycle + c}`, to) : ''}${c === 0 ? cutChip(s, p) + progOnPart(s, p) : ''}${patchChip}</div>`;
+      return `<div class="bcell">${cryptChip}${escChip}${told}${hit && !(p.attack ? false : hit.hidden) ? attackChip(hit, c, `${p.id}@${e.cycle + c}`, to) : ''}${c === 0 ? cutChip(s, p) + progOnPart(s, p) : ''}${patchChip}${pipCell(p, c)}</div>`;
     }).join('');
     // A part with no attack of its own (a Mutex, a Mimic) still shows its row's cells when a tell or a beat sits there.
-    const showCells = p.attack || p.ratchet || mine.some((i) => i.tell || !i.hidden || i.effect === 'fuse');
+    const showCells = p.attack || p.ratchet || hrows[p.id] || mine.some((i) => i.tell || !i.hidden || i.effect === 'fuse');
     const spike = p.armor > 0 ? 'spike breaks a ◆' : `spike deals ${previewDamage(s, 'spike', p)}`;
     const marks = partMarks(s, p);
     // A redraw mid-dissolve picks the fade up where it was (a negative delay), not from the start.
@@ -770,16 +850,38 @@ export function boardMarkup(s, selected, preview = null) {
     const guard = alive(p) ? guardMarks(s, e.virus, p, fc) : '';
     const gearMark = onParts[p.id] ? `<span class="gpart" title="${esc(`${list2(onParts[p.id])}: live on the ${p.name} now.`)}">${glyph('protocol')}</span>` : '';
     return `<button type="button"${fade} class="brow bpart ${dying(p) ? 'dying' : ''} ${selected === p.id ? 'selected' : ''} ${nowHit ? 'now' : ''} ${p.maxArmor && !p.armor ? 'cracked' : ''}${frozenNow(s, p) && !packed(s, e.virus, p) ? ' frozen' : ''}${asleep(p) && alive(p) && !packed(s, e.virus, p) ? ' standby' : ''} ${marks.map((k) => 'm-' + k).join(' ')}${fighting && progExc(s, p) ? ' m-exc' : ''}" data-target="${esc(p.id)}" ${fighting ? '' : 'disabled'} title="Target ${esc(p.name)}: ${spike}">
-      <div class="bcell bname" title="${esc(partTip(s, e.virus, p))}">${ties[ri]}${pips(p.id)}<span class="part-top"><span class="part-name">${esc(p.name)}${known ? '' : '<sup class="unk">?</sup>'}${mastered(s, e.virus, p) && !packed(s, e.virus, p) ? masteredMark(p) : ''}</span>${gearMark}${marksMarkup(marks)}${chitsMarkup(p, fc.chits[p.id] || 0)}<span class="part-hp">${p.integrity}/${p.max}</span></span><span class="part-bar${guard ? ' guarded' : ''}"><span style="width:${pct}%"></span>${lossMark(p.integrity, p.max, fc.parts[p.id] || 0)}${guard}${capLine(s, p)}${ticksMarkup(s, p)}</span><span class="part-tags">${fighting ? progTag(s, p) : ''}${cueTag}${partTags(s, p)}</span></div>
+      <div class="bcell bname" title="${esc(partTip(s, e.virus, p))}">${ties[ri]}${pips(p.id)}<span class="part-top"><span class="part-name">${esc(p.name)}${known ? '' : '<sup class="unk">?</sup>'}${mastered(s, e.virus, p) && !packed(s, e.virus, p) ? masteredMark(p) : ''}</span>${gearMark}${marksMarkup(marks)}${chitsMarkup(p, fc.chits[p.id] || 0)}<span class="part-hp">${p.integrity}/${p.max}</span></span><span class="part-bar${guard ? ' guarded' : ''}"><span style="width:${pct}%"></span>${lossMark(p.integrity, p.max, fc.parts[p.id] || 0)}${ghosts(p)}${guard}${capLine(s, p)}${ticksMarkup(s, p)}</span><span class="part-tags">${fighting ? progTag(s, p) : ''}${cueTag}${partTags(s, p)}</span></div>
       ${showCells ? cells : '<div class="bcell span4"></div>'}</button>`;
   }).join('');
   // A fight whose parts protect each other keeps the tethers' gutter after the last one goes, so the rows don't jump.
-  const keep = !ties.some(Boolean) && e.virus.parts.some((p) => p.lock || p.ward || p.wardsToo || p.twin || p.rearm || p.command || p.buffer || p.front || p.idle) ? '<i class="tether keep" hidden></i>' : '';
+  const keep = !ties.some(Boolean) && (e.virus.parts.some((p) => p.lock || p.ward || p.wardsToo || p.twin || p.rearm || p.command || p.buffer || p.front || p.idle) || (fighting && e.helpers?.length)) ? '<i class="tether keep" hidden></i>' : ''; // helpers out: room for their move-on tether
   const gone = broken.length ? `<div class="brow bbroken"><div class="bcell span5">Broken: ${broken.map((p) => esc(p.name)).join(', ')}</div></div>` : '';
   // Whose half is playing, across the top of the board (the board itself takes its colour: style.css).
   const ph = fighting ? phaseOf(s) : null, who = esc(e.virus.name.split('-')[0]);
   const strip = ph ? `<div class="phase-strip ph-${ph}" title="Each cycle, you move first, then the virus"><span class="ps-you">${ph === 'wait' ? 'Your move' : 'You'}</span><i>▸</i><span class="ps-them">${who}</span>${e.escapeAt ? `<b class="ps-esc" title="${esc(uploadTip(e))}">${uploadText(e)}</b>` : ''}</div>` : '';
   return strip + head + you() + raidRow(s) + escapeRow(s) + rows + gone + keep;
+}
+// The order levers' ghosts on a part's bar (order.mjs, docs/puzzle-levers.md 3.3 and 3.4), past this cycle's slice:
+// a Zip Bomb's blast (its bite, when the fuse runs out) hatched in white, and the damage a Lockbox holds for its partner
+// (half of it lands when the Lockbox breaks) in your teal. Each says it in its tooltip; the board shows the number.
+function orderMarks(s, p, fc, blast) {
+  const max = p.max || 1, loss = Math.min(p.integrity, fc.parts[p.id] || 0), at = (n) => `${((Math.max(0, Math.min(max, n)) / max) * 100).toFixed(2)}%`;
+  let out = '', left = p.integrity - loss;
+  if (blast) {
+    const bite = Math.min(left, Math.floor(blastOf(p) * (p.loud ? CONFIG.tripwire.taken : 1))), when = blast.in <= 0 ? 'this cycle' : blast.in === 1 ? 'next cycle' : `in ${blast.in} cycles`;
+    const tip = `Blast: the ${blast.zip.name}'s fuse runs out ${when}. The ${p.name} loses ${p.armor > 0 ? 'a ◆ and ' : ''}${bite} Integrity${bite >= left ? ', and breaks' : ''}.${answerLine(blast.zip.fuseAt ? 'A ◆ or a shield of yours takes your share. Ending the fight first puts the fuse out.' : 'Have a ◆ or a shield up for its fuse.')}`;
+    if (bite > 0) out += `<i class="blastghost${bite >= left ? ' breaks' : ''}" style="left:${at(left - bite)};width:${at(bite)}" title="${esc(tip)}"></i>`;
+    left -= bite;
+  }
+  for (const box of livingParts(s).filter((x) => x.held?.[p.id])) {
+    const h = heldOf(s, box).find((x) => x.partner === p);
+    if (!h || !(h.land > 0) || left <= 0) continue;
+    const land = Math.min(left, h.land);
+    const tip = `Held: the ${box.name} holds ${h.held} of your damage on the ${p.name}. When it breaks, half of it, ${h.land}, lands at once${h.land >= left ? ' and breaks it' : `, leaving it at ${left - land}`}.${answerLine(h.land >= left ? `Break the ${box.name} now.` : `Fill it more, or break the ${box.name} when half is enough.`)}`;
+    out += `<i class="heldghost${h.land >= left ? ' breaks' : ''}" style="left:${at(left - land)};width:${at(land)}" title="${esc(tip)}"></i>`;
+    left -= land;
+  }
+  return out;
 }
 // A Limiter's cap line (the parts plan's P2): where one hit at most takes its bar down to.
 const capLine = (s, p) => (p.limit && alive(p) && !packed(s, s.encounter.virus, p) ? `<i class="capline" style="left:${Math.max(0, ((p.integrity - limitOf(p)) / p.max) * 100)}%" title="${esc(`Cap: one hit takes it down to ${Math.max(0, p.integrity - limitOf(p))} at most.`)}"></i>` : '');
@@ -851,6 +953,20 @@ export function armorBadge(s, id, p) {
   return `<span class="armd" title="${esc(tip)}" aria-label="${esc(tip)}">◆</span>`;
 }
 
+// SIGINT's key against the live windows (tells.mjs sigintWindows; docs/puzzle-levers.md 3.6): on its state line, a pip
+// for each cast and charge it could stop, with the cycles until its window closes, struck through when SIGINT won't be
+// ready in time. Its count of cycles to go stays where every key has it.
+function sigintKey(s) {
+  const ws = sigintWindows(s);
+  if (!ws.length) return '';
+  const pips = ws.map((w) => {
+    const kind = w.kind === 'cast' ? 'Cast' : 'Charge', open = w.from === 0 ? (w.to === 0 ? 'Its window is open this cycle' : `Its window is open until it lands ${w.to === 1 ? 'next cycle' : `in ${w.to} cycles`}`) : `Its window opens ${w.from === 1 ? 'next cycle' : `in ${w.from} cycles`}`;
+    const ready = w.reach ? (w.wait ? `SIGINT is ready in ${w.wait} ${w.wait === 1 ? 'cycle' : 'cycles'}, in time.` : 'SIGINT is ready.') : `SIGINT is ready in ${w.wait} cycles, too late for it.`;
+    const tip = `${w.name}: ${kind}. ${open}. If it lands, it costs you ${w.price} Signal.${answerLine(ready)}`;
+    return `<i class="sg-w${w.reach ? '' : ' late'}" title="${esc(tip)}"><span class="ico" ${icon(TELL_ICON[w.kind])}></span>${w.to}</i>`;
+  }).join('');
+  return `<span class="sg-wins">${pips}</span>`;
+}
 // selected: the part you picked on the board (app.js), the one a key prefills.
 export function trayMarkup(s, selected = null) {
   const e = s.encounter;
@@ -874,14 +990,16 @@ export function trayMarkup(s, selected = null) {
     const moment = fighting && !wait && !dark ? situationOf(s, id) : null;
     const offline = fighting && e.locked?.[id] >= e.cycle;
     const wiped = fighting && e.wiped?.[id] >= e.cycle; // a Wiper's Wipe (families.mjs)
-    const state = !fighting ? short : queued ? 'queued' : wiped ? `WIPED ${e.wiped[id] - e.cycle + 1}` : offline ? 'OFFLINE' : dark ? 'waiting for its moment' : lit ? 'LIT' : moment ? moment.toUpperCase() : wait ? (wait === 1 ? 'ready next cycle' : `ready in ${wait} cycles`) : short;
+    const junk = fighting && junkKey(s) === id; // a Junker's junk process (mechanics.mjs): firing the key clears it
+    const state = !fighting ? short : queued ? 'queued' : junk ? 'JUNK' : wiped ? `WIPED ${e.wiped[id] - e.cycle + 1}` : offline ? 'OFFLINE' : dark ? 'waiting for its moment' : lit ? 'LIT' : moment ? moment.toUpperCase() : wait ? (wait === 1 ? 'ready next cycle' : `ready in ${wait} cycles`) : short;
     // The charge bar along the bottom: full when it's ready, filling back up while it recharges.
     const cd = cooldownOf(s, id), charge = dark ? 0 : !fighting || !wait ? 100 : cd ? Math.round((1 - wait / Math.max(cd, wait)) * 100) : 0;
     const count = fighting && wait ? `<span class="cd" aria-label="${wait} ${wait === 1 ? 'cycle' : 'cycles'} to go">${wait}</span>` : '';
     const help = id === 'spike' ? said(s, a.help).replace(/Spike/g, spikeName(s)) : a.help; // key 1 under your class's name
     const ml = masteryLine(s, classOf(s), id); // its mastery, on its own line (mastery.mjs; app.js ttShow lights it)
     const armd = fighting && !dark && !offline && !wiped ? armorBadge(s, id, keyAim(s, id, selected)) : ''; // a key you can't press now says nothing of armor
-    return `<button type="button" class="ability ${cantrip ? 'cantrip' : ''} ${wait || dark ? 'cooling' : fighting ? 'ready' : ''} ${lit ? 'lit' : ''} ${moment ? 'moment' : ''} ${offline ? 'offline' : ''}${wiped ? ' wiped' : ''} ${queued ? 'queued' : ''}" data-ability="${id}" title="${esc(scaledText(s, id, help) + (ml ? '\n' + ml : ''))}"><span class="ico" ${icon(a.icon)}></span><span class="name"><kbd>${key}</kbd>${esc(id === 'spike' ? spikeName(s) : a.name)}</span><span class="state">${state}</span>${count}${armd}<span class="charge" style="width:${charge}%"></span></button>`;
+    const sgk = fighting && id === 'sigint' && !queued && !offline && !wiped ? sigintKey(s) : ''; // SIGINT against the live windows, in place of its state line
+    return `<button type="button" class="ability ${cantrip ? 'cantrip' : ''} ${wait || dark ? 'cooling' : fighting ? 'ready' : ''} ${lit ? 'lit' : ''} ${moment ? 'moment' : ''} ${offline || junk ? 'offline' : ''}${wiped ? ' wiped' : ''} ${queued ? 'queued' : ''}" data-ability="${id}" title="${esc((junk ? 'Junk process: a dead key holds this skill. Fire it to clear the junk, and that is your command this cycle.\n' : '') + scaledText(s, id, help) + (ml ? '\n' + ml : ''))}"><span class="ico" ${icon(a.icon)}></span><span class="name"><kbd>${key}</kbd>${esc(id === 'spike' ? spikeName(s) : a.name)}</span><span class="state">${sgk || state}</span>${count}${armd}<span class="charge" style="width:${charge}%"></span></button>`;
   });
   // The next thing your level will unlock, as a faint slot.
   const nx = nextUnlock(s);
@@ -1021,7 +1139,7 @@ function protocolsParts(s, focus = null) {
   const counts = Object.fromEntries(SLOT_KINDS.filter((k, i, a) => a.indexOf(k) === i).map((k) => [k, spare.filter((it) => groupOf(it) === k).length]));
   const filters = `<div class="inv-filters" role="group" aria-label="Show">${[['all', 'All', spare.length], ...Object.entries(counts).map(([k, c]) => [k, SLOTS[k]?.name || k, c])].map(([k, l, c]) => `<button type="button" data-stash-filter="${k}" aria-pressed="${stashUi.filter === k}" ${c || k === 'all' ? '' : 'disabled'}>${esc(l)} <span>${c}</span></button>`).join('')}</div>`;
   const c = compileCost(s), zc = compileCost(s, true);
-  const ccost = SALVAGE_COSTS.protocol(c.salvage), zcost = SALVAGE_COSTS.zeroday(zc.salvage);
+  const ccost = c.salvage, zcost = zc.salvage;
   const can = (x) => !busy && srv.credits >= x.credits && canAfford(s, x === zc ? zcost : ccost);
   const optLabel = (k) => STATS[k].name + (STATS[k].group === 'survival' ? ' (runs)' : '');
   const opt = (k) => `<option value="${k}" ${focus === k ? 'selected' : ''}>${esc(optLabel(k))}</option>`;
@@ -1029,7 +1147,7 @@ function protocolsParts(s, focus = null) {
   if (focus && !mine.includes(focus)) focus = null;
   const group = (g, title) => { const ks = mine.filter((k) => STATS[k].group === g); return ks.length ? `<optgroup label="${esc(title)}">${ks.map(opt).join('')}</optgroup>` : ''; };
   const picker = `<label class="fpick"><span>Recipe</span><select data-focus-select>${mine.length > 1 ? '<option value="">Any of mine</option>' : ''}${group('offense', 'Offense')}${group('survival', 'Defense')}${group('utility', 'Utility')}</select></label>`;
-  const recipes = (s.recipes || []).filter((z) => ZERO_DAYS[z]).map((z) => `<li><span><b class="iname r-zeroday">${esc(ZERO_DAYS[z].name)}</b><br><small>${esc(ZERO_DAYS[z].effect)} · ${zc.credits}c + ${esc(salvageLabel(zcost))}</small></span><button type="button" class="btn primary small" data-command="compile ${z}" data-pay="zeroday:${zc.salvage}" data-pay-title="${esc(ZERO_DAYS[z].name)}" ${can(zc) ? '' : 'disabled'}>Compile</button></li>`).join('');
+  const recipes = (s.recipes || []).filter((z) => ZERO_DAYS[z]).map((z) => `<li><span><b class="iname r-zeroday">${esc(ZERO_DAYS[z].name)}</b><br><small>${esc(ZERO_DAYS[z].effect)} · ${zc.credits}c + ${esc(salvageLabel(zcost))}</small></span><button type="button" class="btn primary small" data-command="compile ${z}" ${can(zc) ? '' : 'disabled'}>Compile</button></li>`).join('');
   return { tiles, filters, sorts, shown, spare, stash, cls, lvl, busy, pick, counts, c, zc, ccost, zcost, can, picker, mine, recipes, focus };
 }
 
@@ -1163,25 +1281,22 @@ export const protocolGearMarkup = (s) => protocolSlotsCard(s) + protocolStashCar
 export const protocolsMarkup = (s) => `<div class="page-grid gear-page"><div style="display:grid;gap:12px;align-content:start">${protocolGearMarkup(s)}</div></div>`;
 
 // ---------- crafting: everything you build at home, in one place ----------
-// What a recipe takes, as have/need chips: red when you're short. cost: { credits, code: { m: n }, salvage }.
+// What a recipe takes, as have/need chips: red when you're short. cost: { credits, code: { m: n }, salvage: components }.
 export function needChips(s, cost) {
   const chip = (icon, have, need, name) => `<span class="need ${have >= need ? 'ok' : 'short'}" title="${esc(name)}: you have ${have}, it takes ${need}">${glyph(icon)}<b>${have}</b>/${need}</span>`;
-  const mats = materialsOf(s), st = Object.fromEntries(salvageStacks(s).map((x) => [x.name, x.n]));
+  const mats = materialsOf(s);
   const out = [];
   if (cost.credits) out.push(chip('credits', s.server.credits, cost.credits, 'Credits'));
   for (const [m, n] of Object.entries(cost.code || {})) if (n) out.push(chip(m, mats[m] || 0, n, MATERIALS[m].name));
 
-  if (cost.salvage) {
-    if (salvageTotal(cost.salvage)) out.push(chip('salvage', s.salvage.length, salvageTotal(cost.salvage), 'Salvage (any)'));
-    for (const x of cost.salvage.need) out.push(chip('crate', x.names.reduce((n, k) => n + (st[k] || 0), 0), x.n, x.label));
-  }
+  if (cost.salvage) out.push(chip('salvage', componentsOf(s), cost.salvage, 'Components'));
   return `<span class="needs">${out.join('')}</span>`;
 }
 // What you have to build with: a grid of counts (Craft and Server pages).
 export function matGrid(s) {
   const mats = materialsOf(s);
   const tile = (icon, n, name) => `<li class="mat ${n ? '' : 'zero'}" title="${esc(name)}">${glyph(icon)}<b>${n}</b><small>${esc(name)}</small></li>`;
-  return `<ul class="mat-grid">${tile('credits', s.server.credits, 'Credits')}${tile('salvage', s.salvage.length, 'Components')}${Object.keys(MATERIALS).map((m) => tile(m, mats[m] || 0, MATERIALS[m].short)).join('')}</ul>`;
+  return `<ul class="mat-grid">${tile('credits', s.server.credits, 'Credits')}${tile('salvage', componentsOf(s), 'Components')}${Object.keys(MATERIALS).map((m) => tile(m, mats[m] || 0, MATERIALS[m].short)).join('')}</ul>`;
 }
 // A craft section: collapsible, its purpose in one line under the title.
 // Which ones you folded stay folded (s.settings.craftShut).
@@ -1194,14 +1309,14 @@ export function craftCats(s, ui = {}) {
   // The slot a protocol compiles into: picked on the recipe (ui.slot), Implant from level 15.
   const slots = Object.keys(SLOTS).filter((k) => k !== 'implant' || L >= 15), slot = slots.includes(ui.slot) ? ui.slot : 'exploit';
   const zds = (s.recipes || []).filter((z) => ZERO_DAYS[z]);
-  const fc = filterCost(L), fOk = !busy && srv.credits >= fc.credits && Object.entries(fc.code).every(([m, n]) => (materialsOf(s)[m] || 0) >= n) && canAfford(s, SALVAGE_COSTS.filter()) && filtersOf(s).length < FILTER_CAP;
+  const fc = filterCost(L), fOk = !busy && srv.credits >= fc.credits && Object.entries(fc.code).every(([m, n]) => (materialsOf(s)[m] || 0) >= n) && canAfford(s, fc.salvage) && filtersOf(s).length < FILTER_CAP;
   const cats = [];
   // Protocols: one recipe per stat you know, or any of them.
   cats.push({ id: 'protocols', name: 'Protocols', icon: 'protocol', items: p.mine.length ? [...(p.mine.length > 1 ? [null] : []), ...p.mine].map((k) => ({
     id: k || 'any', name: k ? PROTOCOL_NAMES[k] : 'Any of your recipes', sub: k ? STATS[k].name : `${p.mine.length} recipes`, icon: k ? 'protocol' : 'item', ready: p.can(p.c),
     picker: `<h3 class="craft-sub">Slot</h3><div class="cd-slots" role="group" aria-label="Slot">${slots.map((x) => `<button type="button" class="cd-slot${x === slot ? ' on' : ''}" data-craft-slot="${x}" aria-pressed="${x === slot}" title="${esc(SLOTS[x].about)}">${esc(SLOTS[x].name)}</button>`).join('')}</div>`,
     out: { title: `${k ? PROTOCOL_NAMES[k] : 'A'} ${SLOTS[slot].name}`, rarity: 'tuned', level: L, tags: [['item', SLOTS[slot].name, SLOTS[slot].about]], stats: [k ? [k, '', STATS[k].name + (STATS[k].group === 'survival' ? ' (runs)' : ''), STATS[k].about] : ['item', '?', 'one of yours', 'Built around one of your recipes, at random']] },
-    cost: { credits: p.c.credits, salvage: p.ccost }, cmd: `compile${k ? ' ' + k : ''} ${slot}`, pay: `protocol:${p.c.salvage}` })) : [], empty: 'No recipes yet. Blueprints teach them.' });
+    cost: { credits: p.c.credits, salvage: p.ccost }, cmd: `compile${k ? ' ' + k : ''} ${slot}` })) : [], empty: 'No recipes yet. Blueprints teach them.' });
   if (zds.length) cats.push({ id: 'zeroday', name: 'Zero-days', icon: 'source', items: zds.map((z) => ({ id: z, name: ZERO_DAYS[z].name, sub: 'source', icon: 'source', ready: p.can(p.zc), out: { title: ZERO_DAYS[z].name, rarity: 'zeroday', level: L, lines: [ZERO_DAYS[z].effect] }, cost: { credits: p.zc.credits, salvage: p.zcost }, cmd: `compile ${z}`, pay: `zeroday:${p.zc.salvage}` })) });
   // Filters: always craftable; a stat to build around, or any.
   const knownF = filterRecipes(s);
@@ -1211,9 +1326,9 @@ export function craftCats(s, ui = {}) {
     locked: k ? !knownF.includes(k) : !knownF.length, lock: 'Its blueprint drops from viruses', lockTag: 'blueprint', ready: fOk && (k ? knownF.includes(k) : knownF.length > 0),
     out: { title: k ? `${FILTER_STATS[k].kind === 'prefix' ? FILTER_STATS[k].label + ' ' : ''}${filterBase(L)}${FILTER_STATS[k].kind === 'suffix' ? ' ' + FILTER_STATS[k].label : ''}` : `A ${filterBase(L)}`, rarity: 'tuned', level: L, stats: [['firewall', `+${Math.max(1, Math.round((1 + L / 10) * 1.1))}`, 'firewall lv', 'Levels on your firewall while it sits in a slot'], k ? filterStatRow(k) : ['item', '?', 'one of yours', 'Built around one of your recipes, at random']],
       foot: `<span class="tag dim" title="Filters you hold">${glyph('item')}${filtersOf(s).length}/${FILTER_CAP}</span>${filterSlots(s) ? slotPips('firewall', filtersOn(s).length, filterSlots(s), 'Filter slots') : `<span class="tag hot" title="No filter slots yet. Firewall tiers +1, +3 and +5 each add one.">${glyph('firewall')}0 slots</span>`}` },
-    cost: { credits: fc.credits, code: fc.code, salvage: SALVAGE_COSTS.filter() }, cmd: `filter craft ${k || 'any'}`, pay: 'filter' })) });
+    cost: { credits: fc.credits, code: fc.code, salvage: fc.salvage }, cmd: `filter craft ${k || 'any'}` })) });
   if (knowsRelay(s)) cats.push({ id: 'relays', name: 'Relays', icon: 'relay', items: [{ id: 'relay', name: 'Relay', sub: `${kitOf(s).relay || 0} in your kit`, icon: 'relay', ready: !busy && canBuildRelay(s),
-    out: { title: 'Relay', tags: [['relay', `${kitOf(s).relay || 0} in your kit`, 'Relays you have, ready to install']], lines: ['Install it on a server you’ve taken over. It pings the unknown servers next to it and flags a contract’s signal.'] }, cost: relayCost(s), cmd: 'relay craft', pay: 'relay' }] });
+    out: { title: 'Relay', tags: [['relay', `${kitOf(s).relay || 0} in your kit`, 'Relays you have, ready to install']], lines: ['Install it on a server you’ve taken over. It pings the unknown servers next to it and flags a contract’s signal.'] }, cost: relayCost(s), cmd: 'relay craft' }] });
   return cats;
 }
 // What comes out: rarity and level as chips, stats as icon rows, then any rule text and a footer.
@@ -1225,15 +1340,12 @@ function outBody(o) {
 }
 // What a recipe takes, a row each: the icon, the name, what you have / what it takes (red when short).
 function costRows(s, cost, cls = '') {
-  const mats = materialsOf(s), st = Object.fromEntries(salvageStacks(s).map((x) => [x.name, x.n])), rows = [];
+  const mats = materialsOf(s), rows = [];
   const row = (icon, name, have, need) => rows.push(`<li class="${have >= need ? 'ok' : 'short'}">${glyph(icon)}<span>${esc(name)}</span><b>${have}<small>/${need}</small></b></li>`);
   if (cost.credits) row('credits', 'Credits', s.server.credits, cost.credits);
   for (const [m, n] of Object.entries(cost.code || {})) if (n) row(m, MATERIALS[m].name, mats[m] || 0, n);
 
-  if (cost.salvage) {
-    if (salvageTotal(cost.salvage)) row('salvage', 'Salvage (any)', s.salvage.length, salvageTotal(cost.salvage));
-    for (const x of cost.salvage.need) row('crate', x.label, x.names.reduce((n, k) => n + (st[k] || 0), 0), x.n);
-  }
+  if (cost.salvage) row('salvage', 'Components', componentsOf(s), cost.salvage);
   if (cost.level > 1) row('server', 'Level (your highest class)', serverLevel(s), cost.level);
   return `<ul class="cd-cost${cls ? ' ' + cls : ''}">${rows.join('')}</ul>`;
 }
@@ -1247,7 +1359,7 @@ export function craftMarkup(s, ui = {}) {
   const detail = !item ? `<section class="craft-detail card"><p class="quiet">${esc(cat.empty || '')}</p></section>`
     : `<section class="craft-detail card"><h2>${esc(cat.name)}</h2><div class="cd-out${item.out.rarity ? ' r-' + item.out.rarity : ''}">${glyph(item.icon, 'badge')}<h1 class="cd-name${item.out.rarity ? ' r-' + item.out.rarity : ''}">${esc(item.out.title)}</h1>${outBody(item.out)}</div>
       ${item.locked ? `<p class="cd-lock"><span class="tag dim plan-lock">${glyph('blueprint')}${item.lockTag || 'plan'}</span> ${esc(item.lock || '')}</p>` : item.done ? '<p class="cd-lock"><span class="tag you">owned</span></p>' : `${item.picker || ''}<h3 class="craft-sub">Takes</h3>${costRows(s, item.cost)}${item.extra || ''}
-      <button type="button" class="btn primary cd-go" data-command="${esc(item.cmd)}"${item.pay ? ` data-pay="${esc(item.pay)}" data-pay-title="${esc(item.out.title)}"` : ''} ${item.ready ? '' : 'disabled'} ${why ? `title="${esc(why)}"` : item.ready ? '' : 'title="Not enough of something above"'}>Craft</button>`}</section>`;
+      <button type="button" class="btn primary cd-go" data-command="${esc(item.cmd)}" ${item.ready ? '' : 'disabled'} ${why ? `title="${esc(why)}"` : item.ready ? '' : 'title="Not enough of something above"'}>Craft</button>`}</section>`;
   return `<div class="craft-ui${busy ? ' busy' : ''}">${nav}${list}${detail}</div>`;
 }
 export const vaultMarkup = protocolsMarkup;
@@ -1264,7 +1376,13 @@ export function bandsText(s) {
   return `Your wall ${blocks ? `blocks invasions up to level ${blocks}` : 'blocks none outright'}${held}; above level ${holds}, they breach.`;
 }
 export function degradedMarkup(s, now = Date.now()) {
-  return s.degraded ? `<div class="degraded" title="Wall down · installs paused"><b>DEGRADED</b><span>${fmtLeft(degradedLeft(s, now))}</span></div>` : '';
+  return s.degraded ? `<div class="degraded" title="${esc(sickTip(s, now))}"><b>DEGRADED</b>${sickPct(s) ? `<em>−${sickPct(s)}%</em>` : ''}<span>${fmtLeft(degradedLeft(s, now))}</span></div>` : '';
+}
+// Reboot sickness (combat.mjs rebootSick), said the same way wherever it shows: the share, and the rule on hover.
+export const sickPct = (s) => Math.round(rebootSick(s) * 100);
+export function sickTip(s, now = Date.now()) {
+  const left = `Back online in ${fmtLeft(degradedLeft(s, now))}.`;
+  return sickPct(s) ? `Reboot sickness\nDebuff\n−${sickPct(s)}% max Signal and damage while your server reboots. Deeper floors take more.\n${left}` : `Your server is rebooting. Its wall is down.\n${left}`;
 }
 // "≤12 · contested ≤22": what your wall stops outright, and what it holds.
 export function wallShort(s) {
@@ -1318,14 +1436,6 @@ function bountyChips(s, inv) {
   const sure = b.capture, odds = Math.round(daemonChance(s, inv.kind === 'thief' && inv.state === 'travel' ? 'intercept' : 'you') * 100);
   return `<div class="rw-chips inv-pay">${chip(b.code, b.now >= b.max ? b.now : `${b.now} → ${b.max}`, `${name} for your kill: ${b.now} now, up to ${b.max} the longer it sits contested. If the wall wears it down, ${b.wall}. An outright block pays ${b.blocked}.`)}${chip('daemon', sure ? 'daemon' : `${odds}%`, sure ? `Your kill leaves a capture: a daemon of band ${daemonBand(inv.level)}, at level ${inv.level}, and a chance at a unique only invasions carry` : `The chance your kill leaves a daemon (band ${daemonBand(inv.level)}, level ${inv.level}). Every stop without one raises it.`, sure ? 'you' : '')}${n ? chip('xp', `+${Math.round((streakMult(s) - 1) * 100)}%`, `A streak of ${n}: each stop pays more`) : ''}</div>`;
 }
-// harden.sh as the answer to what's coming: shown when +3 levels would turn it into a block.
-function hardenAnswer(s, inv) {
-  if (inv.kind === 'thief' || hardenLeft(s) || verdictOf(s, inv) === 'blocked' || inv.state === 'watch' || s.degraded) return '';
-  const L = effLevel(s, undefined, inv.family) + FIREWALL.harden.plus;
-  if ((100 * power(L) * CONFIG.invasion.block) / strength(wallLevelOf(inv), inv.mutation, inv.grade) < CONFIG.invasion.block) return '';
-  const n = kitOf(s).harden || 0, hc = hardenCost(s), can = n || canPay(s, hc), busy = active(s);
-  return `<button type="button" class="btn small" data-command="firewall harden" ${!can || busy ? 'disabled' : ''} title="+${FIREWALL.harden.plus} levels for ${FIREWALL.harden.ms / 3600000} hours: your wall would stop it">harden.sh ${n ? `× ${n}` : bcost(hc)}</button>`;
-}
 // Finish a timed build now (credit buyout): the price on the button, off if you can't pay.
 // Slots as pips: filled for used, hollow for free, with an icon and the name on hover.
 export function slotPips(icon, used, total, name) {
@@ -1361,23 +1471,21 @@ export function safetyTip(s, w = wallSafety(s), { bands = true } = {}) {
 }
 // A holding's firewall in one compact block (an outpost, a hub you hold): its level, the line on
 // what it's vulnerable to against what comes for it (top: the highest level that does), its blocks,
-// and Upgrade, Defrag and harden.sh. arg: what the firewall commands take for it.
+// and Upgrade and Defrag. arg: what the firewall commands take for it.
 // A holding's wall in a card row (an outpost, a hub): one status line (level, tier, what it lets through), then
 // its actions as equal tiles, each with its name on top and its cost under it.
 function fwRow(s, holder, arg, top, now = Date.now()) {
   const f = fwAt(s, holder), b = wallBands(s, ratingAt(s, holder, null, now)), c = upgradeCost(s, holder), busy = active(s) || !!s.run;
   const can = canPay(s, c);
-  const state = b.blocks >= top ? 'ok' : b.holds >= top ? 'mid' : 'low', frag = fragLevels(s, holder), def = defragging(s, now, holder), hard = hardenLeft(s, now, holder);
+  const state = b.blocks >= top ? 'ok' : b.holds >= top ? 'mid' : 'low', frag = fragLevels(s, holder), def = defragging(s, now, holder);
   const line = state === 'ok' ? `<span class="fw-vuln ok" title="Up to level ${top} comes for it">Safe</span>` : `<span class="fw-vuln ${state}" title="Blocks up to level ${b.blocks} and contests up to ${b.holds}. Up to level ${top} comes for it.">Vulnerable to lv ${b.blocks + 1}+</span>`;
-  const mods = [frag || def ? `<span class="fw-mod warn" title="Fragmented">−${frag + (def ? FIREWALL.defragLoss : 0)}</span>` : '', hard ? `<span class="fw-mod you" title="harden.sh">+${FIREWALL.harden.plus} · ${fmtTime(hard)}</span>` : ''].join('');
-  const cmd = (v) => `firewall ${v}${arg ? ' ' + esc(arg) : ''}`, n = kitOf(s).harden || 0;
+  const mods = frag || def ? `<span class="fw-mod warn" title="Fragmented">−${frag + (def ? FIREWALL.defragLoss : 0)}</span>` : '';
+  const cmd = (v) => `firewall ${v}${arg ? ' ' + esc(arg) : ''}`;
   const t = fwTierOf(s, holder) + 1, nv = TIER_PERKS.find((p) => p.tier === t), dc = defragCost(s, holder);
   const tile = (name, cost, command, ok, tip, cls = '') => `<button type="button" class="fw-act${cls ? ' ' + cls : ''}" data-command="${command}" ${ok ? '' : 'disabled'} title="${esc(tip)}"><span class="fa-name">${name}</span>${cost ? `<span class="fa-cost">${cost}</span>` : ''}</button>`;
   const tiles = [
     c && tile(`Upgrade to +${t}`, bcost({ credits: c.credits, cipher: c.cipher, worm: c.worm, kernel: c.kernel }), cmd('upgrade'), !busy && can, `One level more over the base, for good${nv ? `. ${nv.name}` : ''}${f.frag ? '. It leaves every block whole again' : ''}`, can ? 'primary' : ''),
     (f.frag || def) && tile(def ? 'Defragmenting' : 'Defrag', def ? fmtLeft(f.defragUntil - now) : bcost({ credits: dc }), cmd('defrag'), !def && !busy && s.server.credits >= dc, `${FIREWALL.defragLoss} levels down while it runs`),
-    n ? tile('harden.sh', `<span class="fa-held">${n} held</span>`, cmd('harden'), !busy, `+${FIREWALL.harden.plus} levels for ${FIREWALL.harden.ms / 3600000} hours`)
-      : canPay(s, hardenCost(s, holder)) && tile('harden.sh', bcost(hardenCost(s, holder)), cmd('harden'), !busy, `Write a harden.sh from code: +${FIREWALL.harden.plus} levels for ${FIREWALL.harden.ms / 3600000} hours`),
   ].filter(Boolean).join('');
   return `<div class="fw-row"><div class="fw-stat"><span class="fw-lv">${glyph('firewall')}<b>lv ${effLevel(s, now, null, holder)}</b></span>${fwTier(s, holder)}${mods}${line}</div>${tiles ? `<div class="fw-tiles">${tiles}</div>` : ''}</div>`;
 }
@@ -1391,11 +1499,11 @@ function fwTier(s, holder = null) {
 }
 // A button's price, after its label: an icon and a number for each thing it takes.
 const bcost = (c) => `<span class="bcost">${Object.entries(c).filter(([, n]) => n).map(([k, n]) => `<span title="${esc(k === 'credits' ? 'Credits' : MATERIALS[k]?.name || k)}">${glyph(k)}${n}</span>`).join('')}</span>`;
-// A contract's pay as icon chips: credits, Indemnity, XP, standing and rep, anything extra.
+// A contract's pay as icon chips: credits, XP, standing and rep, anything extra.
 function rewardChips(s, c) {
   const r = c.reward, chip = (ic, v, tip, cls = '') => `<span class="rw ${cls}" title="${esc(tip)}">${glyph(ic)}<b>${esc(String(v))}</b></span>`;
-  return [r.credits && chip('credits', r.credits, 'Credits'), r.indemnity && chip('indemnity', r.indemnity, 'Indemnity: Halcyon scrip'),
-    r.xp && chip('xp', xpFor(s, hackerLevel(s), r.xp), 'XP'),
+  return [r.credits && chip('credits', r.credits, 'Credits'),
+    xpOf(s, c) && chip('xp', xpOf(s, c), 'XP'),
     r.standing && chip('f-halcyon', `${r.standing > 0 ? '+' : ''}${r.standing}`, 'Halcyon standing', r.standing < 0 ? 'neg' : ''),
     c.offBooks && chip('f-glassjaw', '+5', 'GLASSJAW rep'), r.rep && c.faction && chip('f-' + c.faction, `+${r.rep}`, `${FACTIONS[c.faction].short} rep`),
     r.relay && chip('relay', `×${r.relay}`, 'A relay'), r.blueprint && chip('blueprint', '+1', 'A blueprint'), (r.drop || r.daemon) && chip('item', '+1', 'A protocol, Tuned or better'), r.item && chip('item', '+1', 'A protocol'), r.pick && chip('item', '1 of 3', `Pick one of three ${RARITIES[r.pick]?.name || ''} protocols at your level.`, `pick r-${r.pick}`)].filter(Boolean).join('');
@@ -1441,7 +1549,7 @@ function invaderCard(s) {
     ${tellOf(s, inv) ? `<p class="inv-tell">${esc(tellOf(s, inv))}</p>` : ''}
     <p class="svc-line">${glyph('firewall')} ${tgt ? `${esc(tgt.name)}'s firewall` : 'Your firewall'} <b>lv ${lv}</b> <span class="tag ${verdict[0]}">${verdict[1]}</span></p>
     ${bountyChips(s, inv)}
-    <div class="row">${(inv.state !== 'travel' || st?.intercept) && st ? jackInButton(st) : ''}${hardenAnswer(s, inv)}<button type="button" class="btn" data-go="server">Firewall</button></div></section>`;
+    <div class="row">${(inv.state !== 'travel' || st?.intercept) && st ? jackInButton(st) : ''}<button type="button" class="btn" data-go="server">Firewall</button></div></section>`;
 }
 // Server architecture: picked at server level 20, a trade each way.
 // ---------- networks (network.mjs) ----------
@@ -1592,9 +1700,8 @@ export function netMarkup(s, { leads = false } = {}) {
   return `<section class="panel net-one" data-pane="ssh ${esc(s.profile?.handle || 'rookie')}@${esc(loc.id)}">
     <header class="net-head">
       <div class="net-where"><b>${esc(loc.name)}${loc.depth > 1 ? ` <span class="tag">layer ${loc.depth}</span>` : ''}${QUIRKS[loc.quirk] ? ` <span class="tag tag-quirk" data-quirk="${loc.quirk}" title="${esc(QUIRKS[loc.quirk].rule)}">${esc(QUIRKS[loc.quirk].name)}</span>` : ''}</b><span>${esc(s.run.cwd)}</span></div>
-      <div class="net-signal ${level}" title="Signal: your health on this run. Moving costs ${CONFIG.cdCost}. At 0 you go home without your pack."><span class="lbl">Signal</span><span class="sigbar"><span style="width:${pct}%"></span></span><strong>${s.run.integrity}</strong><small>/${s.run.max}</small></div>
+      <div class="net-signal ${level}" title="Signal: your health on this run. Moving costs ${CONFIG.cdCost}. At 0 you go home without your pack."><span class="lbl">Signal</span><span class="sigbar"><span style="width:${pct}%"></span></span><strong>${s.run.integrity}</strong><small>/${s.run.max}</small>${sickPct(s) ? `<em class="sig-sick" title="${esc(sickTip(s))}">−${sickPct(s)}%</em>` : ''}</div>
       ${!loc.zone && !loc.rogue ? `<div class="net-trace${(s.run.trace || 0) >= 70 ? ' hot' : (s.run.trace || 0) < TRACE.clean ? ' low' : ''}${s.run.hunter ? ' hunted' : ''}" title="Trace: how loud this break-in has been. Moves, pulls, wrong passwords and fights raise it, and Spoof lowers it. At 100 a hunter comes and you can't jack out until it's down. Under ${TRACE.clean}% with the vault open, it is a clean job worth 25% more credits."><span class="lbl">Trace</span><span class="sigbar"><span style="width:${s.run.trace || 0}%"></span></span><strong>${s.run.hunter ? 'HUNTED' : (s.run.trace || 0) + '%'}</strong></div>` : ''}
-      ${s.run.hot ? `<span class="tag hot net-hot" title="${esc(LOUD_TIP)}">loud</span>` : ''}
       <button type="button" class="net-pack" data-run="pack" title="What you're carrying (unbanked)">pack <b>${s.run.pack.length}</b></button>
       <button type="button" class="net-pack net-leads-btn" data-leads aria-pressed="${leads}" title="Leads">${glyph('trace')}leads</button>
     </header>
@@ -1620,6 +1727,10 @@ const jobTag = (s, c) => (c.done ? ['Done', 'dim'] : contractReady(s, c) ? ['Rea
 const floorTag = (c) => `<span title="A floor job: floor ${c.chain}'s own chain">Floor ${c.chain}</span>`;
 // Where a contract's work is: its server, an unknown one it points at, or SPRAWL-00 (the WoW quest tracker).
 const trackGo = (c) => (c.loc ? `map:${c.loc}` : c.hidden ? `map:${c.hidden}` : c.type === 'bounty' || c.where === 'sprawl' ? 'map:sprawl' : null);
+// A contract's icon, by its kind (the mail's contract card and the map's tracker).
+const jobIcon = (c) => ({ kill: 'kill', strain: 'kill', bounty: 'bounty', takeover: 'takeover', materials: 'materials', item: 'item', side: 'f-' + c.faction, install: 'canary', defuse: 'lock', sweep: 'trace', exfil: 'upload', heist: 'stealth', puzzle: 'cipher', lair: 'bounty', rooms: 'trace', map: 'trace' }[c.type] || 'item');
+// Whose contract it is: its faction, Halcyon's board, or none for LOWLIGHT (the mail's rows and the map's tracker).
+const jobFaction = (c) => c.faction || (c.story !== undefined || /LOWLIGHT/.test(c.from) ? null : 'halcyon');
 function jobBox(s, c, now) {
   const isOffer = c.expiresAt != null;
   const pr = contractProgress(s, c), ok = contractReady(s, c);
@@ -1628,7 +1739,7 @@ function jobBox(s, c, now) {
     ? `<button type="button" class="btn primary" data-command="mail accept ${c.id}" ${full ? `disabled title="You hold ${MAIL.take} contracts. Deliver or drop one first."` : ''}>Take</button>`
     : `<button type="button" class="btn primary" data-command="mail deliver ${c.id}" ${ok ? '' : 'disabled'}>Deliver</button>${trackGo(c) && !ok ? `<button type="button" class="btn" data-go="${esc(trackGo(c))}">${glyph('trace')}Show on map</button>` : ''}${c.story === undefined && !c.chain ? `<button type="button" class="btn" data-command="mail drop ${c.id}">Drop</button>` : ''}`;
   return `<div class="contract${ok ? ' ready' : ''}${c.done ? ' done' : ''}${isOffer ? ' offer' : ''}">
-    <div class="c-head"><b>${glyph({ kill: 'kill', strain: 'kill', bounty: 'bounty', takeover: 'takeover', materials: 'materials', item: 'item', side: 'f-' + c.faction, install: 'canary', defuse: 'lock', sweep: 'trace', exfil: 'upload', heist: 'stealth', puzzle: 'cipher', lair: 'bounty' }[c.type] || 'item', 'badge')}${esc(contractTitle(s, c))}</b>${c.offBooks ? '<span class="tag hot">Off the books</span>' : ''}${isOffer && c.type !== 'side' && !c.waits ? `<small class="c-exp">expires in ${fmtTime(c.expiresAt - now)}</small>` : isOffer && c.type === 'side' ? '<span class="tag you">your call</span>' : ''}</div>
+    <div class="c-head"><b>${glyph(jobIcon(c), 'badge')}${esc(contractTitle(s, c))}</b>${c.offBooks ? '<span class="tag hot">Off the books</span>' : ''}${isOffer && c.type !== 'side' && !c.waits ? `<small class="c-exp">expires in ${fmtTime(c.expiresAt - now)}</small>` : isOffer && c.type === 'side' ? '<span class="tag you">your call</span>' : ''}</div>
     ${isOffer ? '' : `<div class="lvl-row"><span class="lvl-bar"><span style="width:${Math.round(pr.part * 100)}%"></span></span><small>${esc(pr.text)}</small></div>`}
     <div class="rw-chips" title="${c.done ? 'Paid' : 'Pays'}: ${esc(rewardLine(s, c))}">${rewardChips(s, c)}</div>
     ${acts ? `<div class="row">${acts}</div>` : ''}
@@ -1654,18 +1765,18 @@ export function mailMarkup(s, sel = null, now = Date.now()) {
   const taken = new Set((s.mail?.jobs || []).map((j) => j.id));
   const unreadJob = new Set(letters.filter((m) => m.job != null && taken.has(m.job) && !m.read).map((m) => m.job));
   const unreadLetters = letters.filter((m) => !m.read && !(m.job != null && taken.has(m.job))).length;
-  const heldRows = held.filter((c) => !c.chain).map((c) => { const [t, cls] = jobTag(s, c); return row('j' + c.id, c.from, contractTitle(s, c), t, cls, '', unreadJob.has(c.id), c.faction || (c.story !== undefined || /LOWLIGHT/.test(c.from) ? null : 'halcyon')); }).join('');
+  const heldRows = held.filter((c) => !c.chain).map((c) => { const [t, cls] = jobTag(s, c); return row('j' + c.id, c.from, contractTitle(s, c), t, cls, '', unreadJob.has(c.id), jobFaction(c)); }).join('');
   const boardRows = board.map((c) => row('j' + c.id, c.from, c.subject, c.offBooks ? '<span title="GLASSJAW work through Halcyon\'s board: pays 1.6× the credits, costs Halcyon standing">Off books</span>' : '', c.offBooks ? 'hot' : '', `<small class="mexp">${c.type === 'side' ? '<span title="A side offer: take this one or its rival. It never expires.">pick one</span>' : c.waits ? '<span title="A room contract: it waits until you take it.">waits</span>' : fmtTime(c.expiresAt - now)}</small>`, false, c.faction || 'halcyon')).join('');
   const letterRows = letters.filter((m) => m.job == null || !taken.has(m.job)).map((m) => row('l' + m.id, m.from, m.subject, '', '', '', !m.read)).join('');
   const done = doneContracts(s);
-  const doneRows = done.map((c) => row('j' + c.id, c.from, contractTitle(s, c), c.chain ? floorTag(c) : c.story !== undefined ? '<span title="A job from LOWLIGHT, your crew: the storyline">LOWLIGHT</span>' : '', 'dim', '', false, c.faction || (c.story !== undefined || /LOWLIGHT/.test(c.from) ? null : 'halcyon'))).join('');
+  const doneRows = done.map((c) => row('j' + c.id, c.from, contractTitle(s, c), c.chain ? floorTag(c) : c.story !== undefined ? '<span title="A job from LOWLIGHT, your crew: the storyline">LOWLIGHT</span>' : '', 'dim', '', false, jobFaction(c))).join('');
   const st = standing(s), tier = tierOf(s), next = nextTier(s);
   // A faction's chip shows once you've met it: found its hub, or found one of its servers.
   const met = hubsOf(s).length ? FACTION_IDS.filter((f) => f !== 'halcyon' && (hubFound(s, f) || (s.locations || []).some((l) => l.faction === f))) : [];
   const head = `<div class="standing" title="Standing ${st}/100${next ? `. ${next.name} at ${next.min}` : ''}. Contracts raise it; a crash on your server lowers it, and so does work for GLASSJAW.">
       <span class="st-name">${esc(FACTIONS.halcyon.name)}</span><span class="tag ${st ? 'you' : 'hot'}">${esc(tier.name)}</span>
       <span class="lvl-bar"><span style="width:${st}%"></span></span><b>${st}</b></div>
-    <p class="svc-line">Retainer ${retainer(s)} credits · next in <span id="pay-left">${fmtTime(nextPayIn(s, now))}</span> · <b class="ind" title="Indemnity: Halcyon scrip, spent at its store.">${indemnity(s)} Indemnity</b></p>
+    <p class="svc-line">Retainer ${retainer(s)} credits · next in <span id="pay-left">${fmtTime(nextPayIn(s, now))}</span></p>
     ${met.length ? `<div class="reps">${met.map((f) => `<button type="button" class="rep-chip" style="--fc:${FX[f].color}" data-go="hub:${f}" title="${esc(FX[f].name)}: ${rep(s, f)} · ${esc(repTier(s, f).name)}">${glyph('f-' + f)}<span>${esc(repTier(s, f).name)}</span></button>`).join('')}</div>` : ''}`;
   let reader = '<section class="card mread"><p class="quiet">No mail.</p></section>';
   const item = open.letter || open.job;
@@ -1784,11 +1895,11 @@ export function consortiumMarkup(s, now = Date.now()) {
 // ---------- the Halcyon store ----------
 export function storeMarkup(s, now = Date.now()) {
   const L = hackerLevel(s), tierAt = tierIndex(s), have = kitOf(s);
-  const credits = s.server.credits, ind = indemnity(s);
+  const credits = s.server.credits;
   const line = LINE.map((x) => {
     const locked = tierAt < x.tier;
-    const price = x.chase ? `${x.indemnity} Indemnity` : `${x.credits(L)} credits`;
-    const can = !locked && (x.chase ? ind >= x.indemnity : credits >= x.credits(L));
+    const price = `${x.credits(L)} credits`;
+    const can = !locked && credits >= x.credits(L);
     return `<li class="ptile${x.chase ? ' chase' : ''}${locked ? ' locked' : ''}"><b class="iname${x.chase ? ' r-indemnified' : ''}">${glyph({ relay: 'relay', deductible: 'reduction', subrogation: 'countermeasures', actuarial: 'watchman', 'total-loss': 'hit' }[x.id], 'badge')}${esc(lineName(x))}</b><small>${esc(lineAbout(x))}</small>
       <div class="ptile-acts"><span class="price">${price}</span>${locked ? `<span class="tag dim">${esc(TIERS[x.tier].name)}</span>` : `<button type="button" class="btn ${can ? 'primary' : ''} small" data-command="buy ${x.id}" ${can ? '' : 'disabled'}>Buy</button>`}</div></li>`;
   }).join('');
@@ -1800,7 +1911,7 @@ export function storeMarkup(s, now = Date.now()) {
   }).join('');
   const kit = [['relay', 'Relays'], ['cracker', 'Key crackers'], ['injector', 'Trace injectors']].map(([k, n]) => stat(n, have[k] || 0)).join('');
   return `<div class="page-grid store-page"><div class="stack"><section class="card"><h2>Halcyon Mutual</h2>
-      <div class="stats">${stat('Credits', credits)}${stat('Indemnity', ind)}${stat('Standing', `${standing(s)} · ${tierOf(s).name}`)}</div>
+      <div class="stats">${stat('Credits', credits)}${stat('Standing', `${standing(s)} · ${tierOf(s).name}`)}</div>
       <ul class="ptiles">${line}</ul></section>
     <section class="card"><h2>Codebases</h2><ul class="plan-shelf">${shopCodebases(s, 'halcyon', L).map((x) => `<li class="${x.known ? 'known' : ''}"><span class="iname" title="${esc(PROGRAMS[x.id].rule)}">${glyph('module')}${esc(PROGRAMS[x.id].name)}</span><span class="tag dim">${PROGRAMS[x.id].weight}</span>${x.known ? '<span class="tag dim">known</span>' : tierAt < x.tier ? `<span class="tag dim">${esc(TIERS[x.tier].name)}</span>` : `<span class="price">${x.price}</span><button type="button" class="btn small ${credits >= x.price ? 'primary' : ''}" data-command="buy codebase-${x.id}" ${credits >= x.price ? '' : 'disabled'}>Buy</button>`}</li>`).join('')}</ul></section>
     <section class="card"><h2>Your kit</h2><div class="stats">${kit}</div></section></div>
@@ -2012,7 +2123,7 @@ export function threatsOf(s, now = Date.now()) {
     ? { cls: inv.quiet ? 'dim' : 'warn', icon: 'kill', name: inv.name, where: inv.target ? `${labelOf(inv).toLowerCase()} · to ${s.locations.find((l) => l.id === inv.target)?.name || 'outpost'}` : `${inv.kind && inv.kind !== 'raider' ? labelOf(inv).toLowerCase() : 'invasion'} · your wall`, tag: `lv ${inv.level}`, left: inv.left, total: inv.total, sel: 'invader', verb: 'arrives' }
     : inv.state === 'watch' ? { cls: 'hot', icon: 'kill', name: inv.name, where: 'scout mapping your wall', tag: `lv ${inv.level}`, left: inv.mapLeft, total: SCOUT.mapMs, sel: 'invader', verb: 'leaves' }
     : { cls: 'hot', icon: 'kill', name: inv.name, where: inv.state === 'siege' ? 'contested at your wall' : 'BREACH at your wall', tag: `lv ${inv.level}`, pct: inv.hp, sel: 'invader' });
-  else if (threatTop(s) && s.net?.next > 0) add({ cls: 'dim', icon: 'clock', name: 'Next invasion', where: s.net.open ? 'ports open' : 'your wall', left: s.net.next, total: s.net.open ? CONFIG.invasion.everyMs[1] * CONFIG.invasion.open.pace : CONFIG.invasion.everyMs[1], sel: 'server' });
+  else if (threatTop(s) && s.net?.next > 0) add({ cls: 'dim', icon: 'clock', name: 'Next invasion', where: 'your wall', left: s.net.next, total: CONFIG.invasion.everyMs[1], sel: 'server' });
   const r = retakeOf(s);
   if (r) add({ cls: r.state === 'siege' ? 'hot' : 'warn', icon: 'kill', name: `Swarm ×${r.ships}`, where: `${r.state === 'siege' ? 'at' : '→'} your ${FX[r.f].short} hub`, tag: `lv ${r.level}`, left: retakeLeft(s, now), total: r.state === 'travel' ? HUBS.travelMs : HUBS.siegeMs, sel: 'hub-' + r.f, verb: r.state === 'travel' ? 'arrives' : 'falls' });
   for (const h of Object.values(s.hubs || {})) if (h.captured?.lockdown) add({ cls: 'hot', icon: 'takeover', name: 'Lockdown', where: `your ${FX[h.faction].short} hub`, sel: h.id });
@@ -2033,10 +2144,42 @@ function railOf(s, ev, l) {
   if (ev.card === 'spotter') return { name: ev.name, tag: lv, where: 'your wall' };
   return { name: ev.name, tag: lv, where };
 }
+// The map's left column: the threat rail, then the contract tracker under it (the selected server's contract lit).
+function mapLeft(s, sel) {
+  const col = threatRail(s) + contractTracker(s, sel);
+  return col ? `<div class="map-lcol">${col}</div>` : '';
+}
 function threatRail(s) {
   const list = threatsOf(s);
   if (!list.length) return '';
   return `<aside class="threat-rail" aria-label="Threats and timers">${list.map((x) => { const pct = x.pct != null ? x.pct : x.total ? Math.max(0, Math.min(1, 1 - (x.left || 0) / x.total)) : 1; return `<button type="button" class="tr-row ${x.cls}" data-select="${esc(x.sel)}">${glyph(x.icon)}<span class="tr-txt"><b>${esc(x.name)}${x.tag ? ` <small>${esc(x.tag)}</small>` : ''}</b><small>${esc(x.where)}</small></span><span class="tr-t">${x.left != null ? fmtTime(x.left) : x.pct != null ? `${Math.round(x.pct * 100)}%` : ''}</span><span class="tr-bar"><i style="width:${(pct * 100).toFixed(0)}%"></i></span></button>`; }).join('')}</aside>`;
+}
+
+// The contract tracker (WoW's objective tracker): the contracts you hold and haven't delivered, each with its name, whose
+// it is and how far along: a count as pips (a long one as a bar and n/N), anything else as a bar and its few words.
+// Click one to centre the map on its server and select it (app.js data-locate), or for Mail when it has no server.
+export function trackedJobs(s) {
+  return openContracts(s).map((c) => {
+    const pr = contractProgress(s, c), ok = contractReady(s, c), place = trackGo(c);
+    // The tooltip in plain sentences: "15 of 18 rooms cleared.", "Pays 95 credits, 240 XP and 5 Halcyon standing."
+    const said = pr.of && /^Rooms /.test(pr.text) ? `${pr.n} of ${pr.of} rooms cleared` : pr.text.replace(/^(\d+)\/(\d+)/, '$1 of $2');
+    const sentence = (x) => (x ? x[0].toUpperCase() + x.slice(1) + (/[.!?]$/.test(x) ? '' : '.') : '');
+    const pays = rewardLine(s, c).split(' · ').map((x) => x.replace(/^(.+) ([+-])(\d+)$/, (_, who, sign, n) => `${sign === '-' ? '−' : ''}${n} ${who} ${who === 'Halcyon' ? 'standing' : 'rep'}`));
+    const paid = pays.length > 1 ? `${pays.slice(0, -1).join(', ')} and ${pays.at(-1)}` : pays[0];
+    const tip = `${contractTitle(s, c)}: Contract for ${c.from}. ${ok ? 'Ready to deliver.' : sentence(said)} Pays ${paid}.\n▸ ${place ? 'Show it on the map.' : ok ? 'Deliver it in Mail.' : 'Open it in Mail.'}`;
+    return { id: c.id, icon: jobIcon(c), name: contractTitle(s, c), from: c.from, faction: jobFaction(c), ready: ok, text: pr.text, part: Math.max(0, Math.min(1, pr.part || 0)), n: pr.n, of: pr.of, locate: place ? place.slice(4) : null, go: place ? null : `mail:j${c.id}`, tip };
+  });
+}
+function contractTracker(s, sel = null) {
+  const list = trackedJobs(s);
+  if (!list.length) return '';
+  const prog = (j) => j.ready ? `<span class="ct-done">✓ Ready</span>`
+    : j.of && j.of <= 10 ? `<span class="ct-pips" aria-label="${j.n} of ${j.of}">${Array.from({ length: j.of }, (_, i) => `<i${i < j.n ? ' class="on"' : ''}></i>`).join('')}</span>`
+    : j.of ? `<span class="ct-bar"><i style="width:${(j.part * 100).toFixed(0)}%"></i></span><small class="ct-n">${j.n}/${j.of}</small>`
+    : `<small class="ct-n ct-say">${esc(j.text)}</small>`;
+  const mark = (f) => (f && FX[f] ? `<span class="fmark-i ct-f" style="--fc:${FX[f].color}">${glyph('f-' + f)}</span>` : '');
+  const rows = list.map((j) => `<button type="button" class="ct-row${j.ready ? ' ready' : ''}${j.locate && j.locate === sel ? ' on' : ''}" ${j.locate ? `data-locate="${esc(j.locate)}"` : `data-go="${esc(j.go)}"`} title="${esc(j.tip)}">${glyph(j.icon)}<span class="ct-txt"><b>${esc(j.name)}</b><small class="ct-for">${mark(j.faction)}${esc(j.from)}</small></span><span class="ct-prog">${prog(j)}</span></button>`).join('');
+  return `<section class="ctrack" aria-label="Contracts"><h3 class="ct-head">${glyph('contract')}Contracts<small>${heldCount(s)}/${MAIL.take}</small></h3>${rows}</section>`;
 }
 
 // Traffic on the net: files moving between servers, as dots along the links. Your market orders
@@ -2232,7 +2375,7 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
   // List mode (MOO2's planets list): every server as a row, sortable, the filters apply; the
   // selected one's card sits beside the list.
   if (list && !con) return `<div class="map-page map-list-page"><section class="panel map-canvas map-list">${tabs}${serverList(s, sel, filter, sort)}</section><aside class="map-side">${mapSide(s, sel, find(sel))}</aside></div>`;
-  return `<div class="map-page${side ? '' : ' no-side'}"><section class="panel map-canvas">${tabs}${con ? '' : threatRail(s)}${con ? '' : floorLift(s, fl)}${svg}${card}</section>${side ? `<aside class="map-side">${mapSide(s, sel, find(sel))}</aside>` : ''}</div>`;
+  return `<div class="map-page${side ? '' : ' no-side'}"><section class="panel map-canvas">${tabs}${con ? '' : mapLeft(s, none ? null : sel)}${con ? '' : floorLift(s, fl)}${svg}${card}</section>${side ? `<aside class="map-side">${mapSide(s, sel, find(sel))}</aside>` : ''}</div>`;
 }
 // The floor panel, a lift's buttons down the side of the map: the floors you've reached lit (the one on the map marked),
 // the next one dim with its band, the rest dark. A teal pip on the floor you're connected to.
@@ -2248,6 +2391,7 @@ function floorLift(s, n) {
 const LIST_COLS = [['name', 'Server'], ['family', 'Family'], ['level', 'Lv'], ['layer', 'Floor'], ['explored', 'Explored'], ['status', 'Status']];
 function serverList(s, sel, filter, sort) {
   const [key, dir] = sort.startsWith('-') ? [sort.slice(1), -1] : [sort, 1];
+  const sends = new Set(sendersOf(s));
   const rows = (s.locations || []).map((l) => {
     const st = nodeState(s, l), job = openContracts(s).some((c) => c.loc === l.id), tags = mapTags(s, l, st, job);
     const taken = takenOf(l), total = takeable(l).length || 1, progs = programsOn(l);
@@ -2257,6 +2401,7 @@ function serverList(s, sel, filter, sort) {
       l.fresh && l.detached ? '<span class="tag">found</span>' : l.detached ? '<span class="tag dim">detached</span>' : '',
       progs.length ? `<span class="tag" title="Programs: ${esc(progs.map((id) => PROGRAMS[id]?.name || id).join(', '))}">${glyph('module')}${progs.length}</span>` : '', l.takenOver ? '<span class="tag dim">yours</span>' : '',
       l.rogue ? `<span class="tag dim">${esc(ROGUE.kinds[l.rogue.kind].name.toLowerCase())}</span>` : '',
+      sends.has(l) ? wallMark(s, l) : '',
     ].join('');
     const rank = tags.includes('f-threat') ? 0 : st === 'here' ? 1 : job || (l.fresh && l.detached) ? 2 : progs.length ? 3 : tags.includes('minor') ? 5 : 4;
     return { l, tags, chips, rank, explored: taken / total, taken, total };
@@ -2272,6 +2417,14 @@ function serverList(s, sel, filter, sort) {
       <span class="sl-exp"><span class="ld-bar"><span style="width:${Math.round(r.explored * 100)}%"></span></span><small>${r.taken}/${r.total}</small></span>
       <span class="sl-status">${r.chips}${locBtn(l.id)}</span></button>`; }).join('');
   return `<div class="server-list"><div class="sl-head">${head}</div><div class="sl-body">${body || '<p class="quiet">None.</p>'}${listHubs(s, sel, filter)}${listLeads(s, sel, filter)}</div></div>`;
+}
+// A server that sends invasions: your wall's shield, in the colour of what it does to a plain one (blocks, contests,
+// lets through), the rule on hover.
+const WALL_MARK = { blocked: ['you', 'blocks'], siege: ['warn', 'contests'], breach: ['hot', 'lets through'] };
+function wallMark(s, l) {
+  const g = senderGrade(l), v = s.degraded ? 'breach' : outcome(wallRating(s, l.family) / strength(l.level || 1, null, g)), [tone, word] = WALL_MARK[v];
+  const tip = `Sends invasions\n${FAMILIES[l.family]?.name || 'Viruses'} at level ${l.level || 1}${g > 1 ? `, v${g}: a plain one counts ${sendsAt(l)} at your wall` : ''}.\n${s.degraded ? 'Your wall is down while your server reboots.' : `Your wall ${word} a plain one.`}`;
+  return `<span class="sl-wall ${tone}" title="${esc(tip)}">${glyph('firewall')}</span>`;
 }
 // Locate: back to the map, centred and zoomed on it (app.js).
 const locBtn = (id) => `<span class="sl-loc" role="button" tabindex="0" data-locate="${esc(id)}" title="Show it on the map">${glyph('trace')}</span>`;
@@ -2437,7 +2590,7 @@ function mapSide(s, sel, node) {
         ${s.degraded ? srvLine('firewall', 'Firewall', '<span class="tag warn">down</span>', '', 'Your wall is down while the server is degraded') : wallRow(s, 'firewall', 'Firewall', wallBands(s))}
         ${degradedMarkup(s)}${awayLine(s)}
         ${!MEMORY.on ? '' : srvLine('memory', 'Memory', '', `${Math.max(0, memoryCap(s) - liveCount(s))}<small>/${memoryCap(s)} free</small>`, `${liveCount(s)} servers on your network`)}
-        ${srvLine('salvage', 'Components', '', `${s.salvage.length}`, 'What broken parts drop. Programs and crafting take them.')}
+        ${srvLine('salvage', 'Components', '', `${componentsOf(s)}`, 'What broken parts drop. Programs and crafting take them.')}
 
         ${s.invasion ? `<div class="invader-line ${s.invasion.state}"><b>${esc(s.invasion.name)}</b>${levelTag(s, s.invasion.level)}<span>${esc(invaderShort(s))}</span></div>${s.invasion.state !== 'travel' ? `<div class="row acts">${jackInButton(invaderStatus(s))}</div>` : ''}` : ''}
         ${homeEvents(s)}
@@ -2522,7 +2675,7 @@ function mapSide(s, sel, node) {
       <div class="stats">${stat('Hostile', `${live}/${rogueRooms(l).length}`)}${stat('Runs', l.runs || 0)}</div>
       <p class="svc-line"><span class="tag dim" title="Can't be taken over; never sends invasions">wild</span></p>
       ${consortiumLine(s, l)}
-      <div class="row">${st === 'here' ? btn('net', 'Back to the run', true) : `<button type="button" class="btn primary" data-command="connect ${esc(l.id)}" ${busy ? 'disabled title="Finish what you are doing first"' : relockLeft(l) ? `disabled title="${l.rogueRun?.rebootAt > rogueClock() ? 'Rebooting: every room comes back fresh' : 'Still tracing your last connection'}"` : ''}>Connect</button><button type="button" class="btn hot-btn" data-command="connect ${esc(l.id)} loud" ${busy || relockLeft(l) ? 'disabled' : ''} title="${esc(LOUD_TIP)}"><span class="loud-ico" aria-hidden="true"></span>Go loud</button>`}${!l.member && !l.trunk && s.locations.includes(l) && MEMORY.on && !freeOfMemory(l) ? `<button type="button" class="btn small mem-x" data-command="detach ${esc(l.id)}" data-confirm="Click again to detach" ${busy ? 'disabled' : ''} title="Free a memory slot. Frozen until you attach it again.">${glyph('memory')}Detach · ${memoryCost(l)}</button>` : ''}${st !== 'here' && relockLeft(l) ? `<small class="svc-line">${l.rogueRun?.rebootAt > rogueClock() ? 'Rebooting: back' : 'Reconnect'} in ${relockLeft(l)}s</small>` : ''}${st !== 'here' ? deathMark(l.deaths) : ''}</div></section>`;
+      <div class="row">${st === 'here' ? btn('net', 'Back to the run', true) : `<button type="button" class="btn primary" data-command="connect ${esc(l.id)}" ${busy ? 'disabled title="Finish what you are doing first"' : relockLeft(l) ? `disabled title="${l.rogueRun?.rebootAt > rogueClock() ? 'Rebooting: every room comes back fresh' : 'Still tracing your last connection'}"` : ''}>Connect</button>`}${!l.member && !l.trunk && s.locations.includes(l) && MEMORY.on && !freeOfMemory(l) ? `<button type="button" class="btn small mem-x" data-command="detach ${esc(l.id)}" data-confirm="Click again to detach" ${busy ? 'disabled' : ''} title="Free a memory slot. Frozen until you attach it again.">${glyph('memory')}Detach · ${memoryCost(l)}</button>` : ''}${st !== 'here' && relockLeft(l) ? `<small class="svc-line">${l.rogueRun?.rebootAt > rogueClock() ? 'Rebooting: back' : 'Reconnect'} in ${relockLeft(l)}s</small>` : ''}${st !== 'here' ? deathMark(l.deaths) : ''}</div></section>`;
   }
   const layout = layoutName(l);
   const guard = Object.keys(l.state.cleared).length ? 'guard beaten' : 'guarded';
@@ -2547,7 +2700,7 @@ function mapSide(s, sel, node) {
     ${dropLine(s, l)}
     ${programsLine(s, l)}
     ${l.takenOver && !l.relay && !kitOf(s).relay ? `<p class="op-hint">${boardOpen(s) ? knowsRelay(s) ? 'You can install a relay here once you have one. Craft one on the Craft page, or buy one in Halcyon\'s store.' : 'You can install a relay here once you have one. Buy one in Halcyon\'s store, or earn one from a contract. Some contracts pay the Relay plan, so you can craft your own.' : 'You can install a relay here once you have one. Halcyon Mutual sells them once you start working for them.'}</p>` : ''}
-    <div class="row">${l.takenOver && !l.relay ? `<button type="button" class="btn" data-command="relay ${esc(l.id)}" ${kitOf(s).relay ? '' : 'disabled title="You have no relay yet."'}>Install relay${kitOf(s).relay ? ` (${kitOf(s).relay})` : ''}</button>` : ''}${!l.takenOver && !l.member && !l.passwordKnown && kitOf(s).cracker ? `<button type="button" class="btn" data-command="use cracker ${esc(l.id)}">Key cracker (${kitOf(s).cracker})</button>` : ''}${st === 'here' ? btn('net', 'Back to the run', true) : `<button type="button" class="btn ${st !== 'done' ? 'primary' : ''}" data-command="connect ${esc(l.id)}" ${busy ? 'disabled title="Finish what you are doing first"' : relockLeft(l) ? 'disabled title="Still tracing your last connection"' : ''}>${relockLeft(l) ? `Connect · ${relockLeft(l)}s` : 'Connect'}</button>${st !== 'done' ? `<button type="button" class="btn hot-btn" data-command="connect ${esc(l.id)} loud" ${busy || relockLeft(l) ? 'disabled' : ''} title="${esc(LOUD_TIP)}"><span class="loud-ico" aria-hidden="true"></span>Go loud</button>` : ''}`}${!l.member && !l.trunk && s.locations.includes(l) && MEMORY.on && !freeOfMemory(l) ? `<button type="button" class="btn small mem-x" data-command="detach ${esc(l.id)}" data-confirm="Click again to detach" ${busy ? 'disabled' : ''} title="Free a memory slot. Frozen until you attach it again.">${glyph('memory')}Detach · ${memoryCost(l)}</button>` : ''}${st !== 'here' ? deathMark(l.deaths) : ''}</div></section>`;
+    <div class="row">${l.takenOver && !l.relay ? `<button type="button" class="btn" data-command="relay ${esc(l.id)}" ${kitOf(s).relay ? '' : 'disabled title="You have no relay yet."'}>Install relay${kitOf(s).relay ? ` (${kitOf(s).relay})` : ''}</button>` : ''}${!l.takenOver && !l.member && !l.passwordKnown && kitOf(s).cracker ? `<button type="button" class="btn" data-command="use cracker ${esc(l.id)}">Key cracker (${kitOf(s).cracker})</button>` : ''}${st === 'here' ? btn('net', 'Back to the run', true) : `<button type="button" class="btn ${st !== 'done' ? 'primary' : ''}" data-command="connect ${esc(l.id)}" ${busy ? 'disabled title="Finish what you are doing first"' : relockLeft(l) ? 'disabled title="Still tracing your last connection"' : ''}>${relockLeft(l) ? `Connect · ${relockLeft(l)}s` : 'Connect'}</button>${st !== 'done' ? `` : ''}`}${!l.member && !l.trunk && s.locations.includes(l) && MEMORY.on && !freeOfMemory(l) ? `<button type="button" class="btn small mem-x" data-command="detach ${esc(l.id)}" data-confirm="Click again to detach" ${busy ? 'disabled' : ''} title="Free a memory slot. Frozen until you attach it again.">${glyph('memory')}Detach · ${memoryCost(l)}</button>` : ''}${st !== 'here' ? deathMark(l.deaths) : ''}</div></section>`;
 }
 
 // The Antenna (a Lantern Route piece, sets.mjs): a server's ★ rare spawn on its map card, the room it waits in.
@@ -2639,7 +2792,8 @@ export function spoilsOf(events) {
   const out = [];
   const add = (label, qty, kind, extra = {}) => out.push({ label, qty, kind, pack: false, ...extra, text: extra.text || (qty ? `${qty} ${label}` : label) });
   const loot = events.filter((e) => e.type === 'loot');
-  if (loot.length) add('Components', String(loot.length), 'loot', { text: `${loot.length} components`, sub: [...new Set(loot.map((e) => String(e.message || '').replace(/ recovered\.$/, '')))].filter(Boolean).join(', ') });
+  const comps = loot.reduce((n, e) => n + (e.credits ? 0 : e.harvest || 1), 0); // a break's one, a Harvester's or an elite's more (a Payload Box is credits)
+  if (comps) add('Components', String(comps), 'loot', { text: `${comps} components` });
   const xp = events.filter((e) => e.type === 'xp').reduce((n, e) => n + e.amount, 0);
   if (xp) add('XP', `+${xp}`, 'xp', { text: `+${xp} XP` });
   for (const e of events) {
@@ -2728,37 +2882,6 @@ export function gainMarkup(kicker, name, rows, go = true, lead = '') {
     <ul class="sp-rows">${rows.length ? rows.map((r, i) => spRow(r, i)).join('') : '<li class="sp-row k-none" style="--i:0"><span class="sp-lbl">—</span></li>'}</ul>
     ${go ? `<button type="button" class="sp-go" data-gain-go style="--i:${rows.length + 1}">Continue <kbd>Enter</kbd></button>` : ''}</div>`;
 }
-
-// Components as stacks: the ones a recipe asks for by name marked.
-export function salvageStacksMarkup(s) {
-  const st = salvageStacks(s);
-  if (!st.length) return '';
-  return `<h3 class="sv-head">${glyph('salvage')}Components</h3><ul class="sv-rows">${st.map((x) => `<li class="${x.component ? 'comp' : ''}" title="${esc(x.component ? `${x.name}: pays any cost, and some recipes ask for it by name.` : `${x.name}: pays any cost.`)}"><span class="sv-name">${esc(x.name)}</span>${x.component ? '<span class="tag sv-tag">named</span>' : '<span></span>'}<b>${x.n}</b></li>`).join('')}</ul>`;
-}
-
-// The payment picker: which salvage pays for this. key: a SALVAGE_COSTS key with an optional
-// ':n' (the generic amount). pay: { name: n } chosen so far.
-// A pay picker's cost, by its key: a recipe's (protocol:8, zeroday:6, filter, relay) or a program's in the socket you
-// stand in (program:harvester, sockets.mjs).
-export function payCost(s, key) {
-  const [id, n] = key.split(':');
-  if (id === 'program') { const c = programCost(s.rooms, n); return { any: c.any, need: c.need }; }
-  return SALVAGE_COSTS[id](Number(n) || 0);
-}
-export function payMarkup(s, key, pay, title) {
-  const cost = payCost(s, key);
-  const st = salvageStacks(s);
-  const used = Object.values(pay).reduce((a, b) => a + b, 0), need = salvageTotal(cost);
-  const problem = payProblem(s, cost, pay);
-  const reqs = cost.need.map((x) => { const got = x.names.reduce((a, nm) => a + (pay[nm] || 0), 0); return `<span class="pay-req ${got >= x.n ? 'ok' : ''}">${esc(x.label)} <b>${Math.min(got, x.n)}/${x.n}</b></span>`; });
-  const wanted = new Set(cost.need.flatMap((x) => x.names));
-  return `<div class="pay-card" role="dialog" aria-label="Pay components for ${esc(title)}">
-    <header><span class="sp-kicker">Pay components</span><strong>${esc(title)}</strong><small>${esc(salvageLabel(cost))}</small></header>
-    <div class="pay-reqs">${reqs.join('')}<span class="pay-req ${used === need ? 'ok' : ''}">Total <b>${used}/${need}</b></span></div>
-    <ul class="pay-stacks">${st.map((x) => { const k = pay[x.name] || 0; return `<li class="${wanted.has(x.name) ? 'wanted' : x.component ? 'comp' : ''}${k ? ' on' : ''}"><span class="pay-name">${esc(x.name)}${wanted.has(x.name) ? ' <em>needed</em>' : ''}</span><span class="pay-step"><button type="button" data-pay-step="${esc(x.name)}" data-d="-1" ${k ? '' : 'disabled'} aria-label="One less ${esc(x.name)}">−</button><b>${k}</b><button type="button" data-pay-step="${esc(x.name)}" data-d="1" ${k < x.n && used < need ? '' : 'disabled'} aria-label="One more ${esc(x.name)}">+</button></span><small>of ${x.n}</small></li>`; }).join('')}</ul>
-    <footer><span class="pay-why ${problem ? '' : 'ok'}">${esc(problem || 'Ready.')}</span><button type="button" class="btn" data-pay-cancel>Cancel</button><button type="button" class="btn primary" data-pay-go ${problem ? 'disabled' : ''}>Build</button></footer></div>`;
-}
-export const paySlugs = (pay) => Object.entries(pay).filter(([, n]) => n).map(([k, n]) => `${slug(k)}:${n}`).join(',');
 
 // "New" counts on the Loadout, Craft and Daemons tabs: what arrived since you last opened each.
 // s.seen keeps what you've seen; a save from before badges starts with everything seen.
@@ -3013,9 +3136,9 @@ function payloadMarkup(s, f, now) {
   const held = builtOf(s).map((p) => { const band = forecastStrike(s, p, f, now), b = BAND[band], gone = p.kind === 'backdoor' ? f === 'halcyon' : off; return `<li class="mk-row"><span class="mk-ware"><b class="iname" title="${esc(PAYLOADS[p.kind].about)}">${glyph(PAYLOADS[p.kind].code, 'badge')}${esc(PAYLOADS[p.kind].name)} #${p.id}</b>${p.armed ? `<span class="mk-have" title="Armed">${glyph('exploit')}</span>` : ''}</span><span class="mk-val">${powerBar(p.power, def, band)}<span class="tag ${b[1]}">${b[0]}</span></span><span class="mk-btns"><button type="button" class="btn small primary" data-command="payload deploy ${p.id} ${f}" ${gone ? 'disabled' : ''}>Deploy</button></span></li>`; }).join('');
   const credits = PAYLOAD.credits(L), full = builtOf(s).length >= PAYLOAD.maxBuilt, pw = PAYLOAD.power(L);
   const make = Object.entries(PAYLOADS).map(([k, P]) => {
-    const ok = !full && s.server.credits >= credits && (mats[P.code] || 0) >= PAYLOAD.code && (s.salvage || []).length >= PAYLOAD.salvage;
+    const ok = !full && s.server.credits >= credits && (mats[P.code] || 0) >= PAYLOAD.code && canAfford(s, PAYLOAD.salvage);
     const band = k === 'backdoor' && !off ? 'blocked' : forecastStrike(s, { kind: k, power: pw }, f, now);
-    return `<li><span><b class="iname" title="${esc(P.about)}">${glyph(P.code, 'badge')}${esc(P.name)}</b>${needChips(s, { credits, code: { [P.code]: PAYLOAD.code }, salvage: { any: PAYLOAD.salvage, need: [] } })}${powerBar(pw, def, band)}</span><span class="mk-btns"><button type="button" class="btn small ${ok ? 'primary' : ''}" data-command="payload compile ${k}" ${ok ? '' : 'disabled'}>Compile</button>${(mats.exploit || 0) >= 1 ? `<button type="button" class="btn small" data-command="payload compile ${k} exploit" ${ok ? '' : 'disabled'} title="Power ${Math.round(pw * PAYLOAD.armed)}">${glyph('exploit')}Arm</button>` : ''}</span></li>`;
+    return `<li><span><b class="iname" title="${esc(P.about)}">${glyph(P.code, 'badge')}${esc(P.name)}</b>${needChips(s, { credits, code: { [P.code]: PAYLOAD.code }, salvage: PAYLOAD.salvage })}${powerBar(pw, def, band)}</span><span class="mk-btns"><button type="button" class="btn small ${ok ? 'primary' : ''}" data-command="payload compile ${k}" ${ok ? '' : 'disabled'}>Compile</button>${(mats.exploit || 0) >= 1 ? `<button type="button" class="btn small" data-command="payload compile ${k} exploit" ${ok ? '' : 'disabled'} title="Power ${Math.round(pw * PAYLOAD.armed)}">${glyph('exploit')}Arm</button>` : ''}</span></li>`;
   }).join('');
   const going = flyingOf(s).filter((x) => x.f === f);
   const fly = going.length ? `<h3 class="craft-sub">Uploading</h3><ul class="craft-list">${going.map((x) => { const left = Math.max(0, x.landsAt - now), pct = Math.round((1 - left / Math.max(1, x.landsAt - x.sentAt)) * 100); return `<li class="mk-xfer"><span class="mk-ware"><b class="iname">→ ${glyph(PAYLOADS[x.kind].code, 'badge')}${esc(PAYLOADS[x.kind].name)} #${x.id}</b></span><span></span><span class="xfer-bar" title="${Math.max(1, Math.ceil(left / 60000))} min"><i style="width:${pct}%"></i></span></li>`; }).join('')}</ul>` : '';
@@ -3050,7 +3173,7 @@ function marketMarkup(s, f, now) {
   if (hostile(s, f)) return '<p class="quiet">Shut to you.</p>';
   if (offline(s, f, now)) return '<p class="quiet">Offline.</p>';
   const cond = CONDITIONS[HUB_CONDITION[f]], ev = eventOf(s), mats = materialsOf(s), shock = shockOf(s, f);
-  const haveOf = (w) => (w === 'salvage' ? (s.salvage || []).length : mats[w] || 0);
+  const haveOf = (w) => (w === 'salvage' ? componentsOf(s) : mats[w] || 0);
   const min = Math.round(travelMs(s, f) / 60000);
   const rows = WARE_IDS.map((w) => {
     const q = quote(s, f, w), n = haveOf(w), lot = Math.min(10, n);

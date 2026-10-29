@@ -1,19 +1,26 @@
 // Routines (docs/routines.md, phase R1): a program fights for you when you don't act. They unlock at class level 5
 // (ROUTINES.unlockLevel); below it the timer repeats your last hit, as it always did. Each class (each subclass from
 // level 10) keeps one program: a routine per virus (a Codex body: a family, a strain, a guard, the Exfil) it has met,
-// and its default rotation, the planner's priorities (planner.mjs, what the balance bots play), for every virus with no
-// routine. The fight's virus picks the routine. Each cycle you let the timer run out, the routine checks its handlers
-// top to bottom and the first that fits fires; if none fits, the rotation does. Anything you type overrides it.
+// and its default rotation for every virus with no routine: the kit player (planner.mjs kitPlanner), which plays your
+// skills well and reads the timers but nothing of the virus, no tell and no part's rule (docs/puzzle-fights.md 3.1:
+// the program fits the trick, so answering a lever is a handler's job). The fight's virus picks the routine. Each
+// cycle you let the timer run out, the routine checks its handlers top to bottom and the first that fits fires; if
+// none fits, the rotation does. Anything you type overrides it.
 //
-//   handler    three chips: WHEN (a condition), DO (a skill on your bar), TARGET (that part, the soonest attacker, the
-//              lowest, a part with no ◆). Stored { when, do, target }. A part's WHEN chips open with its research
-//              (research.mjs): decoded (3) its name and health, rule (15) its rule and timer, mastered (60) prediction.
+//   handler    three chips: WHEN (a condition), DO (a skill on your bar; Rotation, your rotation's move at the part;
+//              Hold from level 8, nothing), TARGET (that part, the soonest attacker, the lowest, a part with no ◆, the
+//              soonest with no beat on the board, the other parts). Stored { when, do, target }. A handler that names
+//              its part and holds but can't fire (its skill cooling) aims the rotation at that part. A part's WHEN
+//              chips open with its research (research.mjs): decoded (3) its name and health, rule (15) its rule and
+//              timer, mastered (60) prediction.
 //   RAM        a budget per routine, not shared: ramFor(s, body) = ramOf(class level) (4 at level 1 to 10 at 50) +
 //              ramBonus(s, body) (0 in R1; R2's Codex mastery adds there, per virus). A handler costs its WHEN chip's
 //              RAM (1 plain, 2 a rule chip, 3 a mastered one), +1 when it fires a long cooldown. Handlers past the
 //              budget, top to bottom, sit out.
 //   presets    ready-made routines for a virus (presetsFor), built from its parts, your research and your bar, each
-//              fitting its RAM. Picking one replaces the stack; an edited stack can be got back with program undo.
+//              fitting its RAM; first a lever's (Quiet on the beat, Tripwire last, Lockbox first) for each lever part
+//              whose rule you've researched. Picking one replaces the stack; an edited stack can be got back with
+//              program undo.
 //   break ◆    an option on each routine, on by default (armorFirst): before a handler fires a hit that a ◆ on its
 //   first      target would take (combat.mjs armorTakes), the program fires your best ready armor-breaker at that part
 //              instead (breakerFor: the skills whose data breaks ◆, strip or chits); none ready, the hit goes at a part
@@ -24,7 +31,7 @@
 //              (hidden timers, a veiled part's attack); read a tell (its moves count like auto-repeat: a tell's
 //              simple answer, never its Open).
 //   exception  only against a virus whose routine you made or confirmed (a preset picked, a handler added or edited,
-//              Confirm pressed; a virus with none is the rotation's and never throws): a part no handler names and your research doesn't cover (a tell on it, until mastered): that part is
+//              Confirm pressed; a virus with none is the rotation's and never throws): a part no handler names and your research doesn't cover (a charge on it, until mastered), or a lever no handler names (a beat, a part to break first or last, a seal or a cast): that part is
 //              yours to play. The program plays the rest of the fight and never targets it; once it's gone, or you
 //              have acted on it, the program takes it too. Only excepted parts left: it holds (nothing fires). A boss,
 //              lair boss, Resident or crew boss: the whole fight is yours. One cue a fight.
@@ -37,12 +44,16 @@
 // { handlers: [], confirmed, undo, armor } } } } } (armor: false when Break ◆ first is off; missing is on), made on
 // first use (an older save gets the defaults: no SAVE_VERSION change; an R1 save's single stack moves into its viruses'
 // routines, migrate). A fight's exceptions live on e.program.
-import { hooks, emit, warn, active, alive, part, livingParts, intents, toIntent, said, classOf, subOf, hackerLevel, barKeys, cooldownOf, codexKey, defender, maxSignal, timersHidden, armorTakes, frontOf, buffed, frozenNow, packed } from './combat.mjs';
-import { ABILITIES, MUTATIONS, FAMILIES, ROOM_FAMILIES, GUARDS, STRAINS, BOSSES, ARCHETYPES, SUBS } from './data.mjs';
+import { hooks, emit, warn, active, alive, part, livingParts, intents, toIntent, said, classOf, subOf, hackerLevel, barKeys, cooldownOf, codexKey, defender, maxSignal, timersHidden, armorTakes, frontOf, buffed, frozenNow, packed, mirrorOn, bendOf } from './combat.mjs';
+import { copyOf, dearCopy, beatOn, beatBlind } from './tells.mjs';
+import { ABILITIES, MUTATIONS, FAMILIES, ROOM_FAMILIES, GUARDS, STRAINS, BOSSES, ARCHETYPES, SUBS, TELL, TELLS, TELL_SETS } from './data.mjs';
 import { researchAt, TIER } from './research.mjs';
 import { decoded as geneDecoded } from './genome.mjs';
-import { plannerWithout, soonest } from './planner.mjs';
+import { kitPlanner, kitPlannerAt, soonest } from './planner.mjs';
+import { GENES } from './genes.mjs';
+import { sigintTarget, dearest } from './tells.mjs';
 import { isUp } from './floorplan.mjs';
+import { loudWins, blastPays, cashIn } from './order.mjs';
 
 export const ROUTINES = {
   unlockLevel: 5, // the class level routines open at; below it the timer repeats your last hit
@@ -51,7 +62,10 @@ export const ROUTINES = {
   jackOut: [0, 10, 20, 30, 40, 50], // the auto jack-out line, % of your max Signal (0: off)
   low: 0.5, // "under half": a part's Integrity, your Signal
   fragments: 2, encrypted: 3,
+  sealDear: 2, sealOut: 2, // seal dear (docs/puzzle-levers.md 7): a seal that lands within sealOut cycles on a part still wearing sealDear ◆ or more
   danger: ['elite', 'guard', 'core', 'boss'], // rooms a walk stops before
+  presets: 5, // the most plain presets a virus shows (a lever's preset comes on top, one per lever researched)
+  holdFrom: 8, // the Hold chip (a DO that fires nothing) opens at this class level, with the Mimic's first beats
   armorRam: 0, // what Break ◆ first costs a routine: free, since it's on by default (a cost would cut every routine's RAM, and push the last handler of a full one out)
 };
 export const LOCKED = `Routines unlock at level ${ROUTINES.unlockLevel}.`;
@@ -72,7 +86,15 @@ export const PART_WHEN = {
   tell: { tier: TIER.rule, ram: 2, icon: 'counter', short: 'tell live', label: (n) => `${n} tell live`, tip: (n) => `A tell on the ${n} can be answered this cycle.` },
   pretell: { tier: TIER.mastered, ram: 3, icon: 'mastered', short: 'before tell', label: (n) => `before ${n} tell`, tip: (n) => `The cycle before a tell on the ${n} can be answered.` },
   open: { tier: TIER.mastered, ram: 3, icon: 'mastered', short: 'Open', label: (n) => `${n} Open`, tip: (n) => `The ${n} is Open: you read its tell.` },
+  // The order levers (docs/puzzle-levers.md 7; order.mjs reads them): each only on the part whose gene it reads.
+  loudwins: { tier: TIER.rule, ram: 2, icon: 'trace', short: 'loud wins', gene: 'tripwire', label: (n) => `${n} loud wins`, tip: (n) => `Breaking the ${n} now, then every other part loud, ends the others no later and costs you no more than leaving it. No big hit lands while you're still on it.` },
+  blastpays: { tier: TIER.rule, ram: 2, icon: 'payload', short: 'blast pays', gene: 'zipbomb', label: (n) => `${n} blast pays`, tip: (n) => `The ${n} breaks this cycle, and its blast would break another part with a ◆ or a shield of yours covering its fuse, or cut a charge or a cast you can't cut yourself that costs more than the blast.` },
+  cashin: { tier: TIER.rule, ram: 2, icon: 'unlock', short: 'cash in', gene: 'ward', label: (n) => `${n} cash in`, tip: (n) => `Half of the damage the ${n} holds would break its partner the moment it breaks.` },
+  // A seal's lever (docs/puzzle-levers.md 3.5, 7): it would hand out a lot.
+  sealdear: { tier: TIER.rule, ram: 2, icon: 'cracker', short: 'seal dear', label: (n) => `${n} seal dear`, tip: (n) => `A seal on the ${n} lands within ${ROUTINES.sealOut} cycles while it still wears ${ROUTINES.sealDear} ◆ or more.` },
 };
+// A part chip that reads one gene's rule fits only the parts that carry it.
+const chipFits = (cond, spec) => !PART_WHEN[cond]?.gene || !!(spec && GENES[PART_WHEN[cond].gene].carried(spec));
 // WHEN chips about the fight or you. open(s): whether your research has it.
 const anyKey = (s, end, tier) => Object.keys(s.research || {}).some((k) => k.endsWith(':' + end) && researchAt(s, k) >= tier);
 export const GLOBAL_WHEN = {
@@ -81,13 +103,29 @@ export const GLOBAL_WHEN = {
   fragments: { ram: 2, icon: 'worm', label: `${ROUTINES.fragments}+ fragments`, tip: `${ROUTINES.fragments} or more fragments are on the board.`, open: (s) => anyKey(s, 'replicator', TIER.decoded) },
   encrypted: { ram: 2, icon: 'lock', label: `encrypted ${ROUTINES.encrypted}+`, tip: `Your encryption is ${ROUTINES.encrypted} or more.`, open: (s) => anyKey(s, 'encryptor', TIER.decoded) },
   anytell: { ram: 2, icon: 'counter', label: 'any tell live', tip: 'A tell on any part can be answered this cycle.', open: (s) => Object.keys(s.research || {}).some((k) => researchAt(s, k) >= TIER.rule) },
+  beat1: { ram: 2, icon: 'echo', label: 'beat in 1', tip: 'A beat lands this cycle: what you fire now is played back.', open: (s) => beatKnown(s) },
+  beat2: { ram: 2, icon: 'echo', label: 'beat in 2', tip: 'A beat lands this cycle or the next.', open: (s) => beatKnown(s) },
+  // Each beat's own chip (docs/puzzle-levers.md 7) reads the fact that decides it. dear copy, the Mimic's: the copy of
+  // your rotation's move costs a tenth of your max or more (tells.mjs copyOf). bent onto a lever, the Decoy's: its beat
+  // this cycle points at a part that must not take a hit (combat.mjs bendBad), and the board shows where.
+  dearcopy: { ram: 2, icon: 'echo', label: 'dear copy', tip: `On the Mimic's beat, the copy of your rotation's move costs ${Math.round(TELL.copy.dear * 100)}% of your max or more.`, open: (s) => beatKnown(s, (p) => !!p.mimic) },
+  bent: { ram: 2, icon: 'echo', label: 'bent onto a lever', tip: 'The Decoy\'s beat this cycle points at a part that must not be hit now: the Decoy itself, or a part to break last.', open: (s) => beatKnown(s, (p) => !!p.reflect) },
+  // SIGINT's lever (docs/puzzle-levers.md 3.6, 7): open at the rule tier, as any tell live is.
+  dearer: { ram: 2, icon: 'interrupt', label: 'dearer', tip: 'The cast or charge SIGINT would stop now costs more than every other one on the board, or is the only one.', open: (s) => Object.keys(s.research || {}).some((k) => researchAt(s, k) >= TIER.rule) },
 };
+// A beat (docs/puzzle-fights.md 3): a part that plays your command back on its cycle (the Mimic, the Decoy's bend).
+// The beat chips open with any such part's rule; a beat's own chip with its part's.
+const beating = (p) => !!p && (!!p.mimic || !!p.reflect);
+const beatKnown = (s, kind = beating) => Object.keys(s.research || {}).some((k) => !!specOf(k) && kind(specOf(k)) && researchAt(s, k) >= TIER.rule);
 const MUT_WHEN = { ram: 2, icon: 'debuff' };
 export const TARGETS = {
   that: { icon: 'part', label: 'that part', tip: 'The part the WHEN chip names (a tell: its part; fragments: the lowest).' },
   soonest: { icon: 'clock', label: 'soonest', tip: 'The part whose attack lands soonest, by the timers you can see.' },
   lowest: { icon: 'kill', label: 'lowest', tip: 'The part with the least Integrity left.' },
   bare: { icon: 'cracker', label: 'no ◆', tip: 'The lowest part with no armor. None: the handler waits.' },
+  nobeat: { icon: 'echo', label: 'no beat', tip: 'The part whose attack lands soonest, of those with no beat on the board.' },
+  twins: { icon: 'chain', label: 'the twins', tip: 'Whichever of a pair of twins has more of its Integrity left, so they break close together. No twins: the handler waits.' },
+  others: { icon: 'chain', label: 'other parts', tip: 'Any part but the ones the WHEN chip names: Rotation plays with them out of its sight. None left: the handler waits.' },
 };
 
 // ---------- the viruses ----------
@@ -105,7 +143,9 @@ export function allBodies() {
 export const metBody = (s, body) => !!s.met?.[body] || (s.dex?.kills?.[body] || 0) > 0;
 export const metBodies = (s) => allBodies().filter((b) => metBody(s, b));
 // A body's parts as specs (a boss's extra parts share their family's research, so they count as its).
-const bodySpecs = (body) => [...(bodyDef(body)?.parts || []), ...Object.values(BOSSES).filter((b) => (b.strain || b.family) === body).flatMap((b) => b.extra || [])];
+// A strain's third parts (genes.mjs: a part a gene brings, rolled on the virus) are its lineage's (a family lists its own).
+const thirdSpecs = (body) => Object.values(GENES).map((g) => g.parts?.[body] || g.parts?.[STRAINS[body]?.lineage]).filter(Boolean);
+const bodySpecs = (body) => [...(bodyDef(body)?.parts || []), ...Object.values(BOSSES).filter((b) => (b.strain || b.family) === body).flatMap((b) => b.extra || []), ...thirdSpecs(body)];
 export const bodyRefs = (body) => [...new Set(bodySpecs(body).map((x) => `${body}:${x.id}`))];
 // Decoded: any of its parts researched to its name and health.
 export const bodyDecoded = (s, body) => bodyRefs(body).some((ref) => researchAt(s, ref) >= TIER.decoded);
@@ -131,7 +171,7 @@ export function parseWhen(id) {
   if (GLOBAL_WHEN[w]) return { kind: 'global', id: w, def: GLOBAL_WHEN[w] };
   if (w.startsWith('mut:') && MUTATIONS[w.slice(4)] && !MUTATIONS[w.slice(4)].retired) return { kind: 'mutation', id: w, mut: w.slice(4), def: MUT_WHEN };
   const i = w.lastIndexOf(':'), ref = w.slice(0, i), cond = w.slice(i + 1);
-  if (i > 0 && ref.includes(':') && PART_WHEN[cond]) return { kind: 'part', id: w, ref, cond, def: PART_WHEN[cond] };
+  if (i > 0 && ref.includes(':') && PART_WHEN[cond] && chipFits(cond, specOf(ref))) return { kind: 'part', id: w, ref, cond, def: PART_WHEN[cond] };
   return null;
 }
 // Is this WHEN chip yours to use (researched)?
@@ -220,9 +260,18 @@ export const armorFirst = (s, body = currentBody(s)) => routineOf(s, body).armor
 export const armorRam = (s, body = currentBody(s)) => (armorFirst(s, body) ? ROUTINES.armorRam : 0);
 // Your bar's skills (Spike, your slots, SIGINT): what a DO chip can be.
 export const barSkills = (s) => barKeys(s).map(([key, id]) => ({ key, id })).filter((x) => ABILITIES[x.id]);
+// Hold (docs/puzzle-fights.md 3.1): a DO chip that fires nothing that cycle, the routine's way to sit out a beat. Every
+// program has it from ROUTINES.holdFrom. It costs no RAM of its own (its handler pays for its WHEN chip).
+export const HOLD = { id: 'hold', name: 'Hold', icon: 'stall', tip: 'Fires nothing this cycle.' };
+export const holdOpen = (s) => hackerLevel(s) >= ROUTINES.holdFrom;
+// Rotation: a DO chip that plays your rotation's move at the TARGET part (other parts: with the WHEN chip's parts out of
+// its sight), so a handler can say where and leave what to your kit. A lever's preset is built from it. No RAM of its own.
+export const ROTATE = { id: 'rotation', name: 'Rotation', icon: 'cron', tip: 'Your rotation\'s move, at that part.' };
+export const doSkills = (s) => [...barSkills(s), { key: '', id: ROTATE.id }, ...(holdOpen(s) ? [{ key: '', id: HOLD.id }] : [])];
+export const takesPart = (id) => id !== HOLD.id && (id === ROTATE.id || !['none', 'aggro'].includes(ABILITIES[id]?.target));
 // Each handler with what it costs and whether it runs: in budget (top to bottom), its WHEN researched, its skill on your bar.
 export function handlerRows(s, body = currentBody(s)) {
-  const budget = ramFor(s, body) - armorRam(s, body), bar = new Set(barSkills(s).map((x) => x.id));
+  const budget = ramFor(s, body) - armorRam(s, body), bar = new Set(doSkills(s).map((x) => x.id));
   let used = 0;
   return routineOf(s, body).handlers.map((h, i) => {
     const ram = handlerRam(s, h), fits = used + ram <= budget;
@@ -234,9 +283,27 @@ export function handlerRows(s, body = currentBody(s)) {
 export const ramUsed = (s, body = currentBody(s)) => armorRam(s, body) + handlerRows(s, body).filter((r) => r.fits).reduce((n, r) => n + r.ram, 0);
 const liveHandlers = (s, body) => handlerRows(s, body).filter((r) => r.runs).map((r) => r.h);
 
+// ---------- the levers ----------
+// A lever (docs/puzzle-fights.md 3) is a part whose rule makes the default move the wrong one: a beat (fire nothing
+// on it), a part to break last (a Tripwire, a Zip Bomb, a Hotspot), a part to break first (a Lockbox, a Mutex, a C2
+// Node, a Packer), twins to break together (the Mirror). Each gene says which (genes.mjs lever). The rotation answers none of them: a handler that names
+// the part does (a beat chip, for a beat).
+export const LEVERS = {
+  beat: { label: 'beat', tip: 'Fire nothing on its beat.' },
+  last: { label: 'break it last', tip: 'Break it after the other parts.' },
+  first: { label: 'break it first', tip: 'Break it before the other parts.' },
+  together: { label: 'break both together', tip: 'Break it and its twin close together.' },
+};
+export function leverOf(p) {
+  if (!p) return null;
+  for (const g of Object.values(GENES)) if (g.lever && g.carried?.(p)) return g.lever;
+  return null;
+}
+
 // ---------- presets ----------
 // Ready-made routines for a virus: plain stacks from its parts (its signature first), your research and your bar.
-// Each fits the virus's RAM and uses only chips you have open and skills on your bar.
+// Each fits the virus's RAM and uses only chips you have open and skills on your bar. First, one for each lever
+// whose part's rule you've researched (Hold on the beat, Tripwire last, Lockbox first): its id says which.
 const partSkills = (s) => barSkills(s).map((x) => x.id).filter((id) => ABILITIES[id].target === 'part' && !isLong(s, id));
 const bestHit = (s) => partSkills(s).filter((id) => ABILITIES[id].verb === 'hit').sort((a, b) => (ABILITIES[b].damage || 0) - (ABILITIES[a].damage || 0))[0] || 'spike';
 const bestStrip = (s) => partSkills(s).filter((id) => ABILITIES[id].strip || ABILITIES[id].pierce).sort((a, b) => (ABILITIES[b].strip || 0) - (ABILITIES[a].strip || 0))[0] || null;
@@ -246,19 +313,44 @@ export function presetsFor(s, body) {
   const specs = bodySpecs(body).filter((x, i, a) => a.findIndex((y) => y.id === x.id) === i);
   const at = (x, tier) => researchAt(s, `${body}:${x.id}`) >= tier;
   const sig = specs.find((x) => x.special && at(x, TIER.decoded)) || null;
-  const out = [];
-  const add = (id, name, icon, tip, list) => {
+  const out = [], levers = [];
+  const add = (id, name, icon, tip, list, lever = null) => {
     const hs = [];
     let used = 0;
     for (const h of list) {
-      if (!h || !whenOpen(s, h.when)) continue;
+      if (!h || !whenOpen(s, h.when)) { if (lever && h) return; continue; } // a lever's preset is all its handlers or none
       const ram = handlerRam(s, h);
-      if (used + ram > budget) break;
+      if (used + ram > budget) { if (lever) return; break; }
       used += ram;
       hs.push(h);
     }
-    if (hs.length && !out.some((p) => same(p.handlers, hs))) out.push({ id, name, icon, tip, handlers: hs });
+    if (hs.length && ![...out, ...levers].some((p) => same(p.handlers, hs))) (lever ? levers : out).push({ id, name, icon, tip, handlers: hs, ...(lever ? { part: lever } : {}) });
   };
+  // A preset for each lever whose part's rule you've researched: the trick's answer, the rotation doing the rest. One
+  // in the fight comes first.
+  const here = new Set(active(s) && fightBody(s) === body ? s.encounter.virus.parts.map((p) => p.id) : []);
+  for (const x of specs.filter((y) => leverOf(y) && at(y, TIER.rule)).sort((a, b) => here.has(b.id) - here.has(a.id))) {
+    const ref = `${body}:${x.id}`, lever = leverOf(x);
+    // A beat (docs/puzzle-levers.md 7): the Mimic's, hold when the copy of your rotation's move would be dear; the
+    // Decoy's, when its beat points at a part that must not be hit, your rotation fires nothing it can bend.
+    if (lever === 'beat' && x.mimic && holdOpen(s)) add(`beat:${x.id}`, 'Hold on a dear copy', 'echo', `On the ${x.name}'s beat, hold when the copy of your rotation's move would cost ${Math.round(TELL.copy.dear * 100)}% of your max or more.`, [{ when: 'dearcopy', do: HOLD.id, target: 'that' }], x.id);
+    else if (lever === 'beat' && x.reflect) add(`beat:${x.id}`, 'Quiet when bent', 'echo', `When the ${x.name}'s beat points at a part that must not be hit, your rotation fires nothing it can bend: a shield, a buff or an area command.`, [{ when: 'bent', do: ROTATE.id, target: 'nobeat' }], x.id);
+    else if (lever === 'beat') add(`beat:${x.id}`, 'Quiet on the beat', 'echo', `On the ${x.name}'s beat, your rotation fires what costs least to have copied.`, [{ when: 'beat1', do: ROTATE.id, target: 'nobeat' }], x.id);
+    // The order levers' reading presets (docs/puzzle-levers.md 7): the lever's chip first, then its plain answer.
+    if (x.deadman) add(`loud:${x.id}`, 'Trip when loud wins', 'trace', `Your rotation on the ${x.name} when loud wins, else on the other parts while it stands.`, [{ when: `${ref}:loudwins`, do: ROTATE.id, target: 'that' }, { when: `${ref}:present`, do: ROTATE.id, target: 'others' }], x.id);
+    if (x.fuse) add(`blast:${x.id}`, 'Blast when it pays', 'payload', `Your rotation on the ${x.name} when its blast pays, else on the other parts while it stands.`, [{ when: `${ref}:blastpays`, do: ROTATE.id, target: 'that' }, { when: `${ref}:present`, do: ROTATE.id, target: 'others' }], x.id);
+    if (x.ward) add(`cash:${x.id}`, 'Cash in', 'unlock', `Your rotation on the ${x.name} when half of what it holds would break its partner. Until then, your rotation plays the rest.`, [{ when: `${ref}:cashin`, do: ROTATE.id, target: 'that' }], x.id);
+    if (lever === 'last') add(`last:${x.id}`, `${x.name} last`, 'part', `Your rotation on the other parts while the ${x.name} stands, then on it.`, [{ when: `${ref}:present`, do: ROTATE.id, target: 'others' }], x.id);
+    if (lever === 'together') add(`together:${x.id}`, 'Twins together', 'part', `Your rotation on whichever of the ${x.name} and its twin has more left, so they break close together.`, [{ when: `${ref}:present`, do: ROTATE.id, target: 'twins' }], x.id);
+    if (lever === 'first') add(`first:${x.id}`, `${x.name} first`, 'part', `Your rotation on the ${x.name} before the other parts.`, [{ when: `${ref}:present`, do: ROTATE.id, target: 'that' }], x.id);
+  }
+  // A seal (docs/puzzle-levers.md 3.5, 7), for a virus that brings one: your best strip on a part whose seal would
+  // hand out a lot (seal dear → your strip → that part), as a lever's preset.
+  const sealer = sealsOf(body) && specs.find((x) => x.special && at(x, TIER.rule));
+  if (sealer) {
+    const breaker = partSkills(s).filter((id) => breaks(id) > 0).sort((a, b) => breaks(b) - breaks(a))[0] || hit;
+    add(`seal:${sealer.id}`, 'Seal dear: strip it', 'cracker', `${ABILITIES[breaker].name} the ${sealer.name} when its seal lands within ${ROUTINES.sealOut} cycles while it still wears ${ROUTINES.sealDear} ◆ or more.`, [{ when: `${body}:${sealer.id}:sealdear`, do: breaker, target: 'that' }], sealer.id);
+  }
   if (sig) {
     // A preset comes with Break ◆ first on, so a skill that breaks ◆ needs no handler of its own (one at "on board"
     // would spend it on the part once it's bare); a skill that goes through ◆ (Backdoor) keeps its handler.
@@ -269,14 +361,21 @@ export function presetsFor(s, body) {
       : `The ${sig.name} before anything else: ${ABILITIES[hit].name} it${crackFirst ? ', its ◆ broken first' : ''}.`,
       through ? [{ when: `${ref}:bare`, do: hit, target: 'that' }, { when: `${ref}:present`, do: through, target: 'that' }] : [{ when: `${ref}:present`, do: hit, target: 'that' }]);
   }
+  // Tells: your rotation on the part whose tell can be answered (it cuts a charge or a cast on its cycle, strips a
+  // sealing part, or breaks it). SIGINT on the dearer of a cast and a charge (docs/puzzle-levers.md 3.6, 7): its own
+  // preset, since SIGINT fired into a cycle a kill was due costs the kill.
+  add('tells', 'Answer the tells', 'counter', 'Your rotation on a part whose tell can be answered.', [{ when: 'anytell', do: ROTATE.id, target: 'that' }]);
+  if (barSkills(s).some((x) => x.id === 'sigint')) add('sigint', 'SIGINT the dearer', 'interrupt', 'SIGINT the cast or charge you can stop now when it costs more than the other one on the board.', [{ when: 'dearer', do: 'sigint', target: 'that' }]);
   const hitters = specs.filter((x) => at(x, TIER.rule) && x.attack);
   if (hitters.length) add('hits', 'Before it hits', 'clock', `${ABILITIES[hit].name} each part whose attack lands this cycle, signature first.`, hitters.sort((a, b) => !!b.special - !!a.special).map((x) => ({ when: `${body}:${x.id}:due`, do: hit, target: 'that' })));
   if (guard) add('guard', 'Guard when low', 'signal', `${ABILITIES[guard].name} when you're under half, else focus the lowest.`, [{ when: 'hurt', do: guard, target: 'soonest' }, { when: 'always', do: hit, target: 'lowest' }]);
   add('lowest', 'Focus the lowest', 'kill', `${ABILITIES[hit].name} the part with the least Integrity left.`, [{ when: 'always', do: hit, target: 'lowest' }]);
   if (out.length < 2) add('bare', 'No ◆ first', 'cracker', `${ABILITIES[hit].name} the lowest part with no armor; the rotation does the rest.`, [{ when: 'always', do: hit, target: 'bare' }]);
-  return out.slice(0, 4);
+  return [...levers, ...out.slice(0, ROUTINES.presets)];
 }
 const same = (a, b) => a.length === b.length && a.every((h, i) => h.when === b[i].when && h.do === b[i].do && h.target === b[i].target);
+// A body whose tells include a seal (data.mjs TELL_SETS: a family's, a strain's lineage's, a guard's).
+const sealsOf = (body) => (TELL_SETS[body] || TELL_SETS[STRAINS[body]?.lineage] || []).some((id) => TELLS[id]?.kind === 'seal');
 // The preset the stack is now, or null (edited, or empty: the rotation).
 export const presetNow = (s, body) => (routineOf(s, body).handlers.length ? presetsFor(s, body).find((p) => same(p.handlers, routineOf(s, body).handlers))?.id || null : null);
 
@@ -284,6 +383,9 @@ export const presetNow = (s, body) => (routineOf(s, body).handlers.length ? pres
 const isFrag = (p) => p.kind === 'fragment';
 const partsFor = (s, ref) => livingParts(s).filter((p) => !isFrag(p) && refOf(s.encounter.virus, p) === ref);
 const shown = (s) => intents(s, 4);
+// A beat the board shows (the Mimic's, the Decoy's bend), up to `upto` columns out: the parts it's on.
+const beatParts = (s, upto) => [...new Set(shown(s).filter((i) => (i.tell === 'mimic' || i.effect === 'mirror') && !i.hidden && i.col <= upto).map((i) => part(s, i.source)))].filter(alive);
+const isBeat = (i) => i.tell === 'mimic';
 const attackNow = (i, upto) => !i.tell && !i.hidden && i.col <= upto && ['damage', 'encrypt', 'replicate', 'scramble', 'heal', 'fuse'].includes(i.effect);
 // The parts a WHEN chip holds for right now (null: it doesn't hold; [] for a chip that names no part but holds).
 function holds(s, w) {
@@ -293,7 +395,17 @@ function holds(s, w) {
     if (w.id === 'hurt') { const d = defender(s); return d && d.integrity < d.max * ROUTINES.low ? [] : null; }
     if (w.id === 'fragments') { const f = livingParts(s).filter(isFrag).sort((a, b) => a.integrity - b.integrity); return f.length >= ROUTINES.fragments ? f : null; }
     if (w.id === 'encrypted') return (e.encrypt || 0) >= ROUTINES.encrypted ? [] : null;
-    if (w.id === 'anytell') { const ps = list.filter((i) => i.tell && i.open).map((i) => part(s, i.source)).filter(alive); return ps.length ? ps : null; }
+    if (w.id === 'anytell') { const ps = list.filter((i) => i.tell && i.open && !isBeat(i)).map((i) => part(s, i.source)).filter(alive); return ps.length ? ps : null; } // a beat isn't answered by a hit: the beat chips
+    if (w.id === 'beat1' || w.id === 'beat2') { const ps = beatParts(s, w.id === 'beat1' ? 0 : 1); return ps.length ? ps : null; }
+    if (w.id === 'dearcopy') { // the Mimic's beat this cycle, and the copy of your rotation's move is dear (tells.mjs copyOf)
+      const b = beatOn(s);
+      if (!b || b.t.next !== e.cycle || beatBlind(s, b.p, e.cycle)) return null;
+      const text = rotation(s), [id, at] = text.split(' ');
+      return dearCopy(s, copyOf(s, id, part(s, at))) ? [b.p] : null;
+    }
+    if (w.id === 'bent') { const d = mirrorOn(s), b = d && bendOf(s, d); return b?.shown && b.bad ? [d] : null; } // the Decoy's beat this cycle, on a part that must not be hit (combat.mjs bendBad)
+    // dearer: the part of the cast or charge SIGINT would stop now, when it costs the most of those on the board (tells.mjs).
+    if (w.id === 'dearer') { const t = sigintTarget(s), p = t && part(s, t.part); return t && alive(p) && dearest(s, t) ? [p] : null; }
     return null;
   }
   if (w.kind === 'mutation') return e.virus.mutation === w.mut ? [] : null;
@@ -305,32 +417,35 @@ function holds(s, w) {
       case 'bare': return !(p.armor > 0);
       case 'due': return !timersHidden(s, p) && mine.some((i) => attackNow(i, 0));
       case 'soon': return !timersHidden(s, p) && mine.some((i) => attackNow(i, 1));
-      case 'tell': return mine.some((i) => i.tell && i.open);
-      case 'pretell': return mine.some((i) => i.tell && !i.open && i.winFrom === 1);
+      case 'tell': return mine.some((i) => i.tell && i.open && !isBeat(i));
+      case 'pretell': return mine.some((i) => i.tell && !i.open && i.winFrom === 1 && !isBeat(i));
       case 'open': return p.openUntil >= e.cycle;
+      case 'loudwins': return loudWins(s)?.part === p;
+      case 'blastpays': return blastPays(s)?.part === p;
+      case 'cashin': return cashIn(s)?.part === p;
+      case 'sealdear': return p.armor >= ROUTINES.sealDear && mine.some((i) => i.tell === 'seal' && i.col <= ROUTINES.sealOut);
       default: return false;
     }
   });
   return ps.length ? ps : null;
 }
-// Parts a broad TARGET (soonest, lowest, no ◆) leaves for last, as the rotation's planner does: a Hotspot (a direct
-// hit sets it off), a Tripwire and a Zip Bomb while another part stands, a Trojan's live Package while its Loader lives.
-// A handler that names the part (that part) still hits it.
-const others = (s, p) => livingParts(s).some((x) => x !== p && x.kind === 'system');
-export const leftForLast = (s, p) => ((p.hotspot || p.deadman || p.fuse) && others(s, p)) || (!!p.pkg && !p.pkg.inert && livingParts(s).some((x) => x.id === 'loader'));
-const firstOf = (s, list) => list.find((p) => !leftForLast(s, p)) || list[0] || null;
+// A broad TARGET (soonest, lowest, no ◆) does what it says: it knows your kit, not the virus. Leaving a Tripwire for
+// last is a preset's job (docs/puzzle-fights.md 3.1: the program fits the trick), by handlers that name the parts.
 // When a part's next attack lands, by the timers the board shows (a hidden one counts as 2, no attack as last).
 const dueOf = (s, p) => shown(s).find((i) => i.source === p.id && !i.hidden && !i.tell)?.col ?? (p.attack ? 2 : 9);
 // ok: only parts it passes (Break ◆ first's no-◆ retarget); that part then picks among the parts the WHEN chip names.
 function targetOf(s, h, ps, ok = null) {
   const live = (ok ? livingParts(s).filter(ok) : livingParts(s)).filter((p) => !frozenNow(s, p)); // a Cold Store still frozen: nothing reaches it
   if (h.target === 'that') return (ok ? (ps || []).filter(ok) : ps || []).filter((p) => !frozenNow(s, p))[0] || null;
-  if (h.target === 'soonest') return firstOf(s, [...live].sort((a, b) => dueOf(s, a) - dueOf(s, b) || b.max - a.max));
-  if (h.target === 'lowest') return firstOf(s, [...live].sort((a, b) => a.integrity - b.integrity));
-  if (h.target === 'bare') return firstOf(s, live.filter((p) => !(p.armor > 0)).sort((a, b) => a.integrity - b.integrity));
+  const soon = (list) => [...list].sort((a, b) => dueOf(s, a) - dueOf(s, b) || b.max - a.max)[0] || null;
+  if (h.target === 'soonest') return soon(live);
+  if (h.target === 'lowest') return [...live].sort((a, b) => a.integrity - b.integrity)[0] || null;
+  if (h.target === 'bare') return live.filter((p) => !(p.armor > 0)).sort((a, b) => a.integrity - b.integrity)[0] || null;
+  if (h.target === 'nobeat') { const beat = new Set(beatParts(s, 3)); return soon(live.filter((p) => !beat.has(p))); }
+  if (h.target === 'others') { const named = new Set(ps || []); return soon(live.filter((p) => !named.has(p))); }
+  if (h.target === 'twins') { const tw = live.filter((p) => p.twin || live.some((x) => x.twin === p.id)); return tw.length === 2 ? [...tw].sort((a, b) => b.integrity / b.max - a.integrity / a.max)[0] : null; }
   return null;
 }
-const takesPart = (id) => !['none', 'aggro'].includes(ABILITIES[id]?.target);
 const fires = (s, text) => !toIntent(s, text).error;
 
 // ---------- Break ◆ first ----------
@@ -366,19 +481,35 @@ function handlerMove(s, h, body) {
   const ps = holds(s, w);
   if (!ps) return null;
   if (!takesPart(h.do)) return fires(s, h.do) ? { text: h.do } : null;
-  const t = targetOf(s, h, ps);
+  // Rotation at no beat, with only beat parts left: at the beat's part (a beat chip's Rotation reads the beat anyway).
+  const t = targetOf(s, h, ps) || (h.do === ROTATE.id && h.target === 'nobeat' && READS.has(w.id) ? ps[0] : null);
   if (!t) return null;
+  if (h.do === ROTATE.id) { const text = h.target === 'others' ? without(s, new Set((ps || []).map((p) => p.id)), () => rotation(s)) : aimed(s, t, READS.has(w.id) ? BEAT_GENES : null); return fires(s, text) ? { text } : null; }
   const text = `${h.do} ${t.id}`;
   if (!fires(s, text)) return null;
   return armorFirst(s, body) ? armorMove(s, h, ps, t, text) : { text };
 }
-// The rotation: the planner without any long cooldown (only a handler that names one fires it). Key 1 on the
-// soonest attacker if that leaves it nothing.
+// The part a handler aims at when its WHEN holds but its skill can't fire: its own part (TARGET that part), else none.
+function aimOf(s, h) {
+  const w = parseWhen(h.when);
+  if (!w || h.target !== 'that' || !takesPart(h.do) || !whenOpen(s, h.when)) return null;
+  return (holds(s, w) || []).filter((p) => alive(p) && !frozenNow(s, p))[0] || null;
+}
+// The rotation: the kit player (planner.mjs kitPlanner: your kit played well, the timers read, nothing of the virus:
+// no tell, no part's rule; docs/puzzle-fights.md 3.1), without any long cooldown (only a handler that names one fires
+// it). Key 1 on the soonest attacker if that leaves it nothing.
 function rotation(s) {
-  const plan = plannerWithout(s, (id) => isLong(s, id));
+  const plan = kitPlanner(s, (id) => isLong(s, id));
   if (plan && !toIntent(s, plan).error) return plan;
   const t = soonest(s);
   return t && !toIntent(s, `spike ${t.id}`).error ? `spike ${t.id}` : 'hold';
+}
+// A beat chip is the reading: the Rotation it fires reads the beat, and goes quiet on it (a shield, a strip, a burn).
+const BEAT_GENES = ['mimic', 'decoymirror'];
+// The rotation's move at one part (planner.mjs kitPlannerAt: it works on that part).
+function aimed(s, t, read = null) {
+  const plan = kitPlannerAt(s, t, (id) => isLong(s, id), read);
+  return plan && !toIntent(s, plan).error ? plan : `spike ${t.id}`;
 }
 // The board with some parts out of it (the ones that are yours): the program reads and plans as if they weren't there,
 // so it never targets one. Put back however fn ends.
@@ -391,10 +522,15 @@ function without(s, ids, fn) {
 
 // ---------- exceptions ----------
 // Parts whose rule changes a decision (a third part, a guard's rule): the program covers one only at its rule tier.
-const RULED = ['ward', 'wardsToo', 'lock', 'twin', 'reflect', 'mimic', 'command', 'deadman', 'fuse', 'hotspot', 'idle', 'front', 'backlog', 'buffer', 'rearm', 'syncOnly', 'phase', 'echo', 'tax', 'pkg', 'obfuscate', 'limit', 'spare', 'scrape', 'packer', 'badblock', 'damper', 'frozen'];
+const RULED = ['ward', 'wardsToo', 'lock', 'twin', 'reflect', 'mimic', 'command', 'deadman', 'fuse', 'hotspot', 'idle', 'front', 'backlog', 'buffer', 'rearm', 'syncOnly', 'phase', 'echo', 'tax', 'pkg', 'obfuscate', 'limit', 'spare', 'scrape', 'packer', 'badblock', 'damper', 'frozen', 'mech'];
 export const ruled = (p) => RULED.some((k) => p[k]);
+const BEATS = new Set(['beat1', 'beat2']);
+// A beat chip, or a beat's own chip (its rule's: the Mimic's dear copy, the Decoy's bent onto a lever): what covers its part's
+// lever, and what makes the Rotation it fires read the beat.
+const READS = new Set([...BEATS, 'dearcopy', 'bent']);
+const coversBeat = (w, p) => BEATS.has(w.id) || (w.id === 'dearcopy' && !!p?.mimic) || (w.id === 'bent' && !!p?.reflect);
 const named = (s, pred) => liveHandlers(s, fightBody(s)).some((h) => { const w = parseWhen(h.when); return !!w && pred(w); });
-export const EXCEPTION = { label: 'EXCEPTION', phrase: 'no available handler', tip: 'Your program has no handler for this part yet. Play it yourself, or research it in the Codex.', fight: 'Your program leaves this fight to you: a boss is always yours to play.' };
+export const EXCEPTION = { label: 'EXCEPTION', phrase: 'no available handler', tip: 'Your program has no handler for this part yet. Play it yourself, or research it in the Codex.', lever: 'Your program has no handler for this part\'s rule. Play it yourself, or pick its preset in the Program tab.', fight: 'Your program leaves this fight to you: a boss is always yours to play.' };
 // What the program doesn't cover on the board now: [{ key, kind, part, name }], before the parts you've acted on.
 // A boss, a lair's native, the Resident or a crew boss: the whole fight (kind 'fight'). Else each part your research
 // doesn't cover and no handler names (a plain part: decoded; a part with a rule: its rule tier), or that has a tell on
@@ -408,6 +544,11 @@ export function uncovered(s) {
   for (const p of livingParts(s)) {
     if (isFrag(p)) continue;
     const ref = refOf(v, p), n = researchOfRef(s, ref);
+    // A lever (a beat, a part to break first or last): only a handler that names it covers it, a beat chip for a beat.
+    if (leverOf(p)) {
+      if (!named(s, (w) => (w.kind === 'part' && w.ref === ref) || (leverOf(p) === 'beat' && coversBeat(w, p)))) out.set(p.id, { key: `part:${p.id}`, kind: 'lever', part: p.id, name: p.name, lever: leverOf(p) });
+      continue;
+    }
     const need = ruled(p) ? TIER.rule : TIER.decoded;
     // A Packer standing (combat.mjs packed): a rolled part's rule reads as ???, so no research covers it.
     if ((n < need || packed(s, v, p)) && !named(s, (w) => w.kind === 'part' && w.ref === ref)) out.set(p.id, { key: `part:${p.id}`, kind: 'part', part: p.id, name: p.name });
@@ -416,7 +557,11 @@ export function uncovered(s) {
     const p = part(s, i.source);
     if (!alive(p) || out.has(p.id)) continue;
     const ref = refOf(v, p);
-    if (researchOfRef(s, ref) >= TIER.mastered || named(s, (w) => w.id === 'anytell' || (w.kind === 'part' && w.ref === ref && ['tell', 'pretell'].includes(w.cond)))) continue;
+    // The rotation reads no tell. A charge is covered once mastered (it lands or is cut by chance, as a hit); a seal or
+    // a cast is a lever (strip before it, save SIGINT for it), answered only by a handler: a tell chip on its part, or
+    // any tell live. A beat: a beat chip, or a handler that names its part.
+    // A seal is covered by its part's seal dear too, a cast by dearer (SIGINT on the dearer one).
+    if ((i.tell === 'charge' && researchOfRef(s, ref) >= TIER.mastered) || named(s, (w) => (isBeat(i) ? coversBeat(w, p) || (w.kind === 'part' && w.ref === ref) : w.id === 'anytell' || (i.tell === 'cast' && w.id === 'dearer') || (w.kind === 'part' && w.ref === ref && ['tell', 'pretell', ...(i.tell === 'seal' ? ['sealdear'] : [])].includes(w.cond))))) continue;
     out.set(p.id, { key: `part:${p.id}`, kind: 'tell', part: p.id, name: p.name, tell: i.name });
   }
   return [...out.values()];
@@ -434,7 +579,7 @@ export function noteExceptions(s) {
   const P = progE(s.encounter), xs = exceptionsOf(s).filter((x) => !P.thrown[x.key]);
   if (!xs.length) return false;
   for (const x of xs) P.thrown[x.key] = s.encounter.cycle;
-  const what = (x) => (x.kind === 'fight' ? `the whole fight (${x.name})` : x.kind === 'tell' ? `the ${x.name} (${x.tell})` : `the ${x.name}`);
+  const what = (x) => (x.kind === 'fight' ? `the whole fight (${x.name})` : x.kind === 'tell' ? `the ${x.name} (${x.tell})` : x.kind === 'lever' ? `the ${x.name} (${LEVERS[x.lever].label})` : `the ${x.name}`);
   const names = xs.map(what), list = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : names[0];
   emit(s, 'exception', `${EXCEPTION.label} · ${EXCEPTION.phrase}: ${list}.`, { target: xs.find((x) => x.part)?.part || null, exception: xs.map((x) => x.key), kind: xs[0].kind, cue: !P.cued });
   P.cued = true;
@@ -459,11 +604,15 @@ export function decide(s) {
   if (livingParts(s).every((p) => mine.has(p.id))) return { hold: true, exceptions: xs, part: xs[0]?.part || null };
   const body = fightBody(s);
   return without(s, mine, () => {
+    let aim = null;
     for (const r of handlerRows(s, body)) {
       if (!r.runs) continue;
       const m = handlerMove(s, r.h, body);
       if (m) return m.armor && m.armor !== 'through' ? { text: m.text, handler: r.i, armor: m.armor } : { text: m.text, handler: r.i };
+      aim ||= aimOf(s, r.h);
     }
+    // A handler that names its part (that part) holds but can't fire (its skill cooling): the rotation plays that part.
+    if (aim) { const text = aimed(s, aim); if (fires(s, text)) return { text, handler: -1, aim: aim.id }; }
     return { text: rotation(s), handler: -1 };
   });
 }
@@ -535,8 +684,8 @@ export function programCommand(s, text) {
   const n = (x) => { const i = Number(x) - 1; return Number.isInteger(i) && i >= 0 && i < H.length ? i : -1; };
   const fits = (list, opt = armorRam(s, body)) => { const used = opt + list.reduce((a, h) => a + handlerRam(s, h), 0); return used <= budget ? null : `That needs ${used} RAM. ${name} has ${budget}.`; };
   const checkWhen = (id) => (!parseWhen(id) ? `No WHEN chip ${id}.` : !whenOpen(s, id) ? `${whenLabel(id)}: research it first.` : null);
-  const bar = new Set(barSkills(s).map((x) => x.id));
-  const checkDo = (id) => (!ABILITIES[id] ? `No skill ${id}.` : !bar.has(id) ? `${ABILITIES[id].name} is not on your bar.` : null);
+  const bar = new Set(doSkills(s).map((x) => x.id));
+  const checkDo = (id) => (!ABILITIES[id] && id !== HOLD.id && id !== ROTATE.id ? `No skill ${id}.` : !bar.has(id) ? (id === HOLD.id ? `Hold opens at level ${ROUTINES.holdFrom}.` : `${ABILITIES[id].name} is not on your bar.`) : null);
   const checkTarget = (id) => (TARGETS[id] ? null : `No TARGET chip ${id}. Try: ${Object.keys(TARGETS).join(', ')}.`);
   const edited = () => { delete R.undo; R.confirmed = true; };
   if (!verb) return emit(s, 'info', `${programName(s)} program: ${P.on ? 'on' : 'off'}. ${name}: ${ramUsed(s, body)}/${budget} RAM, break ◆ first ${armorFirst(s, body) ? 'on' : 'off'}. ${H.length ? H.map((h, i) => `${i + 1}. ${line(s, h)}`).join('. ') + '.' : 'No handlers: the rotation plays.'}`);
@@ -613,7 +762,7 @@ export function palette(s, body = focusBody(s)) {
   const glob = Object.keys(GLOBAL_WHEN).map((id) => ({ id, open: whenOpen(s, id) }));
   const muts = Object.keys(MUTATIONS).filter((m) => !MUTATIONS[m].retired).map((m) => ({ id: 'mut:' + m, open: whenOpen(s, 'mut:' + m) })).filter((x) => x.open);
   const refs = bodyRefs(body).filter((k) => researchAt(s, k) > 0);
-  const parts = refs.map((ref) => ({ ref, name: refName(ref), body: bodyName(body), n: researchAt(s, ref), chips: Object.keys(PART_WHEN).map((c) => ({ id: `${ref}:${c}`, cond: c, open: researchAt(s, ref) >= PART_WHEN[c].tier, tier: PART_WHEN[c].tier })) }));
+  const parts = refs.map((ref) => ({ ref, name: refName(ref), body: bodyName(body), n: researchAt(s, ref), chips: Object.keys(PART_WHEN).filter((c) => chipFits(c, specOf(ref))).map((c) => ({ id: `${ref}:${c}`, cond: c, open: researchAt(s, ref) >= PART_WHEN[c].tier, tier: PART_WHEN[c].tier })) }));
   return { glob, muts, parts };
 }
 

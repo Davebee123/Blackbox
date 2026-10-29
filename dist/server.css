@@ -34,7 +34,6 @@
 .hsv-ring .crack { fill: none; stroke: var(--gray); stroke-width: 1.2; }
 .hsv-ring.down .blk { fill: none; stroke: var(--gray); stroke-dasharray: 2.5 2.5; }
 .hsv-ring .shell { fill: none; stroke: var(--line); stroke-width: 1.2; stroke-dasharray: 2 5; }
-.hsv-ring .shell.on { stroke: var(--you); stroke-dasharray: none; }
 .hsv-ring .pit { fill: var(--inset); stroke: var(--line-strong); }
 .hsv-ring .track { fill: none; stroke: var(--line); stroke-width: 6; }
 .hsv-ring .integ { fill: none; stroke: var(--you); stroke-width: 6; }
@@ -104,7 +103,7 @@
 .hsv-pay .glyph { width: 12px; height: 12px; margin: 0; color: var(--amber); }
 .hsv-pay .dmn .glyph { color: var(--daemon); }
 
-.hsv-wall { display: grid; grid-template-columns: 1.3fr 1fr 1fr 1fr; gap: 5px; }
+.hsv-wall { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
 .hsv-tile { display: grid; gap: 5px; align-content: start; min-height: 64px; min-width: 0; padding: var(--s4) 10px; border: 1px solid var(--line); border-radius: var(--r-btn); background: var(--inset); }
 .hsv-tile small { font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--dim); }
 .hsv-tile .v { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s2) var(--s4); font: 600 22px var(--mono); color: var(--bright); min-width: 0; }
@@ -114,10 +113,6 @@
 .hsv-pips { display: flex; gap: 3px; }
 .hsv-pips i { width: 12px; height: 3px; border-radius: 1px; background: var(--line-strong); }
 .hsv-pips i.on { background: var(--you); }
-.hsv-sw { position: relative; display: inline-block; width: 24px; height: 12px; border: 1px solid var(--line-strong); border-radius: 6px; vertical-align: -1px; }
-.hsv-sw i { position: absolute; top: 2px; left: 2px; width: 6px; height: 6px; border-radius: 50%; background: var(--dim); }
-.hsv-sw.on { border-color: var(--hot); }
-.hsv-sw.on i { left: 14px; background: var(--hot); }
 
 .hsv-chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(178px, 1fr)); gap: 5px; }
 .hsv-chip { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; align-items: center; gap: var(--s4); min-height: 34px; min-width: 0; padding: 0 10px; border: 1px solid var(--line); border-radius: var(--r-btn); background: var(--inset); color: var(--amber); }
@@ -131,10 +126,6 @@
 .hsv-chip.locked b { font: 500 11px var(--mono); color: var(--gray); }
 .hsv-chip.held { border-style: dashed; }
 .hsv-chip.held em { color: var(--dim); }
-.hsv-chip.dmn { color: var(--daemon); border-color: rgba(195, 166, 255, 0.35); }
-.hsv-chip.dmn em { color: var(--daemon); }
-.hsv-chip .dot { width: 7px; height: 7px; border-radius: 50%; justify-self: center; }
-.hsv-page .dot.you { background: var(--you); } .hsv-page .dot.warn { background: var(--amber); } .hsv-page .dot.hot { background: var(--hot); }
 .hsv-chip.code b { font: 600 13px var(--mono); color: var(--bright); }
 
 /* ---------- the panel: where the words live ---------- */
@@ -185,7 +176,6 @@
 .hsv-list li > small { grid-column: 1 / -1; font: 12px/1.4 var(--sans); color: var(--muted); }
 .hsv-list li > .btn { grid-column: 2; grid-row: 1 / 3; }
 .hsv-list.cb li.on { border-color: rgba(127, 209, 199, 0.4); }
-.hsv-list .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; }
 .hsv-where { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--s2) 10px; padding: var(--s4) 10px; border: 1px solid var(--line); border-left: 3px solid var(--hot); border-radius: var(--r-btn); background: var(--inset); }
 .hsv-where.travel { border-left-style: dashed; }
 .hsv-where.siege, .hsv-where.watch { border-left-color: var(--amber); }
@@ -198,8 +188,6 @@
 .hsv-panel .hsv-pay > span.dmn { color: var(--daemon); border-color: rgba(195, 166, 255, 0.5); }
 .hsv-acts { display: flex; flex-wrap: wrap; gap: var(--s3); padding-top: 2px; }
 .hsv-acts .btn { flex: 1 1 auto; }
-.hsv-net .net-card { padding: 0; border: 0; background: none; box-shadow: none; }
-.hsv-net .net-card::before, .hsv-net .net-card::after { display: none; }
 
 /* Before and after (previewOf): what the action you point at would change, under the buttons so nothing moves. */
 .hsv-prev:empty { display: none; }
@@ -217,7 +205,6 @@
   .hsv-page { grid-template-columns: minmax(0, 1fr) 330px; }
   .hsv-top { grid-template-columns: 150px minmax(0, 1fr) auto; gap: var(--s6); }
   .hsv-intbtn .bar { width: 120px; }
-  .hsv-wall { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 /* A phone: one column, and the panel a bottom sheet of a fixed height (so what it shows never moves what's in it),
    up only once you've picked something; × or Esc puts it away. */

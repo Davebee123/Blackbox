@@ -6,9 +6,9 @@
 // were services once (the Hardened Kernel, the Scrubber, the Hot-patcher, Counter-intrusion).
 // Getting one: filter.flt in some vaults (pull it, jack out to bank it; now and then Custom, the only
 // place Custom filters and the rare tar, sting and reflection come from), and crafting (Tuned, built
-// around a recipe you know, for credits, code and salvage). Equip at home.
+// around a recipe you know, for credits, code and components). Equip at home.
 import { emit, warn, active, hackerLevel, materialsOf, rand, firstTime } from './combat.mjs';
-import { SALVAGE_COSTS, settle, spend, splitPay } from './salvage.mjs';
+import { gainComponents, payProblem, spend } from './salvage.mjs';
 import { RARITIES, seeded } from './gear.mjs';
 import { power, codeUnit } from './data.mjs';
 import { tierSlots } from './firewall.mjs';
@@ -92,7 +92,7 @@ export const filterStat = (s, k) => equipped(s).reduce((a, f) => a + (f.stats[k]
 
 export function addFilter(s, f, why = '') {
   const o = own(s);
-  if (o.held.length >= FILTER_CAP) { for (let i = 0; i < 2; i++) s.salvage.push({ name: 'Filter scraps', virus: 'filter', seed: 0 }); return emit(s, 'drop', `${why}${f.name}, but you hold ${FILTER_CAP} filters already: +2 salvage.`); }
+  if (o.held.length >= FILTER_CAP) { gainComponents(s, 2); return emit(s, 'drop', `${why}${f.name}, but you hold ${FILTER_CAP} filters already: +2 components.`); }
   o.held.push(f);
   emit(s, 'drop', `${why}${f.name} (${RARITIES[f.rarity].name}, lv ${f.level}).`, { filter: f.name });
 }
@@ -100,7 +100,7 @@ export function addFilter(s, f, why = '') {
 export const filterLine = (f) => [`+${f.stats.strength} lv`, ...Object.entries(f.stats).filter(([k]) => k !== 'strength').map(([k, v]) => `${FILTER_STATS[k].family ? '+' : ''}${v}${FILTER_STATS[k].name}`)].join(' · ');
 
 // Crafting one (the Craft page): a Tuned filter at your level, built around the stat you pick
-// (or any). Credits, code (Cipher, and a unit of each code at your level: invasions pay it) and salvage.
+// (or any). Credits, code (Cipher, and a unit of each code at your level: invasions pay it) and components.
 export const CRAFTABLE = Object.keys(FILTER_STATS).filter((k) => !FILTER_STATS[k].rare);
 // Filter recipes: one per stat, taught by blueprints that viruses drop.
 export const filterRecipes = (s) => (s.filterRecipes ||= []);
@@ -113,7 +113,7 @@ export function learnFilter(s, k, why = '') {
 }
 export const filterCost = (L) => ({ credits: 60 + 8 * L, code: { cipher: 6 + Math.floor(L / 2) + codeUnit(L), worm: codeUnit(L), kernel: codeUnit(L) }, salvage: 4 });
 const short = (mats, c) => Object.entries(c.code).some(([m, n]) => (mats[m] || 0) < n);
-function craftFilter(s, stat, payText) {
+function craftFilter(s, stat) {
   if (s.run || active(s)) return warn(s, 'Craft at home, between fights.');
   if (stat && !CRAFTABLE.includes(stat)) return warn(s, `Filters: ${CRAFTABLE.join(', ')}, or any.`);
   if (stat && !knowsFilter(s, stat)) return warn(s, `You don't have the ${recipeLabel(stat)} recipe yet. Viruses drop blueprints.`);
@@ -122,17 +122,16 @@ function craftFilter(s, stat, payText) {
   if (own(s).held.length >= FILTER_CAP) return warn(s, `You hold ${FILTER_CAP} filters. Scrap one first.`);
   const L = hackerLevel(s), c = filterCost(L), mats = materialsOf(s);
   if (s.server.credits < c.credits || short(mats, c)) return warn(s, `A filter takes ${c.credits} credits and ${c.code.cipher} Cipher, ${c.code.worm} Worm and ${c.code.kernel} Kernel code.`);
-  const pay = settle(s, SALVAGE_COSTS.filter(), payText);
-  if (typeof pay === 'string') return warn(s, pay);
-  spend(s, pay);
+  const why = payProblem(s, c.salvage);
+  if (why) return warn(s, why);
+  spend(s, c.salvage);
   s.server.credits -= c.credits; for (const [m, n] of Object.entries(c.code)) mats[m] -= n;
   addFilter(s, rollFilter(() => rand(s), { level: L, rarity: 'tuned', stat }), 'Crafted: ');
   firstTime(s, 'filter-' + stat, `first ${recipeLabel(stat)} filter`);
 }
-export function filterCommand(s, full) {
-  const [text, payText] = splitPay(full);
+export function filterCommand(s, text) {
   const m = text.match(/^filter craft(?: (\w+))?$/);
-  if (m) return craftFilter(s, m[1] && m[1] !== 'any' ? m[1] : null, payText);
+  if (m) return craftFilter(s, m[1] && m[1] !== 'any' ? m[1] : null);
   return filterAction(s, text);
 }
 function filterAction(s, text) {
@@ -150,10 +149,10 @@ function filterAction(s, text) {
     o.on = o.on.filter((x) => x !== i);
     return emit(s, 'firewall', `${f.name} out.`);
   }
-  // scrap: salvage back, and the indexes after it shift down.
+  // scrap: components back, and the indexes after it shift down.
   o.held.splice(i, 1);
   o.on = o.on.filter((x) => x !== i).map((x) => (x > i ? x - 1 : x));
   const back = { scrap: 1, stock: 1, tuned: 2, custom: 3 }[f.rarity] || 1;
-  for (let k = 0; k < back; k++) s.salvage.push({ name: 'Filter scraps', virus: 'filter', seed: 0 });
+  gainComponents(s, back);
   emit(s, 'gear', `Scrapped ${f.name}: +${back} components.`, { gains: [{ label: 'Components', qty: `+${back}`, kind: 'loot', text: `${back} components` }], name: f.name });
 }

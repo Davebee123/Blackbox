@@ -290,7 +290,7 @@ export default {
       let n = 0;
       for (const p of livingParts(s)) {
         if (p === target || e.helpers.length >= helperCap(s)) continue;
-        e.helpers.push({ target: p.id, damage: dmg, left: a.ticks, synced: !!e.synced });
+        e.helpers.push({ target: p.id, damage: dmg, left: a.ticks, synced: !!e.synced, sent: e.cycle, by: a.name });
         n++;
       }
       if (n) emit(s, 'status', `Fan-out puts helpers on ${n === 1 ? 'one more part' : n + ' more parts'}, dealing ${dmg} every cycle for ${cycles(a.ticks)}.`, { mark: 'helper', ability: 'fan-out' });

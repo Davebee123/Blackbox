@@ -1,0 +1,44 @@
+# The full suite (npm run test:full) on every push to main and to a claude/ branch, so no session has to sit through it.
+# A branch is tested merged with the current main, as scripts/land.mjs would land it: a branch that passes alone but
+# breaks once merged goes red here, and one that can't merge cleanly says so. The run's summary has the totals and the
+# failing lines; the whole log is the job's.
+name: Tests
+on:
+  push:
+    branches: [main, 'claude/**']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  full:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Merge main in
+        if: github.ref != 'refs/heads/main'
+        shell: bash
+        run: |
+          git config user.name ci && git config user.email ci@users.noreply.github.com
+          if ! git merge --no-edit origin/main; then
+            { echo '### Conflicts with main'; echo; echo 'Land it with `node scripts/land.mjs` and resolve these on the branch:'; echo; git diff --name-only --diff-filter=U | sed 's/^/- `/; s/$/`/'; } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+      - name: npm run test:full
+        shell: bash
+        run: |
+          npm run test:full 2>&1 | tee test.log
+      - name: Summary
+        if: always()
+        shell: bash
+        run: |
+          [ -f test.log ] || exit 0
+          { echo '### Tests'; echo; echo '```'; grep -E '^# (tests|pass|fail|todo) ' test.log; grep -E '^not ok ' test.log | cut -c1-200; echo '```'; } >> "$GITHUB_STEP_SUMMARY"

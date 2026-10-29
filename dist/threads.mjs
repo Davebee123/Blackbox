@@ -34,6 +34,7 @@ import { addrsOf } from './address.mjs';
 import { graphOf, floorsOf } from './floors.mjs';
 import { changeRep, FACTIONS } from './factions.mjs';
 import { sweepFor } from './forensics.mjs';
+import { contractDid } from './mail.mjs';
 import { AUTHOR_FAMILIES } from './families.mjs';
 import CONTENT from './content/threads.mjs';
 
@@ -651,6 +652,7 @@ function answer(s, o, arg) {
   if (!p.suspects.includes(a)) { warn(s, `sweep: ${a} isn't one of them (${p.suspects.join(', ')}).`); return true; }
   if (a !== p.answer) { st.tries++; emit(s, 'rooms-bad', `${a}: it doesn't fit. Look again.`); return true; }
   st.solved = a;
+  contractDid(s, 'sweeps'); // a Sweep contract counts it (mail.mjs)
   emit(s, 'rooms-good', `SWEPT: ${a}. ${tl.temp.by === 'logs' ? `The builder's pid keys the kill switch: ${tl.name}'s Core.` : 'The builder ran it. The kill switch is sealed past it.'}`, { location: tl.id });
   if (o.t) checkLogs(s, o.t);
   return true;

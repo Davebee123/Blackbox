@@ -33,7 +33,8 @@ import { AUTHOR_FAMILIES, familyName } from './families.mjs';
 import { zoneOf, zoneRooms } from './zone.mjs';
 import { ROGUE, FARM, rogueRooms, rogueSpawns, rogueKill, relocks, clock, inRuns } from './rogue.mjs';
 import { lairOpen, NETWORK } from './network.mjs';
-import { sizeOf, learnCodebase, familyComponents, gainComponents, AUTHOR_CODEBASES, SITES } from './sockets.mjs';
+import { sizeOf, learnCodebase, AUTHOR_CODEBASES, SITES } from './sockets.mjs';
+import { gainComponents } from './salvage.mjs';
 import { consortiumSockets } from './consortium.mjs';
 import { owned, rootOf, ROOT, ROOT_PERKS } from './root.mjs';
 import { contractTakeover, contractRooms, contractMapped, contractConnect, contractInstall, contractStood, contractExfil, payloadFor, roomMarks, jobsOn } from './mail.mjs';
@@ -208,13 +209,13 @@ export function spawnOf(s, room, loc = locOf(s)) {
 
 // ---------- connecting ----------
 // The run starts on a server's rooms (run.mjs connect, after its checks): the entry, the visit, the run's Signal.
-export function enterRooms(s, loc, { signal, hot = false } = {}) {
+export function enterRooms(s, loc, { signal } = {}) {
   const R = roomsFor(s, loc);
   if (isWild(loc)) spawnsOf(s, loc);
   if (!isWild(loc)) { R.level = levelOf(loc); extraSockets(s, loc); }
   s.run = { loc: loc.id, rooms: true, cwd: R.graph.rooms[R.graph.entry].path, integrity: signal, max: maxSignal(s), pack: [], visited: [] };
+  if (s.occupation?.id === loc.id) { s.run.max = maxSignal(s); s.run.integrity = Math.min(s.run.max, s.signal ?? s.run.max); } // your own occupied server: no reboot sickness in it
   s.run.crew = Object.fromEntries((s.crewSim || []).map((x) => [x.name, { cwd: s.run.cwd, link: 'you' }]));
-  if (hot) s.run.hot = true;
   // A key cracker on this server (hidden.mjs): you walk in holding its vault's key, this visit.
   const keys = loc.passwordKnown && R.graph.vaults[0] && !FP.opened(s, R.graph.rooms[R.graph.vaults[0]]) ? [R.graph.vaults[0]] : [];
   threadsConnect(s, loc); // threads (threads.mjs): this server's start pinned, a file in transit at its entry, a temporary server grown
@@ -341,7 +342,7 @@ function takeover(s, loc, room) {
   loc.root ||= { level: 1, cleared: 0, n: 0, nextAt: null, proc: null };
   R.held = now();
   // Its Resident's first fall: a codebase from its author's list (4 components if you know them all).
-  if (!loc.residentFell) { loc.residentFell = now(); learnCodebase(s, null, `${loc.name}'s Resident carried `, { from: AUTHOR_CODEBASES[R.author] || null, pool: familyComponents(loc.family), r: seeded(((loc.seed || 1) * 53 + 11) >>> 0) }); }
+  if (!loc.residentFell) { loc.residentFell = now(); learnCodebase(s, null, `${loc.name}'s Resident carried `, { from: AUTHOR_CODEBASES[R.author] || null, r: seeded(((loc.seed || 1) * 53 + 11) >>> 0) }); }
 }
 // Root: respawned fight rooms cleared on a server you hold climb its pips (root.mjs ROOT.need).
 export function rootClear(s, loc) {
@@ -431,7 +432,7 @@ WORLD_hook('exfil', (s, t) => {
   return seed;
 });
 // Its archive, recovered: CONFIG.exfil.credits Stashes' worth of credits and one item at the server's level (the best of two flat
-// rolls, else a white: about twice a kill's blue chance, never a guaranteed blue, nothing else stacked on: no loud run,
+// rolls, else a white: about twice a kill's blue chance, never a guaranteed blue, nothing else stacked on: no
 // clean read or Pit roll), and now and then one of the server's uniques (its kind's and floor's, as its folders drop).
 // A trash kill's odds (LOOT.odds.trash) and a sure white: plain loot, under a rare spawn's, by design.
 WORLD_hook('exfilWon', (s, room, e) => {
@@ -462,7 +463,7 @@ WORLD_hook('puzzlePay', (s, room, { credits = 0, code = 0, parts = 0, material =
   if (won) setDrop(s, { kind: 'puzzle', id: room.kind }, levelOf(loc), `the ${PUZZLES[room.kind]?.name || room.kind} board`, { pack: true, path: `${room.path}/#set-${n}` }); // Overtime's pieces (sets.mjs), a board won
   if (credits) packFile(s, { path: `${room.path}/#puzzle-${n}`, name: 'cache.dat', kind: 'credits', amount: credits });
   if (code) packFile(s, { path: `${room.path}/#puzzle-code-${n}`, name: `${material}.code`, kind: 'code', material, amount: code });
-  if (parts) gainComponents(s, parts, familyComponents(loc?.family), room.path);
+  if (parts) gainComponents(s, parts);
 });
 WORLD_hook('cache', (s, room, { credits, code, material }) => {
   const n = s.serial;
@@ -564,7 +565,7 @@ function liveFights(s, loc) {
   for (const room of FP.roomList(s)) {
     if (!['process', 'elite', 'guard', 'core'].includes(room.kind) || room.mirror || !FP.known(s, room.id) || !FP.isUp(s, room)) continue;
     const v = FP.virusOf(s, room), sp = room.wild ? spawnOf(s, room, loc) : null;
-    out.push({ id: room.id, family: lineageOf(v.family), zone: !!loc.zone, name: sp?.bounty ? sp.name : null, level: v.level, strain: v.strain || null,
+    out.push({ id: room.id, family: lineageOf(v.family), virus: v.family, zone: !!loc.zone, name: sp?.bounty ? sp.name : null, level: v.level, strain: v.strain || null,
       encrypts: v.parts.some((p) => p.attack?.effect === 'encrypt'), core: room.kind === 'core', server: s.rooms.type === 'server' });
   }
   return out;
@@ -584,7 +585,7 @@ WORLD_hook('mapped', (s) => {
   contractMapped(s, loc);
   // Mapped: every ? linked to it is traced the rest of the way (floors.mjs), so a floor always opens outward.
   if (!loc.zone && !loc.member && HIDDEN.opens) for (const n of hiddenNear(s, loc)) hiddenLead(s, n, 100 - n.lead, 'Mapped: ');
-  if (s.rooms.type === 'server') learnCodebase(s, null, 'Mapped: ', { pool: familyComponents(loc.family), r: seeded(((loc.seed || 1) * 59 + 3) >>> 0) }); // a codebase you don't know
+  if (s.rooms.type === 'server') learnCodebase(s, null, 'Mapped: ', { r: seeded(((loc.seed || 1) * 59 + 3) >>> 0) }); // a codebase you don't know
 });
 
 // ---------- reading a server (the network map's card) ----------

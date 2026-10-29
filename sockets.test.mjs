@@ -39,7 +39,7 @@ function playtest({ seed = 7, size = 'medium', kind = 'Mailhub', hunter = null }
   const sock = sockets(s)[0];
   s.rooms.cleared[sock.id] = clock;
   s.codebases = [...SK.PROGRAM_IDS];
-  SK.gainComponents(s, 200, SK.serverComponents(s.rooms));
+  s.components = 200;
   Object.assign(materialsOf(s), { cipher: 500, worm: 500, kernel: 500, exploit: 20 });
   return { s, sock };
 }
@@ -92,16 +92,16 @@ test('codebases: you start with the Harvester; the Build list shows only what yo
   const html = roomsMarkup(p);
   assert.match(html, /data-rooms="build"|data-command="build harvester"/, 'a Build card in the socket\'s pop-up');
   assert.doesNotMatch(html, /Cron Spawner/);
-  const before = p.salvage.length;
+  const before = p.components;
   assert.equal(SK.learnCodebase(p, 'snare', ''), null, 'already known');
-  assert.equal(p.salvage.length, before + SK.SOCKET.known, '4 components instead');
+  assert.equal(p.components, before + SK.SOCKET.known, '4 components instead');
   assert.equal(SK.learnCodebase(p, 'cron', ''), 'cron');
   assert.ok(SK.knowsCodebase(p, 'cron'));
   // Every one known: a codebase you don't know is 4 components.
   p.codebases = [...SK.PROGRAM_IDS];
-  const n = p.salvage.length;
+  const n = p.components;
   assert.equal(SK.learnCodebase(p, null, ''), null);
-  assert.equal(p.salvage.length, n + 4);
+  assert.equal(p.components, n + 4);
 });
 
 test('codebases come from vaults (one in three, your first always), a Resident\'s first fall (its author\'s list), Mapped and the hubs\' shelves', () => {
@@ -160,12 +160,12 @@ test('components: 60% a part in a room fight, an elite\'s always and one more at
   const elite = FP.roomList(p).find((x) => x.kind === 'elite');
   place(p, FP.neighbours(p.rooms.graph, elite.id)[0]);
   FP.go(p, elite.id); FP.act(p, 'engage');
-  const parts = p.encounter.virus.parts.filter((x) => x.loot).length, before = p.salvage.length;
+  const parts = p.encounter.virus.parts.filter((x) => x.loot).length, before = p.components;
   win(p);
-  assert.ok(p.salvage.length >= before + parts + 1, `an elite: ${p.salvage.length - before} of ${parts} + 1`);
+  assert.ok(p.components >= before + parts + 1, `an elite: ${p.components - before} of ${parts} + 1`);
 });
 
-test('the Harvester: every kill on its server drops 1 more component, from the part you broke last; not on another server', () => {
+test('the Harvester: every kill on its server drops 1 more component; not on another server', () => {
   const { s, sock } = playtest();
   build(s, sock, 'harvester');
   assert.equal(FP.programIn(s, sock.id), 'harvester');
@@ -173,11 +173,10 @@ test('the Harvester: every kill on its server drops 1 more component, from the p
   const room = FP.roomList(s).find((x) => x.kind === 'process' && FP.isUp(s, x));
   place(s, FP.neighbours(s.rooms.graph, room.id)[0]);
   FP.go(s, room.id); FP.act(s, 'engage');
-  const before = s.salvage.length;
+  const before = s.components;
   win(s);
-  const got = s.salvage.slice(before).map((x) => x.name), last = got.at(-1);
-  assert.ok(s.logs.some((e) => /×1 recovered \(Harvester\)/.test(e.message)), 'one more');
-  assert.equal(got.filter((x) => x === last).length >= 1, true);
+  assert.ok(s.logs.some((e) => /\+1 component \(Harvester\)/.test(e.message)), 'one more');
+  assert.ok(s.components >= before + 1);
   // Another server: nothing of it.
   const { s: t } = playtest({ seed: 8 });
   assert.equal(FP.runs(t, 'harvester'), false);
@@ -275,20 +274,18 @@ test('the Listening Post: on its server, the unique you name rolls twice as ofte
   assert.equal(listenBoost(s), 1, 'not off the server');
 });
 
-test('building: one of each a server, paid from what you carry (the server\'s own components for a medium one), instant, uninstall half back; the terminal does it all', () => {
+test('building: one of each a server, paid from what you carry (plain components), instant, uninstall half back; the terminal does it all', () => {
   const { s, sock } = playtest();
   const R = s.rooms;
   const c = SK.programCost(R, 'snare');
-  assert.equal(c.any + c.need[0].n, Math.round(40 * 1.25), 'a medium program: 40 components on floor 1, a quarter more on floor 2');
-  assert.equal(c.need[0].n, Math.round(10 * 1.25), '10 of them named');
-  assert.ok(c.need[0].names.every((nm) => SK.serverComponents(R).includes(nm)), 'named: the server\'s own families\'');
+  assert.equal(c.components, Math.round(40 * 1.25), 'a medium program: 40 components on floor 1, a quarter more on floor 2, none named');
   assert.equal(c.exploit, 1);
-  assert.equal(SK.programCost(R, 'harvester').any, 25, 'light: 20 components, ×1.25 on floor 2');
-  const n0 = s.salvage.length, ex0 = materialsOf(s).exploit;
+  assert.equal(SK.programCost(R, 'harvester').components, 25, 'light: 20 components, ×1.25 on floor 2');
+  const n0 = s.components, ex0 = materialsOf(s).exploit;
   place(s, sock.id);
   const ev = FP.roomsCommand(s, 'build snare');
   assert.ok(ev.some((e) => e.type === 'program'), 'built from the terminal');
-  assert.equal(s.salvage.length, n0 - 50);
+  assert.equal(s.components, n0 - 50);
   assert.equal(materialsOf(s).exploit, ex0 - 1);
   const other = sockets(s)[1];
   s.rooms.cleared[other.id] = clock;
@@ -297,10 +294,10 @@ test('building: one of each a server, paid from what you carry (the server\'s ow
   place(s, sock.id);
   FP.roomsCommand(s, 'uninstall');
   assert.equal(FP.programIn(s, sock.id), null);
-  assert.equal(s.salvage.length, n0 - 50 + 25, 'half the components back');
+  assert.equal(s.components, n0 - 50 + 25, 'half the components back');
   // Short of it: it says what it costs. Unknown: it says so.
   const { s: poor, sock: k } = playtest({ seed: 9 });
-  poor.salvage = []; poor.codebases = ['harvester'];
+  poor.components = 0; poor.codebases = ['harvester'];
   place(poor, k.id);
   assert.match(FP.roomsCommand(poor, 'build harvester').map((e) => e.message).join(' '), /It costs 25 components, 19 \w+ code/);
   assert.match(FP.roomsCommand(poor, 'build tunnel').map((e) => e.message).join(' '), /need the Tunnel codebase/);
@@ -328,7 +325,7 @@ test('a held server: its Core is its core socket; Root 4 adds a socket room; a G
   loc.takenOver = true; loc.root = { level: 1, cleared: 0 };
   assert.equal(FP.isSocket(s, core), true, 'held: the core socket');
   assert.equal(FP.socketOpen(s, core), true);
-  s.codebases = ['harvester']; SK.gainComponents(s, 60, SK.serverComponents(R)); Object.assign(materialsOf(s), { cipher: 99, worm: 99, kernel: 99 });
+  s.codebases = ['harvester']; s.components = 60; Object.assign(materialsOf(s), { cipher: 99, worm: 99, kernel: 99 });
   place(s, core.id);
   FP.act(s, 'build', 'harvester');
   assert.equal(FP.programIn(s, core.id), 'harvester', 'a program in the Core (core programs come in R4)');
@@ -385,7 +382,7 @@ test('the save (v40): outposts, buildings, plans, services, architecture and the
   s.version = 39;
   const t = restore(JSON.parse(JSON.stringify(s)));
   assert.equal(t.version, SAVE_VERSION);
-  assert.equal(SAVE_VERSION, 46); // v41: floors (R3) came after, v42 the long climb, v43 threads, v44 whole-number stats, v45 sets, v46 no default subclass
+  assert.equal(SAVE_VERSION, 48); // v41: floors (R3) came after, v42 the long climb, v43 threads, v44 whole-number stats, v45 sets, v46 no default subclass, v47 one kind of component, v48 Indemnity retires
   const l2 = t.locations.find((x) => x.id === loc.id);
   for (const k of ['buildings', 'build', 'outpost']) assert.equal(l2[k], undefined, `${k} gone`);
   assert.ok(l2.takenOver, 'still yours');
@@ -396,9 +393,8 @@ test('the save (v40): outposts, buildings, plans, services, architecture and the
   const code = SK.retireOutposts ? (t.materials.cipher - m.cipher) + (t.materials.worm - m.worm) + (t.materials.kernel - m.kernel) : 0;
   assert.ok(code >= 10 + 18 + 12 + 12 + 7 + 12 + 40 + 12 + 12 + 4, `code back (${code})`);
   assert.equal(t.materials.exploit - m.exploit, 1, 'the Exploit a v2 took');
-  assert.ok(t.salvage.length >= 4 + 4 + 8 + 6 + 6 + 3 + 6 + 15 + 6 + 6, 'components back');
-  assert.ok(t.salvage.every((p) => !/scrap/i.test(p.name)), 'no plain Scrap left: it\'s components');
-  assert.ok(t.salvage.some((p) => p.name === 'Tracker Core'), 'a guard\'s component stays itself');
+  assert.ok(t.components >= 4 + 4 + 8 + 6 + 6 + 3 + 6 + 15 + 6 + 6, 'components back, and the old pile (Scrap and all) counted in');
+  assert.equal(t.salvage, undefined);
   // Plans and buildings became codebases (and a program still to come keeps its codebase).
   for (const id of ['harvester', 'siphon', 'snare', 'mill', 'post', 'bulkhead', 'honeytoken', 'relay']) assert.ok(t.codebases.includes(id), `${id} codebase`);
   assert.deepEqual(t.plans, ['relay'], 'the Relay plan still crafts relays');

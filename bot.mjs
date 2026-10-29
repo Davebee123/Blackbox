@@ -24,7 +24,7 @@ import { sweepPuzzle, sweepFile } from './dist/forensics.mjs';
 import { eventsOf, CARDS } from './dist/events.mjs';
 import { tickNetwork } from './dist/invasion.mjs';
 import { tickPlay } from './dist/progression.mjs';
-import { offers, openContracts, heldCount, ready, MAIL } from './dist/mail.mjs';
+import { offers, openContracts, heldCount, ready, MAIL, ACTIVITY } from './dist/mail.mjs';
 import { POLICIES } from './balance.mjs';
 import { botStep, BUILD } from './roomsim.mjs';
 import * as FP from './dist/floorplan.mjs';
@@ -55,7 +55,7 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
   const seen = new Set(), losses = {}, lostIn = {}; // lostIn: fights lost in each room, by server and your level: a room that beat it twice is walked around until it levels
   BUILD.log = (x, id) => { (stats.built ||= []).push(`${id}@lv${hackerLevel(x)}`); }; // what it builds in the sockets it clears (sockets.mjs)
   // The ledger: what came in, by where it came from (positive changes only; the bot spends nothing but code on contracts).
-  const purse = () => ({ credits: s.server.credits, code: ['cipher', 'worm', 'kernel'].reduce((n, k) => n + (s.materials?.[k] || 0), 0), exploit: s.materials?.exploit || 0, salvage: (s.salvage || []).length });
+  const purse = () => ({ credits: s.server.credits, code: ['cipher', 'worm', 'kernel'].reduce((n, k) => n + (s.materials?.[k] || 0), 0), exploit: s.materials?.exploit || 0, salvage: s.components || 0 });
   const ledger = (stats.ledger = {}), byLevel = (stats.byLevel = {});
   const book = (why, fn) => { const a = purse(); const r = fn(); const b = purse(); for (const k in a) if (b[k] > a[k]) { const row = (ledger[why] ||= {}); row[k] = (row[k] || 0) + b[k] - a[k]; } return r; };
   const wait = (sec) => book('idle', () => { for (let left = sec; left > 0; left -= 30) { const d = Math.min(30, left) * 1000; t += d; idleRegen(s, d); for (const e of [...tickNetwork(s, t), ...tickServices(s, t)]) note(e); } });
@@ -293,8 +293,9 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
       if (ready(s, c)) say('mail deliver ' + c.id);
       else if (c.story === undefined && t - (taken[c.id] ?? t) > 90 * 60000) say('mail drop ' + c.id);
     }
-    // (A room contract waits on the board, mail.mjs ROOM_JOBS: the bot leaves those.)
-    for (const o of [...offers(s)].filter((o) => !o.offBooks && !o.waits &&(['kill', 'materials'].includes(o.type) || o.loc || (o.type === 'bounty' && stats.bountyLosses < 2)))) {
+    // (A room contract waits on the board, mail.mjs ROOM_JOBS: the bot leaves those. The activity ones it takes: it
+    // fights, solves, decodes and sweeps anyway, and a job it can't finish goes after 90 minutes.)
+    for (const o of [...offers(s)].filter((o) => !o.offBooks && !o.waits && (['kill', 'materials'].includes(o.type) || ACTIVITY[o.type] || o.loc || (o.type === 'bounty' && stats.bountyLosses < 2)))) {
       if (heldCount(s) >= MAIL.take) break;
       say('mail accept ' + o.id); taken[o.id] = t;
     }
