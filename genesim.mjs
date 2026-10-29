@@ -5,7 +5,7 @@
 //   blind     never reads a tell (TELL.bots.answer = false)
 //   ignore    plays one gene as if it weren't there (genes.mjs GENE_BOTS), the per-gene version of blind
 // node genesim.mjs bosses [ids] [levels]   the boss bands
-// node genesim.mjs genes [seeds]           the per-gene table (docs/genome.md "What shipped")
+// node genesim.mjs genes [seeds]           the per-gene table
 import { fresh, selectEncounter, command, resolveCycle, active, defender, maxSignal, classOf } from './dist/combat.mjs';
 import { ARCHETYPES, BOSSES, TELL, SUBCLASS, STRAINS, FAMILIES } from './dist/data.mjs';
 import { GENES, GENE_BOTS } from './dist/genes.mjs';
