@@ -74,7 +74,7 @@ export function findSource(v, def) {
   if (fits(pick)) return pick;
   return [sys.find((x) => x.special), ...basics, ...sys].find(fits) || null;
 }
-// Two tells from the roguelite redesign (docs/roguelite.md 5.2), brought by breach viruses only (breach.mjs sets
+// Two tells from the roguelite redesign (GAME_RULES.md "Side modes"), brought by breach viruses only (breach.mjs sets
 // v.tellSet): each asks for its own verb, and letting it land can be the right call.
 //   overclock  a cast (SIGINT or two hits in its window). If it lands, for `lasts` cycles every part takes `mult`×
 //              damage and every attack comes a cycle sooner: a gamble for whoever holds a big cooldown.

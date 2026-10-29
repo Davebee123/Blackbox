@@ -186,7 +186,7 @@ export function geneCheck(id, { seeds = SEEDS, levels = PROBE_LEVELS, answer = t
   if (out.answered) { out.answer = avg(all.ignore) - avg(all.with); out.ignoreCost = avg(all.ignore) - avg(all.body); }
   return out;
 }
-// The basics (docs/parts-plan.md "Basic parts"): each against its family's Pulse Node, on the same seeds, at the level it
+// The basics (GAME_RULES.md "Viruses"): each against its family's Pulse Node, on the same seeds, at the level it
 // opens and at 30. A basic is free, so it should cost about what a Pulse Node does (within 3 points of Signal).
 export const BASIC_LEVELS = (from) => [...new Set([Math.max(from, 3), 30])];
 export function basicCheck(family, id, { seeds = SEEDS, levels = null } = {}) {

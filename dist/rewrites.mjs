@@ -1,4 +1,4 @@
-// Rewrites (docs/roguelite.md 3, 11): each subsystem you clear on a breach is rewritten. Pick 1 of 2 or 3. A rewrite
+// Rewrites (GAME_RULES.md "Side modes"): each subsystem you clear on a breach is rewritten. Pick 1 of 2 or 3. A rewrite
 // has no effect on the breach you pick it in: it is what the server does for you once it's captured, its Output (the
 // capture card shows it; the campaign, campaign.mjs, runs it on later breaches). Tier I from a virus, tier II from an
 // elite or from clearing the same subsystem twice.

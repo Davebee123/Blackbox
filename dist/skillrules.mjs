@@ -1,4 +1,4 @@
-// Skill rules (docs/roguelite.md 11): the rule affixes that change how one skill plays. They were drafted mods in
+// Skill rules (GAME_RULES.md "Side modes"): the rule affixes that change how one skill plays. They were drafted mods in
 // phase 3; drafting is gone, and the best of them roll on blues and yellows like any rule (gear.mjs RULES, the
 // entries with a skill). A rule rolls only for its own class (rollItem's cls), so a Breaker never finds a Hook rule,
 // and only where the caller names a class: the breach campaign. The old game's rolls are unchanged.

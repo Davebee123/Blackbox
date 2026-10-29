@@ -1,4 +1,4 @@
-// Breach sim (docs/roguelite.md 9.1, 11): a bot plays whole breaches of MERIDIAN-MX-14. It walks the map (breach.mjs
+// Breach sim (GAME_RULES.md "Side modes"): a bot plays whole breaches of MERIDIAN-MX-14. It walks the map (breach.mjs
 // botRoute: keycards, vaults, switches, away from the hunter), decides each screen (botPick), runs a script when one
 // fits (botScript), loads gear that beats what's in its slot, and fights with the planner (planner.mjs), the same
 // scripted player the balance harness uses. Blue gear, the class's subclass.

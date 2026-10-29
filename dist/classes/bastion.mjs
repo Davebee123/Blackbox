@@ -444,7 +444,7 @@ function sysopPlan(s, t) {
 
 // A sim crewmate's bar (crew.mjs builds bots with the default bar): the slots' worth its role wants,
 // of the ones it knows. A Warden keeps its tanking kit, a Sysop its heals (the crew tank and crew healer builds,
-// docs/kits.md 4.3 and 4.4).
+// docs/subclasses/bastion.md, Crewmates).
 const BOT_BAR = {
   warden: ['rate-limit', 'firewall', 'retaliate', 'bulkhead', 'blowback', 'harden', 'dmz', 'suspend', 'purge', 'circuit-breaker', 'reject', 'throttle', 'quarantine', 'failover'],
   sysop: ['rate-limit', 'firewall', 'patch', 'multicast', 'hot-standby', 'heartbeat', 'scrub', 'rollback', 'maintenance-window', 'retaliate', 'purge', 'rebalance', 'reclaim', 'checksum'],

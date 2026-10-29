@@ -1,4 +1,4 @@
-// Heat (docs/roguelite.md 6.3): ranked difficulty, picked per breach. Each rank keeps the ones under it and adds one
+// Heat (GAME_RULES.md "Side modes"): ranked difficulty, picked per breach. Each rank keeps the ones under it and adds one
 // clear modifier, and pays for it: an item level on the gear a breach drops (up to +5), rare odds and XP. The
 // campaign (campaign.mjs) opens the next rank when you capture any server at your highest one, and records the best
 // heat you captured each server at; re-imaging a server asks for that heat or more. Data only, read by breach.mjs.

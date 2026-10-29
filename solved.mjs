@@ -1,6 +1,6 @@
 // node solved.mjs: how solved fights are (docs/puzzle-fights.md section 5, docs/puzzle-levers.md 6). A fight that rewards
 // reading it is won by watching (the learner) and by preparing (the routine player), never a wall for the planner, and
-// no fixed rule plays its lever as well as reading the board does. docs/progression.md "How solved fights are" has the
+// no fixed rule plays its lever as well as reading the board does. docs/puzzle-fights.md "How solved fights are" has the
 // measurements.
 //
 //   node solved.mjs [levels]            ordinary fights, elites, Residents and the six solo bosses, every player, by
@@ -112,7 +112,7 @@ export function play(cls, name, key, b, opts = {}, tier = TIER.rule) {
 
 // ---------- the fights ----------
 // Ordinary: the class-balance fights (20 wilds and the four guards). Elites: 12 rolls. The Resident: 6. The solo bosses
-// of docs/puzzle-fights.md 1.4, two seeds each. All as balance.mjs builds them, at a bracket.
+// of docs/puzzle-fights.md section 5, two seeds each. All as balance.mjs builds them, at a bracket.
 export const SOLO = ['relayking', 'nb-deadbolt', 'nb-tripmine', 'nb-mirrorshade', 'nb-patchday', 'choir'];
 const runs = (n, f) => Array.from({ length: n }, (_, i) => f(i + 1));
 export const SETS = {

@@ -1,4 +1,4 @@
-// Faction gear (docs/loot-plan.md Faction gear). Two halves:
+// Faction gear (GAME_RULES.md "Items"). Two halves:
 //   implicits   one fixed line on an item from a faction, in its mark and colour (gear.mjs IMPLICITS, withImplicit;
 //               combat.mjs gearStat and uniqueFx run it). Rolled onto the items a faction gives: a feud runner's drop,
 //               its contracts' items, its Shop's sealed item, its servers' vaults. Never on a unique or a set piece.

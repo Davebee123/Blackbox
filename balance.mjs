@@ -97,7 +97,7 @@ export function presses(rs) {
 export function generic(policy, b, opts = {}) {
   return [...Array.from({ length: 20 }, (_, i) => fight(policy, 'random', b, { ...opts, seed: i + 1, mode: 'run', zone: true })), ...['watchdog', 'sentinel', 'crawler', 'shredder'].map((g) => fight(policy, g, b, { ...opts, mode: 'run', guard: b.guard }))];
 }
-// The fights each shipped conditional build is for (docs/kits.md section 4, "For"), and a generic set of wilds.
+// The fights each shipped conditional build is for (docs/kits.md 11, second presets), and a generic set of wilds.
 const bossFight = (id) => ({ boss: id, family: BOSSES[id].family, strain: BOSSES[id].strain });
 const many = (n, f) => Array.from({ length: n }, (_, i) => f(i));
 export const MATCHED = {
@@ -116,7 +116,7 @@ export const MATCH_OF = { demolitionist: 'swarm', overclocker: 'rules', warden: 
 // A subclass leans solo or crew (SUBS[sub].lean). The Bastions lean crew and pay for it alone in pace, not Signal:
 // their kills are slow (about twice as many cycles a fight), and they heal or shield it back, so they may sit
 // under the band's floor. Every subclass stays under its ceiling.
-// Held since the damage profiles (docs/parts-plan.md "Damage profiles"), on the 24 fights of a bracket only: the
+// Held since the damage profiles (GAME_RULES.md "Viruses"), on the 24 fights of a bracket only: the
 // Phantom loses 10–12% at Lv 30 (16% over 160 fights, 17% before P1: these seeds suit its burst) and the Overclocker
 // 50% at Lv 10 (39% over 160, as before P1). level: the bracket's, for the hold; without it, the band.
 const HELD_BAND = { 'phantom 30': [8, 50], 'overclocker 10': [15, 52] };

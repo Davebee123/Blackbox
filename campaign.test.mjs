@@ -1,4 +1,4 @@
-// The breach campaign (docs/roguelite.md phase 2: campaign.mjs, campaign-view.mjs, campaignsim.mjs): its own save, a
+// The breach campaign (GAME_RULES.md "Side modes": campaign.mjs, campaign-view.mjs, campaignsim.mjs): its own save, a
 // connected map by layer, outputs on later breaches, checkpoints, re-imaging, bounties, the Archive, and the bot
 // reaching level 10 with every class.
 import test from 'node:test';
@@ -303,7 +303,7 @@ test('the breach page: while you pick a node, the lit nodes show beside the map 
 });
 
 // ---------- the bot ----------
-// docs/roguelite.md 11 has the full table (campaignsim.mjs, 12 seeds a class): about ten breaches to level 10, and every
+// campaignsim.mjs measures it (12 seeds a class): about ten breaches to level 10, and every
 // class winning 55 to 75% of its breaches. Three seeds a class here, with bands wide enough for that sample. Since a
 // decode pays a kill (not a deed's 4 to 8) the climb is a little longer: 11 to 16 breaches a class on these seeds (12 to 13 before).
 let RUNS;
@@ -322,7 +322,7 @@ test('campaignsim: every class reaches level 10 from level 1 within a bounded nu
   const banked = all.reduce((n, x) => n + x.banked, 0) / all.length, ups = mid.reduce((n, x) => n + x.upgrades, 0) / Math.max(1, mid.length);
   assert.ok(banked >= 0.5 && banked <= 3, `${banked.toFixed(2)} items banked a breach`);
   assert.ok(ups >= 0.15 && ups <= 0.8, `${ups.toFixed(2)} upgrades a breach from level 6`);
-  // The world (docs/world.md 6.4) in the bot's campaigns: at most one new event a breach, at most 2 servers under
+  // The world (GAME_RULES.md "Side modes") in the bot's campaigns: at most one new event a breach, at most 2 servers under
   // pressure, always a clean open server, and no author move after a loss.
   const w = worldReport(runs);
   assert.ok(w && w.breaches > 20, 'the world turned');

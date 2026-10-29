@@ -1,4 +1,4 @@
-// The living network (docs/world.md 3, first slice W0): a world turn after each finished breach. The author whose
+// The living network (GAME_RULES.md "Side modes"): a world turn after each finished breach. The author whose
 // server you took answers by digging in on its nearest open server, and wick's leads put dead drops on the map. It
 // moves per breach, never on a clock: being away changes nothing. Pure like the engine: the campaign's state in, news
 // out. Everything the world does to a breach goes through modsFor (the card's `world`), so WORLD.on = false leaves

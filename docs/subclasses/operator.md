@@ -24,7 +24,7 @@ The Herder fills the board with helpers and makes every one of them count. It ha
 
 ### Skills
 
-From level 10 each subclass learns its own line of eleven skills, one at each of levels 10, 12, 14, 16, 18, 20, 22, 26, 30, 34 and 38, so with the four core skills it has fifteen keys to choose from. Your bar holds seven, an eighth from level 22 and a ninth from level 30. Two presets come with each subclass (docs/kits.md): `rotation`, which your bar follows as skills unlock until you change it by hand, and one built for a kind of fight. `loadout use <name>` puts a preset on anywhere out of a fight, at home or on a run, and the keys it brings in start your next fight cooling. `loadout save <name>` keeps the bar you have under a name, and `loadout list` shows them all. A save from before the fifteen-key lines keeps every skill it knew.
+From level 10 each subclass learns its own line of eleven skills, one at each of levels 10, 12, 14, 16, 18, 20, 22, 26, 30, 34 and 38, so with the four core skills it has fifteen keys to choose from. Your bar holds seven, an eighth from level 22 and a ninth from level 30. Two presets come with each subclass (docs/kits.md): `rotation`, which your bar follows as skills unlock until you change it by hand, and one built for a kind of fight. `loadout use <name>` puts a preset on anywhere out of a fight, at home or on a run, and the keys it brings in start your next fight cooling. `loadout save <name>` keeps the bar you have under a name, and `loadout list` shows them all.
 
 | Level | Skill | What it does | Cooldown |
 |---:|---|---|---:|
@@ -104,13 +104,4 @@ Long Jam holds one attack for longer, and Loopback lets you Jam every other cycl
 
 Helper hits are damage over time: they grow half as fast with level as other numbers (+2% a level), and Payload on your gear makes up the rest (a Script rolls it as a primary, *Loaded* as a prefix). A Herder chases Payload and Signal, a Hijacker Payload and Clock Speed.
 
-Measured with the class balance script (`balance.mjs`): blue gear with the stats each subclass chases, a talent point at level 10 and every two levels after, and the default bar (the `rotation` preset at that level). Health lost is the average share of Signal over 20 home intrusions and the four guards at the deepest layer.
-
-| Level | Herder | Hijacker |
-|---:|---:|---:|
-| 10 | 24% | 37% |
-| 18 | 37% | 42% |
-| 30 | 41% | 37% |
-| 40 | 35% | 22% |
-
-Both subclasses win 22 or more of the 24 fights in these brackets, measured after the kit pass (docs/kits.md, section 10). Enemy hits on your Signal take the late step from level 10 (`CONFIG.runLate`). Both lean crew: alone they lose more than the Breakers and the Phantom, and as a crew's third member they win more of the boss tries and keep the crew higher. Their lines start at 10, with Fan-out for the Herder and Sniff for the Hijacker.
+Enemy hits on your Signal take the late step from level 10 (`CONFIG.runLate`). Both lean crew: alone they lose more than the Breakers and the Phantom, and as a crew's third member they win more of the boss tries and keep the crew higher. Their lines start at 10, with Fan-out for the Herder and Sniff for the Hijacker.

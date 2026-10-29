@@ -1,4 +1,4 @@
-// Situational skills: the moment on the board each one is built for (docs/skills.md). The tray lights a key
+// Situational skills: the moment on the board each one is built for (docs/kits.md 6). The tray lights a key
 // whose moment is on the board right now and says what it is in a word or two, so the bar reads the fight with
 // you. The planners (dist/classes/*.mjs) answer the same moments on their own terms.
 import { livingParts, alive, part, defender, momentumStacks, helpersOn, burnsOn, intents, active } from './combat.mjs';

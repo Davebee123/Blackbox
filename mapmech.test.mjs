@@ -1,4 +1,4 @@
-// The breach as a dungeon (docs/roguelite.md 11): drafting is gone, and the map does the work. Keycards and vaults,
+// The breach as a dungeon (GAME_RULES.md "Side modes"): drafting is gone, and the map does the work. Keycards and vaults,
 // switches, Trace and the hunter, one rule per server kind, scripts (the CVEs that survived, as consumables), skill
 // rules on gear and two Phantom talents (the mods that survived), enrage and no sustain out of a fight; then the
 // pieces phase 3 shipped that stay (rolled genomes, heat), the campaign's bounties, Mail Drop and the save migration.

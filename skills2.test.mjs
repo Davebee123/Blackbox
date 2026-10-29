@@ -250,7 +250,7 @@ test('run skills: Tap maps everything; Spoof cloaks once a run, and an Infiltrat
   assert.equal(s.encounter, null);
   play(s, 'cd ..');
   play(s, 'spoof');
-  assert.notEqual(s.run.cloak, 'armed', 'one spoof a run (Rotating Proxies is gone: docs/roguelite.md 11)');
+  assert.notEqual(s.run.cloak, 'armed', 'one spoof a run (Rotating Proxies is gone)');
   assert.equal(slipsLeft(s), 1, 'one slip a run');
 });
 

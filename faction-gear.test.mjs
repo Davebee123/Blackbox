@@ -1,4 +1,4 @@
-// Faction gear (faction-gear.mjs, docs/loot-plan.md Faction gear): implicits, one fixed line in a faction's mark on the
+// Faction gear (faction-gear.mjs, GAME_RULES.md "Items"): implicits, one fixed line in a faction's mark on the
 // items a faction gives, and the five faction pieces, assembled at a hub from three parts that only feuds give. And the
 // feud's rep: +4 a runner, +6 for the win, never a loss with anyone.
 import test from 'node:test';

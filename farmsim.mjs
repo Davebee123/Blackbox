@@ -3,7 +3,7 @@
 // cd walks them), whose hooks change how a bare sim
 // fight in balance.mjs runs. node farmsim.mjs [levels…] prints a table of crews: a full one (tank, healer,
 // two damage), and the same without its tank, its healer, its SIGINTs or a damage dealer, and smaller
-// crews. The bosses are crew bosses (raid.mjs): docs/bosses.md has what each role does in each phase.
+// crews. The bosses are crew bosses (raid.mjs): GAME_RULES.md "Bosses" has what each role does in each phase.
 import { fresh, command, resolveCycle, active, addItem, hooks, subOf } from './dist/combat.mjs';
 import { rollItem, seeded, protocolSlots, SLOT_KINDS, chaseStat } from './dist/gear.mjs';
 import { SUBS } from './dist/data.mjs';

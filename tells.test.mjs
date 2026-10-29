@@ -586,7 +586,7 @@ test('bots keep a tick for a charge: no cut wasted on the charging part before i
   assert.ok(fired.at(-1).endsWith(' encryptor'), `the cut (${fired.at(-1)})`);
 });
 
-// The situational skills are the natural answers to particular tells (docs/skills.md).
+// The situational skills are the natural answers to particular tells (docs/kits.md 6).
 test('situational answers: Segfault triples on a charging part (and its hit cuts it), Suspend drains a charge, Quarantine stops a cast, Hijack steals a charge, Blackhole eats one', () => {
   // Segfault: 30, ×3 on a part winding up a charge, and across its tick on that cycle it calls it off.
   const s = fight({ level: 18, cls: 'breaker' });

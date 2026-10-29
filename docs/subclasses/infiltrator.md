@@ -4,7 +4,7 @@ At level 10 an Infiltrator picks one of two subclasses with `subclass payload` o
 
 Before level 10 every Infiltrator has the same core: `inject`, `tag`, `keepalive` and `backdoor`, and the Ghost passive. Ghost lets you slip past one guard a run without a fight, opens every fight with a blue Surprise window (Inject, Tag and Keepalive fired in it hit harder: Inject ticks once at once), and makes return trips on runs free. Both subclasses keep all of that.
 
-From level 10 each subclass learns its own line of eleven skills, one at each of levels 10, 12, 14, 16, 18, 20, 22, 26, 30, 34 and 38, so with the four core skills it has fifteen keys to choose from. Your bar holds seven, an eighth from level 22 and a ninth from level 30. Two presets come with each subclass (docs/kits.md): `rotation`, which your bar follows as skills unlock until you change it by hand, and one built for a kind of fight. `loadout use <name>` puts a preset on anywhere out of a fight, at home or on a run, and the keys it brings in start your next fight cooling. `loadout save <name>` keeps the bar you have under a name, and `loadout list` shows them all. A save from before the fifteen-key lines keeps every skill it knew.
+From level 10 each subclass learns its own line of eleven skills, one at each of levels 10, 12, 14, 16, 18, 20, 22, 26, 30, 34 and 38, so with the four core skills it has fifteen keys to choose from. Your bar holds seven, an eighth from level 22 and a ninth from level 30. Two presets come with each subclass (docs/kits.md): `rotation`, which your bar follows as skills unlock until you change it by hand, and one built for a kind of fight. `loadout use <name>` puts a preset on anywhere out of a fight, at home or on a run, and the keys it brings in start your next fight cooling. `loadout save <name>` keeps the bar you have under a name, and `loadout list` shows them all.
 
 Numbers below are at level 1. Damage and shields grow 4% a level, the same way every skill's numbers do. Burns and the heals you cast grow half as fast with level (+2%), and Payload and Restore on your gear make up the rest: a Payload in blues that chases Payload carries about 38% at level 18 and 52% at 30, and its Inject ticks about 37 and 47 there (28 and 35 in whites).
 
@@ -76,15 +76,11 @@ Your first hit on each part's bare code crits. Burns do not count, and neither d
 | 16 | `backstab <part>` | Deals 32 damage to the target. Always a critical strike against a part busy with a tell: winding up a charge, compiling a cast, sealing or recording. | 2 |
 | 18 | `side-channel <part>` | Deals 20 damage straight through armor. The target's timer shows for 3 cycles, even through a veil. | 2 |
 | 20 | `shadow-copy [name]` | A decoy of you takes the next hit that would land on you, and Opening lights up when it does. In a crew, shadow-copy nyx puts the decoy on nyx. | 5 |
-| 20 | `spoof` (runs) | Once per run, the next guarded folder does not start a fight. You can read and pull one file there. | once a run |
 | 22 | `rotate-keys` | Clears encryption, Scrambled and Corrupted. The next 2 hits on you deal 30% less, and each one lights Opening. | 6 |
 | 26 | `log-wipe` | Makes Weak Spot fresh on every part, and the next hit on you deals half damage. The Mimic's next beat has nothing of you to play. | 6 |
 | 30 | `unmask <part>` | Deals 26 damage straight through armor and unmasks the target for 4 cycles. Your hits on an unmasked part have +25% crit chance, and its timer shows through a veil. A Decoy or Mimic you unmask has nothing of you to copy on its next beat. | 4 |
-| 30 | `tap` (runs) | Once per run, prints the whole folder tree, its guards, and which file holds the key. | once a run |
 | 34 | `vanish` | The next 2 attacks on you miss, and Weak Spot is fresh on every part. Opening stays lit for 2 cycles after each miss. | 12 |
 | 38 | `implant <part>` | Burns the target for 10 damage every cycle until it breaks. It can't be healed or grown while it burns. Once per fight. | once |
-
-Spoof and Tap are run skills. They take no slot on your bar: you know them once they unlock, and you type them on a run.
 
 Shadow Copy only takes a hit. An Encrypt or a Replicate that does no damage goes straight past it, and the decoy waits for the next real hit.
 
@@ -95,12 +91,12 @@ Shadow Copy only takes a hit. An Encrypt or a Replicate that does no damage goes
 | Ranks | 0 points | Cold Open: Weak Spot hits deal +5% per rank. | Recon: Opening +5 damage per rank. |
 | Tier 1 | 3 points | Fast Hands: Opening stays lit for 2 cycles. | Blind Spot: Weak Spot also crits your first burn tick on each part. |
 | Ranks | 4 points | Pivot: Backstab deals +10% per rank. | Onion Routing: +3 max Signal on runs per rank. |
-| Tier 2 | 8 points | Kill Chain: breaking a part readies Backstab and lights Opening. | Rotating Proxies: Spoof twice per run. |
+| Tier 2 | 8 points | Kill Chain: breaking a part readies Backstab and lights Opening. | Ghost Route: Null Route also delays the attack that lands soonest by 2 cycles. |
 | Ranks | 9 points | Low Profile: take 3% less damage from attacks per rank. | Log Rotation: Log Wipe's cooldown is 1 cycle shorter per rank. |
-| Tier 3 | 14 points | Deep Cover: Log Wipe also readies Null Route and Shadow Copy. | Leaked Creds: slip past 3 guards a run instead of 1. |
+| Tier 3 | 14 points | Deep Cover: Log Wipe also readies Null Route and Shadow Copy. | Tracking Pixel: when a Tagged part breaks, Tag moves to the part whose attack lands soonest, with the cycles it had left. |
 | Capstone | 15 points; 45, rank 2 at 50 | Ghost Step: when you break a part, the attack that lands soonest comes 1 cycle later (2), unless it is already delayed. | Smoke and Mirrors: the first attack that hits you each fight deals 50% less damage (none). |
 
-The tiers ask what kind of Phantom you are. Fast Hands, Kill Chain and Deep Cover make a duelist who chains crits and dodges through a fight. Blind Spot crits the first tick of each Inject, the heaviest burn there is. Rotating Proxies and Leaked Creds make a ghost who barely fights on runs at all.
+The tiers ask what kind of Phantom you are. Fast Hands, Kill Chain and Deep Cover make a duelist who chains crits and dodges through a fight. Blind Spot crits the first tick of each Inject, the heaviest burn there is. Ghost Route and Tracking Pixel push attacks back and keep Tag on the board.
 
 ### How it plays
 
@@ -110,4 +106,3 @@ Open on the part that hurts most. In the Surprise window, Inject ticks at once, 
 
 Rootkit Implant is in both lines, at level 18 for Payload and level 38 for Phantom.
 
-The old Infiltrator talents keep their ids in the new trees. Heap Spray, Persistent Tag, Backchannel, Low Profile, Supercookie and Assassinate went to Payload. Polymorphic is now called Long Fuse and also went to Payload. Recon, Onion Routing, Low Profile, Backchannel, Fast Hands, Rotating Proxies and Leaked Creds went to Phantom. A save from before subclasses keeps its ranks in the nodes Phantom still has, and the tier picks come back as free points. Backchannel later left the Phantom's tree for Log Rotation, because its Backdoor broke a part on the first cycle too often: ranks a save had in it move to Log Rotation.
