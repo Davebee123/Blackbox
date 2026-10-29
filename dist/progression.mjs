@@ -6,13 +6,14 @@
 //                brings something (levelGains, nextGains; app.js levelUp).
 //   v34          server XP, the specialty, ports, eight services and grey protocols are gone. What a save
 //                had in them comes back in kind (progressionRestore).
-import { gainComponents } from './salvage.mjs';
-import { emit, materialsOf, daemonLevel, UNIQUES, gainsTalent, kitTalent } from './combat.mjs';
+//   v49          crafting is gone: everything is found or bought. Recipes, plans and their files become credits, and
+//                Zero-day source the Zero-day (craftRestore).
+import { emit, materialsOf, daemonLevel, UNIQUES, gainsTalent, kitTalent, serverLevel, addItem } from './combat.mjs';
 import { versionLevel } from './daemons.mjs';
 import { LOADOUT, SERVER, FLOORS, ARCHETYPES, xpToNext, v41XpToNext } from './data.mjs';
-import { BASES, PROTOCOL_SLOTS, MATERIALS, primaries, uniqueItem, seeded, RULES, ruleValue, RARITIES } from './gear.mjs';
+import { BASES, PROTOCOL_SLOTS, MATERIALS, primaries, uniqueItem, seeded, RULES, ruleValue, RARITIES, ZERO_DAYS, rollItem } from './gear.mjs';
 import { MEMORY } from './memory.mjs';
-import { learnFilter } from './filters.mjs';
+import { gainComponents } from './salvage.mjs';
 
 // ---------- what a level brings ----------
 // The tracks keyed off your level, at level L. top: the highest level your other classes have, so the
@@ -113,7 +114,7 @@ export function progressionRestore(s, was) {
       became.push(`${d.name} is a daemon now (lv ${daemonLevel(s, d.daemon)})`);
     } else for (let k = 1; k <= v; k++) payBack(s, retiredCost(id, k), back);
     if (job) { payBack(s, retiredCost(id, job.v), back); s.install = null; }
-    if (d.filter && (v || s.recipes?.includes(id))) learnFilter(s, d.filter, '');
+    if (d.filter && (v || s.recipes?.includes(id)) && !(s.filterRecipes ||= []).includes(d.filter)) s.filterRecipes.push(d.filter); // (crafting went in v49: it's credits then)
     if (s.services) delete s.services[id];
     if (s.net?.sabotage?.id === id) s.net.sabotage = null;
   }
@@ -150,4 +151,48 @@ export function progressionRestore(s, was) {
     const v = ruleValue(it.rule, it.level || 1, r());
     if (v) it.ruleValue = v;
   }
+}
+
+// ---------- v49: crafting goes ----------
+// What each thing you could build with is worth now, at L (your highest class level). Protocol recipes (blueprints)
+// and their blueprint.bp files, filter recipes, the Relay plan (a relay's price at Halcyon) and a codebase file still
+// in your pack. A Zero-day's source becomes the Zero-day itself, at your level; a source file in your pack becomes its
+// protocol there. Codebases you know stay known: programs are still built from them.
+export const CRAFT_REFUND = {
+  recipe: (L) => 100 + 10 * L,
+  filter: (L) => 60 + 6 * L,
+  plan: (L) => 120 + 8 * L,
+  codebase: (L) => 100 + 5 * L,
+};
+export function craftRestore(s) {
+  const L = serverLevel(s), got = [];
+  let credits = 0;
+  const pay = (n, each, what) => { if (!n) return; credits += n * each; got.push(`${n} ${what}${n > 1 ? 's' : ''} (${each} credits${n > 1 ? ' each' : ''})`); };
+  const zds = (s.recipes || []).filter((id) => ZERO_DAYS[id] && !ZERO_DAYS[id].chase);
+  const zdItem = (id, k) => rollItem(seeded(((s.seed || 1) * 61 + k * 7 + L) >>> 0), { level: L, zeroDay: id });
+  pay((s.recipes || []).filter((id) => id.startsWith('recipe:')).length + (s.run?.pack || []).filter((f) => f.kind === 'blueprint').length, CRAFT_REFUND.recipe(L), 'protocol recipe');
+  pay((s.filterRecipes || []).length, CRAFT_REFUND.filter(L), 'filter recipe');
+  pay((s.plans || []).includes('relay') ? 1 : 0, CRAFT_REFUND.plan(L), 'Relay plan');
+  pay((s.run?.pack || []).filter((f) => f.kind === 'codebase').length, CRAFT_REFUND.codebase(L), 'codebase file');
+  if (s.run?.pack) s.run.pack = s.run.pack.filter((f) => !['blueprint', 'codebase'].includes(f.kind)).map((f, k) => (f.kind === 'source' && ZERO_DAYS[f.zeroDay] ? { ...f, kind: 'gear', item: zdItem(f.zeroDay, 50 + k) } : f));
+  // Contracts that would have paid a blueprint, a plan or a codebase pay what took their place (mail.mjs).
+  for (const c of [...(s.mail?.jobs || []), ...(s.mail?.offers || [])]) {
+    const r = c.reward;
+    if (!r) continue;
+    if (r.blueprint) { r.credits = (r.credits || 0) + CRAFT_REFUND.recipe(L); delete r.blueprint; }
+    if (r.plan) { r.relay = (r.relay || 0) + 1; delete r.plan; }
+    if (r.codebase) { r.drop = true; delete r.codebase; }
+  }
+  // Agency stock nobody sells any more (sealed blueprints, component lots) leaves the shelf; tickStore refills it.
+  if (s.store?.slots) s.store.slots = s.store.slots.filter((x) => !['blueprint', 'salvage'].includes(x.id));
+  delete s.recipes; delete s.filterRecipes; delete s.plans;
+  if (s.settings) delete s.settings.craftShut;
+  if (s.seen) delete s.seen.craft;
+  if (credits) s.server.credits += credits;
+  zds.forEach((id, k) => addItem(s, zdItem(id, k), 'Your source, built: '));
+  if (!credits && !zds.length) return null;
+  return {
+    from: 'wick', subject: 'Nothing gets built at home now',
+    body: [`Protocols, filters and relays are found or bought now. ${got.length ? `What you'd learned to build came back as credits: ${got.join(', ')}, ${credits} in all.` : ''}${zds.length ? ` Your Zero-day source is built: ${zds.map((id) => ZERO_DAYS[id].name).join(', ')}, in your stash.` : ''}`.trim()],
+  };
 }

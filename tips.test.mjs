@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, restore } from './dist/combat.mjs';
 import { TIPS, nextTip, markSeen } from './dist/tips.mjs';
-import { mapMarkup, serverMarkup, protocolsMarkup, craftMarkup, loadoutMarkup, daemonsMarkup, systemMarkup, boardMarkup, hudMarkup } from './dist/view.mjs';
+import { mapMarkup, serverMarkup, protocolsMarkup, loadoutMarkup, daemonsMarkup, systemMarkup, boardMarkup, hudMarkup } from './dist/view.mjs';
 
 // A stand-in for "is it on screen": the selector's last class/attribute appears in the markup.
 const onPage = (html) => (sel) => {
@@ -78,7 +78,7 @@ test('the screens carry names, numbers and state, not explanations', () => {
   const s = fresh();
   command(s, 'developer location worm');
   command(s, 'encounter cryptjack');
-  const pages = [mapMarkup(s, 'server'), mapMarkup(s, s.locations[0].id), serverMarkup(s), protocolsMarkup(s), craftMarkup(s), loadoutMarkup(s, 'breaker'), daemonsMarkup(s), systemMarkup(s)].join('\n');
+  const pages = [mapMarkup(s, 'server'), mapMarkup(s, s.locations[0].id), serverMarkup(s), protocolsMarkup(s), loadoutMarkup(s, 'breaker'), daemonsMarkup(s), systemMarkup(s)].join('\n');
   for (const phrase of [/Neutralize intrusions to trace/, /Services run on ports/, /Any protocol goes in any slot/, /Daemons act for you in cycles/, /Each class levels on its own/, /numbers are layers/, /click to target/, /Speed changes seconds per cycle/, /its guards, its vault/]) {
     assert.doesNotMatch(pages, phrase);
   }
@@ -99,7 +99,6 @@ test('the newer systems have their tips: a found server’s memory, plans on Cra
   command(s, 'attach ' + loc.id);
   loc.takenOver = true;
   (await import('./dist/netrooms.mjs')).roomsFor(s, loc); // traced: its sockets show
-  assert.equal(nextTip(s, 'craft', onPage(craftMarkup(s))).id, 'craft-plans', 'where recipes come from');
   markSeen(s, 'map-memory'); markSeen(s, 'map-owned');
   // Other tips about this server (its quirk, its trait) may come first; the build tip (its sockets) follows.
   let t = null;

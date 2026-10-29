@@ -190,15 +190,10 @@ export const TIPS = [
   { id: 'server-wall', page: 'server', at: '.hsv-level', text: 'Your firewall stops invasions up to its level. Servers on your network send them, even while you\'re away. Amber or red at the top means one can get through.' },
   { id: 'fw-upgrade', page: 'server', at: '#hsv-panel [data-act="upgrade"]', text: 'Your firewall keeps up with the servers on your network on its own. An upgrade adds a margin on top, up to +6, for credits and code.' },
   { id: 'fw-frag', page: 'server', at: '.hsv-ring .blk.frag', text: 'Each invasion breaks some blocks, and every 4 broken blocks cost a level. Defrag repairs them for credits, but the wall is weaker while it runs.' },
-  { id: 'server-blueprints', page: 'server', at: '.blueprint-card', text: 'You can only build a service once you have its blueprint. Blueprints wait in vaults, and a kill drops one now and then.' },
 
   // ---------- protocols ----------
   { id: 'protocols-slots', page: 'loadout', at: '.loadout-protocols .ptiles', text: 'Each slot takes one kind of protocol: Exploit, Proxy, Shell, Script or Implant. The stats of everything you load add together.' },
-  { id: 'protocols-compile', page: 'craft', at: '.compile-card.open', text: 'You found a recipe, so you can compile protocols. Pick one of your recipes and you\'ll get the protocol at your level.' },
   { id: 'protocols-zeroday', page: 'loadout', at: '.gitem.r-zeroday', text: 'This is a Zero-day. It has a special effect on top of its stats. You can run one of each kind.' },
-
-  // ---------- craft ----------
-  { id: 'craft-plans', page: 'craft', at: '.craft-cats .craft-cat', text: 'Only recipes you know show here. New ones come as blueprints: viruses drop them, vaults hold them, and the Halcyon store sells sealed ones.' },
 
   // ---------- loadout ----------
   { id: 'loadout-status', page: 'loadout', at: '.sk-status', text: 'Your skills put this status on parts. Hover it to see what it does.' },

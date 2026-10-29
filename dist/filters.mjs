@@ -5,12 +5,12 @@
 // shield, Regen and barbs, and on rarer ones a tar pit, a sting or a reflection. The home-fight stats
 // were services once (the Hardened Kernel, the Scrubber, the Hot-patcher, Counter-intrusion).
 // Getting one: filter.flt in some vaults (pull it, jack out to bank it; now and then Custom, the only
-// place Custom filters and the rare tar, sting and reflection come from), and crafting (Tuned, built
-// around a recipe you know, for credits, code and components). Equip at home.
-import { emit, warn, active, hackerLevel, materialsOf, rand, firstTime } from './combat.mjs';
-import { gainComponents, payProblem, spend } from './salvage.mjs';
+// place Custom filters and the rare tar, sting and reflection come from), events, and hub shops' bootleg
+// filters. Equip at home.
+import { emit, warn, active } from './combat.mjs';
+import { gainComponents } from './salvage.mjs';
 import { RARITIES, seeded } from './gear.mjs';
-import { power, codeUnit } from './data.mjs';
+import { power } from './data.mjs';
 import { tierSlots } from './firewall.mjs';
 
 export const FILTER_CAP = 12; // how many you can hold
@@ -59,7 +59,7 @@ export function rollFilter(r, { level = 1, rarity = null, stat = null } = {}) {
   const stats = { strength: Math.max(1, Math.round((1 + L / 10) * base.k * MULT[rarity])) };
   const [lo, hi] = AFFIXES[rarity], n = Math.max(stat ? 1 : 0, lo + Math.floor(r() * (hi - lo + 1)));
   const taken = [];
-  // A crafted filter is built around the stat you pick.
+  // stat: one it's built around (an old save's retired service became one).
   if (stat && FILTER_STATS[stat]) { stats[stat] = statRoll(stat, r, L); taken.push(stat); }
   while (taken.length < n) {
     const ok = Object.keys(FILTER_STATS).filter((k) => !taken.includes(k) && (!FILTER_STATS[k].rare || rarity === 'custom') && !(FILTER_STATS[k].family && taken.some((t) => FILTER_STATS[t].family)));
@@ -99,41 +99,7 @@ export function addFilter(s, f, why = '') {
 // A stat line: "+3 lv · +3 lv vs Worm · 25% less fragmentation".
 export const filterLine = (f) => [`+${f.stats.strength} lv`, ...Object.entries(f.stats).filter(([k]) => k !== 'strength').map(([k, v]) => `${FILTER_STATS[k].family ? '+' : ''}${v}${FILTER_STATS[k].name}`)].join(' · ');
 
-// Crafting one (the Craft page): a Tuned filter at your level, built around the stat you pick
-// (or any). Credits, code (Cipher, and a unit of each code at your level: invasions pay it) and components.
-export const CRAFTABLE = Object.keys(FILTER_STATS).filter((k) => !FILTER_STATS[k].rare);
-// Filter recipes: one per stat, taught by blueprints that viruses drop.
-export const filterRecipes = (s) => (s.filterRecipes ||= []);
-export const knowsFilter = (s, k) => filterRecipes(s).includes(k);
-export const recipeLabel = (k) => FILTER_STATS[k].label.replace(/^of (the )?/, '');
-export function learnFilter(s, k, why = '') {
-  if (knowsFilter(s, k)) return;
-  filterRecipes(s).push(k);
-  emit(s, 'drop', `${why}${recipeLabel(k)} filter recipe. You can craft filters built around ${FILTER_STATS[k].name.trim()} (Craft page).`, { filterRecipe: k });
-}
-export const filterCost = (L) => ({ credits: 60 + 8 * L, code: { cipher: 6 + Math.floor(L / 2) + codeUnit(L), worm: codeUnit(L), kernel: codeUnit(L) }, salvage: 4 });
-const short = (mats, c) => Object.entries(c.code).some(([m, n]) => (mats[m] || 0) < n);
-function craftFilter(s, stat) {
-  if (s.run || active(s)) return warn(s, 'Craft at home, between fights.');
-  if (stat && !CRAFTABLE.includes(stat)) return warn(s, `Filters: ${CRAFTABLE.join(', ')}, or any.`);
-  if (stat && !knowsFilter(s, stat)) return warn(s, `You don't have the ${recipeLabel(stat)} recipe yet. Viruses drop blueprints.`);
-  if (!stat && !filterRecipes(s).length) return warn(s, 'You know no filter recipes yet. Viruses drop blueprints.');
-  if (!stat) stat = filterRecipes(s)[Math.floor(rand(s) * filterRecipes(s).length)]; // any of yours
-  if (own(s).held.length >= FILTER_CAP) return warn(s, `You hold ${FILTER_CAP} filters. Scrap one first.`);
-  const L = hackerLevel(s), c = filterCost(L), mats = materialsOf(s);
-  if (s.server.credits < c.credits || short(mats, c)) return warn(s, `A filter takes ${c.credits} credits and ${c.code.cipher} Cipher, ${c.code.worm} Worm and ${c.code.kernel} Kernel code.`);
-  const why = payProblem(s, c.salvage);
-  if (why) return warn(s, why);
-  spend(s, c.salvage);
-  s.server.credits -= c.credits; for (const [m, n] of Object.entries(c.code)) mats[m] -= n;
-  addFilter(s, rollFilter(() => rand(s), { level: L, rarity: 'tuned', stat }), 'Crafted: ');
-  firstTime(s, 'filter-' + stat, `first ${recipeLabel(stat)} filter`);
-}
-export function filterCommand(s, text) {
-  const m = text.match(/^filter craft(?: (\w+))?$/);
-  if (m) return craftFilter(s, m[1] && m[1] !== 'any' ? m[1] : null);
-  return filterAction(s, text);
-}
+export const filterCommand = (s, text) => filterAction(s, text);
 function filterAction(s, text) {
   const [, verb, n] = text.split(' '), i = Number(n) - 1, o = own(s), f = o.held[i];
   if (!['equip', 'unequip', 'scrap'].includes(verb) || !f) return warn(s, 'filter equip|unequip|scrap <n>');

@@ -157,13 +157,13 @@ test('the spoils card lists what a won fight gave you', async () => {
   const lines = spoilsOf([
     { type: 'loot' }, { type: 'loot' }, { type: 'victory' },
     { type: 'xp', amount: 30 }, { type: 'code', gains: { cipher: 2 } },
-    { type: 'drop', message: 'X dropped a blueprint.', pack: true }, { type: 'level-up', level: 4 },
+    { type: 'drop', message: 'X dropped a file.', pack: true }, { type: 'level-up', level: 4 },
   ]).map((l) => l.text + (l.pack ? ' (pack)' : ''));
   const { spoilsMarkup } = await import('./dist/view.mjs');
   const html = spoilsMarkup({ name: 'CRYPTJACK', level: 1, family: 'Ransomware', cycles: 2, damage: 0, clean: true }, spoilsOf([{ type: 'xp', amount: 30 }, { type: 'loot' }]), { level: 1, from: 0, to: 0.3 });
   assert.match(html, /CRYPTJACK/);
   assert.match(html, /\+30/);
-  assert.deepEqual(lines, ['2 components', '+30 XP', '+2 Cipher code', 'Blueprint (pack)', 'Level 4']);
+  assert.deepEqual(lines, ['2 components', '+30 XP', '+2 Cipher code', 'Drop (pack)', 'Level 4']);
 });
 
 test('Status in the HUD: timed effects on you with the cycles they have left (Momentum, buffs, Scrambled)', async () => {

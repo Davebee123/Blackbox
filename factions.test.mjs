@@ -33,8 +33,7 @@ test('a hub’s goods: tier-gated, limited stock, delivered by file transfer; sh
   const { items } = await import('./dist/hidden.mjs');
   const s = open();
   assert.ok(!shopOf(s, 'kestrel').some((g) => g.id === 'daemon') && !shopOf(s, 'nullchoir').some((g) => g.id === 'daemon'), 'no daemon images: only invasions drop daemons');
-  const bp = shopOf(s, 'glassjaw').find((g) => g.id === 'blueprint');
-  assert.ok(bp.locked, 'a sealed blueprint takes the second tier');
+  assert.ok(shopOf(s, 'kestrel').find((g) => g.id === 'cb-snare').locked, 'the Snare codebase takes the second tier');
   assert.ok(!shopOf(s, 'kestrel').some((g) => ['cipher', 'worm', 'kernel', 'exploit', 'salvage', 'signal', 'repair'].includes(g.id)), 'wares trade on the market; heals are Halcyon’s');
   const c0 = s.server.credits, r0 = items(s).relay || 0;
   buyFrom(s, 'kestrel', 'relay');

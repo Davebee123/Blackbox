@@ -3,7 +3,7 @@
 //   a server   a traced server (yours, a member's, a faction's): the R0 generator from its seed, its template's kind
 //              (relay Relay, mailhub Mailhub, mirror Mirror, archive Archive, lab Lab), its size, its family's crew as
 //              author, its floor (floors.mjs) the rooms' floor (no hunter on floor 1). Its guard post holds the vault's key; the vault
-//              holds what its old vault did (the same files: gear, code, the trace record, plans, blueprints, a
+//              holds what its old vault did (the same files: gear, code, the trace record, credits, a
 //              contract's file), into your pack; the Resident waits in /core. Beat it with the vault open and the
 //              server is yours: taken over (teal on the network map), its Core quiet for good.
 //   wild       SPRAWL-00, a rogue server (Nest, Pit, Gauntlet), a lair, KESSLER-FARM-00, an occupied server: every
@@ -20,20 +20,20 @@
 // Root (2.8) counts respawned fight rooms you clear on a server you hold: Root 2 after 5, 3 after 15, 4 after 30, 5
 // after 50 (root.mjs ROOT.need). Root 2 adds a stash room by the Core, Root 4 one more socket room.
 // Sockets (R2, sockets.mjs): a traced server's socket rooms (by size, +1 Backbone, +1 Root 4, +1 in a Grid consortium);
-// a server you hold has its Core as its core socket. A Resident's first fall and Mapped each teach a codebase. A run on rooms: s.run.rooms, Signal is the
+// a server you hold has its Core as its core socket. A Resident's first fall pays a protocol, and Mapped credits. A run on rooms: s.run.rooms, Signal is the
 // run's, the pack the run's files (run.mjs bank). The save migration (v39) builds every found server's rooms.
 import { hooks, emit, warn, active, hackerLevel, maxSignal, disconnect, gainXp, xpFor, deedXpFor, addItem, findLocation, roomKill, classOf, gainCode, rollDrop, uniqueFrom, rand, setDrop, fxPct } from './combat.mjs';
 import { setCredits } from './sets.mjs';
 import { PUZZLES } from './puzzles.mjs';
 import { CONFIG, BOSSES, FAMILIES, GUARDS, ROOM_FAMILIES, QUIRKS, layerOf } from './data.mjs';
-import { seeded, MATERIALS, codeOf, rollItem } from './gear.mjs';
+import { seeded, MATERIALS, codeOf, rollItem, LOOT } from './gear.mjs';
 import { crewOf, factionAuthor, AUTHORS } from './authors.mjs';
 import * as FP from './floorplan.mjs';
 import { AUTHOR_FAMILIES, familyName } from './families.mjs';
 import { zoneOf, zoneRooms } from './zone.mjs';
 import { ROGUE, FARM, rogueRooms, rogueSpawns, rogueKill, relocks, clock, inRuns } from './rogue.mjs';
 import { lairOpen, NETWORK } from './network.mjs';
-import { sizeOf, learnCodebase, AUTHOR_CODEBASES, SITES } from './sockets.mjs';
+import { sizeOf, SITES } from './sockets.mjs';
 import { gainComponents } from './salvage.mjs';
 import { consortiumSockets } from './consortium.mjs';
 import { owned, rootOf, ROOT, ROOT_PERKS } from './root.mjs';
@@ -54,6 +54,7 @@ export const NET = {
   purseCode: 0.2, // a Stash's 1 code of the server's family, one time in five
   wildXp: 1, // a wild room's kill: a room kill (ROOMS.xp.room), as a traced server's
   stash: 120, // Root 2's stash refills every two hours (minutes)
+  mapped: (L) => 30 + 5 * L, // Mapped's credits, at the server's level
 };
 const now = () => clock();
 const isWild = (loc) => !!(loc?.zone || loc?.rogue);
@@ -341,8 +342,8 @@ function takeover(s, loc, room) {
   setDrop(s, { kind: 'takeover' }, levelOf(loc), loc.name, { pack: true, path: `${room.path}/#set-${s.serial}` }); // Hot Spare's pieces (sets.mjs)
   loc.root ||= { level: 1, cleared: 0, n: 0, nextAt: null, proc: null };
   R.held = now();
-  // Its Resident's first fall: a codebase from its author's list (4 components if you know them all).
-  if (!loc.residentFell) { loc.residentFell = now(); learnCodebase(s, null, `${loc.name}'s Resident carried `, { from: AUTHOR_CODEBASES[R.author] || null, r: seeded(((loc.seed || 1) * 53 + 11) >>> 0) }); }
+  // Its Resident's first fall: a protocol, Tuned or better, at the server's level.
+  if (!loc.residentFell) { loc.residentFell = now(); const r = seeded(((loc.seed || 1) * 53 + 11) >>> 0); addItem(s, rollItem(r, { level: levelOf(loc), rarity: r() < LOOT.quest ? 'custom' : 'tuned' }), `${loc.name}'s Resident carried `); }
 }
 // Root: respawned fight rooms cleared on a server you hold climb its pips (root.mjs ROOT.need).
 export function rootClear(s, loc) {
@@ -585,7 +586,7 @@ WORLD_hook('mapped', (s) => {
   contractMapped(s, loc);
   // Mapped: every ? linked to it is traced the rest of the way (floors.mjs), so a floor always opens outward.
   if (!loc.zone && !loc.member && HIDDEN.opens) for (const n of hiddenNear(s, loc)) hiddenLead(s, n, 100 - n.lead, 'Mapped: ');
-  if (s.rooms.type === 'server') learnCodebase(s, null, 'Mapped: ', { r: seeded(((loc.seed || 1) * 59 + 3) >>> 0) }); // a codebase you don't know
+  if (s.rooms.type === 'server') { const n = NET.mapped(levelOf(loc)); s.server.credits += n; emit(s, 'info', `Mapped: +${n} credits.`, { credits: n }); }
 });
 
 // ---------- reading a server (the network map's card) ----------

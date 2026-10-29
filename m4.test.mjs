@@ -45,7 +45,8 @@ test('configs are gone (a save that owned one gets its credits back), and the wa
   assert.deepEqual(t.configsOwned, []); assert.deepEqual(t.configsKnown, [], 'configs are gone, Triage too');
   assert.deepEqual(t.configs, {});
   assert.ok(!t.services.tarpit && !t.services.honeypot);
-  assert.equal(t.server.credits, credits + 2 * 250 + 2 * FILTER_BAY, 'stateful and triage refunded, and (v34) the Filter Bay and the Hot-patcher come back as what they cost');
+  const { CRAFT_REFUND } = await import('./dist/progression.mjs');
+  assert.equal(t.server.credits, credits + 2 * 250 + 2 * FILTER_BAY + CRAFT_REFUND.filter(1), 'stateful and triage refunded, and (v34) the Filter Bay and the Hot-patcher come back as what they cost, the filter recipe one taught as credits (v47)');
   const stats = t.filters.held.map((f) => Object.keys(f.stats));
   assert.ok(stats.some((k) => k.includes('tarpit')) && stats.some((k) => k.includes('evasion')), 'each retired service comes back as a filter');
 });

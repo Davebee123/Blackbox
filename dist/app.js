@@ -25,7 +25,6 @@ import { nextTip, markSeen, TOUR, tourDone, skipTour } from './tips.mjs';
 import { createWindow } from './window.mjs';
 import { createIntro } from './intro.mjs';
 import { powerOn } from './poweron.mjs';
-import { componentsOf } from './salvage.mjs';
 import { relockLeft } from './rogue.mjs';
 import { createHitFx } from './hitfx.mjs';
 import { createAbilityFx, keyFor, tickKey, recipeOf, originOf, idOfName, finisherBreak, levelOf as afxLevel } from './abilityfx.mjs';
@@ -111,8 +110,6 @@ let skillUi = { sel: null, sheet: false }; // Skills and talents (skills-view.mj
 let bo = null; // the subclass breakout while it's open: { arch, step, sel, lvl, sheet } (skills-view.mjs breakoutMarkup)
 const pd = { id: null, anchor: null, el: null, scrim: null, sheet: false, html: '', mine: false, timer: 0 }; // the Loadout's item datasheet popover (pdShow)
 let pdTouch = 0; // when a touch last came down: the click after it is a tap
-let compileFocus = null; // (old) the recipe picked on the Craft page's Protocols card
-let craftUi = { cat: null, pick: null }; // the Craft page: the category, and the recipe in it
 
 function load() {
   // The campaign: its save, or a fresh state that the first launch (handle, class) turns into a campaign.
@@ -1182,7 +1179,6 @@ function react(events) {
 
       case 'synced': feel.add(e.surprise ? 'surprise' : 'sync', row(e.target) || '.bnow', `${e.surprise ? 'SURPRISE' : 'SYNCED'}${e.bonus ? ' · ' + e.bonus.toUpperCase() : ''}`); if (fx) feel.add(() => juice.punch(0.5)); break;
       case 'boost': feel.add('unlock', '.net-signal', `+${e.amount}`); break;
-      case 'crafted': feel.add('pickup', null); rewardCard('Crafted', e, events, true); break;
       case 'fleet': case 'fleet-siege': feel.add('prewarn', null); break;
       case 'infest': feel.add('prewarn', null); break;
       case 'fleet-hit': feel.add('good', null); notice(e.message); break;
@@ -1227,8 +1223,8 @@ function react(events) {
   barsBefore = after;
   pagerReact(events);
   shell.react(events);
-  // XP earned away from a fight (a vault, a sweep, a dead drop, a decode, a first craft): a quick card.
-  const carded = events.some((e) => ['takeover', 'root', 'streak', 'contract-done', 'crafted', 'bought', 'harvester', 'service-done'].includes(e.type));
+  // XP earned away from a fight (a vault, a sweep, a dead drop, a decode): a quick card.
+  const carded = events.some((e) => ['takeover', 'root', 'streak', 'contract-done', 'bought', 'harvester', 'service-done'].includes(e.type));
   const xpOut = !won && !ended && !active(campaign) && !carded && events.filter((e) => e.type === 'xp');
   if (campaign.rooms) roomsSay(events); // the rooms playtest has no tty: what happens on the server goes up as a notice
   if (xpOut?.length) { const why = String(xpOut[0].message.split('·')[1] || '').trim().replace(/\.$/, ''); showGain(why ? why[0].toUpperCase() + why.slice(1) : 'XP', '', V.spoilsOf(events.filter((x) => ['xp', 'fresh', 'code', 'level-up'].includes(x.type))), true); } // a toast: the level-up carries a level itself
@@ -1275,8 +1271,8 @@ function noticeCard(html) {
 }
 
 // ---------- commands ----------
-const NAV = ['map', 'combat', 'net', 'server', 'craft', 'loadout', 'daemons', 'codex', 'system', 'campaign', 'room', 'archive'];
-const ALIAS = { vault: 'loadout', gear: 'loadout', protocols: 'loadout', stash: 'loadout', inventory: 'loadout', crafting: 'craft', workbench: 'craft', build: 'craft', services: 'server', ports: 'server', wall: 'server', talents: 'loadout', skills: 'loadout', archetypes: 'loadout', home: 'map', trace: 'map', leads: 'map', logs: 'system', settings: 'system', bestiary: 'codex', fight: 'combat', run: 'net' };
+const NAV = ['map', 'combat', 'net', 'server', 'loadout', 'daemons', 'codex', 'system', 'campaign', 'room', 'archive'];
+const ALIAS = { vault: 'loadout', gear: 'loadout', protocols: 'loadout', stash: 'loadout', inventory: 'loadout', services: 'server', ports: 'server', wall: 'server', talents: 'loadout', skills: 'loadout', archetypes: 'loadout', home: 'map', trace: 'map', leads: 'map', logs: 'system', settings: 'system', bestiary: 'codex', fight: 'combat', run: 'net' };
 
 function run(raw) {
   let text = raw.trim().toLowerCase().replace(/\s+/g, ' ');
@@ -1380,7 +1376,7 @@ function run(raw) {
   if (text === 'window on' || text === 'window off') { campaign.settings.window = text === 'window on'; save(); dirty = true; return notice(`Window ${text.slice(7)}.`); }
   if (text.startsWith('weather')) { const w = text.split(' ')[1]; outside.force(w === 'auto' ? null : w); return notice(`Weather: ${w && w !== 'auto' ? w : 'follows the clock'}.`); }
   if (text === 'reset game' || text === 'new game') return resetGame();
-  if (text === 'help' && !CAMP) return notice('In a fight, key 1 is your plain hit, keys 2 to 0 fire your skills, - is SIGINT, hold skips a move and now ends the cycle at once. On a run, use ls, cd, cat, pull, unlock, attack and jack out. For gear, use load, unload, compile, deconstruct and craft. For your server, use install, uninstall, firewall upgrade|defrag and filter equip. On the net, use connect, relay, detach and mail. The pages are map, mail, server, craft, loadout and system. Change the screen with shell immersive|plain|boot, and start over with reset game.', false, null, true);
+  if (text === 'help' && !CAMP) return notice('In a fight, key 1 is your plain hit, keys 2 to 0 fire your skills, - is SIGINT, hold skips a move and now ends the cycle at once. On a run, use ls, cd, cat, pull, unlock, attack and jack out. For gear, use load, unload and deconstruct. For your server, use install, uninstall, firewall upgrade|defrag and filter equip. On the net, use connect, relay, detach and mail. The pages are map, mail, server, loadout and system. Change the screen with shell immersive|plain|boot, and start over with reset game.', false, null, true);
   // The campaign: fights, your gear, skills and talents. The old game's commands (connect, mail, install…) sit out.
   if (CAMP && !fighting && !/^(load|unload|equip|unequip|talent|untalent|respec|subclass|archetype|loadout|preset|deconstruct|scan|codex|collection|hold|now)\b/.test(text)) {
     if (text === 'help') return notice('On the campaign map, pick a server and breach it. On a breach, use ls, cd <n>, tree and the screen\'s verbs (pick, cat, pull, rest, reslot, buy, patch, service, open, force, fight, splice, leave, choose). In a breach fight, script <n> runs one of your scripts. In a fight, key 1 is your plain hit, keys 2 to 0 fire your skills and - is SIGINT. For gear and skills, use load, unload, equip and unequip. The pages are campaign, room, loadout, archive and system.', false, null, true);
@@ -1498,7 +1494,7 @@ function go(name, quiet = false) {
   if (name === 'net' && (!campaign.run || campaign.run.breach || campaign.run.rooms)) name = campaign.breach ? 'breach' : campaign.rooms ? 'rooms' : 'map';
   if (campaign.roomsPlay && name === 'map') name = 'rooms'; // the rooms playtest: its server is the page
   if (name === 'rooms' && !campaign.rooms) name = 'map';
-  if (CAMP && ['map', 'mail', 'server', 'craft', 'store', 'consortium', 'hub', 'net'].includes(name)) name = 'campaign'; // the old game's pages sit out
+  if (CAMP && ['map', 'mail', 'server', 'store', 'consortium', 'hub', 'net'].includes(name)) name = 'campaign'; // the old game's pages sit out
   if (!CAMP && ['campaign', 'room', 'archive'].includes(name)) name = 'map';
   if (campaign.breach && (CAMP ? ['campaign', 'room'].includes(name) && !campaign.breach.result : name === 'map')) name = 'breach'; // a live breach is the page
   if (name === 'breach' && !campaign.breach) name = CAMP ? 'campaign' : 'map';
@@ -1796,9 +1792,6 @@ function renderMeters() {
   $('mail-ready').hidden = !readyN;
   $('mail-ready').title = `${readyN} contract${readyN === 1 ? '' : 's'} ready to deliver`;
   $('tab-store').hidden = true; // Halcyon's store lives in its hub (connect halcyon → Shop)
-  // Craft shows up once there's something to make (WoW/FFXIV unlock UI as you go): a recipe, a plan, a config or filter source.
-  const craftable = (campaign.recipes || []).length || (campaign.plans || []).length || (campaign.filterRecipes || []).length || (campaign.harvesters || []).length;
-  document.querySelector('[data-module="craft"]').hidden = !craftable && module !== 'craft';
   $('tab-consortium').hidden = !consortiumOf(campaign) && !campaign.consortiumInvite;
   fitTopbar();
   const need = alertsOf(campaign).length + (campaign.consortiumInvite && !consortiumOf(campaign) ? 1 : 0);
@@ -1806,7 +1799,7 @@ function renderMeters() {
   $('con-count').textContent = need;
   if (module === 'loadout' && loadoutTab === 'daemons') V.sawTab(campaign, 'daemons'); // daemons are a Loadout tab
   if (module === 'loadout' && loadoutTab !== 'daemons') V.sawTab(campaign, 'skills'); // new skills: seen once you open Loadout
-  for (const t of ['loadout', 'craft']) {
+  for (const t of ['loadout']) {
     if (module === t && !(t === 'loadout' && loadoutTab === 'daemons')) V.sawTab(campaign, t); // you're looking at it
     const n = V.newOn(campaign, t) + (t === 'loadout' ? V.newOn(campaign, 'daemons') + V.newOn(campaign, 'skills') : 0), el = $('new-' + t);
     el.hidden = !n;
@@ -1998,7 +1991,7 @@ function render(force = false) {
       $('term').scrollTop = $('term').scrollHeight;
     }
   } else {
-    const pages = { rooms: (x) => roomsMarkup(x), campaign: (x) => campaignMarkup(x), room: (x) => roomMarkup(x), archive: (x) => archiveMarkup(x), breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab, skillUi), craft: (x) => V.craftMarkup(x, craftUi), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now()), server: (x) => V.serverMarkup(x, Date.now(), srvUi), daemons: V.daemonsMarkup, codex: (x) => codexPageMarkup(x, codexSel, codexIdx), system: (x) => V.systemMarkup(x, { coop: !!coop, tab: systemTab, ach: achUi, cs: caseUi }) };
+    const pages = { rooms: (x) => roomsMarkup(x), campaign: (x) => campaignMarkup(x), room: (x) => roomMarkup(x), archive: (x) => archiveMarkup(x), breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab, skillUi), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now()), server: (x) => V.serverMarkup(x, Date.now(), srvUi), daemons: V.daemonsMarkup, codex: (x) => codexPageMarkup(x, codexSel, codexIdx), system: (x) => V.systemMarkup(x, { coop: !!coop, tab: systemTab, ach: achUi, cs: caseUi }) };
     // A page that throws shows what broke (and a way back) instead of stopping every render after it.
     const keep = module === 'breach' ? $('bx-scroll')?.scrollTop : null;
     const focusRoom = module === 'rooms' ? document.activeElement?.closest?.('.fp-room')?.dataset.room : null; // a redraw keeps a focused room focused
@@ -2661,7 +2654,7 @@ document.addEventListener('click', (e) => {
   if (e.target.closest('[data-spoils-go]')) { if (ended) leaveFight(); else hideSpoils(); return; }
   if (e.target.closest('[data-gain-go]')) { hideGain(); return; }
   const pick = e.target.closest('[data-mk-pick]');
-  if (pick) { const w = pick.dataset.mkPick; setMkOrder(mkOrder?.w === w && mkOrder.f === hubSel ? null : { f: hubSel, w, side: (w === 'salvage' ? componentsOf(campaign) : campaign.materials?.[w] || 0) > 0 ? 'sell' : 'buy', n: 1 }); return; }
+  if (pick) { const w = pick.dataset.mkPick; setMkOrder(mkOrder?.w === w && mkOrder.f === hubSel ? null : { f: hubSel, w, side: w === 'salvage' || (campaign.materials?.[w] || 0) > 0 ? 'sell' : 'buy', n: 1 }); return; }
   const side = e.target.closest('[data-mk-side]');
   if (side && mkOrder) { setMkOrder({ ...mkOrder, side: side.dataset.mkSide, n: 1 }); return; }
   if (e.target.closest('.mk-go') && mkOrder) { const c = e.target.closest('.mk-go').dataset.command; setMkOrder({ ...mkOrder, n: 1 }); return run(c); }
@@ -2682,12 +2675,6 @@ document.addEventListener('click', (e) => {
   }
   const loc = e.target.closest('[data-locate]');
   if (loc) { pendingLocate = loc.dataset.locate === '__sel' ? mapSel : loc.dataset.locate; mapList = false; mapSel = pendingLocate; mapPop = true; if (module !== 'map') go('map'); dirty = true; return; }
-  const cc = e.target.closest('[data-craft-cat]');
-  if (cc) { craftUi = { ...craftUi, cat: cc.dataset.craftCat, pick: null }; dirty = true; return; }
-  const cp = e.target.closest('[data-craft-pick]');
-  if (cp) { craftUi = { ...craftUi, pick: cp.dataset.craftPick }; dirty = true; return; }
-  const cs = e.target.closest('[data-craft-slot]');
-  if (cs) { craftUi = { ...craftUi, slot: cs.dataset.craftSlot }; dirty = true; return; } // the slot a protocol compiles into
   const ml = e.target.closest('[data-maplist]');
   if (ml) { mapList = ml.dataset.maplist === '1'; dirty = true; return; }
   const ms = e.target.closest('[data-msort]');
@@ -3060,7 +3047,6 @@ function goTo(target) {
   if (where === 'mail') { if (what) mailSel = what; go('mail'); }
   else if (where === 'store') go('store');
   else if (where === 'server') go('server');
-  else if (where === 'craft') { craftUi = { cat: what || null, pick: null }; go('craft'); }
   else if (where === 'hub') { openHub(what); if (sub) pickHub(sub); } // hub:<faction>:<window> opens straight to it (a market shock's tile)
   else if (where === 'map') { if (what === 'consortium') { mapView = 'consortium'; mapSel = 'server'; } else if (what?.startsWith('con=')) { mapView = 'consortium'; mapSel = what.slice(4); } else if (what) { mapSel = what; mapPop = true; } go('map'); }
   else if (where === 'consortium' || where === 'people') { peopleOpen = false; go('consortium'); }
@@ -3083,20 +3069,6 @@ document.addEventListener('click', (e) => {
   else if (c) closeHub();
 });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && commsOpen) { setComms(false); } });
-
-// Craft sections you fold stay folded.
-document.addEventListener('toggle', (e) => {
-  const sec = e.target.closest?.('details[data-sec]');
-  if (!sec) return;
-  const shut = new Set(campaign.settings.craftShut || []);
-  if (sec.open) shut.delete(sec.dataset.sec); else shut.add(sec.dataset.sec);
-  campaign.settings.craftShut = [...shut];
-  save();
-}, true);
-// The Craft page's protocol recipe picker.
-document.addEventListener('change', (e) => {
-  if (e.target.matches?.('[data-focus-select]')) { compileFocus = e.target.value || null; dirty = true; }
-});
 
 document.addEventListener('keydown', (e) => {
   const node = e.target.closest?.('[data-select]');
@@ -3419,7 +3391,7 @@ function boLater() {
   dirty = true;
 }
 // The screen is free for it: not in the intro, a fight or its result, a card or another full screen.
-function boFree() { return !introOn && !lu.showing() && !lu.pending() && !ended && !active(campaign) && $('spoils')?.hidden !== false && !gainOpen() && !payState && !document.querySelector('.class-pick') && !['combat', 'net'].includes(module); }
+function boFree() { return !introOn && !lu.showing() && !lu.pending() && !ended && !active(campaign) && $('spoils')?.hidden !== false && !gainOpen() && !document.querySelector('.class-pick') && !['combat', 'net'].includes(module); }
 function renderBreakout() {
   let el = $('breakout');
   if (bo && !subWaiting(campaign, bo.arch)) { // picked (here or by a command): the page shows the new subclass

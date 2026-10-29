@@ -41,11 +41,15 @@ test('buying pays now and the goods land later; can’t overspend, oversell or t
   const s = open();
   tickMarket(s, T0);
   const c0 = s.server.credits;
-  trade(s, 'buy', 'nullchoir', 'salvage', 3, T0);
+  trade(s, 'buy', 'nullchoir', 'kernel', 3, T0);
   assert.ok(s.server.credits < c0);
-  const n0 = s.components;
+  const n0 = s.materials.kernel || 0;
   tickMarket(s, T0 + travelMs(s, 'nullchoir'));
-  assert.equal(s.components, n0 + 3);
+  assert.equal(s.materials.kernel, n0 + 3);
+  const c1 = s.server.credits, x = transfersOf(s).length;
+  trade(s, 'buy', 'nullchoir', 'salvage', 3, T0);
+  assert.equal(s.server.credits, c1, 'components only sell');
+  assert.equal(transfersOf(s).length, x);
   trade(s, 'sell', 'halcyon', 'exploit', 5, T0);
   assert.equal(transfersOf(s).length, 0, 'none to sell');
   s.server.credits = 1;

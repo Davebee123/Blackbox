@@ -88,10 +88,9 @@ export default {
         "any": true
       },
       "reward": {
-        "credits": 150,
+        "credits": 250,
         "standing": 4,
         "xp": 3,
-        "blueprint": true,
         "relay": 1
       },
       "boardAfterHour": true,

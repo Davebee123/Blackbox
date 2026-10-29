@@ -164,7 +164,7 @@ test('no round-trip profit at a held hub (no spread)', () => {
   const s = open();
   take(s, 'kestrel');
   tickMarket(s, T0); s.market.event = 'calm';
-  for (const w of ['kernel', 'cipher', 'exploit', 'salvage']) {
+  for (const w of ['kernel', 'cipher', 'exploit']) {
     const c0 = s.server.credits;
     trade(s, 'buy', 'kestrel', w, 40, T0);
     const spent = c0 - s.server.credits;

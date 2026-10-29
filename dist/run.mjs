@@ -4,12 +4,11 @@
 // Trace, quirk folders) no longer runs on the real game; phase R5 deletes it with the breach code.
 // Pure like the combat engine: state in, events out.
 import { vaultFilter, addFilter, filterLine } from './filters.mjs';
-import { vaultCodebase, learnCodebase } from './sockets.mjs';
 import { gainComponents } from './salvage.mjs';
 import { CONFIG, FAMILIES, GUARDS, QUIRKS, MONTHS, SKILLS, SERVER, XP, BOSSES, layerOf } from './data.mjs';
 import { sweepFile, showSweep, sweepCommand } from './forensics.mjs';
 import { isWild, relocks, rogueLayout, rogueSpawns, rogueMotd, liveRogue, ROGUE, relockLeft, clock, farmFile } from './rogue.mjs';
-import { findLocation, closest, command, selectEncounter, encounterVirus, active, emit, warn, hackerLevel, addLead, addLocation, disconnect, hooks, maxSignal, classOf, equippedSkills, knownSkills, serverLevel, gainXp, addItem, gearStat, regenRate, xpFor, deedXpFor, gainCode, learnBlueprint, UNIQUES, effectLine, loadoutSuggestions } from './combat.mjs';
+import { findLocation, closest, command, selectEncounter, encounterVirus, active, emit, warn, hackerLevel, addLead, addLocation, disconnect, hooks, maxSignal, classOf, equippedSkills, knownSkills, serverLevel, gainXp, addItem, gearStat, regenRate, xpFor, deedXpFor, gainCode, UNIQUES, effectLine, loadoutSuggestions } from './combat.mjs';
 import { ZERO_DAYS, RARITIES, LOOT, uniqueItem, rollItem, seeded, statLine, itemLabel, MATERIALS, codeOf, vaultCode } from './gear.mjs';
 import { jackIn, developerNetwork, invasionsCommand, sabotageBlock } from './invasion.mjs';
 import { developerWall, developerDamage } from './firewall.mjs';
@@ -118,11 +117,11 @@ export function layoutOf(loc) {
   const extra = QUIRK_ROOMS[loc?.quirk];
   let out = iced(loc, base);
   if (extra) out = Object.assign({ ...out, '/': { ...out['/'], dirs: [...out['/'].dirs, ...Object.keys(extra).map((k) => k.slice(1))] } }, extra);
-  // A vault holds a code cache, and maybe a protocol, a blueprint, a second cache, source (floor 2+), a
-  // harvester or a config: fixed by its seed (LOOT.vault*). Your first server's has a protocol and a blueprint.
+  // A vault holds a code cache, and maybe a protocol, spare credits, a second code cache, a Zero-day (floor 2+) or a
+  // filter: fixed by its seed (LOOT.vault*). Your first server's has a protocol and spare credits.
   const vault = Object.keys(out).find((k) => out[k].locked && !out[k].drop);
   // Contracts plant files in vaults too (see mail.mjs).
-  if (vault && loc) out = { ...out, [vault]: { ...out[vault], files: [...out[vault].files, ...(hasKit(loc) ? ['kit.bin'] : []), ...(hasBlueprint(loc) ? ['blueprint.bp'] : []), ...(hasBackup(loc) ? ['backup.bin'] : []), ...(sourceOf(loc) ? [sourceOf(loc) + '.src'] : []), ...(vaultCodebase(loc) ? ['codebase.cb'] : []), ...(vaultFilter(loc) ? ['filter.flt'] : [])] } };
+  if (vault && loc) out = { ...out, [vault]: { ...out[vault], files: [...out[vault].files, ...(hasKit(loc) ? ['kit.bin'] : []), ...(hasTokens(loc) ? ['tokens.dat'] : []), ...(hasBackup(loc) ? ['backup.bin'] : []), ...(sourceOf(loc) ? [sourceOf(loc) + '.src'] : []), ...(vaultFilter(loc) ? ['filter.flt'] : [])] } };
   // About half the found servers keep an incident file at the root (a Log sweep, see forensics.mjs).
   const incident = sweepFile(loc);
   if (incident && out['/'] && !out['/'].files.includes(incident)) out = { ...out, '/': { ...out['/'], files: [...out['/'].files, incident] } };
@@ -151,11 +150,12 @@ function iced(loc, base) {
   return out;
 }
 // Some vaults (10%, fixed per location) hold a second code cache (backup.bin; daemons only come from invasions
-// now, and this is what a vault's daemon.exe became); half a protocol, a quarter a blueprint.
+// now, and this is what a vault's daemon.exe became); half a protocol, and half spare credits (tokens.dat: what a
+// blueprint or a codebase there became).
 export const VAULT_BACKUP = 0.1;
 export const hasBackup = (loc) => seeded(loc.seed * 13 + 5)() < VAULT_BACKUP;
 export const hasKit = (loc) => !!loc.starter || seeded(loc.seed * 41 + 7)() < LOOT.vaultKit;
-export const hasBlueprint = (loc) => !!loc.starter || seeded(loc.seed * 43 + 9)() < LOOT.vaultBlueprint;
+export const hasTokens = (loc) => !!loc.starter || seeded(loc.seed * 43 + 9)() < LOOT.vaultTokens;
 // The protocol waiting in a location's vault: the same every time you look.
 export const levelOf = (loc) => loc.level || SERVER.locationLevel(loc.depth || 1, 0);
 
@@ -192,10 +192,10 @@ export function vaultItem(loc) {
   }
   return { ...rollItem(r, { level, rarity, faction: loc.faction }), from: loc.family }; // a faction's server: its implicit (gear.mjs IMPLICITS)
 }
-// Source in deeper vaults: a Zero-day protocol to compile, or a special service to install.
+// A Zero-day in deeper vaults, ready to load (its .src file: the same one every time you look).
 const SOURCES = Object.keys(ZERO_DAYS).filter((z) => !ZERO_DAYS[z].chase);
 export const sourceOf = (loc) => ((loc.depth || 1) >= 2 && seeded(loc.seed * 47 + 13)() < LOOT.vaultSource ? SOURCES[loc.seed % SOURCES.length] : null);
-const sourceName = (id) => ZERO_DAYS[id]?.name || id;
+export const sourceItem = (loc) => rollItem(seeded(loc.seed * 53 + 17), { level: levelOf(loc), zeroDay: sourceOf(loc) });
 
 const hiddenName = (name) => name.startsWith('.');
 const guardName = (loc, path) => (layoutOf(loc)[path]?.resident ? 'Resident' : GUARDS[layoutOf(loc)[path]?.guard]?.name.toLowerCase() || 'guard');
@@ -299,12 +299,11 @@ export function fileInfo(loc, path, name) {
   const planted = loc.extraFiles?.find((f) => f.name === name && (f.dir || vaultPath) === path);
   if (planted) return { kind: planted.kind || 'contract', size: planted.kind === 'route' ? '6k' : '40k', label: planted.label, hidden: planted.hidden, text: planted.text };
   if (name === 'filter.flt' && vaultFilter(loc) && layoutOf(loc)[path]?.locked) { const f = vaultFilter(loc); return { kind: 'filter', size: '24k', filter: f, text: [`firewall filter: ${f.name} (${RARITIES[f.rarity].name.toLowerCase()}, lv ${f.level}).`, `${filterLine(f)}.`, 'bank it, then put it in your firewall at home (Server page).'] }; }
-  if (name === 'codebase.cb' && vaultCodebase(loc) && layoutOf(loc)[path]?.locked) return { kind: 'codebase', size: '48k', text: ['codebase: a program\'s source, one you don\'t know yet.', 'bank it to learn it, then build it in a socket.'] };
   if (name === 'backup.bin' && hasBackup(loc) && layoutOf(loc)[path]?.locked) return { ...payload, size: '40k', text: [`binary: ${payload.amount} ${MATERIALS[code].name.toLowerCase()}, a backup of the vault's cache.`, 'pull it and bank it.'] };
-  if (name === 'blueprint.bp' && layoutOf(loc)[path]?.locked) return { kind: 'blueprint', size: '64k', text: ['blueprint: plans for a service or a protocol recipe.', 'bank it to learn it.'] };
+  if (name === 'tokens.dat' && hasTokens(loc) && layoutOf(loc)[path]?.locked) return credits(cash, 'spare payment tokens');
   if (name.endsWith('.src') && sourceOf(loc) + '.src' === name) {
-    const id = sourceOf(loc);
-    return { kind: 'source', size: '120k', zeroDay: id, text: [`source: ${sourceName(id)}, a Zero-day protocol.`, ZERO_DAYS[id]?.effect || '', 'bank it, then compile it at home (Craft page).'] };
+    const item = sourceItem(loc);
+    return { kind: 'gear', size: '120k', item, text: [`binary: ${itemLabel(item)}, a Zero-day protocol.`, `${statLine(item.stats)}. ${ZERO_DAYS[item.zeroDay].effect}`, 'pull it and bank it.'] };
   }
   const info = (files[loc.template] || files.relay)[full] || extras[full];
   // The hidden quirk leaves one hint in the first file at the root.
@@ -610,7 +609,7 @@ function pull(s, arg) {
 }
 
 // One pack file in a line (the pack command).
-const packLine = (f) => (f.kind === 'credits' ? f.amount + ' credits' : f.kind === 'item' ? f.item : f.kind === 'gear' ? itemLabel(f.item) : f.kind === 'code' ? `${f.amount} ${MATERIALS[f.material].name}` : f.kind === 'source' ? sourceName(f.zeroDay) + ' source' : f.kind === 'blueprint' ? 'blueprint' : f.kind === 'deeper' ? 'trace record (deeper node)' : f.label || f.kind);
+const packLine = (f) => (f.kind === 'credits' ? f.amount + ' credits' : f.kind === 'item' ? f.item : f.kind === 'gear' ? itemLabel(f.item) : f.kind === 'code' ? `${f.amount} ${MATERIALS[f.material].name}` : f.kind === 'deeper' ? 'trace record (deeper node)' : f.label || f.kind);
 // One pack file as a row for the gain card (app.js): { label, qty, kind, rarity, sub, text }.
 // Same row shape as a fight's spoils (view.mjs spoilsOf), so the card looks the same.
 export function packGain(f, credits = null) {
@@ -620,11 +619,8 @@ export function packGain(f, credits = null) {
     case 'item': return row(f.item, '', 'loot', { sub: 'component' });
     case 'gear': return row(itemLabel(f.item), '', 'item', { rarity: f.item.rarity, sub: statLine(f.item.stats) });
     case 'code': return row(MATERIALS[f.material]?.name || f.material, `+${f.amount}`, f.material === 'exploit' ? 'exploit' : 'code');
-    case 'source': return row(`${sourceName(f.zeroDay)} source`, '', 'blueprint', { rarity: 'zeroday' });
-    case 'blueprint': return row('Blueprint', '', 'blueprint', { sub: '???' });
 
     case 'deeper': return row('Trace record', '', 'found');
-    case 'codebase': return row('Codebase', '', 'blueprint', { sub: '???', rarity: 'tuned' });
     case 'filter': return row(f.filter.name, '', 'item', { rarity: f.filter.rarity, sub: filterLine(f.filter) });
     default: return row(f.label || f.name, '', 'found');
   }
@@ -682,8 +678,6 @@ export function bank(s, loc, why = '') {
     if (f.kind === 'item') gainComponents(s, 1); // an old file system's salvage file: a component
   }
   const gear = pack.filter((f) => f.kind === 'gear');
-  const sources = pack.filter((f) => f.kind === 'source');
-  const blueprints = pack.filter((f) => f.kind === 'blueprint');
   const raw = {};
   // A daemon.exe pulled before daemons came only from invasions: it banks as the vault cache it became.
   for (const f of pack.filter((x) => x.kind === 'daemon')) { const m = codeOf(loc.family) || 'cipher'; raw[m] = (raw[m] || 0) + vaultCode(levelOf(loc)); }
@@ -705,18 +699,11 @@ export function bank(s, loc, why = '') {
   if (s.gate && s.encounter?.phase !== 'alert') { s.encounter = s.gate; s.gate = null; }
   // The card: credits as one row (after Scavenge), everything else as it came.
   const banked = [...(credits ? [packGain({ kind: 'credits' }, credits)] : []), ...pack.filter((f) => f.kind !== 'credits' && f.kind !== 'code').map((f) => packGain(f)), ...Object.entries(code).map(([material, amount]) => packGain({ kind: 'code', material, amount }))];
-  emit(s, 'jacked-out', `${why ? why + ' ' : ''}JACKED OUT of ${loc.name}. Banked: ${pack.length ? [credits ? credits + ' credits' : '', ...items, ...gear.map((f) => itemLabel(f.item)), ...Object.entries(code).map(([m, n]) => `${n} ${MATERIALS[m].name}`), ...sources.map((f) => sourceName(f.zeroDay) + ' source'), ...blueprints.map(() => 'a blueprint'), ...pack.filter((f) => f.kind === 'deeper').map(() => 'a trace record'), ...pack.filter((f) => f.kind === 'harvester').map((f) => harvesterName(f.harvester)), ...pack.filter((f) => f.kind === 'codebase').map(() => 'a codebase'), ...pack.filter((f) => f.kind === 'filter').map((f) => f.filter.name), ...pack.filter((f) => f.kind === 'contract' || f.kind === 'route').map((f) => f.label)].filter(Boolean).join(', ') : 'nothing'}.`, { gains: banked });
+  emit(s, 'jacked-out', `${why ? why + ' ' : ''}JACKED OUT of ${loc.name}. Banked: ${pack.length ? [credits ? credits + ' credits' : '', ...items, ...gear.map((f) => itemLabel(f.item)), ...Object.entries(code).map(([m, n]) => `${n} ${MATERIALS[m].name}`), ...pack.filter((f) => f.kind === 'deeper').map(() => 'a trace record'), ...pack.filter((f) => f.kind === 'harvester').map((f) => harvesterName(f.harvester)), ...pack.filter((f) => f.kind === 'filter').map((f) => f.filter.name), ...pack.filter((f) => f.kind === 'contract' || f.kind === 'route').map((f) => f.label)].filter(Boolean).join(', ') : 'nothing'}.`, { gains: banked });
   if (clean) { emit(s, 'clean-job', `Clean job: in and out at ${Math.round(r0.trace || 0)}% trace.`); gainXp(s, deedXpFor(s, levelOf(loc), TRACE.cleanXp), 'clean job', 'breakin'); }
   gainCode(s, code, 'Banked: ');
   for (const f of gear) addItem(s, f.item, 'Banked: ');
-  for (const f of sources) {
-    s.recipes ||= [];
-    if (s.recipes.includes(f.zeroDay)) { gainComponents(s, 3); emit(s, 'info', `You already have ${sourceName(f.zeroDay)} source: +3 components.`); }
-    else { s.recipes.push(f.zeroDay); emit(s, 'drop', `Source banked. You can compile ${sourceName(f.zeroDay)} at home, on the Craft page.`, { recipe: f.zeroDay }); }
-  }
-  for (const f of pack.filter((x) => x.kind === 'codebase')) learnCodebase(s, null, 'Codebase banked: '); // one you don't know (sockets.mjs)
   for (const f of pack.filter((x) => x.kind === 'filter')) addFilter(s, f.filter, 'Filter banked: ');
-  for (const f of blueprints) learnBlueprint(s, 'Blueprint banked: ');
 
   for (const f of pack.filter((x) => x.kind === 'contract')) bankCargo(s, { name: f.name, label: f.label, loc: f.loc || loc.id, path: f.path });
   // A trace record moves the trace on one of the ? servers linked to this one (a flagged one first, else one of its
@@ -820,7 +807,7 @@ export function play(s, input) {
   else if (word === 'tap') tap(s);
   else if (word === 'boost') boost(s);
   else if (word === 'sweep') sweepCommand(s, currentLocation(s), rest);
-  else if (word === 'pack') out(s, s.run.pack.length ? s.run.pack.map((f) => `${f.name.padEnd(14)} ${f.kind === 'credits' ? f.amount + ' credits' : f.kind === 'item' ? f.item : f.kind === 'gear' ? itemLabel(f.item) : f.kind === 'code' ? `${f.amount} ${MATERIALS[f.material].name}` : f.kind === 'source' ? sourceName(f.zeroDay) + ' source' : f.kind === 'blueprint' ? 'blueprint' : f.kind === 'daemon' ? 'daemon' : 'trace record (deeper node)'}`).concat('unbanked until you jack out.') : 'pack is empty.');
+  else if (word === 'pack') out(s, s.run.pack.length ? s.run.pack.map((f) => `${f.name.padEnd(14)} ${f.kind === 'credits' ? f.amount + ' credits' : f.kind === 'item' ? f.item : f.kind === 'gear' ? itemLabel(f.item) : f.kind === 'code' ? `${f.amount} ${MATERIALS[f.material].name}` : f.kind === 'daemon' ? 'daemon' : 'trace record (deeper node)'}`).concat('unbanked until you jack out.') : 'pack is empty.');
   else if (word === 'help') out(s, ['ls            what is here (ls -a shows hidden files)', 'cd <dir>      move (cd .. goes up)', 'cat <file>    read',
   'sweep <x>     answer an incident log (cat it first)', 'pull <file>   take it (banked when you jack out)', 'unlock <dir> <password>', 'tree          map of what you have seen', 'history       everything this run (the terminal shows one folder at a time)', 'pack          what you are carrying', `scan <x>      a virus's rules before you fight it (${SCAN.signal} Signal${classOf(s) === 'infiltrator' ? ', quiet for you' : ', and Trace on a break-in'})`, 'jack out      go home', ...(equipped(s, 'spoof') ? ['spoof         slip past the next guard (once per run)'] : []), ...(classOf(s) === 'infiltrator' ? [`slip          walk past a guard without a fight (${slipsLeft(s)} left this run)`] : []), ...(equipped(s, 'tap') ? ['tap           show the whole map, guards and where the key is (once per run)'] : [])]);
   return since(s, first);

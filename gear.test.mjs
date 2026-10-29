@@ -1,8 +1,8 @@
 // Protocols (you), services (the server) and code: slots, stats, rarities, crits, drops,
-// compiling, scrapping, Zero-days, the install queue and save migration.
+// scrapping, Zero-days, the install queue and save migration.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fresh, command, selectEncounter, resolveCycle, part, restore, addItem, gearStat, scaled, healScaled, dotMult, dotHit, SAVE_VERSION, previewDamage, daemonSlots, maxSignal, critChance, loaded, slotCount, rigOf, tickServices, syncServer, compileCost, idleRegen, missChance, serverLevel } from './dist/combat.mjs';
+import { fresh, command, selectEncounter, resolveCycle, part, restore, addItem, gearStat, scaled, healScaled, dotMult, dotHit, SAVE_VERSION, previewDamage, daemonSlots, maxSignal, critChance, loaded, slotCount, rigOf, tickServices, syncServer, idleRegen, missChance, serverLevel } from './dist/combat.mjs';
 import { play, connect, sourceOf } from './dist/run.mjs';
 import * as FP from './dist/floorplan.mjs';
 // Since R1 a server is rooms (netrooms.mjs): into the first room next to the entry that something holds, and engage.
@@ -10,7 +10,7 @@ const roomFight = (s) => { const R = s.rooms, g = R.graph, room = FP.neighbours(
 // The vault, its key in hand: opened, its files in your pack.
 const openVault = (s) => { const R = s.rooms, v = R.graph.vaults[0]; R.visit.keys.push(v); R.at = v; R.screen = null; FP.act(s, 'open'); };
 import { CONFIG, power } from './dist/data.mjs';
-import { STATS, RARITIES, LOOT, BASES, AFFIXES, SLOTS, DECONSTRUCT, uniqueItem, lootOdds, magicFind, COMPILE, STASH_CAP, SERVICES, PROTOCOL_STATS, protocolSlots, RULES, rollItem, seeded, codeOf, codeDrop, vaultCode, affixValue, primaries, scavengeCut, baseFor, SCAVENGE_COST } from './dist/gear.mjs';
+import { STATS, RARITIES, LOOT, BASES, AFFIXES, SLOTS, DECONSTRUCT, uniqueItem, lootOdds, magicFind, STASH_CAP, SERVICES, PROTOCOL_STATS, protocolSlots, RULES, rollItem, seeded, codeOf, codeDrop, vaultCode, affixValue, primaries, scavengeCut, baseFor, SCAVENGE_COST } from './dist/gear.mjs';
 
 // Exact numbers unless a test turns crits or misses on.
 CONFIG.baseCrit = 0;
@@ -70,9 +70,8 @@ test('items: a base for its slot (primaries), affixes by rarity (one prefix and 
   // No jump: the new base starts at the power the old one had (gear.mjs ITEM_CURVE), so level 11 is a level's growth on 10.
   const at = (id, L) => primaries(id, L, 1000, () => 0.5).damage;
   assert.ok(at('exploit-chain', 11) > at('weaponized-exploit', 10) && at('exploit-chain', 11) < at('weaponized-exploit', 10) * 1.1, 'and no jump');
-  const asked = rollItem(seeded(5), { level: 6, stat: 'crit', source: 'compile' });
-  assert.equal(asked.rarity, 'tuned');
-  assert.ok(asked.stats.crit > 0, 'compiling a stat: it has that affix');
+  const asked = rollItem(seeded(5), { level: 6, stat: 'crit', rarity: 'tuned' });
+  assert.ok(asked.stats.crit > 0, 'rolled around a stat: it has that affix');
   CONFIG.powerPerLevel = 0;
 });
 
@@ -508,35 +507,6 @@ test('home wins give the family\'s code, and can drop an item at the enemy\'s le
   LOOT.odds.trash.stock = was;
 });
 
-test('compile: pick the stat, pay credits and components, get a protocol at your level', () => {
-  const s = fresh();
-  command(s, 'developer level 3');
-  s.server.credits = 1000;
-  assert.match(command(s, 'compile crit').at(-1).message, /no protocol recipes/, 'compiling starts locked');
-  s.recipes = ['recipe:crit'];
-  assert.match(command(s, 'compile damage').at(-1).message, /recipe/, 'only recipes you have');
-  assert.match(command(s, 'compile crit').at(-1).message, /components/);
-  s.components = 10;
-  command(s, 'compile crit');
-  const it = s.stash.at(-1);
-  assert.equal(it.kind, 'protocol');
-  assert.equal(it.level, 3);
-  assert.ok(it.stats.crit > 0, 'the stat you asked for');
-  assert.match(command(s, 'compile integrity').at(-1).message, /server/, 'server stats come from the server');
-  assert.notEqual(it.rarity, 'zeroday');
-  assert.equal(s.server.credits, 1000 - COMPILE.cost(3).credits);
-  assert.equal(s.components, 10 - COMPILE.cost(3).salvage);
-  assert.match(command(s, 'compile rootkit').at(-1).message, /source/, 'Zero-days need their source first');
-  s.recipes = ['rootkit'];
-  s.components = COMPILE.zeroDayCost(3).salvage - 1;
-  assert.match(command(s, 'compile rootkit').at(-1).message, /Needs 16 components\. You have 15\./, 'any components: no guard ones by name');
-  s.components += 1;
-  command(s, 'compile rootkit');
-  assert.equal(s.components, 0);
-  assert.equal(s.stash.at(-1).zeroDay, 'rootkit');
-  assert.equal(compileCost(s).credits, COMPILE.cost(3).credits, 'no Build Farm any more: the list price');
-});
-
 test('deconstruct: an item breaks into components, code and Exploits by rarity (a loaded one comes off first)', () => {
   const s = fresh();
   const it = give(s, { damage: 5 }, { rarity: 'custom', from: 'worm', group: 'exploit' });
@@ -560,7 +530,7 @@ test('a full stash deconstructs new items instead', () => {
   assert.ok(s.components >= DECONSTRUCT.tuned.salvage[0] && s.components <= DECONSTRUCT.tuned.salvage[1]);
 });
 
-test('runs: your first vault holds a protocol kit and a code cache; deeper vaults can hold source you bank', () => {
+test('runs: your first vault holds a protocol kit and a code cache; deeper vaults can hold a Zero-day you bank', () => {
   const s = fresh();
   command(s, 'developer location worm');
   const loc = s.locations[0];
@@ -570,15 +540,15 @@ test('runs: your first vault holds a protocol kit and a code cache; deeper vault
   const names = s.run.pack.map((f) => f.name);
   assert.ok(names.includes('kit.bin'), names.join(' '));
   const src = sourceOf(loc);
-  assert.ok(names.includes(`${src}.src`), 'and its source');
+  assert.ok(names.includes(`${src}.src`), 'and its Zero-day');
   const before = s.stash.length, worm = s.materials.worm;
   const packed = s.run.pack.filter((p) => p.kind === 'code' && p.material === 'worm').reduce((a, p) => a + p.amount, 0);
   play(s, 'jack out');
-  assert.ok(s.stash.length >= before + 1, 'the kit is banked into your stash');
+  assert.ok(s.stash.length >= before + 2, 'the kit and the Zero-day are banked into your stash');
   assert.ok(packed >= vaultCode(loc.level || 1));
   assert.equal(s.materials.worm - worm, packed, 'worm servers give Worm code');
-  assert.equal(s.recipes[0], src, 'the source banked');
-  assert.ok(s.recipes.slice(1).every((id) => id.startsWith('recipe:')), 'and the blueprint beside it taught a recipe');
+  assert.ok(s.stash.some((it) => it.zeroDay === src && it.level === (loc.level || 1)), 'the Zero-day banked, at the server\'s level, ready to load');
+  assert.equal(s.recipes, undefined, 'nothing to compile');
 });
 
 test('Zero-days: Rootkit\'s first hit goes through armor; Race Condition refunds the first miss; Buffer Overflow crits after a break', () => {
@@ -678,7 +648,7 @@ test('saves from before protocols: installed server gear becomes running service
   assert.equal(s.daemonLv.cron, 1, 'a level-1 save: its Cron Job is a level-1 daemon');
   assert.equal(s.materials.kernel, 5, 'the uninstalled Firewall came back as Kernel code');
   assert.equal(s.materials.worm, 12, 'and the RAID Array as what it cost');
-  assert.deepEqual(s.recipes, [], 'no blueprints left for services that are gone');
+  assert.equal(s.recipes, undefined, 'no blueprints left: services went (v34), crafting too (v47)');
   assert.deepEqual(s.stash.map((x) => x.id), ['g4']);
   assert.equal(s.stash[0].kind, 'protocol');
   assert.equal(s.stash[0].name, 'Tuned Overdrive');
@@ -702,27 +672,6 @@ test('the old Upgrades come back as running services and a loaded protocol; daem
   assert.equal(daemonSlots(t), CONFIG.daemonSlots);
   t.hackers = { operator: { level: 9, xp: 0 }, bastion: { level: 30, xp: 0 } };
   assert.equal(daemonSlots(t), CONFIG.daemonSlots + 2, 'your highest class level opens them (15 and 30), whichever class you play');
-});
-
-test('blueprints: nothing is buildable at first; each teaches something new; every vault holds one', async () => {
-  const { learnBlueprint, knows, knownRecipes } = await import('./dist/combat.mjs');
-  const { layoutOf } = await import('./dist/run.mjs');
-  const { BLUEPRINTS } = await import('./dist/gear.mjs');
-  const s = fresh();
-  assert.equal(knownRecipes(s).length, 0);
-  learnBlueprint(s);
-  // The pool is every kind of recipe: protocol recipes and filter recipes (codebases come their own ways: sockets.mjs).
-  const { CRAFTABLE, knowsFilter } = await import('./dist/filters.mjs');
-  const all = BLUEPRINTS.length + CRAFTABLE.length;
-  for (let i = 1; i < all; i++) learnBlueprint(s);
-  assert.ok(BLUEPRINTS.every((id) => knows(s, id)));
-  assert.ok(CRAFTABLE.every((k) => knowsFilter(s, k)), 'filter recipes');
-  const had = s.components;
-  learnBlueprint(s);
-  assert.equal(s.components, had + 2, 'one you know already is 2 components');
-  command(s, 'developer location worm');
-  const vault = Object.values(layoutOf(s.locations[0])).find((d) => d.locked);
-  assert.ok(vault.files.includes('blueprint.bp'));
 });
 
 test('saves from before categories: a protocol keeps its lead stat\'s category, percent power stats turn flat, and loaded ones move into their kind of slot', () => {
@@ -760,14 +709,9 @@ test('resting: between fights the server repairs 1% of its max every 10 seconds,
   CONFIG.restRegen = 0;
 });
 
-test('components are one currency: every cost takes any of them, and an older save\'s pile becomes its count', async () => {
-  const { payProblem, spend, canAfford, componentsRestore } = await import('./dist/salvage.mjs');
+test('components are one count: an older save\'s pile becomes it', async () => {
+  const { componentsRestore } = await import('./dist/salvage.mjs');
   const s = fresh();
-  assert.equal(s.components, 0);
-  s.components = 5;
-  assert.ok(canAfford(s, 5) && !canAfford(s, 6));
-  assert.equal(payProblem(s, 6), 'Needs 6 components. You have 5.');
-  spend(s, 5);
   assert.equal(s.components, 0);
   // A v46 save: a pile of named pieces (part components, plain Scrap, a guard's) becomes as many components.
   const old = fresh();
@@ -793,44 +737,4 @@ test('Uplink trace is gone: old saves swap Traceroute for Keepalive and the Trac
   assert.deepEqual(s.daemonLv, { stall: 1 }, 'a Stall, at a level from its version and yours');
   assert.equal(s.daemonsOwned, undefined);
   assert.deepEqual(s.daemons, ['stall']);
-});
-
-test('a recipe with a capital in its id compiles (commands are lowercased: compile critDamage)', async () => {
-  const { STATS } = await import('./dist/gear.mjs');
-  const { PROTOCOL_NAMES, recipeId } = await import('./dist/gear.mjs');
-  const ids = Object.keys(STATS).filter((k) => /[A-Z]/.test(k) && PROTOCOL_NAMES[k]);
-  assert.ok(ids.length, 'there are camelCase recipes');
-  for (const id of ids) {
-    const s = fresh();
-    s.recipes = [recipeId(id)]; s.server.credits = 1e5; s.components = 40;
-    const n = (s.stash || []).length;
-    command(s, `compile ${id}`);
-    assert.equal((s.stash || []).length, n + 1, `compile ${id}`);
-  }
-});
-
-test('compile <recipe> <slot>: you pick the slot the protocol compiles into; Implant opens at level 15', async () => {
-  const { groupOf } = await import('./dist/gear.mjs');
-  const { craftMarkup } = await import('./dist/view.mjs');
-  const s = fresh();
-  command(s, 'developer level 5');
-  s.server.credits = 100000;
-  s.recipes = ['recipe:crit'];
-  s.components = 200;
-  for (const slot of ['exploit', 'proxy', 'shell', 'script']) {
-    command(s, `compile crit ${slot}`);
-    assert.equal(groupOf(s.stash.at(-1)), slot, slot);
-    assert.ok(s.stash.at(-1).stats.crit > 0);
-  }
-  command(s, 'compile precision proxy'); // the recipe's own name works too
-  assert.equal(groupOf(s.stash.at(-1)), 'proxy');
-  assert.match(command(s, 'compile crit implant').at(-1).message, /Implants compile from level 15/);
-  command(s, 'developer level 15');
-  command(s, 'compile crit implant');
-  assert.equal(groupOf(s.stash.at(-1)), 'implant');
-  // The Craft page picks the slot on the recipe, and its button compiles into it.
-  const html = craftMarkup(s, { cat: 'protocols', pick: 'crit', slot: 'shell' });
-  assert.match(html, /data-craft-slot="shell" aria-pressed="true"/);
-  assert.match(html, /data-command="compile crit shell"/);
-  assert.match(html, /Precision Shell/);
 });

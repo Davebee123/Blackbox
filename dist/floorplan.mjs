@@ -1128,7 +1128,7 @@ export function act(s, verb, arg = null, opts = {}) {
     if (done !== undefined) return out(s, first);
     if (verb === 'plant') { deny(s, 'plant: you carry nothing to install here.'); return out(s, first); }
   }
-  // A socket you've cleared: build a program in it (its codebase known, paid from what you carry), or take it out.
+  // A socket you've cleared: build a program in it (its codebase known, paid in credits and code), or take it out.
   if ((verb === 'build' || verb === 'install') && isSocket(s, here)) {
     if (!socketOpen(s, here)) deny(s, 'Clear the socket first.');
     else if (socketOff(s, here)) deny(s, WORLD.view?.offNote?.(s, here) || 'This socket is offline.');

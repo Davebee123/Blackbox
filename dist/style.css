@@ -804,8 +804,6 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 .sheet dl > div { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 4px 2px; font: 14px var(--sans); border-bottom: 1px dotted rgba(241, 185, 47, 0.12); cursor: help; }
 .sheet dt { color: var(--bright); display: flex; align-items: center; gap: 6px; } .sheet dd { margin: 0; color: var(--you); font: 600 14px var(--mono); }
 .sheet dl > div.zero dt, .sheet dl > div.zero dd { color: var(--muted); opacity: 0.7; }
-.fpick { display: flex; align-items: center; gap: 10px; margin: 10px 0 4px; font: 600 11px var(--mono); letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
-.fpick select { font: 13px var(--mono); color: var(--bright); background: var(--inset); border: 1px solid var(--line-strong); border-radius: 4px; padding: 5px 8px; text-transform: none; letter-spacing: 0; }
 .intent.cron { margin-top: 4px; padding: 2px 7px; font: 600 11px var(--mono); letter-spacing: 1px; }
 .gslot.locked { opacity: 0.55; border-style: dashed; background: transparent; }
 /* The wall (invasions) and Degraded mode. */
@@ -832,7 +830,6 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 .invader-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 8px; margin: 8px 0 4px; font-size: 13px; }
 .invader-line span { font: 12px var(--mono); color: var(--amber); }
 .invader-line.breach span { color: var(--hot); }
-.compile-card .cost { font: 12px var(--mono); color: var(--muted); align-self: center; }
 .syntax { cursor: help; }
 .intent.mine.idle { color: var(--dim); border-style: dashed; justify-content: center; }
 .meter-note { font: 600 10px var(--mono); letter-spacing: 1px; padding: 1px 5px; border-radius: 3px; border: 1px solid currentColor; white-space: nowrap; }
@@ -1048,7 +1045,6 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 .ptile-acts { display: flex; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
 .ptile .tag { justify-self: start; }
 .ptile.on { border-color: rgba(78, 222, 200, 0.45); }
-.compile-card.shut .svc-line { margin: 0; }
 /* The fight's name line stays one line: name, level, family, then any tags, clipped if tight. */
 .hud-id { flex-wrap: nowrap; white-space: nowrap; overflow: hidden; }
 .hud-id > * { flex-shrink: 0; }
@@ -1368,14 +1364,7 @@ h1 .slots { font-size: 13px; } h1 .slots i { width: 13px; height: 13px; } h1 .sl
 .srv-k { display: inline-flex; align-items: center; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); min-width: 62px; }
 .srv-slots { display: flex; flex-wrap: wrap; gap: 18px; margin-bottom: 12px; }
 .install.mini { margin-bottom: 10px; }
-/* Craft: sections that fold, have/need chips, a materials grid */
-.craft-sec > summary { list-style: none; cursor: pointer; display: grid; gap: 2px; margin-bottom: 10px; }
-.craft-sec > summary::-webkit-details-marker { display: none; }
-.craft-sec > summary h2 { margin: 0; display: flex; align-items: center; gap: 8px; }
-.craft-sec > summary h2::before { content: '▾'; color: var(--dim); font-size: 11px; transition: transform 0.15s; }
-.craft-sec:not([open]) > summary { margin-bottom: 0; } .craft-sec:not([open]) > summary h2::before { transform: rotate(-90deg); }
-.craft-sec > summary small { color: var(--muted); font-size: 12px; }
-.craft-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+/* Have/need chips (a hub's donation and payloads) */
 .craft-sub { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin: 14px 0 6px; }
 .needs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
 .need { display: inline-flex; align-items: center; gap: 2px; padding: 1px 6px; border: 1px solid var(--line); border-radius: 3px; font: 500 11px var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
@@ -1383,12 +1372,6 @@ h1 .slots { font-size: 13px; } h1 .slots i { width: 13px; height: 13px; } h1 .sl
 .need b { color: var(--text); font-weight: 600; }
 .need.ok { border-color: rgba(127, 209, 199, 0.35); } .need.ok .glyph { color: var(--you); }
 .need.short { border-color: rgba(255, 91, 61, 0.5); color: var(--hot); } .need.short b { color: var(--hot); }
-.mat-grid { list-style: none; margin: 0 0 10px; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 6px; }
-.mat { display: grid; justify-items: start; gap: 2px; padding: 8px 10px; border: 1px solid var(--line); background: rgba(241, 185, 47, 0.03); }
-.mat .glyph { width: 16px; height: 16px; color: var(--amber); margin: 0; }
-.mat b { font: 600 20px var(--mono); color: var(--bright); line-height: 1.1; font-variant-numeric: tabular-nums; }
-.mat small { color: var(--muted); font-size: 11px; }
-.mat.zero { opacity: 0.45; }
 /* Consortium: members on one grid, the dividend as a table */
 .con-members { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 10px auto auto auto auto auto minmax(0, 1fr) auto auto; column-gap: 12px; row-gap: 2px; }
 .con-member { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: center; padding: 7px 8px; border-left: 2px solid transparent; background: rgba(241, 185, 47, 0.03); }
@@ -1487,7 +1470,7 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 @media (max-width: 1700px) and (min-width: 901px) { .meter-level { min-width: 0; } .meter-level .meter-bar { width: 40px; } .topbar { gap: 6px 14px; } }
 @media (max-width: 1560px) and (min-width: 901px) { .meter-signal .meter-label { display: none; } }
 @media (max-width: 1320px) and (min-width: 901px) { .ctx-tabs .brand-name { display: none; } }
-/* Craft page lists; protocols on the Loadout page */
+/* Lists of rows (a hub's work and payloads); protocols on the Loadout page */
 .craft-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .craft-list li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 10px; background: var(--inset); border: 1px solid var(--line); border-radius: 3px; }
 .craft-list li > span { display: grid; gap: 2px; min-width: 0; }
@@ -1545,8 +1528,6 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 .glyph.verb-util, .glyph.verb-run { color: var(--muted); }
 .sheet dt .glyph { color: var(--muted); width: 0.95em; height: 0.95em; }
 .stat > span .glyph { color: var(--amber-soft); }
-.salvage-stacks .glyph { color: var(--dim); margin-right: 0.2em; }
-.salvage-stacks li.comp .glyph { color: var(--you); }
 .c-head .glyph { color: var(--amber); }
 .mod .glyph, .cfg .glyph { width: 0.95em; height: 0.95em; margin-right: 0.3em; }
 
@@ -2347,10 +2328,8 @@ body.phase-wait .cmdline, body.phase-wait #command-input { box-shadow: 0 0 0 1px
 .mem-card.asking .srv-slots { outline: 1px solid rgba(241, 185, 47, 0.35); border-radius: 4px; padding: 4px 6px; }
 @keyframes memadd { 50% { background: rgba(241, 185, 47, 0.6); } }
 @media (prefers-reduced-motion: reduce) { .mem-join i.add { animation: none; } }
-/* Craft rows without a plan: dimmed, a plan tag where the button would be. */
+/* A locked row: dimmed. */
 .craft-list li.locked > span { opacity: 0.55; }
-.plan-lock { display: inline-flex; align-items: center; gap: 4px; flex: none; }
-.plan-lock .glyph { width: 12px; height: 12px; }
 /* Installing a harvester on an outpost: slots, then one row per harvester in the rack. */
 .op-pick { display: grid; gap: 8px; margin-top: 8px; }
 .op-rack { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
@@ -2371,8 +2350,6 @@ body.phase-wait .cmdline, body.phase-wait #command-input { box-shadow: 0 0 0 1px
 .plan-shelf li.known { opacity: 0.6; }
 .plan-shelf li.known .tag.you { grid-column: 3 / 5; justify-self: end; }
 .plan-shelf .tag { font-size: 10px; line-height: 16px; padding: 0 5px; }
-.craft-list .plan-lock { display: inline-flex; flex-direction: row; align-items: center; gap: 4px; white-space: nowrap; padding: 2px 7px; line-height: 16px; }
-.craft-list .plan-lock .glyph { margin: 0; }
 .craft-list .iname .tag.you { margin-left: 8px; font-size: 10px; line-height: 16px; padding: 0 5px; }
 /* A broken part's last moment: its row flickers and dissolves while bits rise off it (hitfx.mjs). */
 .brow.dying { pointer-events: none; animation: part-dissolve 1s steps(10, end) forwards; }
@@ -2449,7 +2426,6 @@ body.phase-wait .cmdline, body.phase-wait #command-input { box-shadow: 0 0 0 1px
 @media (max-width: 900px) { .net-body.with-leads { flex-direction: column; } .net-leads { width: auto; border-left: 0; border-top: 1px solid var(--line); max-height: 40%; } }
 /* Class cards: Use sits in the corner of any class you aren't playing. */
 /* A hub's Compile list: each payload's costs on one line. */
-.pay-compile .needs { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 6px; }
 /* The market: each row is ware · held | sell here (price, vs other hubs, Sell 1 / Sell all) | buy here (price, Buy 1). */
 .mk-wares .mk-tr { grid-template-columns: minmax(96px, 1fr) 40px 104px 64px 64px 56px 64px; }
 .mk-sellp { display: flex; align-items: baseline; justify-content: flex-end; gap: 8px; }
@@ -2619,46 +2595,6 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 @media (prefers-reduced-motion: reduce) { .mem-join i.take { animation: none; background: transparent; border-style: dashed; } }
 .tag.fw-ver { color: var(--you); border-color: var(--you); cursor: help; }
 
-/* The Craft page: categories · recipes · the one you picked (output, what it takes, Craft). */
-.craft-ui { display: grid; grid-template-columns: 170px minmax(220px, 1fr) minmax(280px, 1.25fr); gap: 12px; align-items: start; margin-bottom: 12px; }
-.craft-cats { display: grid; gap: 4px; position: sticky; top: 0; }
-.craft-cat { display: flex; align-items: center; gap: 8px; padding: 9px 10px; background: var(--inset); border: 1px solid var(--line); border-radius: 4px; color: var(--muted); font: 600 13px var(--sans, inherit); text-align: left; cursor: pointer; }
-.craft-cat .glyph { width: 16px; height: 16px; flex: none; }
-.craft-cat span { flex: 1; }
-.craft-cat:hover { color: var(--text); border-color: var(--line-strong); }
-.craft-cat.on { color: var(--amber); border-color: var(--amber); background: rgba(241, 185, 47, 0.08); }
-.cc-n { min-width: 18px; padding: 0 5px; border-radius: 9px; background: var(--you); color: #071512; font: 700 11px var(--mono); text-align: center; }
-.craft-items { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
-.craft-item { width: 100%; display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: var(--inset); border: 1px solid var(--line); border-radius: 4px; color: var(--text); text-align: left; cursor: pointer; }
-.craft-item .glyph { width: 18px; height: 18px; flex: none; color: var(--muted); }
-.craft-item .ci-txt { flex: 1; display: grid; min-width: 0; }
-.craft-item .ci-txt b { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.craft-item .ci-txt small { color: var(--muted); font: 11px var(--mono); }
-.craft-item:hover { border-color: var(--line-strong); }
-.craft-item.on { border-color: var(--amber); box-shadow: inset 3px 0 0 var(--amber); }
-.craft-item.ready .glyph { color: var(--you); }
-.craft-item.locked { opacity: 0.55; }
-.ci-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--you); box-shadow: 0 0 6px var(--you); flex: none; }
-.craft-empty { padding: 14px; color: var(--muted); border: 1px dashed var(--line); border-radius: 4px; }
-.craft-detail { position: sticky; top: 0; display: grid; gap: 10px; }
-.cd-out { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; align-items: center; padding: 12px; border: 1px solid var(--line-strong); border-radius: 4px; background: var(--inset); }
-.cd-out > .glyph { grid-row: 1 / 3; width: 34px; height: 34px; }
-.cd-out .cd-name { margin: 0; font-size: 20px; }
-.cd-out.r-tuned { border-color: rgba(111, 182, 255, 0.6); }
-.cd-out.r-zeroday { border-color: rgba(241, 185, 47, 0.7); }
-.cd-lines { grid-column: 2; margin: 0; padding: 0; list-style: none; color: var(--muted); font-size: 13px; display: grid; gap: 2px; }
-.cd-cost .needs { display: flex; flex-wrap: wrap; gap: 6px; }
-.cd-go { justify-self: start; min-width: 140px; }
-.cd-lock { margin: 0; color: var(--muted); }
-@media (max-width: 1100px) { .craft-ui { grid-template-columns: 1fr; } .craft-cats { grid-auto-flow: column; overflow-x: auto; position: static; } .craft-detail { position: static; } }
-.cd-cost { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
-.cd-cost li { display: grid; grid-template-columns: 18px 1fr auto; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 3px; background: var(--inset); }
-.cd-cost li .glyph { width: 15px; height: 15px; color: var(--muted); }
-.cd-cost li b { font: 700 14px var(--mono); color: var(--you); }
-.cd-cost li b small { color: var(--muted); font-weight: 400; }
-.cd-cost li.short { border-color: rgba(255, 91, 61, 0.5); }
-.cd-cost li.short b { color: var(--hot); }
-.cd-name.r-tuned { color: var(--r-tuned); } .cd-name.r-zeroday { color: var(--r-zeroday); } .cd-name.r-custom { color: var(--r-custom); }
 /* A button with a price: the label, a divider, then icon + number for each thing it takes. */
 .bcost { display: inline-flex; align-items: center; gap: 8px; margin-left: 10px; padding-left: 10px; border-left: 1px solid currentColor; opacity: 0.85; font: 12px var(--mono); }
 .bcost span { display: inline-flex; align-items: center; gap: 3px; }
@@ -2723,25 +2659,11 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .inv-card .inv-state { display: flex; align-items: center; gap: 8px; margin: 6px 0 4px; }
 .inv-card .inv-state b { font: 600 12px var(--mono); color: var(--text); }
 .inv-card.breach { border-color: rgba(255, 91, 61, 0.6); }
-/* Have / need rows inside a service line (Server page), a little tighter than the Craft page's. */
-.svc-next .cd-cost { flex: 1 1 100%; }
-.cd-cost.tight { gap: 3px; }
-.cd-cost.tight li { padding: 3px 8px; }
-.cd-cost.tight li b { font-size: 12px; }
 /* The hover card's swap comparison: against what that slot runs now. */
 .ptip-vs { display: grid; gap: 2px; margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--line); font-size: 12px; }
 .ptip-vs small { color: var(--muted); font: 11px var(--mono); }
 .ptip-vs .up { color: var(--you); } .ptip-vs .down { color: var(--hot); } .ptip-vs .dim { color: var(--dim); }
-/* Craft output: chips, icon stat rows, footer pips (Craft page). */
-.cd-meta { grid-column: 2; display: grid; gap: 6px; }
-.cd-tags, .cd-foot { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-.cd-tags .glyph, .cd-foot .tag .glyph { width: 12px; height: 12px; margin-right: 4px; vertical-align: -2px; }
-.cd-rar.r-tuned { color: var(--r-tuned); border-color: currentColor; } .cd-rar.r-zeroday { color: var(--r-zeroday); border-color: currentColor; } .cd-rar.r-stock { color: var(--r-stock); border-color: currentColor; } .cd-rar.r-custom { color: var(--r-custom); border-color: currentColor; }
-.cd-stats { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; }
-.cd-stats li { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
-.cd-stats li .glyph { width: 15px; height: 15px; color: var(--you); }
-.cd-stats li b { font: 700 14px var(--mono); color: var(--bright); }
-.cd-out > .glyph { grid-row: 1 / 3; align-self: start; }
+.ptip-ans { display: block; margin-top: 6px; color: var(--dim); font: 11px var(--mono); } /* a premium shelf's answer: its price, or why not */
 /* A contract's pay: icon chips. */
 .rw-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
 .rw { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border: 1px solid var(--line); border-radius: 3px; background: var(--inset); }
@@ -3192,7 +3114,6 @@ button.evc-link:active { transform: translateY(1px); }
 .op-buildlist .bl-main small { font-size: 11px; color: var(--muted); line-height: 1.35; }
 .op-buildlist .bl-cost { color: var(--dim) !important; }
 .op-buildlist .bl-why { color: var(--warn, #e0a030) !important; }
-.cd-meta .cd-lines { grid-column: auto; } /* inside the meta block it's one column: don't push the text into an implicit second one */
 .coll-set { margin: 4px 0 8px; color: var(--amber); font-size: 12px; letter-spacing: 1px; }
 .coll li.heard { outline: 1px solid var(--hot); }
 .coll .coll-listen { float: right; margin-top: -30px; font-size: 11px; padding: 1px 6px; }
@@ -3299,11 +3220,6 @@ h1 .byline { font-size: 13px; vertical-align: middle; }
 .tt .tt-ans { display: block; margin-top: 5px; padding-top: 4px; border-top: 1px solid var(--line); color: var(--muted); font-size: calc(12px * var(--ui, 1)); } /* the answer line (fightread.mjs answerLine) */
 @media (prefers-reduced-motion: reduce) { .tt { animation: none; } }
 
-/* The Craft page's slot picker (craftCats): which slot a protocol compiles into, one segment each. */
-.cd-slots { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 4px; }
-.cd-slot { padding: 4px 10px; border: 1px solid var(--line); border-radius: 2px; background: var(--inset); color: var(--muted); font: 600 12px var(--mono); letter-spacing: 0.5px; cursor: pointer; }
-.cd-slot:hover, .cd-slot:focus-visible { border-color: var(--line-strong); color: var(--text); outline: none; }
-.cd-slot.on { border-color: var(--amber); color: var(--amber); background: rgba(241, 185, 47, 0.08); }
 
 /* =====================================================================================================
    UI SYSTEM (docs/ui.md). Shared components and the fixes that bring older pieces onto them.
@@ -3486,7 +3402,7 @@ h1 .byline { font-size: 13px; vertical-align: middle; }
 /* Phone, seven tabs or more (Consortium, Store, Fight or Run up): a size down so every tab stays on screen. */
 @media (max-width: 900px) {
   .modules:has(#tab-consortium:not([hidden])) button, .modules:has(#tab-store:not([hidden])) button, .modules:has(#tab-combat:not([hidden])):has(#tab-net:not([hidden])) button, .modules[data-tabs='7'] button { padding: 6px 2px; font-size: 12px; }
-  /* Eight or more (the Codex, Craft and a Run or Fight tab up together): two even rows, so none runs off the screen. */
+  /* Eight or more (the Codex, Consortium and a Run or Fight tab up together): two even rows, so none runs off the screen. */
   .modules[data-tabs='8'], .modules[data-tabs='9'], .modules[data-tabs='10'] { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); overflow: visible; }
   .modules[data-tabs='9'], .modules[data-tabs='10'] { grid-template-columns: repeat(5, minmax(0, 1fr)); }
   .modules[data-tabs='8'] button, .modules[data-tabs='9'] button, .modules[data-tabs='10'] button { padding: 5px 2px; font-size: 13px; text-align: center; }

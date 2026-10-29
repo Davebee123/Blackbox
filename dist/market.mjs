@@ -7,7 +7,7 @@
 // Trades are file transfers: what you sell leaves your stock now and its credits arrive when the
 // transfer completes; what you buy is paid now and arrives later. Transfer time depends on the hub, and
 // relays on servers you hold shorten it. A transfer can't be lost: the worst case is waiting.
-import { emit, warn, materialsOf, hooks, rand, firstTime } from './combat.mjs';
+import { emit, warn, materialsOf, hooks, rand, firstTime, addItem } from './combat.mjs';
 import { addFilter, rollFilter } from './filters.mjs';
 import { FACTIONS, hubsOf, hostile, repTier, buyFrom, hubFound } from './factions.mjs';
 import { seeded } from './gear.mjs';
@@ -24,7 +24,7 @@ export const WARES = {
   worm: { name: 'Worm code', base: 14 },
   kernel: { name: 'Kernel code', base: 14 },
   exploit: { name: 'Exploits', base: 140 },
-  salvage: { name: 'Components', base: 7 }, // (its id stays salvage: the market's history on a save)
+  salvage: { name: 'Components', base: 7, sellOnly: true }, // only sold: what broken parts are worth (its id stays salvage: the market's history on a save)
 };
 export const WARE_IDS = Object.keys(WARES);
 
@@ -92,6 +92,7 @@ export function trade(s, side, f, w, n, at = now()) {
   if (hostile(s, f)) return warn(s, `${FACTIONS[f].short} won’t trade with you.`);
   if ((s.hubs?.[f]?.offlineUntil || 0) > at) return warn(s, `${FACTIONS[f].hub.name} is offline.`);
   if (n < 1 || n > MARKET.maxLots) return warn(s, `How many? 1–${MARKET.maxLots}.`);
+  if (side === 'buy' && WARES[w].sellOnly) return warn(s, `Hubs buy ${WARES[w].name.toLowerCase()} but don't sell them.`);
   const m = marketOf(s), q = quote(s, f, w);
   ((m.pressure[f] ||= {})[w] ||= 0);
   if (side === 'sell') {
@@ -141,6 +142,7 @@ export function orderQuote(s, side, f, w, n) {
 // The most of a ware you can trade here at once: what you hold (sell), or what you can afford (buy).
 export function orderMax(s, side, f, w) {
   if (side === 'sell') return Math.min(MARKET.maxLots, have(s, w));
+  if (WARES[w]?.sellOnly) return 0;
   let n = 0;
   while (n < MARKET.maxLots && lotTotal(s, 'buy', f, w, n + 1).total <= s.server.credits) n++;
   return n;
@@ -164,7 +166,8 @@ export function tickMarket(s, at = now()) {
     m.transfers.splice(m.transfers.indexOf(t), 1);
     if (t.side === 'good') {
       emit(s, 'transfer-in', `Transfer complete from ${FACTIONS[t.f].short}: ${t.name}.`, { faction: t.f });
-      if (t.good === 'tip') deal(s, 'courier'); // a broadcast schedule bought before LANTERN dropped it
+      if (t.item) addItem(s, t.item, `${FACTIONS[t.f].short}: `); // a premium protocol (factions.mjs hubPremium)
+      else if (t.good === 'tip') deal(s, 'courier'); // a broadcast schedule bought before LANTERN dropped it
       else if (t.good.startsWith('cb-')) learnCodebase(s, t.good.slice(3), 'Unsealed: ');
       else if (t.good === 'bootleg') addFilter(s, rollFilter(() => rand(s), { level: t.L, rarity: rand(s) < 0.7 ? 'stock' : 'tuned' }), 'Unsealed: ');
       else deliverGoods(s, t.good, t.L, t.f);
@@ -180,9 +183,10 @@ export function tickMarket(s, at = now()) {
 }
 export const transfersOf = (s) => marketOf(s).transfers;
 // A hub's specialty good, bought (factions.mjs buyFrom): paid now, it lands like any transfer.
-export function sendGood(s, f, id, name, credits, L, at = now()) {
+// item: a protocol bought whole (a hub's premium one), delivered as it is.
+export function sendGood(s, f, id, name, credits, L, at = now(), item = null) {
   const m = marketOf(s);
-  const t = { id: ++m.serial, side: 'good', f, good: id, name, n: 1, L, credits, sentAt: at, landsAt: at + travelMs(s, f) };
+  const t = { id: ++m.serial, side: 'good', f, good: id, name, n: 1, L, credits, sentAt: at, landsAt: at + travelMs(s, f), ...(item ? { item } : {}) };
   m.transfers.push(t);
   emit(s, 'transfer-out', `Bought ${name} from ${FACTIONS[f].short} for ${credits} credits. It lands in ${Math.round((t.landsAt - at) / 60000)} min.`, { faction: f, item: id });
 }

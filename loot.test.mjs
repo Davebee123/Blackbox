@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, resolveCycle, part, FAST } from './dist/combat.mjs';
-import { play, connect, packGain, hasKit, hasBlueprint, sourceOf } from './dist/run.mjs';
+import { play, connect, packGain, hasKit, hasTokens, sourceOf } from './dist/run.mjs';
 import { CONFIG } from './dist/data.mjs';
 import { newOn, sawTab, gainMarkup, spoilsOf } from './dist/view.mjs';
 CONFIG.baseCrit = 0;
@@ -20,7 +20,6 @@ test('pack gains: each kind of file reads as a spoils row', () => {
   assert.deepEqual(packGain({ kind: 'credits', amount: 40 }).qty, '+40');
   assert.equal(packGain({ kind: 'credits', amount: 40 }, 46).qty, '+46'); // after Scavenge
   assert.equal(packGain({ kind: 'code', material: 'exploit', amount: 2 }).kind, 'exploit');
-  assert.equal(packGain({ kind: 'blueprint' }).sub, '???');
   const g = packGain({ kind: 'gear', item: { name: 'x', rarity: 'tuned', stats: { power: 3 }, slot: 'payload' } });
   assert.equal(g.rarity, 'tuned');
   assert.match(gainMarkup('Pulled', '', [g], false), /Pulled/);
@@ -32,25 +31,25 @@ test('pull says what you got; jack out lists everything banked', () => {
   const s = fresh();
   command(s, 'developer location worm');
   const loc = s.locations[0];
-  assert.ok(loc.starter && hasKit(loc) && hasBlueprint(loc), 'your first vault has a protocol and a blueprint');
+  assert.ok(loc.starter && hasKit(loc) && hasTokens(loc), 'your first vault has a protocol and spare credits');
   Object.assign(loc, { template: 'relay', quirk: null });
   connect(s, loc.id);
   // Since R1 a server is rooms (netrooms.mjs): the vault, its key in hand, opens with every file into your pack.
   const R = s.rooms, v = R.graph.vaults[0];
   R.visit.keys.push(v); R.at = v; R.screen = null;
   const pulled = play(s, 'open').find((e) => e.gains?.length);
-  assert.ok(pulled.gains.some((r) => r.kind === 'item') && pulled.gains.some((r) => r.kind === 'blueprint'), 'the vault says what you got');
+  assert.ok(pulled.gains.some((r) => r.kind === 'item') && pulled.gains.some((r) => r.kind === 'credits'), 'the vault says what you got');
   const out = play(s, 'jack out').find((e) => e.type === 'jacked-out');
   const kinds = out.gains.map((r) => r.kind);
-  assert.ok(kinds.includes('blueprint') && kinds.includes('item')); // (and whatever the guard dropped)
+  assert.ok(kinds.includes('credits') && kinds.includes('item')); // (and whatever the guard dropped)
   assert.equal(new Set(out.gains.filter((r) => r.kind === 'code').map((r) => r.label)).size, kinds.filter((k) => k === 'code').length, 'code: one row per material');
 });
 
-test('vaults: protocols in about half, blueprints and source in about a quarter', () => {
+test('vaults: protocols and spare credits in about half, a Zero-day in about a quarter', () => {
   const locs = Array.from({ length: 400 }, (_, i) => ({ seed: 1000 + i * 37, depth: 2 }));
   const share = (f) => locs.filter(f).length / locs.length;
   assert.ok(Math.abs(share(hasKit) - 0.5) < 0.1);
-  assert.ok(Math.abs(share(hasBlueprint) - 0.25) < 0.08);
+  assert.ok(Math.abs(share(hasTokens) - 0.5) < 0.1);
   assert.ok(Math.abs(share(sourceOf) - 0.25) < 0.08);
 });
 

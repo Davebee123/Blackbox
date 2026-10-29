@@ -16,7 +16,7 @@ import { tickMarket, marketCommand } from './market.mjs';
 import { tickPayloads, payloadCommand } from './payload.mjs';
 import { tickHubs, hubCommand, hubWon } from './hubs.mjs';
 import { IMPLICIT_HOOKS } from './faction-gear.mjs';
-import { gainComponents, payProblem, spend, componentsRestore } from './salvage.mjs';
+import { gainComponents, componentsRestore } from './salvage.mjs';
 // Configs are gone (service side-grades; Triage was the last). A save that owned any is refunded.
 const RETIRED_CONFIGS = ['stateful', 'reflective', 'inspection', 'adaptive', 'sticky', 'toll', 'beacon', 'tar', 'sting', 'triage'];
 const CONFIG_REFUND = 250;
@@ -32,14 +32,14 @@ import { TELL, ROOM_FAMILIES, DAMPER_KINDS, floorFor, partGenesFor } from './dat
 import { mechValidate, mechIntercept, mechFired, mechPower, exposedCut, mechLanded, mechCommandHit, mechStart, mechClose, mechBroke, lagged, stunnedNow, missedTurn } from './mechanics.mjs';
 import { tickRoot, processWon } from './root.mjs';
 import { firewallCommand, wear, raidShare, hardenRestore } from './firewall.mjs';
-import { levelGains, nextGains, progressionRestore, climbRestore, RETIRED } from './progression.mjs';
+import { levelGains, nextGains, progressionRestore, climbRestore, craftRestore, RETIRED } from './progression.mjs';
 import { invaderDown, invasionRestore, signatureRestore } from './invasion.mjs';
 import { runDaemons, daemonsOn, daemonsHurt, flushDaemons, lifeline, lifelineHeal, daemonCommand, daemonRestore, slottedDaemons, daemonAmount, watchmanBar, gainDaemon } from './daemons.mjs';
 export { daemonSlots, slottedDaemons, daemonLevel, daemonAmount, daemonNext, watchmanBar, gainDaemon } from './daemons.mjs';
-import { filterCommand, CRAFTABLE, knowsFilter, learnFilter, filterStat, FILTER_STATS, rollFilter, addFilter } from './filters.mjs';
-import { spawnHidden, huntKill, hiddenNode, hiddenLead, HIDDEN, installRelay, useItem, syncFlags, craftRelay, traceNear, leadOf } from './hidden.mjs';
+import { filterCommand, filterStat, FILTER_STATS, rollFilter, addFilter } from './filters.mjs';
+import { spawnHidden, huntKill, hiddenNode, hiddenLead, HIDDEN, installRelay, useItem, syncFlags, traceNear, leadOf } from './hidden.mjs';
 import { slotNode, pickSlot, hiddenAt, hiddenNear, floorOfSlot, lairAt, reached, floorCommand, floorsRestore, floorsLetter } from './floors.mjs';
-import { STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, lootOdds, magicFind, uniqueItem, DECONSTRUCT, SLOTS, OLD_SLOT, BASES, AFFIX_FOR, COMPILE, STASH_CAP, CRIT, ECHO, PROTOCOL_NAMES, protocolSlots, rollItem, statLine, itemLabel, MATERIALS, codeOf, codeDrop, EXPLOIT_CHANCE, RULES, IMPLICITS, implicitFx, BLUEPRINTS, BLUEPRINT_CHANCE, blueprintName, recipeId, recipeStat, PROTOCOL_STATS, SLOT_KINDS, GROUPS, groupOf, statValue, seeded, statsRestore } from './gear.mjs';
+import { STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, lootOdds, magicFind, uniqueItem, DECONSTRUCT, SLOTS, OLD_SLOT, BASES, AFFIX_FOR, STASH_CAP, CRIT, ECHO, PROTOCOL_NAMES, protocolSlots, rollItem, statLine, itemLabel, MATERIALS, codeOf, codeDrop, EXPLOIT_CHANCE, RULES, IMPLICITS, implicitFx, PROTOCOL_STATS, SLOT_KINDS, GROUPS, groupOf, statValue, seeded, statsRestore } from './gear.mjs';
 
 import ITEMS from './content/items.mjs';
 import { SETS, setFx, activeSets, isPiece, setPool, SET_LOOT, CLASS_SET, setPityKey, SET_EVENT, sourcePool, sourceKey, setOf, setsRestore, SET_HOOKS, setStat, setSignal, setHealMult, sxOf, restFast } from './sets.mjs';
@@ -54,7 +54,7 @@ import { crewOf, factionAuthor, AUTHORS } from './authors.mjs';
 import { noteUse } from './mastery.mjs';
 import { fightNet, noteKill, nativeRoll, biasCode, richMult, networkRestore, networkCommand, lairUniques, lairFell, lairBoss, mine, netOf, isNative, named, nameOf, nameNative, openLair } from './network.mjs';
 
-export const SAVE_VERSION = 48; // v48: Indemnity retires: an older save's unspent Indemnity becomes credits once, with a letter from Halcyon (store.mjs indemnityRestore); v47: one kind of component: an older save's pile of named pieces (s.salvage) becomes its count, s.components (salvage.mjs componentsRestore); v46: no default subclass: a class past level 10 that never picked plays its core until it does (subRestore); v45: sets, each loaded protocol stamped with when it went on and the storyline's LOWLIGHT Badge beat armed (sets.mjs setsRestore); v44: whole-number stats, Regen over 5 cycles and Payload flat (gear.mjs statsRestore); v43: threads, quests found in rooms (threads.mjs threadsRestore); v42: the long climb, XP into a level keeps its share (progression.mjs climbRestore); v41: layers become floors (floors.mjs floorsRestore, docs/servers.md R3); v40: outposts, buildings, plans, services, architecture and the dividend retire for sockets (sockets.mjs retireOutposts, netrooms.mjs socketRoomsRestore, docs/servers.md R2); v39: every server is a room graph (netrooms.mjs roomsRestore, docs/servers.md R1); v38: two shipped presets renamed (presetRenameRestore); v37: 15-key pools, reordered lines and presets (kitRestore); v36: networks (network.mjs networkRestore: a network seed for every save); v31: subclasses (retireClassTrees); v32: Payload is a percentage; v33: invasion kinds, bounties, signatures, and the firewall follows the network (invasionRestore, firewallRestore); v34: one level, no server XP, specialty, ports, home-fight services or greys (progression.mjs progressionRestore); v35: the nine-key bar, run skills off it, one-clock tells (barRestore)
+export const SAVE_VERSION = 49; // v49: crafting is gone: recipes, plans and their files become credits, Zero-day source the Zero-day (progression.mjs craftRestore); v48: Indemnity retires: an older save's unspent Indemnity becomes credits once, with a letter from Halcyon (store.mjs indemnityRestore); v47: one kind of component: an older save's pile of named pieces (s.salvage) becomes its count, s.components (salvage.mjs componentsRestore); v46: no default subclass: a class past level 10 that never picked plays its core until it does (subRestore); v45: sets, each loaded protocol stamped with when it went on and the storyline's LOWLIGHT Badge beat armed (sets.mjs setsRestore); v44: whole-number stats, Regen over 5 cycles and Payload flat (gear.mjs statsRestore); v43: threads, quests found in rooms (threads.mjs threadsRestore); v42: the long climb, XP into a level keeps its share (progression.mjs climbRestore); v41: layers become floors (floors.mjs floorsRestore, docs/servers.md R3); v40: outposts, buildings, plans, services, architecture and the dividend retire for sockets (sockets.mjs retireOutposts, netrooms.mjs socketRoomsRestore, docs/servers.md R2); v39: every server is a room graph (netrooms.mjs roomsRestore, docs/servers.md R1); v38: two shipped presets renamed (presetRenameRestore); v37: 15-key pools, reordered lines and presets (kitRestore); v36: networks (network.mjs networkRestore: a network seed for every save); v31: subclasses (retireClassTrees); v32: Payload is a percentage; v33: invasion kinds, bounties, signatures, and the firewall follows the network (invasionRestore, firewallRestore); v34: one level, no server XP, specialty, ports, home-fight services or greys (progression.mjs progressionRestore); v35: the nine-key bar, run skills off it, one-clock tells (barRestore)
 
 // run.mjs registers callbacks here (it imports this file, so we can't import it).
 export const hooks = { flee: null, now: null };
@@ -91,7 +91,6 @@ export function fresh() {
     // Protocols: one shared stash; each class loads its own (gear.rigs[class] = protocol ids).
     stash: [],
     gear: { rigs: {} },
-    recipes: [], // sources you've banked: Zero-day protocols you can compile, special services you can install
     // The server runs services (id → version), one install at a time.
     services: {},
     install: null,
@@ -1043,31 +1042,6 @@ export function fxAnswer(s, p = null) {
 }
 // How much one command counts toward calling off a tell (Double Tap, Spectre: twice).
 
-// ---------- blueprints ----------
-export const knows = (s, id) => (s.recipes || []).includes(id);
-export const knownRecipes = (s) => PROTOCOL_STATS.filter((k) => knows(s, recipeId(k)));
-// Learn a blueprint you don't have yet: the Firewall first, then any other. Every one known:
-// it's components instead.
-// A blueprint teaches something you don't know yet, from every kind of recipe: a protocol recipe or
-// a filter recipe. The first is
-// always the Firewall.
-export function learnBlueprint(s, why = '') {
-  s.recipes ||= [];
-  const left = BLUEPRINTS.filter((id) => !knows(s, id));
-  const others = [
-    ...CRAFTABLE.filter((k) => !knowsFilter(s, k)).map((k) => () => learnFilter(s, k, why)),
-  ];
-  if (!left.length && !others.length) {
-    gainComponents(s, 2);
-    return emit(s, 'info', `${why}a blueprint you already know: +2 components.`);
-  }
-  const k = Math.floor(rand(s) * (left.length + others.length));
-  if (k >= left.length) return others[k - left.length]();
-  const id = left[k];
-  s.recipes.push(id);
-  const stat = recipeStat(id);
-  return emit(s, 'drop', `${why}${blueprintName(id)}. You can compile ${STATS[stat]?.name || 'its'} protocols.`, { recipe: id });
-}
 
 // Code materials: kills, guards and vault caches give the family's code; Exploits are rare.
 export const materialsOf = (s) => (s.materials ||= { cipher: 0, worm: 0, kernel: 0, exploit: 0 });
@@ -1273,7 +1247,7 @@ export function addLocation(s, family, depth = 1, parent = null, slot = null) {
   loc.level = node ? node.level : SERVER.keepUp(hackerLevel(s), depth); // fixed when its floor was generated: its guards' level, and its vault gear's
   if (node) loc.slot = node.id;
   if (parent) loc.parent = parent;
-  if (!s.locations.some((l) => !l.rogue && !l.zone)) loc.starter = true; // your first server's vault: a protocol and a blueprint
+  if (!s.locations.some((l) => !l.rogue && !l.zone)) loc.starter = true; // your first server's vault: a protocol and spare credits
   loc.trait = siteTrait(loc);
   if (!node || (node.d > 1 && !node.main)) rollRogue(s, loc); // about 1 in 6 is a rogue server: wild, respawning, never taken (never beside a floor's entry or on its main road: floors.mjs)
   claimServer(s, loc); // about one in eight belongs to a faction (factions.mjs)
@@ -1309,11 +1283,11 @@ export const hackerLevel = (s, arch = classOf(s)) => hackerOf(s, arch).level;
 export const classTrial = (s) => !Object.values(s.hackers || {}).some((h) => h.level >= LOADOUT.trialUntil);
 // XP for something at an enemy/location level: a share of a kill, scaled by the level gap.
 export const xpFor = (s, level, share = 1) => Math.round(killXp(level) * share * xpScale(level - hackerLevel(s)));
-// XP for a one-off deed (a first clear, Mapped, a takeover, a Root level, a decode, a first craft): its share of a
+// XP for a one-off deed (a first clear, Mapped, a takeover, a Root level, a decode, a first trade): its share of a
 // kill on the old curve, scaled with the climb at your level (deedScale in data.mjs), so it stays a share of a level.
 export const deedXpFor = (s, level, share = 1) => xpFor(s, level, share * deedScale(hackerLevel(s)));
 export const gainsTalent = (level) => level >= LOADOUT.talentFrom && (level - LOADOUT.talentFrom) % LOADOUT.talentEvery === 0;
-// The first time you make or do something (a recipe crafted, a service installed, a trade at a hub):
+// The first time you do something (a trade at a hub):
 // half a kill of XP, once. id: what it was, so it never pays twice.
 export function firstTime(s, id, why, kind = 'build', share = 0.5) {
   const done = (s.firsts ||= []);
@@ -1926,12 +1900,7 @@ export function syncRunSignal(s) {
   s.run.integrity = Math.min(s.run.integrity, s.run.max);
 }
 
-// Protocols at home: protocols · load <protocol> · unload <protocol|slot> · scrap <protocol> ·
-// compile [stat] · compile <zero-day>.
-export const compileCost = (s, zd = false) => {
-  const c = zd ? COMPILE.zeroDayCost(hackerLevel(s)) : COMPILE.cost(hackerLevel(s));
-  return { credits: c.credits, salvage: Math.max(1, c.salvage) };
-};
+// Protocols at home: protocols · load <protocol> · unload <protocol|slot> · deconstruct <protocol>.
 function protocolCommand(s, text) {
   const [word, ...restWords] = text.split(' ');
   const arg = restWords.join(' ').trim();
@@ -1975,33 +1944,6 @@ function protocolCommand(s, text) {
     s.stash = s.stash.filter((x) => x.id !== it.id);
     const gains = [];
     return emit(s, 'gear', `${itemLabel(it)} deconstructed: ${deconstruct(s, it, gains)}.`, { item: it.id, gains, name: itemLabel(it) });
-  }
-  if (word === 'compile') {
-    // compile <recipe> [slot]: the slot you name (Exploit, Proxy, Shell, Script, Implant from level 15), or one at random.
-    const words = arg.split(/\s+/), last = words.at(-1);
-    const slot = words.length > 1 || SLOTS[last] ? Object.keys(SLOTS).find((k) => k === last || SLOTS[k].name.toLowerCase() === last) : null;
-    const what = slot ? words.slice(0, -1).join(' ') : arg; // the recipe, without the slot
-    if (slot === 'implant' && hackerLevel(s) < 15) return warn(s, 'Implants compile from level 15.');
-    const zd = ZERO_DAYS[what] && !ZERO_DAYS[what].chase ? what : Object.keys(ZERO_DAYS).find((z) => !ZERO_DAYS[z].chase && ZERO_DAYS[z].name.toLowerCase() === what);
-    let stat = !zd && what ? Object.keys(STATS).find((k) => k.toLowerCase() === what || STATS[k].name.toLowerCase() === what || PROTOCOL_NAMES[k]?.toLowerCase() === what) : null;
-    const mine = knownRecipes(s);
-    if (!zd && what && !stat) return warn(s, `compile <recipe>: ${mine.join(', ') || 'you have no recipes yet'}${(s.recipes || []).some((r) => ZERO_DAYS[r]) ? `, or a Zero-day you have source for: ${s.recipes.filter((r) => ZERO_DAYS[r]).join(', ')}` : ''}.`);
-    if (stat && !PROTOCOL_NAMES[stat]) return warn(s, `${STATS[stat].name} comes from your server (its firewall's tiers and filters), not protocols.`);
-    if (zd && !(s.recipes || []).includes(zd)) return warn(s, `You don't have ${ZERO_DAYS[zd].name} source. Find ${zd}.src in a vault on a deeper run.`);
-    if (!zd && !mine.length) return warn(s, 'You have no protocol recipes yet. They turn up in vaults, and now and then on a kill.');
-    if (stat && !mine.includes(stat)) return warn(s, `You don't have the ${PROTOCOL_NAMES[stat]} recipe yet.`);
-    if (!zd && !stat) stat = mine[Math.floor(rand(s) * mine.length)];
-    const c = compileCost(s, !!zd);
-    if (s.server.credits < c.credits) return warn(s, `Compiling needs ${c.credits} credits. You have ${s.server.credits}c.`);
-    const why = payProblem(s, c.salvage);
-    if (why) return warn(s, `Compiling: ${why}`);
-    s.server.credits -= c.credits;
-    spend(s, c.salvage);
-    const lvl = hackerLevel(s); // you compile protocols at your own level
-    const made = rollItem(() => rand(s), zd ? { level: lvl, zeroDay: zd } : { level: lvl, stat: AFFIX_FOR[stat] ? stat : null, source: 'compile', slot });
-    made.compiled = true; // breaks down for components and code, never Exploits (no compile-to-sell loop)
-    addItem(s, made, 'Compiled: ');
-    return firstTime(s, 'compile-' + (zd || stat), `first ${zd ? ZERO_DAYS[zd].name : PROTOCOL_NAMES[stat]} compiled`);
   }
 }
 
@@ -2162,7 +2104,6 @@ export function roomKill(s, e, { wild = false, sprawl = false, guard = false, bo
     if (item) addItem(s, item);
     killSets(s, { v, rare, floor: loc?.depth || 1 }); // set pieces (sets.mjs), straight into your stash
     nativeDrop(s, e);
-    if (rand(s) < BLUEPRINT_CHANCE.home) learnBlueprint(s, 'Blueprint recovered: ');
     if (rand(s) < SPARE_EXPLOIT.home) gainCode(s, { exploit: 1 }, 'Exploit recovered: ');
     return { more: () => rollDrop(s, { ...ctx, strain: null }, lvl) };
   }
@@ -2173,7 +2114,6 @@ export function roomKill(s, e, { wild = false, sprawl = false, guard = false, bo
   killSets(s, { v, key: e.key, guard, rare, floor: loc?.depth || 1, layer: layerOf(loc?.depth || 1), pack: true, path: tag }); // set pieces (sets.mjs)
   nativeDrop(s, e, true);
   if (rand(s) < (guard ? SPARE_EXPLOIT.guard : SPARE_EXPLOIT.home)) packExploit(s, `${tag}/xp`, v.name);
-  if (rand(s) < (guard ? BLUEPRINT_CHANCE.guard : BLUEPRINT_CHANCE.home)) { s.run.pack.push({ path: `${tag}/bp`, name: 'blueprint.bp', kind: 'blueprint', size: '64k' }); emit(s, 'drop', `${v.name} dropped a blueprint. In your pack until you jack out.`, { pack: true }); }
   const gains = codeFrom(s, family, lvl, src);
   for (const [m, n] of Object.entries(gains)) s.run.pack.push({ path: `${tag}/code-${m}`, name: `${m}.code`, kind: 'code', size: '8k', material: m, amount: n });
   if (Object.keys(gains).length) emit(s, 'code', `${v.name} dropped ${Object.entries(gains).map(([m, n]) => `${n} ${MATERIALS[m].name}`).join(' and ')}. In your pack until you jack out.`, { gains, pack: true });
@@ -2245,7 +2185,6 @@ export function finish(s, result) {
       const item = rollDrop(s, ctx, e.virus.level);
       if (item) addItem(s, item);
       nativeDrop(s, e); // network.mjs: its own dice
-      if (rand(s) < BLUEPRINT_CHANCE.home) learnBlueprint(s, 'Blueprint recovered: ');
       if (rand(s) < SPARE_EXPLOIT.home) gainCode(s, { exploit: 1 }, 'Exploit recovered: ');
       if (lead && !wild && !e.process) addLead(s, e.virus.family, lead, '', { id: CONFIG.zone.id }); // SPRAWL-00's strays trace its ? servers
       if (wild) rogueKill(s, wild, e.room, now, () => { const more = rollDrop(s, { ...ctx, strain: null }, e.virus.level); if (more) addItem(s, more, 'The Pit gives up more: '); });
@@ -2276,11 +2215,6 @@ export function finish(s, result) {
       if (s.run) killSets(s, { v: e.virus, key: e.key, guard: true, floor: loc?.depth || 1, layer: layerOf(loc?.depth || 1), pack: true, path: `${e.room}/#${e.seed}-${s.serial}` }); // set pieces (sets.mjs)
       if (s.run) nativeDrop(s, e, true); // network.mjs: its own dice, into your pack
       if (s.run && rand(s) < SPARE_EXPLOIT.guard) packExploit(s, `${e.room}/#xp-${e.seed}-${s.serial}`, e.virus.name);
-      // A guard sometimes carries a blueprint, into your pack like the rest.
-      if (s.run && rand(s) < BLUEPRINT_CHANCE.guard) {
-        s.run.pack.push({ path: `${e.room}/#bp-${e.seed}-${s.serial}`, name: 'blueprint.bp', kind: 'blueprint', size: '64k' });
-        emit(s, 'drop', `${e.virus.name} dropped a blueprint. In your pack until you jack out.`, { pack: true });
-      }
       // Guards drop their location's code, into your pack too.
       const gains = s.run && codeFrom(s, loc?.family, e.virus.level, 'guard');
       for (const [m, n] of Object.entries(gains || {})) s.run.pack.push({ path: `${e.room}/#code-${m}-${e.seed}-${s.serial}`, name: `${m}.code`, kind: 'code', size: '8k', material: m, amount: n });
@@ -2308,7 +2242,6 @@ export function finish(s, result) {
     const item = rollDrop(s, { kind: 'home', family: e.virus.family, strain: e.virus.strain, layer: e.virus.grade || 1, elite: !!e.virus.elite, boss: e.virus.boss || null }, e.virus.level);
     if (item) addItem(s, item);
     nativeDrop(s, e); // network.mjs: its own dice
-    if (rand(s) < BLUEPRINT_CHANCE.home) learnBlueprint(s, 'Blueprint recovered: ');
     if (rand(s) < SPARE_EXPLOIT.home) gainCode(s, { exploit: 1 }, 'Exploit recovered: ');
     if (inv) invaderDown(s, inv); // the next of a pack steps up, or the bounty (invasion.mjs)
     if (e.member || e.raid || e.roamer) consortiumWon(s, e); // a fight for the consortium (consortium.mjs)
@@ -2369,7 +2302,7 @@ function distance(a, b) {
 }
 // A command that isn't one, with no fight running: a fight order says so; a run command says where it
 // works; anything else gets a "did you mean" (clickable in the notice).
-const HOME_WORDS = ['connect', 'jack', 'mail', 'repair', 'top', 'install', 'uninstall', 'cancel', 'load', 'unload', 'compile', 'deconstruct', 'craft', 'filter', 'firewall', 'relay', 'use', 'detach', 'attach', 'encounter', 'status', 'daemon', 'speed', 'consortium', 'market', 'buy', 'sell', 'event', 'config', 'map', 'server', 'loadout', 'system', 'help', 'mail', 'equip', 'unequip', 'whoami'];
+const HOME_WORDS = ['connect', 'jack', 'mail', 'repair', 'top', 'install', 'uninstall', 'cancel', 'load', 'unload', 'deconstruct', 'craft', 'filter', 'firewall', 'relay', 'use', 'detach', 'attach', 'encounter', 'status', 'daemon', 'speed', 'consortium', 'market', 'buy', 'sell', 'event', 'config', 'map', 'server', 'loadout', 'system', 'help', 'mail', 'equip', 'unequip', 'whoami'];
 const RUN_WORDS = ['ls', 'cd', 'cat', 'pull', 'unlock', 'attack', 'engage', 'slip', 'spoof', 'tap', 'sweep'];
 function unknownAtHome(s, text) {
   const [w, ...rest] = text.split(' ');
@@ -2544,7 +2477,7 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
   } else if (/^developer bossrule [abc]$/.test(text)) { // the boss rule for every boss fight (interrupt.mjs, docs/servers.md 3.4)
     s.bossRule = text.split(' ')[2];
     emit(s, 'info', `Boss rule ${s.bossRule}: ${BOSS_RULES[s.bossRule].name}. From your next boss fight.`);
-  } else if (/^developer (codebases|components \d+)$/.test(text)) { // sockets.mjs: every codebase, or components to build with
+  } else if (/^developer (codebases|components \d+)$/.test(text)) { // sockets.mjs: every codebase, or components
     if (text.endsWith('codebases')) { for (const id of PROGRAM_IDS) if (!codebasesOf(s).includes(id)) codebasesOf(s).push(id); emit(s, 'info', 'Developer: every codebase learned.'); }
     else { const n = gainComponents(s, Number(text.split(' ')[2])); emit(s, 'info', `Developer: +${n} components.`); }
   } else if (/^developer location (ransomware|worm|ghostroot)$/.test(text)) {
@@ -2561,7 +2494,9 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     selectEncounter(s, key, seed ? Number(seed) >>> 0 : (s.seed + 1) >>> 0);
   } else if (text === 'engage') {
     engage(s);
-  } else if (/^(gear|protocols|load|unload|scrap|deconstruct|compile)( |$)/.test(text)) {
+  } else if (/^(compile|relay craft|filter craft)( |$)/.test(text)) {
+    warn(s, 'Nothing is crafted any more: protocols, filters and relays are found or bought.');
+  } else if (/^(gear|protocols|load|unload|scrap|deconstruct)( |$)/.test(text)) {
     protocolCommand(s, text);
   } else if (/^(services|install|uninstall)( |$)/.test(text) || text === 'cancel install' || text === 'buyout install') {
     serviceCommand(s);
@@ -2579,9 +2514,6 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     const id = text.split(' ')[2];
     if (!isNative(id)) warn(s, `No native unique called ${id}.`);
     else { nameNative(s, id); giveUnique(s, id, 'Developer: '); }
-  } else if (text === 'developer blueprints') {
-    s.recipes = [...new Set([...(s.recipes || []), ...BLUEPRINTS])];
-    emit(s, 'info', 'Developer: every blueprint learned.');
   } else if (/^developer salvage \d+$/.test(text)) {
     const n = gainComponents(s, Number(text.split(' ')[2]));
     emit(s, 'info', `Developer: +${n} components.`);
@@ -2611,7 +2543,7 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     s.devServer = Math.max(1, Math.min(SERVER.maxLevel, Number(text.split(' ')[2])));
     syncServer(s);
     emit(s, 'info', `Developer: server level ${serverLevel(s)} (a floor under your highest class level, for testing).`);
-  } else if (/^filter (equip|unequip|scrap) \d+$/.test(text) || /^filter craft( \w+)?$/.test(text)) {
+  } else if (/^filter (equip|unequip|scrap) \d+$/.test(text)) {
     filterCommand(s, text);
   } else if (/^firewall (upgrade|defrag)( \S+)?$/.test(text) || text === 'defrag') {
     firewallCommand(s, text, now);
@@ -2640,8 +2572,6 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     genomeCommand(s, text); // genome.mjs: a part's genes (free, no cycle), or the card of what you're facing
   } else if (text.startsWith('config ') || text.startsWith('craft config ')) {
     warn(s, 'Configs are gone: services run as they come.');
-  } else if (/^(outpost build relay|relay craft)$/.test(text)) {
-    craftRelay(s);
   } else if (text.startsWith('outpost ') || /^build( |$)/.test(text)) {
     warn(s, 'Outposts are gone. Build in a server\'s socket rooms: connect, clear a socket, and build there.');
   } else if (/^craft( booster)?$/.test(text)) {
@@ -4811,7 +4741,7 @@ export function shuntRestore(s) {
   walk(s, 0);
 }
 export function restore(raw) {
-  if (!raw || ![6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, SAVE_VERSION].includes(raw.version)) return fresh();
+  if (!raw || ![6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, SAVE_VERSION].includes(raw.version)) return fresh();
   try {
     const s = bindRooms(structuredClone(raw));
     const was = s.version;
@@ -4969,6 +4899,7 @@ export function restore(raw) {
     subRestore(s, was); // v46: no default subclass: a class past 10 that never picked plays its core (its default's keys and talent points back)
     hardenRestore(s); // harden.sh is gone: scripts you held come back as credits (firewall.mjs)
     componentsRestore(s); // v47: a pile of named components becomes its count (salvage.mjs); keyed on the field
+    { const l = craftRestore(s); if (l) systemLetter(s, l); } // v49: crafting goes (progression.mjs): keyed on what the save holds
     shuntRestore(s); // the Shunt was cut (docs/parts-plan.md): keyed on the part, not the version
     try { achievementsRestore(s); } catch (err) { hooks.restoreError?.(err); } // achievements.mjs: an older save earns what it has already done (its titles and stickers too), quietly; never costs the save
     if (s.encounter) s.encounter.plan ||= [];
@@ -4998,7 +4929,7 @@ export function suggestions(s, input = '') {
   }
   const base = active(s)
     ? [...usable(s).map((id) => (id === 'spike' ? spikeWord(s) : id)), 'hold', 'pause', 'resume', 'cancel', 'status', 'scan', ...living.filter((p) => p.kind !== 'fragment').map((p) => `inspect ${packed(s, s.encounter.virus, p) ? partKey(s, p) : p.id}`)]
-    : ['engage', 'jack in', 'mail', 'repair', 'top up', 'protocols', 'compile', 'load', 'unload', 'encounter cryptjack', 'encounter splinter', 'encounter ghostroot', 'encounter random', 'status', 'developer reboot'];
+    : ['engage', 'jack in', 'mail', 'repair', 'top up', 'protocols', 'load', 'unload', 'encounter cryptjack', 'encounter splinter', 'encounter ghostroot', 'encounter random', 'status', 'developer reboot'];
   return base.filter((x) => x.startsWith(text));
 }
 
