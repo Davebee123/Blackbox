@@ -36,7 +36,7 @@ import { matesOf, mateUp, mateSignal } from './crew.mjs';
 import { momentumCap } from './classes/breaker.mjs';
 import { online, inSprawl, whereText, simOn, friends, profileOf } from './presence.mjs';
 import { consortiumOf, isGround, sizeOf, tiersOf, nextTier as nextConTier, serversOf, memberServers, memberLevel, CONSORTIUM, rebooting, consortiumWall, alertsOf, tiersOf as conTiers } from './consortium.mjs';
-import { FACTIONS, MAIL, TIERS, openContracts, doneContracts, offers as mailOffers, findJob, heldCount, boardOpen, tierIndex, standing, tierOf, nextTier, retainer, unread, title as contractTitle, progress as contractProgress, rewardLine, ready as contractReady, nextPayIn, contractXp } from './mail.mjs';
+import { FACTIONS, MAIL, TIERS, openContracts, doneContracts, offers as mailOffers, findJob, heldCount, boardOpen, tierIndex, standing, tierOf, nextTier, retainer, unread, title as contractTitle, progress as contractProgress, rewardLine, ready as contractReady, nextPayIn, xpOf } from './mail.mjs';
 import { commsOf } from './comms.mjs';
 import { LINE, GOODS, storeOf, lineName, lineAbout, goodsAbout, priceNow, premiumOf, premiumPrice, premiumBlock } from './store.mjs';
 import { shownHidden, flagged as hiddenFlagged, items as kitOf, HIDDEN, leadOf, connectedTo, viaName } from './hidden.mjs';
@@ -1427,7 +1427,7 @@ const bcost = (c) => `<span class="bcost">${Object.entries(c).filter(([, n]) => 
 function rewardChips(s, c) {
   const r = c.reward, chip = (ic, v, tip, cls = '') => `<span class="rw ${cls}" title="${esc(tip)}">${glyph(ic)}<b>${esc(String(v))}</b></span>`;
   return [r.credits && chip('credits', r.credits, 'Credits'),
-    r.xp && chip('xp', contractXp(s, hackerLevel(s), c), 'XP'),
+    xpOf(s, c) && chip('xp', xpOf(s, c), 'XP'),
     r.standing && chip('f-halcyon', `${r.standing > 0 ? '+' : ''}${r.standing}`, 'Halcyon standing', r.standing < 0 ? 'neg' : ''),
     c.offBooks && chip('f-glassjaw', '+5', 'GLASSJAW rep'), r.rep && c.faction && chip('f-' + c.faction, `+${r.rep}`, `${FACTIONS[c.faction].short} rep`),
     r.relay && chip('relay', `×${r.relay}`, 'A relay'), (r.drop || r.daemon) && chip('item', '+1', 'A protocol, Tuned or better'), r.item && chip('item', '+1', 'A protocol'), r.pick && chip('item', '1 of 3', `Pick one of three ${RARITIES[r.pick]?.name || ''} protocols at your level.`, `pick r-${r.pick}`)].filter(Boolean).join('');

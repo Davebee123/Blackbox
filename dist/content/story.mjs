@@ -25,8 +25,7 @@ export default {
       },
       "reward": {
         "credits": 60,
-        "standing": 3,
-        "xp": 1
+        "standing": 3
       }
     },
     {
@@ -44,8 +43,7 @@ export default {
       },
       "reward": {
         "credits": 80,
-        "standing": 3,
-        "xp": 1
+        "standing": 3
       }
     },
     {
@@ -70,8 +68,7 @@ export default {
       "reward": {
         "item": "wicks-old-toolkit",
         "credits": 100,
-        "standing": 3,
-        "xp": 2
+        "standing": 3
       }
     },
     {
@@ -90,7 +87,6 @@ export default {
       "reward": {
         "credits": 250,
         "standing": 4,
-        "xp": 3,
         "relay": 1
       },
       "boardAfterHour": true,
@@ -119,7 +115,6 @@ export default {
       "reward": {
         "credits": 150,
         "standing": 4,
-        "xp": 3,
         "drop": true
       }
     },
@@ -154,7 +149,6 @@ export default {
       "reward": {
         "credits": 400,
         "standing": 4,
-        "xp": 3,
         "item": "lowlight-badge",
         "items": ["wicks-old-toolkit"]
       }

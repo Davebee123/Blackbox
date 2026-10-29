@@ -26,7 +26,7 @@ import { graphOf, locAt, hiddenAt, neighbours, floorName, reached, serverSlot } 
 import { lairBoss, NETWORK } from './network.mjs';
 import { addrsOf, sweepRooms } from './address.mjs';
 import { zoneOf, zoneRooms } from './zone.mjs';
-import { letter, arm, boardOpen, openContracts, title, CREWS } from './mail.mjs';
+import { letter, arm, boardOpen, openContracts, title, CREWS, minutesOf, contractXp } from './mail.mjs';
 import { FACTIONS } from './factions.mjs';
 import { fill } from './content.mjs';
 import STORY_TEXT from './content/story.mjs';
@@ -86,7 +86,7 @@ const bossOf = (s) => BOSSES[lairBoss(s, 'you')]?.name || 'the lair boss';
 function pay(s, n, step) {
   const c = chainOf(n), k = c.steps.indexOf(step), r = step.reward || {}, L = hackerLevel(s), mine = !c.faction || c.faction === 'halcyon';
   const [base, per] = r.credits || [40, 6];
-  return { credits: Math.round(base + per * L), xp: r.xp || 2, standing: mine ? r.rep || 0 : 0, ...(mine ? {} : { rep: r.rep || 0 }), ...(r.pick ? { pick: k >= c.steps.length - 1 ? ARC.rarity.last : ARC.rarity.mid } : {}) }; // pick: the three's rarity
+  return { credits: Math.round(base + per * L), standing: mine ? r.rep || 0 : 0, ...(mine ? {} : { rep: r.rep || 0 }), ...(r.pick ? { pick: k >= c.steps.length - 1 ? ARC.rarity.last : ARC.rarity.mid } : {}) }; // pick: the three's rarity
 }
 function post(s, n, k, at) {
   const c = chainOf(n), step = c.steps[k];
@@ -106,6 +106,7 @@ function post(s, n, k, at) {
   const msg = { from: from(c), subject: fill(step.subject, vars), body: (step.body || []).map((p) => fill(p, vars)) };
   const l = letter(s, msg, at);
   const j = { id: l.id, ...msg, got: 0, at, faction: c.faction || 'halcyon', ...job, reward: pay(s, n, step) };
+  j.minutes = minutesOf(j); j.reward.xp = contractXp(hackerLevel(s), j); // fixed now, as the board's are (mail.mjs MINUTES)
   l.job = j.id;
   s.mail.jobs.push(j);
   if (j.type === 'bounty') arm(s, j);

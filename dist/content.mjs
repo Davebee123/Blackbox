@@ -20,6 +20,13 @@ export const JOB_VARS = {
   sweep: { server: 'the server to walk' },
   exfil: {},
   heist: { server: 'the server with the Tracker', file: 'the file name', label: 'what it is, lower case', Label: 'the same, capitalised' },
+  grind: { count: 'how many to kill', virus: 'the virus family, lower case (cryptominer)' },
+  solve: { boards: 'what to win: "2 puzzle boards" or "a Cascade board"' },
+  decode: { count: 'how many parts' },
+  sweeps: { logs: 'what to sweep: "a server\'s incident log" or "2 servers\' incident logs"' },
+  interrupt: { count: 'how many attacks' },
+  root: { server: 'the server you hold', root: 'the Root level to reach (2 to 5)' },
+  hold: {},
 };
 // Story beats also know the server you took over in the Turf job.
 export const STORY_VARS = { took: 'the server you took over (once you have one)' };
@@ -39,9 +46,17 @@ export const CONTRACT_KINDS = {
   sweep: { name: 'Map a server without resting', sides: ['halcyon'] },
   exfil: { name: 'Catch an Exfil', sides: ['halcyon'] },
   heist: { name: 'A vault file past the Tracker', sides: ['halcyon'] },
+  grind: { name: 'Grind: many kills of one virus', sides: ['halcyon'] },
+  solve: { name: 'Solve puzzle boards', sides: ['halcyon'] },
+  decode: { name: 'Decode parts', sides: ['halcyon'] },
+  sweeps: { name: 'Sweep logs', sides: ['halcyon'] },
+  interrupt: { name: 'Answer attacks', sides: ['halcyon'] },
+  root: { name: 'Reach a Root level', sides: ['halcyon'] },
+  hold: { name: 'Stop an invasion', sides: ['halcyon'] },
 };
 export const SIDES = { halcyon: 'Halcyon (on the books)', glassjaw: 'GLASSJAW (off the books)' };
-export const REWARDS = { credits: 'Credits', standing: 'Standing', xp: 'XP (kills’ worth)', relay: 'Relays', drop: 'A protocol, Tuned or better' };
+// (A job's XP comes from its kind and your level, as the board's do: mail.mjs MINUTES.)
+export const REWARDS = { credits: 'Credits', standing: 'Standing', relay: 'Relays', drop: 'A protocol, Tuned or better' };
 
 // Fill {blanks}. Unknown ones are left as typed so they're easy to spot.
 export const fill = (text, vars) => String(text ?? '').replace(/\{(\w+)\}/g, (m, k) => (vars[k] != null ? String(vars[k]) : m));
@@ -250,7 +265,7 @@ export const FX_DO = {
   'momentum-safe': { when: ['custom'], label: 'stops Momentum from raising the damage you take' },
   // What you see, and what you earn.
   unveil: { when: ['custom'], label: "shows a Veiled part's next attack once it is X cycles away", value: true },
-  'explore-xp%': { when: ['custom'], label: 'increases the XP from first clears and Mapped servers by X%', value: true },
+  'explore-xp%': { when: ['custom'], label: 'increases the XP from Mapped servers by X%', value: true },
   'cache%': { when: ['custom'], label: 'increases the credits caches pay by X%', value: true },
   // Set pieces (sets.mjs runs them): a piece's own bonus and its green line, the line that counts with two or more of
   // its set worn. Each piece writes its own text, in the plan's words.

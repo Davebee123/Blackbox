@@ -4,7 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { fresh, command, hooks } from './dist/combat.mjs';
-import { initMail, openContracts, offer } from './dist/mail.mjs';
+import { initMail, openContracts, offer, xpOf, MAIL } from './dist/mail.mjs';
 import { mapMarkup, trackedJobs } from './dist/view.mjs';
 
 let clock = 1_700_000_000_000;
@@ -41,7 +41,7 @@ test('only the contracts you hold: not the board, not the delivered ones', () =>
   const html = mapMarkup(s);
   assert.equal(rows(html).length, 3, 'three held, the delivered one and the offer left out');
   assert.deepEqual(trackedJobs(s).map((j) => j.id), openContracts(s).map((c) => c.id));
-  assert.match(tracker(html), /Contracts<small>3\/3<\/small>/, 'the kicker counts them against the hand');
+  assert.match(tracker(html), new RegExp(`Contracts<small>3/${MAIL.take}</small>`), 'the kicker counts them against the hand');
   // Its name, who it's for and its progress, on the row itself.
   const [kill, take, item] = rows(html);
   assert.match(kill, /<b>Kill 5 Ransomware viruses, Lv 8\+<\/b>/);
@@ -93,8 +93,9 @@ test('its tooltip reads in the house grammar: the name, its kind, its progress a
     { id: 2, type: 'item', loc: loc.id, file: 'ledger.db', from: 'wick · LOWLIGHT', reward: { credits: 60 } },
   );
   const tips = rows(mapMarkup(s)).map((r) => unesc(r.match(/title="([^"]*)"/)[1]));
-  assert.equal(tips[0], 'Kill 5 Ransomware viruses, Lv 8+: Contract for Halcyon Mutual · Claims. 3 of 5 neutralized. Pays 90 credits and 2 Halcyon standing.\n▸ Open it in Mail.');
-  assert.equal(tips[1], `Recover ledger.db: Contract for wick · LOWLIGHT. In the vault on ${loc.name}. Pays 60 credits.\n▸ Show it on the map.`);
+  const [kill, item] = s.mail.jobs;
+  assert.equal(tips[0], `Kill 5 Ransomware viruses, Lv 8+: Contract for Halcyon Mutual · Claims. 3 of 5 neutralized. Pays 90 credits, ${xpOf(s, kill)} XP and 2 Halcyon standing.\n▸ Open it in Mail.`);
+  assert.equal(tips[1], `Recover ledger.db: Contract for wick · LOWLIGHT. In the vault on ${loc.name}. Pays 60 credits and ${xpOf(s, item)} XP.\n▸ Show it on the map.`);
   for (const t of tips) {
     const [body, answer] = t.split('\n');
     assert.doesNotMatch(body, /;/, 'no semicolon chains');

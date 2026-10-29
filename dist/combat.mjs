@@ -2091,7 +2091,7 @@ function packExploit(s, path, who) {
 }
 export function roomKill(s, e, { wild = false, sprawl = false, guard = false, bounty = null, family = e.virus.family, loc = null, rare = false } = {}) {
   const v = e.virus, lvl = v.level;
-  contractKill(s, { family, zone: sprawl, bounty, level: lvl, strain: v.strain });
+  contractKill(s, { family, zone: sprawl, bounty, level: lvl, strain: v.strain, virus: v.family }); // virus: its own family (a Grind job's), family its lineage
   eventKill(s, family); // an outbreak's source (events.mjs chains)
   huntKill(s, family);
   // SPRAWL-00's strays trace one of its ? servers (floors.mjs), falling with the level gap like XP (not guards or bosses).

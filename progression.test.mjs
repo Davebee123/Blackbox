@@ -54,15 +54,16 @@ test('the long climb: a level is CLIMB.kills kills of your level (straight betwe
   assert.equal(killsToNext(12), x + ((y - x) * (12 - a)) / (b - a), 'straight between 10 and 15');
   for (let L = 2; L < LOADOUT.maxLevel; L++) assert.ok(xpToNext(L) > xpToNext(L - 1), `level ${L} takes more than ${L - 1}`);
   for (let L = 2; L < LOADOUT.maxLevel; L++) assert.ok(levelMinutes(L) >= levelMinutes(L - 1), `the pace table at ${L}`);
-  // About 100 hours of real play to 50 (CLIMB.minutes), front-loaded: the table loop.test.mjs holds the bot to (pacing.mjs PACE_TARGET).
+  // About 100 hours of real play to 50 (CLIMB.minutes), front-loaded: a farmer's pace (pacing.mjs FARM_TARGET); one who
+  // works contracts earns about 1.5x the XP an hour (PACE_TARGET, the table loop.test.mjs holds the bot to).
   const hours = (to) => { let m = 0; for (let L = 1; L < to; L++) m += levelMinutes(L); return m / 60; };
   for (const [L, h] of [[5, 1], [10, 4], [20, 15], [30, 35], [40, 65], [50, 100]]) assert.ok(Math.abs(hours(L) - h) / h < 0.1, `level ${L}: ${hours(L).toFixed(1)} hours of targets`);
   assert.ok(levelMinutes(1) <= 5, 'the first level comes in minutes');
-  // A deed (first clear, Mapped, takeover, Root, decode, a puzzle board) is its old share of a kill times DEED.share of
-  // how much longer the level is than it was, never less than a kill's share.
+  // A deed (Mapped, takeover, Root) is its old share of a kill times DEED.share of how much longer the level is than it
+  // was, never less than a kill's share. A decode, a puzzle board and a log sweep are a kill each, unscaled.
   assert.equal(deedScale(1), Math.max(1, DEED.share * (killsToNext(1) / 6.2)));
   assert.ok(deedScale(30) > 5 && deedScale(30) < 12, `level 30: ${deedScale(30)}`);
-  assert.equal(DECODE_XP, 1, 'decoding is one kill on the old curve');
+  assert.equal(DECODE_XP, 1, 'decoding is one kill');
 });
 
 test('v42: an older save keeps every class\'s level, and its XP into the level keeps its share of the new, longer level', () => {

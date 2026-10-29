@@ -1,5 +1,5 @@
 // Floor jobs in Mail (arcs.mjs): their own section over Contracts, a row a floor whose chain is under way (the floor's
-// number in an amber frame, the chain's sender and title, its step n/N or Ready), and the chain's page as the picked
+// number on a filled amber flag, the chain's sender and title, its step n/N or Ready), and the chain's page as the picked
 // quest window (quest-view.mjs, the Transmission): the sender's mark, the chain's title and why, its steps as a job (✓
 // done, ▸ the one you're on, the ones ahead encrypted), then the step's letter and its contract. Its pick of three is
 // the Transmission's signed receipt.
