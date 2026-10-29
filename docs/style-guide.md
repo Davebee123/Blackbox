@@ -9,6 +9,8 @@ How every line a player reads is written: tooltips, item effects, log lines, mai
 - **Visual vocabulary first:** an icon, a number, a bar, pips, a state (lit, dim, locked, done), a colour, a position. *What adds how much* is an icon and a number on one row; *how many are left* is pips or a bar; *not available yet* is a dim, locked row.
 - **Words are labels, not instructions:** "Relay", "Trace injector". No "Also: …", no sentence that walks the player through a mechanic on the card.
 - **The detail lives one step away,** in a tooltip (a tap on a phone). A sentence on the card is the last resort, and then one short line.
+- **Cut every word the player can do without.** Assume they know the basics: what a slot, a stat or ▲ ▼ means. What needs teaching goes in the tutorial; anything else is left out, not explained. No qualifiers the screen already answers ("into an empty slot"), no restating the card in its tooltip.
+- **Rewards, costs and stats are icons and numbers, in tooltips too.** A tooltip carries icon chips in a `<template class="tt-more">` inside its element (app.js `ttShow`); never spell out "Pays 90 credits and 240 XP".
 
 Everything below is how the text in tooltips, logs, mail and tips is written. It is not a licence to put that text on the card.
 
@@ -96,6 +98,7 @@ mutation and gene description to it.
 
 ## 6. Checking a line
 
+0. Can it go? Cut it if the screen, an icon or the tutorial already says it.
 1. Is it a mechanic? Then: verb first, number plain, effect before condition, the glossary's nouns.
 2. Does it state a number? Check it against the code that implements it (`dist/data.mjs`, `dist/combat.mjs`, `dist/classes/*.mjs`, `dist/tells.mjs`). Text that is wrong about a mechanic is a bug.
 3. Does a test match it? Update the test to the new wording and keep what it checks.

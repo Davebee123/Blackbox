@@ -86,7 +86,7 @@ test('a click centres the map on its server and selects it; with no server, it o
   assert.doesNotMatch(rows(mapMarkup(s, 'server'))[0], /ct-row on/);
 });
 
-test('its tooltip reads in the house grammar: the name, its kind, its progress and pay, then the answer muted', () => {
+test('its tooltip reads in the house grammar: the name, its kind, its progress, its pay as icons, then the answer muted', () => {
   const { s, loc } = setup();
   s.mail.jobs.push(
     { id: 1, type: 'kill', family: 'ransomware', count: 5, got: 3, level: 12, from: 'Halcyon Mutual · Claims', reward: { credits: 90, standing: 2 } },
@@ -94,13 +94,17 @@ test('its tooltip reads in the house grammar: the name, its kind, its progress a
   );
   const tips = rows(mapMarkup(s)).map((r) => unesc(r.match(/title="([^"]*)"/)[1]));
   const [kill, item] = s.mail.jobs;
-  assert.equal(tips[0], `Kill 5 Ransomware viruses, Lv 8+: Contract for Halcyon Mutual · Claims. 3 of 5 neutralized. Pays 90 credits, ${xpOf(s, kill)} XP and 2 Halcyon standing.\n▸ Open it in Mail.`);
-  assert.equal(tips[1], `Recover ledger.db: Contract for wick · LOWLIGHT. In the vault on ${loc.name}. Pays 60 credits and ${xpOf(s, item)} XP.\n▸ Show it on the map.`);
+  assert.equal(tips[0], `Kill 5 Ransomware viruses, Lv 8+: Contract for Halcyon Mutual · Claims. 3 of 5 neutralized.\n▸ Open it in Mail.`);
+  assert.equal(tips[1], `Recover ledger.db: Contract for wick · LOWLIGHT. In the vault on ${loc.name}.\n▸ Show it on the map.`);
   for (const t of tips) {
     const [body, answer] = t.split('\n');
     assert.doesNotMatch(body, /;/, 'no semicolon chains');
     assert.ok(answer.startsWith('▸ ') && answer.split(' ').length <= 11, 'one short answer on its own line');
+    assert.doesNotMatch(body, /Pays|credits/, 'the pay is icons, not words');
   }
+  const pay = rows(mapMarkup(s))[0].match(/<template class="tt-more">(.*?)<\/template>/)[1];
+  assert.match(pay, /class="rw "[^>]*title="Credits">.*<b>90<\/b>/, 'credits as an icon chip');
+  assert.match(pay, /title="Halcyon standing">.*<b>\+2<\/b>/, 'standing as an icon chip');
 });
 
 test('amber for the work, never teal: teal is only ever you', () => {

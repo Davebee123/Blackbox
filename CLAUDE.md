@@ -24,7 +24,8 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
   raised it.
 - **Branches.** Start from a fresh main and land before the session ends. Work that can't land yet (an experiment the
   designer hasn't kept) goes on a `wip/` branch, so it isn't mistaken for outstanding work.
-- **Docs.** Keep GAME_RULES.md and README.md in sync with the code and with each other, in the same commit.
+- **Docs.** Keep GAME_RULES.md and README.md in sync with the code and with each other, in the same commit. Write
+  docs lean too: no preamble, no restating, no walls of text. Cut a wall whenever you touch it.
 - **Agents.** Use worktree agents for big features only; do small fixes directly. Tell an agent to read narrowly
   (grep for the function, read that part of a file), to run `npm test -- --base main` in its worktree, and to merge
   main before its final test run. Merge agents' branches into main one at a time. Never cd into an agent's worktree.
@@ -44,6 +45,8 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
 
 - **Show, don't tell. Always reduce verbiage.** Numbers, tags, bars and icons on the screen; the rule behind them goes in
   a tooltip, never a paragraph. Cut every word the screen can do without, in new UI and whenever you touch old UI.
+  Assume the player knows the basics; what needs teaching goes in the tutorial, everything else is left out. Rewards
+  and costs are icons, in tooltips too.
 - **Tooltips use WoW's grammar:** a name, its kind, what it does, then the answer, muted. Use sentence case and good
   grammar: whole sentences, never cryptic labels.
 - **Colours keep one meaning each:** teal is only ever the player, red is threat, amber is loot and what you use,
