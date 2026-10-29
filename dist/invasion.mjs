@@ -27,6 +27,7 @@ import { emit, warn, rand, active, holding, selectEncounter, crashServer, endInv
 import { nativeStrain } from './network.mjs';
 import { tickProfile } from './profile.mjs';
 import { tickChannel } from './channel.mjs';
+import { contractDid } from './mail.mjs';
 
 const I = () => CONFIG.invasion;
 const since = (s, first) => s.logs.filter((e) => e.id > first);
@@ -509,6 +510,7 @@ function stopped(s, inv, how) {
   const bk = bountyCode(inv), n = payOut(s, inv, blocked ? 'blocked' : 'wall');
   endInvasion(s, `${blocked ? `${where} stopped ${inv.name} (level ${inv.level}${kind}) from ${inv.fromName}` : `${where} wore ${inv.name} down to nothing`}: +${codeText(n, bk)}, +1 component.`, { blocked, quiet, gains: { [bk]: n } });
   unsabotage(s);
+  contractDid(s, 'hold'); // a Hold contract: an invasion stopped, at the wall or by you
   gainXp(s, xpFor(s, inv.level, I().blockedXp), `${inv.name} stopped at the wall`, 'fight');
   if (inv.hidden) hiddenLead(s, hiddenNode(s, inv.hidden), HIDDEN.blockLead, 'Its route: ');
 }
@@ -520,6 +522,7 @@ export function invaderDown(s, inv) {
   const intercepted = inv.state === 'travel', k = bountyCode(inv), n = bountyOf(s, inv).now;
   emit(s, 'code', `Bounty: +${codeText(n, k)}.`, { gains: { [k]: n } }); // its row on the fight's card
   payOut(s, inv, 'you', intercepted);
+  contractDid(s, 'hold');
   endInvasion(s, `${inv.name} is gone ${intercepted ? `before it reached ${targetOf(s, inv)?.name || 'your outpost'}` : 'from your wall'}: +${codeText(n, k)}.`, {});
   unsabotage(s);
 }

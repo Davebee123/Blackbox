@@ -664,10 +664,10 @@ test('Init Vector: after every 5th cycle, your next damaging skill hits again fo
   assert.equal(spike().length, 1, 'once each time it is armed');
 });
 
-test('out of a fight: Silt Map pays 10% more for a first clear, Golden Image\'s caches 10% more credits', async () => {
+test('out of a fight: Silt Map pays 10% more for a Mapped server, Golden Image\'s caches 10% more credits', async () => {
   const FP = await import('./dist/floorplan.mjs');
   await import('./dist/netrooms.mjs'); // the network's room hooks (cacheMult)
-  const firstClear = (withIt) => {
+  const lastClear = (withIt) => {
     const s = fresh(); s.rng = 7 * 7777;
     FP.outfit(s, { cls: 'breaker', level: 10, gearSeed: 7 });
     if (withIt) wear(s, 'silt-map');
@@ -676,15 +676,17 @@ test('out of a fight: Silt Map pays 10% more for a first clear, Golden Image\'s 
     const R = s.rooms, room = FP.neighbours(R.graph, R.at).map((id) => R.graph.rooms[id]).find((r) => ['process', 'guard', 'elite'].includes(r.kind)) || FP.roomList(s).find((r) => r.kind === 'process');
     const from = FP.neighbours(R.graph, room.id)[0];
     R.at = from; R.visit.walked[from] = true; R.screen = null; FP.look(s);
+    for (const x of FP.roomList(s)) if (FP.counted(x) && x.id !== room.id) R.cleared[x.id] = 1; // its last room: the fight Maps it
     FP.go(s, room.id); FP.act(s, 'engage');
     const mark = s.serial;
     for (const p of s.encounter.virus.parts) p.integrity = 0;
     finish(s, 'victory'); FP.settle(s);
-    return s.logs.filter((x) => x.id > mark && x.type === 'xp' && /first clear/.test(x.message)).reduce((n, x) => n + x.amount, 0);
+    const bonus = s.logs.filter((x) => x.id > mark && x.type === 'fresh').reduce((n, x) => n + x.amount, 0); // a Fresh bonus rides on it, capped
+    return s.logs.filter((x) => x.id > mark && x.type === 'xp' && /Mapped/.test(x.message)).reduce((n, x) => n + x.amount, 0) - bonus;
   };
-  const plain = firstClear(false);
+  const plain = lastClear(false);
   assert.ok(plain > 0);
-  assert.ok(Math.abs(firstClear(true) - plain * 1.1) <= 1, 'Silt Map: 10% more XP for a first clear');
+  assert.ok(Math.abs(lastClear(true) - plain * 1.1) <= 1, 'Silt Map: 10% more XP for a Mapped server');
   const s = vet();
   assert.equal(FP.WORLD.cacheMult(s), 1);
   wear(s, 'golden-image');

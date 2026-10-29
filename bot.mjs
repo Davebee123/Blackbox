@@ -24,7 +24,7 @@ import { sweepPuzzle, sweepFile } from './dist/forensics.mjs';
 import { eventsOf, CARDS } from './dist/events.mjs';
 import { tickNetwork } from './dist/invasion.mjs';
 import { tickPlay } from './dist/progression.mjs';
-import { offers, openContracts, heldCount, ready, MAIL } from './dist/mail.mjs';
+import { offers, openContracts, heldCount, ready, MAIL, ACTIVITY } from './dist/mail.mjs';
 import { POLICIES } from './balance.mjs';
 import { botStep, BUILD } from './roomsim.mjs';
 import * as FP from './dist/floorplan.mjs';
@@ -293,8 +293,9 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
       if (ready(s, c)) say('mail deliver ' + c.id);
       else if (c.story === undefined && t - (taken[c.id] ?? t) > 90 * 60000) say('mail drop ' + c.id);
     }
-    // (A room contract waits on the board, mail.mjs ROOM_JOBS: the bot leaves those.)
-    for (const o of [...offers(s)].filter((o) => !o.offBooks && !o.waits &&(['kill', 'materials'].includes(o.type) || o.loc || (o.type === 'bounty' && stats.bountyLosses < 2)))) {
+    // (A room contract waits on the board, mail.mjs ROOM_JOBS: the bot leaves those. The activity ones it takes: it
+    // fights, solves, decodes and sweeps anyway, and a job it can't finish goes after 90 minutes.)
+    for (const o of [...offers(s)].filter((o) => !o.offBooks && !o.waits && (['kill', 'materials'].includes(o.type) || ACTIVITY[o.type] || o.loc || (o.type === 'bounty' && stats.bountyLosses < 2)))) {
       if (heldCount(s) >= MAIL.take) break;
       say('mail accept ' + o.id); taken[o.id] = t;
     }

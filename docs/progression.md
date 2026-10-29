@@ -572,7 +572,7 @@ By source over the whole climb, old → new (pacing.mjs, three seeds a class):
 | Infiltrator | 72% → 72% | 25% → 23% | 3% → 5% |
 | Operator | 74% → 72% | 24% → 23% | 2% → 5% |
 
-Deeds are first clears, Mapped servers, takeovers, Root levels, decodes, puzzle boards and first crafts. Each pays its old kill share times `deedScale` = `DEED.share` (0.4) × how much longer the level is than before v42. That is 8.6× at level 4, 5.4× at 9, 7.8× at 19, 8.7× at 29 and 8.3× at 49. A Mapped server pays about 25 kills at level 10 and 44 at 30, and a first clear about four times the fight. With the full stretch (×1) deeds came to 80% of the XP and fights fell to under a fifth. The long climb finishes every server on a floor where the old one outgrew half of them, so a deed's count per level rose as well as its size. Contracts were so many kills of work and not scaled. Since the contract XP tune they pay their kills' worth times `MAIL.xp` (3× at level 1, 8× at 5, 13× from 10 to 20, 11× from 30), about 1.5× farming's XP an hour (the pacing bot with contracts on and off, two seeds a class: 1.03× before), and the pacing table is the farmer's: its climbs take no contracts.
+Deeds are first clears, Mapped servers, takeovers, Root levels, decodes, puzzle boards and first crafts. Each pays its old kill share times `deedScale` = `DEED.share` (0.4) × how much longer the level is than before v42. That is 8.6× at level 4, 5.4× at 9, 7.8× at 19, 8.7× at 29 and 8.3× at 49. A Mapped server pays about 25 kills at level 10 and 44 at 30, and a first clear about four times the fight. With the full stretch (×1) deeds came to 80% of the XP and fights fell to under a fifth. The long climb finishes every server on a floor where the old one outgrew half of them, so a deed's count per level rose as well as its size. Contracts were so many kills of work and not scaled. Since the contract XP tune they paid their kills' worth times `MAIL.xp` (3× at level 1, 8× at 5, 13× from 10 to 20, 11× from 30). Since *XP anchored by activities* (below) a contract pays its kind's minutes of farming at the level it was posted, first clears are folded into Mapped, and a puzzle board, a decode and a log sweep pay a kill each.
 
 By kind (`s.xpMix`, what loop.test.mjs checks), fights are 18–27% now, against 66–76% on the old curve. That is not because kills pay less. A held server's respawns tally as building, and the long climb farms them: building is 52–59%, break-ins 19–23% and intel 1–2%. loop.test.mjs keeps its check that fights stay under 76% and that break-ins, intel and building all pay. It adds that kills are 50–85% of the XP and deeds 15% or more, measured to level 30 (fewer respawns are farmed by then).
 
@@ -944,3 +944,30 @@ tells*, as RAM allows). Ordinary fights, wins · Signal lost, %:
   due, it cost the kill and a landed charge (−102 Signal in one fight).
 - **Elites are still walls** for every player (at 18 the planner wins 17–50%, the routine player 0–33%): P3 cuts their
   Integrity first.
+
+## XP anchored by activities (October 2026)
+
+Kills pay as before, contracts pay more, and finishing a server pays one big lump.
+
+- **Deeds.** A first clear pays nothing on its own. Mapped pays its 5 kills plus half of each counted fight room's kill (an elite's ×3, the Core's ×4), all times `deedScale`: about 13 kill-shares on a medium server, 40 kills of your level at 10 (`mappedShare`). A puzzle board won, a decode and a log sweep pay a kill each, unscaled. Takeovers and Root are unchanged.
+- **Rooms n/N.** Caches and puzzle rooms (back in two hours) no longer count, so a server is Mapped once its fights, its vault and the rooms you walk through are done.
+- **Contracts.** Each pays a fixed amount, set when it's posted: its kind's real-play minutes (`MINUTES` in mail.mjs) times `farmXp(L)` (the level's XP over its `CLIMB.minutes`, a minute of farming) times `MAIL.xpShare`. Holding six, about 2.5 contracts' worth of work moves at once (measured: the pacing bot at a 0.5 share climbed 2.2× as fast as the farmer), so the share is 0.5 / 2.5 = 0.2, for about 1.5× farming's XP an hour. The board holds ten offers and you hold six. Seven activity kinds wrap what the game has: grind, solve, decode, sweep, interrupt, root and hold.
+- **Pace.** `CLIMB.minutes` stays the farmer's pace (`FARM_TARGET`, about 100 hours to 50). `PACE_TARGET`, the table the pacing bot is held to, is now a contract worker's: the farmer's over 1.5.
+
+The theoretical table (from the formulas, not bot runs). The farmer is `CLIMB.minutes`; the contract worker is the farmer times 1 + `xpShare` × 2.5; the pure grinder only farms a Mapped medium server's rooms at 150 fights an hour (1.85 kills of XP a fight: three processes on 2-minute respawns, an elite on 5, a guard post on 3, the Core on 10, one respawn in 25 a rare), with no Mapped lumps or other deeds:
+
+| Hours to | Lv 5 | Lv 10 | Lv 20 | Lv 30 | Lv 40 | Lv 50 |
+|---|---:|---:|---:|---:|---:|---:|
+| Contract worker (`PACE_TARGET`) | 0.7 | 2.7 | 10.0 | 23.4 | 43.4 | 66.8 |
+| Farmer, Mapped lumps included (`FARM_TARGET`) | 1.1 | 4.1 | 15.1 | 35.1 | 65.1 | 100.2 |
+| Pure grinder, kills only | 1.3 | 4.4 | 16.6 | 40.3 | 72.6 | 110.9 |
+
+
+Measured (`node pacing.mjs 30 1`, seed 7, the median of the four classes), against the theory:
+
+| Hours to | Lv 5 | Lv 10 | Lv 20 | Lv 30 |
+|---|---:|---:|---:|---:|
+| Working contracts (`PACE_TARGET` 0.7, 2.7, 10, 23) | 0.7 | 3.0 | 11 | 25 |
+| Farming, no contracts (`FARM_TARGET` 1, 4, 15, 35) | 1.4 | 5.3 | 19 | 44 |
+
+The farmer now runs 25 to 40% behind its old table: it loses the first clears of the servers it never maps, and decodes and puzzle boards pay a kill instead of a deed's 4 to 8. It lands near the pure grinder's row. So working contracts measures 1.76× farming's XP an hour, not 1.5×; a share of about 0.13 would give 1.5× but put the contract worker about 27% behind `PACE_TARGET`. By source, working contracts: kills 44–58%, deeds 9–15%, contracts 27–42%. The Infiltrator gains least to level 10 (4.0 hours against 2.7). Working contracts, SPRAWL-only climbs to 8 as fast as mixed play (0.85–1.0×), as both keep their kill, grind and decode jobs; farming, it is 1.41–1.85× as slow.

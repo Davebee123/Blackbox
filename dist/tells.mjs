@@ -44,6 +44,7 @@ import { gainResearch } from './research.mjs';
 import { daemonsOn } from './daemons.mjs';
 import { cancelAttack, crossBy, interruptMove, nextTick } from './interrupt.mjs';
 import { ignores } from './genes.mjs';
+import { contractDid } from './mail.mjs';
 
 // What a fight's tells did, on its metrics (the gap test reads them): said, answered, read (answered by a command
 // of yours, not by breaking the part), landed, and the Signal (or Integrity) they cost you, by tell.
@@ -280,6 +281,7 @@ export function tellAnswer(s, t, p, msg, { open = t.kind !== 'seal', skill = nul
   const e = s.encounter, cmd = e.commanding;
   if (t.kind !== 'seal' && !inWindow(s, t, moved)) return false;
   emit(s, t.kind === 'cast' ? 'interrupt' : 'blocked', msg, { source: p.id, target: p.id, tell: t.id, answered: true });
+  contractDid(s, 'interrupt'); // an Interrupt contract counts every attack answered
   if (at != null ? at >= t.said : cmd && !cmd.auto && (cmd.at ?? e.cycle) >= t.said) read(s, t, p, { open, stagger, skill: skill || (open ? null : cmd?.id) });
   rest(s, t, e.cycle, true);
   credit(s, t, p);
@@ -328,6 +330,7 @@ export function tellCallOff(s, by) {
     if (!t.told || t.kind === 'mimic') continue;
     const p = sourceOf(s, t);
     emit(s, t.kind === 'cast' ? 'interrupt' : 'blocked', `${by} calls off ${label(t)}.`, { source: p?.id, target: p?.id, tell: t.id, answered: true });
+    contractDid(s, 'interrupt');
     rest(s, t, e.cycle, true);
     if (p) credit(s, t, p);
     n++;
@@ -782,6 +785,7 @@ export function tellSigint(s) {
     return true;
   }
   emit(s, 'interrupt', `SIGINT stops ${label(t)}.`, { target: p?.id, tell: t.id, answered: true });
+  contractDid(s, 'interrupt');
   if ((e.commanding?.at ?? e.cycle) >= t.said) read(s, t, p, { open: true });
   rest(s, t, e.cycle, true);
   if (p) credit(s, t, p);

@@ -5,23 +5,26 @@
 // won or lost, a puzzle board 2 minutes, a log sweep 1; mail, connecting, resting and gearing are inside the walk.
 // The bot's own clock (12-second cycles, 3 seconds a step, every rest and reconnect wait) runs about 20 times slower
 // on the long climb, so its hours are not a player's. Climbs run in parallel, one per core (`climbs`, for the tests too).
-// The table is a farmer's pace: the bot takes no contracts (contracts: false). Working them is the faster road, about
-// 1.5x the XP an hour (mail.mjs MAIL.xp); `contracts` on shows it.
-// node pacing.mjs [targetLevel] [seeds] [classes, comma-separated] [spend: none|topup] [contracts: off|on]
+// The table is the pace of a player who works contracts: the bot takes and works them (contracts on, the default).
+// Contracts pay about half again what farming the same servers does (mail.mjs MINUTES, MAIL.xpShare), so it is the
+// farmer's (FARM_TARGET, data.mjs CLIMB.minutes, about 100 hours to 50) over 1.5; `contracts` off holds the bot to that.
+// node pacing.mjs [targetLevel] [seeds] [classes, comma-separated] [spend: none|topup] [contracts: on|off]
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
 import { cpus } from 'node:os';
 
-// Hours of real play to each level: front-loaded, about 100 to 50 (8 floors, 10 to 20 hours each past the first two).
-export const PACE_TARGET = { 5: 1, 10: 4, 20: 15, 30: 35, 40: 65, 50: 100 };
+// Hours of real play to each level: front-loaded. A farmer's (CLIMB.minutes) is about 100 to 50 (8 floors, 10 to 20 hours
+// each past the first two); a player who works contracts earns about 1.5x the XP an hour, about 67.
+export const FARM_TARGET = { 5: 1, 10: 4, 20: 15, 30: 35, 40: 65, 50: 100 };
+export const PACE_TARGET = { 5: 0.7, 10: 2.7, 20: 10, 30: 23, 40: 43, 50: 67 };
 export const MILESTONES = [5, 10, 20, 30, 40, 50];
 export const CLASSES = ['breaker', 'bastion', 'infiltrator', 'operator'];
 // What a climb's XP was, by what earned it (bot.mjs stats.xp's reasons): one-off deeds (deedXpFor), contracts, the rest kills.
-const DEEDS = /first clear|Mapped|taken over|^Root|decoded|solved|first run|vault|sweep|clean job|first /;
+const DEEDS = /Mapped|taken over|^Root|decoded|solved|first run|vault|sweep|clean job|first /;
 
 // One climb, summed up: real and bot hours and fights to each level reached, the XP mix (s.xpMix, by kind), the XP by
 // source (kills, deeds, contracts) and the fight mix by level (stats.mix). sprawlOnly: nothing traces past the server
 // wick hands you at level 4 (loop.test.mjs's slow road). contracts: the bot takes and works the board's contracts.
-export async function climb({ cls, seed, target = 50, spend = 'none', sprawlOnly = false, contracts = false }) {
+export async function climb({ cls, seed, target = 50, spend = 'none', sprawlOnly = false, contracts = true }) {
   const { simulate } = await import('./bot.mjs');
   if (sprawlOnly) {
     const { CONFIG } = await import('./dist/data.mjs'), { HIDDEN } = await import('./dist/hidden.mjs');
@@ -63,7 +66,7 @@ export const medianAt = (runs, key, L) => med(runs.map((r) => r[key][L]));
 export const hoursTo = (runs, L) => med([...new Set(runs.map((r) => r.cls))].map((c) => medianAt(runs.filter((x) => x.cls === c), 'real', L)));
 
 async function main() {
-  const [target = '50', nSeeds = '3', clsArg = CLASSES.join(','), spend = 'none', con = 'off'] = process.argv.slice(2);
+  const [target = '50', nSeeds = '3', clsArg = CLASSES.join(','), spend = 'none', con = 'on'] = process.argv.slice(2);
   const classes = clsArg.split(','), seeds = Array.from({ length: +nSeeds }, (_, i) => 7 + i * 13);
   const jobs = classes.flatMap((cls) => seeds.map((seed) => ({ cls, seed, target: +target, spend, contracts: con === 'on' })));
   const runs = await climbs(jobs, cpus().length, (r) => console.error(`  ${r.cls} seed ${r.seed}: level ${r.level}, ${r.wins + r.losses} fights, ${(r.ms / 1000).toFixed(0)} s`));
@@ -75,15 +78,16 @@ async function main() {
   console.log(`\nHours to each level, median of ${seeds.length} seed${seeds.length > 1 ? 's' : ''} (spend: ${spend}, contracts: ${con}). Real play first, the bot's clock in brackets, then fights.\n`);
   console.log(row(['Class', ...Ls.map((L) => `Lv ${L}`)]));
   console.log(row(['---', ...Ls.map(() => '---:')]));
-  console.log(row(['Target (real)', ...Ls.map((L) => f1(PACE_TARGET[L]))]));
+  const want = con === 'on' ? PACE_TARGET : FARM_TARGET;
+  console.log(row(['Target (real)', ...Ls.map((L) => f1(want[L]))]));
   for (const cls of classes) {
     const r = runs.filter((x) => x.cls === cls);
     console.log(row([cls, ...Ls.map((L) => `${f1(medianAt(r, 'real', L))} (${f1(medianAt(r, 'bot', L))}) · ${Math.round(medianAt(r, 'fights', L) ?? NaN)}`)]));
   }
   console.log(row(['All (median)', ...Ls.map((L) => f1(hoursTo(runs, L)))]));
-  console.log(row(['Against the target', ...Ls.map((L) => vs(hoursTo(runs, L), PACE_TARGET[L]))]));
+  console.log(row(['Against the target', ...Ls.map((L) => vs(hoursTo(runs, L), want[L]))]));
   // The XP mix: each kind's share of everything the climb earned (s.xpMix: a held server's respawns count as building),
-  // then by source: kills, one-off deeds (first clears, Mapped, takeovers, Root, decodes, puzzle boards) and contracts.
+  // then by source: kills, one-off deeds (Mapped, takeovers, Root, decodes, puzzle boards, log sweeps) and contracts.
   console.log('\nXP mix, by kind (contracts count as the work behind them; a held server\'s respawns as building) and by source:\n');
   const kinds = [...new Set(runs.flatMap((r) => Object.keys(r.mix)))].sort();
   console.log(row(['Class', ...kinds, 'kills', 'deeds', 'contracts']));
