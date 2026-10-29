@@ -2677,8 +2677,6 @@ function actorTurn(s, who) {
 
 const signalNow = (s) => Math.min(maxSignal(s), s.signal ?? maxSignal(s)); // as run.mjs
 // Topping up: pay to have Signal or server Integrity full now (CONFIG.topUp), instead of resting.
-// What a unit of code counts for when you're short of credits (top-ups).
-export const CODE_CREDITS = 8;
 export function topUpPrice(s, what) {
   const [base, per] = CONFIG.topUp[what];
   return Math.round(base + per * (what === 'signal' ? hackerLevel(s) : serverLevel(s)));
@@ -2699,16 +2697,10 @@ function topUp(s, what, wanted = null) {
   const now = signal ? signalNow(s) : s.server.integrity;
   let n = Math.min(max - now, wanted ?? max);
   if (n <= 0) return warn(s, signal ? 'Signal is already full.' : 'Server is already at full Integrity.');
-  // Short on credits: the rest comes out of your biggest pile of code (any kind), CODE_CREDITS each.
-  const mats = materialsOf(s), pile = ['cipher', 'worm', 'kernel'].sort((a, b) => (mats[b] || 0) - (mats[a] || 0))[0];
-  const short = Math.max(0, topUpCost(s, what, n) - s.server.credits), code = Math.ceil(short / CODE_CREDITS);
-  let paidCode = 0;
-  if (short && (mats[pile] || 0) >= code) { paidCode = code; mats[pile] -= code; s.server.credits += code * CODE_CREDITS; }
   while (n > 0 && topUpCost(s, what, n) > s.server.credits) n--; // as much as you can afford
   if (n <= 0) return warn(s, `Not enough credits (${topUpCost(s, what)} to fill it).`);
   const cost = topUpCost(s, what, n);
   s.server.credits -= cost;
-  if (paidCode) emit(s, 'info', `Paid ${paidCode} ${MATERIALS[pile].name} toward it.`);
   if (signal) { s.signal = now + n >= max ? null : now + n; s.signalAcc = 0; }
   else s.server.integrity += n;
   emit(s, 'repair', signal ? `Signal topped up: +${n} for ${cost} credits. Signal ${now + n}/${max}.` : `Repaired ${n} Integrity for ${cost} credits. Server ${s.server.integrity}/${s.server.max}.`, { what, credits: cost });

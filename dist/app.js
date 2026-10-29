@@ -1732,11 +1732,12 @@ function renderMeters() {
   $('integrity-note').className = 'meter-note ' + (campaign.degraded ? 'degraded' : inv?.state || '');
   $('integrity-note').title = campaign.degraded ? V.sickTip(campaign) : '';
   $('meter-integrity').classList.toggle('breaching', !campaign.degraded && !onIt && inv?.state === 'breach'); // a breach: the meter itself flashes
-  // Click a meter that isn't full to pay for the rest (topUp in data.mjs); the hover says what it costs.
+  // Click a meter that isn't full to pay for the rest (topUp in data.mjs); the hover says what it costs. Short of
+  // credits it fills what you can pay for; with none there's nothing to click.
   const meterBuy = (el, cmd, cost, base) => {
-    const can = !!cost && !active(campaign);
+    const credits = campaign.server.credits, can = !!cost && credits > 0 && !active(campaign);
     if (can) { el.dataset.command = cmd; el.setAttribute('role', 'button'); el.tabIndex = 0; } else { delete el.dataset.command; el.removeAttribute('role'); el.removeAttribute('tabindex'); }
-    el.title = base + (can ? ` Click to fill it now: ${cost} credits.` : '');
+    el.title = base + (!can ? '' : credits >= cost ? ` Click to fill it now: ${cost} credits.` : ` Click to fill what your ${credits} credits buy (${cost} fills it).`);
   };
   {
     const missing = srv.max - srv.integrity, mins = Math.ceil(missing / (CONFIG.restRegen * srv.max));

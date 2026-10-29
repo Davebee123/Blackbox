@@ -2500,8 +2500,8 @@ function mapSide(s, sel, node) {
   if (!node || node.kind === 'server') {
     const r = s.reports.findLast((x) => x.mode !== 'run');
     const upkeep = [];
-    if (srv.integrity > 0 && srv.integrity < srv.max) upkeep.push(btn('repair', `Repair (${topUpCost(s, 'server')}c)`));
-    if (!s.run && !busy && topUpCost(s, 'signal')) upkeep.push(btn('top up', `Top up Signal (${topUpCost(s, 'signal')}c)`));
+    if (srv.integrity > 0 && srv.integrity < srv.max && srv.credits > 0) upkeep.push(btn('repair', `Repair (${topUpCost(s, 'server')}c)`));
+    if (!s.run && !busy && topUpCost(s, 'signal') && srv.credits > 0) upkeep.push(btn('top up', `Top up Signal (${topUpCost(s, 'signal')}c)`));
     if (srv.integrity <= 0) upkeep.push(btn('developer reboot', 'Reboot (testing)', true));
     const runCard = s.run ? `<section class="card lesson"><h2>On a run</h2><h1>${esc(currentLocation(s).name)}</h1><p>Signal ${s.run.integrity}/${s.run.max} · ${s.run.pack.length} unbanked.</p><div class="row">${btn('net', 'Back to the run', true)}</div></section>` : '';
     const occ = s.occupation && !s.occupation.occupied.cleared ? mapSide(s, 'home', { kind: 'location', loc: s.occupation }) : '';
