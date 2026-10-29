@@ -67,6 +67,8 @@ import * as PGV from './pager-view.mjs';
 import { noCarrier, NC } from './nocarrier.mjs';
 import * as UI from './uiscale.mjs';
 import { playTravel } from './travelfx.mjs';
+import { playBoot, stopBoot, capture as bootHold, bootLines } from './bootfx.mjs';
+let bootFor = null; // the fight the screen last booted into (go)
 import { startTraffic } from './traffic.mjs';
 
 const $ = (id) => document.getElementById(id);
@@ -1508,6 +1510,11 @@ function go(name, quiet = false) {
   if (gainOpen()) hideGain();
   if (name !== 'hub') { hubOpen = false; hubWin = null; }
   const moved = name !== module;
+  // A fight you haven't seen yet: the screen boots into it, the virus first (bootfx.mjs); from the rooms page the map
+  // holds a beat with the room locked on. Screen effects off or Motion off: straight in.
+  const boot = name === 'combat' && moved && active(campaign) && canMove() && fxLevel() !== 'minimal' && bootFor !== campaign.encounter;
+  const held = boot && module === 'rooms' && campaign.rooms?.at ? bootHold($('page-view'), [...$('page-view').querySelectorAll(`[data-room="${CSS.escape(campaign.rooms.at)}"]`)].find((c) => c.getBoundingClientRect().width)) : null;
+  if (name !== 'combat') stopBoot();
   module = name;
   if (name === 'rooms' && revealNote) { const m = revealNote; revealNote = null; setTimeout(() => notice(m), 0); } // a hidden room that opened while you fought
   selected = null;
@@ -1517,6 +1524,16 @@ function go(name, quiet = false) {
   if (moved) $('page-view').scrollTop = 0; // a new page opens at its top
   shell.onModule(name);
   focusPrompt();
+  if (boot) { bootFor = campaign.encounter; playBoot($('app'), held, bootLines(bootInfo())); }
+}
+// What the boot console checks: read off the fight's page as it now stands.
+function bootInfo() {
+  const q = (sel) => document.querySelector(sel)?.textContent.trim() || '';
+  return {
+    bar: q('#hud .hud-bar.mine .bar-top strong') || 'signal', hp: q('#hud .hud-bar.mine .bar-top > span').replace(/\s+/g, ''),
+    cls: q('#who-class'), level: q('#level-value').replace(/\D+/g, ''), keys: [...document.querySelectorAll('#tray .ability:not(.ghost) .name')].map((n) => [...n.childNodes].filter((c) => c.nodeName !== 'KBD').map((c) => c.textContent).join('').trim()),
+    virus: q('#hud .hud-bar.enemy .vname strong'), paused: !!campaign.encounter?.paused,
+  };
 }
 
 // Fill the prompt the way a hotkey would; the player still presses Enter.

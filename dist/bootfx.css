@@ -1,0 +1,20 @@
+/* ---------- Fight boot (bootfx.mjs): the screen powers down and boots into a fight, the virus first ----------
+   The one effect on the panels themselves (approved by the designer), for two seconds before the fight's first order;
+   any key or click ends it. The panels' own flicker runs in bootfx.mjs; these are the layers it adds. */
+.bootfx-black { position: fixed; inset: 0; z-index: -1; pointer-events: none; background: #050302; opacity: 0; }
+.bootfx { position: absolute; inset: 0; z-index: 45; pointer-events: none; border-radius: inherit; overflow: hidden; }
+.bootfx > div { position: absolute; inset: 0; border-radius: inherit; opacity: 0; }
+.bootfx-flash { background: #fff4dc; }
+.bootfx-flare { box-shadow: inset 0 0 0 3px rgba(255, 91, 61, 0.9), inset 0 0 80px 10px rgba(255, 91, 61, 0.4); }
+.bootfx-hold { position: absolute; z-index: 6; pointer-events: none; }
+.bootfx-lock { position: absolute; pointer-events: none; }
+.bootfx-lock i { position: absolute; width: 16px; height: 16px; border: 2px solid var(--hot); filter: drop-shadow(0 0 4px var(--hot)); }
+.bootfx-lock i:nth-child(1) { left: -6px; top: -6px; border-right: 0; border-bottom: 0; }
+.bootfx-lock i:nth-child(2) { right: -6px; top: -6px; border-left: 0; border-bottom: 0; }
+.bootfx-lock i:nth-child(3) { left: -6px; bottom: -6px; border-right: 0; border-top: 0; }
+.bootfx-lock i:nth-child(4) { right: -6px; bottom: -6px; border-left: 0; border-top: 0; }
+.bootfx-noise { position: absolute; inset: 8px; z-index: 2; pointer-events: none; overflow: hidden; white-space: pre; font: 13px/15px var(--mono); color: var(--hot); text-shadow: 0 0 6px rgba(255, 91, 61, 0.8); opacity: 0; }
+.bootfx-console { position: absolute; z-index: 4; pointer-events: none; overflow: hidden; padding: 18px 24px; font: 600 15px/24px var(--mono); color: var(--amber); text-shadow: 0 0 8px var(--sfx-glow, rgba(244, 180, 55, 0.55)); opacity: 0; }
+.bootfx-console div { white-space: pre; overflow: hidden; text-overflow: clip; opacity: 0; }
+.bootfx-console .hot { color: var(--hot); text-shadow: 0 0 8px rgba(255, 91, 61, 0.7); }
+@media (min-width: 1100px) and (min-height: 720px) { body.cased .bootfx-black { position: absolute; border-radius: inherit; } }

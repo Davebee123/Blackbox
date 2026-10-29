@@ -212,6 +212,7 @@ comment saying what it does.
 | `dist/style.css` | Tokens and every shared component (docs/ui.md). Each page has its own stylesheet beside its view. |
 | `dist/shell.mjs`, `dist/poweron.mjs` | The CRT shell, boot lines and status line; the power-up. |
 | `dist/screenfx.mjs`, `dist/screenfx.css` | Screen effects: light on the glass around the game, never on it. |
+| `dist/bootfx.mjs`, `dist/bootfx.css` | A new fight: the screen boots into it, the virus first. |
 | `dist/window.mjs` | The slum outside the window behind the monitor, and its weather. |
 | `dist/abilityfx.mjs`, `dist/abilityfx-table.mjs`, `dist/abilityfx-playtest.mjs` | Ability effects on the board, the table of every ability's effect, and its playtest. |
 | `dist/hitfx.mjs`, `dist/dmgfx.mjs`, `dist/lash.mjs` | Hits landing on a part, damage numbers one per source, a virus lashing at the screen. |

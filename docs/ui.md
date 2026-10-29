@@ -237,6 +237,11 @@ interface**. CSS, the DOM and text only (no canvas, WebGL or PixiJS on the scree
 - Strength is one setting, off / subtle / medium (default) / bold, as `--sfx-k` on `<html data-sfx>`, each effect
   switchable on its own; it also sets how much moves on the fight board. Motion off (`.no-motion`) and
   `prefers-reduced-motion` stop every animation in the file.
+- **The fight boot** (bootfx.mjs, bootfx.css) is the one effect on the panels, approved by the designer (*Centre stage*).
+  The first time you see a fight: brackets lock on its room (from the rooms page), the tube cuts to black with a red
+  edge, the virus flickers on alone at the centre, decoding out of red noise, and drops into its panel; a boot console
+  types your bar, class, keys and the virus where the board will be; your panels catch like tubes. About two seconds;
+  any key or click ends it and still acts. Screen effects off or Motion off: none.
 - **Floor palettes** are the one exception to *No new colours*, approved by the designer. A floor swaps the surface
   tokens (`--bg`, `--panel`, `--panel-2`, `--inset`), the structure colour (`--amber` and its forms) and the text tints
   inline on `<html>`; the job colours (`--hot`, `--next`, `--you`, `--daemon`, `--exception`, `--steel`, `--gray`) never

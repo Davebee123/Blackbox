@@ -2100,6 +2100,10 @@ dusty green, Coldline ice, Deep Core magenta, Kernel Space white on black, The S
 the job colours never change. **Off** shows numbers and bars only. Motion off or reduced motion: no tears, nothing
 moves.
 
+**A new fight boots in.** The first time you see a fight, the screen cuts to black and the virus comes on first, alone
+at the centre, before dropping into its panel; a boot console checks your system and your panels flicker on. About two
+seconds; any key or click ends it (and still acts). Screen effects off or Motion off: straight in.
+
 ### The monitor casing
 
 With the immersive shell on a desktop-sized window, the screen sits in a dark monitor (BLACKBOX · MODEL 7) whose bottom
