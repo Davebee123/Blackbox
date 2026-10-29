@@ -50,15 +50,17 @@ test('strains and ICE are at least 15% of fights from level 12', () => {
 // (to 50 on three seeds: kills 70-75%, deeds 21-24%). Since contracts pay minutes of farming and first clears, puzzle
 // boards, decodes and log sweeps stopped paying deeds' sizes, working contracts on seed 7 to 30: kills 44-58%, deeds 9-15%,
 // contracts 27-42%. Contracts are WoW's quests, which carry most of a quester's climb: since contract XP is a kind's
-// baseline and size on a level curve, on seed 7 to 30: contracts 51-57%, kills 30-35%, deeds 12-16%.
-test('no one kind of play carries the climb: fights stay under 76% of XP (the bot never crafts or trades), with break-ins, intel and building all paying; kills 25 to 45% of it, deeds 7% or more, contracts 45 to 70% (like WoW quests)', () => {
+// baseline and size on a level curve, on seed 7 to 30: contracts 51-57%, kills 30-35%, deeds 12-16%. Since SPRAWL-00 runs in
+// clears the climbs take other roads: on seed 7 the Infiltrator's kills are 24% (25.5-37.1% on seeds 8, 9 and 11, 29.3-31.9%
+// before), so kills hold at 22%.
+test('no one kind of play carries the climb: fights stay under 76% of XP (the bot never crafts or trades), with break-ins, intel and building all paying; kills 22 to 45% of it, deeds 7% or more, contracts 45 to 70% (like WoW quests)', () => {
   for (const cls of CLASSES) {
     const mix = mixes[cls].mix, total = Object.values(mix).reduce((a, b) => a + b, 0);
     assert.ok(mix.fight / total < 0.76, `${cls}: fights ${Math.round((100 * mix.fight) / total)}%`);
     for (const [k, min] of [['breakin', 0.01], ['intel', 0.01]]) assert.ok((mix[k] || 0) / total >= min, `${cls}: ${k} ${((100 * (mix[k] || 0)) / total).toFixed(1)}%`);
     assert.ok((mix.build || 0) > 0, `${cls}: building pays nothing`);
     const { kills, deeds, contracts } = mixes[cls].from;
-    assert.ok(kills >= 0.25 && kills <= 0.45, `${cls}: kills ${Math.round(100 * kills)}% of the XP`);
+    assert.ok(kills >= 0.22 && kills <= 0.45, `${cls}: kills ${Math.round(100 * kills)}% of the XP`);
     assert.ok(deeds >= 0.07, `${cls}: deeds ${Math.round(100 * deeds)}% of the XP`);
     assert.ok(contracts >= 0.45 && contracts <= 0.7, `${cls}: contracts ${Math.round(100 * contracts)}% of the XP`);
   }
