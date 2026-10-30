@@ -4,12 +4,16 @@
 // home (your server), run (tapped into someone else's), fight. A mood with no file of its own
 // plays the home track, so one file covers the whole game; with none the game is just quiet.
 // When two moods land on the same file it keeps playing through and only the level changes.
+// A fight against a family with a theme (fightmusic.mjs) plays that instead: the track fades out
+// as the theme fades in, and back when the fight is over. The theme builds with the fight's heat.
 //
 // RADIO is synthesized, so it needs no files and no licence: now and then a transmission breaks
 // through the static on one side of the room. A squelch, a voice you can't quite make out (a
 // buzzing vocal cord through shifting vowel formants, crushed into a 3 kHz radio band), a roger
 // beep, a reply. Sometimes a numbers station, sometimes a modem burst. It never says anything,
 // on purpose: it's texture, not information.
+import { FIGHT_THEMES, playTheme } from './fightmusic.mjs';
+
 const HOME = ['music/home.ogg', 'music/home.mp3'];
 export const MUSIC = {
   home: HOME,
@@ -19,6 +23,8 @@ export const MUSIC = {
 export const MUSIC_VOLUME = { home: 0.32, run: 0.28, fight: 0.3 };
 export const RADIO_EVERY = { home: [22, 55], run: [14, 38], fight: [40, 90] }; // seconds between transmissions
 const FADE = 2.2;
+export const THEME_FADE = 3; // seconds a fight theme takes to fade in, and out
+export const THEME_LEVEL = 0.4; // a fight theme's level: about 2 dB under the home track as it plays
 
 // ---------- radio ----------
 const VOWELS = [[730, 1090, 2440], [270, 2290, 3010], [530, 1840, 2480], [570, 840, 2410], [300, 870, 2240], [640, 1190, 2390], [490, 1350, 1690]];
@@ -126,8 +132,8 @@ export function transmission(ctx, dest, { level = 0.05, kind = pick(KINDS) } = {
 
 // ---------- the player ----------
 export function createSoundtrack(getCtx) {
-  let want = { on: false, music: true, radio: true, mood: 'home' };
-  let ctx = null, out = null, mus = null, playing = null, radioTimer = null;
+  let want = { on: false, music: true, radio: true, mood: 'home', family: null, heat: 0 };
+  let ctx = null, out = null, mus = null, playing = null, theme = null, radioTimer = null;
   const vol = { music: 0.8, ambience: 0.8 }; // sliders; 0.8 is the level it was mixed at
   const applyVol = () => { if (out) out.gain.value = vol.ambience / 0.8; if (mus) mus.gain.value = vol.music / 0.8; };
   const missing = new Set();
@@ -170,7 +176,15 @@ export function createSoundtrack(getCtx) {
   }
   function music() {
     const should = want.on && want.music;
-    if (!should) { fadeOut(playing); playing = null; return; }
+    if (!should) { fadeOut(playing); playing = null; theme?.stop(THEME_FADE); theme = null; return; }
+    // A fight with a theme of its own: the track makes way for it.
+    const id = want.mood === 'fight' && FIGHT_THEMES[want.family] ? want.family : null;
+    if (theme && theme.id !== id) { theme.stop(THEME_FADE); theme = null; }
+    if (id) {
+      if (!theme) { fadeOut(playing); playing = null; theme = playTheme(ctx, mus, id, { level: THEME_LEVEL, fadeIn: THEME_FADE, heat: want.heat }); }
+      theme?.setHeat(want.heat);
+      return;
+    }
     if (!known) { probe().then(() => music()); return; }
     const mood = want.mood;
     if (playing && (playing.mood === mood || playing.files[playing.i] === fileFor(mood))) {
@@ -347,8 +361,8 @@ export function createSoundtrack(getCtx) {
     set(next) {
       const changed = Object.keys(next).some((k) => next[k] !== want[k]);
       want = { ...want, ...next };
-      if (!want.on && !playing && !radioTimer) { if (rainBus) weatherLevel(); if (street) applyStreet(); return; }
-      if (!changed && (playing || !want.music) && (radioTimer || !want.radio)) return;
+      if (!want.on && !playing && !theme && !radioTimer) { if (rainBus) weatherLevel(); if (street) applyStreet(); return; }
+      if (!changed && (playing || theme || !want.music) && (radioTimer || !want.radio)) return;
       if (!setup()) return;
       music(); radio(); weatherLevel(); applyStreet();
     },

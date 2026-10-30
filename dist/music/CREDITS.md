@@ -4,7 +4,8 @@ BLACKBOX plays one track per mood from this folder (`.ogg` or `.mp3`):
 
 - `home` — on your server. **Required for any music.**
 - `run` — tapped into another server. Optional: without it, `home` keeps playing.
-- `fight` — in a fight. Optional: without it, `home` keeps playing.
+- `fight` — in a fight. Optional: without it, `home` keeps playing. A fight against a family with a synthesized
+  theme (`fightmusic.mjs`) plays that instead.
 
 When two moods share a file the track plays straight through and only its level changes.
 

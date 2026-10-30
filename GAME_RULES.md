@@ -2075,6 +2075,9 @@ casing's options. Nothing plays before your first click or key.
 - **Sound** is recorded CC0 samples and a little synthesis in an old-hardware palette (`dist/sfx/CREDITS.md`), with a
   quiet room tone under it. **Places:** each floor and hub has its own quiet loop, and each virus family a sound under
   its fights, adding its attack and break sounds.
+- **Music:** a track on your server and another on a run. Each virus family's fights have their own theme (dark,
+  gritty industrial synthwave, synthesized live): it fades in as the fight starts, builds as the virus breaks, and fades
+  back to the track when the fight is over. It plays a little under the track, on the Music slider.
 - **UI scale** (System → Settings, `ui scale <auto|80–200>`, 100% by default) draws the whole screen larger or smaller;
   it grows only while the screen stays 1700px wide in its own pixels. **Auto** sizes it to 1800px.
 - **On a phone** (under 480 px) the board shows Now, +1 and +2 and the tray is three wide: tap a skill to pick it, tap

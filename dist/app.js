@@ -3,7 +3,7 @@ import { CONFIG, ABILITIES, FAMILIES, xpToNext, spikeOf, SUBS, SUBCLASS, default
 const FAMILY_NAMES = Object.fromEntries(Object.entries(FAMILIES).map(([k, f]) => [k, f.name]));
 import { selectEncounter, partKey, parse, validate, hooks, stepCycle, keyMap, hackerOf, classOf, cycleLength, fresh, restore, command, advance, active, alive, part, intents, suggestions, idleRegen, tickServices, topUpCost, defender, maxSignal, inSync } from './combat.mjs';
 import * as V from './view.mjs';
-import { subLater, subWaiting, levelUpPreview, barKeys, hackerLevel as heroLevel } from './combat.mjs';
+import { subLater, subWaiting, levelUpPreview, barKeys, hackerLevel as heroLevel, virusIntegrity } from './combat.mjs';
 import { luCalm } from './levelup-view.mjs';
 import { createLevelUpUi } from './levelup-ui.mjs';
 import { SHAPES, render as ascii3d } from './ascii3d.mjs';
@@ -1838,7 +1838,9 @@ function renderMeters() {
   feel.ambience(!!campaign.settings.sound);
   const vols = V.volumesOf(campaign);
   if (JSON.stringify(vols) !== lastVols) { lastVols = JSON.stringify(vols); feel.volumes(vols); }
-  feel.soundtrack({ on: !!campaign.settings.sound, music: campaign.settings.music !== false, radio: campaign.settings.radio !== false, mood: active(campaign) ? 'fight' : campaign.run ? 'run' : 'home' });
+  // A fight plays its family's theme (fightmusic.mjs), building as the virus breaks: heat is how much of it is gone.
+  const fighting = active(campaign), vi = fighting ? virusIntegrity(campaign) : null;
+  feel.soundtrack({ on: !!campaign.settings.sound, music: campaign.settings.music !== false, radio: campaign.settings.radio !== false, mood: fighting ? 'fight' : campaign.run ? 'run' : 'home', family: fighting ? campaign.encounter.virus.family : null, heat: vi?.max ? Math.round((0.15 + 0.85 * (1 - vi.current / vi.max)) * 10) / 10 : 0 });
   // The place under the music (places.mjs): the hub whose session shows, the run's or fight's floor, the floor on the map.
   feel.places({ on: !!campaign.settings.sound, ...placeOf(campaign, { hub: hubShown() ? hubSel : null, map: module === 'map' && mapView === 'mine' ? V.mapFloorOf(campaign, mapSel, mapFloor) : null }) });
   $('speed').textContent = `${cycleLength(campaign) / 1000}s cycle`;

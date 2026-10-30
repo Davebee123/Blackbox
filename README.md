@@ -223,6 +223,7 @@ comment saying what it does.
 | `dist/feel.mjs` | The feedback language: each kind of event's one signature in motion and sound. |
 | `dist/sound.mjs`, `dist/sfx/` | Sound effects from recorded CC0 samples (CREDITS.md). |
 | `dist/soundtrack.mjs`, `dist/music/` | Music and radio chatter (CC0 tracks, CREDITS.md). |
+| `dist/fightmusic.mjs` | Each virus family's fight theme, synthesized live; heat brings its layers in. |
 | `dist/places.mjs` | A sound bed for each floor, and the virus you're fighting. |
 | `dist/ui/` | Icons, textures and the favicon. Some of the set is unused. |
 
