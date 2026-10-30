@@ -119,7 +119,7 @@ export function runDaemons(s) {
   for (const id of slottedDaemons(s)) {
     const d = DAEMONS[id];
     if (!d.cd || !ACT[id] || !active(s) || virusIntegrity(s).current === 0 || daemonNext(s, id) > e.cycle) continue;
-    if (d.exfil && !e.escapeAt) continue; // the Leash only works on an Exfil
+    if (d.exfil && e.objective?.kind !== 'exfil') continue; // the Leash only works on an Exfil
     if (!asDaemon(s, () => ACT[id](s, id))) continue;
     e.daemonReady[id] = e.cycle + d.cd;
     e.metrics.daemon = (e.metrics.daemon || 0) + 1;
@@ -156,7 +156,7 @@ export function flushDaemons(s) {
 function fightStart(s) {
   const e = s.encounter, on = slottedDaemons(s);
   if (on.includes('airbag')) asDaemon(s, () => ON.airbag.go(s, 'airbag'));
-  if (on.includes('leash') && e.escapeAt) { e.escapeAt += 1; emit(s, 'status', `Leash: the upload takes a cycle longer (${e.escapeAt} cycles).`, { auto: 'daemon', daemon: 'leash' }); }
+  if (on.includes('leash') && e.objective?.kind === 'exfil') { e.objective.n += 1; emit(s, 'status', `Leash: the upload takes a cycle longer (${e.objective.n} cycles).`, { auto: 'daemon', daemon: 'leash' }); }
 }
 // Your health after a hit (combat.mjs takeDamage): below half, below a quarter. source: the part that hit you.
 export function daemonsHurt(s, source) {

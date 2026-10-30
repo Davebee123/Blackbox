@@ -38,6 +38,7 @@
 // the markup only changes when the server does and a hovered chip keeps its tooltip.
 import { esc, deathMark, sickPct, sickTip } from './view.mjs';
 import { glyph } from './glyphs.mjs';
+import { OBJECTIVES, OBJ, objectiveLine } from './objectives.mjs';
 import { recapMarkup } from './recap.mjs';
 import { GUARDS, BOSSES, CONFIG } from './data.mjs';
 import { itemLabel, statLine } from './gear.mjs';
@@ -169,6 +170,9 @@ const MARK_ICONS = {
   archive: '<path d="M4.5 2.5h7l4 4v11h-11Z"/><path d="M11.5 2.5v4h4"/><path d="M10 15.5v-6M7.4 12 10 9.4l2.6 2.6"/>',
   // A rival: crosshairs, the runner that has you in its sights.
   rival: '<circle cx="10" cy="10" r="6.5"/><circle cx="10" cy="10" r="2.2"/><path d="M10 1.5v3.5M10 15v3.5M1.5 10H5M15 10h3.5"/>',
+  // An objective's (objectives.mjs): a Priority's target, Uptime's hourglass.
+  target: '<circle cx="10" cy="10" r="7"/><circle cx="10" cy="10" r="3.5"/><circle class="f" cx="10" cy="10" r="1"/>',
+  uptime: '<path d="M5 2.5h10M5 17.5h10M6.5 2.5c0 4.5 7 4.5 7 7.5s-7 3-7 7.5M13.5 2.5c0 4.5-7 4.5-7 7.5s7 3 7 7.5"/>',
   // A contract's mark (the mail's): a page with a tick, on a room a job points at.
   contract: '<path d="M4.5 2.5h7.5l3.5 3.5v11.5h-11Z"/><path d="M12 2.5V6h3.5"/><path d="M7 11.8l2 2 4-4.3"/>',
 };
@@ -190,6 +194,11 @@ const iconOf = (s, room) => (!known(s, room.id) ? null : room.nook ? nookIcon(s,
 // The Exfil where you can see it, and the room it runs to next (when that room is on the map).
 const exfilShown = (s) => { const m = exfilOf(s); return m && exfilSeen(s, m) ? m : null; };
 const exfilStep = (s) => { const m = exfilShown(s), next = m && exfilNext(s, m); return next && seenOf(s, next) ? next : null; };
+// A live plain fight room's objective (objectives.mjs), from the same roll its fight makes: 'priority', 'uptime' or null.
+const objOf = (s, room) => (room.kind === 'process' && !room.wild && !room.mirror && known(s, room.id) && isUp(s, room) ? fightOf(s, room).objective || null : null);
+const OBJ_ICON = { priority: 'target', uptime: 'uptime' };
+// Its bonus, as icons: the loot rolls once more, XP, components.
+const objBonus = () => `<span class="rw" title="Loot: rolls once more">${glyph('item')}<b>+1</b></span><span class="rw" title="XP: ${Math.round(OBJ.bonus.xp * 100)}% more for the kill">${glyph('xp')}<b>+${Math.round(OBJ.bonus.xp * 100)}%</b></span><span class="rw" title="Components">${glyph('salvage')}<b>+${OBJ.bonus.components}</b></span>`;
 // An icon in the strip or the pop-up card.
 const ic = (name, cls = '') => `<svg class="fp-ic${cls ? ' ' + cls : ''}" viewBox="0 0 20 20" aria-hidden="true">${name ? `<use href="#fp-i-${name}"/>` : '<text x="10" y="15" text-anchor="middle">?</text>'}</svg>`;
 
@@ -255,6 +264,7 @@ function aboutOf(s, room) {
   const rule = hunted ? `The ${huntName(h)} is here: walk in and you fight it.`
     : denEdge ? 'Walking in wakes the Tracker.'
       : R.rare[room.id] && isUp(s, room) ? `Rare spawn: ${ROOMS.rareLevel} levels up. It usually drops a blue or better.`
+      : objOf(s, room) ? `${OBJECTIVES[objOf(s, room)].name}: ${objectiveLine(objOf(s, room))} Met, it pays more.`
         : room.kind === 'guard' && room.key && !R.opened[room.key] ? `Carries the ${g.rooms[room.key].path} key.`
           : room.kind === 'boss' ? 'A crew boss: built for a crew.'
           : room.kind === 'nest' ? `Optional. A kill pays ${ROOMS.nest.parts} components.`
@@ -489,6 +499,8 @@ function roomSvg(s, room, p, { reach, next, pop, near, G, marks, th = {}, files 
     if (room.kind === 'vault' && !opened(s, room)) tags.push(R.visit?.keys.includes(room.id) ? ['KEY FITS', 'key'] : ['LOCKED', 'lock']);
     if (sealed) tags.push(['SEALED', 'hot']);
     if (up && R.rare[room.id]) tags.push(['★', 'rare']);
+    const ob = objOf(s, room);
+    if (ob) tags.push([String(OBJECTIVES[ob].n), 'obj', OBJ_ICON[ob], `${OBJECTIVES[ob].name}: ${objectiveLine(ob)}`]);
     if (denEdge) tags.push(['WAKES', 'hot']);
     if (room.kind === 'nest') tags.push(['NEST', 'rare']);
     if (isPuzzle(room.kind)) { const st = puzzleState(s, room); if (st === 'live') tags.push(['IN PLAY', 'rare']); else if (st === 'won') tags.push(['SOLVED', 'done']); else if (st === 'lost') tags.push(['FAILED', 'hot']); }
@@ -496,7 +508,11 @@ function roomSvg(s, room, p, { reach, next, pop, near, G, marks, th = {}, files 
   const race = rv && room.id === g.vaults[0] ? raceOf(s, rv) : null; // the race on the vault: your rooms to it, and the rival's
   if (race) tags.push([`YOU ${race.you ?? '?'}`, 'race-you'], [`${RIVALS[rv.id].name} ${race.it}`, 'race-it']);
   let tx = x0 - 6;
-  for (const [t, c] of tags) { const w = tagW(t); out += `<g class="fp-tag ${c}"><rect x="${n1(tx)}" y="${n1(y0 - 8)}" width="${w}" height="16" rx="2"/><text x="${n1(tx + w / 2)}" y="${n1(y0 + 3.5)}" text-anchor="middle">${t}</text></g>`; tx += w + 4; }
+  for (const [t, c, icon, tip] of tags) { // a tag with an icon (an objective's): the icon, then its number
+    const w = tagW(t) + (icon ? 10 : 0);
+    out += `<g class="fp-tag ${c}"${tip ? ` title="${esc(tip)}"` : ''}><rect x="${n1(tx)}" y="${n1(y0 - 8)}" width="${w}" height="16" rx="2"/>${icon ? `<use href="#fp-i-${icon}" x="${n1(tx + 4)}" y="${n1(y0 - 5)}" width="10" height="10"/>` : ''}<text x="${n1(tx + w / 2 + (icon ? 5 : 0))}" y="${n1(y0 + 3.5)}" text-anchor="middle">${t}</text></g>`;
+    tx += w + 4;
+  }
   // Top centre: YOU, and the hunter's skull (beside YOU when it's on you).
   if (here) { const ux = n1(Math.max(p.x, tx + 20)); out += `<g class="fp-you-tab"><rect x="${n1(ux - 20)}" y="${n1(y0 - 9)}" width="40" height="16" rx="2"/><text x="${ux}" y="${n1(y0 + 3)}" text-anchor="middle">YOU</text></g>`; tx = ux + 24; }
   if (rival) { const nm = RIVALS[rv.id].name, w = tagW(nm) + 4, rx = n1(Math.max(p.x - w / 2, tx + 2)); out += `<g class="fp-rv-tab"><rect x="${rx}" y="${n1(y0 - 9)}" width="${w}" height="16" rx="2"/><text x="${n1(rx + w / 2)}" y="${n1(y0 + 3)}" text-anchor="middle">${esc(nm)}</text></g>`; tx = rx + w + 4; out += lineupSvg(s, rv, p.x, y0 + G.nh + 6); }
@@ -670,6 +686,8 @@ function hereCard(s) {
     const notes = [];
     if (R.rare[room.id]) notes.push(`<span class="fp-tag-inline next">★ rare</span> ${ROOMS.rareLevel} levels up, better loot.`);
     if (room.queue && R.kind === 'Mailhub') notes.push('A Spam Flood joins the fight.');
+    const ob = objOf(s, room); // its objective (objectives.mjs), and what it pays met
+    if (ob) notes.push(`<span class="fp-tag-inline next fp-obj">${ic(OBJ_ICON[ob])}${OBJECTIVES[ob].name}</span> ${esc(objectiveLine(ob))}<span class="fp-obj-pay">${objBonus()}</span>`);
     if (room.kind === 'guard' && room.key && !R.opened[room.key]) notes.push(esc(`Carries the ${g.rooms[room.key].path} key.`));
     if (room.kind === 'elite') notes.push('Enrages from cycle 9. Drops a blue or better.');
     if (room.kind === 'nest') notes.push(esc(`Optional. A kill pays ${ROOMS.nest.parts} components.`));

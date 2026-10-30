@@ -255,9 +255,9 @@ test('in a fight: the Airbag shields at the start, the Breakpoint lands on a cut
   assert.ok(l.logs.some((e) => e.type === 'heal' && /Lifeline/.test(e.message)), 'and healed');
   // Leash: only in an Exfil fight, a cycle more on the upload.
   const x = setup('leash');
-  x.encounter.escapeAt = 6; x.encounter.rooms = { size: 'exfil' };
+  x.encounter.objective = { kind: 'exfil', n: 6 }; x.encounter.rooms = { size: 'exfil' };
   command(x, 'engage');
-  assert.equal(x.encounter.escapeAt, 7);
+  assert.equal(x.encounter.objective.n, 7);
   // Daemons never set off daemons: a Domino's hit that breaks a part doesn't set off another Domino.
   const m = setup('domino');
   command(m, 'engage');

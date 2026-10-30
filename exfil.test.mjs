@@ -159,7 +159,7 @@ test('walking into its room starts a short fight: a weak, quick EXFIL-####; stil
   assert.match(e.virus.name, /^EXFIL-\d{4}$/);
   assert.equal(e.virus.parts.length, 2, 'one or two parts');
   assert.ok(e.virus.parts.every((p) => p.maxArmor <= 1), 'a runner wears 1 ◆ at most');
-  assert.equal(e.escapeAt, M.escape);
+  assert.deepEqual(e.objective, { kind: 'exfil', n: M.escape }, 'its upload: the objective (objectives.mjs)');
   assert.equal(e.roomsXp, FP.ROOMS.xp.room, 'a process kill\'s XP, no more');
   assert.equal(e.virus.level, loc.level, 'the server\'s level');
   assert.deepEqual(e.virus.parts.map((p) => p.name), ['Uplink', 'Archive'], 'its Uplink and its Archive');
