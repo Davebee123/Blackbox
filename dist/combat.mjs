@@ -51,6 +51,7 @@ import { deathRecap } from './recap.mjs';
 import { situationOf } from './situations.mjs';
 import { seeGenes, winGenes, genomeCommand, virusGenes, bylined, logFight, logWin, dexOf } from './genome.mjs';
 import { fightOver, achievementsRestore } from './achievements.mjs';
+import { collectionRestore, homeOfUnique, logGo } from './collection.mjs';
 import { researchOf, gainResearch, knows as knowsAt, masteryDmg, masteryDrop, TIER, researchAt } from './research.mjs';
 import { PARTS, heatOf } from './parts.mjs';
 import { crewOf, factionAuthor, AUTHORS } from './authors.mjs';
@@ -565,7 +566,7 @@ export function syncServer(s) {
 // A new protocol into the stash. A full stash breaks it down for components instead.
 export function addItem(s, item, why = 'Loot: ') {
   s.stash ||= [];
-  if (item.unique && !(s.collection ||= {})[item.unique]) { s.collection[item.unique] = hooks.now?.() ?? Date.now(); emit(s, 'collected', `Collection: ${item.name}.`, { unique: item.unique }); }
+  if (item.unique && !(s.collection ||= {})[item.unique]) { s.collection[item.unique] = hooks.now?.() ?? Date.now(); emit(s, 'collected', `Collection: ${item.name}.`, { unique: item.unique, go: logGo(homeOfUnique(item.unique)) }); }
   if (s.stash.length >= STASH_CAP) {
     const got = deconstruct(s, item);
     emit(s, 'info', `Your stash is full (${STASH_CAP}), so ${itemLabel(item)} was deconstructed for ${got}.`);
@@ -4923,6 +4924,7 @@ export function restore(raw) {
     componentsRestore(s); // v47: a pile of named components becomes its count (salvage.mjs); keyed on the field
     { const l = craftRestore(s); if (l) systemLetter(s, l); } // v49: crafting goes (progression.mjs): keyed on what the save holds
     shuntRestore(s); // the Shunt was cut (docs/parts-plan.md): keyed on the part, not the version
+    collectionRestore(s); // the collection log (collection.mjs): an older save's mastered parts, beaten strains and won bosses, stamped quietly; keyed on each slot
     try { achievementsRestore(s); } catch (err) { hooks.restoreError?.(err); } // achievements.mjs: an older save earns what it has already done (its titles and stickers too), quietly; never costs the save
     if (s.encounter) s.encounter.plan ||= [];
     if (s.encounter?.virus) packParts(s); // a fight saved before packed parts hid their names

@@ -85,7 +85,7 @@ test('earning: one quiet pager line that opens it, a #net line, the title it bri
   channelOf(s); // #net is listening from here
   const first = s.serial;
   tickProfile(s);
-  const ev = since(s, first);
+  const ev = since(s, first).filter((e) => e.type !== 'logged'); // the collection log's line (collection.mjs) comes too
   assert.equal(ev.length, 1);
   assert.equal(ev[0].type, 'achievement');
   assert.equal(ev[0].message, 'Achievement: Uncrowned.');
