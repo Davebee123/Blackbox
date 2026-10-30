@@ -300,7 +300,8 @@ rolls them for a session.
 **The spread.** A strain's mechanics parts roll as a third on wild viruses of its lineage from its level and floor
 (weight `PARTS.spread` 0.5, a server room's fixed third too): a Ghostroot from 12 on floor 2 can be a *LURKING
 GHOSTROOT*. A part that reads the signature (the Predator, the Opportunist) comes only beside it. The Codex card names
-the strain it spreads from (the Worm's Leaker is the Doomsday's).
+the strain it spreads from (the Worm's Leaker and Backtrace are the Doomsday's and the Junkyard's, the Ghostroot's Jitter
+and Prober the Desync's and the Last Stand's).
 
 ### Mutations and part rules
 
@@ -346,8 +347,13 @@ its rule on hover.
 | Doomsday | Worm | 15 | Pulse, Countdown, Leaker. At 10 commands fired every part attacks at once; the Drip leaks you (3% a command for 3 cycles). Holding is free and doesn't count. |
 | Bad Blood | Worm | 16 | Pulse, Vendetta (Grudge 5 every 3), Amplifier. The Amplifier boosts the Pulse's and the Vendetta's next attack in turn (+50%); while the Vendetta stands each break makes the rest hit 20% harder. |
 | Bodysnatcher | Ghostroot | 18 | Pulse, Swap, Stunner. The Swap's Pass Throttles you, and your next command hit moves it (or Exposed or Corrupted) onto that part; the Jolt Stuns you. |
+| Thornwall | Worm | 20 | Pulse, Thorns, Bodyguard. A command on the Thorns Corrupts you (1% for 3 cycles); the Bodyguard shields the part your command hit (15%, commands only). |
+| Desync | Ghostroot | 22 | Pulse, Sandbox, Jitter. The Jitter lags you 2 cycles (your command lands after the virus acts); the Contain Sandboxes you a cycle (quiet commands only). |
+| Junkyard | Worm | 24 | Pulse, Junker, Backtrace. The Junk puts a dead key on your bar; each status you carry stacks the Backtrace, and at 5 it calls a fragment. |
+| Last Stand | Ghostroot | 26 | Pulse, Turncoat, Prober. The Probe Exposes you (next hit +50%, a ◆ blocks it); below half the Turn Scrambles you 2 cycles. |
+| Sweatshop | Ransomware | 28 | Pulse, Encryptor, Feeder. Each cycle the Feeder heals the most damaged part 2% a debuff you carry. Charge: Overtime, a burst of encryption. |
 
-The last six are the mechanics list's parts, paired by hand (docs/variety-plan.md 1.1). A strain's build crowds out what
+The last eleven are the mechanics list's parts, paired by hand (docs/variety-plan.md 1.1). A strain's build crowds out what
 would break the compatibility rules beside it: the Doomsday never rolls Hasty, and Bad Blood and the Bodysnatcher are
 never Linked.
 
@@ -397,7 +403,8 @@ Every virus is a body plus rules, written by a crew (`genes.mjs` the 41 rules, `
 writes ransomware, SWARMLINE worms, PALEMASK ghostroots. A strain is a named build of its author: the Keylogger NULL
 CHOIR's, the Hashrat GLASSJAW's, the Floodgate, Leech, Patchwork and Overrun SWARMLINE's, the Sleeper, Flicker and Echo
 PALEMASK's, the Extortion and Bricker TOLLGATE's. The mechanics strains go the same way (the Lurker PALEMASK's, the
-Bloodhound and Scythe TOLLGATE's, the Doomsday and Bad Blood SWARMLINE's, the Bodysnatcher NULL CHOIR's), and their
+Bloodhound and Scythe TOLLGATE's, the Doomsday, Bad Blood and Thornwall SWARMLINE's, the Bodysnatcher NULL CHOIR's, the
+Desync and Last Stand PALEMASK's, the Junkyard and Sweatshop GLASSJAW's), and their
 parts join their authors' toolkits; a mutated strain is its strain's author's. Kestrel writes the ICE and the Sentinel. A faction's server runs its
 faction's viruses; SPRAWL-00's strays sign nothing.
 
@@ -440,7 +447,7 @@ protector is decoded its node shows **?**.
 ### The Codex tab
 
 A top tab (`codex`), between Loadout and System. Left, an index in six groups: **Families** (Ransomware, Worm,
-Ghostroot and the room bodies), **Strains** (28), **Guards & ICE** (6), **Exfils**, **Bosses**, **Mutations**; each row
+Ghostroot and the room bodies), **Strains** (33), **Guards & ICE** (6), **Exfils**, **Bosses**, **Mutations**; each row
 its icon, name and count (a body's research %, a boss's wins, kills toward a mutation's decode). Unmet entries are ???.
 Over the index, two tabs: the Codex and the collection log (*Collection log*).
 

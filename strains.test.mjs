@@ -4,7 +4,7 @@ import { fresh, command, selectEncounter, resolveCycle, part, attackAmount, defe
 import { STRAINS, strainsFor, createVirus, SERVER, variantFor, gradeFor, defaultSub, spreadOf, spreadFrom } from './dist/data.mjs';
 import { MECH_GENES, compatible } from './dist/genes.mjs';
 import { PARTS } from './dist/parts.mjs';
-import { mechLanded, mechFired, youDebuffs } from './dist/mechanics.mjs';
+import { mechLanded, mechFired, mechValidate, youDebuffs } from './dist/mechanics.mjs';
 
 const veteran = (arch = 'breaker', level = 14) => {
   const s = fresh();
@@ -404,6 +404,60 @@ test('Bodysnatcher: your next command hit moves the Swap\'s Throttle onto the pa
   assert.equal(part(s, 'pulse').integrity, hp, 'Stunned: the command does not fire');
 });
 
+test('Thornwall: a command on the Thorns Corrupts you, and the Bodyguard shields whatever your command hit', () => {
+  const s = mstart('thornwall'), e = s.encounter, th = part(s, 'thorns');
+  for (const p of e.virus.parts) if (p.attack) p.attack.due = 999;
+  fire(s, 'spike thorns');
+  assert.ok(e.corrupt?.left > 0, 'the thorns Corrupt you');
+  assert.ok(th.bufHp > 0, 'the Bodyguard shields the Thorns');
+  fire(s, 'spike pulse');
+  assert.ok(part(s, 'pulse').bufHp > 0 && !th.bufHp, 'switch targets: the shield follows your command');
+});
+
+test('Desync: the Jitter lags you, and the Sandbox\'s Contain refuses a direct hit', () => {
+  const s = mstart('desync'), e = s.encounter, j = part(s, 'jitter'), sb = part(s, 'sandbox');
+  mechLanded(s, j, j.attack);
+  assert.ok(e.lagUntil >= e.cycle, 'lagged');
+  assert.equal(mechValidate(s, { ability: 'spike' }), null, 'a direct hit still goes');
+  mechLanded(s, sb, sb.attack);
+  assert.match(mechValidate(s, { ability: 'spike' }) || '', /Sandboxed/);
+});
+
+test('Junkyard: the Junk puts a dead key on your bar, and the status feeds the Backtrace a fragment', () => {
+  const s = mstart('junkyard'), e = s.encounter, jk = part(s, 'junker'), bt = part(s, 'backtrace');
+  for (const p of e.virus.parts) if (p.attack) p.attack.due = 999;
+  mechLanded(s, jk, jk.attack);
+  assert.ok(e.junk, 'a dead key');
+  bt.trace = 4;
+  const n = e.virus.parts.length;
+  fire(s, 'hold');
+  assert.ok(e.virus.parts.length > n && e.virus.parts.some((p) => p.kind === 'fragment'), 'at 5 stacks, a fragment');
+  assert.equal(bt.trace, 0);
+});
+
+test('Last Stand: the Probe Exposes you, and the Turncoat Scrambles you only below half', () => {
+  const s = mstart('laststand'), e = s.encounter, tc = part(s, 'turncoat'), pr = part(s, 'prober');
+  mechLanded(s, pr, pr.attack);
+  assert.ok(e.exposedHit, 'Exposed');
+  mechLanded(s, tc, tc.attack);
+  assert.ok(!(e.scrambleUntil > e.cycle), 'over half: no Scramble');
+  defender(s).integrity = Math.floor(defender(s).max * 0.4);
+  mechLanded(s, tc, tc.attack);
+  assert.ok(e.scrambleUntil > e.cycle, 'below half: Scrambled');
+});
+
+test('Sweatshop: while you carry the Encryptor\'s encryption, the Feeder heals the most damaged part', () => {
+  const s = mstart('sweatshop'), e = s.encounter, pulse = part(s, 'pulse');
+  for (const p of e.virus.parts) if (p.attack) p.attack.due = 999;
+  pulse.integrity -= 20;
+  let hp = pulse.integrity;
+  fire(s, 'hold');
+  assert.equal(pulse.integrity, hp, 'clean: it doesn\'t feed');
+  e.encrypt = 3;
+  fire(s, 'hold');
+  assert.ok(pulse.integrity > hp, 'Encrypted: it feeds');
+});
+
 test('a mechanics strain\'s build crowds out the mutation or Linked that would break its rules', () => {
   assert.equal(createVirus('random', 3, { family: 'worm', strain: 'doomsday', threat: 30, mutation: 'hasty' }).mutation, null);
   assert.equal(createVirus('random', 3, { family: 'worm', strain: 'doomsday', threat: 30, mutation: 'armored' }).mutation, 'armored');
@@ -418,6 +472,9 @@ test('the spread: a strain\'s mechanics parts roll on wild viruses of its lineag
   assert.deepEqual([...spreadOf('ghostroot', 11, 2)], [], 'below its level');
   assert.deepEqual([...spreadOf('ghostroot', 12, 1)], [], 'above its depth');
   assert.deepEqual([...spreadOf('worm', 16, 3)].sort(), ['amplifier', 'countdown', 'leak', 'vendetta'], 'a mutated strain\'s part doesn\'t spread (the Guarded Patchwork\'s Bodyguard)');
+  assert.deepEqual([...spreadOf('ghostroot', 26, 3)].sort(), ['exposed', 'lag', 'opportunist', 'sandboxed', 'stunned', 'swap', 'turncoat'], 'wave 2: the Desync\'s and the Last Stand\'s');
+  assert.equal(spreadFrom('worm', 'backtrace'), 'junkyard');
+  assert.equal(spreadFrom('ghostroot', 'lag'), 'desync');
   assert.equal(spreadFrom('worm', 'leak'), 'doomsday');
   assert.equal(PARTS.mech, 0);
   const mechOn = (family, L, floor) => { const got = {}; for (let seed = 1; seed <= 600; seed++) { const v = createVirus('random', seed, { family, threat: L + 9, floor, mutation: null }); for (const p of v.parts) if (p.mech) got[p.mech] = (got[p.mech] || 0) + 1; if (v.parts.some((p) => p.mech === 'opportunist')) assert.ok(v.parts.some((p) => p.special), 'the feeder rule: the Opportunist only beside the Scrambler'); } return got; };

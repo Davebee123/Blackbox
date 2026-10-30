@@ -731,6 +731,16 @@ test('natives: elites and ★ rare spawns always bring one of their floor\'s nat
     assert.ok(exact >= 0.75 * n, `floor ${F} at ${L}: its own natives in ${exact} of ${n} (the rest the floor above's: a Spare needs the signature)`);
   }
 });
+test('natives with the mechanics list rolling: a ★ rare spawn holding two levers keeps its forced native and swaps the other', () => {
+  const floorOf = (v, p) => GENES[FAMILIES[v.family].parts.find((x) => x.id === p.id)?.gene || '']?.floor || 0, was = PARTS.mech;
+  PARTS.mech = 0.5; // developer parts mech 0.5
+  try {
+    for (let seed = 1; seed <= 100; seed++) {
+      const v = createVirus('random', seed, { threat: SERVER.threat(10), run: true, mutation: null, floor: 2, rare: true });
+      assert.ok(v.parts.some((p) => floorOf(v, p) && floorOf(v, p) <= 2), `${seed} ${v.name}: ${v.parts.map((p) => p.id).join()}`);
+    }
+  } finally { PARTS.mech = was; }
+});
 test('Kestrel\'s Idle Timer: from floor 3, about half the guard posts and ICE bring one; none above it', () => {
   const k = (L) => { let n = 0; for (let seed = 1; seed <= 100; seed++) { const s = fresh(); s.run = { loc: 'sim', cwd: '/', integrity: 300, max: 300, pack: [], visited: ['/'] }; selectEncounter(s, ['watchdog', 'sentinel', 'crawler', 'shredder', 'bouncer', 'tracer'][seed % 6], seed, { mode: 'run', room: '/x', level: L, quiet: true }); n += s.encounter.virus.parts.some((p) => p.id === 'idletimer'); } return n; };
   assert.equal(k(10), 0, 'floor 2: none');

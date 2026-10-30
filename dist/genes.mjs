@@ -168,14 +168,14 @@ export const GENES = {
   // The mechanics list (docs/mechanics-list.md): twenty components for the designer to play, built lean. Each part's
   // spec carries `mech`, and mechanics.mjs holds its whole rule. sig: its rule reads what the signature does to you (the
   // Encryptor's Encrypt, the Scrambler's Scramble), so it rolls only beside it (parts.mjs).
-  exposed: { name: 'Exposed', adj: 'Probing', cat: 'attack', axis: 'burst', role: 'amplifier', cost: 2, opens: 4, decode: 'part', suits: 'Ransomware',
+  exposed: { name: 'Exposed', adj: 'Probing', cat: 'attack', axis: 'burst', role: 'amplifier', cost: 2, opens: 4, decode: 'part', suits: 'Ransomware, Ghostroot (the Last Stand)',
     does: 'When its Probe lands, you are Exposed, and your next incoming hit deals 50% more. Then it clears. A ◆ on you blocks it.', telegraph: 'An Exposed status on you.', answer: 'Take the next hit on a ◆ or a shield.',
     implicit: 'Exposed hits on you deal less.', carried: (p) => p.mech === 'exposed',
-    parts: { ransomware: { id: 'prober', plan: 3, name: 'Prober', integrity: 16, armor: 0, loot: 'Probe Tip', mech: 'exposed', from: 4, pool: 'third', attack: { name: 'Probe', effect: 'damage', amount: 3, interval: 3, first: 2 } } } },
-  lag: { name: 'Latency', adj: 'Lagging', cat: 'attack', axis: 'clock', role: 'amplifier', cost: 2, opens: 7, decode: 'part', suits: 'Worm',
+    parts: { ransomware: { id: 'prober', plan: 3, name: 'Prober', integrity: 16, armor: 0, loot: 'Probe Tip', mech: 'exposed', from: 4, pool: 'third', attack: { name: 'Probe', effect: 'damage', amount: 3, interval: 3, first: 2 } }, ghostroot: { id: 'prober', plan: 3, name: 'Prober', integrity: 16, armor: 0, veiled: true, loot: 'Probe Tip', mech: 'exposed', from: 4, pool: 'third', attack: { name: 'Probe', effect: 'damage', amount: 3, interval: 3, first: 2 } } } }, // the Ghostroot's: the Last Stand's, to spread
+  lag: { name: 'Latency', adj: 'Lagging', cat: 'attack', axis: 'clock', role: 'amplifier', cost: 2, opens: 7, decode: 'part', suits: 'Worm, Ghostroot (the Desync)',
     does: 'When its Jitter lands, you lag for 2 cycles, and your command lands after the virus acts. It lags you only in a solo fight.', telegraph: 'A Lag status on you.', answer: 'Cut and race before it lands.',
     implicit: 'Lag on you runs shorter.', carried: (p) => p.mech === 'lag',
-    parts: { worm: { id: 'jitter', plan: 3, name: 'Jitter', integrity: 18, armor: 1, loot: 'Jitter Buffer', mech: 'lag', from: 7, pool: 'third', attack: { name: 'Jitter', effect: 'damage', amount: 3, interval: 4, first: 3 } } } },
+    parts: { worm: { id: 'jitter', plan: 3, name: 'Jitter', integrity: 18, armor: 1, loot: 'Jitter Buffer', mech: 'lag', from: 7, pool: 'third', attack: { name: 'Jitter', effect: 'damage', amount: 3, interval: 4, first: 3 } }, ghostroot: { id: 'jitter', plan: 3, name: 'Jitter', integrity: 18, armor: 1, veiled: true, loot: 'Jitter Buffer', mech: 'lag', from: 7, pool: 'third', attack: { name: 'Jitter', effect: 'damage', amount: 3, interval: 4, first: 3 } } } }, // the Ghostroot's: the Desync's, to spread (parts.mjs PARTS.spread)
   leak: { name: 'Leak', adj: 'Leaking', cat: 'attack', axis: 'feedback', role: 'primary', cost: 2, opens: 9, decode: 'part', suits: 'Ransomware, Worm (the Doomsday)',
     does: 'When its Drip lands, you leak for 3 cycles, and every command you fire costs 3% of your max health. Holding is free.', telegraph: 'A Leak status on you.', answer: 'Hold, or fire only what counts.',
     implicit: 'Leaks cost you less.', carried: (p) => p.mech === 'leak',
@@ -236,10 +236,10 @@ export const GENES = {
     does: 'Counts the commands you fire. At 10, every part attacks at once, and the count starts over. Holding doesn\'t count.', telegraph: 'A counter on its row.', answer: 'Hold to stall it, or break it.',
     implicit: 'Countdowns count longer.', carried: (p) => p.mech === 'countdown', bot: { focus: 'first' },
     parts: { worm: { id: 'countdown', plan: 3, name: 'Countdown', integrity: 22, armor: 1, loot: 'Tick Counter', mech: 'countdown', from: 13, pool: 'third' } } },
-  backtrace: { name: 'Backtrace', adj: 'Tracing', cat: 'part', axis: 'swarm', role: 'amplifier', cost: 2, opens: 16, decode: 'part', suits: 'Ransomware, Ghostroot', sig: true,
+  backtrace: { name: 'Backtrace', adj: 'Tracing', cat: 'part', axis: 'swarm', role: 'amplifier', cost: 2, opens: 16, decode: 'part', suits: 'Ransomware, Ghostroot, Worm (the Junkyard)', sig: true,
     does: 'Each cycle, each status you carry adds a stack. At 5 stacks, it calls in a fragment, and the stacks start over.', telegraph: 'A trace counter on its row.', answer: 'Cleanse, or break it.',
     implicit: 'Traces build slower.', carried: (p) => p.mech === 'backtrace',
-    parts: { ransomware: { id: 'backtrace', plan: 3, name: 'Backtrace', integrity: 20, armor: 1, loot: 'Trace Log', mech: 'backtrace', from: 16, pool: 'third', sig: true }, ghostroot: { id: 'backtrace', plan: 3, name: 'Backtrace', integrity: 20, armor: 1, veiled: true, loot: 'Trace Log', mech: 'backtrace', from: 16, pool: 'third', sig: true } } },
+    parts: { ransomware: { id: 'backtrace', plan: 3, name: 'Backtrace', integrity: 20, armor: 1, loot: 'Trace Log', mech: 'backtrace', from: 16, pool: 'third', sig: true }, ghostroot: { id: 'backtrace', plan: 3, name: 'Backtrace', integrity: 20, armor: 1, veiled: true, loot: 'Trace Log', mech: 'backtrace', from: 16, pool: 'third', sig: true }, worm: { id: 'backtrace', plan: 3, name: 'Backtrace', integrity: 20, armor: 1, loot: 'Trace Log', mech: 'backtrace', from: 16, pool: 'third', sig: true } } }, // the Worm's: the Junkyard's, to spread
   swap: { name: 'Swap', adj: 'Swapping', cat: 'part', axis: 'order', role: 'amplifier', cost: 2, opens: 18, decode: 'part', suits: 'Ghostroot',
     does: 'When its Pass lands, you are Throttled for 2 cycles. While it stands, your next command hit moves your Throttled, Exposed or Corrupted onto the part it hits.', telegraph: 'A Throttled status on you.', answer: 'Pass it onto the part whose attack you want weak.',
     implicit: 'Swapped debuffs stay on the part longer.', carried: (p) => p.mech === 'swap',
