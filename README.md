@@ -137,7 +137,8 @@ comment saying what it does.
 | `dist/rogue.mjs` | Rogue servers, where viruses gather, and the KESSLER-FARM-00 crew dungeon. |
 | `dist/root.mjs` | Root access: perks on a server you hold, by respawned rooms cleared. |
 | `dist/sockets.mjs` | Sockets: build a program in a cleared socket room; it changes its own server. |
-| `dist/specials.mjs` | Server specials: each traced server's rule (an upside and a cost) from its seed, and its pull on invasions. |
+| `dist/specials.mjs` | Server specials: each traced server's rule (an upside and a cost) from its seed, its pull on invasions, and its leaning's id (`leaningOf`). |
+| `dist/leanings.mjs` | Leanings: a server's one positive rule (Venting, Wind-up, Brownout), its multipliers in the fight and what it has paid. |
 | `dist/puzzles.mjs`, `dist/puzzle-view.mjs` | Puzzle rooms: four boards that aren't fights. |
 | `dist/forensics.mjs` | Log sweep: a short detective puzzle in a server's incident file. |
 | `dist/traffic.mjs`, `dist/travelfx.mjs` | Ambient packets on the room map; the step between rooms as a train of code. |
@@ -284,7 +285,7 @@ and `style.test.mjs` the tooltip grammar.
 | [`docs/rivals.md`](docs/rivals.md) | Rivals: the roster and the picked look (designed, not built). |
 | [`docs/loot-plan.md`](docs/loot-plan.md) | Sets and uniques. |
 | [`docs/house.md`](docs/house.md) | Your house and its furniture (decided, not built). |
-| [`docs/leanings.md`](docs/leanings.md) | Leanings: a server's one positive rule (picked, not built). |
+| [`docs/leanings.md`](docs/leanings.md) | Leanings: a server's one positive rule (built: GAME_RULES.md "Server kinds, specials and quirks"). |
 | [`docs/server-specials.md`](docs/server-specials.md) | Server specials: an upside, a cost and the programs for each (picked, not built). |
 | [`docs/threads.md`](docs/threads.md), [`docs/director.md`](docs/director.md) | Threads, and the event director. |
 | [`docs/invasions.md`](docs/invasions.md), [`docs/networks.md`](docs/networks.md), [`docs/bosses.md`](docs/bosses.md) | Review sheets: invasions, network signatures, crew bosses. |

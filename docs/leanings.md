@@ -1,7 +1,8 @@
 # Leanings
 
-A server's one positive rule, shown on its card before you connect, that rewards attention in fights. Not built yet:
-these are the designer's picks from the prototypes (October 2026).
+A server's one positive rule, shown on its card before you connect, that rewards attention in fights. **Built**
+(`dist/leanings.mjs`, GAME_RULES.md "Server kinds, specials and quirks"): the designer's picks from the prototypes
+(October 2026).
 
 ## The rule for a leaning
 

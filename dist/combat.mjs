@@ -32,7 +32,8 @@ import { TELL, ROOM_FAMILIES, DAMPER_KINDS, floorFor, partGenesFor } from './dat
 import { mechValidate, mechIntercept, mechFired, mechPower, exposedCut, mechLanded, mechCommandHit, mechStart, mechClose, mechBroke, lagged, stunnedNow, missedTurn } from './mechanics.mjs';
 import { tickRoot, processWon } from './root.mjs';
 import { firewallCommand, wear, raidShare, hardenRestore } from './firewall.mjs';
-import { rollSpecials, specialsRestore, hasSpecial, SPECIAL } from './specials.mjs';
+import { rollSpecials, specialsRestore, hasSpecial, SPECIAL, leaningOf } from './specials.mjs';
+import { leanDealt, leanTaken, leanPaid } from './leanings.mjs';
 import { levelGains, nextGains, progressionRestore, climbRestore, craftRestore, RETIRED } from './progression.mjs';
 import { invaderDown, invasionRestore, signatureRestore } from './invasion.mjs';
 import { runDaemons, daemonsOn, daemonsHurt, flushDaemons, lifeline, lifelineHeal, daemonCommand, daemonRestore, slottedDaemons, daemonAmount, watchmanBar, gainDaemon } from './daemons.mjs';
@@ -311,6 +312,7 @@ export function damageMultiplier(s, p, opts = {}) {
   m *= overclockMult(s); // an Overclock that landed: every part takes double (tells.mjs, breaches only)
   if (p.loud) m *= CONFIG.tripwire.taken; // a Tripwire tripped: the loud parts take more from everything (loud both ways)
   if (e.virus.weakKnown && e.virus.weakPoint === p.id) m *= CONFIG.weakMultiplier;
+  m *= leanDealt(e, p); // the server's leaning: Venting, Wind-up (leanings.mjs)
   if (opts.mine) {
     m *= 1 + 0.03 * rank(s, 'overclocked');
     if (classOf(s) === 'breaker') m *= 1 + momentumBonus(s);
@@ -1126,6 +1128,8 @@ export function selectEncounter(s, key = 'cryptjack', seed = s.seed, opts = {}) 
   if (mode === 'home') { s.seed = seed; s.gate = null; }
   (s.met ||= {})[virus.strain || virus.family] = true; // the Codex names what you've met
   s.encounter = { phase: 'alert', mode, zone: !!opts.zone, wild: opts.wild || null, process: opts.process || null, room: opts.room || null, key, virus, seed, cycle: 1, elapsedMs: 0, paused: false, queue: null, plan: [], lastAttack: null, readyAt: {}, nextFragment: 1, metrics: null, breaks: 0, helpers: [], burns: [], buffs: {}, shield: 0, chits: 0, undo: null, encrypt: 0, scrambleUntil: 0, clock: 0, regenAcc: 0, leechAcc: 0, once: {}, soft: opts.zone && !opts.wild && !opts.process && (s.pace?.kills || 0) < CONFIG.zone.starterKills ? CONFIG.zone.starterHit : 1 }; // soft: your first kills in SPRAWL-00 hit softer, so you can learn the board
+  const lean = mode === 'run' && s.run ? leaningOf(findLocation(s, s.run.loc)) : null;
+  if (lean) s.encounter.leaning = { id: lean, paid: 0 }; // the server's leaning (leanings.mjs)
   if (s.run?.unpack?.includes(virus.id)) s.encounter.unpacked = true; // scanned before the fight: a Packer hides nothing (genes.mjs packer)
   packParts(s);
   const signed = virus.author && AUTHORS[virus.author] ? ` ${AUTHORS[virus.author].name} wrote it.` : '';
@@ -2835,6 +2839,8 @@ export function hit(s, p, base, opts = {}) {
     else if (opts.mine) base += gearStat(s, 'damage') + fxFire(s, 'hit', { target: p, do: 'damage+' }).reduce((n, x) => n + x.value, 0);
   }
   let raw = Math.floor(base * damageMultiplier(s, p, opts) + 1e-9); // tolerance: 25 × 1.5 × 1.2 is 45, not 44.999…
+  const lean = leanDealt(e, p);
+  if (lean > 1 && raw > 0) leanPaid(e, p, raw - Math.round(raw / lean));
   // Subrogation (Halcyon): the part that last hit you takes double from your next skill hit.
   if (raw > 0 && opts.mine && e.subro === p.id) { raw *= 2; e.subro = null; emit(s, 'status', `Subrogation: ${p.name} pays double.`, { target: p.id }); }
   // Grudge (Bastion's edge): the part that last hit you takes more from your hits.
@@ -3826,6 +3832,8 @@ function landAttack(s, p) {
     if (!half && e.hardened > 0) { e.hardened--; cut = 1 - SKILLS.hardenedCut; emit(s, 'blocked', `Hardened: ${atk.name} deals ${Math.round(SKILLS.hardenedCut * 100)}% less damage.`, { source: p.id }); }
     for (const x of fxFire(s, 'struck', { do: 'taken%', atk, amount: pre, lands })) { cut *= Math.max(0, 1 - x.value / 100); emit(s, 'blocked', `${x.name || x.it.name}: ${atk.name} deals ${x.value}% less damage.`, { source: p.id, ...firedOf([x]) }); } // Read-Only
     cut *= exposedCut(s); // Exposed (a Prober, mechanics.mjs): this hit deals more, and the status clears
+    const brown = leanTaken(e, p); // Brownout (leanings.mjs): your command aimed at its part this cycle
+    if (brown < 1) { leanPaid(e, p, Math.round(pre * cut * (1 - brown))); cut *= brown; }
     // Blindside (Ghostroot): a hit you couldn't see coming lands harder.
     const dealt = takeDamage(s, absorbed(s, hitCapped(s, spikeCapped(s, Math.round(hitPower * sap * (hasTalent(s, 'unsafe-mode') ? 1.2 : 1) * tough * (crit ? CRIT.multiplier : 1) * cut * took * (e.virus.raid ? raidTaken(s) : 1)), atk)), atk, p), p.id, atk.name);
     struckFx(s, atk);
@@ -3956,6 +3964,7 @@ function programTurn(s, prog) {
   const intent = toIntent(s, prog.text);
   if (intent.error) { emit(s, 'hold', `⟳ Your program had no move: ${intent.error}`, { auto: 'program' }); e.metrics.holds++; return; }
   e.metrics.program = (e.metrics.program || 0) + 1;
+  e.aim = { cycle: e.cycle, target: intent.target || null };
   e.commanding = { id: intent.ability, target: intent.target || null, auto: true, program: true }; // like auto-repeat: never a read
   const before = beforeCommand(e);
   try { useAbility(s, intent, 'program'); } finally { e.commanding = false; }
@@ -3984,6 +3993,7 @@ export function playerPhase(s, phase = 'all') {
   } else if (e.queue) {
     const q = e.queue;
     e.surprise = !!(e.synced && e.sync?.surprise && q.ability !== 'hold'); // Infiltrator Surprise (see CONFIG.surprise)
+    e.aim = { cycle: e.cycle, target: q.target || null }; // the part your command aims at (Brownout, leanings.mjs)
     e.commanding = { id: q.ability, target: q.target || null, at: q.at ?? e.cycle, auto: false }; // your command: a tell on its part may count it (tells.mjs)
     const before = beforeCommand(e);
     hooks.programActed?.(s, q); // routines.mjs: a part that was yours to play, played: your program takes it from here
@@ -3999,6 +4009,7 @@ export function playerPhase(s, phase = 'all') {
     else if (mechIntercept(s, intent.ability)) e.metrics.holds++;
     else {
       intent.text = `${intent.ability} ${intent.target}`;
+      e.aim = { cycle: e.cycle, target: intent.target || null };
       e.commanding = { id: intent.ability, target: intent.target || null, auto: true }; // auto-repeat never answers a tell
       const before = beforeCommand(e);
       try { useAbility(s, intent, true); } finally { e.commanding = false; }

@@ -665,6 +665,20 @@ on hover, and as its glyph in amber on the map node.
 | ◆ Hardened | Its vault pays double (credits and code); Root climbs twice as fast | Its guards and Resident are Armored | Honeytoken | Patch Injector |
 | ♜ Guarded | Its vault holds one of its floor's uniques, once | A crew elite holds its Core in the Resident's place | — | — |
 
+**Leanings** (`leanings.mjs`, docs/leanings.md): every traced server also has one positive rule from its seed, keyed on
+the virus's timeline so it favours no class. It holds in every fight on that server.
+
+| Leaning | Rule |
+|---|---|
+| Venting | A part takes 50% more damage, from every hit, on the cycle after it attacks. |
+| Wind-up | A part takes 25% more damage, from every hit, on the cycle its attack lands. |
+| Brownout | An attack deals 30% less damage to you when your command aimed at its part that cycle (Spawn and Deploy count). |
+
+The card shows a small table under the level: **Server** (kind, specials, quirk) beside **Leaning** (one filled amber tag
+with its icon). In a fight a *Leaning* row under Gear counts what it has paid (damage added, or Signal kept), lit amber
+on the cycle after it paid; that cycle the part it paid on carries an amber tag with the amount. Nothing shows ahead of
+time.
+
 A server's kind, specials and quirk are tags on its card, each with its rule on hover. A server a faction owns shows its owner and the standing that taking
 it moves (−15 with the owner, +8 with each rival).
 
