@@ -61,6 +61,8 @@ import { deathRecap } from './recap.mjs';
 import { contractDid } from './mail.mjs';
 import { addrsOf, byAddr } from './address.mjs';
 import { gainComponents } from './salvage.mjs';
+import { rollObjective, armObjective } from './objectives.mjs';
+import { GENES } from './genes.mjs';
 import { PROGRAMS, SOCKET, buildProgram, uninstallProgram, programCost, buildBlock as programBlock, costLine as programCostLine, codebasesOf } from './sockets.mjs';
 import { PUZZLES, PUZZLE_KINDS, isPuzzle, cipherOf, cgOpen, newPuzzle, puzzleMove, puzzleScore, puzzleStarted, cellOf, boardLines, moveLine } from './puzzles.mjs';
 import { RIVALS, spawnRival, rivalOf, rivalAt, rivalMove, rivalMeet, rivalLeave, rivalFight, rivalArm, rivalWon, rivalLost, rivalLine } from './rivals.mjs';
@@ -1390,9 +1392,11 @@ export function fightOf(s, room, as = null) {
   const honey = runs(s, 'honeytoken') && as !== 'mirror', elite = room.kind === 'elite' || as === 'mirror' || (honey && seeded((seed * 13 + 7) >>> 0)() < SOCKET.honey.elite);
   const r = seeded((seed * 31 + 5) >>> 0), mut = level >= 4 && r() < SERVER.mutationChance(level) ? ROLLED_MUTATIONS[Math.floor(r() * ROLLED_MUTATIONS.length)] : null;
   // An elite or a ★ rare spawn brings one of its floor's natives (parts.mjs PARTS.native) in place of the room's third.
-  const genes = (elite && PARTS.native.elite) || (rare && PARTS.native.rare) ? [nativeThird(fam, level, R.floor || 1, seed) || third].filter(Boolean) : [third].filter(Boolean);
+  // One plain fight room in two carries an objective (objectives.mjs), and it takes the lever's place: a third that's a lever stays out.
+  const objective = !as && room.kind === 'process' && !elite ? rollObjective(seed, level) : null;
+  const genes = ((elite && PARTS.native.elite) || (rare && PARTS.native.rare) ? [nativeThird(fam, level, R.floor || 1, seed) || third] : [third]).filter((g) => g && !(objective && GENES[g]?.lever));
   const opts = { mode: 'run', room: room.path, level, family: fam, author: room.author, mutation: mut, genes, ...(elite ? { elite: true, eliteHp: ROOMS.eliteHp } : {}), ...(rare ? { rare: true } : {}), ...(honey ? { grade: 1 + SOCKET.honey.grade } : {}) };
-  return { key: 'random', seed, opts, size: elite ? 'elite' : 'process', name: null, level, family: fam, author: room.author, set: (!lured && room.pin) || spawnSet(fam, room.author, seed), mutation: mut, elite, rare };
+  return { key: 'random', seed, opts, size: elite ? 'elite' : 'process', name: null, level, family: fam, author: room.author, set: (!lured && room.pin) || spawnSet(fam, room.author, seed), mutation: mut, elite, rare, objective };
 }
 // The native an elite or a ★ rare spawn brings in a server room (its floor's, open at its level; none there: the nearest
 // floor above's), by its own hash of the seed. null: its family has none open yet.
@@ -1465,7 +1469,8 @@ export function fight(s, room, { pause = false, as = null } = {}) {
   else if (fresh) jitterFirst(v, seeded((f.seed ^ 0x5e7) >>> 0));
   if (room.queue && R.kind === 'Mailhub' && !['hunter', 'exfil', 'rival'].includes(as)) spamFlood(s, e);
   if (f.brood) brood(s, e, f.brood);
-  if (as === 'exfil') { e.escapeAt = CONFIG.exfil.escape; for (const p of v.parts) { p.armor = p.maxArmor = Math.min(p.maxArmor, 1); p.patchAt = null; } } // still up after its cycles: it gets away (combat.mjs cycleClose); a runner wears 1 ◆ at most
+  if (f.objective) armObjective(s, e, f.objective);
+  if (as === 'exfil') { armObjective(s, e, 'exfil', CONFIG.exfil.escape); for (const p of v.parts) { p.armor = p.maxArmor = Math.min(p.maxArmor, 1); p.patchAt = null; } } // still up after its cycles: it gets away (objectives.mjs); a runner wears 1 ◆ at most
   if (v.boss && !v.raid) bossRule(s, R.bossRule || s.bossRule || 'a');
   armTicks(s);
   if (v.elite && !v.boss) e.enrageAt = 9;

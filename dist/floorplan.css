@@ -645,3 +645,8 @@
 .fp-rv-stakes .fp-ic { color: var(--amber); }
 .fp-rv-wick { margin: 0; font-size: 12px; color: var(--dim); font-style: italic; }
 .fp-rv-wick span { font-style: normal; color: var(--muted); margin-right: var(--s3); text-transform: lowercase; }
+/* An objective (objectives.mjs): its tag on the map (icon and number) and its line on the room card, with what it pays. */
+.fp-tag.obj rect { stroke: var(--next); } .fp-tag.obj text { fill: var(--next); font-size: 10px; font-weight: 700; } .fp-tag.obj use { color: var(--next); }
+.fp-tag-inline.fp-obj { gap: 3px; } .fp-tag-inline.fp-obj .fp-ic { width: 11px; height: 11px; }
+.fp-obj-pay { display: flex; gap: 6px; margin-top: 5px; }
+.fp-obj-pay .rw { padding: 1px 6px; } .fp-obj-pay .rw b { font: 600 11px var(--mono); }
