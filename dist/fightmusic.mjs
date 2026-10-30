@@ -149,23 +149,20 @@ export const THEMES = [
     },
   },
   {
-    id: 'worm', name: 'Worm', stem: 'SPLINTER', bpm: 126, gain: 0.068,
-    feel: 'A crawling Phrygian acid riff and a grinding offbeat bass, its filter snapping shut on every note, through a dotted-eighth echo over a sub, gears and clanks. Heat splits it into copies of itself, offset and climbing.',
-    delay: 3, fb: 0.45, step(b, i, t, s, I) {
-      const k = i % 16, bar = Math.floor(i / 16), shift = bar % 8 < 4 ? 0 : 1;
-      const mot = [40, 41, 43, 41, 40, 35, 36, 41, 40, 41, 45, 43, 41, 40, 36, 35].map((m) => m + shift);
-      tone(b, t, mtof(mot[k]), s * 1.3, { type: 'sawtooth', peak: k % 4 === 0 ? 0.06 : 0.042, cut: 2400, cutTo: 260, q: 11, shape: 7, bits: 8, del: 0.28, pan: -0.15 });
-      if (I > 0.25 && k % 2 === 1) tone(b, t, mtof(mot[(k + 13) % 16] + 24), s, { type: 'square', peak: 0.018, cut: 2000, cutTo: 500, q: 5, del: 0.4, pan: 0.45 });
-      if (I > 0.6 && k % 3 === 0) tone(b, t, mtof(mot[(k + 11) % 16] + 19), s, { type: 'sawtooth', peak: 0.015, cut: 1800, cutTo: 400, q: 6, del: 0.3, pan: -0.55 });
-      if (k === 0) tone(b, t, mtof(28 + shift), s * 15, { peak: 0.06, a: 0.02, pumped: true });
-      if (k % 4 === 2) tone(b, t, mtof(40 + shift), s * 1.5, { type: 'sawtooth', peak: 0.05, cut: 900, cutTo: 200, q: 6, shape: 10, bits: 6, pumped: true });
-      if (I > 0.5 && k === 0 && bar % 4 === 0) pad(b, t, [52 + shift, 53 + shift, 55 + shift], s * 64, { peak: 0.012, a: 2, cut: 500, cutTo: 1100, rev: 0.6, pumped: true });
-      noise(b, t, 0.01, { peak: rnd(0.006, 0.022) + I * 0.012, f: 9000, pan: rnd(-0.7, 0.7) });
-      if (k === 6 || k === 14) bell(b, t, mtof(52 + shift), 0.2, { peak: 0.03, ratio: 2.76, index: 7, rev: 0.25, pan: 0.5 });
-      if (I > 0.2 && k % 4 === 0) kick(b, t, { peak: 0.28, f0: 100 });
-      if (k === 7 || k === 15) press(b, t, { peak: 0.05, f: 210, pan: 0.3 });
-      if (k % 4 === 3) metal(b, t, { f: 310, peak: 0.016 + 0.012 * I, dur: 0.06, cut: 3000, pan: -0.5 });
-      if (I > 0.65 && k === 8) snare(b, t, { peak: 0.09 });
+    id: 'worm', name: 'Worm', stem: 'SPLINTER', bpm: 112, gain: 0.07,
+    feel: 'Melodic: a rolling octave bass and a ducking supersaw in E minor under a four-note pluck motif. Heat adds copies of the motif, each entering late and higher, until it plays as a canon.',
+    delay: 3, step(b, i, t, s, I) {
+      const k = i % 16, bar = Math.floor(i / 16) % 4;
+      const roots = [28, 24, 21, 23], chords = [[52, 55, 59], [48, 52, 55], [45, 48, 52], [47, 51, 54]];
+      const mot = [[64, 67, 71, 67], [64, 67, 72, 67], [64, 69, 72, 69], [63, 66, 71, 66]][bar], at = [0, 3, 6, 10];
+      if (k === 0) pad(b, t, chords[bar], s * 16, { peak: 0.014, a: 0.5, cut: 700 + I * 1000, rev: 0.4, pumped: true });
+      if (k % 2 === 0) tone(b, t, mtof(roots[bar] + (k % 4 === 2 ? 12 : 0)), s * 1.6, { type: 'sawtooth', peak: 0.075, cut: 500 + I * 600, cutTo: 180, q: 5, shape: 6, pumped: true });
+      const voices = [[0, 0, 0.034, 0]].concat(I > 0.3 ? [[3, 12, 0.022, 0.45]] : [], I > 0.6 ? [[6, 7, 0.018, -0.45]] : []);
+      voices.forEach(([lag, up, peak, pan]) => { const j = at.indexOf((k - lag + 16) % 16); if (j >= 0) tone(b, t, mtof(mot[j] + up), s * 2.5, { type: 'square', peak, cut: 2600, cutTo: 500, q: 3, del: 0.3, rev: 0.2, pan }); });
+      if (k === 0 || k === 8 || (I > 0.4 && k % 4 === 0)) kick(b, t, { peak: 0.28 });
+      if (k % 4 === 2) noise(b, t, 0.03, { peak: 0.03, f: 8000, pan: 0.3 });
+      if (I > 0.5 && (k === 4 || k === 12)) snare(b, t, { peak: 0.1 });
+      if (k === 14 && bar === 3) press(b, t, { peak: 0.06, f: 160 });
     },
   },
   {
