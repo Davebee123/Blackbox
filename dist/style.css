@@ -3645,6 +3645,7 @@ body.no-motion .recap { animation: none; }
 .fl-btn:hover:not(:disabled) { border-color: var(--line-strong); }
 .fl-btn.on { border-color: var(--amber); background: rgba(40, 30, 10, 0.92); }
 .fl-btn.on .fl-n { background: var(--amber); color: #120f0a; border-color: var(--amber); }
+.fl-btn.held { box-shadow: inset 2px 0 0 var(--hc); } /* its holder's colour (floors.mjs) */
 .fl-btn.next { opacity: 0.6; cursor: default; }
 .fl-btn.next .fl-name { color: var(--muted); }
 .fl-btn.dark { opacity: 0.32; cursor: default; padding-top: 2px; padding-bottom: 2px; }

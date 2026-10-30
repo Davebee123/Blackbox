@@ -81,7 +81,7 @@ const where = (s, c) => {
   const f = c.slot && frontier(s, c.slot);
   return f ? `the server ${f.hops > 1 ? `${f.hops} links ` : ''}past ${f.loc.name}` : `a server on ${floorName(c.chain)}`;
 };
-const bossOf = (s) => BOSSES[lairBoss(s, 'you')]?.name || 'the lair boss';
+const bossOf = (s, n) => BOSSES[(n && graphOf(s, n).lairBoss) || lairBoss(s, 'you')]?.name || 'the lair boss';
 
 // ---------- posting a step ----------
 function pay(s, n, step) {
@@ -119,7 +119,7 @@ function post(s, n, k, at) {
 function varsOf(s, j) {
   const loc = j.loc && locById(s, j.loc), label = j.label || '';
   return { handle: s.profile?.handle || 'rookie', server: where(s, j), floor: floorName(j.chain), owner: loc?.owner || 'a crew', crew: CREWS[loc?.family] || 'its crew',
-    file: j.file, label, Label: label ? label[0].toUpperCase() + label.slice(1) : '', name: j.name, count: j.count, boss: bossOf(s) };
+    file: j.file, label, Label: label ? label[0].toUpperCase() + label.slice(1) : '', name: j.name, count: j.count, boss: bossOf(s, j.chain) };
 }
 // A step's target located: the plain contract from here (its install room, its file planted, a map already done).
 function setup(s, c) {
@@ -178,7 +178,7 @@ function lairDown(s, c) {
 // ---------- what mail.mjs asks of a chain's job ----------
 // Its title, while its target isn't located or for a kind of its own (null: mail.mjs's own).
 export function arcTitle(s, c) {
-  if (ARC.own.includes(c.type)) return c.type === 'puzzle' ? `Win a puzzle board on ${where(s, c)}` : `Beat ${bossOf(s)} on ${where(s, c)}`;
+  if (ARC.own.includes(c.type)) return c.type === 'puzzle' ? `Win a puzzle board on ${where(s, c)}` : `Beat ${bossOf(s, c.chain)} on ${where(s, c)}`;
   if (c.ok || c.type === 'bounty') return null;
   const w = where(s, c);
   return { map: `Map ${w}`, rooms: `Clear ${c.count} rooms on ${w}`, takeover: `Take over ${w}`, install: `Install ${c.label} on ${w}`, sweep: `Map ${w} without resting`, item: `Recover ${c.file}`, heist: `Recover ${c.file} past the Tracker` }[c.type] || null;
@@ -191,7 +191,7 @@ export function arcProgress(s, c) {
     return { text: f ? `${f.hops} links past ${f.loc.name}: trace your way there` : `Somewhere on ${floorName(c.chain)}`, part: 0 };
   }
   if (c.type === 'puzzle') return c.got ? { text: 'Board won', part: 1 } : { text: `Any puzzle room on ${where(s, c)}`, part: 0.3 };
-  if (c.type === 'lair') return c.got ? { text: `${bossOf(s)} beaten`, part: 1 } : { text: `In the Core of ${where(s, c)}`, part: 0.3 };
+  if (c.type === 'lair') return c.got ? { text: `${bossOf(s, c.chain)} beaten`, part: 1 } : { text: `In the Core of ${where(s, c)}`, part: 0.3 };
   return null;
 }
 export const arcReady = (s, c) => ARC.own.includes(c.type) && !!c.got;

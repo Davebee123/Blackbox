@@ -60,8 +60,9 @@ const now = () => clock();
 const isWild = (loc) => !!(loc?.zone || loc?.rogue);
 // The location a server's rooms belong to.
 export const locOf = (s, R = s.rooms) => (R?.world ? (R.loc === CONFIG.zone.id ? zoneOf(s) : findLocation(s, R.loc)) : null);
-// Who writes a traced server: its faction's author, else its family's crew (combat.mjs placeAuthor's rule).
-export const authorOf = (loc) => (loc.faction ? factionAuthor(loc.faction) ?? crewOf(loc.family) : crewOf(loc.family)) || 'tollgate';
+// Who writes a traced server: its faction's author, else its floor's holder (loc.author, floors.mjs), else its family's
+// crew (combat.mjs placeAuthor's rule).
+export const authorOf = (loc) => (loc.faction ? factionAuthor(loc.faction) ?? crewOf(loc.family) : loc.author || crewOf(loc.family)) || 'tollgate';
 // A family's lineage: the old three a new body's code and leads count as (a Trojan's are a worm's).
 export const lineageOf = (f) => (FAMILIES[f] ? f : MATERIALS[ROOM_FAMILIES[f]?.code]?.family || 'ransomware');
 
