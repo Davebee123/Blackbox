@@ -137,6 +137,7 @@ comment saying what it does.
 | `dist/rogue.mjs` | Rogue servers, where viruses gather, and the KESSLER-FARM-00 crew dungeon. |
 | `dist/root.mjs` | Root access: perks on a server you hold, by respawned rooms cleared. |
 | `dist/sockets.mjs` | Sockets: build a program in a cleared socket room; it changes its own server. |
+| `dist/specials.mjs` | Server specials: each traced server's rule (an upside and a cost) from its seed, and its pull on invasions. |
 | `dist/puzzles.mjs`, `dist/puzzle-view.mjs` | Puzzle rooms: four boards that aren't fights. |
 | `dist/forensics.mjs` | Log sweep: a short detective puzzle in a server's incident file. |
 | `dist/traffic.mjs`, `dist/travelfx.mjs` | Ambient packets on the room map; the step between rooms as a train of code. |

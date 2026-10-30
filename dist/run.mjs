@@ -6,6 +6,7 @@
 import { vaultFilter, addFilter, filterLine } from './filters.mjs';
 import { gainComponents } from './salvage.mjs';
 import { CONFIG, FAMILIES, GUARDS, QUIRKS, MONTHS, SKILLS, SERVER, XP, BOSSES, layerOf } from './data.mjs';
+import { hasSpecial, armoredAt, SPECIAL } from './specials.mjs';
 import { sweepFile, showSweep, sweepCommand } from './forensics.mjs';
 import { isWild, relocks, rogueLayout, rogueSpawns, rogueMotd, liveRogue, ROGUE, relockLeft, rebootingUntil, clock, farmFile } from './rogue.mjs';
 import { findLocation, closest, command, selectEncounter, encounterVirus, active, emit, warn, hackerLevel, addLead, addLocation, disconnect, hooks, maxSignal, classOf, equippedSkills, knownSkills, serverLevel, gainXp, addItem, gearStat, regenRate, xpFor, deedXpFor, gainCode, UNIQUES, effectLine, loadoutSuggestions } from './combat.mjs';
@@ -215,7 +216,7 @@ export const CORE = '/core';
 // time it has beaten you in the last 6 hours (up to 3).
 export const RESIDENT = { over: 0, perLoss: 1, maxLoss: 3, lossMs: 6 * 3600000, starterHp: 1.1 }; // over: levels above its server
 export const residentBonus = (loc, now = Date.now()) => (loc.resident && now - loc.resident.at < RESIDENT.lossMs ? loc.resident.bonus : 0);
-export const residentLevel = (loc, now = Date.now()) => Math.min(CONFIG.maxMobLevel, (loc.level || 1) + (loc.starter ? 0 : RESIDENT.over) + residentBonus(loc, now));
+export const residentLevel = (loc, now = Date.now()) => Math.min(CONFIG.maxMobLevel, (loc.level || 1) + (loc.starter ? 0 : RESIDENT.over) + residentBonus(loc, now) + (hasSpecial(loc, 'legacy') ? SPECIAL.resident : 0)); // Legacy: a level higher (specials.mjs)
 
 const FLAVOR = {
   ransomware: 'payout routing for the ransom crews.',
@@ -895,8 +896,8 @@ const procFight = (s, loc, proc, room) => ['random', proc.seed, { mode: 'run', r
 export const spawnFight = (s, loc, sp, room) => ['random', sp.seed, { mode: 'run', room, level: sp.level, family: sp.family, zone: true, ...(sp.bounty || sp.boss || !tagOf(sp.name) ? { name: sp.bounty ? sp.name : sp.name.toUpperCase() } : { tag: tagOf(sp.name) }), ...(sp.boss ? { boss: sp.boss, mutation: null } : {}), ...(loc.rogue ? { wild: loc.id, strain: sp.strain, grade: sp.grade, elite: sp.elite, eliteHp: sp.eliteHp } : sp.grade ? { grade: sp.grade } : {}), ...(sp.calm ? { mutation: null } : {})}];
 // A traced server's guarded folder: its Resident in /core, or its guard.
 const guardFight = (s, loc, room) => (layoutOf(loc)[room].resident
-  ? ['random', (loc.seed * 7 + 31) >>> 0, { mode: 'run', room, level: residentLevel(loc, hooks.now?.() ?? Date.now()), family: loc.family, boss: 'resident', ...(loc.starter ? { bossHp: RESIDENT.starterHp } : {}), mutation: loc.trait === 'hardened' ? 'armored' : null, name: `RESIDENT · ${loc.name}` }]
-  : [layoutOf(loc)[room].guard, loc.seed + room.length, { mode: 'run', room, level: levelOf(loc), ...(loc.quirk === 'hoard' ? { mutation: 'armored' } : {}) }]);
+  ? ['random', (loc.seed * 7 + 31) >>> 0, { mode: 'run', room, level: residentLevel(loc, hooks.now?.() ?? Date.now()), family: loc.family, boss: 'resident', ...(loc.starter ? { bossHp: RESIDENT.starterHp } : {}), mutation: armoredAt(loc) ? 'armored' : null, name: `RESIDENT · ${loc.name}` }]
+  : [layoutOf(loc)[room].guard, loc.seed + room.length, { mode: 'run', room, level: levelOf(loc), ...(loc.quirk === 'hoard' || armoredAt(loc) ? { mutation: 'armored' } : {}) }]);
 
 // The rogue server: attack the virus in this folder.
 function attack(s, arg) {

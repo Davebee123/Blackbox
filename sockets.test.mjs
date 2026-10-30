@@ -428,9 +428,7 @@ test('older still: a harvester and its modules come back as what their buildings
   assert.ok(back.comps >= 12 + 10 + 6);
 });
 
-test('server traits are fixed by the seed, and read in rooms', () => {
-  assert.equal(SK.siteTrait({ seed: 77 }), SK.siteTrait({ seed: 77 }));
-  assert.match(SK.SITES.backbone.rule, /socket room/);
+test('a server\'s size is fixed by its seed', () => {
   assert.equal(SK.sizeOf({ seed: 5 }).id, SK.sizeOf({ seed: 5 }).id);
 });
 

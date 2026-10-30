@@ -15,6 +15,7 @@
 import { FAMILIES, CONFIG, xpScale } from './data.mjs';
 import { emit, warn, rand, addLocation, hackerLevel } from './combat.mjs';
 import { isLive } from './memory.mjs';
+import { pickSender } from './specials.mjs';
 import { quietAtRoot } from './root.mjs';
 import { targetedHidden, contractLocated } from './mail.mjs';
 import { addHidden, neighbours, slotNode, hiddenNear, floorsOf, locAt } from './floors.mjs';
@@ -152,7 +153,7 @@ export function pickOrigin(s) {
   if (hid.length && rand(s) < HIDDEN.invaderShare) return sendFrom(s, hid[Math.floor(rand(s) * hid.length)]);
   const tame = s.locations.filter((l) => !l.rogue && isLive(s, l) && !quietAtRoot(l) && connectedTo(l)); // rogue servers never send invaders; Root 3 servers have gone quiet
   if (!tame.length) return hid.length ? sendFrom(s, hid[Math.floor(rand(s) * hid.length)]) : {};
-  return { loc: tame[Math.floor(rand(s) * tame.length)] };
+  return { loc: pickSender(tame, rand(s)) }; // a Volatile server twice as often, a Stable one half (specials.mjs)
 }
 export const levelOfHidden = (n) => Math.min(50, n.level);
 

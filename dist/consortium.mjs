@@ -98,7 +98,7 @@ function buildNet(s, h) {
     taken.add(loc.id);
     loc.level = SERVER.keepUp(L, floor);
     loc.member = h;
-    loc.trait = null;
+    loc.special = null;
     const roll = i === 0 ? 0 : r();
     if (roll < 0.55) r(); // (was their outpost's kind: the roll stays, so a handle keeps its network)
     else if (roll < 0.85) { loc.rogue = { kind: Object.keys(ROGUE.kinds)[Math.floor(r() * 3)] }; loc.template = 'rogue'; loc.quirk = null; loc.spawns = {}; loc.serial = 0; }
@@ -126,7 +126,7 @@ export function buildNets(s) {
   if (perk(s, 'trunk', false) && !trunk) {
     let seed = strSeed(c.name, 7) % 100000, loc = createLocation('worm', seed, 1);
     while ([...(s.locations || []), ...c.servers].some((l) => l.id === loc.id)) loc = createLocation('worm', ++seed, 1);
-    Object.assign(loc, { id: 'trunk', name: 'TRUNK', trunk: true, level: SERVER.keepUp(hackerLevel(s), 1), trait: null, quirk: null, template: 'rogue', rogue: { kind: 'pit' }, spawns: {}, serial: 0 });
+    Object.assign(loc, { id: 'trunk', name: 'TRUNK', trunk: true, level: SERVER.keepUp(hackerLevel(s), 1), special: null, quirk: null, template: 'rogue', rogue: { kind: 'pit' }, spawns: {}, serial: 0 });
     c.servers.push(loc);
   } else if (!perk(s, 'trunk', false) && trunk && s.run?.loc !== trunk.id) c.servers = c.servers.filter((l) => l !== trunk);
 }
@@ -150,7 +150,7 @@ export function arrive(s, loc, fileInfo, now = hooks.now?.() ?? Date.now()) {
 // folders (no respawns, like a rogue server's), and clearing them all ends the reboot early.
 export function occupy(s, { id, name, member = null, family, level, seed }) {
   const loc = createLocation(family, seed % 100000, 1);
-  Object.assign(loc, { id, name, member, home: true, level, trait: null, quirk: null, template: 'rogue', rogue: { kind: 'nest' }, rooms: CONSORTIUM.homeRooms, spawns: {}, serial: 0, occupied: { left: CONSORTIUM.rebootMs } });
+  Object.assign(loc, { id, name, member, home: true, level, special: null, quirk: null, template: 'rogue', rogue: { kind: 'nest' }, rooms: CONSORTIUM.homeRooms, spawns: {}, serial: 0, occupied: { left: CONSORTIUM.rebootMs } });
   rogueSpawns(s, loc); // the invader's processes move in
   return loc;
 }
