@@ -523,3 +523,33 @@
 .fp-scanbtn.off { cursor: default; }
 .fp-scanbtn.off text { fill: var(--muted); }
 @media (hover: none) { .fp-scanbtn { opacity: 1; pointer-events: auto; } }
+/* rivals (rivals.mjs): red for the rival, its route and its lineup; amber for the stakes; the crew's colour only on its byline */
+.fp-rvstat .fp-ic, .fp-rvstat b { color: var(--hot); }
+.fp-rv-route { fill: none; stroke: var(--hot); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 0.5 7; opacity: 0.9; pointer-events: none; }
+.fp-rv-vault { color: var(--amber); opacity: 0.75; }
+.fp-rv-ring { fill: none; stroke: var(--hot); stroke-width: 2; pointer-events: none; }
+.fp-rv-tab rect { fill: var(--hot); }
+.fp-rv-tab text { font-size: 10px; font-weight: 700; letter-spacing: 1px; fill: #140503; }
+.fp-rv-lineup rect { fill: #140503; stroke: var(--hot); stroke-width: 1; }
+.fp-rv-lineup text { font-size: 9px; font-weight: 700; fill: var(--hot); }
+.fp-rv-lineup .next rect { fill: var(--hot); } .fp-rv-lineup .next text { fill: #140503; }
+.fp-rv-lineup .done rect, .fp-rv-lineup .done line { stroke: var(--gray); } .fp-rv-lineup .done text { fill: var(--gray); }
+.fp-tag.race-you rect { stroke: var(--you); } .fp-tag.race-you text { fill: var(--you); font-weight: 700; }
+.fp-tag.race-it rect { stroke: var(--hot); } .fp-tag.race-it text { fill: var(--hot); font-weight: 700; }
+.fp-rv-by { margin: 0; font-size: 12px; letter-spacing: 0.5px; color: var(--dim); }
+.fp-rv-by span[title] { cursor: help; }
+.fp-rv-says { margin: 0; font-size: 14px; color: var(--hot); font-style: italic; }
+.fp-rv-says.quote { font: 13px var(--mono, monospace); font-style: normal; }
+.fp-rv-line { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--s2); }
+.fp-rv-line li { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: center; gap: var(--s3); padding: var(--s2) var(--s4); border: 1px solid var(--line); border-left: 2px solid var(--hot); border-radius: var(--r-btn); background: var(--inset); font-size: 13px; color: var(--bright); }
+.fp-rv-line li b { color: var(--hot); font-variant-numeric: tabular-nums; }
+.fp-rv-line li.beaten { border-left-color: var(--gray); color: var(--gray); } .fp-rv-line li.beaten span { text-decoration: line-through; } .fp-rv-line li.beaten b { color: var(--gray); }
+.fp-rv-add { font-style: normal; font-size: 12px; color: var(--hot); cursor: help; }
+.fp-rv-read { margin: 0; font-size: 14px; color: var(--text); }
+.fp-rv-read b { color: var(--hot); cursor: help; }
+.fp-rv-sig { display: flex; align-items: center; gap: var(--s3); margin: 0; font-size: 13px; color: var(--dim); }
+.fp-rv-sig .fp-ic { color: var(--you); } .fp-rv-sig b { color: var(--you); font-variant-numeric: tabular-nums; }
+.fp-rv-stakes { display: flex; align-items: center; gap: var(--s3); margin: 0; font-size: 13px; color: var(--amber); cursor: help; }
+.fp-rv-stakes .fp-ic { color: var(--amber); }
+.fp-rv-wick { margin: 0; font-size: 12px; color: var(--dim); font-style: italic; }
+.fp-rv-wick span { font-style: normal; color: var(--muted); margin-right: var(--s3); text-transform: lowercase; }

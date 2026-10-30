@@ -610,6 +610,34 @@ room, next to you (an Infiltrator two off) or in a discovered room; within two r
 fog's edge pulses red. Meet it and you fight it (two levels over the server); beat it and it drops a script and is down
 for the visit. An Infiltrator can `slip` past it once a visit.
 
+### Rivals (rivals.mjs)
+
+Named runners, one per crew, racing you to a traced server's vault ([docs/rivals.md](docs/rivals.md)).
+
+| Rival | Crew | Lineup | Counter-pick (how you won the last fight → the part it adds) |
+|---|---|---|---|
+| **KUDZU** | SWARMLINE | Trojan, Twinned Worm, Worm | Burst one down → Patcher · spread hits → Hot spare · else Flood ramp |
+| **ESCROW** | TOLLGATE | Ransomware, Hashrat, Bricker | Burst → Mutex lock · slow or burns → Deadline · else Ward |
+| **HUSH** | PALEMASK | Ghostroot, Echo, Sleeper | Every tell read → Veil · helpers → Phase shift · else Decoy mirror |
+
+- **The roll.** At most one a visit: 20% at each connect to a traced server whose vault is shut and that isn't yours,
+  then none for an hour (`RIVAL`). It starts as far from the vault as the entry is, never next to you.
+- **The walk.** A room for each of your moves (walk or wait), by the shortest route to the vault, never through the
+  Core, no key needed. At the vault it opens it and takes the files, then walks to the entry and jacks out with them
+  (got away: the files are gone). Its room, its route (a red dotted trace) and the vault show through the fog; the
+  vault's chip shows the race (**YOU 3 · KUDZU 2**).
+- **Aggro.** When it reaches your room, or you walk into its, it has you: no step back, no wait, no jack out. Engage.
+- **The fights.** 2 on floors 1–2, 3 from floor 3, one after another, one level over you, sized like a process room.
+  Your Signal carries; each fight starts your cooldowns fresh. The board tags it **KUDZU 2/3**.
+- **Counter-pick.** Between fights it adds one part to its next virus, read from how you won the last: burst (a hit
+  of a fifth of the virus's Integrity), spread (two parts hit in a quarter of your cycles), slow (14 cycles), burns or
+  helpers (a third of the damage), every tell read, small strips (◆ broken six times). Shown before you engage; the
+  part wears **+ KUDZU**. The Veil veils every part of the next virus instead (a ◆ each at least).
+- **Stakes.** Beat the whole lineup: its pack (4 Stashes' credits and a blue one level over you) and, if it opened
+  the vault, the vault's files, into your pack. Lose: it's gone with both, and you're disconnected as from any fight.
+- **Memory.** `s.rivals`: each rival's meetings, your record (*meeting 3 · 1–1*), how it last ended, and the command
+  HUSH quotes back. wick has a line on each card.
+
 ### Respawns and progress
 
 - **Respawns** (real time, never while you stand in the room): a process room 15 minutes, a guard post 20, an elite 45,

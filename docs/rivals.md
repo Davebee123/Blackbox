@@ -1,7 +1,12 @@
 # Rivals
 
-Named runners, one per crew, who race you to a server's vault and fight you trainer-style. Designed and prototyped
-(October 2026); nothing here is built yet.
+Named runners, one per crew, who race you to a server's vault and fight you trainer-style. **Built** (October 2026,
+`dist/rivals.mjs`, GAME_RULES.md "Rivals"): KUDZU, ESCROW and HUSH, lean. CANTOR waits for floor 3+.
+
+**ESCROW's lineup, for now:** the Wiper and the Cryptominer aren't families yet (docs/parts-plan.md P3), so it fields
+TOLLGATE's built ransomware: a Ransomware virus, the Hashrat (the Cryptominer's build to be) and the Bricker. Swap them
+in when P3 lands. KUDZU's Hot spare is the Spare part; wick's lines past the ones below are new and want the
+designer's pass.
 
 ## Roster
 
