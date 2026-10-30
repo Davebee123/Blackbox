@@ -3545,7 +3545,8 @@ body.no-motion .recap { animation: none; }
 .gfx.lean.lit .lean-n { border-left-color: rgba(241, 185, 47, 0.5); }
 .tag.tag-lean { display: inline-flex; align-items: center; gap: 3px; color: #1a1206; background: var(--amber); border-color: var(--amber); font: 700 11px var(--mono); cursor: help; }
 .tag.tag-lean .glyph { width: 11px; height: 11px; margin: 0; }
-.srv-tags { display: grid; grid-template-columns: 1fr auto; gap: var(--s1) var(--s4); align-items: start; margin: var(--s2) 0 var(--s3); }
+.srv-tags { display: grid; grid-template-columns: auto auto; justify-content: start; gap: var(--s1) var(--s5); align-items: start; margin: var(--s2) 0 var(--s3); }
+.srv-tags > :nth-child(even) { padding-left: var(--s5); border-left: 1px solid var(--line); align-self: stretch; } /* Leaning: a rule between the columns */
 .srv-tags .tagline { margin: 0; flex-direction: column; flex-wrap: nowrap; align-items: flex-start; } /* a tag a line, never wrapped */
 .srv-tags .tag { white-space: nowrap; }
 .hud-gear { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--s3); margin-top: var(--s3); min-width: 0; }
