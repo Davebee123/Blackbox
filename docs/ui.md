@@ -121,8 +121,10 @@ teal, violet or a threat's red.
 - **The lash** (lash.mjs): a virus attack throws a whip of the attacking part's characters into your Signal bar, which
   flares and splits its colours (it never moves); bigger hits and charges whip harder; encryption scrambles hex across
   your bar. About half a second.
-- **The tray:** a charge bar on every key (full amber when ready); on cooldown striped, dimmed, with a big countdown; a
-  key off cooldown flashes once; a steel ◆ in the corner when armor would take the hit.
+- **The tray:** a key is its icon and name, one height and padding (view.mjs `keyFace`); the rest is its tooltip, with
+  what holds now as coloured lines under the kind (`data-tt-state`). A charge bar on every key (full amber when ready);
+  on cooldown striped, with the count over the dimmed icon; a key off cooldown flashes once; a steel icon when armor
+  would take the hit.
 - **How much moves** follows Screen effects: subtle and medium show the number, the bar and the strike (a crewmate's
   quieter); bold adds impact bursts, sparks and row flashes; off shows numbers and bars only, a soft red edge when you're
   hit, and a cycle's numbers stacked at once. Nothing on the interface moves: no screen shake, no nudge; flashes keep

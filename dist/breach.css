@@ -296,4 +296,3 @@
 /* scripts on the fight tray */
 #tray .ability.script { border-left: 2px solid var(--r-stock); }
 #tray .ability.script.r-tuned { border-left-color: var(--r-tuned); } #tray .ability.script.r-custom { border-left-color: var(--r-custom); }
-#tray .ability.script kbd { min-width: 22px; }

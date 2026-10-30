@@ -306,43 +306,36 @@ code { font-family: var(--mono); color: var(--amber); }
 .notice.bad { border-color: var(--hot); color: var(--bright); }
 
 .tray { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 6px; } /* one row: Spike · 7 to 9 skills · SIGINT · next unlock */
-.tray:has(> :nth-child(11)) .ability { grid-template-columns: 1fr; padding: 8px; } /* eleven keys or more (an eighth slot at 22, a ninth at 30): the names get the icon's room */
-.tray:has(> :nth-child(11)) .ability .ico { display: none; }
+.tray:has(> :nth-child(11)) .ability { column-gap: 8px; padding: 0 8px 3px; } /* eleven keys or more (an eighth slot at 22, a ninth at 30): a size down */
+.tray:has(> :nth-child(11)) .ability .name { font-size: 13px; }
+.tray:has(> :nth-child(11)) .ability .cd { left: 8px; }
 .ability.cantrip { background: var(--inset); }
-.ability.cantrip .name { color: var(--muted); }
 .tag.daemon { color: var(--daemon); border-color: var(--daemon); }
-.ability { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 10px; text-align: left; background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 8px 10px; align-items: center; }
-.ability .ico { grid-row: 1 / 3; width: 22px; height: 22px; background: var(--amber); -webkit-mask: var(--icon) center/contain no-repeat; mask: var(--icon) center/contain no-repeat; }
-.ability .name { font-weight: 600; color: var(--bright); }
-.ability .name kbd { font: 11px var(--mono); color: var(--dim); margin-right: 6px; }
-.ability .state { font-size: 12px; color: var(--muted); }
+/* A tray key: its icon and its name, one height and one padding everywhere (view.mjs keyFace). The name takes two lines
+   at most; what the key does and what holds now are its tooltip. */
+.ability { position: relative; overflow: hidden; display: grid; grid-template-columns: 20px minmax(0, 1fr); align-items: center; column-gap: 10px; height: 48px; padding: 0 12px 3px; text-align: left; background: var(--panel); border: 1px solid var(--line); border-radius: 4px; }
+.ability .ico { width: 20px; height: 20px; background: var(--amber); -webkit-mask: var(--icon) center/contain no-repeat; mask: var(--icon) center/contain no-repeat; }
+.ability .name { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: break-word; font-weight: 600; font-size: 14px; line-height: 1.2; color: var(--bright); }
 /* Ready or recharging, at a glance: a charge bar along the bottom (full amber = ready), and while it
-   recharges a big count of cycles to go, the name and icon dimmed (not the whole card). */
-.ability { position: relative; overflow: hidden; }
+   recharges striped and dimmed, the cycles to go over its icon. */
 .ability .charge { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--amber); transition: width 0.4s ease; }
 .ability.cooling { background: repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.025) 0 6px, transparent 6px 12px), var(--inset); border-color: var(--line); }
 .ability.cooling .ico { background: var(--gray); opacity: 0.6; }
 .ability.cooling .name { color: var(--muted); }
 .ability.cooling .charge { background: var(--gray); opacity: 0.8; }
-.ability .cd { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font: 700 22px/1 var(--mono); color: var(--muted); }
-.ability.cooling .state { padding-right: 24px; }
+/* The cycles to go, over the dimmed icon, like WoW's cooldown count. */
+.ability .cd { position: absolute; left: 12px; top: calc(50% - 1.5px); width: 20px; transform: translateY(-50%); text-align: center; font: 700 17px/1 var(--mono); color: var(--bright); }
+.ability:has(.cd) .ico { opacity: 0.22; }
 .ability.ready .ico { filter: drop-shadow(0 0 4px rgba(241, 185, 47, 0.45)); }
 .ability.just-ready { animation: just-ready 0.7s ease-out; }
 @keyframes just-ready { 0% { box-shadow: 0 0 0 2px var(--amber), 0 0 18px rgba(241, 185, 47, 0.6); } 100% { box-shadow: none; } }
 .no-motion .ability.just-ready { animation: none; }
 .ability.queued { border-color: var(--you); box-shadow: 0 0 0 1px var(--you) inset; }
-.ability.queued .state { color: var(--you); }
-/* Armor takes this hit (view.mjs armorBadge): a small steel ◆ in the key's corner, and on your Now chip. Absolute, so
-   nothing moves when it comes and goes; steel is what protects a part (docs/ui.md). */
-.ability .armd, .intent .armd { position: absolute; top: 2px; right: 4px; font: 700 11px/1 var(--mono); color: var(--steel); text-shadow: 0 0 4px var(--steel-glow); cursor: help; }
+/* Armor takes this hit: a key's icon turns steel (view.mjs trayMarkup), and your Now chip wears a small steel ◆
+   (armorBadge). Steel is what protects a part (docs/ui.md). */
+.ability.armd .ico { background: var(--steel); opacity: 1; filter: drop-shadow(0 0 4px var(--steel-glow)); }
+.intent .armd { position: absolute; top: 2px; right: 4px; font: 700 11px/1 var(--mono); color: var(--steel); text-shadow: 0 0 4px var(--steel-glow); cursor: help; }
 .intent .armd { top: -6px; right: -4px; padding: 0 2px; background: var(--panel); border: 1px solid var(--steel); border-radius: var(--r-tag); font-size: 9px; line-height: 11px; }
-/* SIGINT against both clocks (view.mjs sigintKey): a pip per live cast or charge, the cycles until its window closes;
-   struck through when SIGINT won't be ready in time. Red: they're the virus's. */
-.ability .sg-wins { display: inline-flex; gap: 4px; vertical-align: middle; }
-.ability .sg-w { display: inline-flex; align-items: center; gap: 3px; padding: 0 4px; border: 1px solid var(--hot); border-radius: var(--r-tag); color: var(--hot); font: 700 10px/14px var(--mono); font-style: normal; cursor: help; }
-.ability .sg-w .ico { grid-row: auto; width: 9px; height: 9px; background: var(--hot); filter: none; }
-.ability .sg-w.late { border-color: var(--line); color: var(--dim); text-decoration: line-through; }
-.ability .sg-w.late .ico { background: var(--dim); }
 .pips { letter-spacing: 2px; color: var(--amber); font-family: var(--mono); }
 .ability.emergency { border-style: dashed; border-color: var(--line-strong); }
 .ability.emergency .ico { background: var(--next); }
@@ -623,7 +616,7 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
   .workspace { padding: 8px 16px; }
   .bcell { padding: 5px 6px; }
   .mutation-rule { display: none; }
-  .ability { padding: 6px 8px; }
+  .ability { height: 42px; }
 }
 @media (max-width: 900px) {
   .app { height: auto; min-height: calc(100dvh / var(--ui, 1)); }
@@ -671,10 +664,9 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
   .prompt.run { font-size: 12px; }
   .prompt:not(.run)::before { content: '$'; }
   .tray { grid-auto-flow: row; grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .ability { padding: 6px 8px; grid-template-columns: 1fr; }
-  .ability .ico { display: none; }
-  .ability .name { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .ability .state { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ability { height: 44px; column-gap: 8px; padding: 0 8px 3px; }
+  .ability .name { font-size: 13px; }
+  .ability .cd { left: 8px; }
   .notice { max-width: 100%; left: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -770,7 +762,8 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 .lvl-note { font-size: 13px; }
 .gate { color: var(--amber); font-weight: 500; }
 .ability.ghost { border-style: dashed; opacity: 0.55; background: transparent; cursor: default; }
-.ability.ghost .name { color: var(--muted); font: 12px var(--mono); }
+.ability.ghost .ico { background: var(--gray); }
+.ability.ghost .name { color: var(--muted); font-weight: 400; }
 .tag.stag.verb-hit { color: var(--amber); }
 .tag.stag.verb-burn { color: var(--hot); border-color: rgba(255, 91, 61, 0.5); }
 .tag.stag.verb-stun, .tag.stag.verb-debuff { color: var(--next); border-color: rgba(255, 216, 92, 0.5); }
@@ -1052,15 +1045,12 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 .hud-id .tag { flex-shrink: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 /* A lit proc key: it glows while its window is open. */
 .ability.lit { border-color: var(--gold, #ffd85c); box-shadow: 0 0 0 1px rgba(255, 216, 92, 0.6), 0 0 16px rgba(255, 216, 92, 0.45); animation: lit-pulse 1.2s ease-in-out infinite; }
-.ability.lit .state { color: var(--gold, #ffd85c); font-weight: 700; letter-spacing: 1px; }
 @keyframes lit-pulse { 50% { box-shadow: 0 0 0 1px rgba(255, 216, 92, 0.9), 0 0 24px rgba(255, 216, 92, 0.65); } }
 .no-motion .ability.lit { animation: none; }
-/* A situational key whose moment is on the board (situations.mjs): an amber edge and the moment's word. */
+/* A situational key whose moment is on the board (situations.mjs): an amber edge; the moment is in its tooltip. */
 .ability.moment { border-color: rgba(241, 185, 47, 0.75); box-shadow: inset 0 0 0 1px rgba(241, 185, 47, 0.35); }
-.ability.moment .state { color: var(--amber, #f1b92f); font-weight: 700; letter-spacing: 0.5px; }
 /* A key a landed tell knocked offline (tells.mjs). */
 .ability.offline { border-color: rgba(255, 92, 92, 0.6); }
-.ability.offline .state { color: var(--red, #ff5c5c); font-weight: 700; letter-spacing: 1px; }
 /* A part left Open by a tell you read: +50% from everyone. */
 .pmark.m-open { color: #ffd85c; border-color: rgba(255, 216, 92, 0.6); background: rgba(255, 216, 92, 0.12); }
 .mhit { fill: transparent; stroke: none; pointer-events: all; }
@@ -3219,6 +3209,9 @@ h1 .byline { font-size: 13px; vertical-align: middle; }
 /* Themed hover tips (app.js): every title in the game, in the game's own card. */
 .tt { position: fixed; z-index: 90; max-width: calc(300px * var(--ui, 1)); padding: calc(8px * var(--ui, 1)) calc(11px * var(--ui, 1)); background: rgba(10, 8, 5, 0.97); color: var(--text); border: 1px solid var(--line-strong); border-top: 2px solid var(--amber); border-radius: 4px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55); font: calc(13px * var(--ui, 1))/1.45 var(--sans, inherit); pointer-events: none; white-space: pre-line; animation: ptip-in 0.12s ease-out; }
 .tt b { display: block; margin-bottom: 3px; color: var(--amber); font: 600 calc(12px * var(--ui, 1)) var(--mono); letter-spacing: 0.5px; }
+.tt .tt-state { display: block; margin-bottom: 4px; font-size: calc(12px * var(--ui, 1)); } /* what holds now (a tray key's), coloured by its job */
+.tt .tt-state.hot { color: var(--hot); } .tt .tt-state.amber { color: var(--amber); } .tt .tt-state.you { color: var(--you); } .tt .tt-state.steel { color: var(--steel); } .tt .tt-state.muted { color: var(--muted); }
+.tt .tt-kind { display: block; margin: -2px 0 4px; color: var(--muted); font-size: calc(12px * var(--ui, 1)); } /* a tray key's verb and cooldown */
 .tt .tt-mastery { display: block; margin-top: 4px; color: var(--you); font: 600 11px var(--mono); letter-spacing: 0.3px; } /* an ability's mastery line (mastery.mjs) */
 .tt .tt-more { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; white-space: normal; } /* icon chips under the text (a contract's pay) */
 .tt .tt-more b { display: inline; margin: 0; color: var(--bright); font: 700 12px var(--mono); letter-spacing: 0; }
@@ -3294,9 +3287,6 @@ h1 .byline { font-size: 13px; vertical-align: middle; }
 .ptile.empty { justify-content: space-between; }
 
 /* ---- Key cells (the Loadout bar): icon over name, the name wraps to two lines instead of clipping. ---- */
-/* The ability tray, crowded (eleven keys or more): a size down so one-word names fit their key. */
-.tray:has(> :nth-child(11)) .ability .name { font-size: 13px; line-height: 1.2; }
-.tray:has(> :nth-child(11)) .ability .name kbd { margin-right: 3px; }
 
 /* ---- Settings (System): toggles in an even grid, each with a lamp (lit = on), like the casing's lamps.
    The sound test is its own block under a label, with small keys. ---- */
@@ -3378,11 +3368,6 @@ h1 .byline { font-size: 13px; vertical-align: middle; }
   .intent.tell .tl-ans { padding: 1px 5px 4px; white-space: normal; }
 }
 
-/* ---- Ability tray: every key reads top-down from the same line (name, then its state), not centred
-   by however long its state runs; a long state stops at three lines (the hover tip has it all). ---- */
-.ability { align-content: start; align-items: start; }
-.ability .ico { align-self: center; }
-.ability .state { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
 
 /* ---- The error card reads as an alert, like any other hot card: its kicker in red. ---- */
 .page-error h2 { color: var(--hot); }

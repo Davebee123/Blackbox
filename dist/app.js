@@ -3490,7 +3490,11 @@ function ttShow(anchor) {
   // A line that starts with ▸ is the answer (fightread.mjs answerLine): muted, on its own line, like WoW's "Use:" line.
   // A line that starts Mastery is an ability's mastery (mastery.mjs masteryLine): teal, on its own line, like WoW's progress lines.
   const body = (t) => esc(t).replace(/\n▸ ([^\n]*)/g, '<span class="tt-ans">▸ $1</span>').replace(/\n(Mastery [1-3] · [^\n]*)/g, '<span class="tt-mastery">$1</span>');
-  tt.el.innerHTML = m ? `<b>${esc(m[1])}</b>${body(m[2][0].toUpperCase() + m[2].slice(1))}` : body(text);
+  // data-tt-kind: the kind line under the name, muted, like WoW's "Instant · 8 sec cooldown" (a tray key's); data-tt-state:
+  // what holds right now, a "tone|text" line each (view.mjs trayMarkup), coloured by its job like WoW's red "Not ready yet".
+  const state = (anchor.dataset.ttState || '').split('\n').filter(Boolean).map((l) => { const [tone, ...t] = l.split('|'); return `<span class="tt-state ${tone}">${esc(t.join('|'))}</span>`; }).join('');
+  const kind = (m && anchor.dataset.ttKind ? `<span class="tt-kind">${esc(anchor.dataset.ttKind)}</span>` : '') + state;
+  tt.el.innerHTML = m ? `<b>${esc(m[1])}</b>${kind}${body(m[2][0].toUpperCase() + m[2].slice(1))}` : body(text);
   // Icons the text can't carry (a contract's pay chips) ride in the element's <template class="tt-more">, before the answer.
   const more = anchor.querySelector(':scope > template.tt-more');
   if (more) { const box = document.createElement('span'); box.className = 'tt-more'; box.append(more.content.cloneNode(true)); tt.el.insertBefore(box, tt.el.querySelector('.tt-ans')); }

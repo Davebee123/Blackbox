@@ -57,9 +57,18 @@ test('veiled parts hide their timers until their armor is gone; a part with brok
 test('tray shows cooldown and queued states', () => {
   const s = start();
   command(s, 'overload pulse');
-  assert.match(trayMarkup(s), /class="ability[^"]*queued"/);
+  assert.match(trayMarkup(s), /class="ability[^"]*\bqueued\b[^"]*" data-ability="overload"/);
   resolveCycle(s);
-  assert.match(trayMarkup(s), /cooling\s+[^"]*" data-ability="overload"[^]*?ready in 2 cycles[^]*?class="cd"[^>]*>2</);
+  assert.match(trayMarkup(s), /cooling[^"]*" data-ability="overload"[^]*?class="cd"[^>]*>2</);
+});
+
+test('a tray key shows its name, not what it does; its tooltip has that, WoW style', () => {
+  const s = start();
+  const key = trayMarkup(s).match(/<button[^>]*data-ability="overload"[^]*?<\/button>/)[0];
+  assert.doesNotMatch(key, /class="state"/, 'a ready key: no description line');
+  assert.match(key, /title="Overload: Deals \d+ damage/, 'name first, then the rule, no command syntax');
+  assert.match(key, /data-tt-kind="Key \d · Hit · 3 cycle cooldown"/);
+  assert.doesNotMatch(key, /<kbd>/, 'icon and name only');
 });
 
 test('a mutation is a tag, its rule on hover (and in a first-time tip); the gate card is just the virus and Engage', async () => {
@@ -272,9 +281,9 @@ test('the ◆ badge: on a damaging key armor would absorb, aimed at an armored p
   enc.armor = enc.maxArmor = 3;
   const key = (html, id) => html.split('<button').find((k) => k.includes(`data-ability="${id}"`)).split('</button>')[0];
   const html = trayMarkup(s, 'encryptor');
-  assert.match(key(html, 'overload'), /class="armd" title="Armor takes this hit: it breaks 2 ◆ and deals no damage\. Crack it first\."/, 'Overload is a heavy hit: two ◆');
-  assert.match(key(html, 'spike'), /class="armd" title="Armor takes this hit: it breaks 1 ◆/);
-  assert.match(key(html, 'flood'), /class="armd"/, 'Flood doubles only on a bare part: on ◆ it is absorbed like any hit');
+  assert.match(key(html, 'overload'), / armd" [^]*data-tt-state="steel\|Armor takes this hit: it breaks 2 ◆ and deals no damage\. Crack it first\."/, 'Overload is a heavy hit: two ◆');
+  assert.match(key(html, 'spike'), / armd"[^]*steel\|Armor takes this hit: it breaks 1 ◆/);
+  assert.match(key(html, 'flood'), / armd"/, 'Flood doubles only on a bare part: on ◆ it is absorbed like any hit');
   for (const id of ['crack', 'shaped-charge', 'thermal-runaway', 'rm-rf', 'logic-bomb']) assert.doesNotMatch(key(html, id), /armd/, `${id}: breaks ◆, or no hit now`);
   // The rule behind it: piercers, strippers and the skills that break 2 ◆ on armor never count; a bare part never does.
   for (const id of ['backdoor', 'zero-day', 'side-channel', 'crack', 'shaped-charge', 'fork-bomb', 'rate-limit', 'reclaim', 'chain-reaction', 'bit-rot', 'inject', 'harden']) assert.equal(armorTakes(s, id, enc), 0, id);

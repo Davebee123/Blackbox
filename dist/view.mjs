@@ -944,7 +944,7 @@ function keyAim(s, id, selected) {
   const q = parse(s, id);
   return q?.target ? part(s, q.target) : null;
 }
-// Armor takes it: a small ◆ on a key (or your Now chip) whose hit a ◆ on that part would take whole, breaking it and
+// Armor takes it: a small ◆ on your Now chip (a tray key turns its icon steel instead) whose hit a ◆ on that part would take whole, breaking it and
 // dealing no damage (combat.mjs armorTakes: never on Crack and the skills that break or ignore ◆). Steel, the colour of
 // what protects a part. The tooltip says what happens and what to do.
 export function armorBadge(s, id, p) {
@@ -955,20 +955,25 @@ export function armorBadge(s, id, p) {
   return `<span class="armd" title="${esc(tip)}" aria-label="${esc(tip)}">◆</span>`;
 }
 
-// SIGINT's key against the live windows (tells.mjs sigintWindows; docs/puzzle-levers.md 3.6): on its state line, a pip
-// for each cast and charge it could stop, with the cycles until its window closes, struck through when SIGINT won't be
-// ready in time. Its count of cycles to go stays where every key has it.
-function sigintKey(s) {
-  const ws = sigintWindows(s);
-  if (!ws.length) return '';
-  const pips = ws.map((w) => {
-    const kind = w.kind === 'cast' ? 'Cast' : 'Charge', open = w.from === 0 ? (w.to === 0 ? 'Its window is open this cycle' : `Its window is open until it lands ${w.to === 1 ? 'next cycle' : `in ${w.to} cycles`}`) : `Its window opens ${w.from === 1 ? 'next cycle' : `in ${w.from} cycles`}`;
-    const ready = w.reach ? (w.wait ? `SIGINT is ready in ${w.wait} ${w.wait === 1 ? 'cycle' : 'cycles'}, in time.` : 'SIGINT is ready.') : `SIGINT is ready in ${w.wait} cycles, too late for it.`;
-    const tip = `${w.name}: ${kind}. ${open}. If it lands, it costs you ${w.price} Signal.${answerLine(ready)}`;
-    return `<i class="sg-w${w.reach ? '' : ' late'}" title="${esc(tip)}"><span class="ico" ${icon(TELL_ICON[w.kind])}></span>${w.to}</i>`;
-  }).join('');
-  return `<span class="sg-wins">${pips}</span>`;
+// SIGINT's key against the live windows (tells.mjs sigintWindows; docs/puzzle-levers.md 3.6): a line each in its tooltip,
+// for each cast and charge it could stop, red while SIGINT will be ready in time, muted when it won't.
+function sigintLines(s) {
+  return sigintWindows(s).map((w) => {
+    const open = w.from === 0 ? (w.to === 0 ? 'its window is open this cycle' : `its window is open until it lands ${w.to === 1 ? 'next cycle' : `in ${w.to} cycles`}`) : `its window opens ${w.from === 1 ? 'next cycle' : `in ${w.from} cycles`}`;
+    return [w.reach ? 'hot' : 'muted', `${w.name}: ${w.kind === 'cast' ? 'cast' : 'charge'}, ${open}. ${w.reach ? 'SIGINT is ready in time' : 'SIGINT is too late for it'}.`];
+  });
 }
+// A key's kind line under its tooltip's name, like WoW's "Instant · 8 sec cooldown": its key, its verb, its cooldown.
+const KEY_KIND = { hit: 'Hit', burn: 'Burn', stun: 'Stun', debuff: 'Debuff', shield: 'Shield', heal: 'Heal', buff: 'Buff' };
+function keyKind(s, id, key) {
+  const a = ABILITIES[id], cd = cooldownOf(s, id);
+  return `Key ${key === '-' ? 'minus' : key} · ${KEY_KIND[a.verb] || 'Utility'} · ${a.once ? 'Once per fight' : cd ? `${cd} cycle cooldown` : 'No cooldown'}`;
+}
+// A key's face is its icon and its name. What it does is its tooltip, like WoW's action bar; what changes in a fight is
+// the key's border and the tooltip's status lines (data-tt-state: "tone|text" a line, app.js ttShow colours them), the
+// cycles to go drawn over its dimmed icon, and a steel icon when armor would take its hit.
+const keyFace = (ico, name) => `<span class="ico" ${icon(ico)}></span><span class="name">${esc(name)}</span>`;
+const ttState = (lines) => (lines.length ? ` data-tt-state="${esc(lines.map(([tone, t]) => `${tone}|${t}`).join('\n'))}"` : '');
 // selected: the part you picked on the board (app.js), the one a key prefills.
 export function trayMarkup(s, selected = null) {
   const e = s.encounter;
@@ -979,33 +984,45 @@ export function trayMarkup(s, selected = null) {
     const cantrip = CANTRIP_IDS.includes(id);
     if (!a) {
       const sk = ARCHETYPES[classOf(s)].skills.find((x) => x.id === id);
-      const note = sk?.verb === 'run' ? 'on runs' : 'not in fights yet';
-      return `<button type="button" class="ability cooling" disabled title="${esc(sk?.rule || '')}"><span class="ico" ${icon('command')}></span><span class="name"><kbd>${key}</kbd>${esc(sk?.name || id)}</span><span class="state">${note}</span></button>`;
+      const note = sk?.verb === 'run' ? 'Works on runs, not in fights.' : 'Not in fights yet.';
+      return `<button type="button" class="ability cooling" disabled title="${esc(`${sk?.name || id}: ${sk?.rule || ''}`)}" data-tt-kind="Key ${esc(key === '-' ? 'minus' : key)}"${ttState([['muted', note]])}>${keyFace('command', sk?.name || id)}</button>`;
     }
     const wait = fighting ? readyIn(s, id) : 0;
     const queued = fighting && (e.queue?.ability === id || (id === 'fork' && e.queue?.fork));
-    const short = scaledText(s, id, a.short);
     // Procs: a lit key only works while its window is open; unlit, it waits.
     const lit = fighting && a.proc && procOpen(s, a.proc);
     const dark = fighting && a.proc && !lit;
-    // Its moment is on the board (situations.mjs): the key says so, in a word or two.
+    // Its moment is on the board (situations.mjs): an amber border, and the moment in its tooltip.
     const moment = fighting && !wait && !dark ? situationOf(s, id) : null;
     const offline = fighting && e.locked?.[id] >= e.cycle;
     const wiped = fighting && e.wiped?.[id] >= e.cycle; // a Wiper's Wipe (families.mjs)
     const junk = fighting && junkKey(s) === id; // a Junker's junk process (mechanics.mjs): firing the key clears it
-    const state = !fighting ? short : queued ? 'queued' : junk ? 'JUNK' : wiped ? `WIPED ${e.wiped[id] - e.cycle + 1}` : offline ? 'OFFLINE' : dark ? 'waiting for its moment' : lit ? 'LIT' : moment ? moment.toUpperCase() : wait ? (wait === 1 ? 'ready next cycle' : `ready in ${wait} cycles`) : short;
     // The charge bar along the bottom: full when it's ready, filling back up while it recharges.
     const cd = cooldownOf(s, id), charge = dark ? 0 : !fighting || !wait ? 100 : cd ? Math.round((1 - wait / Math.max(cd, wait)) * 100) : 0;
     const count = fighting && wait ? `<span class="cd" aria-label="${wait} ${wait === 1 ? 'cycle' : 'cycles'} to go">${wait}</span>` : '';
-    const help = id === 'spike' ? said(s, a.help).replace(/Spike/g, spikeName(s)) : a.help; // key 1 under your class's name
+    const name = id === 'spike' ? spikeName(s) : a.name;
+    const help = (id === 'spike' ? said(s, a.help).replace(/Spike/g, name) : a.help).replace(/^[^—]*— /, '').replace(/ \d+ cycle cooldown\.$/, ''); // key 1 under your class's name; the command's syntax and cooldown off (the kind line has it)
     const ml = masteryLine(s, classOf(s), id); // its mastery, on its own line (mastery.mjs; app.js ttShow lights it)
-    const armd = fighting && !dark && !offline && !wiped ? armorBadge(s, id, keyAim(s, id, selected)) : ''; // a key you can't press now says nothing of armor
-    const sgk = fighting && id === 'sigint' && !queued && !offline && !wiped ? sigintKey(s) : ''; // SIGINT against the live windows, in place of its state line
-    return `<button type="button" class="ability ${cantrip ? 'cantrip' : ''} ${wait || dark ? 'cooling' : fighting ? 'ready' : ''} ${lit ? 'lit' : ''} ${moment ? 'moment' : ''} ${offline || junk ? 'offline' : ''}${wiped ? ' wiped' : ''} ${queued ? 'queued' : ''}" data-ability="${id}" title="${esc((junk ? 'Junk process: a dead key holds this skill. Fire it to clear the junk, and that is your command this cycle.\n' : '') + scaledText(s, id, help) + (ml ? '\n' + ml : ''))}"><span class="ico" ${icon(a.icon)}></span><span class="name"><kbd>${key}</kbd>${esc(id === 'spike' ? spikeName(s) : a.name)}</span><span class="state">${sgk || state}</span>${count}${armd}<span class="charge" style="width:${charge}%"></span></button>`;
+    const aim = fighting && !dark && !offline && !wiped ? keyAim(s, id, selected) : null; // a key you can't press now says nothing of armor
+    const takes = alive(aim) ? armorTakes(s, id, aim) : 0;
+    const crack = takes && barKeys(s).some(([, x]) => x === 'crack');
+    const lines = !fighting ? [] : [
+      queued && ['you', 'Queued for this cycle.'],
+      junk && ['hot', 'Junk process: a dead key holds this skill. Firing it clears the junk, and that is your command this cycle.'],
+      wiped && ['hot', `Wiped for ${e.wiped[id] - e.cycle + 1} more ${e.wiped[id] - e.cycle + 1 === 1 ? 'cycle' : 'cycles'}.`],
+      offline && ['hot', 'Offline: a tell knocked this skill out.'],
+      lit && ['amber', 'Lit: usable now.'],
+      dark && ['muted', 'Waiting for its moment.'],
+      moment && id !== 'sigint' && ['amber', `Now: ${moment}.`], // SIGINT's windows say it whole, below
+      wait && ['muted', `Ready in ${wait} ${wait === 1 ? 'cycle' : 'cycles'}.`],
+      takes && ['steel', `Armor takes this hit: it breaks ${takes} ◆ and deals no damage. ${crack ? 'Crack it first.' : 'Break its ◆ first.'}`],
+      ...(id === 'sigint' && !queued && !offline && !wiped ? sigintLines(s) : []),
+    ].filter(Boolean);
+    return `<button type="button" class="${['ability', cantrip && 'cantrip', wait || dark ? 'cooling' : fighting && 'ready', lit && 'lit', moment && 'moment', (offline || junk) && 'offline', wiped && 'wiped', queued && 'queued', takes && 'armd'].filter(Boolean).join(' ')}" data-ability="${id}" title="${esc(`${name}: ${scaledText(s, id, help)}${ml ? '\n' + ml : ''}`)}" data-tt-kind="${esc(keyKind(s, id, key))}"${ttState(lines)}>${keyFace(a.icon, name)}${count}<span class="charge" style="width:${charge}%"></span></button>`;
   });
   // The next thing your level will unlock, as a faint slot.
   const nx = nextUnlock(s);
-  if (nx) cards.push(`<div class="ability ghost" title="Unlocks at level ${nx.level}"><span class="name">Lv ${nx.level}</span><span class="state">${esc(nx.name)}</span></div>`);
+  if (nx) cards.push(`<div class="ability ghost" title="${esc(`${nx.name}: Unlocks at level ${nx.level}.`)}">${keyFace(ABILITIES[nx.id]?.icon || 'command', nx.name)}</div>`);
   return cards.join('');
 }
 

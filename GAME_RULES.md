@@ -52,7 +52,7 @@ that winds up.
 |---|---|
 | Win | Reduce the virus's Integrity (the sum of its parts) to zero. |
 | Parts | 2 to 4 a wild virus (Viruses), each with an attack on the timeline. Breaking a part stops its attack and can drop components (Components). |
-| Armor | Chits on a part (◆; a part wearing 2 or more wears half again: 2 → 3, 3 → 5). A hit on an armored part does no damage and breaks one chit; a heavy hit from your command (40+ base, `CONFIG.heavyHit`) breaks two, and Kill Process always breaks two. Burn ticks, helper hits and each target of a spread hit break one each. Armor-piercing hits (Backdoor and the like) go straight through. A hit spent on ◆ logs as absorbed and floats *◆ ABSORBED*, never MISS; the tray marks a key armor would absorb with a steel ◆. |
+| Armor | Chits on a part (◆; a part wearing 2 or more wears half again: 2 → 3, 3 → 5). A hit on an armored part does no damage and breaks one chit; a heavy hit from your command (40+ base, `CONFIG.heavyHit`) breaks two, and Kill Process always breaks two. Burn ticks, helper hits and each target of a spread hit break one each. Armor-piercing hits (Backdoor and the like) go straight through. A hit spent on ◆ logs as absorbed and floats *◆ ABSORBED*, never MISS; the tray turns a key's icon steel when armor would absorb its hit. |
 | Patch | A part with no chits left patches one back 5 cycles later (`CONFIG.patchDelay`), unless it breaks first. The timeline shows the patch (◆ patch). |
 | Veiled | Ghostroot and the Sentinel hide a part's timers while it still has armor. Strip it, or Tag it, to see them. |
 | Stakes | Damage is the only threat: your Signal on a run, your server's Integrity at home (0 = a crash: Home). Nothing takes your credits or files. Ransomware encrypts (a stack that hits you every cycle until the Encryptor breaks), Worm spawns fragments that gnaw every cycle, Ghostroot's Scrambler hits and scrambles you. |
@@ -140,7 +140,7 @@ Battering Ram, the Sentinel's Blacklist (a seal); from level 10 each also has Ca
 The **-** key (`sigint` or `interrupt`), everyone's from level 10: it stops a cast while it compiles (a crew boss's or a
 virus part's), and from level 17 in a solo fight it also cuts a charge on its cycle. With a cast and a charge both in
 their windows it stops the cast. Ready every 8 cycles; it takes your command for the cycle. While a cast or charge is
-on the board, its state line shows a pip for each with the cycles left, struck through when SIGINT won't be ready.
+on the board, its tooltip has a line for each, red while SIGINT will be ready in time, muted when it won't.
 
 ### The Sync Window
 
@@ -993,12 +993,13 @@ free:** until any class reaches level 5, switching to a class you haven't played
 - **Presets** (docs/kits.md): from level 10 a subclass has fifteen skills to choose from (its class's four core skills
   and its eleven-skill line) and two shipped presets, `rotation` and a second with a playstyle of its own. `loadout
   use|save|list|show|delete <name>` (up to six saved a subclass).
-- **Lit keys** say when their moment is on the board, in amber: *drain charge*, *stops a cast*, *fragments*,
-  *Exposed ×2* (situations.mjs). A few skills only work in the cycle or two after their event (Shatter after you strip a
-  part's last ◆, Retaliate after you're hit, Opening after an attack misses you or is delayed). A key knocked offline
-  says *OFFLINE*.
-- **The tray** shows each key's charge bar (full amber when ready), the cycles to go, and a steel **◆** on a damaging
-  key whose hit the target's armor would take whole. The next unlock shows as a ghost key.
+- **The tray:** each key is its icon and name; what it does is its tooltip (name, *Key 4 · Hit · 6 cycle cooldown*,
+  the rule). A charge bar runs along the bottom (full amber when ready), the cycles to go sit over a dimmed icon, and
+  the icon turns steel when the target's armor would take the hit whole. The next unlock shows as a ghost key.
+- **A key's border** says what holds now, and its tooltip says it in words: amber when its moment is on the board
+  (*drain charge*, *stops a cast*, *Exposed ×2*: situations.mjs), gold while lit, red when offline or wiped, teal when
+  queued. A few skills only work in the cycle or two after their event (Shatter after you strip a part's last ◆,
+  Retaliate after you're hit, Opening after an attack misses you or is delayed).
 
 **The core skills** (numbers at level 1; they grow 4% a level):
 

@@ -173,16 +173,16 @@ test('the planner SIGINTs the dearer tell, and cuts or lets land the cheaper one
   assert.equal(planner(s), 'sigint');
 });
 
-test('the SIGINT key shows its cooldown against each window: a pip per cast and charge, struck when it won\'t be ready', () => {
+test('the SIGINT key\'s tooltip shows each window: a line per cast and charge, muted when it won\'t be ready', () => {
   const s = fight();
   deal(s, ['fulldisk', 'extortion']); quiet(s);
   tell(s, 'fulldisk', 'encryptor', 3); tell(s, 'extortion', 'pulse', 1);
-  let html = trayMarkup(s);
-  assert.equal((html.match(/class="sg-w"/g) || []).length, 2, 'both reachable');
-  assert.match(html, /title="Full Disk: Charge\. Its window opens in 3 cycles\. If it lands, it costs you \d+ Signal\.\n▸ SIGINT is ready\."/);
+  // Its tooltip's status lines (data-tt-state): one a window, red while SIGINT is in time, muted when it isn't.
+  const lines = () => (trayMarkup(s).match(/data-ability="sigint"[^>]*data-tt-state="([^"]*)"/)?.[1] || '').split('\n');
+  assert.equal(lines().filter((l) => l.startsWith('hot|')).length, 2, 'both reachable');
+  assert.ok(lines().includes('hot|Full Disk: charge, its window opens in 3 cycles. SIGINT is ready in time.'));
   s.encounter.readyAt.sigint = s.encounter.cycle + 2;
-  html = trayMarkup(s);
-  assert.equal((html.match(/class="sg-w late"/g) || []).length, 1, 'the cast closes before SIGINT is back');
+  assert.equal(lines().filter((l) => l.startsWith('muted|') && l.includes('too late')).length, 1, 'the cast closes before SIGINT is back');
   assert.deepEqual(sigintWindows(s).map((w) => [w.name, w.reach]), [['Double Extortion', false], ['Full Disk', true]]);
   assert.equal(readyIn(s, 'sigint'), 2);
 });

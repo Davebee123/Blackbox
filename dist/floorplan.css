@@ -264,7 +264,7 @@
 .cut-pips { letter-spacing: 1px; } .cut-pips i { font-style: normal; color: var(--gray); }
 #tray .ability.wiped { border-color: var(--hot); }
 #tray .ability.wiped .name { color: transparent; text-shadow: none; }
-#tray .ability.wiped .state { color: var(--hot); font-weight: 700; }
+#tray .ability.wiped .ico { background: var(--hot); }
 #tray .ability.script { border-left: 2px solid var(--r-stock); }
 #tray .ability.script.r-tuned { border-left-color: var(--r-tuned); } #tray .ability.script.r-custom { border-left-color: var(--r-custom); }
 
