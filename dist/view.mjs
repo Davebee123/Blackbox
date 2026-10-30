@@ -2146,14 +2146,18 @@ export function trackedJobs(s) {
     return { id: c.id, icon: jobIcon(c), name: contractTitle(s, c), from: c.from, faction: jobFaction(c), ready: ok, text: pr.text, part: Math.max(0, Math.min(1, pr.part || 0)), n: pr.n, of: pr.of, locate: place && !ok ? place.slice(4) : null, go: place || ok ? null : `mail:j${c.id}`, command: ok ? `mail deliver ${c.id}` : null, tip, pay: rewardChips(s, c) };
   });
 }
+// A tracker row's inside: whose it is over its name, then how far along (the map's tracker, and a server's strip tip).
+const ctProg = (j) => j.ready ? `<span class="ct-turn">Turn in</span>`
+  : j.of && j.of > 10 ? `<span class="ct-bar"><i style="width:${(j.part * 100).toFixed(0)}%"></i></span><small class="ct-n">${j.n}/${j.of}</small>`
+  : `<small class="ct-n ct-say">${esc(j.text)}</small>`;
+const ctMark = (f) => (f && FX[f] ? `<span class="fmark-i ct-f" style="--fc:${FX[f].color}">${glyph('f-' + f)}</span>` : '');
+const ctInner = (j) => `${glyph(j.icon)}<span class="ct-txt"><small class="ct-for">${ctMark(j.faction)}${esc(j.from)}</small><b>${esc(j.name)}</b></span><span class="ct-prog">${ctProg(j)}</span>`;
+// The rows for a tooltip (floorplan-view.mjs: the strip's Contracts), one per contract, as the tracker draws them.
+export const contractTipRows = (list) => list.map((j) => `<span class="ct-row tt-ct${j.ready ? ' ready' : ''}">${ctInner(j)}</span>`).join('');
 function contractTracker(s, sel = null) {
   const list = trackedJobs(s);
   if (!list.length) return '';
-  const prog = (j) => j.ready ? `<span class="ct-turn">Turn in</span>`
-    : j.of && j.of > 10 ? `<span class="ct-bar"><i style="width:${(j.part * 100).toFixed(0)}%"></i></span><small class="ct-n">${j.n}/${j.of}</small>`
-    : `<small class="ct-n ct-say">${esc(j.text)}</small>`;
-  const mark = (f) => (f && FX[f] ? `<span class="fmark-i ct-f" style="--fc:${FX[f].color}">${glyph('f-' + f)}</span>` : '');
-  const rows = list.map((j) => `<button type="button" class="ct-row${j.ready ? ' ready' : ''}${j.locate && j.locate === sel ? ' on' : ''}" ${j.command ? `data-command="${esc(j.command)}"` : j.locate ? `data-locate="${esc(j.locate)}"` : `data-go="${esc(j.go)}"`} title="${esc(j.tip)}">${j.pay ? `<template class="tt-more">${j.pay}</template>` : ''}${glyph(j.icon)}<span class="ct-txt"><small class="ct-for">${mark(j.faction)}${esc(j.from)}</small><b>${esc(j.name)}</b></span><span class="ct-prog">${prog(j)}</span></button>`).join('');
+  const rows = list.map((j) => `<button type="button" class="ct-row${j.ready ? ' ready' : ''}${j.locate && j.locate === sel ? ' on' : ''}" ${j.command ? `data-command="${esc(j.command)}"` : j.locate ? `data-locate="${esc(j.locate)}"` : `data-go="${esc(j.go)}"`} title="${esc(j.tip)}">${j.pay ? `<template class="tt-more">${j.pay}</template>` : ''}${ctInner(j)}</button>`).join('');
   return `<section class="ctrack" aria-label="Contracts"><h3 class="ct-head">${glyph('contract')}Contracts<small>${heldCount(s)}/${MAIL.take}</small></h3>${rows}</section>`;
 }
 

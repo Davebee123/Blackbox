@@ -36,7 +36,7 @@
 // codebase you know, what it costs here and what you hold, and Build.
 // Countdowns are empty <… data-at> slots (and rings with data-ring-*) that fillClocks writes every second (app.js), so
 // the markup only changes when the server does and a hovered chip keeps its tooltip.
-import { esc, deathMark, sickPct, sickTip } from './view.mjs';
+import { esc, deathMark, sickPct, sickTip, trackedJobs, contractTipRows } from './view.mjs';
 import { glyph } from './glyphs.mjs';
 import { recapMarkup } from './recap.mjs';
 import { GUARDS, BOSSES, CONFIG } from './data.mjs';
@@ -558,9 +558,9 @@ function hudMarkup(s) {
   const keys = R.at && R.visit?.keys.length ? `<span class="fp-stat fp-keys" title="Keys: each opens its vault, this visit only. Jack out and it goes back to the elite that held it.">${ic('key')}<b>${R.visit.keys.length}</b></span>` : '';
   const packed = R.world ? (s.run?.pack || []).map((f) => net(s, 'packLine', f)) : R.pack.map((id) => itemLabel(stashItem(s, id) || { name: '?' }));
   const pack = packed.length ? `<span class="fp-stat" title="${esc(`Pack: ${packed.join(', ')}.\nBanks when you jack out. Lost if your Signal hits 0.`)}"><span class="lbl">Pack</span><b>${packed.length}</b></span>` : '';
-  // Contracts on this server, and how far along each is.
-  const jobs = net(s, 'jobs') || [];
-  const job = jobs.length ? `<span class="fp-stat fp-jobs${jobs.some((j) => j.ready) ? ' ready' : ''}" title="${esc(jobs.map((j) => `${j.title}: ${j.text}`).join('\n'))}">${ic('contract')}<span class="lbl">Contract${jobs.length > 1 ? 's' : ''}</span><b>${jobs.length > 1 ? jobs.length : esc(jobs[0].ready ? 'ready' : jobs[0].text.split('.')[0].slice(0, 28))}</b></span>` : '';
+  // Contracts on this server, and how far along each is. The tip draws them as the map's tracker does, a row each.
+  const jobs = net(s, 'jobs') || [], tracked = jobs.length ? trackedJobs(s).filter((t) => jobs.some((j) => j.id === t.id)) : [];
+  const job = jobs.length ? `<span class="fp-stat fp-jobs${jobs.some((j) => j.ready) ? ' ready' : ''}" title="${esc(`Contract${jobs.length > 1 ? 's' : ''}: On this server.`)}"><template class="tt-more">${contractTipRows(tracked)}</template>${ic('contract')}<span class="lbl">Contract${jobs.length > 1 ? 's' : ''}</span><b>${jobs.length > 1 ? jobs.length : esc(jobs[0].ready ? 'ready' : jobs[0].text.split('.')[0].slice(0, 28))}</b></span>` : '';
   const rule = ['a', 'b', 'c'].map((k) => `<button type="button" class="fp-rule${R.bossRule === k ? ' on' : ''}" data-rooms="bossrule" data-arg="${k}" aria-pressed="${R.bossRule === k}" title="${esc(`Boss rule ${k}: ${BOSS_RULES[k].name}.\n${BOSS_RULES[k].text}`)}">${k}</button>`).join('');
   // Wait and Jack out (Connect at home), always in reach at the strip's right.
   const c = connectOf(s);

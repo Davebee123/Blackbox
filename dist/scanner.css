@@ -8,7 +8,7 @@
 .sc-radio[aria-pressed='true'] { background: var(--amber-wash); }
 @keyframes sc-glow { 0%, 100% { box-shadow: 0 0 0 rgba(241, 185, 47, 0); } 50% { box-shadow: 0 0 16px 2px rgba(241, 185, 47, 0.45); } }
 
-.sc-strip { position: absolute; left: 70px; right: 14px; bottom: 14px; height: 116px; display: grid; grid-template-columns: 172px minmax(0, 1fr) 300px; border: 1px solid var(--line); border-radius: var(--r-card); background: #0a0703; animation: sc-up 0.3s ease-out; }
+.sc-strip { position: absolute; left: 70px; right: 14px; bottom: 14px; height: 116px; display: grid; grid-template-columns: 200px minmax(0, 1fr) 300px; border: 1px solid var(--line); border-radius: var(--r-card); background: #0a0703; animation: sc-up 0.3s ease-out; }
 .sc-strip[hidden] { display: none; }
 @keyframes sc-up { from { opacity: 0; transform: translateY(12px); } }
 .sc-strip > * { padding: 10px 12px; min-width: 0; }
@@ -21,7 +21,7 @@
 @keyframes sc-lamp { 50% { opacity: 0.3; } }
 .sc-freq { font: 500 22px var(--mono); color: var(--bright); letter-spacing: 0.5px; font-variant-numeric: tabular-nums; line-height: 1; }
 .sc-freq small { font-size: 11px; color: var(--muted); margin-left: 3px; }
-.sc-counts { display: flex; gap: 10px; }
+.sc-counts { display: flex; gap: 8px; margin-left: -3px; } /* the buttons' border and padding: their icons line up under the header's */
 .sc-counts button { display: inline-flex; gap: 4px; align-items: center; color: var(--amber); font: 500 11px var(--mono); padding: 1px 2px; background: none; border: 1px solid transparent; border-radius: var(--r-btn); cursor: pointer; }
 .sc-counts button:hover { border-color: var(--line-strong); }
 .sc-counts em { font-style: normal; color: var(--muted); }
