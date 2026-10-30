@@ -86,8 +86,8 @@ comment saying what it does.
 | `dist/combat.mjs` | The engine: pure and deterministic, commands in, events out. Fights, XP and levels, the save and its migrations. |
 | `dist/data.mjs` | Every tunable number: abilities, classes, families, strains, guards, bosses, floors, and `createVirus`. |
 | `dist/classes/` | Each class's subclasses: `<class>.data.mjs` their skills and trees, `<class>.mjs` what they do in a fight; `kit.mjs` talent helpers. |
-| `dist/parts.mjs` | What a wild virus is made of: its basic, signature and third parts, rolled by named constants (`PARTS`), and the strains' spread (`PARTS.spread`). |
-| `dist/genes.mjs` | The gene library: every family, strain, third part, mutation, tell and guard rule in one shape. Data only. |
+| `dist/parts.mjs` | What a wild virus is made of: its basic, signature and third parts, rolled by named constants (`PARTS`), the strains' spread (`PARTS.spread`), and an elite's clash. |
+| `dist/genes.mjs` | The gene library: every family, strain, third part, mutation, tell and guard rule in one shape, and the elites' clashes (`CLASHES`). Data only. |
 | `dist/authors.mjs` | The crews that write viruses, each with signature genes, builds and bosses. Data only. |
 | `dist/genome.mjs` | A virus's genes in play: `scan`, `inspect` and the rules' chips. |
 | `dist/families.mjs` | Attack sets for the room families, the Trojan, Cryptominer and Wiper, and the rules every room fight shares. |

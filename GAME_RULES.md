@@ -100,7 +100,8 @@ Hover it for what happens and, on its own muted ▸ line, how to stop it. Breaki
 | Mimic | The Mimic (ghostroot, from level 8) records you; on its beat it copies the command you fire and turns it on you, with each helper you sent onto it after the beat was said. | Fire what costs least to have copied (a strip when you wear no ◆, a heal when every part is whole, a small hit), hold, or cut the Mimic on its beat. | What it copied, never past the tell ceiling (Third parts: the Mimic). |
 
 - **No pile-ups.** A charge never lands on the same cycle as another part's heavy attack, or on the Mimic's beat.
-  Below level 17 one tell is live at a time; from 17 two can be, never on the same cycle. After a tell lands or is
+  Below level 17 one tell is live at a time; from 17 two can be, never on the same cycle. **An elite** with a clash has one
+  more live, and its tells may land together when a cast is among them (its window opens a cycle early: answer it then). After a tell lands or is
   answered, the next of its kind waits 7 cycles, plus up to 2.
 - **A fixed part.** Each tell sits on one part: the signature for its charge, cast and seal, the plain attacker for
   Overcharge, the rule's part for a strain's charge. A boss's charges and casts stay off its ♛ part while another can
@@ -124,7 +125,7 @@ Hover it for what happens and, on its own muted ▸ line, how to stop it. Breaki
 | 10–16 | Its charge | 1 | ×2.5, 18% | Offline, Corrupted 3% |
 | 17+ | Its charge and its cast | 2 | ×3, 25% | Offline, Corrupted 4% |
 
-An **elite** brings one more from level 6 (its family's seal, then its cast), each charge up to 15% bigger; a **solo
+An **elite** brings one more from level 6 (its clash's tell first, then its family's seal and cast), each charge up to 15% bigger; a **solo
 boss** brings three; a **champion** invader the usual ones, its charges a tenth bigger. SPRAWL-00's first two kills
 bring none.
 
@@ -247,6 +248,17 @@ when the server is built. Every number is a named constant in `PARTS`; `develope
   **lever**, a part whose rule makes the default move the wrong one: a beat (Mimic, Decoy), a part to break last
   (Tripwire, Zip Bomb, Hotspot), a part to break first (Lockbox, Mutex, C2 Node, Packer) or twins (Mirror). A fight
   that already brings a stranger may have none, and a server fight with an objective has none (Objectives).
+- **An elite's clash** (docs/puzzle-levers.md 4). From level 6 an elite carries two levers whose answers pull against
+  each other, and no other lever but its floor's native. A ⇄ tag names both; its tooltip says the pull and the answer.
+
+  | Clash | Families, from | The pull | The answer |
+  |---|---|---|---|
+  | Zip Bomb ⇄ its seal | Ransomware, Worm, 6 | The blast strips every part; the seal re-arms by the ◆ left on its part. | Break the Zip Bomb a cycle before the seal lands. |
+  | Mimic ⇄ its cast | Ghostroot, 10 | SIGINT on the beat Hangs you, and the cast can land on the beat. | SIGINT the cast a cycle early, cut its part twice, or let it land. |
+  | Tripwire ⇄ Lockbox | Ransomware, 16 | Half the held damage lands at once, and loud parts take 40% more. | Trip the wire, then break the Lockbox into its loud partner. |
+
+  The Mimic ⇄ Lockbox and Decoy ⇄ Tripwire pairs are built but no family carries both yet. A clash that doesn't fit
+  (a rule it breaks, a second stranger) is rolled again; none fits, and the elite carries one lever.
 - **Floor natives.** A native is a third first met on one floor: the Zip Bomb and Hotspot on floor 1; the Idle Timer,
   Front End and Backlog on 2; the Limiter and Spare on 3; the Scraper, Bad Block and Cold Store on 4. On its own floor
   it weighs three times as much; elsewhere it rolls at its own weight once its level allows. **Elites and ★ rare
@@ -604,7 +616,7 @@ strip (the server, its kind, level and rule, your Signal, **Rooms n/N**, your ke
 |---|---|---|
 | Entry | door | Where you come in. Files left for you (a relay's route files) are `pull`ed here. |
 | Process | ▣ | A virus of the server's author at the server's level; the same family every time, its set and mutation fresh each respawn. |
-| Elite | ◆▣ | Bigger, one more tell, enrages from cycle 9. |
+| Elite | ◆▣ | An elite (`ELITE`) with a clash, one more tell, enrages from cycle 9. |
 | Guard post | ◆▣ KEY | A guard or ICE holding the vault's key, shown as an elite. Hoard, Rich and Hardened servers' are Armored. |
 | Vault | ▥ | `open` with its key, or `force` it for 15% of your max Signal. It holds the server's files: a protocol half the time (your first server's always), code, a trace record, spare credits, now and then a Zero-day (floor 2+) or a filter, and a contract's planted file. Everything goes in your pack. |
 | Core | ♛ | The Resident, **SEALED** until the vault opens. |
@@ -2196,8 +2208,9 @@ developer mode, `crew sim <classes>` adds bot crewmates from level 5 (`crew`, `c
 - **MMO, not ARPG:** a normal virus gets +50% Integrity a player (`CREW.hpPer`), a boss +80%, an elite +5%; its hits
   stay their solo size. **Kill XP is split**, plus 10% a player (`PARTY_XP`: a pair 55% each, a four 32.5%). Drops
   stay personal; rewards are yours.
-- **◆ CREW elites** (a third of a Pit's rooms, and the trunk server): ×5.2 Integrity, ×1.3 damage, one more ◆
-  (`ELITE`), only +5% a player: built for four. Three times the XP, three drop rolls, never less than a blue, 8% a
+- **◆ CREW elites** (a third of a Pit's rooms, and the trunk server, and every elite room): ×1.5 Integrity, ×0.7
+  damage, one more ◆ and a clash (`ELITE`; Fights), only +5% a player. A champion, a feud and the farm's packs size
+  their own Integrity, keep ×1.3 damage and roll no clash. Three times the XP, three drop rolls, never less than a blue, 8% a
   unique. Never in the way of anything you need.
 - A crewmate at 0 Signal is down for the fight; you going down ends it. Their hits stay quiet: the sounds are yours.
 

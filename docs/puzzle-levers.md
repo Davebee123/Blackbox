@@ -79,7 +79,8 @@ command hit is safe when its charge lands on an attack you can cut) and the Limi
 
 ## 4. Rules that pull against each other
 
-Input for P3: an elite takes two levers whose answers clash.
+Built in P3 (genes.mjs CLASHES): an elite takes two levers whose answers clash. The first three roll; no family
+carries both parts of the last two yet.
 
 | Pair | The pull |
 |---|---|
@@ -116,7 +117,7 @@ still pays as much as watching: the routine that fits the trick reads the same f
 
 ## 8. Build order
 
-P2a (Mimic, Tripwire, Zip Bomb), P2b (Lockbox, seals, casts) and P2c (Decoy) are built. P3 builds elites from
+P2a (Mimic, Tripwire, Zip Bomb), P2b (Lockbox, seals, casts) and P2c (Decoy) are built, and P3's elites from
 section 4's pairs. Each new lever adds its entry to `solved.mjs` FIXED beside its tests.
 
 ## 9. Decided

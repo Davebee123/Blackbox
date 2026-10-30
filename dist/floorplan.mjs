@@ -90,13 +90,13 @@ export const ROOMS = {
   // each counted fight room's kill (first), in one lump.
   xp: { room: 1.25, first: 0.5, rare: 5, boss: 4, hunter: 2, mapped: 5 },
   // Each fight's size in a room, on top of the run sizes every Signal fight has (CONFIG.runHp, runDamage): a process at
-  // your level costs 20–30% of your Signal, an elite 45–60%, the Resident wins about one fight in three (2.5).
+  // your level costs 20–30% of your Signal, the Resident wins about one fight in three (2.5). An elite is data.mjs ELITE's
+  // size (docs/puzzle-fights.md P3), with nothing on top.
   // stray: SPRAWL-00's strays (netrooms.mjs), the levels 1 to 5 where you learn the ticks: a plain virus's Integrity, lighter hits.
   // exfil: the Exfil (a runner, quick to break): a plain virus's Integrity, light hits.
   // nest: a Worm server's nest, elite-lite: the Crawler and its two hatchlings cost about 40% of your Signal over the
   // classes at levels 6, 12 and 20 (a process there about 35%, an elite 53%), and almost never lose.
-  size: { process: { hp: 1.3, dmg: 0.9 }, elite: { hp: 0.9, dmg: 0.6 }, nest: { hp: 2.3, dmg: 1 }, guard: { hp: 1.2, dmg: 0.85 }, hunter: { hp: 1.6, dmg: 0.7 }, boss: { hp: 1.25, dmg: 0.9 }, stray: { hp: 1, dmg: 0.8 }, exfil: { hp: 1.5, dmg: 0.35 }, rival: { hp: 1.3, dmg: 0.9 } },
-  eliteHp: 2.2, // an elite's Integrity (of a plain virus's), before its size
+  size: { process: { hp: 1.3, dmg: 0.9 }, elite: { hp: 1, dmg: 1 }, nest: { hp: 2.3, dmg: 1 }, guard: { hp: 1.2, dmg: 0.85 }, hunter: { hp: 1.6, dmg: 0.7 }, boss: { hp: 1.25, dmg: 0.9 }, stray: { hp: 1, dmg: 0.8 }, exfil: { hp: 1.5, dmg: 0.35 }, rival: { hp: 1.3, dmg: 0.9 } },
   hunter: { pace: 2, lose: 5, level: 2 }, // a room per 2 of your moves; a Tracker loses you 5 rooms away; 2 levels over the server (its size: twice a guard's Integrity)
   cache: { credits: [18, 36], code: [2, 4], script: 0.15 },
   purse: (level) => 4 + Math.floor(level / 2), // a rogue server's Stash: credits (and 1 code one time in five, netrooms.mjs)
@@ -1393,8 +1393,10 @@ export function fightOf(s, room, as = null) {
   // An elite or a ★ rare spawn brings one of its floor's natives (parts.mjs PARTS.native) in place of the room's third.
   // One plain fight room in two carries an objective (objectives.mjs), and it takes the lever's place: a third that's a lever stays out.
   const objective = !as && room.kind === 'process' && !elite ? rollObjective(seed, level) : null;
-  const genes = ((elite && PARTS.native.elite) || (rare && PARTS.native.rare) ? [nativeThird(fam, level, R.floor || 1, seed) || third] : [third]).filter((g) => g && !(objective && GENES[g]?.lever));
-  const opts = { mode: 'run', room: room.path, level, family: fam, author: room.author, mutation: mut, genes, ...(elite ? { elite: true, eliteHp: ROOMS.eliteHp } : {}), ...(rare ? { rare: true } : {}), ...(honey ? { grade: 1 + SOCKET.honey.grade } : {}) };
+  // An elite from PARTS.lever is the parts roll's (parts.mjs): its native and its clash, two levers that pull against each other.
+  const rolled = elite && level >= PARTS.lever;
+  const genes = rolled ? null : ((elite && PARTS.native.elite) || (rare && PARTS.native.rare) ? [nativeThird(fam, level, R.floor || 1, seed) || third] : [third]).filter((g) => g && !(objective && GENES[g]?.lever));
+  const opts = { mode: 'run', room: room.path, level, family: fam, author: room.author, mutation: mut, ...(genes ? { genes } : { floor: R.floor || 1 }), ...(elite ? { elite: true } : {}), ...(rare ? { rare: true } : {}), ...(honey ? { grade: 1 + SOCKET.honey.grade } : {}) };
   return { key: 'random', seed, opts, size: elite ? 'elite' : 'process', name: null, level, family: fam, author: room.author, set: (!lured && room.pin) || spawnSet(fam, room.author, seed), mutation: mut, elite, rare, objective };
 }
 // The native an elite or a ★ rare spawn brings in a server room (its floor's, open at its level; none there: the nearest

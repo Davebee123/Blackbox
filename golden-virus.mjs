@@ -331,9 +331,9 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   if (overrides.elite) for (const p of parts) {
     p.max = p.integrity = Math.round(p.max * (overrides.eliteHp ?? ELITE.hp));
     p.armor = p.maxArmor = p.maxArmor + ELITE.armor;
-    if (p.attack && ['damage', 'encrypt'].includes(p.attack.effect)) p.attack.amount = Math.max(1, Math.round(p.attack.amount * ELITE.dmg));
-    if (p.attack?.hit) p.attack.hit = Math.max(1, Math.round(p.attack.hit * ELITE.dmg));
-    if (p.attack?.rampBy) p.attack.rampBy = Math.max(1, Math.round(p.attack.rampBy * ELITE.dmg));
+    if (p.attack && ['damage', 'encrypt'].includes(p.attack.effect)) p.attack.amount = Math.max(1, Math.round(p.attack.amount * (overrides.eliteHp != null ? ELITE.sizedDmg : ELITE.dmg)));
+    if (p.attack?.hit) p.attack.hit = Math.max(1, Math.round(p.attack.hit * (overrides.eliteHp != null ? ELITE.sizedDmg : ELITE.dmg)));
+    if (p.attack?.rampBy) p.attack.rampBy = Math.max(1, Math.round(p.attack.rampBy * (overrides.eliteHp != null ? ELITE.sizedDmg : ELITE.dmg)));
   }
   // A boss (BOSSES): bigger and a little harder; its phases and enrage timer ride on the virus.
   const boss = BOSSES[overrides.boss] || null;
@@ -347,5 +347,5 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   const name = (overrides.elite ? 'ELITE ' : '') + (strain ? strain.name.toUpperCase() + '-' + tagNo : random ? family.name.toUpperCase() + '-' + tagNo : fixture.name) + (grade > 1 ? ` v${grade}` : '');
   // Enemy damage can crit, from level 3 (like mutations).
   const crit = level >= SERVER.mutationsFrom ? CONFIG.enemyCrit : 0;
-  return { id: familyId + '-' + seed, name, family: familyId, strain: strainId, grade, dormant: strain?.dormant ? true : false, art: family.art || familyId, mutation, threat, level, power: dmgScale * (overrides.elite ? ELITE.dmg : 1), hpPower: scale, crit, threatens: family.threatens, parts, weakPoint, weakKnown: false, ...(overrides.elite ? { elite: true } : {}), ...(boss ? { boss: overrides.boss, phases: boss.phases.map((x) => ({ ...x, done: false })), enrageAt: boss.enrageAt } : {}) };
+  return { id: familyId + '-' + seed, name, family: familyId, strain: strainId, grade, dormant: strain?.dormant ? true : false, art: family.art || familyId, mutation, threat, level, power: dmgScale * (overrides.elite ? (overrides.eliteHp != null ? ELITE.sizedDmg : ELITE.dmg) : 1), hpPower: scale, crit, threatens: family.threatens, parts, weakPoint, weakKnown: false, ...(overrides.elite ? { elite: true } : {}), ...(boss ? { boss: overrides.boss, phases: boss.phases.map((x) => ({ ...x, done: false })), enrageAt: boss.enrageAt } : {}) };
 }

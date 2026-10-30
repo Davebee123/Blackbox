@@ -187,7 +187,7 @@ test('a champion: elite-grade (the tells for elites apply), a level over its ser
   play(s, 'jack in');
   const v = s.encounter.virus;
   assert.ok(v.elite && v.champion, 'elite-grade, marked as a champion');
-  assert.ok(CHAMPION.hp < ELITE.hp, 'smaller than a crew elite');
+  assert.ok(CHAMPION.hp <= ELITE.hp, 'no bigger than an elite');
   const ev = win(s);
   assert.ok(ev.some((e) => e.daemon && /leaves a capture/.test(e.message)));
   assert.equal(Object.keys(s.daemonLv).length, 1, 'a daemon, every time');

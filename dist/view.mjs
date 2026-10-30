@@ -23,7 +23,7 @@ import { postsOf, sizeOf as serverSize, PROGRAMS, programsOn, shopCodebases } fr
 import { SPECIALS, specialsOf, leaningOf } from './specials.mjs';
 import { LEANINGS, leanShown } from './leanings.mjs';
 import { ABILITIES, CONFIG, FAMILIES, MUTATIONS, TICKER, QUIRKS, DAEMONS, STRAINS, GUARDS, BOSSES, STRAIN_NATIVE, DAEMON_BANDS, bandDaemons, daemonWhen, daemonBand, FLOORS, bandOf, floorOfLayer } from './data.mjs';
-import { GENES, CATS, AXES } from './genes.mjs';
+import { GENES, CATS, AXES, CLASHES } from './genes.mjs';
 import { AUTHORS } from './authors.mjs';
 import { PUZZLES } from './puzzles.mjs';
 import * as UI from './uiscale.mjs';
@@ -66,7 +66,7 @@ import { tripwireOf, zipOf, heldOf } from './order.mjs';
 import { youMarks, junkKey } from './mechanics.mjs';
 import { cantripsOf, TELL } from './data.mjs';
 import { usable, hooks } from './combat.mjs';
-import { sigintWindows, sigintCharges } from './tells.mjs';
+import { sigintWindows, sigintCharges, plannedTells } from './tells.mjs';
 import { daemonText } from './daemons.mjs';
 import { ROOMS as ROOMS_FP, kindRule, KIND_OF } from './floorplan.mjs'; // a server card's respawn timers, its type's rule
 import { RIVALS } from './rivals.mjs';
@@ -328,11 +328,18 @@ export function hudMarkup(s, { party = true, preview = null } = {}) {
   const cp = active(s) ? beatCopy(s, selectedCmd(s, preview)) : null; // the Mimic's beat: what it would copy of your command
   // No title of its own: the virus's name labels its health bar, its tags sit under the bar with
   // its armor. Your bar and the crew's window come first; the virus's bar is at the right.
-  const tags = `${v.champion ? '<span class="tag tag-crew" title="Champion: an elite-grade invader, sized for one. It is tougher, gives three times the XP, and leaves a capture when it falls: a sure daemon.">★ CHAMPION</span>' : v.elite ? '<span class="tag tag-crew" title="Elite: built for a crew. It is much tougher, gives three times the XP, and drops better loot.">◆ CREW</span>' : ''}${e.invader && s.invasion?.id === e.invader ? `<span class="tag hot">invasion · ${esc(s.invasion.fromName)}</span>` : ''}${m && !geneChips(s, v) ? `<span class="tag tag-mut" data-mut="${v.mutation}" title="${esc(m.rule)}">${esc(m.name)}</span>` : ''}${strainTags(s, v)}${weak ? `<span class="tag you">weak: ${esc(weak.name)}</span>` : ''}`;
+  const tags = `${v.champion ? '<span class="tag tag-crew" title="Champion: an elite-grade invader, sized for one. It is tougher, gives three times the XP, and leaves a capture when it falls: a sure daemon.">★ CHAMPION</span>' : v.elite ? '<span class="tag tag-crew" title="Elite\nA tougher virus, with a clash: two rules whose answers pull against each other.\nIt gives three times the XP and drops better loot.">◆ CREW</span>' : ''}${clashTag(v)}${e.invader && s.invasion?.id === e.invader ? `<span class="tag hot">invasion · ${esc(s.invasion.fromName)}</span>` : ''}${m && !geneChips(s, v) ? `<span class="tag tag-mut" data-mut="${v.mutation}" title="${esc(m.rule)}">${esc(m.name)}</span>` : ''}${strainTags(s, v)}${weak ? `<span class="tag you">weak: ${esc(weak.name)}</span>` : ''}`;
   // Yours first (what you watch): your Signal with the crew under it; the virus's total at the right,
   // over its picture.
   return `<div class="hud-left"><div class="hud-you"><div class="hud-bar mine ${level}"><div class="bar-top"><strong>${glyph(runMode ? 'signal' : 'integrity', 'bar-ico')}${mine}</strong><span>${d.integrity}<small>/${d.max}</small></span></div><div class="bigbar"><span style="width:${dp}%"></span>${capMark(s, d)}${crackMark(s, d)}${lossMark(d.integrity, d.max, fc.you)}${copyGhost(d, fc.you, cp)}${claimMarks(s, d)}</div>${clockMeter(s)}</div></div>${statusPanel(s, cp)}</div>
     <div class="hud-bar enemy"><div class="bar-top"><span class="vname"><strong>${esc(v.name)}</strong>${byline(v)}<span class="meta">${levelTag(s, v.level)}${v.strain || GUARDS[v.family]?.ice ? '' : ' ' + esc(familyInfo(v.family).name)}</span></span><span>${hp.current}<small>/${hp.max}</small></span></div><div class="bigbar"><span style="width:${vp}%"></span>${lossMark(hp.current, hp.max, fc.total)}</div><p class="clock-line">${armor.max ? `<span class="chits">${'◆'.repeat(armor.current)}<i>${'◇'.repeat(armor.max - armor.current)}</i></span>` : ''}${tags}${roomBossTag(s)}${rivalTag(s)}${progFight(s)}</p>${geneChips(s, v)}</div>`;
+}
+// An elite's clash (docs/puzzle-levers.md 4, genes.mjs CLASHES): its two levers by name, the pull and the answer in its tooltip.
+export function clashTag(v) {
+  const c = CLASHES.find((x) => x.id === v?.clash);
+  if (!c) return '';
+  const name = (k) => (k === 'seal' || k === 'cast' ? plannedTells(v).find((t) => t.kind === k)?.name : v.parts.find((p) => GENES[k]?.carried(p))?.name) || GENES[k]?.name || k;
+  return `<span class="tag hot clash" title="${esc(`${c.name}\nClash\n${c.pull}\n▸ ${c.answer}`)}">${esc(name(c.a))} ⇄ ${esc(name(c.b))}</span>`;
 }
 // A Resident in a server room (interrupt.mjs BOSS_RULES): the rule it fights under, and (c)'s budget as pips.
 // A rival's fight (rivals.mjs): its name and which of its lineup this is.

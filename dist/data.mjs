@@ -995,7 +995,10 @@ export const ENRAGE = { dmg: 1.25, warn: 3 };
 // a kill for a world unique too. once: bosses that drop each of their own uniques only once (bossUnique).
 // resident: 'elite' rolls the Resident like an elite (no sure item: one is met on every takeover), 'boss' like the rest.
 export const BOSS_LOOT = { chance: 0.15, pity: 0.05, yellow: 0.25, raid: { chance: 0.3, pity: 0.1, gold: 0.1 }, once: ['resident'], resident: 'elite' };
-export const ELITE = { hp: 5.2, dmg: 1.3, armor: 1, xp: 3, share: 1 / 3, goneMs: 30 * 60000 }; // goneMs: an elite that beats you moves on, and its folder fills again this much later
+// Elites are puzzles (docs/puzzle-fights.md P3): Integrity and hits down (5.2 and 1.3 before) until the planner wins 85%
+// of them, the difficulty back as their clash (parts.mjs, genes.mjs CLASHES). A server room's elite takes these too.
+// sizedDmg: the hits of an elite sized on its own (a champion, a feud, the farm's packs: eliteHp), as before P3, with no clash.
+export const ELITE = { hp: 1.5, dmg: 0.7, sizedDmg: 1.3, armor: 1, xp: 3, share: 1 / 3, goneMs: 30 * 60000 }; // goneMs: an elite that beats you moves on, and its folder fills again this much later
 
 // ---------- solo tells (tells.mjs) ----------
 // A tell is a big move a part announces ahead, on its row of the board and in the log, that you plan your interrupts
@@ -1029,7 +1032,7 @@ export const TELL = {
   // An elite brings one more tell (from level 6), and each can cost 15% more (never past the ceiling). A solo boss
   // brings every tell open at its level, at least `count`. A boss staggers Open like any part, but keeps its clock
   // (delay 0).
-  elite: { count: 1, cap: 1.15 },
+  elite: { count: 1, cap: 1.15, live: 1 }, // live: an elite with a clash has one more at once, and its pile-ups are lifted where a cast is in them (tells.mjs announce)
   boss: { count: 3, cap: 1.1, delay: 0 },
   champion: { cap: 1.1 }, // a champion invasion (elite-grade, but sized for one): the usual tells, its charges a little bigger
 
@@ -1266,7 +1269,7 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   // signature and the forced genes' third (if any): { basic, signature, thirds } as the roll would have it.
   const forced2 = overrides.basic && random && !strain && !overrides.boss && FAMILIES[familyId] ? family.parts.find((x) => (x.pool === 'basic' || x.id === 'pulse') && x.id === overrides.basic) : null;
   const rolled2 = forced2 ? { basic: forced2, dup: false, signature: true, thirds: family.parts.filter((x) => x.pool === 'third' && genes?.includes(x.gene)), strangers: 0 }
-    : PARTS.on && !overrides.classic && random && !strain && !overrides.boss && !genes && FAMILIES[familyId] ? rollParts({ family: familyId, body: family, level, rand: rng((seed ^ 0x2545f491) >>> 0), elite: !!overrides.elite, rare: !!overrides.rare, floor: overrides.floor || floorFor(level), spread: spreadOf(familyId, level, overrides.floor || floorFor(level)), seen: overrides.seen || null, extra: [...(mutation && MUTATIONS[mutation] ? [MUTATIONS[mutation].gene] : []), ...(grade >= 2 ? ['linked'] : [])] }) : null;
+    : PARTS.on && !overrides.classic && random && !strain && !overrides.boss && !genes && FAMILIES[familyId] ? rollParts({ family: familyId, body: family, level, rand: rng((seed ^ 0x2545f491) >>> 0), elite: !!overrides.elite, puzzle: !!overrides.elite && overrides.eliteHp == null, rare: !!overrides.rare, floor: overrides.floor || floorFor(level), spread: spreadOf(familyId, level, overrides.floor || floorFor(level)), seen: overrides.seen || null, extra: [...(mutation && MUTATIONS[mutation] ? [MUTATIONS[mutation].gene] : []), ...(grade >= 2 ? ['linked'] : [])] }) : null;
   const open = (strain ? strain.parts : family.parts).filter((spec) => spec.pool !== 'basic' && (!spec.from || ((random || overrides.family || spec.kestrel) && level >= spec.from)));
   // The third part: a gene's part (genes.mjs), one of those open at its level (the family's pool, in order), picked by its own hash of the
   // seed so it never moves the virus's other rolls. A boss keeps its family's first (the classic one).
@@ -1324,13 +1327,16 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   // A dormant strain's attacks wait off the timeline until it wakes.
   if (strain?.dormant) for (const p of parts) if (p.attack) { p.attack.wake = Math.max(1, p.attack.due - 1); p.attack.due = 999; }
 
+  // An elite sized on its own (eliteHp: a champion, a feud, the farm's packs, a breach's) keeps the elite-grade hits, and
+  // rolls no clash (parts.mjs puzzle).
+  const eliteDmg = overrides.eliteHp != null ? ELITE.sizedDmg : ELITE.dmg;
   if (overrides.elite) for (const p of parts) {
     p.max = p.integrity = Math.round(p.max * (overrides.eliteHp ?? ELITE.hp));
     p.armor = p.maxArmor = p.maxArmor + ELITE.armor;
-    if (p.attack && ['damage', 'encrypt'].includes(p.attack.effect)) p.attack.amount = Math.max(1, Math.round(p.attack.amount * ELITE.dmg));
-    if (p.attack?.hit) p.attack.hit = Math.max(1, Math.round(p.attack.hit * ELITE.dmg));
-    if (p.attack?.rampBy) p.attack.rampBy = Math.max(1, Math.round(p.attack.rampBy * ELITE.dmg));
-    if (p.ratchet) p.ratchet.amount = Math.max(1, Math.round(p.ratchet.amount * ELITE.dmg));
+    if (p.attack && ['damage', 'encrypt'].includes(p.attack.effect)) p.attack.amount = Math.max(1, Math.round(p.attack.amount * eliteDmg));
+    if (p.attack?.hit) p.attack.hit = Math.max(1, Math.round(p.attack.hit * eliteDmg));
+    if (p.attack?.rampBy) p.attack.rampBy = Math.max(1, Math.round(p.attack.rampBy * eliteDmg));
+    if (p.ratchet) p.ratchet.amount = Math.max(1, Math.round(p.ratchet.amount * eliteDmg));
   }
   // A boss (BOSSES): bigger and a little harder; its phases and enrage timer ride on the virus.
   const boss = BOSSES[overrides.boss] || null;
@@ -1357,7 +1363,7 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   // Enemy damage can crit, from level 3 (like mutations).
   const crit = level >= SERVER.mutationsFrom ? CONFIG.enemyCrit : 0;
   const author = authorOf({ family: familyId, strain: strainId, boss: overrides.boss || null }, overrides.author);
-  return { id: familyId + '-' + seed, name, family: familyId, strain: strainId, grade, dormant: strain?.dormant ? true : false, art: family.art || familyId, mutation, threat, level, power: dmgScale * (overrides.elite ? ELITE.dmg : 1), hpPower: scale, crit, threatens: family.threatens, parts, weakPoint, weakKnown: false, ...(overrides.elite ? { elite: true } : {}), ...(boss ? { boss: overrides.boss, phases: boss.phases.map((x) => ({ ...x, done: false })), enrageAt: boss.enrageAt } : {}),
+  return { id: familyId + '-' + seed, name, family: familyId, strain: strainId, grade, dormant: strain?.dormant ? true : false, art: family.art || familyId, mutation, threat, level, power: dmgScale * (overrides.elite ? eliteDmg : 1), hpPower: scale, crit, threatens: family.threatens, parts, weakPoint, weakKnown: false, ...(overrides.elite ? { elite: true } : {}), ...(rolled2?.clash ? { clash: rolled2.clash } : {}), ...(boss ? { boss: overrides.boss, phases: boss.phases.map((x) => ({ ...x, done: false })), enrageAt: boss.enrageAt } : {}),
     genes: genome, author, ...unsigned, ...(unlinked ? { unlinked: true } : {}) };
 }
 
