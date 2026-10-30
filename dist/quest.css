@@ -27,6 +27,16 @@
 .qa-line.sys { color: var(--muted); }
 .qa-line.quote { color: var(--bright); }
 .q-panel.k-log .qa-line { white-space: pre-wrap; }
+/* who's talking (portraits.mjs): a backlit silhouette beside the lines, its rows scanning in once, top down */
+.q-talk { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--s5); align-items: start; }
+.q-face { margin: 0; overflow: hidden; max-height: none; padding: var(--s3) var(--s4); font: 500 10px/10px var(--mono); letter-spacing: 0; white-space: pre; color: var(--amber-soft); border: 1px solid var(--line-strong); border-radius: var(--r-card);
+  background: radial-gradient(ellipse at 62% 45%, rgba(241, 185, 47, 0.1), transparent 70%), var(--inset); }
+.q-face .qf-r { display: block; }
+.q-face i { font-style: normal; }
+.q-face .g0, .q-face .in { color: var(--amber-deep); } .q-face .g1 { opacity: 0.55; }
+.q-face .e2 { color: var(--bright); } .q-face .gl { color: var(--bright); text-shadow: 0 0 4px var(--amber); }
+.q-panel .qf-r { animation: q-in 0.12s steps(2) both; animation-delay: calc(var(--r) * 0.035s - var(--age, 0ms)); }
+@media (max-width: 640px) { .q-face { padding: var(--s2) var(--s3); font-size: 6px; line-height: 6px; } .q-talk { gap: var(--s4); } }
 /* a new quest's opening line resolves out of noise, once: the text wipes in as the noise wipes out (still, the noise is
    gone and the text is all there) */
 .qa-dec { display: grid; }

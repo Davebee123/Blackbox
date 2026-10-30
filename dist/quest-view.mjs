@@ -14,6 +14,7 @@ import { statLine, itemLabel, SLOTS, RULES } from './gear.mjs';
 import { hackerLevel } from './combat.mjs';
 import { chainOf, chainDef, stepsOf, objectiveOf, fill, offerItems, CHAINS, TEMPLATES } from './threads.mjs';
 import { TH_ICONS } from './threads-view.mjs';
+import { portraitMarkup } from './portraits.mjs';
 
 export const QUEST = { settle: 2400 }; // ms: a dialogue's arrival is over by then; drawn still after
 
@@ -84,6 +85,7 @@ function job(m, i0 = 0) {
 const sign = (who, sig, i = 0) => `<p class="qa-sign" style="--i:${i}"><span>signed</span><b>${esc(who)}</b><code>${esc(sig)}</code></p>`;
 
 // ---------- the dialogue over the map ----------
+// Who's talking stands beside their lines (portraits.mjs), scanning in a row at a time with the lines, once.
 // d: what was said (threads.mjs T.said); m: its thread's model (null for a log with none); ctx: { addr, server, body
 // (the process log's sweep, drawn by view.mjs), age (ms since it first drew) }.
 export function questPanel(d, m, ctx = {}) {
@@ -95,7 +97,7 @@ export function questPanel(d, m, ctx = {}) {
   const n = d.lines.length;
   return `<div class="pz-panel th-panel q-panel k-${esc(d.kind)} m-${moment}${still ? ' q-settled' : ''}" id="th-panel" data-th-n="${d.n}" role="dialog" aria-label="${esc(d.who)}"${still ? '' : ` style="--age:${age}ms"`}>
     <section class="pz-card th-card q-card"><header class="pz-head qa-head"><p class="pz-kick">${kick} · <span class="pz-at">${where(ctx)}</span></p><h1>${mark(m, d.icon)}<span>${esc(d.who)}</span></h1>${d.title ? `<p class="qa-thread">${esc(d.title)}</p>` : ''}${xBtn}</header>
-      ${ctx.body || `<div class="qa-lines">${lines}${moment === 'close' && m && !d.choices ? sign(d.who, m.sig, n) : ''}</div>`}${moment === 'open' && m ? job(m, n) : ''}${choicesOf(d) || closeRow}</section></div>`;
+      ${ctx.body || `<div class="q-talk">${portraitMarkup(d.who, d.icon)}<div class="qa-lines">${lines}${moment === 'close' && m && !d.choices ? sign(d.who, m.sig, n) : ''}</div></div>`}${moment === 'open' && m ? job(m, n) : ''}${choicesOf(d) || closeRow}</section></div>`;
 }
 
 // ---------- its page in Mail ----------

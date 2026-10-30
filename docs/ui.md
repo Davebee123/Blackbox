@@ -191,7 +191,7 @@ short vibration on phones that have it.
 - **The wall's ruler:** each level a cell, teal for what it blocks, amber contested, red hatching what breaks through,
   your server and the incoming invasion marked.
 - **The quest window** (the *Transmission*, quest-view.mjs): a thread or floor job read as an intercepted message,
-  its opening line resolving out of noise once, its steps as a job (`job 0003`, ✓, ▸, the rest dim hex). The reward
+  the speaker's backlit ASCII portrait beside their lines (portraits.mjs, scanning in a row at a time, once), its opening line resolving out of noise once, its steps as a job (`job 0003`, ✓, ▸, the rest dim hex). The reward
   card is a signed receipt. Calm: lines arrive once, Mail's page never animates.
 - **The level-up** (the *Firmware update*, levelup-view.mjs): an amber *Firmware update · <class>.rom* strip, the
   level in teal dot-font digits, `[ OK ]` a row at a time with a tick each; it waits for a calm moment.

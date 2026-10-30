@@ -167,6 +167,7 @@ comment saying what it does.
 | `dist/arcs.mjs`, `dist/arcs-view.mjs` | Floor jobs: each floor's fixed chain of contracts, and its page in Mail. |
 | `dist/threads.mjs`, `dist/threads-view.mjs`, `dist/content/threads.mjs` | Threads: quests found in rooms, their marks and dialogue, and their data. |
 | `dist/quest-view.mjs`, `dist/quest.css` | The quest window: a thread as an intercepted transmission. |
+| `dist/portraits.mjs` | The speaker's portrait in the quest window: a backlit ASCII silhouette, the cast's own or one from their name. |
 | `dist/intro.mjs` | First launch: the login, then Halcyon's transmission. |
 | `dist/tips.mjs` | First-time tips, the game's only tutorial text. |
 | `dist/tutorial.mjs` | Guided practice on an isolated training virus. |

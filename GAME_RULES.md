@@ -765,7 +765,8 @@ docs/threads.md). Never given, never timed, nothing missable.
   one-off's blue half the time, else white. On The Sink or Bedrock one time in ten an item is one of the floor's own
   uniques. Faction standing where a faction is in it, and a line of lore.
 - **The quest window** reads a thread as an intercepted *Transmission*: the sender and their mark, the title, its lines
-  (the opening resolving out of noise, once), its steps as a job (✓ done, ▸ current, the rest encrypted). The reward
+  (the opening resolving out of noise, once) beside the speaker's portrait (a backlit ASCII silhouette, or a page for a
+  file or log, scanning in once), its steps as a job (✓ done, ▸ current, the rest encrypted). The reward
   card is a signed receipt. Mail's **Threads** list holds each thread, tracked, set aside or done. `threads`,
   `thread <id>`, `thread track|abandon|resume <id>`, `thread take <n>`.
 
