@@ -26,7 +26,7 @@ test('no key carries a subclass at Lv 30: the most-pressed key is under 45% of p
 });
 
 // Each subclass skill on the bar four levels after it opens (at most 42), over fights that hold its moments:
-// the bracket's own, worms (fragments, twins), elites (seals, more tells) and four strains (a Bricker's rage, a
+// the bracket's own, worms (fragments, twins), elites at the crew size before P3 (eliteHp: long fights, seals, more tells) and four strains (a Bricker's rage, a
 // Leech's heals, Patchwork armor, an Overrun swarm). Every one is pressed at least once. Left out: the run skills
 // (no slot) and Rebalance, which evens out a crew and has nothing to do alone.
 const CREW_ONLY = ['rebalance'];
@@ -44,7 +44,7 @@ test('every subclass skill is pressed in the moments it is built for', () => {
       const bar = base.includes(id) ? base : [...base.slice(0, -1), id];
       let n = score(pol, b, { sub, bar }).uses[id] || 0;
       for (let i = 0; i < 6; i++) n += fight(pol, 'random', b, { sub, bar, seed: 900 + i, mode: 'run', zone: true, family: 'worm' }).uses?.[id] || 0;
-      for (let i = 0; i < 6; i++) n += fight(pol, 'random', b, { sub, bar, seed: 950 + i, mode: 'run', zone: true, elite: true }).uses?.[id] || 0;
+      for (let i = 0; i < 6; i++) n += fight(pol, 'random', b, { sub, bar, seed: 950 + i, mode: 'run', zone: true, elite: true, eliteHp: 5.2 }).uses?.[id] || 0;
       for (const strain of ['patchwork', 'bricker', 'leech', 'overrun']) n += fight(pol, 'random', b, { sub, bar, seed: 990, mode: 'run', zone: true, strain }).uses?.[id] || 0;
       if (!n && !KNOWN_DEAD.includes(`${sub} ${id}`)) dead.push(`${sub} ${id} (Lv ${L})`);
     }
