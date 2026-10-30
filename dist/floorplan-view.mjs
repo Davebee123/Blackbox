@@ -152,6 +152,10 @@ const ROOM_ICONS = {
   chase: '<path d="M4 21V3h10v18"/><path d="M2.5 21h19"/><path d="M11 12.5h.01"/><path d="M14.5 9h7M18.5 6l3 3-3 3"/>',
   cascade: '<path d="M4 4h16v16H4Z"/><path d="M13.2 6.5 8.6 13.1h3.6l-1.3 4.4 4.6-6.6h-3.6Z"/>',
   sweep: '<circle cx="12" cy="12" r="1.8"/><path d="M12 6.5a5.5 5.5 0 0 1 5.5 5.5M12 2.5a9.5 9.5 0 0 1 9.5 9.5"/><path d="M6.5 12A5.5 5.5 0 0 0 12 17.5M2.5 12a9.5 9.5 0 0 0 9.5 9.5" stroke-dasharray="2 2.4"/>',
+  // A wire bending through to its sink; two processes waiting on each other round a lock; a sealed note.
+  routing: '<path d="M2.5 7H9v10h8.5"/><path d="M17 13.5l3.5 3.5-3.5 3.5"/><circle cx="9" cy="7" r="1.2"/><circle cx="9" cy="17" r="1.2"/>',
+  deadlock: '<path d="M4.5 10A8 8 0 0 1 18 6.2M19.5 14A8 8 0 0 1 6 17.8"/><path d="M18.5 2.5v4h-4M5.5 21.5v-4h4"/><rect x="9" y="11" width="6" height="5" rx="1"/><path d="M10.5 11V9.6a1.5 1.5 0 0 1 3 0V11"/>',
+  cryptogram: '<path d="M3 5.5h18v13H3Z"/><path d="M3 5.5l9 7 9-7"/><path d="M7 15.5h3M14 15.5h3"/>',
   // A thread's rooms (threads-view.mjs): someone waiting at a terminal, a file, a log.
   ...TH_ICONS,
 };

@@ -408,7 +408,7 @@ const lu = createLevelUpUi({
   fighting: () => active(campaign),
   calm: () => luCalm({ fighting: active(campaign), ended: !!ended || ending, spoils: !$('spoils').hidden, gainModal: gainOpen(), booting: !!shell.booting || introOn || !!bo || connecting() || !$('tip').hidden }),
 });
-const pzFx = createPuzzleFx({ canMove: () => canMove(), sound: (sign, ms) => { feel.beat(ms); feel.add(sign, null); feel.beat(0); } });
+const pzFx = createPuzzleFx({ canMove: () => canMove(), sound: (sign, ms) => { feel.beat(ms); feel.add(sign, null); feel.beat(0); }, play: (arg) => { if (module === 'rooms' && campaign.rooms) roomsClick('play', arg); }, redraw: () => { feel.key('click'); dirty = true; } });
 // The immersive shell (CRT, boot, status line). `?shell=plain` or `shell plain` turns it off.
 const shellParam = params.get('shell');
 const shellOn = () => (shellParam || campaign.settings.shell || 'immersive') !== 'plain';

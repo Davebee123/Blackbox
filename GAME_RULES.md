@@ -706,14 +706,15 @@ Rooms n/N, Mapped or a no-rest job. Invasions carry the quirk too (Invasions).
 
 Rooms that aren't fights (`puzzles.mjs`). Every traced server has one, or two (a quarter of small
 servers, half of medium, three in four large), never two of a kind, each at the end of a branch. **Quarantine** turns up
-three times as often on a Worm server, the **Hunter chase** only beside a sleeping Tracker's den, **Cascade** and **Ping
-sweep** anywhere. SPRAWL-00, rogue servers, lairs and the farm have none.
+three times as often on a Worm server, the **Hunter chase** only beside a sleeping Tracker's den, the rest anywhere, on
+every floor. SPRAWL-00, rogue servers, lairs and the farm have none.
 
 - Walking in opens its board over the map (**Play** on its card brings it back). A board stays the same until it
   refills, as you left it. Its chip shows **IN PLAY**, **SOLVED** or **FAILED** once you've started.
-- **One rule for all four:** played to its end, won or lost, the room is done until it refills (two hours, then a new
-  board). It pays once, at its end: a win pays a kill's XP (Intel, not scaled) and counts for a Solve contract; on The
-  Sink and Bedrock a win also rolls an elite's gold odds for one of the floor's puzzle-board uniques.
+- **One rule for all:** played to its end, won or lost, the room is done until it refills (two hours, then a new
+  board). It pays once, at its end: a win counts for a Solve contract and pays a kill's XP (Intel, not scaled), half one
+  on Packet routing, Deadlock and Cryptogram. On The Sink and Bedrock a win on the first four also rolls an elite's gold
+  odds for one of the floor's puzzle-board uniques.
 
 | Room | The board | What it pays | Floor 4 and down |
 |---|---|---|---|
@@ -721,6 +722,9 @@ sweep** anywhere. SPRAWL-00, rogue servers, lairs and the farm have none.
 | Hunter chase, *Reach the door* | A 5×5 den with walls. You move or wait; the Tracker takes two steps toward you, across first, never around a wall. Cells where it would catch you show red. Undo and Restart. Every den can be won (5 to 12 moves). | Through the door: the real Tracker loses you for the visit, and half a cache. **Caught:** the hunter fight starts. | — |
 | Cascade, *Bring it all down* | A 5×5 rack of nodes charged 1–3. A tap discharges a node and every neighbour gains 1; one past 3 discharges too. Clear it within the fewest taps + 1. | 3 components of the server's families, 2 more for the spare tap. | — |
 | Ping sweep, *Find the cache* | A 7×7 dark room with a buried cache. **Ping** reads the steps to it and lights that ring; **Dig** digs. A budget of 5. | A cache's credits and code, a quarter more for each unspent action. | Two caches (budget 8), or four noisy cells that read one off |
+| Packet routing, *Get it through* | 7×5 wire tiles (straight, elbow, tee, empty). Click turns one clockwise, right-click back (a phone's tap: clockwise). Join the source to the sink within the fewest turns (9–14, by search) + 2; lit wire glows. Out of turns shows the fewest route. | Half a cache's code. | — |
+| Deadlock, *Let them all finish* | Six processes round a pool of free locks (A–D), each needing 2–3 and holding some. Give one a free lock it needs; one holding all it needs finishes and returns its locks. **Deadlocked** when none can finish from the pool. One can finish at the start, never more than two at once. | 1 component. | — |
+| Cryptogram, *Read wick's note* | A note of wick's in your own substitution key. Pick a cipher letter, then type or tap its letter: right fills every one, wrong is a strike (three lose). Solved letters stay in your key for every later note, won or lost; once no note has three left, wick changes the key. | The note. | — |
 
 ### Rogue servers
 

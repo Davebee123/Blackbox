@@ -138,7 +138,7 @@ comment saying what it does.
 | `dist/root.mjs` | Root access: perks on a server you hold, by respawned rooms cleared. |
 | `dist/sockets.mjs` | Sockets: build a program in a cleared socket room; it changes its own server. |
 | `dist/specials.mjs` | Server specials: each traced server's rule (an upside and a cost) from its seed, and its pull on invasions. |
-| `dist/puzzles.mjs`, `dist/puzzle-view.mjs` | Puzzle rooms: four boards that aren't fights. |
+| `dist/puzzles.mjs`, `dist/puzzle-view.mjs` | Puzzle rooms: seven boards that aren't fights, and the cryptogram's key (`s.cipher`). |
 | `dist/forensics.mjs` | Log sweep: a short detective puzzle in a server's incident file. |
 | `dist/traffic.mjs`, `dist/travelfx.mjs` | Ambient packets on the room map; the step between rooms as a train of code. |
 | `dist/network.mjs` | Your network's signature, rolled from its seed. |
@@ -275,7 +275,7 @@ and `style.test.mjs` the tooltip grammar.
 | [`GAME_RULES.md`](GAME_RULES.md) | The rules as built. |
 | [`docs/ui.md`](docs/ui.md), [`docs/style-guide.md`](docs/style-guide.md) | The look (colours, tokens, components); how every line is written. |
 | [`docs/servers.md`](docs/servers.md) | Servers as rooms, floors, sockets and puzzle rooms. |
-| [`docs/puzzle-rooms-plan.md`](docs/puzzle-rooms-plan.md) | Plan: three new puzzle rooms (Packet routing, Deadlock, Cryptogram). |
+| [`docs/puzzle-rooms-plan.md`](docs/puzzle-rooms-plan.md) | Plan: three new puzzle rooms (Packet routing, Deadlock, Cryptogram). Built. |
 | [`docs/genome.md`](docs/genome.md), [`docs/parts-plan.md`](docs/parts-plan.md), [`docs/mechanics-list.md`](docs/mechanics-list.md) | How viruses are built, their parts, and the mechanics to play. |
 | [`docs/puzzle-fights.md`](docs/puzzle-fights.md), [`docs/puzzle-levers.md`](docs/puzzle-levers.md) | Fights you read or prepare for, and their levers. |
 | [`docs/kits.md`](docs/kits.md), [`docs/subclasses/`](docs/subclasses/) | Class kits and the eight subclasses. |

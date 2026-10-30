@@ -25,7 +25,7 @@ test('every board is the same from its seed, and another seed draws another', ()
   for (const kind of PZ.PUZZLE_KINDS) for (const floor of [1, 5]) {
     const a = PZ.newPuzzle(kind, 4242, { floor }), b = PZ.newPuzzle(kind, 4242, { floor }), c = PZ.newPuzzle(kind, 4243, { floor });
     assert.deepEqual(a, b, `${kind} floor ${floor}`);
-    assert.notDeepEqual({ ...a, seed: 0 }, { ...c, seed: 0 }, `${kind}: a new seed, a new board`);
+    if (kind !== 'cryptogram') assert.notDeepEqual({ ...a, seed: 0 }, { ...c, seed: 0 }, `${kind}: a new seed, a new board`); // (a cryptogram draws one of a few notes)
     assert.deepEqual(JSON.parse(JSON.stringify(a)), a, `${kind}: a board is plain data (a save holds it)`);
   }
 });
@@ -203,11 +203,11 @@ const traced = (family = 'worm', { seed = 1, depth = 1, template = null } = {}) 
 };
 const puzzlesOf = (g) => Object.values(g.rooms).filter((x) => FP.isPuzzle(x.kind));
 const walkIn = (s, id) => { const R = s.rooms; R.at = FP.neighbours(R.graph, id).find((x) => !FP.isPuzzle(R.graph.rooms[x].kind)); R.screen = null; R.visit.walked[R.at] = true; FP.go(s, id); };
-function serverWith(kind, family = 'worm') {
+function serverWith(kind, family = 'worm', ok = () => true) {
   for (let k = 0; k < 300; k++) {
     const t = traced(family, { seed: 500 + k * 61, depth: kind === 'chase' ? 3 : 1 + (k % 3), template: kind === 'chase' ? ['mirror', 'archive', 'lab'][k % 3] : null });
     const room = puzzlesOf(t.R.graph).find((x) => x.kind === kind);
-    if (room) return { ...t, room };
+    if (room && ok(t, room)) return { ...t, room };
   }
   throw new Error('no server with ' + kind);
 }
@@ -274,7 +274,7 @@ test('fog: a puzzle room is a ? like any other until you\'ve been in it; then it
 });
 
 test('play: walking in opens its board; moves by the card\'s verbs or the terminal; it ends once, pays once, counts as cleared, and stays done until it refills (two hours) with a new board', () => {
-  const { s, loc, room } = serverWith('quarantine');
+  const { s, loc, room } = serverWith('quarantine', 'worm', (t, x) => !FP.FIGHTS.includes(t.R.graph.rooms[FP.neighbours(t.R.graph, x.id)[0]].kind)); // walks out and back: a quiet room beside it
   play(s, `connect ${loc.name}`);
   const R = s.rooms;
   walkIn(s, room.id);
@@ -432,4 +432,104 @@ test('an older save: its traced servers gain their puzzle rooms from their seed,
   puzzleRoomsRestore(again);
   assert.equal(puzzlesOf(again.locations.find((x) => x.id === loc.id).floorplan.graph).length, added.length);
   assert.deepEqual(placePuzzles(l2, g2), [], 'a graph with them is done');
+});
+
+// ---------- Packet routing, Deadlock, Cryptogram ----------
+test('packet routing: every board is unlit at the start, its fewest 9 to 14 turns (budget +2), the solver joins it in exactly that; out of turns loses; back turns anticlockwise', () => {
+  for (const seed of SEEDS.slice(0, 20)) {
+    const b = PZ.newRouting(seed);
+    assert.equal(PZ.routeLit(b).won, false, `seed ${seed}: not joined yet`);
+    assert.ok(b.best >= PZ.RT.best[0] && b.best <= PZ.RT.best[1], `seed ${seed}: fewest ${b.best}`);
+    assert.equal(b.budget, b.best + PZ.RT.slack);
+    assert.deepEqual(b.solution.map(([i]) => i)[0], b.src * PZ.RT.cols, 'the route starts at the source');
+    while (!b.done) assert.ok(PZ.puzzleMove(b, PZ.botMove(b)), 'every solver move goes');
+    assert.equal(b.done, 'won'); assert.equal(b.turns, b.best, `seed ${seed}: in the fewest`);
+  }
+  const b = PZ.newRouting(77), i = b.tiles.findIndex((t) => t.t), r0 = b.tiles[i].r;
+  PZ.puzzleMove(b, `back ${i}`);
+  assert.equal(b.tiles[i].r, (r0 + 3) % 4, 'back: a quarter anticlockwise');
+  const empty = b.tiles.findIndex((t) => !t.t);
+  if (empty >= 0) assert.equal(PZ.puzzleMove(b, `turn ${empty}`), null, 'an empty tile doesn\'t turn');
+  const off = b.tiles.map((t, k) => k).filter((k) => b.tiles[k].t && !b.solution.some(([j]) => j === k));
+  for (let k = 0; !b.done; k++) PZ.puzzleMove(b, `turn ${off[0]}`);
+  assert.equal(b.done, 'lost', 'turns spent away from the route: out of turns');
+  assert.match(PZ.boardLines(b).join('\n'), /Turns left 0/);
+});
+
+test('deadlock: exactly one can finish at the start, at most two at any point, three or more decoys, random gives win 4–30%; its finish order wins; a decoy give can deadlock it', () => {
+  let lost = 0;
+  for (const seed of SEEDS.slice(0, 12)) {
+    const b = PZ.newDeadlock(seed);
+    assert.equal(b.need.map((_, p) => p).filter((p) => PZ.canFinish(b, p)).length, 1, `seed ${seed}: one to start`);
+    const sol = PZ.lockSolve(b);
+    assert.ok(sol.ok && Math.max(...sol.steps) <= 2, `seed ${seed}: solvable, a clear chain`);
+    assert.ok(b.need.map((_, p) => p).filter((p) => !PZ.canFinish(b, p) && PZ.lockLeft(b, p).some((l) => b.pool.includes(l))).length >= 3, 'decoys');
+    const rate = PZ.lockRandomRate(b);
+    assert.ok(rate >= PZ.DL.rate[0] && rate <= PZ.DL.rate[1], `seed ${seed}: random play wins ${rate}`);
+    const w = structuredClone(b);
+    while (!w.done) assert.ok(PZ.puzzleMove(w, PZ.botMove(w)));
+    assert.equal(w.done, 'won'); assert.ok(w.fin.every(Boolean)); assert.deepEqual(w.pool.length, b.pool.length + b.held.flat().length, 'every lock back in the pool');
+    // Blunder: always feed a process that can't finish.
+    const x = structuredClone(b);
+    for (let g = 0; !x.done && g < 40; g++) {
+      const p = x.need.map((_, q) => q).find((q) => !x.fin[q] && !PZ.canFinish(x, q) && PZ.lockLeft(x, q).some((l) => x.pool.includes(l)));
+      const q = p ?? x.need.map((_, k) => k).find((k) => PZ.canFinish(x, k)), l = PZ.lockLeft(x, q).find((y) => x.pool.includes(y));
+      PZ.puzzleMove(x, `give ${PZ.PROCS[q]} ${PZ.LOCKS[l].toLowerCase()}`);
+    }
+    if (x.done === 'lost') { lost++; assert.match(PZ.moveLine(x, x.last), /Deadlock\.$/); }
+  }
+  assert.ok(lost > 0, 'a board can be lost');
+  const b = PZ.newDeadlock(5), held = b.held.map((h) => h.slice());
+  assert.equal(PZ.puzzleMove(b, 'give cron z'), null, 'no such lock');
+  assert.deepEqual(b.held, held, 'a move that doesn\'t go changes nothing');
+});
+
+test('cryptogram: one key a player (none to itself), a right letter fills it, a wrong one strikes, three lose; the key carries between notes and survives a loss; read every note and wick changes it', () => {
+  const k = PZ.wickKey(9);
+  assert.equal(new Set(Object.values(k)).size, 26); assert.ok(Object.entries(k).every(([p, c]) => p !== c.toLowerCase()));
+  const cipher = { seed: 9, solved: [] }, b = PZ.newCryptogram(31, cipher);
+  assert.ok(PZ.cgOpen(b).length >= PZ.CG.fresh);
+  const [p, q] = PZ.cgOpen(b), wrong = [...PZ.ALPHA].find((x) => x !== p);
+  assert.ok(PZ.puzzleMove(b, `guess ${b.key[p]} ${p}`).ok);
+  assert.ok(PZ.cgKnown(b, p));
+  assert.equal(PZ.puzzleMove(b, `guess ${b.key[p]} ${p}`), null, 'a solved letter takes no more');
+  assert.equal(PZ.puzzleMove(b, `guess ${b.key[q]} ${q === wrong ? 'z' : wrong}`).ok, false);
+  assert.equal(b.misses, 1);
+  for (const x of [...PZ.ALPHA].filter((x) => x !== q).slice(0, 2)) PZ.puzzleMove(b, `guess ${b.key[q]} ${x}`);
+  assert.equal(b.done, 'lost', 'three strikes');
+  // On a server: solved letters join your key either way, and the next note starts with them.
+  const { s, loc, room } = serverWith('cryptogram');
+  play(s, `connect ${loc.name}`); walkIn(s, room.id);
+  assert.match(roomsMarkup(s), /class="cg-board/, 'its board over the map');
+  const c = FP.boardOf(s, room), first = PZ.cgOpen(c)[0];
+  FP.act(s, 'play', `guess ${c.key[first].toLowerCase()} ${first}`);
+  assert.deepEqual(PZ.cipherOf(s).solved, [first], 'into the key at once');
+  const bad = [...PZ.ALPHA].filter((x) => x !== PZ.cgPlain(c, c.key[PZ.cgOpen(c)[0]]));
+  for (let n = 0; !c.done; n++) FP.act(s, 'play', `guess ${c.key[PZ.cgOpen(c)[0]].toLowerCase()} ${bad[n]}`);
+  assert.equal(c.done, 'lost');
+  assert.ok(PZ.cipherOf(s).solved.includes(first), 'a loss keeps it');
+  const next = PZ.newCryptogram(4040, PZ.cipherOf(s));
+  assert.equal(next.kseed, c.kseed, 'the same key');
+  if (next.text.includes(first)) assert.ok(next.carried.includes(first), 'carried onto the next note');
+  // Every note read: a new key.
+  const all = { seed: 9, solved: [...PZ.ALPHA] }, fresh = PZ.newCryptogram(1, all);
+  assert.notEqual(all.seed, 9); assert.deepEqual(all.solved, []); assert.deepEqual(fresh.carried, []);
+  // A save without it: made on first use.
+  const t = {}; assert.deepEqual(PZ.cipherOf(t).solved, []); const seed = t.cipher.seed; PZ.cipherOf(t); assert.equal(t.cipher.seed, seed, 'safe to run twice');
+});
+
+test('the three new boards pay less: half a kill\'s XP; routing half a cache\'s code, deadlock a component, cryptogram the note', () => {
+  for (const kind of ['routing', 'deadlock', 'cryptogram']) {
+    const { s, loc, room } = serverWith(kind);
+    play(s, `connect ${loc.name}`); walkIn(s, room.id);
+    const b = FP.boardOf(s, room), parts = s.components;
+    let end;
+    while (!b.done) end = FP.act(s, 'play', PZ.botMove(b)).find((e) => e.type === 'puzzle-end') || end;
+    assert.ok(end.won, kind);
+    const kill = s.logs.find((e) => e.type === 'xp' && e.message.includes(`${PZ.PUZZLES[kind].name} solved`));
+    assert.ok(kill?.amount > 0 && kill.kind === 'intel', `${kind}: XP as intel`);
+    if (kind === 'routing') { assert.ok(end.pay.code >= 1 && end.pay.code <= 2); assert.equal(end.pay.credits, 0); }
+    if (kind === 'deadlock') assert.equal(s.components - parts, FP.ROOMS.puzzles.lock);
+    if (kind === 'cryptogram') { assert.equal(end.pay.code + end.pay.credits + end.pay.parts, 0); assert.equal(end.line, b.text.replace(/\.$/, ''), 'the note, decoded'); }
+  }
 });

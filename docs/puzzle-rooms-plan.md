@@ -1,6 +1,6 @@
 # Plan: three new puzzle rooms (Packet routing, Deadlock, Cryptogram)
 
-Not built yet. The designer played prototypes of all three (October 2026) and kept them; the playable prototype is
+**Built** (October 2026): `puzzles.mjs`, `puzzle-view.mjs`, GAME_RULES.md "Puzzle rooms". The designer played prototypes of all three (October 2026) and kept them; the playable prototype is
 https://claude.ai/artifact/XqTzscjsm6DYUJ7peGhipw (private to the designer). Build them to its rules, look and one-line
 rules; this page holds enough of its logic to rebuild. Leave out the prototype's frame (tabs, "Next board").
 

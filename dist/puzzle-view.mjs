@@ -9,16 +9,18 @@
 // the cascade's waves with sparks, a ping's ring opening out, a dig, the Tracker's two steps. Motion off or reduced
 // motion: none of it, the board just changes.
 import { esc } from './view.mjs';
-import { PUZZLES, Q, H, P, C, isPuzzle, qTargets, qValue, chaseReach, chaseDanger, trackerTurn, sweepLeft, cellName, dimsOf } from './puzzles.mjs';
+import { PUZZLES, Q, H, P, C, RT, PROCS, LOCKS, ALPHA, isPuzzle, qTargets, qValue, chaseReach, chaseDanger, trackerTurn, sweepLeft, cellName, dimsOf, rtMask, routeLit, lockLeft, lockGive, cgPlain, cgKnown, cgOpen, cipherOf } from './puzzles.mjs';
 import { hereOf, boardOf, puzzleState, refillAt, addrOf, known } from './floorplan.mjs';
 import { active } from './combat.mjs';
 
-// The panel's view state (never saved): the stand you closed it on, and the sweep's mode.
-export const pzUi = { closed: null, mode: 'ping' };
+// The panel's view state (never saved): the stand you closed it on, the sweep's mode, the cryptogram's cipher letter.
+export const pzUi = { closed: null, mode: 'ping', sel: null };
 const n1 = (v) => +v.toFixed(1);
 const chip = (x, y, hw, hh, c) => [[x - hw + c, y - hh], [x + hw - c, y - hh], [x + hw, y - hh + c], [x + hw, y + hh - c], [x + hw - c, y + hh], [x - hw + c, y + hh], [x - hw, y + hh - c], [x - hw, y - hh + c]].map(([a, b]) => `${n1(a)},${n1(b)}`).join(' ');
 const VARIANT = { twin: { quarantine: 'Two outbreaks', sweep: 'Two caches' }, fast: { quarantine: 'It copies twice' }, noisy: { sweep: 'Noisy cells' } };
-const BOOT = { quarantine: (b) => `isolate /dev/seg0 · ${b.starts.length > 1 ? 'two outbreaks' : b.spread > 1 ? 'worm, fast' : 'worm loose'}`, chase: () => 'open /den · tracker inside', cascade: (b) => `mount /rack0 · ${b.b.filter(Boolean).length} charged`, sweep: (b) => `listen /dark0 · ${b.caches.length > 1 ? 'two caches' : 'one cache'}${Object.keys(b.noise).length ? ' · noise' : ''}` };
+const BOOT = { quarantine: (b) => `isolate /dev/seg0 · ${b.starts.length > 1 ? 'two outbreaks' : b.spread > 1 ? 'worm, fast' : 'worm loose'}`, chase: () => 'open /den · tracker inside', cascade: (b) => `mount /rack0 · ${b.b.filter(Boolean).length} charged`, sweep: (b) => `listen /dark0 · ${b.caches.length > 1 ? 'two caches' : 'one cache'}${Object.keys(b.noise).length ? ' · noise' : ''}`,
+  routing: () => 'route /net0 · src → sink', deadlock: (b) => `ps /lockd · ${b.n} processes · ${b.pool.length} locks free`, cryptogram: (b) => `cat ~/mail/wick.enc · ${b.text.replace(/[^a-z]/g, '').length} letters` };
+const GRID = ['quarantine', 'chase', 'cascade', 'sweep', 'routing'];
 
 // ---------- which board, when ----------
 // The stand you're on: a step in resets it, so walking out and back opens a closed panel again.
@@ -166,11 +168,93 @@ export function sweepSvg(b, mode = 'ping') {
 }
 export const sweepXY = (i) => { const { S, PAD } = sweepGeo; return [PAD + (i % P.cols) * S + S / 2, PAD + Math.floor(i / P.cols) * S + S / 2]; };
 
+// Packet routing: 7×5 tiles of wire. Lit wire, joined to the source, glows amber and flows; the sink (gold, what you're
+// after) lights when it's joined. Out of turns: the fewest route, dashed.
+export const routeGeo = { S: 64, PX: 76, PY: 22 };
+export const routeXY = (i) => { const { S, PX, PY } = routeGeo; return [PX + (i % RT.cols) * S + S / 2, PY + Math.floor(i / RT.cols) * S + S / 2]; };
+const RDR = [-1, 0, 1, 0], RDC = [0, 1, 0, -1];
+export function routeSvg(b) {
+  const { S, PX, PY } = routeGeo, W = PX * 2 + S * RT.cols, Ht = PY * 2 + S * RT.rows, { on, won } = routeLit(b), live = !b.done;
+  let tiles = '';
+  b.tiles.forEach((t, i) => {
+    const [x, y] = routeXY(i), m = rtMask(t), lit = on.has(i);
+    if (!t.t) { tiles += `<g class="pz-n rt-empty" data-pz-i="${i}"><polygon class="pz-chip" points="${chip(x, y, 26, 26, 7)}"/></g>`; return; }
+    let halo = '', wire = '';
+    for (let d = 0; d < 4; d++) {
+      if (!(m & (1 << d))) continue;
+      const seg = (cls) => `<line class="${cls}" x1="${x}" y1="${y}" x2="${x + RDC[d] * S / 2}" y2="${y + RDR[d] * S / 2}"/>`;
+      if (lit) halo += seg('rt-halo'); // (a glow of its own: a filter on a straight line has no area)
+      wire += seg('pz-bed') + seg('rt-wire') + (lit ? seg('rt-flow') : '');
+    }
+    tiles += `<g class="pz-n rt-tile${lit ? ' on' : ''}" data-pz-i="${i}"${act(`turn ${i}`, `${cellName(b, i)}: turn it`, live)}><rect class="pz-hit" x="${x - S / 2}" y="${y - S / 2}" width="${S}" height="${S}"/><polygon class="pz-chip" points="${chip(x, y, 26, 26, 7)}"/><polygon class="pz-hair" points="${chip(x, y, 21, 21, 5)}"/>`
+      + `<g class="rt-w" style="transform-origin:${x}px ${y}px">${halo}${wire}<rect class="rt-via" x="${x - 4}" y="${y - 4}" width="8" height="8" rx="1"/></g></g>`;
+  });
+  const [, sy] = routeXY(b.src * RT.cols), [, ky] = routeXY(b.snk * RT.cols);
+  const lead = (x1, x2, y, cls, flow) => `<line class="rt-halo${cls}" x1="${x1}" y1="${y}" x2="${x2}" y2="${y}"/><line class="pz-bed" x1="${x1}" y1="${y}" x2="${x2}" y2="${y}"/><line class="rt-wire lead on${cls}" x1="${x1}" y1="${y}" x2="${x2}" y2="${y}"/>${flow ? `<line class="rt-flow${cls}" x1="${x1}" y1="${y}" x2="${x2}" y2="${y}"/>` : ''}`;
+  const leads = lead(PX - 30, PX, sy, '', true) + (won ? lead(W - PX, W - PX + 30, ky, ' gold', true) : `<line class="pz-bed" x1="${W - PX}" y1="${ky}" x2="${W - PX + 30}" y2="${ky}"/><line class="rt-wire" x1="${W - PX}" y1="${ky}" x2="${W - PX + 30}" y2="${ky}"/>`);
+  const end = (x, y, cls, word) => `<g class="rt-end ${cls}"><polygon class="pz-chip" points="${chip(x, y, 24, 18, 6)}"/><text x="${x}" y="${y + 4}" text-anchor="middle">${word}</text></g>`;
+  const ghost = b.done === 'lost' ? `<polyline class="rt-ghost" points="${[[PX - 30, sy], ...b.solution.map(([i]) => routeXY(i)), [W - PX + 30, ky]].map((q) => q.join(',')).join(' ')}"/>` : '';
+  return `<svg class="pz-svg rt-svg${won ? ' won' : ''}" viewBox="0 0 ${W} ${Ht}" data-pz-board role="group" aria-label="The net"><g class="pz-traces">${leads}</g><g class="pz-nodes">${tiles}</g>${ghost}${end(PX - 42, sy, 'src', 'SRC')}${end(W - PX + 42, ky, `snk${won ? ' won' : ''}`, 'SINK')}<g class="pz-fx"></g></svg>`;
+}
+
+// Deadlock: six processes in a ring around the pool of free locks. A process's locks: held (steel), then the ones it
+// still needs (dashed); a needed one you have free is lit amber and takes a click. Hovering it lights its process, gold
+// when that give finishes it. tall: the ring standing upright (a phone's).
+const DGEO = { wide: { W: 680, H: 450, cx: 340, cy: 225, rx: 250, ry: 160, hw: 70, nx: 58 }, tall: { W: 400, H: 620, cx: 200, cy: 310, rx: 128, ry: 232, hw: 64, nx: 52 } };
+export const lockXY = (p, tall = false) => { const G = DGEO[tall ? 'tall' : 'wide'], a = -Math.PI / 2 + (p / 6) * Math.PI * 2; return [G.cx + G.rx * Math.cos(a), G.cy + G.ry * Math.sin(a)]; };
+export const poolXY = (tall = false) => { const G = DGEO[tall ? 'tall' : 'wide']; return [G.cx, G.cy + 10]; };
+const padlock = (x, y, l, cls, attrs = '') => `<g class="dl-lock ${cls}"${attrs}><path class="sh" d="M${n1(x - 5.5)} ${n1(y - 7)}v-4.5a5.5 5.5 0 0 1 11 0v4.5"/><rect class="bd" x="${n1(x - 10)}" y="${n1(y - 7)}" width="20" height="17" rx="1.5"/><text x="${n1(x)}" y="${n1(y + 6)}" text-anchor="middle">${LOCKS[l]}</text></g>`;
+export function deadlockSvg(b, tall = false) {
+  const G = DGEO[tall ? 'tall' : 'wide'], live = !b.done;
+  let procs = '';
+  for (let p = 0; p < b.n; p++) {
+    const [x, y] = lockXY(p, tall), fin = b.fin[p], held = b.held[p], left = lockLeft(b, p), all = [...held, ...left];
+    let locks = '';
+    if (!fin) all.forEach((l, k) => {
+      const lx = x + (k - (all.length - 1) / 2) * 30, ly = y + 12, mine = k < held.length, can = !mine && live && b.pool.includes(l) && left.indexOf(l) === k - held.length;
+      const ends = can && lockGive(b, p, l)?.last.finished;
+      locks += padlock(lx, ly, l, `${mine ? 'held' : 'want'}${can ? ' can' : ''}`, can ? `${ends ? ' data-fin="1"' : ''}${act(`give ${PROCS[p]} ${LOCKS[l].toLowerCase()}`, `Give ${LOCKS[l]} to ${PROCS[p]}${ends ? ': it finishes' : ''}`)}` : '');
+    });
+    procs += `<g class="pz-n dl-proc${fin ? ' done' : ''}${b.done === 'lost' && !fin ? ' stuck' : ''}" data-pz-i="${p}"><polygon class="pz-chip" points="${chip(x, y, G.hw, 31, 8)}"/><polygon class="pz-hair" points="${chip(x, y, G.hw - 5, 26, 6)}"/>`
+      + `<text class="dl-name" x="${n1(x - G.nx)}" y="${n1(y - 11)}">${PROCS[p]}</text>${fin ? `<text class="dl-exit" x="${n1(x)}" y="${n1(y + 13)}" text-anchor="middle">exit 0</text>` : `<text class="dl-count" x="${n1(x + G.nx)}" y="${n1(y - 11)}" text-anchor="end">${held.length}/${all.length}</text>`}${locks}</g>`;
+  }
+  const pw = Math.max(2, b.pool.length) * 30 + 22, word = b.done === 'won' ? 'EXIT 0' : b.done === 'lost' ? 'DEADLOCK' : 'FREE';
+  let pool = `<g class="dl-pool${b.done === 'lost' ? ' lost' : ''}"><polygon class="pz-chip" points="${chip(G.cx, G.cy, pw / 2, 30, 8)}"/><text class="dl-free" x="${G.cx}" y="${G.cy - 15}" text-anchor="middle">${word}</text>`;
+  b.pool.forEach((l, k) => { pool += padlock(G.cx + (k - (b.pool.length - 1) / 2) * 30, G.cy + 10, l, 'free'); });
+  if (!b.pool.length && b.done !== 'won') pool += `<text class="dl-none" x="${G.cx}" y="${G.cy + 14}" text-anchor="middle">—</text>`;
+  pool += '</g>';
+  return `<svg class="pz-svg dl-svg ${tall ? 'tall' : 'wide'}" viewBox="0 0 ${G.W} ${G.H}" data-pz-board data-tall="${tall ? 1 : 0}" role="group" aria-label="The processes"><g class="pz-traces"><ellipse class="dl-ring" cx="${G.cx}" cy="${G.cy}" rx="${G.rx}" ry="${G.ry}"/></g>${pool}<g class="pz-nodes">${procs}</g><g class="pz-fx"></g></svg>`;
+}
+
+// Cryptogram: wick's note, each letter's cipher under its slot. Click one (or it moves on by itself), then type or tap
+// its letter. Letters from your key show dim amber, this note's bright; a wrong one is struck on the keys for that symbol.
+function cgSel(b, ui) {
+  const p = ui.sel && cgPlain(b, ui.sel);
+  if (b.done || !p || !b.text.includes(p)) return (ui.sel = null);
+  if (!cgKnown(b, p)) return ui.sel;
+  const order = [...b.text].filter((c) => /[a-z]/.test(c)).map((c) => b.key[c]), at = order.indexOf(ui.sel), open = new Set(cgOpen(b).map((c) => b.key[c]));
+  return (ui.sel = [...order.slice(at), ...order.slice(0, at)].find((C) => open.has(C)) || null);
+}
+export function cryptogramBoard(b, ui = pzUi) {
+  const sel = cgSel(b, ui), live = !b.done;
+  const cell = (ch) => {
+    if (!/[a-z]/.test(ch)) return `<span class="cg-p">${esc(ch)}</span>`;
+    const C = b.key[ch], car = b.carried.includes(ch), sol = b.solved.includes(ch);
+    return `<button type="button" class="cg-c ${car ? 'car' : sol ? 'sol' : 'open'}${sel === C ? ' sel' : ''}${b.last?.C === C && !b.last.ok ? ' miss' : ''}"${!car && !sol && live ? ` data-pz-sel="${C}"` : ' tabindex="-1"'} aria-label="${C}"><b>${car || sol ? ch : ''}</b><i>${C}</i></button>`;
+  };
+  const words = b.text.split(' ').map((w) => `<span class="cg-w">${[...w].map(cell).join('')}</span>`).join('');
+  const keys = [...ALPHA].map((p) => {
+    const car = b.carried.includes(p), sol = b.solved.includes(p), tried = sel && b.wrong.includes(`${sel}${p}`), off = car || sol || tried || !sel || !live;
+    return `<button type="button" class="cg-k${car ? ' car' : sol ? ' sol' : ''}${tried ? ' tried' : ''}"${off ? ' disabled' : ` data-rooms="play" data-arg="guess ${sel.toLowerCase()} ${p}"`}>${p}</button>`;
+  }).join('');
+  return `<div class="cg-board${live ? '' : ' done'}" data-pz-board><p class="cg-note">${words}<span class="cg-sig">— w</span></p><div class="cg-keys" role="group" aria-label="Letters">${keys}</div></div>`;
+}
+
 // ---------- the panel ----------
 const pips = (n, on, cls = '') => `<span class="pz-pips${cls ? ' ' + cls : ''}" aria-hidden="true">${Array.from({ length: n }, (_, k) => `<i class="${k < on ? 'on' : ''}"></i>`).join('')}</span>`;
 const stat = (label, value, cls = '', tip = '') => `<span class="pz-stat${cls ? ' ' + cls : ''}"${tip ? ` title="${esc(tip)}"` : ''}><span class="lbl">${esc(label)}</span><b>${value}</b></span>`;
 const btn = (verb, label, { arg = null, disabled = false, tip = '', cls = '' } = {}) => `<button type="button" class="btn small${cls ? ' ' + cls : ''}" data-rooms="${verb}"${arg != null ? ` data-arg="${esc(arg)}"` : ''}${disabled ? ' disabled' : ''}${tip ? ` title="${esc(tip)}"` : ''}>${esc(label)}</button>`;
-function statsOf(b, ui) {
+function statsOf(s, b, ui) {
   if (b.kind === 'quarantine') {
     const saved = qValue(b), f = saved / Math.max(1, b.total);
     return stat('Turn', b.turn) + `<span class="pz-stat pz-safe${f < Q.win ? ' low' : ''}" title="${esc(`Safe: every node it never reaches pays, a data node three. Half or more and it's contained.`)}"><span class="lbl">Safe</span><span class="pz-bar"><span style="width:${(f * 100).toFixed(1)}%"></span><i style="left:${Q.win * 100}%"></i></span><b>${saved}<small>/${b.total}</small></b></span>` + stat('Firewalls', b.walls, 'steel');
@@ -186,12 +270,20 @@ function statsOf(b, ui) {
     const seg = `<span class="pz-seg" role="group" aria-label="Ping or dig">${['ping', 'dig'].map((m) => `<button type="button" class="btn small${ui.mode === m ? ' on' : ''}" data-pz-mode="${m}" aria-pressed="${ui.mode === m}"${live ? '' : ' disabled'} title="${m === 'ping' ? 'Ping: reads the steps to the cache.' : 'Dig: digs the cell.'}">${m === 'ping' ? 'Ping' : 'Dig'}</button>`).join('')}</span>`;
     return seg + `<span class="pz-stat" title="Pings and digs share the budget."><span class="lbl">Budget</span>${pips(b.budget, left, left <= 1 && live ? 'hot' : '')}<b>${left}</b></span>` + (b.caches.length > 1 ? stat('Found', `${b.found.length}/${b.caches.length}`) : '');
   }
+  if (b.kind === 'routing') { const left = b.budget - b.turns; return `<span class="pz-stat" title="Turns: join the source to the sink within these."><span class="lbl">Turns</span>${pips(b.budget, left, left <= 2 && !b.done ? 'hot' : '')}<b>${left}</b></span>` + stat('Fewest', b.best, 'dim', 'The fewest turns this board can be joined in.'); }
+  if (b.kind === 'deadlock') return stat('Done', `${b.fin.filter(Boolean).length}<small>/${b.n}</small>`);
+  if (b.kind === 'cryptogram') {
+    const key = b.kseed === cipherOf(s).seed ? cipherOf(s).solved.length : b.carried.length + b.solved.length, sol = b.solved.length, car = key - sol;
+    const seg = Array.from({ length: 26 }, (_, k) => `<i class="${k < car ? 'car' : k < key ? 'sol' : ''}"></i>`).join('');
+    return `<span class="pz-stat" title="Strikes: a wrong letter costs one. Three and the note is lost."><span class="lbl">Strikes</span>${pips(b.strikes, b.misses, 'hot')}<b>${b.misses}<small>/${b.strikes}</small></b></span>`
+      + `<span class="pz-stat cg-keystat" title="Your key: every letter you've solved, in every note. The dim ones are from earlier notes."><span class="lbl">Key</span><span class="cg-keybar">${seg}</span><b>${key}<small>/26</small></b></span>`;
+  }
   return '';
 }
 const clock = (at) => `<span class="fp-clock" data-at="${at}"></span>`;
 function resultOf(s, room, b) {
   if (!b.done) return b.kind === 'chase' ? '<p class="pz-keys"><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> move · <kbd>space</kbd> wait</p>' : '';
-  const won = b.done === 'won', head = { quarantine: won ? 'Contained' : 'Overrun', cascade: won ? 'Rack down' : 'Out of taps', sweep: won ? 'Cache found' : 'Out of budget', chase: won ? 'Through the door' : 'Caught' }[b.kind];
+  const won = b.done === 'won', head = { quarantine: won ? 'Contained' : 'Overrun', cascade: won ? 'Rack down' : 'Out of taps', sweep: won ? 'Cache found' : 'Out of budget', chase: won ? 'Through the door' : 'Caught', routing: won ? 'Packet through' : 'Out of turns', deadlock: won ? 'All finished' : 'Deadlocked', cryptogram: won ? 'Decoded' : 'Garbled' }[b.kind];
   const at = refillAt(s, room);
   return `<div class="pz-result ${won ? 'win' : 'lose'}" role="status"><b>${esc(head)}</b>${at ? `<span>Fresh board ↻ ${clock(at)}</span>` : ''}<button type="button" class="btn small" data-pz-close>Close</button></div>`;
 }
@@ -200,14 +292,14 @@ export function puzzlePanel(s, ui = pzUi) {
   const room = panelRoom(s, ui);
   if (!room) return '';
   const b = boardOf(s, room), M = PUZZLES[room.kind], v = VARIANT[b.variant]?.[room.kind];
-  const board = b.kind === 'quarantine' ? quarantineSvg(b, false) + quarantineSvg(b, true) : b.kind === 'chase' ? chaseSvg(b) : b.kind === 'cascade' ? cascadeSvg(b) : sweepSvg(b, ui.mode);
-  const [rows, cols] = dimsOf(b);
+  const board = { quarantine: () => quarantineSvg(b, false) + quarantineSvg(b, true), chase: () => chaseSvg(b), cascade: () => cascadeSvg(b), sweep: () => sweepSvg(b, ui.mode), routing: () => routeSvg(b), deadlock: () => deadlockSvg(b, false) + deadlockSvg(b, true), cryptogram: () => cryptogramBoard(b, ui) }[b.kind]();
+  const [rows, cols] = dimsOf(b), boot = `> ${BOOT[b.kind](b)}${GRID.includes(b.kind) ? ` · ${cols}×${rows}` : ''}`;
   return `<div class="pz-panel k-${b.kind}${b.done ? ` done ${b.done}` : ''}" id="pz-panel" data-pz-key="${esc(keyOf(s, room))}:${s.rooms.puzzles?.[room.id]?.n ?? 0}" data-pz-kind="${b.kind}" role="dialog" aria-label="${esc(`${M.name}: ${M.title}`)}">
     <section class="pz-card"><i class="sp-corner tl"></i><i class="sp-corner tr"></i><i class="sp-corner bl"></i><i class="sp-corner br"></i>
       <header class="pz-head"><p class="pz-kick"><span class="pz-at">${esc(addrOf(s, room.id))}</span> · ${esc(M.name)}${v ? ` · <span class="pz-var">${esc(v)}</span>` : ''}</p><h1>${esc(M.title)}</h1><p class="pz-rule">${esc(M.rule)}</p>
         <button type="button" class="btn small pz-x" data-pz-close title="Close (Esc). Walk out and back, or Play on its card, to come back to it." aria-label="Close">×</button></header>
-      <p class="pz-boot ok" aria-hidden="true" data-boot="${esc(`> ${BOOT[b.kind](b)} · ${cols}×${rows}`)}">${esc(`> ${BOOT[b.kind](b)} · ${cols}×${rows}`)}</p>
-      <div class="pz-stats">${statsOf(b, ui)}</div>
+      <p class="pz-boot ok" aria-hidden="true" data-boot="${esc(boot)}">${esc(boot)}</p>
+      <div class="pz-stats">${statsOf(s, b, ui)}</div>
       <div class="pz-well">${board}</div>
       ${resultOf(s, room, b)}
     </section></div>`;
@@ -216,7 +308,9 @@ export function puzzlePanel(s, ui = pzUi) {
 // ---------- what just happened, played over the board ----------
 // app.js: fx.move(event) after a move renders, fx.mounted() after every render (the board drawing in when a panel first
 // opens, the chase's hover ghost). sound(sign, delay): the feel layer's signs.
-export function createPuzzleFx({ canMove = () => true, sound = () => {} } = {}) {
+// play(arg): a move, as the board's own clicks make it (the routing board's right-click, the cryptogram's typed letters);
+// redraw(): the panel again (the cryptogram's picked letter).
+export function createPuzzleFx({ canMove = () => true, sound = () => {}, play = () => {}, redraw = () => {} } = {}) {
   let lastKey = null, busy = 0;
   const NS = 'http://www.w3.org/2000/svg';
   const el = (tag, attrs, parent) => { const x = document.createElementNS(NS, tag); for (const [k, v] of Object.entries(attrs)) x.setAttribute(k, v); parent?.appendChild(x); return x; };
@@ -241,6 +335,7 @@ export function createPuzzleFx({ canMove = () => true, sound = () => {} } = {}) 
     const boot = p.querySelector('.pz-boot');
     if (boot) { const text = boot.dataset.boot; let n = 0; boot.textContent = ''; boot.classList.remove('ok'); const step = () => { if (!boot.isConnected) return; boot.textContent = text.slice(0, n += 2); if (n < text.length) setTimeout(step, 18); else boot.classList.add('ok'); }; step(); }
     for (const svg of boards()) {
+      if (!svg.viewBox) { anim(svg, [{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'translateY(0)' }], { duration: 360, delay: 120 }); continue; }
       const vb = svg.viewBox.baseVal, mx = vb.width / 2, my = vb.height / 2;
       for (const t of svg.querySelectorAll('.pz-traces, .pz-walls, .pz-frame')) anim(t, [{ opacity: 0 }, { opacity: 1 }], { duration: 500, delay: 120 });
       for (const g of svg.querySelectorAll('[data-pz-i]')) {
@@ -265,6 +360,15 @@ export function createPuzzleFx({ canMove = () => true, sound = () => {} } = {}) 
   document.addEventListener('pointerover', (e) => { const t = e.target.closest?.('.pz-h [data-pz-i]'); if (t) ghost(t); });
   document.addEventListener('pointerout', (e) => { const t = e.target.closest?.('.pz-h [data-pz-i]'); if (t && !t.contains(e.relatedTarget)) { const g = t.closest('.pz-h')?.querySelector('.pz-ghost'); if (g) g.innerHTML = ''; } });
   document.addEventListener('focusin', (e) => { const t = e.target.closest?.('.pz-h [data-pz-i]'); if (t) ghost(t); });
+  // Packet routing: a right-click turns a tile back. Cryptogram: click a cipher letter, then type its plain one.
+  const busy_ = () => !!document.querySelector('#pz-panel.pz-busy');
+  document.addEventListener('contextmenu', (e) => { const t = e.target.closest?.('.rt-tile[data-arg]'); if (!t) return; e.preventDefault(); if (!busy_()) play(t.dataset.arg.replace('turn', 'back')); });
+  document.addEventListener('click', (e) => { const t = e.target.closest?.('[data-pz-sel]'); if (!t) return; pzUi.sel = pzUi.sel === t.dataset.pzSel ? null : t.dataset.pzSel; redraw(); });
+  document.addEventListener('keydown', (e) => {
+    if (!/^[a-z]$/i.test(e.key) || e.metaKey || e.ctrlKey || e.altKey || /input|textarea|select/i.test(e.target.tagName) || !document.querySelector('#pz-panel[data-pz-kind="cryptogram"] .cg-board:not(.done)')) return;
+    e.preventDefault(); e.stopImmediatePropagation(); // (not to the prompt)
+    if (pzUi.sel) play(`guess ${pzUi.sel.toLowerCase()} ${e.key.toLowerCase()}`);
+  });
 
   return {
     // After every render: a panel that wasn't up (or a new board) draws in.
@@ -283,6 +387,9 @@ export function createPuzzleFx({ canMove = () => true, sound = () => {} } = {}) 
       } else if (kind === 'cascade') did.frames.forEach((f, k) => sound('pzzap', k * 190));
       else if (kind === 'sweep') sound(did.mode === 'ping' ? 'pzping' : 'pzdig', 0);
       else if (kind === 'chase' && did.path) did.path.slice(1).forEach((_, k) => sound('pzstep', 200 + k * 210));
+      else if (kind === 'routing') sound('pzstep', 0);
+      else if (kind === 'deadlock') sound('pzzap', 0);
+      else if (kind === 'cryptogram') sound(did.ok ? 'pzping' : 'pzdig', 0);
       if (!canMove()) return 0;
       let total = 0;
       for (const svg of boards()) {
@@ -340,6 +447,24 @@ export function createPuzzleFx({ canMove = () => true, sound = () => {} } = {}) 
             if (did.caught) { const [x, y] = end; burst(svg.querySelector('.pz-fx'), x, y, 'hot', { r: 34, sparks: 8, delay: 600 }); }
           }
           total = 680;
+        } else if (kind === 'routing') {
+          const g = node(svg, did.at)?.querySelector('.rt-w');
+          if (g) anim(g, [{ transform: `rotate(${did.dir > 0 ? -90 : 90}deg)` }, { transform: 'rotate(0)' }], { duration: 160 });
+          const k = e.done === 'won' && svg.querySelector('.rt-end.snk .pz-chip')?.getBBox();
+          if (k) burst(fx, k.x + k.width / 2, k.y + k.height / 2, 'gold', { r: 30, sparks: 8, delay: 120 });
+          total = 180;
+        } else if (kind === 'deadlock') {
+          const tall = svg.dataset.tall === '1', [px, py] = lockXY(did.p, tall), [qx, qy] = poolXY(tall);
+          const fly = (l, [x1, y1], [x2, y2], delay) => {
+            const tok = el('g', { class: 'dl-token' }, fx);
+            el('rect', { x: -8, y: -7, width: 16, height: 14, rx: 1.5 }, tok);
+            el('text', { x: 0, y: 4, 'text-anchor': 'middle' }, tok).textContent = LOCKS[l];
+            anim(tok, [{ transform: `translate(${n1(x1)}px,${n1(y1)}px)`, opacity: 1 }, { transform: `translate(${n1(x2)}px,${n1(y2)}px)`, opacity: 0.3 }], { duration: 300, delay, easing: 'ease-in-out' });
+            setTimeout(() => tok.remove(), delay + 320);
+          };
+          fly(did.l, [qx, qy], [px, py + 12], 0);
+          if (did.finished) { burst(fx, px, py, 'amber', { r: 46, sparks: 8, delay: 300 }); did.back.forEach((l, k) => fly(l, [px + (k - 1) * 14, py + 12], [qx, qy], 420 + k * 60)); }
+          total = did.finished ? 720 : 320;
         }
       }
       if (total) hold(total);

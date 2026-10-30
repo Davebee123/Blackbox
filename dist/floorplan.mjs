@@ -62,7 +62,7 @@ import { contractDid } from './mail.mjs';
 import { addrsOf, byAddr } from './address.mjs';
 import { gainComponents } from './salvage.mjs';
 import { PROGRAMS, SOCKET, buildProgram, uninstallProgram, programCost, buildBlock as programBlock, costLine as programCostLine, codebasesOf } from './sockets.mjs';
-import { PUZZLES, PUZZLE_KINDS, isPuzzle, newPuzzle, puzzleMove, puzzleScore, puzzleStarted, cellOf, boardLines, moveLine } from './puzzles.mjs';
+import { PUZZLES, PUZZLE_KINDS, isPuzzle, cipherOf, cgOpen, newPuzzle, puzzleMove, puzzleScore, puzzleStarted, cellOf, boardLines, moveLine } from './puzzles.mjs';
 
 // ---------- tuning ----------
 export const ROOMS = {
@@ -106,7 +106,9 @@ export const ROOMS = {
     code: (L) => 6 + Math.floor(L / 2), // Quarantine: the whole board's worth of the server's code (a node's share of it, ★ three)
     parts: 3, spare: 2, // Cascade: components, and this many more for each tap left over
     cache: 1, budget: 0.25, // Ping sweep: a cache's credits and code, a quarter more for each of the budget left
-    trail: 0.5 }, // the chase: half a cache, and the Tracker loses your trail for the visit
+    trail: 0.5, // the chase: half a cache, and the Tracker loses your trail for the visit
+    low: 0.5, // Packet routing, Deadlock and Cryptogram pay less: half a kill's XP
+    route: 0.5, lock: 1 }, // Packet routing: half a cache's code; Deadlock: a component; Cryptogram: the note
   // The quirks' rooms (netrooms.mjs places them): a Worm server's nest, a Ghostroot server's hidden room. Both optional,
   // never in Rooms n/N. The nest: a Crawler with its brood already out (brood fragments), an elite-lite fight, a kill
   // paying parts components (a cache's worth, past a process room's one or two) and xp room kills of XP; it respawns
@@ -150,8 +152,8 @@ const world = (s) => !!s.rooms?.world;
 // boss: a crew boss's room (KESSLER-FARM-00's three); stash: Root 2's /root on a server you hold (netrooms.mjs);
 // empty, purse: a rogue server's quiet rooms (Empty, and a Stash of a few credits); nest, secret: the quirks' rooms (a
 // Worm server's nest, a Ghostroot server's hidden room).
-export const ROOM_LABEL = { nest: 'Nest', secret: 'Hidden room', socket: 'Socket', entry: 'Entry', process: 'Process', elite: 'Elite', guard: 'Elite', core: 'Core', boss: 'Boss', den: "Hunter's den", cache: 'Cache', vault: 'Vault', rest: 'Rest room', junction: 'Junction', stash: 'Stash', empty: 'Empty', purse: 'Stash', quarantine: 'Quarantine', chase: 'Hunter chase', cascade: 'Cascade', sweep: 'Ping sweep' };
-export const MARKS = { nest: '▦', secret: '▧', socket: '⊕', entry: '⌂', process: '▣', elite: '◆▣', guard: '◆▣', core: '♛', boss: '♛', den: '☠', cache: '▤', vault: '▥', rest: '☰', junction: '·', stash: '▤', empty: '·', purse: '¤', quarantine: '⊞', chase: '⇥', cascade: '≋', sweep: '◎' };
+export const ROOM_LABEL = { nest: 'Nest', secret: 'Hidden room', socket: 'Socket', entry: 'Entry', process: 'Process', elite: 'Elite', guard: 'Elite', core: 'Core', boss: 'Boss', den: "Hunter's den", cache: 'Cache', vault: 'Vault', rest: 'Rest room', junction: 'Junction', stash: 'Stash', empty: 'Empty', purse: 'Stash', quarantine: 'Quarantine', chase: 'Hunter chase', cascade: 'Cascade', sweep: 'Ping sweep', routing: 'Packet routing', deadlock: 'Deadlock', cryptogram: 'Cryptogram' };
+export const MARKS = { nest: '▦', secret: '▧', socket: '⊕', entry: '⌂', process: '▣', elite: '◆▣', guard: '◆▣', core: '♛', boss: '♛', den: '☠', cache: '▤', vault: '▥', rest: '☰', junction: '·', stash: '▤', empty: '·', purse: '¤', quarantine: '⊞', chase: '⇥', cascade: '≋', sweep: '◎', routing: '╬', deadlock: '⊗', cryptogram: '¶' };
 // Rooms that hold something you take, and refill (a puzzle room's board, played to its end, refills like a cache).
 export const STOCKED = ['cache', 'stash', 'purse', 'secret', ...PUZZLE_KINDS];
 export { PUZZLES, PUZZLE_KINDS, isPuzzle };
@@ -373,11 +375,10 @@ export function markQueue(g) {
   return g;
 }
 // Which puzzles a server gets, from its seed: one, two this often by its size (ROOMS.puzzles.second), never two of a
-// kind. Quarantine leans to Worm-family servers, the chase comes only where a Tracker sleeps; Cascade and Ping sweep
-// anywhere.
+// kind. Quarantine leans to Worm-family servers, the chase comes only where a Tracker sleeps; the rest anywhere.
 export function puzzleKinds(g, seed, { size = 'medium', worm = false } = {}) {
   const P = ROOMS.puzzles, r = seeded(((seed || 1) * 9173 + 41) >>> 0);
-  const n = 1 + (r() < (P.second[size] ?? 0.5) ? 1 : 0), w = { quarantine: worm ? P.worm : 1, chase: g.hunter === 'track' && g.den ? P.chase : 0, cascade: 1, sweep: 1 }, out = [];
+  const n = 1 + (r() < (P.second[size] ?? 0.5) ? 1 : 0), w = { quarantine: worm ? P.worm : 1, chase: g.hunter === 'track' && g.den ? P.chase : 0, cascade: 1, sweep: 1, routing: 1, deadlock: 1, cryptogram: 1 }, out = [];
   while (out.length < n) {
     const left = PUZZLE_KINDS.filter((k) => w[k] > 0 && !out.includes(k)), sum = left.reduce((a, k) => a + w[k], 0);
     if (!left.length) break;
@@ -1233,7 +1234,7 @@ function openVault(s, room, force) {
 // ---------- puzzle rooms (9.11, puzzles.mjs) ----------
 // R.puzzles[id]: { n: the refill its board is from, board, at: when it ended, won }. A board is the same until it refills
 // (the server's seed, the room's and its refill count), kept as you left it if you walk out mid-play. Played to its end,
-// won or lost, the room is done until it refills (a cache's two hours): one rule for all four.
+// won or lost, the room is done until it refills (a cache's two hours): one rule for all of them.
 export const puzzleSeed = (R, room, n) => (((Math.imul(R.seed || 1, 2654435761) ^ Math.imul(room.seed || 1, 40503) ^ Math.imul(n + 1, 0x9e3779b1)) >>> 0) || 1);
 export const puzzleReady = (s, room) => !!room && isPuzzle(room.kind) && cacheFull(s, room);
 // The room's board: the one in play, the last one until it refills, or a new one (built the first time it's asked for).
@@ -1241,9 +1242,17 @@ export function boardOf(s, room) {
   const R = s.rooms;
   if (!room || !isPuzzle(room.kind)) return null;
   const n = R.spawns[room.id] || 0, P = (R.puzzles ||= {}), had = P[room.id];
-  if (had && (had.n === n || !cacheFull(s, room))) return had.board;
-  P[room.id] = { n, board: newPuzzle(room.kind, puzzleSeed(R, room, n), { floor: R.floor || 1 }) };
+  if (had && (had.n === n || !cacheFull(s, room))) return cgSync(s, had.board);
+  P[room.id] = { n, board: newPuzzle(room.kind, puzzleSeed(R, room, n), { floor: R.floor || 1, cipher: room.kind === 'cryptogram' ? cipherOf(s) : undefined }) };
   return P[room.id].board;
+}
+// A cryptogram in play takes up letters solved since on another note (the key is the player's).
+function cgSync(s, b) {
+  if (b?.kind !== 'cryptogram' || b.done || b.kseed !== cipherOf(s).seed) return b;
+  const key = cipherOf(s).solved;
+  b.carried = [...new Set(b.text.replace(/[^a-z]/g, ''))].filter((c) => key.includes(c) && !b.solved.includes(c)).sort();
+  if (!cgOpen(b).length) b.done = 'won';
+  return b;
 }
 // Its state in a word: ready (a fresh board), live (one you've started), won or lost (done until it refills).
 export function puzzleState(s, room) {
@@ -1259,8 +1268,9 @@ function playPuzzle(s, room, text, opts = {}) {
   const b = boardOf(s, room);
   if (!text) return say(s, [`${P.name}: ${P.title}. ${P.rule}`, ...boardLines(b)].join('\n'), 'rooms-out');
   const [verb, ...more] = String(text).trim().toLowerCase().split(/\s+/), cell = more.length ? cellOf(b, more.join(' ')) : null;
-  const did = puzzleMove(b, cell == null ? verb : `${verb} ${cell}`);
+  const did = puzzleMove(b, cell == null ? String(text).trim().toLowerCase() : `${verb} ${cell}`);
   if (!did) return deny(s, `${P.name}: that move doesn't go.`);
+  if (b.kind === 'cryptogram' && did.ok && b.kseed === cipherOf(s).seed) { const key = cipherOf(s).solved; if (!key.includes(did.p)) key.push(did.p); } // into your key, win or lose
   emit(s, 'puzzle', moveLine(b, did), { room: room.id, kind: room.kind, last: did, done: b.done });
   if (b.done) finishPuzzle(s, room, b, opts);
   return did;
@@ -1272,7 +1282,8 @@ function playPuzzle(s, room, text, opts = {}) {
 //   Ping sweep  a cache (credits and code) for the caches found, a quarter more for each of the budget left.
 //   The chase   a win: half a cache, and the Tracker loses your trail for the rest of the visit. A loss: it's on you, and
 //               the fight starts here.
-// A win pays a kill's XP (intel).
+//   Packet routing  half a cache's code, on a win. Deadlock: a component, on a win. Cryptogram: the note itself.
+// A win pays a kill's XP (intel), half one on the last three; only the first four roll the floor's uniques.
 function finishPuzzle(s, room, b, opts = {}) {
   const R = s.rooms, P = ROOMS.puzzles, L = (R.world ? ask('level', s) : undefined) ?? R.level, sc = puzzleScore(b), won = b.done === 'won', now = nowOf();
   const had = R.puzzles[room.id];
@@ -1286,18 +1297,22 @@ function finishPuzzle(s, room, b, opts = {}) {
   if (room.kind === 'cascade' && won) pay.parts = P.parts + P.spare * sc.spare;
   if (room.kind === 'sweep' && sc.found) { const c = cache(), k = (sc.found / sc.caches) * P.cache * (1 + P.budget * sc.left); pay.credits = Math.round(c.credits * k); pay.code = Math.max(1, Math.round(c.code * k)); }
   if (room.kind === 'chase' && won) { const c = cache(); pay.credits = Math.round(c.credits * P.trail); pay.code = Math.max(1, Math.round(c.code * P.trail)); }
+  if (room.kind === 'routing' && won) pay.code = Math.max(1, Math.round(cache().code * P.route));
+  if (room.kind === 'deadlock' && won) pay.parts = P.lock;
+  const low = ['routing', 'deadlock', 'cryptogram'].includes(room.kind);
   if (R.world) ask('puzzlePay', s, room, { ...pay, won }); // into the pack (credits, code), components at once, and a won board's set roll (netrooms.mjs)
   else { R.credits += pay.credits; s.server.credits += pay.credits; if (pay.code) gainCode(s, { [pay.material]: pay.code }, `${room.path}: `); if (pay.parts) gainComponents(s, pay.parts); }
-  const xp = won ? xpFor(s, L, P.xp) : 0; // a kill's worth: a contract (Solve) is what pays for the minutes
+  const xp = won ? xpFor(s, L, low ? P.xp * P.low : P.xp) : 0; // a kill's worth: a contract (Solve) is what pays for the minutes
   if (xp) gainXp(s, xp, `${room.path} solved`, 'intel');
   if (won) contractDid(s, 'solve', room.kind); // a Solve contract: any board, or the one it names
   // A won board deep down may hold one of its floor's uniques (combat.mjs puzzleUnique): into the pack, as a vault's item.
-  const gold = won && R.world ? puzzleUnique(s, R.floor || 1, L) : null, got = gold ? addItem(s, gold, `${room.path}: `) : null;
+  const gold = won && R.world && !low ? puzzleUnique(s, R.floor || 1, L) : null, got = gold ? addItem(s, gold, `${room.path}: `) : null;
   if (got) { ask('packItem', s, got); say(s, `${itemLabel(got)} goes in your pack.`, 'rooms-good'); }
   const first = clear(s, room, true);
   const h = hunterOf(s), caught = room.kind === 'chase' && !won && !!h && !h.down; // a lost chase with the Tracker up: its fight, here
-  const head = { quarantine: won ? 'Contained' : 'Overrun', cascade: won ? 'Rack down' : 'Out of taps', sweep: won ? 'Cache found' : 'Out of budget', chase: won ? 'Through the door' : 'Caught' }[room.kind];
-  const line = { quarantine: `${sc.saved} of ${sc.total} saved`, cascade: won ? `${sc.used} taps, fewest ${sc.best}` : `${sc.left} nodes still up`, sweep: `${sc.found} of ${sc.caches} found, ${sc.left} of the budget left`, chase: won ? `${sc.moves} moves, fewest ${sc.best}` : `after ${sc.moves} moves` }[room.kind];
+  const head = { quarantine: won ? 'Contained' : 'Overrun', cascade: won ? 'Rack down' : 'Out of taps', sweep: won ? 'Cache found' : 'Out of budget', chase: won ? 'Through the door' : 'Caught', routing: won ? 'Packet through' : 'Out of turns', deadlock: won ? 'All finished' : 'Deadlocked', cryptogram: won ? 'Decoded' : 'Garbled' }[room.kind];
+  const line = { quarantine: `${sc.saved} of ${sc.total} saved`, cascade: won ? `${sc.used} taps, fewest ${sc.best}` : `${sc.left} nodes still up`, sweep: `${sc.found} of ${sc.caches} found, ${sc.left} of the budget left`, chase: won ? `${sc.moves} moves, fewest ${sc.best}` : `after ${sc.moves} moves`,
+    routing: won ? `${sc.turns} turns, fewest ${sc.best}` : `fewest ${sc.best}`, deadlock: `${sc.fin} of ${sc.n} finished`, cryptogram: won ? b.text?.replace(/\.$/, '') : `${sc.solved} letters into your key` }[room.kind];
   const rows = [{ label: line, qty: '', kind: won ? 'score' : 'lost' },
     ...(pay.code ? [{ label: MATERIALS[pay.material]?.name || pay.material, qty: `+${pay.code}`, kind: 'code', pack: !!R.world }] : []),
     ...(pay.credits ? [{ label: 'Credits', qty: `+${pay.credits}`, kind: 'credits', pack: !!R.world }] : []),
