@@ -11,7 +11,10 @@
 //            floor below: no fight, no key. The floor below is its own warning: its band, on the exit's card.
 //   hubs     Halcyon's and Kestrel's on floor 1, LANTERN's and GLASSJAW's on floor 2, NULL CHOIR's on floor 3, each
 //            off a server near its level (factions.mjs still traces them).
-//   lairs    one a floor from floor 2: a server slot whose Core holds the network's native boss (network.mjs makeLair).
+//   lairs    one a floor from floor 2: a server slot whose Core holds the floor's lair boss (lairBossFor, network.mjs
+//            makeLair): your native boss on the floor whose pool holds it, else one drawn from the pool (FLOOR.lairs).
+//   holder   floors 2–8: the author that writes most of the floor (holdersOf). Its slots take its families
+//            (FLOOR.holders.writes), and their rooms its families and attack sets (netrooms.mjs authorOf).
 //   the farm KESSLER-FARM-00 hangs off floor 1 (rogue.mjs openFarm, from level 7).
 // Tracing runs along a floor's links (hidden.mjs): an unknown server linked to one you've found (or to an entry you've
 // reached) shows as ?, and fills to 100% to locate it. Going deeper is taking an exit. Home sits above the stack: every
@@ -28,6 +31,12 @@ import { signature, makeLair, lairBoss, leanOf } from './network.mjs';
 export const FLOOR = {
   hubs: { halcyon: 1, kestrel: 1, lantern: 2, glassjaw: 2, nullchoir: 3 }, // which floor each faction's hub stands on
   lairFrom: 2, // a lair on every floor from this one
+  // Each floor's lair pool: the built bosses that fit its band (docs/content.md 3.1). A floor with none keeps the native boss.
+  lairs: { 2: ['nb-deadbolt', 'nb-backorifice', 'nb-patchday', 'nb-sleepwalker', 'nb-mirrorshade'], 3: ['nb-hashlord', 'nb-floodwall', 'nb-echolalia'], 4: ['nb-tripmine'] },
+  // Floor holders: from floor 2, rolled from the roster (never the floor above's), weighted to the network's lean. It
+  // writes this share of the floor's servers; the rest are their family's crew's. Floor 5 waits for ACTUARY.
+  // writes: the server families its slots take (its AUTHOR_FAMILIES among the three; their rooms read the full list).
+  holders: { from: 2, share: 0.75, writes: { tollgate: ['ransomware'], swarmline: ['worm'], palemask: ['ghostroot'], nullchoir: ['ghostroot'], glassjaw: ['ransomware', 'worm', 'ghostroot'], lantern: ['worm'] } },
   gap: 132, // map units between neighbours
   curve: 0.5, // how a floor's levels bunch toward the top of its band
 };
@@ -261,10 +270,42 @@ export function floorGraph(seed, n) {
   const hubs = {};
   for (const [f, fl] of Object.entries(FLOOR.hubs)) if (fl === n) hubs[f] = hang(`f${n}h-${f}`, 'hub', HUB_LEVEL[f] || n, { hub: f });
   const farm = n === 1 ? hang('f1farm', 'farm', 7) : null;
-  const g = { n, seed: seed >>> 0, nodes, links, entry, exits, hubs, lair, farm, order: ranked.map((x) => x.id) };
+  // The holder's slots (its own dice, so the floor's shape never moves): its families, leaning the network's way.
+  const holder = holdersOf(seed)[n] || null;
+  if (holder) {
+    const hr = seeded((((seed >>> 0) ^ 0x401de5) + n * 7919) >>> 0 || 1), own = FLOOR.holders.writes[holder];
+    for (const x of ranked) {
+      if (hr() >= FLOOR.holders.share) continue;
+      x.author = holder;
+      if (!own.includes(x.family)) x.family = wpick(hr, Object.fromEntries(own.map((f) => [f, lean ? lean[f] : 1])));
+    }
+  }
+  const g = { n, seed: seed >>> 0, nodes, links, entry, exits, hubs, lair, lairBoss: lair ? lairBossFor(seed, n) : null, holder, farm, order: ranked.map((x) => x.id) };
   CACHE.set(key, g);
   return g;
 }
+// The floors' holders, floor by floor: { n: author }.
+const HOLDERS = new Map();
+export function holdersOf(seed) {
+  seed >>>= 0;
+  if (HOLDERS.has(seed)) return HOLDERS.get(seed);
+  const r = seeded((seed ^ 0x40d3e5) >>> 0 || 1), lean = signature(seed)?.lean, out = {};
+  const W = FLOOR.holders.writes, w = (a) => W[a].reduce((x, f) => x + (lean ? lean[f] : 1), 0) / W[a].length;
+  for (let n = FLOOR.holders.from; n <= FLOORS.length; n++) out[n] = wpick(r, Object.fromEntries(Object.keys(W).filter((a) => a !== out[n - 1]).map((a) => [a, w(a)])));
+  HOLDERS.set(seed, out);
+  return out;
+}
+// A floor's lair boss: the native boss on a floor whose pool holds it (or that has none), else one from the pool,
+// weighted to the network's lean.
+export function lairBossFor(seed, n) {
+  const sig = signature(seed), pool = FLOOR.lairs[n];
+  if (!sig) return null;
+  if (!pool?.length || pool.includes(sig.boss)) return sig.boss;
+  return wpick(seeded((((seed >>> 0) ^ 0x1a12b0) + n * 104729) >>> 0 || 1), Object.fromEntries(pool.map((b) => [b, sig.lean[BOSSES[b].family]])));
+}
+// Every lair boss on your floors.
+export const floorLairBosses = (s) => [...new Set(FLOORS.map((_, i) => graphOf(s, i + 1).lairBoss).filter(Boolean))];
+export const holderOf = (s, n) => graphOf(s, n).holder || null;
 const HUB_LEVEL = { halcyon: 2, kestrel: 4, lantern: 9, glassjaw: 11, nullchoir: 15 };
 // A free spot: the point asked for if nothing crowds it, else the candidate around it (or around the host, a link's
 // length off) farthest from everything already on the floor.
@@ -348,13 +389,13 @@ export function pickSlot(s, floor, family = null) {
   return null;
 }
 
-// A lair located: the network's native boss in its Core, at its slot's level (network.mjs makeLair).
+// A lair located: its floor's lair boss in its Core, at its slot's level (network.mjs makeLair).
 export function lairAt(s, node, parent = null) {
-  const boss = lairBoss(s, 'you');
+  const n = floorOfSlot(node.id), boss = graphOf(s, n).lairBoss || lairBoss(s, 'you');
   if (!boss) return null;
-  const n = floorOfSlot(node.id), id = (s.locations || []).some((l) => l.id === 'lair') ? `lair-${n}` : 'lair';
+  const id = (s.locations || []).some((l) => l.id === 'lair') ? `lair-${n}` : 'lair';
   const name = `${BOSSES[boss].lair}-${String(n).padStart(2, '0')}`;
-  const loc = makeLair(s, 'you', node.level, id, name);
+  const loc = makeLair(s, 'you', node.level, id, name, boss);
   Object.assign(loc, { depth: n, slot: node.id, ...(parent ? { parent } : {}) });
   return loc;
 }

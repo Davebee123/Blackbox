@@ -15,6 +15,8 @@ import { roomsMarkup } from './dist/floorplan-view.mjs';
 import { mailMarkup, systemMarkup } from './dist/view.mjs';
 import { offerMarkup, threadPanel, threadReader } from './dist/threads-view.mjs';
 import * as QV from './dist/quest-view.mjs';
+import { RIVAL } from './dist/rivals.mjs';
+RIVAL.chance = 0; // a rival rolls at connect (rivals.mjs): these walks are scripted (rivals.test.mjs plays them)
 
 CONFIG.enemyCrit = 0; CONFIG.misses = false; CONFIG.exfil.chance = 0;
 let clock = 1_700_000_000_000;

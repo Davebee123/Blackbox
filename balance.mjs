@@ -37,7 +37,7 @@ export function fight(policy, key, b, opts = {}) {
   const guard = opts.mode === 'run';
   if (guard) s.run = { loc: 'sim', cwd: '/', integrity: maxSignal(s), max: maxSignal(s), pack: [], visited: ['/'] };
   const startHp = guard ? s.run.max : s.server.max; // health lost is a share of your own max
-  selectEncounter(s, key, opts.seed ?? 42, opts.zone ? { mode: 'run', room: '/sim', level: b.level + (opts.levelUp || 0), zone: true, family: opts.family, grade: opts.grade, strain: opts.strain, ...(opts.classic ? { classic: true } : {}), ...(opts.mutation !== undefined ? { mutation: opts.mutation } : {}), ...(opts.elite ? { elite: true } : {}), ...(opts.boss ? { boss: opts.boss } : {}), ...(opts.genes ? { genes: opts.genes } : {}) } : guard ? { mode: 'run', room: '/sim', level: opts.guard || b.guard || b.level } : {});
+  selectEncounter(s, key, opts.seed ?? 42, opts.zone ? { mode: 'run', room: '/sim', level: b.level + (opts.levelUp || 0), zone: true, family: opts.family, grade: opts.grade, strain: opts.strain, ...(opts.classic ? { classic: true } : {}), ...(opts.mutation !== undefined ? { mutation: opts.mutation } : {}), ...(opts.elite ? { elite: true, ...(opts.eliteHp ? { eliteHp: opts.eliteHp } : {}) } : {}), ...(opts.boss ? { boss: opts.boss } : {}), ...(opts.genes ? { genes: opts.genes } : {}) } : guard ? { mode: 'run', room: '/sim', level: opts.guard || b.guard || b.level } : {});
   if (s.encounter) s.encounter.soft = 1; // measure the class, not SPRAWL's mercy for new players (CONFIG.zone.starterHit)
   command(s, 'engage');
   const uses = {};
@@ -103,7 +103,8 @@ export const MATCHED = {
   healers: [{ strain: 'patchwork', seed: 300 }, { strain: 'patchwork', seed: 310 }, { strain: 'leech', seed: 400 }, { strain: 'leech', seed: 410 }, bossFight('nb-patchday'), ...many(4, (i) => ({ family: 'worm', seed: 10 * i + 7 }))],
   ghostroot: [...many(6, (i) => ({ family: 'ghostroot', seed: 10 * i + 1 })), bossFight('choir'), bossFight('nb-mirrorshade')],
   hijack: [{ strain: 'patchwork', seed: 300 }, { strain: 'leech', seed: 400 }, bossFight('nb-patchday'), ...many(3, (i) => ({ family: 'ghostroot', seed: 10 * i + 5 })), bossFight('nb-mirrorshade'), { strain: 'echo', seed: 500 }, bossFight('nb-echolalia')],
-  evasion: [...many(4, (i) => ({ elite: true, seed: 10 * i + 2 })), { strain: 'bricker', seed: 600 }, { strain: 'extortion', seed: 610 }, { strain: 'floodgate', seed: 620 }, bossFight('nb-deadbolt'), bossFight('nb-tripmine'), bossFight('relayking')],
+  // evasion's elites: the crew elites' size before P3 (eliteHp: their big hits, data.mjs ELITE.sizedDmg, are what it's for).
+  evasion: [...many(4, (i) => ({ elite: true, eliteHp: 5.2, seed: 10 * i + 2 })), { strain: 'bricker', seed: 600 }, { strain: 'extortion', seed: 610 }, { strain: 'floodgate', seed: 620 }, bossFight('nb-deadbolt'), bossFight('nb-tripmine'), bossFight('relayking')],
   guards: ['watchdog', 'sentinel', 'crawler', 'shredder', 'bouncer', 'tracer'].flatMap((g) => [{ guard: g, seed: 1 }, { guard: g, seed: 11 }]),
   generic: [...many(4, (i) => ({ family: 'ransomware', seed: 10 * i + 9 })), ...many(4, (i) => ({ family: 'ghostroot', seed: 10 * i + 9 })), { family: 'worm', seed: 909 }, { family: 'worm', seed: 919 }],
 };

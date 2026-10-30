@@ -773,3 +773,68 @@ test('one lever a fight: every wild roll from level 6, every guard but the Senti
     assert.equal(at(5), false, `${g} at 5`);
   }
 });
+
+// docs/puzzle-fights.md P3: an elite carries a clash, two levers whose answers pull against each other (genes.mjs
+// CLASHES), from PARTS.lever: its parts on the board, its tell first, the forced native kept, no other lever.
+test('elites: a clash of two levers from level 6 (the Ghostroot\'s from 10), its tell first, the native kept, no third lever', async () => {
+  const { CLASHES } = await import('./dist/genes.mjs');
+  const { SEAL_FROM, TELL } = await import('./dist/data.mjs');
+  const { plannedTells } = await import('./dist/tells.mjs');
+  const { leverOf } = await import('./dist/routines.mjs');
+  assert.deepEqual(PARTS.tells, { seal: SEAL_FROM, cast: TELL.castFrom });
+  const elite = (L, seed) => { const s = fresh(); s.metAll = true; selectEncounter(s, 'random', seed, { mode: 'run', room: '/sim', level: L, zone: true, elite: true, quiet: true }); return s.encounter.virus; };
+  for (const L of [6, 10, 18, 30]) {
+    const seen = new Set();
+    for (let seed = 1; seed <= 60; seed++) {
+      const v = elite(L, seed), c = CLASHES.find((x) => x.id === v.clash), at = `${v.name} at ${L}: ${v.parts.map((p) => p.id).join()}`;
+      if (L < 10 && v.family === 'ghostroot') { assert.equal(c, undefined, at); continue; }
+      assert.ok(c, `${at}: no clash`);
+      seen.add(c.id);
+      for (const k of [c.a, c.b]) {
+        if (k in PARTS.tells) assert.equal(plannedTells(v)[0].kind, k, `${at}: ${k} first`);
+        else assert.ok(v.parts.some((p) => GENES[k].carried(p)), `${at}: its ${k}`);
+      }
+      const native = v.parts.find((p) => GENES[FAMILIES[v.family].parts.find((x) => x.id === p.id)?.gene || '']?.floor);
+      assert.ok(native, `${at}: its floor's native stays`);
+      const others = v.parts.filter((p) => leverOf(p) && ![c.a, c.b].some((k) => GENES[k]?.carried(p)) && p !== native);
+      assert.deepEqual(others.map((p) => p.id), [], `${at}: no lever past the clash and the native`);
+    }
+    assert.ok(seen.size >= 1, `level ${L}`);
+  }
+  assert.equal(elite(5, 1).clash, undefined, 'none before PARTS.lever');
+});
+// The clash's tag: both levers by name, the pull and the answer in its tooltip.
+test('elites: the clash tag names its two levers, and its tooltip says the pull and the answer', async () => {
+  const { CLASHES } = await import('./dist/genes.mjs');
+  for (const [L, family, id] of [[10, 'ransomware', 'blastseal'], [18, 'ghostroot', 'beatcast']]) {
+    let s = null;
+    for (let seed = 1; seed <= 40 && !s; seed++) { const x = fresh(); x.metAll = true; x.run = { loc: 'sim', cwd: '/', integrity: 300, max: 300, pack: [], visited: ['/'] }; selectEncounter(x, 'random', seed, { mode: 'run', room: '/sim', level: L, zone: true, family, elite: true, quiet: true }); if (x.encounter.virus.clash === id) s = x; }
+    assert.ok(s, `${family} at ${L}`);
+    command(s, 'engage');
+    const c = CLASHES.find((x) => x.id === id), html = hudMarkup(s), tag = html.match(/<span class="tag hot clash" title="([^"]*)">([^<]*)<\/span>/);
+    assert.ok(tag, 'the clash tag');
+    assert.match(tag[2], id === 'blastseal' ? /^Zip Bomb ⇄ Key Rotation$/ : /^Mimic ⇄ Persistence$/);
+    assert.ok(tag[1].startsWith(`${c.name}\nClash\n`) && tag[1].includes(`▸ ${c.answer}`), tag[1]);
+  }
+});
+// No pile-ups, lifted for elites (docs/puzzle-fights.md 3, Two clocks): an elite's two tells may land on one cycle only
+// with a cast among them (its window opens a cycle early); any other pile-up is rolled again. An ordinary fight never.
+test('elites: two tells land on one cycle only with a cast among them; an ordinary fight never piles up', () => {
+  let piled = 0;
+  for (const elite of [true, false]) for (let seed = 1; seed <= 30; seed++) {
+    const s = fresh(); s.metAll = true; s.run = { loc: 'sim', cwd: '/', integrity: 99999, max: 99999, pack: [], visited: ['/'] };
+    selectEncounter(s, 'random', seed, { mode: 'run', room: '/sim', level: 18, zone: true, family: 'ghostroot', elite, quiet: true });
+    s.encounter.soft = 1; command(s, 'engage');
+    const lands = {};
+    for (let i = 0; i < 16 && s.encounter?.phase === 'active'; i++) {
+      for (const t of tellsOf(s)?.list || []) if (t.told && t.kind !== 'mimic' && t.next != null) (lands[t.next] ||= new Map()).set(t.id, t.kind);
+      step(s);
+    }
+    for (const [c, m] of Object.entries(lands)) if (m.size > 1) {
+      assert.ok(elite, `seed ${seed}: an ordinary fight piled ${[...m.keys()]} on cycle ${c}`);
+      assert.ok([...m.values()].includes('cast'), `seed ${seed}: ${[...m.keys()]} on cycle ${c}, no cast among them`);
+      piled++;
+    }
+  }
+  assert.ok(piled >= 1, 'an elite piles a cast up now and then');
+});

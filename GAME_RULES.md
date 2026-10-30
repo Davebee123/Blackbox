@@ -100,7 +100,8 @@ Hover it for what happens and, on its own muted ▸ line, how to stop it. Breaki
 | Mimic | The Mimic (ghostroot, from level 8) records you; on its beat it copies the command you fire and turns it on you, with each helper you sent onto it after the beat was said. | Fire what costs least to have copied (a strip when you wear no ◆, a heal when every part is whole, a small hit), hold, or cut the Mimic on its beat. | What it copied, never past the tell ceiling (Third parts: the Mimic). |
 
 - **No pile-ups.** A charge never lands on the same cycle as another part's heavy attack, or on the Mimic's beat.
-  Below level 17 one tell is live at a time; from 17 two can be, never on the same cycle. After a tell lands or is
+  Below level 17 one tell is live at a time; from 17 two can be, never on the same cycle. **An elite** with a clash has one
+  more live, and its tells may land together when a cast is among them (its window opens a cycle early: answer it then). After a tell lands or is
   answered, the next of its kind waits 7 cycles, plus up to 2.
 - **A fixed part.** Each tell sits on one part: the signature for its charge, cast and seal, the plain attacker for
   Overcharge, the rule's part for a strain's charge. A boss's charges and casts stay off its ♛ part while another can
@@ -124,7 +125,7 @@ Hover it for what happens and, on its own muted ▸ line, how to stop it. Breaki
 | 10–16 | Its charge | 1 | ×2.5, 18% | Offline, Corrupted 3% |
 | 17+ | Its charge and its cast | 2 | ×3, 25% | Offline, Corrupted 4% |
 
-An **elite** brings one more from level 6 (its family's seal, then its cast), each charge up to 15% bigger; a **solo
+An **elite** brings one more from level 6 (its clash's tell first, then its family's seal and cast), each charge up to 15% bigger; a **solo
 boss** brings three; a **champion** invader the usual ones, its charges a tenth bigger. SPRAWL-00's first two kills
 bring none.
 
@@ -252,6 +253,17 @@ when the server is built. Every number is a named constant in `PARTS`; `develope
   (Tripwire, Zip Bomb, Hotspot), a part to break first (Lockbox, Mutex, C2 Node, Packer) or twins (Mirror). A fight
   that already brings a stranger may have none, and a server fight with an objective has none (Objectives). The
   Cryptominer's and the Wiper's pools hold no lever yet: the Rig and the Wipe are their puzzles.
+- **An elite's clash** (docs/puzzle-levers.md 4). From level 6 an elite carries two levers whose answers pull against
+  each other, and no other lever but its floor's native. A ⇄ tag names both; its tooltip says the pull and the answer.
+
+  | Clash | Families, from | The pull | The answer |
+  |---|---|---|---|
+  | Zip Bomb ⇄ its seal | Ransomware, Worm, 6 | The blast strips every part; the seal re-arms by the ◆ left on its part. | Break the Zip Bomb a cycle before the seal lands. |
+  | Mimic ⇄ its cast | Ghostroot, 10 | SIGINT on the beat Hangs you, and the cast can land on the beat. | SIGINT the cast a cycle early, cut its part twice, or let it land. |
+  | Tripwire ⇄ Lockbox | Ransomware, 16 | Half the held damage lands at once, and loud parts take 40% more. | Trip the wire, then break the Lockbox into its loud partner. |
+
+  The Mimic ⇄ Lockbox and Decoy ⇄ Tripwire pairs are built but no family carries both yet. A clash that doesn't fit
+  (a rule it breaks, a second stranger) is rolled again; none fits, and the elite carries one lever.
 - **Floor natives.** A native is a third first met on one floor: the Zip Bomb and Hotspot on floor 1; the Idle Timer,
   Front End and Backlog on 2; the Limiter and Spare on 3; the Scraper, Bad Block and Cold Store on 4. On its own floor
   it weighs three times as much; elsewhere it rolls at its own weight once its level allows. **Elites and ★ rare
@@ -306,8 +318,8 @@ rolls them for a session.
 **The spread.** A strain's mechanics parts roll as a third on wild viruses of its lineage from its level and floor
 (weight `PARTS.spread` 0.5, a server room's fixed third too): a Ghostroot from 12 on floor 2 can be a *LURKING
 GHOSTROOT*. A part that reads the signature (the Predator, the Opportunist) comes only beside it. The Codex card names
-the strain it spreads from (the Worm's Leaker and Backtrace are the Doomsday's and the Junkyard's, the Ghostroot's Jitter
-and Prober the Desync's and the Last Stand's).
+the earliest strain it spreads from (the Worm's Leaker and Backtrace are the Doomsday's and the Junkyard's, the
+Ghostroot's Jitter and Prober the Lagging Flicker's and the Last Stand's).
 
 ### Mutations and part rules
 
@@ -364,7 +376,8 @@ would break the compatibility rules beside it: the Doomsday never rolls Hasty, a
 never Linked.
 
 **Mutated strains** (docs/variety-plan.md 1.3). Each of the first eleven has a mutated form 10 levels later: the strain
-(its rule, tell and author) plus one mechanics part, named by the part's adjective. Its part doesn't spread.
+(its rule, tell and author) plus one mechanics part, named by the part's adjective. Its part spreads as any strain's
+does: the Bodyguard onto worms from 13, the Jitter onto ghostroots from 14, the Prober onto ransomware from 16.
 
 | Mutated strain | From | Adds |
 |---|---:|---|
@@ -505,11 +518,22 @@ Resident drops each of its two once, then makes no unique roll. After a miss the
 
 ### Lairs and native bosses
 
-From level 8, once you've found three servers, your network's **lair** is on your map (every floor from 2 has a lair
-slot, found by tracing). Its two outer rooms hold its family (its native strain more often) and come back half an hour
-after they fall; its Core holds your network's **native boss**, back an hour after it falls. A boss with a floor
+Every floor from 2 has a **lair** slot, found by tracing. Its two outer rooms hold its boss's family (your native
+strain more often) and come back half an hour after they fall; its Core holds the floor's **lair boss**, back an hour
+after it falls. The map labels a found lair with its boss, and its card's boss tag gives the rules.
+
+**Lairs by floor** (`floors.mjs` lairBossFor): each floor draws from the built bosses that fit its band. Your
+**native boss** takes the lair on its own floor; the others draw from their pool, weighted to your network's lean.
+
+| Floor | Its pool |
+|---:|---|
+| 2 | DEADBOLT, BACK ORIFICE, PATCH TUESDAY, SLEEPWALKER, MIRRORSHADE |
+| 3 | HASHLORD, FLOODWALL, ECHOLALIA |
+| 4 | TRIPMINE |
+| 5–8 | none built yet: your native boss |
+ A boss with a floor
 (HASHLORD 16, MIRRORSHADE 12) moves in only once you reach that level; until then the Core stays sealed and says from
-which. A native boss drops a boss's item and rolls for its network's **native uniques** (Networks) at the bosses'
+which. Every lair boss drops a boss's item and rolls for its network's **native uniques** (Networks) at the bosses'
 odds, kept per network; its first fall names them all. A strain boss's hits step with level (×0.8 at 10, ×1.1 at 18,
 ×1.45 at 30).
 
@@ -610,7 +634,7 @@ strip (the server, its kind, level and rule, your Signal, **Rooms n/N**, your ke
 |---|---|---|
 | Entry | door | Where you come in. Files left for you (a relay's route files) are `pull`ed here. |
 | Process | ▣ | A virus of the server's author at the server's level; the same family every time, its set and mutation fresh each respawn. |
-| Elite | ◆▣ | Bigger, one more tell, enrages from cycle 9. |
+| Elite | ◆▣ | An elite (`ELITE`) with a clash, one more tell, enrages from cycle 9. |
 | Guard post | ◆▣ KEY | A guard or ICE holding the vault's key, shown as an elite. Hoard, Rich and Hardened servers' are Armored. |
 | Vault | ▥ | `open` with its key, or `force` it for 15% of your max Signal. It holds the server's files: a protocol half the time (your first server's always), code, a trace record, spare credits, now and then a Zero-day (floor 2+) or a filter, and a contract's planted file. Everything goes in your pack. |
 | Core | ♛ | The Resident, **SEALED** until the vault opens. |
@@ -911,18 +935,22 @@ from your network's seed, with its own level band, shape and size.
 | Floor | Name | Levels | Shape | Servers | On it |
 |---:|---|---|---|---:|---|
 | 1 | The Sprawl | 1–8 | A star around SPRAWL-00 | 10 | SPRAWL-00 (the entry), Halcyon's and Kestrel's hubs, KESSLER-FARM-00 (from 7) |
-| 2 | Backhaul | 7–14 | A trunk with spurs | 12 | LANTERN's and GLASSJAW's hubs, a lair |
-| 3 | The Stacks | 13–20 | A lattice with holes | 14 | NULL CHOIR's hub, a lair |
-| 4 | Coldline | 19–26 | A ring around a dead centre | 14 | a lair, two exits |
-| 5 | Deep Core | 25–32 | Two halves joined by one bridge | 16 | a lair, two exits |
-| 6 | Kernel Space | 31–38 | A deep tree | 16 | a lair, two exits |
-| 7 | The Sink | 37–44 | A funnel | 18 | a lair, two exits |
-| 8 | Bedrock | 43–50 | Scattered islands | 18 | a lair, no exit |
+| 2 | Backhaul | 7–14 | A trunk with spurs | 12 | LANTERN's and GLASSJAW's hubs, a lair, a holder |
+| 3 | The Stacks | 13–20 | A lattice with holes | 14 | NULL CHOIR's hub, a lair, a holder |
+| 4 | Coldline | 19–26 | A ring around a dead centre | 14 | a lair, a holder, two exits |
+| 5 | Deep Core | 25–32 | Two halves joined by one bridge | 16 | a lair, a holder, two exits |
+| 6 | Kernel Space | 31–38 | A deep tree | 16 | a lair, a holder, two exits |
+| 7 | The Sink | 37–44 | A funnel | 18 | a lair, a holder, two exits |
+| 8 | Bedrock | 43–50 | Scattered islands | 18 | a lair, a holder, no exit |
 
 - **A server's level** is its place on its floor, fixed when the floor is drawn: the entry's side at the band's bottom,
   the exits' side at its top. Its kind leans by floor (Mailhubs and name servers near the top, Archives and Labs
-  deeper), its family your network's way. Rogue servers (1 in 6) and faction servers (1 in 8) are rolled as you find
+  deeper), its family your network's way (its holder's, if the holder wrote it). Rogue servers (1 in 6) and faction servers (1 in 8) are rolled as you find
   them. Rogue servers, the farm and lairs keep up with you inside their floor's band.
+- **Floor holders.** Floors 2–8 each have a holder: TOLLGATE, SWARMLINE, PALEMASK, NULL CHOIR, GLASSJAW or LANTERN,
+  rolled from your network's seed, weighted to its lean, never the floor above's. It writes three in four of the
+  floor's servers: their families are its own, and their rooms its families and attack sets. A faction's server stays
+  its faction's. The floor panel wears its colour; its tooltip names it.
 - **Your floor** is the deepest one whose band holds your level; the level-up names a floor when you reach its band.
 - **Exits.** One a floor (two from floor 4; Bedrock none), a **▼** on the far side. It shows once you locate a server
   it hangs off, with the floor below's band in WoW colours; **Go down** on its card (`descend`) opens the floor below.
@@ -972,7 +1000,7 @@ handle). docs/networks.md is the designer's review sheet.
 | Name | *Rust Lattice*, *Saltwire Loop*: on the Network card, the consortium map and tooltips |
 | Lean | The three families weighted 3, 1.5 and 0.5: mixed rogue rooms, the ? servers your servers reveal, and the families of couriers, bounties and outbreaks lean that way |
 | Native strain | One strain, five times as likely as its family's others there |
-| Native boss | One of nine, in its lair (Lairs and native bosses) |
+| Native boss | One of nine, in the lair of the floor whose pool holds it (Lairs and native bosses) |
 | Native uniques | 3 to 5 of 27, at least one in each band (5–15, 16–28, 29–40) |
 | Event bias | Two of the director's cards come up 2.5 times as often |
 | Code bias | 30% of other code dropped there comes as its rich code; its rich material (components or Exploits) drops 1.5 times as often |
@@ -2202,8 +2230,9 @@ developer mode, `crew sim <classes>` adds bot crewmates from level 5 (`crew`, `c
 - **MMO, not ARPG:** a normal virus gets +50% Integrity a player (`CREW.hpPer`), a boss +80%, an elite +5%; its hits
   stay their solo size. **Kill XP is split**, plus 10% a player (`PARTY_XP`: a pair 55% each, a four 32.5%). Drops
   stay personal; rewards are yours.
-- **◆ CREW elites** (a third of a Pit's rooms, and the trunk server): ×5.2 Integrity, ×1.3 damage, one more ◆
-  (`ELITE`), only +5% a player: built for four. Three times the XP, three drop rolls, never less than a blue, 8% a
+- **◆ CREW elites** (a third of a Pit's rooms, and the trunk server, and every elite room): ×1.5 Integrity, ×0.7
+  damage, one more ◆ and a clash (`ELITE`; Fights), only +5% a player. A champion, a feud and the farm's packs size
+  their own Integrity, keep ×1.3 damage and roll no clash. Three times the XP, three drop rolls, never less than a blue, 8% a
   unique. Never in the way of anything you need.
 - A crewmate at 0 Signal is down for the fight; you going down ends it. Their hits stay quiet: the sounds are yours.
 

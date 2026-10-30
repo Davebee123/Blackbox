@@ -17,7 +17,7 @@ export const ROGUE = {
   share: 1 / 6, // of servers you trace
   pity: 5, // after this many in a row that aren't, the next one is
   firstTame: 2, // the first two servers you trace are never rogue
-  kinds: { nest: { name: 'Nest', rule: 'Holds one family only, and strains turn up twice as often.' }, pit: { name: 'Pit', rule: 'Holds mixed families 2 levels above the server, with better drops.' }, gauntlet: { name: 'Gauntlet', rule: 'Clear every room in one visit for a bonus cache.' }, farm: { name: 'Crew dungeon', rule: 'Built for a crew. Three bosses, and the third behind a key the first two hold.' }, lair: { name: 'Lair', rule: "Its network's native boss holds the Core, back an hour after it falls. Two rooms of its family guard the way." } }, // farm: KESSLER-FARM-00 only; lair: a network's (network.mjs). Never rolled
+  kinds: { nest: { name: 'Nest', rule: 'Holds one family only, and strains turn up twice as often.' }, pit: { name: 'Pit', rule: 'Holds mixed families 2 levels above the server, with better drops.' }, gauntlet: { name: 'Gauntlet', rule: 'Clear every room in one visit for a bonus cache.' }, farm: { name: 'Crew dungeon', rule: 'Built for a crew. Three bosses, and the third behind a key the first two hold.' }, lair: { name: 'Lair', rule: "The floor's lair boss holds the Core, back an hour after it falls. Two rooms of its family guard the way." } }, // farm: KESSLER-FARM-00 only; lair: a network's (network.mjs). Never rolled
   rooms: ['hive', 'pit', 'spool', 'cells', 'drain', 'nursery', 'crypt', 'sump', 'rack', 'void'],
   respawnMs: [180000, 300000], // 3–5 minutes
   pitLevels: 2,

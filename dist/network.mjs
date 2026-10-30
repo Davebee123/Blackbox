@@ -271,13 +271,13 @@ export const eventMult = (s, card) => (mine(s)?.events.includes(card) ? NETWORK.
 
 // ---------- the lair ----------
 // One on every floor from floor 2 (floors.mjs): a slot on the floor's diagram, found by tracing like any server, its
-// native boss at the slot's level. lairOf: your first one found.
-export const lairOf = (s) => (s.locations || []).find((l) => l.lair && !l.member) || null;
+// floor's lair boss at the slot's level (floors.mjs lairBossFor). lairOf: the one your native boss holds.
+export const lairOf = (s) => (s.locations || []).find((l) => l.lair && !l.member && l.lair === lairBoss(s, 'you')) || null;
 export const lairsOf = (s) => (s.locations || []).filter((l) => l.lair && !l.member);
 export const lairBoss = (s, who) => sigOf(s, who)?.boss || null;
-// A lair on a network: a rogue server of its own, its native boss in /core, its family in the other two folders.
-export function makeLair(s, who, level, id, name) {
-  const boss = lairBoss(s, who);
+// A lair on a network: a rogue server of its own, its boss in /core (the native boss unless named), its family in the
+// other two folders.
+export function makeLair(s, who, level, id, name, boss = lairBoss(s, who)) {
   if (!boss) return null;
   const B = BOSSES[boss], seed = ((seedOf(s, who) % 99991) + 7 + (id === 'lair' ? 0 : strSeed(id) % 997)) >>> 0;
   const loc = createLocation(B.family, seed, SERVER.floorFor(level));
@@ -287,10 +287,10 @@ export function makeLair(s, who, level, id, name) {
 // force nothing: a lair is found by tracing it on its floor.
 export function openLair(s, force = false) {
   if (!netSeedOf(s) || !force) return null;
-  const n = Math.max(2, floorsOf(s).reached), id = graphOf(s, n).lair;
+  const n = Math.max(2, floorsOf(s).reached), g = graphOf(s, n), id = g.lair;
   if (!id || locAt(s, id)) return null;
-  const loc = addLocation(s, BOSSES[lairBoss(s, 'you')].family, n, null, id);
-  if (loc?.lair) emit(s, 'info', `The lair of ${BOSSES[loc.lair].name}, your network's native boss. What it guards is native to ${mine(s).name}.`, { location: loc.id });
+  const loc = addLocation(s, BOSSES[g.lairBoss || lairBoss(s, 'you')].family, n, null, id);
+  if (loc?.lair) emit(s, 'info', `The lair of ${BOSSES[loc.lair].name}. What it guards is native to ${mine(s).name}.`, { location: loc.id });
   return loc;
 }
 // A boss with a floor (BOSSES floor: HASHLORD 16, MIRRORSHADE 12) holds /core only once you've reached it: until then the
@@ -314,12 +314,12 @@ export function lairSpawns(s, loc, now, variant) {
 // A native boss's drops: its network's natives open at its level, BOSS_LOOT's odds and pity (combat.mjs bossUnique).
 // The first time it falls it names every native of its network.
 export const lairUniques = (s, who, level) => (sigOf(s, who)?.uniques || []).filter((id) => open(id, level));
-export function lairFell(s, who) {
+export function lairFell(s, who, boss = null) {
   const g = sigOf(s, who);
   if (!g) return;
   const fresh = g.uniques.filter((id) => !named(s, id));
   for (const id of fresh) (s.netNamed ||= {})[id] = true;
-  if (fresh.length) emit(s, 'info', `${BOSSES[g.boss].name} falls, and its loot table spills: ${fresh.map((id) => UNIQUES[id].name).join(', ')}. Native to ${g.name}.`);
+  if (fresh.length) emit(s, 'info', `${BOSSES[boss || g.boss].name} falls, and its loot table spills: ${fresh.map((id) => UNIQUES[id].name).join(', ')}. Native to ${g.name}.`);
 }
 
 // ---------- darknet listings (events.mjs) ----------

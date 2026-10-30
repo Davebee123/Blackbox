@@ -42,8 +42,8 @@ import { raidDef } from './raid.mjs';
 import { readGene, seeGene, logTell } from './genome.mjs';
 import { gainResearch } from './research.mjs';
 import { daemonsOn } from './daemons.mjs';
-import { cancelAttack, crossBy, interruptMove, nextTick } from './interrupt.mjs';
-import { ignores } from './genes.mjs';
+import { cancelAttack, crossBy, interruptMove, nextTick, fronted } from './interrupt.mjs';
+import { ignores, CLASHES } from './genes.mjs';
 import { contractDid } from './mail.mjs';
 
 // What a fight's tells did, on its metrics (the gap test reads them): said, answered, read (answered by a command
@@ -118,8 +118,9 @@ export function plannedTells(v) {
   const elite = v.elite && !v.champion;
   let count = tier.count + (elite && tier.count ? TELL.elite.count : 0) + (v.extraTells || 0); // extraTells: a breach gate at heat 2 (breach.mjs), a boss rule (interrupt.mjs)
   if (v.boss) count = Math.max(count, TELL.boss.count);
-  const list = [];
-  for (let def of setOf(v)) {
+  const list = [], c = CLASHES.find((x) => x.id === v.clash), first = c && [c.a, c.b].find((k) => k === 'seal' || k === 'cast');
+  // An elite's clash brings its tell first (genes.mjs CLASHES).
+  for (let def of first ? [...setOf(v)].sort((a, b) => (b.kind === first) - (a.kind === first)) : setOf(v)) {
     if (list.length >= count) break;
     if (def.kind === 'cast' && v.level < TELL.castFrom) continue;
     if (def.kind === 'seal' && v.level < SEAL_FROM) continue;
@@ -146,7 +147,9 @@ export function tellStart(s) {
   const elite = v.elite && !v.champion;
   const list = plannedTells(v);
   const cap = tier.cap * (elite ? TELL.elite.cap : v.champion ? TELL.champion.cap : v.boss ? TELL.boss.cap : 1);
-  v.tells = { list: list.map((t, i) => ({ ...t, told: false, next: null, n: null, said: null, count: 0, after: t.kind === 'mimic' ? t.first : TELL.first + (t.kind === 'seal' ? TELL.sealAfter : i ? 1 : 0) })), tier: { ...tier, cap, dot: tier.dot * (cap / tier.cap) } };
+  // An elite with a clash (docs/puzzle-fights.md 3, Two clocks): one more tell live at once, and no pile-ups lifted (announce).
+  const two = elite && !!v.clash;
+  v.tells = { list: list.map((t, i) => ({ ...t, told: false, next: null, n: null, said: null, count: 0, after: t.kind === 'mimic' ? t.first : TELL.first + (t.kind === 'seal' ? TELL.sealAfter : i ? 1 : 0) })), tier: { ...tier, cap, dot: tier.dot * (cap / tier.cap), live: tier.live + (two ? TELL.elite.live : 0) }, piles: two };
   for (const t of v.tells.list) if (t.kind !== 'mimic') t.after += jitter(v, t);
   announce(s);
 }
@@ -183,7 +186,10 @@ function announce(s) {
   if (!T || e.virus.dormant) return; // a Sleeper says nothing until it wakes
   // Canary Token (a native unique): a tell is announced further ahead, never past the board's last column.
   const c = e.cycle, lead = Math.min(3, T.tier.lead + (fxOn(s, 'warn-early')?.fx.value || 0)), beats = T.list.filter((x) => x.kind === 'mimic');
-  const clear = (t, x) => x >= t.after && !live(s, t).some((o) => o.next === x) && !beats.some((b) => alive(sourceOf(s, b)) && beatAt(b, x));
+  // An elite's tells may pile up (T.piles) when a cast is in it: its window opens a cycle early, so one of the two can be
+  // answered early. Any other pile-up is rolled again: the next landing, or the next cycle.
+  const pile = (t, o) => T.piles && (t.kind === 'cast' || o?.kind === 'cast');
+  const clear = (t, x) => x >= t.after && !live(s, t).some((o) => o.next === x && !pile(t, o)) && !beats.some((b) => alive(sourceOf(s, b)) && beatAt(b, x) && !pile(t));
   for (const t of [...T.list].sort((a, b) => a.after - b.after)) {
     if (t.told || t.gone || t.once) continue; // a Hotspot's charge comes only when you set it off
     const p = sourceOf(s, t);
@@ -1068,7 +1074,7 @@ export function tellMove(s, t0 = null, planned = null) {
   const echoes = (text) => echoesNow(s, text);
   // A charge whose part has to be stripped starting now to bare it for the cut (see below) comes before a kill.
   // (Below level 10 a kit has three or four keys: stripping ahead costs more than the charge, so it doesn't.)
-  const prep = soon(s, 3).filter((t) => t.kind === 'charge' && TELL.bots.strip !== false && s.encounter.virus.level >= TELL.castFrom && alive(sourceOf(s, t)) && sourceOf(s, t).armor > 0 && sourceOf(s, t).ticks?.some((x) => !x.spent) && tellNext(s, t) > c)
+  const prep = soon(s, 3).filter((t) => t.kind === 'charge' && TELL.bots.strip !== false && s.encounter.virus.level >= TELL.castFrom && alive(sourceOf(s, t)) && sourceOf(s, t).armor > 0 && !fronted(s, sourceOf(s, t)) && sourceOf(s, t).ticks?.some((x) => !x.spent) && tellNext(s, t) > c)
     .map((t) => stripPlan(s, sourceOf(s, t), tellNext(s, t) - c)?.length === tellNext(s, t) - c && stripPlan(s, sourceOf(s, t), tellNext(s, t) - c)[0]).find(Boolean);
   if (prep && livingParts(s).length > 1 && !echoes(prep) && ok(s, prep)) return prep;
   // A kill comes first: the dearer tell landing this cycle on another part is SIGINTed first, while the virus has more
@@ -1098,7 +1104,7 @@ export function tellMove(s, t0 = null, planned = null) {
     }
     // A charge on an armored part: strip it over the lead, as late as it can be done, so the cut lands on its cycle
     // (◆ guards the ticks, 3.2). A part it can't bare in time is left to land (a shield, Brace, ◆ soften it).
-    if (t.kind === 'charge' && TELL.bots.strip !== false && s.encounter.virus.level >= TELL.castFrom && next > c && p.armor > 0 && p.ticks?.some((x) => !x.spent)) {
+    if (t.kind === 'charge' && TELL.bots.strip !== false && s.encounter.virus.level >= TELL.castFrom && next > c && p.armor > 0 && !fronted(s, p) && p.ticks?.some((x) => !x.spent)) {
       const plan = stripPlan(s, p, next - c);
       if (plan && plan.length === next - c && !echoes(plan[0])) return plan[0];
     }

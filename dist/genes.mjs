@@ -380,6 +380,18 @@ export function compatible(genes, { boss = false } = {}) {
   return out;
 }
 
+// ---------- clashes (docs/puzzle-levers.md 4, docs/puzzle-fights.md P3) ----------
+// An elite carries two levers whose answers pull against each other (parts.mjs rollParts). a, b: a third part's gene,
+// or a tell kind ('seal', 'cast': the family's own, tells.mjs plannedTells brings it first). pull and answer: its tag's
+// tooltip on the board (view.mjs).
+export const CLASHES = [
+  { id: 'blastseal', a: 'zipbomb', b: 'seal', name: 'Blast and seal', pull: 'The blast strips a ◆ from every part, and the seal re-arms them by the ◆ left on its part.', answer: 'Break the Zip Bomb a cycle before the seal lands.' },
+  { id: 'beatcast', a: 'mimic', b: 'cast', name: 'Beat and cast', pull: 'SIGINT on the beat Hangs you, and the cast can land on the beat.', answer: 'SIGINT the cast a cycle early, cut its part twice, or let it land.' },
+  { id: 'loudheld', a: 'tripwire', b: 'ward', name: 'Loud and held', pull: 'The Lockbox drops half of what it held on its partner, and loud parts take 40% more.', answer: 'Trip the wire, then break the Lockbox into its loud partner.' },
+  { id: 'beatheld', a: 'mimic', b: 'ward', name: 'Beat and held', pull: 'Big hits fill the Lockbox fastest, and big hits are what the Mimic copies.', answer: 'Fill the Lockbox between beats.' },
+  { id: 'bentwire', a: 'decoymirror', b: 'tripwire', name: 'Bent wire', pull: 'On its beat the Decoy can bend your hit onto the Tripwire.', answer: 'Fire on the beat only when you mean to trip it.' },
+];
+
 // ---------- the budget (GAME_RULES.md "Rules and authors"), for phase 3's rolled genes ----------
 // Points a wild virus spends on rolled genes at a level and grade. The body and its tells are free. Breach nodes roll
 // by it (rollGenome); the old game's wild viruses still roll one third part or strain and maybe one mutation (data.mjs).

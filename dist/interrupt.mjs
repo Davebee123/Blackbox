@@ -20,10 +20,11 @@
 //      other parts interrupt as usual, and its phases no longer follow its total Integrity.
 //   b  every part interrupts; phases stay on total Integrity; it brings one more charge.
 //   c  phases at 50% and 25% of total; ticks interrupt, but the fight has a budget of TICKS.budget cancels.
-import { emit, alive, part, livingParts, hooks, previewDamage, ignoresArmor, toIntent, usable, readyIn, fxOn } from './combat.mjs';
+import { emit, alive, part, livingParts, hooks, previewDamage, ignoresArmor, toIntent, usable, readyIn, fxOn, frontOf } from './combat.mjs';
 import { FAMILIES, GUARDS, STRAINS, BOSSES, ROOM_FAMILIES, ABILITIES, TELL } from './data.mjs';
 import { tellsOf, tellAnswer, tellNext, tierOf, inWindow, answers } from './tells.mjs';
 import { raidDef } from './raid.mjs';
+import { ignores } from './genes.mjs';
 import { gainResearch } from './research.mjs';
 import { daemonsOn } from './daemons.mjs';
 
@@ -212,6 +213,8 @@ const ok = (s, text) => !toIntent(s, text).error;
 // A part whose cut answers a tell now (a charge riding the attack due, a cast in its window, a beat or a seal landing)
 // goes first, for a bot that reads tells; then the biggest attack due.
 const telling = (s, p) => answers() && (dueOf(s, p).some((d) => d.kind === 'tell') || (tellsOf(s)?.list || []).some((t) => t.told && t.kind === 'charge' && t.part === p.id && p.attack && t.n === (p.attack.n || 0) && p.attack.due <= s.encounter.cycle));
+// A part a Front End fronts (it wears ◆): a strip at it bends onto the Front End (tells.mjs tellMove reads it).
+export const fronted = (s, p) => !ignores('frontend') && livingParts(s).some((x) => x.front && x.armor > 0 && frontOf(s, x) === p);
 export function interruptMove(s, plan = null) {
   const e = s.encounter;
   if (!ticked(e)) return null;

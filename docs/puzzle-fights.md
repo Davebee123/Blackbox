@@ -1,8 +1,8 @@
 # Puzzle fights: fights you read, or prepare for
 
 Which fights are puzzles, the bar they're measured against, and the phases. Built: P0 (`solved.mjs`), P1 (the program
-fits the trick; helpers count) and P2 (one lever a fight, docs/puzzle-levers.md); the rules are in GAME_RULES.md
-"Fights". Left: P3 (elites), P4 (bosses) and section 6's pay. Code cites this doc by section number.
+fits the trick; helpers count), P2 (one lever a fight, docs/puzzle-levers.md) and P3 (elites: a clash); the rules are
+in GAME_RULES.md "Fights". Left: P4 (bosses) and section 6's pay. Code cites this doc by section number.
 
 The designer: every fight a little tricky, elites and bosses harder, the game challenging. A puzzle, never a wall. A
 blind player loses; paying attention wins, and so does the right routine.
@@ -70,7 +70,7 @@ A Deploy is four cycles of hits set going now, so the Operator's puzzle is where
 | Ordinary | Wild viruses, guards and invasions, from level 6 | One, that a routine can answer | The solo band (15–50%) |
 | Hard | Elites, Residents, solo bosses, lair bosses, feuds | Two or three | The boss band |
 
-- **Elites become puzzles** (P3): Integrity down until the planner wins 85%, difficulty back as conflicts.
+- **Elites are puzzles** (P3, built): Integrity ×1.5 and hits ×0.7 (from ×5.2 and ×1.3), difficulty back as a clash.
 - **Residents keep their puzzle every time**: no fallback after a loss.
 - **The Debugger room** (a practice board whose loss costs nothing) is parked.
 
@@ -100,9 +100,9 @@ and the designer's play judge a lever.
 | 10 | Ordinary | 96–100 | 92–100 | 88–96 | 100 | 100 | 88–96 | 71–100 |
 | 18 | Ordinary | 100 | 96–100 | 92–100 | 96–100 | 100 | 92–100 | 21–100 |
 | 30 | Ordinary | 100 | 96–100 | 92–100 | 96–100 | 100 | 96–100 | 38–100 |
-| 10 | Elites | 0–33 | 0–42 | 0–42 | 0–42 | 0–25 | 0–50 | 0–33 |
-| 18 | Elites | 8–50 | 0–33 | 0–42 | 17–50 | 0–67 | 8–58 | 0–33 |
-| 30 | Elites | 42–92 | 25–58 | 25–50 | 42–92 | 50–92 | 50–67 | 0–42 |
+| 10 | Elites | 83–100 | 67–100 | 50–83 | 83–100 | 92–100 | 42–83 | 17–100 |
+| 18 | Elites | 92–100 | 75–100 | 67–100 | 83–100 | 92–100 | 75–100 | 0–100 |
+| 30 | Elites | 92–100 | 83–100 | 75–100 | 83–100 | 92–100 | 67–100 | 8–100 |
 | 10 | Residents | 67–100 | — | — | 83–100 | 67–100 | 100 | 67–100 |
 | 18 | Residents | 83–100 | — | — | 83–100 | 83–100 | 83–100 | 0–100 |
 | 30 | Residents | 83–100 | — | — | 83–100 | 83–100 | 100 | 17–100 |
@@ -112,9 +112,11 @@ and the designer's play judge a lever.
 
 - **Ordinary fights meet the bar** at every level. Blind play still wins most of them except as an Infiltrator (21% at
   18, 38% at 30) and a Bastion (75% from 18); the blind Operator wins every one.
-- **Elites are walls**: the planner wins 0–33% at 10 and 8–50% at 18. P3 cuts their Integrity first.
-- **No learning curve on hard fights yet**: a first try wins about what a learned one does, so every Resident and boss
-  row misses its first-try ceiling.
+- **Elites meet their floors** (P3's numbers, October 30), but for the Infiltrator's planner at 10: 83%, one fight in
+  12 (a Front End fronts the Scrambler, so Possession can't be cut).
+- **No learning curve on hard fights yet**: a first try wins about what a learned one does, so every elite, Resident
+  and boss row misses its first-try ceiling. Bigger tells don't make one (elite charges ×2 cost every player alike):
+  the learner's misreads seldom fall on a lever's cycle.
 - **The planner falls short on some bosses**: the Breaker wins 58% of the solo bosses at 10, the Infiltrator 75%, and
   the Bastion 83% of Residents from 18. P4 needs those answers fixed before its 85% floor means anything.
 
@@ -131,11 +133,11 @@ Nothing is taken away for not reading. Reading already pays (the read bonus, the
 
 ## 7. Build phases
 
-P0, P1 and P2 are built. Each phase is played by the designer before the next starts.
+P0 to P3 are built. Each phase is played by the designer before the next starts.
 
 | Phase | What ships | Done when |
 |---|---|---|
-| P3 | Elites: Integrity down, two conflicts from docs/puzzle-levers.md 4, *no pile-ups* lifted and checked on the roll (a failed roll rerolls). | Elites meet their row. |
+| P3 (built) | Elites: Integrity down, two conflicts from docs/puzzle-levers.md 4, *no pile-ups* lifted and checked on the roll (a failed roll rerolls). | Elites meet their row (floors met; first try open, as section 5 says). |
 | P4 | Bosses: a beat that repeats, phases, the one to leave. Two Residents and two solo bosses first, then the rest, lair bosses and feuds. | Every boss meets its row, and the designer has played the first four. |
 
 ## 8. Decided

@@ -12,9 +12,10 @@
 //   strangers  a fight never holds more than one part you've never met (research 0), Pulse Node and signature aside,
 //              and a fight with one is never 4 parts
 //   lever      from PARTS.lever, exactly one third whose rule makes the default move the wrong one (genes.mjs lever)
+//   clash      an elite, from PARTS.lever: two levers whose answers pull against each other (genes.mjs CLASHES)
 //
 // Every number a playtest might move is one named entry in PARTS (`developer parts` shows and sets them at runtime).
-import { rollGenome, compatible, GENES, MECH_GENES } from './genes.mjs';
+import { rollGenome, compatible, GENES, MECH_GENES, CLASHES } from './genes.mjs';
 
 export const PARTS = {
   on: true, // the roll (off: every wild virus is built as before the parts plan; golden.test.mjs compares that builder)
@@ -82,6 +83,7 @@ export const PARTS = {
   rare: { min: 3, budget: 2 }, // a ★ rare spawn brings at least this many parts, and this many more budget points for its thirds
   kestrel: { floor: 3, share: 0.5 }, // from this floor, this share of guard posts and ICE bring Kestrel's Idle Timer (data.mjs GUARDS)
   lever: 6, // from this level an ordinary fight carries exactly one lever (docs/puzzle-levers.md 5): wild rolls here, guards a Zip Bomb (data.mjs GUARDS) or the Sentinel's seal
+  tells: { seal: 6, cast: 10 }, // the levels a clash's tell opens (data.mjs SEAL_FROM, TELL.castFrom; parts.test.mjs holds them equal)
 };
 // A level's value on a step table [[level, value], …]: the last step it has reached.
 export const along = (pts, level) => pts.reduce((v, [L, x]) => (level >= L ? x : v), pts[0][1]);
@@ -117,8 +119,9 @@ const pickShare = (rand, shares) => { let x = rand() * shares.reduce((a, b) => a
 //   seen    (spec, family) → true once you've met that part (combat.mjs: research above 0); null: every part counts as met
 //   extra   genes the virus carries besides its body's (its mutation, Linked from v2): the thirds must fit beside them
 //   floor   the fight's floor: its natives weigh PARTS.floor; rare: a ★ rare spawn (PARTS.rare)
+//   puzzle  an elite that rolls a clash (false: one sized on its own, data.mjs ELITE.sizedDmg: no clash, no lever)
 //   spread  the mechanics-list genes its lineage's strains spread here (data.mjs spreadOf): they weigh PARTS.spread
-export function rollParts({ family, body, level, rand, elite = false, rare = false, floor = null, spread = null, seen = null, extra = [] }) {
+export function rollParts({ family, body, level, rand, elite = false, puzzle = elite, rare = false, floor = null, spread = null, seen = null, extra = [] }) {
   const met = (spec) => !seen || spec.id === 'pulse' || !!spec.special || seen(spec, family);
   const basics = basicsOf(body, level), pulse = basics.find((p) => p.id === 'pulse'), sig = body.parts.find((p) => p.special);
   if (level < PARTS.gentle && !elite) {
@@ -175,13 +178,47 @@ export function rollParts({ family, body, level, rand, elite = false, rare = fal
       strangers = thirds.filter(stranger).length + (stranger(basic) ? 1 : 0);
     }
   }
+  // An elite's clash (docs/puzzle-levers.md 4, genes.mjs CLASHES): two levers whose answers pull against each other. Its
+  // parts join the forced native (which stays) and push out every other lever; rolled thirds that aren't levers keep
+  // what room is left. A clash that doesn't fit (a part not open, a rule it breaks, a second stranger, its tell not open
+  // yet) is rolled again, one with the native first; none fits: the ordinary fight's one lever, below.
+  let clash = null, clashParts = [];
+  if (elite && puzzle && level >= PARTS.lever) {
+    const core = [...(body.core || []), ...extra], isLever = (spec) => !!GENES[spec.gene]?.lever;
+    // A side: [] (a tell open at its level), [its part] (a third in the pool), or null (it can't come).
+    const side = (k) => (k in PARTS.tells ? (level >= PARTS.tells[k] ? [] : null) : pool.find((x) => x.gene === k) ? [pool.find((x) => x.gene === k)] : null);
+    const fit = (c) => {
+      const a = side(c.a), b = side(c.b);
+      if (!a || !b) return null;
+      const add = [...a, ...b].filter((x) => x !== forced), all = [...(forced ? [forced] : []), ...add];
+      if (compatible([...core, ...all.map((x) => x.gene)]).length) return null;
+      return all.filter(stranger).length + (stranger(basic) ? 1 : 0) > 1 ? null : add;
+    };
+    const can = CLASHES.map((c) => [c, fit(c)]).filter(([, add]) => add), own = can.filter(([c]) => forced && [c.a, c.b].includes(forced.gene));
+    if (can.length) {
+      const [c, add] = pick(rand, own.length ? own : can);
+      clash = c; clashParts = [...add, ...(forced && [c.a, c.b].includes(forced.gene) ? [forced] : [])];
+      if (add.some((x) => x.sig)) signature = true;
+      const rest = thirds.filter((t) => t !== forced && !add.includes(t) && !isLever(t));
+      thirds.splice(0, thirds.length, ...(forced ? [forced] : []), ...add);
+      const count = () => 1 + (dup ? 1 : 0) + (signature ? 1 : 0) + thirds.length;
+      const fill = (t) => !thirds.includes(t) && !isLever(t) && (!t.sig || signature) && !compatible([...core, ...thirds.map((x) => x.gene), t.gene]).length && (!stranger(t) || !thirds.some(stranger) && !stranger(basic));
+      for (const t of rest) if (count() < n && fill(t)) thirds.push(t);
+      // Still under PARTS.elite: the signature, then another third that isn't a lever.
+      if (count() < PARTS.elite) signature = true;
+      const more = pool.filter(fill);
+      if (count() < PARTS.elite && more.length) thirds.push(pickBy(rand, more, (x) => weigh(x.gene)));
+      if (count() > n) dup = false;
+      strangers = thirds.filter(stranger).length + (stranger(basic) ? 1 : 0);
+    }
+  }
   // One lever a fight (docs/puzzle-levers.md 5): from PARTS.lever an ordinary fight carries exactly one part whose rule
   // makes the default move the wrong one (genes.mjs lever). None rolled: one comes in a free slot, else in the doubled
   // basic's, else on top (up to the most its level rolls), else in the last other third's, so the rolled kinds stay. Two or more: the
   // first stays (a forced native, if it's one), and each other is rolled again from the thirds that bring none (kept when none fits: below level 9
-  // every third open is a lever, and a 4-part fight keeps its 4). Elites bring two that pull against each other (P3).
+  // every third open is a lever, and a 4-part fight keeps its 4). An elite with a clash has its two already.
   let lever = null;
-  if (!elite && level >= PARTS.lever) {
+  if (!clash && (!elite || puzzle) && level >= PARTS.lever) {
     const isLever = (spec) => !!GENES[spec.gene]?.lever && weigh(spec.gene) > 0;
     const most = 2 + along(PARTS.count, level).findLastIndex((x) => x > 0); // the most parts the level's count rolls
     const count = () => 1 + (dup ? 1 : 0) + (signature ? 1 : 0) + thirds.length;
@@ -207,6 +244,6 @@ export function rollParts({ family, body, level, rand, elite = false, rare = fal
   }
   // A new kind's first fight has 2 or 3 parts, never 4.
   let total = 1 + (dup ? 1 : 0) + (signature ? 1 : 0) + thirds.length;
-  if (strangers && total > 3) { const i = thirds.findLastIndex((t) => !stranger(t) && t !== forced && t !== lever); if (i >= 0) thirds.splice(i, 1); else dup = false; total--; }
-  return { basic, dup, signature, thirds, strangers, native: forced || null, lever };
+  if (strangers && total > 3) { const i = thirds.findLastIndex((t) => !stranger(t) && t !== forced && t !== lever && !clashParts.includes(t)); if (i >= 0) thirds.splice(i, 1); else dup = false; total--; }
+  return { basic, dup, signature, thirds, strangers, native: forced || null, lever, clash: clash?.id || null };
 }

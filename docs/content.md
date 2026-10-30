@@ -89,9 +89,10 @@ To carry 10–15 hours without feeling like floor 1 again, each floor gets six t
 strains or rules that open there), **its own named bosses** (one in the lair, one in a fixed place), **a faction
 thread**, **a puzzle twist**, **a signature** (a server kind or event only it has) and **a reason to come back**.
 
-**Lairs by floor** (*decided*). Each floor's lair draws a boss from that floor's band, weighted by your network. Your
-native boss takes the lair on the floor whose band fits it. Every lair still rolls your network's natives (three rolls
-at the elite rate with the network's pity). Today every lair holds your network's native boss at the slot's level.
+**Lairs by floor** (*built*, `floors.mjs` FLOOR.lairs). Each floor's lair draws a boss from that floor's band, weighted
+by your network. Your native boss takes the lair on the floor whose band fits it. Every lair still rolls your network's
+natives (three rolls at the elite rate with the network's pity). Floors 5–8 have no built boss yet, so their lairs keep
+your native boss until the bosses below are built; a lair found before this keeps the boss it had.
 
 | Floor | Built bosses that fit its band | Designed, not built (docs/genome.md 7.4) |
 |---|---|---|
@@ -103,9 +104,12 @@ at the elite rate with the network's pity). Today every lair holds your network'
 | 7 (37–44) | — | GOLDEN PARACHUTE 38 |
 | 8 (43–50) | — | nothing designed |
 
-**Floor holders** (*decided*, deferred from R3). Each floor has a holder, the author that writes most of it, rolled
+**Floor holders** (*built*, `floors.mjs` holdersOf). Each floor has a holder, the author that writes most of it, rolled
 from your network's roster. It sets the floor's families (`AUTHOR_FAMILIES`), attack sets, Nest and guard posts, so
-floor 2 under TOLLGATE plays nothing like floor 2 under SWARMLINE. Floor 5 is always ACTUARY's.
+floor 2 under TOLLGATE plays nothing like floor 2 under SWARMLINE. Floor 5 is always ACTUARY's. *Built:* floors 2–8,
+from the six authors that write viruses, weighted to the lean, never the floor above's; it writes three servers in
+four (their families and their rooms' families and attack sets). *Left:* Nest and guard posts don't read the author
+yet, and floor 5 rolls like the rest until ACTUARY writes viruses (priority 12).
 
 ### 3.2 The floors
 
@@ -229,8 +233,8 @@ Ordered for the most variety per hour of work, floors 2–4 first. S is a day or
 
 | # | Build | Size | Fills |
 |---:|---|:---:|---|
-| 1 | **Lairs by floor** (3.1) | S | Floors 2–4: five different bosses from content that exists |
-| 2 | **Floor holders** (3.1) | S–M | Floors 2–8 |
+| 1 | **Lairs by floor** (3.1). *Built* | S | Floors 2–4: five different bosses from content that exists |
+| 2 | **Floor holders** (3.1). *Built* | S–M | Floors 2–8 |
 | 3 | **Botnet and Logic Bomb** | M | Floor 2 |
 | 4 | **The log sweep as a terminal room** | S | Floors 2–8 |
 | 5 | **Floor 2–4 bosses**: CENTRIFUGE, SHAKEDOWN, SHOULDER SURFER, CAMSWARM, BYZANTINE, with their uniques; the native bosses' own uniques | M | Floors 2–4 |
