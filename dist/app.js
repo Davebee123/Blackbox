@@ -70,6 +70,7 @@ import { playTravel } from './travelfx.mjs';
 import { playBoot, stopBoot, capture as bootHold, bootLines, playCut, stopCut, leaving, playConnect, stopConnect, connecting, connectLines, whenConnected } from './bootfx.mjs';
 let bootFor = null; // the fight the screen last booted into (go)
 import { startTraffic } from './traffic.mjs';
+import { createScanner } from './scanner-view.mjs';
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -87,6 +88,9 @@ const phoneBar = matchMedia('(max-width: 900px)');
 let campaign = load();
 migrateEffects(campaign); // the old Effects setting becomes its Screen effects level (screenfx.mjs)
 if (DEV) Object.defineProperty(window, '__bb', { get: () => campaign }); // dev only: the live state, for tests
+// The scanner on the Map page (scanner.mjs): its own clock, saved as it changes. Not in the breach campaign.
+const scanner = CAMP ? null : createScanner({ state: () => campaign, changed: () => { save(); dirty = true; }, busy: () => active(campaign), sound: () => !!campaign.settings.sound, volume: () => V.volumesOf(campaign).sfx });
+if (DEV && scanner) window.__scan = scanner; // dev only: the needle and the strip, for tests
 let module = playtest === 'story' ? 'mail' : playtest === 'breach' ? 'breach' : playtest === 'rooms' ? 'rooms' : CAMP ? 'campaign' : 'map';
 let selected = null;
 let mapSel = 'server';
@@ -2086,6 +2090,8 @@ function render(force = false) {
   const cooling = new Set([...document.querySelectorAll('#tray .ability.cooling[data-ability]')].map((b) => b.dataset.ability));
   for (const b of document.querySelectorAll('#tray .ability.ready[data-ability]')) if (wasCooling.has(b.dataset.ability)) b.classList.add('just-ready');
   wasCooling = cooling;
+  // The scanner's button and strip ride on the map (scanner-view.mjs): put back after every redraw, taken off elsewhere.
+  if (scanner) { const c = module === 'map' && !mapList ? $('page-view').querySelector('.map-canvas') : null; if (c) scanner.mount(c); else scanner.unmount(); }
   applySideMarks();
   renderBreakout();
   showArmed();
@@ -2604,6 +2610,7 @@ function frame(now) {
   coop?.tick();
   if (dirty) render();
   else tickUi();
+  scanner?.tick(Date.now());
   lu.tick();
   feel.flush();
   checkTips(now);

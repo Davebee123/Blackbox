@@ -167,6 +167,16 @@ function pinStart(s, loc, chain) {
   if (!room) { T.starts[loc.id] = 0; return null; }
   return (T.starts[loc.id] = { chain, room: room.id, at: nowOf() });
 }
+// A distress call (scanner.mjs) starts a one-off thread on this server: its start room pinned and found, so its !
+// shows on the map. Only on a server with no thread start.
+export function pinDistress(s, loc, chain) {
+  const T = threadsOf(s);
+  if (!eligible(loc) || T.starts[loc.id] || !chainDef(chain)) return null;
+  delete T.starts[loc.id];
+  const st = pinStart(s, loc, chain), R = st && roomsOf(s, loc);
+  if (R) R.seen[st.room] = 'kind';
+  return st;
+}
 export const startHere = (s, loc) => (loc && s.threads?.starts?.[loc.id]) || null;
 
 // ---------- places ----------
