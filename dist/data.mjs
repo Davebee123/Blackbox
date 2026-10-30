@@ -615,14 +615,42 @@ export const STRAINS = {
       { id: 'feeder', name: 'Feeder', integrity: 20, armor: 1, loot: 'Feed Tube', mech: 'feeder' }],
   },
 };
+// Wave 3 (docs/variety-plan.md 1.3): each old strain's mutated form, the strain plus one mechanics part that sharpens
+// its lesson, named by the part's adjective, from 10 levels past the strain's own. It keeps the strain's rule, tell and
+// author. Its part doesn't spread (spreadOf): that would re-roll the wild fights.
+const MUTANT = (base, gene, part, rule, answer) => { const b = STRAINS[base]; return { ...b, from: b.from + 10, name: `${GENES[gene].adj} ${b.name}`, genes: [...b.genes, gene], mutates: base, rule: `${b.rule} ${rule}`, answer, parts: [...b.parts, part] }; };
+Object.assign(STRAINS, {
+  leakingkeylogger: MUTANT('keylogger', 'leak', { id: 'leaker', name: 'Leaker', integrity: 18, armor: 1, loot: 'Drip Valve', mech: 'leak', attack: { name: 'Drip', effect: 'damage', amount: 3, interval: 4, first: 3 } },
+    'The Leaker\'s Drip leaks you for 3 cycles, and each command you fire then costs 3% of your max.', 'Fire inside the Sync Window, and hold while you leak.'),
+  junkinghashrat: MUTANT('hashrat', 'junk', { id: 'junker', name: 'Junker', integrity: 20, armor: 1, loot: 'Junk Page', mech: 'junk', attack: { name: 'Junk', effect: 'damage', amount: 3, interval: 4, first: 3 } },
+    'The Junker\'s Junk puts a dead key on your bar. Firing that key clears it, and that is your command.', 'Break the Miner first, and clear the junk when the key matters.'),
+  amplifiedfloodgate: MUTANT('floodgate', 'amplifier', { id: 'amplifier', name: 'Amplifier', integrity: 18, armor: 1, loot: 'Gain Stage', mech: 'amplifier' },
+    'Each cycle the Amplifier boosts the next attack of the Pulse Node or the Flooder, in turn, by 50%.', 'Delay the boosted Flood, or break the Amplifier.'),
+  feedingleech: MUTANT('leech', 'feeder', { id: 'feeder', name: 'Feeder', integrity: 20, armor: 1, loot: 'Feed Tube', mech: 'feeder' },
+    'Each cycle the Feeder heals the most damaged part by 2% of its max for each debuff you carry.', 'Stay clean, shield the Siphon, and break the Tap.'),
+  lurkingsleeper: MUTANT('sleeper', 'opportunist', { id: 'opportunist', name: 'Opportunist', integrity: 20, armor: 1, loot: 'Lurk Sensor', mech: 'opportunist', attack: { name: 'Pounce', effect: 'damage', amount: 5, interval: 3, first: 999 } },
+    'The Opportunist sleeps on until you carry any debuff. Then it wakes for good, and its Pounce lands every 3 cycles.', 'Set up clean, then open big.'),
+  guardedpatchwork: MUTANT('patchwork', 'bodyguard', { id: 'bodyguard', name: 'Bodyguard', integrity: 22, armor: 1, loot: 'Guard Plate', mech: 'bodyguard' },
+    'Each cycle the Bodyguard shields the part your command hit for 15% of its max.', 'Switch targets, and break the Patcher between heals.'),
+  laggingflicker: MUTANT('flicker', 'lag', { id: 'jitter', name: 'Jitter', integrity: 18, armor: 1, loot: 'Jitter Buffer', mech: 'lag', attack: { name: 'Jitter', effect: 'damage', amount: 3, interval: 4, first: 3 } },
+    'The Jitter\'s hit lags you for 2 cycles, and your command lands after the virus acts.', 'Hit the Shade on even cycles, and break the Jitter early.'),
+  probingextortion: MUTANT('extortion', 'exposed', { id: 'prober', name: 'Prober', integrity: 16, armor: 0, loot: 'Probe Tip', mech: 'exposed', attack: { name: 'Probe', effect: 'damage', amount: 3, interval: 3, first: 2 } },
+    'The Prober\'s Probe leaves you Exposed, and your next incoming hit deals 50% more.', 'Save a burst for the wind-up, or a ◆ for the Deadline.'),
+  volatileecho: MUTANT('echo', 'volatile', { id: 'volatile', name: 'Volatile', integrity: 20, armor: 1, loot: 'Unstable Cell', mech: 'volatile', attack: { name: 'Unstable', effect: 'damage', amount: 3, interval: 4, first: 3 } },
+    'The Volatile Corrupts you for 3 cycles, and cleansing that Corrupted deals what it had left at once.', 'Break the Echo early, and let the Corrupted run out.'),
+  vengefulbricker: MUTANT('bricker', 'vendetta', { id: 'vendetta', name: 'Vendetta', integrity: 20, armor: 1, loot: 'Grudge File', mech: 'vendetta' },
+    'While the Vendetta stands, each other part you break makes the rest hit 20% harder.', 'Break the Vendetta first, then each part in one burst.'),
+  countingoverrun: MUTANT('overrun', 'countdown', { id: 'countdown', name: 'Countdown', integrity: 22, armor: 1, loot: 'Tick Counter', mech: 'countdown' },
+    'The Countdown counts the commands you fire. At 10, every part attacks at once, the fragments too. Holding doesn\'t count.', 'Clear fragments young, and hold before the count comes due.'),
+});
 for (const [k, st] of Object.entries(STRAINS)) st.author = buildAuthor(k);
 // The strains a family can field at a level, on a server this many floors down.
 export const strainsFor = (family, level, depth = 99) => Object.keys(STRAINS).filter((k) => STRAINS[k].lineage === family && level >= STRAINS[k].from && depth >= (STRAINS[k].depth || 2));
 // The spread (docs/variety-plan.md 1.2): the mechanics-list genes of the strains a family fields at a level and depth.
 // A wild virus of that family can roll their parts as a third, at PARTS.spread (parts.mjs weightOf).
-export const spreadOf = (family, level, depth) => new Set(strainsFor(family, level, depth || 1).flatMap((k) => STRAINS[k].genes.filter((g) => MECH_GENES.has(g))));
+export const spreadOf = (family, level, depth) => new Set(strainsFor(family, level, depth || 1).filter((k) => !STRAINS[k].mutates).flatMap((k) => STRAINS[k].genes.filter((g) => MECH_GENES.has(g))));
 // The strain a family's spread part came from (the Codex names it): the first that spreads it.
-export const spreadFrom = (family, gene) => Object.keys(STRAINS).find((k) => STRAINS[k].lineage === family && STRAINS[k].genes.includes(gene) && MECH_GENES.has(gene)) || null;
+export const spreadFrom = (family, gene) => Object.keys(STRAINS).find((k) => STRAINS[k].lineage === family && !STRAINS[k].mutates && STRAINS[k].genes.includes(gene) && MECH_GENES.has(gene)) || null;
 export const STRAIN_SHARE = 0.5;
 
 // Grades: the same virus, bigger. Floor 1 servers send v1 (the starter numbers), floors 2 and 3 v2,
@@ -1223,8 +1251,10 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   const grade = GRADES[overrides.grade] ? overrides.grade : 1, g = GRADES[grade];
   // A strain's build crowds out a mutation, or Linked, that would break the rules beside it (genes.mjs compatible): the
   // Countdown leaves no room for Hasty, the Vendetta and the Swap none for Linked.
-  if (strain && mutation && MUTATIONS[mutation] && compatible([...strain.genes, MUTATIONS[mutation].gene]).length) mutation = null;
-  const unlinked = !!strain && grade >= 2 && compatible([...strain.genes, 'linked']).length > 0;
+  // A build's own pair is the designer's (the Leaking Keylogger's two on Feedback): only what a mutation adds counts.
+  const clashes = (g) => compatible([...strain.genes, g]).length > compatible(strain.genes).length;
+  if (strain && mutation && MUTATIONS[mutation] && clashes(MUTATIONS[mutation].gene)) mutation = null;
+  const unlinked = !!strain && grade >= 2 && clashes('linked');
   const scale = mobPower(level) * (mutation === 'hasty' ? 0.9 : 1) * (overrides.run ? CONFIG.runHp * (overrides.boss || overrides.elite ? 1 : runLate(level, CONFIG.runLateHp)) : 1);
 
   // Tougher viruses wear more armor and strike sooner (see THREAT_STEPS).

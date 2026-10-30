@@ -4,7 +4,7 @@ import { fresh, command, selectEncounter, resolveCycle, part, attackAmount, defe
 import { STRAINS, strainsFor, createVirus, SERVER, variantFor, gradeFor, defaultSub, spreadOf, spreadFrom } from './dist/data.mjs';
 import { MECH_GENES, compatible } from './dist/genes.mjs';
 import { PARTS } from './dist/parts.mjs';
-import { mechLanded, mechFired, mechValidate } from './dist/mechanics.mjs';
+import { mechLanded, mechFired, mechValidate, youDebuffs } from './dist/mechanics.mjs';
 
 const veteran = (arch = 'breaker', level = 14) => {
   const s = fresh();
@@ -464,14 +464,14 @@ test('a mechanics strain\'s build crowds out the mutation or Linked that would b
   const bb = createVirus('random', 3, { family: 'worm', strain: 'badblood', threat: 30, grade: 2 });
   assert.ok(bb.unlinked && !bb.genes.some((g) => g.id === 'linked'));
   assert.ok(!createVirus('random', 3, { family: 'ghostroot', strain: 'lurker', threat: 30, grade: 2 }).unlinked);
-  for (const k of Object.keys(STRAINS)) assert.deepEqual(compatible(createVirus('random', 4, { family: STRAINS[k].lineage, strain: k, threat: 40, grade: 3 }).genes.map((g) => g.id)), [], k);
+  for (const k of Object.keys(STRAINS)) assert.deepEqual(compatible(createVirus('random', 4, { family: STRAINS[k].lineage, strain: k, threat: 40, grade: 3 }).genes.map((g) => g.id)), compatible(STRAINS[k].genes), k);
 });
 
 test('the spread: a strain\'s mechanics parts roll on wild viruses of its lineage, from its level and depth, and nowhere else', () => {
   assert.deepEqual([...spreadOf('ghostroot', 12, 2)], ['opportunist']);
   assert.deepEqual([...spreadOf('ghostroot', 11, 2)], [], 'below its level');
   assert.deepEqual([...spreadOf('ghostroot', 12, 1)], [], 'above its depth');
-  assert.deepEqual([...spreadOf('worm', 16, 3)].sort(), ['amplifier', 'countdown', 'leak', 'vendetta']);
+  assert.deepEqual([...spreadOf('worm', 16, 3)].sort(), ['amplifier', 'countdown', 'leak', 'vendetta'], 'a mutated strain\'s part doesn\'t spread (the Guarded Patchwork\'s Bodyguard)');
   assert.deepEqual([...spreadOf('ghostroot', 26, 3)].sort(), ['exposed', 'lag', 'opportunist', 'sandboxed', 'stunned', 'swap', 'turncoat'], 'wave 2: the Desync\'s and the Last Stand\'s');
   assert.equal(spreadFrom('worm', 'backtrace'), 'junkyard');
   assert.equal(spreadFrom('ghostroot', 'lag'), 'desync');
@@ -486,4 +486,58 @@ test('the spread: a strain\'s mechanics parts roll on wild viruses of its lineag
   const names = []; // named as any third names it (beside a costlier lever, the lever's)
   for (let seed = 1; seed <= 600; seed++) { const v = createVirus('random', seed, { family: 'ghostroot', threat: 21, floor: 2, mutation: null }); if (v.parts.some((p) => p.mech === 'opportunist')) names.push(v.name); }
   assert.ok(names.some((n) => /^LURKING GHOSTROOT-/.test(n)), names.join(' '));
+});
+
+// Wave 3 (docs/variety-plan.md 1.3): each old strain's mutated form.
+const MUTANTS = { leakingkeylogger: ['keylogger', 'leaker'], junkinghashrat: ['hashrat', 'junker'], amplifiedfloodgate: ['floodgate', 'amplifier'], feedingleech: ['leech', 'feeder'], lurkingsleeper: ['sleeper', 'opportunist'], guardedpatchwork: ['patchwork', 'bodyguard'], laggingflicker: ['flicker', 'jitter'], probingextortion: ['extortion', 'prober'], volatileecho: ['echo', 'volatile'], vengefulbricker: ['bricker', 'vendetta'], countingoverrun: ['overrun', 'countdown'] };
+
+test('mutated strains: the strain and one mechanics part, named by its adjective, from 10 levels past the strain', () => {
+  for (const [k, [base, id]] of Object.entries(MUTANTS)) {
+    const st = STRAINS[k], b = STRAINS[base], v = createVirus(k, 3, { threat: st.from + 9, mutation: null });
+    assert.equal(st.mutates, base);
+    assert.equal(st.from, b.from + 10, k);
+    assert.deepEqual(v.parts.map((p) => p.id), [...b.parts.map((p) => p.id), id], k);
+    assert.match(v.name, new RegExp(`^${st.name.toUpperCase()}-`));
+    assert.ok(st.name.endsWith(b.name) && st.rule.startsWith(b.rule) && st.author === b.author, k);
+    assert.ok(!strainsFor(b.lineage, st.from - 1, 2).includes(k) && strainsFor(b.lineage, st.from, 2).includes(k), k);
+  }
+});
+
+test('mutated strains: each one\'s part works beside its strain', () => {
+  // The statuses its part's attack puts on you.
+  for (const [k, status] of [['leakingkeylogger', 'Leak'], ['junkinghashrat', 'Junk process'], ['laggingflicker', 'Lag'], ['probingextortion', 'Exposed'], ['volatileecho', 'Corrupted']]) {
+    const s = mstart(k), p = part(s, MUTANTS[k][1]);
+    mechLanded(s, p, p.attack);
+    assert.ok(youDebuffs(s).includes(status), `${k}: ${youDebuffs(s)}`);
+  }
+  // The Leaking Keylogger: an unsynced command both costs and logs.
+  { const s = mstart('leakingkeylogger'), e = s.encounter; for (const p of e.virus.parts) if (p.attack) p.attack.due = 999;
+    e.leakUntil = e.cycle + 2; const hp = s.server.integrity; fire(s, 'spike pulse');
+    assert.ok(s.server.integrity < hp && e.keylog === 1, 'leaked and logged'); }
+  // The Amplified Floodgate: the Amplifier boosts the Flooder in turn.
+  { const s = mstart('amplifiedfloodgate'); for (const p of s.encounter.virus.parts) if (p.attack) p.attack.due = 999;
+    fire(s, 'hold'); fire(s, 'hold');
+    assert.ok([part(s, 'pulse').amped, part(s, 'flooder').amped].every((x) => x === 'amplifier')); }
+  // The Feeding Leech: a debuff on you heals its most damaged part.
+  { const s = mstart('feedingleech'), e = s.encounter; for (const p of e.virus.parts) if (p.attack) p.attack.due = 999;
+    const tap = part(s, 'tap'); tap.integrity -= 10; const was = tap.integrity; e.exposedHit = true; fire(s, 'hold');
+    assert.ok(tap.integrity > was, 'fed'); }
+  // The Lurking Sleeper: a hit wakes the virus, but its Opportunist sleeps on until you carry a debuff.
+  { const s = mstart('lurkingsleeper'), e = s.encounter, o = part(s, 'opportunist');
+    fire(s, 'spike pulse');
+    assert.ok(!e.virus.dormant && !o.woke && o.attack.due >= 900, 'the virus wakes, the Opportunist sleeps');
+    e.exposedHit = true; fire(s, 'hold');
+    assert.ok(o.woke && o.attack.due < 900, 'a debuff wakes it'); }
+  // The Guarded Patchwork: the part you hit is shielded.
+  { const s = mstart('guardedpatchwork'); for (const p of s.encounter.virus.parts) if (p.attack) p.attack.due = 999;
+    fire(s, 'spike patcher');
+    assert.ok(part(s, 'patcher').bufHp > 0 && part(s, 'patcher').bufBy === 'bodyguard'); }
+  // The Vengeful Bricker: a break while the Vendetta stands stacks.
+  { const s = mstart('vengefulbricker'), e = s.encounter; for (const p of e.virus.parts) if (p.attack) p.attack.due = 999;
+    part(s, 'pulse').integrity = 1; fire(s, 'spike pulse');
+    assert.equal(e.virus.vendetta, 1); }
+  // The Counting Overrun: fired commands count, a hold doesn't.
+  { const s = mstart('countingoverrun'), cd = part(s, 'countdown'); for (const p of s.encounter.virus.parts) if (p.attack) p.attack.due = 999;
+    fire(s, 'spike pulse'); fire(s, 'hold');
+    assert.equal(cd.count, 1); }
 });

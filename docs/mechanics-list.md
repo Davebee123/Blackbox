@@ -2,7 +2,7 @@
 
 **Status.** Twenty new part mechanics for the designer to test. Built, all twenty, lean: `dist/mechanics.mjs` (rules
 and `MECH` start numbers), a gene each, playtest pages `?playtest=part:<id>`; GAME_RULES.md *Families*
-has the table. All but the Punisher ride in strains (docs/variety-plan.md 1.1) and spread from them onto their
+has the table. All but the Punisher ride in strains (docs/variety-plan.md 1.1 and 1.3) and spread from them onto their
 lineage's wild viruses (`PARTS.spread`). Left: none rolls elsewhere (`PARTS.mech` 0), and the designer's call on
 combinations.
 

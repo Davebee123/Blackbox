@@ -314,7 +314,7 @@ Mutations are always visible (a tag), open from level 4, and each changes a deci
 - **Adaptive**: a part your commands hit three cycles running gains a ◆ (*ADAPTS +◆*; *adapting* the cycle before).
 
 Two part rules run on many viruses:
-- **Linked** (every v2 or bigger virus but Bad Blood and the Bodysnatcher): when a part breaks, a third of its hit moves to the surviving part that
+- **Linked** (every v2 or bigger virus but Bad Blood, the Bodysnatcher and the Vengeful Bricker): when a part breaks, a third of its hit moves to the surviving part that
   attacks next (`CONFIG.linked`); a survivor whose attack isn't a hit gains one on top. Kill order decides what the
   rest hits for.
 - **Fallback**: a part with no attack of its own (or one that doesn't hit you) takes over its partner's attack when the
@@ -357,6 +357,25 @@ The last eleven are the mechanics list's parts, paired by hand (docs/variety-pla
 would break the compatibility rules beside it: the Doomsday never rolls Hasty, and Bad Blood and the Bodysnatcher are
 never Linked.
 
+**Mutated strains** (docs/variety-plan.md 1.3). Each of the first eleven has a mutated form 10 levels later: the strain
+(its rule, tell and author) plus one mechanics part, named by the part's adjective. Its part doesn't spread.
+
+| Mutated strain | From | Adds |
+|---|---:|---|
+| Guarded Patchwork | 13 | Bodyguard: shields the part you hit, 15% of its max. |
+| Leaking Keylogger | 14 | Leaker: its Drip leaks you, 3% a command for 3 cycles. |
+| Lagging Flicker | 14 | Jitter: lags you 2 cycles; your command lands after the virus acts. |
+| Junking Hashrat | 15 | Junker: a dead key on your bar until you fire it. |
+| Amplified Floodgate | 16 | Amplifier: the Pulse's and the Flooder's next attack in turn, +50%. |
+| Probing Extortion | 16 | Prober: leaves you Exposed; your next incoming hit +50%. |
+| Feeding Leech | 18 | Feeder: heals the most damaged part 2% of its max per debuff you carry. |
+| Volatile Echo | 18 | Volatile: Corrupts you 2% for 3 cycles; cleansing deals the rest. |
+| Vengeful Bricker | 19 | Vendetta: while it stands, each break makes the rest hit 20% harder. Never Linked. |
+| Lurking Sleeper | 20 | Opportunist: sleeps on past the virus's wake until you carry a debuff. |
+| Counting Overrun | 21 | Countdown: at 10 commands fired every part attacks at once, fragments too. |
+
+The Leaking Keylogger and the Feeding Leech carry two punishments on one axis by design (two leaks, two healers).
+
 **Grades.** Deeper servers send bigger versions: **v1** (SPRAWL-00 and floor 1) as normal, **v2** (floors 2–3) ×1.15
 Integrity and ×1.1 damage, **v3** (floor 4 and deeper) ×1.35 and ×1.25. At your wall a v2 invader counts 2 levels
 higher and a v3 4.
@@ -386,7 +405,7 @@ CHOIR's, the Hashrat GLASSJAW's, the Floodgate, Leech, Patchwork and Overrun SWA
 PALEMASK's, the Extortion and Bricker TOLLGATE's. The mechanics strains go the same way (the Lurker PALEMASK's, the
 Bloodhound and Scythe TOLLGATE's, the Doomsday, Bad Blood and Thornwall SWARMLINE's, the Bodysnatcher NULL CHOIR's, the
 Desync and Last Stand PALEMASK's, the Junkyard and Sweatshop GLASSJAW's), and their
-parts join their authors' toolkits. Kestrel writes the ICE and the Sentinel. A faction's server runs its
+parts join their authors' toolkits; a mutated strain is its strain's author's. Kestrel writes the ICE and the Sentinel. A faction's server runs its
 faction's viruses; SPRAWL-00's strays sign nothing.
 
 - **Names.** A wild virus is named for its costliest rolled rule, its body's stem, four digits and its grade:
@@ -428,7 +447,7 @@ protector is decoded its node shows **?**.
 ### The Codex tab
 
 A top tab (`codex`), between Loadout and System. Left, an index in six groups: **Families** (Ransomware, Worm,
-Ghostroot and the room bodies), **Strains** (22), **Guards & ICE** (6), **Exfils**, **Bosses**, **Mutations**; each row
+Ghostroot and the room bodies), **Strains** (33), **Guards & ICE** (6), **Exfils**, **Bosses**, **Mutations**; each row
 its icon, name and count (a body's research %, a boss's wins, kills toward a mutation's decode). Unmet entries are ???.
 Over the index, two tabs: the Codex and the collection log (*Collection log*).
 
