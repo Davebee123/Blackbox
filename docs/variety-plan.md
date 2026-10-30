@@ -173,7 +173,7 @@ The prompt to paste is under each.
 | 3 | Collection log: build the picked look | 2 and the designer's pick | medium |
 | 4 | Strains wave 1: Lurker to Bodysnatcher, and the spread rule: **done** | nothing | medium |
 | 5 | Strains wave 2: Thornwall to Sweatshop | 4 merged | medium |
-| 6 | Strains wave 3: the eleven mutated strains | 4 merged | medium |
+| 6 | Strains wave 3: the eleven mutated strains: **done** | 4 merged | medium |
 | 7 | Objectives: the engine, the Exfil on it, Priority and Uptime, one room in two | the answer on levers | medium |
 | 8 | Objectives: Backup (its look first, as screenshots) and Clean run | 7 merged | medium |
 

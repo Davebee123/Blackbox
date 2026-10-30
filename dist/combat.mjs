@@ -4208,6 +4208,7 @@ function cycleStart(s) {
     if (e.virus.woke || e.cycle >= STRAINS.sleeper.dormant) {
       e.virus.dormant = false;
       for (const p of attackers(s)) {
+        if (p.mech === 'opportunist' && !p.woke) continue; // the Lurking Sleeper's: it wakes on a debuff, not with the virus
         if (p.attack.alarm) p.attack.due = e.cycle;
         else { p.attack.interval = Math.max(2, p.attack.interval - 1); p.attack.due = e.cycle + Math.min(p.attack.interval, p.attack.wake || p.attack.interval); }
       }

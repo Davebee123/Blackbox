@@ -47,6 +47,9 @@ test('today\'s content, mapped: the bodies, the third parts, the mutations, the 
   // Strains are named builds of their authors, with their genes on their rule's part.
   const builds = { keylogger: ['synclock', 'keystrokedump'], hashrat: ['cycletax'], floodgate: ['floodramp'], leech: ['siphon'], sleeper: ['dormant'], patchwork: ['mend'], flicker: ['phaseshift'], extortion: ['deadline'], echo: ['echo'], bricker: ['rage'], overrun: ['hivebrood'], lurker: ['opportunist'], bloodhound: ['predator'], scythe: ['volatile', 'harvester'], doomsday: ['countdown', 'leak'], badblood: ['vendetta', 'amplifier'], bodysnatcher: ['swap', 'stunned'] };
   const author = { keylogger: 'nullchoir', hashrat: 'glassjaw', floodgate: 'swarmline', leech: 'swarmline', sleeper: 'palemask', patchwork: 'swarmline', flicker: 'palemask', extortion: 'tollgate', echo: 'palemask', bricker: 'tollgate', overrun: 'swarmline', lurker: 'palemask', bloodhound: 'tollgate', scythe: 'tollgate', doomsday: 'swarmline', badblood: 'swarmline', bodysnatcher: 'nullchoir' };
+  // The mutated strains (docs/variety-plan.md 1.3): the strain, its author, and one mechanics part.
+  const mutants = { leakingkeylogger: ['keylogger', 'leak'], junkinghashrat: ['hashrat', 'junk'], amplifiedfloodgate: ['floodgate', 'amplifier'], feedingleech: ['leech', 'feeder'], lurkingsleeper: ['sleeper', 'opportunist'], guardedpatchwork: ['patchwork', 'bodyguard'], laggingflicker: ['flicker', 'lag'], probingextortion: ['extortion', 'exposed'], volatileecho: ['echo', 'volatile'], vengefulbricker: ['bricker', 'vendetta'], countingoverrun: ['overrun', 'countdown'] };
+  for (const [k, [base, g]] of Object.entries(mutants)) { builds[k] = [...builds[base], g]; author[k] = author[base]; }
   for (const [k, st] of Object.entries(STRAINS)) {
     assert.deepEqual(st.genes, builds[k], k);
     assert.equal(st.author, author[k], k);
@@ -96,7 +99,8 @@ test('compatibility: today\'s wild viruses all pass the rules (one punishment pe
     assert.deepEqual(compatible(ids(v)), [], `${v.name}: ${ids(v)}`);
     n++;
   }
-  for (const k of Object.keys(STRAINS)) for (const m of [null, ...ROLLED_MUTATIONS]) assert.deepEqual(compatible(ids(createVirus(k, 5, { threat: 30, mutation: m, grade: 3 }))), [], `${k} ${m}`);
+  // A strain passes too, but for its own build's pair, which is the designer's (the Leaking Keylogger, the Feeding Leech).
+  for (const k of Object.keys(STRAINS)) for (const m of [null, ...ROLLED_MUTATIONS]) assert.deepEqual(compatible(ids(createVirus(k, 5, { threat: 30, mutation: m, grade: 3 }))), compatible(STRAINS[k].genes), `${k} ${m}`);
   assert.equal(n, 3000);
   // What the rules reject: two amplifiers on one axis, two beats, the hard exclusions.
   assert.equal(compatible(['surge', 'scramble', 'veil', 'mimic', 'decoymirror']).length, 2, 'MIRRORSHADE after half, before its rebuild');
