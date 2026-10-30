@@ -6,7 +6,7 @@ import * as INFILTRATOR_SUBS from './classes/infiltrator.data.mjs';
 import * as OPERATOR_SUBS from './classes/operator.data.mjs';
 const CLASS_DATA = { breaker: BREAKER_SUBS, bastion: BASTION_SUBS, infiltrator: INFILTRATOR_SUBS, operator: OPERATOR_SUBS };
 // Viruses are built from genes (genes.mjs) and written by authors (authors.mjs): docs/genome.md.
-import { GENES, partGenes } from './genes.mjs';
+import { GENES, partGenes, compatible, MECH_GENES } from './genes.mjs';
 import { PARTS, rollParts, roleOf, ratchetSpan, along as alongParts } from './parts.mjs';
 import { crewOf, buildAuthor, bossAuthor } from './authors.mjs';
 
@@ -438,7 +438,7 @@ export const FAMILIES = {
     summary: 'Spawns fragments that gnaw your server every cycle. The Replicator makes them.',
     core: ['surge', 'replicate'],
     basic: [['strobe', 1], ['repeater', 3], ['fanin', 5]],
-    third: ['twin', 'zipbomb', 'c2', 'backlog', 'spare', 'damper', 'amplifier', 'lag', 'thorns', 'bodyguard', 'vendetta', 'countdown', 'junk'], // the Mirror from level 3, the Zip Bomb from 5, the C2 Node from 8, the Backlog from 12, the Spare from 14, the Damper from 23; the mechanics list's: the Amplifier from 5, the Jitter and the Thorns from 7, the Bodyguard from 9, the Vendetta from 11, the Countdown from 13, the Junker from 14
+    third: ['twin', 'zipbomb', 'c2', 'backlog', 'spare', 'damper', 'amplifier', 'lag', 'thorns', 'bodyguard', 'vendetta', 'countdown', 'junk', 'leak'], // the Mirror from level 3, the Zip Bomb from 5, the C2 Node from 8, the Backlog from 12, the Spare from 14, the Damper from 23; the mechanics list's: the Amplifier from 5, the Jitter and the Thorns from 7, the Bodyguard from 9, the Vendetta from 11, the Countdown from 13, the Junker from 14, the Leaker from 9 (the Doomsday's, to spread)
     parts: [
       { id: 'pulse', name: 'Pulse Node', integrity: 34, armor: 1, loot: 'Pulse Kernel', attack: { name: 'Surge', effect: 'damage', amount: 12, interval: 4, first: 4 } },
       { id: 'replicator', name: 'Replicator', integrity: 38, armor: 1, loot: 'Replication Seed', special: true, attack: { name: 'Replicate', effect: 'replicate', amount: 1, interval: 4, first: 3, hit: 4 } }, // a small Splice hit with each spawn
@@ -535,10 +535,59 @@ export const STRAINS = {
     answer: 'Clear fragments young, or break the Hive.',
     parts: [PULSE(10, 4), { id: 'hive', name: 'Hive', integrity: 34, armor: 1, loot: 'Hive Comb', special: true, overrun: true, attack: { name: 'Swarm', effect: 'replicate', amount: 1, interval: 4, first: 2 } }],
   },
+  // Wave 2 (docs/variety-plan.md 1.1): the mechanics list's parts (mechanics.mjs, by `mech`), each paired by hand, three
+  // parts where a feeder is the point. Their mechanics parts spread to wild viruses of their lineage (parts.mjs PARTS.spread).
+  lurker: {
+    lineage: 'ghostroot', from: 12, depth: 2, name: 'Lurker', genes: ['opportunist'], tell: { name: 'Lure', gene: 'possession', longer: 2 },
+    rule: 'The Scrambler Scrambles you. The Opportunist sleeps off the timeline until you carry any debuff. Then it wakes for good, and its Pounce lands every 3 cycles.',
+    answer: 'Cut the Scramble or take it on a ◆, or break the Opportunist while it sleeps.',
+    parts: [PULSE(11, 3), { id: 'scrambler', name: 'Scrambler', integrity: 30, armor: 1, veiled: true, loot: 'Signal Key', special: true, attack: { name: 'Scramble', effect: 'scramble', amount: 2, hit: 9, interval: 4, first: 2 } },
+      { id: 'opportunist', name: 'Opportunist', integrity: 18, armor: 1, veiled: true, loot: 'Lurk Sensor', mech: 'opportunist', attack: { name: 'Pounce', effect: 'damage', amount: 5, interval: 3, first: 999 } }],
+  },
+  bloodhound: {
+    lineage: 'ransomware', from: 13, depth: 2, name: 'Bloodhound', genes: ['predator'], tell: { name: 'Bloodlust', gene: 'fulldisk' },
+    rule: 'The Encryptor Encrypts you. While you are Encrypted, the Predator\'s Bite lands every cycle.',
+    answer: 'Cleanse the encryption at once, or race the Predator.',
+    parts: [PULSE(12, 3), { id: 'encryptor', name: 'Encryptor', integrity: 30, armor: 1, loot: 'Cipher Seed', special: true, attack: { name: 'Encrypt', effect: 'encrypt', amount: 4, interval: 5, first: 4 } },
+      { id: 'predator', name: 'Predator', integrity: 18, armor: 1, loot: 'Fang Chip', mech: 'predator', attack: { name: 'Bite', effect: 'damage', amount: 2, interval: 3, first: 3 } }],
+  },
+  scythe: {
+    lineage: 'ransomware', from: 14, depth: 2, name: 'Scythe', genes: ['volatile', 'harvester'], tell: { name: 'Meltdown', gene: 'overcharge' },
+    rule: 'The Volatile Corrupts you for 3 cycles, and cleansing that Corrupted deals what it had left at once. The Harvester\'s Reap consumes your Corrupted for 4% of your max for each cycle it had left.',
+    answer: 'Cleanse behind a shield before the Reap, or break the Harvester first.',
+    parts: [PULSE(12, 3), { id: 'volatile', name: 'Volatile', integrity: 26, armor: 1, loot: 'Unstable Cell', special: true, mech: 'volatile', attack: { name: 'Unstable', effect: 'damage', amount: 4, interval: 4, first: 3 } },
+      { id: 'harvester', name: 'Harvester', integrity: 20, armor: 1, loot: 'Reaper Blade', mech: 'harvester', attack: { name: 'Reap', effect: 'damage', amount: 3, interval: 4, first: 4 } }],
+  },
+  doomsday: {
+    lineage: 'worm', from: 15, depth: 2, name: 'Doomsday', genes: ['countdown', 'leak'], tell: { name: 'Zero Hour', part: 'pulse', gene: 'overcharge' },
+    rule: 'The Countdown counts the commands you fire. At 10, every part attacks at once. The Leaker\'s Drip leaks you for 3 cycles, and each command you fire then costs 3% of your max. Holding is free, and it doesn\'t count.',
+    answer: 'Hold while you leak, or break the Countdown.',
+    parts: [PULSE(12, 4), { id: 'countdown', name: 'Countdown', integrity: 26, armor: 1, loot: 'Tick Counter', special: true, mech: 'countdown' },
+      { id: 'leaker', name: 'Leaker', integrity: 18, armor: 1, loot: 'Drip Valve', mech: 'leak', attack: { name: 'Drip', effect: 'damage', amount: 3, interval: 4, first: 3 } }],
+  },
+  badblood: {
+    lineage: 'worm', from: 16, depth: 2, name: 'Bad Blood', genes: ['vendetta', 'amplifier'], tell: { name: 'Blood Feud', gene: 'overcharge' },
+    rule: 'Each cycle the Amplifier boosts the next attack of the Pulse Node or the Vendetta, in turn, by 50%. While the Vendetta stands, each other part you break makes the rest hit 20% harder.',
+    answer: 'Break the Vendetta first, then the part the Amplifier boosts.',
+    parts: [PULSE(12, 4), { id: 'vendetta', name: 'Vendetta', integrity: 26, armor: 1, loot: 'Grudge File', special: true, mech: 'vendetta', attack: { name: 'Grudge', effect: 'damage', amount: 5, interval: 3, first: 3 } },
+      { id: 'amplifier', name: 'Amplifier', integrity: 18, armor: 1, loot: 'Gain Stage', mech: 'amplifier' }],
+  },
+  bodysnatcher: {
+    lineage: 'ghostroot', from: 18, depth: 2, name: 'Bodysnatcher', genes: ['swap', 'stunned'], tell: { name: 'Body Swap', gene: 'overcharge' },
+    rule: 'The Swap\'s Pass Throttles you for 2 cycles. While the Swap stands, your next command hit moves your Throttled, Exposed or Corrupted onto the part it hits. The Stunner\'s Jolt Stuns you, and your next command does not fire.',
+    answer: 'Pass the Throttle to the part whose hit you want weak, and take the Jolt on a ◆.',
+    parts: [PULSE(13, 3), { id: 'swap', name: 'Swap', integrity: 26, armor: 1, veiled: true, loot: 'Swap File', special: true, mech: 'swap', attack: { name: 'Pass', effect: 'damage', amount: 4, interval: 4, first: 3 } },
+      { id: 'stunner', name: 'Stunner', integrity: 18, armor: 1, veiled: true, loot: 'Jolt Coil', mech: 'stunner', attack: { name: 'Jolt', effect: 'damage', amount: 3, interval: 5, first: 4 } }],
+  },
 };
 for (const [k, st] of Object.entries(STRAINS)) st.author = buildAuthor(k);
 // The strains a family can field at a level, on a server this many floors down.
 export const strainsFor = (family, level, depth = 99) => Object.keys(STRAINS).filter((k) => STRAINS[k].lineage === family && level >= STRAINS[k].from && depth >= (STRAINS[k].depth || 2));
+// The spread (docs/variety-plan.md 1.2): the mechanics-list genes of the strains a family fields at a level and depth.
+// A wild virus of that family can roll their parts as a third, at PARTS.spread (parts.mjs weightOf).
+export const spreadOf = (family, level, depth) => new Set(strainsFor(family, level, depth || 1).flatMap((k) => STRAINS[k].genes.filter((g) => MECH_GENES.has(g))));
+// The strain a family's spread part came from (the Codex names it): the first that spreads it.
+export const spreadFrom = (family, gene) => Object.keys(STRAINS).find((k) => STRAINS[k].lineage === family && STRAINS[k].genes.includes(gene) && MECH_GENES.has(gene)) || null;
 export const STRAIN_SHARE = 0.5;
 
 // Grades: the same virus, bigger. Floor 1 servers send v1 (the starter numbers), floors 2 and 3 v2,
@@ -1023,14 +1072,14 @@ export const TELL_SETS = {
 // dice, so nothing else moves. overrides.genes forces the rolled genes instead (a probe in genesim.mjs; phase 3
 // rolls them from an author's toolkit by the budget, genes.mjs budgetFor).
 // Each gene on the virus says where it came from (src): core, build, rolled, grade or boss.
-export function genomeOf(parts, { strain = null, mutation = null, grade = 1, boss = null, ice = false, srcs = [], linked = false } = {}) {
+export function genomeOf(parts, { strain = null, mutation = null, grade = 1, unlinked = false, boss = null, ice = false, srcs = [], linked = false } = {}) {
   const out = [];
   const add = (id, src) => { if (GENES[id] && !out.some((x) => x.id === id)) out.push({ id, src }); };
   const build = STRAINS[strain]?.genes || [];
   const srcOf = (p, i, id) => (srcs[i] ? (boss ? 'boss' : srcs[i]) : build.includes(id) || (ice && p.special) ? 'build' : 'core');
   parts.forEach((p, i) => { for (const id of partGenes(p)) add(id, srcOf(p, i, id)); });
   if (mutation && MUTATIONS[mutation]) add(MUTATIONS[mutation].gene, boss ? 'boss' : 'rolled');
-  if (grade >= 2) add('linked', 'grade');
+  if (grade >= 2 && !unlinked) add('linked', 'grade');
   else if (linked) add('linked', 'rolled'); // forced (a probe)
   return out;
 }
@@ -1130,13 +1179,17 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   const mutationIds = ROLLED_MUTATIONS;
   const rolled = random ? mutationIds[Math.floor(next() * mutationIds.length)] : forced ? null : fixture.mutation;
   const genes = Array.isArray(overrides.genes) ? overrides.genes : null; // forced rolled genes
-  const mutation = overrides.mutation !== undefined ? overrides.mutation : genes ? genes.find((id) => GENES[id]?.mutation) || null : rolled;
+  let mutation = overrides.mutation !== undefined ? overrides.mutation : genes ? genes.find((id) => GENES[id]?.mutation) || null : rolled;
   const threat = overrides.threat ?? (random ? 12 + Math.floor(next() * 9) : forced ? 13 : fixture.threat);
   const level = Math.max(1, threat - 9);
   // A strain (forced by key, or chosen by variantFor for deeper servers) and a grade.
   const strainId = forced || overrides.strain || null;
   const strain = strainId ? STRAINS[strainId] : null;
   const grade = GRADES[overrides.grade] ? overrides.grade : 1, g = GRADES[grade];
+  // A strain's build crowds out a mutation, or Linked, that would break the rules beside it (genes.mjs compatible): the
+  // Countdown leaves no room for Hasty, the Vendetta and the Swap none for Linked.
+  if (strain && mutation && MUTATIONS[mutation] && compatible([...strain.genes, MUTATIONS[mutation].gene]).length) mutation = null;
+  const unlinked = !!strain && grade >= 2 && compatible([...strain.genes, 'linked']).length > 0;
   const scale = mobPower(level) * (mutation === 'hasty' ? 0.9 : 1) * (overrides.run ? CONFIG.runHp * (overrides.boss || overrides.elite ? 1 : runLate(level, CONFIG.runLateHp)) : 1);
 
   // Tougher viruses wear more armor and strike sooner (see THREAT_STEPS).
@@ -1148,7 +1201,7 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   // signature and the forced genes' third (if any): { basic, signature, thirds } as the roll would have it.
   const forced2 = overrides.basic && random && !strain && !overrides.boss && FAMILIES[familyId] ? family.parts.find((x) => (x.pool === 'basic' || x.id === 'pulse') && x.id === overrides.basic) : null;
   const rolled2 = forced2 ? { basic: forced2, dup: false, signature: true, thirds: family.parts.filter((x) => x.pool === 'third' && genes?.includes(x.gene)), strangers: 0 }
-    : PARTS.on && !overrides.classic && random && !strain && !overrides.boss && !genes && FAMILIES[familyId] ? rollParts({ family: familyId, body: family, level, rand: rng((seed ^ 0x2545f491) >>> 0), elite: !!overrides.elite, rare: !!overrides.rare, floor: overrides.floor || floorFor(level), seen: overrides.seen || null, extra: [...(mutation && MUTATIONS[mutation] ? [MUTATIONS[mutation].gene] : []), ...(grade >= 2 ? ['linked'] : [])] }) : null;
+    : PARTS.on && !overrides.classic && random && !strain && !overrides.boss && !genes && FAMILIES[familyId] ? rollParts({ family: familyId, body: family, level, rand: rng((seed ^ 0x2545f491) >>> 0), elite: !!overrides.elite, rare: !!overrides.rare, floor: overrides.floor || floorFor(level), spread: spreadOf(familyId, level, overrides.floor || floorFor(level)), seen: overrides.seen || null, extra: [...(mutation && MUTATIONS[mutation] ? [MUTATIONS[mutation].gene] : []), ...(grade >= 2 ? ['linked'] : [])] }) : null;
   const open = (strain ? strain.parts : family.parts).filter((spec) => spec.pool !== 'basic' && (!spec.from || ((random || overrides.family || spec.kestrel) && level >= spec.from)));
   // The third part: a gene's part (genes.mjs), one of those open at its level (the family's pool, in order), picked by its own hash of the
   // seed so it never moves the virus's other rolls. A boss keeps its family's first (the classic one).
@@ -1231,7 +1284,7 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   const weakPoint = parts[Math.floor(next() * parts.length)].id;
   const srcs = specs.map((spec) => (spec.pool === 'third' || boss?.extra?.includes(spec) ? 'rolled' : null));
   const unsigned = rolled2 && !rolled2.signature ? { noSignature: true } : {}; // no signature this fight (tells.mjs skips its tells)
-  const genome = genomeOf(parts, { strain: strainId, mutation, grade, boss: overrides.boss || null, ice: !!family.ice, srcs, linked: !!genes?.includes('linked') });
+  const genome = genomeOf(parts, { strain: strainId, mutation, grade, unlinked, boss: overrides.boss || null, ice: !!family.ice, srcs, linked: !!genes?.includes('linked') });
   // Its name (GAME_RULES.md "Rules and authors"): the adjective of its costliest rolled gene, its body's stem or its build's name, its
   // tag (the seed's four digits, or its file's) and its grade: WARDED CRYPTJACK-4821 v2. Named fixtures keep theirs.
   const tagNo = overrides.tag ? String(overrides.tag).slice(-4).padStart(4, '0') : String(seed >>> 0).slice(-4).padStart(4, '0');
@@ -1240,7 +1293,7 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   const crit = level >= SERVER.mutationsFrom ? CONFIG.enemyCrit : 0;
   const author = authorOf({ family: familyId, strain: strainId, boss: overrides.boss || null }, overrides.author);
   return { id: familyId + '-' + seed, name, family: familyId, strain: strainId, grade, dormant: strain?.dormant ? true : false, art: family.art || familyId, mutation, threat, level, power: dmgScale * (overrides.elite ? ELITE.dmg : 1), hpPower: scale, crit, threatens: family.threatens, parts, weakPoint, weakKnown: false, ...(overrides.elite ? { elite: true } : {}), ...(boss ? { boss: overrides.boss, phases: boss.phases.map((x) => ({ ...x, done: false })), enrageAt: boss.enrageAt } : {}),
-    genes: genome, author, ...unsigned };
+    genes: genome, author, ...unsigned, ...(unlinked ? { unlinked: true } : {}) };
 }
 
 // ---------- locations ----------

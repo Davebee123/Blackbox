@@ -46,6 +46,8 @@ import { AUTHORS } from './authors.mjs';
 import { SCRIPTS, TIER, scriptsOf, slotsOf, scriptTip } from './scripts.mjs';
 import { BOSS_RULES } from './interrupt.mjs';
 import { familyName } from './families.mjs';
+import { RIVALS, COUNTERS, READS, rivalOf, routeOf, raceOf, lineupOf, memoryOf, wickLine, crewName, crewColour, rivalSays, rivalLine } from './rivals.mjs';
+import { GENES } from './genes.mjs';
 import { ROOMS, KINDS, kindName, HUNTERS, RESIDENT, WORLD, STOCKED, farmed, respawnMs, roomList, hereOf, neighbours, linksOf, seenOf, isUp, backAt, downAt, cacheFull, refillAt, isBait, coreOpen, opened, signalNow, sigOf, progressOf, fmtLeft, hunterOf, hunterNext, paceOf, moveCost, fightOf, exits, hunterLine, xpEarned, virusName, exfilOf, exfilNext, exfilSeen, exfilLine, known, nameOf, hunterSeen, isSocket, socketOpen, socketOff, programIn, roomRuns, tunnelOf, restUsed, lureFamilies, addrOf, PUZZLES, isPuzzle, puzzleState } from './floorplan.mjs';
 import { puzzlePanel } from './puzzle-view.mjs';
 import { PROGRAMS, SOCKET, programCost, buildBlock, codebasesOf, costLine as programCostLine } from './sockets.mjs';
@@ -152,6 +154,10 @@ const ROOM_ICONS = {
   chase: '<path d="M4 21V3h10v18"/><path d="M2.5 21h19"/><path d="M11 12.5h.01"/><path d="M14.5 9h7M18.5 6l3 3-3 3"/>',
   cascade: '<path d="M4 4h16v16H4Z"/><path d="M13.2 6.5 8.6 13.1h3.6l-1.3 4.4 4.6-6.6h-3.6Z"/>',
   sweep: '<circle cx="12" cy="12" r="1.8"/><path d="M12 6.5a5.5 5.5 0 0 1 5.5 5.5M12 2.5a9.5 9.5 0 0 1 9.5 9.5"/><path d="M6.5 12A5.5 5.5 0 0 0 12 17.5M2.5 12a9.5 9.5 0 0 0 9.5 9.5" stroke-dasharray="2 2.4"/>',
+  // A wire bending through to its sink; two processes waiting on each other round a lock; a sealed note.
+  routing: '<path d="M2.5 7H9v10h8.5"/><path d="M17 13.5l3.5 3.5-3.5 3.5"/><circle cx="9" cy="7" r="1.2"/><circle cx="9" cy="17" r="1.2"/>',
+  deadlock: '<path d="M4.5 10A8 8 0 0 1 18 6.2M19.5 14A8 8 0 0 1 6 17.8"/><path d="M18.5 2.5v4h-4M5.5 21.5v-4h4"/><rect x="9" y="11" width="6" height="5" rx="1"/><path d="M10.5 11V9.6a1.5 1.5 0 0 1 3 0V11"/>',
+  cryptogram: '<path d="M3 5.5h18v13H3Z"/><path d="M3 5.5l9 7 9-7"/><path d="M7 15.5h3M14 15.5h3"/>',
   // A thread's rooms (threads-view.mjs): someone waiting at a terminal, a file, a log.
   ...TH_ICONS,
 };
@@ -161,6 +167,8 @@ const MARK_ICONS = {
   star: '<path class="f" d="M10 2.8l2.2 4.6 5 .6-3.7 3.4 1 5-4.5-2.5-4.5 2.5 1-5L2.8 8l5-.6z"/>',
   // The Exfil's stolen archive: a file, its corner folded, an upload arrow through it.
   archive: '<path d="M4.5 2.5h7l4 4v11h-11Z"/><path d="M11.5 2.5v4h4"/><path d="M10 15.5v-6M7.4 12 10 9.4l2.6 2.6"/>',
+  // A rival: crosshairs, the runner that has you in its sights.
+  rival: '<circle cx="10" cy="10" r="6.5"/><circle cx="10" cy="10" r="2.2"/><path d="M10 1.5v3.5M10 15v3.5M1.5 10H5M15 10h3.5"/>',
   // A contract's mark (the mail's): a page with a tick, on a room a job points at.
   contract: '<path d="M4.5 2.5h7.5l3.5 3.5v11.5h-11Z"/><path d="M12 2.5V6h3.5"/><path d="M7 11.8l2 2 4-4.3"/>',
 };
@@ -212,8 +220,12 @@ function tileTip(s, room, marks = net(s, 'marks') || {}) {
   const job = marks[room.id]; // the address is on the chip itself: the tooltip says the job, once
   if (!known(s, room.id)) {
     const cost = stepCost(s, room), th = R_th(s)[room.id];
+    if (rivalOf(s)?.at === room.id) return rivalTip(s, rivalOf(s));
+    if (rivalOf(s) && room.id === s.rooms.graph.vaults[0]) return `Vault\n${rivalLine(s)}`;
     return ['Unknown room', job ? `Contract: ${job}.` : '', th ? `${th.mark} ${th.text}` : '', cost ? `A first step in costs ${cost} Signal.` : '', hunted ? `The ${huntName(h)} is here.` : '', x ? `${x.name}, an Exfil, is here.` : ''].filter(Boolean).join('\n');
   }
+  const rv = rivalOf(s);
+  if (rv?.at === room.id) return rivalTip(s, rv);
   const name = labelOf(s, room);
   if (x) return `${name}: ${x.name}, an Exfil uploading a stolen archive.\n${exfilNext(s) ? 'It runs from you. Corner it.' : 'Cornered: walk in and break its Uplink.'}`;
   const { who, rule } = aboutOf(s, room), th = R_th(s)[room.id];
@@ -358,11 +370,14 @@ function mapSvg(s, tall, pop = null) {
     const d = distOf(g, here, h.at);
     if (d != null && d <= 2) near = neighbours(g, h.at).filter((id) => shown(id) && id !== here).sort((a, b) => (distOf(g, here, a) ?? 9) - (distOf(g, here, b) ?? 9))[0] || null;
   }
-  const ctx = { reach, next, pop, near, G, marks: net(s, 'marks') || {}, th: R_th(s), files };
+  // A rival's whole route, a red dotted trace from its room to where it's going (rivals.mjs: it shows through the fog).
+  const rv = rivalOf(s), route = rv ? routeOf(s, rv) : [];
+  const trail = route.length > 1 ? `<polyline class="fp-rv-route" points="${route.map((id) => { const p = at(g.rooms[id]); return `${p.x},${p.y}`; }).join(' ')}"/>` : '';
+  const ctx = { reach, next, pop, near, G, marks: net(s, 'marks') || {}, th: R_th(s), files, rv };
   const rooms = roomList(s).filter((r) => shown(r.id)).map((room) => roomSvg(s, room, at(room), ctx)).join('');
   const bits = here ? bitsSvg(at(g.rooms[here]), G, here) : '';
   const vw = width + 2 * PAD, vh = height + 2 * PAD, vb = `${-PAD} ${-PAD} ${vw} ${vh}`;
-  return `<svg class="fp-svg ${tall ? 'tall' : 'wide'}" viewBox="${vb}" data-vb="${vb}" width="${vw}" height="${vh}" preserveAspectRatio="xMidYMid meet" style="--w:${vw}px;--h:${vh}px" role="group" aria-label="Room map of ${esc(R.name)}">${lines}${tunnel}${rooms}${arrow}${bits}</svg>`;
+  return `<svg class="fp-svg ${tall ? 'tall' : 'wide'}" viewBox="${vb}" data-vb="${vb}" width="${vw}" height="${vh}" preserveAspectRatio="xMidYMid meet" style="--w:${vw}px;--h:${vh}px" role="group" aria-label="Room map of ${esc(R.name)}">${lines}${tunnel}${trail}${rooms}${arrow}${bits}</svg>`;
 }
 // A dashed arrow, bowed off the trace, from one room into the next (the hunter's red, the Exfil's amber).
 function routeSvg(p, q, G, kind) {
@@ -377,6 +392,18 @@ function routeSvg(p, q, G, kind) {
 }
 // The Exfil: a gold archive with an upload arrow in a small dark badge (filled gold once it's cornered).
 const exfilSvg = (cx, cy, k, cornered) => `<g class="fp-exfil${cornered ? ' cornered' : ''}" transform="translate(${n1(cx - 10 * k)} ${n1(cy - 10 * k)}) scale(${k})"><rect class="bg" x="0" y="0" width="20" height="20" rx="2"/><use href="#fp-i-archive" x="1.5" y="1.5" width="17" height="17"/></g>`;
+// A rival's lineup under its room: a numbered red chip for each fight, struck once beaten.
+function lineupSvg(s, v, cx, y) {
+  const n = v.fights, w = 16, gap = 4, x0 = cx - (n * w + (n - 1) * gap) / 2;
+  return `<g class="fp-rv-lineup">${Array.from({ length: n }, (_, i) => { const x = n1(x0 + i * (w + gap)), done = i < v.fight; return `<g class="${done ? 'done' : i === v.fight ? 'next' : ''}"><rect x="${x}" y="${n1(y)}" width="${w}" height="14" rx="2"/><text x="${n1(x + w / 2)}" y="${n1(y + 10.5)}" text-anchor="middle">${i + 1}</text>${done ? `<line x1="${x}" y1="${n1(y + 14)}" x2="${n1(x + w)}" y2="${n1(y)}"/>` : ''}</g>`; }).join('')}</g>`;
+}
+// A rival's tooltip: its name, what it is, what it does, then the answer (muted, after ▸).
+function rivalTip(s, v) {
+  const P = RIVALS[v.id], m = memoryOf(s, v.id);
+  return [P.name, `Rival · ${crewName(v.id)} · level ${v.level}${m.met ? ` · ${m.won}–${m.lost}` : ''}`,
+    `${rivalLine(s)} It walks a room for each of your moves and needs no key. When it reaches you, it fights you: ${v.fights} viruses, one after another.`,
+    '▸ Beat it to take its pack, and the vault if it opened it.'].join('\n');
+}
 // The 1s and 0s drifting off the room you're in: they start just outside its edge and drift 14 to 32 out.
 function bitsSvg(p, G, id) {
   let seed = hashOf(id);
@@ -419,7 +446,7 @@ function revealing(s, id) {
   if (!REVEALED.has(k)) REVEALED.set(k, t);
   return t - REVEALED.get(k) < 1600;
 }
-function roomSvg(s, room, p, { reach, next, pop, near, G, marks, th = {}, files = [] }) {
+function roomSvg(s, room, p, { reach, next, pop, near, G, marks, th = {}, files = [], rv = null }) {
   const R = s.rooms, g = R.graph, kind = known(s, room.id), h = hunterOf(s);
   const sock = kind && isSocket(s, room) && socketOpen(s, room), prog = sock ? programIn(s, room.id) : null; // an open socket (a held server's Core too) and what runs in it
   const here = R.at === room.id, can = reach.has(room.id), fight = kind && fightKind(room) && !sock, up = fight && isUp(s, room), down = fight && !up;
@@ -440,8 +467,12 @@ function roomSvg(s, room, p, { reach, next, pop, near, G, marks, th = {}, files 
   let out = `<g class="${cls}" data-room="${esc(room.id)}"${attrs}${pop === room.id ? '' : ` title="${esc(tileTip(s, room, marks))}"`} aria-label="${esc(kind ? labelOf(s, room) : 'Unknown room')}">`;
   // You: a soft teal glow and a pulsing outline. The hunter just out of sight next door: a red pulse.
   if (here) out += `<polygon class="fp-you-glow" points="${pts}" filter="url(#fp-glow)"/><polygon class="fp-you-ring" points="${pts}"/>`;
+  const rival = rv?.at === room.id;
+  if (rival) out += `<polygon class="fp-rv-ring" points="${chipPts(p.x, p.y, hw + 5, hh + 5, G.ch + 2)}"/>`;
   if (near === room.id) out += `<polygon class="fp-near" points="${pts}" title="${esc(`${huntName(h)}: just out of sight.`)}"/>`;
-  if (!kind) out += `<polygon class="fp-body" points="${pts}"/><text class="fp-q" x="${p.x}" y="${n1(p.y + 8)}" text-anchor="middle">?</text>`;
+  const after = !kind && rv && room.id === g.vaults[0]; // the vault a rival is after shows through the fog
+  if (after) { const sz = n1(24 * G.ic); out += `<polygon class="fp-body" points="${pts}"/><use class="fp-icon fp-rv-vault" href="#fp-i-vault" x="${n1(p.x - sz / 2)}" y="${n1(p.y - sz / 2)}" width="${sz}" height="${sz}"/>`; }
+  else if (!kind) out += `<polygon class="fp-body" points="${pts}"/><text class="fp-q" x="${p.x}" y="${n1(p.y + 8)}" text-anchor="middle">?</text>`;
   else {
     // The chip, its hairline, the icon (the largest thing on it) and the name plate under it, centred as one block.
     const sz = n1(24 * G.ic), name = (room.kind === 'socket' && prog ? PROGRAMS[prog].name : plateOf(s, room)).toUpperCase(), t = plateType(name, G);
@@ -462,10 +493,13 @@ function roomSvg(s, room, p, { reach, next, pop, near, G, marks, th = {}, files 
     if (room.kind === 'nest') tags.push(['NEST', 'rare']);
     if (isPuzzle(room.kind)) { const st = puzzleState(s, room); if (st === 'live') tags.push(['IN PLAY', 'rare']); else if (st === 'won') tags.push(['SOLVED', 'done']); else if (st === 'lost') tags.push(['FAILED', 'hot']); }
   }
+  const race = rv && room.id === g.vaults[0] ? raceOf(s, rv) : null; // the race on the vault: your rooms to it, and the rival's
+  if (race) tags.push([`YOU ${race.you ?? '?'}`, 'race-you'], [`${RIVALS[rv.id].name} ${race.it}`, 'race-it']);
   let tx = x0 - 6;
   for (const [t, c] of tags) { const w = tagW(t); out += `<g class="fp-tag ${c}"><rect x="${n1(tx)}" y="${n1(y0 - 8)}" width="${w}" height="16" rx="2"/><text x="${n1(tx + w / 2)}" y="${n1(y0 + 3.5)}" text-anchor="middle">${t}</text></g>`; tx += w + 4; }
   // Top centre: YOU, and the hunter's skull (beside YOU when it's on you).
   if (here) { const ux = n1(Math.max(p.x, tx + 20)); out += `<g class="fp-you-tab"><rect x="${n1(ux - 20)}" y="${n1(y0 - 9)}" width="40" height="16" rx="2"/><text x="${ux}" y="${n1(y0 + 3)}" text-anchor="middle">YOU</text></g>`; tx = ux + 24; }
+  if (rival) { const nm = RIVALS[rv.id].name, w = tagW(nm) + 4, rx = n1(Math.max(p.x - w / 2, tx + 2)); out += `<g class="fp-rv-tab"><rect x="${rx}" y="${n1(y0 - 9)}" width="${w}" height="16" rx="2"/><text x="${n1(rx + w / 2)}" y="${n1(y0 + 3)}" text-anchor="middle">${esc(nm)}</text></g>`; tx = rx + w + 4; out += lineupSvg(s, rv, p.x, y0 + G.nh + 6); }
   if (hunted) { const half = 5.5 * G.px + 4; out += skullSvg(n1(Math.max(p.x, tx + half)), n1(y0 - 2), G.px, h.kind === 'track' && !h.awake && !h.returning); }
   if (exfil) { const k = G.px / 2.2, half = 10 * k; out += exfilSvg(n1(Math.max(p.x, tx + half + 2)), n1(y0 + 1), k, !exfilNext(s)); tx += 2 * half + 6; }
   // A thread's mark (threads.mjs): an amber ! where one starts, ? where the step you're on sends you.
@@ -519,6 +553,8 @@ function hudMarkup(s) {
   const scripts = bag.map((id) => `<li class="fp-perk r-${TIER[SCRIPTS[id].rarity]}" title="${esc(scriptTip(id))}">${esc(SCRIPTS[id].name)}</li>`).join('');
   const hunt = R.at && h ? `<span class="fp-stat fp-hunt${h.down ? ' out' : ''}" title="${esc(`${hunterLine(s)}\n${huntName(h)}: ${HUNTERS[h.kind].text} It moves only when you walk or wait.`)}">${ic('den')}<span class="lbl">${esc(huntName(h))}</span><b>${h.down ? 'down' : h.kind === 'track' && !h.awake && !h.returning ? 'asleep' : `moves in ${paceOf(s) - h.count}`}</b></span>` : '';
   const ml = R.at && exfilShown(s) ? `<span class="fp-stat fp-exfilstat" title="${esc(`${exfilLine(s)}\nAn Exfil is uploading a stolen archive off this server. It runs from you, a room for each of your moves. Corner it where it can't run, then walk in: its upload completes after ${CONFIG.exfil.escape} cycles.`)}">${ic('archive')}<span class="lbl">Exfil</span><b>${exfilNext(s) ? 'running' : 'cornered'}</b></span>` : '';
+  const rv = R.at ? rivalOf(s) : null, race = rv ? raceOf(s, rv) : null;
+  const rival = rv ? `<span class="fp-stat fp-rvstat" title="${esc(rivalTip(s, rv))}">${ic('rival')}<span class="lbl">${esc(RIVALS[rv.id].name)}</span><b>${rv.state === 'on' ? 'on you' : race ? `${race.it} to vault` : 'leaving'}</b></span>` : '';
   const keys = R.at && R.visit?.keys.length ? `<span class="fp-stat fp-keys" title="Keys: each opens its vault, this visit only. Jack out and it goes back to the elite that held it.">${ic('key')}<b>${R.visit.keys.length}</b></span>` : '';
   const packed = R.world ? (s.run?.pack || []).map((f) => net(s, 'packLine', f)) : R.pack.map((id) => itemLabel(stashItem(s, id) || { name: '?' }));
   const pack = packed.length ? `<span class="fp-stat" title="${esc(`Pack: ${packed.join(', ')}.\nBanks when you jack out. Lost if your Signal hits 0.`)}"><span class="lbl">Pack</span><b>${packed.length}</b></span>` : '';
@@ -536,7 +572,7 @@ function hudMarkup(s) {
     <span class="fp-id" title="${esc(net(s, 'idTip') ?? `${R.name}: ${author} ${kindName(R.kind)}, level ${R.level}, floor ${R.floor}.\n${K.rule}: ${K.text}`)}"><span class="ico" ${icon('server')}></span><b>${esc(R.name)}</b><small>${esc(net(s, 'idLine') ?? `${kindName(R.kind)} · lv ${R.level} · ${K.rule}`)}</small></span>
     <div class="fp-sig ${lvl}" title="${esc(`Signal: carries from fight to fight and rests back at home.\nA room's first step each visit costs ${step}, or ${stepNew} into one you've never been in.`)}"><span class="lbl">Signal</span><span class="sigbar"><span style="width:${(f * 100).toFixed(1)}%"></span></span><strong>${sig}</strong><small>/${max}</small>${R.world && sickPct(s) ? `<em class="sig-sick" title="${esc(sickTip(s))}">−${sickPct(s)}%</em>` : ''}</div>
     <div class="fp-prog" title="${esc(`Rooms cleared for good: at ${Math.ceil(prog.total / 2)} the whole map is drawn, at ${prog.total} the server is Mapped.`)}"><span class="lbl">Rooms</span><span class="pbar"><span style="width:${(prog.done / prog.total) * 100}%"></span><i style="left:50%"></i></span><b>${prog.done}/${prog.total}</b>${R.mapped ? '<small class="fp-mapped">MAPPED</small>' : ''}</div>
-    ${keys}${hunt}${ml}${pack}${job}${R.world && s.threads ? threadHud(s) : ''}
+    ${keys}${hunt}${rival}${ml}${pack}${job}${R.world && s.threads ? threadHud(s) : ''}
     <span class="fp-tools">${R.world ? '' : `<span class="fp-rules" role="group" aria-label="Boss rule"><span class="lbl" title="${esc(`Boss rule: how ${BOSSES[RESIDENT].name}'s ticks work. It applies to your next fight with it.`)}">Boss</span>${rule}</span>`}
     <ul class="fp-perks" aria-label="Scripts"><li class="lbl" title="Scripts: run one a fight, from the fight's tray. It takes no cycle.">Scripts ${bag.length}/${slotsOf(s)}</li>${scripts}</ul>
     <span class="fp-acts">${acts}</span></span>
@@ -600,10 +636,27 @@ function hunterNote(s, room) {
   if (h.at === room.id && room.id !== s.rooms.at) return '';
   return huntStep(s) === room.id ? note(esc(`The ${huntName(h)} steps in here next.`), 'hot') : '';
 }
+// A rival on you (rivals.mjs): the challenge, or the card between its fights. Engage only.
+//   challenge   its crew's byline, level and your record, its line, the lineup as numbered rows, the stakes, wick.
+//   between     the lineup rail (beaten ones struck), what you did → the part it adds, your Signal, wick.
+function rivalCard(s, room, sc) {
+  const v = s.rooms.visit.rival, P = RIVALS[v.id], m = memoryOf(s, v.id), add = sc.between && v.next ? COUNTERS[v.next.counter] : null;
+  const by = `<p class="fp-rv-by"><span style="${crewColour(v.id) ? `color:${crewColour(v.id)}` : ''}">${esc(crewName(v.id))}</span> · lv ${v.level}${m.met > 1 || m.won || m.lost ? ` · <span title="${esc(`Meeting ${m.met}: you've beaten ${P.name} ${m.won} ${m.won === 1 ? 'time' : 'times'} and lost to it ${m.lost}.`)}">meeting ${m.met} · ${m.won}–${m.lost}</span>` : ''}</p>`;
+  const says = sc.between ? '' : `<p class="fp-rv-says${v.id === 'hush' ? ' quote' : ''}">${esc(rivalSays(s, v.id))}</p>`;
+  const addTip = (c) => { const G = GENES[c.gene]; return `${c.name}\nPart · added by ${P.name}\n${c.veil ? 'Every part of its next virus is veiled, and wears a ◆ at least.' : G?.does || ''}${G?.answer ? `\n▸ ${G.answer}` : ''}`; };
+  const rows = lineupOf(s, v).map((x) => `<li class="${x.beaten ? 'beaten' : x.next ? 'next' : ''}"><b>${x.i + 1}</b><span>${esc(x.name)}</span>${x.next && add ? `<i class="fp-rv-add" title="${esc(addTip(add))}">+ ${esc(add.name)}</i>` : ''}</li>`).join('');
+  const did = add ? `<p class="fp-rv-read" title="${esc(`How you won the last fight. ${P.name} answers it with one part, on its next virus.`)}"><span>${esc(v.next.read === 'slow' ? `${v.next.cycles} cycles` : READS[v.next.read])}</span> → <b title="${esc(addTip(add))}">${esc(add.name)}</b></p>` : '';
+  const sig = sc.between ? `<p class="fp-rv-sig" title="Your Signal carries from fight to fight. Your cooldowns start fresh."><b>${signalNow(s)}</b>/${s.rooms.max} Signal</p>` : '';
+  const stakes = sc.between ? '' : `<p class="fp-rv-stakes" title="${esc(`Beat ${P.name} and its pack is yours${v.vault ? ', with the vault it opened' : ''}. Lose and it's gone with both.`)}">${v.vault ? `${ic('vault')}<span>Vault</span>` : ''}${ic('cache')}<span>Its pack</span></p>`;
+  const wick = `<p class="fp-rv-wick"><span>wick</span>${esc(wickLine(s, v, sc.between ? 'between' : 'challenge'))}</p>`;
+  const st = { word: sc.between ? `${v.fight} of ${v.fights} down` : 'challenged', cls: 'hot' };
+  return cardOf(st, true, P.name, by + says + did + `<ol class="fp-rv-line">${rows}</ol>` + sig + stakes + wick, btn('engage', 'Engage', { primary: true }), true, addrOf(s, room.id));
+}
 // The room you're in: what holds it and its verbs.
 function hereCard(s) {
   const R = s.rooms, g = R.graph, room = hereOf(s), sc = R.screen, h = hunterOf(s);
   let st = stateOf(s, room), body = '', acts = '';
+  if (sc?.kind === 'rival') return rivalCard(s, room, sc);
   if (sc?.kind === 'hunter') {
     st = { word: 'caught', cls: 'hot' };
     body = holder('den', `${huntName(h).toUpperCase()} ICE`, `Level ${fightOf(s, room, 'hunter').level} hunter`) + note('Beat it for a script. It stays down the rest of the visit.');

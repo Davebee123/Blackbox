@@ -14,13 +14,13 @@
 // strays are nobody's. Sectors, rosters and ACTUARY's portfolio come in phases 3 and 5.
 export const AUTHORS = {
   tollgate: { name: 'TOLLGATE', crew: 'ransomware', colour: '#ff9f43', style: 'TOLLGATE builds with locks and leverage. Everything is behind something, and something is on a clock.',
-    signature: ['ward', 'mutexlock', 'deadline', 'rage', 'ransomtimer'], toolkit: ['tripwire', 'zipbomb', 'exfiltrate', 'ratecap', 'armored'], builds: ['extortion', 'bricker'], bosses: ['repoman', 'nb-deadbolt', 'nb-tripmine'] },
+    signature: ['ward', 'mutexlock', 'deadline', 'rage', 'ransomtimer'], toolkit: ['tripwire', 'zipbomb', 'exfiltrate', 'ratecap', 'armored', 'predator', 'volatile', 'harvester'], builds: ['extortion', 'bricker', 'bloodhound', 'scythe'], bosses: ['repoman', 'nb-deadbolt', 'nb-tripmine'] },
   swarmline: { name: 'SWARMLINE', crew: 'worm', colour: '#7bd389', style: 'SWARMLINE builds with numbers and spares. Whatever you break comes back or brings friends.',
-    signature: ['twin', 'floodramp', 'mend', 'hotspare'], toolkit: ['c2', 'hivebrood', 'siphon', 'loadbalancer', 'botnetrecruit', 'antivirussweep', 'fork', 'regenerative', 'hasty'], builds: ['floodgate', 'leech', 'patchwork', 'overrun'], bosses: ['relayking', 'nb-backorifice', 'nb-patchday', 'nb-floodwall'] },
+    signature: ['twin', 'floodramp', 'mend', 'hotspare'], toolkit: ['c2', 'hivebrood', 'siphon', 'loadbalancer', 'botnetrecruit', 'antivirussweep', 'fork', 'regenerative', 'hasty', 'countdown', 'leak', 'vendetta', 'amplifier'], builds: ['floodgate', 'leech', 'patchwork', 'overrun', 'doomsday', 'badblood'], bosses: ['relayking', 'nb-backorifice', 'nb-patchday', 'nb-floodwall'] },
   palemask: { name: 'PALEMASK', crew: 'ghostroot', colour: '#b8a6ff', style: 'PALEMASK builds with misdirection, so you never quite see where the hit comes from.',
-    signature: ['veil', 'decoymirror', 'phaseshift', 'echo', 'dormant'], toolkit: ['frontend', 'honeypot'], builds: ['sleeper', 'flicker', 'echo'], bosses: ['nb-sleepwalker', 'nb-echolalia'] },
+    signature: ['veil', 'decoymirror', 'phaseshift', 'echo', 'dormant'], toolkit: ['frontend', 'honeypot', 'opportunist'], builds: ['sleeper', 'flicker', 'echo', 'lurker'], bosses: ['nb-sleepwalker', 'nb-echolalia'] },
   nullchoir: { name: 'NULL CHOIR', faction: 'nullchoir', colour: '#ff6f91', style: 'NULL CHOIR builds with rhythm and mockery. It copies you and makes you keep time.',
-    signature: ['mimic', 'synclock', 'keystrokedump'], toolkit: ['veil', 'clockglitch', 'handshake', 'stateless', 'adaptive'], builds: ['keylogger'], bosses: ['choir', 'nb-mirrorshade'] },
+    signature: ['mimic', 'synclock', 'keystrokedump'], toolkit: ['veil', 'clockglitch', 'handshake', 'stateless', 'adaptive', 'swap', 'stunned'], builds: ['keylogger', 'bodysnatcher'], bosses: ['choir', 'nb-mirrorshade'] },
   glassjaw: { name: 'GLASSJAW', faction: 'glassjaw', colour: '#e07bd0', style: 'GLASSJAW sells professional denial. It taxes your tools and blocks your favourites.',
     signature: ['cycletax', 'synflood', 'acl'], toolkit: ['exfiltrate', 'badsectors', 'stateless', 'ratecap', 'loadbalancer', 'watchdogtimer', 'hasty'], builds: ['hashrat'], bosses: ['nb-hashlord'] },
   lantern: { name: 'LANTERN', faction: 'lantern', colour: '#ffb347', style: 'LANTERN listens. Its builds bait you and hide their hand.',

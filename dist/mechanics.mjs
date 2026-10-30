@@ -160,7 +160,7 @@ export function mechLanded(s, p, atk) {
     case 'harvester': {
       const k = e.corrupt?.left > 0 ? e.corrupt.left : 0;
       if (!k) return;
-      e.corrupt = null;
+      e.corrupt = null; e.volatile = null; // reaped, not cleansed: a Volatile's rest doesn't land on top (the Scythe)
       const dealt = takeDamage(s, shareOf(s, MECH.harvester.share * k), p.id, 'Harvest');
       return say(`consumes your Corrupted (${k} left): −${dealt}.`);
     }
@@ -299,7 +299,7 @@ export function mechRead(s, p, atk = '') {
     case 'volatile': return [`${a}When it lands, you are Corrupted for ${pct(MECH.volatile.share)} of your max every cycle for ${cyc(MECH.volatile.cycles)}. Cleansing it deals what it had left at once.`, 'Let it run out, or cleanse with a shield up.', cue('volatile corruption', 'burn')];
     case 'amplifier': { const t = live ? e.virus.parts.find((x) => alive(x) && x.amped === p.id) : null; return [`Has no attack of its own. Each cycle it boosts the next attack of another part, in turn. That attack deals ${pct(MECH.amplifier.mult - 1)} more.`, 'Break the boosted part first, or the Amplifier.', cue(t ? `boosts ${t.name}` : 'boosts the others', 'sync')]; }
     case 'bodyguard': return [`Has no attack of its own. At the end of each cycle, it shields the part your command hit for ${pct(MECH.bodyguard.share)} of that part's max. The shield takes only your commands.`, 'Switch targets, or break the Bodyguard first.', cue('shields your target', 'shield')];
-    case 'vendetta': { const n = live ? e.virus.vendetta || 0 : 0; return [`Has no attack of its own. While it stands, each other part you break makes the rest hit ${pct(MECH.vendetta.more)} harder for the rest of the fight.`, 'Break the Vendetta first.', cue(n ? `+${pct(MECH.vendetta.more * n)} damage` : 'avenges each break', 'damage')]; }
+    case 'vendetta': { const n = live ? e.virus.vendetta || 0 : 0; return [`${a || 'Has no attack of its own. '}While it stands, each other part you break makes the rest hit ${pct(MECH.vendetta.more)} harder for the rest of the fight.`, 'Break the Vendetta first.', cue(n ? `+${pct(MECH.vendetta.more * n)} damage` : 'avenges each break', 'damage')]; }
     case 'thorns': return [`${a}Each command that hits it leaves you Corrupted, a stack of ${pct(MECH.thorns.share)} of your max a cycle for ${cyc(MECH.thorns.cycles)}. Burns and helpers don't.`, 'Use burns and helpers on it.', cue('thorns', 'spike')];
     case 'countdown': { const left = MECH.countdown.at - (p.count || 0); return [`Has no attack of its own. It counts the commands you fire. At ${MECH.countdown.at}, every part attacks at once, and the count starts over. Holding doesn't count.`, 'Hold to stall it, or break it.', cue(live ? `big turn in ${left}` : `counts ${MECH.countdown.at} commands`, 'clock')]; }
     case 'backtrace': return [`Has no attack of its own. Each cycle, each status you carry adds a stack. At ${MECH.backtrace.at} stacks, it calls in a fragment, and the stacks start over.`, 'Cleanse, or break it.', cue(live ? `trace ${p.trace || 0}/${MECH.backtrace.at}` : 'traces your statuses', 'spider')];

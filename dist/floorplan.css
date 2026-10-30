@@ -456,6 +456,98 @@
   .pz-seg .btn { min-height: 34px; min-width: 70px; }
 }
 
+/* ---- Packet routing: lit wire amber and flowing, the sink gold once it's joined ---- */
+.rt-svg .pz-bed { stroke-linecap: butt; }
+.rt-wire { stroke: rgba(241, 185, 47, 0.32); stroke-width: 2.4; }
+.rt-via { fill: #0a0703; stroke: rgba(241, 185, 47, 0.35); stroke-width: 1.2; }
+.rt-tile.on .rt-wire, .rt-wire.lead.on { stroke: var(--amber); stroke-width: 3; }
+.rt-halo { stroke: rgba(241, 185, 47, 0.22); stroke-width: 9; pointer-events: none; }
+.rt-svg.won .rt-halo, .rt-halo.gold { stroke: rgba(255, 216, 92, 0.24); }
+.rt-tile.on .rt-via { stroke: var(--amber); fill: #2a1d06; }
+.rt-tile.on .pz-chip { stroke: var(--amber-deep); }
+.rt-wire.lead.gold, .rt-svg.won .rt-tile.on .rt-wire { stroke: var(--next); }
+.rt-flow { stroke: var(--bright); stroke-width: 2; stroke-dasharray: 2 12; stroke-linecap: round; opacity: 0.7; pointer-events: none; }
+.rt-empty .pz-chip { fill: none; stroke: #2a2010; stroke-dasharray: 3 3; }
+.rt-end .pz-chip { stroke-width: 1.8; }
+.rt-end text { font: 600 10px var(--mono); letter-spacing: 1px; }
+.rt-end.src .pz-chip { fill: #2a1d06; stroke: var(--amber); } .rt-end.src text { fill: var(--amber); }
+.rt-end.snk .pz-chip { fill: #1a1405; stroke: rgba(255, 216, 92, 0.55); stroke-dasharray: 4 3; } .rt-end.snk text { fill: rgba(255, 216, 92, 0.7); }
+.rt-end.snk.won .pz-chip { fill: #3a2e08; stroke: var(--next); stroke-dasharray: none; } .rt-end.snk.won text { fill: var(--next); }
+.rt-ghost { fill: none; stroke: var(--next); stroke-width: 2; stroke-dasharray: 3 6; opacity: 0.6; pointer-events: none; }
+/* ---- Deadlock: held locks steel, wanted ones dashed, a give you can make amber; a give that finishes, gold ---- */
+.dl-svg.tall { display: none; }
+.dl-ring { fill: none; stroke: rgba(241, 185, 47, 0.28); stroke-width: 1.6; stroke-dasharray: 6 8; }
+.dl-name { font: 600 12px var(--mono); fill: var(--bright); letter-spacing: 0.5px; }
+.dl-count { font: 600 11px var(--mono); fill: var(--muted); }
+.dl-proc.done .pz-chip { fill: #1c1406; stroke: var(--amber-deep); }
+.dl-proc.done .dl-name { fill: var(--muted); }
+.dl-exit { font: 600 12px var(--mono); fill: var(--amber); letter-spacing: 1px; }
+.dl-proc.stuck .pz-chip { stroke: rgba(255, 91, 61, 0.6); fill: url(#fp-g-hot); }
+.dl-proc:has(.dl-lock.can:hover, .dl-lock.can:focus-visible) .pz-chip { stroke: var(--amber); }
+.dl-proc:has(.dl-lock.can[data-fin]:hover, .dl-lock.can[data-fin]:focus-visible) .pz-chip { stroke: var(--next); filter: url(#fp-glow); }
+.dl-lock .sh { fill: none; stroke-width: 2; }
+.dl-lock .bd { stroke-width: 1.4; }
+.dl-lock .bd, .dl-lock .sh { pointer-events: all; }
+.dl-lock text { font: 700 11px var(--mono); }
+.dl-lock.held .sh, .dl-lock.free .sh { stroke: var(--steel); } .dl-lock.held .bd, .dl-lock.free .bd { fill: #0c181c; stroke: var(--steel); } .dl-lock.held text, .dl-lock.free text { fill: var(--steel); }
+.dl-lock.want .sh { stroke: #4a3c22; stroke-dasharray: 2 2; } .dl-lock.want .bd { fill: none; stroke: #4a3c22; stroke-dasharray: 3 2; } .dl-lock.want text { fill: var(--dim); }
+.dl-lock.want.can { cursor: pointer; }
+.dl-lock.want.can .sh, .dl-lock.want.can .bd { stroke: var(--amber-soft); } .dl-lock.want.can text { fill: var(--amber); }
+.dl-lock.can:hover .bd, .dl-lock.can:focus-visible .bd { stroke: var(--amber); stroke-dasharray: none; fill: #2a1d06; }
+.dl-lock.can:hover .sh, .dl-lock.can:focus-visible .sh { stroke: var(--amber); stroke-dasharray: none; }
+.dl-lock.can[data-fin]:hover .bd, .dl-lock.can[data-fin]:hover .sh, .dl-lock.can[data-fin]:focus-visible .bd { stroke: var(--next); }
+.dl-lock.can[data-fin]:hover text { fill: var(--next); }
+.dl-lock:focus { outline: none; }
+.dl-pool .pz-chip { fill: #0c1114; stroke: rgba(134, 182, 198, 0.45); stroke-width: 1.4; stroke-dasharray: 4 3; }
+.dl-free { font: 600 10px var(--mono); letter-spacing: 2px; fill: var(--steel); opacity: 0.8; }
+.dl-pool.lost .pz-chip { stroke: var(--hot); stroke-dasharray: none; fill: #1e0a06; }
+.dl-pool.lost .dl-free { fill: var(--hot); opacity: 1; font-size: 12px; }
+.dl-none { font: 600 14px var(--mono); fill: var(--dim); }
+.dl-token rect { fill: #0c181c; stroke: var(--steel); stroke-width: 1.4; filter: url(#fp-glow); }
+.dl-token text { font: 700 10px var(--mono); fill: var(--steel); }
+/* ---- Cryptogram: your key's letters dim amber, this note's bright ---- */
+.cg-board { display: grid; gap: var(--s6); padding: var(--s5) var(--s4) var(--s4); user-select: none; -webkit-user-select: none; }
+.cg-note { display: flex; flex-wrap: wrap; gap: var(--s5) 18px; align-items: flex-end; margin: 0; }
+.cg-w { display: inline-flex; gap: 2px; }
+.cg-c { display: inline-grid; grid-template-rows: 22px 14px; justify-items: center; width: 22px; padding: 0; border: 0; border-radius: 2px; background: none; color: var(--bright); cursor: pointer; }
+.cg-c b { align-self: end; width: 100%; font: 600 18px/22px var(--mono); text-align: center; border-bottom: 1px solid rgba(241, 185, 47, 0.3); }
+.cg-c i { font: 500 10px/14px var(--mono); font-style: normal; color: var(--dim); }
+.cg-c.car b { color: var(--amber-soft); border-bottom-color: transparent; }
+.cg-c.sol b { color: var(--amber); text-shadow: 0 0 10px rgba(241, 185, 47, 0.45); border-bottom-color: transparent; }
+.cg-c.car, .cg-c.sol { cursor: default; }
+.cg-c.open:hover { background: var(--amber-wash); }
+.cg-c.sel { background: rgba(241, 185, 47, 0.16); box-shadow: inset 0 0 0 1px var(--amber); }
+.cg-c.sel b { border-bottom-color: var(--amber); } .cg-c.sel i { color: var(--amber); }
+.cg-c.miss { animation: cg-miss 0.9s ease-out both; }
+@keyframes cg-miss { 0%, 40% { box-shadow: inset 0 0 0 1px var(--hot); background: var(--hot-soft); transform: translateX(-2px); } 20% { transform: translateX(2px); } 100% { transform: none; } }
+.cg-p { font: 600 18px/22px var(--mono); color: var(--muted); align-self: start; padding-bottom: 14px; }
+.cg-sig { font: 500 14px var(--mono); color: var(--dim); align-self: center; margin-left: var(--s4); }
+.cg-keys { display: grid; grid-template-columns: repeat(13, 1fr); gap: var(--s2); }
+.cg-k { min-height: 34px; padding: 0; font: 600 15px var(--mono); color: var(--bright); border: 1px solid var(--line-strong); border-radius: var(--r-btn); background: #0e0a04; }
+.cg-k:hover:not(:disabled) { border-color: var(--amber); color: var(--amber); }
+.cg-k:disabled { opacity: 1; cursor: default; color: var(--muted); }
+.cg-board.done .cg-k:not(.car):not(.sol) { color: var(--dim); border-color: var(--line); background: none; }
+.cg-k.car { color: var(--amber-soft); border-color: transparent; background: none; opacity: 0.55; }
+.cg-k.sol { color: var(--amber); border-color: transparent; background: none; opacity: 0.55; }
+.cg-k.tried { color: var(--hot); border-color: rgba(255, 91, 61, 0.4); text-decoration: line-through; }
+.cg-keybar { display: inline-flex; gap: 1px; }
+.cg-keybar i { width: 4px; height: 10px; background: var(--inset); border: 1px solid var(--line); }
+.cg-keybar i.car { background: var(--amber-soft); border-color: var(--amber-soft); opacity: 0.6; }
+.cg-keybar i.sol { background: var(--amber); border-color: var(--amber); }
+.pz-stat b small { font-size: 12px; color: var(--muted); font-weight: 500; }
+@media (prefers-reduced-motion: no-preference) {
+  body:not(.no-motion) .rt-flow { animation: rt-flow 0.9s linear infinite; }
+  body:not(.no-motion) .dl-ring { animation: fp-flow 2.4s linear infinite; }
+}
+@keyframes rt-flow { to { stroke-dashoffset: -14; } }
+@media (max-width: 640px) {
+  .dl-svg.wide { display: none; } .dl-svg.tall { display: block; }
+  .cg-c { width: 18px; } .cg-c b { font-size: 15px; }
+  .cg-note { gap: var(--s4) 12px; }
+  .cg-board { padding: var(--s3) 0; }
+  .cg-keys .cg-k { min-height: 38px; font-size: 14px; }
+}
+
 /* ---- Threads (threads-view.mjs): quests found in rooms. Amber is a thread's colour; teal is only ever you. ---- */
 /* the mark over a room: a filled amber badge, ! where one starts, ? where the step you're on sends you */
 .fp-quest { pointer-events: auto; cursor: help; }
@@ -523,3 +615,33 @@
 .fp-scanbtn.off { cursor: default; }
 .fp-scanbtn.off text { fill: var(--muted); }
 @media (hover: none) { .fp-scanbtn { opacity: 1; pointer-events: auto; } }
+/* rivals (rivals.mjs): red for the rival, its route and its lineup; amber for the stakes; the crew's colour only on its byline */
+.fp-rvstat .fp-ic, .fp-rvstat b { color: var(--hot); }
+.fp-rv-route { fill: none; stroke: var(--hot); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 0.5 7; opacity: 0.9; pointer-events: none; }
+.fp-rv-vault { color: var(--amber); opacity: 0.75; }
+.fp-rv-ring { fill: none; stroke: var(--hot); stroke-width: 2; pointer-events: none; }
+.fp-rv-tab rect { fill: var(--hot); }
+.fp-rv-tab text { font-size: 10px; font-weight: 700; letter-spacing: 1px; fill: #140503; }
+.fp-rv-lineup rect { fill: #140503; stroke: var(--hot); stroke-width: 1; }
+.fp-rv-lineup text { font-size: 9px; font-weight: 700; fill: var(--hot); }
+.fp-rv-lineup .next rect { fill: var(--hot); } .fp-rv-lineup .next text { fill: #140503; }
+.fp-rv-lineup .done rect, .fp-rv-lineup .done line { stroke: var(--gray); } .fp-rv-lineup .done text { fill: var(--gray); }
+.fp-tag.race-you rect { stroke: var(--you); } .fp-tag.race-you text { fill: var(--you); font-weight: 700; }
+.fp-tag.race-it rect { stroke: var(--hot); } .fp-tag.race-it text { fill: var(--hot); font-weight: 700; }
+.fp-rv-by { margin: 0; font-size: 12px; letter-spacing: 0.5px; color: var(--dim); }
+.fp-rv-by span[title] { cursor: help; }
+.fp-rv-says { margin: 0; font-size: 14px; color: var(--hot); font-style: italic; }
+.fp-rv-says.quote { font: 13px var(--mono, monospace); font-style: normal; }
+.fp-rv-line { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--s2); }
+.fp-rv-line li { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: center; gap: var(--s3); padding: var(--s2) var(--s4); border: 1px solid var(--line); border-left: 2px solid var(--hot); border-radius: var(--r-btn); background: var(--inset); font-size: 13px; color: var(--bright); }
+.fp-rv-line li b { color: var(--hot); font-variant-numeric: tabular-nums; }
+.fp-rv-line li.beaten { border-left-color: var(--gray); color: var(--gray); } .fp-rv-line li.beaten span { text-decoration: line-through; } .fp-rv-line li.beaten b { color: var(--gray); }
+.fp-rv-add { font-style: normal; font-size: 12px; color: var(--hot); cursor: help; }
+.fp-rv-read { margin: 0; font-size: 14px; color: var(--text); }
+.fp-rv-read b { color: var(--hot); cursor: help; }
+.fp-rv-sig { display: flex; align-items: center; gap: var(--s3); margin: 0; font-size: 13px; color: var(--dim); }
+.fp-rv-sig .fp-ic { color: var(--you); } .fp-rv-sig b { color: var(--you); font-variant-numeric: tabular-nums; }
+.fp-rv-stakes { display: flex; align-items: center; gap: var(--s3); margin: 0; font-size: 13px; color: var(--amber); cursor: help; }
+.fp-rv-stakes .fp-ic { color: var(--amber); }
+.fp-rv-wick { margin: 0; font-size: 12px; color: var(--dim); font-style: italic; }
+.fp-rv-wick span { font-style: normal; color: var(--muted); margin-right: var(--s3); text-transform: lowercase; }

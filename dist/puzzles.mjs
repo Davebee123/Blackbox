@@ -1,4 +1,4 @@
-// Puzzle rooms (GAME_RULES.md "Puzzle rooms"): four rooms that aren't fights. Pure: a seed in, a board out, a move in, what
+// Puzzle rooms (GAME_RULES.md "Puzzle rooms"): seven rooms that aren't fights. Pure: a seed in, a board out, a move in, what
 // happened out. The rooms engine (floorplan.mjs) keeps each room's board on the server (R.puzzles) and pays the end;
 // the page (puzzle-view.mjs) draws it. Every board here is JSON (a save holds it as it is).
 //   quarantine  "Wall it in": a 7×9 node grid with a Worm outbreak. Firewall a node; the worm then copies into ONE
@@ -15,15 +15,25 @@
 //   sweep       "Find the cache": a 7×7 dark room, a cache hidden in one cell. A ping reads the steps (across plus down)
 //               to the cache; a dig digs. Pings and digs share a budget of 5. Deeper: two caches (a budget of 8), or
 //               noisy cells (marked) whose ping reads one off.
+//   routing     "Get it through": 7×5 tiles (straight, elbow, tee, empty). A turn turns one a quarter, either way. Join
+//               the source to the sink within the fewest turns (found by search) + 2.
+//   deadlock    "Let them all finish": six processes, each needing 2–3 locks (A–D) and holding some, around a pool of
+//               free ones. Give one a free lock it needs; one holding all it needs finishes and returns its locks.
+//               Lost when none can finish from the pool.
+//   cryptogram  "Read wick's note": a note in the player's own substitution key. Name a cipher letter's plain one: right
+//               fills it everywhere and stays in the key; wrong is a strike, three lose.
 import { seeded } from './gear.mjs';
 
-export const PUZZLE_KINDS = ['quarantine', 'chase', 'cascade', 'sweep'];
+export const PUZZLE_KINDS = ['quarantine', 'chase', 'cascade', 'sweep', 'routing', 'deadlock', 'cryptogram'];
 // Each one's name, its title (what you do), its rule (one line) and how deep its harder boards start.
 export const PUZZLES = {
   quarantine: { name: 'Quarantine', title: 'Wall it in', rule: 'Firewall a node. The worm copies into the marked one. Every node it never reaches pays.', deep: 4 },
   chase: { name: 'Hunter chase', title: 'Reach the door', rule: 'Move a room or wait. The Tracker takes two steps: across first, then up or down. Walls stop it.', deep: 99 },
   cascade: { name: 'Cascade', title: 'Bring it all down', rule: 'Tap to discharge. Every node beside it gains 1; past 3, it goes too.', deep: 99 },
   sweep: { name: 'Ping sweep', title: 'Find the cache', rule: 'A ping reads the steps to the cache. Pings and digs share the budget.', deep: 4 },
+  routing: { name: 'Packet routing', title: 'Get it through', rule: 'Click turns a tile clockwise, right-click turns it back. Join the source to the sink.', deep: 99 },
+  deadlock: { name: 'Deadlock', title: 'Let them all finish', rule: 'Give a process a free lock. One holding all it needs finishes and returns its locks.', deep: 99 },
+  cryptogram: { name: 'Cryptogram', title: "Read wick's note", rule: 'Each letter stands for another, the same in every note. A wrong letter costs a strike.', deep: 99 },
 };
 export const isPuzzle = (kind) => PUZZLE_KINDS.includes(kind);
 const mix = (seed, salt) => ((((seed >>> 0) ^ Math.imul(salt + 1, 0x9e3779b1)) >>> 0) || 1);
@@ -335,17 +345,264 @@ export function sweepBest(st) {
   return { mode: 'ping', at: best?.at ?? cand[0] };
 }
 
+// ---------- packet routing ----------
+// Tiles: { t: 'I' | 'L' | 'T' | '' (empty), r: quarter turns clockwise }. Sides N E S W are bits 1 2 4 8. The source
+// feeds the left edge of row src, the sink takes the right edge of row snk.
+export const RT = { rows: 5, cols: 7, slack: 2, path: [13, 21], best: [9, 14] };
+const RT_BASE = { I: 0b0101, L: 0b0011, T: 0b0111, '': 0 };
+const RDR = [-1, 0, 1, 0], RDC = [0, 1, 0, -1], opp = (d) => (d + 2) % 4, bit = (d) => 1 << d;
+const rot = (m, r) => ((m << r) | (m >> (4 - r))) & 15;
+export const rtMask = (t) => rot(RT_BASE[t.t], t.r);
+// The fewest quarter turns (either way round) that open every side in need.
+export function rtCost(t, need) {
+  let best = Infinity;
+  for (let k = 0; k < 4; k++) if ((rot(RT_BASE[t.t], (t.r + k) % 4) & need) === need) best = Math.min(best, k, 4 - k);
+  return best;
+}
+const rtStep = (i, d) => { const r = Math.floor(i / RT.cols) + RDR[d], c = (i % RT.cols) + RDC[d]; return r < 0 || r >= RT.rows || c < 0 || c >= RT.cols ? -1 : r * RT.cols + c; };
+// Every lit tile (joined to the source), and whether the sink is lit.
+export function routeLit(st) {
+  const on = new Set(), q = [], s0 = st.src * RT.cols, end = st.snk * RT.cols + RT.cols - 1;
+  if (rtMask(st.tiles[s0]) & bit(3)) { on.add(s0); q.push(s0); }
+  while (q.length) {
+    const i = q.shift(), m = rtMask(st.tiles[i]);
+    for (let d = 0; d < 4; d++) {
+      const j = m & bit(d) ? rtStep(i, d) : -1;
+      if (j >= 0 && !on.has(j) && rtMask(st.tiles[j]) & bit(opp(d))) { on.add(j); q.push(j); }
+    }
+  }
+  return { on, won: on.has(end) && !!(rtMask(st.tiles[end]) & bit(1)) };
+}
+// The fewest turns that join the source to the sink, and one route that does it ([tile, sides it needs] a step): a DFS
+// over simple routes, pruned by a lower bound from (tile, entry side) that ignores a route crossing itself.
+export function routeSolve(st) {
+  const n = RT.rows * RT.cols, end = st.snk * RT.cols + RT.cols - 1, LB = Array.from({ length: n }, () => [Infinity, Infinity, Infinity, Infinity]);
+  for (let moved = true, pass = 0; moved && pass < 200; pass++) {
+    moved = false;
+    for (let i = 0; i < n; i++) for (let e = 0; e < 4; e++) {
+      let best = i === end ? rtCost(st.tiles[i], bit(e) | bit(1)) : Infinity;
+      for (let x = 0; x < 4; x++) {
+        const j = x === e ? -1 : rtStep(i, x), k = j < 0 ? Infinity : rtCost(st.tiles[i], bit(e) | bit(x));
+        if (k < Infinity) best = Math.min(best, k + LB[j][opp(x)]);
+      }
+      if (best < LB[i][e]) { LB[i][e] = best; moved = true; }
+    }
+  }
+  let bestCost = Infinity, bestRoute = [];
+  const seen = new Set(), route = [];
+  const dfs = (i, e, cost) => {
+    if (cost + LB[i][e] >= bestCost) return;
+    seen.add(i);
+    if (i === end) { const k = rtCost(st.tiles[i], bit(e) | bit(1)); if (cost + k < bestCost) { bestCost = cost + k; bestRoute = [...route, [i, bit(e) | bit(1)]]; } }
+    for (let x = 0; x < 4; x++) {
+      const j = x === e ? -1 : rtStep(i, x);
+      if (j < 0 || seen.has(j)) continue;
+      const k = rtCost(st.tiles[i], bit(e) | bit(x));
+      if (k === Infinity) continue;
+      route.push([i, bit(e) | bit(x)]); dfs(j, opp(x), cost + k); route.pop();
+    }
+    seen.delete(i);
+  };
+  dfs(st.src * RT.cols, 3, 0);
+  return { best: bestCost, route: bestRoute };
+}
+// A winding route (a self-avoiding walk of 13–21 tiles, a fifth of it tees) under random tiles, every tile turned at
+// random; kept when the fewest turns is 9 to 14. Turns: the fewest + 2.
+export function newRouting(seed) {
+  const { rows, cols } = RT;
+  for (let a = 0; ; a++) {
+    const r = seeded(mix(seed, 1301 + a)), src = Math.floor(r() * rows), snk = Math.floor(r() * rows), end = snk * cols + cols - 1;
+    const path = [src * cols], used = new Set(path);
+    let ok = false;
+    for (let step = 0; step < 60; step++) {
+      const i = path[path.length - 1];
+      if (i === end && path.length >= RT.path[0]) { ok = true; break; }
+      const dirs = [0, 1, 2, 3];
+      for (let k = 3; k > 0; k--) { const j = Math.floor(r() * (k + 1)); [dirs[k], dirs[j]] = [dirs[j], dirs[k]]; }
+      const opts = dirs.map((d) => [d, rtStep(i, d)]).filter(([, j]) => j >= 0 && !used.has(j));
+      if (!opts.length) break;
+      const [, j] = opts.find(([d]) => d !== 1 || r() < 0.45) || opts[0];
+      path.push(j); used.add(j);
+    }
+    if (!ok || path.length > RT.path[1]) continue;
+    const tiles = Array.from({ length: rows * cols }, () => ({ t: ['L', 'L', 'L', 'I', 'I', 'T', 'T', ''][Math.floor(r() * 8)], r: 0 }));
+    const side = (x, y) => RDR.findIndex((dr, d) => Math.floor(y / cols) - Math.floor(x / cols) === dr && (y % cols) - (x % cols) === RDC[d]);
+    path.forEach((i, k) => {
+      const e = k === 0 ? 3 : opp(side(path[k - 1], i)), x = k === path.length - 1 ? 1 : side(i, path[k + 1]);
+      tiles[i] = { t: opp(e) === x ? 'I' : 'L', r: 0 };
+      if (r() < 0.2) tiles[i].t = 'T';
+    });
+    for (const t of tiles) t.r = Math.floor(r() * 4);
+    const st = { kind: 'routing', seed, src, snk, tiles, turns: 0, done: null, last: null };
+    if (routeLit(st).won) continue;
+    const { best, route } = routeSolve(st);
+    if (best < RT.best[0] || best > RT.best[1]) continue;
+    return { ...st, best, budget: best + RT.slack, solution: route };
+  }
+}
+function routeTurn(st, i, dir) {
+  if (st.done || !st.tiles[i]?.t) return null;
+  st.tiles[i].r = (st.tiles[i].r + (dir > 0 ? 1 : 3)) % 4;
+  st.turns++;
+  if (routeLit(st).won) st.done = 'won';
+  else if (st.turns >= st.budget) st.done = 'lost';
+  st.last = { at: i, dir };
+  return st.last;
+}
+
+// ---------- deadlock ----------
+// Six processes around a pool of free locks (kinds A–D, as numbers). need[p]: every lock p must hold to finish; held[p]:
+// what it holds. Give a free lock to a process that still needs it; one holding all it needs finishes and returns its
+// locks to the pool. Deadlocked: none can finish from the pool.
+export const DL = { n: 6, kinds: 4, rate: [0.04, 0.3], tries: 300 };
+export const PROCS = ['cron', 'sshd', 'dbus', 'httpd', 'rsync', 'syslog'];
+export const LOCKS = 'ABCD';
+const minus = (a, b) => { const out = [...a]; for (const x of b) { const i = out.indexOf(x); if (i >= 0) out.splice(i, 1); } return out; };
+const covers = (pool, want) => minus(want, pool).length === 0;
+export const lockLeft = (st, p) => minus(st.need[p], st.held[p]);
+export const canFinish = (st, p) => !st.fin[p] && covers(st.pool, lockLeft(st, p));
+const finishable = (st) => PROCS.slice(0, st.n).map((_, p) => p).filter((p) => canFinish(st, p));
+// A give, on a copy: the new board, or null when it can't go.
+export function lockGive(st, p, l) {
+  if (st.done || st.fin[p] || !st.pool.includes(l) || !lockLeft(st, p).includes(l)) return null;
+  const held = st.held.map((h, q) => (q === p ? [...h, l] : h)), fin = [...st.fin];
+  let pool = minus(st.pool, [l]), back = [];
+  if (!minus(st.need[p], held[p]).length) { fin[p] = true; back = held[p]; pool = [...pool, ...back].sort(); held[p] = []; }
+  const nb = { ...st, held, pool, fin, gives: st.gives + 1, last: { p, l, finished: back.length > 0, back } };
+  nb.done = fin.every(Boolean) ? 'won' : finishable(nb).length ? null : 'lost';
+  return nb;
+}
+// Solvable when finishing whatever can finish, in any order, finishes everyone (a finish only frees locks). steps: how
+// many could finish at each point of that walk.
+export function lockSolve(st) {
+  let pool = [...st.pool];
+  const fin = [...st.fin], steps = [], order = [];
+  for (;;) {
+    const can = fin.map((_, p) => p).filter((p) => !fin[p] && covers(pool, minus(st.need[p], st.held[p])));
+    if (!can.length) break;
+    steps.push(can.length);
+    const p = can[0];
+    fin[p] = true; pool = [...minus(pool, minus(st.need[p], st.held[p])), ...st.need[p]]; order.push(p);
+  }
+  return { ok: fin.every(Boolean), steps, order };
+}
+// How often random gives win it.
+export function lockRandomRate(st, tries = DL.tries, r = seeded(5)) {
+  let wins = 0;
+  for (let t = 0; t < tries; t++) {
+    let x = st;
+    while (!x.done) {
+      const opts = [];
+      for (let p = 0; p < x.n; p++) if (!x.fin[p]) for (const l of new Set(lockLeft(x, p))) if (x.pool.includes(l)) opts.push([p, l]);
+      if (!opts.length) break;
+      const [p, l] = opts[Math.floor(r() * opts.length)];
+      x = lockGive(x, p, l);
+    }
+    if (x.done === 'won') wins++;
+  }
+  return wins / tries;
+}
+// Kept: exactly one can finish at the start, at most two at any point of the finish chain, three or more decoys (a lock
+// you could give but that finishes nothing), and random gives win 4–30% of the time.
+export function newDeadlock(seed) {
+  const { n, kinds } = DL;
+  for (let a = 0; ; a++) {
+    const r = seeded(mix(seed, 2203 + a)), shuf = (xs) => { for (let k = xs.length - 1; k > 0; k--) { const j = Math.floor(r() * (k + 1)); [xs[k], xs[j]] = [xs[j], xs[k]]; } return xs; };
+    const need = Array.from({ length: n }, () => Array.from({ length: r() < 0.5 ? 2 : 3 }, () => Math.floor(r() * kinds)).sort());
+    const held = need.map((nd) => shuf([...nd]).slice(0, Math.floor(r() * nd.length)).sort());
+    const pool = Array.from({ length: 2 + Math.floor(r() * 2) }, () => Math.floor(r() * kinds)).sort();
+    const st = { kind: 'deadlock', seed, n, need, held, pool, fin: Array(n).fill(false), gives: 0, done: null, last: null };
+    if (finishable(st).length !== 1) continue;
+    const sol = lockSolve(st);
+    if (!sol.ok || Math.max(...sol.steps) > 2) continue;
+    const decoys = need.map((_, p) => p).filter((p) => !canFinish(st, p) && lockLeft(st, p).some((l) => pool.includes(l))).length;
+    if (decoys < 3) continue;
+    const rate = lockRandomRate(st);
+    if (rate < DL.rate[0] || rate > DL.rate[1]) continue;
+    return { ...st, order: sol.order };
+  }
+}
+function deadlockGive(st, p, l) {
+  const nb = lockGive(st, p, l);
+  if (!nb) return null;
+  Object.assign(st, nb);
+  return st.last;
+}
+
+// ---------- cryptogram ----------
+// wick's notes in one substitution key, the player's (s.cipher: its seed and the plain letters solved, made on first
+// use), so a solved letter stays solved on every later note, won or lost. Once no note has three letters left to
+// solve, wick changes the key.
+export const CG = { strikes: 3, fresh: 3 };
+export const NOTES = [
+  'dont trust the quiet ones. the loud ones tell you what they want.',
+  'there is a box off the map. old builds still run on it. tune the scanner to 81.3 after dark and wait for the numbers.',
+  'the runner you met on four keeps a log. read it before you go back down. they never wipe it.',
+  'quiet week. the market on two pays double for coolant. dont ask me why. sell before friday.',
+  'halcyon reads your mail. so do i. only one of us minds.',
+  'every vault has a guard who wants to go home. find the guard first.',
+  'if the tracker wakes, walk. never run. it counts your steps, not your speed.',
+  'burn this. or dont. nobody but you has the key.',
+];
+export const ALPHA = 'abcdefghijklmnopqrstuvwxyz';
+const lettersOf = (text) => [...new Set(text.replace(/[^a-z]/g, ''))];
+// The player's key, made on first use (the save keys on the field).
+export function cipherOf(s) {
+  if (!s.cipher || !Array.isArray(s.cipher.solved)) s.cipher = { seed: Math.floor(Math.random() * 2 ** 31) || 1, solved: [] };
+  return s.cipher;
+}
+// A key from its seed: plain letter → cipher letter (capital), none to itself.
+export function wickKey(seed) {
+  const r = seeded(mix(seed, 3307));
+  for (;;) {
+    const sh = [...ALPHA];
+    for (let k = sh.length - 1; k > 0; k--) { const j = Math.floor(r() * (k + 1)); [sh[k], sh[j]] = [sh[j], sh[k]]; }
+    if (sh.every((c, i) => c !== ALPHA[i])) return Object.fromEntries([...ALPHA].map((c, i) => [c, sh[i].toUpperCase()]));
+  }
+}
+// A note with three or more letters still to solve, from the seed (none left: a new key, and it changes cipher).
+export function newCryptogram(seed, cipher = { seed: 1, solved: [] }) {
+  const open = (t) => lettersOf(t).filter((c) => !cipher.solved.includes(c)).length >= CG.fresh;
+  if (!NOTES.some(open)) { cipher.seed = (mix(cipher.seed, 17) % 2 ** 31) || 1; cipher.solved = []; }
+  const notes = NOTES.map((t, i) => i).filter((i) => open(NOTES[i])), note = notes[Math.floor(seeded(mix(seed, 3301))() * notes.length)];
+  return { kind: 'cryptogram', seed, note, text: NOTES[note], kseed: cipher.seed, key: wickKey(cipher.seed), carried: lettersOf(NOTES[note]).filter((c) => cipher.solved.includes(c)).sort(), solved: [], strikes: CG.strikes, misses: 0, wrong: [], done: null, last: null };
+}
+export const cgPlain = (st, C) => Object.keys(st.key).find((p) => st.key[p] === C);
+export const cgKnown = (st, p) => st.carried.includes(p) || st.solved.includes(p);
+export const cgOpen = (st) => lettersOf(st.text).filter((p) => !cgKnown(st, p));
+// A guess: cipher letter C stands for plain p. Right fills it everywhere; wrong costs a strike.
+function cgGuess(st, C, p) {
+  const truth = cgPlain(st, C);
+  if (st.done || !truth || !ALPHA.includes(p) || !st.text.includes(truth) || cgKnown(st, truth) || st.wrong.includes(`${C}${p}`)) return null;
+  if (truth === p) {
+    st.solved.push(p);
+    st.last = { C, p, ok: true };
+    if (!cgOpen(st).length) st.done = 'won';
+    return st.last;
+  }
+  st.misses++;
+  st.wrong.push(`${C}${p}`);
+  st.last = { C, p, ok: false };
+  if (st.misses >= st.strikes) st.done = 'lost';
+  return st.last;
+}
+
 // ---------- one entry point ----------
 // A new board for a room: its kind, its seed (the server's, the room's and how many times it has refilled), its floor.
-export function newPuzzle(kind, seed, { floor = 1 } = {}) {
+// A cryptogram takes the player's key (cipherOf) and may change it (a new key once every note reads).
+export function newPuzzle(kind, seed, { floor = 1, cipher } = {}) {
   if (kind === 'quarantine') return newQuarantine(seed, { floor });
   if (kind === 'chase') return newChase(seed);
   if (kind === 'cascade') return newCascade(seed);
   if (kind === 'sweep') return newSweep(seed, { floor });
+  if (kind === 'routing') return newRouting(seed);
+  if (kind === 'deadlock') return newDeadlock(seed);
+  if (kind === 'cryptogram') return newCryptogram(seed, cipher);
   return null;
 }
 // A move on a board, in words (the card's verbs and the terminal's): quarantine "wall 23"; chase "up", "down", "left",
-// "right", "wait", "go 12", "undo", "restart"; cascade "tap 7"; sweep "ping 12", "dig 30". Returns what happened, or
+// "right", "wait", "go 12", "undo", "restart"; cascade "tap 7"; sweep "ping 12", "dig 30"; routing "turn 12", "back 12"
+// (anticlockwise); deadlock "give cron a"; cryptogram "guess q e" (Q stands for e). Returns what happened, or
 // null when the move doesn't go (the board stays as it was).
 export function puzzleMove(st, text) {
   const [verb, arg] = String(text || '').trim().toLowerCase().split(/\s+/), i = Number(arg);
@@ -353,6 +610,10 @@ export function puzzleMove(st, text) {
   if (st.kind === 'quarantine') return verb === 'wall' && Number.isInteger(i) ? qWall(st, i) : null;
   if (st.kind === 'cascade') return verb === 'tap' && Number.isInteger(i) ? cascadeTap(st, i) : null;
   if (st.kind === 'sweep') return (verb === 'ping' || verb === 'dig') && Number.isInteger(i) ? sweepAct(st, verb, i) : null;
+  if (st.kind === 'routing') return (verb === 'turn' || verb === 'back') && Number.isInteger(i) ? routeTurn(st, i, verb === 'turn' ? 1 : -1) : null;
+  const third = String(text || '').trim().toLowerCase().split(/\s+/)[2];
+  if (st.kind === 'deadlock') { const p = /^\d+$/.test(arg) ? Number(arg) : PROCS.indexOf(arg), l = LOCKS.indexOf((third || '').toUpperCase()); return verb === 'give' && p >= 0 && p < st.n && l >= 0 ? deadlockGive(st, p, l) : null; }
+  if (st.kind === 'cryptogram') return verb === 'guess' && arg?.length === 1 && third?.length === 1 ? cgGuess(st, arg.toUpperCase(), third) : null;
   if (st.kind === 'chase') {
     if (verb === 'undo') { const h = st.hist.pop(); if (!h) return null; [st.p, st.h, st.moves] = h; st.last = { undo: true }; return st.last; }
     if (verb === 'restart') { if (!st.hist.length) return null; st.p = st.p0; st.h = st.h0; st.moves = 0; st.hist = []; st.last = { restart: true }; return st.last; }
@@ -368,6 +629,14 @@ export function botMove(st) {
   if (st.kind === 'cascade') { const { taps } = cascadeSolve(st.b, Math.max(1, st.taps - st.used)); return `tap ${taps[0] ?? st.b.findIndex(Boolean)}`; }
   if (st.kind === 'sweep') { const m = sweepBest(st); return `${m.mode} ${m.at}`; }
   if (st.kind === 'chase') { const { moves } = chaseSolve(st.walls, st.p, st.h, st.exit); return moves[0] || 'wait'; }
+  if (st.kind === 'routing') {
+    const step = routeSolve(st).route.find(([i, need]) => (rtMask(st.tiles[i]) & need) !== need);
+    if (!step) return null;
+    const [i, need] = step, t = st.tiles[i];
+    return `${rtCost({ ...t, r: (t.r + 1) % 4 }, need) < rtCost(t, need) ? 'turn' : 'back'} ${i}`;
+  }
+  if (st.kind === 'deadlock') { const p = lockSolve(st).order[0] ?? st.fin.indexOf(false), l = lockLeft(st, p).find((x) => st.pool.includes(x)); return l == null ? null : `give ${PROCS[p]} ${LOCKS[l].toLowerCase()}`; }
+  if (st.kind === 'cryptogram') { const p = cgOpen(st)[0]; return p ? `guess ${st.key[p].toLowerCase()} ${p}` : null; }
   return null;
 }
 // How the board went: its score as the room pays it. quarantine: the value saved of the total; cascade: the taps
@@ -377,12 +646,15 @@ export function puzzleScore(st) {
   if (st.kind === 'cascade') return { spare: Math.max(0, st.taps - st.used), used: st.used, best: st.best, left: st.b.filter(Boolean).length };
   if (st.kind === 'sweep') return { found: st.found.length, caches: st.caches.length, left: sweepLeft(st) };
   if (st.kind === 'chase') return { moves: st.moves, best: st.best };
+  if (st.kind === 'routing') return { turns: st.turns, best: st.best, left: st.budget - st.turns };
+  if (st.kind === 'deadlock') return { fin: st.fin.filter(Boolean).length, n: st.n };
+  if (st.kind === 'cryptogram') return { solved: st.solved.length, misses: st.misses, note: st.note };
   return {};
 }
 
 // ---------- words (the terminal) ----------
 // A board's size, and a cell by its address as the board labels it (columns A…, rows 1…: c4), or by its number.
-export const dimsOf = (st) => (st.kind === 'quarantine' ? [Q.rows, Q.cols] : st.kind === 'sweep' ? [P.rows, P.cols] : [5, 5]);
+export const dimsOf = (st) => (st.kind === 'quarantine' ? [Q.rows, Q.cols] : st.kind === 'sweep' ? [P.rows, P.cols] : st.kind === 'routing' ? [RT.rows, RT.cols] : [5, 5]);
 const colName = (c) => String.fromCharCode(65 + c);
 export const cellName = (st, i) => { const [, cols] = dimsOf(st); return `${colName(i % cols)}${Math.floor(i / cols) + 1}`; };
 export function cellOf(st, text) {
@@ -391,9 +663,13 @@ export function cellOf(st, text) {
   return /^\d+$/.test(t) && Number(t) < rows * cols ? Number(t) : null;
 }
 // Whether you've made a move on it yet.
-export const puzzleStarted = (st) => !!st && (st.kind === 'quarantine' ? st.turn > 0 : st.kind === 'chase' ? st.moves > 0 : st.kind === 'cascade' ? st.used > 0 : st.pings.length + st.digs.length > 0);
+const STARTED = { quarantine: (st) => st.turn > 0, chase: (st) => st.moves > 0, cascade: (st) => st.used > 0, sweep: (st) => st.pings.length + st.digs.length > 0, routing: (st) => st.turns > 0, deadlock: (st) => st.gives > 0, cryptogram: (st) => st.solved.length + st.misses > 0 };
+export const puzzleStarted = (st) => !!st && !!STARTED[st.kind]?.(st);
 // The board as text: a header of columns and a row a line.
+const PIPE = { 0: ' ', 1: '╵', 2: '╶', 4: '╷', 8: '╴', 5: '│', 10: '─', 3: '└', 6: '┌', 12: '┐', 9: '┘', 7: '├', 14: '┬', 13: '┤', 11: '┴', 15: '┼' };
 export function boardLines(st) {
+  if (st.kind === 'deadlock') return [...st.need.map((_, p) => `${PROCS[p].padEnd(7)}${st.fin[p] ? 'exit 0' : `holds ${st.held[p].map((l) => LOCKS[l]).join(' ') || '-'} · needs ${lockLeft(st, p).map((l) => LOCKS[l]).join(' ')}`}`), `Free: ${st.pool.map((l) => LOCKS[l]).join(' ') || '-'} · give cron a`];
+  if (st.kind === 'cryptogram') return [st.text.replace(/[a-z]/g, (c) => st.key[c]), st.text.replace(/[a-z]/g, (c) => (cgKnown(st, c) ? c : '_')), `Strikes ${st.misses}/${st.strikes} · guess q e: Q stands for e`];
   const [rows, cols] = dimsOf(st), out = ['    ' + Array.from({ length: cols }, (_, c) => colName(c)).join(' ')];
   const next = st.kind === 'quarantine' && !st.done ? new Set(qTargets(st).map((t) => t.to)) : new Set();
   for (let r = 0; r < rows; r++) {
@@ -402,12 +678,14 @@ export function boardLines(st) {
       const i = r * cols + c;
       if (st.kind === 'quarantine') cells.push(next.has(i) ? '!' : st.cells[i] === Q.INF ? 'X' : st.cells[i] === Q.WALL ? '#' : st.cells[i] === Q.DEAD ? ' ' : st.data.includes(i) ? '*' : '.');
       else if (st.kind === 'cascade') cells.push(st.b[i] ? String(st.b[i]) : '.');
+      else if (st.kind === 'routing') cells.push(PIPE[rtMask(st.tiles[i])] ?? '?');
       else if (st.kind === 'sweep') { const p = st.pings.find((x) => x.at === i); cells.push(st.found.includes(i) ? '$' : st.digs.includes(i) ? 'x' : p ? String(Math.min(9, p.read)) : i in st.noise ? '~' : '.'); }
       else cells.push(i === st.p ? '@' : i === st.h ? 'T' : i === st.exit ? 'D' : '.');
     }
-    out.push(`${String(r + 1).padStart(2)}  ${cells.join(' ')}`);
+    out.push(`${st.kind === 'routing' && r === st.src ? '>' : ' '}${String(r + 1).padStart(2)} ${cells.join(st.kind === 'routing' ? '' : ' ')}${st.kind === 'routing' && r === st.snk ? ' >' : ''}`);
   }
   if (st.kind === 'quarantine') out.push(`Safe ${qValue(st)}/${st.total} · firewalls ${st.walls} · X the worm, ! where it goes next, * a data node (3)`);
+  if (st.kind === 'routing') { out[0] = '    ' + Array.from({ length: cols }, (_, c) => colName(c)).join(''); out.push(`Turns left ${st.budget - st.turns} · fewest ${st.best} · turn c3, back c3`); }
   if (st.kind === 'cascade') out.push(`Taps left ${st.taps - st.used} · fewest ${st.best}`);
   if (st.kind === 'sweep') out.push(`Budget ${sweepLeft(st)}/${st.budget}${Object.keys(st.noise).length ? ' · ~ a noisy cell reads one off' : ''}${st.caches.length > 1 ? ' · two caches' : ''}`);
   if (st.kind === 'chase') { out.push(`Moves ${st.moves} · fewest ${st.best} · @ you, T the Tracker, D the door`); out.push(`Walls: ${st.walls.map((k) => k.split('-').map((x) => cellName(st, Number(x))).join('|')).join(' ')}`); }
@@ -418,6 +696,9 @@ export function moveLine(st, did) {
   const at = (i) => cellName(st, i);
   if (st.kind === 'quarantine') return `Firewall on ${at(did.wall)}.${did.spread.length ? ` The worm copies into ${did.spread.map((x) => at(x.to)).join(' and ')}.` : ''}${st.done ? ' It can\'t spread.' : ''}`;
   if (st.kind === 'cascade') return `${at(did.tap)} discharges: ${did.gone} ${did.gone === 1 ? 'node goes' : 'nodes go'}.`;
+  if (st.kind === 'routing') return `${at(did.at)} turns ${did.dir > 0 ? 'clockwise' : 'back'}.${st.done === 'won' ? ' The sink lights.' : ''}`;
+  if (st.kind === 'deadlock') return `${PROCS[did.p]} takes ${LOCKS[did.l]}.${did.finished ? ` It finishes and returns ${st.need[did.p].map((l) => LOCKS[l]).join(' ')}.` : ''}${st.done === 'lost' ? ' Deadlock.' : ''}`;
+  if (st.kind === 'cryptogram') return did.ok ? `${did.C} is ${did.p}.` : `${did.C} isn't ${did.p}.`;
   if (st.kind === 'sweep') return did.mode === 'ping' ? `Ping ${at(did.at)}: ${did.read} ${did.read === 1 ? 'step' : 'steps'}.` : `Dig ${at(did.at)}: ${did.hit ? 'a cache.' : 'nothing.'}`;
   if (did.undo) return 'Undone.';
   if (did.restart) return 'Back to the start.';

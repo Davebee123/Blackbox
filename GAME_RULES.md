@@ -297,6 +297,11 @@ Volatile, Amplifier, Bodyguard, Vendetta, Thorns, Countdown, Backtrace, Swap, Tu
 (`PARTS.mech` 0) until the designer has played them; `?playtest=part:<id>` shows each, and `developer parts mech 0.5`
 rolls them for a session.
 
+**The spread.** A strain's mechanics parts roll as a third on wild viruses of its lineage from its level and floor
+(weight `PARTS.spread` 0.5, a server room's fixed third too): a Ghostroot from 12 on floor 2 can be a *LURKING
+GHOSTROOT*. A part that reads the signature (the Predator, the Opportunist) comes only beside it. The Codex card names
+the strain it spreads from (the Worm's Leaker is the Doomsday's).
+
 ### Mutations and part rules
 
 Mutations are always visible (a tag), open from level 4, and each changes a decision:
@@ -308,7 +313,7 @@ Mutations are always visible (a tag), open from level 4, and each changes a deci
 - **Adaptive**: a part your commands hit three cycles running gains a ◆ (*ADAPTS +◆*; *adapting* the cycle before).
 
 Two part rules run on many viruses:
-- **Linked** (every v2 or bigger virus): when a part breaks, a third of its hit moves to the surviving part that
+- **Linked** (every v2 or bigger virus but Bad Blood and the Bodysnatcher): when a part breaks, a third of its hit moves to the surviving part that
   attacks next (`CONFIG.linked`); a survivor whose attack isn't a hit gains one on top. Kill order decides what the
   rest hits for.
 - **Fallback**: a part with no attack of its own (or one that doesn't hit you) takes over its partner's attack when the
@@ -335,6 +340,16 @@ its rule on hover.
 | Bricker | Ransomware | 9 | Each part hits ×1.3 while below half Integrity. |
 | Sleeper | Ghostroot | 10 | Dormant until any hit lands or cycle 6; then the Cell's Alarm (14) lands that cycle and every 5. |
 | Overrun | Worm | 11 | Swarm spawns a fragment every 4; its fragments bite +1 every cycle they live. |
+| Lurker | Ghostroot | 12 | Pulse, Scrambler, Opportunist. The Opportunist sleeps off the timeline until you carry any debuff, then wakes for good (Pounce 5 every 3). Charge: Lure, a Scramble 2 cycles longer. |
+| Bloodhound | Ransomware | 13 | Pulse, Encryptor, Predator. While you're Encrypted the Predator's Bite (2) lands every cycle. Charge: Bloodlust, a burst of encryption. |
+| Scythe | Ransomware | 14 | Pulse, Volatile, Harvester. The Volatile Corrupts you (2% of your max for 3 cycles); cleansing it deals the rest at once. The Harvester's Reap consumes it for 4% a cycle it had left (a reap is no cleanse). |
+| Doomsday | Worm | 15 | Pulse, Countdown, Leaker. At 10 commands fired every part attacks at once; the Drip leaks you (3% a command for 3 cycles). Holding is free and doesn't count. |
+| Bad Blood | Worm | 16 | Pulse, Vendetta (Grudge 5 every 3), Amplifier. The Amplifier boosts the Pulse's and the Vendetta's next attack in turn (+50%); while the Vendetta stands each break makes the rest hit 20% harder. |
+| Bodysnatcher | Ghostroot | 18 | Pulse, Swap, Stunner. The Swap's Pass Throttles you, and your next command hit moves it (or Exposed or Corrupted) onto that part; the Jolt Stuns you. |
+
+The last six are the mechanics list's parts, paired by hand (docs/variety-plan.md 1.1). A strain's build crowds out what
+would break the compatibility rules beside it: the Doomsday never rolls Hasty, and Bad Blood and the Bodysnatcher are
+never Linked.
 
 **Grades.** Deeper servers send bigger versions: **v1** (SPRAWL-00 and floor 1) as normal, **v2** (floors 2–3) ×1.15
 Integrity and ×1.1 damage, **v3** (floor 4 and deeper) ×1.35 and ×1.25. At your wall a v2 invader counts 2 levels
@@ -362,7 +377,9 @@ Sentinel brings a **Zip Bomb** (docs/puzzle-levers.md 5).
 Every virus is a body plus rules, written by a crew (`genes.mjs` the 41 rules, `authors.mjs` the crews). TOLLGATE
 writes ransomware, SWARMLINE worms, PALEMASK ghostroots. A strain is a named build of its author: the Keylogger NULL
 CHOIR's, the Hashrat GLASSJAW's, the Floodgate, Leech, Patchwork and Overrun SWARMLINE's, the Sleeper, Flicker and Echo
-PALEMASK's, the Extortion and Bricker TOLLGATE's. Kestrel writes the ICE and the Sentinel. A faction's server runs its
+PALEMASK's, the Extortion and Bricker TOLLGATE's. The mechanics strains go the same way (the Lurker PALEMASK's, the
+Bloodhound and Scythe TOLLGATE's, the Doomsday and Bad Blood SWARMLINE's, the Bodysnatcher NULL CHOIR's), and their
+parts join their authors' toolkits. Kestrel writes the ICE and the Sentinel. A faction's server runs its
 faction's viruses; SPRAWL-00's strays sign nothing.
 
 - **Names.** A wild virus is named for its costliest rolled rule, its body's stem, four digits and its grade:
@@ -404,7 +421,7 @@ protector is decoded its node shows **?**.
 ### The Codex tab
 
 A top tab (`codex`), between Loadout and System. Left, an index in six groups: **Families** (Ransomware, Worm,
-Ghostroot and the room bodies), **Strains** (11), **Guards & ICE** (6), **Exfils**, **Bosses**, **Mutations**; each row
+Ghostroot and the room bodies), **Strains** (17), **Guards & ICE** (6), **Exfils**, **Bosses**, **Mutations**; each row
 its icon, name and count (a body's research %, a boss's wins, kills toward a mutation's decode). Unmet entries are ???.
 
 - **A family, strain or guard:** its art, your kills, its research, the sets you've faced and its authors; one card a
@@ -610,6 +627,34 @@ room, next to you (an Infiltrator two off) or in a discovered room; within two r
 fog's edge pulses red. Meet it and you fight it (two levels over the server); beat it and it drops a script and is down
 for the visit. An Infiltrator can `slip` past it once a visit.
 
+### Rivals (rivals.mjs)
+
+Named runners, one per crew, racing you to a traced server's vault ([docs/rivals.md](docs/rivals.md)).
+
+| Rival | Crew | Lineup | Counter-pick (how you won the last fight → the part it adds) |
+|---|---|---|---|
+| **KUDZU** | SWARMLINE | Trojan, Twinned Worm, Worm | Burst one down → Patcher · spread hits → Hot spare · else Flood ramp |
+| **ESCROW** | TOLLGATE | Ransomware, Hashrat, Bricker | Burst → Mutex lock · slow or burns → Deadline · else Ward |
+| **HUSH** | PALEMASK | Ghostroot, Echo, Sleeper | Every tell read → Veil · helpers → Phase shift · else Decoy mirror |
+
+- **The roll.** At most one a visit: 20% at each connect to a traced server whose vault is shut and that isn't yours,
+  then none for an hour (`RIVAL`). It starts as far from the vault as the entry is, never next to you.
+- **The walk.** A room for each of your moves (walk or wait), by the shortest route to the vault, never through the
+  Core, no key needed. At the vault it opens it and takes the files, then walks to the entry and jacks out with them
+  (got away: the files are gone). Its room, its route (a red dotted trace) and the vault show through the fog; the
+  vault's chip shows the race (**YOU 3 · KUDZU 2**).
+- **Aggro.** When it reaches your room, or you walk into its, it has you: no step back, no wait, no jack out. Engage.
+- **The fights.** 2 on floors 1–2, 3 from floor 3, one after another, one level over you, sized like a process room.
+  Your Signal carries; each fight starts your cooldowns fresh. The board tags it **KUDZU 2/3**.
+- **Counter-pick.** Between fights it adds one part to its next virus, read from how you won the last: burst (a hit
+  of a fifth of the virus's Integrity), spread (two parts hit in a quarter of your cycles), slow (14 cycles), burns or
+  helpers (a third of the damage), every tell read, small strips (◆ broken six times). Shown before you engage; the
+  part wears **+ KUDZU**. The Veil veils every part of the next virus instead (a ◆ each at least).
+- **Stakes.** Beat the whole lineup: its pack (4 Stashes' credits and a blue one level over you) and, if it opened
+  the vault, the vault's files, into your pack. Lose: it's gone with both, and you're disconnected as from any fight.
+- **Memory.** `s.rivals`: each rival's meetings, your record (*meeting 3 · 1–1*), how it last ended, and the command
+  HUSH quotes back. wick has a line on each card.
+
 ### Respawns and progress
 
 - **Respawns** (real time, never while you stand in the room): a process room 15 minutes, a guard post 20, an elite 45,
@@ -665,6 +710,20 @@ on hover, and as its glyph in amber on the map node.
 | ◆ Hardened | Its vault pays double (credits and code); Root climbs twice as fast | Its guards and Resident are Armored | Honeytoken | Patch Injector |
 | ♜ Guarded | Its vault holds one of its floor's uniques, once | A crew elite holds its Core in the Resident's place | — | — |
 
+**Leanings** (`leanings.mjs`, docs/leanings.md): every traced server also has one positive rule from its seed, keyed on
+the virus's timeline so it favours no class. It holds in every fight on that server.
+
+| Leaning | Rule |
+|---|---|
+| Venting | A part takes 50% more damage, from every hit, on the cycle after it attacks. |
+| Wind-up | A part takes 25% more damage, from every hit, on the cycle its attack lands. |
+| Brownout | An attack deals 30% less damage to you when your command aimed at its part that cycle (Spawn and Deploy count). |
+
+The card shows a small table under the level: **Server** (kind, specials, quirk) beside **Leaning** (one filled amber tag
+with its icon). In a fight a *Leaning* row under Gear counts what it has paid (damage added, or Signal kept), lit amber
+on the cycle after it paid; that cycle the part it paid on carries an amber tag with the amount. Nothing shows ahead of
+time.
+
 A server's kind, specials and quirk are tags on its card, each with its rule on hover. A server a faction owns shows its owner and the standing that taking
 it moves (−15 with the owner, +8 with each rival).
 
@@ -706,14 +765,15 @@ Rooms n/N, Mapped or a no-rest job. Invasions carry the quirk too (Invasions).
 
 Rooms that aren't fights (`puzzles.mjs`). Every traced server has one, or two (a quarter of small
 servers, half of medium, three in four large), never two of a kind, each at the end of a branch. **Quarantine** turns up
-three times as often on a Worm server, the **Hunter chase** only beside a sleeping Tracker's den, **Cascade** and **Ping
-sweep** anywhere. SPRAWL-00, rogue servers, lairs and the farm have none.
+three times as often on a Worm server, the **Hunter chase** only beside a sleeping Tracker's den, the rest anywhere, on
+every floor. SPRAWL-00, rogue servers, lairs and the farm have none.
 
 - Walking in opens its board over the map (**Play** on its card brings it back). A board stays the same until it
   refills, as you left it. Its chip shows **IN PLAY**, **SOLVED** or **FAILED** once you've started.
-- **One rule for all four:** played to its end, won or lost, the room is done until it refills (two hours, then a new
-  board). It pays once, at its end: a win pays a kill's XP (Intel, not scaled) and counts for a Solve contract; on The
-  Sink and Bedrock a win also rolls an elite's gold odds for one of the floor's puzzle-board uniques.
+- **One rule for all:** played to its end, won or lost, the room is done until it refills (two hours, then a new
+  board). It pays once, at its end: a win counts for a Solve contract and pays a kill's XP (Intel, not scaled), half one
+  on Packet routing, Deadlock and Cryptogram. On The Sink and Bedrock a win on the first four also rolls an elite's gold
+  odds for one of the floor's puzzle-board uniques.
 
 | Room | The board | What it pays | Floor 4 and down |
 |---|---|---|---|
@@ -721,6 +781,9 @@ sweep** anywhere. SPRAWL-00, rogue servers, lairs and the farm have none.
 | Hunter chase, *Reach the door* | A 5×5 den with walls. You move or wait; the Tracker takes two steps toward you, across first, never around a wall. Cells where it would catch you show red. Undo and Restart. Every den can be won (5 to 12 moves). | Through the door: the real Tracker loses you for the visit, and half a cache. **Caught:** the hunter fight starts. | — |
 | Cascade, *Bring it all down* | A 5×5 rack of nodes charged 1–3. A tap discharges a node and every neighbour gains 1; one past 3 discharges too. Clear it within the fewest taps + 1. | 3 components of the server's families, 2 more for the spare tap. | — |
 | Ping sweep, *Find the cache* | A 7×7 dark room with a buried cache. **Ping** reads the steps to it and lights that ring; **Dig** digs. A budget of 5. | A cache's credits and code, a quarter more for each unspent action. | Two caches (budget 8), or four noisy cells that read one off |
+| Packet routing, *Get it through* | 7×5 wire tiles (straight, elbow, tee, empty). Click turns one clockwise, right-click back (a phone's tap: clockwise). Join the source to the sink within the fewest turns (9–14, by search) + 2; lit wire glows. Out of turns shows the fewest route. | Half a cache's code. | — |
+| Deadlock, *Let them all finish* | Six processes round a pool of free locks (A–D), each needing 2–3 and holding some. Give one a free lock it needs; one holding all it needs finishes and returns its locks. **Deadlocked** when none can finish from the pool. One can finish at the start, never more than two at once. | 1 component. | — |
+| Cryptogram, *Read wick's note* | A note of wick's in your own substitution key. Pick a cipher letter, then type or tap its letter: right fills every one, wrong is a strike (three lose). Solved letters stay in your key for every later note, won or lost; once no note has three left, wick changes the key. | The note. | — |
 
 ### Rogue servers
 
@@ -2265,9 +2328,11 @@ Checked by `node balance.mjs` (docs/BALANCE.md, `balance.test.mjs`), `farmsim.mj
 
 ## Saves
 
-The save is `SAVE_VERSION` 51 (combat.mjs). An older save is migrated on load, each step keyed on the field it converts,
+The save is `SAVE_VERSION` 53 (combat.mjs). An older save is migrated on load, each step keyed on the field it converts,
 so it is safe to run twice; nothing a save held is lost.
 
+- **v53** the cryptogram's key, `s.cipher`, made on first use (`cipherOf`).
+- **v52** rivals' memory, `s.rivals`, made on first use (`rivalsRestore`).
 - **v51** the scanner's log, `s.scanner`, made on first use (`scannerOf`).
 - **v50** site traits become specials: Rich, Legacy, Backbone, Hostile and Hardened keep their names, a traced server
   with none rolls its own, a Stable server gets its rest room and a Backbone one its socket (`specialsRestore`).

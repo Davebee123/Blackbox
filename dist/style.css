@@ -3529,6 +3529,14 @@ body.no-motion .recap { animation: none; }
    while its condition holds, dim while it doesn't, struck through once a once-a-fight rule is spent. The board marks
    the columns a cycle rule is live in (a clock in the header) and the parts a part rule holds on (a chip by the name);
    a decoded part whose rule reaches another row says so under its name (a lock: "locks Encryptor"). */
+/* The server's leaning (leanings.mjs): amber, a thing you use. Lit on the cycle it paid; its tag on the part's row. */
+.gfx.lean .lean-n { font: 700 11px var(--mono); padding-left: 6px; margin-left: 2px; border-left: 1px solid var(--line); }
+.gfx.lean.lit { color: var(--amber); border-color: var(--amber); background: rgba(241, 185, 47, 0.12); box-shadow: 0 0 8px rgba(241, 185, 47, 0.3); }
+.gfx.lean.lit .lean-n { border-left-color: rgba(241, 185, 47, 0.5); }
+.tag.tag-lean { display: inline-flex; align-items: center; gap: 3px; color: #1a1206; background: var(--amber); border-color: var(--amber); font: 700 11px var(--mono); cursor: help; }
+.tag.tag-lean .glyph { width: 11px; height: 11px; margin: 0; }
+.srv-tags { display: grid; grid-template-columns: 1fr auto; gap: var(--s1) var(--s4); align-items: start; margin: var(--s2) 0 var(--s3); }
+.srv-tags .tagline { margin: 0; }
 .hud-gear { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--s3); margin-top: var(--s3); min-width: 0; }
 .hg-k { display: inline-flex; align-items: center; gap: var(--s1); flex: none; height: var(--h-chip); font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--dim); }
 .hg-k .glyph { width: 11px; height: 11px; margin: 0; }

@@ -6,13 +6,15 @@ import assert from 'node:assert/strict';
 import { createVirus, STRAINS, BOSSES, GUARDS, FIXTURES } from './dist/data.mjs';
 import { GENES } from './dist/genes.mjs';
 import { hooks } from './dist/combat.mjs';
-import { createVirus as legacy } from './golden-virus.mjs';
+import { createVirus as legacy, STRAINS as OLD } from './golden-virus.mjs';
 import { fight, BRACKETS, strainsAt } from './balance.mjs';
 import { bossFight } from './genesim.mjs';
 import { PARTS } from './dist/parts.mjs';
 // The builder from before genes knows nothing of the parts plan (parts.mjs): its wild viruses are a basic, the
 // signature and one third. This file compares that builder, so it plays with the parts roll off.
 PARTS.on = false;
+// …and of the strains, only those it knew: the mechanics strains came after it (docs/variety-plan.md 1.1).
+const OLD_STRAINS = Object.keys(STRAINS).filter((k) => OLD[k]);
 
 // What the genome adds to a virus: its genes, its author, and a name read off them (phase 1).
 const ADDED = ['genes', 'author', 'name'];
@@ -37,13 +39,13 @@ function config(i) {
   const r = (n) => (Math.imul(i + 1, 2654435761) >>> 0) % n;
   const seed = (i * 7919 + 13) >>> 0, threat = 10 + (i % 52), o = { threat, run: i % 3 !== 0 };
   if (i % 5 === 1) o.family = ['ransomware', 'worm', 'ghostroot'][r(3)];
-  if (i % 7 === 2) { const st = Object.keys(STRAINS)[r(Object.keys(STRAINS).length)]; o.strain = st; o.family = STRAINS[st].lineage; }
+  if (i % 7 === 2) { const st = OLD_STRAINS[r(OLD_STRAINS.length)]; o.strain = st; o.family = STRAINS[st].lineage; }
   if (i % 4 === 3) o.grade = 1 + r(3);
   if (i % 9 === 4) o.mutation = null;
   if (i % 11 === 5) o.mutation = ['armored', 'regenerative', 'hasty', 'adaptive', 'rerouting'][r(5)];
   if (i % 13 === 6) { o.elite = true; if (r(2)) o.eliteHp = 1; }
   if (i % 17 === 7) { const b = SOLO[r(SOLO.length)]; o.boss = b; o.family = BOSSES[b].family || 'ransomware'; o.strain = BOSSES[b].strain || undefined; o.mutation = null; if (r(3) === 0) o.bossHp = 0.75; }
-  const keys = ['random', 'random', 'random', ...Object.keys(FIXTURES), ...Object.keys(STRAINS)];
+  const keys = ['random', 'random', 'random', ...Object.keys(FIXTURES), ...OLD_STRAINS];
   const key = i % 6 === 5 ? keys[r(keys.length)] : 'random';
   return { key, seed, o: key === 'random' ? o : { threat, run: o.run, ...(o.grade ? { grade: o.grade } : {}) } };
 }
@@ -79,7 +81,7 @@ test('golden: the same fights end the same way, wild, strain, grade, guard and b
     for (const policy of ['Breaker', 'Bastion', 'Infiltrator', 'Operator']) {
       for (let i = 0; i < 12; i++) { same(`${policy} ${b.name} wild ${i}`, () => fight(policy, 'random', b, { seed: i + 1, mode: 'run', zone: true })); n++; }
       for (const g of ['watchdog', 'sentinel', 'crawler', 'shredder', 'bouncer', 'tracer']) { same(`${policy} ${b.name} ${g}`, () => fight(policy, g, b, { mode: 'run', guard: b.guard })); n++; }
-      for (const [k, strain] of strainsAt(b.level).entries()) { same(`${policy} ${b.name} ${strain}`, () => fight(policy, 'random', b, { seed: 100 + k, mode: 'run', zone: true, strain })); n++; }
+      for (const [k, strain] of strainsAt(b.level).filter((x) => OLD[x]).entries()) { same(`${policy} ${b.name} ${strain}`, () => fight(policy, 'random', b, { seed: 100 + k, mode: 'run', zone: true, strain })); n++; }
       for (let i = 0; i < 3; i++) { same(`${policy} ${b.name} v2 ${i}`, () => fight(policy, 'random', b, { seed: 200 + i, mode: 'run', zone: true, grade: 2 })); n++; }
     }
   }

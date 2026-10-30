@@ -11,6 +11,8 @@ import { rootClear } from './dist/netrooms.mjs';
 import { residentLevel, play } from './dist/run.mjs';
 import { tickNetwork, sendsAt, daemonDrop } from './dist/invasion.mjs';
 import { mapMarkup, specialTags } from './dist/view.mjs';
+import { RIVAL } from './dist/rivals.mjs';
+RIVAL.chance = 0; // a rival rolls at connect (rivals.mjs): these walks are scripted (rivals.test.mjs plays them)
 
 CONFIG.enemyCrit = 0; CONFIG.misses = false;
 CONFIG.exfil.chance = 0;

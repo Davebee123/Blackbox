@@ -49,7 +49,7 @@
 // end back here (hooks.roomEnd), and families.mjs and interrupt.mjs play the room rules (attack sets, the new bodies,
 // the interrupt). The Resident is DEADBOLT, under the boss rule the playtest switches (interrupt.mjs BOSS_RULES).
 import { hooks, emit, warn, active, selectEncounter, encounterVirus, command, maxSignal, hackerOf, hackerLevel, classOf, addItem, stashItem, gainXp, gainCode, xpFor, deedXpFor, rollDrop, fxPct, puzzleUnique } from './combat.mjs';
-import { GUARDS, SUBS, LOADOUT, SUBCLASS, defaultSub, ARCHETYPES, BOSSES, FAMILIES, CONFIG, ELITE, ROLLED_MUTATIONS, SERVER, xpToNext } from './data.mjs';
+import { GUARDS, SUBS, LOADOUT, SUBCLASS, defaultSub, ARCHETYPES, BOSSES, FAMILIES, CONFIG, ELITE, ROLLED_MUTATIONS, SERVER, xpToNext, spreadOf } from './data.mjs';
 import { LOOT, vaultRarity, seeded, rollItem, itemLabel, protocolSlots, SLOT_KINDS, chaseStat, MATERIALS } from './gear.mjs';
 import { AUTHORS } from './authors.mjs';
 import { giveScript, rollScript } from './scripts.mjs';
@@ -62,7 +62,8 @@ import { contractDid } from './mail.mjs';
 import { addrsOf, byAddr } from './address.mjs';
 import { gainComponents } from './salvage.mjs';
 import { PROGRAMS, SOCKET, buildProgram, uninstallProgram, programCost, buildBlock as programBlock, costLine as programCostLine, codebasesOf } from './sockets.mjs';
-import { PUZZLES, PUZZLE_KINDS, isPuzzle, newPuzzle, puzzleMove, puzzleScore, puzzleStarted, cellOf, boardLines, moveLine } from './puzzles.mjs';
+import { PUZZLES, PUZZLE_KINDS, isPuzzle, cipherOf, cgOpen, newPuzzle, puzzleMove, puzzleScore, puzzleStarted, cellOf, boardLines, moveLine } from './puzzles.mjs';
+import { RIVALS, spawnRival, rivalOf, rivalAt, rivalMove, rivalMeet, rivalLeave, rivalFight, rivalArm, rivalWon, rivalLost, rivalLine } from './rivals.mjs';
 
 // ---------- tuning ----------
 export const ROOMS = {
@@ -92,7 +93,7 @@ export const ROOMS = {
   // exfil: the Exfil (a runner, quick to break): a plain virus's Integrity, light hits.
   // nest: a Worm server's nest, elite-lite: the Crawler and its two hatchlings cost about 40% of your Signal over the
   // classes at levels 6, 12 and 20 (a process there about 35%, an elite 53%), and almost never lose.
-  size: { process: { hp: 1.3, dmg: 0.9 }, elite: { hp: 0.9, dmg: 0.6 }, nest: { hp: 2.3, dmg: 1 }, guard: { hp: 1.2, dmg: 0.85 }, hunter: { hp: 1.6, dmg: 0.7 }, boss: { hp: 1.25, dmg: 0.9 }, stray: { hp: 1, dmg: 0.8 }, exfil: { hp: 1.5, dmg: 0.35 } },
+  size: { process: { hp: 1.3, dmg: 0.9 }, elite: { hp: 0.9, dmg: 0.6 }, nest: { hp: 2.3, dmg: 1 }, guard: { hp: 1.2, dmg: 0.85 }, hunter: { hp: 1.6, dmg: 0.7 }, boss: { hp: 1.25, dmg: 0.9 }, stray: { hp: 1, dmg: 0.8 }, exfil: { hp: 1.5, dmg: 0.35 }, rival: { hp: 1.3, dmg: 0.9 } },
   eliteHp: 2.2, // an elite's Integrity (of a plain virus's), before its size
   hunter: { pace: 2, lose: 5, level: 2 }, // a room per 2 of your moves; a Tracker loses you 5 rooms away; 2 levels over the server (its size: twice a guard's Integrity)
   cache: { credits: [18, 36], code: [2, 4], script: 0.15 },
@@ -106,7 +107,9 @@ export const ROOMS = {
     code: (L) => 6 + Math.floor(L / 2), // Quarantine: the whole board's worth of the server's code (a node's share of it, ★ three)
     parts: 3, spare: 2, // Cascade: components, and this many more for each tap left over
     cache: 1, budget: 0.25, // Ping sweep: a cache's credits and code, a quarter more for each of the budget left
-    trail: 0.5 }, // the chase: half a cache, and the Tracker loses your trail for the visit
+    trail: 0.5, // the chase: half a cache, and the Tracker loses your trail for the visit
+    low: 0.5, // Packet routing, Deadlock and Cryptogram pay less: half a kill's XP
+    route: 0.5, lock: 1 }, // Packet routing: half a cache's code; Deadlock: a component; Cryptogram: the note
   // The quirks' rooms (netrooms.mjs places them): a Worm server's nest, a Ghostroot server's hidden room. Both optional,
   // never in Rooms n/N. The nest: a Crawler with its brood already out (brood fragments), an elite-lite fight, a kill
   // paying parts components (a cache's worth, past a process room's one or two) and xp room kills of XP; it respawns
@@ -150,8 +153,8 @@ const world = (s) => !!s.rooms?.world;
 // boss: a crew boss's room (KESSLER-FARM-00's three); stash: Root 2's /root on a server you hold (netrooms.mjs);
 // empty, purse: a rogue server's quiet rooms (Empty, and a Stash of a few credits); nest, secret: the quirks' rooms (a
 // Worm server's nest, a Ghostroot server's hidden room).
-export const ROOM_LABEL = { nest: 'Nest', secret: 'Hidden room', socket: 'Socket', entry: 'Entry', process: 'Process', elite: 'Elite', guard: 'Elite', core: 'Core', boss: 'Boss', den: "Hunter's den", cache: 'Cache', vault: 'Vault', rest: 'Rest room', junction: 'Junction', stash: 'Stash', empty: 'Empty', purse: 'Stash', quarantine: 'Quarantine', chase: 'Hunter chase', cascade: 'Cascade', sweep: 'Ping sweep' };
-export const MARKS = { nest: '▦', secret: '▧', socket: '⊕', entry: '⌂', process: '▣', elite: '◆▣', guard: '◆▣', core: '♛', boss: '♛', den: '☠', cache: '▤', vault: '▥', rest: '☰', junction: '·', stash: '▤', empty: '·', purse: '¤', quarantine: '⊞', chase: '⇥', cascade: '≋', sweep: '◎' };
+export const ROOM_LABEL = { nest: 'Nest', secret: 'Hidden room', socket: 'Socket', entry: 'Entry', process: 'Process', elite: 'Elite', guard: 'Elite', core: 'Core', boss: 'Boss', den: "Hunter's den", cache: 'Cache', vault: 'Vault', rest: 'Rest room', junction: 'Junction', stash: 'Stash', empty: 'Empty', purse: 'Stash', quarantine: 'Quarantine', chase: 'Hunter chase', cascade: 'Cascade', sweep: 'Ping sweep', routing: 'Packet routing', deadlock: 'Deadlock', cryptogram: 'Cryptogram' };
+export const MARKS = { nest: '▦', secret: '▧', socket: '⊕', entry: '⌂', process: '▣', elite: '◆▣', guard: '◆▣', core: '♛', boss: '♛', den: '☠', cache: '▤', vault: '▥', rest: '☰', junction: '·', stash: '▤', empty: '·', purse: '¤', quarantine: '⊞', chase: '⇥', cascade: '≋', sweep: '◎', routing: '╬', deadlock: '⊗', cryptogram: '¶' };
 // Rooms that hold something you take, and refill (a puzzle room's board, played to its end, refills like a cache).
 export const STOCKED = ['cache', 'stash', 'purse', 'secret', ...PUZZLE_KINDS];
 export { PUZZLES, PUZZLE_KINDS, isPuzzle };
@@ -373,11 +376,10 @@ export function markQueue(g) {
   return g;
 }
 // Which puzzles a server gets, from its seed: one, two this often by its size (ROOMS.puzzles.second), never two of a
-// kind. Quarantine leans to Worm-family servers, the chase comes only where a Tracker sleeps; Cascade and Ping sweep
-// anywhere.
+// kind. Quarantine leans to Worm-family servers, the chase comes only where a Tracker sleeps; the rest anywhere.
 export function puzzleKinds(g, seed, { size = 'medium', worm = false } = {}) {
   const P = ROOMS.puzzles, r = seeded(((seed || 1) * 9173 + 41) >>> 0);
-  const n = 1 + (r() < (P.second[size] ?? 0.5) ? 1 : 0), w = { quarantine: worm ? P.worm : 1, chase: g.hunter === 'track' && g.den ? P.chase : 0, cascade: 1, sweep: 1 }, out = [];
+  const n = 1 + (r() < (P.second[size] ?? 0.5) ? 1 : 0), w = { quarantine: worm ? P.worm : 1, chase: g.hunter === 'track' && g.den ? P.chase : 0, cascade: 1, sweep: 1, routing: 1, deadlock: 1, cryptogram: 1 }, out = [];
   while (out.length < n) {
     const left = PUZZLE_KINDS.filter((k) => w[k] > 0 && !out.includes(k)), sum = left.reduce((a, k) => a + w[k], 0);
     if (!left.length) break;
@@ -554,8 +556,9 @@ function assign(g, r, { size, kind, level, floor, author, hunter, N, L }) {
   const order = [...fams].sort(() => r() - 0.5);
   fights.forEach((id, i) => {
     const family = i < order.length ? order[i] : pick(r, fams);
-    const pool = (FAMILIES[family]?.parts || []).filter((p) => p.pool === 'third' && (!p.from || level >= p.from) && mechRolls(p.gene));
-    Object.assign(R[id], { family, author, set: rollSet(family, author, r), third: pool.length && r() < 0.6 ? pickWeighted(r, pool, (x) => weightOf(x.gene, floor)).gene : null }); // a native weighs PARTS.floor on its own floor (parts.mjs)
+    const spread = spreadOf(family, level, floor); // its strains' mechanics parts (parts.mjs PARTS.spread)
+    const pool = (FAMILIES[family]?.parts || []).filter((p) => p.pool === 'third' && (!p.from || level >= p.from) && (mechRolls(p.gene) || spread.has(p.gene)));
+    Object.assign(R[id], { family, author, set: rollSet(family, author, r), third: pool.length && r() < 0.6 ? pickWeighted(r, pool, (x) => weightOf(x.gene, floor, spread)).gene : null }); // a native weighs PARTS.floor on its own floor (parts.mjs)
   });
   for (const id of all) {
     R[id].seed = Math.floor(r() * 2 ** 31);
@@ -913,6 +916,9 @@ function catchExfil(s, room, opts) {
   fight(s, room, { as: 'exfil', pause: !!opts.pause });
 }
 
+// A vault a rival opened: its files are the rival's until you beat it (rivals.mjs).
+const rivalHolds = (s, room) => { const v = s.rooms.visit?.rival; return !!v?.vault && v.state !== 'down' && room.id === s.rooms.graph.vaults[0]; };
+
 // ---------- a visit ----------
 export function connect(s) {
   const R = s.rooms, first = s.serial, now = nowOf();
@@ -944,6 +950,7 @@ export function enter(s, now = nowOf(), { keys = [] } = {}) {
   say(s, `CONNECTED to ${R.name}, visit ${R.visits}.${R.visit.hunter ? ` A ${HUNTERS[R.visit.hunter.kind].name} walks this server.` : ''}`);
   if (!fresh && !R.mapped) { const p = progressOf(s); if (p.done === p.total) mapped(s); } // done before caches and boards stopped counting
   if (R.world) { const seed = ask('exfil', s, now); if (seed) spawnExfil(s, seed); } // an Exfil this visit (netrooms.mjs: rogue servers, your cooldown)
+  if (R.world) { const seed = ask('rival', s, now); if (seed) spawnRival(s, seed); } // a rival this visit (rivals.mjs: a traced server's shut vault, your cooldown)
 }
 // Jack out from any room: home, with the pack banked. A key you didn't use goes back to its post, guard and all.
 export function jackOut(s, why = '') {
@@ -951,6 +958,7 @@ export function jackOut(s, why = '') {
   settle(s);
   if (!R?.at) { deny(s, 'You are not on the server.'); return out(s, first); }
   if (active(s)) { deny(s, 'No jacking out mid-fight. Win it, or lose the pack.'); return out(s, first); }
+  if (R.screen?.kind === 'rival') { deny(s, `${RIVALS[rivalOf(s).id].name} has you. No stepping back.`); return out(s, first); }
   keysBack(s);
   if (R.world) {
     R.last = { result: 'out', xp: xpTotal(s) - R.visit.xp0, banked: s.run.pack.length, visit: R.visit.n };
@@ -976,6 +984,7 @@ function keysBack(s) {
 // Home, and the server's wait (longer after each disconnect since your last clean jack out: R.deaths).
 function goHome(s, R = s.rooms) {
   const now = nowOf();
+  rivalLeave(s); // a rival still walking finishes the job (rivals.mjs)
   R.fightFrom = null; // the fight you left (or lost) is over: its Signal never caps your next visit's
   R.at = null; R.screen = null; R.homeAt = now; R.reconnectAt = now + (R.world ? ROOMS.reconnect : Math.min(CONFIG.deathWait.cap, ROOMS.reconnect + (R.deaths || 0) * CONFIG.deathWait.each)) / R.speed;
   R.visit = { ...R.visit, hunter: null, exfil: R.visit?.exfil?.state === 'loose' ? { ...R.visit.exfil, state: 'gone' } : R.visit?.exfil || null }; // an Exfil you left is gone
@@ -1026,6 +1035,7 @@ export function go(s, id, opts = {}) {
   else if (active(s)) deny(s, 'Finish the fight first.');
   else if (R.screen?.kind === 'virus') deny(s, `The ${R.screen.name} holds ${hereOf(s).path}. Engage it, or step back.`);
   else if (R.screen?.kind === 'hunter') deny(s, 'The hunter is on you.');
+  else if (R.screen?.kind === 'rival') deny(s, `${RIVALS[rivalOf(s).id].name} has you. No stepping back.`);
   else if (!room || !walkable(s, R.at).includes(room.id)) deny(s, room ? `${room.path} is not next to ${hereOf(s).path}.` : `No room ${id}.`);
   else if (room.kind === 'core' && !coreOpen(s)) deny(s, R.world ? `The Core is sealed. ${WORLD.view?.sealed?.(s) || (R.graph.vaults[0] ? `Open the ${R.graph.rooms[R.graph.vaults[0]].path} first.` : '')}`.trim() : `The Core is sealed. Open the ${R.graph.rooms[R.graph.vaults[0]].path} first.`);
   else { step(s, room, opts); hooks.railCheck?.(s); } // routines.mjs: a move that took you under your jack-out line
@@ -1045,8 +1055,10 @@ function step(s, room, opts) {
   const h = hunterOf(s);
   if (h && !h.down && h.at === room.id) return meet(s, room, opts);
   if (hunterMove(s)) return meet(s, room, opts);
+  if (rivalAt(s, room.id)) return rivalMeet(s, room, opts);
   if (exfilOf(s)?.at === room.id) return catchExfil(s, room, opts);
   exfilMove(s);
+  if (rivalMove(s)) return rivalMeet(s, room, opts); // a rival walks a room for each of yours (rivals.mjs)
   if (R.world) ask('moved', s); // a thread's file walks (threads.mjs)
   arrive(s, room, opts);
 }
@@ -1058,7 +1070,8 @@ export function wait(s, opts = {}) {
   R.visit.moves++; R.stats.moves++;
   say(s, 'wait', 'rooms-cmd');
   if (hunterMove(s)) meet(s, hereOf(s), opts);
-  else { exfilMove(s); if (R.world) ask('moved', s); const line = hunterLine(s); if (line) say(s, line); }
+  else if (rivalMove(s)) rivalMeet(s, hereOf(s), opts);
+  else { exfilMove(s); if (R.world) ask('moved', s); const line = [hunterLine(s), rivalLine(s)].filter(Boolean).join(' '); if (line) say(s, line); }
   return out(s, first);
 }
 // Step back out of a fight room you walked into (the move in is spent).
@@ -1124,6 +1137,11 @@ export function act(s, verb, arg = null, opts = {}) {
     else deny(s, 'Fight it, or slip past it.');
     return out(s, first);
   }
+  if (sc?.kind === 'rival') {
+    if (verb === 'engage' || verb === 'fight') { R.screen = null; fight(s, here, { as: 'rival', pause: !!opts.pause || !!sc.pause }); }
+    else deny(s, `${RIVALS[rivalOf(s).id].name} has you. Engage.`);
+    return out(s, first);
+  }
   if (verb === 'engage') {
     if (sc?.kind !== 'virus') deny(s, 'Nothing here to fight.');
     else { R.screen = null; fight(s, here, { pause: !!opts.pause || !!sc.pause }); }
@@ -1137,6 +1155,7 @@ export function act(s, verb, arg = null, opts = {}) {
   }
   if ((verb === 'pull' || verb === 'pull all') && (here.kind === 'cache' || here.kind === 'secret')) { pull(s, here, opts); return out(s, first); }
   if ((verb === 'pull' || verb === 'pull all') && here.kind === 'stash') { if (!cacheFull(s, here)) deny(s, `The stash is empty. It fills again in ${fmtLeft(refillAt(s, here) - nowOf())}.`); else { ask('stash', s, here); R.taken[here.id] = nowOf(); clear(s, here); } return out(s, first); }
+  if ((verb === 'pull' || verb === 'pull all') && here.kind === 'vault' && rivalHolds(s, here)) { deny(s, `${RIVALS[R.visit.rival.id].name} took the files.`); return out(s, first); }
   if ((verb === 'pull' || verb === 'pull all') && here.kind === 'vault' && R.world && opened(s, here)) { if (!ask('pull', s, here)) deny(s, 'Nothing left in the vault.'); return out(s, first); }
   if ((verb === 'pull' || verb === 'pull all') && here.kind === 'entry' && R.world) { if (!ask('entryPull', s)) deny(s, 'Nothing here to take.'); return out(s, first); }
   if ((verb === 'open' || verb === 'force') && here.kind === 'vault') { openVault(s, here, verb === 'force'); return out(s, first); }
@@ -1233,7 +1252,7 @@ function openVault(s, room, force) {
 // ---------- puzzle rooms (9.11, puzzles.mjs) ----------
 // R.puzzles[id]: { n: the refill its board is from, board, at: when it ended, won }. A board is the same until it refills
 // (the server's seed, the room's and its refill count), kept as you left it if you walk out mid-play. Played to its end,
-// won or lost, the room is done until it refills (a cache's two hours): one rule for all four.
+// won or lost, the room is done until it refills (a cache's two hours): one rule for all of them.
 export const puzzleSeed = (R, room, n) => (((Math.imul(R.seed || 1, 2654435761) ^ Math.imul(room.seed || 1, 40503) ^ Math.imul(n + 1, 0x9e3779b1)) >>> 0) || 1);
 export const puzzleReady = (s, room) => !!room && isPuzzle(room.kind) && cacheFull(s, room);
 // The room's board: the one in play, the last one until it refills, or a new one (built the first time it's asked for).
@@ -1241,9 +1260,17 @@ export function boardOf(s, room) {
   const R = s.rooms;
   if (!room || !isPuzzle(room.kind)) return null;
   const n = R.spawns[room.id] || 0, P = (R.puzzles ||= {}), had = P[room.id];
-  if (had && (had.n === n || !cacheFull(s, room))) return had.board;
-  P[room.id] = { n, board: newPuzzle(room.kind, puzzleSeed(R, room, n), { floor: R.floor || 1 }) };
+  if (had && (had.n === n || !cacheFull(s, room))) return cgSync(s, had.board);
+  P[room.id] = { n, board: newPuzzle(room.kind, puzzleSeed(R, room, n), { floor: R.floor || 1, cipher: room.kind === 'cryptogram' ? cipherOf(s) : undefined }) };
   return P[room.id].board;
+}
+// A cryptogram in play takes up letters solved since on another note (the key is the player's).
+function cgSync(s, b) {
+  if (b?.kind !== 'cryptogram' || b.done || b.kseed !== cipherOf(s).seed) return b;
+  const key = cipherOf(s).solved;
+  b.carried = [...new Set(b.text.replace(/[^a-z]/g, ''))].filter((c) => key.includes(c) && !b.solved.includes(c)).sort();
+  if (!cgOpen(b).length) b.done = 'won';
+  return b;
 }
 // Its state in a word: ready (a fresh board), live (one you've started), won or lost (done until it refills).
 export function puzzleState(s, room) {
@@ -1259,8 +1286,9 @@ function playPuzzle(s, room, text, opts = {}) {
   const b = boardOf(s, room);
   if (!text) return say(s, [`${P.name}: ${P.title}. ${P.rule}`, ...boardLines(b)].join('\n'), 'rooms-out');
   const [verb, ...more] = String(text).trim().toLowerCase().split(/\s+/), cell = more.length ? cellOf(b, more.join(' ')) : null;
-  const did = puzzleMove(b, cell == null ? verb : `${verb} ${cell}`);
+  const did = puzzleMove(b, cell == null ? String(text).trim().toLowerCase() : `${verb} ${cell}`);
   if (!did) return deny(s, `${P.name}: that move doesn't go.`);
+  if (b.kind === 'cryptogram' && did.ok && b.kseed === cipherOf(s).seed) { const key = cipherOf(s).solved; if (!key.includes(did.p)) key.push(did.p); } // into your key, win or lose
   emit(s, 'puzzle', moveLine(b, did), { room: room.id, kind: room.kind, last: did, done: b.done });
   if (b.done) finishPuzzle(s, room, b, opts);
   return did;
@@ -1272,7 +1300,8 @@ function playPuzzle(s, room, text, opts = {}) {
 //   Ping sweep  a cache (credits and code) for the caches found, a quarter more for each of the budget left.
 //   The chase   a win: half a cache, and the Tracker loses your trail for the rest of the visit. A loss: it's on you, and
 //               the fight starts here.
-// A win pays a kill's XP (intel).
+//   Packet routing  half a cache's code, on a win. Deadlock: a component, on a win. Cryptogram: the note itself.
+// A win pays a kill's XP (intel), half one on the last three; only the first four roll the floor's uniques.
 function finishPuzzle(s, room, b, opts = {}) {
   const R = s.rooms, P = ROOMS.puzzles, L = (R.world ? ask('level', s) : undefined) ?? R.level, sc = puzzleScore(b), won = b.done === 'won', now = nowOf();
   const had = R.puzzles[room.id];
@@ -1286,18 +1315,22 @@ function finishPuzzle(s, room, b, opts = {}) {
   if (room.kind === 'cascade' && won) pay.parts = P.parts + P.spare * sc.spare;
   if (room.kind === 'sweep' && sc.found) { const c = cache(), k = (sc.found / sc.caches) * P.cache * (1 + P.budget * sc.left); pay.credits = Math.round(c.credits * k); pay.code = Math.max(1, Math.round(c.code * k)); }
   if (room.kind === 'chase' && won) { const c = cache(); pay.credits = Math.round(c.credits * P.trail); pay.code = Math.max(1, Math.round(c.code * P.trail)); }
+  if (room.kind === 'routing' && won) pay.code = Math.max(1, Math.round(cache().code * P.route));
+  if (room.kind === 'deadlock' && won) pay.parts = P.lock;
+  const low = ['routing', 'deadlock', 'cryptogram'].includes(room.kind);
   if (R.world) ask('puzzlePay', s, room, { ...pay, won }); // into the pack (credits, code), components at once, and a won board's set roll (netrooms.mjs)
   else { R.credits += pay.credits; s.server.credits += pay.credits; if (pay.code) gainCode(s, { [pay.material]: pay.code }, `${room.path}: `); if (pay.parts) gainComponents(s, pay.parts); }
-  const xp = won ? xpFor(s, L, P.xp) : 0; // a kill's worth: a contract (Solve) is what pays for the minutes
+  const xp = won ? xpFor(s, L, low ? P.xp * P.low : P.xp) : 0; // a kill's worth: a contract (Solve) is what pays for the minutes
   if (xp) gainXp(s, xp, `${room.path} solved`, 'intel');
   if (won) contractDid(s, 'solve', room.kind); // a Solve contract: any board, or the one it names
   // A won board deep down may hold one of its floor's uniques (combat.mjs puzzleUnique): into the pack, as a vault's item.
-  const gold = won && R.world ? puzzleUnique(s, R.floor || 1, L) : null, got = gold ? addItem(s, gold, `${room.path}: `) : null;
+  const gold = won && R.world && !low ? puzzleUnique(s, R.floor || 1, L) : null, got = gold ? addItem(s, gold, `${room.path}: `) : null;
   if (got) { ask('packItem', s, got); say(s, `${itemLabel(got)} goes in your pack.`, 'rooms-good'); }
   const first = clear(s, room, true);
   const h = hunterOf(s), caught = room.kind === 'chase' && !won && !!h && !h.down; // a lost chase with the Tracker up: its fight, here
-  const head = { quarantine: won ? 'Contained' : 'Overrun', cascade: won ? 'Rack down' : 'Out of taps', sweep: won ? 'Cache found' : 'Out of budget', chase: won ? 'Through the door' : 'Caught' }[room.kind];
-  const line = { quarantine: `${sc.saved} of ${sc.total} saved`, cascade: won ? `${sc.used} taps, fewest ${sc.best}` : `${sc.left} nodes still up`, sweep: `${sc.found} of ${sc.caches} found, ${sc.left} of the budget left`, chase: won ? `${sc.moves} moves, fewest ${sc.best}` : `after ${sc.moves} moves` }[room.kind];
+  const head = { quarantine: won ? 'Contained' : 'Overrun', cascade: won ? 'Rack down' : 'Out of taps', sweep: won ? 'Cache found' : 'Out of budget', chase: won ? 'Through the door' : 'Caught', routing: won ? 'Packet through' : 'Out of turns', deadlock: won ? 'All finished' : 'Deadlocked', cryptogram: won ? 'Decoded' : 'Garbled' }[room.kind];
+  const line = { quarantine: `${sc.saved} of ${sc.total} saved`, cascade: won ? `${sc.used} taps, fewest ${sc.best}` : `${sc.left} nodes still up`, sweep: `${sc.found} of ${sc.caches} found, ${sc.left} of the budget left`, chase: won ? `${sc.moves} moves, fewest ${sc.best}` : `after ${sc.moves} moves`,
+    routing: won ? `${sc.turns} turns, fewest ${sc.best}` : `fewest ${sc.best}`, deadlock: `${sc.fin} of ${sc.n} finished`, cryptogram: won ? b.text?.replace(/\.$/, '') : `${sc.solved} letters into your key` }[room.kind];
   const rows = [{ label: line, qty: '', kind: won ? 'score' : 'lost' },
     ...(pay.code ? [{ label: MATERIALS[pay.material]?.name || pay.material, qty: `+${pay.code}`, kind: 'code', pack: !!R.world }] : []),
     ...(pay.credits ? [{ label: 'Credits', qty: `+${pay.credits}`, kind: 'credits', pack: !!R.world }] : []),
@@ -1338,6 +1371,7 @@ export function setLure(s, arg) {
 // What a room's fight is: [key, seed, opts] for selectEncounter, and its name and kind of size.
 export function fightOf(s, room, as = null) {
   if (as === 'exfil') return exfilFight(s, room);
+  if (as === 'rival') return rivalFight(s, room);
   const w = world(s) && as !== 'hunter' ? ask('fight', s, room, as) : undefined;
   if (w) return w;
   const R = s.rooms, n = R.spawns[room.id] || 0, rare = !as && !!R.rare[room.id], level = (R.world ? ask('level', s) ?? R.level : R.level) + (rare ? ROOMS.rareLevel : 0);
@@ -1406,6 +1440,7 @@ export function fight(s, room, { pause = false, as = null } = {}) {
   if (!e) return;
   const v = e.virus;
   e.rooms = { room: room.id, kind: R.kind, as, size: f.size, rare: !!f.rare };
+  if (as === 'rival') rivalArm(s, e); // the part it adds between fights (rivals.mjs), sized with the rest
   // Its size in a room, its attack set, Spam on a Mailhub's queue. Its tells come by level (tells.mjs, 3.5).
   // A server's special (netrooms.mjs tune: Hostile's hits and XP) and its programs (sockets.mjs): a Patch Injector strips
   // 1 ◆ off every part, a Bulkhead here or next door starts you behind a shield, a Honeytoken's kills pay more XP.
@@ -1428,7 +1463,7 @@ export function fight(s, room, { pause = false, as = null } = {}) {
   const set = fresh ? (f.set !== undefined ? f.set : spawnSet(v.family, f.author, f.seed)) : null;
   if (set) { applySet(v, set, seeded((f.seed ^ 0x5e7) >>> 0)); R.codex[`${v.family}:${set}`] = true; logSet(s, v.family, set); }
   else if (fresh) jitterFirst(v, seeded((f.seed ^ 0x5e7) >>> 0));
-  if (room.queue && R.kind === 'Mailhub' && as !== 'hunter' && as !== 'exfil') spamFlood(s, e);
+  if (room.queue && R.kind === 'Mailhub' && !['hunter', 'exfil', 'rival'].includes(as)) spamFlood(s, e);
   if (f.brood) brood(s, e, f.brood);
   if (as === 'exfil') { e.escapeAt = CONFIG.exfil.escape; for (const p of v.parts) { p.armor = p.maxArmor = Math.min(p.maxArmor, 1); p.patchAt = null; } } // still up after its cycles: it gets away (combat.mjs cycleClose); a runner wears 1 ◆ at most
   if (v.boss && !v.raid) bossRule(s, R.bossRule || s.bossRule || 'a');
@@ -1499,7 +1534,8 @@ hooks.roomEnd = (s, result) => {
   }
   if (result !== 'victory') {
     R.stats.lost++;
-    if (as !== 'hunter' && as !== 'exfil') (R.stats.lostAt ||= {})[room.id] = (R.stats.lostAt[room.id] || 0) + 1;
+    if (as === 'rival') rivalLost(s); // it's gone with its pack (rivals.mjs)
+    if (!['hunter', 'exfil', 'rival'].includes(as)) (R.stats.lostAt ||= {})[room.id] = (R.stats.lostAt[room.id] || 0) + 1;
     if (R.world && as !== 'exfil') ask('lost', s, room, e, result);
     if (result === 'fled') return; // jacked out mid-fight (the emergency escape): the run ends as a jack out
     return disconnected(s, `${e.virus.name} took your Signal to 0 in ${room.path}.`);
@@ -1514,6 +1550,13 @@ hooks.roomEnd = (s, result) => {
     const pending = R.visit.pending;
     R.visit.pending = null;
     if (pending) arrive(s, R.graph.rooms[pending]);
+    return;
+  }
+  if (as === 'rival') {
+    if (!rivalWon(s, room, e)) return; // the next of its lineup waits behind the card
+    const pending = R.visit.pending;
+    R.visit.pending = null;
+    if (pending && R.at) arrive(s, R.graph.rooms[pending]);
     return;
   }
   if (as === 'hunter') {
