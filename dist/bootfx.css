@@ -21,3 +21,14 @@
 /* Leaving a won fight (Channel cut): the teal line the page folds into, and the ring on your room. */
 .bootfx > .bootfx-tline { inset: auto; height: 2px; background: #bff3ec; box-shadow: 0 0 12px 3px var(--you), 0 0 40px 8px rgba(127, 209, 199, 0.45); border-radius: 0; }
 .bootfx > .bootfx-ring { inset: auto; border: 2px solid var(--you); border-radius: 6px; box-shadow: 0 0 14px 2px rgba(127, 209, 199, 0.7), inset 0 0 14px rgba(127, 209, 199, 0.4); }
+/* Connecting to a server (Handshake): the node's teal lock and pings, the edge's glow, the name and its readout. */
+.bootfx-lock.you i { border-color: var(--you); filter: drop-shadow(0 0 5px var(--you)); }
+.bootfx > .bootfx-ping { inset: auto; width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--you); box-shadow: 0 0 12px var(--you); }
+.bootfx-glow { box-shadow: inset 0 0 0 3px rgba(127, 209, 199, 0.85), inset 0 0 80px 10px rgba(127, 209, 199, 0.3); }
+.bootfx > .bootfx-dial { inset: 38% 0 auto; display: flex; flex-direction: column; align-items: center; opacity: 1; border-radius: 0; overflow: visible; }
+.bootfx-dial-name { display: grid; max-width: 92%; font: 700 clamp(22px, 4vw, 44px)/1.2 var(--mono); letter-spacing: .14em; color: var(--amber); text-shadow: 0 0 18px var(--sfx-glow, rgba(244, 180, 55, 0.55)); white-space: nowrap; }
+.bootfx-dial-name > div { grid-area: 1 / 1; opacity: 0; }
+.bootfx-dial-bar { width: min(420px, 80%); height: 3px; margin-top: 14px; background: var(--amber); box-shadow: 0 0 10px var(--amber); transform-origin: center; }
+.bootfx-dial-lines { margin-top: 22px; max-width: 92%; overflow: hidden; font: 600 15px/24px var(--mono); color: var(--amber); white-space: pre; }
+.bootfx-dial-lines div { opacity: 0; }
+.bootfx-dial-lines .you { color: var(--you); text-shadow: 0 0 10px var(--you); }

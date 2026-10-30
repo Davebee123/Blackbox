@@ -182,3 +182,126 @@ export function playCut(app, regions, swap, room) {
   timers.push(setTimeout(toNext, CUT.swap), setTimeout(end, CUT.done));
   addEventListener('keydown', end, true); addEventListener('pointerdown', end, true);
 }
+
+// Connecting to a server (app.js, the designer's pick, Handshake): from the map, teal brackets lock on the server's
+// node and two pings ring out; the map and your chrome power down in two tube dips into black, the tube's edge glowing
+// teal. The server's name decodes at the centre over a dial readout; the name flies into the server strip, and the
+// rooms catch outward from the entry, which rings teal; then your chrome. Not from the map: it starts at the black.
+// When each beat comes, in ms; without the map (not from the map page) everything comes DIAL sooner.
+export const CONNECT = { lock: 0, ping: 200, dim: 380, black: 520, name: 600, lines: 760, line: 95, fly: 1400, strip: 1460, rooms: 1520, ring: 70, chrome: 1700, done: 2300 };
+const DIAL = 440;
+// The tube dipping as it powers down: [ms from CONNECT.dim, brightness], each held until the next.
+export const DIM = [[0, 1], [30, 0.55], [60, 0.85], [100, 0.35], [120, 0.5], [140, 0.15]];
+const GLYPHS = '#%&*+=/<>?01ABCDEFX';
+// The name part-decoded: its first n characters, the rest noise.
+export const decoded = (name, n) => [...name].map((c, j) => (c === ' ' || j < n ? c : GLYPHS[(j * 7 + n * 13) % GLYPHS.length])).join('');
+
+// The readout under the name: what the dial-up checks. The last line, CONNECT, is yours (teal).
+export function connectLines({ name = '', kind = '', level = '', rooms = 0 }) {
+  const row = (k, v) => `${k} ${'.'.repeat(Math.max(3, 24 - k.length))} ${v}`;
+  return [
+    { text: row(`dial ${name.toLowerCase()}`, 'ring') },
+    { text: row('carrier', '33.6k') },
+    { text: row('handshake', 'ok') },
+    { text: row([kind.toLowerCase(), level && `lv ${level}`].filter(Boolean).join(' · ') || 'server', rooms ? `${rooms} rooms` : 'up') },
+    { text: 'CONNECT_', you: true },
+  ];
+}
+
+let dialing = null;
+export const connecting = () => !!dialing;
+export function stopConnect() { dialing?.(); }
+const after = [];
+// Run fn once the connect is over (at once if none is playing): the first-run reward waits for it.
+export function whenConnected(fn) { if (dialing) after.push(fn); else fn(); }
+
+// Play it. app: #app; held: capture()'s result on the map with the server's node, or null; name: the server's; lines:
+// connectLines(). The rooms page must already be drawn in #page-view.
+export function playConnect(app, held, name, lines) {
+  stopConnect();
+  const T = CONNECT, $ = (q) => app.querySelector(q), anims = [], nodes = [], o = held ? 0 : -DIAL, at = (ms) => Math.max(0, ms + o);
+  $('#workspace')?.classList.remove('refresh'); // the page change's own sweep: this stands in for it (and its filter would move the map)
+  const play = (el, frames, delay, duration, easing = 'linear') => { if (el) anims.push(el.animate(frames, { delay, duration, easing, fill: 'both' })); };
+  const steps = (el, prop, pts) => { if (!el) return; const end = pts[pts.length - 1][0] || 1; play(el, pts.map(([ms, v]) => ({ [prop]: v, offset: ms / end, easing: 'steps(1, end)' })), 0, end); };
+  const tubeOn = (from) => TUBE_ON.map(([ms, v]) => [from + ms, v]);
+  const add = (parent, cls, before = null) => { const d = document.createElement('div'); d.className = cls; d.setAttribute('aria-hidden', 'true'); parent.insertBefore(d, before); nodes.push(d); return d; };
+  const black = add(app, 'bootfx-black', $('#fx-back')?.nextSibling || app.firstChild);
+  steps(black, 'opacity', [[0, 0], [at(T.black), 1], [at(T.chrome), 0], [at(T.chrome) + 1, 0]]);
+  const top = add(app, 'bootfx'), lr = top.getBoundingClientRect(), lk = lr.width / (top.offsetWidth || lr.width) || 1;
+  const box = (r, pad = 0) => ({ left: `${(r.left - lr.left) / lk - pad}px`, top: `${(r.top - lr.top) / lk - pad}px`, width: `${r.width / lk + pad * 2}px`, height: `${r.height / lk + pad * 2}px` });
+  const dim = DIM.map(([ms, v]) => [at(T.dim) + ms, `brightness(${v})`]);
+
+  // The map holding, the node locking teal and pinging, then powering down.
+  if (held) {
+    held.parent.append(held.clone); nodes.push(held.clone);
+    const r = held.clone.getBoundingClientRect();
+    Object.assign(held.clone.style, { left: `${(held.at.left - r.left) / held.k}px`, top: `${(held.at.top - r.top) / held.k}px` });
+    held.lock.classList.add('you');
+    play(held.lock, [{ opacity: 0, transform: 'scale(2.2)' }, { opacity: 1, transform: 'scale(1)', offset: 0.55 }, { opacity: 0.2, offset: 0.7 }, { opacity: 1, offset: 0.85 }, { opacity: 1, transform: 'scale(1)' }], 0, 240, 'ease-out');
+    steps(held.clone, 'filter', [[0, 'brightness(1)'], ...dim]);
+    steps(held.clone, 'opacity', [[0, 1], [T.black, 0], [T.black + 1, 0]]);
+    const nr = held.lock.getBoundingClientRect(), cx = (nr.left + nr.width / 2 - lr.left) / lk, cy = (nr.top + nr.height / 2 - lr.top) / lk;
+    for (const i of [0, 1]) {
+      const p = add(top, 'bootfx-ping');
+      Object.assign(p.style, { left: `${cx - 20}px`, top: `${cy - 20}px` });
+      play(p, [{ opacity: 0, transform: 'scale(.5)' }, { opacity: 1, transform: 'scale(1)', offset: 0.1 }, { opacity: 0, transform: 'scale(9)' }], T.ping + i * 110, 420, 'cubic-bezier(.2,.7,.3,1)');
+    }
+  }
+  const glow = add(top, 'bootfx-glow');
+  play(glow, [{ opacity: 0 }, { opacity: 0.45, offset: 0.3 }, { opacity: 0.25, offset: 0.6 }, { opacity: 0 }], at(T.black), 900, 'ease-in-out');
+  // Your chrome dips with the map, goes dark, and catches again at the end.
+  for (const q of ['.topbar', '#sidebar', '#crewwin', '#statusline', '#net-line', '.prompt-row', '#tray']) {
+    const el = $(q);
+    if (held) steps(el, 'filter', [[0, 'brightness(1)'], ...dim.slice(0, -1), [at(T.black), 'brightness(1)'], [at(T.black) + 1, 'brightness(1)']]);
+    steps(el, 'opacity', [[0, 1], [at(T.black), 0], ...tubeOn(at(T.chrome))]);
+  }
+
+  // The name at the centre, decoding, with its carrier bar and the readout.
+  const card = add(top, 'bootfx-dial'), nm = document.createElement('div'), bar = document.createElement('div'), sub = document.createElement('div');
+  nm.className = 'bootfx-dial-name'; bar.className = 'bootfx-dial-bar'; sub.className = 'bootfx-dial-lines';
+  card.append(nm, bar, sub);
+  const N = 8;
+  for (let i = 0; i <= N; i++) {
+    const s = document.createElement('div'), t0 = at(T.name) + i * 45;
+    s.textContent = decoded(name, Math.round((i / N) * name.length));
+    nm.append(s);
+    steps(s, 'opacity', i < N ? [[0, 0], [t0, 1], [t0 + 45, 0], [t0 + 46, 0]] : [[0, 0], [t0, 1], [t0 + 1, 1]]);
+  }
+  play(bar, [{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], at(T.lines), 420, 'steps(12)');
+  lines.forEach((l, i) => { const d = document.createElement('div'); d.textContent = l.text; if (l.you) d.className = 'you'; sub.append(d); steps(d, 'opacity', [[0, 0], [at(T.lines) + i * T.line, 1], [at(T.lines) + i * T.line + 1, 1]]); });
+  // The name flies into the strip's; the readout goes out.
+  const strip = $('#page-view .fp-hud'), target = strip?.querySelector('.fp-id b');
+  if (target) {
+    const tr = target.getBoundingClientRect(), br = nm.getBoundingClientRect();
+    const dx = (tr.left + tr.width / 2 - (br.left + br.width / 2)) / lk, dy = (tr.top + tr.height / 2 - (br.top + br.height / 2)) / lk;
+    play(nm, [{ transform: 'none' }, { transform: `translate(${dx}px, ${dy}px) scale(${Math.max(0.3, tr.height / (br.height || 1))})` }], at(T.fly), 200, 'cubic-bezier(.6,0,.4,1)');
+  }
+  steps(nm, 'opacity', [[0, 1], [at(T.fly) + 200, 0], [at(T.fly) + 201, 0]]);
+  steps(sub, 'opacity', [[0, 1], [at(T.fly), 0.4], [at(T.fly) + 30, 1], [at(T.fly) + 60, 0], [at(T.fly) + 61, 0]]);
+  steps(bar, 'opacity', [[0, 1], [at(T.fly), 0], [at(T.fly) + 1, 0]]);
+
+  // The rooms page: the strip, then the rooms and links catching outward from the entry, a ring on each step out.
+  steps(strip, 'opacity', [[0, 0], ...tubeOn(at(T.strip))]);
+  const svg = [...app.querySelectorAll('#page-view .fp-svg')].find((s) => s.getBoundingClientRect().width), here = svg?.querySelector('.fp-room.here');
+  if (svg && here) {
+    const h = here.getBoundingClientRect(), hx = h.left + h.width / 2, hy = h.top + h.height / 2, unit = h.width * 1.6 || 1;
+    const ringOf = (el) => { const r = el.getBoundingClientRect(); return Math.round(Math.hypot(r.left + r.width / 2 - hx, r.top + r.height / 2 - hy) / unit); };
+    for (const el of svg.querySelectorAll('.fp-room, .fp-bed, .fp-under, .fp-link')) steps(el, 'opacity', [[0, 0], ...tubeOn(at(T.rooms) + ringOf(el) * T.ring)]);
+    for (const el of svg.children) if (!el.matches('defs, symbol') && !el.querySelector('.fp-room, .fp-link') && !el.matches('.fp-room, .fp-link, .fp-bed, .fp-under')) steps(el, 'opacity', [[0, 0], ...tubeOn(at(T.rooms) + T.ring)]);
+    const ring = add(top, 'bootfx-ring');
+    Object.assign(ring.style, box(h, 8));
+    play(ring, [{ opacity: 0, transform: 'scale(1.4)' }, { opacity: 1, transform: 'scale(1)', offset: 0.35 }, { opacity: 0, transform: 'scale(1)' }], at(T.rooms), 520, 'ease-out');
+  }
+
+  let timer = 0;
+  const end = () => {
+    if (dialing !== end) return;
+    dialing = null; clearTimeout(timer);
+    removeEventListener('keydown', end, true); removeEventListener('pointerdown', end, true);
+    anims.forEach((a) => a.cancel()); nodes.forEach((n) => n.remove());
+    after.splice(0).forEach((fn) => fn());
+  };
+  dialing = end;
+  timer = setTimeout(end, at(T.done));
+  addEventListener('keydown', end, true); addEventListener('pointerdown', end, true);
+}

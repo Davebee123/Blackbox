@@ -67,7 +67,7 @@ import * as PGV from './pager-view.mjs';
 import { noCarrier, NC } from './nocarrier.mjs';
 import * as UI from './uiscale.mjs';
 import { playTravel } from './travelfx.mjs';
-import { playBoot, stopBoot, capture as bootHold, bootLines, playCut, stopCut, leaving } from './bootfx.mjs';
+import { playBoot, stopBoot, capture as bootHold, bootLines, playCut, stopCut, leaving, playConnect, stopConnect, connecting, connectLines, whenConnected } from './bootfx.mjs';
 let bootFor = null; // the fight the screen last booted into (go)
 import { startTraffic } from './traffic.mjs';
 
@@ -402,7 +402,7 @@ const feel = createFeel({ settings: () => campaign.settings, reducedMotion: () =
 const lu = createLevelUpUi({
   feel, keys: () => barKeys(campaign), motion: () => canMove(),
   fighting: () => active(campaign),
-  calm: () => luCalm({ fighting: active(campaign), ended: !!ended || ending, spoils: !$('spoils').hidden, gainModal: gainOpen(), booting: !!shell.booting || introOn || !!bo || !$('tip').hidden }),
+  calm: () => luCalm({ fighting: active(campaign), ended: !!ended || ending, spoils: !$('spoils').hidden, gainModal: gainOpen(), booting: !!shell.booting || introOn || !!bo || connecting() || !$('tip').hidden }),
 });
 const pzFx = createPuzzleFx({ canMove: () => canMove(), sound: (sign, ms) => { feel.beat(ms); feel.add(sign, null); feel.beat(0); } });
 // The immersive shell (CRT, boot, status line). `?shell=plain` or `shell plain` turns it off.
@@ -951,6 +951,7 @@ function showGain(kicker, name, rows, toast, lead = '') {
   const el = $('gain');
   if (!el) return;
   if (gainOpen()) { gainQueue.push([kicker, name, rows, toast, lead]); return; } // never over a card that waits for Enter
+  if (connecting()) return whenConnected(() => showGain(kicker, name, rows, toast, lead)); // never over the connect
   clearTimeout(gainTimer);
   el.className = `gain${toast ? ' toast' : ''}`;
   el.innerHTML = V.gainMarkup(kicker, name, rows, !toast, lead);
@@ -1109,7 +1110,7 @@ function react(events) {
       case 'theft': case 'wall-mapped': feel.add('lose', null); notice(e.message, true); break;
       case 'wall-siege': feel.add('interrupt', '#meter-integrity', 'SIEGE'); notice(e.message); break;
       case 'jack-in': feel.add('jackin', null); shell.glitch?.(); break;
-      case 'run-start': feel.add('jackin', null); shell.glitch?.(); break;
+      case 'run-start': feel.add('jackin', null); if (!dialFx()) shell.glitch?.(); break; // (the connect's own effect stands in for the glitch)
       case 'jacked-out': feel.add('hangup', null); if (e.gains?.length) { const name = e.message.match(/JACKED OUT of (.+?)\. Banked/)?.[1] || ''; setTimeout(() => showGain('Banked', name, e.gains, false), 350); } break;
       case 'rooms-good': if (e.gains?.length) { feel.add('pickup', null); showGain('Pulled', '', e.gains, true); } break; // a vault's files into your pack (netrooms.mjs)
       case 'puzzle': feel.add(() => pzFx.move(e)); break; // a move on a puzzle room's board: it plays over the board once drawn
@@ -1238,7 +1239,10 @@ function react(events) {
   const carded = events.some((e) => ['takeover', 'root', 'streak', 'contract-done', 'bought', 'harvester', 'service-done'].includes(e.type));
   const xpOut = !won && !ended && !active(campaign) && !carded && events.filter((e) => e.type === 'xp');
   if (campaign.rooms) roomsSay(events); // the rooms playtest has no tty: what happens on the server goes up as a notice
-  if (xpOut?.length) { const why = String(xpOut[0].message.split('·')[1] || '').trim().replace(/\.$/, ''); showGain(why ? why[0].toUpperCase() + why.slice(1) : 'XP', '', V.spoilsOf(events.filter((x) => ['xp', 'fresh', 'code', 'level-up'].includes(x.type))), true); } // a toast: the level-up carries a level itself
+  if (xpOut?.length) {
+    const why = String(xpOut[0].message.split('·')[1] || '').trim().replace(/\.$/, ''), show = () => showGain(why ? why[0].toUpperCase() + why.slice(1) : 'XP', '', V.spoilsOf(events.filter((x) => ['xp', 'fresh', 'code', 'level-up'].includes(x.type))), true); // a toast: the level-up carries a level itself
+    if (events.some((e) => e.type === 'run-start') && dialFx()) setTimeout(() => whenConnected(show), 0); else show(); // a first run's XP waits for the connect to play
+  }
   if (events.length) dirty = true;
 }
 
@@ -1421,7 +1425,7 @@ function run(raw) {
   }
   // (a connect or hang-up has its own sound, so the channel change stays quiet)
   if ((wasAlert || events.some((e) => e.type === 'jack-in' || e.type === 'engage')) && active(campaign)) go('combat', events.some((e) => e.type === 'jack-in'));
-  else if (events.some((e) => e.type === 'run-start')) go('net', true);
+  else if (events.some((e) => e.type === 'run-start')) connectTo(events.findLast((e) => e.type === 'run-start'));
   else if (events.some((e) => e.type === 'jacked-out')) go('map', true);
   else if (campaign.rooms && module !== 'rooms' && !ended && !events.some((e) => e.type === 'victory') && events.some((e) => e.type.startsWith('rooms') && e.type !== 'rooms-out')) go('rooms', true); // a move typed from another page (a win stays on its kill screen)
   else if (campaign.run && module !== 'net' && !events.some((e) => e.type === 'victory') && events.some((e) => e.type.startsWith('net'))) go('net'); // a win stays on its kill screen (the folder listing waits in the terminal)
@@ -1524,6 +1528,7 @@ function go(name, quiet = false) {
   const boot = name === 'combat' && moved && active(campaign) && canMove() && fxLevel() !== 'minimal' && bootFor !== campaign.encounter;
   const held = boot && module === 'rooms' && campaign.rooms?.at ? bootHold($('page-view'), [...$('page-view').querySelectorAll(`[data-room="${CSS.escape(campaign.rooms.at)}"]`)].find((c) => c.getBoundingClientRect().width)) : null;
   if (name !== 'combat') stopBoot();
+  if (name !== 'rooms') stopConnect();
   module = name;
   if (name === 'rooms' && revealNote) { const m = revealNote; revealNote = null; setTimeout(() => notice(m), 0); } // a hidden room that opened while you fought
   selected = null;
@@ -1534,6 +1539,19 @@ function go(name, quiet = false) {
   shell.onModule(name);
   focusPrompt();
   if (boot) { bootFor = campaign.encounter; playBoot($('app'), held, bootLines(bootInfo())); }
+}
+// Connecting to a server: the screen dials it (bootfx.mjs, Handshake); from the map, its node locks on first. Screen
+// effects off or Motion off: straight in.
+const dialFx = () => canMove() && fxLevel() !== 'minimal' && !shell.booting;
+function connectTo(e) {
+  const sel = e.location && `[data-select="${CSS.escape(e.location)}"]`, shown = (q) => [...$('page-view').querySelectorAll(q)].find((g) => g.getBoundingClientRect().width);
+  const node = dialFx() && module === 'map' && sel ? shown(`${sel} .ring`) || shown(sel) : null; // its node on the map (or its row on the list)
+  const held = node ? bootHold($('page-view'), node) : null;
+  go('net', true);
+  if (!dialFx() || module !== 'rooms') return;
+  const q = (sel) => $('page-view').querySelector(sel)?.textContent.trim() || '';
+  const name = q('.fp-hud .fp-id b') || campaign.locations?.find((l) => l.id === e.location)?.name || '';
+  playConnect($('app'), held, name, connectLines({ name, level: q('.fp-hud .fp-id small').match(/lv ([\d–-]+)/)?.[1] || '', rooms: Number(q('.fp-hud .fp-prog b').split('/')[1]) || 0 }));
 }
 // What the boot console checks: read off the fight's page as it now stands.
 function bootInfo() {
@@ -2354,7 +2372,7 @@ const shownRect = (el) => { const r = el.getBoundingClientRect(); return r.width
 const shownEl = (sel) => [...document.querySelectorAll(sel)].find(shownRect) || null;
 function onScreen(sel) { return !!shownEl(sel); }
 function checkTips(now) {
-  if (tip || ending || introOn || lu.showing() || shell.booting || playtest || now < tipWait) return;
+  if (tip || ending || introOn || lu.showing() || shell.booting || connecting() || playtest || now < tipWait) return;
   tipWait = now + 400;
   const t = nextTip(campaign, module, onScreen);
   if (!t) return;
