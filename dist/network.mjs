@@ -33,6 +33,7 @@ export const NETWORK = {
   bands: [[5, 15], [16, 28], [29, 40]], // one from each band at least, so there's always one to chase
   tagWeight: { lean: 2, second: 1.25 }, // a native tied to its lean family is likelier to be one of its own
   lean: [3, 1.5, 0.5], // family weights, first to last
+  late: 1.5, // a later family's weight (the Cryptominer, the Wiper) once its level and floor allow (lateFamilies)
   home: 0.000005, // the native roll on its network, per kill (elites and bosses roll three times): a world drop, so very rare; its lair boss is the way (BOSS_LOOT)
   pity: 0.0000001, // and this much more for every kill on that network without one (BOSS_LOOT's pity, per kill)
   awayEach: 0.0000002, // each foreign native you know of (named, or native to a network you know), per kill: a tenth of a native's share at home, no pity
@@ -161,14 +162,19 @@ export const knownNets = (s) => [...(netSeedOf(s) ? ['you'] : []), ...(s.consort
 export const homeOf = (s, id) => knownNets(s).find((who) => sigOf(s, who)?.uniques.includes(id)) || null;
 
 // ---------- the lean ----------
-// A family for something on a network, from one roll (so callers keep their dice in step): its lean, or even.
-export function leanPick(s, who, x) {
-  const g = sigOf(s, who);
-  if (!g) return FAMS[Math.floor(x * FAMS.length)];
-  let r = x * FAMS.reduce((n, f) => n + g.lean[f], 0);
-  for (const f of FAMS) { r -= g.lean[f]; if (r < 0) return f; }
-  return FAMS.at(-1);
+// The later families (data.mjs FAMILIES opens: the Cryptominer, the Wiper) open at a level and floor: from there they
+// join the lean at NETWORK.late each.
+export const lateFamilies = (level, floor) => Object.keys(FAMILIES).filter((f) => FAMILIES[f].opens && level >= FAMILIES[f].opens.level && floor >= FAMILIES[f].opens.floor);
+// A family from one roll x and a lean (null: even), with the later families open at `at` ({ level, floor }) beside them.
+export function leanOf(lean, x, at = null) {
+  const late = at ? lateFamilies(at.level, at.floor) : [], w = (f) => (late.includes(f) ? NETWORK.late : lean ? lean[f] : 1), all = [...FAMS, ...late];
+  let r = x * all.reduce((n, f) => n + w(f), 0);
+  for (const f of all) { r -= w(f); if (r < 0) return f; }
+  return all.at(-1);
 }
+// A family for something on a network, from one roll (so callers keep their dice in step): its lean, or even. at: the
+// level and floor it's for, so the later families can come.
+export const leanPick = (s, who, x, at = null) => leanOf(sigOf(s, who)?.lean || null, x, at);
 export const nativeStrain = (s, who) => sigOf(s, who)?.strain || null;
 
 // ---------- named and seen ----------

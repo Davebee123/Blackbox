@@ -164,7 +164,7 @@ export const rowSub = (act, row, card = SERVER_CARD) => { const [a, b] = card.su
 function virusOf(r, node, level, elite, card = SERVER_CARD, gen = {}) {
   const strains = (card.builds || []).filter((k) => STRAINS[k] && (STRAINS[k].from || 1) <= level);
   const strain = !elite && node.act > 0 && strains.length && r() < BREACH.strainShare ? strains[Math.floor(r() * strains.length)] : null; // past the perimeter
-  const fam = card.family, charge = { ransomware: 'fulldisk', worm: 'massmailer', ghostroot: 'possession' }[fam], seal = { ransomware: 'keyrotation', worm: 'resync', ghostroot: 'godark' }[fam];
+  const fam = card.family, charge = { ransomware: 'fulldisk', worm: 'massmailer', ghostroot: 'possession', cryptominer: 'hashburst', wiper: 'zerofill' }[fam], seal = { ransomware: 'keyrotation', worm: 'resync', ghostroot: 'godark', cryptominer: 'coldboot', wiper: 'writelock' }[fam];
   const pool = { ...BREACH.tells };
   if (level < TELL.castFrom) delete pool.overclock; // casts come with SIGINT
   if (level < BREACH.lockFrom) delete pool.lock; // Lock asks for a cooldown to feed it: not while your bar is two keys

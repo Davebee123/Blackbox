@@ -132,6 +132,9 @@ export const TIPS = [
   { id: 'sync', page: 'combat', at: '#sync-win', pause: true, text: 'The bar under Now fills as the cycle runs. Press Enter while it\'s inside the bright window, and your move deals 10% more damage.', more: (s) => `As ${/^[AEIOU]/.test(ARCHETYPES[classOf(s)].name) ? 'an' : 'a'} ${ARCHETYPES[classOf(s)].name}, it also ${SYNC[classOf(s)].rule.replace(/^./, (c) => c.toLowerCase())}` },
   { id: 'fight-patch', page: 'combat', pause: true, at: '.board .intent.patch', under: '#board', text: 'A part with no ◆ left grows one back five cycles later, unless you break it first.' },
   { id: 'fight-veiled', page: 'combat', pause: true, at: '.board .intent.hidden', under: '#board', text: 'This part hides when it will attack. Strip its ◆ to see its timer.' },
+  // The parts plan's P3 families (families.mjs).
+  { id: 'fight-heat', page: 'combat', pause: true, at: '.board .tag.heat', under: '#board', text: 'The Rig hits harder each time its Hash lands, and heats up every cycle. At 100 heat it stops and burns itself out. Push it past a tick to vent it, or leave it to cook.' },
+  { id: 'fight-wipe', page: 'combat', pause: true, at: '.board .tag.wipe', under: '#board', text: 'When the Wipe lands, it takes your strongest ready skill off your bar for 3 cycles. Fire that skill before then.' },
   { id: 'fight-encrypt', page: 'combat', pause: true, at: '.board .intent.crypt', under: '#board', text: 'Encryption damages you every cycle and grows each time it lands. It stops when you break the Encryptor.' },
   // Tells (tells.mjs): a part announces a move ahead, and the chip says what answers it.
   { id: 'fight-tell', page: 'combat', pause: true, at: '.board .intent.tell.t-charge', under: '#board', text: 'This part is charging a much bigger hit. Push it past a tick on the cycle the hit lands to call it off. The chip shows NOW on that cycle.' },

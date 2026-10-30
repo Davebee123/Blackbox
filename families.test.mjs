@@ -1,14 +1,15 @@
 // What fights in a server's rooms (docs/servers.md 4, families.mjs): attack sets for the Ransomware, the Worm and the
-// Ghostroot (and the new bodies' two each), each its own timing at the same pressure; the Trojan's Packages and Loader;
-// the Cryptominer's ramp, heat, burnout and vent; the Wiper's Wipe. They stay out of FAMILIES, so the old game never
-// rolls them.
+// Ghostroot (and the later bodies' two each), each its own timing at the same pressure; the Trojan's Packages and
+// Loader, a room body only; the Cryptominer's ramp, heat, burnout and vent and the Wiper's Wipe, families since the
+// parts plan's P3, whose rules run in any fight.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fresh, hooks, hit, part, livingParts, command, resolveCycle, attackers, readyIn, usable, active, toIntent, intents } from './dist/combat.mjs';
+import { fresh, hooks, hit, part, livingParts, command, resolveCycle, attackers, readyIn, usable, active, toIntent, intents, selectEncounter } from './dist/combat.mjs';
 import { CONFIG, FAMILIES, ROOM_FAMILIES, ABILITIES, createVirus } from './dist/data.mjs';
 import { seeded } from './dist/gear.mjs';
 import * as FP from './dist/floorplan.mjs';
 import { ATTACK_SETS, SET_SCALE, pressureOf, rollSet, applySet, BODY } from './dist/families.mjs';
+import { PARTS } from './dist/parts.mjs';
 
 CONFIG.enemyCrit = 0; CONFIG.misses = false; CONFIG.baseCrit = 0;
 let clock = Date.UTC(2026, 0, 1);
@@ -24,6 +25,20 @@ function roomFight({ family = 'ransomware', set = 'standard', cls = 'breaker', l
   R.at = room.id; R.screen = null;
   FP.fight(s, room);
   s.run.integrity = s.run.max = 5000; R.fightFrom = 5000;
+  s.encounter.hardened = 0;
+  return s;
+}
+// A wild fight outside the rooms (no e.rooms): the family's rules travel with it. basic: a forced basic beside the
+// signature (the Cooler); set: an attack set laid on as a room would.
+function wildFight({ family, basic = null, set = null, cls = 'breaker', level = 20 }) {
+  const s = fresh();
+  s.rng = 99;
+  FP.outfit(s, { cls, level, gearSeed: 2 });
+  s.run ||= { loc: 'sim', cwd: '/', pack: [], visited: ['/'] };
+  selectEncounter(s, 'random', 5, { mode: 'run', room: '/sim', level, family, mutation: null, genes: [], ...(basic ? { basic } : {}), quiet: true });
+  if (set) applySet(s.encounter.virus, set);
+  command(s, 'engage');
+  s.run.integrity = s.run.max = 5000;
   s.encounter.hardened = 0;
   return s;
 }
@@ -113,8 +128,13 @@ test('every fight is its own puzzle: the same room rolls its set and its first a
   assert.equal(dues.size, 1, 'a boss is learnable');
 });
 
-test('the new bodies stay out of the old game\'s families', () => {
-  for (const id of ['trojan', 'cryptominer', 'wiper']) { assert.equal(FAMILIES[id], undefined); assert.ok(ROOM_FAMILIES[id]); }
+test('the Trojan stays a room body; the Cryptominer and the Wiper are families whose rules run in any fight', () => {
+  assert.equal(FAMILIES.trojan, undefined); assert.ok(ROOM_FAMILIES.trojan);
+  for (const id of ['cryptominer', 'wiper']) { assert.ok(FAMILIES[id].rules && FAMILIES[id].opens); assert.equal(ROOM_FAMILIES[id], undefined); }
+  const s = wildFight({ family: 'cryptominer' });
+  assert.ok(!s.encounter.rooms);
+  hold(s, 3);
+  assert.ok(s.encounter.virus.heat > 0, 'the Rig heats outside a room');
 });
 
 // ---------- the Trojan ----------
@@ -292,7 +312,7 @@ test('the Cryptominer: its Hash ramps, its heat climbs, and at 100 it overheats 
   const h = roomFight({ family: 'cryptominer', set: 'hot' });
   for (let i = 0; i < 20 && !h.encounter.virus.overheated; i++) hold(h);
   assert.ok(h.encounter.cycle <= 9, `a hot rig around cycle 8 (${h.encounter.cycle})`);
-  const c = roomFight({ family: 'cryptominer', set: 'cold' }), amt = part(c, 'rig').attack.amount;
+  const c = wildFight({ family: 'cryptominer', basic: 'cooler', set: 'cold' }), amt = part(c, 'rig').attack.amount;
   strike(c, part(c, 'cooler'), 999);
   assert.equal(part(c, 'rig').attack.amount, Math.round(amt * BODY.heat.hard));
   hold(c);
@@ -316,8 +336,20 @@ test('the Cryptominer\'s ticks vent it: ramp and heat back to nothing, and an ov
   assert.ok(rig.attack.due < 900, 'hashing again');
 });
 
-test('the Cryptominer\'s Cooler falls back on the Rig: break the Rig first and the Cooler takes over its Hash, climb and heat, uncooled', () => {
-  const s = roomFight({ family: 'cryptominer', set: 'cold' }), e = s.encounter, v = e.virus, rig = part(s, 'rig'), cooler = part(s, 'cooler');
+test('the Cryptominer\'s Cooler: one carrying the Surge keeps it when the Rig breaks; one with none takes over its Hash, climb and heat, uncooled', () => {
+  // Beside the Rig a rolled Cooler carries the family's Surge (parts.mjs PARTS.steadyCarry), and keeps it.
+  const k = wildFight({ family: 'cryptominer', basic: 'cooler' });
+  assert.equal(part(k, 'cooler').attack?.name, 'Surge');
+  strike(k, part(k, 'rig'), part(k, 'rig').integrity);
+  assert.equal(part(k, 'cooler').attack?.name, 'Surge', 'it keeps its Surge');
+  hold(k, 2);
+  assert.equal(k.encounter.virus.heat || 0, 0, 'and never heats');
+  // With no Surge to carry, it takes the Hash over.
+  const was = PARTS.steadyCarry;
+  PARTS.steadyCarry = false;
+  let s;
+  try { s = wildFight({ family: 'cryptominer', basic: 'cooler', set: 'cold' }); } finally { PARTS.steadyCarry = was; }
+  const e = s.encounter, v = e.virus, rig = part(s, 'rig'), cooler = part(s, 'cooler');
   s.run.integrity = 5000;
   hold(s, 4);
   assert.equal(cooler.attack, null, 'no attack of its own while the Rig stands');
@@ -357,8 +389,8 @@ test('the Wiper: a Targeted Wipe takes your strongest ready key for 3 cycles; ne
 test('the Wiper: a Rolling Wipe takes the key you used last, and its cooldown stands still; the Degausser\'s tick cancels a Wipe', () => {
   const s = roomFight({ family: 'wiper', set: 'rolling' }), e = s.encounter, deg = part(s, 'degausser');
   for (const p of attackers(s)) p.attack.due = 999;
-  const key = usable(s).find((id) => !['spike', 'sigint'].includes(id) && ABILITIES[id].cooldown >= 3 && !toIntent(s, `${id} eraser`).error);
-  command(s, `${key} eraser`); resolveCycle(s);
+  const key = usable(s).find((id) => !['spike', 'sigint'].includes(id) && ABILITIES[id].cooldown >= 3 && !toIntent(s, `${id} pulse`).error);
+  command(s, `${key} pulse`); resolveCycle(s);
   const left = readyIn(s, key);
   assert.ok(left > 0, 'cooling');
   deg.attack.due = e.cycle;

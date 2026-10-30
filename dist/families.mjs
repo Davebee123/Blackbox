@@ -1,27 +1,28 @@
 // What fights in a server's rooms (docs/servers.md 4, phase R0): attack sets for the three families, three new bodies
 // (the Trojan, the Cryptominer and the Wiper), and the rules every room fight shares (an elite's enrage, a Lab's
 // overheat, a Mailhub's spam). It installs the room hooks in combat.mjs (hooks.roomHit, roomBroke, roomCycle,
-// roomLanded, roomIntents), which only ever act on a fight flagged e.rooms (floorplan.mjs), so nothing here touches
-// the old game's fights.
+// roomLanded, roomIntents), which act on a fight flagged e.rooms (floorplan.mjs), or on a Cryptominer or a Wiper
+// anywhere (combat.mjs bodyRules).
 //
 // Attack sets (4.1): every virus rolls one when it spawns: when each part fires first, how often, and which leads.
 // Sets are named, so they're learnable. A set keeps its family's pressure (the damage over the first 20 cycles, by
 // pressureOf, stays within 5% of the Standard set's: SET_SCALE evens it out), and each part's first attack moves by up
 // to a cycle either way on top (seeded jitter, never onto cycle 1). Authors weight the sets they favour.
 //
-// The bodies are kept out of FAMILIES (data.mjs ROOM_FAMILIES), so the old game never rolls them.
+// The Trojan is kept out of FAMILIES (data.mjs ROOM_FAMILIES), so only a room rolls it. The Cryptominer and the Wiper
+// are FAMILIES since the parts plan's P3 (data.mjs, rules: true): their rules here run in every fight they're in.
 //   Trojan       Don't hit the box. The Courier drops a hit and delivers Packages (one is on the board when the fight
 //                opens); while the Loader lives, any damage to a Package unpacks it into two Droppers, and an unopened
 //                one unpacks on its own 5 cycles after delivery. The Loader redeploys a broken Courier 4 cycles later at
 //                half its Integrity, as often as it breaks: the Loader is the real target. Once the Loader is broken, the
 //                Courier stays down and a Package is an inert box: break it for a Payload Box.
 //   Cryptominer  Let it cook, or vent it. The Rig's Hash ramps every time it lands, and it heats up every cycle (faster
-//                once the Cooler is broken, and every Hash lands 50% harder then). At 100 heat it overheats: it stops
+//                once a Cooler in the fight is broken, and every Hash lands 50% harder then). At 100 heat it overheats: it stops
 //                hashing and burns itself until it breaks. Its ticks vent (ramp and heat back to nothing). Break the
 //                Rig first and the Cooler falls back on it (combat.mjs fallback): it takes over the Hash, climb and heat as
 //                they were, and runs it uncooled (25 a cycle). Whichever part is left hashing cooks.
-//   Wiper        Hold your big key. The Degausser's Wipe hits and takes a key off your bar: your strongest ready skill
-//                (Targeted) or the one you used last (Rolling). Key 1 and SIGINT are never wiped.
+//   Wiper        Fire your big key before the Wipe. The Degausser's Wipe hits and takes a key off your bar: your strongest
+//                ready skill (Targeted) or the one you used last (Rolling). Key 1 and SIGINT are never wiped.
 import { hooks, emit, alive, part, livingParts, attackers, defender, hit, usable, readyIn, strikeWith, virusIntegrity } from './combat.mjs';
 import { ROOM_FAMILIES, FAMILIES, ABILITIES, CONFIG } from './data.mjs';
 
@@ -34,24 +35,6 @@ Object.assign(ROOM_FAMILIES, {
     parts: [
       { id: 'courier', name: 'Courier', integrity: 34, armor: 1, loot: 'Courier Packet', special: true, attack: { name: 'Drop', effect: 'damage', amount: 10, interval: 5, first: 3 }, deliver: { interval: 3, first: 2 } },
       { id: 'loader', name: 'Loader', integrity: 30, armor: 2, loot: 'Loader Stub' },
-    ],
-  },
-  cryptominer: {
-    name: 'Cryptominer', stem: 'XMRIG', threatens: 'Signal', art: 'ransomware', opens: 6, code: 'cipher',
-    summary: 'The Rig\'s Hash lands every 2 cycles, dealing 2 more each time, and the Rig heats up every cycle. At 100 heat, the Rig overheats, stops hashing and burns itself every cycle until it breaks. When the Cooler breaks, the Rig heats 2.5 times as fast, and every Hash deals 50% more damage. If the Rig breaks first, the Cooler takes over its Hash, uncooled.',
-    answer: 'Vent whichever part is left hashing, or let it cook.',
-    parts: [
-      { id: 'rig', name: 'Rig', integrity: 44, armor: 1, loot: 'ASIC Die', special: true, attack: { name: 'Hash', effect: 'damage', amount: 4, interval: 2, first: 2, ramp: 2 } },
-      { id: 'cooler', name: 'Cooler', integrity: 26, armor: 1, loot: 'Heat Pipe', fallback: 'rig' }, // break the Rig first and the Cooler takes over its Hash, uncooled (Fallback)
-    ],
-  },
-  wiper: {
-    name: 'Wiper', stem: 'SHAMOON', threatens: 'Signal', art: 'ransomware', opens: 10, code: 'cipher',
-    summary: "The Eraser zeroes your Signal. The Degausser's Wipe deals damage and takes a key off your bar for 2 or 3 cycles. A wiped key cannot be pressed, and its cooldown stands still. Never wipes key 1 or SIGINT.",
-    answer: 'Fire your big skill before the Wipe lands.',
-    parts: [
-      { id: 'eraser', name: 'Eraser', integrity: 34, armor: 1, loot: 'Zero Block', attack: { name: 'Zero', effect: 'damage', amount: 12, interval: 4, first: 3 } },
-      { id: 'degausser', name: 'Degausser', integrity: 38, armor: 2, loot: 'Degauss Coil', special: true, attack: { name: 'Wipe', effect: 'damage', amount: 6, interval: 5, first: 4, wipe: 'strongest', wipeFor: 3 } },
     ],
   },
   // The Exfil (floorplan.mjs, EXFIL-####): a process smuggling a stolen archive off a rogue server. A runner, not a
@@ -75,8 +58,8 @@ export const BODY = {
   heat: { cooled: 10, hot: 25, at: 100, burn: 0.12, hard: 1.5 }, // the Rig's heat a cycle (Cooler alive, broken), overheat, its burnout, Hash once the Cooler is gone
   loader: 2, // a Loader's tick delays the Courier's next delivery this many cycles
 };
-// Which families a server's author writes (4.5), and from what level each opens.
-export const OPENS = { ransomware: 1, worm: 1, ghostroot: 1, trojan: 4, cryptominer: 6, wiper: 10 };
+// Which families a server's author writes (4.5), and from what level each opens (a P3 family's, data.mjs FAMILIES).
+export const OPENS = { ransomware: 1, worm: 1, ghostroot: 1, trojan: 4, cryptominer: FAMILIES.cryptominer.opens.level, wiper: FAMILIES.wiper.opens.level };
 export const AUTHOR_FAMILIES = {
   tollgate: ['ransomware', 'cryptominer', 'wiper'],
   swarmline: ['worm', 'trojan'],
@@ -113,12 +96,12 @@ export const ATTACK_SETS = {
     freight: { name: 'Freight', lead: 'courier', by: ['lantern'], parts: { courier: { interval: 3, first: 3, deliver: { interval: 4, first: 2 } } } },
   },
   cryptominer: {
-    cold: { name: 'Cold rig', lead: 'rig', by: ['tollgate'], heat: 0.8, parts: { rig: { interval: 2, first: 2, ramp: 3 } } },
-    hot: { name: 'Hot rig', lead: 'rig', by: ['glassjaw'], heat: 1.4, parts: { rig: { interval: 2, first: 2, ramp: 1 } } },
+    cold: { name: 'Cold rig', lead: 'rig', by: ['tollgate'], heat: 0.8, parts: { rig: { interval: 2, first: 2, ramp: 1.5 } } },
+    hot: { name: 'Hot rig', lead: 'rig', by: ['glassjaw'], heat: 1.4, parts: { rig: { interval: 2, first: 2, ramp: 0.5 } } },
   },
   wiper: {
-    targeted: { name: 'Targeted', lead: 'degausser', by: ['tollgate'], parts: { eraser: { interval: 4, first: 3 }, degausser: { interval: 5, first: 4, amount: 6, wipe: 'strongest', wipeFor: 3 } } },
-    rolling: { name: 'Rolling', lead: 'degausser', by: ['glassjaw'], parts: { eraser: { interval: 4, first: 3 }, degausser: { interval: 3, first: 2, amount: 4, wipe: 'last', wipeFor: 2 } } },
+    targeted: { name: 'Targeted', lead: 'degausser', by: ['tollgate'], parts: { pulse: { interval: 4, first: 3 }, degausser: { interval: 5, first: 3, amount: 10, wipe: 'strongest', wipeFor: 3 } } },
+    rolling: { name: 'Rolling', lead: 'degausser', by: ['glassjaw'], parts: { pulse: { interval: 4, first: 3 }, degausser: { interval: 3, first: 2, amount: 6, wipe: 'last', wipeFor: 2 } } },
   },
 };
 const STANDARD = { ransomware: 'standard', worm: 'standard', ghostroot: 'standard', trojan: 'express', cryptominer: 'cold', wiper: 'targeted' };
@@ -270,7 +253,8 @@ function vent(s, p) {
 }
 // What a tick does on a part whose body has its own verb (interrupt.mjs): vent, or delay the next delivery.
 // The part hashing: the Rig, or the Cooler once it has failed over.
-const hasherOf = (s) => (s.encounter?.virus?.family === 'cryptominer' ? livingParts(s).find((x) => x.id === 'rig' || (x.tookOver === 'rig' && x.attack)) || null : null);
+// (A Cooler carrying the family's Surge, parts.mjs PARTS.steadyCarry, keeps it when the Rig breaks: it never hashes.)
+const hasherOf = (s) => (s.encounter?.virus?.family === 'cryptominer' ? livingParts(s).find((x) => x.id === 'rig' || (x.tookOver === 'rig' && x.attack?.ramp)) || null : null);
 hooks.tickVerb = (s, p) => (s.encounter.virus.family === 'cryptominer' && p === hasherOf(s) ? 'vent' : s.encounter.virus.family === 'trojan' && p.id === 'loader' ? 'delay' : 'cancel');
 hooks.tickDo = (s, p, verb) => {
   if (verb === 'vent') return vent(s, p);
@@ -368,7 +352,9 @@ hooks.roomCycle = (s) => {
     emit(s, 'status', `The ${rig.name} runs the Hash uncooled: it heats up ${BODY.heat.hot} a cycle until it overheats.`, { target: rig.id });
   }
   if (rig) {
-    const cooler = livingParts(s).some((x) => x.id === 'cooler' && x !== rig);
+    // Cooled while a Cooler stands, or when the fight never had one (the parts roll: a Rig beside another basic); hot
+    // once a Cooler breaks, or running the Hash itself.
+    const cooler = rig.id === 'rig' && (livingParts(s).some((x) => x.id === 'cooler') || !v.parts.some((x) => x.id === 'cooler'));
     if (!v.overheated) {
       v.heat = Math.min(BODY.heat.at, (v.heat || 0) + Math.round((cooler ? BODY.heat.cooled : BODY.heat.hot) * (v.heatRate || 1)));
       if (v.heat >= BODY.heat.at) { v.overheated = true; if (rig.attack) rig.attack.due = 999; emit(s, 'phase', `The ${rig.name} OVERHEATS. It stops hashing and burns itself every cycle until it breaks.`, { target: rig.id }); }
@@ -381,7 +367,7 @@ hooks.roomCycle = (s) => {
     for (const p of attackers(s)) { const a = p.attack; if (a.amount && a.effect !== 'scramble') a.amount = Math.round(a.amount * k); if (a.hit) a.hit = Math.round(a.hit * k); }
     emit(s, 'warning', `${v.name} ENRAGES: its attacks deal ${Math.round((k - 1) * 100)}% more.`, {});
   }
-  if (e.rooms.kind === 'Lab' && e.cycle >= ROOM_RULES.overheat.from && virusIntegrity(s).current > 0) {
+  if (e.rooms?.kind === 'Lab' && e.cycle >= ROOM_RULES.overheat.from && virusIntegrity(s).current > 0) {
     const d = defender(s), you = Math.min(d.integrity, Math.max(1, Math.round(d.max * ROOM_RULES.overheat.you)));
     d.integrity -= you;
     for (const p of livingParts(s)) hit(s, p, Math.max(1, Math.round(p.max * ROOM_RULES.overheat.parts)), { by: 'Overheat', pierce: true, server: true });
@@ -394,7 +380,7 @@ export function bodyTags(s, p) {
   if (!v || !alive(p)) return out;
   if (p.pkg) out.push(p.pkg.inert ? ['inert', 'Inert: holds a Payload Box of credits.\n▸ Break it for the credits.', ''] : [`opens ${Math.max(0, p.pkg.opensAt - e.cycle)}`, `Package: unpacks into two Droppers at the end of cycle ${p.pkg.opensAt}, or when anything damages it while the Loader stands.`, 'hot']);
   if (p.id === 'loader' && v.family === 'trojan') { const down = redeployOf(s); out.push(down ? [`redeploys in ${Math.max(0, down.redeployAt - e.cycle)}`, `Redeploy: brings the ${down.name} back at the end of cycle ${down.redeployAt} at half its Integrity, unless the Loader breaks first. The Loader's ticks delay the redeploy by ${BODY.loader} cycles.\n▸ Break the Loader before then.`, 'hot'] : ['loader', `Loader: while it stands, any damage to a Package unpacks it. Redeploys a broken Courier ${BODY.redeploy.in} cycles later at half its Integrity. Its ticks delay the next delivery by ${BODY.loader} cycles.`, 'hot']); }
-  if (p === hasherOf(s)) out.push([v.overheated ? 'overheated' : `heat ${v.heat || 0}/${BODY.heat.at}`, v.overheated ? 'Overheated: burns itself every cycle until it breaks. Venting it starts it hashing again.' : `Heat: at ${BODY.heat.at}, overheats, stops hashing and burns itself until it breaks. Its ticks vent its heat and climb back to nothing.`, v.overheated ? 'you' : 'hot']);
-  if (p.attack?.wipe) out.push([p.attack.wipe === 'last' ? 'wipes your last skill' : 'wipes your strongest', p.attack.wipe === 'last' ? `Wipe: takes the skill you used last off your bar for ${p.attack.wipeFor} cycles.` : `Wipe: takes your strongest ready skill off your bar for ${p.attack.wipeFor} cycles.`, 'hot']);
+  if (p === hasherOf(s)) out.push([v.overheated ? 'overheated' : `heat ${v.heat || 0}/${BODY.heat.at}`, v.overheated ? 'Overheated: burns itself every cycle until it breaks. Venting it starts it hashing again.' : `Heat: at ${BODY.heat.at}, overheats, stops hashing and burns itself until it breaks. Its ticks vent its heat and climb back to nothing.`, v.overheated ? 'you heat' : 'hot heat']);
+  if (p.attack?.wipe) out.push([p.attack.wipe === 'last' ? 'wipes your last skill' : 'wipes your strongest', p.attack.wipe === 'last' ? `Wipe: takes the skill you used last off your bar for ${p.attack.wipeFor} cycles.` : `Wipe: takes your strongest ready skill off your bar for ${p.attack.wipeFor} cycles.`, 'hot wipe']);
   return out;
 }

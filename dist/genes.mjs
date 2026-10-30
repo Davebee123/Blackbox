@@ -64,9 +64,16 @@ export const GENES = {
   scramble: { name: 'Scramble', adj: 'Scrambling', cat: 'attack', axis: 'feedback', role: 'primary', cost: 3, opens: 1, decode: 'part', suits: 'Ghostroot, PALEMASK',
     does: 'Deals damage to you and Scrambles you for 2 cycles. While you are Scrambled, each of your attacks may hit you instead, at half damage. A ◆ on you blocks it.', telegraph: 'Its cell on the timeline, then a Scrambled status on you.', answer: 'Fire quiet commands while Scrambled. Scrub cleanses it.',
     implicit: 'Scrambled hits on you deal less.', carried: (p) => A(p)?.effect === 'scramble', bot: { quiet: 'scrambled' } },
+  // The parts plan's P3 families' signatures (docs/parts-plan.md, families.mjs).
+  hash: { name: 'Hash', adj: 'Hashing', cat: 'attack', axis: 'clock', role: 'primary', cost: 3, opens: 9, decode: 'part', suits: 'the Cryptominer, GLASSJAW',
+    does: 'The Rig\'s Hash lands every 2 cycles, dealing more each time, and the Rig heats up every cycle. At 100 heat it overheats and burns itself until it breaks.', telegraph: 'A heat tag on its row, and its Hash climbing on the timeline.', answer: 'Let it cook while you break the rest, then burst it. A hit across its tick vents it.',
+    implicit: 'Hashes on you climb slower.', carried: (p) => !!p.hash, bot: { focus: 'cook' } },
+  wipe: { name: 'Wipe', adj: 'Wiping', cat: 'attack', axis: 'tempo', role: 'primary', cost: 3, opens: 19, decode: 'part', suits: 'the Wiper, TOLLGATE',
+    does: 'Deals damage to you and takes your strongest ready key off your bar for 3 cycles. Its cooldown stands still. Key 1 and SIGINT are never wiped.', telegraph: 'Its cell on the timeline, then a WIPED key on your bar.', answer: 'Fire your big key before the Wipe lands.',
+    implicit: 'Wiped keys come back a cycle sooner.', carried: (p) => !!A(p)?.wipe, bot: { fire: 'strongest' } },
   floodramp: { name: 'Flood ramp', adj: 'Flooding', cat: 'attack', axis: 'attrition', role: 'primary', cost: 3, opens: 6, decode: 'part', suits: 'Worm, SWARMLINE (the Floodgate)',
     does: 'Attacks every cycle, dealing 1 more damage each time. Any delay resets it.', telegraph: 'A cell on every cycle, its number climbing.', answer: 'Delay it, or break the Flooder. Suspend, Quarantine, Jam, Spoofed ACK and the Stall daemon delay it.',
-    implicit: 'Ramping attacks on you grow slower.', carried: (p) => !!A(p)?.ramp, bot: { delay: true } },
+    implicit: 'Ramping attacks on you grow slower.', carried: (p) => !!A(p)?.ramp && !p.hash, bot: { delay: true } },
   siphon: { name: 'Siphon', adj: 'Siphoning', cat: 'attack', axis: 'sustain', role: 'primary', cost: 3, opens: 8, decode: 'part', suits: 'Worm, SWARMLINE (the Leech)',
     does: 'Heals the most damaged part for the damage its hit deals. Removes 1 burn from that part.', telegraph: 'Its cell on the timeline, marked siphon.', answer: 'Shrink its hit with shields, Block or Throttle, or break it. Implant keeps a part from being healed.',
     implicit: 'Heals a virus part gets are smaller.', carried: (p) => !!A(p)?.siphon, counter: 'antivirussweep' },
@@ -135,8 +142,7 @@ export const GENES = {
     implicit: 'A backlog adds one cycle less to your cooldowns.', carried: (p) => !!p.backlog, bot: { quiet: 'cooldown' },
     parts: { worm: { id: 'backlog', plan: 1, name: 'Backlog', integrity: 20, armor: 1, loot: 'Queue Slab', backlog: 2, from: 12, pool: 'third', attack: { name: 'Ack', effect: 'damage', amount: 3, interval: 4, first: 3 } } } },
   // The parts plan's second wave (docs/parts-plan.md P2): floors 3 and 4. floor: the floor a native is first met on,
-  // and weighted on (parts.mjs PARTS.floor); a third with no floor is no floor's native. The Damper's families (the
-  // Cryptominer and the Wiper) come with P3: until then it sits on the Worm, the home family with nothing new on floor 4.
+  // and weighted on (parts.mjs PARTS.floor); a third with no floor is no floor's native.
   limiter: { name: 'Limiter', adj: 'Capped', cat: 'defence', axis: 'shell', role: 'primary', cost: 3, opens: 13, floor: 3, decode: 'part', suits: 'Ransomware, the Wiper, TOLLGATE',
     does: 'No single hit takes more than 20% of its max Integrity. Damage past the cap is lost.', telegraph: 'A cap line on its bar and a cap tag with the most one hit can take.', answer: 'Use many small hits. Burns, helpers, Purge\'s ticks, Overvolt\'s two strikes and Shatter\'s shards count.',
     implicit: 'Caps let more of your hits through.', carried: (p) => !!p.limit, bot: { focus: 'last' },
@@ -328,6 +334,11 @@ export const GENES = {
     implicit: 'Seals that land leave more of your ◆ and shield.', bot: { strip: true } },
 };
 for (const [id, g] of Object.entries(GENES)) { g.id = id; g.beat ||= null; g.bot ||= null; g.lever ||= null; }
+// The parts plan's P3 (docs/parts-plan.md): the Cryptominer and the Wiper carry these natives, as their first family
+// has them (unveiled). The Damper is theirs alone.
+const CARRY = { cryptominer: ['idletimer', 'backlog', 'damper'], wiper: ['limiter', 'scraper', 'badblock', 'damper', 'coldstore'] };
+for (const [fam, ids] of Object.entries(CARRY)) for (const id of ids) { const { veiled, ...spec } = Object.values(GENES[id].parts)[0]; GENES[id].parts[fam] = spec; }
+delete GENES.damper.parts.worm;
 export const GENE_IDS = Object.keys(GENES);
 // The mechanics list's genes (a third-part spec with `mech`): they roll only while PARTS.mech is above 0 (parts.mjs).
 export const MECH_GENES = new Set(GENE_IDS.filter((id) => Object.values(GENES[id].parts || {}).some((x) => x.mech)));

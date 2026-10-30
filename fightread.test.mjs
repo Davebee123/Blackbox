@@ -212,7 +212,7 @@ test('part reads stay true to the code: a Lockbox\'s cap, a Mirror\'s reboot, a 
   const bo = body('bouncer', GUARDS.bouncer.parts.filter((x) => !x.kestrel)); // the Bouncer as it stands (Kestrel's Idle Timer joins half of them from floor 3)
   assert.equal(partRead(null, bo, bo.parts.find((p) => p.rearm)).cue.text, 're-arms Gate');
   for (const fam of ['trojan', 'cryptominer', 'wiper']) {
-    const b = body(fam, ROOM_FAMILIES[fam].parts);
+    const b = body(fam, (ROOM_FAMILIES[fam] || FAMILIES[fam]).parts);
     for (const p of b.parts) assert.ok(partRead(null, b, p).does.length > 20, `${fam} ${p.name}`);
   }
   const tro = body('trojan', ROOM_FAMILIES.trojan.parts);

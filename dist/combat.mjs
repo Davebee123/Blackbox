@@ -272,6 +272,9 @@ export function defender(s) {
   return s.encounter?.mode === 'run' ? s.run : s.server;
 }
 export const familyInfo = (id) => FAMILIES[id] || GUARDS[id] || ROOM_FAMILIES[id];
+// The room bodies' rules (families.mjs) run in a room fight, and in any fight of a family whose rules travel with it
+// (data.mjs FAMILIES rules: the Cryptominer, the Wiper).
+const bodyRules = (e) => !!e.rooms || (!!FAMILIES[e.virus?.family]?.rules && !e.virus.strain); // (a strain of theirs, the Hashrat, has its own body)
 
 // Veiled parts hide their attack timers while they still have armor; Blind hides every timer for a
 // few cycles. A Tagged part's timer always shows.
@@ -2941,7 +2944,7 @@ export function hit(s, p, base, opts = {}) {
   if (unlocked) emit(s, 'armor', `The ${p.name}'s lock breaks. The Mutex locks it again in ${CONFIG.mutex.every} cycles unless you break the Mutex.`, { target: p.id, left: p.armor, lock: 'broke' });
   // A server room's bodies' own rules on a hit (families.mjs: a Trojan's Package unpacks). 'gone': the part left the
   // board without breaking. Then the interrupt's ticks (interrupt.mjs), in every fight that has them.
-  if (e.rooms && dealt > 0 && hooks.roomHit && hooks.roomHit(s, p, p.integrity + dealt, dealt, opts) === 'gone') return { dealt, overflow: 0, crit, broke: false };
+  if (bodyRules(e) && dealt > 0 && hooks.roomHit && hooks.roomHit(s, p, p.integrity + dealt, dealt, opts) === 'gone') return { dealt, overflow: 0, crit, broke: false };
   if (e.ticked && dealt > 0) tickHit(s, p, p.integrity + dealt, dealt, opts);
   // Extortion: damage dealt to a winding-up Demand in the 2 cycles before it lands calls it off.
   const w = p.attack?.windup;
@@ -3134,7 +3137,7 @@ function breakPart(s, p) {
   if (hasTalent(s, 'cascade-failure') && !e.once.rampage) { e.once.rampage = true; e.readyAt = {}; emit(s, 'status', 'Cascade Failure resets your cooldowns.'); }
   classEach('broke', s, p);
   if (p.kind !== 'fragment') daemonsOn(s, 'broke', { part: p.id }); // Domino
-  if (e.rooms) hooks.roomBroke?.(s, p); // a room body's rule on a break (families.mjs)
+  if (bodyRules(e)) hooks.roomBroke?.(s, p); // a room body's rule on a break (families.mjs)
   // Uniques that fire on a break (Cryptominer, Zero Cool).
   for (const x of fxFire(s, 'break', { crit: e.lastCrit, target: p })) {
     const who = x.name || x.it.name;
@@ -3919,7 +3922,7 @@ function landAttack(s, p) {
       emit(s, 'spawn', `Fragment ${n} spawns with ${hp} Integrity. It gnaws ${amount} every cycle.`, { source: p.id, target: 'frag' + n });
     }
   }
-  if (e.rooms) hooks.roomLanded?.(s, p, atk); // a room body's attack that got through (families.mjs: a Wiper's Wipe)
+  if (bodyRules(e)) hooks.roomLanded?.(s, p, atk); // a room body's attack that got through (families.mjs: a Wiper's Wipe)
 }
 
 // One player's part of a cycle: their command (or auto-repeat), their daemons, then their burns,
@@ -4436,7 +4439,7 @@ function cycleClose(s, landed) {
     if (defender(s).integrity <= 0) return finish(s, 'crashed');
   }
   // A server room's end of cycle (floorplan.mjs): an elite's enrage, a Lab's overheat, the room bodies' clocks.
-  if (hooks.roomCycle && e.rooms) {
+  if (hooks.roomCycle && bodyRules(e)) {
     hooks.roomCycle(s);
     if (virusIntegrity(s).current === 0) return finish(s, 'victory');
     if (defender(s).integrity <= 0) return finish(s, 'crashed');
@@ -4596,7 +4599,7 @@ export function intents(s, columns = 4) {
   for (const p of livingParts(s)) if (p.frozen && !p.thawed && p.thawAt - e.cycle >= 0 && p.thawAt - e.cycle < columns) out.push({ source: p.id, name: 'Thaw', effect: 'thaw', amount: p.chill ? attackAmount({ ...p, attack: p.chill }) : 0, col: p.thawAt - e.cycle, hidden: false, kind: p.kind });
   for (const p of livingParts(s)) if (asleep(p) && p.bootAt && p.bootAt - e.cycle >= 0 && p.bootAt - e.cycle < columns) out.push({ source: p.id, name: 'Boot', effect: 'boot', amount: Math.round((p.bootFrom?.max || 0) * p.spare.at), col: p.bootAt - e.cycle, hidden: false, kind: p.kind });
   out.push(...told);
-  if (e.rooms && hooks.roomIntents) out.push(...hooks.roomIntents(s, columns)); // a room body's other moves (families.mjs: a Courier's deliveries)
+  if (bodyRules(e) && hooks.roomIntents) out.push(...hooks.roomIntents(s, columns)); // a room body's other moves (families.mjs: a Courier's deliveries)
   // A packed part's chips (packParts): their timing and amount, named ???, marks off (view.mjs). Tells keep their own.
   const pk = new Set(e.virus.parts.filter((p) => packed(s, e.virus, p)).map((p) => p.id));
   if (pk.size) for (const i of out) if (pk.has(i.source) && !i.tell) Object.assign(i, { name: '???', packed: true });

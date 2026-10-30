@@ -16,7 +16,7 @@ import { HUBS, FACTION_FAMILY, hubWall, lockedDown } from './hubs.mjs';
 import { gainComponents } from './salvage.mjs';
 
 export const FLEET = {};
-const SHIP = { ransomware: 'cryptjack', worm: 'splinter', ghostroot: 'ghostroot' };
+const SHIP = { ransomware: 'cryptjack', worm: 'splinter', ghostroot: 'ghostroot', cryptominer: 'xmrig', wiper: 'shamoon' };
 export const fleetOf = (s) => s.fleet || null;
 const clock = () => hooks.now?.() ?? Date.now();
 

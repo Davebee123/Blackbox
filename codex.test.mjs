@@ -242,10 +242,10 @@ test('the index lists every family a player can meet, old and room bodies, with 
 // (??? until decoded, its numbers at 3, its rule and answer at 15, its drop at 60) and its own component, and the
 // guards' page has Kestrel's Idle Timer.
 test('the P2 parts: a card each, with research tiers and a component, and Kestrel\'s Idle Timer on every guard\'s page', () => {
-  const P2 = { ransomware: ['limiter', 'scraper', 'coldstore'], worm: ['spare', 'damper'], ghostroot: ['spare', 'packer', 'badblock'] };
+  const P2 = { ransomware: ['limiter', 'scraper', 'coldstore'], worm: ['spare'], ghostroot: ['spare', 'packer', 'badblock'], cryptominer: ['damper'], wiper: ['limiter', 'scraper', 'badblock', 'damper', 'coldstore'] };
   const s = fresh();
   s.hackers = { [s.loadout.archetype]: { level: 30, xp: 0 } };
-  s.met = { ransomware: true, worm: true, ghostroot: true, watchdog: true };
+  s.met = { ransomware: true, worm: true, ghostroot: true, cryptominer: true, wiper: true, watchdog: true };
   for (const [f, ids] of Object.entries(P2)) for (const id of ids) {
     const x = partsOf(s, 'family', f).find((c) => c.spec.id === id);
     assert.ok(x?.part, `${f} ${id} has a card`);

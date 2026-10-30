@@ -27,10 +27,8 @@ export const RIVAL = {
   rarity: 'tuned',
 };
 
-// The roster. lineup: its fights in order, a family (genes: its third) or a named build (strain). ESCROW's lineup
-// stands in for the Wiper and the Cryptominer until they join the families (docs/parts-plan.md P3): the Hashrat (the
-// Cryptominer's build to be) and TOLLGATE's Bricker. reads: [read, counter] in order, the first that matches, else the
-// last.
+// The roster. lineup: its fights in order, a family (genes: its third) or a named build (strain). reads: [read,
+// counter] in order, the first that matches, else the last.
 export const RIVALS = {
   kudzu: {
     name: 'KUDZU', crew: 'swarmline', lineup: [{ family: 'trojan' }, { family: 'worm', genes: ['twin'] }, { family: 'worm' }],
@@ -39,7 +37,7 @@ export const RIVALS = {
     wick: { first: 'kudzu. swarmline sends it. it grows back if you let it.', won: 'kudzu. you beat it last time. it\'s been practising.', counter: { patcher: 'it saw you burst the first one. it brought a patcher.' } },
   },
   escrow: {
-    name: 'ESCROW', crew: 'tollgate', lineup: [{ family: 'ransomware' }, { strain: 'hashrat' }, { strain: 'bricker' }],
+    name: 'ESCROW', crew: 'tollgate', lineup: [{ family: 'ransomware' }, { family: 'wiper' }, { family: 'cryptominer' }],
     reads: [['burst', 'mutexlock'], ['slow', 'deadline'], ['burns', 'deadline'], ['strips', 'ward']],
     line: (m) => `Invoice ${String(417 + (m.met || 0)).padStart(4, '0')}. Your time is billable.`,
     wick: { first: 'escrow\'s here. it bills by the cycle. don\'t pay.', won: 'escrow again. it kept your invoice.', counter: { deadline: 'you made escrow wait. it brought a deadline.' } },

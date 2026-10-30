@@ -378,6 +378,7 @@ export const BASICS = {
   cipherblock: { name: 'Cipher Block', integrity: 30, armor: 1, loot: 'Cipher Plate', cipher: 0.25, attack: { name: 'Cipher', k: 0.67, interval: 4, first: 3 } },
   fanin: { name: 'Fan-in', integrity: 30, armor: 1, loot: 'Fan-in Bus', fanin: 0.5, attack: { name: 'Fan-in', k: 0.46, interval: 4, first: 4 } },
   obfuscator: { name: 'Obfuscator', integrity: 22, armor: 1, veiled: true, loot: 'Smoke Lens', obfuscate: true },
+  cooler: { name: 'Cooler', integrity: 26, armor: 1, loot: 'Heat Pipe', cools: true }, // the Rig heats 10 a cycle while it lives, 25 once it breaks (families.mjs)
 };
 // What a part (or a spec) lands in a fight's first 20 cycles if nothing were broken, as families.mjs pressureOf counts it:
 // a hit its amount (a volley each of its hits), an Encrypt its stack every cycle from its landing, a Replicate its
@@ -388,7 +389,7 @@ export function nominal(p, until = 20) {
   if (!a) return 0;
   let n = 0;
   for (let c = a.first ?? a.due, k = 0; c <= until; k++) {
-    if (a.effect === 'damage') n += a.amount;
+    if (a.effect === 'damage') n += a.amount + (a.ramp ? k * (a.rampBy ?? a.ramp) : 0); // a ramp (the Rig's Hash) climbs each landing (a built part's by its rampBy)
     if (a.effect === 'encrypt') n += a.amount * (until - c); // its stack ticks from the next cycle on
     if (a.effect === 'replicate') n += (a.hit || 0) + CONFIG.fragmentDamage * 4;
     if (a.effect === 'scramble') n += (a.hit || 0) + a.amount * 3;
@@ -438,7 +439,7 @@ export const FAMILIES = {
     summary: 'Spawns fragments that gnaw your server every cycle. The Replicator makes them.',
     core: ['surge', 'replicate'],
     basic: [['strobe', 1], ['repeater', 3], ['fanin', 5]],
-    third: ['twin', 'zipbomb', 'c2', 'backlog', 'spare', 'damper', 'amplifier', 'lag', 'thorns', 'bodyguard', 'vendetta', 'countdown', 'junk', 'leak', 'backtrace'], // the Mirror from level 3, the Zip Bomb from 5, the C2 Node from 8, the Backlog from 12, the Spare from 14, the Damper from 23; the mechanics list's: the Amplifier from 5, the Jitter and the Thorns from 7, the Bodyguard from 9, the Vendetta from 11, the Countdown from 13, the Junker from 14, the Leaker from 9 (the Doomsday's, to spread), the Backtrace from 16 (the Junkyard's)
+    third: ['twin', 'zipbomb', 'c2', 'backlog', 'spare', 'amplifier', 'lag', 'thorns', 'bodyguard', 'vendetta', 'countdown', 'junk', 'leak', 'backtrace'], // the Mirror from level 3, the Zip Bomb from 5, the C2 Node from 8, the Backlog from 12, the Spare from 14; the mechanics list's: the Amplifier from 5, the Jitter and the Thorns from 7, the Bodyguard from 9, the Vendetta from 11, the Countdown from 13, the Junker from 14, the Leaker from 9 (the Doomsday's, to spread), the Backtrace from 16 (the Junkyard's)
     parts: [
       { id: 'pulse', name: 'Pulse Node', integrity: 34, armor: 1, loot: 'Pulse Kernel', attack: { name: 'Surge', effect: 'damage', amount: 12, interval: 4, first: 4 } },
       { id: 'replicator', name: 'Replicator', integrity: 38, armor: 1, loot: 'Replication Seed', special: true, attack: { name: 'Replicate', effect: 'replicate', amount: 1, interval: 4, first: 3, hit: 4 } }, // a small Splice hit with each spawn
@@ -458,6 +459,37 @@ export const FAMILIES = {
       { id: 'scrambler', name: 'Scrambler', integrity: 40, armor: 1, veiled: true, loot: 'Signal Key', special: true, attack: { name: 'Scramble', effect: 'scramble', amount: 2, hit: 9, interval: 4, first: 2 } },
     ],
   },
+  // The parts plan's P3 (docs/parts-plan.md): two families that open deeper (opens: the level and floor they're first
+  // sent from), with their rules in families.mjs. rules: their bodies' rules run in every fight, not just a room's.
+  cryptominer: {
+    name: 'Cryptominer',
+    stem: 'XMRIG',
+    threatens: 'Integrity',
+    opens: { level: 9, floor: 2 }, rules: true, art: 'ransomware',
+    summary: 'The Rig\'s Hash lands every 2 cycles, dealing more each time, and the Rig heats up every cycle. At 100 heat it overheats, stops hashing and burns itself until it breaks. Hitting it across a tick vents it.',
+    core: ['surge', 'hash'],
+    basic: [['cooler', 1], ['strobe', 1], ['accumulator', 1]],
+    third: ['idletimer', 'backlog', 'damper'], // the Idle Timer from 9, the Backlog from 12, the Damper from 23 (P4 adds the Reactor, Monitor and Reservoir)
+    parts: [
+      { id: 'pulse', name: 'Pulse Node', integrity: 34, armor: 1, loot: 'Pulse Kernel', attack: { name: 'Surge', effect: 'damage', amount: 12, interval: 4, first: 3 } },
+      { id: 'rig', name: 'Rig', integrity: 40, armor: 1, loot: 'ASIC Die', special: true, hash: true, attack: { name: 'Hash', effect: 'damage', amount: 5, interval: 2, first: 2, ramp: 1 } },
+    ],
+  },
+  wiper: {
+    name: 'Wiper',
+    stem: 'SHAMOON',
+    threatens: 'Integrity',
+    opens: { level: 19, floor: 4 }, rules: true, art: 'ransomware',
+    summary: 'The Degausser\'s Wipe deals damage and takes your strongest ready key off your bar for 3 cycles. A wiped key can\'t be pressed, and its cooldown stands still. Key 1 and SIGINT are never wiped.',
+    core: ['surge', 'wipe'],
+    basic: [['accumulator', 1], ['repeater', 1], ['buffer', 1]],
+    third: ['limiter', 'scraper', 'badblock', 'damper', 'coldstore'], // the Limiter from 13, the Scraper from 19, the Bad Block from 21, the Damper from 23, the Cold Store from 24 (P4 adds the Latch and Bleeder)
+    parts: [
+      // The Eraser is its Pulse Node: the plain attacker every basic is matched to.
+      { id: 'pulse', name: 'Eraser', integrity: 34, armor: 1, loot: 'Zero Block', attack: { name: 'Zero', effect: 'damage', amount: 12, interval: 4, first: 3 } },
+      { id: 'degausser', name: 'Degausser', integrity: 38, armor: 1, loot: 'Degauss Coil', special: true, attack: { name: 'Wipe', effect: 'damage', amount: 10, interval: 5, first: 3, wipe: 'strongest', wipeFor: 3 } },
+    ],
+  },
 };
 for (const [k, f] of Object.entries(FAMILIES)) f.parts.push(...f.basic.map(([id, from]) => basicOf(k, id, from)), ...thirds(k, f.third));
 
@@ -475,7 +507,7 @@ export const STRAINS = {
     parts: [PULSE(12, 3), { id: 'logger', name: 'Logger', integrity: 30, armor: 1, loot: 'Logger Spool', special: true, syncOnly: true, attack: { name: 'Dump', effect: 'damage', amount: 18, interval: 6, first: 6, dump: true } }],
   },
   hashrat: {
-    lineage: 'ransomware', from: 5, depth: 2, name: 'Hashrat', genes: ['cycletax'], tell: { name: 'Overcharge', part: 'basic', gene: 'overcharge' },
+    lineage: 'cryptominer', from: 5, depth: 2, name: 'Hashrat', genes: ['cycletax'], tell: { name: 'Overcharge', part: 'basic', gene: 'overcharge' },
     rule: 'While the Miner stands, your cooldowns tick down only every other cycle. As the last part left, the Miner\'s Overclock deals 4 damage to you every 2 cycles.',
     answer: 'Break the Miner first.',
     parts: [PULSE(12, 3), { id: 'miner', name: 'Miner', integrity: 30, armor: 0, loot: 'Miner Rig', special: true, tax: true, attack: { name: 'Overclock', effect: 'damage', amount: 4, interval: 2, first: 2, alone: true } }],
@@ -773,6 +805,8 @@ export const FIXTURES = {
   cryptjack: { name: 'CRYPTJACK', family: 'ransomware', mutation: null, threat: 15 },
   splinter: { name: 'SPLINTER', family: 'worm', mutation: 'regenerative', threat: 14 },
   ghostroot: { name: 'GHOSTROOT', family: 'ghostroot', mutation: 'hasty', threat: 15 },
+  xmrig: { name: 'XMRIG', family: 'cryptominer', mutation: null, threat: 18 },
+  shamoon: { name: 'SHAMOON', family: 'wiper', mutation: null, threat: 28 },
   watchdog: { name: 'WATCHDOG', family: 'watchdog', mutation: null, threat: 13 },
   sentinel: { name: 'SENTINEL', family: 'sentinel', mutation: null, threat: 13 },
   crawler: { name: 'CRAWLER', family: 'crawler', mutation: null, threat: 13 },
@@ -781,8 +815,8 @@ export const FIXTURES = {
   tracer: { name: 'TRACER', family: 'tracer', mutation: null, threat: 13 },
 };
 
-// Bodies that live only in server rooms (dist/families.mjs registers the Trojan, the Cryptominer and the Wiper here for
-// the rooms playtest, GAME_RULES.md "Developer tools"). They are kept out of FAMILIES so nothing in the old game rolls them.
+// Bodies that live only in server rooms (dist/families.mjs registers the Trojan and the Exfil here). They are kept out of
+// FAMILIES so nothing outside the rooms rolls them.
 export const ROOM_FAMILIES = {};
 const familyOf = (id) => FAMILIES[id] || GUARDS[id] || ROOM_FAMILIES[id];
 
@@ -812,6 +846,7 @@ export function makePart(spec, kind, scale, extraArmor = 0) {
     loot: spec.loot || null,
     special: !!spec.special,
     syncOnly: !!spec.syncOnly, // Keylogger's Logger: only commands fired in a Sync Window hurt it
+    ...(spec.hash ? { hash: true } : {}), // the Cryptominer's Rig (families.mjs: heat, vent)
     tax: !!spec.tax, // Hashrat's Miner: your cooldowns run at half speed while it lives
     phase: !!spec.phase, // Flicker's Shade: only there on even cycles
     echo: !!spec.echo, // Echo: every hit you take repeats next cycle at half
@@ -966,6 +1001,8 @@ export const BOSSES = {
   // HASHLORD, rebuilt (GAME_RULES.md "Solo bosses"): GLASSJAW's Hashrat build, from level 16. A Pool Lock wards its Miner, but only
   // against your commands: burns and helpers go through at full. Block Reward (a Self-Update on the Miner) and the Chain Fork
   // at half, when a second Miner spins up (the tax comes back if the first is gone, and the Pool Lock wards it too).
+  // Its family stays the Ransomware's though the Hashrat is the Cryptominer's since P3: as a Cryptominer its tells' jitter
+  // (keyed on its id) moved its band past the read-over-blind margin (genesim.test.mjs). The designer's call.
   'nb-hashlord': { name: 'HASHLORD', family: 'ransomware', strain: 'hashrat', native: true, lair: 'HASHLORD-RIG', charge: 'Difficulty Bomb', floor: 16, band: 'B',
     extra: [{ id: 'poollock', name: 'Pool Lock', integrity: 16, armor: 0, loot: 'Lock Pin', ward: 'miner', wardCommands: true }],
     signature: { name: 'Chain Fork', rule: 'At half Integrity, a second Miner spins up. Its cycle tax returns if the first Miner is gone, and the Pool Lock wards it too while the Lock stands.' },
@@ -1080,6 +1117,8 @@ export const TELLS = {
   fulldisk: { kind: 'charge', name: 'Full Disk', gene: 'fulldisk', part: 'special' }, // an Encrypt with a burst of encryption on top for 3 cycles
   massmailer: { kind: 'charge', name: 'Mass Mailer', gene: 'massmailer', part: 'special', spawn: 0 }, // a Replicate that hatches two (up to the limit); one more on top before R1, when a burst could answer it
   possession: { kind: 'charge', name: 'Possession', gene: 'possession', part: 'special', longer: 2 }, // a Scramble that lasts two cycles longer (Scrub clears it)
+  hashburst: { kind: 'charge', name: 'Hash Burst', gene: 'overcharge', part: 'special' }, // the Cryptominer: an Overcharge on the Rig
+  zerofill: { kind: 'charge', name: 'Zero Fill', gene: 'overcharge', part: 'special' }, // the Wiper: an Overcharge on the Degausser
   lockon: { kind: 'charge', name: 'Lock-on', gene: 'overcharge', part: 'special' }, // Watchdog, Tracer: the Tracker
   infest: { kind: 'charge', name: 'Infest', gene: 'massmailer', part: 'special', spawn: 0 }, // Crawler: the Brood
   deepshred: { kind: 'charge', name: 'Deep Shred', gene: 'overcharge', part: 'special', shred: true }, // Shredder: it shreds a file in your pack too
@@ -1087,6 +1126,8 @@ export const TELLS = {
   ram: { kind: 'charge', name: 'Battering Ram', gene: 'batteringram', part: 'basic' }, // Bouncer (only its Gate attacks): the Gate wears ◆, so it mostly asks for ◆2 in the window
   // Casts (from level 10): SIGINT or a cut in its window, or break the part.
   extortion: { kind: 'cast', name: 'Double Extortion', gene: 'doubleextortion', part: 'special', does: 'loud' }, // its attacks hit 35% harder for 4 cycles
+  turbo: { kind: 'cast', name: 'Turbo Boost', gene: 'doubleextortion', part: 'special', does: 'loud' }, // the Cryptominer's Double Extortion
+  fastwipe: { kind: 'cast', name: 'Fast Wipe', gene: 'persistence', part: 'special', does: 'haste' }, // the Wiper's Persistence
   selfupdate: { kind: 'cast', name: 'Self-Update', gene: 'selfupdate', part: 'special', does: 'grow' }, // every part grows a quarter of its current Integrity
   persistence: { kind: 'cast', name: 'Persistence', gene: 'persistence', part: 'special', does: 'haste' }, // its attacks repeat a cycle faster for 4 cycles
   callhome: { kind: 'cast', name: 'Call Home', gene: 'persistence', part: 'special', does: 'haste' }, // guards
@@ -1094,6 +1135,8 @@ export const TELLS = {
   keyrotation: { kind: 'seal', name: 'Key Rotation', gene: 'rekey', part: 'special' },
   resync: { kind: 'seal', name: 'Resync', gene: 'rekey', part: 'special' },
   godark: { kind: 'seal', name: 'Go Dark', gene: 'rekey', part: 'special' },
+  coldboot: { kind: 'seal', name: 'Cold Boot', gene: 'rekey', part: 'special' }, // the Cryptominer's
+  writelock: { kind: 'seal', name: 'Write Lock', gene: 'rekey', part: 'special' }, // the Wiper's
   blacklist: { kind: 'seal', name: 'Blacklist', gene: 'rekey', part: 'special' }, // Sentinel: the Lockout
   // The Mimic's beat (a part's nature, not counted against the tier's count): every 4 cycles from cycle 3.
   mimic: { kind: 'mimic', name: 'Mimic', gene: 'mimic', part: 'mimic', first: 3, every: 4 },
@@ -1114,6 +1157,8 @@ export const TELL_SETS = {
   ransomware: ['fulldisk', 'extortion', 'overcharge', 'keyrotation'],
   worm: ['massmailer', 'selfupdate', 'overcharge', 'resync'],
   ghostroot: ['possession', 'persistence', 'overcharge', 'godark'],
+  cryptominer: ['hashburst', 'turbo', 'overcharge', 'coldboot'],
+  wiper: ['zerofill', 'fastwipe', 'overcharge', 'writelock'],
   watchdog: ['lockon', 'callhome', 'overcharge'],
   sentinel: ['blacklist', 'callhome'],
   crawler: ['infest', 'callhome', 'overcharge'],
@@ -1164,10 +1209,10 @@ export function authorOf({ family, strain = null, boss = null }, context) {
   return crewOf(family);
 }
 
-// Every family's budget over a typical fight of T cycles (PARTS.horizon): the average of the families' pre-P1 fights
-// (the Pulse Node and the signature), so all three deal the same and only the shape differs.
-const budgets = {};
-export const profileBudget = (T) => (budgets[T] ??= Object.keys(PARTS.profile).reduce((n, f) => n + FAMILIES[f].parts.filter((x) => x.id === 'pulse' || x.special).reduce((m, x) => m + nominal(x, T), 0), 0) / Object.keys(PARTS.profile).length);
+// Every family's budget over a typical fight of T cycles (PARTS.horizon): the average of the first three families'
+// pre-P1 fights (the Pulse Node and the signature), so every family deals the same and only the shape differs.
+const budgets = {}, BUDGET_FAMILIES = ['ransomware', 'worm', 'ghostroot'];
+export const profileBudget = (T) => (budgets[T] ??= BUDGET_FAMILIES.reduce((n, f) => n + FAMILIES[f].parts.filter((x) => x.id === 'pulse' || x.special).reduce((m, x) => m + nominal(x, T), 0), 0) / BUDGET_FAMILIES.length);
 // The profile share-out of a rolled fight (createVirus), before the level's damage scale, in nominal's units over T. Each
 // role's parts scale to its share (within PARTS.pressure); a role nothing here carries moves onto the basic (the ramp
 // as a Ratchet, the burst as the Scrambler's hit and Scramble on the basic's hits); what's still left goes onto
@@ -1223,7 +1268,7 @@ function shareProfile(familyId, family, specs, parts, r, level) {
     if (k === 1 || !p.attack) continue;
     const a = p.attack;
     if (a.effect === 'damage' && !p.taps && k > 1 && a.amount * k > top && a.interval > 2) { const want = a.amount * k, every = Math.max(2, Math.round((a.interval * top) / want)); a.amount = Math.min(top, (want * every) / a.interval); a.interval = every; a.first = a.due = Math.max(2, Math.min(a.due, every + 1)); }
-    else if (scalable(p)) a.amount = a.effect === 'damage' && k > 1 ? Math.min(Math.max(a.amount, top), a.amount * k) : a.amount * k;
+    else if (scalable(p)) { a.amount = a.effect === 'damage' && k > 1 ? Math.min(Math.max(a.amount, top), a.amount * k) : a.amount * k; if (a.ramp) a.ramp *= k; } // a ramp (the Rig's) climbs in step
   }
 }
 
@@ -1236,7 +1281,7 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   const fixture = FIXTURES[key];
   const forced = STRAINS[key] ? key : null;
   if (!random && !fixture && !forced) throw new Error('Unknown fixture ' + key);
-  const homeFamilies = Object.keys(FAMILIES);
+  const homeFamilies = Object.keys(FAMILIES).filter((f) => !FAMILIES[f].opens); // the later families come only by name (a server's, a lean's)
   const familyId = overrides.family || BOSSES[overrides.boss]?.family || (forced ? STRAINS[forced].lineage : random ? homeFamilies[Math.floor(next() * homeFamilies.length)] : fixture.family);
   const family = familyOf(familyId);
   const mutationIds = ROLLED_MUTATIONS;
@@ -1309,14 +1354,14 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   const step = overrides.run ? (CONFIG.runEarly[level - 1] ?? 1) * (overrides.boss || overrides.elite ? 1 : runLate(level)) : 1;
   const dmgScale = mobPower(level) * (1 + CONFIG.enemyRamp * (level - 1)) * g.dmg * (overrides.run ? CONFIG.runDamage * step : 1);
   // Encryption stacks, so it skips the early-game and late steps (they would compound).
-  for (const p of parts) if (p.attack && ['damage', 'encrypt'].includes(p.attack.effect)) p.attack.amount = Math.max(1, Math.round(p.attack.amount * dmgScale / (p.attack.effect === 'encrypt' ? step : 1)));
+  for (const p of parts) if (p.attack && ['damage', 'encrypt'].includes(p.attack.effect)) p.attack.amount = Math.max(1, Math.round(p.attack.amount * dmgScale / (p.attack.effect === 'encrypt' || p.hash ? step : 1))); // a Rig's Hash climbs like encryption: it skips them too
   for (const p of parts) if (p.attack?.effect === 'heal') p.attack.amount = Math.max(1, Math.round(p.attack.amount * scale * g.hp));
   for (const p of parts) if (p.attack?.hit) p.attack.hit = Math.max(1, Math.round(p.attack.hit * dmgScale)); // a special that also hits (the Scrambler)
   for (const p of parts) if (p.attack?.grow) p.attack.grow = Math.max(1, Math.round(p.attack.grow * dmgScale));
   for (const p of parts) if (p.attack?.windup) p.attack.windup = Math.max(1, Math.round(p.attack.windup * scale * g.hp));
   if (strain?.enrage) for (const p of parts) p.enrage = true;
   for (const p of parts) if (p.ratchet) p.ratchet.amount = Math.max(1, Math.round((p.ratchet.amount * dmgScale) / step)); // a Ratchet stacks like encryption: the same steps skipped
-  for (const p of parts) if (p.attack?.ramp) { p.attack.rampBy = Math.max(1, Math.round(p.attack.ramp * dmgScale)); p.attack.step = 0; }
+  for (const p of parts) if (p.attack?.ramp) { p.attack.rampBy = Math.max(1, p.hash ? (p.attack.ramp * dmgScale) / step : Math.round(p.attack.ramp * dmgScale)); p.attack.step = 0; } // a Rig's climb compounds like encryption (the same steps skipped) and stays exact (attackAmount rounds each Hash)
   const sooner = (mutation === 'hasty' ? 1 : 0) + (threat >= THREAT_STEPS.sooner ? 1 : 0);
   for (const p of parts) if (p.attack && p.attack.due < 900) p.attack.due = Math.max(2, p.attack.due - sooner); // never on cycle 1: you always get a move first
   // Hasty also repeats faster (at least every 2 cycles), so it stays a pressure mutation at every level.
@@ -1383,7 +1428,7 @@ export function createLocation(family, seed, depth = 1) {
   const pick = (list) => list[Math.floor(next() * list.length)];
   const owner = pick(OWNERS);
   const node = pick(NODES);
-  const others = Object.keys(FAMILIES).filter((f) => f !== family);
+  const others = Object.keys(FAMILIES).filter((f) => f !== family && !FAMILIES[f].opens); // the trace leads to one of the first three
   return {
     id: `${owner}-${node}-${String(seed % 100).padStart(2, '0')}`.toLowerCase(),
     name: `${owner}-${node}-${String(seed % 100).padStart(2, '0')}`,

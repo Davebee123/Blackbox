@@ -1,8 +1,9 @@
 # Parts plan: more virus variety
 
-Something new every 2–3 levels from 1 to 50. Built: P1 (the basic slot, levels 1–12, damage profiles) and P2 (floors
-2–4, natives, the Packer, Spare, Scraper and Shunt rework), with the basic parts, the roll and the damage profiles in
-GAME_RULES.md "Viruses". Left: P3 (two new families) and P4 (the deep-floor thirds), both in the backlog.
+Something new every 2–3 levels from 1 to 50. Built: P1 (the basic slot, levels 1–12, damage profiles), P2 (floors
+2–4, natives, the Packer, Spare, Scraper and Shunt rework) and P3 (the Cryptominer and the Wiper), with the basic
+parts, the roll, the damage profiles and the families in GAME_RULES.md "Viruses". Left: P4 (the deep-floor thirds),
+in the backlog.
 
 ## Principles
 
@@ -15,7 +16,10 @@ GAME_RULES.md "Viruses". Left: P3 (two new families) and P4 (the deep-floor thir
 - **Honest costs.** A third costs genome budget (1 to 3), set by the per-gene harness, not by guesswork.
 - **Names** are visual or mechanical, in computing words. No intrusion words.
 
-## P3: two new families
+## P3: two new families (built)
+
+Built as below, with these choices: the Wiper's Pulse Node is its Eraser; neither pool holds a lever yet; a random
+virus with no family named stays one of the first three; a Hash climbs like encryption (the run's steps skip it).
 
 The rooms engine's bodies (`families.mjs` `ROOM_FAMILIES`) move into `FAMILIES`, so the rooms playtest and the game
 read one definition.
@@ -90,7 +94,7 @@ bosses, when built, take their floor's natives.
 | Phase | Contents | Tests and checks |
 |---|---|---|
 | P1, P2 | Built. | `parts.test.mjs`, `floors.test.mjs`, `codex.test.mjs`, `tips.test.mjs` |
-| **P3** | The Cryptominer and the Wiper into `FAMILIES`, with crews, network lean, invasions, rogue servers, Codex pages and tips; their thirds join the pools; the Damper's weight up. | `families.test.mjs`, `genome.test.mjs`, `roomsim.mjs` unchanged, `balance.mjs` at 10, 18 and 30, the kinds table again |
+| P3 (built) | The Cryptominer and the Wiper into `FAMILIES`, with crews, network lean, invasions, rogue servers, Codex pages and tips; their thirds join the pools; the Damper's weight up. | `families.test.mjs`, `genome.test.mjs`, `roomsim.mjs` unchanged, `balance.mjs` at 10, 18 and 30, the kinds table again |
 | **P4** | The ten deep-floor thirds above. | `balance.mjs` at 30 and 50 (watch the Phantom's opening burst against smaller parts), genesim, spike cap, the kinds table to 50 |
 
 Each phase ends with `npm test`, `node balance.mjs` into docs/BALANCE.md, and a playtest page per new part.

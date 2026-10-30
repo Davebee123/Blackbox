@@ -458,7 +458,9 @@ export const MATERIALS = {
   kernel: { name: 'Kernel code', short: 'Kernel', family: 'ghostroot' },
   exploit: { name: 'Exploits', short: 'Exploits', family: null },
 };
-export const codeOf = (family) => Object.keys(MATERIALS).find((k) => MATERIALS[k].family === family) || null;
+// The later families give their crews' code: the Cryptominer and the Wiper cipher, the Trojan worm.
+const CODE_ALSO = { trojan: 'worm', cryptominer: 'cipher', wiper: 'cipher' };
+export const codeOf = (family) => Object.keys(MATERIALS).find((k) => MATERIALS[k].family === family) || CODE_ALSO[family] || null;
 // How much code a kill drops (1 at level 1, 6 at 50); guards give half again; vault caches more.
 export const codeDrop = (level) => 1 + Math.floor(Math.max(1, level) / 10);
 export const EXPLOIT_CHANCE = { home: 0.04, guard: 0.08 };

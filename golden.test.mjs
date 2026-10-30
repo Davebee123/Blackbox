@@ -39,13 +39,13 @@ function config(i) {
   const r = (n) => (Math.imul(i + 1, 2654435761) >>> 0) % n;
   const seed = (i * 7919 + 13) >>> 0, threat = 10 + (i % 52), o = { threat, run: i % 3 !== 0 };
   if (i % 5 === 1) o.family = ['ransomware', 'worm', 'ghostroot'][r(3)];
-  if (i % 7 === 2) { const st = OLD_STRAINS[r(OLD_STRAINS.length)]; o.strain = st; o.family = STRAINS[st].lineage; }
+  if (i % 7 === 2) { const st = OLD_STRAINS[r(OLD_STRAINS.length)]; o.strain = st; o.family = OLD[st].lineage; } // the frozen lineage (the Hashrat was Ransomware's before P3)
   if (i % 4 === 3) o.grade = 1 + r(3);
   if (i % 9 === 4) o.mutation = null;
   if (i % 11 === 5) o.mutation = ['armored', 'regenerative', 'hasty', 'adaptive', 'rerouting'][r(5)];
   if (i % 13 === 6) { o.elite = true; if (r(2)) o.eliteHp = 1; }
-  if (i % 17 === 7) { const b = SOLO[r(SOLO.length)]; o.boss = b; o.family = BOSSES[b].family || 'ransomware'; o.strain = BOSSES[b].strain || undefined; o.mutation = null; if (r(3) === 0) o.bossHp = 0.75; }
-  const keys = ['random', 'random', 'random', ...Object.keys(FIXTURES), ...OLD_STRAINS];
+  if (i % 17 === 7) { const b = SOLO[r(SOLO.length)]; o.boss = b; o.family = (BOSSES[b].strain && OLD[BOSSES[b].strain]?.lineage) || BOSSES[b].family || 'ransomware'; o.strain = BOSSES[b].strain || undefined; o.mutation = null; if (r(3) === 0) o.bossHp = 0.75; }
+  const keys = ['random', 'random', 'random', ...Object.keys(FIXTURES).filter((k) => !['xmrig', 'shamoon'].includes(k)), ...OLD_STRAINS.filter((st) => OLD[st].lineage === STRAINS[st].lineage)]; // the P3 families' fixtures, and the Hashrat's move to the Cryptominer, came after the frozen builder
   const key = i % 6 === 5 ? keys[r(keys.length)] : 'random';
   return { key, seed, o: key === 'random' ? o : { threat, run: o.run, ...(o.grade ? { grade: o.grade } : {}) } };
 }

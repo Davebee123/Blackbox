@@ -94,8 +94,8 @@ export function rogueSpawns(s, loc, now = clock()) {
     const n = (loc.serial = (loc.serial || 0) + 1);
     const seed = ((loc.seed || 1) * 131 + n * 7919) >>> 0;
     const r = seeded(seed);
-    const family = loc.rogue.kind === 'nest' ? loc.family : leanPick(s, who, r());
     const level = (loc.level || 1) + (loc.rogue.kind === 'pit' ? ROGUE.pitLevels : 0);
+    const family = loc.rogue.kind === 'nest' ? loc.family : leanPick(s, who, r(), { level, floor: loc.depth || 1 }); // the later families too, once open
     let { grade, strain } = variantFor(family, level, loc.depth || 1, seed, native);
     if (!strain && loc.rogue.kind === 'nest') strain = variantFor(family, level, loc.depth || 1, seed ^ 0x9e37, native).strain; // twice the chances
     const label = strain ? STRAINS[strain].name.toLowerCase() : FAMILIES[family].stem.toLowerCase(); // a build's name or the body's stem, as the fight is named

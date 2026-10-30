@@ -201,22 +201,25 @@ Numbers at enemy level 6; Integrity and damage grow 4% a level (a level-1 virus 
 | Ransomware (CRYPTJACK) | Pulse Node: 34, ◆, Surge 14 every 4 (first 3) | Encryptor: 38, ◆ (◆◆ from 5), Encrypt every 5 (first 4): +4 damage a cycle, stacking, until it breaks |
 | Worm (SPLINTER) | Pulse Node: 34, ◆, Surge 12 every 4 (first 4) | Replicator: 38, ◆ (◆◆ from 5), spawns a fragment every 4 (first 3) with a 4-damage Splice. Fragments: 18, bare, gnaw 3 every cycle, at most 3 |
 | Ghostroot (GHOSTROOT) | Pulse Node: 34, ◆, veiled, Surge 11 every 4 (first 3) | Scrambler: 40, ◆ (◆◆ from 5), veiled, Scramble every 4 (first 2), hitting for 9 |
+| Cryptominer (XMRIG), from 9 on floor 2 | Pulse Node: 34, ◆, Surge 12 every 4 (first 3) | **Rig**: 40, ◆ (◆◆ from 5), Hash 5 every 2 (first 2), 1 more each landing. It heats 10 a cycle; at 100 it overheats and burns itself out. Its ticks vent it. |
+| Wiper (SHAMOON), from 19 on floor 4 | Eraser: 34, ◆, Zero 12 every 4 (first 3) | **Degausser**: 38, ◆ (◆◆ from 5), Wipe 10 every 5 (first 3): takes your strongest ready key for 3 cycles (*WIPED*), its cooldown standing still. Never key 1 or SIGINT. |
 
-**Room bodies.** A traced server's rooms also field three bodies by their authors (`families.mjs`):
+GLASSJAW writes the Cryptominer (and the Hashrat), TOLLGATE the Wiper. Their rules run in any fight (`families.mjs`).
+Servers, rogue folders and invasions send them once a server's level and floor allow (`network.mjs` `lateFamilies`,
+lean 1.5 each); a random virus with no family named stays one of the first three. A Hash climbs like encryption
+(the run's early and late steps skip it). A Cooler in the fight keeps the Rig at 10 heat a cycle; break it and the
+Rig heats 25 a cycle, every Hash 50% harder.
+
+**The Trojan.** A traced server's rooms also field a body by its authors (`families.mjs`):
 - **Trojan** (SWARMLINE, LANTERN). The Courier drops a hit and delivers Packages; the fight opens with one on the board.
   While the Loader lives, any damage to a Package unpacks it into two Droppers (Spray 2 every 2), and one left alone
   unpacks 5 cycles after delivery. **The Loader redeploys the Courier**: break it and it comes back 4 cycles later at
   half its max, every time (a Redeploy chip and a tether; ↻ N while it's down). Break the Loader and the Courier stays
   down and the Packages go inert. The Courier's ticks cancel a delivery; the Loader's delay the next by 2.
-- **Cryptominer** (TOLLGATE, GLASSJAW). The Rig's Hash climbs each time it lands and its heat every cycle (faster, and
-  every Hash 50% harder, once the Cooler breaks); at 100 heat it overheats and burns itself out. Its ticks vent it. Break
-  the Rig first and the Cooler **falls back** on it, hashing uncooled (25 heat a cycle) until it cooks.
-- **Wiper** (TOLLGATE, GLASSJAW). The Degausser's Wipe hits and takes a key off your bar (*WIPED*: your strongest ready
-  skill for 3 cycles, or your last one for 2), its cooldown standing still. Key 1 and SIGINT are never wiped.
 
 **Attack sets.** Each spawn rolls its set (Ransomware Standard, Lockout, Hammer or Lockstep; Worm Standard, Bloom or
 Wave; Ghostroot Standard, Ambush or Flicker; Trojan Express or Freight; Cryptominer Cold or Hot rig; Wiper Targeted or
-Rolling), and each part's first attack moves a cycle either way. A set changes when things land, not how much (within
+Rolling, the Rolling Wipe taking your last key for 2), and each part's first attack moves a cycle either way. A set changes when things land, not how much (within
 5% over 20 cycles). The room's card never names it: you read it on the board, and the Codex keeps every set you've
 faced. Bosses and the farm keep their own timing.
 
@@ -237,16 +240,18 @@ when the server is built. Every number is a named constant in `PARTS`; `develope
 - **The total stays the same.** A fight's Integrity and ◆ are its family's two core parts' (×1.06 from level 3), shared
   out, so a two-part fight's parts are bigger and a four-part fight's smaller.
 - **Damage profiles.** Every family deals the same budget over a typical fight at its level, in its own shape:
-  Ransomware half steady and half ramp, Worm all steady, Ghostroot a third steady and two thirds burst. No single hit
+  Ransomware half steady and half ramp, Worm all steady, Ghostroot a third steady and two thirds burst, Cryptominer
+  half steady and half ramp (the Hash), Wiper half steady and half burst (the Wipe). No single hit
   grows past 1.3× its family's Pulse Node; past that a part hits more often instead.
 - **A missing role moves onto the basic.** No Encryptor: the basic's **Ratchet** stacks on the Encryptor's clock
-  (an amber hatched chip, *▲ ratchet 7*, *Ratcheted* on you; Purge or Rollback resets it). No Scrambler: the basic's
+  (an amber hatched chip, *▲ ratchet 7*, *Ratcheted* on you; Purge or Rollback resets it); no Rig, on the Rig's. No Scrambler: the basic's
   hits Scramble you, at most once every 4 cycles. Nothing steady: the basic takes its family's Surge too.
 - **One stranger a fight.** At most one part you've never met (research 0), and a fight with one is never four parts.
 - **One lever a fight** (docs/puzzle-levers.md 5). From level 6 every wild fight (every invasion too) carries one
   **lever**, a part whose rule makes the default move the wrong one: a beat (Mimic, Decoy), a part to break last
   (Tripwire, Zip Bomb, Hotspot), a part to break first (Lockbox, Mutex, C2 Node, Packer) or twins (Mirror). A fight
-  that already brings a stranger may have none, and a server fight with an objective has none (Objectives).
+  that already brings a stranger may have none, and a server fight with an objective has none (Objectives). The
+  Cryptominer's and the Wiper's pools hold no lever yet: the Rig and the Wipe are their puzzles.
 - **Floor natives.** A native is a third first met on one floor: the Zip Bomb and Hotspot on floor 1; the Idle Timer,
   Front End and Backlog on 2; the Limiter and Spare on 3; the Scraper, Bad Block and Cold Store on 4. On its own floor
   it weighs three times as much; elsewhere it rolls at its own weight once its level allows. **Elites and ★ rare
@@ -280,18 +285,19 @@ A basic with no attack is its signature's **fallback**: break the signature firs
 | Ransomware | **Mutex** (8): 18, ◆ | Locks the Encryptor behind a shield of a quarter of its max that takes every hit first; a broken lock comes back 4 cycles later while the Mutex lives. |
 | Worm | **C2 Node** (8): 18, ◆, Beacon 3 every 4 | Fragments gnaw half again as hard while it lives, and all drop when it breaks. |
 | Ghostroot | **Mimic** (8): 18, ◆, veiled | Every 4 cycles (announced two ahead) it copies the command you fire and turns it on you (`copyOf`): a hit for its whole direct hit; a strip strips your ◆ and shield; a burn leaves you Corrupted for its ticks at a quarter each; a debuff Throttles you; a shield or buff re-arms the Mimic with a ◆; a heal heals the virus's most damaged part; SIGINT, a stun or a utility Hangs you (your next command doesn't fire); hold copies nothing. A copy under a tenth of your max is a read. Its chip shows what your selected command would copy. |
-| Ransomware | **Idle Timer** (9): 20, ◆ | Hit the signature with a command at least every 4 cycles, or at 5 every part re-arms to full ◆. Pips count down on the signature's row. |
+| Ransomware, Cryptominer | **Idle Timer** (9): 20, ◆ | Hit the signature with a command at least every 4 cycles, or at 5 every part re-arms to full ◆. Pips count down on the signature's row. |
 | Ghostroot, Ransomware | **Front End** (10): 22, ◆ | While it wears ◆, your single-target commands at its partner land on it. Burns, helpers, area hits and Sudo go through. |
-| Worm | **Backlog** (12): 20, ◆, Ack 3 every 4 | When its Ack lands, the skill you fired that cycle cools 2 cycles longer. |
-| Ransomware | **Limiter** (13): 24, ◆, Ping 3 every 3 | No single hit takes more than 20% of its max. Many small hits answer it. |
+| Worm, Cryptominer | **Backlog** (12): 20, ◆, Ack 3 every 4 | When its Ack lands, the skill you fired that cycle cools 2 cycles longer. |
+| Ransomware, Wiper | **Limiter** (13): 24, ◆, Ping 3 every 3 | No single hit takes more than 20% of its max. Many small hits answer it. |
 | Worm, Ghostroot | **Spare** (14): 2, ◆◆◆ | Sleeps off the timeline under 3 ◆. When the signature breaks, it boots 2 cycles later at 60% of the signature's max, with its attack, and drops its ◆. Pay its ◆ while it sleeps or its Integrity once it boots. |
 | Ransomware | **Tripwire** (16): 18, ◆, Ping 3 every 3 | Break it while the others stand and they go **loud** for the fight: 25% more damage and every attack a cycle sooner, but 40% more damage taken and all their ◆ gone. Trip it when you can finish them fast (*loud wins*), else break it last. Throttle quiets a loud part. |
-| Ransomware | **Scraper** (19): 22, ◆, Scrape 4 every 4 | When its Scrape lands it takes the buffs you put up before it: your ◆, your shield after its hit, your timed buffs. Buff after it lands. |
+| Ransomware, Wiper | **Scraper** (19): 22, ◆, Scrape 4 every 4 | When its Scrape lands it takes the buffs you put up before it: your ◆, your shield after its hit, your timed buffs. Buff after it lands. |
 | Ghostroot | **Packer** (20): 20, ◆ | While it stands, the virus's rolled parts show as *Packed part* (attacks named ???) and its rules as ??? chips. A scan before you engage, or breaking it, unpacks them. |
-| Ghostroot | **Bad Block** (21): 22, ◆, Bad Write 4 every 4 | When it lands your next heals lose up to 10% of your max (*Cracked*). Purge, Scrub, Rollback, Rotate Keys and Vent clear it. |
-| Ransomware | **Cold Store** (24): 30, ◆, Chill 10 every 5 | Frozen and untouchable for its first 5 cycles; its first Chill comes 2 cycles after the thaw. |
+| Ghostroot, Wiper | **Bad Block** (21): 22, ◆, Bad Write 4 every 4 | When it lands your next heals lose up to 10% of your max (*Cracked*). Purge, Scrub, Rollback, Rotate Keys and Vent clear it. |
+| Cryptominer, Wiper | **Damper** (23): 26, ◆◆ | While it wears ◆ it takes nothing from one kind (burns, helpers or area hits, crossed out on its tag), which still breaks a ◆. Strip it first. |
+| Ransomware, Wiper | **Cold Store** (24): 30, ◆, Chill 10 every 5 | Frozen and untouchable for its first 5 cycles; its first Chill comes 2 cycles after the thaw. |
 
-**Built, not rolling yet.** The Damper (Worm, 23) and the mechanics list's twenty (docs/mechanics-list.md,
+**Built, not rolling yet.** The mechanics list's twenty (docs/mechanics-list.md,
 `mechanics.mjs`: Prober, Jitter, Leaker, Sandbox, Stunner, Junker, Predator, Opportunist, Feeder, Punisher, Harvester,
 Volatile, Amplifier, Bodyguard, Vendetta, Thorns, Countdown, Backtrace, Swap, Turncoat) roll in no fight
 (`PARTS.mech` 0) until the designer has played them; `?playtest=part:<id>` shows each, and `developer parts mech 0.5`
@@ -333,7 +339,7 @@ its rule on hover.
 | Patchwork | Worm | 3 | The Patcher heals the most damaged part 12 every 3. Delays stop it; ◆ and misses don't. Break the Pulse Node first and the Patcher falls back on its Surge. |
 | Keylogger | Ghostroot | 4 | A Sync Window opens every cycle. The Logger takes damage only from commands fired inside it (and burns and helpers started there). Each command outside it is logged; at 3 its Dump (18) lands next cycle. It also Dumps every 6. |
 | Flicker | Ghostroot | 4 | The Shade is out of phase on odd cycles: hits pass through and 15% of your command's hit bounces back. Its Fade (5) lands every even cycle. |
-| Hashrat | Ransomware | 5 | While the Miner lives your cooldowns tick only every other cycle. Last part standing, it Overclocks for 4 every 2. |
+| Hashrat | Cryptominer | 5 | While the Miner lives your cooldowns tick only every other cycle. Last part standing, it Overclocks for 4 every 2. |
 | Floodgate | Worm | 6 | Flood hits every cycle from 2, +1 each time; any delay resets it. |
 | Extortion | Ransomware | 6 | Deadline (26, every 5): 14 damage to the Demand in the 2 cycles before it calls it off. |
 | Leech | Worm | 8 | Siphon (8, every 3) heals the most damaged part by what it deals and clears one burn. Shields and Throttle starve it. |
@@ -675,7 +681,7 @@ Named runners, one per crew, racing you to a traced server's vault ([docs/rivals
 | Rival | Crew | Lineup | Counter-pick (how you won the last fight → the part it adds) |
 |---|---|---|---|
 | **KUDZU** | SWARMLINE | Trojan, Twinned Worm, Worm | Burst one down → Patcher · spread hits → Hot spare · else Flood ramp |
-| **ESCROW** | TOLLGATE | Ransomware, Hashrat, Bricker | Burst → Mutex lock · slow or burns → Deadline · else Ward |
+| **ESCROW** | TOLLGATE | Ransomware, Wiper, Cryptominer | Burst → Mutex lock · slow or burns → Deadline · else Ward |
 | **HUSH** | PALEMASK | Ghostroot, Echo, Sleeper | Every tell read → Veil · helpers → Phase shift · else Decoy mirror |
 
 - **The roll.** At most one a visit: 20% at each connect to a traced server whose vault is shut and that isn't yours,

@@ -23,7 +23,7 @@
 import { FLOORS, SERVER, CONFIG, TEMPLATES, FAMILIES, bandOf, BOSSES } from './data.mjs';
 import { seeded } from './gear.mjs';
 import { emit, warn, hackerLevel, addLocation, active } from './combat.mjs';
-import { signature, makeLair, lairBoss } from './network.mjs';
+import { signature, makeLair, lairBoss, leanOf } from './network.mjs';
 
 export const FLOOR = {
   hubs: { halcyon: 1, kestrel: 1, lantern: 2, glassjaw: 2, nullchoir: 3 }, // which floor each faction's hub stands on
@@ -190,7 +190,6 @@ function islands(r, N) { // floor 8: scattered islands
 // A node: { id, kind: 'server' | 'lair' | 'entry' | 'exit' | 'hub' | 'farm', x, y, d (links from the entry), place
 // (0–1), level, family, template, hub }. Server slots are f<n>-<i>, exits f<n>x<k>, the entry f<n>e.
 const CACHE = new Map();
-const FAMS = ['ransomware', 'worm', 'ghostroot'];
 const kindWeights = (n) => ({ relay: Math.max(0.4, 3 - 0.35 * (n - 1)), mailhub: Math.max(0.4, 3 - 0.35 * (n - 1)), mirror: 2, archive: 1 + 0.35 * (n - 1), lab: 1 + 0.35 * (n - 1) });
 const wpick = (r, ws) => { let x = r() * Object.values(ws).reduce((a, b) => a + b, 0); for (const [k, w] of Object.entries(ws)) { x -= w; if (x < 0) return k; } return Object.keys(ws).at(-1); };
 export function floorGraph(seed, n) {
@@ -219,8 +218,7 @@ export function floorGraph(seed, n) {
   // Families lean the network's way; kinds lean by floor, never the same kind twice in a row along a link.
   const lean = signature(seed)?.lean;
   for (const x of ranked) {
-    let t = r() * (lean ? FAMS.reduce((a, f) => a + lean[f], 0) : 3);
-    x.family = FAMS.find((f) => (t -= lean ? lean[f] : 1) < 0) || FAMS.at(-1);
+    x.family = leanOf(lean, r(), { level: x.level, floor: n }); // the later families once the floor and level allow
     const near = adj(x.id).map((y) => nodes[y].template).filter(Boolean);
     x.template = wpick(r, kindWeights(n));
     if (near.includes(x.template)) x.template = wpick(r, kindWeights(n));

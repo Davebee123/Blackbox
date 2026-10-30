@@ -37,8 +37,7 @@ const walk = (s, id) => {
     const path = FP.pathTo(s.rooms.graph, s.rooms.at, id, (x) => x !== s.rooms.graph.core || FP.coreOpen(s));
     assert.ok(path, `a way to ${id}`);
     FP.go(s, path[1]);
-    if (s.rooms.screen?.kind === 'virus' || s.rooms.screen?.kind === 'hunter') FP.act(s, 'engage');
-    if (active(s)) win(s);
+    for (let r = 0; r < 4 && ['virus', 'hunter', 'rival'].includes(s.rooms.screen?.kind); r++) { FP.act(s, 'engage'); if (active(s)) win(s); } // a rival fights two or three in a row
     s.run.integrity = s.run.max;
   }
   assert.equal(s.rooms.at, id);

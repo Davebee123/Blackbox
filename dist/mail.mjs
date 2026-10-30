@@ -76,7 +76,7 @@ export const TIERS = [
   { min: 75, name: 'Preferred', pay: (L) => 20 + 4 * L },
 ];
 // The rival crews, by the viruses they run.
-export const CREWS = { ransomware: 'TOLLGATE', worm: 'SWARMLINE', ghostroot: 'PALEMASK' };
+export const CREWS = { ransomware: 'TOLLGATE', worm: 'SWARMLINE', ghostroot: 'PALEMASK', cryptominer: 'GLASSJAW', wiper: 'TOLLGATE' };
 
 // Who writes to you (content/story.mjs, edited in editor.html).
 const SENDERS = new Proxy({}, { get: (_, k) => STORY_TEXT.contacts?.[k] || String(k) });

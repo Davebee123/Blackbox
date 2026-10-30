@@ -130,6 +130,10 @@ export const PROBES = {
   badblock: probe(21, fam('ghostroot'), 'badblock', { genes: ['badblock'] }),
   damper: probe(23, fam('worm'), 'damper', { genes: ['damper'] }),
   coldstore: probe(24, fam('ransomware'), 'coldstore', { genes: ['coldstore'] }),
+  // The parts plan's P3 families, each against a Ransomware fight from the level it opens (rule 4: an answer in every
+  // kit there): the Rig's Hash and the Degausser's Wipe.
+  hash: { opens: 9, body: fam('ransomware'), with: fam('cryptominer'), gene: 'hash', levels: [9, 18, 30] },
+  wipe: { opens: 19, body: fam('ransomware'), with: fam('wiper'), gene: 'wipe', levels: [19, 30] },
 };
 // The mechanics list (docs/mechanics-list.md): one level and one seed each (CLAUDE.md "Lean first"), the check that a
 // component works and isn't absurd, not its tuning. The designer's play tunes them.
@@ -144,7 +148,7 @@ export const PROBE_LEVELS = [5, 10, 18, 30];
 // Who plays a level: the four classes below SUBCLASS.from, every subclass from it.
 export const playersAt = (L) => (L >= SUBCLASS.from ? SUBS : Object.keys(ARCHETYPES).map((cls) => [cls, null]));
 // Genes the planner has a rule for, so ignoring them means something (planner.mjs, tells.mjs, the Sync Window here).
-export const ANSWERED = ['ward', 'mutexlock', 'tripwire', 'twin', 'c2', 'decoymirror', 'mimic', 'keyring', 'adaptive', 'phaseshift', 'synclock', 'overcharge', 'fulldisk', 'massmailer', 'possession', 'doubleextortion', 'selfupdate', 'persistence', 'rekey', 'batteringram', 'hotfix', 'zipbomb', 'hotspot', 'idletimer', 'frontend', 'backlog', 'spare', 'scraper', 'badblock', 'coldstore']; // no rule of their own in the planner: the Limiter (its threat order already leaves it late), the Packer (a bot reads every rule anyway), the Damper (it strips ◆ first anyway) and the Shunt (what it takes still breaks it)
+export const ANSWERED = ['hash', 'wipe', 'ward', 'mutexlock', 'tripwire', 'twin', 'c2', 'decoymirror', 'mimic', 'keyring', 'adaptive', 'phaseshift', 'synclock', 'overcharge', 'fulldisk', 'massmailer', 'possession', 'doubleextortion', 'selfupdate', 'persistence', 'rekey', 'batteringram', 'hotfix', 'zipbomb', 'hotspot', 'idletimer', 'frontend', 'backlog', 'spare', 'scraper', 'badblock', 'coldstore']; // no rule of their own in the planner: the Limiter (its threat order already leaves it late), the Packer (a bot reads every rule anyway), the Damper (it strips ◆ first anyway) and the Shunt (what it takes still breaks it)
 
 // One probe fight: a run fight at the level, the planner reading (or ignoring one gene).
 export function probeFight(cfg, level, cls, sub, seed, { ignore = null } = {}) {

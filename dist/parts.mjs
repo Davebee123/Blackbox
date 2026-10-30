@@ -34,14 +34,13 @@ export const PARTS = {
   // the Warden's swarm kit lost 8.8 points more than its rotation on its fights, 4.1 on fights with no P2 part). The
   // Tripwire at 1.5: P2's three new Ransomware thirds took it from 30% of Ransomware fights at level 30 to 20% (28% now),
   // and quieting a loud part is a key the Bastions carry. The Zip Bomb at 0.5: in two families' pools and the cheapest
-  // rule, it was in a third of the fights at every level past 5, over every floor's natives. The Damper at 0: built, on
-  // the Worm's list for its playtest page, its Codex card and the room probes, but it rolls only once its own families
-  // (the Cryptominer and the Wiper) come with P3 (on the Worm the harness measured it free: -1.8 points a fight).
-  // The mechanics list's twenty (docs/mechanics-list.md) at PARTS.mech: 0, as the Damper. They're built, with their
+  // rule, it was in a third of the fights at every level past 5, over every floor's natives. The Damper at 1: it rolls on
+  // its own families (the Cryptominer and the Wiper) since P3 (on the Worm, its old home, the harness measured it free).
+  // The mechanics list's twenty (docs/mechanics-list.md) at PARTS.mech: 0. They're built, with their
   // playtest pages, Codex cards and probes, but a wild virus rolls none until the designer has played one and kept it
   // (give it its own weight here). At 0.5 they came in about 40% of wild fights from level 10, and the kits', crew,
   // pace and sets balance tests moved with them. `developer parts mech 0.5` rolls them all for a session.
-  weight: { mimic: 4, coldstore: 0.5, tripwire: 1.5, zipbomb: 0.5, damper: 0 },
+  weight: { mimic: 4, coldstore: 0.5, tripwire: 1.5, zipbomb: 0.5, damper: 1 },
   mech: 0,
   // The spread (docs/variety-plan.md 1.2): a strain's mechanics parts roll as a third on wild viruses of its lineage,
   // from its level and depth (data.mjs spreadOf), at this weight (the others' 1). Nowhere else: PARTS.mech holds there.
@@ -59,11 +58,13 @@ export const PARTS = {
   // A rolled fight's parts share their family's profile out by role (PARTS.roles). A role with no part to carry it
   // moves onto the basic: the ramp as a Ratchet (its own stack, one step more every few cycles the basic lives, gone
   // when it breaks), the burst as the basic's hits taking the Scrambler's (its hit and, on the Scrambler's clock, its Scramble).
-  profile: { ransomware: { steady: 0.5, ramp: 0.5, burst: 0 }, worm: { steady: 1, ramp: 0, burst: 0 }, ghostroot: { steady: 0.33, ramp: 0, burst: 0.67 } },
+  // The P3 families: the Cryptominer half steady and half ramp (the Rig's Hash), the Wiper half steady and half burst
+  // (the Degausser's Wipe).
+  profile: { ransomware: { steady: 0.5, ramp: 0.5, burst: 0 }, worm: { steady: 1, ramp: 0, burst: 0 }, ghostroot: { steady: 0.33, ramp: 0, burst: 0.67 }, cryptominer: { steady: 0.5, ramp: 0.5, burst: 0 }, wiper: { steady: 0.5, ramp: 0, burst: 0.5 } },
   horizon: [[1, 10], [40, 9], [50, 8]], // a typical fight's length by level, in cycles (balance.mjs's wild fights before P1, every subclass: 9.7 at 10, 10.5 at 18, 10.3 at 30, 8.4 at 50)
   budget: 1, // the shared budget's scale (1: the three pre-P1 fights' average)
   // Each part's shape (a part not named: steady if it attacks). A shape its family's profile hasn't is steady there.
-  roles: { encryptor: 'ramp', scrambler: 'burst', accumulator: 'burst' },
+  roles: { encryptor: 'ramp', scrambler: 'burst', accumulator: 'burst', rig: 'ramp', degausser: 'burst' },
   ratchet: { from: null, every: null }, // a Ratchet's first step and its beat (null: the Encryptor's first Encrypt and interval)
   burstHit: 1, // the share of the Scrambler's hit a basic carrying the burst takes on
   fast: 0.5, // a part that hits every cycle or two (a Strobe) takes this share of its role's lift (Block takes the same off every hit)

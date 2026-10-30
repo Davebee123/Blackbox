@@ -283,6 +283,15 @@ function play(s) {
   if (wary(t) && !killNow(s, t)) t = livingParts(s).filter((p) => p !== t && !wary(p) && !phasedOut(s, p)).sort((a, b) => dueOf(s, a) - dueOf(s, b))[0] || t;
   // Hotspot: a direct hit sets it off. Burns and helpers don't: use them on it if you have them.
   if (t.hotspot && !ignores('hotspot')) { const soft = first(s, [!injected(s, t) && 'inject ' + t.id, 'deploy ' + t.id, 'spawn ' + t.id, 'botnet ' + t.id, !burnsOn(s, t) && 'purge ' + t.id]); if (soft) return soft; }
+  // Cryptominer (families.mjs): let the Rig cook while the rest stand, unless its Hash has doubled (a hit across its
+  // tick vents it then); once it overheats, burst it.
+  const rig = !ignores('hash') && livingParts(s).find((p) => p.hash || (p.tookOver === 'rig' && p.attack?.ramp));
+  if (rig && t === rig && !s.encounter.virus.overheated && (rig.attack?.step || 0) * (rig.attack?.rampBy || 1) < (rig.attack?.amount || 0)) t = livingParts(s).filter((p) => p !== rig && reachable(s, p) && !shunned(s, p)).sort((a, b) => dueOf(s, a) - dueOf(s, b))[0] || t;
+  // Wiper: a Wipe lands this cycle and takes your strongest ready key, so fire that key now.
+  if (!ignores('wipe') && landingNow(s).some((i) => part(s, i.source)?.attack?.wipe === 'strongest')) {
+    const key = usable(s).filter((id) => !['spike', 'sigint'].includes(id) && ABILITIES[id] && readyIn(s, id) === 0).sort((a, b) => (ABILITIES[b].damage || 0) - (ABILITIES[a].damage || 0) || (ABILITIES[b].cooldown || 0) - (ABILITIES[a].cooldown || 0))[0];
+    if (key && ABILITIES[key].damage > 0 && !t.armor && ok(s, key + ' ' + t.id)) return key + ' ' + t.id; // a hit on a bare part only: a shield or heal waits for its moment
+  }
   // A subclass's own play (dist/classes/<class>.mjs plan): its new skills, before the generic rules.
   // Palemask (sets.mjs, the Infiltrator's tier set): a part you took under half takes your next hit as a critical
   // strike. Spend it on the biggest direct hit you have ready, there (not on a part your burns finish anyway, or under ◆).

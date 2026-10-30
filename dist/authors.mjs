@@ -3,7 +3,7 @@
 //
 // An author:
 //   name, faction  how it signs (the byline: WARDED CRYPTJACK-4821 v2 · TOLLGATE), and its faction in factions.mjs
-//   crew           the family it writes as a crew (the three family crews the contract mail names, mail.mjs CREWS)
+//   crew           the family it writes as a crew (the family crews the contract mail names, mail.mjs CREWS); also: more
 //   colour, style  its colour, and the sentence the scan card says about it
 //   signature      its signature genes (genes.mjs), weighted three to one over the rest of its toolkit
 //   toolkit        the rest of what it writes with (phase 3 rolls from these; some are genes phase 3 brings)
@@ -13,7 +13,7 @@
 // (Kestrel), a faction's server (that faction), a guard (its server's), and a boss (its author). SPRAWL-00's
 // strays are nobody's. Sectors, rosters and ACTUARY's portfolio come in phases 3 and 5.
 export const AUTHORS = {
-  tollgate: { name: 'TOLLGATE', crew: 'ransomware', colour: '#ff9f43', style: 'TOLLGATE builds with locks and leverage. Everything is behind something, and something is on a clock.',
+  tollgate: { name: 'TOLLGATE', crew: 'ransomware', also: ['wiper'], colour: '#ff9f43', style: 'TOLLGATE builds with locks and leverage. Everything is behind something, and something is on a clock.',
     signature: ['ward', 'mutexlock', 'deadline', 'rage', 'ransomtimer'], toolkit: ['tripwire', 'zipbomb', 'exfiltrate', 'ratecap', 'armored', 'predator', 'volatile', 'harvester', 'exposed'], builds: ['extortion', 'bricker', 'bloodhound', 'scythe', 'probingextortion', 'vengefulbricker'], bosses: ['repoman', 'nb-deadbolt', 'nb-tripmine'] },
   swarmline: { name: 'SWARMLINE', crew: 'worm', colour: '#7bd389', style: 'SWARMLINE builds with numbers and spares. Whatever you break comes back or brings friends.',
     signature: ['twin', 'floodramp', 'mend', 'hotspare'], toolkit: ['c2', 'hivebrood', 'siphon', 'loadbalancer', 'botnetrecruit', 'antivirussweep', 'fork', 'regenerative', 'hasty', 'countdown', 'leak', 'vendetta', 'amplifier', 'bodyguard', 'thorns'], builds: ['floodgate', 'leech', 'patchwork', 'overrun', 'doomsday', 'badblood', 'amplifiedfloodgate', 'feedingleech', 'guardedpatchwork', 'countingoverrun', 'thornwall'], bosses: ['relayking', 'nb-backorifice', 'nb-patchday', 'nb-floodwall'] },
@@ -21,7 +21,7 @@ export const AUTHORS = {
     signature: ['veil', 'decoymirror', 'phaseshift', 'echo', 'dormant'], toolkit: ['frontend', 'honeypot', 'opportunist', 'sandboxed', 'lag', 'turncoat', 'exposed'], builds: ['sleeper', 'flicker', 'echo', 'lurker', 'lurkingsleeper', 'laggingflicker', 'volatileecho', 'desync', 'laststand'], bosses: ['nb-sleepwalker', 'nb-echolalia'] },
   nullchoir: { name: 'NULL CHOIR', faction: 'nullchoir', colour: '#ff6f91', style: 'NULL CHOIR builds with rhythm and mockery. It copies you and makes you keep time.',
     signature: ['mimic', 'synclock', 'keystrokedump'], toolkit: ['veil', 'clockglitch', 'handshake', 'stateless', 'adaptive', 'swap', 'stunned'], builds: ['keylogger', 'bodysnatcher', 'leakingkeylogger'], bosses: ['choir', 'nb-mirrorshade'] },
-  glassjaw: { name: 'GLASSJAW', faction: 'glassjaw', colour: '#e07bd0', style: 'GLASSJAW sells professional denial. It taxes your tools and blocks your favourites.',
+  glassjaw: { name: 'GLASSJAW', faction: 'glassjaw', crew: 'cryptominer', colour: '#e07bd0', style: 'GLASSJAW sells professional denial. It taxes your tools and blocks your favourites.',
     signature: ['cycletax', 'synflood', 'acl'], toolkit: ['exfiltrate', 'badsectors', 'stateless', 'ratecap', 'loadbalancer', 'watchdogtimer', 'hasty', 'junk', 'backtrace', 'feeder'], builds: ['hashrat', 'junkinghashrat', 'junkyard', 'sweatshop'], bosses: ['nb-hashlord'] },
   lantern: { name: 'LANTERN', faction: 'lantern', colour: '#ffb347', style: 'LANTERN listens. Its builds bait you and hide their hand.',
     signature: ['honeypot', 'packed'], toolkit: ['keystrokedump', 'handshake', 'veil'], builds: [], bosses: [] },
@@ -31,7 +31,7 @@ export const AUTHORS = {
 };
 for (const [id, a] of Object.entries(AUTHORS)) a.id = id;
 // The crew that writes a family's plain viruses.
-export const crewOf = (family) => Object.keys(AUTHORS).find((id) => AUTHORS[id].crew === family) || null;
+export const crewOf = (family) => Object.keys(AUTHORS).find((id) => AUTHORS[id].crew === family || AUTHORS[id].also?.includes(family)) || null;
 // The author of a named build (a strain) or a guard, if it has one of its own.
 export const buildAuthor = (build) => Object.keys(AUTHORS).find((id) => AUTHORS[id].builds.includes(build)) || null;
 export const bossAuthor = (boss) => Object.keys(AUTHORS).find((id) => AUTHORS[id].bosses.includes(boss)) || null;

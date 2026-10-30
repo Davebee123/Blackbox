@@ -91,4 +91,4 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
 
 ## Backlog
 
-- **Backlog:** Silos, more event cards, parts plan P3 and P4, and co-op's rough edges.
+- **Backlog:** Silos, more event cards, parts plan P4, and co-op's rough edges.

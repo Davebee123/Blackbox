@@ -19,7 +19,7 @@ import { pieceState, pieceOf } from './faction-gear.mjs';
 
 // Each card's icon (the strip, the threat list, the pager), and a family's: its code's glyph.
 export const EVENT_ICON = { courier: 'upload', bounty: 'bounty', choir: 'echo', outbreak: 'spider', leak: 'cracker', darknet: 'item', feud: 'mirror', hunt: 'kill', shock: 'sync', spotter: 'watchman', counter: 'claw', returning: 'bounty', lantern: 'upload', zero: 'accuracy' };
-export const FAM_GLYPH = { ransomware: 'cipher', worm: 'worm', ghostroot: 'kernel' };
+export const FAM_GLYPH = { ransomware: 'cipher', worm: 'worm', ghostroot: 'kernel', cryptominer: 'kernel', wiper: 'scrubber' };
 const WARE_GLYPH = { cipher: 'cipher', worm: 'worm', kernel: 'kernel', salvage: 'salvage', exploit: 'exploit' };
 const mins = (ms) => Math.max(1, Math.ceil(ms / 60000));
 const busyOf = (s) => (active(s) || s.run ? 'Finish what you are doing first' : '');

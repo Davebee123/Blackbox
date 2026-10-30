@@ -32,7 +32,7 @@ export const HUBS = {
 };
 // Each faction's crews write their own kind of virus.
 export const FACTION_FAMILY = { halcyon: 'worm', glassjaw: 'ghostroot', kestrel: 'worm', lantern: 'worm', nullchoir: 'ransomware' };
-const KEY = { ransomware: 'cryptjack', worm: 'splinter', ghostroot: 'ghostroot' };
+const KEY = { ransomware: 'cryptjack', worm: 'splinter', ghostroot: 'ghostroot', cryptominer: 'xmrig', wiper: 'shamoon' };
 
 const hub = (s, f) => s.hubs?.[f];
 export const heldOf = (s) => Object.keys(s.hubs || {}).filter((f) => captured(s, f));

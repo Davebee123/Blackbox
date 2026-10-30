@@ -90,7 +90,7 @@ comment saying what it does.
 | `dist/genes.mjs` | The gene library: every family, strain, third part, mutation, tell and guard rule in one shape. Data only. |
 | `dist/authors.mjs` | The crews that write viruses, each with signature genes, builds and bosses. Data only. |
 | `dist/genome.mjs` | A virus's genes in play: `scan`, `inspect` and the rules' chips. |
-| `dist/families.mjs` | Attack sets for the room families, the Trojan, Cryptominer and Wiper, and the rules every room fight shares. |
+| `dist/families.mjs` | Attack sets, the Trojan (a room body), the Cryptominer's and Wiper's rules (any fight), and the rules every room fight shares. |
 | `dist/tells.mjs` | Solo tells: the big moves a part announces ahead (charges, casts, seals). |
 | `dist/interrupt.mjs` | The interrupt: crossing a part's 50% or 25% tick on its due cycle cancels its move. |
 | `dist/order.mjs` | The order levers: parts whose right moment to break depends on the board. |

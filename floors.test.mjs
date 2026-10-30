@@ -275,7 +275,7 @@ test('natives weigh ×3 on their own floor: in the weights, in the wild roll and
   const sum = (by, ids) => ids.reduce((n, id) => n + (by[id] || 0), 0);
   assert.ok(sum(f3, n3) > 1.5 * sum(f4, n3), `floor 3's natives: ${sum(f3, n3)} on floor 3, ${sum(f4, n3)} on floor 4`);
   assert.ok(sum(f4, n4) > 1.5 * sum(f3, n4), `floor 4's natives: ${sum(f4, n4)} on floor 4, ${sum(f3, n4)} on floor 3`);
-  assert.ok(Object.values(FAMILIES).every((f) => f.third.length >= 6)); // the Worm's 6 since the Shunt was cut
+  assert.ok(Object.values(FAMILIES).every((f) => f.third.length >= (f.opens ? 3 : 6))); // the Worm's 6 since the Shunt was cut; the P3 families' natives until P4 brings the rest
 });
 test('a fight\'s floor: the server\'s on a run; at home and in a sim your floor at the fight\'s level; SPRAWL-00 is floor 1', async () => {
   const { floorOfFight } = await import('./dist/combat.mjs');

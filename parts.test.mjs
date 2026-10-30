@@ -385,15 +385,15 @@ test('damage profiles: a fight without its signature deals what one with it does
       const k = v.noSignature ? 'none' : 'sig';
       by[k].push(fightTotal(v, T)); armor[k].push(v.parts.reduce((n, p) => n + p.armor, 0));
     }
-    assert.ok(Math.abs(avg(by.none) / avg(by.sig) - 1) <= 0.15, `${f} at ${L}: ${avg(by.none).toFixed(0)} without, ${avg(by.sig).toFixed(0)} with`);
-    if (along(PARTS.armor, L) === 1) assert.ok(avg(armor.none) >= avg(armor.sig) - 1, `${f} at ${L}: ◆ ${avg(armor.none).toFixed(1)} without, ${avg(armor.sig).toFixed(1)} with`);
+    if (by.none.length) assert.ok(Math.abs(avg(by.none) / avg(by.sig) - 1) <= 0.15, `${f} at ${L}: ${avg(by.none).toFixed(0)} without, ${avg(by.sig).toFixed(0)} with`);
+    if (by.none.length && along(PARTS.armor, L) === 1) assert.ok(avg(armor.none) >= avg(armor.sig) - 1, `${f} at ${L}: ◆ ${avg(armor.none).toFixed(1)} without, ${avg(armor.sig).toFixed(1)} with`);
   }
 });
 test('damage profiles: every family deals the same over a typical fight at its level (within 5%), only the shape differs', () => {
   // Each family's own fight (the Pulse Node and the signature, no third), over PARTS.horizon at the level.
   for (const L of [5, 10, 30, 50]) {
     const T = along(PARTS.horizon, L);
-    const by = Object.fromEntries(Object.keys(FAMILIES).map((f) => { const v = createVirus('random', 7, { family: f, threat: SERVER.threat(L), mutation: null, basic: 'pulse' }); /* at home: a run's early steps leave encryption out */ return [f, fightTotal(v, T) / v.power]; }));
+    const by = Object.fromEntries(Object.keys(FAMILIES).filter((f) => (FAMILIES[f].opens?.level || 1) <= L).map((f) => { const v = createVirus('random', 7, { family: f, threat: SERVER.threat(L), mutation: null, basic: 'pulse' }); /* at home: a run's early steps leave encryption out */ return [f, fightTotal(v, T) / v.power]; }));
     const xs = Object.values(by);
     assert.ok(Math.max(...xs) / Math.min(...xs) <= 1.05, `level ${L} over ${T} cycles: ${Object.entries(by).map(([f, x]) => `${f} ${x.toFixed(0)}`).join(' / ')}`);
   }
@@ -689,7 +689,7 @@ test('Bad Block: when it lands your next heals lose up to 10% of your max; it sh
   assert.ok(!s.encounter.badBlock);
 });
 test('Damper: while it wears ◆, the kind it drops deals nothing even through ◆, but still breaks one; stripped, it takes everything', () => {
-  const s = fight2(23, 'worm', ['damper']), d = part(s, 'damper');
+  const s = fight2(23, 'cryptominer', ['damper']), d = part(s, 'damper');
   assert.ok(DAMPER_KINDS.includes(d.damperKind));
   d.damperKind = 'burn';
   const a = d.armor, hp = d.integrity;

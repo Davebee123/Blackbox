@@ -33,7 +33,7 @@ import { contractDid } from './mail.mjs';
 const I = () => CONFIG.invasion;
 const since = (s, first) => s.logs.filter((e) => e.id > first);
 // Each family sends its own virus.
-export const INVADER = { ransomware: 'cryptjack', worm: 'splinter', ghostroot: 'ghostroot' };
+export const INVADER = { ransomware: 'cryptjack', worm: 'splinter', ghostroot: 'ghostroot', cryptominer: 'xmrig', wiper: 'shamoon' };
 
 // ---------- what comes ----------
 // w: its weight in the roll. from: the sending server's level it needs. bounty: points, each paying a unit of its
