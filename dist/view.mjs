@@ -78,6 +78,7 @@ import { skillsTabMarkup } from './skills-view.mjs';
 import { achievementsMarkup } from './achievements-view.mjs';
 import { casingPageMarkup, districtCardMarkup } from './casing-view.mjs';
 import { terminalPageMarkup } from './terminal-view.mjs';
+import { objectiveText, objectiveTip } from './objectives.mjs';
 import { pointsOf } from './achievements.mjs';
 export { skillDetailMarkup, breakoutMarkup, breakoutDetailMarkup, breakoutDue, breakoutLevels } from './skills-view.mjs';
 
@@ -562,6 +563,8 @@ function partTags(s, p) {
   const e = s.encounter, tags = [], pk = packed(s, e.virus, p); // a Packer standing: a rolled part's rule reads as ???
   if (pk && p.integrity > 0) tags.push(`<span class="tag packed" title="${esc('Packed: its name and rule are hidden until the Packer breaks.')}">${glyph('crate')}???</span>`);
   if (p.veiled && p.armor > 0) tags.push(`<span class="tag" title="${VEIL_NOTE}">veiled</span>`);
+  const o = e.objective; // a Priority's mark, and its cycles left (objectives.mjs)
+  if (o?.kind === 'priority' && o.part === p.id && !o.failed) tags.push(`<span class="tag prio${o.met ? ' met' : ''}" title="${esc(objTip(s))}" data-tt-kind="Objective">${glyph('target')}${o.met ? '✓' : o.n - e.cycle + 1}</span>`);
   if (p.exposedUntil >= e.cycle) tags.push(`<span class="tag you" title="Exposed: hits on it have a 25% higher chance to critically strike">exposed ${p.exposedUntil - e.cycle + 1}</span>`);
   if (e.virus.weakKnown && e.virus.weakPoint === p.id) tags.push('<span class="tag you" title="+50% damage for the rest of the fight">weak</span>');
   if (p.taggedUntil >= e.cycle) tags.push(`<span class="tag you" title="Tagged: burns on it deal 50% more damage, and its timer shows through a veil">tagged ${p.taggedUntil - e.cycle + 1}</span>`);
@@ -798,7 +801,7 @@ export function boardMarkup(s, selected, preview = null) {
         : '<div class="intent mine idle">—</div>');
   const planCell = (i) => (e.plan[i] ? `<div class="intent mine plan" data-k="you@${e.cycle + 1 + i}" data-at="${esc(e.plan[i].target || '')}">${esc(e.plan[i].text)}</div>` : '');
   // Your slotted daemons: each chip sits on the cycle it acts next.
-  const dmn = fighting ? slottedDaemons(s).filter((id) => DAEMONS[id].cd && (!DAEMONS[id].exfil || e.escapeAt)) : [];
+  const dmn = fighting ? slottedDaemons(s).filter((id) => DAEMONS[id].cd && (!DAEMONS[id].exfil || e.objective?.kind === 'exfil')) : [];
   const daemonCell = (c) => dmn.filter((id) => daemonNext(s, id) === e.cycle + c).map((id) => `<div class="intent daemon" data-k="daemon:${id}@${e.cycle + c}" title="${esc(DAEMONS[id].name)} lv ${daemonLevel(s, id)}: ${esc(daemonText(id, daemonLevel(s, id)))}">${esc(DAEMONS[id].name.toLowerCase())}</div>`).join('');
   const cronCell = (c) => daemonCell(c);
   const you = () => fighting
@@ -882,7 +885,7 @@ export function boardMarkup(s, selected, preview = null) {
   const gone = broken.length ? `<div class="brow bbroken"><div class="bcell span5">Broken: ${broken.map((p) => esc(p.name)).join(', ')}</div></div>` : '';
   // Whose half is playing, across the top of the board (the board itself takes its colour: style.css).
   const ph = fighting ? phaseOf(s) : null, who = esc(e.virus.name.split('-')[0]);
-  const strip = ph ? `<div class="phase-strip ph-${ph}" title="Each cycle, you move first, then the virus"><span class="ps-you">${ph === 'wait' ? 'Your move' : 'You'}</span><i>▸</i><span class="ps-them">${who}</span>${e.escapeAt ? `<b class="ps-esc" title="${esc(uploadTip(e))}">${uploadText(e)}</b>` : ''}</div>` : '';
+  const strip = ph ? `<div class="phase-strip ph-${ph}" title="Each cycle, you move first, then the virus"><span class="ps-you">${ph === 'wait' ? 'Your move' : 'You'}</span><i>▸</i><span class="ps-them">${who}</span>${e.objective ? objChip(s) : ''}</div>` : '';
   return strip + head + you() + raidRow(s) + escapeRow(s) + rows + gone + keep;
 }
 // The order levers' ghosts on a part's bar (order.mjs, docs/puzzle-levers.md 3.3 and 3.4), past this cycle's slice:
@@ -909,15 +912,16 @@ function orderMarks(s, p, fc, blast) {
 }
 // A Limiter's cap line (the parts plan's P2): where one hit at most takes its bar down to.
 const capLine = (s, p) => (p.limit && alive(p) && !packed(s, s.encounter.virus, p) ? `<i class="capline" style="left:${Math.max(0, ((p.integrity - limitOf(p)) / p.max) * 100)}%" title="${esc(`Cap: one hit takes it down to ${Math.max(0, p.integrity - limitOf(p))} at most.`)}"></i>` : '');
+// An objective (objectives.mjs): its chip in the phase strip ("Uptime 3/8"; the Exfil's on phones, where its row hides).
+const objTip = (s) => { const e = s.encounter, p = e.objective.part && e.virus.parts.find((x) => x.id === e.objective.part); return objectiveTip(e, p && !packed(s, e.virus, p) ? p.name : null); };
+const objChip = (s, e = s.encounter) => `<b class="${e.objective.kind === 'exfil' ? 'ps-esc' : `ps-obj${e.objective.met ? ' met' : e.objective.failed ? ' failed' : ''}`}" title="${esc(objTip(s))}" data-tt-kind="Objective">${esc(objectiveText(e))}</b>`;
 // A runner (the Exfil): its own row, "Upload 2/6", the fuse on the cycle its upload completes.
-const uploadText = (e) => `Upload ${Math.max(0, Math.min(e.escapeAt, e.cycle - 1))}/${e.escapeAt}`;
-const uploadTip = (e) => `Still up at the end of cycle ${e.escapeAt}, its upload completes and the archive is gone. Break its Uplink first.`;
 function escapeRow(s) {
-  const e = s.encounter;
-  if (!e?.escapeAt || !active(s)) return '';
-  const col = e.escapeAt - e.cycle;
-  const cells = [0, 1, 2, 3].map((c) => `<div class="bcell">${c === col ? `<div class="intent raid fuse escape${c === 0 ? ' now' : ''}" title="${esc(uploadTip(e))}"><b>Upload done</b><small>${c === 0 ? 'this cycle' : `cycle ${e.escapeAt}`}</small></div>` : ''}</div>`).join('');
-  return `<div class="brow braid bescape"><div class="bcell bname"><b>${esc(e.virus.name)}</b><small class="esc-left">${uploadText(e)}</small></div>${cells}</div>`;
+  const e = s.encounter, o = e?.objective;
+  if (o?.kind !== 'exfil' || !active(s)) return '';
+  const col = o.n - e.cycle;
+  const cells = [0, 1, 2, 3].map((c) => `<div class="bcell">${c === col ? `<div class="intent raid fuse escape${c === 0 ? ' now' : ''}" title="${esc(objTip(s))}" data-tt-kind="Objective"><b>Upload done</b><small>${c === 0 ? 'this cycle' : `cycle ${o.n}`}</small></div>` : ''}</div>`).join('');
+  return `<div class="brow braid bescape"><div class="bcell bname"><b>${esc(e.virus.name)}</b><small class="esc-left">${objectiveText(e)}</small></div>${cells}</div>`;
 }
 
 // A crew boss (raid.mjs): its mechanics on their own row, each chip on the cycle it lands, with who it's

@@ -84,7 +84,9 @@ test('a decoded part shows its numbers at your level, the same numbers a room fi
   const s = server(11);
   const L = hackerLevel(s);
   // Find a plain room at your level with no mutation, and fight it.
-  const room = FP.roomList(s).find((r) => r.kind === 'process' && FAMILIES[r.family] && !s.rooms.rare[r.id] && !FP.fightOf(s, r).mutation);
+  // No objective either (objectives.mjs: Uptime's virus can't be broken): its spawn count nudged until it has none.
+  const plain = (r) => { for (let n = 0; n < 20; n++) { s.rooms.spawns[r.id] = n; if (!FP.fightOf(s, r).mutation && !FP.fightOf(s, r).objective) return true; } return false; };
+  const room = FP.roomList(s).find((r) => r.kind === 'process' && FAMILIES[r.family] && !s.rooms.rare[r.id] && plain(r));
   place(s, room.id); FP.fight(s, room);
   const v = s.encounter.virus, real = v.parts.find((p) => p.id === 'pulse');
   // Break its Pulse Node for real, two research short: decoded in the codex.
