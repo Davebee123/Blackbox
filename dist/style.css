@@ -213,6 +213,10 @@ code { font-family: var(--mono); color: var(--amber); }
 .crypt-line.esc { background: repeating-linear-gradient(45deg, var(--amber) 0 4px, transparent 4px 8px); }
 .crypt-line.esc::after { border-color: var(--amber); color: var(--amber); background: repeating-linear-gradient(45deg, var(--amber-wash) 0 6px, transparent 6px 12px), var(--panel); }
 .tag.esc { color: var(--amber); border-color: var(--amber-soft); }
+/* A Priority's mark (objectives.mjs): its target and cycles left, amber like the bonus it pays. */
+.tag.prio { display: inline-flex; align-items: center; gap: 3px; color: var(--next); border-color: var(--next); font-weight: 700; }
+.tag.prio .glyph { width: 11px; height: 11px; }
+.tag.prio.met { color: var(--muted); border-color: var(--line); }
 /* A crew boss's mechanics (raid.mjs): their own row on the board, each chip on the cycle it lands. */
 .braid .bname small { display: block; font-size: 11px; }
 .intent.raid { border-color: var(--hot); color: var(--hot); display: flex; flex-direction: column; gap: 1px; }
@@ -2287,6 +2291,8 @@ body.with-sidebar .workspace { grid-template-columns: 200px minmax(0, 1fr); }
 /* a runner's countdown (the Exfil's upload): its own board row; on a phone, where rows are dear, on the strip instead */
 .phase-strip .ps-esc { display: none; margin-left: auto; color: var(--next); font-weight: 700; letter-spacing: 0.08em; }
 @media (max-width: 640px) { .board .bescape { display: none; } .phase-strip .ps-esc { display: inline; } }
+.phase-strip .ps-obj { margin-left: 8px; padding: 1px 7px; border: 1px solid currentColor; border-radius: 2px; color: var(--next); font-weight: 700; letter-spacing: 0.08em; }
+.phase-strip .ps-obj.met { color: var(--amber); } .phase-strip .ps-obj.failed { color: var(--muted); font-weight: 400; }
 .phase-strip span { padding: 2px 8px; border-radius: 2px; border: 1px solid transparent; }
 .phase-strip.ph-wait .ps-you { color: var(--you); border-color: color-mix(in srgb, var(--you) 50%, transparent); }
 .phase-strip.ph-you .ps-you { color: var(--bg); background: var(--you); }
