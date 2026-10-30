@@ -29,6 +29,7 @@ import { raidStart, raidLand, raidCycle, raidShield, raidBroke, raidTaken, raidA
 import { tellStart, tellCycle, tellLand, tellBroke, chargeNow, tellIntents, tellSigint, tellSigintCheck, tellOn, tellsOf, overclockMult, hotCharge } from './tells.mjs';
 import { prepareTicks, onHit as tickHit, blastCut, BOSS_RULES } from './interrupt.mjs';
 import { TELL, ROOM_FAMILIES, DAMPER_KINDS, floorFor, partGenesFor } from './data.mjs';
+import { holdsPart, objectiveBroke, objectiveCycle, objectiveBonus, bonusXp, bonusRolls } from './objectives.mjs';
 import { mechValidate, mechIntercept, mechFired, mechPower, exposedCut, mechLanded, mechCommandHit, mechStart, mechClose, mechBroke, lagged, stunnedNow, missedTurn } from './mechanics.mjs';
 import { tickRoot, processWon } from './root.mjs';
 import { firewallCommand, wear, raidShare, hardenRestore } from './firewall.mjs';
@@ -840,7 +841,7 @@ export const tierOf = (ctx) => ctx.tier || (ctx.rare ? 'rare' : ctx.elite || ctx
 // drop rolls none here: bossLoot gives its item. A strain also has its own trophy: 1 in LOOT.trophy kills of that strain.
 export function rollDrop(s, ctx, level) {
   if (typeof ctx === 'string') ctx = { kind: ctx === 'guard' ? 'guard' : 'home' };
-  const rolls = ctx.boss && sureDrop(ctx.boss) ? 0 : (ctx.rolls || LOOT.rolls[ctx.kind] || 1) + (ctx.flat ? 0 : (s.encounter?.cleanRead && s.encounter.phase !== 'active' ? TELL.read.rolls : 0)); // every tell in the fight read: once more (tells.mjs). flat: its rolls and no more (the Exfil's)
+  const rolls = ctx.boss && sureDrop(ctx.boss) ? 0 : (ctx.rolls || LOOT.rolls[ctx.kind] || 1) + (ctx.flat ? 0 : (s.encounter?.cleanRead && s.encounter.phase !== 'active' ? TELL.read.rolls : 0) + bonusRolls(s.encounter)); // every tell in the fight read: once more (tells.mjs), and a met objective (objectives.mjs). flat: its rolls and no more (the Exfil's)
   const tier = tierOf(ctx);
   let best = null;
   for (let i = 0; i < rolls; i++) {
@@ -2089,7 +2090,9 @@ function payKill(s, e, base, why) {
   // LOWLIGHT Kit (2): the kill after a delivered contract pays more (s.killXp, a percentage; setDeliver).
   const kit = s.killXp ? Math.max(1, Math.round((xp * s.killXp) / 100)) : 0;
   if (kit) { emit(s, 'set-xp', `${s.killXpFrom || 'Set bonus'}: +${kit} XP.`, { amount: kit }); delete s.killXp; delete s.killXpFrom; }
-  gainXp(s, xp + bonus + hot + read + rested + kit, why, 'fight', e.xpKind || 'fight'); // xpKind: what it tallies as (a held server's respawns: build, netrooms.mjs)
+  const obj = bonusXp(e, xp); // a met objective (objectives.mjs)
+  if (obj) emit(s, 'objective-xp', `Objective: +${obj} XP.`, { amount: obj });
+  gainXp(s, xp + bonus + hot + read + rested + kit + obj, why, 'fight', e.xpKind || 'fight'); // xpKind: what it tallies as (a held server's respawns: build, netrooms.mjs)
 }
 
 // A room fight won on the network (netrooms.mjs, GAME_RULES.md "Runs: servers as rooms"): what the kill pays besides its XP. wild: SPRAWL-00
@@ -2170,8 +2173,9 @@ export function finish(s, result) {
   // A server room (floorplan.mjs, the rooms playtest): the kill's XP here. Progress, loot and the pack are the room's.
   if (e.rooms) {
     if (result === 'escaped') emit(s, 'escaped', 'Upload complete. The archive is gone.', { mode: 'rooms', cycles: e.cycle }); // a runner got away (the Exfil: its upload completed)
+    else if (result === 'victory' && e.objective?.kind === 'uptime') emit(s, 'victory', `Uptime held for ${e.cycle} cycles. Signal ${d.integrity}/${d.max}.`, { mode: 'rooms' });
     else emit(s, result === 'victory' ? 'victory' : 'crashed', result === 'victory' ? `${e.virus.name} neutralized in ${e.cycle} cycles. ${!e.metrics.attackDamage ? 'Nothing got through.' : `Took ${e.metrics.attackDamage} damage.`} Signal ${d.integrity}/${d.max}.` : `${e.virus.name} burned your Signal to zero.`, { mode: 'rooms' });
-    if (result === 'victory') payKill(s, e, e.roomsXp || 1, `${e.virus.name} neutralized`);
+    if (result === 'victory') { objectiveBonus(s, e); payKill(s, e, e.roomsXp || 1, `${e.virus.name} neutralized`); } // a met objective's components (objectives.mjs)
     hooks.roomEnd?.(s, result);
     return;
   }
@@ -2909,6 +2913,7 @@ export function hit(s, p, base, opts = {}) {
   if (p.exposedUntil >= e.cycle) notes.push('exposed');
   if (p.taggedUntil >= e.cycle) notes.push('tagged');
   if (e.virus.weakKnown && e.virus.weakPoint === p.id) notes.push('weak point');
+  if (dealt > 0 && holdsPart(e, p)) dealt = Math.min(dealt, Math.max(0, p.integrity - 1)); // Uptime: the virus can't be broken (objectives.mjs)
   const above = p.integrity >= p.max / 4;
   p.integrity -= dealt;
   if (above && p.integrity > 0 && p.integrity < p.max / 4) daemonsOn(s, 'low', { part: p.id }); // Reaper
@@ -3119,6 +3124,7 @@ function breakPart(s, p) {
   e.metrics.breakOrder.push(p.id);
   if (p.kind !== 'fragment') e.breaks = (e.breaks || 0) + 1;
   mechBroke(s, p); // Vendetta (mechanics.mjs)
+  objectiveBroke(s, p); // a Priority's part (objectives.mjs)
   // Mirror: break one twin while the other lives, and it reboots a few cycles later (at most twice).
   const tw = twinOf(s, p);
   if (tw && alive(tw) && (p.reboots || 0) < CONFIG.twinReboot.max && !p.quiet && !fxHas(s, 'no-reboot')) { p.rebootAt = e.cycle + CONFIG.twinReboot.in; emit(s, 'status', `${p.name} is down, but its twin ${tw.name} will reboot it in ${CONFIG.twinReboot.in} cycles. Break both.`, { target: p.id }); }
@@ -4434,8 +4440,8 @@ function cycleClose(s, landed) {
     if (virusIntegrity(s).current === 0) return finish(s, 'victory');
     if (defender(s).integrity <= 0) return finish(s, 'crashed');
   }
-  // A runner (the Exfil, floorplan.mjs): still up when its cycles run out, its upload completes and it gets away.
-  if (e.escapeAt && e.rooms && e.cycle >= e.escapeAt) return finish(s, 'escaped');
+  // An objective's clock (objectives.mjs): the Exfil's upload completes and it gets away, Uptime held wins, a Priority missed.
+  { const end = objectiveCycle(s); if (end) return finish(s, end); }
 
   e.cycle++;
   e.elapsedMs = 0;
@@ -4921,6 +4927,7 @@ export function restore(raw) {
     try { achievementsRestore(s); } catch (err) { hooks.restoreError?.(err); } // achievements.mjs: an older save earns what it has already done (its titles and stickers too), quietly; never costs the save
     if (s.encounter) s.encounter.plan ||= [];
     if (s.encounter?.virus) packParts(s); // a fight saved before packed parts hid their names
+    if (s.encounter?.escapeAt) { s.encounter.objective ||= { kind: 'exfil', n: s.encounter.escapeAt }; delete s.encounter.escapeAt; } // an Exfil saved mid-fight: its upload becomes its objective (objectives.mjs); keyed on the field
     if (active(s)) { s.encounter.paused = true; s.encounter.autoPaused = true; } // resumes on the next order, or opening the Fight tab
     return s;
   } catch (err) {

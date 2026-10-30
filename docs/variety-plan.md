@@ -1,9 +1,10 @@
 # Variety plan: strains, objectives and the collection log
 
 **Status.** The designer's current plan against burnout, cut into sessions. Built: one kind of component (session 1,
-v47; GAME_RULES.md *Components*), strains wave 1 with the spread (session 4; GAME_RULES.md *Strains and grades*), and
-the collection log (sessions 2 and 3; GAME_RULES.md *Collection log*). Left: sessions 5 to 8: 16 new and mutated
-strains, and objectives. Session 4 left two
+v47; GAME_RULES.md *Components*), strains wave 1 with the spread (session 4; GAME_RULES.md *Strains and grades*), the
+collection log (sessions 2 and 3; GAME_RULES.md *Collection log*), and objectives' engine with Priority and Uptime
+(session 7; GAME_RULES.md *Objectives*). Left: sessions 5, 6 and 8: 16 new and mutated strains, Backup and Clean run.
+Session 4 left two
 balance tests `todo` for the designer: the Warden's capstones at 50, and the climb's contract share (strain contracts
 naming the new strains stall).
 
@@ -190,7 +191,7 @@ The prompt to paste is under each.
 | 4 | Strains wave 1: Lurker to Bodysnatcher, and the spread rule: **done** | nothing | medium |
 | 5 | Strains wave 2: Thornwall to Sweatshop | 4 merged | medium |
 | 6 | Strains wave 3: the eleven mutated strains | 4 merged | medium |
-| 7 | Objectives: the engine, the Exfil on it, Priority and Uptime, one room in two | the answer on levers | medium |
+| 7 | Objectives: the engine, the Exfil on it, Priority and Uptime, one room in two: **done** | the answer on levers | medium |
 | 8 | Objectives: Backup (its look first, as screenshots) and Clean run | 7 merged | medium |
 
 Sessions 2, 4 and 7 touch different files and can run side by side. Sessions 5 and 6 can too, once 4 is merged.

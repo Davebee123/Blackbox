@@ -246,7 +246,7 @@ when the server is built. Every number is a named constant in `PARTS`; `develope
 - **One lever a fight** (docs/puzzle-levers.md 5). From level 6 every wild fight (every invasion too) carries one
   **lever**, a part whose rule makes the default move the wrong one: a beat (Mimic, Decoy), a part to break last
   (Tripwire, Zip Bomb, Hotspot), a part to break first (Lockbox, Mutex, C2 Node, Packer) or twins (Mirror). A fight
-  that already brings a stranger may have none.
+  that already brings a stranger may have none, and a server fight with an objective has none (Objectives).
 - **Floor natives.** A native is a third first met on one floor: the Zip Bomb and Hotspot on floor 1; the Idle Timer,
   Front End and Backlog on 2; the Limiter and Spare on 3; the Scraper, Bad Block and Cold Store on 4. On its own floor
   it weighs three times as much; elsewhere it rolls at its own weight once its level allows. **Elites and ★ rare
@@ -601,6 +601,20 @@ shared on a server. It sits on every chip (an unknown room's too), opens its car
 and `go`/`cd` take it. A room a contract points at, or whose live virus a job would count, shows its address amber with
 the contract's mark.
 
+### Objectives (objectives.mjs)
+
+One plain fight room in two (a Process, from level 6) carries an **objective**, rolled with each respawn. It takes the
+fight's lever's place: a room third that's a lever stays out of that fight. The map tags the chip with its icon and
+number, and the room card names it with its bonus.
+
+| Objective | What wins | Missed | Board |
+|---|---|---|---|
+| **Priority** | Break the marked part by the end of cycle 5. The rest can stand. | The fight goes on, no bonus. | ◎ on the part with its cycles left; **Priority 2/5** on the phase strip. |
+| **Uptime** | Keep your Signal up to the end of cycle 8. The virus can't be broken (a hit leaves a part at 1); every 3 cycles its attacks come a cycle quicker. | You disconnect as usual. | **Uptime 3/8** on the phase strip. |
+
+**Met, it pays:** the loot rolls once more, the kill's XP half again, and 2 components. The Exfil's upload is an
+objective too (it pays its archive, not the bonus).
+
 ### Walking and fog
 
 - **Walking** into a room for the first time on a visit costs 3% of your max Signal if you've been in it before, 5% if
@@ -810,7 +824,7 @@ off the server (**EXFIL-####**). After one turns up, none does on any rogue serv
   to where it runs next, *Exfil running* on the strip. After each of your moves it steps to the neighbour farthest
   from you, never into your room or through a live virus's room. With nowhere farther to go it's **cornered**.
 - **Catch it** by walking into its room: a short fight with an Uplink and an Archive, light hits. Its row counts the
-  upload, **Upload 0/6**: still up at the end of cycle 6 and the archive is gone. Break it in time: **Archive
+  upload (its objective), **Upload 0/6**: still up at the end of cycle 6 and the archive is gone. Break it in time: **Archive
   recovered**: 10 Stashes' worth of credits, one item at the server's level (the best of two trash rolls, a white if
   both miss), 5% one of the server's uniques, and a process kill's XP. Jack out and it's gone for the run.
 
@@ -1743,8 +1757,8 @@ minutes after you take it.
 | Past the Tracker | Bank a file planted in a Tracker server's vault from a visit it never reached you (waking is fine) | 8 | 65 + 10L, +8, a protocol half the time |
 
 A contract that points at a room marks it on that server's map (its address amber, the contract's mark), and so does any
-job a room's live virus would count for. The strip shows **Contract** and its progress, the map's card each contract on
-that server. A takeover or recovery points at a server you've found, or at an **unknown server** one hop past one: you
+job a room's live virus would count for. The strip shows **Contract** and its progress (its tip has each one, a row each as
+the map's tracker draws it), the map's card each contract on that server. A takeover or recovery points at a server you've found, or at an **unknown server** one hop past one: you
 trace it to find it.
 
 **The board** opens with the turf letter (the storyline's fourth), or once you've held the claimjack or turf job for an

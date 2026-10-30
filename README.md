@@ -128,6 +128,7 @@ comment saying what it does.
 |---|---|
 | `dist/run.mjs` | Runs: connecting, the pack, banking at jack out, the run commands on rooms. |
 | `dist/floorplan.mjs` | A server as a graph of rooms: moving, fights, caches, the hunter, the vault and the Core. |
+| `dist/objectives.mjs` | A room fight's objective (`e.objective`): Priority, Uptime and the Exfil's upload, their roll, rules, board text and bonus. |
 | `dist/netrooms.mjs` | Every server on the real save as a room graph, kept on its location; takeover and Root rooms. |
 | `dist/floorplan-view.mjs`, `dist/floorplan.css` | The rooms page: the server strip and the room map with its pop-up card. |
 | `dist/floors.mjs` | The eight floors: each one's diagram of server slots, generated from your network's seed. |
