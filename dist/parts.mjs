@@ -177,7 +177,7 @@ export function rollParts({ family, body, level, rand, elite = false, rare = fal
   // One lever a fight (docs/puzzle-levers.md 5): from PARTS.lever an ordinary fight carries exactly one part whose rule
   // makes the default move the wrong one (genes.mjs lever). None rolled: one comes in a free slot, else in the doubled
   // basic's, else on top (up to the most its level rolls), else in the last other third's, so the rolled kinds stay. Two or more: the
-  // first stays, and each other is rolled again from the thirds that bring none (kept when none fits: below level 9
+  // first stays (a forced native, if it's one), and each other is rolled again from the thirds that bring none (kept when none fits: below level 9
   // every third open is a lever, and a 4-part fight keeps its 4). Elites bring two that pull against each other (P3).
   let lever = null;
   if (!elite && level >= PARTS.lever) {
@@ -185,7 +185,8 @@ export function rollParts({ family, body, level, rand, elite = false, rare = fal
     const most = 2 + along(PARTS.count, level).findLastIndex((x) => x > 0); // the most parts the level's count rolls
     const count = () => 1 + (dup ? 1 : 0) + (signature ? 1 : 0) + thirds.length;
     const ok = (spec, others) => !others.includes(spec) && (!spec.sig || signature) && !compatible([...(body.core || []), ...extra, ...others.map((t) => t.gene), spec.gene]).length && (!stranger(spec) || others.filter(stranger).length + (stranger(basic) ? 1 : 0) < 1);
-    for (const t of thirds.filter(isLever).slice(1)) {
+    const levers = thirds.filter(isLever), first = levers.includes(forced) ? forced : levers[0]; // a forced native stays: the other lever goes
+    for (const t of levers.filter((x) => x !== first)) {
       const rest = thirds.filter((x) => x !== t), swap = pool.filter((spec) => !isLever(spec) && weigh(spec.gene) > 0 && ok(spec, rest));
       if (swap.length) thirds[thirds.indexOf(t)] = pickBy(rand, swap, (x) => weigh(x.gene));
     }

@@ -2,8 +2,8 @@
 
 **Status.** Twenty new part mechanics for the designer to test. Built, all twenty, lean: `dist/mechanics.mjs` (rules
 and `MECH` start numbers), a gene each, playtest pages `?playtest=part:<id>`; GAME_RULES.md *Families*
-has the table. Ten ride in strains (docs/variety-plan.md 1.1) and spread from them onto their lineage's wild
-viruses (`PARTS.spread`). Left: none rolls elsewhere (`PARTS.mech` 0), the roll bug below, and the designer's call on
+has the table. All but the Punisher ride in strains (docs/variety-plan.md 1.1) and spread from them onto their
+lineage's wild viruses (`PARTS.spread`). Left: none rolls elsewhere (`PARTS.mech` 0), and the designer's call on
 combinations.
 
 October 28, 2026. The designer: *"Adding more mechanics for me to test primarily is going to save a lot."* And: *"You
@@ -39,9 +39,8 @@ and the Mimic.
   `developer parts mech 0.5` rolls them all for a session. At half weight they came in about 40% of wild fights from
   level 10, and four full-suite balance tests moved (the Overclocker's Sudo, crew-leaning kits, the Operator's solo
   pace, two sets); don't bend the planner to them.
-- **The roll bug.** An elite or ★ rare spawn holding two levers can swap away the floor native it must bring, when a
-  non-lever third is open to take the lever's place (parts.mjs). With the list rolling, the natives test fails. Fix:
-  keep the forced native, and swap the other lever.
+- **The roll bug: fixed.** A ★ rare spawn holding two levers could swap away the floor native it must bring. It keeps
+  the forced native and swaps the other lever now (parts.test.mjs rolls it at `PARTS.mech` 0.5).
 
 **The bots' check** (genesim, level 18, one seed, every subclass): Signal lost a fight against the body alone. All
 under the 25-point bound and the planner still wins. Not tuning targets.

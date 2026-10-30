@@ -96,7 +96,7 @@ comment saying what it does.
 | `dist/tells.mjs` | Solo tells: the big moves a part announces ahead (charges, casts, seals). |
 | `dist/interrupt.mjs` | The interrupt: crossing a part's 50% or 25% tick on its due cycle cancels its move. |
 | `dist/order.mjs` | The order levers: parts whose right moment to break depends on the board. |
-| `dist/mechanics.mjs` | The mechanics list: twenty third parts built lean, each rule's hooks in one place. Six strains are built from them (`STRAINS`). |
+| `dist/mechanics.mjs` | The mechanics list: twenty third parts built lean, each rule's hooks in one place. Eleven strains are built from them (`STRAINS`). |
 | `dist/situations.mjs` | The moment on the board each situational skill is built for; the tray lights it. |
 | `dist/raid.mjs` | Crew bosses: phases and mechanics for KESSLER-FARM-00's three. |
 | `dist/planner.mjs` | The scripted fight player for every class, used by the simulations and bot crewmates. |
