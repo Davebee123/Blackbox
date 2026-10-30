@@ -64,13 +64,14 @@ import { guardSetChance, lairChance, bossOdds, presetsOf, presetKeys, followOf, 
 import { tripwireOf, zipOf, heldOf } from './order.mjs';
 import { youMarks, junkKey } from './mechanics.mjs';
 import { cantripsOf, TELL } from './data.mjs';
-import { usable } from './combat.mjs';
+import { usable, hooks } from './combat.mjs';
 import { sigintWindows, sigintCharges } from './tells.mjs';
 import { daemonText } from './daemons.mjs';
 import { ROOMS as ROOMS_FP, kindRule, KIND_OF } from './floorplan.mjs'; // a server card's respawn timers, its type's rule
 import { threadRows, threadReader, tempNodes, tempNodeSvg, tempCard, serverMarkSvg, transitNodes, transitSvg } from './threads-view.mjs';
 import { arcRows, arcReader } from './arcs-view.mjs';
 import { threadById, serverMarks } from './threads.mjs';
+import { tipOf } from './scanner.mjs';
 import { skillsTabMarkup } from './skills-view.mjs';
 import { achievementsMarkup } from './achievements-view.mjs';
 import { casingPageMarkup, districtCardMarkup } from './casing-view.mjs';
@@ -2420,13 +2421,18 @@ function homeEvents(s) {
 }
 // A market shock at a hub (events.mjs): ▲ (it pays more: sell) or ▼ (it's cheap: buy), the ware, the minutes left.
 function shockTag(s, f) {
-  const ev = shockOf(s, f);
-  return ev ? `<span class="tag shock ${ev.mult > 1 ? 'up' : 'down'}" title="${esc(`${eventText(s, ev)} ${eventMinutes(ev)} min left.`)}">${ev.mult > 1 ? '▲' : '▼'}${glyph(GLYPH_OF_GOOD[ev.ware])}×${ev.mult}</span>` : '';
+  const ev = shockOf(s, f) || tipShock(s, f);
+  return ev ? `<span class="tag shock ${ev.mult > 1 ? 'up' : 'down'}" title="${esc(ev.title || `${eventText(s, ev)} ${eventMinutes(ev)} min left.`)}">${ev.mult > 1 ? '▲' : '▼'}${glyph(GLYPH_OF_GOOD[ev.ware])}×${ev.mult}</span>` : '';
+}
+// A pirate's tip you logged on the scanner (scanner.mjs), shown like a market shock.
+function tipShock(s, f) {
+  const x = tipOf(s, f);
+  return x && { mult: x.mult, ware: x.ware, title: `Pirate tip: ${FX[f].short} ${x.mult > 1 ? 'pays' : 'charges'} ${Math.round(x.mult * 100)}% of the usual for ${WARES[x.ware].name}. ${Math.max(1, Math.ceil((x.until - (hooks.now?.() ?? Date.now())) / 60000))} min left.` };
 }
 function shockSvg(s, f) {
-  const ev = shockOf(s, f);
+  const ev = shockOf(s, f) || tipShock(s, f);
   // Sized for the screen, not the map (--z, like the labels): it sits above the hub's mark at any zoom.
-  return ev ? `<g class="hub-shock ${ev.mult > 1 ? 'up' : 'down'}" transform="translate(10 -14)"><title>${esc(`${eventText(s, ev)} ${eventMinutes(ev)} min left.`)}</title><g class="hs-in"><rect x="0" y="-15" width="56" height="15" rx="2"/><text x="4" y="-4">${ev.mult > 1 ? '▲' : '▼'}</text><g class="hs-ware" transform="translate(14 -13.5) scale(0.75)">${GLYPHS[GLYPH_OF_GOOD[ev.ware]]}</g><text x="28" y="-4">×${ev.mult}</text></g></g>` : '';
+  return ev ? `<g class="hub-shock ${ev.mult > 1 ? 'up' : 'down'}" transform="translate(10 -14)"><title>${esc(ev.title || `${eventText(s, ev)} ${eventMinutes(ev)} min left.`)}</title><g class="hs-in"><rect x="0" y="-15" width="56" height="15" rx="2"/><text x="4" y="-4">${ev.mult > 1 ? '▲' : '▼'}</text><g class="hs-ware" transform="translate(14 -13.5) scale(0.75)">${GLYPHS[GLYPH_OF_GOOD[ev.ware]]}</g><text x="28" y="-4">×${ev.mult}</text></g></g>` : '';
 }
 
 // In a consortium, your wall meets invaders while you're logged off: what it stops.

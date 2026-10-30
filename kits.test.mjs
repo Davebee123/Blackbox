@@ -158,7 +158,7 @@ test('a v36 save: known skills stay known, untouched bars become the new default
   s.version = 36;
   const t = restore(JSON.parse(JSON.stringify(s)));
   assert.equal(t.version, SAVE_VERSION);
-  assert.equal(SAVE_VERSION, 50); // v50: specials; v49: crafting goes; v48: Indemnity retires; v47: one kind of component; v46: no default subclass; v45: sets; v44: whole-number stats; v43: threads; v42: the long climb; v41: floors (R3)
+  assert.equal(SAVE_VERSION, 51); // v51: the scanner; v50: specials; v49: crafting goes; v48: Indemnity retires; v47: one kind of component; v46: no default subclass; v45: sets; v44: whole-number stats; v43: threads; v42: the long climb; v41: floors (R3)
   assert.ok(knownSkills(t, 'bastion').includes('patch'), 'Patch kept');
   assert.deepEqual(t.loadout.kept.sysop, ['patch']);
   assert.deepEqual(t.loadout.equipped.sysop, presetBar('bastion', 'sysop', 13, SUBS.sysop.presets.rotation, knownSkills(t, 'bastion')), 'an untouched bar becomes the new rotation, with what it kept');

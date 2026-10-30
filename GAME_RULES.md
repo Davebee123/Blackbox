@@ -777,7 +777,8 @@ docs/threads.md). Never given, never timed, nothing missable.
   (`talk`; **Read**, **Take** for a thing) starts it.
 - **Where.** Each server's start is pinned the first time you connect, from its seed: at most one a server, never on
   SPRAWL-00, the farm, a lair, a rogue, a member's or a temporary server. An authored chain lands on the first servers
-  of its floor you connect to once you're at its level; any other server holds a one-off 35% of the time.
+  of its floor you connect to once you're at its level; any other server holds a one-off 35% of the time. A distress
+  call on the scanner pins a one-off on a server with none, already found.
 - **A thread's rooms** hang off the deep end of a branch, on this server, one a link or two off, or a floor up (always
   one you've located). They come cleared and never count toward Rooms n/N. The step you're on marks its room with an
   amber **?** and its server on the map.
@@ -1548,6 +1549,7 @@ hubs.
   hour. Each unit of a lot is priced after its own push, so no round trip profits.
 - **File transfers:** a sale leaves now and pays on arrival; a purchase is paid now and arrives later. Halcyon 5 min,
   Kestrel 8, LANTERN 10, GLASSJAW 12, NULL CHOIR 15; each relay cuts 10% (up to 40%). Hostile factions won't trade.
+- **Tips.** A pirate broadcast logged on the scanner moves one ware's price at one hub for a while ("The scanner").
 
 ### Sockets and programs
 
@@ -1803,6 +1805,37 @@ and pager line carry a chain-link mark. Ignoring a card never starts a chain.
 | 3 **Couriers** intercepted | **LANTERN's offer** | at once | LANTERN's own courier on one of your servers. 15 min | A Custom protocol, +5 LANTERN rep |
 | 15 kills of an **Outbreak**'s family while it's on | **Patient zero** | at once | The outbreak's source, an elite, on one of your servers; kill it and the outbreak ends. 15 min | A code cache (12 + level/2) and the elite's loot |
 | A **Spotter** killed | the next invasion | its own clock | 2 levels weaker, its kind known | — |
+
+## The scanner
+
+A shortwave radio on the Map page (`scanner.mjs`, `scanner-view.mjs`): the calm side activity, with no risk. The radio
+button sits at the map's bottom-left corner, dim while nothing is on the air and glowing amber while a broadcast is up.
+It opens a strip across the map's foot; the button or Esc closes it, and it closes itself 3 s after the broadcast ends.
+
+- **On the air.** One station at a time, for 2–3 minutes, then 15–30 minutes quiet (the first 5 minutes into a new
+  save). Stations not yet logged come up first, then the ones that still pay. A broadcast starts with a quiet two-tone
+  ping, never in a fight.
+- **Finding it.** The dial runs 3–12 MHz; drag, scroll or use the arrow keys (Shift for ×10). It never shows where a
+  station you can catch is: the S-meter rises and the static clears within 0.15 MHz of it. One with nothing left to
+  catch shows as a muted glow.
+- **The reel.** Within 0.04 MHz at a strength over S3 it **bites**: the dial zooms to 0.8 MHz round it, a teal hold
+  zone of ±0.025 MHz sits round the needle, and the carrier moves. In the zone the lock fills in 5 s; outside it drains
+  at 1/8 a second. A numbers station sways, a pirate hops every 1.7 s (never back to the centre), a distress call
+  wanders and fades, and the lock waits while it's faded. Holding still never catches one. Leaving the window lets go.
+- **Logged.** A full lock logs it (its own log, `s.scanner`: counts by kind on the strip, the log card lists each with
+  ??? for those not caught) and it signs off 8 s later. A numbers station pays once; a pirate or a distress call pays
+  each time it's caught, once a broadcast, and the log keeps its last payoff.
+
+| Kind | Stations | Pays |
+|---|---|---|
+| Numbers station | 4 | A line of lore, kept in the log |
+| Pirate broadcast | 3 | A tip for a hub you've found: one ware's price there moves (Kernel ×1.3 for 20 min, Cipher ×0.75 for 60, Worm ×1.5 for 40), shown on the hub like a market shock. Only once you've found a hub |
+| Distress call | 3 | A one-off thread on the traced server it names (one with no thread, at most 3 levels over you), its ! on the map |
+
+- **Radio traffic.** Fifteen transmissions across the band (time signals, Morse, data, music, voices), heard within
+  0.06 MHz, on in bursts. Nothing to catch.
+- **Sound** follows Sound and the Effects volume: static that thins as a station clears, the off-tune whistle (silent
+  dead on), the station under it, the traffic, and a chirp on a catch.
 
 ## Home
 
@@ -2248,9 +2281,10 @@ Checked by `node balance.mjs` (docs/BALANCE.md, `balance.test.mjs`), `farmsim.mj
 
 ## Saves
 
-The save is `SAVE_VERSION` 50 (combat.mjs). An older save is migrated on load, each step keyed on the field it converts,
+The save is `SAVE_VERSION` 51 (combat.mjs). An older save is migrated on load, each step keyed on the field it converts,
 so it is safe to run twice; nothing a save held is lost.
 
+- **v51** the scanner's log, `s.scanner`, made on first use (`scannerOf`).
 - **v50** site traits become specials: Rich, Legacy, Backbone, Hostile and Hardened keep their names, a traced server
   with none rolls its own, a Stable server gets its rest room and a Backbone one its socket (`specialsRestore`).
 - **v49** crafting goes: recipes, plans and their files become credits (a letter from wick lists them), banked Zero-day
