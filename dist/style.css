@@ -1611,6 +1611,8 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 .mnode.rogue path.rx { fill: none; stroke: var(--hot); stroke-width: 1.4; opacity: 0.8; }
 .mnode.rogue.here path { stroke: var(--you); fill: rgba(127, 209, 199, 0.15); }
 .tag-rogue { border-color: var(--hot); color: var(--hot); }
+.tag.tag-special { color: #1a1206; background: var(--amber); border-color: var(--amber); font-weight: 700; letter-spacing: 0.5px; cursor: help; } /* a server special (specials.mjs): the one filled amber tag */
+.mspecial { fill: var(--amber); font-size: calc(15px / var(--z, 1)); font-weight: 700; } /* a server special's glyph on its map node */
 
 /* A meter that isn't full: click to pay for the rest (top up Signal, repair the server). */
 .meter[data-command] { cursor: pointer; border-radius: 4px; padding: 2px 6px; margin: -2px -6px; }
@@ -3220,6 +3222,7 @@ h1 .byline { font-size: 13px; vertical-align: middle; }
 .tt .tt-mastery { display: block; margin-top: 4px; color: var(--you); font: 600 11px var(--mono); letter-spacing: 0.3px; } /* an ability's mastery line (mastery.mjs) */
 .tt .tt-more { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; white-space: normal; } /* icon chips under the text (a contract's pay) */
 .tt .tt-more b { display: inline; margin: 0; color: var(--bright); font: 700 12px var(--mono); letter-spacing: 0; }
+.tt .tt-more .rw.neg b { color: var(--hot); } /* a cost (a server special's) */
 .tt .tt-ans { display: block; margin-top: 5px; padding-top: 4px; border-top: 1px solid var(--line); color: var(--muted); font-size: calc(12px * var(--ui, 1)); } /* the answer line (fightread.mjs answerLine) */
 @media (prefers-reduced-motion: reduce) { .tt { animation: none; } }
 

@@ -22,7 +22,7 @@
 // Sockets (R2, sockets.mjs): a traced server's socket rooms (by size, +1 Backbone, +1 Root 4, +1 in a Grid consortium);
 // a server you hold has its Core as its core socket. A Resident's first fall pays a protocol, and Mapped credits. A run on rooms: s.run.rooms, Signal is the
 // run's, the pack the run's files (run.mjs bank). The save migration (v39) builds every found server's rooms.
-import { hooks, emit, warn, active, hackerLevel, maxSignal, disconnect, gainXp, xpFor, deedXpFor, addItem, findLocation, roomKill, classOf, gainCode, rollDrop, uniqueFrom, rand, setDrop, fxPct } from './combat.mjs';
+import { hooks, emit, warn, active, hackerLevel, maxSignal, disconnect, gainXp, xpFor, deedXpFor, addItem, findLocation, roomKill, classOf, gainCode, rollDrop, uniqueFrom, rand, setDrop, fxPct, guardedUnique } from './combat.mjs';
 import { setCredits } from './sets.mjs';
 import { PUZZLES } from './puzzles.mjs';
 import { CONFIG, BOSSES, FAMILIES, GUARDS, ROOM_FAMILIES, QUIRKS, layerOf } from './data.mjs';
@@ -33,7 +33,8 @@ import { AUTHOR_FAMILIES, familyName } from './families.mjs';
 import { zoneOf, zoneRooms } from './zone.mjs';
 import { ROGUE, FARM, rogueRooms, rogueSpawns, rogueKill, relocks, clock, inRuns } from './rogue.mjs';
 import { lairOpen, NETWORK } from './network.mjs';
-import { sizeOf, SITES } from './sockets.mjs';
+import { sizeOf } from './sockets.mjs';
+import { SPECIAL, SPECIALS, specialsOf, hasSpecial, armoredAt } from './specials.mjs';
 import { gainComponents } from './salvage.mjs';
 import { consortiumSockets } from './consortium.mjs';
 import { owned, rootOf, ROOT, ROOT_PERKS } from './root.mjs';
@@ -48,8 +49,7 @@ import { threadsConnect, threadsMoved, threadsStood, threadVerb, tempCoreOpen, t
 
 export const KIND_OF = FP.KIND_OF;
 export const NET = {
-  hostile: 0.5, // a Hostile server's fight rooms come back twice as fast
-  rich: 2, hoard: 1.5, // caches pay this much more on a Rich server, a Hoard
+  hoard: 1.5, // caches pay this much more on a Hoard
   quiet: [2, 4], // a rogue server's quiet rooms (Empty and Stash), from its seed
   purseCode: 0.2, // a Stash's 1 code of the server's family, one time in five
   wildXp: 1, // a wild room's kill: a room kill (ROOMS.xp.room), as a traced server's
@@ -80,6 +80,7 @@ function build(s, loc) {
     const graph = FP.generate(loc.seed || 1, { size, kind, level, floor, author: AUTHOR_FAMILIES[author] ? author : 'tollgate', sockets: socketsFor(loc, size) });
     placePuzzles(loc, graph, size);
     placeQuirkRoom(loc, graph);
+    if (hasSpecial(loc, 'stable')) FP.addRestRoom(graph); // a Stable server's rest room (specials.mjs)
     return FP.newRooms(s, { ...base, seed: loc.seed || 1, size, kind, level, floor, author: AUTHOR_FAMILIES[author] ? author : 'tollgate', graph, type: 'server', code: codeOf(loc.family) || 'cipher' });
   }
   const graph = loc.zone ? sprawlGraph() : loc.farm ? farmGraph() : wildGraph(loc);
@@ -102,7 +103,7 @@ export function placeQuirkRoom(loc, g) {
   return room;
 }
 // A traced server's socket rooms: by its size, one more on a Backbone server (Root 4's and Grid's are rooms added later).
-const socketsFor = (loc, size = sizeOf(loc).id) => (FP.ROOMS.sockets[size] || 1) + (loc.trait === 'backbone' ? 1 : 0);
+const socketsFor = (loc, size = sizeOf(loc).id) => (FP.ROOMS.sockets[size] || 1) + (hasSpecial(loc, 'backbone') ? 1 : 0);
 const link = (g, a, b) => g.links.push([a, b]);
 function graphOf(list, links, { core = null, vaults = [], spine = [] } = {}) {
   const g = { rooms: {}, links: [], hops: [], loops: [], entry: 'r0', core, vaults, spine };
@@ -252,16 +253,14 @@ WORLD_hook('back', (s, room) => { if (!room.wild) return undefined; const sp = s
 WORLD_hook('from', (s, room) => { if (!room.wild) return undefined; const sp = spawnOf(s, room); return sp && !sp.alive ? sp.diedAt ?? (sp.respawnAt - 180000) : null; });
 // A server you hold is on the farm timers like a Mapped one (FP.farmed).
 WORLD_hook('held', (s) => !!locOf(s)?.takenOver);
-WORLD_hook('respawn', (s, room) => {
-  const loc = locOf(s), base = FP.respawnBase(s, room);
-  return loc?.trait === 'hostile' ? base * NET.hostile : base;
-});
+// A server's special in its fights (specials.mjs): Hostile's hits and XP (floorplan.mjs fight).
+WORLD_hook('tune', (s) => (hasSpecial(locOf(s), 'hostile') ? { hits: SPECIAL.hits, xp: SPECIAL.xp } : null));
 WORLD_hook('level', (s) => { const loc = locOf(s); return loc ? levelOf(loc) : undefined; });
 // A server you hold: its Core is its core socket (6.1). (Core programs come with R4; until then it takes any program.)
 WORLD_hook('coreSocket', (s) => { const loc = locOf(s); return !!loc && owned(loc) && s.rooms?.type === 'server'; });
 // A Grid socket outside a Grid consortium: its program waits, idle.
 WORLD_hook('socketOff', (s, room) => !!room && room.extra === 'grid' && !consortiumSockets(s));
-WORLD_hook('rare', (s) => { const loc = locOf(s); return (rootOf(loc) >= 5 ? 2 : 1) * (loc?.trait === 'legacy' ? 2 : 1); });
+WORLD_hook('rare', (s) => { const loc = locOf(s); return (rootOf(loc) >= 5 ? 2 : 1) * (hasSpecial(loc, 'legacy') ? 2 : 1); });
 WORLD_hook('coreOpen', (s) => {
   const loc = locOf(s), R = s.rooms;
   if (!loc) return undefined;
@@ -295,10 +294,13 @@ WORLD_hook('fight', (s, room, as) => {
     return { key, seed, opts: { ...opts, room: room.path, author: loc.zone ? null : opts.author }, size: crew ? 'raw' : sp.boss ? 'boss' : sp.elite ? 'elite' : loc.zone ? 'stray' : 'process', name: sp.boss || sp.bounty ? sp.name.toUpperCase?.() === sp.name ? sp.name : opts.name || sp.name : null, level: sp.level, family: fam, elite: !!sp.elite, boss: sp.boss || null, bounty: !!sp.bounty, author: loc.zone ? null : authorOf(loc), xp: NET.wildXp, wild: true };
   }
   if (room.kind === 'core' && R.type === 'server') {
-    const level = residentLevel(loc, now()), name = `${loc.temp ? 'KILL SWITCH' : 'RESIDENT'} · ${loc.name}`;
-    return { key: 'random', seed: (((loc.seed || 1) * 7 + 31) >>> 0) + (R.spawns[room.id] || 0) * 7919, opts: { mode: 'run', room: room.path, level, family: loc.family, boss: 'resident', ...(loc.starter ? { bossHp: RESIDENT.starterHp } : {}), mutation: loc.trait === 'hardened' ? 'armored' : null, name, author: R.author }, size: 'boss', name, level, family: loc.family, author: R.author };
+    const level = residentLevel(loc, now()), seed = (((loc.seed || 1) * 7 + 31) >>> 0) + (R.spawns[room.id] || 0) * 7919;
+    // Guarded (specials.mjs): a crew elite holds the Core in the Resident's place, as a Pit's (rogue.mjs).
+    if (hasSpecial(loc, 'guarded') && !loc.temp) { const name = `ELITE · ${loc.name}`; return { key: 'random', seed, opts: { mode: 'run', room: room.path, level, family: loc.family, elite: true, mutation: armoredAt(loc) ? 'armored' : null, name, author: R.author }, size: 'elite', name, level, family: loc.family, elite: true, author: R.author }; }
+    const name = `${loc.temp ? 'KILL SWITCH' : 'RESIDENT'} · ${loc.name}`;
+    return { key: 'random', seed, opts: { mode: 'run', room: room.path, level, family: loc.family, boss: 'resident', ...(loc.starter ? { bossHp: RESIDENT.starterHp } : {}), mutation: armoredAt(loc) ? 'armored' : null, name, author: R.author }, size: 'boss', name, level, family: loc.family, author: R.author };
   }
-  if (room.kind === 'guard' && (loc.quirk === 'hoard' || loc.trait === 'hardened')) {
+  if (room.kind === 'guard' && (loc.quirk === 'hoard' || armoredAt(loc))) {
     const rare = !as && !!R.rare[room.id], level = levelOf(loc) + (rare ? FP.ROOMS.rareLevel : 0); // a rare spawn two levels up, as any guard post's
     return { key: room.guard, seed: ((room.seed + (R.spawns[room.id] || 0) * 7919) >>> 0) || 1, opts: { mode: 'run', room: room.path, level, mutation: 'armored' }, size: 'guard', name: GUARDS[room.guard].name.toUpperCase(), level, family: room.guard, author: GUARDS[room.guard].ice ? 'kestrel' : null, rare };
   }
@@ -319,7 +321,7 @@ WORLD_hook('won', (s, room, e, { first = false, mirror = false, rare = false } =
   if (e.virus.elite && seeded((e.seed * 31 + R.stats.fights) >>> 0)() < 0.25) giveScript(s, rollScript(seeded((e.seed * 17 + 3) >>> 0)), 'The elite carried: ');
   if (room.kind === 'core') { if (loc.temp) tempKilled(s, loc); else takeover(s, loc, room); } // a temporary server's kill switch: dark for good (threads.mjs)
   // Root (2.8): a respawned fight room cleared on a server you hold.
-  if (!first && owned(loc) && FP.FIGHTS.includes(room.kind) && room.kind !== 'core') rootClear(s, loc);
+  if (!first && owned(loc) && FP.FIGHTS.includes(room.kind) && room.kind !== 'core') rootClear(s, loc, hasSpecial(loc, 'hardened') ? SPECIAL.root : 1); // Hardened: twice as fast
 });
 WORLD_hook('lost', (s, room, e) => {
   const loc = locOf(s);
@@ -346,9 +348,9 @@ function takeover(s, loc, room) {
   if (!loc.residentFell) { loc.residentFell = now(); const r = seeded(((loc.seed || 1) * 53 + 11) >>> 0); addItem(s, rollItem(r, { level: levelOf(loc), rarity: r() < LOOT.quest ? 'custom' : 'tuned' }), `${loc.name}'s Resident carried `); }
 }
 // Root: respawned fight rooms cleared on a server you hold climb its pips (root.mjs ROOT.need).
-export function rootClear(s, loc) {
+export function rootClear(s, loc, n = 1) {
   const r = (loc.root ||= { level: 1, cleared: 0 });
-  r.cleared = (r.cleared || 0) + 1;
+  r.cleared = (r.cleared || 0) + n;
   while (r.level < ROOT.max && r.cleared >= ROOT.need[r.level + 1]) {
     r.level++;
     emit(s, 'root', `ROOT ${r.level} on ${loc.name}: ${ROOT_PERKS[r.level]}.`, { location: loc.id, root: r.level });
@@ -474,7 +476,7 @@ WORLD_hook('cache', (s, room, { credits, code, material }) => {
   packFile(s, { path: `${room.path}/#cache-${n}`, name: 'cache.dat', kind: 'credits', amount: credits });
   packFile(s, { path: `${room.path}/#code-${n}`, name: `${material}.code`, kind: 'code', material, amount: code });
 });
-WORLD_hook('cacheMult', (s) => { const loc = locOf(s); return (loc?.trait === 'rich' ? NET.rich : 1) * (loc?.quirk === 'hoard' ? NET.hoard : 1) * setCredits(s, 'cache') * (1 + fxPct(s, 'cache%') / 100); }); // setCredits: Lantern Route, the Logbook (sets.mjs); cache%: Golden Image
+WORLD_hook('cacheMult', (s) => { const loc = locOf(s); return (loc?.quirk === 'hoard' ? NET.hoard : 1) * setCredits(s, 'cache') * (1 + fxPct(s, 'cache%') / 100); }); // setCredits: Lantern Route, the Logbook (sets.mjs); cache%: Golden Image
 WORLD_hook('packItem', (s, it) => {
   // An item already added to your stash (floorplan.mjs): it goes back out and into the pack, banked when you jack out.
   s.stash = s.stash.filter((x) => x.id !== it.id);
@@ -495,10 +497,18 @@ function takeVault(s, loc) {
   for (const { dir, name } of vaultFiles(loc)) {
     const full = `${dir}/${name}`, info = fileInfo(loc, dir, name);
     if (!info || ['text', 'trap', 'sweep'].includes(info.kind) || loc.state?.taken?.[full] || s.run.pack.some((f) => f.path === full)) continue;
-    got.push(packFile(s, { path: full, name, ...info, ...(info.kind === 'credits' && info.amount ? { amount: Math.round(info.amount * setCredits(s, 'vault')) } : {}), loc: loc.id })); // Lantern Route (3): a vault's credits (sets.mjs)
+    got.push(packFile(s, { path: full, name, ...info, ...(info.amount ? { amount: Math.round(info.amount * vaultMult(s, loc, info.kind)) } : {}), loc: loc.id }));
+  }
+  // Guarded (specials.mjs): one of its floor's uniques, once.
+  if (hasSpecial(loc, 'guarded') && !loc.state?.taken?.['vault/#guarded'] && !s.run.pack.some((f) => f.path === 'vault/#guarded')) {
+    const u = guardedUnique(s, loc.depth || 1, levelOf(loc));
+    if (u) got.push(packFile(s, { path: 'vault/#guarded', name: 'protocol.bin', kind: 'gear', size: '32k', item: uniqueItem(u, levelOf(loc), () => rand(s)), loc: loc.id }));
   }
   return got;
 }
+// A vault file's pay: Lantern Route's credits (sets.mjs); a Hardened server's credits and code ×2, a Rich server's code ×2.
+const vaultMult = (s, loc, kind) => (kind === 'credits' ? setCredits(s, 'vault') * (hasSpecial(loc, 'hardened') ? SPECIAL.vault : 1)
+  : kind === 'code' ? (hasSpecial(loc, 'hardened') ? SPECIAL.vault : 1) * (hasSpecial(loc, 'rich') ? SPECIAL.code : 1) : 1);
 const gainsOf = (files) => files.map((f) => packGain(f));
 WORLD_hook('vault', (s, room) => {
   const loc = locOf(s), R = s.rooms;
@@ -544,8 +554,8 @@ FP.WORLD.view = {
   idTip: (s) => {
     const loc = locOf(s), R = s.rooms, r = ruleOf(loc);
     if (r) return `${loc.name}: ${r.rule}.\n${r.text}${inRuns(loc) ? '\nCleared rooms stay down. Clear them all and it reboots: every room back fresh a minute later.' : ''}`;
-    const by = (AUTHORS[R.author]?.name || R.author).toUpperCase(), site = SITES[loc.trait], q = QUIRKS[loc.quirk];
-    return `${loc.name}: a ${by} ${FP.kindName(R.kind)}, level ${levelOf(loc)}, ${R.size}.\n${FP.kindRule(R.kind)}${site ? `\n${site.name}: ${site.rule}` : ''}${q ? `\n${q.name}: ${q.rule}` : ''}${loc.takenOver ? '\nYours: its Core is quiet.' : ''}`;
+    const by = (AUTHORS[R.author]?.name || R.author).toUpperCase(), sp = specialsOf(loc).map((id) => SPECIALS[id]), q = QUIRKS[loc.quirk];
+    return `${loc.name}: a ${by} ${FP.kindName(R.kind)}, level ${levelOf(loc)}, ${R.size}.\n${FP.kindRule(R.kind)}${sp.map((x) => `\n${x.glyph} ${x.name}: ${x.rule}`).join('')}${q ? `\n${q.name}: ${q.rule}` : ''}${loc.takenOver ? '\nYours: its Core is quiet.' : ''}`;
   },
   sealed: (s) => { const loc = locOf(s); return loc?.zone ? (hackerLevel(s) < 3 ? 'RELAY-KING holds it from level 3, once SPRAWL-00 has rebooted.' : 'It opens when SPRAWL-00 reboots. Clear every room.') : loc?.farm ? 'Behind the ledger.' : loc?.lair ? `${BOSSES[loc.lair]?.name || 'Its boss'} holds it from level ${BOSSES[loc.lair]?.floor || 1}.` : undefined; },
   elite: (s, room) => { const sp = spawnOf(s, room); return !!(sp?.elite || sp?.bounty); },
@@ -686,6 +696,17 @@ export function quirkRoomsRestore(s) {
     // Beside a room you'd cleared that never fights again (a socket, a cache): it's open already, a room you haven't been in.
     if (by && R.cleared[by.id] && (!FP.FIGHTS.includes(by.kind) || by.kind === 'socket')) { delete room.concealed; R.graph.links.push([by.id, room.id]); }
     if (room && !room.concealed && (R.drawn || R.mapped)) R.seen[room.id] ||= 'shape';
+  }
+  specialRoomsRestore(s);
+}
+// The specials' rooms on a graph from before them (specials.mjs, v50): a Stable server's rest room, and a Backbone
+// server's socket where its graph has only its size's (open at once). Every load, idempotent.
+export function specialRoomsRestore(s) {
+  for (const loc of s.locations || []) {
+    const R = loc.floorplan;
+    if (!R?.graph || R.type !== 'server') continue;
+    if (hasSpecial(loc, 'stable') && R.graph.stable == null) { const room = FP.addRestRoom(R.graph); if (room && (R.drawn || R.mapped)) R.seen[room.id] ||= 'shape'; }
+    if (hasSpecial(loc, 'backbone') && (R.graph.sockets || 0) < socketsFor(loc, R.size)) { const room = FP.addSocketRoom(R.graph, 'backbone'); if (room) { R.cleared[room.id] = now(); R.seen[room.id] ||= 'shape'; } }
   }
 }
 hooks.roomsRestore = roomsRestore;

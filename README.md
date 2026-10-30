@@ -137,6 +137,7 @@ comment saying what it does.
 | `dist/rogue.mjs` | Rogue servers, where viruses gather, and the KESSLER-FARM-00 crew dungeon. |
 | `dist/root.mjs` | Root access: perks on a server you hold, by respawned rooms cleared. |
 | `dist/sockets.mjs` | Sockets: build a program in a cleared socket room; it changes its own server. |
+| `dist/specials.mjs` | Server specials: each traced server's rule (an upside and a cost) from its seed, and its pull on invasions. |
 | `dist/puzzles.mjs`, `dist/puzzle-view.mjs` | Puzzle rooms: four boards that aren't fights. |
 | `dist/forensics.mjs` | Log sweep: a short detective puzzle in a server's incident file. |
 | `dist/traffic.mjs`, `dist/travelfx.mjs` | Ambient packets on the room map; the step between rooms as a train of code. |
@@ -166,6 +167,7 @@ comment saying what it does.
 | `dist/content/story.mjs`, `dist/content/contracts.mjs` | The story beats and contract templates, written in the editor. |
 | `dist/arcs.mjs`, `dist/arcs-view.mjs` | Floor jobs: each floor's fixed chain of contracts, and its page in Mail. |
 | `dist/threads.mjs`, `dist/threads-view.mjs`, `dist/content/threads.mjs` | Threads: quests found in rooms, their marks and dialogue, and their data. |
+| `dist/scanner.mjs`, `dist/scanner-view.mjs`, `dist/scanner.css` | The scanner: a shortwave radio on the Map page, its stations, the reel and what each pays. |
 | `dist/quest-view.mjs`, `dist/quest.css` | The quest window: a thread as an intercepted transmission. |
 | `dist/portraits.mjs` | The speaker's portrait in the quest window: a backlit ASCII silhouette, the cast's own or one from their name. |
 | `dist/intro.mjs` | First launch: the login, then Halcyon's transmission. |

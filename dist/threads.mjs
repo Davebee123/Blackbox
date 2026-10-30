@@ -167,6 +167,16 @@ function pinStart(s, loc, chain) {
   if (!room) { T.starts[loc.id] = 0; return null; }
   return (T.starts[loc.id] = { chain, room: room.id, at: nowOf() });
 }
+// A distress call (scanner.mjs) starts a one-off thread on this server: its start room pinned and found, so its !
+// shows on the map. Only on a server with no thread start.
+export function pinDistress(s, loc, chain) {
+  const T = threadsOf(s);
+  if (!eligible(loc) || T.starts[loc.id] || !chainDef(chain)) return null;
+  delete T.starts[loc.id];
+  const st = pinStart(s, loc, chain), R = st && roomsOf(s, loc);
+  if (R) R.seen[st.room] = 'kind';
+  return st;
+}
 export const startHere = (s, loc) => (loc && s.threads?.starts?.[loc.id]) || null;
 
 // ---------- places ----------
@@ -584,7 +594,7 @@ function spawnTemp(s, t, key) {
   const name = () => `${def.name || 'TEMP'}-${String(seed % 100).padStart(2, '0')}`;
   while (findLocation(s, name().toLowerCase())) seed++;
   const loc = createLocation(host?.family || 'worm', seed, floor);
-  Object.assign(loc, { id: name().toLowerCase(), name: name(), level, template: TEMPLATE_OF[kind] || 'relay', trait: null, quirk: null, runs: 0,
+  Object.assign(loc, { id: name().toLowerCase(), name: name(), level, template: TEMPLATE_OF[kind] || 'relay', special: null, quirk: null, runs: 0,
     temp: { thread: t.id, key, host: host?.id || null, at: host ? mapSpot(s, host) : { x: 0, y: 0 }, builder: def.builder || 'nobody', copy: !!def.copy, logs: {}, read: {}, sweep: { tries: 0, solved: null }, grown: 0, dark: null, kill: false, by: def.kill || 'logs' } });
   const graph = (def.copy && copyGraph(s, seed, author)) || FP.generate(seed, { size: 'small', kind, level, floor, author, sockets: 0 });
   graph.puzzles ??= 0;

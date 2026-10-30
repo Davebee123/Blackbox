@@ -275,7 +275,7 @@ export function makeLair(s, who, level, id, name) {
   if (!boss) return null;
   const B = BOSSES[boss], seed = ((seedOf(s, who) % 99991) + 7 + (id === 'lair' ? 0 : strSeed(id) % 997)) >>> 0;
   const loc = createLocation(B.family, seed, SERVER.floorFor(level));
-  return Object.assign(loc, { id, name, family: B.family, level, lair: boss, rogue: { kind: 'lair' }, template: 'rogue', quirk: null, trait: null, spawns: {}, serial: 0, rooms: NETWORK.lairRooms });
+  return Object.assign(loc, { id, name, family: B.family, level, lair: boss, rogue: { kind: 'lair' }, template: 'rogue', quirk: null, special: null, spawns: {}, serial: 0, rooms: NETWORK.lairRooms });
 }
 // developer lair (force): the lair on the deepest floor you've reached (floor 2 at least), located at once. Without
 // force nothing: a lair is found by tracing it on its floor.

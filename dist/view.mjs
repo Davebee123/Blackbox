@@ -19,7 +19,8 @@ import { FACTIONS as FX, FACTION_IDS, rep, repTier, REP_TIERS, hubsOf, hubOf, sh
 import { GLYPHS } from './glyphs.mjs';
 import { SKILL_TEXT } from './lore.mjs';
 import { ruleHtml } from './ruletext.mjs';
-import { postsOf, siteLabel, sizeOf as serverSize, PROGRAMS, programsOn, shopCodebases } from './sockets.mjs';
+import { postsOf, sizeOf as serverSize, PROGRAMS, programsOn, shopCodebases } from './sockets.mjs';
+import { SPECIALS, specialsOf } from './specials.mjs';
 import { ABILITIES, CONFIG, FAMILIES, MUTATIONS, TICKER, QUIRKS, DAEMONS, STRAINS, GUARDS, BOSSES, STRAIN_NATIVE, DAEMON_BANDS, bandDaemons, daemonWhen, daemonBand, FLOORS, bandOf, floorOfLayer } from './data.mjs';
 import { GENES, CATS, AXES } from './genes.mjs';
 import { AUTHORS } from './authors.mjs';
@@ -63,13 +64,14 @@ import { guardSetChance, lairChance, bossOdds, presetsOf, presetKeys, followOf, 
 import { tripwireOf, zipOf, heldOf } from './order.mjs';
 import { youMarks, junkKey } from './mechanics.mjs';
 import { cantripsOf, TELL } from './data.mjs';
-import { usable } from './combat.mjs';
+import { usable, hooks } from './combat.mjs';
 import { sigintWindows, sigintCharges } from './tells.mjs';
 import { daemonText } from './daemons.mjs';
 import { ROOMS as ROOMS_FP, kindRule, KIND_OF } from './floorplan.mjs'; // a server card's respawn timers, its type's rule
 import { threadRows, threadReader, tempNodes, tempNodeSvg, tempCard, serverMarkSvg, transitNodes, transitSvg } from './threads-view.mjs';
 import { arcRows, arcReader } from './arcs-view.mjs';
 import { threadById, serverMarks } from './threads.mjs';
+import { tipOf } from './scanner.mjs';
 import { skillsTabMarkup } from './skills-view.mjs';
 import { achievementsMarkup } from './achievements-view.mjs';
 import { casingPageMarkup, districtCardMarkup } from './casing-view.mjs';
@@ -1992,6 +1994,12 @@ export function consortiumLayout(s) {
 // A tiny fill gauge for a map label (an outpost's stockpile): ▮▮▯▯.
 const gauge = (n, of, cells = 4) => { const k = Math.max(0, Math.min(cells, Math.round((n / Math.max(1, of)) * cells))); return '▮'.repeat(k) + '▯'.repeat(cells - k); };
 
+// A server's specials (specials.mjs): one filled amber tag each, its glyph (as text, never an emoji: U+FE0E) and name.
+// The tooltip: the name, its kind, the rule, the upside and cost as icon chips (the cost red), the ▸ programs.
+export function specialTags(l) {
+  const chip = ([ic, v, tip], neg) => `<span class="rw${neg ? ' neg' : ''}" title="${esc(tip)}">${glyph(ic)}<b>${esc(v)}</b></span>`;
+  return specialsOf(l).map((id) => { const x = SPECIALS[id]; return ` <span class="tag tag-special" data-special="${id}" title="${esc(`${x.name}: Server special.\n${x.rule}\n▸ ${x.answer}`)}"><template class="tt-more">${x.up.map((c) => chip(c)).join('')}${x.cost.map((c) => chip(c, true)).join('')}</template>${x.glyph}\uFE0E ${esc(x.name)}</span>`; }).join('');
+}
 function nodeState(s, l) {
   const taken = takenOf(l), total = takeable(l).length;
   if (s.run?.loc === l.id) return 'here';
@@ -2286,7 +2294,7 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
       const live = Object.values(l.spawns || {}).filter((x) => x.alive).length;
       return `<g class="mnode rogue${mapTags(s, l, st, job)}${crowded.has(n.id) ? ' crowded' : ''}${st === 'here' ? ' here' : ''}${s.locations.includes(l) && !isLive(s, l) ? ' detached' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}, rogue server"><circle r="18" class="mhit"/><path d="M0 -10 L9 -5 L9 5 L0 10 L-9 5 L-9 -5 Z"/><path d="M-4 -3 L4 3 M4 -3 L-4 3" class="rx"/>${pick}${lvLabel(s, n, 12, l.name, l.level || 1, l.depth || 1, l.occupied ? `rebooting · ${live}` : `${ROGUE.kinds[l.rogue.kind].name.toLowerCase()}${st === 'here' ? ' · here' : live ? ` · ${live} hostile` : ''}`)}</g>`;
     }
-    return `<g ${l.faction ? `style="--fc:${FX[l.faction].color}" ` : ''}class="mnode loc ${st}${mapTags(s, l, st, job)}${crowded.has(n.id) ? ' crowded' : ''}${l.faction ? ' fowned' : ''}${l.takenOver ? ' owned' : ''}${s.locations.includes(l) && !isLive(s, l) ? ' detached' : ''}${op}${job ? ' job' : ''}${eventsAt(s, l.id).length ? ' drop' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}"><circle r="18" class="mhit"/>${st === 'new' ? '<circle r="11" class="ring"/>' : arc(10, total ? taken / total : 0, st)}<circle r="5" class="core"/>${rotMark(l)}${l.faction ? `<g class="fmark" transform="translate(9 -17) scale(0.62)">${GLYPHS['f-' + l.faction]}</g>` : ''}${dropMark(s, l)}${serverMarkSvg(s, l.id, thMarks)}${pick}${lvLabel(s, n, 12, l.name, l.takenOver ? null : l.level || 1, l.depth || 1, rest)}</g>`;
+    return `<g ${l.faction ? `style="--fc:${FX[l.faction].color}" ` : ''}class="mnode loc ${st}${mapTags(s, l, st, job)}${crowded.has(n.id) ? ' crowded' : ''}${l.faction ? ' fowned' : ''}${l.takenOver ? ' owned' : ''}${s.locations.includes(l) && !isLive(s, l) ? ' detached' : ''}${op}${job ? ' job' : ''}${eventsAt(s, l.id).length ? ' drop' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}"><circle r="18" class="mhit"/>${st === 'new' ? '<circle r="11" class="ring"/>' : arc(10, total ? taken / total : 0, st)}<circle r="5" class="core"/>${rotMark(l)}${l.faction ? `<g class="fmark" transform="translate(9 -17) scale(0.62)">${GLYPHS['f-' + l.faction]}</g>` : ''}${specialsOf(l).length ? `<text class="mspecial" x="-11" y="-8" text-anchor="end">${specialsOf(l).map((id) => `${SPECIALS[id].glyph}\uFE0E`).join('')}</text>` : ''}${dropMark(s, l)}${serverMarkSvg(s, l.id, thMarks)}${pick}${lvLabel(s, n, 12, l.name, l.takenOver ? null : l.level || 1, l.depth || 1, rest)}</g>`;
   }).join('');
   const hoverNames = s.settings?.mapNames === 'hover';
   const svg = `<svg class="map-svg${hoverNames ? ' names-hover' : ''}${filter.length ? ' mf' + filter.map((k) => ' mf-' + k).join('') : ''}" viewBox="${minX} ${minY} ${maxX - minX} ${maxY - minY}" data-vb="${minX} ${minY} ${maxX - minX} ${maxY - minY}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${con ? 'Map of your consortium' : `Floor ${fl}, ${esc(floorName(fl))}`}">${scope}${lines}${con ? '' : trafficMarkup(s, nodes)}${con ? '' : trails}${draw}</svg>`;
@@ -2413,13 +2421,18 @@ function homeEvents(s) {
 }
 // A market shock at a hub (events.mjs): ▲ (it pays more: sell) or ▼ (it's cheap: buy), the ware, the minutes left.
 function shockTag(s, f) {
-  const ev = shockOf(s, f);
-  return ev ? `<span class="tag shock ${ev.mult > 1 ? 'up' : 'down'}" title="${esc(`${eventText(s, ev)} ${eventMinutes(ev)} min left.`)}">${ev.mult > 1 ? '▲' : '▼'}${glyph(GLYPH_OF_GOOD[ev.ware])}×${ev.mult}</span>` : '';
+  const ev = shockOf(s, f) || tipShock(s, f);
+  return ev ? `<span class="tag shock ${ev.mult > 1 ? 'up' : 'down'}" title="${esc(ev.title || `${eventText(s, ev)} ${eventMinutes(ev)} min left.`)}">${ev.mult > 1 ? '▲' : '▼'}${glyph(GLYPH_OF_GOOD[ev.ware])}×${ev.mult}</span>` : '';
+}
+// A pirate's tip you logged on the scanner (scanner.mjs), shown like a market shock.
+function tipShock(s, f) {
+  const x = tipOf(s, f);
+  return x && { mult: x.mult, ware: x.ware, title: `Pirate tip: ${FX[f].short} ${x.mult > 1 ? 'pays' : 'charges'} ${Math.round(x.mult * 100)}% of the usual for ${WARES[x.ware].name}. ${Math.max(1, Math.ceil((x.until - (hooks.now?.() ?? Date.now())) / 60000))} min left.` };
 }
 function shockSvg(s, f) {
-  const ev = shockOf(s, f);
+  const ev = shockOf(s, f) || tipShock(s, f);
   // Sized for the screen, not the map (--z, like the labels): it sits above the hub's mark at any zoom.
-  return ev ? `<g class="hub-shock ${ev.mult > 1 ? 'up' : 'down'}" transform="translate(10 -14)"><title>${esc(`${eventText(s, ev)} ${eventMinutes(ev)} min left.`)}</title><g class="hs-in"><rect x="0" y="-15" width="56" height="15" rx="2"/><text x="4" y="-4">${ev.mult > 1 ? '▲' : '▼'}</text><g class="hs-ware" transform="translate(14 -13.5) scale(0.75)">${GLYPHS[GLYPH_OF_GOOD[ev.ware]]}</g><text x="28" y="-4">×${ev.mult}</text></g></g>` : '';
+  return ev ? `<g class="hub-shock ${ev.mult > 1 ? 'up' : 'down'}" transform="translate(10 -14)"><title>${esc(ev.title || `${eventText(s, ev)} ${eventMinutes(ev)} min left.`)}</title><g class="hs-in"><rect x="0" y="-15" width="56" height="15" rx="2"/><text x="4" y="-4">${ev.mult > 1 ? '▲' : '▼'}</text><g class="hs-ware" transform="translate(14 -13.5) scale(0.75)">${GLYPHS[GLYPH_OF_GOOD[ev.ware]]}</g><text x="28" y="-4">×${ev.mult}</text></g></g>` : '';
 }
 
 // In a consortium, your wall meets invaders while you're logged off: what it stops.
@@ -2608,7 +2621,7 @@ function mapSide(s, sel, node) {
   const vaultStat = l.takenOver ? stat('Root', rootPips(l)) : stat('Vault', R && vaultId && R.opened[vaultId] ? 'open' : R ? 'shut' : '???');
   const parent = l.parent && s.locations.find((x) => x.id === l.parent);
   return `<section class="card ${st === 'new' ? 'alert' : ''}"><h2>${l.member ? `${esc(l.member)}'s server` : `Floor ${l.depth || 1}`} · ${esc(FAMILIES[l.family].name)}</h2><h1>${esc(l.name)}</h1>
-    <p class="tagline">${levelTag(s, l.level || 1)} <span class="tag tag-kind" data-kind="${esc(l.template || '')}"${layoutRule(l) ? ` title="${esc(layoutRule(l))}"` : ''}>${esc(layout)}</span>${siteLabel(l) ? ` <span class="tag tag-site" title="${esc(siteLabel(l).rule)}">${esc(siteLabel(l).name)}</span>` : ''}${QUIRKS[l.quirk] ? ` <span class="tag tag-quirk" data-quirk="${l.quirk}" title="${esc(QUIRKS[l.quirk].rule)}">${esc(QUIRKS[l.quirk].name)}</span>` : ''}</p>
+    <p class="tagline">${levelTag(s, l.level || 1)} <span class="tag tag-kind" data-kind="${esc(l.template || '')}"${layoutRule(l) ? ` title="${esc(layoutRule(l))}"` : ''}>${esc(layout)}</span>${specialTags(l)}${QUIRKS[l.quirk] ? ` <span class="tag tag-quirk" data-quirk="${l.quirk}" title="${esc(QUIRKS[l.quirk].rule)}">${esc(QUIRKS[l.quirk].name)}</span>` : ''}</p>
     <div class="stats">${roomsStat}${vaultStat}${stat('Runs', l.runs || 0)}</div>
     ${R?.mapped || (R && l.takenOver) ? `<p class="svc-line">${R.mapped ? '<span class="tag you" title="Every room cleared at least once">Mapped</span> ' : ''}<span class="tag" title="Mapped or held, a server's rooms come back fast">Fast respawns</span> <small>fight rooms ${ROOMS_FP.respawn.process} min, guard posts ${ROOMS_FP.respawn.guard}, elites ${ROOMS_FP.respawn.elite}</small></p>` : ''}
     ${openContracts(s).filter((c) => c.loc === l.id).map((c) => `<p class="svc-line"><span class="tag${c.offBooks ? ' hot' : ''}">Contract</span> ${esc(contractTitle(s, c))} <small class="svc-prog">· ${esc(contractProgress(s, c).text)}</small></p>`).join('')}

@@ -561,7 +561,7 @@ strip (the server, its kind, level and rule, your Signal, **Rooms n/N**, your ke
 | Entry | door | Where you come in. Files left for you (a relay's route files) are `pull`ed here. |
 | Process | ▣ | A virus of the server's author at the server's level; the same family every time, its set and mutation fresh each respawn. |
 | Elite | ◆▣ | Bigger, one more tell, enrages from cycle 9. |
-| Guard post | ◆▣ KEY | A guard or ICE holding the vault's key, shown as an elite. Hoard and Hardened servers' are Armored. |
+| Guard post | ◆▣ KEY | A guard or ICE holding the vault's key, shown as an elite. Hoard, Rich and Hardened servers' are Armored. |
 | Vault | ▥ | `open` with its key, or `force` it for 15% of your max Signal. It holds the server's files: a protocol half the time (your first server's always), code, a trace record, spare credits, now and then a Zero-day (floor 2+) or a filter, and a contract's planted file. Everything goes in your pack. |
 | Core | ♛ | The Resident, **SEALED** until the vault opens. |
 | Cache | ▤ | Credits and code, now and then a script; one in four is **bait** (10% of your max Signal; `cat` shows it). Refills 2 hours after you take it. |
@@ -614,7 +614,7 @@ for the visit. An Infiltrator can `slip` past it once a visit.
 
 - **Respawns** (real time, never while you stand in the room): a process room 15 minutes, a guard post 20, an elite 45,
   the Core 60 while you explore; once the server is **Mapped** or yours, 2, 3, 5 and 10 (`ROOMS.respawn`), so a
-  finished server carries a session of farming (*Fast respawns* on its card). A Cron Spawner or a Hostile server halves
+  finished server carries a session of farming (*Fast respawns* on its card). A Cron Spawner halves
   either. One respawn in 25 is a **★ rare spawn**: two levels up, five kills' worth of XP, usually an item.
 - **Progress** counts rooms cleared at least once and never goes down: **Rooms n/N** on the strip and the map card. At
   all of them the server is **Mapped**: an item two levels over it and one lump of XP (5 kills plus half of each fight
@@ -639,7 +639,7 @@ for the visit. An Infiltrator can `slip` past it once a visit.
 - **Home while out:** an invasion that wants you waits until you're back.
 - **Contracts ready:** a yellow ✓ by Mail on the top bar.
 
-### Server kinds, traits and quirks
+### Server kinds, specials and quirks
 
 | Kind | Rule |
 |---|---|
@@ -649,9 +649,23 @@ for the visit. An Infiltrator can `slip` past it once a visit.
 | Archive | Two vaults, each with its own key; only the one before the Core unseals it. |
 | Lab | From cycle 10 of a fight the rack burns you for 2% of your max Signal and every part for 3% of its max a cycle. Its Tracker is fast. |
 
-**Traits:** Rich (caches pay double), Legacy (rare spawns twice as often), Backbone (one more socket room), Hostile
-(fight rooms respawn twice as fast), Hardened (its Resident and guards are Armored). A server's kind, trait and quirk
-are tags on its card, each with its rule on hover. A server a faction owns shows its owner and the standing that taking
+**Specials** (`specials.mjs`, docs/server-specials.md): every traced server has one from its seed, two from floor 5
+down; Guarded comes 1 in 25. Each is an upside and a cost, and points at a program that leans in (⇡) and one that
+fixes the cost (⇣). It shows as one filled amber tag (its glyph and name) on the card, its rule, chips and ▸ programs
+on hover, and as its glyph in amber on the map node.
+
+| Special | Upside | Cost | ⇡ | ⇣ |
+|---|---|---|---|---|
+| ⚡ Volatile | Sends invasions twice as often; its invaders you kill drop a daemon 50% of the time | Its invaders come 2 levels higher | Amplifier | Lockdown |
+| ≈ Stable | One more rest room (beside the spine; each rests once a visit) | Sends invasions half as often | Lockdown | Amplifier |
+| ⌗ Rich | Kills and its vault drop twice the code | Its guards and Resident are Armored | Code Siphon | Patch Injector |
+| ↻ Hostile | Its fights pay 50% more XP | Its viruses hit 25% harder | Defrag Bay | Bulkhead |
+| ★ Legacy | Rare spawns twice as often | Its Resident fights a level higher | Listening Post | Bulkhead |
+| ⊞ Backbone | One more socket room | Its invasions travel twice as fast | any | Lockdown |
+| ◆ Hardened | Its vault pays double (credits and code); Root climbs twice as fast | Its guards and Resident are Armored | Honeytoken | Patch Injector |
+| ♜ Guarded | Its vault holds one of its floor's uniques, once | A crew elite holds its Core in the Resident's place | — | — |
+
+A server's kind, specials and quirk are tags on its card, each with its rule on hover. A server a faction owns shows its owner and the standing that taking
 it moves (−15 with the owner, +8 with each rival).
 
 ### Quirks
@@ -746,7 +760,8 @@ docs/threads.md). Never given, never timed, nothing missable.
   (`talk`; **Read**, **Take** for a thing) starts it.
 - **Where.** Each server's start is pinned the first time you connect, from its seed: at most one a server, never on
   SPRAWL-00, the farm, a lair, a rogue, a member's or a temporary server. An authored chain lands on the first servers
-  of its floor you connect to once you're at its level; any other server holds a one-off 35% of the time.
+  of its floor you connect to once you're at its level; any other server holds a one-off 35% of the time. A distress
+  call on the scanner pins a one-off on a server with none, already found.
 - **A thread's rooms** hang off the deep end of a branch, on this server, one a link or two off, or a floor up (always
   one you've located). They come cleared and never count toward Rooms n/N. The step you're on marks its room with an
   amber **?** and its server on the map.
@@ -1517,6 +1532,7 @@ hubs.
   hour. Each unit of a lot is priced after its own push, so no round trip profits.
 - **File transfers:** a sale leaves now and pays on arrival; a purchase is paid now and arrives later. Halcyon 5 min,
   Kestrel 8, LANTERN 10, GLASSJAW 12, NULL CHOIR 15; each relay cuts 10% (up to 40%). Hostile factions won't trade.
+- **Tips.** A pirate broadcast logged on the scanner moves one ware's price at one hub for a while ("The scanner").
 
 ### Sockets and programs
 
@@ -1529,7 +1545,8 @@ that server's rules and nothing else.
   has its **Core** as a socket too.
 - **Codebases:** you need a program's codebase to build it, once, then anywhere. You start with the **Harvester**; the
   rest are bought once each, by tier: Halcyon (Harvester and Defrag Bay at Probation, Cache Mill at Contractor), Kestrel
-  (Snare), LANTERN (Listening Post, Tunnel), GLASSJAW (Code Siphon), NULL CHOIR (Cron Spawner).
+  (Snare, Bulkhead, Lockdown), LANTERN (Listening Post, Tunnel), GLASSJAW (Code Siphon, Patch Injector, Honeytoken),
+  NULL CHOIR (Cron Spawner, Lure, Amplifier). Lockdown is paid in Cipher; the rest in the server's own code.
 - **One of each a server**, injected at once (no timer, no upkeep, nothing comes for it). **Uninstall** (in its room,
   between fights) is free and gives back half the credits and code.
 - **On the map** a socket is a bus slot: red while guarded, amber once open; a program takes the chip. Walk into an open
@@ -1546,6 +1563,12 @@ that server's rules and nothing else.
 | Tunnel | medium | Its room and the entry are one free step apart; the hunter can't use the link |
 | Snare | medium | A hunter that walks into its room is held 4 of your moves, once a visit |
 | Listening Post | medium | Kills here roll for the unique you name (`listen <unique>`) twice as often; `listen` needs one somewhere |
+| Lockdown | medium | Invasions it sends come 2 levels lower |
+| Amplifier | medium | Invasions it sends come 2 levels higher |
+| Bulkhead | medium | The hunter never steps into its room; fights in it and next door start behind a shield of 10% of your max Signal |
+| Patch Injector | medium | Its viruses have 1 ◆ less on every part (not the hunter) |
+| Honeytoken | medium | Its fight rooms' viruses come a grade higher, 1 in 4 an elite; its kills pay 50% more XP and roll for loot once more |
+| Lure | medium | Its fight rooms respawn as the family you name (`lure <family>`, or its room's buttons), one you've met |
 
 ### Root access
 
@@ -1766,6 +1789,37 @@ and pager line carry a chain-link mark. Ignoring a card never starts a chain.
 | 15 kills of an **Outbreak**'s family while it's on | **Patient zero** | at once | The outbreak's source, an elite, on one of your servers; kill it and the outbreak ends. 15 min | A code cache (12 + level/2) and the elite's loot |
 | A **Spotter** killed | the next invasion | its own clock | 2 levels weaker, its kind known | — |
 
+## The scanner
+
+A shortwave radio on the Map page (`scanner.mjs`, `scanner-view.mjs`): the calm side activity, with no risk. The radio
+button sits at the map's bottom-left corner, dim while nothing is on the air and glowing amber while a broadcast is up.
+It opens a strip across the map's foot; the button or Esc closes it, and it closes itself 3 s after the broadcast ends.
+
+- **On the air.** One station at a time, for 2–3 minutes, then 15–30 minutes quiet (the first 5 minutes into a new
+  save). Stations not yet logged come up first, then the ones that still pay. A broadcast starts with a quiet two-tone
+  ping, never in a fight.
+- **Finding it.** The dial runs 3–12 MHz; drag, scroll or use the arrow keys (Shift for ×10). It never shows where a
+  station you can catch is: the S-meter rises and the static clears within 0.15 MHz of it. One with nothing left to
+  catch shows as a muted glow.
+- **The reel.** Within 0.04 MHz at a strength over S3 it **bites**: the dial zooms to 0.8 MHz round it, a teal hold
+  zone of ±0.025 MHz sits round the needle, and the carrier moves. In the zone the lock fills in 5 s; outside it drains
+  at 1/8 a second. A numbers station sways, a pirate hops every 1.7 s (never back to the centre), a distress call
+  wanders and fades, and the lock waits while it's faded. Holding still never catches one. Leaving the window lets go.
+- **Logged.** A full lock logs it (its own log, `s.scanner`: counts by kind on the strip, the log card lists each with
+  ??? for those not caught) and it signs off 8 s later. A numbers station pays once; a pirate or a distress call pays
+  each time it's caught, once a broadcast, and the log keeps its last payoff.
+
+| Kind | Stations | Pays |
+|---|---|---|
+| Numbers station | 4 | A line of lore, kept in the log |
+| Pirate broadcast | 3 | A tip for a hub you've found: one ware's price there moves (Kernel ×1.3 for 20 min, Cipher ×0.75 for 60, Worm ×1.5 for 40), shown on the hub like a market shock. Only once you've found a hub |
+| Distress call | 3 | A one-off thread on the traced server it names (one with no thread, at most 3 levels over you), its ! on the map |
+
+- **Radio traffic.** Fifteen transmissions across the band (time signals, Morse, data, music, voices), heard within
+  0.06 MHz, on in bursts. Nothing to catch.
+- **Sound** follows Sound and the Effects volume: static that thins as a station clears, the off-tune whistle (silent
+  dead on), the station under it, the traffic, and a chirp on a catch.
+
 ## Home
 
 Your server stays home: its Integrity is your health at home (100, +4% a level, +5% at firewall tiers +1, +3 and +5),
@@ -1782,9 +1836,10 @@ it is, what it does and what it pays (`invasions` in the terminal).
 
 - **When.** The first sets out 3 minutes after you first connect to a server; the next 20–30 minutes after the last is
   dealt with. Logged off, one every 2–4 hours. A server you hold at Root 3 sends none.
-- **Who.** Half the time your strongest server sends it, otherwise any. A virus of that server's family **at its
-  level** and floor grade, maybe a strain, maybe mutated (from level 4). The very first is a plain raider.
-- **Travel:** 2 minutes from a floor-1 server, a minute more a floor down, times its kind's.
+- **Who.** Half the time your strongest server sends it, otherwise any, a Volatile server counted twice and a Stable
+  one half. A virus of that server's family **at its level** (Volatile and an Amplifier +2, a Lockdown −2) and floor
+  grade, maybe a strain, maybe mutated (from level 4). The very first is a plain raider.
+- **Travel:** 2 minutes from a floor-1 server, a minute more a floor down, times its kind's; half that from Backbone.
 - **Quirks:** a raider, pack or champion carries its server's quirk three times in ten: from a **Hoard** it's Armored
   and pays half again; from a **Nest** it brings a brood (one more virus, two levels under; +1 bounty); a **Hidden** one
   counts 2 levels higher at your wall.
@@ -2209,9 +2264,12 @@ Checked by `node balance.mjs` (docs/BALANCE.md, `balance.test.mjs`), `farmsim.mj
 
 ## Saves
 
-The save is `SAVE_VERSION` 49 (combat.mjs). An older save is migrated on load, each step keyed on the field it converts,
+The save is `SAVE_VERSION` 51 (combat.mjs). An older save is migrated on load, each step keyed on the field it converts,
 so it is safe to run twice; nothing a save held is lost.
 
+- **v51** the scanner's log, `s.scanner`, made on first use (`scannerOf`).
+- **v50** site traits become specials: Rich, Legacy, Backbone, Hostile and Hardened keep their names, a traced server
+  with none rolls its own, a Stable server gets its rest room and a Backbone one its socket (`specialsRestore`).
 - **v49** crafting goes: recipes, plans and their files become credits (a letter from wick lists them), banked Zero-day
   source the Zero-day (`craftRestore`).
 - **v48** unspent Indemnity becomes credits once, with a letter from Halcyon (`indemnityRestore`).
