@@ -1,9 +1,10 @@
 # Variety plan: strains, objectives and the collection log
 
 **Status.** The designer's current plan against burnout, cut into sessions. Built: one kind of component (session 1,
-v47; GAME_RULES.md *Components*), strains wave 1 with the spread (session 4; GAME_RULES.md *Strains and grades*), and objectives'
-engine with Priority and Uptime (session 7; GAME_RULES.md *Objectives*).
-Left: sessions 2, 3, 5, 6 and 8: the collection log, 16 new and mutated strains, Backup and Clean run. Session 4 left two
+v47; GAME_RULES.md *Components*), strains wave 1 with the spread (session 4; GAME_RULES.md *Strains and grades*), the
+collection log (sessions 2 and 3; GAME_RULES.md *Collection log*), and objectives' engine with Priority and Uptime
+(session 7; GAME_RULES.md *Objectives*). Left: sessions 5, 6 and 8: 16 new and mutated strains, Backup and Clean run.
+Session 4 left two
 balance tests `todo` for the designer: the Warden's capstones at 50, and the climb's contract share (strain contracts
 naming the new strains stall).
 
@@ -151,12 +152,27 @@ earns an achievement, whose reward is a title, a sticker, a banner or a casing c
 **Data.** A save keeps `s.collection = { [slot]: when }`. An older save fills it on load from what it already holds
 (uniques and set pieces it owns, research at 60, achievements earned), quietly, with one pager line.
 
-**Open point for the designer.** The Collection on the System page exists (GAME_RULES *Collection log*), and
-`s.collection` already holds `{ [unique]: when }` for it. The log either grows out of that card (slots keyed so a
-unique's slot is its id) or replaces it; it must not keep two collections.
+**Built (session 3)** as `collection.mjs` (slots, save, the older save's fill), `collection-log.mjs` (the log from the
+Codex) and `collection-view.mjs` (GAME_RULES *Collection log*). The log grows out of the System page's card: the same
+`s.collection`, a unique's slot its id. The card stays for now (its *listen* buttons and faction pieces). Beaten has the
+strain and the boss so far; a mutated form and the objectives join it as sessions 6 to 8 land.
 
-**Where it lives.** A tab of the Codex. The look has real alternatives, so session 1 shows two or three as
-screenshots first: a grid of item slots per entry, a list with progress bars, or slots on each Codex page.
+**The look: the Ledger** (the designer's pick of three, October 30; the others were *Slots*, a grid of tiles, and
+*Strip*, chips on each Codex page). Drawn from a veteran's save: https://claude.ai/artifact/QYhfznoEDb8QzGa3eXG6WL
+(private to the designer). Its rules:
+- A second tab over the Codex's index, **Collection n/N**. The index groups: Families, Strains, Guards & ICE, Bosses,
+  Floors, Elsewhere; each row its icon, name (??? until met), n/N and a 3px bar under it.
+- The entry: its kind (and *Lv n+* for a floor or a boss) and name, the big n/N and a bar on the right. Then sections,
+  each a kicker with its count: Uniques, each set by its name in the set's green (its count the whole set's), Mastered,
+  Beaten, Feats.
+- A line a slot, at most 760px: icon, name, a muted hint, the date (*Jun 25*) right-aligned. Filled: amber icon, the
+  name in its rarity's colour (a set piece green). Missing: gray **???** with its level and where it drops (a floor's
+  line names the kind: Vaults, Threads), a part with its research bar toward 60, a feat with its rule.
+- The rest goes in the tooltip, WoW's grammar: *???: A Proxy from the Night Shift set, level 11. ▸ Drops from The
+  Sprawl's threads.*
+- On a phone the index folds as the Codex's does, and the hint drops under the name.
+- Added after the pick (the designer): a search box over the index (names, and what you've found or named, never a
+  ??? slot), and **‹** to fold either tab's index to a rail, kept as you left it.
 
 ## 4. One kind of component (K)
 
@@ -170,8 +186,8 @@ The prompt to paste is under each.
 | # | Session | Depends on | Size |
 |---|---|---|---|
 | 1 | One kind of component (section 4): **done** | nothing | small |
-| 2 | Collection log: the look, as screenshots | 1 | small |
-| 3 | Collection log: build the picked look | 2 and the designer's pick | medium |
+| 2 | Collection log: the look, as screenshots: **done** (the Ledger) | 1 | small |
+| 3 | Collection log: build the picked look: **done** | 2 and the designer's pick | medium |
 | 4 | Strains wave 1: Lurker to Bodysnatcher, and the spread rule: **done** | nothing | medium |
 | 5 | Strains wave 2: Thornwall to Sweatshop: **done** | 4 merged | medium |
 | 6 | Strains wave 3: the eleven mutated strains | 4 merged | medium |

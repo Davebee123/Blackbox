@@ -430,6 +430,7 @@ protector is decoded its node shows **?**.
 A top tab (`codex`), between Loadout and System. Left, an index in six groups: **Families** (Ransomware, Worm,
 Ghostroot and the room bodies), **Strains** (22), **Guards & ICE** (6), **Exfils**, **Bosses**, **Mutations**; each row
 its icon, name and count (a body's research %, a boss's wins, kills toward a mutation's decode). Unmet entries are ???.
+Over the index, two tabs: the Codex and the collection log (*Collection log*).
 
 - **A family, strain or guard:** its art, your kills, its research, the sets you've faced and its authors; one card a
   part, revealed by research (a bar of 60 marked at 3, 15 and 60, *n/60*); its attack sets as timing strips (only those
@@ -1526,6 +1527,26 @@ shows its boss's chance a kill, pity included. A bar counts the total; the card 
 find adds a *New in collection* row to the reward card, and counts even if a full stash breaks it down. Sets show their
 pieces (*Kestrel Clearance 1/3*, ??? until found); faction pieces their parts as three pips.
 
+The **collection log** is the Codex's second tab, **Collection n/N** (`collection.mjs` keeps it, `collection-log.mjs`
+builds it, `collection-view.mjs` draws it: the *Ledger*). Its index: Families, Strains, Guards & ICE, Bosses, Floors and
+Elsewhere (every other source), each entry its n of N and a thin bar, and a search over the entries by their names and
+what you've found or named on them (never a ??? slot). The **‹** over either tab folds the index to a rail, and stays
+as you left it. An entry lists its slots, one line each, in sections; daemons have their own log.
+
+| Section | A slot | It fills when |
+|---|---|---|
+| Uniques | each unique its kills or rooms drop | you first find it |
+| *a set* | each piece of the set it drops (the heading counts the whole set) | you first find it |
+| Mastered | each part the Codex lists for it | its research reaches 60 |
+| Beaten | a strain, a boss | you first beat one |
+| Feats | its achievements (a boss's, a floor's, each set's) | you earn it |
+
+A line shows the slot's icon, its name (**???** until it fills) and a muted hint (its level and where it drops, or its
+research toward 60), and the date it first came. The rest is its tooltip. The first time a slot fills, one quiet pager
+line says so and opens its entry. A save keeps `s.collection = { slot: when }`: a unique by its id, `m:` a part
+mastered, `b:` a strain beaten, `w:` a boss won, `full:` an entry filled. An older save stamps what it has already
+done on load (as *before the log*), with one pager line.
+
 ## The economy
 
 ### Credits
@@ -2103,7 +2124,7 @@ props, boots, prompts and cursors. None changes a number.
 |---|---|
 | Combat (17) | Process Killer (10): win 100 fights → casing Beige box. Long Uptime (10): win a fight of 20+ cycles → title *the Patient*, boot POST, desk prop Coffee mug. Big Game (10): beat 25 ◆ CREW elites. Uncrowned (10): beat RELAY-KING → *Uncrowner*. Repossessed (10): beat REPO MAN → *Repossessor*. Dead Air (25, hidden): silence the HOLLOW CHOIR → *of the Last Note*. Every Crown (25): beat RELAY-KING, REPO MAN and the farm's three → banner Crown, window Tar Beach. **Lairs:** Lair-born (10): beat a lair boss → *Lair-born*; then 10 each for each of the nine lair bosses → its sticker |
 | Exploration (13) | Cartographer (5): Map a server → cursor Underline. Mapper (25): Map 20 → *Mapper*, window The Stacks. Change of Hands (10), Landlord (25): take over 1 / 10 servers. Five Points (10): find every hub → desk prop Keycard. Loose Ends (10): finish 5 threads. **Floors:** reach floors 2 to 8 → stickers F2–F8 (Down the Line also window Backhaul; Core Sample, floor 5, *Deepwalker*; Rock Bottom, floor 8, 50 points and casing Matte black) |
-| Collection (23) | Gold Star (5): find a unique. Collector (25): find 25 → *Collector*, desk prop Floppy stack. Curator (50): find 100 → banner Vault door. Assembled (10): assemble a faction piece → *the Assembler*. Five of a Kind (50): all five. Matched (10): complete a set → *the Matched*, prompt Titled. **Sets:** complete each general set → its sticker (10; Mesh, Deep Archive and Bedrock 25) |
+| Collection (26) | Full Page (10): fill an entry in the collection log → *the Thorough*. Family Album (25): Ransomware's, Worm's or Ghostroot's → sticker. Floor Plan (25): a floor's → sticker. Gold Star (5): find a unique. Collector (25): find 25 → *Collector*, desk prop Floppy stack. Curator (50): find 100 → banner Vault door. Assembled (10): assemble a faction piece → *the Assembler*. Five of a Kind (50): all five. Matched (10): complete a set → *the Matched*, prompt Titled. **Sets:** complete each general set → its sticker (10; Mesh, Deep Archive and Bedrock 25) |
 | Factions (9) | Reach each faction's top tier (25 each) → *of Halcyon* (and so on), its sticker, its casing colourway, its boot and the Root prompt (On the Signal also window Coldline). Courier's Bane (10): intercept 10 couriers. Tracker (10): collect 5 bounty hunts. Feudbreaker (25): win 5 feuds. On Retainer (10): deliver 25 contracts |
 | Classes (14) | Specialist (5): pick a subclass → prompt Two-line. Polyglot (25): all four classes to 10. Each class to 50 (50 each) → *the Hammer*, *the Wall*, *the Quiet*, *the Conductor*. **Mastery:** Second Nature (10): an ability at Mastery 3 → sticker Mastery 3; Muscle Memory (25): five → *the Virtuoso*; First Principles (25): Bash, Ban, Poke and Ping → banner Key one; Full Repertoire (50): key 1, the core and a whole subclass line → sticker Repertoire. **Tier sets:** complete each (25) → its sticker |
 | Daemons (5) | Process Table (10): find 10 → cursor Beam. Pandemonium (50): find all → banner Pandemonium. Full House (10): slot 4 at once. Background Process (10): daemons act 500 times. Unattended (10): win a fight in which they act 10 times |

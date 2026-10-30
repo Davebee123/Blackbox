@@ -14,7 +14,7 @@
 // Saved on s.achievements = { got: { id: when earned }, n: { counters }, flags: { feat ids done }, pins: [ids],
 // seen (the last log serial read) }. An older save gets everything it has already done on load (achievementsRestore):
 // every title and sticker it holds keeps its achievement, quietly, and one pager line says how many.
-import { emit, warn, hooks, defender, classOf } from './combat.mjs';
+import { emit, warn, hooks, defender, classOf, UNIQUES } from './combat.mjs';
 import { ARCHETYPES, BOSSES, SUBS, DAEMONS, FLOORS } from './data.mjs';
 import { FACTIONS, FACTION_IDS, REP_TIERS, hubFound } from './factions.mjs';
 import { PIECES } from './faction-gear.mjs';
@@ -51,7 +51,8 @@ export const earned = (s, id) => !!s?.achievements?.got?.[id];
 // ---------- the reads (state the game already keeps) ----------
 const won = (s, boss) => (s.dex?.won?.[boss] || 0) > 0;
 const wins = (s) => Object.values(s.dex?.kills || {}).reduce((a, n) => a + (n || 0), 0);
-const uniques = (s) => Object.keys(s.collection || {}).length;
+const uniques = (s) => Object.keys(s.collection || {}).filter((k) => UNIQUES[k]).length; // the log's other slots (collection.mjs) aren't uniques
+const filled = (s) => Object.keys(s.collection || {}).filter((k) => k.startsWith('full:')).map((k) => k.slice(5)); // the log's full entries (collection.mjs)
 const setDone = (s, id) => piecesOf(id).length > 0 && piecesOf(id).every((p) => s.collection?.[p]);
 const mappedN = (s) => (s.locations || []).filter((l) => l.floorplan?.mapped && !l.member).length;
 const takenN = (s) => Math.max(s.achievements?.n?.takeovers || 0,(s.locations || []).filter((l) => l.takenOver && !l.member).length);
@@ -86,6 +87,8 @@ export const DEED_STICKERS = {
   'a-thread': { label: '<5%', color: AMBER, glyph: 'signal', tip: 'Won by a thread' },
   'a-mastery': { label: 'Mastery 3', color: AMBER, glyph: 'mastered', tip: 'An ability at Mastery 3' },
   'a-kit': { label: 'Repertoire', color: AMBER, glyph: 'mastered', tip: 'A whole kit at Mastery 3' },
+  'log-family': { label: 'Family album', color: AMBER, glyph: 'worm', tip: "A family's collection log filled" },
+  'log-floor': { label: 'Floor plan', color: AMBER, glyph: 'node', tip: "A floor's collection log filled" },
 };
 
 const A = (id, cat, name, rule, pts, more = {}) => ({ id, cat, name, rule, pts, ...more });
@@ -117,6 +120,10 @@ const listed = () => (LIST ||= [ // the list as written; achievements() (below, 
   A('k-assembler', 'collect', 'Assembled', 'Assemble a faction piece.', 10, { has: (s) => titleHas(s, 'assembler'), reward: { title: 'assembler' } }),
   A('k-pieces', 'collect', 'Five of a Kind', 'Assemble all 5 faction pieces.', 50, { progress: (s) => of(Object.values(PIECES).filter((u) => s.collection?.[u.id]).length, Object.keys(PIECES).length) }),
   A('k-matched', 'collect', 'Matched', 'Find every piece of a set.', 10, { has: (s) => titleHas(s, 'matched'), reward: { title: 'matched' } }),
+  // The collection log (collection.mjs): an entry filled, a family's, a floor's.
+  A('k-log-entry', 'collect', 'Full Page', 'Fill an entry in the collection log.', 10, { group: 'Log', has: (s) => filled(s).length > 0, reward: { title: 'thorough' } }),
+  A('k-log-family', 'collect', 'Family Album', "Fill Ransomware's, Worm's or Ghostroot's entry in the collection log.", 25, { group: 'Log', has: (s) => filled(s).some((k) => ['family:ransomware', 'family:worm', 'family:ghostroot'].includes(k)), reward: { sticker: 'log-family' } }),
+  A('k-log-floor', 'collect', 'Floor Plan', "Fill a floor's entry in the collection log.", 25, { group: 'Log', has: (s) => filled(s).some((k) => k.startsWith('floor:')), reward: { sticker: 'log-floor' } }),
   ...Object.values(SETS).filter((x) => !x.tier).map((x) => A('k-set-' + x.id, 'collect', x.name, `Find every piece of ${x.name}.`, BIG_SETS.has(x.id) ? 25 : 10, { group: 'Sets', progress: (s) => of(piecesOf(x.id).filter((p) => s.collection?.[p]).length, piecesOf(x.id).length), has: (s) => setDone(s, x.id), reward: { sticker: 'set-' + x.id } })),
   // ---------- Factions ----------
   ...FACTION_IDS.map((f) => A('f-' + f, 'faction', FACTION_ACH[f], `Reach ${FACTIONS[f].tiers[4]} with ${FACTIONS[f].name}.`, 25, { has: (s) => top(s, f) || titled(s, 'of-' + f), reward: { title: 'of-' + f, sticker: 'f-' + f, casing: f } })),
