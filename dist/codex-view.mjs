@@ -66,7 +66,8 @@ function partCard(level, x, tells = [], withHandler = false) {
     return `<div class="cx-part unknown"><div class="cxp-head"><b>${UNKNOWN}</b></div><div class="cxp-stats"><span>${UNKNOWN} Integrity</span><span>◆ ${UNKNOWN}</span></div><p class="cxp-hint">Meet one to learn its name.</p></div>`;
   }
   const n = x.research, mast = n >= RESEARCH.max, a = p?.attack;
-  const head = `<div class="cxp-head"><b>${esc(p?.name || x.spec.name)}${mast ? masteredMark(p || x.spec) : ''}</b>${p?.special ? '<span class="tag" title="Its family\'s signature part">signature</span>' : ''}${opens}</div>`;
+  const from = x.strain ? `<span class="tag dim" title="${esc(`It spreads from the ${STRAINS[x.strain].name}, onto this family's viruses where the ${STRAINS[x.strain].name} lives.`)}">${esc(STRAINS[x.strain].name)}</span>` : ''; // a strain's mechanics part (parts.mjs PARTS.spread)
+  const head = `<div class="cxp-head"><b>${esc(p?.name || x.spec.name)}${mast ? masteredMark(p || x.spec) : ''}</b>${p?.special ? '<span class="tag" title="Its family\'s signature part">signature</span>' : ''}${from}${opens}</div>`;
   const bar = researchBar(n);
   if (!x.known) {
     return `<div class="cx-part t0">${head}${bar}<p class="cxp-hits">${esc(hitsWord(p))}</p><div class="cxp-stats"><span>${UNKNOWN} Integrity</span><span>◆ ${UNKNOWN}</span></div>${locked(`Research ${TIER.decoded} to learn its numbers. Break one, cut it or answer its tell.`)}</div>`;

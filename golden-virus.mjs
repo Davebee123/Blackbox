@@ -51,7 +51,7 @@ const FAMILIES = {
   },
 };
 const PULSE = (amount, first) => ({ id: 'pulse', name: 'Pulse Node', integrity: 34, armor: 1, loot: 'Pulse Kernel', attack: { name: 'Surge', effect: 'damage', amount, interval: 4, first } });
-const STRAINS = {
+export const STRAINS = {
   keylogger: {
     lineage: 'ghostroot', from: 4, depth: 2, name: 'Keylogger', tell: { name: 'Keystorm' },
     rule: 'A Sync Window opens every cycle. The Logger only takes damage from commands fired inside it; every command fired outside it is logged, and 3 logs come back as an 18-damage Dump. It Dumps on its own every 6 cycles too.',

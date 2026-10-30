@@ -137,8 +137,9 @@ for (const [id, g] of Object.entries(GENES)) {
   const [family, spec] = Object.entries(g.parts || {})[0] || [];
   if (spec?.mech) PROBES[id] = { ...probe(g.opens, fam(family), id, { genes: [id] }), levels: [18], seeds: [1] };
 }
-// The named builds: each strain against its family's body. Keylogger's two genes share one probe.
-for (const [k, st] of Object.entries(STRAINS)) PROBES[st.genes[0]] = { opens: st.from, body: fam(st.lineage), with: { ...fam(st.lineage), strain: k }, gene: st.genes[0], build: k, also: st.genes.slice(1) };
+// The named builds: each strain against its family's body. Keylogger's two genes share one probe. A mechanics strain's
+// genes have their own probes as parts, so it goes under its own name (lurker), measuring its build's first gene.
+for (const [k, st] of Object.entries(STRAINS)) PROBES[PROBES[st.genes[0]] ? k : st.genes[0]] = { opens: st.from, body: fam(st.lineage), with: { ...fam(st.lineage), strain: k }, gene: st.genes[0], build: k, also: st.genes.slice(1) };
 export const PROBE_LEVELS = [5, 10, 18, 30];
 // Who plays a level: the four classes below SUBCLASS.from, every subclass from it.
 export const playersAt = (L) => (L >= SUBCLASS.from ? SUBS : Object.keys(ARCHETYPES).map((cls) => [cls, null]));
@@ -163,7 +164,7 @@ const avg = (xs) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
 // A gene's cost and answer, over the levels it's open at, every player, the seeds: Signal lost with it over the body
 // alone (cost, and per cost point), and with it ignored over it answered (answer), and each player's wins either way.
 export function geneCheck(id, { seeds = SEEDS, levels = PROBE_LEVELS, answer = true } = {}) {
-  const P = PROBES[id], out = { id, cost: GENES[id].cost, levels: {}, subs: {} };
+  const P = PROBES[id], g = GENES[P.gene], out = { id, name: P.build && !GENES[id] ? STRAINS[P.build].name : g.name, cost: g.cost, levels: {}, subs: {} };
   const Ls = (P.levels || levels).filter((L) => L >= P.opens);
   if (P.seeds) seeds = P.seeds; // a lean probe's own (the mechanics list's)
   const all = { body: [], with: [], ignore: [] };
@@ -206,7 +207,7 @@ export function basicCheck(family, id, { seeds = SEEDS, levels = null } = {}) {
 }
 const f1 = (x) => (x == null ? '' : (x >= 0 ? '+' : '') + x.toFixed(1));
 export const basicLine = (c) => `${c.family}/${c.id}`.padEnd(24) + ` ${f1(c.delta)} pts against the Pulse Node · ${Object.entries(c.levels).map(([L, x]) => `${L}: ${x.basic.toFixed(1)} vs ${x.pulse.toFixed(1)}`).join(' · ')}`;
-export const geneLine = (c) => `${GENES[c.id].name.padEnd(16)} cost ${c.cost} · ${f1(c.delta)} pts (${f1(c.perPoint)} a point)${c.answered ? ` · answering saves ${f1(c.answer)}, ignoring costs ${f1(c.ignoreCost)}` : ''} · ${Object.entries(c.levels).map(([L, x]) => `${L}: ${f1(x.cost)}`).join(' ')}`;
+export const geneLine = (c) => `${c.name.padEnd(16)} cost ${c.cost} · ${f1(c.delta)} pts (${f1(c.perPoint)} a point)${c.answered ? ` · answering saves ${f1(c.answer)}, ignoring costs ${f1(c.ignoreCost)}` : ''} · ${Object.entries(c.levels).map(([L, x]) => `${L}: ${f1(x.cost)}`).join(' ')}`;
 
 const isMain = import.meta.url === `file://${process.argv[1]}`;
 if (isMain) {

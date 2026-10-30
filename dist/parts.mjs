@@ -43,6 +43,9 @@ export const PARTS = {
   // pace and sets balance tests moved with them. `developer parts mech 0.5` rolls them all for a session.
   weight: { mimic: 4, coldstore: 0.5, tripwire: 1.5, zipbomb: 0.5, damper: 0 },
   mech: 0,
+  // The spread (docs/variety-plan.md 1.2): a strain's mechanics parts roll as a third on wild viruses of its lineage,
+  // from its level and depth (data.mjs spreadOf), at this weight (the others' 1). Nowhere else: PARTS.mech holds there.
+  spread: 0.5,
   carve: 1, // the share of the thirds' Integrity that comes out of the basic's and the signature's (0: thirds come on top)
   thirdMax: 1.15, // a third part's Integrity never grows past this share of its own (the basic and the signature take the rest)
   // Damage profiles (GAME_RULES.md "Viruses"): every family deals the same over a typical fight at its
@@ -101,7 +104,8 @@ const pick = (rand, xs) => xs[Math.min(xs.length - 1, Math.floor(rand() * xs.len
 // A third's weight in the roll: its own (PARTS.weight), times PARTS.floor on the floor it's native to.
 export const nativeFloor = (gene) => GENES[gene]?.floor || null;
 export const floorWeight = (gene, floor) => (floor && nativeFloor(gene) === floor ? PARTS.floor : 1);
-export const weightOf = (gene, floor = null) => (PARTS.weight[gene] ?? (MECH_GENES.has(gene) ? PARTS.mech : 1)) * floorWeight(gene, floor);
+// spread: the genes this fight's strains spread (data.mjs spreadOf), which weigh PARTS.spread.
+export const weightOf = (gene, floor = null, spread = null) => (PARTS.weight[gene] ?? (MECH_GENES.has(gene) ? (spread?.has(gene) ? Math.max(PARTS.spread, PARTS.mech) : PARTS.mech) : 1)) * floorWeight(gene, floor);
 // A mechanics-list gene rolls (a wild fight, a breach node, a server room) only while PARTS.mech is above 0.
 export const mechRolls = (gene) => !MECH_GENES.has(gene) || PARTS.mech > 0;
 const pickBy = (rand, xs, w) => { let x = rand() * xs.reduce((n, y) => n + w(y), 0); for (const y of xs) if ((x -= w(y)) < 0) return y; return xs.at(-1); };
@@ -112,7 +116,8 @@ const pickShare = (rand, shares) => { let x = rand() * shares.reduce((a, b) => a
 //   seen    (spec, family) → true once you've met that part (combat.mjs: research above 0); null: every part counts as met
 //   extra   genes the virus carries besides its body's (its mutation, Linked from v2): the thirds must fit beside them
 //   floor   the fight's floor: its natives weigh PARTS.floor; rare: a ★ rare spawn (PARTS.rare)
-export function rollParts({ family, body, level, rand, elite = false, rare = false, floor = null, seen = null, extra = [] }) {
+//   spread  the mechanics-list genes its lineage's strains spread here (data.mjs spreadOf): they weigh PARTS.spread
+export function rollParts({ family, body, level, rand, elite = false, rare = false, floor = null, spread = null, seen = null, extra = [] }) {
   const met = (spec) => !seen || spec.id === 'pulse' || !!spec.special || seen(spec, family);
   const basics = basicsOf(body, level), pulse = basics.find((p) => p.id === 'pulse'), sig = body.parts.find((p) => p.special);
   if (level < PARTS.gentle && !elite) {
@@ -123,7 +128,7 @@ export function rollParts({ family, body, level, rand, elite = false, rare = fal
   let n = 2 + pickShare(rand, along(PARTS.count, level));
   if (elite) n = Math.max(n, PARTS.elite);
   if (rare) n = Math.max(n, PARTS.rare.min);
-  const weigh = (gene) => weightOf(gene, floor);
+  const weigh = (gene) => weightOf(gene, floor, spread);
   let signature = rand() < signatureShare(level);
   let strangers = 0;
   const stranger = (spec) => !met(spec);

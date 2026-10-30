@@ -176,10 +176,10 @@ export const GENES = {
     does: 'When its Jitter lands, you lag for 2 cycles, and your command lands after the virus acts. It lags you only in a solo fight.', telegraph: 'A Lag status on you.', answer: 'Cut and race before it lands.',
     implicit: 'Lag on you runs shorter.', carried: (p) => p.mech === 'lag',
     parts: { worm: { id: 'jitter', plan: 3, name: 'Jitter', integrity: 18, armor: 1, loot: 'Jitter Buffer', mech: 'lag', from: 7, pool: 'third', attack: { name: 'Jitter', effect: 'damage', amount: 3, interval: 4, first: 3 } } } },
-  leak: { name: 'Leak', adj: 'Leaking', cat: 'attack', axis: 'feedback', role: 'primary', cost: 2, opens: 9, decode: 'part', suits: 'Ransomware',
+  leak: { name: 'Leak', adj: 'Leaking', cat: 'attack', axis: 'feedback', role: 'primary', cost: 2, opens: 9, decode: 'part', suits: 'Ransomware, Worm (the Doomsday)',
     does: 'When its Drip lands, you leak for 3 cycles, and every command you fire costs 3% of your max health. Holding is free.', telegraph: 'A Leak status on you.', answer: 'Hold, or fire only what counts.',
     implicit: 'Leaks cost you less.', carried: (p) => p.mech === 'leak',
-    parts: { ransomware: { id: 'leaker', plan: 3, name: 'Leaker', integrity: 18, armor: 1, loot: 'Drip Valve', mech: 'leak', from: 9, pool: 'third', attack: { name: 'Drip', effect: 'damage', amount: 3, interval: 4, first: 3 } } } },
+    parts: { ransomware: { id: 'leaker', plan: 3, name: 'Leaker', integrity: 18, armor: 1, loot: 'Drip Valve', mech: 'leak', from: 9, pool: 'third', attack: { name: 'Drip', effect: 'damage', amount: 3, interval: 4, first: 3 } }, worm: { id: 'leaker', plan: 3, name: 'Leaker', integrity: 18, armor: 1, loot: 'Drip Valve', mech: 'leak', from: 9, pool: 'third', attack: { name: 'Drip', effect: 'damage', amount: 3, interval: 4, first: 3 } } } }, // the Worm's: the Doomsday's, to spread (parts.mjs PARTS.spread)
   sandboxed: { name: 'Sandboxed', adj: 'Sandboxing', cat: 'attack', axis: 'tempo', role: 'amplifier', cost: 2, opens: 11, decode: 'part', suits: 'Ghostroot',
     does: 'When its Contain lands, you are Sandboxed for 1 cycle, and only quiet commands fire. Strips, burns, helpers, shields and buffs still go, and direct hits don\'t.', telegraph: 'A Sandboxed status on you.', answer: 'Finish what needs a direct hit before it lands.',
     implicit: 'Sandboxes on you run shorter.', carried: (p) => p.mech === 'sandbox',
