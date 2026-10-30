@@ -189,6 +189,7 @@ comment saying what it does.
 | `dist/routines-view.mjs`, `dist/routines-ui.mjs`, `dist/routines.css` | The Program tab, its drag and drop, and the program's marks on the board. |
 | `dist/levelup-view.mjs`, `dist/levelup-ui.mjs`, `dist/levelup.css` | The level-up: a firmware update under the top bar. |
 | `dist/codex.mjs`, `dist/codex-view.mjs`, `dist/codex.css` | The Codex: every virus you can meet, and what you know of it. |
+| `dist/collection.mjs`, `dist/collection-log.mjs`, `dist/collection-view.mjs` | The collection log: its slots and save, the log built from the Codex, and the Codex's Collection tab (the Ledger). |
 | `dist/achievements.mjs`, `dist/achievements-view.mjs`, `dist/achievements.css` | Achievements and their cosmetic rewards. |
 | `dist/profile.mjs`, `dist/profile-view.mjs` | Your profile card (`finger`), and #net's markup. |
 | `dist/channel.mjs`, `dist/presence.mjs` | #net, the public channel; who's online and your friends. |

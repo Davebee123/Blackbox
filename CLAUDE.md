@@ -68,7 +68,8 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
   - quest window: the *Transmission*;
   - level-up: the *Firmware update*;
   - pager: the *Tray*;
-  - player card: the *NET ID badge*.
+  - player card: the *NET ID badge*;
+  - collection log: the *Ledger*.
 - **Rejected looks:**
   - the *View* background behind the monitor; keep the original city, with more detail at the same size;
   - card-first clicks on the rooms map; one click walks;
