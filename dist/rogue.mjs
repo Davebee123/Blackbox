@@ -73,8 +73,8 @@ export function rollRogue(s, loc) {
   loc.rogue = { kind: early ? 'nest' : kinds[Math.floor(r() * kinds.length)] };
   net.nested = true;
   loc.template = 'rogue';
-  loc.quirk = null; // quirks and site traits are about vaults and harvesting: not here
-  loc.trait = null;
+  loc.quirk = null; // quirks and specials are about vaults and harvesting: not here
+  loc.special = null;
   loc.spawns = {};
   loc.serial = 0;
 }
@@ -198,7 +198,7 @@ export const farmOf = (s) => (s.locations || []).find((l) => l.farm) || null;
 export function openFarm(s) {
   if (farmOf(s) || hackerLevel(s) < FARM.from) return null;
   const seed = ((s.seed || 1) * 977 + 31) >>> 0, r = seeded(seed);
-  const loc = Object.assign(createLocation('worm', seed, 1), { id: FARM.id, name: FARM.name, level: hackerLevel(s), farm: true, slot: 'f1farm', rogue: { kind: 'farm' }, template: 'rogue', quirk: null, trait: null,
+  const loc = Object.assign(createLocation('worm', seed, 1), { id: FARM.id, name: FARM.name, level: hackerLevel(s), farm: true, slot: 'f1farm', rogue: { kind: 'farm' }, template: 'rogue', quirk: null, special: null,
     password: FARM.words[Math.floor(r() * FARM.words.length)] + String(10 + Math.floor(r() * 90)), state: { cleared: {}, unlocked: {}, taken: {} }, runs: 0, spawns: {}, serial: 0 });
   s.locations.push(loc);
   emit(s, 'located', `${FARM.name} is on your map: a crew dungeon. Bring a crew (crew sim <class>, or crew invite <friend>).`, { location: loc.id });

@@ -33,7 +33,7 @@ family's code builds the programs that family would write. Installing costs cred
 
 One list: the servers design's catalogue and this sheet's. Light and medium cost what the built ones do (140 or 280
 credits, 15 or 30 of the server's code, a medium an Exploit, ×1.25 a floor past the first). Core programs go only in a
-held server's core socket.
+held server's core socket. ✓ marks one built with the server specials (docs/server-specials.md); its v1 only.
 
 | Program | Code | Weight | Codebase | v1 (v2, v3 by patch) |
 |---|---|---|---|---|
@@ -41,13 +41,14 @@ held server's core socket.
 | **Botnet** | Worm | medium | | A fight here starts with 1 helper on the weakest part (2, 3) |
 | **Crawler** | Worm | light | | Walking into a room reveals 1 neighbour's kind (2, all) |
 | **Escrow** | Cipher | light | | Contracts on this server pay +15% (+30%, +45%) |
-| **Lockdown** | Cipher | medium | | Invasions this server sends lose a process (and arrive a level lower; lose two) |
+| **Lockdown** ✓ | Cipher | medium | Kestrel | Built as: invasions this server sends come 2 levels lower |
+| **Amplifier** ✓ | any | medium | NULL CHOIR | Invasions this server sends come 2 levels higher |
 | **Rootkit** | Kernel | light | | Moves here cost 25% less Signal (50%, 75%) |
-| **Bulkhead** | any | medium | Kestrel | The hunter can't pass through this room. Fights here and next door start with a shield of 10% of your max Signal. |
+| **Bulkhead** ✓ | any | medium | Kestrel | The hunter can't pass through this room. Fights here and next door start with a shield of 10% of your max Signal. |
 | **Sentry Turret** | any | medium | Kestrel | In fights here and next door, deals 6% of a part's max Integrity to the part whose move lands soonest every 3 cycles. Its hits count toward interrupts. |
-| **Patch Injector** | any | medium | GLASSJAW | Viruses on this server respawn with 1 ◆ less on every part |
-| **Honeytoken** | any | medium | GLASSJAW | Viruses here respawn a grade higher, 1 in 4 as an elite. Kills pay 50% more XP and roll for loot once more. |
-| **Lure** | any | medium | NULL CHOIR | Fight rooms here respawn as the family or strain you name, one you've met |
+| **Patch Injector** ✓ | any | medium | GLASSJAW | Viruses on this server respawn with 1 ◆ less on every part |
+| **Honeytoken** ✓ | any | medium | GLASSJAW | Viruses here respawn a grade higher, 1 in 4 as an elite. Kills pay 50% more XP and roll for loot once more. |
+| **Lure** ✓ | any | medium | NULL CHOIR | Fight rooms here respawn as the family or strain you name, one you've met (built: families only) |
 | **Relay** | any | medium | LANTERN | Pings the unknown servers linked to this one: each room you clear here traces each 15% more, and it flags the one a contract points at |
 | **Range** | any | core | | Holds a solo boss you've beaten, with its own loot table and pity. Back an hour after it falls. |
 | **Jump Host** | any | core | | Connecting to this server starts you in any room you've been in |

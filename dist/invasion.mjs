@@ -25,6 +25,7 @@ import { SERVICES, codeOf, uniqueItem, MATERIALS } from './gear.mjs';
 import { pickOrigin, hiddenNode, hiddenLead, HIDDEN, connectedTo } from './hidden.mjs';
 import { emit, warn, rand, active, holding, selectEncounter, crashServer, endInvasion, gainXp, xpFor, command, gainCode, hackerLevel, syncServer, addItem, UNIQUES, listenBoost, syncRunSignal } from './combat.mjs';
 import { nativeStrain } from './network.mjs';
+import { sendShift, sendTravel, pickSender, hasSpecial } from './specials.mjs';
 import { tickProfile } from './profile.mjs';
 import { tickChannel } from './channel.mjs';
 import { contractDid } from './mail.mjs';
@@ -346,7 +347,7 @@ export const senderGrade = (loc) => gradeFor(loc?.depth || 1);
 // a scout's map, a pack's waiting viruses) and GRADE_LEVELS for each grade over v1, as strength() weighs it.
 export const countsAt = (inv) => wallLevelOf(inv) + GRADE_LEVELS * ((inv?.grade || 1) - 1);
 // The level a plain invasion from a server counts as at your wall: its level and its floor's grade (a v2 two higher, a v3 four).
-export const sendsAt = (loc) => (loc?.level || 1) + GRADE_LEVELS * (senderGrade(loc) - 1);
+export const sendsAt = (loc) => (loc?.level || 1) + sendShift(loc) + GRADE_LEVELS * (senderGrade(loc) - 1); // a special's or a program's shift too (specials.mjs)
 // The highest level a plain invasion from your network counts as at your wall (0 when nothing sends one).
 export const sendTop = (s) => Math.max(0, ...tame(s).map(sendsAt));
 // The Safe readout, everywhere it shows: Safe only while your wall blocks a plain invasion from every server that
@@ -386,7 +387,7 @@ function rollKind(s, loc, awayRoll, r0 = () => rand(s)) {
 export function scoutNext(s, r) {
   const net = (s.net ||= { wall: null, next: null }), all = tame(s);
   if (!all.length) return null;
-  const loc = r() < 0.5 ? [...all].sort((a, b) => (b.level || 1) - (a.level || 1))[0] : all[Math.floor(r() * all.length)]; // half the time your strongest, as ever
+  const loc = r() < 0.5 ? [...all].sort((a, b) => (b.level || 1) - (a.level || 1))[0] : pickSender(all, r()); // half the time your strongest, as ever
   const kind = rollKind(s, loc, false, r);
   net.scouted = { levels: SCOUTED.levels, from: loc.id, kind };
   return { name: KINDS[kind].name, from: loc.name, kind };
@@ -422,16 +423,17 @@ function depart(s, want = {}) {
   // A thief comes from somewhere else than the outpost it robs, when there's anywhere else.
   if (kind === 'thief' && loc.id === target.id) { const others = tame(s).filter((l) => l.id !== target.id); if (others.length) loc = others[Math.floor(rand(s) * others.length)]; }
   const K = KINDS[kind];
-  const level = clampLv((loc.level || 1) + (KINDS[kind].lvl || 0) - weak);
+  const src = h ? null : loc; // its server's special and programs move its level and its road (specials.mjs)
+  const level = clampLv((loc.level || 1) + (KINDS[kind].lvl || 0) - weak + sendShift(src));
   const front = unit(s, loc, level, quirk === 'hoard' ? 'armored' : undefined);
   const queue = [];
   if (kind === 'pack') for (let i = 1; i < K.size; i++) { const u = unit(s, loc, level); if (u.name === front.name) u.name += ` #${i + 1}`; queue.push(u); }
-  if (kind === 'pair') { const others = tame(s).filter((l) => l.id !== loc.id), b = others[Math.floor(rand(s) * others.length)] || loc; queue.push(unit(s, b, clampLv((b.level || 1) - weak))); }
+  if (kind === 'pair') { const others = tame(s).filter((l) => l.id !== loc.id), b = others[Math.floor(rand(s) * others.length)] || loc; queue.push(unit(s, b, clampLv((b.level || 1) - weak + sendShift(b)))); }
   if (quirk === 'nest') queue.push(unit(s, loc, clampLv(level + QUIRKED.brood)));
   const mark = net.mark || 0;
   net.mark = 0;
   const bounty = Math.round((kind === 'pack' ? K.bounty * K.size : KINDS[kind].bounty) * (quirk === 'hoard' ? QUIRKED.hoard : 1)) + (quirk === 'nest' ? 1 : 0);
-  const total = Math.round(travelMs(s, loc.road || loc.depth) * (KINDS[kind].travel || 1));
+  const total = Math.round(travelMs(s, loc.road || loc.depth) * (KINDS[kind].travel || 1) * sendTravel(src));
   net.seq = (net.seq || 0) + 1;
   net.lastKind = kind;
   (net.seen ||= {})[loc.family] = (net.seen[loc.family] || 0) + 1;
@@ -486,7 +488,8 @@ function payOut(s, inv, how, intercepted = false) {
 export const daemonChance = (s, how) => Math.min(1, (DAEMON_DROP[how] ?? DAEMON_DROP.wall) + DAEMON_DROP.pity * (s.pity?.daemon || 0));
 // A daemon of the invasion's band at its level, or a miss (the next chance is better). Returns gainDaemon's result.
 export function daemonDrop(s, inv, how, why = '') {
-  const p = (s.pity ||= {});
+  const p = (s.pity ||= {}), from = !inv.hidden && (s.locations || []).find((l) => l.id === inv.from);
+  if (['you', 'intercept'].includes(how) && hasSpecial(from, 'volatile') && DAEMON_DROP.volatile > DAEMON_DROP[how]) how = 'volatile'; // a Volatile server's invader you kill
   if (rand(s) >= daemonChance(s, how)) { p.daemon = (p.daemon || 0) + 1; return null; }
   p.daemon = 0;
   return gainDaemon(s, rollDaemon(s, inv.level), inv.level, { why, family: inv.family });

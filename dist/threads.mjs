@@ -594,7 +594,7 @@ function spawnTemp(s, t, key) {
   const name = () => `${def.name || 'TEMP'}-${String(seed % 100).padStart(2, '0')}`;
   while (findLocation(s, name().toLowerCase())) seed++;
   const loc = createLocation(host?.family || 'worm', seed, floor);
-  Object.assign(loc, { id: name().toLowerCase(), name: name(), level, template: TEMPLATE_OF[kind] || 'relay', trait: null, quirk: null, runs: 0,
+  Object.assign(loc, { id: name().toLowerCase(), name: name(), level, template: TEMPLATE_OF[kind] || 'relay', special: null, quirk: null, runs: 0,
     temp: { thread: t.id, key, host: host?.id || null, at: host ? mapSpot(s, host) : { x: 0, y: 0 }, builder: def.builder || 'nobody', copy: !!def.copy, logs: {}, read: {}, sweep: { tries: 0, solved: null }, grown: 0, dark: null, kill: false, by: def.kill || 'logs' } });
   const graph = (def.copy && copyGraph(s, seed, author)) || FP.generate(seed, { size: 'small', kind, level, floor, author, sockets: 0 });
   graph.puzzles ??= 0;

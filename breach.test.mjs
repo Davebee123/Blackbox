@@ -382,7 +382,7 @@ test('the breach is a playtest only: a fresh campaign has none, and the save ver
   const s = fresh();
   assert.equal(s.breach, undefined);
   const { SAVE_VERSION } = await import('./dist/combat.mjs');
-  assert.equal(SAVE_VERSION, 50); // v50: the scanner; v49: crafting goes; v48: Indemnity retires; v47: one kind of component; v46: no default subclass; v45: sets; v44: whole-number stats; v43: threads; v42: the long climb; v41: floors (R3), not the breach
+  assert.equal(SAVE_VERSION, 51); // v51: the scanner; v50: specials; v49: crafting goes; v48: Indemnity retires; v47: one kind of component; v46: no default subclass; v45: sets; v44: whole-number stats; v43: threads; v42: the long climb; v41: floors (R3), not the breach
   assert.ok(maxSignal(s) > 0);
 });
 
