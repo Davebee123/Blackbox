@@ -985,11 +985,11 @@ function sigintLines(s) {
     return [w.reach ? 'hot' : 'muted', `${w.name}: ${w.kind === 'cast' ? 'cast' : 'charge'}, ${open}. ${w.reach ? 'SIGINT is ready in time' : 'SIGINT is too late for it'}.`];
   });
 }
-// A key's kind line under its tooltip's name, like WoW's "Instant · 8 sec cooldown": its key, its verb, its cooldown.
+// A key's kind line under its tooltip's name, like WoW's "Instant · 8 sec cooldown": its verb and its cooldown.
 const KEY_KIND = { hit: 'Hit', burn: 'Burn', stun: 'Stun', debuff: 'Debuff', shield: 'Shield', heal: 'Heal', buff: 'Buff' };
-function keyKind(s, id, key) {
+function keyKind(s, id) {
   const a = ABILITIES[id], cd = cooldownOf(s, id);
-  return `Key ${key === '-' ? 'minus' : key} · ${KEY_KIND[a.verb] || 'Utility'} · ${a.once ? 'Once per fight' : cd ? `${cd} cycle cooldown` : 'No cooldown'}`;
+  return `${KEY_KIND[a.verb] || 'Utility'} · ${a.once ? 'Once per fight' : cd ? `${cd} cycle cooldown` : 'No cooldown'}`;
 }
 // A key's face is its icon and its name. What it does is its tooltip, like WoW's action bar; what changes in a fight is
 // the key's border and the tooltip's status lines (data-tt-state: "tone|text" a line, app.js ttShow colours them), the
@@ -1007,7 +1007,7 @@ export function trayMarkup(s, selected = null) {
     if (!a) {
       const sk = ARCHETYPES[classOf(s)].skills.find((x) => x.id === id);
       const note = sk?.verb === 'run' ? 'Works on runs, not in fights.' : 'Not in fights yet.';
-      return `<button type="button" class="ability cooling" disabled title="${esc(`${sk?.name || id}: ${sk?.rule || ''}`)}" data-tt-kind="Key ${esc(key === '-' ? 'minus' : key)}"${ttState([['muted', note]])}>${keyFace('command', sk?.name || id)}</button>`;
+      return `<button type="button" class="ability cooling" disabled title="${esc(`${sk?.name || id}: ${sk?.rule || ''}`)}"${ttState([['muted', note]])}>${keyFace('command', sk?.name || id)}</button>`;
     }
     const wait = fighting ? readyIn(s, id) : 0;
     const queued = fighting && (e.queue?.ability === id || (id === 'fork' && e.queue?.fork));
@@ -1040,7 +1040,7 @@ export function trayMarkup(s, selected = null) {
       takes && ['steel', `Armor takes this hit: it breaks ${takes} ◆ and deals no damage. ${crack ? 'Crack it first.' : 'Break its ◆ first.'}`],
       ...(id === 'sigint' && !queued && !offline && !wiped ? sigintLines(s) : []),
     ].filter(Boolean);
-    return `<button type="button" class="${['ability', cantrip && 'cantrip', wait || dark ? 'cooling' : fighting && 'ready', lit && 'lit', moment && 'moment', (offline || junk) && 'offline', wiped && 'wiped', queued && 'queued', takes && 'armd'].filter(Boolean).join(' ')}" data-ability="${id}" title="${esc(`${name}: ${scaledText(s, id, help)}${ml ? '\n' + ml : ''}`)}" data-tt-kind="${esc(keyKind(s, id, key))}"${ttState(lines)}>${keyFace(a.icon, name)}${count}<span class="charge" style="width:${charge}%"></span></button>`;
+    return `<button type="button" class="${['ability', cantrip && 'cantrip', wait || dark ? 'cooling' : fighting && 'ready', lit && 'lit', moment && 'moment', (offline || junk) && 'offline', wiped && 'wiped', queued && 'queued', takes && 'armd'].filter(Boolean).join(' ')}" data-ability="${id}" title="${esc(`${name}: ${scaledText(s, id, help)}${ml ? '\n' + ml : ''}`)}" data-tt-kind="${esc(keyKind(s, id))}"${ttState(lines)}>${keyFace(a.icon, name)}${count}<span class="charge" style="width:${charge}%"></span></button>`;
   });
   // The next thing your level will unlock, as a faint slot.
   const nx = nextUnlock(s);
