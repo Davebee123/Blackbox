@@ -63,6 +63,7 @@ import { addrsOf, byAddr } from './address.mjs';
 import { gainComponents } from './salvage.mjs';
 import { PROGRAMS, SOCKET, buildProgram, uninstallProgram, programCost, buildBlock as programBlock, costLine as programCostLine, codebasesOf } from './sockets.mjs';
 import { PUZZLES, PUZZLE_KINDS, isPuzzle, cipherOf, cgOpen, newPuzzle, puzzleMove, puzzleScore, puzzleStarted, cellOf, boardLines, moveLine } from './puzzles.mjs';
+import { RIVALS, spawnRival, rivalOf, rivalAt, rivalMove, rivalMeet, rivalLeave, rivalFight, rivalArm, rivalWon, rivalLost, rivalLine } from './rivals.mjs';
 
 // ---------- tuning ----------
 export const ROOMS = {
@@ -92,7 +93,7 @@ export const ROOMS = {
   // exfil: the Exfil (a runner, quick to break): a plain virus's Integrity, light hits.
   // nest: a Worm server's nest, elite-lite: the Crawler and its two hatchlings cost about 40% of your Signal over the
   // classes at levels 6, 12 and 20 (a process there about 35%, an elite 53%), and almost never lose.
-  size: { process: { hp: 1.3, dmg: 0.9 }, elite: { hp: 0.9, dmg: 0.6 }, nest: { hp: 2.3, dmg: 1 }, guard: { hp: 1.2, dmg: 0.85 }, hunter: { hp: 1.6, dmg: 0.7 }, boss: { hp: 1.25, dmg: 0.9 }, stray: { hp: 1, dmg: 0.8 }, exfil: { hp: 1.5, dmg: 0.35 } },
+  size: { process: { hp: 1.3, dmg: 0.9 }, elite: { hp: 0.9, dmg: 0.6 }, nest: { hp: 2.3, dmg: 1 }, guard: { hp: 1.2, dmg: 0.85 }, hunter: { hp: 1.6, dmg: 0.7 }, boss: { hp: 1.25, dmg: 0.9 }, stray: { hp: 1, dmg: 0.8 }, exfil: { hp: 1.5, dmg: 0.35 }, rival: { hp: 1.3, dmg: 0.9 } },
   eliteHp: 2.2, // an elite's Integrity (of a plain virus's), before its size
   hunter: { pace: 2, lose: 5, level: 2 }, // a room per 2 of your moves; a Tracker loses you 5 rooms away; 2 levels over the server (its size: twice a guard's Integrity)
   cache: { credits: [18, 36], code: [2, 4], script: 0.15 },
@@ -915,6 +916,9 @@ function catchExfil(s, room, opts) {
   fight(s, room, { as: 'exfil', pause: !!opts.pause });
 }
 
+// A vault a rival opened: its files are the rival's until you beat it (rivals.mjs).
+const rivalHolds = (s, room) => { const v = s.rooms.visit?.rival; return !!v?.vault && v.state !== 'down' && room.id === s.rooms.graph.vaults[0]; };
+
 // ---------- a visit ----------
 export function connect(s) {
   const R = s.rooms, first = s.serial, now = nowOf();
@@ -946,6 +950,7 @@ export function enter(s, now = nowOf(), { keys = [] } = {}) {
   say(s, `CONNECTED to ${R.name}, visit ${R.visits}.${R.visit.hunter ? ` A ${HUNTERS[R.visit.hunter.kind].name} walks this server.` : ''}`);
   if (!fresh && !R.mapped) { const p = progressOf(s); if (p.done === p.total) mapped(s); } // done before caches and boards stopped counting
   if (R.world) { const seed = ask('exfil', s, now); if (seed) spawnExfil(s, seed); } // an Exfil this visit (netrooms.mjs: rogue servers, your cooldown)
+  if (R.world) { const seed = ask('rival', s, now); if (seed) spawnRival(s, seed); } // a rival this visit (rivals.mjs: a traced server's shut vault, your cooldown)
 }
 // Jack out from any room: home, with the pack banked. A key you didn't use goes back to its post, guard and all.
 export function jackOut(s, why = '') {
@@ -953,6 +958,7 @@ export function jackOut(s, why = '') {
   settle(s);
   if (!R?.at) { deny(s, 'You are not on the server.'); return out(s, first); }
   if (active(s)) { deny(s, 'No jacking out mid-fight. Win it, or lose the pack.'); return out(s, first); }
+  if (R.screen?.kind === 'rival') { deny(s, `${RIVALS[rivalOf(s).id].name} has you. No stepping back.`); return out(s, first); }
   keysBack(s);
   if (R.world) {
     R.last = { result: 'out', xp: xpTotal(s) - R.visit.xp0, banked: s.run.pack.length, visit: R.visit.n };
@@ -978,6 +984,7 @@ function keysBack(s) {
 // Home, and the server's wait (longer after each disconnect since your last clean jack out: R.deaths).
 function goHome(s, R = s.rooms) {
   const now = nowOf();
+  rivalLeave(s); // a rival still walking finishes the job (rivals.mjs)
   R.fightFrom = null; // the fight you left (or lost) is over: its Signal never caps your next visit's
   R.at = null; R.screen = null; R.homeAt = now; R.reconnectAt = now + (R.world ? ROOMS.reconnect : Math.min(CONFIG.deathWait.cap, ROOMS.reconnect + (R.deaths || 0) * CONFIG.deathWait.each)) / R.speed;
   R.visit = { ...R.visit, hunter: null, exfil: R.visit?.exfil?.state === 'loose' ? { ...R.visit.exfil, state: 'gone' } : R.visit?.exfil || null }; // an Exfil you left is gone
@@ -1028,6 +1035,7 @@ export function go(s, id, opts = {}) {
   else if (active(s)) deny(s, 'Finish the fight first.');
   else if (R.screen?.kind === 'virus') deny(s, `The ${R.screen.name} holds ${hereOf(s).path}. Engage it, or step back.`);
   else if (R.screen?.kind === 'hunter') deny(s, 'The hunter is on you.');
+  else if (R.screen?.kind === 'rival') deny(s, `${RIVALS[rivalOf(s).id].name} has you. No stepping back.`);
   else if (!room || !walkable(s, R.at).includes(room.id)) deny(s, room ? `${room.path} is not next to ${hereOf(s).path}.` : `No room ${id}.`);
   else if (room.kind === 'core' && !coreOpen(s)) deny(s, R.world ? `The Core is sealed. ${WORLD.view?.sealed?.(s) || (R.graph.vaults[0] ? `Open the ${R.graph.rooms[R.graph.vaults[0]].path} first.` : '')}`.trim() : `The Core is sealed. Open the ${R.graph.rooms[R.graph.vaults[0]].path} first.`);
   else { step(s, room, opts); hooks.railCheck?.(s); } // routines.mjs: a move that took you under your jack-out line
@@ -1047,8 +1055,10 @@ function step(s, room, opts) {
   const h = hunterOf(s);
   if (h && !h.down && h.at === room.id) return meet(s, room, opts);
   if (hunterMove(s)) return meet(s, room, opts);
+  if (rivalAt(s, room.id)) return rivalMeet(s, room, opts);
   if (exfilOf(s)?.at === room.id) return catchExfil(s, room, opts);
   exfilMove(s);
+  if (rivalMove(s)) return rivalMeet(s, room, opts); // a rival walks a room for each of yours (rivals.mjs)
   if (R.world) ask('moved', s); // a thread's file walks (threads.mjs)
   arrive(s, room, opts);
 }
@@ -1060,7 +1070,8 @@ export function wait(s, opts = {}) {
   R.visit.moves++; R.stats.moves++;
   say(s, 'wait', 'rooms-cmd');
   if (hunterMove(s)) meet(s, hereOf(s), opts);
-  else { exfilMove(s); if (R.world) ask('moved', s); const line = hunterLine(s); if (line) say(s, line); }
+  else if (rivalMove(s)) rivalMeet(s, hereOf(s), opts);
+  else { exfilMove(s); if (R.world) ask('moved', s); const line = [hunterLine(s), rivalLine(s)].filter(Boolean).join(' '); if (line) say(s, line); }
   return out(s, first);
 }
 // Step back out of a fight room you walked into (the move in is spent).
@@ -1126,6 +1137,11 @@ export function act(s, verb, arg = null, opts = {}) {
     else deny(s, 'Fight it, or slip past it.');
     return out(s, first);
   }
+  if (sc?.kind === 'rival') {
+    if (verb === 'engage' || verb === 'fight') { R.screen = null; fight(s, here, { as: 'rival', pause: !!opts.pause || !!sc.pause }); }
+    else deny(s, `${RIVALS[rivalOf(s).id].name} has you. Engage.`);
+    return out(s, first);
+  }
   if (verb === 'engage') {
     if (sc?.kind !== 'virus') deny(s, 'Nothing here to fight.');
     else { R.screen = null; fight(s, here, { pause: !!opts.pause || !!sc.pause }); }
@@ -1139,6 +1155,7 @@ export function act(s, verb, arg = null, opts = {}) {
   }
   if ((verb === 'pull' || verb === 'pull all') && (here.kind === 'cache' || here.kind === 'secret')) { pull(s, here, opts); return out(s, first); }
   if ((verb === 'pull' || verb === 'pull all') && here.kind === 'stash') { if (!cacheFull(s, here)) deny(s, `The stash is empty. It fills again in ${fmtLeft(refillAt(s, here) - nowOf())}.`); else { ask('stash', s, here); R.taken[here.id] = nowOf(); clear(s, here); } return out(s, first); }
+  if ((verb === 'pull' || verb === 'pull all') && here.kind === 'vault' && rivalHolds(s, here)) { deny(s, `${RIVALS[R.visit.rival.id].name} took the files.`); return out(s, first); }
   if ((verb === 'pull' || verb === 'pull all') && here.kind === 'vault' && R.world && opened(s, here)) { if (!ask('pull', s, here)) deny(s, 'Nothing left in the vault.'); return out(s, first); }
   if ((verb === 'pull' || verb === 'pull all') && here.kind === 'entry' && R.world) { if (!ask('entryPull', s)) deny(s, 'Nothing here to take.'); return out(s, first); }
   if ((verb === 'open' || verb === 'force') && here.kind === 'vault') { openVault(s, here, verb === 'force'); return out(s, first); }
@@ -1354,6 +1371,7 @@ export function setLure(s, arg) {
 // What a room's fight is: [key, seed, opts] for selectEncounter, and its name and kind of size.
 export function fightOf(s, room, as = null) {
   if (as === 'exfil') return exfilFight(s, room);
+  if (as === 'rival') return rivalFight(s, room);
   const w = world(s) && as !== 'hunter' ? ask('fight', s, room, as) : undefined;
   if (w) return w;
   const R = s.rooms, n = R.spawns[room.id] || 0, rare = !as && !!R.rare[room.id], level = (R.world ? ask('level', s) ?? R.level : R.level) + (rare ? ROOMS.rareLevel : 0);
@@ -1422,6 +1440,7 @@ export function fight(s, room, { pause = false, as = null } = {}) {
   if (!e) return;
   const v = e.virus;
   e.rooms = { room: room.id, kind: R.kind, as, size: f.size, rare: !!f.rare };
+  if (as === 'rival') rivalArm(s, e); // the part it adds between fights (rivals.mjs), sized with the rest
   // Its size in a room, its attack set, Spam on a Mailhub's queue. Its tells come by level (tells.mjs, 3.5).
   // A server's special (netrooms.mjs tune: Hostile's hits and XP) and its programs (sockets.mjs): a Patch Injector strips
   // 1 ◆ off every part, a Bulkhead here or next door starts you behind a shield, a Honeytoken's kills pay more XP.
@@ -1444,7 +1463,7 @@ export function fight(s, room, { pause = false, as = null } = {}) {
   const set = fresh ? (f.set !== undefined ? f.set : spawnSet(v.family, f.author, f.seed)) : null;
   if (set) { applySet(v, set, seeded((f.seed ^ 0x5e7) >>> 0)); R.codex[`${v.family}:${set}`] = true; logSet(s, v.family, set); }
   else if (fresh) jitterFirst(v, seeded((f.seed ^ 0x5e7) >>> 0));
-  if (room.queue && R.kind === 'Mailhub' && as !== 'hunter' && as !== 'exfil') spamFlood(s, e);
+  if (room.queue && R.kind === 'Mailhub' && !['hunter', 'exfil', 'rival'].includes(as)) spamFlood(s, e);
   if (f.brood) brood(s, e, f.brood);
   if (as === 'exfil') { e.escapeAt = CONFIG.exfil.escape; for (const p of v.parts) { p.armor = p.maxArmor = Math.min(p.maxArmor, 1); p.patchAt = null; } } // still up after its cycles: it gets away (combat.mjs cycleClose); a runner wears 1 ◆ at most
   if (v.boss && !v.raid) bossRule(s, R.bossRule || s.bossRule || 'a');
@@ -1515,7 +1534,8 @@ hooks.roomEnd = (s, result) => {
   }
   if (result !== 'victory') {
     R.stats.lost++;
-    if (as !== 'hunter' && as !== 'exfil') (R.stats.lostAt ||= {})[room.id] = (R.stats.lostAt[room.id] || 0) + 1;
+    if (as === 'rival') rivalLost(s); // it's gone with its pack (rivals.mjs)
+    if (!['hunter', 'exfil', 'rival'].includes(as)) (R.stats.lostAt ||= {})[room.id] = (R.stats.lostAt[room.id] || 0) + 1;
     if (R.world && as !== 'exfil') ask('lost', s, room, e, result);
     if (result === 'fled') return; // jacked out mid-fight (the emergency escape): the run ends as a jack out
     return disconnected(s, `${e.virus.name} took your Signal to 0 in ${room.path}.`);
@@ -1530,6 +1550,13 @@ hooks.roomEnd = (s, result) => {
     const pending = R.visit.pending;
     R.visit.pending = null;
     if (pending) arrive(s, R.graph.rooms[pending]);
+    return;
+  }
+  if (as === 'rival') {
+    if (!rivalWon(s, room, e)) return; // the next of its lineup waits behind the card
+    const pending = R.visit.pending;
+    R.visit.pending = null;
+    if (pending && R.at) arrive(s, R.graph.rooms[pending]);
     return;
   }
   if (as === 'hunter') {

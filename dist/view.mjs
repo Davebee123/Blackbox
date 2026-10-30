@@ -69,6 +69,7 @@ import { usable, hooks } from './combat.mjs';
 import { sigintWindows, sigintCharges } from './tells.mjs';
 import { daemonText } from './daemons.mjs';
 import { ROOMS as ROOMS_FP, kindRule, KIND_OF } from './floorplan.mjs'; // a server card's respawn timers, its type's rule
+import { RIVALS } from './rivals.mjs';
 import { threadRows, threadReader, tempNodes, tempNodeSvg, tempCard, serverMarkSvg, transitNodes, transitSvg } from './threads-view.mjs';
 import { arcRows, arcReader } from './arcs-view.mjs';
 import { threadById, serverMarks } from './threads.mjs';
@@ -330,9 +331,16 @@ export function hudMarkup(s, { party = true, preview = null } = {}) {
   // Yours first (what you watch): your Signal with the crew under it; the virus's total at the right,
   // over its picture.
   return `<div class="hud-left"><div class="hud-you"><div class="hud-bar mine ${level}"><div class="bar-top"><strong>${glyph(runMode ? 'signal' : 'integrity', 'bar-ico')}${mine}</strong><span>${d.integrity}<small>/${d.max}</small></span></div><div class="bigbar"><span style="width:${dp}%"></span>${capMark(s, d)}${crackMark(s, d)}${lossMark(d.integrity, d.max, fc.you)}${copyGhost(d, fc.you, cp)}${claimMarks(s, d)}</div>${clockMeter(s)}</div></div>${statusPanel(s, cp)}</div>
-    <div class="hud-bar enemy"><div class="bar-top"><span class="vname"><strong>${esc(v.name)}</strong>${byline(v)}<span class="meta">${levelTag(s, v.level)}${v.strain || GUARDS[v.family]?.ice ? '' : ' ' + esc(familyInfo(v.family).name)}</span></span><span>${hp.current}<small>/${hp.max}</small></span></div><div class="bigbar"><span style="width:${vp}%"></span>${lossMark(hp.current, hp.max, fc.total)}</div><p class="clock-line">${armor.max ? `<span class="chits">${'◆'.repeat(armor.current)}<i>${'◇'.repeat(armor.max - armor.current)}</i></span>` : ''}${tags}${roomBossTag(s)}${progFight(s)}</p>${geneChips(s, v)}</div>`;
+    <div class="hud-bar enemy"><div class="bar-top"><span class="vname"><strong>${esc(v.name)}</strong>${byline(v)}<span class="meta">${levelTag(s, v.level)}${v.strain || GUARDS[v.family]?.ice ? '' : ' ' + esc(familyInfo(v.family).name)}</span></span><span>${hp.current}<small>/${hp.max}</small></span></div><div class="bigbar"><span style="width:${vp}%"></span>${lossMark(hp.current, hp.max, fc.total)}</div><p class="clock-line">${armor.max ? `<span class="chits">${'◆'.repeat(armor.current)}<i>${'◇'.repeat(armor.max - armor.current)}</i></span>` : ''}${tags}${roomBossTag(s)}${rivalTag(s)}${progFight(s)}</p>${geneChips(s, v)}</div>`;
 }
 // A Resident in a server room (interrupt.mjs BOSS_RULES): the rule it fights under, and (c)'s budget as pips.
+// A rival's fight (rivals.mjs): its name and which of its lineup this is.
+function rivalTag(s) {
+  const e = s.encounter, v = e?.rooms?.as === 'rival' ? s.rooms?.visit?.rival : null;
+  if (!v) return '';
+  const P = RIVALS[v.id];
+  return `<span class="tag hot" title="${esc(`${P.name}\nRival · fight ${v.fight + 1} of ${v.fights}\nYour Signal carries to its next fight. Your cooldowns start fresh.\n▸ Win all ${v.fights} to take its pack.`)}">${esc(P.name)} ${v.fight + 1}/${v.fights}</span>`;
+}
 function roomBossTag(s) {
   const e = s.encounter;
   if (!e?.rooms || !e.bossRule) return '';
@@ -581,6 +589,7 @@ function partTags(s, p) {
   // A Lockbox's held damage (docs/puzzle-levers.md 3.4): yours, in your teal.
   for (const h of p.integrity > 0 && !pk ? heldOf(s, p) : []) tags.push(`<span class="tag you held" title="${esc(`Held: the ${p.name} holds ${h.held} of your damage on the ${h.partner.name}. When it breaks, half of it, ${h.land}, lands on the ${h.partner.name} at once.`)}">${glyph('unlock')}held ${h.held}</span>`);
   // Fallback (combat.mjs): the part that takes over its partner's attack when the partner breaks first.
+  if (p.rival) { const v = s.rooms?.visit?.rival, P = v && RIVALS[v.id]; if (P) tags.push(`<span class="tag hot" title="${esc(`${p.name}\nPart · added by ${P.name}, read from how you won its last fight.`)}">+ ${esc(P.name)}</span>`); }
   if (p.fallback && p.integrity > 0) { const t = e.virus.parts.find((x) => x.id === p.fallback); if (p.tookOver) tags.push(`<span class="tag hot" title="${esc(`Took over: took over the ${t?.name || 'broken part'}'s ${t?.attack?.name || 'attack'} when the ${t?.name || 'other part'} broke.`)}">took over</span>`); else if (t && t.integrity > 0 && t.attack) tags.push(`<span class="tag hot" title="${esc(`Fallback: if the ${t.name} breaks first, the ${p.name} takes over its ${t.attack.name}.`)}">fallback</span>`); }
   // The parts plan (data.mjs BASICS, genes.mjs): an Accumulator's charge, a Hotspot's glow, the Idle Timer's countdown on
   // the signature's row, an Obfuscator's smoke.
@@ -2774,6 +2783,7 @@ export function spoilsOf(events) {
       else if (h) add(`Trace to the unknown ${h[1]} server past ${h[2]}`, `${h[3]}%`, 'lead', { text: `Trace to the unknown ${h[1]} server past ${h[2]}: ${h[3]}%`, pct: Math.min(100, +h[3]) });
       else if (f) add(`Trace to the ${f[1]} hub`, `${f[2]}%`, 'lead', { text: `Trace to the ${f[1]} hub: ${f[2]}%`, pct: Math.min(100, +f[2]) });
     }
+    else if (e.type === 'spoil') add(e.label, e.qty, e.kind, { pack: !!e.pack, sub: e.sub || '' }); // a rival's pack (rivals.mjs)
     else if (e.type === 'collected') add('New in collection', '', 'found', { text: `New in collection: ${e.message.replace(/^Collection: /, '')}` });
     else if (e.type === 'located') add(e.message.replace(/^[^:]*: /, 'Found ').replace(/\.$/, ''), '', 'found');
     else if (e.type === 'contract-ready') { if (/is down\. Contract ready/.test(e.message || '')) add('Bounty target down', '', 'bounty', { sub: 'Deliver it from Mail' }); else add('Contract ready', '', 'found'); }

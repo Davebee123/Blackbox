@@ -13,6 +13,8 @@ import * as FP from './dist/floorplan.mjs';
 import { nameOf } from './dist/network.mjs';
 import { memoryPair } from './dist/coop-net.mjs';
 import { hostSession, guestSession, hostGame, guestGame, hostSwap, humansReady } from './dist/coop.mjs';
+import { RIVAL } from './dist/rivals.mjs';
+RIVAL.chance = 0; // a rival rolls at connect (rivals.mjs): these walks are scripted (rivals.test.mjs plays them)
 
 CONFIG.enemyCrit = 0; CONFIG.misses = false;
 CONFIG.exfil.chance = 0;

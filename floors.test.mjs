@@ -12,6 +12,8 @@ import { floorGraph, floorsOf, graphOf, neighbours, locAt, hiddenAt, hiddenNear,
 import { hiddenNodes, hiddenLead, HIDDEN, pickOrigin, connectedTo } from './dist/hidden.mjs';
 import { tickNetwork, travelMs } from './dist/invasion.mjs';
 import { mapLayout, mapMarkup } from './dist/view.mjs';
+import { RIVAL } from './dist/rivals.mjs';
+RIVAL.chance = 0; // a rival rolls at connect (rivals.mjs): these walks are scripted (rivals.test.mjs plays them)
 
 CONFIG.enemyCrit = 0; CONFIG.misses = false; CONFIG.exfil.chance = 0;
 let clock = 1_700_000_000_000;

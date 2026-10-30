@@ -139,6 +139,7 @@ comment saying what it does.
 | `dist/sockets.mjs` | Sockets: build a program in a cleared socket room; it changes its own server. |
 | `dist/specials.mjs` | Server specials: each traced server's rule (an upside and a cost) from its seed, its pull on invasions, and its leaning's id (`leaningOf`). |
 | `dist/leanings.mjs` | Leanings: a server's one positive rule (Venting, Wind-up, Brownout), its multipliers in the fight and what it has paid. |
+| `dist/rivals.mjs` | Rivals: named runners who race you to a server's vault and fight you two or three in a row. |
 | `dist/puzzles.mjs`, `dist/puzzle-view.mjs` | Puzzle rooms: seven boards that aren't fights, and the cryptogram's key (`s.cipher`). |
 | `dist/forensics.mjs` | Log sweep: a short detective puzzle in a server's incident file. |
 | `dist/traffic.mjs`, `dist/travelfx.mjs` | Ambient packets on the room map; the step between rooms as a train of code. |
@@ -282,7 +283,7 @@ and `style.test.mjs` the tooltip grammar.
 | [`docs/kits.md`](docs/kits.md), [`docs/subclasses/`](docs/subclasses/) | Class kits and the eight subclasses. |
 | [`docs/routines.md`](docs/routines.md) | Routines. |
 | [`docs/progression.md`](docs/progression.md), [`docs/economy.md`](docs/economy.md), [`docs/content.md`](docs/content.md), [`docs/variety-plan.md`](docs/variety-plan.md) | Pacing, the economy, activities and variety. |
-| [`docs/rivals.md`](docs/rivals.md) | Rivals: the roster and the picked look (designed, not built). |
+| [`docs/rivals.md`](docs/rivals.md) | Rivals: the roster, the rules and the picked look. |
 | [`docs/loot-plan.md`](docs/loot-plan.md) | Sets and uniques. |
 | [`docs/house.md`](docs/house.md) | Your house and its furniture (decided, not built). |
 | [`docs/leanings.md`](docs/leanings.md) | Leanings: a server's one positive rule (built: GAME_RULES.md "Server kinds, specials and quirks"). |

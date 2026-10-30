@@ -104,6 +104,7 @@ export function botTarget(s) {
 export function botStep(s) {
   const R = s.rooms, here = FP.hereOf(s), sc = R.screen;
   if (sc?.kind === 'hunter') { FP.act(s, sig(s) < 0.6 ? 'slip' : 'engage'); return true; }
+  if (sc?.kind === 'rival') { FP.act(s, 'engage'); return true; } // a rival has you: no step back (rivals.mjs)
   if (sc?.kind === 'virus') {
     const room = FP.roomOf(s, sc.room);
     if (sig(s) >= needOf(s, room) || !R.visit.back) FP.act(s, 'engage'); else { (R.visit.avoid ||= {})[room.id] = true; FP.act(s, 'back'); }

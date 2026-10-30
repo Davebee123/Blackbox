@@ -30,6 +30,7 @@ import { seeded, MATERIALS, codeOf, rollItem, LOOT } from './gear.mjs';
 import { crewOf, factionAuthor, AUTHORS } from './authors.mjs';
 import * as FP from './floorplan.mjs';
 import { AUTHOR_FAMILIES, familyName } from './families.mjs';
+import { rivalRoll, rivalsRestore } from './rivals.mjs';
 import { zoneOf, zoneRooms } from './zone.mjs';
 import { ROGUE, FARM, rogueRooms, rogueSpawns, rogueKill, relocks, clock, inRuns } from './rogue.mjs';
 import { lairOpen, NETWORK } from './network.mjs';
@@ -437,6 +438,20 @@ WORLD_hook('exfil', (s, t) => {
   c.at = t; c.n = (c.n || 0) + 1; rr.exfil = seed;
   return seed;
 });
+// A rival (rivals.mjs): a roll at each connect to a traced server whose vault is still shut, never one you hold. The
+// seed, or 0.
+WORLD_hook('rival', (s, t) => {
+  const loc = locOf(s), R = s.rooms, vault = R?.graph.vaults[0];
+  if (!loc || R.type !== 'server' || !vault || R.opened[vault] || owned(loc) || loc.member || loc.zone || loc.farm || loc.lair || loc.temp || !s.run) return 0;
+  return rivalRoll(s, (loc.seed || 1) + R.visits * 40503, t);
+});
+// A rival that got away with the vault: its files are gone.
+WORLD_hook('vaultGone', (s) => {
+  const loc = locOf(s);
+  if (!loc) return;
+  const taken = ((loc.state ||= {}).taken ||= {});
+  for (const { dir, name } of vaultFiles(loc)) taken[`${dir}/${name}`] = true;
+});
 // Its archive, recovered: CONFIG.exfil.credits Stashes' worth of credits and one item at the server's level (the best of two flat
 // rolls, else a white: about twice a kill's blue chance, never a guaranteed blue, nothing else stacked on: no
 // clean read or Pit roll), and now and then one of the server's uniques (its kind's and floor's, as its folders drop).
@@ -618,6 +633,7 @@ export function summaryOf(s, loc) {
 // is jacked out (what it carried banked). Buildings and outposts stay as they were (sockets are R2).
 export function roomsRestore(s, was) {
   exfilRestore(s);
+  rivalsRestore(s); // v52: rivals' memory (rivals.mjs), keyed on the field
   // Rooms are unknown until you've been in them (floorplan.mjs fogRestore): an older save keeps what it can't rule out.
   for (const loc of [s.zone, ...(s.locations || [])]) if (loc?.floorplan) FP.fogRestore(loc.floorplan);
   // A wild server's rooms were once named by their folders (/var/log): named for what they are now (Process 5).
