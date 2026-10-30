@@ -11,6 +11,7 @@ import { GENES } from './dist/genes.mjs';
 import { geneState, genomeCard, cardLines, virusGenes } from './dist/genome.mjs';
 import { hudMarkup, netTranscript } from './dist/view.mjs';
 import { signature, openLair, lairOf, networkLines } from './dist/network.mjs';
+import { floorsOf } from './dist/floors.mjs';
 import { rogueSpawns } from './dist/rogue.mjs';
 
 // Win the fight you're in: every part down to 1, bare, then a Spike each.
@@ -165,13 +166,14 @@ test('inspect: a part\'s rules, what each does once its research says so, and no
   assert.ok(virusGenes(s.encounter.virus).some((g) => g.id === 'twin'));
 });
 
-test('HASHLORD and MIRRORSHADE hold /core from their floors: a lair stands on floor 2 and deeper, its boss when you reach 16 or 12', () => {
+test('HASHLORD and MIRRORSHADE hold /core from their floors: HASHLORD\'s lair stands on floor 3, its boss when you reach 16', () => {
   let seed = 1, boss = null;
   for (; seed < 5000; seed++) if (signature(seed).boss === 'nb-hashlord') { boss = 'nb-hashlord'; break; }
   const s = at(10);
   s.netSeed = seed;
   for (const f of ['ransomware', 'worm', 'ghostroot']) command(s, 'developer location ' + f);
-  openLair(s, true); // developer lair: the lair on floor 2, located now (a player traces it, floors.mjs)
+  floorsOf(s).reached = 3; // its own floor: floor 3's pool holds it (floors.mjs FLOOR.lairs)
+  openLair(s, true); // developer lair: the lair on the deepest floor reached, located now (a player traces it, floors.mjs)
   const lair = lairOf(s);
   assert.ok(lair && lair.lair === boss);
   assert.equal(rogueSpawns(s, lair, Date.now())['/core'], undefined, 'no HASHLORD at 10');
@@ -183,6 +185,6 @@ test('HASHLORD and MIRRORSHADE hold /core from their floors: a lair stands on fl
   play(s, 'jack out');
   s.hackers.breaker.level = 16;
   assert.equal(rogueSpawns(s, lair, Date.now())['/core']?.boss, 'nb-hashlord');
-  assert.equal(lair.spawns['/core'].level, 16, 'never under its floor');
+  assert.equal(lair.spawns['/core'].level, Math.max(16, lair.level), 'never under its floor');
   assert.equal(BOSSES['nb-mirrorshade'].floor, 12);
 });

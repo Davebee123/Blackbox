@@ -157,11 +157,12 @@ test('the native boss: a lair on every floor from 2, found by tracing, its boss 
   assert.equal(lairOf(s), null, 'nothing turns up on its own: a lair is a slot on its floor (floors.mjs)');
   assert.equal(graphOf(s, 1).lair, null, 'none on floor 1');
   s.hackers.breaker.level = 18;
-  const slot = graphOf(s, 2).lair;
-  const found = addLocation(s, 'worm', 2, null, slot); // traced to 100% on floor 2
-  const lair = lairOf(s), g = sigOf(s, 'you'), B = BOSSES[g.boss];
+  const g = sigOf(s, 'you'), B = BOSSES[g.boss], n = [2, 3, 4, 5].find((k) => graphOf(s, k).lairBoss === g.boss); // the floor its own lair is on (floors.mjs lairBossFor)
+  const slot = graphOf(s, n).lair;
+  const found = addLocation(s, 'worm', n, null, slot); // traced to 100% on its floor
+  const lair = lairOf(s);
   assert.equal(found, lair);
-  assert.ok(lair && lair.lair === g.boss && lair.name === `${B.lair}-02` && lair.rogue.kind === 'lair' && lair.slot === slot);
+  assert.ok(lair && lair.lair === g.boss && lair.name === `${B.lair}-0${n}` && lair.rogue.kind === 'lair' && lair.slot === slot);
   lair.level = 18; // (its slot's level is 7-14; this test fights the boss at 18)
   assert.ok(ROGUE.kinds.lair, 'a kind of its own, never rolled');
   const sp = rogueSpawns(s, lair, Date.now());

@@ -42,7 +42,7 @@ import { FACTIONS, MAIL, TIERS, openContracts, doneContracts, offers as mailOffe
 import { commsOf } from './comms.mjs';
 import { LINE, GOODS, storeOf, lineName, lineAbout, goodsAbout, priceNow, premiumOf, premiumPrice, premiumBlock } from './store.mjs';
 import { shownHidden, flagged as hiddenFlagged, items as kitOf, HIDDEN, leadOf, connectedTo, viaName } from './hidden.mjs';
-import { floorsOf, graphOf, locAt, hiddenAt, exitOpen, floorOfSlot, floorName, FLOOR, canDescend, waypointOf } from './floors.mjs';
+import { floorsOf, graphOf, locAt, hiddenAt, exitOpen, floorOfSlot, floorName, FLOOR, canDescend, waypointOf, holderOf } from './floors.mjs';
 import { ROOT, ROOT_PERKS, rootOf, rootProgress, procOf, freeOfMemory } from './root.mjs';
 import { FIREWALL, fwOf, fwAt, ratingAt, effLevel, wallBonus, fragLevels, defragging, upgradeCost, canPay, defragMs, defragCost, perksAt, TIER_PERKS, BASE_GAP, baseOf, tierOf as fwTierOf, fwLevel } from './firewall.mjs';
 import { filtersOf, equipped as filtersOn, slotsOf as filterSlots, filterLine, FILTER_STATS, FILTER_CAP, baseName as filterBase } from './filters.mjs';
@@ -52,7 +52,7 @@ import { tellTip, gearLive, cycleGear, gearOnParts, partTip, partCue, partRead, 
 import { cutsNow, crossBy, BOSS_RULES, TICKS } from './interrupt.mjs';
 import { programMarkup, progNow, progTarget, progText, progMove, progOnPart, progExc, progFight, progTag } from './routines-view.mjs';
 import { unlocked as routinesOpen, LOCKED as ROUTINES_LOCKED } from './routines.mjs';
-import { bodyTags } from './families.mjs';
+import { bodyTags, AUTHOR_FAMILIES, familyName } from './families.mjs';
 import { heatOf } from './parts.mjs';
 import { wallRating, wallBands, ratioOf, outcome, chipRate, grindRate, fighting, degradedLeft, fmtLeft, bountyOf, tellOf, quirkLine, labelOf, verdictOf, strength, sendersOf, senderGrade, sendsAt, streakOf, streakMult, STREAK, SCOUT, daemonChance, SCOUTED, KINDS as INV_KINDS, scoutedLine, sendTop, countsAt, wallSafety } from './invasion.mjs';
 import { RULES, LOOT, SLOTS, BASES, STATS, GROUPS, RARITIES, RARITY_ORDER, ZERO_DAYS, STASH_CAP, PROTOCOL_SLOTS, SERVICES, MATERIALS, statLine, itemLabel, fmtStat, sideStats, SLOT_KINDS, groupOf, codeOf, uniqueItem, seeded, IMPLICITS } from './gear.mjs';
@@ -2345,7 +2345,7 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
     const op = progs ? ' outpost' : '';
     if (l.rogue) {
       const live = Object.values(l.spawns || {}).filter((x) => x.alive).length;
-      return `<g class="mnode rogue${mapTags(s, l, st, job)}${crowded.has(n.id) ? ' crowded' : ''}${st === 'here' ? ' here' : ''}${s.locations.includes(l) && !isLive(s, l) ? ' detached' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}, rogue server"><circle r="18" class="mhit"/><path d="M0 -10 L9 -5 L9 5 L0 10 L-9 5 L-9 -5 Z"/><path d="M-4 -3 L4 3 M4 -3 L-4 3" class="rx"/>${pick}${lvLabel(s, n, 12, l.name, l.level || 1, l.depth || 1, l.occupied ? `rebooting · ${live}` : `${ROGUE.kinds[l.rogue.kind].name.toLowerCase()}${st === 'here' ? ' · here' : live ? ` · ${live} hostile` : ''}`)}</g>`;
+      return `<g class="mnode rogue${mapTags(s, l, st, job)}${crowded.has(n.id) ? ' crowded' : ''}${st === 'here' ? ' here' : ''}${s.locations.includes(l) && !isLive(s, l) ? ' detached' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}, rogue server"><circle r="18" class="mhit"/><path d="M0 -10 L9 -5 L9 5 L0 10 L-9 5 L-9 -5 Z"/><path d="M-4 -3 L4 3 M4 -3 L-4 3" class="rx"/>${pick}${lvLabel(s, n, 12, l.name, l.level || 1, l.depth || 1, l.occupied ? `rebooting · ${live}` : `${l.lair && BOSSES[l.lair] ? BOSSES[l.lair].name : ROGUE.kinds[l.rogue.kind].name.toLowerCase()}${st === 'here' ? ' · here' : live ? ` · ${live} hostile` : ''}`)}</g>`;
     }
     return `<g ${l.faction ? `style="--fc:${FX[l.faction].color}" ` : ''}class="mnode loc ${st}${mapTags(s, l, st, job)}${crowded.has(n.id) ? ' crowded' : ''}${l.faction ? ' fowned' : ''}${l.takenOver ? ' owned' : ''}${s.locations.includes(l) && !isLive(s, l) ? ' detached' : ''}${op}${job ? ' job' : ''}${eventsAt(s, l.id).length ? ' drop' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}"><circle r="18" class="mhit"/>${st === 'new' ? '<circle r="11" class="ring"/>' : arc(10, total ? taken / total : 0, st)}<circle r="5" class="core"/>${rotMark(l)}${l.faction ? `<g class="fmark" transform="translate(9 -17) scale(0.62)">${GLYPHS['f-' + l.faction]}</g>` : ''}${specialsOf(l).length ? `<text class="mspecial" x="-11" y="-8" text-anchor="end">${specialsOf(l).map((id) => `${SPECIALS[id].glyph}\uFE0E`).join('')}</text>` : ''}${dropMark(s, l)}${serverMarkSvg(s, l.id, thMarks)}${pick}${lvLabel(s, n, 12, l.name, l.takenOver ? null : l.level || 1, l.depth || 1, rest)}</g>`;
   }).join('');
@@ -2367,7 +2367,9 @@ function floorLift(s, n) {
   const rows = FLOORS.map((f, i) => {
     const k = i + 1, [lo, hi] = f.band, open = k <= F.reached, next = k === F.reached + 1;
     const band = open || next ? `<small><b class="${conClass(lo - L)}">${lo}</b>–<b class="${conClass(hi - L)}">${hi}</b></small>` : '';
-    return `<button type="button" class="fl-btn ${open ? 'open' : next ? 'next' : 'dark'}${k === n ? ' on' : ''}" ${open ? `data-floor="${k}" title="${esc(`${f.name} · lv ${lo}–${hi}${waypointOf(s, k) ? ` · waypoint ${waypointOf(s, k).name}` : ''}`)}"` : 'disabled'} aria-label="Floor ${k}"><b class="fl-n">${k}</b><span class="fl-name">${open ? esc(f.name) : next ? '???' : ''}</span>${band}${here === k ? '<i class="fl-you" title="You are here"></i>' : ''}</button>`;
+    const A = open ? AUTHORS[holderOf(s, k)] : null; // its holder (floors.mjs): a stripe in its colour
+    const held = A ? `\nHeld by ${A.name}: it writes most of the servers here, with ${AUTHOR_FAMILIES[A.id].map(familyName).join(', ').replace(/, ([^,]*)$/, ' and $1')}.\n${A.style}` : '';
+    return `<button type="button" class="fl-btn ${open ? 'open' : next ? 'next' : 'dark'}${k === n ? ' on' : ''}${A ? ' held' : ''}"${A ? ` style="--hc:${A.colour}"` : ''} ${open ? `data-floor="${k}" title="${esc(`${f.name}\nFloor ${k}, levels ${lo}–${hi}.${held}${waypointOf(s, k) ? `\nWaypoint: ${waypointOf(s, k).name}.` : ''}`)}"` : 'disabled'} aria-label="Floor ${k}"><b class="fl-n">${k}</b><span class="fl-name">${open ? esc(f.name) : next ? '???' : ''}</span>${band}${here === k ? '<i class="fl-you" title="You are here"></i>' : ''}</button>`;
   });
   return `<nav class="floor-lift" aria-label="Floors">${rows.join('')}</nav>`;
 }
@@ -2659,7 +2661,7 @@ function mapSide(s, sel, node) {
   if (l.rogue) {
     const k = ROGUE.kinds[l.rogue.kind], live = Object.values(rogueSpawns(s, l)).filter((x) => x.alive).length;
     return `<section class="card"><h2>${l.trunk ? 'Trunk server' : l.member ? `${esc(l.member)}'s rogue server` : 'Rogue server'}${` · floor ${l.depth || 1}`}</h2><h1>${esc(l.name)}</h1>
-      <p class="tagline">${levelTag(s, (l.level || 1) + (l.rogue.kind === 'pit' ? ROGUE.pitLevels : 0))} <span class="tag tag-rogue" title="${esc(k.rule)}">${esc(k.name)}</span>${l.rogue.kind === 'nest' ? ` ${esc(FAMILIES[l.family].name)}` : ''}</p>
+      <p class="tagline">${levelTag(s, (l.level || 1) + (l.rogue.kind === 'pit' ? ROGUE.pitLevels : 0))} <span class="tag tag-rogue" title="${esc(k.rule)}">${esc(k.name)}</span>${l.rogue.kind === 'nest' ? ` ${esc(FAMILIES[l.family].name)}` : ''}${l.lair && BOSSES[l.lair] ? ` <span class="tag tag-rogue tag-lairboss" title="${esc(`${BOSSES[l.lair].name}\nLair boss · ${FAMILIES[BOSSES[l.lair].family].name}\n${BOSSES[l.lair].about}\nIt drops ${l.member ? 'its' : 'your'} network's natives.`)}">${glyph('kill')}${esc(BOSSES[l.lair].name)}</span>` : ''}</p>
       <div class="stats">${stat('Hostile', `${live}/${rogueRooms(l).length}`)}${stat('Runs', l.runs || 0)}</div>
       <p class="svc-line"><span class="tag dim" title="Can't be taken over; never sends invasions">wild</span></p>
       ${consortiumLine(s, l)}

@@ -3,12 +3,14 @@
 // floor, and an older save's layers moved onto floors.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fresh, command, resolveCycle, active, hooks, restore, SAVE_VERSION, addLocation, hackerOf, addLead } from './dist/combat.mjs';
-import { CONFIG, FLOORS, SERVER, bandOf, floorFor, layerOf, gradeFor } from './dist/data.mjs';
+import { fresh, command, resolveCycle, active, hooks, restore, SAVE_VERSION, addLocation, hackerOf, addLead, bossTable } from './dist/combat.mjs';
+import { CONFIG, FLOORS, SERVER, bandOf, floorFor, layerOf, gradeFor, BOSSES, NATIVE_BOSSES } from './dist/data.mjs';
 import { play } from './dist/run.mjs';
 import * as FP from './dist/floorplan.mjs';
 import { roomsFor } from './dist/netrooms.mjs';
-import { floorGraph, floorsOf, graphOf, neighbours, locAt, hiddenAt, hiddenNear, exitOpen, canDescend, descend, floorFit, FLOOR, waypointOf, waypoints } from './dist/floors.mjs';
+import { floorGraph, floorsOf, graphOf, neighbours, locAt, hiddenAt, hiddenNear, exitOpen, canDescend, descend, floorFit, FLOOR, waypointOf, waypoints, holdersOf, lairBossFor } from './dist/floors.mjs';
+import { signature } from './dist/network.mjs';
+import { AUTHOR_FAMILIES } from './dist/families.mjs';
 import { hiddenNodes, hiddenLead, HIDDEN, pickOrigin, connectedTo } from './dist/hidden.mjs';
 import { tickNetwork, travelMs } from './dist/invasion.mjs';
 import { mapLayout, mapMarkup } from './dist/view.mjs';
@@ -127,7 +129,7 @@ test('exits: hidden until a server they hang off is located, then shown and take
   assert.equal(floorsOf(s).at, 2);
   assert.match(command(s, 'floor 3').map((e) => e.message).join(' '), /isn't open to you yet/);
   assert.equal(mapLayout(s, 2).nodes.find((n) => n.kind === 'entry')?.floor, 2, 'floor 2\'s ▲ up-link');
-  assert.match(mapMarkup(s, 'server', 'mine', { floor: 2 }), /class="fl-btn open on"[^>]*data-floor="2"/, 'the floor panel marks the floor on the map');
+  assert.match(mapMarkup(s, 'server', 'mine', { floor: 2 }), /class="fl-btn open on[^"]*"[^>]*data-floor="2"/, 'the floor panel marks the floor on the map');
   assert.match(mapMarkup(s, 'server', 'mine', { floor: 2 }), /fl-btn next[^>]*disabled[^>]*><b class="fl-n">3<\/b><span class="fl-name">\?\?\?<\/span>/, 'the next floor dim, ??? until reached');
   // A tall screen draws the floor on its side: the same links, the way down below the entry.
   const wide = mapLayout(s, 1), tall = mapLayout(s, 1, true), at = (L, id) => L.nodes.find((n) => n.id === id);
@@ -219,7 +221,7 @@ test('migration (v41): an older save\'s layers become floors, every server kept 
   a.floorplan.programs = { [sock.id]: 'harvester' };
   const cleared = Object.keys(b.floorplan.cleared).length;
   s.hidden = [{ id: 'h77', family: 'worm', via: b.id, depth: 3, level: 18, lead: 60, pinged: true, signal: 3 }];
-  s.leadProgress = { ransomware: 40, worm: 0, ghostroot: 0 };
+  s.leadProgress = { ransomware: 0, worm: 0, ghostroot: 40 }; // a family with a ? of its own on these floors (floors.mjs holders)
   s.mail.jobs.push({ id: 991, type: 'item', hidden: 'h77', got: 0, reward: { credits: 1 } });
   const t = restore(JSON.parse(JSON.stringify(s)));
   assert.equal(t.version, SAVE_VERSION);
@@ -235,7 +237,7 @@ test('migration (v41): an older save\'s layers become floors, every server kept 
   const h = t.hidden.find((x) => x.id === 'h77');
   assert.ok(h && h.slot && h.lead === 60 && h.pinged && neighbours(t, B.slot).includes(h.slot), 'an unknown server keeps its trace, beside the server it hung off');
   assert.ok(t.mail.jobs.some((j) => j.hidden === 'h77'), 'its contract still points at it');
-  assert.equal(t.leadProgress.ransomware, 0, 'a family lead became trace');
+  assert.equal(t.leadProgress.ghostroot, 0, 'a family lead became trace');
   assert.ok(t.hidden.some((x) => x.lead >= 40 && x.id !== 'h77'));
   assert.ok(t.mail.list.some((m) => /The net goes down now/.test(m.subject)), 'wick says so');
   assert.equal(floorFit(9, 1), 2, 'level 9 only fits floor 2');
@@ -287,4 +289,58 @@ test('a fight\'s floor: the server\'s on a run; at home and in a sim your floor 
   const loc = addLocation(s, 'worm', 3);
   s.run = { loc: loc.id };
   assert.equal(floorOfFight(s, 'run', {}, loc.level || 18), loc.depth);
+});
+
+test('lairs by floor: floors 2–4 draw from the bosses that fit their band, the native boss on its own floor, the rest keep it', () => {
+  const seen = { 2: new Set(), 3: new Set(), 4: new Set() };
+  for (const id of Object.values(FLOOR.lairs).flat()) assert.ok(NATIVE_BOSSES.includes(id), `${id} is built`);
+  for (let seed = 1; seed <= 300; seed++) {
+    const native = signature(seed).boss, home = Object.keys(FLOOR.lairs).find((n) => FLOOR.lairs[n].includes(native));
+    for (let n = 2; n <= 8; n++) {
+      const b = floorGraph(seed, n).lairBoss;
+      assert.equal(b, lairBossFor(seed, n));
+      if (FLOOR.lairs[n]) { assert.ok(FLOOR.lairs[n].includes(b), `seed ${seed} floor ${n}: ${b} fits the band`); seen[n].add(b); }
+      else assert.equal(b, native, 'no built boss fits floors 5–8 yet: the native boss holds them');
+      if (String(n) === home) assert.equal(b, native, 'the native boss takes the lair on its own floor');
+    }
+  }
+  for (const n of [2, 3, 4]) assert.equal(seen[n].size, FLOOR.lairs[n].length, `every boss in floor ${n}'s pool turns up`);
+  // Located: the floor's boss in /core, named for it, its network's natives on its loot table.
+  const s = mk(18, 12345), n = [2, 3].find((k) => graphOf(s, k).lairBoss !== signature(12345).boss) || 3, g = graphOf(s, n);
+  const lair = addLocation(s, 'worm', n, null, g.lair);
+  assert.equal(lair.lair, g.lairBoss);
+  assert.ok(lair.name.startsWith(BOSSES[g.lairBoss].lair) && lair.name.endsWith(`-0${n}`));
+  assert.deepEqual(bossTable(s, g.lairBoss).uniques.map((u) => u.id).sort(), [...signature(12345).uniques].sort(), 'every lair boss drops your network\'s natives');
+  s.floors.reached = n;
+  const html = mapMarkup(s, lair.id, 'mine', { floor: n });
+  assert.match(html, new RegExp(`tag-lairboss" title="${BOSSES[g.lairBoss].name}`), 'its card names its boss, with its rules in the tooltip');
+});
+
+test('floor holders: floors 2–8 each held by an author from the roster, never the floor above\'s; it writes most of the floor', () => {
+  for (const [a, fams] of Object.entries(FLOOR.holders.writes)) assert.deepEqual(fams, AUTHOR_FAMILIES[a].filter((f) => ['ransomware', 'worm', 'ghostroot'].includes(f)), `${a}: its families among the three`);
+  let mine = 0, all = 0;
+  const held = new Set();
+  for (let seed = 1; seed <= 200; seed++) {
+    const h = holdersOf(seed);
+    assert.equal(floorGraph(seed, 1).holder, null, 'floor 1 has no holder');
+    for (let n = 2; n <= 8; n++) {
+      const g = floorGraph(seed, n);
+      assert.equal(g.holder, h[n]);
+      assert.ok(FLOOR.holders.writes[g.holder], 'from the roster');
+      if (n > 2) assert.notEqual(h[n], h[n - 1], 'never the floor above\'s');
+      held.add(g.holder);
+      for (const x of Object.values(g.nodes).filter((y) => y.kind === 'server')) {
+        all++;
+        if (x.author === g.holder) { mine++; assert.ok(FLOOR.holders.writes[g.holder].includes(x.family), 'its slots take its families'); }
+      }
+    }
+  }
+  assert.equal(held.size, Object.keys(FLOOR.holders.writes).length, 'every author holds a floor somewhere');
+  assert.ok(mine / all > 0.65 && mine / all < 0.85, `the holder writes most of a floor: ${(mine / all).toFixed(2)}`);
+  // A server it wrote: its rooms are the holder's (families and attack sets), and the floor panel wears its colour.
+  const s = mk(10), g = graphOf(s, 2), slot = Object.values(g.nodes).find((x) => x.kind === 'server' && x.author);
+  const loc = addLocation(s, slot.family, 2, null, slot.id);
+  if (!loc.faction) assert.equal(roomsFor(s, loc).author, g.holder);
+  s.floors.reached = 2;
+  assert.match(mapMarkup(s, 'server', 'mine', { floor: 2 }), /class="fl-btn open on held" style="--hc:#[0-9a-f]{6}"[^>]*title="[^"]*Held by [A-Z ]+: it writes most of the servers here/, 'the floor panel: a stripe in its colour, its name in the tooltip');
 });

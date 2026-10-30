@@ -499,11 +499,22 @@ Resident drops each of its two once, then makes no unique roll. After a miss the
 
 ### Lairs and native bosses
 
-From level 8, once you've found three servers, your network's **lair** is on your map (every floor from 2 has a lair
-slot, found by tracing). Its two outer rooms hold its family (its native strain more often) and come back half an hour
-after they fall; its Core holds your network's **native boss**, back an hour after it falls. A boss with a floor
+Every floor from 2 has a **lair** slot, found by tracing. Its two outer rooms hold its boss's family (your native
+strain more often) and come back half an hour after they fall; its Core holds the floor's **lair boss**, back an hour
+after it falls. The map labels a found lair with its boss, and its card's boss tag gives the rules.
+
+**Lairs by floor** (`floors.mjs` lairBossFor): each floor draws from the built bosses that fit its band. Your
+**native boss** takes the lair on its own floor; the others draw from their pool, weighted to your network's lean.
+
+| Floor | Its pool |
+|---:|---|
+| 2 | DEADBOLT, BACK ORIFICE, PATCH TUESDAY, SLEEPWALKER, MIRRORSHADE |
+| 3 | HASHLORD, FLOODWALL, ECHOLALIA |
+| 4 | TRIPMINE |
+| 5–8 | none built yet: your native boss |
+ A boss with a floor
 (HASHLORD 16, MIRRORSHADE 12) moves in only once you reach that level; until then the Core stays sealed and says from
-which. A native boss drops a boss's item and rolls for its network's **native uniques** (Networks) at the bosses'
+which. Every lair boss drops a boss's item and rolls for its network's **native uniques** (Networks) at the bosses'
 odds, kept per network; its first fall names them all. A strain boss's hits step with level (×0.8 at 10, ×1.1 at 18,
 ×1.45 at 30).
 
@@ -905,18 +916,22 @@ from your network's seed, with its own level band, shape and size.
 | Floor | Name | Levels | Shape | Servers | On it |
 |---:|---|---|---|---:|---|
 | 1 | The Sprawl | 1–8 | A star around SPRAWL-00 | 10 | SPRAWL-00 (the entry), Halcyon's and Kestrel's hubs, KESSLER-FARM-00 (from 7) |
-| 2 | Backhaul | 7–14 | A trunk with spurs | 12 | LANTERN's and GLASSJAW's hubs, a lair |
-| 3 | The Stacks | 13–20 | A lattice with holes | 14 | NULL CHOIR's hub, a lair |
-| 4 | Coldline | 19–26 | A ring around a dead centre | 14 | a lair, two exits |
-| 5 | Deep Core | 25–32 | Two halves joined by one bridge | 16 | a lair, two exits |
-| 6 | Kernel Space | 31–38 | A deep tree | 16 | a lair, two exits |
-| 7 | The Sink | 37–44 | A funnel | 18 | a lair, two exits |
-| 8 | Bedrock | 43–50 | Scattered islands | 18 | a lair, no exit |
+| 2 | Backhaul | 7–14 | A trunk with spurs | 12 | LANTERN's and GLASSJAW's hubs, a lair, a holder |
+| 3 | The Stacks | 13–20 | A lattice with holes | 14 | NULL CHOIR's hub, a lair, a holder |
+| 4 | Coldline | 19–26 | A ring around a dead centre | 14 | a lair, a holder, two exits |
+| 5 | Deep Core | 25–32 | Two halves joined by one bridge | 16 | a lair, a holder, two exits |
+| 6 | Kernel Space | 31–38 | A deep tree | 16 | a lair, a holder, two exits |
+| 7 | The Sink | 37–44 | A funnel | 18 | a lair, a holder, two exits |
+| 8 | Bedrock | 43–50 | Scattered islands | 18 | a lair, a holder, no exit |
 
 - **A server's level** is its place on its floor, fixed when the floor is drawn: the entry's side at the band's bottom,
   the exits' side at its top. Its kind leans by floor (Mailhubs and name servers near the top, Archives and Labs
-  deeper), its family your network's way. Rogue servers (1 in 6) and faction servers (1 in 8) are rolled as you find
+  deeper), its family your network's way (its holder's, if the holder wrote it). Rogue servers (1 in 6) and faction servers (1 in 8) are rolled as you find
   them. Rogue servers, the farm and lairs keep up with you inside their floor's band.
+- **Floor holders.** Floors 2–8 each have a holder: TOLLGATE, SWARMLINE, PALEMASK, NULL CHOIR, GLASSJAW or LANTERN,
+  rolled from your network's seed, weighted to its lean, never the floor above's. It writes three in four of the
+  floor's servers: their families are its own, and their rooms its families and attack sets. A faction's server stays
+  its faction's. The floor panel wears its colour; its tooltip names it.
 - **Your floor** is the deepest one whose band holds your level; the level-up names a floor when you reach its band.
 - **Exits.** One a floor (two from floor 4; Bedrock none), a **▼** on the far side. It shows once you locate a server
   it hangs off, with the floor below's band in WoW colours; **Go down** on its card (`descend`) opens the floor below.
@@ -966,7 +981,7 @@ handle). docs/networks.md is the designer's review sheet.
 | Name | *Rust Lattice*, *Saltwire Loop*: on the Network card, the consortium map and tooltips |
 | Lean | The three families weighted 3, 1.5 and 0.5: mixed rogue rooms, the ? servers your servers reveal, and the families of couriers, bounties and outbreaks lean that way |
 | Native strain | One strain, five times as likely as its family's others there |
-| Native boss | One of nine, in its lair (Lairs and native bosses) |
+| Native boss | One of nine, in the lair of the floor whose pool holds it (Lairs and native bosses) |
 | Native uniques | 3 to 5 of 27, at least one in each band (5–15, 16–28, 29–40) |
 | Event bias | Two of the director's cards come up 2.5 times as often |
 | Code bias | 30% of other code dropped there comes as its rich code; its rich material (components or Exploits) drops 1.5 times as often |
