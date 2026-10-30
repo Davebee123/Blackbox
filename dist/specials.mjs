@@ -10,6 +10,7 @@
 //   hardened  netrooms.mjs (vault, Armored), rootClear
 //   guarded   netrooms.mjs (the Core's crew elite, the vault's unique)
 import { seeded } from './gear.mjs';
+import { LEANING_IDS } from './leanings.mjs';
 
 export const SPECIAL = {
   send: { volatile: 2, stable: 0.5 }, // how often a server sends, against the rest (hidden.mjs pickOrigin)
@@ -49,6 +50,8 @@ export function rollSpecials(loc) {
   if ((loc.depth || 1) >= SPECIAL.deep) { let x = pick(); for (let i = 0; i < 8 && out.includes(x); i++) x = pick(); if (!out.includes(x)) out.push(x); }
   return out;
 }
+// Its leaning (leanings.mjs), from its seed: every traced server has one, a wild one none. Nothing saved.
+export const leaningOf = (loc) => (traced(loc) ? LEANING_IDS[seeded(((loc.seed || 1) * 53 + 7) >>> 0)() * LEANING_IDS.length | 0] : null);
 // Rich and Hardened: its guards and Resident are Armored.
 export const armoredAt = (loc) => hasSpecial(loc, 'rich') || hasSpecial(loc, 'hardened');
 // Whether a location takes specials: a traced server, never a wild one or another player's.

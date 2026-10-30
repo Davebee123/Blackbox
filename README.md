@@ -88,7 +88,7 @@ comment saying what it does.
 | `dist/combat.mjs` | The engine: pure and deterministic, commands in, events out. Fights, XP and levels, the save and its migrations. |
 | `dist/data.mjs` | Every tunable number: abilities, classes, families, strains, guards, bosses, floors, and `createVirus`. |
 | `dist/classes/` | Each class's subclasses: `<class>.data.mjs` their skills and trees, `<class>.mjs` what they do in a fight; `kit.mjs` talent helpers. |
-| `dist/parts.mjs` | What a wild virus is made of: its basic, signature and third parts, rolled by named constants (`PARTS`). |
+| `dist/parts.mjs` | What a wild virus is made of: its basic, signature and third parts, rolled by named constants (`PARTS`), and the strains' spread (`PARTS.spread`). |
 | `dist/genes.mjs` | The gene library: every family, strain, third part, mutation, tell and guard rule in one shape. Data only. |
 | `dist/authors.mjs` | The crews that write viruses, each with signature genes, builds and bosses. Data only. |
 | `dist/genome.mjs` | A virus's genes in play: `scan`, `inspect` and the rules' chips. |
@@ -96,7 +96,7 @@ comment saying what it does.
 | `dist/tells.mjs` | Solo tells: the big moves a part announces ahead (charges, casts, seals). |
 | `dist/interrupt.mjs` | The interrupt: crossing a part's 50% or 25% tick on its due cycle cancels its move. |
 | `dist/order.mjs` | The order levers: parts whose right moment to break depends on the board. |
-| `dist/mechanics.mjs` | The mechanics list: twenty third parts built lean, each rule's hooks in one place. |
+| `dist/mechanics.mjs` | The mechanics list: twenty third parts built lean, each rule's hooks in one place. Six strains are built from them (`STRAINS`). |
 | `dist/situations.mjs` | The moment on the board each situational skill is built for; the tray lights it. |
 | `dist/raid.mjs` | Crew bosses: phases and mechanics for KESSLER-FARM-00's three. |
 | `dist/planner.mjs` | The scripted fight player for every class, used by the simulations and bot crewmates. |
@@ -137,7 +137,8 @@ comment saying what it does.
 | `dist/rogue.mjs` | Rogue servers, where viruses gather, and the KESSLER-FARM-00 crew dungeon. |
 | `dist/root.mjs` | Root access: perks on a server you hold, by respawned rooms cleared. |
 | `dist/sockets.mjs` | Sockets: build a program in a cleared socket room; it changes its own server. |
-| `dist/specials.mjs` | Server specials: each traced server's rule (an upside and a cost) from its seed, and its pull on invasions. |
+| `dist/specials.mjs` | Server specials: each traced server's rule (an upside and a cost) from its seed, its pull on invasions, and its leaning's id (`leaningOf`). |
+| `dist/leanings.mjs` | Leanings: a server's one positive rule (Venting, Wind-up, Brownout), its multipliers in the fight and what it has paid. |
 | `dist/rivals.mjs` | Rivals: named runners who race you to a server's vault and fight you two or three in a row. |
 | `dist/puzzles.mjs`, `dist/puzzle-view.mjs` | Puzzle rooms: four boards that aren't fights. |
 | `dist/forensics.mjs` | Log sweep: a short detective puzzle in a server's incident file. |
@@ -285,7 +286,7 @@ and `style.test.mjs` the tooltip grammar.
 | [`docs/rivals.md`](docs/rivals.md) | Rivals: the roster, the rules and the picked look. |
 | [`docs/loot-plan.md`](docs/loot-plan.md) | Sets and uniques. |
 | [`docs/house.md`](docs/house.md) | Your house and its furniture (decided, not built). |
-| [`docs/leanings.md`](docs/leanings.md) | Leanings: a server's one positive rule (picked, not built). |
+| [`docs/leanings.md`](docs/leanings.md) | Leanings: a server's one positive rule (built: GAME_RULES.md "Server kinds, specials and quirks"). |
 | [`docs/server-specials.md`](docs/server-specials.md) | Server specials: an upside, a cost and the programs for each (picked, not built). |
 | [`docs/threads.md`](docs/threads.md), [`docs/director.md`](docs/director.md) | Threads, and the event director. |
 | [`docs/invasions.md`](docs/invasions.md), [`docs/networks.md`](docs/networks.md), [`docs/bosses.md`](docs/bosses.md) | Review sheets: invasions, network signatures, crew bosses. |

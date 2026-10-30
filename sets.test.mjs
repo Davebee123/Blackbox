@@ -631,7 +631,7 @@ test('a class set: anyone wears its 2- and 3-piece and the 4-piece\'s base line;
 });
 
 test('Kestrel pieces held from save v45 keep working, as the retuned set', () => {
-  assert.equal(SAVE_VERSION, 51, 'no save bump since v45 for sets (v46 is the subclass pick, v47 components, v48 Indemnity, v49 crafting, v50 specials, v51 the scanner): a piece reads its bonuses from its unique, and its id and stats are unchanged');
+  assert.equal(SAVE_VERSION, 52, 'no save bump since v45 for sets (v46 is the subclass pick, v47 components, v48 Indemnity, v49 crafting, v50 specials, v51 the scanner, v52 rivals): a piece reads its bonuses from its unique, and its id and stats are unchanged');
   const s = at(12);
   const items = wear(s, KESTREL);
   (s.pity ||= {})['set:bouncer'] = 3;

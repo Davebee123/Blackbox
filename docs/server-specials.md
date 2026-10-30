@@ -85,8 +85,8 @@ is worked from the formulas.
 
 ## Open
 
-- **Two filled amber tags.** A leaning is also a filled amber tag on the card (docs/leanings.md): the two need telling
-  apart once leanings are built.
+- **Two filled amber tags.** A leaning is also a filled amber tag (docs/leanings.md). The card's table now labels them
+  (Server, Leaning); whether specials should step back to outlined tags is the designer's call.
 - **Backbone's cost.**
 - **Hardened and Root 3:** Root 3 stops a server's invasions, which works against daemon farming. Root climbing twice
   as fast gets there sooner.

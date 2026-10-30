@@ -12,7 +12,7 @@
 // (research.mjs): its numbers at 3, its rule, answer and tells at 15, its loot at 60; an attack set once you've faced it
 // in a room (s.dex.sets, and each server's floorplan codex); a tell once one was said in your fight (s.dex.tells); a
 // boss's phases once you've fought it.
-import { FAMILIES, ROOM_FAMILIES, STRAINS, GUARDS, BOSSES, MUTATIONS, ROLLED_MUTATIONS, TELLS, TELL, CONFIG, SERVER, createVirus } from './data.mjs';
+import { FAMILIES, ROOM_FAMILIES, STRAINS, GUARDS, BOSSES, MUTATIONS, ROLLED_MUTATIONS, TELLS, TELL, CONFIG, SERVER, createVirus, spreadFrom } from './data.mjs';
 import { ATTACK_SETS, AUTHOR_FAMILIES, OPENS, applySet } from './families.mjs';
 import { GENES, AXES } from './genes.mjs';
 import { AUTHORS, crewOf, buildAuthor, bossAuthor } from './authors.mjs';
@@ -85,11 +85,15 @@ export function sampleOf(group, id, level, gene = null, raw = false, basic = nul
   return v;
 }
 const levelOf = (s) => Math.max(1, Math.min(CONFIG.maxMobLevel, hackerLevel(s)));
-// A body's parts, the third-part pool included: [{ spec, gene (a third part's), from (the level it opens at) }].
+// A body's parts, the third-part pool included: [{ spec, gene (a third part's), from (the level it opens at), strain (the
+// strain a mechanics part spreads from, parts.mjs PARTS.spread: it comes from that strain's level) }].
 function specsOf(group, id) {
   if (group === 'strain') return STRAINS[id].parts.map((spec) => ({ spec, gene: null, from: STRAINS[id].from }));
   const body = bodyOf(id);
-  return body.parts.map((spec) => ({ spec, gene: spec.pool === 'third' ? spec.gene : null, basic: spec.pool === 'basic' ? spec.id : null, from: spec.from || OPENS[id] || 1 }));
+  return body.parts.map((spec) => {
+    const strain = group === 'family' && spec.pool === 'third' ? spreadFrom(id, spec.gene) : null, from = spec.from || OPENS[id] || 1;
+    return { spec, gene: spec.pool === 'third' ? spec.gene : null, basic: spec.pool === 'basic' ? spec.id : null, from: strain ? Math.max(from, STRAINS[strain].from) : from, strain };
+  });
 }
 
 // ---------- the index ----------
@@ -137,7 +141,7 @@ export function partsOf(s, group, id) {
     // A third part: named once you've met one (its own rule seen in a fight), or researched it. A basic: once researched.
     const named = met(s, group, id) && (x.basic ? !!p && researchAt(s, codexKey(v, p)) > 0 : !x.gene || geneState(s, x.gene) !== 'unknown' || (p && knowsPart(s, v, p)));
     const n = p && met(s, group, id) ? researchAt(s, codexKey(v, p)) : 0;
-    return { spec: x.spec, part: p, virus: v, level, from: x.from, gene: x.gene, basic: x.basic, named: !!named, research: n, tier: tierAt(n), known: !!p && met(s, group, id) && knowsPart(s, v, p) };
+    return { spec: x.spec, part: p, virus: v, level, from: x.from, gene: x.gene, basic: x.basic, strain: x.strain || null, named: !!named, research: n, tier: tierAt(n), known: !!p && met(s, group, id) && knowsPart(s, v, p) };
   });
 }
 // The authors who write it: its family's crew and the authors whose servers field it, or a build's or a boss's own.

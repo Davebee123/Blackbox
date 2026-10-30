@@ -297,6 +297,11 @@ Volatile, Amplifier, Bodyguard, Vendetta, Thorns, Countdown, Backtrace, Swap, Tu
 (`PARTS.mech` 0) until the designer has played them; `?playtest=part:<id>` shows each, and `developer parts mech 0.5`
 rolls them for a session.
 
+**The spread.** A strain's mechanics parts roll as a third on wild viruses of its lineage from its level and floor
+(weight `PARTS.spread` 0.5, a server room's fixed third too): a Ghostroot from 12 on floor 2 can be a *LURKING
+GHOSTROOT*. A part that reads the signature (the Predator, the Opportunist) comes only beside it. The Codex card names
+the strain it spreads from (the Worm's Leaker is the Doomsday's).
+
 ### Mutations and part rules
 
 Mutations are always visible (a tag), open from level 4, and each changes a decision:
@@ -308,7 +313,7 @@ Mutations are always visible (a tag), open from level 4, and each changes a deci
 - **Adaptive**: a part your commands hit three cycles running gains a ◆ (*ADAPTS +◆*; *adapting* the cycle before).
 
 Two part rules run on many viruses:
-- **Linked** (every v2 or bigger virus): when a part breaks, a third of its hit moves to the surviving part that
+- **Linked** (every v2 or bigger virus but Bad Blood and the Bodysnatcher): when a part breaks, a third of its hit moves to the surviving part that
   attacks next (`CONFIG.linked`); a survivor whose attack isn't a hit gains one on top. Kill order decides what the
   rest hits for.
 - **Fallback**: a part with no attack of its own (or one that doesn't hit you) takes over its partner's attack when the
@@ -335,6 +340,16 @@ its rule on hover.
 | Bricker | Ransomware | 9 | Each part hits ×1.3 while below half Integrity. |
 | Sleeper | Ghostroot | 10 | Dormant until any hit lands or cycle 6; then the Cell's Alarm (14) lands that cycle and every 5. |
 | Overrun | Worm | 11 | Swarm spawns a fragment every 4; its fragments bite +1 every cycle they live. |
+| Lurker | Ghostroot | 12 | Pulse, Scrambler, Opportunist. The Opportunist sleeps off the timeline until you carry any debuff, then wakes for good (Pounce 5 every 3). Charge: Lure, a Scramble 2 cycles longer. |
+| Bloodhound | Ransomware | 13 | Pulse, Encryptor, Predator. While you're Encrypted the Predator's Bite (2) lands every cycle. Charge: Bloodlust, a burst of encryption. |
+| Scythe | Ransomware | 14 | Pulse, Volatile, Harvester. The Volatile Corrupts you (2% of your max for 3 cycles); cleansing it deals the rest at once. The Harvester's Reap consumes it for 4% a cycle it had left (a reap is no cleanse). |
+| Doomsday | Worm | 15 | Pulse, Countdown, Leaker. At 10 commands fired every part attacks at once; the Drip leaks you (3% a command for 3 cycles). Holding is free and doesn't count. |
+| Bad Blood | Worm | 16 | Pulse, Vendetta (Grudge 5 every 3), Amplifier. The Amplifier boosts the Pulse's and the Vendetta's next attack in turn (+50%); while the Vendetta stands each break makes the rest hit 20% harder. |
+| Bodysnatcher | Ghostroot | 18 | Pulse, Swap, Stunner. The Swap's Pass Throttles you, and your next command hit moves it (or Exposed or Corrupted) onto that part; the Jolt Stuns you. |
+
+The last six are the mechanics list's parts, paired by hand (docs/variety-plan.md 1.1). A strain's build crowds out what
+would break the compatibility rules beside it: the Doomsday never rolls Hasty, and Bad Blood and the Bodysnatcher are
+never Linked.
 
 **Grades.** Deeper servers send bigger versions: **v1** (SPRAWL-00 and floor 1) as normal, **v2** (floors 2–3) ×1.15
 Integrity and ×1.1 damage, **v3** (floor 4 and deeper) ×1.35 and ×1.25. At your wall a v2 invader counts 2 levels
@@ -362,7 +377,9 @@ Sentinel brings a **Zip Bomb** (docs/puzzle-levers.md 5).
 Every virus is a body plus rules, written by a crew (`genes.mjs` the 41 rules, `authors.mjs` the crews). TOLLGATE
 writes ransomware, SWARMLINE worms, PALEMASK ghostroots. A strain is a named build of its author: the Keylogger NULL
 CHOIR's, the Hashrat GLASSJAW's, the Floodgate, Leech, Patchwork and Overrun SWARMLINE's, the Sleeper, Flicker and Echo
-PALEMASK's, the Extortion and Bricker TOLLGATE's. Kestrel writes the ICE and the Sentinel. A faction's server runs its
+PALEMASK's, the Extortion and Bricker TOLLGATE's. The mechanics strains go the same way (the Lurker PALEMASK's, the
+Bloodhound and Scythe TOLLGATE's, the Doomsday and Bad Blood SWARMLINE's, the Bodysnatcher NULL CHOIR's), and their
+parts join their authors' toolkits. Kestrel writes the ICE and the Sentinel. A faction's server runs its
 faction's viruses; SPRAWL-00's strays sign nothing.
 
 - **Names.** A wild virus is named for its costliest rolled rule, its body's stem, four digits and its grade:
@@ -404,7 +421,7 @@ protector is decoded its node shows **?**.
 ### The Codex tab
 
 A top tab (`codex`), between Loadout and System. Left, an index in six groups: **Families** (Ransomware, Worm,
-Ghostroot and the room bodies), **Strains** (11), **Guards & ICE** (6), **Exfils**, **Bosses**, **Mutations**; each row
+Ghostroot and the room bodies), **Strains** (17), **Guards & ICE** (6), **Exfils**, **Bosses**, **Mutations**; each row
 its icon, name and count (a body's research %, a boss's wins, kills toward a mutation's decode). Unmet entries are ???.
 
 - **A family, strain or guard:** its art, your kills, its research, the sets you've faced and its authors; one card a
@@ -692,6 +709,20 @@ on hover, and as its glyph in amber on the map node.
 | ⊞ Backbone | One more socket room | Its invasions travel twice as fast | any | Lockdown |
 | ◆ Hardened | Its vault pays double (credits and code); Root climbs twice as fast | Its guards and Resident are Armored | Honeytoken | Patch Injector |
 | ♜ Guarded | Its vault holds one of its floor's uniques, once | A crew elite holds its Core in the Resident's place | — | — |
+
+**Leanings** (`leanings.mjs`, docs/leanings.md): every traced server also has one positive rule from its seed, keyed on
+the virus's timeline so it favours no class. It holds in every fight on that server.
+
+| Leaning | Rule |
+|---|---|
+| Venting | A part takes 50% more damage, from every hit, on the cycle after it attacks. |
+| Wind-up | A part takes 25% more damage, from every hit, on the cycle its attack lands. |
+| Brownout | An attack deals 30% less damage to you when your command aimed at its part that cycle (Spawn and Deploy count). |
+
+The card shows a small table under the level: **Server** (kind, specials, quirk) beside **Leaning** (one filled amber tag
+with its icon). In a fight a *Leaning* row under Gear counts what it has paid (damage added, or Signal kept), lit amber
+on the cycle after it paid; that cycle the part it paid on carries an amber tag with the amount. Nothing shows ahead of
+time.
 
 A server's kind, specials and quirk are tags on its card, each with its rule on hover. A server a faction owns shows its owner and the standing that taking
 it moves (−15 with the owner, +8 with each rival).
@@ -2292,9 +2323,10 @@ Checked by `node balance.mjs` (docs/BALANCE.md, `balance.test.mjs`), `farmsim.mj
 
 ## Saves
 
-The save is `SAVE_VERSION` 51 (combat.mjs). An older save is migrated on load, each step keyed on the field it converts,
+The save is `SAVE_VERSION` 52 (combat.mjs). An older save is migrated on load, each step keyed on the field it converts,
 so it is safe to run twice; nothing a save held is lost.
 
+- **v52** rivals' memory, `s.rivals`, made on first use (`rivalsRestore`).
 - **v51** the scanner's log, `s.scanner`, made on first use (`scannerOf`).
 - **v50** site traits become specials: Rich, Legacy, Backbone, Hostile and Hardened keep their names, a traced server
   with none rolls its own, a Stable server gets its rest room and a Backbone one its socket (`specialsRestore`).

@@ -20,7 +20,8 @@ import { GLYPHS } from './glyphs.mjs';
 import { SKILL_TEXT } from './lore.mjs';
 import { ruleHtml } from './ruletext.mjs';
 import { postsOf, sizeOf as serverSize, PROGRAMS, programsOn, shopCodebases } from './sockets.mjs';
-import { SPECIALS, specialsOf } from './specials.mjs';
+import { SPECIALS, specialsOf, leaningOf } from './specials.mjs';
+import { LEANINGS, leanShown } from './leanings.mjs';
 import { ABILITIES, CONFIG, FAMILIES, MUTATIONS, TICKER, QUIRKS, DAEMONS, STRAINS, GUARDS, BOSSES, STRAIN_NATIVE, DAEMON_BANDS, bandDaemons, daemonWhen, daemonBand, FLOORS, bandOf, floorOfLayer } from './data.mjs';
 import { GENES, CATS, AXES } from './genes.mjs';
 import { AUTHORS } from './authors.mjs';
@@ -133,6 +134,11 @@ const effectTarget = new Proxy(TARGETS, { get: (t, k) => (k === 'damage' && runM
 
 // Armor chits on a part: filled = still there, hollow = broken.
 // breaking: chits this cycle's hits will break (the forecast); they blink, like the white slices.
+// The leaning's pay on a part, the cycle just played (leanings.mjs leanShown): a filled amber tag, its icon and number.
+function leanTag(s, p) {
+  const n = leanShown(s.encounter)?.[p.id], x = n && LEANINGS[s.encounter.leaning.id];
+  return x ? `<span class="tag tag-lean" title="${esc(`${x.name}: Server leaning.\n${x.rule}\n▸ ${x.paid === 'signal' ? `It kept ${n} Signal last cycle.` : `It added ${n} damage last cycle.`}`)}">${glyph(x.glyph)}${x.paid === 'signal' ? '' : '+'}${n}</span>` : '';
+}
 export function chitsMarkup(p, breaking = 0) {
   if (!p.maxArmor) return '';
   const going = Math.min(breaking, p.armor);
@@ -364,7 +370,14 @@ function statusPanel(s, cp = null) {
   const strip = cp?.col === 0 && cp.kind === 'strip' ? cp : null;
   const ghost = (x) => (strip && x.name === 'Armor' && strip.chits ? `−${strip.chits}◆` : strip && x.name === 'Shield' && strip.shield ? `−${strip.shield}` : '');
   const chips = all.map((x) => { const g = ghost(x); return `<span class="st ${x.kind}${g ? ' ghosted' : ''}" data-tip="${esc(x.tip + (g ? `\nMimic: Beat, this cycle. Copies your ${strip.name}: ${strip.text}.` : ''))}" tabindex="0">${esc(x.name)}${g ? `<b class="st-ghost">${esc(g)}</b>` : ''}</span>`; }).join('');
-  return `<div class="hud-status"><div class="bar-top"><strong>Status</strong></div><div class="st-list">${chips || '<small class="quiet">nothing on you</small>'}</div>${gearRow(s)}</div>`;
+  return `<div class="hud-status"><div class="bar-top"><strong>Status</strong></div><div class="st-list">${chips || '<small class="quiet">nothing on you</small>'}</div>${gearRow(s)}${leanRow(s)}</div>`;
+}
+// The server's leaning (leanings.mjs): a chip with what it has paid this fight, lit amber on the cycle it paid.
+function leanRow(s) {
+  const L = s.encounter?.leaning, x = L && LEANINGS[L.id];
+  if (!x) return '';
+  const lit = !!leanShown(s.encounter), paid = L.paid || 0;
+  return `<div class="hud-gear hud-lean" aria-label="Leaning"><span class="hg-k">${glyph(x.glyph, 'hg-ico')}Leaning</span><span class="gfx-list"><span class="gfx lean${lit ? ' lit' : ''}" title="${esc(`${x.name}: Server leaning.\n${x.rule}\n▸ ${x.answer}`)}" tabindex="0"><template class="tt-more"><span class="rw" title="${x.paid === 'signal' ? 'Signal kept this fight' : 'Damage dealt this fight'}">${glyph(x.paid)}<b>+${paid}</b></span></template>${esc(x.name)}<b class="lean-n">+${paid}</b></span></span></div>`;
 }
 // Your gear's conditional rules (fightread.mjs gearLive): a chip each, lit while its condition holds, dim while it
 // doesn't, struck through once a once-a-fight one is spent. Only what you have equipped; nothing when none wait on a
@@ -861,7 +874,7 @@ export function boardMarkup(s, selected, preview = null) {
     const guard = alive(p) ? guardMarks(s, e.virus, p, fc) : '';
     const gearMark = onParts[p.id] ? `<span class="gpart" title="${esc(`${list2(onParts[p.id])}: live on the ${p.name} now.`)}">${glyph('protocol')}</span>` : '';
     return `<button type="button"${fade} class="brow bpart ${dying(p) ? 'dying' : ''} ${selected === p.id ? 'selected' : ''} ${nowHit ? 'now' : ''} ${p.maxArmor && !p.armor ? 'cracked' : ''}${frozenNow(s, p) && !packed(s, e.virus, p) ? ' frozen' : ''}${asleep(p) && alive(p) && !packed(s, e.virus, p) ? ' standby' : ''} ${marks.map((k) => 'm-' + k).join(' ')}${fighting && progExc(s, p) ? ' m-exc' : ''}" data-target="${esc(p.id)}" ${fighting ? '' : 'disabled'} title="Target ${esc(p.name)}: ${spike}">
-      <div class="bcell bname" title="${esc(partTip(s, e.virus, p))}">${ties[ri]}${pips(p.id)}<span class="part-top"><span class="part-name">${esc(p.name)}${known ? '' : '<sup class="unk">?</sup>'}${mastered(s, e.virus, p) && !packed(s, e.virus, p) ? masteredMark(p) : ''}</span>${gearMark}${marksMarkup(marks)}${chitsMarkup(p, fc.chits[p.id] || 0)}<span class="part-hp">${p.integrity}/${p.max}</span></span><span class="part-bar${guard ? ' guarded' : ''}"><span style="width:${pct}%"></span>${lossMark(p.integrity, p.max, fc.parts[p.id] || 0)}${ghosts(p)}${guard}${capLine(s, p)}${ticksMarkup(s, p)}</span><span class="part-tags">${fighting ? progTag(s, p) : ''}${cueTag}${partTags(s, p)}</span></div>
+      <div class="bcell bname" title="${esc(partTip(s, e.virus, p))}">${ties[ri]}${pips(p.id)}<span class="part-top"><span class="part-name">${esc(p.name)}${known ? '' : '<sup class="unk">?</sup>'}${mastered(s, e.virus, p) && !packed(s, e.virus, p) ? masteredMark(p) : ''}</span>${gearMark}${marksMarkup(marks)}${chitsMarkup(p, fc.chits[p.id] || 0)}${leanTag(s, p)}<span class="part-hp">${p.integrity}/${p.max}</span></span><span class="part-bar${guard ? ' guarded' : ''}"><span style="width:${pct}%"></span>${lossMark(p.integrity, p.max, fc.parts[p.id] || 0)}${ghosts(p)}${guard}${capLine(s, p)}${ticksMarkup(s, p)}</span><span class="part-tags">${fighting ? progTag(s, p) : ''}${cueTag}${partTags(s, p)}</span></div>
       ${showCells ? cells : '<div class="bcell span4"></div>'}</button>`;
   }).join('');
   // A fight whose parts protect each other keeps the tethers' gutter after the last one goes, so the rows don't jump.
@@ -2009,6 +2022,12 @@ export function specialTags(l) {
   const chip = ([ic, v, tip], neg) => `<span class="rw${neg ? ' neg' : ''}" title="${esc(tip)}">${glyph(ic)}<b>${esc(v)}</b></span>`;
   return specialsOf(l).map((id) => { const x = SPECIALS[id]; return ` <span class="tag tag-special" data-special="${id}" title="${esc(`${x.name}: Server special.\n${x.rule}\n▸ ${x.answer}`)}"><template class="tt-more">${x.up.map((c) => chip(c)).join('')}${x.cost.map((c) => chip(c, true)).join('')}</template>${x.glyph}\uFE0E ${esc(x.name)}</span>`; }).join('');
 }
+// The card's tags: its level, then a small table, Server (kind, specials, quirk) beside Leaning (leanings.mjs).
+function serverTags(s, l, tags) {
+  const x = LEANINGS[leaningOf(l)];
+  if (!x) return `<p class="tagline">${levelTag(s, l.level || 1)} ${tags}</p>`;
+  return `<p class="tagline">${levelTag(s, l.level || 1)}</p><div class="srv-tags"><span class="hg-k">Server</span><span class="hg-k">Leaning</span><p class="tagline">${tags}</p><p class="tagline"><span class="tag tag-special tag-lean" data-leaning="${leaningOf(l)}" title="${esc(`${x.name}: Server leaning.\n${x.rule}\n▸ ${x.answer}`)}">${glyph(x.glyph)}${esc(x.name)}</span></p></div>`;
+}
 function nodeState(s, l) {
   const taken = takenOf(l), total = takeable(l).length;
   if (s.run?.loc === l.id) return 'here';
@@ -2630,7 +2649,7 @@ function mapSide(s, sel, node) {
   const vaultStat = l.takenOver ? stat('Root', rootPips(l)) : stat('Vault', R && vaultId && R.opened[vaultId] ? 'open' : R ? 'shut' : '???');
   const parent = l.parent && s.locations.find((x) => x.id === l.parent);
   return `<section class="card ${st === 'new' ? 'alert' : ''}"><h2>${l.member ? `${esc(l.member)}'s server` : `Floor ${l.depth || 1}`} · ${esc(FAMILIES[l.family].name)}</h2><h1>${esc(l.name)}</h1>
-    <p class="tagline">${levelTag(s, l.level || 1)} <span class="tag tag-kind" data-kind="${esc(l.template || '')}"${layoutRule(l) ? ` title="${esc(layoutRule(l))}"` : ''}>${esc(layout)}</span>${specialTags(l)}${QUIRKS[l.quirk] ? ` <span class="tag tag-quirk" data-quirk="${l.quirk}" title="${esc(QUIRKS[l.quirk].rule)}">${esc(QUIRKS[l.quirk].name)}</span>` : ''}</p>
+    ${serverTags(s, l, `<span class="tag tag-kind" data-kind="${esc(l.template || '')}"${layoutRule(l) ? ` title="${esc(layoutRule(l))}"` : ''}>${esc(layout)}</span>${specialTags(l)}${QUIRKS[l.quirk] ? ` <span class="tag tag-quirk" data-quirk="${l.quirk}" title="${esc(QUIRKS[l.quirk].rule)}">${esc(QUIRKS[l.quirk].name)}</span>` : ''}`)}
     <div class="stats">${roomsStat}${vaultStat}${stat('Runs', l.runs || 0)}</div>
     ${R?.mapped || (R && l.takenOver) ? `<p class="svc-line">${R.mapped ? '<span class="tag you" title="Every room cleared at least once">Mapped</span> ' : ''}<span class="tag" title="Mapped or held, a server's rooms come back fast">Fast respawns</span> <small>fight rooms ${ROOMS_FP.respawn.process} min, guard posts ${ROOMS_FP.respawn.guard}, elites ${ROOMS_FP.respawn.elite}</small></p>` : ''}
     ${openContracts(s).filter((c) => c.loc === l.id).map((c) => `<p class="svc-line"><span class="tag${c.offBooks ? ' hot' : ''}">Contract</span> ${esc(contractTitle(s, c))} <small class="svc-prog">· ${esc(contractProgress(s, c).text)}</small></p>`).join('')}
