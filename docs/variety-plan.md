@@ -1,8 +1,10 @@
 # Variety plan: strains, objectives and the collection log
 
 **Status.** The designer's current plan against burnout, cut into sessions. Built: one kind of component (session 1,
-v47; GAME_RULES.md *Components*). Left: sessions 2 to 8: the collection log, 22 new and mutated strains, and
-objectives.
+v47; GAME_RULES.md *Components*), and strains wave 1 with the spread (session 4; GAME_RULES.md *Strains and grades*).
+Left: sessions 2, 3 and 5 to 8: the collection log, 16 new and mutated strains, and objectives. Session 4 left two
+balance tests `todo` for the designer: the Warden's capstones at 50, and the climb's contract share (strain contracts
+naming the new strains stall).
 
 October 28, 2026. The designer: *"I still think variety is going to be the most important factor to prevent burnout."*
 They picked three things from the suggestions: more strains, different objectives, and a collection log, then added a
@@ -169,7 +171,7 @@ The prompt to paste is under each.
 | 1 | One kind of component (section 4): **done** | nothing | small |
 | 2 | Collection log: the look, as screenshots | 1 | small |
 | 3 | Collection log: build the picked look | 2 and the designer's pick | medium |
-| 4 | Strains wave 1: Lurker to Bodysnatcher, and the spread rule | nothing | medium |
+| 4 | Strains wave 1: Lurker to Bodysnatcher, and the spread rule: **done** | nothing | medium |
 | 5 | Strains wave 2: Thornwall to Sweatshop | 4 merged | medium |
 | 6 | Strains wave 3: the eleven mutated strains | 4 merged | medium |
 | 7 | Objectives: the engine, the Exfil on it, Priority and Uptime, one room in two | the answer on levers | medium |

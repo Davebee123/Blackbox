@@ -1,7 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, selectEncounter, resolveCycle, part, attackAmount, defender, intents as intentsOf } from './dist/combat.mjs';
-import { STRAINS, strainsFor, createVirus, SERVER, variantFor, gradeFor, defaultSub } from './dist/data.mjs';
+import { STRAINS, strainsFor, createVirus, SERVER, variantFor, gradeFor, defaultSub, spreadOf, spreadFrom } from './dist/data.mjs';
+import { MECH_GENES, compatible } from './dist/genes.mjs';
+import { PARTS } from './dist/parts.mjs';
+import { mechLanded, mechFired } from './dist/mechanics.mjs';
 
 const veteran = (arch = 'breaker', level = 14) => {
   const s = fresh();
@@ -24,12 +27,12 @@ test('strains belong to a lineage and live deeper; SPRAWL-00 stays plain', () =>
     const v = createVirus(id, 3);
     assert.equal(v.family, st.lineage);
     assert.equal(v.strain, id);
-    assert.ok(v.parts.some((p) => p.special) && v.parts.length === 2, id);
+    assert.ok(v.parts.some((p) => p.special) && v.parts.length === (st.genes.some((g) => MECH_GENES.has(g)) ? 3 : 2), id); // a mechanics strain carries three
     assert.match(v.name, new RegExp('^' + st.name.toUpperCase()));
   }
   assert.deepEqual(strainsFor('ghostroot', 3), []);
   assert.deepEqual(strainsFor('ghostroot', 12, 1), [], 'not on layer 1');
-  assert.deepEqual(strainsFor('ghostroot', 12, 2).sort(), ['echo', 'flicker', 'keylogger', 'sleeper']);
+  assert.deepEqual(strainsFor('ghostroot', 12, 2).sort(), ['echo', 'flicker', 'keylogger', 'lurker', 'sleeper']);
   // SPRAWL-00 (random variants) never rolls a strain
   for (let seed = 1; seed <= 100; seed++) assert.equal(createVirus('random', seed, { family: 'worm', threat: SERVER.threat(30) }).strain, null);
   // layer 2: about half the time, once the level allows
@@ -308,4 +311,122 @@ test('ICE: a Bouncer re-arms its Gate; a Tracer hits harder the longer it lasts;
     if (iceOf(loc)) { iced++; assert.equal(layoutOf(loc)['/relay'].guard, 'tracer'); }
   }
   assert.ok(iced > 30 && iced < 70, `iced: ${iced}`);
+});
+
+// ---------- the mechanics strains (docs/variety-plan.md 1.1): each builds, and its pair interacts ----------
+const mstart = (key) => { const s = veteran('breaker', 20); selectEncounter(s, key, 7, { level: STRAINS[key].from, mutation: null }); command(s, 'engage'); s.encounter.virus.tells = null; return bare(s); };
+const said = (ev, re) => ev.some((x) => re.test(x.message || ''));
+
+test('Lurker: the Opportunist sleeps off the timeline until you carry a debuff, then wakes for good', () => {
+  const s = mstart('lurker'), e = s.encounter, o = part(s, 'opportunist');
+  assert.deepEqual(e.virus.parts.map((p) => p.id), ['pulse', 'scrambler', 'opportunist']);
+  part(s, 'scrambler').attack = null; part(s, 'pulse').attack = null;
+  fire(s, 'hold');
+  assert.ok(!o.woke && o.attack.due >= 900, 'clean: it sleeps');
+  e.scrambleUntil = e.cycle + 2; // the Scramble its pair puts on you
+  const ev = fire(s, 'hold');
+  assert.ok(o.woke && said(ev, /WAKES/), 'Scrambled: it wakes');
+  assert.ok(o.attack.due <= e.cycle + 1);
+  e.scrambleUntil = 0;
+  fire(s, 'hold');
+  assert.ok(o.woke && o.attack.due < 900, 'and stays awake once clean');
+});
+
+test('Bloodhound: while the Encryptor\'s encryption is on you, the Predator bites every cycle', () => {
+  const s = mstart('bloodhound'), e = s.encounter, p = part(s, 'predator');
+  part(s, 'encryptor').attack = null; part(s, 'pulse').attack = null;
+  fire(s, 'hold');
+  assert.ok(!p.hunting);
+  e.encrypt = 3;
+  fire(s, 'hold');
+  assert.ok(p.hunting && p.attack.due <= e.cycle + 1, 'Encrypted: it hunts');
+  e.encrypt = 0;
+  fire(s, 'hold');
+  assert.ok(!p.hunting, 'cleansed: it stops');
+});
+
+test('Scythe: the Harvester reaps the Volatile\'s Corrupted, and a reap is not a cleanse; a cleanse deals the rest', () => {
+  const s = mstart('scythe'), e = s.encounter, vol = part(s, 'volatile'), har = part(s, 'harvester');
+  mechLanded(s, vol, vol.attack);
+  assert.ok(e.corrupt?.left > 0 && e.volatile, 'the Volatile Corrupts you');
+  const before = s.server.integrity;
+  e.lastCmd = { id: 'hold', cycle: e.cycle };
+  mechLanded(s, har, har.attack);
+  assert.ok(!e.corrupt && !e.volatile && s.server.integrity < before, 'the Reap consumes it for a hit');
+  const after = s.server.integrity;
+  mechFired(s);
+  assert.equal(s.server.integrity, after, 'and the Volatile\'s rest does not land on top');
+  mechLanded(s, vol, vol.attack);
+  e.corrupt = null; // cleansed
+  mechFired(s);
+  assert.ok(s.server.integrity < after, 'a cleanse deals what it had left at once');
+});
+
+test('Doomsday: fired commands count toward the big turn, the Leak makes each one cost, and holding is free', () => {
+  const s = mstart('doomsday'), e = s.encounter, cd = part(s, 'countdown');
+  part(s, 'pulse').attack.due = 999;
+  part(s, 'leaker').attack.due = 999;
+  e.leakUntil = e.cycle + 1;
+  const hp = s.server.integrity, ev = fire(s, 'spike pulse');
+  assert.ok(said(ev, /^Leak: your command costs/) && s.server.integrity < hp, 'leaking, a command costs');
+  assert.equal(cd.count, 1);
+  fire(s, 'hold');
+  assert.equal(cd.count, 1, 'a hold neither counts nor costs');
+  cd.count = 9;
+  const big = [...fire(s, 'spike pulse'), ...fire(s, 'hold')];
+  assert.ok(said(big, /^COUNTDOWN/), 'at 10, every part attacks at once');
+  assert.equal(cd.count, 0);
+});
+
+test('Bad Blood: the Amplifier boosts the Pulse Node and the Vendetta in turn, and a break while the Vendetta stands stacks', () => {
+  const s = mstart('badblood'), e = s.encounter;
+  for (const p of e.virus.parts) if (p.attack) p.attack.due = 999;
+  fire(s, 'hold'); fire(s, 'hold');
+  assert.equal(part(s, 'pulse').amped, 'amplifier');
+  assert.equal(part(s, 'vendetta').amped, 'amplifier', 'both its attackers, in turn');
+  part(s, 'pulse').integrity = 1;
+  fire(s, 'spike pulse');
+  assert.equal(e.virus.vendetta, 1, 'the break avenged');
+});
+
+test('Bodysnatcher: your next command hit moves the Swap\'s Throttle onto the part it hits; the Jolt costs a command', () => {
+  const s = mstart('bodysnatcher'), e = s.encounter;
+  for (const p of e.virus.parts) if (p.attack) p.attack.due = 999;
+  e.throttledUntil = e.cycle + 2;
+  const ev = fire(s, 'spike pulse');
+  assert.ok(said(ev, /^Swap: your Throttled moves onto the Pulse Node/));
+  assert.ok(e.throttledUntil < e.cycle && part(s, 'pulse').throttledUntil >= e.cycle);
+  const st = part(s, 'stunner');
+  mechLanded(s, st, st.attack);
+  fire(s, 'hold');
+  const hp = part(s, 'pulse').integrity;
+  fire(s, 'spike pulse');
+  assert.equal(part(s, 'pulse').integrity, hp, 'Stunned: the command does not fire');
+});
+
+test('a mechanics strain\'s build crowds out the mutation or Linked that would break its rules', () => {
+  assert.equal(createVirus('random', 3, { family: 'worm', strain: 'doomsday', threat: 30, mutation: 'hasty' }).mutation, null);
+  assert.equal(createVirus('random', 3, { family: 'worm', strain: 'doomsday', threat: 30, mutation: 'armored' }).mutation, 'armored');
+  const bb = createVirus('random', 3, { family: 'worm', strain: 'badblood', threat: 30, grade: 2 });
+  assert.ok(bb.unlinked && !bb.genes.some((g) => g.id === 'linked'));
+  assert.ok(!createVirus('random', 3, { family: 'ghostroot', strain: 'lurker', threat: 30, grade: 2 }).unlinked);
+  for (const k of Object.keys(STRAINS)) assert.deepEqual(compatible(createVirus('random', 4, { family: STRAINS[k].lineage, strain: k, threat: 40, grade: 3 }).genes.map((g) => g.id)), [], k);
+});
+
+test('the spread: a strain\'s mechanics parts roll on wild viruses of its lineage, from its level and depth, and nowhere else', () => {
+  assert.deepEqual([...spreadOf('ghostroot', 12, 2)], ['opportunist']);
+  assert.deepEqual([...spreadOf('ghostroot', 11, 2)], [], 'below its level');
+  assert.deepEqual([...spreadOf('ghostroot', 12, 1)], [], 'above its depth');
+  assert.deepEqual([...spreadOf('worm', 16, 3)].sort(), ['amplifier', 'countdown', 'leak', 'vendetta']);
+  assert.equal(spreadFrom('worm', 'leak'), 'doomsday');
+  assert.equal(PARTS.mech, 0);
+  const mechOn = (family, L, floor) => { const got = {}; for (let seed = 1; seed <= 600; seed++) { const v = createVirus('random', seed, { family, threat: L + 9, floor, mutation: null }); for (const p of v.parts) if (p.mech) got[p.mech] = (got[p.mech] || 0) + 1; if (v.parts.some((p) => p.mech === 'opportunist')) assert.ok(v.parts.some((p) => p.special), 'the feeder rule: the Opportunist only beside the Scrambler'); } return got; };
+  const g = mechOn('ghostroot', 12, 2);
+  assert.deepEqual(Object.keys(g), ['opportunist'], JSON.stringify(g));
+  assert.deepEqual(mechOn('ghostroot', 12, 1), {}, 'not above its depth');
+  assert.deepEqual(mechOn('ghostroot', 11, 2), {}, 'not below its level');
+  assert.ok(mechOn('worm', 15, 2).leak > 0, 'the Doomsday\'s Leaker spreads onto worms');
+  const names = []; // named as any third names it (beside a costlier lever, the lever's)
+  for (let seed = 1; seed <= 600; seed++) { const v = createVirus('random', seed, { family: 'ghostroot', threat: 21, floor: 2, mutation: null }); if (v.parts.some((p) => p.mech === 'opportunist')) names.push(v.name); }
+  assert.ok(names.some((n) => /^LURKING GHOSTROOT-/.test(n)), names.join(' '));
 });

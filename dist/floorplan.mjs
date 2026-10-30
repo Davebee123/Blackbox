@@ -49,7 +49,7 @@
 // end back here (hooks.roomEnd), and families.mjs and interrupt.mjs play the room rules (attack sets, the new bodies,
 // the interrupt). The Resident is DEADBOLT, under the boss rule the playtest switches (interrupt.mjs BOSS_RULES).
 import { hooks, emit, warn, active, selectEncounter, encounterVirus, command, maxSignal, hackerOf, hackerLevel, classOf, addItem, stashItem, gainXp, gainCode, xpFor, deedXpFor, rollDrop, fxPct, puzzleUnique } from './combat.mjs';
-import { GUARDS, SUBS, LOADOUT, SUBCLASS, defaultSub, ARCHETYPES, BOSSES, FAMILIES, CONFIG, ELITE, ROLLED_MUTATIONS, SERVER, xpToNext } from './data.mjs';
+import { GUARDS, SUBS, LOADOUT, SUBCLASS, defaultSub, ARCHETYPES, BOSSES, FAMILIES, CONFIG, ELITE, ROLLED_MUTATIONS, SERVER, xpToNext, spreadOf } from './data.mjs';
 import { LOOT, vaultRarity, seeded, rollItem, itemLabel, protocolSlots, SLOT_KINDS, chaseStat, MATERIALS } from './gear.mjs';
 import { AUTHORS } from './authors.mjs';
 import { giveScript, rollScript } from './scripts.mjs';
@@ -554,8 +554,9 @@ function assign(g, r, { size, kind, level, floor, author, hunter, N, L }) {
   const order = [...fams].sort(() => r() - 0.5);
   fights.forEach((id, i) => {
     const family = i < order.length ? order[i] : pick(r, fams);
-    const pool = (FAMILIES[family]?.parts || []).filter((p) => p.pool === 'third' && (!p.from || level >= p.from) && mechRolls(p.gene));
-    Object.assign(R[id], { family, author, set: rollSet(family, author, r), third: pool.length && r() < 0.6 ? pickWeighted(r, pool, (x) => weightOf(x.gene, floor)).gene : null }); // a native weighs PARTS.floor on its own floor (parts.mjs)
+    const spread = spreadOf(family, level, floor); // its strains' mechanics parts (parts.mjs PARTS.spread)
+    const pool = (FAMILIES[family]?.parts || []).filter((p) => p.pool === 'third' && (!p.from || level >= p.from) && (mechRolls(p.gene) || spread.has(p.gene)));
+    Object.assign(R[id], { family, author, set: rollSet(family, author, r), third: pool.length && r() < 0.6 ? pickWeighted(r, pool, (x) => weightOf(x.gene, floor, spread)).gene : null }); // a native weighs PARTS.floor on its own floor (parts.mjs)
   });
   for (const id of all) {
     R[id].seed = Math.floor(r() * 2 ** 31);
