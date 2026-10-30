@@ -104,7 +104,7 @@ test('Uptime: the virus can\'t be broken, its attacks quicken, and holding to th
   assert.ok(e.objective.met && s.components >= before + OBJ.bonus.components);
 });
 
-test('the Exfil runs on the engine: its upload is its objective (the Leash's cycle: daemons.test.mjs), an old save\'s escapeAt carried over', () => {
+test('the Exfil runs on the engine: its upload is its objective (the Leash: daemons.test.mjs), an old save\'s escapeAt carried over', () => {
   const s = server(), room = roomWith(s, null);
   const e = engage(s, room);
   assert.equal(e.objective ?? null, null, 'a plain room\'s fight with none');
