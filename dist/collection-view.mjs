@@ -56,14 +56,32 @@ function entryMarkup(e) {
   }).join('');
   return head + secs;
 }
-// The tabs over the Codex's index: the Codex, and the Collection with its count.
-export const codexTabs = (on, have, total) => `<div class="lg-tabs" role="tablist"><button type="button" role="tab" data-codex-tab="codex" aria-selected="${on === 'codex'}"${on === 'codex' ? ' class="on"' : ''}>Codex</button><button type="button" role="tab" data-codex-tab="log" aria-selected="${on === 'log'}"${on === 'log' ? ' class="on"' : ''}>Collection${total ? ` <small>${have}/${total}</small>` : ''}</button></div>`;
+// The top of the Codex's index: its two tabs (the Codex, and the Collection with its count), and the button that
+// folds the index away to a rail (app.js codexShut) and back.
+export const codexTabs = (on, have, total, shut = false) => `<div class="cx-top"><button type="button" class="cx-side" data-codex-side aria-expanded="${!shut}" title="${shut ? 'Show the index' : 'Hide the index'}" aria-label="${shut ? 'Show the index' : 'Hide the index'}">${shut ? '›' : '‹'}</button><div class="lg-tabs" role="tablist"><button type="button" role="tab" data-codex-tab="codex" aria-selected="${on === 'codex'}"${on === 'codex' ? ' class="on"' : ''}>Codex</button><button type="button" role="tab" data-codex-tab="log" aria-selected="${on === 'log'}"${on === 'log' ? ' class="on"' : ''}>Collection${total ? ` <small>${have}/${total}</small>` : ''}</button></div></div>`;
+// What a search finds an entry by: its name and the names you know on it (what you've found, the parts you've named, its
+// sets and its feats). Never a ??? slot's: a search doesn't give away what's left.
+function findText(e) {
+  const out = [e.name || ''];
+  for (const sec of e.sections) {
+    if (sec.kind === 'set') out.push(sec.name);
+    for (const x of sec.slots) {
+      if (x.kind === 'feat') { const a = achById(x.ach); if (a && (!a.hidden || x.got)) out.push(a.name); }
+      else if ((x.kind === 'unique' || x.kind === 'set') ? x.got : x.kind === 'mastered' && x.name) out.push(x.name);
+    }
+  }
+  return out.join(' ').toLowerCase();
+}
+export const finds = (text, q) => !q || String(q).toLowerCase().trim().split(/\s+/).every((w) => text.includes(w));
 // The tab. sel: the entry picked (app.js logSel), idx: the phone's index open.
-export function collectionPageMarkup(s, sel = null, idx = false) {
+// shut: the index folded to a rail; find: the search (app.js logFind), which hides the rows it doesn't match.
+export function collectionPageMarkup(s, sel = null, idx = false, shut = false, find = '') {
   const log = logOf(s), all = log.flatMap((g) => g.rows), T = logTotals(log);
   const e = all.find((x) => x.key === sel) || all.find((x) => x.known) || all[0];
-  const rows = log.map((g) => `<section class="cx-grp" aria-label="${esc(g.name)}"><h3><span>${esc(g.name)}</span><small>${g.have}/${g.total}</small></h3><ul>${g.rows.map((r) => `<li><button type="button" class="cx-row lg-row${r.known ? '' : ' unknown'}${r === e ? ' on' : ''}" data-log="${esc(r.key)}" aria-current="${r === e}"><span class="cx-ico" aria-hidden="true">${r.known ? glyph(ICON[r.group]) : '<i class="cx-none"></i>'}</span><span class="cx-name">${esc(r.name || UNKNOWN)}</span>${count(r.have, r.total)}${bar(r.have, r.total, 'thin')}</button></li>`).join('')}</ul></section>`).join('');
-  return `<div class="cx-page${idx ? ' idx-open' : ''}">
-    <nav class="cx-index card" aria-label="Collection index">${codexTabs('log', T.have, T.total)}<button type="button" class="cx-fold" data-codex-fold aria-expanded="${idx}"><span class="cx-label">Index</span><b>${esc(e?.name || UNKNOWN)}</b><span class="cx-caret" aria-hidden="true">${idx ? '▴' : '▾'}</span></button><div class="cx-groups">${rows}</div></nav>
+  const hit = (r) => finds(findText(r), find);
+  const rows = log.map((g) => `<section class="cx-grp" aria-label="${esc(g.name)}"${g.rows.some(hit) ? '' : ' hidden'}><h3><span>${esc(g.name)}</span><small>${g.have}/${g.total}</small></h3><ul>${g.rows.map((r) => `<li data-find="${esc(findText(r))}"${hit(r) ? '' : ' hidden'}><button type="button" class="cx-row lg-row${r.known ? '' : ' unknown'}${r === e ? ' on' : ''}" data-log="${esc(r.key)}" aria-current="${r === e}"><span class="cx-ico" aria-hidden="true">${r.known ? glyph(ICON[r.group]) : '<i class="cx-none"></i>'}</span><span class="cx-name">${esc(r.name || UNKNOWN)}</span>${count(r.have, r.total)}${bar(r.have, r.total, 'thin')}</button></li>`).join('')}</ul></section>`).join('');
+  const none = !all.some(hit);
+  return `<div class="cx-page${idx ? ' idx-open' : ''}${shut ? ' side-shut' : ''}">
+    <nav class="cx-index card" aria-label="Collection index">${codexTabs('log', T.have, T.total, shut)}<button type="button" class="cx-fold" data-codex-fold aria-expanded="${idx}"><span class="cx-label">Index</span><b>${esc(e?.name || UNKNOWN)}</b><span class="cx-caret" aria-hidden="true">${idx ? '▴' : '▾'}</span></button><div class="cx-groups"><input type="search" id="lg-find" class="lg-find" placeholder="Search" value="${esc(find)}" aria-label="Search the collection log" autocomplete="off" spellcheck="false"><p class="lg-none"${none ? '' : ' hidden'}>No match.</p>${rows}</div></nav>
     <article class="cx-entry card lg-entry" aria-label="Collection entry" data-log-entry="${esc(e?.key || '')}">${e ? entryMarkup(e) : ''}</article></div>`;
 }

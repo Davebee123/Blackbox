@@ -146,6 +146,11 @@
   .cx-fold .cx-caret { color: var(--amber); }
   .cx-page:not(.idx-open) .cx-groups { display: none; }
   .cx-groups { gap: var(--s4); }
+  .cx-side { display: none; }
+  .cx-top { grid-template-columns: minmax(0, 1fr); }
+  .cx-page.side-shut { grid-template-columns: minmax(0, 1fr); }
+  .side-shut .cx-index > :not(.cx-top), .side-shut .cx-top .lg-tabs { display: revert; }
+  .side-shut .cx-index > .cx-fold { display: grid; }
   .cx-grp ul { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: var(--s3); }
   .cx-head { grid-template-columns: minmax(0, 1fr); gap: var(--s4); }
   .cx-art { height: 150px; }
@@ -159,6 +164,18 @@
 .cx-head.solo .stats > .stat { flex: 0 1 200px; }
 
 /* ---------- the Collection tab (collection-view.mjs): the Ledger ---------- */
+/* The index's top: the fold-away button and the two tabs. Folded, the index is a rail with only the button. */
+.cx-top { display: grid; grid-template-columns: var(--h-btn-sm) minmax(0, 1fr); gap: var(--s3); }
+.cx-side { display: grid; place-items: center; min-height: var(--h-btn-sm); color: var(--amber); font: 600 15px var(--mono); border: 1px solid var(--line-strong); border-radius: var(--r-btn); }
+.cx-side:hover { background: var(--amber-wash); }
+.cx-page.side-shut { grid-template-columns: calc(var(--h-btn-sm) + 2 * var(--s3)) minmax(0, 1fr); }
+.side-shut .cx-index { padding: var(--s3); }
+.side-shut .cx-index > :not(.cx-top), .side-shut .cx-top .lg-tabs { display: none; }
+.side-shut .cx-top { grid-template-columns: var(--h-btn-sm); }
+.lg-find { width: 100%; min-height: var(--h-btn-sm); padding: 0 var(--s4); font: 13px var(--sans); color: var(--bright); background: var(--inset); border: 1px solid var(--line); border-radius: var(--r-btn); }
+.lg-find::placeholder { color: var(--dim); }
+.lg-find:focus { outline: none; border-color: var(--line-strong); }
+.lg-none { padding: 0 var(--s3); font: 12px var(--sans); color: var(--dim); }
 /* Amber is what you've collected (a set piece in the set's green), gray ??? what's left; the date it first came on the right. */
 .lg-tabs { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--line-strong); border-radius: var(--r-btn); overflow: hidden; }
 .lg-tabs button { min-height: var(--h-btn-sm); font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--muted); }

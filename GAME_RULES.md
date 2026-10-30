@@ -1508,8 +1508,9 @@ pieces (*Kestrel Clearance 1/3*, ??? until found); faction pieces their parts as
 
 The **collection log** is the Codex's second tab, **Collection n/N** (`collection.mjs` keeps it, `collection-log.mjs`
 builds it, `collection-view.mjs` draws it: the *Ledger*). Its index: Families, Strains, Guards & ICE, Bosses, Floors and
-Elsewhere (every other source), each entry its n of N and a thin bar. An entry lists its slots, one line each, in
-sections; daemons have their own log.
+Elsewhere (every other source), each entry its n of N and a thin bar, and a search over the entries by their names and
+what you've found or named on them (never a ??? slot). The **‹** over either tab folds the index to a rail, and stays
+as you left it. An entry lists its slots, one line each, in sections; daemons have their own log.
 
 | Section | A slot | It fills when |
 |---|---|---|

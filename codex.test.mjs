@@ -37,7 +37,7 @@ test('the Codex is a top-level tab between Loadout and System, and typing codex 
   assert.match(html, /href="codex.css"/);
   const app = readFileSync('./dist/app.js', 'utf8');
   assert.match(app, /const NAV = \[[^\]]*'codex'/, 'codex is a page you can type');
-  assert.match(app, /codex: \(x\) => codexPageMarkup\(x, codexSel, codexIdx\)/, 'the page renders the Codex');
+  assert.match(app, /codex: \(x\) => \(codexTab === 'log' \? collectionPageMarkup\([^)]*\) : codexPageMarkup\(x, codexSel, codexIdx, codexShut\)\)/, 'the page renders the Codex, or its Collection tab');
 });
 
 test('a fresh character: every entry ??? in its group, nothing spelled out, no undefined or NaN', () => {

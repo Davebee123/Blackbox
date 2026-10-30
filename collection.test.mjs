@@ -107,3 +107,19 @@ test('the Ledger: tabs, the index with counts and bars, ??? with a hint, the dat
   assert.match(h, /<b class="unk">\?\?\?<\/b><small class="lg-hint">Lv \d+ · Vaults<\/small>/);
   assert.ok(!/undefined|NaN|null/.test(h.replace(/data-[a-z-]+="[^"]*"/g, '')), 'no holes');
 });
+
+test('the index: a search hides the rows it misses, never by a ??? slot; it folds to a rail', () => {
+  const s = me();
+  s.collection = { floppy: 1 };
+  const h = collectionPageMarkup(s, null, false, false, 'flop');
+  const shown = [...h.matchAll(/<li data-find="([^"]*)">/g)].map((m) => m[1]);
+  assert.ok(shown.length >= 1 && shown.every((x) => x.includes('flop')), 'what you found finds its entry');
+  assert.match(h, /id="lg-find"[^>]*value="flop"/);
+  assert.match(h, /<p class="lg-none" hidden>/);
+  const none = collectionPageMarkup(me(), null, false, false, 'boot sector');
+  assert.ok(!/<li data-find="[^"]*">/.test(none), 'a piece not yet found finds nothing');
+  assert.match(none, /<p class="lg-none">No match\.<\/p>/);
+  const shut = collectionPageMarkup(s, null, false, true);
+  assert.match(shut, /class="cx-page side-shut"/);
+  assert.match(shut, /data-codex-side aria-expanded="false" title="Show the index"/);
+});

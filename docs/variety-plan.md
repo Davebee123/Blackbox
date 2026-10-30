@@ -170,6 +170,8 @@ strain and the boss so far; a mutated form and the objectives join it as session
 - The rest goes in the tooltip, WoW's grammar: *???: A Proxy from the Night Shift set, level 11. ▸ Drops from The
   Sprawl's threads.*
 - On a phone the index folds as the Codex's does, and the hint drops under the name.
+- Added after the pick (the designer): a search box over the index (names, and what you've found or named, never a
+  ??? slot), and **‹** to fold either tab's index to a rail, kept as you left it.
 
 ## 4. One kind of component (K)
 
