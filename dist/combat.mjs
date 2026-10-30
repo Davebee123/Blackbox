@@ -3217,7 +3217,7 @@ function breakPart(s, p) {
   // goes to the survivor that attacks next (WoW council fights). A survivor whose attack isn't a hit
   // (Encrypt, Scramble, Replicate) gains a hit on top of what it does (landAttack's `hit`).
   const hitOf = (x) => (x.attack?.effect === 'damage' ? x.attack.amount : x.attack?.hit || 0);
-  if ((e.virus.mutation === 'rerouting' || e.virus.grade >= 2 || e.virus.genes?.some((g) => g.id === 'linked')) && hitOf(p) > 0) {
+  if ((e.virus.mutation === 'rerouting' || (e.virus.grade >= 2 && !e.virus.unlinked) || e.virus.genes?.some((g) => g.id === 'linked')) && hitOf(p) > 0) {
     const to = livingParts(s).filter((x) => x !== p && x.attack && x.attack.effect !== 'heal' && x.fallback !== p.id).sort((a, b) => a.attack.due - b.attack.due)[0]; // a fallback part takes it whole (below)
     const add = Math.max(1, Math.round(hitOf(p) * CONFIG.linked));
     if (to) {

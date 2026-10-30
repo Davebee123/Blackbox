@@ -2,7 +2,9 @@
 
 **Status.** Twenty new part mechanics for the designer to test. Built, all twenty, lean: `dist/mechanics.mjs` (rules
 and `MECH` start numbers), a gene each, playtest pages `?playtest=part:<id>`; GAME_RULES.md *Families*
-has the table. Left: none rolls yet (`PARTS.mech` 0), the roll bug below, and the designer's call on combinations.
+has the table. Ten ride in strains (docs/variety-plan.md 1.1) and spread from them onto their lineage's wild
+viruses (`PARTS.spread`). Left: none rolls elsewhere (`PARTS.mech` 0), the roll bug below, and the designer's call on
+combinations.
 
 October 28, 2026. The designer: *"Adding more mechanics for me to test primarily is going to save a lot."* And: *"You
 can run a small balance check and make sure they work, but don't go overboard with the bots. Players are going to be
