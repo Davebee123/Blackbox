@@ -57,7 +57,7 @@ function payOf(s, st) {
   return { icon: g('thread'), text: chainDef(st.chain)?.title || 'Thread', sub: 'thread' };
 }
 const payChip = (s, st) => { const p = payOf(s, st); return `<span class="sc-chip" title="${esc(`${p.text}: ${SC.payText(s, st)}`)}">${p.icon}${esc(p.text)}<small>${esc(p.sub)}</small></span>`; };
-const stationTitle = (s, st, known) => (known ? `${st.name}: ${SC.KINDS[st.kind].name}. ${SC.KINDS[st.kind].does}${SC.logged(s, st.id) ? '\nLogged.' : ANSWER}` : `Unknown signal: Something is broadcasting here.${ANSWER}`);
+const stationTitle = (s, st, known) => (known ? `${st.name}: ${SC.KINDS[st.kind].name}. ${SC.KINDS[st.kind].does}${SC.catchable(s, st) ? ANSWER : '\nLogged.'}` : `Unknown signal: Something is broadcasting here.${ANSWER}`);
 export function buttonTitle(s, at) {
   return SC.onAir(s, at) ? 'Shortwave: Radio. Something is on the air.\n▸ Tune in to catch it.' : 'Shortwave: Radio. Nothing is on the air.';
 }
@@ -76,23 +76,23 @@ export function parts(s, tune, t) {
   const lit = Math.max(1, Math.round(Math.max(str, tr.s) * 9));
   const meter = `<span class="sc-meter" title="S${lit}: Signal strength.">${Array.from({ length: 9 }, (_, i) => `<i${i < lit ? ' class="on"' : ''}></i>`).join('')}<b>S${lit}</b></span>`;
   const seed = Math.floor(t * 8), lock = `<div class="sc-lock" title="Lock: Fills while the carrier is in the zone, and drains outside it."><i style="width:${(tune.lock * 100).toFixed(1)}%"></i></div>`;
-  // The carriers: an unlogged one shows only on the line; a logged one as a muted glow.
+  // The carriers: one you can catch shows only on the line; one with nothing left to catch, as a muted glow.
   const marks = SC.STATIONS.map((x) => {
     const p = SC.level(s, x, t, tune.hook);
     if (!p) return '';
     const on = tune.hook?.id === x.id;
     if (tune.hook && !on) return '';
-    if (!on && !SC.logged(s, x.id)) return '';
+    if (!on && (SC.catchable(s, x) || !SC.logged(s, x.id))) return '';
     const left = pct(tune, SC.carrier(x, t, tune.hook)).toFixed(2);
     return on ? `<i class="sc-glow" style="left:${left}%;opacity:${(0.3 + 0.6 * p).toFixed(2)}"></i><i class="sc-carrier" style="left:${left}%;opacity:${(0.25 + 0.75 * p).toFixed(2)}"></i>` : `<i class="sc-glow old" style="left:${left}%;opacity:${(0.2 + 0.5 * p).toFixed(2)}"></i>`;
   }).join('');
   const out = { freq: `${tune.f.toFixed(3)}<small>MHz</small>`, counts: counts(s), scale: ticks(tune), marks, needle: pct(tune, tune.f), zone: tune.hook ? [pct(tune, tune.f - HOLD), pct(tune, tune.f + HOLD)] : null, fine: !!tune.hook };
   if (st && str > 0.06) {
     const known = SC.logged(s, st.id) || str > 0.45 || (tune.hook && tune.lock > 0.4);
-    const clear = SC.logged(s, st.id) ? 1 : tune.hook ? Math.min(1, 0.15 + tune.lock * 0.9) * Math.min(1, str * 1.4) : Math.min(1, str * str * 1.1);
+    const clear = !SC.catchable(s, st) ? 1 : tune.hook ? Math.min(1, 0.15 + tune.lock * 0.9) * Math.min(1, str * 1.4) : Math.min(1, str * str * 1.1);
     out.who = `<span class="sc-who" title="${esc(stationTitle(s, st, known))}">${g(known ? st.kind : 'unknown')}<b class="${known ? '' : 'q'}">${known ? esc(st.name) : '???'}</b></span>${meter}`;
     out.tx = esc(scramble(SC.textOf(s, st), clear, seed)); out.txCls = 'sc-tx';
-    out.res = SC.logged(s, st.id) && d < SC.SCANNER.reach / 2 ? `<div class="sc-result">${payChip(s, st)}<span class="sc-ok">${g('check')}LOGGED</span></div>` : lock;
+    out.res = !SC.catchable(s, st) && SC.logged(s, st.id) && d < SC.SCANNER.reach / 2 ? `<div class="sc-result">${payChip(s, st)}<span class="sc-ok">${g('check')}LOGGED</span></div>` : lock;
   } else if (tr.tr && tr.s > 0.08) {
     out.who = `<span class="sc-who" title="${esc(`${tr.tr.name}: Radio traffic. Somebody else's transmission.`)}">${g('wave')}<b class="q">${esc(tr.tr.name)}</b></span>${meter}`;
     out.tx = esc(scramble(tr.tr.text, Math.min(1, tr.s * 1.4), seed)); out.txCls = 'sc-tx tr';
@@ -102,7 +102,7 @@ export function parts(s, tune, t) {
     out.tx = esc(staticLine(120, seed)); out.txCls = 'sc-tx static';
     out.res = lock;
   }
-  out.sound = { st, d, s: str, ts: tr.s, tr: tr.tr, clear: !st || str < 0.03 ? 0 : SC.logged(s, st.id) ? str : tune.hook ? Math.min(1, 0.15 + tune.lock * 0.9) * Math.min(1, str * 1.4) : str };
+  out.sound = { st, d, s: str, ts: tr.s, tr: tr.tr, clear: !st || str < 0.03 ? 0 : !SC.catchable(s, st) ? str : tune.hook ? Math.min(1, 0.15 + tune.lock * 0.9) * Math.min(1, str * 1.4) : str };
   return out;
 }
 // The strip, whole: what mount builds, and what the tests read.

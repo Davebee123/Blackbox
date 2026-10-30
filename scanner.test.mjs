@@ -62,7 +62,7 @@ test('the schedule: the first broadcast after 5 minutes, on 2–3 minutes, then 
   assert.equal(S.air, null);
 });
 
-test('what goes on the air: stations not yet logged first, a pirate only with a hub, a distress call only with a server', () => {
+test('what goes on the air: stations not yet logged first, then the ones that pay again, a pirate only with a hub, a distress call only with a server', () => {
   const bare = setup({ servers: 0, hubs: false });
   assert.deepEqual(new Set(SC.pool(bare).map((x) => x.kind)), new Set(['numbers']));
   const s = setup();
@@ -71,7 +71,7 @@ test('what goes on the air: stations not yet logged first, a pirate only with a 
   for (const st of SC.STATIONS) if (st.id !== 'owl') S.log[st.id] = { at: clock };
   for (let i = 0; i < 5; i++) assert.equal(SC.startBroadcast(s, clock).id, 'owl', 'the one not yet logged');
   S.log.owl = { at: clock };
-  assert.equal(SC.pool(s).length, SC.STATIONS.length, 'all logged: any of them');
+  assert.deepEqual(new Set(SC.pool(s).map((x) => x.kind)), new Set(['pirate', 'distress']), 'all logged: the ones that still pay');
   const p = SC.startBroadcast(s, clock, 'tarbeach'), d = SC.startBroadcast(s, clock, 'kade');
   assert.ok(['kestrel', 'lantern'].includes(p.hub));
   assert.ok(s.locations.some((l) => l.id === d.loc));
@@ -147,4 +147,27 @@ test('the strip: the frequency, the S-meter, the log counts, ??? until clear, an
   assert.match(done, /LOGGED/);
   assert.match(buttonTitle(s, clock), /^Shortwave: /);
   assert.match(buttonTitle(s, clock), /\n▸ /, 'on the air: the answer line');
+});
+
+test('a numbers station pays once; a pirate and a distress call pay again on a later broadcast, once a broadcast', () => {
+  const s = setup(), owl = air(s, 'owl');
+  SC.catchStation(s, 'owl', clock);
+  air(s, 'owl');
+  assert.equal(SC.tuneStep(s, { f: owl.f, hook: null, lock: 0 }, 0.05, t()), null, 'a logged numbers station never bites again');
+  assert.equal(SC.catchStation(s, 'owl', clock), null);
+  const tar = air(s, 'tarbeach');
+  SC.catchStation(s, 'tarbeach', clock);
+  assert.equal(SC.tuneStep(s, { f: tar.f, hook: null, lock: 0 }, 0.05, t()), null, 'not twice in one broadcast');
+  air(s, 'tarbeach');
+  assert.equal(bite(s, tar).hook.id, 'tarbeach', 'it bites again on the next');
+  assert.ok(SC.catchStation(s, 'tarbeach', clock));
+  assert.equal(SC.scannerOf(s).log.tarbeach.n, 2);
+  air(s, 'kade');
+  const first = SC.scannerOf(s).air.loc;
+  SC.catchStation(s, 'kade', clock);
+  air(s, 'kade');
+  const second = SC.scannerOf(s).air.loc;
+  assert.notEqual(second, first, 'a server with a thread on it is never named again');
+  SC.catchStation(s, 'kade', clock);
+  assert.equal(startHere(s, s.locations.find((l) => l.id === second)).chain, 'tpl:talk:0');
 });

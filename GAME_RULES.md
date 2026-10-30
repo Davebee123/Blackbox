@@ -1796,15 +1796,18 @@ button sits at the map's bottom-left corner, dim while nothing is on the air and
 It opens a strip across the map's foot; the button or Esc closes it, and it closes itself 3 s after the broadcast ends.
 
 - **On the air.** One station at a time, for 2–3 minutes, then 15–30 minutes quiet (the first 5 minutes into a new
-  save). Stations not yet logged come up first. A broadcast starts with a quiet two-tone ping, never in a fight.
-- **Finding it.** The dial runs 3–12 MHz; drag, scroll or use the arrow keys (Shift for ×10). It never shows where an
-  unlogged station is: the S-meter rises and the static clears within 0.15 MHz of it. A logged one shows as a muted glow.
+  save). Stations not yet logged come up first, then the ones that still pay. A broadcast starts with a quiet two-tone
+  ping, never in a fight.
+- **Finding it.** The dial runs 3–12 MHz; drag, scroll or use the arrow keys (Shift for ×10). It never shows where a
+  station you can catch is: the S-meter rises and the static clears within 0.15 MHz of it. One with nothing left to
+  catch shows as a muted glow.
 - **The reel.** Within 0.04 MHz at a strength over S3 it **bites**: the dial zooms to 0.8 MHz round it, a teal hold
   zone of ±0.025 MHz sits round the needle, and the carrier moves. In the zone the lock fills in 5 s; outside it drains
   at 1/8 a second. A numbers station sways, a pirate hops every 1.7 s (never back to the centre), a distress call
   wanders and fades, and the lock waits while it's faded. Holding still never catches one. Leaving the window lets go.
 - **Logged.** A full lock logs it (its own log, `s.scanner`: counts by kind on the strip, the log card lists each with
-  ??? for those not caught) and it signs off 8 s later. Each station logs once.
+  ??? for those not caught) and it signs off 8 s later. A numbers station pays once; a pirate or a distress call pays
+  each time it's caught, once a broadcast, and the log keeps its last payoff.
 
 | Kind | Stations | Pays |
 |---|---|---|

@@ -2,7 +2,7 @@
 // One station is on the air at a time, for 2–3 minutes, then 15–30 minutes of quiet. Tune the dial to it by the
 // S-meter and the static clearing (the dial never shows where an unlogged one is). Close in and it bites: the dial
 // zooms in, the carrier moves its kind's way, and holding it in the hold zone round the needle fills the lock. A full
-// lock logs it, and it signs off. Each station logs once; what it pays:
+// lock logs it, and it signs off. A numbers station pays once; a pirate or a distress call pays each time it's caught:
 //   numbers   a line of lore, kept in the log (LANTERN's voice: the coordinates wait for off-map servers)
 //   pirate    a tip: one hub's price for one ware moves for a while (market.mjs outsideMult, tipMult)
 //   distress  a thread starts on the server it names (threads.mjs pinDistress)
@@ -54,8 +54,8 @@ export const STATIONS = [
 ];
 export const KINDS = {
   numbers: { name: 'Numbers station', does: 'Reads out groups of digits. They decode to a line of lore.' },
-  pirate: { name: 'Pirate broadcast', does: 'Reads out a market tip for a hub. Logging it moves that price for a while.' },
-  distress: { name: 'Distress call', does: 'Repeats a call for help from one of your servers. Logging it starts a thread there.' },
+  pirate: { name: 'Pirate broadcast', does: 'Reads out a market tip for a hub. Catching it moves that price for a while. Works every time it is caught.' },
+  distress: { name: 'Distress call', does: 'Repeats a call for help from one of your servers. Catching it starts a thread there. Works every time it is caught.' },
 };
 // Radio traffic: other people's transmissions across the band, on in bursts. Nothing to catch.
 export const TRAFFIC = [
@@ -86,6 +86,9 @@ export function scannerOf(s) {
   return S;
 }
 export const logged = (s, id) => !!s.scanner?.log?.[id];
+// A numbers station pays once; a pirate or a distress call pays each time, once a broadcast.
+export const repeats = (st) => st.kind !== 'numbers';
+export const catchable = (s, st) => { const a = s.scanner?.air; return a?.id === st.id && !a.caught && (repeats(st) || !logged(s, st.id)); };
 const roll = (S) => seeded(Math.imul((S.n = (S.n || 0) + 1), 2654435761) ^ 0x5ca7);
 const between = (r, [lo, hi]) => lo + r() * (hi - lo);
 
@@ -97,10 +100,10 @@ export function distressTargets(s) {
     .sort((a, b) => Math.abs((a.level || 1) - L) - Math.abs((b.level || 1) - L) || (a.id < b.id ? -1 : 1));
 }
 const possible = (s, st) => st.kind === 'numbers' || (st.kind === 'pirate' ? hubsOf(s).length > 0 : distressTargets(s).length > 0);
-// Stations not yet logged come up first.
+// Stations not yet logged come up first; then the ones that still pay.
 export function pool(s) {
-  const all = STATIONS.filter((st) => possible(s, st)), fresh = all.filter((st) => !logged(s, st.id));
-  return fresh.length ? fresh : all;
+  const all = STATIONS.filter((st) => possible(s, st)), fresh = all.filter((st) => !logged(s, st.id)), paying = all.filter(repeats);
+  return fresh.length ? fresh : paying.length ? paying : all;
 }
 export function startBroadcast(s, at = now(), id = null) {
   const S = scannerOf(s), r = roll(S), from = pool(s);
@@ -187,7 +190,7 @@ export function tuneStep(s, tune, dt, t) {
   const h = heard(s, tune, t);
   if (!tune.hook) {
     tune.lock = 0;
-    if (h.st && !logged(s, h.st.id) && h.d < SCANNER.bite.d && h.s > SCANNER.bite.s) { tune.hook = { id: h.st.id, c: h.st.f, t0: t }; return 'bite'; }
+    if (h.st && catchable(s, h.st) && h.d < SCANNER.bite.d && h.s > SCANNER.bite.s) { tune.hook = { id: h.st.id, c: h.st.f, t0: t }; return 'bite'; }
     return null;
   }
   const st = stationById(tune.hook.id);
@@ -199,11 +202,12 @@ export function tuneStep(s, tune, dt, t) {
 }
 
 // ---------- logging one ----------
-// Logs the station, pays it, and it signs off SCANNER.signoff seconds later.
+// Logs the station, pays it, and it signs off SCANNER.signoff seconds later. The log keeps the last catch's payoff.
 export function catchStation(s, id, at = now()) {
   const S = scannerOf(s), st = stationById(id), air = S.air?.id === id ? S.air : {};
-  if (!st || S.log[id]) return null;
-  const entry = (S.log[id] = { at });
+  if (!st || !catchable(s, st)) return null;
+  const entry = (S.log[id] = { at, n: (S.log[id]?.n || 0) + 1 });
+  S.air.caught = true;
   if (st.kind === 'pirate' && air.hub) {
     entry.hub = air.hub;
     S.tips = S.tips.filter((x) => !(x.hub === air.hub && x.ware === st.tip.ware));
