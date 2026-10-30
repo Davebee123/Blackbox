@@ -1070,7 +1070,7 @@ free:** until any class reaches level 5, switching to a class you haven't played
 - **Presets** (docs/kits.md): from level 10 a subclass has fifteen skills to choose from (its class's four core skills
   and its eleven-skill line) and two shipped presets, `rotation` and a second with a playstyle of its own. `loadout
   use|save|list|show|delete <name>` (up to six saved a subclass).
-- **The tray:** each key is its icon and name; what it does is its tooltip (name, *Key 4 · Hit · 6 cycle cooldown*,
+- **The tray:** each key is its icon and name; what it does is its tooltip (name, *Hit · 6 cycle cooldown*,
   the rule). A charge bar runs along the bottom (full amber when ready), the cycles to go sit over a dimmed icon, and
   the icon turns steel when the target's armor would take the hit whole. The next unlock shows as a ghost key.
 - **A key's border** says what holds now, and its tooltip says it in words: amber when its moment is on the board
