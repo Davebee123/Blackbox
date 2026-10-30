@@ -17,8 +17,8 @@ export const BOOT = {
 };
 const LOCK = 200;
 // A tube catching: [ms, opacity] from the moment it starts, each held until the next.
-export const TUBE_ON = [[0, 0], [30, 0.9], [60, 0], [110, 0.6], [140, 0], [175, 1], [205, 0.35], [235, 1], [240, 1]];
-const VIRUS_ON = [[0, 0], [40, 1], [70, 0], [150, 0.8], [180, 0.1], [240, 1], [300, 0.5], [330, 1], [600, 1], [630, 0.6], [660, 1], [670, 1]];
+export const TUBE_ON = [[0, 0], [40, 0.6], [90, 0.2], [150, 1], [155, 1]]; // one soft dip (the designer: less flashing)
+const VIRUS_ON = [[0, 0], [60, 0.7], [120, 0.25], [220, 1], [600, 1], [640, 0.75], [680, 1], [685, 1]];
 const NOISE = '@%#*+=-:.01';
 
 // The console's lines: what your system checks as it comes up. The virus's line is the red one.
@@ -69,15 +69,15 @@ export function playBoot(app, held, lines) {
     held.parent.append(held.clone); nodes.push(held.clone);
     const r = held.clone.getBoundingClientRect(); // back over where the page stood
     Object.assign(held.clone.style, { left: `${(held.at.left - r.left) / held.k}px`, top: `${(held.at.top - r.top) / held.k}px` });
-    play(held.lock, [{ opacity: 0, transform: 'scale(1.7)' }, { opacity: 1, transform: 'scale(1)', offset: 0.55 }, { opacity: 0.2, offset: 0.7 }, { opacity: 1, offset: 0.85 }, { opacity: 1, transform: 'scale(1)' }], 0, 220, 'ease-out');
+    play(held.lock, [{ opacity: 0, transform: 'scale(1.7)' }, { opacity: 1, transform: 'scale(1)', offset: 0.55 }, { opacity: 0.6, offset: 0.7 }, { opacity: 1, offset: 0.85 }, { opacity: 1, transform: 'scale(1)' }], 0, 220, 'ease-out');
     steps(held.clone, 'opacity', [[0, 1], [BOOT.black, 0], [BOOT.black + 1, 0]]);
   }
   // The power cut: a flash, black behind the panels, the tube's edge flaring.
   const black = add(app, 'bootfx-black', $('#fx-back')?.nextSibling || app.firstChild);
   steps(black, 'opacity', [[0, 0], [at(BOOT.black), 1], [at(BOOT.chrome), 0], [at(BOOT.chrome) + 1, 0]]);
   const top = add(app, 'bootfx'), flash = add(top, 'bootfx-flash'), flare = add(top, 'bootfx-flare');
-  play(flash, [{ opacity: 0 }, { opacity: 0.55, offset: 0.25 }, { opacity: 0 }], at(BOOT.flash), 90);
-  play(flare, [{ opacity: 0 }, { opacity: 1, offset: 0.1 }, { opacity: 0.5, offset: 0.4 }, { opacity: 0 }], at(BOOT.black), 900, 'ease-out');
+  play(flash, [{ opacity: 0 }, { opacity: 0.2, offset: 0.25 }, { opacity: 0 }], at(BOOT.flash), 90);
+  play(flare, [{ opacity: 0 }, { opacity: 0.55, offset: 0.15 }, { opacity: 0.3, offset: 0.45 }, { opacity: 0 }], at(BOOT.black), 900, 'ease-out');
   // Your chrome goes dark with the cut and catches with the rest of you.
   for (const [q, on] of [['.topbar', BOOT.chrome], ['#sidebar', BOOT.chrome], ['#crewwin', BOOT.chrome], ['#statusline', BOOT.chrome + 20], ['#net-line', BOOT.prompt], ['.prompt-row', BOOT.prompt], ['#tray', BOOT.tray]])
     steps($(q), 'opacity', [[0, 1], [at(BOOT.black), 0], ...tubeOn(at(on))]);
@@ -116,7 +116,7 @@ export function playBoot(app, held, lines) {
     Object.assign(con.style, { left: `${board.offsetLeft}px`, top: `${board.offsetTop}px`, width: `${board.offsetWidth}px`, height: `${board.offsetHeight}px` });
     lines.forEach((l, i) => { const d = document.createElement('div'); d.textContent = l.text; if (l.hot) d.className = 'hot'; con.append(d); steps(d, 'opacity', [[0, 0], [at(BOOT.console + 20) + i * BOOT.line, 1], [at(BOOT.console + 21) + i * BOOT.line, 1]]); });
     const c0 = at(BOOT.console);
-    steps(con, 'opacity', [[0, 0], [c0, 1], [c0 + 90, 0.4], [c0 + 120, 1], [c0 + 260, 0.7], [c0 + 290, 1], [c0 + 420, 0.3], [c0 + 440, 1], [c0 + 560, 1], [c0 + 580, 0], [c0 + 610, 0.8], [c0 + 640, 0], [c0 + 641, 0]]);
+    steps(con, 'opacity', [[0, 0], [c0, 1], [c0 + 260, 0.75], [c0 + 300, 1], [c0 + 560, 1], [c0 + 600, 0], [c0 + 601, 0]]);
   }
   steps(board, 'opacity', [[0, 0], ...tubeOn(at(BOOT.board))]);
   steps($('#combat-view > .log'), 'opacity', [[0, 0], ...tubeOn(at(BOOT.log))]);
@@ -157,7 +157,7 @@ export function playCut(app, regions, swap, room) {
   const line = add(layer, 'bootfx-tline');
   Object.assign(line.style, { left: `${(left - lr.left) / lk}px`, top: `${(cy - lr.top) / lk - 1}px`, width: `${(right - left) / lk}px` });
   play(line, [{ opacity: 0, transform: 'scaleX(1)' }, { opacity: 1, transform: 'scaleX(1)', offset: 0.25 }, { opacity: 1, transform: 'scaleX(.01)', offset: 0.65 }, { opacity: 0, transform: 'scaleX(1)', offset: 0.8 }, { opacity: 0, transform: 'scaleX(1)' }], 100, 260);
-  const folds = els.map((el, i) => play(el, [{ transform: 'scale(1, 1)', transformOrigin: origin(el, rs[i]), filter: 'brightness(1)' }, { transform: 'scale(1, .004)', transformOrigin: origin(el, rs[i]), filter: 'brightness(4) saturate(0)', offset: 0.7 }, { transform: 'scale(0, .004)', transformOrigin: origin(el, rs[i]), filter: 'brightness(4) saturate(0)' }], 0, CUT.cut, 'cubic-bezier(.6,0,.9,.5)'));
+  const folds = els.map((el, i) => play(el, [{ transform: 'scale(1, 1)', transformOrigin: origin(el, rs[i]), filter: 'brightness(1)' }, { transform: 'scale(1, .004)', transformOrigin: origin(el, rs[i]), filter: 'brightness(2.5) saturate(0)', offset: 0.7 }, { transform: 'scale(0, .004)', transformOrigin: origin(el, rs[i]), filter: 'brightness(2.5) saturate(0)' }], 0, CUT.cut, 'cubic-bezier(.6,0,.9,.5)'));
 
   let swapped = false;
   const toNext = () => {
@@ -165,7 +165,7 @@ export function playCut(app, regions, swap, room) {
     swapped = true; folds.forEach((a) => a.cancel());
     swap();
     const chip = room?.(), cr = chip?.getBoundingClientRect(); // measured before the page starts opening
-    els.forEach((el) => { const r = el.getBoundingClientRect(); play(el, [{ transform: 'scale(1, .004)', transformOrigin: origin(el, r), filter: 'brightness(4)', opacity: 0 }, { opacity: 1, offset: 0.01 }, { transform: 'scale(1, 1.02)', transformOrigin: origin(el, r), filter: 'brightness(1.3)', offset: 0.7 }, { transform: 'scale(1, 1)', transformOrigin: origin(el, r), filter: 'brightness(1)', opacity: 1 }], CUT.open - CUT.swap, CUT.openFor, 'cubic-bezier(.2,.8,.3,1)'); });
+    els.forEach((el) => { const r = el.getBoundingClientRect(); play(el, [{ transform: 'scale(1, .004)', transformOrigin: origin(el, r), filter: 'brightness(2.5)', opacity: 0 }, { opacity: 1, offset: 0.01 }, { transform: 'scale(1, 1.02)', transformOrigin: origin(el, r), filter: 'brightness(1.3)', offset: 0.7 }, { transform: 'scale(1, 1)', transformOrigin: origin(el, r), filter: 'brightness(1)', opacity: 1 }], CUT.open - CUT.swap, CUT.openFor, 'cubic-bezier(.2,.8,.3,1)'); });
     if (cr?.width) {
       const ring = add(layer, 'bootfx-ring');
       Object.assign(ring.style, { left: `${(cr.left - lr.left) / lk - 6}px`, top: `${(cr.top - lr.top) / lk - 6}px`, width: `${cr.width / lk + 12}px`, height: `${cr.height / lk + 12}px` });

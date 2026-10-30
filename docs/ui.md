@@ -240,7 +240,7 @@ interface**. CSS, the DOM and text only (no canvas, WebGL or PixiJS on the scree
 - **The fight boot** (bootfx.mjs, bootfx.css) is the one effect on the panels, approved by the designer (*Centre stage*).
   The first time you see a fight: brackets lock on its room (from the rooms page), the tube cuts to black with a red
   edge, the virus flickers on alone at the centre, decoding out of red noise, and drops into its panel; a boot console
-  types your bar, class, keys and the virus where the board will be; your panels catch like tubes. About two seconds;
+  types your bar, class, keys and the virus where the board will be; your panels catch like tubes, one soft flicker each (no hard flashes). About two seconds;
   any key or click ends it and still acts. Leaving a won fight (*Channel cut*): the page folds to a teal line and a
   dot, the next page opens out of it and your room rings teal, under 0.9 s. Connecting to a server (*Handshake*): its
   node locks teal and pings, the map and chrome dim in two tube dips into black (no flash), the name decodes over a dial

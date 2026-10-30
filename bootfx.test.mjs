@@ -12,10 +12,12 @@ test('the virus comes on before anything of yours, and it is all over in a littl
   assert.ok(BOOT.done <= 2200);
 });
 
-test('a panel catching flickers but ends lit', () => {
+test('a panel catching flickers once, softly, and ends lit (the designer: less flashing)', () => {
   assert.equal(TUBE_ON[0][1], 0);
   assert.equal(TUBE_ON.at(-1)[1], 1);
-  assert.ok(TUBE_ON.filter(([, v]) => v === 0).length >= 3);
+  const dips = TUBE_ON.filter(([, v], i) => i && v < TUBE_ON[i - 1][1]);
+  assert.equal(dips.length, 1);
+  assert.ok(dips[0][1] > 0);
 });
 
 test('the console checks your bar, class and keys, then names the virus in red', () => {
