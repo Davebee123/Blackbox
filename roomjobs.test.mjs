@@ -17,6 +17,8 @@ import { initMail, roomOffer, ROOM_JOBS, MAIL, offers, openContracts, ready, pro
 import { roomsMarkup, fpUi, labelOf, pickRoom } from './dist/floorplan-view.mjs';
 import { mailMarkup, mapMarkup } from './dist/view.mjs';
 import { sizeOf } from './dist/sockets.mjs';
+import { RIVAL } from './dist/rivals.mjs';
+RIVAL.chance = 0; // a rival rolls at connect (rivals.mjs): these walks are scripted (rivals.test.mjs plays them)
 
 CONFIG.enemyCrit = 0; CONFIG.misses = false;
 CONFIG.exfil.chance = 0;

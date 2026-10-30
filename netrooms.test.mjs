@@ -15,6 +15,8 @@ import { ROOT, ROOT_PERKS } from './dist/root.mjs';
 import { openContracts, ready } from './dist/mail.mjs';
 import { roomsMarkup } from './dist/floorplan-view.mjs';
 import { mapMarkup } from './dist/view.mjs';
+import { RIVAL } from './dist/rivals.mjs';
+RIVAL.chance = 0; // a rival rolls at connect (rivals.mjs): these walks are scripted (rivals.test.mjs plays them)
 
 CONFIG.enemyCrit = 0; CONFIG.misses = false;
 CONFIG.exfil.chance = 0; // no Exfil in these rooms (exfil.test.mjs has it)
