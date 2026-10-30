@@ -5,11 +5,8 @@
 //   Nest      one family, strains twice as often
 //   Pit       mixed families, 2 levels above the server, a second roll for drops
 //   Gauntlet  mixed families; the full clear pays a bonus cache
-// They run in clears (inRuns): a fight room you clear stays down for the rest of the run. Clear them
-// all and the server reboots: you're jacked out with your pack, it's offline for ROGUE.rebootMs, then
-// every room is back fresh (its Stash rooms full) and a new run starts. A run you leave half done
-// keeps its progress, and reboots on its own ROGUE.idleMs after you last left. loc.rogueRun holds the
-// run (on your save: your runs are your own): { n, at, leftAt, rebootAt, rolled, exfil, paid }.
+// Each fight room fills again on its own timer (ROGUE.respawnMs), like SPRAWL-00's. A Gauntlet pays its
+// cache when you clear every fight room in one visit (s.run.felled).
 import { emit, rand, gainCode, gainXp, xpFor, hooks, hackerLevel, giveUnique } from './combat.mjs';
 import { FAMILIES, variantFor, STRAINS, CONFIG, ELITE, SERVER, BOSSES, createLocation } from './data.mjs';
 import { seeded, codeOf } from './gear.mjs';
@@ -20,43 +17,20 @@ export const ROGUE = {
   share: 1 / 6, // of servers you trace
   pity: 5, // after this many in a row that aren't, the next one is
   firstTame: 2, // the first two servers you trace are never rogue
-  kinds: { nest: { name: 'Nest', rule: 'Holds one family only, and strains turn up twice as often.' }, pit: { name: 'Pit', rule: 'Holds mixed families 2 levels above the server, with better drops.' }, gauntlet: { name: 'Gauntlet', rule: 'Clear every room in one run for a bonus cache.' }, farm: { name: 'Crew dungeon', rule: 'Built for a crew. Three bosses, and the third behind a key the first two hold.' }, lair: { name: 'Lair', rule: "Its network's native boss holds the Core, back an hour after it falls. Two rooms of its family guard the way." } }, // farm: KESSLER-FARM-00 only; lair: a network's (network.mjs). Never rolled
+  kinds: { nest: { name: 'Nest', rule: 'Holds one family only, and strains turn up twice as often.' }, pit: { name: 'Pit', rule: 'Holds mixed families 2 levels above the server, with better drops.' }, gauntlet: { name: 'Gauntlet', rule: 'Clear every room in one visit for a bonus cache.' }, farm: { name: 'Crew dungeon', rule: 'Built for a crew. Three bosses, and the third behind a key the first two hold.' }, lair: { name: 'Lair', rule: "Its network's native boss holds the Core, back an hour after it falls. Two rooms of its family guard the way." } }, // farm: KESSLER-FARM-00 only; lair: a network's (network.mjs). Never rolled
   rooms: ['hive', 'pit', 'spool', 'cells', 'drain', 'nursery', 'crypt', 'sump', 'rack', 'void'],
   respawnMs: [180000, 300000], // 3–5 minutes
   pitLevels: 2,
   relockMs: CONFIG.relockMs, // after you leave a wild server it won't take you back for 30 seconds
-  rebootMs: 60000, // a full clear: offline for a minute, then every room back fresh
-  idleMs: 30 * 60000, // a run left half done reboots on its own this long after you last left
 };
-// Which rogue servers run in clears: a Nest, a Pit or a Gauntlet (a lair, the farm and an occupied server keep their timers).
-export const inRuns = (loc) => !!loc?.rogue && ['nest', 'pit', 'gauntlet'].includes(loc.rogue.kind) && !loc.occupied && !loc.lair && !loc.farm;
-// Every fight room down this run.
-export const runCleared = (loc) => inRuns(loc) && rogueRooms(loc).every((p) => loc.spawns?.[p] && !loc.spawns[p].alive);
-// A new run: every folder fresh (rogueSpawns fills them), the Stash rooms full, the Exfil's roll to come.
-export function rogueReboot(s, loc, now = clock()) {
-  loc.spawns = {};
-  loc.rogueRun = { n: (loc.rogueRun?.n || 0) + 1, at: now };
-  delete loc.deaths; // a new run: its disconnects no longer count (combat.mjs relockWait)
-  const R = loc.floorplan;
-  if (R) for (const r of Object.values(R.graph.rooms)) if (r.kind === 'purse') delete R.taken[r.id];
-}
-// Due a reboot: a full clear's minute is up, or a half-done run has sat ROGUE.idleMs since you left (never while you're on it).
-function rebootDue(s, loc, now) {
-  const rr = loc.rogueRun;
-  if (s.run?.loc === loc.id) return false;
-  if (!rr) return true; // its first run (or a save from before runs)
-  if (rr.rebootAt) return now >= rr.rebootAt;
-  const done = Object.values(loc.spawns || {}).some((x) => !x.alive) || Object.values(loc.floorplan?.graph.rooms || {}).some((r) => r.kind === 'purse' && loc.floorplan.taken[r.id] != null);
-  return done && rr.leftAt != null && now >= rr.leftAt + ROGUE.idleMs;
-}
+// A Nest, a Pit or a Gauntlet (not a lair, the farm or an occupied server): rooms laid out from its seed, Stashes, the Exfil.
+export const plainRogue = (loc) => !!loc?.rogue && ['nest', 'pit', 'gauntlet'].includes(loc.rogue.kind) && !loc.occupied && !loc.lair && !loc.farm;
 export const isRogue = (loc) => !!loc?.rogue;
 export const isWild = (loc) => !!(loc?.zone || loc?.rogue);
 // Which servers make you wait before reconnecting: every one (the outposts that didn't went in R2).
 export const relocks = (loc) => !!loc;
 // Seconds until a wild server lets you reconnect (0 = now).
 export const clock = () => hooks.now?.() ?? Date.now();
-// Until when a cleared server is rebooting (a rogue server's run, SPRAWL-00's loc.rebootAt), or 0.
-export const rebootingUntil = (loc) => Math.max(loc?.rogueRun?.rebootAt || 0, loc?.rebootAt || 0);
 export const relockLeft = (loc, now = clock()) => Math.max(0, Math.ceil(((loc?.lockUntil || 0) - now) / 1000));
 
 // Decide, when a server is traced, whether it's rogue (fixed by its seed, with the pity rule).
@@ -111,13 +85,12 @@ export function rogueSpawns(s, loc, now = clock()) {
   if (loc.farm) return farmSpawns(s, loc, now);
   loc.spawns ||= {};
   if (loc.lair) return lairSpawns(s, loc, now, variantFor); // a network's lair (network.mjs)
-  if (inRuns(loc) && rebootDue(s, loc, now)) rogueReboot(s, loc, now);
   // A rogue server keeps up with you inside its floor's band, then tops out (you've outgrown it).
   if (!loc.member && !loc.trunk) loc.level = Math.max(loc.level || 1, SERVER.keepUp(hackerLevel(s), loc.depth || 1));
   const who = netOf(s, loc), native = nativeStrain(s, who); // its network's lean and native strain (network.mjs)
   for (const room of rogueRooms(loc)) {
     const sp = loc.spawns[room];
-    if (sp?.alive || (sp && (sp.respawnAt > now || loc.occupied || inRuns(loc)))) continue; // an occupation doesn't come back; a run's cleared rooms wait for the reboot
+    if (sp?.alive || (sp && (sp.respawnAt > now || loc.occupied))) continue; // an occupation doesn't come back
     const n = (loc.serial = (loc.serial || 0) + 1);
     const seed = ((loc.seed || 1) * 131 + n * 7919) >>> 0;
     const r = seeded(seed);
@@ -134,27 +107,25 @@ export function rogueSpawns(s, loc, now = clock()) {
 export const liveRogue = (loc) => Object.values(loc.spawns || {}).filter((x) => x.alive).length;
 export const rogueRespawn = (s) => ROGUE.respawnMs[0] + Math.floor(rand(s) * (ROGUE.respawnMs[1] - ROGUE.respawnMs[0]));
 
-// After a kill on a rogue server: the folder goes quiet (for the rest of the run, or on its timer),
-// the Pit rolls again for a drop, and the full clear reboots the server (a Gauntlet's pays its cache).
-// Returns true on the full clear (netrooms.mjs jacks you out).
+// After a kill on a rogue server: the folder goes quiet on its timer, the Pit rolls again for a drop, and the full
+// clear (every fight room in one visit, once a visit) pays a Gauntlet's cache. Returns true on the full clear.
 export function rogueKill(s, loc, room, now, extraDrop) {
   const sp = loc.spawns?.[room];
-  if (sp) { sp.alive = false; sp.respawnAt = inRuns(loc) ? null : now + (loc.farm ? (sp.boss ? FARM.bossMs : FARM.packMs) : loc.lair ? (sp.boss ? NETWORK.lairMs : NETWORK.lairPackMs) : rogueRespawn(s)); }
+  if (sp) { sp.alive = false; sp.respawnAt = now + (loc.farm ? (sp.boss ? FARM.bossMs : FARM.packMs) : loc.lair ? (sp.boss ? NETWORK.lairMs : NETWORK.lairPackMs) : rogueRespawn(s)); }
   if (loc.farm) farmKill(s, loc, sp);
   if (loc.occupied && !liveRogue(loc)) occupationCleared(s, loc);
   if (loc.rogue.kind === 'pit') extraDrop();
-  if (!runCleared(loc)) return false;
-  const rr = (loc.rogueRun ||= { n: 1, at: now });
-  rr.rebootAt = now + ROGUE.rebootMs;
+  if (!plainRogue(loc) || s.run?.loc !== loc.id || s.run.cleared) return false;
+  const felled = (s.run.felled ||= {});
+  felled[room] = true;
+  if (!rogueRooms(loc).every((p) => felled[p])) return false;
+  s.run.cleared = true;
   if (loc.rogue.kind === 'gauntlet') {
-    if (!rr.paid) {
-      rr.paid = true;
-      const credits = 60 + 12 * (loc.level || 1), code = 4 + Math.floor((loc.level || 1) / 5);
-      s.server.credits += credits;
-      gainCode(s, { [codeOf(loc.family)]: code }, '');
-      gainXp(s, xpFor(s, loc.level || 1, 1), 'gauntlet cleared', 'fight');
-      emit(s, 'net-good', `GAUNTLET CLEARED. The cache at the root opens: +${credits} credits, +${code} code.`);
-    }
+    const credits = 60 + 12 * (loc.level || 1), code = 4 + Math.floor((loc.level || 1) / 5);
+    s.server.credits += credits;
+    gainCode(s, { [codeOf(loc.family)]: code }, '');
+    gainXp(s, xpFor(s, loc.level || 1, 1), 'gauntlet cleared', 'fight');
+    emit(s, 'net-good', `GAUNTLET CLEARED. The cache at the root opens: +${credits} credits, +${code} code.`);
   }
   return true;
 }

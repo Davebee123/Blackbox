@@ -12,7 +12,7 @@ import { CONFIG, ROOM_FAMILIES } from './dist/data.mjs';
 import { play } from './dist/run.mjs';
 import * as FP from './dist/floorplan.mjs';
 import { rogueGraph, treeGraph, rogueRestore } from './dist/netrooms.mjs';
-import { ROGUE, rogueRooms, rogueSpawns, inRuns } from './dist/rogue.mjs';
+import { ROGUE, rogueRooms, rogueSpawns, plainRogue } from './dist/rogue.mjs';
 import { matesOf } from './dist/crew.mjs';
 import { roomsMarkup } from './dist/floorplan-view.mjs';
 import { boardMarkup } from './dist/view.mjs';
@@ -40,7 +40,7 @@ function rogueSave(kind = null) {
 }
 const connect = (s, loc, chance = 0) => { M.chance = chance; try { return play(s, 'connect ' + loc.id); } finally { M.chance = CHANCE; } };
 // Every fight room down (the chase's ground opens up), or just these up.
-const clearAll = (loc, except = []) => { for (const p of rogueRooms(loc)) Object.assign(loc.spawns[p], { alive: except.includes(p), respawnAt: null }); };
+const clearAll = (loc, except = []) => { for (const p of rogueRooms(loc)) Object.assign(loc.spawns[p], { alive: except.includes(p), respawnAt: except.includes(p) ? null : 1e15 }); };
 const kill = (s) => { for (let i = 0; i < 40 && active(s); i++) { for (const p of s.encounter.virus.parts) Object.assign(p, { armor: 0, integrity: Math.min(p.integrity, 1) }); const p = s.encounter.virus.parts.find((x) => x.integrity > 0); if (p) command(s, 'spike ' + p.id); resolveCycle(s); } FP.settle(s); };
 const place = (s, id) => { const R = s.rooms; R.at = id; R.visit.walked[id] = true; R.screen = null; FP.look(s); };
 const exfil = (s, at) => { const R = s.rooms; R.visit.exfil = { at, seed: 4242, name: 'EXFIL-4242', state: 'loose', seen: true, cornered: false }; return R.visit.exfil; };
@@ -66,14 +66,14 @@ test('quiet rooms: every rogue server has 2 to 4 woven into its tree, from its s
     assert.ok(quiet.some((q) => FP.neighbours(g, q.id).some((n) => g.rooms[n].wild && d[n] > d[q.id])), `seed ${seed}: one between`);
   }
   assert.ok(counts[2] && counts[3] && counts[4], JSON.stringify(counts));
-  // SPRAWL-00, a lair and the farm keep their trees: no quiet rooms, no runs.
-  assert.equal(inRuns({ rogue: { kind: 'lair' }, lair: 'x' }), false);
-  assert.equal(inRuns({ rogue: { kind: 'farm' }, farm: true }), false);
+  // SPRAWL-00, a lair and the farm keep their trees: no quiet rooms.
+  assert.equal(plainRogue({ rogue: { kind: 'lair' }, lair: 'x' }), false);
+  assert.equal(plainRogue({ rogue: { kind: 'farm' }, farm: true }), false);
   const s = fresh(); play(s, 'connect sprawl');
   assert.ok(!Object.values(s.rooms.graph.rooms).some((r) => quietKinds.includes(r.kind)), 'SPRAWL-00 as it was');
 });
 
-test('an Empty room counts toward Rooms n/N as you walk in; a Stash pays a few credits as you walk in and fills again only on the reboot', () => {
+test('an Empty room counts toward Rooms n/N as you walk in; a Stash pays a few credits as you walk in and fills again 30 minutes later', () => {
   const { s, loc } = rogueSave();
   connect(s, loc);
   const R = s.rooms, g = R.graph;
@@ -91,15 +91,11 @@ test('an Empty room counts toward Rooms n/N as you walk in; a Stash pays a few c
   assert.ok(out.some((e) => e.type === 'rooms-good' && /^Stash: \+\d+ credits/.test(e.message)), 'a short notice');
   assert.equal(FP.progressOf(s).done, done + 1, 'Rooms n/N counts it when first taken');
   assert.equal(FP.cacheFull(s, stash), false);
-  clock += 3 * 3600000;
-  assert.equal(FP.cacheFull(s, stash), false, 'no timer: it waits for the reboot');
+  assert.equal(FP.refillAt(s, stash), clock + 30 * 60000, 'full again in 30 minutes');
   FP.go(s, FP.neighbours(g, stash.id)[0]); const c2 = s.server.credits; FP.go(s, stash.id);
   assert.equal(s.server.credits, c2, 'nothing the second time');
   assert.doesNotMatch(roomsMarkup(s), /undefined|NaN/);
-  play(s, 'jack out');
-  // A reboot (the full clear's, or the idle one) fills it.
-  loc.rogueRun.rebootAt = clock; clock += 1; loc.lockUntil = 0;
-  connect(s, loc);
+  clock += 30 * 60000;
   assert.ok(FP.cacheFull(s, stash), 'full again');
 });
 
@@ -218,32 +214,21 @@ test('its item is sure but plain: the best of two trash rolls (a white otherwise
   assert.ok(Math.abs(more - base) < 40, `${more} vs ${base}: flat`);
 });
 
-test('the roll: once a run, at its first connect; reconnecting mid-run never rolls again; a new roll takes a full clear and its reboot', () => {
+test('the roll: once a visit, as you connect; inside your cooldown nothing; past it the next visit rolls again', () => {
   const { s, loc } = rogueSave();
   connect(s, loc, 1);
-  assert.ok(FP.exfilOf(s), 'an Exfil this run');
+  assert.ok(FP.exfilOf(s), 'an Exfil this visit');
   assert.equal(s.exfil.n, 1);
   assert.match(FP.exfilOf(s).name, /^EXFIL-\d{4}$/);
   play(s, 'jack out');
   assert.equal(loc.floorplan.visit.exfil.state, 'gone', 'jacking out ends it');
   loc.lockUntil = 0;
   connect(s, loc, 1);
-  assert.equal(FP.exfilOf(s), null, 'reconnecting mid-run rolls nothing');
+  assert.equal(FP.exfilOf(s), null, 'inside the cooldown: nothing');
   play(s, 'jack out');
-  // Past the cooldown, still the same run: nothing.
   clock += M.cooldownMs + 1; loc.lockUntil = 0;
   connect(s, loc, 1);
-  assert.equal(FP.exfilOf(s), null, 'one roll a run');
-  // The full clear: reboot, a new run, a new roll.
-  clearAll(loc, [rogueRooms(loc)[0]]);
-  const g = s.rooms.graph, last = FP.roomList(s).find((r) => r.path0 === rogueRooms(loc)[0]);
-  const way = FP.pathTo(g, s.rooms.at, last.id);
-  for (const id of way.slice(1)) FP.go(s, id);
-  play(s, 'engage'); kill(s);
-  assert.equal(s.run, null, 'rebooting');
-  clock += ROGUE.rebootMs;
-  connect(s, loc, 1);
-  assert.ok(FP.exfilOf(s), 'a new run rolls again');
+  assert.ok(FP.exfilOf(s), 'past it: a new roll');
   assert.equal(s.exfil.n, 2);
 });
 
@@ -263,25 +248,14 @@ test('the cooldown is yours, on your save: 45 minutes across every rogue server 
   clock += 10 * 60000;
   connect(s, other, 1);
   assert.equal(FP.exfilOf(s), null, 'another rogue server, inside the cooldown: no Exfil');
-  assert.ok(other.rogueRun.rolled, 'and its run had its roll');
   play(s, 'jack out');
-  // Its run left half done reboots on its own 30 minutes after you left: a new run, still inside the cooldown.
-  other.spawns[rogueRooms(other)[0]].alive = false;
-  clock += ROGUE.idleMs + 1; other.lockUntil = 0;
-  assert.ok(clock < at + M.cooldownMs);
-  const n = other.rogueRun.n;
-  connect(s, other, 1);
-  assert.equal(other.rogueRun.n, n + 1, 'the idle reboot: a new run');
-  assert.equal(FP.exfilOf(s), null, 'the cooldown still holds');
-  play(s, 'jack out');
-  // Past the cooldown, the next new run rolls.
-  clock = at + M.cooldownMs + 1;
-  other.spawns[rogueRooms(other)[0]].alive = false; other.rogueRun.leftAt = clock - ROGUE.idleMs - 1; other.lockUntil = 0;
+  // Past the cooldown, the next visit rolls.
+  clock = at + M.cooldownMs + 1; other.lockUntil = 0;
   connect(s, other, 1);
   assert.ok(FP.exfilOf(s), 'past 45 minutes: an Exfil');
 });
 
-test('jacking out mid-chase or mid-fight ends the Exfil for the run, and its cooldown still runs', () => {
+test('jacking out mid-chase or mid-fight ends the Exfil, and its cooldown still runs', () => {
   const { s, loc } = rogueSave();
   connect(s, loc, 1);
   const R = s.rooms, g = R.graph;
@@ -297,7 +271,7 @@ test('jacking out mid-chase or mid-fight ends the Exfil for the run, and its coo
   assert.notEqual(R.visit.exfil?.state, 'loose');
   clock += 60000; loc.lockUntil = 0;
   connect(s, loc, 1);
-  assert.equal(FP.exfilOf(s), null, 'gone for the run');
+  assert.equal(FP.exfilOf(s), null, 'gone');
   assert.ok(clock < s.exfil.at + M.cooldownMs, 'its cooldown runs on');
 });
 
@@ -439,7 +413,6 @@ test('an old save\'s Mule is the Exfil: s.mule becomes s.exfil (the cooldown car
   (old.dex ||= {}).kills = { ...(old.dex.kills || {}), mule: 3 };
   old.settings.seen = { ...(old.settings.seen || {}), mule: 1 };
   const L = old.locations.find((l) => l.id === loc.id);
-  L.rogueRun.mule = L.rogueRun.exfil; delete L.rogueRun.exfil;
   L.floorplan.visit.mule = { ...L.floorplan.visit.exfil, name: 'MULE-1234', state: 'loose' }; delete L.floorplan.visit.exfil;
   const back = restore(old);
   assert.equal(back.mule, undefined);
@@ -451,13 +424,12 @@ test('an old save\'s Mule is the Exfil: s.mule becomes s.exfil (the cooldown car
   assert.equal(back.dex.kills.exfil, 3);
   assert.equal(back.settings.seen.exfil, 1);
   const B = back.locations.find((l) => l.id === loc.id);
-  assert.ok(B.rogueRun.exfil && B.rogueRun.mule === undefined);
   assert.equal(B.floorplan.visit.exfil.name, 'EXFIL-1234');
   assert.equal(B.floorplan.visit.mule, undefined);
   // Inside the cooldown, still: no Exfil on the next run.
   const again = restore(JSON.parse(JSON.stringify(back)));
   assert.deepEqual(again.exfil, back.exfil, 'twice is once');
-  B.rogueRun.rebootAt = clock; clock += 1; B.lockUntil = 0;
+  clock += 1; B.lockUntil = 0;
   connect(back, B, 1);
   assert.equal(FP.exfilOf(back), null, 'the carried cooldown still blocks');
 });

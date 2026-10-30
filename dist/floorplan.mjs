@@ -25,7 +25,7 @@
 //   respawns    fight rooms come back on real time (ROOMS.respawn, ×ROOMS speed in the playtest), never while you stand
 //               in them; a cache refills. Nothing expires: a week away and the server is just full again.
 //   quiet rooms a rogue server's (netrooms.mjs rogueGraph): Empty (nothing in it, cleared as you walk in) and Stash
-//               (a few credits, taken as you walk in, full again when the server reboots: rogue.mjs rogueReboot).
+//               (a few credits, taken as you walk in, full again ROOMS.respawn.purse minutes later).
 //   quirk rooms a traced server's quirk (netrooms.mjs placeQuirkRoom), both optional (never in Rooms n/N): a Worm
 //               server's nest (a Crawler with its brood out, paying components: addNest) and a Ghostroot server's
 //               hidden room (off the map until you clear the room beside it, then open for good, a stash: addSecret,
@@ -79,7 +79,7 @@ export const ROOMS = {
   // the slow timers (respawnNew): a rest at home takes 3 to 5 minutes, and on the farm timers every visit would fight its
   // way back down the spine (the rooms sim mapped 0 servers in 12). Caches and puzzle boards: 2 hours either way. The
   // core: R0 has no takeover, so it comes back on its own.
-  respawn: { process: 2, elite: 5, guard: 3, core: 10, cache: 120 },
+  respawn: { process: 2, elite: 5, guard: 3, core: 10, cache: 120, purse: 30 },
   respawnNew: { process: 15, elite: 45, guard: 20, core: 60 },
   speed: 1, // the playtest runs the clocks ten times as fast (app.js)
   reconnect: 30000, // after you leave, the server takes you back this much later
@@ -663,10 +663,9 @@ export function isUp(s, room, now = nowOf()) {
 export const backAt = (s, room) => { const w = world(s) ? ask('back', s, room) : undefined; return w !== undefined ? w : s.rooms.down[room.id] != null ? s.rooms.down[room.id] + respawnMs(s, room) : null; };
 // When it fell (the respawn ring's start), or null.
 export const downAt = (s, room) => { const w = world(s) ? ask('from', s, room) : undefined; return w !== undefined ? w : s.rooms.down[room.id] ?? null; };
-// (A Stash has no timer: it's full again when its server reboots.)
-const refillMs = (s, room) => mins(s, ROOMS.respawn.cache) * (room.kind === 'cache' && runs(s, 'mill') ? 0.5 : 1); // a Cache Mill: twice as fast
-export const cacheFull = (s, room, now = nowOf()) => STOCKED.includes(room.kind) && (s.rooms.taken[room.id] == null || (room.kind !== 'purse' && now >= s.rooms.taken[room.id] + refillMs(s, room)));
-export const refillAt = (s, room) => (s.rooms.taken[room.id] != null && room.kind !== 'purse' ? s.rooms.taken[room.id] + refillMs(s, room) : null);
+const refillMs = (s, room) => mins(s, ROOMS.respawn[room.kind === 'purse' ? 'purse' : 'cache']) * (room.kind === 'cache' && runs(s, 'mill') ? 0.5 : 1); // a Cache Mill: twice as fast
+export const cacheFull = (s, room, now = nowOf()) => STOCKED.includes(room.kind) && (s.rooms.taken[room.id] == null || now >= s.rooms.taken[room.id] + refillMs(s, room));
+export const refillAt = (s, room) => (s.rooms.taken[room.id] != null ? s.rooms.taken[room.id] + refillMs(s, room) : null);
 // Bait: one cache in four, fresh with each refill.
 export const isBait = (s, room) => room.kind === 'cache' && !room.mirror && seeded((room.baitSeed + (s.rooms.spawns[room.id] || 0) * 7919) >>> 0)() < 0.25;
 export const coreOpen = (s) => { const w = world(s) ? ask('coreOpen', s) : undefined; return w !== undefined ? w : !!s.rooms.opened[s.rooms.graph.vaults[0]]; };
@@ -1224,7 +1223,7 @@ function takeCache(s, room) {
   R.spawns[room.id] = (R.spawns[room.id] || 0) + 1;
   clear(s, room);
 }
-// A Stash (a rogue server's quiet room): a few credits, now and then a code, full again when the server reboots.
+// A Stash (a rogue server's quiet room): a few credits, now and then a code, full again ROOMS.respawn.purse minutes later.
 function takePurse(s, room) {
   const R = s.rooms, got = (R.world ? ask('purse', s, room) : null) || { credits: ROOMS.purse(R.level), code: 0 };
   if (!R.world) { R.credits += got.credits; s.server.credits += got.credits; }

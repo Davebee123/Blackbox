@@ -8,7 +8,7 @@ import { gainComponents } from './salvage.mjs';
 import { CONFIG, FAMILIES, GUARDS, QUIRKS, MONTHS, SKILLS, SERVER, XP, BOSSES, layerOf } from './data.mjs';
 import { hasSpecial, armoredAt, SPECIAL } from './specials.mjs';
 import { sweepFile, showSweep, sweepCommand } from './forensics.mjs';
-import { isWild, relocks, rogueLayout, rogueSpawns, rogueMotd, liveRogue, ROGUE, relockLeft, rebootingUntil, clock, farmFile } from './rogue.mjs';
+import { isWild, relocks, rogueLayout, rogueSpawns, rogueMotd, liveRogue, ROGUE, relockLeft, clock, farmFile } from './rogue.mjs';
 import { findLocation, closest, command, selectEncounter, encounterVirus, active, emit, warn, hackerLevel, addLead, addLocation, disconnect, hooks, maxSignal, classOf, equippedSkills, knownSkills, serverLevel, gainXp, addItem, gearStat, regenRate, xpFor, deedXpFor, gainCode, UNIQUES, effectLine, loadoutSuggestions } from './combat.mjs';
 import { ZERO_DAYS, RARITIES, LOOT, uniqueItem, rollItem, seeded, statLine, itemLabel, MATERIALS, codeOf, vaultCode } from './gear.mjs';
 import { jackIn, developerNetwork, invasionsCommand, sabotageBlock } from './invasion.mjs';
@@ -85,25 +85,19 @@ export const LAYOUTS = {
 // The rogue server lives in zone.mjs (mail.mjs needs it too); its layout joins the rest here.
 LAYOUTS.sprawl = SPRAWL;
 const ZONE_FAMILIES = ['ransomware', 'worm', 'ghostroot'];
-// Fill empty folders. SPRAWL-00 runs in clears: a stray you kill (respawnAt null) stays down until nothing in it is
-// left alive, then it reboots: you're jacked out, it's offline CONFIG.zone.rebootMs (z.rebootAt), then every stray is back (z.reboots). Its Core is sealed, and empty, until level 3 and
-// its first reboot; then it holds RELAY-KING, on his own timer. Each spawn is a plain virus of a home family at
-// your level, up to CONFIG.zone.maxLevel: past that, the fights worth having are on the servers you trace. Below
-// level 3 no Ghostroot (it's veiled): your first fights show you what's coming (Slay the Spire).
-export const kingOpen = (s, z = zoneOf(s)) => hackerLevel(s) >= 3 && (z.reboots || 0) > 0;
-export const zoneCleared = (z) => !Object.values(z.spawns || {}).some((x) => x.alive);
+// Fill empty folders whose timer is up: a stray CONFIG.zone.respawnMs after it falls. Its Core is sealed, and empty,
+// until level 3; then it holds RELAY-KING, on his own timer. A contract's named target holds its room until it falls.
+// Each spawn is a plain virus of a home family at your level, up to CONFIG.zone.maxLevel: past that, the fights worth
+// having are on the servers you trace. Below level 3 no Ghostroot (it's veiled): your first fights show you what's
+// coming (Slay the Spire).
+export const kingOpen = (s) => hackerLevel(s) >= 3;
 export function zoneSpawns(s, now = clock()) {
   const z = zoneOf(s);
-  if (!kingOpen(s, z)) delete z.spawns[KING_ROOM]; // a sealed Core holds nothing (a save from before held a stray, or the king)
-  const clear = zoneCleared(z);
-  if (clear && Object.keys(z.spawns).length) {
-    if (now < (z.rebootAt || 0)) return z.spawns; // rebooting
-    z.reboots = (z.reboots || 0) + 1;
-  }
+  if (!kingOpen(s)) delete z.spawns[KING_ROOM]; // a sealed Core holds nothing (a save from before held a stray, or the king)
   for (const room of zoneRooms()) {
     const sp = z.spawns[room];
-    if (sp?.alive || (sp && (sp.respawnAt == null ? !clear : sp.respawnAt > now))) continue;
-    if (room === KING_ROOM && !kingOpen(s, z)) continue;
+    if (sp?.alive || (sp && sp.respawnAt > now)) continue; // a stray down until its clears (respawnAt null) is back
+    if (room === KING_ROOM && !kingOpen(s)) continue;
     const n = ++z.serial;
     const pool = hackerLevel(s) < 3 ? ZONE_FAMILIES.filter((f) => f !== 'ghostroot') : ZONE_FAMILIES;
     const family = pool[(n + room.length) % pool.length];
@@ -411,7 +405,7 @@ export function connect(s, id) {
   else if (s.server.integrity <= 0) warn(s, 'Your server crashed. Reboot before running.');
   else if (loc.fresh && loc.detached && !joinCost(s, loc).fits) warn(s, `${loc.name} needs ${joinCost(s, loc).add} memory; ${memoryCap(s) - liveCount(s)} free (${liveCount(s)}/${memoryCap(s)}). Detach something first.`);
   else if (!loc.fresh && (loc.detached || (s.locations.includes(loc) && !isLive(s, loc)))) warn(s, `${loc.name} is detached from your network. Attach it first (its map card).`);
-  else if (relocks(loc) && relockLeft(loc)) warn(s, rebootingUntil(loc) > clock() ? `${loc.name} is rebooting. Back in ${relockLeft(loc)}s, every room fresh.` : `${loc.name} is still tracing your last connection. Reconnect in ${relockLeft(loc)}s.`);
+  else if (relocks(loc) && relockLeft(loc)) warn(s, `${loc.name} is still tracing your last connection. Reconnect in ${relockLeft(loc)}s.`);
   else if (loc.farm && !(s.crewSim || []).length) warn(s, `${loc.name} is built for a crew. Bring one first with crew sim <class> or crew invite <friend>.`);
   else if (loc.member && (loc.depth || 1) > floorsReached(s)) warn(s, `${loc.name} is on floor ${loc.depth}. Reach that floor yourself first.`); // a member's servers: on floors you've opened (GAME_RULES.md "Consortium")
   else {

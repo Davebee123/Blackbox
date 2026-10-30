@@ -17,8 +17,8 @@ was set up for you and that wick of LOWLIGHT will write. Then you pick a class (
 
 1. `connect sprawl`: **SPRAWL-00**, the starter server, six rooms of strays at your level (never above 5, now and
    then one a level higher). Walk into a room and `engage`. Your first two kills there hit at 60%
-   (`CONFIG.zone.starterHit`). A kill pays at once. A stray you kill stays down until nothing in SPRAWL-00 is left
-   alive; then it **reboots** (**SERVER CLEARED**): you're jacked out, and 30 seconds later every stray is back. Its Core opens from level 3, after its first reboot.
+   (`CONFIG.zone.starterHit`). A kill pays at once, and the room fills again 90 seconds later. Its Core opens from
+   level 3.
 2. The network is a stack of eight **floors**; SPRAWL-00 is floor 1's entry. The servers linked to what you know show
    as **?**: kills and first clears **trace** them, and at 100% one is located (Floors, The hidden network).
 3. `connect <server>` starts a run. Out on the net your health is **Signal** (100 × your power, plus gear). It carries
@@ -450,7 +450,7 @@ quiet for good. Lose and you're disconnected, and for 6 hours it is a level stro
 
 | Boss | Where | From | Integrity | Phase | Enrages |
 |---|---|---|---|---|---|
-| RELAY-KING (worm) | SPRAWL-00's relay room, a Core sealed until level 3 and SPRAWL-00's first reboot; back 30 minutes after it falls | level 3 | 1.6× | every attack a cycle sooner | cycle 16 |
+| RELAY-KING (worm) | SPRAWL-00's relay room, a Core sealed until level 3; back 30 minutes after it falls | level 3 | 1.6× | every attack a cycle sooner | cycle 16 |
 | REPO MAN (ransomware) | The Bounty event from level 8 | level 8 | 1.6× | 60%: re-arms every part; 30%: every attack a cycle sooner | cycle 18 |
 | HOLLOW CHOIR (ghostroot) | Its own event, from level 10 | level 10 | 1.6× | Harmony: when its Decoy points at itself, 75% of a hit bounces back | cycle 16 |
 
@@ -681,8 +681,8 @@ Named runners, one per crew, racing you to a traced server's vault ([docs/rivals
   medium server; `mappedShare`). A first clear pays no XP of its own. Caches, puzzle rooms, thread rooms and quirk
   rooms never count.
 - **Wild servers** (SPRAWL-00, a lair, the farm) can't be taken over: each room is a fight, and kills pay straight
-  into your bank. SPRAWL-00 runs in clears: its strays come back together once nothing in it is alive, RELAY-KING
-  included while he's up (he keeps his own 30 minutes); a lair's and the farm's rooms keep their own timers. Rogue servers run in clears too.
+  into your bank. Each room fills again on its own timer (SPRAWL-00's 90 seconds, RELAY-KING's 30 minutes, a rogue
+  server's 3–5 minutes). A contract's named target holds its room until it falls.
 
 ### Visits
 
@@ -693,7 +693,7 @@ Named runners, one per crew, racing you to a traced server's vault ([docs/rivals
 - **Jack out** (`jack out`, or the strip's button) from any room banks your **pack** (cache credits and code, the
   vault's files, kill drops; a **Banked** card) and sends you home.
 - **Reconnect wait.** A server you leave takes you back after 30 s (`CONFIG.relockMs`), +15 s for each disconnect on
-  its run, 2 min at most (`CONFIG.deathWait`). A clean jack out or a reboot resets the count. Connect counts it down,
+  its run, 2 min at most (`CONFIG.deathWait`). A clean jack out resets the count. Connect counts it down,
   with ☠ and the count. Deadman's Switch counts as a jack out.
 - **Home while out:** an invasion that wants you waits until you're back.
 - **Contracts ready:** a yellow ✓ by Mail on the top bar.
@@ -811,13 +811,12 @@ as you walk in, 1 code one time in five). No vault, nothing to take over, no puz
 |---|---|
 | Nest | One family only, and strains twice as often |
 | Pit | Mixed families, 2 levels above the server, a second roll for drops. A third of its rooms hold a **◆ CREW elite** (Co-op); one that beats you, or that you run from, moves on and the room fills again in 30 minutes |
-| Gauntlet | Mixed families; the full clear pays a bonus cache (60 + 12×level credits, code, XP), once a run |
+| Gauntlet | Mixed families; clear every fight room in one visit for a bonus cache (60 + 12×level credits, code, XP) |
 
-**It runs in clears.** A fight room you clear stays down for the run. Clear them all and the server reboots (**SERVER
-CLEARED**): you're jacked out with your pack banked, and it's offline a minute, then fresh. A run you leave half done
-keeps its progress and reboots on its own 30 minutes after you last left. Your runs are your own.
+Each fight room fills again 3–5 minutes after it falls, a Stash 30 minutes after you take it. Clearing every fight
+room in one visit is a **full clear**.
 
-**The Exfil.** Each run rolls once as it starts: 25% (`CONFIG.exfil`) for an **Exfil**, a process smuggling an archive
+**The Exfil.** Each visit rolls once as you connect: 25% (`CONFIG.exfil`) for an **Exfil**, a process smuggling an archive
 off the server (**EXFIL-####**). After one turns up, none does on any rogue server you visit for 45 minutes.
 - It starts in the room farthest from you that no live virus holds: a gold archive on its chip, an amber dashed arrow
   to where it runs next, *Exfil running* on the strip. After each of your moves it steps to the neighbour farthest
@@ -825,7 +824,7 @@ off the server (**EXFIL-####**). After one turns up, none does on any rogue serv
 - **Catch it** by walking into its room: a short fight with an Uplink and an Archive, light hits. Its row counts the
   upload (its objective), **Upload 0/6**: still up at the end of cycle 6 and the archive is gone. Break it in time: **Archive
   recovered**: 10 Stashes' worth of credits, one item at the server's level (the best of two trash rolls, a white if
-  both miss), 5% one of the server's uniques, and a process kill's XP. Jack out and it's gone for the run.
+  both miss), 5% one of the server's uniques, and a process kill's XP. Jack out and it's gone.
 
 ### Threads
 

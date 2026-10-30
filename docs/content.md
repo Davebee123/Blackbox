@@ -47,7 +47,7 @@ one's reward waits.
 | To climb | Trace and map servers toward the floor's exit | 30–60 min a server | XP, gear, trace | The floor itself |
 | Code | A held server with programs (Harvester, Code Siphon, Cron Spawner) | 15–30 min | Code of its family, components to sell | Rooms: 2–10 min once Mapped or held |
 | A boss unique | The lair, RELAY-KING, an event boss, the farm | 5–20 min a boss | Uniques (with pity), a sure item | Lair 1 h, RELAY-KING 30 min, farm 6 h, events every 15–30 min |
-| A fast clear | A rogue server's run, and an Exfil if it rolls | 10–20 min | XP, Stashes, the Exfil's archive | Reboot 1 min after a full clear; Exfil 45 min |
+| A fast clear | A rogue server's visit, and an Exfil if it rolls | 10–20 min | XP, Stashes, a Gauntlet's cache, the Exfil's archive | Rooms 3–5 min, Stashes 30 min; Exfil 45 min |
 | Daemons and code | Jack in at the wall | 5 min an invasion | Code bounties, daemons (the only source) | Every 20–30 min |
 | Credits and standing | Contracts, room contracts, supply orders *(planned)* | 10–30 min | Credits, standing, XP, protocols | Offers every 1–3 min |
 | A break between fights | A puzzle room | 1–3 min | Code, a cache, the Tracker off your trail | 2 h |

@@ -10,7 +10,7 @@ import { CONFIG, BOSSES } from './dist/data.mjs';
 import { play, currentLocation, LEGACY, KING_ROOM } from './dist/run.mjs';
 import * as FP from './dist/floorplan.mjs';
 import { roomsFor, summaryOf, sprawlGraph } from './dist/netrooms.mjs';
-import { ROGUE, rogueRooms } from './dist/rogue.mjs';
+import { ROGUE, rogueRooms, rogueSpawns } from './dist/rogue.mjs';
 import { ROOT, ROOT_PERKS } from './dist/root.mjs';
 import { openContracts, ready } from './dist/mail.mjs';
 import { roomsMarkup } from './dist/floorplan-view.mjs';
@@ -52,7 +52,7 @@ test('a fresh level-1 character: connect sprawl plays SPRAWL-00 as rooms, its fo
   assert.match(play(s, 'ls').find((e) => e.type === 'rooms-out').message, new RegExp(`${net.path}  \\[fight · \\w+ lv 1\\]`), 'been in: discovered');
   Object.assign(s.zone.spawns['/net'], { alive: false, respawnAt: clock + 3600000 });
   assert.match(play(s, 'cd /net/relay').map((e) => e.message).join(' '), /The Core is sealed\. RELAY-KING holds it from level 3/);
-  // A stray: a fight, its first clear, down until every room is cleared, then back.
+  // A stray: a fight, its first clear, back on its timer once you've left.
   play(s, 'cd /'); play(s, 'cd tmp');
   assert.equal(s.run.cwd, Object.values(g.rooms).find((r) => r.path0 === '/tmp').path);
   play(s, 'attack');
@@ -62,22 +62,13 @@ test('a fresh level-1 character: connect sprawl plays SPRAWL-00 as rooms, its fo
   const room = FP.hereOf(s);
   assert.ok(s.rooms.cleared[room.id], 'cleared for good');
   assert.equal(FP.isUp(s, room), false);
-  clock += 3600000;
-  assert.equal(FP.isUp(s, room), false, 'down while others still stand, however long');
-  assert.equal(FP.WORLD.view.downNote(s, room), 'Down until every room is cleared.');
-  // The last one falls: you're jacked out, it reboots for half a minute, then every stray is back.
-  for (const [p, sp] of Object.entries(s.zone.spawns)) if (p !== '/srv') Object.assign(sp, { alive: false, respawnAt: null });
-  play(s, 'cd ..'); play(s, 'cd /srv'); play(s, 'attack'); win(s);
-  assert.equal(s.run, null, 'the clear jacks you out');
-  assert.ok(s.logs.some((e) => e.type === 'jacked-out' && /SERVER CLEARED\. Reboot in progress/.test(e.message)));
-  assert.match(play(s, 'connect sprawl').map((e) => e.message).join(' '), /is rebooting\. Back in 30s/);
-  assert.ok(Object.values(s.zone.spawns).every((x) => !x.alive), 'nothing back while it reboots');
-  clock += CONFIG.zone.rebootMs;
-  play(s, 'connect sprawl');
-  assert.ok(s.run, 'back up');
-  assert.ok(Object.values(s.zone.spawns).every((x) => x.alive), 'every stray back');
+  assert.equal(FP.WORLD.view.downNote(s, room), 'Back in 1:30.');
+  clock += CONFIG.zone.respawnMs + 1000;
+  assert.equal(FP.isUp(s, room), false, 'never back while you stand in it');
+  play(s, 'cd ..');
+  assert.equal(FP.isUp(s, room), true, 'back once you have left');
   // Level 3: RELAY-KING in the Core, a boss under boss rule a.
-  s.hackers[s.loadout.archetype].level = 3; s.zone.spawns = {}; s.zone.reboots = 1;
+  s.hackers[s.loadout.archetype].level = 3; s.zone.spawns = {};
   play(s, 'cd /'); play(s, 'cd net'); if (s.rooms.screen) { play(s, 'attack'); win(s); }
   play(s, 'cd relay');
   assert.equal(s.rooms.screen?.kind, 'virus');
@@ -164,7 +155,7 @@ test('losing a fight on rooms disconnects you and loses the pack; progress stays
   assert.ok(loc.floorplan.opened[loc.floorplan.graph.vaults[0]], 'the vault stays open');
 });
 
-test('respawns run at real speed: a process room 15 minutes, a guard post 20, an elite 45 while you explore; 2, 3, 5 and the Core 10 once it is Mapped or yours; a rogue room stays down for the run', () => {
+test('respawns run at real speed: a process room 15 minutes, a guard post 20, an elite 45 while you explore; 2, 3, 5 and the Core 10 once it is Mapped or yours; a rogue room 3 to 5', () => {
   const { s, loc } = traced();
   play(s, 'connect ' + loc.id);
   const kinds = Object.fromEntries(FP.roomList(s).filter((r) => FP.FIGHTS.includes(r.kind)).map((r) => [r.kind, FP.respawnMs(s, r)]));
@@ -180,7 +171,7 @@ test('respawns run at real speed: a process room 15 minutes, a guard post 20, an
   if (held.core) assert.equal(held.core, 10 * 60000);
   loc.takenOver = false;
   play(s, 'jack out');
-  // A rogue server: a fight room for every folder (and its quiet rooms: exfil.test.mjs); a cleared one stays down for the run.
+  // A rogue server: a fight room for every folder (and its quiet rooms: exfil.test.mjs); a cleared one back on its own timer.
   for (let i = 0; i < 40 && !s.locations.some((l) => l.rogue && !l.farm); i++) { (s.net ||= {}).rogueDry = ROGUE.pity; command(s, 'developer location worm'); }
   const rogue = s.locations.find((l) => l.rogue && !l.farm);
   rogue.lockUntil = 0;
@@ -194,9 +185,12 @@ test('respawns run at real speed: a process room 15 minutes, a guard post 20, an
   play(s, 'attack'); win(s);
   const sp = rogue.spawns[r0.path0];
   assert.equal(sp.alive, false);
-  assert.equal(FP.backAt(s, r0), null, 'no timer: it waits for the reboot');
-  clock += ROGUE.respawnMs[1] * 3;
-  assert.equal(FP.isUp(s, r0), false, 'still down this run');
+  const back = FP.backAt(s, r0) - clock;
+  assert.ok(back >= ROGUE.respawnMs[0] && back <= ROGUE.respawnMs[1], '3 to 5 minutes');
+  play(s, 'jack out');
+  clock += ROGUE.respawnMs[1] + 1000;
+  rogueSpawns(s, rogue, clock);
+  assert.equal(rogue.spawns[r0.path0].alive, true, 'back');
 });
 
 test('root: respawned rooms cleared on a held server climb its pips (2.8); Root 4 is one more socket room', () => {
@@ -243,7 +237,7 @@ test('developer bossrule a|b|c switches the rule for every boss fight on the net
   play(s, 'developer bossrule b');
   assert.equal(s.bossRule, 'b');
   s.hackers[s.loadout.archetype].level = 3;
-  play(s, 'connect sprawl'); s.zone.reboots = 1; s.zone.spawns['/net'] = { alive: false, respawnAt: clock + 1e9 };
+  play(s, 'connect sprawl'); s.zone.spawns['/net'] = { alive: false, respawnAt: clock + 1e9 };
   play(s, 'cd net/relay'); play(s, 'attack');
   assert.equal(s.encounter.bossRule, 'b');
 });
@@ -380,7 +374,7 @@ test('you go back in with the Signal you topped up to, never the Signal you star
   assert.equal(s.run.integrity, maxSignal(s));
 });
 test('each disconnect on a run adds 15 s, up to 2 minutes; a clean jack out clears the count; other servers keep 30 s', async () => {
-  const { disconnect } = await import('./dist/combat.mjs'), { relockLeft, rogueReboot } = await import('./dist/rogue.mjs');
+  const { disconnect } = await import('./dist/combat.mjs'), { relockLeft } = await import('./dist/rogue.mjs');
   const { s, loc } = traced();
   const die = () => { clock += 5 * 60000; s.signal = null; play(s, 'connect ' + loc.id); assert.ok(s.run, 'connected'); s.run.integrity = 0; disconnect(s, 'Signal lost'); return relockLeft(loc); };
   assert.equal(die(), 45, 'the first: 45 s');
@@ -398,7 +392,4 @@ test('each disconnect on a run adds 15 s, up to 2 minutes; a clean jack out clea
   assert.equal(relockLeft(loc), 30);
   assert.equal(loc.deaths, undefined);
   assert.equal(die(), 45, 'counting from one again');
-  // So does the server's reboot (a rogue server's new run).
-  rogueReboot(s, loc);
-  assert.equal(loc.deaths, undefined);
 });

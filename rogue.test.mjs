@@ -62,7 +62,7 @@ test('kinds: a Nest is one family, a Pit runs 2 levels hot', () => {
   for (const sp of Object.values(rogueSpawns(s, pit))) assert.equal(sp.level, pit.level + ROGUE.pitLevels);
 });
 
-test('a kill empties the room for the rest of the run; the full clear pays the Gauntlet once and reboots the server', () => {
+test('a kill empties the room for 3 to 5 minutes; every room cleared in one visit pays the Gauntlet, once a visit', () => {
   let t = 1_000_000;
   hooks.now = () => t;
   try {
@@ -84,22 +84,14 @@ test('a kill empties the room for the rest of the run; the full clear pays the G
       FP.settle(s);
       const sp = loc.spawns[next.path0];
       assert.equal(sp.alive, false);
-      assert.equal(sp.respawnAt, null, 'no timer: down until the reboot');
-      if (n < rooms.length - 1) { t += ROGUE.respawnMs[1] + 1; assert.equal(rogueSpawns(s, loc, t)[next.path0].alive, false, 'still down this run'); }
+      assert.ok(sp.respawnAt - t >= ROGUE.respawnMs[0] && sp.respawnAt - t <= ROGUE.respawnMs[1], 'back in 3 to 5 minutes');
+      assert.equal(s.logs.some((e) => /GAUNTLET CLEARED/.test(e.message)), n === rooms.length - 1, 'the cache pays on the last room');
     }
-    assert.ok(loc.rogueRun.paid, 'the Gauntlet paid');
     assert.ok(s.server.credits > credits0);
-    assert.equal(s.run, null, 'the full clear jacks you out');
-    assert.ok(s.logs.some((e) => e.type === 'jacked-out' && /SERVER CLEARED\. Reboot in progress/.test(e.message)));
-    assert.equal(relockLeft(loc, t), ROGUE.rebootMs / 1000, 'offline a minute');
-    play(s, `connect ${loc.id}`);
-    assert.ok(!s.run, 'still rebooting');
-    t += ROGUE.rebootMs;
-    play(s, `connect ${loc.id}`);
-    assert.ok(s.run, 'back up');
-    assert.ok(Object.values(rogueSpawns(s, loc, t)).every((x) => x.alive), 'every room fresh');
-    assert.equal(loc.rogueRun.n, 2, 'a new run');
-    assert.ok(!loc.rogueRun.paid, 'its Gauntlet cache to pay again');
+    assert.ok(s.run, 'the full clear leaves you on the server');
+    assert.ok(s.run.cleared);
+    t += ROGUE.respawnMs[1] + 1;
+    assert.ok(Object.values(rogueSpawns(s, loc, t)).every((x) => x.alive), 'every room back on its timer');
   } finally { delete hooks.now; }
 });
 

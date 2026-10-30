@@ -112,13 +112,10 @@ test('early bosses: RELAY-KING holds /net/relay from level 3; the bounty is REPO
   const { deal } = await import('./dist/events.mjs');
   const s = fresh();
   s.hackers = { breaker: { level: 2, xp: 0 } };
-  zoneSpawns(s); s.zone.reboots = 1;
+  zoneSpawns(s);
   assert.ok(!zoneSpawns(s)[KING_ROOM], 'not before level 3: the Core sealed and empty');
-  s.hackers.breaker.level = 3; s.zone.reboots = 0; s.zone.spawns = {};
-  assert.ok(!zoneSpawns(s)[KING_ROOM], 'nor before SPRAWL-00 first reboots');
-  for (const sp of Object.values(s.zone.spawns)) Object.assign(sp, { alive: false, respawnAt: null });
-  assert.equal(zoneSpawns(s)[KING_ROOM].boss, 'relayking', 'the first reboot opens the Core');
-  assert.equal(s.zone.reboots, 1);
+  s.hackers.breaker.level = 3;
+  assert.equal(zoneSpawns(s)[KING_ROOM].boss, 'relayking', 'level 3 opens the Core');
   s.hackers.breaker.level = 8;
   command(s, 'developer location worm');
   assert.equal(deal(s, 'bounty').boss, 'repoman');

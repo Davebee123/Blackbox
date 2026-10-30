@@ -31,7 +31,7 @@ import { chipOf, virusGenes, scannedDeep, scannedRead, packedChip, packsGene } f
 import { mastered, RESEARCH, TIER } from './research.mjs';
 import { SFX, levelOf as sfxLevel } from './screenfx.mjs';
 import { currentLocation, takeable, takenOf, liveSpawns, zoneRooms, signalNow, zoneSpawns, TRACE } from './run.mjs';
-import { ROGUE, rogueSpawns, rogueRooms, relockLeft, rebootingUntil, FARM_UNIQUES, clock as rogueClock } from './rogue.mjs';
+import { ROGUE, rogueSpawns, rogueRooms, relockLeft, FARM_UNIQUES } from './rogue.mjs';
 import { eventsAt, eventsOf, eventText, eventMinutes, CARDS as EVENT_CARDS, HUNT, shockOf, hopLeft, feudShare } from './events.mjs';
 import { eventCard, leakCard, toldCard, darknetCard, EVENT_ICON, FAM_GLYPH } from './event-cards.mjs';
 import { matesOf, mateUp, mateSignal } from './crew.mjs';
@@ -2520,7 +2520,7 @@ export const deathMark = (n) => (n > 0 ? `<span class="tag hot death-mark" title
 // The rogue server's card: the main thing to do, so it also leads the server card.
 function zoneCard(s) {
   const here = s.run?.loc === CONFIG.zone.id, sig = signalNow(s), max = maxSignal(s), need = Math.ceil(max * CONFIG.zone.minSignal);
-  const why = active(s) ? 'Finish the fight first' : s.run ? 'Jack out first' : relockLeft(s.zone) ? `${rebootingUntil(s.zone) > rogueClock() ? 'Rebooting: back' : 'Reconnect'} in ${relockLeft(s.zone)}s` : sig < need ? `Needs ${need} Signal` : '';
+  const why = active(s) ? 'Finish the fight first' : s.run ? 'Jack out first' : relockLeft(s.zone) ? `Reconnect in ${relockLeft(s.zone)}s` : sig < need ? `Needs ${need} Signal` : '';
   return `<section class="card zone-card"><h2>Rogue server</h2><h1>${CONFIG.zone.name}</h1>
     <div class="stats">${stat('Hostiles', `${liveSpawns(s)}/${zoneRooms().length}`)}${stat('Levels', `<b class="${hackerLevel(s) > CONFIG.zone.maxLevel + 4 ? 'con-gray' : hackerLevel(s) > CONFIG.zone.maxLevel ? 'con-orange' : 'con-yellow'}" title="${hackerLevel(s) > CONFIG.zone.maxLevel ? 'You\'re outgrowing it: its kills pay less every level' : 'Its viruses keep up with you to this level'}">Lv 1–${CONFIG.zone.maxLevel}</b>`)}</div>
     <div class="row">${here ? btn('net', 'Back to the run', true) : `<button type="button" class="btn primary" data-command="connect ${CONFIG.zone.id}" ${why ? `disabled title="${esc(why)}"` : ''}>Connect</button>`}${why && !here ? `<small class="svc-line">${esc(why)}</small>` : ''}${here ? '' : deathMark(s.zone?.deaths)}</div></section>`;
@@ -2663,7 +2663,7 @@ function mapSide(s, sel, node) {
       <div class="stats">${stat('Hostile', `${live}/${rogueRooms(l).length}`)}${stat('Runs', l.runs || 0)}</div>
       <p class="svc-line"><span class="tag dim" title="Can't be taken over; never sends invasions">wild</span></p>
       ${consortiumLine(s, l)}
-      <div class="row">${st === 'here' ? btn('net', 'Back to the run', true) : `<button type="button" class="btn primary" data-command="connect ${esc(l.id)}" ${busy ? 'disabled title="Finish what you are doing first"' : relockLeft(l) ? `disabled title="${l.rogueRun?.rebootAt > rogueClock() ? 'Rebooting: every room comes back fresh' : 'Still tracing your last connection'}"` : ''}>Connect</button>`}${!l.member && !l.trunk && s.locations.includes(l) && MEMORY.on && !freeOfMemory(l) ? `<button type="button" class="btn small mem-x" data-command="detach ${esc(l.id)}" data-confirm="Click again to detach" ${busy ? 'disabled' : ''} title="Free a memory slot. Frozen until you attach it again.">${glyph('memory')}Detach · ${memoryCost(l)}</button>` : ''}${st !== 'here' && relockLeft(l) ? `<small class="svc-line">${l.rogueRun?.rebootAt > rogueClock() ? 'Rebooting: back' : 'Reconnect'} in ${relockLeft(l)}s</small>` : ''}${st !== 'here' ? deathMark(l.deaths) : ''}</div></section>`;
+      <div class="row">${st === 'here' ? btn('net', 'Back to the run', true) : `<button type="button" class="btn primary" data-command="connect ${esc(l.id)}" ${busy ? 'disabled title="Finish what you are doing first"' : relockLeft(l) ? 'disabled title="Still tracing your last connection"' : ''}>Connect</button>`}${!l.member && !l.trunk && s.locations.includes(l) && MEMORY.on && !freeOfMemory(l) ? `<button type="button" class="btn small mem-x" data-command="detach ${esc(l.id)}" data-confirm="Click again to detach" ${busy ? 'disabled' : ''} title="Free a memory slot. Frozen until you attach it again.">${glyph('memory')}Detach · ${memoryCost(l)}</button>` : ''}${st !== 'here' && relockLeft(l) ? `<small class="svc-line">Reconnect in ${relockLeft(l)}s</small>` : ''}${st !== 'here' ? deathMark(l.deaths) : ''}</div></section>`;
   }
   const layout = layoutName(l);
   const guard = Object.keys(l.state.cleared).length ? 'guard beaten' : 'guarded';

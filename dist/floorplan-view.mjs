@@ -253,7 +253,7 @@ function aboutOf(s, room) {
   else if (room.kind === 'cache') who = 'Credits and code, sometimes a script.';
   else if (room.kind === 'stash') who = 'The server\'s code, back every two hours.';
   else if (room.kind === 'secret') who = 'A stash: credits and code, now and then a script or a blue.';
-  else if (room.kind === 'purse') who = cacheFull(s, room) ? `A few credits. Taken as you walk in.` : 'Taken. It fills again when the server reboots.';
+  else if (room.kind === 'purse') who = `A few credits, taken as you walk in. Full again ${ROOMS.respawn.purse} minutes later.`;
   else if (room.nook) who = room.log ? 'A log. Read it.' : nookLive(s, room, R_th(s)) ? 'Someone, or something, waits here.' : 'Quiet now.';
   else if (room.kind === 'empty') who = 'Nothing here.';
   else if (room.kind === 'vault' && !opened(s, room)) who = room.farm ? 'Opens once the Foreman and the Heatsink are down.' : R.visit?.keys.includes(room.id) ? 'Your key fits.' : `Its key is in ${guardOf(s, room.id) ? labelOf(s, guardOf(s, room.id)) : 'an elite'}.`;
@@ -741,7 +741,7 @@ function hereCard(s) {
   }
   else if (room.kind === 'den') body = note(g.hunter === 'track' ? 'The Tracker sleeps here.' : 'The Patroller walks its loop from here.', 'dim');
   else if (room.kind === 'empty') body = note('Nothing here.', 'dim');
-  else if (room.kind === 'purse') body = note(cacheFull(s, room) ? 'A few credits.' : 'Taken. It fills again when the server reboots.', 'dim');
+  else if (room.kind === 'purse') body = note(cacheFull(s, room) ? 'A few credits.' : `Taken. Full again in ${clock(refillAt(s, room))}.`, 'dim');
   // A thread's business here (threads-view.mjs): who waits in it and Talk (Read, Take…), the file standing in it.
   if (R.world && s.threads && !sc) { const th = threadCard(s, room, true, holder, note, btn); if (th.body) body = th.body + (room.nook ? '' : body); acts = th.acts + acts; }
   // An Install job's item, carried for this room: Install it (nothing holds the room).

@@ -444,7 +444,7 @@ const ROOM_FROM = Math.min(...Object.values(ROOM_JOBS).map((j) => j.from));
 const INSTALLS = [{ file: 'canary.ko', label: 'a Halcyon canary' }, { file: 'tap.so', label: 'a logging tap' }, { file: 'patch.sh', label: 'a patch script' }];
 const tracedOf = (s) => (s.locations || []).filter((l) => !l.rogue && !l.member && !l.farm && !l.lair && !l.zone && !(l.fresh && l.detached));
 const roomsOfLoc = (s, l) => { try { return l.floorplan || hooks.roomsFor?.(s, l) || null; } catch { return null; } };
-const inRunsLoc = (l) => !!l.rogue && ['nest', 'pit', 'gauntlet'].includes(l.rogue.kind) && !l.occupied && !l.lair && !l.farm;
+const plainRogueLoc = (l) => !!l.rogue && ['nest', 'pit', 'gauntlet'].includes(l.rogue.kind) && !l.occupied && !l.lair && !l.farm;
 function roomJob(s, kind) {
   const L = hackerLevel(s), pay = (base, per) => Math.round(base + per * L), busy = busyLoc(s), T = CONTRACT_TEXT;
   const free = tracedOf(s).filter((l) => !busy.has(l.id));
@@ -457,7 +457,7 @@ function roomJob(s, kind) {
     return { type: kind, loc: l.id, room, addr: addrsOf(g)[room], file: it.file, label: it.label, carry: 'stash', reward: { credits: pay(55, 9), standing: 7, ...(rand(s) < 1 / 3 ? { drop: true } : {}) } };
   }
   if (kind === 'defuse') return { type: kind, count: 3 + (L >= 20 ? 1 : 0), reward: { credits: pay(40, 7), standing: 6 } };
-  if (kind === 'exfil') return (s.locations || []).some(inRunsLoc) ? { type: kind, reward: { credits: pay(45, 7), standing: 6 } } : null;
+  if (kind === 'exfil') return (s.locations || []).some(plainRogueLoc) ? { type: kind, reward: { credits: pay(45, 7), standing: 6 } } : null;
   if (kind === 'sweep') {
     const pool = free.filter((l) => (l.level || 1) <= L).map((l) => ({ l, R: roomsOfLoc(s, l) })).filter((x) => x.R?.graph && ['small', 'medium'].includes(x.R.size));
     if (!pool.length) return null;
@@ -490,7 +490,7 @@ export function roomOffer(s, at = now(), want = null) {
 }
 // A waiting offer whose target is gone (its server lost, its Tracker gone) leaves the board.
 function roomJobOk(s, o) {
-  if (!o.loc) return o.type !== 'exfil' || (s.locations || []).some(inRunsLoc);
+  if (!o.loc) return o.type !== 'exfil' || (s.locations || []).some(plainRogueLoc);
   const l = tracedOf(s).find((x) => x.id === o.loc), g = l && roomsOfLoc(s, l)?.graph;
   return !!g && (o.type !== 'install' || !!g.rooms[o.room]) && (o.type !== 'heist' || g.hunter === 'track');
 }
