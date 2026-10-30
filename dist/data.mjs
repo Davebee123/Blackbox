@@ -588,7 +588,7 @@ export const STRAINS = {
   },
   desync: {
     lineage: 'ghostroot', from: 22, depth: 2, name: 'Desync', genes: ['sandboxed', 'lag'], tell: { name: 'Clock Skew', gene: 'overcharge' },
-    rule: 'The Jitter lags you for 2 cycles, and your command lands after the virus acts. The Sandbox\'s Contain Sandboxes you for 1 cycle, and only quiet commands fire: strips, burns, helpers, shields and buffs.',
+    rule: 'The Jitter lags you for 2 cycles, and your command lands after the virus acts. The Sandbox\'s Contain Sandboxes you for 1 cycle, and only quiet commands fire.',
     answer: 'Shield a cycle early while you lag, and land your direct hits before the Contain.',
     parts: [PULSE(13, 3), { id: 'sandbox', name: 'Sandbox', integrity: 26, armor: 1, veiled: true, loot: 'Sandbox Shell', special: true, mech: 'sandbox', attack: { name: 'Contain', effect: 'damage', amount: 4, interval: 4, first: 3 } },
       { id: 'jitter', name: 'Jitter', integrity: 18, armor: 1, veiled: true, loot: 'Jitter Buffer', mech: 'lag', attack: { name: 'Jitter', effect: 'damage', amount: 3, interval: 4, first: 2 } }],
