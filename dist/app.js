@@ -10,6 +10,7 @@ import { SHAPES, render as ascii3d } from './ascii3d.mjs';
 import { glyphMotion } from './protocol-glyphs.mjs';
 import { createArt } from './virus-art.mjs';
 import { codexPageMarkup, codexEntry } from './codex-view.mjs';
+import { collectionPageMarkup } from './collection-view.mjs';
 import { createFeel } from './feel.mjs';
 import { placeOf, familyCues } from './places.mjs';
 import { createShell } from './shell.mjs';
@@ -99,7 +100,7 @@ let nag = {}; // when the pager last shook for an alert, and the breach last pin
 let wasCooling = new Set(); // abilities on cooldown at the last render (the tray flashes the ones that come back)
 let mapView = 'mine'; // the Map: 'mine' (your network) or 'consortium' (the merged servers)
 let mailSel = null; // the open item on the Mail page: 'l<id>' a letter, 'j<id>' a contract
-let codexSel = null, codexIdx = false; // the Codex tab: the entry open ('family:worm'), and the phone's index unfolded
+let codexSel = null, codexIdx = false, codexTab = 'codex', logSel = null; // and its tab ('codex' or 'log', the Collection: collection-view.mjs) and the log's entry open; // the Codex tab: the entry open ('family:worm'), and the phone's index unfolded
 let srvUi = { sel: null, open: false, preview: null, armed: null }; // the Server page (server-view.mjs): what's picked, the phone's sheet, the before and after showing and the one a tap armed
 let history = [];
 let historyIndex = -1;
@@ -367,21 +368,25 @@ const codexArt = createArt({
 function codexDrawn(focusKey) {
   const c = $('cx-canvas');
   if (c) { codexArtVirus = codexEntry(campaign, c.closest('[data-entry]')?.dataset.entry)?.art || null; codexArt.attach(c); }
-  if (focusKey && !document.activeElement?.closest?.('[data-codex], [data-codex-fold]')) {
-    const el = focusKey === 'fold' ? document.querySelector('[data-codex-fold]') : [...document.querySelectorAll(`.cx-index [data-codex="${CSS.escape(focusKey)}"]`)].find((x) => x.getClientRects().length);
+  if (focusKey && !document.activeElement?.closest?.('[data-codex], [data-log], [data-codex-fold]')) {
+    const sel = focusKey.startsWith('log=') ? `.cx-index [data-log="${CSS.escape(focusKey.slice(4))}"]` : `.cx-index [data-codex="${CSS.escape(focusKey)}"]`;
+    const el = focusKey === 'fold' ? document.querySelector('[data-codex-fold]') : [...document.querySelectorAll(sel)].find((x) => x.getClientRects().length);
     el?.focus({ preventScroll: true });
   }
 }
 document.addEventListener('click', (e) => {
   const row = e.target.closest?.('[data-codex]');
-  if (row) { codexSel = row.dataset.codex; codexIdx = false; if (module !== 'codex') go('codex'); else { dirty = true; $('page-view').scrollTop = 0; } return; }
+  if (row) { codexSel = row.dataset.codex; codexTab = 'codex'; codexIdx = false; if (module !== 'codex') go('codex'); else { dirty = true; $('page-view').scrollTop = 0; } return; }
+  const lrow = e.target.closest?.('[data-log]'), tab = e.target.closest?.('[data-codex-tab]');
+  if (lrow) { logSel = lrow.dataset.log; codexIdx = false; dirty = true; $('page-view').scrollTop = 0; return; }
+  if (tab) { codexTab = tab.dataset.codexTab === 'log' ? 'log' : 'codex'; dirty = true; return; }
   if (e.target.closest?.('[data-codex-fold]')) { codexIdx = !codexIdx; dirty = true; }
 });
 // The index by keyboard: ↑ and ↓ walk its rows (Tab reaches them too), Enter or Space opens one.
 document.addEventListener('keydown', (e) => {
-  const row = e.target.closest?.('.cx-index [data-codex]');
+  const row = e.target.closest?.('.cx-index [data-codex], .cx-index [data-log]');
   if (!row || !['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return;
-  const rows = [...document.querySelectorAll('.cx-index [data-codex]')].filter((x) => x.getClientRects().length), i = rows.indexOf(row);
+  const rows = [...document.querySelectorAll('.cx-index [data-codex], .cx-index [data-log]')].filter((x) => x.getClientRects().length), i = rows.indexOf(row);
   const to = e.key === 'Home' ? 0 : e.key === 'End' ? rows.length - 1 : Math.max(0, Math.min(rows.length - 1, i + (e.key === 'ArrowDown' ? 1 : -1)));
   e.preventDefault();
   rows[to]?.focus();
@@ -2044,12 +2049,12 @@ function render(force = false) {
       $('term').scrollTop = $('term').scrollHeight;
     }
   } else {
-    const pages = { rooms: (x) => roomsMarkup(x), campaign: (x) => campaignMarkup(x), room: (x) => roomMarkup(x), archive: (x) => archiveMarkup(x), breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab, skillUi), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now()), server: (x) => V.serverMarkup(x, Date.now(), srvUi), daemons: V.daemonsMarkup, codex: (x) => codexPageMarkup(x, codexSel, codexIdx), system: (x) => V.systemMarkup(x, { coop: !!coop, tab: systemTab, ach: achUi, cs: caseUi }) };
+    const pages = { rooms: (x) => roomsMarkup(x), campaign: (x) => campaignMarkup(x), room: (x) => roomMarkup(x), archive: (x) => archiveMarkup(x), breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab, skillUi), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now()), server: (x) => V.serverMarkup(x, Date.now(), srvUi), daemons: V.daemonsMarkup, codex: (x) => (codexTab === 'log' ? collectionPageMarkup(x, logSel, codexIdx) : codexPageMarkup(x, codexSel, codexIdx)), system: (x) => V.systemMarkup(x, { coop: !!coop, tab: systemTab, ach: achUi, cs: caseUi }) };
     // A page that throws shows what broke (and a way back) instead of stopping every render after it.
     const keep = module === 'breach' ? $('bx-scroll')?.scrollTop : null;
     const focusRoom = module === 'rooms' ? document.activeElement?.closest?.('.fp-room')?.dataset.room : null; // a redraw keeps a focused room focused
-    const focusCx = module === 'codex' ? document.activeElement?.closest?.('[data-codex], [data-codex-fold]') : null; // and a Codex row its focus
-    const focusCxKey = focusCx ? (focusCx.dataset.codex ?? 'fold') : null;
+    const focusCx = module === 'codex' ? document.activeElement?.closest?.('[data-codex], [data-log], [data-codex-fold]') : null; // and a Codex row its focus
+    const focusCxKey = focusCx ? (focusCx.dataset.codex ?? (focusCx.dataset.log != null ? 'log=' + focusCx.dataset.log : 'fold')) : null;
     const focusSilk = module === 'loadout' ? document.activeElement?.closest?.('[data-silk-sel]')?.dataset.silkSel : null; // and the board its pick
     const focusSk = module === 'loadout' ? skFocusKey() : null; // and the Skills page its item
     const focusRow = module === 'loadout' ? document.activeElement?.closest?.('.silk-tile') : null; // and the stash its row, or the next once it's loaded
@@ -3108,6 +3113,7 @@ function goTo(target) {
   else if (where === 'consortium' || where === 'people') { peopleOpen = false; go('consortium'); }
   else if (where === 'jack') run('jack in');
   else if (where === 'profile') { setComms(false); openProfile(what || null); pf.tab = 'title'; profileUi(); } // a title just earned: your card, on its titles
+  else if (where === 'log') { setComms(false); codexTab = 'log'; if (what && sub) logSel = `${what}:${sub}`; codexIdx = false; go('codex'); dirty = true; } // the collection log (a pager line): on its entry
   else if (where === 'achieve') { // an achievement (a pager line, a chip on your card): System → Achievements, on its category, lit
     setComms(false);
     if (profileOn) { profileOn = null; profileUi(); }

@@ -14,6 +14,7 @@ import { ruleHtml } from './ruletext.mjs';
 import { entries, entryOf, validKey, firstKey, tellKind, SET_CYCLES } from './codex.mjs';
 import { RESEARCH, TIER } from './research.mjs';
 import { refOf, refBody, unlocked } from './routines.mjs';
+import { codexTabs } from './collection-view.mjs';
 
 const UNKNOWN = '???';
 const every = (n) => (n >= 900 ? 'once' : n === 1 ? 'every cycle' : `every ${n} cycles`);
@@ -190,7 +191,7 @@ export function codexPageMarkup(s, sel = null, idx = false) {
   const key = validKey(sel) ? sel : firstKey(s);
   const groups = entries(s), cur = groups.flatMap((g) => g.rows).find((r) => r.key === key);
   const html = `<div class="cx-page${idx ? ' idx-open' : ''}">
-    <nav class="cx-index card" aria-label="Codex index"><button type="button" class="cx-fold" data-codex-fold aria-expanded="${idx}"><span class="cx-label">Index</span><b>${esc(cur?.name || UNKNOWN)}</b><span class="cx-caret" aria-hidden="true">${idx ? '▴' : '▾'}</span></button><div class="cx-groups">${indexMarkup(groups, key)}</div></nav>
+    <nav class="cx-index card" aria-label="Codex index">${codexTabs('codex')}<button type="button" class="cx-fold" data-codex-fold aria-expanded="${idx}"><span class="cx-label">Index</span><b>${esc(cur?.name || UNKNOWN)}</b><span class="cx-caret" aria-hidden="true">${idx ? '▴' : '▾'}</span></button><div class="cx-groups">${indexMarkup(groups, key)}</div></nav>
     <article class="cx-entry card" aria-label="Codex entry" data-entry="${esc(key)}">${entryMarkup(s, key)}</article></div>`;
   return html;
 }

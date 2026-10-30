@@ -15,6 +15,7 @@ import { PRESENCE, profileOf as simOf, online, simOn, whereText } from './presen
 import { uniqueItem, seeded } from './gear.mjs';
 import { tickAchievements, rewardStickers, bannersOf, pointsOf, shownAchievements, achievements, DEED_STICKERS } from './achievements.mjs';
 import { masteredN } from './mastery.mjs';
+import { syncSlots } from './collection.mjs';
 
 export const PROFILE = { rows: 4, cols: 24, plan: 60 };
 const clock = () => hooks.now?.() ?? Date.now();
@@ -179,7 +180,8 @@ export const titles = () => (TITLE_LIST ||= [
   { id: 'lairborn', name: 'Lair-born', rule: 'Beat a lair boss.', lv: 12, has: (s) => natives().some((b) => won(s, b)) },
   { id: 'assembler', name: 'the Assembler', rule: 'Assemble a faction piece.', lv: 14, has: (s) => Object.values(PIECES).some((u) => s.collection?.[u.id]) },
   { id: 'matched', name: 'the Matched', rule: 'Find every piece of a set.', lv: 14, has: (s) => setsDone(s).length > 0 },
-  { id: 'collector', name: 'Collector', rule: 'Find 25 uniques.', lv: 16, has: (s) => Object.keys(s.collection || {}).length >= 25 },
+  { id: 'collector', name: 'Collector', rule: 'Find 25 uniques.', lv: 16, has: (s) => Object.keys(s.collection || {}).filter((k) => UNIQUES[k]).length >= 25 },
+  { id: 'thorough', name: 'the Thorough', rule: 'Fill an entry in the collection log.', lv: 12, has: (s) => Object.keys(s.collection || {}).some((k) => k.startsWith('full:')) },
   { id: 'deepwalker', name: 'Deepwalker', rule: 'Reach floor 5.', lv: 20, has: (s) => (s.floors?.reached || 1) >= 5 },
   { id: 'virtuoso', name: 'the Virtuoso', rule: 'Reach Mastery 3 with 5 abilities.', lv: 40, has: (s) => masteredN(s) >= 5 },
   ...FACTION_IDS.map((f) => ({ id: 'of-' + f, name: `of ${FACTIONS[f].short}`, rule: `Reach ${FACTIONS[f].tiers[4]} with ${FACTIONS[f].name}.`, lv: 16, faction: f, has: (s) => (s.standing?.[f] ?? -1) >= REP_TIERS[4] })),
@@ -218,6 +220,7 @@ export function tickProfile(s) {
     if (e.card === 'hunt' || e.card === 'returning') p.deeds.hunts++;
   }
   p.seen = s.serial || 0;
+  (hooks.syncCollection || syncSlots)(s); // the collection log's new slots and full entries (collection-log.mjs), before the achievements that read them
   tickAchievements(s);
   p.seen = s.serial || 0;
 }

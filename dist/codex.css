@@ -157,3 +157,45 @@
 }
 /* A page with a tile or two (a boss, a mutation): tiles keep a tile's width. */
 .cx-head.solo .stats > .stat { flex: 0 1 200px; }
+
+/* ---------- the Collection tab (collection-view.mjs): the Ledger ---------- */
+/* Amber is what you've collected (a set piece in the set's green), gray ??? what's left; the date it first came on the right. */
+.lg-tabs { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--line-strong); border-radius: var(--r-btn); overflow: hidden; }
+.lg-tabs button { min-height: var(--h-btn-sm); font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--muted); }
+.lg-tabs button + button { border-left: 1px solid var(--line-strong); }
+.lg-tabs button.on { background: var(--amber-wash); color: var(--bright); }
+.lg-tabs small { font: inherit; color: var(--dim); margin-left: var(--s2); }
+.lg-n { font: 500 11px var(--mono); color: var(--dim); font-variant-numeric: tabular-nums; letter-spacing: 0; text-transform: none; }
+.lg-n.full { color: var(--amber); }
+.lg-setname { color: var(--r-set); }
+.lg-bar { display: block; height: 4px; background: var(--inset); border: 1px solid var(--line); border-radius: 2px; overflow: hidden; }
+.lg-bar b { display: block; height: 100%; background: var(--amber-soft); }
+.lg-bar.thin { grid-column: 2 / 4; height: 3px; border: 0; background: var(--amber-wash); }
+.cx-row.lg-row { row-gap: 2px; }
+.lg-entry { gap: var(--s6); }
+.lg-head { display: grid; grid-template-columns: minmax(0, 1fr) 200px; gap: var(--s6); align-items: end; padding-bottom: var(--s4); border-bottom: 1px solid var(--line); }
+.lg-head h2 { display: flex; gap: var(--s3); align-items: center; }
+.lg-total { display: grid; gap: var(--s3); justify-items: end; }
+.lg-total b { font: 600 24px var(--mono); color: var(--bright); font-variant-numeric: tabular-nums; }
+.lg-total b small { font-size: 14px; color: var(--dim); }
+.lg-total .lg-bar { width: 100%; height: 6px; }
+.lg-lines { list-style: none; margin: 0; padding: 0; display: grid; max-width: 760px; }
+.lg-line { display: grid; grid-template-columns: 16px 200px minmax(0, 1fr) 56px; gap: var(--s4); align-items: center; min-height: 26px; padding: 0 var(--s3); border-bottom: 1px solid var(--amber-wash); }
+.lg-line .lg-ico { display: inline-flex; color: var(--gray); }
+.lg-line .lg-ico .glyph { width: 14px; height: 14px; margin: 0; }
+.lg-line b { font: 500 13px var(--sans); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lg-line b.unk { font-family: var(--mono); letter-spacing: 1px; color: var(--gray); }
+.lg-line .lg-hint { font: 12px var(--sans); color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lg-line time { font: 11px var(--mono); color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+.lg-line.got .lg-ico { color: var(--amber); }
+.lg-line.got.set .lg-ico { color: var(--r-set); }
+.lg-line.got b { color: var(--bright); }
+.lg-line.got b.r-zeroday { color: var(--r-zeroday); }
+.lg-line.got b.r-set { color: var(--r-set); }
+.lg-rs { display: grid; grid-template-columns: 120px auto; gap: var(--s4); align-items: center; }
+.lg-rs small { font: 11px var(--mono); color: var(--dim); }
+@media (max-width: 900px) {
+  .lg-head { grid-template-columns: minmax(0, 1fr) 120px; gap: var(--s4); }
+  .lg-line { grid-template-columns: 16px minmax(0, 1fr) 48px; }
+  .lg-line .lg-hint, .lg-line .lg-rs { grid-column: 2 / 4; grid-row: 2; padding-bottom: var(--s2); }
+}
