@@ -2285,9 +2285,10 @@ Checked by `node balance.mjs` (docs/BALANCE.md, `balance.test.mjs`), `farmsim.mj
 
 ## Saves
 
-The save is `SAVE_VERSION` 51 (combat.mjs). An older save is migrated on load, each step keyed on the field it converts,
+The save is `SAVE_VERSION` 52 (combat.mjs). An older save is migrated on load, each step keyed on the field it converts,
 so it is safe to run twice; nothing a save held is lost.
 
+- **v52** the cryptogram's key, `s.cipher`, made on first use (`cipherOf`).
 - **v51** the scanner's log, `s.scanner`, made on first use (`scannerOf`).
 - **v50** site traits become specials: Rich, Legacy, Backbone, Hostile and Hardened keep their names, a traced server
   with none rolls its own, a Stable server gets its rest room and a Backbone one its socket (`specialsRestore`).
