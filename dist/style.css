@@ -1649,7 +1649,7 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 .pglyph.pg-framed::before { top: 0; left: 0; border-width: 1px 0 0 1px; }
 .pglyph.pg-framed::after { right: 0; bottom: 0; border-width: 0 1px 1px 0; }
 .pglyph .pg-scan { font-weight: inherit; color: #fff3c4; text-shadow: 0 0 0.6em var(--pg-c); }
-.ptip-glyph { justify-self: center; display: grid; place-items: center; }
+.ptip-glyph { justify-self: start; display: grid; place-items: center; }
 
 /* ---------- the protocol board (Loadout → Protocols; view.mjs silkBoard) ----------
    A silkscreened board: the rig in the middle, its slots as labelled footprints three a side, a trace from each to the
@@ -2640,7 +2640,7 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .ct-row.ready:hover .ct-turn, .ct-row.ready:focus-visible .ct-turn { background: var(--ready); color: var(--bg); }
 .ct-row.ready > .glyph { color: var(--ready); }
 /* The rail and the tracker share the map's left column; the rail keeps its own rows. */
-.map-lcol { position: absolute; top: 44px; left: 10px; z-index: 3; width: 230px; display: grid; align-content: start; gap: var(--s5); max-height: calc(100% - 60px); overflow-y: auto; pointer-events: none; }
+.map-lcol { position: absolute; top: 56px; left: 10px; z-index: 3; width: 230px; display: grid; align-content: start; gap: var(--s5); max-height: calc(100% - 60px); overflow-y: auto; pointer-events: none; }
 .map-lcol > * { pointer-events: auto; }
 @media (max-width: 900px) { .map-lcol { position: static; width: auto; max-height: none; overflow: visible; margin: 44px 8px 0; gap: var(--s4); } }
 /* Item hover card: a spinning ASCII model of the item's kind, in its rarity colour, over its details. */
@@ -2648,12 +2648,14 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 @keyframes ptip-in { from { opacity: 0; transform: translateY(4px); } }
 .ptip-card { width: 290px; display: grid; gap: 8px; padding: 12px 14px; background: rgba(10, 8, 5, 0.97); border: 1px solid var(--line-strong); border-top: 2px solid currentColor; border-radius: 4px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); color: var(--r-stock); }
 .ptip-card.r-scrap { color: var(--r-scrap); } .ptip-card.r-tuned { color: var(--r-tuned); } .ptip-card.r-custom { color: var(--r-custom); } .ptip-card.r-zeroday, .ptip-card.r-indemnified { color: var(--r-zeroday); }
-.ptip-art { margin: 0; max-height: none; overflow: visible; justify-self: center; font: 11px/1 var(--mono); letter-spacing: 0.05em; color: currentColor; text-shadow: 0 0 6px currentColor; opacity: 0.95; background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.04), transparent 70%); padding: 4px 6px; }
+.ptip-art { margin: 0; max-height: none; overflow: visible; justify-self: start; font: 11px/1 var(--mono); letter-spacing: 0.05em; color: currentColor; text-shadow: 0 0 6px currentColor; opacity: 0.95; background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.04), transparent 70%); padding: 4px 6px; }
 .ptip-body { display: grid; gap: 3px; color: var(--text); }
 .ptip-body .iname { font-size: 15px; }
 .ptip-body > small { color: var(--muted); font: 11px var(--mono); }
 .ptip-stats { display: grid; gap: 2px; margin-top: 4px; font-size: 12px; }
 .ptip-stats span { display: block; }
+.ptip-body .impl { display: block; } /* its text wraps back to the left edge, under the icon */
+.ptip-body .impl .glyph { display: inline-block; vertical-align: -2px; margin-right: 6px; }
 .ptip-body em { color: var(--muted); font-size: 11px; margin-top: 4px; }
 .inv-card .inv-state { display: flex; align-items: center; gap: 8px; margin: 6px 0 4px; }
 .inv-card .inv-state b { font: 600 12px var(--mono); color: var(--text); }
@@ -3222,6 +3224,8 @@ h1 .byline { font-size: 13px; vertical-align: middle; }
 .tt .tt-more { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; white-space: normal; } /* icon chips under the text (a contract's pay) */
 .tt .tt-more b { display: inline; margin: 0; color: var(--bright); font: 700 12px var(--mono); letter-spacing: 0; }
 .tt .tt-more .rw.neg b { color: var(--hot); } /* a cost (a server special's) */
+.tt .tt-more .tt-ct { flex: 1 1 100%; cursor: inherit; backdrop-filter: none; } /* a contract as the map's tracker draws it (floorplan-view.mjs strip) */
+.tt .tt-ct .ct-txt b { display: block; margin: 0; color: var(--bright); font: 600 12px var(--sans, inherit); letter-spacing: 0; }
 .tt .tt-ans { display: block; margin-top: 5px; padding-top: 4px; border-top: 1px solid var(--line); color: var(--muted); font-size: calc(12px * var(--ui, 1)); } /* the answer line (fightread.mjs answerLine) */
 @media (prefers-reduced-motion: reduce) { .tt { animation: none; } }
 
@@ -3542,7 +3546,8 @@ body.no-motion .recap { animation: none; }
 .tag.tag-lean { display: inline-flex; align-items: center; gap: 3px; color: #1a1206; background: var(--amber); border-color: var(--amber); font: 700 11px var(--mono); cursor: help; }
 .tag.tag-lean .glyph { width: 11px; height: 11px; margin: 0; }
 .srv-tags { display: grid; grid-template-columns: 1fr auto; gap: var(--s1) var(--s4); align-items: start; margin: var(--s2) 0 var(--s3); }
-.srv-tags .tagline { margin: 0; }
+.srv-tags .tagline { margin: 0; flex-direction: column; flex-wrap: nowrap; align-items: flex-start; } /* a tag a line, never wrapped */
+.srv-tags .tag { white-space: nowrap; }
 .hud-gear { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--s3); margin-top: var(--s3); min-width: 0; }
 .hg-k { display: inline-flex; align-items: center; gap: var(--s1); flex: none; height: var(--h-chip); font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--dim); }
 .hg-k .glyph { width: 11px; height: 11px; margin: 0; }
@@ -3655,7 +3660,7 @@ body.no-motion .recap { animation: none; }
   .fl-btn .fl-you { left: 50%; top: -3px; margin: 0 0 0 -3.5px; }
   /* The tools row flows above the rail and the floor strip instead of floating over them (it wrapped off the right edge). */
   .map-tools { position: static; flex-wrap: wrap; row-gap: 6px; padding: 8px 8px 0; }
-  .map-lcol { margin-top: 6px; }
+  .map-lcol { margin-top: 14px; }
 }
 /* An exit (▼) and an up-link (▲): lit through the fog. Its label carries the floor's band in WoW colours. */
 .mnode.exit .exit-mark, .mnode.entry .exit-mark { fill: rgba(241, 185, 47, 0.12); stroke: var(--amber); stroke-width: 1.4; stroke-linejoin: round; }
