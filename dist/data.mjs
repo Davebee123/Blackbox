@@ -617,7 +617,7 @@ export const STRAINS = {
 };
 // Wave 3 (docs/variety-plan.md 1.3): each old strain's mutated form, the strain plus one mechanics part that sharpens
 // its lesson, named by the part's adjective, from 10 levels past the strain's own. It keeps the strain's rule, tell and
-// author. Its part doesn't spread (spreadOf): that would re-roll the wild fights.
+// author, and its part spreads as any strain's does.
 const MUTANT = (base, gene, part, rule, answer) => { const b = STRAINS[base]; return { ...b, from: b.from + 10, name: `${GENES[gene].adj} ${b.name}`, genes: [...b.genes, gene], mutates: base, rule: `${b.rule} ${rule}`, answer, parts: [...b.parts, part] }; };
 Object.assign(STRAINS, {
   leakingkeylogger: MUTANT('keylogger', 'leak', { id: 'leaker', name: 'Leaker', integrity: 18, armor: 1, loot: 'Drip Valve', mech: 'leak', attack: { name: 'Drip', effect: 'damage', amount: 3, interval: 4, first: 3 } },
@@ -648,9 +648,9 @@ for (const [k, st] of Object.entries(STRAINS)) st.author = buildAuthor(k);
 export const strainsFor = (family, level, depth = 99) => Object.keys(STRAINS).filter((k) => STRAINS[k].lineage === family && level >= STRAINS[k].from && depth >= (STRAINS[k].depth || 2));
 // The spread (docs/variety-plan.md 1.2): the mechanics-list genes of the strains a family fields at a level and depth.
 // A wild virus of that family can roll their parts as a third, at PARTS.spread (parts.mjs weightOf).
-export const spreadOf = (family, level, depth) => new Set(strainsFor(family, level, depth || 1).filter((k) => !STRAINS[k].mutates).flatMap((k) => STRAINS[k].genes.filter((g) => MECH_GENES.has(g))));
-// The strain a family's spread part came from (the Codex names it): the first that spreads it.
-export const spreadFrom = (family, gene) => Object.keys(STRAINS).find((k) => STRAINS[k].lineage === family && !STRAINS[k].mutates && STRAINS[k].genes.includes(gene) && MECH_GENES.has(gene)) || null;
+export const spreadOf = (family, level, depth) => new Set(strainsFor(family, level, depth || 1).flatMap((k) => STRAINS[k].genes.filter((g) => MECH_GENES.has(g))));
+// The strain a family's spread part came from (the Codex names it): the earliest that spreads it.
+export const spreadFrom = (family, gene) => Object.keys(STRAINS).filter((k) => STRAINS[k].lineage === family && STRAINS[k].genes.includes(gene) && MECH_GENES.has(gene)).sort((a, b) => STRAINS[a].from - STRAINS[b].from)[0] || null;
 export const STRAIN_SHARE = 0.5;
 
 // Grades: the same virus, bigger. Floor 1 servers send v1 (the starter numbers), floors 2 and 3 v2,

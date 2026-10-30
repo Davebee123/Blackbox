@@ -471,10 +471,11 @@ test('the spread: a strain\'s mechanics parts roll on wild viruses of its lineag
   assert.deepEqual([...spreadOf('ghostroot', 12, 2)], ['opportunist']);
   assert.deepEqual([...spreadOf('ghostroot', 11, 2)], [], 'below its level');
   assert.deepEqual([...spreadOf('ghostroot', 12, 1)], [], 'above its depth');
-  assert.deepEqual([...spreadOf('worm', 16, 3)].sort(), ['amplifier', 'countdown', 'leak', 'vendetta'], 'a mutated strain\'s part doesn\'t spread (the Guarded Patchwork\'s Bodyguard)');
-  assert.deepEqual([...spreadOf('ghostroot', 26, 3)].sort(), ['exposed', 'lag', 'opportunist', 'sandboxed', 'stunned', 'swap', 'turncoat'], 'wave 2: the Desync\'s and the Last Stand\'s');
+  assert.deepEqual([...spreadOf('worm', 16, 3)].sort(), ['amplifier', 'bodyguard', 'countdown', 'leak', 'vendetta'], 'the Guarded Patchwork\'s too');
+  assert.equal(spreadFrom('worm', 'bodyguard'), 'guardedpatchwork', 'the earliest that spreads it');
+  assert.deepEqual([...spreadOf('ghostroot', 26, 3)].sort(), ['exposed', 'lag', 'leak', 'opportunist', 'sandboxed', 'stunned', 'swap', 'turncoat', 'volatile'], 'wave 2: the Desync\'s and the Last Stand\'s; wave 3: the Leaking Keylogger\'s and Volatile Echo\'s (no Ghostroot part, so they never roll)');
   assert.equal(spreadFrom('worm', 'backtrace'), 'junkyard');
-  assert.equal(spreadFrom('ghostroot', 'lag'), 'desync');
+  assert.equal(spreadFrom('ghostroot', 'lag'), 'laggingflicker', 'the earliest: the Lagging Flicker (14), before the Desync (22)');
   assert.equal(spreadFrom('worm', 'leak'), 'doomsday');
   assert.equal(PARTS.mech, 0);
   const mechOn = (family, L, floor) => { const got = {}; for (let seed = 1; seed <= 600; seed++) { const v = createVirus('random', seed, { family, threat: L + 9, floor, mutation: null }); for (const p of v.parts) if (p.mech) got[p.mech] = (got[p.mech] || 0) + 1; if (v.parts.some((p) => p.mech === 'opportunist')) assert.ok(v.parts.some((p) => p.special), 'the feeder rule: the Opportunist only beside the Scrambler'); } return got; };
