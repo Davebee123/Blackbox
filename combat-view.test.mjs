@@ -67,7 +67,7 @@ test('a tray key shows its name, not what it does; its tooltip has that, WoW sty
   const key = trayMarkup(s).match(/<button[^>]*data-ability="overload"[^]*?<\/button>/)[0];
   assert.doesNotMatch(key, /class="state"/, 'a ready key: no description line');
   assert.match(key, /title="Overload: Deals \d+ damage/, 'name first, then the rule, no command syntax');
-  assert.match(key, /data-tt-kind="Key \d · Hit · 3 cycle cooldown"/);
+  assert.match(key, /data-tt-kind="Hit · 3 cycle cooldown"/);
   assert.doesNotMatch(key, /<kbd>/, 'icon and name only');
 });
 
