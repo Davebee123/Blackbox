@@ -300,8 +300,8 @@ rolls them for a session.
 **The spread.** A strain's mechanics parts roll as a third on wild viruses of its lineage from its level and floor
 (weight `PARTS.spread` 0.5, a server room's fixed third too): a Ghostroot from 12 on floor 2 can be a *LURKING
 GHOSTROOT*. A part that reads the signature (the Predator, the Opportunist) comes only beside it. The Codex card names
-the strain it spreads from (the Worm's Leaker and Backtrace are the Doomsday's and the Junkyard's, the Ghostroot's Jitter
-and Prober the Desync's and the Last Stand's).
+the earliest strain it spreads from (the Worm's Leaker and Backtrace are the Doomsday's and the Junkyard's, the
+Ghostroot's Jitter and Prober the Lagging Flicker's and the Last Stand's).
 
 ### Mutations and part rules
 
@@ -358,7 +358,8 @@ would break the compatibility rules beside it: the Doomsday never rolls Hasty, a
 never Linked.
 
 **Mutated strains** (docs/variety-plan.md 1.3). Each of the first eleven has a mutated form 10 levels later: the strain
-(its rule, tell and author) plus one mechanics part, named by the part's adjective. Its part doesn't spread.
+(its rule, tell and author) plus one mechanics part, named by the part's adjective. Its part spreads as any strain's
+does: the Bodyguard onto worms from 13, the Jitter onto ghostroots from 14, the Prober onto ransomware from 16.
 
 | Mutated strain | From | Adds |
 |---|---:|---|
