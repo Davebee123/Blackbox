@@ -3,7 +3,7 @@
 // program whose codebase you know, paid in credits, the server's code and Exploits. A program changes how its own
 // server plays for as long as it runs, and never reaches another server.
 //
-//   socket rooms  small 1, medium 2, large 3 (floorplan.mjs ROOMS.sockets), +1 on a Backbone server, +1 at Root 4, +1 on
+//   socket rooms  small 1, medium 2, large 3 (floorplan.mjs ROOMS.sockets), +1 on a Backbone server (specials.mjs), +1 at Root 4, +1 on
 //                 every traced server in a Grid consortium (netrooms.mjs), and a held server's Core is its core socket.
 //   codebases     you start knowing the Harvester. Halcyon's store and the hub shops sell the rest, by standing and
 //                 rep tier. The Build card lists only codebases you know.
@@ -23,8 +23,8 @@ import { seeded, MATERIALS, codeOf } from './gear.mjs';
 import { gainComponents } from './salvage.mjs';
 import { consortiumLinked } from './consortium.mjs';
 
-// ---------- the catalogue (6.4: the first eight) ----------
-// rule: its tooltip, one line. weight: light | medium (6.3).
+// ---------- the catalogue (6.4: the first eight, then the specials' six) ----------
+// rule: its tooltip, one line. weight: light | medium (6.3). code: what it costs in, if not the server's own code.
 export const PROGRAMS = {
   harvester: { name: 'Harvester', weight: 'light', rule: 'Every virus you kill on this server drops 1 more component.' },
   cron: { name: 'Cron Spawner', weight: 'light', rule: 'Fight rooms on this server respawn twice as fast.' },
@@ -34,10 +34,17 @@ export const PROGRAMS = {
   tunnel: { name: 'Tunnel', weight: 'medium', rule: 'Links this room to the server\'s entry. Walking the link costs no Signal, and the hunter can\'t use it.' },
   snare: { name: 'Snare', weight: 'medium', rule: 'A hunter that walks into this room is held there for 4 of your moves. Once a visit.' },
   post: { name: 'Listening Post', weight: 'medium', rule: 'Kills on this server roll for the unique you name twice as often, wherever it can drop here.' },
+  // The specials' programs (docs/server-specials.md): each leans into a special or fixes its cost.
+  lockdown: { name: 'Lockdown', weight: 'medium', code: 'cipher', rule: 'Invasions this server sends come 2 levels lower.' },
+  amplifier: { name: 'Amplifier', weight: 'medium', rule: 'Invasions this server sends come 2 levels higher.' },
+  bulkhead: { name: 'Bulkhead', weight: 'medium', rule: 'The hunter can\'t pass through this room. Fights here and next door start behind a shield of 10% of your max Signal.' },
+  patch: { name: 'Patch Injector', weight: 'medium', rule: 'Viruses on this server have 1 ◆ less on every part.' },
+  honeytoken: { name: 'Honeytoken', weight: 'medium', rule: 'Viruses on this server come a grade higher, 1 in 4 as an elite. Their kills pay 50% more XP and roll for loot once more.' },
+  lure: { name: 'Lure', weight: 'medium', rule: 'Fight rooms on this server respawn as the family you name, one you\'ve met.' },
 };
 export const PROGRAM_IDS = Object.keys(PROGRAMS);
 // Codebases of programs still to come (R4): an old save's plans can already teach them (retireOutposts).
-export const LATER = { bulkhead: 'Bulkhead', turret: 'Sentry Turret', patch: 'Patch Injector', lure: 'Lure', honeytoken: 'Honeytoken', relay: 'Relay', range: 'Range', jumphost: 'Jump Host' };
+export const LATER = { turret: 'Sentry Turret', relay: 'Relay', range: 'Range', jumphost: 'Jump Host' };
 export const codebaseName = (id) => PROGRAMS[id]?.name || LATER[id] || id;
 
 export const SOCKET = {
@@ -47,16 +54,17 @@ export const SOCKET = {
   drop: { room: 0.6, elite: 1 }, // a part's components in a room fight (elsewhere CONFIG.salvageChance, 35%)
   linked: 1.1, // a Linked consortium: components drop 10% more on members' servers
   rest: 0.25, snare: 4, siphon: 3, // the Defrag Bay's rest, the Snare's hold, the Code Siphon's code
+  patch: 1, bulkhead: 0.1, honey: { grade: 1, elite: 0.25, xp: 1.5 }, // the Patch Injector's ◆, the Bulkhead's shield, the Honeytoken's
   start: ['harvester'],
   price: { light: (L) => 200 + 10 * L, medium: (L) => 400 + 15 * L }, // credits at a hub
 };
 // The hubs' shelves (6.2), each codebase at a rep tier (index in REP_TIERS; Halcyon's in its store's standing tiers).
 export const CODEBASE_SHOPS = {
   halcyon: [['harvester', 1], ['defrag', 1], ['mill', 2]],
-  kestrel: [['snare', 2]],
+  kestrel: [['snare', 2], ['bulkhead', 2], ['lockdown', 3]],
   lantern: [['post', 2], ['tunnel', 3]],
-  glassjaw: [['siphon', 1]],
-  nullchoir: [['cron', 1]],
+  glassjaw: [['siphon', 1], ['patch', 2], ['honeytoken', 3]],
+  nullchoir: [['cron', 1], ['lure', 2], ['amplifier', 3]],
 };
 
 // ---------- codebases ----------
@@ -88,7 +96,7 @@ const linkedOn = (s) => consortiumLinked(s);
 // What a program costs on a server: { credits, code: { kind: n }, exploit }. R: the server's rooms (floorplan.mjs).
 export function programCost(R, id) {
   const P = PROGRAMS[id], c = SOCKET.cost[P?.weight || 'light'], m = 1 + SOCKET.floor * Math.max(0, (R?.floor || 1) - 1);
-  return { credits: Math.round(c.credits * m), code: { [serverCode(R)]: Math.round(c.code * m) }, exploit: c.exploit };
+  return { credits: Math.round(c.credits * m), code: { [P?.code || serverCode(R)]: Math.round(c.code * m) }, exploit: c.exploit }; // a program's own code (Lockdown's Cipher), else the server's
 }
 // The server's code: its own, else its family's, else its first fight room's.
 export const serverCode = (R) => R?.code || codeOf(R?.family) || codeOf(Object.values(R?.graph?.rooms || {}).find((x) => x.family && codeOf(x.family))?.family) || 'cipher';
@@ -141,23 +149,8 @@ export const postsOf = (s) => (s.locations || []).reduce((n, l) => n + programsO
 // The named unique's drop on this kill: twice as often on a server running a Listening Post.
 export const listenBoost = (s) => (s.listen && s.run?.loc && programsOn(findLocation(s, s.run.loc)).includes('post') ? 2 : 1);
 
-// ---------- server traits (2.2: the old site traits, read in rooms) ----------
-export const SITES = {
-  rich: { name: 'Rich', rule: 'Its caches pay double.' },
-  legacy: { name: 'Legacy', rule: 'Its rare spawns come twice as often.' },
-  backbone: { name: 'Backbone', rule: 'Has 1 more socket room.' },
-  hostile: { name: 'Hostile', rule: 'Its fight rooms respawn twice as fast.' },
-  hardened: { name: 'Hardened', rule: 'Its Resident and guards are Armored.' },
-};
-const SITE_CHANCE = 0.45, SIZES = [['small', 0.3], ['medium', 0.5], ['large', 0.2]];
-// A server trait (or none), fixed by its seed.
-export function siteTrait(loc) {
-  const r = seeded(loc.seed * 29 + 3);
-  if (r() >= SITE_CHANCE) return null;
-  const ids = Object.keys(SITES);
-  return ids[Math.floor(r() * ids.length)];
-}
-export const siteLabel = (loc) => (loc?.trait ? SITES[loc.trait] : null);
+// ---------- server size ----------
+const SIZES = [['small', 0.3], ['medium', 0.5], ['large', 0.2]];
 // A server's size, fixed by its seed (the old outpost size roll).
 export function sizeOf(loc) {
   let x = seeded(loc.seed * 41 + 7)();

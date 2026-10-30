@@ -248,6 +248,26 @@ export function addSocketRoom(g, tag) {
   nameRooms(g);
   return g.rooms[id];
 }
+// One more rest room (a Stable server, specials.mjs), beside the spine nearest its middle, never left of the entry or
+// above the top row (no address moves). It rests once a visit, apart from the server's own (restUsed). g.stable marks
+// it done; the same graph always adds the same room.
+export function addRestRoom(g) {
+  if (g.stable != null) return null;
+  const all = Object.values(g.rooms), taken = new Set(all.map((x) => `${x.x},${x.y}`)), y0 = Math.min(...all.map((x) => x.y)), spine = g.spine || [];
+  const mid = (spine.length - 1) / 2, around = spine.filter((id) => id !== g.entry && id !== g.core).sort((a, b) => Math.abs(spine.indexOf(a) - mid) - Math.abs(spine.indexOf(b) - mid));
+  for (const by of around) {
+    const c = g.rooms[by], at = [[c.x, c.y + 1], [c.x, c.y - 1]].find(([x, y]) => y >= y0 && x >= 0 && !taken.has(`${x},${y}`));
+    if (!at) continue;
+    const id = `r${Math.max(...Object.keys(g.rooms).map((k) => Number(k.slice(1)))) + 1}`;
+    g.rooms[id] = { id, kind: 'rest', x: at[0], y: at[1], depth: 0, seed: 0, extra: 'stable' };
+    g.links.push([by, id]);
+    g.stable = 1;
+    nameRooms(g);
+    return g.rooms[id];
+  }
+  g.stable = 0;
+  return null;
+}
 // Puzzle rooms (9.11), a server's from its seed: kinds, each a new leaf room on a free cell off a branch room (never off
 // the entry, a vault, the Core, the den, a guard post or a socket, never beside the Core, never left of the entry or above
 // the top row, so no address moves). The chase only beside the den (off a room next to it). g.puzzles marks it done
@@ -668,6 +688,9 @@ export function soonest(s, now = nowOf()) {
 }
 export const fmtLeft = (ms) => { const t = Math.max(0, Math.ceil(ms / 1000)); return t >= 3600 ? `${Math.floor(t / 3600)}:${String(Math.floor((t % 3600) / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}` : `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`; };
 
+// A rest room used this visit: the server's own, or a Stable server's second (each once a visit).
+export const restUsed = (R, room) => (room.extra === 'stable' ? !!R.visit?.bays?.[room.id] : !!R.visit?.rested);
+
 // ---------- sockets and programs (6, R2: sockets.mjs has the catalogue, codebases and costs) ----------
 // R.programs: { roomId: program }. A socket room is a bus slot: guarded by its process until its first clear, then
 // open for good. A held server's Core is its core socket (WORLD.coreSocket). A socket the world switches off (a Grid
@@ -773,7 +796,7 @@ export function fogRestore(R) {
 }
 
 // ---------- the hunter (2.5) ----------
-const forbidden = (s, g, id) => id === g.entry || g.rooms[id]?.kind === 'rest' || g.vaults.includes(id) || id === g.core || roomRuns(s, g.rooms[id], 'defrag'); // a Defrag Bay is a rest room
+const forbidden = (s, g, id) => id === g.entry || g.rooms[id]?.kind === 'rest' || g.vaults.includes(id) || id === g.core || roomRuns(s, g.rooms[id], 'defrag') || roomRuns(s, g.rooms[id], 'bulkhead'); // a Defrag Bay is a rest room; a Bulkhead seals its room
 function newHunter(s) {
   const g = s.rooms.graph;
   if (!g.den) return null;
@@ -1119,9 +1142,9 @@ export function act(s, verb, arg = null, opts = {}) {
   if ((verb === 'pull' || verb === 'pull all') && here.kind === 'entry' && R.world) { if (!ask('entryPull', s)) deny(s, 'Nothing here to take.'); return out(s, first); }
   if ((verb === 'open' || verb === 'force') && here.kind === 'vault') { openVault(s, here, verb === 'force'); return out(s, first); }
   if (verb === 'rest' && here.kind === 'rest') {
-    if (R.visit.rested) deny(s, 'You already rested this visit.');
+    if (restUsed(R, here)) deny(s, 'You already rested here this visit.');
     else if (sigOf(s) >= R.max) deny(s, 'Your Signal is full. Your rest keeps for later this visit.');
-    else { const n = Math.min(R.max - sigOf(s), Math.round(R.max * ROOMS.rest)); setSig(s, sigOf(s) + n); R.visit.rested = true; clear(s, here); say(s, `You rest: +${n} Signal.`, 'rooms-good'); }
+    else { const n = Math.min(R.max - sigOf(s), Math.round(R.max * ROOMS.rest)); setSig(s, sigOf(s) + n); if (here.extra === 'stable') (R.visit.bays ||= {})[here.id] = true; else R.visit.rested = true; clear(s, here); say(s, `You rest: +${n} Signal.`, 'rooms-good'); }
     return out(s, first);
   }
   // A Defrag Bay: a rest room of your own, once a visit.
@@ -1302,6 +1325,16 @@ export function buildLines(s, room) {
     known.length ? 'build <program> builds it here.' : 'You know no codebase yet.'];
 }
 
+// A Lure's family (sockets.mjs): one you've met, named anywhere on the server. Its fight rooms respawn as it.
+export const lureFamilies = (s) => Object.keys(s.met || {}).filter((f) => FAMILIES[f]?.parts && Object.values(AUTHOR_FAMILIES).some((xs) => xs.includes(f)));
+export function setLure(s, arg) {
+  const R = s.rooms, f = String(arg || '').toLowerCase().trim(), fam = lureFamilies(s).find((x) => x === f || familyName(x).toLowerCase() === f);
+  if (!runs(s, 'lure')) return deny(s, 'lure: no Lure runs on this server.');
+  if (!fam) return deny(s, `lure: name a family you've met (${lureFamilies(s).map(familyName).join(', ') || 'none yet'}).`);
+  R.lure = fam;
+  say(s, `The Lure calls ${familyName(fam)}. Fight rooms here respawn as it.`, 'rooms-good');
+}
+
 // ---------- fights ----------
 // What a room's fight is: [key, seed, opts] for selectEncounter, and its name and kind of size.
 export function fightOf(s, room, as = null) {
@@ -1319,12 +1352,14 @@ export function fightOf(s, room, as = null) {
   if (room.kind === 'nest') return { key: 'crawler', seed, opts: { mode: 'run', room: room.path, level, nest: true }, size: 'nest', name: null, level, family: 'crawler', author: null, brood: ROOMS.nest.brood, xp: ROOMS.nest.xp };
   if (room.kind === 'core') return { key: 'random', seed, opts: { mode: 'run', room: room.path, level, family: BOSSES[RESIDENT].family, boss: RESIDENT, mutation: null, name: BOSSES[RESIDENT].name, author: R.author }, size: 'boss', name: BOSSES[RESIDENT].name, level, family: BOSSES[RESIDENT].family, author: R.author };
   // A wild virus: its room's family, author, third part and set, and a mutation fresh with each respawn (one at most).
-  const elite = room.kind === 'elite' || as === 'mirror';
+  // A Lure (sockets.mjs) makes it the family you named; a Honeytoken a grade higher, and one in four an elite.
+  const fam = (runs(s, 'lure') && R.lure) || room.family, lured = fam !== room.family, third = lured ? null : room.third;
+  const honey = runs(s, 'honeytoken') && as !== 'mirror', elite = room.kind === 'elite' || as === 'mirror' || (honey && seeded((seed * 13 + 7) >>> 0)() < SOCKET.honey.elite);
   const r = seeded((seed * 31 + 5) >>> 0), mut = level >= 4 && r() < SERVER.mutationChance(level) ? ROLLED_MUTATIONS[Math.floor(r() * ROLLED_MUTATIONS.length)] : null;
   // An elite or a ★ rare spawn brings one of its floor's natives (parts.mjs PARTS.native) in place of the room's third.
-  const genes = (elite && PARTS.native.elite) || (rare && PARTS.native.rare) ? [nativeThird(room.family, level, R.floor || 1, seed) || room.third].filter(Boolean) : [room.third].filter(Boolean);
-  const opts = { mode: 'run', room: room.path, level, family: room.family, author: room.author, mutation: mut, genes, ...(elite ? { elite: true, eliteHp: ROOMS.eliteHp } : {}), ...(rare ? { rare: true } : {}) };
-  return { key: 'random', seed, opts, size: elite ? 'elite' : 'process', name: null, level, family: room.family, author: room.author, set: room.pin || spawnSet(room.family, room.author, seed), mutation: mut, elite, rare };
+  const genes = (elite && PARTS.native.elite) || (rare && PARTS.native.rare) ? [nativeThird(fam, level, R.floor || 1, seed) || third].filter(Boolean) : [third].filter(Boolean);
+  const opts = { mode: 'run', room: room.path, level, family: fam, author: room.author, mutation: mut, genes, ...(elite ? { elite: true, eliteHp: ROOMS.eliteHp } : {}), ...(rare ? { rare: true } : {}), ...(honey ? { grade: 1 + SOCKET.honey.grade } : {}) };
+  return { key: 'random', seed, opts, size: elite ? 'elite' : 'process', name: null, level, family: fam, author: room.author, set: (!lured && room.pin) || spawnSet(fam, room.author, seed), mutation: mut, elite, rare };
 }
 // The native an elite or a ★ rare spawn brings in a server room (its floor's, open at its level; none there: the nearest
 // floor above's), by its own hash of the seed. null: its family has none open yet.
@@ -1373,7 +1408,11 @@ export function fight(s, room, { pause = false, as = null } = {}) {
   const v = e.virus;
   e.rooms = { room: room.id, kind: R.kind, as, size: f.size, rare: !!f.rare };
   // Its size in a room, its attack set, Spam on a Mailhub's queue. Its tells come by level (tells.mjs, 3.5).
-  const S = f.size === 'raw' ? { hp: 1, dmg: 1 } : ROOMS.size[f.size] || ROOMS.size.process; // raw: a crew boss or its packs, sized for a crew already
+  // A server's special (netrooms.mjs tune: Hostile's hits and XP) and its programs (sockets.mjs): a Patch Injector strips
+  // 1 ◆ off every part, a Bulkhead here or next door starts you behind a shield, a Honeytoken's kills pay more XP.
+  const T = (R.world && as !== 'exfil' && ask('tune', s, room)) || {}, ice = as === 'hunter' || as === 'exfil';
+  const S0 = f.size === 'raw' ? { hp: 1, dmg: 1 } : ROOMS.size[f.size] || ROOMS.size.process; // raw: a crew boss or its packs, sized for a crew already
+  const S = { hp: S0.hp, dmg: S0.dmg * (T.hits || 1) };
   v.roomHp = S.hp; v.roomDmg = S.dmg;
   for (const p of v.parts) {
     p.max = p.integrity = Math.max(1, Math.round(p.max * S.hp));
@@ -1381,7 +1420,9 @@ export function fight(s, room, { pause = false, as = null } = {}) {
     if (a && ['damage', 'encrypt'].includes(a.effect)) a.amount = Math.max(1, Math.round(a.amount * S.dmg));
     if (a?.hit) a.hit = Math.max(1, Math.round(a.hit * S.dmg));
     if (a?.rampBy) a.rampBy = Math.max(1, Math.round(a.rampBy * S.dmg));
+    if (!ice && runs(s, 'patch') && p.maxArmor) { p.maxArmor -= SOCKET.patch; p.armor = Math.min(p.armor, p.maxArmor); }
   }
+  if (!ice && [room.id, ...neighbours(R.graph, room.id)].some((id) => roomRuns(s, R.graph.rooms[id], 'bulkhead'))) { const n = Math.max(1, Math.round(R.max * SOCKET.bulkhead)); e.shield = (e.shield || 0) + n; emit(s, 'status', `The Bulkhead: you start behind a ${n} shield.`, { mark: 'shield' }); }
   // Its timing, fresh each fight (a boss's and crew content's stay fixed, so they can be learned): its set, if its family has them (a wild
   // room's spawn rolls one here), and each part's first attack nudged up to a cycle either way.
   const fresh = !v.boss && !v.raid && f.size !== 'raw'; // crew content (the farm's packs and bosses) is tuned on its own timing
@@ -1394,7 +1435,7 @@ export function fight(s, room, { pause = false, as = null } = {}) {
   if (v.boss && !v.raid) bossRule(s, R.bossRule || s.bossRule || 'a');
   armTicks(s);
   if (v.elite && !v.boss) e.enrageAt = 9;
-  e.roomsXp = ROOMS.xp.room * (as === 'hunter' ? ROOMS.xp.hunter : room.kind === 'core' ? ROOMS.xp.boss : f.rare ? ROOMS.xp.rare : 1) * (f.xp || 1);
+  e.roomsXp = ROOMS.xp.room * (as === 'hunter' ? ROOMS.xp.hunter : room.kind === 'core' ? ROOMS.xp.boss : f.rare ? ROOMS.xp.rare : 1) * (f.xp || 1) * (T.xp || 1) * (runs(s, 'honeytoken') ? SOCKET.honey.xp : 1);
   if (R.world && !as) e.xpKind = ask('xpKind', s, room); // what its XP counts as in your mix (netrooms.mjs)
   if (v.boss) R.stats.boss.tries++;
   R.stats.fights++;
@@ -1634,6 +1675,7 @@ export function roomsCommand(s, text) {
   if (word === 'play' && R.at) return act(s, 'play', arg || null); // a puzzle room's board: play draws it, play wall c4 / up / tap b2 / ping d4 moves
   if (['talk', 'read', 'take'].includes(word) && R.at && R.world) return act(s, word, arg || null); // a thread's room (threads.mjs): talk, talk 1, read
   if (word === 'sweep' && R.at && R.world && hereOf(s)?.log === 'sweep') return act(s, 'sweep', arg || null); // a process log's answer (a temporary server's)
+  if (word === 'lure' && R.at) { setLure(s, arg); return out(s, first); }
   if (['build', 'install', 'plant', 'uninstall', 'remove'].includes(word) && R.at) {
     return act(s, word === 'remove' ? 'uninstall' : word, arg || null); // install: a contract's item here, else a program (act)
   }

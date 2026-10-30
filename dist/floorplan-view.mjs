@@ -46,7 +46,7 @@ import { AUTHORS } from './authors.mjs';
 import { SCRIPTS, TIER, scriptsOf, slotsOf, scriptTip } from './scripts.mjs';
 import { BOSS_RULES } from './interrupt.mjs';
 import { familyName } from './families.mjs';
-import { ROOMS, KINDS, kindName, HUNTERS, RESIDENT, WORLD, STOCKED, farmed, respawnMs, roomList, hereOf, neighbours, linksOf, seenOf, isUp, backAt, downAt, cacheFull, refillAt, isBait, coreOpen, opened, signalNow, sigOf, progressOf, fmtLeft, hunterOf, hunterNext, paceOf, moveCost, fightOf, exits, hunterLine, xpEarned, virusName, exfilOf, exfilNext, exfilSeen, exfilLine, known, nameOf, hunterSeen, isSocket, socketOpen, socketOff, programIn, roomRuns, tunnelOf, addrOf, PUZZLES, isPuzzle, puzzleState } from './floorplan.mjs';
+import { ROOMS, KINDS, kindName, HUNTERS, RESIDENT, WORLD, STOCKED, farmed, respawnMs, roomList, hereOf, neighbours, linksOf, seenOf, isUp, backAt, downAt, cacheFull, refillAt, isBait, coreOpen, opened, signalNow, sigOf, progressOf, fmtLeft, hunterOf, hunterNext, paceOf, moveCost, fightOf, exits, hunterLine, xpEarned, virusName, exfilOf, exfilNext, exfilSeen, exfilLine, known, nameOf, hunterSeen, isSocket, socketOpen, socketOff, programIn, roomRuns, tunnelOf, restUsed, lureFamilies, addrOf, PUZZLES, isPuzzle, puzzleState } from './floorplan.mjs';
 import { puzzlePanel } from './puzzle-view.mjs';
 import { PROGRAMS, SOCKET, programCost, buildBlock, codebasesOf, costLine as programCostLine } from './sockets.mjs';
 import { materialsOf } from './combat.mjs';
@@ -138,6 +138,13 @@ const ROOM_ICONS = {
   defrag: '<rect x="4" y="4" width="7" height="7"/><rect x="13" y="4" width="7" height="7"/><rect x="4" y="13" width="7" height="7"/><path d="M16.5 13.5v6M13.5 16.5h6"/>',
   tunnel: '<path d="M3 20v-8a9 9 0 0 1 18 0v8"/><path d="M8 20v-7a4 4 0 0 1 8 0v7"/><path d="M2 20h20"/>',
   snare: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><path d="M12 3.5v17M3.5 12h17"/>',
+  // The specials' programs: a padlock on a bus; a horn; a sealed door; a syringe; a bait token; a hook.
+  lockdown: '<rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/>',
+  amplifier: '<path d="M3 10v4h4l6 4.5v-13L7 10Z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11"/>',
+  bulkhead: '<rect x="4" y="3" width="16" height="18" rx="1.5"/><path d="M4 9h16M4 15h16"/><circle cx="12" cy="12" r="1.6"/>',
+  patch: '<path d="M14 4l6 6M17 7l-9 9-3 1 1-3 9-9"/><path d="M4 20l3-3"/>',
+  honeytoken: '<path d="M12 3l7.8 4.5v9L12 21l-7.8-4.5v-9Z"/><path d="M12 8v8M8.5 10l7 4M15.5 10l-7 4"/>',
+  lure: '<path d="M12 3v11a4 4 0 1 1-4-4"/><path d="M10 3h4"/>',
   post: '<path d="M12 12v9"/><circle cx="12" cy="10" r="1.8"/><path d="M8.3 6.3a5.2 5.2 0 0 0 0 7.4M15.7 6.3a5.2 5.2 0 0 1 0 7.4M5.4 3.4a9.4 9.4 0 0 0 0 13.2M18.6 3.4a9.4 9.4 0 0 1 0 13.2"/><path d="M9 21h6"/>',
   // The puzzle rooms (puzzles.mjs): a firewall's bricks walling a node in; a door and the way out; a charged node's
   // bolt; a ping's rings.
@@ -262,7 +269,7 @@ function stateOf(s, room) {
   if (room.kind === 'purse') return cacheFull(s, room) ? { word: 'stocked', cls: '' } : { word: 'taken', cls: 'dim' };
   if (room.nook) return nookLive(s, room, R_th(s)) ? { word: room.log ? 'unread' : 'waiting', cls: 'next' } : { word: room.log ? 'read' : 'quiet', cls: 'dim' };
   if (room.kind === 'empty') return { word: s.rooms.cleared[room.id] ? 'empty' : '', cls: 'dim' };
-  if (room.kind === 'rest') return R.visit?.rested ? { word: 'rested', cls: 'dim' } : { word: '', cls: '' };
+  if (room.kind === 'rest') return restUsed(R, room) ? { word: 'rested', cls: 'dim' } : { word: '', cls: '' };
   return { word: '', cls: '' };
 }
 
@@ -421,7 +428,7 @@ function roomSvg(s, room, p, { reach, next, pop, near, G, marks, th = {}, files 
   const stocked = STOCKED.includes(room.kind);
   const exfil = exfilShown(s)?.at === room.id;
   const full = kind && stocked && cacheFull(s, room), empty = kind && stocked && !full;
-  const used = empty || (kind && room.kind === 'rest' && !!R.visit?.rested) || (kind && room.kind === 'vault' && opened(s, room));
+  const used = empty || (kind && room.kind === 'rest' && restUsed(R, room)) || (kind && room.kind === 'vault' && opened(s, room));
   const live = up || (full && !!room.mirror);
   const denEdge = kind && g.hunter === 'track' && g.den && neighbours(g, g.den).includes(room.id) && h && !h.awake && !h.down;
   // Its colour: you, a live threat, used up (or a plain room you've cleared), or something there for you.
@@ -551,7 +558,7 @@ function needOf(s) {
   if (!R.at) return `home:${R.visits}`;
   if (active(s)) return null;
   const room = hereOf(s), v = R.visit;
-  const ask = !!R.screen || (isSocket(s, room) && socketOpen(s, room) && !programIn(s, room.id) && !socketOff(s, room)) || (roomRuns(s, room, 'defrag') && !v.bays?.[room.id] && sigOf(s) < R.max) || ((room.kind === 'cache' || room.kind === 'stash' || room.kind === 'secret' || isPuzzle(room.kind)) && cacheFull(s, room)) || (room.kind === 'vault' && (!opened(s, room) || (net(s, 'vaultLeft', room) || 0) > 0)) || (room.kind === 'rest' && !v.rested && restGain(s) > 0) || (room.kind === 'entry' && (net(s, 'entryFiles') || 0) > 0) || !!net(s, 'plantHere', room) || (R.world && !!s.threads && threadAsks(s, room));
+  const ask = !!R.screen || (isSocket(s, room) && socketOpen(s, room) && !programIn(s, room.id) && !socketOff(s, room)) || (roomRuns(s, room, 'defrag') && !v.bays?.[room.id] && sigOf(s) < R.max) || ((room.kind === 'cache' || room.kind === 'stash' || room.kind === 'secret' || isPuzzle(room.kind)) && cacheFull(s, room)) || (room.kind === 'vault' && (!opened(s, room) || (net(s, 'vaultLeft', room) || 0) > 0)) || (room.kind === 'rest' && !restUsed(R, room) && restGain(s) > 0) || (room.kind === 'entry' && (net(s, 'entryFiles') || 0) > 0) || !!net(s, 'plantHere', room) || (R.world && !!s.threads && threadAsks(s, room));
   return ask ? `${stampOf(s)}:${R.screen?.kind || room.kind}` : null;
 }
 // The room the pop-up is on: the one you clicked, or the one you're in when it wants a decision you haven't closed.
@@ -648,7 +655,8 @@ function hereCard(s) {
     acts = cacheFull(s, room) ? btn('pull', 'Take it', { primary: true }) : '';
   } else if (room.kind === 'rest') {
     body = note('The hunter never comes in.', 'dim');
-    acts = btn('rest', R.visit.rested ? 'Rested' : 'Rest', { primary: !R.visit.rested && restGain(s) > 0, disabled: R.visit.rested || !restGain(s), note: R.visit.rested ? 'once a visit' : restGain(s) ? `+${restGain(s)} Signal` : 'Signal full' });
+    const used = restUsed(R, room);
+    acts = btn('rest', used ? 'Rested' : 'Rest', { primary: !used && restGain(s) > 0, disabled: used || !restGain(s), note: used ? 'once a visit' : restGain(s) ? `+${restGain(s)} Signal` : 'Signal full' });
   } else if (room.kind === 'entry') {
     const files = R.world ? net(s, 'entryFiles') || 0 : 0;
     body = files ? note(esc(`${files} ${files === 1 ? 'file' : 'files'} left here for you.`)) : note('The hunter never comes in.', 'dim');
@@ -678,7 +686,9 @@ function socketCard(s, room) {
     const P = PROGRAMS[p], off = socketOff(s, room), bay = p === 'defrag' && !off;
     const body = holder(p, P.name, `Program · ${P.weight}${off ? ' · offline' : ''}`, '', 'prog') + note(esc(P.rule), off ? 'dim' : '') + (off ? note(esc(WORLD.view?.offNote?.(s, room) || 'Offline.'), 'hot') : '');
     const used = !!R.visit?.bays?.[room.id], gain = Math.min(R.max - sigOf(s), Math.round(R.max * SOCKET.rest));
-    const acts = (bay ? btn('rest', used ? 'Rested' : 'Rest', { primary: !used && gain > 0, disabled: used || gain <= 0, note: used ? 'once a visit' : gain > 0 ? `+${gain} Signal` : 'Signal full' }) : '')
+    // A Lure: the families you've met, the one it calls lit.
+    const lure = p === 'lure' && !off ? `<p class="bp-lure">${lureFamilies(s).map((f) => `<button type="button" class="btn small${R.lure === f ? ' primary' : ''}" data-command="lure ${f}" aria-pressed="${R.lure === f}">${esc(familyName(f))}</button>`).join('')}</p>` : '';
+    const acts = lure + (bay ? btn('rest', used ? 'Rested' : 'Rest', { primary: !used && gain > 0, disabled: used || gain <= 0, note: used ? 'once a visit' : gain > 0 ? `+${gain} Signal` : 'Signal full' }) : '')
       + `<button type="button" class="btn small" data-rooms="uninstall" title="Uninstall: half its components and code come back.">Uninstall</button>`;
     return { body, acts };
   }

@@ -318,7 +318,7 @@ export const DAEMONS = {
 // What a kill's old daemon drop became (a daemon from a vault became a code cache, run.mjs backup.bin): an Exploit,
 // at the same odds, from a kill and from a guard.
 export const SPARE_EXPLOIT = { home: 0.0025, guard: 0.01 };
-export const DAEMON_DROP = { you: 0.35, intercept: 0.5, wall: 0.15, capture: 1, pity: 0.05, earlier: 0.25 };
+export const DAEMON_DROP = { you: 0.35, intercept: 0.5, wall: 0.15, capture: 1, pity: 0.05, earlier: 0.25, volatile: 0.5 }; // volatile: a Volatile server's invader you kill (specials.mjs)
 // A unit of code at a level: what a point of invasion bounty pays (invasion.mjs), what a scrapped daemon gives,
 // and what the wall's prices count in (firewall.mjs: its tiers from +3).
 export const codeUnit = (level) => 4 + Math.floor(Math.max(1, level) / 3);
