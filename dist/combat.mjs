@@ -28,8 +28,8 @@ import { consortiumWon } from './consortium.mjs';
 import { rollRogue, rogueKill } from './rogue.mjs';
 import { raidStart, raidLand, raidCycle, raidShield, raidBroke, raidTaken, raidAbsorb, noteDealt, noteHeal, cleanse, attackTarget, sigint, sigintCheck } from './raid.mjs';
 import { tellStart, tellCycle, tellLand, tellBroke, chargeNow, tellIntents, tellSigint, tellSigintCheck, tellOn, tellsOf, overclockMult, hotCharge } from './tells.mjs';
-import { prepareTicks, onHit as tickHit, blastCut, BOSS_RULES } from './interrupt.mjs';
-import { TELL, ROOM_FAMILIES, DAMPER_KINDS, floorFor } from './data.mjs';
+import { prepareTicks, onHit as tickHit, blastCut, BOSS_RULES, TICKS } from './interrupt.mjs';
+import { TELL, TELLS, ROOM_FAMILIES, DAMPER_KINDS, floorFor } from './data.mjs';
 import { holdsPart, objectiveBroke, objectiveCycle, objectiveBonus, bonusXp, bonusRolls, backupHit } from './objectives.mjs';
 import { mechValidate, mechIntercept, mechFired, mechPower, exposedCut, mechLanded, mechCommandHit, mechStart, mechClose, mechBroke, lagged, stunnedNow, missedTurn } from './mechanics.mjs';
 import { tickRoot, processWon } from './root.mjs';
@@ -2789,8 +2789,8 @@ export function hit(s, p, base, opts = {}) {
     return { dealt: 0, overflow: 0, absorbed: true };
   }
   // Decoy (docs/puzzle-levers.md 3.8): its beat bent your command onto the part it points at (bendCommand). Pointing at
-  // itself, each hit of that command lands on the Decoy and part of it bounces back at you (never your last point;
-  // HOLLOW CHOIR's Harmony raises it). Mirror Maze (a native unique) let the command through unbent, at its share.
+  // itself, each hit of that command lands on the Decoy and part of it bounces back at you (never your last point).
+  // Mirror Maze (a native unique) let the command through unbent, at its share.
   const root = opts.mine && !opts.server && (buffed(e, 'sudo') || opts.unlock); // Sudo (Overclocker): the parts' rules don't hold you; Zero-day goes through locks
   if (cmd && e.commanding?.maze) base = Math.max(1, Math.round((base * e.commanding.maze) / 100));
   if (cmd && e.commanding?.bounce === p.id) {
@@ -2835,6 +2835,7 @@ export function hit(s, p, base, opts = {}) {
     // ◆ ABSORBED off it: absorbed). Burns, helpers, extra hits and a server's keep the plain line.
     const cmd = opts.mine && !opts.dot && !opts.by && !opts.server && e.commanding?.id && ABILITIES[e.commanding.id] ? e.commanding.id : null;
     const n = heavy ? 2 : 1;
+    if (cmd) lien(s, p);
     if (cmd) emit(s, 'armor', `${cmd === 'spike' ? spikeName(s) : ABILITIES[cmd].name}: absorbed by ${p.name}'s ◆ (${n} broken${p.armor ? `, ${p.armor} left` : ''}).${p.armor ? '' : ` ${patchNote}.`}`, { target: p.id, left: p.armor, absorbed: true, ability: cmd, broke: n });
     else emit(s, 'armor', `${opts.by ? opts.by + ': ' : ''}${p.name} ${heavy ? 'two ◆ broken' : '◆ broken'}${p.armor ? ` (${p.armor} left)` : `. ${patchNote}`}.`, { target: p.id, left: p.armor, broke: n });
     return { dealt: 0, overflow: 0, absorbed: true };
@@ -3001,7 +3002,12 @@ function bossPhases(s) {
         if (p.lock) { const t = part(s, p.lock); if (alive(t)) { t.lockMax = t.lockHp = Math.max(1, Math.round(t.max * CONFIG.mutex.share)); t.lockAt = null; } } // a Mutex that joins locks its part at once
         for (const w of livingParts(s).filter((x) => x.ward === spec.id && p.id !== spec.id)) (w.wardsToo ||= []).push(p.id); // HASHLORD's Pool Lock wards the forked Miner too
       }
-      if (act === 'harmony') { const d = livingParts(s).find((x) => x.reflect); if (d) d.bounce = CONFIG.decoy.harmony; else say = 'The Hollow Choir reaches for its harmony, but its Decoy is broken.'; }
+      if (act === 'hop') say = crownHop(s) || say; // RELAY-KING
+      if (act === 'flood') for (const p of attackers(s)) { if (p.attack.effect === 'replicate') p.attack.interval = Math.min(p.attack.interval, 2); if (p.broadcast) p.attack.interval = Math.min(p.attack.interval, 3); }
+      if (act === 'collect') { const l = livingParts(s).find((x) => x.lien && x.attack); if (l) l.attack.due = Math.min(l.attack.due, e.cycle + 3); } // REPO MAN: a Collection 3 cycles out
+      if (act === 'interest') v.interest = 2;
+      if (act === 'voice') say = secondVoice(s) || say; // HOLLOW CHOIR
+      if (act === 'round') v.round = 3;
       if (act === 'doppelganger') say = doppelganger(s);
     }
     emit(s, 'phase', `PHASE ${v.phases.filter((x) => x.done).length + 1}. ${say}`, { boss: v.boss });
@@ -3013,6 +3019,45 @@ function bossPhases(s) {
     emit(s, 'phase', `${v.name} ENRAGES. Every attack lands every cycle.`, { boss: v.boss, enrage: true });
   }
 }
+
+// RELAY-KING's Crown Hop: its ♛ (and the phase ticks still to come) moves to its healthiest other part, and the part it
+// leaves heals a quarter of its max and takes plain ticks. A phase tick the new part is already under starts at once.
+export const CROWN = { heal: 0.25 };
+function crownHop(s) {
+  const v = s.encounter.virus, old = livingParts(s).find((x) => x.core);
+  if (!old) return null;
+  const to = livingParts(s).filter((x) => x !== old && x.kind === 'system' && !x.mimic).sort((a, b) => b.integrity / b.max - a.integrity / a.max)[0];
+  if (!to) return `${v.name}'s ♛ has nowhere to hop.`;
+  const left = (old.ticks || []).filter((t) => t.phase != null && !t.spent), was = old.integrity;
+  old.core = false;
+  old.integrity = Math.min(old.max, old.integrity + Math.round(old.max * CROWN.heal));
+  old.ticks = TICKS.at.map((at) => ({ at, spent: old.integrity <= at * old.max }));
+  to.core = true;
+  to.ticks = left.map((t) => ({ ...t, spent: to.integrity <= t.at * to.max }));
+  for (const t of to.ticks) if (t.spent && v.phases?.[t.phase] && !v.phases[t.phase].done) v.phases[t.phase].at = 2;
+  return `${v.name} reroutes. Its ♛ hops to the ${to.name}, and the ${old.name} heals ${old.integrity - was}.`;
+}
+// HOLLOW CHOIR's second voice: a Mimic at the boss's size (fork:mimic before it), beating 2 cycles behind the first.
+function secondVoice(s) {
+  const e = s.encounter, v = e.virus, T = v.tells, ms = livingParts(s).filter((x) => x.mimic), m2 = ms.length > 1 ? ms.at(-1) : null;
+  if (!m2) return 'The Hollow Choir has no voice left to double.';
+  if (!T || T.list.some((t) => t.part === m2.id)) return null;
+  const t1 = T.list.find((t) => t.kind === 'mimic'), every = t1?.every || TELLS.mimic.every;
+  let first = (t1 ? t1.first : e.cycle + 1) + Math.floor(every / 2);
+  while (first < e.cycle + 3) first += every;
+  T.list.push({ ...TELLS.mimic, id: 'mimic2', part: m2.id, first, every, told: false, next: null, n: null, said: null, count: 0, after: first });
+  return null;
+}
+// REPO MAN's Liens (docs/solo-bosses.md): each of your commands a ◆ absorbs, while its Ledger stands, puts a Lien on it.
+function lien(s, p) {
+  const v = s.encounter.virus, l = livingParts(s).find((x) => x.lien);
+  if (!l) return;
+  v.liens = (v.liens || 0) + 1;
+  liftOf(s);
+  emit(s, 'status', `${v.name} files a Lien on your ${p.name} hit: ${v.liens} on the ${l.name}.`, { source: l.id, lien: v.liens });
+}
+// The Ledger's Collection pays every Lien off, whether it lands or is cut.
+export function liensPaid(s, p) { if (p?.lien && s.encounter?.virus) { s.encounter.virus.liens = 0; liftOf(s); } }
 
 // MIRRORSHADE's Doppelganger: the Mimic stops recording and takes the shape of the first part you broke (its attack and
 // its ◆), or of the Pulse Node if you haven't broken one. What the phase card says.
@@ -3703,7 +3748,8 @@ export function liftOf(s) {
   const enc = livingParts(s).find((x) => x.attack?.effect === 'encrypt'), stacks = (e.encrypt > 0 ? Math.max(1, Math.round(e.encrypt / Math.max(1, enc?.attack.amount || e.encrypt))) : 0)
     + livingParts(s).reduce((n, x) => n + (x.ratchet ? Math.round(heatOf(x, e.cycle) / x.ratchet.amount) : 0), 0); // a Ratchet's steps count as Encrypts (parts.mjs)
   const frags = livingParts(s).filter((x) => x.kind === 'fragment').length;
-  for (const p of livingParts(s)) if (p.attack && (p.cipher || p.fanin)) p.attack.lift = Math.round(p.attack.amount * ((p.cipher || 0) * stacks + (p.fanin || 0) * frags));
+  const liens = (e.virus.liens || 0) * (e.virus.interest || 1); // REPO MAN's Ledger: its Collection grows by each Lien
+  for (const p of livingParts(s)) if (p.attack && (p.cipher || p.fanin || p.lien)) p.attack.lift = Math.round(p.attack.amount * ((p.cipher || 0) * stacks + (p.fanin || 0) * frags + (p.lien || 0) * liens));
 }
 // The cycles a part's attack lands on, from now until `until` (exclusive): its timer, then its interval; a volley
 // (taps: a Repeater, a Prism) on back to back cycles, its next volley an interval after the first.
@@ -3793,6 +3839,7 @@ function landAttack(s, p) {
   p.lastLanded = e.cycle;
   atk.due = e.cycle + atk.interval; // it lands: the next attack can be delayed again
   atk.n = (atk.n || 0) + 1; // its landings: a charge rides one of them (tells.mjs)
+  liensPaid(s, p); // the Ledger's Collection: its size is set (power, above), the Liens are paid
   // A volley (a Repeater's Double Tap, a Prism's Spread): its next hit the next cycle, then an interval after the first.
   if (p.taps) {
     if (!atk.tap) atk.volley = e.cycle;

@@ -56,10 +56,11 @@ test('the rebuilt bosses keep their designs: one punishment per axis, one beat, 
   assert.equal(sc(12).maxArmor, 3); assert.equal(sc(12).attack.interval, 5);
   assert.ok(sc(14).maxArmor > 3); assert.equal(sc(14).attack.interval, 4);
   for (const v of [h, m]) assert.deepEqual(compatible([...virusGenes(v).map((g) => g.id), ...tellGenes(v)], { boss: true }), [], v.name);
-  // HOLLOW CHOIR keeps one Decoy: Harmony, not a second beat.
+  // HOLLOW CHOIR starts on one beat, its Mimic; its second voice comes with its 50% phase (docs/solo-bosses.md).
   const c = createVirus('random', 7, { family: 'ghostroot', boss: 'choir', threat: 19, mutation: null });
-  assert.equal(c.parts.filter((p) => p.reflect).length, 1);
-  assert.ok(!BOSSES.choir.phases.some((ph) => ph.do.some((d) => d.startsWith('spawn'))));
+  assert.equal(c.parts.filter((p) => p.mimic).length, 1);
+  assert.ok(!c.parts.some((p) => p.reflect));
+  assert.deepEqual(BOSSES.choir.phases[0].do, ['fork:mimic', 'voice']);
   assert.deepEqual(compatible(virusGenes(c).map((g) => g.id), { boss: true }), []);
 });
 

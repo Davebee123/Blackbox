@@ -180,7 +180,9 @@ function reactAll(s, p, text) { let n = 0; for (const x of sims(s)) if (n < 2 &&
 // ---------- ambient: a line every so often, only what's true ----------
 // What a sim hacker might say, from where they are, their class and level, and what's up on the net.
 const BOSS_TALK = [['relayking', 3], ['repoman', 8], ['choir', 10], ['foreman', 7], ['heatsink', 7], ['coldwallet', 7]];
-const phaseLine = (k) => { const ph = BOSSES[k].phases?.[0]; if (!ph) return `${BOSSES[k].name} hits hard. bring a ${clsName('bastion')}`; const at = Math.round(ph.at * 100); return ph.do?.includes('rearm') ? `${BOSSES[k].name} re-arms at ${at}%. save something for it` : `${BOSSES[k].name} speeds up at ${at}%. don't panic`; };
+// A tip on a boss you can fight: the solo bosses' own reads (docs/solo-bosses.md), else its first phase.
+const BOSS_TIPS = { relayking: 'kill the fragments before RELAY-KING broadcasts. every one makes it louder', repoman: 'every hit REPO MAN\'s armor soaks is a lien. strip it first', choir: 'the HOLLOW CHOIR sings back what you fire. break the second voice before the round' };
+const phaseLine = (k) => { if (BOSS_TIPS[k]) return BOSS_TIPS[k]; const ph = BOSSES[k].phases?.[0]; if (!ph) return `${BOSSES[k].name} hits hard. bring a ${clsName('bastion')}`; const at = Math.round(ph.at * 100); return ph.do?.includes('rearm') ? `${BOSSES[k].name} re-arms at ${at}%. save something for it` : `${BOSSES[k].name} speeds up at ${at}%. don't panic`; };
 const SOURCE = { sprawl: 'in SPRAWL-00', vault: 'out of a vault', guard: 'off a guard', rogue: 'on a rogue server', rare: 'off a ★ rare', thread: 'finishing a thread', puzzle: 'off a puzzle board' };
 function simLine(s) {
   const on = sims(s);

@@ -131,7 +131,7 @@ export const CARDS = {
     where: (s) => places(s),
     // From level 8 the bounty is REPO MAN, a boss (BOSSES.repoman) at your level instead of a named virus two up.
     make: (s) => (hackerLevel(s) >= 8 ? { family: 'ransomware', level: hackerLevel(s), name: 'REPO MAN', boss: 'repoman' } : { family: fam(s), level: Math.min(CONFIG.maxMobLevel, hackerLevel(s) + 2), name: `${pick(s, NAMES)}-${1000 + Math.floor(roll(s) * 9000)}`, elite: true }),
-    text: (ev, where) => (ev.boss ? `Halcyon posted a bounty on REPO MAN, a level ${ev.level} ransomware boss loose on ${where}. It re-arms at 60% and gets desperate at 30%. Kill it before it moves on.` : `Halcyon posted a bounty on ${ev.name}, a level ${ev.level} ${FAMILIES[ev.family].name.toLowerCase()} virus loose on ${where}. Kill it before it moves on.`),
+    text: (ev, where) => (ev.boss ? `Halcyon posted a bounty on REPO MAN, a level ${ev.level} ransomware boss loose on ${where}. Every hit its armor soaks is a lien. Kill it before it moves on.` : `Halcyon posted a bounty on ${ev.name}, a level ${ev.level} ${FAMILIES[ev.family].name.toLowerCase()} virus loose on ${where}. Kill it before it moves on.`),
     reward: (ev) => `${bountyPay(ev.level)} credits and Halcyon standing`,
     won: (s, ev) => {
       s.server.credits += bountyPay(ev.level);
@@ -143,7 +143,7 @@ export const CARDS = {
     name: 'Hollow Choir', weight: 1, ms: 25 * 60000, fight: true, from: 10,
     where: (s) => (hackerLevel(s) >= 10 ? places(s) : []),
     make: (s) => ({ family: 'ghostroot', level: hackerLevel(s), name: 'HOLLOW CHOIR', boss: 'choir' }),
-    text: (ev, where) => `The HOLLOW CHOIR, a level ${ev.level} ghostroot boss, is singing through ${where}. It mirrors your commands, and at half Integrity its mirror bounces back harder. Silence it before it moves on.`,
+    text: (ev, where) => `The HOLLOW CHOIR, a level ${ev.level} ghostroot boss, is singing through ${where}. It sings your commands back at you, and it sings in rounds. Silence it before it moves on.`,
     reward: (ev) => `${bountyPay(ev.level) * 2} credits and a protocol, Custom or better`,
     won: (s, ev) => {
       s.server.credits += bountyPay(ev.level) * 2;

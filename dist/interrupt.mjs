@@ -20,7 +20,7 @@
 //      other parts interrupt as usual, and its phases no longer follow its total Integrity.
 //   b  every part interrupts; phases stay on total Integrity; it brings one more charge.
 //   c  phases at 50% and 25% of total; ticks interrupt, but the fight has a budget of TICKS.budget cancels.
-import { emit, alive, part, livingParts, hooks, previewDamage, ignoresArmor, toIntent, usable, readyIn, fxOn, frontOf } from './combat.mjs';
+import { emit, alive, part, livingParts, hooks, previewDamage, ignoresArmor, toIntent, usable, readyIn, fxOn, frontOf, liensPaid } from './combat.mjs';
 import { FAMILIES, GUARDS, STRAINS, BOSSES, ROOM_FAMILIES, ABILITIES, TELL } from './data.mjs';
 import { tellsOf, tellAnswer, tellNext, tierOf, inWindow, answers } from './tells.mjs';
 import { raidDef } from './raid.mjs';
@@ -142,6 +142,7 @@ export function cancelAttack(s, p) {
   }
   a.n = (a.n || 0) + 1;
   if (a.windup) a.wound = 0;
+  liensPaid(s, p); // REPO MAN's Collection, cut: its Liens are paid off too
 }
 // Cancel what the part has due now. Its schedule goes on as if it had landed.
 function cancel(s, p, due, t) {

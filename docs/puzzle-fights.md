@@ -138,7 +138,7 @@ P0 to P3 are built. Each phase is played by the designer before the next starts.
 | Phase | What ships | Done when |
 |---|---|---|
 | P3 (built) | Elites: Integrity down, two conflicts from docs/puzzle-levers.md 4, *no pile-ups* lifted and checked on the roll (a failed roll rerolls). | Elites meet their row (floors met; first try open, as section 5 says). |
-| P4 | Bosses: a beat that repeats, phases, the one to leave. Two Residents and two solo bosses first, then the rest, lair bosses and feuds. | Every boss meets its row, solved, not outgeared, at its level (decision 14), and the designer has played the first four. |
+| P4 (solo bosses built) | Bosses: a part and a rule of their own, and a mechanic a phase (docs/solo-bosses.md). The three solo bosses are built; the nine lair bosses are proposed there. Then the Residents and feuds. | Every boss meets its row, solved, not outgeared, at its level (decision 14), and the designer has played the first four. |
 
 ## 8. Decided
 

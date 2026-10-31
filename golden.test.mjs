@@ -28,9 +28,10 @@ const nameOk = (a, b) => {
   return adj.some((x) => a.name === want.replace(/^(ELITE )?/, (m) => `${m}${x} `));
 };
 const strip = (v) => { const o = structuredClone(v); for (const k of ADDED) delete o[k]; return o; };
-// Phase 1 rebuilt three bosses on purpose (GAME_RULES.md "Solo bosses", docs/genome.md 5.3): HASHLORD, MIRRORSHADE and HOLLOW CHOIR's Harmony.
-// genesim.test.mjs holds them to their designs and their band; every other boss is the same fight it was.
-const REBUILT = ['nb-hashlord', 'nb-mirrorshade', 'choir'];
+// Bosses rebuilt on purpose (GAME_RULES.md "Solo bosses"): HASHLORD and MIRRORSHADE (docs/genome.md 5.3), and the three solo
+// bosses' own parts and phases (docs/solo-bosses.md). genesim.test.mjs and bosses.test.mjs hold them to their designs;
+// every other boss is the same fight it was.
+const REBUILT = ['nb-hashlord', 'nb-mirrorshade', 'choir', 'relayking', 'repoman'];
 const SOLO = Object.keys(BOSSES).filter((k) => !BOSSES[k].raid && !REBUILT.includes(k));
 
 // 10,000 seeds over everything a virus can be: wild viruses of every family at every level, strains, grades, run

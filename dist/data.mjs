@@ -63,8 +63,8 @@ export const CONFIG = {
   mirrorBounce: 0.5, // Decoy: pointing at itself, this share of a hit bounces back at you
   // Decoy (docs/puzzle-levers.md 3.8): its beat bends your command (mirrorBounce: the share of a hit that bounces back when it
   // points at itself). veil: the ◆ it wears at any level (the pointer shows once they're stripped); first: its first
-  // beat's cycle (then every 4, as the Mimic's); harmony: HOLLOW CHOIR's bounce at half Integrity.
-  decoy: { veil: 1, first: 3, harmony: 0.75 },
+  // beat's cycle (then every 4, as the Mimic's).
+  decoy: { veil: 1, first: 3 },
   // The third parts that change the fight (FAMILIES, pool 'third'; GAME_RULES.md Families):
   mutex: { share: 0.25, every: 4 }, // Mutex: the part it locks carries a shield of a quarter of its max, back to full 4 cycles after it breaks
   // Tripwire: break it while the others live and they go loud, both ways (docs/puzzle-levers.md 3.2): they hit 25% harder
@@ -873,6 +873,7 @@ export function makePart(spec, kind, scale, extraArmor = 0) {
     ...(spec.packer ? { packer: true } : {}), ...(spec.badblock ? { badblock: spec.badblock } : {}), ...(spec.damper ? { damper: true } : {}), ...(spec.frozen ? { frozen: spec.frozen } : {}),
     ...(spec.mech ? { mech: spec.mech } : {}), // the mechanics list (mechanics.mjs): its rule, by id
     ...(spec.wardCommands ? { wardCommands: true } : {}), // HASHLORD's Pool Lock: its ward holds back your commands only, not burns or helpers
+    ...(spec.lien ? { lien: spec.lien } : {}), ...(spec.broadcast ? { broadcast: true } : {}), // REPO MAN's Ledger (its Collection grows by each Lien), RELAY-KING's Relay
     attack: spec.attack ? { ...spec.attack, due: spec.attack.first, amount: spec.attack.amount } : null,
     exposedUntil: 0,
     lastDamaged: 0,
@@ -978,19 +979,30 @@ const HASHLORD_LATE = [[8, 1], [10, 0.8], [18, 0.95], [30, 1.1]];
 export const BOSSES = {
   // The Resident (run.mjs /core): about two wins in three for a geared player at its level.
   resident: { name: 'Resident', hp: 1.4, dmg: 1, enrageAt: 18, phases: [{ at: 0.5, do: ['rearm'], say: 'The Resident re-arms every part.' }] },
-  // RELAY-KING (run.mjs): a worm boss in SPRAWL-00's /net from level 3, back every half hour.
-  relayking: { name: 'RELAY-KING', family: 'worm', hp: 1.6, dmg: 1, enrageAt: 16, phases: [{ at: 0.5, do: ['faster'], say: 'RELAY-KING speeds up. Every attack comes a cycle sooner.' }] },
-  // REPO MAN (events.mjs): the bounty from level 8.
-  repoman: { name: 'REPO MAN', family: 'ransomware', hp: 1.6, dmg: 1, enrageAt: 18, phases: [{ at: 0.6, do: ['rearm'], say: 'REPO MAN re-arms every part.' }, { at: 0.3, do: ['faster'], say: 'REPO MAN gets desperate. Every attack comes a cycle sooner.' }] },
-  // HOLLOW CHOIR (events.mjs): a ghostroot boss from level 10. At half its Decoy's bounce rises from 50% to 75% (Harmony), in
-  // place of the second Decoy it used to split off on the off-beat: one global beat, as the compatibility rules ask (genes.mjs).
+  // The three solo bosses (docs/solo-bosses.md): each has a part and a rule of its own, and three phases: the opening and one
+  // at each of its ♛ part's ticks (interrupt.mjs rule a), each adding a mechanic (combat.mjs bossPhases).
+  // RELAY-KING (run.mjs): a worm boss in SPRAWL-00's /net from level 3, back every half hour. Its Relay's Broadcast grows
+  // for each fragment on the board (a Fan-in's lift); at 50% the ♛ hops to its healthiest part, at 25% the Flood.
+  relayking: { name: 'RELAY-KING', family: 'worm', hp: 1.25, dmg: 1, enrageAt: 16,
+    extra: [{ id: 'relay', name: 'Relay', integrity: 30, armor: 1, loot: 'Crown Relay', fanin: 1, broadcast: true, attack: { name: 'Broadcast', effect: 'damage', amount: 3, interval: 4, first: 5 } }],
+    signature: { name: 'Broadcast', rule: 'The Relay\'s Broadcast hits harder for each fragment on the board. At 50% the ♛ hops to its healthiest part, and at 25% the Flood starts.' },
+    phases: [{ at: 0.5, do: ['hop'], say: 'RELAY-KING reroutes. Its ♛ hops to its healthiest part.' }, { at: 0.25, do: ['flood'], say: 'RELAY-KING floods the network. The Replicator hatches every 2 cycles, and the Relay broadcasts every 3.' }] },
+  // REPO MAN (events.mjs): the bounty from level 8. Each command a ◆ absorbs puts a Lien on its Ledger; the Ledger's
+  // Collection hits harder for each Lien and pays them off. Each phase calls a Collection in 3 cycles.
+  repoman: { name: 'REPO MAN', family: 'ransomware', hp: 1.6, dmg: 1, enrageAt: 18,
+    extra: [{ id: 'ledger', name: 'Ledger', integrity: 32, armor: 2, loot: 'Ledger Page', lien: 1, attack: { name: 'Collection', effect: 'damage', amount: 3, interval: 5, first: 6 } }],
+    signature: { name: 'Lien', rule: 'Each command a ◆ absorbs puts a Lien on the Ledger. Its Collection hits harder for each Lien, then clears them. Each phase calls a Collection in 3 cycles.' },
+    phases: [{ at: 0.5, do: ['rearm', 'collect'], say: 'REPO MAN repossesses. Every part re-arms, and the Ledger collects in 3 cycles.' }, { at: 0.25, do: ['interest', 'collect'], say: 'REPO MAN compounds the interest. Each Lien counts twice, and the Ledger collects in 3 cycles.' }] },
   // KESSLER-FARM-00 (rogue.mjs FARM), the crew dungeon: crew bosses on the group boss framework (raid.mjs).
   // Sized for a crew of four (smaller crews get a smaller boss: crewHp in raid.mjs). Their own parts hit
   // softly (dmg) and go at whoever holds aggro; the danger is the mechanics, each a share of max Signal.
   foreman: { name: 'THE FOREMAN', family: 'ransomware', hp: 13, dmg: 0.45, enrageAt: 22, phases: [], raid: FOREMAN },
   heatsink: { name: 'HEATSINK', family: 'worm', hp: 17, dmg: 0.45, enrageAt: 25, phases: [], raid: HEATSINK },
   coldwallet: { name: 'COLDWALLET', family: 'ghostroot', hp: 8.8, dmg: 0.45, enrageAt: 18, phases: [], raid: COLDWALLET },
-  choir: { name: 'HOLLOW CHOIR', family: 'ghostroot', hp: 1.6, dmg: 1, enrageAt: 16, signature: { name: 'Harmony', rule: 'At half Integrity, the Decoy bounces 75% of a hit back at you instead of 50%.' }, phases: [{ at: 0.5, do: ['harmony'], say: 'The Hollow Choir finds its harmony. When the Decoy\'s beat points at itself, three quarters of a hit now bounce back.' }] },
+  // HOLLOW CHOIR (events.mjs): a ghostroot boss from level 10 that sings in rounds. A Mimic from the start; at 50% a
+  // second voice, beating two cycles behind the first; at 25% the Round: each beat plays back your last three commands.
+  choir: { name: 'HOLLOW CHOIR', family: 'ghostroot', third: 'mimic', hp: 1.4, dmg: 1, enrageAt: 16, signature: { name: 'Canon', rule: 'Its Mimic copies your command on its beat. At 50% a second voice beats 2 cycles behind the first, and at 25% each beat plays back your last three commands.' },
+    phases: [{ at: 0.5, do: ['fork:mimic', 'voice'], say: 'A second voice joins the Hollow Choir, two beats behind the first.' }, { at: 0.25, do: ['round'], say: 'The Hollow Choir sings the round. Each beat plays back your last three commands.' }] },
   // Native bosses (network.mjs): each network rolls one of these for its lair, a rogue server of its own. Solo bosses
   // on the tells framework: every tell open at their level, a signature charge of their own (TELLS, TELL_SETS by id;
   // a strain boss renames its strain's charge), a third part they always bring (third), and phases. Their drops are

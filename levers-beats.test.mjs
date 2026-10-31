@@ -223,7 +223,7 @@ test('the Decoy bends your command at one part onto the part it points at; area 
   assert.ok(livingParts(s2).every((p) => p.armor === 0), 'Fork Bomb strips every part');
 });
 
-test('pointing at itself, your hit lands on the Decoy and half of it bounces back; HOLLOW CHOIR\'s Harmony raises it', () => {
+test('pointing at itself, your hit lands on the Decoy and half of it bounces back', () => {
   const s = fight('decoy');
   const d = livingParts(s).find((p) => p.reflect), t = livingParts(s).find((p) => p !== d);
   while (!mirrorOn(s)) fire(s, 'hold');
@@ -232,7 +232,6 @@ test('pointing at itself, your hit lands on the Decoy and half of it bounces bac
   fire(s, `spike ${t.id}`);
   assert.ok(dw - d.integrity > 0, 'it lands on the Decoy');
   assert.ok(Math.abs(hw - s.server.integrity - back) <= 1, `${CONFIG.mirrorBounce * 100}% of the hit back: ${hw - s.server.integrity} against ${back}`);
-  assert.ok(CONFIG.decoy.harmony > CONFIG.mirrorBounce);
 });
 
 test('the pointer moves to another part each beat, and shows once the Decoy is stripped or Tagged', () => {

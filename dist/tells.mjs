@@ -686,9 +686,13 @@ export function mimicLands(s, t, p) { // (exported for exe.test.mjs)
   const copy = was && (!mine || (was.cost || 0) > (mine.cost || 0)) ? was : mine;
   // Echo Cancel blinds it to your helpers too (it turns your command on the Mimic, below).
   const caught = blind || p.echoCancelUntil >= e.cycle ? [] : caughtHelpers(s, t, p), swarm = caught.reduce((n, h) => n + h.damage, 0);
-  const direct = copy?.kind === 'hit' ? copy.amount : 0;
-  if (!copy && !swarm) { emit(s, 'blocked', `The ${p.name} has nothing to copy.`, { source: p.id, tell: t.id }); return false; }
-  const what = !swarm ? `your ${copy.name}` : `${copy ? `your ${copy.name} and ` : 'your '}${caught.length === 1 ? 'helper' : `${caught.length} helpers`}`;
+  // HOLLOW CHOIR's Round (v.round, docs/solo-bosses.md): the beat sings back the commands of the cycles before it too, three
+  // cycles in all. A cycle you held adds nothing.
+  const notes = [...(blind ? [] : sungOf(host, p)), ...(copy ? [copy] : [])], hits = notes.filter((c) => c.kind === 'hit');
+  const direct = hits.reduce((n, c) => n + c.amount, 0);
+  if (!notes.length && !swarm) { emit(s, 'blocked', `The ${p.name} has nothing to copy.`, { source: p.id, tell: t.id }); return false; }
+  const names = notes.map((c) => c.name).join(notes.length > 2 ? ', ' : ' and ').replace(/, ([^,]*)$/, ' and $1');
+  const what = !swarm ? `your ${names}` : `${notes.length ? `your ${names} and ` : 'your '}${caught.length === 1 ? 'helper' : `${caught.length} helpers`}`;
   // Reflector (a native unique): a played-back hit lands on the Mimic instead, at a share of it. Echo Cancel: all of it,
   // and whatever else it copied comes to nothing.
   const turn = p.echoCancelUntil >= e.cycle ? { it: { name: 'Echo Cancel' }, fx: { value: 100 } } : fxOn(host, 'mimic-turn');
@@ -699,18 +703,23 @@ export function mimicLands(s, t, p) { // (exported for exe.test.mjs)
     return false;
   }
   // The copy, unless it is a hit (that lands with the helpers, below).
-  const cheap = copy && !dearCopy(host, copy) && !swarm;
-  if (copy && copy.kind !== 'hit') {
-    landCopy(s, t, p, copy);
-    if (!swarm) { if (cheap) return 'quiet'; tally(s, t, 'landed'); return false; }
-  }
+  const cost = notes.reduce((n, c) => n + (c.cost || 0), 0), cheap = notes.length && !swarm && cost < TELL.copy.dear * defender(host).max;
+  for (const c of notes) if (c.kind !== 'hit') landCopy(s, t, p, c);
+  if (!direct && !swarm) { if (cheap) return 'quiet'; tally(s, t, 'landed'); return false; }
   tally(s, t, 'landed');
   const amount = Math.max(1, Math.round(Math.min(ceilingOf(s) * defender(host).max, direct + swarm * TELL.mimic)));
   const loud = copy?.loud > 1 && direct;
   emit(s, 'status', loud ? `You're Scrambled, and the ${p.name} plays ${what} back at you ${copy.loud === 2 ? 'twice' : `${copy.loud} times`} over.` : `The ${p.name} plays ${what} back at you.`, { source: p.id, tell: t.id, missed: true, ...(swarm ? { helpers: caught.length } : {}) });
-  const over = strikeWith(s, p, { name: `${direct ? ABILITIES[copy.id]?.name || copy.name : 'Helpers'}${direct && swarm ? ' and helpers' : ''} (mimicked)`, effect: 'damage', amount, interval: 99, noCrit: true, tell: t.id });
+  const over = strikeWith(s, p, { name: `${direct ? (hits.length > 1 ? 'The round' : ABILITIES[hits[0].id]?.name || hits[0].name) : 'Helpers'}${direct && swarm ? ' and helpers' : ''} (mimicked)`, effect: 'damage', amount, interval: 99, noCrit: true, tell: t.id });
   if (!over) { if (direct) lockLast(s, t, 'MIMIC'); corrupt(s, t, p); } // your command's skill goes offline; helpers alone lock nothing
   return over;
+}
+// The Round's recording (HOLLOW CHOIR from 25%): what the commands you fired on the cycles before this one would copy, oldest
+// first (the beat's own command is copyOf's). Empty off the Round, or when the Mimic has nothing of you.
+export function sungOf(s, p, c = (s.host || s).encounter?.cycle) {
+  const host = s.host || s, e = host.encounter, n = e?.virus?.round;
+  if (!n || !p || beatBlind(host, p, c)) return [];
+  return (e.cmdLog || []).filter((x) => x.cycle < c && x.cycle > c - n && ABILITIES[x.id]).map((x) => copyOf(host, x.id, part(host, x.target))).filter((x) => x && x.kind !== 'hold');
 }
 // A copy that isn't a hit lands on you (or, a shield or a heal, on its side).
 function landCopy(s, t, p, c) {

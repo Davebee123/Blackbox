@@ -544,11 +544,21 @@ the server's family (all three parts) at the server's level, 1.4× Integrity (1.
 re-arms every part; it enrages at cycle 18. Beat it and the server is **taken over**: yours, teal on the map, its Core
 quiet for good. Lose and you're disconnected, and for 6 hours it is a level stronger, up to three levels.
 
-| Boss | Where | From | Integrity | Phase | Enrages |
-|---|---|---|---|---|---|
-| RELAY-KING (worm) | SPRAWL-00's relay room, a Core sealed until level 3; back 30 minutes after it falls | level 3 | 1.6× | every attack a cycle sooner | cycle 16 |
-| REPO MAN (ransomware) | The Bounty event from level 8 | level 8 | 1.6× | 60%: re-arms every part; 30%: every attack a cycle sooner | cycle 18 |
-| HOLLOW CHOIR (ghostroot) | Its own event, from level 10 | level 10 | 1.6× | Harmony: when its Decoy points at itself, 75% of a hit bounces back | cycle 16 |
+| Boss | Where | From | Integrity | Enrages |
+|---|---|---|---|---|
+| RELAY-KING (worm) | SPRAWL-00's relay room, a Core sealed until level 3; back 30 minutes after it falls | level 3 | 1.25× | cycle 16 |
+| REPO MAN (ransomware) | The Bounty event from level 8 | level 8 | 1.6× | cycle 18 |
+| HOLLOW CHOIR (ghostroot) | Its own event, from level 10 | level 10 | 1.4× | cycle 16 |
+
+Each brings a part and a rule of its own, and three phases: the opening, then one at each ♛ tick (docs/solo-bosses.md).
+
+| Boss | Its part | Opening | At 50% | At 25% |
+|---|---|---|---|---|
+| RELAY-KING | **Relay**: Broadcast every 4 cycles, its hit bigger by its base for each fragment on the board | Broadcast | **Crown Hop**: the ♛ (and its 25% tick) moves to the healthiest other part; the part it leaves heals 25% of its max and takes plain ticks | **Flood**: the Replicator hatches every 2 cycles, the Relay broadcasts every 3 |
+| REPO MAN | **Ledger**: Collection every 5 cycles, its hit bigger by its base for each Lien | **Liens**: each of your commands a ◆ absorbs puts one on the Ledger (strips, piercing hits, burns and helpers don't); a Collection that lands or is cut clears them | Re-arms every part; a Collection 3 cycles out | **Interest**: each Lien counts twice; a Collection 3 cycles out |
+| HOLLOW CHOIR | A **Mimic**, its third part | One voice: the Mimic's beat every 4 cycles | **Second voice**: a second Mimic at the boss's size, beating 2 cycles behind the first | **Round**: each beat plays back your last three commands (the beat's own and the two before it); a cycle you hold adds nothing |
+
+On the board: ♛ on the crown part, ×*n* fragments on the Relay, §*n* Liens on the Ledger, *round* on a Mimic.
 
 **Loot.** A boss always drops one item at its level (`bossLoot`): a blue, or a yellow one kill in four. The Resident
 rolls like an elite instead (one is met on every takeover). Each boss has **two uniques of its own**: 15% a kill, +5%
