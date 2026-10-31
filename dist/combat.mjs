@@ -1316,11 +1316,11 @@ export function firstTime(s, id, why, kind = 'build', share = 0.5) {
   done.push(id);
   gainXp(s, deedXpFor(s, hackerLevel(s), share), why, kind);
 }
-// Out of SPRAWL-00 (WoW's starter-zone breadcrumb): by level 4 you've traced a server (the family
-// you've chased most), and at 5 wick points you at one you haven't cracked yet.
+// Out of SPRAWL-00 (WoW's starter-zone breadcrumb): by level 4 you've traced a server (SPRAWL-00's
+// lowest-level neighbour, level 1), and at 5 wick points you at one you haven't cracked yet.
 function breadcrumb(s, level) {
   const tame = (s.locations || []).filter((l) => !l.rogue && !l.member);
-  if (level === 4 && !tame.length) { const h = hiddenNear(s, { id: CONFIG.zone.id }).sort((a, b) => b.lead - a.lead || a.level - b.level)[0]; addLocation(s, h?.family || 'worm', 1, h?.via || null, h?.slot || null); }
+  if (level === 4 && !tame.length) { const h = hiddenNear(s, { id: CONFIG.zone.id }).sort((a, b) => a.level - b.level || b.lead - a.lead)[0]; addLocation(s, h?.family || 'worm', 1, h?.via || null, h?.slot || null); }
   const open = (s.locations || []).find((l) => !l.rogue && !l.member && !l.takenOver);
   if (level === 5 && open && !tame.some((l) => Object.keys(l.state?.unlocked || {}).length)) emit(s, 'breadcrumb', `wick: strays won't feed you forever. ${open.name} has a vault. go open it.`, { location: open.id });
 }

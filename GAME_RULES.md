@@ -1002,7 +1002,7 @@ until a relay pings it or it sends an invader at you).
 
 | Trace from | Adds |
 |---|---|
-| A stray killed in SPRAWL-00 | +25% to one ? (the most traced first), falling with the level gap like XP |
+| A stray killed in SPRAWL-00 | +25% to one ? (the most traced first; your first, the level-1 one), falling with the level gap like XP |
 | A first clear of a fight room on a server linked to it | +20% |
 | A vault's trace record (`signal.trc`), banked | +50% on one ? (a flagged one first) |
 | Mapping the server it hangs off, or a rogue server's full clear | the rest of the way |
@@ -1013,8 +1013,8 @@ until a relay pings it or it sends an invader at you).
 
 At 100% the server is **located**: an ordinary server at its slot, with its own ? neighbours; contracts aimed at it
 follow it there. Its card shows the way you're tracing it now on top, with a pip for each step still needed, then the
-other ways, dim until you have them. Reaching level 4 with nothing traced traces one for you, and at 5 wick pages you
-with one you haven't cracked.
+other ways, dim until you have them. Your first server is always SPRAWL-00's level-1 neighbour; reaching level 4
+with nothing traced traces it for you, and at 5 wick pages you with one you haven't cracked.
 
 **Relays** (Halcyon sells them; the storyline gives you one) go on a server you've taken over (`relay <server>`, or its
 card). While you have none, one Halcyon takeover or recovery job at a time pays a relay too. A relay pings the ?

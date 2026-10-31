@@ -66,11 +66,14 @@ export function hiddenLead(s, n, amount, why = '') {
   if (n.lead >= 100) locate(s, n);
 }
 // A place's trace along its links (floors.mjs hiddenNear): every ? linked to it, or one (one: the most traced, so they
-// come one at a time; then its family's, then the lowest level). Returns the nodes it moved.
+// come one at a time; then its family's, then the lowest level). Until you've found a server, the lowest level comes
+// first: your first server is SPRAWL-00's level-1 neighbour (firstFind). Returns the nodes it moved.
+export const firstFind = (s) => !(s.locations || []).some((l) => !l.rogue && !l.zone && !l.member);
 export function traceNear(s, loc, amount, why = '', { one = false, family = null } = {}) {
   const near = hiddenNear(s, loc);
   if (!near.length || amount <= 0) return [];
-  const pick = one ? [[...near].sort((a, b) => b.lead - a.lead || (b.family === family) - (a.family === family) || a.level - b.level)[0]] : near;
+  const low = one && firstFind(s) ? (a, b) => a.level - b.level : () => 0;
+  const pick = one ? [[...near].sort((a, b) => low(a, b) || b.lead - a.lead || (b.family === family) - (a.family === family) || a.level - b.level)[0]] : near;
   for (const n of pick) hiddenLead(s, n, amount, why);
   return pick;
 }
