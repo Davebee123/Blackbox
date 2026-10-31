@@ -1,9 +1,8 @@
-// The scanner (scanner.mjs, GAME_RULES.md "The scanner"): it shares the pager's pill in the top bar. A two-way switch at
-// the pill's left end shows the pager or the radio; the radio side glows amber while a broadcast is up, and the pager
-// side carries a dot (red for a threat) while pages wait behind the radio. A fight hides the switch. The radio side is a
-// small tuner (the frequency and the dial), with a tab hanging under the bar: the station with its S-meter, the
-// transcript, the lock (or what it paid) and the log counts, which open the log card. Esc or the pager side switches
-// back, and it switches back by itself when the broadcast ends. DOM and SVG only.
+// The scanner (scanner.mjs, GAME_RULES.md "The scanner"): a radio button in the top bar beside your name, dim while
+// nothing is on the air and glowing amber while a broadcast is up, hidden in a fight. It opens into a small tuner in
+// the top bar (the frequency and the dial, over your name), with a tab hanging under the bar: the station with its
+// S-meter, the transcript, the lock (or what it paid) and the log counts, which open the log card. Esc or the button
+// closes it, and it closes itself when the broadcast ends. DOM and SVG only.
 //
 // Built once (stripMarkup) and painted in place at 20 frames a second, slot by slot, so the tooltips never lose it.
 // Its sounds (createRadio) play with Sound on, at the Effects volume.
@@ -11,7 +10,6 @@ import * as SC from './scanner.mjs';
 import { glyph } from './glyphs.mjs';
 import { FACTIONS } from './factions.mjs';
 import { chainDef } from './threads.mjs';
-import { pages, classOf } from './pager.mjs';
 
 const { band: [LO, HI], fine: FINE, hold: HOLD } = SC.SCANNER;
 const SPAN = 2; // MHz the dial shows while you sweep, centred on the needle
@@ -29,7 +27,6 @@ const G = {
   check: '<path d="M3 8.5 6.5 12 13 4.5"/>',
 };
 const g = (n) => `<svg class="glyph" viewBox="0 0 16 16" aria-hidden="true">${G[n]}</svg>`;
-const PAGER = '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="2.5" width="10" height="11" rx="1.5"/><path d="M5.5 5.5h5M5.5 8h5M5.5 10.5h3"/></svg>';
 const RADIO = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8 17 2.5"/><rect x="2.5" y="8" width="19" height="13" rx="2"/><circle cx="8" cy="14.5" r="3.4"/><path d="M14 11.5h5M14 14.5h5"/><circle cx="15" cy="18" r=".6"/><circle cx="18" cy="18" r=".6"/></svg>';
 const KIND_ORDER = ['numbers', 'pirate', 'distress'];
 const ANSWER = '\n▸ Hold the carrier in the zone until the lock fills.';
@@ -126,34 +123,27 @@ export function createScanner({ state, changed = () => {}, busy = () => false, s
   const tune = { f: 7.415, hook: null, lock: 0 };
   const radio = createRadio();
   const $ = (k) => root.querySelector(`[data-sc="${k}"]`);
-  let btn = null, pgBtn = null, sw = null, pill = null, tuner = null, bar = null;
+  let btn = null, pill = null, tuner = null, bar = null;
   function build(topbar) {
     bar = topbar;
     pill = document.createElement('div');
-    pill.className = 'sc-dock';
-    pill.innerHTML = `<div class="sc-switch" role="group" aria-label="Pager or radio"><button type="button" class="sc-sw sc-pg" aria-pressed="true" aria-label="Pager">${PAGER}<i class="sc-mark"></i></button><button type="button" class="sc-sw sc-radio" aria-pressed="false" aria-label="Shortwave">${RADIO}</button></div><div class="sc-tuner" hidden></div>`;
-    sw = pill.querySelector('.sc-switch'); btn = pill.querySelector('.sc-radio'); pgBtn = pill.querySelector('.sc-pg');
+    pill.className = 'sc-pill';
+    pill.innerHTML = `<button type="button" class="sc-radio" aria-pressed="false" aria-label="Shortwave">${RADIO}</button><div class="sc-tuner" hidden></div>`;
+    btn = pill.querySelector('.sc-radio');
     tuner = root = pill.querySelector('.sc-tuner');
-    btn.addEventListener('click', () => { if (!open) show(); });
-    pgBtn.addEventListener('click', () => { if (open) close(); });
+    btn.addEventListener('click', toggle);
     tuner.addEventListener('click', (e) => { if (e.target.closest('[data-scan-log]')) { logOpen = !logOpen; paintLog(); } });
-    // The pager moves into the pill, between the switch and the tuner; app.js still draws it by its id.
     const pager = topbar.querySelector('#pager');
-    if (pager) { pager.before(pill); tuner.before(pager); } else topbar.append(pill);
-    paintButton(Date.now()); paintPager();
+    if (pager) pager.before(pill); else topbar.append(pill);
+    paintButton(Date.now());
   }
-  // A tooltip that ttShow (app.js) may already have moved to data-tt.
-  const tip = (el, t) => { if (el.dataset.tt !== t && el.title !== t) { el.title = t; delete el.dataset.tt; } };
   function paintButton(at) {
-    btn.classList.toggle('live', !!SC.onAir(state(), at));
-    btn.setAttribute('aria-pressed', String(open)); pgBtn.setAttribute('aria-pressed', String(!open));
-    tip(btn, buttonTitle(state(), at));
-  }
-  // The pager side's dot while the radio shows: pages wait (red if one is a threat).
-  function paintPager() {
-    const ps = open ? pages(state()) : [], hot = ps.some((c) => classOf(c) === 'threat');
-    pgBtn.querySelector('.sc-mark').className = `sc-mark${ps.length ? ' on' : ''}${hot ? ' hot' : ''}`;
-    tip(pgBtn, ps.length ? `Pager: ${ps.length} ${ps.length === 1 ? 'page waits' : 'pages wait'} behind the radio.\n▸ Switch back to read ${ps.length === 1 ? 'it' : 'them'}.` : 'Pager: Shows the pages waiting for you.');
+    const b = btn, air = !!SC.onAir(state(), at);
+    pill.hidden = b.hidden;
+    b.classList.toggle('live', air);
+    b.setAttribute('aria-pressed', String(open));
+    const tt = buttonTitle(state(), at);
+    if (b.dataset.tt !== tt && b.title !== tt) { b.title = tt; delete b.dataset.tt; }
   }
   function paintLog() { const c = root.querySelector('.sc-logcard'); if (!c) return; c.hidden = !(open && logOpen); if (!c.hidden) c.innerHTML = logMarkup(state()); }
   function wireDial() {
@@ -170,22 +160,23 @@ export function createScanner({ state, changed = () => {}, busy = () => false, s
   }
   const step = (e) => (tune.hook ? 0.002 : 0.005) * (e.shiftKey ? 10 : 1);
   function set(f) { SC.setFreq(tune, f); paint(true); }
+  function toggle() { if (open) close(); else show(); }
   function show() {
     open = true; closeAt = 0; painted = {};
     tuner.innerHTML = stripMarkup(state(), tune, Date.now() / 1000);
     tuner.hidden = false;
-    pill.classList.add('radio'); bar.classList.add('sc-on');
+    pill.classList.add('open'); bar.classList.add('sc-on');
     wireDial();
     $('dial').focus({ preventScroll: true });
     if (sound()) radio.wake();
-    paintButton(Date.now()); paintPager();
+    paintButton(Date.now());
   }
   function close() {
     if (!root) return;
     open = false; logOpen = false; tune.hook = null; tune.lock = 0;
     tuner.hidden = true;
-    pill.classList.remove('radio'); bar.classList.remove('sc-on');
-    paintLog(); paintButton(Date.now()); paintPager();
+    pill.classList.remove('open'); bar.classList.remove('sc-on');
+    paintLog(); paintButton(Date.now());
     radio.quiet();
   }
   // Writes each slot whose markup changed since the last paint.
@@ -219,7 +210,7 @@ export function createScanner({ state, changed = () => {}, busy = () => false, s
     e.preventDefault();
   }, true);
   return {
-    // Puts the switch and the tuner into the pager's pill in the top bar, once.
+    // Puts the button (and its tuner) in the top bar beside the pager, once.
     mount(topbar) { if (!btn && topbar) build(topbar); },
     isOpen: () => open,
     // Every frame: the schedule, the reel, the paint, the sound.
@@ -231,11 +222,10 @@ export function createScanner({ state, changed = () => {}, busy = () => false, s
         const ev = SC.tickScanner(s, now);
         if (ev === 'start' && sound() && !busy()) radio.cue(volume());
         if (ev) changed();
-        if (btn) paintPager();
       }
       const air = !!SC.onAir(s, now), away = busy();
       if (!btn) return;
-      sw.hidden = away; // a fight hides the switch: the pill is the pager
+      btn.hidden = away; // a fight hides it (paintButton hides the pill with it)
       if (away && open) close();
       paintButton(now);
       if (open && wasAir && !air) closeAt = now + 3000; // the broadcast ended: the tuner folds away 3 s later
