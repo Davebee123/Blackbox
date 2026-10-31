@@ -22,18 +22,24 @@
 //               Lost when none can finish from the pool.
 //   cryptogram  "Read wick's note": a note in the player's own substitution key. Name a cipher letter's plain one: right
 //               fills it everywhere and stays in the key; wrong is a strike, three lose.
+//   terminal    "Name it" (floor 2+): the log sweep (logsweep.mjs), an incident file, a question and three suspects. Name
+//               one: right wins; a second wrong answer loses. Its trick deepens by floor (2, 3, 4+).
+//   Deeper (floor 3+): the chase has a second Tracker in the den; the cascade has two racks side by side, where a node
+//               discharging on its rack's edge charges the same slot on the other rack.
 import { seeded } from './gear.mjs';
+import { sweepFor } from './logsweep.mjs';
 
-export const PUZZLE_KINDS = ['quarantine', 'chase', 'cascade', 'sweep', 'routing', 'deadlock', 'cryptogram'];
+export const PUZZLE_KINDS = ['quarantine', 'chase', 'cascade', 'sweep', 'routing', 'deadlock', 'cryptogram', 'terminal'];
 // Each one's name, its title (what you do), its rule (one line) and how deep its harder boards start.
 export const PUZZLES = {
   quarantine: { name: 'Quarantine', title: 'Wall it in', rule: 'Firewall a node. The worm copies into the marked one. Every node it never reaches pays.', deep: 4 },
-  chase: { name: 'Hunter chase', title: 'Reach the door', rule: 'Move a room or wait. The Tracker takes two steps: across first, then up or down. Walls stop it.', deep: 99 },
-  cascade: { name: 'Cascade', title: 'Bring it all down', rule: 'Tap to discharge. Every node beside it gains 1; past 3, it goes too.', deep: 99 },
+  chase: { name: 'Hunter chase', title: 'Reach the door', rule: 'Move a room or wait. The Tracker takes two steps: across first, then up or down. Walls stop it.', deep: 3 },
+  cascade: { name: 'Cascade', title: 'Bring it all down', rule: 'Tap to discharge. Every node beside it gains 1; past 3, it goes too.', deep: 3 },
   sweep: { name: 'Ping sweep', title: 'Find the cache', rule: 'A ping reads the steps to the cache. Pings and digs share the budget.', deep: 4 },
   routing: { name: 'Packet routing', title: 'Get it through', rule: 'Click turns a tile clockwise, right-click turns it back. Join the source to the sink.', deep: 99 },
   deadlock: { name: 'Deadlock', title: 'Let them all finish', rule: 'Give a process a free lock. One holding all it needs finishes and returns its locks.', deep: 99 },
   cryptogram: { name: 'Cryptogram', title: "Read wick's note", rule: 'Each letter stands for another, the same in every note. A wrong letter costs a strike.', deep: 99 },
+  terminal: { name: 'Log sweep', title: 'Name it', rule: 'Click a line to light every line that shares its value. A second wrong answer loses.', from: 2, deep: 3 },
 };
 export const isPuzzle = (kind) => PUZZLE_KINDS.includes(kind);
 const mix = (seed, salt) => ((((seed >>> 0) ^ Math.imul(salt + 1, 0x9e3779b1)) >>> 0) || 1);
@@ -153,46 +159,52 @@ export function trackerTurn(walls, h, p) {
   for (let k = 0; k < 2; k++) { h = trackerStep(W, h, p); path.push(h); if (h === p) return { h, caught: true, path }; }
   return { h, caught: false, path };
 }
-// The fewest moves to the door (0: none), and the moves themselves.
-export function chaseSolve(wallsIn, p0, h0, exit) {
-  const walls = wallsIn instanceof Set ? wallsIn : new Set(wallsIn);
-  const seen = new Map([[p0 * 64 + h0, null]]), q = [[p0, h0]];
+// Both Trackers' turns (h2 null: a den with one): where each ends, and whether either caught you.
+function trackersTurn(walls, h, h2, p) {
+  const a = trackerTurn(walls, h, p), b = h2 == null ? null : trackerTurn(walls, h2, p);
+  return { h: a.h, h2: b ? b.h : null, caught: a.caught || !!b?.caught, path: a.path, path2: b?.path || null };
+}
+// The fewest moves to the door (0: none), and the moves themselves. h2: a second Tracker (a deeper den), or null.
+export function chaseSolve(wallsIn, p0, h0, exit, h20 = null) {
+  const walls = wallsIn instanceof Set ? wallsIn : new Set(wallsIn), K = (p, h, h2) => (p * 64 + h) * 64 + (h2 ?? 63);
+  const seen = new Map([[K(p0, h0, h20), null]]), q = [[p0, h0, h20]];
   while (q.length) {
-    const [p, h] = q.shift();
+    const [p, h, h2] = q.shift();
     for (const [dr, dc] of MOVES) {
       const np = dr || dc ? hStep(walls, p, dr, dc) : p;
-      if (np < 0 || np === h) continue;
+      if (np < 0 || np === h || np === h2) continue;
       const dir = Object.keys(DIRS).find((k) => DIRS[k][0] === dr && DIRS[k][1] === dc);
       if (np === exit) {
         const moves = [dir];
-        for (let k = p * 64 + h; seen.get(k); k = seen.get(k).from) moves.unshift(seen.get(k).dir);
+        for (let k = K(p, h, h2); seen.get(k); k = seen.get(k).from) moves.unshift(seen.get(k).dir);
         return { best: moves.length, moves };
       }
-      const t = trackerTurn(walls, h, np);
+      const t = trackersTurn(walls, h, h2, np);
       if (t.caught) continue;
-      const k = np * 64 + t.h;
-      if (!seen.has(k)) { seen.set(k, { from: p * 64 + h, dir }); q.push([np, t.h]); }
+      const k = K(np, t.h, t.h2);
+      if (!seen.has(k)) { seen.set(k, { from: K(p, h, h2), dir }); q.push([np, t.h, t.h2]); }
     }
   }
   return { best: 0, moves: [] };
 }
-// Walking the shortest way to the door, never minding the Tracker: true if it gets there.
-export function chaseStraight(wallsIn, p, h, exit) {
+// Walking the shortest way to the door, never minding the Trackers: true if it gets there.
+export function chaseStraight(wallsIn, p, h, exit, h2 = null) {
   const walls = wallsIn instanceof Set ? wallsIn : new Set(wallsIn);
   for (let n = 0; n < 40; n++) {
     const prev = new Map([[exit, -1]]), q = [exit];
     while (q.length) { const x = q.shift(); for (const [dr, dc] of MOVES.slice(1)) { const y = hStep(walls, x, dr, dc); if (y >= 0 && !prev.has(y)) { prev.set(y, x); q.push(y); } } }
     const np = prev.get(p);
-    if (np === undefined || np < 0 || np === h) return false;
+    if (np === undefined || np < 0 || np === h || np === h2) return false;
     if (np === exit) return true;
-    const t = trackerTurn(walls, h, np);
+    const t = trackersTurn(walls, h, h2, np);
     if (t.caught) return false;
-    p = np; h = t.h;
+    p = np; h = t.h; h2 = t.h2;
   }
   return false;
 }
 const hDist = (a, b) => Math.abs(Math.floor(a / H.cols) - Math.floor(b / H.cols)) + Math.abs((a % H.cols) - (b % H.cols));
-export function newChase(seed) {
+export function newChase(seed, { floor = 1 } = {}) {
+  const two = floor >= PUZZLES.chase.deep;
   for (let salt = 0; ; salt++) {
     for (let attempt = 0; attempt < H.attempts; attempt++) {
       const r = seeded(mix(seed, 7919 + salt * 104729 + attempt)), walls = new Set();
@@ -203,11 +215,12 @@ export function newChase(seed) {
       }
       const exitSide = Math.floor(r() * 4), along = Math.floor(r() * H.cols);
       const exit = exitSide === 0 ? along : exitSide === 1 ? along * H.cols + H.cols - 1 : exitSide === 2 ? (H.rows - 1) * H.cols + along : along * H.cols;
-      const p0 = Math.floor(r() * H.rows * H.cols), h0 = Math.floor(r() * H.rows * H.cols);
+      const p0 = Math.floor(r() * H.rows * H.cols), h0 = Math.floor(r() * H.rows * H.cols), h20 = two ? Math.floor(r() * H.rows * H.cols) : null;
       if (p0 === h0 || p0 === exit || h0 === exit || hDist(p0, exit) < 4 || hDist(p0, h0) < 3) continue;
-      const { best } = chaseSolve(walls, p0, h0, exit);
-      if (best < H.best[0] || best > H.best[1] || chaseStraight(walls, p0, h0, exit)) continue;
-      return { kind: 'chase', seed, walls: [...walls].sort(), exit, exitSide, p: p0, h: h0, p0, h0, best, moves: 0, hist: [], last: null, done: null };
+      if (two && (h20 === h0 || h20 === exit || hDist(p0, h20) < 3)) continue;
+      const { best } = chaseSolve(walls, p0, h0, exit, h20);
+      if (best < H.best[0] || best > H.best[1] || chaseStraight(walls, p0, h0, exit, h20)) continue;
+      return { kind: 'chase', seed, walls: [...walls].sort(), exit, exitSide, p: p0, h: h0, p0, h0, ...(two ? { variant: 'twin', h2: h20, h20 } : {}), best, moves: 0, hist: [], last: null, done: null };
     }
   }
 }
@@ -218,34 +231,48 @@ function chaseMove(st, dir) {
   if (!d) return null;
   const walls = new Set(st.walls), np = d[0] || d[1] ? hStep(walls, st.p, d[0], d[1]) : st.p;
   if (np < 0) return null;
-  const from = st.p;
-  st.hist.push([st.p, st.h, st.moves]);
+  const from = st.p, h2 = st.h2 ?? null;
+  st.hist.push([st.p, st.h, st.moves, h2]);
   st.moves++;
   st.p = np;
-  if (np === st.h) { st.done = 'lost'; st.last = { from, path: [st.h], caught: true }; return st.last; }
+  if (np === st.h || np === h2) { st.done = 'lost'; st.last = { from, path: [np], caught: true }; return st.last; }
   if (np === st.exit) { st.done = 'won'; st.last = { from, path: null }; return st.last; }
-  const t = trackerTurn(walls, st.h, np);
+  const t = trackersTurn(walls, st.h, h2, np);
   st.h = t.h;
-  st.last = { from, path: t.path, caught: t.caught };
+  if (h2 != null) st.h2 = t.h2;
+  st.last = { from, path: t.path, ...(t.path2 ? { path2: t.path2 } : {}), caught: t.caught };
   if (t.caught) st.done = 'lost';
   return st.last;
 }
 export const chaseReach = (st) => { const walls = new Set(st.walls), out = {}; for (const [k, [dr, dc]] of Object.entries(DIRS)) { if (k === 'wait') continue; const t = hStep(walls, st.p, dr, dc); if (t >= 0) out[t] = k; } return out; };
 // Rooms you could step into where it would catch you (the board shows them red).
-export const chaseDanger = (st, to) => to !== st.exit && (to === st.h || trackerTurn(st.walls, st.h, to).caught);
+export const chaseDanger = (st, to) => to !== st.exit && (to === st.h || to === st.h2 || trackersTurn(st.walls, st.h, st.h2 ?? null, to).caught);
 
 // ---------- the cascade ----------
-export const C = { rows: 5, cols: 5, nodes: [12, 18], fewest: 3, cap: 5, attempts: 400 };
+export const C = { rows: 5, cols: 5, nodes: [12, 18], fewest: 3, cap: 5, attempts: 400, twin: { rows: 4, cols: 4, nodes: [16, 22], fill: 0.62 } };
 const cNeighbours = (i) => qNeighbours(i, C.rows, C.cols);
+// Two racks (a deeper cascade): one grid T.rows × 2·T.cols, the left rack and the right. A slot's neighbours are in its
+// own rack; a slot on its rack's edge also touches the same slot on the other rack.
+const T = C.twin;
+export const cTwin = (b) => b.length === 2 * T.rows * T.cols;
+const onEdge = (r, c) => r === 0 || r === T.rows - 1 || c === 0 || c === T.cols - 1;
+export function twinNeighbours(i) {
+  const W = 2 * T.cols, r = Math.floor(i / W), c = i % W, rack = c >= T.cols ? 1 : 0, lc = c - rack * T.cols, out = [];
+  for (const [dr, dc] of [[-1, 0], [0, 1], [1, 0], [0, -1]]) { const nr = r + dr, nc = lc + dc; if (nr >= 0 && nr < T.rows && nc >= 0 && nc < T.cols) out.push(nr * W + nc + rack * T.cols); }
+  if (onEdge(r, lc)) out.push(r * W + lc + (1 - rack) * T.cols);
+  return out;
+}
+export const twinEdge = (i) => { const W = 2 * T.cols; return onEdge(Math.floor(i / W), (i % W) % T.cols); };
+export const rackOf = (i) => (i % (2 * T.cols) >= T.cols ? 1 : 0);
 // One discharge and everything it sets off, wave by wave: a snapshot of the rack after each wave (for the animation).
 // Changes b in place.
 export function discharge(b, i) {
-  const frames = [], gone = new Set();
+  const frames = [], gone = new Set(), nb = cTwin(b) ? twinNeighbours : cNeighbours;
   let wave = [i];
   while (wave.length) {
     for (const x of wave) { gone.add(x); b[x] = 0; }
     const next = [];
-    for (const x of wave) for (const y of cNeighbours(x)) { if (!b[y] || gone.has(y)) continue; b[y]++; if (b[y] > 3 && !next.includes(y)) next.push(y); }
+    for (const x of wave) for (const y of nb(x)) { if (!b[y] || gone.has(y)) continue; b[y]++; if (b[y] > 3 && !next.includes(y)) next.push(y); }
     frames.push({ board: b.slice(), wave });
     wave = next;
   }
@@ -268,16 +295,18 @@ export function cascadeSolve(board, cap = C.cap) {
   }
   return { best: 0, taps: [] };
 }
-export function newCascade(seed) {
+export function newCascade(seed, { floor = 1 } = {}) {
+  const two = floor >= PUZZLES.cascade.deep, nodes = two ? C.twin.nodes : C.nodes, fill = two ? C.twin.fill : 0.62;
   for (let salt = 0; ; salt++) {
     for (let a = 0; a < C.attempts; a++) {
-      const r = seeded(mix(seed, 4099 + salt * 7717 + a)), b = Array(C.rows * C.cols).fill(0);
-      for (let i = 0; i < b.length; i++) if (r() < 0.62) { const x = r(); b[i] = x < 0.25 ? 1 : x < 0.55 ? 2 : 3; }
+      const r = seeded(mix(seed, (two ? 5113 : 4099) + salt * 7717 + a)), b = Array(two ? 2 * T.rows * T.cols : C.rows * C.cols).fill(0);
+      for (let i = 0; i < b.length; i++) if (r() < fill) { const x = r(); b[i] = x < 0.25 ? 1 : x < 0.55 ? 2 : 3; }
       const n = b.filter(Boolean).length;
-      if (n < C.nodes[0] || n > C.nodes[1]) continue;
+      if (n < nodes[0] || n > nodes[1]) continue;
+      if (two && [0, 1].some((k) => !b.some((v, i) => v && rackOf(i) === k))) continue; // both racks charged
       const { best } = cascadeSolve(b);
       if (best < C.fewest) continue;
-      return { kind: 'cascade', seed, start: b.slice(), b, best, taps: best + 1, used: 0, done: null, last: null };
+      return { kind: 'cascade', seed, ...(two ? { variant: 'twin' } : {}), start: b.slice(), b, best, taps: best + 1, used: 0, done: null, last: null };
     }
   }
 }
@@ -587,22 +616,41 @@ function cgGuess(st, C, p) {
   return st.last;
 }
 
+// ---------- the terminal: the log sweep ----------
+// An incident file from the room's seed: its kind (two breach logs in four, a transfer log, a process list) and its
+// trick by floor (2: the obvious one, 3: a decoy, 4+: the note). The answer stays on the board; the page never shows it.
+export const LS = { strikes: 2, kinds: ['auth', 'auth', 'exfil', 'proc'] };
+export function newTerminal(seed, { floor = 2 } = {}) {
+  const r = seeded(mix(seed, 2203)), kind = LS.kinds[Math.floor(r() * LS.kinds.length)];
+  const p = sweepFor({ seed: Math.floor(r() * 2 ** 31) + 1, depth: Math.max(1, floor - 1) }, kind);
+  return { kind: 'terminal', seed, log: p.kind, tier: p.tier, file: p.file, question: p.question, note: p.note, cols: p.cols, rows: p.rows, filters: p.filters, toneCol: p.toneCol, suspects: p.suspects, answer: p.answer, misses: 0, strikes: LS.strikes, wrong: [], done: null, last: null };
+}
+function terminalName(st, a) {
+  if (!st.suspects.includes(a) || st.wrong.includes(a)) return null;
+  const ok = a === st.answer;
+  if (ok) st.done = 'won';
+  else { st.wrong.push(a); st.misses++; if (st.misses >= st.strikes) st.done = 'lost'; }
+  st.last = { name: a, ok };
+  return st.last;
+}
+
 // ---------- one entry point ----------
 // A new board for a room: its kind, its seed (the server's, the room's and how many times it has refilled), its floor.
 // A cryptogram takes the player's key (cipherOf) and may change it (a new key once every note reads).
 export function newPuzzle(kind, seed, { floor = 1, cipher } = {}) {
   if (kind === 'quarantine') return newQuarantine(seed, { floor });
-  if (kind === 'chase') return newChase(seed);
-  if (kind === 'cascade') return newCascade(seed);
+  if (kind === 'chase') return newChase(seed, { floor });
+  if (kind === 'cascade') return newCascade(seed, { floor });
   if (kind === 'sweep') return newSweep(seed, { floor });
   if (kind === 'routing') return newRouting(seed);
   if (kind === 'deadlock') return newDeadlock(seed);
   if (kind === 'cryptogram') return newCryptogram(seed, cipher);
+  if (kind === 'terminal') return newTerminal(seed, { floor });
   return null;
 }
 // A move on a board, in words (the card's verbs and the terminal's): quarantine "wall 23"; chase "up", "down", "left",
 // "right", "wait", "go 12", "undo", "restart"; cascade "tap 7"; sweep "ping 12", "dig 30"; routing "turn 12", "back 12"
-// (anticlockwise); deadlock "give cron a"; cryptogram "guess q e" (Q stands for e). Returns what happened, or
+// (anticlockwise); deadlock "give cron a"; cryptogram "guess q e" (Q stands for e); terminal "name 10.4.2.17". Returns what happened, or
 // null when the move doesn't go (the board stays as it was).
 export function puzzleMove(st, text) {
   const [verb, arg] = String(text || '').trim().toLowerCase().split(/\s+/), i = Number(arg);
@@ -614,9 +662,10 @@ export function puzzleMove(st, text) {
   const third = String(text || '').trim().toLowerCase().split(/\s+/)[2];
   if (st.kind === 'deadlock') { const p = /^\d+$/.test(arg) ? Number(arg) : PROCS.indexOf(arg), l = LOCKS.indexOf((third || '').toUpperCase()); return verb === 'give' && p >= 0 && p < st.n && l >= 0 ? deadlockGive(st, p, l) : null; }
   if (st.kind === 'cryptogram') return verb === 'guess' && arg?.length === 1 && third?.length === 1 ? cgGuess(st, arg.toUpperCase(), third) : null;
+  if (st.kind === 'terminal') return (verb === 'name' || verb === 'sweep') && arg ? terminalName(st, arg) : null;
   if (st.kind === 'chase') {
-    if (verb === 'undo') { const h = st.hist.pop(); if (!h) return null; [st.p, st.h, st.moves] = h; st.last = { undo: true }; return st.last; }
-    if (verb === 'restart') { if (!st.hist.length) return null; st.p = st.p0; st.h = st.h0; st.moves = 0; st.hist = []; st.last = { restart: true }; return st.last; }
+    if (verb === 'undo') { const h = st.hist.pop(); if (!h) return null; [st.p, st.h, st.moves] = h; if (st.h20 != null) st.h2 = h[3]; st.last = { undo: true }; return st.last; }
+    if (verb === 'restart') { if (!st.hist.length) return null; st.p = st.p0; st.h = st.h0; if (st.h20 != null) st.h2 = st.h20; st.moves = 0; st.hist = []; st.last = { restart: true }; return st.last; }
     if (verb === 'go' && Number.isInteger(i)) { const dir = i === st.p ? 'wait' : chaseReach(st)[i]; return dir ? chaseMove(st, dir) : null; }
     return chaseMove(st, verb);
   }
@@ -628,7 +677,8 @@ export function botMove(st) {
   if (st.kind === 'quarantine') { const i = qBest(st); return i >= 0 ? `wall ${i}` : null; }
   if (st.kind === 'cascade') { const { taps } = cascadeSolve(st.b, Math.max(1, st.taps - st.used)); return `tap ${taps[0] ?? st.b.findIndex(Boolean)}`; }
   if (st.kind === 'sweep') { const m = sweepBest(st); return `${m.mode} ${m.at}`; }
-  if (st.kind === 'chase') { const { moves } = chaseSolve(st.walls, st.p, st.h, st.exit); return moves[0] || 'wait'; }
+  if (st.kind === 'chase') { const { moves } = chaseSolve(st.walls, st.p, st.h, st.exit, st.h2 ?? null); return moves[0] || 'wait'; }
+  if (st.kind === 'terminal') return `name ${st.answer}`;
   if (st.kind === 'routing') {
     const step = routeSolve(st).route.find(([i, need]) => (rtMask(st.tiles[i]) & need) !== need);
     if (!step) return null;
@@ -649,12 +699,13 @@ export function puzzleScore(st) {
   if (st.kind === 'routing') return { turns: st.turns, best: st.best, left: st.budget - st.turns };
   if (st.kind === 'deadlock') return { fin: st.fin.filter(Boolean).length, n: st.n };
   if (st.kind === 'cryptogram') return { solved: st.solved.length, misses: st.misses, note: st.note };
+  if (st.kind === 'terminal') return { misses: st.misses, strikes: st.strikes };
   return {};
 }
 
 // ---------- words (the terminal) ----------
 // A board's size, and a cell by its address as the board labels it (columns A…, rows 1…: c4), or by its number.
-export const dimsOf = (st) => (st.kind === 'quarantine' ? [Q.rows, Q.cols] : st.kind === 'sweep' ? [P.rows, P.cols] : st.kind === 'routing' ? [RT.rows, RT.cols] : [5, 5]);
+export const dimsOf = (st) => (st.kind === 'quarantine' ? [Q.rows, Q.cols] : st.kind === 'sweep' ? [P.rows, P.cols] : st.kind === 'routing' ? [RT.rows, RT.cols] : st.kind === 'terminal' ? [0, 0] : st.kind === 'cascade' && cTwin(st.b) ? [T.rows, 2 * T.cols] : [5, 5]);
 const colName = (c) => String.fromCharCode(65 + c);
 export const cellName = (st, i) => { const [, cols] = dimsOf(st); return `${colName(i % cols)}${Math.floor(i / cols) + 1}`; };
 export function cellOf(st, text) {
@@ -663,13 +714,14 @@ export function cellOf(st, text) {
   return /^\d+$/.test(t) && Number(t) < rows * cols ? Number(t) : null;
 }
 // Whether you've made a move on it yet.
-const STARTED = { quarantine: (st) => st.turn > 0, chase: (st) => st.moves > 0, cascade: (st) => st.used > 0, sweep: (st) => st.pings.length + st.digs.length > 0, routing: (st) => st.turns > 0, deadlock: (st) => st.gives > 0, cryptogram: (st) => st.solved.length + st.misses > 0 };
+const STARTED = { quarantine: (st) => st.turn > 0, chase: (st) => st.moves > 0, cascade: (st) => st.used > 0, sweep: (st) => st.pings.length + st.digs.length > 0, routing: (st) => st.turns > 0, deadlock: (st) => st.gives > 0, cryptogram: (st) => st.solved.length + st.misses > 0, terminal: (st) => st.misses > 0 };
 export const puzzleStarted = (st) => !!st && !!STARTED[st.kind]?.(st);
 // The board as text: a header of columns and a row a line.
 const PIPE = { 0: ' ', 1: '╵', 2: '╶', 4: '╷', 8: '╴', 5: '│', 10: '─', 3: '└', 6: '┌', 12: '┐', 9: '┘', 7: '├', 14: '┬', 13: '┤', 11: '┴', 15: '┼' };
 export function boardLines(st) {
   if (st.kind === 'deadlock') return [...st.need.map((_, p) => `${PROCS[p].padEnd(7)}${st.fin[p] ? 'exit 0' : `holds ${st.held[p].map((l) => LOCKS[l]).join(' ') || '-'} · needs ${lockLeft(st, p).map((l) => LOCKS[l]).join(' ')}`}`), `Free: ${st.pool.map((l) => LOCKS[l]).join(' ') || '-'} · give cron a`];
   if (st.kind === 'cryptogram') return [st.text.replace(/[a-z]/g, (c) => st.key[c]), st.text.replace(/[a-z]/g, (c) => (cgKnown(st, c) ? c : '_')), `Strikes ${st.misses}/${st.strikes} · guess q e: Q stands for e`];
+  if (st.kind === 'terminal') return [`${st.file}: ${st.question}`, ...(st.note ? [st.note] : []), st.cols.join('  '), ...st.rows.map((x) => x.cells.join('  ')), `Suspects: ${st.suspects.map((a) => (st.wrong.includes(a) ? `${a} (no)` : a)).join(', ')} · strikes ${st.misses}/${st.strikes} · name <answer>`];
   const [rows, cols] = dimsOf(st), out = ['    ' + Array.from({ length: cols }, (_, c) => colName(c)).join(' ')];
   const next = st.kind === 'quarantine' && !st.done ? new Set(qTargets(st).map((t) => t.to)) : new Set();
   for (let r = 0; r < rows; r++) {
@@ -680,13 +732,13 @@ export function boardLines(st) {
       else if (st.kind === 'cascade') cells.push(st.b[i] ? String(st.b[i]) : '.');
       else if (st.kind === 'routing') cells.push(PIPE[rtMask(st.tiles[i])] ?? '?');
       else if (st.kind === 'sweep') { const p = st.pings.find((x) => x.at === i); cells.push(st.found.includes(i) ? '$' : st.digs.includes(i) ? 'x' : p ? String(Math.min(9, p.read)) : i in st.noise ? '~' : '.'); }
-      else cells.push(i === st.p ? '@' : i === st.h ? 'T' : i === st.exit ? 'D' : '.');
+      else cells.push(i === st.p ? '@' : i === st.h || i === st.h2 ? 'T' : i === st.exit ? 'D' : '.');
     }
     out.push(`${st.kind === 'routing' && r === st.src ? '>' : ' '}${String(r + 1).padStart(2)} ${cells.join(st.kind === 'routing' ? '' : ' ')}${st.kind === 'routing' && r === st.snk ? ' >' : ''}`);
   }
   if (st.kind === 'quarantine') out.push(`Safe ${qValue(st)}/${st.total} · firewalls ${st.walls} · X the worm, ! where it goes next, * a data node (3)`);
   if (st.kind === 'routing') { out[0] = '    ' + Array.from({ length: cols }, (_, c) => colName(c)).join(''); out.push(`Turns left ${st.budget - st.turns} · fewest ${st.best} · turn c3, back c3`); }
-  if (st.kind === 'cascade') out.push(`Taps left ${st.taps - st.used} · fewest ${st.best}`);
+  if (st.kind === 'cascade') out.push(`Taps left ${st.taps - st.used} · fewest ${st.best}${cTwin(st.b) ? ` · two racks (A–${colName(T.cols - 1)}, ${colName(T.cols)}–${colName(2 * T.cols - 1)}): an edge node charges its twin` : ''}`);
   if (st.kind === 'sweep') out.push(`Budget ${sweepLeft(st)}/${st.budget}${Object.keys(st.noise).length ? ' · ~ a noisy cell reads one off' : ''}${st.caches.length > 1 ? ' · two caches' : ''}`);
   if (st.kind === 'chase') { out.push(`Moves ${st.moves} · fewest ${st.best} · @ you, T the Tracker, D the door`); out.push(`Walls: ${st.walls.map((k) => k.split('-').map((x) => cellName(st, Number(x))).join('|')).join(' ')}`); }
   return out;
@@ -699,8 +751,9 @@ export function moveLine(st, did) {
   if (st.kind === 'routing') return `${at(did.at)} turns ${did.dir > 0 ? 'clockwise' : 'back'}.${st.done === 'won' ? ' The sink lights.' : ''}`;
   if (st.kind === 'deadlock') return `${PROCS[did.p]} takes ${LOCKS[did.l]}.${did.finished ? ` It finishes and returns ${st.need[did.p].map((l) => LOCKS[l]).join(' ')}.` : ''}${st.done === 'lost' ? ' Deadlock.' : ''}`;
   if (st.kind === 'cryptogram') return did.ok ? `${did.C} is ${did.p}.` : `${did.C} isn't ${did.p}.`;
+  if (st.kind === 'terminal') return did.ok ? `${did.name}: it fits.` : `${did.name}: it doesn't fit.${st.done === 'lost' ? ' The log rotates.' : ''}`;
   if (st.kind === 'sweep') return did.mode === 'ping' ? `Ping ${at(did.at)}: ${did.read} ${did.read === 1 ? 'step' : 'steps'}.` : `Dig ${at(did.at)}: ${did.hit ? 'a cache.' : 'nothing.'}`;
   if (did.undo) return 'Undone.';
   if (did.restart) return 'Back to the start.';
-  return did.path ? `You: ${at(did.from)} → ${at(st.p)}. The Tracker: ${did.path.map(at).join(' → ')}.${did.caught ? ' It has you.' : ''}` : st.done === 'won' ? 'Through the door.' : 'You walk into it.';
+  return did.path ? `You: ${at(did.from)} → ${at(st.p)}. The Tracker: ${did.path.map(at).join(' → ')}.${did.path2 ? ` The second: ${did.path2.map(at).join(' → ')}.` : ''}${did.caught ? ' It has you.' : ''}` : st.done === 'won' ? 'Through the door.' : 'You walk into it.';
 }

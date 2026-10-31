@@ -182,7 +182,10 @@ function load() {
     const seed = Number(params.get('seed')) || (newRng() % 100000) + 1;
     FP.outfit(s, { cls, level: lv, sub: params.get('sub') || params.get('subclass'), gearSeed: seed });
     FP.startRooms(s, { seed, size, kind, level: lv, floor: Math.max(1, Number(params.get('floor')) || 2), author: params.get('author') || null, hunter: ['patrol', 'track'].includes(params.get('hunter')) ? params.get('hunter') : null, boss: params.get('boss') || 'a', speed: 10 });
+    const pz = FP.isPuzzle(params.get('puzzle')) ? FP.addPuzzles(s.rooms.graph, [params.get('puzzle')], seed)[0] : null; // &puzzle=<kind>: its room, and you in it
     FP.connect(s);
+    if (pz) { s.rooms.at = FP.neighbours(s.rooms.graph, pz.id)[0]; s.rooms.visit.walked[s.rooms.at] = true; FP.go(s, pz.id); }
+    if (params.has('seen')) for (const id of Object.keys(s.rooms.graph.rooms)) s.rooms.seen[id] = 'kind'; // &seen: every room discovered
     if (params.has('rival')) spawnRival(s, seed, params.get('rival')); // &rival=kudzu|escrow|hush (or any): a rival this visit (rivals.mjs)
     return s;
   }

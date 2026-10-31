@@ -1631,7 +1631,9 @@ function sweepMarkup(s, e, live) {
 }
 // The sweep itself (its log, the filters, the suspects): the old runs' incident file, and a thread's process log on a
 // temporary server (threads-view.mjs). solved: the answer once found; tries: wrong answers so far.
-export function sweepBlock(p, { solved = null, tries = 0, key = '' } = {}) {
+// act: a suspect button's attributes (a terminal room's board plays it); wrong: suspects already ruled out; label: the
+// foot's word once it's over.
+export function sweepBlock(p, { solved = null, tries = 0, key = '', act = (a) => `data-run="sweep ${esc(a)}"`, wrong = [], label = 'Swept' } = {}) {
   if (sweepUi.key !== key) { sweepUi.key = key; sweepUi.flags = new Map(); sweepUi.filter = 'all'; }
   const f = sweepUi.filter;
   const shown = p.rows.filter((x) => f === 'all' || x.kind === f);
@@ -1643,8 +1645,8 @@ export function sweepBlock(p, { solved = null, tries = 0, key = '' } = {}) {
     return x.flag ? `<button type="button" class="sw-line${c}${x.tone === 'dim' ? ' dimmed' : ''}" ${grid} data-sweep-flag="${esc(x.flag)}">${body}</button>` : `<div class="sw-line quiet" ${grid}>${body}</div>`;
   };
   const filt = (id, label) => `<button type="button" class="sw-filter${f === id ? ' on' : ''}" data-sweep-filter="${id}">${esc(label)}</button>`;
-  const suspects = p.suspects.map((a) => (solved ? `<span class="sw-suspect${a === solved ? ' guilty' : ' cleared'}">${esc(a)}</span>` : `<button type="button" class="sw-suspect" data-run="sweep ${esc(a)}">${esc(a)}</button>`)).join('');
-  return `<div class="sweep${solved ? ' solved' : ''}"><div class="sw-head"><b>${glyph('ids')}${esc(p.file)}</b><span class="sw-q">${esc(p.question)}</span><span class="sw-filters">${filt('all', 'All')}${filt('a', p.filters[0])}${filt('b', p.filters[1])}</span></div>${p.note ? `<div class="sw-note">${esc(p.note)}</div>` : ''}<div class="sw-cols sw-line" ${grid}>${p.cols.map((c) => `<span>${esc(c)}</span>`).join('')}</div><div class="sw-log">${shown.map(row).join('') || '<div class="sw-line quiet">nothing matches</div>'}</div><div class="sw-foot"><span class="sw-label">${solved ? 'Swept' : 'Your answer'}</span>${suspects}${!solved && tries ? `<small class="sw-tries">${tries} wrong</small>` : ''}</div></div>`;
+  const suspects = p.suspects.map((a) => (solved ? `<span class="sw-suspect${a === solved ? ' guilty' : ' cleared'}">${esc(a)}</span>` : wrong.includes(a) ? `<span class="sw-suspect cleared">${esc(a)}</span>` : `<button type="button" class="sw-suspect" ${act(a)}>${esc(a)}</button>`)).join('');
+  return `<div class="sweep${solved ? ' solved' : ''}"><div class="sw-head"><b>${glyph('ids')}${esc(p.file)}</b><span class="sw-q">${esc(p.question)}</span><span class="sw-filters">${filt('all', 'All')}${filt('a', p.filters[0])}${filt('b', p.filters[1])}</span></div>${p.note ? `<div class="sw-note">${esc(p.note)}</div>` : ''}<div class="sw-cols sw-line" ${grid}>${p.cols.map((c) => `<span>${esc(c)}</span>`).join('')}</div><div class="sw-log">${shown.map(row).join('') || '<div class="sw-line quiet">nothing matches</div>'}</div><div class="sw-foot"><span class="sw-label">${solved ? esc(label) : 'Your answer'}</span>${suspects}${!solved && tries ? `<small class="sw-tries">${tries} wrong</small>` : ''}</div></div>`;
 }
 
 // "Did you mean …?": the guess as a button (a guess ending in a space prefills the prompt instead).
@@ -2733,7 +2735,7 @@ function programsLine(s, l) {
 
 // A traced server's type as the card names it, and its one rule on rooms (floorplan.mjs KINDS) for the tag's tooltip.
 // (A relay is the item you install on a server you hold: the relay template reads as a name server.)
-export const LAYOUT_NAMES = { relay: 'Name server', mailhub: 'Mail hub', mirror: 'Public mirror', archive: 'Backup archive', lab: 'Research lab' };
+export const LAYOUT_NAMES = { relay: 'Name server', mailhub: 'Mail hub', mirror: 'Public mirror', archive: 'Backup archive', lab: 'Research lab', router: 'Router', honeypot: 'Honeypot', cold: 'Cold storage' };
 export const layoutName = (l) => LAYOUT_NAMES[l.template] || 'Node';
 export const layoutRule = (l) => kindRule(KIND_OF[l.template]);
 
