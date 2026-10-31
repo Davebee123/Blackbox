@@ -14,7 +14,10 @@ import { ARCHETYPES, SUBS, SUBCLASS, LOADOUT, FAMILIES, defaultSub, skillOrder, 
 import { floorsOf, graphOf, neighbours, serverSlot, locAt, descend } from './floors.mjs';
 import { CARDS as EVENT_CARDS } from './events.mjs';
 import { PARTS } from './parts.mjs';
+import { LEANINGS } from './leanings.mjs';
+import { OBJECTIVES } from './objectives.mjs';
 import { openFarm } from './rogue.mjs';
+import { arenaList, arenaEntry, arenaLevel, arenaLeanings, arenaObjectives, ARENA_GROUPS } from './arena.mjs';
 
 // ---------- the save keys ----------
 export const SAVE_KEY = 'blackbox-v6'; // the real game's save
@@ -156,6 +159,16 @@ export function benchBuild(s, name, level) {
   return { ok: true, cls: kit.cls, sub, level: L, floor, message: `Bench: ${who}, level ${L}, on floor ${floor}.${note}` };
 }
 
+// ?bench=arena (app.js): the class or subclass to build the bench as, or null to keep it. &as and &level build it whenever
+// they differ from the save's character; with no &as, a new arena bench is the first subclass at level 10.
+export function arenaBuild(s, raw, as, level) {
+  const L = Math.max(1, Math.min(LOADOUT.maxLevel, Math.round(Number(level)) || 10));
+  if (!as) return raw ? null : Object.keys(SUBS)[0];
+  const kit = benchKit(as);
+  if (!kit) return null;
+  return !raw || (kit.sub || kit.cls) !== (subOf(s) || classOf(s)) || L !== hackerLevel(s) ? String(as).toLowerCase() : null;
+}
+
 // bench …: on a bench (bench: its name), or bench list / delete with developer mode on. store: localStorage.
 // Returns the events it emitted, as command() does.
 export function benchCommand(s, text, { bench = null, dev = false, store = null } = {}) {
@@ -204,11 +217,10 @@ export const PANEL = [
   { group: 'Event', items: [
     { id: 'event', icon: '✦', label: 'Deal', title: 'An event now: the card picked, or any that fits (developer event [card])', fields: ['event'] },
   ] },
-  { group: 'Fight', items: [
-    { id: 'fight', icon: '⚔', label: 'Fight', title: 'A fight at home now: family, level (yours if empty) and seed (developer fight <family|random> <level> <seed>)', fields: ['family', 'level', 'seed'] },
-  ] },
-  { group: 'Part', items: [
-    { id: 'part', icon: '◈', label: 'Fight', title: 'A fight with that part in it, at the level it opens if empty (developer fight part:<id> [level])', fields: ['part', 'level'] },
+  { group: 'Arena', items: [
+    { id: 'arena', icon: '⚔', label: 'Fight', title: 'Fight\nStarts a fight with the pick at home, at the level (the one it opens, or yours, if empty) and the seed set.\ndeveloper fight <kind>:<id> [level] [seed] [leaning=…] [objective=…]', fields: ['pick', 'level', 'seed', 'leaning', 'objective'] },
+    { id: 'again', icon: '⟳', label: 'Again', title: 'Again\nFights the last pick again, from the start.\ndeveloper fight again' },
+    { id: 'again-refill', icon: '♥', label: 'Again', title: 'Refill and again\nFills your Signal and Integrity, then fights the last pick again.\ndeveloper fight again refill' },
   ] },
   { group: 'Parts', items: [
     { id: 'parts-on', icon: '⇄', label: 'Roll', title: 'The parts roll on or off (developer parts on 1|0)', toggle: true },
@@ -225,7 +237,7 @@ export const panelKits = () => [...Object.keys(SUBS), ...Object.keys(ARCHETYPES)
 export const panelEvents = () => Object.keys(EVENT_CARDS).filter((k) => !EVENT_CARDS[k].chain);
 export const panelFamilies = () => ['random', ...Object.keys(FAMILIES)];
 export const panelParts = () => [...new Set(Object.values(FAMILIES).flatMap((f) => f.parts.map((p) => p.id)))];
-// The command a panel button types. v: its row's fields { level, kit, event, family, seed, part }.
+// The command a panel button types. v: its row's fields { level, kit, event, family, seed, part, pick, leaning, objective }.
 export function benchAction(s, id, v = {}) {
   const L = hackerLevel(s), clamp = (n) => Math.max(1, Math.min(LOADOUT.maxLevel, Math.round(Number(n)) || L));
   const lv = /^lv([+-]\d+)$/.exec(id);
@@ -240,6 +252,12 @@ export function benchAction(s, id, v = {}) {
     case 'event': return v.event && panelEvents().includes(v.event) ? `developer event ${v.event}` : 'developer event';
     case 'fight': return `developer fight ${panelFamilies().includes(v.family) ? v.family : 'random'} ${clamp(v.level)} ${Math.max(1, Number(v.seed) >>> 0 || 1)}`;
     case 'part': return `developer fight part:${panelParts().includes(v.part) ? v.part : panelParts()[0]}${Number(v.level) >= 1 ? ` ${clamp(v.level)}` : ''}`;
+    case 'arena': {
+      const id = arenaEntry(v.pick) ? v.pick : arenaList()[0].id, lvl = Number(v.level) >= 1 ? clamp(v.level) : arenaLevel(s, id);
+      return `developer fight ${id} ${lvl} ${Math.max(1, Number(v.seed) >>> 0 || 1)}${arenaLeanings().includes(v.leaning) ? ` leaning=${v.leaning}` : ''}${arenaObjectives().includes(v.objective) ? ` objective=${v.objective}` : ''}`;
+    }
+    case 'again': return 'developer fight again';
+    case 'again-refill': return 'developer fight again refill';
     case 'parts-on': return `developer parts on ${PARTS.on ? 0 : 1}`;
     case 'parts': return 'developer parts';
     case 'list': return 'bench list';
@@ -257,10 +275,28 @@ function field(s, f) {
   if (f === 'kit') return `<select data-bench-field="kit" aria-label="Class or subclass" title="Class or subclass">${options(panelKits(), (k) => SUBS[k]?.name || ARCHETYPES[k].name, subOf(s) || classOf(s))}</select>`;
   if (f === 'event') return `<select data-bench-field="event" aria-label="Event card" title="Event card"><option value="">Any card</option>${options(panelEvents(), (k) => EVENT_CARDS[k].name || k)}</select>`;
   if (f === 'family') return `<select data-bench-field="family" aria-label="Family" title="Family">${options(panelFamilies(), (k) => (k === 'random' ? 'Any family' : FAMILIES[k].name))}</select>`;
+  if (f === 'pick') return arenaPicker(s);
+  if (f === 'leaning') return `<select data-bench-field="leaning" aria-label="Leaning" title="Leaning\nThe server's one positive rule, on this fight.">${'<option value="">No leaning</option>'}${options(arenaLeanings(), (k) => LEANINGS[k].name)}</select>`;
+  if (f === 'objective') return `<select data-bench-field="objective" aria-label="Objective" title="Objective\nWhat wins this fight besides breaking every part.">${'<option value="">No objective</option>'}${options(arenaObjectives(), (k) => OBJECTIVES[k].name)}</select>`;
   if (f === 'part') return `<select data-bench-field="part" aria-label="Part" title="Part">${options(panelParts(), partName)}</select>`;
   return '';
 }
+// The Arena's picker: a search box over every fightable thing (arena.mjs), grouped by kind, each row its name, kind and
+// the level it opens; the pick in a hidden field. app.js filters the rows as you type and marks the one you click.
+function arenaPicker(s) {
+  const last = String(s.arenaLast || '').split(' ')[0], list = arenaList(), pick = list.some((x) => x.id === last) ? last : list[0].id;
+  const row = (x) => `<button type="button" class="ar-row" role="option" data-arena-pick="${esc(x.id)}" data-arena-find="${esc(`${x.name} ${x.kind} ${x.id}`.toLowerCase())}" aria-selected="${x.id === pick}" title="${esc([x.name, x.kind, ...x.tip, `Opens at level ${x.opens}.`].join('\n'))}"><b>${esc(x.name)}</b><span class="ar-kind">${esc(x.kind)}</span><span class="ar-lv">lv ${x.opens}</span></button>`;
+  const groups = ARENA_GROUPS.map(([g, head]) => { const xs = list.filter((x) => x.group === g); return xs.length ? `<div class="ar-group" role="group" aria-label="${esc(head)}"><span class="ar-head">${esc(head)}</span>${xs.map(row).join('')}</div>` : ''; }).join('');
+  return `<div class="ar-pick"><input type="search" class="ar-find" data-arena-search placeholder="Search ${list.length} fights" aria-label="Search the Arena" autocomplete="off" spellcheck="false"><input type="hidden" data-bench-field="pick" value="${esc(pick)}"><div class="ar-list" role="listbox" aria-label="Fights">${groups}<p class="ar-none" hidden>No match.</p></div></div>`;
+}
 export function panelMarkup(s) {
-  const row = (g) => `<div class="bp-row" role="group" aria-label="${esc(g.group)}"><span class="bp-label">${esc(g.group)}</span>${[...new Set(g.items.flatMap((x) => x.fields || []))].map((f) => field(s, f)).join('')}${g.items.map((x) => `<button type="button" class="bp-btn" data-bench-act="${esc(x.id)}" title="${esc(x.title)}"${x.toggle ? ` aria-pressed="${PARTS.on}"` : ''}><span class="bp-ico" aria-hidden="true">${esc(x.icon)}</span>${esc(x.label)}</button>`).join('')}</div>`;
+  const btn = (x) => `<button type="button" class="bp-btn" data-bench-act="${esc(x.id)}" title="${esc(x.title)}"${x.toggle ? ` aria-pressed="${PARTS.on}"` : ''}><span class="bp-ico" aria-hidden="true">${esc(x.icon)}</span>${esc(x.label)}</button>`;
+  const row = (g) => {
+    const fields = [...new Set(g.items.flatMap((x) => x.fields || []))];
+    const head = `<div class="bp-row" role="group" aria-label="${esc(g.group)}"><span class="bp-label">${esc(g.group)}</span>`;
+    // The Arena: its picker, its fields on a line and its buttons on the next, all under the picker.
+    if (fields.includes('pick')) return `${head}<div class="bp-stack">${field(s, 'pick')}<div class="bp-line">${fields.filter((f) => f !== 'pick').map((f) => field(s, f)).join('')}</div><div class="bp-line">${g.items.map(btn).join('')}</div></div></div>`;
+    return `${head}${fields.map((f) => field(s, f)).join('')}${g.items.map(btn).join('')}</div>`;
+  };
   return PANEL.map(row).join('');
 }

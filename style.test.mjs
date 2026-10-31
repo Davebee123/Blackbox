@@ -12,6 +12,7 @@ import { codexPageMarkup } from './dist/codex-view.mjs';
 import { tellIntents, tellsOf } from './dist/tells.mjs';
 import { ruleHtml } from './dist/ruletext.mjs';
 import './dist/families.mjs';
+import './dist/arena.mjs'; // developer fight (the Arena)
 
 Object.assign(CONFIG, { enemyCrit: 0, misses: false });
 
