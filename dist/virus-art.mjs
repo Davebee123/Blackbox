@@ -9,11 +9,11 @@ const COLORS = { amber: '#f1b92f', bright: '#fff2c8', hot: '#ff5b3d', dim: '#7e5
 const RAMP = ' .,:-=+*#%@'; // dark → lit
 const SHARDS = '#*+=:.01';
 
-// Which shape a virus wears: its strain first, then a guard's own kind, then its family's.
+// Which shape a virus wears: its strain first, then a guard's or a room body's own kind, then its family's.
 const STRAIN_SHAPE = { keylogger: 'eye', hashrat: 'cube', floodgate: 'fountain', leech: 'tick', sleeper: 'cocoon', patchwork: 'crab', flicker: 'wraith', extortion: 'padlock', echo: 'rings', bricker: 'block', overrun: 'hive' };
-const GUARD_SHAPE = { watchdog: 'hound', sentinel: 'eye', crawler: 'spider', shredder: 'blades', bouncer: 'block', tracer: 'dish' };
+const OWN_SHAPE = { watchdog: 'hound', sentinel: 'eye', crawler: 'spider', shredder: 'blades', bouncer: 'block', tracer: 'dish', trojan: 'horse', cryptominer: 'boiler', wiper: 'magnet' };
 const FAMILY_SHAPE = { ransomware: 'crab', worm: 'serpent', ghostroot: 'wraith', watchdog: 'hound' };
-export const shapeOf = (v) => STRAIN_SHAPE[v.strain] || GUARD_SHAPE[v.family] || FAMILY_SHAPE[v.art] || FAMILY_SHAPE[v.family] || 'crab';
+export const shapeOf = (v) => STRAIN_SHAPE[v.strain] || OWN_SHAPE[v.family] || FAMILY_SHAPE[v.art] || FAMILY_SHAPE[v.family] || 'crab';
 
 // A small seeded random, so each virus keeps its own variation.
 function rng(seed) { let x = (seed >>> 0) || 1; return () => ((x = (x * 1664525 + 1013904223) >>> 0) / 4294967296); }
@@ -238,10 +238,53 @@ export function createArt({ getState, canMove, getSelected, getNowSources }) {
       // Overrun: a cluster of cells, a swarm of drones circling it.
       for (let i = 0; i < 7; i++) { const th = (i / 6) * Math.PI * 2, rr = i ? 26 : 0; orb(Math.cos(th) * rr, Math.sin(th) * rr * 0.8, 0, 14, 12, 14, i ? S(i % 2 ? -1 : 1) : B, i ? 0 : breathe, 0.3); }
       for (let i = 0; i < 18; i++) orb(Math.cos(i) * 60, Math.sin(i * 1.7) * 30, Math.sin(i) * 40, 2, 2, 2, 'frag' + (1 + (i % 3)), orbit([0, 0, 0], 0.8 + (i % 4) * 0.2, 0.3 * (i % 3)), 1.2);
+    } else if (shape === 'horse') {
+      // Trojan: a wooden horse on a wheeled cart. Its head and neck are the Courier, nodding; the hatch in its flank
+      // the Loader; Packages and Droppers are the crates on the cart's tail.
+      box(0, 0, 0, 38, 15, 15, 'body', 0, 4);
+      for (const x of [-26, 26]) for (const z of [-9, 9]) tube([x, 12, z], [x + Math.sign(x) * 3, 44, z], 4, 3.5, 'body');
+      box(0, 50, 0, 50, 3, 18, 'body', 0, 4);
+      for (const x of [-36, 36]) disc(x, 58, -20, 10, 'body', spin([x, 58, -20], 1.2));
+      const nod = sway([-34, -8, 0], 0.12, 1.1);
+      tube([-30, -8, 0], [-46, -44, 0], 8, 6, S(), nod);
+      tube([-46, -46, 0], [-70, -34, 0], 8, 5, S(), nod);
+      for (const z of [-4, 4]) tube([-44, -50, z], [-40, -64, z * 1.4], 2.5, 0.4, S(), nod); // ears
+      for (let i = 0; i < 4; i++) tube([-40 + i * 3, -48 + i * 4, 0], [-30 + i * 4, -54 + i * 6, 0], 2, 0.5, S(), nod); // mane
+      orb(-56, -46, -7, 2, 2, 1, S(), nod);
+      box(4, 0, -16, 13, 8, 2, B, breathe, 3);
+      orb(4, 0, -12, 8, 5, 3, B, breathe);
+      tube([38, -6, 0], [56, 22, 0], 3, 0.5, 'body', sway([38, -6, 0], 0.3, 1.6));
+      for (const [k, x, y] of [[1, 44, 40], [2, 58, 40], [3, 51, 27]]) box(x, y, -6, 6, 6, 6, 'frag' + k, anim({ k: 'bob', amp: 1.2, speed: 1.5 + k * 0.3 }), 3);
+    } else if (shape === 'boiler') {
+      // Cryptominer: a boiler building pressure. The tank is the Rig, swelling; the coil wrapped round it the
+      // Cooler; heat comes off the stack, and the gauge's needle twitches.
+      const swell = anim({ k: 'breathe', c: [0, 8, 0], amp: 0.04, speed: 2 });
+      orb(0, 8, 0, 44, 44, 40, S(), swell);
+      for (let i = 0; i < 6; i++) { const y = -18 + i * 10; ring(0, y, 0, Math.sqrt(1 - ((y - 8) / 46) ** 2) * 44 + 4, 1, B, swell, 0.1); }
+      disc(0, 0, -42, 12, 'body');
+      tube([0, 0, -44], [8, -9, -45], 1.8, 0.6, S(-1), sway([0, 0, -44], 0.6, 2.4)); // the needle
+      tube([14, -30, 0], [16, -52, 0], 7, 7, 'body');
+      for (let i = 0; i < 4; i++) tube([10 + i * 4, -54, 0], [8 + i * 5 + (r() - 0.5) * 8, -74, 0], 1.2, 0.3, S(i % 2 ? -1 : 1), anim({ k: 'wave', amp: 4, freq: 0.25, speed: 3 + i * 0.5 }));
+      tube([-40, 18, 0], [-62, 18, 0], 4, 4, 'body');
+      ring(-64, 18, 0, 11, 1, 'body', spin([-64, 18, 0], 0.8), Math.PI / 2); // a valve wheel
+      for (const [x, z] of [[-24, -18], [24, -18], [0, 26]]) tube([x, 46, z], [x * 1.3, 66, z * 1.3], 5, 4, 'body');
+    } else if (shape === 'magnet') {
+      // Wiper: a great horseshoe magnet, the Degausser (an arm a side), hanging over a drive, the Eraser, with field
+      // lines pulsing between its poles.
+      const hang = sway([0, -70, 0], 0.05, 0.7);
+      for (let th = 0; th <= Math.PI; th += 0.07) tube([Math.cos(th) * 34, -20 - Math.sin(th) * 40, 0], [Math.cos(th + 0.07) * 34, -20 - Math.sin(th + 0.07) * 40, 0], 9, 9, S(th < Math.PI / 2 ? 1 : -1), hang, 0.4);
+      for (const side of [-1, 1]) { tube([side * 34, -20, 0], [side * 34, 6, 0], 9, 9, S(side), hang); box(side * 34, 12, 0, 10, 5, 10, S(side), hang, 3); }
+      tube([0, -60, 0], [0, -84, 0], 1.2, 1.2, 'body', hang);
+      for (let i = 0; i < 4; i++) {
+        const rr = 22 + i * 8, field = anim({ k: 'ripple', c: [0, 16, 0], amp: 0.1, speed: 3, phase: i * 0.9 });
+        for (let th = 0.3; th < Math.PI - 0.3; th += 0.1) tube([Math.cos(th) * rr * 1.5, 16 + Math.sin(th) * rr * 0.9, 0], [Math.cos(th + 0.1) * rr * 1.5, 16 + Math.sin(th + 0.1) * rr * 0.9, 0], 1, 1, 'body', field, 0.5);
+      }
+      box(0, 58, 0, 30, 6, 20, B, spin([0, 58, 0], 0.6, 'y'), 3);
+      orb(0, 50, -12, 6, 3, 3, B, breathe);
     }
     // Decorations by seed: antennae or an orbiting halo now and then.
-    if (r() < 0.35 && !['blades', 'block', 'gate', 'dish', 'fountain'].includes(shape)) for (const side of [-1, 1]) tube([side * 10, -38, -6], [side * 22, -66, -14], 1.5, 0.3, 'body', sway([side * 10, -38, -6], 0.25, 2, side));
-    if (r() < 0.25 && !['eye', 'rings', 'hive'].includes(shape)) ring(0, 0, 0, 70, 0.8, 'body', orbit([0, 0, 0], 0.4, 1.1), 1.1);
+    if (r() < 0.35 && !['blades', 'block', 'gate', 'dish', 'fountain', 'horse', 'boiler', 'magnet'].includes(shape)) for (const side of [-1, 1]) tube([side * 10, -38, -6], [side * 22, -66, -14], 1.5, 0.3, 'body', sway([side * 10, -38, -6], 0.25, 2, side));
+    if (r() < 0.25 && !['eye', 'rings', 'hive', 'horse', 'boiler', 'magnet'].includes(shape)) ring(0, 0, 0, 70, 0.8, 'body', orbit([0, 0, 0], 0.4, 1.1), 1.1);
     radius = Math.max(40, ...points.map((p) => Math.hypot(p.x, p.y, p.z)));
     rx = Math.max(40, ...points.map((p) => Math.hypot(p.x, p.z))); // it turns: its widest is any horizontal reach
     ry = Math.max(40, ...points.map((p) => Math.abs(p.y) + 8));
