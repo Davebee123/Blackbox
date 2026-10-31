@@ -2307,8 +2307,9 @@ A page stays while it's true, an hour at most; the same news again replaces the 
 
 - **The tray:** one icon per waiting page, most urgent first (threats, then events by time left, then a ready contract,
   letters, offers), amber, red for a threat; up to four on a desktop, three on a phone, then **+n**. **One tap** does
-  the page's thing (**Deliver**, **Take**, **Read**, **Intercept**, **Jack in**, **Show**…); mid-fight or on a run,
-  anything that would start a fight shows you where it is instead.
+  the page's thing (**Deliver**, **Read**, **Jack in**, **Show**…); mid-fight or on a run, anything that would start a
+  fight shows you where it is instead. A page that takes on a task (an offer, a world event's fight) shows its quest
+  first, in the quest window's look, with **Take** (or **Intercept**, **Hunt**…) and **Cancel**.
 - **The lamp:** dark with nothing to do, lit while pages wait, blinking while one is new, red for a threat; click it for
   **Comms** (the pages, then the news folded under **News**).
 - **Sound:** only a new page chirps; mid-fight only a breach. A breach also flashes the Integrity meter with BREACH.

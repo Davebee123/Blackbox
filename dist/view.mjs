@@ -1480,7 +1480,7 @@ function fwTier(s, holder = null) {
 // A button's price, after its label: an icon and a number for each thing it takes.
 const bcost = (c) => `<span class="bcost">${Object.entries(c).filter(([, n]) => n).map(([k, n]) => `<span title="${esc(k === 'credits' ? 'Credits' : MATERIALS[k]?.name || k)}">${glyph(k)}${n}</span>`).join('')}</span>`;
 // A contract's pay as icon chips: credits, XP, standing and rep, anything extra.
-function rewardChips(s, c) {
+export function rewardChips(s, c) {
   const r = c.reward, chip = (ic, v, tip, cls = '') => `<span class="rw ${cls}" title="${esc(tip)}">${glyph(ic)}<b>${esc(String(v))}</b></span>`;
   return [r.credits && chip('credits', r.credits, 'Credits'),
     xpOf(s, c) && chip('xp', xpOf(s, c), 'XP'),

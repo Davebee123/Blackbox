@@ -49,3 +49,10 @@
 .topbar.fit-2 .pg-tile .glyph { width: 13px; height: 13px; }
 /* Phone: the pager's cell on the top bar's first row, the lamp and up to three icons. */
 @media (max-width: 900px) { .pager + .meters { margin-left: 0; } }
+
+/* A page's quest before you take it (pager-view.mjs askMarkup): the quest window's card over the screen, Take or Cancel. */
+.gain.pg-ask-wrap { z-index: 41; }
+.gain.pg-ask-wrap .pz-card.pg-ask { width: min(520px, 100%); gap: var(--s5); }
+.pg-ask .qa-lines { display: grid; gap: var(--s3); color: var(--text); }
+.pg-ask .rw-chips { justify-content: flex-start; }
+.pg-ask .acts { justify-content: flex-end; }

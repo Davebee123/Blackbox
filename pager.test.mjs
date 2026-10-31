@@ -76,6 +76,23 @@ test('the act runs the right thing: Deliver, Take, Intercept and Hunt are the re
   assert.deepEqual(PG.actOf(s, bounty), { label: 'Show', go: bounty.go }, 'mid-fight, a fight page shows you where it is');
 });
 
+test('a page that takes on a task asks first: its quest with Take or Cancel; the rest are one tap', () => {
+  const s = filled();
+  const by = (f) => PG.pages(s).find(f);
+  const offer = by((c) => c.kind === 'offer'), courier = by((c) => c.card === 'courier'), ready = by((c) => c.kind === 'ready'), letter = by((c) => c.kind === 'mail');
+  assert.equal(PG.askOf(s, offer), 'offer');
+  assert.equal(PG.askOf(s, courier), 'event');
+  assert.equal(PG.askOf(s, ready), null, 'Deliver is one tap');
+  assert.equal(PG.askOf(s, letter), null, 'Read is one tap');
+  const o = offers(s).find((x) => x.id === offer.ref), html = PGV.askMarkup(s, offer);
+  assert.ok(html.includes(o.subject) && html.includes('data-ask-yes') && html.includes('data-ask-no') && /Take<\/button>/.test(html) && /Cancel<\/button>/.test(html), 'the offer: its subject, Take and Cancel');
+  assert.ok(html.includes('class="rw-chips"'), 'and its pay, as icons');
+  const ev = PGV.askMarkup(s, courier);
+  assert.ok(/Intercept<\/button>/.test(ev) && ev.includes('evc-courier'), 'the courier: its card, Intercept and Cancel');
+  assert.equal(PGV.askMarkup(s, ready), '');
+  assert.ok(offers(s).some((x) => x.id === offer.ref), 'asking takes nothing');
+});
+
 test('acts follow the game: a full hand reads the offer, a contract not done opens it, the wall says what it can', () => {
   const s = filled();
   const offer = PG.pages(s).find((c) => c.kind === 'offer');

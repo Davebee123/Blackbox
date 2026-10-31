@@ -2956,15 +2956,33 @@ function pagerReact(events) {
 }
 // One tap on a page: its command, or where it is (pager.mjs actOf). Going there handles it; a command leaves it up
 // until what it asked for is done (the contract delivered, the courier caught).
-function pagerAct(id) {
+// A page that takes on a task (an offer, a world event's fight) shows its quest first, with Take and Cancel
+// (pager-view.mjs askMarkup); sure: its Take.
+let pgAsk = null;
+function pagerAct(id, sure = false) {
   const c = commsOf(campaign).find((x) => x.id === id), a = c && PG.actOf(campaign, c);
+  pgAsk = null;
   if (!a) return;
   c.seen = true;
   setComms(false);
+  if (!sure && PG.askOf(campaign, c)) { pgAsk = id; dirty = true; return; }
   if (a.go) { markDone(campaign, id); save(); goTo(a.go); } else { save(); run(a.cmd); }
   dirty = true;
 }
+function renderAsk() {
+  const el = $('pg-ask'), c = pgAsk != null && commsOf(campaign).find((x) => x.id === pgAsk);
+  if (!c || !PG.askOf(campaign, c)) pgAsk = null;
+  el.hidden = pgAsk == null;
+  if (pgAsk != null) put('pg-ask', PGV.askMarkup(campaign, c)); else if (cache.get('pg-ask')) { cache.delete('pg-ask'); el.innerHTML = ''; }
+}
+$('pg-ask').addEventListener('click', (e) => {
+  if (e.target.closest('[data-ask-yes]')) { e.stopPropagation(); return pagerAct(pgAsk, true); }
+  if (e.target.closest('[data-ask-no]') || e.target === e.currentTarget) { e.stopPropagation(); pgAsk = null; dirty = true; return; }
+  if (e.target.closest('[data-command]')) { pgAsk = null; dirty = true; } // the event card's own tile: it runs, and the quest goes
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && pgAsk != null) { pgAsk = null; dirty = true; e.stopImmediatePropagation(); } }, true);
 function pagerUi() {
+  renderAsk();
   put('pager', PGV.trayMarkup(campaign, phoneBar.matches ? 3 : 4));
   $('pager').setAttribute('aria-expanded', String(commsOpen));
   $('comms').hidden = !commsOpen;

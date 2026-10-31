@@ -66,6 +66,16 @@ export function actOf(s, c) {
   return open(c);
 }
 
+// A page that takes on a task (an offer's Take, a world event's fight) asks first: its quest comes up with Take and
+// Cancel (pager-view.mjs askMarkup). 'offer', 'event', or null for a page that's one tap.
+export function askOf(s, c) {
+  const a = actOf(s, c);
+  if (!a?.cmd) return null;
+  if (c.kind === 'offer' && a.cmd.startsWith('mail accept ')) return 'offer';
+  if (c.card && a.cmd.startsWith('event fight ')) return 'event';
+  return null;
+}
+
 // In hand: the fight you're in is this page (the courier you intercepted, the invader you jacked in on).
 function inHand(s, c) {
   if (!active(s)) return false;

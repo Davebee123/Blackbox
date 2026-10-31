@@ -6,8 +6,12 @@
 // Everything that explains is a tooltip in WoW grammar (pager.mjs tipOf). No new colours: amber for what you act on,
 // red for a threat.
 import { glyph } from './glyphs.mjs';
-import { EVENT_ICON } from './event-cards.mjs';
-import { pages, news, actOf, lampOf, shortOf, clockOf, tipOf, classOf } from './pager.mjs';
+import { EVENT_ICON, eventCard } from './event-cards.mjs';
+import { pages, news, actOf, lampOf, shortOf, clockOf, tipOf, classOf, askOf } from './pager.mjs';
+import { CARDS, eventText } from './events.mjs';
+import { offers, title } from './mail.mjs';
+import { FACTIONS } from './factions.mjs';
+import { rewardChips } from './view.mjs';
 
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const ago = (ms) => (ms < 60000 ? `${Math.max(0, Math.round(ms / 1000))}s` : ms < 3600000 ? `${Math.floor(ms / 60000)}m` : `${Math.floor(ms / 3600000)}h`);
@@ -46,4 +50,25 @@ export function inboxMarkup(s, now = Date.now()) {
   const old = (c) => `<li class="pgh${c.done ? ' done' : ''}${c.go ? ' go' : ''}" title="${esc(`${c.label}: ${c.text}`)}"${c.go ? ` data-hgo="${esc(c.go)}" data-cid="${c.id}" role="button" tabindex="0"` : ''}><span class="pgh-k">${esc(c.label)}${chainMk(c)}</span><span class="pgh-t">${esc(c.text)}</span><span class="pgh-age">${ago(now - c.t)}</span></li>`;
   return `<div class="comms-head"><span>Comms</span><span class="p-acts">${h.some((c) => c.seen) ? '<button type="button" class="act dim" data-comms-clear title="Clear the news you have seen">Clear</button>' : ''}<button type="button" class="act" data-comms-close>Close</button></span></div>
     <div class="pg-scroll" data-keep="pg-scroll"><ul class="comms-list pg-inbox">${p.map(row).join('') || '<li class="quiet">Quiet.</li>'}</ul>${h.length ? `<details class="pg-hist"><summary>News <b>${h.length}</b></summary><ul class="comms-list">${h.map(old).join('')}</ul></details>` : ''}</div>`;
+}
+
+// The quest a page asks about (pager.mjs askOf), in the quest window's look: who it's from, what it is, what it pays,
+// then Take or Cancel. An offer reads as its letter with its pay; a world event as its card.
+export function askMarkup(s, c) {
+  const kind = askOf(s, c), a = actOf(s, c);
+  if (!kind) return '';
+  const acts = `<div class="row acts"><button type="button" class="btn primary" data-ask-yes>${esc(a.label)}</button><button type="button" class="btn" data-ask-no>Cancel</button></div>`;
+  const x = '<button type="button" class="btn small pz-x" data-ask-no title="Cancel (Esc)" aria-label="Cancel">×</button>';
+  const head = (kick, at, mark, name, sub = '') => `<header class="pz-head qa-head"><p class="pz-kick">${esc(kick)} · <span class="pz-at">${esc(at)}</span></p><h1>${mark}<span>${esc(name)}</span></h1>${sub ? `<p class="qa-thread">${esc(sub)}</p>` : ''}${x}</header>`;
+  if (kind === 'offer') {
+    const o = offers(s).find((x) => x.id === c.ref), f = o.offBooks ? 'glassjaw' : o.faction || 'halcyon';
+    const mark = `<span class="q-mark q-f" style="--fc:${FACTIONS[f].color}" title="${esc(FACTIONS[f].name)}">${glyph('f-' + f)}</span>`;
+    return `<div class="pz-card q-card pg-ask" role="dialog" aria-label="${esc(o.subject)}">${head('Contract', o.from, mark, o.subject, title(s, o))}
+      <div class="qa-lines">${(o.body || []).filter(Boolean).map((l) => `<p class="qa-line">${esc(l)}</p>`).join('')}</div>
+      <div class="rw-chips" title="Pays">${rewardChips(s, o)}</div>${acts}</div>`;
+  }
+  const ev = (s.events || []).find((e) => e.id === c.event);
+  const mark = `<span class="q-mark">${glyphOf(c)}</span>`;
+  return `<div class="pz-card q-card pg-ask ev" role="dialog" aria-label="${esc(ev.name || CARDS[ev.card].name)}">${head(CARDS[ev.card].name, c.from, mark, ev.name || CARDS[ev.card].name)}
+    <div class="qa-lines"><p class="qa-line">${esc(eventText(s, ev))}</p></div>${eventCard(s, ev)}${acts}</div>`;
 }
