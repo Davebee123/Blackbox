@@ -33,6 +33,7 @@
   --steel: #86b6c6; /* what protects a virus part: a lock, a ward, the tethers between parts (docs/ui.md) */
   --steel-glow: rgba(134, 182, 198, 0.6);
   --gray: #7d7362;
+  --backup: #e9e2cf; /* the Backup objective's process (objectives.mjs): yours to keep, not you (teal) */
   --ready: #8fd46b; /* done and waiting on you: a contract to turn in (docs/ui.md) */
   --sans: 'Inter Tight', 'IBM Plex Sans', system-ui, sans-serif;
   --mono: 'IBM Plex Mono', 'Cascadia Mono', ui-monospace, monospace;
@@ -2301,6 +2302,16 @@ body.with-sidebar .workspace { grid-template-columns: 200px minmax(0, 1fr); }
 @media (max-width: 640px) { .board .bescape { display: none; } .phase-strip .ps-esc { display: inline; } }
 .phase-strip .ps-obj { margin-left: 8px; padding: 1px 7px; border: 1px solid currentColor; border-radius: 2px; color: var(--next); font-weight: 700; letter-spacing: 0.08em; }
 .phase-strip .ps-obj.met { color: var(--amber); } .phase-strip .ps-obj.failed { color: var(--muted); font-weight: 400; }
+.phase-strip .ps-obj.ob-backup:not(.met) { color: var(--backup); } .phase-strip .ps-obj.ob-clean.failed { text-decoration: line-through; }
+/* The Backup (objectives.mjs): its own row under yours, ivory, a segmented bar; an attack coming for it wears its stripe and disk. */
+.bbackup { background: rgba(233, 226, 207, 0.06); box-shadow: inset 3px 0 0 var(--backup); }
+.bbackup .part-name { display: inline-flex; align-items: center; gap: 6px; }
+.bbackup .part-name b, .bbackup .part-hp { color: var(--backup); font-weight: 600; }
+.bbackup .part-bar span { background: repeating-linear-gradient(90deg, var(--backup) 0 10px, transparent 10px 12px); }
+.bbackup.lost { opacity: 0.45; }
+.bk-ico { width: 13px; height: 13px; flex: none; color: var(--backup); }
+.intent.to-bk { box-shadow: inset 3px 0 0 var(--backup); }
+.intent.to-bk .bk-ico { margin-right: 4px; vertical-align: -2px; }
 .phase-strip span { padding: 2px 8px; border-radius: 2px; border: 1px solid transparent; }
 .phase-strip.ph-wait .ps-you { color: var(--you); border-color: color-mix(in srgb, var(--you) 50%, transparent); }
 .phase-strip.ph-you .ps-you { color: var(--bg); background: var(--you); }
