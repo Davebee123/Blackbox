@@ -90,8 +90,10 @@ const phoneBar = matchMedia('(max-width: 900px)');
 let campaign = load();
 migrateEffects(campaign); // the old Effects setting becomes its Screen effects level (screenfx.mjs)
 if (DEV) Object.defineProperty(window, '__bb', { get: () => campaign }); // dev only: the live state, for tests
-// The scanner on the Map page (scanner.mjs): its own clock, saved as it changes. Not in the breach campaign.
+// The scanner (scanner.mjs): a radio button beside the pager, hidden in a fight; its own clock, saved as it changes. Not
+// in the breach campaign.
 const scanner = CAMP ? null : createScanner({ state: () => campaign, changed: () => { save(); dirty = true; }, busy: () => active(campaign), sound: () => !!campaign.settings.sound, volume: () => V.volumesOf(campaign).sfx });
+scanner?.mount(document.querySelector('.topbar'));
 if (DEV && scanner) window.__scan = scanner; // dev only: the needle and the strip, for tests
 let module = playtest === 'story' ? 'mail' : playtest === 'breach' ? 'breach' : playtest === 'rooms' ? 'rooms' : CAMP ? 'campaign' : 'map';
 let selected = null;
@@ -2111,8 +2113,6 @@ function render(force = false) {
   const cooling = new Set([...document.querySelectorAll('#tray .ability.cooling[data-ability]')].map((b) => b.dataset.ability));
   for (const b of document.querySelectorAll('#tray .ability.ready[data-ability]')) if (wasCooling.has(b.dataset.ability)) b.classList.add('just-ready');
   wasCooling = cooling;
-  // The scanner's button and strip ride on the map (scanner-view.mjs): put back after every redraw, taken off elsewhere.
-  if (scanner) { const c = module === 'map' && !mapList ? $('page-view').querySelector('.map-canvas') : null; if (c) scanner.mount(c); else scanner.unmount(); }
   applySideMarks();
   renderBreakout();
   showArmed();
@@ -3107,8 +3107,8 @@ function fitTopbar() {
   // the bar's height after the last fit is part of the key, so growing onto a second row refits it.
   const sig = () => [...document.querySelectorAll('.modules button')].map((b) => (b.hidden ? 0 : 1)).join('') + ':' + bar.clientWidth + ':' + bar.offsetHeight + ':' + ($('integrity-note')?.hidden ? 0 : $('integrity-note')?.textContent) + ':' + $('people')?.hidden + ':' + $('pager').childElementCount; // the pager's icons change its width
   if (sig() === fitKey) return;
-  // Wrapped: something starts below where something else ends.
-  const wraps = () => { const kids = [...bar.children].filter((x) => !x.hidden && x.offsetHeight); return kids.some((a) => kids.some((b) => a.offsetTop >= b.offsetTop + b.offsetHeight)); };
+  // Wrapped: something starts below where something else ends (not the scanner's band, a row of its own).
+  const wraps = () => { const kids = [...bar.children].filter((x) => !x.hidden && x.offsetHeight && !x.classList.contains('sc-bar')); return kids.some((a) => kids.some((b) => a.offsetTop >= b.offsetTop + b.offsetHeight)); };
   for (let i = 1; i <= 4; i++) bar.classList.remove('fit-' + i);
   for (let i = 1; i <= 4 && wraps(); i++) bar.classList.add('fit-' + i);
   fitKey = sig();
