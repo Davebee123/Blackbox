@@ -54,6 +54,7 @@ import { puzzlePanel } from './puzzle-view.mjs';
 import { PROGRAMS, SOCKET, programCost, buildBlock, codebasesOf, costLine as programCostLine } from './sockets.mjs';
 import { materialsOf } from './combat.mjs';
 import { MATERIALS } from './gear.mjs';
+import { roomSpark } from './event-cards.mjs';
 import { TH_ICONS, roomMarksOf, nookIcon, nookLive, questSvg, fileSvg, filesHere, threadHud, threadCard, threadAsks, threadPanel, thUi } from './threads-view.mjs';
 import { sweepBlock } from './view.mjs';
 
@@ -242,7 +243,8 @@ function tileTip(s, room, marks = net(s, 'marks') || {}) {
   const name = labelOf(s, room);
   if (x) return `${name}: ${x.name}, an Exfil uploading a stolen archive.\n${exfilNext(s) ? 'It runs from you. Corner it.' : 'Cornered: walk in and break its Uplink.'}`;
   const { who, rule } = aboutOf(s, room), th = R_th(s)[room.id];
-  const body = [who, rule, job ? `Contract: ${job}.` : '', th ? `${th.mark} ${th.text}` : ''].filter(Boolean).join('\n');
+  const bl = (net(s, 'blips') || {})[room.id];
+  const body = [who, rule, job ? `Contract: ${job}.` : '', th ? `${th.mark} ${th.text}` : '', bl ? `${bl.name}: ${bl.text}` : ''].filter(Boolean).join('\n');
   return body ? `${name}: ${body}` : name;
 }
 // What a room can cost you to walk into: its badge's −N, on a room you can walk into, else 0.
@@ -395,7 +397,7 @@ function mapSvg(s, tall, pop = null) {
   // A rival's whole route, a red dotted trace from its room to where it's going (rivals.mjs: it shows through the fog).
   const rv = rivalOf(s), route = rv ? routeOf(s, rv) : [];
   const trail = route.length > 1 ? `<polyline class="fp-rv-route" points="${route.map((id) => { const p = at(g.rooms[id]); return `${p.x},${p.y}`; }).join(' ')}"/>` : '';
-  const ctx = { reach, next, pop, near, G, marks: net(s, 'marks') || {}, th: R_th(s), files, rv };
+  const ctx = { reach, next, pop, near, G, marks: net(s, 'marks') || {}, th: R_th(s), bl: net(s, 'blips') || {}, files, rv };
   const rooms = roomList(s).filter((r) => shown(r.id)).map((room) => roomSvg(s, room, at(room), ctx)).join('');
   const bits = here ? bitsSvg(at(g.rooms[here]), G, here) : '';
   const vw = width + 2 * PAD, vh = height + 2 * PAD, vb = `${-PAD} ${-PAD} ${vw} ${vh}`;
@@ -468,7 +470,7 @@ function revealing(s, id) {
   if (!REVEALED.has(k)) REVEALED.set(k, t);
   return t - REVEALED.get(k) < 1600;
 }
-function roomSvg(s, room, p, { reach, next, pop, near, G, marks, th = {}, files = [], rv = null }) {
+function roomSvg(s, room, p, { reach, next, pop, near, G, marks, th = {}, bl = {}, files = [], rv = null }) {
   const R = s.rooms, g = R.graph, kind = known(s, room.id), h = hunterOf(s);
   const sock = kind && isSocket(s, room) && socketOpen(s, room), prog = sock ? programIn(s, room.id) : null; // an open socket (a held server's Core too) and what runs in it
   const here = R.at === room.id, can = reach.has(room.id), fight = kind && fightKind(room) && !sock, up = fight && isUp(s, room), down = fight && !up;
@@ -532,6 +534,8 @@ function roomSvg(s, room, p, { reach, next, pop, near, G, marks, th = {}, files 
   if (exfil) { const k = G.px / 2.2, half = 10 * k; out += exfilSvg(n1(Math.max(p.x, tx + half + 2)), n1(y0 + 1), k, !exfilNext(s)); tx += 2 * half + 6; }
   // A thread's mark (threads.mjs): an amber ! where one starts, ? where the step you're on sends you.
   if (th[room.id]) out += questSvg(Math.max(p.x, tx + 12), y0 - 1, th[room.id]);
+  // A blip of the director's here (events.mjs: a stray cache, a ★ sighting): its spark on the chip's top-left corner.
+  if (bl[room.id]) out += roomSpark(n1(x0 + 2), n1(y0 + 2), bl[room.id]);
   // Top right: the live light, and what a first step in costs.
   if (live && !here) out += `<circle class="fp-live" cx="${n1(x0 + G.nw - 18)}" cy="${n1(y0 + 16)}" r="3.5" filter="url(#fp-glow)"/>`;
   const cost = can ? moveCost(s, room) : 0;

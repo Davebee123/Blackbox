@@ -12,7 +12,7 @@ import { addFilter, rollFilter } from './filters.mjs';
 import { FACTIONS, hubsOf, hostile, repTier, buyFrom, hubFound } from './factions.mjs';
 import { seeded } from './gear.mjs';
 import { deliverGoods } from './store.mjs';
-import { deal, shockMult } from './events.mjs';
+import { deal, shockMult, flickerMult } from './events.mjs';
 import { learnCodebase } from './sockets.mjs';
 import { gainComponents, componentsOf, spend } from './salvage.mjs';
 
@@ -61,13 +61,13 @@ const marketOf = (s) => (s.market ||= { pressure: {}, transfers: [], serial: 0, 
 export const eventOf = (s) => EVENTS[marketOf(s).event] || EVENTS.calm;
 
 // What moves a hub's price that you can't: its condition × the world event × a wiped hub elsewhere × a market shock
-// on this hub's ware (events.mjs, the Market shock card) × a pirate's tip you logged (scanner.mjs).
+// on this hub's ware (events.mjs, the Market shock card) × a price flicker (a blip) × a pirate's tip you logged (scanner.mjs).
 // A tip is { hub, ware, mult, until } in s.scanner.tips (scanner.mjs catchStation).
 export const tipMult = (s, f, w) => (s.scanner?.tips || []).find((x) => x.hub === f && x.ware === w && x.until > now())?.mult ?? 1;
 export function outsideMult(s, f, w) {
   const cond = CONDITIONS[HUB_CONDITION[f]]?.mult[w] ?? 1, ev = eventOf(s).mult[w] ?? 1;
   const t = now(), gap = Object.entries(s.hubs || {}).some(([g, h]) => g !== f && (h.offlineUntil || 0) > t && (CONDITIONS[HUB_CONDITION[g]]?.mult[w] || 0) > 1) ? MARKET.wiperBoost : 1;
-  return cond * ev * gap * shockMult(s, f, w) * tipMult(s, f, w);
+  return cond * ev * gap * shockMult(s, f, w) * flickerMult(s, f, w) * tipMult(s, f, w);
 }
 // The price at a hub for one unit, before the spread: base × outside factors × your own pressure
 // (selling pushes it down to 35% at most, buying up to 160%).

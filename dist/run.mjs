@@ -17,7 +17,7 @@ import { contractTakeover, bankCargo, payloadHome, wantedBy, title as contractTi
 import { hiddenNodes, locate, flagged, bankRoute, hiddenLead, spawnHidden, HIDDEN, routed } from './hidden.mjs';
 import { hiddenNear, reached as floorsReached } from './floors.mjs';
 import { SPRAWL, zoneOf, zoneRooms } from './zone.mjs';
-import { deal, developerChain, CARDS as EVENT_CARDS } from './events.mjs';
+import { deal, developerChain, CARDS as EVENT_CARDS, dealBlip, BLIPS } from './events.mjs';
 import { crewCommand } from './crew.mjs';
 import { presenceCommand, at, simOn, PRESENCE, online } from './presence.mjs';
 import { profileCommand } from './profile.mjs';
@@ -767,6 +767,12 @@ export function play(s, input) {
     return since(s, first);
   }
   if (/^developer pager( \w+)?$/.test(text)) { const first = s.serial; developerPager(s, text.split(' ')[2] || 'fill'); return since(s, first); } // a realistic mix on the pager, or none (pager.mjs)
+  if (/^developer blip( \w+)?$/.test(text)) { // a blip now (events.mjs): developer blip [cache|flicker|rumour|sighting]
+    const first = s.serial, kind = text.split(' ')[2] || null;
+    if (kind && !BLIPS[kind]) warn(s, `developer blip [${Object.keys(BLIPS).join('|')}]`);
+    else if (!dealBlip(s, kind)) warn(s, kind ? `No ${BLIPS[kind].name.toLowerCase()} fits now, or one is up already.` : 'No blip fits now.');
+    return since(s, first);
+  }
   if (/^developer chain( \w+)?$/.test(text)) { const first = s.serial; developerChain(s, text.split(' ')[2] || 'counter'); return since(s, first); } // a follow-up now (events.mjs chains)
   // On rooms (R1): ls, cd, map, go, wait, back, engage, cat, pull, open, force, rest, slip, jack out (floorplan.mjs).
   // Mid-fight, jack out is the emergency escape, as on the old runs.
