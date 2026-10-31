@@ -23,7 +23,13 @@
 //                they were, and runs it uncooled (25 a cycle). Whichever part is left hashing cooks.
 //   Wiper        Fire your big key before the Wipe. The Degausser's Wipe hits and takes a key off your bar: your strongest
 //                ready skill (Targeted) or the one you used last (Rolling). Key 1 and SIGINT are never wiped.
-import { hooks, emit, alive, part, attackAmount, livingParts, attackers, defender, hit, usable, readyIn, strikeWith, virusIntegrity } from './combat.mjs';
+//   Botnet       Farm it or end it. The C&C's Volley fires every Zombie at once (data.mjs SWARM), so it shrinks as they
+//                break. Break the C&C and everything left scatters: the fight ends, paying BODY.botnet.end of a kill.
+//                Clear the Zombies first and the C&C falls silent, and the kill pays BODY.botnet.farm.
+//   Logic Bomb   Count your hits. The Payload's fuse burns down with hits on it: your commands' (Contact) or every hit,
+//                burns and helpers too, winding back up 1 a cycle (Timed). Its ticks take 2 more. At 0 it detonates
+//                (BODY.fuse.blast of your max Signal) and is gone with its loot; the fight goes on against the rest.
+import { hooks, emit, alive, part, attackAmount, livingParts, attackers, defender, hit, usable, readyIn, strikeWith, virusIntegrity, takeDamage } from './combat.mjs';
 import { ROOM_FAMILIES, FAMILIES, ABILITIES, CONFIG } from './data.mjs';
 
 // ---------- the bodies (level 6 scale, like FAMILIES) ----------
@@ -58,12 +64,14 @@ export const BODY = {
   heat: { cooled: 10, hot: 25, at: 100, burn: 0.12, hard: 1.5 }, // the Rig's heat a cycle (Cooler alive, broken), overheat, its burnout, Hash once the Cooler is gone
   loader: 2, // a Loader's tick delays the Courier's next delivery this many cycles
   twin: 1, // a Twin Rig left alone climbs this many steps on top of the climb it takes from the broken one
+  botnet: { end: 0.6, farm: 1.5 }, // a Botnet's kill: the C&C broken with a Zombie standing, or every Zombie first
+  fuse: { blast: 0.35, tick: 2 }, // a Payload's detonation (a share of your max Signal), and what each of its ticks takes off the fuse
 };
 // Which families a server's author writes (4.5), and from what level each opens (a P3 family's, data.mjs FAMILIES).
-export const OPENS = { ransomware: 1, worm: 1, ghostroot: 1, trojan: 4, cryptominer: FAMILIES.cryptominer.opens.level, wiper: FAMILIES.wiper.opens.level };
+export const OPENS = { ransomware: 1, worm: 1, ghostroot: 1, trojan: 4, cryptominer: FAMILIES.cryptominer.opens.level, wiper: FAMILIES.wiper.opens.level, botnet: FAMILIES.botnet.opens.level, logicbomb: FAMILIES.logicbomb.opens.level };
 export const AUTHOR_FAMILIES = {
-  tollgate: ['ransomware', 'cryptominer', 'wiper'],
-  swarmline: ['worm', 'trojan'],
+  tollgate: ['ransomware', 'cryptominer', 'wiper', 'logicbomb'],
+  swarmline: ['worm', 'trojan', 'botnet'],
   palemask: ['ghostroot'],
   nullchoir: ['ghostroot'],
   glassjaw: ['ransomware', 'worm', 'ghostroot', 'cryptominer', 'wiper'],
@@ -74,7 +82,8 @@ export const familyName = (id) => FAMILIES[id]?.name || ROOM_FAMILIES[id]?.name 
 // ---------- attack sets (4.1) ----------
 // parts: per part id, its attack's first cycle and interval (and an amount multiplier, mult; a scramble's cycles,
 // amount; a replicate's spawns), deliver (the Courier's), ramp (the Rig's), heat (the Rig's heat rate), wipe (the
-// Degausser's: what it takes, for how long). lead: the part that leads. by: the authors that favour it.
+// Degausser's: what it takes, for how long). lead: the part that leads. by: the authors that favour it. fuse: a Logic
+// Bomb's Payload: its length, what it counts (cmd: your commands' hits, ◆ included; all: every hit), its wind back a cycle.
 export const ATTACK_SETS = {
   ransomware: {
     standard: { name: 'Standard', lead: 'pulse', by: [], parts: { pulse: { interval: 4, first: 3 }, encryptor: { interval: 5, first: 4 } } },
@@ -104,8 +113,16 @@ export const ATTACK_SETS = {
     targeted: { name: 'Targeted', lead: 'degausser', by: ['tollgate'], parts: { pulse: { interval: 4, first: 3 }, degausser: { interval: 5, first: 3, amount: 10, wipe: 'strongest', wipeFor: 3 } } },
     rolling: { name: 'Rolling', lead: 'degausser', by: ['glassjaw'], parts: { pulse: { interval: 4, first: 3 }, degausser: { interval: 3, first: 2, amount: 6, wipe: 'last', wipeFor: 2 } } },
   },
+  botnet: {
+    barrage: { name: 'Barrage', lead: 'cnc', by: ['swarmline'], parts: { cnc: { interval: 4, first: 4 } } },
+    drizzle: { name: 'Drizzle', lead: 'cnc', by: [], parts: { cnc: { interval: 2, first: 2, amount: 6 } } },
+  },
+  logicbomb: {
+    contact: { name: 'Contact', lead: 'pulse', by: ['tollgate'], fuse: { at: 8, counts: 'cmd', wind: 0 }, parts: {} },
+    timed: { name: 'Timed', lead: 'pulse', by: [], fuse: { at: 6, counts: 'all', wind: 1 }, parts: {} },
+  },
 };
-const STANDARD = { ransomware: 'standard', worm: 'standard', ghostroot: 'standard', trojan: 'express', cryptominer: 'cold', wiper: 'targeted' };
+const STANDARD = { ransomware: 'standard', worm: 'standard', ghostroot: 'standard', trojan: 'express', cryptominer: 'cold', wiper: 'targeted', botnet: 'barrage', logicbomb: 'contact' };
 export const setsOf = (family) => ATTACK_SETS[family] || null;
 const bodyOf = (family) => FAMILIES[family] || ROOM_FAMILIES[family];
 // A part's attack under a set (its spec with the set's timing on top).
@@ -186,6 +203,7 @@ export function applySet(v, setId, jitter = null) {
   // A Trojan opens with a Package already delivered (so the boxes are never optional), unpacking on the usual clock.
   if (v.family === 'trojan' && !v.parts.some((p) => p.pkg)) for (let k = 0; k < BODY.package.opening; k++) addPackage(v, 0, true);
   if (set.heat) v.heatRate = set.heat;
+  if (set.fuse) v.fuse = { ...set.fuse };
   v.attackSet = setId;
   return v;
 }
@@ -258,8 +276,9 @@ function vent(s, p) {
 // A Twin Rig (its lever) hashes beside it on the same heat.
 const hashersOf = (s) => (s.encounter?.virus?.family === 'cryptominer' ? livingParts(s).filter((x) => x.id === 'rig' || x.twinrig || (x.tookOver === 'rig' && x.attack?.ramp)) : []);
 const hasherOf = (s) => hashersOf(s)[0] || null;
-hooks.tickVerb = (s, p) => (hashersOf(s).includes(p) ? 'vent' : p.bin && p.binHeld ? 'restore' : s.encounter.virus.family === 'trojan' && p.id === 'loader' ? 'delay' : 'cancel');
+hooks.tickVerb = (s, p) => (hashersOf(s).includes(p) ? 'vent' : p.bin && p.binHeld ? 'restore' : p.payload ? 'fuse' : s.encounter.virus.family === 'trojan' && p.id === 'loader' ? 'delay' : 'cancel');
 hooks.tickDo = (s, p, verb) => {
+  if (verb === 'fuse') { if (!p.detonated) burnFuse(s, p, BODY.fuse.tick); return; } // a Payload's tick: never an interrupt
   if (verb === 'vent') return vent(s, p);
   if (verb === 'restore') return restore(s, p);
   if (verb === 'delay') {
@@ -301,6 +320,40 @@ function restore(s, p) {
   emit(s, 'cut', `RESTORED. You take the ${p.name} across a tick: ${ABILITIES[h.id].name} is back on your bar${p.binCool ? ', cooling' : ''}.`, { target: p.id, restore: true, ability: h.id });
 }
 
+// ---------- the Botnet and the Logic Bomb ----------
+const zombiesOf = (s) => livingParts(s).filter((x) => x.zombie);
+// The C&C's Volley is its living Zombies' shares (an enrage or a tell on its amount carries through).
+function volleyLift(s) {
+  const c = livingParts(s).find((x) => x.cnc);
+  if (!c?.attack || !c.zombies) return;
+  const z = zombiesOf(s).length;
+  c.attack.lift = -c.attack.amount * (1 - z / c.zombies);
+  if (!z) c.attack.due = 999;
+}
+// A Payload's fuse: its set's (a wild one's is Contact's), and what's left of it.
+export const fuseOf = (v) => v?.fuse || ATTACK_SETS.logicbomb.contact.fuse;
+export const fuseLeft = (v, p) => p.fuseLeft ?? fuseOf(v).at;
+function burnFuse(s, p, n) {
+  p.fuseLeft = Math.max(0, fuseLeft(s.encounter.virus, p) - n);
+  if (p.fuseLeft <= 0) detonate(s, p);
+}
+// At 0 it detonates: BODY.fuse.blast of your max Signal (never your last point), and the Payload is gone, loot and all.
+function detonate(s, p) {
+  const d = defender(s), n = Math.max(1, Math.round(d.max * BODY.fuse.blast));
+  p.integrity = 0; p.loot = null; p.detonated = true; p.attack = null;
+  const dealt = takeDamage(s, Math.min(n, Math.max(0, d.integrity - 1)), p.id, 'Detonation');
+  emit(s, 'server-hit', `The ${p.name} DETONATES: −${dealt}. It's gone, and its loot with it.`, { source: p.id, amount: dealt, atk: 'Detonation', detonate: true });
+}
+// Every hit on a Payload, before ◆ or Integrity take it (combat.mjs hit): Contact counts your commands' hits, Timed every
+// hit but the server's. 'gone': it detonated.
+hooks.bodyHit = (s, p, base, opts) => {
+  if (!p.payload || base <= 0 || opts.server) return null;
+  const cmd = opts.mine && !opts.dot && !opts.by;
+  if (fuseOf(s.encounter.virus).counts === 'cmd' && !cmd) return null;
+  burnFuse(s, p, 1);
+  return p.detonated ? 'gone' : null;
+};
+
 // ---------- the hooks (combat.mjs), room fights only ----------
 hooks.roomHit = (s, p, was, dealt, opts) => {
   const e = s.encounter;
@@ -341,6 +394,19 @@ hooks.roomBroke = (s, p) => {
     emit(s, 'status', `With the Cooler broken, the Rig heats up ${BODY.heat.hot} a cycle, and every Hash lands 50% harder.`, { target: p.id });
   }
   if (p.deliver) p.deliver = null;
+  // A Zombie down: the Volley shrinks; the last one silences the C&C, and the kill pays more.
+  if (p.zombie) {
+    volleyLift(s);
+    const c = livingParts(s).find((x) => x.cnc);
+    if (c && !zombiesOf(s).length) { v.pays = BODY.botnet.farm; emit(s, 'status', `Every Zombie is down. The ${c.name} falls silent, and the kill pays ${BODY.botnet.farm}×.`, { target: c.id, farm: true }); }
+  }
+  // The C&C down with a Zombie standing: everything left scatters, and the fight ends safely for less.
+  if (p.cnc && zombiesOf(s).length) {
+    const left = livingParts(s);
+    for (const x of left) { x.integrity = 0; x.scattered = true; }
+    v.pays = BODY.botnet.end;
+    emit(s, 'status', `The ${p.name} breaks, and ${left.length} parts scatter. The kill pays ${BODY.botnet.end}×.`, { target: p.id, scatter: true });
+  }
 };
 hooks.roomLanded = (s, p, atk) => {
   if (atk.wipe) for (let k = 0; k < (p.wipes || 1); k++) wipe(s, p, atk); // a Degausser.exe takes two
@@ -388,6 +454,10 @@ hooks.roomCycle = (s) => {
       else if (v.heat >= BODY.heat.at) { v.overheated = true; for (const r of rigs) if (r.attack) r.attack.due = 999; emit(s, 'phase', `The ${rigs.map((r) => r.name).join(' and the ')} OVERHEAT${rigs.length > 1 ? '' : 'S'}. Hashing stops, and each burns itself every cycle until it breaks.`, { target: rig.id }); }
     } else for (const r of rigs) hit(s, r, Math.max(1, Math.round(r.max * BODY.heat.burn)), { by: 'Burnout', pierce: true, server: true });
   }
+  volleyLift(s);
+  // A Timed fuse winds back up a cycle.
+  const w = fuseOf(v).wind;
+  if (w) for (const p of livingParts(s).filter((x) => x.payload)) p.fuseLeft = Math.min(fuseOf(v).at, fuseLeft(v, p) + w);
   const R = ROOM_RULES.enrage;
   if (e.enrageAt && e.cycle >= e.enrageAt && (e.cycle - e.enrageAt) % R.every === 0) {
     const k = e.enraged ? R.step : R.first;
@@ -411,6 +481,8 @@ export function bodyTags(s, p) {
   if (p === hasherOf(s)) out.push([v.overheated ? 'overheated' : `heat ${v.heat || 0}/${BODY.heat.at}`, v.overheated ? 'Overheated: burns itself every cycle until it breaks. Venting it starts it hashing again.' : `Heat: at ${BODY.heat.at}, overheats, stops hashing and burns itself until it breaks. Its ticks vent its heat and climb back to nothing.`, v.overheated ? 'you heat' : 'hot heat']);
   if (p.twinrig) out.push(['twin', 'Twin Rig: shares the Rig\'s heat. When one Rig breaks while the other stands, the other takes its climb on top of its own.\n▸ Bring both down close together.', 'hot twin']);
   if (p.bin && p.binHeld && e.wiped?.[p.binHeld.id] >= e.cycle) out.push([`holds ${ABILITIES[p.binHeld.id].name}`, `Recycle Bin: holds the key the Wipe took.\n▸ Push it past a tick and ${ABILITIES[p.binHeld.id].name} comes back, ready.`, 'bin']);
+  if (p.payload) { const f = fuseOf(v), n = fuseLeft(v, p); out.push([`fuse ${n}/${f.at}`, `Fuse: ${f.counts === 'cmd' ? 'each hit of your commands on it, a hit on ◆ included,' : 'each hit on it, burns and helpers included,'} burns 1. Each of its ticks burns ${BODY.fuse.tick}.${f.wind ? ` Winds back up ${f.wind} a cycle.` : ''} At 0 it detonates for ${Math.round(BODY.fuse.blast * 100)}% of your max Signal, and its loot is gone.\n▸ ${f.counts === 'cmd' ? 'Few big hits, or burns.' : 'One big hit a cycle, and no helpers.'}`, 'hot payload']); }
+  if (p.cnc && p.zombies) { const z = zombiesOf(s).length; out.push([`${z} zombies`, `C&C: its Volley fires every Zombie at once. Break it and the rest scatter: the fight ends, and the kill pays ${BODY.botnet.end}×.\n▸ Clear the Zombies first and the kill pays ${BODY.botnet.farm}×.`, 'hot cnc']); }
   if (p.attack?.wipe) out.push([p.attack.wipe === 'last' ? 'wipes your last skill' : 'wipes your strongest', p.attack.wipe === 'last' ? `Wipe: takes the skill you used last off your bar for ${p.attack.wipeFor} cycles.` : `Wipe: takes your strongest ready skill off your bar for ${p.attack.wipeFor} cycles.`, 'hot wipe']);
   return out;
 }

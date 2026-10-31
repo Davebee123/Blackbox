@@ -71,6 +71,13 @@ export const GENES = {
   wipe: { name: 'Wipe', adj: 'Wiping', cat: 'attack', axis: 'tempo', role: 'primary', cost: 3, opens: 19, decode: 'part', suits: 'the Wiper, TOLLGATE',
     does: 'Deals damage to you and takes your strongest ready key off your bar for 3 cycles. Its cooldown stands still. Key 1 and SIGINT are never wiped.', telegraph: 'Its cell on the timeline, then a WIPED key on your bar.', answer: 'Fire your big key before the Wipe lands.',
     implicit: 'Wiped keys come back a cycle sooner.', carried: (p) => !!A(p)?.wipe, bot: { fire: 'strongest' } },
+  // Priority 3's floor 2 bodies (docs/content.md 5, families.mjs).
+  volley: { name: 'Volley', adj: 'Swarming', cat: 'attack', axis: 'swarm', role: 'primary', cost: 3, opens: 8, decode: 'part', suits: 'the Botnet, SWARMLINE',
+    does: 'The C&C\'s Volley fires every Zombie at once, so it shrinks as they break. Breaking the C&C scatters the rest and ends the fight, and the kill pays 0.6. Clearing every Zombie first makes it pay 1.5.', telegraph: 'The Zombie count on the C&C, and its Volley on the timeline.', answer: 'Farm the Zombies while your Signal holds, else break the C&C.',
+    implicit: 'Volleys on you lose a Zombie\'s share.', carried: (p) => !!p.cnc, bot: { focus: 'cnc' } },
+  payload: { name: 'Payload', adj: 'Armed', cat: 'part', axis: 'feedback', role: 'primary', cost: 3, opens: 12, decode: 'part', suits: 'the Logic Bomb, TOLLGATE',
+    does: 'Its fuse burns down with hits on it, your commands\' in Contact and every hit in Timed, which winds back up a cycle. Its ticks burn 2 more. At 0 it detonates for 35% of your max Signal, and its loot is gone.', telegraph: 'A fuse tag on its row.', answer: 'Land few big hits in Contact, one a cycle in Timed.',
+    implicit: 'Detonations on you deal less.', carried: (p) => !!p.payload },
   // Their levers (lever 'together', 'recover'): neither asks for a kill order.
   twinrig: { name: 'Twin rig', adj: 'Twinned', lever: 'together', cat: 'part', axis: 'order', role: 'primary', cost: 3, opens: 9, decode: 'part', suits: 'the Cryptominer, GLASSJAW', sig: true,
     does: 'A second Rig that shares the Rig\'s heat. When one Rig breaks while the other stands, the other takes its climb on top of its own.', telegraph: 'A heat tether between the two Rigs.', answer: 'Bring both down close together.',
@@ -345,7 +352,7 @@ export const GENES = {
 for (const [id, g] of Object.entries(GENES)) { g.id = id; g.beat ||= null; g.bot ||= null; g.lever ||= null; }
 // The parts plan's P3 (docs/parts-plan.md): the Cryptominer and the Wiper carry these natives, as their first family
 // has them (unveiled). The Damper is theirs alone.
-const CARRY = { cryptominer: ['idletimer', 'backlog', 'damper'], wiper: ['limiter', 'scraper', 'badblock', 'damper', 'coldstore'] };
+const CARRY = { cryptominer: ['idletimer', 'backlog', 'damper'], wiper: ['limiter', 'scraper', 'badblock', 'damper', 'coldstore'], botnet: ['idletimer', 'backlog', 'spare'], logicbomb: ['idletimer', 'frontend', 'backlog'] };
 for (const [fam, ids] of Object.entries(CARRY)) for (const id of ids) { const { veiled, ...spec } = Object.values(GENES[id].parts)[0]; GENES[id].parts[fam] = spec; }
 delete GENES.damper.parts.worm;
 export const GENE_IDS = Object.keys(GENES);

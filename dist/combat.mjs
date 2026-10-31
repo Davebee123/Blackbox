@@ -2084,7 +2084,7 @@ function payKill(s, e, base, why) {
   // A party splits the kill's XP, with a small bonus per extra player (PARTY_XP). Members who dropped in
   // (consortium guests) take their share of the damage they dealt, so joining late pays only for what
   // you did; you and your own crew split the rest evenly.
-  const n = e.party || 1, pool = xpFor(s, e.virus.level, base) * (e.virus.elite ? ELITE.xp : 1) * (1 + PARTY_XP * (n - 1));
+  const n = e.party || 1, pool = xpFor(s, e.virus.level, base) * (e.virus.elite ? ELITE.xp : 1) * (e.virus.pays || 1) * (1 + PARTY_XP * (n - 1)); // pays: a Botnet's (families.mjs)
   const dealt = e.virus.dealt || {}, total = Object.values(dealt).reduce((a, b) => a + b, 0);
   const guests = n > 1 ? e.guests || [] : [];
   const guestShare = total ? guests.reduce((a, g) => a + (dealt[g] || 0), 0) / total : 0;
@@ -2766,6 +2766,8 @@ export function hit(s, p, base, opts = {}) {
     if (base > 0 && (opts.mine || opts.dot)) emit(s, 'status', `${opts.by ? opts.by + ': ' : ''}the ${p.name} is frozen. Nothing gets through until it thaws.`, { target: p.id, frozen: true });
     return { dealt: 0, overflow: 0, absorbed: true };
   }
+  // A body's rule on every hit, before ◆ take it (families.mjs: a Logic Bomb's Payload burns its fuse). 'gone': it left the board.
+  if (bodyRules(e) && hooks.bodyHit?.(s, p, base, opts) === 'gone') return { dealt: 0, overflow: 0, absorbed: true };
   // The parts plan's rules on your own command's hit (burns, helpers, area hits and the server's go past them).
   const cmd = opts.mine && !opts.dot && !opts.by && !opts.server && base > 0;
   // Front End: while it wears ◆, a single-target command at its partner lands on it.

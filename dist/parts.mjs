@@ -61,11 +61,11 @@ export const PARTS = {
   // when it breaks), the burst as the basic's hits taking the Scrambler's (its hit and, on the Scrambler's clock, its Scramble).
   // The P3 families: the Cryptominer half steady and half ramp (the Rig's Hash), the Wiper half steady and half burst
   // (the Degausser's Wipe).
-  profile: { ransomware: { steady: 0.5, ramp: 0.5, burst: 0 }, worm: { steady: 1, ramp: 0, burst: 0 }, ghostroot: { steady: 0.33, ramp: 0, burst: 0.67 }, cryptominer: { steady: 0.5, ramp: 0.5, burst: 0 }, wiper: { steady: 0.5, ramp: 0, burst: 0.5 } },
+  profile: { ransomware: { steady: 0.5, ramp: 0.5, burst: 0 }, worm: { steady: 1, ramp: 0, burst: 0 }, ghostroot: { steady: 0.33, ramp: 0, burst: 0.67 }, cryptominer: { steady: 0.5, ramp: 0.5, burst: 0 }, wiper: { steady: 0.5, ramp: 0, burst: 0.5 }, botnet: { steady: 1, ramp: 0, burst: 0 }, logicbomb: { steady: 1, ramp: 0, burst: 0 } },
   horizon: [[1, 10], [40, 9], [50, 8]], // a typical fight's length by level, in cycles (balance.mjs's wild fights before P1, every subclass: 9.7 at 10, 10.5 at 18, 10.3 at 30, 8.4 at 50)
   budget: 1, // the shared budget's scale (1: the three pre-P1 fights' average)
   // Each part's shape (a part not named: steady if it attacks). A shape its family's profile hasn't is steady there.
-  roles: { encryptor: 'ramp', scrambler: 'burst', accumulator: 'burst', rig: 'ramp', twinrig: 'ramp', degausser: 'burst' },
+  roles: { encryptor: 'ramp', scrambler: 'burst', accumulator: 'burst', rig: 'ramp', twinrig: 'ramp', degausser: 'burst', cnc: 'burst' },
   ratchet: { from: null, every: null }, // a Ratchet's first step and its beat (null: the Encryptor's first Encrypt and interval)
   burstHit: 1, // the share of the Scrambler's hit a basic carrying the burst takes on
   fast: 0.5, // a part that hits every cycle or two (a Strobe) takes this share of its role's lift (Block takes the same off every hit)

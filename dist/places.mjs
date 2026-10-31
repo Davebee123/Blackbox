@@ -40,7 +40,9 @@ export const FAMILY_SOUNDS = { ransomware: fam('ransomware-b-press'), worm: fam(
 const body = (id) => ({ idle: `bodies/${id}-b-idle.ogg`, attack: `bodies/${id}-b-attack.ogg`, break: `bodies/${id}-b-break.ogg` });
 Object.assign(FAMILY_SOUNDS, { trojan: body('trojan'), cryptominer: body('cryptominer'), wiper: body('wiper'), exfil: body('exfil'), crawler: body('crawler'), ice: body('ice') });
 // The set a fight's virus carries: its own, the Crawler's, or the ICE's for every other guard and hunter. null: none.
-export const soundOf = (family) => (FAMILY_SOUNDS[family] ? family : GUARDS[family] ? 'ice' : null);
+// Stand-ins until the designer hears their own: the Botnet carries the Worm's set, the Logic Bomb the Ransomware's.
+const SOUND_AS = { botnet: 'worm', logicbomb: 'ransomware' };
+export const soundOf = (family) => (FAMILY_SOUNDS[family] ? family : SOUND_AS[family] || (GUARDS[family] ? 'ice' : null));
 
 // Levels. The files sit at −23 LUFS (loops) and −16 LUFS (one-shots); the music plays at about −35 in the mix.
 // A bed sits several dB under the music, a family's idle further down still (texture, not a cue).

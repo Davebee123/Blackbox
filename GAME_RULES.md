@@ -205,12 +205,21 @@ Numbers at enemy level 6; Integrity and damage grow 4% a level (a level-1 virus 
 | Ghostroot (GHOSTROOT) | Pulse Node: 34, ◆, veiled, Surge 11 every 4 (first 3) | Scrambler: 40, ◆ (◆◆ from 5), veiled, Scramble every 4 (first 2), hitting for 9 |
 | Cryptominer (XMRIG), from 9 on floor 2 | Pulse Node: 34, ◆, Surge 12 every 4 (first 3) | **Rig**: 40, ◆ (◆◆ from 5), Hash 5 every 2 (first 2), 1 more each landing. It heats 10 a cycle; at 100 it overheats and burns itself out. Its ticks vent it. |
 | Wiper (SHAMOON), from 19 on floor 4 | Eraser: 34, ◆, Zero 12 every 4 (first 3) | **Degausser**: 38, ◆ (◆◆ from 5), Wipe 10 every 5 (first 3): takes your strongest ready key for 3 cycles (*WIPED*), its cooldown standing still. Never key 1 or SIGINT. |
+| Botnet (MIRAINET), from 8 on floor 2 | Pulse Node: 34, ◆, Surge 12 every 4 (first 3) | **C&C**: 46, ◆◆, Volley 12 every 4 (first 4): every **Zombie** at once (6; 7 from 15, 8 from 25; 8 each, bare, no ticks or drops), so it shrinks as they break (*6 zombies*). |
+| Logic Bomb (TIMEBOMB), from 12 on floor 2 | Trigger: 30, ◆, Tick 9 every 3 (first 2) | **Payload**: 70, ◆ (◆◆ from 10), no attack. A **fuse** of 8 (*fuse 8/8*) that your commands' hits on it burn, a hit on ◆ included; each of its ticks burns 2, and cancels nothing. At 0 it **detonates**: 35% of your max Signal (never your last point), and it's gone with its loot. |
 
-GLASSJAW writes the Cryptominer (and the Hashrat), TOLLGATE the Wiper. Their rules run in any fight (`families.mjs`).
+GLASSJAW writes the Cryptominer (and the Hashrat), TOLLGATE the Wiper and the Logic Bomb, SWARMLINE the Botnet. Their
+rules run in any fight (`families.mjs`).
 Servers, rogue folders and invasions send them once a server's level and floor allow (`network.mjs` `lateFamilies`,
 lean 1.5 each); a random virus with no family named stays one of the first three. A Hash climbs like encryption
 (the run's early and late steps skip it). A Cooler in the fight keeps the Rig at 10 heat a cycle; break it and the
 Rig heats 25 a cycle, every Hash 50% harder.
+
+**The Botnet: farm it or end it.** Break the C&C while a Zombie stands and everything left scatters: the fight ends,
+paying 0.6 of a kill. Clear every Zombie first and the C&C falls silent, and the kill pays 1.5. Its ticks cancel a
+Volley. **The Logic Bomb: count your hits.** A wild one's fuse is Contact's; the fight goes on against the rest after a
+detonation. The Payload's ◆ are its own (none added), and it falls back on the fight's attacker: break that first and
+it takes the attack over.
 
 **The Trojan.** A traced server's rooms also field a body by its authors (`families.mjs`):
 - **Trojan** (SWARMLINE, LANTERN). The Courier drops a hit and delivers Packages; the fight opens with one on the board.
@@ -221,7 +230,8 @@ Rig heats 25 a cycle, every Hash 50% harder.
 
 **Attack sets.** Each spawn rolls its set (Ransomware Standard, Lockout, Hammer or Lockstep; Worm Standard, Bloom or
 Wave; Ghostroot Standard, Ambush or Flicker; Trojan Express or Freight; Cryptominer Cold or Hot rig; Wiper Targeted or
-Rolling, the Rolling Wipe taking your last key for 2), and each part's first attack moves a cycle either way. A set changes when things land, not how much (within
+Rolling, the Rolling Wipe taking your last key for 2; Botnet Barrage or Drizzle, a Volley every 2; Logic Bomb Contact or
+Timed, a 6-hit fuse that every hit burns, burns and helpers too, winding back up 1 a cycle), and each part's first attack moves a cycle either way. A set changes when things land, not how much (within
 5% over 20 cycles). The room's card never names it: you read it on the board, and the Codex keeps every set you've
 faced. Bosses and the farm keep their own timing.
 
@@ -243,7 +253,9 @@ when the server is built. Every number is a named constant in `PARTS`; `develope
   out, so a two-part fight's parts are bigger and a four-part fight's smaller.
 - **Damage profiles.** Every family deals the same budget over a typical fight at its level, in its own shape:
   Ransomware half steady and half ramp, Worm all steady, Ghostroot a third steady and two thirds burst, Cryptominer
-  half steady and half ramp (the Hash), Wiper half steady and half burst (the Wipe). No single hit
+  half steady and half ramp (the Hash), Wiper half steady and half burst (the Wipe), Botnet half steady and half burst
+  (the Volley), Logic Bomb all steady on its Trigger, the one attacker (a Tick may grow to 2.6× its own; an unrolled
+  Payload counts as 38 in its total). No single hit
   grows past 1.3× its family's Pulse Node; past that a part hits more often instead.
 - **A missing role moves onto the basic.** No Encryptor: the basic's **Ratchet** stacks on the Encryptor's clock
   (an amber hatched chip, *▲ ratchet 7*, *Ratcheted* on you; Purge or Rollback resets it); no Rig, on the Rig's. No Scrambler: the basic's
@@ -346,11 +358,11 @@ A basic with no attack is its signature's **fallback**: break the signature firs
 | Worm | **C2 Node** (8): 18, ◆, Beacon 3 every 4 | Fragments gnaw half again as hard while it lives, and all drop when it breaks. |
 | Ghostroot | **Mimic** (8): 18, ◆, veiled | Every 4 cycles (announced two ahead) it copies the command you fire and turns it on you (`copyOf`): a hit for its whole direct hit; a strip strips your ◆ and shield; a burn leaves you Corrupted for its ticks at a quarter each; a debuff Throttles you; a shield or buff re-arms the Mimic with a ◆; a heal heals the virus's most damaged part; SIGINT, a stun or a utility Hangs you (your next command doesn't fire); hold copies nothing. A copy under a tenth of your max is a read. Its chip shows what your selected command would copy. |
 | Cryptominer | **Twin Rig** (9): 18, ◆, Hash 2 every 2, climbing | A second Rig on the same heat (*twin*); its ticks vent it too. Break one while the other stands and the other takes its climb, and one step more. Bring both down close together. |
-| Ransomware, Cryptominer | **Idle Timer** (9): 20, ◆ | Hit the signature with a command at least every 4 cycles, or at 5 every part re-arms to full ◆. Pips count down on the signature's row. |
-| Ghostroot, Ransomware | **Front End** (10): 22, ◆ | While it wears ◆, your single-target commands at its partner land on it. Burns, helpers, area hits and Sudo go through. |
-| Worm, Cryptominer | **Backlog** (12): 20, ◆, Ack 3 every 4 | When its Ack lands, the skill you fired that cycle cools 2 cycles longer. |
+| Ransomware, Cryptominer, Botnet, Logic Bomb | **Idle Timer** (9): 20, ◆ | Hit the signature with a command at least every 4 cycles, or at 5 every part re-arms to full ◆. Pips count down on the signature's row. |
+| Ghostroot, Ransomware, Logic Bomb | **Front End** (10): 22, ◆ | While it wears ◆, your single-target commands at its partner land on it. Burns, helpers, area hits and Sudo go through. |
+| Worm, Cryptominer, Botnet, Logic Bomb | **Backlog** (12): 20, ◆, Ack 3 every 4 | When its Ack lands, the skill you fired that cycle cools 2 cycles longer. |
 | Ransomware, Wiper | **Limiter** (13): 24, ◆, Ping 3 every 3 | No single hit takes more than 20% of its max. Many small hits answer it. |
-| Worm, Ghostroot | **Spare** (14): 2, ◆◆◆ | Sleeps off the timeline under 3 ◆. When the signature breaks, it boots 2 cycles later at 60% of the signature's max, with its attack, and drops its ◆. Pay its ◆ while it sleeps or its Integrity once it boots. |
+| Worm, Ghostroot, Botnet | **Spare** (14): 2, ◆◆◆ | Sleeps off the timeline under 3 ◆. When the signature breaks, it boots 2 cycles later at 60% of the signature's max, with its attack, and drops its ◆. Pay its ◆ while it sleeps or its Integrity once it boots. |
 | Ransomware | **Tripwire** (16): 18, ◆, Ping 3 every 3 | Break it while the others stand and they go **loud** for the fight: 25% more damage and every attack a cycle sooner, but 40% more damage taken and all their ◆ gone. Trip it when you can finish them fast (*loud wins*), else break it last. Throttle quiets a loud part. |
 | Ransomware, Wiper | **Scraper** (19): 22, ◆, Scrape 4 every 4 | When its Scrape lands it takes the buffs you put up before it: your ◆, your shield after its hit, your timed buffs. Buff after it lands. |
 | Wiper | **Recycle Bin** (19): 24, ◆ | Holds the key the Wipe takes (*holds Flood*). Push it past a tick while it holds one and the key comes back, ready. |

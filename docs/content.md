@@ -235,7 +235,7 @@ Ordered for the most variety per hour of work, floors 2–4 first. S is a day or
 |---:|---|:---:|---|
 | 1 | **Lairs by floor** (3.1). *Built* | S | Floors 2–4: five different bosses from content that exists |
 | 2 | **Floor holders** (3.1). *Built* | S–M | Floors 2–8 |
-| 3 | **Botnet and Logic Bomb** | M | Floor 2 |
+| 3 | **Botnet and Logic Bomb**. *Built* | M | Floor 2 |
 | 4 | **The log sweep as a terminal room** | S | Floors 2–8 |
 | 5 | **Floor 2–4 bosses**: CENTRIFUGE, SHAKEDOWN, SHOULDER SURFER, CAMSWARM, BYZANTINE, with their uniques; the native bosses' own uniques | M | Floors 2–4 |
 | 6 | **Polymorph, RAT, Rootkit** | L | Floor 3 |

@@ -1209,7 +1209,7 @@ function takeCache(s, room) {
   const R = s.rooms, r = rnd(R, 21), C = ROOMS.cache, mill = runs(s, 'mill') && room.kind === 'cache' ? 1.5 : 1, rich = ((R.world && ask('cacheMult', s, room)) || 1) * mill; // a Cache Mill: half again
   if (isBait(s, room)) { const lost = Math.round(R.max * ROOMS.bait); setSig(s, Math.max(1, sigOf(s) - lost)); say(s, `The canary costs you ${lost} Signal.`, 'rooms-bad'); }
   const credits = Math.round((C.credits[0] + Math.floor(r() * (C.credits[1] - C.credits[0] + 1))) * rich * (1 + R.level / 20));
-  const fam = roomList(s).find((x) => x.family)?.family, kind = { ransomware: 'cipher', worm: 'worm', ghostroot: 'kernel', trojan: 'worm', cryptominer: 'cipher', wiper: 'cipher' }[fam] || 'cipher';
+  const fam = roomList(s).find((x) => x.family)?.family, kind = { ransomware: 'cipher', worm: 'worm', ghostroot: 'kernel', trojan: 'worm', cryptominer: 'cipher', wiper: 'cipher', botnet: 'worm', logicbomb: 'cipher' }[fam] || 'cipher';
   const code = Math.round((C.code[0] + Math.floor(r() * (C.code[1] - C.code[0] + 1))) * mill);
   if (R.world) ask('cache', s, room, { credits, code, material: kind }); // into the pack: banked when you jack out
   else { R.credits += credits; s.server.credits += credits; gainCode(s, { [kind]: code }, 'Cache: '); }
@@ -1625,7 +1625,7 @@ function programsPay(s, room, e) {
     say(s, `Code Siphon: +${n} ${material} code${R.world ? ' into your pack' : ''}.`, 'rooms-good');
   }
 }
-const FAM_CODE = { ransomware: 'cipher', worm: 'worm', ghostroot: 'kernel', trojan: 'worm', cryptominer: 'cipher', wiper: 'cipher' };
+const FAM_CODE = { ransomware: 'cipher', worm: 'worm', ghostroot: 'kernel', trojan: 'worm', cryptominer: 'cipher', wiper: 'cipher', botnet: 'worm', logicbomb: 'cipher' };
 const serverCodeOf = (s) => FAM_CODE[roomList(s).find((x) => x.family)?.family] || 'cipher';
 // What a won fight drops into the pack: gear now and then at its tier's odds (trash, an elite, a ★ rare spawn: LOOT.odds),
 // a boss its sure item (bossLoot), and the Resident a script half the time.

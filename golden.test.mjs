@@ -45,7 +45,7 @@ function config(i) {
   if (i % 11 === 5) o.mutation = ['armored', 'regenerative', 'hasty', 'adaptive', 'rerouting'][r(5)];
   if (i % 13 === 6) { o.elite = true; if (r(2)) o.eliteHp = 1; }
   if (i % 17 === 7) { const b = SOLO[r(SOLO.length)]; o.boss = b; o.family = (BOSSES[b].strain && OLD[BOSSES[b].strain]?.lineage) || BOSSES[b].family || 'ransomware'; o.strain = BOSSES[b].strain || undefined; o.mutation = null; if (r(3) === 0) o.bossHp = 0.75; }
-  const keys = ['random', 'random', 'random', ...Object.keys(FIXTURES).filter((k) => !['xmrig', 'shamoon'].includes(k)), ...OLD_STRAINS.filter((st) => OLD[st].lineage === STRAINS[st].lineage)]; // the P3 families' fixtures, and the Hashrat's move to the Cryptominer, came after the frozen builder
+  const keys = ['random', 'random', 'random', ...Object.keys(FIXTURES).filter((k) => !['xmrig', 'shamoon', 'mirainet', 'timebomb'].includes(k)), ...OLD_STRAINS.filter((st) => OLD[st].lineage === STRAINS[st].lineage)]; // the P3 and priority 3 families' fixtures, and the Hashrat's move to the Cryptominer, came after the frozen builder
   const key = i % 6 === 5 ? keys[r(keys.length)] : 'random';
   return { key, seed, o: key === 'random' ? o : { threat, run: o.run, ...(o.grade ? { grade: o.grade } : {}) } };
 }

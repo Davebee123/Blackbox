@@ -401,7 +401,8 @@ export function nominal(p, until = 20) {
 // A family's basic: its spec at the family's Pulse Node's size (Ghostroot's are veiled, as all its parts are).
 function basicOf(family, id, from) {
   const b = BASICS[id], pulse = FAMILIES[family].parts.find((x) => x.id === 'pulse');
-  const attack = b.attack ? { name: b.attack.name, effect: 'damage', amount: Math.max(1, Math.round(pulse.attack.amount * b.attack.k * 10) / 10), interval: b.attack.interval, first: b.attack.first } : undefined;
+  // (k is against a Pulse Node every 4 cycles: one that hits more often, the Logic Bomb's Trigger, scales it up)
+  const attack = b.attack ? { name: b.attack.name, effect: 'damage', amount: Math.max(1, Math.round(((pulse.attack.amount * b.attack.k * 4) / pulse.attack.interval) * 10) / 10), interval: b.attack.interval, first: b.attack.first } : undefined;
   const { attack: _, ...rest } = b;
   // One with no attack is its signature's fallback (combat.mjs breakPart): break the signature first and it takes the
   // attack over, so no kill order leaves the rest harmless (degenerate.test.mjs).
@@ -489,6 +490,38 @@ export const FAMILIES = {
       // The Eraser is its Pulse Node: the plain attacker every basic is matched to.
       { id: 'pulse', name: 'Eraser', integrity: 34, armor: 1, loot: 'Zero Block', attack: { name: 'Zero', effect: 'damage', amount: 12, interval: 4, first: 3 } },
       { id: 'degausser', name: 'Degausser', integrity: 38, armor: 1, loot: 'Degauss Coil', special: true, attack: { name: 'Wipe', effect: 'damage', amount: 10, interval: 5, first: 3, wipe: 'strongest', wipeFor: 3 } },
+    ],
+  },
+  // Priority 3 (docs/content.md 5): floor 2's two bodies, their rules in families.mjs.
+  botnet: {
+    name: 'Botnet',
+    stem: 'MIRAINET',
+    threatens: 'Integrity',
+    opens: { level: 8, floor: 2 }, rules: true, art: 'worm',
+    summary: 'The C&C\'s Volley fires every Zombie at once. Break the C&C and the Zombies scatter: the fight ends, but pays 0.6 of a kill. Clear the Zombies first and it pays 1.5.',
+    core: ['surge', 'volley'],
+    basic: [['strobe', 1], ['repeater', 1], ['accumulator', 1]],
+    third: ['idletimer', 'backlog', 'spare'], // the Idle Timer from 9, the Backlog from 12, the Spare from 14
+    parts: [
+      { id: 'pulse', name: 'Pulse Node', integrity: 34, armor: 1, loot: 'Pulse Kernel', attack: { name: 'Surge', effect: 'damage', amount: 12, interval: 4, first: 3 } },
+      // Its Volley is every Zombie's share (data.mjs SWARM: 6 of them, 2 each: at 3 a Volley was 1.5 Pulse Nodes); it shrinks as they break.
+      { id: 'cnc', name: 'C&C', integrity: 46, armor: 2, loot: 'C&C Beacon', special: true, cnc: true, attack: { name: 'Volley', effect: 'damage', amount: 12, interval: 4, first: 4 } },
+    ],
+  },
+  logicbomb: {
+    name: 'Logic Bomb',
+    stem: 'TIMEBOMB',
+    threatens: 'Integrity',
+    opens: { level: 12, floor: 2 }, rules: true, art: 'ransomware',
+    cap: 2.6, // its one attacker carries the whole budget: a Tick may grow to 2.6 of its own (PARTS.cap is 1.3, half a fight's)
+    summary: 'The Payload carries a fuse, and your hits on it burn it down. At 0 it detonates for 35% of your max Signal, and the Payload is gone with its loot.',
+    core: ['surge', 'payload'],
+    basic: [['strobe', 1], ['repeater', 1], ['accumulator', 1]],
+    third: ['idletimer', 'frontend', 'backlog'], // floor 2's natives: the Idle Timer from 9, the Front End from 10, the Backlog from 12
+    parts: [
+      // The Trigger is its Pulse Node: the plain attacker every basic is matched to.
+      { id: 'pulse', name: 'Trigger', integrity: 30, armor: 1, loot: 'Trigger Pin', attack: { name: 'Tick', effect: 'damage', amount: 9, interval: 3, first: 2 } },
+      { id: 'payload', name: 'Payload', integrity: 70, bulk: 38, armor: 1, loot: 'Warhead', special: true, payload: true }, // bulk: what it counts for in the family's Integrity when it isn't rolled (a signature's size: the basic doesn't take its pinata's)
     ],
   },
 };
@@ -808,6 +841,8 @@ export const FIXTURES = {
   ghostroot: { name: 'GHOSTROOT', family: 'ghostroot', mutation: 'hasty', threat: 15 },
   xmrig: { name: 'XMRIG', family: 'cryptominer', mutation: null, threat: 18 },
   shamoon: { name: 'SHAMOON', family: 'wiper', mutation: null, threat: 28 },
+  mirainet: { name: 'MIRAINET', family: 'botnet', mutation: null, threat: 17 },
+  timebomb: { name: 'TIMEBOMB', family: 'logicbomb', mutation: null, threat: 21 },
   watchdog: { name: 'WATCHDOG', family: 'watchdog', mutation: null, threat: 13 },
   sentinel: { name: 'SENTINEL', family: 'sentinel', mutation: null, threat: 13 },
   crawler: { name: 'CRAWLER', family: 'crawler', mutation: null, threat: 13 },
@@ -815,6 +850,9 @@ export const FIXTURES = {
   bouncer: { name: 'BOUNCER', family: 'bouncer', mutation: null, threat: 13 },
   tracer: { name: 'TRACER', family: 'tracer', mutation: null, threat: 13 },
 };
+
+// A Botnet's Zombies (createVirus): their Integrity at level 6 scale, and how many from each level.
+export const SWARM = { integrity: 8, count: [[1, 6], [15, 7], [25, 8]] };
 
 // Bodies that live only in server rooms (dist/families.mjs registers the Trojan and the Exfil here). They are kept out of
 // FAMILIES so nothing outside the rooms rolls them.
@@ -850,6 +888,9 @@ export function makePart(spec, kind, scale, extraArmor = 0) {
     ...(spec.hash ? { hash: true } : {}), // the Cryptominer's Rig (families.mjs: heat, vent)
     ...(spec.twinrig ? { twinrig: true } : {}), // its Twin Rig: a second Rig on the same heat
     ...(spec.bin ? { bin: true } : {}), // the Wiper's Recycle Bin: holds the wiped key
+    ...(spec.cnc ? { cnc: true } : {}), // the Botnet's C&C: its Volley is its Zombies' (families.mjs)
+    ...(spec.payload ? { payload: true } : {}), // the Logic Bomb's Payload: a fuse your hits burn down (families.mjs)
+    ...(spec.zombie ? { zombie: true, noTicks: true } : {}), // a Botnet's Zombie: no ticks, no attack of its own
     tax: !!spec.tax, // Hashrat's Miner: your cooldowns run at half speed while it lives
     phase: !!spec.phase, // Flicker's Shade: only there on even cycles
     echo: !!spec.echo, // Echo: every hit you take repeats next cycle at half
@@ -1125,6 +1166,8 @@ export const TELLS = {
   possession: { kind: 'charge', name: 'Possession', gene: 'possession', part: 'special', longer: 2 }, // a Scramble that lasts two cycles longer (Scrub clears it)
   hashburst: { kind: 'charge', name: 'Hash Burst', gene: 'overcharge', part: 'special' }, // the Cryptominer: an Overcharge on the Rig
   zerofill: { kind: 'charge', name: 'Zero Fill', gene: 'overcharge', part: 'special' }, // the Wiper: an Overcharge on the Degausser
+  ddos: { kind: 'charge', name: 'DDoS', gene: 'overcharge', part: 'special' }, // the Botnet: an Overcharge on the C&C's Volley
+  shortfuse: { kind: 'charge', name: 'Short Fuse', gene: 'overcharge', part: 'pulse' }, // the Logic Bomb: an Overcharge on the Trigger (the Payload has no attack)
   lockon: { kind: 'charge', name: 'Lock-on', gene: 'overcharge', part: 'special' }, // Watchdog, Tracer: the Tracker
   infest: { kind: 'charge', name: 'Infest', gene: 'massmailer', part: 'special', spawn: 0 }, // Crawler: the Brood
   deepshred: { kind: 'charge', name: 'Deep Shred', gene: 'overcharge', part: 'special', shred: true }, // Shredder: it shreds a file in your pack too
@@ -1134,6 +1177,8 @@ export const TELLS = {
   extortion: { kind: 'cast', name: 'Double Extortion', gene: 'doubleextortion', part: 'special', does: 'loud' }, // its attacks hit 35% harder for 4 cycles
   turbo: { kind: 'cast', name: 'Turbo Boost', gene: 'doubleextortion', part: 'special', does: 'loud' }, // the Cryptominer's Double Extortion
   fastwipe: { kind: 'cast', name: 'Fast Wipe', gene: 'persistence', part: 'special', does: 'haste' }, // the Wiper's Persistence
+  recruit: { kind: 'cast', name: 'Recruit', gene: 'persistence', part: 'special', does: 'haste' }, // the Botnet's Persistence
+  armtimer: { kind: 'cast', name: 'Arm Timer', gene: 'persistence', part: 'pulse', does: 'haste' }, // the Logic Bomb's, on the Trigger
   selfupdate: { kind: 'cast', name: 'Self-Update', gene: 'selfupdate', part: 'special', does: 'grow' }, // every part grows a quarter of its current Integrity
   persistence: { kind: 'cast', name: 'Persistence', gene: 'persistence', part: 'special', does: 'haste' }, // its attacks repeat a cycle faster for 4 cycles
   callhome: { kind: 'cast', name: 'Call Home', gene: 'persistence', part: 'special', does: 'haste' }, // guards
@@ -1143,6 +1188,8 @@ export const TELLS = {
   godark: { kind: 'seal', name: 'Go Dark', gene: 'rekey', part: 'special' },
   coldboot: { kind: 'seal', name: 'Cold Boot', gene: 'rekey', part: 'special' }, // the Cryptominer's
   writelock: { kind: 'seal', name: 'Write Lock', gene: 'rekey', part: 'special' }, // the Wiper's
+  rollcall: { kind: 'seal', name: 'Roll Call', gene: 'rekey', part: 'special' }, // the Botnet's
+  failsafe: { kind: 'seal', name: 'Failsafe', gene: 'rekey', part: 'special' }, // the Logic Bomb's
   blacklist: { kind: 'seal', name: 'Blacklist', gene: 'rekey', part: 'special' }, // Sentinel: the Lockout
   // The Mimic's beat (a part's nature, not counted against the tier's count): every 4 cycles from cycle 3.
   mimic: { kind: 'mimic', name: 'Mimic', gene: 'mimic', part: 'mimic', first: 3, every: 4 },
@@ -1165,6 +1212,8 @@ export const TELL_SETS = {
   ghostroot: ['possession', 'persistence', 'overcharge', 'godark'],
   cryptominer: ['hashburst', 'turbo', 'overcharge', 'coldboot'],
   wiper: ['zerofill', 'fastwipe', 'overcharge', 'writelock'],
+  botnet: ['ddos', 'recruit', 'overcharge', 'rollcall'],
+  logicbomb: ['shortfuse', 'armtimer', 'overcharge', 'failsafe'],
   watchdog: ['lockon', 'callhome', 'overcharge'],
   sentinel: ['blacklist', 'callhome'],
   crawler: ['infest', 'callhome', 'overcharge'],
@@ -1227,7 +1276,8 @@ function shareProfile(familyId, family, specs, parts, r, level) {
   const prof = PARTS.profile[familyId];
   if (!prof) return;
   const pulse = family.parts.find((x) => x.id === 'pulse'), sig = family.parts.find((x) => x.special);
-  const lift = alongParts(PARTS.hit, level), [lo, hi] = PARTS.pressure, top = PARTS.cap * pulse.attack.amount;
+  const lift = alongParts(PARTS.hit, level), [lo, hi] = PARTS.pressure, top0 = PARTS.cap * pulse.attack.amount;
+  const topOf = (p) => (family.cap && p.id === 'pulse' ? family.cap / PARTS.cap : 1) * top0; // a family's own cap on its Pulse Node (the Logic Bomb's Trigger)
   const T = alongParts(PARTS.horizon, level), budget = profileBudget(T) * PARTS.budget;
   const scalable = (p) => ['damage', 'encrypt'].includes(p.attack?.effect);
   // A basic is pressure-matched to the Pulse Node over 20 cycles (parts.test.mjs), so it counts as one Pulse Node.
@@ -1266,13 +1316,14 @@ function shareProfile(familyId, family, specs, parts, r, level) {
   const pool = rows.filter((x) => scalable(x.p)), now = pool.reduce((n, x) => n + x.k * x.d, 0);
   if (left > 0 && now > 0) for (const x of pool) x.k = Math.min(hi, (x.k * (now + left)) / now);
   // No hit to take it (an Obfuscator beside the Scrambler, a Buffer beside the Replicator): onto the hit a special carries.
-  else if (left > 0) { const hitters = rows.filter((x) => x.p.attack?.hit); for (const x of hitters) { const n = nominal({ attack: { ...x.p.attack, effect: 'damage', amount: 1 } }, T); if (n) x.p.attack.hit = Math.min(Math.max(x.p.attack.hit, top), x.p.attack.hit + left / hitters.length / n); } }
-  for (const { p, hk } of rows) if (hk && hk !== 1) p.attack.hit = hk > 1 ? Math.min(Math.max(p.attack.hit, top), p.attack.hit * hk) : p.attack.hit * hk;
+  else if (left > 0) { const hitters = rows.filter((x) => x.p.attack?.hit); for (const x of hitters) { const n = nominal({ attack: { ...x.p.attack, effect: 'damage', amount: 1 } }, T); if (n) x.p.attack.hit = Math.min(Math.max(x.p.attack.hit, top0), x.p.attack.hit + left / hitters.length / n); } }
+  for (const { p, hk } of rows) if (hk && hk !== 1) p.attack.hit = hk > 1 ? Math.min(Math.max(p.attack.hit, top0), p.attack.hit * hk) : p.attack.hit * hk;
   for (const row of rows) {
     // A hit every cycle or two (a Strobe) grows only PARTS.fast of its lift: Block takes the same off each hit, so a bigger small hit gains more than its share.
     const k = row.k > 1 && row.p.attack?.interval <= 2 ? 1 + (row.k - 1) * PARTS.fast : row.k, p = row.p;
     if (k === 1 || !p.attack) continue;
     const a = p.attack;
+    const top = topOf(p);
     if (a.effect === 'damage' && !p.taps && k > 1 && a.amount * k > top && a.interval > 2) { const want = a.amount * k, every = Math.max(2, Math.round((a.interval * top) / want)); a.amount = Math.min(top, (want * every) / a.interval); a.interval = every; a.first = a.due = Math.max(2, Math.min(a.due, every + 1)); }
     else if (scalable(p)) { a.amount = a.effect === 'damage' && k > 1 ? Math.min(Math.max(a.amount, top), a.amount * k) : a.amount * k; if (a.ramp) a.ramp *= k; } // a ramp (the Rig's) climbs in step
   }
@@ -1333,7 +1384,7 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
     // Its Integrity: the family's two core parts' total (PARTS.bulk), shared out. A third keeps about its own size (never
     // more than PARTS.thirdMax of it); the basic and the signature take the rest.
     const weight = (spec) => (r.dup && (spec === r.basic || spec === copy) ? PARTS.copy : 1);
-    const total = alongParts(PARTS.bulk, level) * (family.parts.find((x) => x.id === 'pulse').integrity + sig.integrity), sum = specs.reduce((n, x) => n + x.integrity * weight(x), 0);
+    const total = alongParts(PARTS.bulk, level) * (family.parts.find((x) => x.id === 'pulse').integrity + (r.signature ? sig.integrity : sig.bulk ?? sig.integrity)), sum = specs.reduce((n, x) => n + x.integrity * weight(x), 0);
     const kt = Math.min(PARTS.thirdMax, total / sum), t3 = r.thirds.reduce((n, x) => n + x.integrity * kt, 0), core = specs.filter((x) => x.pool !== 'third').reduce((n, x) => n + x.integrity * weight(x), 0);
     const kc = (total - t3 * PARTS.carve) / core; // PARTS.carve: how much of the thirds' Integrity comes out of the basic's and the signature's
     share = (spec) => (spec.pool === 'third' ? kt : weight(spec) * kc);
@@ -1352,6 +1403,11 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
     if (!wearers.length) wearers.push(parts[0]);
     for (let i = 0; lack > 0; i++, lack--) { const p = PARTS.armorEven ? wearers.reduce((a, b) => (b.armor / b.max < a.armor / a.max ? b : a)) : wearers[i % wearers.length]; p.armor++; p.maxArmor = (p.maxArmor || 0) + 1; } // armorEven: each ◆ onto the part with the fewest for its size
   }
+  // A Logic Bomb's Payload and a Botnet's C&C wear their own ◆ (the Payload 1, 2 from level 10; the C&C 2): the fuse
+  // counts hits on ◆ too, and the C&C is the way to end a Botnet early, so none are added to them.
+  for (const p of parts) if (p.payload || p.cnc) p.armor = p.maxArmor = p.cnc || level >= 10 ? 2 : 1;
+  // A Payload falls back on its fight's basic (the Trigger, or what took its slot): break that first and it takes the attack over.
+  for (const p of parts) if (p.payload) p.fallback = parts.find((x) => x !== p && x.basic !== false && x.attack && x.kind === 'system' && !x.from)?.id || parts.find((x) => x !== p && x.attack)?.id;
   // A doubled basic: each copy hits for PARTS.copy of one, the second a cycle behind.
   if (rolled2?.dup) for (const p of parts.filter((x) => x.id === rolled2.basic.id + '2' || x.id === rolled2.basic.id)) { if (p.attack) p.attack.amount *= PARTS.copy; if (p.copy && p.attack) { p.attack.first += 1; p.attack.due += 1; } }
   // Its damage, like its Integrity, is its family's: the family's profile (PARTS.profile, GAME_RULES.md
@@ -1375,6 +1431,14 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   // A dormant strain's attacks wait off the timeline until it wakes.
   if (strain?.dormant) for (const p of parts) if (p.attack) { p.attack.wake = Math.max(1, p.attack.due - 1); p.attack.due = 999; }
 
+  // A Botnet's C&C brings its Zombies (SWARM), once every number is set: bare, no attack or drops of their own. Its Volley is
+  // their shares, so more Zombies hit for less each.
+  const cnc = parts.find((p) => p.cnc);
+  if (cnc) {
+    const n = SWARM.count.filter(([from]) => level >= from).at(-1)[1];
+    for (let k = 1; k <= n; k++) parts.push(makePart({ id: `zombie${k}`, name: `Zombie ${k}`, integrity: SWARM.integrity, armor: 0, loot: null, zombie: true }, 'system', scale * g.hp));
+    cnc.zombies = n;
+  }
   // An elite sized on its own (eliteHp: a champion, a feud, the farm's packs, a breach's) keeps the elite-grade hits, and
   // rolls no clash (parts.mjs puzzle).
   const eliteDmg = overrides.eliteHp != null ? ELITE.sizedDmg : ELITE.dmg;

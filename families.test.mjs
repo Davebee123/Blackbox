@@ -1,14 +1,14 @@
 // What fights in a server's rooms (docs/servers.md 4, families.mjs): attack sets for the Ransomware, the Worm and the
 // Ghostroot (and the later bodies' two each), each its own timing at the same pressure; the Trojan's Packages and
 // Loader, a room body only; the Cryptominer's ramp, heat, burnout and vent and the Wiper's Wipe, families since the
-// parts plan's P3, whose rules run in any fight.
+// parts plan's P3, and the Botnet's Volley and the Logic Bomb's fuse (priority 3), whose rules run in any fight.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fresh, hooks, hit, part, livingParts, command, resolveCycle, attackers, readyIn, usable, active, toIntent, intents, selectEncounter } from './dist/combat.mjs';
+import { fresh, hooks, hit, part, livingParts, command, resolveCycle, attackers, readyIn, usable, active, alive, attackAmount, toIntent, intents, selectEncounter } from './dist/combat.mjs';
 import { CONFIG, FAMILIES, ROOM_FAMILIES, ABILITIES, createVirus } from './dist/data.mjs';
 import { seeded } from './dist/gear.mjs';
 import * as FP from './dist/floorplan.mjs';
-import { ATTACK_SETS, SET_SCALE, pressureOf, rollSet, applySet, BODY } from './dist/families.mjs';
+import { ATTACK_SETS, SET_SCALE, pressureOf, rollSet, applySet, BODY, fuseLeft } from './dist/families.mjs';
 import { PARTS } from './dist/parts.mjs';
 import { GENES } from './dist/genes.mjs';
 
@@ -439,4 +439,66 @@ test('the Recycle Bin holds the key the Wipe took; cross one of its ticks and th
   assert.equal(readyIn(s, id), 0, 'ready, as it was');
   assert.equal(bin.binHeld, null);
   assert.ok(s.logs.some((x) => x.restore));
+});
+
+// ---------- priority 3: the Botnet and the Logic Bomb ----------
+test('the Botnet: the C&C\'s Volley is its standing Zombies\' shares; the last Zombie silences it and the kill pays 1.5', () => {
+  const s = wildFight({ family: 'botnet', level: 20 });
+  const c = part(s, 'cnc'), zs = livingParts(s).filter((p) => p.zombie);
+  assert.equal(zs.length, 7, 'seven from level 15');
+  assert.ok(zs.every((z) => !z.attack && !z.ticks && !z.armor));
+  assert.equal(c.armor, 2);
+  const full = attackAmount(c);
+  strike(s, zs[0], zs[0].integrity);
+  assert.equal(attackAmount(c), Math.round((full * 6) / 7), 'one share less');
+  for (const z of zs.slice(1)) strike(s, z, z.integrity);
+  assert.equal(s.encounter.virus.pays, BODY.botnet.farm);
+  assert.equal(c.attack.due, 999, 'silent');
+  assert.ok(active(s), 'the rest still stand');
+});
+
+test('the Botnet: break the C&C with a Zombie standing and everything scatters: the fight ends, paying 0.6', () => {
+  const s = wildFight({ family: 'botnet', level: 12 });
+  assert.equal(livingParts(s).filter((p) => p.zombie).length, 6);
+  const c = part(s, 'cnc');
+  c.armor = 0;
+  command(s, 'spike cnc'); c.integrity = 1; resolveCycle(s);
+  if (alive(c)) strike(s, c, c.integrity);
+  assert.equal(livingParts(s).length, 0);
+  assert.equal(s.encounter.virus.pays, BODY.botnet.end);
+  assert.ok(s.logs.some((x) => x.scatter));
+});
+
+test('the Logic Bomb\'s Contact fuse counts your commands\' hits on the Payload (◆ too), not burns; at 0 it detonates and is gone', () => {
+  const s = wildFight({ family: 'logicbomb', level: 14 });
+  const e = s.encounter, p = part(s, 'payload'), max = s.run.max;
+  assert.equal(p.armor, 2, '◆2 from level 10');
+  assert.equal(hooks.tickVerb(s, p), 'fuse');
+  p.integrity = p.max = 100000; // no tick crossed
+  hit(s, p, 5, { mine: true, dot: true });
+  assert.equal(fuseLeft(e.virus, p), 8, 'a burn burns nothing');
+  hit(s, p, 5, { mine: true });
+  assert.equal(fuseLeft(e.virus, p), 7, 'a hit on ◆ counts');
+  for (let n = 0; n < 6; n++) hit(s, p, 1, { mine: true, pierce: true });
+  assert.equal(fuseLeft(e.virus, p), 1);
+  hit(s, p, 1, { mine: true, pierce: true });
+  assert.ok(p.detonated && !alive(p) && p.loot === null);
+  assert.ok(max - s.run.integrity > max * (BODY.fuse.blast - 0.05), 'about 35% of your max (Block takes its bit)');
+  assert.ok(active(s) && alive(part(s, 'pulse')), 'the fight goes on against the Trigger');
+});
+
+test('the Logic Bomb\'s Timed fuse counts every hit and winds back up a cycle; a tick on the Payload burns 2 and cancels nothing', () => {
+  const s = wildFight({ family: 'logicbomb', level: 14, set: 'timed' });
+  const e = s.encounter, p = part(s, 'payload');
+  p.armor = 0;
+  p.max *= 100; p.integrity = p.max;
+  hit(s, p, 1, { mine: true, dot: true });
+  hit(s, p, 1, { mine: true, src: 'helper', by: 'Helper', dot: true });
+  assert.equal(fuseLeft(e.virus, p), 4);
+  hold(s);
+  assert.equal(fuseLeft(e.virus, p), 5, 'wound back 1');
+  for (const x of attackers(s)) x.attack.due = 999;
+  strike(s, p, p.integrity - Math.floor(p.max * 0.5) + 1);
+  assert.equal(fuseLeft(e.virus, p), 3, 'a tick burns 2');
+  assert.ok(!s.logs.some((x) => x.type === 'cut' && x.target === 'payload'));
 });

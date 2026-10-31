@@ -48,7 +48,10 @@ const order = (s, p) => (p.core && p.ticks?.some((t) => !t.spent) && livingParts
 export const mostThreat = (s) => livingParts(s).filter((p) => reachable(s, p)).map((p) => ({ p, k: (threatOf(p) * invested(s, p) * order(s, p)) / (p.integrity + 10 * (p.armor || 0)) })).sort((a, b) => b.k - a.k || dueOf(s, a.p) - dueOf(s, b.p))[0]?.p || soonest(s);
 const bare = (p) => alive(p) && !p.armor;
 // A Trojan's Package while its Loader lives (families.mjs): any damage unpacks it, so a player leaves it alone.
-const shunned = (s, p) => !!p?.pkg && !p.pkg.inert && livingParts(s).some((x) => x.id === 'loader');
+// A Botnet (families.mjs): an area kit farms its Zombies while its Signal holds; any other kit, or one under half its
+// Signal, ends it at the C&C (the Zombies scatter).
+const ending = (s) => (!ignores('volley') && (defender(s).integrity < defender(s).max / 2 || !usable(s).some((id) => AREA.has(id))) && livingParts(s).find((x) => x.cnc && x.zombies && reachable(s, x))) || null;
+const shunned = (s, p) => (!!p?.pkg && !p.pkg.inert && livingParts(s).some((x) => x.id === 'loader')) || (!!p?.zombie && !!ending(s));
 const shunning = (s) => livingParts(s).some((p) => shunned(s, p));
 const HITS = ['zero-day', 'retaliate', 'opening', 'chain-reaction', 'segfault', 'overload', 'flood', 'shatter', 'backdoor', 'reclaim', 'rate-limit', 'reject', 'checksum', 'hot-loop', 'backstab', 'fingerprint', 'side-channel', 'unmask', 'nohup', 'sniff', 'jam', 'echo-cancel', 'revoke', 'throttle', 'hook', 'tag', 'spike']; // the cheap core hits before key 1
 // A command that breaks this part right now, if there is one.
@@ -190,7 +193,7 @@ function planner1(s) {
   if (!plan || !shunning(s)) return plan;
   const [id, at] = plan.split(' '), aim = part(s, at);
   if (!AREA.has(id) && !shunned(s, aim)) return plan;
-  const t = (aim && !shunned(s, aim) ? aim : null) || livingParts(s).filter((p) => !shunned(s, p)).sort((a, b) => dueOf(s, a) - dueOf(s, b))[0];
+  const t = (aim && !shunned(s, aim) ? aim : null) || ending(s) || livingParts(s).filter((p) => !shunned(s, p)).sort((a, b) => dueOf(s, a) - dueOf(s, b))[0];
   return (t && first(s, ['overload', 'flood', 'segfault', 'backdoor', 'reclaim', 'rate-limit', 'exploit', 'crack', 'inject', 'deploy', 'tag', 'spike'].map((id) => id + ' ' + t.id))) || 'hold';
 }
 // One planner for every class: finish what you can, answer what lands now, strip, then finish.
@@ -298,6 +301,8 @@ function play(s) {
     const key = usable(s).filter((id) => !['spike', 'sigint'].includes(id) && ABILITIES[id] && readyIn(s, id) === 0).sort((a, b) => (ABILITIES[b].damage || 0) - (ABILITIES[a].damage || 0) || (ABILITIES[b].cooldown || 0) - (ABILITIES[a].cooldown || 0))[0];
     if (key && ABILITIES[key].damage > 0 && !t.armor && ok(s, key + ' ' + t.id)) return key + ' ' + t.id; // a hit on a bare part only: a shield or heal waits for its moment
   }
+  // Botnet (families.mjs): end it at the C&C unless an area kit can farm it (ending, above).
+  if (ending(s)) t = ending(s);
   // A subclass's own play (dist/classes/<class>.mjs plan): its new skills, before the generic rules.
   // Palemask (sets.mjs, the Infiltrator's tier set): a part you took under half takes your next hit as a critical
   // strike. Spend it on the biggest direct hit you have ready, there (not on a part your burns finish anyway, or under ◆).

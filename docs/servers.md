@@ -58,9 +58,10 @@ its chip listing two or three requirements with a check box each. Each unmet req
 
 ## 4. Virus variety
 
-Attack sets and the Trojan, Cryptominer and Wiper are built (GAME_RULES *Runs: servers as rooms*, *Families*). The seven families below are not.
+Attack sets and the Trojan, Cryptominer, Wiper, Botnet and Logic Bomb are built (GAME_RULES *Runs: servers as rooms*,
+*Families*). The other five below are not.
 
-### 4.2 The seven families still to build
+### 4.2 The later families
 
 New **bodies** (genes.mjs, authors.mjs): each rolls its author's genes on top within the budget and the
 compatibility rules (docs/genome.md 5.3), one mutation at most, and passes rule 4 (an answer in every kit at its level)
@@ -68,8 +69,8 @@ before it ships. Numbers are at level 6 scale and grow 4% a level. Each comes wi
 
 | Family | Stem | Opens (level, floor) | Authors | Code | Threshold verb |
 |---|---|---|---|---|---|
-| Botnet | MIRAINET | 8, floor 2 | SWARMLINE | Worm | C&C: cancel a volley |
-| Logic Bomb | TIMEBOMB | 12, floor 2 | TOLLGATE | Cipher | Trigger: cancel. Payload: shorten the fuse. |
+| Botnet (*built*) | MIRAINET | 8, floor 2 | SWARMLINE | Worm | C&C: cancel a volley |
+| Logic Bomb (*built*) | TIMEBOMB | 12, floor 2 | TOLLGATE | Cipher | Trigger: cancel. Payload: shorten the fuse. |
 | Polymorph | SHAPESHIFT | 14, floor 3 | PALEMASK, NULL CHOIR | Kernel | cancel, and lock its form 2 cycles |
 | RAT | DARKCOMET | 16, floor 3 | NULL CHOIR, GLASSJAW | Kernel | Operator: release your key |
 | Rootkit | KERNELHOOK | 18, floor 3 | PALEMASK, NULL CHOIR | Kernel | surface the next part |
@@ -80,18 +81,8 @@ Invasions can be any family but the Fileless, which lives only in rooms.
 
 ### 4.3 The families
 
-**4. Logic Bomb. Count your hits.**
-
-| Part | Integrity | ◆ | Move |
-|---|---:|---:|---|
-| Trigger | 30 | 1 | Tick 9 every 3 from 2 |
-| Payload | 70 | 1 (2 from 10) | none. A **fuse** on its bar. |
-
-- Sets: **Contact** (an 8-hit fuse counting your command hits on the Payload, a hit on ◆ included) and **Timed** (a
-  6-hit fuse counting every hit, burns and helpers too, winding back up 1 a cycle, to 6).
-- At 0 it detonates: 35% of your max Signal, and the Payload is gone with its loot. The fight goes on against the Trigger.
-- Ticks on the Payload shorten the fuse by 2 and never interrupt. The Trigger's cancel as usual.
-- The lesson: Contact wants few big hits or burns. Timed wants one big hit a cycle and no helpers.
+**4. Logic Bomb. Count your hits.** *Built* (GAME_RULES *Families*). As built, a Trigger and a Payload as designed, plus
+the parts roll's basic and thirds (floor 2's natives); a wild one's fuse is Contact's.
 
 **5. Polymorph. Hit the other one.**
 
@@ -106,18 +97,10 @@ Invasions can be any family but the Fileless, which lives only in rooms.
 - Ticks cancel as usual and **lock its form** for 2 cycles: the ◆ stay where they are.
 - The lesson: alternate. Burns on one and commands on the other work too.
 
-**6. Botnet. Farm it or end it.**
-
-| Part | Integrity | ◆ | Move |
-|---|---:|---:|---|
-| C&C | 46 | 2 | Volley: every Zombie fires at once |
-| Zombie (6; 7 from 15; 8 from 25) | 8 each | 0 | its share of the volley |
-
-- Sets: **Barrage** (a volley every 4 from 4, each Zombie 3) and **Drizzle** (every 2 from 2, each Zombie 1).
-- Break the C&C and the Zombies scatter: the fight ends safely but pays only 0.6 of a kill and none of the Zombies'
-  drops. Clear the Zombies first and it pays 1.5 kills.
-- Ticks: the C&C's cancel a volley. Zombies have none.
-- The lesson: area builds farm it. Anyone low on Signal ends it.
+**6. Botnet. Farm it or end it.** *Built* (GAME_RULES *Families*). As built, each Zombie's share is 2, not 3 (at 3 a
+full Volley was 1.5 Pulse Nodes), the C&C's ◆ stay at 2 so ending it stays quick, and the parts roll adds its basic and
+thirds; breaking the C&C scatters them too. Zombies drop nothing: the farm pays in XP. The bots end it unless their kit
+has an area hit.
 
 **7. Rootkit. Find the Hook.**
 

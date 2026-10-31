@@ -19,7 +19,7 @@ import { CONFIG, TELL, TELLS, BOSSES, STRAINS, ABILITIES } from './data.mjs';
 import { fxText } from './content.mjs';
 import { tellsOf, tellIntents, partTells, NEW_TELLS, beatOn, beatBlind, copyOf, dearCopy, sigintCharges } from './tells.mjs';
 import { nextTick } from './interrupt.mjs';
-import { BODY } from './families.mjs';
+import { BODY, fuseOf, fuseLeft } from './families.mjs';
 import { situationOf } from './situations.mjs';
 import { knows, TIER } from './research.mjs';
 import { mechRead } from './mechanics.mjs';
@@ -243,6 +243,9 @@ function readOf(s, v, p) {
   if (fam === 'cryptominer' && p.id === 'cooler' && p.tookOver && p.attack?.ramp) return [`Runs the Rig's Hash uncooled. ${deals(hitOf(s, p))} ${every(p.attack.interval)}. Each Hash deals ${Math.round(p.attack.rampBy || 1)} more than the last. Gains ${BODY.heat.hot} heat a cycle. At ${BODY.heat.at} heat, overheats and burns itself until it breaks.`, 'Vent it with a cut, or let it cook.', null];
   if (fam === 'cryptominer' && p.twinrig) return [`${deals(hitOf(s, p))} ${every(p.attack?.interval || 2)}. Each Hash deals ${Math.round(p.attack?.rampBy || 1)} more than the last. Shares the Rig's heat. When one Rig breaks while the other stands, the other takes its climb on top of its own.`, 'Bring both down close together.', null];
   if (p.bin) { const h = p.binHeld && s?.encounter?.wiped?.[p.binHeld.id] >= s.encounter.cycle ? ABILITIES[p.binHeld.id]?.name : null; return [`Holds the skill the Wipe takes${h ? `: ${h} now` : ''}. Push it past a tick while it holds one, and the skill comes back${p.binCool ? ', still cooling' : ', ready'}.`, 'After a Wipe, cross one of its ticks.', null]; }
+  if (p.cnc) { const z = v.parts.filter((x) => x.zombie && alive(x)).length; return [`${p.attack && z ? `${deals(hitOf(s, p))} ${every(p.attack.interval)}, every Zombie at once, a share for each of the ${z} standing.` : 'Silent, with no Zombies left to fire.'} When it breaks, everything left scatters and the fight ends, paying ${BODY.botnet.end} of a kill.`, 'Clear the Zombies first, or break it when low.', null]; }
+  if (p.zombie) return ['Fires its share of the C&C\'s Volley. Scatters when the C&C breaks.', 'Clear every Zombie for a bigger kill.', null];
+  if (p.payload) { const f = fuseOf(v); return [`${p.attack ? attackRead(s, v, p)[0] : 'Has no attack.'} Its fuse has ${fuseLeft(v, p)} left. ${f.counts === 'cmd' ? 'Each hit of your commands on it, ◆ included,' : 'Each hit on it, burns and helpers included,'} burns 1, and each of its ticks ${BODY.fuse.tick}.${f.wind ? ` It winds back up ${f.wind} a cycle.` : ''} At 0 it detonates for ${pct(BODY.fuse.blast)} of your max Signal, and its loot is gone.`, f.counts === 'cmd' ? 'Land few big hits, or use burns.' : 'Land one big hit a cycle, and no helpers.', null]; }
   // (One carrying the family's Surge, parts.mjs PARTS.steadyCarry, keeps it when the Rig breaks.)
   if (fam === 'cryptominer' && p.id === 'cooler') return [`${p.attack ? `${attackRead(s, v, p)[0]} ` : ''}Keeps the Rig cool. When broken, the Rig gains ${BODY.heat.hot} heat a cycle instead of ${BODY.heat.cooled}, and every Hash deals ${pct(BODY.heat.hard - 1)} more damage.${p.attack ? '' : ` If the Rig breaks first, the Cooler takes over its Hash, uncooled, at ${BODY.heat.hot} heat a cycle.`}`, 'Vent whichever part is left hashing, or let it cook.', { text: 'cools the Rig', icon: 'scheduler', link: 'rig' }];
   if (p.kind === 'fragment' && p.attack && !p.raidAdd) return [`${deals(hitOf(s, p))} ${every(p.attack.interval)}.`, String(p.id).startsWith('dropper') ? 'Break it, or hit every part.' : 'Hit every part to clear it.', null];

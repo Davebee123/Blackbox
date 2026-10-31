@@ -263,7 +263,7 @@ function roomShares(H) {
     const room = R.graph.rooms[id];
     if (!['cache', 'stash', 'secret', 'purse'].includes(room?.kind)) continue;
     const fam = Object.values(R.graph.rooms).find((x) => x.family)?.family;
-    const material = { ransomware: 'cipher', worm: 'worm', ghostroot: 'kernel', trojan: 'worm', cryptominer: 'cipher', wiper: 'cipher' }[fam] || 'cipher';
+    const material = { ransomware: 'cipher', worm: 'worm', ghostroot: 'kernel', trojan: 'worm', cryptominer: 'cipher', wiper: 'cipher', botnet: 'worm', logicbomb: 'cipher' }[fam] || 'cipher';
     for (const x of seats(s)) x.rewards.push({ kind: 'cache', room: room.kind, level: R.level || 1, material });
   }
   if (R.visit?.rested && !H.rested) {

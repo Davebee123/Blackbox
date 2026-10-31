@@ -11,7 +11,7 @@ import { ARCHETYPES, BOSSES, TELL, SUBCLASS, STRAINS, FAMILIES } from './dist/da
 import { GENES, GENE_BOTS } from './dist/genes.mjs';
 import { planner } from './dist/planner.mjs';
 import { build } from './balance.mjs';
-import './dist/families.mjs'; // the Cryptominer's and the Wiper's rules (and the room bodies'), as the game loads them
+import './dist/families.mjs'; // the later families' rules (and the room bodies'), as the game loads them
 
 export const SUBS = Object.entries(ARCHETYPES).flatMap(([cls, a]) => Object.keys(a.subs).map((sub) => [cls, sub]));
 export const SEEDS = Array.from({ length: Number(process.env.GENESIM_SEEDS) || 6 }, (_, i) => i + 1); // six a cell
@@ -135,6 +135,9 @@ export const PROBES = {
   // kit there): the Rig's Hash and the Degausser's Wipe.
   hash: { opens: 9, body: fam('ransomware'), with: fam('cryptominer'), gene: 'hash', levels: [9, 18, 30] },
   wipe: { opens: 19, body: fam('ransomware'), with: fam('wiper'), gene: 'wipe', levels: [19, 30] },
+  // Priority 3's floor 2 bodies: the C&C's Volley and the Payload's fuse, each against a Ransomware fight from its level.
+  volley: { opens: 8, body: fam('ransomware'), with: fam('botnet'), gene: 'volley', levels: [8, 18, 30] },
+  payload: { opens: 12, body: fam('ransomware'), with: fam('logicbomb'), gene: 'payload', levels: [12, 18, 30] },
   twinrig: probe(9, fam('cryptominer'), 'twinrig', { genes: ['twinrig'] }),
   recyclebin: probe(19, fam('wiper'), 'recyclebin', { genes: ['recyclebin'] }),
 };
@@ -151,7 +154,7 @@ export const PROBE_LEVELS = [5, 10, 18, 30];
 // Who plays a level: the four classes below SUBCLASS.from, every subclass from it.
 export const playersAt = (L) => (L >= SUBCLASS.from ? SUBS : Object.keys(ARCHETYPES).map((cls) => [cls, null]));
 // Genes the planner has a rule for, so ignoring them means something (planner.mjs, tells.mjs, the Sync Window here).
-export const ANSWERED = ['hash', 'wipe', 'twinrig', 'recyclebin', 'ward', 'mutexlock', 'tripwire', 'twin', 'c2', 'decoymirror', 'mimic', 'keyring', 'adaptive', 'phaseshift', 'synclock', 'overcharge', 'fulldisk', 'massmailer', 'possession', 'doubleextortion', 'selfupdate', 'persistence', 'rekey', 'batteringram', 'hotfix', 'zipbomb', 'hotspot', 'idletimer', 'frontend', 'backlog', 'spare', 'scraper', 'badblock', 'coldstore']; // no rule of their own in the planner: the Limiter (its threat order already leaves it late), the Packer (a bot reads every rule anyway), the Damper (it strips ◆ first anyway) and the Shunt (what it takes still breaks it)
+export const ANSWERED = ['hash', 'wipe', 'volley', 'twinrig', 'recyclebin', 'ward', 'mutexlock', 'tripwire', 'twin', 'c2', 'decoymirror', 'mimic', 'keyring', 'adaptive', 'phaseshift', 'synclock', 'overcharge', 'fulldisk', 'massmailer', 'possession', 'doubleextortion', 'selfupdate', 'persistence', 'rekey', 'batteringram', 'hotfix', 'zipbomb', 'hotspot', 'idletimer', 'frontend', 'backlog', 'spare', 'scraper', 'badblock', 'coldstore']; // no rule of their own in the planner: the Payload (the plain plan's big hits are the answer), the Limiter (its threat order already leaves it late), the Packer (a bot reads every rule anyway), the Damper (it strips ◆ first anyway) and the Shunt (what it takes still breaks it)
 
 // One probe fight: a run fight at the level, the planner reading (or ignoring one gene).
 export function probeFight(cfg, level, cls, sub, seed, { ignore = null } = {}) {
