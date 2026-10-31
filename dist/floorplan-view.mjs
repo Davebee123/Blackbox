@@ -159,6 +159,8 @@ const ROOM_ICONS = {
   routing: '<path d="M2.5 7H9v10h8.5"/><path d="M17 13.5l3.5 3.5-3.5 3.5"/><circle cx="9" cy="7" r="1.2"/><circle cx="9" cy="17" r="1.2"/>',
   deadlock: '<path d="M4.5 10A8 8 0 0 1 18 6.2M19.5 14A8 8 0 0 1 6 17.8"/><path d="M18.5 2.5v4h-4M5.5 21.5v-4h4"/><rect x="9" y="11" width="6" height="5" rx="1"/><path d="M10.5 11V9.6a1.5 1.5 0 0 1 3 0V11"/>',
   cryptogram: '<path d="M3 5.5h18v13H3Z"/><path d="M3 5.5l9 7 9-7"/><path d="M7 15.5h3M14 15.5h3"/>',
+  // A terminal's screen, its log lines and the prompt.
+  terminal: '<path d="M3 4h18v16H3Z"/><path d="M6.5 8h11M6.5 11h8M6.5 14h10"/><path d="M6.5 17h2.5"/>',
   // A thread's rooms (threads-view.mjs): someone waiting at a terminal, a file, a log.
   ...TH_ICONS,
 };
@@ -172,6 +174,8 @@ const MARK_ICONS = {
   rival: '<circle cx="10" cy="10" r="6.5"/><circle cx="10" cy="10" r="2.2"/><path d="M10 1.5v3.5M10 15v3.5M1.5 10H5M15 10h3.5"/>',
   // An objective's (objectives.mjs): a Priority's target, Uptime's hourglass.
   target: '<circle cx="10" cy="10" r="7"/><circle cx="10" cy="10" r="3.5"/><circle class="f" cx="10" cy="10" r="1"/>',
+  backup: '<path d="M3 3h11.5L17 5.5V17H3z"/><path d="M6.5 3v5h7V3M6.5 17v-5.5h7V17"/>',
+  clean: '<circle cx="10" cy="10" r="7"/><path d="M7 10.2l2.2 2.2 4-4.6"/>',
   uptime: '<path d="M5 2.5h10M5 17.5h10M6.5 2.5c0 4.5 7 4.5 7 7.5s-7 3-7 7.5M13.5 2.5c0 4.5-7 4.5-7 7.5s7 3 7 7.5"/>',
   // A contract's mark (the mail's): a page with a tick, on a room a job points at.
   contract: '<path d="M4.5 2.5h7.5l3.5 3.5v11.5h-11Z"/><path d="M12 2.5V6h3.5"/><path d="M7 11.8l2 2 4-4.3"/>',
@@ -196,7 +200,7 @@ const exfilShown = (s) => { const m = exfilOf(s); return m && exfilSeen(s, m) ? 
 const exfilStep = (s) => { const m = exfilShown(s), next = m && exfilNext(s, m); return next && seenOf(s, next) ? next : null; };
 // A live plain fight room's objective (objectives.mjs), from the same roll its fight makes: 'priority', 'uptime' or null.
 const objOf = (s, room) => (room.kind === 'process' && !room.wild && !room.mirror && known(s, room.id) && isUp(s, room) ? fightOf(s, room).objective || null : null);
-const OBJ_ICON = { priority: 'target', uptime: 'uptime' };
+const OBJ_ICON = { priority: 'target', uptime: 'uptime', backup: 'backup', clean: 'clean' };
 // Its bonus, as icons: the loot rolls once more, XP, components.
 const objBonus = () => `<span class="rw" title="Loot: rolls once more">${glyph('item')}<b>+1</b></span><span class="rw" title="XP: ${Math.round(OBJ.bonus.xp * 100)}% more for the kill">${glyph('xp')}<b>+${Math.round(OBJ.bonus.xp * 100)}%</b></span><span class="rw" title="Components">${glyph('salvage')}<b>+${OBJ.bonus.components}</b></span>`;
 // An icon in the strip or the pop-up card.
@@ -326,6 +330,13 @@ const hashOf = (str) => { let x = 7; for (const c of str) x = (x * 31 + c.charCo
 // A hop's trace bows out; a Tunnel's arc, from the entry to its room, bows a little less.
 const hopD = (p, q) => `M${p.x} ${p.y} Q${n1((p.x + q.x) / 2 + (q.y - p.y) * 0.35)} ${n1((p.y + q.y) / 2 - (q.x - p.x) * 0.35)} ${q.x} ${q.y}`;
 const tunnelD = (e, t) => `M${e.x} ${e.y} Q${n1((e.x + t.x) / 2 + (t.y - e.y) * 0.3)} ${n1((e.y + t.y) / 2 - (t.x - e.x) * 0.3)} ${t.x} ${t.y}`;
+// A Router's one-way link (floorplan.mjs oneWay): a chevron at the trace's middle, pointing the way it runs.
+function oneWayMark(g, a, b, p, q) {
+  const w = (g.oneway || []).find(([x, y]) => (x === a && y === b) || (x === b && y === a));
+  if (!w) return '';
+  const [f, t] = w[0] === a ? [p, q] : [q, p], ang = (Math.atan2(t.y - f.y, t.x - f.x) * 180) / Math.PI;
+  return `<g class="fp-oneway" transform="translate(${n1((p.x + q.x) / 2)} ${n1((p.y + q.y) / 2)}) rotate(${n1(ang)})"><title>One-way: this link only runs the way it points, for you and the hunter.</title><path d="M-5 -7L4 0L-5 7"/></g>`;
+}
 // The trace a step from one room into the next runs along, for the step's effect (travelfx.mjs): its path as the map
 // draws it, whether you walk it backwards (rev), both rooms' centres and a chip's half size. Null when no trace joins them.
 export function stepPath(s, from, to, tall) {
@@ -361,7 +372,8 @@ function mapSvg(s, tall, pop = null) {
     const live = !!here && ((a === here && reach.has(b)) || (b === here && reach.has(a))), fog = !live && (!found(a) || !found(b)), trod = R.at && walked[a] && walked[b];
     const d = hop ? hopD(p, q) : '';
     const shape = (cls) => (hop ? `<path class="${cls}" d="${d}"/>` : `<line class="${cls}" x1="${p.x}" y1="${p.y}" x2="${q.x}" y2="${q.y}"/>`);
-    const out = shape(`fp-bed${beat.has([a, b].sort().join('|')) ? ' beat' : ''}`) + (live ? shape('fp-under') : '') + shape(`fp-link ${fog ? 'fog' : live ? 'live' : trod ? 'walked' : 'seen'}${hop ? ' hop' : ''}`);
+    const out = shape(`fp-bed${beat.has([a, b].sort().join('|')) ? ' beat' : ''}`) + (live ? shape('fp-under') : '') + shape(`fp-link ${fog ? 'fog' : live ? 'live' : trod ? 'walked' : 'seen'}${hop ? ' hop' : ''}`)
+      + oneWayMark(g, a, b, p, q);
     return revealing(s, a) || revealing(s, b) ? `<g class="reveal">${out}</g>` : out; // a hidden room's trace fades in with it
   }).join('');
   // A Tunnel's link to the entry (a program, R2): a dashed amber arc, yours to walk free; the hunter never takes it.
@@ -500,7 +512,7 @@ function roomSvg(s, room, p, { reach, next, pop, near, G, marks, th = {}, files 
     if (sealed) tags.push(['SEALED', 'hot']);
     if (up && R.rare[room.id]) tags.push(['★', 'rare']);
     const ob = objOf(s, room);
-    if (ob) tags.push([String(OBJECTIVES[ob].n), 'obj', OBJ_ICON[ob], `${OBJECTIVES[ob].name}: ${objectiveLine(ob)}`]);
+    if (ob) tags.push([OBJECTIVES[ob].n ? String(OBJECTIVES[ob].n) : '', 'obj', OBJ_ICON[ob], `${OBJECTIVES[ob].name}: ${objectiveLine(ob)}`]);
     if (denEdge) tags.push(['WAKES', 'hot']);
     if (room.kind === 'nest') tags.push(['NEST', 'rare']);
     if (isPuzzle(room.kind)) { const st = puzzleState(s, room); if (st === 'live') tags.push(['IN PLAY', 'rare']); else if (st === 'won') tags.push(['SOLVED', 'done']); else if (st === 'lost') tags.push(['FAILED', 'hot']); }
@@ -509,7 +521,7 @@ function roomSvg(s, room, p, { reach, next, pop, near, G, marks, th = {}, files 
   if (race) tags.push([`YOU ${race.you ?? '?'}`, 'race-you'], [`${RIVALS[rv.id].name} ${race.it}`, 'race-it']);
   let tx = x0 - 6;
   for (const [t, c, icon, tip] of tags) { // a tag with an icon (an objective's): the icon, then its number
-    const w = tagW(t) + (icon ? 10 : 0);
+    const w = t ? tagW(t) + (icon ? 10 : 0) : 18; // an icon alone (a Backup's, a Clean run's)
     out += `<g class="fp-tag ${c}"${tip ? ` title="${esc(tip)}"` : ''}><rect x="${n1(tx)}" y="${n1(y0 - 8)}" width="${w}" height="16" rx="2"/>${icon ? `<use href="#fp-i-${icon}" x="${n1(tx + 4)}" y="${n1(y0 - 5)}" width="10" height="10"/>` : ''}<text x="${n1(tx + w / 2 + (icon ? 5 : 0))}" y="${n1(y0 + 3.5)}" text-anchor="middle">${t}</text></g>`;
     tx += w + 4;
   }

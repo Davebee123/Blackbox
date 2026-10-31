@@ -92,7 +92,7 @@ function build(s, loc) {
 const wormy = (loc) => lineageOf(loc.family) === 'worm';
 export function placePuzzles(loc, g, size = sizeOf(loc).id) {
   if (!g || g.puzzles != null) return [];
-  return FP.addPuzzles(g, FP.puzzleKinds(g, loc.seed || 1, { size, worm: wormy(loc) }), loc.seed || 1, ['cascade', 'sweep', 'quarantine']);
+  return FP.addPuzzles(g, FP.puzzleKinds(g, loc.seed || 1, { size, worm: wormy(loc), floor: loc.depth || 1 }), loc.seed || 1, ['cascade', 'sweep', 'quarantine']);
 }
 // A traced server's quirk room (floorplan.mjs addNest, addSecret), from its seed: a Worm server's nest (the Nest
 // quirk), a Ghostroot server's hidden room (Hidden). g.quirks marks it done (also an older save's graph:

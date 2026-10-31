@@ -182,7 +182,10 @@ function load() {
     const seed = Number(params.get('seed')) || (newRng() % 100000) + 1;
     FP.outfit(s, { cls, level: lv, sub: params.get('sub') || params.get('subclass'), gearSeed: seed });
     FP.startRooms(s, { seed, size, kind, level: lv, floor: Math.max(1, Number(params.get('floor')) || 2), author: params.get('author') || null, hunter: ['patrol', 'track'].includes(params.get('hunter')) ? params.get('hunter') : null, boss: params.get('boss') || 'a', speed: 10 });
+    const pz = FP.isPuzzle(params.get('puzzle')) ? FP.addPuzzles(s.rooms.graph, [params.get('puzzle')], seed)[0] : null; // &puzzle=<kind>: its room, and you in it
     FP.connect(s);
+    if (pz) { s.rooms.at = FP.neighbours(s.rooms.graph, pz.id)[0]; s.rooms.visit.walked[s.rooms.at] = true; FP.go(s, pz.id); }
+    if (params.has('seen')) for (const id of Object.keys(s.rooms.graph.rooms)) s.rooms.seen[id] = 'kind'; // &seen: every room discovered
     if (params.has('rival')) spawnRival(s, seed, params.get('rival')); // &rival=kudzu|escrow|hush (or any): a rival this visit (rivals.mjs)
     return s;
   }
@@ -213,7 +216,9 @@ function load() {
     const s = restore(raw);
     if (!raw) { s.rng = newRng(); s.netSeed = newRng() || 1; } // crits and drops differ from game to game, and every network has its own signature (network.mjs)
     // A bench with no save yet, opened as ?bench=<name>&as=<subclass|class>&level=<n>: that character, ready (bench.mjs).
-    if (!raw && BENCH && params.get('as')) BN.benchCommand(s, `bench ${params.get('as')} ${Number(params.get('level')) || 10}`, { bench: BENCH });
+    // ?bench=arena: the Arena's bench, built as &as at &level (a subclass at 10 if none), again whenever they change (bench.mjs arenaBuild).
+    const as = BENCH === 'arena' ? BN.arenaBuild(s, raw, params.get('as'), params.get('level')) : params.get('as');
+    if (as && (!raw || BENCH === 'arena') && BENCH) BN.benchCommand(s, `bench ${as} ${Number(params.get('level')) || 10}`, { bench: BENCH });
     return s;
   } catch {
     const s = fresh();
@@ -3234,6 +3239,7 @@ if (BENCH) {
   document.querySelector('.topbar .brand').after(tag);
   let open = true;
   try { const was = localStorage.getItem('bb-bench-panel'); open = was ? was === 'open' : innerWidth > 900; } catch { /* storage unavailable */ } // open on a wide screen, shut on a phone, then as you left it
+  if (BENCH === 'arena') open = true; // ?bench=arena: always open, on the Arena
   const panel = document.createElement('aside');
   panel.className = 'bench-panel';
   panel.setAttribute('aria-label', 'Developer panel');
@@ -3253,6 +3259,12 @@ if (BENCH) {
       try { localStorage.setItem('bb-bench-panel', open ? 'open' : 'closed'); } catch { /* storage unavailable */ }
       return;
     }
+    const pick = e.target.closest('[data-arena-pick]'); // the Arena: a row picked
+    if (pick) {
+      for (const x of panel.querySelectorAll('[data-arena-pick]')) x.setAttribute('aria-selected', String(x === pick));
+      panel.querySelector('[data-bench-field="pick"]').value = pick.dataset.arenaPick;
+      return;
+    }
     const b = e.target.closest('[data-bench-act]');
     if (!b) return;
     const v = Object.fromEntries([...b.closest('.bp-row').querySelectorAll('[data-bench-field]')].map((x) => [x.dataset.benchField, x.value]));
@@ -3260,6 +3272,19 @@ if (BENCH) {
     if (cmd) run(cmd);
     for (const x of panel.querySelectorAll('[aria-pressed]')) x.setAttribute('aria-pressed', String(PARTS.on));
   });
+  // The Arena's search: rows whose name, kind or id hold every word typed; a group with none left hides.
+  panel.addEventListener('input', (e) => {
+    if (!e.target.matches('[data-arena-search]')) return;
+    const words = e.target.value.toLowerCase().split(/\s+/).filter(Boolean);
+    let any = false;
+    for (const g of panel.querySelectorAll('.ar-group')) {
+      let n = 0;
+      for (const r of g.querySelectorAll('[data-arena-pick]')) { const hit = words.every((w) => r.dataset.arenaFind.includes(w)); r.hidden = !hit; n += hit; }
+      g.hidden = !n; any ||= !!n;
+    }
+    panel.querySelector('.ar-none').hidden = any;
+  });
+  if (BENCH === 'arena') requestAnimationFrame(() => { panel.querySelector('.ar-pick')?.scrollIntoView({ block: 'nearest' }); panel.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest' }); });
 }
 go(active(campaign) ? 'combat' : campaign.breach ? 'breach' : campaign.rooms ? 'rooms' : campaign.run ? 'net' : playtest === 'story' ? 'mail' : CAMP ? 'campaign' : 'map');
 // No intrusion waits at the gate any more: you go to the rogue server to find fights.

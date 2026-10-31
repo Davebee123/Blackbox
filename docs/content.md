@@ -236,11 +236,11 @@ Ordered for the most variety per hour of work, floors 2–4 first. S is a day or
 | 1 | **Lairs by floor** (3.1). *Built* | S | Floors 2–4: five different bosses from content that exists |
 | 2 | **Floor holders** (3.1). *Built* | S–M | Floors 2–8 |
 | 3 | **Botnet and Logic Bomb**. *Built* | M | Floor 2 |
-| 4 | **The log sweep as a terminal room** | S | Floors 2–8 |
+| 4 | **The log sweep as a terminal room**. *Built* | S | Floors 2–8 |
 | 5 | **Floor 2–4 bosses**: CENTRIFUGE, SHAKEDOWN, SHOULDER SURFER, CAMSWARM, BYZANTINE, with their uniques; the native bosses' own uniques | M | Floors 2–4 |
 | 6 | **Polymorph, RAT, Rootkit** | L | Floor 3 |
-| 7 | **Floor 2–4 signatures**: Router, Honeypot, Cold storage | S each | Floors 2–4 |
-| 8 | **Deeper chase and Cascade boards** | S | Floors 3–8 |
+| 7 | **Floor 2–4 signatures**: Router, Honeypot, Cold storage. *Built* | S each | Floors 2–4 |
+| 8 | **Deeper chase and Cascade boards**. *Built* | S | Floors 3–8 |
 | 9 | **Faction ground and the LANTERN–GLASSJAW side pair**; supply orders | S, then M | Floors 2–7 |
 | 10 | **Stealer and Fileless** | L | Floor 4 (Fileless needs possession of room processes) |
 | 11 | **Floors 5–7 bosses**: EXIT NODE, PARASITE, RING ZERO, BRICKWALL, BLACKOUT, GOLDEN PARACHUTE | L | Floors 5–7 |

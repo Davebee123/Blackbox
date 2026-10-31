@@ -39,11 +39,12 @@ Every playtest URL runs on a fresh state that is never saved. The real save is n
 |---|---|
 | `/?dev` | The real game with developer commands on (and `window.__bb`, the live state, for tests). |
 | `/?bench=<name>` | A test bench: its own save (`blackbox-bench-<name>`), developer mode on, a BENCH tag. Add `&as=<subclass\|class>&level=<n>` to start as that character. |
+| `/?bench=arena` | A bench with the Dev drawer open on the **Arena**: every fight, searchable. `&as=<subclass>&level=<n>` builds that character (again whenever they change). |
 | `/?playtest=cryptjack` | A paused fight against a fixture or strain (`splinter`, `ghostroot`…); `random` for a wild one. `&level=`, `&cls=`, `&sub=`, `&family=`, `&seed=`. Type `resume`. |
 | `/?playtest=part:<id>` | A fight with that part, at the level it opens (or `&level=`); `part:<id>.exe` its .exe build. |
 | `/?playtest=fx` | The ability effects playtest: a panel that fires every ability's effect, at each Screen effects level and mastery tier. `&cls=`, `&crew=<class>`. |
 | `/?playtest=run` | Connected to a fresh server. `&family=worm\|ghostroot`, `&template=mailhub\|mirror\|archive\|lab` (its rooms' kind), `&depth=<floor>`. |
-| `/?playtest=rooms` | One server as rooms, clocks ten times as fast. `&class=`, `&level=`, `&kind=`, `&size=small\|medium\|large`, `&floor=`, `&boss=a\|b\|c`, `&hunter=patrol\|track`, `&seed=`. |
+| `/?playtest=rooms` | One server as rooms, clocks ten times as fast. `&class=`, `&level=`, `&kind=`, `&size=small\|medium\|large`, `&floor=`, `&boss=a\|b\|c`, `&hunter=patrol\|track`, `&seed=`, `&puzzle=<board>` (its room, and you in it), `&seen` (every room discovered). |
 | `/?playtest=story&beat=<id>` | A test save at a story beat (the editor's *Play from here*). |
 | `/?playtest=breach`, `/?campaign=breach` | The side modes (GAME_RULES.md "Side modes"): one breach, or the breach campaign under its own save. |
 | `/?shell=plain`, `/?tod=night\|dawn\|day\|dusk` | No CRT shell; another time of day outside the window. |
@@ -56,7 +57,7 @@ Common developer commands (with `?dev` or on a bench; the **Dev** drawer above t
 | `bench <subclass\|class> <level>` | Starts this bench over as a ready character. `bench list`, `bench delete <name>`. |
 | `developer level <n>`, `developer server <n>` | Sets your class's level; sets a floor under your server's level. |
 | `developer location <family>` | Traces a new server of that family on the map. |
-| `developer fight <family\|random> <level> <seed>`, `developer fight part:<id>` | Starts a fight. |
+| `developer fight <kind>:<id> [level] [seed] [leaning=…] [objective=…]` | Starts a fight at home: kinds `family`, `strain`, `ice`, `part` (`part:<id>.exe`), `elite`, `boss`, `holder`, `rival` (`rival:kudzu.2`), `invader`. `developer fight again [refill]` the last one again. |
 | `developer parts` | The parts roll's numbers and mix. |
 | `developer event [card]`, `developer invade [kind]` | Deals an event card; sends an invasion. |
 | `developer levelup preview`, `developer thread preview`, `developer scene <id>`, `terminal preview` | Plays the level-up, a thread's windows, a transmission, a boot look. |
@@ -126,11 +127,11 @@ comment saying what it does.
 | File | What it does |
 |---|---|
 | `dist/run.mjs` | Runs: connecting, the pack, banking at jack out, the run commands on rooms. |
-| `dist/floorplan.mjs` | A server as a graph of rooms: moving, fights, caches, the hunter, the vault and the Core. |
-| `dist/objectives.mjs` | A room fight's objective (`e.objective`): Priority, Uptime and the Exfil's upload, their roll, rules, board text and bonus. |
+| `dist/floorplan.mjs` | A server as a graph of rooms: moving, fights, caches, the hunter, the vault and the Core; the server kinds, a Router's one-way links among them. |
+| `dist/objectives.mjs` | A room fight's objective (`e.objective`): Priority, Uptime, Backup, Clean run and the Exfil's upload, their roll, rules, board text and bonus. |
 | `dist/netrooms.mjs` | Every server on the real save as a room graph, kept on its location; takeover and Root rooms. |
 | `dist/floorplan-view.mjs`, `dist/floorplan.css` | The rooms page: the server strip and the room map with its pop-up card. |
-| `dist/floors.mjs` | The eight floors: each one's diagram of server slots, generated from your network's seed; each floor's lair boss (`lairBossFor`) and holder (`holdersOf`). |
+| `dist/floors.mjs` | The eight floors: each one's diagram of server slots, generated from your network's seed; each floor's lair boss (`lairBossFor`), holder (`holdersOf`) and signature kind (`FLOOR.signature`). |
 | `dist/hidden.mjs` | Unknown servers along your floors' links, and tracing them. |
 | `dist/address.mjs` | Every room's grid address (C2). |
 | `dist/zone.mjs` | SPRAWL-00, the starting zone. |
@@ -140,8 +141,8 @@ comment saying what it does.
 | `dist/specials.mjs` | Server specials: each traced server's rule (an upside and a cost) from its seed, its pull on invasions, and its leaning's id (`leaningOf`). |
 | `dist/leanings.mjs` | Leanings: a server's one positive rule (Venting, Wind-up, Brownout), its multipliers in the fight and what it has paid. |
 | `dist/rivals.mjs` | Rivals: named runners who race you to a server's vault and fight you two or three in a row. |
-| `dist/puzzles.mjs`, `dist/puzzle-view.mjs` | Puzzle rooms: seven boards that aren't fights, and the cryptogram's key (`s.cipher`). |
-| `dist/forensics.mjs` | Log sweep: a short detective puzzle in a server's incident file. |
+| `dist/puzzles.mjs`, `dist/puzzle-view.mjs` | Puzzle rooms: eight boards that aren't fights (deeper chase and Cascade boards from floor 3), and the cryptogram's key (`s.cipher`). |
+| `dist/forensics.mjs`, `dist/logsweep.mjs` | Log sweep: a short detective puzzle in an incident file (logsweep.mjs builds the logs: a thread's process log, the Terminal room). |
 | `dist/traffic.mjs`, `dist/travelfx.mjs` | Ambient packets on the room map; the step between rooms as a train of code. |
 | `dist/network.mjs` | Your network's signature, rolled from its seed. |
 | `dist/memory.mjs` | Server memory: how many servers your network holds. Switched off (`MEMORY.on`). |
@@ -242,6 +243,7 @@ comment saying what it does.
 | `dist/heat.mjs`, `dist/scripts.mjs`, `dist/rewrites.mjs`, `dist/skillrules.mjs` | The breach's heat ranks, one-shot scripts, rewrites and skill rules. |
 | `dist/world.mjs`, `dist/room.mjs`, `dist/room-view.mjs`, `dist/room.css`, `dist/content/room.mjs` | LOWLIGHT's back room and the world turn between breaches. |
 | `dist/bench.mjs` | The test bench and the Dev drawer; `build()` is shared with the simulations. |
+| `dist/arena.mjs` | The Arena: every fightable thing from the data tables, and `developer fight`. |
 
 ### Root: server, scripts and simulations
 

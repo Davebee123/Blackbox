@@ -10,6 +10,7 @@ import { MECH, mechPower, youDebuffs, directHit, junkKey } from './dist/mechanic
 import { partTip } from './dist/fightread.mjs';
 import { statusSpans } from './dist/view.mjs';
 import { TIER } from './dist/research.mjs';
+import './dist/arena.mjs'; // developer fight (the Arena)
 
 CONFIG.enemyCrit = 0; CONFIG.misses = false; CONFIG.baseCrit = 0;
 
