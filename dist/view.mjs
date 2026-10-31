@@ -74,7 +74,8 @@ import { RIVALS } from './rivals.mjs';
 import { threadRows, threadReader, tempNodes, tempNodeSvg, tempCard, serverMarkSvg, transitNodes, transitSvg } from './threads-view.mjs';
 import { arcRows, arcReader } from './arcs-view.mjs';
 import { threadById, serverMarks } from './threads.mjs';
-import { tipOf } from './scanner.mjs';
+import { tipOf, postFound } from './scanner.mjs';
+import { POST, postNodeSvg, postNodeSub, postCard } from './scanner-view.mjs';
 import { skillsTabMarkup } from './skills-view.mjs';
 import { achievementsMarkup } from './achievements-view.mjs';
 import { casingPageMarkup, districtCardMarkup } from './casing-view.mjs';
@@ -1979,6 +1980,7 @@ export function mapLayout(s, floor = null, portrait = mapPortrait) {
   links.push({ from: 'server', to: idOf[g.entry], ghost: true });
   const e = gateOf(s);
   if (e) { put({ id: 'intrusion', kind: 'intrusion', x: home.x + 64, y: home.y + 34, angle: 0, virus: e.virus, fighting: e.phase === 'active' }); links.push({ from: 'server', to: 'intrusion', hot: true }); }
+  if (postFound(s)) { put({ id: POST.id, kind: 'post', x: home.x - 64, y: home.y + 34, angle: 180 }); links.push({ from: 'server', to: POST.id, ghost: true }); } // the Listening Post (scanner-view.mjs), beside home once found
   // The floor's slots: located servers, ?s, exits, hubs you've found.
   const hubs = new Set(hubsOf(s).map((h) => h.faction));
   for (const x of all) {
@@ -2280,9 +2282,9 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
     const z = mapScale || 1, CH = (11 * 0.62 + 1) / z, H = 30 / z, boxes = []; // text keeps its on-screen size: its width in map units grows as the map shrinks
     const rank = (n) => { if (n.id === sel) return 0; const tags = mapTags(s, n.loc, nodeState(s, n.loc), openContracts(s).some((c) => c.loc === n.loc.id)); return tags.includes('minor') ? 9 : tags.includes('f-threat') ? 1 : tags.includes('f-target') && !tags.includes(' f-mine') ? 3 : n.loc.outpost?.h || s.run?.loc === n.loc.id ? 2 : 4; };
     // Every labelled node takes part, not only servers: a lead, an unknown server or a swarm's label can sit on a server's name too.
-    const OTHER = { invader: 1, roamer: 1, intrusion: 1, fleet: 1, zone: 2, member: 2, exit: 2, entry: 3, hub: 3, hidden: 5 };
-    const SUB = { zone: 24, hub: 15, fleet: 12, invader: 14, roamer: 14, member: 12 }; // the line under the name, where it's the longer one
-    const nameOf = (n) => n.loc?.name || n.inv?.name || n.roamer?.name || n.virus?.name || (n.hub ? FX[n.hub.faction]?.short : '') || (n.fleet ? `Swarm ×${n.fleet.ships}` : '') || n.handle || (n.kind === 'exit' || n.kind === 'entry' ? 'Floor 8' : n.kind === 'zone' ? CONFIG.zone.name : '');
+    const OTHER = { invader: 1, roamer: 1, intrusion: 1, fleet: 1, zone: 2, member: 2, exit: 2, entry: 3, hub: 3, post: 3, hidden: 5 };
+    const SUB = { zone: 24, hub: 15, post: 16, fleet: 12, invader: 14, roamer: 14, member: 12 }; // the line under the name, where it's the longer one
+    const nameOf = (n) => n.loc?.name || n.inv?.name || n.roamer?.name || n.virus?.name || (n.hub ? FX[n.hub.faction]?.short : '') || (n.fleet ? `Swarm ×${n.fleet.ships}` : '') || n.handle || (n.kind === 'exit' || n.kind === 'entry' ? 'Floor 8' : n.kind === 'zone' ? CONFIG.zone.name : n.kind === 'post' ? POST.name : '');
     const cands = nodes.filter((n) => (n.kind === 'location' && n.loc) || OTHER[n.kind]).map((n) => ({ n, r: n.kind === 'location' ? rank(n) : n.id === sel ? 0 : OTHER[n.kind] })).filter((c) => c.r < 9).sort((a, b) => a.r - b.r);
     { const h = find('server'); boxes.push([h.x - 5 * CH, h.y + 26 / z, h.x + 5 * CH, h.y + 26 / z + H]); } // HOME's label, under the server
     for (const { n } of cands) {
@@ -2331,6 +2333,7 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
       const ang = Math.atan2(-n.y, -n.x) * 180 / Math.PI; // it points at home
       return `<g class="mnode invader ${inv.state} f-threat${on}${crowded.has(n.id) ? ' crowded' : ''}" data-select="invader" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="Invasion: ${esc(inv.name)}"><circle r="18" class="mhit"/><circle r="13" class="vring"/><path class="vbody" d="M0 -9.5 L2.3 -3.8 L8.1 -4.6 L4.3 0 L8.1 4.6 L2.3 3.8 L0 9.5 L-2.3 3.8 L-8.1 4.6 L-4.3 0 L-8.1 -4.6 L-2.3 -3.8 Z"/><circle r="2.6" class="vcore"/>${pick}${label({ ...n, angle: undefined }, 7, inv.name, sub, inv.state === 'breach' ? 'hot' : '')}</g>`;
     }
+    if (n.kind === 'post') return postNodeSvg(s, n, on + (crowded.has(n.id) ? ' crowded' : ''), pick + label(n, 14, POST.name, postNodeSub(s)));
     if (n.kind === 'hub') {
       const f = n.hub.faction, F = FX[f], t = repTier(s, f);
       return `<g class="mnode hub${hostile(s, f) ? ' hostile' : ''}${offline(s, f) ? ' offline' : ''}${captured(s, f) ? ' yours f-mine' : ''}${lockedDown(s, f) || retakeOf(s)?.f === f ? ' threat f-threat' : ''}${on}${crowded.has(n.id) ? ' crowded' : ''}" style="--fc:${captured(s, f) ? 'var(--you)' : F.color}" data-select="${esc(n.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(F.name)} hub"><circle r="18" class="mhit"/><path d="M0 -13 L13 0 L0 13 L-13 0 Z" class="hub-frame"/><g class="hub-mark" transform="translate(-8 -8)">${GLYPHS['f-' + f]}</g>${shockSvg(s, f)}${pick}${label(n, 14, F.short, lockedDown(s, f) ? 'lockdown' : retakeOf(s)?.f === f ? `swarm · ${fmtLeft(retakeLeft(s))}` : offline(s, f) ? 'hub · offline' : captured(s, f) ? 'your hub' : `hub · ${t.name}`, lockedDown(s, f) || retakeOf(s)?.f === f ? 'hot' : '')}</g>`;
@@ -2601,6 +2604,7 @@ function mapSide(s, sel, node) {
   }
   if (node.kind === 'zone') return zoneCard(s) + alertCard();
   if (node.kind === 'hub') return hubCard(s, node.hub.faction);
+  if (node.kind === 'post') return postCard(s);
   if (node.kind === 'roamer') {
     const r = node.roamer;
     return `<section class="card alert"><h2>Invasion on the trunk line · hop ${r.hop} of ${CONSORTIUM.roam.hops}</h2><h1>${esc(r.name)}</h1>

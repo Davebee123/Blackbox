@@ -74,7 +74,8 @@ import { playTravel } from './travelfx.mjs';
 import { playBoot, stopBoot, capture as bootHold, bootLines, playCut, stopCut, leaving, playConnect, stopConnect, connecting, connectLines, whenConnected, playHangup, stopHangup, hangupLines, whenHome } from './bootfx.mjs';
 let bootFor = null; // the fight the screen last booted into (go)
 import { startTraffic } from './traffic.mjs';
-import { createScanner } from './scanner-view.mjs';
+import { postFound } from './scanner.mjs';
+import { createScanner, postBanner, postOptions, postTerminalMarkup, POST } from './scanner-view.mjs';
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -92,10 +93,9 @@ const phoneBar = matchMedia('(max-width: 900px)');
 let campaign = load();
 migrateEffects(campaign); // the old Effects setting becomes its Screen effects level (screenfx.mjs)
 if (DEV) Object.defineProperty(window, '__bb', { get: () => campaign }); // dev only: the live state, for tests
-// The scanner (scanner.mjs): a radio button in the top bar, hidden in a fight; its own clock, saved as it changes. Not
-// in the breach campaign.
-const scanner = CAMP ? null : createScanner({ state: () => campaign, changed: () => { save(); dirty = true; }, busy: () => active(campaign), sound: () => !!campaign.settings.sound, volume: () => V.volumesOf(campaign).sfx });
-scanner?.mount(document.querySelector('.topbar'));
+// The scanner (scanner.mjs): its own clock, saved as it changes; the radio sits in the Listening Post's Tune window
+// (render mounts it). Not in the breach campaign.
+const scanner = CAMP ? null : createScanner({ state: () => campaign, changed: () => { save(); dirty = true; }, busy: () => active(campaign), sound: () => !!campaign.settings.sound, volume: () => V.volumesOf(campaign).sfx, played: () => { if (hubSel === POST.id && hubShown()) { hubWin = 'tune'; dirty = true; } }, found: () => { feel.numbers(); notice('Numbers under the radio chatter. A Listening Post shows on your map, beside HOME.'); } });
 if (DEV && scanner) window.__scan = scanner; // dev only: the needle and the strip, for tests
 let module = playtest === 'story' ? 'mail' : playtest === 'breach' ? 'breach' : playtest === 'rooms' ? 'rooms' : CAMP ? 'campaign' : 'map';
 let selected = null;
@@ -1334,11 +1334,12 @@ function run(raw) {
   const found = join && campaign.locations?.find((l) => (l.id === join[1] || l.name.toLowerCase() === join[1]) && l.fresh && l.detached);
   if (found && memYes !== found.id) { mapSel = found.id; mapPop = true; V.setMemAsk(found.id); go('map'); dirty = true; return; }
   // Hub sessions: connect <hub> opens one; inside it, a number or a word picks from its menu.
-  const dial = text.match(/^(?:connect|dial) (halcyon|glassjaw|kestrel|lantern|nullchoir)$/);
+  const dial = text.match(/^(?:connect|dial) (halcyon|glassjaw|kestrel|lantern|nullchoir|post|post-07)$/);
+  if (dial && /^post/.test(dial[1])) return scanner && postFound(campaign) ? openHub(POST.id) : notice('POST-07: not on your map yet.', true);
   if (dial && V.hubOptions(campaign, dial[1]).length) return openHub(dial[1]);
   if (dial && hubsOf(campaign).length && !hubFound(campaign, dial[1])) { notice(`${dial[1].toUpperCase()}: hub not located yet (${hubTraceOf(campaign, dial[1])}%).`, true); return; }
   if (hubShown() && !active(campaign)) {
-    const opts = V.hubOptions(campaign, hubSel);
+    const opts = hubOpts(hubSel);
     if (/^\d$/.test(text)) { const n = Number(text); if (n === 0) return closeHub(); if (opts[n - 1]) return pickHub(opts[n - 1].key, text); hubEcho(text); hubLines.push({ cls: 'warn', html: `${text}: no such option` }, menuLine); dirty = true; return; }
     if (['disconnect', 'exit', 'bye', 'logout', 'quit'].includes(text)) return closeHub();
     const o = opts.find((x) => x.key === text || x.label.toLowerCase() === text);
@@ -1655,9 +1656,11 @@ let hubSel = 'halcyon'; // the faction hub you're connected to
 // menu choice opened beside it.
 let hubOpen = false, hubWin = null, hubLines = [];
 const menuLine = { cls: 'hub-menu', menu: true };
+// The Listening Post (scanner-view.mjs) runs as a hub session too: hubSel 'post'.
+const hubOpts = (f) => (f === POST.id ? postOptions(campaign) : V.hubOptions(campaign, f));
 function openHub(f) {
   hubSel = f; hubWin = null; hubOpen = true;
-  hubLines = [...V.hubBanner(campaign, f).slice(0, -1), menuLine];
+  hubLines = [...(f === POST.id ? postBanner(campaign) : V.hubBanner(campaign, f)).slice(0, -1), menuLine];
   go('hub');
 }
 function closeHub() { hubOpen = false; hubWin = null; V.setOrder(null); if (module === 'hub') go('map'); else dirty = true; }
@@ -2104,7 +2107,7 @@ function render(force = false) {
       $('term').scrollTop = $('term').scrollHeight;
     }
   } else {
-    const pages = { rooms: (x) => roomsMarkup(x), campaign: (x) => campaignMarkup(x), room: (x) => roomMarkup(x), archive: (x) => archiveMarkup(x), breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab, skillUi), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now()), server: (x) => V.serverMarkup(x, Date.now(), srvUi), daemons: V.daemonsMarkup, codex: (x) => (codexTab === 'log' ? collectionPageMarkup(x, logSel, codexIdx, codexShut, logFind) : codexPageMarkup(x, codexSel, codexIdx, codexShut)), system: (x) => V.systemMarkup(x, { coop: !!coop, tab: systemTab, ach: achUi, cs: caseUi }) };
+    const pages = { rooms: (x) => roomsMarkup(x), campaign: (x) => campaignMarkup(x), room: (x) => roomMarkup(x), archive: (x) => archiveMarkup(x), breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab, skillUi), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => (hubSel === POST.id ? postTerminalMarkup(x, hubLines, hubWin, Date.now()) : V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now())), server: (x) => V.serverMarkup(x, Date.now(), srvUi), daemons: V.daemonsMarkup, codex: (x) => (codexTab === 'log' ? collectionPageMarkup(x, logSel, codexIdx, codexShut, logFind) : codexPageMarkup(x, codexSel, codexIdx, codexShut)), system: (x) => V.systemMarkup(x, { coop: !!coop, tab: systemTab, ach: achUi, cs: caseUi }) };
     // A page that throws shows what broke (and a way back) instead of stopping every render after it.
     const keep = module === 'breach' ? $('bx-scroll')?.scrollTop : null;
     const focusRoom = module === 'rooms' ? document.activeElement?.closest?.('.fp-room')?.dataset.room : null; // a redraw keeps a focused room focused
@@ -2146,6 +2149,7 @@ function render(force = false) {
       applyMapZoom();
     }
   }
+  scanner?.mount(module === 'hub' && hubSel === POST.id && hubWin === 'tune' ? $('page-view').querySelector('[data-sc-root]') : null); // the radio rides in the Tune window
   const netTray = module === 'net' && !!campaign.run;
   $('tray').hidden = !(combatLike || netTray);
   $('tray').classList.toggle('net-tray', netTray);
@@ -2186,7 +2190,7 @@ function renderPrompt() {
     $('command-input').placeholder = '';
   } else if (hubShown()) {
     el.className = 'prompt hub';
-    el.innerHTML = `<span>${V.esc(campaign.profile?.handle || 'rookie')}@${V.esc(V.hubHost(campaign, hubSel))}:~$</span>`;
+    el.innerHTML = `<span>${V.esc(campaign.profile?.handle || 'rookie')}@${V.esc(hubSel === POST.id ? POST.host : V.hubHost(campaign, hubSel))}:~$</span>`;
   } else {
     // At home the prompt is yours to style (System → Terminal: terminal.mjs). Stock is <handle>@blackbox:~$.
     const P = promptLabel(campaign);
