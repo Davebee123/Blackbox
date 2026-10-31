@@ -4,7 +4,6 @@
 .bootfx-black { position: fixed; inset: 0; z-index: -1; pointer-events: none; background: #050302; opacity: 0; }
 .bootfx { position: absolute; inset: 0; z-index: 45; pointer-events: none; border-radius: inherit; overflow: hidden; }
 .bootfx > div { position: absolute; inset: 0; border-radius: inherit; opacity: 0; }
-.bootfx-flash { background: #fff4dc; }
 .bootfx-flare { box-shadow: inset 0 0 0 3px rgba(255, 91, 61, 0.9), inset 0 0 80px 10px rgba(255, 91, 61, 0.4); }
 .bootfx-hold { position: absolute; z-index: 6; pointer-events: none; }
 .bootfx-lock { position: absolute; pointer-events: none; }

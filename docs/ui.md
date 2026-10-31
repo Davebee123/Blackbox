@@ -240,14 +240,16 @@ interface**. CSS, the DOM and text only (no canvas, WebGL or PixiJS on the scree
   switchable on its own; it also sets how much moves on the fight board. Motion off (`.no-motion`) and
   `prefers-reduced-motion` stop every animation in the file.
 - **The fight boot** (bootfx.mjs, bootfx.css) is the one effect on the panels, approved by the designer (*Centre stage*).
-  The first time you see a fight: brackets lock on its room (from the rooms page), the tube cuts to black with a red
-  edge, the virus flickers on alone at the centre, decoding out of red noise, and drops into its panel; a boot console
-  types your bar, class, keys and the virus where the board will be; your panels catch like tubes, one soft flicker each (no hard flashes). About two seconds;
-  any key or click ends it and still acts. Leaving a won fight (*Channel cut*): the page folds to a teal line and a
-  dot, the next page opens out of it and your room rings teal, under 0.9 s. Connecting to a server (*Handshake*): its
-  node locks teal and pings, the map and chrome dim in two tube dips into black (no flash), the name decodes over a dial
-  readout and flies into the server strip, the rooms catch outward from the entry; about 2.3 s, any key or click ends
-  it. Screen effects off or Motion off: none of them.
+  The first time you see a fight: brackets lock on its room (from the rooms page), the tube goes dark with a red edge,
+  the virus comes up alone at the centre, decoding out of red noise, and drops into its panel; a boot console types
+  your bar, class, keys and the virus where the board will be; your panels come up. About two seconds; any key or
+  click ends it and still acts. Leaving a won fight (*Channel cut*): the page folds to a teal line and a dot, the next
+  page opens out of it and your room rings teal, under 0.9 s. Connecting to a server (*Handshake*): its node locks
+  teal and pings, the map dims into black, the name decodes over a dial readout and flies into the server strip, the
+  rooms come up outward from the entry; about 2.3 s. Jacking out (*Hang-up*, the Handshake backwards): your room locks
+  teal, the rooms go dark toward it, the hang-up readout, then the map with the server's node ringed; 1.7 s. **No
+  flash, no blink** (the designer): a panel only brightens or only dims, in held steps; chrome dims to 15%, never out
+  (bootfx.test.mjs). Any key or click ends each. Screen effects off or Motion off: none of them.
 - **Floor palettes** are the one exception to *No new colours*, approved by the designer. A floor swaps the surface
   tokens (`--bg`, `--panel`, `--panel-2`, `--inset`), the structure colour (`--amber` and its forms) and the text tints
   inline on `<html>`; the job colours (`--hot`, `--next`, `--you`, `--daemon`, `--exception`, `--steel`, `--gray`) never

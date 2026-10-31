@@ -1,24 +1,29 @@
 // A fight coming up (app.js go, the first time you see each fight): the screen powers down and boots into it, the
-// virus first. From the rooms page, red brackets lock on the room you walked into while the map holds a beat; then a
-// flash, and the tube goes black with its edge flaring red. The virus's picture flickers on alone at the centre of the
-// dark, decoding out of red noise, holds, and drops into its panel; its name and bar come on and its bar fills. A boot
-// console stutters through your system where the board will be (your bar, class, keys, the virus, the clock), and
-// then your panels catch one by one like tubes, your bar filling. Any key or click ends it at once (and still acts).
-// No canvas: the real panels flicker (opacity and clip-path through the Web Animations API, held steps, no fades), with
-// a black layer behind them and the console, noise and flare on top (bootfx.css).
+// virus first. From the rooms page, red brackets lock on the room you walked into while the map holds a beat; then the
+// tube goes dark with its edge glowing red. The virus's picture comes up alone at the centre of the dark, decoding out
+// of red noise, holds, and drops into its panel; its name and bar come on and its bar fills. A boot console types
+// through your system where the board will be (your bar, class, keys, the virus, the clock), and then your panels come
+// up one by one, your bar filling. Any key or click ends it at once (and still acts).
+// Calm (the designer: less flashing): no flash and nothing blinks; a panel only ever brightens or only dims, in short
+// held steps, and your chrome dims rather than going out. No canvas: the real panels through the Web Animations API,
+// with a black layer behind them and the console, noise and glow on top (bootfx.css).
 // Leaving a won fight (app.js leaveFight, the designer's pick, Channel cut): the page collapses to a teal line, then a
 // dot, like a tube switching channel; the page you go back to opens out of the line, and your room rings teal.
-// Screen effects off, Motion off or reduced motion: neither plays (app.js doesn't call them).
+// Jacking out (app.js hangUp, Hang-up): the dial-up backwards; see playHangup.
+// Screen effects off, Motion off or reduced motion: none of them plays (app.js doesn't call them).
 
 // When each beat comes, in ms; without the brackets (not from the rooms page) everything comes LOCK sooner.
 export const BOOT = {
-  lock: 0, flash: 210, black: 250, virus: 340, centre: 1000, enemy: 910, enemyBar: 990,
+  lock: 0, black: 250, virus: 340, centre: 1000, enemy: 910, enemyBar: 990,
   console: 1150, line: 62, chrome: 1710, you: 1750, youBar: 1810, board: 1790, log: 1850, prompt: 1890, tray: 1930, done: 2200,
 };
 const LOCK = 200;
-// A tube catching: [ms, opacity] from the moment it starts, each held until the next.
-export const TUBE_ON = [[0, 0], [40, 0.6], [90, 0.2], [150, 1], [155, 1]]; // one soft dip (the designer: less flashing)
-const VIRUS_ON = [[0, 0], [60, 0.7], [120, 0.25], [220, 1], [600, 1], [640, 0.75], [680, 1], [685, 1]];
+// A panel coming up: [ms, opacity] from the moment it starts, each held until the next. It only ever brightens.
+export const TUBE_ON = [[0, 0], [50, 0.35], [100, 0.7], [150, 1], [155, 1]];
+export const VIRUS_ON = [[0, 0], [70, 0.3], [140, 0.65], [220, 1], [225, 1]];
+// Your chrome through a cut: it dims to this and comes back up, never out.
+export const CHROME_LOW = 0.15;
+const DOWN = (at, lo = CHROME_LOW) => [[Math.max(0, at - 80), 0.6], [Math.max(0, at - 40), 0.3], [at, lo]];
 const NOISE = '@%#*+=-:.01';
 
 // The console's lines: what your system checks as it comes up. The virus's line is the red one.
@@ -61,7 +66,7 @@ export function playBoot(app, held, lines) {
   const play = (el, frames, delay, duration, easing = 'linear') => { if (el) anims.push(el.animate(frames, { delay, duration, easing, fill: 'both' })); };
   // Held steps along absolute times: [[ms, value], ...] from 0.
   const steps = (el, prop, pts) => { const end = pts[pts.length - 1][0] || 1; play(el, pts.map(([ms, v]) => ({ [prop]: v, offset: ms / end, easing: 'steps(1, end)' })), 0, end); };
-  const tubeOn = (from) => TUBE_ON.map(([ms, v]) => [from + ms, v]);
+  const tubeOn = (from, lo = 0) => TUBE_ON.map(([ms, v]) => [from + ms, lo + v * (1 - lo)]);
   const add = (parent, cls, before = null) => { const d = document.createElement('div'); d.className = cls; d.setAttribute('aria-hidden', 'true'); parent.insertBefore(d, before); nodes.push(d); return d; };
 
   // The rooms page holding a beat, the brackets locking on.
@@ -69,18 +74,18 @@ export function playBoot(app, held, lines) {
     held.parent.append(held.clone); nodes.push(held.clone);
     const r = held.clone.getBoundingClientRect(); // back over where the page stood
     Object.assign(held.clone.style, { left: `${(held.at.left - r.left) / held.k}px`, top: `${(held.at.top - r.top) / held.k}px` });
-    play(held.lock, [{ opacity: 0, transform: 'scale(1.7)' }, { opacity: 1, transform: 'scale(1)', offset: 0.55 }, { opacity: 0.6, offset: 0.7 }, { opacity: 1, offset: 0.85 }, { opacity: 1, transform: 'scale(1)' }], 0, 220, 'ease-out');
-    steps(held.clone, 'opacity', [[0, 1], [BOOT.black, 0], [BOOT.black + 1, 0]]);
+    play(held.lock, [{ opacity: 0, transform: 'scale(1.7)' }, { opacity: 1, transform: 'scale(1)', offset: 0.55 }, { opacity: 1, transform: 'scale(1)' }], 0, 220, 'ease-out');
+    steps(held.clone, 'opacity', [[0, 1], ...DOWN(BOOT.black, 0), [BOOT.black + 1, 0]]);
   }
-  // The power cut: a flash, black behind the panels, the tube's edge flaring.
+  // The power cut: black behind the panels, the tube's edge glowing red once.
   const black = add(app, 'bootfx-black', $('#fx-back')?.nextSibling || app.firstChild);
-  steps(black, 'opacity', [[0, 0], [at(BOOT.black), 1], [at(BOOT.chrome), 0], [at(BOOT.chrome) + 1, 0]]);
-  const top = add(app, 'bootfx'), flash = add(top, 'bootfx-flash'), flare = add(top, 'bootfx-flare');
-  play(flash, [{ opacity: 0 }, { opacity: 0.2, offset: 0.25 }, { opacity: 0 }], at(BOOT.flash), 90);
-  play(flare, [{ opacity: 0 }, { opacity: 0.55, offset: 0.15 }, { opacity: 0.3, offset: 0.45 }, { opacity: 0 }], at(BOOT.black), 900, 'ease-out');
-  // Your chrome goes dark with the cut and catches with the rest of you.
+  const b0 = Math.max(0, at(BOOT.black) - 100);
+  play(black, [{ opacity: 0 }, { opacity: 1, offset: 0.08 }, { opacity: 1, offset: 0.9 }, { opacity: 0 }], b0, at(BOOT.chrome) - b0 + 150, 'ease-in-out');
+  const top = add(app, 'bootfx'), flare = add(top, 'bootfx-flare');
+  play(flare, [{ opacity: 0 }, { opacity: 0.35, offset: 0.3 }, { opacity: 0 }], at(BOOT.black), 900, 'ease-in-out');
+  // Your chrome dims with the cut and comes back up with the rest of you.
   for (const [q, on] of [['.topbar', BOOT.chrome], ['#sidebar', BOOT.chrome], ['#crewwin', BOOT.chrome], ['#statusline', BOOT.chrome + 20], ['#net-line', BOOT.prompt], ['.prompt-row', BOOT.prompt], ['#tray', BOOT.tray]])
-    steps($(q), 'opacity', [[0, 1], [at(BOOT.black), 0], ...tubeOn(at(on))]);
+    steps($(q), 'opacity', [[0, 1], ...DOWN(at(BOOT.black)), ...tubeOn(at(on), CHROME_LOW)]);
   // The virus: alone in the dark at the centre, red-lit and decoding, then into its panel.
   const stage = $('#combat-view > .stage'), pic = stage?.querySelector('.virus-stage');
   if (stage) {
@@ -116,7 +121,7 @@ export function playBoot(app, held, lines) {
     Object.assign(con.style, { left: `${board.offsetLeft}px`, top: `${board.offsetTop}px`, width: `${board.offsetWidth}px`, height: `${board.offsetHeight}px` });
     lines.forEach((l, i) => { const d = document.createElement('div'); d.textContent = l.text; if (l.hot) d.className = 'hot'; con.append(d); steps(d, 'opacity', [[0, 0], [at(BOOT.console + 20) + i * BOOT.line, 1], [at(BOOT.console + 21) + i * BOOT.line, 1]]); });
     const c0 = at(BOOT.console);
-    steps(con, 'opacity', [[0, 0], [c0, 1], [c0 + 260, 0.75], [c0 + 300, 1], [c0 + 560, 1], [c0 + 600, 0], [c0 + 601, 0]]);
+    steps(con, 'opacity', [[0, 0], [c0, 1], [c0 + 560, 0.6], [c0 + 600, 0.25], [c0 + 640, 0], [c0 + 641, 0]]);
   }
   steps(board, 'opacity', [[0, 0], ...tubeOn(at(BOOT.board))]);
   steps($('#combat-view > .log'), 'opacity', [[0, 0], ...tubeOn(at(BOOT.log))]);
@@ -157,7 +162,7 @@ export function playCut(app, regions, swap, room) {
   const line = add(layer, 'bootfx-tline');
   Object.assign(line.style, { left: `${(left - lr.left) / lk}px`, top: `${(cy - lr.top) / lk - 1}px`, width: `${(right - left) / lk}px` });
   play(line, [{ opacity: 0, transform: 'scaleX(1)' }, { opacity: 1, transform: 'scaleX(1)', offset: 0.25 }, { opacity: 1, transform: 'scaleX(.01)', offset: 0.65 }, { opacity: 0, transform: 'scaleX(1)', offset: 0.8 }, { opacity: 0, transform: 'scaleX(1)' }], 100, 260);
-  const folds = els.map((el, i) => play(el, [{ transform: 'scale(1, 1)', transformOrigin: origin(el, rs[i]), filter: 'brightness(1)' }, { transform: 'scale(1, .004)', transformOrigin: origin(el, rs[i]), filter: 'brightness(2.5) saturate(0)', offset: 0.7 }, { transform: 'scale(0, .004)', transformOrigin: origin(el, rs[i]), filter: 'brightness(2.5) saturate(0)' }], 0, CUT.cut, 'cubic-bezier(.6,0,.9,.5)'));
+  const folds = els.map((el, i) => play(el, [{ transform: 'scale(1, 1)', transformOrigin: origin(el, rs[i]), filter: 'brightness(1)' }, { transform: 'scale(1, .004)', transformOrigin: origin(el, rs[i]), filter: 'brightness(1.4) saturate(0)', offset: 0.7 }, { transform: 'scale(0, .004)', transformOrigin: origin(el, rs[i]), filter: 'brightness(1.4) saturate(0)' }], 0, CUT.cut, 'cubic-bezier(.6,0,.9,.5)'));
 
   let swapped = false;
   const toNext = () => {
@@ -165,7 +170,7 @@ export function playCut(app, regions, swap, room) {
     swapped = true; folds.forEach((a) => a.cancel());
     swap();
     const chip = room?.(), cr = chip?.getBoundingClientRect(); // measured before the page starts opening
-    els.forEach((el) => { const r = el.getBoundingClientRect(); play(el, [{ transform: 'scale(1, .004)', transformOrigin: origin(el, r), filter: 'brightness(2.5)', opacity: 0 }, { opacity: 1, offset: 0.01 }, { transform: 'scale(1, 1.02)', transformOrigin: origin(el, r), filter: 'brightness(1.3)', offset: 0.7 }, { transform: 'scale(1, 1)', transformOrigin: origin(el, r), filter: 'brightness(1)', opacity: 1 }], CUT.open - CUT.swap, CUT.openFor, 'cubic-bezier(.2,.8,.3,1)'); });
+    els.forEach((el) => { const r = el.getBoundingClientRect(); play(el, [{ transform: 'scale(1, .004)', transformOrigin: origin(el, r), filter: 'brightness(1.4)', opacity: 0 }, { opacity: 1, offset: 0.01 }, { transform: 'scale(1, 1.02)', transformOrigin: origin(el, r), filter: 'brightness(1.1)', offset: 0.7 }, { transform: 'scale(1, 1)', transformOrigin: origin(el, r), filter: 'brightness(1)', opacity: 1 }], CUT.open - CUT.swap, CUT.openFor, 'cubic-bezier(.2,.8,.3,1)'); });
     if (cr?.width) {
       const ring = add(layer, 'bootfx-ring');
       Object.assign(ring.style, { left: `${(cr.left - lr.left) / lk - 6}px`, top: `${(cr.top - lr.top) / lk - 6}px`, width: `${cr.width / lk + 12}px`, height: `${cr.height / lk + 12}px` });
@@ -184,14 +189,14 @@ export function playCut(app, regions, swap, room) {
 }
 
 // Connecting to a server (app.js, the designer's pick, Handshake): from the map, teal brackets lock on the server's
-// node and two pings ring out; the map and your chrome power down in two tube dips into black, the tube's edge glowing
-// teal. The server's name decodes at the centre over a dial readout; the name flies into the server strip, and the
+// node and two pings ring out; the map dims into black, your chrome with it (never a dip back up), the tube's edge
+// glowing teal. The server's name decodes at the centre over a dial readout; the name flies into the server strip, and the
 // rooms catch outward from the entry, which rings teal; then your chrome. Not from the map: it starts at the black.
 // When each beat comes, in ms; without the map (not from the map page) everything comes DIAL sooner.
 export const CONNECT = { lock: 0, ping: 200, dim: 380, black: 520, name: 600, lines: 760, line: 95, fly: 1400, strip: 1460, rooms: 1520, ring: 70, chrome: 1700, done: 2300 };
 const DIAL = 440;
-// The tube dipping as it powers down: [ms from CONNECT.dim, brightness], each held until the next.
-export const DIM = [[0, 1], [30, 0.55], [60, 0.85], [100, 0.35], [120, 0.5], [140, 0.15]];
+// The map dimming as it powers down: [ms from CONNECT.dim, brightness], each held until the next. It only ever dims.
+export const DIM = [[0, 1], [35, 0.75], [70, 0.5], [105, 0.3], [140, 0.15]];
 const GLYPHS = '#%&*+=/<>?01ABCDEFX';
 // The name part-decoded: its first n characters, the rest noise.
 export const decoded = (name, n) => [...name].map((c, j) => (c === ' ' || j < n ? c : GLYPHS[(j * 7 + n * 13) % GLYPHS.length])).join('');
@@ -223,10 +228,11 @@ export function playConnect(app, held, name, lines) {
   $('#workspace')?.classList.remove('refresh'); // the page change's own sweep: this stands in for it (and its filter would move the map)
   const play = (el, frames, delay, duration, easing = 'linear') => { if (el) anims.push(el.animate(frames, { delay, duration, easing, fill: 'both' })); };
   const steps = (el, prop, pts) => { if (!el) return; const end = pts[pts.length - 1][0] || 1; play(el, pts.map(([ms, v]) => ({ [prop]: v, offset: ms / end, easing: 'steps(1, end)' })), 0, end); };
-  const tubeOn = (from) => TUBE_ON.map(([ms, v]) => [from + ms, v]);
+  const tubeOn = (from, lo = 0) => TUBE_ON.map(([ms, v]) => [from + ms, lo + v * (1 - lo)]);
   const add = (parent, cls, before = null) => { const d = document.createElement('div'); d.className = cls; d.setAttribute('aria-hidden', 'true'); parent.insertBefore(d, before); nodes.push(d); return d; };
   const black = add(app, 'bootfx-black', $('#fx-back')?.nextSibling || app.firstChild);
-  steps(black, 'opacity', [[0, 0], [at(T.black), 1], [at(T.chrome), 0], [at(T.chrome) + 1, 0]]);
+  const b0 = Math.max(0, at(T.black) - 140);
+  play(black, [{ opacity: 0 }, { opacity: 1, offset: 0.08 }, { opacity: 1, offset: 0.9 }, { opacity: 0 }], b0, at(T.chrome) - b0 + 150, 'ease-in-out');
   const top = add(app, 'bootfx'), lr = top.getBoundingClientRect(), lk = lr.width / (top.offsetWidth || lr.width) || 1;
   const box = (r, pad = 0) => ({ left: `${(r.left - lr.left) / lk - pad}px`, top: `${(r.top - lr.top) / lk - pad}px`, width: `${r.width / lk + pad * 2}px`, height: `${r.height / lk + pad * 2}px` });
   const dim = DIM.map(([ms, v]) => [at(T.dim) + ms, `brightness(${v})`]);
@@ -237,7 +243,7 @@ export function playConnect(app, held, name, lines) {
     const r = held.clone.getBoundingClientRect();
     Object.assign(held.clone.style, { left: `${(held.at.left - r.left) / held.k}px`, top: `${(held.at.top - r.top) / held.k}px` });
     held.lock.classList.add('you');
-    play(held.lock, [{ opacity: 0, transform: 'scale(2.2)' }, { opacity: 1, transform: 'scale(1)', offset: 0.55 }, { opacity: 0.2, offset: 0.7 }, { opacity: 1, offset: 0.85 }, { opacity: 1, transform: 'scale(1)' }], 0, 240, 'ease-out');
+    play(held.lock, [{ opacity: 0, transform: 'scale(2.2)' }, { opacity: 1, transform: 'scale(1)', offset: 0.55 }, { opacity: 1, transform: 'scale(1)' }], 0, 240, 'ease-out');
     steps(held.clone, 'filter', [[0, 'brightness(1)'], ...dim]);
     steps(held.clone, 'opacity', [[0, 1], [T.black, 0], [T.black + 1, 0]]);
     const nr = held.lock.getBoundingClientRect(), cx = (nr.left + nr.width / 2 - lr.left) / lk, cy = (nr.top + nr.height / 2 - lr.top) / lk;
@@ -249,12 +255,9 @@ export function playConnect(app, held, name, lines) {
   }
   const glow = add(top, 'bootfx-glow');
   play(glow, [{ opacity: 0 }, { opacity: 0.45, offset: 0.3 }, { opacity: 0.25, offset: 0.6 }, { opacity: 0 }], at(T.black), 900, 'ease-in-out');
-  // Your chrome dips with the map, goes dark, and catches again at the end.
-  for (const q of ['.topbar', '#sidebar', '#crewwin', '#statusline', '#net-line', '.prompt-row', '#tray']) {
-    const el = $(q);
-    if (held) steps(el, 'filter', [[0, 'brightness(1)'], ...dim.slice(0, -1), [at(T.black), 'brightness(1)'], [at(T.black) + 1, 'brightness(1)']]);
-    steps(el, 'opacity', [[0, 1], [at(T.black), 0], ...tubeOn(at(T.chrome))]);
-  }
+  // Your chrome dims with the map and comes back up at the end.
+  for (const q of ['.topbar', '#sidebar', '#crewwin', '#statusline', '#net-line', '.prompt-row', '#tray'])
+    steps($(q), 'opacity', [[0, 1], ...(held ? DIM.map(([ms, v]) => [at(T.dim) + ms, Math.max(CHROME_LOW, v)]) : DOWN(at(T.black))), ...tubeOn(at(T.chrome), CHROME_LOW)]);
 
   // The name at the centre, decoding, with its carrier bar and the readout.
   const card = add(top, 'bootfx-dial'), nm = document.createElement('div'), bar = document.createElement('div'), sub = document.createElement('div');
@@ -277,7 +280,7 @@ export function playConnect(app, held, name, lines) {
     play(nm, [{ transform: 'none' }, { transform: `translate(${dx}px, ${dy}px) scale(${Math.max(0.3, tr.height / (br.height || 1))})` }], at(T.fly), 200, 'cubic-bezier(.6,0,.4,1)');
   }
   steps(nm, 'opacity', [[0, 1], [at(T.fly) + 200, 0], [at(T.fly) + 201, 0]]);
-  steps(sub, 'opacity', [[0, 1], [at(T.fly), 0.4], [at(T.fly) + 30, 1], [at(T.fly) + 60, 0], [at(T.fly) + 61, 0]]);
+  steps(sub, 'opacity', [[0, 1], [at(T.fly), 0.6], [at(T.fly) + 40, 0.25], [at(T.fly) + 80, 0], [at(T.fly) + 81, 0]]);
   steps(bar, 'opacity', [[0, 1], [at(T.fly), 0], [at(T.fly) + 1, 0]]);
 
   // The rooms page: the strip, then the rooms and links catching outward from the entry, a ring on each step out.
@@ -302,6 +305,97 @@ export function playConnect(app, held, name, lines) {
     after.splice(0).forEach((fn) => fn());
   };
   dialing = end;
+  timer = setTimeout(end, at(T.done));
+  addEventListener('keydown', end, true); addEventListener('pointerdown', end, true);
+}
+
+// Jacking out (app.js hangUp): the dial-up backwards. On the rooms page your room locks teal and the rooms go dark from
+// the far ones in to yours; the dark holds the server's name and the hang-up's readout (your pack banked); then the map
+// comes up and the server's node rings teal: where you were. Not from the rooms page: it starts at the black. Calm like
+// the rest: a thing only dims or only brightens.
+export const HANGUP = { lock: 0, out: 120, ring: 60, black: 520, name: 560, lines: 640, line: 90, map: 1180, mark: 1300, chrome: 1240, done: 1700 };
+const HANG = 400; // without the rooms page, everything comes this much sooner
+export function hangupLines({ name = '', banked = 0 }) {
+  const row = (k, v) => `${k} ${'.'.repeat(Math.max(3, 24 - k.length))} ${v}`;
+  return [
+    { text: row(`ath0 ${name.toLowerCase()}`, 'ok') },
+    { text: row('carrier', 'dropped') },
+    { text: row('pack', banked ? `${banked} banked` : 'empty') },
+    { text: 'HOME_', you: true },
+  ];
+}
+let hanging = null;
+const afterHome = [];
+export const hangingUp = () => !!hanging;
+export function stopHangup() { hanging?.(); }
+// Run fn once the hang-up is over (at once if none is playing): the Banked card waits for it.
+export function whenHome(fn) { if (hanging) afterHome.push(fn); else fn(); }
+
+// Play it. app: #app; held: capture()'s result on the rooms page with your room, or null; name: the server's; lines:
+// hangupLines(); node: finds the server's node on the map (now drawn in #page-view), or null.
+export function playHangup(app, held, name, lines, node) {
+  stopHangup();
+  const T = HANGUP, $ = (q) => app.querySelector(q), anims = [], nodes = [], o = held ? 0 : -HANG, at = (ms) => Math.max(0, ms + o);
+  $('#workspace')?.classList.remove('refresh');
+  const play = (el, frames, delay, duration, easing = 'linear') => { if (el) anims.push(el.animate(frames, { delay, duration, easing, fill: 'both' })); };
+  const steps = (el, prop, pts) => { if (!el) return; const end = pts[pts.length - 1][0] || 1; play(el, pts.map(([ms, v]) => ({ [prop]: v, offset: ms / end, easing: 'steps(1, end)' })), 0, end); };
+  const tubeOn = (from, lo = 0) => TUBE_ON.map(([ms, v]) => [from + ms, lo + v * (1 - lo)]);
+  const fade = (from, hi = 1) => [[from, hi * 0.6], [from + 40, hi * 0.3], [from + 80, 0], [from + 81, 0]];
+  const add = (parent, cls, before = null) => { const d = document.createElement('div'); d.className = cls; d.setAttribute('aria-hidden', 'true'); parent.insertBefore(d, before); nodes.push(d); return d; };
+  const black = add(app, 'bootfx-black', $('#fx-back')?.nextSibling || app.firstChild);
+  const b0 = Math.max(0, at(T.black) - 140);
+  play(black, [{ opacity: 0 }, { opacity: 1, offset: 0.12 }, { opacity: 1, offset: 0.85 }, { opacity: 0 }], b0, at(T.map) - b0 + 150, 'ease-in-out');
+  const top = add(app, 'bootfx'), lr = top.getBoundingClientRect(), lk = lr.width / (top.offsetWidth || lr.width) || 1;
+  const glow = add(top, 'bootfx-glow');
+  play(glow, [{ opacity: 0 }, { opacity: 0.3, offset: 0.3 }, { opacity: 0 }], at(T.black), 800, 'ease-in-out');
+
+  // The rooms page holding, your room locked, the rest going dark from the far ones in.
+  if (held) {
+    held.parent.append(held.clone); nodes.push(held.clone);
+    const r = held.clone.getBoundingClientRect();
+    Object.assign(held.clone.style, { left: `${(held.at.left - r.left) / held.k}px`, top: `${(held.at.top - r.top) / held.k}px` });
+    held.lock.classList.add('you');
+    play(held.lock, [{ opacity: 0, transform: 'scale(2)' }, { opacity: 1, transform: 'scale(1)', offset: 0.55 }, { opacity: 1, transform: 'scale(1)' }], 0, 240, 'ease-out');
+    const svg = [...held.clone.querySelectorAll('.fp-svg')].find((s) => s.getBoundingClientRect().width), here = svg?.querySelector('.fp-room.here');
+    if (svg && here) {
+      const h = here.getBoundingClientRect(), hx = h.left + h.width / 2, hy = h.top + h.height / 2, unit = h.width * 1.6 || 1;
+      const ringOf = (el) => { const b = el.getBoundingClientRect(); return Math.round(Math.hypot(b.left + b.width / 2 - hx, b.top + b.height / 2 - hy) / unit); };
+      const els = [...svg.querySelectorAll('.fp-room, .fp-bed, .fp-under, .fp-link')].filter((el) => el !== here && !here.contains(el));
+      const far = Math.max(1, ...els.map(ringOf));
+      for (const el of els) steps(el, 'opacity', [[0, 1], ...fade(T.out + Math.max(0, far - ringOf(el)) * T.ring)]);
+    }
+    steps(held.clone, 'opacity', [[0, 1], ...fade(T.black - 80)]);
+  }
+  // Your chrome dims with the cut and comes back up with the map.
+  for (const q of ['.topbar', '#sidebar', '#crewwin', '#statusline', '#net-line', '.prompt-row', '#tray'])
+    steps($(q), 'opacity', [[0, 1], [Math.max(0, at(T.black) - 80), 0.6], [Math.max(0, at(T.black) - 40), 0.3], [at(T.black), CHROME_LOW], ...tubeOn(at(T.chrome), CHROME_LOW)]);
+
+  // The name and the readout in the dark.
+  const card = add(top, 'bootfx-dial'), nm = document.createElement('div'), sub = document.createElement('div');
+  nm.className = 'bootfx-dial-name'; sub.className = 'bootfx-dial-lines';
+  nm.innerHTML = '<div></div>'; nm.firstChild.textContent = name;
+  card.append(nm, sub);
+  steps(nm.firstChild, 'opacity', [[0, 0], ...tubeOn(at(T.name)).slice(1), ...fade(at(T.map) - 80)]);
+  lines.forEach((l, i) => { const d = document.createElement('div'); d.textContent = l.text; if (l.you) d.className = 'you'; sub.append(d); steps(d, 'opacity', [[0, 0], [at(T.lines) + i * T.line, 1], ...fade(at(T.map) - 80)]); });
+
+  // The map comes up, and the server's node rings: where you were.
+  steps($('#page-view'), 'opacity', [[0, 0], ...tubeOn(at(T.map))]);
+  const n = node?.(), nr = n?.getBoundingClientRect();
+  if (nr?.width) {
+    const ring = add(top, 'bootfx-ring');
+    Object.assign(ring.style, { left: `${(nr.left - lr.left) / lk - 8}px`, top: `${(nr.top - lr.top) / lk - 8}px`, width: `${nr.width / lk + 16}px`, height: `${nr.height / lk + 16}px`, borderRadius: '50%' });
+    play(ring, [{ opacity: 0, transform: 'scale(1.6)' }, { opacity: 1, transform: 'scale(1)', offset: 0.35 }, { opacity: 0, transform: 'scale(1)' }], at(T.mark), 520, 'ease-out');
+  }
+
+  let timer = 0;
+  const end = () => {
+    if (hanging !== end) return;
+    hanging = null; clearTimeout(timer);
+    removeEventListener('keydown', end, true); removeEventListener('pointerdown', end, true);
+    anims.forEach((a) => a.cancel()); nodes.forEach((x) => x.remove());
+    afterHome.splice(0).forEach((fn) => fn());
+  };
+  hanging = end;
   timer = setTimeout(end, at(T.done));
   addEventListener('keydown', end, true); addEventListener('pointerdown', end, true);
 }
