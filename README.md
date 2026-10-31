@@ -168,7 +168,7 @@ comment saying what it does.
 | `dist/content/story.mjs`, `dist/content/contracts.mjs` | The story beats and contract templates, written in the editor. |
 | `dist/arcs.mjs`, `dist/arcs-view.mjs` | Floor jobs: each floor's fixed chain of contracts, and its page in Mail. |
 | `dist/threads.mjs`, `dist/threads-view.mjs`, `dist/content/threads.mjs` | Threads: quests found in rooms, their marks and dialogue, and their data. |
-| `dist/scanner.mjs`, `dist/scanner-view.mjs`, `dist/scanner.css` | The scanner: a shortwave radio in the top bar, its stations, the reel and what each pays. |
+| `dist/scanner.mjs`, `dist/scanner-view.mjs`, `dist/scanner.css` | The scanner: a shortwave radio sharing the pager's pill, its stations, the reel and what each pays. |
 | `dist/quest-view.mjs`, `dist/quest.css` | The quest window: a thread as an intercepted transmission. |
 | `dist/portraits.mjs` | The speaker's portrait in the quest window: a backlit ASCII silhouette, the cast's own or one from their name. |
 | `dist/intro.mjs` | First launch: the login, then Halcyon's transmission. |

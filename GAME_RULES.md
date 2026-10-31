@@ -1943,10 +1943,11 @@ and pager line carry a chain-link mark. Ignoring a card never starts a chain.
 
 ## The scanner
 
-A shortwave radio (`scanner.mjs`, `scanner-view.mjs`): the calm side activity, with no risk. Its button sits in the top
-bar beside your name on every page, dim while nothing is on the air, glowing amber while a broadcast is up, and hidden
-in a fight. It opens into a small tuner over your name (frequency and dial), with a tab under the bar (station,
-transcript, lock, log counts); the button or Esc closes it, and it closes itself 3 s after the broadcast ends.
+A shortwave radio (`scanner.mjs`, `scanner-view.mjs`): the calm side activity, with no risk. It shares the pager's
+pill in the top bar: a two-way switch at its left end shows the pager or the radio, the radio side glowing amber while
+a broadcast is up. The radio is a small tuner (frequency and dial) with a tab under the bar (station, transcript, lock,
+log counts); while it shows, the pager side carries a dot if pages wait, red for a threat. The pager side or Esc
+switches back, and so does the broadcast ending (3 s later). A fight hides the switch.
 
 - **On the air.** One station at a time, for 2–3 minutes, then 15–30 minutes quiet (the first 5 minutes into a new
   save). Stations not yet logged come up first, then the ones that still pay. A broadcast starts with a quiet two-tone
