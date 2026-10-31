@@ -174,6 +174,8 @@ const MARK_ICONS = {
   rival: '<circle cx="10" cy="10" r="6.5"/><circle cx="10" cy="10" r="2.2"/><path d="M10 1.5v3.5M10 15v3.5M1.5 10H5M15 10h3.5"/>',
   // An objective's (objectives.mjs): a Priority's target, Uptime's hourglass.
   target: '<circle cx="10" cy="10" r="7"/><circle cx="10" cy="10" r="3.5"/><circle class="f" cx="10" cy="10" r="1"/>',
+  backup: '<path d="M3 3h11.5L17 5.5V17H3z"/><path d="M6.5 3v5h7V3M6.5 17v-5.5h7V17"/>',
+  clean: '<circle cx="10" cy="10" r="7"/><path d="M7 10.2l2.2 2.2 4-4.6"/>',
   uptime: '<path d="M5 2.5h10M5 17.5h10M6.5 2.5c0 4.5 7 4.5 7 7.5s-7 3-7 7.5M13.5 2.5c0 4.5-7 4.5-7 7.5s7 3 7 7.5"/>',
   // A contract's mark (the mail's): a page with a tick, on a room a job points at.
   contract: '<path d="M4.5 2.5h7.5l3.5 3.5v11.5h-11Z"/><path d="M12 2.5V6h3.5"/><path d="M7 11.8l2 2 4-4.3"/>',
@@ -198,7 +200,7 @@ const exfilShown = (s) => { const m = exfilOf(s); return m && exfilSeen(s, m) ? 
 const exfilStep = (s) => { const m = exfilShown(s), next = m && exfilNext(s, m); return next && seenOf(s, next) ? next : null; };
 // A live plain fight room's objective (objectives.mjs), from the same roll its fight makes: 'priority', 'uptime' or null.
 const objOf = (s, room) => (room.kind === 'process' && !room.wild && !room.mirror && known(s, room.id) && isUp(s, room) ? fightOf(s, room).objective || null : null);
-const OBJ_ICON = { priority: 'target', uptime: 'uptime' };
+const OBJ_ICON = { priority: 'target', uptime: 'uptime', backup: 'backup', clean: 'clean' };
 // Its bonus, as icons: the loot rolls once more, XP, components.
 const objBonus = () => `<span class="rw" title="Loot: rolls once more">${glyph('item')}<b>+1</b></span><span class="rw" title="XP: ${Math.round(OBJ.bonus.xp * 100)}% more for the kill">${glyph('xp')}<b>+${Math.round(OBJ.bonus.xp * 100)}%</b></span><span class="rw" title="Components">${glyph('salvage')}<b>+${OBJ.bonus.components}</b></span>`;
 // An icon in the strip or the pop-up card.
@@ -510,7 +512,7 @@ function roomSvg(s, room, p, { reach, next, pop, near, G, marks, th = {}, files 
     if (sealed) tags.push(['SEALED', 'hot']);
     if (up && R.rare[room.id]) tags.push(['★', 'rare']);
     const ob = objOf(s, room);
-    if (ob) tags.push([String(OBJECTIVES[ob].n), 'obj', OBJ_ICON[ob], `${OBJECTIVES[ob].name}: ${objectiveLine(ob)}`]);
+    if (ob) tags.push([OBJECTIVES[ob].n ? String(OBJECTIVES[ob].n) : '', 'obj', OBJ_ICON[ob], `${OBJECTIVES[ob].name}: ${objectiveLine(ob)}`]);
     if (denEdge) tags.push(['WAKES', 'hot']);
     if (room.kind === 'nest') tags.push(['NEST', 'rare']);
     if (isPuzzle(room.kind)) { const st = puzzleState(s, room); if (st === 'live') tags.push(['IN PLAY', 'rare']); else if (st === 'won') tags.push(['SOLVED', 'done']); else if (st === 'lost') tags.push(['FAILED', 'hot']); }
@@ -519,7 +521,7 @@ function roomSvg(s, room, p, { reach, next, pop, near, G, marks, th = {}, files 
   if (race) tags.push([`YOU ${race.you ?? '?'}`, 'race-you'], [`${RIVALS[rv.id].name} ${race.it}`, 'race-it']);
   let tx = x0 - 6;
   for (const [t, c, icon, tip] of tags) { // a tag with an icon (an objective's): the icon, then its number
-    const w = tagW(t) + (icon ? 10 : 0);
+    const w = t ? tagW(t) + (icon ? 10 : 0) : 18; // an icon alone (a Backup's, a Clean run's)
     out += `<g class="fp-tag ${c}"${tip ? ` title="${esc(tip)}"` : ''}><rect x="${n1(tx)}" y="${n1(y0 - 8)}" width="${w}" height="16" rx="2"/>${icon ? `<use href="#fp-i-${icon}" x="${n1(tx + 4)}" y="${n1(y0 - 5)}" width="10" height="10"/>` : ''}<text x="${n1(tx + w / 2 + (icon ? 5 : 0))}" y="${n1(y0 + 3.5)}" text-anchor="middle">${t}</text></g>`;
     tx += w + 4;
   }

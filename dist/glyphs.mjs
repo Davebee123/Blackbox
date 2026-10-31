@@ -96,6 +96,9 @@ const P = {
   target: '<circle cx="8" cy="8" r="6"/><circle cx="8" cy="8" r="3"/><circle cx="8" cy="8" r=".6"/>',
   // Uptime: an hourglass.
   uptime: '<path d="M4 1.5h8M4 14.5h8M5 1.5c0 4 6 4 6 6.5s-6 2.5-6 6.5M11 1.5c0 4-6 4-6 6.5s6 2.5 6 6.5"/>',
+  // Backup: a disk. Clean run: a ring with a tick.
+  backup: '<path d="M2.5 2.5h9l2 2v9h-11z"/><path d="M5 2.5v4h6v-4M5 13.5v-4h6v4"/>',
+  clean: '<circle cx="8" cy="8" r="6"/><path d="M5.5 8.2 7.3 10l3.4-3.8"/>',
   mender: '<path d="M6 2h4v4h4v4h-4v4H6v-4H2V6h4z"/>',
   spider: '<circle cx="8" cy="8.5" r="2.5"/><path d="M5.8 7 2 4.5M5.6 9 1.5 9.5M6 10.5 3 13.5M10.2 7 14 4.5M10.4 9l4.1.5M10 10.5l3 3M8 6V2"/>',
   mirror: '<path d="M8 1.5v13M6 3.5 1.5 12.5H6zM10 3.5l4.5 9H10z"/>',
