@@ -1453,12 +1453,14 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 .meter-signal strong { color: var(--you); min-width: 3ch; }
 .meter-signal.weak .sig-bars i.on { background: var(--hot); box-shadow: 0 0 5px rgba(255, 91, 61, 0.5); }
 .meter-signal.weak strong { color: var(--hot); }
-/* Integrity: your server as five rack units, lit bottom up, read like Signal's bars. */
-.srv-rack { display: inline-flex; flex-direction: column-reverse; gap: 1px; width: 15px; height: 16px; }
-.srv-rack i { flex: 1; background: rgba(127, 209, 199, 0.14); border-radius: 1px; transition: background 0.3s; }
-.srv-rack i.on { background: var(--you); box-shadow: 0 0 5px rgba(127, 209, 199, 0.5); }
-.meter-integrity.critical .srv-rack i.on { background: var(--hot); box-shadow: 0 0 5px rgba(255, 91, 61, 0.5); }
-.meter-integrity strong { color: var(--you); min-width: 3ch; }
+/* Integrity: a server tower that drains from the top, two rack lines across it. */
+.srv-tower { position: relative; flex: none; box-sizing: border-box; width: 12px; height: 16px; padding: 1px; display: flex; align-items: flex-end; border: 1.5px solid var(--amber); border-radius: 2px; box-shadow: 0 0 5px rgba(241, 185, 47, 0.35); }
+.srv-tower b { display: block; width: 100%; background: var(--amber); border-radius: 0.5px; transition: height 0.3s; }
+.srv-tower::before, .srv-tower::after { content: ''; position: absolute; left: 2px; right: 2px; height: 1px; background: var(--inset); }
+.srv-tower::before { top: 3px; } .srv-tower::after { top: 6px; }
+.meter-integrity.critical .srv-tower { border-color: var(--hot); box-shadow: 0 0 5px rgba(255, 91, 61, 0.4); }
+.meter-integrity.critical .srv-tower b { background: var(--hot); }
+.meter-integrity strong { min-width: 3ch; }
 /* Resting: the next bar up breathes while it refills. */
 .meter-signal.resting .sig-bars i.on + i:not(.on), .meter-signal.resting .sig-bars i:first-child:not(.on) { animation: sig-rest 1.2s ease-in-out infinite; }
 @keyframes sig-rest { 50% { background: rgba(127, 209, 199, 0.5); } }
