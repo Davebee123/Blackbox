@@ -138,7 +138,7 @@ P0 to P3 are built. Each phase is played by the designer before the next starts.
 | Phase | What ships | Done when |
 |---|---|---|
 | P3 (built) | Elites: Integrity down, two conflicts from docs/puzzle-levers.md 4, *no pile-ups* lifted and checked on the roll (a failed roll rerolls). | Elites meet their row (floors met; first try open, as section 5 says). |
-| P4 | Bosses: a beat that repeats, phases, the one to leave. Two Residents and two solo bosses first, then the rest, lair bosses and feuds. | Every boss meets its row, its first try lost unless overgeared (decision 7), and the designer has played the first four. |
+| P4 | Bosses: a beat that repeats, phases, the one to leave. Two Residents and two solo bosses first, then the rest, lair bosses and feuds. | Every boss meets its row, solved, not outgeared, at its level (decision 7), and the designer has played the first four. |
 
 ## 8. Decided
 
@@ -151,8 +151,9 @@ The designer, October 2026:
 5. **Pile-ups:** lifted for elites and bosses, checked fight by fight.
 6. **Routines:** *"Paying attention should be rewarded, but also making the correct routine should also be rewarded."*
 7. **First tries:** *"Bosses especially should not be killable on the first try unless you are in insane gear."* A
-   boss's first try (learner 30) at its level, in the gear of that level, almost never wins; only gear far above the
-   level carries one. Elites lean the same way, less strictly. P4 measures it, and sets the bar's boss row to it.
+   Not strict: *"In a lot of MMOs, bosses are designed to need to be solved."* A boss is a fight you learn; at its level
+   a first try usually loses and a learned one wins, and overgearing is how a player skips the learning. Elites lean the
+   same way, less. P4 builds to it; the bar's first-try ceiling (under 50%) stays the measure.
 7. **Elites:** *"Puzzles versus walls always."*
 8. **Hold:** every program has it from level 8.
 9. **The program:** *"The default program should have players allocate the program to fit the trick."*
