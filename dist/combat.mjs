@@ -3014,7 +3014,7 @@ function bossPhases(s) {
       if (act === 'collect') { const l = livingParts(s).find((x) => x.lien && x.attack); if (l) l.attack.due = Math.min(l.attack.due, e.cycle + 3); } // REPO MAN: a Collection 3 cycles out
       if (act === 'interest') v.interest = 2;
       if (act === 'voice') say = secondVoice(s) || say; // HOLLOW CHOIR
-      if (act === 'round') v.round = 3;
+      if (act === 'round') { v.round = 3; v.roundFrom = e.cycle; } // it records only what you fire after it starts
       if (act === 'doppelganger') say = doppelganger(s);
     }
     emit(s, 'phase', `PHASE ${v.phases.filter((x) => x.done).length + 1}. ${say}`, { boss: v.boss });

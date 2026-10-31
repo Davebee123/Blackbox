@@ -690,8 +690,8 @@ export function mimicLands(s, t, p) { // (exported for exe.test.mjs)
   const caught = blind || p.echoCancelUntil >= e.cycle ? [] : caughtHelpers(s, t, p), swarm = caught.reduce((n, h) => n + h.damage, 0);
   // HOLLOW CHOIR's Round (v.round, docs/solo-bosses.md): the beat sings back the commands of the cycles before it too, three
   // cycles in all. A cycle you held adds nothing.
-  const notes = [...(blind ? [] : sungOf(host, p)), ...(copy ? [copy] : [])], hits = notes.filter((c) => c.kind === 'hit');
-  const direct = hits.reduce((n, c) => n + c.amount, 0);
+  const sung = blind ? [] : sungOf(host, p), notes = [...sung, ...(copy ? [copy] : [])], hits = notes.filter((c) => c.kind === 'hit');
+  const direct = hits.reduce((n, c) => n + (sung.includes(c) ? Math.round(c.amount * ROUND.echo) : c.amount), 0); // a sung hit lands at half
   if (!notes.length && !swarm) { emit(s, 'blocked', `The ${p.name} has nothing to copy.`, { source: p.id, tell: t.id }); return false; }
   const names = notes.map((c) => c.name).join(notes.length > 2 ? ', ' : ' and ').replace(/, ([^,]*)$/, ' and $1');
   const what = !swarm ? `your ${names}` : `${notes.length ? `your ${names} and ` : 'your '}${caught.length === 1 ? 'helper' : `${caught.length} helpers`}`;
@@ -716,12 +716,14 @@ export function mimicLands(s, t, p) { // (exported for exe.test.mjs)
   if (!over) { if (direct) lockLast(s, t, 'MIMIC'); corrupt(s, t, p); } // your command's skill goes offline; helpers alone lock nothing
   return over;
 }
-// The Round's recording (HOLLOW CHOIR from 25%): what the commands you fired on the cycles before this one would copy, oldest
-// first (the beat's own command is copyOf's). Empty off the Round, or when the Mimic has nothing of you.
+// The Round's recording (HOLLOW CHOIR from 25%): what the commands you fired on the cycles before this one would copy,
+// oldest first (the beat's own command is copyOf's); its hits land at ROUND.echo. Empty off the Round, or when the Mimic
+// has nothing of you.
+export const ROUND = { echo: 0.5 };
 export function sungOf(s, p, c = (s.host || s).encounter?.cycle) {
   const host = s.host || s, e = host.encounter, n = e?.virus?.round;
   if (!n || !p || beatBlind(host, p, c)) return [];
-  return (e.cmdLog || []).filter((x) => x.cycle < c && x.cycle > c - n && ABILITIES[x.id]).map((x) => copyOf(host, x.id, part(host, x.target))).filter((x) => x && x.kind !== 'hold');
+  return (e.cmdLog || []).filter((x) => x.cycle < c && x.cycle > c - n && x.cycle > (e.virus.roundFrom ?? -1) && ABILITIES[x.id]).map((x) => copyOf(host, x.id, part(host, x.target))).filter((x) => x && x.kind !== 'hold');
 }
 // A copy that isn't a hit lands on you (or, a shield or a heal, on its side).
 function landCopy(s, t, p, c) {
@@ -1085,6 +1087,12 @@ export function tellMove(s, t0 = null, planned = null) {
   if (recording && TELL.bots.quiet !== false && planned && !(kills(s, planned) && livingParts(s).length === 1)) {
     const best = beatMove(s, planned, t0);
     if (best !== planned) return best;
+  }
+  // HOLLOW CHOIR's Round: a beat a cycle or two out sings what you fire now too, so a dear copy waits for the cycle after.
+  const sings = !recording && s.encounter.virus.round && soon(s, s.encounter.virus.round - 1).some((t) => t.kind === 'mimic' && tellNext(s, t) > c);
+  if (sings && planned && !kills(s, planned) && dearCopy(s, copyOf(s, planned.split(' ')[0], part(s, planned.split(' ')[1])))) {
+    const quiet = [...QUIET, ...BEAT_ALTS.map((id) => id + ' ' + (planned.split(' ')[1] || ''))].find((x) => ok(s, x) && !dearCopy(s, copyOf(s, x.split(' ')[0], part(s, x.split(' ')[1]))));
+    if (quiet) return quiet;
   }
   const echoes = (text) => echoesNow(s, text);
   // A charge whose part has to be stripped starting now to bare it for the cut (see below) comes before a kill.

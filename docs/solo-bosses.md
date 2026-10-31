@@ -38,8 +38,11 @@ What the bots made of it (a scratch sim, 12 fights a cell, wins %, before → af
 | HOLLOW CHOIR 10 | 92 → 33 | 83 → 33 | 83 → 25 |
 | HOLLOW CHOIR 18 | 100 → 67 | 100 → 42 | 75 → 17 |
 
-The planner knows only enough to measure: clear fragments before a Broadcast, and cut the second voice. It doesn't avoid
-Liens or go quiet before a Round beat (holding two cycles cost it more than the Round). The designer's play is the bar.
+The planner knows only enough to measure: clear fragments before a Broadcast, cut the second voice, and keep a dear
+command off the cycles a Round beat will sing. It doesn't avoid Liens. The designer's play is the bar.
+
+The Round's sung notes land at half (`ROUND.echo`) and record only what you fire after it starts: at full, one Flood
+fired the cycle the Round began came back as 54% of a level-10 Breaker's bar.
 
 ## Proposed: the nine lair bosses (not built)
 
