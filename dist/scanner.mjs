@@ -1,4 +1,4 @@
-// The scanner (GAME_RULES.md "The scanner"): a shortwave radio on the Map page, the calm side activity with no risk.
+// The scanner (GAME_RULES.md "The scanner"): a shortwave radio in the top bar, the calm side activity with no risk.
 // One station is on the air at a time, for 2–3 minutes, then 15–30 minutes of quiet. Tune the dial to it by the
 // S-meter and the static clearing (the dial never shows where an unlogged one is). Close in and it bites: the dial
 // zooms in, the carrier moves its kind's way, and holding it in the hold zone round the needle fills the lock. A full
