@@ -11,7 +11,8 @@ Every session opens with the power-up: the monitor comes on, the BLACKBOX mark (
 light) rises, and **Press any key to start** waits (a tap on a phone). A new game opens on a bare terminal:
 `blackbox login:` asks for a handle (2–16 letters, numbers, dots, dashes or underscores) and a password (4+
 characters, never stored). An encrypted transmission from Halcyon Mutual's Office of Loss Prevention says the terminal
-was set up for you and that wick of LOWLIGHT will write. Then you pick a class (Classes and loadout).
+was set up for you and that wick of LOWLIGHT will write. Then you pick a class (Classes and loadout), and wick's
+first transmission comes in over the map (Transmissions).
 
 ### The loop
 
@@ -1782,6 +1783,19 @@ pays third-party crews to fight a turf war against them, and never asks how. You
 **LOWLIGHT** (your handler is `wick`). The rival crews are named for the viruses they run: **TOLLGATE** (ransomware),
 **SWARMLINE** (worms) and **PALEMASK** (ghostroot). **GLASSJAW** is a broker that works against Halcyon.
 
+### Transmissions
+
+A **transmission** is a conversation over the map with a contact (`scenes.mjs`; its words in `content/scenes.mjs`), in
+the quest window's look: **Incoming**, their portrait beside the conversation, your answers in teal, numbered choices
+under it (click, or press 1–9). A question you've asked is gone from the next choices; an answer can end it somewhere
+(Mail, a server on the map). Esc or × ends it. Each plays once, never mid-fight; one that comes while another plays
+waits its turn.
+
+| Scene | When |
+|---|---|
+| wick's welcome | Your first login, after you pick a class: who LOWLIGHT is, what Halcyon wants, where to start (your first job in Mail). |
+| Your first server | Your first server located: what a server is, getting in, the vault; **Show me** opens it on the map. Only on a save that heard the welcome. |
+
 ### Standing
 
 Standing with Halcyon runs 0 to 100 and starts at 10. It sets the retainer, paid every 30 real minutes, offline too (up
@@ -2352,13 +2366,16 @@ dusty green, Coldline ice, Deep Core magenta, Kernel Space white on black, The S
 the job colours never change. **Off** shows numbers and bars only. Motion off or reduced motion: no tears, nothing
 moves.
 
-**A new fight boots in.** The first time you see a fight, the screen cuts to black and the virus comes on first, alone
-at the centre, before dropping into its panel; a boot console checks your system and your panels flicker on. About two
+**A new fight boots in.** The first time you see a fight, the screen goes dark and the virus comes up first, alone
+at the centre, before dropping into its panel; a boot console checks your system and your panels come up. About two
 seconds; any key or click ends it (and still acts). Leaving a won fight, the page folds to a teal line like a tube
 switching channel and the map opens back out of it, your room ringing. Connecting to a server dials it: its node locks
 teal and pings, the screen dims into black, its name decodes over a dial readout and flies into the server strip, and
-the rooms switch on outward from the entry (about two seconds; a first run's XP waits for it). Screen effects off or
-Motion off: straight in and out.
+the rooms switch on outward from the entry (about two seconds; a first run's XP waits for it). **Jacking out** hangs
+up: your room locks teal and the rooms go dark toward it, the hang-up's readout holds the dark, then the map comes up
+with the server's node ringed (under two seconds; the Banked card waits for it). None of them flashes or blinks: a
+panel only brightens or only dims, and your chrome dims rather than going out. Screen effects off or Motion off:
+straight in and out.
 
 ### The monitor casing
 
@@ -2403,7 +2420,7 @@ Developer commands work only in tests, playtest pages, a test bench and with `?d
   drawer over the prompt holds buttons that type the common developer commands.
 - **Playtest pages:** `?playtest=rooms` (a throwaway server of rooms, its clocks ten times as fast), `?playtest=<strain
   or fixture>`, `?playtest=part:<id>` (`part:<id>.exe` for its .exe build), `?playtest=fx` (every ability effect, tier and break finisher, fired from its key).
-- `developer levelup preview`, `developer thread preview`, `developer pager fill`, `developer parts`, `developer
+- `developer scene <id>` plays a transmission again. `developer levelup preview`, `developer thread preview`, `developer pager fill`, `developer parts`, `developer
   event`, `developer exfil`, and the rest under each section.
 
 ## Side modes

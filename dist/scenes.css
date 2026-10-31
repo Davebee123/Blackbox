@@ -1,0 +1,14 @@
+/* ---- Transmissions (scenes-view.mjs): a conversation in the quest window's look (quest.css), over the map. Your
+   answers teal (you); only the newest exchange arrives, a line at a time, then its choices; the portrait scans in on
+   the first. Still with Motion off or reduced motion. ---- */
+.gain.sc-wrap { z-index: 41; }
+.gain.sc-wrap .pz-card.sc-card { width: min(640px, 100%); gap: var(--s5); }
+.sc-card .q-talk { align-items: stretch; }
+.sc-log { align-content: start; max-height: min(300px, 42vh); overflow: auto; }
+.sc-log .sc-you { color: var(--you); }
+.sc-foot { display: flex; justify-content: space-between; margin: 0; font: 11px var(--mono); color: var(--dim); max-width: none; }
+.sc-card .sc-new { animation: q-in 0.3s ease-out both; animation-delay: calc(var(--i, 0) * 0.3s + 0.15s); }
+.sc-card .sc-choices { animation: q-in 0.3s ease-out both; animation-delay: calc(var(--n, 0) * 0.3s + 0.2s); }
+.sc-card.sc-first .qf-r { animation: q-in 0.12s steps(2) both; animation-delay: calc(var(--r) * 0.035s); }
+.no-motion .sc-card * { animation: none !important; }
+@media (prefers-reduced-motion: reduce) { .sc-card * { animation: none !important; } }

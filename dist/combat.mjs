@@ -2,6 +2,7 @@
 // Rendering never advances the simulation. This file is written so it can
 // later run on a shared server unchanged.
 import { onFound, memoryCommand, isLive, joinCost, memoryRestore } from './memory.mjs';
+import { onFirstServer } from './scenes.mjs';
 import { barSlots, isRunSkill, SUBCLASS, SUBS, defaultSub, ELITE, BOSS_LOOT, BOSSES, ENRAGE, makePart, EDGE, SYNC, CONFIG, ABILITIES, SKILLS, DAEMONS, SPARE_EXPLOIT, FAMILIES, FIXTURES, GUARDS, MUTATIONS, STRAINS, SERVER, TEMPLATES, layerOf, floorOfLayer, createVirus, createLocation, ARCHETYPES, CANTRIPS, LOADOUT, TREE, UNLOCKS, XP, xpToNext, killXp, xpScale, deedScale, power, mobPower, skillOrder, unlockLevel, lineOf, presetBar, shippedPresets, spikeOf, SPIKE } from './data.mjs';
 // The subclasses' engine side (dist/classes/<class>.mjs): what their skills, talents and edges do.
 import BREAKER_FX, { momentumCap } from './classes/breaker.mjs';
@@ -1278,6 +1279,7 @@ export function addLocation(s, family, depth = 1, parent = null, slot = null) {
   onFound(s, loc); // memory full: it arrives detached (memory.mjs)
   dropStaleFinds(s);
   emit(s, 'located', `LOCATED on floor ${depth}: ${loc.name}.`, { location: loc.id, floor: depth });
+  if (loc.starter) onFirstServer(s, loc); // wick's transmission (scenes.mjs)
   return loc;
 }
 

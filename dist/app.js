@@ -25,6 +25,8 @@ import { logComms, commsOf, unseenAlert, seeAll, markDone, pruneComms } from './
 import { nextTip, markSeen, TOUR, tourDone, skipTour } from './tips.mjs';
 import { createWindow } from './window.mjs';
 import { createIntro } from './intro.mjs';
+import * as SC from './scenes.mjs';
+import { sceneMarkup } from './scenes-view.mjs';
 import { powerOn } from './poweron.mjs';
 import { relockLeft } from './rogue.mjs';
 import { createHitFx } from './hitfx.mjs';
@@ -69,7 +71,7 @@ import * as PGV from './pager-view.mjs';
 import { noCarrier, NC } from './nocarrier.mjs';
 import * as UI from './uiscale.mjs';
 import { playTravel } from './travelfx.mjs';
-import { playBoot, stopBoot, capture as bootHold, bootLines, playCut, stopCut, leaving, playConnect, stopConnect, connecting, connectLines, whenConnected } from './bootfx.mjs';
+import { playBoot, stopBoot, capture as bootHold, bootLines, playCut, stopCut, leaving, playConnect, stopConnect, connecting, connectLines, whenConnected, playHangup, stopHangup, hangupLines, whenHome } from './bootfx.mjs';
 let bootFor = null; // the fight the screen last booted into (go)
 import { startTraffic } from './traffic.mjs';
 import { createScanner } from './scanner-view.mjs';
@@ -455,7 +457,8 @@ function firstLogin() {
     cache.clear();
     go('map', true);
     feel.add('pager', '#pager');
-    notice('New mail: wick has written to you.');
+    SC.queueScene(campaign, 'welcome'); // wick's transmission over the map (scenes.mjs)
+    save();
   });
 }
 // The campaign's first launch: log in, a short transmission (no mail: the story is in /core), pick a class, and the
@@ -758,7 +761,7 @@ function roomsDone(events) {
   const warning = events.findLast((e) => e.type === 'warning');
   if (warning) notice(warning.message, true);
   if (events.some((e) => e.type === 'engage') && active(campaign)) { go('combat'); notice('Fight paused. Any order starts it.'); }
-  else if (events.some((e) => e.type === 'jacked-out') && !campaign.roomsPlay) go('map', true); // the network: home is the map
+  else if (events.some((e) => e.type === 'jacked-out') && !campaign.roomsPlay) hangUp(events); // the network: home is the map
   // (a disconnect: NO CARRIER, in react, takes you to the map under its static: nocarrier.mjs)
   else if (module !== 'rooms' && !active(campaign) && !events.some((e) => e.type === 'disconnected')) go('rooms', true);
   save(); // the network's rooms are on your save (the playtest's never are: save skips it)
@@ -1137,7 +1140,7 @@ function react(events) {
       case 'wall-siege': feel.add('interrupt', '#meter-integrity', 'SIEGE'); notice(e.message); break;
       case 'jack-in': feel.add('jackin', null); shell.glitch?.(); break;
       case 'run-start': feel.add('jackin', null); if (!dialFx()) shell.glitch?.(); break; // (the connect's own effect stands in for the glitch)
-      case 'jacked-out': feel.add('hangup', null); if (e.gains?.length) { const name = e.message.match(/JACKED OUT of (.+?)\. Banked/)?.[1] || ''; setTimeout(() => showGain('Banked', name, e.gains, false), 350); } break;
+      case 'jacked-out': feel.add('hangup', null); if (e.gains?.length) { const name = e.message.match(/JACKED OUT of (.+?)\. Banked/)?.[1] || ''; setTimeout(() => whenHome(() => showGain('Banked', name, e.gains, false)), 350); } break;
       case 'rooms-good': if (e.gains?.length) { feel.add('pickup', null); showGain('Pulled', '', e.gains, true); } break; // a vault's files into your pack (netrooms.mjs)
       case 'puzzle': feel.add(() => pzFx.move(e)); break; // a move on a puzzle room's board: it plays over the board once drawn
       case 'puzzle-end': { // how a puzzle room's board went: a card like a reward's, once the move has played (a lost chase is a fight instead)
@@ -1395,6 +1398,7 @@ function run(raw) {
   { const said = screenFxCommand(campaign, text); if (said) { save(); dirty = true; return notice(said); } } // screen fx [off|subtle|medium|bold|next] / screen fx <effect> on|off (and the old effects calm|full|minimal)
   if (/^developer levelup( |$)/.test(text)) return levelUpCommand(text.slice(17).trim());
   if (/^developer thread preview\b/.test(text)) return threadPreview(text.replace(/^developer thread preview\s*/, ''));
+  if (/^developer scene\b/.test(text)) { const id = text.replace(/^developer scene\s*/, ''); if (!SC.replay(campaign, id)) return notice(`developer scene: ${Object.keys(SC.SCENES).join(', ')}.`, true); if (module === 'combat') go('map'); dirty = true; return; }
   if (text === 'casing on' || text === 'casing off') { campaign.settings.casing = text === 'casing on'; save(); dirty = true; return; }
   if (text === 'tips on' || text === 'tips off' || text === 'tips replay') {
     if (text === 'tips replay') { campaign.settings.seen = {}; delete campaign.tour; campaign.settings.tips = true; }
@@ -1452,7 +1456,7 @@ function run(raw) {
   // (a connect or hang-up has its own sound, so the channel change stays quiet)
   if ((wasAlert || events.some((e) => e.type === 'jack-in' || e.type === 'engage')) && active(campaign)) go('combat', events.some((e) => e.type === 'jack-in'));
   else if (events.some((e) => e.type === 'run-start')) connectTo(events.findLast((e) => e.type === 'run-start'));
-  else if (events.some((e) => e.type === 'jacked-out')) go('map', true);
+  else if (events.some((e) => e.type === 'jacked-out')) hangUp(events);
   else if (campaign.rooms && module !== 'rooms' && !ended && !events.some((e) => e.type === 'victory') && events.some((e) => e.type.startsWith('rooms') && e.type !== 'rooms-out')) go('rooms', true); // a move typed from another page (a win stays on its kill screen)
   else if (campaign.run && module !== 'net' && !events.some((e) => e.type === 'victory') && events.some((e) => e.type.startsWith('net'))) go('net'); // a win stays on its kill screen (the folder listing waits in the terminal)
   else if (text.startsWith('encounter ') && campaign.encounter?.phase === 'alert') { mapSel = 'intrusion'; go('map'); }
@@ -1555,6 +1559,7 @@ function go(name, quiet = false) {
   const held = boot && module === 'rooms' && campaign.rooms?.at ? bootHold($('page-view'), [...$('page-view').querySelectorAll(`[data-room="${CSS.escape(campaign.rooms.at)}"]`)].find((c) => c.getBoundingClientRect().width)) : null;
   if (name !== 'combat') stopBoot();
   if (name !== 'rooms') stopConnect();
+  if (name !== 'map') stopHangup();
   module = name;
   if (name === 'rooms' && revealNote) { const m = revealNote; revealNote = null; setTimeout(() => notice(m), 0); } // a hidden room that opened while you fought
   selected = null;
@@ -1578,6 +1583,18 @@ function connectTo(e) {
   const q = (sel) => $('page-view').querySelector(sel)?.textContent.trim() || '';
   const name = q('.fp-hud .fp-id b') || campaign.locations?.find((l) => l.id === e.location)?.name || '';
   playConnect($('app'), held, name, connectLines({ name, level: q('.fp-hud .fp-id small').match(/lv ([\d–-]+)/)?.[1] || '', rooms: Number(q('.fp-hud .fp-prog b').split('/')[1]) || 0 }));
+}
+// Jacking out: the dial-up backwards (bootfx.mjs, Hang-up): from the rooms page your room locks teal and the rooms go
+// dark toward it, the hang-up's readout holds the dark, then the map comes up with the server's node ringed. Screen
+// effects off or Motion off: straight to the map.
+function hangUp(events) {
+  const e = events.findLast((x) => x.type === 'jacked-out'), shown = (q) => [...$('page-view').querySelectorAll(q)].find((g) => g.getBoundingClientRect().width);
+  const fx = dialFx() && !CAMP, here = fx && module === 'rooms' ? shown('.fp-room.here') : null;
+  const held = here ? bootHold($('page-view'), here) : null;
+  go('map', true);
+  if (!fx || module !== 'map') return;
+  const name = e?.message.match(/JACKED OUT of (.+?)\./)?.[1] || '', sel = e?.out && `[data-select="${CSS.escape(e.out)}"]`;
+  playHangup($('app'), held, name, hangupLines({ name, banked: e?.gains?.length || 0 }), () => (sel ? shown(`${sel} .core`) || shown(sel) : null));
 }
 // What the boot console checks: read off the fight's page as it now stands.
 function bootInfo() {
@@ -1952,7 +1969,7 @@ const thOffer = { later: null };
 const offerKey = () => (campaign.threads?.offer ? campaign.threads.offer.tid : campaign.arcs?.offers?.[0] ? `arc:${campaign.arcs.offers[0].floor}:${campaign.arcs.offers[0].step}` : null);
 function renderOffer() {
   const el = $('th-offer'), o = offerKey() && { tid: offerKey() };
-  const want = !!o && thOffer.later !== o.tid && module !== 'combat' && !active(campaign) && !gainOpen() && !CAMP && !campaign.roomsPlay && !document.getElementById('th-panel'); // the last lines first: it comes up once you close them
+  const want = !!o && !SC.sceneNow(campaign) && thOffer.later !== o.tid && module !== 'combat' && !active(campaign) && !gainOpen() && !CAMP && !campaign.roomsPlay && !document.getElementById('th-panel'); // the last lines first: it comes up once you close them
   if (!el) return;
   el.hidden = !want;
   if (want) put('th-offer', campaign.threads?.offer ? thOfferMarkup(campaign) : arcOfferMarkup(campaign)); else if (cache.get('th-offer')) { cache.delete('th-offer'); el.innerHTML = ''; }
@@ -1969,6 +1986,28 @@ function threadPreview(arg) {
   }
   thPrev.open = true; thPrev.qn = null; dirty = true;
 }
+// A transmission (scenes.mjs): over any page but a fight, once nothing else is up.
+function renderScene() {
+  const el = $('scene'), want = !!SC.sceneNow(campaign) && !CAMP && !introOn && module !== 'combat' && !active(campaign) && !gainOpen();
+  el.hidden = !want;
+  if (want) { const was = cache.get('scene'); put('scene', sceneMarkup(campaign)); if (cache.get('scene') !== was) { const log = el.querySelector('.sc-log'); if (log) log.scrollTop = log.scrollHeight; } } else if (cache.get('scene')) { cache.delete('scene'); el.innerHTML = ''; }
+}
+function sceneAnswer(n) {
+  const r = SC.choose(campaign, n);
+  if (!r) return;
+  feel.key('enter'); save(); dirty = true;
+  if (r.go) goTo(r.go);
+}
+$('scene').addEventListener('click', (e) => {
+  const p = e.target.closest('[data-scene-pick]');
+  if (p) { e.stopPropagation(); return sceneAnswer(Number(p.dataset.scenePick)); }
+  if (e.target.closest('[data-scene-skip]')) { e.stopPropagation(); SC.skip(campaign); feel.key('click'); save(); dirty = true; }
+});
+document.addEventListener('keydown', (e) => {
+  if ($('scene').hidden || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (/^[1-9]$/.test(e.key)) { e.preventDefault(); e.stopImmediatePropagation(); sceneAnswer(Number(e.key)); }
+  else if (e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); SC.skip(campaign); save(); dirty = true; }
+}, true);
 function renderPreview() {
   const el = $('th-preview');
   if (!el) return;
@@ -2009,6 +2048,7 @@ function render(force = false) {
   }
   if (force) cache.clear();
   renderMeters();
+  renderScene();
   renderOffer();
   renderPreview();
   shell.apply(module);

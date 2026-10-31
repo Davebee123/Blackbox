@@ -59,7 +59,7 @@ Common developer commands (with `?dev` or on a bench; the **Dev** drawer above t
 | `developer fight <family\|random> <level> <seed>`, `developer fight part:<id>` | Starts a fight. |
 | `developer parts` | The parts roll's numbers and mix. |
 | `developer event [card]`, `developer invade [kind]` | Deals an event card; sends an invasion. |
-| `developer levelup preview`, `developer thread preview`, `terminal preview` | Plays the level-up, a thread's windows, a boot look. |
+| `developer levelup preview`, `developer thread preview`, `developer scene <id>`, `terminal preview` | Plays the level-up, a thread's windows, a transmission, a boot look. |
 | `crew sim <class…>`, `online sim` | Bot crewmates in your fights; simulated hackers online. |
 | `reset game` (twice) | Starts over from level 1. Settings stay. |
 
@@ -173,6 +173,7 @@ comment saying what it does.
 | `dist/quest-view.mjs`, `dist/quest.css` | The quest window: a thread as an intercepted transmission. |
 | `dist/portraits.mjs` | The speaker's portrait in the quest window: a backlit ASCII silhouette, the cast's own or one from their name. |
 | `dist/intro.mjs` | First launch: the login, then Halcyon's transmission. |
+| `dist/scenes.mjs`, `dist/scenes-view.mjs`, `dist/scenes.css`, `dist/content/scenes.mjs` | Transmissions: conversations with a contact over the map, their window and their words. |
 | `dist/tips.mjs` | First-time tips, the game's only tutorial text. |
 | `dist/tutorial.mjs` | Guided practice on an isolated training virus. |
 | `dist/lore.mjs` | Skill descriptions and flavour lines for the library. |
@@ -218,7 +219,7 @@ comment saying what it does.
 | `dist/style.css` | Tokens and every shared component (docs/ui.md). Each page has its own stylesheet beside its view. |
 | `dist/shell.mjs`, `dist/poweron.mjs` | The CRT shell, boot lines and status line; the power-up. |
 | `dist/screenfx.mjs`, `dist/screenfx.css` | Screen effects: light on the glass around the game, never on it. |
-| `dist/bootfx.mjs`, `dist/bootfx.css` | A new fight: the screen boots into it, the virus first; leaving a won one, a channel cut; connecting to a server, the dial-up. |
+| `dist/bootfx.mjs`, `dist/bootfx.css` | A new fight: the screen boots into it, the virus first; leaving a won one, a channel cut; connecting to a server, the dial-up; jacking out, the hang-up. |
 | `dist/window.mjs` | The slum outside the window behind the monitor, and its weather. |
 | `dist/abilityfx.mjs`, `dist/abilityfx-table.mjs`, `dist/abilityfx-playtest.mjs` | Ability effects on the board, the table of every ability's effect, and its playtest. |
 | `dist/hitfx.mjs`, `dist/dmgfx.mjs`, `dist/lash.mjs` | Hits landing on a part, damage numbers one per source, a virus lashing at the screen. |
