@@ -152,7 +152,8 @@ The designer, October 2026:
 6. **Routines:** *"Paying attention should be rewarded, but also making the correct routine should also be rewarded."*
 7. **First tries:** *"Bosses especially should not be killable on the first try unless you are in insane gear."* A
    Not strict: *"In a lot of MMOs, bosses are designed to need to be solved."* A boss is a fight you learn; at its level
-   a first try usually loses and a learned one wins, and overgearing is how a player skips the learning. Elites lean the
+   a first try usually loses and a learned one wins. Only being overleveled for it (gear and level well past
+   the boss's) carries a first try. Elites lean the
    same way, less. P4 builds to it; the bar's first-try ceiling (under 50%) stays the measure.
 7. **Elites:** *"Puzzles versus walls always."*
 8. **Hold:** every program has it from level 8.
