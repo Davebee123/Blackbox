@@ -1998,24 +1998,31 @@ and pager line carry a chain-link mark. Ignoring a card never starts a chain.
 
 ## The scanner
 
-A shortwave radio (`scanner.mjs`, `scanner-view.mjs`): the calm side activity, with no risk. Its button sits in the top
-bar beside your name on every page, dim while nothing is on the air, glowing amber while a broadcast is up, and hidden
-in a fight. It opens into a small tuner over your name (frequency and dial), with a tab under the bar (station,
-transcript, lock, log counts); the button or Esc closes it, and it closes itself 3 s after the broadcast ends.
+A shortwave radio (`scanner.mjs`, `scanner-view.mjs`): the calm side activity, with no risk. It lives at the
+**Listening Post**, LANTERN's (apart from LANTERN's trading hub): a hub's diamond with an antenna beside HOME on every
+floor, "hub · on the air" with an amber ping while a broadcast is up, "hub · quiet" otherwise. **Connect** (or
+`connect post`) opens it like a hub's terminal (`ssh <you>@post-07`, instant): LANTERN's line, then **[1] tune** (the
+radio in a window beside it), **[2] recordings** (the tape), **[3] log**, **[0] disconnect**.
 
+- **Found** from a clue: the first broadcast on the air outside a fight breaks into the radio chatter as numbers, a
+  line says so, and the post shows on the map (`s.scanner.found`; already true for a save that had the old top-bar
+  radio).
 - **On the air.** One station at a time, for 2–3 minutes, then 15–30 minutes quiet (the first 5 minutes into a new
   save). Stations not yet logged come up first, then the ones that still pay. A broadcast starts with a quiet two-tone
-  ping, never in a fight.
-- **Finding it.** The band runs 3–12 MHz; the dial shows 2 MHz round the needle. Drag, scroll or use the arrow keys
+  ping once the post is found, never in a fight.
+- **Finding it.** The band runs 3–12 MHz, all of it on the dial. Drag, scroll or use the arrow keys
   (Shift for ×10). It never shows where a station you can catch is: the S-meter rises and the static clears within
   0.15 MHz of it. One with nothing left to catch shows as a muted glow.
 - **The reel.** Within 0.04 MHz at a strength over S3 it **bites**: the dial zooms to 0.8 MHz round it, a teal hold
   zone of ±0.025 MHz sits round the needle, and the carrier moves. In the zone the lock fills in 5 s; outside it drains
   at 1/8 a second. A numbers station sways, a pirate hops every 1.7 s (never back to the centre), a distress call
   wanders and fades, and the lock waits while it's faded. Holding still never catches one. Leaving the window lets go.
-- **Logged.** A full lock logs it (its own log, `s.scanner`: counts by kind on the strip, the log card lists each with
+- **Logged.** A full lock logs it (its own log, `s.scanner`: counts by kind in Tune, **[3] log** lists each with
   ??? for those not caught) and it signs off 8 s later. A numbers station pays once; a pirate or a distress call pays
   each time it's caught, once a broadcast, and the log keeps its last payoff.
+- **The tape.** The post records each broadcast, over the last one (`s.scanner.tape`). Once it's off the air, the
+  **On tape** row (in Tune and in **[2] recordings**) shows its station, frequency and age, and **Play back** puts it
+  back on the air as long as it ran, to reel in as usual: once, and not if it was caught. The schedule keeps its time.
 
 | Kind | Stations | Pays |
 |---|---|---|
@@ -2025,8 +2032,9 @@ transcript, lock, log counts); the button or Esc closes it, and it closes itself
 
 - **Radio traffic.** Fifteen transmissions across the band (time signals, Morse, data, music, voices), heard within
   0.06 MHz, on in bursts. Nothing to catch.
-- **Sound** follows Sound and the Effects volume: static that thins as a station clears, the off-tune whistle (silent
-  dead on), the station under it, the traffic, and a chirp on a catch.
+- **Sound** follows Sound and the Effects volume, and plays only while Tune is open: static that thins as a station
+  clears, the off-tune whistle (silent dead on), the station under it, the traffic, and a chirp on a catch. The
+  broadcast's ping plays anywhere but a fight.
 
 ## Home
 
