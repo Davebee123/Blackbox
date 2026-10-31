@@ -1,12 +1,11 @@
-// The scanner on the Map page (scanner.mjs, GAME_RULES.md "The scanner"): a radio button at the map's bottom-left
-// corner, dim while nothing is on the air and glowing amber while a broadcast is up. It opens a strip across the map's
-// foot: the frequency and the log counts on the left, the dial and the transcript in the middle, the station, the
-// S-meter and the lock (or what it paid) on the right. The counts open the log card. Esc or the button closes it, and
-// it closes itself when the broadcast ends. DOM and SVG only.
+// The scanner (scanner.mjs, GAME_RULES.md "The scanner"): a radio button in the top bar beside the pager, dim while
+// nothing is on the air and glowing amber while a broadcast is up, hidden in a fight. It opens a slim band under the top
+// bar, one row: the frequency, the dial, the station with its S-meter and lock (or what it paid), the transcript, and
+// the log counts, which open the log card. Esc or the button closes it, and it closes itself when the broadcast ends.
+// DOM and SVG only.
 //
-// The strip is built once (stripMarkup) and painted in place at 20 frames a second, slot by slot, so the map's own
-// redraws (app.js re-attaches it with mount) and the tooltips never lose it. Its sounds (createRadio) play with
-// Sound on, at the Effects volume.
+// The band is built once (stripMarkup) and painted in place at 20 frames a second, slot by slot, so the tooltips never
+// lose it. Its sounds (createRadio) play with Sound on, at the Effects volume.
 import * as SC from './scanner.mjs';
 import { glyph } from './glyphs.mjs';
 import { FACTIONS } from './factions.mjs';
@@ -35,14 +34,13 @@ const ANSWER = '\n▸ Hold the carrier in the zone until the lock fills.';
 // Where a frequency sits on the band, as a % of the dial: the whole band, or the fine window once it bites.
 const pct = (tune, m) => (tune.hook ? (m - (tune.hook.c - FINE / 2)) / FINE : (m - LO) / (HI - LO)) * 100;
 function ticks(tune) {
-  const [from, to, step, major, fmt] = tune.hook ? [tune.hook.c - FINE / 2, tune.hook.c + FINE / 2, 0.02, 0.1, (m) => m.toFixed(1)] : [LO, HI, 0.25, 1, (m) => String(m)];
+  const [from, to, step, major] = tune.hook ? [tune.hook.c - FINE / 2, tune.hook.c + FINE / 2, 0.02, 0.1] : [LO, HI, 0.25, 1];
   let out = '';
   for (let i = Math.ceil(from / step - 1e-9); i <= Math.floor(to / step + 1e-9); i++) {
     const m = +(i * step).toFixed(3), x = pct(tune, m).toFixed(2), big = Math.abs(m / major - Math.round(m / major)) < 1e-6;
-    out += `<line x1="${x}%" x2="${x}%" y1="${big ? 27 : 32}" y2="36" class="${big ? 'big' : ''}"/>`;
-    if (big) out += `<text x="${x}%" y="48" text-anchor="middle">${fmt(m)}</text>`;
+    out += `<line x1="${x}%" x2="${x}%" y1="${big ? 35 : 62}%" y2="100%"${big ? ' class="big"' : ''}/>`;
   }
-  return out + '<line x1="0" x2="100%" y1="36" y2="36"/>';
+  return out;
 }
 const NOISE = '·:.░▒ ·.:  ';
 const rng = (seed) => { let x = seed >>> 0 || 1; return () => ((x = (x * 1664525 + 1013904223) >>> 0) / 4294967296); };
@@ -68,7 +66,7 @@ function counts(s) {
 export function logMarkup(s) {
   return `<div class="sc-log-h">${g('antenna')}<span class="kick">Log</span><button type="button" class="sc-x" data-scan-log aria-label="Close">×</button></div>
     ${KIND_ORDER.map((k) => { const all = SC.STATIONS.filter((x) => x.kind === k), n = all.filter((x) => SC.logged(s, x.id)).length;
-      return `<div class="sc-sec"><span class="lbl">${g(k)}${SC.KINDS[k].name}s<em>${n}/${all.length}</em></span>${all.map((x) => SC.logged(s, x.id) ? `<div class="sc-row"><span>${esc(x.name)}</span>${payChip(s, x)}</div>` : '<div class="sc-row q"><span>???</span></div>').join('')}</div>`; }).join('')}`;
+      return `<div class="sc-sec"><span class="lbl">${g(k)}${SC.KINDS[k].name}s<em>${n}/${all.length}</em></span>${all.map((x) => SC.logged(s, x.id) ? `<div class="sc-row-l"><span>${esc(x.name)}</span>${payChip(s, x)}</div>` : '<div class="sc-row-l q"><span>???</span></div>').join('')}</div>`; }).join('')}`;
 }
 // Every slot of the strip at t (seconds), from the save and the needle.
 export function parts(s, tune, t) {
@@ -105,12 +103,14 @@ export function parts(s, tune, t) {
   out.sound = { st, d, s: str, ts: tr.s, tr: tr.tr, clear: !st || str < 0.03 ? 0 : !SC.catchable(s, st) ? str : tune.hook ? Math.min(1, 0.15 + tune.lock * 0.9) * Math.min(1, str * 1.4) : str };
   return out;
 }
-// The strip, whole: what mount builds, and what the tests read.
+// The band, whole: what show builds, and what the tests read.
 export function stripMarkup(s, tune, t) {
-  const p = parts(s, tune, t), air = SC.onAir(s, t * 1000);
-  return `<div class="sc-l"><div class="sc-hd">${g('antenna')}<span class="kick">Scanner</span><i class="sc-lamp${air ? '' : ' idle'}" data-sc="lamp"></i></div><span class="sc-freq" data-sc="freq">${p.freq}</span><div class="sc-counts" data-sc="counts">${p.counts}</div></div>
-    <div class="sc-m"><div class="sc-dial${p.fine ? ' fine' : ''}" data-sc="dial" tabindex="0" role="slider" aria-label="Frequency" aria-valuemin="${LO}" aria-valuemax="${HI}" aria-valuenow="${tune.f}"><div class="sc-band"><svg class="sc-scale" data-sc="scale">${p.scale}</svg><div data-sc="marks">${p.marks}</div><i class="sc-zone" data-sc="zone"${p.zone ? ` style="left:${p.zone[0]}%;width:${p.zone[1] - p.zone[0]}%"` : ' hidden'}></i><i class="sc-needle" data-sc="needle" style="left:${p.needle}%"></i></div></div><div class="${p.txCls}" data-sc="tx">${p.tx}</div></div>
-    <div class="sc-r"><div class="sc-who-row" data-sc="who">${p.who}</div><div data-sc="res">${p.res}</div></div>`;
+  const p = parts(s, tune, t);
+  return `<span class="sc-freq" data-sc="freq">${p.freq}</span>
+    <div class="sc-dial${p.fine ? ' fine' : ''}" data-sc="dial" tabindex="0" role="slider" aria-label="Frequency" aria-valuemin="${LO}" aria-valuemax="${HI}" aria-valuenow="${tune.f}"><div class="sc-span"><svg class="sc-scale" data-sc="scale">${p.scale}</svg><div data-sc="marks">${p.marks}</div><i class="sc-zone" data-sc="zone"${p.zone ? ` style="left:${p.zone[0]}%;width:${p.zone[1] - p.zone[0]}%"` : ' hidden'}></i><i class="sc-needle" data-sc="needle" style="left:${p.needle}%"></i></div></div>
+    <div class="sc-mid"><div class="sc-who-row" data-sc="who">${p.who}</div><div class="sc-res" data-sc="res">${p.res}</div></div>
+    <div class="${p.txCls}" data-sc="tx">${p.tx}</div>
+    <div class="sc-counts" data-sc="counts">${p.counts}</div>`;
 }
 
 // ---------- the controller ----------
@@ -121,18 +121,24 @@ export function createScanner({ state, changed = () => {}, busy = () => false, s
   const tune = { f: 7.415, hook: null, lock: 0 };
   const radio = createRadio();
   const $ = (k) => root.querySelector(`[data-sc="${k}"]`);
-  function build() {
-    root = document.createElement('div');
-    root.className = 'scan';
-    root.innerHTML = `<button type="button" class="sc-radio" data-scan-radio aria-pressed="false" aria-label="Shortwave">${RADIO}</button><div class="sc-strip" hidden></div><div class="sc-logcard" hidden></div>`;
-    root.addEventListener('click', (e) => {
-      if (e.target.closest('[data-scan-radio]')) toggle();
-      else if (e.target.closest('[data-scan-log]')) { logOpen = !logOpen; paintLog(); }
-    });
+  let btn = null, band = null;
+  function build(topbar) {
+    btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'sc-radio'; btn.setAttribute('aria-pressed', 'false'); btn.setAttribute('aria-label', 'Shortwave');
+    btn.innerHTML = RADIO;
+    btn.addEventListener('click', toggle);
+    band = document.createElement('div');
+    band.className = 'sc-bar'; band.hidden = true;
+    band.innerHTML = '<div class="sc-row"></div><div class="sc-logcard" hidden></div>';
+    band.addEventListener('click', (e) => { if (e.target.closest('[data-scan-log]')) { logOpen = !logOpen; paintLog(); } });
+    root = band;
+    const pager = topbar.querySelector('#pager');
+    if (pager) pager.before(btn); else topbar.append(btn);
+    topbar.append(band);
     paintButton(Date.now());
   }
   function paintButton(at) {
-    const b = root.querySelector('.sc-radio'), air = !!SC.onAir(state(), at);
+    const b = btn, air = !!SC.onAir(state(), at);
     b.classList.toggle('live', air);
     b.setAttribute('aria-pressed', String(open));
     const tt = buttonTitle(state(), at);
@@ -141,8 +147,8 @@ export function createScanner({ state, changed = () => {}, busy = () => false, s
   function paintLog() { const c = root.querySelector('.sc-logcard'); c.hidden = !(open && logOpen); if (!c.hidden) c.innerHTML = logMarkup(state()); }
   function wireDial() {
     const dial = $('dial');
-    const toX = (e) => { const r = dial.querySelector('.sc-band').getBoundingClientRect(), u = (e.clientX - r.left) / r.width; set(tune.hook ? tune.hook.c - FINE / 2 + u * FINE : LO + u * (HI - LO)); };
-    // The drag listens on the window, so a redraw of the map under it never drops it.
+    const toX = (e) => { const r = dial.querySelector('.sc-span').getBoundingClientRect(), u = (e.clientX - r.left) / r.width; set(tune.hook ? tune.hook.c - FINE / 2 + u * FINE : LO + u * (HI - LO)); };
+    // The drag listens on the window, so it carries on past the dial's edges.
     dial.addEventListener('pointerdown', (e) => {
       e.preventDefault(); dial.focus({ preventScroll: true }); toX(e);
       const move = (ev) => toX(ev), up = () => { removeEventListener('pointermove', move); removeEventListener('pointerup', up); removeEventListener('pointercancel', up); };
@@ -155,9 +161,8 @@ export function createScanner({ state, changed = () => {}, busy = () => false, s
   function toggle() { if (open) close(); else show(); }
   function show() {
     open = true; closeAt = 0; painted = {};
-    const strip = root.querySelector('.sc-strip');
-    strip.innerHTML = stripMarkup(state(), tune, Date.now() / 1000);
-    strip.hidden = false;
+    band.querySelector('.sc-row').innerHTML = stripMarkup(state(), tune, Date.now() / 1000);
+    band.hidden = false;
     wireDial();
     $('dial').focus({ preventScroll: true });
     if (sound()) radio.wake();
@@ -166,7 +171,7 @@ export function createScanner({ state, changed = () => {}, busy = () => false, s
   function close() {
     if (!root) return;
     open = false; logOpen = false; tune.hook = null; tune.lock = 0;
-    root.querySelector('.sc-strip').hidden = true;
+    band.hidden = true;
     paintLog(); paintButton(Date.now());
     radio.quiet();
   }
@@ -183,13 +188,12 @@ export function createScanner({ state, changed = () => {}, busy = () => false, s
     const z = $('zone'); z.hidden = !p.zone; if (p.zone) { z.style.left = p.zone[0] + '%'; z.style.width = (p.zone[1] - p.zone[0]) + '%'; }
     $('dial').classList.toggle('fine', p.fine);
     $('dial').setAttribute('aria-valuenow', tune.f.toFixed(3));
-    $('lamp').classList.toggle('idle', !SC.onAir(s, now));
     radio.hear({ ...p.sound, f: tune.f, t, hook: tune.hook, on: sound(), volume: volume() });
   }
-  // Esc closes the log card, then the strip, before the map's own Esc. The arrow keys tune while it's open, unless
-  // you're typing (a map redraw can take the focus off the dial).
+  // Esc closes the log card, then the band, before the page's own Esc. The arrow keys tune while it's open, unless
+  // you're typing.
   document.addEventListener('keydown', (e) => {
-    if (!open || !root?.isConnected) return;
+    if (!open) return;
     if (e.key === 'Escape') { e.stopPropagation(); if (logOpen) { logOpen = false; paintLog(); } else close(); return; }
     if (/input|textarea|select/i.test(e.target.tagName || '')) return;
     if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') set(tune.f - step(e));
@@ -198,13 +202,8 @@ export function createScanner({ state, changed = () => {}, busy = () => false, s
     e.preventDefault();
   }, true);
   return {
-    // Puts the button (and the strip, if open) on the map; app.js calls it after every map redraw.
-    mount(canvas) {
-      if (!canvas) return this.unmount();
-      if (!root) build();
-      if (root.parentElement !== canvas) canvas.append(root);
-    },
-    unmount() { if (root?.isConnected) { root.remove(); if (open) close(); } },
+    // Puts the button beside the pager and the band under the top bar, once.
+    mount(topbar) { if (!btn && topbar) build(topbar); },
     isOpen: () => open,
     // Every frame: the schedule, the reel, the paint, the sound.
     tick(now = Date.now()) {
@@ -216,12 +215,15 @@ export function createScanner({ state, changed = () => {}, busy = () => false, s
         if (ev === 'start' && sound() && !busy()) radio.cue(volume());
         if (ev) changed();
       }
-      const air = !!SC.onAir(s, now);
-      if (root?.isConnected) paintButton(now);
-      if (open && wasAir && !air) closeAt = now + 3000; // the broadcast ended: the strip folds away 3 s later
+      const air = !!SC.onAir(s, now), away = busy();
+      if (!btn) return;
+      btn.hidden = away; // a fight hides it
+      if (away && open) close();
+      paintButton(now);
+      if (open && wasAir && !air) closeAt = now + 3000; // the broadcast ended: the band folds away 3 s later
       wasAir = air;
       if (open && closeAt && now >= closeAt) close();
-      if (!open || !root?.isConnected) { radio.voices(null, null); return; }
+      if (!open) { radio.voices(null, null); return; }
       const r = SC.tuneStep(s, tune, dt, now / 1000);
       if (r === 'catch') {
         const id = tune.hook.id;
@@ -236,7 +238,7 @@ export function createScanner({ state, changed = () => {}, busy = () => false, s
       radio.voices(a ? SC.stationById(a.id) : null, tune.hook ? null : SC.trafficHeard(tune.f, now / 1000).tr);
     },
     // For tests and screenshots: the needle, and opening it.
-    tune, show: () => { if (root && !open) show(); }, close,
+    tune, show: () => { if (btn && !open) show(); }, close,
   };
 }
 
