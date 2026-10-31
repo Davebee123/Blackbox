@@ -7,7 +7,9 @@
 // The roll: from EXE_ROLL.floor, each part with a build here comes as its .exe this often, by floor (a fight's floor is
 // its server's). An elite or a ★ rare spawn from that floor brings at least one. A part you've never met never comes as
 // its .exe: the stranger is the lesson.
-export const EXE_ROLL = { floor: 4, share: [[4, 0.15], [5, 0.2], [6, 0.25], [7, 0.3], [8, 0.35]], sure: true };
+// From EXE_ROLL.clash an elite's clash (genes.mjs CLASHES) comes as its .exe builds, and a floor's natives come back
+// four floors down always as theirs (parts.mjs PARTS.echo: echoes).
+export const EXE_ROLL = { floor: 4, share: [[4, 0.15], [5, 0.2], [6, 0.25], [7, 0.3], [8, 0.35]], sure: true, clash: 6 };
 
 const hit = (p, k) => { if (p.attack) p.attack.amount = Math.max(1, Math.round(p.attack.amount * k)); };
 const partner = (p, parts, id) => parts.find((x) => x.id === p[id]);
@@ -23,6 +25,12 @@ export const EXE = {
   cipherblock: { kind: 'stronger', what: 'It deals 50% more for each Encrypt on you, not 25%.', apply: (p) => { p.cipher = 0.5; } },
   fanin: { kind: 'stronger', what: 'It deals 100% more for each fragment, not 50%.', apply: (p) => { p.fanin = 1; } },
   obfuscator: { kind: 'different', what: 'Tag reveals nothing while it stands.', apply: () => {} },
+  // The signatures.
+  encryptor: { kind: 'different', what: 'Broken, it leaves your encryption on, one step lighter each cycle. Purge still clears it.', apply: (p) => { p.drain = true; } },
+  replicator: { kind: 'different', what: 'Each Replicate hatches two fragments, not one.', apply: (p) => { p.spawnN = 2; } },
+  scrambler: { kind: 'stronger', what: 'While you are Scrambled, a backfired attack hits you at full damage, not half.', apply: (p) => { p.selfFull = true; } },
+  rig: { kind: 'different', what: 'At 100 heat it blows up instead of burning out: a blast on both sides, like a Zip Bomb\'s, then it vents.', apply: (p) => { p.blows = true; } },
+  degausser: { kind: 'stronger', what: 'Its Wipe takes your two strongest keys, not one.', apply: (p) => { p.wipes = 2; } },
   // The thirds.
   lockbox: { kind: 'stronger', what: 'Its ward caps the partner at 15% a cycle, not 25%.', apply: (p, parts) => { const t = partner(p, parts, 'ward'); if (t) t.wardShare = 0.15; } },
   mirror: { kind: 'stronger', what: 'A twin reboots twice, not once.', apply: (p, parts) => { p.rebootMax = 2; const t = partner(p, parts, 'twin'); if (t) t.rebootMax = 2; } },
@@ -38,6 +46,13 @@ export const EXE = {
   spare: { kind: 'stronger', what: 'It boots at 90% of the signature\'s max, not 60%.', apply: (p) => { if (p.spare) p.spare = { ...p.spare, at: 0.9 }; } },
   tripwire: { kind: 'stronger', what: 'Loud parts attack 2 cycles sooner, not 1.', apply: (p) => { p.loudSooner = 2; } },
   scraper: { kind: 'stronger', what: 'It gains up to 4 ◆ from what it takes, not 2.', apply: (p) => { p.scrape = (p.scrape || 2) * 2; } },
+  prism: { kind: 'different', what: 'A cut stops only the hit it lands on, not the rest of the volley.', apply: (p) => { p.cutOne = true; } },
+  mimic: { kind: 'different', what: 'On its beat it plays back the dearer of your last two commands, so holding is no longer safe.', apply: () => {} },
+  packer: { kind: 'different', what: 'A scan unpacks only one of the parts it hides. Breaking it unpacks the rest.', apply: () => {} },
+  damper: { kind: 'stronger', what: 'It drops two kinds of damage, not one.', apply: (p) => { const k = ['burn', 'helper', 'area']; p.damperKind2 = k[(k.indexOf(p.damperKind) + 1) % k.length]; } },
+  coldstore: { kind: 'stronger', what: 'It thaws with one more ◆, and its Chill lands the next cycle, not 2 cycles later.', apply: (p) => { p.thawHard = true; } },
+  twinrig: { kind: 'stronger', what: 'A Rig left alone takes the other\'s climb and 3 steps more, not 1.', apply: (p) => { p.twinBonus = 3; } },
+  recyclebin: { kind: 'different', what: 'Crossing a tick gives the key back still cooling, not ready.', apply: (p) => { p.binCool = true; } },
   badblock: { kind: 'stronger', what: 'Cracked heals lose up to 20% of your max, not 10%.', apply: (p) => { p.badblock = (p.badblock || 0.1) * 2; } },
 };
 

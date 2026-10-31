@@ -62,8 +62,9 @@ function researchBar(n) {
 const locked = (text) => `<p class="cxp-lock"><span>${UNKNOWN}</span>${esc(text)}</p>`;
 const TELL_VERB = { charge: 'Charges', cast: 'Casts', seal: 'Seals with', lock: 'Locks with' };
 // Its .exe build (exe.mjs), from floor 4: what it changes.
-const exeLine = (p) => { const b = EXE[p?.id]; return b ? `<p class="cxp-exe" title="${esc(`${p.name}.exe\nA harder build of the ${p.name}, from floor ${EXE_ROLL.floor}.\n${b.what}`)}"><span class="pexe">.exe</span> Floor ${EXE_ROLL.floor}+: ${esc(b.what)}</p>` : ''; };
-function partCard(level, x, tells = [], withHandler = false) {
+// Hidden until you've broken one (combat.mjs breakPart: s.exeSeen).
+const exeLine = (p, seen) => { const b = EXE[p?.id]; return b && seen?.[p.id] ? `<p class="cxp-exe" title="${esc(`${p.name}.exe\nA harder build of the ${p.name}, from floor ${EXE_ROLL.floor}.\n${b.what}`)}"><span class="pexe">.exe</span> Floor ${EXE_ROLL.floor}+: ${esc(b.what)}</p>` : ''; };
+function partCard(level, x, tells = [], withHandler = false, seen = null) {
   // Lv N+: a third part (it joins viruses of that level and up), or a part whose body comes later than your level (its numbers are at N).
   const p = x.part, later = x.level > level, opens = ((x.gene || x.basic) && x.from > 1) || later ? `<span class="tag dim" title="${esc(`${x.gene || x.basic ? `Joins viruses of level ${x.from} and up.` : `Comes at level ${x.from} and up.`}${later ? ` Its numbers are at level ${x.level}.` : ''}`)}">Lv ${x.from}+</span>` : '';
   if (!x.named) {
@@ -82,7 +83,7 @@ function partCard(level, x, tells = [], withHandler = false) {
   if (n >= TIER.rule) {
     const r = partRead(null, x.virus, p, { tells: false });
     const rides = tells.length ? `<p class="cxp-rides">${tells.map((t) => `${TELL_VERB[t.kind] || 'Brings'} <b>${esc(t.name)}</b>${t.level ? ` <small>Lv ${t.level}+</small>` : t.elite ? ` <small>elite Lv ${t.elite}+</small>` : ''}.`).join(' ')}</p>` : '';
-    rule = `<p class="cxp-does">${ruleHtml(r.does)}</p>${r.answer ? `<p class="cxp-answer">${esc(r.answer)}</p>` : ''}${rides}${exeLine(p)}`;
+    rule = `<p class="cxp-does">${ruleHtml(r.does)}</p>${r.answer ? `<p class="cxp-answer">${esc(r.answer)}</p>` : ''}${rides}${exeLine(p, seen)}`;
   } else rule = locked(`Research ${TIER.rule} to learn its rule, its answer and its tells.`);
   const loot = !p.loot ? '' : mast ? `<p class="cxp-loot">${glyph('salvage')}${esc(dropLine())}</p>` : locked(`Research ${RESEARCH.max} to learn its drop chance.`);
   const perk = mast ? `<p class="cxp-perk">Mastered. It drops components ${Math.round((RESEARCH.perk.drop - 1) * 100)}% more often, and you deal ${Math.round((RESEARCH.perk.dmg - 1) * 100)}% more damage to it.</p>` : '';
@@ -118,7 +119,7 @@ function bodyPage(s, e) {
     ${e.authors.length ? `<p class="cx-by"><span class="cx-label">Written by</span>${e.authors.map(byline).join('')}</p>` : ''}</div></header>`;
   const rule = e.rule ? `<p class="cx-rule"${e.ice ? ' title="ICE: its rule shows as a tag in the fight"' : ''}>${ruleHtml(e.rule)}${e.answer ? `<span class="cx-ans">${esc(e.answer)}</span>` : ''}</p>` : '';
   const ridesOf = (x) => e.tells.filter((t) => t.part && t.part === (x.part?.name || x.spec.name)).map((t) => ({ name: t.name, kind: t.kind, level: t.level, elite: t.elite }));
-  const parts = section('Parts', `<div class="cx-parts">${e.parts.map((x) => partCard(e.level, x, ridesOf(x), unlocked(s))).join('')}</div>`, ` <small>at <b class="you">Lv ${e.level}</b></small>`);
+  const parts = section('Parts', `<div class="cx-parts">${e.parts.map((x) => partCard(e.level, x, ridesOf(x), unlocked(s), s.exeSeen)).join('')}</div>`, ` <small>at <b class="you">Lv ${e.level}</b></small>`);
   const sets = e.sets.length ? section('Attack sets', `<div class="cx-sets">${e.sets.map(setMarkup).join('')}</div><p class="cx-foot">Each fight rolls its set, and nudges every part's first attack by up to 1 cycle.</p>`) : '';
   const tells = section('Tells', e.tells.length ? `<ul class="cx-tells">${e.tells.map(tellMarkup).join('')}</ul>` : '<p class="cx-foot">Brings no tells.</p>');
   const loot = section('Loot', lootList(e.parts) + (e.setLoot ? setLootTable(e.setLoot) : ''), ` <small>at research ${RESEARCH.max}</small>`);
@@ -165,7 +166,7 @@ function bossPage(s, e) {
   const phases = e.phases.length ? section('Phases', `<ol class="cx-phases">${e.phases.map((ph) => `<li><b class="cxph-at">${Math.round(ph.at * 100)}%</b><div>${ph.name ? `<b>${esc(ph.name)}</b>` : ''}${ph.say ? `<p>${esc(ph.say)}</p>` : ''}${ph.mechs ? `<p class="cxph-mechs">${ph.mechs.map((m) => `<span class="tag">${esc(m)}</span>`).join('')}</p>` : ''}</div></li>`).join('')}</ol>${e.enrage ? `<p class="cx-foot">Past its timer: ${esc(e.enrage)}.</p>` : ''}`) : '';
   const tells = e.raid ? '' : section('Tells', e.tells.length ? `<ul class="cx-tells">${e.tells.map(tellMarkup).join('')}</ul>` : '<p class="cx-foot">Brings no tells.</p>', ` <small>at <b class="you">Lv ${e.level}</b></small>`);
   const lv = e.parts[0]?.level || e.level, rides = (x) => e.tells.filter((t) => t.part === x.part.name).map((t) => ({ name: t.name, kind: t.kind }));
-  const parts = e.parts.length ? section('Parts', `<div class="cx-parts">${e.parts.map((x) => partCard(lv, x, rides(x))).join('')}</div><p class="cx-foot">Its parts share their research with its ${e.strain ? 'strain' : 'family'}.</p>`, ` <small>at <b class="you">Lv ${lv}</b></small>`) : '';
+  const parts = e.parts.length ? section('Parts', `<div class="cx-parts">${e.parts.map((x) => partCard(lv, x, rides(x), false, s.exeSeen)).join('')}</div><p class="cx-foot">Its parts share their research with its ${e.strain ? 'strain' : 'family'}.</p>`, ` <small>at <b class="you">Lv ${lv}</b></small>`) : '';
   const loot = section('Loot', lootTable(e.loot));
   return head + about + sig + phases + parts + tells + loot;
 }

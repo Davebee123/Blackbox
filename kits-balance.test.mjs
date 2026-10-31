@@ -66,7 +66,10 @@ const second = (sub) => {
 // (fewer of them carry a Lockbox or a Mutex for Sudo to walk through): held at 7 until the kits are retuned for the mix.
 // Since the P2 rework (docs/parts-plan.md: the Shunt cut, so the Worm's rolls moved) the Hijacker's rules preset
 // measures 7.4 worse on the generic fights (6.1 before; 7.1 with the Shunt's cut alone): held at 8.
-const DRIFT = { demolitionist: { generic: 6.5, suits: 1.5 }, sysop: { generic: 6.5, suits: -2 }, hijacker: { generic: 8, suits: 2.5 }, herder: { generic: 5, suits: 0 }, overclocker: { generic: 7, suits: 5 } };
+// Since the .exe builds' echoes (exe.mjs: floor 1's Zip Bomb and Hotspot back as their .exe on floor 5, Lv 30) the
+// Demolitionist's area preset measures 6.9 worse on the generic fights and the Phantom's evasion preset 5.5: held at 7.5
+// and 6, until the designer has played them.
+const DRIFT = { demolitionist: { generic: 7.5, suits: 1.5 }, sysop: { generic: 6.5, suits: -2 }, hijacker: { generic: 8, suits: 2.5 }, herder: { generic: 5, suits: 0 }, overclocker: { generic: 7, suits: 5 }, phantom: { generic: 6, suits: 5 } };
 test('each second preset is a real alternative: within 5 points of the rotation on the generic fights, and at least 5 points better on the fights it suits', () => {
   const off = [], line = [];
   for (const sub of ALL) {

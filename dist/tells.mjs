@@ -671,7 +671,7 @@ export function caughtHelpers(s, t, p) {
 // The Mimic copies the command you fired this cycle (copyOf) and turns it on you, and plays back the helpers it catches
 // (each at its own size) as a hit, never past the tell ceiling. true if the fight ended, 'quiet' if the copy cost you
 // little (a read: it opens).
-function mimicLands(s, t, p) {
+export function mimicLands(s, t, p) { // (exported for exe.test.mjs)
   if (!p.mimic) return false; // it stopped recording (MIRRORSHADE's Doppelganger)
   const host = s.host || s, e = host.encounter, last = e.lastCmd;
   const honey = e.buffs?.honeypot >= e.cycle; // Honeypot (Warden): the beat goes after the honeypot
@@ -679,7 +679,11 @@ function mimicLands(s, t, p) {
   const blind = e.buffs?.sudo >= e.cycle || e.mimicBlind || honey || p.unmaskUntil >= e.cycle; // Sudo, Log Wipe, Unmask: it has nothing of you
   if (e.mimicBlind) delete e.mimicBlind;
   const id = last && last.cycle === e.cycle && !blind ? last.id : null, a = id && ABILITIES[id];
-  const copy = a ? copyOf(host, id, part(host, last.target)) : null;
+  const mine = a ? copyOf(host, id, part(host, last.target)) : null;
+  // A Mimic.exe (exe.mjs): the dearer of this cycle's command and the one before it.
+  const prev = p.exe && !blind ? [...(e.cmdLog || [])].reverse().find((x) => x.cycle < e.cycle && ABILITIES[x.id]) : null;
+  const was = prev ? copyOf(host, prev.id, part(host, prev.target)) : null;
+  const copy = was && (!mine || (was.cost || 0) > (mine.cost || 0)) ? was : mine;
   // Echo Cancel blinds it to your helpers too (it turns your command on the Mimic, below).
   const caught = blind || p.echoCancelUntil >= e.cycle ? [] : caughtHelpers(s, t, p), swarm = caught.reduce((n, h) => n + h.damage, 0);
   const direct = copy?.kind === 'hit' ? copy.amount : 0;
@@ -704,7 +708,7 @@ function mimicLands(s, t, p) {
   const amount = Math.max(1, Math.round(Math.min(ceilingOf(s) * defender(host).max, direct + swarm * TELL.mimic)));
   const loud = copy?.loud > 1 && direct;
   emit(s, 'status', loud ? `You're Scrambled, and the ${p.name} plays ${what} back at you ${copy.loud === 2 ? 'twice' : `${copy.loud} times`} over.` : `The ${p.name} plays ${what} back at you.`, { source: p.id, tell: t.id, missed: true, ...(swarm ? { helpers: caught.length } : {}) });
-  const over = strikeWith(s, p, { name: `${direct ? a.name : 'Helpers'}${direct && swarm ? ' and helpers' : ''} (mimicked)`, effect: 'damage', amount, interval: 99, noCrit: true, tell: t.id });
+  const over = strikeWith(s, p, { name: `${direct ? ABILITIES[copy.id]?.name || copy.name : 'Helpers'}${direct && swarm ? ' and helpers' : ''} (mimicked)`, effect: 'damage', amount, interval: 99, noCrit: true, tell: t.id });
   if (!over) { if (direct) lockLast(s, t, 'MIMIC'); corrupt(s, t, p); } // your command's skill goes offline; helpers alone lock nothing
   return over;
 }

@@ -297,8 +297,8 @@ function restore(s, p) {
   p.binHeld = null;
   if (!(e.wiped?.[h.id] >= e.cycle)) return emit(s, 'tick-wasted', `The ${p.name} crosses a tick, but ${ABILITIES[h.id].name} is back already.`, { target: p.id, wasted: true });
   e.wiped[h.id] = e.cycle - 1; if (e.locked) e.locked[h.id] = e.cycle - 1;
-  e.readyAt[h.id] = h.readyAt <= h.at ? e.cycle : h.readyAt + (e.cycle - h.at);
-  emit(s, 'cut', `RESTORED. You take the ${p.name} across a tick: ${ABILITIES[h.id].name} is back on your bar.`, { target: p.id, restore: true, ability: h.id });
+  e.readyAt[h.id] = p.binCool ? e.cycle + (ABILITIES[h.id].cooldown || 0) : h.readyAt <= h.at ? e.cycle : h.readyAt + (e.cycle - h.at); // a Recycle Bin.exe's comes back cooling
+  emit(s, 'cut', `RESTORED. You take the ${p.name} across a tick: ${ABILITIES[h.id].name} is back on your bar${p.binCool ? ', cooling' : ''}.`, { target: p.id, restore: true, ability: h.id });
 }
 
 // ---------- the hooks (combat.mjs), room fights only ----------
@@ -331,7 +331,7 @@ hooks.roomBroke = (s, p) => {
   if (v.family === 'cryptominer' && (p.id === 'rig' || p.twinrig)) {
     const other = livingParts(s).find((x) => x !== p && (x.id === 'rig' || x.twinrig));
     if (other?.attack && (p.id === 'rig' ? v.parts.some((x) => x.twinrig) : true)) {
-      other.attack.step = (other.attack.step || 0) + (p.attack?.step || 0) + BODY.twin;
+      other.attack.step = (other.attack.step || 0) + (p.attack?.step || 0) + (p.twinBonus ?? other.twinBonus ?? BODY.twin); // a Twin Rig.exe's: 3
       emit(s, 'status', `The ${other.name} takes the ${p.name}'s climb: its Hash deals ${Math.round(attackAmount(other))} now.`, { target: other.id, twin: true });
     }
   }
@@ -343,7 +343,7 @@ hooks.roomBroke = (s, p) => {
   if (p.deliver) p.deliver = null;
 };
 hooks.roomLanded = (s, p, atk) => {
-  if (atk.wipe) wipe(s, p, atk);
+  if (atk.wipe) for (let k = 0; k < (p.wipes || 1); k++) wipe(s, p, atk); // a Degausser.exe takes two
   if (atk.effect === 'replicate' && atk.spawns > 1 && !atk.extra) for (let k = 1; k < atk.spawns; k++) strikeWith(s, p, { ...atk, hit: 0, extra: true, spawns: 1 });
 };
 hooks.roomIntents = (s, columns) => {
@@ -382,7 +382,10 @@ hooks.roomCycle = (s) => {
     const cooler = rig.id !== 'cooler' && (livingParts(s).some((x) => x.id === 'cooler') || !v.parts.some((x) => x.id === 'cooler'));
     if (!v.overheated) {
       v.heat = Math.min(BODY.heat.at, (v.heat || 0) + Math.round((cooler ? BODY.heat.cooled : BODY.heat.hot) * (v.heatRate || 1)));
-      if (v.heat >= BODY.heat.at) { v.overheated = true; for (const r of rigs) if (r.attack) r.attack.due = 999; emit(s, 'phase', `The ${rigs.map((r) => r.name).join(' and the ')} OVERHEAT${rigs.length > 1 ? '' : 'S'}. Hashing stops, and each burns itself every cycle until it breaks.`, { target: rig.id }); }
+      // A Rig.exe (exe.mjs) blows instead: a 1-cycle fuse, a Zip Bomb's blast on both sides (combat.mjs), then it vents.
+      const blows = rigs.filter((r) => r.blows);
+      if (v.heat >= BODY.heat.at && blows.length) { for (const r of blows) { r.fuseAt = e.cycle + 1; r.fused = false; if (r.attack) r.attack.step = 0; } v.heat = 0; emit(s, 'phase', `The ${blows.map((r) => r.name).join(' and the ')} OVERHEAT${blows.length > 1 ? '' : 'S'} and will blow next cycle, on both sides.`, { target: blows[0].id, fuse: true }); }
+      else if (v.heat >= BODY.heat.at) { v.overheated = true; for (const r of rigs) if (r.attack) r.attack.due = 999; emit(s, 'phase', `The ${rigs.map((r) => r.name).join(' and the ')} OVERHEAT${rigs.length > 1 ? '' : 'S'}. Hashing stops, and each burns itself every cycle until it breaks.`, { target: rig.id }); }
     } else for (const r of rigs) hit(s, r, Math.max(1, Math.round(r.max * BODY.heat.burn)), { by: 'Burnout', pierce: true, server: true });
   }
   const R = ROOM_RULES.enrage;

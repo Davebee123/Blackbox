@@ -134,8 +134,12 @@ function wasted(s, p, t, why) {
 // as if it had landed.
 export function cancelAttack(s, p) {
   const e = s.encounter, a = p.attack;
-  a.due = a.tap ? Math.max(e.cycle + 1, a.volley + a.interval) : e.cycle + a.interval; // a volley cut mid-way: the rest of it goes too
-  a.tap = 0; a.volley = null;
+  // A Prism.exe (exe.mjs): a cut stops only that hit; the volley goes on as if it had landed.
+  if (p.taps && p.cutOne) { if (!a.tap) a.volley = e.cycle; a.tap = (a.tap || 0) + 1; if (a.tap < p.taps) a.due = e.cycle + 1; else { a.due = Math.max(e.cycle + 1, a.volley + a.interval); a.tap = 0; a.volley = null; } }
+  else {
+    a.due = a.tap ? Math.max(e.cycle + 1, a.volley + a.interval) : e.cycle + a.interval; // a volley cut mid-way: the rest of it goes too
+    a.tap = 0; a.volley = null;
+  }
   a.n = (a.n || 0) + 1;
   if (a.windup) a.wound = 0;
 }
