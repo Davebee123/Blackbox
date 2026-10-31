@@ -7,7 +7,7 @@ import { glyph } from './glyphs.mjs';
 import { ABILITIES } from './data.mjs';
 import { said, active, hackerLevel } from './combat.mjs';
 import { entries } from './codex.mjs';
-import { ROUTINES, LOCKED, EXCEPTION, confirmed, TARGETS, unlocked, programsOf, programName, routineOf, focusBody, bodyName, bodyDecoded, isBody, handlerRows, ramFor, ramUsed, doSkills, takesPart, HOLD, ROTATE, palette, presetsFor, presetNow, armorFirst, whenLabel, whenTip, whenIcon, whenRam, isLong, parseWhen, refName, live, preview, exceptionsOf, wholeFight } from './routines.mjs';
+import { ROUTINES, LOCKED, EXCEPTION, confirmed, TARGETS, unlocked, programsOf, programName, routineOf, focusBody, bodyName, bodyDecoded, isBody, handlerRows, ramFor, ramUsed, doSkills, takesPart, HOLD, ROTATE, palette, presetsFor, presetNow, armorFirst, whenLabel, whenTip, whenIcon, whenRam, isLong, parseWhen, refName, live, preview, exceptionsOf, wholeFight, ramParts, masteredParts, bodyRefs, benchable, benchOf, CUES } from './routines.mjs';
 
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 // A RAM cost: a small circle on the left of a chip, "2R".
@@ -46,6 +46,31 @@ function armorToggle(s, body) {
   return `<button type="button" class="rt-armor${on ? ' on' : ''}" role="switch" aria-checked="${on}" aria-label="Break ◆ first" data-command="program ${esc(body)} armor ${on ? 'off' : 'on'}" title="${esc(ARMOR_TIP)}">${cost ? ramCost(cost, on ? '' : 'off') : ''}<span class="rt-sw" aria-hidden="true"><i></i></span><b>Break <span class="rt-dia">◆</span> first</b></button>`;
 }
 
+// RAM in use against the budget, and where the budget comes from: level, Codex mastery, gear (each its own tag).
+const RAM_SRC = {
+  level: { icon: 'xp', tip: (n) => `Class level: ${n} RAM. Every routine gets it, ${ROUTINES.ram[0]} at level 1 to ${ROUTINES.ram[1]} at 50.` },
+  mastery: { icon: 'mastered', tip: (n, s, body) => `Codex mastery: ${n} RAM. Each 3 of this virus's parts you master add 1, up to ${ROUTINES.mastery.cap}, and mastering all of them adds ${ROUTINES.mastery.full} more. ${masteredParts(s, body)} of ${bodyRefs(body).length} mastered.` },
+  gear: { icon: 'ram', tip: (n) => `Gear: ${n} RAM. The RAM stat on your protocols adds to every routine, up to ${ROUTINES.gearRam}.` },
+};
+function ramMarkup(s, body, used, budget) {
+  const src = ramParts(s, body);
+  const tags = Object.entries(RAM_SRC).map(([k, x]) => `<span class="rt-src${src[k] ? '' : ' none'}" title="${esc(x.tip(src[k], s, body))}">${glyph(x.icon)}<b>${src[k]}</b></span>`).join('');
+  return `<div class="rt-ram" title="${esc(`RAM: ${used} of ${budget} in use. Each virus's routine has its own.`)}"><span class="rt-label">RAM</span><b class="rt-ramnum${used > budget ? ' over' : ''}">${used}<small> / ${budget}</small></b>${ramMeter(used, budget)}<span class="rt-srcs">${tags}</span></div>`;
+}
+// The benchmark: this routine alone against the virus's builds at your level. Its numbers once run (dimmed once the
+// routine changes).
+function benchMarkup(s, body) {
+  if (!benchable(body)) return '';
+  const b = benchOf(s, body), n = ROUTINES.bench;
+  const tip = `Benchmark: runs this routine alone against ${n} builds of the ${bodyName(body)} at your level, on a copy of your save.`;
+  const btn = `<button type="button" class="btn small rt-bench-go" data-command="program ${esc(body)} bench" title="${esc(tip)}">${glyph('clock')}Benchmark</button>`;
+  if (!b) return `<div class="rt-bench">${btn}</div>`;
+  const pct = Math.round((b.wins / (b.n || 1)) * 100);
+  const stat = (cls, icon, v, t) => `<span class="rt-bs ${cls}" title="${esc(t)}">${glyph(icon)}<b>${v}</b></span>`;
+  return `<div class="rt-bench${b.stale ? ' stale' : ''}"${b.stale ? ' title="Measured before your last change. Run it again."' : ''}>${btn}
+    ${stat('win', 'kill', `${pct}%`, `Won ${b.wins} of ${b.n}.`)}${stat('cyc', 'clock', b.cycles || '—', 'Cycles a win takes, on average.')}${stat('lost', 'signal', `−${b.lost}%`, 'Signal lost, on average. A loss loses all of it.')}${b.asked ? stat('asked', 'lock', b.asked, `${b.asked} of ${b.n} fights left a part to you (${EXCEPTION.label}). Here the rotation played it.`) : ''}</div>`;
+}
+
 // ---------- the Program tab ----------
 // Below level 5: one locked card, your level against the one it opens at.
 function lockedMarkup(s) {
@@ -82,7 +107,7 @@ export function programMarkup(s) {
   const whenOpts = [...pal.glob.filter((x) => x.open).map((x) => x.id), ...pal.muts.map((x) => x.id), ...pal.parts.flatMap((p) => p.chips.filter((c) => c.open).map((c) => c.id))].map((id) => [id, whenLabel(id)]);
   const doOpts = bar.map((x) => [x.id, `${x.key ? x.key + ' ' : ''}${skillName(s, x.id)}`]);
   const tgtOpts = Object.keys(TARGETS).map((id) => [id, TARGETS[id].label]);
-  const ramBar = `<div class="rt-ram" title="${esc(`RAM: ${used} of ${budget} in use. Each virus's routine has its own. Your class level gives it: ${ROUTINES.ram[0]} at level 1, ${ROUTINES.ram[1]} at 50.`)}"><span class="rt-label">RAM</span><b class="rt-ramnum${used > budget ? ' over' : ''}">${used}<small> / ${budget}</small></b>${ramMeter(used, budget)}</div>`;
+  const ramBar = ramMarkup(s, body, used, budget);
   const list = rows.map((r) => {
     const h = r.h, x = bar.find((b) => b.id === h.do) || { id: h.do, key: '' };
     const state = !r.fits ? 'over' : !r.open ? 'shut' : !r.onBar ? 'shut' : '';
@@ -99,7 +124,7 @@ export function programMarkup(s) {
   const add = `<li class="rt-h rt-add" data-rt-drop="add"><button type="button" class="btn small" data-command="program ${esc(body)} add" ${used + 1 > budget ? `disabled title="Out of RAM"` : 'title="A new handler: every cycle, key 1, the soonest attacker. Drop chips on it."'}>+ Handler</button><span class="rt-drop-hint">${glyph('item')}</span></li>`;
   const stack = `<section class="card rt-stack"><div class="thead"><div><h2>${esc(programName(s))} program</h2><h1>${esc(bodyName(body))}</h1></div>
       <div class="settings-grid rt-power"><button type="button" class="btn small" data-command="program ${P.on ? 'off' : 'on'}" aria-pressed="${P.on}" title="${esc(P.on ? 'On: when the timer runs out, your program moves.' : 'Off: when the timer runs out, you repeat your last hit.')}">Program</button></div></div>
-    <div class="rt-top">${ramBar}${armorToggle(s, body)}</div>${presetRow(s, body)}
+    <div class="rt-top">${ramBar}${armorToggle(s, body)}</div>${presetRow(s, body)}${benchMarkup(s, body)}
     <ol class="rt-list" aria-label="Handlers, checked top to bottom">${list}${add}${rot}</ol></section>`;
   // The chips you can drag in: yours, the fight's, then this virus's parts you've met with their chips by research tier.
   const partRow = (p) => `<li class="rt-prow"><span class="rt-pname" title="${esc(`${p.name}: research ${p.n}`)}">${glyph('part')}${esc(p.name)}</span><span class="rt-pchips">${p.chips.map((c) => whenChip(s, c.id, { open: c.open, short: true })).join('')}</span></li>`;
@@ -111,7 +136,8 @@ export function programMarkup(s) {
   const jo = P.rails.jackOut;
   const railsCard = `<section class="card rt-rails"><h2>Rails</h2>
     <div class="rt-rail"><span class="rt-label" title="On a run, crossing this Signal line jacks you out with your pack.">Auto jack-out</span><span class="rt-seg" role="group" aria-label="Auto jack-out">${ROUTINES.jackOut.map((v) => `<button type="button" class="btn small" data-command="program jackout ${v || 'off'}" aria-pressed="${jo === v}">${v ? v + '%' : 'Off'}</button>`).join('')}</span></div>
-    <div class="rt-rail"><span class="rt-label" title="A walk stops before an elite, a boss, the Resident or a vault guard, and waits for you.">Stop before danger</span><span class="settings-grid"><button type="button" class="btn small" data-command="program danger ${P.rails.danger ? 'off' : 'on'}" aria-pressed="${P.rails.danger}">${glyph('ids')}Elites, bosses</button></span></div></section>`;
+    <div class="rt-rail"><span class="rt-label" title="A walk stops before an elite, a boss, the Resident or a vault guard, and waits for you.">Stop before danger</span><span class="settings-grid"><button type="button" class="btn small" data-command="program danger ${P.rails.danger ? 'off' : 'on'}" aria-pressed="${P.rails.danger}">${glyph('ids')}Elites, bosses</button></span></div>
+    <div class="rt-rail"><span class="rt-label" title="${esc(`Cues: while your program plays, a sound when ${Object.values(CUES).map((c) => c.name.toLowerCase()).join(', ').replace(/, ([^,]*)$/, ' or $1')}. Each has its own.`)}">Cues</span><span class="settings-grid"><button type="button" class="btn small" data-command="program cues ${P.rails.cues ? 'off' : 'on'}" aria-pressed="${P.rails.cues}">${glyph('signal')}Sound</button></span></div></section>`;
   return `<div class="rt-editor" data-rt-body="${esc(body)}">${virusList(s, body)}<div class="rt-main">${stack}</div><div class="rt-side">${chips}${railsCard}</div></div>`;
 }
 
