@@ -1,4 +1,4 @@
-// The scanner (GAME_RULES.md "The scanner"): a shortwave radio in the top bar, the calm side activity with no risk.
+// The scanner (GAME_RULES.md "The scanner"): the Listening Post's radio, the calm side activity with no risk.
 // One station is on the air at a time, for 2–3 minutes, then 15–30 minutes of quiet. Tune the dial to it by the
 // S-meter and the static clearing (the dial never shows where an unlogged one is). Close in and it bites: the dial
 // zooms in, the carrier moves its kind's way, and holding it in the hold zone round the needle fills the lock. A full
@@ -7,6 +7,8 @@
 //   pirate    a tip: one hub's price for one ware moves for a while (market.mjs outsideMult, tipMult)
 //   distress  a thread starts on the server it names (threads.mjs pinDistress)
 // Radio traffic sits across the band too: transmissions you run into while sweeping, nothing to catch.
+// The post records each broadcast: the tape holds the last one until the next starts, and Play back puts it back on
+// the air once, so the trip to the post never costs you a broadcast.
 //
 // State: s.scanner (scannerOf, made on first use: the save keys on the field). The needle, the bite and the lock are
 // the view's (scanner-view.mjs), worked by tuneStep here. Times in the save are ms; the rules' clock t is seconds.
@@ -112,14 +114,34 @@ export function startBroadcast(s, at = now(), id = null) {
   if (st.kind === 'pirate') { const hubs = hubsOf(s); if (hubs.length) air.hub = hubs[Math.floor(r() * hubs.length)].faction; }
   if (st.kind === 'distress') { const xs = distressTargets(s).slice(0, 3); if (xs.length) air.loc = xs[Math.floor(r() * xs.length)].id; }
   S.air = air;
+  S.tape = { ...air }; // the post records it, over the last one
   return air;
+}
+// ---------- the tape ----------
+// The last broadcast, or null. Play back needs it uncaught, not yet played, and nothing on the air.
+export const tapeOf = (s) => s.scanner?.tape || null;
+export function playable(s, at = now()) {
+  const T = tapeOf(s);
+  if (!T) return 'Nothing on tape.';
+  if (T.caught) return 'Already logged.';
+  if (onAir(s, at)) return 'Something is on the air.';
+  if (T.played) return 'Already played back.';
+  return '';
+}
+// Puts the tape back on the air, as long as it ran, once. The schedule's next broadcast keeps its time.
+export function playBack(s, at = now()) {
+  if (playable(s, at)) return null;
+  const S = scannerOf(s), T = S.tape;
+  T.played = true;
+  S.air = { id: T.id, start: at, end: at + (T.end - T.start), tape: true, ...(T.hub ? { hub: T.hub } : {}), ...(T.loc ? { loc: T.loc } : {}) };
+  return S.air;
 }
 // The schedule, on the wall clock: a broadcast ends, the quiet rolls, the next one starts. 'start' or 'end' or null.
 export function tickScanner(s, at = now()) {
   const S = scannerOf(s);
   let out = null;
   if (S.tips.some((x) => x.until <= at)) S.tips = S.tips.filter((x) => x.until > at);
-  if (S.air && at >= S.air.end) { S.air = null; S.next = at + Math.round(between(roll(S), SCANNER.quiet) * 1000); out = 'end'; }
+  if (S.air && at >= S.air.end) { if (!S.air.tape) S.next = at + Math.round(between(roll(S), SCANNER.quiet) * 1000); S.air = null; out = 'end'; }
   if (!S.air && at >= S.next) { startBroadcast(s, at); out = 'start'; }
   return out;
 }
@@ -208,6 +230,7 @@ export function catchStation(s, id, at = now()) {
   if (!st || !catchable(s, st)) return null;
   const entry = (S.log[id] = { at, n: (S.log[id]?.n || 0) + 1 });
   S.air.caught = true;
+  if (S.tape) S.tape.caught = true; // the tape is this broadcast (live or played back): nothing left on it
   if (st.kind === 'pirate' && air.hub) {
     entry.hub = air.hub;
     S.tips = S.tips.filter((x) => !(x.hub === air.hub && x.ware === st.tip.ware));

@@ -1,18 +1,16 @@
-// The scanner (scanner.mjs, GAME_RULES.md "The scanner"): a radio button in the top bar beside your name, dim while
-// nothing is on the air and glowing amber while a broadcast is up, hidden in a fight. It opens into a small tuner in
-// the top bar (the frequency and the dial, over your name), with a tab hanging under the bar: the station with its
-// S-meter, the transcript, the lock (or what it paid) and the log counts, which open the log card. Esc or the button
-// closes it, and it closes itself when the broadcast ends. DOM and SVG only.
+// The scanner (scanner.mjs, GAME_RULES.md "The scanner") as the Listening Post: a hub-style node near HOME on the map,
+// LANTERN's, that pings amber while a broadcast is up. Connected, it's a hub terminal (an ssh banner, LANTERN's line,
+// the menu): [1] tune opens the radio in a window beside it, [2] recordings the tape, [3] log the log.
 //
-// Built once (stripMarkup) and painted in place at 20 frames a second, slot by slot, so the tooltips never lose it.
-// Its sounds (createRadio) play with Sound on, at the Effects volume.
+// The radio is built once (stripMarkup) and painted in place at 20 frames a second, slot by slot; app.js mounts it in
+// the Tune window after every redraw, so a redraw never drops it. Its sounds (createRadio) play only while it's open,
+// with Sound on, at the Effects volume; the ping when a broadcast starts plays anywhere but a fight.
 import * as SC from './scanner.mjs';
 import { glyph } from './glyphs.mjs';
 import { FACTIONS } from './factions.mjs';
 import { chainDef } from './threads.mjs';
 
 const { band: [LO, HI], fine: FINE, hold: HOLD } = SC.SCANNER;
-const SPAN = 2; // MHz the dial shows while you sweep, centred on the needle
 const esc = (x) => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 // The scanner's own icons, in the game's 16×16 stroke hand.
 const G = {
@@ -27,22 +25,21 @@ const G = {
   check: '<path d="M3 8.5 6.5 12 13 4.5"/>',
 };
 const g = (n) => `<svg class="glyph" viewBox="0 0 16 16" aria-hidden="true">${G[n]}</svg>`;
-const RADIO = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8 17 2.5"/><rect x="2.5" y="8" width="19" height="13" rx="2"/><circle cx="8" cy="14.5" r="3.4"/><path d="M14 11.5h5M14 14.5h5"/><circle cx="15" cy="18" r=".6"/><circle cx="18" cy="18" r=".6"/></svg>';
 const KIND_ORDER = ['numbers', 'pirate', 'distress'];
 const ANSWER = '\n▸ Hold the carrier in the zone until the lock fills.';
 
 // ---------- the parts, as markup ----------
-// Where a frequency sits on the dial, as a %: a window of SPAN MHz that scrolls under the needle, or the fine window
-// round the station once it bites.
-const pct = (tune, m) => (tune.hook ? (m - (tune.hook.c - FINE / 2)) / FINE * 100 : 50 + (m - tune.f) / SPAN * 100);
+// Where a frequency sits on the dial, as a %: the whole band, or the fine window round the station once it bites.
+const pct = (tune, m) => (tune.hook ? (m - (tune.hook.c - FINE / 2)) / FINE : (m - LO) / (HI - LO)) * 100;
 function ticks(tune) {
-  const [from, to, step, major] = tune.hook ? [tune.hook.c - FINE / 2, tune.hook.c + FINE / 2, 0.02, 0.1] : [Math.max(LO, tune.f - SPAN / 2), Math.min(HI, tune.f + SPAN / 2), 0.05, 0.5];
+  const [from, to, step, major, fmt] = tune.hook ? [tune.hook.c - FINE / 2, tune.hook.c + FINE / 2, 0.02, 0.1, (m) => m.toFixed(1)] : [LO, HI, 0.25, 1, (m) => String(m)];
   let out = '';
   for (let i = Math.ceil(from / step - 1e-9); i <= Math.floor(to / step + 1e-9); i++) {
     const m = +(i * step).toFixed(3), x = pct(tune, m).toFixed(2), big = Math.abs(m / major - Math.round(m / major)) < 1e-6;
-    out += `<line x1="${x}%" x2="${x}%" y1="${big ? 35 : 62}%" y2="100%"${big ? ' class="big"' : ''}/>`;
+    out += `<line x1="${x}%" x2="${x}%" y1="${big ? 27 : 32}" y2="36"${big ? ' class="big"' : ''}/>`;
+    if (big) out += `<text x="${x}%" y="48" text-anchor="middle">${fmt(m)}</text>`;
   }
-  return out;
+  return out + '<line x1="0" x2="100%" y1="36" y2="36"/>';
 }
 const NOISE = '·:.░▒ ·.:  ';
 const rng = (seed) => { let x = seed >>> 0 || 1; return () => ((x = (x * 1664525 + 1013904223) >>> 0) / 4294967296); };
@@ -58,17 +55,23 @@ function payOf(s, st) {
 }
 const payChip = (s, st) => { const p = payOf(s, st); return `<span class="sc-chip" title="${esc(`${p.text}: ${SC.payText(s, st)}`)}">${p.icon}${esc(p.text)}<small>${esc(p.sub)}</small></span>`; };
 const stationTitle = (s, st, known) => (known ? `${st.name}: ${SC.KINDS[st.kind].name}. ${SC.KINDS[st.kind].does}${SC.catchable(s, st) ? ANSWER : '\nLogged.'}` : `Unknown signal: Something is broadcasting here.${ANSWER}`);
-export function buttonTitle(s, at) {
-  return SC.onAir(s, at) ? 'Shortwave: Radio. Something is on the air.\n▸ Tune in to catch it.' : 'Shortwave: Radio. Nothing is on the air.';
-}
 function counts(s) {
   return KIND_ORDER.map((k) => { const all = SC.STATIONS.filter((x) => x.kind === k), n = all.filter((x) => SC.logged(s, x.id)).length;
-    return `<button type="button" data-scan-log title="${esc(`${SC.KINDS[k].name}s: ${n} of ${all.length} logged.\n▸ Open the log.`)}">${g(k)}<em>${n}/${all.length}</em></button>`; }).join('');
+    return `<button type="button" data-hub-opt="log" title="${esc(`${SC.KINDS[k].name}s: ${n} of ${all.length} logged.\n▸ Open the log.`)}">${g(k)}<em>${n}/${all.length}</em></button>`; }).join('');
 }
 export function logMarkup(s) {
-  return `<div class="sc-log-h">${g('antenna')}<span class="kick">Log</span><button type="button" class="sc-x" data-scan-log aria-label="Close">×</button></div>
-    ${KIND_ORDER.map((k) => { const all = SC.STATIONS.filter((x) => x.kind === k), n = all.filter((x) => SC.logged(s, x.id)).length;
-      return `<div class="sc-sec"><span class="lbl">${g(k)}${SC.KINDS[k].name}s<em>${n}/${all.length}</em></span>${all.map((x) => SC.logged(s, x.id) ? `<div class="sc-row-l"><span>${esc(x.name)}</span>${payChip(s, x)}</div>` : '<div class="sc-row-l q"><span>???</span></div>').join('')}</div>`; }).join('')}`;
+  return `<div class="sc-logcard">${KIND_ORDER.map((k) => { const all = SC.STATIONS.filter((x) => x.kind === k), n = all.filter((x) => SC.logged(s, x.id)).length;
+      return `<div class="sc-sec"><span class="lbl">${g(k)}${SC.KINDS[k].name}s<em>${n}/${all.length}</em></span>${all.map((x) => SC.logged(s, x.id) ? `<div class="sc-row-l"><span>${esc(x.name)}</span>${payChip(s, x)}</div>` : '<div class="sc-row-l q"><span>???</span></div>').join('')}</div>`; }).join('')}</div>`;
+}
+// The tape: the last broadcast, its frequency, how long ago, and Play back (or why not).
+const ago = (ms) => (ms < 60000 ? 'just now' : ms < 3600000 ? `${Math.floor(ms / 60000)}m ago` : `${Math.floor(ms / 3600000)}h ago`);
+export function tapeMarkup(s, at = Date.now()) {
+  const T = SC.tapeOf(s), st = T && SC.stationById(T.id);
+  if (!st) return '<div class="sc-tape q"><span class="sc-tape-k">On tape</span><span>nothing yet</span></div>';
+  if (SC.onAir(s, at) && !SC.onAir(s, at).tape) return '<div class="sc-tape q"><span class="sc-tape-k" title="On tape: The post records each broadcast. The next one records over it.">On tape</span><span>recording…</span></div>';
+  const why = SC.playable(s, at);
+  const tip = why ? `Play back: ${why}` : 'Play back: Puts this broadcast back on the air, once. Reel it in as usual.';
+  return `<div class="sc-tape"><span class="sc-tape-k" title="On tape: The post records each broadcast. The next one records over it.">On tape</span>${g(st.kind)}<b>${esc(st.name)}</b><span class="sc-tape-f">${st.f.toFixed(3)} MHz</span><span class="sc-tape-t">${T.start > at ? '' : ago(at - T.start)}</span>${T.caught ? `<span class="sc-ok">${g('check')}LOGGED</span>` : `<button type="button" class="btn small${why ? '' : ' primary'}" data-scan-play${why ? ' disabled' : ''} title="${esc(tip)}">Play back</button>`}</div>`;
 }
 // Every slot of the strip at t (seconds), from the save and the needle.
 export function parts(s, tune, t) {
@@ -87,7 +90,7 @@ export function parts(s, tune, t) {
     if (at < -10 || at > 110) return '';
     return on ? `<i class="sc-glow" style="left:${left}%;opacity:${(0.3 + 0.6 * p).toFixed(2)}"></i><i class="sc-carrier" style="left:${left}%;opacity:${(0.25 + 0.75 * p).toFixed(2)}"></i>` : `<i class="sc-glow old" style="left:${left}%;opacity:${(0.2 + 0.5 * p).toFixed(2)}"></i>`;
   }).join('');
-  const out = { freq: `${tune.f.toFixed(3)}<small>MHz</small>`, counts: counts(s), scale: ticks(tune), marks, needle: pct(tune, tune.f), zone: tune.hook ? [pct(tune, tune.f - HOLD), pct(tune, tune.f + HOLD)] : null, fine: !!tune.hook };
+  const out = { freq: `${tune.f.toFixed(3)}<small>MHz</small>`, counts: counts(s), tape: tapeMarkup(s, t * 1000), scale: ticks(tune), marks, needle: pct(tune, tune.f), zone: tune.hook ? [pct(tune, tune.f - HOLD), pct(tune, tune.f + HOLD)] : null, fine: !!tune.hook };
   if (st && str > 0.06) {
     const known = SC.logged(s, st.id) || str > 0.45 || (tune.hook && tune.lock > 0.4);
     const clear = !SC.catchable(s, st) ? 1 : tune.hook ? Math.min(1, 0.15 + tune.lock * 0.9) * Math.min(1, str * 1.4) : Math.min(1, str * str * 1.1);
@@ -106,103 +109,144 @@ export function parts(s, tune, t) {
   out.sound = { st, d, s: str, ts: tr.s, tr: tr.tr, clear: !st || str < 0.03 ? 0 : !SC.catchable(s, st) ? str : tune.hook ? Math.min(1, 0.15 + tune.lock * 0.9) * Math.min(1, str * 1.4) : str };
   return out;
 }
-// The tuner, whole: the frequency and the dial in the top bar, and the tab under it. What show builds, and what the
-// tests read.
+// The radio, whole: the frequency and the log counts; the dial over the band and the transcript; the station, its
+// S-meter and the lock (or what it paid); the tape under it. What mount builds, and what the tests read.
 export function stripMarkup(s, tune, t) {
   const p = parts(s, tune, t);
-  return `<span class="sc-freq" data-sc="freq">${p.freq}</span>
-    <div class="sc-dial${p.fine ? ' fine' : ''}" data-sc="dial" tabindex="0" role="slider" aria-label="Frequency" aria-valuemin="${LO}" aria-valuemax="${HI}" aria-valuenow="${tune.f}"><div class="sc-span"><svg class="sc-scale" data-sc="scale">${p.scale}</svg><div data-sc="marks">${p.marks}</div><i class="sc-zone" data-sc="zone"${p.zone ? ` style="left:${p.zone[0]}%;width:${p.zone[1] - p.zone[0]}%"` : ' hidden'}></i><i class="sc-needle" data-sc="needle" style="left:${p.needle}%"></i></div></div>
-    <div class="sc-tab" data-sc="tab"><div class="sc-who-row" data-sc="who">${p.who}</div><div class="${p.txCls}" data-sc="tx">${p.tx}</div><div class="sc-res" data-sc="res">${p.res}</div><div class="sc-counts" data-sc="counts">${p.counts}</div><div class="sc-logcard" hidden></div></div>`;
+  return `<div class="sc-l"><span class="sc-freq" data-sc="freq">${p.freq}</span><div class="sc-counts" data-sc="counts">${p.counts}</div></div>
+    <div class="sc-m"><div class="sc-dial${p.fine ? ' fine' : ''}" data-sc="dial" tabindex="0" role="slider" aria-label="Frequency" aria-valuemin="${LO}" aria-valuemax="${HI}" aria-valuenow="${tune.f}"><div class="sc-band"><svg class="sc-scale" data-sc="scale">${p.scale}</svg><div data-sc="marks">${p.marks}</div><i class="sc-zone" data-sc="zone"${p.zone ? ` style="left:${p.zone[0]}%;width:${p.zone[1] - p.zone[0]}%"` : ' hidden'}></i><i class="sc-needle" data-sc="needle" style="left:${p.needle}%"></i></div></div><div class="${p.txCls}" data-sc="tx">${p.tx}</div></div>
+    <div class="sc-r"><div class="sc-who-row" data-sc="who">${p.who}</div><div data-sc="res">${p.res}</div></div>
+    <div class="sc-foot" data-sc="tape">${p.tape}</div>`;
+}
+
+// ---------- the Listening Post ----------
+// A hub-style place near HOME, LANTERN's, separate from LANTERN's trading hub. Its terminal is a hub's (view.mjs
+// hubTerminalMarkup's classes); app.js runs it as the hub session 'post'.
+export const POST = { id: 'post', host: 'post-07', name: 'Listening Post', who: 'lantern@post-07', color: FACTIONS.lantern.color };
+const ANT = ['    \\ | /    ', '   -- o --   ', '    / | \\    ', '      |      ', '     /|\\     ', '    /_|_\\    '];
+// The map's tooltip and sub-line.
+export function postTitle(s, at = Date.now()) {
+  const a = SC.onAir(s, at);
+  return `${POST.name}: LANTERN's radio hub. Tunes in to broadcasts and records the last one.\n▸ ${a ? 'Something is on the air.' : SC.playable(s, at) ? 'Nothing is on the air.' : 'One broadcast on tape.'}`;
+}
+// The node: a hub's diamond with an antenna, pinging amber while something is on the air.
+// n: the map node ({ x, y }); cls: its selected/crowded classes; after: the reticle and the label (view.mjs's).
+export function postNodeSvg(s, n, cls = '', after = '', at = Date.now()) {
+  const a = SC.onAir(s, at);
+  return `<g class="mnode post hub${a ? ' live' : ''}${cls}" style="--fc:${POST.color}" data-select="${POST.id}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${POST.name}"><title>${esc(postTitle(s, at))}</title>${a ? '<circle r="13" class="post-ping"/>' : ''}<circle r="18" class="mhit"/><path d="M0 -13 L13 0 L0 13 L-13 0 Z" class="hub-frame"/><g class="hub-mark" transform="translate(-8 -8)">${G.antenna}</g>${after}</g>`;
+}
+export const postNodeSub = (s, at = Date.now()) => (SC.onAir(s, at) ? 'hub · on the air' : 'hub · quiet');
+// The card when you pick it on the map: the usual hub card, with Connect.
+export function postCard(s, at = Date.now()) {
+  const a = SC.onAir(s, at);
+  return `<section class="card fcard" style="--fc:${POST.color}"><h2>LANTERN · hub</h2><h1><span class="fmark-i big" style="--fc:${POST.color}">${g('antenna')}</span>${POST.name}</h1>
+    <p class="svc-line">${POST.host.toUpperCase()}${a ? ' <span class="tag" title="On the air: A broadcast is up now.">on the air</span>' : ''}</p>
+    <div class="row"><button type="button" class="btn primary" data-go="hub:post">Connect</button></div></section>`;
+}
+// LANTERN's line when you connect: dry, short, lower case.
+function postLine(s, at) {
+  const a = SC.onAir(s, at), st = a && SC.stationById(a.id);
+  if (st) return SC.catchable(s, st) ? `carrier near ${Math.floor(st.f)}. somebody is talking.` : `${st.name.toLowerCase()} again. nothing new on it.`;
+  return SC.playable(s, at) ? 'dead air. nothing on tape either.' : 'dead air. one on tape.';
+}
+// The menu: [{ key, label, meta }]. Typed numbers pick from this.
+export function postOptions(s, at = Date.now()) {
+  const n = SC.STATIONS.filter((x) => SC.logged(s, x.id)).length;
+  return [
+    { key: 'tune', label: 'Tune', meta: SC.onAir(s, at) ? '<span class="tag">on air</span>' : '' },
+    { key: 'recordings', label: 'Recordings', meta: SC.playable(s, at) ? '' : '1 on tape' },
+    { key: 'log', label: 'Log', meta: `${n}/${SC.STATIONS.length}` },
+  ];
+}
+export function postMenuLine(s, at = Date.now(), win = null) {
+  const row = (n, label, meta, attr, on = false) => `<button type="button" class="hub-row${on ? ' on' : ''}" ${attr}><span class="hn">${n}</span><span class="hl">${esc(label)}</span><span class="hm">${meta || ''}</span></button>`;
+  return { cls: 'hub-menu', html: postOptions(s, at).map((o, i) => row(i + 1, o.label.toLowerCase(), o.meta, `data-hub-opt="${o.key}"`, o.key === win)).join('') + row(0, 'disconnect', '', 'data-hub-close') };
+}
+const postMotd = (s, at) => `<pre class="hub-ascii" aria-hidden="true">${ANT.map(esc).join('\n')}</pre><span class="hub-motd"><b>${POST.name}</b>${SC.onAir(s, at) ? '<span class="tag" title="On the air: A broadcast is up now.">ON THE AIR</span>' : ''}</span>`;
+// The lines a connection prints: handshake, banner, LANTERN's line, the menu.
+export function postBanner(s, at = Date.now()) {
+  return [
+    { cls: 'you', html: `ssh ${esc(s.profile?.handle || 'rookie')}@${POST.host}` },
+    { cls: 'note', html: `Connecting to ${POST.host.toUpperCase()} … ⇄ instant` },
+    { cls: 'good', html: 'Connected.' },
+    { cls: 'hub-banner', motd: true, html: postMotd(s, at) },
+    { cls: 'hub-say', html: `<b>${POST.who}:</b> ${esc(postLine(s, at))}` },
+    postMenuLine(s, at),
+  ];
+}
+const POST_WINDOWS = {
+  tune: { title: 'Tune', body: () => '<div class="sc-slot" data-sc-root></div>' },
+  recordings: { title: 'Recordings', body: (s, at) => tapeMarkup(s, at) },
+  log: { title: 'Log', body: (s) => logMarkup(s) },
+};
+// lines: the session so far (app.js keeps it); win: the open window. The banner and the menu redraw live.
+export function postTerminalMarkup(s, lines, win, at = Date.now()) {
+  const W = POST_WINDOWS[win];
+  const term = `<section class="panel net-one hub-term" data-pane="ssh ${esc(s.profile?.handle || 'rookie')}@${POST.host}">
+    <header class="net-head"><div class="net-where"><span class="fmark-i" style="--fc:${POST.color}">${g('antenna')}</span><b>${POST.host.toUpperCase()}</b></div><span class="post-by" title="LANTERN: The voice on the numbers station.">${glyph('f-lantern')}LANTERN</span><button type="button" class="btn small" data-hub-close title="Disconnect">×</button></header>
+    <ol class="term" id="hubterm">${lines.map((l) => `<li class="${l.cls}">${l.menu ? postMenuLine(s, at, win).html : l.motd ? postMotd(s, at) : l.html}</li>`).join('')}</ol>
+  </section>`;
+  const w = W ? `<section class="card hub-win post-win${win === 'tune' ? ' tune' : ''}" data-keep="post ${W.title}"><h2>${W.title}<button type="button" class="btn small x" data-hub-opt="" title="Close">×</button></h2>${W.body(s, at)}</section>` : '';
+  return `<div class="hub-session${W ? ' with-win' : ''}" style="--fc:${POST.color}">${term}${w}</div>`;
 }
 
 // ---------- the controller ----------
 // opts: state() the save, changed() after the save changes (save and redraw), busy() true in a fight, sound() and
-// volume() the Sound setting and the Effects volume.
-export function createScanner({ state, changed = () => {}, busy = () => false, sound = () => false, volume = () => 0.8 }) {
-  let root = null, open = false, logOpen = false, closeAt = 0, last = 0, lastPaint = 0, lastSched = 0, wasAir = false, painted = {};
+// volume() the Sound setting and the Effects volume, played() after Play back.
+export function createScanner({ state, changed = () => {}, busy = () => false, sound = () => false, volume = () => 0.8, played = () => {} }) {
+  let open = false, last = 0, lastPaint = 0, lastSched = 0, painted = {};
   const tune = { f: 7.415, hook: null, lock: 0 };
   const radio = createRadio();
+  const root = typeof document === 'undefined' ? null : document.createElement('div');
   const $ = (k) => root.querySelector(`[data-sc="${k}"]`);
-  let btn = null, pill = null, tuner = null, bar = null;
-  function build(topbar) {
-    bar = topbar;
-    pill = document.createElement('div');
-    pill.className = 'sc-pill';
-    pill.innerHTML = `<button type="button" class="sc-radio" aria-pressed="false" aria-label="Shortwave">${RADIO}</button><div class="sc-tuner" hidden></div>`;
-    btn = pill.querySelector('.sc-radio');
-    tuner = root = pill.querySelector('.sc-tuner');
-    btn.addEventListener('click', toggle);
-    tuner.addEventListener('click', (e) => { if (e.target.closest('[data-scan-log]')) { logOpen = !logOpen; paintLog(); } });
-    const pager = topbar.querySelector('#pager');
-    if (pager) pager.before(pill); else topbar.append(pill);
-    paintButton(Date.now());
-  }
-  function paintButton(at) {
-    const b = btn, air = !!SC.onAir(state(), at);
-    pill.hidden = b.hidden;
-    b.classList.toggle('live', air);
-    b.setAttribute('aria-pressed', String(open));
-    const tt = buttonTitle(state(), at);
-    if (b.dataset.tt !== tt && b.title !== tt) { b.title = tt; delete b.dataset.tt; }
-  }
-  function paintLog() { const c = root.querySelector('.sc-logcard'); if (!c) return; c.hidden = !(open && logOpen); if (!c.hidden) c.innerHTML = logMarkup(state()); }
+  root?.classList.add('sc-strip');
+  if (typeof document !== 'undefined') document.addEventListener('click', (e) => { if (e.target.closest?.('[data-scan-play]')) play(); }); // in Tune and in Recordings
+  function play() { const s = state(); if (SC.playBack(s, Date.now())) { painted = {}; changed(); played(); paint(true); } }
   function wireDial() {
     const dial = $('dial');
-    // A drag turns the dial: the needle moves with the pointer, by the window's width for the dial's width. It listens on
-    // the window, so it carries on past the dial's edges.
+    const toX = (e) => { const r = dial.querySelector('.sc-band').getBoundingClientRect(), u = (e.clientX - r.left) / (r.width || 1); set(tune.hook ? tune.hook.c - FINE / 2 + u * FINE : LO + u * (HI - LO)); };
+    // A drag turns the dial; it listens on the window, so a redraw of the page under it never drops it.
     dial.addEventListener('pointerdown', (e) => {
-      e.preventDefault(); dial.focus({ preventScroll: true });
-      let x0 = e.clientX;
-      const move = (ev) => { const w = dial.getBoundingClientRect().width || 1; set(tune.f + (ev.clientX - x0) / w * (tune.hook ? FINE : SPAN)); x0 = ev.clientX; }, up = () => { removeEventListener('pointermove', move); removeEventListener('pointerup', up); removeEventListener('pointercancel', up); };
+      e.preventDefault(); dial.focus({ preventScroll: true }); toX(e);
+      const move = (ev) => toX(ev), up = () => { removeEventListener('pointermove', move); removeEventListener('pointerup', up); removeEventListener('pointercancel', up); };
       addEventListener('pointermove', move); addEventListener('pointerup', up); addEventListener('pointercancel', up);
     });
     dial.addEventListener('wheel', (e) => { e.preventDefault(); set(tune.f + Math.sign(e.deltaY || e.deltaX) * step(e)); }, { passive: false });
   }
   const step = (e) => (tune.hook ? 0.002 : 0.005) * (e.shiftKey ? 10 : 1);
   function set(f) { SC.setFreq(tune, f); paint(true); }
-  function toggle() { if (open) close(); else show(); }
   function show() {
-    open = true; closeAt = 0; painted = {};
-    tuner.innerHTML = stripMarkup(state(), tune, Date.now() / 1000);
-    tuner.hidden = false;
-    pill.classList.add('open'); bar.classList.add('sc-on');
+    open = true; painted = {};
+    root.innerHTML = stripMarkup(state(), tune, Date.now() / 1000);
     wireDial();
     $('dial').focus({ preventScroll: true });
     if (sound()) radio.wake();
-    paintButton(Date.now());
   }
   function close() {
-    if (!root) return;
-    open = false; logOpen = false; tune.hook = null; tune.lock = 0;
-    tuner.hidden = true;
-    pill.classList.remove('open'); bar.classList.remove('sc-on');
-    paintLog(); paintButton(Date.now());
-    radio.quiet();
+    if (!open) return;
+    open = false; tune.hook = null; tune.lock = 0;
+    root.remove();
+    radio.quiet(); radio.voices(null, null);
   }
   // Writes each slot whose markup changed since the last paint.
   function paint(force = false) {
+    if (!open) return;
     const now = Date.now(), t = now / 1000;
     if (!force && now - lastPaint < 50) return;
     lastPaint = now;
     const s = state(), p = parts(s, tune, t);
-    for (const k of ['freq', 'counts', 'scale', 'marks', 'who', 'res']) if (painted[k] !== p[k]) { $(k).innerHTML = p[k]; painted[k] = p[k]; }
+    for (const k of ['freq', 'counts', 'scale', 'marks', 'who', 'res', 'tape']) if (painted[k] !== p[k]) { $(k).innerHTML = p[k]; painted[k] = p[k]; }
     if (painted.tx !== p.tx) { $('tx').innerHTML = p.tx; painted.tx = p.tx; }
     $('tx').className = p.txCls;
     $('needle').style.left = p.needle + '%';
     const z = $('zone'); z.hidden = !p.zone; if (p.zone) { z.style.left = p.zone[0] + '%'; z.style.width = (p.zone[1] - p.zone[0]) + '%'; }
     $('dial').classList.toggle('fine', p.fine);
     $('dial').setAttribute('aria-valuenow', tune.f.toFixed(3));
-    // The tab hangs from the top bar's bottom edge, under the tuner, moved left if it would run past the bar's end.
-    const tab = $('tab');
-    tab.style.top = `${bar.clientHeight - pill.offsetTop}px`;
-    tab.style.left = `${Math.min(0, bar.clientWidth - 20 - pill.offsetLeft - tab.offsetWidth)}px`;
     radio.hear({ ...p.sound, f: tune.f, t, hook: tune.hook, on: sound(), volume: volume() });
   }
-  // Esc closes the log card, then the tuner, before the page's own Esc. The arrow keys tune while it's open, unless
-  // you're typing.
-  document.addEventListener('keydown', (e) => {
-    if (!open) return;
-    if (e.key === 'Escape') { e.stopPropagation(); if (logOpen) { logOpen = false; paintLog(); } else close(); return; }
+  // The arrow keys tune while it's open, unless you're typing.
+  if (typeof document !== 'undefined') document.addEventListener('keydown', (e) => {
+    if (!open || !root.isConnected) return;
     if (/input|textarea|select/i.test(e.target.tagName || '')) return;
     if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') set(tune.f - step(e));
     else if (e.key === 'ArrowRight' || e.key === 'ArrowUp') set(tune.f + step(e));
@@ -210,8 +254,12 @@ export function createScanner({ state, changed = () => {}, busy = () => false, s
     e.preventDefault();
   }, true);
   return {
-    // Puts the button (and its tuner) in the top bar beside the pager, once.
-    mount(topbar) { if (!btn && topbar) build(topbar); },
+    // Puts the radio in the Tune window's slot (after every redraw), or takes it away (null: the window is shut).
+    mount(slot) {
+      if (!slot || busy()) return close();
+      if (root.parentElement !== slot) slot.append(root);
+      if (!open) show();
+    },
     isOpen: () => open,
     // Every frame: the schedule, the reel, the paint, the sound.
     tick(now = Date.now()) {
@@ -223,30 +271,22 @@ export function createScanner({ state, changed = () => {}, busy = () => false, s
         if (ev === 'start' && sound() && !busy()) radio.cue(volume());
         if (ev) changed();
       }
-      const air = !!SC.onAir(s, now), away = busy();
-      if (!btn) return;
-      btn.hidden = away; // a fight hides it (paintButton hides the pill with it)
-      if (away && open) close();
-      paintButton(now);
-      if (open && wasAir && !air) closeAt = now + 3000; // the broadcast ended: the tuner folds away 3 s later
-      wasAir = air;
-      if (open && closeAt && now >= closeAt) close();
-      if (!open) { radio.voices(null, null); return; }
+      if (open && busy()) close();
+      if (!open) return;
       const r = SC.tuneStep(s, tune, dt, now / 1000);
       if (r === 'catch') {
         const id = tune.hook.id;
         tune.hook = null; tune.lock = 0;
         SC.catchStation(s, id, now);
         if (sound()) radio.chirp(volume());
-        if (logOpen) paintLog();
         changed();
       }
       if (r) paint(true); else paint();
       const a = SC.onAir(s, now);
       radio.voices(a ? SC.stationById(a.id) : null, tune.hook ? null : SC.trafficHeard(tune.f, now / 1000).tr);
     },
-    // For tests and screenshots: the needle, and opening it.
-    tune, show: () => { if (btn && !open) show(); }, close,
+    // For tests and screenshots: the needle.
+    tune, close, play,
   };
 }
 
