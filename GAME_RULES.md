@@ -251,8 +251,7 @@ when the server is built. Every number is a named constant in `PARTS`; `develope
 - **One lever a fight** (docs/puzzle-levers.md 5). From level 6 every wild fight (every invasion too) carries one
   **lever**, a part whose rule makes the default move the wrong one: a beat (Mimic, Decoy), a part to break last
   (Tripwire, Zip Bomb, Hotspot), a part to break first (Lockbox, Mutex, C2 Node, Packer) or twins (Mirror). A fight
-  that already brings a stranger may have none, and a server fight with an objective has none (Objectives). The
-  Cryptominer's and the Wiper's pools hold no lever yet: the Rig and the Wipe are their puzzles.
+  that already brings a stranger may have none, and a server fight with an objective has none (Objectives).
 - **An elite's clash** (docs/puzzle-levers.md 4). From level 6 an elite carries two levers whose answers pull against
   each other, and no other lever but its floor's native. A ⇄ tag names both; its tooltip says the pull and the answer.
 
@@ -293,7 +292,7 @@ A basic with no attack is its signature's **fallback**: break the signature firs
 | Worm | **Mirror** (3): 18, ◆, Splice 3 every 4 | Twinned with the Replicator: break one while the other lives and 3 cycles later it reboots at 40% with its armor, once. Break both close together. |
 | Ghostroot | **Decoy** (4): 18, ◆1, veiled | **The bent beat:** every 4 cycles from cycle 3 your command at one part goes to the part the Decoy points at (*→ Pulse Node*; the pointer moves each beat). Pointing at itself, 50% of a hit bounces back at you. Where it points shows once its ◆ is stripped or it's Tagged. Area commands and ones on you aren't bent; Sudo, Unmask and Echo Cancel go straight through. |
 | Ransomware, Worm | **Zip Bomb** (5): 14, bare | Break it and its fuse burns 2 cycles, then it goes off **both ways**: 20% of your max to you unless a ◆ or a shield takes it, and every part of the virus loses a ◆ and 20% of its max and has its move that cycle cut (no tick spent). Break it last, or early when the blast pays (*blast pays*). |
-| Ransomware, Ghostroot | **Hotspot** (6): 14, bare | A hit from your command on it turns the virus's next attack 2+ cycles away into a *Hot Charge*. Burns and helpers don't set it off. |
+| Ransomware, Ghostroot, Cryptominer | **Hotspot** (6): 14, bare | A hit from your command on it turns the virus's next attack 2+ cycles away into a *Hot Charge*. Burns and helpers don't set it off. |
 | Ransomware | **Mutex** (8): 18, ◆ | Locks the Encryptor behind a shield of a quarter of its max that takes every hit first; a broken lock comes back 4 cycles later while the Mutex lives. |
 | Worm | **C2 Node** (8): 18, ◆, Beacon 3 every 4 | Fragments gnaw half again as hard while it lives, and all drop when it breaks. |
 | Ghostroot | **Mimic** (8): 18, ◆, veiled | Every 4 cycles (announced two ahead) it copies the command you fire and turns it on you (`copyOf`): a hit for its whole direct hit; a strip strips your ◆ and shield; a burn leaves you Corrupted for its ticks at a quarter each; a debuff Throttles you; a shield or buff re-arms the Mimic with a ◆; a heal heals the virus's most damaged part; SIGINT, a stun or a utility Hangs you (your next command doesn't fire); hold copies nothing. A copy under a tenth of your max is a read. Its chip shows what your selected command would copy. |
@@ -302,7 +301,7 @@ A basic with no attack is its signature's **fallback**: break the signature firs
 | Worm, Cryptominer | **Backlog** (12): 20, ◆, Ack 3 every 4 | When its Ack lands, the skill you fired that cycle cools 2 cycles longer. |
 | Ransomware, Wiper | **Limiter** (13): 24, ◆, Ping 3 every 3 | No single hit takes more than 20% of its max. Many small hits answer it. |
 | Worm, Ghostroot | **Spare** (14): 2, ◆◆◆ | Sleeps off the timeline under 3 ◆. When the signature breaks, it boots 2 cycles later at 60% of the signature's max, with its attack, and drops its ◆. Pay its ◆ while it sleeps or its Integrity once it boots. |
-| Ransomware | **Tripwire** (16): 18, ◆, Ping 3 every 3 | Break it while the others stand and they go **loud** for the fight: 25% more damage and every attack a cycle sooner, but 40% more damage taken and all their ◆ gone. Trip it when you can finish them fast (*loud wins*), else break it last. Throttle quiets a loud part. |
+| Ransomware, Wiper | **Tripwire** (16): 18, ◆, Ping 3 every 3 | Break it while the others stand and they go **loud** for the fight: 25% more damage and every attack a cycle sooner, but 40% more damage taken and all their ◆ gone. Trip it when you can finish them fast (*loud wins*), else break it last. Throttle quiets a loud part. |
 | Ransomware, Wiper | **Scraper** (19): 22, ◆, Scrape 4 every 4 | When its Scrape lands it takes the buffs you put up before it: your ◆, your shield after its hit, your timed buffs. Buff after it lands. |
 | Ghostroot | **Packer** (20): 20, ◆ | While it stands, the virus's rolled parts show as *Packed part* (attacks named ???) and its rules as ??? chips. A scan before you engage, or breaking it, unpacks them. |
 | Ghostroot, Wiper | **Bad Block** (21): 22, ◆, Bad Write 4 every 4 | When it lands your next heals lose up to 10% of your max (*Cracked*). Purge, Scrub, Rollback, Rotate Keys and Vent clear it. |

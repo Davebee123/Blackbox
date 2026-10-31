@@ -469,7 +469,7 @@ export const FAMILIES = {
     summary: 'The Rig\'s Hash lands every 2 cycles, dealing more each time, and the Rig heats up every cycle. At 100 heat it overheats, stops hashing and burns itself until it breaks. Hitting it across a tick vents it.',
     core: ['surge', 'hash'],
     basic: [['cooler', 1], ['strobe', 1], ['accumulator', 1]],
-    third: ['idletimer', 'backlog', 'damper'], // the Idle Timer from 9, the Backlog from 12, the Damper from 23 (P4 adds the Reactor, Monitor and Reservoir)
+    third: ['hotspot', 'idletimer', 'backlog', 'damper'], // the Hotspot (its lever) from 6, the Idle Timer from 9, the Backlog from 12, the Damper from 23 (P4 adds the Reactor, Monitor and Reservoir)
     parts: [
       { id: 'pulse', name: 'Pulse Node', integrity: 34, armor: 1, loot: 'Pulse Kernel', attack: { name: 'Surge', effect: 'damage', amount: 12, interval: 4, first: 3 } },
       { id: 'rig', name: 'Rig', integrity: 40, armor: 1, loot: 'ASIC Die', special: true, hash: true, attack: { name: 'Hash', effect: 'damage', amount: 5, interval: 2, first: 2, ramp: 1 } },
@@ -483,7 +483,7 @@ export const FAMILIES = {
     summary: 'The Degausser\'s Wipe deals damage and takes your strongest ready key off your bar for 3 cycles. A wiped key can\'t be pressed, and its cooldown stands still. Key 1 and SIGINT are never wiped.',
     core: ['surge', 'wipe'],
     basic: [['accumulator', 1], ['repeater', 1], ['buffer', 1]],
-    third: ['limiter', 'scraper', 'badblock', 'damper', 'coldstore'], // the Limiter from 13, the Scraper from 19, the Bad Block from 21, the Damper from 23, the Cold Store from 24 (P4 adds the Latch and Bleeder)
+    third: ['limiter', 'tripwire', 'scraper', 'badblock', 'damper', 'coldstore'], // the Limiter from 13, the Tripwire (its lever) from 16, the Scraper from 19, the Bad Block from 21, the Damper from 23, the Cold Store from 24 (P4 adds the Latch and Bleeder)
     parts: [
       // The Eraser is its Pulse Node: the plain attacker every basic is matched to.
       { id: 'pulse', name: 'Eraser', integrity: 34, armor: 1, loot: 'Zero Block', attack: { name: 'Zero', effect: 'damage', amount: 12, interval: 4, first: 3 } },

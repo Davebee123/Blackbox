@@ -18,8 +18,9 @@ in the backlog.
 
 ## P3: two new families (built)
 
-Built as below, with these choices: the Wiper's Pulse Node is its Eraser; neither pool holds a lever yet; a random
-virus with no family named stays one of the first three; a Hash climbs like encryption (the run's steps skip it).
+Built as below, with these choices: the Wiper's Pulse Node is its Eraser; a lever each (the Cryptominer the Hotspot,
+the Wiper the Tripwire); a random virus with no family named stays one of the first three; a Hash climbs like
+encryption (the run's steps skip it).
 
 The rooms engine's bodies (`families.mjs` `ROOM_FAMILIES`) move into `FAMILIES`, so the rooms playtest and the game
 read one definition.

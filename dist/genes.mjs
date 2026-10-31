@@ -99,7 +99,7 @@ export const GENES = {
     does: 'While the Mutex stands, its partner wears a shield of 25% of the partner\'s max Integrity. A broken shield returns 4 cycles later.', telegraph: 'A lock tag on the partner, then a countdown to the relock.', answer: 'Break the Mutex, or burst through one lock. Lockpick, Thermal Throttle and Sudo get through it.',
     implicit: 'Locks take more from you.', carried: (p) => !!p.lock, bot: { focus: 'first' }, counter: 'limiter',
     parts: { ransomware: { id: 'mutex', name: 'Mutex', integrity: 18, armor: 1, loot: 'Mutex Handle', lock: 'encryptor', from: 8, pool: 'third', sig: true } } },
-  tripwire: { name: 'Tripwire', adj: 'Wired', lever: 'last', cat: 'part', axis: 'order', role: 'primary', cost: 2, opens: 16, decode: 'part', suits: 'Ransomware, TOLLGATE',
+  tripwire: { name: 'Tripwire', adj: 'Wired', lever: 'last', cat: 'part', axis: 'order', role: 'primary', cost: 2, opens: 16, decode: 'part', suits: 'Ransomware, the Wiper, TOLLGATE',
     does: 'When broken while other parts stand, the others go loud for the rest of the fight, both ways. Loud parts deal 25% more damage and attack 1 cycle sooner, and they take 40% more damage and drop their ◆.', telegraph: 'A tripwire tag. When your move would break it, the others\' attacks at their loud numbers and their ◆ falling.', answer: 'Break it last, or first when you can finish the rest before their attacks add up. Quiet Wire, Logic Bomb and Sudo keep it quiet, and Throttle silences a loud part.',
     implicit: 'Loud parts hit you less.', carried: (p) => !!p.deadman, bot: { focus: 'last' }, counter: 'zipbomb',
     parts: { ransomware: { id: 'tripwire', name: 'Tripwire', integrity: 18, armor: 1, loot: 'Trip Coil', deadman: true, from: 16, pool: 'third', attack: { name: 'Ping', effect: 'damage', amount: 3, interval: 3, first: 3 } } } },
@@ -125,7 +125,7 @@ export const GENES = {
     does: 'When broken, lights a 2-cycle fuse. The blast deals 20% of your max health to you. It also takes 20% of each virus part\'s own max and a ◆ from each. A shield or ◆ absorbs your share. Ending the fight puts the fuse out.', telegraph: 'A fuse chip on its row that counts down 2, 1, and the blast\'s bite as a ghost on every other bar.', answer: 'Break it last, or early when its blast breaks a part and a shield or ◆ is up when the fuse runs out.',
     implicit: 'Fuses on you deal less.', carried: (p) => !!p.fuse, bot: { focus: 'last' },
     parts: { ransomware: { id: 'zipbomb', plan: 1, name: 'Zip Bomb', integrity: 14, armor: 0, loot: 'Fuse Wire', fuse: true, from: 5, pool: 'third' }, worm: { id: 'zipbomb', plan: 1, name: 'Zip Bomb', integrity: 14, armor: 0, loot: 'Fuse Wire', fuse: true, from: 5, pool: 'third' } } },
-  hotspot: { name: 'Hotspot', adj: 'Heated', lever: 'last', cat: 'part', axis: 'burst', role: 'amplifier', cost: 1, opens: 6, floor: 1, decode: 'part', suits: 'Ransomware, Ghostroot',
+  hotspot: { name: 'Hotspot', adj: 'Heated', lever: 'last', cat: 'part', axis: 'burst', role: 'amplifier', cost: 1, opens: 6, floor: 1, decode: 'part', suits: 'Ransomware, Ghostroot, the Cryptominer',
     does: 'When your command hits it, the virus\'s next attack 2 or more cycles away becomes a charge. Burns and helpers do not set it off.', telegraph: 'An amber glow on its row, then a charge chip on the attack it powers up.', answer: 'Hit it with burns and helpers. Command hits are safe when the charge lands on a part you can cut.',
     implicit: 'Charges a hit of yours sets off deal less.', carried: (p) => !!p.hotspot, bot: { quiet: 'part' },
     parts: { ransomware: { id: 'hotspot', plan: 1, name: 'Hotspot', integrity: 14, armor: 0, loot: 'Thermal Pad', hotspot: true, from: 6, pool: 'third' }, ghostroot: { id: 'hotspot', plan: 1, name: 'Hotspot', integrity: 14, armor: 0, loot: 'Thermal Pad', hotspot: true, from: 6, pool: 'third' } } },
@@ -335,8 +335,8 @@ export const GENES = {
 };
 for (const [id, g] of Object.entries(GENES)) { g.id = id; g.beat ||= null; g.bot ||= null; g.lever ||= null; }
 // The parts plan's P3 (docs/parts-plan.md): the Cryptominer and the Wiper carry these natives, as their first family
-// has them (unveiled). The Damper is theirs alone.
-const CARRY = { cryptominer: ['idletimer', 'backlog', 'damper'], wiper: ['limiter', 'scraper', 'badblock', 'damper', 'coldstore'] };
+// has them (unveiled), and a lever each (the Hotspot, the Tripwire). The Damper is theirs alone.
+const CARRY = { cryptominer: ['hotspot', 'idletimer', 'backlog', 'damper'], wiper: ['limiter', 'tripwire', 'scraper', 'badblock', 'damper', 'coldstore'] };
 for (const [fam, ids] of Object.entries(CARRY)) for (const id of ids) { const { veiled, ...spec } = Object.values(GENES[id].parts)[0]; GENES[id].parts[fam] = spec; }
 delete GENES.damper.parts.worm;
 export const GENE_IDS = Object.keys(GENES);
