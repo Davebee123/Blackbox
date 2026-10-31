@@ -2443,6 +2443,12 @@ Developer commands work only in tests, playtest pages, a test bench and with `?d
   real one. `bench <subclass|class> <level>` makes a ready character (talents, blue gear with its subclass's stats, its
   rotation, floors reached); `bench list`, `bench delete <name>`. A **BENCH** tag sits on the top bar, and a **Dev**
   drawer over the prompt holds buttons that type the common developer commands.
+- **The Arena** (`arena.mjs`, the Dev drawer; `?bench=arena` opens on it): every fightable thing, read from the data
+  tables and grouped by kind (families, strains by wave and mutated, ICE, parts and .exe builds, elites by clash,
+  Residents, solo, lair and crew bosses, floor holders, rivals' fights, invaders), with its level. Fight types
+  `developer fight <kind>:<id> [level] [seed] [leaning=…] [objective=…]`: a home fight, at the level it opens if
+  empty (never under yours; a part's at its own, a rival's one over you). A rival's later fights bring its counter, read
+  from your win in the one before. **Again** (`developer fight again`) restarts the last pick; ♥ refills first.
 - **Playtest pages:** `?playtest=rooms` (a throwaway server of rooms, its clocks ten times as fast), `?playtest=<strain
   or fixture>`, `?playtest=part:<id>` (`part:<id>.exe` for its .exe build), `?playtest=fx` (every ability effect, tier and break finisher, fired from its key).
 - `developer scene <id>` plays a transmission again. `developer levelup preview`, `developer thread preview`, `developer pager fill`, `developer parts`, `developer
