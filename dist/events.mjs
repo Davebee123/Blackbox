@@ -20,6 +20,14 @@
 //   lantern   after 3 couriers you intercepted: LANTERN's own courier (an Escort in D3).
 //   zero      15 kills of an outbreak's family during it: its source, an elite; kill it and the outbreak ends.
 //
+// Blips (docs/director.md section 3): small, quick, cheap, about every 5 minutes logged on, beside the events (never in
+// their slots), on their own dice. A spark on the map, a quiet pager line. Missing one costs nothing.
+//   cache     a stray cache in a room you've cleared on one of your servers: walk in for half a vault's credits and code.
+//   flicker   one ware at one hub ±15% for 5 minutes (the hub's ▲/▼ chip).
+//   rumour    names where the next event lands, and it's true (deal keeps it).
+//   sighting  a ★ rare spawn due in a named room on one of your servers within minutes.
+// The history: the last 20 things the director dealt and how each ended (on s.director.history).
+//
 // Your network's signature (network.mjs) leans the deck: its two favoured cards come up more often, and the
 // families of couriers, bounties and outbreaks lean toward its own.
 //
@@ -36,6 +44,7 @@ import { FACTION_FAMILY } from './hubs.mjs';
 import { addFilter, rollFilter } from './filters.mjs';
 import { invasionsLive, scoutNext, SCOUTED } from './invasion.mjs';
 import { gainPart, pieceOf } from './faction-gear.mjs';
+import { addrsOf } from './address.mjs';
 
 export const DIRECTOR = {
   from: 3, // class level the director starts dealing at
@@ -374,10 +383,11 @@ export function tickEvents(s, dt) {
     ev.left -= dt;
     const c = CARDS[ev.card];
     if (ev.left > 0) c.tick?.(s, ev); // a hunt hops
-    else { const won = c.timeout?.(s, ev, placeName(s, ev.loc)); end(s, ev, won || (c.gone ? c.gone(ev, placeName(s, ev.loc)) : c.fight ? `${ev.name} left ${placeName(s, ev.loc)}.` : null), won ? 'world-event-won' : 'world-event-end'); }
+    else { const won = c.timeout?.(s, ev, placeName(s, ev.loc)); end(s, ev, won || (c.gone ? c.gone(ev, placeName(s, ev.loc)) : c.fight ? `${ev.name} left ${placeName(s, ev.loc)}.` : null), won ? 'world-event-won' : 'world-event-end', won ? 'won' : 'gone'); }
   }
   dealDue(s); // and into the slots the cards just freed
   if (hackerLevel(s) < DIRECTOR.from) return;
+  tickBlips(s, dt);
   if (d.next == null) d.next = between(s, DIRECTOR.firstMs);
   d.next -= dt;
   if (d.next > 0) return;
@@ -385,23 +395,43 @@ export function tickEvents(s, dt) {
   if (eventsOf(s).length < DIRECTOR.max) deal(s);
 }
 
-// Deal a card (or the one asked for). Returns the event, or null when nothing fits.
-export function deal(s, card = null) {
+// Pick a card and its server (or the one asked for): { id, loc }, or null when nothing fits. located: only a card that
+// lands on a server (a rumour names it).
+function choose(s, card = null, located = false) {
   const d = (s.director ||= { next: null, n: 0, last: null });
   const up = new Set(eventsOf(s).map((e) => e.card));
-  const ids = (card ? [card] : Object.keys(CARDS).filter((k) => k !== d.last)).filter((k) => CARDS[k] && !up.has(k) && CARDS[k].where(s).length);
+  const spotsOf = (k) => CARDS[k].where(s).filter((l) => (located ? !!l : true) && (!l || !eventsAt(s, l.id).length));
+  const ids = (card ? [card] : Object.keys(CARDS).filter((k) => k !== d.last)).filter((k) => CARDS[k] && !up.has(k) && (located ? CARDS[k].fight && !CARDS[k].home : true) && (located ? spotsOf(k).length : CARDS[k].where(s).length));
   if (!ids.length) return null;
   const w = (k) => CARDS[k].weight * eventMult(s, k); // your network's favoured cards (network.mjs)
   let r = roll(s) * ids.reduce((n, k) => n + w(k), 0), id = ids[0];
   for (const k of ids) { r -= w(k); if (r < 0) { id = k; break; } }
-  const c = CARDS[id], spots = c.where(s).filter((l) => !l || !eventsAt(s, l.id).length);
+  const spots = spotsOf(id);
   if (!spots.length) return null;
-  const loc = pick(s, spots);
+  return { id, loc: pick(s, spots) };
+}
+// A rumour's card and server, if it still fits (its card not up, its server still free): what the deck deals next.
+function rumoured(s) {
+  const r = s.director?.rumour;
+  if (!r || !CARDS[r.card] || eventsOf(s).some((e) => e.card === r.card)) return null;
+  const loc = CARDS[r.card].where(s).find((l) => l && l.id === r.loc && !eventsAt(s, l.id).length);
+  return loc ? { id: r.card, loc } : null;
+}
+// Deal a card (or the one asked for). Returns the event, or null when nothing fits.
+export function deal(s, card = null) {
+  const d = (s.director ||= { next: null, n: 0, last: null });
+  const told = card ? null : rumoured(s), rumour = card ? null : d.rumour;
+  if (!card) d.rumour = null;
+  const got = told || choose(s, card);
+  if (!got) return null;
+  const { id, loc } = got, c = CARDS[id];
   const ev = { id: ++d.n, card: id, loc: loc?.id || null, left: c.ms, seed: (d.n * 7919 + (loc?.seed || 1) * 31) >>> 0, ...c.make(s, loc) };
   c.start?.(s, ev, loc);
   d.last = id;
   noteEvent(s, id); // your network's favoured cards show on its card once each has come up twice (network.mjs)
   if (c.ms && id !== 'leak') eventsOf(s).push(ev);
+  if (told) noteHistory(s, rumour.blip, 'true');
+  noteHistory(s, ev.id, null, { k: id, name: ev.name || c.name, loc: ev.loc, how: id === 'leak' ? 'done' : 'up' });
   emit(s, 'world-event', eventText(s, ev), { card: id, event: c.ms && id !== 'leak' ? ev.id : null, location: ev.loc, ...(ev.hub ? { hub: ev.hub, from: FACTIONS[ev.hub].short } : {}), ...(ev.hunter ? { from: FACTIONS[ev.hunter].short } : {}) });
   return ev;
 }
@@ -411,6 +441,7 @@ export function deal(s, card = null) {
 const wire = (ev) => ({ name: ev.name, ...(ev.family ? { family: ev.family } : {}), ...(ev.hub ? { hub: ev.hub, ware: ev.ware } : {}), ...(ev.card === 'feud' ? { sides: ev.sides, winner: (ev.bar ?? 0.5) > 0.5 ? ev.sides[0] : (ev.bar ?? 0.5) < 0.5 ? ev.sides[1] : null } : {}) });
 function end(s, ev, message, type = 'world-event-end', how = 'gone') {
   s.events = eventsOf(s).filter((e) => e !== ev);
+  noteHistory(s, ev.id, how);
   if (message) emit(s, type, message, { card: ev.card, location: ev.loc, ...wire(ev) });
   chainAfter(s, ev, how);
 }
@@ -471,6 +502,7 @@ export function dealChain(s, f) {
   const ev = { id: ++d.n, card: f.kind, loc: loc?.id || null, left: c.ms, seed: (d.n * 7919 + (loc?.seed || 1) * 31) >>> 0, cause: f.cause, ...c.make(s, loc, f) };
   if (f.kind === 'lantern') d.couriers = 0; // the count starts over once LANTERN's offer is dealt
   eventsOf(s).push(ev);
+  noteHistory(s, ev.id, null, { k: f.kind, name: ev.name || c.name, loc: ev.loc, how: 'up', cause: causeText(s, f.cause) });
   emit(s, 'world-event', eventText(s, ev), { card: f.kind, event: ev.id, location: ev.loc, from: c.from(ev), chain: causeText(s, f.cause) });
   return ev;
 }
@@ -508,7 +540,7 @@ export function eventCommand(s, text) {
   if (b) { // a darknet listing (network.mjs)
     const ev = eventById(s, b[1]);
     if (!ev || ev.card !== 'darknet') return warn(s, 'That listing is gone.');
-    if (darknetBuy(s, ev)) end(s, ev, null);
+    if (darknetBuy(s, ev)) end(s, ev, null, 'world-event-end', 'won');
     return;
   }
   const m = text.match(/^event fight (\d+)(?: (\w+))?$/);
@@ -539,4 +571,151 @@ export function eventWon(s, e) {
   const said = CARDS[ev.card].won?.(s, ev);
   if (!CARDS[ev.card].again || ev.over) end(s, ev, null, 'world-event-end', 'won'); // a feud stays up for the next runner until it's won
   if (said) emit(s, 'world-event-won', said, { card: ev.card, location: ev.loc, ...(CARDS[ev.card].again && !ev.over ? { name: ev.name } : wire(ev)) });
+}
+
+// ---------- blips (docs/director.md section 3) ----------
+// One every everyMs of logged-on time, max up at once, each up for its own few minutes. CACHE: half a vault's credits
+// and code (a courier's credits halved, vaultCode halved). FLICKER: a hub's ware ×(1 ± pct). SIGHTING: due within due.
+export const BLIP = {
+  everyMs: [4 * 60000, 6 * 60000], max: 2,
+  cache: { ms: [3 * 60000, 6 * 60000] },
+  flicker: { ms: 5 * 60000, pct: 0.15 },
+  rumour: { ms: [2 * 60000, 4 * 60000] },
+  sighting: { ms: [4 * 60000, 8 * 60000], due: [60000, 4 * 60000] },
+};
+export const HISTORY = { keep: 20 };
+// The blips' own dice (as the events' roll, on its own stream), so a blip never shifts what the deck deals.
+function broll(s) {
+  const d = s.director;
+  let t = (d.br = ((d.br ?? ((s.seed || 1) ^ 0x2f6b9d1)) + 0x6d2b79f5) >>> 0);
+  t = Math.imul(t ^ (t >>> 15), t | 1);
+  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
+const bpick = (s, xs) => xs[Math.floor(broll(s) * xs.length)];
+const bspan = (s, x) => (Array.isArray(x) ? x[0] + Math.floor(broll(s) * (x[1] - x[0])) : x);
+const wall = () => hooks.now?.() ?? Date.now();
+export const blipsOf = (s) => ((s.director ||= { next: null, n: 0, last: null }).blips ||= []);
+export const historyOf = (s) => ((s.director ||= { next: null, n: 0, last: null }).history ||= []);
+// Your servers' rooms (netrooms.mjs hands the rooms engine over as hooks.roomsFP): a traced server you've walked, not the one you're in.
+const roomSpots = (s, test) => {
+  const FP = hooks.roomsFP;
+  if (!FP) return [];
+  return places(s).filter((l) => l.floorplan?.type === 'server' && !l.zone && !(s.run && s.run.loc === l.id)).flatMap((l) => Object.values(l.floorplan.graph.rooms).filter((r) => test(l.floorplan, r)).map((r) => ({ loc: l, room: r })));
+};
+const taken = (s, loc, room) => blipsOf(s).some((b) => b.loc === loc && b.room === room);
+const roomName = (s, b) => { const l = (s.locations || []).find((x) => x.id === b.loc), r = l?.floorplan?.graph.rooms[b.room]; return r ? `${r.path} (${addrsOf(l.floorplan.graph)[r.id] || '?'})` : 'a room'; };
+// Run fn with the rooms engine looking at R (its clocks read s.rooms), then put back what was there.
+const withRooms = (s, R, fn) => { const was = s.rooms; s.rooms = R; try { return fn(); } finally { s.rooms = was; } };
+const RUMOUR = {
+  courier: (w) => `Couriers are moving through ${w}.`,
+  bounty: (w) => `Halcyon is asking about something loose near ${w}.`,
+  choir: (w) => `Someone heard singing on ${w}.`,
+  hunt: (w) => `Hunters are watching ${w}.`,
+  feud: (w) => `Runners are gathering on ${w}.`,
+};
+
+export const BLIPS = {
+  cache: {
+    name: 'Stray cache', icon: 'crate', label: 'Cache',
+    where: (s) => roomSpots(s, (R, r) => R.cleared[r.id] && ['process', 'elite', 'guard', 'junction', 'rest'].includes(r.kind)).filter((x) => !taken(s, x.loc.id, x.room.id)),
+    make: (s, { loc, room }) => { const L = loc.floorplan.level || loc.level || hackerLevel(s); return { loc: loc.id, room: room.id, level: L, credits: Math.round(courierPay(L) / 2), code: Math.ceil(vaultCode(L) / 2), material: loc.floorplan.code || codeOf(loc.family) || 'cipher' }; },
+    text: (s, b) => `A stray cache sits in ${roomName(s, b)} on ${placeName(s, b.loc)}: ${b.credits} credits and ${b.code} code. Walk in before someone else takes it.`,
+    gone: (s, b) => `Someone took the stray cache on ${placeName(s, b.loc)}.`,
+  },
+  flicker: {
+    name: 'Price flicker', icon: 'sync', label: 'Price',
+    where: (s) => markets(s).flatMap((hub) => SHOCK.wares.filter((ware) => shockMult(s, hub, ware) === 1).map((ware) => ({ hub, ware }))),
+    make: (s, { hub, ware }) => ({ hub, ware, mult: broll(s) < 0.5 ? 1 + BLIP.flicker.pct : 1 - BLIP.flicker.pct }),
+    text: (s, b) => `${FACTIONS[b.hub].short} ${b.mult > 1 ? 'pays' : 'charges'} ${Math.round(Math.abs(b.mult - 1) * 100)}% ${b.mult > 1 ? 'more' : 'less'} for ${WARE_NAME[b.ware]} for ${BLIP.flicker.ms / 60000} minutes.`,
+  },
+  rumour: {
+    name: 'Rumour', icon: 'signal', label: 'Rumour',
+    where: (s) => (!s.director.rumour && eventsOf(s).length < DIRECTOR.max ? [true] : []),
+    // The next event, picked now on the deck's own dice and kept: deal() honours it while it still fits.
+    make: (s) => { const got = choose(s, null, true); return got && RUMOUR[got.id] ? { card: got.id, loc: got.loc.id } : null; },
+    start: (s, b) => { s.director.rumour = { card: b.card, loc: b.loc, blip: b.id }; },
+    text: (s, b) => RUMOUR[b.card](placeName(s, b.loc)),
+  },
+  sighting: {
+    name: 'Sighting', icon: 'target', label: 'Sighting',
+    where: (s) => roomSpots(s, (R, r) => R.cleared[r.id] && ['process', 'elite'].includes(r.kind) && !R.rare[r.id]).filter((x) => !taken(s, x.loc.id, x.room.id)),
+    // The room's next virus is a ★ rare spawn, up within due (sooner than its own respawn, never later).
+    make: (s, { loc, room }) => {
+      const R = loc.floorplan, FP = hooks.roomsFP, due = bspan(s, BLIP.sighting.due), now = wall();
+      R.rare[room.id] = true;
+      const back = withRooms(s, R, () => (FP.isUp(s, room, now) ? null : FP.backAt(s, room)));
+      if (back != null && back > now + due) R.down[room.id] = now + due - withRooms(s, R, () => FP.respawnMs(s, room));
+      return { loc: loc.id, room: room.id, spawns: R.spawns[room.id] || 0, at: back == null ? now : Math.min(back, now + due) };
+    },
+    // Not met in time: it moves on (the room's next virus is an ordinary one again), unless you're in its room.
+    end: (s, b) => { const l = (s.locations || []).find((x) => x.id === b.loc), R = l?.floorplan; if (R && !(s.run?.loc === b.loc && R.at === b.room)) R.rare[b.room] = false; },
+    gone: (s, b) => `The rare spawn on ${placeName(s, b.loc)} moved on.`,
+    text: (s, b) => { const m = Math.ceil((b.at - wall()) / 60000); return `A ★ rare spawn ${m > 0 ? `is due in ${roomName(s, b)} on ${placeName(s, b.loc)} within ${m} minute${m > 1 ? 's' : ''}` : `is up in ${roomName(s, b)} on ${placeName(s, b.loc)}`}.`; },
+  },
+};
+export const blipText = (s, b) => BLIPS[b.kind].text(s, b);
+// A price flicker on this hub's ware (market.mjs, through shockMult): ×(1 ± pct), or 1.
+export const flickerMult = (s, f, w) => blipsOf(s).find((b) => b.kind === 'flicker' && b.hub === f && b.ware === w)?.mult ?? 1;
+// A flicker as the hub's ▲/▼ chip (view.mjs shows it like a market shock).
+export const flickerOf = (s, f) => { const b = blipsOf(s).find((x) => x.kind === 'flicker' && x.hub === f); return b ? { mult: b.mult, ware: b.ware, title: `Price flicker: ${blipText(s, b)} ${Math.max(1, Math.ceil(b.left / 60000))} min left.` } : null; };
+export const blipsAt = (s, id) => blipsOf(s).filter((b) => b.loc === id);
+
+function tickBlips(s, dt) {
+  const d = s.director;
+  for (const b of [...blipsOf(s)]) {
+    b.left -= dt;
+    if (b.kind === 'sighting') { const R = (s.locations || []).find((l) => l.id === b.loc)?.floorplan; if (!R || (R.spawns[b.room] || 0) > b.spawns) { endBlip(s, b, 'taken'); continue; } }
+    if (b.kind === 'rumour' && d.rumour?.blip !== b.id) { endBlip(s, b, null); continue; } // the event it named is dealt: its line goes
+    if (b.left <= 0) { BLIPS[b.kind].end?.(s, b); endBlip(s, b, b.kind === 'rumour' ? null : 'missed', BLIPS[b.kind].gone?.(s, b)); }
+  }
+  if (d.blipNext == null) d.blipNext = bspan(s, BLIP.everyMs);
+  d.blipNext -= dt;
+  if (d.blipNext > 0) return;
+  d.blipNext = bspan(s, BLIP.everyMs);
+  if (blipsOf(s).length < BLIP.max) dealBlip(s);
+}
+// Deal a blip (or the kind asked for), never the same kind twice in a row. Returns it, or null when nothing fits.
+export function dealBlip(s, kind = null) {
+  const d = (s.director ||= { next: null, n: 0, last: null });
+  const up = new Set(blipsOf(s).map((b) => b.kind));
+  const kinds = (kind ? [kind] : Object.keys(BLIPS).filter((k) => k !== d.lastBlip)).filter((k) => BLIPS[k] && !up.has(k));
+  for (const k of [...kinds].sort(() => broll(s) - 0.5)) {
+    const c = BLIPS[k], spots = c.where(s);
+    if (!spots.length) continue;
+    const data = c.make(s, bpick(s, spots));
+    if (!data) continue;
+    const ms = bspan(s, BLIP[k].ms), b = { id: `b${(d.bn = (d.bn || 0) + 1)}`, kind: k, left: ms, ms, ...data };
+    c.start?.(s, b);
+    blipsOf(s).push(b);
+    d.lastBlip = k;
+    noteHistory(s, b.id, null, { k, blip: true, name: c.name, loc: b.loc || null, how: 'up' });
+    emit(s, 'blip', blipText(s, b), { blip: b.id, kind: k, location: b.loc || null, ...(b.hub ? { hub: b.hub } : {}) });
+    return b;
+  }
+  return null;
+}
+function endBlip(s, b, how, message = null) {
+  s.director.blips = blipsOf(s).filter((x) => x !== b);
+  if (how) noteHistory(s, b.id, how);
+  if (message) emit(s, 'blip-end', message, { blip: b.id, kind: b.kind, location: b.loc || null });
+}
+// You stand in a room (netrooms.mjs 'stood'): a stray cache there goes in your pack.
+export function blipStood(s, loc, room) {
+  const b = blipsOf(s).find((x) => x.kind === 'cache' && x.loc === loc.id && x.room === room.id);
+  if (!b || !s.run?.pack) return;
+  s.run.pack.push({ path: `${room.path}/#stray-${b.id}`, name: 'cache.dat', kind: 'credits', amount: b.credits }, { path: `${room.path}/#stray-code-${b.id}`, name: `${b.material}.code`, kind: 'code', material: b.material, amount: b.code });
+  endBlip(s, b, 'taken');
+  emit(s, 'rooms-good', `You take the stray cache: ${b.credits} credits and ${b.code} ${MATERIALS[b.material]?.name || 'code'}.`, { blip: b.id });
+}
+// The marks on a server's room map (netrooms.mjs 'blips'): { roomId: { kind, text } }.
+export const blipRooms = (s, loc) => Object.fromEntries(blipsOf(s).filter((b) => loc && b.loc === loc.id && b.room).map((b) => [b.room, { kind: b.kind, name: BLIPS[b.kind].name, text: blipText(s, b) }]));
+
+// ---------- the history (docs/director.md section 5) ----------
+// { id, k, name, loc, how, cause } newest first, HISTORY.keep at most. how: up, won, gone, taken, missed, true, done.
+function noteHistory(s, id, how, fresh = null) {
+  const h = historyOf(s);
+  if (fresh) { h.unshift({ id, ...fresh }); if (h.length > HISTORY.keep) h.length = HISTORY.keep; return; }
+  const x = id != null && h.find((e) => e.id === id);
+  if (x && how) x.how = how;
 }

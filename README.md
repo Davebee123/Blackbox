@@ -153,7 +153,7 @@ comment saying what it does.
 | `dist/invasion.mjs` | Invasions: servers on your network send kinds of invader home while you play. |
 | `dist/firewall.mjs` | The firewall: its base follows your network, plus the margin you buy. |
 | `dist/server-view.mjs`, `dist/server.css` | The Server page: your home server's ring, rows and detail panel. |
-| `dist/events.mjs`, `dist/event-cards.mjs` | The event director's deck, and each card's panel. |
+| `dist/events.mjs`, `dist/event-cards.mjs` | The event director's deck, chains, blips and history; each card's panel, the blips' sparks and the history list. |
 | `dist/factions.mjs` | Factions: hubs, shops, rep, friends and enemies. |
 | `dist/market.mjs` | Hub markets: prices that move with conditions, world events and sales. |
 | `dist/hubs.mjs`, `dist/fleet.mjs` | Holding a hub, and the swarms its old owner sends. Hub capture is off with Payloads. |

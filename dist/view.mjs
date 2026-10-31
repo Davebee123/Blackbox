@@ -32,8 +32,8 @@ import { mastered, RESEARCH, TIER } from './research.mjs';
 import { SFX, levelOf as sfxLevel } from './screenfx.mjs';
 import { currentLocation, takeable, takenOf, liveSpawns, zoneRooms, signalNow, zoneSpawns, TRACE } from './run.mjs';
 import { ROGUE, rogueSpawns, rogueRooms, relockLeft, FARM_UNIQUES } from './rogue.mjs';
-import { eventsAt, eventsOf, eventText, eventMinutes, CARDS as EVENT_CARDS, HUNT, shockOf, hopLeft, feudShare } from './events.mjs';
-import { eventCard, leakCard, toldCard, darknetCard, EVENT_ICON, FAM_GLYPH } from './event-cards.mjs';
+import { eventsAt, eventsOf, eventText, eventMinutes, CARDS as EVENT_CARDS, HUNT, shockOf, flickerOf, hopLeft, feudShare } from './events.mjs';
+import { eventCard, leakCard, toldCard, darknetCard, EVENT_ICON, FAM_GLYPH, blipSvg } from './event-cards.mjs';
 import { matesOf, mateUp, mateSignal } from './crew.mjs';
 import { momentumCap } from './classes/breaker.mjs';
 import { online, inSprawl, whereText, simOn, friends, profileOf } from './presence.mjs';
@@ -2361,7 +2361,7 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
       const live = Object.values(l.spawns || {}).filter((x) => x.alive).length;
       return `<g class="mnode rogue${mapTags(s, l, st, job)}${crowded.has(n.id) ? ' crowded' : ''}${st === 'here' ? ' here' : ''}${s.locations.includes(l) && !isLive(s, l) ? ' detached' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}, rogue server"><circle r="18" class="mhit"/><path d="M0 -10 L9 -5 L9 5 L0 10 L-9 5 L-9 -5 Z"/><path d="M-4 -3 L4 3 M4 -3 L-4 3" class="rx"/>${pick}${lvLabel(s, n, 12, l.name, l.level || 1, l.depth || 1, l.occupied ? `rebooting · ${live}` : `${l.lair && BOSSES[l.lair] ? BOSSES[l.lair].name : ROGUE.kinds[l.rogue.kind].name.toLowerCase()}${st === 'here' ? ' · here' : live ? ` · ${live} hostile` : ''}`)}</g>`;
     }
-    return `<g ${l.faction ? `style="--fc:${FX[l.faction].color}" ` : ''}class="mnode loc ${st}${mapTags(s, l, st, job)}${crowded.has(n.id) ? ' crowded' : ''}${l.faction ? ' fowned' : ''}${l.takenOver ? ' owned' : ''}${s.locations.includes(l) && !isLive(s, l) ? ' detached' : ''}${op}${job ? ' job' : ''}${eventsAt(s, l.id).length ? ' drop' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}"><circle r="18" class="mhit"/>${st === 'new' ? '<circle r="11" class="ring"/>' : arc(10, total ? taken / total : 0, st)}<circle r="5" class="core"/>${rotMark(l)}${l.faction ? `<g class="fmark" transform="translate(9 -17) scale(0.62)">${GLYPHS['f-' + l.faction]}</g>` : ''}${specialsOf(l).length ? `<text class="mspecial" x="-11" y="-8" text-anchor="end">${specialsOf(l).map((id) => `${SPECIALS[id].glyph}\uFE0E`).join('')}</text>` : ''}${dropMark(s, l)}${serverMarkSvg(s, l.id, thMarks)}${pick}${lvLabel(s, n, 12, l.name, l.takenOver ? null : l.level || 1, l.depth || 1, rest)}</g>`;
+    return `<g ${l.faction ? `style="--fc:${FX[l.faction].color}" ` : ''}class="mnode loc ${st}${mapTags(s, l, st, job)}${crowded.has(n.id) ? ' crowded' : ''}${l.faction ? ' fowned' : ''}${l.takenOver ? ' owned' : ''}${s.locations.includes(l) && !isLive(s, l) ? ' detached' : ''}${op}${job ? ' job' : ''}${eventsAt(s, l.id).length ? ' drop' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}"><circle r="18" class="mhit"/>${st === 'new' ? '<circle r="11" class="ring"/>' : arc(10, total ? taken / total : 0, st)}<circle r="5" class="core"/>${rotMark(l)}${l.faction ? `<g class="fmark" transform="translate(9 -17) scale(0.62)">${GLYPHS['f-' + l.faction]}</g>` : ''}${specialsOf(l).length ? `<text class="mspecial" x="-11" y="-8" text-anchor="end">${specialsOf(l).map((id) => `${SPECIALS[id].glyph}\uFE0E`).join('')}</text>` : ''}${dropMark(s, l)}${blipSvg(s, l)}${serverMarkSvg(s, l.id, thMarks)}${pick}${lvLabel(s, n, 12, l.name, l.takenOver ? null : l.level || 1, l.depth || 1, rest)}</g>`;
   }).join('');
   const hoverNames = s.settings?.mapNames === 'hover';
   const svg = `<svg class="map-svg${hoverNames ? ' names-hover' : ''}${filter.length ? ' mf' + filter.map((k) => ' mf-' + k).join('') : ''}" viewBox="${minX} ${minY} ${maxX - minX} ${maxY - minY}" data-vb="${minX} ${minY} ${maxX - minX} ${maxY - minY}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${con ? 'Map of your consortium' : `Floor ${fl}, ${esc(floorName(fl))}`}">${scope}${lines}${con ? '' : trafficMarkup(s, nodes)}${con ? '' : trails}${draw}</svg>`;
@@ -2488,9 +2488,9 @@ const leakShown = (l) => l.leaked && l.passwordKnown && !l.takenOver && !(l.floo
 function homeEvents(s) {
   return eventsOf(s).filter((ev) => EVENT_CARDS[ev.card].home || (!ev.loc && !ev.hub)).map((ev) => eventCard(s, ev)).join('') + (s.net?.scouted && !s.invasion ? toldCard(s) : '');
 }
-// A market shock at a hub (events.mjs): ▲ (it pays more: sell) or ▼ (it's cheap: buy), the ware, the minutes left.
+// A market shock at a hub (events.mjs), or a price flicker (a blip): ▲ (it pays more: sell) or ▼ (it's cheap: buy), the ware, the minutes left.
 function shockTag(s, f) {
-  const ev = shockOf(s, f) || tipShock(s, f);
+  const ev = shockOf(s, f) || flickerOf(s, f) || tipShock(s, f);
   return ev ? `<span class="tag shock ${ev.mult > 1 ? 'up' : 'down'}" title="${esc(ev.title || `${eventText(s, ev)} ${eventMinutes(ev)} min left.`)}">${ev.mult > 1 ? '▲' : '▼'}${glyph(GLYPH_OF_GOOD[ev.ware])}×${ev.mult}</span>` : '';
 }
 // A pirate's tip you logged on the scanner (scanner.mjs), shown like a market shock.
@@ -2499,9 +2499,9 @@ function tipShock(s, f) {
   return x && { mult: x.mult, ware: x.ware, title: `Pirate tip: ${FX[f].short} ${x.mult > 1 ? 'pays' : 'charges'} ${Math.round(x.mult * 100)}% of the usual for ${WARES[x.ware].name}. ${Math.max(1, Math.ceil((x.until - (hooks.now?.() ?? Date.now())) / 60000))} min left.` };
 }
 function shockSvg(s, f) {
-  const ev = shockOf(s, f) || tipShock(s, f);
+  const ev = shockOf(s, f) || flickerOf(s, f) || tipShock(s, f);
   // Sized for the screen, not the map (--z, like the labels): it sits above the hub's mark at any zoom.
-  return ev ? `<g class="hub-shock ${ev.mult > 1 ? 'up' : 'down'}" transform="translate(10 -14)"><title>${esc(ev.title || `${eventText(s, ev)} ${eventMinutes(ev)} min left.`)}</title><g class="hs-in"><rect x="0" y="-15" width="56" height="15" rx="2"/><text x="4" y="-4">${ev.mult > 1 ? '▲' : '▼'}</text><g class="hs-ware" transform="translate(14 -13.5) scale(0.75)">${GLYPHS[GLYPH_OF_GOOD[ev.ware]]}</g><text x="28" y="-4">×${ev.mult}</text></g></g>` : '';
+  return ev ? `<g class="hub-shock ${ev.mult > 1 ? 'up' : 'down'}" transform="translate(10 -14)"><title>${esc(ev.title || `${eventText(s, ev)} ${eventMinutes(ev)} min left.`)}</title><g class="hs-in"><rect x="0" y="-15" width="${32 + 6.2 * String(ev.mult).length}" height="15" rx="2"/><text x="4" y="-4">${ev.mult > 1 ? '▲' : '▼'}</text><g class="hs-ware" transform="translate(14 -13.5) scale(0.75)">${GLYPHS[GLYPH_OF_GOOD[ev.ware]]}</g><text x="28" y="-4">×${ev.mult}</text></g></g>` : '';
 }
 
 // In a consortium, your wall meets invaders while you're logged off: what it stops.

@@ -10,7 +10,7 @@ import { glyphMarkup } from './protocol-glyphs.mjs';
 import { FACTIONS as FX } from './factions.mjs';
 import { FAMILIES, CONFIG } from './data.mjs';
 import { UNIQUES, hackerLevel, active, materialsOf } from './combat.mjs';
-import { CARDS, HUNT, huntPay, hopLeft, feudShare, feudPay, feudGood, eventText, courierPay, bountyPay, FEUD, CHAIN, counterPay, returnPay, zeroCode, causeText } from './events.mjs';
+import { CARDS, BLIPS, blipsAt, blipText, historyOf, HUNT, huntPay, hopLeft, feudShare, feudPay, feudGood, eventText, courierPay, bountyPay, FEUD, CHAIN, counterPay, returnPay, zeroCode, causeText } from './events.mjs';
 import { SCOUTED, KINDS as INV_KINDS } from './invasion.mjs';
 import { WARES } from './market.mjs';
 import { codeOf } from './gear.mjs';
@@ -182,3 +182,24 @@ function zero(s, ev) {
 const BUILD = { feud, hunt, bounty, choir, courier, spotter, shock, outbreak, darknet: darknetCard, counter, returning, lantern, zero };
 // An event's card, or '' for one with none (a leak is shown on its server: leakCard).
 export const eventCard = (s, ev) => BUILD[ev.card]?.(s, ev) || '';
+
+// ---------- blips and the history (docs/director.md sections 3 and 5) ----------
+// A blip's spark on its server's map node (a four-point star in the director's violet), its line on hover.
+const SPARK = 'M0 -5 L1.2 -1.2 L5 0 L1.2 1.2 L0 5 L-1.2 1.2 L-5 0 L-1.2 -1.2 Z';
+export function blipSvg(s, l, x = 13, y = 9) {
+  const bs = blipsAt(s, l.id);
+  return bs.length ? `<g class="blipmark" transform="translate(${x} ${y})"><title>${esc(bs.map((b) => `${BLIPS[b.kind].name}: ${blipText(s, b)}`).join('\n'))}</title><path d="${SPARK}"/></g>` : '';
+}
+// The same spark on a room's chip (floorplan-view.mjs), at x, y.
+export const roomSpark = (x, y, m) => `<g class="blipmark fp-blip" transform="translate(${x} ${y}) scale(2)"><title>${esc(`${m.name}: ${m.text}`)}</title><path d="${SPARK}"/></g>`;
+// The history: the director's last 20, each its icon, name and how it ended; a follow-up's link mark, its cause on hover.
+const HOW = { up: 'up', won: 'won', gone: 'gone', taken: 'taken', missed: 'missed', true: 'came true', done: 'done' };
+export function historyMarkup(s) {
+  const h = historyOf(s);
+  if (!h.length) return '';
+  const row = (e) => {
+    const icon = e.blip ? BLIPS[e.k]?.icon : EVENT_ICON[e.k], at = e.loc && placeOf(s, e.loc);
+    return `<li class="pgh dh-${e.how}${e.blip ? ' blip' : ''}" title="${esc(`${e.name}${at ? ` on ${at.name}` : ''}: ${HOW[e.how] || e.how}.${e.cause ? ` ${e.cause}` : ''}`)}"><span class="pgh-k">${glyph(icon || 'signal')}${e.cause ? `<i class="cchain">${glyph('chain')}</i>` : ''}</span><span class="pgh-t">${esc(e.name)}</span><span class="pgh-age">${esc(HOW[e.how] || e.how)}</span></li>`;
+  };
+  return `<details class="pg-hist dh"><summary>History <b>${h.length}</b></summary><ul class="comms-list">${h.map(row).join('')}</ul></details>`;
+}

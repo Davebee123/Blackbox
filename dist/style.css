@@ -1631,6 +1631,10 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 .motion .mnode.drop .dropmark, .mnode.drop .dropmark { animation: drop-ping 1.8s ease-in-out infinite; }
 .no-motion .mnode.drop .dropmark { animation: none; }
 @keyframes drop-ping { 50% { opacity: 0.35; } }
+/* A blip (events.mjs): a small spark in the director's violet, on a map node or a room's chip. */
+.blipmark { cursor: help; pointer-events: auto; }
+.blipmark path { fill: var(--daemon, #c3a6ff); filter: drop-shadow(0 0 3px rgba(195, 166, 255, 0.8)); }
+.motion .blipmark path { animation: drop-ping 2.4s ease-in-out infinite; }
 .tag-drop { color: var(--daemon, #c3a6ff); border-color: currentColor; }
 .drop-line code { color: var(--daemon, #c3a6ff); letter-spacing: 1px; }
 

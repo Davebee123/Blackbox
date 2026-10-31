@@ -45,6 +45,7 @@ import { strikeServer, clearedFor } from './factions.mjs';
 import { traceNear, hiddenLead, HIDDEN } from './hidden.mjs';
 import { hiddenNear } from './floors.mjs';
 import { zoneSpawns, kingOpen, spawnFight, levelOf, layoutOf, fileInfo, residentLevel, RESIDENT, bank, KING_ROOM, packGain, peopleIn, scanButton } from './run.mjs';
+import { blipStood, blipRooms } from './events.mjs';
 import { threadsConnect, threadsMoved, threadsStood, threadVerb, tempCoreOpen, tempKilled, threadsRestore } from './threads.mjs';
 
 export const KIND_OF = FP.KIND_OF;
@@ -73,6 +74,7 @@ export function roomsFor(s, loc) {
   if (!loc.floorplan) loc.floorplan = build(s, loc);
   return loc.floorplan;
 }
+hooks.roomsFP = FP; // the director's blips read a server's room clocks (events.mjs)
 hooks.roomsFor = roomsFor; // a contract aimed at a room or a vault reads the server's rooms (mail.mjs)
 function build(s, loc) {
   const name = loc.name, base = { world: true, loc: loc.id, name, speed: 1 };
@@ -460,7 +462,7 @@ WORLD_hook('exfilWon', (s, room, e) => {
 // A contract's item installed in its room (an Install job, mail.mjs): undefined when you carry none for this server.
 WORLD_hook('plant', (s, room, arg) => { const loc = locOf(s); return loc ? contractInstall(s, loc, room, arg) : undefined; });
 // You stand in a room with nothing live in it: a no-rest map job counts the visit's rooms (mail.mjs).
-WORLD_hook('stood', (s, room) => { const loc = locOf(s); if (loc) { contractStood(s, loc, s.rooms); threadsStood(s, loc, room); } }); // and a thread's goto (threads.mjs)
+WORLD_hook('stood', (s, room) => { const loc = locOf(s); if (loc) { contractStood(s, loc, s.rooms); threadsStood(s, loc, room); blipStood(s, loc, room); } }); // and a thread's goto (threads.mjs), a stray cache (events.mjs blips)
 // Threads (threads.mjs): a file walking after each of your moves; talk, read and sweep in a thread's room.
 WORLD_hook('moved', (s) => threadsMoved(s));
 WORLD_hook('verb', (s, room, verb, arg) => { const loc = locOf(s); return loc ? threadVerb(s, loc, room, verb, arg) : undefined; });
@@ -575,6 +577,8 @@ FP.WORLD.view = {
   plantHere: (s, room) => { const loc = locOf(s); return loc ? payloadFor(s, loc, room) : null; },
   marks: (s) => { const loc = locOf(s); return loc ? roomMarks(s, loc, liveFights(s, loc)) : {}; },
   jobs: (s) => { const loc = locOf(s); return loc ? jobsOn(s, loc) : []; },
+  // The director's blips on this server (events.mjs): { roomId: { kind, name, text } }, a spark on the chip.
+  blips: (s) => { const loc = locOf(s); return loc ? blipRooms(s, loc) : {}; },
   // A room next to you that scan reads (run.mjs scanRoom): its card's Scan button runs scan <room>.
   scan: (s, room) => scanButton(s, room),
 };

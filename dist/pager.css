@@ -38,6 +38,10 @@
 .pgh-k { font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: var(--dim); }
 .pgh-t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pgh-age { font-size: 10px; color: var(--dim); }
+/* The director's history (event-cards.mjs historyMarkup): its icon, the name, how it ended; won and taken in amber. */
+.pg-hist.dh .pgh-k { display: inline-flex; gap: 3px; align-items: center; color: var(--daemon, #c3a6ff); }
+.pg-hist.dh .pgh-k .glyph { width: 12px; height: 12px; margin: 0; }
+.pg-hist.dh .pgh.dh-won .pgh-age, .pg-hist.dh .pgh.dh-taken .pgh-age, .pg-hist.dh .pgh.dh-true .pgh-age { color: var(--amber); }
 .pgh.done { opacity: 0.55; }
 .pgh.go { cursor: pointer; }
 .pgh.go:hover .pgh-t { color: var(--bright); }

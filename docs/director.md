@@ -1,7 +1,7 @@
 # The event director: a living net
 
-**Status.** The plan to make the net move without you. Built: the director, its deck and chains (D1; GAME_RULES.md
-*Events*, *Chains*). Left: blips (D2), run cards (D3) and crises (D4).
+**Status.** The plan to make the net move without you. Built: the director, its deck and chains (D1), blips and the
+history list (D2; GAME_RULES.md *Events*, *Chains*, *Blips*, *History*). Left: run cards (D3) and crises (D4).
 
 What it does **not** do: read how you're doing. It never looks at your Signal, deaths, streaks or gear (section 6).
 
@@ -37,7 +37,8 @@ Blips don't count toward the two-event limit. At most one crisis is up at a time
 
 ### Blips
 
-Small, quick and cheap. No fights of their own, or one room at most.
+**Built (D2).** The rules are in GAME_RULES *Blips*; the code is `dist/events.mjs` (`BLIPS`, `dealBlip`), tested in
+`blips.test.mjs`. Small, quick and cheap. No fights of their own, or one room at most.
 
 - **Stray cache:** a cache appears in a room you've cleared on one of your servers (credits and code, about half a vault cache) until someone else takes it (a few minutes).
 - **Price flicker:** one ware at one hub moves ±15% for 5 minutes. The ▲/▼ chip on the hub shows it.
@@ -80,7 +81,9 @@ It never reads your Signal, deaths, win streaks, gear or play time per session. 
 ## 7. Build order
 
 1. **D1: chains**: built.
-2. **D2: blips**, all four, and the history list.
+2. **D2: blips**, all four, and the history list: built. Pacing (bot.mjs, seed 7, to level 12, the director's own
+   clock): events 2.7–2.9 an hour, blips 11.7 an hour; every blip taken would add about 10% to credits an hour
+   (3 caches) and 3 rare spawns' kills (+0.0015 uniques an hour); uniques within one of the run with blips off.
 3. **D3: run cards**: the Surge room first, then Escort, then hunter packs.
 4. **D4: crises**: Strain bloom first (strains already exist), then Turf war, then Blackout.
 
