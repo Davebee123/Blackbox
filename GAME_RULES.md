@@ -731,13 +731,15 @@ the contract's mark.
 ### Objectives (objectives.mjs)
 
 One plain fight room in two (a Process, from level 6) carries an **objective**, rolled with each respawn. It takes the
-fight's lever's place: a room third that's a lever stays out of that fight. The map tags the chip with its icon and
-number, and the room card names it with its bonus.
+fight's lever's place: a room third that's a lever stays out of that fight. The map tags the chip with its icon (and
+number), and the room card names it with its bonus.
 
 | Objective | What wins | Missed | Board |
 |---|---|---|---|
 | **Priority** | Break the marked part by the end of cycle 5. The rest can stand. | The fight goes on, no bonus. | ◎ on the part with its cycles left; **Priority 2/5** on the phase strip. |
 | **Uptime** | Keep your Signal up to the end of cycle 8. The virus can't be broken (a hit leaves a part at 1); every 3 cycles its attacks come a cycle quicker. | You disconnect as usual. | **Uptime 3/8** on the phase strip. |
+| **Backup** | Break the virus with the Backup still up. It has 60% of your max Signal, and every damage attack landing on an even cycle hits it instead of you, nothing of yours soaking it. | The fight goes on, no bonus; its attacks come back to you. | Its own ivory row under yours, a segmented bar; its disk on each attack card coming for it; **Backup 47/60**. |
+| **Clean run** | Break every part with no status on you at the end of any cycle (any debuff the virus puts on you). | The fight goes on, no bonus. | **Clean run** on the phase strip, struck through once a status sticks. |
 
 **Met, it pays:** the loot rolls once more, the kill's XP half again, and 2 components. The Exfil's upload is an
 objective too (it pays its archive, not the bonus).

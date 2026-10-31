@@ -22,6 +22,7 @@ emoji markers, nothing centred that is meant to be scanned.
 | `--steel` | armor and what protects a virus part: a hit on ◆, a Mutex's lock, a Lockbox's cap, the tethers between parts |
 | `--gray` / `--dim` | broken, unavailable, small print |
 | `--ready` (green) | done and waiting on you: a contract to turn in (the map's tracker) |
+| `--backup` (ivory) | the Backup objective's process: its row, its segmented bar, the stripe and disk on an attack coming for it |
 | `--r-set` (set green) | a set (sets.mjs): its name, its lit pieces and bonuses, in tooltips, the Loadout's Set bonuses and the Collection. It sits with the rarity colours (`--r-stock` … `--r-indemnified`, D2's white, blue, yellow, gold and orange), warmed to the amber screen (`#b6cf55`). A piece's own name stays gold. |
 
 A colour never means two things on one screen. A tag takes the colour of what it labels, not of the card it sits on.

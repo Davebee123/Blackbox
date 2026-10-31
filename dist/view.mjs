@@ -81,7 +81,7 @@ import { skillsTabMarkup } from './skills-view.mjs';
 import { achievementsMarkup } from './achievements-view.mjs';
 import { casingPageMarkup, districtCardMarkup } from './casing-view.mjs';
 import { terminalPageMarkup } from './terminal-view.mjs';
-import { objectiveText, objectiveTip } from './objectives.mjs';
+import { objectiveText, objectiveTip, backupAims } from './objectives.mjs';
 import { pointsOf } from './achievements.mjs';
 export { skillDetailMarkup, breakoutMarkup, breakoutDetailMarkup, breakoutDue, breakoutLevels } from './skills-view.mjs';
 
@@ -472,7 +472,7 @@ function attackChip(i, c, k = '', to = null) {
   if (i.effect === 'mirror') return bendChip(i, c, k);
   if (i.effect === 'backlash') return lashChip(i, c, k);
   if (i.packed) i = { ...i, syn: false, scrape: false, bad: false, taps: 0 };
-  return `<div class="intent ${c === 0 ? 'now' : c === 1 ? 'next' : ''}${i.held ? ' held' : ''}${chipCls(i)}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(i.name)}: ${effectLabel(i)} ${to ? `at ${esc(to)}` : i.packed && !['damage', 'fuse'].includes(i.effect) ? '' : effectTarget[i.effect] || ''}${heldTip(i)}${esc(i.packed ? '' : chipTip(i))}"><span class="ico" ${icon(ICON[i.effect])}></span>${heldMark(i)}<b${longChip(i) ? ' class="long"' : ''}>${esc(i.name)}</b><i class="code${longChip(i) ? ' long' : ''}">${esc(attackCode(i.name))}</i><small>${effectLabel(i)}</small>${i.syn ? '<em class="synmark">SYN</em>' : ''}${i.scrape ? `<em class="scrapemark" title="Takes your buffs">${glyph('scraper')}</em>` : ''}${i.bad ? '<em class="badmark" title="Cracks your next heals">▦</em>' : ''}${i.taps ? `<em class="tapmark">${i.tap}/${i.taps}</em>` : ''}${to ? `<small class="at">→ ${esc(to)}</small>` : ''}</div>`;
+  return `<div class="intent ${c === 0 ? 'now' : c === 1 ? 'next' : ''}${i.held ? ' held' : ''}${chipCls(i)}${i.bk ? ' to-bk' : ''}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(i.name)}: ${effectLabel(i)} ${i.bk ? 'to the Backup' : to ? `at ${esc(to)}` : i.packed && !['damage', 'fuse'].includes(i.effect) ? '' : effectTarget[i.effect] || ''}${heldTip(i)}${esc(i.packed ? '' : chipTip(i))}">${i.bk ? glyph('backup', 'bk-ico') : `<span class="ico" ${icon(ICON[i.effect])}></span>`}${heldMark(i)}<b${longChip(i) ? ' class="long"' : ''}>${esc(i.name)}</b><i class="code${longChip(i) ? ' long' : ''}">${esc(attackCode(i.name))}</i><small>${effectLabel(i)}</small>${i.syn ? '<em class="synmark">SYN</em>' : ''}${i.scrape ? `<em class="scrapemark" title="Takes your buffs">${glyph('scraper')}</em>` : ''}${i.bad ? '<em class="badmark" title="Cracks your next heals">▦</em>' : ''}${i.taps ? `<em class="tapmark">${i.tap}/${i.taps}</em>` : ''}${to ? `<small class="at">→ ${esc(to)}</small>` : ''}</div>`;
 }
 
 // What you've put on a part, as marks by its name (an icon each) and a class on its row, so a
@@ -891,7 +891,7 @@ export function boardMarkup(s, selected, preview = null) {
       // target rule (raid.mjs) on the one player it's aiming at.
       const aimed = crew.length && hit?.effect === 'damage' && !sink && p.attack.target ? attackTarget(s, p) : null;
       const to = crew.length && hit?.effect === 'damage' ? sink || (aimed ? aimed.who || 'you' : 'all') : null;
-      return `<div class="bcell">${cryptChip}${escChip}${told}${hit && !(p.attack ? false : hit.hidden) ? attackChip(hit, c, `${p.id}@${e.cycle + c}`, to) : ''}${lash}${c === 0 ? cutChip(s, p) + progOnPart(s, p) : ''}${patchChip}${pipCell(p, c)}</div>`;
+      return `<div class="bcell">${cryptChip}${escChip}${told}${hit && !(p.attack ? false : hit.hidden) ? attackChip(hit.effect === 'damage' && backupAims(e, e.cycle + c) ? { ...hit, bk: true } : hit, c, `${p.id}@${e.cycle + c}`, to) : ''}${lash}${c === 0 ? cutChip(s, p) + progOnPart(s, p) : ''}${patchChip}${pipCell(p, c)}</div>`;
     }).join('');
     // A part with no attack of its own (a Mutex, a Mimic) still shows its row's cells when a tell or a beat sits there.
     const showCells = p.attack || p.ratchet || hrows[p.id] || mine.some((i) => i.tell || !i.hidden || i.effect === 'fuse');
@@ -915,7 +915,7 @@ export function boardMarkup(s, selected, preview = null) {
   // Whose half is playing, across the top of the board (the board itself takes its colour: style.css).
   const ph = fighting ? phaseOf(s) : null, who = esc(e.virus.name.split('-')[0]);
   const strip = ph ? `<div class="phase-strip ph-${ph}" title="Each cycle, you move first, then the virus"><span class="ps-you">${ph === 'wait' ? 'Your move' : 'You'}</span><i>▸</i><span class="ps-them">${who}</span>${e.objective ? objChip(s) : ''}</div>` : '';
-  return strip + head + you() + raidRow(s) + escapeRow(s) + rows + gone + keep;
+  return strip + head + you() + backupRow(s) + raidRow(s) + escapeRow(s) + rows + gone + keep;
 }
 // The order levers' ghosts on a part's bar (order.mjs, docs/puzzle-levers.md 3.3 and 3.4), past this cycle's slice:
 // a Zip Bomb's blast (its bite, when the fuse runs out) hatched in white, and the damage a Lockbox holds for its partner
@@ -943,7 +943,15 @@ function orderMarks(s, p, fc, blast) {
 const capLine = (s, p) => { const n = alive(p) && !packed(s, s.encounter.virus, p) ? capOf(s, p) : null; return n ? `<i class="capline" style="left:${Math.max(0, ((p.integrity - n) / p.max) * 100)}%" title="${esc(`Cap: one hit takes it down to ${Math.max(0, p.integrity - n)} at most.`)}"></i>` : ''; };
 // An objective (objectives.mjs): its chip in the phase strip ("Uptime 3/8"; the Exfil's on phones, where its row hides).
 const objTip = (s) => { const e = s.encounter, p = e.objective.part && e.virus.parts.find((x) => x.id === e.objective.part); return objectiveTip(e, p && !packed(s, e.virus, p) ? p.name : null); };
-const objChip = (s, e = s.encounter) => `<b class="${e.objective.kind === 'exfil' ? 'ps-esc' : `ps-obj${e.objective.met ? ' met' : e.objective.failed ? ' failed' : ''}`}" title="${esc(objTip(s))}" data-tt-kind="Objective">${esc(objectiveText(e))}</b>`;
+const objChip = (s, e = s.encounter) => `<b class="${e.objective.kind === 'exfil' ? 'ps-esc' : `ps-obj ob-${e.objective.kind}${e.objective.met ? ' met' : e.objective.failed ? ' failed' : ''}`}" title="${esc(objTip(s))}" data-tt-kind="Objective">${esc(objectiveText(e))}</b>`;
+// A Backup (objectives.mjs): its own row under yours, ivory, its bar in segments. The hits coming for it are marked on
+// the attacks' own chips (attackChip: to-bk).
+function backupRow(s) {
+  const e = s.encounter, o = e?.objective;
+  if (o?.kind !== 'backup' || !active(s)) return '';
+  const tip = esc(objTip(s));
+  return `<div class="brow bbackup${o.failed ? ' lost' : ''}"><div class="bcell bname" title="${tip}" data-tt-kind="Objective"><span class="part-top"><span class="part-name">${glyph('backup', 'bk-ico')}<b>Backup</b></span><span class="part-hp">${o.hp}/${o.n}</span></span><span class="part-bar"><span style="width:${(o.hp / o.n) * 100}%"></span></span></div><div class="bcell"></div><div class="bcell"></div><div class="bcell"></div><div class="bcell"></div></div>`;
+}
 // A runner (the Exfil): its own row, "Upload 2/6", the fuse on the cycle its upload completes.
 function escapeRow(s) {
   const e = s.encounter, o = e?.objective;
