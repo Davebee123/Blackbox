@@ -7,7 +7,7 @@ import { CONFIG, BOSSES } from './dist/data.mjs';
 import { tickNetwork } from './dist/invasion.mjs';
 
 const say = (s, t) => play(s, t);
-const onRun = () => { const s = fresh(); command(s, 'developer location ransomware'); connect(s, s.locations[0].id); return s; };
+const onRun = (family = 'ransomware') => { const s = fresh(); command(s, `developer location ${family}`); connect(s, s.locations[0].id); return s; };
 const finishOff = (s, id) => {
   for (const p of s.encounter.virus.parts) Object.assign(p, { integrity: 0, armor: 0 });
   part(s, id).integrity = 1;
@@ -63,8 +63,9 @@ test('a Resident that beats you is a level stronger for 6 hours, up to three', (
   } finally { hooks.now = null; }
 });
 
+// The ghostroot Resident keeps this phase; the worm's and ransomware's play in acts (acts.test.mjs).
 test('a boss has phases (GAME_RULES.md "Solo bosses", rule a): taking the Resident\'s core part across its 50% tick re-arms every part', () => {
-  const s = onRun();
+  const s = onRun('ghostroot');
   openVault(s);
   toCore(s);
   const e = s.encounter, v = e.virus;

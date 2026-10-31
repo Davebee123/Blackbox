@@ -177,8 +177,19 @@ quickens, and the ♛ left above its tick until its act's beat has played (else 
 | REPO MAN | The Mimic, the beat P2 built, as a boss's | Repossess (a Mimic) | On the beat: a strip or a small hit; break the Repo Agent early |
 | HOLLOW CHOIR | The Decoy, the other beat, made to bite: every bend sings back | Bend | On the beat: a shield, a buff or an area command |
 
-Section 5's fixes these needed: the ♛ holding at its tick ends one-hit phase skips (the Breaker's boss losses at 10 came
-from racing the enrage); the Residents' acts trade Integrity (1.1×) for a later enrage (24).
+The ♛ holds at its tick, so one big hit no longer skips an act. The Residents' acts trade Integrity (1.1×) for a later
+enrage (24): the planner wins 83–96% of the worm and ransomware Residents at 10, 18 and 30 (the Bastion's misses
+there are gone).
 
-Open: the first-try ceiling. The kit player now loses most Resident and REPO MAN fights at 10, but learner 30 still
-wins about what learned play does: its misreads fall on a beat about one cycle in four.
+Measured October 31 (8 subclasses × 3 seeds a cell; planner · learner 30 · learner 5 · kit · blind, wins %):
+
+| Boss | Level | Planner | L30 | L5 | Kit | Blind |
+|---|---:|---:|---:|---:|---:|---:|
+| Worm Resident | 10 · 18 · 30 | 96 · 96 · 83 | 88 · 92 · 88 | 88 · 96 · 83 | 33 · 92 · 92 | 25 · 33 · 46 |
+| Ransomware Resident | 10 · 18 · 30 | 96 · 96 · 96 | 96 · 96 · 96 | 96 · 96 · 96 | 96 · 75 · 88 | 58 · 42 · 46 |
+| REPO MAN | 10 · 14 · 20 | 100 · 100 · 88 | 71 · 100 · 63 | 92 · 100 · 79 | 50 · 46 · 17 | 42 · 29 · 21 |
+| HOLLOW CHOIR | 10 · 14 · 20 | 100 · 79 · 100 | 100 · 88 · 96 | 100 · 79 · 92 | 83 · 88 · 88 | 83 · 79 · 67 |
+
+Open: the first-try ceiling (learner 30 under 50%) is missed by all four: a misread falls on a beat about one cycle
+in four. HOLLOW CHOIR at home is still easy for every player, and its planner dips at 14. The designer's play decides
+what to tune; nothing was tuned against these bots.

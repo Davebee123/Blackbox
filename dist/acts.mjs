@@ -88,7 +88,7 @@ export function crossed(s, p) {
 // played (none skipped by one big hit). Past its last tick, the rest of it.
 export function actCap(s, p) {
   if (!actsOf(s.encounter?.virus)) return Infinity;
-  const t = (p.ticks || []).find((x) => !x.spent);
+  const t = (p.ticks || []).find((x) => !x.spent && Math.floor(x.at * p.max) < p.integrity); // a tick it is already under holds nothing
   return t ? Math.max(0, p.integrity - Math.floor(t.at * p.max)) : Infinity;
 }
 // A hit from your command on a part (combat.mjs hit): on the Backlash's beat, it lashes back this cycle unless it breaks.
