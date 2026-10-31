@@ -260,6 +260,7 @@ test('a market shock moves exactly that hub\'s ware, and ends', () => {
     assert.ok(Math.abs(priceOf(s, f, w) - want) < 1e-9, `${f} ${w}`);
   }
   assert.match(mapMarkup(s, 'hub-' + ev.hub), /hub-shock/, 'a chip on the hub');
+  s.director.blipNext = Infinity; // no price flicker (a blip) meanwhile
   tickEvents(s, SHOCK.ms);
   assert.equal(eventsOf(s).length, 0);
   for (const f of hubs) for (const w of WARE_IDS) assert.ok(Math.abs(priceOf(s, f, w) - before[f][w]) < 1e-9, 'back to normal');

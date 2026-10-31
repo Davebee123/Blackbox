@@ -2040,6 +2040,25 @@ and pager line carry a chain-link mark. Ignoring a card never starts a chain.
 | 15 kills of an **Outbreak**'s family while it's on | **Patient zero** | at once | The outbreak's source, an elite, on one of your servers; kill it and the outbreak ends. 15 min | A code cache (12 + level/2) and the elite's loot |
 | A **Spotter** killed | the next invasion | its own clock | 2 levels weaker, its kind known | — |
 
+### Blips
+
+Small, quick and cheap (docs/director.md 3): one about every 4–6 minutes of logged-on time from level 3, never the same
+kind twice running, at most two up, beside the events (not in their slots), on dice of their own. A blip shows as a
+violet spark on its server or room (its line on hover) and a quiet pager line that goes with it. Missing one costs
+nothing. `developer blip [cache|flicker|rumour|sighting]`.
+
+| Blip | Where | Lasts | What it is | What you get |
+|---|---|---|---|---|
+| **Stray cache** | a room you've cleared on one of your servers | 3–6 min | Walk into the room (a live virus there first) | (40 + 12L) / 2 credits and half a vault's code (12 + L/2), into your pack |
+| **Price flicker** | a hub you can trade at | 5 min | One ware ±15%, on the hub's ▲/▼ chip | No fight |
+| **Rumour** | a traced server | 2–4 min | Names where the next event lands. It's true: the director deals that card there while it still fits | — |
+| **Sighting** | a fight room you've cleared on one of your servers | 4–8 min | Its next virus is a ★ rare spawn, up within 1–4 minutes. Not met in time, it moves on (the room's next virus is ordinary) | A rare spawn's kill |
+
+### History
+
+The director's last 20 (events, follow-ups and blips) and how each ended (*up*, *won*, *gone*, *taken*, *missed*,
+*came true*) sit under **History** in Comms, a follow-up with its chain mark and cause on hover.
+
 ## The scanner
 
 A shortwave radio (`scanner.mjs`, `scanner-view.mjs`): the calm side activity, with no risk. It lives at the
@@ -2380,7 +2399,7 @@ A page stays while it's true, an hour at most; the same news again replaces the 
   fight shows you where it is instead. A page that takes on a task (an offer, a world event's fight) shows its quest
   first, in the quest window's look, with **Take** (or **Intercept**, **Hunt**…) and **Cancel**.
 - **The lamp:** dark with nothing to do, lit while pages wait, blinking while one is new, red for a threat; click it for
-  **Comms** (the pages, then the news folded under **News**).
+  **Comms** (the pages, then the news folded under **News**, then the director's **History**).
 - **Sound:** only a new page chirps; mid-fight only a breach. A breach also flashes the Integrity meter with BREACH.
 
 ### Settings

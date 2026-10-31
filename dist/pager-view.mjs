@@ -6,9 +6,9 @@
 // Everything that explains is a tooltip in WoW grammar (pager.mjs tipOf). No new colours: amber for what you act on,
 // red for a threat.
 import { glyph } from './glyphs.mjs';
-import { EVENT_ICON, eventCard } from './event-cards.mjs';
+import { EVENT_ICON, eventCard, historyMarkup } from './event-cards.mjs';
 import { pages, news, actOf, lampOf, shortOf, clockOf, tipOf, classOf, askOf } from './pager.mjs';
-import { CARDS, eventText } from './events.mjs';
+import { CARDS, BLIPS, eventText } from './events.mjs';
 import { offers, title } from './mail.mjs';
 import { FACTIONS } from './factions.mjs';
 import { rewardChips } from './view.mjs';
@@ -21,6 +21,7 @@ const threat = (c) => classOf(c) === 'threat';
 // contract, the contract for an offer, an envelope for a letter.
 export function glyphOf(c) {
   if (c.card && EVENT_ICON[c.card]) return glyph(EVENT_ICON[c.card]);
+  if (c.bk && BLIPS[c.bk]) return glyph(BLIPS[c.bk].icon); // a blip (events.mjs)
   if (threat(c)) return glyph(c.label === 'Lockdown' ? 'lock' : c.label === 'Swarm' ? 'raid' : c.from === 'Consortium' ? 'relay' : 'firewall');
   if (c.kind === 'ready') return glyph('credits');
   if (c.kind === 'offer') return glyph('contract');
@@ -49,7 +50,7 @@ export function inboxMarkup(s, now = Date.now()) {
   };
   const old = (c) => `<li class="pgh${c.done ? ' done' : ''}${c.go ? ' go' : ''}" title="${esc(`${c.label}: ${c.text}`)}"${c.go ? ` data-hgo="${esc(c.go)}" data-cid="${c.id}" role="button" tabindex="0"` : ''}><span class="pgh-k">${esc(c.label)}${chainMk(c)}</span><span class="pgh-t">${esc(c.text)}</span><span class="pgh-age">${ago(now - c.t)}</span></li>`;
   return `<div class="comms-head"><span>Comms</span><span class="p-acts">${h.some((c) => c.seen) ? '<button type="button" class="act dim" data-comms-clear title="Clear the news you have seen">Clear</button>' : ''}<button type="button" class="act" data-comms-close>Close</button></span></div>
-    <div class="pg-scroll" data-keep="pg-scroll"><ul class="comms-list pg-inbox">${p.map(row).join('') || '<li class="quiet">Quiet.</li>'}</ul>${h.length ? `<details class="pg-hist"><summary>News <b>${h.length}</b></summary><ul class="comms-list">${h.map(old).join('')}</ul></details>` : ''}</div>`;
+    <div class="pg-scroll" data-keep="pg-scroll"><ul class="comms-list pg-inbox">${p.map(row).join('') || '<li class="quiet">Quiet.</li>'}</ul>${h.length ? `<details class="pg-hist"><summary>News <b>${h.length}</b></summary><ul class="comms-list">${h.map(old).join('')}</ul></details>` : ''}${historyMarkup(s)}</div>`;
 }
 
 // The quest a page asks about (pager.mjs askOf), in the quest window's look: who it's from, what it is, what it pays,

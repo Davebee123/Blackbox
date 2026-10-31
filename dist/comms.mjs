@@ -62,6 +62,8 @@ const MAP = {
   'world-event': (e) => ({ event: e.event, card: e.card, ...(e.chain ? { chain: e.chain } : {}), kind: 'net', label: { courier: 'Courier', bounty: 'Bounty', choir: 'Boss', outbreak: 'Outbreak', leak: 'Leak', feud: 'Feud', hunt: 'Hunt', shock: 'Market', spotter: 'Spotter', counter: 'Raid', returning: 'Bounty', lantern: 'LANTERN', zero: 'Source' }[e.card] || 'Event', from: e.from || (e.card === 'courier' ? 'LANTERN' : e.card === 'bounty' ? 'Halcyon' : e.card === 'choir' ? 'Hollow Choir' : 'Network'), text: e.message, go: e.location ? `map:${e.location}` : e.hub ? `map:hub-${e.hub}` : e.card === 'spotter' || e.card === 'counter' ? 'map:server' : e.card === 'outbreak' ? null : 'map', beep: true }),
   // A hunt's quarry moved (events.mjs): its pager line follows it (the event's line is replaced, not added to).
   'world-event-hop': (e) => ({ event: e.event, card: 'hunt', kind: 'net', label: 'Hunt', from: e.from || 'Network', text: e.message, go: e.location ? `map:${e.location}` : 'map', beep: false }),
+  // A blip (events.mjs): a quiet news line, no beep, gone when the blip is (live).
+  blip: (e) => ({ blip: e.blip, bk: e.kind, kind: 'net', label: { cache: 'Cache', flicker: 'Price', rumour: 'Rumour', sighting: 'Sighting' }[e.kind] || 'Blip', from: 'Network', text: e.message, go: e.location ? `map:${e.location}` : e.hub ? `hub:${e.hub}:market` : 'map', beep: false }),
   'consortium-invite': (e) => ({ kind: 'net', label: 'Invite', from: 'Consortium', text: e.message.replace(/ consortium accept, or consortium decline\.$/, ''), go: 'people:consortium', beep: true }),
   'consortium-merged': (e) => ({ kind: 'net', label: 'Merged', from: 'Consortium', text: e.message.replace(/ See the Map\.$/, ''), go: 'map:consortium', beep: false }),
   'consortium-tier': (e) => ({ kind: 'net', label: 'Consortium', from: 'Consortium', text: e.message, go: 'map:consortium', beep: true }),
@@ -113,6 +115,7 @@ export function live(s, c) {
     if (c.go === 'map:fleet' || c.from === 'Hub' || c.from === 'Outpost') return !!s.fleet || c.label === 'Lockdown';
   }
   if (c.event) return (s.events || []).some((x) => x.id === c.event);
+  if (c.blip) return (s.director?.blips || []).some((x) => x.id === c.blip);
   return true;
 }
 export function pruneComms(s, now = Date.now()) {
