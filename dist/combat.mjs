@@ -1137,7 +1137,10 @@ export function selectEncounter(s, key = 'cryptjack', seed = s.seed, opts = {}) 
   s.encounter = { phase: 'alert', mode, zone: !!opts.zone, wild: opts.wild || null, process: opts.process || null, room: opts.room || null, key, virus, seed, cycle: 1, elapsedMs: 0, paused: false, queue: null, plan: [], lastAttack: null, readyAt: {}, nextFragment: 1, metrics: null, breaks: 0, helpers: [], burns: [], buffs: {}, shield: 0, chits: 0, undo: null, encrypt: 0, scrambleUntil: 0, clock: 0, regenAcc: 0, leechAcc: 0, once: {}, soft: opts.zone && !opts.wild && !opts.process && (s.pace?.kills || 0) < CONFIG.zone.starterKills ? CONFIG.zone.starterHit : 1 }; // soft: your first kills in SPRAWL-00 hit softer, so you can learn the board
   const lean = mode === 'run' && s.run ? leaningOf(findLocation(s, s.run.loc)) : null;
   if (lean) s.encounter.leaning = { id: lean, paid: 0 }; // the server's leaning (leanings.mjs)
-  if (s.run?.unpack?.includes(virus.id)) s.encounter.unpacked = true; // scanned before the fight: a Packer hides nothing (genes.mjs packer)
+  if (s.run?.unpack?.includes(virus.id)) { // scanned before the fight: a Packer hides nothing (genes.mjs packer); a Packer.exe all but one
+    const pk = virus.parts.find((x) => x.packer);
+    if (pk?.exe) s.encounter.unpackedOne = virus.parts.find((x) => x.kind === 'system' && !x.packer && !x.special && !x.basic)?.id || null; else s.encounter.unpacked = true;
+  }
   packParts(s);
   const signed = virus.author && AUTHORS[virus.author] ? ` ${AUTHORS[virus.author].name} wrote it.` : '';
   if (!opts.quiet) emit(s, 'intrusion', opts.zone
@@ -2828,7 +2831,7 @@ export function hit(s, p, base, opts = {}) {
   }
   // Damper: while it wears ◆, the kind of hit it drops deals it nothing, but still breaks a ◆ (even one that would go
   // through armor).
-  if (p.damper && p.armor > 0 && opts.pierce && hitKind(s, p, opts) === p.damperKind) opts = { ...opts, pierce: false, damped: true };
+  if (p.damper && p.armor > 0 && opts.pierce && [p.damperKind, p.damperKind2].includes(hitKind(s, p, opts))) opts = { ...opts, pierce: false, damped: true };
   if (p.armor > 0 && !opts.pierce) {
     // A heavy hit from your own command cracks two.
     const heavy = (opts.chits > 1 || (opts.mine && !opts.dot && !opts.by && (base >= CONFIG.heavyHit * powerOf(s) - 1e-9 || fxFire(s, 'hit', { target: p, do: 'shatter' }).length))) && p.armor > 1; // (base is already your size; Shellshock breaks two)
@@ -3064,7 +3067,7 @@ export function hitKind(s, p, opts = {}) {
 // are. Each shows as a Packed part (A, B… when there are more), its attack's name as ???, its tags, telegraphs, rule
 // and inspect hidden; what it does still happens. p.packedAs keeps its own names until it unpacks.
 export const packerOn = (s, v = s?.encounter?.virus) => !!v && !s?.encounter?.unpacked && s?.encounter?.virus === v && v.parts.some((x) => x.packer && alive(x));
-export const packed = (s, v, p) => packerOn(s, v) && !!p && !p.packer && p.kind === 'system' && !p.special && !p.basic;
+export const packed = (s, v, p) => packerOn(s, v) && !!p && !p.packer && p.kind === 'system' && !p.special && !p.basic && p.id !== s.encounter.unpackedOne;
 export const PACKED_NAME = 'Packed part';
 export function packParts(s) {
   const v = s.encounter?.virus;
@@ -3202,6 +3205,12 @@ function breakPart(s, p) {
     e.metrics?.loot?.push(p.loot);
     emit(s, 'loot', 'Component recovered.', { target: p.id });
   }
+  // An .exe build (exe.mjs) broken: one more component, and the Codex learns the build (codex-view.mjs).
+  if (p.exe) {
+    gainComponents(s, 1);
+    emit(s, 'loot', `The ${p.name} gives up a component.`, { target: p.id });
+    (s.exeSeen ||= {})[p.exe] = true;
+  }
   if (e.lastAttack && e.lastAttack.endsWith(' ' + p.id)) {
     e.lastAttack = null;
     e.autoStopped = true;
@@ -3280,9 +3289,10 @@ function breakPart(s, p) {
     for (const x of others) if (alive(x)) hit(s, x, Math.round((p.max || 0) * 0.25), { by: 'Total Loss', server: true });
   }
   // Breaking the Encryptor hands you the key: the encryption stops.
+  // An Encryptor.exe (exe.mjs) leaves it on, a step lighter each cycle (the encryption's tick below).
   if (e.encrypt && p.attack?.effect === 'encrypt' && !livingParts(s).some((x) => x.attack?.effect === 'encrypt')) {
-    e.encrypt = 0; e.burst = null;
-    emit(s, 'decrypted', 'Key recovered. Your server is decrypted.', { target: p.id });
+    if (p.drain) { e.drain = Math.max(1, p.attack.amount); emit(s, 'status', `The ${p.name} breaks, but your encryption stays on. It drops ${e.drain} a cycle. Purge clears it.`, { target: p.id }); }
+    else { e.encrypt = 0; e.burst = null; emit(s, 'decrypted', 'Key recovered. Your server is decrypted.', { target: p.id }); }
   }
   if (e.autoStopped) {
     e.autoStopped = false;
@@ -3358,6 +3368,7 @@ function useAbility(s, intent, auto = false) {
   const base = target ? skillBase(s, id, target) : 0;
   e.lastSkill = id;
   e.lastCmd = { id, cycle: e.cycle, target: intent.target || null }; // what the Mimic plays back (tells.mjs)
+  e.cmdLog = [...(e.cmdLog || []).slice(-2), e.lastCmd]; // a Mimic.exe plays back the dearer of your last two
   // An empty cycle Spikes the last part you hit.
   if (base && auto !== 'daemon') e.lastAttack = `spike ${intent.target}`;
 
@@ -3374,7 +3385,7 @@ function useAbility(s, intent, auto = false) {
   }
   // Scrambled (Ghostroot's Scrambler): the attack may turn on you, at half strength. The cooldown is spent.
   if ((base || a.all) && e.scrambleUntil >= e.cycle && rand(s) < CONFIG.scramble.chance) {
-    const amount = Math.max(1, Math.round((base || a.all * powerOf(s)) * CONFIG.scramble.self));
+    const amount = Math.max(1, Math.round((base || a.all * powerOf(s)) * (e.scrambleSelf ?? CONFIG.scramble.self))); // a Scrambler.exe's: at full
     const dealt = takeDamage(s, amount, null, a.name);
     emit(s, 'scrambled', `SCRAMBLED. ${a.name} hits YOU for ${dealt}.`, { ability: id, amount: dealt });
     classEach('used', s, { id, target, res: null, before });
@@ -3903,7 +3914,7 @@ function landAttack(s, p) {
   if (atk.scrambles && atk.effect === 'damage' && !(e.scrambleUntil > e.cycle) && e.cycle - (atk.scrambledAt ?? -99) >= (atk.scrambleEvery || 1)) {
     atk.scrambledAt = e.cycle;
     if (e.buffs?.honeypot >= e.cycle) { delete e.buffs.honeypot; emit(s, 'blocked', `${atk.name} goes after your honeypot. You aren't Scrambled.`, { source: p.id, ability: 'honeypot' }); }
-    else { const n = Math.max(1, Math.round(atk.scrambles) - (fxHas(s, 'blind-short') ? 1 : 0)); e.scrambleUntil = e.cycle + n; emit(s, 'blind', `${atk.name} Scrambles you for ${n} ${n === 1 ? 'cycle' : 'cycles'}. Each of your attacks has a ${Math.round(CONFIG.scramble.chance * 100)}% chance to hit you instead.`, { source: p.id }); }
+    else { const n = Math.max(1, Math.round(atk.scrambles) - (fxHas(s, 'blind-short') ? 1 : 0)); e.scrambleUntil = e.cycle + n; e.scrambleSelf = null; emit(s, 'blind', `${atk.name} Scrambles you for ${n} ${n === 1 ? 'cycle' : 'cycles'}. Each of your attacks has a ${Math.round(CONFIG.scramble.chance * 100)}% chance to hit you instead.`, { source: p.id }); }
   }
   if (atk.effect === 'scramble' && e.buffs?.honeypot >= e.cycle) {
     delete e.buffs.honeypot; // Honeypot (Warden): the scramble goes after the honeypot
@@ -3911,13 +3922,13 @@ function landAttack(s, p) {
   } else if (atk.effect === 'scramble') {
     // Scrambled: for a few cycles, each of your attacks may hit you instead (useAbility).
     const n = Math.max(1, Math.round(atk.amount) - (fxHas(s, 'blind-short') ? 1 : 0)); // cycles: not scaled by level
-    e.scrambleUntil = e.cycle + n;
+    e.scrambleUntil = e.cycle + n; e.scrambleSelf = p.selfFull ? 1 : null;
     emit(s, 'blind', `${atk.name} lands, and you are SCRAMBLED for ${n} ${n === 1 ? 'cycle' : 'cycles'}. Each of your attacks has a ${Math.round(CONFIG.scramble.chance * 100)}% chance to hit you instead.`, { source: p.id });
   } else if (atk.effect === 'replicate') {
     const living = livingParts(s).filter((x) => x.kind === 'fragment').length;
     if (e.buffs?.dmz >= e.cycle) emit(s, 'blocked', `${atk.name} fizzles. Nothing new gets into the DMZ.`, { source: p.id, ability: 'dmz' }); // Warden DMZ
     else if (living >= CONFIG.fragmentCap) emit(s, 'info', `${atk.name} fizzles. The fragment limit is reached.`, { source: p.id });
-    else {
+    else for (let k = 0; k < (p.spawnN || 1) && livingParts(s).filter((x) => x.kind === 'fragment').length < CONFIG.fragmentCap; k++) { // a Replicator.exe hatches two
       const n = e.nextFragment++;
       const pw = e.virus.power || 1;
       const amount = Math.max(1, Math.round(CONFIG.fragmentDamage * pw));
@@ -4186,6 +4197,8 @@ function cycleStart(s) {
       finish(s, 'crashed');
       return true;
     }
+    // An Encryptor.exe broken: the stack drains a step a cycle (a living Encryptor stops the drain).
+    if (e.drain && !src) { e.encrypt = Math.max(0, e.encrypt - e.drain); if (!e.encrypt) { e.drain = null; emit(s, 'decrypted', 'The encryption runs out. Your server is decrypted.'); } }
   }
 
   // A Ratchet (parts.mjs PARTS.profile: a rolled fight's ramp with no Encryptor to carry it): the basic's own stack,
@@ -4373,8 +4386,10 @@ function cycleClose(s, landed) {
   // Cold Store: it thaws and joins the fight, its first Chill a cycle after the Thaw chip at the earliest.
   for (const p of livingParts(s).filter((x) => x.frozen && !x.thawed && e.cycle >= x.thawAt)) {
     p.thawed = true;
-    if (p.chill) { p.attack = { ...p.chill, due: Math.max(p.chill.due, e.cycle + 2) }; p.chill = null; }
-    emit(s, 'status', `The ${p.name} THAWS and joins the fight${p.attack ? `: its ${p.attack.name} lands in 2 cycles` : ''}.`, { target: p.id, thaw: true });
+    const soon = p.thawHard ? 1 : 2; // a Cold Store.exe: one more ◆, its Chill the next cycle
+    if (p.thawHard) { p.armor += 1; p.maxArmor = (p.maxArmor || 0) + 1; p.patchAt = null; }
+    if (p.chill) { p.attack = { ...p.chill, due: p.thawHard ? e.cycle + 1 : Math.max(p.chill.due, e.cycle + 2) }; p.chill = null; }
+    emit(s, 'status', `The ${p.name} THAWS and joins the fight${p.thawHard ? ' with one more ◆' : ''}${p.attack ? `: its ${p.attack.name} lands ${soon === 1 ? 'next cycle' : `in ${soon} cycles`}` : ''}.`, { target: p.id, thaw: true });
   }
   // Adaptive (mutation): a part hit three cycles running hardens.
   if (mutated(s, 'adaptive')) for (const p of livingParts(s).filter((x) => x.adaptAt === e.cycle && x.adaptRun >= 3)) {

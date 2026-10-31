@@ -79,6 +79,8 @@ export const PARTS = {
   // fight's floor is its server's; a fight with no server (home, SPRAWL-00's strays, a sim) is your floor's, the
   // deepest whose band holds its level (data.mjs floorFor).
   floor: 3, // a native's weight in the roll on its own floor (×, on top of PARTS.weight); elsewhere ×1 once its level allows it
+  // Echoes (exe.mjs): a floor's natives come back this many floors down, at this weight, always as their .exe.
+  echo: { gap: 4, weight: 2 },
   native: { elite: true, rare: true }, // elites and ★ rare spawns always bring one of their floor's natives (none open there: the nearest floor above's)
   rare: { min: 3, budget: 2 }, // a ★ rare spawn brings at least this many parts, and this many more budget points for its thirds
   kestrel: { floor: 3, share: 0.5 }, // from this floor, this share of guard posts and ICE bring Kestrel's Idle Timer (data.mjs GUARDS)
@@ -106,7 +108,9 @@ export const thirdsOf = (body, level = 99) => body.parts.filter((p) => p.pool ==
 const pick = (rand, xs) => xs[Math.min(xs.length - 1, Math.floor(rand() * xs.length))];
 // A third's weight in the roll: its own (PARTS.weight), times PARTS.floor on the floor it's native to.
 export const nativeFloor = (gene) => GENES[gene]?.floor || null;
-export const floorWeight = (gene, floor) => (floor && nativeFloor(gene) === floor ? PARTS.floor : 1);
+export const floorWeight = (gene, floor) => (floor && nativeFloor(gene) === floor ? PARTS.floor : floor && nativeFloor(gene) && nativeFloor(gene) + PARTS.echo.gap === floor ? PARTS.echo.weight : 1);
+// An echo: a native come back PARTS.echo.gap floors below its own (exe.mjs: it comes as its .exe).
+export const echoOn = (gene, floor) => !!floor && !!nativeFloor(gene) && nativeFloor(gene) + PARTS.echo.gap === floor;
 // spread: the genes this fight's strains spread (data.mjs spreadOf), which weigh PARTS.spread.
 export const weightOf = (gene, floor = null, spread = null) => (PARTS.weight[gene] ?? (MECH_GENES.has(gene) ? (spread?.has(gene) ? Math.max(PARTS.spread, PARTS.mech) : PARTS.mech) : 1)) * floorWeight(gene, floor);
 // A mechanics-list gene rolls (a wild fight, a breach node, a server room) only while PARTS.mech is above 0.

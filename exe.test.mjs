@@ -2,14 +2,19 @@
 // part with its rule harder or bent. The roll, the builds' rules in a fight, and the board's red .exe.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fresh, selectEncounter, command, resolveCycle, part, livingParts, hit, timersHidden } from './dist/combat.mjs';
+import './dist/families.mjs'; // the Cryptominer's and the Wiper's rules (the Rig's heat, the Wipe)
+import { fresh, selectEncounter, command, resolveCycle, part, livingParts, hit, timersHidden, active } from './dist/combat.mjs';
+import { codexPageMarkup } from './dist/codex-view.mjs';
+import { floorWeight, PARTS } from './dist/parts.mjs';
+import { CLASHES } from './dist/genes.mjs';
+import { mimicLands, tellsOf } from './dist/tells.mjs';
 import { FAMILIES, CONFIG, createVirus, FLOORS } from './dist/data.mjs';
 import { EXE, exeShare, rollExe } from './dist/exe.mjs';
 import { boardMarkup } from './dist/view.mjs';
 import { partRead } from './dist/fightread.mjs';
 
 const fight = (level, family, { basic = 'pulse', genes = [], exe = [] } = {}) => {
-  const s = fresh(); s.metAll = true;
+  const s = fresh(); s.metAll = true; s.hackers = { [s.loadout.archetype]: { level, xp: 0 } };
   selectEncounter(s, 'random', 77, { level, family, basic, genes, exe, mutation: null, quiet: true });
   command(s, 'engage');
   s.encounter.soft = 1;
@@ -127,4 +132,110 @@ test('each build reads its own numbers: research and the Codex are the part\'s (
   }
   assert.equal(part(fight(22, 'ghostroot', { genes: ['decoymirror'], exe: ['decoy'] }), 'decoy').reflect, 3);
   assert.equal(part(fight(22, 'worm', { genes: ['twin'], exe: ['mirror'] }), 'replicator').rebootMax, 2);
+});
+
+// Batch 2: the signatures and the rest of the thirds.
+const dueNow = (s, p) => { for (const x of livingParts(s)) if (x.attack) x.attack.due = 99; p.attack.due = s.encounter.cycle; };
+
+test('Replicator.exe hatches two; Encryptor.exe leaves your encryption on, a step lighter each cycle', () => {
+  const w = fight(22, 'worm', { exe: ['replicator'] });
+  dueNow(w, part(w, 'replicator')); step(w);
+  assert.equal(livingParts(w).filter((x) => x.kind === 'fragment').length, 2);
+  const s = fight(22, 'ransomware', { exe: ['encryptor'] }), en = part(s, 'encryptor');
+  dueNow(s, en); step(s); dueNow(s, en); step(s);
+  const stack = s.encounter.encrypt;
+  assert.ok(stack >= 2 * en.attack.amount, 'two Encrypts on');
+  assert.ok(stack > 0);
+  Object.assign(en, { armor: 0, integrity: 1, patchAt: 99 });
+  step(s, 'spike encryptor');
+  assert.equal(s.encounter.drain, en.attack.amount, 'broken, it drains');
+  assert.equal(s.encounter.encrypt, stack - en.attack.amount, 'one step lighter after the tick');
+});
+
+test('Scrambler.exe backfires at full; Rig.exe blows at 100 heat and vents; Degausser.exe wipes two', () => {
+  const g = fight(22, 'ghostroot', { exe: ['scrambler'] });
+  dueNow(g, part(g, 'scrambler')); step(g);
+  assert.equal(g.encounter.scrambleSelf, 1);
+  const c = fight(22, 'cryptominer', { exe: ['rig'] }), rig = part(c, 'rig');
+  for (const x of livingParts(c)) if (x.attack) x.attack.due = 99;
+  c.encounter.virus.heat = 95;
+  step(c);
+  assert.equal(c.encounter.virus.heat, 0, 'vented');
+  assert.equal(rig.fuseAt, c.encounter.cycle, 'its fuse lit, for next cycle');
+  const hp = c.server.integrity, rhp = rig.integrity;
+  step(c);
+  assert.ok(rig.fused && c.server.integrity < hp && rig.integrity < rhp, 'the blast hits both sides');
+  const w = fight(30, 'wiper', { exe: ['degausser'] });
+  dueNow(w, part(w, 'degausser')); step(w);
+  assert.equal(Object.keys(w.encounter.wiped || {}).length, 2);
+});
+
+test('Prism.exe: a cut stops only that hit; Damper.exe drops two kinds; Cold Store.exe thaws harder', () => {
+  const g = fight(22, 'ghostroot', { basic: 'prism', exe: ['prism'] }), pr = part(g, 'prism');
+  assert.ok(pr.cutOne && pr.taps === 3);
+  const w = fight(30, 'wiper', { genes: ['damper'], exe: ['damper'] }), d = part(w, 'damper');
+  assert.ok(d.damperKind2 && d.damperKind2 !== d.damperKind);
+  const s = fight(30, 'ransomware', { genes: ['coldstore'], exe: ['coldstore'] }), cs = part(s, 'coldstore');
+  for (const x of livingParts(s)) if (x.attack) x.attack.due = 99;
+  const armor = cs.armor, T = cs.thawAt;
+  while (s.encounter.cycle <= T && active(s)) step(s);
+  assert.ok(cs.thawed);
+  assert.equal(cs.armor, armor + 1, 'one more ◆');
+  assert.equal(cs.attack.due, T + 1, 'its Chill the next cycle');
+});
+
+test('Mimic.exe on a hold plays back your last command; the plain Mimic copies nothing', () => {
+  for (const exe of [true, false]) {
+    const s = fight(22, 'ghostroot', { genes: ['mimic'], exe: exe ? ['mimic'] : [] }), m = part(s, 'mimic'), pulse = part(s, 'pulse');
+    for (const x of livingParts(s)) if (x.attack) x.attack.due = 99;
+    pulse.armor = 0; pulse.patchAt = 99;
+    s.encounter.cmdLog = [{ id: 'spike', cycle: s.encounter.cycle - 1, target: 'pulse' }];
+    s.encounter.lastCmd = { id: 'hold', cycle: s.encounter.cycle };
+    const t = tellsOf(s).list.find((x) => x.kind === 'mimic');
+    assert.ok(t, 'its beat');
+    const hp = s.server.integrity;
+    assert.doesNotThrow(() => mimicLands(s, t, m));
+    assert.equal(s.server.integrity < hp, exe, exe ? 'the .exe plays key 1 back' : 'nothing to copy');
+  }
+});
+
+test('the lever builds: Twin Rig.exe, Recycle Bin.exe, Packer.exe and Mimic.exe carry theirs', () => {
+  assert.equal(part(fight(22, 'cryptominer', { genes: ['twinrig'], exe: ['twinrig'] }), 'twinrig').twinBonus, 3);
+  assert.ok(part(fight(30, 'wiper', { genes: ['recyclebin'], exe: ['recyclebin'] }), 'recyclebin').binCool);
+  for (const [gene, id] of [['packer', 'packer'], ['mimic', 'mimic']]) assert.equal(part(fight(22, 'ghostroot', { genes: [gene], exe: [id] }), id).name, `${EXE[id] && id === 'packer' ? 'Packer' : 'Mimic'}.exe`);
+});
+
+test('echoes: a floor\'s natives come back four floors down, weighted up, always as their .exe', () => {
+  assert.equal(floorWeight('zipbomb', 1), PARTS.floor);
+  assert.equal(floorWeight('zipbomb', 5), PARTS.echo.weight);
+  assert.equal(floorWeight('zipbomb', 4), 1);
+  let seen = 0, exe = 0;
+  for (let seed = 1; seed <= 300; seed++) {
+    const v = createVirus('random', seed, { family: 'ransomware', threat: 36, floor: 5 }), z = v.parts.find((p) => p.id === 'zipbomb' || p.id === 'hotspot');
+    if (z) { seen++; exe += z.exe ? 1 : 0; }
+  }
+  assert.ok(seen > 10 && exe === seen, `floor 5: ${seen} Zip Bombs and Hotspots, ${exe} as .exe`);
+});
+
+test('from floor 6 an elite\'s clash comes as its .exe builds', () => {
+  const PART = { zipbomb: 'zipbomb', mimic: 'mimic', tripwire: 'tripwire', ward: 'lockbox', decoymirror: 'decoy' }; // a clash's genes as parts (its tells have none)
+  let n = 0;
+  for (let seed = 1; seed <= 60; seed++) {
+    const v = createVirus('random', seed, { family: FAMS[seed % 3], threat: 40, floor: 6, elite: true }), c = CLASHES.find((x) => x.id === v.clash);
+    for (const p of c ? v.parts.filter((x) => [PART[c.a], PART[c.b]].includes(x.id)) : []) { assert.ok(p.exe, `${v.name}: ${p.name}`); n++; }
+  }
+  assert.ok(n > 20, `${n} clash parts checked`);
+});
+
+test('an .exe part broken: one more component, and its Codex card names the build from then on', () => {
+  const s = fight(22, 'ransomware', { genes: ['ward'], exe: ['lockbox'] }), lb = part(s, 'lockbox');
+  s.met = { ransomware: true }; s.research['ransomware:lockbox'] = 15;
+  assert.doesNotMatch(codexPageMarkup(s, 'family:ransomware'), /cxp-exe/, 'hidden until you break one');
+  const was = s.components || 0;
+  Object.assign(lb, { armor: 0, integrity: 1, patchAt: 99 });
+  for (const x of livingParts(s)) if (x.attack) x.attack.due = 99;
+  step(s, 'spike lockbox');
+  assert.ok((s.components || 0) >= was + 1);
+  assert.equal(s.exeSeen?.lockbox, true);
+  assert.match(codexPageMarkup(s, 'family:ransomware'), /cxp-exe[^>]*><span class="pexe">\.exe<\/span> Floor 4\+: Its ward caps/);
 });

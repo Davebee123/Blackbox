@@ -6,9 +6,9 @@ import * as INFILTRATOR_SUBS from './classes/infiltrator.data.mjs';
 import * as OPERATOR_SUBS from './classes/operator.data.mjs';
 const CLASS_DATA = { breaker: BREAKER_SUBS, bastion: BASTION_SUBS, infiltrator: INFILTRATOR_SUBS, operator: OPERATOR_SUBS };
 // Viruses are built from genes (genes.mjs) and written by authors (authors.mjs): docs/genome.md.
-import { GENES, partGenes, compatible, MECH_GENES } from './genes.mjs';
-import { PARTS, rollParts, roleOf, ratchetSpan, along as alongParts } from './parts.mjs';
-import { rollExe, makeExe } from './exe.mjs';
+import { GENES, partGenes, compatible, MECH_GENES, CLASHES } from './genes.mjs';
+import { PARTS, rollParts, roleOf, ratchetSpan, along as alongParts, echoOn } from './parts.mjs';
+import { rollExe, makeExe, EXE, EXE_ROLL } from './exe.mjs';
 import { crewOf, buildAuthor, bossAuthor } from './authors.mjs';
 
 export const CONFIG = {
@@ -1408,7 +1408,10 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   // is set and its genome read (an .exe is its part's rule, not a new gene). overrides.exe forces them (a list of part ids: the playtest page, the tests); its own hash of the seed.
   const exeIds = specs.map((spec) => (spec.copy && rolled2 ? rolled2.basic.id : spec.id));
   const exeMet = (i) => !overrides.seen || specs[i].id === 'pulse' || overrides.seen(specs[i].copy ? rolled2.basic : specs[i], familyId);
-  const exePick = Array.isArray(overrides.exe) ? overrides.exe : rolled2 && !forced2 && overrides.exe !== false ? rollExe({ ids: exeIds, floor: overrides.floor || floorFor(level), rand: rng((seed ^ 0x6a09e667) >>> 0), met: exeMet, sure: !!overrides.elite || !!overrides.rare }) : [];
+  // Always as their .exe: an echo (a native PARTS.echo.gap floors below its own), and from EXE_ROLL.clash an elite's clash.
+  const exeFloor = overrides.floor || floorFor(level), clash = overrides.elite && exeFloor >= EXE_ROLL.clash && rolled2?.clash ? CLASHES.find((c) => c.id === rolled2.clash) : null;
+  const exeSure = exeIds.filter((id, i) => EXE[id] && exeMet(i) && (echoOn(specs[i].gene, exeFloor) || (clash && [clash.a, clash.b].includes(specs[i].gene))));
+  const exePick = Array.isArray(overrides.exe) ? overrides.exe : rolled2 && !forced2 && overrides.exe !== false ? [...new Set([...rollExe({ ids: exeIds, floor: exeFloor, rand: rng((seed ^ 0x6a09e667) >>> 0), met: exeMet, sure: !!overrides.elite || !!overrides.rare }), ...exeSure])] : [];
   parts.forEach((p, i) => { if (exePick.includes(exeIds[i])) makeExe(p, parts, exeIds[i]); });
   // Its name (GAME_RULES.md "Rules and authors"): the adjective of its costliest rolled gene, its body's stem or its build's name, its
   // tag (the seed's four digits, or its file's) and its grade: WARDED CRYPTJACK-4821 v2. Named fixtures keep theirs.

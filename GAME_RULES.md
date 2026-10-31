@@ -265,13 +265,19 @@ when the server is built. Every number is a named constant in `PARTS`; `develope
   (a rule it breaks, a second stranger) is rolled again; none fits, and the elite carries one lever.
 - **Floor natives.** A native is a third first met on one floor: the Zip Bomb and Hotspot on floor 1; the Idle Timer,
   Front End and Backlog on 2; the Limiter and Spare on 3; the Scraper, Bad Block and Cold Store on 4. On its own floor
-  it weighs three times as much; elsewhere it rolls at its own weight once its level allows. **Elites and ★ rare
-  spawns** always bring one of their floor's natives, and a rare spawn at least three parts and 2 more budget points.
+  it weighs three times as much, four floors down twice (an echo: .exe builds); elsewhere it rolls at its own weight
+  once its level allows. **Elites and ★ rare spawns** always bring one of their floor's natives, and a rare spawn at
+  least three parts and 2 more budget points.
 
 **.exe builds** (exe.mjs). From floor 4 a wild virus's part can come as its **.exe**: the same part, its rule harder or
 bent a new way, its *.exe* red on the board (hover it for what changed). Each part with a build comes as it 15% of the
 time on floor 4, 5% more each floor down (35% on floor 8); an elite or ★ rare spawn there brings at least one. A part
-you've never met never comes as its .exe. Its research and Codex card are the part's; the card names the build.
+you've never met never comes as its .exe. Its research and Codex card are the part's.
+
+- **Echoes.** A floor's natives come back four floors down (floor 1's on 5, 2's on 6, 3's on 7, 4's on 8), weighing
+  twice as much there and always as their .exe.
+- **Elites** from floor 6 bring their clash's parts as .exe builds.
+- **Broken,** an .exe part gives one more component, and from then on its Codex card names the build.
 
 | Part | Its .exe |
 |---|---|
@@ -297,6 +303,18 @@ you've never met never comes as its .exe. Its research and Codex card are the pa
 | Tripwire | Loud parts attack 2 cycles sooner, not 1. |
 | Scraper | Gains up to 4 ◆ from what it takes, not 2. |
 | Bad Block | Cracked heals lose up to 20% of your max, not 10%. |
+| Encryptor | Broken, it leaves your encryption on, one step lighter each cycle; Purge still clears it. |
+| Replicator | Each Replicate hatches two fragments, not one. |
+| Scrambler | While you're Scrambled, a backfired attack hits you at full, not half. |
+| Rig | At 100 heat it blows a cycle later instead of burning out: a Zip Bomb's blast on both sides, then it vents. |
+| Degausser | Its Wipe takes your two strongest keys. |
+| Prism | A cut stops only the hit it lands on, not the rest of the volley. |
+| Mimic | On its beat it plays back the dearer of your last two commands. |
+| Packer | A scan unpacks only one of the parts it hides. |
+| Damper | Drops two kinds of damage, not one. |
+| Cold Store | Thaws with one more ◆; its Chill lands the next cycle. |
+| Twin Rig | A Rig left alone takes the other's climb and 3 steps more, not 1. |
+| Recycle Bin | Crossing a tick gives the key back still cooling. |
 
 **Basic parts** (each matched to its family's Pulse Node over 20 cycles; level 6).
 
@@ -1663,7 +1681,7 @@ of home kills and 8% of guard kills. Scavenge adds to all of it.
 
 **Components** (salvage.mjs) are one currency, a count: what broken parts leave behind. Breaking a part drops them **60%
 of the time in a room fight**, always from an elite's parts with **one more** at the kill, and **35% anywhere else**
-(home, invasions). A mastered part drops them 25% more often; a Harvester adds one a kill on its server; a network rich
+(home, invasions). A mastered part drops them 25% more often, and an .exe part always one more; a Harvester adds one a kill on its server; a network rich
 in them more. Deconstructing, a stopped invasion and a scrapped filter give them too. Every hub's market buys them;
 none sells them. Nothing is built from them. Your count shows on the Server page.
 
