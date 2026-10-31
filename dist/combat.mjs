@@ -29,7 +29,7 @@ import { rollRogue, rogueKill } from './rogue.mjs';
 import { raidStart, raidLand, raidCycle, raidShield, raidBroke, raidTaken, raidAbsorb, noteDealt, noteHeal, cleanse, attackTarget, sigint, sigintCheck } from './raid.mjs';
 import { tellStart, tellCycle, tellLand, tellBroke, chargeNow, tellIntents, tellSigint, tellSigintCheck, tellOn, tellsOf, overclockMult, hotCharge } from './tells.mjs';
 import { prepareTicks, onHit as tickHit, blastCut, BOSS_RULES } from './interrupt.mjs';
-import { TELL, ROOM_FAMILIES, DAMPER_KINDS, floorFor, partGenesFor } from './data.mjs';
+import { TELL, ROOM_FAMILIES, DAMPER_KINDS, floorFor } from './data.mjs';
 import { holdsPart, objectiveBroke, objectiveCycle, objectiveBonus, bonusXp, bonusRolls, backupHit } from './objectives.mjs';
 import { mechValidate, mechIntercept, mechFired, mechPower, exposedCut, mechLanded, mechCommandHit, mechStart, mechClose, mechBroke, lagged, stunnedNow, missedTurn } from './mechanics.mjs';
 import { tickRoot, processWon } from './root.mjs';
@@ -2482,19 +2482,8 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     const n = Math.min(1e6, Number(text.split(' ')[2]));
     s.server.credits += n;
     emit(s, 'info', `Developer: +${n} credits.`);
-  } else if (/^developer fight (random|[a-z]+|part:[a-z0-9-]+)( \d+)?( \d+)?$/.test(text)) {
-    // developer fight <family|random> [level] [seed]: a home fight at that level (your level by default), at once.
-    // developer fight part:<id> [level]: one with that basic or third part, at the level it opens (as ?playtest=part:<id>).
-    const [, , what, lv, sd] = text.split(' '), L = Math.max(1, Math.min(LOADOUT.maxLevel, Number(lv) || hackerLevel(s))), seed = Number(sd) >>> 0 || 1;
-    const exeOn = /\.exe$/.test(what), pid = what.startsWith('part:') ? what.slice(5).replace(/\.exe$/, '') : null, home = pid && Object.entries(FAMILIES).find(([, f]) => f.parts.some((x) => x.id === pid)); // part:<id>.exe: its .exe build
-    if (active(s) || s.run) warn(s, active(s) ? 'Finish the fight first.' : 'Jack out first: developer fight is a fight at home.');
-    else if (pid && !home) warn(s, `No part called ${pid}.`);
-    else if (!pid && what !== 'random' && !FAMILIES[what]) warn(s, `developer fight <random|${Object.keys(FAMILIES).join('|')}|part:<id>> [level] [seed]`);
-    else {
-      if (home) { const spec = home[1].parts.find((x) => x.id === pid), PL = lv ? L : Math.max(spec.from || 1, 3); selectEncounter(s, 'random', seed, { level: PL, family: home[0], mutation: null, ...(exeOn ? { exe: [pid] } : {}), ...(spec.pool === 'third' ? { genes: partGenesFor(home[0], spec, PL), basic: 'pulse' } : { basic: pid }) }); }
-      else selectEncounter(s, 'random', seed, { level: L, ...(what !== 'random' ? { family: what } : {}), mutation: null });
-      engage(s);
-    }
+  } else if (/^developer fight( |$)/.test(text)) { // the Arena (arena.mjs, which bench.mjs loads): any fight by kind and id, or the last again
+    if (hooks.arena) hooks.arena(s, text); else warn(s, 'The Arena is not loaded (dist/arena.mjs).');
   } else if (/^developer parts( [a-z]+( [\d.]+){1,2}| profile [a-z]+ (steady|ramp|burst) [\d.]+)?$/.test(text)) { // the parts plan's numbers (parts.mjs PARTS): show them and the mix, or set one
     const [, , k, a, b, c] = text.split(' '), key = Object.keys(PARTS).find((x) => x.toLowerCase() === k);
     if (k && !key) warn(s, `No parts number ${k}. Try: ${Object.keys(PARTS).filter((x) => x !== 'native' && x !== 'count').join(', ')}.`);
