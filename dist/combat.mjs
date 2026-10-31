@@ -29,6 +29,7 @@ import { rollRogue, rogueKill } from './rogue.mjs';
 import { raidStart, raidLand, raidCycle, raidShield, raidBroke, raidTaken, raidAbsorb, noteDealt, noteHeal, cleanse, attackTarget, sigint, sigintCheck } from './raid.mjs';
 import { tellStart, tellCycle, tellLand, tellBroke, chargeNow, tellIntents, tellSigint, tellSigintCheck, tellOn, tellsOf, overclockMult, hotCharge } from './tells.mjs';
 import { prepareTicks, onHit as tickHit, blastCut, BOSS_RULES } from './interrupt.mjs';
+import { actsStart, lashHit, lashLand, actIntents, actBegins, actCap } from './acts.mjs';
 import { TELL, ROOM_FAMILIES, DAMPER_KINDS, floorFor } from './data.mjs';
 import { holdsPart, objectiveBroke, objectiveCycle, objectiveBonus, bonusXp, bonusRolls, backupHit } from './objectives.mjs';
 import { mechValidate, mechIntercept, mechFired, mechPower, exposedCut, mechLanded, mechCommandHit, mechStart, mechClose, mechBroke, lagged, stunnedNow, missedTurn } from './mechanics.mjs';
@@ -2063,6 +2064,7 @@ function engage(s) {
   seeGenes(s, e.virus); // the rules' chips: what you fight, you've seen (genome.mjs)
   logFight(s, e.virus); // the Codex tab: a boss fought, a mutation and what it rode on (genome.mjs)
   prepareTicks(s); // the interrupt's ticks on every part, and a boss's rule (interrupt.mjs; not a crew boss or a breach)
+  actsStart(s); // a P4 boss's beat on its part (acts.mjs)
   tellStart(s); // a solo fight's tells (tells.mjs)
 }
 
@@ -2767,6 +2769,7 @@ export function hit(s, p, base, opts = {}) {
   if (cmd && p.special) e.virus.idleHit = e.cycle; // the Idle Timer counts from the signature's last command hit
   // Hotspot: a command hit on it powers up the virus's next attack 2 or more cycles away (tells.mjs).
   if ((cmd || (p.exe && base > 0 && !opts.server)) && p.hotspot && p.hotAt !== e.cycle) { p.hotAt = e.cycle; hotCharge(s, p); } // a Hotspot.exe: burns and helpers too
+  if (cmd || (opts.src === 'helper' && opts.sent != null && base > 0)) lashHit(s, p, cmd ? null : opts.sent); // a P4 boss's Backlash: on its beat a part your command hits lashes back, and one a helper sent after the beat showed (acts.mjs)
   if (cmd) mechCommandHit(s, p); // Thorns, a Swap passing your statuses on, the Bodyguard's target (mechanics.mjs)
   // Adaptive (mutation): count the cycles in a row your commands hit this part (the chit comes at cycle end).
   if (mutated(s, 'adaptive') && opts.mine && !opts.dot && !opts.server && base > 0 && p.adaptAt !== e.cycle) {
@@ -2796,9 +2799,9 @@ export function hit(s, p, base, opts = {}) {
   const root = opts.mine && !opts.server && (buffed(e, 'sudo') || opts.unlock); // Sudo (Overclocker): the parts' rules don't hold you; Zero-day goes through locks
   if (cmd && e.commanding?.maze) base = Math.max(1, Math.round((base * e.commanding.maze) / 100));
   if (cmd && e.commanding?.bounce === p.id) {
-    const back = Math.min(Math.max(1, Math.round(base * (p.bounce ?? CONFIG.mirrorBounce))), defender(s).integrity - 1);
-    const took = back > 0 ? takeDamage(s, back, p.id, `${p.name} bounce`) : 0;
-    if (took) emit(s, 'server-hit', `Part of it bounces back off the ${p.name}: −${took}.`, { source: p.id, amount: took, bounce: true });
+    const by = e.commanding.bounceBy || p.name, back = Math.min(Math.max(1, Math.round(base * (e.commanding.bounceShare ?? p.bounce ?? CONFIG.mirrorBounce))), defender(s).integrity - 1);
+    const took = back > 0 ? takeDamage(s, back, p.id, `${by} bounce`) : 0;
+    if (took) emit(s, 'server-hit', `Part of it bounces back off the ${by}: −${took}.`, { source: p.id, amount: took, bounce: true });
   }
   // A crew boss's firewall phase (raid.mjs): while its shield is up, every hit on the boss lands on the shield,
   // armor or not.
@@ -2917,6 +2920,7 @@ export function hit(s, p, base, opts = {}) {
   if (p.taggedUntil >= e.cycle) notes.push('tagged');
   if (e.virus.weakKnown && e.virus.weakPoint === p.id) notes.push('weak point');
   if (dealt > 0 && holdsPart(e, p)) dealt = Math.min(dealt, Math.max(0, p.integrity - 1)); // Uptime: the virus can't be broken (objectives.mjs)
+  if (dealt > 0 && p.core) dealt = Math.min(dealt, actCap(s, p)); // a P4 boss's ♛: one tick a hit, so no act is skipped (acts.mjs)
   const above = p.integrity >= p.max / 4;
   p.integrity -= dealt;
   if (above && p.integrity > 0 && p.integrity < p.max / 4) daemonsOn(s, 'low', { part: p.id }); // Reaper
@@ -2987,6 +2991,7 @@ function bossPhases(s) {
   for (const ph of v.phases || []) {
     if (ph.done || share > ph.at || !life.current) continue;
     ph.done = true;
+    actBegins(s, ph); // a P4 boss's next act (acts.mjs)
     let say = ph.say;
     for (const act of ph.do) {
       if (act === 'rearm') for (const p of livingParts(s)) if (p.kind === 'system') { p.armor = Math.max(1, p.maxArmor); p.maxArmor = p.armor; p.patchAt = null; }
@@ -3312,7 +3317,8 @@ function fxCooldown(s, id, a) {
 function bendCommand(s, intent) {
   const e = s.encounter, a = ABILITIES[intent.ability], d = mirrorOn(s);
   if (!d || !intent.target || !['part', 'attack'].includes(a?.target) || buffed(e, 'sudo') || d.unmaskUntil >= e.cycle) return intent;
-  const to = bendOf(s, d)?.to, self = to === d;
+  const to = bendOf(s, d)?.to, self = to === d, sings = !!d.sings; // HOLLOW CHOIR's Decoy (acts.mjs): every bent command bounces, wherever it lands
+  if (to && sings && e.commanding) Object.assign(e.commanding, { bounce: to.id, bounceShare: d.bounce ?? CONFIG.mirrorBounce, bounceBy: d.name });
   if (!to || (to.id === intent.target && !self)) return intent;
   const maze = fxHas(s, 'decoy-pass');
   if (maze) {
@@ -3323,7 +3329,7 @@ function bendCommand(s, intent) {
   const bent = { ...intent, target: to.id, text: `${intent.ability} ${to.id}` };
   if (to.id !== intent.target && validate(s, bent)) return intent;
   if (to.id !== intent.target) emit(s, 'status', `The ${d.name} bends your ${intent.ability === 'spike' ? spikeName(s) : a.name} onto ${self ? 'itself' : `the ${to.name}`}.`, { target: to.id, from: intent.target, bent: true });
-  if (e.commanding) Object.assign(e.commanding, { target: to.id, bounce: self ? d.id : null });
+  if (e.commanding) Object.assign(e.commanding, { target: to.id, bounce: self || sings ? to.id : null });
   return bent;
 }
 function useAbility(s, intent, auto = false) {
@@ -4084,7 +4090,7 @@ export function playerPhase(s, phase = 'all') {
     let t = part(s, h.target);
     if (!alive(t)) { t = soonestAttacker(s); if (t) h.target = t.id; }
     if (t) e.helperHits.list.push({ target: t.id, damage: h.damage, sent: h.sent, by: h.by || null });
-    const r = t ? hit(s, t, h.damage, { by: 'Helper', dot: true, synced: h.synced, src: 'helper' }) : null;
+    const r = t ? hit(s, t, h.damage, { by: 'Helper', dot: true, synced: h.synced, src: 'helper', sent: h.sent }) : null;
     h.left--;
     // Fork (Herder): a ◆ a helper breaks while it runs starts another helper on that part (up to the cap).
     if (t && r?.absorbed && !r.dealt && buffed(e, 'fork') && alive(t) && e.helpers.length < helperCap(s)) { e.helpers.push({ target: t.id, damage: h.damage, left: 3, sent: e.cycle, by: ABILITIES.fork.name }); emit(s, 'status', `Fork: a ◆ breaks, and a helper splits off on the ${t.name}.`, { target: t.id, mark: 'helper' }); }
@@ -4484,7 +4490,8 @@ function lagCycle(s, first) {
 }
 function endCycle(s, first) {
   if (cycleStart(s)) return since(s, first);
-  // 2. Enemy attacks due this cycle.
+  // 2. Enemy attacks due this cycle (a P4 boss's Backlash first: acts.mjs).
+  if (lashLand(s)) return since(s, first);
   let landed = 0;
   for (const p of dueNow(s)) {
     if (p.attack?.due > s.encounter.cycle) continue;
@@ -4608,12 +4615,13 @@ export function intents(s, columns = 4) {
   // where its next one points (to) only once the Decoy's timers do (veiled: not yet).
   for (const decoy of livingParts(s).filter((x) => x.reflect)) {
     const b = bendOf(s, decoy);
-    for (let col = 0; col < columns; col++) if ((e.cycle + col + (decoy.reflectOff || 0)) % decoy.reflect === 0) out.push({ source: decoy.id, name: 'Bend', effect: 'mirror', amount: Math.round((decoy.bounce ?? CONFIG.mirrorBounce) * 100), col, hidden: false, veiled: !b.shown, to: b.shown && b.at === e.cycle + col ? b.to.id : null, toName: b.shown && b.at === e.cycle + col ? b.to.name : null, self: b.to === decoy, harm: b.shown && b.at === e.cycle + col ? b.bad : null, kind: decoy.kind });
+    for (let col = 0; col < columns; col++) if ((e.cycle + col + (decoy.reflectOff || 0)) % decoy.reflect === 0) out.push({ source: decoy.id, name: 'Bend', effect: 'mirror', amount: Math.round((decoy.bounce ?? CONFIG.mirrorBounce) * 100), col, hidden: false, sings: !!decoy.sings, veiled: !b.shown, to: b.shown && b.at === e.cycle + col ? b.to.id : null, toName: b.shown && b.at === e.cycle + col ? b.to.name : null, self: b.to === decoy, harm: b.shown && b.at === e.cycle + col ? b.bad : null, kind: decoy.kind });
   }
   for (const p of parts(s)) if (p.rebootAt && p.integrity === 0 && p.rebootAt - e.cycle >= 0 && p.rebootAt - e.cycle < columns) out.push({ source: p.id, name: 'Reboot', effect: 'reboot', amount: Math.round(p.max * CONFIG.twinReboot.at), col: p.rebootAt - e.cycle, hidden: false, kind: p.kind });
   // A Cold Store's thaw and a Spare's boot (the parts plan's P2): on the cycle each joins the fight.
   for (const p of livingParts(s)) if (p.frozen && !p.thawed && p.thawAt - e.cycle >= 0 && p.thawAt - e.cycle < columns) out.push({ source: p.id, name: 'Thaw', effect: 'thaw', amount: p.chill ? attackAmount({ ...p, attack: p.chill }) : 0, col: p.thawAt - e.cycle, hidden: false, kind: p.kind });
   for (const p of livingParts(s)) if (asleep(p) && p.bootAt && p.bootAt - e.cycle >= 0 && p.bootAt - e.cycle < columns) out.push({ source: p.id, name: 'Boot', effect: 'boot', amount: Math.round((p.bootFrom?.max || 0) * p.spare.at), col: p.bootAt - e.cycle, hidden: false, kind: p.kind });
+  out.push(...actIntents(s, columns)); // a P4 boss's Backlash (acts.mjs)
   out.push(...told);
   if (bodyRules(e) && hooks.roomIntents) out.push(...hooks.roomIntents(s, columns)); // a room body's other moves (families.mjs: a Courier's deliveries)
   // A packed part's chips (packParts): their timing and amount, named ???, marks off (view.mjs). Tells keep their own.

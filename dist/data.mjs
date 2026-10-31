@@ -1018,11 +1018,19 @@ const STRAIN_BOSS_LATE = [[8, 1], [10, 0.8], [18, 1.1], [30, 1.45]];
 const HASHLORD_LATE = [[8, 1], [10, 0.8], [18, 0.95], [30, 1.1]];
 export const BOSSES = {
   // The Resident (run.mjs /core): about two wins in three for a geared player at its level.
-  resident: { name: 'Resident', hp: 1.4, dmg: 1, enrageAt: 18, phases: [{ at: 0.5, do: ['rearm'], say: 'The Resident re-arms every part.' }] },
+  // P4 (acts.mjs, docs/puzzle-fights.md 7): a P4 boss plays in three acts, each from a tick on its ♛ part. acts: its beat
+  // (backlash, copy or bend), every and first its rhythm; a phase's every quickens it. The Resident's are by family: the
+  // worm's and the ransomware's are built, the ghostroot's keeps the old phase until P4's next batch.
+  resident: { name: 'Resident', hp: 1.4, dmg: 1, enrageAt: 18, phases: [{ at: 0.5, do: ['rearm'], say: 'The Resident re-arms every part.' }],
+    acts: { worm: { beat: 'backlash', every: 4, first: 3, hp: 1.1, enrageAt: 24 }, ransomware: { beat: 'backlash', every: 4, first: 4, hp: 1.1, enrageAt: 24 } },
+    actPhases: [{ at: 0.5, do: [], every: 3, say: 'The Resident quickens. Its Backlash comes every 3 cycles.' }, { at: 0.25, do: ['faster'], say: 'The Resident gets desperate. Every attack comes a cycle sooner.' }] },
   // RELAY-KING (run.mjs): a worm boss in SPRAWL-00's /net from level 3, back every half hour.
   relayking: { name: 'RELAY-KING', family: 'worm', hp: 1.6, dmg: 1, enrageAt: 16, phases: [{ at: 0.5, do: ['faster'], say: 'RELAY-KING speeds up. Every attack comes a cycle sooner.' }] },
   // REPO MAN (events.mjs): the bounty from level 8.
-  repoman: { name: 'REPO MAN', family: 'ransomware', hp: 1.6, dmg: 1, enrageAt: 18, phases: [{ at: 0.6, do: ['rearm'], say: 'REPO MAN re-arms every part.' }, { at: 0.3, do: ['faster'], say: 'REPO MAN gets desperate. Every attack comes a cycle sooner.' }] },
+  // P4: its Repo Agent (a Mimic) repossesses what you fire on its beat, every 4 cycles, then every 3.
+  repoman: { name: 'REPO MAN', family: 'ransomware', hp: 1.6, dmg: 1, enrageAt: 18, acts: { beat: 'copy' },
+    extra: [{ id: 'agent', name: 'Repo Agent', integrity: 18, armor: 1, loot: 'Repo Tag', mimic: true }],
+    phases: [{ at: 0.5, do: [], every: 3, say: 'REPO MAN quickens. The Repo Agent plays you back every 3 cycles.' }, { at: 0.25, do: ['faster'], say: 'REPO MAN gets desperate. Every attack comes a cycle sooner.' }] },
   // HOLLOW CHOIR (events.mjs): a ghostroot boss from level 10. At half its Decoy's bounce rises from 50% to 75% (Harmony), in
   // place of the second Decoy it used to split off on the off-beat: one global beat, as the compatibility rules ask (genes.mjs).
   // KESSLER-FARM-00 (rogue.mjs FARM), the crew dungeon: crew bosses on the group boss framework (raid.mjs).
@@ -1031,7 +1039,8 @@ export const BOSSES = {
   foreman: { name: 'THE FOREMAN', family: 'ransomware', hp: 13, dmg: 0.45, enrageAt: 22, phases: [], raid: FOREMAN },
   heatsink: { name: 'HEATSINK', family: 'worm', hp: 17, dmg: 0.45, enrageAt: 25, phases: [], raid: HEATSINK },
   coldwallet: { name: 'COLDWALLET', family: 'ghostroot', hp: 8.8, dmg: 0.45, enrageAt: 18, phases: [], raid: COLDWALLET },
-  choir: { name: 'HOLLOW CHOIR', family: 'ghostroot', hp: 1.6, dmg: 1, enrageAt: 16, signature: { name: 'Harmony', rule: 'At half Integrity, the Decoy bounces 75% of a hit back at you instead of 50%.' }, phases: [{ at: 0.5, do: ['harmony'], say: 'The Hollow Choir finds its harmony. When the Decoy\'s beat points at itself, three quarters of a hit now bounce back.' }] },
+  // P4: the Decoy's bend is its beat (every 3); Harmony is its second act, every attack sooner its third.
+  choir: { name: 'HOLLOW CHOIR', family: 'ghostroot', hp: 1.6, dmg: 1, enrageAt: 16, acts: { beat: 'bend', every: 3, first: 3 }, signature: { name: 'Harmony', rule: 'From its second act, three quarters of every hit its Decoy bends come back at you instead of half.' }, phases: [{ at: 0.5, do: ['harmony'], say: 'The Hollow Choir finds its harmony. Three quarters of every bent hit now come back at you.' }, { at: 0.25, do: ['faster'], say: 'The Hollow Choir sings over you. Every attack comes a cycle sooner.' }] },
   // Native bosses (network.mjs): each network rolls one of these for its lair, a rogue server of its own. Solo bosses
   // on the tells framework: every tell open at their level, a signature charge of their own (TELLS, TELL_SETS by id;
   // a strain boss renames its strain's charge), a third part they always bring (third), and phases. Their drops are
@@ -1451,9 +1460,9 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
     if (p.ratchet) p.ratchet.amount = Math.max(1, Math.round(p.ratchet.amount * eliteDmg));
   }
   // A boss (BOSSES): bigger and a little harder; its phases and enrage timer ride on the virus.
-  const boss = BOSSES[overrides.boss] || null;
+  const boss = BOSSES[overrides.boss] || null, acts = boss?.acts?.beat ? boss.acts : boss?.acts?.[familyId] || null; // a P4 boss's acts (acts.mjs): its own Integrity and enrage
   if (boss) for (const p of parts) {
-    p.max = p.integrity = Math.round(p.max * (overrides.bossHp ?? boss.hp));
+    p.max = p.integrity = Math.round(p.max * (overrides.bossHp ?? acts?.hp ?? boss.hp));
     const dmg = boss.dmg * (boss.healerDmg ? runLate(level, boss.healerDmg) : 1);
     for (const k of ['amount', 'hit', 'rampBy']) if (p.attack?.[k] && (k !== 'amount' || ['damage', 'encrypt'].includes(p.attack.effect))) p.attack[k] = Math.max(1, Math.round(p.attack[k] * dmg));
   }
@@ -1484,7 +1493,7 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   // Enemy damage can crit, from level 3 (like mutations).
   const crit = level >= SERVER.mutationsFrom ? CONFIG.enemyCrit : 0;
   const author = authorOf({ family: familyId, strain: strainId, boss: overrides.boss || null }, overrides.author);
-  return { id: familyId + '-' + seed, name, family: familyId, strain: strainId, grade, dormant: strain?.dormant ? true : false, art: family.art || familyId, mutation, threat, level, power: dmgScale * (overrides.elite ? eliteDmg : 1), hpPower: scale, crit, threatens: family.threatens, parts, weakPoint, weakKnown: false, ...(overrides.elite ? { elite: true } : {}), ...(rolled2?.clash ? { clash: rolled2.clash } : {}), ...(boss ? { boss: overrides.boss, phases: boss.phases.map((x) => ({ ...x, done: false })), enrageAt: boss.enrageAt } : {}),
+  return { id: familyId + '-' + seed, name, family: familyId, strain: strainId, grade, dormant: strain?.dormant ? true : false, art: family.art || familyId, mutation, threat, level, power: dmgScale * (overrides.elite ? eliteDmg : 1), hpPower: scale, crit, threatens: family.threatens, parts, weakPoint, weakKnown: false, ...(overrides.elite ? { elite: true } : {}), ...(rolled2?.clash ? { clash: rolled2.clash } : {}), ...(boss ? { boss: overrides.boss, phases: (boss.acts?.[familyId] ? boss.actPhases : boss.phases).map((x) => ({ ...x, done: false })), enrageAt: acts?.enrageAt ?? boss.enrageAt } : {}),
     genes: genome, author, ...unsigned, ...(unlinked ? { unlinked: true } : {}) };
 }
 

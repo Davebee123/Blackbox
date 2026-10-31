@@ -29,8 +29,9 @@ const nameOk = (a, b) => {
 };
 const strip = (v) => { const o = structuredClone(v); for (const k of ADDED) delete o[k]; return o; };
 // Phase 1 rebuilt three bosses on purpose (GAME_RULES.md "Solo bosses", docs/genome.md 5.3): HASHLORD, MIRRORSHADE and HOLLOW CHOIR's Harmony.
-// genesim.test.mjs holds them to their designs and their band; every other boss is the same fight it was.
-const REBUILT = ['nb-hashlord', 'nb-mirrorshade', 'choir'];
+// genesim.test.mjs holds them to their designs and their band; every other boss is the same fight it was. P4 rebuilt
+// the Resident (its ransomware and worm acts, the only family this file gives it) and REPO MAN (acts.test.mjs).
+const REBUILT = ['nb-hashlord', 'nb-mirrorshade', 'choir', 'resident', 'repoman'];
 const SOLO = Object.keys(BOSSES).filter((k) => !BOSSES[k].raid && !REBUILT.includes(k));
 
 // 10,000 seeds over everything a virus can be: wild viruses of every family at every level, strains, grades, run
