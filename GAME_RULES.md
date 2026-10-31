@@ -114,6 +114,7 @@ Hover it for what happens and, on its own muted ▸ line, how to stop it. Breaki
 - **Ignoring hurts** (`TELL.tiers`): a charge or cast that gets through knocks your last skill **Offline** for a cycle
   (from level 6; never key 1 or SIGINT), and leaves you **Corrupted** (3% of your max a cycle for 3 cycles at 10–16,
   4% from 17; Purge, Scrub or Rollback cleanses it).
+- **A boss's beat** (Boss acts): the Backlash, REPO MAN's Repo Agent and HOLLOW CHOIR's singing Decoy.
 - **Helpers count** (docs/puzzle-fights.md 3.2). A helper's hit is your hit on every lever: it can set off a Tripwire,
   cross a boss's phase tick or boot a Spare, and on the Mimic's beat each helper you sent onto it after the beat was
   said is played back at its own size (`caughtHelpers`). Helpers never cut a tell on their own. On the board each
@@ -541,14 +542,34 @@ flashes on screen.
 
 **The Resident.** Opening a server's vault unseals its **Core**, where the Resident waits: the owner's process, a boss of
 the server's family (all three parts) at the server's level, 1.4× Integrity (1.1× on your first server). Its phase
-re-arms every part; it enrages at cycle 18. Beat it and the server is **taken over**: yours, teal on the map, its Core
+re-arms every part; it enrages at cycle 18. A worm or ransomware Resident plays in acts instead (below): 1.1× Integrity,
+enraging at cycle 24. Beat it and the server is **taken over**: yours, teal on the map, its Core
 quiet for good. Lose and you're disconnected, and for 6 hours it is a level stronger, up to three levels.
 
 | Boss | Where | From | Integrity | Phase | Enrages |
 |---|---|---|---|---|---|
 | RELAY-KING (worm) | SPRAWL-00's relay room, a Core sealed until level 3; back 30 minutes after it falls | level 3 | 1.6× | every attack a cycle sooner | cycle 16 |
-| REPO MAN (ransomware) | The Bounty event from level 8 | level 8 | 1.6× | 60%: re-arms every part; 30%: every attack a cycle sooner | cycle 18 |
-| HOLLOW CHOIR (ghostroot) | Its own event, from level 10 | level 10 | 1.6× | Harmony: when its Decoy points at itself, 75% of a hit bounces back | cycle 16 |
+| REPO MAN (ransomware) | The Bounty event from level 8 | level 8 | 1.6× | In acts: its Repo Agent's beat every 3 cycles; every attack a cycle sooner | cycle 18 |
+| HOLLOW CHOIR (ghostroot) | Its own event, from level 10 | level 10 | 1.6× | In acts: Harmony (75% of a bend bounces back); every attack a cycle sooner | cycle 16 |
+
+### Boss acts (acts.mjs)
+
+A P4 boss (docs/puzzle-fights.md 7) plays in **three acts**: the first from the start, the next two from its ♛ part's
+ticks at 50% and 25%. Built: the worm and ransomware Residents, REPO MAN and HOLLOW CHOIR.
+
+- **One tick a hit.** A hit takes the ♛ under its next tick and no further, so no act is skipped.
+- **A tell an act.** Act 1 deals the boss's first tell (its charge), act 2 its cast as well, act 3 its third.
+- **The beat** repeats on a fixed rhythm, always on the board. Act 2 quickens it; act 3 makes every attack a cycle sooner.
+- **The one to leave.** The ♛ stays above its next tick until this act's beat has played, or nothing else stands. Taken
+  under it sooner, every part re-arms (*Too soon*). The held tick is outlined red; its tooltip says when the beat plays.
+
+| Boss | The beat | Every | What answers it |
+|---|---|---|---|
+| Resident (worm, ransomware) | **Backlash**: a part with an attack that your command hits on the beat lashes back for its attack doubled (30% of your max at least, 60% at most), and an Encrypt or Replicate does its own thing once on top. A hit that breaks it doesn't lash, nor do burns or helpers sent before. | 4, then 3 | A shield, a buff or hold, a part with no attack (the Lockbox), or a hit that breaks its part |
+| REPO MAN | **Repossess**: its Repo Agent, a Mimic, copies what you fire and turns it on you | 4, then 3 | What costs least to have copied, or break the Agent |
+| HOLLOW CHOIR | **Bend**: its Decoy bends your command at one part onto the part it points at, and part of the hit comes back at you wherever it lands (50%, 75% from act 2) | 3 | A shield, a buff or an area command, or a small hit |
+
+The Backlash's chips (*Lash −N*) sit on every part with an attack, in the columns the beat falls in.
 
 **Loot.** A boss always drops one item at its level (`bossLoot`): a blue, or a yellow one kill in four. The Resident
 rolls like an elite instead (one is met on every takeover). Each boss has **two uniques of its own**: 15% a kill, +5%

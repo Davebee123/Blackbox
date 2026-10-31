@@ -3,6 +3,7 @@ import { masteryLine } from './mastery.mjs';
 import { componentsOf } from './salvage.mjs';
 import { glyph } from './glyphs.mjs';
 import { TELL_ICON } from './recap.mjs';
+import { leaveOf } from './acts.mjs';
 import { glyphMarkup } from './protocol-glyphs.mjs';
 import { isLive, liveCount, memoryCap, memoryCost, joinCost, MEMORY } from './memory.mjs';
 // The server whose Connect is waiting on a yes (app.js): its card shows the memory it takes.
@@ -450,15 +451,26 @@ const chipTip0 = (i) => (i.taps ? `\nHit ${i.tap} of ${i.taps} of one volley. A 
 const bendWhen = (c) => (c === 0 ? 'this cycle' : c === 1 ? 'next cycle' : `in ${c} cycles`);
 function bendChip(i, c, k = '') {
   const self = i.to && i.to === i.source, label = !i.to ? '→ ?' : self ? '→ itself' : `→ ${i.toName}`;
-  const head = `Decoy: Bend, ${bendWhen(c)}. Your command at one part goes to the part the Decoy points at. Area commands and the ones on you aren't bent.`;
+  const head = `Decoy: Bend, ${bendWhen(c)}. Your command at one part goes to the part the Decoy points at${i.sings ? `, and ${i.amount}% of its hit comes back at you` : ''}. Area commands and the ones on you aren't bent.`;
+  if (i.sings) { // HOLLOW CHOIR's Decoy (acts.mjs): every bend bounces
+    const where = !i.to ? (i.veiled ? ' It hides where while it wears ◆.' : '') : self ? ' It points at itself.' : ` It points at the ${i.toName}.`;
+    return `<div class="intent bend harm${c === 0 ? ' now' : c === 1 ? ' next' : ''}${i.to ? '' : ' veiled'}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(`${head}${where}${answerLine('Fire a shield, a buff or an area command then, or a small hit.')}`)}"><span class="ico" ${icon(ICON.mirror)}></span><b class="bend-to">${esc(label)}</b></div>`;
+  }
   const tip = !i.to ? `${head} ${i.veiled ? 'It hides where while it wears ◆.' : 'Where it points next shows after this beat.'}${answerLine(i.veiled ? 'Strip its ◆, or Tag it, to see where.' : 'Read it after this beat.')}`
     : self ? `${head} It points at itself: the command lands on the Decoy, and ${i.amount}% of a hit bounces back at you.${answerLine('Fire nothing at one part then: a shield, a buff or an area command.')}`
       : i.harm ? `${head} It points at the ${i.toName}, a part that must not be hit now.${answerLine('Fire nothing at one part then: a shield, a buff or an area command.')}`
         : `${head} It points at the ${i.toName}.${answerLine(`Fire then if you want the ${i.toName} hit.`)}`;
   return `<div class="intent bend${c === 0 ? ' now' : c === 1 ? ' next' : ''}${self || i.harm ? ' harm' : ''}${i.to ? '' : ' veiled'}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(tip)}"><span class="ico" ${icon(ICON.mirror)}></span><b class="bend-to">${esc(label)}</b></div>`;
 }
+// A P4 boss's Backlash (acts.mjs): a dashed red chip on each part with an attack, in the columns the beat falls in, with
+// what the lash costs. Its tooltip: the rule, and the answer.
+function lashChip(i, c, k = '') {
+  const tip = `Backlash, ${bendWhen(c)}. A beat: hit this part with a command then and it lashes back for ${i.amount}${i.also ? `, with its ${i.also}` : ''}. A hit that breaks it doesn't.${answerLine('Hit a part with no attack, break one, or fire a shield or buff then.')}`;
+  return `<div class="intent bend lash${c === 0 ? ' now' : c === 1 ? ' next' : ''}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(tip)}"><span class="ico" ${icon(ICON.mirror)}></span><b class="bend-to">Lash −${i.amount}</b></div>`;
+}
 function attackChip(i, c, k = '', to = null) {
   if (i.effect === 'mirror') return bendChip(i, c, k);
+  if (i.effect === 'backlash') return lashChip(i, c, k);
   if (i.packed) i = { ...i, syn: false, scrape: false, bad: false, taps: 0 };
   return `<div class="intent ${c === 0 ? 'now' : c === 1 ? 'next' : ''}${i.held ? ' held' : ''}${chipCls(i)}${i.bk ? ' to-bk' : ''}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(i.name)}: ${effectLabel(i)} ${i.bk ? 'to the Backup' : to ? `at ${esc(to)}` : i.packed && !['damage', 'fuse'].includes(i.effect) ? '' : effectTarget[i.effect] || ''}${heldTip(i)}${esc(i.packed ? '' : chipTip(i))}">${i.bk ? glyph('backup', 'bk-ico') : `<span class="ico" ${icon(ICON[i.effect])}></span>`}${heldMark(i)}<b${longChip(i) ? ' class="long"' : ''}>${esc(i.name)}</b><i class="code${longChip(i) ? ' long' : ''}">${esc(attackCode(i.name))}</i><small>${effectLabel(i)}</small>${i.syn ? '<em class="synmark">SYN</em>' : ''}${i.scrape ? `<em class="scrapemark" title="Takes your buffs">${glyph('scraper')}</em>` : ''}${i.bad ? '<em class="badmark" title="Cracks your next heals">▦</em>' : ''}${i.taps ? `<em class="tapmark">${i.tap}/${i.taps}</em>` : ''}${to ? `<small class="at">→ ${esc(to)}</small>` : ''}</div>`;
 }
@@ -672,9 +684,13 @@ export function statusSpans(s) {
 
 // The interrupt (interrupt.mjs, every fight but a crew boss's): two ticks on a part's bar at 50% and 25%. A spent one
 // goes hollow; a boss's core part under rule (a) has phase ticks instead.
+// A P4 boss's ♛ (acts.mjs leaveOf): its next phase tick is held (amber) until this act's beat has played.
 function ticksMarkup(s, p) {
   if (!s.encounter?.ticked || !p.ticks) return '';
-  return p.ticks.map((t) => `<i class="ptick${t.spent ? ' spent' : ''}${t.phase != null ? ' phase' : ''}" style="left:${t.at * 100}%" title="${esc(t.phase != null ? `Phase tick at ${Math.round(t.at * 100)}%: take the ${p.name} across it and the boss starts its next phase.${t.spent ? ' Spent.' : ''}` : `Tick at ${Math.round(t.at * 100)}%: take the ${p.name} across it on a cycle its move is due and that move is cancelled. Each tick works once a fight.${t.spent ? ' Spent.' : ''}`)}"></i>`).join('');
+  const lv = p.core ? leaveOf(s) : null, next = p.ticks.find((t) => !t.spent);
+  const held = (t) => lv && !lv.done && t === next;
+  const leaveTip = (t) => (held(t) ? `\nLeave it above this tick until the beat plays${lv.beat != null ? ` (${bendWhen(lv.beat)})` : ''}. Taken under it sooner, every part re-arms.` : '');
+  return p.ticks.map((t) => `<i class="ptick${t.spent ? ' spent' : ''}${t.phase != null ? ' phase' : ''}${held(t) ? ' held' : ''}" style="left:${t.at * 100}%" title="${esc(t.phase != null ? `Phase tick at ${Math.round(t.at * 100)}%: take the ${p.name} across it and the boss starts its next phase.${t.spent ? ' Spent.' : ''}${leaveTip(t)}` : `Tick at ${Math.round(t.at * 100)}%: take the ${p.name} across it on a cycle its move is due and that move is cancelled. Each tick works once a fight.${t.spent ? ' Spent.' : ''}`)}"></i>`).join('');
 }
 // What crossing takes this cycle, in the Now column: cut ▸ 9 (deal 9), cut ▸ ◆1 + 9 when it still wears armor,
 // cut ▸ — when no tick is left.
@@ -868,13 +884,14 @@ export function boardMarkup(s, selected, preview = null) {
       // A tell shows whatever the part hides (tells.mjs): nothing big lands unannounced.
       const told = mine.filter((i) => i.tell && i.col === c).map((i) => tellChip(s, i.tell === 'mimic' ? { ...i, copy: cp } : i, c, `tell:${p.id}:${i.id}@${e.cycle + c}`, crew.length && i.effect === 'damage' ? sink || 'all' : null)).join('')
         + mine.filter((i) => i.tell && i.winFrom != null && c >= i.winFrom && c < i.col).map((i) => tellSpan(s, i, c)).join(''); // a window longer than a cycle (tells.mjs)
-      if (timersHidden(s, p) && p.attack) return `<div class="bcell">${cryptChip}${escChip}${told || '<div class="intent hidden">?</div>'}${c === 0 ? cutChip(s, p) + progOnPart(s, p) : ''}${patchChip}${pipCell(p, c)}</div>`;
-      const hit = mine.find((i) => i.col === c && !i.tell);
+      const lash = mine.filter((i) => i.col === c && i.effect === 'backlash').map((i) => lashChip(i, c, `lash:${p.id}@${e.cycle + c}`)).join(''); // a P4 boss's beat (acts.mjs), beside what lands
+      if (timersHidden(s, p) && p.attack) return `<div class="bcell">${cryptChip}${escChip}${told || '<div class="intent hidden">?</div>'}${lash}${c === 0 ? cutChip(s, p) + progOnPart(s, p) : ''}${patchChip}${pipCell(p, c)}</div>`;
+      const hit = mine.find((i) => i.col === c && !i.tell && i.effect !== 'backlash');
       // With a crew, a damage attack lands on everyone, or on whoever is drawing fire; a crew boss's part with a
       // target rule (raid.mjs) on the one player it's aiming at.
       const aimed = crew.length && hit?.effect === 'damage' && !sink && p.attack.target ? attackTarget(s, p) : null;
       const to = crew.length && hit?.effect === 'damage' ? sink || (aimed ? aimed.who || 'you' : 'all') : null;
-      return `<div class="bcell">${cryptChip}${escChip}${told}${hit && !(p.attack ? false : hit.hidden) ? attackChip(hit.effect === 'damage' && backupAims(e, e.cycle + c) ? { ...hit, bk: true } : hit, c, `${p.id}@${e.cycle + c}`, to) : ''}${c === 0 ? cutChip(s, p) + progOnPart(s, p) : ''}${patchChip}${pipCell(p, c)}</div>`;
+      return `<div class="bcell">${cryptChip}${escChip}${told}${hit && !(p.attack ? false : hit.hidden) ? attackChip(hit.effect === 'damage' && backupAims(e, e.cycle + c) ? { ...hit, bk: true } : hit, c, `${p.id}@${e.cycle + c}`, to) : ''}${lash}${c === 0 ? cutChip(s, p) + progOnPart(s, p) : ''}${patchChip}${pipCell(p, c)}</div>`;
     }).join('');
     // A part with no attack of its own (a Mutex, a Mimic) still shows its row's cells when a tell or a beat sits there.
     const showCells = p.attack || p.ratchet || hrows[p.id] || mine.some((i) => i.tell || !i.hidden || i.effect === 'fuse');

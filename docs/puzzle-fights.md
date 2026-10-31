@@ -2,7 +2,8 @@
 
 Which fights are puzzles, the bar they're measured against, and the phases. Built: P0 (`solved.mjs`), P1 (the program
 fits the trick; helpers count), P2 (one lever a fight, docs/puzzle-levers.md) and P3 (elites: a clash); the rules are
-in GAME_RULES.md "Fights". Left: P4 (bosses) and section 6's pay. Code cites this doc by section number.
+in GAME_RULES.md "Fights". P4's first four are built (acts.mjs, GAME_RULES.md "Boss acts") and wait on the designer's
+play. Left: the rest of P4 and section 6's pay. Code cites this doc by section number.
 
 The designer: every fight a little tricky, elites and bosses harder, the game challenging. A puzzle, never a wall. A
 blind player loses; paying attention wins, and so does the right routine.
@@ -133,12 +134,12 @@ Nothing is taken away for not reading. Reading already pays (the read bonus, the
 
 ## 7. Build phases
 
-P0 to P3 are built. Each phase is played by the designer before the next starts.
+P0 to P3 are built, and P4's first four. Each phase is played by the designer before the next starts.
 
 | Phase | What ships | Done when |
 |---|---|---|
 | P3 (built) | Elites: Integrity down, two conflicts from docs/puzzle-levers.md 4, *no pile-ups* lifted and checked on the roll (a failed roll rerolls). | Elites meet their row (floors met; first try open, as section 5 says). |
-| P4 | Bosses: a beat that repeats, phases, the one to leave. Two Residents and two solo bosses first, then the rest, lair bosses and feuds. | Every boss meets its row, solved, not outgeared, at its level (decision 14), and the designer has played the first four. |
+| P4 (first four built) | Bosses: a beat that repeats, phases, the one to leave. Two Residents and two solo bosses first (7.1), then the rest, lair bosses and feuds. | Every boss meets its row, solved, not outgeared, at its level (decision 14), and the designer has played the first four. |
 
 ## 8. Decided
 
@@ -163,3 +164,32 @@ The designer, October 2026:
     level a first try usually loses and a learned one wins. Only being overleveled for it (gear and level well past the
     boss's) carries a first try. Elites lean the same way, less. P4 builds to it; the bar's first-try ceiling (under
     50%) stays the measure.
+
+### 7.1 P4's first four
+
+One shape for every boss (acts.mjs): three acts on the ♛'s ticks, one tick a hit, a tell an act, a beat that act 2
+quickens, and the ♛ left above its tick until its act's beat has played (else every part re-arms).
+
+| Boss | Why it shows the pattern | The beat | The routine answer |
+|---|---|---|---|
+| Worm Resident | The commonest fight (every takeover); fragments make *where* you hit on the beat matter | Backlash | On the beat: a shield, a buff, a fragment you break, or hold |
+| Ransomware Resident | The same beat, another family: an Encryptor's lash leaves a stack until the ♛ breaks | Backlash | On the beat: hit the Lockbox (no attack) or go quiet |
+| REPO MAN | The Mimic, the beat P2 built, as a boss's | Repossess (a Mimic) | On the beat: a strip or a small hit; break the Repo Agent early |
+| HOLLOW CHOIR | The Decoy, the other beat, made to bite: every bend sings back | Bend | On the beat: a shield, a buff or an area command |
+
+The ♛ holds at its tick, so one big hit no longer skips an act. The Residents' acts trade Integrity (1.1×) for a later
+enrage (24): the planner wins 83–96% of the worm and ransomware Residents at 10, 18 and 30 (the Bastion's misses
+there are gone).
+
+Measured October 31 (8 subclasses × 3 seeds a cell; planner · learner 30 · learner 5 · kit · blind, wins %):
+
+| Boss | Level | Planner | L30 | L5 | Kit | Blind |
+|---|---:|---:|---:|---:|---:|---:|
+| Worm Resident | 10 · 18 · 30 | 96 · 96 · 83 | 88 · 92 · 88 | 88 · 96 · 83 | 33 · 92 · 92 | 25 · 33 · 46 |
+| Ransomware Resident | 10 · 18 · 30 | 96 · 96 · 96 | 96 · 96 · 96 | 96 · 96 · 96 | 96 · 75 · 88 | 58 · 42 · 46 |
+| REPO MAN | 10 · 14 · 20 | 100 · 100 · 88 | 71 · 100 · 63 | 92 · 100 · 79 | 50 · 46 · 17 | 42 · 29 · 21 |
+| HOLLOW CHOIR | 10 · 14 · 20 | 100 · 79 · 100 | 100 · 88 · 96 | 100 · 79 · 92 | 83 · 88 · 88 | 83 · 79 · 67 |
+
+Open: the first-try ceiling (learner 30 under 50%) is missed by all four: a misread falls on a beat about one cycle
+in four. HOLLOW CHOIR at home is still easy for every player, and its planner dips at 14. The designer's play decides
+what to tune; nothing was tuned against these bots.

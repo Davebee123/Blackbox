@@ -8,6 +8,7 @@ import assert from 'node:assert/strict';
 import { generic, presses, at, setScore, fight, MATCHED, MATCH_OF, policyOf, score } from './balance.mjs';
 import { SUBS, BOSSES, presetBar, unlockLevel } from './dist/data.mjs';
 import { defaultBar } from './dist/combat.mjs';
+import { bossFight, HOME } from './genesim.mjs';
 
 const ALL = Object.keys(SUBS);
 const pct = (x) => `${Math.round(x * 100)}%`;
@@ -117,7 +118,8 @@ test('level-10 Breakers beat the three-part solo bosses at least half the time, 
   for (const sub of ['demolitionist', 'overclocker']) {
     let wins = 0, choir = 0;
     for (const id of THREE) for (let seed = 1; seed <= 6; seed++) {
-      const r = fight('Breaker', 'random', at(10), { sub, mode: 'run', zone: true, boss: id, family: BOSSES[id].family, strain: BOSSES[id].strain, mutation: null, seed });
+      // The event bosses (REPO MAN, HOLLOW CHOIR) where the game fights them: at home (genesim.mjs HOME).
+      const r = HOME.has(id) ? bossFight(id, 10, 'breaker', sub, seed) : fight('Breaker', 'random', at(10), { sub, mode: 'run', zone: true, boss: id, family: BOSSES[id].family, strain: BOSSES[id].strain, mutation: null, seed });
       if (r.win) { wins++; if (id === 'choir') choir++; }
     }
     assert.ok(wins >= THREE.length * 3, `${sub}: ${wins}/${THREE.length * 6}`);
