@@ -1,9 +1,9 @@
-// Comms: the pager's memory. World events (mail, the board, contracts, money, the network) become
-// short pager entries, kept on the save so what happened while you were away is still there.
-// Pure: events in, entries out. Which entries are pages and what a tap does is pager.mjs; the pager
-// itself (the tray on the top bar and Comms) is pager-view.mjs and app.js.
+// Comms: the ping log's memory. World events (mail, the board, contracts, money, the network) become
+// short entries, kept on the save so what happened while you were away still pings.
+// Pure: events in, entries out. Which entries are pages and what a click does is pager.mjs; the log
+// itself is pings.mjs and app.js.
 
-// The pager keeps what still matters. News (money, harvests, flags) times out on its own; things
+// It keeps what still matters. News (money, harvests, flags) times out on its own; things
 // to act on (an offer, a ready contract, a swarm) stay while they're true and go when they aren't.
 export const COMMS = {
   keep: 20,
@@ -13,7 +13,7 @@ export const COMMS = {
 };
 const NEWS = new Set(['paid', 'standing', 'store', 'net']);
 
-// event type → { kind, label, from, beep }. beep: whether the pager beeps (quiet ones only light up).
+// event type → { kind, label, from, beep }. beep: whether it chirps (quiet ones only ping).
 const MAP = {
   mail: (e) => ({ kind: 'mail', label: 'Mail', from: e.from || 'Mail', text: e.subject || e.message.replace(/^New mail from [^:]+: /, ''), go: e.letter ? `mail:l${e.letter}` : 'mail', beep: true }),
   board: (e) => ({ ref: e.offer, kind: 'offer', label: 'Offer', from: 'Halcyon board', text: e.message.replace(/^New offers? on the board: /, ''), go: e.offer ? `mail:j${e.offer}` : 'mail', beep: true }),
@@ -60,7 +60,7 @@ const MAP = {
   breadcrumb: (e) => ({ kind: 'mail', label: 'wick', from: 'wick', text: e.message.replace(/^wick: /, ''), go: e.location ? `map:${e.location}` : 'map', beep: true }),
   // A follow-up (events.mjs chains) carries its cause as chain: the line's link mark, its sentence on hover.
   'world-event': (e) => ({ event: e.event, card: e.card, ...(e.chain ? { chain: e.chain } : {}), kind: 'net', label: { courier: 'Courier', bounty: 'Bounty', choir: 'Boss', outbreak: 'Outbreak', leak: 'Leak', feud: 'Feud', hunt: 'Hunt', shock: 'Market', spotter: 'Spotter', counter: 'Raid', returning: 'Bounty', lantern: 'LANTERN', zero: 'Source' }[e.card] || 'Event', from: e.from || (e.card === 'courier' ? 'LANTERN' : e.card === 'bounty' ? 'Halcyon' : e.card === 'choir' ? 'Hollow Choir' : 'Network'), text: e.message, go: e.location ? `map:${e.location}` : e.hub ? `map:hub-${e.hub}` : e.card === 'spotter' || e.card === 'counter' ? 'map:server' : e.card === 'outbreak' ? null : 'map', beep: true }),
-  // A hunt's quarry moved (events.mjs): its pager line follows it (the event's line is replaced, not added to).
+  // A hunt's quarry moved (events.mjs): its ping follows it (the event's line is replaced, not added to).
   'world-event-hop': (e) => ({ event: e.event, card: 'hunt', kind: 'net', label: 'Hunt', from: e.from || 'Network', text: e.message, go: e.location ? `map:${e.location}` : 'map', beep: false }),
   'consortium-invite': (e) => ({ kind: 'net', label: 'Invite', from: 'Consortium', text: e.message.replace(/ consortium accept, or consortium decline\.$/, ''), go: 'people:consortium', beep: true }),
   'consortium-merged': (e) => ({ kind: 'net', label: 'Merged', from: 'Consortium', text: e.message.replace(/ See the Map\.$/, ''), go: 'map:consortium', beep: false }),
@@ -81,10 +81,9 @@ const MAP = {
 };
 
 export const commsOf = (s) => (s.comms ||= []);
-export const unseen = (s) => commsOf(s).filter((c) => !c.seen).length;
 export const unseenAlert = (s) => commsOf(s).some((c) => !c.seen && c.kind === 'alert');
 
-// Log what's pager-worthy from a batch of events. Returns the new entries (newest last).
+// Log what's ping-worthy from a batch of events. Returns the new entries (newest last).
 export function logComms(s, events, now = Date.now()) {
   const list = commsOf(s);
   const added = [];
@@ -101,7 +100,6 @@ export function logComms(s, events, now = Date.now()) {
   if (list.length > COMMS.keep) list.length = COMMS.keep;
   return added;
 }
-export function seeAll(s, now = Date.now()) { for (const c of commsOf(s)) { c.seen = true; if (!c.go && !c.done) c.done = now; } } // nothing to do about it: seen is handled
 // Handled (you opened what it pointed at, or ticked it off): greyed out, and gone after COMMS.doneMs.
 export function markDone(s, id, now = Date.now()) { const c = commsOf(s).find((x) => x.id === id); if (c && !c.done) { c.done = now; c.seen = true; } }
 // Still true? An offer still on the board, a contract still waiting, a swarm or invasion still on.
@@ -120,7 +118,3 @@ export function pruneComms(s, now = Date.now()) {
   if (keep.length !== list.length) { s.comms = keep; return true; }
   return false;
 }
-// Clear one: that entry goes, now.
-export function clearOne(s, id) { s.comms = commsOf(s).filter((c) => c.id !== id); }
-// Clear: everything you've seen goes; what you haven't looked at yet stays.
-export function clearComms(s) { s.comms = commsOf(s).filter((c) => !c.seen); }

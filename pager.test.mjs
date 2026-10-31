@@ -1,16 +1,16 @@
-// The pager (pager.mjs, pager-view.mjs): which lines are pages, what one tap does, the order, the counts, the tray.
+// The pager's pages (pager.mjs): which lines are pages, what one click does, the order. The ping log draws them
+// (pings.test.mjs).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { fresh } from './dist/combat.mjs';
 import { play } from './dist/run.mjs';
 import { benchCommand } from './dist/bench.mjs';
-import { logComms, commsOf, seeAll, markDone } from './dist/comms.mjs';
+import { logComms, commsOf, markDone } from './dist/comms.mjs';
 import { MAIL, offers, jobs } from './dist/mail.mjs';
 import * as PG from './dist/pager.mjs';
-import * as PGV from './dist/pager-view.mjs';
 
-// A level 12 character with a realistic pager: developer pager fill (a letter, an offer, a ready contract, a courier, a
+// A level 12 character with a realistic ping log: developer pager fill (a letter, an offer, a ready contract, a courier, a
 // bounty, and six lines of news), run the way the game runs it.
 function filled() {
   const s = fresh();
@@ -96,69 +96,40 @@ test('acts follow the game: a full hand reads the offer, a contract not done ope
   assert.deepEqual(PG.actOf(t, hub), { label: 'Defend', cmd: 'hub defend kestrel' });
 });
 
-test('the count is the pages; the order is threat, clock, pay, the rest, letters, offers', () => {
+test('the order is threat, clock, pay, the rest, letters, offers', () => {
   const s = filled();
   const p = PG.pages(s);
   assert.equal(p.length, 5, 'a letter, an offer, a ready contract, a courier, a bounty');
   assert.ok(PG.news(s).length >= 5, 'and the news under them');
   assert.deepEqual(p.map((c) => c.kind === 'net' ? c.card : c.kind), ['courier', 'bounty', 'ready', 'mail', 'offer'], 'the courier has less time left than the bounty');
-  assert.deepEqual(PG.lampOf(s), { on: true, blink: true, threat: false, n: 5 });
-  seeAll(s);
-  assert.deepEqual(PG.lampOf(s), { on: true, blink: false, threat: false, n: 5 }, 'looking stops the blink, not the count');
   line(s, 'wall-breach', 'cryptjack BREACHED your wall.');
   s.invasion = { id: 2, name: 'cryptjack', state: 'breach' };
   assert.equal(PG.pages(s)[0].label, 'Breach', 'a threat goes first');
-  assert.deepEqual(PG.lampOf(s), { on: true, blink: true, threat: true, n: 6 });
+  assert.equal(PG.pages(s).length, 6);
   line(s, 'wall-siege', 'Your wall now contests cryptjack.');
   assert.equal(PG.pages(s).filter((c) => c.from === 'Wall').length, 1, 'one invasion at your wall is one page');
   assert.equal(PG.pages(s)[0].label, 'Invasion', 'the newest line says where it is now');
   for (const c of commsOf(s).filter((x) => x.from === 'Wall')) markDone(s, c.id);
-  assert.equal(PG.lampOf(s).n, 5, 'handled: off the count');
+  assert.equal(PG.pages(s).length, 5, 'handled: off the pages');
   const letter = PG.pages(s).find((c) => c.kind === 'mail');
   s.mail.list.find((m) => `mail:l${m.id}` === letter.go).read = true;
-  assert.ok(!PG.pages(s).includes(letter), 'a letter read in Mail is off the pager too');
-  PG.clearNews(s);
-  assert.ok(PG.pages(s).length === 4 && commsOf(s).every((c) => PG.pages(s).includes(c) || !c.seen), 'Clear takes the seen news and leaves the pages');
+  assert.ok(!PG.pages(s).includes(letter), 'a letter read in Mail is off the pages too');
   play(s, 'developer pager clear');
-  assert.deepEqual(PG.lampOf(s), { on: false, blink: false, threat: false, n: 0 });
+  assert.equal(PG.pages(s).length, 0);
 });
 
-test('the tray draws the pages: an icon each, most urgent first, +n when more wait; Comms lists them with buttons', () => {
-  const s = filled(), p = PG.pages(s);
-  const tray = PGV.trayMarkup(s, 4);
-  assert.equal((tray.match(/class="pg-tile/g) || []).length, 3, 'three icons and +2');
-  assert.match(tray, />\+2</);
-  assert.match(tray, new RegExp(`class="pg-tile new" data-pact="${p[0].id}" title="Courier: [^"]+\n▸ Intercept"`), 'the courier first: a tap intercepts it, the tooltip is the line and its ▸ act');
-  assert.equal((PGV.trayMarkup(s, 3).match(/class="pg-tile/g) || []).length, 2, 'a tight bar: two icons and +3');
-  assert.equal((PGV.trayMarkup(s, 6).match(/class="pg-tile/g) || []).length, 5, 'room for all five: no +n');
-  assert.doesNotMatch(PGV.trayMarkup(s, 6), /pg-more/);
-  seeAll(s);
-  assert.doesNotMatch(PGV.trayMarkup(s), /pg-tile[^"]* new/, 'seen: no glow');
-  const inbox = PGV.inboxMarkup(s);
-  assert.equal((inbox.match(/class="pgi[ "]/g) || []).length, 5, 'Comms lists the pages');
-  assert.equal((inbox.match(/data-pact=/g) || []).length, 5, 'each with its button');
-  assert.match(inbox, /<details class="pg-hist"><summary>News <b>\d+<\/b>/, 'and folds the news under them');
-  const empty = fresh();
-  assert.doesNotMatch(PGV.trayMarkup(empty) + PGV.inboxMarkup(empty), /data-pact/, 'nothing to do: nothing to press');
-  assert.match(PGV.trayMarkup(empty), /class="pg-lamp" data-pg-open/, 'the lamp always opens Comms');
-});
-
-test('one pager, no switch: the classic list, its filters and the trial styles are gone', () => {
+test('no pager: the tray and Comms are gone, the ping log took their place', () => {
   const app = readFileSync(new URL('./dist/app.js', import.meta.url), 'utf8');
   const html = readFileSync(new URL('./dist/index.html', import.meta.url), 'utf8');
-  assert.doesNotMatch(app, /params\.get\('pager'\)|pagerCommand|commsMarkup|data-cfilter/);
-  assert.doesNotMatch(html, /pager-lcd|id="pg"/);
-  assert.equal(PG.pagerStyle, undefined);
-  const s = fresh();
-  play(s, 'pager b');
-  assert.equal(s.settings.pager, undefined, 'pager b is no command');
+  assert.ok(!existsSync(new URL('./dist/pager-view.mjs', import.meta.url)) && !existsSync(new URL('./dist/pager.css', import.meta.url)));
+  assert.doesNotMatch(html, /id="pager"|id="comms"|pager\.css/);
+  assert.doesNotMatch(app, /\$\('pager'\)|\$\('comms'\)|setComms|data-pact|pager-view/);
+  assert.match(html, /id="pings"/);
+  assert.equal(PG.lampOf, undefined);
 });
 
-test('the pager keeps the rules: no teal, nothing moves, the same chirp, only for a page', () => {
-  const css = readFileSync(new URL('./dist/pager.css', import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
-  assert.doesNotMatch(css, /--you|#7fd1c7/, 'teal is only ever you');
-  assert.doesNotMatch(css.replace(/text-transform/g, ''), /transform|translate|rotate|@keyframes/, 'nothing moves (the lamp reuses the blink)');
+test('the pager keeps the rules on the log: the same chirp, only for a page', () => {
   const app = readFileSync(new URL('./dist/app.js', import.meta.url), 'utf8');
   assert.match(app, /logComms\(campaign, events\)\.filter\(PG\.isPage\)/, 'news never chirps');
-  assert.match(app, /feel\.add\('pager', '#pager', null, \{ alert \}\)/, 'the pager chirp is the one it always had');
+  assert.match(app, /feel\.add\('pager', '\.pings', null, \{ alert \}\)/, 'the pager chirp, on the log');
 });

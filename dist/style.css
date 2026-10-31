@@ -473,7 +473,7 @@ pre[aria-hidden="true"] { max-height: none; overflow: visible; }
 @keyframes vring { 0% { transform: scale(0.6); opacity: 0.9; } 100% { transform: scale(2.4); opacity: 0; } }
 @keyframes vthrob { 50% { transform: scale(1.15); } }
 @media (prefers-reduced-motion: reduce) { .mnode.invader.breach .vring, .mnode.invader.breach .vbody { animation: none; } .mnode.invader.breach .vring { opacity: 0.6; } }
-/* The pager's lamp on a breach: one ring fires out of it (app.js). */
+/* A breach: one ring fires out of its line in the ping log (app.js). */
 .led-ring { position: fixed; width: 12px; height: 12px; margin: -6px 0 0 -6px; border: 2px solid var(--hot); border-radius: 50%; pointer-events: none; z-index: 60; animation: led-ring 0.9s ease-out forwards; }
 @keyframes led-ring { from { transform: scale(1); opacity: 1; } to { transform: scale(5); opacity: 0; } }
 .marc-bg.lead { stroke: rgba(241, 185, 47, 0.14); stroke-dasharray: 1 3; }
@@ -1119,14 +1119,10 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 .iname.r-indemnified, .r-indemnified { color: var(--r-indemnified); }
 @media (max-width: 900px) { .store-page { grid-template-columns: 1fr; } }
 
-/* ---------- the pager and Comms ---------- */
-/* The pager itself (the tray: a lamp and one icon per page) is in pager.css. */
-.pager { margin-left: auto; }
-.pager + .meters { margin-left: -6px; }
-.pager.fx-pager { animation: pagerbuzz 0.4s linear; }
+/* ---------- the pager's chirp (feel.mjs 'pager'), now on the ping log (pings.css) ---------- */
 @keyframes pagerblink { 50% { opacity: 0.25; } }
-@keyframes pagerbuzz { 15%, 55% { box-shadow: 0 0 10px rgba(241, 185, 47, 0.55); } 35%, 75% { box-shadow: none; } }
-.no-motion .pager.fx-pager { animation: none; }
+@keyframes pagerbuzz { 15%, 55% { filter: drop-shadow(0 0 4px currentColor); } 35%, 75% { filter: none; } }
+/* The panels that drop from the top bar (People). */
 .comms { position: absolute; top: 52px; right: 20px; z-index: 60; width: 360px; max-width: calc(100% - 24px); max-height: min(70vh, 560px); display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line-strong); border-radius: 4px; box-shadow: 0 14px 34px rgba(0, 0, 0, 0.65); }
 .app { position: relative; }
 .comms-head { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--line); font: 600 11px var(--sans); letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
@@ -2385,8 +2381,6 @@ body.phase-wait .cmdline, body.phase-wait #command-input { box-shadow: 0 0 0 1px
 .whoami .who-dot { color: var(--dim); }
 .whoami .who-bar { grid-column: 1 / -1; height: 3px; background: rgba(127, 209, 199, 0.12); border-radius: 2px; overflow: hidden; }
 .whoami .who-bar span { display: block; height: 100%; background: var(--you); }
-/* The pager sits by the server's meters now, just left of Integrity. */
-.topbar .pager { margin-left: 0; }
 @media (max-width: 900px) { .whoami { display: none; } }
 /* Mail: delivered contracts and LOWLIGHT jobs, greyed, under Completed (newest first). */
 .mdone-head { color: var(--dim); }
@@ -2438,7 +2432,7 @@ body.phase-wait .cmdline, body.phase-wait #command-input { box-shadow: 0 0 0 1px
 .mk-th .mk-buy-h { grid-column: 6 / 8; text-align: left; padding-left: 12px; border-left: 1px solid var(--line-strong, var(--line)); color: var(--amber); }
 .mk-th span:last-child { text-align: left; }
 .mk-tr .btn.small { white-space: nowrap; }
-/* Tight top bar (a breach's chip, a full pager): the pager's icons and who-you-are give way (pager.css has the pager's steps). */
+/* Tight top bar (a breach's chip): who-you-are gives way. */
 .topbar.fit-3 .whoami .who-dot, .topbar.fit-3 .whoami #who-class { display: none; }
 /* A listing with several files to pull: one button takes them all. */
 .ls-all { margin: 2px 0 4px; }
@@ -3039,8 +3033,8 @@ details.map-pick { pointer-events: auto; }
 button.evc-link { cursor: pointer; }
 button.evc-link:hover, button.evc-link:focus-visible { border-color: var(--ec); background-color: color-mix(in srgb, var(--ec) 22%, transparent); box-shadow: 0 0 8px color-mix(in srgb, var(--ec) 45%, transparent); outline: none; }
 button.evc-link:active { transform: translateY(1px); }
-.comms .cchain { display: inline-flex; margin-left: 4px; vertical-align: -1px; cursor: help; }
-.comms .cchain .glyph { width: 11px; height: 11px; margin: 0; }
+.cchain { display: inline-flex; margin-left: 4px; vertical-align: -1px; cursor: help; }
+.cchain .glyph { width: 11px; height: 11px; margin: 0; }
 
 /* Counter-raid: the blow swings back, an arc from the side you fought onto your server (your side's mark on it). */
 .cx-blow { position: relative; display: flex; align-items: flex-end; justify-content: space-between; height: 34px; margin: 0 2px; cursor: help; }
@@ -3316,11 +3310,10 @@ h1 .byline { font-size: 13px; vertical-align: middle; }
 
 /* ---- Phone layout (≤900px): the top bar in two tidy rows, a map you can read, a fight HUD that stacks. ---- */
 @media (max-width: 900px) {
-  /* top bar, three rows on a grid: brand · pager · credits, then Integrity and Signal, then the tabs */
+  /* top bar, three rows on a grid: brand · credits, then Integrity and Signal, then the tabs */
   .topbar { display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto; align-items: center; gap: var(--s4) var(--s5); }
   .topbar > .meters { display: contents; }
   .topbar .brand { grid-area: 1 / 1; }
-  .topbar .pager { grid-area: 1 / 2; margin: 0; justify-self: start; }
   .meters > .meter, .meters > .meter[data-command] { padding: 0; min-height: 26px; border-left: 0 !important; }
   .meters > .meter:last-child { grid-area: 1 / 4; justify-self: end; }
   #meter-integrity { grid-area: 2 / 1 / 3 / 3; }

@@ -156,8 +156,8 @@ short vibration on phones that have it.
 ## The pages, at a glance
 
 - **The top bar:** the pages on the left; in the middle your handle · class · level with the class's XP as a thin bar;
-  on the right the people button, the pager, then Integrity (a server tower that drains), Signal (five bars) and
-  credits, each with its **+**. At 1440 with the casing the pager's tray tightens so the class name keeps its place.
+  on the right the people button, then Integrity (a server tower that drains), Signal (five bars) and credits, each
+  with its **+**.
 - **The map** shows one floor at a time. A server's level is the number under it in WoW colours; servers that ask
   nothing of you draw as dim dots without labels until hovered, selected or zoomed. Labels never overlap: the more
   important one keeps its label (selected, then threats, then where you are, then a contract or fresh find). Scroll
@@ -197,8 +197,10 @@ short vibration on phones that have it.
   card is a signed receipt. Calm: lines arrive once, Mail's page never animates.
 - **The level-up** (the *Firmware update*, levelup-view.mjs): an amber *Firmware update · <class>.rom* strip, the
   level in teal dot-font digits, `[ OK ]` a row at a time with a tick each; it waits for a calm moment.
-- **The pager** (the *Tray*): a lamp and one icon per page (up to four on a desktop, three on a phone, then **+n**),
-  amber, red for a threat, a soft glow on one you haven't seen; its tooltip is the line and, muted, ▸ what the tap does.
+- **The ping log** (the *Log*, pings.mjs; it replaced the pager's *Tray*): frameless lines, an icon and one short
+  sentence each, sans 12px with a text shadow, newest at the bottom, the older fading in steps. Names amber, a threat
+  red, yours teal. In the map's rail under Contracts; elsewhere above the prompt, in the dock's own room so it covers
+  nothing. Its tooltip: the name, its kind, the whole line, ▸ what a click does.
 - **The player card** (the *NET ID badge*, profile-view.mjs): an amber NET ID strip, the banner framed as a photo
   (teal corners), the handle large in teal, the title amber, the plan a quiet italic quote, sections on one column,
   a bar code at the foot.
@@ -212,7 +214,7 @@ short vibration on phones that have it.
   content must still fit. Grid columns are `minmax(0, 1fr)`; a `nowrap` inside a cell also gets `min-width: 0` and an
   ellipsis.
 - **Phone (≤ 900px)**: one column. Side windows (a hub's shop or market, the crew column) stack above or below their
-  page. The top bar is a grid: brand, pager and credits; Integrity and Signal; then the tabs (two rows of four when
+  page. The top bar is a grid: brand and credits; Integrity and Signal; then the tabs (two rows of four when
   eight show).
 - **Narrow columns**: board cells are size containers; a chip tightens and drops its icon below 132px instead of
   cutting words.

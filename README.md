@@ -194,7 +194,7 @@ comment saying what it does.
 | `dist/achievements.mjs`, `dist/achievements-view.mjs`, `dist/achievements.css` | Achievements and their cosmetic rewards. |
 | `dist/profile.mjs`, `dist/profile-view.mjs` | Your profile card (`finger`), and #net's markup. |
 | `dist/channel.mjs`, `dist/presence.mjs` | #net, the public channel; who's online and your friends. |
-| `dist/comms.mjs`, `dist/pager.mjs`, `dist/pager-view.mjs`, `dist/pager.css` | The pager: world events as entries, which ones ask something of you, and the tray. |
+| `dist/comms.mjs`, `dist/pager.mjs`, `dist/pings.mjs`, `dist/pings.css` | The ping log: world events as entries, which ones ask something of you, and the lines in the map's rail and above the prompt. |
 | `dist/casing.mjs`, `dist/casing-view.mjs`, `dist/casing.css` | Casing cosmetics: the monitor's colourway, plate, stickers and desk. |
 | `dist/terminal.mjs`, `dist/terminal-view.mjs`, `dist/terminal.css`, `dist/boots.mjs` | Terminal cosmetics on System → **Terminal**: boot looks (POST, Corrupted…), prompts, cursors. |
 | `dist/recap.mjs` | The death recap on the Disconnected card. |

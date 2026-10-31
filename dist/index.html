@@ -21,7 +21,7 @@
   <link rel="stylesheet" href="achievements.css">
   <link rel="stylesheet" href="casing.css">
   <link rel="stylesheet" href="terminal.css">
-  <link rel="stylesheet" href="pager.css">
+  <link rel="stylesheet" href="pings.css">
   <link rel="stylesheet" href="levelup.css">
   <link rel="stylesheet" href="quest.css">
   <link rel="stylesheet" href="nocarrier.css">
@@ -53,7 +53,6 @@
     </nav>
     <div class="whoami" id="whoami"><b id="who-handle">rookie</b><span class="who-dot" aria-hidden="true">·</span><span id="who-class">Breaker</span><span class="who-dot" aria-hidden="true">·</span><span class="who-lv">Lv <b id="who-lv">1</b></span><span class="who-bar" aria-hidden="true"><span id="who-fill"></span></span></div>
     <button type="button" class="people-btn" id="people" aria-label="People: friends and who's online" aria-expanded="false" aria-controls="people-panel" hidden><svg class="p-ico" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="5" r="2.8"/><path d="M2.8 14c.4-3 2.5-4.6 5.2-4.6s4.8 1.6 5.2 4.6"/></svg><span id="people-count">0</span></button>
-    <div class="pager" id="pager" role="group" aria-label="Pager" aria-expanded="false"></div>
     <section class="meters" aria-label="Server">
       <div class="meter meter-level" id="meter-level" title="Your class level. Each class levels on its own.">
         <span class="meter-label" id="level-label">Breaker</span>
@@ -87,7 +86,6 @@
       <button id="haptics" aria-pressed="true" hidden title="Vibration on phones that support it">Vibrate</button>
     </div>
   </header>
-  <div class="comms" id="comms" hidden></div>
   <div class="comms people" id="people-panel" hidden></div>
 
   <main id="workspace" class="workspace">
@@ -117,6 +115,8 @@
   <div id="th-preview" class="gain th-preview" hidden></div>
 
   <footer class="command-dock">
+    <!-- The ping log off the Map page (pings.mjs); on the Map it sits in the map's left rail. -->
+    <div class="ping-dock" id="pings"></div>
     <!-- #net (channel.mjs): the latest line over the prompt; click it for the channel. -->
     <button type="button" class="net-line" id="net-line" aria-controls="channel" aria-expanded="false" title="#net, the public channel"></button>
     <section class="channel" id="channel" aria-label="#net, the public channel" hidden>

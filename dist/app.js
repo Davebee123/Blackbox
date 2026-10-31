@@ -21,7 +21,7 @@ import { consortiumOf, alertsOf } from './consortium.mjs';
 import { nextPayIn, boardOpen, storyAt, openContracts, ready } from './mail.mjs';
 import { hubsOf, hubFound, hubTraceOf, FACTIONS } from './factions.mjs';
 import { WARES } from './market.mjs';
-import { logComms, commsOf, unseenAlert, seeAll, markDone, pruneComms } from './comms.mjs';
+import { logComms, commsOf, unseenAlert, markDone, pruneComms } from './comms.mjs';
 import { nextTip, markSeen, TOUR, tourDone, skipTour } from './tips.mjs';
 import { createWindow } from './window.mjs';
 import { createIntro } from './intro.mjs';
@@ -65,7 +65,7 @@ import { wireRoutines } from './routines-ui.mjs';
 import { createCoop } from './coop-ui.mjs';
 import { humansReady } from './coop.mjs';
 import * as PG from './pager.mjs';
-import * as PGV from './pager-view.mjs';
+import * as PI from './pings.mjs';
 import { noCarrier, NC } from './nocarrier.mjs';
 import * as UI from './uiscale.mjs';
 import { playTravel } from './travelfx.mjs';
@@ -83,8 +83,6 @@ const playtest = params.get('playtest');
 // is never read, written or reset from a bench.
 const { key: KEY, bench: BENCH, camp: CAMP } = BN.pageSave(location.search, CP.CAMPAIGN_KEY);
 const DEV = params.has('dev') || !!BENCH; // developer commands (and window.__bb, for tests)
-// The pager's tray (pager-view.mjs): four slots (three icons and +n when more wait) on a desktop, three on a phone.
-const phoneBar = matchMedia('(max-width: 900px)');
 
 // ---------- state ----------
 let campaign = load();
@@ -94,11 +92,12 @@ if (DEV) Object.defineProperty(window, '__bb', { get: () => campaign }); // dev 
 // in the breach campaign.
 const scanner = CAMP ? null : createScanner({ state: () => campaign, changed: () => { save(); dirty = true; }, busy: () => active(campaign), sound: () => !!campaign.settings.sound, volume: () => V.volumesOf(campaign).sfx });
 scanner?.mount(document.querySelector('.topbar'));
+document.querySelector('.topbar .meters')?.before(document.querySelector('.topbar .sc-pill') || ''); // the scanner's button: left of the meters, where the pager was
 if (DEV && scanner) window.__scan = scanner; // dev only: the needle and the strip, for tests
 let module = playtest === 'story' ? 'mail' : playtest === 'breach' ? 'breach' : playtest === 'rooms' ? 'rooms' : CAMP ? 'campaign' : 'map';
 let selected = null;
 let mapSel = 'server';
-let nag = {}; // when the pager last shook for an alert, and the breach last pinged
+let nag = {}; // when an unseen alert last glowed in the ping log, and the breach last pinged
 let wasCooling = new Set(); // abilities on cooldown at the last render (the tray flashes the ones that come back)
 let mapView = 'mine'; // the Map: 'mine' (your network) or 'consortium' (the merged servers)
 let mailSel = null; // the open item on the Mail page: 'l<id>' a letter, 'j<id>' a contract
@@ -408,9 +407,9 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ---------- events → feedback ----------
-// A breach: a ring fires out of the pager's lamp (twice, a beat apart), so you notice it.
+// A breach: a ring fires out of its line in the ping log (twice, a beat apart), so you notice it.
 function ledRing() {
-  const led = document.querySelector('#pager .led');
+  const led = [...document.querySelectorAll('.ping.threat .pi-ico')].find((x) => x.offsetParent);
   if (!led || campaign.settings.motion === false) return;
   const r = led.getBoundingClientRect();
   for (const delay of [0, 280]) setTimeout(() => { const d = document.createElement('div'); d.className = 'led-ring'; d.style.left = r.left + r.width / 2 + 'px'; d.style.top = r.top + r.height / 2 + 'px'; document.body.appendChild(d); setTimeout(() => d.remove(), 950); }, delay);
@@ -454,7 +453,7 @@ function firstLogin() {
     dirty = true;
     cache.clear();
     go('map', true);
-    feel.add('pager', '#pager');
+    feel.add('pager', '.pings');
     notice('New mail: wick has written to you.');
   });
 }
@@ -1030,7 +1029,7 @@ function markFx(e, mate) {
 function react(events) {
   const won = events.find((e) => e.type === 'victory');
   const fin = module === 'combat' ? finisherBreak(events) : null; // the break that wins the fight: your class's finisher (abilityfx.mjs)
-  // The wall stopping a weak invasion is quiet: a log line and a pager entry, no sound or float (invasion.mjs).
+  // The wall stopping a weak invasion is quiet: a log line and a ping, no sound or float (invasion.mjs).
   const hush = !active(campaign) && events.some((e) => e.type === 'invasion-cleared' && e.quiet);
   const fx = canMove();
   if (events.some((e) => e.type === 'engage')) { barsBefore = null; hideSpoils(); fightFrom = events.find((e) => e.type === 'engage').id; }
@@ -1147,7 +1146,7 @@ function react(events) {
         setTimeout(() => showGain(e.head, PUZZLES[e.kind]?.name || '', rows, false), canMove() ? 800 : 0);
         break;
       }
-      case 'world-event': lampBlink('net'); if (e.card === 'courier') feel.numbers(); break; // LANTERN on the radio (the pager carries the text)
+      case 'world-event': lampBlink('net'); if (e.card === 'courier') feel.numbers(); break; // LANTERN on the radio (the ping log carries the text)
       case 'wall-breach': feel.add('hurt', '#meter-integrity', 'BREACH'); notice(e.message, true); ledRing(); break;
       case 'invasion-cleared': if (!won && !e.quiet && !e.lost) { feel.add(e.blocked ? 'good' : 'win', MINE); notice(e.message); } break;
       case 'degraded': flash('REBOOTED · DEGRADED'); notice(e.message, true); if (module === 'combat') setTimeout(() => { if (!active(campaign)) go('map'); }, 1800); break;
@@ -1196,7 +1195,7 @@ function react(events) {
       case 'lead': case 'loadout': feel.add('good', null); break;
       case 'intrusion': feel.add('hurt', null); break;
       // Mail: contracts and the Halcyon retainer.
-      // Mail, the board, contracts ready, the retainer and flags go to the pager (see pagerReact).
+      // Mail, the board, contracts ready, the retainer and flags go to the ping log (see pagerReact).
       case 'contract-done': feel.add('unlock', null); showGain('Contract delivered', e.name || '', e.gains || [], false); break;
       // Threads (threads.mjs): found, a step on, a temporary server raised or dark, the end, the reward taken.
       case 'thread-talk': feel.add('pickup', null); break;
@@ -1853,7 +1852,7 @@ function renderMeters() {
   $('tab-archive').hidden = !CAMP;
   $('tab-room').hidden = !CAMP;
   document.body.classList.toggle('breach-mode', !!campaign.breach); // a breach playtest: the campaign's tabs and meters step aside
-  document.body.classList.toggle('campaign-mode', CAMP); // the breach campaign: the old game's tabs, meters and pager step aside
+  document.body.classList.toggle('campaign-mode', CAMP); // the breach campaign: the old game's tabs, meters and ping log step aside
   document.body.classList.toggle('ctx-tabs', active(campaign) || !!campaign.run);
   $('combat-dot').hidden = !active(campaign) || module === 'combat';
   const unreadMail = (campaign.mail?.list || []).filter((m) => !m.read).length;
@@ -1892,7 +1891,7 @@ function renderMeters() {
   $('motion').textContent = 'Motion';
   $('haptics').hidden = !feel.canBuzz();
   casing();
-  pagerUi();
+  pingsUi();
   peopleUi();
   channelUi();
   profileUi();
@@ -2642,9 +2641,9 @@ function frame(now) {
     if (simOn(campaign)) peopleUi(); // people move about (presence.mjs)
     channelUi(); // #net's latest line (channel.mjs)
     if (pruneComms(campaign)) { save(); dirty = true; } // handled comms clear out after 5 minutes
-    // Unanswered alerts shake the pager every 10 s; a breach pings every 15 s.
+    // An unseen alert glows on its line in the ping log every 10 s (until you hover or click it); a breach pings every 15 s.
     const tickNow = Date.now();
-    if (unseenAlert(campaign) && !commsOpen && tickNow - (nag.pager || 0) >= 10000) { nag.pager = tickNow; const p = $('pager'); p.classList.remove('fx-pager'); void p.offsetWidth; p.classList.add('fx-pager'); }
+    if (unseenAlert(campaign) && tickNow - (nag.pager || 0) >= 10000) { nag.pager = tickNow; for (const p of document.querySelectorAll('.ping.threat.unseen')) { p.classList.remove('fx-pager'); void p.offsetWidth; p.classList.add('fx-pager'); } }
     const inv = campaign.invasion, breached = inv?.state === 'breach' && !campaign.degraded && !(active(campaign) && campaign.encounter.invader === inv.id);
     if (breached && tickNow - (nag.breach || 0) >= 15000) { nag.breach = tickNow; feel.add('prewarn', '#meter-integrity'); feel.flush(); }
     if (!breached) nag.breach = 0;
@@ -2941,35 +2940,40 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
-// ---------- the pager ----------
-// World events land on the pager (comms.mjs); pager.mjs sorts them into pages (something to act on) and news. The
-// tray on the top bar is a lamp and one icon per page; tap one to do its thing. A new page chirps (only a threat
-// mid-fight); news only goes on the list. The lamp opens Comms: the pages with their buttons, the news folded.
-let commsOpen = false;
+// ---------- the ping log ----------
+// World events land on the pager's list (comms.mjs); pager.mjs sorts them into pages (something to act on) and news,
+// and the ping log draws them (pings.mjs): in the map's rail on the Map page, above the prompt elsewhere. A new page
+// chirps (only a threat mid-fight); news is a quiet line.
 function pagerReact(events) {
   const added = logComms(campaign, events).filter(PG.isPage);
   if (!added.length) { save(); return; }
   const alert = added.some((c) => c.alert);
   const fighting = active(campaign) && module === 'combat';
-  if (alert || (!fighting && added.some((c) => c.beep))) feel.add('pager', '#pager', null, { alert });
+  if (alert || (!fighting && added.some((c) => c.beep))) feel.add('pager', '.pings', null, { alert });
   save();
 }
-// One tap on a page: its command, or where it is (pager.mjs actOf). Going there handles it; a command leaves it up
-// until what it asked for is done (the contract delivered, the courier caught).
-function pagerAct(id) {
-  const c = commsOf(campaign).find((x) => x.id === id), a = c && PG.actOf(campaign, c);
+// A click on a line: the page's command, or where it is (pager.mjs actOf), or where a line of news happened. Going
+// there handles it; a command leaves it up until what it asked for is done (the contract delivered, the courier caught).
+function pingAct(id) {
+  const c = commsOf(campaign).find((x) => x.id === id), a = c && (PG.actOf(campaign, c) || (c.go ? { go: c.go } : null));
   if (!a) return;
   c.seen = true;
-  setComms(false);
   if (a.go) { markDone(campaign, id); save(); goTo(a.go); } else { save(); run(a.cmd); }
   dirty = true;
 }
-function pagerUi() {
-  put('pager', PGV.trayMarkup(campaign, phoneBar.matches ? 3 : 4));
-  $('pager').setAttribute('aria-expanded', String(commsOpen));
-  $('comms').hidden = !commsOpen;
-  if (commsOpen) put('comms', PGV.inboxMarkup(campaign, Date.now()));
+// Off the Map page (and on the consortium's map), the log sits above the prompt. In a fight it shows only threats.
+function pingsUi() {
+  const onMap = module === 'map' && mapView === 'mine';
+  put('pings', CAMP || onMap ? '' : PI.pingsMarkup(campaign, Date.now(), module === 'combat' ? { only: (c) => PG.classOf(c) === 'threat' } : {}));
+  // A plain line's fade runs from when it came in, so a redraw picks it up where it was.
+  for (const el of document.querySelectorAll('.ping[data-t] > .pi-in')) if (!el.style.animationDelay) el.style.animationDelay = `${Number(el.parentElement.dataset.t) - Date.now()}ms`;
 }
+document.addEventListener('click', (e) => { const b = e.target.closest('[data-ping]'); if (b) { e.stopPropagation(); pingAct(Number(b.dataset.ping)); } }, true);
+// Hovering a line is seeing it: the nag stops.
+document.addEventListener('pointerover', (e) => {
+  const b = e.target.closest?.('[data-ping]'), c = b && commsOf(campaign).find((x) => x.id === Number(b.dataset.ping));
+  if (c && !c.seen) { c.seen = true; save(); }
+});
 // People (presence.mjs): a button on the top bar with how many are online, and its panel.
 let peopleOpen = false, peopleTab = 'friends';
 function peopleUi() {
@@ -2983,13 +2987,13 @@ function peopleUi() {
   $('people-panel').hidden = !peopleOpen;
   if (peopleOpen) put('people-panel', V.peopleMarkup(campaign, peopleTab));
 }
-$('people').addEventListener('click', (e) => { e.stopPropagation(); peopleOpen = !peopleOpen; if (peopleOpen) setComms(false); dirty = true; });
+$('people').addEventListener('click', (e) => { e.stopPropagation(); peopleOpen = !peopleOpen; dirty = true; });
 $('people-panel').addEventListener('click', (e) => {
   const t = e.target.closest('[data-ptab]');
   if (t) { e.stopPropagation(); peopleTab = t.dataset.ptab; dirty = true; return; }
   if (e.target.closest('[data-people-close]')) { e.stopPropagation(); peopleOpen = false; dirty = true; }
 });
-document.addEventListener('click', (e) => { if (e.target.closest('[data-people-open]')) { e.stopPropagation(); peopleOpen = true; peopleTab = 'online'; setComms(false); dirty = true; } }, true);
+document.addEventListener('click', (e) => { if (e.target.closest('[data-people-open]')) { e.stopPropagation(); peopleOpen = true; peopleTab = 'online'; dirty = true; } }, true);
 document.addEventListener('click', (e) => { if (peopleOpen && !e.target.closest('#people-panel, #people')) { peopleOpen = false; dirty = true; } });
 
 // #net (channel.mjs): its latest line sits over the prompt (fights too, as one line); click it for the channel, a
@@ -3012,7 +3016,7 @@ function channelUi() {
   if (stick || chanShown !== last) { if (stick) box.scrollTop = box.scrollHeight; }
   chanShown = last;
 }
-function setChan(open) { chanOpen = open; if (open) { chanShown = -1; peopleOpen = false; setComms(false); } dirty = true; channelUi(); if (open) $('channel-input').focus({ preventScroll: true }); }
+function setChan(open) { chanOpen = open; if (open) { chanShown = -1; peopleOpen = false; } dirty = true; channelUi(); if (open) $('channel-input').focus({ preventScroll: true }); }
 $('net-line').addEventListener('click', (e) => { if (e.target.closest('[data-finger]')) return; e.stopPropagation(); setChan(!chanOpen); });
 $('channel').addEventListener('click', (e) => { if (e.target.closest('[data-chan-close]')) { e.stopPropagation(); setChan(false); } });
 $('channel-form').addEventListener('submit', (e) => {
@@ -3075,26 +3079,6 @@ document.addEventListener('submit', (e) => {
   run(t ? `casing plate text ${t}` : 'casing plate stock');
 });
 
-function setComms(open) {
-  commsOpen = open;
-  if (open) { seeAll(campaign); save(); }
-  dirty = true;
-}
-$('pager').addEventListener('click', (e) => {
-  e.stopPropagation();
-  const a = e.target.closest('button[data-pact]');
-  if (a) return pagerAct(Number(a.dataset.pact));
-  if (e.target.closest('button[data-pg-open]')) setComms(!commsOpen);
-});
-$('comms').addEventListener('click', (e) => {
-  e.stopPropagation();
-  if (e.target.closest('[data-comms-close]')) { setComms(false); return; }
-  if (e.target.closest('[data-comms-clear]')) { PG.clearNews(campaign); save(); dirty = true; return; }
-  const pa = e.target.closest('button[data-pact]');
-  if (pa) return pagerAct(Number(pa.dataset.pact));
-  const h = e.target.closest('li[data-hgo]'); // a line of news: where it happened (an achievement, a takeover, the store)
-  if (h) { markDone(campaign, Number(h.dataset.cid)); save(); setComms(false); goTo(h.dataset.hgo); }
-});
 // The top bar stays on one line: when it would wrap (more tabs, a narrow screen, the monitor
 // casing), it tightens a step at a time (style.css .fit-1 … .fit-4). Only re-measured when the
 // tabs shown or the bar's width change.
@@ -3104,9 +3088,9 @@ function fitTopbar() {
   if (!bar.clientWidth) return; // not laid out yet (the casing boots)
   const tabs = document.querySelector('.modules'), n = String([...tabs.children].filter((b) => !b.hidden).length);
   if (tabs.dataset.tabs !== n) tabs.dataset.tabs = n; // how many tabs show: a phone sizes them down from seven (style.css)
-  // Refit when the tabs, the width, or what the bar holds changes (a breach adds a chip, the pager an alert):
+  // Refit when the tabs, the width, or what the bar holds changes (a breach adds a chip):
   // the bar's height after the last fit is part of the key, so growing onto a second row refits it.
-  const sig = () => [...document.querySelectorAll('.modules button')].map((b) => (b.hidden ? 0 : 1)).join('') + ':' + bar.clientWidth + ':' + bar.offsetHeight + ':' + ($('integrity-note')?.hidden ? 0 : $('integrity-note')?.textContent) + ':' + $('people')?.hidden + ':' + $('pager').childElementCount; // the pager's icons change its width
+  const sig = () => [...document.querySelectorAll('.modules button')].map((b) => (b.hidden ? 0 : 1)).join('') + ':' + bar.clientWidth + ':' + bar.offsetHeight + ':' + ($('integrity-note')?.hidden ? 0 : $('integrity-note')?.textContent) + ':' + $('people')?.hidden;
   if (sig() === fitKey) return;
   // Wrapped: something starts below where something else ends.
   const wraps = () => { const kids = [...bar.children].filter((x) => !x.hidden && x.offsetHeight); return kids.some((a) => kids.some((b) => a.offsetTop >= b.offsetTop + b.offsetHeight)); };
@@ -3117,7 +3101,7 @@ function fitTopbar() {
 addEventListener('resize', () => { fitKey = ''; fitTopbar(); uiScale(); });
 document.fonts?.ready.then(() => { fitKey = ''; fitTopbar(); });
 
-// "where:what" from a pager entry or a button elsewhere: a page, and what to show on it.
+// "where:what" from a ping or a button elsewhere: a page, and what to show on it.
 function goTo(target) {
   const [where, what, sub] = target.split(':');
   if (where === 'mail') { if (what) mailSel = what; go('mail'); }
@@ -3127,10 +3111,9 @@ function goTo(target) {
   else if (where === 'map') { if (what === 'consortium') { mapView = 'consortium'; mapSel = 'server'; } else if (what?.startsWith('con=')) { mapView = 'consortium'; mapSel = what.slice(4); } else if (what) { mapSel = what; mapPop = true; } go('map'); }
   else if (where === 'consortium' || where === 'people') { peopleOpen = false; go('consortium'); }
   else if (where === 'jack') run('jack in');
-  else if (where === 'profile') { setComms(false); openProfile(what || null); pf.tab = 'title'; profileUi(); } // a title just earned: your card, on its titles
-  else if (where === 'log') { setComms(false); codexTab = 'log'; if (what && sub) logSel = `${what}:${sub}`; codexIdx = false; go('codex'); dirty = true; } // the collection log (a pager line): on its entry
-  else if (where === 'achieve') { // an achievement (a pager line, a chip on your card): System → Achievements, on its category, lit
-    setComms(false);
+  else if (where === 'profile') { openProfile(what || null); pf.tab = 'title'; profileUi(); } // a title just earned: your card, on its titles
+  else if (where === 'log') { codexTab = 'log'; if (what && sub) logSel = `${what}:${sub}`; codexIdx = false; go('codex'); dirty = true; } // the collection log (a ping): on its entry
+  else if (where === 'achieve') { // an achievement (a ping, a chip on your card): System → Achievements, on its category, lit
     if (profileOn) { profileOn = null; profileUi(); }
     const a = what && achById(what);
     systemTab = 'achievements'; achUi = { cat: a ? a.cat : 'summary', focus: a ? a.id : null };
@@ -3138,14 +3121,12 @@ function goTo(target) {
     if (a) setTimeout(() => document.querySelector(`[data-ach="${CSS.escape(a.id)}"]`)?.scrollIntoView({ block: 'center' }), 80);
   }
 }
-document.addEventListener('click', (e) => { const g = !e.target.closest('#comms') && e.target.closest('[data-go]'); if (g) { peopleOpen = false; goTo(g.dataset.go); } });
-document.addEventListener('click', (e) => { if (commsOpen && !e.target.closest('#comms, #pager')) setComms(false); });
+document.addEventListener('click', (e) => { const g = e.target.closest('[data-go]'); if (g) { peopleOpen = false; goTo(g.dataset.go); } });
 document.addEventListener('click', (e) => {
   const o = e.target.closest('[data-hub-opt]'), c = e.target.closest('[data-hub-close]');
   if (o) pickHub(o.dataset.hubOpt);
   else if (c) closeHub();
 });
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && commsOpen) { setComms(false); } });
 
 document.addEventListener('keydown', (e) => {
   const node = e.target.closest?.('[data-select]');

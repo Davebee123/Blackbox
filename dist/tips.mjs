@@ -90,7 +90,7 @@ export const TIPS = [
   { id: 'map-hub-swarm', page: 'map', when: (s) => !!retakeOf(s), at: '.mnode.hub.yours.threat', text: 'This hub\'s old owner is sending viruses to reclaim it, and the timer is under its name. The hub earns nothing until you beat them, one fight per virus.' },
   { id: 'map-hub-lockdown', page: 'map', when: (s) => !retakeOf(s), at: '.mnode.hub.yours.threat', text: 'This hub is in lockdown and earns nothing until you retake it, which takes one fight. It stays yours in the meantime.' },
   { id: 'map-contract', page: 'map', at: '.mnode.job', text: 'A contract points at this server. Open its vault to find the file you were sent for, or beat the Resident in /core to take the server over.' },
-  { id: 'pager', page: '*', at: '#pager .led.on', text: 'This is your pager. New mail, offers, finished contracts, your retainer and news from the network show up here. Click it to see the list.' },
+  { id: 'pings', page: '*', at: '.pings .ping', text: 'Pings: news from the net, newest at the bottom. Click one to deal with it. A threat or a contract to turn in stays until it\'s done.' },
   { id: 'mail', page: '*', at: '.modules [data-module="mail"]', when: (s, m) => m !== 'mail' && (s.mail?.list || []).some((x) => !x.read), text: 'You have mail. Your crew, LOWLIGHT and Halcyon Mutual send you contracts here.' },
 
   // ---------- mail ----------

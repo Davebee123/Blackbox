@@ -1125,7 +1125,7 @@ a favoured card once it has come up twice, its rich code once it leans your way;
   behind them.
 - **Rested** (WoW's rule) comes only from time logged off with no crash: 5% of a level every 8 hours, up to 1.5 levels
   (`RESTED`). Kills spend it: each pays double while it lasts (a *Rested* row).
-- **Hot strain:** every 4 hours one strain open at your level runs hot: +50% XP from it, on the pager.
+- **Hot strain:** every 4 hours one strain open at your level runs hot: +50% XP from it, in the ping log.
 
 ### The level-up
 
@@ -1625,10 +1625,10 @@ as you left it. An entry lists its slots, one line each, in sections; daemons ha
 | Feats | its achievements (a boss's, a floor's, each set's) | you earn it |
 
 A line shows the slot's icon, its name (**???** until it fills) and a muted hint (its level and where it drops, or its
-research toward 60), and the date it first came. The rest is its tooltip. The first time a slot fills, one quiet pager
-line says so and opens its entry. A save keeps `s.collection = { slot: when }`: a unique by its id, `m:` a part
+research toward 60), and the date it first came. The rest is its tooltip. The first time a slot fills, one quiet
+ping says so and opens its entry. A save keeps `s.collection = { slot: when }`: a unique by its id, `m:` a part
 mastered, `b:` a strain beaten, `w:` a boss won, `full:` an entry filled. An older save stamps what it has already
-done on load (as *before the log*), with one pager line.
+done on load (as *before the log*), with one ping.
 
 ## The economy
 
@@ -1943,7 +1943,7 @@ first: its standing is its rep.
 
 The net isn't a storyline: things happen on it. From level 3 an **event director** deals one now and then (first 4–8
 minutes of logged-on time after level 3, then every 15–30 minutes, never the same kind twice running, at most two up).
-Each goes to the pager and to #net; missing one costs nothing. The director rolls its own dice.
+Each goes to the ping log and to #net; missing one costs nothing. The director rolls its own dice.
 
 | Event | Where | Lasts | What it is | What you get |
 |---|---|---|---|---|
@@ -1968,7 +1968,7 @@ outbreak|leak|darknet|feud|hunt|shock|spotter]`.
 
 What you do with an event can deal a **follow-up** (docs/director.md 2): at most 3 pending, one of each kind, each
 waiting its delay in logged-on time and then taking a free slot; one not dealt within 3 hours goes quietly. Its card
-and pager line carry a chain-link mark. Ignoring a card never starts a chain.
+carries a chain-link mark, and its ping's tooltip names the cause. Ignoring a card never starts a chain.
 
 | Cause | Follow-up | Delay | What it is | What you get |
 |---|---|---|---|---|
@@ -2063,7 +2063,7 @@ under 1), moving for free.
 
 | Your wall against the invasion's strength | Result |
 |---|---|
-| 20% or more stronger | **Blocked**, quietly (a log line and a silent pager entry): half its bounty, 25% of a kill's XP, 1 component |
+| 20% or more stronger | **Blocked**, quietly (a log line and a silent ping): half its bounty, 25% of a kill's XP, 1 component |
 | Within ±20% | **Contested**: the wall wears the front virus down (4–20% a minute) while it chips you (0–1% of max Integrity a minute) |
 | 20% or more weaker | **Breach**: it chips 1% of your max Integrity a minute until you deal with it |
 
@@ -2174,7 +2174,7 @@ no attaching, detaching or memory pips.
   from real game state: the director's events and how they end, faction contacts speaking for their side after a feud
   (never at you), your feats (a unique found, a title, every tenth level), and simulated hackers chatting from what
   they're doing and reacting to you. A line every 20–90 seconds of logged-on time; the last 80 stay on the save. It never
-  touches the pager and rolls its own dice.
+  touches the ping log and rolls its own dice.
 
 ### Profile: finger (profile.mjs)
 
@@ -2197,12 +2197,12 @@ props, boots, prompts and cursors. None changes a number.
 
 - **Checked cheaply:** every second, only the ones not yet earned, each a look at state the game already keeps; what
   only a fight knows is noted as the fight ends. A loss counts for nothing. Nothing is time-limited or missable.
-- **Earning one** is a quiet pager line and a #net line naming it (and the title it brings). No new sound.
+- **Earning one** is a quiet ping and a #net line naming it (and the title it brings). No new sound.
 - **The page:** System → **Achievements** (`achievements`): the categories down the left with their bars, *Summary*
   first; each achievement's points on a medal, its bar while under way, what it brings shown as itself, and once earned
   the date and **Pin** (up to three on your card; `achieve pin|unpin <name>`). Its rule is its tooltip. Three are
   **hidden** (*???* and a hint).
-- An older save gets what it has already done on load, quietly, in one pager line.
+- An older save gets what it has already done on load, quietly, in one ping.
 
 | Category | Achievements (points): deed → reward |
 |---|---|
@@ -2297,20 +2297,22 @@ tips off** on any tip or the System page; **Replay tips** shows them again. Your
 **rooms tour**, a step at a time (walk, engage, jack out; a cache, the hunter, the rest room and SCAN as you meet them).
 The log and terminal still say what happened, in a line; they don't teach.
 
-### The pager
+### The ping log
 
-On the top bar: a lamp, then one icon per thing you can act on (`pager.mjs`). A **page** is a line you can act on (a
-threat, a world event, a contract ready, an offer, a letter, a thread, wick's lead, an invite); everything else is
-**news** (pay, the retainer, standing, restocks, finds, a blocked invasion, titles), gone 10 minutes after it came in.
-A page stays while it's true, an hour at most; the same news again replaces the old line.
+World events as short lines, an icon and a sentence each, newest at the bottom (`pings.mjs`, after Starsector's
+message log): in the map's left rail under Contracts on the Map page, above the prompt elsewhere (three lines on a
+phone; only threats in a fight). At most five; the older fade in steps. Names amber, a threat red, yours teal.
 
-- **The tray:** one icon per waiting page, most urgent first (threats, then events by time left, then a ready contract,
-  letters, offers), amber, red for a threat; up to four on a desktop, three on a phone, then **+n**. **One tap** does
-  the page's thing (**Deliver**, **Take**, **Read**, **Intercept**, **Jack in**, **Show**…); mid-fight or on a run,
-  anything that would start a fight shows you where it is instead.
-- **The lamp:** dark with nothing to do, lit while pages wait, blinking while one is new, red for a threat; click it for
-  **Comms** (the pages, then the news folded under **News**).
-- **Sound:** only a new page chirps; mid-fight only a breach. A breach also flashes the Integrity meter with BREACH.
+- **Pages and news** (`pager.mjs`): a **page** is a line you can act on (a threat, a world event, a contract ready, an
+  offer, a letter, a thread, wick's lead, an invite); everything else is **news** (pay, standing, restocks, finds, a
+  blocked invasion, titles). The same news again replaces the old line.
+- **How long:** a line fades after 30 s. A threat, a contract to turn in, an unread letter and an invite stay until
+  they're dealt with. A world event pings once; its rail card is the place to act.
+- **Click** a line to do its thing (**Deliver**, **Take**, **Read**, **Intercept**, **Jack in**, **Show**…) or open
+  where it happened; mid-fight or on a run, anything that would start a fight shows you where it is instead. Its
+  tooltip has the whole line.
+- **Sound:** only a new page chirps; mid-fight only a breach. An unseen alert glows on its line every 10 s until you
+  hover or click it. A breach also flashes the Integrity meter with BREACH.
 
 ### Settings
 

@@ -96,10 +96,10 @@
 .ar-n { font: 600 11px var(--mono); color: var(--amber); }
 .ar-missing { margin: 0; font: 12px var(--mono); color: var(--dim); cursor: help; }
 
-/* the campaign: the old game's tabs, meters and pager step aside */
+/* the campaign: the old game's tabs, meters and ping log step aside */
 .campaign-mode .modules button[data-module="map"], .campaign-mode .modules button[data-module="mail"], .campaign-mode .modules button[data-module="server"], .campaign-mode .modules button[data-module="craft"],
 .campaign-mode .modules button[data-module="store"], .campaign-mode .modules button[data-module="consortium"],
-.campaign-mode #meter-integrity, .campaign-mode #meter-signal, .campaign-mode .meter:has(#vault-value), .campaign-mode #pager, .campaign-mode #people { display: none !important; }
+.campaign-mode #meter-integrity, .campaign-mode #meter-signal, .campaign-mode .meter:has(#vault-value), .campaign-mode #pings, .campaign-mode #people { display: none !important; }
 
 @media (max-width: 900px) {
   .page:has(> .cp) { overflow: visible; }

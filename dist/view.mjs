@@ -40,6 +40,7 @@ import { online, inSprawl, whereText, simOn, friends, profileOf } from './presen
 import { consortiumOf, isGround, sizeOf, tiersOf, nextTier as nextConTier, serversOf, memberServers, memberLevel, CONSORTIUM, rebooting, consortiumWall, alertsOf, tiersOf as conTiers } from './consortium.mjs';
 import { FACTIONS, MAIL, TIERS, openContracts, doneContracts, offers as mailOffers, findJob, heldCount, boardOpen, tierIndex, standing, tierOf, nextTier, retainer, unread, title as contractTitle, progress as contractProgress, rewardLine, ready as contractReady, nextPayIn, xpOf } from './mail.mjs';
 import { commsOf } from './comms.mjs';
+import { pingsMarkup } from './pings.mjs';
 import { LINE, GOODS, storeOf, lineName, lineAbout, goodsAbout, priceNow, premiumOf, premiumPrice, premiumBlock } from './store.mjs';
 import { shownHidden, flagged as hiddenFlagged, items as kitOf, HIDDEN, leadOf, connectedTo, viaName } from './hidden.mjs';
 import { floorsOf, graphOf, locAt, hiddenAt, exitOpen, floorOfSlot, floorName, FLOOR, canDescend, waypointOf, holderOf } from './floors.mjs';
@@ -2136,9 +2137,10 @@ function railOf(s, ev, l) {
   if (ev.card === 'spotter') return { name: ev.name, tag: lv, where: 'your wall' };
   return { name: ev.name, tag: lv, where };
 }
-// The map's left column: the threat rail, then the contract tracker under it (the selected server's contract lit).
+// The map's left column: the threat rail, the contract tracker under it (the selected server's contract lit), then the
+// ping log (pings.mjs).
 function mapLeft(s, sel) {
-  const col = threatRail(s) + contractTracker(s, sel);
+  const col = threatRail(s) + contractTracker(s, sel) + pingsMarkup(s);
   return col ? `<div class="map-lcol">${col}</div>` : '';
 }
 function threatRail(s) {

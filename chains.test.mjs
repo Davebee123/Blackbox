@@ -8,7 +8,7 @@ import { rep, FACTIONS } from './dist/factions.mjs';
 import { FACTION_FAMILY } from './dist/hubs.mjs';
 import { codeOf } from './dist/gear.mjs';
 import { mapMarkup } from './dist/view.mjs';
-import { inboxMarkup } from './dist/pager-view.mjs';
+import { pingsMarkup } from './dist/pings.mjs';
 import { logComms, commsOf } from './dist/comms.mjs';
 import { play } from './dist/run.mjs';
 
@@ -71,11 +71,11 @@ test('a counter-raid: only after a feud you won a fight in; waits its delay, the
   const html = mapMarkup(s, c.loc);
   assert.match(html, /<section class="evc evc-counter chained/);
   assert.match(html, /class="evc-link"[^>]*title="Follows the feud [^"]+\."/, 'the link mark names its cause');
-  // The pager line carries the same mark.
+  // Its ping carries the cause in its tooltip.
   logComms(s, s.logs.filter((e) => e.id > first));
   const line = commsOf(s).find((x) => x.event === c.id);
   assert.match(line.chain, /^Follows the feud/);
-  assert.match(inboxMarkup(s), /class="cchain"[^>]*title="Follows the feud/);
+  assert.match(pingsMarkup(s), /data-ping="\d+" title="[^"]*\nFollows the feud/);
   // Holding no server you've been on: it comes at your home.
   const t = world({ hubs: ['glassjaw'] });
   t.locations.forEach((l) => { l.runs = 0; });

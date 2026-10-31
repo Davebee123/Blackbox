@@ -1,15 +1,15 @@
-// The pager's pages: which of its lines ask something of you, what one tap does about each, and in what order.
+// The pager's pages: which of its lines ask something of you, what one click does about each, and in what order.
 // comms.mjs keeps the lines (world events in, entries out); this sorts them. A *page* is a line you can act on (a
 // threat at your wall, a courier to intercept, a contract to deliver, a letter, an offer); *news* is a line that only
-// tells you something (pay, standing, a restock, a find). Pure: the save in, pages and acts out. The pager on the top
-// bar (the tray: one icon per page) and Comms draw from it (pager-view.mjs).
+// tells you something (pay, standing, a restock, a find). Pure: the save in, pages and acts out. The ping log draws
+// from it (pings.mjs).
 import { active, emit, warn } from './combat.mjs';
 import { STRAINS } from './data.mjs';
 import { commsOf, live } from './comms.mjs';
 import { MAIL, ready, heldCount, jobs, offers, offer, initMail, systemLetter, title } from './mail.mjs';
 import { deal, CARDS } from './events.mjs';
 
-// A fight starts from a world event's card; what the tap says depends on the card.
+// A fight starts from a world event's card; what the click says depends on the card.
 const FIGHT_VERB = { courier: 'Intercept', lantern: 'Intercept', bounty: 'Hunt', returning: 'Hunt', hunt: 'Hunt', choir: 'Engage', spotter: 'Engage', counter: 'Engage', zero: 'Engage', feud: 'Fight' };
 // Threats: red, first in line. Everything at your wall, a swarm on a hub or an outpost, a lockdown, a consortium alarm.
 const isThreat = (c) => c.kind === 'alert' || (c.label === 'Invasion' && c.from === 'Wall' && c.beep !== false);
@@ -29,7 +29,7 @@ const openLabel = (go) => (/^mail:l/.test(go) || go === 'mail' ? 'Read' : /^map/
 const open = (c) => (c.go ? { label: openLabel(c.go), go: c.go } : null);
 const eventOf = (s, c) => (c.event != null ? (s.events || []).find((e) => e.id === c.event) : null);
 
-// What one tap on a page does: { label, cmd } (a command, run as typed) or { label, go } (where it is: app.js goTo).
+// What one click on a page does: { label, cmd } (a command, run as typed) or { label, go } (where it is: app.js goTo).
 // null for news, and for a page with nowhere to go. Mid-fight or on a run, anything that would start a fight shows
 // you where it is instead.
 export function actOf(s, c) {
@@ -101,46 +101,33 @@ export function pages(s) {
     .sort((a, b) => rankOf(a) - rankOf(b) || (rankOf(a) === 1 ? leftOf(s, a) - leftOf(s, b) : 0) || b.t - a.t || b.id - a.id)
     .filter((c) => !atHome(c) || (!home && (home = true)));
 }
-// The news: what happened, newest first (the history under the pages).
+// The news: what happened, newest first.
 export const news = (s) => { const p = new Set(pages(s)); return commsOf(s).filter((c) => !p.has(c)); };
-// Clear (the trial pagers' Comms): the news you've seen goes; pages stay until they're done or no longer true.
-export function clearNews(s) { const p = new Set(pages(s)); s.comms = commsOf(s).filter((c) => p.has(c) || !c.seen); }
-// The lamp: off (nothing to do), lit (pages waiting, all seen), blinking (one you haven't seen), red (a threat).
-export function lampOf(s) {
-  const p = pages(s);
-  if (!p.length) return { on: false, blink: false, threat: false, n: 0 };
-  return { on: true, blink: p.some((c) => !c.seen), threat: p.some(isThreat), n: p.length };
-}
-// A page's short name for a small screen: the event's runner, the contract, the sender, the invader.
+// A page's short name: the event's runner, the contract, the sender, the invader.
 export function shortOf(s, c) {
   const ev = eventOf(s, c);
   if (ev?.name) return ev.name;
   if (c.kind === 'ready') { const j = jobs(s).find((x) => x.id === c.ref); if (j) return title(s, j); }
   if (c.kind === 'offer') { const o = offers(s).find((x) => x.id === c.ref); if (o?.subject) return o.subject; }
-  if (c.label === 'Invasion' && c.from === 'Wall' && s.invasion?.name) return s.invasion.name;
+  if (c.from === 'Wall' && isThreat(c) && s.invasion?.name) return s.invasion.name;
   if (c.kind === 'mail') return c.text.replace(/\.$/, '');
   return c.text.replace(/[.:].*$/, '') || c.label;
 }
-// Its clock, when it has one: minutes left on an event, else how long ago it came in.
-export function clockOf(s, c, now = Date.now()) {
-  const ev = eventOf(s, c);
-  if (ev?.left != null) return `${Math.max(1, Math.ceil(ev.left / 60000))}m`;
-  const ms = now - c.t;
-  return ms < 60000 ? 'now' : ms < 3600000 ? `${Math.floor(ms / 60000)}m ago` : `${Math.floor(ms / 3600000)}h ago`;
-}
-// The tooltip, WoW grammar: the label as the title, the line, the tap on its own ▸ line.
+// The tooltip, WoW grammar: the name as the title (a page's runner, contract or sender; news's label), its kind under it
+// (kindOf), the whole line, a follow-up's cause, then the click on its own ▸ line (news opens where it happened).
 export function tipOf(s, c) {
-  const a = actOf(s, c);
-  return `${c.label}: ${c.text}${a ? `\n▸ ${a.label}` : ''}`;
+  const a = actOf(s, c) || open(c);
+  return `${isPage(c) ? shortOf(s, c) : c.label}: ${c.text}${c.chain ? `\n${c.chain}` : ''}${a ? `\n▸ ${a.label}` : ''}`;
 }
+export const kindOf = (c) => (isPage(c) ? `${c.label} · ${c.from}` : c.from);
 
 // ---------- developer pager fill|clear ----------
 // fill: a realistic mix, as real as the game can make it on the spot. A letter, an offer on the board, a contract
 // ready to deliver (a real one in Mail), up to two of the director's events (a courier, a bounty: on the map, with
 // their clocks), and the news a session brings (the retainer, a restock, standing, a hot strain, a blocked invasion,
-// a transfer). developer invade puts a threat on top. clear: an empty pager.
+// a transfer). developer invade puts a threat on top. clear: an empty ping log.
 export function developerPager(s, what = 'fill') {
-  if (what === 'clear') { s.comms = []; return emit(s, 'info', 'Developer: the pager is empty.'); }
+  if (what === 'clear') { s.comms = []; return emit(s, 'info', 'Developer: the ping log is empty.'); }
   if (what !== 'fill') return warn(s, 'developer pager fill|clear');
   initMail(s);
   const told = [
@@ -166,6 +153,6 @@ export function developerPager(s, what = 'fill') {
     () => deal(s, 'courier') || deal(s),
     () => deal(s, 'bounty') || deal(s),
   ];
-  // Interleaved as a session brings them, news last: the line the classic pager scrolls is often news.
+  // Interleaved as a session brings them, news last.
   for (let i = 0; i < Math.max(told.length, page.length); i++) { page[i]?.(); told[i]?.(); }
 }

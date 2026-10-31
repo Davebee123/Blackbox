@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh } from './dist/combat.mjs';
-import { logComms, commsOf, unseen, unseenAlert, seeAll, COMMS, clearOne, pruneComms } from './dist/comms.mjs';
+import { logComms, commsOf, unseenAlert, COMMS, markDone, pruneComms } from './dist/comms.mjs';
 
-test('world events go to the pager; fight chatter doesn’t', () => {
+test('world events go to the ping log; fight chatter doesn’t', () => {
   const s = fresh();
   const added = logComms(s, [
     { type: 'mail', message: 'New mail from wick · LOWLIGHT: a name on the list.', letter: 3, from: 'wick · LOWLIGHT', subject: 'a name on the list' },
@@ -17,9 +17,7 @@ test('world events go to the pager; fight chatter doesn’t', () => {
   assert.equal(offer.go, 'mail:j9');
   assert.equal(offer.text, 'Turf: ORIN-MIRROR-07.');
   assert.equal(ret.label, 'Retainer');
-  assert.equal(unseen(s), 3);
-  seeAll(s);
-  assert.equal(unseen(s), 0);
+  assert.ok(commsOf(s).every((c) => !c.seen), 'new lines are unseen');
 });
 
 test('a breach is an alert; repeats fold together; the list keeps the last few', () => {
@@ -34,7 +32,7 @@ test('a breach is an alert; repeats fold together; the list keeps the last few',
   assert.equal(commsOf(s).length, COMMS.keep);
 });
 
-test('the pager drops what is no longer true, and news times out', () => {
+test('the log drops what is no longer true, and news times out', () => {
   const s = fresh(), t = 1e12;
   s.mail = { ...(s.mail || {}), offers: [{ id: 7 }], jobs: [] };
   logComms(s, [{ type: 'board', message: 'New offer on the board: a job.', offer: 7 }, { type: 'retainer', message: 'Halcyon retainer: +5 credits.' }], t);
@@ -47,13 +45,12 @@ test('the pager drops what is no longer true, and news times out', () => {
   assert.equal(commsOf(s).length, 0, 'news goes on its own');
 });
 
-test('each pager entry clears on its own', () => {
-  const s = fresh();
-  logComms(s, [
-    { type: 'mail', message: 'New mail from wick: hi.', letter: 1, from: 'wick', subject: 'hi' },
-    { type: 'retainer', message: 'Halcyon retainer: +38 credits.', credits: 38 },
-  ]);
-  const [a, b] = commsOf(s);
-  clearOne(s, a.id);
-  assert.deepEqual(commsOf(s).map((c) => c.id), [b.id]);
+test('a handled entry lingers a little, then goes', () => {
+  const s = fresh(), t = 1e12;
+  logComms(s, [{ type: 'mail', message: 'New mail from wick: hi.', letter: 1, from: 'wick', subject: 'hi' }], t);
+  const [a] = commsOf(s);
+  markDone(s, a.id, t);
+  assert.ok(a.seen && a.done, 'handled is seen');
+  pruneComms(s, t + COMMS.doneMs + 1);
+  assert.equal(commsOf(s).length, 0);
 });
