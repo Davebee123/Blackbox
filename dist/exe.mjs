@@ -15,8 +15,7 @@ const partner = (p, parts, id) => parts.find((x) => x.id === p[id]);
 // Each build: kind, what it changes (the tooltip on its red .exe, after "A harder build of the <part>."), and apply
 // (the built part, every part of the virus).
 export const EXE = {
-  // The basics.
-  pulse: { kind: 'different', what: 'Its Surge fires twice, on back-to-back cycles, each hit at 60%.', apply: (p) => { p.taps = 2; hit(p, 0.6); } },
+  // The basics. The Pulse Node has none: it stays the plain one (the designer, October 31, 2026).
   accumulator: { kind: 'stronger', what: 'Its Discharge comes every 4 cycles, not 5.', apply: (p) => { if (p.attack) p.attack.interval = Math.max(2, p.attack.interval - 1); } },
   strobe: { kind: 'different', what: 'Each Tick deals more than the last. A delay starts the climb over.', apply: (p) => { if (p.attack) { p.attack.ramp = 1; p.attack.rampBy = Math.max(1, Math.round(p.attack.amount * 0.12)); p.attack.step = 0; } } },
   repeater: { kind: 'stronger', what: 'Its volley is three hits, not two, each at 80%.', apply: (p) => { p.taps = 3; hit(p, 0.8); } },
