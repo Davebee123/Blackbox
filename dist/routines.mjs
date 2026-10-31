@@ -44,7 +44,7 @@
 // { handlers: [], confirmed, undo, armor } } } } } (armor: false when Break ◆ first is off; missing is on), made on
 // first use (an older save gets the defaults: no SAVE_VERSION change; an R1 save's single stack moves into its viruses'
 // routines, migrate). A fight's exceptions live on e.program.
-import { hooks, emit, warn, active, alive, part, livingParts, intents, toIntent, said, classOf, subOf, hackerLevel, barKeys, cooldownOf, codexKey, defender, maxSignal, timersHidden, armorTakes, frontOf, buffed, frozenNow, packed, mirrorOn, bendOf } from './combat.mjs';
+import { hooks, emit, warn, gearStat, selectEncounter, command as runCommand, resolveCycle, active, alive, part, livingParts, intents, toIntent, said, classOf, subOf, hackerLevel, barKeys, cooldownOf, codexKey, defender, maxSignal, timersHidden, armorTakes, frontOf, buffed, frozenNow, packed, mirrorOn, bendOf } from './combat.mjs';
 import { copyOf, dearCopy, beatOn, beatBlind } from './tells.mjs';
 import { ABILITIES, MUTATIONS, FAMILIES, ROOM_FAMILIES, GUARDS, STRAINS, BOSSES, ARCHETYPES, SUBS, TELL, TELLS, TELL_SETS } from './data.mjs';
 import { researchAt, TIER } from './research.mjs';
@@ -66,14 +66,27 @@ export const ROUTINES = {
   danger: ['elite', 'guard', 'core', 'boss'], // rooms a walk stops before
   presets: 5, // the most plain presets a virus shows (a lever's preset comes on top, one per lever researched)
   holdFrom: 8, // the Hold chip (a DO that fires nothing) opens at this class level, with the Mimic's first beats
+  mastery: { per: 3, cap: 6, full: 1 }, // Codex mastery's RAM, per virus: +1 for every 3 of its parts mastered (at most 6), +1 more with all of them
+  gearRam: 3, // the most RAM your gear adds (the RAM stat, gear.mjs)
+  bench: 50, benchCycles: 80, // the benchmark: fights against a virus's builds at your level, and the cycles before one counts as lost
+  cueLow: 0.3, // the Signal cue's line (a share of your max)
   armorRam: 0, // what Break ◆ first costs a routine: free, since it's on by default (a cost would cut every routine's RAM, and push the last handler of a full one out)
 };
 export const LOCKED = `Routines unlock at level ${ROUTINES.unlockLevel}.`;
 export const unlocked = (s, arch = classOf(s)) => hackerLevel(s, arch) >= ROUTINES.unlockLevel;
 export const ramOf = (level) => Math.round(ROUTINES.ram[0] + ((Math.min(50, Math.max(1, level || 1)) - 1) * (ROUTINES.ram[1] - ROUTINES.ram[0])) / 49);
-// RAM a virus's routine gets on top of the base. R2: Codex mastery of that virus adds here (docs/routines.md, RAM).
-export const ramBonus = (s, body) => { void s; void body; return 0; };
+// RAM a virus's routine gets on top of the base: Codex mastery of that virus (its parts at research 60), and your gear's
+// RAM stat (gear.mjs, at most ROUTINES.gearRam).
+export const masteredParts = (s, body) => bodyRefs(body).filter((ref) => researchAt(s, ref) >= TIER.mastered).length;
+export function ramMastery(s, body) {
+  const M = ROUTINES.mastery, all = bodyRefs(body).length, n = masteredParts(s, body);
+  return Math.min(M.cap, Math.floor(n / M.per)) + (all && n === all ? M.full : 0);
+}
+export const ramGear = (s) => Math.min(ROUTINES.gearRam, Math.max(0, Math.floor(gearStat(s, 'ram') || 0)));
+export const ramBonus = (s, body) => ramMastery(s, body) + ramGear(s);
 export const ramFor = (s, body = null, arch = classOf(s)) => ramOf(hackerLevel(s, arch)) + (body ? ramBonus(s, body) : 0);
+// Where a routine's RAM comes from: { level, mastery, gear }.
+export const ramParts = (s, body, arch = classOf(s)) => ({ level: ramOf(hackerLevel(s, arch)), mastery: body ? ramMastery(s, body) : 0, gear: body ? ramGear(s) : 0 });
 
 // ---------- the chips ----------
 // WHEN chips on a part, by the research tier that opens them. ref is the part's Codex key (combat.mjs codexKey).
@@ -209,6 +222,7 @@ export function programsOf(s) {
   P.rails ||= {};
   if (P.rails.jackOut === undefined) P.rails.jackOut = 0;
   if (P.rails.danger === undefined) P.rails.danger = true;
+  if (P.rails.cues === undefined) P.rails.cues = true;
   P.by ||= {};
   for (const key of Object.keys(P.by)) if (Array.isArray(P.by[key].handlers)) migrate(s, key, P.by[key]);
   return P;
@@ -697,6 +711,13 @@ export function programCommand(s, text) {
     if (s.run) delete s.run.railAt;
     return emit(s, 'info', v ? `Auto jack-out at ${v}% Signal.` : 'Auto jack-out off.');
   }
+  if (verb === 'cues') { if (!['on', 'off'].includes(args[0])) return warn(s, 'program cues on or off.'); P.rails.cues = args[0] === 'on'; return emit(s, 'info', `Cues ${args[0]}.`); }
+  if (verb === 'bench') {
+    if (!benchable(body)) return warn(s, `${name} can't be benchmarked.`);
+    if (active(s)) return warn(s, 'Finish the current fight first.');
+    const b = R.bench = benchmark(s, body);
+    return emit(s, 'bench', `Benchmark, ${name} ×${b.n}: won ${b.wins}, ${b.cycles} cycles to kill, ${b.lost}% Signal lost${b.asked ? `, ${b.asked} left a part to you` : ''}.`, { body, ...b });
+  }
   if (verb === 'danger') { if (!['on', 'off'].includes(args[0])) return warn(s, 'program danger on or off.'); P.rails.danger = args[0] === 'on'; return emit(s, 'info', `Stop before danger ${args[0]}.`); }
   if (verb === 'add') {
     const h = { when: args[0] || 'always', do: args[1] || 'spike', target: args[2] || (parseWhen(args[0])?.kind === 'part' ? 'that' : 'soonest') };
@@ -754,7 +775,7 @@ export function programCommand(s, text) {
     R.confirmed = true;
     return emit(s, 'info', `${name}: your own handlers are back.`);
   }
-  return warn(s, 'program [virus] [on|off|add|set|move|remove|clear|preset|undo|confirm|armor|jackout|danger].');
+  return warn(s, 'program [virus] [on|off|add|set|move|remove|clear|preset|undo|confirm|armor|bench|jackout|danger|cues].');
 }
 
 // The palette for a virus: the fight-wide chips, then its parts you've met (research above 0) with their chips.
@@ -767,6 +788,77 @@ export function palette(s, body = focusBody(s)) {
 }
 
 // Install: the browser's fights run your program (app.js). Tests install it too.
+// ---------- the benchmark ----------
+// Your program alone against a virus's builds at your level (seeds 1 to n: its parts, mutations and part counts as a
+// fight would roll them), on a copy of your save, no rails: the fights the balance harness runs. Wins, the average
+// cycles a win takes, the Signal lost (a loss: all of it; a fight past benchCycles is a loss), and how many fights left
+// a part to you (asked: the rotation plays it here, as the fight would leave it to you). The result keeps the routine it measured (sig): edit it and the
+// result shows as stale.
+const BENCH_HOOKS = ['stepped', 'runWon', 'flee', 'jackOut', 'crewEngage', 'crewTurns', 'crewMates', 'crewAll', 'crewAllies', 'crewGuests']; // stepped: the browser's cycles play out in beats; a bench run plays them at once
+export const benchable = (body) => ['family', 'strain', 'guard'].includes(groupOf(body)) && !ROOM_FAMILIES[body];
+export const benchSig = (s, body) => JSON.stringify([routineOf(s, body).handlers, armorFirst(s, body), hackerLevel(s), ramFor(s, body)]);
+export function benchmark(s, body, n = ROUTINES.bench) {
+  const level = hackerLevel(s), g = groupOf(body), base = JSON.parse(JSON.stringify({ ...s, logs: [], reports: [], encounter: null, run: null, breach: null, crew: null }));
+  const P = programsOf(base);
+  P.on = true; P.focus = body; P.rails = { ...P.rails, jackOut: 0, danger: false };
+  const runs = [], keep = BENCH_HOOKS.map((k) => hooks[k]);
+  BENCH_HOOKS.forEach((k) => { hooks[k] = null; }); // a bench run has no folders, no trace, no crew and no exit
+  try { for (let seed = 1; seed <= n; seed++) {
+    const c = structuredClone(base);
+    c.rng = (seed * 2654435761) >>> 0;
+    c.run = { loc: 'bench', cwd: '/', integrity: maxSignal(c), max: maxSignal(c), pack: [], visited: ['/'] };
+    if (g === 'guard') selectEncounter(c, body, seed, { mode: 'run', room: '/bench', level, quiet: true });
+    else selectEncounter(c, 'random', seed, { mode: 'run', room: '/bench', level, zone: true, quiet: true, ...(g === 'strain' ? { strain: body } : { family: body }) });
+    if (!c.encounter) continue;
+    runCommand(c, 'engage');
+    const R = routineOf(c, body), own = !!R.confirmed;
+    let asked = false;
+    for (let k = 0; k < ROUTINES.benchCycles && active(c); k++) {
+      if (own) { R.confirmed = true; asked ||= uncovered(c).length > 0; R.confirmed = false; } // a part left to you: the rotation plays it here
+      resolveCycle(c);
+    }
+    const r = c.reports.at(-1), win = r?.result === 'victory' && !active(c);
+    runs.push({ asked, win, cycles: r?.cycles || ROUTINES.benchCycles, lost: win ? Math.max(0, Math.round(((c.run.max - c.run.integrity) / c.run.max) * 100)) : 100 });
+  } } finally { BENCH_HOOKS.forEach((k, i) => { hooks[k] = keep[i]; }); }
+  const won = runs.filter((r) => r.win), avg = (xs) => (xs.length ? Math.round((xs.reduce((a, x) => a + x, 0) / xs.length) * 10) / 10 : 0);
+  return { n: runs.length, wins: won.length, asked: runs.filter((r) => r.asked).length, cycles: avg(won.map((r) => r.cycles)), lost: Math.round(avg(runs.map((r) => r.lost))), sig: benchSig(s, body) };
+}
+export const benchOf = (s, body) => { const b = routineOf(s, body).bench; return b ? { ...b, stale: b.sig !== benchSig(s, body) } : null; };
+
+// ---------- cues ----------
+// Sounds that say when to look back, while your program plays (its move was the last one: you're away) and Cues are on:
+// a tell landing on you, your Signal crossing under ROUTINES.cueLow, an item of yellow rarity or better dropping. The
+// elite ahead and a run's end already have their own (the rails, the loss). Each is its own voice (app.js plays it).
+export const CUES = {
+  tell: { voice: 'ping', name: 'A tell lands' },
+  low: { voice: 'zap', name: `Signal under ${Math.round(ROUTINES.cueLow * 100)}%` },
+  drop: { voice: 'unlock', name: 'A rare drop' },
+};
+const RARE = new Set(['custom', 'zeroday', 'indemnified']);
+const landedIn = (e) => Object.values(e?.metrics?.tells || {}).reduce((n, x) => n + (x.landed || 0), 0);
+export function cuesOf(s, events) {
+  if (!unlocked(s) || s.who) return [];
+  const P = programsOf(s), out = new Set();
+  for (const ev of events) {
+    if (ev.who) continue;
+    if (ev.type === 'resolved' && ev.auto !== 'daemon') P.away = ev.auto === 'program';
+    else if (ev.type === 'hold' && ev.auto === 'program') P.away = true;
+    else if (ev.type === 'drop' && P.away && (RARE.has(ev.rarity) || ev.set || ev.item?.unique)) out.add('drop');
+  }
+  const e = s.encounter, d = active(s) ? defender(s) : null;
+  if (e) {
+    const x = progE(e), n = landedIn(e);
+    if (n > (x.landed || 0) && P.away) out.add('tell');
+    x.landed = n;
+  }
+  if (d?.max) {
+    const pct = d.integrity / d.max, was = P.cueAt ?? 1;
+    if (P.away && was >= ROUTINES.cueLow && pct < ROUTINES.cueLow && d.integrity > 0) out.add('low');
+    P.cueAt = pct;
+  } else delete P.cueAt;
+  return P.on && P.rails.cues && live(s) ? [...out] : [];
+}
+
 export function installPrograms() {
   hooks.program = programHook;
   hooks.programCycle = (s) => { if (s.who) return; noteExceptions(s); railCheck(s); };

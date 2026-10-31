@@ -60,6 +60,9 @@ export const STATS = {
   stealth: { side: 'hacker', group: 'utility', name: 'Stealth', unit: '%', base: 8, cap: 60, about: 'Gives each enemy part\'s first attack a chance to come 1 cycle later.' },
   sync: { side: 'hacker', group: 'utility', name: 'Sync', unit: '%', base: 4, cap: 50, about: 'Adds to the 25% chance that a cycle opens a Sync Window.' },
   scavenge: { side: 'hacker', group: 'utility', name: 'Scavenge', unit: '%', base: 8, about: 'Makes items drop more often and at better rarity, and increases the credits from caches you bank.' },
+  // RAM (routines.mjs): every routine's budget grows by it, up to ROUTINES.gearRam. It costs the item's primaries, as
+  // Scavenge does (RAM_COST).
+  ram: { side: 'hacker', group: 'utility', name: 'RAM', unit: '', base: 1, flat: true, about: 'Adds this much RAM to every routine of your program, up to 3 from all your gear.' },
   lead: { side: 'server', group: 'utility', name: 'Lead', unit: '', base: 5, flat: true, about: 'Increases the lead every home or rogue-server kill gives by this much.' },
 };
 export const GROUPS = { offense: 'Offense', survival: 'Defense', utility: 'Utility' };
@@ -73,7 +76,7 @@ export const groupOf = (item) => { const g = item?.group || STATS[Object.keys(it
 export const PROTOCOL_NAMES = {
   damage: 'Overdrive', crit: 'Precision', critDamage: 'Amplifier', accuracy: 'Targeting', echo: 'Echo', payload: 'Injector',
   clock: 'Clockrate', leech: 'Leech', stealth: 'Cloak', signal: 'Relay', regen: 'Self-repair', restore: 'Restore Point', reduction: 'Hardening',
-  evasion: 'Jitter', sanitize: 'Sanitizer', scavenge: 'Scavenger', sync: 'Phaselock',
+  evasion: 'Jitter', sanitize: 'Sanitizer', scavenge: 'Scavenger', sync: 'Phaselock', ram: 'Cache',
 };
 
 // Base items: seven per slot (the Implant three), a tier every few levels. A base's primaries are its stat mix
@@ -153,6 +156,7 @@ export const AFFIXES = {
   silence: { kind: 'suffix', name: 'of Silence', stat: 'stealth', lo: 6, hi: 10, from: 5 },
   beat: { kind: 'suffix', name: 'of the Beat', stat: 'sync', lo: 3, hi: 6, from: 7 },
   scrubbing: { kind: 'suffix', name: 'of Scrubbing', stat: 'sanitize', lo: 6, hi: 12, from: 8 },
+  heap: { kind: 'suffix', name: 'of the Heap', stat: 'ram', lo: 1, hi: 1.5, cap: 2, from: 10 }, // RAM for your routines, paid in primaries (RAM_COST): 1, 2 from about level 30
 };
 // Rule affixes: every blue carries one minor rule and every yellow one major rule, written in the effect
 // blocks uniques use (combat.mjs fxFire; content.mjs FX_WHEN, FX_IF, FX_DO). Each changes what a fight asks
@@ -304,6 +308,9 @@ export const magicFind = (scavenge) => { const x = Math.max(0, scavenge) / 100; 
 // it carries, at most 15% (rollItem). Uniques and set pieces keep theirs: they are the deliberate magic-find pieces.
 export const SCAVENGE_COST = { per: 1, max: 15 };
 export const scavengeCut = (scavenge) => Math.min(SCAVENGE_COST.max, Math.max(0, scavenge || 0) * SCAVENGE_COST.per);
+// RAM is paid for the same way: a rolled item's primaries are 6% lower for each point, within the same 15% at most.
+export const RAM_COST = { per: 6 };
+export const statCut = (stats = {}) => Math.min(SCAVENGE_COST.max, scavengeCut(stats.scavenge) + Math.max(0, stats.ram || 0) * RAM_COST.per);
 export const STASH_CAP = 40;
 export const CRIT = { multiplier: 1.5 };
 export const ECHO = { share: 0.5 }; // an echo hits for half
@@ -379,9 +386,9 @@ export function rollItem(rand, opts = {}) {
     if (!ok.length) break;
     take(pick(rand, ok));
   }
-  // Scavenge costs the base's primaries (SCAVENGE_COST), so the tooltip shows the lower numbers. An affix's own stat
-  // keeps its roll.
-  const cut = scavengeCut(stats.scavenge);
+  // Scavenge and RAM cost the base's primaries (SCAVENGE_COST, RAM_COST), so the tooltip shows the lower numbers. An
+  // affix's own stat keeps its roll.
+  const cut = statCut(stats);
   if (cut) for (const [k, v] of Object.entries(prim)) stats[k] -= v - Math.max(1, Math.round((v * (100 - cut)) / 100));
   // Its rule: a minor one on a blue, a major one on a yellow (RULES).
   const tier = !zeroDay && r.rule;

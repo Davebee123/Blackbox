@@ -62,7 +62,7 @@ import { casingLook, decalStrips, districtOf, propsLook, propMarkup, propLayout 
 import { promptLabel, cursorOf, bootOf, bootIds, BOOT_LOOKS, lookOpen } from './terminal.mjs';
 import * as BN from './bench.mjs';
 import { PARTS } from './parts.mjs';
-import { installPrograms, noteExceptions } from './routines.mjs';
+import { installPrograms, noteExceptions, cuesOf } from './routines.mjs';
 import { wireRoutines } from './routines-ui.mjs';
 import { createCoop } from './coop-ui.mjs';
 import { humansReady } from './coop.mjs';
@@ -1075,6 +1075,7 @@ function react(events) {
     feel.beat(split.delay(e));
     if (p && fxLevel() !== 'minimal') feel.add('strike', row(e.source), p.attack?.name ? p.attack.name.toUpperCase() : null, { floatAt: `${row(e.source)} > .bcell:nth-child(2)` });
   }
+  for (const c of cuesOf(campaign, events)) feel.add('cue' + c, null); // routines.mjs: while your program plays, when to look back
   const famCue = familyCues(campaign, events); // a virus family's attack and break one-shots, layered on the hurt and the break
   for (const e of events) {
     feel.beat(split.delay(e));

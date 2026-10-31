@@ -85,8 +85,8 @@ test('Scavenge is magic find, and it costs stats: the Scavenger suffix rolls low
   assert.deepEqual(rolls(50), [9, 10, 10, 10, 10]);
   assert.ok([60, 80].every((L) => affixValue('scavenger', L, 1) === 10), 'capped at 10');
   assert.deepEqual([AFFIXES.scavenger.lo, AFFIXES.scavenger.hi, AFFIXES.scavenger.cap], [3, 6, 10]);
-  // Every other affix is as it was, with no cap: of the Bunker still grows past 20.
-  assert.ok(Object.entries(AFFIXES).every(([id, a]) => id === 'scavenger' || a.cap === undefined));
+  // Every other affix is as it was, with no cap (but of the Heap's RAM, 2 at most): of the Bunker still grows past 20.
+  assert.ok(Object.entries(AFFIXES).every(([id, a]) => id === 'scavenger' || id === 'heap' || a.cap === undefined));
   assert.deepEqual([1, 20, 50].map((L) => affixValue('bunker', L, 0.5)), [6, 20, 42]);
   // The cost: 1% of the base's primaries a point of Scavenge, at most 15%, in whole numbers.
   assert.deepEqual([0, 3, 10, 15, 30].map(scavengeCut), [0, 3, 10, 15, 15]);
@@ -96,6 +96,7 @@ test('Scavenge is magic find, and it costs stats: the Scavenger suffix rolls low
     const it = rollItem(seeded(k * 31 + L), { level: L, rarity, slot, stat: rarity === 'tuned' ? 'scavenge' : undefined });
     const raw = primaries(it.base, L, RARITIES[rarity].mult, seeded(k * 31 + L)); // the same dice: primaries roll first
     const extra = Object.fromEntries(it.affixes.map((a) => [AFFIXES[a].stat, true]));
+    if (it.stats.ram) continue; // RAM costs primaries too (the RAM test)
     if (!it.stats.scavenge) { for (const [st, v] of Object.entries(raw)) if (!extra[st]) assert.equal(it.stats[st], v, `${it.name}: no Scavenge, no cost`); continue; }
     seen[rarity]++;
     const cut = Math.min(15, it.stats.scavenge);

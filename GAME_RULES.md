@@ -1332,8 +1332,13 @@ its own from 10; Loadout → **Program** edits it.
   *Quiet when bent*, *Tripwire last*, *Lockbox first*, *Trip when loud wins*, *Blast when it pays*, *Cash in*, *Twins
   together*, *Seal dear: strip it*), and a few built from the virus's parts (*Encryptor first*, *Answer the tells*,
   *SIGINT the dearer*, *Guard when low*).
-- **RAM:** each routine has its own, 4 at level 1 to 10 at 50. A handler costs its WHEN chip's RAM (1 plain, 2 a rule
-  chip, 3 a mastered chip; +1 for a long-cooldown skill). Handlers past the RAM sit out.
+- **RAM:** each routine has its own: class level (4 at level 1 to 10 at 50), Codex mastery of that virus (+1 for
+  every 3 of its parts mastered, at most 6, +1 more with all of them), and gear's RAM stat (at most 3). A tag for each
+  sits by the meter. A handler costs its WHEN chip's RAM (1 plain, 2 a rule chip, 3 a mastered chip; +1 for a
+  long-cooldown skill). Handlers past the RAM sit out.
+- **Benchmark** (`program <virus> bench`; not the Exfil): the routine alone against 50 builds of its virus at your
+  level, on a copy of your save, no rails: win rate, cycles a win takes, Signal lost (a loss: all of it; past 80
+  cycles: a loss; a part left to you stays unplayed). The result stays on the routine, dimmed once you change it.
 - **Break ◆ first** (on by default, `program <virus> armor off`): before a hit armor would take, the program fires your
   best ready armor-breaker at that part instead, or aims at a part with no ◆ if the target allows.
 - **What it can't do:** fire a skill with a cooldown of 6 or more (or once a fight) unless a handler names it; sync;
@@ -1346,7 +1351,10 @@ its own from 10; Loadout → **Program** edits it.
   A program's fight pays what yours does.
 - **Rails:** **auto jack-out** (off, or at 10–50% Signal; `program jackout 30`) and **Stop before danger** (on: a walk
   of more than one room stops next door to an elite, a boss, the Resident or a vault guard).
-- `program on|off`; `program <virus> add|set|move|remove|clear|preset|undo|confirm`.
+- **Cues** (on: `program cues off`): while your program plays (the last move was its), a tell landing on you, your
+  Signal crossing under 30% and a drop of yellow rarity or better each play their own sound. The elite ahead and a
+  run's end have theirs already (the rails, the loss).
+- `program on|off`; `program <virus> add|set|move|remove|clear|preset|undo|confirm|bench`.
 
 ## Items
 
@@ -1429,6 +1437,7 @@ Every stat is a whole number. The stat sheet lists them all.
 | Stealth (%) | Chance each part's first attack comes a cycle later | of Silence |
 | Sync (%) | Added to the 25% chance of a Sync Window | of the Beat |
 | Scavenge (%) | Magic find (below) | of the Scavenger |
+| RAM | Every routine's RAM, up to 3 from all your gear (Routines) | of the Heap (from item level 10; 1, 2 from about 30) |
 
 **Heals and burns grow with gear.** Heals you cast and damage over time keep +2% a level, not 4%; Restore and Payload
 make up the rest and more (a blue Sysop at 30 carries about 65% Restore). Heals that give back damage (Reclaim,
@@ -1436,8 +1445,8 @@ Rollback, OOM Kill) take Restore only. Payload is flat on every tick, so it coun
 
 **Scavenge is magic find** with diminishing returns (+50% Scavenge = +33% better odds) and more cache credits. It
 **costs stats**, as in D2: of the Scavenger rolls 3% at item level 1 to 10% at most, and a rolled blue or yellow
-carrying it has its primaries 1% lower a point (`SCAVENGE_COST`, at most 15%). Uniques and set pieces that carry it
-keep their stats.
+carrying it has its primaries 1% lower a point (`SCAVENGE_COST`, at most 15%). RAM costs 6% a point (`RAM_COST`),
+within the same 15%. Uniques and set pieces that carry either keep their stats.
 
 ### Rarity
 
