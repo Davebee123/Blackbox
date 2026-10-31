@@ -137,6 +137,9 @@ export const TIPS = [
   { id: 'fight-twin', page: 'combat', pause: true, at: '.board .tag.twin', under: '#board', text: 'Two Rigs share one heat gauge. Break one and the other takes its climb, so bring both down close together.' },
   { id: 'fight-bin', page: 'combat', pause: true, at: '.board .tag.bin', under: '#board', text: 'The Recycle Bin holds the skill the Wipe took. Push it past a tick to get that skill back, ready.' },
   { id: 'fight-wipe', page: 'combat', pause: true, at: '.board .tag.wipe', under: '#board', text: 'When the Wipe lands, it takes your strongest ready skill off your bar for 3 cycles. Fire that skill before then.' },
+  // Priority 3's floor 2 bodies (families.mjs).
+  { id: 'fight-cnc', page: 'combat', pause: true, at: '.board .tag.cnc', under: '#board', text: 'The C&C fires every Zombie at once. Clear the Zombies and the kill pays more. Break the C&C and the fight ends now, for less.' },
+  { id: 'fight-payload', page: 'combat', pause: true, at: '.board .tag.payload', under: '#board', text: 'Your hits on the Payload burn its fuse. At 0 it blows up on you, and its loot is gone. Count your hits.' },
   { id: 'fight-encrypt', page: 'combat', pause: true, at: '.board .intent.crypt', under: '#board', text: 'Encryption damages you every cycle and grows each time it lands. It stops when you break the Encryptor.' },
   // Tells (tells.mjs): a part announces a move ahead, and the chip says what answers it.
   { id: 'fight-tell', page: 'combat', pause: true, at: '.board .intent.tell.t-charge', under: '#board', text: 'This part is charging a much bigger hit. Push it past a tick on the cycle the hit lands to call it off. The chip shows NOW on that cycle.' },

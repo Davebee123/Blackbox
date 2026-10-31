@@ -96,6 +96,10 @@ export const SIGNS = {
   pzdig: { voice: 'dig', buzz: 14 },
   pzstep: { voice: 'step', buzz: 5 },
   pzfail: { voice: 'fizzle', buzz: [30, 40, 60] },
+  // Cues (routines.mjs CUES): while your program plays, when to look back. Sound and touch only.
+  cuetell: { voice: 'ping', buzz: [6, 30, 6] },
+  cuelow: { voice: 'zap', buzz: [20, 40, 20] },
+  cuedrop: { voice: 'unlock', buzz: 12 },
 };
 
 // Voices too faint to duck the place beds under (places.mjs) for.

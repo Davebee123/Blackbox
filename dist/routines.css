@@ -172,3 +172,17 @@ body.rt-drag-when .rt-slot:not(.rt-s-when), body.rt-drag-do .rt-slot:not(.rt-s-d
 .rt-armor.on .rt-sw i { left: 11px; background: var(--steel); box-shadow: 0 0 4px var(--steel-glow); }
 .rt-armor:not(.on) .rt-dia { color: var(--gray); }
 .rt-rc.off { border-color: var(--gray); background: none; color: var(--gray); }
+
+/* R2: where a routine's RAM comes from (level, Codex mastery, gear), as small tags after the meter; none dims. */
+.rt-srcs { display: inline-flex; gap: var(--s3); flex: none; }
+.rt-src { display: inline-flex; align-items: center; gap: 3px; color: var(--muted); font: 600 11px var(--mono); }
+.rt-src .glyph { width: 12px; height: 12px; }
+.rt-src.none { opacity: 0.4; }
+/* The benchmark: its button, then win rate, cycles a win takes and Signal lost; dimmed once the routine changes. */
+.rt-bench { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s3) var(--s5); }
+.rt-bs { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font: 600 12px var(--mono); cursor: help; }
+.rt-bs b { color: var(--text); font-weight: 700; }
+.rt-bs .glyph { width: 13px; height: 13px; }
+.rt-bs.lost b { color: var(--hot); }
+.rt-bs.asked, .rt-bs.asked b { color: var(--exception); }
+.rt-bench.stale .rt-bs { opacity: 0.45; }

@@ -162,11 +162,11 @@ test('the P2 parts\' board elements each have a tip, and each shows in a fight w
     assert.ok(!onPage(hudMarkup(off) + boardMarkup(off))(t.at), `${id}: not without its part`);
   }
 });
-// The parts plan's P3: the Rig's heat and the Degausser's Wipe each have a tip, on the board in a fight of its family.
+// The parts plan's P3 and priority 3: the Rig's heat, the Degausser's Wipe, the C&C and the Payload each have a tip, on the board in a fight of its family.
 test('the P3 families\' board elements each have a tip, and each shows in a fight of its family', async () => {
   const { selectEncounter } = await import('./dist/combat.mjs');
   const fight = (family, level, genes = []) => { const s = fresh(); s.metAll = true; selectEncounter(s, 'random', 77, { level, family, basic: 'pulse', genes, mutation: null, quiet: true }); command(s, 'engage'); return s; };
-  for (const [id, family, level, genes] of [['fight-heat', 'cryptominer', 9], ['fight-wipe', 'wiper', 19], ['fight-twin', 'cryptominer', 9, ['twinrig']]]) {
+  for (const [id, family, level, genes] of [['fight-heat', 'cryptominer', 9], ['fight-wipe', 'wiper', 19], ['fight-twin', 'cryptominer', 9, ['twinrig']], ['fight-cnc', 'botnet', 8], ['fight-payload', 'logicbomb', 12]]) {
     const t = TIPS.find((x) => x.id === id);
     assert.ok(t?.pause && t.page === 'combat' && t.text.length <= 200, id);
     const s = fight(family, level, genes), off = fight('ransomware', level);

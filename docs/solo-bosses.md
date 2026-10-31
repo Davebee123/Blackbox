@@ -8,14 +8,14 @@ family virus at 1.6× Integrity with one stock phase: the kit player (blind to t
 
 ## The shape
 
-- **Three phases**: the opening, then one at each of the ♛ part's ticks (50%, 25%). Each phase adds a mechanic. A stock
-  phase (re-arm, a cycle sooner) is never a phase on its own.
+- **Three acts**: the opening, then one at each of the ♛ part's ticks (50%, 25%). Each act adds a mechanic. A stock
+  phase (re-arm, a cycle sooner) is never an act on its own.
 - **A part of its own**, with a rule, on top of its family's: the boss's signature, shown on its row.
 - **You choose when**: the ♛ ticks are yours to cross, so each phase starts when you are ready for it.
 
 ## Built: the three solo bosses
 
-| Boss | Its part | Opening | At 50% | At 25% | The read |
+| Boss | Its part | Act 1 | Act 2 (50%) | Act 3 (25%) | The read |
 |---|---|---|---|---|---|
 | RELAY-KING | Relay: Broadcast every 4, +its hit per fragment | Broadcast | **Crown Hop**: the ♛ moves to the healthiest part; the old one heals 25% | **Flood**: Replicate every 2, Broadcast every 3 | Clear fragments before a Broadcast; pace the parts so the ♛ hops where you want it |
 | REPO MAN | Ledger: Collection every 5, +its hit per Lien | **Liens**: each command a ◆ absorbs adds one; a Collection, landed or cut, clears them | Re-arms every part; a Collection in 3 | **Interest**: each Lien counts twice; a Collection in 3 | Strip with strips, burns or helpers; cut the Collection; cross a tick with the ledger clear |
@@ -24,16 +24,19 @@ family virus at 1.6× Integrity with one stock phase: the kit player (blind to t
 Integrity (`BOSSES` in data.mjs): RELAY-KING 1.25× (its Relay is a fourth part), REPO MAN 1.6×, HOLLOW CHOIR 1.4× (its second
 voice is a boss-sized part).
 
-What the bots made of it (`node solved.mjs bosses`; the scratch sim, 12 fights a cell, before → after):
+They play in P4's acts (GAME_RULES.md "Boss acts"): one ♛ tick a hit, a tell an act, and the ♛ left above its tick until
+the act's beat has played (the Broadcast, the Collection, the Mimic's copy), else every part re-arms.
+
+What the bots made of it (a scratch sim, 12 fights a cell, wins %, before → after):
 
 | Boss, level | Planner | Kit | Blind |
 |---|---|---|---|
-| RELAY-KING 3 | 92 → 67 | 83 → 50 | 50 → 17 |
-| RELAY-KING 10 | 100 → 67 | 100 → 75 | 50 → 50 |
-| REPO MAN 10 | 92 → 67 | 100 → 75 | 100 → 33 |
-| REPO MAN 18 | 100 → 50 | 92 → 75 | 75 → 50 |
-| HOLLOW CHOIR 10 | 92 → 58 | 83 → 67 | 83 → 25 |
-| HOLLOW CHOIR 18 | 100 → 75 | 100 → 42 | 75 → 25 |
+| RELAY-KING 10 | 100 → 67 | 100 → 50 | 50 → 42 |
+| RELAY-KING 18 | 100 → 67 | 83 → 75 | 58 → 50 |
+| REPO MAN 10 | 92 → 50 | 100 → 42 | 100 → 33 |
+| REPO MAN 18 | 100 → 50 | 92 → 50 | 75 → 25 |
+| HOLLOW CHOIR 10 | 92 → 33 | 83 → 33 | 83 → 25 |
+| HOLLOW CHOIR 18 | 100 → 67 | 100 → 42 | 75 → 17 |
 
 The planner knows only enough to measure: clear fragments before a Broadcast, and cut the second voice. It doesn't avoid
 Liens or go quiet before a Round beat (holding two cycles cost it more than the Round). The designer's play is the bar.

@@ -1,8 +1,9 @@
 # Routines: programs you write to fight for you
 
 **Status.** The plan for programs that play your moves when you look away. Built: R1, programs from level 5 with a
-routine per virus, presets, exceptions, RAM from class level and the rails (GAME_RULES.md *Routines*).
-Left: R2 (RAM from mastery and gear, the benchmark, cues) and R3 (rarer chips, share codes, the run queue).
+routine per virus, presets, exceptions, RAM from class level and the rails; R2, RAM from mastery and gear, the
+benchmark and sound cues (GAME_RULES.md *Routines*). Left: R3 (rarer chips, share codes, the run queue), and from R2
+the uniques and set bonuses that add RAM, the browser notification and cue voices of their own.
 
 You should be able to start something and look away, the way you can in RuneScape or World of Warcraft, without the game losing its nuance. Attention is a dial, not a switch. Looking away never costs you the run or your rewards. Paying attention earns more.
 
@@ -83,7 +84,10 @@ Parked, by the designer's call (October 20, 2026). Revisit with real multiplayer
 ## Build phases
 
 1. **R1:** built.
-2. **R2:** RAM from Codex mastery and gear, and the sandbox benchmark. Sound cues and the browser notification option.
+2. **R2:** built: RAM from Codex mastery (capped at 6, +1 for all parts) and the RAM stat (of the Heap, at most 3), the
+   benchmark (50 builds at your level, no picked build yet), cues for a tell landing, Signal under 30% and a rare drop,
+   on voices the game already has. Parked: the browser notification (a hidden tab pauses the fight, so there's
+   nothing to report), the director-event cue, RAM on uniques and sets.
 3. **R3:** the rarer chips (Predict, Chain, Hold, Watch) as loot and Codex rewards, share codes, the run queue, and the
    bigger variety bonus.
 4. **Later:** per-virus leaderboards and a weekly featured strain.

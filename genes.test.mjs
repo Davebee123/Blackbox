@@ -10,8 +10,8 @@ import { CREWS } from './dist/mail.mjs';
 
 const ids = (v) => v.genes.map((g) => g.id);
 
-test('the library: 77 genes that carry today\'s content, each with a category, an axis, a role, a cost and an answer', () => {
-  assert.equal(GENE_IDS.length, 77); // 54 until the Shunt was cut, then the mechanics list's 20 (docs/mechanics-list.md), then the P3 families' Hash and Wipe, and their levers (the Twin Rig, the Recycle Bin)
+test('the library: 79 genes that carry today\'s content, each with a category, an axis, a role, a cost and an answer', () => {
+  assert.equal(GENE_IDS.length, 79); // 54 until the Shunt was cut, then the mechanics list's 20 (docs/mechanics-list.md), then the P3 families' Hash and Wipe, and their levers (the Twin Rig, the Recycle Bin), then the Botnet's Volley and the Logic Bomb's Payload
   for (const [id, g] of Object.entries(GENES)) {
     assert.ok(CATS[g.cat] && AXES[g.axis], id);
     assert.ok(['primary', 'amplifier'].includes(g.role), id);
@@ -20,7 +20,7 @@ test('the library: 77 genes that carry today\'s content, each with a category, a
     assert.ok(['part', 'tell', 'kills'].includes(g.decode), id);
   }
   const by = Object.fromEntries(Object.keys(CATS).map((c) => [c, GENE_IDS.filter((id) => GENES[id].cat === c).length]));
-  assert.deepEqual(by, { attack: 22, part: 30, defence: 5, rule: 10, tell: 10 }); // the parts plan's P1 brought five part genes, P2 eight (two attacks, three parts, two defences, a rule), then the Shunt (a part) was cut; the mechanics list eight attacks and twelve parts; P3 two attacks (the Hash, the Wipe) and two parts (the Twin Rig, the Recycle Bin)
+  assert.deepEqual(by, { attack: 23, part: 31, defence: 5, rule: 10, tell: 10 }); // the parts plan's P1 brought five part genes, P2 eight (two attacks, three parts, two defences, a rule), then the Shunt (a part) was cut; priority 3 an attack (the Volley) and a part (the Payload); the mechanics list eight attacks and twelve parts; P3 two attacks (the Hash, the Wipe) and two parts (the Twin Rig, the Recycle Bin)
 });
 
 test('today\'s content, mapped: the bodies, the third parts, the mutations, the strains and the guards are genes', () => {

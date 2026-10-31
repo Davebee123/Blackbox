@@ -13,9 +13,9 @@
 // (Kestrel), a faction's server (that faction), a guard (its server's), and a boss (its author). SPRAWL-00's
 // strays are nobody's. Sectors, rosters and ACTUARY's portfolio come in phases 3 and 5.
 export const AUTHORS = {
-  tollgate: { name: 'TOLLGATE', crew: 'ransomware', also: ['wiper'], colour: '#ff9f43', style: 'TOLLGATE builds with locks and leverage. Everything is behind something, and something is on a clock.',
+  tollgate: { name: 'TOLLGATE', crew: 'ransomware', also: ['wiper', 'logicbomb'], colour: '#ff9f43', style: 'TOLLGATE builds with locks and leverage. Everything is behind something, and something is on a clock.',
     signature: ['ward', 'mutexlock', 'deadline', 'rage', 'ransomtimer'], toolkit: ['tripwire', 'zipbomb', 'exfiltrate', 'ratecap', 'armored', 'predator', 'volatile', 'harvester', 'exposed'], builds: ['extortion', 'bricker', 'bloodhound', 'scythe', 'probingextortion', 'vengefulbricker'], bosses: ['repoman', 'nb-deadbolt', 'nb-tripmine'] },
-  swarmline: { name: 'SWARMLINE', crew: 'worm', colour: '#7bd389', style: 'SWARMLINE builds with numbers and spares. Whatever you break comes back or brings friends.',
+  swarmline: { name: 'SWARMLINE', crew: 'worm', also: ['botnet'], colour: '#7bd389', style: 'SWARMLINE builds with numbers and spares. Whatever you break comes back or brings friends.',
     signature: ['twin', 'floodramp', 'mend', 'hotspare'], toolkit: ['c2', 'hivebrood', 'siphon', 'loadbalancer', 'botnetrecruit', 'antivirussweep', 'fork', 'regenerative', 'hasty', 'countdown', 'leak', 'vendetta', 'amplifier', 'bodyguard', 'thorns'], builds: ['floodgate', 'leech', 'patchwork', 'overrun', 'doomsday', 'badblood', 'amplifiedfloodgate', 'feedingleech', 'guardedpatchwork', 'countingoverrun', 'thornwall'], bosses: ['relayking', 'nb-backorifice', 'nb-patchday', 'nb-floodwall'] },
   palemask: { name: 'PALEMASK', crew: 'ghostroot', colour: '#b8a6ff', style: 'PALEMASK builds with misdirection, so you never quite see where the hit comes from.',
     signature: ['veil', 'decoymirror', 'phaseshift', 'echo', 'dormant'], toolkit: ['frontend', 'honeypot', 'opportunist', 'sandboxed', 'lag', 'turncoat', 'exposed'], builds: ['sleeper', 'flicker', 'echo', 'lurker', 'lurkingsleeper', 'laggingflicker', 'volatileecho', 'desync', 'laststand'], bosses: ['nb-sleepwalker', 'nb-echolalia'] },

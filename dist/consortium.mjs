@@ -263,7 +263,7 @@ export function alertsOf(s) {
 
 // Fights for the consortium: a siege or lockdown on a member's outpost (e.member), an invader at an
 // away member's wall (e.raid), the travelling virus (e.roamer).
-const NATIVE = { ransomware: 'cryptjack', worm: 'splinter', ghostroot: 'ghostroot', cryptominer: 'xmrig', wiper: 'shamoon' };
+const NATIVE = { ransomware: 'cryptjack', worm: 'splinter', ghostroot: 'ghostroot', cryptominer: 'xmrig', wiper: 'shamoon', botnet: 'mirainet', logicbomb: 'timebomb' };
 function fight(s, { family, level, seed }, tag, text, location) {
   const gate = s.encounter?.phase === 'alert' && s.encounter.mode !== 'run' ? s.encounter : s.gate;
   const who = tag.member ? memberServers(s).find((l) => l.id === tag.member)?.member : null; // a member's native strain there (network.mjs)

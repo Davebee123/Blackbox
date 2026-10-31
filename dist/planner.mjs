@@ -8,8 +8,9 @@ import { tellMove, tellFocus, answers, QUIET, chargeNow, echoesNow, beatOn, beat
 // genesim.mjs: a gene the sim ignores (genes.mjs GENE_BOTS) is played as if it weren't there, one gene at a time.
 import { ignores, GENES, GENE_BOTS } from './genes.mjs';
 import { heatOf } from './parts.mjs';
-import { interruptMove, saveTick } from './interrupt.mjs';
+import { interruptMove, saveTick, toCross } from './interrupt.mjs';
 import { loudWins, blastPays, cashIn } from './order.mjs';
+import { actsOf, lashOn, actDone, actCap } from './acts.mjs';
 
 // Against a crew boss only the tank taunts (a taunt pulls its busters onto you): raid.mjs noTaunt.
 // veto: skills the planner may not pick this call (routines.mjs: a program's rotation never fires a long cooldown).
@@ -44,11 +45,14 @@ const others = (s, p) => livingParts(s).some((x) => x !== p && x.kind === 'syste
 // A part an order lever keeps for last right now (its lever doesn't say now).
 const keptLast = (s, p) => ((p.fuse && !p.fuseAt && !ignores('zipbomb')) || (p.deadman && !p.quiet && !ignores('tripwire'))) && others(s, p) && leverNow(s) !== p && p !== prefer;
 const leverNow = (s) => (!ignores('ward') && cashIn(s)?.part) || (!ignores('tripwire') && loudWins(s)?.part) || (!ignores('zipbomb') && blastPays(s)?.part) || null;
-const order = (s, p) => (p.core && p.ticks?.some((t) => !t.spent) && livingParts(s).some((x) => x !== p && x.attack) ? 0.4 : p.deadman && !ignores('tripwire') && others(s, p) ? 0.05 : p.fuse && !ignores('zipbomb') && others(s, p) ? 0.05 : p.hotspot && !ignores('hotspot') && others(s, p) ? 0.3 : p.command && !ignores('c2') && livingParts(s).filter((x) => x.kind === 'fragment').length >= 2 ? 4 : 1);
+const order = (s, p) => (p.core && p.ticks?.some((t) => !t.spent) && livingParts(s).some((x) => x !== p && x.attack) && !(actsOf(s.encounter.virus) && ignores('leave')) ? 0.4 : p.deadman && !ignores('tripwire') && others(s, p) ? 0.05 : p.fuse && !ignores('zipbomb') && others(s, p) ? 0.05 : p.hotspot && !ignores('hotspot') && others(s, p) ? 0.3 : p.command && !ignores('c2') && livingParts(s).filter((x) => x.kind === 'fragment').length >= 2 ? 4 : 1);
 export const mostThreat = (s) => livingParts(s).filter((p) => reachable(s, p)).map((p) => ({ p, k: (threatOf(p) * invested(s, p) * order(s, p)) / (p.integrity + 10 * (p.armor || 0)) })).sort((a, b) => b.k - a.k || dueOf(s, a.p) - dueOf(s, b.p))[0]?.p || soonest(s);
 const bare = (p) => alive(p) && !p.armor;
 // A Trojan's Package while its Loader lives (families.mjs): any damage unpacks it, so a player leaves it alone.
-const shunned = (s, p) => !!p?.pkg && !p.pkg.inert && livingParts(s).some((x) => x.id === 'loader');
+// A Botnet (families.mjs): an area kit farms its Zombies while its Signal holds; any other kit, or one under half its
+// Signal, ends it at the C&C (the Zombies scatter).
+const ending = (s) => (!ignores('volley') && (defender(s).integrity < defender(s).max / 2 || !usable(s).some((id) => AREA.has(id))) && livingParts(s).find((x) => x.cnc && x.zombies && reachable(s, x))) || null;
+const shunned = (s, p) => (!!p?.pkg && !p.pkg.inert && livingParts(s).some((x) => x.id === 'loader')) || (!!p?.zombie && !!ending(s));
 const shunning = (s) => livingParts(s).some((p) => shunned(s, p));
 const HITS = ['zero-day', 'retaliate', 'opening', 'chain-reaction', 'segfault', 'overload', 'flood', 'shatter', 'backdoor', 'reclaim', 'rate-limit', 'reject', 'checksum', 'hot-loop', 'backstab', 'fingerprint', 'side-channel', 'unmask', 'nohup', 'sniff', 'jam', 'echo-cancel', 'revoke', 'throttle', 'hook', 'tag', 'spike']; // the cheap core hits before key 1
 // A command that breaks this part right now, if there is one.
@@ -110,7 +114,7 @@ export function plannerWithout(s, no) {
 // virus: no tell (TELL.bots.answer off) and no gene's rule (every gene in GENE_BOTS.ignore, the Buffer's too). A
 // program's rotation (routines.mjs), and solved.mjs's kit player. read: genes it reads after all (a routine's beat
 // chip fires the rotation on a beat: the chip is the reading, so it goes quiet on it).
-const UNREAD = new Set([...Object.keys(GENES), 'buffer']);
+const UNREAD = new Set([...Object.keys(GENES), 'buffer', 'backlash', 'leave']); // a P4 boss's beat and its ♛ (acts.mjs)
 export function kitPlanner(s, no = null, read = null) {
   const answer = TELL.bots.answer, ignore = GENE_BOTS.ignore;
   TELL.bots.answer = !!read?.length && answer; GENE_BOTS.ignore = read?.length ? new Set([...UNREAD].filter((g) => !read.includes(g))) : UNREAD;
@@ -129,10 +133,29 @@ export function kitPlannerAt(s, p, no = null, read = null) {
 const BUFFING = new Set(['harden', 'brace', 'sudo', 'fork', 'debris-field', 'rm-rf', 'circuit-breaker', 'honeypot', 'maintenance-window', 'bulkhead', 'dmz', 'mesh']);
 const scrapeNow = (s) => !ignores('scraper') && landingNow(s).some((i) => part(s, i.source)?.scrape);
 export function planner(s) {
-  if (!scrapeNow(s)) return heedBend(s, heedHelpers(s, spareLast(s, planner1(s))));
+  if (!scrapeNow(s)) return heedActs(s, heedBend(s, heedHelpers(s, spareLast(s, planner1(s)))));
   const was = veto;
   veto = (id) => BUFFING.has(id) || !!(was && was(id));
-  try { return heedBend(s, heedHelpers(s, spareLast(s, planner1(s)))); } finally { veto = was; }
+  try { return heedActs(s, heedBend(s, heedHelpers(s, spareLast(s, planner1(s))))); } finally { veto = was; }
+}
+// A P4 boss (acts.mjs): no command hit on the ♛ on its Backlash's beat, unless it breaks it, and the ♛ left above its
+// next tick until this act's beat has played. The same command goes at another part, or a quiet move, or it waits.
+function heedActs(s, move) {
+  const v = s.encounter?.virus;
+  if (!actsOf(v) || !move || move === 'hold') return move;
+  const [id] = String(move).split(' '), it = toIntent(s, move), aim = it && !it.error ? part(s, it.target) : null;
+  const bad = (p, k = id) => {
+    if (!p) return false;
+    const breaks = !(p.armor > 0 && !ignoresArmor(s, k)) && previewDamage(s, k, p) >= p.integrity && !(actCap(s, p) < p.integrity); // the ♛ holds at its tick
+    if (breaks) return false;
+    if (!ignores('backlash') && lashOn(s, p)) return true;
+    if (!ignores('leave') && p.core && !actDone(s)) { const n = toCross(p); if (n != null && (!(p.armor > 0) || ignoresArmor(s, k)) && previewDamage(s, k, p) >= n) return true; }
+    return false;
+  };
+  const hit = AREA.has(id) ? livingParts(s) : aim ? [aim] : [];
+  if (!hit.some((p) => bad(p))) return move;
+  if (!AREA.has(id)) { const to = livingParts(s).filter((x) => x !== aim && !frozenNow(s, x)).sort((a, b) => dueOf(s, a) - dueOf(s, b)).map((x) => `${id} ${x.id}`).find((t) => ok(s, t) && !bad(part(s, t.split(' ')[1]))); if (to) return to; }
+  return first(s, quietOf(s).filter((q) => !AREA.has(q))) || 'hold';
 }
 // The Decoy (docs/puzzle-levers.md 3.8): on its beat a command at one part goes to the part it points at (combat.mjs
 // bendCommand). Pointing at a part to break last while others stand, nothing that bends fires: a shield, a buff, an area
@@ -167,7 +190,7 @@ function heedBend(s, move) {
     const k = x.attack ? 1 : TELL.copy.lesser;
     if (!hits) return k * pace;
     const dealt = x.armor > 0 && !ignoresArmor(s, id) ? key1 * TELL.copy.lesser : Math.min(plan, previewDamage(s, id, x));
-    return k * (dealt / key1) * pace - (x === dec ? (dec.bounce ?? CONFIG.mirrorBounce) * base : 0);
+    return k * (dealt / key1) * pace - (x === dec || dec.sings ? (dec.bounce ?? CONFIG.mirrorBounce) * base : 0);
   };
   const left = livingParts(s).filter((x) => x.kind === 'system' && x.id !== b.was), pool = b.shown ? [b.to] : left.length ? left : [dec];
   const fire = pool.reduce((n, x) => n + worth(x), 0) / pool.length, quiet = first(s, quietOf(s));
@@ -190,7 +213,7 @@ function planner1(s) {
   if (!plan || !shunning(s)) return plan;
   const [id, at] = plan.split(' '), aim = part(s, at);
   if (!AREA.has(id) && !shunned(s, aim)) return plan;
-  const t = (aim && !shunned(s, aim) ? aim : null) || livingParts(s).filter((p) => !shunned(s, p)).sort((a, b) => dueOf(s, a) - dueOf(s, b))[0];
+  const t = (aim && !shunned(s, aim) ? aim : null) || ending(s) || livingParts(s).filter((p) => !shunned(s, p)).sort((a, b) => dueOf(s, a) - dueOf(s, b))[0];
   return (t && first(s, ['overload', 'flood', 'segfault', 'backdoor', 'reclaim', 'rate-limit', 'exploit', 'crack', 'inject', 'deploy', 'tag', 'spike'].map((id) => id + ' ' + t.id))) || 'hold';
 }
 // One planner for every class: finish what you can, answer what lands now, strip, then finish.
@@ -302,6 +325,8 @@ function play(s) {
     const key = usable(s).filter((id) => !['spike', 'sigint'].includes(id) && ABILITIES[id] && readyIn(s, id) === 0).sort((a, b) => (ABILITIES[b].damage || 0) - (ABILITIES[a].damage || 0) || (ABILITIES[b].cooldown || 0) - (ABILITIES[a].cooldown || 0))[0];
     if (key && ABILITIES[key].damage > 0 && !t.armor && ok(s, key + ' ' + t.id)) return key + ' ' + t.id; // a hit on a bare part only: a shield or heal waits for its moment
   }
+  // Botnet (families.mjs): end it at the C&C unless an area kit can farm it (ending, above).
+  if (ending(s)) t = ending(s);
   // A subclass's own play (dist/classes/<class>.mjs plan): its new skills, before the generic rules.
   // Palemask (sets.mjs, the Infiltrator's tier set): a part you took under half takes your next hit as a critical
   // strike. Spend it on the biggest direct hit you have ready, there (not on a part your burns finish anyway, or under ◆).

@@ -114,6 +114,7 @@ Hover it for what happens and, on its own muted ▸ line, how to stop it. Breaki
 - **Ignoring hurts** (`TELL.tiers`): a charge or cast that gets through knocks your last skill **Offline** for a cycle
   (from level 6; never key 1 or SIGINT), and leaves you **Corrupted** (3% of your max a cycle for 3 cycles at 10–16,
   4% from 17; Purge, Scrub or Rollback cleanses it).
+- **A boss's beat** (Boss acts): the Backlash, RELAY-KING's Broadcast, REPO MAN's Collection and HOLLOW CHOIR's Mimic.
 - **Helpers count** (docs/puzzle-fights.md 3.2). A helper's hit is your hit on every lever: it can set off a Tripwire,
   cross a boss's phase tick or boot a Spare, and on the Mimic's beat each helper you sent onto it after the beat was
   said is played back at its own size (`caughtHelpers`). Helpers never cut a tell on their own. On the board each
@@ -205,12 +206,21 @@ Numbers at enemy level 6; Integrity and damage grow 4% a level (a level-1 virus 
 | Ghostroot (GHOSTROOT) | Pulse Node: 34, ◆, veiled, Surge 11 every 4 (first 3) | Scrambler: 40, ◆ (◆◆ from 5), veiled, Scramble every 4 (first 2), hitting for 9 |
 | Cryptominer (XMRIG), from 9 on floor 2 | Pulse Node: 34, ◆, Surge 12 every 4 (first 3) | **Rig**: 40, ◆ (◆◆ from 5), Hash 5 every 2 (first 2), 1 more each landing. It heats 10 a cycle; at 100 it overheats and burns itself out. Its ticks vent it. |
 | Wiper (SHAMOON), from 19 on floor 4 | Eraser: 34, ◆, Zero 12 every 4 (first 3) | **Degausser**: 38, ◆ (◆◆ from 5), Wipe 10 every 5 (first 3): takes your strongest ready key for 3 cycles (*WIPED*), its cooldown standing still. Never key 1 or SIGINT. |
+| Botnet (MIRAINET), from 8 on floor 2 | Pulse Node: 34, ◆, Surge 12 every 4 (first 3) | **C&C**: 46, ◆◆, Volley 12 every 4 (first 4): every **Zombie** at once (6; 7 from 15, 8 from 25; 8 each, bare, no ticks or drops), so it shrinks as they break (*6 zombies*). |
+| Logic Bomb (TIMEBOMB), from 12 on floor 2 | Trigger: 30, ◆, Tick 9 every 3 (first 2) | **Payload**: 70, ◆ (◆◆ from 10), no attack. A **fuse** of 8 (*fuse 8/8*) that your commands' hits on it burn, a hit on ◆ included; each of its ticks burns 2, and cancels nothing. At 0 it **detonates**: 35% of your max Signal (never your last point), and it's gone with its loot. |
 
-GLASSJAW writes the Cryptominer (and the Hashrat), TOLLGATE the Wiper. Their rules run in any fight (`families.mjs`).
+GLASSJAW writes the Cryptominer (and the Hashrat), TOLLGATE the Wiper and the Logic Bomb, SWARMLINE the Botnet. Their
+rules run in any fight (`families.mjs`).
 Servers, rogue folders and invasions send them once a server's level and floor allow (`network.mjs` `lateFamilies`,
 lean 1.5 each); a random virus with no family named stays one of the first three. A Hash climbs like encryption
 (the run's early and late steps skip it). A Cooler in the fight keeps the Rig at 10 heat a cycle; break it and the
 Rig heats 25 a cycle, every Hash 50% harder.
+
+**The Botnet: farm it or end it.** Break the C&C while a Zombie stands and everything left scatters: the fight ends,
+paying 0.6 of a kill. Clear every Zombie first and the C&C falls silent, and the kill pays 1.5. Its ticks cancel a
+Volley. **The Logic Bomb: count your hits.** A wild one's fuse is Contact's; the fight goes on against the rest after a
+detonation. The Payload's ◆ are its own (none added), and it falls back on the fight's attacker: break that first and
+it takes the attack over.
 
 **The Trojan.** A traced server's rooms also field a body by its authors (`families.mjs`):
 - **Trojan** (SWARMLINE, LANTERN). The Courier drops a hit and delivers Packages; the fight opens with one on the board.
@@ -221,7 +231,8 @@ Rig heats 25 a cycle, every Hash 50% harder.
 
 **Attack sets.** Each spawn rolls its set (Ransomware Standard, Lockout, Hammer or Lockstep; Worm Standard, Bloom or
 Wave; Ghostroot Standard, Ambush or Flicker; Trojan Express or Freight; Cryptominer Cold or Hot rig; Wiper Targeted or
-Rolling, the Rolling Wipe taking your last key for 2), and each part's first attack moves a cycle either way. A set changes when things land, not how much (within
+Rolling, the Rolling Wipe taking your last key for 2; Botnet Barrage or Drizzle, a Volley every 2; Logic Bomb Contact or
+Timed, a 6-hit fuse that every hit burns, burns and helpers too, winding back up 1 a cycle), and each part's first attack moves a cycle either way. A set changes when things land, not how much (within
 5% over 20 cycles). The room's card never names it: you read it on the board, and the Codex keeps every set you've
 faced. Bosses and the farm keep their own timing.
 
@@ -243,7 +254,9 @@ when the server is built. Every number is a named constant in `PARTS`; `develope
   out, so a two-part fight's parts are bigger and a four-part fight's smaller.
 - **Damage profiles.** Every family deals the same budget over a typical fight at its level, in its own shape:
   Ransomware half steady and half ramp, Worm all steady, Ghostroot a third steady and two thirds burst, Cryptominer
-  half steady and half ramp (the Hash), Wiper half steady and half burst (the Wipe). No single hit
+  half steady and half ramp (the Hash), Wiper half steady and half burst (the Wipe), Botnet half steady and half burst
+  (the Volley), Logic Bomb all steady on its Trigger, the one attacker (a Tick may grow to 2.6× its own; an unrolled
+  Payload counts as 38 in its total). No single hit
   grows past 1.3× its family's Pulse Node; past that a part hits more often instead.
 - **A missing role moves onto the basic.** No Encryptor: the basic's **Ratchet** stacks on the Encryptor's clock
   (an amber hatched chip, *▲ ratchet 7*, *Ratcheted* on you; Purge or Rollback resets it); no Rig, on the Rig's. No Scrambler: the basic's
@@ -346,11 +359,11 @@ A basic with no attack is its signature's **fallback**: break the signature firs
 | Worm | **C2 Node** (8): 18, ◆, Beacon 3 every 4 | Fragments gnaw half again as hard while it lives, and all drop when it breaks. |
 | Ghostroot | **Mimic** (8): 18, ◆, veiled | Every 4 cycles (announced two ahead) it copies the command you fire and turns it on you (`copyOf`): a hit for its whole direct hit; a strip strips your ◆ and shield; a burn leaves you Corrupted for its ticks at a quarter each; a debuff Throttles you; a shield or buff re-arms the Mimic with a ◆; a heal heals the virus's most damaged part; SIGINT, a stun or a utility Hangs you (your next command doesn't fire); hold copies nothing. A copy under a tenth of your max is a read. Its chip shows what your selected command would copy. |
 | Cryptominer | **Twin Rig** (9): 18, ◆, Hash 2 every 2, climbing | A second Rig on the same heat (*twin*); its ticks vent it too. Break one while the other stands and the other takes its climb, and one step more. Bring both down close together. |
-| Ransomware, Cryptominer | **Idle Timer** (9): 20, ◆ | Hit the signature with a command at least every 4 cycles, or at 5 every part re-arms to full ◆. Pips count down on the signature's row. |
-| Ghostroot, Ransomware | **Front End** (10): 22, ◆ | While it wears ◆, your single-target commands at its partner land on it. Burns, helpers, area hits and Sudo go through. |
-| Worm, Cryptominer | **Backlog** (12): 20, ◆, Ack 3 every 4 | When its Ack lands, the skill you fired that cycle cools 2 cycles longer. |
+| Ransomware, Cryptominer, Botnet, Logic Bomb | **Idle Timer** (9): 20, ◆ | Hit the signature with a command at least every 4 cycles, or at 5 every part re-arms to full ◆. Pips count down on the signature's row. |
+| Ghostroot, Ransomware, Logic Bomb | **Front End** (10): 22, ◆ | While it wears ◆, your single-target commands at its partner land on it. Burns, helpers, area hits and Sudo go through. |
+| Worm, Cryptominer, Botnet, Logic Bomb | **Backlog** (12): 20, ◆, Ack 3 every 4 | When its Ack lands, the skill you fired that cycle cools 2 cycles longer. |
 | Ransomware, Wiper | **Limiter** (13): 24, ◆, Ping 3 every 3 | No single hit takes more than 20% of its max. Many small hits answer it. |
-| Worm, Ghostroot | **Spare** (14): 2, ◆◆◆ | Sleeps off the timeline under 3 ◆. When the signature breaks, it boots 2 cycles later at 60% of the signature's max, with its attack, and drops its ◆. Pay its ◆ while it sleeps or its Integrity once it boots. |
+| Worm, Ghostroot, Botnet | **Spare** (14): 2, ◆◆◆ | Sleeps off the timeline under 3 ◆. When the signature breaks, it boots 2 cycles later at 60% of the signature's max, with its attack, and drops its ◆. Pay its ◆ while it sleeps or its Integrity once it boots. |
 | Ransomware | **Tripwire** (16): 18, ◆, Ping 3 every 3 | Break it while the others stand and they go **loud** for the fight: 25% more damage and every attack a cycle sooner, but 40% more damage taken and all their ◆ gone. Trip it when you can finish them fast (*loud wins*), else break it last. Throttle quiets a loud part. |
 | Ransomware, Wiper | **Scraper** (19): 22, ◆, Scrape 4 every 4 | When its Scrape lands it takes the buffs you put up before it: your ◆, your shield after its hit, your timed buffs. Buff after it lands. |
 | Wiper | **Recycle Bin** (19): 24, ◆ | Holds the key the Wipe takes (*holds Flood*). Push it past a tick while it holds one and the key comes back, ready. |
@@ -541,7 +554,8 @@ flashes on screen.
 
 **The Resident.** Opening a server's vault unseals its **Core**, where the Resident waits: the owner's process, a boss of
 the server's family (all three parts) at the server's level, 1.4× Integrity (1.1× on your first server). Its phase
-re-arms every part; it enrages at cycle 18. Beat it and the server is **taken over**: yours, teal on the map, its Core
+re-arms every part; it enrages at cycle 18. A worm or ransomware Resident plays in acts instead (below): 1.1× Integrity,
+enraging at cycle 24. Beat it and the server is **taken over**: yours, teal on the map, its Core
 quiet for good. Lose and you're disconnected, and for 6 hours it is a level stronger, up to three levels.
 
 | Boss | Where | From | Integrity | Enrages |
@@ -550,15 +564,36 @@ quiet for good. Lose and you're disconnected, and for 6 hours it is a level stro
 | REPO MAN (ransomware) | The Bounty event from level 8 | level 8 | 1.6× | cycle 18 |
 | HOLLOW CHOIR (ghostroot) | Its own event, from level 10 | level 10 | 1.4× | cycle 16 |
 
-Each brings a part and a rule of its own, and three phases: the opening, then one at each ♛ tick (docs/solo-bosses.md).
+Each plays in acts (below) with a part and a rule of its own, and a mechanic an act (docs/solo-bosses.md).
 
-| Boss | Its part | Opening | At 50% | At 25% |
+| Boss | Its part | Act 1 | Act 2 (♛ at 50%) | Act 3 (♛ at 25%) |
 |---|---|---|---|---|
 | RELAY-KING | **Relay**: Broadcast every 4 cycles, its hit bigger by its base for each fragment on the board | Broadcast | **Crown Hop**: the ♛ (and its 25% tick) moves to the healthiest other part; the part it leaves heals 25% of its max and takes plain ticks | **Flood**: the Replicator hatches every 2 cycles, the Relay broadcasts every 3 |
 | REPO MAN | **Ledger**: Collection every 5 cycles, its hit bigger by its base for each Lien | **Liens**: each of your commands a ◆ absorbs puts one on the Ledger (strips, piercing hits, burns and helpers don't); a Collection that lands or is cut clears them | Re-arms every part; a Collection 3 cycles out | **Interest**: each Lien counts twice; a Collection 3 cycles out |
 | HOLLOW CHOIR | A **Mimic**, its third part | One voice: the Mimic's beat every 4 cycles | **Second voice**: a second Mimic at the boss's size, beating 2 cycles behind the first | **Round**: each beat plays back your last three commands (the beat's own and the two before it); a cycle you hold adds nothing |
 
 On the board: ♛ on the crown part, ×*n* fragments on the Relay, §*n* Liens on the Ledger, *round* on a Mimic.
+
+### Boss acts (acts.mjs)
+
+A P4 boss (docs/puzzle-fights.md 7) plays in **three acts**: the first from the start, the next two from its ♛ part's
+ticks at 50% and 25%. Built: the worm and ransomware Residents and the three solo bosses.
+
+- **One tick a hit.** A hit takes the ♛ under its next tick and no further, so no act is skipped.
+- **A tell an act.** Act 1 deals the boss's first tell (its charge), act 2 its cast as well, act 3 its third.
+- **The beat** repeats, always on the board. Acts 2 and 3 bring the boss's mechanics (a Resident's: act 2 quickens its
+  beat, act 3 makes every attack a cycle sooner).
+- **The one to leave.** The ♛ stays above its next tick until this act's beat has played, or nothing else stands. Taken
+  under it sooner, every part re-arms (*Too soon*). The held tick is outlined red; its tooltip says when the beat plays.
+
+| Boss | The beat | Every | What answers it |
+|---|---|---|---|
+| Resident (worm, ransomware) | **Backlash**: a part with an attack that your command hits on the beat lashes back for its attack doubled (30% of your max at least, 60% at most), and an Encrypt or Replicate does its own thing once on top. A hit that breaks it doesn't lash, nor do burns or helpers sent before. | 4, then 3 | A shield, a buff or hold, a part with no attack (the Lockbox), or a hit that breaks its part |
+| RELAY-KING | **Broadcast**: its Relay's attack, bigger for each fragment | 4, 3 from act 3 | Clear the fragments, cut it, or a ◆ on you |
+| REPO MAN | **Collection**: its Ledger's attack, bigger for each Lien; each act calls one 3 cycles out | 5 | Few Liens, a cut, or a ◆ on you |
+| HOLLOW CHOIR | **Copy**: its Mimic copies what you fire and turns it on you (a second voice from act 2) | 4 | What costs least to have copied, hold, or break a voice |
+
+The Backlash's chips (*Lash −N*) sit on every part with an attack, in the columns the beat falls in.
 
 **Loot.** A boss always drops one item at its level (`bossLoot`): a blue, or a yellow one kill in four. The Resident
 rolls like an elite instead (one is met on every takeover). Each boss has **two uniques of its own**: 15% a kill, +5%
@@ -1309,8 +1344,13 @@ its own from 10; Loadout → **Program** edits it.
   *Quiet when bent*, *Tripwire last*, *Lockbox first*, *Trip when loud wins*, *Blast when it pays*, *Cash in*, *Twins
   together*, *Seal dear: strip it*), and a few built from the virus's parts (*Encryptor first*, *Answer the tells*,
   *SIGINT the dearer*, *Guard when low*).
-- **RAM:** each routine has its own, 4 at level 1 to 10 at 50. A handler costs its WHEN chip's RAM (1 plain, 2 a rule
-  chip, 3 a mastered chip; +1 for a long-cooldown skill). Handlers past the RAM sit out.
+- **RAM:** each routine has its own: class level (4 at level 1 to 10 at 50), Codex mastery of that virus (+1 for
+  every 3 of its parts mastered, at most 6, +1 more with all of them), and gear's RAM stat (at most 3). A tag for each
+  sits by the meter. A handler costs its WHEN chip's RAM (1 plain, 2 a rule chip, 3 a mastered chip; +1 for a
+  long-cooldown skill). Handlers past the RAM sit out.
+- **Benchmark** (`program <virus> bench`; not the Exfil): the routine alone against 50 builds of its virus at your
+  level, on a copy of your save, no rails: win rate, cycles a win takes, Signal lost (a loss: all of it; past 80
+  cycles: a loss; a part left to you stays unplayed). The result stays on the routine, dimmed once you change it.
 - **Break ◆ first** (on by default, `program <virus> armor off`): before a hit armor would take, the program fires your
   best ready armor-breaker at that part instead, or aims at a part with no ◆ if the target allows.
 - **What it can't do:** fire a skill with a cooldown of 6 or more (or once a fight) unless a handler names it; sync;
@@ -1323,7 +1363,10 @@ its own from 10; Loadout → **Program** edits it.
   A program's fight pays what yours does.
 - **Rails:** **auto jack-out** (off, or at 10–50% Signal; `program jackout 30`) and **Stop before danger** (on: a walk
   of more than one room stops next door to an elite, a boss, the Resident or a vault guard).
-- `program on|off`; `program <virus> add|set|move|remove|clear|preset|undo|confirm`.
+- **Cues** (on: `program cues off`): while your program plays (the last move was its), a tell landing on you, your
+  Signal crossing under 30% and a drop of yellow rarity or better each play their own sound. The elite ahead and a
+  run's end have theirs already (the rails, the loss).
+- `program on|off`; `program <virus> add|set|move|remove|clear|preset|undo|confirm|bench`.
 
 ## Items
 
@@ -1406,6 +1449,7 @@ Every stat is a whole number. The stat sheet lists them all.
 | Stealth (%) | Chance each part's first attack comes a cycle later | of Silence |
 | Sync (%) | Added to the 25% chance of a Sync Window | of the Beat |
 | Scavenge (%) | Magic find (below) | of the Scavenger |
+| RAM | Every routine's RAM, up to 3 from all your gear (Routines) | of the Heap (from item level 10; 1, 2 from about 30) |
 
 **Heals and burns grow with gear.** Heals you cast and damage over time keep +2% a level, not 4%; Restore and Payload
 make up the rest and more (a blue Sysop at 30 carries about 65% Restore). Heals that give back damage (Reclaim,
@@ -1413,8 +1457,8 @@ Rollback, OOM Kill) take Restore only. Payload is flat on every tick, so it coun
 
 **Scavenge is magic find** with diminishing returns (+50% Scavenge = +33% better odds) and more cache credits. It
 **costs stats**, as in D2: of the Scavenger rolls 3% at item level 1 to 10% at most, and a rolled blue or yellow
-carrying it has its primaries 1% lower a point (`SCAVENGE_COST`, at most 15%). Uniques and set pieces that carry it
-keep their stats.
+carrying it has its primaries 1% lower a point (`SCAVENGE_COST`, at most 15%). RAM costs 6% a point (`RAM_COST`),
+within the same 15%. Uniques and set pieces that carry either keep their stats.
 
 ### Rarity
 

@@ -11,7 +11,7 @@ const SHARDS = '#*+=:.01';
 
 // Which shape a virus wears: its strain first, then a guard's or a room body's own kind, then its family's.
 const STRAIN_SHAPE = { keylogger: 'eye', hashrat: 'cube', floodgate: 'fountain', leech: 'tick', sleeper: 'cocoon', patchwork: 'crab', flicker: 'wraith', extortion: 'padlock', echo: 'rings', bricker: 'block', overrun: 'hive' };
-const OWN_SHAPE = { watchdog: 'hound', sentinel: 'eye', crawler: 'spider', shredder: 'blades', bouncer: 'block', tracer: 'dish', trojan: 'horse', cryptominer: 'boiler', wiper: 'magnet' };
+const OWN_SHAPE = { watchdog: 'hound', sentinel: 'eye', crawler: 'spider', shredder: 'blades', bouncer: 'block', tracer: 'dish', trojan: 'horse', cryptominer: 'boiler', wiper: 'magnet', botnet: 'mast', logicbomb: 'bomb' };
 const FAMILY_SHAPE = { ransomware: 'crab', worm: 'serpent', ghostroot: 'wraith', watchdog: 'hound' };
 export const shapeOf = (v) => STRAIN_SHAPE[v.strain] || OWN_SHAPE[v.family] || FAMILY_SHAPE[v.art] || FAMILY_SHAPE[v.family] || 'crab';
 
@@ -281,10 +281,35 @@ export function createArt({ getState, canMove, getSelected, getNowSources }) {
       }
       box(0, 58, 0, 30, 6, 20, B, spin([0, 58, 0], 0.6, 'y'), 3);
       orb(0, 50, -12, 6, 3, 3, B, breathe);
+    } else if (shape === 'mast') {
+      // Botnet: a C&C mast on its housing (the basic), its dish sweeping the field, and a ring of Zombie boxes on the
+      // ground, each tied to the mast by a thin beam. A broken Zombie goes dark in its place.
+      box(0, 44, 0, 24, 8, 24, B, breathe, 4);
+      tube([0, 36, 0], [0, -46, 0], 4, 2, S(), sway([0, 36, 0], 0.04, 0.9));
+      for (const [y, rr] of [[18, 10], [-2, 8], [-22, 6]]) ring(0, y, 0, rr, 0.8, S(), spin([0, y, 0], 0.4, 'y'));
+      disc(0, -52, -4, 16, S(-1), anim({ k: 'sweep', c: [0, -52, 0], amp: 0.7, speed: 0.8 }));
+      tube([0, -52, -4], [0, -52, -16], 1.5, 0.4, S(-1), anim({ k: 'sweep', c: [0, -52, 0], amp: 0.7, speed: 0.8 }));
+      const zs = v.parts.filter((p) => p.zombie);
+      zs.forEach((z, i) => {
+        const th = (i / zs.length) * Math.PI * 2, x = Math.cos(th) * 66, zz = Math.sin(th) * 44, bob = anim({ k: 'bob', amp: 1.5, speed: 1.6 + (i % 3) * 0.4 });
+        box(x, 50, zz, 7, 7, 7, z.id, bob, 3.5);
+        tube([x, 42, zz], [0, -30, 0], 0.5, 0.5, z.id, 0, 0.12);
+      });
+    } else if (shape === 'bomb') {
+      // Logic Bomb: a round bomb, the Payload, with a lit wick curling off its cap; strapped to its belly a clock face,
+      // the Trigger, its hand ticking round.
+      orb(0, 4, 0, 46, 44, 44, S(), anim({ k: 'breathe', c: [0, 4, 0], amp: 0.03, speed: 1.4 }));
+      ring(0, -36, 0, 14, 2, 'body');
+      tube([0, -40, 0], [6, -52, 0], 5, 5, 'body');
+      for (let i = 0; i < 6; i++) { const t0 = i / 6, t1 = (i + 1) / 6; tube([6 + Math.sin(t0 * 5) * 10, -52 - t0 * 26, Math.cos(t0 * 5) * 4], [6 + Math.sin(t1 * 5) * 10, -52 - t1 * 26, Math.cos(t1 * 5) * 4], 1.5, 1.4, S(-1), sway([6, -52, 0], 0.18, 2.2)); }
+      for (let i = 0; i < 5; i++) orb(6 + Math.sin(5) * 10 + (r() - 0.5) * 8, -80 - r() * 8, (r() - 0.5) * 6, 1.5, 1.5, 1.5, S(-1), anim({ k: 'wave', amp: 3, freq: 0.4, speed: 6 + i }), 0.6); // sparks
+      for (const y of [-12, 22]) ring(0, y, 0, 46 - Math.abs(y) * 0.18, 1, 'body');
+      disc(0, 8, -46, 18, B, 0, 12);
+      tube([0, 8, -48], [0, -6, -49], 1.6, 0.6, B, spin([0, 8, -48], 1.4));
     }
     // Decorations by seed: antennae or an orbiting halo now and then.
-    if (r() < 0.35 && !['blades', 'block', 'gate', 'dish', 'fountain', 'horse', 'boiler', 'magnet'].includes(shape)) for (const side of [-1, 1]) tube([side * 10, -38, -6], [side * 22, -66, -14], 1.5, 0.3, 'body', sway([side * 10, -38, -6], 0.25, 2, side));
-    if (r() < 0.25 && !['eye', 'rings', 'hive', 'horse', 'boiler', 'magnet'].includes(shape)) ring(0, 0, 0, 70, 0.8, 'body', orbit([0, 0, 0], 0.4, 1.1), 1.1);
+    if (r() < 0.35 && !['blades', 'block', 'gate', 'dish', 'fountain', 'horse', 'boiler', 'magnet', 'mast', 'bomb'].includes(shape)) for (const side of [-1, 1]) tube([side * 10, -38, -6], [side * 22, -66, -14], 1.5, 0.3, 'body', sway([side * 10, -38, -6], 0.25, 2, side));
+    if (r() < 0.25 && !['eye', 'rings', 'hive', 'horse', 'boiler', 'magnet', 'mast', 'bomb'].includes(shape)) ring(0, 0, 0, 70, 0.8, 'body', orbit([0, 0, 0], 0.4, 1.1), 1.1);
     radius = Math.max(40, ...points.map((p) => Math.hypot(p.x, p.y, p.z)));
     rx = Math.max(40, ...points.map((p) => Math.hypot(p.x, p.z))); // it turns: its widest is any horizontal reach
     ry = Math.max(40, ...points.map((p) => Math.abs(p.y) + 8));

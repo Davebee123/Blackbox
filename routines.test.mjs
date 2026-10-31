@@ -8,7 +8,7 @@
 // loads with the defaults, an R1 stack moved into its viruses' routines.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fresh, command, resolveCycle, advance, selectEncounter, part, livingParts, attackers, hooks, active, restore, cycleLength, codexKey, barKeys, finish, intents, armorTakes as armorTakesHit } from './dist/combat.mjs';
+import { fresh, command, resolveCycle, advance, selectEncounter, part, livingParts, attackers, hooks, active, restore, cycleLength, codexKey, barKeys, finish, intents, loaded, armorTakes as armorTakesHit } from './dist/combat.mjs';
 import { copyOf, dearCopy } from './dist/tells.mjs';
 import { CONFIG, FAMILIES, ABILITIES } from './dist/data.mjs';
 import * as FP from './dist/floorplan.mjs';
@@ -87,14 +87,14 @@ test('a routine a virus: the fight\'s virus picks it, one with none plays the ro
   const s = fight({ level: 6 });
   for (const p of attackers(s)) p.attack.due = 999;
   const base = R.ramOf(6);
-  assert.equal(R.ramFor(s, 'ransomware'), base);
-  assert.equal(R.ramFor(s, 'worm'), base, 'every virus starts from the class level\'s RAM');
-  assert.equal(R.ramBonus(s, 'worm'), 0, 'R2\'s per-virus RAM hook: nothing yet');
+  assert.equal(R.ramFor(s, 'ransomware'), base + R.ramMastery(s, 'ransomware'), 'the class level\'s RAM, and its mastery\'s');
+  assert.equal(R.ramFor(s, 'cryptominer'), base, 'every virus starts from the class level\'s RAM');
   assert.equal(warning(command(s, 'program worm add always spike soonest')), null);
   assert.equal(R.programsOf(s).focus, 'worm', 'naming a virus picks it');
   assert.equal(R.decide(s).handler, -1, 'a worm routine never plays a Ransomware fight: the rotation does');
-  for (let i = 0; i < base; i++) assert.equal(warning(command(s, 'program ransomware add always spike lowest')), null);
-  assert.equal(R.ramUsed(s, 'ransomware'), base);
+  const full = R.ramFor(s, 'ransomware');
+  for (let i = 0; i < full; i++) assert.equal(warning(command(s, 'program ransomware add always spike lowest')), null);
+  assert.equal(R.ramUsed(s, 'ransomware'), full);
   assert.match(warning(command(s, 'program ransomware add always spike lowest')), /needs \d+ RAM\. Ransomware has \d+/, 'Ransomware is full');
   assert.equal(R.ramUsed(s, 'worm'), 1, 'and Worm\'s RAM is its own');
   assert.equal(warning(command(s, 'program worm add always spike lowest')), null, 'Worm still has room');
@@ -103,7 +103,7 @@ test('a routine a virus: the fight\'s virus picks it, one with none plays the ro
   // A stack past its RAM (an old one): the rest sit out.
   R.routineOf(s, 'ransomware').handlers.push({ when: 'always', do: 'spike', target: 'lowest' });
   assert.equal(R.handlerRows(s, 'ransomware').at(-1).fits, false, 'the last sits out');
-  assert.equal(R.ramUsed(s, 'ransomware'), base);
+  assert.equal(R.ramUsed(s, 'ransomware'), full);
 });
 
 test('WHEN chips open by research: decoded its name and health, rule its timer and tell, mastered its prediction', () => {
@@ -458,7 +458,7 @@ test('programs are per class and per subclass on the save; an old save loads wit
   const old = JSON.parse(JSON.stringify(fresh()));
   delete old.programs;
   const o = restore(old);
-  assert.deepEqual(R.programsOf(o).rails, { jackOut: 0, danger: true });
+  assert.deepEqual(R.programsOf(o).rails, { jackOut: 0, danger: true, cues: true });
   assert.equal(R.programsOf(o).on, true);
   assert.deepEqual(R.routineOf(o, 'ransomware').handlers, []);
 });
@@ -484,7 +484,7 @@ test('an R1 save\'s single stack moves into its viruses\' routines, which count 
   assert.equal(R.confirmed(o, 'worm'), true);
   assert.equal(R.confirmed(o, 'ghostroot'), false);
   // No room: a handler naming no part is dropped, without an error.
-  const t = fight({ level: 1 });
+  const t = fight({ level: 1, research: 0 });
   t.met = { ransomware: true };
   const save2 = JSON.parse(JSON.stringify(t));
   save2.programs = { by: { breaker: { handlers: [1, 2, 3, 4, 5].map(() => ({ when: 'always', do: 'spike', target: 'soonest' })) } } };
@@ -796,4 +796,102 @@ test('a seal or a cast needs a handler (the rotation reads no tell); a charge is
   assert.deepEqual(R.routineOf(t, 'ransomware').handlers, [{ when: 'anytell', do: 'rotation', target: 'that' }]);
   for (let i = 0; i < 14 && active(t); i++) { assert.ok(!R.exceptionsOf(t).some((y) => y.kind === 'tell'), 'any tell live covers them'); cycle(t); }
   assert.ok(R.presetsFor(t, 'ransomware').some((p) => p.id === 'sigint' && p.name === 'SIGINT the dearer' && p.handlers[0].when === 'dearer'), 'SIGINT has its own preset, on the dearer tell');
+});
+
+// ---------- R2: RAM from mastery and gear, the benchmark, cues ----------
+test('RAM grows with Codex mastery of that virus (+1 for every 3 parts mastered, up to 6, +1 for all) and with gear (up to 3)', () => {
+  const s = fight({ level: 30, research: 0 });
+  const base = R.ramOf(30), refs = R.bodyRefs('ransomware');
+  assert.equal(R.ramFor(s, 'ransomware'), base, 'nothing mastered, no gear RAM: the level alone');
+  refs.slice(0, 7).forEach((ref) => { s.research[ref] = 60; });
+  assert.equal(R.ramMastery(s, 'ransomware'), 2, '7 mastered: 2');
+  assert.equal(R.ramFor(s, 'ransomware'), base + 2);
+  assert.equal(R.ramFor(s, 'worm'), base, 'per virus: the Worm gets none of it');
+  refs.forEach((ref) => { s.research[ref] = 60; });
+  assert.equal(R.ramMastery(s, 'ransomware'), R.ROUTINES.mastery.cap + R.ROUTINES.mastery.full, 'all of them: the cap and the bonus');
+  const g = R.bodyRefs('watchdog');
+  g.forEach((ref) => { s.research[ref] = 60; });
+  assert.equal(R.ramMastery(s, 'watchdog'), Math.floor(g.length / 3) + 1, 'a guard mastered whole');
+  // Gear: the RAM stat on loaded protocols, at most 3 in all.
+  assert.equal(R.ramGear(s), 0);
+  const worn = loaded(s);
+  assert.ok(worn.length >= 2, 'the outfit wears protocols');
+  worn[0].stats.ram = 1;
+  assert.equal(R.ramGear(s), 1);
+  for (const it of worn) it.stats.ram = 2;
+  assert.equal(R.ramGear(s), R.ROUTINES.gearRam, 'capped');
+  assert.deepEqual(R.ramParts(s, 'worm'), { level: base, mastery: 0, gear: 3 });
+  // The Program tab shows each source as its own tag.
+  command(s, 'program ransomware');
+  const html = programMarkup(s);
+  assert.match(html, /rt-src[^>]*title="Codex mastery: 7 RAM/);
+  assert.match(html, /rt-src[^>]*title="Gear: 3 RAM/);
+});
+
+test('the RAM stat is paid for like Scavenge: 6% of the primaries a point, within the same 15%', async () => {
+  const G = await import('./dist/gear.mjs');
+  assert.equal(G.STATS.ram.name, 'RAM');
+  assert.equal(G.AFFIXES.heap.stat, 'ram');
+  assert.deepEqual([{}, { ram: 1 }, { ram: 2 }, { ram: 2, scavenge: 10 }].map(G.statCut), [0, 6, 12, 15]);
+  let seen = 0;
+  for (let k = 0; k < 400 && seen < 5; k++) {
+    const it = G.rollItem(G.seeded(k), { level: 30, rarity: 'tuned', slot: 'proxy', stat: 'ram' });
+    if (!it.stats.ram) continue;
+    seen++;
+    const raw = G.primaries(it.base, 30, G.RARITIES.tuned.mult, G.seeded(k));
+    for (const [st, v] of Object.entries(raw)) assert.equal(it.stats[st], Math.max(1, Math.round((v * (100 - G.statCut(it.stats))) / 100)), `${it.name}: ${st} paid for`);
+  }
+  assert.ok(seen, 'of the Heap rolls');
+});
+
+test('the benchmark runs your routine alone against the virus\'s builds at your level, on a copy of your save', () => {
+  const s = fight({ level: 14, research: 60 });
+  s.encounter = null;
+  const before = JSON.stringify({ stash: s.stash, research: s.research, xp: s.xp, logs: s.logs.length });
+  const b = R.benchmark(s, 'worm', 8);
+  assert.equal(b.n, 8);
+  assert.ok(b.wins > 0 && b.wins <= 8, `won ${b.wins}`);
+  assert.ok(b.cycles > 0 && b.lost >= 0 && b.lost <= 100);
+  assert.equal(JSON.stringify({ stash: s.stash, research: s.research, xp: s.xp, logs: s.logs.length }), before, 'nothing of yours moves');
+  assert.deepEqual(R.benchmark(s, 'worm', 8), b, 'the same dice every time');
+  // The Keylogger asks for the sync, and a program never syncs: it never wins.
+  assert.equal(R.benchmark(s, 'keylogger', 3).wins, 0);
+  assert.equal(R.benchable('exfil'), false, 'the Exfil runs: nothing to benchmark');
+  // The command keeps the result on the routine; a change to the routine marks it stale.
+  const ev = command(s, 'program worm bench');
+  assert.ok(ev.some((e) => e.type === 'bench'));
+  assert.equal(R.benchOf(s, 'worm').n, R.ROUTINES.bench);
+  assert.equal(R.benchOf(s, 'worm').stale, false);
+  assert.match(programMarkup(s), /rt-bench"[\s\S]*rt-bs win/);
+  command(s, 'program worm add always spike soonest');
+  assert.equal(R.benchOf(s, 'worm').stale, true);
+  assert.match(programMarkup(s), /rt-bench stale/);
+});
+
+test('cues: while your program plays, a tell landing, Signal crossing under 30% and a rare drop each sound once; typing silences them', () => {
+  const s = fight({ level: 14 });
+  const P = R.programsOf(s);
+  assert.equal(P.rails.cues, true, 'on by default');
+  const prog = { type: 'resolved', auto: 'program' }, typed = { type: 'resolved' };
+  const d = s.encounter.mode === 'run' ? s.run : s.server;
+  R.cuesOf(s, [prog]);
+  // Signal crossing the line.
+  d.integrity = Math.floor(d.max * 0.25);
+  assert.deepEqual(R.cuesOf(s, [prog]), ['low']);
+  assert.deepEqual(R.cuesOf(s, [prog]), [], 'once a crossing');
+  d.integrity = d.max; R.cuesOf(s, [prog]);
+  // A tell that lands.
+  s.encounter.metrics.tells = { x: { landed: 1 } };
+  assert.deepEqual(R.cuesOf(s, [prog]), ['tell']);
+  // A rare drop; a plain one says nothing.
+  assert.deepEqual(R.cuesOf(s, [prog, { type: 'drop', rarity: 'custom' }]), ['drop']);
+  assert.deepEqual(R.cuesOf(s, [prog, { type: 'drop', rarity: 'tuned' }]), []);
+  // You typed: you're watching, no cues.
+  s.encounter.metrics.tells.x.landed = 2;
+  assert.deepEqual(R.cuesOf(s, [typed, { type: 'drop', rarity: 'custom' }]), []);
+  // Off: none.
+  command(s, 'program cues off');
+  s.encounter.metrics.tells.x.landed = 3;
+  assert.deepEqual(R.cuesOf(s, [prog]), []);
+  assert.match(programMarkup(s), /data-command="program cues on"/);
 });

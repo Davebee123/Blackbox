@@ -28,10 +28,10 @@ const nameOk = (a, b) => {
   return adj.some((x) => a.name === want.replace(/^(ELITE )?/, (m) => `${m}${x} `));
 };
 const strip = (v) => { const o = structuredClone(v); for (const k of ADDED) delete o[k]; return o; };
-// Bosses rebuilt on purpose (GAME_RULES.md "Solo bosses"): HASHLORD and MIRRORSHADE (docs/genome.md 5.3), and the three solo
-// bosses' own parts and phases (docs/solo-bosses.md). genesim.test.mjs and bosses.test.mjs hold them to their designs;
-// every other boss is the same fight it was.
-const REBUILT = ['nb-hashlord', 'nb-mirrorshade', 'choir', 'relayking', 'repoman'];
+// Bosses rebuilt on purpose (GAME_RULES.md "Solo bosses"): HASHLORD and MIRRORSHADE (docs/genome.md 5.3), P4's Resident (its
+// ransomware and worm acts, the only family this file gives it; acts.test.mjs), and the three solo bosses' own parts and
+// acts (docs/solo-bosses.md, bosses.test.mjs). Every other boss is the same fight it was.
+const REBUILT = ['nb-hashlord', 'nb-mirrorshade', 'resident', 'choir', 'relayking', 'repoman'];
 const SOLO = Object.keys(BOSSES).filter((k) => !BOSSES[k].raid && !REBUILT.includes(k));
 
 // 10,000 seeds over everything a virus can be: wild viruses of every family at every level, strains, grades, run
@@ -46,7 +46,7 @@ function config(i) {
   if (i % 11 === 5) o.mutation = ['armored', 'regenerative', 'hasty', 'adaptive', 'rerouting'][r(5)];
   if (i % 13 === 6) { o.elite = true; if (r(2)) o.eliteHp = 1; }
   if (i % 17 === 7) { const b = SOLO[r(SOLO.length)]; o.boss = b; o.family = (BOSSES[b].strain && OLD[BOSSES[b].strain]?.lineage) || BOSSES[b].family || 'ransomware'; o.strain = BOSSES[b].strain || undefined; o.mutation = null; if (r(3) === 0) o.bossHp = 0.75; }
-  const keys = ['random', 'random', 'random', ...Object.keys(FIXTURES).filter((k) => !['xmrig', 'shamoon'].includes(k)), ...OLD_STRAINS.filter((st) => OLD[st].lineage === STRAINS[st].lineage)]; // the P3 families' fixtures, and the Hashrat's move to the Cryptominer, came after the frozen builder
+  const keys = ['random', 'random', 'random', ...Object.keys(FIXTURES).filter((k) => !['xmrig', 'shamoon', 'mirainet', 'timebomb'].includes(k)), ...OLD_STRAINS.filter((st) => OLD[st].lineage === STRAINS[st].lineage)]; // the P3 and priority 3 families' fixtures, and the Hashrat's move to the Cryptominer, came after the frozen builder
   const key = i % 6 === 5 ? keys[r(keys.length)] : 'random';
   return { key, seed, o: key === 'random' ? o : { threat, run: o.run, ...(o.grade ? { grade: o.grade } : {}) } };
 }

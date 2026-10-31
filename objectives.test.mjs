@@ -145,7 +145,7 @@ test('Backup: its own row; damage attacks on even cycles hit it, not you; standi
   const before = s.components;
   a.attack.amount = 0;
   for (const p of e.virus.parts) Object.assign(p, { integrity: Math.min(p.integrity, 1), armor: 0 });
-  for (let i = 0; i < 10 && active(s); i++) { const p = e.virus.parts.find((x) => x.integrity > 0); play(s, 'spike ' + p.id); resolveCycle(s); }
+  for (let i = 0; i < 10 && active(s); i++) { const p = e.virus.parts.find((x) => x.integrity > 0); p.armor = 0; play(s, 'spike ' + p.id); resolveCycle(s); } // (◆ off each time: an Idle Timer re-arms them)
   assert.equal(e.phase, 'victory');
   assert.ok(o.met && s.components >= before + OBJ.bonus.components);
   // Lost: missed, and the fight goes on with its hits back on you.
