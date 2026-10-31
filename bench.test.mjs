@@ -170,7 +170,7 @@ test('every panel button types an existing command, and each one works on a benc
   try {
     for (const id of B.PANEL_IDS) {
       const { s } = benched('phantom', 10);
-      const v = { level: '12', kit: 'herder', event: 'courier', family: 'worm', seed: '3', part: B.panelParts()[1] };
+      const v = { level: '12', kit: 'herder', event: 'courier', family: 'worm', seed: '3', part: B.panelParts()[1], pick: 'family:worm' };
       const cmd = B.benchAction(s, id, v);
       assert.ok(cmd, id);
       if (cmd === 'reset game') { assert.match(app, /if \(text === 'reset game' \|\| text === 'new game'\) return resetGame\(\);/); continue; }
@@ -188,7 +188,8 @@ test('the panel\'s commands do what their buttons say', () => {
   assert.equal(B.benchAction(s, 'lv', { level: '33' }), 'developer level 33');
   assert.equal(B.benchAction(s, 'lv', { level: '99' }), 'developer level 50');
   assert.equal(B.benchAction(s, 'build', { kit: 'herder', level: '' }), 'bench herder 10', 'your level when the field is empty');
-  assert.equal(B.benchAction(s, 'fight', { family: 'ghostroot', level: '', seed: '' }), 'developer fight ghostroot 10 1');
+  assert.equal(B.benchAction(s, 'arena', { pick: 'family:ghostroot', level: '', seed: '' }), 'developer fight family:ghostroot 10 1');
+  assert.equal(B.benchAction(s, 'arena', { pick: 'boss:nb-hashlord', level: '', seed: '4', leaning: 'brownout', objective: 'uptime' }), 'developer fight boss:nb-hashlord 16 4 leaning=brownout objective=uptime', 'empty: the level it opens, over yours');
   assert.equal(B.benchAction(s, 'event', { event: '' }), 'developer event');
   play(s, B.benchAction(s, 'lv+5'));
   assert.equal(hackerLevel(s), 15);
@@ -198,12 +199,12 @@ test('the panel\'s commands do what their buttons say', () => {
   assert.equal(s.server.integrity, s.server.max); assert.equal(signalNow(s), maxSignal(s));
   const c = s.server.credits; play(s, B.benchAction(s, 'credits')); assert.equal(s.server.credits, c + 1000);
   // A fight: that family at that level, engaged.
-  play(s, B.benchAction(s, 'fight', { family: 'worm', level: '12', seed: '5' }));
+  play(s, B.benchAction(s, 'arena', { pick: 'family:worm', level: '12', seed: '5' }));
   assert.ok(active(s)); assert.equal(s.encounter.virus.family, 'worm'); assert.equal(s.encounter.virus.level, 12);
   assert.equal(play(s, 'developer fight worm 12 5').at(-1).type, 'warning', 'one fight at a time');
   // A part's fight: the part is in it.
   const t = benched('phantom', 10).s, pid = 'zipbomb';
-  play(t, B.benchAction(t, 'part', { part: pid, level: '' }));
+  play(t, B.benchAction(t, 'arena', { pick: `part:${pid}`, level: '' }));
   assert.ok(active(t)); assert.ok(t.encounter.virus.parts.some((p) => p.id === pid), pid); assert.equal(t.encounter.virus.level, 5, 'at the level it opens');
   assert.ok(B.panelParts().includes(pid));
   // The parts roll: off, then on.
@@ -212,6 +213,6 @@ test('the panel\'s commands do what their buttons say', () => {
   // The markup: one button a command, a tooltip each.
   const html = B.panelMarkup(s);
   for (const id of B.PANEL_IDS) assert.ok(html.includes(`data-bench-act="${id}"`), id);
-  assert.equal((html.match(/<button /g) || []).length, B.PANEL_IDS.length);
+  assert.equal((html.match(/data-bench-act=/g) || []).length, B.PANEL_IDS.length);
   assert.equal((html.match(/ title="/g) || []).length >= B.PANEL_IDS.length, true);
 });
