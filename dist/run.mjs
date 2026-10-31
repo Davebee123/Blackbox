@@ -127,7 +127,7 @@ export function layoutOf(loc) {
   // filter: fixed by its seed (LOOT.vault*). Your first server's has a protocol and spare credits.
   const vault = Object.keys(out).find((k) => out[k].locked && !out[k].drop);
   // Contracts plant files in vaults too (see mail.mjs).
-  if (vault && loc) out = { ...out, [vault]: { ...out[vault], files: [...out[vault].files, ...(hasKit(loc) ? ['kit.bin'] : []), ...(hasTokens(loc) ? ['tokens.dat'] : []), ...(hasBackup(loc) ? ['backup.bin'] : []), ...(sourceOf(loc) ? [sourceOf(loc) + '.src'] : []), ...(vaultFilter(loc) ? ['filter.flt'] : [])] } };
+  if (vault && loc) out = { ...out, [vault]: { ...out[vault], files: [...out[vault].files, ...(hasKit(loc) ? ['kit.bin'] : []), ...(loc.template === 'cold' ? ['kit2.bin'] : []), ...(hasTokens(loc) ? ['tokens.dat'] : []), ...(hasBackup(loc) ? ['backup.bin'] : []), ...(sourceOf(loc) ? [sourceOf(loc) + '.src'] : []), ...(vaultFilter(loc) ? ['filter.flt'] : [])] } };
   // About half the found servers keep an incident file at the root (a Log sweep, see forensics.mjs).
   const incident = sweepFile(loc);
   if (incident && out['/'] && !out['/'].files.includes(incident)) out = { ...out, '/': { ...out['/'], files: [...out['/'].files, incident] } };
@@ -160,7 +160,7 @@ function iced(loc, base) {
 // blueprint or a codebase there became).
 export const VAULT_BACKUP = 0.1;
 export const hasBackup = (loc) => seeded(loc.seed * 13 + 5)() < VAULT_BACKUP;
-export const hasKit = (loc) => !!loc.starter || seeded(loc.seed * 41 + 7)() < LOOT.vaultKit;
+export const hasKit = (loc) => !!loc.starter || loc.template === 'cold' || seeded(loc.seed * 41 + 7)() < LOOT.vaultKit; // Cold storage: two kits (kit2.bin)
 export const hasTokens = (loc) => !!loc.starter || seeded(loc.seed * 43 + 9)() < LOOT.vaultTokens;
 // The protocol waiting in a location's vault: the same every time you look.
 export const levelOf = (loc) => loc.level || SERVER.locationLevel(loc.depth || 1, 0);
@@ -186,8 +186,8 @@ function hunt(s) {
 }
 // A vault always holds one item, white or better (LOOT.vault), fixed by its seed. A gold is a
 // unique that drops from vaults this deep (a source's floor: that floor's vaults only, The Sink's or Bedrock's).
-export function vaultItem(loc) {
-  const r = seeded(loc.seed * 7 + 3), level = levelOf(loc), depth = loc.depth || 1;
+export function vaultItem(loc, n = 1) {
+  const r = seeded(loc.seed * 7 + 3 + (n - 1) * 104729), level = levelOf(loc), depth = loc.depth || 1;
   const w = LOOT.vault, total = Object.values(w).reduce((a, b) => a + b, 0);
   let x = r() * total, rarity = 'stock';
   for (const [k, v] of Object.entries(w)) if ((x -= v) < 0) { rarity = k; break; }
@@ -297,8 +297,8 @@ export function fileInfo(loc, path, name) {
   if (loc.farm && full !== '/motd.txt') return farmFile(loc, path, name);
   if (loc.rogue) return full === '/motd.txt' ? { kind: 'text', size: '1k', text: rogueMotd(loc) } : null;
   if (sweepFile(loc) && full === '/' + sweepFile(loc)) return { kind: 'sweep', size: '9k', text: ['an incident log. cat it to sweep it.'] };
-  if (name === 'kit.bin' && layoutOf(loc)[path]?.locked) {
-    const item = vaultItem(loc);
+  if ((name === 'kit.bin' || (name === 'kit2.bin' && loc.template === 'cold')) && layoutOf(loc)[path]?.locked) {
+    const item = vaultItem(loc, name === 'kit2.bin' ? 2 : 1);
     return { kind: 'gear', size: '32k', item, text: [`binary: ${itemLabel(item)}, ${item.unique ? 'a Zero-day' : `a ${RARITIES[item.rarity].name.toLowerCase()} ${item.group || 'item'}`}.`, `${statLine(item.stats)}.${item.zeroDay ? ' ' + ZERO_DAYS[item.zeroDay].effect : ''}${item.unique ? ' ' + effectLine(item) : ''}`, 'pull it to take it. load it at home.'] };
   }
   const vaultPath = Object.keys(layoutOf(loc)).find((k) => layoutOf(loc)[k].locked && !layoutOf(loc)[k].drop);

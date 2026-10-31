@@ -160,6 +160,8 @@ const ROOM_ICONS = {
   routing: '<path d="M2.5 7H9v10h8.5"/><path d="M17 13.5l3.5 3.5-3.5 3.5"/><circle cx="9" cy="7" r="1.2"/><circle cx="9" cy="17" r="1.2"/>',
   deadlock: '<path d="M4.5 10A8 8 0 0 1 18 6.2M19.5 14A8 8 0 0 1 6 17.8"/><path d="M18.5 2.5v4h-4M5.5 21.5v-4h4"/><rect x="9" y="11" width="6" height="5" rx="1"/><path d="M10.5 11V9.6a1.5 1.5 0 0 1 3 0V11"/>',
   cryptogram: '<path d="M3 5.5h18v13H3Z"/><path d="M3 5.5l9 7 9-7"/><path d="M7 15.5h3M14 15.5h3"/>',
+  // A terminal's screen, its log lines and the prompt.
+  terminal: '<path d="M3 4h18v16H3Z"/><path d="M6.5 8h11M6.5 11h8M6.5 14h10"/><path d="M6.5 17h2.5"/>',
   // A thread's rooms (threads-view.mjs): someone waiting at a terminal, a file, a log.
   ...TH_ICONS,
 };
@@ -328,6 +330,13 @@ const hashOf = (str) => { let x = 7; for (const c of str) x = (x * 31 + c.charCo
 // A hop's trace bows out; a Tunnel's arc, from the entry to its room, bows a little less.
 const hopD = (p, q) => `M${p.x} ${p.y} Q${n1((p.x + q.x) / 2 + (q.y - p.y) * 0.35)} ${n1((p.y + q.y) / 2 - (q.x - p.x) * 0.35)} ${q.x} ${q.y}`;
 const tunnelD = (e, t) => `M${e.x} ${e.y} Q${n1((e.x + t.x) / 2 + (t.y - e.y) * 0.3)} ${n1((e.y + t.y) / 2 - (t.x - e.x) * 0.3)} ${t.x} ${t.y}`;
+// A Router's one-way link (floorplan.mjs oneWay): a chevron at the trace's middle, pointing the way it runs.
+function oneWayMark(g, a, b, p, q) {
+  const w = (g.oneway || []).find(([x, y]) => (x === a && y === b) || (x === b && y === a));
+  if (!w) return '';
+  const [f, t] = w[0] === a ? [p, q] : [q, p], ang = (Math.atan2(t.y - f.y, t.x - f.x) * 180) / Math.PI;
+  return `<g class="fp-oneway" transform="translate(${n1((p.x + q.x) / 2)} ${n1((p.y + q.y) / 2)}) rotate(${n1(ang)})"><title>One-way: this link only runs the way it points, for you and the hunter.</title><path d="M-5 -7L4 0L-5 7"/></g>`;
+}
 // The trace a step from one room into the next runs along, for the step's effect (travelfx.mjs): its path as the map
 // draws it, whether you walk it backwards (rev), both rooms' centres and a chip's half size. Null when no trace joins them.
 export function stepPath(s, from, to, tall) {
@@ -363,7 +372,8 @@ function mapSvg(s, tall, pop = null) {
     const live = !!here && ((a === here && reach.has(b)) || (b === here && reach.has(a))), fog = !live && (!found(a) || !found(b)), trod = R.at && walked[a] && walked[b];
     const d = hop ? hopD(p, q) : '';
     const shape = (cls) => (hop ? `<path class="${cls}" d="${d}"/>` : `<line class="${cls}" x1="${p.x}" y1="${p.y}" x2="${q.x}" y2="${q.y}"/>`);
-    const out = shape(`fp-bed${beat.has([a, b].sort().join('|')) ? ' beat' : ''}`) + (live ? shape('fp-under') : '') + shape(`fp-link ${fog ? 'fog' : live ? 'live' : trod ? 'walked' : 'seen'}${hop ? ' hop' : ''}`);
+    const out = shape(`fp-bed${beat.has([a, b].sort().join('|')) ? ' beat' : ''}`) + (live ? shape('fp-under') : '') + shape(`fp-link ${fog ? 'fog' : live ? 'live' : trod ? 'walked' : 'seen'}${hop ? ' hop' : ''}`)
+      + oneWayMark(g, a, b, p, q);
     return revealing(s, a) || revealing(s, b) ? `<g class="reveal">${out}</g>` : out; // a hidden room's trace fades in with it
   }).join('');
   // A Tunnel's link to the entry (a program, R2): a dashed amber arc, yours to walk free; the hunter never takes it.

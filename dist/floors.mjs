@@ -37,6 +37,9 @@ export const FLOOR = {
   // writes this share of the floor's servers; the rest are their family's crew's. Floor 5 waits for ACTUARY.
   // writes: the server families its slots take (its AUTHOR_FAMILIES among the three; their rooms read the full list).
   holders: { from: 2, share: 0.75, writes: { tollgate: ['ransomware'], swarmline: ['worm'], palemask: ['ghostroot'], nullchoir: ['ghostroot'], glassjaw: ['ransomware', 'worm', 'ghostroot'], lantern: ['worm'] } },
+  // Each floor's signature server kind (floorplan.mjs KINDS: Router, Honeypot, Cold storage): this share of its servers
+  // (off the floor's own dice, so nothing else on the floor moves).
+  signature: { kinds: { 2: 'router', 3: 'honeypot', 4: 'cold' }, share: 0.3 },
   gap: 132, // map units between neighbours
   curve: 0.5, // how a floor's levels bunch toward the top of its band
 };
@@ -232,6 +235,9 @@ export function floorGraph(seed, n) {
     x.template = wpick(r, kindWeights(n));
     if (near.includes(x.template)) x.template = wpick(r, kindWeights(n));
   }
+  // The floor's signature kind (FLOOR.signature), on its own dice.
+  const sig = FLOOR.signature.kinds[n];
+  if (sig) { const rs = seeded(((seed >>> 0) * 40503 + n * 7919 + 211) >>> 0 || 1); for (const x of ranked) if (rs() < FLOOR.signature.share) x.template = sig; }
   // Exits: on the far side, hanging off one or two servers.
   const exits = [];
   shape.far.slice(0, F.exits).forEach((from, k) => {
