@@ -54,7 +54,7 @@ export function objectiveBroke(s, p) {
 // The end of a cycle: the objective's clock. Returns how the fight ends ('escaped', 'victory'), or null.
 export function objectiveCycle(s) {
   const e = s.encounter, o = e?.objective;
-  if (!o || !e.rooms) return null;
+  if (!o || !(e.rooms || e.arena)) return null; // a room's fight, or the Arena's (arena.mjs)
   if (o.kind === 'exfil') return e.cycle >= o.n ? 'escaped' : null;
   if (o.kind === 'priority') {
     if (!o.met && !o.failed && e.cycle >= o.n) { o.failed = true; emit(s, 'status', 'Priority missed. Fight on.', { objective: 'priority' }); }
