@@ -92,7 +92,6 @@ code { font-family: var(--mono); color: var(--amber); }
 .meter-integrity { align-items: center; }
 .meter-bar { width: 120px; height: 8px; background: var(--inset); border: 1px solid var(--line); display: block; }
 .meter-bar span { display: block; height: 100%; background: var(--amber); transition: width 0.3s; }
-.meter-integrity.critical .meter-bar span { background: var(--hot); }
 .meter-integrity.critical strong { color: var(--hot); }
 .toggles { display: flex; gap: 4px; color: var(--dim); font-size: 12px; white-space: nowrap; }
 .toggles button[aria-pressed='true'] { color: var(--text); }
@@ -130,7 +129,6 @@ code { font-family: var(--mono); color: var(--amber); }
 .hud-bar .bar-top small { font-size: 13px; color: var(--muted); }
 .hud-bar .bar-top .bar-ico { width: 14px; height: 14px; margin-right: 6px; vertical-align: -2px; color: var(--you); }
 .hud-bar.mine.mid .bar-ico { color: var(--next); } .hud-bar.mine.low .bar-ico { color: var(--hot); }
-.meter-ico { width: 14px; height: 14px; margin-right: -2px; color: var(--amber); }
 .bigbar { height: 14px; background: var(--inset); border: 1px solid var(--hot); margin-top: 6px; }
 .bigbar span { display: block; height: 100%; background: linear-gradient(90deg, #a82f20, var(--hot)); transition: width 0.25s; }
 .hud-bar.mine .bigbar { border-color: var(--you); }
@@ -1455,15 +1453,23 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 .meter-signal strong { color: var(--you); min-width: 3ch; }
 .meter-signal.weak .sig-bars i.on { background: var(--hot); box-shadow: 0 0 5px rgba(255, 91, 61, 0.5); }
 .meter-signal.weak strong { color: var(--hot); }
+/* Integrity: a server tower that drains from the top, two rack lines across it. */
+.srv-tower { position: relative; flex: none; box-sizing: border-box; width: 12px; height: 16px; padding: 1px; display: flex; align-items: flex-end; border: 1.5px solid var(--amber); border-radius: 2px; box-shadow: 0 0 5px rgba(241, 185, 47, 0.35); }
+.srv-tower b { display: block; width: 100%; background: var(--amber); border-radius: 0.5px; transition: height 0.3s; }
+.srv-tower::before, .srv-tower::after { content: ''; position: absolute; left: 2px; right: 2px; height: 1px; background: var(--inset); }
+.srv-tower::before { top: 3px; } .srv-tower::after { top: 6px; }
+.meter-integrity.critical .srv-tower { border-color: var(--hot); box-shadow: 0 0 5px rgba(255, 91, 61, 0.4); }
+.meter-integrity.critical .srv-tower b { background: var(--hot); }
+.meter-integrity strong { min-width: 3ch; }
 /* Resting: the next bar up breathes while it refills. */
 .meter-signal.resting .sig-bars i.on + i:not(.on), .meter-signal.resting .sig-bars i:first-child:not(.on) { animation: sig-rest 1.2s ease-in-out infinite; }
 @keyframes sig-rest { 50% { background: rgba(127, 209, 199, 0.5); } }
 .no-motion .meter-signal .sig-bars i { animation: none; }
-@media (max-width: 1700px) and (min-width: 901px) { .meters { gap: 14px; } .meter-integrity .meter-bar { width: 80px; } }
-@media (max-width: 1440px) and (min-width: 901px) { .meter-signal .meter-label { display: none; } .meter-integrity .meter-bar { width: 56px; } .meters { gap: 10px; } }
+@media (max-width: 1700px) and (min-width: 901px) { .meters { gap: 14px; } }
+@media (max-width: 1440px) and (min-width: 901px) { .meter-signal .meter-label { display: none; } .meters { gap: 10px; } }
 @media (max-width: 1300px) and (min-width: 901px) { .meter-level .meter-bar { display: none; } }
 @media (max-width: 1700px) and (min-width: 901px) { .meter-level { min-width: 0; } .meter-level .meter-bar { width: 40px; } .topbar { gap: 6px 14px; } }
-@media (max-width: 1560px) and (min-width: 901px) { .meter-signal .meter-label { display: none; } }
+@media (max-width: 1560px) and (min-width: 901px) { .meter-signal .meter-label, .meter-integrity .meter-label { display: none; } }
 @media (max-width: 1320px) and (min-width: 901px) { .ctx-tabs .brand-name { display: none; } }
 /* Lists of rows (a hub's work and payloads); protocols on the Loadout page */
 .craft-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
@@ -2269,9 +2275,6 @@ body.with-sidebar .workspace { grid-template-columns: 200px minmax(0, 1fr); }
 .meters > .meter, .meters > .meter[data-command] { padding: 4px 14px; margin: 0; min-height: 28px; align-items: center; border-radius: 0; }
 .meter[data-command]:hover, .meter[data-command]:focus-visible { outline: 1px solid var(--line-strong); outline-offset: -2px; border-radius: 4px; }
 .meters > .meter:not([hidden]) ~ .meter:not([hidden]) { border-left: 1px solid var(--line-strong, var(--line)); }
-.meter-integrity .meter-bar, .topbar.fit-2 .meter-integrity .meter-bar { width: 60px; }
-@media (max-width: 1700px) and (min-width: 901px) { .meter-integrity .meter-bar { width: 60px; } }
-@media (max-width: 1440px) and (min-width: 901px) { .meter-integrity .meter-bar { width: 48px; } }
 .meter strong { font-variant-numeric: tabular-nums; }
 /* Your server on the map: the server glyph (two racks), not a square. */
 .mnode.server .srv-glyph rect { fill: rgba(127, 209, 199, 0.12); stroke: var(--you); stroke-width: 1; }

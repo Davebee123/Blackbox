@@ -156,8 +156,8 @@ short vibration on phones that have it.
 ## The pages, at a glance
 
 - **The top bar:** the pages on the left; in the middle your handle · class · level with the class's XP as a thin bar;
-  on the right the people button, the pager, then Integrity, Signal and credits (each with its **+**). At 1440 with the
-  casing the pager's tray tightens so the class name keeps its place.
+  on the right the people button, the pager, then Integrity (a server tower that drains), Signal (five bars) and
+  credits, each with its **+**. At 1440 with the casing the pager's tray tightens so the class name keeps its place.
 - **The map** shows one floor at a time. A server's level is the number under it in WoW colours; servers that ask
   nothing of you draw as dim dots without labels until hovered, selected or zoomed. Labels never overlap: the more
   important one keeps its label (selected, then threats, then where you are, then a contract or fresh find). Scroll

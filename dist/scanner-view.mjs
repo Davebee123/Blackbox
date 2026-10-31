@@ -1,17 +1,18 @@
-// The scanner (scanner.mjs, GAME_RULES.md "The scanner"): a radio button in the top bar beside the pager, dim while
-// nothing is on the air and glowing amber while a broadcast is up, hidden in a fight. It opens a slim band under the top
-// bar, one row: the frequency, the dial, the station with its S-meter and lock (or what it paid), the transcript, and
-// the log counts, which open the log card. Esc or the button closes it, and it closes itself when the broadcast ends.
-// DOM and SVG only.
+// The scanner (scanner.mjs, GAME_RULES.md "The scanner"): a radio button in the top bar beside your name, dim while
+// nothing is on the air and glowing amber while a broadcast is up, hidden in a fight. It opens into a small tuner in
+// the top bar (the frequency and the dial, over your name), with a tab hanging under the bar: the station with its
+// S-meter, the transcript, the lock (or what it paid) and the log counts, which open the log card. Esc or the button
+// closes it, and it closes itself when the broadcast ends. DOM and SVG only.
 //
-// The band is built once (stripMarkup) and painted in place at 20 frames a second, slot by slot, so the tooltips never
-// lose it. Its sounds (createRadio) play with Sound on, at the Effects volume.
+// Built once (stripMarkup) and painted in place at 20 frames a second, slot by slot, so the tooltips never lose it.
+// Its sounds (createRadio) play with Sound on, at the Effects volume.
 import * as SC from './scanner.mjs';
 import { glyph } from './glyphs.mjs';
 import { FACTIONS } from './factions.mjs';
 import { chainDef } from './threads.mjs';
 
 const { band: [LO, HI], fine: FINE, hold: HOLD } = SC.SCANNER;
+const SPAN = 2; // MHz the dial shows while you sweep, centred on the needle
 const esc = (x) => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 // The scanner's own icons, in the game's 16×16 stroke hand.
 const G = {
@@ -31,10 +32,11 @@ const KIND_ORDER = ['numbers', 'pirate', 'distress'];
 const ANSWER = '\n▸ Hold the carrier in the zone until the lock fills.';
 
 // ---------- the parts, as markup ----------
-// Where a frequency sits on the band, as a % of the dial: the whole band, or the fine window once it bites.
-const pct = (tune, m) => (tune.hook ? (m - (tune.hook.c - FINE / 2)) / FINE : (m - LO) / (HI - LO)) * 100;
+// Where a frequency sits on the dial, as a %: a window of SPAN MHz that scrolls under the needle, or the fine window
+// round the station once it bites.
+const pct = (tune, m) => (tune.hook ? (m - (tune.hook.c - FINE / 2)) / FINE * 100 : 50 + (m - tune.f) / SPAN * 100);
 function ticks(tune) {
-  const [from, to, step, major] = tune.hook ? [tune.hook.c - FINE / 2, tune.hook.c + FINE / 2, 0.02, 0.1] : [LO, HI, 0.25, 1];
+  const [from, to, step, major] = tune.hook ? [tune.hook.c - FINE / 2, tune.hook.c + FINE / 2, 0.02, 0.1] : [Math.max(LO, tune.f - SPAN / 2), Math.min(HI, tune.f + SPAN / 2), 0.05, 0.5];
   let out = '';
   for (let i = Math.ceil(from / step - 1e-9); i <= Math.floor(to / step + 1e-9); i++) {
     const m = +(i * step).toFixed(3), x = pct(tune, m).toFixed(2), big = Math.abs(m / major - Math.round(m / major)) < 1e-6;
@@ -81,7 +83,8 @@ export function parts(s, tune, t) {
     const on = tune.hook?.id === x.id;
     if (tune.hook && !on) return '';
     if (!on && (SC.catchable(s, x) || !SC.logged(s, x.id))) return '';
-    const left = pct(tune, SC.carrier(x, t, tune.hook)).toFixed(2);
+    const at = pct(tune, SC.carrier(x, t, tune.hook)), left = at.toFixed(2);
+    if (at < -10 || at > 110) return '';
     return on ? `<i class="sc-glow" style="left:${left}%;opacity:${(0.3 + 0.6 * p).toFixed(2)}"></i><i class="sc-carrier" style="left:${left}%;opacity:${(0.25 + 0.75 * p).toFixed(2)}"></i>` : `<i class="sc-glow old" style="left:${left}%;opacity:${(0.2 + 0.5 * p).toFixed(2)}"></i>`;
   }).join('');
   const out = { freq: `${tune.f.toFixed(3)}<small>MHz</small>`, counts: counts(s), scale: ticks(tune), marks, needle: pct(tune, tune.f), zone: tune.hook ? [pct(tune, tune.f - HOLD), pct(tune, tune.f + HOLD)] : null, fine: !!tune.hook };
@@ -103,14 +106,13 @@ export function parts(s, tune, t) {
   out.sound = { st, d, s: str, ts: tr.s, tr: tr.tr, clear: !st || str < 0.03 ? 0 : !SC.catchable(s, st) ? str : tune.hook ? Math.min(1, 0.15 + tune.lock * 0.9) * Math.min(1, str * 1.4) : str };
   return out;
 }
-// The band, whole: what show builds, and what the tests read.
+// The tuner, whole: the frequency and the dial in the top bar, and the tab under it. What show builds, and what the
+// tests read.
 export function stripMarkup(s, tune, t) {
   const p = parts(s, tune, t);
   return `<span class="sc-freq" data-sc="freq">${p.freq}</span>
     <div class="sc-dial${p.fine ? ' fine' : ''}" data-sc="dial" tabindex="0" role="slider" aria-label="Frequency" aria-valuemin="${LO}" aria-valuemax="${HI}" aria-valuenow="${tune.f}"><div class="sc-span"><svg class="sc-scale" data-sc="scale">${p.scale}</svg><div data-sc="marks">${p.marks}</div><i class="sc-zone" data-sc="zone"${p.zone ? ` style="left:${p.zone[0]}%;width:${p.zone[1] - p.zone[0]}%"` : ' hidden'}></i><i class="sc-needle" data-sc="needle" style="left:${p.needle}%"></i></div></div>
-    <div class="sc-mid"><div class="sc-who-row" data-sc="who">${p.who}</div><div class="sc-res" data-sc="res">${p.res}</div></div>
-    <div class="${p.txCls}" data-sc="tx">${p.tx}</div>
-    <div class="sc-counts" data-sc="counts">${p.counts}</div>`;
+    <div class="sc-tab" data-sc="tab"><div class="sc-who-row" data-sc="who">${p.who}</div><div class="${p.txCls}" data-sc="tx">${p.tx}</div><div class="sc-res" data-sc="res">${p.res}</div><div class="sc-counts" data-sc="counts">${p.counts}</div><div class="sc-logcard" hidden></div></div>`;
 }
 
 // ---------- the controller ----------
@@ -121,37 +123,37 @@ export function createScanner({ state, changed = () => {}, busy = () => false, s
   const tune = { f: 7.415, hook: null, lock: 0 };
   const radio = createRadio();
   const $ = (k) => root.querySelector(`[data-sc="${k}"]`);
-  let btn = null, band = null;
+  let btn = null, pill = null, tuner = null, bar = null;
   function build(topbar) {
-    btn = document.createElement('button');
-    btn.type = 'button'; btn.className = 'sc-radio'; btn.setAttribute('aria-pressed', 'false'); btn.setAttribute('aria-label', 'Shortwave');
-    btn.innerHTML = RADIO;
+    bar = topbar;
+    pill = document.createElement('div');
+    pill.className = 'sc-pill';
+    pill.innerHTML = `<button type="button" class="sc-radio" aria-pressed="false" aria-label="Shortwave">${RADIO}</button><div class="sc-tuner" hidden></div>`;
+    btn = pill.querySelector('.sc-radio');
+    tuner = root = pill.querySelector('.sc-tuner');
     btn.addEventListener('click', toggle);
-    band = document.createElement('div');
-    band.className = 'sc-bar'; band.hidden = true;
-    band.innerHTML = '<div class="sc-row"></div><div class="sc-logcard" hidden></div>';
-    band.addEventListener('click', (e) => { if (e.target.closest('[data-scan-log]')) { logOpen = !logOpen; paintLog(); } });
-    root = band;
+    tuner.addEventListener('click', (e) => { if (e.target.closest('[data-scan-log]')) { logOpen = !logOpen; paintLog(); } });
     const pager = topbar.querySelector('#pager');
-    if (pager) pager.before(btn); else topbar.append(btn);
-    topbar.append(band);
+    if (pager) pager.before(pill); else topbar.append(pill);
     paintButton(Date.now());
   }
   function paintButton(at) {
     const b = btn, air = !!SC.onAir(state(), at);
+    pill.hidden = b.hidden;
     b.classList.toggle('live', air);
     b.setAttribute('aria-pressed', String(open));
     const tt = buttonTitle(state(), at);
     if (b.dataset.tt !== tt && b.title !== tt) { b.title = tt; delete b.dataset.tt; }
   }
-  function paintLog() { const c = root.querySelector('.sc-logcard'); c.hidden = !(open && logOpen); if (!c.hidden) c.innerHTML = logMarkup(state()); }
+  function paintLog() { const c = root.querySelector('.sc-logcard'); if (!c) return; c.hidden = !(open && logOpen); if (!c.hidden) c.innerHTML = logMarkup(state()); }
   function wireDial() {
     const dial = $('dial');
-    const toX = (e) => { const r = dial.querySelector('.sc-span').getBoundingClientRect(), u = (e.clientX - r.left) / r.width; set(tune.hook ? tune.hook.c - FINE / 2 + u * FINE : LO + u * (HI - LO)); };
-    // The drag listens on the window, so it carries on past the dial's edges.
+    // A drag turns the dial: the needle moves with the pointer, by the window's width for the dial's width. It listens on
+    // the window, so it carries on past the dial's edges.
     dial.addEventListener('pointerdown', (e) => {
-      e.preventDefault(); dial.focus({ preventScroll: true }); toX(e);
-      const move = (ev) => toX(ev), up = () => { removeEventListener('pointermove', move); removeEventListener('pointerup', up); removeEventListener('pointercancel', up); };
+      e.preventDefault(); dial.focus({ preventScroll: true });
+      let x0 = e.clientX;
+      const move = (ev) => { const w = dial.getBoundingClientRect().width || 1; set(tune.f + (ev.clientX - x0) / w * (tune.hook ? FINE : SPAN)); x0 = ev.clientX; }, up = () => { removeEventListener('pointermove', move); removeEventListener('pointerup', up); removeEventListener('pointercancel', up); };
       addEventListener('pointermove', move); addEventListener('pointerup', up); addEventListener('pointercancel', up);
     });
     dial.addEventListener('wheel', (e) => { e.preventDefault(); set(tune.f + Math.sign(e.deltaY || e.deltaX) * step(e)); }, { passive: false });
@@ -161,8 +163,9 @@ export function createScanner({ state, changed = () => {}, busy = () => false, s
   function toggle() { if (open) close(); else show(); }
   function show() {
     open = true; closeAt = 0; painted = {};
-    band.querySelector('.sc-row').innerHTML = stripMarkup(state(), tune, Date.now() / 1000);
-    band.hidden = false;
+    tuner.innerHTML = stripMarkup(state(), tune, Date.now() / 1000);
+    tuner.hidden = false;
+    pill.classList.add('open'); bar.classList.add('sc-on');
     wireDial();
     $('dial').focus({ preventScroll: true });
     if (sound()) radio.wake();
@@ -171,7 +174,8 @@ export function createScanner({ state, changed = () => {}, busy = () => false, s
   function close() {
     if (!root) return;
     open = false; logOpen = false; tune.hook = null; tune.lock = 0;
-    band.hidden = true;
+    tuner.hidden = true;
+    pill.classList.remove('open'); bar.classList.remove('sc-on');
     paintLog(); paintButton(Date.now());
     radio.quiet();
   }
@@ -188,9 +192,13 @@ export function createScanner({ state, changed = () => {}, busy = () => false, s
     const z = $('zone'); z.hidden = !p.zone; if (p.zone) { z.style.left = p.zone[0] + '%'; z.style.width = (p.zone[1] - p.zone[0]) + '%'; }
     $('dial').classList.toggle('fine', p.fine);
     $('dial').setAttribute('aria-valuenow', tune.f.toFixed(3));
+    // The tab hangs from the top bar's bottom edge, under the tuner, moved left if it would run past the bar's end.
+    const tab = $('tab');
+    tab.style.top = `${bar.clientHeight - pill.offsetTop}px`;
+    tab.style.left = `${Math.min(0, bar.clientWidth - 20 - pill.offsetLeft - tab.offsetWidth)}px`;
     radio.hear({ ...p.sound, f: tune.f, t, hook: tune.hook, on: sound(), volume: volume() });
   }
-  // Esc closes the log card, then the band, before the page's own Esc. The arrow keys tune while it's open, unless
+  // Esc closes the log card, then the tuner, before the page's own Esc. The arrow keys tune while it's open, unless
   // you're typing.
   document.addEventListener('keydown', (e) => {
     if (!open) return;
@@ -202,7 +210,7 @@ export function createScanner({ state, changed = () => {}, busy = () => false, s
     e.preventDefault();
   }, true);
   return {
-    // Puts the button beside the pager and the band under the top bar, once.
+    // Puts the button (and its tuner) in the top bar beside the pager, once.
     mount(topbar) { if (!btn && topbar) build(topbar); },
     isOpen: () => open,
     // Every frame: the schedule, the reel, the paint, the sound.
@@ -217,10 +225,10 @@ export function createScanner({ state, changed = () => {}, busy = () => false, s
       }
       const air = !!SC.onAir(s, now), away = busy();
       if (!btn) return;
-      btn.hidden = away; // a fight hides it
+      btn.hidden = away; // a fight hides it (paintButton hides the pill with it)
       if (away && open) close();
       paintButton(now);
-      if (open && wasAir && !air) closeAt = now + 3000; // the broadcast ended: the band folds away 3 s later
+      if (open && wasAir && !air) closeAt = now + 3000; // the broadcast ended: the tuner folds away 3 s later
       wasAir = air;
       if (open && closeAt && now >= closeAt) close();
       if (!open) { radio.voices(null, null); return; }
