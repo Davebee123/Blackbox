@@ -40,7 +40,7 @@ Every playtest URL runs on a fresh state that is never saved. The real save is n
 | `/?dev` | The real game with developer commands on (and `window.__bb`, the live state, for tests). |
 | `/?bench=<name>` | A test bench: its own save (`blackbox-bench-<name>`), developer mode on, a BENCH tag. Add `&as=<subclass\|class>&level=<n>` to start as that character. |
 | `/?playtest=cryptjack` | A paused fight against a fixture or strain (`splinter`, `ghostroot`…); `random` for a wild one. `&level=`, `&cls=`, `&sub=`, `&family=`, `&seed=`. Type `resume`. |
-| `/?playtest=part:<id>` | A fight with that part, at the level it opens (or `&level=`). |
+| `/?playtest=part:<id>` | A fight with that part, at the level it opens (or `&level=`); `part:<id>.exe` its .exe build. |
 | `/?playtest=fx` | The ability effects playtest: a panel that fires every ability's effect, at each Screen effects level and mastery tier. `&cls=`, `&crew=<class>`. |
 | `/?playtest=run` | Connected to a fresh server. `&family=worm\|ghostroot`, `&template=mailhub\|mirror\|archive\|lab` (its rooms' kind), `&depth=<floor>`. |
 | `/?playtest=rooms` | One server as rooms, clocks ten times as fast. `&class=`, `&level=`, `&kind=`, `&size=small\|medium\|large`, `&floor=`, `&boss=a\|b\|c`, `&hunter=patrol\|track`, `&seed=`. |
@@ -87,6 +87,7 @@ comment saying what it does.
 | `dist/data.mjs` | Every tunable number: abilities, classes, families, strains, guards, bosses, floors, and `createVirus`. |
 | `dist/classes/` | Each class's subclasses: `<class>.data.mjs` their skills and trees, `<class>.mjs` what they do in a fight; `kit.mjs` talent helpers. |
 | `dist/parts.mjs` | What a wild virus is made of: its basic, signature and third parts, rolled by named constants (`PARTS`), the strains' spread (`PARTS.spread`), and an elite's clash. |
+| `dist/exe.mjs` | The .exe builds: a part's rule harder or bent (`EXE`), and their roll from floor 4 (`EXE_ROLL`). |
 | `dist/genes.mjs` | The gene library: every family, strain, third part, mutation, tell and guard rule in one shape, and the elites' clashes (`CLASHES`). Data only. |
 | `dist/authors.mjs` | The crews that write viruses, each with signature genes, builds and bosses. Data only. |
 | `dist/genome.mjs` | A virus's genes in play: `scan`, `inspect` and the rules' chips. |

@@ -283,7 +283,8 @@ export function timersHidden(s, p = null) {
   // Actuarial Model (Halcyon): nothing hides its timers from you.
   const near = fxHas(s, 'unveil'), soon = (x) => !!near && !!x.attack && x.attack.due - c <= (Number(near.fx.value) || 0); // Sounding Line: its next attack shows once it is close
   const smoke = livingParts(s).some((x) => x.obfuscate); // an Obfuscator: every part stays veiled while it lives, bare or not
-  const hides = (x) => alive(x) && !(x.taggedUntil >= c) && !(x.seenUntil >= c) && (smoke ? !!x.attack || x.veiled : x.veiled && x.armor > 0) && !zeroDay(s, 'actuarial') && !soon(x); // seenUntil: Side Channel, Unmask
+  const blind = livingParts(s).some((x) => x.obfuscate && x.exe); // an Obfuscator.exe: Tag reveals nothing
+  const hides = (x) => alive(x) && !(!blind && x.taggedUntil >= c) && !(x.seenUntil >= c) && (smoke ? !!x.attack || x.veiled : x.veiled && x.armor > 0) && !zeroDay(s, 'actuarial') && !soon(x); // seenUntil: Side Channel, Unmask
   return p ? hides(p) : livingParts(s).some(hides);
 }
 
@@ -419,7 +420,8 @@ export function previewDamage(s, abilityId, p) {
   if (p.armor > 0 && !ignoresArmor(s, abilityId) && !rootkitReady(s)) return 0;
   let n = Math.floor((skillBase(s, abilityId, p) + gearStat(s, 'damage')) * damageMultiplier(s, p, { mine: true }) + 1e-9);
   const root = s.encounter && buffed(s.encounter, 'sudo');
-  if (p.limit && !root) n = Math.min(n, limitOf(p)); // a Limiter's cap
+  const capN = !root ? capOf(s, p) : null;
+  if (capN) n = Math.min(n, capN); // a Limiter's cap (a Limiter.exe's on every part)
   return Math.min(p.integrity, n);
 }
 // Armor takes this hit: the ◆ a damaging skill of yours would break on p instead of dealing its damage (hit below), or
@@ -1184,6 +1186,7 @@ export function encounterVirus(s, key, seed, opts = {}) {
   if (opts.boss) { over.boss = opts.boss; if (opts.bossHp) over.bossHp = opts.bossHp; }
   if (opts.genes) over.genes = opts.genes; // forced rolled genes (genesim.mjs probes)
   if (opts.basic) over.basic = opts.basic; // a forced basic (parts.mjs: genesim.mjs probes, the playtest page)
+  if (Array.isArray(opts.exe)) over.exe = opts.exe; // forced .exe builds (exe.mjs: the playtest page, the tests)
   if (opts.classic) over.classic = true; // the shape from before the parts roll (a Pulse Node, the signature, one third): balance.mjs's designed fight sets
   if (mode === 'run') over.run = true; // tuned for Signal fights (CONFIG.runHp, runDamage)
   if (opts.tag) over.tag = opts.tag; // a file's four digits: the fight carries its file's tag (WARDED CRYPTJACK-4821)
@@ -2478,12 +2481,12 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     // developer fight <family|random> [level] [seed]: a home fight at that level (your level by default), at once.
     // developer fight part:<id> [level]: one with that basic or third part, at the level it opens (as ?playtest=part:<id>).
     const [, , what, lv, sd] = text.split(' '), L = Math.max(1, Math.min(LOADOUT.maxLevel, Number(lv) || hackerLevel(s))), seed = Number(sd) >>> 0 || 1;
-    const pid = what.startsWith('part:') ? what.slice(5) : null, home = pid && Object.entries(FAMILIES).find(([, f]) => f.parts.some((x) => x.id === pid));
+    const exeOn = /\.exe$/.test(what), pid = what.startsWith('part:') ? what.slice(5).replace(/\.exe$/, '') : null, home = pid && Object.entries(FAMILIES).find(([, f]) => f.parts.some((x) => x.id === pid)); // part:<id>.exe: its .exe build
     if (active(s) || s.run) warn(s, active(s) ? 'Finish the fight first.' : 'Jack out first: developer fight is a fight at home.');
     else if (pid && !home) warn(s, `No part called ${pid}.`);
     else if (!pid && what !== 'random' && !FAMILIES[what]) warn(s, `developer fight <random|${Object.keys(FAMILIES).join('|')}|part:<id>> [level] [seed]`);
     else {
-      if (home) { const spec = home[1].parts.find((x) => x.id === pid), PL = lv ? L : Math.max(spec.from || 1, 3); selectEncounter(s, 'random', seed, { level: PL, family: home[0], mutation: null, ...(spec.pool === 'third' ? { genes: partGenesFor(home[0], spec, PL), basic: 'pulse' } : { basic: pid }) }); }
+      if (home) { const spec = home[1].parts.find((x) => x.id === pid), PL = lv ? L : Math.max(spec.from || 1, 3); selectEncounter(s, 'random', seed, { level: PL, family: home[0], mutation: null, ...(exeOn ? { exe: [pid] } : {}), ...(spec.pool === 'third' ? { genes: partGenesFor(home[0], spec, PL), basic: 'pulse' } : { basic: pid }) }); }
       else selectEncounter(s, 'random', seed, { level: L, ...(what !== 'random' ? { family: what } : {}), mutation: null });
       engage(s);
     }
@@ -2762,12 +2765,12 @@ export function hit(s, p, base, opts = {}) {
   const cmd = opts.mine && !opts.dot && !opts.by && !opts.server && base > 0;
   // Front End: while it wears ◆, a single-target command at its partner lands on it.
   if (cmd && !opts.fronted && e.commanding?.target === p.id && ABILITIES[e.commanding.id]?.target !== 'none' && !buffed(e, 'sudo')) {
-    const fe = livingParts(s).find((x) => x.front && x !== p && x.armor > 0 && frontOf(s, x) === p);
+    const fe = livingParts(s).find((x) => x.front && x !== p && (x.armor > 0 || x.exe) && frontOf(s, x) === p);
     if (fe) { emit(s, 'status', `The ${fe.name} takes your hit on the ${p.name}.`, { target: fe.id, from: p.id, fronted: true }); return hit(s, fe, base, { ...opts, fronted: true }); }
   }
   if (cmd && p.special) e.virus.idleHit = e.cycle; // the Idle Timer counts from the signature's last command hit
   // Hotspot: a command hit on it powers up the virus's next attack 2 or more cycles away (tells.mjs).
-  if (cmd && p.hotspot && p.hotAt !== e.cycle) { p.hotAt = e.cycle; hotCharge(s, p); }
+  if ((cmd || (p.exe && base > 0 && !opts.server)) && p.hotspot && p.hotAt !== e.cycle) { p.hotAt = e.cycle; hotCharge(s, p); } // a Hotspot.exe: burns and helpers too
   if (cmd) mechCommandHit(s, p); // Thorns, a Swap passing your statuses on, the Bodyguard's target (mechanics.mjs)
   // Adaptive (mutation): count the cycles in a row your commands hit this part (the chit comes at cycle end).
   if (mutated(s, 'adaptive') && opts.mine && !opts.dot && !opts.server && base > 0 && p.adaptAt !== e.cycle) {
@@ -2881,14 +2884,14 @@ export function hit(s, p, base, opts = {}) {
   let dealt = Math.min(p.integrity, raw);
   const notes = [];
   // Limiter: no single hit takes more than its share of its max. The rest is lost.
-  if (dealt > 0 && p.limit && !root) { const cap = limitOf(p); if (dealt > cap) { notes.push(`capped: ${dealt - cap} lost`); dealt = cap; } }
+  if (dealt > 0 && !root && capOf(s, p)) { const cap = capOf(s, p); if (dealt > cap) { notes.push(`capped: ${dealt - cap} lost`); dealt = cap; } }
   // Lockbox: while it lives, the part it wards loses at most a quarter of its max a cycle, from everything. HASHLORD's Pool
   // Lock (wardCommands) holds back your commands only: burns and helpers go through at full.
   const crush = opts.mine && !opts.server ? 1 + (fxHas(s, 'lock-crush')?.fx.value || 0) / 100 : 1; // Lockpick (a native unique): locks and wards give way faster
   // What the cap holds back isn't lost: the Lockbox holds it, for its partner when it breaks (breakPart; docs/puzzle-levers.md 3.4).
   const warder = dealt > 0 && !root ? livingParts(s).find((x) => wards(x, p) && !(x.wardCommands && opts.dot)) : null;
   if (warder) {
-    const cap = Math.max(1, Math.round(p.max * CONFIG.ward * crush)), used = p.wardAt === e.cycle ? p.wardUsed : 0;
+    const cap = Math.max(1, Math.round(p.max * (p.wardShare ?? CONFIG.ward) * crush)), used = p.wardAt === e.cycle ? p.wardUsed : 0;
     const was = dealt;
     dealt = Math.max(0, Math.min(dealt, cap - used));
     p.wardAt = e.cycle; p.wardUsed = used + dealt;
@@ -2901,7 +2904,7 @@ export function hit(s, p, base, opts = {}) {
     lockWas = p.lockHp; lockLost = soak;
     p.lockHp -= soak; dealt -= spent; soaked = spent;
     notes.push(`lock: ${soak} held`);
-    if (!p.lockHp) { p.lockAt = e.cycle + CONFIG.mutex.every; unlocked = true; }
+    if (!p.lockHp) { p.lockAt = e.cycle + (p.relock ?? CONFIG.mutex.every); unlocked = true; }
   }
   // Buffer: its shield on the part below it takes your command hits first (burns and helpers go under it).
   if (dealt > 0 && !root && p.bufHp > 0 && opts.mine && !opts.dot && !opts.by && !opts.server && bufferOn(s, p)) {
@@ -2942,7 +2945,7 @@ export function hit(s, p, base, opts = {}) {
   // shield: what the Mutex's lock took of it, from lockWas, with the part at hp after the hit (the board's lock segment
   // drains by it: view.mjs, app.js; dmgfx.mjs's number says it was absorbed).
   emit(s, 'damage', `${opts.by ? opts.by + ': ' : ''}${p.name} −${dealt}${notes.length ? ` (${notes.join(', ')})` : ''}. ${p.integrity}/${p.max}.`, { target: p.id, amount: dealt, crit, ...srcOf(e, opts), ...firedOf(fired), hp: p.integrity, ...(lockLost ? { shield: lockLost, lockWas } : {}) }); // hp: what's left after this hit (the board steps its bar down hit by hit)
-  if (unlocked) emit(s, 'armor', `The ${p.name}'s lock breaks. The Mutex locks it again in ${CONFIG.mutex.every} cycles unless you break the Mutex.`, { target: p.id, left: p.armor, lock: 'broke' });
+  if (unlocked) emit(s, 'armor', `The ${p.name}'s lock breaks. The Mutex locks it again in ${p.relock ?? CONFIG.mutex.every} cycles unless you break the Mutex.`, { target: p.id, left: p.armor, lock: 'broke' });
   // A server room's bodies' own rules on a hit (families.mjs: a Trojan's Package unpacks). 'gone': the part left the
   // board without breaking. Then the interrupt's ticks (interrupt.mjs), in every fight that has them.
   if (bodyRules(e) && dealt > 0 && hooks.roomHit && hooks.roomHit(s, p, p.integrity + dealt, dealt, opts) === 'gone') return { dealt, overflow: 0, crit, broke: false };
@@ -3043,6 +3046,8 @@ export const signatureOf = (s) => livingParts(s).find((x) => x.special && x.kind
 export const frozenNow = (s, p) => !!p?.frozen && !p.thawed && (s.encounter?.cycle ?? 1) <= (p.thawAt ?? p.frozen);
 export const asleep = (p) => !!p?.spare && !p.booted;
 export const limitOf = (p) => Math.max(1, Math.round(p.max * p.limit));
+// The cap on a part's hits: its own Limiter's, or a standing Limiter.exe's on every part (null: none).
+export function capOf(s, p) { const l = p.limit || (s?.encounter ? livingParts(s).find((x) => x.limit && x.exe && x !== p)?.limit : 0); return l ? Math.max(1, Math.round(p.max * l)) : null; }
 // What kind of hit this is, for a Damper: a burn's tick, a helper's hit, or an area hit (a command's hit on a part it
 // wasn't aimed at, a spill); null for a single-target command's own hit or the server's.
 export function hitKind(s, p, opts = {}) {
@@ -3131,7 +3136,7 @@ function breakPart(s, p) {
   objectiveBroke(s, p); // a Priority's part (objectives.mjs)
   // Mirror: break one twin while the other lives, and it reboots a few cycles later (at most twice).
   const tw = twinOf(s, p);
-  if (tw && alive(tw) && (p.reboots || 0) < CONFIG.twinReboot.max && !p.quiet && !fxHas(s, 'no-reboot')) { p.rebootAt = e.cycle + CONFIG.twinReboot.in; emit(s, 'status', `${p.name} is down, but its twin ${tw.name} will reboot it in ${CONFIG.twinReboot.in} cycles. Break both.`, { target: p.id }); }
+  if (tw && alive(tw) && (p.reboots || 0) < (p.rebootMax ?? CONFIG.twinReboot.max) && !p.quiet && !fxHas(s, 'no-reboot')) { p.rebootAt = e.cycle + CONFIG.twinReboot.in; emit(s, 'status', `${p.name} is down, but its twin ${tw.name} will reboot it in ${CONFIG.twinReboot.in} cycles. Break both.`, { target: p.id }); }
   // Breaker Momentum: a stack per break (up to SKILLS.momentumMax), for SKILLS.momentumCycles cycles after the last one.
   if (p.kind !== 'fragment' && classOf(s) === 'breaker') e.momentum = { stacks: Math.min(SKILLS.momentumMax, momentumStacks(s) + 1), until: e.cycle + SKILLS.momentumCycles };
   // Breaker Cascade Failure talent: the first break resets your cooldowns.
@@ -3178,7 +3183,7 @@ function breakPart(s, p) {
     if (wasKnown && next && usable(s).includes('scan')) emit(s, 'info', 'A new weak point formed. Scan to find it.');
   }
   // Zip Bomb: its fuse burns, then it hits you (cycleStart), unless the fight ends first.
-  if (p.fuse && !p.fuseAt) { p.fuseAt = e.cycle + CONFIG.zipbomb.fuse; emit(s, 'warning', `The ${p.name}'s fuse is lit. It goes off in ${CONFIG.zipbomb.fuse} cycles unless the fight ends first.`, { target: p.id, fuse: p.fuseAt }); }
+  if (p.fuse && !p.fuseAt) { const fz = p.fuseIn ?? CONFIG.zipbomb.fuse; p.fuseAt = e.cycle + fz; emit(s, 'warning', `The ${p.name}'s fuse is lit. It goes off in ${fz === 1 ? '1 cycle' : `${fz} cycles`} unless the fight ends first.`, { target: p.id, fuse: p.fuseAt }); }
   // Spare: the signature broke while a Spare sleeps: it boots a little later with the signature's attack (cycleClose).
   if (p.special && p.attack) for (const sp of livingParts(s).filter((x) => asleep(x) && !x.bootAt)) {
     sp.bootAt = e.cycle + sp.spare.in; sp.bootFrom = { id: p.id, name: p.name, max: p.max, attack: { ...p.attack } };
@@ -3237,10 +3242,10 @@ function breakPart(s, p) {
       if (!a) continue;
       if (['damage', 'encrypt'].includes(a.effect)) a.amount = Math.max(1, Math.round(a.amount * CONFIG.tripwire.loud));
       if (a.hit) a.hit = Math.max(1, Math.round(a.hit * CONFIG.tripwire.loud));
-      if (a.due > e.cycle && a.due < 900) a.due = Math.max(e.cycle, a.due - CONFIG.tripwire.sooner); // its next attack a cycle sooner: one due next cycle lands this one
-      if (a.interval > 2) { const cut = Math.min(CONFIG.tripwire.sooner, a.interval - 2); a.interval -= cut; a.loudCut = cut; } // every attack after it a cycle sooner too (2 at the fastest)
+      if (a.due > e.cycle && a.due < 900) a.due = Math.max(e.cycle, a.due - (p.loudSooner ?? CONFIG.tripwire.sooner)); // its next attack a cycle sooner: one due next cycle lands this one
+      if (a.interval > 2) { const cut = Math.min(p.loudSooner ?? CONFIG.tripwire.sooner, a.interval - 2); a.interval -= cut; a.loudCut = cut; } // every attack after it a cycle sooner too (2 at the fastest)
     }
-    if (loud.length) emit(s, 'phase', `TRIPWIRE. ${andList(loud.map((x) => x.name))} ${loud.length === 1 ? 'goes' : 'go'} loud: ${Math.round((CONFIG.tripwire.loud - 1) * 100)}% more damage dealt and every attack a cycle sooner, ${Math.round((CONFIG.tripwire.taken - 1) * 100)}% more damage taken${shed ? ` and ${shed} ◆ dropped` : ''}.`, { target: loud[0].id, tripwire: true, shed });
+    if (loud.length) emit(s, 'phase', `TRIPWIRE. ${andList(loud.map((x) => x.name))} ${loud.length === 1 ? 'goes' : 'go'} loud: ${Math.round((CONFIG.tripwire.loud - 1) * 100)}% more damage dealt and every attack ${(p.loudSooner ?? CONFIG.tripwire.sooner) > 1 ? `${p.loudSooner ?? CONFIG.tripwire.sooner} cycles` : 'a cycle'} sooner, ${Math.round((CONFIG.tripwire.taken - 1) * 100)}% more damage taken${shed ? ` and ${shed} ◆ dropped` : ''}.`, { target: loud[0].id, tripwire: true, shed });
   }
   // Linked parts (every v2 or bigger virus; the old Rerouting mutation too): a third of the broken part's hit
   // goes to the survivor that attacks next (WoW council fights). A survivor whose attack isn't a hit
@@ -3714,7 +3719,7 @@ export function landingsOf(p, until) {
   return out;
 }
 // C2 Node: while it lives, fragments gnaw harder (CONFIG.c2).
-export const c2Gnaw = (s, p) => (p.kind === 'fragment' && livingParts(s).some((x) => x.command) ? 1 + CONFIG.c2.gnaw : 1);
+export const c2Gnaw = (s, p) => { const c = p.kind === 'fragment' ? livingParts(s).filter((x) => x.command) : []; return c.length ? 1 + Math.max(...c.map((x) => x.gnaw ?? CONFIG.c2.gnaw)) : 1; }; // a C2 Node.exe's gnaw
 // A player drawing fire this cycle (Bastion Firewall in a crew): the one every attack goes at.
 export const drawingFire = (s) => (s.encounter?.buffs?.sinkhole >= s.encounter?.cycle ? s : null);
 
@@ -4353,7 +4358,7 @@ function cycleClose(s, landed) {
     p.reboots = (p.reboots || 0) + 1;
     Object.assign(p, { integrity: Math.round(p.max * CONFIG.twinReboot.at), armor: p.maxArmor, patchAt: null });
     if (p.attack) p.attack.due = e.cycle + 2;
-    emit(s, 'patch', `${p.name} REBOOTS at ${p.integrity}/${p.max}${p.reboots >= CONFIG.twinReboot.max ? '. It can\'t do it again.' : '.'}`, { target: p.id, reboot: true });
+    emit(s, 'patch', `${p.name} REBOOTS at ${p.integrity}/${p.max}${p.reboots >= (p.rebootMax ?? CONFIG.twinReboot.max) ? '. It can\'t do it again.' : '.'}`, { target: p.id, reboot: true });
   }
   // Spare: it boots at its share of the broken signature's max, with its attack, two cycles after it broke.
   for (const p of livingParts(s).filter((x) => asleep(x) && x.bootAt && e.cycle >= x.bootAt)) {

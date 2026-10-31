@@ -194,8 +194,9 @@ function load() {
     const fam = params.get('family'), seed = Number(params.get('seed')) >>> 0;
     s.metAll = true; // a playtest plays a veteran: the parts roll (parts.mjs) brings its whole mix, as the measurement does
     // ?playtest=part:<id> (docs/parts-plan.md): a fight with that basic or third part, at the level it opens (or &level=).
-    const pid = playtest.startsWith('part:') ? playtest.slice(5) : null, home = pid && Object.entries(FAMILIES).find(([, f]) => f.parts.some((x) => x.id === pid));
-    if (home) { const spec = home[1].parts.find((x) => x.id === pid), L = lv >= 1 && lv <= 50 ? lv : Math.max(spec.from || 1, 3); s.hackers = { [s.loadout.archetype]: { level: L, xp: 0 } }; selectEncounter(s, 'random', seed || 1, { level: L, family: home[0], mutation: null, ...(spec.pool === 'third' ? { genes: partGenesFor(home[0], spec, L), basic: 'pulse' } : { basic: pid }) }); }
+    // part:<id>.exe: its .exe build (exe.mjs).
+    const exeOn = /\.exe$/.test(playtest), pid = playtest.startsWith('part:') ? playtest.slice(5).replace(/\.exe$/, '') : null, home = pid && Object.entries(FAMILIES).find(([, f]) => f.parts.some((x) => x.id === pid));
+    if (home) { const spec = home[1].parts.find((x) => x.id === pid), L = lv >= 1 && lv <= 50 ? lv : Math.max(spec.from || 1, 3); s.hackers = { [s.loadout.archetype]: { level: L, xp: 0 } }; selectEncounter(s, 'random', seed || 1, { level: L, family: home[0], mutation: null, ...(exeOn ? { exe: [pid] } : {}), ...(spec.pool === 'third' ? { genes: partGenesFor(home[0], spec, L), basic: 'pulse' } : { basic: pid }) }); }
     // ?playtest=fx (abilityfx-playtest.mjs): the ability effects playtest, on a three-part fight (&family=, &seed=, &level=).
     else if (playtest === 'fx') { const L = lv >= 1 && lv <= 50 ? lv : 12; s.hackers = { [s.loadout.archetype]: { level: L, xp: 0 } }; if (/^[a-z ]+$/.test(params.get('crew') || '')) play(s, `crew sim ${params.get('crew')}`); selectEncounter(s, 'random', seed || 8, { level: L, family: /^[a-z]+$/.test(fam || '') ? fam : 'ransomware', mutation: null }); } // &crew=<class>: a crewmate in the crew window, to fire theirs
     else if (playtest === 'random' && (fam || seed)) selectEncounter(s, 'random', seed || 1, { ...(lv >= 1 && lv <= 50 ? { level: lv } : {}), ...(/^[a-z]+$/.test(fam || '') ? { family: fam } : {}), mutation: null });

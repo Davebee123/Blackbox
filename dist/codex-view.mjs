@@ -3,6 +3,7 @@
 // with what unlocks it. Each part card carries its research (research.mjs) as a bar with marks at 3, 15 and 60. Teal
 // is only ever you: your kills, your level. On a phone the index folds into a bar over the entry (app.js codexIdx).
 // The entry's art is a canvas (#cx-canvas) that app.js draws with the fight board's renderer (virus-art.mjs).
+import { EXE, EXE_ROLL } from './exe.mjs';
 import { esc, masteredMark } from './view.mjs';
 import { glyph } from './glyphs.mjs';
 import { AUTHORS } from './authors.mjs';
@@ -60,6 +61,8 @@ function researchBar(n) {
 }
 const locked = (text) => `<p class="cxp-lock"><span>${UNKNOWN}</span>${esc(text)}</p>`;
 const TELL_VERB = { charge: 'Charges', cast: 'Casts', seal: 'Seals with', lock: 'Locks with' };
+// Its .exe build (exe.mjs), from floor 4: what it changes.
+const exeLine = (p) => { const b = EXE[p?.id]; return b ? `<p class="cxp-exe" title="${esc(`${p.name}.exe\nA harder build of the ${p.name}, from floor ${EXE_ROLL.floor}.\n${b.what}`)}"><span class="pexe">.exe</span> Floor ${EXE_ROLL.floor}+: ${esc(b.what)}</p>` : ''; };
 function partCard(level, x, tells = [], withHandler = false) {
   // Lv N+: a third part (it joins viruses of that level and up), or a part whose body comes later than your level (its numbers are at N).
   const p = x.part, later = x.level > level, opens = ((x.gene || x.basic) && x.from > 1) || later ? `<span class="tag dim" title="${esc(`${x.gene || x.basic ? `Joins viruses of level ${x.from} and up.` : `Comes at level ${x.from} and up.`}${later ? ` Its numbers are at level ${x.level}.` : ''}`)}">Lv ${x.from}+</span>` : '';
@@ -79,7 +82,7 @@ function partCard(level, x, tells = [], withHandler = false) {
   if (n >= TIER.rule) {
     const r = partRead(null, x.virus, p, { tells: false });
     const rides = tells.length ? `<p class="cxp-rides">${tells.map((t) => `${TELL_VERB[t.kind] || 'Brings'} <b>${esc(t.name)}</b>${t.level ? ` <small>Lv ${t.level}+</small>` : t.elite ? ` <small>elite Lv ${t.elite}+</small>` : ''}.`).join(' ')}</p>` : '';
-    rule = `<p class="cxp-does">${ruleHtml(r.does)}</p>${r.answer ? `<p class="cxp-answer">${esc(r.answer)}</p>` : ''}${rides}`;
+    rule = `<p class="cxp-does">${ruleHtml(r.does)}</p>${r.answer ? `<p class="cxp-answer">${esc(r.answer)}</p>` : ''}${rides}${exeLine(p)}`;
   } else rule = locked(`Research ${TIER.rule} to learn its rule, its answer and its tells.`);
   const loot = !p.loot ? '' : mast ? `<p class="cxp-loot">${glyph('salvage')}${esc(dropLine())}</p>` : locked(`Research ${RESEARCH.max} to learn its drop chance.`);
   const perk = mast ? `<p class="cxp-perk">Mastered. It drops components ${Math.round((RESEARCH.perk.drop - 1) * 100)}% more often, and you deal ${Math.round((RESEARCH.perk.dmg - 1) * 100)}% more damage to it.</p>` : '';

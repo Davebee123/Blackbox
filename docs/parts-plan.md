@@ -1,9 +1,9 @@
 # Parts plan: more virus variety
 
 Something new every 2–3 levels from 1 to 50. Built: P1 (the basic slot, levels 1–12, damage profiles), P2 (floors
-2–4, natives, the Packer, Spare, Scraper and Shunt rework) and P3 (the Cryptominer and the Wiper), with the basic
-parts, the roll, the damage profiles and the families in GAME_RULES.md "Viruses". Left: P4 (the deep-floor thirds),
-in the backlog.
+2–4, natives, the Packer, Spare, Scraper and Shunt rework), P3 (the Cryptominer and the Wiper) and P5's first 23 .exe
+builds, with the basic parts, the roll, the damage profiles and the families in GAME_RULES.md "Viruses". Left: P4
+(the deep-floor thirds), in the backlog.
 
 ## Principles
 
@@ -85,6 +85,19 @@ Families: R Ransomware, W Worm, G Ghostroot, Cm Cryptominer, Wp Wiper.
 **Cadence.** Floor 5 brings the Reactor, Latch and Tarball (26, 28, 30); floor 6 the Monitor, Interrupt Mask and Bus
 (32, 34, 36); floor 7 the Reservoir and Bleeder (39, 41); floor 8 the Bootloader and Consensus (44, 47). The floor 5–8
 bosses, when built, take their floor's natives.
+
+## P5: .exe builds (first 23 built)
+
+The designer, October 31, 2026: deeper mobs bring harder builds of the parts you know, so the deep floors get new
+fights without a new system each time. P4 stays: new mechanics are always wanted.
+
+- **A build, not a gene.** The same part and rule, harder (a number) or bent (the rule reaches further). Its id stays,
+  so research and the Codex are the part's. The genome is read before it applies.
+- **From floor 4,** 15% a part, 5% more each floor; an elite or rare spawn brings one. Never on a part you've not met.
+- **Board:** *.exe* in red on the name, its tooltip what changed; a line on the Codex card.
+- **Lean:** no planner answers, presets or tuning yet; the designer plays it first (`?playtest=part:<id>.exe`).
+- **Next:** the signatures (Encryptor, Replicator, Scrambler, Rig, Degausser), the Prism, the Mimic, the Packer, the
+  Damper, the Cold Store, the Twin Rig and the Recycle Bin.
 
 ## Calibration
 

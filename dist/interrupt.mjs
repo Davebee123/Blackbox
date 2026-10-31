@@ -214,7 +214,7 @@ const ok = (s, text) => !toIntent(s, text).error;
 // goes first, for a bot that reads tells; then the biggest attack due.
 const telling = (s, p) => answers() && (dueOf(s, p).some((d) => d.kind === 'tell') || (tellsOf(s)?.list || []).some((t) => t.told && t.kind === 'charge' && t.part === p.id && p.attack && t.n === (p.attack.n || 0) && p.attack.due <= s.encounter.cycle));
 // A part a Front End fronts (it wears ◆): a strip at it bends onto the Front End (tells.mjs tellMove reads it).
-export const fronted = (s, p) => !ignores('frontend') && livingParts(s).some((x) => x.front && x.armor > 0 && frontOf(s, x) === p);
+export const fronted = (s, p) => !ignores('frontend') && livingParts(s).some((x) => x.front && (x.armor > 0 || x.exe) && frontOf(s, x) === p);
 export function interruptMove(s, plan = null) {
   const e = s.encounter;
   if (!ticked(e)) return null;

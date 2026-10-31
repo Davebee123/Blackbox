@@ -63,6 +63,7 @@
 .cx-entry .cxp-does { color: var(--text); font-size: 13px; line-height: 1.45; }
 .cx-entry .cxp-answer { color: var(--you); font-size: 13px; line-height: 1.45; }
 .cx-entry .cxp-answer::before, .cx-rule .cx-ans::before { content: '▸ '; } /* the answer line, as the fight board's tooltips draw it (docs/ui.md "Tooltip style") */
+.cx-entry .cxp-exe { color: var(--dim); font-size: 12px; line-height: 1.45; margin-top: var(--s1); cursor: help; } /* its .exe build (exe.mjs), red like the board's */
 .cx-rule .cx-ans { display: block; margin-top: var(--s2); color: var(--you); }
 .cx-entry .cxp-tele { color: var(--muted); font-size: 12px; }
 .cx-entry .cxp-tele .glyph { width: 11px; height: 11px; margin: 0 var(--s2) 0 0; vertical-align: -1px; }

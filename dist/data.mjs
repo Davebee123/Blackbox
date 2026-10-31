@@ -8,6 +8,7 @@ const CLASS_DATA = { breaker: BREAKER_SUBS, bastion: BASTION_SUBS, infiltrator: 
 // Viruses are built from genes (genes.mjs) and written by authors (authors.mjs): docs/genome.md.
 import { GENES, partGenes, compatible, MECH_GENES } from './genes.mjs';
 import { PARTS, rollParts, roleOf, ratchetSpan, along as alongParts } from './parts.mjs';
+import { rollExe, makeExe } from './exe.mjs';
 import { crewOf, buildAuthor, bossAuthor } from './authors.mjs';
 
 export const CONFIG = {
@@ -1403,6 +1404,12 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   const srcs = specs.map((spec) => (spec.pool === 'third' || boss?.extra?.includes(spec) ? 'rolled' : null));
   const unsigned = rolled2 && !rolled2.signature ? { noSignature: true } : {}; // no signature this fight (tells.mjs skips its tells)
   const genome = genomeOf(parts, { strain: strainId, mutation, grade, unlinked, boss: overrides.boss || null, ice: !!family.ice, srcs, linked: !!genes?.includes('linked') });
+  // .exe builds (exe.mjs): from floor 4 a rolled part can come as its .exe, its rule harder or bent, once every number
+  // is set and its genome read (an .exe is its part's rule, not a new gene). overrides.exe forces them (a list of part ids: the playtest page, the tests); its own hash of the seed.
+  const exeIds = specs.map((spec) => (spec.copy && rolled2 ? rolled2.basic.id : spec.id));
+  const exeMet = (i) => !overrides.seen || specs[i].id === 'pulse' || overrides.seen(specs[i].copy ? rolled2.basic : specs[i], familyId);
+  const exePick = Array.isArray(overrides.exe) ? overrides.exe : rolled2 && !forced2 && overrides.exe !== false ? rollExe({ ids: exeIds, floor: overrides.floor || floorFor(level), rand: rng((seed ^ 0x6a09e667) >>> 0), met: exeMet, sure: !!overrides.elite || !!overrides.rare }) : [];
+  parts.forEach((p, i) => { if (exePick.includes(exeIds[i])) makeExe(p, parts, exeIds[i]); });
   // Its name (GAME_RULES.md "Rules and authors"): the adjective of its costliest rolled gene, its body's stem or its build's name, its
   // tag (the seed's four digits, or its file's) and its grade: WARDED CRYPTJACK-4821 v2. Named fixtures keep theirs.
   const tagNo = overrides.tag ? String(overrides.tag).slice(-4).padStart(4, '0') : String(seed >>> 0).slice(-4).padStart(4, '0');

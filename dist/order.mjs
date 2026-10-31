@@ -143,7 +143,7 @@ export function blastBreaks(s, z = zipOf(s)) {
 // (tells.mjs tellPrice).
 export function blastCuts(s, z = zipOf(s)) {
   if (!z) return [];
-  const at = z.fuseAt || s.encounter.cycle + CONFIG.zipbomb.fuse;
+  const at = z.fuseAt || s.encounter.cycle + (z.fuseIn ?? CONFIG.zipbomb.fuse);
   return (tellsOf(s)?.list || []).filter((t) => t.told && ['charge', 'cast'].includes(t.kind) && t.part !== z.id && alive(part(s, t.part)) && !part(s, t.part).core)
     .filter((t) => { const n = tellNext(s, t); return t.kind === 'cast' ? at <= n && at >= n - TELL.castWindow + 1 : n === at; })
     .filter((t) => { const q = part(s, t.part); return !nextTick(q) || (q.armor || 0) >= 2; }) // only what a cut of yours can't reach: no tick left, or too much ◆
@@ -157,7 +157,7 @@ export function blastPays(s) {
   if (!z || !alive(z) || !others(s, z).length) return null;
   const breaks = blastBreaks(s, z), cuts = blastCuts(s, z);
   if ((!breaks.length && !cuts.length) || race(s, [{ p: z, loud: false }], 1) !== 1) return null;
-  const cover = coverFor(s), saved = cuts.reduce((n, x) => n + x.price, 0);
+  const cover = coverFor(s, zipOf(s)?.fuseIn ?? CONFIG.zipbomb.fuse), saved = cuts.reduce((n, x) => n + x.price, 0);
   if (breaks.length && cover) return { part: z, breaks, cuts, cover };
   return cuts.length && saved > (cover ? 0 : biteOf(s)) ? { part: z, breaks, cuts, cover } : null;
 }

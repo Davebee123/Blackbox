@@ -59,13 +59,14 @@ import { RULES, LOOT, SLOTS, BASES, STATS, GROUPS, RARITIES, RARITY_ORDER, ZERO_
 import { raidIntents, raidMarks, raidOf, attackTarget } from './raid.mjs';
 import { EMBLEMS } from './class-emblems.mjs';
 import { ARCHETYPES, CANTRIPS, EDGE, SYNC, STATUSES, LOADOUT, TREE, SERVER, SKILLS, xpToNext, unlockLevel, power, SUBS, SUBCLASS, skillOrder, barSlots, isRunSkill } from './data.mjs';
-import { XP_KINDS, rebootSick, cooldownOf, subOf, subPicked, kitTalent, specRule, skillBase, knowsPart, codexKey, previewDamage, ignoresArmor, armorTakes, parse, blocked, attackAmount, drawingFire, momentumStacks, momentumBonus, topUpCost, UNIQUES, bossChance, listenBoost, effectLine, implicitText, paceOf, keyMap, barKeys, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverClass, daemonSlots, procOpen, slottedDaemons, daemonNext, talentPoints, loaded, loadedOn, slotCount, maxSignal, materialsOf, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, picksOf, ranksOf, freeSlot, rigOf, stashItem, pointsSpent, tierState, rowState, spentAbove, knownSkills, equippedSkills, cycleLength, familyInfo, defender, healCap, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, part, daemonLevel, packed, limitOf, asleep, frozenNow } from './combat.mjs';
+import { XP_KINDS, rebootSick, cooldownOf, subOf, subPicked, kitTalent, specRule, skillBase, knowsPart, codexKey, previewDamage, ignoresArmor, armorTakes, parse, blocked, attackAmount, drawingFire, momentumStacks, momentumBonus, topUpCost, UNIQUES, bossChance, listenBoost, effectLine, implicitText, paceOf, keyMap, barKeys, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverClass, daemonSlots, procOpen, slottedDaemons, daemonNext, talentPoints, loaded, loadedOn, slotCount, maxSignal, materialsOf, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, picksOf, ranksOf, freeSlot, rigOf, stashItem, pointsSpent, tierState, rowState, spentAbove, knownSkills, equippedSkills, cycleLength, familyInfo, defender, healCap, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, part, daemonLevel, packed, capOf, asleep, frozenNow } from './combat.mjs';
 import { sigOf, named, lairOf, intelOf, knowsStrain, knowsEvent, knowsRich, nameOf, NETWORK, nativeChance, homeName, isNative, whoLabel, homeOf, netSeedOf, knownNets, NATIVE_POOL, awayChance } from './network.mjs';
 import { guardSetChance, lairChance, bossOdds, presetsOf, presetKeys, followOf, spikeName, said, mutated, capstonePoints, capPickOf, capState, blastOf, livingParts } from './combat.mjs';
 import { tripwireOf, zipOf, heldOf } from './order.mjs';
 import { youMarks, junkKey } from './mechanics.mjs';
 import { cantripsOf, TELL } from './data.mjs';
 import { usable, hooks } from './combat.mjs';
+import { EXE } from './exe.mjs';
 import { sigintWindows, sigintCharges, plannedTells } from './tells.mjs';
 import { daemonText } from './daemons.mjs';
 import { ROOMS as ROOMS_FP, kindRule, KIND_OF } from './floorplan.mjs'; // a server card's respawn timers, its type's rule
@@ -609,11 +610,12 @@ function partTags(s, p) {
   if (idler) { const left = Math.max(0, idler.idle - (e.cycle - (e.virus.idleHit || 0))); tags.push(`<span class="tag${left <= 2 ? ' hot' : ''} idlepips" title="${esc(`${idler.name}: ${left ? `every part re-arms to full ◆ in ${left} ${left === 1 ? 'cycle' : 'cycles'}` : 'every part re-arms at the end of this cycle'} unless your command hits the ${p.name}.`)}">${glyph('clock')}${'●'.repeat(left)}<i>${'○'.repeat(Math.max(0, idler.idle - left))}</i></span>`); }
   if (p.obfuscate && p.integrity > 0) tags.push('<span class="tag" title="Smoke: while it stands, every part hides its timers, even with no ◆. Tag still reveals one.">smoke</span>');
   // The parts plan's P2: a Limiter's cap, a Spare on standby, a Damper's dropped kind, a Cold Store's thaw.
-  if (p.limit && p.integrity > 0 && !pk) tags.push(`<span class="tag limcap" title="${esc(`Limiter: no single hit takes more than ${limitOf(p)} of its Integrity. Damage past the cap is lost.${answerLine('Use many small hits.')}`)}">${glyph('shield')}cap ${limitOf(p)}</span>`);
+  const capN = p.integrity > 0 && !pk ? capOf(s, p) : null; // its own Limiter's, or a Limiter.exe's on every part
+  if (capN) tags.push(`<span class="tag limcap" title="${esc(`Limiter: no single hit takes more than ${capN} of its Integrity. Damage past the cap is lost.${answerLine('Use many small hits.')}`)}">${glyph('shield')}cap ${capN}</span>`);
   if (asleep(p) && p.integrity > 0 && !pk) tags.push(`<span class="tag standby" title="${esc(p.bootAt ? `Booting: boots ${p.bootAt - e.cycle <= 0 ? 'at the end of this cycle' : `in ${p.bootAt - e.cycle} ${p.bootAt - e.cycle === 1 ? 'cycle' : 'cycles'}`} with the ${p.bootFrom?.name || 'signature'}'s attack. Drops its ◆ as it boots.${answerLine('Break it first, or once it boots.')}` : `Standby: sleeps under its ◆ until the signature part breaks. Then boots with its attack and drops its ◆.${answerLine('Pay for its ◆ asleep, or its Integrity once booted.')}`)}">${glyph('snapshot')}${p.bootAt ? 'booting' : 'standby'}</span>`);
   if (p.damper && p.integrity > 0 && !pk) { const k = DAMPED[p.damperKind] || DAMPED.burn; tags.push(`<span class="tag damper${p.armor > 0 ? '' : ' off'}" title="${esc(p.armor > 0 ? `Damper: while it wears ◆, immune to damage from ${k.many}. ${k.many[0].toUpperCase() + k.many.slice(1)} still break its ◆.` : `Damper: stripped. ${k.many[0].toUpperCase() + k.many.slice(1)} damage it again until its ◆ patches back.`)}">${glyph(k.icon)}<s>${esc(k.short)}</s></span>`); }
   if (frozenNow(s, p) && !pk) { const k = p.thawAt ?? p.frozen, f = Math.max(0, Math.min(1, (e.cycle - 1) / k)), n = k - e.cycle + 1; tags.push(`<span class="tag frost" title="${esc(`Frozen: off the timeline and immune to damage. Thaws ${n <= 1 ? 'at the end of this cycle' : `in ${n} cycles`}. Its first hit lands 2 cycles after the thaw.`)}">${glyph('clock')}<i class="thaw-bar"><b style="width:${Math.round(f * 100)}%"></b></i></span>`); }
-  if (p.command && p.integrity > 0) tags.push(`<span class="tag hot" title="${esc(`${p.name}: fragments deal ${Math.round(CONFIG.c2.gnaw * 100)}% more damage while it stands. When it breaks, every fragment drops.`)}">commands fragments</span>`);
+  if (p.command && p.integrity > 0) tags.push(`<span class="tag hot" title="${esc(`${p.name}: fragments deal ${Math.round((p.gnaw ?? CONFIG.c2.gnaw) * 100)}% more damage while it stands. When it breaks, every fragment drops.`)}">commands fragments</span>`);
   const burn = (e.burns || []).filter((b) => b.target === p.id);
   // Burns, one tag per kind: the damage a cycle in all, and how many when there's more than one of a kind
   // (Inject is one a part: pressing it again refreshes it).
@@ -690,6 +692,8 @@ function cutChip(s, p) {
 // cycle would only take lock, the blinking preview slice sits on the segment, not the Integrity. A Lockbox's ward: a cap
 // line at the most the part can still lose this cycle. Both show before the protector is decoded (??? in the tooltip).
 // A part you've researched to 100% (research.mjs): a small amber star by its name, here and in the Codex.
+// A part's name, its .exe (exe.mjs) in red: a harder build of a part you know.
+export const exeName = (p) => (p.exe && EXE[p.exe] && p.name.endsWith('.exe') ? `${esc(p.name.slice(0, -4))}<span class="pexe" title="${esc(`${p.name}\nA harder build of the ${p.name.slice(0, -4)}.\n${EXE[p.exe].what}`)}">.exe</span>` : esc(p.name));
 export const masteredMark = (p) => `<span class="pmast" title="${esc(`${p.name} mastered: research ${RESEARCH.max}. It drops components ${Math.round((RESEARCH.perk.drop - 1) * 100)}% more often, and you deal ${Math.round((RESEARCH.perk.dmg - 1) * 100)}% more damage to it.`)}">${glyph('mastered')}</span>`;
 const unknownTip = (what, by) => `${what}: ???\nBreak one ${by.name} to decode what it does.`;
 function guardMarks(s, v, p, fc) {
@@ -782,12 +786,12 @@ export function boardMarkup(s, selected, preview = null) {
     const x = part(s, i.source);
     if (!loudAt(x) || i.tell || i.hidden || !['damage', 'encrypt'].includes(i.effect) && !i.hit) return i;
     const k = CONFIG.tripwire.loud, amt = ['damage', 'encrypt'].includes(i.effect) ? 'amount' : 'hit';
-    return { ...i, [amt]: Math.max(1, Math.round(i[amt] * k)), col: Math.max(0, i.col - CONFIG.tripwire.sooner), loud: { by: trip.name, was: i[amt], amount: Math.max(1, Math.round(i[amt] * k)), from: i.col } };
+    return { ...i, [amt]: Math.max(1, Math.round(i[amt] * k)), col: Math.max(0, i.col - (trip.loudSooner ?? CONFIG.tripwire.sooner)), loud: { by: trip.name, was: i[amt], amount: Math.max(1, Math.round(i[amt] * k)), from: i.col } };
   });
   if (tripping) for (const x of e.virus.parts.filter(loudAt)) if (x.armor > 0) fc.chits[x.id] = x.armor;
   // A Zip Bomb lit, or one your move breaks this cycle: every other part's bar shows the blast's bite as a ghost.
   const zip = fighting ? zipOf(s) : null;
-  const blast = zip && knowsPart(s, e.virus, zip) && (zip.fuseAt ? zip.fuseAt - e.cycle : alive(zip) && (fc.parts[zip.id] || 0) >= zip.integrity && !(zip.armor > 0) ? CONFIG.zipbomb.fuse : null);
+  const blast = zip && knowsPart(s, e.virus, zip) && (zip.fuseAt ? zip.fuseAt - e.cycle : alive(zip) && (fc.parts[zip.id] || 0) >= zip.integrity && !(zip.armor > 0) ? zip.fuseIn ?? CONFIG.zipbomb.fuse : null);
   const ghosts = (p) => (alive(p) ? orderMarks(s, p, fc, blast != null && p !== zip ? { zip, in: blast } : null) : '');
   const hidden = fighting && timersHidden(s);
   const remaining = Math.max(0, (cycleLength(s) - e.elapsedMs) / 1000);
@@ -884,7 +888,7 @@ export function boardMarkup(s, selected, preview = null) {
     const guard = alive(p) ? guardMarks(s, e.virus, p, fc) : '';
     const gearMark = onParts[p.id] ? `<span class="gpart" title="${esc(`${list2(onParts[p.id])}: live on the ${p.name} now.`)}">${glyph('protocol')}</span>` : '';
     return `<button type="button"${fade} class="brow bpart ${dying(p) ? 'dying' : ''} ${selected === p.id ? 'selected' : ''} ${nowHit ? 'now' : ''} ${p.maxArmor && !p.armor ? 'cracked' : ''}${frozenNow(s, p) && !packed(s, e.virus, p) ? ' frozen' : ''}${asleep(p) && alive(p) && !packed(s, e.virus, p) ? ' standby' : ''} ${marks.map((k) => 'm-' + k).join(' ')}${fighting && progExc(s, p) ? ' m-exc' : ''}" data-target="${esc(p.id)}" ${fighting ? '' : 'disabled'} title="Target ${esc(p.name)}: ${spike}">
-      <div class="bcell bname" title="${esc(partTip(s, e.virus, p))}">${ties[ri]}${pips(p.id)}<span class="part-top"><span class="part-name">${esc(p.name)}${known ? '' : '<sup class="unk">?</sup>'}${mastered(s, e.virus, p) && !packed(s, e.virus, p) ? masteredMark(p) : ''}</span>${gearMark}${marksMarkup(marks)}${chitsMarkup(p, fc.chits[p.id] || 0)}${leanTag(s, p)}<span class="part-hp">${p.integrity}/${p.max}</span></span><span class="part-bar${guard ? ' guarded' : ''}"><span style="width:${pct}%"></span>${lossMark(p.integrity, p.max, fc.parts[p.id] || 0)}${ghosts(p)}${guard}${capLine(s, p)}${ticksMarkup(s, p)}</span><span class="part-tags">${fighting ? progTag(s, p) : ''}${cueTag}${partTags(s, p)}</span></div>
+      <div class="bcell bname" title="${esc(partTip(s, e.virus, p))}">${ties[ri]}${pips(p.id)}<span class="part-top"><span class="part-name">${exeName(p)}${known ? '' : '<sup class="unk">?</sup>'}${mastered(s, e.virus, p) && !packed(s, e.virus, p) ? masteredMark(p) : ''}</span>${gearMark}${marksMarkup(marks)}${chitsMarkup(p, fc.chits[p.id] || 0)}${leanTag(s, p)}<span class="part-hp">${p.integrity}/${p.max}</span></span><span class="part-bar${guard ? ' guarded' : ''}"><span style="width:${pct}%"></span>${lossMark(p.integrity, p.max, fc.parts[p.id] || 0)}${ghosts(p)}${guard}${capLine(s, p)}${ticksMarkup(s, p)}</span><span class="part-tags">${fighting ? progTag(s, p) : ''}${cueTag}${partTags(s, p)}</span></div>
       ${showCells ? cells : '<div class="bcell span4"></div>'}</button>`;
   }).join('');
   // A fight whose parts protect each other keeps the tethers' gutter after the last one goes, so the rows don't jump.
@@ -918,7 +922,7 @@ function orderMarks(s, p, fc, blast) {
   return out;
 }
 // A Limiter's cap line (the parts plan's P2): where one hit at most takes its bar down to.
-const capLine = (s, p) => (p.limit && alive(p) && !packed(s, s.encounter.virus, p) ? `<i class="capline" style="left:${Math.max(0, ((p.integrity - limitOf(p)) / p.max) * 100)}%" title="${esc(`Cap: one hit takes it down to ${Math.max(0, p.integrity - limitOf(p))} at most.`)}"></i>` : '');
+const capLine = (s, p) => { const n = alive(p) && !packed(s, s.encounter.virus, p) ? capOf(s, p) : null; return n ? `<i class="capline" style="left:${Math.max(0, ((p.integrity - n) / p.max) * 100)}%" title="${esc(`Cap: one hit takes it down to ${Math.max(0, p.integrity - n)} at most.`)}"></i>` : ''; };
 // An objective (objectives.mjs): its chip in the phase strip ("Uptime 3/8"; the Exfil's on phones, where its row hides).
 const objTip = (s) => { const e = s.encounter, p = e.objective.part && e.virus.parts.find((x) => x.id === e.objective.part); return objectiveTip(e, p && !packed(s, e.virus, p) ? p.name : null); };
 const objChip = (s, e = s.encounter) => `<b class="${e.objective.kind === 'exfil' ? 'ps-esc' : `ps-obj${e.objective.met ? ' met' : e.objective.failed ? ' failed' : ''}`}" title="${esc(objTip(s))}" data-tt-kind="Objective">${esc(objectiveText(e))}</b>`;

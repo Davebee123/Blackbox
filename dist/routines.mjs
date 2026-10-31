@@ -461,7 +461,7 @@ export function breakerFor(s, p) {
   return list.sort((a, b) => b.n - a.n || a.cd - b.cd || a.i - b.i)[0]?.text || null;
 }
 // The part a hit at p lands on: a Front End wearing ◆ takes a command at its partner (combat.mjs hit), Sudo aside.
-const landsOn = (s, p) => (buffed(s.encounter, 'sudo') ? null : livingParts(s).find((x) => x.front && x !== p && x.armor > 0 && frontOf(s, x) === p)) || p;
+const landsOn = (s, p) => (buffed(s.encounter, 'sudo') ? null : livingParts(s).find((x) => x.front && x !== p && (x.armor > 0 || x.exe) && frontOf(s, x) === p)) || p;
 // With Break ◆ first on: a hit a ◆ would take becomes your best breaker at that part; none ready, it goes at a part
 // with no ◆ its TARGET chip allows (soonest, lowest; that part: another the WHEN chip names); none, it fires anyway.
 function armorMove(s, h, ps, t, text) {

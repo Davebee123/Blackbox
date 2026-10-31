@@ -264,7 +264,7 @@ function play(s) {
   // Tripwire, Zip Bomb: leave them for last while anything else stands.
   if (((t.deadman && !ignores('tripwire')) || (t.fuse && !ignores('zipbomb'))) && t !== pick) t = livingParts(s).filter((p) => p !== t && p.kind === 'system' && !p.deadman && !p.fuse).sort((a, b) => dueOf(s, a) - dueOf(s, b))[0] || livingParts(s).filter((p) => p !== t && p.kind === 'system').sort((a, b) => dueOf(s, a) - dueOf(s, b))[0] || t;
   // Front End: a direct hit on its partner lands on it while it wears ◆. A Breaker or a Bastion strips it first; burns and helpers go past.
-  const fe = !ignores('frontend') && livingParts(s).find((p) => p.front && p.armor > 0 && frontOf(s, p) === t);
+  const fe = !ignores('frontend') && livingParts(s).find((p) => p.front && (p.armor > 0 || p.exe) && frontOf(s, p) === t);
   if (fe && ['breaker', 'bastion'].includes(classOf(s))) t = fe;
   // The Infiltrator: an Inject on the partner goes past it; with none to fire, a direct hit would land on the Front End
   // anyway, so it strips the Front End (the parts plan's answer: Inject the partner). The helper classes keep the plain plan.

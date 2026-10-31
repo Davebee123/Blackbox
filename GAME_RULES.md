@@ -268,6 +268,37 @@ when the server is built. Every number is a named constant in `PARTS`; `develope
   it weighs three times as much; elsewhere it rolls at its own weight once its level allows. **Elites and ★ rare
   spawns** always bring one of their floor's natives, and a rare spawn at least three parts and 2 more budget points.
 
+**.exe builds** (exe.mjs). From floor 4 a wild virus's part can come as its **.exe**: the same part, its rule harder or
+bent a new way, its *.exe* red on the board (hover it for what changed). Each part with a build comes as it 15% of the
+time on floor 4, 5% more each floor down (35% on floor 8); an elite or ★ rare spawn there brings at least one. A part
+you've never met never comes as its .exe. Its research and Codex card are the part's; the card names the build.
+
+| Part | Its .exe |
+|---|---|
+| Pulse Node | Its Surge fires twice, on back-to-back cycles, each hit at 60%. |
+| Accumulator | Discharge every 4 cycles, not 5. |
+| Strobe | Each Tick deals more than the last; a delay starts the climb over. |
+| Repeater | A volley of three hits, not two, each at 80%. |
+| Buffer | Shields every 2 cycles, not 3. |
+| Cipher Block | +50% for each Encrypt, not 25%. |
+| Fan-in | +100% for each fragment, not 50%. |
+| Obfuscator | Tag reveals nothing while it stands. |
+| Lockbox | Caps its partner at 15% a cycle, not 25%. |
+| Mirror | A twin reboots twice, not once. |
+| Decoy | Bends every 3 cycles, not 4. |
+| Zip Bomb | A 1-cycle fuse, not 2. |
+| Hotspot | Burns and helpers set it off too. |
+| Mutex | A broken lock returns in 2 cycles, not 4. |
+| C2 Node | Fragments deal 100% more, not 50%. |
+| Idle Timer | Every part re-arms at 4 cycles, not 5. |
+| Front End | Fronts its partner while it stands, ◆ or not. |
+| Backlog | Its Ack cools your skill 3 cycles longer, not 2. |
+| Limiter | Its cap holds every part while it stands. |
+| Spare | Boots at 90% of the signature's max, not 60%. |
+| Tripwire | Loud parts attack 2 cycles sooner, not 1. |
+| Scraper | Gains up to 4 ◆ from what it takes, not 2. |
+| Bad Block | Cracked heals lose up to 20% of your max, not 10%. |
+
 **Basic parts** (each matched to its family's Pulse Node over 20 cycles; level 6).
 
 | Part | Families | From | Integrity, ◆, attack | Rule |
@@ -2370,7 +2401,7 @@ Developer commands work only in tests, playtest pages, a test bench and with `?d
   rotation, floors reached); `bench list`, `bench delete <name>`. A **BENCH** tag sits on the top bar, and a **Dev**
   drawer over the prompt holds buttons that type the common developer commands.
 - **Playtest pages:** `?playtest=rooms` (a throwaway server of rooms, its clocks ten times as fast), `?playtest=<strain
-  or fixture>`, `?playtest=part:<id>`, `?playtest=fx` (every ability effect, tier and break finisher, fired from its key).
+  or fixture>`, `?playtest=part:<id>` (`part:<id>.exe` for its .exe build), `?playtest=fx` (every ability effect, tier and break finisher, fired from its key).
 - `developer levelup preview`, `developer thread preview`, `developer pager fill`, `developer parts`, `developer
   event`, `developer exfil`, and the rest under each section.
 
