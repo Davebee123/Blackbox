@@ -45,7 +45,7 @@ Every playtest URL runs on a fresh state that is never saved. The real save is n
 | `/?playtest=part:<id>` | A fight with that part, at the level it opens (or `&level=`); `part:<id>.exe` its .exe build. |
 | `/?playtest=fx` | The ability effects playtest: a panel that fires every ability's effect, at each Screen effects level and mastery tier. `&cls=`, `&crew=<class>`. |
 | `/?playtest=run` | Connected to a fresh server. `&family=worm\|ghostroot`, `&template=mailhub\|mirror\|archive\|lab` (its rooms' kind), `&depth=<floor>`. |
-| `/?playtest=rooms` | One server as rooms, clocks ten times as fast. `&class=`, `&level=`, `&kind=`, `&size=small\|medium\|large`, `&floor=`, `&boss=a\|b\|c`, `&hunter=patrol\|track`, `&seed=`. |
+| `/?playtest=rooms` | One server as rooms, clocks ten times as fast. `&class=`, `&level=`, `&kind=`, `&size=small\|medium\|large`, `&floor=`, `&boss=a\|b\|c`, `&hunter=patrol\|track`, `&seed=`, `&puzzle=<board>` (its room, and you in it), `&seen` (every room discovered). |
 | `/?playtest=story&beat=<id>` | A test save at a story beat (the editor's *Play from here*). |
 | `/?playtest=breach`, `/?campaign=breach` | The side modes (GAME_RULES.md "Side modes"): one breach, or the breach campaign under its own save. |
 | `/?shell=plain`, `/?tod=night\|dawn\|day\|dusk` | No CRT shell; another time of day outside the window. |
@@ -129,11 +129,11 @@ comment saying what it does.
 | File | What it does |
 |---|---|
 | `dist/run.mjs` | Runs: connecting, the pack, banking at jack out, the run commands on rooms. |
-| `dist/floorplan.mjs` | A server as a graph of rooms: moving, fights, caches, the hunter, the vault and the Core. |
+| `dist/floorplan.mjs` | A server as a graph of rooms: moving, fights, caches, the hunter, the vault and the Core; the server kinds, a Router's one-way links among them. |
 | `dist/objectives.mjs` | A room fight's objective (`e.objective`): Priority, Uptime and the Exfil's upload, their roll, rules, board text and bonus. |
 | `dist/netrooms.mjs` | Every server on the real save as a room graph, kept on its location; takeover and Root rooms. |
 | `dist/floorplan-view.mjs`, `dist/floorplan.css` | The rooms page: the server strip and the room map with its pop-up card. |
-| `dist/floors.mjs` | The eight floors: each one's diagram of server slots, generated from your network's seed; each floor's lair boss (`lairBossFor`) and holder (`holdersOf`). |
+| `dist/floors.mjs` | The eight floors: each one's diagram of server slots, generated from your network's seed; each floor's lair boss (`lairBossFor`), holder (`holdersOf`) and signature kind (`FLOOR.signature`). |
 | `dist/hidden.mjs` | Unknown servers along your floors' links, and tracing them. |
 | `dist/address.mjs` | Every room's grid address (C2). |
 | `dist/zone.mjs` | SPRAWL-00, the starting zone. |
@@ -143,8 +143,8 @@ comment saying what it does.
 | `dist/specials.mjs` | Server specials: each traced server's rule (an upside and a cost) from its seed, its pull on invasions, and its leaning's id (`leaningOf`). |
 | `dist/leanings.mjs` | Leanings: a server's one positive rule (Venting, Wind-up, Brownout), its multipliers in the fight and what it has paid. |
 | `dist/rivals.mjs` | Rivals: named runners who race you to a server's vault and fight you two or three in a row. |
-| `dist/puzzles.mjs`, `dist/puzzle-view.mjs` | Puzzle rooms: seven boards that aren't fights, and the cryptogram's key (`s.cipher`). |
-| `dist/forensics.mjs` | Log sweep: a short detective puzzle in a server's incident file. |
+| `dist/puzzles.mjs`, `dist/puzzle-view.mjs` | Puzzle rooms: eight boards that aren't fights (deeper chase and Cascade boards from floor 3), and the cryptogram's key (`s.cipher`). |
+| `dist/forensics.mjs`, `dist/logsweep.mjs` | Log sweep: a short detective puzzle in an incident file (logsweep.mjs builds the logs: a thread's process log, the Terminal room). |
 | `dist/traffic.mjs`, `dist/travelfx.mjs` | Ambient packets on the room map; the step between rooms as a train of code. |
 | `dist/network.mjs` | Your network's signature, rolled from its seed. |
 | `dist/memory.mjs` | Server memory: how many servers your network holds. Switched off (`MEMORY.on`). |

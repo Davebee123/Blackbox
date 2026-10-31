@@ -4,7 +4,7 @@
 // families.test.mjs.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fresh, hooks, active, finish, stashItem } from './dist/combat.mjs';
+import { fresh, hooks, active, finish, stashItem, command, resolveCycle } from './dist/combat.mjs';
 import { CONFIG, GUARDS } from './dist/data.mjs';
 import * as FP from './dist/floorplan.mjs';
 import { roomsMarkup, popOf, pickRoom, closePop, stepPath, traceHop, TRACE } from './dist/floorplan-view.mjs';
@@ -65,7 +65,16 @@ test('every server is connected, sized by the table, and laid out as the doc ask
     }
     assert.equal(g.vaults.length, kind === 'Archive' ? 2 : 1, tag);
     if (kind === 'Relay') assert.equal(g.hops.length, 2, `${tag}: two hops`);
-    assert.equal(g.loops.length, { small: 0, medium: 1, large: 2 }[size], `${tag}: loops`);
+    assert.equal(g.loops.length, { small: kind === 'Router' ? 1 : 0, medium: 1, large: 2 }[size], `${tag}: loops`);
+    // A Router: two one-way links on its loops, never the vault's or the Core's, and every room still reaches every other.
+    if (kind === 'Router') {
+      assert.equal(g.oneway.length, 2, `${tag}: two one-way links`);
+      for (const [f, t] of g.oneway) {
+        assert.ok(FP.neighbours(g, f).includes(t) && !FP.neighbours(g, t).includes(f), `${tag}: ${f}→${t} runs one way`);
+        assert.ok(![f, t].some((x) => g.vaults.includes(x) || x === g.core), tag);
+      }
+      for (const id of ids.filter((x) => x !== g.core)) assert.ok(ids.filter((x) => x !== g.core).every((x) => x in FP.distances(g, id)), `${tag}: ${id} reaches every room`);
+    } else assert.equal(g.oneway, undefined, tag);
     // The hunter: on medium and large from floor 2. A Patroller's loop never takes in the entry, the rest room, a vault or /core.
     if (size === 'small') assert.equal(g.den, undefined, tag);
     else {
@@ -769,4 +778,40 @@ test('XP for exploring: a first clear pays nothing on its own; Mapped pays 5 kil
   const want = deedXpFor(s, R.level, FP.mappedShare(FP.roomList(s)));
   const got = xp(/Mapped/) - s.logs.filter((x) => x.type === 'fresh').reduce((n, x) => n + x.amount, 0);
   assert.ok(Math.abs(got - want) <= 1, `Mapped: ${got} XP, ${want} wanted`);
+});
+
+// ---------- the floors' signature kinds (floors 2–4) ----------
+test('a Honeypot: every cache is bait, and bait pays double', () => {
+  const a = server({ seed: 9, kind: 'Honeypot', size: 'large' }), b = server({ seed: 9, kind: 'Honeypot', size: 'large' });
+  b.rooms.kind = 'Mailhub'; // the same server, the same dice, not a Honeypot
+  const caches = FP.roomList(a).filter((x) => x.kind === 'cache' && !x.mirror);
+  assert.ok(caches.length && caches.every((c) => FP.isBait(a, c)), 'every cache is bait');
+  const c = caches[0];
+  for (const s of [a, b]) { place(s, c.id); FP.act(s, 'pull'); }
+  assert.ok(Math.abs(a.rooms.credits - 2 * b.rooms.credits) <= 1, `double: ${a.rooms.credits} against ${b.rooms.credits}`);
+  assert.equal(a.rooms.signal, a.rooms.max - Math.round(a.rooms.max * FP.ROOMS.bait), 'and it costs the canary');
+});
+
+test('Cold storage: every virus sleeps off the timeline until you hit it or cycle 6, then keeps its own pace', () => {
+  const s = server({ seed: 4, kind: 'Cold', size: 'small' }), R = s.rooms;
+  const fightRoom = FP.roomList(s).find((r) => r.kind === 'process');
+  place(s, FP.neighbours(R.graph, fightRoom.id)[0]);
+  FP.go(s, fightRoom.id);
+  FP.act(s, 'engage');
+  const v = s.encounter.virus;
+  assert.ok(v.dormant && v.cold, 'asleep');
+  assert.ok(v.parts.filter((p) => p.attack).every((p) => p.attack.due === 999), 'off the timeline');
+  for (let i = 0; i < 8 && active(s) && s.encounter.cycle <= FP.ROOMS.cold; i++) { command(s, 'wait'); resolveCycle(s); }
+  assert.equal(v.dormant, false, `awake by cycle ${FP.ROOMS.cold}`);
+  assert.ok(v.parts.filter((p) => p.attack).every((p) => p.attack.due < 900), 'back on the timeline');
+  // Another Cold server's fight: a hit wakes it at once.
+  const t = server({ seed: 5, kind: 'Cold', size: 'small' }), room = FP.roomList(t).find((r) => r.kind === 'process');
+  place(t, FP.neighbours(t.rooms.graph, room.id)[0]); FP.go(t, room.id); FP.act(t, 'engage');
+  const p = t.encounter.virus.parts.find((x) => x.integrity > 0);
+  command(t, `spike ${p.id}`); resolveCycle(t);
+  assert.equal(t.encounter.virus.dormant, false, 'a hit wakes it');
+  // Not Cold: no sleep.
+  const m = server({ seed: 4, kind: 'Mailhub', size: 'small' }), mr = FP.roomList(m).find((r) => r.kind === 'process');
+  place(m, FP.neighbours(m.rooms.graph, mr.id)[0]); FP.go(m, mr.id); FP.act(m, 'engage');
+  assert.ok(!m.encounter.virus.cold);
 });

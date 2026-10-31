@@ -358,7 +358,7 @@ test('the chase, with the real Tracker: through the door it loses your trail for
   const h = FP.hunterOf(s);
   assert.ok(h && h.kind === 'track');
   const b = FP.boardOf(s, room), pack = s.run.pack.length;
-  for (const m of PZ.chaseSolve(b.walls, b.p, b.h, b.exit).moves) FP.act(s, 'play', m);
+  for (const m of PZ.chaseSolve(b.walls, b.p, b.h, b.exit, b.h2 ?? null).moves) FP.act(s, 'play', m);
   assert.equal(b.done, 'won');
   assert.ok(h.lost, 'it lost your trail');
   assert.equal(s.run.pack.length, pack + 2, 'half a cache: credits and code');
@@ -532,4 +532,95 @@ test('the three new boards pay less: half a kill\'s XP; routing half a cache\'s 
     if (kind === 'deadlock') assert.equal(s.components - parts, FP.ROOMS.puzzles.lock);
     if (kind === 'cryptogram') { assert.equal(end.pay.code + end.pay.credits + end.pay.parts, 0); assert.equal(end.line, b.text.replace(/\.$/, ''), 'the note, decoded'); }
   }
+});
+
+// ---------- deeper boards (floor 3+) and the terminal (floor 2+) ----------
+test('a deeper chase has two Trackers: winnable, fewest 5 to 12, straight at the door loses, the solver wins in exactly that many; either one catches you', () => {
+  assert.equal(PZ.newChase(SEEDS[0], { floor: 2 }).h2, undefined, 'one Tracker above floor 3');
+  for (const seed of SEEDS.slice(0, 20)) {
+    const b = PZ.newChase(seed, { floor: 3 });
+    assert.equal(b.variant, 'twin');
+    assert.ok(b.h2 != null && b.h2 !== b.h && b.h2 !== b.exit && b.h2 !== b.p, `seed ${seed}`);
+    assert.ok(b.best >= 5 && b.best <= 12, `seed ${seed}: fewest ${b.best}`);
+    assert.equal(PZ.chaseSolve(b.walls, b.p0, b.h0, b.exit, b.h20).best, b.best);
+    assert.equal(PZ.chaseStraight(b.walls, b.p0, b.h0, b.exit, b.h20), false, `seed ${seed}: straight loses`);
+    const { moves } = PZ.chaseSolve(b.walls, b.p, b.h, b.exit, b.h2);
+    for (const m of moves) PZ.puzzleMove(b, m);
+    assert.equal(b.done, 'won', `seed ${seed}`);
+    assert.equal(b.moves, b.best);
+  }
+  // The second one alone catches you: step into a room where only it lands.
+  for (const seed of SEEDS) {
+    const b = PZ.newChase(seed, { floor: 3 }), reach = PZ.chaseReach(b);
+    const at = Object.keys(reach).map(Number).find((i) => i !== b.exit && !PZ.trackerTurn(b.walls, b.h, i).caught && i !== b.h && (i === b.h2 || PZ.trackerTurn(b.walls, b.h2, i).caught));
+    if (at == null) continue;
+    assert.ok(PZ.chaseDanger(b, at), 'the board marks it');
+    PZ.puzzleMove(b, `go ${at}`);
+    assert.equal(b.done, 'lost');
+    PZ.puzzleMove(b, 'undo');
+    return;
+  }
+  assert.fail('no den where the second Tracker alone catches you');
+});
+
+test('a deeper cascade has two racks: an edge node charges its twin on the other rack, an inner one doesn\'t; every rack is cleared in its fewest taps', () => {
+  const T = PZ.C.twin, W = 2 * T.cols, N = T.rows * W;
+  assert.equal(PZ.newCascade(SEEDS[0], { floor: 2 }).b.length, PZ.C.rows * PZ.C.cols, 'one rack above floor 3');
+  const b = Array(N).fill(0); b[0] = 1; b[T.cols] = 1; // A1 and its twin E1
+  PZ.discharge(b, 0);
+  assert.equal(b[T.cols], 2, 'the corner charges its twin');
+  const inner = W + 1, c = Array(N).fill(0); c[inner] = 1; c[inner + T.cols] = 1;
+  PZ.discharge(c, inner);
+  assert.equal(c[inner + T.cols], 1, 'an inner node keeps to its rack');
+  const seam = Array(N).fill(0); seam[T.cols - 1] = 1; seam[T.cols] = 1; // D1 beside E1, across the gap
+  assert.ok(!PZ.twinNeighbours(T.cols - 1).includes(T.cols) || T.cols - 1 === 0, 'the racks never touch side by side');
+  for (const seed of SEEDS.slice(0, 12)) {
+    const d = PZ.newCascade(seed, { floor: 3 });
+    assert.equal(d.variant, 'twin');
+    assert.equal(d.b.length, N);
+    assert.ok(d.best >= PZ.C.fewest && d.taps === d.best + 1, `seed ${seed}`);
+    for (const k of [0, 1]) assert.ok(d.b.some((v, i) => v && PZ.rackOf(i) === k), `seed ${seed}: both racks charged`);
+    for (const i of PZ.cascadeSolve(d.b).taps) PZ.puzzleMove(d, `tap ${i}`);
+    assert.equal(d.done, 'won', `seed ${seed}`);
+    assert.equal(d.used, d.best);
+  }
+});
+
+test('the terminal: a log sweep, its trick by floor; naming the answer wins, a second wrong answer loses, a suspect twice or a stranger doesn\'t go', () => {
+  for (const seed of SEEDS.slice(0, 20)) for (const floor of [2, 3, 4, 7]) {
+    const b = PZ.newPuzzle('terminal', seed, { floor });
+    assert.equal(b.tier, Math.min(3, floor - 1), `seed ${seed}: floor ${floor}'s trick`);
+    assert.equal(b.suspects.length, 3);
+    assert.ok(b.suspects.includes(b.answer));
+    assert.equal(PZ.puzzleMove(b, PZ.botMove(b)).ok, true);
+    assert.equal(b.done, 'won');
+  }
+  const b = PZ.newPuzzle('terminal', SEEDS[3], { floor: 3 }), [w1, w2] = b.suspects.filter((a) => a !== b.answer);
+  assert.equal(PZ.puzzleMove(b, 'name 1.2.3.4'), null, 'not a suspect');
+  assert.equal(PZ.puzzleMove(b, `name ${w1}`).ok, false);
+  assert.equal(PZ.puzzleMove(b, `name ${w1}`), null, 'ruled out already');
+  assert.equal(b.done, null);
+  assert.ok(PZ.puzzleStarted(b));
+  PZ.puzzleMove(b, `name ${w2}`);
+  assert.equal(b.done, 'lost');
+  assert.ok(PZ.boardLines(b).some((l) => l.includes(b.file)));
+});
+
+test('the terminal on a server: only from floor 2; a first read pays a cache, a wrong answer first halves it, and it\'s a kill\'s XP', () => {
+  for (let k = 0; k < 40; k++) { const { R } = traced('worm', { seed: 900 + k * 61, depth: 1 }); assert.ok(!puzzlesOf(R.graph).some((x) => x.kind === 'terminal'), 'never on floor 1'); }
+  const ends = [];
+  for (const miss of [false, true]) {
+    const { s, loc, room } = serverWith('terminal');
+    play(s, `connect ${loc.name}`);
+    walkIn(s, room.id);
+    const b = FP.boardOf(s, room), xp0 = s.hackers[Object.keys(s.hackers)[0]].xp;
+    if (miss) FP.act(s, 'play', `name ${b.suspects.find((a) => a !== b.answer)}`);
+    const end = FP.act(s, 'play', `name ${b.answer}`).find((e) => e.type === 'puzzle-end');
+    assert.equal(b.done, 'won');
+    assert.equal(FP.puzzleState(s, room), 'won');
+    assert.ok(end.won && end.pay.credits > 0 && end.pay.code > 0, 'a cache');
+    assert.ok(s.hackers[Object.keys(s.hackers)[0]].xp > xp0, 'XP');
+    ends.push(end);
+  }
+  assert.ok(ends[1].pay.credits < ends[0].pay.credits, 'a wrong answer first pays half');
 });
