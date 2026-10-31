@@ -181,7 +181,7 @@ export function rivalLine(s) {
 
 // ---------- the fights ----------
 // Fight i of its lineup: a family's virus (its third forced) or a named build, one level over you, its crew's.
-const fightSpec = (v, i) => {
+export const fightSpec = (v, i) => {
   const P = RIVALS[v.id], spec = P.lineup[i] || P.lineup.at(-1);
   return { key: spec.strain || 'random', seed: ((v.seed + i * 7919) >>> 0) || 1, family: spec.family || null, opts: { mode: 'run', level: v.level, mutation: null, author: P.crew, ...(spec.strain ? {} : { family: spec.family }), ...(spec.genes ? { genes: spec.genes } : {}) } };
 };
@@ -198,8 +198,8 @@ export function lineupOf(s, v = s.rooms?.visit?.rival) {
   });
 }
 // The part it adds before the next fight, onto the virus just built (floorplan.mjs fight, before the room sizes it).
-export function rivalArm(s, e) {
-  const v = s.rooms.visit.rival, c = v?.next && COUNTERS[v.next.counter];
+export function rivalArm(s, e, v = s.rooms.visit.rival) { // v: the Arena's own (arena.mjs)
+  const c = v?.next && COUNTERS[v.next.counter];
   if (!c) return null;
   const vir = e.virus;
   if (c.veil) {

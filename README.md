@@ -39,6 +39,7 @@ Every playtest URL runs on a fresh state that is never saved. The real save is n
 |---|---|
 | `/?dev` | The real game with developer commands on (and `window.__bb`, the live state, for tests). |
 | `/?bench=<name>` | A test bench: its own save (`blackbox-bench-<name>`), developer mode on, a BENCH tag. Add `&as=<subclass\|class>&level=<n>` to start as that character. |
+| `/?bench=arena` | A bench with the Dev drawer open on the **Arena**: every fight, searchable. `&as=<subclass>&level=<n>` builds that character (again whenever they change). |
 | `/?playtest=cryptjack` | A paused fight against a fixture or strain (`splinter`, `ghostroot`…); `random` for a wild one. `&level=`, `&cls=`, `&sub=`, `&family=`, `&seed=`. Type `resume`. |
 | `/?playtest=boss:<id>` | A paused boss fight (`resident`, `repoman`, `choir`…), geared for `&level=` (10 by default). `&family=worm\|ransomware` for the Resident, `&cls=`, `&sub=`, `&seed=`. |
 | `/?playtest=part:<id>` | A fight with that part, at the level it opens (or `&level=`); `part:<id>.exe` its .exe build. |
@@ -57,7 +58,7 @@ Common developer commands (with `?dev` or on a bench; the **Dev** drawer above t
 | `bench <subclass\|class> <level>` | Starts this bench over as a ready character. `bench list`, `bench delete <name>`. |
 | `developer level <n>`, `developer server <n>` | Sets your class's level; sets a floor under your server's level. |
 | `developer location <family>` | Traces a new server of that family on the map. |
-| `developer fight <family\|random> <level> <seed>`, `developer fight part:<id>` | Starts a fight. |
+| `developer fight <kind>:<id> [level] [seed] [leaning=…] [objective=…]` | Starts a fight at home: kinds `family`, `strain`, `ice`, `part` (`part:<id>.exe`), `elite`, `boss`, `holder`, `rival` (`rival:kudzu.2`), `invader`. `developer fight again [refill]` the last one again. |
 | `developer parts` | The parts roll's numbers and mix. |
 | `developer event [card]`, `developer invade [kind]` | Deals an event card; sends an invasion. |
 | `developer levelup preview`, `developer thread preview`, `developer scene <id>`, `terminal preview` | Plays the level-up, a thread's windows, a transmission, a boot look. |
@@ -244,6 +245,7 @@ comment saying what it does.
 | `dist/heat.mjs`, `dist/scripts.mjs`, `dist/rewrites.mjs`, `dist/skillrules.mjs` | The breach's heat ranks, one-shot scripts, rewrites and skill rules. |
 | `dist/world.mjs`, `dist/room.mjs`, `dist/room-view.mjs`, `dist/room.css`, `dist/content/room.mjs` | LOWLIGHT's back room and the world turn between breaches. |
 | `dist/bench.mjs` | The test bench and the Dev drawer; `build()` is shared with the simulations. |
+| `dist/arena.mjs` | The Arena: every fightable thing from the data tables, and `developer fight`. |
 
 ### Root: server, scripts and simulations
 
