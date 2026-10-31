@@ -1982,13 +1982,16 @@ and pager line carry a chain-link mark. Ignoring a card never starts a chain.
 
 A shortwave radio (`scanner.mjs`, `scanner-view.mjs`): the calm side activity, with no risk. It lives at the
 **Listening Post**, LANTERN's (apart from LANTERN's trading hub): a hub's diamond with an antenna beside HOME on every
-floor, reading "hub · on the air" and pinging amber while a broadcast is up, "hub · quiet" otherwise. **Connect** (or
+floor, "hub · on the air" with an amber ping while a broadcast is up, "hub · quiet" otherwise. **Connect** (or
 `connect post`) opens it like a hub's terminal (`ssh <you>@post-07`, instant): LANTERN's line, then **[1] tune** (the
 radio in a window beside it), **[2] recordings** (the tape), **[3] log**, **[0] disconnect**.
 
+- **Found** from a clue: the first broadcast on the air outside a fight breaks into the radio chatter as numbers, a
+  line says so, and the post shows on the map (`s.scanner.found`; already true for a save that had the old top-bar
+  radio).
 - **On the air.** One station at a time, for 2–3 minutes, then 15–30 minutes quiet (the first 5 minutes into a new
   save). Stations not yet logged come up first, then the ones that still pay. A broadcast starts with a quiet two-tone
-  ping, never in a fight.
+  ping once the post is found, never in a fight.
 - **Finding it.** The band runs 3–12 MHz, all of it on the dial. Drag, scroll or use the arrow keys
   (Shift for ×10). It never shows where a station you can catch is: the S-meter rises and the static clears within
   0.15 MHz of it. One with nothing left to catch shows as a muted glow.

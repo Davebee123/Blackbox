@@ -192,8 +192,8 @@ export function postTerminalMarkup(s, lines, win, at = Date.now()) {
 
 // ---------- the controller ----------
 // opts: state() the save, changed() after the save changes (save and redraw), busy() true in a fight, sound() and
-// volume() the Sound setting and the Effects volume, played() after Play back.
-export function createScanner({ state, changed = () => {}, busy = () => false, sound = () => false, volume = () => 0.8, played = () => {} }) {
+// volume() the Sound setting and the Effects volume, played() after Play back, found() when the clue finds the post.
+export function createScanner({ state, changed = () => {}, busy = () => false, sound = () => false, volume = () => 0.8, played = () => {}, found = () => {} }) {
   let open = false, last = 0, lastPaint = 0, lastSched = 0, painted = {};
   const tune = { f: 7.415, hook: null, lock: 0 };
   const radio = createRadio();
@@ -268,7 +268,8 @@ export function createScanner({ state, changed = () => {}, busy = () => false, s
       if (now - lastSched >= 500) {
         lastSched = now;
         const ev = SC.tickScanner(s, now);
-        if (ev === 'start' && sound() && !busy()) radio.cue(volume());
+        if (!SC.postFound(s) && !busy() && SC.findPost(s, now)) { found(); changed(); } // the clue: numbers in the chatter
+        else if (ev === 'start' && SC.postFound(s) && sound() && !busy()) radio.cue(volume());
         if (ev) changed();
       }
       if (open && busy()) close();

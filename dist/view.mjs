@@ -74,7 +74,7 @@ import { RIVALS } from './rivals.mjs';
 import { threadRows, threadReader, tempNodes, tempNodeSvg, tempCard, serverMarkSvg, transitNodes, transitSvg } from './threads-view.mjs';
 import { arcRows, arcReader } from './arcs-view.mjs';
 import { threadById, serverMarks } from './threads.mjs';
-import { tipOf } from './scanner.mjs';
+import { tipOf, postFound } from './scanner.mjs';
 import { POST, postNodeSvg, postNodeSub, postCard } from './scanner-view.mjs';
 import { skillsTabMarkup } from './skills-view.mjs';
 import { achievementsMarkup } from './achievements-view.mjs';
@@ -1980,7 +1980,7 @@ export function mapLayout(s, floor = null, portrait = mapPortrait) {
   links.push({ from: 'server', to: idOf[g.entry], ghost: true });
   const e = gateOf(s);
   if (e) { put({ id: 'intrusion', kind: 'intrusion', x: home.x + 64, y: home.y + 34, angle: 0, virus: e.virus, fighting: e.phase === 'active' }); links.push({ from: 'server', to: 'intrusion', hot: true }); }
-  put({ id: POST.id, kind: 'post', x: home.x - 64, y: home.y + 34, angle: 180 }); links.push({ from: 'server', to: POST.id, ghost: true }); // the Listening Post (scanner-view.mjs), beside home
+  if (postFound(s)) { put({ id: POST.id, kind: 'post', x: home.x - 64, y: home.y + 34, angle: 180 }); links.push({ from: 'server', to: POST.id, ghost: true }); } // the Listening Post (scanner-view.mjs), beside home once found
   // The floor's slots: located servers, ?s, exits, hubs you've found.
   const hubs = new Set(hubsOf(s).map((h) => h.faction));
   for (const x of all) {

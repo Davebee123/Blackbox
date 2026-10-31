@@ -9,6 +9,7 @@ import { startHere, chainDef } from './dist/threads.mjs';
 import { serverMarks } from './dist/threads.mjs';
 import * as SC from './dist/scanner.mjs';
 import { stripMarkup, tapeMarkup, postBanner, postOptions, postTerminalMarkup, postTitle } from './dist/scanner-view.mjs';
+import { mapMarkup } from './dist/view.mjs';
 import './dist/netrooms.mjs';
 
 let clock = 1_700_000_000_000;
@@ -23,6 +24,7 @@ function setup({ servers = 5, hubs = true } = {}) {
   s.hackers = { [arch]: { level: 6, xp: 0 } };
   for (let i = 0; i < servers; i++) command(s, 'developer location worm');
   if (hubs) { command(s, 'mail'); s.mail.boardOpen = true; s.hubFound = { kestrel: true, lantern: true }; }
+  SC.scannerOf(s).found = true;
   return s;
 }
 // Puts a station on the air from now, fully faded in.
@@ -229,4 +231,20 @@ test('the Listening Post: an ssh banner, LANTERN on the line, the menu, ON THE A
   const page = postTerminalMarkup(s, postBanner(s, clock), 'tune', clock);
   assert.match(page, /data-sc-root/, 'the Tune window holds the radio');
   assert.match(page, /\[?0?.*disconnect/);
+});
+
+test('the clue: the post is off the map until the first broadcast is on the air, then found once; an old radio save knows it', () => {
+  const s = fresh(); s.tutorialCompleted = true;
+  const S = SC.scannerOf(s);
+  assert.equal(SC.postFound(s), false);
+  assert.doesNotMatch(mapMarkup(s, 'server'), /data-select="post"/);
+  assert.equal(SC.findPost(s, clock), false, 'nothing on the air yet');
+  clock = S.next; SC.tickScanner(s, clock);
+  assert.equal(SC.findPost(s, clock), true);
+  assert.equal(SC.findPost(s, clock), false, 'once');
+  assert.match(mapMarkup(s, 'server'), /data-select="post"/);
+  const old = fresh(); old.scanner = { log: {}, tips: [], n: 3, air: null, next: clock };
+  assert.equal(SC.postFound(old), false);
+  SC.scannerOf(old);
+  assert.equal(SC.postFound(old), true, 'keyed on the field: a save from the top-bar radio');
 });

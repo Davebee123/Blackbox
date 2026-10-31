@@ -72,6 +72,7 @@ import { playTravel } from './travelfx.mjs';
 import { playBoot, stopBoot, capture as bootHold, bootLines, playCut, stopCut, leaving, playConnect, stopConnect, connecting, connectLines, whenConnected } from './bootfx.mjs';
 let bootFor = null; // the fight the screen last booted into (go)
 import { startTraffic } from './traffic.mjs';
+import { postFound } from './scanner.mjs';
 import { createScanner, postBanner, postOptions, postTerminalMarkup, POST } from './scanner-view.mjs';
 
 const $ = (id) => document.getElementById(id);
@@ -92,7 +93,7 @@ migrateEffects(campaign); // the old Effects setting becomes its Screen effects 
 if (DEV) Object.defineProperty(window, '__bb', { get: () => campaign }); // dev only: the live state, for tests
 // The scanner (scanner.mjs): its own clock, saved as it changes; the radio sits in the Listening Post's Tune window
 // (render mounts it). Not in the breach campaign.
-const scanner = CAMP ? null : createScanner({ state: () => campaign, changed: () => { save(); dirty = true; }, busy: () => active(campaign), sound: () => !!campaign.settings.sound, volume: () => V.volumesOf(campaign).sfx, played: () => { if (hubSel === POST.id && hubShown()) { hubWin = 'tune'; dirty = true; } } });
+const scanner = CAMP ? null : createScanner({ state: () => campaign, changed: () => { save(); dirty = true; }, busy: () => active(campaign), sound: () => !!campaign.settings.sound, volume: () => V.volumesOf(campaign).sfx, played: () => { if (hubSel === POST.id && hubShown()) { hubWin = 'tune'; dirty = true; } }, found: () => { feel.numbers(); notice('Numbers under the radio chatter. A Listening Post shows on your map, beside HOME.'); } });
 if (DEV && scanner) window.__scan = scanner; // dev only: the needle and the strip, for tests
 let module = playtest === 'story' ? 'mail' : playtest === 'breach' ? 'breach' : playtest === 'rooms' ? 'rooms' : CAMP ? 'campaign' : 'map';
 let selected = null;
@@ -1331,7 +1332,7 @@ function run(raw) {
   if (found && memYes !== found.id) { mapSel = found.id; mapPop = true; V.setMemAsk(found.id); go('map'); dirty = true; return; }
   // Hub sessions: connect <hub> opens one; inside it, a number or a word picks from its menu.
   const dial = text.match(/^(?:connect|dial) (halcyon|glassjaw|kestrel|lantern|nullchoir|post|post-07)$/);
-  if (dial && /^post/.test(dial[1]) && scanner) return openHub(POST.id);
+  if (dial && /^post/.test(dial[1])) return scanner && postFound(campaign) ? openHub(POST.id) : notice('POST-07: not on your map yet.', true);
   if (dial && V.hubOptions(campaign, dial[1]).length) return openHub(dial[1]);
   if (dial && hubsOf(campaign).length && !hubFound(campaign, dial[1])) { notice(`${dial[1].toUpperCase()}: hub not located yet (${hubTraceOf(campaign, dial[1])}%).`, true); return; }
   if (hubShown() && !active(campaign)) {

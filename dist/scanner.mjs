@@ -8,7 +8,8 @@
 //   distress  a thread starts on the server it names (threads.mjs pinDistress)
 // Radio traffic sits across the band too: transmissions you run into while sweeping, nothing to catch.
 // The post records each broadcast: the tape holds the last one until the next starts, and Play back puts it back on
-// the air once, so the trip to the post never costs you a broadcast.
+// the air once, so the trip to the post never costs you a broadcast. It's found from a clue: the first broadcast
+// on the air outside a fight breaks into the radio chatter as numbers, and the post shows on the map (S.found).
 //
 // State: s.scanner (scannerOf, made on first use: the save keys on the field). The needle, the bite and the lock are
 // the view's (scanner-view.mjs), worked by tuneStep here. Times in the save are ms; the rules' clock t is seconds.
@@ -85,7 +86,17 @@ export function scannerOf(s) {
   S.log ||= {}; S.tips ||= []; S.n ||= 0;
   if (S.air === undefined) S.air = null;
   if (S.next == null) S.next = now() + SCANNER.first * 1000;
+  if (S.found == null) S.found = S.n > 0; // a save that had the old top-bar radio already knows it
   return S;
+}
+// ---------- the Listening Post, found ----------
+export const postFound = (s) => !!s.scanner?.found;
+// The clue: true the first time, while a broadcast is on the air (the view calls it outside a fight).
+export function findPost(s, at = now()) {
+  const S = scannerOf(s);
+  if (S.found || !onAir(s, at)) return false;
+  S.found = true;
+  return true;
 }
 export const logged = (s, id) => !!s.scanner?.log?.[id];
 // A numbers station pays once; a pirate or a distress call pays each time, once a broadcast.
