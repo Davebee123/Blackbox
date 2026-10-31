@@ -1787,7 +1787,8 @@ function renderMeters() {
   $('who-fill').style.width = (h.level >= 50 ? 100 : (h.xp / V.xpNeeded(h.level)) * 100) + '%';
   $('whoami').title = h.level >= 50 ? 'max' : `${h.xp}/${V.xpNeeded(h.level)} XP`;
   const pct = (srv.integrity / srv.max) * 100;
-  $('integrity-fill').style.width = pct + '%';
+  const racks = Math.ceil((pct / 100) * 5 - 1e-9); // five rack units, lit bottom up like Signal's bars
+  $('meter-integrity').querySelectorAll('.srv-rack i').forEach((u, i) => u.classList.toggle('on', i < racks));
   $('integrity-value').textContent = srv.integrity;
   $('meter-integrity').classList.toggle('critical', pct <= 25);
   const inv = campaign.invasion;
