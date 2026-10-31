@@ -1944,16 +1944,16 @@ and pager line carry a chain-link mark. Ignoring a card never starts a chain.
 ## The scanner
 
 A shortwave radio (`scanner.mjs`, `scanner-view.mjs`): the calm side activity, with no risk. Its button sits in the top
-bar beside the pager on every page, dim while nothing is on the air, glowing amber while a broadcast is up, and hidden
-in a fight. It opens a one-row band under the top bar (frequency, dial, station, transcript, log counts); the button
-or Esc closes it, and it closes itself 3 s after the broadcast ends.
+bar beside your name on every page, dim while nothing is on the air, glowing amber while a broadcast is up, and hidden
+in a fight. It opens into a small tuner over your name (frequency and dial), with a tab under the bar (station,
+transcript, lock, log counts); the button or Esc closes it, and it closes itself 3 s after the broadcast ends.
 
 - **On the air.** One station at a time, for 2–3 minutes, then 15–30 minutes quiet (the first 5 minutes into a new
   save). Stations not yet logged come up first, then the ones that still pay. A broadcast starts with a quiet two-tone
   ping, never in a fight.
-- **Finding it.** The dial runs 3–12 MHz; drag, scroll or use the arrow keys (Shift for ×10). It never shows where a
-  station you can catch is: the S-meter rises and the static clears within 0.15 MHz of it. One with nothing left to
-  catch shows as a muted glow.
+- **Finding it.** The band runs 3–12 MHz; the dial shows 2 MHz round the needle. Drag, scroll or use the arrow keys
+  (Shift for ×10). It never shows where a station you can catch is: the S-meter rises and the static clears within
+  0.15 MHz of it. One with nothing left to catch shows as a muted glow.
 - **The reel.** Within 0.04 MHz at a strength over S3 it **bites**: the dial zooms to 0.8 MHz round it, a teal hold
   zone of ±0.025 MHz sits round the needle, and the carrier moves. In the zone the lock fills in 5 s; outside it drains
   at 1/8 a second. A numbers station sways, a pirate hops every 1.7 s (never back to the centre), a distress call
