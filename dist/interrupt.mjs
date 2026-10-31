@@ -27,6 +27,7 @@ import { raidDef } from './raid.mjs';
 import { ignores } from './genes.mjs';
 import { gainResearch } from './research.mjs';
 import { daemonsOn } from './daemons.mjs';
+import { crossed as actCrossed } from './acts.mjs';
 
 export const TICKS = { at: [0.5, 0.25], small: 20, budget: 3 };
 export const BOSS_RULES = {
@@ -116,6 +117,7 @@ export function onHit(s, p, was, dealt, opts = {}) {
       if (ph && !ph.done) ph.at = 2;
       emit(s, 'cut', `You take ${v.name}'s ${p.name} under ${pct(t.at)}. Its next phase starts.`, { target: p.id, tick: t.at, phase: true });
     }
+    actCrossed(s, p); // a P4 boss: under its tick before this act's beat played, every part re-arms (acts.mjs)
     return;
   }
   if (verb !== 'cancel') { for (const t of crossed) hooks.tickDo?.(s, p, verb, t); return; }

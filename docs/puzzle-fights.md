@@ -2,7 +2,8 @@
 
 Which fights are puzzles, the bar they're measured against, and the phases. Built: P0 (`solved.mjs`), P1 (the program
 fits the trick; helpers count), P2 (one lever a fight, docs/puzzle-levers.md) and P3 (elites: a clash); the rules are
-in GAME_RULES.md "Fights". Left: P4 (bosses) and section 6's pay. Code cites this doc by section number.
+in GAME_RULES.md "Fights". P4's first four are built (acts.mjs, GAME_RULES.md "Boss acts") and wait on the designer's
+play. Left: the rest of P4 and section 6's pay. Code cites this doc by section number.
 
 The designer: every fight a little tricky, elites and bosses harder, the game challenging. A puzzle, never a wall. A
 blind player loses; paying attention wins, and so does the right routine.
@@ -133,12 +134,12 @@ Nothing is taken away for not reading. Reading already pays (the read bonus, the
 
 ## 7. Build phases
 
-P0 to P3 are built. Each phase is played by the designer before the next starts.
+P0 to P3 are built, and P4's first four. Each phase is played by the designer before the next starts.
 
 | Phase | What ships | Done when |
 |---|---|---|
 | P3 (built) | Elites: Integrity down, two conflicts from docs/puzzle-levers.md 4, *no pile-ups* lifted and checked on the roll (a failed roll rerolls). | Elites meet their row (floors met; first try open, as section 5 says). |
-| P4 | Bosses: a beat that repeats, phases, the one to leave. Two Residents and two solo bosses first, then the rest, lair bosses and feuds. | Every boss meets its row, solved, not outgeared, at its level (decision 14), and the designer has played the first four. |
+| P4 (first four built) | Bosses: a beat that repeats, phases, the one to leave. Two Residents and two solo bosses first (7.1), then the rest, lair bosses and feuds. | Every boss meets its row, solved, not outgeared, at its level (decision 14), and the designer has played the first four. |
 
 ## 8. Decided
 
@@ -163,3 +164,21 @@ The designer, October 2026:
     level a first try usually loses and a learned one wins. Only being overleveled for it (gear and level well past the
     boss's) carries a first try. Elites lean the same way, less. P4 builds to it; the bar's first-try ceiling (under
     50%) stays the measure.
+
+### 7.1 P4's first four
+
+One shape for every boss (acts.mjs): three acts on the ♛'s ticks, one tick a hit, a tell an act, a beat that act 2
+quickens, and the ♛ left above its tick until its act's beat has played (else every part re-arms).
+
+| Boss | Why it shows the pattern | The beat | The routine answer |
+|---|---|---|---|
+| Worm Resident | The commonest fight (every takeover); fragments make *where* you hit on the beat matter | Backlash | On the beat: a shield, a buff, a fragment you break, or hold |
+| Ransomware Resident | The same beat, another family: an Encryptor's lash leaves a stack until the ♛ breaks | Backlash | On the beat: hit the Lockbox (no attack) or go quiet |
+| REPO MAN | The Mimic, the beat P2 built, as a boss's | Repossess (a Mimic) | On the beat: a strip or a small hit; break the Repo Agent early |
+| HOLLOW CHOIR | The Decoy, the other beat, made to bite: every bend sings back | Bend | On the beat: a shield, a buff or an area command |
+
+Section 5's fixes these needed: the ♛ holding at its tick ends one-hit phase skips (the Breaker's boss losses at 10 came
+from racing the enrage); the Residents' acts trade Integrity (1.1×) for a later enrage (24).
+
+Open: the first-try ceiling. The kit player now loses most Resident and REPO MAN fights at 10, but learner 30 still
+wins about what learned play does: its misreads fall on a beat about one cycle in four.

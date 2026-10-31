@@ -40,6 +40,7 @@ Every playtest URL runs on a fresh state that is never saved. The real save is n
 | `/?dev` | The real game with developer commands on (and `window.__bb`, the live state, for tests). |
 | `/?bench=<name>` | A test bench: its own save (`blackbox-bench-<name>`), developer mode on, a BENCH tag. Add `&as=<subclass\|class>&level=<n>` to start as that character. |
 | `/?playtest=cryptjack` | A paused fight against a fixture or strain (`splinter`, `ghostroot`…); `random` for a wild one. `&level=`, `&cls=`, `&sub=`, `&family=`, `&seed=`. Type `resume`. |
+| `/?playtest=boss:<id>` | A paused boss fight (`resident`, `repoman`, `choir`…), geared for `&level=` (10 by default). `&family=worm\|ransomware` for the Resident, `&cls=`, `&sub=`, `&seed=`. |
 | `/?playtest=part:<id>` | A fight with that part, at the level it opens (or `&level=`); `part:<id>.exe` its .exe build. |
 | `/?playtest=fx` | The ability effects playtest: a panel that fires every ability's effect, at each Screen effects level and mastery tier. `&cls=`, `&crew=<class>`. |
 | `/?playtest=run` | Connected to a fresh server. `&family=worm\|ghostroot`, `&template=mailhub\|mirror\|archive\|lab` (its rooms' kind), `&depth=<floor>`. |
@@ -95,6 +96,7 @@ comment saying what it does.
 | `dist/tells.mjs` | Solo tells: the big moves a part announces ahead (charges, casts, seals). |
 | `dist/interrupt.mjs` | The interrupt: crossing a part's 50% or 25% tick on its due cycle cancels its move. |
 | `dist/order.mjs` | The order levers: parts whose right moment to break depends on the board. |
+| `dist/acts.mjs` | Boss acts (P4): a boss's three acts, its beat (the Backlash, a Mimic, a Decoy), and the ♛ left until its beat plays. |
 | `dist/mechanics.mjs` | The mechanics list: twenty third parts built lean, each rule's hooks in one place. Eleven strains and the eleven mutated ones are built from them (`STRAINS`). |
 | `dist/situations.mjs` | The moment on the board each situational skill is built for; the tray lights it. |
 | `dist/raid.mjs` | Crew bosses: phases and mechanics for KESSLER-FARM-00's three. |

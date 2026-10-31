@@ -45,6 +45,7 @@ import { daemonsOn } from './daemons.mjs';
 import { cancelAttack, crossBy, interruptMove, nextTick, fronted } from './interrupt.mjs';
 import { ignores, CLASHES } from './genes.mjs';
 import { contractDid } from './mail.mjs';
+import { tellAct, actOf } from './acts.mjs';
 
 // What a fight's tells did, on its metrics (the gap test reads them): said, answered, read (answered by a command
 // of yours, not by breaking the part), landed, and the Signal (or Integrity) they cost you, by tell.
@@ -129,7 +130,7 @@ export function plannedTells(v) {
     if (def.part === 'special' && v.noSignature && def.kind === 'charge') def = { ...TELLS.overcharge, id: def.id };
     const p = findSource(v, def);
     if (!p) continue;
-    list.push({ ...def, part: p.id });
+    list.push({ ...def, part: p.id, ...(tellAct(v, list.length) ? { act: tellAct(v, list.length) } : {}) }); // a P4 boss: the n-th tell is act n's (acts.mjs)
   }
   // The Mimic's beat comes with the part, not the tier.
   const mim = v.parts.find((p) => p.mimic);
@@ -192,6 +193,7 @@ function announce(s) {
   const clear = (t, x) => x >= t.after && !live(s, t).some((o) => o.next === x && !pile(t, o)) && !beats.some((b) => alive(sourceOf(s, b)) && beatAt(b, x) && !pile(t));
   for (const t of [...T.list].sort((a, b) => a.after - b.after)) {
     if (t.told || t.gone || t.once) continue; // a Hotspot's charge comes only when you set it off
+    if (t.act > actOf(e.virus)) continue; // a P4 boss's tell waits for its act (acts.mjs)
     const p = sourceOf(s, t);
     if (!alive(p)) continue;
     if (t.kind === 'mimic' && !p.mimic) continue; // a Mimic that stopped recording (MIRRORSHADE's Doppelganger) has no beat

@@ -650,3 +650,4 @@
 .fp-tag-inline.fp-obj { gap: 3px; } .fp-tag-inline.fp-obj .fp-ic { width: 11px; height: 11px; }
 .fp-obj-pay { display: flex; gap: 6px; margin-top: 5px; }
 .fp-obj-pay .rw { padding: 1px 6px; } .fp-obj-pay .rw b { font: 600 11px var(--mono); }
+.part-bar .ptick.phase.held { background: var(--bg); box-shadow: inset 0 0 0 2px var(--hot), 0 0 0 1px var(--bg); } /* a P4 boss's ♛: leave it above this tick until the beat plays (acts.mjs) */
