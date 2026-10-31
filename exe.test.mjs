@@ -44,18 +44,19 @@ test('the roll: none above floor 4, more each floor down, and an elite there bri
   let elites = 0, able = 0;
   for (let seed = 1; seed <= 200; seed++) { const v = createVirus('random', seed, { family: FAMS[seed % 5], threat: 30, floor: 4, elite: true }); if (v.parts.some((p) => EXE[p.id] || (p.copy && EXE[p.id.slice(0, -1)]))) { able++; elites += v.parts.some((p) => p.exe) ? 1 : 0; } }
   assert.equal(elites, able, 'every elite from floor 4 that has a part with a build');
-  // A part you've never met never comes as its .exe (the Pulse Node is always met).
-  assert.deepEqual(rollExe({ ids: ['lockbox', 'pulse'], floor: 8, rand: () => 0, met: (i) => i === 1 }), ['pulse']);
+  // A part you've never met never comes as its .exe.
+  assert.deepEqual(rollExe({ ids: ['lockbox', 'buffer'], floor: 8, rand: () => 0, met: (i) => i === 1 }), ['buffer']);
   assert.deepEqual(rollExe({ ids: ['lockbox'], floor: 8, rand: () => 0.99, met: () => false, sure: true }), []);
 });
 
-test('Pulse Node.exe: its Surge fires twice on back-to-back cycles, each at 60%', () => {
-  const a = fight(30, 'ransomware'), b = fight(30, 'ransomware', { exe: ['pulse'] });
-  const p0 = part(a, 'pulse'), p = part(b, 'pulse');
-  assert.equal(p.name, 'Pulse Node.exe');
-  assert.equal(p.taps, 2);
-  assert.ok(Math.abs(p.attack.amount - Math.round(p0.attack.amount * 0.6)) <= 1);
-  assert.match(boardMarkup(b), /<span class="pexe" title="[^"]*A harder build of the Pulse Node\.[^"]*">\.exe<\/span>/, 'the board draws its .exe red, with what it changes');
+test('Repeater.exe: a volley of three, each at 80%; the board draws its .exe red, with what it changes', () => {
+  const a = fight(30, 'worm', { basic: 'repeater' }), b = fight(30, 'worm', { basic: 'repeater', exe: ['repeater'] });
+  const p0 = part(a, 'repeater'), p = part(b, 'repeater');
+  assert.equal(p.name, 'Repeater.exe');
+  assert.equal(p.taps, 3);
+  assert.ok(Math.abs(p.attack.amount - Math.round(p0.attack.amount * 0.8)) <= 1);
+  assert.match(boardMarkup(b), /<span class="pexe" title="[^"]*A harder build of the Repeater\.[^"]*">\.exe<\/span>/);
+  assert.equal(EXE.pulse, undefined, 'the Pulse Node stays the plain one');
 });
 
 test('Lockbox.exe caps its partner at 15% a cycle, Mutex.exe relocks in 2, Zip Bomb.exe fuses in 1', () => {

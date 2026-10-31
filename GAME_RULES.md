@@ -276,7 +276,6 @@ you've never met never comes as its .exe. Its research and Codex card are the pa
 
 | Part | Its .exe |
 |---|---|
-| Pulse Node | Its Surge fires twice, on back-to-back cycles, each hit at 60%. |
 | Accumulator | Discharge every 4 cycles, not 5. |
 | Strobe | Each Tick deals more than the last; a delay starts the climb over. |
 | Repeater | A volley of three hits, not two, each at 80%. |
