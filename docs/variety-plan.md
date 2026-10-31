@@ -192,7 +192,7 @@ The prompt to paste is under each.
 | 5 | Strains wave 2: Thornwall to Sweatshop: **done** | 4 merged | medium |
 | 6 | Strains wave 3: the eleven mutated strains: **done** | 4 merged | medium |
 | 7 | Objectives: the engine, the Exfil on it, Priority and Uptime, one room in two: **done** | the answer on levers | medium |
-| 8 | Objectives: Backup (its look first, as screenshots) and Clean run | 7 merged | medium |
+| 8 | Objectives: Backup (its look first, as screenshots) and Clean run: **done** (the Ivory look) | 7 merged | medium |
 
 Sessions 2, 4 and 7 touch different files and can run side by side. Sessions 5 and 6 can too, once 4 is merged.
 
@@ -233,7 +233,7 @@ Full suite once at the end, then push.*
 - Strains spread their parts to adjacent viruses (1.2).
 - Objectives appear in one fight room in two.
 - The bonus is drop chance, XP and components.
-- The Backup gets its own look.
+- The Backup gets its own look: the Ivory (a pale off-white row and segmented bar).
 - The log leaves daemons out (they have their own) and covers uniques and sets.
 - An objective takes the lever's place in its fight (try it, and see how it plays).
 - The mutated strains (1.3) are a third wave, with their eleven pairings.

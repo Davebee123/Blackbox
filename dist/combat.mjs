@@ -30,7 +30,7 @@ import { raidStart, raidLand, raidCycle, raidShield, raidBroke, raidTaken, raidA
 import { tellStart, tellCycle, tellLand, tellBroke, chargeNow, tellIntents, tellSigint, tellSigintCheck, tellOn, tellsOf, overclockMult, hotCharge } from './tells.mjs';
 import { prepareTicks, onHit as tickHit, blastCut, BOSS_RULES } from './interrupt.mjs';
 import { TELL, ROOM_FAMILIES, DAMPER_KINDS, floorFor, partGenesFor } from './data.mjs';
-import { holdsPart, objectiveBroke, objectiveCycle, objectiveBonus, bonusXp, bonusRolls } from './objectives.mjs';
+import { holdsPart, objectiveBroke, objectiveCycle, objectiveBonus, bonusXp, bonusRolls, backupHit } from './objectives.mjs';
 import { mechValidate, mechIntercept, mechFired, mechPower, exposedCut, mechLanded, mechCommandHit, mechStart, mechClose, mechBroke, lagged, stunnedNow, missedTurn } from './mechanics.mjs';
 import { tickRoot, processWon } from './root.mjs';
 import { firewallCommand, wear, raidShare, hardenRestore } from './firewall.mjs';
@@ -3812,6 +3812,7 @@ function landAttack(s, p) {
   }
   if (atk.ramp) atk.step = (atk.step || 0) + 1; // Floodgate: one harder each time
   if (atk.dump) e.keylog = 0; // Keylogger: the log empties into the Dump
+  if (atk.effect === 'damage' && backupHit(s, p, hitPower)) return; // a Backup's even cycle: it takes the hit, not you (objectives.mjs)
   // Null Route: this cycle's attacks miss (and Opening lights up).
   if (e.nullRoute > 0 || e.buffs['null-route'] >= e.cycle) { dodged(e); emit(s, 'blocked', `${atk.name} misses. You null-routed it.`, { source: p.id }); openProc(s, 'slipped'); return slipLonger(s); }
   // Scraper: as it lands it takes your ◆ (so they don't stop its hit), then your shield once its hit is through it and
