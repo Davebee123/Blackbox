@@ -18,8 +18,8 @@ in the backlog.
 
 ## P3: two new families (built)
 
-Built as below, with these choices: the Wiper's Pulse Node is its Eraser; a lever each (the Cryptominer the Hotspot,
-the Wiper the Tripwire); a random virus with no family named stays one of the first three; a Hash climbs like
+Built as below, with these choices: the Wiper's Pulse Node is its Eraser; a lever each of their own (the Twin Rig and
+the Recycle Bin, below); a random virus with no family named stays one of the first three; a Hash climbs like
 encryption (the run's steps skip it).
 
 The rooms engine's bodies (`families.mjs` `ROOM_FAMILIES`) move into `FAMILIES`, so the rooms playtest and the game
@@ -42,6 +42,13 @@ body and the Exfil a runner.
 |---|---|---|---|---|
 | Rig | Let it cook, then burst; crossing its ticks vents it | Rate Limit the Hash | Steady burns while it cooks | Helpers while it cooks |
 | Degausser | Overload just before the Wipe | Big key first; Retaliate and Purge after | Inject before the Wipe; Backdoor after | Deploy before; Spawn and Hook after |
+
+Their levers (the designer, October 31, 2026): neither asks for a kill order.
+
+| Part | Family, from | Rule | Board | Cost |
+|---|---|---|---|---:|
+| Twin Rig | Cryptominer, 9 | A second Rig on the same heat. Break one while the other stands and the other takes its climb, and one step more. | A *twin* tag; heat on both | 3 |
+| Recycle Bin | Wiper, 19 | Holds the key the Wipe takes. Cross one of its ticks and the key comes back, ready. | *holds Flood* on its row | 2 |
 
 ## P4: the deep floors
 

@@ -287,6 +287,12 @@ function play(s) {
   // tick vents it then); once it overheats, burst it.
   const rig = !ignores('hash') && livingParts(s).find((p) => p.hash || (p.tookOver === 'rig' && p.attack?.ramp));
   if (rig && t === rig && !s.encounter.virus.overheated && (rig.attack?.step || 0) * (rig.attack?.rampBy || 1) < (rig.attack?.amount || 0)) t = livingParts(s).filter((p) => p !== rig && reachable(s, p) && !shunned(s, p)).sort((a, b) => dueOf(s, a) - dueOf(s, b))[0] || t;
+  // Twin Rig: work the healthier of the two, so both go down close together.
+  const twinRig = !ignores('twinrig') && (t.id === 'rig' || t.twinrig) && livingParts(s).find((p) => p !== t && (p.id === 'rig' || p.twinrig) && reachable(s, p));
+  if (twinRig && twinRig.integrity / twinRig.max > t.integrity / t.max + 0.2) t = twinRig;
+  // Recycle Bin: it holds the key the Wipe took; cross one of its ticks to get the key back.
+  const bin = !ignores('recyclebin') && livingParts(s).find((p) => p.bin && !p.armor && p.binHeld && s.encounter.wiped?.[p.binHeld.id] >= s.encounter.cycle && p.ticks?.some((x) => !x.spent) && reachable(s, p)); // bare: a hit gets it across
+  if (bin) t = bin;
   // Wiper: a Wipe lands this cycle and takes your strongest ready key, so fire that key now.
   if (!ignores('wipe') && landingNow(s).some((i) => part(s, i.source)?.attack?.wipe === 'strongest')) {
     const key = usable(s).filter((id) => !['spike', 'sigint'].includes(id) && ABILITIES[id] && readyIn(s, id) === 0).sort((a, b) => (ABILITIES[b].damage || 0) - (ABILITIES[a].damage || 0) || (ABILITIES[b].cooldown || 0) - (ABILITIES[a].cooldown || 0))[0];

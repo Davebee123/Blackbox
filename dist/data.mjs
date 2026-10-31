@@ -469,7 +469,7 @@ export const FAMILIES = {
     summary: 'The Rig\'s Hash lands every 2 cycles, dealing more each time, and the Rig heats up every cycle. At 100 heat it overheats, stops hashing and burns itself until it breaks. Hitting it across a tick vents it.',
     core: ['surge', 'hash'],
     basic: [['cooler', 1], ['strobe', 1], ['accumulator', 1]],
-    third: ['hotspot', 'idletimer', 'backlog', 'damper'], // the Hotspot (its lever) from 6, the Idle Timer from 9, the Backlog from 12, the Damper from 23 (P4 adds the Reactor, Monitor and Reservoir)
+    third: ['twinrig', 'idletimer', 'backlog', 'damper'], // the Twin Rig (its lever) from 9, the Idle Timer from 9, the Backlog from 12, the Damper from 23 (P4 adds the Reactor, Monitor and Reservoir)
     parts: [
       { id: 'pulse', name: 'Pulse Node', integrity: 34, armor: 1, loot: 'Pulse Kernel', attack: { name: 'Surge', effect: 'damage', amount: 12, interval: 4, first: 3 } },
       { id: 'rig', name: 'Rig', integrity: 40, armor: 1, loot: 'ASIC Die', special: true, hash: true, attack: { name: 'Hash', effect: 'damage', amount: 5, interval: 2, first: 2, ramp: 1 } },
@@ -483,7 +483,7 @@ export const FAMILIES = {
     summary: 'The Degausser\'s Wipe deals damage and takes your strongest ready key off your bar for 3 cycles. A wiped key can\'t be pressed, and its cooldown stands still. Key 1 and SIGINT are never wiped.',
     core: ['surge', 'wipe'],
     basic: [['accumulator', 1], ['repeater', 1], ['buffer', 1]],
-    third: ['limiter', 'tripwire', 'scraper', 'badblock', 'damper', 'coldstore'], // the Limiter from 13, the Tripwire (its lever) from 16, the Scraper from 19, the Bad Block from 21, the Damper from 23, the Cold Store from 24 (P4 adds the Latch and Bleeder)
+    third: ['limiter', 'recyclebin', 'scraper', 'badblock', 'damper', 'coldstore'], // the Limiter from 13, the Recycle Bin (its lever) from 19, the Scraper from 19, the Bad Block from 21, the Damper from 23, the Cold Store from 24 (P4 adds the Latch and Bleeder)
     parts: [
       // The Eraser is its Pulse Node: the plain attacker every basic is matched to.
       { id: 'pulse', name: 'Eraser', integrity: 34, armor: 1, loot: 'Zero Block', attack: { name: 'Zero', effect: 'damage', amount: 12, interval: 4, first: 3 } },
@@ -847,6 +847,8 @@ export function makePart(spec, kind, scale, extraArmor = 0) {
     special: !!spec.special,
     syncOnly: !!spec.syncOnly, // Keylogger's Logger: only commands fired in a Sync Window hurt it
     ...(spec.hash ? { hash: true } : {}), // the Cryptominer's Rig (families.mjs: heat, vent)
+    ...(spec.twinrig ? { twinrig: true } : {}), // its Twin Rig: a second Rig on the same heat
+    ...(spec.bin ? { bin: true } : {}), // the Wiper's Recycle Bin: holds the wiped key
     tax: !!spec.tax, // Hashrat's Miner: your cooldowns run at half speed while it lives
     phase: !!spec.phase, // Flicker's Shade: only there on even cycles
     echo: !!spec.echo, // Echo: every hit you take repeats next cycle at half
@@ -1357,14 +1359,14 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   const step = overrides.run ? (CONFIG.runEarly[level - 1] ?? 1) * (overrides.boss || overrides.elite ? 1 : runLate(level)) : 1;
   const dmgScale = mobPower(level) * (1 + CONFIG.enemyRamp * (level - 1)) * g.dmg * (overrides.run ? CONFIG.runDamage * step : 1);
   // Encryption stacks, so it skips the early-game and late steps (they would compound).
-  for (const p of parts) if (p.attack && ['damage', 'encrypt'].includes(p.attack.effect)) p.attack.amount = Math.max(1, Math.round(p.attack.amount * dmgScale / (p.attack.effect === 'encrypt' || p.hash ? step : 1))); // a Rig's Hash climbs like encryption: it skips them too
+  for (const p of parts) if (p.attack && ['damage', 'encrypt'].includes(p.attack.effect)) p.attack.amount = Math.max(1, Math.round(p.attack.amount * dmgScale / (p.attack.effect === 'encrypt' || p.hash || p.twinrig ? step : 1))); // a Rig's Hash climbs like encryption: it skips them too
   for (const p of parts) if (p.attack?.effect === 'heal') p.attack.amount = Math.max(1, Math.round(p.attack.amount * scale * g.hp));
   for (const p of parts) if (p.attack?.hit) p.attack.hit = Math.max(1, Math.round(p.attack.hit * dmgScale)); // a special that also hits (the Scrambler)
   for (const p of parts) if (p.attack?.grow) p.attack.grow = Math.max(1, Math.round(p.attack.grow * dmgScale));
   for (const p of parts) if (p.attack?.windup) p.attack.windup = Math.max(1, Math.round(p.attack.windup * scale * g.hp));
   if (strain?.enrage) for (const p of parts) p.enrage = true;
   for (const p of parts) if (p.ratchet) p.ratchet.amount = Math.max(1, Math.round((p.ratchet.amount * dmgScale) / step)); // a Ratchet stacks like encryption: the same steps skipped
-  for (const p of parts) if (p.attack?.ramp) { p.attack.rampBy = Math.max(1, p.hash ? (p.attack.ramp * dmgScale) / step : Math.round(p.attack.ramp * dmgScale)); p.attack.step = 0; } // a Rig's climb compounds like encryption (the same steps skipped) and stays exact (attackAmount rounds each Hash)
+  for (const p of parts) if (p.attack?.ramp) { p.attack.rampBy = Math.max(1, p.hash || p.twinrig ? (p.attack.ramp * dmgScale) / step : Math.round(p.attack.ramp * dmgScale)); p.attack.step = 0; } // a Rig's climb compounds like encryption (the same steps skipped) and stays exact (attackAmount rounds each Hash)
   const sooner = (mutation === 'hasty' ? 1 : 0) + (threat >= THREAT_STEPS.sooner ? 1 : 0);
   for (const p of parts) if (p.attack && p.attack.due < 900) p.attack.due = Math.max(2, p.attack.due - sooner); // never on cycle 1: you always get a move first
   // Hasty also repeats faster (at least every 2 cycles), so it stays a pressure mutation at every level.

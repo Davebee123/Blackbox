@@ -71,9 +71,18 @@ export const GENES = {
   wipe: { name: 'Wipe', adj: 'Wiping', cat: 'attack', axis: 'tempo', role: 'primary', cost: 3, opens: 19, decode: 'part', suits: 'the Wiper, TOLLGATE',
     does: 'Deals damage to you and takes your strongest ready key off your bar for 3 cycles. Its cooldown stands still. Key 1 and SIGINT are never wiped.', telegraph: 'Its cell on the timeline, then a WIPED key on your bar.', answer: 'Fire your big key before the Wipe lands.',
     implicit: 'Wiped keys come back a cycle sooner.', carried: (p) => !!A(p)?.wipe, bot: { fire: 'strongest' } },
+  // Their levers (lever 'together', 'recover'): neither asks for a kill order.
+  twinrig: { name: 'Twin rig', adj: 'Twinned', lever: 'together', cat: 'part', axis: 'order', role: 'primary', cost: 3, opens: 9, decode: 'part', suits: 'the Cryptominer, GLASSJAW', sig: true,
+    does: 'A second Rig that shares the Rig\'s heat. When one Rig breaks while the other stands, the other takes its climb on top of its own.', telegraph: 'A heat tether between the two Rigs.', answer: 'Bring both down close together.',
+    implicit: 'A twin rig inherits less of the climb.', carried: (p) => !!p.twinrig, bot: { focus: 'pair' },
+    parts: { cryptominer: { id: 'twinrig', name: 'Twin Rig', integrity: 18, armor: 1, loot: 'Riser Card', twinrig: true, from: 9, pool: 'third', sig: true, attack: { name: 'Hash', effect: 'damage', amount: 2, interval: 2, first: 3, ramp: 0.5 } } } },
+  recyclebin: { name: 'Recycle bin', adj: 'Binned', lever: 'recover', cat: 'part', axis: 'tempo', role: 'amplifier', cost: 2, opens: 19, decode: 'part', suits: 'the Wiper, TOLLGATE', sig: true,
+    does: 'Holds the key the Wipe takes. Push it past a tick while it holds one and the key comes back, ready.', telegraph: 'The held key\'s name on its row.', answer: 'After a Wipe, cross one of its ticks.',
+    implicit: 'Binned keys come back with a cycle off their cooldown.', carried: (p) => !!p.bin, bot: { focus: 'bin' },
+    parts: { wiper: { id: 'recyclebin', name: 'Recycle Bin', integrity: 24, armor: 1, loot: 'Bin Liner', bin: true, from: 19, pool: 'third', sig: true } } },
   floodramp: { name: 'Flood ramp', adj: 'Flooding', cat: 'attack', axis: 'attrition', role: 'primary', cost: 3, opens: 6, decode: 'part', suits: 'Worm, SWARMLINE (the Floodgate)',
     does: 'Attacks every cycle, dealing 1 more damage each time. Any delay resets it.', telegraph: 'A cell on every cycle, its number climbing.', answer: 'Delay it, or break the Flooder. Suspend, Quarantine, Jam, Spoofed ACK and the Stall daemon delay it.',
-    implicit: 'Ramping attacks on you grow slower.', carried: (p) => !!A(p)?.ramp && !p.hash, bot: { delay: true } },
+    implicit: 'Ramping attacks on you grow slower.', carried: (p) => !!A(p)?.ramp && !p.hash && !p.twinrig, bot: { delay: true } },
   siphon: { name: 'Siphon', adj: 'Siphoning', cat: 'attack', axis: 'sustain', role: 'primary', cost: 3, opens: 8, decode: 'part', suits: 'Worm, SWARMLINE (the Leech)',
     does: 'Heals the most damaged part for the damage its hit deals. Removes 1 burn from that part.', telegraph: 'Its cell on the timeline, marked siphon.', answer: 'Shrink its hit with shields, Block or Throttle, or break it. Implant keeps a part from being healed.',
     implicit: 'Heals a virus part gets are smaller.', carried: (p) => !!A(p)?.siphon, counter: 'antivirussweep' },
@@ -99,7 +108,7 @@ export const GENES = {
     does: 'While the Mutex stands, its partner wears a shield of 25% of the partner\'s max Integrity. A broken shield returns 4 cycles later.', telegraph: 'A lock tag on the partner, then a countdown to the relock.', answer: 'Break the Mutex, or burst through one lock. Lockpick, Thermal Throttle and Sudo get through it.',
     implicit: 'Locks take more from you.', carried: (p) => !!p.lock, bot: { focus: 'first' }, counter: 'limiter',
     parts: { ransomware: { id: 'mutex', name: 'Mutex', integrity: 18, armor: 1, loot: 'Mutex Handle', lock: 'encryptor', from: 8, pool: 'third', sig: true } } },
-  tripwire: { name: 'Tripwire', adj: 'Wired', lever: 'last', cat: 'part', axis: 'order', role: 'primary', cost: 2, opens: 16, decode: 'part', suits: 'Ransomware, the Wiper, TOLLGATE',
+  tripwire: { name: 'Tripwire', adj: 'Wired', lever: 'last', cat: 'part', axis: 'order', role: 'primary', cost: 2, opens: 16, decode: 'part', suits: 'Ransomware, TOLLGATE',
     does: 'When broken while other parts stand, the others go loud for the rest of the fight, both ways. Loud parts deal 25% more damage and attack 1 cycle sooner, and they take 40% more damage and drop their ◆.', telegraph: 'A tripwire tag. When your move would break it, the others\' attacks at their loud numbers and their ◆ falling.', answer: 'Break it last, or first when you can finish the rest before their attacks add up. Quiet Wire, Logic Bomb and Sudo keep it quiet, and Throttle silences a loud part.',
     implicit: 'Loud parts hit you less.', carried: (p) => !!p.deadman, bot: { focus: 'last' }, counter: 'zipbomb',
     parts: { ransomware: { id: 'tripwire', name: 'Tripwire', integrity: 18, armor: 1, loot: 'Trip Coil', deadman: true, from: 16, pool: 'third', attack: { name: 'Ping', effect: 'damage', amount: 3, interval: 3, first: 3 } } } },
@@ -125,7 +134,7 @@ export const GENES = {
     does: 'When broken, lights a 2-cycle fuse. The blast deals 20% of your max health to you. It also takes 20% of each virus part\'s own max and a ◆ from each. A shield or ◆ absorbs your share. Ending the fight puts the fuse out.', telegraph: 'A fuse chip on its row that counts down 2, 1, and the blast\'s bite as a ghost on every other bar.', answer: 'Break it last, or early when its blast breaks a part and a shield or ◆ is up when the fuse runs out.',
     implicit: 'Fuses on you deal less.', carried: (p) => !!p.fuse, bot: { focus: 'last' },
     parts: { ransomware: { id: 'zipbomb', plan: 1, name: 'Zip Bomb', integrity: 14, armor: 0, loot: 'Fuse Wire', fuse: true, from: 5, pool: 'third' }, worm: { id: 'zipbomb', plan: 1, name: 'Zip Bomb', integrity: 14, armor: 0, loot: 'Fuse Wire', fuse: true, from: 5, pool: 'third' } } },
-  hotspot: { name: 'Hotspot', adj: 'Heated', lever: 'last', cat: 'part', axis: 'burst', role: 'amplifier', cost: 1, opens: 6, floor: 1, decode: 'part', suits: 'Ransomware, Ghostroot, the Cryptominer',
+  hotspot: { name: 'Hotspot', adj: 'Heated', lever: 'last', cat: 'part', axis: 'burst', role: 'amplifier', cost: 1, opens: 6, floor: 1, decode: 'part', suits: 'Ransomware, Ghostroot',
     does: 'When your command hits it, the virus\'s next attack 2 or more cycles away becomes a charge. Burns and helpers do not set it off.', telegraph: 'An amber glow on its row, then a charge chip on the attack it powers up.', answer: 'Hit it with burns and helpers. Command hits are safe when the charge lands on a part you can cut.',
     implicit: 'Charges a hit of yours sets off deal less.', carried: (p) => !!p.hotspot, bot: { quiet: 'part' },
     parts: { ransomware: { id: 'hotspot', plan: 1, name: 'Hotspot', integrity: 14, armor: 0, loot: 'Thermal Pad', hotspot: true, from: 6, pool: 'third' }, ghostroot: { id: 'hotspot', plan: 1, name: 'Hotspot', integrity: 14, armor: 0, loot: 'Thermal Pad', hotspot: true, from: 6, pool: 'third' } } },
@@ -335,8 +344,8 @@ export const GENES = {
 };
 for (const [id, g] of Object.entries(GENES)) { g.id = id; g.beat ||= null; g.bot ||= null; g.lever ||= null; }
 // The parts plan's P3 (docs/parts-plan.md): the Cryptominer and the Wiper carry these natives, as their first family
-// has them (unveiled), and a lever each (the Hotspot, the Tripwire). The Damper is theirs alone.
-const CARRY = { cryptominer: ['hotspot', 'idletimer', 'backlog', 'damper'], wiper: ['limiter', 'tripwire', 'scraper', 'badblock', 'damper', 'coldstore'] };
+// has them (unveiled). The Damper is theirs alone.
+const CARRY = { cryptominer: ['idletimer', 'backlog', 'damper'], wiper: ['limiter', 'scraper', 'badblock', 'damper', 'coldstore'] };
 for (const [fam, ids] of Object.entries(CARRY)) for (const id of ids) { const { veiled, ...spec } = Object.values(GENES[id].parts)[0]; GENES[id].parts[fam] = spec; }
 delete GENES.damper.parts.worm;
 export const GENE_IDS = Object.keys(GENES);

@@ -10,6 +10,7 @@ import { seeded } from './dist/gear.mjs';
 import * as FP from './dist/floorplan.mjs';
 import { ATTACK_SETS, SET_SCALE, pressureOf, rollSet, applySet, BODY } from './dist/families.mjs';
 import { PARTS } from './dist/parts.mjs';
+import { GENES } from './dist/genes.mjs';
 
 CONFIG.enemyCrit = 0; CONFIG.misses = false; CONFIG.baseCrit = 0;
 let clock = Date.UTC(2026, 0, 1);
@@ -30,12 +31,12 @@ function roomFight({ family = 'ransomware', set = 'standard', cls = 'breaker', l
 }
 // A wild fight outside the rooms (no e.rooms): the family's rules travel with it. basic: a forced basic beside the
 // signature (the Cooler); set: an attack set laid on as a room would.
-function wildFight({ family, basic = null, set = null, cls = 'breaker', level = 20 }) {
+function wildFight({ family, basic = null, set = null, cls = 'breaker', level = 20, genes = [] }) {
   const s = fresh();
   s.rng = 99;
   FP.outfit(s, { cls, level, gearSeed: 2 });
   s.run ||= { loc: 'sim', cwd: '/', pack: [], visited: ['/'] };
-  selectEncounter(s, 'random', 5, { mode: 'run', room: '/sim', level, family, mutation: null, genes: [], ...(basic ? { basic } : {}), quiet: true });
+  selectEncounter(s, 'random', 5, { mode: 'run', room: '/sim', level, family, mutation: null, genes, ...(basic ? { basic } : {}), quiet: true });
   if (set) applySet(s.encounter.virus, set);
   command(s, 'engage');
   s.run.integrity = s.run.max = 5000;
@@ -405,4 +406,37 @@ test('the Wiper: a Rolling Wipe takes the key you used last, and its cooldown st
   strike(t, d2, 4);
   hold(t);
   assert.ok(!Object.keys(te.wiped || {}).length, 'no Wipe');
+});
+
+// ---------- the P3 families' levers ----------
+test('the Twin Rig shares the Rig\'s heat; break one while the other stands and the other takes its climb on top of its own', () => {
+  const s = wildFight({ family: 'cryptominer', level: 12, genes: ['twinrig'] });
+  const rig = part(s, 'rig'), twin = part(s, 'twinrig');
+  assert.ok(twin?.twinrig && GENES.twinrig.lever === 'together');
+  hold(s, 4);
+  const heat = s.encounter.virus.heat, steps = (rig.attack.step || 0) + (twin.attack.step || 0);
+  assert.ok(heat > 0, 'one heat gauge');
+  assert.equal(hooks.tickVerb(s, twin), 'vent', 'its ticks vent it too');
+  strike(s, rig, rig.integrity);
+  assert.equal(twin.attack.step, steps + BODY.twin, 'it takes the climb, and one step more');
+  assert.ok(s.logs.some((x) => x.twin && /takes the Rig's climb/.test(x.message)));
+  assert.equal(s.encounter.virus.heat, heat, 'the heat stays where it was');
+});
+
+test('the Recycle Bin holds the key the Wipe took; cross one of its ticks and the key comes back, ready', () => {
+  const s = wildFight({ family: 'wiper', level: 22, genes: ['recyclebin'] });
+  const e = s.encounter, bin = part(s, 'recyclebin'), deg = part(s, 'degausser');
+  assert.ok(bin?.bin && GENES.recyclebin.lever);
+  for (const p of attackers(s)) p.attack.due = 999;
+  deg.attack.due = e.cycle;
+  hold(s);
+  const id = bin.binHeld?.id;
+  assert.ok(id && e.wiped[id] >= e.cycle, `${id} wiped and held`);
+  assert.equal(hooks.tickVerb(s, bin), 'restore');
+  bin.armor = 0;
+  strike(s, bin, bin.integrity - Math.floor(bin.max / 2) + 1);
+  assert.ok(!(e.wiped[id] >= e.cycle), 'back on the bar');
+  assert.equal(readyIn(s, id), 0, 'ready, as it was');
+  assert.equal(bin.binHeld, null);
+  assert.ok(s.logs.some((x) => x.restore));
 });

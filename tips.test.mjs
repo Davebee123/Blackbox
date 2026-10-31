@@ -165,11 +165,11 @@ test('the P2 parts\' board elements each have a tip, and each shows in a fight w
 // The parts plan's P3: the Rig's heat and the Degausser's Wipe each have a tip, on the board in a fight of its family.
 test('the P3 families\' board elements each have a tip, and each shows in a fight of its family', async () => {
   const { selectEncounter } = await import('./dist/combat.mjs');
-  const fight = (family, level) => { const s = fresh(); s.metAll = true; selectEncounter(s, 'random', 77, { level, family, basic: 'pulse', genes: [], mutation: null, quiet: true }); command(s, 'engage'); return s; };
-  for (const [id, family, level] of [['fight-heat', 'cryptominer', 9], ['fight-wipe', 'wiper', 19]]) {
+  const fight = (family, level, genes = []) => { const s = fresh(); s.metAll = true; selectEncounter(s, 'random', 77, { level, family, basic: 'pulse', genes, mutation: null, quiet: true }); command(s, 'engage'); return s; };
+  for (const [id, family, level, genes] of [['fight-heat', 'cryptominer', 9], ['fight-wipe', 'wiper', 19], ['fight-twin', 'cryptominer', 9, ['twinrig']]]) {
     const t = TIPS.find((x) => x.id === id);
     assert.ok(t?.pause && t.page === 'combat' && t.text.length <= 200, id);
-    const s = fight(family, level), off = fight('ransomware', level);
+    const s = fight(family, level, genes), off = fight('ransomware', level);
     assert.ok(onPage(hudMarkup(s) + boardMarkup(s))(t.at), `${id}: ${t.at} is on the board`);
     assert.ok(!onPage(hudMarkup(off) + boardMarkup(off))(t.at), `${id}: not on a Ransomware's`);
   }

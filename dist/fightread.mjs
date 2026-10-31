@@ -15,7 +15,7 @@
 //                          the ones that trip a lever, and where helpers move on from a part breaking this cycle
 //   lockOf(s, v, p)        the lock shield a part wears now (its bar's absorb segment), wardOf the most a ward lets it lose
 import { part, livingParts, bendOf, gearFx, fxHolds, blocked, attackAmount, knowsPart, usable, fxOn, alive, wards, belowOf, frontOf, signatureOf, frozenNow, asleep, limitOf, packed, active, attackers, hookHit } from './combat.mjs';
-import { CONFIG, TELL, TELLS, BOSSES, STRAINS } from './data.mjs';
+import { CONFIG, TELL, TELLS, BOSSES, STRAINS, ABILITIES } from './data.mjs';
 import { fxText } from './content.mjs';
 import { tellsOf, tellIntents, partTells, NEW_TELLS, beatOn, beatBlind, copyOf, dearCopy, sigintCharges } from './tells.mjs';
 import { nextTick } from './interrupt.mjs';
@@ -238,6 +238,8 @@ function readOf(s, v, p) {
   if (p.pkg) return p.pkg.inert ? ['An inert box. Holds a Payload Box of credits.', 'Break it for the credits.', null] : [`Unpacks into two Droppers at the end of cycle ${p.pkg.opensAt}, or when anything damages it while the Loader stands.`, 'Leave it alone, or break the Loader first.', null];
   if (fam === 'cryptominer' && p.id === 'rig') return [`${deals(hitOf(s, p))} ${every(p.attack?.interval || 2)}. Each Hash deals ${Math.round(p.attack?.rampBy || 1)} more than the last. Gains heat every cycle. At ${BODY.heat.at} heat, overheats, stops hashing and burns itself until it breaks.`, 'Vent it with a cut, or let it cook.', null];
   if (fam === 'cryptominer' && p.id === 'cooler' && p.tookOver && p.attack?.ramp) return [`Runs the Rig's Hash uncooled. ${deals(hitOf(s, p))} ${every(p.attack.interval)}. Each Hash deals ${Math.round(p.attack.rampBy || 1)} more than the last. Gains ${BODY.heat.hot} heat a cycle. At ${BODY.heat.at} heat, overheats and burns itself until it breaks.`, 'Vent it with a cut, or let it cook.', null];
+  if (fam === 'cryptominer' && p.twinrig) return [`${deals(hitOf(s, p))} ${every(p.attack?.interval || 2)}. Each Hash deals ${Math.round(p.attack?.rampBy || 1)} more than the last. Shares the Rig's heat. When one Rig breaks while the other stands, the other takes its climb on top of its own.`, 'Bring both down close together.', null];
+  if (p.bin) { const h = p.binHeld && s?.encounter?.wiped?.[p.binHeld.id] >= s.encounter.cycle ? ABILITIES[p.binHeld.id]?.name : null; return [`Holds the skill the Wipe takes${h ? `: ${h} now` : ''}. Push it past a tick while it holds one, and the skill comes back, ready.`, 'After a Wipe, cross one of its ticks.', null]; }
   // (One carrying the family's Surge, parts.mjs PARTS.steadyCarry, keeps it when the Rig breaks.)
   if (fam === 'cryptominer' && p.id === 'cooler') return [`${p.attack ? `${attackRead(s, v, p)[0]} ` : ''}Keeps the Rig cool. When broken, the Rig gains ${BODY.heat.hot} heat a cycle instead of ${BODY.heat.cooled}, and every Hash deals ${pct(BODY.heat.hard - 1)} more damage.${p.attack ? '' : ` If the Rig breaks first, the Cooler takes over its Hash, uncooled, at ${BODY.heat.hot} heat a cycle.`}`, 'Vent whichever part is left hashing, or let it cook.', { text: 'cools the Rig', icon: 'scheduler', link: 'rig' }];
   if (p.kind === 'fragment' && p.attack && !p.raidAdd) return [`${deals(hitOf(s, p))} ${every(p.attack.interval)}.`, String(p.id).startsWith('dropper') ? 'Break it, or hit every part.' : 'Hit every part to clear it.', null];

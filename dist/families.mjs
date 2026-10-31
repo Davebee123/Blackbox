@@ -23,7 +23,7 @@
 //                they were, and runs it uncooled (25 a cycle). Whichever part is left hashing cooks.
 //   Wiper        Fire your big key before the Wipe. The Degausser's Wipe hits and takes a key off your bar: your strongest
 //                ready skill (Targeted) or the one you used last (Rolling). Key 1 and SIGINT are never wiped.
-import { hooks, emit, alive, part, livingParts, attackers, defender, hit, usable, readyIn, strikeWith, virusIntegrity } from './combat.mjs';
+import { hooks, emit, alive, part, attackAmount, livingParts, attackers, defender, hit, usable, readyIn, strikeWith, virusIntegrity } from './combat.mjs';
 import { ROOM_FAMILIES, FAMILIES, ABILITIES, CONFIG } from './data.mjs';
 
 // ---------- the bodies (level 6 scale, like FAMILIES) ----------
@@ -57,6 +57,7 @@ export const BODY = {
   payload: { credits: [12, 24] }, // a Payload Box from an inert Package
   heat: { cooled: 10, hot: 25, at: 100, burn: 0.12, hard: 1.5 }, // the Rig's heat a cycle (Cooler alive, broken), overheat, its burnout, Hash once the Cooler is gone
   loader: 2, // a Loader's tick delays the Courier's next delivery this many cycles
+  twin: 1, // a Twin Rig left alone climbs this many steps on top of the climb it takes from the broken one
 };
 // Which families a server's author writes (4.5), and from what level each opens (a P3 family's, data.mjs FAMILIES).
 export const OPENS = { ransomware: 1, worm: 1, ghostroot: 1, trojan: 4, cryptominer: FAMILIES.cryptominer.opens.level, wiper: FAMILIES.wiper.opens.level };
@@ -254,10 +255,13 @@ function vent(s, p) {
 // What a tick does on a part whose body has its own verb (interrupt.mjs): vent, or delay the next delivery.
 // The part hashing: the Rig, or the Cooler once it has failed over.
 // (A Cooler carrying the family's Surge, parts.mjs PARTS.steadyCarry, keeps it when the Rig breaks: it never hashes.)
-const hasherOf = (s) => (s.encounter?.virus?.family === 'cryptominer' ? livingParts(s).find((x) => x.id === 'rig' || (x.tookOver === 'rig' && x.attack?.ramp)) || null : null);
-hooks.tickVerb = (s, p) => (s.encounter.virus.family === 'cryptominer' && p === hasherOf(s) ? 'vent' : s.encounter.virus.family === 'trojan' && p.id === 'loader' ? 'delay' : 'cancel');
+// A Twin Rig (its lever) hashes beside it on the same heat.
+const hashersOf = (s) => (s.encounter?.virus?.family === 'cryptominer' ? livingParts(s).filter((x) => x.id === 'rig' || x.twinrig || (x.tookOver === 'rig' && x.attack?.ramp)) : []);
+const hasherOf = (s) => hashersOf(s)[0] || null;
+hooks.tickVerb = (s, p) => (hashersOf(s).includes(p) ? 'vent' : p.bin && p.binHeld ? 'restore' : s.encounter.virus.family === 'trojan' && p.id === 'loader' ? 'delay' : 'cancel');
 hooks.tickDo = (s, p, verb) => {
   if (verb === 'vent') return vent(s, p);
+  if (verb === 'restore') return restore(s, p);
   if (verb === 'delay') {
     const c = livingParts(s).find((x) => x.deliver), down = redeployOf(s);
     if (!c && down) { down.redeployAt += BODY.loader; return emit(s, 'cut', `DELAYED. You take the ${p.name} across a tick: it redeploys the ${down.name} ${BODY.loader} cycles later.`, { target: p.id, delay: true }); }
@@ -277,11 +281,24 @@ function wipe(s, p, atk) {
   const e = s.encounter, id = wipeTarget(s, atk.wipe), n = atk.wipeFor || 3;
   if (!id) return emit(s, 'status', `${atk.name} finds no key to take.`, { source: p.id });
   const until = e.cycle + n;
+  // A Recycle Bin (the Wiper's lever) holds it: cross one of the Bin's ticks and it comes back (restore).
+  const bin = livingParts(s).find((x) => x.bin);
+  if (bin) bin.binHeld = { id, at: e.cycle, readyAt: e.readyAt[id] || 0 };
   // It can't be pressed while wiped, and its cooldown stands still: a skill cooling carries the cycles it had left.
   e.readyAt[id] = e.readyAt[id] > e.cycle ? e.readyAt[id] + n : until + 1;
   (e.wiped ||= {})[id] = until;
   (e.locked ||= {})[id] = until;
   emit(s, 'locked', `${atk.name} lands. ${ABILITIES[id].name} is WIPED off your bar for ${n} cycles.`, { source: p.id, ability: id, cycles: n, wiped: true });
+}
+// A Recycle Bin crossed past a tick: the key it holds comes back, its cooldown where it stood (ready, if it was).
+function restore(s, p) {
+  const e = s.encounter, h = p.binHeld;
+  if (!h) return; // a second tick in the same hit: the first one restored it
+  p.binHeld = null;
+  if (!(e.wiped?.[h.id] >= e.cycle)) return emit(s, 'tick-wasted', `The ${p.name} crosses a tick, but ${ABILITIES[h.id].name} is back already.`, { target: p.id, wasted: true });
+  e.wiped[h.id] = e.cycle - 1; if (e.locked) e.locked[h.id] = e.cycle - 1;
+  e.readyAt[h.id] = h.readyAt <= h.at ? e.cycle : h.readyAt + (e.cycle - h.at);
+  emit(s, 'cut', `RESTORED. You take the ${p.name} across a tick: ${ABILITIES[h.id].name} is back on your bar.`, { target: p.id, restore: true, ability: h.id });
 }
 
 // ---------- the hooks (combat.mjs), room fights only ----------
@@ -309,6 +326,14 @@ hooks.roomBroke = (s, p) => {
     p.redeployAt = e.cycle + BODY.redeploy.in;
     p.redeploy = { deliver: p.deliver ? { ...p.deliver } : p.redeploy?.deliver || null };
     emit(s, 'status', `The Loader will redeploy the ${p.name} in ${BODY.redeploy.in} cycles at half its Integrity. Break the Loader before then and it stays down.`, { target: p.id });
+  }
+  // Twin Rigs: break one while the other stands and the other adds its climb to its own, and BODY.twin steps more.
+  if (v.family === 'cryptominer' && (p.id === 'rig' || p.twinrig)) {
+    const other = livingParts(s).find((x) => x !== p && (x.id === 'rig' || x.twinrig));
+    if (other?.attack && (p.id === 'rig' ? v.parts.some((x) => x.twinrig) : true)) {
+      other.attack.step = (other.attack.step || 0) + (p.attack?.step || 0) + BODY.twin;
+      emit(s, 'status', `The ${other.name} takes the ${p.name}'s climb: its Hash deals ${Math.round(attackAmount(other))} now.`, { target: other.id, twin: true });
+    }
   }
   if (v.family === 'cryptominer' && p.id === 'cooler') {
     const rig = livingParts(s).find((x) => x.id === 'rig');
@@ -343,7 +368,7 @@ hooks.roomCycle = (s) => {
   if (down && down.redeployAt <= e.cycle) { if (livingParts(s).some((x) => x.id === 'loader')) redeploy(s, down); else down.redeployAt = null; }
   for (const p of livingParts(s).filter((x) => x.deliver && x.deliver.due <= e.cycle)) deliver(s, p);
   for (const box of livingParts(s).filter((x) => x.pkg && !x.pkg.inert && x.pkg.opensAt <= e.cycle)) unpack(s, box, 'on its own');
-  const rig = hasherOf(s);
+  const rigs = hashersOf(s), rig = rigs[0] || null;
   // The Cooler took over the Hash this cycle (combat.mjs fallback): it runs it uncooled, with the climb and the heat
   // the Rig had (an overheated rig stays overheated).
   if (rig && rig.id !== 'rig' && !rig.uncooled) {
@@ -354,11 +379,11 @@ hooks.roomCycle = (s) => {
   if (rig) {
     // Cooled while a Cooler stands, or when the fight never had one (the parts roll: a Rig beside another basic); hot
     // once a Cooler breaks, or running the Hash itself.
-    const cooler = rig.id === 'rig' && (livingParts(s).some((x) => x.id === 'cooler') || !v.parts.some((x) => x.id === 'cooler'));
+    const cooler = rig.id !== 'cooler' && (livingParts(s).some((x) => x.id === 'cooler') || !v.parts.some((x) => x.id === 'cooler'));
     if (!v.overheated) {
       v.heat = Math.min(BODY.heat.at, (v.heat || 0) + Math.round((cooler ? BODY.heat.cooled : BODY.heat.hot) * (v.heatRate || 1)));
-      if (v.heat >= BODY.heat.at) { v.overheated = true; if (rig.attack) rig.attack.due = 999; emit(s, 'phase', `The ${rig.name} OVERHEATS. It stops hashing and burns itself every cycle until it breaks.`, { target: rig.id }); }
-    } else hit(s, rig, Math.max(1, Math.round(rig.max * BODY.heat.burn)), { by: 'Burnout', pierce: true, server: true });
+      if (v.heat >= BODY.heat.at) { v.overheated = true; for (const r of rigs) if (r.attack) r.attack.due = 999; emit(s, 'phase', `The ${rigs.map((r) => r.name).join(' and the ')} OVERHEAT${rigs.length > 1 ? '' : 'S'}. Hashing stops, and each burns itself every cycle until it breaks.`, { target: rig.id }); }
+    } else for (const r of rigs) hit(s, r, Math.max(1, Math.round(r.max * BODY.heat.burn)), { by: 'Burnout', pierce: true, server: true });
   }
   const R = ROOM_RULES.enrage;
   if (e.enrageAt && e.cycle >= e.enrageAt && (e.cycle - e.enrageAt) % R.every === 0) {
@@ -381,6 +406,8 @@ export function bodyTags(s, p) {
   if (p.pkg) out.push(p.pkg.inert ? ['inert', 'Inert: holds a Payload Box of credits.\n▸ Break it for the credits.', ''] : [`opens ${Math.max(0, p.pkg.opensAt - e.cycle)}`, `Package: unpacks into two Droppers at the end of cycle ${p.pkg.opensAt}, or when anything damages it while the Loader stands.`, 'hot']);
   if (p.id === 'loader' && v.family === 'trojan') { const down = redeployOf(s); out.push(down ? [`redeploys in ${Math.max(0, down.redeployAt - e.cycle)}`, `Redeploy: brings the ${down.name} back at the end of cycle ${down.redeployAt} at half its Integrity, unless the Loader breaks first. The Loader's ticks delay the redeploy by ${BODY.loader} cycles.\n▸ Break the Loader before then.`, 'hot'] : ['loader', `Loader: while it stands, any damage to a Package unpacks it. Redeploys a broken Courier ${BODY.redeploy.in} cycles later at half its Integrity. Its ticks delay the next delivery by ${BODY.loader} cycles.`, 'hot']); }
   if (p === hasherOf(s)) out.push([v.overheated ? 'overheated' : `heat ${v.heat || 0}/${BODY.heat.at}`, v.overheated ? 'Overheated: burns itself every cycle until it breaks. Venting it starts it hashing again.' : `Heat: at ${BODY.heat.at}, overheats, stops hashing and burns itself until it breaks. Its ticks vent its heat and climb back to nothing.`, v.overheated ? 'you heat' : 'hot heat']);
+  if (p.twinrig) out.push(['twin', 'Twin Rig: shares the Rig\'s heat. When one Rig breaks while the other stands, the other takes its climb on top of its own.\n▸ Bring both down close together.', 'hot twin']);
+  if (p.bin && p.binHeld && e.wiped?.[p.binHeld.id] >= e.cycle) out.push([`holds ${ABILITIES[p.binHeld.id].name}`, `Recycle Bin: holds the key the Wipe took.\n▸ Push it past a tick and ${ABILITIES[p.binHeld.id].name} comes back, ready.`, 'bin']);
   if (p.attack?.wipe) out.push([p.attack.wipe === 'last' ? 'wipes your last skill' : 'wipes your strongest', p.attack.wipe === 'last' ? `Wipe: takes the skill you used last off your bar for ${p.attack.wipeFor} cycles.` : `Wipe: takes your strongest ready skill off your bar for ${p.attack.wipeFor} cycles.`, 'hot wipe']);
   return out;
 }

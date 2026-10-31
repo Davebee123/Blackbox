@@ -134,6 +134,8 @@ export const TIPS = [
   { id: 'fight-veiled', page: 'combat', pause: true, at: '.board .intent.hidden', under: '#board', text: 'This part hides when it will attack. Strip its ◆ to see its timer.' },
   // The parts plan's P3 families (families.mjs).
   { id: 'fight-heat', page: 'combat', pause: true, at: '.board .tag.heat', under: '#board', text: 'The Rig hits harder each time its Hash lands, and heats up every cycle. At 100 heat it stops and burns itself out. Push it past a tick to vent it, or leave it to cook.' },
+  { id: 'fight-twin', page: 'combat', pause: true, at: '.board .tag.twin', under: '#board', text: 'Two Rigs share one heat gauge. Break one and the other takes its climb, so bring both down close together.' },
+  { id: 'fight-bin', page: 'combat', pause: true, at: '.board .tag.bin', under: '#board', text: 'The Recycle Bin holds the skill the Wipe took. Push it past a tick to get that skill back, ready.' },
   { id: 'fight-wipe', page: 'combat', pause: true, at: '.board .tag.wipe', under: '#board', text: 'When the Wipe lands, it takes your strongest ready skill off your bar for 3 cycles. Fire that skill before then.' },
   { id: 'fight-encrypt', page: 'combat', pause: true, at: '.board .intent.crypt', under: '#board', text: 'Encryption damages you every cycle and grows each time it lands. It stops when you break the Encryptor.' },
   // Tells (tells.mjs): a part announces a move ahead, and the chip says what answers it.
