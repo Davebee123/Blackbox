@@ -8,8 +8,8 @@
 // render): the board drawing in with a boot line, the worm running down a trace into its next node, a firewall going up,
 // the cascade's waves with sparks, a ping's ring opening out, a dig, the Tracker's two steps. Motion off or reduced
 // motion: none of it, the board just changes.
-import { esc } from './view.mjs';
-import { PUZZLES, Q, H, P, C, RT, PROCS, LOCKS, ALPHA, isPuzzle, qTargets, qValue, chaseReach, chaseDanger, trackerTurn, sweepLeft, cellName, dimsOf, rtMask, routeLit, lockLeft, lockGive, cgPlain, cgKnown, cgOpen, cipherOf } from './puzzles.mjs';
+import { esc, sweepBlock } from './view.mjs';
+import { PUZZLES, Q, H, P, C, RT, cTwin, twinEdge, rackOf, PROCS, LOCKS, ALPHA, isPuzzle, qTargets, qValue, chaseReach, chaseDanger, trackerTurn, sweepLeft, cellName, dimsOf, rtMask, routeLit, lockLeft, lockGive, cgPlain, cgKnown, cgOpen, cipherOf } from './puzzles.mjs';
 import { hereOf, boardOf, puzzleState, refillAt, addrOf, known } from './floorplan.mjs';
 import { active } from './combat.mjs';
 
@@ -17,9 +17,9 @@ import { active } from './combat.mjs';
 export const pzUi = { closed: null, mode: 'ping', sel: null };
 const n1 = (v) => +v.toFixed(1);
 const chip = (x, y, hw, hh, c) => [[x - hw + c, y - hh], [x + hw - c, y - hh], [x + hw, y - hh + c], [x + hw, y + hh - c], [x + hw - c, y + hh], [x - hw + c, y + hh], [x - hw, y + hh - c], [x - hw, y - hh + c]].map(([a, b]) => `${n1(a)},${n1(b)}`).join(' ');
-const VARIANT = { twin: { quarantine: 'Two outbreaks', sweep: 'Two caches' }, fast: { quarantine: 'It copies twice' }, noisy: { sweep: 'Noisy cells' } };
-const BOOT = { quarantine: (b) => `isolate /dev/seg0 · ${b.starts.length > 1 ? 'two outbreaks' : b.spread > 1 ? 'worm, fast' : 'worm loose'}`, chase: () => 'open /den · tracker inside', cascade: (b) => `mount /rack0 · ${b.b.filter(Boolean).length} charged`, sweep: (b) => `listen /dark0 · ${b.caches.length > 1 ? 'two caches' : 'one cache'}${Object.keys(b.noise).length ? ' · noise' : ''}`,
-  routing: () => 'route /net0 · src → sink', deadlock: (b) => `ps /lockd · ${b.n} processes · ${b.pool.length} locks free`, cryptogram: (b) => `cat ~/mail/wick.enc · ${b.text.replace(/[^a-z]/g, '').length} letters` };
+const VARIANT = { twin: { quarantine: 'Two outbreaks', sweep: 'Two caches', chase: 'Two Trackers', cascade: 'Two racks' }, fast: { quarantine: 'It copies twice' }, noisy: { sweep: 'Noisy cells' } };
+const BOOT = { quarantine: (b) => `isolate /dev/seg0 · ${b.starts.length > 1 ? 'two outbreaks' : b.spread > 1 ? 'worm, fast' : 'worm loose'}`, chase: (b) => `open /den · ${b.h2 != null ? 'two trackers' : 'tracker'} inside`, cascade: (b) => `mount /rack0${cTwin(b.b) ? ' /rack1' : ''} · ${b.b.filter(Boolean).length} charged`, sweep: (b) => `listen /dark0 · ${b.caches.length > 1 ? 'two caches' : 'one cache'}${Object.keys(b.noise).length ? ' · noise' : ''}`,
+  routing: () => 'route /net0 · src → sink', deadlock: (b) => `ps /lockd · ${b.n} processes · ${b.pool.length} locks free`, cryptogram: (b) => `cat ~/mail/wick.enc · ${b.text.replace(/[^a-z]/g, '').length} letters`, terminal: (b) => `tail /var/log/${b.file} · ${b.rows.length} lines` };
 const GRID = ['quarantine', 'chase', 'cascade', 'sweep', 'routing'];
 
 // ---------- which board, when ----------
@@ -89,11 +89,10 @@ export function chaseSvg(b) {
   let tiles = '', walls = '';
   for (let i = 0; i < H.rows * H.cols; i++) {
     const can = reach[i] != null, danger = can && chaseDanger(b, i), x = cx(i), y = cy(i);
-    const t = can && i !== b.exit && i !== b.h ? trackerTurn(b.walls, b.h, i) : null;
-    tiles += `<g class="pz-n pz-room${can ? ' reach' : ''}${danger ? ' danger' : ''}" data-pz-i="${i}"${t ? ` data-ghost="${t.path.join(',')}"${t.caught ? ' data-caught="1"' : ''}` : ''}${act(`go ${i}`, `${cellName(b, i)}: move ${reach[i]}${danger ? ' (it catches you there)' : ''}`, can)}>`
+    tiles += `<g class="pz-n pz-room${can ? ' reach' : ''}${danger ? ' danger' : ''}" data-pz-i="${i}"${can && i !== b.exit && i !== b.h && i !== b.h2 ? ghostOf(b, i) : ''}${act(`go ${i}`, `${cellName(b, i)}: move ${reach[i]}${danger ? ' (it catches you there)' : ''}`, can)}>`
       + `<polygon class="pz-chip" points="${chip(x, y, S / 2 - 4, S / 2 - 4, 7)}"/></g>`;
   }
-  if (!b.done && b.p !== b.exit) { const t = trackerTurn(b.walls, b.h, b.p); tiles = tiles.replace(`data-pz-i="${b.p}"`, `data-pz-i="${b.p}" data-ghost="${t.path.join(',')}"${t.caught ? ' data-caught="1"' : ''}`); }
+  if (!b.done && b.p !== b.exit) tiles = tiles.replace(`data-pz-i="${b.p}"`, `data-pz-i="${b.p}"${ghostOf(b, b.p)}`);
   for (const k of b.walls) {
     const [a, c] = k.split('-').map(Number), ax = PAD + (a % H.cols) * S, ay = PAD + Math.floor(a / H.cols) * S;
     const [x1, y1, x2, y2] = c === a + 1 ? [ax + S, ay - 2, ax + S, ay + S + 2] : [ax - 2, ay + S, ax + S + 2, ay + S];
@@ -104,38 +103,52 @@ export function chaseSvg(b) {
   const [g1, g2, g3, g4] = [[ex - gap, ey - half, ex + gap, ey - half], [ex + half, ey - gap, ex + half, ey + gap], [ex - gap, ey + half, ex + gap, ey + half], [ex - half, ey - gap, ex - half, ey + gap]][b.exitSide];
   const door = `<polygon class="pz-doorway" points="${chip(ex, ey, half - 9, half - 9, 5)}"/><line class="pz-gap" x1="${g1}" y1="${g2}" x2="${g3}" y2="${g4}"/><line class="pz-door" x1="${g1}" y1="${g2}" x2="${g3}" y2="${g4}"/><text class="pz-doorword" x="${ex}" y="${ey + 4}" text-anchor="middle">DOOR</text>`;
   const you = `<g class="pz-you" id="pz-you" data-pos="${b.p}"><circle class="ring" cx="${cx(b.p)}" cy="${cy(b.p)}" r="29"/><polygon class="body" points="${chip(cx(b.p), cy(b.p), 22, 16, 5)}"/><text x="${cx(b.p)}" y="${cy(b.p) + 4.5}" text-anchor="middle">YOU</text></g>`;
-  const px = 2.6, trk = `<g class="pz-trk${b.done === 'lost' ? ' caught' : ''}" id="pz-trk" data-pos="${b.h}"><g transform="translate(${n1(cx(b.h) - 5.5 * px)} ${n1(cy(b.h) - 4.5 * px)})"><rect class="bg" x="-5" y="-5" width="${n1(11 * px + 10)}" height="${n1(9 * px + 10)}" rx="2"/><path class="px" d="${skullPath(px)}"/></g></g>`;
-  const last = b.last?.path && b.last.path.length > 1 && !b.done ? `<polyline class="pz-trail" points="${b.last.path.map((i) => `${cx(i)},${cy(i)}`).join(' ')}"/>` : '';
+  const px = 2.6, skull = (h, id) => `<g class="pz-trk${b.done === 'lost' && b.p === h ? ' caught' : ''}" id="${id}" data-pos="${h}"><g transform="translate(${n1(cx(h) - 5.5 * px)} ${n1(cy(h) - 4.5 * px)})"><rect class="bg" x="-5" y="-5" width="${n1(11 * px + 10)}" height="${n1(9 * px + 10)}" rx="2"/><path class="px" d="${skullPath(px)}"/></g></g>`;
+  const trk = skull(b.h, 'pz-trk') + (b.h2 != null ? skull(b.h2, 'pz-trk2') : '');
+  const trail = (path) => (path && path.length > 1 && !b.done ? `<polyline class="pz-trail" points="${path.map((i) => `${cx(i)},${cy(i)}`).join(' ')}"/>` : '');
+  const last = trail(b.last?.path) + trail(b.last?.path2);
   return `<svg class="pz-svg pz-h" viewBox="0 0 ${W} ${Ht}" data-pz-board role="group" aria-label="The den"><rect class="pz-frame" x="${PAD}" y="${PAD}" width="${S * H.cols}" height="${S * H.rows}"/><g class="pz-nodes">${tiles}</g>${door}<g class="pz-walls">${walls}</g>${last}<g class="pz-ghost"></g>${b.done === 'won' ? '' : trk}${you}<g class="pz-fx"></g></svg>`;
+}
+// Where the Tracker (and a second one) would end up if you stepped into i: the hover's ghost.
+function ghostOf(b, i) {
+  const t = trackerTurn(b.walls, b.h, i), t2 = b.h2 != null ? trackerTurn(b.walls, b.h2, i) : null;
+  return ` data-ghost="${t.path.join(',')}"${t2 ? ` data-ghost2="${t2.path.join(',')}"` : ''}${t.caught || t2?.caught ? ' data-caught="1"' : ''}`;
 }
 export const chaseXY = (i) => { const { S, PAD } = chaseGeo; return [PAD + (i % H.cols) * S + S / 2, PAD + Math.floor(i / H.cols) * S + S / 2]; };
 
 // The cascade: the rack's slots, each node's charge as its number and three pips (3, about to go, red).
-export const cascadeGeo = { S: 80, PAD: 40 };
+// Two racks (a deeper cascade): side by side, a gap between, each in its frame; a slot on a rack's edge carries a notch
+// (it charges its twin on the other rack).
+export const cascadeGeo = { S: 80, PAD: 40, GAP: 56 };
+const cColsOf = (board) => (cTwin(board) ? 2 * C.twin.cols : C.cols);
+export const cascadeXY = (i, twin = false) => { const { S, PAD, GAP } = cascadeGeo, cols = twin ? 2 * C.twin.cols : C.cols, c = i % cols; return [PAD + c * S + (twin && c >= C.twin.cols ? GAP : 0), PAD + Math.floor(i / cols) * S]; };
 export function cascadeNodes(board, live = true, done = false) {
-  const { S, PAD } = cascadeGeo, xy = (i) => [PAD + (i % C.cols) * S, PAD + Math.floor(i / C.cols) * S];
+  const { S } = cascadeGeo, twin = cTwin(board), cols = cColsOf(board), xy = (i) => cascadeXY(i, twin);
   let traces = '', nodes = '';
   for (let i = 0; i < board.length; i++) {
     if (!board[i]) continue;
-    for (const j of [i + 1, i + C.cols]) {
-      if (j >= board.length || (j === i + 1 && i % C.cols === C.cols - 1) || !board[j]) continue;
+    for (const j of [i + 1, i + cols]) {
+      if (j >= board.length || (j === i + 1 && (i % cols === cols - 1 || (twin && rackOf(i) !== rackOf(j)))) || !board[j]) continue;
       const [x1, y1] = xy(i), [x2, y2] = xy(j);
       traces += `<line class="pz-bed" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/><line class="pz-trace" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
     }
   }
   for (let i = 0; i < board.length; i++) {
     const [x, y] = xy(i), v = board[i];
+    const edge = twin && twinEdge(i);
     if (!v) { nodes += `<g class="pz-n s-empty" data-pz-i="${i}"><rect class="pz-slot" x="${x - 9}" y="${y - 4}" width="18" height="8" rx="1.5"/></g>`; continue; }
-    nodes += `<g class="pz-n v${v}" data-pz-i="${i}"${act(`tap ${i}`, `Charge ${v}: discharge it`, live && !done)}><rect class="pz-hit" x="${x - S / 2}" y="${y - S / 2}" width="${S}" height="${S}"/><polygon class="pz-chip" points="${chip(x, y, 27, 27, 8)}"/><polygon class="pz-hair" points="${chip(x, y, 22, 22, 6)}"/>`
+    nodes += `<g class="pz-n v${v}${edge ? ' edge' : ''}" data-pz-i="${i}"${act(`tap ${i}`, `Charge ${v}: discharge it${edge ? '. It also charges its twin on the other rack' : ''}`, live && !done)}><rect class="pz-hit" x="${x - S / 2}" y="${y - S / 2}" width="${S}" height="${S}"/><polygon class="pz-chip" points="${chip(x, y, 27, 27, 8)}"/><polygon class="pz-hair" points="${chip(x, y, 22, 22, 6)}"/>`
       + `<text class="pz-num" x="${x}" y="${y + 5}" text-anchor="middle">${v}</text>`
-      + [0, 1, 2].map((k) => `<rect class="pz-pip${k < v ? ' on' : ''}" x="${x - 14 + k * 10}" y="${y + 13}" width="8" height="4" rx="1"/>`).join('') + '</g>';
+      + [0, 1, 2].map((k) => `<rect class="pz-pip${k < v ? ' on' : ''}" x="${x - 14 + k * 10}" y="${y + 13}" width="8" height="4" rx="1"/>`).join('') + (edge ? `<path class="pz-twin" d="M${x - 6} ${y - 21}h12"/>` : '') + '</g>';
   }
   return `<g class="pz-traces">${traces}</g><g class="pz-nodes">${nodes}</g>`;
 }
-export const cascadeXY = (i) => { const { S, PAD } = cascadeGeo; return [PAD + (i % C.cols) * S, PAD + Math.floor(i / C.cols) * S]; };
 export function cascadeSvg(b) {
-  const { S, PAD } = cascadeGeo, W = PAD * 2 + S * (C.cols - 1);
-  return `<svg class="pz-svg pz-c" viewBox="0 0 ${W} ${W}" data-pz-board role="group" aria-label="The rack"><g class="pz-rack">${cascadeNodes(b.b, true, !!b.done)}</g><g class="pz-fx"></g></svg>`;
+  const { S, PAD, GAP } = cascadeGeo, twin = cTwin(b.b);
+  if (!twin) { const W = PAD * 2 + S * (C.cols - 1); return `<svg class="pz-svg pz-c" viewBox="0 0 ${W} ${W}" data-pz-board role="group" aria-label="The rack"><g class="pz-rack">${cascadeNodes(b.b, true, !!b.done)}</g><g class="pz-fx"></g></svg>`; }
+  const T = C.twin, W = PAD * 2 + S * (2 * T.cols - 1) + GAP, Ht = PAD * 2 + S * (T.rows - 1), rw = S * (T.cols - 1) + 64, rh = S * (T.rows - 1) + 64;
+  const frame = (k) => { const [x, y] = cascadeXY(k * T.cols, true); return `<rect class="pz-rackframe" x="${x - 32}" y="${y - 32}" width="${rw}" height="${rh}" rx="4"/>`; };
+  return `<svg class="pz-svg pz-c twin" viewBox="0 0 ${W} ${Ht}" data-pz-board role="group" aria-label="Two racks"><g class="pz-frames">${frame(0)}${frame(1)}</g><g class="pz-rack">${cascadeNodes(b.b, true, !!b.done)}</g><g class="pz-fx"></g></svg>`;
 }
 
 // The sweep: a dark 7×7 room. A ping's reading in gold on its cell, the ring of cells at that distance faint; a dig
@@ -250,6 +263,9 @@ export function cryptogramBoard(b, ui = pzUi) {
   return `<div class="cg-board${live ? '' : ' done'}" data-pz-board><p class="cg-note">${words}<span class="cg-sig">— w</span></p><div class="cg-keys" role="group" aria-label="Letters">${keys}</div></div>`;
 }
 
+// The terminal: the log sweep's log (view.mjs sweepBlock), its suspects played as the board's moves.
+export const terminalBoard = (s, room, b) => `<div class="ls-board${b.done ? ' done' : ''}" data-pz-board>${sweepBlock(b, { solved: b.done ? b.answer : null, key: `pz:${room.id}:${s.rooms.puzzles?.[room.id]?.n ?? 0}`, act: (a) => `data-rooms="play" data-arg="name ${esc(a)}"`, wrong: b.wrong, label: b.done === 'won' ? 'Swept' : 'It was' })}</div>`;
+
 // ---------- the panel ----------
 const pips = (n, on, cls = '') => `<span class="pz-pips${cls ? ' ' + cls : ''}" aria-hidden="true">${Array.from({ length: n }, (_, k) => `<i class="${k < on ? 'on' : ''}"></i>`).join('')}</span>`;
 const stat = (label, value, cls = '', tip = '') => `<span class="pz-stat${cls ? ' ' + cls : ''}"${tip ? ` title="${esc(tip)}"` : ''}><span class="lbl">${esc(label)}</span><b>${value}</b></span>`;
@@ -272,6 +288,7 @@ function statsOf(s, b, ui) {
   }
   if (b.kind === 'routing') { const left = b.budget - b.turns; return `<span class="pz-stat" title="Turns: join the source to the sink within these."><span class="lbl">Turns</span>${pips(b.budget, left, left <= 2 && !b.done ? 'hot' : '')}<b>${left}</b></span>` + stat('Fewest', b.best, 'dim', 'The fewest turns this board can be joined in.'); }
   if (b.kind === 'deadlock') return stat('Done', `${b.fin.filter(Boolean).length}<small>/${b.n}</small>`);
+  if (b.kind === 'terminal') return `<span class="pz-stat" title="Strikes: a wrong answer costs one. Two and the log rotates."><span class="lbl">Strikes</span>${pips(b.strikes, b.misses, 'hot')}<b>${b.misses}<small>/${b.strikes}</small></b></span>`;
   if (b.kind === 'cryptogram') {
     const key = b.kseed === cipherOf(s).seed ? cipherOf(s).solved.length : b.carried.length + b.solved.length, sol = b.solved.length, car = key - sol;
     const seg = Array.from({ length: 26 }, (_, k) => `<i class="${k < car ? 'car' : k < key ? 'sol' : ''}"></i>`).join('');
@@ -283,7 +300,7 @@ function statsOf(s, b, ui) {
 const clock = (at) => `<span class="fp-clock" data-at="${at}"></span>`;
 function resultOf(s, room, b) {
   if (!b.done) return b.kind === 'chase' ? '<p class="pz-keys"><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> move · <kbd>space</kbd> wait</p>' : '';
-  const won = b.done === 'won', head = { quarantine: won ? 'Contained' : 'Overrun', cascade: won ? 'Rack down' : 'Out of taps', sweep: won ? 'Cache found' : 'Out of budget', chase: won ? 'Through the door' : 'Caught', routing: won ? 'Packet through' : 'Out of turns', deadlock: won ? 'All finished' : 'Deadlocked', cryptogram: won ? 'Decoded' : 'Garbled' }[b.kind];
+  const won = b.done === 'won', head = { quarantine: won ? 'Contained' : 'Overrun', cascade: won ? 'Rack down' : 'Out of taps', sweep: won ? 'Cache found' : 'Out of budget', chase: won ? 'Through the door' : 'Caught', routing: won ? 'Packet through' : 'Out of turns', deadlock: won ? 'All finished' : 'Deadlocked', cryptogram: won ? 'Decoded' : 'Garbled', terminal: won ? 'Swept' : 'Log rotated' }[b.kind];
   const at = refillAt(s, room);
   return `<div class="pz-result ${won ? 'win' : 'lose'}" role="status"><b>${esc(head)}</b>${at ? `<span>Fresh board ↻ ${clock(at)}</span>` : ''}<button type="button" class="btn small" data-pz-close>Close</button></div>`;
 }
@@ -292,7 +309,7 @@ export function puzzlePanel(s, ui = pzUi) {
   const room = panelRoom(s, ui);
   if (!room) return '';
   const b = boardOf(s, room), M = PUZZLES[room.kind], v = VARIANT[b.variant]?.[room.kind];
-  const board = { quarantine: () => quarantineSvg(b, false) + quarantineSvg(b, true), chase: () => chaseSvg(b), cascade: () => cascadeSvg(b), sweep: () => sweepSvg(b, ui.mode), routing: () => routeSvg(b), deadlock: () => deadlockSvg(b, false) + deadlockSvg(b, true), cryptogram: () => cryptogramBoard(b, ui) }[b.kind]();
+  const board = { quarantine: () => quarantineSvg(b, false) + quarantineSvg(b, true), chase: () => chaseSvg(b), cascade: () => cascadeSvg(b), sweep: () => sweepSvg(b, ui.mode), routing: () => routeSvg(b), deadlock: () => deadlockSvg(b, false) + deadlockSvg(b, true), cryptogram: () => cryptogramBoard(b, ui), terminal: () => terminalBoard(s, room, b) }[b.kind]();
   const [rows, cols] = dimsOf(b), boot = `> ${BOOT[b.kind](b)}${GRID.includes(b.kind) ? ` · ${cols}×${rows}` : ''}`;
   return `<div class="pz-panel k-${b.kind}${b.done ? ` done ${b.done}` : ''}" id="pz-panel" data-pz-key="${esc(keyOf(s, room))}:${s.rooms.puzzles?.[room.id]?.n ?? 0}" data-pz-kind="${b.kind}" role="dialog" aria-label="${esc(`${M.name}: ${M.title}`)}">
     <section class="pz-card"><i class="sp-corner tl"></i><i class="sp-corner tr"></i><i class="sp-corner bl"></i><i class="sp-corner br"></i>
@@ -353,9 +370,11 @@ export function createPuzzleFx({ canMove = () => true, sound = () => {}, play = 
     g.innerHTML = '';
     const path = target.dataset.ghost?.split(',').map(Number);
     if (!path) return;
-    const pts = path.map((i) => chaseXY(i).join(',')).join(' '), [x, y] = chaseXY(path[path.length - 1]);
-    el('polyline', { points: pts, class: 'pz-ghostpath' }, g);
-    el('polygon', { points: chip(x, y, 19, 19, 5), class: `pz-ghostbox${target.dataset.caught ? ' caught' : ''}` }, g);
+    for (const p of [path, target.dataset.ghost2?.split(',').map(Number)].filter(Boolean)) {
+      const pts = p.map((i) => chaseXY(i).join(',')).join(' '), [x, y] = chaseXY(p[p.length - 1]);
+      el('polyline', { points: pts, class: 'pz-ghostpath' }, g);
+      el('polygon', { points: chip(x, y, 19, 19, 5), class: `pz-ghostbox${target.dataset.caught ? ' caught' : ''}` }, g);
+    }
   }
   document.addEventListener('pointerover', (e) => { const t = e.target.closest?.('.pz-h [data-pz-i]'); if (t) ghost(t); });
   document.addEventListener('pointerout', (e) => { const t = e.target.closest?.('.pz-h [data-pz-i]'); if (t && !t.contains(e.relatedTarget)) { const g = t.closest('.pz-h')?.querySelector('.pz-ghost'); if (g) g.innerHTML = ''; } });
@@ -389,7 +408,7 @@ export function createPuzzleFx({ canMove = () => true, sound = () => {}, play = 
       else if (kind === 'chase' && did.path) did.path.slice(1).forEach((_, k) => sound('pzstep', 200 + k * 210));
       else if (kind === 'routing') sound('pzstep', 0);
       else if (kind === 'deadlock') sound('pzzap', 0);
-      else if (kind === 'cryptogram') sound(did.ok ? 'pzping' : 'pzdig', 0);
+      else if (kind === 'cryptogram' || kind === 'terminal') sound(did.ok ? 'pzping' : 'pzdig', 0);
       if (!canMove()) return 0;
       let total = 0;
       for (const svg of boards()) {
@@ -415,7 +434,7 @@ export function createPuzzleFx({ canMove = () => true, sound = () => {}, play = 
             setTimeout(() => {
               if (!rack.isConnected) return;
               rack.innerHTML = cascadeNodes(f.board, false);
-              for (const i of f.wave) { const [x, y] = cascadeXY(i); burst(fx, x, y, k ? 'hot' : 'amber', { r: 30, sparks: 7 }); }
+              for (const i of f.wave) { const [x, y] = cascadeXY(i, cTwin(f.board)); burst(fx, x, y, k ? 'hot' : 'amber', { r: 30, sparks: 7 }); }
             }, k * 190);
           });
           setTimeout(() => { if (rack.isConnected) rack.innerHTML = final; }, did.frames.length * 190 + 60);
@@ -439,12 +458,13 @@ export function createPuzzleFx({ canMove = () => true, sound = () => {}, play = 
             total = 620;
           }
         } else if (kind === 'chase' && (did.path || did.from != null)) {
-          const you = svg.querySelector('#pz-you'), trk = svg.querySelector('#pz-trk');
+          const you = svg.querySelector('#pz-you');
           if (you && did.from != null) { const [fx0, fy0] = chaseXY(did.from), [x, y] = chaseXY(Number(you.dataset.pos)); anim(you, [{ transform: `translate(${fx0 - x}px,${fy0 - y}px)` }, { transform: 'translate(0,0)' }], { duration: 170, easing: 'ease-in-out' }); }
-          if (trk && did.path?.length > 1) {
+          for (const [trk, path] of [[svg.querySelector('#pz-trk'), did.path], [svg.querySelector('#pz-trk2'), did.path2]]) {
+            if (!trk || !(path?.length > 1)) continue;
             const end = chaseXY(Number(trk.dataset.pos)), off = (i) => { const [x, y] = chaseXY(i); return `translate(${x - end[0]}px,${y - end[1]}px)`; };
-            anim(trk, [{ transform: off(did.path[0]) }, { transform: off(did.path[0]), offset: 0.3 }, { transform: off(did.path[1]), offset: 0.62 }, { transform: off(did.path[did.path.length - 1]) }], { duration: 620, easing: 'linear' });
-            if (did.caught) { const [x, y] = end; burst(svg.querySelector('.pz-fx'), x, y, 'hot', { r: 34, sparks: 8, delay: 600 }); }
+            anim(trk, [{ transform: off(path[0]) }, { transform: off(path[0]), offset: 0.3 }, { transform: off(path[1]), offset: 0.62 }, { transform: off(path[path.length - 1]) }], { duration: 620, easing: 'linear' });
+            if (did.caught && end[0] === chaseXY(Number(you?.dataset.pos))[0] && end[1] === chaseXY(Number(you?.dataset.pos))[1]) { const [x, y] = end; burst(svg.querySelector('.pz-fx'), x, y, 'hot', { r: 34, sparks: 8, delay: 600 }); }
           }
           total = 680;
         } else if (kind === 'routing') {

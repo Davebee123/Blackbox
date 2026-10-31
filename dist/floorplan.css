@@ -146,6 +146,8 @@
 .fp-room.prog.off .fp-icon, .fp-room.prog.off .fp-name { opacity: 0.45; }
 .fp-room.k-socket.open:not(.prog) .fp-hair { stroke-dasharray: 3 3; }
 .fp-tunnel { fill: none; stroke: var(--amber); stroke-width: 2; stroke-dasharray: 2 5; stroke-linecap: round; opacity: 0.85; }
+.fp-oneway path { fill: none; stroke: var(--amber); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.fp-oneway { pointer-events: visibleStroke; }
 /* a room's grid address (C2): a dim corner label on every chip, an unknown one too; amber with a contract's mark when a
    job points at the room. Never teal (teal is you). */
 .fp-addr rect { fill: #0a0703; }
@@ -650,3 +652,11 @@
 .fp-tag-inline.fp-obj { gap: 3px; } .fp-tag-inline.fp-obj .fp-ic { width: 11px; height: 11px; }
 .fp-obj-pay { display: flex; gap: 6px; margin-top: 5px; }
 .fp-obj-pay .rw { padding: 1px 6px; } .fp-obj-pay .rw b { font: 600 11px var(--mono); }
+
+/* Two racks (a deeper cascade): each in its frame; a slot on its rack's edge carries a notch (it charges its twin). */
+.pz-rackframe { fill: none; stroke: var(--line-strong); stroke-dasharray: 4 4; }
+.pz-twin { stroke: var(--amber-soft); stroke-width: 2.4; stroke-linecap: round; pointer-events: none; }
+.pz-c .v3 .pz-twin { stroke: var(--hot); }
+/* The terminal: the log sweep's log in the well. */
+.ls-board .sweep { margin: 0; border: 0; background: none; }
+.ls-board.done .sw-line { pointer-events: none; }
