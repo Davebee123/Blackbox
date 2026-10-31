@@ -4236,11 +4236,12 @@ function cycleStart(s) {
 
   // Sleeper: dormant until a hit or its timer wakes it. While it sleeps its attacks wait.
   if (e.virus.dormant) {
-    if (e.virus.woke || e.cycle >= STRAINS.sleeper.dormant) {
+    if (e.virus.woke || e.cycle >= (e.virus.wakeAt ?? STRAINS.sleeper.dormant)) {
       e.virus.dormant = false;
       for (const p of attackers(s)) {
         if (p.mech === 'opportunist' && !p.woke) continue; // the Lurking Sleeper's: it wakes on a debuff, not with the virus
         if (p.attack.alarm) p.attack.due = e.cycle;
+        else if (e.virus.cold) p.attack.due = e.cycle + (p.attack.wake || 1); // Cold storage's (floorplan.mjs coldSleep): at its own pace
         else { p.attack.interval = Math.max(2, p.attack.interval - 1); p.attack.due = e.cycle + Math.min(p.attack.interval, p.attack.wake || p.attack.interval); }
       }
       emit(s, 'status', `${e.virus.name} WAKES.`, {});

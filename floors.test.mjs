@@ -353,3 +353,21 @@ test('floor holders: floors 2–8 each held by an author from the roster, never 
   s.floors.reached = 2;
   assert.match(mapMarkup(s, 'server', 'mine', { floor: 2 }), /class="fl-btn open on held" style="--hc:#[0-9a-f]{6}"[^>]*title="[^"]*Held by [A-Z ]+: it writes most of the servers here/, 'the floor panel: a stripe in its colour, its name in the tooltip');
 });
+
+test('each floor\'s signature kind: Routers on floor 2, Honeypots on 3, Cold storage on 4, about a third of their servers, nowhere else; a Cold storage vault holds two kits', async () => {
+  const { layoutOf, fileInfo } = await import('./dist/run.mjs');
+  const seen = {};
+  for (const seed of [977, 31, 4242, 90001]) for (let n = 1; n <= 8; n++) for (const x of servers(floorGraph(seed, n))) (seen[n] ||= []).push(x.template);
+  for (const [n, sig] of [[2, 'router'], [3, 'honeypot'], [4, 'cold']]) {
+    const share = seen[n].filter((t) => t === sig).length / seen[n].length;
+    assert.ok(share > 0.15 && share < 0.5, `floor ${n}: ${sig} ${share.toFixed(2)}`);
+  }
+  for (let n = 1; n <= 8; n++) for (const [f, sig] of [[2, 'router'], [3, 'honeypot'], [4, 'cold']]) if (n !== f) assert.ok(!seen[n].includes(sig), `${sig} only on floor ${f}`);
+  const s = mk(20);
+  command(s, 'developer location worm');
+  const loc = Object.assign(s.locations.at(-1), { template: 'cold', depth: 4 }), lay = layoutOf(loc), vault = Object.keys(lay).find((k) => lay[k].locked && !lay[k].drop);
+  assert.ok(lay[vault].files.includes('kit.bin') && lay[vault].files.includes('kit2.bin'), 'two kits');
+  const a = fileInfo(loc, vault, 'kit.bin').item, b = fileInfo(loc, vault, 'kit2.bin').item;
+  assert.ok(a && b && JSON.stringify(a) !== JSON.stringify(b), 'two different protocols');
+  assert.equal(FP.KIND_OF.cold, 'Cold');
+});
