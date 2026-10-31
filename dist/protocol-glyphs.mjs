@@ -207,7 +207,7 @@ export const PIECE_SHAPES = {
 export const FILL = {
   damage: '#', crit: '*', critDamage: 'x', accuracy: '!', echo: '"', payload: '+',
   signal: '@', regen: 'o', reduction: '=', evasion: "'", sanitize: '-', restore: '+', leech: '~',
-  clock: ':', stealth: '.', sync: '^', scavenge: '$',
+  clock: ':', stealth: '.', sync: '^', scavenge: '$', ram: '8',
 };
 // A character and its mirror image, for the symmetry check; any other character is its own.
 export const MIRROR = { '/': '\\', '\\': '/', '(': ')', ')': '(', '<': '>', '>': '<', '[': ']', ']': '[', '{': '}', '}': '{' };
