@@ -34,6 +34,7 @@ test('effect blocks: damage when synced, a chit and a crit at the start, half th
   const u = vet();
   wear(u, 'watchdog-whitelist');
   fight(u);
+  u.server.integrity = u.server.max = 99999; // a level-30 virus against a fresh save's level-1 server: room for both hits
   for (const x of u.encounter.virus.parts) if (x.attack) x.attack.due = 99;
   const pulse = part(u, 'pulse'); pulse.attack.due = u.encounter.cycle; pulse.attack.interval = 1;
   let hp = u.server.integrity; command(u, 'hold'); resolveCycle(u); const first = hp - u.server.integrity;

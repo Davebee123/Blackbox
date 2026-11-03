@@ -10,7 +10,7 @@ CONFIG.partToughness = 1; // mechanics tests use the parts' base numbers
 CONFIG.enemyRamp = 0;
 CONFIG.salvageChance = 1;
 CONFIG.misses = false; // and no misses
-CONFIG.powerPerLevel = 0; // flat numbers at every level (level tests turn it back on)
+CONFIG.powerPerLevel = 0; CONFIG.levelLine = 0; // flat numbers at every level (level tests turn it back on)
 CONFIG.gap = { dealt: 0, taken: 0, floor: 1, below: 0 }; // and no level-gap scaling (combat.test.mjs tests it)
 (await import('./dist/data.mjs')).LOADOUT.specRanks = 0; // the kit talent's two free ranks (progression.mjs): off, for exact numbers
 
@@ -389,7 +389,7 @@ test('daemon slots: slot and unslot between fights; the slot count is the limit'
 
 test('enemies have a level: home intrusions come in at your level, and grow with you', async () => {
   const { SERVER, mobPower, power } = await import('./dist/data.mjs');
-  CONFIG.powerPerLevel = 0.04;
+  CONFIG.powerPerLevel = 0.06; CONFIG.levelLine = 0.04;
   const s = fresh();
   selectEncounter(s, 'cryptjack', 1);
   const v = s.encounter.virus;
@@ -410,8 +410,10 @@ test('enemies have a level: home intrusions come in at your level, and grow with
   assert.equal(SERVER.keepUp(10, 2), 10, 'your own floor: your level');
   assert.deepEqual([1, 6, 7, 15, 19, 26, 38, 50].map(SERVER.floorFor), [1, 1, 2, 3, 4, 5, 7, 8], 'your floor: the deepest band you have reached');
   assert.ok(mobPower(1) === power(1) && mobPower(6) === power(6), 'viruses match you level for level');
-  assert.ok(Math.abs(power(50) - 2.96) < 1e-9, '+4% per level');
-  CONFIG.powerPerLevel = 0;
+  assert.ok(Math.abs(power(50) - 1.06 ** 49) < 1e-9 && Math.abs(power(11) / power(10) - 1.06) < 1e-9, '+6% a level, compounding');
+  const { line, lift } = await import('./dist/data.mjs');
+  assert.ok(Math.abs(line(50) - 2.96) < 1e-9 && Math.abs(lift(30) * line(30) - power(30)) < 1e-9, 'the level line: 4% a level; the lift carries it to power');
+  CONFIG.powerPerLevel = 0; CONFIG.levelLine = 0;
 });
 
 test('level-gap misses, Classic-style: 5% at your level, ±1% per level of difference', async () => {

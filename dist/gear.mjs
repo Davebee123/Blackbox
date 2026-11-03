@@ -5,7 +5,7 @@
 // like Corepunk. Loot and salvage build you.
 // Your server runs no services any more (R2): the home fight is the firewall's job (filters, tiers) and the daemons',
 // and a server's programs (sockets.mjs) are the building. Code builds them, and the wall.
-import { power } from './data.mjs';
+import { power, line, lift, lifted } from './data.mjs';
 
 // Slots by class level: 4 to start, 5 at 15, 6 at 30. Each slot takes one kind of item (SLOTS).
 export const PROTOCOL_SLOTS = [{ level: 1, slots: 4 }, { level: 15, slots: 5 }, { level: 30, slots: 6 }];
@@ -23,7 +23,8 @@ export const SLOTS = {
 export const OLD_SLOT = { offense: 'exploit', survival: 'proxy', utility: 'script' };
 
 // Stats. Flat stats (most of them) are base × power(L) at item level L, so a better or
-// higher-level protocol is a visibly bigger number. Chances (Crit, Evasion…) stay percentages:
+// higher-level protocol is a visibly bigger number (an item's numbers are worked out on the level line, then
+// lifted: liftItem). Chances (Crit, Evasion…) stay percentages:
 // base × (1 + L/25). Then rarity and a ±15% roll.
 // side: 'hacker' (rig only), 'server', or 'both'. A defense stat on both sides counts where
 // that side is defending: a rig's on runs (your Signal), the server's at home (its Integrity).
@@ -127,9 +128,10 @@ export const baseFor = (slot, level) => Object.entries(BASES).filter(([, b]) => 
 // with power(L) and the enemy ramp (`ramp`, CONFIG.enemyRamp's number, kept here so a test that zeroes the ramp
 // doesn't move the gear), to the power `n`: the rest of you grows only 4% a level, so plain gear has to outgrow the
 // hits to keep a same-level fight costing the same share of your Signal. Level `top` (the level cap) is the anchor:
-// there each slot's last base rolls what it rolled when bases came in tiers.
+// there each slot's last base rolls what it rolled when bases came in tiers. All of it on the level line (data.mjs
+// line): the compounding rest, the lift, comes on at the end (liftItem), so gear keeps its share at every level.
 export const ITEM_CURVE = { n: 1.4, ramp: 0.03, top: 50 };
-const hits = (level) => power(level) * (1 + ITEM_CURVE.ramp * (Math.max(1, level) - 1));
+const hits = (level) => line(level) * (1 + ITEM_CURVE.ramp * (Math.max(1, level) - 1));
 export const itemPower = (level) => (hits(level) / hits(ITEM_CURVE.top)) ** ITEM_CURVE.n;
 // A base's size against its slot's last base: the geometric mean of its primaries over the last base's, so a
 // new base starts at the power the one before it had (its stats can shift between themselves, not grow).
@@ -342,9 +344,32 @@ export function statValue(stat, level, mult, rand) {
   return Math.max(1, Math.round(raw));
 }
 const round = (stat, v) => Math.round(v); // every stat is a whole number
+// The lift (data.mjs lift, docs/scaling.md): a flat number that meets power-scaled ones (damage, Signal, heals, Block)
+// is worked out on the level line, then × lift(its item level). It stays a flat number; it never becomes a share.
+// RAM and Lead don't meet power, so they stay as they are.
+export const grows = (k) => !!STATS[k]?.flat && k !== 'ram' && k !== 'lead';
+// Effect kinds whose value is a flat number (damage, healing, shield, burn growth), and those that add a stat.
+const FLAT_FX = new Set(['damage+', 'heal', 'shield', 'break-hit', 'read-hit', 'burn-grow']), STAT_FX = new Set(['stat+', 'stack', 'stat', 'buff']);
+export const liftsFx = (fx) => !!fx && Number.isFinite(Number(fx.value)) && (FLAT_FX.has(fx.do) || (STAT_FX.has(fx.do) && grows(fx.stat)));
+// An effect block at an item level: its flat value (and cap) lifted, and its written text with it. Others as they are.
+export function liftFx(fx, level) {
+  if (!liftsFx(fx)) return fx;
+  const v = lifted(Number(fx.value), level), out = { ...fx, value: v };
+  if (Number.isFinite(fx.cap)) out.cap = lifted(fx.cap, level);
+  if (typeof fx.text === 'string') out.text = fx.text.replace(new RegExp(`(^|[^\\d.])${fx.value}(?![\\d.])`), `$1${v}`);
+  return out;
+}
+// An item's flat stats and flat rule value, lifted at its level (rollItem, uniqueItem, curveRestore).
+export function liftItem(it) {
+  const L = Math.max(1, it.level || 1);
+  for (const k of Object.keys(it.stats || {})) if (grows(k) && it.stats[k]) it.stats[k] = it.stats[k] < 0 ? -lifted(-it.stats[k], L) : lifted(it.stats[k], L);
+  if (it.ruleValue && RULES[it.rule]?.fx && liftsFx({ ...RULES[it.rule].fx, value: it.ruleValue })) it.ruleValue = lifted(it.ruleValue, L);
+  return it;
+}
 // What a base's listed primaries are multiplied by at an item level (before ITEM_SCALE and rarity): its mix at the
 // size of the slot's last base, the size that base had at the level cap (grown 4% a level from its own), along ITEM_CURVE.
-export const baseScale = (baseId, level) => { const b = BASES[baseId], top = lastBase(b.slot); return (power(ITEM_CURVE.top) / power(top.level)) / sizeOf(b) * (itemPower(level) / itemPower(ITEM_CURVE.top)); };
+// On the level line: liftItem lifts it.
+export const baseScale = (baseId, level) => { const b = BASES[baseId], top = lastBase(b.slot); return (line(ITEM_CURVE.top) / line(top.level)) / sizeOf(b) * (itemPower(level) / itemPower(ITEM_CURVE.top)); };
 // A base's primaries at an item level, times a multiplier (rarity), each rolled ±10%.
 export function primaries(baseId, level, mult, rand) {
   const b = BASES[baseId], k = baseScale(baseId, level) * ITEM_SCALE.primary, out = {};
@@ -398,7 +423,7 @@ export function rollItem(rand, opts = {}) {
   const name = zeroDay ? ZERO_DAYS[zeroDay].name
     : rarity === 'custom' ? `${pick(rand, NAME_A)} ${pick(rand, NAME_B[slot] || NAME_B.script)}`
     : [pre?.name, BASES[base].name, suf?.name || (rule && RULES[rule].of)].filter(Boolean).join(' ');
-  const it = { kind: 'protocol', side: 'hacker', group: slot, base, rarity, level, stats, affixes, zeroDay, unique: null, name, ...(rule ? { rule, ...(ruleVal ? { ruleValue: ruleVal } : {}) } : {}) };
+  const it = liftItem({ kind: 'protocol', side: 'hacker', group: slot, base, rarity, level, stats, affixes, zeroDay, unique: null, name, ...(rule ? { rule, ...(ruleVal ? { ruleValue: ruleVal } : {}) } : {}) });
   return opts.faction ? withImplicit(it, opts.faction) : it; // faction: its implicit (IMPLICITS)
 }
 // Which affix carries a stat (for compiling a chosen stat).
@@ -414,7 +439,7 @@ export const chaseStat = (chase, i, rarity) => (RARITIES[rarity]?.affixes[1] && 
 // downside in full.
 export function uniqueItem(u, level, rand) {
   const L = Math.max(u.level, level || u.level);
-  const k = power(L) / power(u.level);
+  const k = line(L) / line(u.level); // on the level line: liftItem lifts it
   const stats = {};
   const q = ITEM_SCALE.unique;
   const slot = BASES[u.base]?.slot || 'script';
@@ -425,7 +450,7 @@ export function uniqueItem(u, level, rand) {
   for (const [stat, v] of Object.entries(u.secondary || {})) addStats(stats, { [stat]: Math.max(1, round(stat, (Array.isArray(v) ? v[0] + (v[1] - v[0]) * rand() : v) * q)) });
   addStats(stats, u.downside);
   const own = u.faction && IMPLICITS[u.faction] ? { implicit: u.faction, implicitValue: implicitValue(u.faction, L, IMPLICIT.piece) } : {}; // a faction piece: its faction's implicit, stronger
-  return { kind: 'protocol', side: 'hacker', group: slot, base: best, rarity: 'zeroday', level: L, stats, affixes: [], zeroDay: null, unique: u.id, name: u.name, ...own };
+  return liftItem({ kind: 'protocol', side: 'hacker', group: slot, base: best, rarity: 'zeroday', level: L, stats, affixes: [], zeroDay: null, unique: u.id, name: u.name, ...own });
 }
 
 // Save v44: whole-number stats. Regen counts over 5 cycles now (STATS.regen.every), so every Regen on a protocol or a
@@ -450,6 +475,26 @@ export function statsRestore(s, was) {
     for (const v of Array.isArray(x) ? x : Object.values(x)) walk(v);
   };
   walk(s);
+}
+
+// The compounding curve (docs/scaling.md): an older save's items carry stats rolled on the level line. Each protocol's
+// flat stats and flat rule value, and each filter's growing stats, are lifted at its item level once. Keyed on the
+// field: s.curve marks a save whose items are on the curve (fresh saves start with it).
+export function curveRestore(s) {
+  if (s.curve) return;
+  const seen = new Set();
+  const walk = (x) => {
+    if (!x || typeof x !== 'object' || seen.has(x)) return;
+    seen.add(x);
+    if (x.kind === 'protocol' && x.stats && typeof x.stats === 'object') return void liftItem(x);
+    if (x.kind === 'filter' && x.stats && typeof x.stats === 'object') {
+      for (const k of ['reduction', 'regen', 'countermeasures']) if (x.stats[k] > 0) x.stats[k] = lifted(x.stats[k], Math.max(1, x.level || 1));
+      return;
+    }
+    for (const v of Array.isArray(x) ? x : Object.values(x)) walk(v);
+  };
+  walk(s);
+  s.curve = 1;
 }
 
 // "+6% Damage · +2% Crit"

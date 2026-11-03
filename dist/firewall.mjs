@@ -13,7 +13,7 @@
 // Filters and the +N chip (architecture, the consortium's Grid, a Firewall Node, Root 5) add on top.
 // Its effective level is what it blocks outright: an invader at or under it bounces.
 import { emit, warn, hooks, syncServer } from './combat.mjs';
-import { CONFIG, power, codeUnit } from './data.mjs';
+import { CONFIG, line, codeUnit } from './data.mjs';
 import { filterStat } from './filters.mjs';
 import { FACTIONS } from './factions.mjs';
 import { rootWall } from './root.mjs';
@@ -120,7 +120,7 @@ export function tickFirewall(s, at = clock()) {
 }
 // The wall's rating at a holding, against a threat's strength (invasion.mjs's numbers): it blocks
 // threats at or under its effective level outright.
-export const ratingAt = (s, loc, family = null, at = clock()) => { const L = effLevel(s, at, family, loc); return L < 1 ? 100 * CONFIG.invasion.wall : 100 * power(L) * CONFIG.invasion.block; };
+export const ratingAt = (s, loc, family = null, at = clock()) => { const L = effLevel(s, at, family, loc); return L < 1 ? 100 * CONFIG.invasion.wall : 100 * line(L) * CONFIG.invasion.block; };
 
 // firewall upgrade|defrag [server]: your home firewall, or an outpost's.
 export function firewallCommand(s, text, at = clock()) {

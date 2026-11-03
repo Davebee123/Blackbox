@@ -47,6 +47,36 @@ Why:
 - **Fights are short and hits are big**: about 10 cycles at your level, a single hit up to a quarter of your bar, so
   reading the big hits decides the fight and damage barely does.
 
+### After step 1 (November 3): the curve
+
+Power compounds 6% a level (`CONFIG.powerPerLevel`); flat numbers are lifted (`lift` = power ÷ the 4% line), so a fight
+at your level plays as before. Events, lairs and SPRAWL-00's rooms take their place's level. Same harness; cycles ·
+Signal lost (8% beside it, from `?bench=<name>&curve=8`):
+
+| Level | Ordinary | Elite |
+|---|---|---|
+| 10 | 9 · 27% (8%: 9 · 29%) | 13 · 47% (13 · 50%) |
+| 18 | 11 · 20% (11 · 20%) | 15 · 16% (15 · 17%) |
+| 30 | 9 · 29% (9 · 28%) | 12 · 22% (12 · 19%) |
+| 45 | 8 · 20% (8 · 20%) | 9 · 16% (9 · 16%) |
+
+| You | Mob at your level | 3 below | 6 below | 10 below |
+|---|---|---|---|---|
+| 10 | 9 · 27% | 8 · 22% (8%: 21%) | 6 · 4% (3%) | — |
+| 20 | 10 · 24% | 10 · 8% (8%) | 8 · 5% (4%) | 6 · 5% (4%) |
+| 30 | 9 · 29% | 9 · 17% (15%) | 8 · 9% (7%) | 7 · 3% (2%) |
+| 45 | 8 · 20% | 9 · 20% (16%) | 9 · 9% (7%) | 7 · 5% (4%) |
+
+Gear (you and the mob at 20, Signal lost): gear level 10: 49 / 47 / 33% (stock / tuned / custom); 20: 32 / 24 / 20%;
+25: 25 / 15 / 10%. Stuck in level-10 gear at 30: 67% lost, 75% won (8%: 72%, 63%). Old gear hurts a little more.
+
+**Outleveling is cheap now, not short.** Ten levels over, a fight costs 3–5% (was 6–8%), but still takes 6–7 cycles:
+fights are bound by ◆, not Integrity. A hit breaks one ◆ (two when heavy) however big it is, so a part needs its ◆
+broken and then one hit, at any level gap; even at 20% a level, twenty levels down takes 5–7 cycles. Measured (not
+built): if a virus below you wore ◆ × (1 − gap ÷ 10), none at ten under, ten levels over would take 3–4 cycles and 0%,
+six over 6–7 cycles. A lean rule for the designer to pick, or step 2's longer fights may change the balance of ◆ and
+Integrity enough on their own.
+
 ## 2. The WoW model, mapped
 
 | WoW | BLACKBOX |
@@ -88,7 +118,7 @@ shorten cycles). The smooth gear curve and the flat friction target give way.
 
 One session each, one after the other (they share the economy, pacing and combat numbers), each played before the next:
 
-1. The curve: `power` compounding (most growth already goes through it: `mobPower`, `powerOf`, `scaled`), and every
+1. **Built (November 3).** The curve: `power` compounding (most growth already goes through it: `mobPower`, `powerOf`, `scaled`), and every
    number that doesn't keeps its flat form with its value rescaled (never turned into a share): gear stats (anchored at level 50 by `itemPower`, so the low levels
    shrink), flat affixes and uniques (*+6 damage*), heals, shields, Signal, prices and anything shown as a fixed number.
    Events and lairs at their place's level.

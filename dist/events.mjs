@@ -33,7 +33,8 @@
 //
 // Pure: state in, events out.
 import { emit, warn, active, hackerLevel, selectEncounter, command, addItem, UNIQUES, giveUnique, setDrop, WORLD_SOURCES, hooks, gainCode } from './combat.mjs';
-import { FAMILIES, CONFIG } from './data.mjs';
+import { FAMILIES, CONFIG, floorFor } from './data.mjs';
+import { floorOfSlot } from './floors.mjs';
 import { LOOT, rollItem, seeded, codeOf, vaultCode, MATERIALS } from './gear.mjs';
 import { changeStanding } from './mail.mjs';
 import { openFarm } from './rogue.mjs';
@@ -114,7 +115,7 @@ export const CARDS = {
     name: 'Courier', weight: 3, ms: 15 * 60000, fight: true,
     where: (s) => places(s),
     // About one courier in DIRECTOR.named carries a unique you haven't found, by name, from level DIRECTOR.namedFrom: a lucky shot.
-    make: (s) => ({ family: fam(s), level: hackerLevel(s), name: `COURIER-${1000 + Math.floor(roll(s) * 9000)}`, ...(roll(s) * DIRECTOR.named < 1 && hackerLevel(s) >= DIRECTOR.namedFrom && missing(s).length ? { unique: pick(s, missing(s)) } : {}) }),
+    make: (s, loc) => ({ family: fam(s), level: placeLevel(s, loc), name: `COURIER-${1000 + Math.floor(roll(s) * 9000)}`, ...(roll(s) * DIRECTOR.named < 1 && hackerLevel(s) >= DIRECTOR.namedFrom && missing(s).length ? { unique: pick(s, missing(s)) } : {}) }),
     text: (ev, where) => `LANTERN's courier ${ev.name} is carrying ${ev.unique ? `${UNIQUES[ev.unique].name}, a unique you haven't found,` : 'a dead drop'} through ${where}. Intercept it before it leaves to take ${ev.unique ? 'it' : 'the drop'}.`,
     reward: (ev) => `${credits(ev.level)} credits and ${ev.unique ? UNIQUES[ev.unique].name : 'a protocol'}`,
     won: (s, ev) => {
@@ -130,7 +131,7 @@ export const CARDS = {
     name: 'Bounty', weight: 2, ms: 25 * 60000, fight: true,
     where: (s) => places(s),
     // From level 8 the bounty is REPO MAN, a boss (BOSSES.repoman) at your level instead of a named virus two up.
-    make: (s) => (hackerLevel(s) >= 8 ? { family: 'ransomware', level: hackerLevel(s), name: 'REPO MAN', boss: 'repoman' } : { family: fam(s), level: Math.min(CONFIG.maxMobLevel, hackerLevel(s) + 2), name: `${pick(s, NAMES)}-${1000 + Math.floor(roll(s) * 9000)}`, elite: true }),
+    make: (s, loc) => (hackerLevel(s) >= 8 ? { family: 'ransomware', level: placeLevel(s, loc), name: 'REPO MAN', boss: 'repoman' } : { family: fam(s), level: Math.min(CONFIG.maxMobLevel, placeLevel(s, loc) + 2), name: `${pick(s, NAMES)}-${1000 + Math.floor(roll(s) * 9000)}`, elite: true }),
     text: (ev, where) => (ev.boss ? `Halcyon posted a bounty on REPO MAN, a level ${ev.level} ransomware boss loose on ${where}. Every hit its armor soaks is a lien. Kill it before it moves on.` : `Halcyon posted a bounty on ${ev.name}, a level ${ev.level} ${FAMILIES[ev.family].name.toLowerCase()} virus loose on ${where}. Kill it before it moves on.`),
     reward: (ev) => `${bountyPay(ev.level)} credits and Halcyon standing`,
     won: (s, ev) => {
@@ -142,7 +143,7 @@ export const CARDS = {
   choir: {
     name: 'Hollow Choir', weight: 1, ms: 25 * 60000, fight: true, from: 10,
     where: (s) => (hackerLevel(s) >= 10 ? places(s) : []),
-    make: (s) => ({ family: 'ghostroot', level: hackerLevel(s), name: 'HOLLOW CHOIR', boss: 'choir' }),
+    make: (s, loc) => ({ family: 'ghostroot', level: placeLevel(s, loc), name: 'HOLLOW CHOIR', boss: 'choir' }),
     text: (ev, where) => `The HOLLOW CHOIR, a level ${ev.level} ghostroot boss, is singing through ${where}. It sings your commands back at you, and it sings in rounds. Silence it before it moves on.`,
     reward: (ev) => `${bountyPay(ev.level) * 2} credits and a protocol, Custom or better`,
     won: (s, ev) => {
@@ -181,7 +182,7 @@ export const CARDS = {
   feud: {
     name: 'Feud', weight: 1, ms: FEUD.ms, fight: true, again: true, from: FEUD.from,
     where: (s) => (hackerLevel(s) >= FEUD.from && feuds(s).length ? places(s) : []),
-    make: (s) => { const sides = pick(s, feuds(s)); return { sides, level: hackerLevel(s), name: sides.map((f) => FACTIONS[f].short).join(' vs '), bar: Math.round((0.5 + (roll(s) * 2 - 1) * FEUD.start) * 100) / 100, steps: 0, wins: 0, runners: Object.fromEntries(sides.map((f) => [f, runnerName(s, f)])) }; },
+    make: (s, loc) => { const sides = pick(s, feuds(s)); return { sides, level: placeLevel(s, loc), name: sides.map((f) => FACTIONS[f].short).join(' vs '), bar: Math.round((0.5 + (roll(s) * 2 - 1) * FEUD.start) * 100) / 100, steps: 0, wins: 0, runners: Object.fromEntries(sides.map((f) => [f, runnerName(s, f)])) }; },
     foe: (ev, f) => { const o = rival(ev, f); return { family: FACTION_FAMILY[o], name: ev.runners[o], elite: true, eliteHp: FEUD.hp }; },
     text: (ev, where) => `${FACTIONS[ev.sides[0]].short} and ${FACTIONS[ev.sides[1]].short} are fighting over ${where}. Pick a side and push its bar to 100%.`,
     reward: (ev, f = ev.side) => `Each win pays ${feudPay(ev.level)} credits, a protocol with ${FACTIONS[f].short}'s mark and ${FACTIONS[f].short} +${FEUD.rep}. Winning the feud adds a part of ${pieceOf(f)?.name || 'its piece'}, ${feudGood(f) === 'crate' ? 'a sealed item' : 'a bootleg filter'} and ${FACTIONS[f].short} +${FEUD.bonusRep}`,
@@ -220,19 +221,19 @@ export const CARDS = {
     make: (s, loc) => {
       const path = [loc.id];
       for (let i = 0; i < HUNT.hops; i++) path.push(pick(s, places(s).filter((l) => l.id !== path.at(-1))).id);
-      return { family: fam(s), base: hackerLevel(s), level: hackerLevel(s), hop: 0, path, next: path[1], name: `${pick(s, NAMES)}-${1000 + Math.floor(roll(s) * 9000)}`, elite: true, hunter: hunters(s) };
+      return { family: fam(s), base: placeLevel(s, loc), level: placeLevel(s, loc), hop: 0, path, next: path[1], name: `${pick(s, NAMES)}-${1000 + Math.floor(roll(s) * 9000)}`, elite: true, hunter: hunters(s) };
     },
     text: (ev, where) => `${FACTIONS[ev.hunter].short} is hunting ${ev.name}, a level ${ev.level} ${FAMILIES[ev.family].name.toLowerCase()} virus, on ${where}. It moves every ${HUNT.hopMs / 60000} minutes, tougher and better paid each time.`,
     reward: (ev) => `${huntPay(ev)} credits and ${FACTIONS[ev.hunter].short} +${HUNT.rep}`,
     gone: (ev) => `${ev.name} got away.`,
-    // A hop: on to the next server on its path, a level up (to your level + HUNT.cap at most). Not while you fight it.
+    // A hop: on to the next server on its path, a level up (HUNT.cap over where it started at most). Not while you fight it.
     tick: (s, ev) => {
       const want = Math.min(HUNT.hops, Math.floor((CARDS.hunt.ms - ev.left) / HUNT.hopMs));
       while (ev.hop < want) {
         ev.hop++;
         if ((s.locations || []).some((l) => l.id === ev.path[ev.hop])) ev.loc = ev.path[ev.hop]; // a server that's gone: it stays put
         ev.next = ev.hop < HUNT.hops ? ev.path[ev.hop + 1] : null;
-        ev.level = Math.min(CONFIG.maxMobLevel, ev.base + ev.hop, hackerLevel(s) + HUNT.cap);
+        ev.level = Math.min(CONFIG.maxMobLevel, ev.base + Math.min(ev.hop, HUNT.cap));
         emit(s, 'world-event-hop', `${ev.name} moved to ${placeName(s, ev.loc)}: level ${ev.level}.`, { card: 'hunt', event: ev.id, location: ev.loc, from: FACTIONS[ev.hunter].short });
       }
     },
@@ -256,7 +257,7 @@ export const CARDS = {
   spotter: {
     name: 'Spotter', weight: 1, ms: SCOUT_EVENT.ms, fight: true, from: SCOUT_EVENT.from, home: true,
     where: (s) => (hackerLevel(s) >= SCOUT_EVENT.from && invasionsLive(s) && !s.net?.scouted && !s.degraded ? [null] : []),
-    make: (s) => ({ family: fam(s), level: hackerLevel(s), name: `SPOTTER-${1000 + Math.floor(roll(s) * 9000)}` }),
+    make: (s) => ({ family: fam(s), level: placeLevel(s, null), name: `SPOTTER-${1000 + Math.floor(roll(s) * 9000)}` }),
     text: (ev) => `A spotter, ${ev.name}, is watching your wall. Kill it and the next invasion comes ${SCOUTED.levels} levels weaker.`,
     reward: () => `the next invasion −${SCOUTED.levels} levels, and its kind`,
     gone: (ev) => `${ev.name} left your wall.`,
@@ -271,7 +272,7 @@ export const CARDS = {
   counter: {
     name: 'Counter-raid', chain: true, weight: 0, ms: CHAIN.counter.ms, fight: true, where: () => [],
     spots: (s) => { const held = places(s).filter((l) => (l.runs || 0) > 0 || l.takenOver); return held.length ? held : [null]; },
-    make: (s, loc, f) => ({ side: f.data.side, foe: f.data.foe, family: FACTION_FAMILY[f.data.foe], level: hackerLevel(s), name: runnerName(s, f.data.foe), elite: true, eliteHp: FEUD.hp }),
+    make: (s, loc, f) => ({ side: f.data.side, foe: f.data.foe, family: FACTION_FAMILY[f.data.foe], level: placeLevel(s, loc), name: runnerName(s, f.data.foe), elite: true, eliteHp: FEUD.hp }),
     from: (ev) => FACTIONS[ev.foe].short,
     text: (ev, where) => `${FACTIONS[ev.foe].short} sends ${ev.name} at ${ev.loc ? where : 'your server'} for the feud you fought for ${FACTIONS[ev.side].short}. Beat it before it leaves.`,
     reward: (ev) => `${counterPay(ev.level)} credits and ${FACTIONS[ev.side].short} +${CHAIN.counter.rep}`,
@@ -303,7 +304,7 @@ export const CARDS = {
   lantern: {
     name: "LANTERN's offer", chain: true, weight: 0, ms: CHAIN.lantern.ms, fight: true, where: () => [],
     spots: (s) => places(s),
-    make: (s) => ({ family: FACTION_FAMILY.lantern, level: hackerLevel(s), name: `${RUNNER.lantern}-${1000 + Math.floor(roll(s) * 9000)}`, ally: hubFound(s, 'lantern') ? 'lantern' : 'halcyon' }),
+    make: (s, loc) => ({ family: FACTION_FAMILY.lantern, level: placeLevel(s, loc), name: `${RUNNER.lantern}-${1000 + Math.floor(roll(s) * 9000)}`, ally: hubFound(s, 'lantern') ? 'lantern' : 'halcyon' }),
     from: () => 'LANTERN',
     text: (ev, where) => `LANTERN noticed the couriers you took. Its own courier ${ev.name} crosses ${where}: intercept it for a Custom protocol.`,
     reward: (ev) => `a Custom protocol and ${FACTIONS[ev.ally].short} +${CHAIN.lantern.rep}`,
@@ -318,7 +319,7 @@ export const CARDS = {
   zero: {
     name: 'Patient zero', chain: true, weight: 0, ms: CHAIN.zero.ms, fight: true, where: () => [],
     spots: (s) => places(s),
-    make: (s, loc, f) => ({ family: f.data.family, outbreak: f.data.outbreak, level: hackerLevel(s), name: `${FAMILIES[f.data.family].name.toUpperCase()}-0`, elite: true }),
+    make: (s, loc, f) => ({ family: f.data.family, outbreak: f.data.outbreak, level: placeLevel(s, loc), name: `${FAMILIES[f.data.family].name.toUpperCase()}-0`, elite: true }),
     from: () => 'Network',
     text: (ev, where) => `The ${FAMILIES[ev.family].name.toLowerCase()} outbreak's source, ${ev.name}, is on ${where}. Kill it and the outbreak ends.`,
     reward: (ev) => `${zeroCode(ev)} ${MATERIALS[codeOf(ev.family)]?.name || 'code'} and an elite's loot`,
@@ -360,8 +361,20 @@ function roll(s) {
 }
 const pick = (s, xs) => xs[Math.floor(roll(s) * xs.length)];
 const between = (s, [lo, hi]) => lo + Math.floor(roll(s) * (hi - lo));
-// Where a fight event can turn up: a server you've traced (never a rogue one), else none.
-const places = (s) => (s.locations || []).filter((l) => !l.rogue && !l.member);
+// Where a fight event can turn up: a server you've traced (never a rogue one) on your floor (your level picks the floor),
+// at your level + 2 or under (the lowest of the floor's when none is), else any you've traced. An event takes its
+// server's level, never yours (docs/scaling.md 4).
+const traced = (s) => (s.locations || []).filter((l) => !l.rogue && !l.member);
+const floorAt = (l) => floorOfSlot(l.slot) || l.depth || 1;
+const places = (s) => {
+  const all = traced(s), L = hackerLevel(s), mine = all.filter((l) => floorAt(l) === floorFor(L));
+  if (!mine.length) return all;
+  const near = mine.filter((l) => (l.level || 1) <= L + 2);
+  return near.length ? near : [mine.reduce((a, b) => ((b.level || 1) < (a.level || 1) ? b : a))];
+};
+// The level an event takes: its server's; one with no server (a spotter at your wall) your floor's servers' lowest
+// such level, else yours.
+const placeLevel = (s, loc) => { const ls = places(s).map((l) => l.level || 1); return Math.min(CONFIG.maxMobLevel, Math.max(1, loc?.level || (ls.length ? Math.min(...ls) : hackerLevel(s)))); };
 
 export const eventsOf = (s) => (s.events ||= []);
 export const eventsAt = (s, id) => eventsOf(s).filter((e) => e.loc === id);
@@ -508,7 +521,7 @@ export function dealChain(s, f) {
 }
 // developer chain [counter|returning|lantern|zero]: a follow-up now, with a made-up cause (for tests and screenshots).
 export function developerChain(s, kind) {
-  const L = hackerLevel(s), at = places(s)[0]?.id || null, ob = eventsOf(s).find((e) => e.card === 'outbreak');
+  const L = placeLevel(s, places(s)[0]), at = places(s)[0]?.id || null, ob = eventsOf(s).find((e) => e.card === 'outbreak');
   const sides = feuds(s)[0] || ['halcyon', 'glassjaw'], family = ob?.family || fam(s);
   const fake = {
     counter: () => ({ cause: { card: 'feud', id: 0, name: sides.map((f) => FACTIONS[f].short).join(' vs '), loc: at, side: sides[0] }, data: { side: sides[0], foe: sides[1] } }),

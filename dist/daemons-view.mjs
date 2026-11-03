@@ -167,7 +167,7 @@ function mini(id) {
 }
 function stronger(s, id) {
   const L = daemonLevel(s, id), n = daemonN(id, L), top = daemonN(id, SERVER.maxLevel), u = unitOf(id), b = DAEMONS[id].band, [lo, hi] = DAEMON_BANDS[b - 1];
-  const tip = `Its number grows 4% a level, like a protocol's stats: ${daemonN(id, lo)} at level ${lo}, ${daemonN(id, hi)} at ${hi}, ${top} at ${SERVER.maxLevel}. An invasion can drop a higher-level copy, which replaces this one.`;
+  const tip = `Its number grows with its level, like a protocol's stats: ${daemonN(id, lo)} at level ${lo}, ${daemonN(id, hi)} at ${hi}, ${top} at ${SERVER.maxLevel}. An invasion can drop a higher-level copy, which replaces this one.`;
   const text = L >= SERVER.maxLevel || n >= top ? `${n}${u}, as strong as it gets` : `${n}${u} now, ${top} at level ${SERVER.maxLevel}`;
   return `<span title="${esc(tip)}">${esc(text)}</span><span class="dm-meter" role="img" aria-label="${n} of ${top}"><i style="width:${Math.min(100, (n / top) * 100).toFixed(1)}%"></i></span>`;
 }

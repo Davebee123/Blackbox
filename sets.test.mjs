@@ -15,7 +15,7 @@ import { PUZZLE_KINDS } from './dist/puzzles.mjs';
 import { STORY_LENGTH, openContracts, tickMail, ready } from './dist/mail.mjs';
 import { entryOf } from './dist/codex.mjs';
 import { codexPageMarkup } from './dist/codex-view.mjs';
-import { CONFIG, GUARDS, BOSSES, power } from './dist/data.mjs';
+import { CONFIG, GUARDS, BOSSES, power, line, lifted } from './dist/data.mjs';
 import STORY from './dist/content/story.mjs';
 import ITEMS from './dist/content/items.mjs';
 
@@ -427,7 +427,7 @@ test('a piece works alone: stats for its slot and level, and its own small bonus
   const s = at(30);
   const [hat] = wear(s, ['hard-hat'], 30);
   assert.equal(BASES[hat.base].slot, 'shell');
-  assert.equal(gearStat(s, 'reduction'), (hat.stats.reduction || 0) + 2, 'Hard Hat: +2 Block');
+  assert.equal(gearStat(s, 'reduction'), (hat.stats.reduction || 0) + lifted(2, hat.level), 'Hard Hat: +2 Block, lifted at its item level');
   assert.ok(hat.stats.signal > 0 && hat.stats.regen > 0, 'a shell\'s stats');
   // The Tumbler: +6% max Signal, on top of its own Signal.
   const t = at(32), plain = at(32);
@@ -512,7 +512,7 @@ test('Wrecking Crew (3) and (4): a break gives +10% damage, and the next damagin
   assert.ok(!s.logs.some((l) => /^Wrecking Crew \(4\): /.test(l.message)));
   const left = parts.filter((x) => x.integrity > 0);
   assert.ok(left.length >= 2, 'two parts left to hit');
-  for (const x of left) { x.armor = 0; x.integrity = x.max = 500; }
+  for (const x of left) { x.armor = 0; x.integrity = x.max = 50000; }
   command(s, 'spike ' + left[0].id); resolveCycle(s);
   assert.ok(s.logs.some((l) => l.type === 'damage' && /^Wrecking Crew \(4\): /.test(l.message)), 'the splash');
   assert.equal(e.sx.splash, false, 'once a break');
@@ -553,7 +553,7 @@ test('Glass Ceiling (3): +10% damage below half Signal; Cold Storage (3): 8% les
   const block = gearStat(c, 'reduction');
   c.run.integrity = 60;
   assert.equal(SET_HOOKS.taken(c), 1);
-  assert.equal(gearStat(c, 'reduction'), block - 1, 'the Frost Line\'s +1 Block above 75% only');
+  assert.equal(gearStat(c, 'reduction'), block - lifted(1, 26), 'the Frost Line\'s +1 Block above 75% only, lifted');
 });
 
 test('Hot Spare (2): the first time a fight drops you below 30%, a heal of 20% and 10% more damage', () => {
@@ -631,7 +631,7 @@ test('a class set: anyone wears its 2- and 3-piece and the 4-piece\'s base line;
 });
 
 test('Kestrel pieces held from save v45 keep working, as the retuned set', () => {
-  assert.equal(SAVE_VERSION, 53, 'no save bump since v45 for sets (v46 is the subclass pick, v47 components, v48 Indemnity, v49 crafting, v50 specials, v51 the scanner, v52 rivals): a piece reads its bonuses from its unique, and its id and stats are unchanged');
+  assert.equal(SAVE_VERSION, 54, 'no save bump since v45 for sets (v46 is the subclass pick, v47 components, v48 Indemnity, v49 crafting, v50 specials, v51 the scanner, v52 rivals, v54 the curve lifts every item alike): a piece reads its bonuses from its unique, and its id and stats are unchanged');
   const s = at(12);
   const items = wear(s, KESTREL);
   (s.pity ||= {})['set:bouncer'] = 3;
@@ -716,8 +716,8 @@ test('the class sets are the end-game tier sets: every piece level 50, the best 
       const u = UNIQUES[p], slot = BASES[u.base].slot, best = baseFor(slot, 50);
       assert.equal(u.level, 50, `${p}: level 50`);
       assert.equal(u.base, best, `${p}: the best ${slot} base at 50`);
-      // As the Bedrock uniques are statted: the base's primaries grown to 50, times 1.1.
-      const k = (power(50) / power(BASES[best].level)) * 1.1;
+      // As the Bedrock uniques are statted: the base's primaries grown to 50 on the level line (the data's), times 1.1.
+      const k = (line(50) / line(BASES[best].level)) * 1.1;
       assert.deepEqual(u.primary, Object.fromEntries(Object.entries(BASES[best].primary).map(([st, v]) => [st, Array.isArray(v) ? v.map((x) => Math.round(x * k)) : Math.round(v * k)])), `${p}: its primaries`);
       assert.deepEqual(u.sources, [{ kind: 'crew' }, { kind: 'lair', floor: 8, planned: 'flash ranks' }], `${p}: the crew bosses and the Bedrock lair boss, flash ranks once built`);
     }
@@ -763,7 +763,7 @@ test('a tier set drop comes up three times as often for your own class, pieces y
 });
 
 test('tier pieces held from the floor 3 to 6 version keep their item level and stats, and work as the set', () => {
-  assert.equal(SAVE_VERSION, 53, 'no save bump since v45 for sets (v46 is the subclass pick, v47 components, v48 Indemnity, v49 crafting, v50 specials, v51 the scanner, v52 rivals): a held piece keeps its stats and reads its bonuses from its unique and its set');
+  assert.equal(SAVE_VERSION, 54, 'no save bump since v45 for sets (v46 is the subclass pick, v47 components, v48 Indemnity, v49 crafting, v50 specials, v51 the scanner, v52 rivals, v54 the curve lifts every item alike): a held piece keeps its stats and reads its bonuses from its unique and its set');
   // A Wrecking Crew found before, at its old levels and bases.
   const OLD = { crowbar: ['exploit-chain', 15, { damage: [15, 19] }], 'det-cord': ['loader', 20, { damage: 9, signal: 40, payload: 4 }], 'hard-hat': ['ghost-shell', 26, { signal: 70, regen: 15, restore: 30 }], 'blast-map': ['implant', 32, { damage: 6, signal: 30 }] };
   const s = as('breaker', 'demolitionist', 32);
@@ -774,7 +774,7 @@ test('tier pieces held from the floor 3 to 6 version keep their item level and s
   assert.deepEqual(back.map((x) => [x.unique, x.level, x.stats]), held.map((x) => [x.unique, x.level, x.stats]), 'the same item level and stats');
   assert.deepEqual(activeSets(loaded(r))[0].open, [2, 3, 4]);
   assert.ok(gearFx(r).some((x) => x.fx.do === 'break-splash') && gearFx(r).some((x) => x.fx.do === 'spill+' && fxHolds(r, x.fx, {})));
-  assert.equal(gearStat(r, 'reduction'), held.reduce((n, x) => n + (x.stats.reduction || 0), 0) + 2, 'the Hard Hat\'s own +2 Block');
+  assert.equal(gearStat(r, 'reduction'), held.reduce((n, x) => n + (x.stats.reduction || 0), 0) + lifted(2, 26), 'the Hard Hat\'s own +2 Block, lifted at its item level');
 });
 
 test('the Antenna shows a server\'s rare spawn on its map card; Lantern Route (3) pays caches and vaults more', () => {

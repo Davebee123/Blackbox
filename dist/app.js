@@ -86,6 +86,7 @@ const playtest = params.get('playtest');
 // is never read, written or reset from a bench.
 const { key: KEY, bench: BENCH, camp: CAMP } = BN.pageSave(location.search, CP.CAMPAIGN_KEY);
 const DEV = params.has('dev') || !!BENCH; // developer commands (and window.__bb, for tests)
+if (BENCH) { const c = BN.benchCurve(location.search); if (c != null) CONFIG.powerPerLevel = c; } // ?curve=8: the level curve at 8% on this bench (bench.mjs)
 // The pager's tray (pager-view.mjs): four slots (three icons and +n when more wait) on a desktop, three on a phone.
 const phoneBar = matchMedia('(max-width: 900px)');
 

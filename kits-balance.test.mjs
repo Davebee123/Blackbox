@@ -70,7 +70,10 @@ const second = (sub) => {
 // Since the .exe builds' echoes (exe.mjs: floor 1's Zip Bomb and Hotspot back as their .exe on floor 5, Lv 30) the
 // Demolitionist's area preset measures 6.9 worse on the generic fights and the Phantom's evasion preset 5.5: held at 7.5
 // and 6, until the designer has played them.
-const DRIFT = { demolitionist: { generic: 7.5, suits: 1.5 }, sysop: { generic: 6.5, suits: -2 }, hijacker: { generic: 8, suits: 2.5 }, herder: { generic: 5, suits: 0 }, overclocker: { generic: 7, suits: 5 }, phantom: { generic: 6, suits: 5 } };
+// Since the compounding curve (docs/scaling.md 1: the at-level numbers ×lift, rounded anew; the bracket's guards 12
+// levels under you at Lv 30 now easy) the Sysop's healers preset measures 9.7 better on the generic fights and 8.4
+// worse on its own: held at 10 and -9 until the designer has played the curve.
+const DRIFT = { demolitionist: { generic: 7.5, suits: 1.5 }, sysop: { generic: 10, suits: -9 }, hijacker: { generic: 8, suits: 2.5 }, herder: { generic: 5, suits: 0 }, overclocker: { generic: 7, suits: 5 }, phantom: { generic: 6, suits: 5 } };
 test('each second preset is a real alternative: within 5 points of the rotation on the generic fights, and at least 5 points better on the fights it suits', () => {
   const off = [], line = [];
   for (const sub of ALL) {

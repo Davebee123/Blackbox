@@ -50,7 +50,7 @@ test('every unlock is a row, with its detail in a tooltip; the power line, the I
   assert.doesNotMatch(h, /undefined|NaN|\[object/);
   assert.ok(h.includes('data-module="loadout"') && h.includes('data-lu-close'), 'Loadout and Continue');
   const one = levelUpPreview(at('breaker', 9), 10), s1 = levelUpSummary([one]), h1 = plain(firmwareMarkup(s1));
-  assert.ok(s1.items.some((it) => it.kind === 'power' && it.value === '+4%') && s1.items.some((it) => it.kind === 'integrity' && it.value === String(one.server)));
+  assert.ok(s1.items.some((it) => it.kind === 'power' && it.value === '+6%') && s1.items.some((it) => it.kind === 'integrity' && it.value === String(one.server)));
   assert.ok(s1.next && s1.next.level === one.next.level && h1.includes('v11 · Protocol bases +4'), 'the next level that brings something');
   assert.match(h1, /Firmware update · breaker\.rom/);
   assert.match(firmwareMarkup(s1), /v9 → <b>v10<\/b>/);

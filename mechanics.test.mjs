@@ -184,9 +184,9 @@ test('Amplifier: each cycle it boosts the next attack of another part, in turn, 
 
 test('Bodyguard: at the cycle\'s end it shields the part your command hit, and the shield takes your next command', () => {
   const s = fight('bodyguard'), b = mech(s, 'bodyguard'), p = pulse(s);
-  Object.assign(p, { armor: 0, integrity: 1000, max: 1000 });
+  Object.assign(p, { armor: 0, integrity: 10000, max: 10000 });
   step(s, 'spike pulse');
-  assert.equal(p.bufBy, b.id); assert.equal(p.bufHp, Math.round(1000 * MECH.bodyguard.share));
+  assert.equal(p.bufBy, b.id); assert.equal(p.bufHp, Math.round(10000 * MECH.bodyguard.share));
   const hp = p.integrity;
   step(s, 'spike pulse');
   assert.equal(p.integrity, hp, 'the shield took the hit');

@@ -11,7 +11,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, hooks, hit, part, livingParts, command, resolveCycle, active, defender, selectEncounter } from './dist/combat.mjs';
-import { CONFIG, FAMILIES, STRAINS, GUARDS } from './dist/data.mjs';
+import { CONFIG, FAMILIES, STRAINS, GUARDS, lift } from './dist/data.mjs';
 import { GENES } from './dist/genes.mjs';
 import * as FP from './dist/floorplan.mjs';
 import './dist/families.mjs';
@@ -39,7 +39,7 @@ function runFight(key, level, seed, over = {}) {
   const s = fresh();
   s.hackers = { breaker: { level, xp: 0 } };
   s.rng = (seed * 2654435761 + level * 97) >>> 0;
-  s.run = { loc: 'x', cwd: '/', integrity: 300, max: 300, pack: [], visited: ['/'] };
+  s.run = { loc: 'x', cwd: '/', integrity: Math.round(300 * lift(level)), max: Math.round(300 * lift(level)), pack: [], visited: ['/'] }; // 300 on the level line (data.mjs lift)
   selectEncounter(s, key, seed * 7919 + 13, { level, mode: 'run', room: '/x', mutation: null, ...over });
   command(s, 'engage');
   return s;

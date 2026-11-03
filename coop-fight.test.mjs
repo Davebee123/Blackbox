@@ -66,6 +66,7 @@ test('the timer turns a cycle with no command from the guest: their auto-repeat 
   const P = pairUp();
   fight(P);
   const e = P.host.encounter, t = firstLive(P.host);
+  Object.assign(t, { integrity: 99999, max: 99999 }); // SPRAWL's level-1 room: sturdy enough that the host's hit leaves it for the guest's
   command(P.host, `spike ${t.id}`); P.G.command(`spike ${t.id}`);
   const before = P.host.serial, c1 = e.cycle;
   advance(P.host, cycleLength(P.host) + 1);

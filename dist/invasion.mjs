@@ -19,7 +19,7 @@ import { isLive } from './memory.mjs';
 import { gainComponents } from './salvage.mjs';
 import { effLevel, tickFirewall, fragment, ratingAt, firewallRestore, baseOf } from './firewall.mjs';
 import { filterStat } from './filters.mjs';
-import { CONFIG, SERVER, MUTATIONS, ROLLED_MUTATIONS, QUIRKS, quirkOf, createVirus, power, variantFor, gradeFor, codeUnit, DAEMON_DROP, restedGain, restedCap } from './data.mjs';
+import { CONFIG, SERVER, MUTATIONS, ROLLED_MUTATIONS, QUIRKS, quirkOf, createVirus, line, variantFor, gradeFor, codeUnit, DAEMON_DROP, restedGain, restedCap } from './data.mjs';
 import { gainDaemon, rollDaemon } from './daemons.mjs';
 import { SERVICES, codeOf, uniqueItem, MATERIALS } from './gear.mjs';
 import { pickOrigin, hiddenNode, hiddenLead, HIDDEN, connectedTo } from './hidden.mjs';
@@ -75,13 +75,13 @@ export const streakMult = (s) => 1 + STREAK.step * Math.min(streakOf(s), STREAK.
 // ---------- the wall ----------
 // A v2 invader counts as 2 levels higher at the wall, a v3 as 4: your firewall blocks it at its level +2 / +4.
 export const GRADE_LEVELS = 2;
-export const strength = (level, mutation = null, grade = 1) => 100 * power(level + GRADE_LEVELS * ((grade || 1) - 1)) * (mutation ? I().mutated : 1);
+export const strength = (level, mutation = null, grade = 1) => 100 * line(level + GRADE_LEVELS * ((grade || 1) - 1)) * (mutation ? I().mutated : 1);
 // Your wall's rating: your firewall's effective level (firewall.mjs), set so it blocks invaders at
 // or under that level outright. Down while the server is Degraded.
 export function wallRating(s, family = null) {
   if (s.degraded) return 0;
   const L = effLevel(s, undefined, family);
-  return L < 1 ? 100 * I().wall : 100 * power(L) * I().block;
+  return L < 1 ? 100 * I().wall : 100 * line(L) * I().block;
 }
 export const topFamily = (s) => Object.entries(s.net?.seen || {}).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
 // The levels an invasion counts higher at the wall: its kind, its quirk, a scout's map, and two for

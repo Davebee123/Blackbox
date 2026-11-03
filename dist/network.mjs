@@ -294,12 +294,12 @@ export function openLair(s, force = false) {
   return loc;
 }
 // A boss with a floor (BOSSES floor: HASHLORD 16, MIRRORSHADE 12) holds /core only once you've reached it: until then the
-// lair's other folders are open and /core stands empty. It is met at your level, never under its floor.
+// lair's other folders are open and /core stands empty. It is met at its lair's level, never under its floor.
 export const lairOpen = (s, loc) => loc.member || !BOSSES[loc.lair]?.floor || hackerLevel(s) >= BOSSES[loc.lair].floor;
 // What a lair's folders hold: its family (its network's native strain more often) and, in /core, its boss.
 export function lairSpawns(s, loc, now, variant) {
   const who = netOf(s, loc), B = BOSSES[loc.lair];
-  if (!loc.member && !loc.slot) loc.level = Math.max(loc.level || 1, hackerLevel(s)); // a lair on a floor keeps its slot's level
+  // A lair keeps the level it was made at (on a floor, its slot's), never yours (docs/scaling.md 4).
   for (const room of NETWORK.lairRooms.map((x) => '/' + x)) {
     const sp = loc.spawns[room];
     if (sp?.alive || (sp && sp.respawnAt > now)) continue;

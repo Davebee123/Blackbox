@@ -6,7 +6,7 @@ import { CONFIG } from './dist/data.mjs';
 CONFIG.baseCrit = 0;
 CONFIG.enemyCrit = 0;
 CONFIG.misses = false; // and no misses
-CONFIG.powerPerLevel = 0; // flat numbers at every level (level tests turn it back on)
+CONFIG.powerPerLevel = 0; CONFIG.levelLine = 0; // flat numbers at every level (level tests turn it back on)
 CONFIG.gap = { dealt: 0, taken: 0, floor: 1, below: 0 }; // and no level-gap scaling (combat.test.mjs tests it)
 
 const settings = { sound: false, motion: true };

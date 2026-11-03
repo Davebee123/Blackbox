@@ -228,28 +228,28 @@ test('the Mutex\'s lock on the Encryptor\'s own bar: a segment as wide as the lo
   const { floatOf } = await import('./dist/dmgfx.mjs');
   const s = mutexFight();
   quiet(s);
-  const enc = Object.assign(part(s, 'encryptor'), { armor: 0, maxArmor: 0, integrity: 200, max: 200, lockHp: 50, lockMax: 50 });
+  const enc = Object.assign(part(s, 'encryptor'), { armor: 0, maxArmor: 0, integrity: 2000, max: 2000, lockHp: 500, lockMax: 500 });
   let seg = segOf(boardMarkup(s, null), 'encryptor');
-  assert.equal(seg.lock, 50);
-  assert.equal(seg.width, 25, 'the lock on the bar\'s scale: 50 of 200');
+  assert.equal(seg.lock, 500);
+  assert.equal(seg.width, 25, 'the lock on the bar\'s scale: 500 of 2000');
   assert.equal(seg.left, 75, 'over the end of the fill, where hits land first');
-  assert.match(seg.row, /<i class="lockseg"[^>]*title="Shield 50\/50: \?\?\?\nBreak one Mutex to decode what it does\."><b class="lockpad">/, 'a padlock at its edge; ??? until the Mutex is decoded');
+  assert.match(seg.row, /<i class="lockseg"[^>]*title="Shield 500\/500: \?\?\?\nBreak one Mutex to decode what it does\."><b class="lockpad">/, 'a padlock at its edge; ??? until the Mutex is decoded');
   // Typing a Spike at it: the blinking slice sits on the lock, and none on the Integrity.
   command(s, 'spike encryptor');
   const html = boardMarkup(s, null), row = segOf(html, 'encryptor').row;
   assert.match(row, /<i class="loss lockloss" style="left:75\.00%;width:[\d.]+%" title="−\d+ lock this cycle">/);
   assert.doesNotMatch(row.replace(/<i class="loss lockloss"[^>]*>/, ''), /<i class="loss"/, 'the Integrity isn\'t previewed: the lock takes it');
   const ev = resolveCycle(s), hitEv = ev.find((e) => e.type === 'damage' && e.target === 'encryptor');
-  assert.equal(hitEv.amount, 0); assert.ok(hitEv.shield > 0); assert.equal(hitEv.lockWas, 50);
-  assert.equal(enc.integrity, 200);
+  assert.equal(hitEv.amount, 0); assert.ok(hitEv.shield > 0); assert.equal(hitEv.lockWas, 500);
+  assert.equal(enc.integrity, 2000);
   seg = segOf(boardMarkup(s, null), 'encryptor');
-  assert.equal(seg.lock, 50 - hitEv.shield, 'it drains');
-  assert.equal(seg.width, ((50 - hitEv.shield) / 200) * 100);
+  assert.equal(seg.lock, 500 - hitEv.shield, 'it drains');
+  assert.equal(seg.width, ((500 - hitEv.shield) / 2000) * 100);
   const f = floatOf(hitEv, { partName: () => 'Encryptor', skillName: () => 'Spike' });
   assert.deepEqual([f.kind, f.text, f.at], ['shield', `−${hitEv.shield} absorbed`, 'part'], 'the number is the lock\'s');
   // Decoded, the segment says whose it is.
   s.research = { [codexKey(s.encounter.virus, part(s, 'mutex'))]: 3 };
-  assert.match(segOf(boardMarkup(s, null), 'encryptor').row, /title="Lock \d+\/50: the Mutex&#39;s shield on the Encryptor\. Every hit on it drains the lock first\."/);
+  assert.match(segOf(boardMarkup(s, null), 'encryptor').row, /title="Lock \d+\/500: the Mutex&#39;s shield on the Encryptor\. Every hit on it drains the lock first\."/);
 });
 
 test('a tether between the Mutex and the Encryptor: ? and ??? until decoded, glowing while the lock stands, ↻ N once it breaks, snapping and gone with the Mutex', () => {

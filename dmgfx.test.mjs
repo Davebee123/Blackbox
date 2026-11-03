@@ -116,7 +116,7 @@ const start = (arch, id = 'cryptjack') => {
   s.loadout.equipped[arch] = [];
   selectEncounter(s, id, 7, { level: 6 });
   command(s, 'engage');
-  for (const p of s.encounter.virus.parts) Object.assign(p, { armor: 0, maxArmor: 0, patchAt: null, integrity: 500, max: 500 });
+  for (const p of s.encounter.virus.parts) Object.assign(p, { armor: 0, maxArmor: 0, patchAt: null, integrity: 5000, max: 5000 });
   s.encounter.hardened = 0;
   return s;
 };

@@ -65,7 +65,7 @@ import { sigOf, named, lairOf, intelOf, knowsStrain, knowsEvent, knowsRich, name
 import { guardSetChance, lairChance, bossOdds, presetsOf, presetKeys, followOf, spikeName, said, mutated, capstonePoints, capPickOf, capState, blastOf, livingParts } from './combat.mjs';
 import { tripwireOf, zipOf, heldOf } from './order.mjs';
 import { youMarks, junkKey } from './mechanics.mjs';
-import { cantripsOf, TELL } from './data.mjs';
+import { cantripsOf, TELL, lifted } from './data.mjs';
 import { usable, hooks } from './combat.mjs';
 import { EXE } from './exe.mjs';
 import { sigintWindows, sigintCharges, plannedTells } from './tells.mjs';
@@ -1714,7 +1714,7 @@ export function netMarkup(s, { leads = false } = {}) {
   return `<section class="panel net-one" data-pane="ssh ${esc(s.profile?.handle || 'rookie')}@${esc(loc.id)}">
     <header class="net-head">
       <div class="net-where"><b>${esc(loc.name)}${loc.depth > 1 ? ` <span class="tag">layer ${loc.depth}</span>` : ''}${QUIRKS[loc.quirk] ? ` <span class="tag tag-quirk" data-quirk="${loc.quirk}" title="${esc(QUIRKS[loc.quirk].rule)}">${esc(QUIRKS[loc.quirk].name)}</span>` : ''}</b><span>${esc(s.run.cwd)}</span></div>
-      <div class="net-signal ${level}" title="Signal: your health on this run. Moving costs ${CONFIG.cdCost}. At 0 you go home without your pack."><span class="lbl">Signal</span><span class="sigbar"><span style="width:${pct}%"></span></span><strong>${s.run.integrity}</strong><small>/${s.run.max}</small>${sickPct(s) ? `<em class="sig-sick" title="${esc(sickTip(s))}">−${sickPct(s)}%</em>` : ''}</div>
+      <div class="net-signal ${level}" title="Signal: your health on this run. Moving costs ${lifted(CONFIG.cdCost, hackerLevel(s))}. At 0 you go home without your pack."><span class="lbl">Signal</span><span class="sigbar"><span style="width:${pct}%"></span></span><strong>${s.run.integrity}</strong><small>/${s.run.max}</small>${sickPct(s) ? `<em class="sig-sick" title="${esc(sickTip(s))}">−${sickPct(s)}%</em>` : ''}</div>
       ${!loc.zone && !loc.rogue ? `<div class="net-trace${(s.run.trace || 0) >= 70 ? ' hot' : (s.run.trace || 0) < TRACE.clean ? ' low' : ''}${s.run.hunter ? ' hunted' : ''}" title="Trace: how loud this break-in has been. Moves, pulls, wrong passwords and fights raise it, and Spoof lowers it. At 100 a hunter comes and you can't jack out until it's down. Under ${TRACE.clean}% with the vault open, it is a clean job worth 25% more credits."><span class="lbl">Trace</span><span class="sigbar"><span style="width:${s.run.trace || 0}%"></span></span><strong>${s.run.hunter ? 'HUNTED' : (s.run.trace || 0) + '%'}</strong></div>` : ''}
       <button type="button" class="net-pack" data-run="pack" title="What you're carrying (unbanked)">pack <b>${s.run.pack.length}</b></button>
       <button type="button" class="net-pack net-leads-btn" data-leads aria-pressed="${leads}" title="Leads">${glyph('trace')}leads</button>

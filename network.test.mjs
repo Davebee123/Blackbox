@@ -6,7 +6,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, resolveCycle, part, active, addItem, loaded, restore, SAVE_VERSION, UNIQUES, selectEncounter, syncServer, damageMultiplier, fxAnswer, hit, finish, patchDelay, addLocation } from './dist/combat.mjs';
 import { play, connect, currentLocation, layoutOf } from './dist/run.mjs';
-import { CONFIG, BOSSES, NATIVE_BOSSES, STRAINS, variantFor, STRAIN_NATIVE, BOSS_LOOT, TELL } from './dist/data.mjs';
+import { CONFIG, BOSSES, NATIVE_BOSSES, STRAINS, variantFor, STRAIN_NATIVE, BOSS_LOOT, TELL, lifted } from './dist/data.mjs';
 import { uniqueItem, seeded, RULES, MATERIALS } from './dist/gear.mjs';
 import { NETWORK, NATIVE_POOL, signature, sigOf, memberSeed, netOf, fightNet, nativeRoll, nativeChance, awayChance, named, biasCode, leanPick, eventMult, lairOf, openLair, networkRestore, networkLines, homeName, darknetPick } from './dist/network.mjs';
 import { deal, eventsOf, CARDS } from './dist/events.mjs';
@@ -322,17 +322,17 @@ test('native effects: Open, locks and wards, the Tripwire, twins, reads, after-e
     const d = at(30); wear(d, 'split-brain'); fight(d, 'random', 30, { family: 'worm' });
     const mirror = d.encounter.virus.parts.find((x) => x.twin);
     if (mirror) { Object.assign(mirror, { integrity: 1, armor: 0 }); command(d, 'spike ' + mirror.id); resolveCycle(d); assert.ok(!mirror.rebootAt, 'no reboot'); }
-    // Ping of Death: the part you read takes 10.
-    const e = at(30); wear(e, 'ping-of-death'); fight(e);
+    // Ping of Death: the part you read takes 10, lifted at its item level.
+    const e = at(30), pod = wear(e, 'ping-of-death'); fight(e);
     const q = part(e, 'encryptor'); Object.assign(q, { armor: 0 });
     const hp = q.integrity; fxAnswer(e, q);
-    assert.equal(hp - q.integrity, 10);
+    assert.equal(hp - q.integrity, lifted(10, pod.level));
     // Rubber Hose: +6 damage a read, up to 30.
     const f = at(38); wear(f, 'rubber-hose', 38); fight(f, 'cryptjack', 38);
     const fp = part(f, 'encryptor'); Object.assign(fp, { armor: 0, integrity: 9999, max: 9999 });
     const dealt = (reads) => { f.encounter.metrics.reads = reads; const was = fp.integrity; hit(f, fp, 20, { mine: true, pierce: true }); return was - fp.integrity; };
     const full = dealt(7) - dealt(0);
-    assert.ok(full >= 25 && full <= 40, `+30 before the multipliers: ${full}`);
+    assert.ok(full >= lifted(25, 38) && full <= lifted(40, 38), `+30 before the multipliers, lifted: ${full}`);
     assert.equal(dealt(9), dealt(7), 'capped');
     assert.ok(dealt(2) < dealt(4));
     // Sandman: tells that land leave nothing behind (no key offline, no Corrupted, no Hung).

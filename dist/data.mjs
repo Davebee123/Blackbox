@@ -12,8 +12,8 @@ import { rollExe, makeExe, EXE, EXE_ROLL } from './exe.mjs';
 import { crewOf, buildAuthor, bossAuthor } from './authors.mjs';
 
 export const CONFIG = {
-  // Heals you cast and damage over time (burns, helpers) keep this share of the +4% a level everything
-  // else gets; the rest comes from gear (Restore, Payload), so a built healer or burn class outscales a bare one.
+  // Heals you cast and damage over time (burns, helpers) keep this share of the level line's growth (levelLine)
+  // and all of the lift above it; the rest comes from gear (Restore, Payload), so a built healer or burn class outscales a bare one.
   healLevel: 0.5,
   dotLevel: 0.5,
   cycleMs: 8000, // default; players pick a speed below
@@ -44,8 +44,13 @@ export const CONFIG = {
   misses: true,
   baseMiss: 5,
   maxMiss: 60,
-  // Power: every level, players' and enemies' numbers grow 4% (level 1 = the base numbers).
-  powerPerLevel: 0.04,
+  // Power: every level, players' and enemies' numbers grow this much, compounding (level 1 = the base numbers),
+  // so a mob a few levels below you is clearly weaker and one ten below is trivial (docs/scaling.md).
+  powerPerLevel: 0.06,
+  // The level line: 4% a level, linear, the curve the game's flat numbers were tuned on. What grows only partly with
+  // level (heals and burns: healLevel, dotLevel; gear's edge: gear.mjs ITEM_CURVE) is measured on it, and lift()
+  // carries it up to power().
+  levelLine: 0.04,
   // Enemy parts are tougher than one or two of your hits: fights run long enough that attacks
   // land, so gear and planning are what keep you standing.
   partToughness: 1.7,
@@ -149,7 +154,7 @@ export const CONFIG = {
     travelMs: 2 * 60000, // from a floor-1 server; +1 minute per floor down (perFloorMs)
     perFloorMs: 60000,
     maxTickMs: 5000, // a long gap (closed tab, sleep) counts as this much
-    // The wall: your Firewall rating vs the invader's strength (both 100 × power(level)).
+    // The wall: your Firewall rating vs the invader's strength (both 100 × line(level), the level line: data.mjs).
     wall: 0.75, // rating with no Firewall service (the Firewall's versions set 1, 1.2, 1.45)
     block: 1.2, // rating/strength at or above: blocked at the wall
     breach: 0.8, // at or below: breach. In between: siege.
@@ -256,7 +261,7 @@ for (const d of Object.values(CLASS_DATA)) Object.assign(ABILITIES, d.abilities)
 // Daemons: small programs that fight beside you, and only invasions drop them (invasion.mjs daemonDrop).
 // Each belongs to a band (DAEMON_BANDS, below: an invasion drops its level's band, now and then an earlier one's)
 // and drops at the invasion's level, an item level: its number n grows with it like a protocol's stats
-// (×power(level)). A higher-level copy is just better and replaces yours; the lower one scraps for code.
+// (×power(level); a share, ×line(level)). A higher-level copy is just better and replaces yours; the lower one scraps for code.
 //   cd    acts on its own cooldown (cycles), right after your order. exfil: only in an Exfil fight.
 //   on    acts when something happens instead (once: once a fight):
 //         start (the fight starts) · half, quarter (you drop below half, a quarter) · crash (a hit would take
@@ -326,7 +331,7 @@ export const codeUnit = (level) => 4 + Math.floor(Math.max(1, level) / 3);
 export const daemonBand = (level) => DAEMON_BANDS.reduce((d, [lo], i) => (level >= lo ? i + 1 : d), 1); // an invasion's band: the deepest DAEMON_BANDS entry its level has reached
 export const bandDaemons = (band) => Object.keys(DAEMONS).filter((id) => DAEMONS[id].band === band);
 // A daemon's number at an item level, like a protocol's stats.
-export const daemonN = (id, level) => Math.max(1, Math.round(DAEMONS[id].n * power(level)));
+export const daemonN = (id, level) => Math.max(1, Math.round(DAEMONS[id].n * (DAEMONS[id].pct ? line(level) : power(level)))); // a share (pct) grows on the level line
 // When it acts, in words: "Every 4 cycles", "Once a fight", "On a cut".
 const ON_WORD = { start: 'As a fight starts', half: 'Below half', quarter: 'Below a quarter', crash: 'On a killing blow', big: 'On a big attack', cut: 'On an interrupt', stripped: 'On a stripped part', told: 'On a tell', charge: 'On a charge', answered: 'On an answered tell', soaked: 'On a shield hit', burnout: 'On a burn ending', crit: 'On a crit', broke: 'On a break', low: 'Below a quarter (a part)', synced: 'On a Sync Window' };
 export const daemonWhen = (id) => { const d = DAEMONS[id]; return d.cd ? `Every ${d.cd} cycles` : `${ON_WORD[d.on] || d.on}${d.once ? ' · once a fight' : ''}`; };
@@ -927,14 +932,20 @@ export function makePart(spec, kind, scale, extraArmor = 0) {
 // (Threat = level + 9.) Home intrusions reach these as the server levels up; deep guards sooner.
 export const THREAT_STEPS = { armor: [{ threat: 14, part: 'special' }, { threat: 16, part: 'special' }, { threat: 22, part: 'basic' }], sooner: 24 };
 
-// Power at a level: 4% more per level from level 1 (players and enemies alike).
 // The late step (CONFIG.runLate) at an enemy level: 1 up to the first point, linear between points, flat after.
 export function runLate(level, pts = CONFIG.runLate) {
   if (!pts?.length || level <= pts[0][0]) return 1;
   for (let i = 1; i < pts.length; i++) if (level <= pts[i][0]) { const [a, x] = pts[i - 1], [b, y] = pts[i]; return x + ((y - x) * (level - a)) / (b - a); }
   return pts.at(-1)[1];
 }
-export const power = (level) => 1 + CONFIG.powerPerLevel * (Math.max(1, level) - 1);
+// Power at a level: CONFIG.powerPerLevel more per level, compounding from level 1 (players and enemies alike).
+export const power = (level) => (1 + CONFIG.powerPerLevel) ** (Math.max(1, level) - 1);
+// The level line (CONFIG.levelLine), and the lift: power over the line. A flat number tuned on the line (an item's
+// stats, a unique's +6 damage, a talent's +4 Signal) is that number × lift(its level), so it keeps its weight.
+export const line = (level) => 1 + CONFIG.levelLine * (Math.max(1, level) - 1);
+export const lift = (level) => power(level) / line(level);
+// A flat number at a level: n × lift, whole, never under 1.
+export const lifted = (n, level) => Math.max(1, Math.round(n * lift(level)));
 // Enemies match you level for level (no soft start: the first fights should cost something).
 export const mobPower = (level) => power(level) * 1;
 

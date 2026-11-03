@@ -7,7 +7,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, resolveCycle, active, hooks, restore, SAVE_VERSION, finish } from './dist/combat.mjs';
 import { CONFIG, BOSSES } from './dist/data.mjs';
-import { play, currentLocation, LEGACY, KING_ROOM } from './dist/run.mjs';
+import { play, currentLocation, LEGACY, KING_ROOM, ZONE_LEVEL } from './dist/run.mjs';
 import * as FP from './dist/floorplan.mjs';
 import { roomsFor, summaryOf, sprawlGraph } from './dist/netrooms.mjs';
 import { ROGUE, rogueRooms, rogueSpawns } from './dist/rogue.mjs';
@@ -49,7 +49,7 @@ test('a fresh level-1 character: connect sprawl plays SPRAWL-00 as rooms, its fo
   assert.match(play(s, 'cd net/relay').map((e) => e.message).join(' '), new RegExp(`\\w+-\\d+ holds ${net.path}`), 'what holds it stops the walk; cd still takes the folder');
   assert.equal(s.rooms.screen?.kind, 'virus', 'an unknown room\'s virus still asks: Engage or Step back');
   play(s, 'back');
-  assert.match(play(s, 'ls').find((e) => e.type === 'rooms-out').message, new RegExp(`${net.path}  \\[fight · \\w+ lv 1\\]`), 'been in: discovered');
+  assert.match(play(s, 'ls').find((e) => e.type === 'rooms-out').message, new RegExp(`${net.path}  \\[fight · \\w+ lv ${ZONE_LEVEL['/net']}\\]`), 'been in: discovered, at its room\'s level');
   Object.assign(s.zone.spawns['/net'], { alive: false, respawnAt: clock + 3600000 });
   assert.match(play(s, 'cd /net/relay').map((e) => e.message).join(' '), /The Core is sealed\. RELAY-KING holds it from level 3/);
   // A stray: a fight, its first clear, back on its timer once you've left.

@@ -839,7 +839,8 @@ test('the RAM stat is paid for like Scavenge: 6% of the primaries a point, withi
     if (!it.stats.ram) continue;
     seen++;
     const raw = G.primaries(it.base, 30, G.RARITIES.tuned.mult, G.seeded(k));
-    for (const [st, v] of Object.entries(raw)) assert.equal(it.stats[st], Math.max(1, Math.round((v * (100 - G.statCut(it.stats))) / 100)), `${it.name}: ${st} paid for`);
+    const { lifted } = await import('./dist/data.mjs'); // primaries on the level line, the item lifted (gear.mjs liftItem)
+    for (const [st, v] of Object.entries(raw)) assert.equal(it.stats[st], lifted(Math.max(1, Math.round((v * (100 - G.statCut(it.stats))) / 100)), 30), `${it.name}: ${st} paid for`);
   }
   assert.ok(seen, 'of the Heap rolls');
 });

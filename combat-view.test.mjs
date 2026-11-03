@@ -12,7 +12,7 @@ CONFIG.partToughness = 1; // mechanics tests use the parts' base numbers
 CONFIG.enemyRamp = 0;
 CONFIG.salvageChance = 1;
 CONFIG.misses = false; // and no misses
-CONFIG.powerPerLevel = 0; // flat numbers at every level (level tests turn it back on)
+CONFIG.powerPerLevel = 0; CONFIG.levelLine = 0; // flat numbers at every level (level tests turn it back on)
 CONFIG.gap = { dealt: 0, taken: 0, floor: 1, below: 0 }; // and no level-gap scaling (combat.test.mjs tests it)
 
 const start = (id = 'cryptjack') => { const s = fresh(); s.hackers = { breaker: { level: 50, xp: 0 } }; selectEncounter(s, id, 7, { level: 6 }); command(s, 'engage'); return s; };

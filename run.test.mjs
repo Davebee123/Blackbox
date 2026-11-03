@@ -16,7 +16,7 @@ __FRESH.bonus = 0; // exact XP checks: the Fresh bonus has its own tests (phase2
 CONFIG.baseCrit = 0;
 CONFIG.enemyCrit = 0;
 CONFIG.misses = false; // and no misses
-CONFIG.powerPerLevel = 0; // flat numbers at every level (level tests turn it back on)
+CONFIG.powerPerLevel = 0; CONFIG.levelLine = 0; // flat numbers at every level (level tests turn it back on)
 CONFIG.gap = { dealt: 0, taken: 0, floor: 1, below: 0 }; // and no level-gap scaling (combat.test.mjs tests it)
 
 const say = (s, t) => play(s, t);

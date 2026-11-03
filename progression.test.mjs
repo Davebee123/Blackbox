@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, selectEncounter, resolveCycle, part, addItem, loaded, restore, serverLevel, syncServer, gainXp, hackerOf, finish, UNIQUES, fxAnswer, patchDelay, gearStat, daemonLevel, SAVE_VERSION, DECODE_XP, effectLine, previewDamage, bossTable } from './dist/combat.mjs';
-import { CONFIG, CLIMB, levelMinutes, xpToNext, killXp, killsToNext, v41XpToNext, deedScale, DEED, power, LOADOUT, BOSS_LOOT } from './dist/data.mjs';
+import { CONFIG, CLIMB, levelMinutes, xpToNext, killXp, killsToNext, v41XpToNext, deedScale, DEED, power, LOADOUT, BOSS_LOOT, lifted } from './dist/data.mjs';
 import { uniqueItem, rollItem, seeded, RULES, RARITIES, BASES, baseFor, primaries, SERVICES } from './dist/gear.mjs';
 const VERSIONS = [{ code: 12, credits: 120 }, { code: 40, credits: 600 }]; // what a service's v1 and v2 cost (the retired table)
 import { tickPlay, CRAFT_REFUND } from './dist/progression.mjs';
@@ -175,7 +175,7 @@ test('rules at work: Interrupt Handler on a part winding up a tell, Exception Ha
   wear(u, rule('double-tap'));
   bare(fight(u, 20));
   const r = part(u, 'pulse');
-  Object.assign(r, { integrity: 52, max: 100, ticks: [{ at: 0.5, spent: false }, { at: 0.25, spent: false }] });
+  Object.assign(r, { integrity: 520, max: 1000, ticks: [{ at: 0.5, spent: false }, { at: 0.25, spent: false }] });
   r.attack.due = u.encounter.cycle;
   command(u, 'spike pulse'); const ev = resolveCycle(u);
   assert.ok(ev.some((e) => e.type === 'cut' && e.cut), 'cut');
@@ -213,7 +213,7 @@ test('the new world uniques: Rowhammer, Slammer, Log4Shell, Shellshock, Blue Pil
   pulse.integrity = 1;
   telling(c, enc);
   command(c, 'spike pulse'); resolveCycle(c);
-  assert.equal(enc.max - enc.integrity, UNIQUES.log4shell.effect.value, 'the Encryptor, winding up, took 22');
+  assert.equal(enc.max - enc.integrity, lifted(UNIQUES.log4shell.effect.value, 24), 'the Encryptor, winding up, took 22, lifted at its item level');
   // Slammer: burns on a broken part jump on.
   const d = at({ infiltrator: 22 });
   wear(d, uniqueItem(UNIQUES.slammer, 22, seeded(1)));
@@ -250,7 +250,7 @@ test('the new world uniques: Rowhammer, Slammer, Log4Shell, Shellshock, Blue Pil
   wear(g, uniqueItem(UNIQUES['ctrl-c'], 32, seeded(1)));
   fight(f, 32); fight(g, 32);
   fxAnswer(f);
-  assert.equal(f.encounter.shield, 30);
+  assert.equal(f.encounter.shield, lifted(30, 32), 'a 30 shield, lifted at its item level');
   g.encounter.readyAt = { firewall: g.encounter.cycle + 3 };
   fxAnswer(g);
   assert.equal(g.encounter.readyAt.firewall, g.encounter.cycle + 1, 'every cooldown 2 sooner');

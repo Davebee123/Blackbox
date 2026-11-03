@@ -38,7 +38,7 @@ Every playtest URL runs on a fresh state that is never saved. The real save is n
 | URL | What it opens |
 |---|---|
 | `/?dev` | The real game with developer commands on (and `window.__bb`, the live state, for tests). |
-| `/?bench=<name>` | A test bench: its own save (`blackbox-bench-<name>`), developer mode on, a BENCH tag. Add `&as=<subclass\|class>&level=<n>` to start as that character. |
+| `/?bench=<name>` | A test bench: its own save (`blackbox-bench-<name>`), developer mode on, a BENCH tag. Add `&as=<subclass\|class>&level=<n>` to start as that character, `&curve=8` for an 8% level curve. |
 | `/?bench=arena` | A bench with the Dev drawer open on the **Arena**: every fight, searchable. `&as=<subclass>&level=<n>` builds that character (again whenever they change). |
 | `/?playtest=cryptjack` | A paused fight against a fixture or strain (`splinter`, `ghostroot`…); `random` for a wild one. `&level=`, `&cls=`, `&sub=`, `&family=`, `&seed=`. Type `resume`. |
 | `/?playtest=boss:<id>` | A paused boss fight (`resident`, `repoman`, `choir`…), geared for `&level=` (10 by default). `&family=worm\|ransomware` for the Resident, `&cls=`, `&sub=`, `&seed=`. |
@@ -86,7 +86,7 @@ comment saying what it does.
 | File | What it does |
 |---|---|
 | `dist/combat.mjs` | The engine: pure and deterministic, commands in, events out. Fights, XP and levels, the save and its migrations. |
-| `dist/data.mjs` | Every tunable number: abilities, classes, families, strains, guards, bosses, floors, and `createVirus`. |
+| `dist/data.mjs` | Every tunable number: abilities, classes, families, strains, guards, bosses, floors, and `createVirus`; the level curve (`power` compounding, the 4% `line`, the `lift` between). |
 | `dist/classes/` | Each class's subclasses: `<class>.data.mjs` their skills and trees, `<class>.mjs` what they do in a fight; `kit.mjs` talent helpers. |
 | `dist/parts.mjs` | What a wild virus is made of: its basic, signature and third parts, rolled by named constants (`PARTS`), the strains' spread (`PARTS.spread`), and an elite's clash. |
 | `dist/exe.mjs` | The .exe builds: a part's rule harder or bent (`EXE`), and their roll from floor 4 (`EXE_ROLL`; echoes are `PARTS.echo`). |
@@ -110,7 +110,7 @@ comment saying what it does.
 
 | File | What it does |
 |---|---|
-| `dist/gear.mjs` | Protocols: slots, rarities, item levels, stats and rule affixes. Pure data and functions. |
+| `dist/gear.mjs` | Protocols: slots, rarities, item levels, stats and rule affixes; flat numbers lifted at their level (`liftItem`, `liftFx`, `curveRestore`). Pure data and functions. |
 | `dist/sets.mjs` | Sets: piece counts and their bonuses in a fight. |
 | `dist/faction-gear.mjs` | Faction gear: implicit lines on a faction's items, and the five faction uniques assembled from feud parts. |
 | `dist/filters.mjs` | Filters: rolled gear for your firewall's slots. |

@@ -12,7 +12,7 @@ CONFIG.tells = false; // these check skill numbers; tells.test.mjs checks the te
 CONFIG.baseCrit = 0;
 CONFIG.enemyCrit = 0;
 CONFIG.misses = false;
-CONFIG.powerPerLevel = 0;
+CONFIG.powerPerLevel = 0; CONFIG.levelLine = 0;
 CONFIG.partToughness = 1;
 CONFIG.enemyRamp = 0;
 CONFIG.gap = { dealt: 0, taken: 0, floor: 1, below: 0 };

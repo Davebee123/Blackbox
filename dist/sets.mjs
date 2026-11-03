@@ -23,6 +23,7 @@ import ITEMS from './content/items.mjs';
 import { fxHolds, gearFx, active, loaded, emit, hit, heal, alive, parts, livingParts, defender, burnsOn, helpersOn, helperCap, alliesOf, momentumStacks, classOf, delayAttack } from './combat.mjs';
 import { momentumCap } from './classes/breaker.mjs';
 import { ABILITIES, SKILLS, ARCHETYPES } from './data.mjs';
+import { liftFx } from './gear.mjs';
 
 export const SETS = Object.fromEntries((SET_TEXT.sets || []).map((x) => [x.id, x]));
 const UNIQ = Object.fromEntries((ITEMS.uniques || []).map((u) => [u.id, u]));
@@ -132,18 +133,24 @@ export function activeSets(items = []) {
 // The active bonuses' effect blocks and the worn pieces' green lines: { fx, id, name, set, at } each, the shape
 // combat.mjs uniqueFx lists. A subclass line carries its subclass (fx.sub): combat.mjs fxCond holds it for that
 // subclass only.
+// A flat bonus (+2 Block) is lifted at the set's level (setLevel), a green line at its piece's item level (gear.mjs liftFx).
 export function setFx(items = []) {
   const out = [];
   for (const r of activeSets(items)) {
+    const L = setLevel(r.id);
     for (const at of r.open) {
       const b = SETS[r.id].bonuses[at];
-      for (const [i, fx] of (b.fx || []).entries()) out.push({ fx: { text: b.text, ...fx }, id: `set:${r.id}:${at}:${i}`, name: `${r.name} (${at})`, set: r.id, at });
-      for (const [sub, x] of Object.entries(b.subs || {})) for (const [i, fx] of (x.fx || []).entries()) out.push({ fx: { text: x.text, ...fx, sub }, id: `set:${r.id}:${at}:${sub}:${i}`, name: `${r.name} (${at})`, set: r.id, at });
+      for (const [i, fx] of (b.fx || []).entries()) out.push({ fx: liftFx({ text: b.text, ...fx }, L), id: `set:${r.id}:${at}:${i}`, name: `${r.name} (${at})`, set: r.id, at });
+      for (const [sub, x] of Object.entries(b.subs || {})) for (const [i, fx] of (x.fx || []).entries()) out.push({ fx: liftFx({ text: x.text, ...fx, sub }, L), id: `set:${r.id}:${at}:${sub}:${i}`, name: `${r.name} (${at})`, set: r.id, at });
     }
-    if (r.n >= GREEN_AT) for (const p of r.worn) if (UNIQ[p]?.green) out.push({ fx: UNIQ[p].green, id: 'green:' + p, name: `${UNIQ[p].name} (set)`, set: r.id, at: GREEN_AT });
+    if (r.n >= GREEN_AT) for (const p of r.worn) if (UNIQ[p]?.green) out.push({ fx: liftFx(UNIQ[p].green, items.find((it) => it?.unique === p)?.level || UNIQ[p].level), id: 'green:' + p, name: `${UNIQ[p].name} (set)`, set: r.id, at: GREEN_AT });
   }
   return out;
 }
+// A set's level: its tier, else its highest piece's level.
+export const setLevel = (id) => SETS[id]?.tier || Math.max(1, ...piecesOf(id).map((p) => UNIQ[p].level || 1));
+// A bonus's text with its flat numbers lifted (the first flat block's, as setFx lifts it).
+const liftText = (text, fxs, L) => { const fx = (fxs || []).map((x) => liftFx({ text, ...x }, L)).find((x) => x.text !== text); return fx ? fx.text : text; };
 // One set for a tooltip or the Collection. have: { worn: [unique ids loaded], held: Set of ids in your stash, found: Set of
 // ids you've ever found (the Collection) }, the active rows (activeSets) for the 4-piece rule, and your subclass.
 // pieces: [{ id, name (null until found), slot base, state: 'worn' | 'held' | 'missing' | 'unknown' }]
@@ -159,7 +166,7 @@ export function setCard(id, { worn = [], held = new Set(), found = new Set(), ac
   });
   const bonuses = bonusesOf(id).map((b) => {
     const on = row ? row.open.includes(b.at) : n >= b.at;
-    return { at: b.at, text: b.text, on, blocked: row?.blocked?.at === b.at ? row.blocked.by : null, subs: Object.entries(b.subs || {}).map(([k, x]) => ({ id: k, text: x.text, mine: k === sub, on: on && k === sub })) };
+    return { at: b.at, text: liftText(b.text, b.fx, setLevel(id)), on, blocked: row?.blocked?.at === b.at ? row.blocked.by : null, subs: Object.entries(b.subs || {}).map(([k, x]) => ({ id: k, text: liftText(x.text, x.fx, setLevel(id)), mine: k === sub, on: on && k === sub })) };
   });
   return { id, name: set.name, n, total: pieces.length, pieces, bonuses };
 }
@@ -168,7 +175,7 @@ export function greenOf(uniqueId, worn = []) {
   const u = UNIQ[uniqueId], set = setOf(uniqueId);
   if (!u?.green || !set) return null;
   const n = piecesOf(set.id).filter((p) => worn.includes(p)).length;
-  return { text: u.green.text, at: GREEN_AT, on: worn.includes(uniqueId) && n >= GREEN_AT };
+  return { text: liftFx(u.green, u.level).text ?? u.green.text, at: GREEN_AT, on: worn.includes(uniqueId) && n >= GREEN_AT };
 }
 
 // ---------- saves ----------

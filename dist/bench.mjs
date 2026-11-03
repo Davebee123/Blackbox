@@ -34,6 +34,9 @@ export function pageSave(search, campaignKey) {
   const camp = !playtest && p.get('campaign') === 'breach';
   return { key: camp ? campaignKey : SAVE_KEY, bench: null, camp };
 }
+// A bench's level curve (?curve=<percent>, 0 to 20): power's compounding rate on that page only (data.mjs
+// CONFIG.powerPerLevel), or null for the game's. Gear rolled after it (bench <class> <level>) is on that curve.
+export const benchCurve = (search) => { const v = new URLSearchParams(search).get('curve'), n = Number(v); return v != null && v !== '' && n >= 0 && n <= 20 ? n / 100 : null; };
 // The bench saves in a storage (localStorage, or a test's stand-in): their names, sorted.
 export function benchList(store) {
   const out = [];

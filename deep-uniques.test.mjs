@@ -6,7 +6,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, selectEncounter, resolveCycle, part, addItem, loaded, hooks, UNIQUES, gearStat, maxSignal, damageMultiplier, hit, heal, takeDamage, takenMult, cooldownOf, timersHidden, fxOn, fxPct, rollDrop, setBonusCount, puzzleUnique, floorUniques, strainTrophies, WORLD_SOURCES, addLocation, finish, hackerLevel, critChance } from './dist/combat.mjs';
 import { uniqueItem, seeded, BASES, STATS, LOOT } from './dist/gear.mjs';
-import { CONFIG, BOSS_LOOT, ABILITIES, defaultSub } from './dist/data.mjs';
+import { CONFIG, BOSS_LOOT, ABILITIES, defaultSub, lifted } from './dist/data.mjs';
 import { checkItems, fxText, fxList } from './dist/content.mjs';
 import ITEMS from './dist/content/items.mjs';
 
@@ -101,23 +101,23 @@ test('Batch 1: all 60 uniques, each with the plan\'s name, slot, level, source a
 // ---------- stats while a condition holds ----------
 test('stat+ and stat%: Siltstone\'s Block for each ◆, Depth Gauge\'s Regen below half, Pressure Hull\'s Block behind a shield, Siphon Tube\'s Leech, Signal Floor\'s Regen', () => {
   const t = vet();
-  for (const id of ['siltstone', 'pressure-hull']) wear(t, id);
+  const [silt] = ['siltstone', 'pressure-hull'].map((id) => wear(t, id));
   const e = fight(t);
   const block = gearStat(t, 'reduction', 'hacker');
   e.chits = 2;
-  assert.equal(gearStat(t, 'reduction', 'hacker'), block + 2, 'Siltstone: +1 Block a ◆');
+  assert.equal(gearStat(t, 'reduction', 'hacker'), block + 2 * lifted(1, silt.level), 'Siltstone: +1 Block a ◆, lifted at its item level');
   e.chits = 0;
   e.shield = 5;
   assert.equal(gearStat(t, 'reduction', 'hacker'), Math.round(block * 1.25), 'Pressure Hull: Block 25% stronger behind a shield');
   const s = vet();
-  for (const id of ['depth-gauge', 'siphon-tube', 'signal-floor']) wear(s, id);
+  const [gauge] = ['depth-gauge', 'siphon-tube', 'signal-floor'].map((id) => wear(s, id)), four = lifted(4, gauge.level);
   fight(s);
   const regen = gearStat(s, 'regen', 'hacker'), leech = gearStat(s, 'leech', 'hacker');
   s.run.integrity = Math.floor(s.run.max * 0.4); // below half
-  assert.equal(gearStat(s, 'regen', 'hacker'), regen + 4, 'Depth Gauge: +4 Regen below half');
+  assert.equal(gearStat(s, 'regen', 'hacker'), regen + four, 'Depth Gauge: +4 Regen below half, lifted');
   assert.equal(gearStat(s, 'leech', 'hacker'), Math.round(leech * 1.5), 'Siphon Tube: Leech half again below half');
   s.run.integrity = Math.floor(s.run.max * 0.2); // below 25%
-  assert.equal(gearStat(s, 'regen', 'hacker'), (regen + 4) * 2, 'Signal Floor: Regen doubles below 25%');
+  assert.equal(gearStat(s, 'regen', 'hacker'), (regen + four) * 2, 'Signal Floor: Regen doubles below 25%');
 });
 
 test('max Signal% and the plain stat rules: Bedframe, Firmware, Flotsam and Golden Image, in a fight or out of one', () => {
@@ -197,9 +197,9 @@ test('one hit at a time: Drain Plug halves the first big one, Read-Only cuts the
 });
 
 test('Seawall stacks Block for the fight as your Block meets hits; Weir\'s helper takes the first hit; Last Known Good rewinds you once', () => {
-  const s = vet(); wear(s, 'seawall'); fight(s);
-  const b = gearStat(s, 'reduction', 'hacker');
-  for (let k = 1; k <= 7; k++) { landed(s, 50); assert.equal(gearStat(s, 'reduction', 'hacker'), b + Math.min(5, k)); }
+  const s = vet(), sw = wear(s, 'seawall'); fight(s);
+  const b = gearStat(s, 'reduction', 'hacker'), one = lifted(1, sw.level), cap = lifted(5, sw.level); // +1 a hit up to 5, lifted at its item level
+  for (let k = 1; k <= 7; k++) { landed(s, 50); assert.equal(gearStat(s, 'reduction', 'hacker'), b + Math.min(cap, k * one)); }
   const t = vet(); wear(t, 'weir'); const e = fight(t);
   assert.ok(landed(t, 100) > 0, 'no helper out: it lands');
   e.helpers.push({ target: 'encryptor', damage: 1, left: 9 });
@@ -311,7 +311,7 @@ test("critical strikes: Deepwater on armored parts, Bit Flip's every fourth, POS
   assert.equal(v.run.integrity, 500 + Math.round(v.run.max * 0.02), 'Root of Trust: 2% of your max on a crit');
 });
 
-const power50 = () => 1 + CONFIG.powerPerLevel * (L - 1);
+const power50 = () => (1 + CONFIG.powerPerLevel) ** (L - 1);
 test('Dead Reckoning goes through ◆ on its first hit on each part; Spillway carries the leftover of a breaking hit', () => {
   const s = vet(); wear(s, 'dead-reckoning'); fight(s);
   const p = pulse(s);

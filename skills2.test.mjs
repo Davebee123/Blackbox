@@ -10,7 +10,7 @@ CONFIG.baseCrit = 0;
 CONFIG.enemyCrit = 0;
 CONFIG.misses = false; // and no misses
 CONFIG.edges = false; // each class's edge (Overkill, Grudge, Weak Spot, Last Gasp) has its own test
-CONFIG.powerPerLevel = 0; // flat numbers at every level (level tests turn it back on)
+CONFIG.powerPerLevel = 0; CONFIG.levelLine = 0; // flat numbers at every level (level tests turn it back on)
 CONFIG.gap = { dealt: 0, taken: 0, floor: 1, below: 0 }; // and no level-gap scaling (combat.test.mjs tests it)
 (await import('./dist/data.mjs')).LOADOUT.specRanks = 0; // the kit talent's two free ranks (progression.mjs): off, for exact numbers
 import { start as startAt, act, quiet, noArmor, big, lost } from './classes.test.mjs';

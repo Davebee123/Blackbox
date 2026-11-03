@@ -16,8 +16,8 @@ first transmission comes in over the map (Transmissions).
 
 ### The loop
 
-1. `connect sprawl`: **SPRAWL-00**, the starter server, six rooms of strays at your level (never above 5, now and
-   then one a level higher). Walk into a room and `engage`. Your first two kills there hit at 60%
+1. `connect sprawl`: **SPRAWL-00**, the starter server, six rooms of strays, each at its own level (1 near the
+   entry, up to 4; `ZONE_LEVEL`). Walk into a room and `engage`. Your first two kills there hit at 60%
    (`CONFIG.zone.starterHit`). A kill pays at once, and the room fills again 90 seconds later. Its Core opens from
    level 3.
 2. The network is a stack of eight **floors**; SPRAWL-00 is floor 1's entry. The servers linked to what you know show
@@ -196,7 +196,7 @@ is a crash (Home).
 
 ### Families
 
-Numbers at enemy level 6; Integrity and damage grow 4% a level (a level-1 virus is gentler, 80% of a match, ramping to
+Numbers at enemy level 6; Integrity and damage grow 6% a level, compounding (a level-1 virus is gentler, 80% of a match, ramping to
 100% by level 6). More ◆ at 5, 7 and 10; from level 9 first attacks come a cycle sooner (never on cycle 1).
 
 | Family | Basic part | Signature part |
@@ -560,7 +560,7 @@ quiet for good. Lose and you're disconnected, and for 6 hours it is a level stro
 
 | Boss | Where | From | Integrity | Enrages |
 |---|---|---|---|---|
-| RELAY-KING (worm) | SPRAWL-00's relay room, a Core sealed until level 3; back 30 minutes after it falls | level 3 | 1.25× | cycle 16 |
+| RELAY-KING (worm) | SPRAWL-00's relay room (level 5), a Core sealed until level 3; back 30 minutes after it falls | level 3 | 1.25× | cycle 16 |
 | REPO MAN (ransomware) | The Bounty event from level 8 | level 8 | 1.6× | cycle 18 |
 | HOLLOW CHOIR (ghostroot) | Its own event, from level 10 | level 10 | 1.4× | cycle 16 |
 
@@ -1160,10 +1160,13 @@ a favoured card once it has come up twice, its rich code once it leans your way;
 ### Levels
 
 - **Hacker level** (per class, 1–50): a long, WoW-style climb. Each class starts at level 1 and levels on its own.
-  **Every level adds 4% power**: damage, heals, shields and Signal (key 1 hits 25 at level 1, 44 at 20, 74 at 50).
-  Heals you cast and damage over time take half of it (+2% a level, `CONFIG.healLevel`, `dotLevel`); Restore and
-  Payload on your gear make up the rest (Items).
-- **Your server's level is your highest class level.** It sets your server's Integrity (100, +4% a level) and opens
+  **Every level adds 6% power, compounding** (`CONFIG.powerPerLevel`, `power`): damage, heals, shields and Signal, for
+  you and enemies alike (key 1 hits 25 at level 1, 76 at 20, 434 at 50). A virus 10 levels under you has about half
+  your numbers. Heals you cast and damage over time keep half of the 4% **level line** (`CONFIG.levelLine`, +2% a
+  level, `healLevel`, `dotLevel`) and all of the **lift** above it (`lift` = power ÷ line); Restore and Payload on
+  your gear make up the rest (Items). Every flat number tuned on the line (an item's stats, a unique's +6 damage, a
+  talent's +4 Signal, a run's Signal costs) is that number × the lift at its level: still a flat number.
+- **Your server's level is your highest class level.** It sets your server's Integrity (100, +6% a level, compounding) and opens
   daemon slots (+1 at 15, 30 and 45).
 - **Enemies have a level (1–60).** A server keeps the level it was found at, so old servers get easier. Enemy levels
   are coloured WoW-style: red (5+ above you), orange (3–4), yellow (about even), green (below), grey (10+ below, no XP).
@@ -1242,7 +1245,7 @@ free:** until any class reaches level 5, switching to a class you haven't played
   queued. A few skills only work in the cycle or two after their event (Shatter after you strip a part's last ◆,
   Retaliate after you're hit, Opening after an attack misses you or is delayed).
 
-**The core skills** (numbers at level 1; they grow 4% a level):
+**The core skills** (numbers at level 1; they grow 6% a level, compounding):
 
 | Skill | What it does | Cooldown |
 |---|---|---:|
@@ -1393,8 +1396,10 @@ deconstructed.
   Hypervisor Escape 42; the Proxy, Shell and Script lines likewise, ending in Covert Channel, Firmware Shell and
   Metamorphic Engine at 42; Implant 15, Bootkit 34, Firmware Rootkit 42). **Base power follows item level on one smooth
   curve** (`ITEM_CURVE` in gear.mjs): a new base brings its name and its mix of primaries, never a step in power. Plain
-  gear grows about 10% a level at level 1, 7% at 10, 5% at 30 and 3.6% at 50, outgrowing the enemies' hits so a
-  same-level fight costs about the same share of your Signal throughout.
+  gear grows about 12% a level at level 1, 11% at 10, 9% at 30 and 8% at 50, outgrowing the enemies' hits so a
+  same-level fight costs about the same share of your Signal throughout. An item's numbers are worked out on the level
+  line, then its flat stats (all but RAM and Lead), its flat rule and a unique's or set's flat effect are lifted at its
+  item level (`liftItem`, `liftFx`). Chances stay percentages.
 - **Power spikes are earned** (the designer's rule): base power never spikes; a new skill, a talent tier, a capstone, a
   slot, a unique, a set bonus or a tier set does, and the big jumps belong past the level cap. A spike that takes the
   friction away is a problem to fix in its kit.
@@ -1451,7 +1456,8 @@ Every stat is a whole number. The stat sheet lists them all.
 | Scavenge (%) | Magic find (below) | of the Scavenger |
 | RAM | Every routine's RAM, up to 3 from all your gear (Routines) | of the Heap (from item level 10; 1, 2 from about 30) |
 
-**Heals and burns grow with gear.** Heals you cast and damage over time keep +2% a level, not 4%; Restore and Payload
+**Heals and burns grow with gear.** Heals you cast and damage over time keep +2% a level of the 4% level line, and the
+lift; Restore and Payload
 make up the rest and more (a blue Sysop at 30 carries about 65% Restore). Heals that give back damage (Reclaim,
 Rollback, OOM Kill) take Restore only. Payload is flat on every tick, so it counts most on small, frequent ones.
 
@@ -2042,16 +2048,20 @@ Each goes to the pager and to #net; missing one costs nothing. The director roll
 
 | Event | Where | Lasts | What it is | What you get |
 |---|---|---|---|---|
-| **Courier** (weight 3) | a traced server | 15 min | LANTERN's courier passes through: *Intercept* it, a fight at your level. From level 10, one in twenty carries a unique you lack, and says which | 40 + 12L credits and a protocol (85% Tuned, 15% Custom), or that unique |
-| **Bounty** (2) | a traced server | 25 min | A named virus two levels above you (from level 8, REPO MAN) | 80 + 15L credits, +2 standing |
+| **Courier** (weight 3) | a traced server | 15 min | LANTERN's courier passes through: *Intercept* it, a fight. From level 10, one in twenty carries a unique you lack, and says which | 40 + 12L credits and a protocol (85% Tuned, 15% Custom), or that unique |
+| **Bounty** (2) | a traced server | 25 min | A named virus two levels above its server (from level 8, REPO MAN) | 80 + 15L credits, +2 standing |
 | **Hollow Choir** (1) | a traced server, from 10 | 25 min | The boss | Twice the bounty's credits and a Custom protocol |
 | **Outbreak** (2) | the net | 30 min | One family surges | Its kills drop double code |
 | **Leak** (1) | a server you've found, not taken | at once | Someone leaks its vault key | You hold the key as you connect |
 | **Darknet listing** (0.5) | the net, from 8 | 20 min | A broker lists a native unique from another network, naming it (`event buy <id>`) | It, for 400 + 40L credits and 2 Exploits |
 | **Feud** (1) | a traced server, from 8, with two rival hubs located | 20 min | A tug-of-war between two rival factions (the bar drifts 2–5% a minute, never past 20/80 alone). *Pick a side* (`event fight <id> <faction>`): fight the other side's runner (an elite of its family at your level); each win pushes your side +25% and brings a fresh runner. Your side wins at 100%, or ahead when time runs out | Each win: 40 + 7.5L credits, +4 rep, a protocol with your side's implicit. The feud: a **part** of your side's faction piece, one of its goods, +6 rep (its allies +3). A feud never costs rep |
-| **Bounty hunt** (1.5) | a traced server, from 6, two or more traced | 20 min | A named elite that hops to another of your servers every 5 minutes, 3 hops, a level each (up to yours + 3) | 80 + 15L credits ×1, ×1.3, ×1.6, ×2 by hops made, +2 Kestrel rep |
+| **Bounty hunt** (1.5) | a traced server, from 6, two or more traced | 20 min | A named elite that hops to another of your servers every 5 minutes, 3 hops, a level each | 80 + 15L credits ×1, ×1.3, ×1.6, ×2 by hops made, +2 Kestrel rep |
 | **Market shock** (1) | a hub you can trade at, from 5 | 15 min | One ware's price ×2.5 there, or one time in three ×0.4 | No fight |
 | **Spotter** (1) | your wall, from 6 | 10 min | A spotter watching your wall: *Fight* it | The next invasion comes 2 levels weaker, and you know where from and what kind |
+
+**An event takes its place's level, never yours.** Your level picks the floor: a fight event lands on a traced server
+on your floor at your level + 2 or under (the floor's lowest when none is), at that server's level; a spotter at your
+wall takes that lowest level. Off your floor's list, any traced server. Lairs keep their slot's level.
 
 Your network's two favoured cards come up 2.5 times as often, and couriers', bounties' and outbreaks' families follow
 its lean. A server with an event wears an antenna on the map, and its card shows the event as a small panel: a strip
@@ -2134,7 +2144,7 @@ radio in a window beside it), **[2] recordings** (the tape), **[3] log**, **[0] 
 
 ## Home
 
-Your server stays home: its Integrity is your health at home (100, +4% a level, +5% at firewall tiers +1, +3 and +5),
+Your server stays home: its Integrity is your health at home (100, +6% a level compounding, +5% at firewall tiers +1, +3 and +5),
 resting 2% of its max a minute between fights (half that while an invasion is contested or breaching), offline too.
 `repair [n]` pays for it now. The **Server** page (`server-view.mjs`) is one card (your firewall drawn as a ring of
 sixteen blocks round the core, the Integrity ring, **Repair**, Wall, Streak and Next) and a detail panel; its buttons
@@ -2237,7 +2247,7 @@ sometimes stops one. A crash while away reboots for **2 hours** and the invasion
 
 Small programs that fight beside you; **only invasions drop them**. Forty, eight to each band (lv 1–9, 7–18, 16–28,
 26–40, 38–50); each is weak alone. An invasion drops one of its level's band (an earlier band's a quarter of the time)
-**at its level**: its number grows 4% a level. You hold **one copy of each**: a higher one replaces yours, and the other
+**at its level**: its number grows with power (Snapshot's share, 4% a level). You hold **one copy of each**: a higher one replaces yours, and the other
 scraps for a unit of its family's code.
 
 - **Slots:** 2, +1 at server level 15, 30 and 45; Operators +1. Choose them on the Loadout's **Daemons** tab: your
@@ -2524,7 +2534,8 @@ Developer commands work only in tests, playtest pages, a test bench and with `?d
 - **Test bench** (`bench.mjs`): `/?bench=<name>` is a save of its own (`blackbox-bench-<name>`) that never touches the
   real one. `bench <subclass|class> <level>` makes a ready character (talents, blue gear with its subclass's stats, its
   rotation, floors reached); `bench list`, `bench delete <name>`. A **BENCH** tag sits on the top bar, and a **Dev**
-  drawer over the prompt holds buttons that type the common developer commands.
+  drawer over the prompt holds buttons that type the common developer commands. `&curve=<percent>` sets the level
+  curve's rate on that page only (`benchCurve`; gear rolled after it, as by `bench <class> <level>`, is on it).
 - **The Arena** (`arena.mjs`, the Dev drawer; `?bench=arena` opens on it): every fightable thing, read from the data
   tables and grouped by kind (families, strains by wave and mutated, ICE, parts and .exe builds, elites by clash,
   Residents, solo, lair and crew bosses, floor holders, rivals' fights, invaders), with its level. Fight types
@@ -2587,9 +2598,11 @@ Checked by `node balance.mjs` (docs/BALANCE.md, `balance.test.mjs`), `farmsim.mj
 
 ## Saves
 
-The save is `SAVE_VERSION` 53 (combat.mjs). An older save is migrated on load, each step keyed on the field it converts,
+The save is `SAVE_VERSION` 54 (combat.mjs). An older save is migrated on load, each step keyed on the field it converts,
 so it is safe to run twice; nothing a save held is lost.
 
+- **v54** the compounding curve: every protocol's flat stats and flat rule, and each filter's Block, Regen and barbs,
+  lifted once at its item level (`curveRestore`, keyed on `s.curve`).
 - **v53** the cryptogram's key, `s.cipher`, made on first use (`cipherOf`).
 - **v52** rivals' memory, `s.rivals`, made on first use (`rivalsRestore`).
 - **v51** the scanner's log, `s.scanner`, made on first use (`scannerOf`).

@@ -5,7 +5,9 @@
 // Pure like the combat engine: state in, events out.
 import { vaultFilter, addFilter, filterLine } from './filters.mjs';
 import { gainComponents } from './salvage.mjs';
-import { CONFIG, FAMILIES, GUARDS, QUIRKS, MONTHS, SKILLS, SERVER, XP, BOSSES, layerOf } from './data.mjs';
+import { CONFIG, FAMILIES, GUARDS, QUIRKS, MONTHS, SKILLS, SERVER, XP, BOSSES, layerOf, lifted } from './data.mjs';
+// A run's flat Signal cost at your level: lifted with your Signal (data.mjs lift).
+const cost = (s, n) => lifted(n, hackerLevel(s));
 import { hasSpecial, armoredAt, SPECIAL } from './specials.mjs';
 import { sweepFile, showSweep, sweepCommand } from './forensics.mjs';
 import { isWild, relocks, rogueLayout, rogueSpawns, rogueMotd, liveRogue, ROGUE, relockLeft, clock, farmFile } from './rogue.mjs';
@@ -87,10 +89,12 @@ LAYOUTS.sprawl = SPRAWL;
 const ZONE_FAMILIES = ['ransomware', 'worm', 'ghostroot'];
 // Fill empty folders whose timer is up: a stray CONFIG.zone.respawnMs after it falls. Its Core is sealed, and empty,
 // until level 3; then it holds RELAY-KING, on his own timer. A contract's named target holds its room until it falls.
-// Each spawn is a plain virus of a home family at your level, up to CONFIG.zone.maxLevel: past that, the fights worth
-// having are on the servers you trace. Below level 3 no Ghostroot (it's veiled): your first fights show you what's
+// Each spawn is a plain virus of a home family at its room's level (ZONE_LEVEL, 1 to CONFIG.zone.maxLevel), never yours:
+// past that, the fights worth having are on the servers you trace. Below level 3 no Ghostroot (it's veiled): your first fights show you what's
 // coming (Slay the Spire).
 export const kingOpen = (s) => hackerLevel(s) >= 3;
+// A SPRAWL-00 room's level: the nearer folders lower (docs/scaling.md 4). RELAY-KING, in /net/relay, at its top.
+export const ZONE_LEVEL = { '/tmp': 1, '/srv': 1, '/var': 2, '/net': 3, '/var/log': 4 };
 export function zoneSpawns(s, now = clock()) {
   const z = zoneOf(s);
   if (!kingOpen(s)) delete z.spawns[KING_ROOM]; // a sealed Core holds nothing (a save from before held a stray, or the king)
@@ -101,9 +105,9 @@ export function zoneSpawns(s, now = clock()) {
     const n = ++z.serial;
     const pool = hackerLevel(s) < 3 ? ZONE_FAMILIES.filter((f) => f !== 'ghostroot') : ZONE_FAMILIES;
     const family = pool[(n + room.length) % pool.length];
-    const lvl = Math.min(CONFIG.zone.maxLevel, Math.max(1, hackerLevel(s) + (n % 4 === 0 ? 1 : 0))); // a starter area: never past CONFIG.zone.maxLevel
+    const lvl = Math.min(CONFIG.zone.maxLevel, ZONE_LEVEL[room] || 1); // a starter area: never past CONFIG.zone.maxLevel
     // Once open, /net/relay holds RELAY-KING, a boss (BOSSES.relayking), back half an hour after you beat it.
-    if (room === KING_ROOM) { z.spawns[room] = { alive: true, bornAt: now, family: 'worm', level: Math.min(CONFIG.zone.maxLevel + 2, hackerLevel(s)), seed: (z.seed * 97 + n * 131) >>> 0, name: 'RELAY-KING', boss: 'relayking' }; continue; }
+    if (room === KING_ROOM) { z.spawns[room] = { alive: true, bornAt: now, family: 'worm', level: CONFIG.zone.maxLevel, seed: (z.seed * 97 + n * 131) >>> 0, name: 'RELAY-KING', boss: 'relayking' }; continue; }
     z.spawns[room] = { alive: true, bornAt: now, family, level: lvl, seed: (z.seed * 97 + n * 131) >>> 0, name: `${FAMILIES[family].stem.toLowerCase()}-${String(1000 + ((n * 7919) % 9000)).slice(-4)}` }; // the body's stem: the fight is CRYPTJACK-4821 (data.mjs stemOf)
   }
   return z.spawns;
@@ -519,7 +523,7 @@ function cd(s, arg, pulled = null) {
   if (!up && locked(loc, target)) return err(s, `${arg}/ is locked. Type unlock ${arg.split('/').pop()} <password>.`);
   // Infiltrator Light footprint: going back where you've been is free.
   const free = classOf(s) === 'infiltrator' && s.run.visited.includes(target);
-  if (!free) { s.run.integrity = Math.max(0, s.run.integrity - CONFIG.cdCost); traceAdd(s, TRACE.cd); }
+  if (!free) { s.run.integrity = Math.max(0, s.run.integrity - cost(s, CONFIG.cdCost)); traceAdd(s, TRACE.cd); }
   // Rig Regen: a little Signal back with every move (Regen R: R every 5 moves).
   const rg = regenRate(gearStat(s, 'regen', 'hacker'));
   if (rg && s.run.integrity > 0) {
@@ -601,8 +605,9 @@ function pull(s, arg) {
   if (info.kind === 'trap') {
     if (loc.state.sprung?.[full]) return err(s, `${arg} already went off. It's worthless now.`);
     (loc.state.sprung ||= {})[full] = true;
-    s.run.integrity = Math.max(0, s.run.integrity - CONFIG.trapSignal);
-    emit(s, 'trap', `CANARY TRIPPED. ${arg} was bait: −${CONFIG.trapSignal} Signal (${s.run.integrity}/${s.run.max}).`, { amount: CONFIG.trapSignal });
+    const lost = cost(s, CONFIG.trapSignal);
+    s.run.integrity = Math.max(0, s.run.integrity - lost);
+    emit(s, 'trap', `CANARY TRIPPED. ${arg} was bait: −${lost} Signal (${s.run.integrity}/${s.run.max}).`, { amount: lost });
     if (s.run.integrity <= 0) disconnect(s, 'Signal ran out');
     return;
   }
@@ -641,8 +646,9 @@ function unlock(s, rest) {
   if (!locked(loc, target)) return out(s, `${dir}/ isn't locked.`);
   if (guarded(loc, s.run.cwd)) return err(s, `The ${guardName(loc, s.run.cwd)} is watching. Deal with it first.`);
   if (pass !== loc.password) {
-    s.run.integrity = Math.max(0, s.run.integrity - 3);
-    err(s, `access denied. The failed attempt cost 3 Signal (${s.run.integrity}/${s.run.max}).`);
+    const lost = cost(s, 3);
+    s.run.integrity = Math.max(0, s.run.integrity - lost);
+    err(s, `access denied. The failed attempt cost ${lost} Signal (${s.run.integrity}/${s.run.max}).`);
     if (s.run.integrity <= 0) return disconnect(s, 'Signal ran out');
     traceAdd(s, TRACE.wrong);
     return;
@@ -942,8 +948,8 @@ function scan(s, arg) {
   if (!v) return err(s, arg ? `Nothing to scan at ${arg}. Scan a virus here, or a folder you can see that holds one.` : 'Nothing to scan in this folder. scan <folder> reads a guard or a virus next door.');
   const deep = classOf(s) === 'infiltrator';
   if (!deep) {
-    if (s.run.integrity <= SCAN.signal) return err(s, 'Not enough Signal to scan.');
-    s.run.integrity -= SCAN.signal;
+    if (s.run.integrity <= cost(s, SCAN.signal)) return err(s, 'Not enough Signal to scan.');
+    s.run.integrity -= cost(s, SCAN.signal);
     traceAdd(s, SCAN.trace);
   } else (s.run.scanned ||= []).includes(v.id) || s.run.scanned.push(v.id);
   (s.run.unpack ||= []).includes(v.id) || s.run.unpack.push(v.id); // a Packer's rules show once you've scanned it (combat.mjs packerOn)
@@ -973,8 +979,8 @@ function scanRoom(s, arg) {
   const f = fightOf(s, room), v = encounterVirus(s, f.key, f.seed, f.opts);
   const deep = classOf(s) === 'infiltrator';
   if (!deep) {
-    if (s.run.integrity <= SCAN.signal) return err(s, 'Not enough Signal to scan.');
-    s.run.integrity -= SCAN.signal;
+    if (s.run.integrity <= cost(s, SCAN.signal)) return err(s, 'Not enough Signal to scan.');
+    s.run.integrity -= cost(s, SCAN.signal);
   } else (s.run.scanned ||= []).includes(v.id) || s.run.scanned.push(v.id);
   (s.run.unpack ||= []).includes(v.id) || s.run.unpack.push(v.id); // a Packer's rules show once you've scanned it (combat.mjs packerOn)
   (s.run.named ||= []).includes(v.id) || s.run.named.push(v.id); // its rules show by name, on the card and in the fight (genome.mjs scannedRead)

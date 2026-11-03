@@ -66,7 +66,7 @@ test('a counter-raid: only after a feud you won a fight in; waits its delay, the
   assert.equal(c?.card, 'counter', 'dealt when due');
   assert.equal(chainOf(s).length, 0, 'off the list');
   assert.equal(c.family, FACTION_FAMILY[f.data.foe], 'in the side you fought\'s family');
-  assert.equal(c.level, 12); assert.ok(c.elite); assert.equal(c.eliteHp, FEUD.hp, 'sized like a feud\'s runner');
+  assert.equal(c.level, s.locations.find((l) => l.id === c.loc).level, 'at its server\'s level, not yours'); assert.ok(c.elite); assert.equal(c.eliteHp, FEUD.hp, 'sized like a feud\'s runner');
   assert.ok(s.locations.some((l) => l.id === c.loc), 'a server you hold');
   const html = mapMarkup(s, c.loc);
   assert.match(html, /<section class="evc evc-counter chained/);

@@ -228,9 +228,10 @@ test('a bounty hunt hops three times, a level and more pay each hop, then it\'s 
     assert.equal(ev.loc, ev.path[h]);
     levels.push(ev.level); pays.push(huntPay(ev));
   }
-  assert.deepEqual(levels, [9, 10, 11, 12], 'a level a hop');
+  const L0 = s.locations.find((l) => l.id === ev.path[0]).level;
+  assert.deepEqual(levels, [L0, L0 + 1, L0 + 2, L0 + 3], 'its first server\'s level, then a level a hop');
   for (let i = 1; i < pays.length; i++) assert.ok(pays[i] > pays[i - 1], 'better paid');
-  assert.equal(pays[3], Math.round((80 + 15 * 12) * 2));
+  assert.equal(pays[3], Math.round((80 + 15 * (L0 + 3)) * 2));
   tickEvents(s, HUNT.hopMs);
   assert.ok(!eventsOf(s).includes(ev), 'gone after three hops');
   // Caught at its second hop: that hop's pay, and Kestrel standing.
@@ -243,7 +244,7 @@ test('a bounty hunt hops three times, a level and more pay each hop, then it\'s 
   assert.equal(e2.hop, 2, 'it waits while you fight it');
   const credits = t.server.credits, kes = rep(t, 'kestrel');
   win(t);
-  assert.equal(t.server.credits - credits >= Math.round((80 + 15 * 11) * 1.6), true);
+  assert.equal(t.server.credits - credits >= Math.round((80 + 15 * e2.level) * 1.6), true);
   assert.equal(rep(t, 'kestrel'), kes + HUNT.rep);
   // No Kestrel hub: Halcyon posts it.
   assert.equal(deal(world({ level: 9 }), 'hunt').hunter, 'halcyon');

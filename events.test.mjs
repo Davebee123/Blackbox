@@ -43,7 +43,7 @@ test('a courier is a fight from the server card; winning takes the drop', () => 
 test('a bounty pays and raises standing; it leaves when its time is up', () => {
   const s = world();
   const ev = deal(s, 'bounty');
-  assert.equal(ev.level, 8, 'two levels up');
+  assert.equal(ev.level, s.locations.find((l) => l.id === ev.loc).level + 2, 'two levels over its server');
   tickEvents(s, CARDS.bounty.ms + 1);
   assert.ok(!eventsOf(s).includes(ev), 'gone');
   assert.ok(s.logs.some((e) => e.type === 'world-event-end'));

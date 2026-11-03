@@ -30,7 +30,7 @@ import { raidStart, raidLand, raidCycle, raidShield, raidBroke, raidTaken, raidA
 import { tellStart, tellCycle, tellLand, tellBroke, chargeNow, tellIntents, tellSigint, tellSigintCheck, tellOn, tellsOf, overclockMult, hotCharge } from './tells.mjs';
 import { prepareTicks, onHit as tickHit, blastCut, BOSS_RULES, TICKS } from './interrupt.mjs';
 import { actsStart, lashHit, lashLand, actIntents, actBegins, actCap } from './acts.mjs';
-import { TELL, TELLS, ROOM_FAMILIES, DAMPER_KINDS, floorFor } from './data.mjs';
+import { TELL, TELLS, ROOM_FAMILIES, DAMPER_KINDS, floorFor, line, lift, lifted } from './data.mjs';
 import { holdsPart, objectiveBroke, objectiveCycle, objectiveBonus, bonusXp, bonusRolls, backupHit } from './objectives.mjs';
 import { mechValidate, mechIntercept, mechFired, mechPower, exposedCut, mechLanded, mechCommandHit, mechStart, mechClose, mechBroke, lagged, stunnedNow, missedTurn } from './mechanics.mjs';
 import { tickRoot, processWon } from './root.mjs';
@@ -44,7 +44,7 @@ export { daemonSlots, slottedDaemons, daemonLevel, daemonAmount, daemonNext, wat
 import { filterCommand, filterStat, FILTER_STATS, rollFilter, addFilter } from './filters.mjs';
 import { spawnHidden, huntKill, hiddenNode, hiddenLead, HIDDEN, installRelay, useItem, syncFlags, traceNear, leadOf } from './hidden.mjs';
 import { slotNode, pickSlot, hiddenAt, hiddenNear, floorOfSlot, lairAt, floorLairBosses, reached, floorCommand, floorsRestore, floorsLetter } from './floors.mjs';
-import { STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, lootOdds, magicFind, uniqueItem, DECONSTRUCT, SLOTS, OLD_SLOT, BASES, AFFIX_FOR, STASH_CAP, CRIT, ECHO, PROTOCOL_NAMES, protocolSlots, rollItem, statLine, itemLabel, MATERIALS, codeOf, codeDrop, EXPLOIT_CHANCE, RULES, IMPLICITS, implicitFx, PROTOCOL_STATS, SLOT_KINDS, GROUPS, groupOf, statValue, seeded, statsRestore } from './gear.mjs';
+import { STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, lootOdds, magicFind, uniqueItem, liftFx, DECONSTRUCT, SLOTS, OLD_SLOT, BASES, AFFIX_FOR, STASH_CAP, CRIT, ECHO, PROTOCOL_NAMES, protocolSlots, rollItem, statLine, itemLabel, MATERIALS, codeOf, codeDrop, EXPLOIT_CHANCE, RULES, IMPLICITS, implicitFx, PROTOCOL_STATS, SLOT_KINDS, GROUPS, groupOf, statValue, seeded, statsRestore, curveRestore } from './gear.mjs';
 
 import ITEMS from './content/items.mjs';
 import { SETS, setFx, activeSets, isPiece, setPool, SET_LOOT, CLASS_SET, setPityKey, SET_EVENT, sourcePool, sourceKey, setOf, setsRestore, SET_HOOKS, setStat, setSignal, setHealMult, sxOf, restFast } from './sets.mjs';
@@ -60,7 +60,7 @@ import { crewOf, factionAuthor, AUTHORS } from './authors.mjs';
 import { noteUse } from './mastery.mjs';
 import { fightNet, noteKill, nativeRoll, biasCode, richMult, networkRestore, networkCommand, lairUniques, lairFell, mine, netOf, isNative, named, nameOf, nameNative, openLair } from './network.mjs';
 
-export const SAVE_VERSION = 53; // v53: the cryptogram's key, s.cipher (puzzles.mjs cipherOf: made on first use, keyed on the field); v52: rivals' memory, s.rivals (rivals.mjs rivalsRestore: made on first use, keyed on the field); v51: the scanner's log, s.scanner (scanner.mjs scannerOf: made on first use, keyed on the field); v50: site traits become server specials (specials.mjs specialsRestore); v49: crafting is gone: recipes, plans and their files become credits, Zero-day source the Zero-day (progression.mjs craftRestore); v48: Indemnity retires: an older save's unspent Indemnity becomes credits once, with a letter from Halcyon (store.mjs indemnityRestore); v47: one kind of component: an older save's pile of named pieces (s.salvage) becomes its count, s.components (salvage.mjs componentsRestore); v46: no default subclass: a class past level 10 that never picked plays its core until it does (subRestore); v45: sets, each loaded protocol stamped with when it went on and the storyline's LOWLIGHT Badge beat armed (sets.mjs setsRestore); v44: whole-number stats, Regen over 5 cycles and Payload flat (gear.mjs statsRestore); v43: threads, quests found in rooms (threads.mjs threadsRestore); v42: the long climb, XP into a level keeps its share (progression.mjs climbRestore); v41: layers become floors (floors.mjs floorsRestore); v40: outposts, buildings, plans, services, architecture and the dividend retire for sockets (sockets.mjs retireOutposts, netrooms.mjs socketRoomsRestore, GAME_RULES.md "Saves"); v39: every server is a room graph (netrooms.mjs roomsRestore, GAME_RULES.md "Runs: servers as rooms"); v38: two shipped presets renamed (presetRenameRestore); v37: 15-key pools, reordered lines and presets (kitRestore); v36: networks (network.mjs networkRestore: a network seed for every save); v31: subclasses (retireClassTrees); v32: Payload is a percentage; v33: invasion kinds, bounties, signatures, and the firewall follows the network (invasionRestore, firewallRestore); v34: one level, no server XP, specialty, ports, home-fight services or greys (progression.mjs progressionRestore); v35: the nine-key bar, run skills off it, one-clock tells (barRestore)
+export const SAVE_VERSION = 54; // v54: the compounding curve: items lifted at their level (gear.mjs curveRestore, keyed on s.curve); v53: the cryptogram's key, s.cipher (puzzles.mjs cipherOf: made on first use, keyed on the field); v52: rivals' memory, s.rivals (rivals.mjs rivalsRestore: made on first use, keyed on the field); v51: the scanner's log, s.scanner (scanner.mjs scannerOf: made on first use, keyed on the field); v50: site traits become server specials (specials.mjs specialsRestore); v49: crafting is gone: recipes, plans and their files become credits, Zero-day source the Zero-day (progression.mjs craftRestore); v48: Indemnity retires: an older save's unspent Indemnity becomes credits once, with a letter from Halcyon (store.mjs indemnityRestore); v47: one kind of component: an older save's pile of named pieces (s.salvage) becomes its count, s.components (salvage.mjs componentsRestore); v46: no default subclass: a class past level 10 that never picked plays its core until it does (subRestore); v45: sets, each loaded protocol stamped with when it went on and the storyline's LOWLIGHT Badge beat armed (sets.mjs setsRestore); v44: whole-number stats, Regen over 5 cycles and Payload flat (gear.mjs statsRestore); v43: threads, quests found in rooms (threads.mjs threadsRestore); v42: the long climb, XP into a level keeps its share (progression.mjs climbRestore); v41: layers become floors (floors.mjs floorsRestore); v40: outposts, buildings, plans, services, architecture and the dividend retire for sockets (sockets.mjs retireOutposts, netrooms.mjs socketRoomsRestore, GAME_RULES.md "Saves"); v39: every server is a room graph (netrooms.mjs roomsRestore, GAME_RULES.md "Runs: servers as rooms"); v38: two shipped presets renamed (presetRenameRestore); v37: 15-key pools, reordered lines and presets (kitRestore); v36: networks (network.mjs networkRestore: a network seed for every save); v31: subclasses (retireClassTrees); v32: Payload is a percentage; v33: invasion kinds, bounties, signatures, and the firewall follows the network (invasionRestore, firewallRestore); v34: one level, no server XP, specialty, ports, home-fight services or greys (progression.mjs progressionRestore); v35: the nine-key bar, run skills off it, one-clock tells (barRestore)
 
 // run.mjs registers callbacks here (it imports this file, so we can't import it).
 export const hooks = { flee: null, now: null };
@@ -87,6 +87,7 @@ export const classFill = (s, t) => classHooks().flatMap((h) => (h.fill ? h.fill(
 export function fresh() {
   const s = {
     version: SAVE_VERSION,
+    curve: 1, // items rolled on the compounding curve (gear.mjs curveRestore)
     server: { integrity: CONFIG.maxIntegrity, max: CONFIG.maxIntegrity, credits: CONFIG.startingCredits },
     encounter: null,
     leadProgress: { ransomware: 0, worm: 0, ghostroot: 0 },
@@ -492,7 +493,7 @@ export function gearStat(s, stat, side = null) {
     const u = it.unique && UNIQUES[it.unique];
     if (u?.set) pieces = true;
     if (!u?.effect) continue;
-    fxList(u).forEach((fx, i) => {
+    fxList(u).map((fx) => liftFx(fx, it.level)).forEach((fx, i) => {
       if (fx.stat !== stat || ['signal', 'integrity'].includes(stat)) return;
       // A unique whose stat counts double while its condition holds (Hotfix, Shade Filter…).
       if (fx.when === 'always' && fx.do === 'stat-x2' && fxCond(s, fx)) n += it.stats[stat] || 0;
@@ -511,16 +512,16 @@ export function gearStat(s, stat, side = null) {
 export const guarding = (s) => (s.encounter && (active(s) || s.encounter.phase === 'alert') ? (s.encounter.mode === 'run' ? 'hacker' : 'server') : s.run ? 'hacker' : 'server');
 export const defense = (s, stat) => gearStat(s, stat, guarding(s));
 export const critMultiplier = () => CRIT.multiplier;
-// Your power: every level, your numbers grow 4% (damage, heals, shields, Signal).
+// Your power: every level, your numbers grow CONFIG.powerPerLevel, compounding (damage, heals, shields, Signal).
 export const powerOf = (s) => power(hackerLevel(s));
 export const scaled = (s, n) => Math.max(1, Math.round(n * powerOf(s)));
 // Heals you cast: CONFIG.healLevel of the level growth, times Restore. restoreMult alone for heals that
 // give back damage (Reclaim's half, Rollback), which already grow with it.
 export const restoreMult = (s) => 1 + gearStat(s, 'restore') / 100;
-export const healScaled = (s, n) => Math.max(1, Math.round(n * (1 + (powerOf(s) - 1) * CONFIG.healLevel) * restoreMult(s) * setHealMult(s))); // setHealMult: Link, Mesh (sets.mjs)
-// Damage over time (burn ticks, helper hits): built with scaled(), it keeps CONFIG.dotLevel of the level
-// growth at the hit (dotMult), and Payload adds its flat number to each one (dotHit), as Damage does to a skill hit.
-export const dotMult = (s) => (1 + (powerOf(s) - 1) * CONFIG.dotLevel) / powerOf(s);
+export const healScaled = (s, n) => { const L = hackerLevel(s); return Math.max(1, Math.round(n * lift(L) * (1 + (line(L) - 1) * CONFIG.healLevel) * restoreMult(s) * setHealMult(s))); }; // setHealMult: Link, Mesh (sets.mjs)
+// Damage over time (burn ticks, helper hits): built with scaled(), it keeps CONFIG.dotLevel of the level line's
+// growth and the whole lift at the hit (dotMult), and Payload adds its flat number to each one (dotHit), as Damage does to a skill hit.
+export const dotMult = (s) => { const L = hackerLevel(s); return (1 + (line(L) - 1) * CONFIG.dotLevel) / line(L); };
 export const dotHit = (s, base) => base * dotMult(s) + gearStat(s, 'payload');
 // Regen a cycle (or a move, or a minute at home): Regen counts over STATS.regen.every of them.
 export const regenRate = (n) => n / (STATS.regen.every || 1);
@@ -898,7 +899,7 @@ const fxIdOf = (uid, i) => (i ? `${uid}:${i}` : uid);
 const uniqueFx = (s) => {
   const out = [], rules = {}, imps = {};
   for (const it of loaded(s)) {
-    if (it.unique) fxList(UNIQUES[it.unique]).forEach((fx, i) => out.push({ it, fx, id: fxIdOf(it.unique, i) }));
+    if (it.unique) fxList(UNIQUES[it.unique]).forEach((fx, i) => out.push({ it, fx: liftFx(fx, it.level), id: fxIdOf(it.unique, i) })); // a flat number lifted at its item level (gear.mjs liftFx)
     if (IMPLICITS[it.implicit] && !((imps[it.implicit]?.implicitValue || 0) >= (it.implicitValue || 0))) imps[it.implicit] = it; // a faction implicit: once, at its best
     const r = it.rule && RULES[it.rule];
     if (r && !((rules[it.rule]?.fx.value || 0) >= (it.ruleValue || 0) && rules[it.rule])) rules[it.rule] = { it, fx: { ...r.fx, value: it.ruleValue }, id: 'rule:' + it.rule, name: r.name };
@@ -1043,7 +1044,7 @@ export function fxFire(s, when, ctx = {}, spend = true) {
 }
 const fxHas = (s, what) => (wears(s, what) && uniqueFx(s).find((x) => x.fx.do === what)) || null;
 export const fxOn = fxHas; // tells.mjs: Canary Token, Read Receipt, Reflector, Write Blocker, Hush Money, Sandman
-export const effectLine = (it) => (it?.unique && UNIQUES[it.unique]?.effect ? fxText(fxList(UNIQUES[it.unique]), (k) => STATS[k]?.name || ABILITIES[k]?.name || k) : it?.rule && RULES[it.rule] ? `${RULES[it.rule].name} — ${RULES[it.rule].text ? RULES[it.rule].text(it.ruleValue) : fxText({ ...RULES[it.rule].fx, value: it.ruleValue }, (k) => STATS[k]?.name || ABILITIES[k]?.name || k)}` : '');
+export const effectLine = (it) => (it?.unique && UNIQUES[it.unique]?.effect ? fxText(fxList(UNIQUES[it.unique]).map((fx) => liftFx(fx, it.level || UNIQUES[it.unique].level)), (k) => STATS[k]?.name || ABILITIES[k]?.name || k) : it?.rule && RULES[it.rule] ? `${RULES[it.rule].name} — ${RULES[it.rule].text ? RULES[it.rule].text(it.ruleValue) : fxText({ ...RULES[it.rule].fx, value: it.ruleValue }, (k) => STATS[k]?.name || ABILITIES[k]?.name || k)}` : '');
 // An item's faction implicit as its tooltip line (gear.mjs IMPLICITS text), '' for none.
 export const implicitText = (it) => IMPLICITS[it?.implicit]?.text(it.implicitValue) || '';
 // What fires when you call off a tell (tells.mjs: a charge or cast hit off in time, a cast stopped by SIGINT).
@@ -1910,7 +1911,7 @@ function loadoutCommand(s, text) {
 
 // ---------- upgrades ----------
 // Max Signal%: set pieces and bonuses (sets.mjs) and Bedframe, Firmware (max-signal%) raise the whole of it.
-const signalOf = (s) => Math.round(CONFIG.maxSignal * powerOf(s)) + gearStat(s, 'signal') + 4 * rank(s, 'redundancy') + 3 * rank(s, 'onion-routing') + 3 * rank(s, 'extra-memory');
+const signalOf = (s) => { const t = 4 * rank(s, 'redundancy') + 3 * rank(s, 'onion-routing') + 3 * rank(s, 'extra-memory'); return Math.round(CONFIG.maxSignal * powerOf(s)) + gearStat(s, 'signal') + (t ? lifted(t, hackerLevel(s)) : 0); }; // talents' flat Signal, lifted (data.mjs lift)
 export const maxSignal = (s) => {
   const n = signalOf(s), pct = (piecesOn(s) ? setSignal(s) : 0) + fxSum(s, 'always', 'max-signal%'), sick = rebootSick(s), m = pct ? n + Math.round((n * pct) / 100) : n;
   return sick ? Math.max(1, Math.round(m * (1 - sick))) : m;
@@ -4740,7 +4741,7 @@ function migrateCategories(s) {
     const stats = {};
     for (const [k, v] of Object.entries(it.stats || {})) {
       if (STATS[k]?.group !== group) continue;
-      if (OLD_PCT[k]) { const q = v / (OLD_PCT[k] * (1 + it.level / 25)); stats[k] = Math.max(1, Math.round(STATS[k].base * power(it.level) * q)); } else stats[k] = v;
+      if (OLD_PCT[k]) { const q = v / (OLD_PCT[k] * (1 + it.level / 25)); stats[k] = Math.max(1, Math.round(STATS[k].base * line(it.level) * q)); } else stats[k] = v; // on the line: curveRestore lifts it
     }
     it.stats = stats;
     it.group = group;
@@ -4843,7 +4844,7 @@ export function shuntRestore(s) {
   walk(s, 0);
 }
 export function restore(raw) {
-  if (!raw || ![6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, SAVE_VERSION].includes(raw.version)) return fresh();
+  if (!raw || ![6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, SAVE_VERSION].includes(raw.version)) return fresh();
   try {
     const s = bindRooms(structuredClone(raw));
     const was = s.version;
@@ -4997,6 +4998,7 @@ export function restore(raw) {
     hooks.roomsRestore?.(s, was); // v39: every server you'd found is a room graph (netrooms.mjs)
     hooks.threadsRestore?.(s, was); // v43: threads (threads.mjs): an older save starts with none
     statsRestore(s, was); // v44: whole-number stats: Regen five times over 5 cycles, Payload flat at each item's level (gear.mjs)
+    curveRestore(s); // the compounding curve: every item's flat stats lifted at its level, once (gear.mjs); keyed on s.curve
     setsRestore(s, was); // v45: sets: loaded protocols stamped in slot order, set pieces you hold found, the Badge beat armed (sets.mjs)
     subRestore(s, was); // v46: no default subclass: a class past 10 that never picked plays its core (its default's keys and talent points back)
     hardenRestore(s); // harden.sh is gone: scripts you held come back as credits (firewall.mjs)

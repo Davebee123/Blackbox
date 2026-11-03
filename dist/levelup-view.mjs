@@ -52,7 +52,8 @@ export function levelUpSummary(events, keys = []) {
     if (same) { same.n += it.n; same.value = `+${same.n}`; if (it.names) { same.names = [...same.names, ...it.names]; same.tip = basesTip(same.names); } }
     else items.push({ ...it });
   }
-  const pct = Math.round(CONFIG.powerPerLevel * 100) * evs.length, srv = evs.findLast((e) => e.server)?.server;
+  const pct = Math.round(((1 + CONFIG.powerPerLevel) ** evs.length - 1) * 100), // compounding (data.mjs power)
+    srv = evs.findLast((e) => e.server)?.server;
   items.push({ kind: 'power', label: 'Power', value: `+${pct}%`, tip: `Power: Your skills deal ${pct}% more damage, and your server's Integrity grows with them.` });
   if (srv) items.push({ kind: 'integrity', label: 'Integrity', value: String(srv), tip: `Integrity: Your server's Integrity is now ${srv}.` });
   const nx = last.next, nItems = nx ? nx.gains.map((g) => gainItem(g, { ...last, level: nx.level })) : [];
