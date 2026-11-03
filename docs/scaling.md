@@ -79,9 +79,10 @@ Integrity enough on their own.
 
 ### After step 2 (November 3): gear carries your power
 
-Your own numbers (skill damage, burns, base Signal, shields, talents' Signal) grow with `power` to level 6, then stop
-(`CONFIG.ownFrom`, `ownPerLevel` 0); mobs still compound 6%. Heals keep step 1's growth: no item stat carries a heal,
-and on your own line the Sysop lost 20% alone at 30 (15% at most) and a full crew won 72 of 81 boss tries at 18 (95%).
+Your own numbers (skill damage, base Signal, shields, talents' Signal) grow with `power` to level 6, then stop
+(`CONFIG.ownFrom`, `ownPerLevel` 0); mobs still compound 6%. Heals and burns keep step 1's growth: on your own line the
+Sysop lost 20% alone at 30 (15% at most) and a full crew won 72 of 93 boss tries at 18 (95%); filling Payload instead
+over-fed the Herder at 10 (13%) and starved the Payload at 30 (32%).
 Your gear's Damage, Crit Damage, Signal, Regen and Leech are × a fill at their item level (`CONFIG.gearFill`: 1 to 6, 1.46 at 10, 1.77 at 25, 1.52 at 50), fitted so
 a level's blues give the Signal and Damage step 1 did. In them, gear is 74% of your Signal at 20 and 88% at 30 (was 42%
 and 52%).
@@ -90,24 +91,25 @@ Same harness, wild fights at your level; won · cycles · Signal lost (step 1 in
 
 | You | Its level's blues | Ten levels old | None | Level-10 blues |
 |---|---|---|---|---|
-| 10 | 98% · 10 · 30% (98% · 33%) | 85% · 55% (98% · 38%) | 69% · 68% (94% · 48%) | — |
-| 20 | 100% · 11 · 28% (100% · 30%) | 58% · 74% (85% · 45%) | 13% · 96% (73% · 65%) | (ten old) |
-| 30 | 96% · 10 · 29% (96% · 32%) | 60% · 73% (85% · 50%) | 0% (60% · 75%) | 8% · 97% (63% · 73%) |
+| 10 | 98% · 10 · 30% (98% · 33%) | 85% · 55% (98% · 38%) | 73% · 65% (94% · 48%) | — |
+| 20 | 100% · 11 · 27% (100% · 30%) | 60% · 71% (85% · 45%) | 13% · 94% (73% · 65%) | (ten old) |
+| 30 | 94% · 10 · 30% (96% · 32%) | 71% · 64% (85% · 50%) | 0% (60% · 75%) | 13% · 93% (63% · 73%) |
 
-At your level in its blues (cycles · Signal lost): 3: 9 · 32%; 10: 10 · 30% (elite 15 · 41%); 18: 11 · 21% (17 ·
-24%); 30: 10 · 29% (13 · 31%); 45: 8 · 23% (11 · 29%). Per subclass at 30 the Sysop now loses 10% (was 1%), the
-Hijacker 50% (40%), the Warden 21% (33%). Crew bosses at 18 in whites: 17–18 of 20 won (20). The campaign bot's
-Breaker takes 19 breaches to level 10 (16).
+At your level in its blues (cycles · Signal lost): 3: 9 · 31%; 10: 10 · 30% (elite 16 · 41%); 18: 11 · 20% (17 ·
+24%); 30: 10 · 30% (13 · 30%); 45: 8 · 24% (11 · 29%). Per subclass at 30, alone: within a few points of step 1 but
+the Hijacker 50% (40%) and the Payload 37% (34%). Crew bosses at 18: 20 of 20 each. The campaign bot reaches level 10
+in 13–17 breaches (12–16).
 
 **Why level 6:** with your own line flat from level 1, gear a few levels old at 5–10 cost a lot (level 5 in starter
-whites: 81% won, the campaign Breaker 23 breaches to level 10 and 19% of its breaches won from 6). From 6, SPRAWL-00 and
-the first levels play as they did. The cost: at 10, no gear still wins 69%.
+whites: 81% won; the campaign Breaker 23 breaches to level 10, 19% of its breaches won from 6). From 6, SPRAWL-00 and
+the first levels play as they did. The cost: at 10, no gear still wins 73%.
 
-**Short of the targets:** ten levels old still wins about 60% at 20 and 30. That is a ceiling of the split, not its
+**Short of the targets:** ten levels old still wins 60–70% at 20 and 30. That is a ceiling of the split, not its
 tuning: a level's blues must match its mobs, which grow 1.8× in ten levels, so gear ten levels old is about 45% of you
-however little your level gives. A fight at your level costs about 30%, so half of you still often wins. Fights that
-cost more at your level (step 3) and a floor's gear step (step 4) close it. Level-10 gear at 30, the designer's case,
-loses 92%.
+however little your level gives (0% a level from level 1 measured the same). A fight at your level costs about 30%, so
+half of you still often wins, and heals and burns, which keep step 1's growth, soften it further. Fights that cost
+more at your level (step 3) and a floor's gear step (step 4) close it. Level-10 gear at 30, the designer's case, loses
+87%.
 
 ## 2. The WoW model, mapped
 

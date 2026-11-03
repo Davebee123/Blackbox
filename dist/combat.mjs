@@ -519,9 +519,10 @@ export const scaled = (s, n) => Math.max(1, Math.round(n * powerOf(s)));
 // restoreMult alone for heals that give back damage (Reclaim's half, Rollback), which already grow with it.
 export const restoreMult = (s) => 1 + gearStat(s, 'restore') / 100;
 export const healScaled = (s, n) => { const L = hackerLevel(s); return Math.max(1, Math.round(n * lift(L) * (1 + (line(L) - 1) * CONFIG.healLevel) * restoreMult(s) * setHealMult(s))); }; // setHealMult: Link, Mesh (sets.mjs)
-// Damage over time (burn ticks, helper hits): built with scaled(), and Payload adds its flat number to each one, as
-// Damage does to a skill hit.
-export const dotHit = (s, base) => base + gearStat(s, 'payload');
+// Damage over time (burn ticks, helper hits): built with scaled(), it keeps CONFIG.dotLevel of the level line's growth
+// and the whole lift at the hit (dotMult, step 1's curve), and Payload adds its flat number to each one, as Damage does to a skill hit.
+export const dotMult = (s) => { const L = hackerLevel(s); return (lift(L) * (1 + (line(L) - 1) * CONFIG.dotLevel)) / powerOf(s); };
+export const dotHit = (s, base) => base * dotMult(s) + gearStat(s, 'payload');
 // Regen a cycle (or a move, or a minute at home): Regen counts over STATS.regen.every of them.
 export const regenRate = (n) => n / (STATS.regen.every || 1);
 // The level gap to the enemy you're fighting (positive: it's above you).
@@ -3556,7 +3557,7 @@ function useAbility(s, intent, auto = false) {
     const mine = burnsOn(s, target).filter((b) => b.id !== 'implant');
     let total = 0, ticks = 0;
     for (const b of mine) { for (let k = 0; k < b.left; k++) total += b.damage + (b.grow || 0) * k; ticks += b.left; e.burns.splice(e.burns.indexOf(b), 1); }
-    hit(s, target, Math.round((total + ticks * gearStat(s, 'payload')) * a.mult * (hasTalent(s, 'assassinate') && on(s, target, 'tagged') ? 2 : 1)), { by: 'Detonate', pierce: true }); // burns' worth, Payload included
+    hit(s, target, Math.round((total * dotMult(s) + ticks * gearStat(s, 'payload')) * a.mult * (hasTalent(s, 'assassinate') && on(s, target, 'tagged') ? 2 : 1)), { by: 'Detonate', pierce: true }); // burns' worth, Payload included
   }
   if (id === 'propagate') {
     // Fragments catch the copies at double.

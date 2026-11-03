@@ -40,7 +40,7 @@ export const STATS = {
   // A budget point is 60% of Damage's (base 1.2 to its 2): a burn or helper build lands about twice as many of them as
   // skill hits, most of them smaller. Its numbers on the bases, the Loaded affix and uniques are what the old percentage
   // added to a 12 tick at their level, a tick keeping half the level growth (save v44, statsRestore). Damage over time
-  // grows on your own line (data.mjs own), and Payload carries the rest.
+  // keeps only part of the level growth (CONFIG.dotLevel), and Payload makes up the rest.
   payload: { side: 'hacker', group: 'offense', name: 'Payload', unit: '', base: 1.2, flat: true, about: 'Adds this much damage to every burn tick and helper hit.' },
   // Defense (health on its side; the rest on both sides)
   signal: { side: 'hacker', group: 'survival', name: 'Signal', unit: '', base: 10, flat: true, about: 'Increases your max Signal on runs.' },

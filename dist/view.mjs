@@ -92,13 +92,14 @@ export const conClass = (gap) => (gap >= 5 ? 'con-red' : gap >= 3 ? 'con-orange'
 const longChip = (i) => i.name.length > 6 || i.name.length + String(effectLabel(i)).length > 14;
 export const attackCode = (name = '') => (name[0] + name.slice(1).replace(/[aeiou\s'-]/gi, '')).slice(0, 3).toUpperCase();
 export const levelTag = (s, level, label = `Level ${level}`) => `<b class="${conClass(level - hackerLevel(s))}" title="${level > hackerLevel(s) ? `${level - hackerLevel(s)} levels above you` : level < hackerLevel(s) ? `${hackerLevel(s) - level} levels below you` : 'your level'}">${label}</b>`;
-// Skill text with this level's numbers: your own line (data.mjs own) on damage, shields and burns; heals keep half
-// the level line and the lift (CONFIG.healLevel), times Restore; Payload adds its flat number to every burn tick and helper hit.
+// Skill text with this level's numbers: your own line (data.mjs own) on damage and shields; heals and burns keep half
+// the level line and the lift (CONFIG.healLevel, dotLevel); heals times Restore, and Payload adds its flat number to
+// every burn tick and helper hit.
 export function scaledText(s, id, text, arch = null) {
   const a = ABILITIES[id];
   const L = hackerLevel(s, arch || undefined), k = arch ? own(L) : powerOf(s);
   const kHeal = lift(L) * (1 + (line(L) - 1) * CONFIG.healLevel) * (1 + gearStat(s, 'restore') / 100);
-  const kDot = k, pay = gearStat(s, 'payload');
+  const kDot = lift(L) * (1 + (line(L) - 1) * CONFIG.dotLevel), pay = gearStat(s, 'payload');
   if (!a || !text || (k === 1 && kHeal === 1 && kDot === 1 && !pay)) return text;
   const healing = a.verb === 'heal' || id === 'patch';
   const factor = { heal: kHeal, drain: kHeal, tick: healing ? kHeal : kDot, helper: kDot }, plus = { tick: healing ? 0 : pay, helper: pay }; // Payload: flat, on each tick and helper hit

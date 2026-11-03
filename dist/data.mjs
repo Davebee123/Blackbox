@@ -12,9 +12,11 @@ import { rollExe, makeExe, EXE, EXE_ROLL } from './exe.mjs';
 import { crewOf, buildAuthor, bossAuthor } from './authors.mjs';
 
 export const CONFIG = {
-  // Heals you cast keep this share of the level line's growth (levelLine) and all of the lift above it: no item stat
-  // carries a heal, so heals stay off your own line (docs/scaling.md step 2); Restore adds to them.
+  // Heals you cast and damage over time (burns, helpers) keep this share of the level line's growth (levelLine) and all
+  // of the lift above it, off your own line (docs/scaling.md step 2): no item stat fills them as Signal and Damage
+  // are filled; Restore and Payload add to them.
   healLevel: 0.5,
+  dotLevel: 0.5,
   cycleMs: 8000, // default; players pick a speed below
   speeds: { relaxed: 12000, normal: 8000, fast: 5000 },
   // Server

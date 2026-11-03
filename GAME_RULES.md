@@ -1161,11 +1161,11 @@ a favoured card once it has come up twice, its rich code once it leans your way;
 
 - **Hacker level** (per class, 1–50): a long, WoW-style climb. Each class starts at level 1 and levels on its own.
   **Enemies grow 6% a level, compounding** (`CONFIG.powerPerLevel`, `power`): a virus 10 levels under you has about
-  half its match's numbers. **Gear carries your power:** your own numbers (skill damage, burns, base Signal, shields,
+  half its match's numbers. **Gear carries your power:** your own numbers (skill damage, base Signal, shields,
   talents' Signal) grow 6% a level to level 6, then stop (`CONFIG.ownFrom`, `ownPerLevel`, `own`; key 1 hits 25 at
   level 1, 33 from 6 on), and your gear's Damage, Crit Damage, Signal, Regen and Leech carry the rest (Items): in its
-  level's blues, three quarters of your Signal at 20 and seven eighths at 30. Heals you cast keep half of the 4% level
-  line and the lift (`healLevel`): no item stat carries a heal, and Restore adds to them. Every flat number tuned on the 4% **level line** (`CONFIG.levelLine`;
+  level's blues, three quarters of your Signal at 20 and seven eighths at 30. Heals you cast and damage over time keep
+  half of the 4% level line and the lift (`healLevel`, `dotLevel`); Restore and Payload add to them. Every flat number tuned on the 4% **level line** (`CONFIG.levelLine`;
   an item's stats, a unique's +6 damage, a run's Signal costs) is that number × the **lift** at its level (`lift` =
   power ÷ line): still a flat number.
 - **Your server's level is your highest class level.** It sets your server's Integrity (100, +6% a level, compounding: the server isn't on your own line) and opens
@@ -1404,7 +1404,7 @@ deconstructed.
   item level (`liftItem`, `liftFx`). The ones that carry your power (Damage, Crit Damage, Signal, Regen, Leech, and
   flat damage, heal and shield effects) are also × the **fill** at their item level (`CONFIG.gearFill`: 1 to level
   6, 1.46 at 10, 1.77 at 25, 1.52 at 50), so a fight at your level in its blues costs what it did when your level
-  carried half of you. Gear ten levels old loses about 40% of fights at your level; twenty, 90%. Chances stay percentages.
+  carried half of you. Gear ten levels old loses 30–40% of fights at your level; twenty, nearly all. Chances stay percentages.
 - **Power spikes are earned** (the designer's rule): base power never spikes; a new skill, a talent tier, a capstone, a
   slot, a unique, a set bonus or a tier set does, and the big jumps belong past the level cap. A spike that takes the
   friction away is a problem to fix in its kit.
@@ -1461,8 +1461,8 @@ Every stat is a whole number. The stat sheet lists them all.
 | Scavenge (%) | Magic find (below) | of the Scavenger |
 | RAM | Every routine's RAM, up to 3 from all your gear (Routines) | of the Heap (from item level 10; 1, 2 from about 30) |
 
-**Heals and burns grow with gear.** Heals you cast keep half of the 4% level line and the lift; burns and helper hits
-grow on your own line. Restore and Payload make up the rest and more (a blue Sysop at 30 carries about 65% Restore). Heals that give back damage (Reclaim,
+**Heals and burns grow with gear.** Heals you cast and damage over time keep half of the 4% level line and the lift;
+Restore and Payload make up the rest and more (a blue Sysop at 30 carries about 65% Restore). Heals that give back damage (Reclaim,
 Rollback, OOM Kill) take Restore only. Payload is flat on every tick, so it counts most on small, frequent ones.
 
 **Scavenge is magic find** with diminishing returns (+50% Scavenge = +33% better odds) and more cache credits. It

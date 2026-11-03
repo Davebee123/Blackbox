@@ -330,11 +330,10 @@ test('the bots: the tank taunts for the buster, the healer cleanses, someone int
 // Crew sims (farmsim.mjs), one boss each, a few seeds: a full crew wins; without SIGINT the Foreman wins.
 test('crew sim smoke test: a full crew beats each boss; a crew that never interrupts loses to the Foreman', async () => {
   const { farmScore } = await import('./farmsim.mjs');
-  // (Ten seeds: the Coldwallet is the damage check, and a full crew still drops one or two in ten. Since gear carries your
-  // power, heals and shields grow on your own line: on 20 seeds the Foreman and the Coldwallet win 18, the Heatsink 17.)
+  // (Ten seeds: the Coldwallet is the damage check, and a full crew still drops one or two in ten.)
   for (const boss of ['foreman', 'heatsink', 'coldwallet']) {
     const r = farmScore('demolitionist', ['warden', 'sysop', 'payload'], 18, { seeds: 10, only: boss, tries: 1 });
-    assert.ok(r.by[boss].wins >= (boss === 'coldwallet' ? 7 : 8), `${boss}: ${r.by[boss].wins}/10`);
+    assert.ok(r.by[boss].wins >= (boss === 'coldwallet' ? 7 : 9), `${boss}: ${r.by[boss].wins}/10`);
   }
   const none = farmScore('demolitionist', ['warden', 'sysop', 'payload'], 18, { seeds: 2, only: 'foreman', tries: 1, bots: { interrupt: false } });
   assert.equal(none.by.foreman.wins, 0, 'Clock In and Layoffs land');
