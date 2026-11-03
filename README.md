@@ -86,7 +86,7 @@ comment saying what it does.
 | File | What it does |
 |---|---|
 | `dist/combat.mjs` | The engine: pure and deterministic, commands in, events out. Fights, XP and levels, the save and its migrations. |
-| `dist/data.mjs` | Every tunable number: abilities, classes, families, strains, guards, bosses, floors, and `createVirus`; the level curve (`power` compounding, the 4% `line`, the `lift` between). |
+| `dist/data.mjs` | Every tunable number: abilities, classes, families, strains, guards, bosses, floors, and `createVirus`; the level curve (`power` compounding for enemies, your slow `own` line, the 4% `line`, the `lift` between, gear's `gearFill`). |
 | `dist/classes/` | Each class's subclasses: `<class>.data.mjs` their skills and trees, `<class>.mjs` what they do in a fight; `kit.mjs` talent helpers. |
 | `dist/parts.mjs` | What a wild virus is made of: its basic, signature and third parts, rolled by named constants (`PARTS`), the strains' spread (`PARTS.spread`), and an elite's clash. |
 | `dist/exe.mjs` | The .exe builds: a part's rule harder or bent (`EXE`), and their roll from floor 4 (`EXE_ROLL`; echoes are `PARTS.echo`). |
@@ -110,7 +110,7 @@ comment saying what it does.
 
 | File | What it does |
 |---|---|
-| `dist/gear.mjs` | Protocols: slots, rarities, item levels, stats and rule affixes; flat numbers lifted at their level (`liftItem`, `liftFx`, `curveRestore`). Pure data and functions. |
+| `dist/gear.mjs` | Protocols: slots, rarities, item levels, stats and rule affixes; flat numbers lifted at their level, and the ones that carry your power filled (`liftItem`, `liftFx`, `FILLS`, `curveRestore`). Pure data and functions. |
 | `dist/sets.mjs` | Sets: piece counts and their bonuses in a fight. |
 | `dist/faction-gear.mjs` | Faction gear: implicit lines on a faction's items, and the five faction uniques assembled from feud parts. |
 | `dist/filters.mjs` | Filters: rolled gear for your firewall's slots. |

@@ -65,7 +65,7 @@ import { sigOf, named, lairOf, intelOf, knowsStrain, knowsEvent, knowsRich, name
 import { guardSetChance, lairChance, bossOdds, presetsOf, presetKeys, followOf, spikeName, said, mutated, capstonePoints, capPickOf, capState, blastOf, livingParts } from './combat.mjs';
 import { tripwireOf, zipOf, heldOf } from './order.mjs';
 import { youMarks, junkKey } from './mechanics.mjs';
-import { cantripsOf, TELL, lifted } from './data.mjs';
+import { cantripsOf, TELL, lifted, own } from './data.mjs';
 import { usable, hooks } from './combat.mjs';
 import { EXE } from './exe.mjs';
 import { sigintWindows, sigintCharges, plannedTells } from './tells.mjs';
@@ -92,14 +92,13 @@ export const conClass = (gap) => (gap >= 5 ? 'con-red' : gap >= 3 ? 'con-orange'
 const longChip = (i) => i.name.length > 6 || i.name.length + String(effectLabel(i)).length > 14;
 export const attackCode = (name = '') => (name[0] + name.slice(1).replace(/[aeiou\s'-]/gi, '')).slice(0, 3).toUpperCase();
 export const levelTag = (s, level, label = `Level ${level}`) => `<b class="${conClass(level - hackerLevel(s))}" title="${level > hackerLevel(s) ? `${level - hackerLevel(s)} levels above you` : level < hackerLevel(s) ? `${hackerLevel(s) - level} levels below you` : 'your level'}">${label}</b>`;
-// Skill text with this level's numbers: every level adds 4% to damage and shields. Heals you cast and
-// damage over time (burn ticks, helpers) take CONFIG.healLevel / dotLevel of that; heals times Restore, and
-// Payload adds its flat number to every burn tick and helper hit.
+// Skill text with this level's numbers: your own line (data.mjs own) on damage, shields, heals and burns; heals
+// times Restore, and Payload adds its flat number to every burn tick and helper hit.
 export function scaledText(s, id, text, arch = null) {
   const a = ABILITIES[id];
-  const k = arch ? power(hackerLevel(s, arch)) : powerOf(s);
-  const kHeal = (1 + (k - 1) * CONFIG.healLevel) * (1 + gearStat(s, 'restore') / 100);
-  const kDot = 1 + (k - 1) * CONFIG.dotLevel, pay = gearStat(s, 'payload');
+  const k = arch ? own(hackerLevel(s, arch)) : powerOf(s);
+  const kHeal = k * (1 + gearStat(s, 'restore') / 100);
+  const kDot = k, pay = gearStat(s, 'payload');
   if (!a || !text || (k === 1 && kHeal === 1 && kDot === 1 && !pay)) return text;
   const healing = a.verb === 'heal' || id === 'patch';
   const factor = { heal: kHeal, drain: kHeal, tick: healing ? kHeal : kDot, helper: kDot }, plus = { tick: healing ? 0 : pay, helper: pay }; // Payload: flat, on each tick and helper hit

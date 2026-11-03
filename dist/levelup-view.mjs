@@ -4,7 +4,7 @@
 // It lists what the level brings on every track: each gain of the level, the power line, the server's Integrity and the
 // next level. Each row's detail is its tooltip (Name: sentence), never on the row. Pure markup builders: no DOM
 // (levelup-ui.mjs puts it on the page).
-import { ABILITIES, ARCHETYPES, SUBS, FLOORS, CANTRIPS, CONFIG } from './data.mjs';
+import { ABILITIES, ARCHETYPES, SUBS, FLOORS, CANTRIPS, CONFIG, own } from './data.mjs';
 import { kitTalent, specRule } from './combat.mjs';
 
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -52,9 +52,9 @@ export function levelUpSummary(events, keys = []) {
     if (same) { same.n += it.n; same.value = `+${same.n}`; if (it.names) { same.names = [...same.names, ...it.names]; same.tip = basesTip(same.names); } }
     else items.push({ ...it });
   }
-  const pct = Math.round(((1 + CONFIG.powerPerLevel) ** evs.length - 1) * 100), // compounding (data.mjs power)
+  const pct = Math.round((own(last.level) / own(evs[0].level - 1) - 1) * 100), // your own line (data.mjs own): none past level 6, gear carries you
     srv = evs.findLast((e) => e.server)?.server;
-  items.push({ kind: 'power', label: 'Power', value: `+${pct}%`, tip: `Power: Your skills deal ${pct}% more damage, and your server's Integrity grows with them.` });
+  if (pct > 0) items.push({ kind: 'power', label: 'Power', value: `+${pct}%`, tip: `Power: Your skills deal ${pct}% more damage, and your server's Integrity grows with them.` });
   if (srv) items.push({ kind: 'integrity', label: 'Integrity', value: String(srv), tip: `Integrity: Your server's Integrity is now ${srv}.` });
   const nx = last.next, nItems = nx ? nx.gains.map((g) => gainItem(g, { ...last, level: nx.level })) : [];
   const short = (it) => (['skill', 'sigint', 'floor', 'kit', 'edge'].includes(it.kind) ? it.label : `${it.label} ${it.value}`);

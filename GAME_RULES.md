@@ -1160,13 +1160,14 @@ a favoured card once it has come up twice, its rich code once it leans your way;
 ### Levels
 
 - **Hacker level** (per class, 1–50): a long, WoW-style climb. Each class starts at level 1 and levels on its own.
-  **Every level adds 6% power, compounding** (`CONFIG.powerPerLevel`, `power`): damage, heals, shields and Signal, for
-  you and enemies alike (key 1 hits 25 at level 1, 76 at 20, 434 at 50). A virus 10 levels under you has about half
-  your numbers. Heals you cast and damage over time keep half of the 4% **level line** (`CONFIG.levelLine`, +2% a
-  level, `healLevel`, `dotLevel`) and all of the **lift** above it (`lift` = power ÷ line); Restore and Payload on
-  your gear make up the rest (Items). Every flat number tuned on the line (an item's stats, a unique's +6 damage, a
-  talent's +4 Signal, a run's Signal costs) is that number × the lift at its level: still a flat number.
-- **Your server's level is your highest class level.** It sets your server's Integrity (100, +6% a level, compounding) and opens
+  **Enemies grow 6% a level, compounding** (`CONFIG.powerPerLevel`, `power`): a virus 10 levels under you has about
+  half its match's numbers. **Gear carries your power:** your own numbers (skill damage, base Signal, heals, shields,
+  talents' Signal) grow 6% a level to level 6, then stop (`CONFIG.ownFrom`, `ownPerLevel`, `own`; key 1 hits 25 at
+  level 1, 33 from 6 on), and your gear's Damage, Crit Damage, Payload, Signal, Regen and Leech carry the rest (Items):
+  in its level's blues, three quarters of your Signal at 20 and seven eighths at 30. Every flat number tuned on the 4% **level line** (`CONFIG.levelLine`;
+  an item's stats, a unique's +6 damage, a run's Signal costs) is that number × the **lift** at its level (`lift` =
+  power ÷ line): still a flat number.
+- **Your server's level is your highest class level.** It sets your server's Integrity (100, +6% a level, compounding: the server isn't on your own line) and opens
   daemon slots (+1 at 15, 30 and 45).
 - **Enemies have a level (1–60).** A server keeps the level it was found at, so old servers get easier. Enemy levels
   are coloured WoW-style: red (5+ above you), orange (3–4), yellow (about even), green (below), grey (10+ below, no XP).
@@ -1206,8 +1207,8 @@ a favoured card once it has come up twice, its rich code once it leans your way;
 ### The level-up
 
 It lists what the level brings: skills (with the key each went on), your subclass, SIGINT, a talent or capstone point,
-a protocol slot, new protocol bases, a floor's band, and a daemon slot when your server rises; then the power line and
-the next level that brings something. Several levels at once are one level-up. It is a **firmware update**: a compact
+a protocol slot, new protocol bases, a floor's band, and a daemon slot when your server rises; then the power line (to
+level 6), the server's Integrity and the next level that brings something. Several levels at once are one level-up. It is a **firmware update**: a compact
 panel under the top bar, an amber *Firmware update · <class>.rom* strip, the level in big teal dot-font digits beside
 *v9 → v10*, then `[ OK ]` per unlock as the flash finishes, **Loadout** (when there's something to set) and
 **Continue**. It closes by itself 12 seconds after the flash, never comes up during a fight or over a card that waits,
@@ -1245,7 +1246,7 @@ free:** until any class reaches level 5, switching to a class you haven't played
   queued. A few skills only work in the cycle or two after their event (Shatter after you strip a part's last ◆,
   Retaliate after you're hit, Opening after an attack misses you or is delayed).
 
-**The core skills** (numbers at level 1; they grow 6% a level, compounding):
+**The core skills** (numbers at level 1; ×1.34 from level 6 on, your own line):
 
 | Skill | What it does | Cooldown |
 |---|---|---:|
@@ -1399,7 +1400,10 @@ deconstructed.
   gear grows about 12% a level at level 1, 11% at 10, 9% at 30 and 8% at 50, outgrowing the enemies' hits so a
   same-level fight costs about the same share of your Signal throughout. An item's numbers are worked out on the level
   line, then its flat stats (all but RAM and Lead), its flat rule and a unique's or set's flat effect are lifted at its
-  item level (`liftItem`, `liftFx`). Chances stay percentages.
+  item level (`liftItem`, `liftFx`). The ones that carry your power (Damage, Crit Damage, Payload, Signal, Regen, Leech,
+  and flat damage, heal and shield effects) are also × the **fill** at their item level (`CONFIG.gearFill`: 1 to level
+  6, 1.46 at 10, 1.77 at 25, 1.52 at 50), so a fight at your level in its blues costs what it did when your level
+  carried half of you. Gear ten levels old loses about 40% of fights at your level; twenty, 90%. Chances stay percentages.
 - **Power spikes are earned** (the designer's rule): base power never spikes; a new skill, a talent tier, a capstone, a
   slot, a unique, a set bonus or a tier set does, and the big jumps belong past the level cap. A spike that takes the
   friction away is a problem to fix in its kit.
@@ -1456,9 +1460,8 @@ Every stat is a whole number. The stat sheet lists them all.
 | Scavenge (%) | Magic find (below) | of the Scavenger |
 | RAM | Every routine's RAM, up to 3 from all your gear (Routines) | of the Heap (from item level 10; 1, 2 from about 30) |
 
-**Heals and burns grow with gear.** Heals you cast and damage over time keep +2% a level of the 4% level line, and the
-lift; Restore and Payload
-make up the rest and more (a blue Sysop at 30 carries about 65% Restore). Heals that give back damage (Reclaim,
+**Heals and burns grow with gear.** Heals you cast and damage over time grow on your own line; Restore, Regen, Leech
+and Payload make up the rest and more (a blue Sysop at 30 carries about 65% Restore). Heals that give back damage (Reclaim,
 Rollback, OOM Kill) take Restore only. Payload is flat on every tick, so it counts most on small, frequent ones.
 
 **Scavenge is magic find** with diminishing returns (+50% Scavenge = +33% better odds) and more cache credits. It
@@ -2598,9 +2601,11 @@ Checked by `node balance.mjs` (docs/BALANCE.md, `balance.test.mjs`), `farmsim.mj
 
 ## Saves
 
-The save is `SAVE_VERSION` 54 (combat.mjs). An older save is migrated on load, each step keyed on the field it converts,
+The save is `SAVE_VERSION` 55 (combat.mjs). An older save is migrated on load, each step keyed on the field it converts,
 so it is safe to run twice; nothing a save held is lost.
 
+- **v55** gear carries your power: every protocol's filling stats (Damage, Crit Damage, Payload, Signal, Regen,
+  Leech) and flat damage, heal or shield rule × the fill at its item level, once (`curveRestore`, keyed on `s.curve` 2).
 - **v54** the compounding curve: every protocol's flat stats and flat rule, and each filter's Block, Regen and barbs,
   lifted once at its item level (`curveRestore`, keyed on `s.curve`).
 - **v53** the cryptogram's key, `s.cipher`, made on first use (`cipherOf`).

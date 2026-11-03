@@ -77,6 +77,37 @@ built): if a virus below you wore ◆ × (1 − gap ÷ 10), none at ten under, t
 six over 6–7 cycles. A lean rule for the designer to pick, or step 2's longer fights may change the balance of ◆ and
 Integrity enough on their own.
 
+### After step 2 (November 3): gear carries your power
+
+Your own numbers (skill damage, base Signal, heals, shields, talents' Signal) grow with `power` to level 6, then stop
+(`CONFIG.ownFrom`, `ownPerLevel` 0); mobs still compound 6%. Your gear's Damage, Crit Damage, Payload, Signal, Regen
+and Leech are × a fill at their item level (`CONFIG.gearFill`: 1 to 6, 1.46 at 10, 1.77 at 25, 1.52 at 50), fitted so
+a level's blues give the Signal and Damage step 1 did. In them, gear is 74% of your Signal at 20 and 88% at 30 (was 42%
+and 52%).
+
+Same harness, wild fights at your level; won · cycles · Signal lost (step 1 in brackets):
+
+| You | Its level's blues | Ten levels old | None | Level-10 blues |
+|---|---|---|---|---|
+| 10 | 98% · 10 · 30% (98% · 33%) | 85% · 55% (98% · 38%) | 69% · 68% (94% · 48%) | — |
+| 20 | 100% · 11 · 28% (100% · 30%) | 58% · 74% (85% · 45%) | 13% · 96% (73% · 65%) | (ten old) |
+| 30 | 96% · 10 · 29% (96% · 32%) | 60% · 73% (85% · 50%) | 0% (60% · 75%) | 8% · 97% (63% · 73%) |
+
+At your level in its blues (cycles · Signal lost): 3: 9 · 32%; 10: 10 · 30% (elite 15 · 41%); 18: 11 · 21% (17 ·
+24%); 30: 10 · 29% (13 · 31%); 45: 8 · 23% (11 · 29%). Per subclass at 30 the Sysop now loses 10% (was 1%), the
+Hijacker 50% (40%), the Warden 21% (33%). Crew bosses at 18 in whites: 17–18 of 20 won (20). The campaign bot's
+Breaker takes 19 breaches to level 10 (16).
+
+**Why level 6:** with your own line flat from level 1, gear a few levels old at 5–10 cost a lot (level 5 in starter
+whites: 81% won, the campaign Breaker 23 breaches to level 10 and 19% of its breaches won from 6). From 6, SPRAWL-00 and
+the first levels play as they did. The cost: at 10, no gear still wins 69%.
+
+**Short of the targets:** ten levels old still wins about 60% at 20 and 30. That is a ceiling of the split, not its
+tuning: a level's blues must match its mobs, which grow 1.8× in ten levels, so gear ten levels old is about 45% of you
+however little your level gives. A fight at your level costs about 30%, so half of you still often wins. Fights that
+cost more at your level (step 3) and a floor's gear step (step 4) close it. Level-10 gear at 30, the designer's case,
+loses 92%.
+
 ## 2. The WoW model, mapped
 
 | WoW | BLACKBOX |
@@ -122,7 +153,7 @@ One session each, one after the other (they share the economy, pacing and combat
    number that doesn't keeps its flat form with its value rescaled (never turned into a share): gear stats (anchored at level 50 by `itemPower`, so the low levels
    shrink), flat affixes and uniques (*+6 damage*), heals, shields, Signal, prices and anything shown as a fixed number.
    Events and lairs at their place's level.
-2. **Next: gear carries your power** (decided November 3, section 5.5). Your own numbers (skill damage, base Signal,
+2. **Built (November 3): gear carries your power** (decided November 3, section 5.5; section 1 has the numbers). Your own numbers (skill damage, base Signal,
    heals, shields) grow on a slow line instead of `power`; mobs keep compounding 6%; item stats grow to fill the gap, so
    in level-appropriate blues most of your Signal and damage is gear. Targets at your level, on the harness:
 
@@ -135,8 +166,8 @@ One session each, one after the other (they share the economy, pacing and combat
    Now, at 30: level-30 blues win 100% (29% lost), level-20 blues 92%, level-10 whites or level-1 gear 63% (73% lost):
    your level alone carries you (540 of 1028 Signal is level, the rest gear). The cost: the friction table's "nothing"
    row (60–75%, a win) goes; the low levels (starter gear at 3) must still win; elites, bosses and the class sims are
-   re-measured against the new split. Then step 2.
-3. Fight length: Integrity up, hits down, enrages, the balance targets moved.
+   re-measured against the new split.
+3. **Next:** fight length: Integrity up, hits down, enrages, the balance targets moved.
 4. Floors as tiers: the mob step and the gear step.
 5. Boss rounds that grow (the solo bosses first, then the lairs as they're built).
 

@@ -2,15 +2,15 @@
 // scrapping, Zero-days, the install queue and save migration.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fresh, command, selectEncounter, resolveCycle, part, restore, addItem, gearStat, scaled, healScaled, dotMult, dotHit, SAVE_VERSION, previewDamage, daemonSlots, maxSignal, critChance, loaded, slotCount, rigOf, tickServices, syncServer, idleRegen, missChance, serverLevel } from './dist/combat.mjs';
+import { fresh, command, selectEncounter, resolveCycle, part, restore, addItem, gearStat, scaled, healScaled, dotHit, SAVE_VERSION, previewDamage, daemonSlots, maxSignal, critChance, loaded, slotCount, rigOf, tickServices, syncServer, idleRegen, missChance, serverLevel } from './dist/combat.mjs';
 import { play, connect, sourceOf } from './dist/run.mjs';
 import * as FP from './dist/floorplan.mjs';
 // Since R1 a server is rooms (netrooms.mjs): into the first room next to the entry that something holds, and engage.
 const roomFight = (s) => { const R = s.rooms, g = R.graph, room = FP.neighbours(g, R.at).map((id) => g.rooms[id]).find((r) => FP.isUp(s, r) && r.kind !== 'core'); FP.go(s, room.id); FP.act(s, 'engage'); };
 // The vault, its key in hand: opened, its files in your pack.
 const openVault = (s) => { const R = s.rooms, v = R.graph.vaults[0]; R.visit.keys.push(v); R.at = v; R.screen = null; FP.act(s, 'open'); };
-import { CONFIG, power, lifted } from './dist/data.mjs';
-import { STATS, RARITIES, LOOT, BASES, AFFIXES, SLOTS, DECONSTRUCT, uniqueItem, lootOdds, magicFind, STASH_CAP, SERVICES, PROTOCOL_STATS, protocolSlots, RULES, rollItem, seeded, codeOf, codeDrop, vaultCode, affixValue, primaries, scavengeCut, baseFor, SCAVENGE_COST } from './dist/gear.mjs';
+import { CONFIG, power, lifted, filled } from './dist/data.mjs';
+import { STATS, RARITIES, LOOT, BASES, AFFIXES, SLOTS, DECONSTRUCT, uniqueItem, lootOdds, magicFind, STASH_CAP, SERVICES, PROTOCOL_STATS, protocolSlots, RULES, rollItem, seeded, codeOf, codeDrop, vaultCode, affixValue, primaries, scavengeCut, baseFor, SCAVENGE_COST, FILLS } from './dist/gear.mjs';
 
 // Exact numbers unless a test turns crits or misses on.
 CONFIG.baseCrit = 0;
@@ -20,7 +20,8 @@ CONFIG.enemyRamp = 0;
 CONFIG.restRegen = 0; // resting has its own test
 CONFIG.salvageChance = 1;
 CONFIG.misses = false; // and no misses
-CONFIG.powerPerLevel = 0; CONFIG.levelLine = 0; // flat numbers at every level (level tests turn it back on)
+const OWN0 = CONFIG.ownPerLevel, FILL0 = CONFIG.gearFill; // your own line and gear's fill, to turn back on
+CONFIG.powerPerLevel = 0; CONFIG.levelLine = 0; CONFIG.ownPerLevel = 0; CONFIG.gearFill = [[1, 1]]; // flat numbers at every level (level tests turn it back on)
 CONFIG.gap = { dealt: 0, taken: 0, floor: 1, below: 0 }; // and no level-gap scaling (combat.test.mjs tests it)
 (await import('./dist/data.mjs')).LOADOUT.specRanks = 0; // the kit talent's two free ranks (progression.mjs): off, for exact numbers
 
@@ -40,7 +41,7 @@ const finishOne = (s) => {
 };
 
 test('items: a base for its slot (primaries), affixes by rarity (one prefix and suffix on a blue, up to three each on a yellow), named like D2', () => {
-  CONFIG.powerPerLevel = 0.06; CONFIG.levelLine = 0.04;
+  CONFIG.powerPerLevel = 0.06; CONFIG.levelLine = 0.04; CONFIG.ownPerLevel = OWN0; CONFIG.gearFill = FILL0;
   const r = seeded(11);
   for (let i = 0; i < 300; i++) {
     const rarity = ['stock', 'tuned', 'custom'][i % 3];
@@ -72,11 +73,11 @@ test('items: a base for its slot (primaries), affixes by rarity (one prefix and 
   assert.ok(at('exploit-chain', 11) > at('weaponized-exploit', 10) && at('exploit-chain', 11) < at('weaponized-exploit', 10) * 1.1, 'and no jump');
   const asked = rollItem(seeded(5), { level: 6, stat: 'crit', rarity: 'tuned' });
   assert.ok(asked.stats.crit > 0, 'rolled around a stat: it has that affix');
-  CONFIG.powerPerLevel = 0; CONFIG.levelLine = 0;
+  CONFIG.powerPerLevel = 0; CONFIG.levelLine = 0; CONFIG.ownPerLevel = 0; CONFIG.gearFill = [[1, 1]];
 });
 
 test('Scavenge is magic find, and it costs stats: the Scavenger suffix rolls low, and a rolled item carrying it has lower primaries', async () => {
-  CONFIG.powerPerLevel = 0.06; CONFIG.levelLine = 0.04;
+  CONFIG.powerPerLevel = 0.06; CONFIG.levelLine = 0.04; CONFIG.ownPerLevel = OWN0; CONFIG.gearFill = FILL0;
   const { UNIQUES } = await import('./dist/combat.mjs');
   // The suffix: 3 at item level 1, 5 to 7 at 20, about 10 at 50 and never over it (it was 5 to 7, 10 to 14 and 18 to 25).
   const rolls = (L) => [0, 0.25, 0.5, 0.75, 1].map((r) => affixValue('scavenger', L, r));
@@ -97,7 +98,7 @@ test('Scavenge is magic find, and it costs stats: the Scavenger suffix rolls low
     const raw = primaries(it.base, L, RARITIES[rarity].mult, seeded(k * 31 + L)); // the same dice: primaries roll first
     const extra = Object.fromEntries(it.affixes.map((a) => [AFFIXES[a].stat, true]));
     if (it.stats.ram) continue; // RAM costs primaries too (the RAM test)
-    const up = (st, v) => (STATS[st].flat ? lifted(v, L) : v); // primaries on the level line, the item lifted (gear.mjs liftItem)
+    const up = (st, v) => (FILLS.has(st) ? filled(v, L) : STATS[st].flat ? lifted(v, L) : v); // primaries on the level line, the item lifted and filled (gear.mjs liftItem)
     if (!it.stats.scavenge) { for (const [st, v] of Object.entries(raw)) if (!extra[st]) assert.equal(it.stats[st], up(st, v), `${it.name}: no Scavenge, no cost`); continue; }
     seen[rarity]++;
     const cut = Math.min(15, it.stats.scavenge);
@@ -108,20 +109,20 @@ test('Scavenge is magic find, and it costs stats: the Scavenger suffix rolls low
   const blue = rollItem(seeded(7), { level: 50, rarity: 'tuned', slot: 'proxy', stat: 'scavenge' });
   const raw = primaries(blue.base, 50, RARITIES.tuned.mult, seeded(7));
   assert.equal(blue.stats.scavenge, 10);
-  assert.equal(blue.stats.signal, lifted(Math.round(raw.signal * 0.9), 50));
-  assert.ok(blue.stats.signal < lifted(raw.signal, 50));
+  assert.equal(blue.stats.signal, filled(Math.round(raw.signal * 0.9), 50));
+  assert.ok(blue.stats.signal < filled(raw.signal, 50));
   // Uniques and set pieces keep theirs: Neighbour's Wifi and the Silt Map carry Scavenge at full stats.
   for (const id of ['neighbours-wifi', 'silt-map']) {
     const u = UNIQUES[id], it = uniqueItem(u, u.level, seeded(3)), bare = uniqueItem({ ...u, secondary: {} }, u.level, seeded(3));
     assert.ok(it.stats.scavenge > 0, id);
     for (const st of Object.keys(bare.stats)) if (!(st in (u.secondary || {}))) assert.equal(it.stats[st], bare.stats[st], `${id}: ${st}`);
   }
-  CONFIG.powerPerLevel = 0; CONFIG.levelLine = 0;
+  CONFIG.powerPerLevel = 0; CONFIG.levelLine = 0; CONFIG.ownPerLevel = 0; CONFIG.gearFill = [[1, 1]];
 });
 
 // Base power follows item level (gear.mjs ITEM_CURVE): no step where a base unlocks, and level 50 where the tiers left it.
 test('item power: in every slot the best base\'s primaries rise level by level from 1 to 50, with no step where a base unlocks; level 50 rolls what it did', () => {
-  CONFIG.powerPerLevel = 0.06; CONFIG.levelLine = 0.04;
+  CONFIG.powerPerLevel = 0.06; CONFIG.levelLine = 0.04; CONFIG.ownPerLevel = OWN0; CONFIG.gearFill = FILL0;
   // A base's power at a level: the geometric mean of its primaries, rolled mid-range, big enough that rounding is noise.
   const size = (id, L) => { const p = Object.values(primaries(id, L, 1000, () => 0.5)); return Math.exp(p.reduce((n, x) => n + Math.log(x), 0) / p.length); };
   for (const slot of ['exploit', 'proxy', 'shell', 'script', 'implant']) {
@@ -138,11 +139,11 @@ test('item power: in every slot the best base\'s primaries rise level by level f
   assert.deepEqual([mid('hypervisor-escape'), mid('covert-channel'), mid('firmware-shell'), mid('metamorphic-engine'), mid('firmware-rootkit')], [
     { damage: 44 }, { signal: 170, reduction: 5 }, { signal: 85, regen: 18, restore: 37 }, { damage: 16, signal: 67, payload: 8 }, { damage: 9, signal: 47 },
   ]);
-  CONFIG.powerPerLevel = 0; CONFIG.levelLine = 0;
+  CONFIG.powerPerLevel = 0; CONFIG.levelLine = 0; CONFIG.ownPerLevel = 0; CONFIG.gearFill = [[1, 1]];
 });
 
 test('uniques: fixed name and stats, scaled up from their own level; drop odds by tier, trash under elites under rare spawns', () => {
-  CONFIG.powerPerLevel = 0.06; CONFIG.levelLine = 0.04;
+  CONFIG.powerPerLevel = 0.06; CONFIG.levelLine = 0.04; CONFIG.ownPerLevel = OWN0; CONFIG.gearFill = FILL0;
   const u = { id: 'x', name: 'Test Unique', base: 'weaponized-exploit', level: 5, primary: { damage: 10 }, secondary: { crit: 5 }, downside: { reduction: -1 } };
   const a = uniqueItem(u, 5, seeded(1)), b = uniqueItem(u, 15, seeded(1));
   assert.equal(a.name, 'Test Unique');
@@ -150,7 +151,7 @@ test('uniques: fixed name and stats, scaled up from their own level; drop odds b
   assert.equal(a.unique, 'x');
   assert.equal(a.stats.reduction, -1, 'the downside');
   assert.ok(b.stats.damage > a.stats.damage, 'found later, it is bigger');
-  CONFIG.powerPerLevel = 0; CONFIG.levelLine = 0;
+  CONFIG.powerPerLevel = 0; CONFIG.levelLine = 0; CONFIG.ownPerLevel = 0; CONFIG.gearFill = [[1, 1]];
   // The loot model (WoW's): trash rarely drops an item, an elite better, a rare spawn better still, at every rarity.
   const [trash, elite, rare] = ['trash', 'elite', 'rare'].map(lootOdds);
   for (const r of ['stock', 'tuned', 'custom', 'zeroday']) assert.ok(trash[r] < elite[r] && elite[r] < rare[r], r);
@@ -379,19 +380,17 @@ test('Restore: every heal you cast heals that much more (Patch up front and as i
   assert.equal(herder(6), 18, '+6 Payload on the helper hit');
 });
 
-test('heals you cast and damage over time keep half the level line\'s growth and the whole lift (CONFIG.healLevel, CONFIG.dotLevel); Restore and Payload make up the rest', () => {
-  CONFIG.powerPerLevel = 0.06; CONFIG.levelLine = 0.04;
+test('your own line: skills, heals you cast and damage over time grow with power to level 6, then hold (data.mjs own); Restore and Payload come from gear', () => {
+  CONFIG.powerPerLevel = 0.06; CONFIG.levelLine = 0.04; CONFIG.ownPerLevel = OWN0; CONFIG.gearFill = FILL0;
   const s = fresh();
   s.loadout.archetype = 'bastion'; s.hackers = { bastion: { level: 26, xp: 0 } };
-  const P = 1.06 ** 25; // power at 26; the line there is 2, the lift P / 2
-  assert.equal(scaled(s, 10), Math.round(10 * P), 'everything else: power');
-  assert.equal(healScaled(s, 10), Math.round(10 * (P / 2) * 1.5), 'a heal you cast: half the line\'s ×2, lifted');
-  assert.equal(dotMult(s), 0.75, 'a burn tick or helper hit (built with scaled): 1.5 of the line\'s 2');
+  const k = 1.06 ** 5; // your own line at 26: level 6's
+  assert.equal(scaled(s, 10), Math.round(10 * k), 'a skill: your own line');
+  assert.equal(healScaled(s, 10), Math.round(10 * k), 'a heal you cast: the same');
   give(s, { restore: 20, payload: 5 });
-  assert.equal(healScaled(s, 10), Math.round(10 * (P / 2) * 1.5 * 1.2), '+20% Restore');
-  assert.equal(dotMult(s), 0.75, 'Payload is flat: the share stays');
-  assert.equal(dotHit(s, scaled(s, 10)), Math.round(10 * P) * 0.75 + 5, 'a 10 tick at level 26, +5 Payload');
-  CONFIG.powerPerLevel = 0; CONFIG.levelLine = 0;
+  assert.equal(healScaled(s, 10), Math.round(10 * k * 1.2), '+20% Restore');
+  assert.equal(dotHit(s, scaled(s, 10)), Math.round(10 * k) + 5, 'a 10 tick at level 26, +5 Payload');
+  CONFIG.powerPerLevel = 0; CONFIG.levelLine = 0; CONFIG.ownPerLevel = 0; CONFIG.gearFill = [[1, 1]];
 });
 
 test('v32 then v44: Payload on old protocols was flat (+1–2 a tick), came back ×7 as a percentage, and is flat again at its level', () => {

@@ -12,10 +12,6 @@ import { rollExe, makeExe, EXE, EXE_ROLL } from './exe.mjs';
 import { crewOf, buildAuthor, bossAuthor } from './authors.mjs';
 
 export const CONFIG = {
-  // Heals you cast and damage over time (burns, helpers) keep this share of the level line's growth (levelLine)
-  // and all of the lift above it; the rest comes from gear (Restore, Payload), so a built healer or burn class outscales a bare one.
-  healLevel: 0.5,
-  dotLevel: 0.5,
   cycleMs: 8000, // default; players pick a speed below
   speeds: { relaxed: 12000, normal: 8000, fast: 5000 },
   // Server
@@ -48,9 +44,16 @@ export const CONFIG = {
   // so a mob a few levels below you is clearly weaker and one ten below is trivial (docs/scaling.md).
   powerPerLevel: 0.06,
   // The level line: 4% a level, linear, the curve the game's flat numbers were tuned on. What grows only partly with
-  // level (heals and burns: healLevel, dotLevel; gear's edge: gear.mjs ITEM_CURVE) is measured on it, and lift()
+  // level (gear's edge: gear.mjs ITEM_CURVE) is measured on it, and lift()
   // carries it up to power().
   levelLine: 0.04,
+  // Gear carries your power (docs/scaling.md step 2): your own numbers (skill damage, base Signal, heals, shields) grow
+  // with power() to level ownFrom (the first levels play as they did), then ownPerLevel a level; mobs keep compounding.
+  // Item stats that stand in for what level no longer gives (gear.mjs FILLS) are × gearFill at their item level
+  // ([level, fill] points, linear between), so a fight at your level in its blues costs what it did.
+  ownPerLevel: 0,
+  ownFrom: 6,
+  gearFill: [[6, 1], [10, 1.46], [15, 1.67], [25, 1.77], [30, 1.66], [40, 1.6], [50, 1.52]],
   // Enemy parts are tougher than one or two of your hits: fights run long enough that attacks
   // land, so gear and planning are what keep you standing.
   partToughness: 1.7,
@@ -946,6 +949,11 @@ export const line = (level) => 1 + CONFIG.levelLine * (Math.max(1, level) - 1);
 export const lift = (level) => power(level) / line(level);
 // A flat number at a level: n × lift, whole, never under 1.
 export const lifted = (n, level) => Math.max(1, Math.round(n * lift(level)));
+// Your own line (CONFIG.ownPerLevel): what your level alone gives you.
+export const own = (level) => { const L = Math.max(1, level), F = Math.max(1, CONFIG.ownFrom || 1); return power(Math.min(L, F)) * (1 + CONFIG.ownPerLevel * Math.max(0, L - F)); };
+// Gear's fill at an item level (CONFIG.gearFill), and a flat item number lifted and filled.
+export const gearFill = (level) => runLate(level, CONFIG.gearFill);
+export const filled = (n, level) => Math.max(1, Math.round(n * lift(level) * gearFill(level)));
 // Enemies match you level for level (no soft start: the first fights should cost something).
 export const mobPower = (level) => power(level) * 1;
 

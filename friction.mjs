@@ -1,9 +1,9 @@
 // The difficulty curve: health a same-level fight costs, by the gear you're wearing.
-// Targets (items design doc): nothing 50–60%, whites 35–45%, blues 25–30%, a yellow set 12–18%.
+// Targets: TARGET below. Nothing loses from level 10 on (gear carries your power, docs/scaling.md step 2).
 // node friction.mjs [levels…]
 import { score, BRACKETS } from './balance.mjs';
 export const GEAR = { nothing: { noGear: true }, whites: { rarity: 'stock' }, blues: { rarity: 'tuned' }, yellows: { rarity: 'custom' } };
-export const TARGET = { nothing: [60, 75], whites: [40, 50], blues: [35, 45], yellows: [20, 30] };
+export const TARGET = { nothing: [90, 100], whites: [40, 50], blues: [35, 45], yellows: [20, 30] };
 export function friction(levels = [1, 5, 10, 18, 30], classes = ['Breaker', 'Bastion', 'Infiltrator', 'Operator']) {
   const rows = [];
   for (const L of levels) {
