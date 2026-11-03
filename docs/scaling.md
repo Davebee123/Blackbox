@@ -52,7 +52,7 @@ Why:
 | WoW | BLACKBOX |
 |---|---|
 | A zone or expansion's level range | A floor's band |
-| Grey mobs: a few levels down, trivial | Gap modifiers that cut both ways |
+| Grey mobs: a few levels down, trivial (stats steep by level; gap rules mostly for mobs above) | A compounding level curve |
 | Quest rewards keep you a little ahead while leveling | A floor's drops at its band's top |
 | A new expansion's first greens beat last tier's epics | Each floor's gear a step above the last |
 | Dungeon → heroic → raid, each gated by gear from the one before | A floor's servers → its elites → its lair boss and exit |
@@ -66,8 +66,10 @@ the floor's own blues: you need its gear. New gear on the next floor jumps you a
 
 Starting numbers, to tune on the arena bench:
 
-1. **Gaps cut both ways.** Below you: you deal 8% more a level (up to +80%) and take 8% less (down to 25%), and grey
-   from 6 below. Ten levels over, an ordinary fight takes about 4 cycles and costs almost nothing.
+1. **A compounding level curve (route 1, WoW's).** `power(level)` grows 6–8% a level, compounding, for you and for
+   mobs alike, in place of 4% linear: about 17× (6%) to 43× (8%) by 50, against 3× now. A fight at your level is
+   unchanged; a mob ten levels down has about half the Integrity and half the hits (6%), so it falls fast and costs
+   little. WoW-sized numbers. The gap rules stay as they are (mostly about mobs above you, as WoW's are).
 2. **Longer fights, smaller hits**, at your level in level-appropriate blues: ordinary 12–16 cycles, elites 20–25, solo
    bosses 28–35 with the enrage about 15% past a geared kill. A plain hit at most ~12% of your max; a telegraphed boss
    move at most ~25%. Integrity up and hits down together, so a fight's cost holds.
@@ -86,7 +88,19 @@ shorten cycles). The smooth gear curve and the flat friction target give way.
 
 One session each, one after the other (they share the economy, pacing and combat numbers), each played before the next:
 
-1. Gaps both ways, and events and lairs at their place's level.
+1. The curve: `power` compounding (most growth already goes through it: `mobPower`, `powerOf`, `scaled`), and every
+   number that doesn't rescaled or made a share: gear stats (anchored at level 50 by `itemPower`, so the low levels
+   shrink), flat affixes and uniques (*+6 damage*), heals, shields, Signal, prices and anything shown as a fixed number.
+   Events and lairs at their place's level.
 2. Fight length: Integrity up, hits down, enrages, the balance targets moved.
 3. Floors as tiers: the mob step and the gear step.
 4. Boss rounds that grow (the solo bosses first, then the lairs as they're built).
+
+## 5. Decided
+
+The designer, November 3, 2026:
+
+1. **Fight length:** *"slightly longer"* than 12–16, 20–25 and 28–35 cycles; tuned on the arena bench.
+2. **The compass:** WoW: *"they do an excellent job at making the player feel powerful when they level, but then it
+   slowly gets harder and harder which necessitates gear, then does this over and over again."*
+3. **Route 1:** a compounding level curve, WoW's mechanism, over gap modifiers.
