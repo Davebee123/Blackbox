@@ -122,9 +122,23 @@ One session each, one after the other (they share the economy, pacing and combat
    number that doesn't keeps its flat form with its value rescaled (never turned into a share): gear stats (anchored at level 50 by `itemPower`, so the low levels
    shrink), flat affixes and uniques (*+6 damage*), heals, shields, Signal, prices and anything shown as a fixed number.
    Events and lairs at their place's level.
-2. Fight length: Integrity up, hits down, enrages, the balance targets moved.
-3. Floors as tiers: the mob step and the gear step.
-4. Boss rounds that grow (the solo bosses first, then the lairs as they're built).
+2. **Next: gear carries your power** (decided November 3, section 5.5). Your own numbers (skill damage, base Signal,
+   heals, shields) grow on a slow line instead of `power`; mobs keep compounding 6%; item stats grow to fill the gap, so
+   in level-appropriate blues most of your Signal and damage is gear. Targets at your level, on the harness:
+
+   | Gear | Level 10 | Level 30 |
+   |---|---|---|
+   | Its level's blues | 35–45% lost (as now) | 35–45% lost (as now) |
+   | Ten levels old | often lost | lost nearly every fight |
+   | None | lost | lost |
+
+   Now, at 30: level-30 blues win 100% (29% lost), level-20 blues 92%, level-10 whites or level-1 gear 63% (73% lost):
+   your level alone carries you (540 of 1028 Signal is level, the rest gear). The cost: the friction table's "nothing"
+   row (60–75%, a win) goes; the low levels (starter gear at 3) must still win; elites, bosses and the class sims are
+   re-measured against the new split. Then step 2.
+3. Fight length: Integrity up, hits down, enrages, the balance targets moved.
+4. Floors as tiers: the mob step and the gear step.
+5. Boss rounds that grow (the solo bosses first, then the lairs as they're built).
 
 ## 5. Decided
 
@@ -135,3 +149,5 @@ The designer, November 3, 2026:
    slowly gets harder and harder which necessitates gear, then does this over and over again."*
 3. **Route 1:** a compounding level curve, WoW's mechanism, over gap modifiers.
 4. **Items keep flat values:** *"Don't convert items into %s. Just adjust their flat values."*
+5. **Gear over level:** *"There is no way a level 30 should be winning any fights at level 30 with level 10 gear."*
+   *"Level should not contribute to your power as much at all."*
