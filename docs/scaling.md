@@ -89,7 +89,7 @@ shorten cycles). The smooth gear curve and the flat friction target give way.
 One session each, one after the other (they share the economy, pacing and combat numbers), each played before the next:
 
 1. The curve: `power` compounding (most growth already goes through it: `mobPower`, `powerOf`, `scaled`), and every
-   number that doesn't rescaled or made a share: gear stats (anchored at level 50 by `itemPower`, so the low levels
+   number that doesn't keeps its flat form with its value rescaled (never turned into a share): gear stats (anchored at level 50 by `itemPower`, so the low levels
    shrink), flat affixes and uniques (*+6 damage*), heals, shields, Signal, prices and anything shown as a fixed number.
    Events and lairs at their place's level.
 2. Fight length: Integrity up, hits down, enrages, the balance targets moved.
@@ -104,3 +104,4 @@ The designer, November 3, 2026:
 2. **The compass:** WoW: *"they do an excellent job at making the player feel powerful when they level, but then it
    slowly gets harder and harder which necessitates gear, then does this over and over again."*
 3. **Route 1:** a compounding level curve, WoW's mechanism, over gap modifiers.
+4. **Items keep flat values:** *"Don't convert items into %s. Just adjust their flat values."*
