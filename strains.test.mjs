@@ -66,6 +66,7 @@ test('Keylogger: the Logger only feels synced commands, and three unsynced ones 
   fire(s, 'spike logger', true);
   assert.ok(logger.integrity < hp, 'in sync: it lands');
   assert.equal(s.encounter.keylog, 1, 'a synced command is not logged');
+  Object.assign(part(s, 'pulse'), { integrity: 9999, max: 9999 }); // the Pulse holds: no break, no Overkill onto the Logger
   fire(s, 'spike pulse');
   fire(s, 'spike pulse');
   assert.equal(logger.attack.due, s.encounter.cycle, 'the Dump comes next cycle');
