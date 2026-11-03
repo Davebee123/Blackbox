@@ -58,6 +58,10 @@ export const CONFIG = {
   // ([level, fill] points, linear between), so a fight at your level in its blues costs what it did.
   ownPerLevel: 0,
   ownFrom: 6,
+  damageCoef: false, // prototype: gear Damage × the hit's size over Spike's (combat.mjs gearDamage)
+  damageRef: 25,
+  dotCoef: false, // prototype: burns on your own line, Payload × the tick's size over dotRef (combat.mjs gearPayload)
+  dotRef: 8,
   gearFill: [[6, 1], [10, 1.46], [15, 1.67], [25, 1.77], [30, 1.66], [40, 1.6], [50, 1.52]],
   // Enemy parts are tougher than one or two of your hits: fights run long enough that attacks
   // land, so gear and planning are what keep you standing.

@@ -121,6 +121,36 @@ more at your level (step 3) and a floor's gear step (step 4) close it. Level-10 
 | A new expansion's first greens beat last tier's epics | Each floor's gear a step above the last |
 | Dungeon → heroic → raid, each gated by gear from the one before | A floor's servers → its elites → its lair boss and exit |
 | Enrage timers and repeating mechanics | Boss mechanics that grow each round, and a tight enrage |
+| Item level: one number sets an item's stat budget | Item level × the fill (`gearFill`) |
+| Health is mostly Stamina from gear | Signal is mostly gear (step 2: 88% at 30) |
+| An ability is a base plus a coefficient × spell or attack power from gear; a big spell gets more of it | Gear Damage × the skill's size over Spike's (`damageCoef`, prototype) |
+| A DoT or HoT tick gets its own coefficient | Payload × the tick's size over 8 (`dotCoef`, prototype) |
+| Heals scale with spell power from gear | Not yet: heals keep step 1's growth with your level |
+
+### Re-run (November 3, on the step-2 branch)
+
+**What a flat Damage stat does without the coefficient:** once your level stops growing skill hits, every hit is a small
+base plus the same gear Damage, so a nuke and a jab converge (at 30, a 40 hits 282 and a 10 hits 241). Big-hit kits
+sink: core rotations at 30 lose Demolitionist 51% (main 26%), Overclocker 52% (34%).
+
+**With WoW's coefficients** (`damageCoef` and `dotCoef` on), the same harness at your level:
+
+| | Main | Step 2, flat Damage | Step 2, coefficients |
+|---|---|---|---|
+| Core rotation at 30 (Demolitionist / Overclocker / Hijacker) | 26 / 34 / 44% | 51 / 52 / 48% | 25 / 34 / 51% |
+| Crew bosses at 18 (full crew) | 72 of 73 | 72 of 93 (burns on your line) | 72 of 73 |
+| Level 30 in level-10 blues | 63% won | 13% won | 10% won |
+| Ten levels old at 20 / 30 | 85 / 85% won | 60 / 71% | 65 / 67% |
+| No gear at 10 / 20 / 30 | 94 / 73 / 60% won | 73 / 13 / 0% | 69 / 13 / 0% |
+
+Subclasses alone at 30 sit within a few points of main; at 10 the Herder (12–14%) and the Hijacker (14%) run easy:
+helpers are many small ticks, so `dotRef` wants tuning.
+
+**What WoW does that a per-level curve can't:** in WoW, gear ten levels old still levels fine; the wall is the *tier*.
+A new raid tier's mobs are tuned to the tier's gear, and its first drops outclass the last tier's best. Here, a level's
+blues must keep up with its mobs, so gear ten levels old is about 45% of you, and a fight at your level costs about 30%:
+half of you still wins most fights. The wall comes from step 4 (each floor a gear step, its elites, lair and exit tuned
+to its own blues), not from shrinking your level further.
 
 **The sawtooth, per floor:** you arrive at the band's bottom wearing the last floor's best: strong. The floor's servers
 climb toward its top while its mobs carry the floor's step: it gets harder. Its elites, lair boss and exit are tuned for
