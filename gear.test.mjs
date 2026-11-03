@@ -2,7 +2,7 @@
 // scrapping, Zero-days, the install queue and save migration.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fresh, command, selectEncounter, resolveCycle, part, restore, addItem, gearStat, scaled, healScaled, dotMult, dotHit, SAVE_VERSION, previewDamage, daemonSlots, maxSignal, critChance, loaded, slotCount, rigOf, tickServices, syncServer, idleRegen, missChance, serverLevel } from './dist/combat.mjs';
+import { fresh, command, selectEncounter, resolveCycle, part, restore, addItem, gearStat, scaled, healScaled, dotHit, SAVE_VERSION, previewDamage, daemonSlots, maxSignal, critChance, loaded, slotCount, rigOf, tickServices, syncServer, idleRegen, missChance, serverLevel } from './dist/combat.mjs';
 import { play, connect, sourceOf } from './dist/run.mjs';
 import * as FP from './dist/floorplan.mjs';
 // Since R1 a server is rooms (netrooms.mjs): into the first room next to the entry that something holds, and engage.
@@ -347,7 +347,7 @@ test('Echo repeats a hit (breaking another chit); Crit Damage raises crits; Payl
   bare(quiet(fight(b)));
   Object.assign(part(b, 'pulse'), { integrity: 500, max: 500 });
   command(b, 'inject pulse'); resolveCycle(b);
-  assert.equal(500 - part(b, 'pulse').integrity, 30, 'Inject 20, +10 Payload on the tick');
+  assert.equal(500 - part(b, 'pulse').integrity, 34, 'Inject 20, +10 Payload × its size over a 14 tick (CONFIG.dotRef): +14');
 });
 
 test('Restore: every heal you cast heals that much more (Patch up front and as it ticks); Payload: every helper hit too', () => {
@@ -377,10 +377,10 @@ test('Restore: every heal you cast heals that much more (Patch up front and as i
     return 500 - part(s, 'pulse').integrity - first;
   };
   assert.equal(herder(0), 12, 'a helper hits for 12');
-  assert.equal(herder(6), 18, '+6 Payload on the helper hit');
+  assert.equal(herder(6), 17, '+6 Payload × 12/14 on the helper hit');
 });
 
-test('your own line: skills grow with power to level 6, then hold (data.mjs own); heals and damage over time keep half the line and the lift (CONFIG.healLevel, dotLevel); Restore and Payload come from gear', () => {
+test('your own line: skills and damage over time grow with power to level 6, then hold (data.mjs own); heals keep half the line and the lift (CONFIG.healLevel); Restore and Payload come from gear', () => {
   CONFIG.powerPerLevel = 0.06; CONFIG.levelLine = 0.04; CONFIG.ownPerLevel = OWN0; CONFIG.gearFill = FILL0;
   const s = fresh();
   s.loadout.archetype = 'bastion'; s.hackers = { bastion: { level: 26, xp: 0 } };
@@ -390,7 +390,9 @@ test('your own line: skills grow with power to level 6, then hold (data.mjs own)
   assert.equal(healScaled(s, 10), Math.round(10 * (P / 2) * 1.5), 'a heal you cast: half the line\'s ×2, lifted');
   give(s, { restore: 20, payload: 5 });
   assert.equal(healScaled(s, 10), Math.round(10 * (P / 2) * 1.5 * 1.2), '+20% Restore');
-  assert.ok(Math.abs(dotHit(s, scaled(s, 10)) - (Math.round(10 * k) * (P / 2) * 1.5 / k + 5)) < 1e-9, 'a 10 tick at level 26: half the line\'s ×2, lifted, +5 Payload');
+  const t = scaled(s, 10);
+  assert.equal(t, Math.round(10 * k), 'a burn tick: your own line');
+  assert.ok(Math.abs(dotHit(s, t) - (t + (5 * t) / (14 * k))) < 1e-9, 'a 10 tick at level 26, +5 Payload × its size over a 14 tick');
   CONFIG.powerPerLevel = 0; CONFIG.levelLine = 0; CONFIG.ownPerLevel = 0; CONFIG.gearFill = [[1, 1]];
 });
 

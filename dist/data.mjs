@@ -12,11 +12,9 @@ import { rollExe, makeExe, EXE, EXE_ROLL } from './exe.mjs';
 import { crewOf, buildAuthor, bossAuthor } from './authors.mjs';
 
 export const CONFIG = {
-  // Heals you cast and damage over time (burns, helpers) keep this share of the level line's growth (levelLine) and all
-  // of the lift above it, off your own line (docs/scaling.md step 2): no item stat fills them as Signal and Damage
-  // are filled; Restore and Payload add to them.
+  // Heals you cast keep this share of the level line's growth (levelLine) and all of the lift above it, off your own
+  // line (docs/scaling.md step 2): no item stat fills a heal; Restore adds to them.
   healLevel: 0.5,
-  dotLevel: 0.5,
   cycleMs: 8000, // default; players pick a speed below
   speeds: { relaxed: 12000, normal: 8000, fast: 5000 },
   // Server
@@ -58,10 +56,10 @@ export const CONFIG = {
   // ([level, fill] points, linear between), so a fight at your level in its blues costs what it did.
   ownPerLevel: 0,
   ownFrom: 6,
-  damageCoef: false, // prototype: gear Damage × the hit's size over Spike's (combat.mjs gearDamage)
+  // WoW's coefficients (combat.mjs gearDamage, gearPayload): gear Damage counts in full on a hit of damageRef (Spike's),
+  // Payload on a tick of dotRef, both at your level; a bigger hit gets more of it, a smaller one less.
   damageRef: 25,
-  dotCoef: false, // prototype: burns on your own line, Payload × the tick's size over dotRef (combat.mjs gearPayload)
-  dotRef: 8,
+  dotRef: 14,
   gearFill: [[6, 1], [10, 1.46], [15, 1.67], [25, 1.77], [30, 1.66], [40, 1.6], [50, 1.52]],
   // Enemy parts are tougher than one or two of your hits: fights run long enough that attacks
   // land, so gear and planning are what keep you standing.

@@ -1161,13 +1161,14 @@ a favoured card once it has come up twice, its rich code once it leans your way;
 
 - **Hacker level** (per class, 1–50): a long, WoW-style climb. Each class starts at level 1 and levels on its own.
   **Enemies grow 6% a level, compounding** (`CONFIG.powerPerLevel`, `power`): a virus 10 levels under you has about
-  half its match's numbers. **Gear carries your power:** your own numbers (skill damage, base Signal, shields,
-  talents' Signal) grow 6% a level to level 6, then stop (`CONFIG.ownFrom`, `ownPerLevel`, `own`; key 1 hits 25 at
-  level 1, 33 from 6 on), and your gear's Damage, Crit Damage, Signal, Regen and Leech carry the rest (Items): in its
-  level's blues, three quarters of your Signal at 20 and seven eighths at 30. Heals you cast and damage over time keep
-  half of the 4% level line and the lift (`healLevel`, `dotLevel`); Restore and Payload add to them. Every flat number tuned on the 4% **level line** (`CONFIG.levelLine`;
-  an item's stats, a unique's +6 damage, a run's Signal costs) is that number × the **lift** at its level (`lift` =
-  power ÷ line): still a flat number.
+  half its match's numbers. **Gear carries your power** (WoW's model): your own numbers (skill damage, burns, base
+  Signal, shields, talents' Signal) grow 6% a level to level 6, then stop (`CONFIG.ownFrom`, `ownPerLevel`, `own`;
+  key 1 hits 25 at level 1, 33 from 6 on), and your gear's Damage, Crit Damage, Payload, Signal, Regen and Leech carry
+  the rest (Items): in its level's blues, three quarters of your Signal at 20 and seven eighths at 30. Damage and
+  Payload work like spell power: each hit gets them in proportion to its size (below). Heals you cast keep half of the
+  4% level line and the lift (`healLevel`); Restore adds to them. Every flat number tuned on the 4% **level line**
+  (`CONFIG.levelLine`; an item's stats, a unique's +6 damage, a run's Signal costs) is that number × the **lift** at its
+  level (`lift` = power ÷ line): still a flat number.
 - **Your server's level is your highest class level.** It sets your server's Integrity (100, +6% a level, compounding: the server isn't on your own line) and opens
   daemon slots (+1 at 15, 30 and 45).
 - **Enemies have a level (1–60).** A server keeps the level it was found at, so old servers get easier. Enemy levels
@@ -1404,7 +1405,7 @@ deconstructed.
   item level (`liftItem`, `liftFx`). The ones that carry your power (Damage, Crit Damage, Signal, Regen, Leech, and
   flat damage, heal and shield effects) are also × the **fill** at their item level (`CONFIG.gearFill`: 1 to level
   6, 1.46 at 10, 1.77 at 25, 1.52 at 50), so a fight at your level in its blues costs what it did when your level
-  carried half of you. Gear ten levels old loses 30–40% of fights at your level; twenty, nearly all. Chances stay percentages.
+  carried half of you. Gear ten levels old loses about a third of fights at your level; twenty, nearly all. Chances stay percentages.
 - **Power spikes are earned** (the designer's rule): base power never spikes; a new skill, a talent tier, a capstone, a
   slot, a unique, a set bonus or a tier set does, and the big jumps belong past the level cap. A spike that takes the
   friction away is a problem to fix in its kit.
@@ -1442,12 +1443,12 @@ Every stat is a whole number. The stat sheet lists them all.
 
 | Stat | What it does | Rolls on |
 |---|---|---|
-| Damage | Added to every skill hit you land | Exploit, Script, Implant; Weaponized |
+| Damage | Added to a skill hit in proportion to its size: all of it on a Spike-sized hit (`damageRef`), twice on one twice as big, less on a smaller one (`gearDamage`) | Exploit, Script, Implant; Weaponized |
 | Crit (%) | Chance a damaging hit crits (5% base) | Precise |
 | Crit Damage | Added to every crit, on top of its +50% | Brutal |
 | Accuracy (%) | Cancels the enemy's evasion | Calibrated |
 | Echo (%) | Chance a skill hit repeats at half; on armor it breaks another ◆ | Recursive |
-| Payload | Added to every burn tick and helper hit you start (a budget point is 60% of Damage's) | Script; Loaded |
+| Payload | Added to every burn tick and helper hit you start, in proportion to its size: all of it on a 14 tick (`dotRef`, `gearPayload`) (a budget point is 60% of Damage's) | Script; Loaded |
 | Signal | Max Signal | Proxy, Shell, Script, Implant; of the Bunker |
 | Regen | Heals this much every 5 cycles in a fight, a fifth a cycle; on runs also every 5 moves; at home every 5 minutes | Shell; of Mending |
 | Block | Taken off every hit (never below half) | Proxy |
@@ -1461,9 +1462,10 @@ Every stat is a whole number. The stat sheet lists them all.
 | Scavenge (%) | Magic find (below) | of the Scavenger |
 | RAM | Every routine's RAM, up to 3 from all your gear (Routines) | of the Heap (from item level 10; 1, 2 from about 30) |
 
-**Heals and burns grow with gear.** Heals you cast and damage over time keep half of the 4% level line and the lift;
-Restore and Payload make up the rest and more (a blue Sysop at 30 carries about 65% Restore). Heals that give back damage (Reclaim,
-Rollback, OOM Kill) take Restore only. Payload is flat on every tick, so it counts most on small, frequent ones.
+**Heals and burns grow with gear.** Heals you cast keep half of the 4% level line and the lift, and Restore makes up
+the rest and more (a blue Sysop at 30 carries about 65% Restore). Heals that give back damage (Reclaim, Rollback, OOM
+Kill) take Restore only. Burns and helper hits grow on your own line, and Payload carries the rest, in proportion to
+each tick's size.
 
 **Scavenge is magic find** with diminishing returns (+50% Scavenge = +33% better odds) and more cache credits. It
 **costs stats**, as in D2: of the Scavenger rolls 3% at item level 1 to 10% at most, and a rolled blue or yellow

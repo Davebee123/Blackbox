@@ -79,37 +79,37 @@ Integrity enough on their own.
 
 ### After step 2 (November 3): gear carries your power
 
-Your own numbers (skill damage, base Signal, shields, talents' Signal) grow with `power` to level 6, then stop
-(`CONFIG.ownFrom`, `ownPerLevel` 0); mobs still compound 6%. Heals and burns keep step 1's growth: on your own line the
-Sysop lost 20% alone at 30 (15% at most) and a full crew won 72 of 93 boss tries at 18 (95%); filling Payload instead
-over-fed the Herder at 10 (13%) and starved the Payload at 30 (32%).
-Your gear's Damage, Crit Damage, Signal, Regen and Leech are × a fill at their item level (`CONFIG.gearFill`: 1 to 6, 1.46 at 10, 1.77 at 25, 1.52 at 50), fitted so
-a level's blues give the Signal and Damage step 1 did. In them, gear is 74% of your Signal at 20 and 88% at 30 (was 42%
-and 52%).
+WoW's model. Your own numbers (skill damage, burns, base Signal, shields, talents' Signal) grow with `power` to level 6,
+then stop (`CONFIG.ownFrom`, `ownPerLevel` 0); mobs still compound 6%. Your gear's Damage, Crit Damage, Payload,
+Signal, Regen and Leech are × a fill at their item level (`CONFIG.gearFill`: 1 to 6, 1.46 at 10, 1.77 at 25, 1.52 at
+50), fitted so a level's blues give the Signal and Damage step 1 did. Damage and Payload work like spell power: each hit
+gets them × its size over Spike's (`damageRef` 25) or a 14 tick's (`dotRef`), so a nuke stays a nuke. Heals keep step
+1's growth: no gear stat feeds a heal but Restore. In its level's blues, gear is 74% of your Signal at 20 and 88% at 30
+(was 42% and 52%).
 
 Same harness, wild fights at your level; won · cycles · Signal lost (step 1 in brackets):
 
 | You | Its level's blues | Ten levels old | None | Level-10 blues |
 |---|---|---|---|---|
-| 10 | 98% · 10 · 30% (98% · 33%) | 85% · 55% (98% · 38%) | 73% · 65% (94% · 48%) | — |
-| 20 | 100% · 11 · 27% (100% · 30%) | 60% · 71% (85% · 45%) | 13% · 94% (73% · 65%) | (ten old) |
-| 30 | 94% · 10 · 30% (96% · 32%) | 71% · 64% (85% · 50%) | 0% (60% · 75%) | 13% · 93% (63% · 73%) |
+| 10 | 98% · 10 · 30% (98% · 33%) | 88% · 54% (98% · 38%) | 69% · 68% (94% · 48%) | — |
+| 20 | 100% · 11 · 27% (100% · 30%) | 63% · 71% (85% · 45%) | 13% · 95% (73% · 65%) | (ten old) |
+| 30 | 96% · 10 · 34% (96% · 32%) | 63% · 73% (85% · 50%) | 0% (60% · 75%) | 8% · 94% (63% · 73%) |
 
-At your level in its blues (cycles · Signal lost): 3: 9 · 31%; 10: 10 · 30% (elite 16 · 41%); 18: 11 · 20% (17 ·
-24%); 30: 10 · 30% (13 · 30%); 45: 8 · 24% (11 · 29%). Per subclass at 30, alone: within a few points of step 1 but
-the Hijacker 50% (40%) and the Payload 37% (34%). Crew bosses at 18: 20 of 20 each. The campaign bot reaches level 10
-in 13–17 breaches (12–16).
+At your level in its blues (cycles · Signal lost): 3: 8 · 29%; 10: 10 · 30% (elite 14 · 38%); 18: 11 · 21% (16 ·
+23%); 30: 10 · 34% (12 · 31%); 45: 9 · 28% (11 · 31%). Subclasses alone and their core rotations sit within a few
+points of main; crew bosses at 18 win 72 of 74 tries (72 of 73); the campaign bot reaches level 10 in 11–15 breaches.
+
+**Why the coefficients:** with a flat Damage stat and your level no longer growing hits, every hit is a small base plus
+the same gear Damage, so a nuke and a jab converge (at 30, a 40 hit 282 and a 10 hit 241) and big-hit kits sink (core
+rotations at 30: Demolitionist 51%, main 26%). With burns on your level instead, the Sysop lost 20% alone at 30 and a
+crew won 72 of 93 boss tries.
 
 **Why level 6:** with your own line flat from level 1, gear a few levels old at 5–10 cost a lot (level 5 in starter
-whites: 81% won; the campaign Breaker 23 breaches to level 10, 19% of its breaches won from 6). From 6, SPRAWL-00 and
-the first levels play as they did. The cost: at 10, no gear still wins 73%.
+whites: 81% won). From 6, SPRAWL-00 and the first levels play as they did. The cost: at 10, no gear still wins 69%.
 
-**Short of the targets:** ten levels old still wins 60–70% at 20 and 30. That is a ceiling of the split, not its
-tuning: a level's blues must match its mobs, which grow 1.8× in ten levels, so gear ten levels old is about 45% of you
-however little your level gives (0% a level from level 1 measured the same). A fight at your level costs about 30%, so
-half of you still often wins, and heals and burns, which keep step 1's growth, soften it further. Fights that cost
-more at your level (step 3) and a floor's gear step (step 4) close it. Level-10 gear at 30, the designer's case, loses
-87%.
+**Ten levels old still wins about 60%.** A level's blues must keep up with its mobs, which grow 1.8× in ten levels, so
+gear ten levels old is about 45% of you however little your level gives. WoW is the same while levelling; its wall is
+the tier. Ours is step 4: each floor a gear step, its elites, lair and exit tuned to its own blues.
 
 ## 2. The WoW model, mapped
 
@@ -123,34 +123,9 @@ more at your level (step 3) and a floor's gear step (step 4) close it. Level-10 
 | Enrage timers and repeating mechanics | Boss mechanics that grow each round, and a tight enrage |
 | Item level: one number sets an item's stat budget | Item level × the fill (`gearFill`) |
 | Health is mostly Stamina from gear | Signal is mostly gear (step 2: 88% at 30) |
-| An ability is a base plus a coefficient × spell or attack power from gear; a big spell gets more of it | Gear Damage × the skill's size over Spike's (`damageCoef`, prototype) |
-| A DoT or HoT tick gets its own coefficient | Payload × the tick's size over 8 (`dotCoef`, prototype) |
+| An ability is a base plus a coefficient × spell or attack power from gear; a big spell gets more of it | Gear Damage × the skill's size over Spike's (`damageRef`) |
+| A DoT or HoT tick gets its own coefficient | Payload × the tick's size over 14 (`dotRef`) |
 | Heals scale with spell power from gear | Not yet: heals keep step 1's growth with your level |
-
-### Re-run (November 3, on the step-2 branch)
-
-**What a flat Damage stat does without the coefficient:** once your level stops growing skill hits, every hit is a small
-base plus the same gear Damage, so a nuke and a jab converge (at 30, a 40 hits 282 and a 10 hits 241). Big-hit kits
-sink: core rotations at 30 lose Demolitionist 51% (main 26%), Overclocker 52% (34%).
-
-**With WoW's coefficients** (`damageCoef` and `dotCoef` on), the same harness at your level:
-
-| | Main | Step 2, flat Damage | Step 2, coefficients |
-|---|---|---|---|
-| Core rotation at 30 (Demolitionist / Overclocker / Hijacker) | 26 / 34 / 44% | 51 / 52 / 48% | 25 / 34 / 51% |
-| Crew bosses at 18 (full crew) | 72 of 73 | 72 of 93 (burns on your line) | 72 of 73 |
-| Level 30 in level-10 blues | 63% won | 13% won | 10% won |
-| Ten levels old at 20 / 30 | 85 / 85% won | 60 / 71% | 65 / 67% |
-| No gear at 10 / 20 / 30 | 94 / 73 / 60% won | 73 / 13 / 0% | 69 / 13 / 0% |
-
-Subclasses alone at 30 sit within a few points of main; at 10 the Herder (12–14%) and the Hijacker (14%) run easy:
-helpers are many small ticks, so `dotRef` wants tuning.
-
-**What WoW does that a per-level curve can't:** in WoW, gear ten levels old still levels fine; the wall is the *tier*.
-A new raid tier's mobs are tuned to the tier's gear, and its first drops outclass the last tier's best. Here, a level's
-blues must keep up with its mobs, so gear ten levels old is about 45% of you, and a fight at your level costs about 30%:
-half of you still wins most fights. The wall comes from step 4 (each floor a gear step, its elites, lair and exit tuned
-to its own blues), not from shrinking your level further.
 
 **The sawtooth, per floor:** you arrive at the band's bottom wearing the last floor's best: strong. The floor's servers
 climb toward its top while its mobs carry the floor's step: it gets harder. Its elites, lair boss and exit are tuned for
@@ -215,3 +190,5 @@ The designer, November 3, 2026:
 4. **Items keep flat values:** *"Don't convert items into %s. Just adjust their flat values."*
 5. **Gear over level:** *"There is no way a level 30 should be winning any fights at level 30 with level 10 gear."*
    *"Level should not contribute to your power as much at all."*
+6. **WoW's coefficients:** gear Damage and Payload scale with each hit's size, like spell power: *"focus the design close
+   to [WoW]"*, *"keep the coefficients and land step 2"*.

@@ -1,7 +1,7 @@
 // The scripted fight player: one planner for every class (finish what you can, answer what lands
 // now, strip, then finish), playing that class's own kit. Used by the balance scripts and by
 // simulated crewmates (crew.mjs). It reads the fight through the engine's own functions.
-import { classPlan, classFill, hooks, classOf, subOf, toIntent, intents, attackers, livingParts, alive, part, defender, previewDamage, ignoresArmor, readyIn, skillBase, mirrorOn, bendOf, bendBad, timersHidden, usable, hookHit, wards, attackAmount, delayHeld, frontOf, bufferOn, signatureOf, cooldownOf, frozenNow, asleep, scaled } from './combat.mjs';
+import { gearDamage, classPlan, classFill, hooks, classOf, subOf, toIntent, intents, attackers, livingParts, alive, part, defender, previewDamage, ignoresArmor, readyIn, skillBase, mirrorOn, bendOf, bendBad, timersHidden, usable, hookHit, wards, attackAmount, delayHeld, frontOf, bufferOn, signatureOf, cooldownOf, frozenNow, asleep, scaled } from './combat.mjs';
 import { ABILITIES, TELL, CONFIG } from './data.mjs';
 import { raidMove, raidFocus, noTaunt } from './raid.mjs';
 import { tellMove, tellFocus, answers, QUIET, chargeNow, echoesNow, beatOn, beatBlind, copyCost, paceOf, tellsOf } from './tells.mjs';
@@ -183,7 +183,7 @@ function heedBend(s, move) {
   // bounces back. A command with no hit is worth a cycle where it lands. Quiet is worth half a cycle (TELL.copy.lesser),
   // hold nothing.
   const pace = paceOf(s), a = ABILITIES[id], hits = a.damage > 0 || a.hit > 0 || a.bareHit > 0 || a.verb === 'hit';
-  const plan = Math.max(1, previewDamage(s, id, aim) || skillBase(s, id, aim)), base = skillBase(s, a.damage > 0 ? id : 'spike', aim) || 0;
+  const plan = Math.max(1, previewDamage(s, id, aim) || skillBase(s, id, aim)), b0 = skillBase(s, a.damage > 0 ? id : 'spike', aim) || 0, base = b0 + gearDamage(s, b0); // the whole hit bounces
   const key1 = Math.max(1, skillBase(s, 'spike', aim));
   const worth = (x) => {
     if (bendBad(s, dec, x) && x !== dec) return -Infinity; // a part to break last: never

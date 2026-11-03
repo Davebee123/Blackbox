@@ -4,7 +4,7 @@
 // preset, its board marks, and its entry in the no-fixed-rule test (solved.mjs FIXED).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fresh, command, selectEncounter, resolveCycle, part, livingParts, intents, mirrorOn, bendOf, previewDamage, damageMultiplier, blocked, skillBase } from './dist/combat.mjs';
+import { gearDamage, fresh, command, selectEncounter, resolveCycle, part, livingParts, intents, mirrorOn, bendOf, previewDamage, damageMultiplier, blocked, skillBase } from './dist/combat.mjs';
 import { CONFIG, TELL, createVirus } from './dist/data.mjs';
 import { tellsOf, copyOf, copyKind, dearCopy, paceOf } from './dist/tells.mjs';
 import { planner } from './dist/planner.mjs';
@@ -228,7 +228,7 @@ test('pointing at itself, your hit lands on the Decoy and half of it bounces bac
   const d = livingParts(s).find((p) => p.reflect), t = livingParts(s).find((p) => p !== d);
   while (!mirrorOn(s)) fire(s, 'hold');
   d.bend = { at: s.encounter.cycle, to: d.id, was: null };
-  const dw = d.integrity, hw = s.server.integrity, back = blocked(s, Math.round(skillBase(s, 'spike', d) * CONFIG.mirrorBounce));
+  const b0 = skillBase(s, 'spike', d), dw = d.integrity, hw = s.server.integrity, back = blocked(s, Math.round((b0 + gearDamage(s, b0)) * CONFIG.mirrorBounce)); // the whole hit, gear Damage in it
   fire(s, `spike ${t.id}`);
   assert.ok(dw - d.integrity > 0, 'it lands on the Decoy');
   assert.ok(Math.abs(hw - s.server.integrity - back) <= 1, `${CONFIG.mirrorBounce * 100}% of the hit back: ${hw - s.server.integrity} against ${back}`);

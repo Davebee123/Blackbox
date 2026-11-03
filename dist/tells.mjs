@@ -37,7 +37,7 @@
 //         boss's extra cap
 import { hit, implanted, emit, alive, part, livingParts, attackers, defender, hackerLevel, skillBase, gearStat, attackAmount, strikeWith, toIntent, usable, readyIn, alliesOf, fxAnswer, fxOn, cooldownOf, armorTakes, ignoresArmor } from './combat.mjs';
 import { CONFIG, TELL, TELLS, TELL_SETS, SEAL_FROM, STRAINS, ABILITIES, BOSSES } from './data.mjs';
-import { previewDamage, delayAttack, blocked, scaled } from './combat.mjs';
+import { previewDamage, delayAttack, blocked, scaled, gearDamage } from './combat.mjs';
 import { raidDef } from './raid.mjs';
 import { readGene, seeGene, logTell } from './genome.mjs';
 import { gainResearch } from './research.mjs';
@@ -580,8 +580,9 @@ export function copyKind(id) {
 export function mimicHit(s, id, target) {
   const a = ABILITIES[id];
   if (!a || copyKind(id) !== 'hit') return 0;
-  if (a.hit) return Math.round((a.hit * (a.hits || 1) * (skillBase(s, 'spike', target) / ABILITIES.spike.damage) + gearStat(s, 'damage')) * TELL.mimic); // Overvolt's two hits
-  return Math.round((skillBase(s, a.damage > 0 ? id : 'spike', target) + gearStat(s, 'damage')) * TELL.mimic);
+  if (a.hit) { const b = a.hit * (a.hits || 1) * (skillBase(s, 'spike', target) / ABILITIES.spike.damage); return Math.round((b + gearDamage(s, b)) * TELL.mimic); } // Overvolt's two hits
+  const b = skillBase(s, a.damage > 0 ? id : 'spike', target);
+  return Math.round((b + gearDamage(s, b)) * TELL.mimic);
 }
 // The virus's pace: the damage its attacks deal you a cycle, on the average (after your Block). A cycle you lose costs this.
 export function paceOf(s) {

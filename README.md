@@ -86,7 +86,7 @@ comment saying what it does.
 | File | What it does |
 |---|---|
 | `dist/combat.mjs` | The engine: pure and deterministic, commands in, events out. Fights, XP and levels, the save and its migrations. |
-| `dist/data.mjs` | Every tunable number: abilities, classes, families, strains, guards, bosses, floors, and `createVirus`; the level curve (`power` compounding for enemies, your slow `own` line, the 4% `line`, the `lift` between, gear's `gearFill`). |
+| `dist/data.mjs` | Every tunable number: abilities, classes, families, strains, guards, bosses, floors, and `createVirus`; the level curve (`power` compounding for enemies, your slow `own` line, the 4% `line`, the `lift` between, gear's `gearFill`, the coefficients' `damageRef` and `dotRef`). |
 | `dist/classes/` | Each class's subclasses: `<class>.data.mjs` their skills and trees, `<class>.mjs` what they do in a fight; `kit.mjs` talent helpers. |
 | `dist/parts.mjs` | What a wild virus is made of: its basic, signature and third parts, rolled by named constants (`PARTS`), the strains' spread (`PARTS.spread`), and an elite's clash. |
 | `dist/exe.mjs` | The .exe builds: a part's rule harder or bent (`EXE`), and their roll from floor 4 (`EXE_ROLL`; echoes are `PARTS.echo`). |

@@ -519,15 +519,13 @@ export const scaled = (s, n) => Math.max(1, Math.round(n * powerOf(s)));
 // restoreMult alone for heals that give back damage (Reclaim's half, Rollback), which already grow with it.
 export const restoreMult = (s) => 1 + gearStat(s, 'restore') / 100;
 export const healScaled = (s, n) => { const L = hackerLevel(s); return Math.max(1, Math.round(n * lift(L) * (1 + (line(L) - 1) * CONFIG.healLevel) * restoreMult(s) * setHealMult(s))); }; // setHealMult: Link, Mesh (sets.mjs)
-// Damage over time (burn ticks, helper hits): built with scaled(), it keeps CONFIG.dotLevel of the level line's growth
-// and the whole lift at the hit (dotMult, step 1's curve), and Payload adds its flat number to each one, as Damage does to a skill hit.
-export const dotMult = (s) => { if (CONFIG.dotCoef) return 1; const L = hackerLevel(s); return (lift(L) * (1 + (line(L) - 1) * CONFIG.dotLevel)) / powerOf(s); };
-// Payload on a tick: flat, or (CONFIG.dotCoef) × the tick's size over CONFIG.dotRef at your level.
-export const gearPayload = (s, base) => { const d = gearStat(s, 'payload'); return CONFIG.dotCoef ? (d * base) / (CONFIG.dotRef * powerOf(s)) : d; };
-// Gear Damage on a skill hit. With CONFIG.damageCoef (WoW's spell-power coefficient) it scales with the hit: a hit the
-// size of Spike's (CONFIG.damageRef at your level) gets all of it, a bigger hit more, a smaller one less.
-export const gearDamage = (s, base) => { const d = gearStat(s, 'damage'); return CONFIG.damageCoef ? (d * base) / (CONFIG.damageRef * powerOf(s)) : d; };
-export const dotHit = (s, base) => base * dotMult(s) + gearPayload(s, base);
+// Gear on a hit, WoW's coefficient: gear Damage on a skill hit, and Payload on a burn tick or helper hit, scale with
+// the hit's size: a hit the size of Spike's (CONFIG.damageRef at your level) gets all of its Damage, a tick of
+// CONFIG.dotRef all of its Payload; a bigger one more, a smaller one less.
+export const gearDamage = (s, base) => (gearStat(s, 'damage') * base) / (CONFIG.damageRef * powerOf(s));
+export const gearPayload = (s, base) => (gearStat(s, 'payload') * base) / (CONFIG.dotRef * powerOf(s));
+// Damage over time (burn ticks, helper hits): built with scaled(), plus its Payload.
+export const dotHit = (s, base) => base + gearPayload(s, base);
 // Regen a cycle (or a move, or a minute at home): Regen counts over STATS.regen.every of them.
 export const regenRate = (n) => n / (STATS.regen.every || 1);
 // The level gap to the enemy you're fighting (positive: it's above you).
@@ -2805,7 +2803,7 @@ export function hit(s, p, base, opts = {}) {
   const root = opts.mine && !opts.server && (buffed(e, 'sudo') || opts.unlock); // Sudo (Overclocker): the parts' rules don't hold you; Zero-day goes through locks
   if (cmd && e.commanding?.maze) base = Math.max(1, Math.round((base * e.commanding.maze) / 100));
   if (cmd && e.commanding?.bounce === p.id) {
-    const by = e.commanding.bounceBy || p.name, back = Math.min(Math.max(1, Math.round(base * (e.commanding.bounceShare ?? p.bounce ?? CONFIG.mirrorBounce))), defender(s).integrity - 1);
+    const by = e.commanding.bounceBy || p.name, whole = base + (opts.mine && !opts.server && !opts.dot ? gearDamage(s, base) : 0), back = Math.min(Math.max(1, Math.round(whole * (e.commanding.bounceShare ?? p.bounce ?? CONFIG.mirrorBounce))), defender(s).integrity - 1); // the whole hit, your gear's Damage in it
     const took = back > 0 ? takeDamage(s, back, p.id, `${by} bounce`) : 0;
     if (took) emit(s, 'server-hit', `Part of it bounces back off the ${by}: −${took}.`, { source: p.id, amount: took, bounce: true });
   }
@@ -3562,7 +3560,7 @@ function useAbility(s, intent, auto = false) {
     const mine = burnsOn(s, target).filter((b) => b.id !== 'implant');
     let total = 0, ticks = 0;
     for (const b of mine) { for (let k = 0; k < b.left; k++) total += b.damage + (b.grow || 0) * k; ticks += b.left; e.burns.splice(e.burns.indexOf(b), 1); }
-    hit(s, target, Math.round((total * dotMult(s) + (CONFIG.dotCoef ? gearPayload(s, total) : ticks * gearStat(s, 'payload'))) * a.mult * (hasTalent(s, 'assassinate') && on(s, target, 'tagged') ? 2 : 1)), { by: 'Detonate', pierce: true }); // burns' worth, Payload included
+    hit(s, target, Math.round((total + gearPayload(s, total)) * a.mult * (hasTalent(s, 'assassinate') && on(s, target, 'tagged') ? 2 : 1)), { by: 'Detonate', pierce: true }); // burns' worth, Payload included
   }
   if (id === 'propagate') {
     // Fragments catch the copies at double.
