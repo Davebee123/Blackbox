@@ -350,7 +350,7 @@ const round = (stat, v) => Math.round(v); // every stat is a whole number
 export const grows = (k) => !!STATS[k]?.flat && k !== 'ram' && k !== 'lead';
 // The rig's stats that carry what your level no longer gives (data.mjs gearFill): they're lifted and filled. Block and
 // the server's stats are only lifted.
-export const FILLS = new Set(['damage', 'critDamage', 'payload', 'signal', 'regen', 'leech']);
+export const FILLS = new Set(['damage', 'critDamage', 'signal', 'regen', 'leech']);
 const up = (k, n, L) => (FILLS.has(k) ? filled(n, L) : lifted(n, L));
 // Effect kinds whose value is a flat number (damage, healing, shield, burn growth), and those that add a stat.
 const FLAT_FX = new Set(['damage+', 'heal', 'shield', 'break-hit', 'read-hit', 'burn-grow']), STAT_FX = new Set(['stat+', 'stack', 'stat', 'buff']);

@@ -30,7 +30,7 @@ import { raidStart, raidLand, raidCycle, raidShield, raidBroke, raidTaken, raidA
 import { tellStart, tellCycle, tellLand, tellBroke, chargeNow, tellIntents, tellSigint, tellSigintCheck, tellOn, tellsOf, overclockMult, hotCharge } from './tells.mjs';
 import { prepareTicks, onHit as tickHit, blastCut, BOSS_RULES, TICKS } from './interrupt.mjs';
 import { actsStart, lashHit, lashLand, actIntents, actBegins, actCap } from './acts.mjs';
-import { TELL, TELLS, ROOM_FAMILIES, DAMPER_KINDS, floorFor, line, own } from './data.mjs';
+import { TELL, TELLS, ROOM_FAMILIES, DAMPER_KINDS, floorFor, line, lift, own } from './data.mjs';
 import { holdsPart, objectiveBroke, objectiveCycle, objectiveBonus, bonusXp, bonusRolls, backupHit } from './objectives.mjs';
 import { mechValidate, mechIntercept, mechFired, mechPower, exposedCut, mechLanded, mechCommandHit, mechStart, mechClose, mechBroke, lagged, stunnedNow, missedTurn } from './mechanics.mjs';
 import { tickRoot, processWon } from './root.mjs';
@@ -515,10 +515,10 @@ export const critMultiplier = () => CRIT.multiplier;
 // Your power: your own numbers (damage, heals, shields, Signal) grow on your slow line (data.mjs own); gear carries the rest.
 export const powerOf = (s) => own(hackerLevel(s));
 export const scaled = (s, n) => Math.max(1, Math.round(n * powerOf(s)));
-// Heals you cast: on your own line, times Restore. restoreMult alone for heals that give back damage (Reclaim's half,
-// Rollback), which already grow with it.
+// Heals you cast: CONFIG.healLevel of the level line's growth and the lift (step 1's curve), times Restore.
+// restoreMult alone for heals that give back damage (Reclaim's half, Rollback), which already grow with it.
 export const restoreMult = (s) => 1 + gearStat(s, 'restore') / 100;
-export const healScaled = (s, n) => Math.max(1, Math.round(n * powerOf(s) * restoreMult(s) * setHealMult(s))); // setHealMult: Link, Mesh (sets.mjs)
+export const healScaled = (s, n) => { const L = hackerLevel(s); return Math.max(1, Math.round(n * lift(L) * (1 + (line(L) - 1) * CONFIG.healLevel) * restoreMult(s) * setHealMult(s))); }; // setHealMult: Link, Mesh (sets.mjs)
 // Damage over time (burn ticks, helper hits): built with scaled(), and Payload adds its flat number to each one, as
 // Damage does to a skill hit.
 export const dotHit = (s, base) => base + gearStat(s, 'payload');

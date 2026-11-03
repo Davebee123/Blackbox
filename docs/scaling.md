@@ -79,9 +79,10 @@ Integrity enough on their own.
 
 ### After step 2 (November 3): gear carries your power
 
-Your own numbers (skill damage, base Signal, heals, shields, talents' Signal) grow with `power` to level 6, then stop
-(`CONFIG.ownFrom`, `ownPerLevel` 0); mobs still compound 6%. Your gear's Damage, Crit Damage, Payload, Signal, Regen
-and Leech are × a fill at their item level (`CONFIG.gearFill`: 1 to 6, 1.46 at 10, 1.77 at 25, 1.52 at 50), fitted so
+Your own numbers (skill damage, burns, base Signal, shields, talents' Signal) grow with `power` to level 6, then stop
+(`CONFIG.ownFrom`, `ownPerLevel` 0); mobs still compound 6%. Heals keep step 1's growth: no item stat carries a heal,
+and on your own line the Sysop lost 20% alone at 30 (15% at most) and a full crew won 72 of 81 boss tries at 18 (95%).
+Your gear's Damage, Crit Damage, Signal, Regen and Leech are × a fill at their item level (`CONFIG.gearFill`: 1 to 6, 1.46 at 10, 1.77 at 25, 1.52 at 50), fitted so
 a level's blues give the Signal and Damage step 1 did. In them, gear is 74% of your Signal at 20 and 88% at 30 (was 42%
 and 52%).
 

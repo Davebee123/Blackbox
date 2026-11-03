@@ -380,15 +380,16 @@ test('Restore: every heal you cast heals that much more (Patch up front and as i
   assert.equal(herder(6), 18, '+6 Payload on the helper hit');
 });
 
-test('your own line: skills, heals you cast and damage over time grow with power to level 6, then hold (data.mjs own); Restore and Payload come from gear', () => {
+test('your own line: skills and damage over time grow with power to level 6, then hold (data.mjs own); heals keep half the line and the lift (CONFIG.healLevel); Restore and Payload come from gear', () => {
   CONFIG.powerPerLevel = 0.06; CONFIG.levelLine = 0.04; CONFIG.ownPerLevel = OWN0; CONFIG.gearFill = FILL0;
   const s = fresh();
   s.loadout.archetype = 'bastion'; s.hackers = { bastion: { level: 26, xp: 0 } };
   const k = 1.06 ** 5; // your own line at 26: level 6's
   assert.equal(scaled(s, 10), Math.round(10 * k), 'a skill: your own line');
-  assert.equal(healScaled(s, 10), Math.round(10 * k), 'a heal you cast: the same');
+  const P = 1.06 ** 25; // power at 26; the line there is 2, the lift P / 2
+  assert.equal(healScaled(s, 10), Math.round(10 * (P / 2) * 1.5), 'a heal you cast: half the line\'s ×2, lifted');
   give(s, { restore: 20, payload: 5 });
-  assert.equal(healScaled(s, 10), Math.round(10 * k * 1.2), '+20% Restore');
+  assert.equal(healScaled(s, 10), Math.round(10 * (P / 2) * 1.5 * 1.2), '+20% Restore');
   assert.equal(dotHit(s, scaled(s, 10)), Math.round(10 * k) + 5, 'a 10 tick at level 26, +5 Payload');
   CONFIG.powerPerLevel = 0; CONFIG.levelLine = 0; CONFIG.ownPerLevel = 0; CONFIG.gearFill = [[1, 1]];
 });
