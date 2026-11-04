@@ -170,6 +170,15 @@ Integrity had healed back all of it). Alone at 10 · 18 · 30: the Sysop 33 · 8
 Warden 24 · 12 · 12% (27 · 13 · 25%). Five levels up the Sysop wins 1–3 of 8; the Warden still 5–7 (its cuts and blocks
 scale with the hits). Damage dealers: +2 wins about 85% for 50–65% lost, +3 about half, +5 one in eight.
 
+**No damage caps (the designer, November 4: as in WoW).** The spike cap, the tell ceiling, the tiers' caps and the
+Backlash's floor and ceiling are gone: a charge is its hit × `mult`, a Backlash its hit × 2. HASHLORD's hits had been
+fitted under the cap (every Surge landed at 25%; its Difficulty Bomb uncapped took 55–100%): `long.dmg` 3 → 0.6 puts the
+Bomb back near a quarter (median 23–27% at 16, 18, 30) and a Surge at 8%. It costs 20–34% where main cost 54–81%, and
+its band at 16 reads 99%, blind 81% (76%, 36% on main); more Integrity only runs it into its enrage. The other solo bosses'
+big moves already land 5–28%, left as they are. MIRRORSHADE at 12 is unchanged but for its misreader (51% → 45%: a
+mimicked hit is no longer capped). A wild charge, no longer stopped at 20%, is ×2.5 to ×3 its hit: the Sysop alone loses 25%
+at 30 (20%), its core rotation 63% (49%), and the Breaker's climb to 10 takes 17 breaches (16); each held in its test.
+
 Held (each test says what it measures): the Demolitionist's core rotation 27 points under its full build at 18; five
 second presets (the Payload's swarm +14.7 on the generic fights, the Hijacker's rules −14.6 on its own, the Phantom's
 evasion −7.8, the Herder's swarm +5.6, the Warden's swarm +5.2); the Warden's DMZ pressed in 3 of 24 at 30; ignoring the

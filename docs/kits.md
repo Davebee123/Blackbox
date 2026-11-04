@@ -94,6 +94,6 @@ the Hijacker carries a crew in 65% of boss tries.
   `swarm` and `healers` for the rest.
 - **The Sysop alone** deals 75% with its hits and burns (`SUBS.sysop.alone`); its heals come from the full hit. In a
   crew nothing changes.
-- **The spike cap.** A solo boss's single landing stops at 60% of your max, a wild virus's or a guard's charge at 45%
-  (`CONFIG.spikeCap`). Plain wild hits aren't capped: capping them made levels 1 to 12 too safe.
+- **No damage caps**, as in WoW: every hit is its attack's own number. A solo boss's big moves are sized to land about
+  25% of your max in its blues (`BOSSES` long `dmg`).
 - **Tooltips** read like a World of Warcraft tooltip (docs/style-guide.md).

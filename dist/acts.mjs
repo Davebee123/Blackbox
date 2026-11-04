@@ -10,11 +10,11 @@
 //                attack a cycle (BOSSES phases).
 //   the one to leave  the ♛ must stand above its next tick until this act's beat has played (ACTS.leave), or nothing else
 //                stands. Taken under it sooner, every part re-arms (to its full ◆). A hit takes it under one tick at most.
-import { BOSSES, TELL } from './data.mjs';
-import { emit, alive, part, livingParts, defender, strikeWith, attackAmount, landingsOf } from './combat.mjs';
+import { BOSSES } from './data.mjs';
+import { emit, alive, part, livingParts, strikeWith, attackAmount, landingsOf } from './combat.mjs';
 import { tellsOf } from './tells.mjs';
 
-export const ACTS = { leave: 1, lash: 2, floor: 0.15 }; // beats an act plays before its ♛ may go on; the Backlash's multiple, and its least (a share of your max)
+export const ACTS = { leave: 1, lash: 2 }; // beats an act plays before its ♛ may go on; the Backlash's multiple
 
 // The boss's acts (its family's, for the Resident), or null: not a P4 boss.
 export function actsOf(v) {
@@ -101,11 +101,11 @@ export function lashHit(s, p, sent = null) {
   if (!lashOn(s, p) || p.lashAt === e.cycle || (sent != null && sent < e.cycle)) return;
   p.lashAt = e.cycle;
 }
-// What a lash lands: a hit of the part's attack doubled, never under ACTS.floor of your max nor over the tell ceiling
+// What a lash lands: a hit of the part's attack doubled
 // (an Encrypt, a Replicate or a Scramble counts its hit, and does its own thing once on top: lashLand).
 export function lashAttack(s, p) {
-  const a = p.attack, max = defender(s).max, n = a.effect === 'damage' ? attackAmount(p) : a.hit || 0;
-  const amount = Math.max(Math.round(ACTS.floor * max), Math.min(Math.round(n * ACTS.lash), Math.round(TELL.ceiling * max)));
+  const a = p.attack, n = a.effect === 'damage' ? attackAmount(p) : a.hit || 0;
+  const amount = Math.max(1, Math.round(n * ACTS.lash));
   return { name: 'Backlash', effect: 'damage', amount, interval: a.interval, noCrit: true };
 }
 // The virus's half (combat.mjs endCycle, before its attacks due): each lash lands. True if the fight ended.

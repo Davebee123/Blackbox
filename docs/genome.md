@@ -51,7 +51,7 @@ Checked on every virus's rules (`compatible` in genes.mjs). A new body, boss or 
 | 2. One beat | At most one rule with a beat of its own (Mimic, Decoy mirror, Phase shift, Sync lock, Keyring, Watchdog timer). A global beat covers at most one cycle in four. |
 | 3. One clock | Every rule event goes through the tell scheduler: on the board two cycles ahead, never on a cycle with another heavy event or a tell landing. |
 | 4. An answer in every kit | Each subclass at that level (each class below 10) owns an answer: a skill unlocked by then, SIGINT from 10, or a play every kit has, shown enough by the harness. |
-| 5. Spike cap | The worst single landing, crit and charge cap included, is at most 45% of a same-level player's max Signal in blues; the worst three cycles at most 75% (85% for bosses). |
+| 5. No caps | Every hit is its attack's own number. A solo boss's big moves land about 25% of a same-level player's max Signal in blues; the worst three cycles at most 75% (90% for bosses). |
 
 Hard exclusions (`EXCLUDE`): Sync lock never with Clock glitch, Twin never with Hot Spare, Dormant never with Honeypot;
 Ransom timer never on a boss.

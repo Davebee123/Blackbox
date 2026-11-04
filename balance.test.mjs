@@ -69,9 +69,10 @@ test('the Bastions alone are the slow ones: the Warden at least 1.4 times the da
     // Since step 2 (docs/scaling.md) the Sysop measures 1.95 times at Lv 18: held at 1.9.
     assert.ok(rs.sysop.cycles >= 1.9 * median, `${b.name}: Sysop ${(rs.sysop.cycles / median).toFixed(2)}x: ${line}`);
     // Since sustain potency (docs/scaling.md step 3: the designer found healing too strong) the Sysop loses 20% at Lv 30:
-    // held at 21, a healer alone no longer safe.
-    assert.ok(rs.sysop.lost <= 21, `${b.name}: ${line}`);
-    for (const sub of ['warden', 'sysop']) assert.ok(rs[sub].wins >= 0.85, `${b.name}: ${line}`);
+    // held at 21, a healer alone no longer safe. With no damage caps (docs/scaling.md "After step 3": a wild charge is its hit × mult, no longer stopped at 20%) it loses 25% at 30 and wins 84%: held
+    // at 26 and 83% until the designer has played it.
+    assert.ok(rs.sysop.lost <= 26, `${b.name}: ${line}`);
+    for (const sub of ['warden', 'sysop']) assert.ok(rs[sub].wins >= (sub === 'sysop' ? 0.83 : 0.85), `${b.name}: ${line}`);
   }
 });
 

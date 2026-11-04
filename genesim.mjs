@@ -1,4 +1,4 @@
-// The genome harness (GAME_RULES.md "Balance targets"): the boss bands, the spike cap, and the per-gene cost and answer checks.
+// The genome harness (GAME_RULES.md "Balance targets"): the boss bands, the biggest hits, and the per-gene cost and answer checks.
 // Scripted players, not people: the planner over every subclass (the four classes below level 10), in blues, at a level.
 //   read      the planner, reading every tell and answering every gene it has a rule for
 //   misread   plays as if blind on a seeded 30% of its cycles (a stand-in for a person)
@@ -27,7 +27,7 @@ function mover(mode, seed) {
   };
 }
 // Play a fight the encounter is already set up for: engage, then the mover until it ends (80 cycles is a loss).
-// Also measures the spike cap (docs/genome.md rule 5): the biggest single landing on you and the worst three cycles,
+// Also measures the hits (docs/genome.md rule 5): the biggest single landing on you and the worst three cycles,
 // as shares of your max.
 export function playOut(s, move, cap = 80, { sync = true } = {}) {
   command(s, 'engage');

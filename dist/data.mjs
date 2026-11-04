@@ -163,10 +163,6 @@ export const CONFIG = {
   trapSignal: 10, // pulling honeypot bait
   // Worm fragments
   rearmMax: 3, // the Bouncer's Keyring re-arms this many times, then overheats
-  // The spike cap (docs/genome.md rule 5). A solo boss's single landing on you, charged or plain, never takes more than
-  // 25% of your max Signal (Integrity at home), a telegraphed boss move at most about a quarter (docs/scaling.md step 3;
-  // 60% before). A wild virus's or a guard's charge stops at 20% (45% before; tells.mjs). Crew bosses (raid.mjs) have their own rules.
-  spikeCap: { wild: 0.2, boss: 0.25 },
   fragmentIntegrity: 18, // no armor: one Spike breaks one
   fragmentDamage: 3,
   fragmentCap: 3,
@@ -1107,7 +1103,7 @@ export const BOSSES = {
   // at half, when a second Miner spins up (the tax comes back if the first is gone, and the Pool Lock wards it too).
   // Its family stays the Ransomware's though the Hashrat is the Cryptominer's since P3: as a Cryptominer its tells' jitter
   // (keyed on its id) moved its band past the read-over-blind margin (genesim.test.mjs). The designer's call.
-  'nb-hashlord': { long: { hp: 0.6, dmg: 3, enrageAt: 40 }, name: 'HASHLORD', family: 'ransomware', strain: 'hashrat', native: true, lair: 'HASHLORD-RIG', charge: 'Difficulty Bomb', floor: 16, band: 'B',
+  'nb-hashlord': { long: { hp: 0.6, dmg: 0.6, enrageAt: 40 }, name: 'HASHLORD', family: 'ransomware', strain: 'hashrat', native: true, lair: 'HASHLORD-RIG', charge: 'Difficulty Bomb', floor: 16, band: 'B',
     extra: [{ id: 'poollock', name: 'Pool Lock', integrity: 16, armor: 0, loot: 'Lock Pin', ward: 'miner', wardCommands: true }],
     signature: { name: 'Chain Fork', rule: 'At half Integrity, a second Miner spins up. Its cycle tax returns if the first Miner is gone, and the Pool Lock wards it too while the Lock stands.' },
     // hp 3.9 → 4.3 with the seal a dial and Block Reward on current Integrity (docs/puzzle-levers.md 3.5, 3.6): its band holds (genesim.test.mjs)
@@ -1160,23 +1156,22 @@ export const ELITE = { hp: 1.65, dmg: 0.62, // 1.5 and 0.7 before fight length (
 export const TELL = {
   // By the virus's level: how many tells it brings (count: none to level 5, the ticks are the lesson; one from 6;
   // two from 17), how many can be live at once (live), how far ahead each shows (lead), how much bigger a charge is
-  // (mult), the most a charge adds to the hit it rides on as a share of your max (cap; dot: Full Disk's burst a
-  // cycle), and the after-effects of a tell that lands (after: your last skill locked that many cycles; burn:
-  // Corrupted, a share of your max a cycle for 3; hang: your next command doesn't fire).
+  // (mult: its hit × mult; Full Disk's burst a cycle its Encrypt × (mult − 1); no cap, as in WoW), and the
+  // after-effects of a tell that lands (after: your last skill locked that many cycles; burn: Corrupted, a share of
+  // your max a cycle for 3; hang: your next command doesn't fire).
   tiers: [
-    { to: 5, count: 0, live: 1, lead: 3, mult: 2.5, cap: 0.12, dot: 0.03, after: 0, burn: 0, hang: 0 },
-    { to: 9, count: 1, live: 1, lead: 3, mult: 2.5, cap: 0.12, dot: 0.03, after: 1, burn: 0, hang: 0 },
-    { to: 16, count: 1, live: 1, lead: 3, mult: 2.5, cap: 0.18, dot: 0.045, after: 1, burn: 0.03, hang: 0 },
-    { to: 99, count: 2, live: 2, lead: 3, mult: 3, cap: 0.25, dot: 0.06, after: 1, burn: 0.04, hang: 0 },
+    { to: 5, count: 0, live: 1, lead: 3, mult: 2.5, after: 0, burn: 0, hang: 0 },
+    { to: 9, count: 1, live: 1, lead: 3, mult: 2.5, after: 1, burn: 0, hang: 0 },
+    { to: 16, count: 1, live: 1, lead: 3, mult: 2.5, after: 1, burn: 0.03, hang: 0 },
+    { to: 99, count: 2, live: 2, lead: 3, mult: 3, after: 1, burn: 0.04, hang: 0 },
   ],
   castWindow: 2, // a cast can be answered on the cycle it lands and the one before
-  ceiling: 0.25, // (0.6 before fight length) a solo boss's tell never lands for more than this share of your max (or the plain hit, if that's bigger); a wild virus's stops at CONFIG.spikeCap.wild (tells.mjs ceilingOf)
-  // An elite brings one more tell (from level 6), and each can cost 15% more (never past the ceiling). A solo boss
+  // An elite brings one more tell (from level 6), and a charge's extra is 15% more (extra). A solo boss
   // brings every tell open at its level, at least `count`. A boss staggers Open like any part, but keeps its clock
   // (delay 0).
-  elite: { count: 1, cap: 1.15, live: 1 }, // live: an elite with a clash has one more at once, and its pile-ups are lifted where a cast is in them (tells.mjs announce)
-  boss: { count: 3, cap: 1.1, delay: 0 },
-  champion: { cap: 1.1 }, // a champion invasion (elite-grade, but sized for one): the usual tells, its charges a little bigger
+  elite: { count: 1, extra: 1.15, live: 1 }, // live: an elite with a clash has one more at once, and its pile-ups are lifted where a cast is in them (tells.mjs announce)
+  boss: { count: 3, extra: 1.1, delay: 0 },
+  champion: { extra: 1.1 }, // a champion invasion (elite-grade, but sized for one): the usual tells, its charges a little bigger
 
   castFrom: 10, // casts come with SIGINT
   first: 3, // the first tell lands no sooner than this cycle (a cast and a second charge one later, a seal sealAfter later)
