@@ -272,6 +272,10 @@ and 18 cycles), the four: REPO MAN 54 → 49%, HOLLOW CHOIR 81 → 72%; the Syso
 The slow kills pay the most (the Warden −15 points, the Sysop −13, from fewer wins to start with), but every class loses
 some: a damage dealer's geared kill at 27 cycles is round 7, ×1.6. Turn `ROUNDS.grow` to taste; 0.05 is the gentle end.
 
+Held (each test says what it measures): HASHLORD's reader 53% at 16 (the Herder 1 of 12, the Sysop 0) and MIRRORSHADE's
+54% at 12 (misreader 40%; the Warden and the Overclocker 1 of 12), against a 55% floor; the level-10 Breakers beat the
+three-part solo bosses 21 and 18 times in 48 (24 asked); the campaign bot's Breaker takes 18.7 breaches to 10 (18).
+
 ## 2. The WoW model, mapped
 
 | WoW | BLACKBOX |
