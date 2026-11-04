@@ -100,7 +100,9 @@ At your level in its blues (cycles · Signal lost): 3: 8 · 29%; 10: 10 · 30% (
 points of main; crew bosses at 18 win 72 of 74 tries (72 of 73); the campaign bot reaches level 10 in 11–15 breaches.
 Held where the class sims moved a point or two (each test says what it measures): key 1 at 21–22% for the Payload,
 Herder and Hijacker; the Hijacker's core 19 over its full build; the Overclocker 20 of 24 alone at 30; the Sysop 1.98×
-the pace at 18; the Herder's swarm preset and OOM Kill; the Warden's Throttle; Umbrella Policy. They wait on a kit pass
+the pace at 18; the Herder's swarm preset and OOM Kill; the Warden's Throttle; Umbrella Policy. **Roles moved:** in a crew the
+solo-leaning Demolitionist and Overclocker now win 100% of the farm's boss tries, the crew-leaning Payload 99%, Herder
+91% and Hijacker 83%: big hits take the most from the coefficient, so the crew-leaning ones no longer out-carry them. They wait on a kit pass
 after the designer has played step 2.
 
 **Why the coefficients:** with a flat Damage stat and your level no longer growing hits, every hit is a small base plus
