@@ -1,6 +1,6 @@
 // The Operator's helper rules (docs/puzzle-fights.md 3.2): a helper's hit is your hit on every lever (a Tripwire, a
 // boss's ♛ part, a Spare), the Mimic's beat plays back the helpers on its part that were sent once the beat was said,
-// never past the tell ceiling and never through Sudo, Unmask, Echo Cancel, Log Wipe or a Honeypot; and the planner
+// each at its own size and never through Sudo, Unmask, Echo Cancel, Log Wipe or a Honeypot; and the planner
 // keeps its helpers off a beat and off a Tripwire while others stand.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -86,16 +86,19 @@ test('helpers on other parts are free; Unmask, Sudo, Log Wipe, a Honeypot and Ec
   }
 });
 
-test('one beat\'s playback never passes the tell ceiling, however many helpers it catches', () => {
-  const s = fight({ seed: mimicSeed() });
-  big(s, 'mimic');
-  s.server.max = s.server.integrity = 100;
-  beat(s, 0);
-  const e = s.encounter;
-  for (let i = 0; i < 12; i++) e.helpers.push({ target: 'mimic', damage: 40, left: 3, synced: false, sent: e.cycle, by: 'Deploy' });
-  step(s);
-  const lost = 100 - defender(s).integrity;
-  assert.ok(lost > 0 && lost <= Math.round(Math.min(TELL.ceiling, CONFIG.spikeCap.wild) * 100), `lost ${lost}`);
+test('one beat\'s playback lands every helper it catches, with no cap', () => {
+  const play = (n) => {
+    const s = fight({ seed: mimicSeed() });
+    big(s, 'mimic');
+    s.server.max = s.server.integrity = 100000;
+    beat(s, 0);
+    const e = s.encounter;
+    for (let i = 0; i < n; i++) e.helpers.push({ target: 'mimic', damage: 40, left: 3, synced: false, sent: e.cycle, by: 'Deploy' });
+    step(s);
+    return 100000 - defender(s).integrity;
+  };
+  const one = play(1), twelve = play(12);
+  assert.ok(one > 0 && twelve > one * 6, `one ${one}, twelve ${twelve}`);
 });
 
 test('a helper\'s hit is your hit: it sets off a Tripwire, starts a ♛ part\'s phase and boots a Spare', () => {

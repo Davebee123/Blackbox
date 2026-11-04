@@ -261,7 +261,7 @@ comment saying what it does.
 | `econ.mjs` | What the bot earns and spends, resting or topping up. |
 | `farmsim.mjs` | Crews against KESSLER-FARM-00's bosses. |
 | `friction.mjs` | Health a same-level fight costs, by gear. |
-| `genesim.mjs` | The genome harness: boss bands, the spike cap, per-gene checks. |
+| `genesim.mjs` | The genome harness: boss bands, the worst three cycles, per-gene checks. |
 | `solved.mjs` | How solved fights are: eight kinds of player by class and tier. |
 | `roomsim.mjs`, `breachsim.mjs`, `campaignsim.mjs` | Bots playing a server's rooms, a breach, and the breach campaign. |
 | `playtest.mjs` | Kill-order strategies against the fixtures; prints its tables. |

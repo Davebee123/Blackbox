@@ -50,8 +50,8 @@ that winds up.
 **Fight length** (`CONFIG.length`): on your Signal, a fight at your level in its blues runs about 15 cycles, an elite
 about 25, a solo boss 30 to 35, for about the Signal a shorter one cost. A virus's Integrity is ×2.2 at level 1 up to
 ×5.5 at 45 and its hits ×0.33 to ×0.5 (steeper late, so a mob ten levels down still falls fast); a plain hit stays
-under about 12% of your max. A single hit lands for at most 25% of your max from a solo boss and 20% from a wild charge
-(`CONFIG.spikeCap`). Your sustain shrinks with it (`potency`): a heal you take and your skills' flat shields are ×0.2 to
+under about 12% of your max. No hit is capped: each is its attack's own number.
+Your sustain shrinks with it (`potency`): a heal you take and your skills' flat shields are ×0.2 to
 ×0.3 (`length.heal`), and a heal drawn from your damage (lifesteal, Leech, Reclaim, Checksum) half of 1 ÷ the Integrity
 factor (`length.drawn`). Adds (fragments, Packages, Droppers), breaches and crew bosses keep their size.
 
@@ -103,10 +103,10 @@ Hover it for what happens and, on its own muted ▸ line, how to stop it. Breaki
 
 | Kind | What it is | What answers it | If you don't |
 |---|---|---|---|
-| Charge | The part's next scheduled attack, much bigger, 3 cycles ahead. | A cut on that cycle, or a built answer (Suspend, Jam, Spoofed ACK, Hijack, Blackhole, Backfire); soften it with ◆, a shield, Brace, Bulkhead. From level 17 SIGINT cuts a charge too. | ×2.5 to ×3 the plain hit, capped at 45% of your max (a solo boss's 60%: `CONFIG.spikeCap`). Charges don't crit. Then the after-effects. |
+| Charge | The part's next scheduled attack, much bigger, 3 cycles ahead. | A cut on that cycle, or a built answer (Suspend, Jam, Spoofed ACK, Hijack, Blackhole, Backfire); soften it with ◆, a shield, Brace, Bulkhead. From level 17 SIGINT cuts a charge too. | ×2.5 to ×3 the plain hit. Charges don't crit. Then the after-effects. |
 | Cast | *Casting*: a buff on the virus for 4 cycles. From level 10. | SIGINT or a cut on its part in its two-cycle window, or a skill built for it (Quarantine, Hijack). SIGINT before the window is refused and keeps its cooldown. | Double Extortion: its attacks hit 35% harder. Persistence and Call Home: its attacks repeat a cycle faster. Self-Update: every part grows by a quarter of the Integrity it has left. Then the after-effects. |
 | Seal | A dial, from level 6: the Sentinel's Blacklist, elites and bosses. | Strip its part first, as far as it pays. Bit Rot and Cache Poison make it fail even with ◆ on. | Each ◆ its part still wears gives one ◆ back to every part, never past a part's max. It takes the same share of your ◆ and shield and leaves you Corrupted at that share. |
-| Mimic | The Mimic (ghostroot, from level 8) records you; on its beat it copies the command you fire and turns it on you, with each helper you sent onto it after the beat was said. | Fire what costs least to have copied (a strip when you wear no ◆, a heal when every part is whole, a small hit), hold, or cut the Mimic on its beat. | What it copied, never past the tell ceiling (Third parts: the Mimic). |
+| Mimic | The Mimic (ghostroot, from level 8) records you; on its beat it copies the command you fire and turns it on you, with each helper you sent onto it after the beat was said. | Fire what costs least to have copied (a strip when you wear no ◆, a heal when every part is whole, a small hit), hold, or cut the Mimic on its beat. | What it copied (Third parts: the Mimic). |
 
 - **No pile-ups.** A charge never lands on the same cycle as another part's heavy attack, or on the Mimic's beat.
   Below level 17 one tell is live at a time; from 17 two can be, never on the same cycle. **An elite** with a clash has one
@@ -128,18 +128,18 @@ Hover it for what happens and, on its own muted ▸ line, how to stop it. Breaki
   said is played back at its own size (`caughtHelpers`). Helpers never cut a tell on their own. On the board each
   helper's hits left show as teal pips in its part's columns; a pip that trips a lever is edged red.
 
-| Levels | A wild virus brings | Live at once | Charge (extra over the plain hit, at most) | After-effects |
+| Levels | A wild virus brings | Live at once | Charge | After-effects |
 |---|---|---|---|---|
 | 1–5 | None: the ticks are the lesson | — | — | — |
-| 6–9 | Its charge | 1 | ×2.5, 12% of your max | Offline |
-| 10–16 | Its charge | 1 | ×2.5, 18% | Offline, Corrupted 3% |
-| 17+ | Its charge and its cast | 2 | ×3, 25% | Offline, Corrupted 4% |
+| 6–9 | Its charge | 1 | ×2.5 | Offline |
+| 10–16 | Its charge | 1 | ×2.5 | Offline, Corrupted 3% |
+| 17+ | Its charge and its cast | 2 | ×3 | Offline, Corrupted 4% |
 
-An **elite** brings one more from level 6 (its clash's tell first, then its family's seal and cast), each charge up to 15% bigger; a **solo
-boss** brings three; a **champion** invader the usual ones, its charges a tenth bigger. SPRAWL-00's first two kills
+An **elite** brings one more from level 6 (its clash's tell first, then its family's seal and cast), each charge's extra 15% bigger; a **solo
+boss** brings three, its charges ×2; a **champion** invader the usual ones, its charges' extra a tenth bigger. SPRAWL-00's first two kills
 bring none.
 
-**Who brings what** (`TELL_SETS`): Ransomware Full Disk (its Encrypt plus a burst of encryption for 3 cycles), Double
+**Who brings what** (`TELL_SETS`): Ransomware Full Disk (its Encrypt plus a burst of encryption for 3 cycles, its Encrypt × (mult − 1) a cycle), Double
 Extortion, Overcharge, Key Rotation. Worm Mass Mailer (a Replicate that hatches two fragments), Self-Update, Overcharge,
 Resync. Ghostroot Possession (a Scramble two cycles longer), Persistence, Overcharge, Go Dark. A strain brings a charge
 of its own on its rule's part, and its lineage's cast and seal. Guards: the Watchdog's and the Tracer's Lock-on, the
@@ -599,7 +599,7 @@ ticks at 50% and 25%. Built: the worm and ransomware Residents and the three sol
 
 | Boss | The beat | Every | What answers it |
 |---|---|---|---|
-| Resident (worm, ransomware) | **Backlash**: a part with an attack that your command hits on the beat lashes back for its attack doubled (15% of your max at least, 25% at most), and an Encrypt or Replicate does its own thing once on top. A hit that breaks it doesn't lash, nor do burns or helpers sent before. | 4, then 3 | A shield, a buff or hold, a part with no attack (the Lockbox), or a hit that breaks its part |
+| Resident (worm, ransomware) | **Backlash**: a part with an attack that your command hits on the beat lashes back for its attack doubled, and an Encrypt or Replicate does its own thing once on top. A hit that breaks it doesn't lash, nor do burns or helpers sent before. | 4, then 3 | A shield, a buff or hold, a part with no attack (the Lockbox), or a hit that breaks its part |
 | RELAY-KING | **Broadcast**: its Relay's attack, bigger for each fragment | 4, 3 from act 3 | Clear the fragments, cut it, or a ◆ on you |
 | REPO MAN | **Collection**: its Ledger's attack, bigger for each Lien; each act calls one 3 cycles out | 5 | Few Liens, a cut, or a ◆ on you |
 | HOLLOW CHOIR | **Copy**: its Mimic copies what you fire and turns it on you (a second voice from act 2) | 4 | What costs least to have copied, hold, or break a voice |

@@ -3797,13 +3797,6 @@ export const c2Gnaw = (s, p) => { const c = p.kind === 'fragment' ? livingParts(
 // A player drawing fire this cycle (Bastion Firewall in a crew): the one every attack goes at.
 export const drawingFire = (s) => (s.encounter?.buffs?.sinkhole >= s.encounter?.cycle ? s : null);
 
-// The spike cap (CONFIG.spikeCap): a solo boss's single landing never takes more than 60% of your max, and a wild
-// virus's or a guard's charge (a tell, atk.tell) no more than 45%. A crew boss (raid.mjs) is left to its own rules.
-export const spikeCap = (s, atk = null) => {
-  const e = s.encounter, share = e?.virus?.raid ? null : e?.virus?.boss ? CONFIG.spikeCap.boss : atk?.tell ? CONFIG.spikeCap.wild : null;
-  return share ? Math.max(1, Math.floor(defender(s).max * share)) : Infinity;
-};
-const spikeCapped = (s, n, atk) => Math.min(n, spikeCap(s, atk));
 // Mooring (hit-cap): no single attack takes more than its share of your max.
 const hitCapped = (s, n) => { const x = fxHas(s, 'hit-cap'); return x ? Math.min(n, Math.max(1, Math.floor((defender(s).max * (Number(x.fx.value) || 100)) / 100))) : n; };
 // Bilge (burn-sap): each burn you started on a part this fight takes a share off its hits on you, up to the cap.
@@ -3927,7 +3920,7 @@ function landAttack(s, p) {
     const brown = leanTaken(e, p); // Brownout (leanings.mjs): your command aimed at its part this cycle
     if (brown < 1) { leanPaid(e, p, Math.round(pre * cut * (1 - brown))); cut *= brown; }
     // Blindside (Ghostroot): a hit you couldn't see coming lands harder.
-    const dealt = takeDamage(s, absorbed(s, hitCapped(s, spikeCapped(s, Math.round(hitPower * sap * (hasTalent(s, 'unsafe-mode') ? 1.2 : 1) * tough * (crit ? CRIT.multiplier : 1) * cut * took * (e.virus.raid ? raidTaken(s) : 1)), atk)), atk, p), p.id, atk.name);
+    const dealt = takeDamage(s, absorbed(s, hitCapped(s, Math.round(hitPower * sap * (hasTalent(s, 'unsafe-mode') ? 1.2 : 1) * tough * (crit ? CRIT.multiplier : 1) * cut * took * (e.virus.raid ? raidTaken(s) : 1))), atk, p), p.id, atk.name);
     struckFx(s, atk);
     if (dealt) classEach('struck', s, atk, dealt, p);
     if (p.mech) mechLanded(s, p, atk); // the status it leaves on you, or what it cashes in (mechanics.mjs)

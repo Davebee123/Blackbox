@@ -56,16 +56,15 @@ test('the Mimic copies everything: each kind of command, by its data', () => {
   assert.equal(copyKind('hold'), 'hold');
 });
 
-test('a hit copied hits you, never past the tell ceiling; a ◆ on you takes it', () => {
+test('a hit copied hits you at its own size, whatever your max; a ◆ on you takes it', () => {
   const s = fight('mimic');
   beat(s);
   const t = other(s), was = s.server.integrity, c = copyOf(s, 'overload', t);
   fire(s, `overload ${t.id}`);
   assert.equal(was - s.server.integrity, c.amount);
-  assert.ok(c.amount <= TELL.ceiling * 1000, 'under the ceiling');
   const s2 = fight('mimic', { max: 60 });
   beat(s2);
-  assert.ok(copyOf(s2, 'overload', other(s2)).amount <= Math.ceil(CONFIG.spikeCap.wild * 60), 'a wild virus: the spike cap');
+  assert.equal(copyOf(s2, 'overload', other(s2)).amount, c.amount, 'no cap: a small max takes the whole hit');
   const s3 = fight('mimic');
   beat(s3); s3.encounter.chits = 1;
   const w3 = s3.server.integrity;

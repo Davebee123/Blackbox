@@ -147,10 +147,10 @@ export function tellStart(s) {
   // A crew elite brings more and harder tells; a champion invasion (elite-grade, sized for one) only bigger charges.
   const elite = v.elite && !v.champion;
   const list = plannedTells(v);
-  const cap = tier.cap * (elite ? TELL.elite.cap : v.champion ? TELL.champion.cap : v.boss ? TELL.boss.cap : 1);
+  const extra = elite ? TELL.elite.extra : v.champion ? TELL.champion.extra : v.boss ? TELL.boss.extra : 1; // on a charge's extra
   // An elite with a clash (docs/puzzle-fights.md 3, Two clocks): one more tell live at once, and no pile-ups lifted (announce).
   const two = elite && !!v.clash;
-  v.tells = { list: list.map((t, i) => ({ ...t, told: false, next: null, n: null, said: null, count: 0, after: t.kind === 'mimic' ? t.first : TELL.first + (t.kind === 'seal' ? TELL.sealAfter : i ? 1 : 0) })), tier: { ...tier, cap, dot: tier.dot * (cap / tier.cap), live: tier.live + (two ? TELL.elite.live : 0) }, piles: two };
+  v.tells = { list: list.map((t, i) => ({ ...t, told: false, next: null, n: null, said: null, count: 0, after: t.kind === 'mimic' ? t.first : TELL.first + (t.kind === 'seal' ? TELL.sealAfter : i ? 1 : 0) })), tier: { ...tier, extra, ...(v.boss && !elite ? { mult: TELL.boss.mult } : {}), live: tier.live + (two ? TELL.elite.live : 0) }, piles: two };
   for (const t of v.tells.list) if (t.kind !== 'mimic') t.after += jitter(v, t);
   announce(s);
 }
@@ -377,20 +377,17 @@ export function tellBroke(s, p) {
 // A charge landing this cycle from this part: the attack due now is the one it rides.
 export const chargeNow = (s, p) => !!tellsOf(s)?.list.some((t) => t.kind === 'charge' && t.told && t.part === p.id && p.attack && t.n === (p.attack.n || 0) && p.attack.due <= s.encounter.cycle);
 // What a charge does when it lands, as the attack it powers up would (so ◆, shields, Null Route, Throttle and
-// Brace all count), bigger, never more than the tier's cap of your max on top (cap; dot for a stack), never past the ceiling.
-// The most a tell lands for, as a share of your max: a solo boss's TELL.ceiling (its landing is capped at 60% in
-// combat.mjs spikeCap), a wild virus's or a guard's the spike cap's 45% (CONFIG.spikeCap.wild).
-const ceilingOf = (s) => (s.encounter?.virus?.boss ? TELL.ceiling : Math.min(TELL.ceiling, CONFIG.spikeCap.wild));
+// Brace all count): its hit × the tier's mult, an elite's, champion's or boss's extra a little bigger. No cap, as in WoW.
 function chargeAttack(s, t, p) {
-  const T = tellsOf(s), max = defender(s).max, a = p.attack, k = 1;
+  const T = tellsOf(s), a = p.attack, k = 1;
   const enr = p.enrage && p.integrity < p.max / 2 ? CONFIG.enrage : 1; // attackAmount counts Bricker's rage again: take it out
-  const big = (n, cap) => { const top = Math.max(n, Math.min(ceilingOf(s) * max, n + Math.min(cap * max, n * (T.tier.mult - 1)))); return Math.max(1, Math.round(n + (top - n) * k)); };
+  const more = (T.tier.mult - 1) * (T.tier.extra ?? 1), big = (n, share = 1) => Math.max(1, Math.round(n + n * more * share * k));
   const base = { ...a, name: t.name, ramp: 0, step: 0, rampBy: 0, bonus: 0, grow: 0, windup: 0, wound: 0, noCrit: true, tell: t.id, spawn: t.spawn || 0 };
-  if (a.effect === 'damage') return { ...base, amount: Math.max(1, Math.round(big(attackAmount(p), T.tier.cap) / enr)) };
-  if (a.effect === 'encrypt') return { ...base, burst: Math.round(Math.min(T.tier.dot * max, a.amount * (T.tier.mult - 1)) * k) }; // its Encrypt, and a burst on top (TELL.burst cycles)
-  if (a.effect === 'scramble') return { ...base, amount: a.amount + Math.round((t.longer || 0) * k), hit: a.hit ? (t.plain ? a.hit : big(a.hit, T.tier.cap)) : 0 }; // Possession: the same hit, a longer scramble
+  if (a.effect === 'damage') return { ...base, amount: Math.max(1, Math.round(big(attackAmount(p)) / enr)) };
+  if (a.effect === 'encrypt') return { ...base, burst: Math.round(a.amount * more * k) }; // its Encrypt, and a burst on top (TELL.burst cycles)
+  if (a.effect === 'scramble') return { ...base, amount: a.amount + Math.round((t.longer || 0) * k), hit: a.hit ? (t.plain ? a.hit : big(a.hit)) : 0 }; // Possession: the same hit, a longer scramble
   if (a.effect === 'heal') return { ...base, amount: Math.round(a.amount * (1 + (T.tier.mult - 1) * k)) };
-  return { ...base, hit: a.hit ? big(a.hit, T.tier.cap * 0.5) : 0 }; // replicate: the spawns come on top (spawn)
+  return { ...base, hit: a.hit ? big(a.hit, 0.5) : 0 }; // replicate: the spawns come on top (spawn)
 }
 // After-effects: a tell that lands leaves something behind (from level 6; the tier's `after` cycles).
 // Corrupted: a charge that got through leaves damage on you for 3 cycles (the tier's burn of your max a cycle),
@@ -616,14 +613,14 @@ const mimicOf = (s) => livingParts(s).find((x) => x.mimic) || null;
 export function copyOf(s, id, target = null) {
   const host = s.host || s, e = host.encounter, m = mimicOf(host);
   if (!e || !m) return null;
-  const a = ABILITIES[id], kind = copyKind(id), C = TELL.copy, max = defender(host).max, top = ceilingOf(host) * max, pace = paceOf(host);
+  const a = ABILITIES[id], kind = copyKind(id), C = TELL.copy, max = defender(host).max, pace = paceOf(host);
   const name = id === 'spike' ? 'key 1' : a?.name || 'hold', out = { kind, id, name, cost: 0, text: '', short: '' };
   if (kind === 'hold') return { ...out, cost: pace, text: 'copies nothing, and the cycle is gone', short: 'nothing' };
   if (kind === 'hit') {
     // A boss's Mimic that sits on its Scramble (BOSSES mimic, MIRRORSHADE's): while you're Scrambled it plays your hit
-    // back that many times over, still under the ceiling.
+    // back that many times over.
     const loud = e.scrambleUntil >= e.cycle ? BOSSES[e.virus.boss]?.mimic || 1 : 1;
-    const amount = Math.max(1, Math.round(Math.min(top, mimicHit(host, id, target || m) * loud)));
+    const amount = Math.max(1, Math.round(mimicHit(host, id, target || m) * loud));
     const T = tellsOf(host)?.tier, after = T?.burn && !clean(host) ? Math.round(max * T.burn) * 3 : 0; // Corrupted after it
     if (e.chits > 0) return { ...out, amount, loud, cost: nextHit(host), text: `hits you for ${amount}, and a ◆ on you takes it`, short: '−1◆' };
     return { ...out, amount, loud, cost: amount + after, text: `deals ${amount} damage to you`, short: `−${amount}` };
@@ -636,7 +633,7 @@ export function copyOf(s, id, target = null) {
   }
   if (kind === 'burn') {
     const each = (a.tick || a.helper || a.hit || 0) * (a.helpers || 1), ticks = Math.min(a.ticks || 1, 9); // a Rootkit Implant's endless burn: a long one
-    const per = Math.max(1, Math.round(scaled(host, each) * C.burn)), total = Math.min(top, per * ticks);
+    const per = Math.max(1, Math.round(scaled(host, each) * C.burn)), total = per * ticks;
     // A cleanse ready by next cycle (Purge, Scrub, Rollback) takes it off after one tick.
     const wash = CLEANSE.some((k) => k !== id && usable(host).includes(k) && readyIn(host, k) <= 1);
     return { ...out, per, ticks, total, cost: wash ? per : total, text: `burns you for ${per} a cycle for ${cycles(ticks)}`, short: `${per}×${ticks}` };
@@ -672,7 +669,7 @@ export function caughtHelpers(s, t, p) {
   return x && x.cycle === e.cycle ? x.list.filter((h) => h.target === p.id && h.sent != null && h.sent >= t.said) : [];
 }
 // The Mimic copies the command you fired this cycle (copyOf) and turns it on you, and plays back the helpers it catches
-// (each at its own size) as a hit, never past the tell ceiling. true if the fight ended, 'quiet' if the copy cost you
+// (each at its own size) as a hit. true if the fight ended, 'quiet' if the copy cost you
 // little (a read: it opens).
 export function mimicLands(s, t, p) { // (exported for exe.test.mjs)
   if (!p.mimic) return false; // it stopped recording (MIRRORSHADE's Doppelganger)
@@ -710,7 +707,7 @@ export function mimicLands(s, t, p) { // (exported for exe.test.mjs)
   for (const c of notes) if (c.kind !== 'hit') landCopy(s, t, p, c);
   if (!direct && !swarm) { if (cheap) return 'quiet'; tally(s, t, 'landed'); return false; }
   tally(s, t, 'landed');
-  const amount = Math.max(1, Math.round(Math.min(ceilingOf(s) * defender(host).max, direct + swarm * TELL.mimic)));
+  const amount = Math.max(1, Math.round(direct + swarm * TELL.mimic));
   const loud = copy?.loud > 1 && direct;
   emit(s, 'status', loud ? `You're Scrambled, and the ${p.name} plays ${what} back at you ${copy.loud === 2 ? 'twice' : `${copy.loud} times`} over.` : `The ${p.name} plays ${what} back at you.`, { source: p.id, tell: t.id, missed: true, ...(swarm ? { helpers: caught.length } : {}) });
   const over = strikeWith(s, p, { name: `${direct ? (hits.length > 1 ? 'The round' : ABILITIES[hits[0].id]?.name || hits[0].name) : 'Helpers'}${direct && swarm ? ' and helpers' : ''} (mimicked)`, effect: 'damage', amount, interval: 99, noCrit: true, tell: t.id });
