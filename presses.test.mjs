@@ -37,7 +37,9 @@ const CREW_ONLY = ['rebalance'];
 // pressed in none of them at 42: the keys ahead of it answer every charge these fights bring. Held.
 // Since step 2 (docs/scaling.md: gear on each tick by its size) the Herder's OOM Kill (cash in its helpers) is pressed in
 // none at 38: its helpers finish the parts first. Held until the designer has played step 2.
-const KNOWN_DEAD = ['hijacker reroute', 'hijacker blackhole', 'herder oom-kill'];
+// Since fight length (docs/scaling.md step 3) the Warden's Circuit Breaker is pressed in none at 30: smaller hits rarely
+// ask for it. Held until the designer has played it.
+const KNOWN_DEAD = ['hijacker reroute', 'hijacker blackhole', 'herder oom-kill', 'warden circuit-breaker'];
 test('every subclass skill is pressed in the moments it is built for', () => {
   const dead = [];
   for (const [cls, pol, sub] of ALL) {

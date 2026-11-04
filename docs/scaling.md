@@ -169,7 +169,7 @@ damage dealers sit near main (Demolitionist 31 · 16 · 24%, main 32 · 21 · 35
 Held (each test says what it measures): the Demolitionist's core rotation 27 points under its full build at 18; five
 second presets (the Payload's swarm +14.7 on the generic fights, the Hijacker's rules −14.6 on its own, the Phantom's
 evasion −7.8, the Herder's swarm +5.6, the Warden's swarm +5.2); the Warden's DMZ pressed in 3 of 24 at 30; ignoring the
-Mimic 32 points; the Herder carrying a crew 97% to the Demolitionist's 100%; the Infiltrator's climb on seed 7, which from level 19 farms one held server's respawns and meets 2% strains and ICE (15% asked).
+Mimic 32 points; the Herder carrying a crew 97% to the Demolitionist's 100%; the Warden's Circuit Breaker pressed in none of its moments at 30; the Demolitionist's floor at 18 held at 13 (10% with the Kestrel pair); the Infiltrator's climb on seed 7, which from level 19 farms one held server's respawns and meets 2% strains and ICE (15% asked).
 
 ## 2. The WoW model, mapped
 
