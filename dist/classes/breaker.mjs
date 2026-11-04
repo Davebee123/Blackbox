@@ -21,7 +21,7 @@
 // State: fight state this module keeps lives on the encounter under bk* names, created when first
 // needed (a crewmate's encounter is a copy of the leader's at engage, so nothing is made at start).
 // Part state (Bit Rot, Exposed Wiring) lives on the shared parts and remembers whose it is.
-import { sustained, subOf, subEdge, hasTalent, rank, capValue, emit, hit, rand, part, alive, livingParts, attackers, soonestAttacker, on, buffed, openProc, scaled, powerOf, defender, momentumStacks, classOf, missChance, patchDelay, toIntent, readyIn, damageMultiplier, gearStat, edge, previewDamage, ignoresArmor, usable, stripMark, mirrorOn, intents, heal, healScaled, fxOn } from '../combat.mjs';
+import { sustained, budgeted, spend, subOf, subEdge, hasTalent, rank, capValue, emit, hit, rand, part, alive, livingParts, attackers, soonestAttacker, on, buffed, openProc, scaled, powerOf, defender, momentumStacks, classOf, missChance, patchDelay, toIntent, readyIn, damageMultiplier, gearStat, edge, previewDamage, ignoresArmor, usable, stripMark, mirrorOn, intents, heal, healScaled, fxOn } from '../combat.mjs';
 import { ABILITIES, SKILLS, EDGE } from '../data.mjs';
 import { tellOn, tellOpen, tellAnswer, chargeSize } from '../tells.mjs';
 import { subs } from './breaker.data.mjs';
@@ -328,8 +328,9 @@ const crit = (s, p, opts) => (opts.mine && ((hasTalent(s, 'critical-heat') && mo
 function chipped(s, p, n) {
   const e = s.encounter;
   if (!breaker(s) || !buffed(e, 'debris-field') || !(n > 0)) return;
-  const a = A('debris-field'), room = scaled(s, a.most) - (e.bkDebris || 0), add = Math.min(room, n * sustained(s, scaled(s, a.per)));
+  const a = A('debris-field'), room = scaled(s, a.most) - (e.bkDebris || 0), add = budgeted(s, Math.min(room, n * sustained(s, scaled(s, a.per))));
   if (add <= 0) return;
+  spend(s, add);
   e.bkDebris = (e.bkDebris || 0) + add;
   e.shield = (e.shield || 0) + add;
   emit(s, 'status', `Debris Field: +${add} shield (${e.shield}).`, { mark: 'shield', ability: 'debris-field' });

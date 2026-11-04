@@ -93,6 +93,10 @@ export const CONFIG = {
     // (0.6 of the hits' factor). drawn: a heal drawn from what you deal (lifesteal, Leech, Reclaim) is this share of
     // 1 / hp, the Integrity it draws on (without it the Sysop alone lost nothing at 20 and 30, and won five levels up).
     heal: [[1, 0.25], [10, 0.24], [18, 0.3], [30, 0.25], [45, 0.2]], drawn: 0.5 },
+  // Heal budget (prototype, wip/heal-budget; off): in such a fight, the heals you take and your skills' flat shields draw
+  // on a pool of this share of your max Signal (combat.mjs budgeted); when it's spent they stop. drawn: heals drawn from
+  // your damage (lifesteal, Leech, Reclaim) draw on it too.
+  healBudget: { on: false, pool: 0.8, drawn: true },
   thirdTrim: 0.85, // a family's third part (Lockbox, Mirror, Decoy) comes out of the other two's Integrity
   ward: 0.25, // Lockbox: the warded part loses at most this share of its max a cycle
   wardHeld: 0.5, // Lockbox: what the cap holds back isn't lost; the Lockbox holds it, and when it breaks this share lands on the partner at once (docs/puzzle-levers.md 3.4)

@@ -520,6 +520,12 @@ export const scaled = (s, n) => Math.max(1, Math.round(n * powerOf(s)));
 // drawn: a heal drawn from the damage you deal (lifesteal, Leech, Reclaim) shrinks with the Integrity it draws on instead.
 export const potency = (s, drawn = false) => { const v = s.encounter?.virus; return !v?.long || !CONFIG.length.heal ? 1 : drawn ? (CONFIG.length.drawn ?? 1) / runLate(v.level, CONFIG.length.hp) : runLate(v.level, CONFIG.length.heal); };
 export const sustained = (s, n, drawn = false) => Math.max(1, Math.round(n * potency(s, drawn)));
+// The heal budget (prototype, CONFIG.healBudget): a per-fight pool, CONFIG.healBudget.pool of your max Signal, that the
+// heals you take and your skills' flat shields spend; empty, they stop. Same fights as potency (fight length's).
+const budgetOn = (s, drawn = false) => { const B = CONFIG.healBudget, v = s.encounter?.virus; return !!(B?.on && v?.long && (!drawn || B.drawn)); };
+export const budgetLeft = (s) => { const e = s.encounter, k = s.who || 'you'; if (!CONFIG.healBudget?.on || !e?.virus?.long) return null; e.budget ??= {}; return (e.budget[k] ??= Math.round(defender(s).max * CONFIG.healBudget.pool)); };
+export const budgeted = (s, n, drawn = false) => (budgetOn(s, drawn) ? Math.max(0, Math.min(n, budgetLeft(s))) : n);
+export const spend = (s, n, drawn = false) => { if (budgetOn(s, drawn) && n > 0) s.encounter.budget[s.who || 'you'] = Math.max(0, budgetLeft(s) - n); };
 // Heals you cast: CONFIG.healLevel of the level line's growth and the lift (step 1's curve), times Restore.
 // restoreMult alone for heals that give back damage (Reclaim's half, Rollback), which already grow with it.
 export const restoreMult = (s) => 1 + gearStat(s, 'restore') / 100;
@@ -3553,7 +3559,8 @@ function useAbility(s, intent, auto = false) {
   }
   if (a.shield) {
     const amount = sustained(s, scaled(s, id === 'firewall' ? (hasTalent(s, 'deep-packet-inspection') ? 30 : a.shield) + 5 * rank(s, 'stateful-firewall') : a.shield));
-    e.shield = Math.max(e.shield || 0, amount);
+    const add = budgeted(s, Math.max(0, amount - (e.shield || 0))); spend(s, add); // the heal budget: what it raises
+    e.shield = Math.max(e.shield || 0, (e.shield || 0) + add);
     emit(s, 'status', `Shield up. It absorbs the next ${amount} damage.`, { mark: 'shield', ability: id });
   }
   // Taunt (Bastion Firewall), in a crew only: every damage attack comes at you for a.taunt cycles.
@@ -3651,8 +3658,10 @@ export function heal(s, amount, label, { lift = false, gear = null, drawn = fals
   amount = Math.round(amount * classMult('healing', s, label)); // a heal you cast, larger (Runbook: sets.mjs)
   const bb = s.encounter?.badBlock; // Bad Block: the cracked cells eat the heal first
   if (bb?.left > 0 && amount > 0) { const eat = Math.min(bb.left, amount); bb.left -= eat; amount -= eat; if (!bb.left) s.encounter.badBlock = null; emit(s, 'blocked', `${bb.name}: ${eat} of ${label} is lost in the cracked cells.`, { source: bb.source, badblock: eat }); if (!amount) return; }
+  if (!lift) { amount = budgeted(s, amount, drawn); if (!amount) return; } // the heal budget (CONFIG.healBudget)
   const cap = lift ? d.max : healCap(s), healed = Math.max(0, Math.min(amount, cap - d.integrity));
   d.integrity += healed;
+  if (!lift) spend(s, healed, drawn);
   if (healed < amount && d.integrity >= d.max) classEach('overheal', s, amount - healed); // healing past full (On-Call: sets.mjs)
   if (s.encounter?.commanding && healed) fxState(s.encounter).healed = (fxState(s.encounter).healed || 0) + healed; // what your command healed (Anchor Chain's next heal)
   if (lift && s.run?.breach && s.breach?.fightFrom != null) s.breach.fightFrom = Math.max(s.breach.fightFrom, d.integrity);

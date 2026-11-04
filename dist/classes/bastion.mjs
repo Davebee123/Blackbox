@@ -23,7 +23,7 @@
 //              [{ id, name, amount, left, from, cap, crit, loop }] (cap: the healer's Overprovision cap,
 //              0 without the edge; crit: Critical Path; loop: the healer's name, for Loopback)
 //   e.standby  Hot Standby: the next attack that would drop this player to 0 leaves them at 1
-import { sustained, slotsOf, subOf, subEdge, hasTalent, capValue, soonestAttacker, rank, emit, heal, hit, alive, part, livingParts, defender, alliesOf, buffed, on, scaled, attackAmount, gapTaken, levelGap, classOf, usable, intents, toIntent, readyIn, knownSkills, healScaled, restoreMult, previewDamage, attackers, openProc } from '../combat.mjs';
+import { sustained, budgeted, spend, slotsOf, subOf, subEdge, hasTalent, capValue, soonestAttacker, rank, emit, heal, hit, alive, part, livingParts, defender, alliesOf, buffed, on, scaled, attackAmount, gapTaken, levelGap, classOf, usable, intents, toIntent, readyIn, knownSkills, healScaled, restoreMult, previewDamage, attackers, openProc } from '../combat.mjs';
 import { ABILITIES, SKILLS } from '../data.mjs';
 import { tankMove, healMove, cleanse, savePatch, saveBulkhead } from '../raid.mjs';
 import { tellOn, tellOpen, tellAnswer, undoCast, landsAt } from '../tells.mjs';
@@ -45,11 +45,12 @@ const aim = (s, id, st) => (st === s ? id : `${id} ${nameOf(st)}`);
 // Overprovision (Sysop's edge): healing past full turns into a shield, up to 20 (40 with Overcommit;
 // Reserve Pool adds 5 a rank). cap: the healer's, worked out when the heal was cast.
 const capOf = (s) => (subEdge(s, 'sysop') ? scaled(s, 20 + 5 * rank(s, 'reserve-pool')) * (hasTalent(s, 'overcommit') ? 2 : 1) : 0);
-function overprovision(to, over, cap) {
+function overprovision(to, over, cap, drawn = false) {
   const e = to.encounter;
   if (!e || over <= 0 || cap <= 0) return 0;
-  const add = Math.min(over, Math.max(0, cap - (e.shield || 0)));
+  const add = budgeted(to, Math.min(over, Math.max(0, cap - (e.shield || 0))), drawn);
   if (add <= 0) return 0;
+  spend(to, add, drawn);
   e.shield = (e.shield || 0) + add;
   emit(to, 'status', `Overprovision: ${add} of it becomes a shield (${e.shield}).`, { mark: 'shield' });
   return add;
@@ -69,8 +70,8 @@ function mend(s, to, amount, label, opts = {}) {
   if (!opts.plain && windowOpen(s)) amount = Math.round(amount * (1 + A('maintenance-window').boost)); // Maintenance Window: heals +50%
   if (!opts.potent) amount = sustained(to, amount, opts.drawn); // potency (data.mjs CONFIG.length.heal), before Overprovision reads the spill
   const room = d.max - d.integrity;
-  heal(to, amount, label, { potent: true });
-  overprovision(to, amount - Math.min(amount, room), opts.cap ?? capOf(s));
+  heal(to, amount, label, { potent: true, drawn: !!opts.drawn });
+  overprovision(to, amount - Math.min(amount, room), opts.cap ?? capOf(s), !!opts.drawn);
   if (!opts.looped) rootCause(s, amount);
   const loop = 'loop' in opts ? opts.loop : hasTalent(s, 'loopback') ? s : null;
   if (loop && !opts.looped && amount > 0) mend(loop, loop, Math.max(1, Math.round(amount / 3)), 'Loopback', { looped: true, crit: false, cap: opts.cap ?? capOf(loop), loop: null });
@@ -122,7 +123,9 @@ const use = {
   // Warden: Reject throws it back, and shields you against the part that last hit you.
   reject(s, { a, target, e }) {
     if (e.grudge !== target.id) return;
-    const n = sustained(s, scaled(s, a.guard));
+    const n = budgeted(s, sustained(s, scaled(s, a.guard)));
+    if (!n) return;
+    spend(s, n);
     e.shield = (e.shield || 0) + n;
     emit(s, 'status', `Reject: the ${target.name} hit you last, so you shield ${n} (${e.shield}).`, { mark: 'shield', ability: 'reject' });
   },
@@ -266,12 +269,12 @@ const use = {
     if (!(res?.dealt > 0)) return;
     const amount = sustained(s, Math.max(1, Math.round(res.dealt * A('reclaim').lifesteal * restoreMult(s) * drawn(s))), true);
     // The generic lifesteal has healed you: what spilled past full is Overprovision's.
-    overprovision(s, amount - (lastHeal(s, A('reclaim').name) ?? amount), capOf(s));
-    if (windowOpen(s)) mend(s, s, Math.round(amount * A('maintenance-window').boost), 'Maintenance Window', { plain: true, potent: true });
+    overprovision(s, amount - (lastHeal(s, A('reclaim').name) ?? amount), capOf(s), true);
+    if (windowOpen(s)) mend(s, s, Math.round(amount * A('maintenance-window').boost), 'Maintenance Window', { plain: true, potent: true, drawn: true });
     if (!hasTalent(s, 'redistribute')) return;
     const others = alliesOf(s).filter((x) => defender(x.st).integrity > 0).sort((x, y) => frac(x.st) - frac(y.st));
-    if (others.length) mend(s, others[0].st, amount, `Redistribute from ${s.who || 'you'}`, { potent: true });
-    else mend(s, s, amount, 'Redistribute', { potent: true });
+    if (others.length) mend(s, others[0].st, amount, `Redistribute from ${s.who || 'you'}`, { potent: true, drawn: true });
+    else mend(s, s, amount, 'Redistribute', { potent: true, drawn: true });
   },
 };
 

@@ -66,7 +66,7 @@ import { guardSetChance, lairChance, bossOdds, presetsOf, presetKeys, followOf, 
 import { tripwireOf, zipOf, heldOf } from './order.mjs';
 import { youMarks, junkKey } from './mechanics.mjs';
 import { cantripsOf, TELL, lifted, own, lift, line } from './data.mjs';
-import { usable, hooks } from './combat.mjs';
+import { usable, hooks, budgetLeft } from './combat.mjs';
 import { EXE } from './exe.mjs';
 import { sigintWindows, sigintCharges, plannedTells } from './tells.mjs';
 import { daemonText } from './daemons.mjs';
@@ -662,6 +662,8 @@ function youStanding(s) {
   if (slottedDaemons(s).includes('snapshot') && !e.once?.['dmn-snapshot']) add('Snapshot', 'you', daemonText('snapshot', daemonLevel(s, 'snapshot')));
   if (e.chits > 0) add('Armor', 'you', `${'◆'.repeat(e.chits)} The next attack on you does nothing, however big.`);
   if (e.shield > 0) add('Shield', 'you', `${e.shield}. Absorbs damage from attacks.`);
+  const pool = budgetLeft(s); // the heal budget (prototype, CONFIG.healBudget)
+  if (pool != null) add(`Heal budget ${pool}`, pool ? 'you' : 'hot', `${pool} of ${Math.round(defender(s).max * CONFIG.healBudget.pool)} left. Your heals and your skills' shields this fight draw on it; once it's spent, they stop.`);
   if (e.badBlock?.left > 0) add('Cracked', 'hot', `${e.badBlock.name}: your next heals lose up to ${e.badBlock.left}. Purge, Scrub, Rollback or Rotate Keys clears it.`);
   if (e.helpers?.length) add('Helpers', 'daemon', `${e.helpers.length} running. They hit after you each cycle.`);
   for (const x of raidMarks(s, s)) add(x.name, x.kind, x.tip); // a crew boss: Thermal Stress, Corruption, encrypted sectors, marks, aggro

@@ -174,3 +174,27 @@ test('sustain potency (step 3): in a fight with length, a heal shrinks with the 
   s.encounter.virus.long = false;
   assert.equal(potency(s), 1, 'a breach, a crew boss or a home fight: whole');
 });
+
+test('heal budget (prototype, CONFIG.healBudget, off by default): in a fight with length, heals and skill shields spend a pool of your max Signal; spent, they stop', async () => {
+  const { heal, budgetLeft, defender, command } = await import('./dist/combat.mjs');
+  assert.equal(CONFIG.healBudget.on, false, 'off on this branch by default');
+  const was = { ...CONFIG.healBudget }, heal0 = CONFIG.length.heal;
+  try {
+    CONFIG.healBudget = { on: true, pool: 0.1, drawn: false }; CONFIG.length.heal = null;
+    const s = fresh();
+    s.run = { loc: 'sim', cwd: '/', integrity: 100, max: 1000, pack: [], visited: ['/'] };
+    s.encounter = { mode: 'run', virus: { long: true, level: 30, parts: [] }, once: {}, buffs: {} };
+    const d = defender(s);
+    assert.equal(budgetLeft(s), Math.round(d.max * 0.1));
+    const pool = budgetLeft(s);
+    heal(s, pool - 10, 'Patch');
+    assert.equal(budgetLeft(s), 10);
+    const before = d.integrity; heal(s, 50, 'Patch');
+    assert.equal(d.integrity - before, 10, 'only what is left lands');
+    assert.equal(budgetLeft(s), 0);
+    const at = d.integrity; heal(s, 50, 'Patch'); assert.equal(d.integrity, at, 'spent: no more heals');
+    heal(s, 20, 'Leech', { drawn: true }); assert.equal(d.integrity, at + 20, 'drawn heals are exempt when drawn is false');
+    s.encounter.virus.long = false;
+    assert.equal(budgetLeft(s), null, 'elsewhere, no budget');
+  } finally { CONFIG.healBudget = was; CONFIG.length.heal = heal0; }
+});
