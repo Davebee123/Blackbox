@@ -17,7 +17,7 @@ import { newCampaign, launch, leave, recOf, migrate, heatOpen, cardFor, SERVER, 
 import { campaignMarkup, campUi } from './dist/campaign-view.mjs';
 
 const SUB = { breaker: 'demolitionist', bastion: 'warden', infiltrator: 'payload', operator: 'herder' };
-// A breach of a server: MERIDIAN-MX-14 (the playtest's), or a campaign server's card.
+// A breach of a server: MERIDIAN-MX-14 (SERVER_CARD), or a campaign server's card.
 function breach(cls = 'breaker', seed = 3, { level = 10, heat = 0, server = null, sub = SUB[cls] } = {}) {
   const s = fresh();
   s.rng = seed * 7777;
