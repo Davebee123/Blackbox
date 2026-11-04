@@ -729,7 +729,7 @@ strip (the server, its kind, level and rule, your Signal, **Rooms n/N**, your ke
 |---|---|---|
 | Entry | door | Where you come in. Files left for you (a relay's route files) are `pull`ed here. |
 | Process | ▣ | A virus of the server's author at the server's level; the same family every time, its set and mutation fresh each respawn. |
-| Elite | ◆▣ | An elite (`ELITE`) with a clash, one more tell, enrages from cycle 9. |
+| Elite | ◆▣ | An elite (`ELITE`) with a clash, one more tell, enrages from cycle 17. |
 | Guard post | ◆▣ KEY | A guard or ICE holding the vault's key, shown as an elite. Hoard, Rich and Hardened servers' are Armored. |
 | Vault | ▥ | `open` with its key, or `force` it for 15% of your max Signal. It holds the server's files: a protocol half the time (your first server's always), code, a trace record, spare credits, now and then a Zero-day (floor 2+) or a filter, and a contract's planted file. Everything goes in your pack. |
 | Core | ♛ | The Resident, **SEALED** until the vault opens. |

@@ -53,7 +53,7 @@ import { GUARDS, SUBS, LOADOUT, SUBCLASS, defaultSub, ARCHETYPES, BOSSES, FAMILI
 import { LOOT, vaultRarity, seeded, rollItem, itemLabel, protocolSlots, SLOT_KINDS, chaseStat, MATERIALS } from './gear.mjs';
 import { AUTHORS } from './authors.mjs';
 import { giveScript, rollScript } from './scripts.mjs';
-import { AUTHOR_FAMILIES, OPENS, rollSet, applySet, jitterFirst, setsOf, familyName, setName } from './families.mjs';
+import { ROOM_RULES, AUTHOR_FAMILIES, OPENS, rollSet, applySet, jitterFirst, setsOf, familyName, setName } from './families.mjs';
 import { armTicks, bossRule, BOSS_RULES } from './interrupt.mjs';
 import { logSet } from './genome.mjs';
 import { weightOf, nativeFloor, PARTS, mechRolls } from './parts.mjs';
@@ -1506,7 +1506,7 @@ export function fight(s, room, { pause = false, as = null } = {}) {
   if (v.boss && !v.raid) bossRule(s, R.bossRule || s.bossRule || 'a');
   if (R.kind === 'Cold' && !ice && !v.raid && !v.dormant) coldSleep(v);
   armTicks(s);
-  if (v.elite && !v.boss) e.enrageAt = 9;
+  if (v.elite && !v.boss) e.enrageAt = ROOM_RULES.enrage.elite;
   e.roomsXp = ROOMS.xp.room * (as === 'hunter' ? ROOMS.xp.hunter : room.kind === 'core' ? ROOMS.xp.boss : f.rare ? ROOMS.xp.rare : 1) * (f.xp || 1) * (T.xp || 1) * (runs(s, 'honeytoken') ? SOCKET.honey.xp : 1);
   if (R.world && !as) e.xpKind = ask('xpKind', s, room); // what its XP counts as in your mix (netrooms.mjs)
   if (v.boss) R.stats.boss.tries++;
@@ -1532,7 +1532,7 @@ function spamFlood(s, e) {
 function brood(s, e, n) {
   const pw = e.virus.power || 1;
   for (let i = 0; i < n; i++) {
-    const k = e.nextFragment++, amount = Math.max(1, Math.round(CONFIG.fragmentDamage * pw)), hp = Math.max(1, Math.round(CONFIG.fragmentIntegrity * (e.virus.hpPower ?? pw)));
+    const k = e.nextFragment++, amount = Math.max(1, Math.round(CONFIG.fragmentDamage * pw)), hp = Math.max(1, Math.round(CONFIG.fragmentIntegrity * (e.virus.addPower ?? e.virus.hpPower ?? pw)));
     e.virus.parts.push({ id: 'frag' + k, name: 'Hatchling ' + k, kind: 'fragment', integrity: hp, max: hp, armor: 0, maxArmor: 0, patchAt: null, veiled: false, loot: null, special: false, attack: { name: 'Gnaw', effect: 'damage', amount, interval: 1, due: 2 }, exposedUntil: 0, lastDamaged: 0, boosted: false });
   }
   emit(s, 'status', `The nest's brood is out: ${n} hatchlings gnaw every cycle.`, { target: 'frag1' });

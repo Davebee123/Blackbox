@@ -3991,7 +3991,7 @@ function landAttack(s, p) {
       const n = e.nextFragment++;
       const pw = e.virus.power || 1;
       const amount = Math.max(1, Math.round(CONFIG.fragmentDamage * pw));
-      const hp = Math.max(1, Math.round(CONFIG.fragmentIntegrity * (e.virus.hpPower ?? pw))); // health follows the virus's health scale, not its damage
+      const hp = Math.max(1, Math.round(CONFIG.fragmentIntegrity * (e.virus.addPower ?? e.virus.hpPower ?? pw))); // health follows the virus's health scale, not its damage
       e.virus.parts.push({ id: 'frag' + n, name: 'Fragment ' + n, kind: 'fragment', integrity: hp, max: hp, armor: 0, maxArmor: 0, patchAt: null, veiled: false, loot: null, special: false, attack: { name: 'Gnaw', effect: 'damage', amount, interval: 1, due: e.cycle + 1 }, exposedUntil: 0, lastDamaged: 0, boosted: false });
       if (p.overrun) { const f = e.virus.parts.at(-1); f.attack.ramp = 1; f.attack.rampBy = Math.max(1, Math.round(pw)); f.attack.step = 0; }
       e.undo = { type: 'replicate', part: 'frag' + n };

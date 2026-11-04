@@ -101,3 +101,24 @@ test('events take their server\'s level, never yours; SPRAWL-00\'s rooms keep th
   }
   assert.deepEqual([benchCurve('?bench=a&curve=8'), benchCurve('?bench=a'), benchCurve('?curve=50')], [0.08, null, null]);
 });
+
+test('fight length (step 3): a Signal fight\'s Integrity × CONFIG.length.hp and its hits × dmg at its level; a solo boss its own; adds, breaches and crew bosses keep their size', async () => {
+  const { createVirus, runLate, SERVER, BOSSES } = await import('./dist/data.mjs');
+  const o = { threat: SERVER.threat(30), run: true, family: 'worm', mutation: null };
+  const was = CONFIG.length;
+  let base, boss0;
+  try { CONFIG.length = { hp: [[1, 1]], dmg: [[1, 1]], boss: { hp: 1, dmg: 1 } }; base = createVirus('random', 7, o); } finally { CONFIG.length = was; }
+  const long = createVirus('random', 7, o), short = createVirus('random', 7, { ...o, short: true });
+  const hp = (v) => v.parts.reduce((n, p) => n + p.max, 0), hit = (v) => v.parts.find((p) => p.attack?.effect === 'damage').attack.amount;
+  assert.ok(Math.abs(hp(long) / hp(base) / runLate(30, CONFIG.length.hp) - 1) < 0.02, 'Integrity up');
+  assert.ok(Math.abs(hit(long) / hit(base) / runLate(30, CONFIG.length.dmg) - 1) < 0.1, 'hits down');
+  assert.ok(runLate(45, CONFIG.length.hp) > runLate(10, CONFIG.length.hp), 'steeper late, where your damage outgrows a mob\'s Integrity');
+  assert.equal(hp(short), hp(base), 'a breach keeps its own pace');
+  assert.ok(Math.abs(long.addPower - base.hpPower) < 1e-9, 'its adds (fragments, Packages) keep their size');
+  // A solo boss: its own Integrity, hits and enrage on your Signal; elsewhere its old enrage. A crew boss skips it.
+  const b = { ...o, family: 'worm', strain: 'floodgate', boss: 'nb-floodwall' };
+  assert.equal(createVirus('random', 7, b).enrageAt, BOSSES['nb-floodwall'].long.enrageAt);
+  assert.equal(createVirus('random', 7, { ...b, short: true }).enrageAt, BOSSES['nb-floodwall'].enrageAt);
+  try { CONFIG.length = { hp: [[1, 1]], dmg: [[1, 1]], boss: { hp: 1, dmg: 1 } }; boss0 = createVirus('random', 7, { ...o, family: 'ransomware', boss: 'foreman' }); } finally { CONFIG.length = was; }
+  assert.equal(hp(createVirus('random', 7, { ...o, family: 'ransomware', boss: 'foreman' })), hp(boss0), 'a crew boss keeps its size');
+});

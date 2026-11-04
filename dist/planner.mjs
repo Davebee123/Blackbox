@@ -274,8 +274,10 @@ function play(s) {
   const voices = answers() ? livingParts(s).filter((p) => p.mimic) : [], voice = voices.length > 1 ? voices.sort((a, b) => a.integrity - b.integrity)[0] : null;
   let t0 = (alive(focus) && focus) || raidFocus(s) || tellFocus(s) || frag || voice || pick || open || key || (classOf(s) === 'infiltrator' ? soonest(s) : mostThreat(s));
   if (shunned(s, t0)) t0 = livingParts(s).filter((p) => !shunned(s, p)).sort((a, b) => dueOf(s, a) - dueOf(s, b))[0] || t0;
-  // A Trojan's Loader (families.mjs): while a broken Courier waits on its redeploy, it's the part to break.
-  const loader = s.encounter.virus.parts.some((p) => p.redeployAt != null) ? livingParts(s).find((p) => p.id === 'loader' && s.encounter.virus.family === 'trojan') : null;
+  // A Trojan's Loader (families.mjs): the part to break, its family's answer (the Courier only ever redeploys while it
+  // stands, and every Package it delivers unpacks on a hit). Since fight length (data.mjs CONFIG.length) the Courier
+  // outlasts enough deliveries that chasing the Droppers never ends.
+  const loader = livingParts(s).find((p) => p.id === 'loader' && s.encounter.virus.family === 'trojan');
   if (loader && !raidFocus(s) && !tellFocus(s)) t0 = loader;
   let t = phasedOut(s, t0) ? livingParts(s).find((p) => !phasedOut(s, p)) || t0 : t0;
   if (!reachable(s, t)) t = livingParts(s).filter((p) => reachable(s, p)).sort((a, b) => dueOf(s, a) - dueOf(s, b))[0] || t; // a frozen Cold Store: the others first

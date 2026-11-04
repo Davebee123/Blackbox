@@ -3,7 +3,7 @@
 // THREAT_STEPS, ELITE, SERVER, power) come from data.mjs, so tuning them moves both builders alike. The virus content
 // below (families, strains, guards, mutations, fixtures, solo bosses) is a copy: change a part's numbers on purpose
 // and change it here too, or retire the golden test.
-import { CONFIG, GRADES, THREAT_STEPS, ELITE, SERVER, mobPower, runLate } from './dist/data.mjs';
+import { CONFIG, GRADES, THREAT_STEPS, ELITE, SERVER, mobPower, runLate, BOSSES as LIVE } from './dist/data.mjs';
 
 const FAMILIES = {
   ransomware: {
@@ -297,7 +297,8 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   const strainId = forced || overrides.strain || null;
   const strain = strainId ? STRAINS[strainId] : null;
   const grade = GRADES[overrides.grade] ? overrides.grade : 1, g = GRADES[grade];
-  const scale = mobPower(level) * (mutation === 'hasty' ? 0.9 : 1) * (overrides.run ? CONFIG.runHp * (overrides.boss || overrides.elite ? 1 : runLate(level, CONFIG.runLateHp)) : 1);
+  const long = !!overrides.run && !overrides.short && !LIVE[overrides.boss]?.raid, live = LIVE[overrides.boss]?.long; // fight length (data.mjs CONFIG.length), a solo boss's own (BOSSES long)
+  const scale = mobPower(level) * (mutation === 'hasty' ? 0.9 : 1) * (overrides.run ? CONFIG.runHp * (overrides.boss || overrides.elite ? 1 : runLate(level, CONFIG.runLateHp)) : 1) * (long ? runLate(level, CONFIG.length.hp) : 1);
 
   // Tougher viruses wear more armor and strike sooner (see THREAT_STEPS).
   const extra = (spec) => (mutation === 'armored' ? 1 : 0) + THREAT_STEPS.armor.filter((x) => threat >= x.threat && (x.part === 'any' || (x.part === 'special') === !!spec.special)).length;
@@ -312,7 +313,7 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   const trim = specs.some((spec) => spec.from) ? CONFIG.thirdTrim : 1;
   const parts = specs.map((spec) => makePart(spec, 'system', scale * g.hp * (spec.from ? 1 : trim), extra(spec) + (spec.special ? 0 : g.armor)));
   const step = overrides.run ? (CONFIG.runEarly[level - 1] ?? 1) * (overrides.boss || overrides.elite ? 1 : runLate(level)) : 1;
-  const dmgScale = mobPower(level) * (1 + CONFIG.enemyRamp * (level - 1)) * g.dmg * (overrides.run ? CONFIG.runDamage * step : 1);
+  const dmgScale = mobPower(level) * (1 + CONFIG.enemyRamp * (level - 1)) * g.dmg * (overrides.run ? CONFIG.runDamage * step : 1) * (long ? runLate(level, CONFIG.length.dmg) : 1);
   // Encryption stacks, so it skips the early-game and late steps (they would compound).
   for (const p of parts) if (p.attack && ['damage', 'encrypt'].includes(p.attack.effect)) p.attack.amount = Math.max(1, Math.round(p.attack.amount * dmgScale / (p.attack.effect === 'encrypt' ? step : 1)));
   for (const p of parts) if (p.attack?.effect === 'heal') p.attack.amount = Math.max(1, Math.round(p.attack.amount * scale * g.hp));
@@ -338,8 +339,8 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   // A boss (BOSSES): bigger and a little harder; its phases and enrage timer ride on the virus.
   const boss = BOSSES[overrides.boss] || null;
   if (boss) for (const p of parts) {
-    p.max = p.integrity = Math.round(p.max * (overrides.bossHp ?? boss.hp));
-    const dmg = boss.dmg * (boss.healerDmg ? runLate(level, boss.healerDmg) : 1);
+    p.max = p.integrity = Math.round(p.max * (overrides.bossHp ?? boss.hp) * (long ? live?.hp ?? CONFIG.length.boss.hp : 1));
+    const dmg = boss.dmg * (boss.healerDmg ? runLate(level, boss.healerDmg) : 1) * (long ? live?.dmg ?? CONFIG.length.boss.dmg : 1);
     for (const k of ['amount', 'hit', 'rampBy']) if (p.attack?.[k] && (k !== 'amount' || ['damage', 'encrypt'].includes(p.attack.effect))) p.attack[k] = Math.max(1, Math.round(p.attack[k] * dmg));
   }
   const weakPoint = parts[Math.floor(next() * parts.length)].id;
@@ -347,5 +348,5 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   const name = (overrides.elite ? 'ELITE ' : '') + (strain ? strain.name.toUpperCase() + '-' + tagNo : random ? family.name.toUpperCase() + '-' + tagNo : fixture.name) + (grade > 1 ? ` v${grade}` : '');
   // Enemy damage can crit, from level 3 (like mutations).
   const crit = level >= SERVER.mutationsFrom ? CONFIG.enemyCrit : 0;
-  return { id: familyId + '-' + seed, name, family: familyId, strain: strainId, grade, dormant: strain?.dormant ? true : false, art: family.art || familyId, mutation, threat, level, power: dmgScale * (overrides.elite ? (overrides.eliteHp != null ? ELITE.sizedDmg : ELITE.dmg) : 1), hpPower: scale, crit, threatens: family.threatens, parts, weakPoint, weakKnown: false, ...(overrides.elite ? { elite: true } : {}), ...(boss ? { boss: overrides.boss, phases: boss.phases.map((x) => ({ ...x, done: false })), enrageAt: boss.enrageAt } : {}) };
+  return { id: familyId + '-' + seed, name, family: familyId, strain: strainId, grade, dormant: strain?.dormant ? true : false, art: family.art || familyId, mutation, threat, level, power: dmgScale * (overrides.elite ? (overrides.eliteHp != null ? ELITE.sizedDmg : ELITE.dmg) : 1), hpPower: scale, addPower: scale / (long ? runLate(level, CONFIG.length.hp) : 1), crit, threatens: family.threatens, parts, weakPoint, weakKnown: false, ...(overrides.elite ? { elite: true } : {}), ...(boss ? { boss: overrides.boss, phases: boss.phases.map((x) => ({ ...x, done: false })), enrageAt: (long && live?.enrageAt) || boss.enrageAt } : {}) };
 }
