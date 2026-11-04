@@ -207,6 +207,7 @@ Before: damage dealers 89% · 48% at +1, 76% · 62% at +2, 49% at +3, 13% at +5;
 level already makes +1 cost about 10 points more than an even fight (42% in the fights won, against the 30–40% asked):
 less than that would need the gap to help you at +1. The Warden at 30 still wins 3 of 8 at +5 (its cuts and
 Blowback grow with the hits).
+The class sims hold; the breach (acts, gate and core one or two levels up) falls from 45% to 34% a class, held in its test.
 
 ## 2. The WoW model, mapped
 
