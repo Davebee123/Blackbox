@@ -524,8 +524,10 @@ export const healScaled = (s, n) => { const L = hackerLevel(s); return Math.max(
 // CONFIG.dotRef all of its Payload; a bigger one more, a smaller one less.
 export const gearDamage = (s, base) => (gearStat(s, 'damage') * base) / (CONFIG.damageRef * powerOf(s));
 export const gearPayload = (s, base) => (gearStat(s, 'payload') * base) / (CONFIG.dotRef * powerOf(s));
-// Damage over time (burn ticks, helper hits): built with scaled(), plus its Payload.
-export const dotHit = (s, base) => base + gearPayload(s, base);
+// A burn tick or helper hit: gear Damage by the tick's coefficient (all of it on a tick of CONFIG.tickRef), Payload on top.
+export const gearTick = (s, base) => (gearStat(s, 'damage') * base) / (CONFIG.tickRef * powerOf(s)) + gearPayload(s, base);
+// Damage over time (burn ticks, helper hits): built with scaled(), plus its share of gear Damage and Payload.
+export const dotHit = (s, base) => base + gearTick(s, base);
 // Regen a cycle (or a move, or a minute at home): Regen counts over STATS.regen.every of them.
 export const regenRate = (n) => n / (STATS.regen.every || 1);
 // The level gap to the enemy you're fighting (positive: it's above you).
@@ -3560,7 +3562,7 @@ function useAbility(s, intent, auto = false) {
     const mine = burnsOn(s, target).filter((b) => b.id !== 'implant');
     let total = 0, ticks = 0;
     for (const b of mine) { for (let k = 0; k < b.left; k++) total += b.damage + (b.grow || 0) * k; ticks += b.left; e.burns.splice(e.burns.indexOf(b), 1); }
-    hit(s, target, Math.round((total + gearPayload(s, total)) * a.mult * (hasTalent(s, 'assassinate') && on(s, target, 'tagged') ? 2 : 1)), { by: 'Detonate', pierce: true }); // burns' worth, Payload included
+    hit(s, target, Math.round((total + gearTick(s, total)) * a.mult * (hasTalent(s, 'assassinate') && on(s, target, 'tagged') ? 2 : 1)), { by: 'Detonate', pierce: true }); // burns' worth, gear Damage and Payload included
   }
   if (id === 'propagate') {
     // Fragments catch the copies at double.

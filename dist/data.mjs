@@ -60,6 +60,7 @@ export const CONFIG = {
   // Payload on a tick of dotRef, both at your level; a bigger hit gets more of it, a smaller one less.
   damageRef: 25,
   dotRef: 14,
+  tickRef: Infinity,
   gearFill: [[6, 1], [10, 1.46], [15, 1.67], [25, 1.77], [30, 1.66], [40, 1.6], [50, 1.52]],
   // Enemy parts are tougher than one or two of your hits: fights run long enough that attacks
   // land, so gear and planning are what keep you standing.
