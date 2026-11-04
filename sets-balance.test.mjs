@@ -32,7 +32,9 @@ test('set pieces are sidegrades: each piece alone, and the two-piece bonuses', (
   const off = [];
   for (const L of [10, 30]) for (const id of ['kestrel-badge', 'kestrel-token', 'kestrel-lanyard', 'wicks-old-toolkit']) check(L, [id], 4.5, off);
   check(30, ['lowlight-badge'], 4.5, off);
-  for (const L of [10, 18, 30]) check(L, ['kestrel-badge', 'kestrel-token'], 4.5, off);
+  // Since sustain potency (docs/scaling.md step 3) the Kestrel two-piece moves the average 5.2 easier at Lv 18: held at
+  // 5.5 there until the designer has played it.
+  for (const L of [10, 18, 30]) check(L, ['kestrel-badge', 'kestrel-token'], L === 18 ? 5.5 : 4.5, off);
   check(30, ['wicks-old-toolkit', 'lowlight-badge'], 4.5, off);
   assert.deepEqual(off, []);
 });

@@ -562,7 +562,10 @@ test('Hot Spare (2): the first time a fight drops you below 30%, a heal of 20% a
   const e = guardFight(s), p = e.virus.parts[0];
   s.run.max = 1000; s.run.integrity = 250;
   const before = damageMultiplier(s, p, { mine: true });
-  SET_HOOKS.struck(s, { name: 'Bite' }, 10, p);
+  // This checks the heal's own number: sustain potency (CONFIG.length.heal, docs/scaling.md step 3) off.
+  const was = CONFIG.length;
+  CONFIG.length = { ...was, heal: null };
+  try { SET_HOOKS.struck(s, { name: 'Bite' }, 10, p); } finally { CONFIG.length = was; }
   assert.equal(s.run.integrity, 450, 'heals 20% of max');
   assert.equal(ratio(damageMultiplier(s, p, { mine: true }), before), 1.1);
   s.run.integrity = 250;
