@@ -150,7 +150,7 @@ export function tellStart(s) {
   const extra = elite ? TELL.elite.extra : v.champion ? TELL.champion.extra : v.boss ? TELL.boss.extra : 1; // on a charge's extra
   // An elite with a clash (docs/puzzle-fights.md 3, Two clocks): one more tell live at once, and no pile-ups lifted (announce).
   const two = elite && !!v.clash;
-  v.tells = { list: list.map((t, i) => ({ ...t, told: false, next: null, n: null, said: null, count: 0, after: t.kind === 'mimic' ? t.first : TELL.first + (t.kind === 'seal' ? TELL.sealAfter : i ? 1 : 0) })), tier: { ...tier, extra, live: tier.live + (two ? TELL.elite.live : 0) }, piles: two };
+  v.tells = { list: list.map((t, i) => ({ ...t, told: false, next: null, n: null, said: null, count: 0, after: t.kind === 'mimic' ? t.first : TELL.first + (t.kind === 'seal' ? TELL.sealAfter : i ? 1 : 0) })), tier: { ...tier, extra, ...(v.boss && !elite ? { mult: TELL.boss.mult } : {}), live: tier.live + (two ? TELL.elite.live : 0) }, piles: two };
   for (const t of v.tells.list) if (t.kind !== 'mimic') t.after += jitter(v, t);
   announce(s);
 }

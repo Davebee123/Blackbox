@@ -50,7 +50,7 @@ that winds up.
 **Fight length** (`CONFIG.length`): on your Signal, a fight at your level in its blues runs about 15 cycles, an elite
 about 25, a solo boss 30 to 35, for about the Signal a shorter one cost. A virus's Integrity is ×2.2 at level 1 up to
 ×5.5 at 45 and its hits ×0.33 to ×0.5 (steeper late, so a mob ten levels down still falls fast); a plain hit stays
-under about 12% of your max, and a solo boss's big moves about 25%. No hit is capped: each is its attack's own number.
+under about 12% of your max. No hit is capped: each is its attack's own number.
 Your sustain shrinks with it (`potency`): a heal you take and your skills' flat shields are ×0.2 to
 ×0.3 (`length.heal`), and a heal drawn from your damage (lifesteal, Leech, Reclaim, Checksum) half of 1 ÷ the Integrity
 factor (`length.drawn`). Adds (fragments, Packages, Droppers), breaches and crew bosses keep their size.
@@ -136,7 +136,7 @@ Hover it for what happens and, on its own muted ▸ line, how to stop it. Breaki
 | 17+ | Its charge and its cast | 2 | ×3 | Offline, Corrupted 4% |
 
 An **elite** brings one more from level 6 (its clash's tell first, then its family's seal and cast), each charge's extra 15% bigger; a **solo
-boss** brings three; a **champion** invader the usual ones, its charges' extra a tenth bigger (a boss's too). SPRAWL-00's first two kills
+boss** brings three, its charges ×2; a **champion** invader the usual ones, its charges' extra a tenth bigger. SPRAWL-00's first two kills
 bring none.
 
 **Who brings what** (`TELL_SETS`): Ransomware Full Disk (its Encrypt plus a burst of encryption for 3 cycles, its Encrypt × (mult − 1) a cycle), Double

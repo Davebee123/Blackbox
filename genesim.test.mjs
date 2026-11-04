@@ -22,10 +22,8 @@ const SEEDS12 = Array.from({ length: 12 }, (_, i) => i + 1);
 // points ahead of the blind bot, before the curve and after it: the 12 seeds here sit at the top of that.)
 // Since the compounding curve (docs/scaling.md 1: every number ×lift, rounded anew) MIRRORSHADE's reader wins 93% (89%
 // before; the Demolitionist and the Herder win two more seeds each): the reader's ceiling held at 94% until the
-// designer has played the curve. Since there are no damage caps (docs/scaling.md "After step 3") HASHLORD's hits are
-// trimmed so its Difficulty Bomb lands about a quarter of your max: its reader wins 99%, the blind bot 81%. Its ceiling
-// is held at 100% until the designer has played it.
-const READ_TOP = { 'nb-hashlord': 1 };
+// designer has played the curve. With no damage caps (docs/scaling.md "After step 3") HASHLORD's hits are refitted
+// (dmg 1.55, its charge ×2): read 89%, blind 56%.
 // MIRRORSHADE's misreader wins 45% (43 of 96; 51% before) now its mimicked hits aren't capped: held at 44%.
 const MISREAD_LOW = { 'nb-mirrorshade': 0.44 };
 const FLAGGED = { 'nb-mirrorshade': ['sysop'] };
@@ -35,7 +33,7 @@ const band = (id) => (bands[id] ||= bossBand(id, BOSSES[id].floor, undefined, SE
 test('HASHLORD and MIRRORSHADE, rebuilt, sit in the boss band at their floors (16 and 12)', () => {
   for (const id of ['nb-hashlord', 'nb-mirrorshade']) {
     const b = band(id), line = `${id} at ${b.level}: read ${b.read.toFixed(2)} misread ${b.misread.toFixed(2)} blind ${b.blind.toFixed(2)} ${JSON.stringify(b.subs)}`;
-    assert.ok(b.read >= 0.55 && b.read <= (READ_TOP[id] ?? 0.94), line);
+    assert.ok(b.read >= 0.55 && b.read <= 0.94, line);
     assert.ok(b.misread >= (MISREAD_LOW[id] ?? 0.45), line);
     assert.ok(b.read - b.blind >= 0.08, line);
     for (const [sub, w] of Object.entries(b.subs)) if (!(FLAGGED[id] || []).includes(sub)) assert.ok(w >= 4, `${sub}: ${line}`);

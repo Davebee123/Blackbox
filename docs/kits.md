@@ -94,6 +94,6 @@ the Hijacker carries a crew in 65% of boss tries.
   `swarm` and `healers` for the rest.
 - **The Sysop alone** deals 75% with its hits and burns (`SUBS.sysop.alone`); its heals come from the full hit. In a
   crew nothing changes.
-- **No damage caps**, as in WoW: every hit is its attack's own number. A solo boss's big moves are sized to land about
-  25% of your max in its blues (`BOSSES` long `dmg`).
+- **No damage caps**, as in WoW: every hit is its attack's own number. A solo boss's charge is its hit × 2
+  (`TELL.boss.mult`), and its hits are sized so a correct routine wins about 70% in its blues (`BOSSES` long `dmg`).
 - **Tooltips** read like a World of Warcraft tooltip (docs/style-guide.md).
