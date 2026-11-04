@@ -248,47 +248,29 @@ farms the floor below from 10 (40% grey, no strain or ICE from 12); the rooms bo
 
 ### After step 5 (November 4): boss rounds that grow
 
-On your Signal a solo boss fights in rounds of 4 cycles (`ROUNDS`), and each round every hit it lands is × (1 + its
-`long.grow`) the last round's, compounding: 0.15 for most, 0.13 DEADBOLT and BACK ORIFICE, 0.12 PATCH TUESDAY, 0.1
-HOLLOW CHOIR and HASHLORD, 0.08 FLOODWALL (×1.9 to ×3.1 by round 9, cycle 33). Its `long.dmg` came down (×0.4 to ×0.8)
-so a geared kill costs what it did; a slow one meets a round it can't survive, the enrage behind it. Its bar shows the
-round (R3 ×1.3). At home (REPO MAN's and HOLLOW CHOIR's events, the Arena) there are no rounds.
+One number: a solo boss fights in rounds of 4 cycles, and each round its hits are 8% harder than the last round's,
+compounding (`ROUNDS.grow`; ×1.85 by round 9, cycle 33), at home and on your Signal, its enrage behind it. Its bar shows
+the round (R3 ×1.2). No per-boss numbers: each boss keeps its step 3 size, so every boss is harder, the slow kill most.
+(A first cut with a growth per boss and its opening hits refit down, to keep a geared kill's cost, moved the pressure
+around without adding any: 26 numbers, cut.)
 
-Scratch harness: the 13 solo bosses on your Signal (a lair's /core, REPO MAN and HOLLOW CHOIR too), 10 seeds, Lv 10, 18
-and 30 pooled; wins · Signal lost · cycles of a win, main → now:
+Scratch harness: the 13 solo bosses on your Signal (a lair's /core), 10 seeds, Lv 10, 18 and 30 pooled; wins · Signal
+lost · cycles of a win, at each growth (0 is main):
 
-| Boss | Four default subclasses | Sysop |
-|---|---|---|
-| Resident | 75% · 48% · 33 → 71% · 56% · 34 | 17% · 77% · 59 → 10% · 96% · 45 |
-| RELAY-KING | 49% · 82% · 29 → 70% · 60% · 29 | 0% → 0% |
-| REPO MAN | 60% · 73% · 37 → 72% · 67% · 32 | 67% · 56% · 68 → 3% · 99% · 57 |
-| HOLLOW CHOIR | 58% · 71% · 33 → 71% · 60% · 33 | 3% → 0% |
-| DEADBOLT | 62% · 60% · 36 → 71% · 53% · 35 | 100% · 7% · 63 → 90% · 53% · 60 |
-| TRIPMINE | 49% · 69% · 38 → 70% · 60% · 37 | 53% · 44% · 70 → 33% · 75% · 71 |
-| HASHLORD | 48% · 74% · 38 → 70% · 68% · 37 | 0% → 0% |
-| BACK ORIFICE | 66% · 70% · 31 → 71% · 67% · 30 | 0% → 0% |
-| PATCH TUESDAY | 52% · 75% · 33 → 67% · 62% · 30 | 0% → 0% |
-| FLOODWALL | 47% · 81% · 28 → 48% · 74% · 31 | 0% → 3% |
-| MIRRORSHADE (at 12, its floor) | 83% · 68% · 28 → 75% · 62% · 26 | 47% → 7% (10–30) |
-| SLEEPWALKER | 50% · 82% · 35 → 71% · 68% · 31 | 0% → 0% |
-| ECHOLALIA | 60% · 72% · 33 → 71% · 62% · 33 | 0% → 0% |
+| Growth a round | 0 | 0.05 | **0.08** | 0.12 |
+|---|---|---|---|---|
+| Four default subclasses | 60% · 69% · 33 | 52% · 74% | **47% · 78% · 32** | 41% · 81% |
+| Damage dealers (Demolitionist, Phantom, Herder) | 56% · 74% · 28 | 48% · 78% | **44% · 80% · 27** | 39% · 83% |
+| Warden | 70% · 53% · 46 | 63% · 62% | **55% · 69% · 45** | 46% · 76% |
+| Sysop | 22% · 81% · 65 | 13% · 91% | **9% · 95% · 62** | 3% · 99% |
+| Four default, a 30% slower kill (Integrity ×1.3) | 37% · 82% | 30% · 87% | **25% · 89%** | |
+| Four default, one level under | 30% · 85% | 24% · 89% | **20% · 91%** | |
 
-| Pooled | At your level | One level under | A 30% slower kill (Integrity ×1.3) |
-|---|---|---|---|
-| Four default | 60% · 69% · 33 → 70% · 61% · 32 | 30% · 85% → 31% · 85% | 37% · 82% → 41% · 80% |
-| Damage dealers (Demolitionist, Phantom, Herder) | 56% · 74% · 28 → 74% · 61% · 29 | 24% · 89% → 31% · 85% | 32% · 87% → 43% · 80% |
-| Warden | 70% · 53% · 46 → 58% · 64% · 46 | 49% · 72% → 29% · 86% | 52% · 66% → 35% · 82% |
-| Sysop | 22% · 81% · 65 → 11% · 94% · 61 | 8% → 6% | 6% → 1% |
+By level, the four at 10 · 18 · 30: 49 · 53 · 76% → 36 · 37 · 68%. At home (REPO MAN's and HOLLOW CHOIR's events, about 13
+and 18 cycles), the four: REPO MAN 54 → 49%, HOLLOW CHOIR 81 → 72%; the Sysop 93 → 57% and 80 → 57%.
 
-By level, the four at 10 · 18 · 30: 49 · 53 · 76% → 61 · 66 · 83%. The damage dealers' slow kill now loses 31 points
-against their geared one (24 on main); the Warden's 46-cycle and the Sysop's 61-cycle kills pay the most. The Warden
-still wins 86% at 30 and DEADBOLT and TRIPMINE nearly always: a ◆ chit voids a whole hit however big the round, so its
-mitigation, not its heals, is what outlasts. Measured, not landed: rounds of ×1.2 (opening hits ×0.3 to ×0.6) take the
-Warden to 51% and the Sysop to 3%, the damage dealers to 75%.
-
-FLOODWALL's hits sit at 1 at 10 and 18 (its Flooder 1 + 1 a step, `long.dmg` × its size rounds to the floor), so its
-`long.dmg` only moves it at 30; its 47% is main's. MIRRORSHADE was refit at 12, its floor's top (83% → 75%; 92% at
-10, 18, 30). Level 9 has no subclass, so the Warden and Sysop rows one level under 10 are the Bastion's.
+The slow kills pay the most (the Warden −15 points, the Sysop −13, from fewer wins to start with), but every class loses
+some: a damage dealer's geared kill at 27 cycles is round 7, ×1.6. Turn `ROUNDS.grow` to taste; 0.05 is the gentle end.
 
 ## 2. The WoW model, mapped
 

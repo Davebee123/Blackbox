@@ -570,10 +570,9 @@ On your Signal each solo boss takes its own Integrity and hits on top of the fig
 30 to 35 cycles, and enrages about 15% past a geared kill: the Resident at 36, the lair bosses at 31 to 40. In a
 breach the Resident keeps its old size and enrages at 18 (24 in acts).
 
-**Rounds** (`ROUNDS`, `BOSSES` long `grow`): on your Signal a solo boss fights in rounds of 4 cycles, and each round
-every hit it lands is 8–15% harder than the last round's, compounding (×1.9 to ×3.1 by round 9, cycle 33), its enrage on top. Its
-bar shows the round and its multiple (R3 ×1.3). It opens softer than it used to, so a geared kill costs what it did and a
-slow one meets a round it can't survive. At home there are no rounds.
+**Rounds** (`ROUNDS`): a solo boss fights in rounds of 4 cycles, and each round every hit it lands is 8% harder than the
+last round's, compounding (×1.4 by round 5, ×1.85 by round 9), its enrage on top. Its bar shows the round and its
+multiple (R3 ×1.2). A slow kill meets a round it can't survive. Crew bosses have none.
 
 | Boss | Where | From | Integrity | Enrages |
 |---|---|---|---|---|

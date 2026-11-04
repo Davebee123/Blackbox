@@ -3844,10 +3844,10 @@ function scrapeYou(s, p, atk, { chits = 0, shield = 0, buffs = [] }) {
   const what = [chits ? `${chits} ◆` : '', shield ? `${shield} shield` : '', ...buffs.map((b) => b.name)].filter(Boolean);
   emit(s, 'blind', `${atk.name} scrapes off your ${andList(what)}${gain ? `. The ${p.name} wears ${gain} more ◆` : ''}.`, { source: p.id, scrape: true, shield, chits, buffs: buffs.map((b) => b.name), gain });
 }
-// Boss rounds (data.mjs ROUNDS): a solo boss on your Signal, the round this cycle is in, its hits' multiple, and the cycles
-// until the next round (null: no rounds).
+// Boss rounds (data.mjs ROUNDS): for a solo boss, the round this cycle is in, its hits' multiple, and the cycles until the
+// next round (null: not a solo boss).
 export function roundOf(v, cycle) {
-  const g = v?.long && BOSSES[v.boss]?.long?.grow;
+  const g = BOSSES[v?.boss] && !BOSSES[v.boss].raid ? ROUNDS.grow : 0;
   if (!g) return null;
   const n = Math.floor((Math.max(1, cycle) - 1) / ROUNDS.every) + 1;
   return { n, grow: g, mult: (1 + g) ** (n - 1), next: n * ROUNDS.every + 1 - cycle };

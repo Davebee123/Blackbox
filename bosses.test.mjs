@@ -115,30 +115,24 @@ test('HOLLOW CHOIR: one voice, a second at 50% beating two behind, and at 25% th
   assert.ok(copyOf(s, 'spike', target), 'copyOf still prices the beat');
 });
 
-// Boss rounds (docs/scaling.md step 5): on your Signal a solo boss's hits grow each round of ROUNDS.every cycles, shown on
-// its bar; at home (no fight length) it has none.
-test('rounds: a solo boss on your Signal hits harder each round, and its bar shows the round', async () => {
-  const { player } = await import('./genesim.mjs');
+// Boss rounds (docs/scaling.md step 5): a solo boss's hits grow each round of ROUNDS.every cycles, shown on its bar.
+test('rounds: a solo boss hits harder each round, and its bar shows the round', async () => {
   const { ROUNDS } = await import('./dist/data.mjs');
   const { roundOf, strikeWith, defender } = await import('./dist/combat.mjs');
   const { hudMarkup } = await import('./dist/view.mjs');
-  const id = 'relayking', g = BOSSES[id].long.grow;
-  const s = player('breaker', 'demolitionist', 18);
-  selectEncounter(s, 'random', 7, { mode: 'run', room: '/core', level: 18, zone: true, wild: 'lair', family: 'worm', boss: id, mutation: null, name: BOSSES[id].name });
-  command(s, 'engage');
-  const e = s.encounter, v = e.virus;
-  assert.ok(v.long && g > 0);
+  const s = boss('relayking'), e = s.encounter, v = e.virus, g = ROUNDS.grow;
+  assert.ok(g > 0);
   assert.deepEqual(roundOf(v, 1), { n: 1, grow: g, mult: 1, next: ROUNDS.every });
   assert.equal(roundOf(v, ROUNDS.every * 2 + 1).n, 3);
   assert.ok(Math.abs(roundOf(v, ROUNDS.every * 2 + 1).mult - (1 + g) ** 2) < 1e-9);
   // The same hit, in round 1 and in round 6.
   const p = livingParts(s).find((x) => x.attack?.effect === 'damage');
-  const land = (cycle) => { e.cycle = cycle; e.chits = 0; e.shield = 0; const d = defender(s); d.integrity = d.max; strikeWith(s, p, { name: 'Test', effect: 'damage', amount: 40, interval: 4, noCrit: true }); return d.max - d.integrity; };
+  const land = (cycle) => { e.cycle = cycle; e.chits = 0; e.shield = 0; const d = defender(s); d.integrity = d.max; strikeWith(s, p, { name: 'Test', effect: 'damage', amount: 400, interval: 4, noCrit: true }); return d.max - d.integrity; };
   const one = land(1), six = land(ROUNDS.every * 5 + 1);
-  assert.ok(one > 0 && Math.abs(six / one - (1 + g) ** 5) < 0.1, `round 6 lands ${six}, round 1 ${one}`);
+  assert.ok(one > 0 && Math.abs(six / one - (1 + g) ** 5) < 0.05, `round 6 lands ${six}, round 1 ${one}`);
   assert.match(hudMarkup(s), /class="tag hot rounds"[^>]*title="Rounds\nBoss rule\n[^"]*Round 6: its hits are ×/);
-  // At home, no rounds.
-  const h = fresh();
-  selectEncounter(h, 'random', 7, { level: 18, mutation: null, family: 'worm', boss: id });
-  assert.equal(roundOf(h.encounter.virus, 30), null);
+  // A crew boss has none.
+  const c = fresh();
+  selectEncounter(c, 'random', 7, { level: 18, mutation: null, family: 'ransomware', boss: 'foreman' });
+  assert.equal(roundOf(c.encounter.virus, 30), null);
 });
