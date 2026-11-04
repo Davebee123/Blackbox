@@ -648,7 +648,7 @@ export function fight(s, n, { pause = false, sample = null, as = null } = {}) {
   b.fightFrom = b.signal;
   s.run = { loc: 'breach', breach: true, cwd: n.path, integrity: b.signal, max: b.max, pack: [], visited: [n.path] };
   const [key, seed, opts] = fightOf(s, sample ? { ...n, kind: 'virus', sample } : n, as);
-  selectEncounter(s, key, seed, { ...opts, quiet: true });
+  selectEncounter(s, key, seed, { ...opts, quiet: true, short: true }); // its own pace: no fight length (data.mjs CONFIG.length)
   const e = s.encounter;
   if (!e) return;
   e.breach = n.id;

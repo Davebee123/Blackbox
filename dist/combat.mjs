@@ -1200,6 +1200,7 @@ export function encounterVirus(s, key, seed, opts = {}) {
   if (Array.isArray(opts.exe)) over.exe = opts.exe; // forced .exe builds (exe.mjs: the playtest page, the tests)
   if (opts.classic) over.classic = true; // the shape from before the parts roll (a Pulse Node, the signature, one third): balance.mjs's designed fight sets
   if (mode === 'run') over.run = true; // tuned for Signal fights (CONFIG.runHp, runDamage)
+  if (opts.short) over.short = true; // a breach's fights keep their own pace (CONFIG.length skipped)
   if (opts.tag) over.tag = opts.tag; // a file's four digits: the fight carries its file's tag (WARDED CRYPTJACK-4821)
   // Its floor (parts.mjs PARTS.floor, natives): the server's, or with no server (home, SPRAWL-00, a sim) your floor at
   // the fight's level. A ★ rare spawn (floorplan.mjs) brings a native like an elite.
