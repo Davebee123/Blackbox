@@ -129,6 +129,48 @@ whites: 81% won). From 6, SPRAWL-00 and the first levels play as they did. The c
 gear ten levels old is about 45% of you however little your level gives. WoW is the same while levelling; its wall is
 the tier. Ours is step 4: each floor a gear step, its elites, lair and exit tuned to its own blues.
 
+### After step 3 (November 4): fight length
+
+On your Signal a virus's Integrity is × `CONFIG.length.hp` at its level (2.2 at 1, 2.5 at 10, 2.3 at 18, 3.5 at 30, 5.5
+at 45) and its hits × `length.dmg` (0.42, 0.4, 0.5, 0.42, 0.33): steeper late, where your damage had outgrown a mob's
+Integrity and fights were bound by ◆. Elites ×1.65 Integrity, ×0.62 hits (from 1.5 and 0.7). Each solo boss has its own
+(`BOSSES` long: Integrity, hits, and an enrage about 15% past its geared kill, cycles 31 to 40), fitted to its Signal
+cost on main. The spike cap: 25% of your max from a solo boss (was 60%), 20% from a wild charge (45%); the Backlash
+15–25% (30–60%). Room elites enrage at 17 (9). Adds (fragments, Packages, Droppers) keep their size, breaches keep
+their pace, crew bosses are untouched. The planner breaks a Trojan's Loader first (a sturdier Courier outlasts the chase).
+
+Same harness, at your level in its blues; cycles · Signal lost · the 90th-percentile single hit (main in brackets):
+
+| Level | Ordinary | Elite | Solo boss (won) |
+|---|---|---|---|
+| 3 | 15 · 30% · 18% (8 · 29% · 21%) | 26 · 48% (13 · 48%) | 33 · 65%, 79% (14 · 65%, 71%) |
+| 10 | 15 · 23% · 19% (9 · 27% · 25%) | 27 · 34% (13 · 30%) | 35 · 49%, 75% (14 · 61%, 71%) |
+| 18 | 17 · 23% · 11% (11 · 19% · 15%) | 23 · 13% (15 · 15%) | 34 · 45%, 71% (14 · 52%, 79%) |
+| 30 | 16 · 28% · 13% (10 · 31% · 22%) | 26 · 24% (11 · 25%) | 36 · 33%, 83% (12 · 40%, 88%) |
+| 45 | 16 · 21% · 13% (8 · 24% · 20%) | 26 · 18% (9 · 19%) | 36 · 27%, 79% (11 · 31%, 96%) |
+
+Plain hits now stay under about 12% (main reached 30–41%); what goes past is a charge or a Mimic's playback, capped.
+
+| You | At your level | 3 below | 6 below | 10 below |
+|---|---|---|---|---|
+| 10 | 14 · 19% | 12 · 13% | 8 · 2% | — |
+| 20 | 15 · 23% | 14 · 7% | 11 · 2% | 9 · 3% |
+| 30 | 16 · 25% | 12 · 13% | 10 · 5% | 9 · 0% |
+| 45 | 16 · 20% | 15 · 13% | 12 · 3% | 9 · 3% |
+
+Gear (won · Signal lost): its level's blues 100% · 19–25% at 10, 20, 30; ten levels old at 20 63% · 68% (88% · 62%), at
+30 38% · 73% (63% · 66%); none at 10 67% · 66% (71% · 62%), at 20 8%, at 30 0%. The full crew wins 36 of 36 boss tries at
+18 and 30. The rooms bot maps 6 of 12 medium servers at 10 (12 on main: the Warden's room fights run 25–45 cycles).
+
+**Sustain gains.** A longer fight at the same cost lands less a cycle, so heals, shields and Regen (unchanged, out of this
+step) go further: alone, the Warden loses 8% at 10, 18 and 30 (27, 13, 25% on main) and the Sysop 0–8% (2–24%). The
+damage dealers sit near main (Demolitionist 31 · 16 · 24%, main 32 · 21 · 35%).
+
+Held (each test says what it measures): the Demolitionist's core rotation 27 points under its full build at 18; five
+second presets (the Payload's swarm +14.7 on the generic fights, the Hijacker's rules −14.6 on its own, the Phantom's
+evasion −7.8, the Herder's swarm +5.6, the Warden's swarm +5.2); the Warden's DMZ pressed in 3 of 24 at 30; ignoring the
+Mimic 32 points; the Herder carrying a crew 97% to the Demolitionist's 100%.
+
 ## 2. The WoW model, mapped
 
 | WoW | BLACKBOX |
@@ -193,8 +235,8 @@ One session each, one after the other (they share the economy, pacing and combat
    your level alone carries you (540 of 1028 Signal is level, the rest gear). The cost: the friction table's "nothing"
    row (60–75%, a win) goes; the low levels (starter gear at 3) must still win; elites, bosses and the class sims are
    re-measured against the new split.
-3. **Next:** fight length: Integrity up, hits down, enrages, the balance targets moved.
-4. Floors as tiers: the mob step and the gear step.
+3. **Built (November 4): fight length** (section 1 has the numbers): Integrity up, hits down, enrages, the balance targets moved.
+4. **Next:** floors as tiers: the mob step and the gear step.
 5. Boss rounds that grow (the solo bosses first, then the lairs as they're built).
 
 ## 5. Decided

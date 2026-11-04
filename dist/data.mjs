@@ -1073,7 +1073,7 @@ export const BOSSES = {
     phases: [{ at: 0.5, do: ['hop'], say: 'RELAY-KING reroutes. Its ♛ hops to its healthiest part.' }, { at: 0.25, do: ['flood'], say: 'RELAY-KING floods the network. The Replicator hatches every 2 cycles, and the Relay broadcasts every 3.' }] },
   // REPO MAN (events.mjs): the bounty from level 8. Each command a ◆ absorbs puts a Lien on its Ledger; the Ledger's
   // Collection hits harder for each Lien and pays them off. Each phase calls a Collection in 3 cycles.
-  repoman: { long: { hp: 1.45, dmg: 0.54, enrageAt: 39 }, name: 'REPO MAN', family: 'ransomware', hp: 1.6, dmg: 1, enrageAt: 18, acts: { beat: 'collect' },
+  repoman: { long: { hp: 1.15, dmg: 0.54, enrageAt: 34 }, name: 'REPO MAN', family: 'ransomware', hp: 1.6, dmg: 1, enrageAt: 18, acts: { beat: 'collect' },
     extra: [{ id: 'ledger', name: 'Ledger', integrity: 32, armor: 2, loot: 'Ledger Page', lien: 1, attack: { name: 'Collection', effect: 'damage', amount: 3, interval: 5, first: 6 } }],
     signature: { name: 'Lien', rule: 'Each command a ◆ absorbs puts a Lien on the Ledger. Its Collection hits harder for each Lien, then clears them. Each phase calls a Collection in 3 cycles.' },
     phases: [{ at: 0.5, do: ['rearm', 'collect'], say: 'REPO MAN repossesses. Every part re-arms, and the Ledger collects in 3 cycles.' }, { at: 0.25, do: ['interest', 'collect'], say: 'REPO MAN compounds the interest. Each Lien counts twice, and the Ledger collects in 3 cycles.' }] },
@@ -1115,7 +1115,7 @@ export const BOSSES = {
   // you broke, or of the Pulse Node. At 12 and 13 its Scrambler is trimmed (trim): ◆3, and a Scramble every 5 cycles.
   // mimic: while you're Scrambled its Mimic plays your hit back twice over (tells.mjs mimicLands). Its beats fall in the
   // Scramble, and with the class kits' openers going quiet there by habit, a plain playback cost a blind player too little.
-  'nb-mirrorshade': { long: { hp: 1.45, dmg: 0.9, enrageAt: 35 }, name: 'MIRRORSHADE', family: 'ghostroot', third: 'mimic', native: true, lair: 'MIRRORSHADE-HALL', floor: 12, band: 'A',
+  'nb-mirrorshade': { long: { hp: 1.45, dmg: 0.8, enrageAt: 35 }, name: 'MIRRORSHADE', family: 'ghostroot', third: 'mimic', native: true, lair: 'MIRRORSHADE-HALL', floor: 12, band: 'A',
     trim: { below: 14, part: 'scrambler', armor: 3, interval: 5 },
     signature: { name: 'Doppelganger', rule: 'At half Integrity, the Mimic stops recording and takes the shape of the first part you broke, with its attack and its ◆. If you have not broken one, it takes the shape of the Pulse Node.' },
     hp: 1.34, dmg: 1.08, mimic: 2, enrageAt: 17, about: 'A Mimic plays your commands back at you on its beat, at double damage while you are Scrambled. At 60% Integrity it re-arms every part, and at half the Mimic stops recording and becomes a Doppelganger of the first part you broke.', phases: [{ at: 0.6, do: ['rearm'], say: 'MIRRORSHADE re-arms every part.' }, { at: 0.5, do: ['doppelganger'], say: 'MIRRORSHADE\'s Mimic stops recording and takes a shape.' }] },

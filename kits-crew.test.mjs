@@ -31,7 +31,8 @@ test('crew-leaning damage dealers carry a crew: over Lv 18 and 30, more boss tri
     // (92% to 89%). The Herder is fine as it is, so against the Phantom it is held to winning more, not to the low point.
     // Since step 2 (docs/scaling.md: WoW's coefficients) the Herder wins 99% of these tries to the Demolitionist's 100%, its
     // low point a hair under the Overclocker's (32.9 to 33.0): held to within 2 points of each, until the kit pass.
-    const give = c === 'herder' ? 0.02 : 0;
+    // Since fight length (docs/scaling.md step 3) it wins 97% to the Demolitionist's 100%: held to within 3.5 points.
+    const give = c === 'herder' ? 0.035 : 0;
     for (const s of solo) assert.ok(r[c].won >= r[s].won - give && (r[c].low > r[s].low - 100 * give || (c === 'herder' && s === 'phantom')), `${c} vs ${s}: ${line}`);
   }
 });

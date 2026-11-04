@@ -570,7 +570,7 @@ breach the Resident keeps its old size and enrages at 18 (24 in acts).
 | Boss | Where | From | Integrity | Enrages |
 |---|---|---|---|---|
 | RELAY-KING (worm) | SPRAWL-00's relay room (level 5), a Core sealed until level 3; back 30 minutes after it falls | level 3 | 1.31× | cycle 36 |
-| REPO MAN (ransomware) | The Bounty event from level 8 | level 8 | 2.32× | cycle 39 |
+| REPO MAN (ransomware) | The Bounty event from level 8 | level 8 | 1.84× | cycle 34 |
 | HOLLOW CHOIR (ghostroot) | Its own event, from level 10 | level 10 | 1.33× | cycle 40 |
 
 Each plays in acts (below) with a part and a rule of its own, and a mechanic an act (docs/solo-bosses.md).
