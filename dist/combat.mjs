@@ -30,7 +30,7 @@ import { raidStart, raidLand, raidCycle, raidShield, raidBroke, raidTaken, raidA
 import { tellStart, tellCycle, tellLand, tellBroke, chargeNow, tellIntents, tellSigint, tellSigintCheck, tellOn, tellsOf, overclockMult, hotCharge } from './tells.mjs';
 import { prepareTicks, onHit as tickHit, blastCut, BOSS_RULES, TICKS } from './interrupt.mjs';
 import { actsStart, lashHit, lashLand, actIntents, actBegins, actCap } from './acts.mjs';
-import { TELL, TELLS, ROOM_FAMILIES, DAMPER_KINDS, floorFor, line, lift, own } from './data.mjs';
+import { runLate, TELL, TELLS, ROOM_FAMILIES, DAMPER_KINDS, floorFor, line, lift, own } from './data.mjs';
 import { holdsPart, objectiveBroke, objectiveCycle, objectiveBonus, bonusXp, bonusRolls, backupHit } from './objectives.mjs';
 import { mechValidate, mechIntercept, mechFired, mechPower, exposedCut, mechLanded, mechCommandHit, mechStart, mechClose, mechBroke, lagged, stunnedNow, missedTurn } from './mechanics.mjs';
 import { tickRoot, processWon } from './root.mjs';
@@ -515,6 +515,11 @@ export const critMultiplier = () => CRIT.multiplier;
 // Your power: your own numbers (damage, heals, shields, Signal) grow on your slow line (data.mjs own); gear carries the rest.
 export const powerOf = (s) => own(hackerLevel(s));
 export const scaled = (s, n) => Math.max(1, Math.round(n * powerOf(s)));
+// Sustain's potency in a fight with fight length (data.mjs CONFIG.length.heal, by the virus's level): heals you take and
+// your skills' flat shields shrink with its hits, so twice the casts in a longer fight don't double what you sustain.
+// drawn: a heal drawn from the damage you deal (lifesteal, Leech, Reclaim) shrinks with the Integrity it draws on instead.
+export const potency = (s, drawn = false) => { const v = s.encounter?.virus; return !v?.long ? 1 : drawn ? (CONFIG.length.drawn ?? 1) / runLate(v.level, CONFIG.length.hp) : runLate(v.level, CONFIG.length.heal); };
+export const sustained = (s, n, drawn = false) => Math.max(1, Math.round(n * potency(s, drawn)));
 // Heals you cast: CONFIG.healLevel of the level line's growth and the lift (step 1's curve), times Restore.
 // restoreMult alone for heals that give back damage (Reclaim's half, Rollback), which already grow with it.
 export const restoreMult = (s) => 1 + gearStat(s, 'restore') / 100;
@@ -3462,7 +3467,7 @@ function useAbility(s, intent, auto = false) {
   // Overload: a crit resets its cooldown.
   if (id === 'overload' && res?.crit) { delete e.readyAt.overload; emit(s, 'proc', 'Overload lands a critical strike and is ready again.', { ability: 'overload' }); }
   if (a.proc) delete e.procs[a.proc]; // Shatter, Retaliate, Opening spend their window
-  if (a.lifesteal && res?.dealt) heal(s, Math.max(1, Math.round(res.dealt * a.lifesteal * restoreMult(s) * classMult('drawn', s))), a.name); // drawn: a class's heals from its hits (the Sysop alone heals from what it would have dealt)
+  if (a.lifesteal && res?.dealt) heal(s, Math.max(1, Math.round(res.dealt * a.lifesteal * restoreMult(s) * classMult('drawn', s))), a.name, { drawn: true }); // drawn: a class's heals from its hits (the Sysop alone heals from what it would have dealt)
   if (a.all) for (const p of livingParts(s)) hit(s, p, a.all * powerOf(s) * (a.fragx && p.kind === 'fragment' ? a.fragx : 1), { mine: true, by: a.name }); // fragments take more (Fork Bomb, Garbage Collect)
   if (id === 'garbage-collect') for (const h of e.helpers) h.left++;
   if (id === 'failover') {
@@ -3532,7 +3537,7 @@ function useAbility(s, intent, auto = false) {
     emit(s, 'status', `${a.name} for ${a.cycles} cycles.`, { mark: 'buff', ability: id });
   }
   if (a.shield) {
-    const amount = scaled(s, id === 'firewall' ? (hasTalent(s, 'deep-packet-inspection') ? 30 : a.shield) + 5 * rank(s, 'stateful-firewall') : a.shield);
+    const amount = sustained(s, scaled(s, id === 'firewall' ? (hasTalent(s, 'deep-packet-inspection') ? 30 : a.shield) + 5 * rank(s, 'stateful-firewall') : a.shield));
     e.shield = Math.max(e.shield || 0, amount);
     emit(s, 'status', `Shield up. It absorbs the next ${amount} damage.`, { mark: 'shield', ability: id });
   }
@@ -3622,10 +3627,11 @@ const allyOf = (s, who) => hooks.crewAllies?.(s)?.find((x) => x.who === who)?.st
 const fightFromOf = (s) => (s.run?.breach ? s.breach?.fightFrom : s.run?.rooms ? s.rooms?.fightFrom : null); // a breach's, or a server room's (floorplan.mjs)
 export const healCap = (s) => { const d = defender(s), from = fightFromOf(s); return from != null ? Math.min(d.max, from) : d.max; };
 // lift: a restore that counts like a patch (the Sasser script): it ignores the cap and raises it with you.
-export function heal(s, amount, label, { lift = false, gear = null } = {}) {
+export function heal(s, amount, label, { lift = false, gear = null, drawn = false, potent = false } = {}) {
   const d = defender(s);
   const more = s.encounter ? fxSum(s, 'always', 'heal%') : 0; // the healing you receive (Sump Pump, Bedframe)
   if (more) amount = Math.max(1, Math.round(amount * (1 + more / 100)));
+  if (!lift && !potent && amount > 0) amount = sustained(s, amount, drawn); // potency (CONFIG.length.heal); potent: already applied
   if (s.encounter?.virus?.raid) amount = raidAbsorb(s, amount); // encrypted sectors (raid.mjs)
   amount = Math.round(amount * classMult('healing', s, label)); // a heal you cast, larger (Runbook: sets.mjs)
   const bb = s.encounter?.badBlock; // Bad Block: the cracked cells eat the heal first
@@ -4162,7 +4168,7 @@ export function playerPhase(s, phase = 'all') {
   if (e.regen && e.regen.from <= e.cycle && e.regen.left > 0) { heal(s, e.regen.amount, e.regen.name || 'Patch'); e.regen.left--; }
   classEach('cycle', s); // class modules: the end of this player's turn
   // Leech pays out; Regen ticks (the rig's on runs, the server's at home).
-  if (e.leechAcc >= 1) { const n = Math.floor(e.leechAcc); e.leechAcc -= n; heal(s, n, 'Leech'); }
+  if (e.leechAcc >= 1) { const n = Math.floor(e.leechAcc); e.leechAcc -= n; heal(s, n, 'Leech', { drawn: true }); }
   const rg = regenRate(defense(s, 'regen')) * (1 + fxSum(s, 'always', 'heal%') / 100); // Regen R: R every 5 cycles (more with Sump Pump, Bedframe: heal%)
   if (rg) {
     e.regenAcc = (e.regenAcc || 0) + rg;

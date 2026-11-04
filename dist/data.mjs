@@ -80,7 +80,12 @@ export const CONFIG = {
   // ten levels down as at your level. boss: a solo boss's on top, unless it has its own (BOSSES long: its Integrity, hits
   // and enrage, about 15% past a geared kill). Adds keep their size (addPower). Crew bosses (raid.mjs) and breaches (their
   // own pace) skip it.
-  length: { hp: [[1, 2.2], [10, 2.5], [18, 2.3], [30, 3.5], [45, 5.5]], dmg: [[1, 0.42], [10, 0.4], [18, 0.5], [30, 0.42], [45, 0.33]], boss: { hp: 1.4, dmg: 0.45 } },
+  length: { hp: [[1, 2.2], [10, 2.5], [18, 2.3], [30, 3.5], [45, 5.5]], dmg: [[1, 0.42], [10, 0.4], [18, 0.5], [30, 0.42], [45, 0.33]], boss: { hp: 1.4, dmg: 0.45 },
+    // heal: your sustain's potency in such a fight (combat.mjs potency): every heal you take and your skills' flat shields,
+    // by the virus's level, so a longer fight doesn't hand a healer or a tank twice the casts against the same damage
+    // (0.6 of the hits' factor). drawn: a heal drawn from what you deal (lifesteal, Leech, Reclaim) is this share of
+    // 1 / hp, the Integrity it draws on (without it the Sysop alone lost nothing at 20 and 30, and won five levels up).
+    heal: [[1, 0.25], [10, 0.24], [18, 0.3], [30, 0.25], [45, 0.2]], drawn: 0.5 },
   thirdTrim: 0.85, // a family's third part (Lockbox, Mirror, Decoy) comes out of the other two's Integrity
   ward: 0.25, // Lockbox: the warded part loses at most this share of its max a cycle
   wardHeld: 0.5, // Lockbox: what the cap holds back isn't lost; the Lockbox holds it, and when it breaks this share lands on the partner at once (docs/puzzle-levers.md 3.4)
@@ -1542,7 +1547,7 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   // Enemy damage can crit, from level 3 (like mutations).
   const crit = level >= SERVER.mutationsFrom ? CONFIG.enemyCrit : 0;
   const author = authorOf({ family: familyId, strain: strainId, boss: overrides.boss || null }, overrides.author);
-  return { id: familyId + '-' + seed, name, family: familyId, strain: strainId, grade, dormant: strain?.dormant ? true : false, art: family.art || familyId, mutation, threat, level, power: dmgScale * (overrides.elite ? eliteDmg : 1), hpPower: scale, addPower: scale / (long ? runLate(level, CONFIG.length.hp) : 1), crit, threatens: family.threatens, parts, weakPoint, weakKnown: false, ...(overrides.elite ? { elite: true } : {}), ...(rolled2?.clash ? { clash: rolled2.clash } : {}), ...(boss ? { boss: overrides.boss, phases: (boss.acts?.[familyId] ? boss.actPhases : boss.phases).map((x) => ({ ...x, done: false })), enrageAt: (long && boss.long?.enrageAt) || (acts?.enrageAt ?? boss.enrageAt) } : {}),
+  return { id: familyId + '-' + seed, name, family: familyId, strain: strainId, grade, dormant: strain?.dormant ? true : false, art: family.art || familyId, mutation, threat, level, power: dmgScale * (overrides.elite ? eliteDmg : 1), hpPower: scale, addPower: scale / (long ? runLate(level, CONFIG.length.hp) : 1), ...(long ? { long: true } : {}), crit, threatens: family.threatens, parts, weakPoint, weakKnown: false, ...(overrides.elite ? { elite: true } : {}), ...(rolled2?.clash ? { clash: rolled2.clash } : {}), ...(boss ? { boss: overrides.boss, phases: (boss.acts?.[familyId] ? boss.actPhases : boss.phases).map((x) => ({ ...x, done: false })), enrageAt: (long && boss.long?.enrageAt) || (acts?.enrageAt ?? boss.enrageAt) } : {}),
     genes: genome, author, ...unsigned, ...(unlinked ? { unlinked: true } : {}) };
 }
 

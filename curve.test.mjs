@@ -122,3 +122,16 @@ test('fight length (step 3): a Signal fight\'s Integrity × CONFIG.length.hp and
   try { CONFIG.length = { hp: [[1, 1]], dmg: [[1, 1]], boss: { hp: 1, dmg: 1 } }; boss0 = createVirus('random', 7, { ...o, family: 'ransomware', boss: 'foreman' }); } finally { CONFIG.length = was; }
   assert.equal(hp(createVirus('random', 7, { ...o, family: 'ransomware', boss: 'foreman' })), hp(boss0), 'a crew boss keeps its size');
 });
+
+test('sustain potency (step 3): in a fight with length, a heal shrinks with the hits (CONFIG.length.heal) and one drawn from your damage with the Integrity it draws on; elsewhere it is whole', async () => {
+  const { potency, sustained, heal } = await import('./dist/combat.mjs');
+  const { runLate } = await import('./dist/data.mjs');
+  const s = fresh();
+  s.encounter = { virus: { long: true, level: 30 } };
+  assert.equal(potency(s), runLate(30, CONFIG.length.heal));
+  assert.ok(Math.abs(potency(s, true) - CONFIG.length.drawn / runLate(30, CONFIG.length.hp)) < 1e-12);
+  assert.ok(potency(s) < 0.5 && potency(s, true) < 0.5, 'a heal is a fraction of its size in a long fight');
+  assert.equal(sustained(s, 100), Math.round(100 * potency(s)));
+  s.encounter.virus.long = false;
+  assert.equal(potency(s), 1, 'a breach, a crew boss or a home fight: whole');
+});

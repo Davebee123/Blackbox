@@ -162,9 +162,13 @@ Gear (won · Signal lost): its level's blues 100% · 19–25% at 10, 20, 30; ten
 30 38% · 73% (63% · 66%); none at 10 67% · 66% (71% · 62%), at 20 8%, at 30 0%. The full crew wins 36 of 36 boss tries at
 18 and 30. The rooms bot maps 6 of 12 medium servers at 10 (12 on main: the Warden's room fights run 25–45 cycles).
 
-**Sustain gains.** A longer fight at the same cost lands less a cycle, so heals, shields and Regen (unchanged, out of this
-step) go further: alone, the Warden loses 8% at 10, 18 and 30 (27, 13, 25% on main) and the Sysop 0–8% (2–24%). The
-damage dealers sit near main (Demolitionist 31 · 16 · 24%, main 32 · 21 · 35%).
+**Sustain potency (the designer, November 4: healing too strong; potency and cooldowns, since there is no mana).** A longer
+fight lands less a cycle, so heals and shields went further: alone, the Warden lost 8% at 10, 18 and 30 and the Sysop
+0–8%, and both won five levels up. Now every heal you take and your skills' flat shields are × `length.heal` (0.6 of the
+hits' factor) and a heal drawn from your damage × `length.drawn` ÷ `length.hp` (Reclaim's lifesteal off a mob's whole
+Integrity had healed back all of it). Alone at 10 · 18 · 30: the Sysop 33 · 8 · 21% (24 · 2 · 7% before step 3), the
+Warden 24 · 12 · 12% (27 · 13 · 25%). Five levels up the Sysop wins 1–3 of 8; the Warden still 5–7 (its cuts and blocks
+scale with the hits). Damage dealers: +2 wins about 85% for 50–65% lost, +3 about half, +5 one in eight.
 
 Held (each test says what it measures): the Demolitionist's core rotation 27 points under its full build at 18; five
 second presets (the Payload's swarm +14.7 on the generic fights, the Hijacker's rules −14.6 on its own, the Phantom's

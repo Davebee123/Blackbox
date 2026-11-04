@@ -51,7 +51,9 @@ that winds up.
 about 25, a solo boss 30 to 35, for about the Signal a shorter one cost. A virus's Integrity is ×2.2 at level 1 up to
 ×5.5 at 45 and its hits ×0.33 to ×0.5 (steeper late, so a mob ten levels down still falls fast); a plain hit stays
 under about 12% of your max. A single hit lands for at most 25% of your max from a solo boss and 20% from a wild charge
-(`CONFIG.spikeCap`). Adds (fragments, Packages, Droppers), breaches and crew bosses keep their size.
+(`CONFIG.spikeCap`). Your sustain shrinks with it (`potency`): a heal you take and your skills' flat shields are ×0.2 to
+×0.3 (`length.heal`), and a heal drawn from your damage (lifesteal, Leech, Reclaim, Checksum) half of 1 ÷ the Integrity
+factor (`length.drawn`). Adds (fragments, Packages, Droppers), breaches and crew bosses keep their size.
 
 ### Rules, one per layer
 

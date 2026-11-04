@@ -323,7 +323,7 @@ export default {
       const total = helperValue(s), n = e.helpers.length;
       e.helpers = [];
       emit(s, 'status', `OOM Kill reaps ${n === 1 ? 'one helper' : n + ' helpers'}.`, { ability: 'oom-kill' });
-      heal(s, Math.max(1, Math.round(total * a.share * restoreMult(s))), 'OOM Kill');
+      heal(s, Math.max(1, Math.round(total * a.share * restoreMult(s))), 'OOM Kill', { drawn: true });
     },
     // ----- Hijacker -----
     // Jam: a hit that leaves it Jammed. With one of your helpers on it, the helper goes too and the attack waits a cycle.
