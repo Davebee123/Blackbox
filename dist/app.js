@@ -87,6 +87,8 @@ const playtest = params.get('playtest');
 const { key: KEY, bench: BENCH, camp: CAMP } = BN.pageSave(location.search, CP.CAMPAIGN_KEY);
 const DEV = params.has('dev') || !!BENCH; // developer commands (and window.__bb, for tests)
 if (BENCH) { const c = BN.benchCurve(location.search); if (c != null) CONFIG.powerPerLevel = c; } // ?curve=8: the level curve at 8% on this bench (bench.mjs)
+// ?heal=50: the heal budget prototype on this bench, a pool of 50% of your max Signal, sustain potency off; ?heal=50p keeps potency (data.mjs CONFIG.healBudget)
+if (BENCH) { const m = /^(\d{1,3})(p?)$/.exec(new URLSearchParams(location.search).get('heal') || ''); if (m) { CONFIG.healBudget = { ...CONFIG.healBudget, on: true, pool: +m[1] / 100 }; if (!m[2]) CONFIG.length.heal = null; } }
 // The pager's tray (pager-view.mjs): four slots (three icons and +n when more wait) on a desktop, three on a phone.
 const phoneBar = matchMedia('(max-width: 900px)');
 
