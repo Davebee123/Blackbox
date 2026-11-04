@@ -47,7 +47,7 @@ Every playtest URL runs on a fresh state that is never saved. The real save is n
 | `/?playtest=run` | Connected to a fresh server. `&family=worm\|ghostroot`, `&template=mailhub\|mirror\|archive\|lab` (its rooms' kind), `&depth=<floor>`. |
 | `/?playtest=rooms` | One server as rooms, clocks ten times as fast. `&class=`, `&level=`, `&kind=`, `&size=small\|medium\|large`, `&floor=`, `&boss=a\|b\|c`, `&hunter=patrol\|track`, `&seed=`, `&puzzle=<board>` (its room, and you in it), `&seen` (every room discovered). |
 | `/?playtest=story&beat=<id>` | A test save at a story beat (the editor's *Play from here*). |
-| `/?playtest=breach`, `/?campaign=breach` | The side modes (GAME_RULES.md "Side modes"): one breach, or the breach campaign under its own save. |
+| `/?campaign=breach` | The breach campaign under its own save (GAME_RULES.md "Side modes"). |
 | `/?shell=plain`, `/?tod=night\|dawn\|day\|dusk` | No CRT shell; another time of day outside the window. |
 | Co-op | Two benches in two tabs, then `coop host` and `coop join <code>`: [`docs/coop.md`](docs/coop.md). |
 
@@ -240,7 +240,7 @@ comment saying what it does.
 
 | File | What it does |
 |---|---|
-| `dist/breach.mjs`, `dist/breach-view.mjs`, `dist/breach.css` | A breach: one run through one server on a branching map. |
+| `dist/breach.mjs`, `dist/breach-view.mjs`, `dist/breach.css` | The campaign's breach: one run through one server on a branching map. |
 | `dist/campaign.mjs`, `dist/campaign-view.mjs`, `dist/campaign.css` | The breach campaign: servers by layer, its own save. |
 | `dist/heat.mjs`, `dist/scripts.mjs`, `dist/rewrites.mjs`, `dist/skillrules.mjs` | The breach's heat ranks, one-shot scripts, rewrites and skill rules. |
 | `dist/world.mjs`, `dist/room.mjs`, `dist/room-view.mjs`, `dist/room.css`, `dist/content/room.mjs` | LOWLIGHT's back room and the world turn between breaches. |
@@ -263,7 +263,7 @@ comment saying what it does.
 | `friction.mjs` | Health a same-level fight costs, by gear. |
 | `genesim.mjs` | The genome harness: boss bands, the worst three cycles, per-gene checks. |
 | `solved.mjs` | How solved fights are: eight kinds of player by class and tier. |
-| `roomsim.mjs`, `breachsim.mjs`, `campaignsim.mjs` | Bots playing a server's rooms, a breach, and the breach campaign. |
+| `roomsim.mjs`, `breachsim.mjs`, `campaignsim.mjs` | Bots playing a server's rooms, the campaign's breaches one at a time, and the whole campaign. |
 | `playtest.mjs` | Kill-order strategies against the fixtures; prints its tables. |
 | `golden-virus.mjs` | The virus builder before genes, frozen for `golden.test.mjs`. |
 | `tools/sound-preview/` | Renders sound preview clips to MP3 for the designer to hear. |

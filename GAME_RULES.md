@@ -2582,7 +2582,7 @@ breaches once you capture the server. Gear, scripts and XP bank at gates and on 
 checkpoint. **Heat 1–8** adds a modifier a rank and pays more. **LOWLIGHT's room** (`world.mjs`, `room.mjs`) is where
 you come back after each breach: wick has a line about it, the board lists what moved, and from your second capture a
 **world turn** runs after every breach (an author digs in on its nearest open server, dead drops appear, never on a
-clock). `?playtest=breach` plays one breach with a throwaway character. Code: `breach.mjs`, `campaign.mjs`,
+clock). Code: `breach.mjs`, `campaign.mjs`,
 `scripts.mjs`, `rewrites.mjs`, `heat.mjs`, `world.mjs`; bots `breachsim.mjs`, `campaignsim.mjs`.
 
 ## Balance targets

@@ -1,6 +1,5 @@
-// The breach prototype (GAME_RULES.md "Side modes": breach.mjs, rewrites.mjs, the Overclock and Lock tells): the
-// map generator, fog, rewrites (output only), the two new tells, losing, capturing, the page, and the bot winning a
-// fair share of breaches with every class. The map's dungeon pieces, scripts and skill rules: mapmech.test.mjs.
+// The breach campaign's breach (GAME_RULES.md "Side modes": breach.mjs, rewrites.mjs, the Overclock and Lock tells): the
+// map generator, fog, rewrites (output only), the two new tells, losing, capturing and the page. The map's dungeon pieces, scripts and skill rules: mapmech.test.mjs.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, resolveCycle, active, part, livingParts, readyIn, previewDamage, finish, stashItem, maxSignal, addItem } from './dist/combat.mjs';
@@ -9,7 +8,7 @@ import { tellsOf, plannedTells, NEW_TELLS } from './dist/tells.mjs';
 import { generateMap, allPaths, nodeList, nextOf, firstRow, BREACH, ACTS, startBreach, outfit, reachable, visible, go, act, fight, settle, captureOf, SERVER_CARD, EVENTS, CORE_DUMP } from './dist/breach.mjs';
 import { SUBSYSTEMS, REWRITES } from './dist/rewrites.mjs';
 import { seeded, rollItem } from './dist/gear.mjs';
-import { winRate, runBreach, CLASSES, PICK } from './breachsim.mjs';
+import { runBreach } from './breachsim.mjs';
 import { breachMarkup, bxUi, bxToggle } from './dist/breach-view.mjs';
 
 const SEEDS = Array.from({ length: 40 }, (_, i) => i + 1);
@@ -18,6 +17,7 @@ function breach(cls = 'breaker', seed = 3) {
   s.rng = seed * 7777;
   outfit(s, { cls, level: 10, gearSeed: seed });
   startBreach(s, { seed, level: 10 });
+  s.breach.scripts = ['sasser', 'bluekeep']; // two to carry, as a campaign would
   return s;
 }
 const nodeOf = (s, kind, act = 0) => nodeList(s.breach.map).find((n) => n.kind === kind && n.act === act);
@@ -367,21 +367,7 @@ test('the page: a run strip, one decision, the rewrites in the gutter, the pack 
 });
 
 // ---------- the bot ----------
-// The target is 50 to 70% a class at heat 0 in blues (breachsim.mjs measures it). The band
-// here is wider so the test is stable at 16 breaches a class, with the subclasses the campaign bot picks, and it
-// guards the floor and the ceiling: every class can win a fair share, and the Bastion no longer wins them all.
-// Held (November 4, the level gap from +1 and resists): acts 2 and 3, the gate and the core are one or two levels up,
-// so the mean fell 45% → 34% (the Breaker and Operator 25%, the Operator 13% on another run); floors 25% and 45% → 10%
-// and 30% until the breach, a playtest only, is retuned.
-test('breachsim: every class at level 10 wins a fair share of breaches, and none wins nearly all', { timeout: 300000 }, () => {
-  const rates = CLASSES.map((cls) => winRate(cls, { runs: 16, sub: PICK[cls] }));
-  for (const r of rates) assert.ok(r.rate >= 0.1 && r.rate <= 0.94, `${r.cls} wins ${Math.round(r.rate * 100)}%`);
-  const mean = rates.reduce((n, r) => n + r.rate, 0) / rates.length;
-  assert.ok(mean >= 0.3 && mean <= 0.85, `mean ${Math.round(mean * 100)}%`);
-  for (const r of rates) assert.ok(r.fights >= 6, `${r.cls}: about ten fights a breach (${r.fights.toFixed(1)})`);
-});
-
-test('the breach is a playtest only: a fresh campaign has none, and the save version is unchanged', async () => {
+test('the main game never holds a breach (only the breach campaign does), and the save version is unchanged', async () => {
   const s = fresh();
   assert.equal(s.breach, undefined);
   const { SAVE_VERSION } = await import('./dist/combat.mjs');

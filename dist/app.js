@@ -98,7 +98,7 @@ if (DEV) Object.defineProperty(window, '__bb', { get: () => campaign }); // dev 
 // (render mounts it). Not in the breach campaign.
 const scanner = CAMP ? null : createScanner({ state: () => campaign, changed: () => { save(); dirty = true; }, busy: () => active(campaign), sound: () => !!campaign.settings.sound, volume: () => V.volumesOf(campaign).sfx, played: () => { if (hubSel === POST.id && hubShown()) { hubWin = 'tune'; dirty = true; } }, found: () => { feel.numbers(); notice('Numbers under the radio chatter. A Listening Post shows on your map, beside HOME.'); } });
 if (DEV && scanner) window.__scan = scanner; // dev only: the needle and the strip, for tests
-let module = playtest === 'story' ? 'mail' : playtest === 'breach' ? 'breach' : playtest === 'rooms' ? 'rooms' : CAMP ? 'campaign' : 'map';
+let module = playtest === 'story' ? 'mail' : playtest === 'rooms' ? 'rooms' : CAMP ? 'campaign' : 'map';
 let selected = null;
 let mapSel = 'server';
 let nag = {}; // when the pager last shook for an alert, and the breach last pinged
@@ -153,19 +153,6 @@ function load() {
     s.tutorialCompleted = true;
     s.profile = { handle: params.get('handle') || 'tester', pwLen: 6, since: Date.now() };
     storyAt(s, params.get('beat'));
-    return s;
-  }
-  // The roguelite prototype (breach.mjs): ?playtest=breach&class=operator&level=10&sub=hijacker&seed=7. One breach of
-  // MERIDIAN-MX-14 on a fresh campaign that is never saved: a real save is not read, touched or migrated.
-  if (playtest === 'breach') {
-    const s = fresh();
-    s.rng = newRng();
-    s.tutorialCompleted = true;
-    s.profile = { handle: params.get('handle') || 'tester', pwLen: 6, since: Date.now() };
-    const cls = ['breaker', 'bastion', 'infiltrator', 'operator'].includes(params.get('class') || params.get('cls')) ? params.get('class') || params.get('cls') : 'breaker';
-    const lv = Math.max(1, Math.min(50, Number(params.get('level')) || 10));
-    BR.outfit(s, { cls, level: lv, sub: params.get('sub') || params.get('subclass'), gearSeed: Number(params.get('seed')) || 0 });
-    BR.startBreach(s, { seed: Number(params.get('seed')) || (newRng() % 100000) + 1, level: lv, heat: Math.max(0, Math.min(8, Number(params.get('heat')) || 0)) });
     return s;
   }
   // The rooms playtest (floorplan.mjs, GAME_RULES.md "Developer tools"): one server as a room graph, on a fresh character that is
@@ -1887,7 +1874,7 @@ function renderMeters() {
   $('tab-campaign').hidden = !CAMP;
   $('tab-archive').hidden = !CAMP;
   $('tab-room').hidden = !CAMP;
-  document.body.classList.toggle('breach-mode', !!campaign.breach); // a breach playtest: the campaign's tabs and meters step aside
+  document.body.classList.toggle('breach-mode', !!campaign.breach); // a campaign breach: the campaign's tabs and meters step aside
   document.body.classList.toggle('campaign-mode', CAMP); // the breach campaign: the old game's tabs, meters and pager step aside
   document.body.classList.toggle('ctx-tabs', active(campaign) || !!campaign.run);
   $('combat-dot').hidden = !active(campaign) || module === 'combat';
@@ -2423,7 +2410,7 @@ function services() {
   const S = own();
   if (!document.hidden && now - lastInput < 120000 && !playtest && !CAMP) tickPlay(S, dt);
   const hp = S.server.integrity;
-  const events = S.breach || S.roomsPlay ? [] : [...tickNetwork(S, now), ...tickServices(S, now)]; // a breach or rooms playtest has no network
+  const events = S.breach || S.roomsPlay ? [] : [...tickNetwork(S, now), ...tickServices(S, now)]; // a campaign breach or the rooms playtest has no network
   if (campaign.rooms && !realSave) { const ev = FP.tick(campaign, now); if (ev.length) react(ev); if (module === 'rooms' || ev.length) dirty = true; } // respawn timers count down on the map
   if (events.length) { react(events); save(); }
   // A siege or breach took a bite: the meter says so.
@@ -3236,7 +3223,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key.length === 1 && !/input|textarea|select/i.test(e.target.tagName)) $('command-input').focus();
 });
 
-if (playtest) document.title = playtest === 'breach' ? 'BLACKBOX · breach' : playtest === 'rooms' ? 'BLACKBOX · rooms' : 'BLACKBOX · playtest';
+if (playtest) document.title = playtest === 'rooms' ? 'BLACKBOX · rooms' : 'BLACKBOX · playtest';
 if (CAMP) document.title = 'BLACKBOX · campaign';
 // The test bench (bench.mjs): a BENCH tag in the top bar, and the dev panel in a drawer, each button one command.
 if (BENCH) {
