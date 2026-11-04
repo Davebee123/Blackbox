@@ -31,7 +31,7 @@ export const OLD_SLOT = { offense: 'exploit', survival: 'proxy', utility: 'scrip
 // group: the protocol's category (its slot kind) and how the pages list stats.
 export const STATS = {
   // Offense (rig, everywhere)
-  damage: { side: 'hacker', group: 'offense', name: 'Damage', unit: '', base: 2, flat: true, about: 'Adds this much damage to a Spike-sized skill hit; a bigger hit gets more of it, a smaller one less.' },
+  damage: { side: 'hacker', group: 'offense', name: 'Damage', unit: '', base: 2, flat: true, about: 'Adds this much damage to a Spike-sized skill hit, and a share of it to every burn tick and helper hit. A bigger hit gets more of it, a smaller one less.' },
   crit: { side: 'hacker', group: 'offense', name: 'Crit', unit: '%', base: 4, about: 'Increases the chance that a damaging hit is a critical strike. Everyone starts at 5%.' },
   critDamage: { side: 'hacker', group: 'offense', name: 'Crit Damage', unit: '', base: 6, flat: true, about: 'Adds this much damage to every critical strike, on top of the half again a crit deals.' },
   accuracy: { side: 'hacker', group: 'offense', name: 'Accuracy', unit: '%', base: 2.5, about: 'Offsets the enemy\'s evasion, so your damaging skills miss less often. A miss still spends the cooldown.' },
@@ -40,8 +40,8 @@ export const STATS = {
   // A budget point is 60% of Damage's (base 1.2 to its 2): a burn or helper build lands about twice as many of them as
   // skill hits, most of them smaller. Its numbers on the bases, the Loaded affix and uniques are what the old percentage
   // added to a 12 tick at their level, a tick keeping half the level growth (save v44, statsRestore). Damage over time
-  // grows on your own line (data.mjs own); Payload carries the rest, × each tick's size (combat.mjs gearPayload).
-  payload: { side: 'hacker', group: 'offense', name: 'Payload', unit: '', base: 1.2, flat: true, about: 'Adds this much damage to a typical burn tick or helper hit; a bigger one gets more of it, a smaller one less.' },
+  // grows on your own line (data.mjs own); gear Damage and Payload carry the rest, × each tick's size (combat.mjs gearTick).
+  payload: { side: 'hacker', group: 'offense', name: 'Payload', unit: '', base: 1.2, flat: true, about: 'Adds damage to every burn tick and helper hit, on top of Damage\'s share: half this much to a typical tick. A bigger one gets more of it, a smaller one less.' },
   // Defense (health on its side; the rest on both sides)
   signal: { side: 'hacker', group: 'survival', name: 'Signal', unit: '', base: 10, flat: true, about: 'Increases your max Signal on runs.' },
   integrity: { side: 'server', group: 'survival', name: 'Integrity', unit: '', base: 20, flat: true, about: 'Increases your server\'s max Integrity.' },

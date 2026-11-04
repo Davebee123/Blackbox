@@ -39,8 +39,7 @@ test('every subclass is viable alone at Lv 10, 18 and 30: at least 85% wins, ins
     const rs = SUBS.map(([, sub]) => [sub, subRuns[b.name][sub]]);
     for (const [sub, r] of rs) {
       const [lo, hi] = soloBand(sub, b.level);
-      // Since step 2 (docs/scaling.md) the Overclocker wins 20 of 24 at Lv 30: held at 20 until the designer has played it.
-      assert.ok(r.wins >= (sub === 'overclocker' && b.level === 30 ? 20 : 0.85 * r.total), `${sub} at ${b.name}: ${r.wins}/${r.total}`);
+      assert.ok(r.wins >= 0.85 * r.total, `${sub} at ${b.name}: ${r.wins}/${r.total}`);
       assert.ok(r.lost >= lo && r.lost <= hi, `${sub} at ${b.name}: ${r.lost.toFixed(0)}%`);
     }
     const lost = rs.filter(([sub]) => soloBand(sub)[0] > 0).map(([, r]) => r.lost);
@@ -66,8 +65,7 @@ test('the Bastions alone are the slow ones: the Warden at least 1.4 times the da
     const dps = SUBS.filter(([c]) => c !== 'Bastion').map(([, sub]) => rs[sub].cycles).sort((x, y) => x - y);
     const median = (dps[2] + dps[3]) / 2;
     assert.ok(rs.warden.cycles >= 1.4 * median, `${b.name}: ${line}`);
-    // Since step 2 (docs/scaling.md) the Sysop measures 1.98 times at Lv 18: held at 1.95.
-    assert.ok(rs.sysop.cycles >= 1.95 * median, `${b.name}: Sysop ${(rs.sysop.cycles / median).toFixed(2)}x: ${line}`);
+    assert.ok(rs.sysop.cycles >= 2 * median, `${b.name}: Sysop ${(rs.sysop.cycles / median).toFixed(2)}x: ${line}`);
     assert.ok(rs.sysop.lost <= 15, `${b.name}: ${line}`);
     for (const sub of ['warden', 'sysop']) assert.ok(rs[sub].wins >= 0.85, `${b.name}: ${line}`);
   }

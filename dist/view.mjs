@@ -93,17 +93,17 @@ const longChip = (i) => i.name.length > 6 || i.name.length + String(effectLabel(
 export const attackCode = (name = '') => (name[0] + name.slice(1).replace(/[aeiou\s'-]/gi, '')).slice(0, 3).toUpperCase();
 export const levelTag = (s, level, label = `Level ${level}`) => `<b class="${conClass(level - hackerLevel(s))}" title="${level > hackerLevel(s) ? `${level - hackerLevel(s)} levels above you` : level < hackerLevel(s) ? `${hackerLevel(s) - level} levels below you` : 'your level'}">${label}</b>`;
 // Skill text with this level's numbers: your own line (data.mjs own) on damage, shields and burns; heals keep half the
-// level line and the lift (CONFIG.healLevel), times Restore; Payload adds its share to every burn tick and helper hit.
+// level line and the lift (CONFIG.healLevel), times Restore; gear Damage and Payload add their share to every burn tick and helper hit.
 export function scaledText(s, id, text, arch = null) {
   const a = ABILITIES[id];
   const L = hackerLevel(s, arch || undefined), k = arch ? own(L) : powerOf(s);
   const kHeal = lift(L) * (1 + (line(L) - 1) * CONFIG.healLevel) * (1 + gearStat(s, 'restore') / 100);
-  const kDot = k, pay = gearStat(s, 'payload');
+  const kDot = k, pay = gearStat(s, 'payload') / CONFIG.dotRef + gearStat(s, 'damage') / CONFIG.tickRef; // per point of tick (combat.mjs gearTick)
   if (!a || !text || (k === 1 && kHeal === 1 && kDot === 1 && !pay)) return text;
   const healing = a.verb === 'heal' || id === 'patch';
-  const factor = { heal: kHeal, drain: kHeal, tick: healing ? kHeal : kDot, helper: kDot }, plus = { tick: healing ? 0 : pay, helper: pay }; // Payload: its share on each tick and helper hit (combat.mjs gearPayload)
+  const factor = { heal: kHeal, drain: kHeal, tick: healing ? kHeal : kDot, helper: kDot }, plus = { tick: healing ? 0 : pay, helper: pay }; // gear's share on each tick and helper hit (combat.mjs gearTick)
   // a.scales: the extra numbers a subclass skill writes in its text (dist/classes), as fields to scale.
-  const nums = ['damage', 'heal', 'shield', 'tick', 'helper', 'all', 'cap', 'floor', ...(a.scales || [])].map((f) => [a[f], factor[f] ?? k, ((plus[f] || 0) * a[f]) / CONFIG.dotRef]).filter(([n]) => typeof n === 'number' && n > 1);
+  const nums = ['damage', 'heal', 'shield', 'tick', 'helper', 'all', 'cap', 'floor', ...(a.scales || [])].map((f) => [a[f], factor[f] ?? k, (plus[f] || 0) * a[f]]).filter(([n]) => typeof n === 'number' && n > 1);
   if (id === 'counter') nums.push([SKILLS.fixedCounter, k, 0]);
   if (id === 'hook') nums.push([SKILLS.hooked, k, 0]);
   let out = text;

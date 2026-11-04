@@ -521,7 +521,7 @@ export const restoreMult = (s) => 1 + gearStat(s, 'restore') / 100;
 export const healScaled = (s, n) => { const L = hackerLevel(s); return Math.max(1, Math.round(n * lift(L) * (1 + (line(L) - 1) * CONFIG.healLevel) * restoreMult(s) * setHealMult(s))); }; // setHealMult: Link, Mesh (sets.mjs)
 // Gear on a hit, WoW's coefficient: gear Damage on a skill hit, and Payload on a burn tick or helper hit, scale with
 // the hit's size: a hit the size of Spike's (CONFIG.damageRef at your level) gets all of its Damage, a tick of
-// CONFIG.dotRef all of its Payload; a bigger one more, a smaller one less.
+// CONFIG.tickRef all of its Damage and of CONFIG.dotRef all of its Payload; a bigger one more, a smaller one less.
 export const gearDamage = (s, base) => (gearStat(s, 'damage') * base) / (CONFIG.damageRef * powerOf(s));
 export const gearPayload = (s, base) => (gearStat(s, 'payload') * base) / (CONFIG.dotRef * powerOf(s));
 // A burn tick or helper hit: gear Damage by the tick's coefficient (all of it on a tick of CONFIG.tickRef), Payload on top.

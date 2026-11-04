@@ -56,11 +56,13 @@ export const CONFIG = {
   // ([level, fill] points, linear between), so a fight at your level in its blues costs what it did.
   ownPerLevel: 0,
   ownFrom: 6,
-  // WoW's coefficients (combat.mjs gearDamage, gearPayload): gear Damage counts in full on a hit of damageRef (Spike's),
-  // Payload on a tick of dotRef, both at your level; a bigger hit gets more of it, a smaller one less.
+  // WoW's coefficients (combat.mjs gearDamage, gearTick): gear Damage counts in full on a skill hit of damageRef (Spike's)
+  // and on a burn tick or helper hit of tickRef, Payload on a tick of dotRef, all at your level; a bigger hit gets more of
+  // it, a smaller one less. A typical 14 tick takes about a third of Damage's share and half of Payload's, so a burn or
+  // helper class gains about the share of its damage from gear a skill-hit one does (docs/scaling.md).
   damageRef: 25,
-  dotRef: 14,
-  tickRef: Infinity,
+  tickRef: 50,
+  dotRef: 28,
   gearFill: [[6, 1], [10, 1.46], [15, 1.67], [25, 1.77], [30, 1.66], [40, 1.6], [50, 1.52]],
   // Enemy parts are tougher than one or two of your hits: fights run long enough that attacks
   // land, so gear and planning are what keep you standing.
