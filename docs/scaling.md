@@ -83,7 +83,8 @@ WoW's model. Your own numbers (skill damage, burns, base Signal, shields, talent
 then stop (`CONFIG.ownFrom`, `ownPerLevel` 0); mobs still compound 6%. Your gear's Damage, Crit Damage, Payload,
 Signal, Regen and Leech are × a fill at their item level (`CONFIG.gearFill`: 1 to 6, 1.46 at 10, 1.77 at 25, 1.52 at
 50), fitted so a level's blues give the Signal and Damage step 1 did. Damage and Payload work like spell power: each hit
-gets them × its size over Spike's (`damageRef` 25) or a 14 tick's (`dotRef`), so a nuke stays a nuke. Heals keep step
+gets them × its size over a reference, so a nuke stays a nuke: Damage on a skill hit over Spike's (`damageRef` 25), on a
+burn tick or helper hit over 50 (`tickRef`), and Payload on top over 28 (`dotRef`). Heals keep step
 1's growth: no gear stat feeds a heal but Restore. In its level's blues, gear is 74% of your Signal at 20 and 88% at 30
 (was 42% and 52%).
 
@@ -98,12 +99,23 @@ Same harness, wild fights at your level; won · cycles · Signal lost (step 1 in
 At your level in its blues (cycles · Signal lost): 3: 8 · 29%; 10: 10 · 30% (elite 14 · 38%); 18: 11 · 21% (16 ·
 23%); 30: 10 · 34% (12 · 31%); 45: 9 · 28% (11 · 31%). Subclasses alone and their core rotations sit within a few
 points of main; crew bosses at 18 win 72 of 74 tries (72 of 73); the campaign bot reaches level 10 in 11–15 breaches.
-Held where the class sims moved a point or two (each test says what it measures): key 1 at 21–22% for the Payload,
-Herder and Hijacker; the Hijacker's core 19 over its full build; the Overclocker 20 of 24 alone at 30; the Sysop 1.98×
-the pace at 18; the Herder's swarm preset and OOM Kill; the Warden's Throttle; Umbrella Policy. **Roles moved:** in a crew the
-solo-leaning Demolitionist and Overclocker now win 100% of the farm's boss tries, the crew-leaning Payload 99%, Herder
-91% and Hijacker 83%: big hits take the most from the coefficient, so the crew-leaning ones no longer out-carry them. They wait on a kit pass
-after the designer has played step 2.
+
+**Ticks and helpers (November 4).** With Damage on skill hits only, a burn or helper class's hits gained ×6 from its blues
+at 30 and its ticks ×2.9 (×2.4 against ×2.0 at 18), and in a crew the solo-leaning Demolitionist and Overclocker won
+100% of the farm's boss tries, the Herder 91% and the Hijacker 83%. Now Damage reaches ticks too (`gearTick`), and
+Payload's reference went from 14 to 28 so a burn or helper class alone plays as before: ticks gain ×1.4 · ×2.2 · ×4.5
+at 10 · 18 · 30, against hits' ×1.5 · ×2.4 · ×6.0. Alone, Signal lost at 10 · 18 · 30 (main in brackets): Payload 19 ·
+18 · 23% (19 · 19 · 24), Herder 13 · 20 · 20% (15 · 22 · 28), Hijacker 21 · 29 · 36% (23 · 29 · 38), Sysop 24 · 2 · 7%
+(25 · 3 · 11). As a crew's third member (Lv 18 · 30): Payload 100 · 100%, Herder 97 · 100% (81 · 100), Hijacker
+90 · 100% (65 · 100); the Demolitionist 100 · 100, the Overclocker 97 · 100; the full crew at 18 100% (97%).
+
+Back where they were before step 2: key 1 for the Payload and Herder, the Warden's Throttle, the Payload out-carrying
+the solo ones in a crew. Still held (each test says what it measures): the Herder carries a crew within 2 points of the
+solo ones (99% to the Demolitionist's 100%) and the Hijacker 95% (floor raised from 65% to 90%); the Herder alone at 10
+loses 13% (band floor 15: one fight of 24); the Hijacker's key 1 21% at 18 and its core 21 under its full build at 30;
+the Overclocker 20 of 24 alone at 30; the Sysop 1.95× the pace at 18; the Herder's OOM Kill; Umbrella Policy 5.5. New
+since the tick rule: the Sysop's healers preset 10.7 worse on its own fights, the Herder's swarm preset 0.2 and the
+Payload's 5.8 on the generic fights. They wait on a kit pass after the designer has played it.
 
 **Why the coefficients:** with a flat Damage stat and your level no longer growing hits, every hit is a small base plus
 the same gear Damage, so a nuke and a jab converge (at 30, a 40 hit 282 and a 10 hit 241) and big-hit kits sink (core
@@ -130,7 +142,7 @@ the tier. Ours is step 4: each floor a gear step, its elites, lair and exit tune
 | Item level: one number sets an item's stat budget | Item level × the fill (`gearFill`) |
 | Health is mostly Stamina from gear | Signal is mostly gear (step 2: 88% at 30) |
 | An ability is a base plus a coefficient × spell or attack power from gear; a big spell gets more of it | Gear Damage × the skill's size over Spike's (`damageRef`) |
-| A DoT or HoT tick gets its own coefficient | Payload × the tick's size over 14 (`dotRef`) |
+| A DoT tick or a pet's hit gets its own, smaller coefficient of the same spell power | Gear Damage × the tick's size over 50 (`tickRef`), Payload × it over 28 (`dotRef`) |
 | Heals scale with spell power from gear | Not yet: heals keep step 1's growth with your level |
 
 **The sawtooth, per floor:** you arrive at the band's bottom wearing the last floor's best: strong. The floor's servers

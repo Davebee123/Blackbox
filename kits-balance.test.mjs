@@ -16,9 +16,8 @@ const pct = (x) => `${Math.round(x * 100)}%`;
 // Since R1 (docs/servers.md 3.5) the bot cuts big moves with whatever crosses the tick on the cycle, often the same
 // hard hitter, so a few spreads narrowed: the Overclocker 4.9, 4.9 and 4.5 keys, the Phantom 4.9 at 18, the Herder 4.4
 // and the Demolitionist 5.0 at 40. The floor is 4.4 until the kit pass the interrupt asks for.
-// Since gear carries your power (docs/scaling.md step 2: WoW's coefficients, small ticks taking a smaller share of Payload) key 1 measures 21% for the Payload at 40,
-// 22% for the Herder at 30 and the Hijacker at 18 (21% at 40): held at 23% until the designer has played step 2.
-const KEY1 = { payload: 0.23, herder: 0.23, hijacker: 0.23 };
+// Since step 2 (docs/scaling.md) the Hijacker's key 1 measures 21% at Lv 18: held at 23% until the designer has played it.
+const KEY1 = { hijacker: 0.23 };
 test('the rotation preset presses a spread of keys: at least 4.4 effective keys and key 1 at most 20% of presses at Lv 18, 30 and 40', () => {
   const off = [];
   for (const sub of ALL) for (const L of [18, 30, 40]) {
@@ -35,7 +34,7 @@ test('the rotation preset presses a spread of keys: at least 4.4 effective keys 
 // or its answers (Suspend, Harden, Bulkhead) misses more of them: the Overclocker's core measured 15 to 17 points over
 // the full build at 18, the Payload's 14 and 24, the Hijacker's 16 at 30, the Warden's 31 and 21. Each is held to what it
 // measures, so it can't drift further unnoticed, until the kit pass.
-const CORE_DRIFT = { overclocker: 18, payload: 27, hijacker: 20, warden: 32 }; // hijacker 17 → 20: since step 2 (docs/scaling.md) its core measures 19 over the full build at 30 // payload 25 → 27: Backdoor's flat +12 on a burning part made its full build ~1.5 points better; its core (no Backdoor) is unchanged
+const CORE_DRIFT = { overclocker: 18, payload: 27, hijacker: 22, warden: 32 }; // hijacker 17 → 22: since step 2 (docs/scaling.md) its core measures 21 under its full build at 30 // payload 25 → 27: Backdoor's flat +12 on a burning part made its full build ~1.5 points better; its core (no Backdoor) is unchanged
 test('the core rotation alone is viable: within 12 points of the full rotation build (the Bastions 20) at Lv 18 and 30, with at least 90% of its wins', () => {
   const off = [];
   for (const sub of ALL) for (const L of [18, 30]) {
@@ -76,7 +75,10 @@ const second = (sub) => {
 // Since the compounding curve (docs/scaling.md 1: the at-level numbers ×lift, rounded anew; the bracket's guards 12
 // levels under you at Lv 30 now easy) the Sysop's healers preset measures 9.7 better on the generic fights and 8.4
 // worse on its own: held at 10 and -9 until the designer has played the curve.
-const DRIFT = { demolitionist: { generic: 7.5, suits: 1.5 }, sysop: { generic: 10, suits: -9 }, hijacker: { generic: 8, suits: 2.5 }, herder: { generic: 5, suits: -1.5 }, /* herder 0 → -1.5: since step 2 (docs/scaling.md) its swarm preset measures -0.8 */ overclocker: { generic: 7, suits: 5 }, phantom: { generic: 6, suits: 5 } };
+// Since gear Damage reaches ticks and helper hits (docs/scaling.md step 2) the Sysop's healers preset measures 10.7 worse
+// on its own fights, the Herder's swarm preset 0.2 worse and the Payload's 5.8 better on the generic fights: held at -11,
+// -1 and 6.5 until the designer has played it.
+const DRIFT = { demolitionist: { generic: 7.5, suits: 1.5 }, sysop: { generic: 10, suits: -11 }, hijacker: { generic: 8, suits: 2.5 }, herder: { generic: 5, suits: -1 }, payload: { generic: 6.5, suits: 5 }, overclocker: { generic: 7, suits: 5 }, phantom: { generic: 6, suits: 5 } };
 test('each second preset is a real alternative: within 5 points of the rotation on the generic fights, and at least 5 points better on the fights it suits', () => {
   const off = [], line = [];
   for (const sub of ALL) {
@@ -104,7 +106,7 @@ test('the Demolitionist\'s second preset is area and the Phantom\'s is evasion',
 // steady share sits on fewer, bigger hitters it cuts or delays instead), and the Overclocker's Sudo (walk through the
 // parts' rules) in 5 (fewer Lockboxes and Mutexes than before P1). Held at 5. Since the P2 rework (the Shunt cut, and
 // the bot holding Bulkhead and its other buffs out of a landing Scrape) the Throttle is pressed in 4. Held at 4.
-const RARE_KEYS = { 'garbage-collect': 2, throttle: 3, sudo: 5 }; // throttle 4 → 3 since step 2 (docs/scaling.md)
+const RARE_KEYS = { 'garbage-collect': 2, throttle: 4, sudo: 5 };
 test('every specialist key earns its slot: pressed in at least a quarter of the generic fights when it is on the bar', () => {
   const off = [];
   for (const sub of ALL) for (const id of SUBS[sub].layers.specialist) {

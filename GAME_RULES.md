@@ -1443,12 +1443,12 @@ Every stat is a whole number. The stat sheet lists them all.
 
 | Stat | What it does | Rolls on |
 |---|---|---|
-| Damage | Added to a skill hit in proportion to its size: all of it on a Spike-sized hit (`damageRef`), twice on one twice as big, less on a smaller one (`gearDamage`) | Exploit, Script, Implant; Weaponized |
+| Damage | Added to a skill hit in proportion to its size: all of it on a Spike-sized hit (`damageRef`), twice on one twice as big, less on a smaller one (`gearDamage`); and to every burn tick and helper hit you start: all of it on a 50 tick (`tickRef`, `gearTick`), a third on a typical 14 | Exploit, Script, Implant; Weaponized |
 | Crit (%) | Chance a damaging hit crits (5% base) | Precise |
 | Crit Damage | Added to every crit, on top of its +50% | Brutal |
 | Accuracy (%) | Cancels the enemy's evasion | Calibrated |
 | Echo (%) | Chance a skill hit repeats at half; on armor it breaks another ◆ | Recursive |
-| Payload | Added to every burn tick and helper hit you start, in proportion to its size: all of it on a 14 tick (`dotRef`, `gearPayload`) (a budget point is 60% of Damage's) | Script; Loaded |
+| Payload | Added to every burn tick and helper hit you start on top of Damage's share, in proportion to its size: all of it on a 28 tick, half on a typical 14 (`dotRef`, `gearPayload`) (a budget point is 60% of Damage's) | Script; Loaded |
 | Signal | Max Signal | Proxy, Shell, Script, Implant; of the Bunker |
 | Regen | Heals this much every 5 cycles in a fight, a fifth a cycle; on runs also every 5 moves; at home every 5 minutes | Shell; of Mending |
 | Block | Taken off every hit (never below half) | Proxy |
@@ -1464,8 +1464,8 @@ Every stat is a whole number. The stat sheet lists them all.
 
 **Heals and burns grow with gear.** Heals you cast keep half of the 4% level line and the lift, and Restore makes up
 the rest and more (a blue Sysop at 30 carries about 65% Restore). Heals that give back damage (Reclaim, Rollback, OOM
-Kill) take Restore only. Burns and helper hits grow on your own line, and Payload carries the rest, in proportion to
-each tick's size.
+Kill) take Restore only. Burns and helper hits grow on your own line, and gear Damage and Payload carry the rest, in proportion
+to each tick's size: a burn or helper class gains about the share of its damage from gear a skill-hit one does.
 
 **Scavenge is magic find** with diminishing returns (+50% Scavenge = +33% better odds) and more cache credits. It
 **costs stats**, as in D2: of the Scavenger rolls 3% at item level 1 to 10% at most, and a rolled blue or yellow

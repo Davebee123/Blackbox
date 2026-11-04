@@ -347,7 +347,16 @@ test('Echo repeats a hit (breaking another chit); Crit Damage raises crits; Payl
   bare(quiet(fight(b)));
   Object.assign(part(b, 'pulse'), { integrity: 500, max: 500 });
   command(b, 'inject pulse'); resolveCycle(b);
-  assert.equal(500 - part(b, 'pulse').integrity, 34, 'Inject 20, +10 Payload × its size over a 14 tick (CONFIG.dotRef): +14');
+  assert.equal(500 - part(b, 'pulse').integrity, 27, 'Inject 20, +10 Payload × its size over a 28 tick (CONFIG.dotRef): +7');
+  // Gear Damage reaches ticks too, by the tick's coefficient (combat.mjs gearTick: all of it on a tick of CONFIG.tickRef).
+  const d = fresh();
+  d.loadout.archetype = 'infiltrator';
+  d.hackers = { infiltrator: { level: 18, xp: 0 } };
+  give(d, { damage: 25, payload: 10 });
+  bare(quiet(fight(d)));
+  Object.assign(part(d, 'pulse'), { integrity: 500, max: 500 });
+  command(d, 'inject pulse'); resolveCycle(d);
+  assert.equal(500 - part(d, 'pulse').integrity, 37, 'Inject 20, +25 Damage × 20 over a 50 tick (CONFIG.tickRef): +10, and +7 Payload');
 });
 
 test('Restore: every heal you cast heals that much more (Patch up front and as it ticks); Payload: every helper hit too', () => {
@@ -377,7 +386,7 @@ test('Restore: every heal you cast heals that much more (Patch up front and as i
     return 500 - part(s, 'pulse').integrity - first;
   };
   assert.equal(herder(0), 12, 'a helper hits for 12');
-  assert.equal(herder(6), 17, '+6 Payload × 12/14 on the helper hit');
+  assert.equal(herder(6), 14, '+6 Payload × 12/28 on the helper hit');
 });
 
 test('your own line: skills and damage over time grow with power to level 6, then hold (data.mjs own); heals keep half the line and the lift (CONFIG.healLevel); Restore and Payload come from gear', () => {
@@ -392,7 +401,7 @@ test('your own line: skills and damage over time grow with power to level 6, the
   assert.equal(healScaled(s, 10), Math.round(10 * (P / 2) * 1.5 * 1.2), '+20% Restore');
   const t = scaled(s, 10);
   assert.equal(t, Math.round(10 * k), 'a burn tick: your own line');
-  assert.ok(Math.abs(dotHit(s, t) - (t + (5 * t) / (14 * k))) < 1e-9, 'a 10 tick at level 26, +5 Payload × its size over a 14 tick');
+  assert.ok(Math.abs(dotHit(s, t) - (t + (5 * t) / (28 * k))) < 1e-9, 'a 10 tick at level 26, +5 Payload × its size over a 28 tick (CONFIG.dotRef)');
   CONFIG.powerPerLevel = 0; CONFIG.levelLine = 0; CONFIG.ownPerLevel = 0; CONFIG.gearFill = [[1, 1]];
 });
 

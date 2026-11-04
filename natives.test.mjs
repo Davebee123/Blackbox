@@ -45,7 +45,7 @@ test('native uniques keep the bands: sidegrades, not upgrades', () => {
 // Held since the damage profiles (docs/parts-plan.md): Blank Check takes the Phantom at Lv 10 (46% on its blues, 47%
 // over 160 fights) to 57% and 19 of 24 wins, and Umbrella Policy moves the Lv 30 average 5.4.
 const HOT = { 'blank-check phantom 10': { lost: 60, wins: 0.75 } };
-const MOVES = { 'umbrella-policy': 6.5 }; // 5.5 → 6.5: since step 2 (docs/scaling.md) it measures 6.0
+const MOVES = { 'umbrella-policy': 6 }; // 5.5 → 6: since step 2 (docs/scaling.md) it measures 5.5
 // The faction pieces (faction-gear.mjs) are held to the same bounds: each one, its implicit and its signature in, in place
 // of the blue in its slot at 10, 18 and 30 (it is assembled, and re-tuned, at your level), on every subclass.
 test('faction pieces keep the bands too: sidegrades, not upgrades', async () => {

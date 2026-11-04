@@ -66,8 +66,8 @@ test('the Bastions alone are the slow ones: the Warden at least 1.4 times the da
     const dps = SUBS.filter(([c]) => c !== 'Bastion').map(([, sub]) => rs[sub].cycles).sort((x, y) => x - y);
     const median = (dps[2] + dps[3]) / 2;
     assert.ok(rs.warden.cycles >= 1.4 * median, `${b.name}: ${line}`);
-    // Since step 2 (docs/scaling.md) the Sysop measures 1.98 times at Lv 18: held at 1.95.
-    assert.ok(rs.sysop.cycles >= 1.95 * median, `${b.name}: Sysop ${(rs.sysop.cycles / median).toFixed(2)}x: ${line}`);
+    // Since step 2 (docs/scaling.md) the Sysop measures 1.95 times at Lv 18: held at 1.9.
+    assert.ok(rs.sysop.cycles >= 1.9 * median, `${b.name}: Sysop ${(rs.sysop.cycles / median).toFixed(2)}x: ${line}`);
     assert.ok(rs.sysop.lost <= 15, `${b.name}: ${line}`);
     for (const sub of ['warden', 'sysop']) assert.ok(rs[sub].wins >= 0.85, `${b.name}: ${line}`);
   }
