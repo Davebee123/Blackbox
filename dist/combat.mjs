@@ -307,8 +307,8 @@ export const momentumStacks = (s) => { const m = s.encounter?.momentum; return m
 export const momentumBonus = (s) => (SKILLS.momentum + 0.02 * rank(s, 'chain-exploit')) * momentumStacks(s);
 
 // Level gap (CONFIG.gap): what you deal to something above you, and what it deals you.
-// One level up is still about even; it counts from the second.
-const over = (g) => Math.max(0, g - 1);
+// It counts from the first level up.
+const over = (g) => Math.max(0, g);
 export const gapDealt = (g) => (g > 0 ? Math.max(CONFIG.gap.floor, 1 - CONFIG.gap.dealt * over(g)) : 1 + Math.min(0.15, CONFIG.gap.below * -g));
 export const gapTaken = (g) => (g > 0 ? 1 + CONFIG.gap.taken * over(g) : Math.max(0.7, 1 - CONFIG.gap.below * -g));
 export function damageMultiplier(s, p, opts = {}) {
@@ -541,6 +541,10 @@ export const levelGap = (s) => (s.encounter?.virus?.level || hackerLevel(s)) - h
 // level below (never under 0). Your hits: less your Accuracy. Its hits: plus your Evasion.
 const gapMiss = (gap) => Math.min(CONFIG.maxMiss, Math.max(0, CONFIG.baseMiss + gap));
 export const missChance = (s) => (CONFIG.misses ? Math.max(0, gapMiss(levelGap(s)) - gearStat(s, 'accuracy')) : 0);
+// Resists: a part above you shrugs off your delays and statuses CONFIG.resist% more often a level (none at or below).
+// What a resist can stop: a skill that delays, stuns, jams or puts a status on a part.
+export const controls = (a, id) => !!(a?.status || a?.delay || a?.verb === 'stun' || id === 'jam');
+export const resistChance = (s) => (CONFIG.misses ? Math.min(CONFIG.maxResist, CONFIG.resist * Math.max(0, levelGap(s))) : 0);
 export const enemyMissChance = (s) => (CONFIG.misses ? Math.min(75, gapMiss(-levelGap(s)) + defense(s, 'evasion')) : defense(s, 'evasion'));
 // Server Regen between fights: very slow (its number every 5 real minutes, as in a fight it is every 5 cycles).
 // Between fights: resting (see CONFIG.restRegen) plus any Self-healing filter's Regen.
@@ -3442,6 +3446,14 @@ function useAbility(s, intent, auto = false) {
     // Race Condition (Zero-day): the first miss each fight gives the cooldown straight back.
     if (zeroDay(s, 'race-condition') && !e.once.race) { e.once.race = true; delete e.readyAt[id]; emit(s, 'status', `Race Condition: ${a.name} is ready again.`); }
     classEach('used', s, { id, target, res: null, before }); // a miss still counts as a skill used (sets.mjs)
+    return;
+  }
+  // Resisted: a part above your level shrugs off a delay, a stun or a status (CONFIG.resist a level), like a miss.
+  if (controls(a, id) && resistChance(s) > 0 && rand(s) * 100 < resistChance(s)) {
+    e.metrics.resists = (e.metrics.resists || 0) + 1;
+    if (target) target.resisted = { cycle: e.cycle, name: a.name };
+    emit(s, 'miss', `${target ? target.name : 'The virus'} RESISTS ${a.name}.${cooldownOf(s, id) > 1 && !intent.ignoreCooldown ? ` Cooldown spent (${cooldownOf(s, id)}).` : ''}`, { target: target?.id, ability: id, resisted: true });
+    classEach('used', s, { id, target, res: null, before });
     return;
   }
   // Scrambled (Ghostroot's Scrambler): the attack may turn on you, at half strength. The cooldown is spent.

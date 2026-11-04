@@ -492,3 +492,23 @@ test('a Sysop alone still works: its heals land on itself, and it wins', () => {
   assert.ok(knownSkills(s, 'bastion').includes('heartbeat'));
   assert.ok(rank(s, 'patch-notes') === 0);
 });
+
+test('resists: a part above you shrugs off Suspend like a miss (cooldown spent, Resisted on the board); at your level it lands', async () => {
+  const { boardMarkup } = await import('./dist/view.mjs');
+  const saved = { misses: CONFIG.misses, resist: CONFIG.resist, maxResist: CONFIG.maxResist, baseMiss: CONFIG.baseMiss };
+  try {
+    Object.assign(CONFIG, { misses: true, resist: 100, maxResist: 100, baseMiss: 0 });
+    const s = start('warden', ['suspend']);
+    s.encounter.virus.level = 38 + 5;
+    const p = part(s, 'pulse'), due = p.attack.due;
+    const ev = act(s, 'suspend pulse');
+    assert.ok(ev.some((x) => x.type === 'miss' && x.resisted && x.target === 'pulse'), 'resisted, as a miss');
+    assert.equal(p.attack.due, due, 'its attack is not delayed');
+    assert.ok(readyIn(s, 'suspend') > 0, 'the cooldown is spent');
+    assert.match(boardMarkup(s, null), /title="Resisted: 5 levels above you, it shrugged off your Suspend\./);
+    const t = start('warden', ['suspend']); // at your level: never resisted
+    const q = part(t, 'pulse'), was = q.attack.due;
+    act(t, 'suspend pulse');
+    assert.equal(q.attack.due, was + 2);
+  } finally { Object.assign(CONFIG, saved); }
+});

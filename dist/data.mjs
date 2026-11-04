@@ -20,11 +20,10 @@ export const CONFIG = {
   // Server
   maxIntegrity: 100,
   scramble: { chance: 0.25, self: 0.5 }, // Ghostroot's Scrambler: while you're Scrambled, each attack may hit you instead, at half
-  // Level gap, WoW-style: something above you takes less from you (−7% a level past the first,
-  // never under 40%) and hits you harder (+10% a level past the first), so orange (3–4 up) is a
-  // real fight and red a gamble.
+  // Level gap, WoW-style, from the first level up: something above you takes 5% less from you a level (never under
+  // 40%) and hits you 6% harder, on top of its own level's numbers, so +1 costs more, +3 is a coin flip and +5 a loss.
   // Below you, a little the other way (3% a level, up to +15% dealt / −30% taken).
-  gap: { dealt: 0.07, taken: 0.1, floor: 0.4, below: 0.03 },
+  gap: { dealt: 0.05, taken: 0.06, floor: 0.4, below: 0.03 },
   phaseBounce: 0.15, // Flicker: 15% of your command's hit on an out-of-phase part bounces back at you
   enrage: 1.3, // Bricker: a part under half Integrity hits this much harder
   linked: 0.33, // Linked parts (v2+): the share of a broken part's hit its survivor takes on (a half broke Breakers on v2 Ghostroots)
@@ -39,10 +38,13 @@ export const CONFIG = {
   enemyCrit: 0.1,
   // Misses, Classic-style: against a same-level target, 5% of damaging hits miss; each level
   // the target is above you adds 1%, each level below takes 1% off (never under 0). Your
-  // Accuracy (and the defender's Evasion) adjust it. A miss still spends the cooldown.
+  // Accuracy (and the defender's Evasion) adjust it. A miss still spends the cooldown. Resists: a part above
+  // you resists your delays, stuns, jams and statuses resist% a level (Accuracy doesn't help), cooldown spent too.
   misses: true,
   baseMiss: 5,
   maxMiss: 60,
+  resist: 10, // % a level a part above you resists your delays and statuses (combat.mjs resistChance)
+  maxResist: 75,
   // Power: every level, players' and enemies' numbers grow this much, compounding (level 1 = the base numbers),
   // so a mob a few levels below you is clearly weaker and one ten below is trivial (docs/scaling.md).
   powerPerLevel: 0.06,

@@ -286,7 +286,7 @@ const shooterClass = (who) => { if (!who) return classOf(campaign); const m = ma
 // Its mastery tier (mastery.mjs): yours plays at the tier you chose for it (default the highest you've reached); a
 // crewmate's at tier 1.
 const afxTier = (e, id) => (e.who || !id ? 1 : masteryTier(campaign, classOf(campaign), id));
-const plainStrike = (e, result) => () => hitfx.strike(partRow(e.target), { who: e.who || 'you', initials: initials(e.who || campaign.profile?.handle || 'you'), kind: e.who ? 'crew' : 'you', result });
+const plainStrike = (e, result) => () => hitfx.strike(partRow(e.target), { who: e.who || 'you', initials: initials(e.who || campaign.profile?.handle || 'you'), kind: e.who ? 'crew' : 'you', result, word: e.resisted ? 'RESISTED' : 'MISS' });
 // Every command fired in a batch (combat.mjs resolved) with an effect to play: what it set off follows it, up to the
 // next one (its hits, its marks, its interrupt). A miss keeps the strike's MISS; a crewmate's heal or shield is on their
 // bar, not yours.

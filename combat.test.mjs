@@ -527,14 +527,14 @@ test('stepped (the browser): solo, the virus answers as its own step after yours
   } finally { hooks.stepped = false; }
 });
 
-test('level gap, WoW-style: one level up is about even; past that, it takes less and hits harder', async () => {
+test('level gap, WoW-style: from one level up, it takes less and hits harder', async () => {
   const { gapDealt, gapTaken } = await import('./dist/combat.mjs');
   const saved = CONFIG.gap;
-  CONFIG.gap = { dealt: 0.07, taken: 0.1, floor: 0.4, below: 0.03 };
+  CONFIG.gap = { dealt: 0.05, taken: 0.06, floor: 0.4, below: 0.03 };
   try {
     assert.equal(gapDealt(0), 1); assert.equal(gapTaken(0), 1);
-    assert.equal(gapDealt(1), 1); assert.equal(gapTaken(1), 1);
-    assert.ok(Math.abs(gapDealt(4) - 0.79) < 1e-9 && Math.abs(gapTaken(4) - 1.3) < 1e-9, 'orange: a real fight');
+    assert.ok(Math.abs(gapDealt(1) - 0.95) < 1e-9 && Math.abs(gapTaken(1) - 1.06) < 1e-9, 'one level up already counts');
+    assert.ok(Math.abs(gapDealt(4) - 0.8) < 1e-9 && Math.abs(gapTaken(4) - 1.24) < 1e-9, 'orange: a real fight');
     assert.equal(gapDealt(20), 0.4, 'never under 40%');
     assert.ok(gapDealt(-3) > 1 && gapTaken(-3) < 1, 'below you, a little easier');
     const s = fresh();

@@ -185,6 +185,29 @@ second presets (the Payload's swarm +14.7 on the generic fights, the Hijacker's 
 evasion −7.8, the Herder's swarm +5.6, the Warden's swarm +5.2); the Warden's DMZ pressed in 3 of 24 at 30; ignoring the
 Mimic 32 points; the Herder carrying a crew 97% to the Demolitionist's 100%; the Warden's Circuit Breaker pressed in none of its moments at 30; the Demolitionist's floor at 18 held at 13 (10% with the Kestrel pair); the Infiltrator's climb on seed 7, which from level 19 farms one held server's respawns and meets 2% strains and ICE (15% asked).
 
+### Above your level (November 4)
+
+The designer: one or two levels up should cost 30–50% of your Signal in its blues, +3 often lost, +5 nearly always;
+the Warden won 5–7 of 8 five levels up (one attack in four cycles landed). The gap now counts from +1: 5% less dealt and
+6% more taken a level (`CONFIG.gap`, was 7% and 10% from +2), with the miss chance's +1% a level. A part above you
+resists your delays, stuns, jams and statuses 10% a level (`CONFIG.resist`, up to 75%): the skill does nothing, its
+cooldown is spent, the board says RESISTED.
+
+Scratch harness, wins · Signal lost (a loss is 100%) at Lv 10, 20 and 30 together; the damage dealers are the
+Demolitionist, Phantom and Herder at 16 seeds, the Warden and Sysop at 8:
+
+| | +0 | +1 | +2 | +3 | +5 |
+|---|---|---|---|---|---|
+| Damage dealers | 94% · 36% | 84% · 52% | 76% · 62% | 48% · 78% | 10% · 97% |
+| … in the fights won | 32% | 42% | 51% | 54% | 68% |
+| Warden | 100% · 17% | 96% · 34% | 92% · 41% | 71% · 58% | 29% · 87% |
+| Sysop | 92% · 27% | 79% · 50% | 50% · 71% | 13% · 95% | 0% |
+
+Before: damage dealers 89% · 48% at +1, 76% · 62% at +2, 49% at +3, 13% at +5; the Warden 67% at +5. The mob's own 6% a
+level already makes +1 cost about 10 points more than an even fight (42% in the fights won, against the 30–40% asked):
+less than that would need the gap to help you at +1. The Warden at 30 still wins 3 of 8 at +5 (its cuts and
+Blowback grow with the hits).
+
 ## 2. The WoW model, mapped
 
 | WoW | BLACKBOX |

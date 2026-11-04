@@ -69,7 +69,8 @@ factor (`length.drawn`). Adds (fragments, Packages, Droppers), breaches and crew
 | Order | Your command (or your routine's) → your daemons → burns → helpers → heals over time → encryption → attacks due → patches. |
 | Crits | Any hit you land that does damage can crit for +50% (5% base, plus Crit and Crit Damage). Enemy damage attacks crit 10% of the time from enemy level 3. Timeline numbers show the normal hit, after your Block. |
 | Misses | Your damaging skills miss 5% of the time against a same-level enemy, +1% a level it's above you, −1% a level below, less your Accuracy; the HUD shows *you miss N%*. A miss spends the cooldown. Enemy attacks miss you the same way, plus your Evasion (up to 20%). Burns, helpers and utility skills never miss. |
-| Level gap | One level up is about even. Each level an enemy has over you takes 7% off what you deal it (never under 40%) and adds 10% to what it deals you (`CONFIG.gap`); below you, 3% a level the other way (up to +15% dealt, −30% taken). |
+| Level gap | From one level up, each level an enemy has over you takes 5% off what you deal it (never under 40%) and adds 6% to what it deals you (`CONFIG.gap`), on top of its own level's 6%; below you, 3% a level the other way (up to +15% dealt, −30% taken). |
+| Resists | A part above you resists your delays, stuns, jams and statuses (Rate Limit, Throttle, Quarantine, Suspend, SIGINT, Tag and the like) 10% of the time a level, up to 75% (`CONFIG.resist`): the skill does nothing, its cooldown is spent, and the board shows **RESISTED** and a *resisted* tag on the part. Accuracy doesn't help. |
 | Clean | A fight where nothing got through says so. |
 | Idle | Type nothing and you fire key 1 at the last part you hit (from level 5, your routine moves instead: Routines). `hold` does nothing. |
 | No part picked | A skill that needs a part goes at the last part you hit, else the part that attacks soonest. |
