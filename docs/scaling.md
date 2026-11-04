@@ -246,6 +246,50 @@ and at 30 the farm is a real check: over 18 and 30 the Herder carries 69% and th
 farms the floor below from 10 (40% grey, no strain or ICE from 12); the rooms bot clears 4–6 of 12 of a Lab. MIRRORSHADE
 (fought at 12, floor 2's top) is refit: Integrity 1.45 → 1.25, hits 0.8 → 0.6, a reader 38% → 72%.
 
+### After step 5 (November 4): boss rounds that grow
+
+On your Signal a solo boss fights in rounds of 4 cycles (`ROUNDS`), and each round every hit it lands is × (1 + its
+`long.grow`) the last round's, compounding: 0.15 for most, 0.13 DEADBOLT and BACK ORIFICE, 0.12 PATCH TUESDAY, 0.1
+HOLLOW CHOIR and HASHLORD, 0.08 FLOODWALL (×1.9 to ×3.1 by round 9, cycle 33). Its `long.dmg` came down (×0.4 to ×0.8)
+so a geared kill costs what it did; a slow one meets a round it can't survive, the enrage behind it. Its bar shows the
+round (R3 ×1.3). At home (REPO MAN's and HOLLOW CHOIR's events, the Arena) there are no rounds.
+
+Scratch harness: the 13 solo bosses on your Signal (a lair's /core, REPO MAN and HOLLOW CHOIR too), 10 seeds, Lv 10, 18
+and 30 pooled; wins · Signal lost · cycles of a win, main → now:
+
+| Boss | Four default subclasses | Sysop |
+|---|---|---|
+| Resident | 75% · 48% · 33 → 71% · 56% · 34 | 17% · 77% · 59 → 10% · 96% · 45 |
+| RELAY-KING | 49% · 82% · 29 → 70% · 60% · 29 | 0% → 0% |
+| REPO MAN | 60% · 73% · 37 → 72% · 67% · 32 | 67% · 56% · 68 → 3% · 99% · 57 |
+| HOLLOW CHOIR | 58% · 71% · 33 → 71% · 60% · 33 | 3% → 0% |
+| DEADBOLT | 62% · 60% · 36 → 71% · 53% · 35 | 100% · 7% · 63 → 90% · 53% · 60 |
+| TRIPMINE | 49% · 69% · 38 → 70% · 60% · 37 | 53% · 44% · 70 → 33% · 75% · 71 |
+| HASHLORD | 48% · 74% · 38 → 70% · 68% · 37 | 0% → 0% |
+| BACK ORIFICE | 66% · 70% · 31 → 71% · 67% · 30 | 0% → 0% |
+| PATCH TUESDAY | 52% · 75% · 33 → 67% · 62% · 30 | 0% → 0% |
+| FLOODWALL | 47% · 81% · 28 → 48% · 74% · 31 | 0% → 3% |
+| MIRRORSHADE (at 12, its floor) | 83% · 68% · 28 → 75% · 62% · 26 | 47% → 7% (10–30) |
+| SLEEPWALKER | 50% · 82% · 35 → 71% · 68% · 31 | 0% → 0% |
+| ECHOLALIA | 60% · 72% · 33 → 71% · 62% · 33 | 0% → 0% |
+
+| Pooled | At your level | One level under | A 30% slower kill (Integrity ×1.3) |
+|---|---|---|---|
+| Four default | 60% · 69% · 33 → 70% · 61% · 32 | 30% · 85% → 31% · 85% | 37% · 82% → 41% · 80% |
+| Damage dealers (Demolitionist, Phantom, Herder) | 56% · 74% · 28 → 74% · 61% · 29 | 24% · 89% → 31% · 85% | 32% · 87% → 43% · 80% |
+| Warden | 70% · 53% · 46 → 58% · 64% · 46 | 49% · 72% → 29% · 86% | 52% · 66% → 35% · 82% |
+| Sysop | 22% · 81% · 65 → 11% · 94% · 61 | 8% → 6% | 6% → 1% |
+
+By level, the four at 10 · 18 · 30: 49 · 53 · 76% → 61 · 66 · 83%. The damage dealers' slow kill now loses 31 points
+against their geared one (24 on main); the Warden's 46-cycle and the Sysop's 61-cycle kills pay the most. The Warden
+still wins 86% at 30 and DEADBOLT and TRIPMINE nearly always: a ◆ chit voids a whole hit however big the round, so its
+mitigation, not its heals, is what outlasts. Measured, not landed: rounds of ×1.2 (opening hits ×0.3 to ×0.6) take the
+Warden to 51% and the Sysop to 3%, the damage dealers to 75%.
+
+FLOODWALL's hits sit at 1 at 10 and 18 (its Flooder 1 + 1 a step, `long.dmg` × its size rounds to the floor), so its
+`long.dmg` only moves it at 30; its 47% is main's. MIRRORSHADE was refit at 12, its floor's top (83% → 75%; 92% at
+10, 18, 30). Level 9 has no subclass, so the Warden and Sysop rows one level under 10 are the Bastion's.
+
 ## 2. The WoW model, mapped
 
 | WoW | BLACKBOX |
@@ -312,7 +356,7 @@ One session each, one after the other (they share the economy, pacing and combat
    re-measured against the new split.
 3. **Built (November 4): fight length** (section 1 has the numbers): Integrity up, hits down, enrages, the balance targets moved.
 4. **Built (November 4): floors as tiers** (section 1 has the numbers): the mob step, the gear step and its drift.
-5. **Next:** boss rounds that grow (the solo bosses first, then the lairs as they're built).
+5. **Built (November 4): boss rounds that grow**, the solo bosses (section 1 has the numbers); the lairs' as they're built.
 
 ## 5. Decided
 

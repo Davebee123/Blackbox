@@ -26,8 +26,10 @@ const SEEDS12 = Array.from({ length: 12 }, (_, i) => i + 1);
 // (dmg 1.55, its charge ×2): read 89%, blind 56%.
 // MIRRORSHADE's misreader wins 45% (43 of 96; 51% before) now its mimicked hits aren't capped: held at 44%. Refit with the
 // floor tiers (docs/scaling.md "After step 4"): read 72%, misread 49%, blind 23%.
+// With boss rounds (docs/scaling.md "After step 5") its reader still wins 72%, but the Warden, the slow kill, wins 1 of 12
+// (4 before; 2 to 3 at a growth of 0.08 to 0.1): the rounds are the damage check a tank meets alone. Flagged with the Sysop.
 const MISREAD_LOW = { 'nb-mirrorshade': 0.44 };
-const FLAGGED = { 'nb-mirrorshade': ['sysop'] };
+const FLAGGED = { 'nb-mirrorshade': ['sysop', 'warden'] };
 const bands = {};
 const band = (id) => (bands[id] ||= bossBand(id, BOSSES[id].floor, undefined, SEEDS12));
 

@@ -97,8 +97,10 @@ const second = (sub) => {
 // ones: held at 0.5, 16.5 and 6.5.
 // With the floor tiers (Lv 30 is floor 5's top) the Sysop's healers measure 14.6 worse on their own fights, the Payload's
 // swarm 18.2 off on the generic ones and 13.8 worse on its own, the Phantom's evasion 11.4 off on the generic ones: held
-// at -15, 18.5, -14 and 11.5.
-const DRIFT = { demolitionist: { generic: 7.5, suits: 0.5 }, sysop: { generic: 10, suits: -15 }, hijacker: { generic: 8, suits: -15 }, herder: { generic: 6.5, suits: -1 }, payload: { generic: 18.5, suits: -14 }, overclocker: { generic: 7, suits: 5 }, phantom: { generic: 11.5, suits: 5 }, warden: { generic: 5.5, suits: 5 } };
+// at -15, 18.5, -14 and 11.5. With boss rounds (docs/scaling.md "After step 5": the solo bosses in its suited fights
+// open softer and grow each round) the Overclocker's rules preset is 4.1 better on its own fights and the Payload's swarm
+// 14.1 worse: held at 4 and -14.5.
+const DRIFT = { demolitionist: { generic: 7.5, suits: 0.5 }, sysop: { generic: 10, suits: -15 }, hijacker: { generic: 8, suits: -15 }, herder: { generic: 6.5, suits: -1 }, payload: { generic: 18.5, suits: -14.5 }, overclocker: { generic: 7, suits: 4 }, phantom: { generic: 11.5, suits: 5 }, warden: { generic: 5.5, suits: 5 } };
 test('each second preset is a real alternative: within 5 points of the rotation on the generic fights, and at least 5 points better on the fights it suits', () => {
   const off = [], line = [];
   for (const sub of ALL) {

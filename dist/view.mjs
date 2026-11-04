@@ -23,7 +23,7 @@ import { ruleHtml } from './ruletext.mjs';
 import { postsOf, sizeOf as serverSize, PROGRAMS, programsOn, shopCodebases } from './sockets.mjs';
 import { SPECIALS, specialsOf, leaningOf } from './specials.mjs';
 import { LEANINGS, leanShown } from './leanings.mjs';
-import { ABILITIES, CONFIG, FAMILIES, MUTATIONS, TICKER, QUIRKS, DAEMONS, STRAINS, GUARDS, BOSSES, STRAIN_NATIVE, DAEMON_BANDS, bandDaemons, daemonWhen, daemonBand, FLOORS, bandOf, floorOfLayer } from './data.mjs';
+import { ABILITIES, CONFIG, FAMILIES, MUTATIONS, TICKER, QUIRKS, DAEMONS, STRAINS, GUARDS, BOSSES, ROUNDS, STRAIN_NATIVE, DAEMON_BANDS, bandDaemons, daemonWhen, daemonBand, FLOORS, bandOf, floorOfLayer } from './data.mjs';
 import { GENES, CATS, AXES, CLASHES } from './genes.mjs';
 import { AUTHORS } from './authors.mjs';
 import { PUZZLES } from './puzzles.mjs';
@@ -66,7 +66,7 @@ import { guardSetChance, lairChance, bossOdds, presetsOf, presetKeys, followOf, 
 import { tripwireOf, zipOf, heldOf } from './order.mjs';
 import { youMarks, junkKey } from './mechanics.mjs';
 import { cantripsOf, TELL, lifted, own, lift, line } from './data.mjs';
-import { usable, hooks } from './combat.mjs';
+import { usable, hooks, roundOf } from './combat.mjs';
 import { EXE } from './exe.mjs';
 import { sigintWindows, sigintCharges, plannedTells } from './tells.mjs';
 import { daemonText } from './daemons.mjs';
@@ -334,7 +334,7 @@ export function hudMarkup(s, { party = true, preview = null } = {}) {
   // Yours first (what you watch): your Signal with the crew under it; the virus's total at the right,
   // over its picture.
   return `<div class="hud-left"><div class="hud-you"><div class="hud-bar mine ${level}"><div class="bar-top"><strong>${glyph(runMode ? 'signal' : 'integrity', 'bar-ico')}${mine}</strong><span>${d.integrity}<small>/${d.max}</small></span></div><div class="bigbar"><span style="width:${dp}%"></span>${capMark(s, d)}${crackMark(s, d)}${lossMark(d.integrity, d.max, fc.you)}${copyGhost(d, fc.you, cp)}${claimMarks(s, d)}</div>${clockMeter(s)}</div></div>${statusPanel(s, cp)}</div>
-    <div class="hud-bar enemy"><div class="bar-top"><span class="vname"><strong>${esc(v.name)}</strong>${byline(v)}<span class="meta">${levelTag(s, v.level)}${v.strain || GUARDS[v.family]?.ice ? '' : ' ' + esc(familyInfo(v.family).name)}</span></span><span>${hp.current}<small>/${hp.max}</small></span></div><div class="bigbar"><span style="width:${vp}%"></span>${lossMark(hp.current, hp.max, fc.total)}</div><p class="clock-line">${armor.max ? `<span class="chits">${'◆'.repeat(armor.current)}<i>${'◇'.repeat(armor.max - armor.current)}</i></span>` : ''}${tags}${roomBossTag(s)}${rivalTag(s)}${progFight(s)}</p>${geneChips(s, v)}</div>`;
+    <div class="hud-bar enemy"><div class="bar-top"><span class="vname"><strong>${esc(v.name)}</strong>${byline(v)}<span class="meta">${levelTag(s, v.level)}${v.strain || GUARDS[v.family]?.ice ? '' : ' ' + esc(familyInfo(v.family).name)}</span></span><span>${hp.current}<small>/${hp.max}</small></span></div><div class="bigbar"><span style="width:${vp}%"></span>${lossMark(hp.current, hp.max, fc.total)}</div><p class="clock-line">${armor.max ? `<span class="chits">${'◆'.repeat(armor.current)}<i>${'◇'.repeat(armor.max - armor.current)}</i></span>` : ''}${tags}${roundTag(s)}${roomBossTag(s)}${rivalTag(s)}${progFight(s)}</p>${geneChips(s, v)}</div>`;
 }
 // An elite's clash (docs/puzzle-levers.md 4, genes.mjs CLASHES): its two levers by name, the pull and the answer in its tooltip.
 export function clashTag(v) {
@@ -350,6 +350,13 @@ function rivalTag(s) {
   if (!v) return '';
   const P = RIVALS[v.id];
   return `<span class="tag hot" title="${esc(`${P.name}\nRival · fight ${v.fight + 1} of ${v.fights}\nYour Signal carries to its next fight. Your cooldowns start fresh.\n▸ Win all ${v.fights} to take its pack.`)}">${esc(P.name)} ${v.fight + 1}/${v.fights}</span>`;
+}
+// A solo boss's rounds on your Signal (combat.mjs roundOf): the round it's in and its hits' size.
+function roundTag(s) {
+  const e = s.encounter, r = roundOf(e?.virus, e?.cycle);
+  if (!r) return '';
+  const next = r.next === 1 ? 'next cycle' : `in ${r.next} cycles`;
+  return `<span class="tag hot rounds" title="${esc(`Rounds\nBoss rule\nEach round of ${ROUNDS.every} cycles, its hits grow ${Math.round(r.grow * 100)}% over the last round's. Round ${r.n}: its hits are ×${r.mult.toFixed(2)}. The next round starts ${next}.${answerLine('Kill it before the rounds outgrow you.')}`)}">${glyph('clock')}R${r.n} ×${r.mult.toFixed(1)}</span>`;
 }
 function roomBossTag(s) {
   const e = s.encounter;
