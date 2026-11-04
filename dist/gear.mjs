@@ -5,7 +5,7 @@
 // like Corepunk. Loot and salvage build you.
 // Your server runs no services any more (R2): the home fight is the firewall's job (filters, tiers) and the daemons',
 // and a server's programs (sockets.mjs) are the building. Code builds them, and the wall.
-import { power, line, lift, lifted, filled, gearFill } from './data.mjs';
+import { power, line, lift, lifted, filled, gearFill, runLate } from './data.mjs';
 
 // Slots by class level: 4 to start, 5 at 15, 6 at 30. Each slot takes one kind of item (SLOTS).
 export const PROTOCOL_SLOTS = [{ level: 1, slots: 4 }, { level: 15, slots: 5 }, { level: 30, slots: 6 }];
@@ -372,8 +372,9 @@ export function liftItem(it) {
   return it;
 }
 // Save v55 (step 2): a lifted item's filling stats and rule value × the fill at its level (the lift already in them).
-function fillItem(it) {
-  const L = Math.max(1, it.level || 1), f = (n) => Math.max(1, Math.round(n * gearFill(L)));
+// by: what to multiply by (v56, the floor tiers: the new fill over the one it was filled with).
+function fillItem(it, by = gearFill) {
+  const L = Math.max(1, it.level || 1), f = (n) => Math.max(1, Math.round(n * by(L)));
   for (const k of Object.keys(it.stats || {})) if (FILLS.has(k) && it.stats[k]) it.stats[k] = it.stats[k] < 0 ? -f(-it.stats[k]) : f(it.stats[k]);
   const fx = RULES[it.rule]?.fx;
   if (it.ruleValue && fx && liftsFx({ ...fx, value: it.ruleValue }) && (FLAT_FX.has(fx.do) || FILLS.has(fx.stat))) it.ruleValue = f(it.ruleValue);
@@ -492,14 +493,17 @@ export function statsRestore(s, was) {
 // The compounding curve (docs/scaling.md): an older save's items carry stats rolled on the level line. Each protocol's
 // flat stats and flat rule value, and each filter's growing stats, are lifted at its item level once. Keyed on the
 // field: s.curve marks a save whose items are on the curve (fresh saves start with it).
+// The fill before the floor tiers (save v56: s.curve 3 refills an item filled on it, × the new fill over this).
+const FILL_V55 = [[6, 1], [10, 1.46], [15, 1.67], [25, 1.77], [30, 1.66], [40, 1.6], [50, 1.52]];
+const refill = (L) => gearFill(L) / runLate(L, FILL_V55);
 export function curveRestore(s) {
-  if (s.curve >= 2) return;
+  if (s.curve >= 3) return;
   const was = s.curve || 0;
   const seen = new Set();
   const walk = (x) => {
     if (!x || typeof x !== 'object' || seen.has(x)) return;
     seen.add(x);
-    if (x.kind === 'protocol' && x.stats && typeof x.stats === 'object') return void (was ? fillItem(x) : liftItem(x)); // lifted already (v54): filled
+    if (x.kind === 'protocol' && x.stats && typeof x.stats === 'object') return void (was >= 2 ? fillItem(x, refill) : was ? fillItem(x) : liftItem(x)); // filled already (v55): refilled on the tiers; lifted (v54): filled
     if (x.kind === 'filter' && x.stats && typeof x.stats === 'object') {
       if (was) return;
       for (const k of ['reduction', 'regen', 'countermeasures']) if (x.stats[k] > 0) x.stats[k] = lifted(x.stats[k], Math.max(1, x.level || 1));
@@ -508,7 +512,7 @@ export function curveRestore(s) {
     for (const v of Array.isArray(x) ? x : Object.values(x)) walk(v);
   };
   walk(s);
-  s.curve = 2;
+  s.curve = 3;
 }
 
 // "+6% Damage · +2% Crit"

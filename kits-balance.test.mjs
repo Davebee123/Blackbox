@@ -40,8 +40,11 @@ test('the rotation preset presses a spread of keys: at least 4.4 effective keys 
 // full build's 12%, and wins 15 to 19: held at 38 points and 75% of the wins. With no damage caps (docs/scaling.md "After step 3": a wild charge is its hit × mult, no longer stopped at 20%) the
 // Sysop's core loses 63% at 30 to 14% and wins 11 to 19, the Demolitionist's 29 points over at 18, the Overclocker's core
 // wins 17 to 20 at 30: held at 50 points and 55%, 30, and 85% until the designer has played it.
-const CORE_DRIFT = { overclocker: 18, payload: 27, hijacker: 22, warden: 32, demolitionist: 30, sysop: 50 };
-const CORE_WINS = { sysop: 0.55, overclocker: 0.85 }; // hijacker 17 → 22: since step 2 (docs/scaling.md) its core measures 21 under its full build at 30 // payload 25 → 27: Backdoor's flat +12 on a burning part made its full build ~1.5 points better; its core (no Backdoor) is unchanged
+// Floors as tiers (docs/scaling.md "After step 4": 18 and 30 are floor tops, the arc's hardest points) widen the gap: the
+// Demolitionist's core 35 points over at 18, the Sysop's 53 and 9 of 17 wins at 30, the Phantom's 13 at 18, the Herder's
+// 12 and 15 of 19 at 30, the Overclocker's 16 of 20 at 30: held there until the designer has played the arc.
+const CORE_DRIFT = { overclocker: 18, payload: 27, hijacker: 22, warden: 32, demolitionist: 36, sysop: 54, phantom: 14, herder: 13 };
+const CORE_WINS = { sysop: 0.5, overclocker: 0.8, herder: 0.78 }; // hijacker 17 → 22: since step 2 (docs/scaling.md) its core measures 21 under its full build at 30 // payload 25 → 27: Backdoor's flat +12 on a burning part made its full build ~1.5 points better; its core (no Backdoor) is unchanged
 test('the core rotation alone is viable: within 12 points of the full rotation build (the Bastions 20) at Lv 18 and 30, with at least 90% of its wins', () => {
   const off = [];
   for (const sub of ALL) for (const L of [18, 30]) {
@@ -92,7 +95,10 @@ const second = (sub) => {
 // generic fights, the Phantom's evasion 8.1 worse: held at -14.5, 16 and 8.5. With no damage caps (docs/scaling.md "After step 3": a wild charge is its hit × mult, no longer stopped at 20%) the
 // Demolitionist's area preset is 0.8 better on its fights, the Payload's swarm 16.3 and the Herder's 6.3 off on the generic
 // ones: held at 0.5, 16.5 and 6.5.
-const DRIFT = { demolitionist: { generic: 7.5, suits: 0.5 }, sysop: { generic: 10, suits: -14.5 }, hijacker: { generic: 8, suits: -15 }, herder: { generic: 6.5, suits: -1 }, payload: { generic: 16.5, suits: 0 }, overclocker: { generic: 7, suits: 5 }, phantom: { generic: 8.5, suits: 5 }, warden: { generic: 5.5, suits: 5 } };
+// With the floor tiers (Lv 30 is floor 5's top) the Sysop's healers measure 14.6 worse on their own fights, the Payload's
+// swarm 18.2 off on the generic ones and 13.8 worse on its own, the Phantom's evasion 11.4 off on the generic ones: held
+// at -15, 18.5, -14 and 11.5.
+const DRIFT = { demolitionist: { generic: 7.5, suits: 0.5 }, sysop: { generic: 10, suits: -15 }, hijacker: { generic: 8, suits: -15 }, herder: { generic: 6.5, suits: -1 }, payload: { generic: 18.5, suits: -14 }, overclocker: { generic: 7, suits: 5 }, phantom: { generic: 11.5, suits: 5 }, warden: { generic: 5.5, suits: 5 } };
 test('each second preset is a real alternative: within 5 points of the rotation on the generic fights, and at least 5 points better on the fights it suits', () => {
   const off = [], line = [];
   for (const sub of ALL) {

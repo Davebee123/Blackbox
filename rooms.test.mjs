@@ -195,9 +195,10 @@ test('progress: rooms cleared at least once, for good; it never goes down', () =
   let last = FP.progressOf(s).done;
   assert.equal(last, 1, 'the entry counts once you\'re in');
   // The bot plays visit after visit (losses and all): progress only ever climbs. (Seed 3 cleared 10 of 12; with no damage
-  // caps its Operator loses more of the Lab and clears 4, so seed 5.)
+  // caps its Operator loses more of the Lab and clears 4, so seed 5.) With the floor tiers (docs/scaling.md step 4) the bot
+  // in its own blues clears 4–6 of 12 on seeds 1–7 (6+ before): held at a third, until the designer has played the arc.
   const r = runServer({ cls: 'operator', seed: 5, kind: 'Lab', hours: 1.5 });
-  assert.ok(r.progress.done >= r.progress.total / 2);
+  assert.ok(r.progress.done >= r.progress.total / 3);
   // A respawn doesn't take a cleared room back.
   const room = roomOfKind(s, 'process');
   place(s, room.id); FP.fight(s, room); win(s);

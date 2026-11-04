@@ -186,7 +186,7 @@ test('one hit at a time: Drain Plug halves the first big one, Read-Only cuts the
   const t = vet(); wear(t, 'read-only'); fight(t);
   const bt = gearStat(t, 'reduction', 'hacker');
   assert.equal(landed(t, 200), 200 - bt, 'it stays above half: untouched');
-  assert.equal(landed(t, 400), Math.round(400 * 0.6) - bt, 'the hit that takes you below half: 40% less');
+  assert.equal(landed(t, 520), Math.round(520 * 0.6) - bt, 'the hit that takes you below half (from anywhere above it, your Regen in): 40% less');
   t.run.integrity = 1000;
   assert.equal(landed(t, 600), 600 - bt, 'once a fight');
   const u = vet(); wear(u, 'mooring'); fight(u);

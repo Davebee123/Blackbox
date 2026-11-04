@@ -526,6 +526,7 @@ test('mutated strains: each one\'s part works beside its strain', () => {
     assert.ok(tap.integrity > was, 'fed'); }
   // The Lurking Sleeper: a hit wakes the virus, but its Opportunist sleeps on until you carry a debuff.
   { const s = mstart('lurkingsleeper'), e = s.encounter, o = part(s, 'opportunist');
+    Object.assign(s.server, { integrity: 10000, max: 10000 }); // its wake-up hits (floor 4's step) don't end the fight
     fire(s, 'spike pulse');
     assert.ok(!e.virus.dormant && !o.woke && o.attack.due >= 900, 'the virus wakes, the Opportunist sleeps');
     e.exposedHit = true; fire(s, 'hold');

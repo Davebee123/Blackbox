@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, restore, addItem, command, gearFx, effectLine, UNIQUES, addLocation, maxSignal, powerOf } from './dist/combat.mjs';
-import { CONFIG, power, line, lift, lifted, filled, gearFill, own, mobPower } from './dist/data.mjs';
+import { CONFIG, power, line, lift, lifted, filled, gearFill, gearTier, own, mobPower, runLate, floorFor, createVirus, SERVER } from './dist/data.mjs';
 import { rollItem, uniqueItem, seeded, liftFx, curveRestore, STATS } from './dist/gear.mjs';
 import { deal } from './dist/events.mjs';
 import { zoneSpawns, ZONE_LEVEL, KING_ROOM } from './dist/run.mjs';
@@ -15,7 +15,7 @@ import { at } from './balance.mjs';
 test('power compounds: 6% a level, so a mob ten levels down is about half of you; the lift carries the 4% line up to it', () => {
   assert.equal(CONFIG.powerPerLevel, 0.06);
   assert.ok(Math.abs(power(31) / power(30) - 1.06) < 1e-12, 'a level: +6%');
-  assert.ok(Math.abs(mobPower(20) / power(30) - 1 / 1.06 ** 10) < 1e-12 && mobPower(20) / power(30) < 0.56, 'ten below: 0.56 of you');
+  assert.ok(Math.abs(mobPower(20, 5) / mobPower(30, 5) - 1 / 1.06 ** 10) < 1e-12, 'ten below on one floor: 0.56 of it');
   assert.equal(line(26), 2, 'the line: 4% a level, linear');
   assert.equal(lift(1), 1);
   assert.ok(Math.abs(lift(30) * line(30) - power(30)) < 1e-12);
@@ -49,7 +49,7 @@ test('a unique\'s flat effect is lifted at its item level, its text with it; a s
 });
 
 test('an older save: every item\'s flat stats lifted and filled once at its level (filters lifted), keyed on s.curve; a fresh save is already on the curve', () => {
-  assert.equal(fresh().curve, 2);
+  assert.equal(fresh().curve, 3);
   const s = fresh(); delete s.curve;
   s.stash.push({ id: 'g1', kind: 'protocol', side: 'hacker', group: 'proxy', rarity: 'tuned', level: 30, stats: { signal: 100, reduction: 3, evasion: 4, ram: 1 }, affixes: [], name: 'Old Proxy', rule: 'stack-canary', ruleValue: 4 });
   s.filters = { held: [{ id: 'f1', kind: 'filter', level: 20, stats: { strength: 3, reduction: 4, frag: 20 } }], on: [] };
@@ -57,7 +57,7 @@ test('an older save: every item\'s flat stats lifted and filled once at its leve
   assert.deepEqual(it.stats, { signal: filled(100, 30), reduction: lifted(3, 30), evasion: 4, ram: 1 }, 'Signal lifted and filled, Block lifted; chances and RAM as they were');
   assert.equal(it.ruleValue, filled(4, 30), 'Stack Canary\'s shield is a flat number too');
   assert.deepEqual(r.filters.held[0].stats, { strength: 3, reduction: lifted(4, 20), frag: 20 });
-  assert.equal(r.curve, 2);
+  assert.equal(r.curve, 3);
   const twice = structuredClone(r); curveRestore(twice);
   assert.deepEqual(twice.stash.find((x) => x.id === 'g1').stats, it.stats, 'safe to run twice');
 });
@@ -72,6 +72,45 @@ test('a v54 save (already lifted): its items\' filling stats × the fill once, t
   assert.deepEqual(r.filters.held[0].stats, { reduction: 9 });
   const twice = structuredClone(r); curveRestore(twice);
   assert.deepEqual(twice.stash.find((x) => x.id === 'g1').stats, it.stats, 'safe to run twice');
+});
+
+test('a v55 save (filled before the floor tiers): its items\' filling stats × the new fill over the old once, the rest as they were', () => {
+  const s = fresh(); s.curve = 2;
+  s.stash.push({ id: 'g1', kind: 'protocol', side: 'hacker', group: 'proxy', rarity: 'tuned', level: 36, stats: { signal: 400, damage: 50, reduction: 9, evasion: 4 }, affixes: [], name: 'Proxy' });
+  const r = restore(structuredClone(s)), it = r.stash.find((x) => x.id === 'g1');
+  const f = gearFill(36) / runLate(36, [[6, 1], [10, 1.46], [15, 1.67], [25, 1.77], [30, 1.66], [40, 1.6], [50, 1.52]]);
+  assert.ok(f > 1.5, 'floor 6 gear: its tier on top');
+  assert.deepEqual(it.stats, { signal: Math.round(400 * f), damage: Math.round(50 * f), reduction: 9, evasion: 4 });
+  assert.equal(r.curve, 3);
+  const twice = structuredClone(r); curveRestore(twice);
+  assert.deepEqual(twice.stash.find((x) => x.id === 'g1').stats, it.stats, 'safe to run twice');
+});
+
+test('floors as tiers (step 4): a mob takes its floor\'s step on top of its level; the floor it is on when known', () => {
+  const { mob } = CONFIG.floorStep;
+  assert.equal(mob, 0.15);
+  assert.equal(mobPower(5), power(5), 'floor 1: no step');
+  assert.ok(Math.abs(mobPower(31) / power(31) - (1 + mob) ** 5) < 1e-12, 'floor 6: five steps, compounding');
+  assert.equal(floorFor(14), 3);
+  assert.ok(Math.abs(mobPower(14, 2) / power(14) - (1 + mob)) < 1e-12, "floor 2's exit server: floor 2's step, though its level reaches floor 3");
+  assert.ok(Math.abs(mobPower(20, 99) / power(20) - (1 + mob) ** 7) < 1e-12, 'never past the last floor');
+  const v = (floor) => createVirus('random', 5, { threat: SERVER.threat(14), run: true, mutation: null, family: 'ransomware', ...(floor ? { floor } : {}) });
+  const hp = (x) => x.parts.reduce((n, p) => n + p.max, 0);
+  assert.ok(Math.abs(hp(v(2)) / hp(v(3)) - 1 / (1 + mob)) < 0.05, 'a level-14 virus on floor 2 is a step under one on floor 3');
+});
+
+test('floors as tiers (step 4): gear takes a bigger step, and drifts down inside its floor, so the next floor\'s first drops outclass the last floor\'s best', () => {
+  const { gear, drift } = CONFIG.floorStep;
+  assert.ok(gear > CONFIG.floorStep.mob, 'gear steps more than mobs');
+  assert.equal(gearTier(1), 1); assert.equal(gearTier(6), 1, 'floor 1: as it was');
+  assert.ok(Math.abs(gearTier(19) - (1 + gear) ** 3) < 1e-12, "floor 4's first level: three steps");
+  assert.ok(Math.abs(gearTier(24) / gearTier(19) - (1 - drift) ** 5) < 1e-12, 'its top: five levels of drift');
+  assert.equal(gearFill(20), runLate(20, CONFIG.gearFill) * gearTier(20));
+  for (const f of [2, 4, 6]) {
+    const first = SERVER.locationLevel(f), best = first - 1;
+    const sig = (L) => rollItem(seeded(7), { level: L, rarity: 'tuned', slot: 'proxy' }).stats.signal;
+    assert.ok(sig(first) > 1.15 * sig(best), `floor ${f}: its first blue (${sig(first)}) outclasses the last floor's best (${sig(best)})`);
+  }
 });
 
 test('gear carries your power: your own numbers stop growing at level 6; in its level\'s blues most of your Signal is gear, and old gear falls far short', () => {

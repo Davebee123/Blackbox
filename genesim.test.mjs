@@ -24,7 +24,8 @@ const SEEDS12 = Array.from({ length: 12 }, (_, i) => i + 1);
 // before; the Demolitionist and the Herder win two more seeds each): the reader's ceiling held at 94% until the
 // designer has played the curve. With no damage caps (docs/scaling.md "After step 3") HASHLORD's hits are refitted
 // (dmg 1.55, its charge ×2): read 89%, blind 56%.
-// MIRRORSHADE's misreader wins 45% (43 of 96; 51% before) now its mimicked hits aren't capped: held at 44%.
+// MIRRORSHADE's misreader wins 45% (43 of 96; 51% before) now its mimicked hits aren't capped: held at 44%. Refit with the
+// floor tiers (docs/scaling.md "After step 4"): read 72%, misread 49%, blind 23%.
 const MISREAD_LOW = { 'nb-mirrorshade': 0.44 };
 const FLAGGED = { 'nb-mirrorshade': ['sysop'] };
 const bands = {};

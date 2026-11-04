@@ -443,10 +443,11 @@ test('a Warden draws fire with Bulkhead and takes it at half; DMZ covers the who
   const d = crewFight('warden', 'breaker', 38, ['rate-limit', 'firewall', 'retaliate', 'dmz']);
   const [kilo] = matesOf(d);
   const k = kilo.run.integrity;
-  crewSurge(d, 60);
+  const big = Math.ceil(kilo.run.max * 0.12); // over a tenth of the crewmate's max (DMZ's minor)
+  crewSurge(d, big);
   order(kilo, 'hold');
   act(d, 'dmz');
-  assert.equal(k - kilo.run.integrity, 42);
+  assert.equal(k - kilo.run.integrity, Math.round(big * 0.7));
   const m = crewFight('warden', 'breaker', 38, ['rate-limit', 'firewall', 'retaliate', 'dmz']);
   const [lima] = matesOf(m);
   const l = lima.run.integrity;

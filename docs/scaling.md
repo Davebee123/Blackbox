@@ -209,6 +209,43 @@ less than that would need the gap to help you at +1. The Warden at 30 still wins
 Blowback grow with the hits).
 The class sims hold; the breach (acts, gate and core one or two levels up) falls from 45% to 34% a class, held in its test.
 
+### After step 4 (November 4): floors as tiers
+
+A mob takes +15% a floor on top of its level, compounding (`CONFIG.floorStep.mob`, `mobPower`: the floor it's on, else
+its level's; the crew dungeon's, which keeps up with you, its level's; a breach's fights keep their own pace without it). Gear from floor 2 takes +25% a floor and drifts down 6% a level inside its floor (`gearTier`, on
+`gearFill`), and the fill was reshaped (2.2 at 7, 1.45 at 12, 1.95 at 25, 1.35 at 42, 1.25 at 50), so a floor's first
+blue outclasses the last floor's best. Save v56 refills old items on the tiers.
+
+The designer chose the gear-tier sawtooth (November 4). With the same step at a floor's start for mobs, *bottom in the last
+floor's best* can't be easier than *the last floor's top in that same gear*: the mob is one level lower but +15%. So the arc
+is in the floor's own gear: easy on its first drops, 35–45% at its top. Arriving in old gear costs about what the last
+floor's top did, and that's the cue to pick up the new drops.
+
+Scratch harness: the four default subclasses (their mean, then each) and the Sysop, 8 wilds each at the level; wins ·
+Signal lost (a loss is 100%) · cycles. A floor's levels are its `floorFor` ones (floor 2: 7–12):
+
+| Floor | Bottom, last floor's best | Bottom, its own | Top, its own | Top, last floor's best |
+|---|---|---|---|---|
+| 2 (Lv 7, 12; gear 6) | 81% · 53% · 18 | 97% · 21% · 15 | 81% · 46% · 16 | 59% · 62% |
+| 4 (Lv 19, 24; gear 18) | 69% · 55% · 17 | 100% · 13% · 13 | 91% · 38% · 16 | 47% · 76% |
+| 6 (Lv 31, 36; gear 30) | 72% · 52% · 18 | 97% · 25% · 14 | 88% · 40% · 17 | 41% · 73% |
+| Sysop, 2 · 4 · 6 | 60 · 89 · 95% | 12 · 36 · 62% | 93 · 82 · 88% | 100% |
+
+Floors 3, 5, 7 and 8 in their own gear: 24 → 30%, 30 → 42%, 14 → 35%, 10 → 29% (bottom → top). By class at a top the
+Bastion loses 8–18% and the Breaker or Infiltrator 43–66%. The Sysop alone loses 82–93% at a floor's top (it was 27–37%
+at level): a healer leveling solo feels the arc most. Before (no tiers): 30% at the bottom and 17–40% at the top.
+
+Held (each test says what it measures): Lv 18 and 30 are floor tops now, so the Overclocker wins 20 of 24 at 18 and 30,
+the Infiltrator 20 of 24 at 50, the Sysop alone 18 of 24 at 30 (74% and 35% lost over the wider sample) and 18 of 45 of
+its hard slice; natives, set pieces
+and sets keep a 0.7 (sets 0.6) wins floor at 18 and 30, and Kestrel's three-piece moves the average 8.6 at 30; the core
+rotations' gaps (the Demolitionist 35 at 18, the Sysop 53 at 18 and 9 of 17 at 30) and the second presets (the Payload's
+swarm 18.2 on the generic fights, the Phantom's evasion 11.4); the Payload's crew low point a point under the Phantom's;
+the full crew wins 72 of 76 farm boss tries at 18 (the farm, on floor 1 at your level, gives its mobs your level's floor),
+and at 30 the farm is a real check: over 18 and 30 the Herder carries 69% and the Hijacker 61% (the Demolitionist 92%); the Operator's climb on seed 7
+farms the floor below from 10 (40% grey, no strain or ICE from 12); the rooms bot clears 4–6 of 12 of a Lab. MIRRORSHADE
+(fought at 12, floor 2's top) is refit: Integrity 1.45 → 1.25, hits 0.8 → 0.6, a reader 38% → 72%.
+
 ## 2. The WoW model, mapped
 
 | WoW | BLACKBOX |
@@ -274,8 +311,8 @@ One session each, one after the other (they share the economy, pacing and combat
    row (60–75%, a win) goes; the low levels (starter gear at 3) must still win; elites, bosses and the class sims are
    re-measured against the new split.
 3. **Built (November 4): fight length** (section 1 has the numbers): Integrity up, hits down, enrages, the balance targets moved.
-4. **Next:** floors as tiers: the mob step and the gear step.
-5. Boss rounds that grow (the solo bosses first, then the lairs as they're built).
+4. **Built (November 4): floors as tiers** (section 1 has the numbers): the mob step, the gear step and its drift.
+5. **Next:** boss rounds that grow (the solo bosses first, then the lairs as they're built).
 
 ## 5. Decided
 

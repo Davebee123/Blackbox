@@ -65,7 +65,12 @@ export const CONFIG = {
   damageRef: 25,
   tickRef: 50,
   dotRef: 28,
-  gearFill: [[6, 1], [10, 1.46], [15, 1.67], [25, 1.77], [30, 1.66], [40, 1.6], [50, 1.52]],
+  // Reshaped with the floor tiers: more at a floor's first levels where gear carries little (7), less by the late floors' tops.
+  gearFill: [[6, 1], [7, 2.2], [12, 1.45], [15, 1.75], [25, 1.95], [30, 1.66], [37, 1.6], [42, 1.35], [50, 1.25]],
+  // Floors as tiers (docs/scaling.md step 4): a mob takes its floor's step on top of its level, mob a floor, compounding
+  // (mobPower). Gear takes a bigger step, gear a floor, and its fill drifts down drift a level inside its floor
+  // (gearTier), so a floor's first drops outclass the last floor's best and its own gear has aged by the floor's top.
+  floorStep: { mob: 0.15, gear: 0.25, drift: 0.06 },
   // Enemy parts are tougher than one or two of your hits: fights run long enough that attacks
   // land, so gear and planning are what keep you standing.
   partToughness: 1.7,
@@ -972,10 +977,15 @@ export const lifted = (n, level) => Math.max(1, Math.round(n * lift(level)));
 // Your own line (CONFIG.ownPerLevel): what your level alone gives you.
 export const own = (level) => { const L = Math.max(1, level), F = Math.max(1, CONFIG.ownFrom || 1); return power(Math.min(L, F)) * (1 + CONFIG.ownPerLevel * Math.max(0, L - F)); };
 // Gear's fill at an item level (CONFIG.gearFill), and a flat item number lifted and filled.
-export const gearFill = (level) => runLate(level, CONFIG.gearFill);
+// The floor tier of gear at an item level (CONFIG.floorStep): its floor's step (floorFor), less the drift for each level
+// past the floor's first. Floor 1's gear is as it was (the first levels' tuning).
+export const gearTier = (level) => { const L = Math.max(1, level), f = floorFor(L), F = CONFIG.floorStep; return f < 2 ? 1 : (1 + F.gear) ** (f - 1) * (1 - F.drift) ** (L - bandOf(f)[0]); };
+export const gearFill = (level) => runLate(level, CONFIG.gearFill) * gearTier(level);
 export const filled = (n, level) => Math.max(1, Math.round(n * lift(level) * gearFill(level)));
-// Enemies match you level for level (no soft start: the first fights should cost something).
-export const mobPower = (level) => power(level) * 1;
+// Enemies match you level for level (no soft start: the first fights should cost something), and take their floor's
+// step (CONFIG.floorStep.mob): the floor they're on when it's known, else the one their level is on. A breach's fights
+// (overrides.short) keep their own pace without it, as they skip fight length.
+export const mobPower = (level, floor = floorFor(level)) => power(level) * (1 + CONFIG.floorStep.mob) ** (Math.min(FLOORS.length, Math.max(1, floor || 1)) - 1);
 
 // ---------- crew bosses (raid.mjs) ----------
 // Each phase gives every role a job (docs/bosses.md has the review sheet). Mechanic kinds and their fields
@@ -1118,7 +1128,8 @@ export const BOSSES = {
   // you broke, or of the Pulse Node. At 12 and 13 its Scrambler is trimmed (trim): ◆3, and a Scramble every 5 cycles.
   // mimic: while you're Scrambled its Mimic plays your hit back twice over (tells.mjs mimicLands). Its beats fall in the
   // Scramble, and with the class kits' openers going quiet there by habit, a plain playback cost a blind player too little.
-  'nb-mirrorshade': { long: { hp: 1.45, dmg: 0.8, enrageAt: 35 }, name: 'MIRRORSHADE', family: 'ghostroot', third: 'mimic', native: true, lair: 'MIRRORSHADE-HALL', floor: 12, band: 'A',
+  // Its long size refit with the floor tiers (fought at 12, floor 2's top): 1.45 and 0.8 left a reader 38%; now 72%.
+  'nb-mirrorshade': { long: { hp: 1.25, dmg: 0.6, enrageAt: 35 }, name: 'MIRRORSHADE', family: 'ghostroot', third: 'mimic', native: true, lair: 'MIRRORSHADE-HALL', floor: 12, band: 'A',
     trim: { below: 14, part: 'scrambler', armor: 3, interval: 5 },
     signature: { name: 'Doppelganger', rule: 'At half Integrity, the Mimic stops recording and takes the shape of the first part you broke, with its attack and its ◆. If you have not broken one, it takes the shape of the Pulse Node.' },
     hp: 1.34, dmg: 1.08, mimic: 2, enrageAt: 17, about: 'A Mimic plays your commands back at you on its beat, at double damage while you are Scrambled. At 60% Integrity it re-arms every part, and at half the Mimic stops recording and becomes a Doppelganger of the first part you broke.', phases: [{ at: 0.6, do: ['rearm'], say: 'MIRRORSHADE re-arms every part.' }, { at: 0.5, do: ['doppelganger'], say: 'MIRRORSHADE\'s Mimic stops recording and takes a shape.' }] },
@@ -1416,7 +1427,7 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   if (strain && mutation && MUTATIONS[mutation] && clashes(MUTATIONS[mutation].gene)) mutation = null;
   const unlinked = !!strain && grade >= 2 && clashes('linked');
   const long = !!overrides.run && !overrides.short && !BOSSES[overrides.boss]?.raid; // fight length (CONFIG.length)
-  const scale = mobPower(level) * (mutation === 'hasty' ? 0.9 : 1) * (overrides.run ? CONFIG.runHp * (overrides.boss || overrides.elite ? 1 : runLate(level, CONFIG.runLateHp)) : 1) * (long ? runLate(level, CONFIG.length.hp) : 1);
+  const scale = mobPower(level, overrides.short ? 1 : overrides.tier ?? overrides.floor) * (mutation === 'hasty' ? 0.9 : 1) * (overrides.run ? CONFIG.runHp * (overrides.boss || overrides.elite ? 1 : runLate(level, CONFIG.runLateHp)) : 1) * (long ? runLate(level, CONFIG.length.hp) : 1);
 
   // Tougher viruses wear more armor and strike sooner (see THREAT_STEPS).
   const extra = (spec) => (mutation === 'armored' ? 1 : 0) + THREAT_STEPS.armor.filter((x) => threat >= x.threat && (x.part === 'any' || (x.part === 'special') === !!spec.special)).length;
@@ -1473,7 +1484,7 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   // "Viruses"), shared out by role (shareProfile).
   if (rolled2) shareProfile(familyId, family, specs, parts, rolled2, level);
   const step = overrides.run ? (CONFIG.runEarly[level - 1] ?? 1) * (overrides.boss || overrides.elite ? 1 : runLate(level)) : 1;
-  const dmgScale = mobPower(level) * (1 + CONFIG.enemyRamp * (level - 1)) * g.dmg * (overrides.run ? CONFIG.runDamage * step : 1) * (long ? runLate(level, CONFIG.length.dmg) : 1);
+  const dmgScale = mobPower(level, overrides.short ? 1 : overrides.tier ?? overrides.floor) * (1 + CONFIG.enemyRamp * (level - 1)) * g.dmg * (overrides.run ? CONFIG.runDamage * step : 1) * (long ? runLate(level, CONFIG.length.dmg) : 1);
   // Encryption stacks, so it skips the early-game and late steps (they would compound).
   for (const p of parts) if (p.attack && ['damage', 'encrypt'].includes(p.attack.effect)) p.attack.amount = Math.max(1, Math.round(p.attack.amount * dmgScale / (p.attack.effect === 'encrypt' || p.hash || p.twinrig ? step : 1))); // a Rig's Hash climbs like encryption: it skips them too
   for (const p of parts) if (p.attack?.effect === 'heal') p.attack.amount = Math.max(1, Math.round(p.attack.amount * scale * g.hp));

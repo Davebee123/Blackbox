@@ -1173,7 +1173,10 @@ a favoured card once it has come up twice, its rich code once it leans your way;
 
 - **Hacker level** (per class, 1–50): a long, WoW-style climb. Each class starts at level 1 and levels on its own.
   **Enemies grow 6% a level, compounding** (`CONFIG.powerPerLevel`, `power`): a virus 10 levels under you has about
-  half its match's numbers. **Gear carries your power** (WoW's model): your own numbers (skill damage, burns, base
+  half its match's numbers. **Floors are tiers** (`CONFIG.floorStep`): a mob takes +15% a floor on top of its level,
+  compounding (`mobPower`: the floor it's on, else its level's; KESSLER-FARM-00's mobs their level's; a breach's fights skip it), and gear a bigger step that drifts down inside its
+  floor (Items), so a floor plays as an arc: its first drops make you strong, by its top you need its gear.
+  **Gear carries your power** (WoW's model): your own numbers (skill damage, burns, base
   Signal, shields, talents' Signal) grow 6% a level to level 6, then stop (`CONFIG.ownFrom`, `ownPerLevel`, `own`;
   key 1 hits 25 at level 1, 33 from 6 on), and your gear's Damage, Crit Damage, Payload, Signal, Regen and Leech carry
   the rest (Items): in its level's blues, three quarters of your Signal at 20 and seven eighths at 30. Damage and
@@ -1415,9 +1418,10 @@ deconstructed.
   same-level fight costs about the same share of your Signal throughout. An item's numbers are worked out on the level
   line, then its flat stats (all but RAM and Lead), its flat rule and a unique's or set's flat effect are lifted at its
   item level (`liftItem`, `liftFx`). The ones that carry your power (Damage, Crit Damage, Signal, Regen, Leech, and
-  flat damage, heal and shield effects) are also × the **fill** at their item level (`CONFIG.gearFill`: 1 to level
-  6, 1.46 at 10, 1.77 at 25, 1.52 at 50), so a fight at your level in its blues costs what it did when your level
-  carried half of you. Gear ten levels old loses about a third of fights at your level; twenty, nearly all. Chances stay percentages.
+  flat damage, heal and shield effects) are also × the **fill** at their item level (`gearFill`: `CONFIG.gearFill`, 1
+  to level 6, 2.2 at 7, 1.95 at 25, 1.25 at 50, × the floor tier, `gearTier`: +25% a floor from floor 2, compounding,
+  less 6% a level past the floor's first). A floor's first blue outclasses the last floor's best; at its first level
+  in its own blues a fight costs about 10–25% of your Signal, at its top 35–45%. Gear ten levels old loses about a third of fights at your level; twenty, nearly all. Chances stay percentages.
 - **Power spikes are earned** (the designer's rule): base power never spikes; a new skill, a talent tier, a capstone, a
   slot, a unique, a set bonus or a tier set does, and the big jumps belong past the level cap. A spike that takes the
   friction away is a problem to fix in its kit.
@@ -2616,9 +2620,10 @@ Checked by `node balance.mjs` (docs/BALANCE.md, `balance.test.mjs`), `farmsim.mj
 
 ## Saves
 
-The save is `SAVE_VERSION` 55 (combat.mjs). An older save is migrated on load, each step keyed on the field it converts,
+The save is `SAVE_VERSION` 56 (combat.mjs). An older save is migrated on load, each step keyed on the field it converts,
 so it is safe to run twice; nothing a save held is lost.
 
+- **v56** floors as tiers: every protocol's filling stats and flat rule × its new fill over the one it was filled with, once (`curveRestore`, keyed on `s.curve` 3).
 - **v55** gear carries your power: every protocol's filling stats (Damage, Crit Damage, Signal, Regen, Leech) and flat damage, heal or shield rule × the fill at its item level, once (`curveRestore`, keyed on `s.curve` 2).
 - **v54** the compounding curve: every protocol's flat stats and flat rule, and each filter's Block, Regen and barbs,
   lifted once at its item level (`curveRestore`, keyed on `s.curve`).
