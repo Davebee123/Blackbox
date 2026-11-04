@@ -14,7 +14,7 @@ import { BOSSES, TELL } from './data.mjs';
 import { emit, alive, part, livingParts, defender, strikeWith, attackAmount, landingsOf } from './combat.mjs';
 import { tellsOf } from './tells.mjs';
 
-export const ACTS = { leave: 1, lash: 2, floor: 0.3 }; // beats an act plays before its ♛ may go on; the Backlash's multiple, and its least (a share of your max)
+export const ACTS = { leave: 1, lash: 2, floor: 0.15 }; // beats an act plays before its ♛ may go on; the Backlash's multiple, and its least (a share of your max)
 
 // The boss's acts (its family's, for the Resident), or null: not a P4 boss.
 export function actsOf(v) {

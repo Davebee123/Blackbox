@@ -47,6 +47,12 @@ on the cycle it would fire never fires. Only attacks cost you anything. Leave a 
 chit back. From level 6 a virus also announces big moves ahead (**tells**), and the part you've left alone is the one
 that winds up.
 
+**Fight length** (`CONFIG.length`): on your Signal, a fight at your level in its blues runs about 15 cycles, an elite
+about 25, a solo boss 30 to 35, for about the Signal a shorter one cost. A virus's Integrity is ×2.2 at level 1 up to
+×5.5 at 45 and its hits ×0.33 to ×0.5 (steeper late, so a mob ten levels down still falls fast); a plain hit stays
+under about 12% of your max. A single hit lands for at most 25% of your max from a solo boss and 20% from a wild charge
+(`CONFIG.spikeCap`). Adds (fragments, Packages, Droppers), breaches and crew bosses keep their size.
+
 ### Rules, one per layer
 
 | Layer | Rule |
@@ -554,15 +560,18 @@ flashes on screen.
 
 **The Resident.** Opening a server's vault unseals its **Core**, where the Resident waits: the owner's process, a boss of
 the server's family (all three parts) at the server's level, 1.4× Integrity (1.1× on your first server). Its phase
-re-arms every part; it enrages at cycle 18. A worm or ransomware Resident plays in acts instead (below): 1.1× Integrity,
-enraging at cycle 24. Beat it and the server is **taken over**: yours, teal on the map, its Core
+re-arms every part. A worm or ransomware Resident plays in acts instead (below): 1.1× Integrity. Beat it and the server is **taken over**: yours, teal on the map, its Core
 quiet for good. Lose and you're disconnected, and for 6 hours it is a level stronger, up to three levels.
+
+On your Signal each solo boss takes its own Integrity and hits on top of the fight length (`BOSSES` long), so it runs
+30 to 35 cycles, and enrages about 15% past a geared kill: the Resident at 36, the lair bosses at 31 to 40. In a
+breach the Resident keeps its old size and enrages at 18 (24 in acts).
 
 | Boss | Where | From | Integrity | Enrages |
 |---|---|---|---|---|
-| RELAY-KING (worm) | SPRAWL-00's relay room (level 5), a Core sealed until level 3; back 30 minutes after it falls | level 3 | 1.25× | cycle 16 |
-| REPO MAN (ransomware) | The Bounty event from level 8 | level 8 | 1.6× | cycle 18 |
-| HOLLOW CHOIR (ghostroot) | Its own event, from level 10 | level 10 | 1.4× | cycle 16 |
+| RELAY-KING (worm) | SPRAWL-00's relay room (level 5), a Core sealed until level 3; back 30 minutes after it falls | level 3 | 1.31× | cycle 36 |
+| REPO MAN (ransomware) | The Bounty event from level 8 | level 8 | 2.32× | cycle 39 |
+| HOLLOW CHOIR (ghostroot) | Its own event, from level 10 | level 10 | 1.33× | cycle 40 |
 
 Each plays in acts (below) with a part and a rule of its own, and a mechanic an act (docs/solo-bosses.md).
 
@@ -588,7 +597,7 @@ ticks at 50% and 25%. Built: the worm and ransomware Residents and the three sol
 
 | Boss | The beat | Every | What answers it |
 |---|---|---|---|
-| Resident (worm, ransomware) | **Backlash**: a part with an attack that your command hits on the beat lashes back for its attack doubled (30% of your max at least, 60% at most), and an Encrypt or Replicate does its own thing once on top. A hit that breaks it doesn't lash, nor do burns or helpers sent before. | 4, then 3 | A shield, a buff or hold, a part with no attack (the Lockbox), or a hit that breaks its part |
+| Resident (worm, ransomware) | **Backlash**: a part with an attack that your command hits on the beat lashes back for its attack doubled (15% of your max at least, 25% at most), and an Encrypt or Replicate does its own thing once on top. A hit that breaks it doesn't lash, nor do burns or helpers sent before. | 4, then 3 | A shield, a buff or hold, a part with no attack (the Lockbox), or a hit that breaks its part |
 | RELAY-KING | **Broadcast**: its Relay's attack, bigger for each fragment | 4, 3 from act 3 | Clear the fragments, cut it, or a ◆ on you |
 | REPO MAN | **Collection**: its Ledger's attack, bigger for each Lien; each act calls one 3 cycles out | 5 | Few Liens, a cut, or a ◆ on you |
 | HOLLOW CHOIR | **Copy**: its Mimic copies what you fire and turns it on you (a second voice from act 2) | 4 | What costs least to have copied, hold, or break a voice |
@@ -2400,7 +2409,7 @@ developer mode, `crew sim <classes>` adds bot crewmates from level 5 (`crew`, `c
 - **MMO, not ARPG:** a normal virus gets +50% Integrity a player (`CREW.hpPer`), a boss +80%, an elite +5%; its hits
   stay their solo size. **Kill XP is split**, plus 10% a player (`PARTY_XP`: a pair 55% each, a four 32.5%). Drops
   stay personal; rewards are yours.
-- **◆ CREW elites** (a third of a Pit's rooms, and the trunk server, and every elite room): ×1.5 Integrity, ×0.7
+- **◆ CREW elites** (a third of a Pit's rooms, and the trunk server, and every elite room): ×1.65 Integrity, ×0.62
   damage, one more ◆ and a clash (`ELITE`; Fights), only +5% a player. A champion, a feud and the farm's packs size
   their own Integrity, keep ×1.3 damage and roll no clash. Three times the XP, three drop rolls, never less than a blue, 8% a
   unique. Never in the way of anything you need.

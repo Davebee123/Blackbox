@@ -77,9 +77,10 @@ export const CONFIG = {
   // Fight length (docs/scaling.md step 3): a Signal fight's Integrity × hp and its hits × dmg, by enemy level (runLate
   // points: linear between, flat after the last), so a fight at your level in its blues runs longer for about the Signal
   // it cost before. Steeper late: your damage outgrows a mob's Integrity with level, and a fight bound by its ◆ is as long
-  // ten levels down as at your level. boss: a solo boss's on top (its enrage stretched with it). Crew bosses (raid.mjs)
-  // and breaches (their own pace) skip it.
-  length: { hp: [[1, 2.2], [10, 2.5], [18, 2.3], [30, 3.5], [45, 5.5]], dmg: [[1, 0.42], [10, 0.4], [18, 0.4], [30, 0.42], [45, 0.33]], boss: { hp: 1.4, dmg: 0.45 } },
+  // ten levels down as at your level. boss: a solo boss's on top, unless it has its own (BOSSES long: its Integrity, hits
+  // and enrage, about 15% past a geared kill). Adds keep their size (addPower). Crew bosses (raid.mjs) and breaches (their
+  // own pace) skip it.
+  length: { hp: [[1, 2.2], [10, 2.5], [18, 2.3], [30, 3.5], [45, 5.5]], dmg: [[1, 0.42], [10, 0.4], [18, 0.5], [30, 0.42], [45, 0.33]], boss: { hp: 1.4, dmg: 0.45 } },
   thirdTrim: 0.85, // a family's third part (Lockbox, Mirror, Decoy) comes out of the other two's Integrity
   ward: 0.25, // Lockbox: the warded part loses at most this share of its max a cycle
   wardHeld: 0.5, // Lockbox: what the cap holds back isn't lost; the Lockbox holds it, and when it breaks this share lands on the partner at once (docs/puzzle-levers.md 3.4)
@@ -157,9 +158,9 @@ export const CONFIG = {
   trapSignal: 10, // pulling honeypot bait
   // Worm fragments
   rearmMax: 3, // the Bouncer's Keyring re-arms this many times, then overheats
-  // The spike cap (docs/genome.md rule 5, as the designer set it in docs/kits.md 11). A solo boss's single landing on
-  // you, charged or plain, never takes more than 60% of your max Signal (Integrity at home), so it hurts but never
-  // one-shots you. A wild virus's or a guard's charge stops at 45% (tells.mjs). Crew bosses (raid.mjs) have their own rules.
+  // The spike cap (docs/genome.md rule 5). A solo boss's single landing on you, charged or plain, never takes more than
+  // 25% of your max Signal (Integrity at home), a telegraphed boss move at most about a quarter (docs/scaling.md step 3;
+  // 60% before). A wild virus's or a guard's charge stops at 20% (45% before; tells.mjs). Crew bosses (raid.mjs) have their own rules.
   spikeCap: { wild: 0.2, boss: 0.25 },
   fragmentIntegrity: 18, // no armor: one Spike breaks one
   fragmentDamage: 3,
@@ -1044,7 +1045,9 @@ const COLDWALLET = {
 // unique chance. Only in Pit folders, never on the way to anything you need.
 // Bosses: a solo fight with phases. hp and dmg scale the whole virus; at each phase's share of its
 // total Integrity it does something (re-arm every part, call in a Sentry, attack faster), and from
-// enrageAt every attack lands every cycle, a quarter harder. healerDmg (optional): damage that steps up by
+// enrageAt every attack lands every cycle, a quarter harder. long: on your Signal (fight length, CONFIG.length), its
+// Integrity and hits in place of CONFIG.length.boss's, fitted so it runs 30 to 35 cycles for about the Signal it cost
+// before, and its enrage, about 15% past a geared kill (enrageAt stays a breach's). healerDmg (optional): damage that steps up by
 // level (runLate points). raid: a crew boss on the group boss framework (raid.mjs, the farm's three): its
 // phases are mechanics with target rules and telegraphs, and its own parts hit softly (dmg).
 // A strain boss (two parts, its strain's rule) is soft at 10 and hard to keep up with by 30: its hits step with level.
@@ -1131,7 +1134,8 @@ export const BOSS_LOOT = { chance: 0.15, pity: 0.05, yellow: 0.25, raid: { chanc
 // Elites are puzzles (docs/puzzle-fights.md P3): Integrity and hits down (5.2 and 1.3 before) until the planner wins 85%
 // of them, the difficulty back as their clash (parts.mjs, genes.mjs CLASHES). A server room's elite takes these too.
 // sizedDmg: the hits of an elite sized on its own (a champion, a feud, the farm's packs: eliteHp), as before P3, with no clash.
-export const ELITE = { hp: 1.65, dmg: 0.62, sizedDmg: 1.3, armor: 1, xp: 3, share: 1 / 3, goneMs: 30 * 60000 }; // goneMs: an elite that beats you moves on, and its folder fills again this much later
+export const ELITE = { hp: 1.65, dmg: 0.62, // 1.5 and 0.7 before fight length (CONFIG.length)
+  sizedDmg: 1.3, armor: 1, xp: 3, share: 1 / 3, goneMs: 30 * 60000 }; // goneMs: an elite that beats you moves on, and its folder fills again this much later
 
 // ---------- solo tells (tells.mjs) ----------
 // A tell is a big move a part announces ahead, on its row of the board and in the log, that you plan your interrupts
@@ -1161,7 +1165,7 @@ export const TELL = {
     { to: 99, count: 2, live: 2, lead: 3, mult: 3, cap: 0.25, dot: 0.06, after: 1, burn: 0.04, hang: 0 },
   ],
   castWindow: 2, // a cast can be answered on the cycle it lands and the one before
-  ceiling: 0.25, // a solo boss's tell never lands for more than this share of your max (or the plain hit, if that's bigger); a wild virus's stops at CONFIG.spikeCap.wild (tells.mjs ceilingOf)
+  ceiling: 0.25, // (0.6 before fight length) a solo boss's tell never lands for more than this share of your max (or the plain hit, if that's bigger); a wild virus's stops at CONFIG.spikeCap.wild (tells.mjs ceilingOf)
   // An elite brings one more tell (from level 6), and each can cost 15% more (never past the ceiling). A solo boss
   // brings every tell open at its level, at least `count`. A boss staggers Open like any part, but keeps its clock
   // (delay 0).

@@ -7,7 +7,7 @@ import { bossBand, bossFight, geneCheck, PROBES, ANSWERED, SUBS, playersAt, play
 import { strainsAt } from './balance.mjs';
 import { selectEncounter, command, resolveCycle, active } from './dist/combat.mjs';
 import { planner } from './dist/planner.mjs';
-import { BOSSES, TELL } from './dist/data.mjs';
+import { BOSSES, TELL, CONFIG } from './dist/data.mjs';
 import { GENES, GENE_IDS } from './dist/genes.mjs';
 
 const SEEDS12 = Array.from({ length: 12 }, (_, i) => i + 1);
@@ -118,16 +118,16 @@ test('per-gene calibration: about 3–4 points a cost point, answers worth 3 or 
   assert.deepEqual(off, []);
 });
 
-// The spike cap (docs/genome.md rule 5, as the designer set it in docs/kits.md 11, CONFIG.spikeCap): a solo boss's
-// single landing may reach 60% of your max, so it hurts but never one-shots you, and a wild virus's or a guard's charge
-// stops at 45%. The rebuilt bosses on their twelve seeds, every solo boss at 10, 18 and 30 on one seed a subclass,
+// The spike cap (docs/genome.md rule 5, CONFIG.spikeCap): a solo boss's single landing may reach 25% of your max (60%
+// before fight length, docs/scaling.md step 3: a telegraphed boss move at most about a quarter), and a wild virus's or a
+// guard's charge stops at 20% (45% before). The rebuilt bosses on their twelve seeds, every solo boss at 10, 18 and 30 on one seed a subclass,
 // and the hard slice of wild fights (every open strain, elites) at 10 and 30.
-test('the spike cap: a solo boss lands at most 60% of your max in one hit, a wild virus\'s charge at most 45%', () => {
-  for (const id of ['nb-hashlord', 'nb-mirrorshade']) assert.ok(band(id).spike <= 0.6, `${id}: ${band(id).spike.toFixed(2)} (${band(id).spikeBy})`);
+test('the spike cap: a solo boss lands at most 25% of your max in one hit, a wild virus\'s charge at most 20%', () => {
+  for (const id of ['nb-hashlord', 'nb-mirrorshade']) assert.ok(band(id).spike <= CONFIG.spikeCap.boss + 0.005, `${id}: ${band(id).spike.toFixed(2)} (${band(id).spikeBy})`);
   const solo = Object.keys(BOSSES).filter((k) => !BOSSES[k].raid);
   for (const id of solo) for (const L of [10, 18, 30]) for (const [cls, sub] of SUBS) {
     const r = bossFight(id, Math.max(L, BOSSES[id].floor || 0), cls, sub, 1);
-    assert.ok(r.spike <= 0.6, `${id} at ${L}, ${sub}: ${r.spike.toFixed(2)} (${r.spikeBy})`);
+    assert.ok(r.spike <= CONFIG.spikeCap.boss + 0.005, `${id} at ${L}, ${sub}: ${r.spike.toFixed(2)} (${r.spikeBy})`);
   }
   // Since SIGINT cuts charges too (docs/puzzle-levers.md 3.6), the planner here keeps it for casts, so enough charges
   // land to measure the cap.
@@ -144,7 +144,7 @@ test('the spike cap: a solo boss lands at most 60% of your max in one hit, a wil
       command(s, 'engage');
       for (let n = 0; n < 80 && active(s); n++) {
         command(s, planner(s) || 'hold');
-        for (const x of resolveCycle(s)) if (x.type === 'server-hit' && x.tell && !x.who) { charges++; assert.ok(x.amount <= 0.45 * max + 1, `${sub} at ${L}, ${JSON.stringify(f)}: ${x.message} (max ${max})`); }
+        for (const x of resolveCycle(s)) if (x.type === 'server-hit' && x.tell && !x.who) { charges++; assert.ok(x.amount <= CONFIG.spikeCap.wild * max + 1, `${sub} at ${L}, ${JSON.stringify(f)}: ${x.message} (max ${max})`); }
       }
     }
   } } finally { TELL.bots.sigintOn = was; }
