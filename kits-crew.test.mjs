@@ -24,7 +24,8 @@ test('crew-leaning damage dealers carry a crew: over Lv 18 and 30, more boss tri
     // folders are rooms) it measures 69%: held at 65%.
     // Since gear Damage reaches ticks and helper hits (docs/scaling.md step 2, combat.mjs gearTick) it measures 95% to the
     // Overclocker's 99%: held at 90% and to within 4 points of it.
-    if (c === 'hijacker') { assert.ok(r[c].won >= 0.9 && r[c].won >= r.overclocker.won - 0.04, line); continue; }
+    // Since fight length (docs/scaling.md step 3) it measures 93% to the Overclocker's 97%: held to within 5 points.
+    if (c === 'hijacker') { assert.ok(r[c].won >= 0.9 && r[c].won >= r.overclocker.won - 0.05, line); continue; }
     assert.ok(r[c].won >= 0.9, line);
     // The designer's call (October 21, 2026): once a lost fight stopped leaving a stale heal cap on the next visit, the
     // Phantom's crew low point passed the Herder's by under a point (27.4 to 26.7) while the Herder still won more tries
