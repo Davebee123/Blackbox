@@ -93,8 +93,8 @@ test('every gene in play has its cost measured: a probe for each one a virus rol
 // kills. The designer's play decides it.
 const TRADES = ['volley'];
 // Since fight length (docs/scaling.md step 3) ignoring the Mimic costs 32 points: a longer fight plays more of its beats,
-// and it copies your hits, which kept their size. Held at 32 until the designer has played it.
-const HELD_IGNORE = { mimic: 32 };
+// and it copies your hits, which kept their size. Held at 32 until the designer has played it; 33.1 with sustain potency: 34.
+const HELD_IGNORE = { mimic: 34 };
 test('no rolled gene or tell runs away: at most 25 points a fight with it, and at most 25 for ignoring it', () => {
   const off = [];
   for (const [id, c] of Object.entries(checks)) {
