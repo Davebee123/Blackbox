@@ -98,6 +98,10 @@ Same harness, wild fights at your level; won · cycles · Signal lost (step 1 in
 At your level in its blues (cycles · Signal lost): 3: 8 · 29%; 10: 10 · 30% (elite 14 · 38%); 18: 11 · 21% (16 ·
 23%); 30: 10 · 34% (12 · 31%); 45: 9 · 28% (11 · 31%). Subclasses alone and their core rotations sit within a few
 points of main; crew bosses at 18 win 72 of 74 tries (72 of 73); the campaign bot reaches level 10 in 11–15 breaches.
+Held where the class sims moved a point or two (each test says what it measures): key 1 at 21–22% for the Payload,
+Herder and Hijacker; the Hijacker's core 19 over its full build; the Overclocker 20 of 24 alone at 30; the Sysop 1.98×
+the pace at 18; the Herder's swarm preset and OOM Kill; the Warden's Throttle; Umbrella Policy. They wait on a kit pass
+after the designer has played step 2.
 
 **Why the coefficients:** with a flat Damage stat and your level no longer growing hits, every hit is a small base plus
 the same gear Damage, so a nuke and a jab converge (at 30, a 40 hit 282 and a 10 hit 241) and big-hit kits sink (core
