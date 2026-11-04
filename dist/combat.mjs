@@ -518,7 +518,7 @@ export const scaled = (s, n) => Math.max(1, Math.round(n * powerOf(s)));
 // Sustain's potency in a fight with fight length (data.mjs CONFIG.length.heal, by the virus's level): heals you take and
 // your skills' flat shields shrink with its hits, so twice the casts in a longer fight don't double what you sustain.
 // drawn: a heal drawn from the damage you deal (lifesteal, Leech, Reclaim) shrinks with the Integrity it draws on instead.
-export const potency = (s, drawn = false) => { const v = s.encounter?.virus; return !v?.long ? 1 : drawn ? (CONFIG.length.drawn ?? 1) / runLate(v.level, CONFIG.length.hp) : runLate(v.level, CONFIG.length.heal); };
+export const potency = (s, drawn = false) => { const v = s.encounter?.virus; return !v?.long || !CONFIG.length.heal ? 1 : drawn ? (CONFIG.length.drawn ?? 1) / runLate(v.level, CONFIG.length.hp) : runLate(v.level, CONFIG.length.heal); };
 export const sustained = (s, n, drawn = false) => Math.max(1, Math.round(n * potency(s, drawn)));
 // Heals you cast: CONFIG.healLevel of the level line's growth and the lift (step 1's curve), times Restore.
 // restoreMult alone for heals that give back damage (Reclaim's half, Rollback), which already grow with it.

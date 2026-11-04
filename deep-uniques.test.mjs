@@ -7,6 +7,8 @@ import assert from 'node:assert/strict';
 import { fresh, command, selectEncounter, resolveCycle, part, addItem, loaded, hooks, UNIQUES, gearStat, maxSignal, damageMultiplier, hit, heal, takeDamage, takenMult, cooldownOf, timersHidden, fxOn, fxPct, rollDrop, setBonusCount, puzzleUnique, floorUniques, strainTrophies, WORLD_SOURCES, addLocation, finish, hackerLevel, critChance } from './dist/combat.mjs';
 import { uniqueItem, seeded, BASES, STATS, LOOT } from './dist/gear.mjs';
 import { CONFIG, BOSS_LOOT, ABILITIES, defaultSub, lifted, filled, own } from './dist/data.mjs';
+// These test each heal's and shield's own numbers: sustain potency (CONFIG.length.heal, docs/scaling.md step 3) off.
+CONFIG.length = { ...CONFIG.length, heal: null };
 import { checkItems, fxText, fxList } from './dist/content.mjs';
 import ITEMS from './dist/content/items.mjs';
 

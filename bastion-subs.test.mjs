@@ -4,6 +4,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, selectEncounter, resolveCycle, part, readyIn, hasTalent, rank, defender, subOf, edge, knownSkills, active } from './dist/combat.mjs';
 import { CONFIG, ABILITIES, SUBS, SUBCLASS, unlockLevel } from './dist/data.mjs';
+// These test each heal's and shield's own numbers: sustain potency (CONFIG.length.heal, docs/scaling.md step 3) off.
+CONFIG.length = { ...CONFIG.length, heal: null };
 import { play } from './dist/run.mjs';
 import { matesOf } from './dist/crew.mjs';
 import { planner } from './dist/planner.mjs';

@@ -59,7 +59,7 @@ const wide = (c, b, sub) => {
   const rs = [0, 1, 2].flatMap((gearSeed) => [...Array.from({ length: 40 }, (_, i) => fight(c, 'random', b, { sub, gearSeed, seed: 500 + i, mode: 'run', zone: true })), ...['watchdog', 'sentinel', 'crawler', 'shredder'].flatMap((g) => [1, 2].map((seed) => fight(c, g, b, { sub, gearSeed, seed, mode: 'run', guard: b.guard })))]);
   return { lost: rs.reduce((a, r) => a + r.lostPct, 0) / rs.length, wins: rs.filter((r) => r.win).length / rs.length, cycles: rs.reduce((a, r) => a + r.cycles, 0) / rs.length };
 };
-test('the Bastions alone are the slow ones: the Warden at least 1.4 times the damage dealers\' median cycles a fight at Lv 18 and 30, the Sysop at least twice, both winning 85% and the Sysop losing 15% or less', () => {
+test('the Bastions alone are the slow ones: the Warden at least 1.4 times the damage dealers\' median cycles a fight at Lv 18 and 30, the Sysop at least twice, both winning 85% and the Sysop losing 21% or less', () => {
   for (const b of BRACKETS.filter((x) => x.level === 18 || x.level === 30)) {
     const rs = Object.fromEntries(SUBS.map(([c, sub]) => [sub, wide(c, b, sub)]));
     const line = Object.entries(rs).map(([sub, r]) => `${sub} ${r.lost.toFixed(0)}% ${Math.round(r.wins * 100)} ${r.cycles.toFixed(1)}c`).join(' / ');
@@ -68,7 +68,9 @@ test('the Bastions alone are the slow ones: the Warden at least 1.4 times the da
     assert.ok(rs.warden.cycles >= 1.4 * median, `${b.name}: ${line}`);
     // Since step 2 (docs/scaling.md) the Sysop measures 1.95 times at Lv 18: held at 1.9.
     assert.ok(rs.sysop.cycles >= 1.9 * median, `${b.name}: Sysop ${(rs.sysop.cycles / median).toFixed(2)}x: ${line}`);
-    assert.ok(rs.sysop.lost <= 15, `${b.name}: ${line}`);
+    // Since sustain potency (docs/scaling.md step 3: the designer found healing too strong) the Sysop loses 20% at Lv 30:
+    // held at 21, a healer alone no longer safe.
+    assert.ok(rs.sysop.lost <= 21, `${b.name}: ${line}`);
     for (const sub of ['warden', 'sysop']) assert.ok(rs[sub].wins >= 0.85, `${b.name}: ${line}`);
   }
 });
