@@ -36,9 +36,9 @@ export const SCANNER = {
 // The stations. A pirate's tip lands on a hub you've found ({hub}); a distress call names a server of yours ({server}).
 export const STATIONS = [
   { id: 'sparrow', kind: 'numbers', f: 6.815, name: 'SPARROW-9', text: '58331 · 0300 · 58331 · 0300 · 22816 · end',
-    lore: { title: 'Orders', line: 'A server, an hour, a crew. TOLLGATE hit that server at 0300, to the minute. The crews are told where to hit.' } },
+    lore: { title: 'Orders', line: 'A server, an hour, a crew. TOLLGATE hit that server at 0300, to the minute.' } },
   { id: 'kite', kind: 'numbers', f: 11.140, name: 'KITE-4', text: 'achtung. 7 7 2. 7 7 2. 0 6 0 0. 2 2 8 1 6. ende',
-    lore: { title: 'One voice', line: "SWARMLINE's targets, read in the same voice as TOLLGATE's. The crews you fight take orders from one sender." } },
+    lore: { title: 'One voice', line: "SWARMLINE's targets, read in the same voice as TOLLGATE's." } },
   { id: 'wren', kind: 'numbers', f: 8.215, name: 'WREN-2', text: '00412 00412 · 9 9 1 4 0 · 00412 · 22816 · repeat',
     lore: { title: 'Page 0412', line: '00412 is a page number. Someone reads out a schedule of hits, a page a night. LANTERN wants the whole thing.' } },
   { id: 'owl', kind: 'numbers', f: 5.235, name: 'OWL-7', text: '22816 · 22816 · 22816 · 0 · 22816 · end',
