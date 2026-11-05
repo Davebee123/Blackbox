@@ -480,8 +480,7 @@ test('the loadout page: Protocols (the board, the stash, the stats), then Skills
   command(s, 'developer level 18');
   html = loadoutMarkup(s, 'operator', 'skills');
   assert.doesNotMatch(html, /data-command="talent operator/, 'no subclass picked: no tree to spend in');
-  assert.match(html, /data-bo-open="operator">Choose your subclass</, 'and the way to pick one');
-  assert.doesNotMatch(loadoutMarkup(s, 'operator/herder', 'skills'), /data-arch="operator\/herder"/, 'no subclass to look at before the pick: the breakout shows them');
+  assert.match(html, /data-command="subclass operator herder"[^>]*>Choose Herder</, 'and the way to pick one');
   command(s, 'subclass operator herder');
   html = loadoutMarkup(s, 'operator', 'skills');
   assert.match(html, /<span>0 of 21 · 5 earned<\/span>/, 'the tree shows its points, no explanation');

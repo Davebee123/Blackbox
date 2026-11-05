@@ -1,4 +1,4 @@
-// Loadout → Skills and talents, and the subclass breakout (the designer's direction C, proto/skills-c.html).
+// Loadout → Skills and talents, where you choose your subclass (the designer's direction C, proto/skills-c.html).
 //
 // The page is one card and a detail panel. The card is names, icons and state, nothing to read: the class emblem with
 // the class, subclass, level and XP; then Bar (your keys, the presets, save bar), Skills (chips by line: the core, then
@@ -11,13 +11,11 @@
 // panel says where it stands (Mastery 2 · 340/1000, its bar) with the tier its effect plays at, any you've unlocked.
 //
 // No subclass shows before SUBCLASS.from. From it a class that hasn't picked plays its core alone (combat.mjs subOf),
-// and the breakout waits: a full-screen walk inside the screen's glass (Idea, Skills, Talents, Choose) with both
-// subclasses side by side and the detail panel for anything in it. app.js opens it once you're home and out of a fight
-// (breakoutDue), "Later" puts it off (combat.mjs subLater), and the page keeps a "Choose your subclass" button for it.
+// and this page is where it picks: it opens on its first subclass, read-only like any preview, with the other and the
+// core beside it in the nav and a Choose button. app.js brings you here once, the first time you're home (subPromptDue).
 //
-// Item keys (data-sk): s:<skill>, k:<cantrip>, r:<passive|sync|kit|edge>, t:<talent node> on the page; in the breakout
-// b:<subclass>:<skill>, bt:<subclass>:<node> and be:<subclass> (its edge).
-import { ABILITIES, ARCHETYPES, CONFIG, LOADOUT, SUBCLASS, SUBS, SYNC, STATUSES, TREE, barSlots, cantripsOf, isRunSkill, lineOf, presetBar, shippedPresets, skillOrder, unlockLevel, xpToNext } from './data.mjs';
+// Item keys (data-sk): s:<skill>, k:<cantrip>, r:<passive|sync|kit|edge>, t:<talent node>.
+import { ABILITIES, ARCHETYPES, CONFIG, LOADOUT, SUBCLASS, SUBS, SYNC, STATUSES, TREE, barSlots, cantripsOf, isRunSkill, lineOf, skillOrder, unlockLevel, xpToNext } from './data.mjs';
 import { active, canTakeBack, capPickOf, capState, capstonePoints, classOf, cooldownOf, equippedSkills, followOf, hackerLevel, hackerOf, kitTalent, knownSkills, picksOf, pointsSpent, presetKeys, presetsOf, ranksOf, rowState, spentAbove, specRule, subOf, subWaiting, talentPoints, tierState } from './combat.mjs';
 import { glyph } from './glyphs.mjs';
 import { ruleHtml } from './ruletext.mjs';
@@ -40,23 +38,23 @@ const VERB = { hit: 'hit', burn: 'burn', stun: 'stun', debuff: 'debuff', shield:
 const ROOT = { passive: ['Passive', 'damage'], sync: ['Sync', 'sync'], kit: ['Kit talent', 'crit'], edge: ['Edge', 'spike'] };
 // Lit skills (Shatter, Retaliate, Opening) have no cooldown: they're usable just after their moment.
 const LIT = new Set(['shatter', 'retaliate', 'opening']);
-const SUB_ICON = { demolitionist: 'expand', overclocker: 'overload', warden: 'shell-shield', sysop: 'clear', payload: 'injector', phantom: 'weakness', herder: 'command', hijacker: 'behavior' };
 
 // ---------- what the page shows ----------
-// view: a class, or class/subclass (class/core: the class alone). Only a class that picked can look at a subclass:
-// its own, or the other as a preview (read-only, with Switch). Below SUBCLASS.from, and until you pick, the class alone.
+// view: a class, or class/subclass (class/core: the class alone). From SUBCLASS.from a class can look at a subclass:
+// its own, or another as a preview (read-only, with Switch, or Choose before a pick: it opens on its first). Below
+// SUBCLASS.from, the class alone.
 function pageOf(s, view) {
   const [vc, vs] = String(view || '').split('/');
   const equippedArch = classOf(s), id = ARCHETYPES[vc] ? vc : equippedArch, a = ARCHETYPES[id];
-  const mine = subOf(s, id); // null below SUBCLASS.from, and until a pick
-  const shown = !mine || vs === 'core' ? null : SUBS[vs]?.cls === id ? vs : mine;
+  const mine = subOf(s, id), waiting = subWaiting(s, id); // mine: null below SUBCLASS.from, and until a pick
+  const shown = (!mine && !waiting) || vs === 'core' ? null : SUBS[vs]?.cls === id ? vs : mine || Object.values(a.subs)[0].id;
   const kit = SUBS[shown] || null, previewing = !!kit && shown !== mine;
   const lvl = hackerLevel(s, id);
   return {
     s, id, a, equippedArch, mine, shown, kit, previewing, lvl, hk: hackerOf(s, id),
     busy: active(s) || !!s.run, keysBusy: active(s), // talents and classes change at home, keys anywhere out of a fight
     known: knownSkills(s, id), equipped: equippedSkills(s, id), slots: barSlots(lvl),
-    waiting: subWaiting(s, id),
+    waiting,
   };
 }
 const skillName = (id) => ABILITIES[id]?.name || Object.values(ARCHETYPES).flatMap((a) => a.skills).find((x) => x.id === id)?.name || id;
@@ -194,19 +192,20 @@ export function skillsTabMarkup(s, view, ui = {}) {
   const items = itemsOf(p), sk = items.has(ui.sel) ? ui.sel : firstKey(p);
   const st = STATUSES[a.status];
   const next = xpToNext(lvl), pct = lvl < LOADOUT.maxLevel ? Math.max(0, Math.min(100, (hk.xp / next) * 100)) : 100;
-  // The head's right side: the subclass you picked, its other, and the class alone to look at; or the way to choose.
+  // The head's right side: the subclasses and the class alone to look at, with Switch on another, or Choose before a pick.
   let side = '';
-  if (p.mine) {
+  if (p.mine || p.waiting) {
     const nav = [['core', `${a.name} core`], ...Object.values(a.subs).map((x) => [x.id, x.name])].map(([k, name]) => {
       const on = (k === 'core' && !kit) || k === p.shown;
       return `<button type="button" data-arch="${id}/${k}" aria-pressed="${on}">${esc(name)}${k === p.mine ? '<i class="sk-yours" title="Yours"></i>' : ''}</button>`;
     }).join('');
-    const why = p.keysBusy ? 'Between fights' : p.busy ? 'At home' : `Switch to ${kit?.name}`;
-    const sw = p.previewing ? `<button type="button" class="btn small" ${p.busy ? 'disabled' : `data-command="subclass ${id} ${kit.id}"`} title="${esc(why)}">Switch</button>` : '';
-    side = `<nav class="sk-subnav" aria-label="Subclass">${nav}</nav>${sw}`;
-  } else if (p.waiting) side = `<button type="button" class="btn primary sk-choose" data-bo-open="${id}">Choose your subclass</button>`;
+    let act = '';
+    if (p.waiting && kit) act = `<button type="button" class="btn primary sk-choose" ${p.keysBusy ? 'disabled title="Between fights"' : `data-command="subclass ${id} ${kit.id}" title="Switching later is free at home"`}>Choose ${esc(kit.name)}</button>`;
+    else if (p.previewing) { const why = p.keysBusy ? 'Between fights' : p.busy ? 'At home' : `Switch to ${kit.name}`; act = `<button type="button" class="btn small" ${p.busy ? 'disabled' : `data-command="subclass ${id} ${kit.id}"`} title="${esc(why)}">Switch</button>`; }
+    side = `<nav class="sk-subnav" aria-label="Subclass">${nav}</nav>${act}`;
+  }
   const head = `<header class="sk-head"><pre class="sk-emblem" aria-hidden="true">${esc(EMBLEMS[id].join('\n'))}</pre>
-    <div class="sk-id"><h2>${kit ? esc(a.name) : a.role.map(esc).join(' · ')}</h2><h1>${esc(kit ? kit.name : a.name)}${p.previewing ? ' <span class="tag preview">Preview</span>' : ''}</h1>
+    <div class="sk-id"><h2>${p.waiting ? `${esc(a.name)} · Choose a subclass` : kit ? esc(a.name) : a.role.map(esc).join(' · ')}</h2><h1>${esc(kit ? kit.name : a.name)}${p.previewing && !p.waiting ? ' <span class="tag preview">Preview</span>' : ''}</h1>
       <div class="sk-lv"><b>Lv ${lvl}</b>${lvl < LOADOUT.maxLevel ? `<span class="lvl-bar" title="${fmt(hk.xp)} / ${fmt(next)} XP"><span style="width:${pct.toFixed(1)}%"></span></span><small>${Math.floor(pct)}%</small>` : '<small>max level</small>'}<span class="tag stag status sk-status" title="${esc(`${st.name}: ${st.rule}`)}">${esc(st.name)}</span></div></div>
     <div class="sk-side">${side}</div></header>`;
 
@@ -222,7 +221,7 @@ export function skillsTabMarkup(s, view, ui = {}) {
   const points = talentPoints(s, id), spent = kit && !p.previewing ? pointsSpent(s, id) : 0, free = Math.max(0, points - spent);
   const reset = spent && kit && !p.previewing && !p.busy ? `<button type="button" class="btn small sk-reset" data-command="talent reset ${id}" title="Take back every point and pick (free at home)">Reset</button>` : '';
   const pts = kit
-    ? `<div class="sk-pts" title="${esc(`A talent point every ${LOADOUT.talentEvery} levels from level ${LOADOUT.talentFrom}`)}"><b>${p.previewing ? '' : `${free} free`}</b><span class="sk-ptbar"><i style="width:${Math.min(100, (spent / TREE_MAX) * 100).toFixed(1)}%"></i></span><span>${spent} of ${TREE_MAX} · ${points} earned</span>${reset}</div>${treeHtml(p, sk)}`
+    ? `<div class="sk-pts" title="${esc(`A talent point every ${LOADOUT.talentEvery} levels from level ${LOADOUT.talentFrom}`)}"><b>${p.previewing && !p.waiting ? '' : `${free} free`}</b><span class="sk-ptbar"><i style="width:${Math.min(100, (spent / TREE_MAX) * 100).toFixed(1)}%"></i></span><span>${spent} of ${TREE_MAX} · ${points} earned</span>${reset}</div>${treeHtml(p, sk)}`
     : p.waiting ? `<div class="sk-pts" title="Talent points go into your subclass's tree"><b>${points} free</b><span>${points} earned</span></div>` : '';
   const talents = `<section class="sk-sec sk-talents"><h3>Talents${kit ? `<small>${spent}/${TREE_MAX}</small>` : ''}</h3><div>${rootsHtml(p, sk)}${pts}</div></section>`;
 
@@ -334,107 +333,6 @@ function nodeActs(p, n, row, j, st) {
   return `<div class="sk-acts"><button type="button" class="btn primary" ${st.can ? `data-command="${cmd}"` : `disabled title="${esc(why)}"`}>${st.other ? 'Swap to this' : 'Pick'}</button></div>`;
 }
 
-// ---------- the subclass breakout ----------
-// Open by itself when the class in use is past SUBCLASS.from with no pick, you're home and out of a fight, and you
-// haven't put it off (Later). app.js also waits for the screen to be free (no fight result or class picker up).
-export const breakoutDue = (s) => subWaiting(s) && !s.loadout?.subLater?.[classOf(s)] && !active(s) && !s.run;
-export const BREAKOUT_STEPS = ['Idea', 'Skills', 'Talents', 'Choose'];
-// Your bar as that subclass at a level: the pick's (its rotation preset at your level), filled as its rotation fills.
-function barAt(s, arch, sub, level) {
-  const rot = shippedPresets(sub).rotation || [], from = Math.min(level, Math.max(SUBCLASS.from, hackerLevel(s, arch)));
-  let bar = presetBar(arch, sub, from, rot);
-  for (let l = from + 1; l <= level; l++) {
-    const want = presetBar(arch, sub, l, rot), out = bar.map((x) => (want.includes(x) ? x : null));
-    for (const x of want) if (!out.includes(x)) { const i = out.indexOf(null); if (i >= 0) out[i] = x; else out.push(x); }
-    bar = out.filter(Boolean);
-  }
-  return bar;
-}
-export const breakoutLevels = (s, arch) => { const L = hackerLevel(s, arch); return [...new Set([L, 22, 30, 38].filter((l) => l >= L))].sort((a, b) => a - b); };
-
-function breakoutItems(p, subs) {
-  const items = itemsOf(p); // the class's own: its core, cantrips and roots
-  for (const k of subs) {
-    for (const { id: x } of lineOf(k)) items.set(`b:${k.id}:${x}`, { kind: 'skill', id: x, name: skillName(x), text: skillText(p.s, x, p.id), sub: k.id, preview: true });
-    items.set('be:' + k.id, { kind: 'root', root: 'edge', name: k.edge.name, text: k.edge.rule, level: SUBCLASS.from });
-    treeNodes(k, (n, row, i, j, alt) => items.set(`bt:${k.id}:${n.id}`, { kind: row.kind, node: n, row, i, j, alt, name: n.name, text: n.rules?.[0] || n.rule, preview: true }));
-  }
-  return items;
-}
-// "Works with" in the breakout: within one subclass (and the class's core), never across the two.
-function scoped(items, key) {
-  const sub = key.split(':')[1], out = new Map();
-  for (const [k, o] of items) if (!/^(b|bt|be):/.test(k) || k.split(':')[1] === sub || (k.startsWith('be:') && k === 'be:' + sub)) out.set(k, o);
-  return out;
-}
-
-export function breakoutMarkup(s, ui = {}) {
-  const arch = ARCHETYPES[ui.arch] ? ui.arch : classOf(s), a = ARCHETYPES[arch];
-  const p = pageOf(s, arch), subs = Object.values(a.subs), [A, B] = subs;
-  const step = Math.max(1, Math.min(4, Number(ui.step) || 1));
-  const items = breakoutItems(p, subs);
-  const lvls = breakoutLevels(s, arch), atLvl = lvls.includes(Number(ui.lvl)) ? Number(ui.lvl) : lvls[0];
-  const steps = BREAKOUT_STEPS.map((x, i) => `<button type="button" role="tab" data-bo-step="${i + 1}" aria-selected="${step === i + 1}" class="${i + 1 < step ? 'done' : ''}"><span>${i + 1 < step ? '✓' : i + 1}</span>${x}</button>`).join('');
-  const top = `<div class="bo-top"><div><p class="bo-kick">Level ${p.lvl} · ${esc(a.name)}</p><h1>Choose a subclass</h1></div>
-    <nav class="bo-steps" role="tablist" aria-label="Steps">${steps}</nav>
-    <button type="button" class="btn small bo-later" data-bo-later title="${esc(`Until you choose, you play the ${a.name} core. The choice waits on Loadout → Skills and talents.`)}">Later</button></div>`;
-  const mark = (k) => `<span class="bo-mark">${ico(SUB_ICON[k.id] || 'command')}</span>`;
-  const head = (k) => `<div class="bo-name">${mark(k)}<div><h2>${esc(k.name)}</h2><p>${k.role.map(esc).join(' · ')}</p></div></div>`;
-  const pts = TREE_MAX;
-  let body = '', sk = null, panel = '';
-  if (step === 1) {
-    const side = (k) => `<article class="bo-side">${head(k)}<p class="bo-idea">${esc(k.idea)}</p>
-      <dl class="bo-rows"><dt>Solo</dt><dd>${esc(k.solo)}</dd><dt>Crew</dt><dd>${esc(k.crew)}</dd></dl>
-      <div class="bo-edge"><small>Edge · from level ${SUBCLASS.from}</small><b>${esc(k.edge.name)}</b><p>${esc(k.edge.rule)}</p></div>
-      <div class="bo-strip">${lineOf(k).filter((x) => !isRunSkill(x.id)).map((x) => `<span title="${esc(`${skillName(x.id)} · level ${x.level}`)}"><span class="bo-frame">${skIco(x.id)}</span><small>${x.level}</small></span>`).join('')}</div>
-      <div class="bo-gets"><div><small>Skills</small><b>${lineOf(k).filter((x) => !isRunSkill(x.id)).length}</b> <span>Lv ${SUBCLASS.unlocks[0]}–${SUBCLASS.unlocks.at(-1)}</span></div><div><small>Talents</small><b>${pts}</b> <span>points</span></div><div><small>Presets</small><b>${Object.keys(k.presets).length}</b> <span>${Object.keys(k.presets).map(esc).join(', ')}</span></div></div></article>`;
-    body = `<div class="bo-vs">${side(A)}<div class="bo-mid"><pre class="sk-emblem" aria-hidden="true">${esc(EMBLEMS[arch].join('\n'))}</pre><span class="bo-fork"></span></div>${side(B)}</div>`;
-  } else if (step === 2 || step === 3) {
-    let rows = `<span class="bo-lhead">${esc(A.name)}</span><span></span><span class="bo-lhead r">${esc(B.name)}</span>`;
-    if (step === 2) {
-      sk = items.has(ui.sel) ? ui.sel : `b:${A.id}:${lineOf(A)[0].id}`;
-      const shared = (k, x) => subs.some((o) => o !== k && o.skills.includes(x));
-      const chip = (k, x, r) => `<button type="button" class="sk-chip bo-chip${r ? ' r' : ''}" ${sel(`b:${k.id}:${x}`, sk === `b:${k.id}:${x}`)}>${skIco(x)}<b>${esc(skillName(x))}</b>${shared(k, x) ? '<small title="Both subclasses get it">both</small>' : isRunSkill(x) ? '<small>run</small>' : ''}</button>`;
-      const levels = [...new Set([...lineOf(A), ...lineOf(B)].map((x) => x.level))].sort((x, y) => x - y);
-      for (const l of levels) {
-        const xa = lineOf(A).filter((x) => x.level === l), xb = lineOf(B).filter((x) => x.level === l);
-        for (let n = 0; n < Math.max(xa.length, xb.length); n++) rows += `${xa[n] ? chip(A, xa[n].id, false) : '<span></span>'}<span class="bo-lv"><span>${n ? '' : l}</span></span>${xb[n] ? chip(B, xb[n].id, true) : '<span></span>'}`;
-      }
-      // Your bar as each, at a level: your core keys and the subclass's (marked +) as its rotation fills.
-      const bars = subs.map((k) => {
-        const bar = barAt(s, arch, k.id, atLvl), slots = barSlots(atLvl), cs = cantripsOf(arch);
-        const keys = Array.from({ length: LOADOUT.equipSlots }, (_, i) => {
-          const x = bar[i], kk = LOADOUT.keys[i];
-          if (i >= slots) return `<li class="sk-key closed"><kbd>${kk}</kbd><b>Lv ${LOADOUT.bar.find(([, n]) => n > i)?.[0]}</b></li>`;
-          if (!x) return `<li class="sk-key empty"><kbd>${kk}</kbd><b>empty</b></li>`;
-          const mine = a.core.includes(x), key = mine ? 's:' + x : `b:${k.id}:${x}`;
-          return `<li><button type="button" class="sk-key on${mine ? '' : ' new'}" ${sel(key, sk === key)} title="${esc(mine ? `${skillName(x)}: yours` : `${skillName(x)}: new with ${k.name}, level ${unlockLevel(arch, x, k.id)}`)}"><kbd>${kk}</kbd>${skIco(x)}<b>${esc(skillName(x))}</b></button></li>`;
-        }).join('');
-        const cant = (c) => `<li class="sk-key cantrip${unlockLevel(arch, c.id) > atLvl ? ' closed' : ''}"><kbd>${c.key}</kbd>${skIco(c.id)}<b>${esc(c.name)}</b></li>`;
-        return `<div class="bo-bar"><b>${esc(k.name)}</b><ol class="sk-bar" aria-label="${esc(`Your bar as ${k.name} at level ${atLvl}`)}">${cant(cs[0])}${keys}${cs.slice(1).map(cant).join('')}</ol></div>`;
-      }).join('');
-      body = `<section class="bo-bars"><div class="bo-bars-h"><h3>Your bar</h3><nav class="bo-lvls" aria-label="At level">${lvls.map((l) => `<button type="button" data-bo-lvl="${l}" aria-pressed="${l === atLvl}">Lv ${l}</button>`).join('')}</nav></div>${bars}</section>`;
-    } else {
-      sk = items.has(ui.sel) ? ui.sel : `bt:${A.id}:${A.talents[0][0].id}`;
-      TREE.forEach((row, i) => {
-        const label = row.kind === 'filler' ? 'ranks' : row.kind === 'choice' ? `tier ${row.tier + 1}` : `Lv ${LOADOUT.capstoneAt[0]}`;
-        const pair = (k) => `<div class="bo-pair">${(row.kind === 'filler' ? k.fillers[row.row] : row.kind === 'choice' ? k.talents[row.tier] : k.capstones).map((n) => `<button type="button" class="sk-tn" ${sel(`bt:${k.id}:${n.id}`, sk === `bt:${k.id}:${n.id}`)}><b>${esc(n.name)}</b>${row.kind === 'choice' ? '' : pips(0, n.max)}</button>`).join(`<span class="sk-or">${row.kind === 'filler' ? '' : 'or'}</span>`)}</div>`;
-        rows += `${pair(A)}<span class="bo-lv"><span>${label}</span></span>${pair(B)}`;
-      });
-    }
-    panel = `<aside class="sk-panel bo-panel${ui.sheet ? ' open' : ''}" aria-label="Details" aria-live="polite" data-showing="${esc(sk)}">${detailHtml(p, scoped(items, sk), sk)}</aside>${ui.sheet ? '<div class="sk-scrim" data-sk-close></div>' : ''}`;
-    body += `<div class="bo-layout"><div class="bo-ladder">${rows}</div>${panel}</div>`;
-  } else {
-    const busy = active(s);
-    body = `<div class="bo-choose">${subs.map((k) => `<article class="bo-side">${head(k)}<p class="bo-idea">${esc(k.idea)}</p><div class="bo-edge"><small>Edge</small><b>${esc(k.edge.name)}</b></div><button type="button" class="btn primary" ${busy ? 'disabled title="Between fights"' : `data-command="subclass ${arch} ${k.id}" title="Switching later is free at home"`}>Choose ${esc(k.name)}</button></article>`).join('')}</div>`;
-  }
-  const nav = step < 4 ? `<div class="bo-next">${step > 1 ? `<button type="button" class="btn" data-bo-step="${step - 1}">Back</button>` : ''}<button type="button" class="btn primary" data-bo-step="${step + 1}">${BREAKOUT_STEPS[step]} ›</button></div>` : `<div class="bo-next"><button type="button" class="btn" data-bo-step="3">Back</button></div>`;
-  return `<div class="bo-scene" role="dialog" aria-modal="true" aria-label="Choose a subclass"><div class="bo-walk">${top}${body}${nav}</div></div>`;
-}
-
-// The panel for an item in the breakout (app.js: hover and focus, as on the page).
-export function breakoutDetailMarkup(s, ui = {}, key) {
-  const arch = ARCHETYPES[ui.arch] ? ui.arch : classOf(s), p = pageOf(s, arch);
-  const items = breakoutItems(p, Object.values(ARCHETYPES[arch].subs));
-  return items.has(key) ? detailHtml(p, scoped(items, key), key) : '';
-}
+// The first time the class in use is past SUBCLASS.from with no pick and you're home and out of a fight, app.js brings
+// you to this page once (combat.mjs subPrompted); after that the page waits for the pick.
+export const subPromptDue = (s) => subWaiting(s) && !s.loadout?.subLater?.[classOf(s)] && !active(s) && !s.run;

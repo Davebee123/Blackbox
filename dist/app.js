@@ -3,7 +3,7 @@ import { CONFIG, ABILITIES, FAMILIES, BOSSES, xpToNext, spikeOf, SUBS, SUBCLASS,
 const FAMILY_NAMES = Object.fromEntries(Object.entries(FAMILIES).map(([k, f]) => [k, f.name]));
 import { selectEncounter, partKey, parse, validate, hooks, stepCycle, keyMap, hackerOf, classOf, cycleLength, fresh, restore, command, advance, active, alive, part, intents, suggestions, idleRegen, tickServices, topUpCost, defender, maxSignal, inSync } from './combat.mjs';
 import * as V from './view.mjs';
-import { subLater, subWaiting, levelUpPreview, barKeys, hackerLevel as heroLevel, virusIntegrity } from './combat.mjs';
+import { subPrompted, levelUpPreview, barKeys, hackerLevel as heroLevel, virusIntegrity } from './combat.mjs';
 import { luCalm } from './levelup-view.mjs';
 import { createLevelUpUi } from './levelup-ui.mjs';
 import { SHAPES, render as ascii3d } from './ascii3d.mjs';
@@ -120,7 +120,6 @@ let systemTab = 'settings'; // System page: 'settings' or 'achievements' (view.m
 let achUi = { cat: 'summary', focus: null }; // the Achievements page (achievements-view.mjs): the category shown, an achievement to light
 let caseUi = { slot: 0, pslot: 0 }; // System → Casing (casing-view.mjs): the sticker slot and the desk's spot picked
 let skillUi = { sel: null, sheet: false }; // Skills and talents (skills-view.mjs): the item its panel explains, and the phone's sheet
-let bo = null; // the subclass breakout while it's open: { arch, step, sel, lvl, sheet } (skills-view.mjs breakoutMarkup)
 const pd = { id: null, anchor: null, el: null, scrim: null, sheet: false, html: '', mine: false, timer: 0 }; // the Loadout's item datasheet popover (pdShow)
 let pdTouch = 0; // when a touch last came down: the click after it is a tap
 
@@ -427,11 +426,11 @@ function flash(text) {
 const feel = createFeel({ settings: () => campaign.settings, reducedMotion: () => !campaign.settings.motion || reducedMotion.matches });
 // A puzzle room's board: what a move did, played over it once it renders (puzzle-view.mjs), its sounds on their beats.
 // The level-up (levelup-ui.mjs): a firmware update under the top bar. It waits for a calm moment: no fight, no card
-// that waits for you, no breakout over the screen; after a won fight, once you have left it.
+// that waits for you; after a won fight, once you have left it.
 const lu = createLevelUpUi({
   feel, keys: () => barKeys(campaign), motion: () => canMove(),
   fighting: () => active(campaign),
-  calm: () => luCalm({ fighting: active(campaign), ended: !!ended || ending, spoils: !$('spoils').hidden, gainModal: gainOpen(), booting: !!shell.booting || introOn || !!bo || connecting() || !$('tip').hidden }),
+  calm: () => luCalm({ fighting: active(campaign), ended: !!ended || ending, spoils: !$('spoils').hidden, gainModal: gainOpen(), booting: !!shell.booting || introOn || connecting() || !$('tip').hidden }),
 });
 const pzFx = createPuzzleFx({ canMove: () => canMove(), sound: (sign, ms) => { feel.beat(ms); feel.add(sign, null); feel.beat(0); }, play: (arg) => { if (module === 'rooms' && campaign.rooms) roomsClick('play', arg); }, redraw: () => { feel.key('click'); dirty = true; } });
 // The immersive shell (CRT, boot, status line). `?shell=plain` or `shell plain` turns it off.
@@ -2161,7 +2160,7 @@ function render(force = false) {
   for (const b of document.querySelectorAll('#tray .ability.ready[data-ability]')) if (wasCooling.has(b.dataset.ability)) b.classList.add('just-ready');
   wasCooling = cooling;
   applySideMarks();
-  renderBreakout();
+  subPrompt();
   showArmed();
   renderPrompt();
   tourCheck();
@@ -3219,7 +3218,7 @@ document.addEventListener('keydown', (e) => {
 
 // Typing anywhere goes to the prompt.
 document.addEventListener('keydown', (e) => {
-  if (e.target === $('command-input') || e.target.closest?.('[data-select], [data-rooms], [data-fp-sel], [data-pdetail], [data-sk], #breakout') || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.target === $('command-input') || e.target.closest?.('[data-select], [data-rooms], [data-fp-sel], [data-pdetail], [data-sk]') || e.metaKey || e.ctrlKey || e.altKey) return;
   if (e.key.length === 1 && !/input|textarea|select/i.test(e.target.tagName)) $('command-input').focus();
 });
 
@@ -3470,114 +3469,72 @@ document.addEventListener('click', (e) => {
 addEventListener('scroll', () => pdPlace(), true);
 addEventListener('resize', () => (pd.sheet ? null : pdHide()));
 
-// ---------- Loadout → Skills and talents, and the subclass breakout (skills-view.mjs) ----------
+// ---------- Loadout → Skills and talents (skills-view.mjs) ----------
 // The page's panel explains the item you picked (a click or Enter: skillUi.sel), and shows the one under the pointer
 // or the keyboard's focus while it's there, without a redraw. On a phone (900px and under) a tap opens it as a
-// bottom sheet; a tap on the scrim or × closes it. The breakout is its own screen inside the glass (#breakout).
+// bottom sheet; a tap on the scrim or × closes it.
 const skNarrow = () => matchMedia('(max-width: 900px)').matches;
-const skPanelOf = (el) => el?.closest?.('#breakout') ? $('breakout')?.querySelector('.sk-panel') : $('page-view')?.querySelector('.sk-panel');
-const skDetail = (inBo, key) => (inBo ? V.breakoutDetailMarkup(campaign, bo || {}, key) : V.skillDetailMarkup(campaign, archView, key));
+const skPanel = () => $('page-view')?.querySelector('.sk-panel');
 function skFocusKey() { const a = document.activeElement?.closest?.('[data-sk]'); return a && !a.closest('.sk-panel') ? a.dataset.sk : null; }
 function skRefocus(root, key) { if (document.activeElement?.closest?.('[data-sk]')) return; [...(root?.querySelectorAll('[data-sk]') || [])].find((n) => n.dataset.sk === key && !n.closest('.sk-panel'))?.focus({ preventScroll: true }); }
 // Show an item in the panel for a moment (hover, focus), or the picked one again. The panel is only rewritten when the
 // item changes, so a click on one of its buttons never loses its target to a redraw under the pointer.
-function skShow(panel, inBo, key) {
+function skShow(panel, key) {
   if (!panel || !key || panel.dataset.showing === key) return;
-  const html = skDetail(inBo, key);
+  const html = V.skillDetailMarkup(campaign, archView, key);
   if (!html) return;
   panel.innerHTML = html;
   panel.dataset.showing = key;
 }
 function skPeek(el) {
   if (skNarrow()) return;
-  skShow(skPanelOf(el), !!el.closest('#breakout'), el.dataset.sk);
+  skShow(skPanel(), el.dataset.sk);
 }
-function skRestore(inBo) {
-  const panel = inBo ? $('breakout')?.querySelector('.sk-panel') : $('page-view')?.querySelector('.sk-panel');
+function skRestore() {
+  const panel = skPanel();
   if (!panel || skNarrow()) return;
-  const picked = panel.parentElement?.querySelector('[data-sk][aria-pressed="true"]')?.dataset.sk || (inBo ? bo?.sel : skillUi.sel);
-  skShow(panel, inBo, picked);
+  const picked = panel.parentElement?.querySelector('[data-sk][aria-pressed="true"]')?.dataset.sk || skillUi.sel;
+  skShow(panel, picked);
 }
 document.addEventListener('pointerover', (e) => {
   if (e.pointerType === 'touch') return;
-  const a = e.target.closest?.('#page-view [data-sk], #breakout [data-sk]');
+  const a = e.target.closest?.('#page-view [data-sk]');
   if (a && !a.closest('.sk-panel')) skPeek(a);
 });
 document.addEventListener('pointerout', (e) => {
   if (e.pointerType === 'touch') return;
-  const a = e.target.closest?.('#page-view [data-sk], #breakout [data-sk]');
+  const a = e.target.closest?.('#page-view [data-sk]');
   if (!a || a.closest('.sk-panel') || a.contains(e.relatedTarget)) return;
   const to = e.relatedTarget?.closest?.('[data-sk]');
-  if (!to || to.closest('.sk-panel')) skRestore(!!a.closest('#breakout'));
+  if (!to || to.closest('.sk-panel')) skRestore();
 });
-document.addEventListener('focusin', (e) => { const a = e.target.closest?.('#page-view [data-sk], #breakout [data-sk]'); if (a && !a.closest('.sk-panel') && a.matches(':focus-visible')) skPeek(a); });
-document.addEventListener('focusout', (e) => { const a = e.target.closest?.('#page-view [data-sk], #breakout [data-sk]'); if (a && !a.closest('.sk-panel') && !e.relatedTarget?.closest?.('[data-sk], .sk-panel')) skRestore(!!a.closest('#breakout')); });
+document.addEventListener('focusin', (e) => { const a = e.target.closest?.('#page-view [data-sk]'); if (a && !a.closest('.sk-panel') && a.matches(':focus-visible')) skPeek(a); });
+document.addEventListener('focusout', (e) => { const a = e.target.closest?.('#page-view [data-sk]'); if (a && !a.closest('.sk-panel') && !e.relatedTarget?.closest?.('[data-sk], .sk-panel')) skRestore(); });
 document.addEventListener('click', (e) => {
   const x = e.target.closest?.('[data-sk-close]');
-  if (x) { if (x.closest('#breakout')) bo.sheet = false; else skillUi.sheet = false; dirty = true; renderBreakout(); return; }
-  const a = e.target.closest?.('#page-view [data-sk], #breakout [data-sk]');
+  if (x) { skillUi.sheet = false; dirty = true; return; }
+  const a = e.target.closest?.('#page-view [data-sk]');
   if (a) {
-    if (a.closest('#breakout')) { bo.sel = a.dataset.sk; bo.sheet = skNarrow(); renderBreakout(); }
-    else { skillUi = { sel: a.dataset.sk, sheet: skNarrow() }; dirty = true; }
+    skillUi = { sel: a.dataset.sk, sheet: skNarrow() }; dirty = true;
     feel.key('click');
     return;
   }
-  const open = e.target.closest?.('[data-bo-open]');
-  if (open) { boOpen(open.dataset.boOpen); return; }
-  if (!bo || !e.target.closest?.('#breakout')) return;
-  const st = e.target.closest('[data-bo-step]');
-  if (st) { bo = { ...bo, step: Number(st.dataset.boStep), sel: null, sheet: false }; feel.add('channel', null); renderBreakout(); $('breakout')?.scrollTo?.(0, 0); return; }
-  const lv = e.target.closest('[data-bo-lvl]');
-  if (lv) { bo.lvl = Number(lv.dataset.boLvl); feel.key('click'); renderBreakout(); return; }
-  if (e.target.closest('[data-bo-later]')) { boLater(); return; }
 });
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
-  if (bo?.sheet) { bo.sheet = false; renderBreakout(); return; }
-  if (bo) { boLater(); return; }
   if (skillUi.sheet) { skillUi.sheet = false; dirty = true; }
 });
-// The breakout: open (the page's Choose your subclass, or by itself: breakoutDue), Later, and closed by a pick.
-function boOpen(arch) {
-  bo = { arch: arch || classOf(campaign), step: 1, sel: null, lvl: null, sheet: false, fresh: true };
-  feel.add('unlock', null);
-  renderBreakout();
-}
-function boLater() {
-  if (!bo) return;
-  subLater(campaign, bo.arch);
-  bo = null;
+// The subclass prompt: the first time you're home with no pick, it brings you to Skills and talents once.
+// It waits for the screen to be free: not in the intro, a fight or its result, a card or another full screen.
+function subPrompt() {
+  if (CAMP || !V.subPromptDue(campaign) || introOn || lu.showing() || lu.pending() || ended || $('spoils')?.hidden === false || gainOpen() || document.querySelector('.class-pick') || ['combat', 'net'].includes(module)) return;
+  subPrompted(campaign);
   save();
-  renderBreakout();
+  loadoutTab = 'skills'; archView = classOf(campaign); skillUi = { sel: null, sheet: false };
+  notice('Choose your subclass.');
+  feel.add('unlock', null);
   dirty = true;
-}
-// The screen is free for it: not in the intro, a fight or its result, a card or another full screen.
-function boFree() { return !introOn && !lu.showing() && !lu.pending() && !ended && !active(campaign) && $('spoils')?.hidden !== false && !gainOpen() && !document.querySelector('.class-pick') && !['combat', 'net'].includes(module); }
-function renderBreakout() {
-  let el = $('breakout');
-  if (bo && !subWaiting(campaign, bo.arch)) { // picked (here or by a command): the page shows the new subclass
-    const arch = bo.arch;
-    bo = null;
-    if (el) { el.hidden = true; el.innerHTML = ''; renderBreakout.html = ''; }
-    if (!CAMP) { archView = arch; loadoutTab = 'skills'; skillUi = { sel: null, sheet: false }; dirty = true; if (module !== 'loadout') go('loadout', true); }
-    return;
-  }
-  if (!bo && !CAMP && V.breakoutDue(campaign) && boFree()) {
-    bo = { arch: classOf(campaign), step: 1, sel: null, lvl: null, sheet: false, fresh: true };
-    loadoutTab = 'skills'; archView = classOf(campaign); skillUi = { sel: null, sheet: false };
-    notice('Choose your subclass.');
-    feel.add('unlock', null);
-    dirty = true;
-    if (module !== 'loadout') return go('loadout', true); // its render draws the breakout
-  }
-  if (!bo) { if (el) { el.hidden = true; el.innerHTML = ''; renderBreakout.html = ''; } return; }
-  if (!el) { el = document.createElement('div'); el.id = 'breakout'; el.className = 'breakout'; document.body.append(el); }
-  const html = V.breakoutMarkup(campaign, bo), focus = el.contains(document.activeElement) ? document.activeElement.closest('[data-sk], [data-bo-step], [data-bo-lvl]') : null;
-  const fk = focus && (focus.dataset.sk ? `[data-sk="${CSS.escape(focus.dataset.sk)}"]` : focus.dataset.boLvl ? `[data-bo-lvl="${focus.dataset.boLvl}"]` : null);
-  if (renderBreakout.html !== html || el.hidden) { el.innerHTML = html; renderBreakout.html = html; }
-  el.hidden = false;
-  if (fk && !el.contains(document.activeElement)) el.querySelector(fk)?.focus({ preventScroll: true });
-  if (bo.fresh) { bo.fresh = false; requestAnimationFrame(() => el.querySelector('.bo-next .primary')?.focus({ preventScroll: true })); } // the keyboard starts on the walk, not the prompt behind it
+  if (module !== 'loadout') go('loadout', true);
 }
 
 // Themed hover tips: every title="" in the game shows in the game's own card instead of the browser's.

@@ -1,11 +1,11 @@
 // Loadout → Skills and talents (dist/skills-view.mjs): one card and a detail panel, no subclass before level 10, the
-// subclass breakout from 10 until you pick (there is no default subclass in play), and old saves that played one.
+// choice on the page from 10 until you pick (there is no default subclass in play), and old saves that played one.
 // Loads view.mjs, whose imports install the network's fight hooks, so it runs on its own.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ARCHETYPES, SUBS, SUBCLASS, LOADOUT, TREE, defaultSub, presetBar, skillOrder, lineOf } from './dist/data.mjs';
-import { fresh, command, restore, subOf, subPicked, subWaiting, subLater, edge, kitOf, knownSkills, equippedSkills, talentPoints, pointsSpent, picksOf, ranksOf, capPickOf, SAVE_VERSION } from './dist/combat.mjs';
-import { loadoutMarkup, skillDetailMarkup, breakoutMarkup, breakoutDetailMarkup, breakoutDue, breakoutLevels } from './dist/view.mjs';
+import { fresh, command, restore, subOf, subPicked, subWaiting, subPrompted, edge, kitOf, knownSkills, equippedSkills, talentPoints, pointsSpent, picksOf, ranksOf, capPickOf, SAVE_VERSION } from './dist/combat.mjs';
+import { loadoutMarkup, skillDetailMarkup, subPromptDue } from './dist/view.mjs';
 import { play } from './dist/run.mjs';
 
 const at = (cls, level, sub = null) => {
@@ -77,22 +77,19 @@ test('the rule text is only in the detail panel: the card is names, numbers and 
   // Highlights do show in the panel.
   const s = at('breaker', 30, 'demolitionist');
   assert.match(panelOf(page(s, 'breaker', { sel: 's:shaped-charge' })), /<b class="hi">/);
-  // The breakout: only its panel, on the Skills and Talents steps, lights anything.
-  const t = at('breaker', 10);
-  for (const step of [1, 2, 3, 4]) {
-    const html = breakoutMarkup(t, { step });
-    assert.doesNotMatch(card(html), /class="hi"/, `breakout step ${step}`);
-    if (step === 2 || step === 3) assert.match(panelOf(html), /class="sk-rule"/, `step ${step}: its panel`);
-  }
+  // Before a pick, the subclass on show: only its panel lights anything.
+  const t = page(at('breaker', 10), 'breaker/overclocker', { sel: 's:segfault' });
+  assert.doesNotMatch(card(t), /class="hi"/);
+  assert.match(panelOf(t), /class="sk-rule"/);
 });
 
-test('no subclass UI before level 10: no subclass, edge, presets, tree or breakout, for any class', () => {
+test('no subclass UI before level 10: no subclass, edge, presets or tree, for any class', () => {
   for (const cls of Object.keys(ARCHETYPES)) {
     for (const level of [1, 5, 9]) {
       const s = at(cls, level), html = page(s, cls), where = `${cls} ${level}`;
       for (const n of names(cls)) assert.ok(!html.includes(n), `${where}: ${n}`);
-      assert.doesNotMatch(html, /[Ss]ubclass|data-bo-open|sk-subnav|class="sk-tree"|class="sk-presets"|<small>Edge/, where);
-      assert.equal(breakoutDue(s), false, where);
+      assert.doesNotMatch(html, /[Ss]ubclass|sk-choose|sk-subnav|class="sk-tree"|class="sk-presets"|<small>Edge/, where);
+      assert.equal(subPromptDue(s), false, where);
       assert.equal(subWaiting(s, cls), false, where);
       for (const key of keysOf(html)) assert.doesNotMatch(page(s, cls, { sel: key }), /[Ss]ubclass/, `${where} ${key}`);
       // A subclass view asked for (an old link) still shows the class alone.
@@ -109,79 +106,61 @@ test('from level 10 with no pick, a class plays its core alone (no default subcl
     assert.ok(!edge(s, cls), `${cls}: not the default's edge`);
     assert.deepEqual(knownSkills(s, cls), ARCHETYPES[cls].core, cls);
     assert.ok(equippedSkills(s, cls).every((id) => !SUBS[d].skills.includes(id)), `${cls}: no default-subclass key`);
-    const html = page(s, cls);
-    assert.match(html, new RegExp(`<button type="button" class="btn primary sk-choose" data-bo-open="${cls}">Choose your subclass</button>`), cls);
-    for (const n of names(cls)) assert.ok(!card(html).includes(n), `${cls}: no ${n} on the page`);
-    assert.doesNotMatch(html, /class="sk-tree"|data-command="talent/, `${cls}: no tree to spend in`);
-    assert.match(html, /<b>\d+ free<\/b><span>\d+ earned<\/span>/, `${cls}: its points wait for the tree`);
+    const [A, B] = Object.values(ARCHETYPES[cls].subs), html = page(s, cls), core = page(s, `${cls}/core`);
+    assert.match(html, new RegExp(`<h2>${ARCHETYPES[cls].name} · Choose a subclass</h2><h1>${A.name}</h1>`), `${cls}: it opens on the first subclass`);
+    assert.match(html, new RegExp(`class="btn primary sk-choose" data-command="subclass ${cls} ${A.id}"[^>]*>Choose ${A.name}</button>`), cls);
+    assert.match(page(s, `${cls}/${B.id}`), new RegExp(`data-command="subclass ${cls} ${B.id}"[^>]*>Choose ${B.name}</button>`), `${cls}: and the other`);
+    assert.match(html, /class="sk-tree"/, `${cls}: its tree, to look at`);
+    assert.doesNotMatch(html, /data-command="talent|class="sk-presets"|<i class="sk-yours"/, `${cls}: nothing to spend or keep before the pick`);
+    assert.match(html, /<b>\d+ free<\/b><span class="sk-ptbar">/, `${cls}: its points, waiting for the tree`);
+    for (const n of names(cls)) assert.ok(!card(core).includes(n) || core.includes(`>${n}</button>`), `${cls}: the core view shows only the nav's ${n}`);
+    assert.doesNotMatch(core, /class="sk-tree"|sk-choose/, `${cls}: the core alone`);
     assert.doesNotMatch(loadoutMarkup(s, cls, 'skills'), /Skills and talents · \d+ free/, 'nothing to spend yet');
   }
 });
 
-test('the breakout: due at 10 when home and out of a fight; four steps with both subclasses; Later puts it off; choosing picks', () => {
+test('the choice: the page brings you to it once, at 10, home and out of a fight; choosing picks', () => {
   const s = at('breaker', 9);
-  assert.equal(breakoutDue(s), false);
+  assert.equal(subPromptDue(s), false);
   command(s, 'developer level 10');
-  assert.equal(breakoutDue(s), true, 'at 10 with no pick');
-  const steps = [1, 2, 3, 4].map((step) => breakoutMarkup(s, { step }));
-  for (const [i, html] of steps.entries()) {
-    assert.match(html, /<div class="bo-scene" role="dialog" aria-modal="true" aria-label="Choose a subclass">/);
-    assert.match(html, /<p class="bo-kick">Level 10 · Breaker<\/p><h1>Choose a subclass<\/h1>/);
-    assert.match(html, new RegExp(`data-bo-step="${i + 1}" aria-selected="true"`), `step ${i + 1} is on`);
-    assert.match(html, /data-bo-later/, 'Later, on every step');
-    assert.ok(html.includes('Demolitionist') && html.includes('Overclocker'), `step ${i + 1}: both, side by side`);
-    assert.doesNotMatch(html, /undefined|NaN|\[object/, `step ${i + 1}`);
-  }
-  assert.match(steps[0], /<b>Overkill<\/b>[\s\S]*<b>Redline<\/b>/, 'the idea: each edge');
-  // Skills: both lines by level, the panel, and your own bar as each at 10, 22, 30 and 38.
-  for (const k of ['demolitionist', 'overclocker']) for (const x of lineOf(SUBS[k])) assert.match(steps[1], new RegExp(`data-sk="b:${k}:${x.id}"`), `${k} ${x.id}`);
-  assert.deepEqual(breakoutLevels(s, 'breaker'), [10, 22, 30, 38]);
-  assert.match(steps[1], /<nav class="bo-lvls" aria-label="At level"><button type="button" data-bo-lvl="10" aria-pressed="true">Lv 10<\/button><button type="button" data-bo-lvl="22"[^>]*>Lv 22<\/button><button type="button" data-bo-lvl="30"[^>]*>Lv 30<\/button><button type="button" data-bo-lvl="38"[^>]*>Lv 38<\/button><\/nav>/);
-  const bar30 = breakoutMarkup(s, { step: 2, lvl: 30 });
+  assert.equal(subPromptDue(s), true, 'at 10 with no pick');
   for (const k of ['demolitionist', 'overclocker']) {
-    const want = presetBar('breaker', k, 30, SUBS[k].presets.rotation);
-    const bar = bar30.match(new RegExp(`aria-label="Your bar as ${SUBS[k].name} at level 30">([\\s\\S]*?)</ol>`))[1];
-    for (const id of want) assert.match(bar, new RegExp(ARCHETYPES.breaker.core.includes(id) ? `data-sk="s:${id}"` : `class="sk-key on new" data-sk="b:${k}:${id}"`), `${k} at 30: ${id}${ARCHETYPES.breaker.core.includes(id) ? '' : ', marked new'}`);
+    const html = page(s, `breaker/${k}`);
+    for (const x of lineOf(SUBS[k])) assert.match(html, new RegExp(`data-sk="s:${x.id}"`), `${k} ${x.id}`);
+    for (const n of [...SUBS[k].fillers.flat(), ...SUBS[k].talents.flat(), ...SUBS[k].capstones]) assert.match(html, new RegExp(`data-sk="t:${n.id}"`), n.id);
+    assert.match(html, new RegExp(`<b>${SUBS[k].edge.name}</b>`), `${k}: its edge`);
+    assert.doesNotMatch(html, /undefined|NaN|\[object/, k);
   }
-  assert.match(breakoutMarkup(s, { step: 2, sel: 'b:overclocker:segfault' }), /<aside class="sk-panel bo-panel"[\s\S]*<small>Overclocker skill<\/small><h2>Segfault<\/h2>/, 'the panel explains any item');
-  assert.match(breakoutDetailMarkup(s, {}, 'b:demolitionist:shaped-charge'), /<h2>Shaped Charge<\/h2>/);
-  // Talents: every row of both trees.
-  for (const k of ['demolitionist', 'overclocker']) for (const n of [...SUBS[k].fillers.flat(), ...SUBS[k].talents.flat(), ...SUBS[k].capstones]) assert.match(steps[2], new RegExp(`data-sk="bt:${k}:${n.id}"`), n.id);
-  assert.match(breakoutMarkup(s, { step: 3, sel: `bt:overclocker:${SUBS.overclocker.talents[0][0].id}` }), /<div class="sk-alt"><small>Or<\/small>/, 'an OR choice shows its other side');
-  // Choose.
-  assert.match(steps[3], /data-command="subclass breaker demolitionist"[^>]*>Choose Demolitionist<\/button>/);
-  assert.match(steps[3], /data-command="subclass breaker overclocker"[^>]*>Choose Overclocker<\/button>/);
+  assert.match(page(s, 'breaker/overclocker', { sel: `t:${SUBS.overclocker.talents[0][0].id}` }), /<div class="sk-alt"><small>Or<\/small>/, 'an OR choice shows its other side');
   // Not in a fight, not on a run.
   command(s, 'encounter cryptjack'); command(s, 'engage');
-  assert.equal(breakoutDue(s), false, 'never over a fight');
-  assert.match(breakoutMarkup(s, { step: 4 }), /disabled title="Between fights">Choose Demolitionist/);
+  assert.equal(subPromptDue(s), false, 'never over a fight');
+  assert.match(page(s, 'breaker'), /disabled title="Between fights">Choose Demolitionist/);
   const r = at('breaker', 10);
   play(r, 'connect sprawl');
-  assert.equal(breakoutDue(r), false, 'it waits until you are home');
+  assert.equal(subPromptDue(r), false, 'it waits until you are home');
   play(r, 'jack out');
-  assert.equal(breakoutDue(r), true);
-  // Later: it stops opening by itself; the page keeps the way back to it.
-  subLater(r, 'breaker');
-  assert.equal(breakoutDue(r), false);
+  assert.equal(subPromptDue(r), true);
+  // Once: after it has brought you to the page, the page waits.
+  subPrompted(r, 'breaker');
+  assert.equal(subPromptDue(r), false);
   assert.ok(subWaiting(r, 'breaker'));
-  assert.match(page(r, 'breaker'), /data-bo-open="breaker">Choose your subclass</);
+  assert.match(page(r, 'breaker'), /sk-choose/);
   // Choosing applies the pick.
   command(r, 'subclass breaker overclocker');
   assert.equal(subOf(r), 'overclocker');
   assert.ok(subPicked(r));
-  assert.equal(breakoutDue(r), false);
   assert.deepEqual(equippedSkills(r, 'breaker'), presetBar('breaker', 'overclocker', 10, SUBS.overclocker.presets.rotation), 'the pick\'s bar: its rotation at your level');
-  assert.doesNotMatch(page(r, 'breaker'), /data-bo-open/);
+  assert.doesNotMatch(page(r, 'breaker'), /sk-choose|Choose a subclass/);
   assert.match(page(r, 'breaker'), /<h1>Overclocker<\/h1>/);
-  // Switching later works as before (at home, free): the other subclass's page has Switch.
+  assert.match(page(r, 'breaker/demolitionist'), /data-command="subclass breaker demolitionist"[^>]*>Switch</, 'the other has Switch');
   command(r, 'subclass breaker demolitionist');
   assert.equal(subOf(r), 'demolitionist');
-  // Another class past 10 with no pick: its own breakout from its page; the one in use decides what opens by itself.
+  // Another class past 10 with no pick: its own page asks; the one in use decides when the page brings you there.
   const o = at('operator', 12);
   command(o, 'archetype breaker');
-  assert.equal(breakoutDue(o), false, 'the class in use is below 10');
-  assert.match(page(o, 'operator'), /data-bo-open="operator"/);
-  assert.match(breakoutMarkup(o, { arch: 'operator', step: 4 }), /data-command="subclass operator herder"/);
+  assert.equal(subPromptDue(o), false, 'the class in use is below 10');
+  assert.match(page(o, 'operator'), /data-command="subclass operator herder"[^>]*>Choose Herder</);
 });
 
 test('every control is reachable from the new page: keys, presets, ranks, OR picks, capstones, reset, Switch, Use', () => {
@@ -245,7 +224,7 @@ test('every control is reachable from the new page: keys, presets, ranks, OR pic
   assert.match(fight, /Between fights/);
 });
 
-test('an old save whose class is past 10 with no pick loads cleanly: the default\'s keys and points come back, and the breakout is due', () => {
+test('an old save whose class is past 10 with no pick loads cleanly: the default\'s keys and points come back, and the choice waits', () => {
   // A v45 save: a Breaker at 22 that never picked played the Demolitionist: its bar, its tree, a preset, its program.
   const s = fresh();
   s.hackers = { breaker: { level: 22, xp: 0 }, bastion: { level: 30, xp: 0 } };
@@ -272,8 +251,8 @@ test('an old save whose class is past 10 with no pick loads cleanly: the default
   assert.equal(talentPoints(t, 'breaker'), 7, 'every point it earned, free for the tree it picks');
   assert.deepEqual(t.loadout.presets.demolitionist.mine, ['crack', 'shatter'], 'a preset it saved waits for a pick');
   assert.ok(t.programs.by.breaker.routines.worm, 'the routines it wrote are the class\'s now');
-  assert.equal(breakoutDue(t), true, 'the breakout opens');
-  assert.match(page(t, 'breaker'), /data-bo-open="breaker">Choose your subclass</);
+  assert.equal(subPromptDue(t), true, 'the page asks');
+  assert.match(page(t, 'breaker'), /sk-choose/);
   // The class that picked: as it was.
   assert.equal(subOf(t, 'bastion'), 'warden');
   assert.deepEqual(t.loadout.equipped.warden, s.loadout.equipped.warden);
@@ -298,7 +277,7 @@ test('an old save whose class is past 10 with no pick loads cleanly: the default
   w.loadout.equipped = { breaker: ['overload', 'crack'] };
   w.version = 45;
   assert.deepEqual(equippedSkills(restore(JSON.parse(JSON.stringify(w))), 'breaker'), ['overload', 'crack']);
-  assert.equal(breakoutDue(restore(JSON.parse(JSON.stringify(w)))), false);
+  assert.equal(subPromptDue(restore(JSON.parse(JSON.stringify(w)))), false);
 });
 
 test('a class at 10 that never picks: the level-up says so, its bar holds the core, and every view draws', () => {
@@ -311,9 +290,7 @@ test('a class at 10 that never picks: the level-up says so, its bar holds the co
   assert.deepEqual(skillOrder('bastion', subOf(s)), ARCHETYPES.bastion.core);
   for (let level = 10; level <= 50; level += 8) {
     command(s, `developer level ${level}`);
-    for (const step of [1, 2, 3, 4]) assert.doesNotMatch(breakoutMarkup(s, { step }), /undefined|NaN|\[object/, `${level} ${step}`);
-    assert.doesNotMatch(page(s, 'bastion'), /undefined|NaN|\[object/, `${level}`);
-    assert.ok(breakoutLevels(s, 'bastion').every((l) => l >= level), `${level}: the bar strip starts at your level`);
+    for (const v of ['bastion', 'bastion/core', 'bastion/sysop']) assert.doesNotMatch(page(s, v), /undefined|NaN|\[object/, `${level} ${v}`);
   }
   void LOADOUT;
 });

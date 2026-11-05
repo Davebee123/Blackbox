@@ -59,7 +59,7 @@ export function build(s, cls, b, opts) {
   s.metAll = true; // a veteran: every part met, so the parts roll (dist/parts.mjs) brings its whole mix, strangers and all
   s.hackers = { [cls]: { level: b.level, xp: 0 } };
   // From SUBCLASS.from a subclass, picked (opts.sub, else the class's default): its skill line and tree. opts.noSub:
-  // none picked yet, the class's core alone (the bench's `bench <class> <level>`, the breakout waiting).
+  // none picked yet, the class's core alone (the bench's `bench <class> <level>`, its pick waiting).
   const sub = b.level >= SUBCLASS.from && !opts.noSub ? opts.sub || defaultSub(cls) : null, key = sub || cls, kit = SUBS[sub];
   if (sub) s.loadout.sub = { [cls]: sub };
   if (!kit) { /* no tree before the subclass */ }
@@ -149,7 +149,7 @@ export function benchBuild(s, name, level) {
   s.tutorialCompleted = true;
   if (!keep.profile) s.settings.tips = false; // a new bench: no first-time tips (tips on brings them back)
   s.profile = keep.profile || { handle: 'bench', pwLen: 6, since: Date.now() };
-  const sub = L >= SUBCLASS.from ? kit.sub : null; // a class from SUBCLASS.from: no subclass yet, its breakout waiting
+  const sub = L >= SUBCLASS.from ? kit.sub : null; // a class from SUBCLASS.from: no subclass yet, its pick waiting
   build(s, kit.cls, { level: L }, { sub, noSub: !sub });
   if (sub) { s.loadout.equipped[sub] = presetKeys(s, kit.cls, 'rotation'); (s.loadout.follow ||= {})[sub] = 'rotation'; }
   const floor = benchFloors(s, L);

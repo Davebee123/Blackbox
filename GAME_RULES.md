@@ -1291,10 +1291,10 @@ free:** until any class reaches level 5, switching to a class you haven't played
 ### Subclasses
 
 Picked at level 10 (`subclass <id>`; the first pick anywhere out of a fight, switching free at home). Until you pick, a
-class past 10 plays its **core alone**: its four core skills and kit talent, no edge, presets or tree. The first time
-you're home with no pick, the **subclass breakout** opens: both subclasses side by side in four steps (Idea, Skills,
-Talents, Choose); **Later** puts it off. Each subclass has its own eleven-skill line, edge, presets, talent tree and
-capstones; docs/subclasses/ has every skill.
+class past 10 plays its **core alone**: its four core skills and kit talent, no edge, presets or tree. You choose on
+Loadout → Skills and talents: it shows each subclass's skills, edge and tree read-only, with **Choose** on the one shown.
+The first time you're home with no pick, the game takes you there once. Each subclass has its own eleven-skill line,
+edge, presets, talent tree and capstones; docs/subclasses/ has every skill.
 
 | Class | Subclass | Edge (from level 10) |
 |---|---|---|
@@ -2644,7 +2644,7 @@ so it is safe to run twice; nothing a save held is lost.
   source the Zero-day (`craftRestore`).
 - **v48** unspent Indemnity becomes credits once, with a letter from Halcyon (`indemnityRestore`).
 - **v47** a pile of named salvage becomes the components count (`componentsRestore`).
-- **v46** a class past level 10 with no subclass picked plays its core, the breakout due (`subRestore`).
+- **v46** a class past level 10 with no subclass picked plays its core, the pick waiting (`subRestore`).
 - **v45** sets: loaded protocols stamped, the Badge's beat armed (`setsRestore`). **v44** whole-number stats
   (`statsRestore`). **v43** threads. **v42** the long climb keeps your share of a level (`climbRestore`). **v41** layers
   become floors (`floorsRestore`). **v40** outposts, buildings, services and plans pay back, plans become codebases

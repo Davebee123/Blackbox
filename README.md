@@ -189,7 +189,7 @@ comment saying what it does.
 | `dist/view.mjs` | Markup builders for every page and the fight board. Pure functions of state. |
 | `dist/fightread.mjs` | Reading a fight: what a tell does and how to stop it, live gear rules, decoded parts. |
 | `dist/ruletext.mjs` | Picks out a rule's key facts (numbers, ◆, statuses) for highlighting. |
-| `dist/skills-view.mjs` | Loadout → Skills and talents, and the subclass breakout. |
+| `dist/skills-view.mjs` | Loadout → Skills and talents, where you choose your subclass. |
 | `dist/routines.mjs` | Routines: a program per virus that plays your moves when you don't; its RAM, benchmark and cues. |
 | `dist/routines-view.mjs`, `dist/routines-ui.mjs`, `dist/routines.css` | The Program tab, its drag and drop, and the program's marks on the board. |
 | `dist/levelup-view.mjs`, `dist/levelup-ui.mjs`, `dist/levelup.css` | The level-up: a firmware update under the top bar. |
