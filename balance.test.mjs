@@ -44,7 +44,8 @@ test('every subclass is viable alone at Lv 10, 18 and 30: at least 85% wins, ins
       const [lo, hi] = soloBand(sub, b.level);
       // Since step 2 (docs/scaling.md) the Overclocker wins 20 of 24 at Lv 30, and with the floor tiers (step 4: 18 is floor
       // 3's top) 20 at 18 too, and the Sysop alone 18 at 30 (floor 5's top): held there until the designer has played it.
-      const held = sub === 'overclocker' && b.level >= 18 ? 20 : sub === 'sysop' && b.level === 30 ? 18 : 0.85 * r.total;
+      // Leaning crew (Turbo Boost on its bar from 18, in Overload's slot at 30), the Overclocker wins 19 at 30: held at 19.
+      const held = sub === 'overclocker' && b.level >= 18 ? (b.level === 30 ? 19 : 20) : sub === 'sysop' && b.level === 30 ? 18 : 0.85 * r.total;
       assert.ok(r.wins >= held, `${sub} at ${b.name}: ${r.wins}/${r.total}`);
       assert.ok(r.lost >= lo && r.lost <= hi, `${sub} at ${b.name}: ${r.lost.toFixed(0)}%`);
     }

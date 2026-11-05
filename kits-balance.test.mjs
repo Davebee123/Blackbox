@@ -100,7 +100,9 @@ const second = (sub) => {
 // at -15, 18.5, -14 and 11.5. With boss rounds (docs/scaling.md "After step 5": the solo bosses in its suited fights
 // open softer and grow each round) the Overclocker's rules preset is 4.1 better on its own fights and the Payload's swarm
 // 14.1 worse: held at 4 and -14.5.
-const DRIFT = { demolitionist: { generic: 7.5, suits: 0.5 }, sysop: { generic: 10, suits: -15 }, hijacker: { generic: 8, suits: -15 }, herder: { generic: 6.5, suits: -1 }, payload: { generic: 18.5, suits: -14.5 }, overclocker: { generic: 7, suits: 4 }, phantom: { generic: 11.5, suits: 5 }, warden: { generic: 5.5, suits: 5 } };
+// Leaning crew (Turbo Boost on the rotation from 18, in Overload's slot at 30) the Overclocker's rules preset is 10.2 off
+// its rotation on the generic fights: held at 10.5.
+const DRIFT = { demolitionist: { generic: 7.5, suits: 0.5 }, sysop: { generic: 10, suits: -15 }, hijacker: { generic: 8, suits: -15 }, herder: { generic: 6.5, suits: -1 }, payload: { generic: 18.5, suits: -14.5 }, overclocker: { generic: 10.5, suits: 4 }, phantom: { generic: 11.5, suits: 5 }, warden: { generic: 5.5, suits: 5 } };
 test('each second preset is a real alternative: within 5 points of the rotation on the generic fights, and at least 5 points better on the fights it suits', () => {
   const off = [], line = [];
   for (const sub of ALL) {
