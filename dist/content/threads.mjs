@@ -78,7 +78,7 @@ export default {
         { kind: 'talk', at: 'start', who: 'repeater · lantern', icon: 'file', verb: 'Read',
           lines: ['> repeater · owner: LANTERN · uplink: DOWN', "This process sends LANTERN's radio recordings on to their relay. With the uplink down, it keeps replaying the last one: a numbers broadcast.", 'The relay is on {relay}, {relay.at}. Get it running again.'],
           text: 'Read the repeater.' },
-        { kind: 'goto', at: 'relay', text: 'Restart the relay on {relay}, {relay.at}.', lines: ["The viruses here killed the relay process. You restart it, and LANTERN's recordings start coming through again."] },
+        { kind: 'goto', at: 'relay', text: 'Restart the relay on {relay}, {relay.at}.', lines: ["The viruses here killed the relay process. Restart it, and LANTERN's recordings start coming through again."] },
         { kind: 'talk', at: 'relay', who: 'LANTERN · over the relay', icon: 'npc', verb: 'Talk',
           lines: ["You got our relay back up. We've been cut off for nine days. Thanks.", 'Someone broadcasts lists of numbers most nights. We record them and try to decode them.', 'Our Listening Post is next to your HOME server. Use it: tune in, catch what you can, and we will decode it for you.'],
           text: 'Talk to LANTERN at the relay.' },
