@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Class page</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter+Tight:wght@400;500;600;700&display=swap">
+<style>
+:root {
+  --bg: #090603; --panel: #100b05; --panel-2: #171006; --inset: #070503;
+  --text: #f0e2b6; --bright: #fff2c8; --muted: #b99d61; --dim: #8f7748;
+  --amber: #f1b92f; --amber-soft: #d69a22; --amber-deep: #7e5311;
+  --line: rgba(241, 185, 47, 0.2); --line-strong: rgba(241, 185, 47, 0.45); --amber-wash: rgba(241, 185, 47, 0.1);
+  --you: #7fd1c7; --next: #ffd85c;
+  --sans: 'Inter Tight', system-ui, sans-serif; --mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --kicker: 600 11px/1.3 var(--mono); --label: 600 10px/1.3 var(--mono);
+}
+* { box-sizing: border-box; margin: 0; }
+body { background: var(--bg); color: var(--text); font: 15px/1.4 var(--sans); padding: 24px; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+.ico { display: inline-block; width: 20px; height: 20px; background: currentColor; -webkit-mask: var(--icon) center/contain no-repeat; mask: var(--icon) center/contain no-repeat; flex: none; }
+.kick { font: var(--kicker); letter-spacing: 1.5px; text-transform: uppercase; color: var(--dim); }
+.lab { font: var(--label); letter-spacing: 1px; text-transform: uppercase; color: var(--dim); }
+.btn { height: 34px; padding: 0 16px; border: 1px solid var(--line-strong); border-radius: 3px; font: 500 14px var(--sans); color: var(--text); }
+.btn.primary { border-color: var(--amber); background: var(--amber); color: #120c03; font-weight: 600; }
+.btn.ghost { color: var(--muted); }
+.page { max-width: 1480px; margin: 0 auto; }
+/* the slim identity bar every layout shares */
+.idbar { display: flex; align-items: center; gap: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+.idbar .mark { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--line-strong); border-radius: 4px; color: var(--amber); }
+.idbar h1 { font: 600 24px var(--sans); color: var(--bright); letter-spacing: .5px; }
+.idbar .lv { display: flex; align-items: center; gap: 10px; font: 600 12px var(--mono); color: var(--you); }
+.xp { width: 160px; height: 3px; background: var(--line); } .xp i { display: block; height: 100%; width: 38%; background: var(--you); }
+.idbar .sp { flex: 1; }
+.tabs { display: flex; gap: 28px; }
+.tabs button { padding: 6px 0; font: 600 12px var(--mono); letter-spacing: 1.5px; text-transform: uppercase; color: var(--dim); border-bottom: 2px solid transparent; }
+.tabs button.on { color: var(--amber); border-color: var(--amber); }
+.dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--amber); margin-left: 6px; vertical-align: 2px; }
+
+/* ---------- A: tabs; the Specialization tab ---------- */
+.a-specs { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 28px; }
+.spec { display: grid; gap: 20px; align-content: start; padding: 28px 30px; border: 1px solid var(--line); border-radius: 4px; background: linear-gradient(180deg, var(--panel-2), var(--panel)); }
+.spec.on { border-color: var(--amber); box-shadow: 0 0 0 1px var(--amber) inset; }
+.spec-h { display: flex; align-items: center; gap: 16px; }
+.spec-h .mk { display: grid; place-items: center; width: 64px; height: 64px; border: 1px solid var(--amber); border-radius: 4px; color: var(--amber); background: radial-gradient(circle at 50% 35%, rgba(241,185,47,.16), transparent 70%); }
+.spec-h .mk .ico { width: 34px; height: 34px; }
+.spec-h h2 { font: 600 30px var(--sans); color: var(--bright); }
+.roles { display: flex; gap: 6px; margin-top: 6px; }
+.role { padding: 2px 7px; border: 1px solid var(--line-strong); border-radius: 2px; font: var(--label); letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+.idea { font: 400 19px/1.35 var(--sans); color: var(--text); }
+.edge { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 3px; background: var(--inset); }
+.edge .ico { color: var(--amber); }
+.edge b { font: 600 15px var(--sans); color: var(--amber); }
+.strip { display: grid; grid-template-columns: repeat(11, 1fr); gap: 6px; }
+.strip span { display: grid; justify-items: center; gap: 4px; }
+.fr { display: grid; place-items: center; width: 100%; aspect-ratio: 1; border: 1px solid var(--line); border-radius: 3px; background: var(--inset); color: var(--amber); }
+.strip small { font: 600 10px var(--mono); color: var(--dim); }
+.spec-f { display: flex; align-items: center; gap: 16px; padding-top: 4px; }
+.spec-f .lab { margin-left: auto; }
+.a-later { margin-top: 18px; text-align: center; color: var(--dim); font-size: 13px; }
+
+/* ---------- B: sheet; left rail and an open main ---------- */
+.b { display: grid; grid-template-columns: 300px 1fr; gap: 32px; margin-top: 24px; }
+.rail { display: grid; gap: 10px; align-content: start; }
+.pick { display: grid; grid-template-columns: 40px 1fr; gap: 4px 12px; align-items: center; padding: 14px; border: 1px solid var(--line); border-radius: 4px; text-align: left; }
+.pick .ico { width: 26px; height: 26px; color: var(--muted); grid-row: span 2; justify-self: center; }
+.pick b { font: 600 18px var(--sans); color: var(--text); }
+.pick.on { border-color: var(--amber); background: var(--amber-wash); } .pick.on .ico, .pick.on b { color: var(--bright); } .pick.on .ico { color: var(--amber); }
+.pick.core { display: block; padding: 10px 14px; } .pick.core b { font-size: 14px; color: var(--muted); }
+.rail .btn { width: 100%; height: 40px; margin-top: 4px; }
+.sec { display: grid; gap: 12px; }
+.sec + .sec { margin-top: 28px; }
+.sec-h { display: flex; align-items: baseline; gap: 12px; }
+.bar { display: grid; grid-template-columns: repeat(11, 1fr); gap: 6px; }
+.key { position: relative; display: grid; place-items: center; height: 58px; border: 1px solid var(--line-strong); border-radius: 3px; background: var(--inset); color: var(--amber); }
+.key kbd { position: absolute; top: 3px; left: 5px; font: 600 10px var(--mono); color: var(--dim); }
+.key.empty { border-style: dashed; border-color: var(--line); }
+.key.closed { border-style: dashed; border-color: var(--line); color: var(--dim); font: 600 10px var(--mono); }
+.grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; }
+.tile { display: grid; justify-items: center; gap: 6px; padding: 12px 4px 10px; border: 1px solid var(--line); border-radius: 3px; color: var(--amber); }
+.tile b { font: 500 12px var(--sans); color: var(--text); text-align: center; }
+.tile small { font: 600 10px var(--mono); color: var(--dim); }
+.tile.pre { border-style: dashed; color: var(--muted); } .tile.pre b { color: var(--muted); }
+.b-main .split { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+.tree { display: grid; gap: 10px; }
+.trow { display: grid; grid-template-columns: 1fr 22px 1fr; align-items: center; gap: 6px; }
+.tn { display: flex; align-items: center; justify-content: space-between; height: 38px; padding: 0 12px; border: 1px solid var(--line); border-radius: 3px; font: 500 13px var(--sans); color: var(--muted); }
+.tn.pre { border-style: dashed; }
+.tn i { font-style: normal; font: 600 10px var(--mono); color: var(--dim); letter-spacing: 2px; }
+.trow .or { text-align: center; font: 600 10px var(--mono); color: var(--dim); }
+.pts { display: flex; align-items: center; gap: 12px; font: 600 12px var(--mono); color: var(--muted); }
+.pts b { color: var(--amber); }
+
+/* ---------- C: tree first; both subclasses beside the class ---------- */
+.c { display: grid; grid-template-columns: 1fr 260px 1fr; gap: 0; margin-top: 24px; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); }
+.c-col { padding: 22px 26px; display: grid; gap: 16px; align-content: start; }
+.c-col + .c-col { border-left: 1px solid var(--line); }
+.c-mid { background: var(--inset); justify-items: center; text-align: center; }
+.c-head { display: flex; align-items: center; gap: 14px; }
+.c-head .mk { display: grid; place-items: center; width: 48px; height: 48px; border: 1px solid var(--amber); border-radius: 4px; color: var(--amber); }
+.c-head .mk .ico { width: 26px; height: 26px; }
+.c-head h2 { font: 600 24px var(--sans); color: var(--bright); }
+.c-head .btn { margin-left: auto; }
+.c-skills { display: grid; grid-template-columns: repeat(11, 1fr); gap: 5px; }
+.c-skills span { display: grid; justify-items: center; gap: 3px; } .c-skills small { font: 600 9px var(--mono); color: var(--dim); }
+.c-mid .core { display: grid; grid-template-columns: repeat(2, 64px); gap: 8px; }
+.c-mid .core span { display: grid; justify-items: center; gap: 4px; font: 500 11px var(--sans); color: var(--muted); }
+.c-mid .core .fr { width: 52px; }
+.root { display: grid; gap: 4px; align-content: start; padding: 10px 12px; width: 100%; border: 1px solid var(--line); border-radius: 3px; text-align: left; }
+.root b { font: 500 14px var(--sans); color: var(--text); }
+.c-bar { display: flex; align-items: center; gap: 16px; margin-top: 16px; padding: 12px 16px; border: 1px solid var(--line); border-radius: 4px; }
+.c-bar .bar { flex: 1; }
+.c-bar .key { height: 46px; }
+.c-banner { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 10px; margin-top: 20px; font: 600 12px var(--mono); letter-spacing: 1.5px; text-transform: uppercase; color: var(--amber); }
+.c-banner::before, .c-banner::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--line-strong), transparent); }
+
+/* ---------- the class card: the core between its two subclasses ---------- */
+.idbar .btn { display: flex; align-items: center; gap: 8px; }
+.idbar .btn kbd { font: 600 10px var(--mono); color: var(--dim); border: 1px solid var(--line); border-radius: 2px; padding: 0 4px; }
+.pts2 { font: 600 12px var(--mono); color: var(--muted); } .pts2 b { color: var(--amber); }
+.cls { display: grid; grid-template-columns: 1fr 250px 1fr; margin-top: 22px; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); }
+.col { padding: 22px 26px 26px; display: grid; gap: 18px; align-content: start; }
+.col + .col { border-left: 1px solid var(--line); }
+.col.mid { background: var(--inset); }
+.col.off > :not(.ch) { opacity: .32; filter: grayscale(1); }
+.col.off .ch .mk, .col.off .ch h2, .col.off .ch .roles { opacity: .45; filter: grayscale(1); }
+.ch { display: flex; align-items: center; gap: 14px; }
+.ch .mk { display: grid; place-items: center; width: 48px; height: 48px; border: 1px solid var(--amber); border-radius: 4px; color: var(--amber); }
+.ch .mk .ico { width: 26px; height: 26px; }
+.ch h2 { font: 600 24px var(--sans); color: var(--bright); }
+.ch > :last-child { margin-left: auto; }
+.yours { display: flex; align-items: center; gap: 6px; font: 600 11px var(--mono); letter-spacing: 1px; text-transform: uppercase; color: var(--you); }
+.yours::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--you); }
+.abil { display: grid; grid-template-columns: repeat(6, 64px); justify-content: space-between; gap: 14px 8px; }
+.ab { position: relative; display: grid; justify-items: center; gap: 4px; }
+.ab .fr { width: 100%; aspect-ratio: 1; }
+.ab .fr .ico { width: 24px; height: 24px; }
+.ab b { font: 500 11px/1.2 var(--sans); width: 76px; color: var(--muted); text-align: center; }
+.ab.on .fr { border-color: var(--line-strong); } .ab.on b { color: var(--text); }
+.ab.lock .fr { color: var(--dim); border-style: dashed; } .ab.lock b { color: var(--dim); }
+.ab .k { position: absolute; top: -5px; right: -5px; min-width: 18px; height: 18px; display: grid; place-items: center; padding: 0 4px; border: 1px solid var(--you); border-radius: 2px; background: var(--inset); font: 600 11px var(--mono); color: var(--you); }
+.ab .lv { position: absolute; top: 3px; left: 5px; font: 600 9px var(--mono); color: var(--dim); }
+.mid .abil { grid-template-columns: repeat(2, 64px); justify-content: center; gap: 14px 24px; }
+.mid .roots { display: grid; gap: 8px; }
+.root2 { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 3px; }
+.root2 .ico { color: var(--amber); width: 16px; height: 16px; }
+.root2 b { font: 500 14px var(--sans); color: var(--text); display: block; }
+.tr2 { display: grid; gap: 8px; }
+.tr2 .row { display: grid; grid-template-columns: 1fr 18px 1fr; align-items: center; }
+.tn2 { display: flex; align-items: center; justify-content: space-between; gap: 8px; height: 36px; padding: 0 12px; border: 1px solid var(--line); border-radius: 3px; font: 500 13px var(--sans); color: var(--muted); }
+.tn2.has { border-color: var(--line-strong); color: var(--text); }
+.tn2.pick { border-color: var(--amber); background: var(--amber-wash); color: var(--bright); }
+.tn2.locked { color: var(--dim); border-style: dashed; }
+.pp { display: flex; gap: 3px; } .pp i { width: 6px; height: 6px; border: 1px solid var(--line-strong); transform: rotate(45deg); } .pp i.on { background: var(--amber); border-color: var(--amber); }
+.tr2 .or { text-align: center; font: 600 9px var(--mono); color: var(--dim); }
+.ban { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 22px; font: 600 12px var(--mono); letter-spacing: 1.5px; text-transform: uppercase; color: var(--amber); }
+.ban::before, .ban::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--line-strong), transparent); }
+
+/* ---------- the spellbook ---------- */
+.scrim { position: fixed; inset: 0; background: rgba(5, 3, 1, .78); }
+.book { position: relative; width: 1180px; margin: 10px auto 0; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--panel); box-shadow: 0 30px 80px rgba(0,0,0,.7); }
+.bk-h { display: flex; align-items: center; gap: 18px; padding: 14px 22px; border-bottom: 1px solid var(--line); }
+.bk-h h2 { font: 600 18px var(--sans); color: var(--bright); }
+.bk-h .x { margin-left: auto; width: 30px; height: 30px; border: 1px solid var(--line); border-radius: 3px; color: var(--muted); }
+.spread { display: grid; grid-template-columns: 1fr 1fr; }
+.pg { padding: 20px 24px 24px; display: grid; gap: 14px; align-content: start; }
+.pg + .pg { border-left: 1px solid var(--line); background: linear-gradient(90deg, rgba(0,0,0,.25), transparent 40px); }
+.sp { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px 18px; }
+.sp-i { display: grid; grid-template-columns: 52px 1fr; gap: 2px 12px; align-items: center; padding: 6px; border-radius: 3px; }
+.sp-i .fr { grid-row: span 2; width: 52px; position: relative; cursor: grab; }
+.sp-i .fr .ico { width: 26px; height: 26px; }
+.sp-i b { font: 500 15px var(--sans); color: var(--text); align-self: end; }
+.sp-i small { font: 500 11px var(--mono); color: var(--dim); align-self: start; }
+.sp-i .k { position: absolute; top: -5px; right: -5px; min-width: 18px; height: 18px; display: grid; place-items: center; border: 1px solid var(--you); border-radius: 2px; background: var(--inset); font: 600 11px var(--mono); color: var(--you); }
+.sp-i.lock .fr { color: var(--dim); border-style: dashed; cursor: default; } .sp-i.lock b { color: var(--dim); }
+.sp-i.drag { opacity: .4; }
+.dock { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 18px; padding: 14px 22px; border-top: 1px solid var(--line); background: var(--inset); border-radius: 0 0 6px 6px; }
+.slots { display: grid; grid-template-columns: repeat(11, 1fr); gap: 6px; }
+.slot { position: relative; display: grid; place-items: center; height: 54px; border: 1px solid var(--line-strong); border-radius: 3px; background: var(--panel); color: var(--amber); }
+.slot kbd { position: absolute; top: 3px; left: 5px; font: 600 10px var(--mono); color: var(--dim); }
+.slot .ico { width: 24px; height: 24px; }
+.slot.empty { border-style: dashed; }
+.slot.closed { border-style: dashed; border-color: var(--line); color: var(--dim); font: 600 10px var(--mono); }
+.slot.cant { background: var(--inset); }
+.slot.hover { border-color: var(--amber); box-shadow: 0 0 0 1px var(--amber), 0 0 18px rgba(241,185,47,.35); }
+.dragghost { position: absolute; width: 52px; height: 52px; display: grid; place-items: center; border: 1px solid var(--amber); border-radius: 3px; background: var(--panel-2); color: var(--amber); box-shadow: 0 8px 22px rgba(0,0,0,.6); transform: rotate(-4deg); pointer-events: none; }
+.dragghost .ico { width: 26px; height: 26px; }
+.presets { display: flex; gap: 6px; }
+.chip { padding: 4px 10px; border: 1px solid var(--line); border-radius: 3px; font: 500 12px var(--sans); color: var(--muted); }
+.chip.on { border-color: var(--amber); color: var(--bright); background: var(--amber-wash); }
+
+/* the regular page: your subclass wide, the other folded to a strip */
+.cls.reg { grid-template-columns: minmax(0, 1fr) 250px 200px; }
+.cls.reg > .col:first-child .abil { grid-template-columns: repeat(11, minmax(0, 1fr)); gap: 14px 8px; }
+.cls.reg > .col:first-child .ab .fr { width: 100%; max-width: 64px; }
+.cls.reg > .col:first-child .ab b { width: auto; }
+.fold { padding: 22px 18px; display: grid; gap: 14px; align-content: start; justify-items: center; text-align: center; border-left: 1px solid var(--line); }
+.fold > :not(.btn) { opacity: .4; filter: grayscale(1); }
+.fold .mk { display: grid; place-items: center; width: 48px; height: 48px; border: 1px solid var(--amber); border-radius: 4px; color: var(--amber); }
+.fold .mk .ico { width: 26px; height: 26px; }
+.fold h2 { font: 600 20px var(--sans); color: var(--bright); }
+.fold .icons { display: grid; grid-template-columns: repeat(4, 30px); gap: 6px; color: var(--amber); }
+.fold .icons span { display: grid; place-items: center; height: 30px; border: 1px solid var(--line); border-radius: 3px; }
+.fold .icons .ico { width: 16px; height: 16px; }
+
+.cid { display: grid; justify-items: center; gap: 8px; padding-bottom: 6px; }
+.emb { font: 600 11px/1.15 var(--mono); color: var(--amber); text-shadow: 0 0 12px rgba(241,185,47,.35); }
+.cid h2 { font: 600 28px var(--sans); color: var(--bright); letter-spacing: .5px; }
+.cid .roles { margin: 0; }
+.lockr { border-style: dashed; opacity: .45; }
+
+.cls.dimmer .col.off > :not(.ch) { opacity: .14; }
+.cls.dimmer .col.off .ch .mk, .cls.dimmer .col.off .ch h2, .cls.dimmer .col.off .ch .roles { opacity: .3; }
+.cls.strips { grid-template-columns: 220px minmax(0, 1fr) 220px; }
+.cls.strips .fold { border: 0; }
+.cls.strips .fold:last-child { border-left: 1px solid var(--line); }
+.cls.strips .fold:first-child { border-right: 1px solid var(--line); }
+.lockside .lv10 { opacity: 1 !important; filter: none !important; color: var(--muted); border: 1px solid var(--line); border-radius: 2px; padding: 3px 8px; }
+.col.mid.wide { padding: 30px 60px 34px; justify-items: center; gap: 26px; }
+.col.mid.wide .abil { grid-template-columns: repeat(4, 84px); gap: 18px 26px; }
+.col.mid.wide .ab b { font-size: 13px; }
+.col.mid.wide .roots { grid-template-columns: repeat(3, 230px); }
+</style>
+</head>
+<body>
+<div class="page" id="root"></div>
+<script type="module">
+import { ARCHETYPES, ABILITIES, TREE, lineOf, SUBS } from '../../dist/data.mjs';
+import { EMBLEMS } from '../../dist/class-emblems.mjs';
+const q = new URLSearchParams(location.search), v = q.get('v') || 'choose';
+const a = ARCHETYPES.breaker, [A, B] = Object.values(a.subs);
+const early = /^(early|lvl1)/.test(v), dimmer = v === 'lvl1a', strips = v === 'lvl1b', picked = v === 'choose' || early ? null : A, reg = v === 'regular', L = v.startsWith('lvl1') ? 1 : early ? 6 : v === 'choose' ? 12 : 22;
+const SUB_ICON = { demolitionist: 'expand', overclocker: 'overload' };
+const subIco = (id) => `<span class="ico" style="--icon:url('../../dist/ui/icons/sub-${id}.svg')"></span>`;
+const ico = (n) => `<span class="ico" style="--icon:url('../../dist/ui/icons/${n}.svg')"></span>`;
+const sIco = (id) => ico(ABILITIES[id]?.icon || 'command');
+const name = (id) => id === 'spike' ? 'Bash' : ABILITIES[id]?.name || id;
+const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const roles = (k) => `<div class="roles">${k.role.map((r) => `<span class="role">${r}</span>`).join('')}</div>`;
+const CORE_LV = { overload: 1, flood: 1, exploit: 3, crack: 7 };
+const KEYS = ['2', '3', '4', '5', '6', '7', '8', '9', '0'];
+const BAR = v.startsWith('lvl1') ? ['overload', 'flood'] : picked ? ['crack', 'shatter', 'flood', 'overload', 'shaped-charge', 'thermal-runaway', 'backfire', 'logic-bomb'] : ['overload', 'flood', 'exploit', 'crack'];
+const keyOf = (id) => { const i = BAR.indexOf(id); return i < 0 ? '' : `<span class="k">${KEYS[i]}</span>`; };
+const verb = (id) => { const x = ABILITIES[id]; return `${({ hit: 'Hit', burn: 'Burn', debuff: 'Debuff', shield: 'Shield', heal: 'Heal', buff: 'Buff', stun: 'Stun' })[x?.verb] || 'Utility'} · ${x?.cooldown ? `${x.cooldown} cycle cooldown` : 'No cooldown'}`; };
+const ab = (id, lv, mine) => { const lock = !mine || lv > L; return `<div class="ab ${lock ? 'lock' : 'on'}" title="${esc(name(id))}"><span class="fr">${sIco(id)}${lock ? `<span class="lv">${lv}</span>` : ''}</span>${keyOf(id) && !lock ? keyOf(id) : ''}<b>${esc(name(id))}</b></div>`; };
+const pips = (n, max) => `<span class="pp">${Array.from({ length: max }, (_, i) => `<i${i < n ? ' class="on"' : ''}></i>`).join('')}</span>`;
+// The picked subclass's spent points: 6 by level 22.
+const RANKS = { 'armor-cracker': 2, 'blast-radius': 1 }, PICKS = [0];
+const tree = (k, mine) => `<div class="tr2">${TREE.map((row, i) => {
+  const ns = row.kind === 'filler' ? k.fillers[row.row] : row.kind === 'choice' ? k.talents[row.tier] : k.capstones;
+  const open = mine && row.need <= 4;
+  const n = (x, j) => {
+    let cls = open ? '' : 'locked', tail = '';
+    if (row.kind === 'filler') { const r = mine ? RANKS[x.id] || 0 : 0; if (r) cls = 'has'; tail = pips(r, x.max); }
+    else if (row.kind === 'choice' && mine && PICKS[row.tier] === j) cls = 'pick';
+    else if (row.kind === 'capstone') tail = pips(0, x.max);
+    return `<span class="tn2 ${cls}" title="${esc(x.rule || x.rules?.[0])}">${esc(x.name)}${tail}</span>`;
+  };
+  return `<div class="row">${n(ns[0], 0)}<span class="or">${row.kind === 'filler' ? '' : 'or'}</span>${n(ns[1], 1)}</div>`;
+}).join('')}</div>`;
+const col = (k) => {
+  const mine = picked === k, off = (picked && !mine) || early;
+  const act = early ? `<span class="lab">Level 10</span>` : !picked ? `<button class="btn primary">Choose</button>` : mine ? `<span class="yours">Yours</span>` : `<button class="btn ghost">Switch</button>`;
+  return `<section class="col${off ? ' off' : ''}"><div class="ch"><span class="mk">${subIco(k.id)}</span><div><h2>${k.name}</h2>${roles(k)}</div>${act}</div>
+    <div class="edge" title="${esc(k.edge.rule)}">${ico('spike')}<div><p class="lab">Edge</p><b>${k.edge.name}</b></div></div>
+    <div class="abil">${lineOf(k).map((x) => ab(x.id, x.level, mine)).join('')}</div>
+    ${tree(k, mine)}</section>`;
+};
+const idbar = `<header class="idbar"><div class="lv">Lv ${L}<span class="xp"><i></i></span></div><span class="sp"></span>${early ? '' : `<span class="pts2"><b>${picked ? 1 : 2}</b> ${picked ? 'talent point' : 'talent points'}</span>`}<button class="btn">${ico('command')}Toolkit<kbd>T</kbd></button></header>`;
+const cls = () => `${picked ? '' : early ? '<div class="ban" style="color:var(--dim)">Subclass at level 10</div>' : '<div class="ban">Choose a subclass</div>'}<div class="cls${reg ? ' reg' : ''}${dimmer ? ' dimmer' : ''}">${col(A)}
+  <section class="col mid"><div class="cid"><pre class="emb">${esc(EMBLEMS.breaker.join('\n'))}</pre><h2>Breaker</h2>${roles(a)}</div><div class="abil">${a.core.map((x) => ab(x, CORE_LV[x], true)).join('')}</div>
+    <div class="roots"><div class="root2" title="${esc(a.passive.rule)}">${ico('spike')}<div><p class="lab">Passive</p><b>${a.passive.name}</b></div></div>
+    <div class="root2">${ico('pulse-node')}<div><p class="lab">Sync</p><b>Sync bonus</b></div></div>
+    <div class="root2${L < 5 ? ' lockr' : ''}">${ico('overload')}<div><p class="lab">Kit talent${L < 5 ? ' · Lv 5' : ''}</p><b>Overclocked Core</b></div></div></div></section>
+  ${reg ? `<aside class="fold"><span class="mk">${subIco(B.id)}</span><h2>${B.name}</h2>${roles(B)}<p class="lab">Edge · ${B.edge.name}</p><div class="icons">${lineOf(B).map((x) => `<span>${sIco(x.id)}</span>`).join('')}</div><button class="btn">Switch</button></aside>` : col(B)}</div>`;
+const strip = (k) => `<aside class="fold lockside"><span class="mk">${subIco(k.id)}</span><h2>${k.name}</h2>${roles(k)}<p class="lab">Edge · ${k.edge.name}</p><div class="icons">${lineOf(k).map((x) => `<span>${sIco(x.id)}</span>`).join('')}</div><span class="lab lv10">Level 10</span></aside>`;
+const clsStrips = () => `<div class="ban" style="color:var(--dim)">Subclass at level 10</div><div class="cls strips">${strip(A)}
+  <section class="col mid wide"><div class="cid"><pre class="emb">${esc(EMBLEMS.breaker.join('\n'))}</pre><h2>Breaker</h2>${roles(a)}</div>
+    <div class="abil">${a.core.map((x) => ab(x, CORE_LV[x], true)).join('')}</div>
+    <div class="roots"><div class="root2" title="${esc(a.passive.rule)}">${ico('spike')}<div><p class="lab">Passive</p><b>${a.passive.name}</b></div></div>
+    <div class="root2">${ico('pulse-node')}<div><p class="lab">Sync</p><b>Sync bonus</b></div></div>
+    <div class="root2 lockr">${ico('overload')}<div><p class="lab">Kit talent · Lv 5</p><b>Overclocked Core</b></div></div></div></section>
+  ${strip(B)}</div>`;
+let html;
+if (strips) html = idbar + clsStrips(); else if (v !== 'book') html = idbar + cls();
+else {
+  const entry = (id, lv, drag) => { const lock = lv > L; return `<div class="sp-i${lock ? ' lock' : ''}${drag ? ' drag' : ''}"><span class="fr">${sIco(id)}${!lock ? keyOf(id) : ''}</span><b>${esc(name(id))}</b><small>${lock ? `Level ${lv}` : verb(id)}</small></div>`; };
+  const slots = [`<div class="slot cant"><kbd>1</kbd>${ico('spike')}</div>`];
+  for (let i = 0; i < 9; i++) {
+    const id = BAR[i], k = KEYS[i];
+    if (i === 8) slots.push(`<div class="slot closed"><kbd>0</kbd>Lv 30</div>`);
+    else slots.push(id ? `<div class="slot${i === 6 ? ' hover' : ''}"><kbd>${k}</kbd>${sIco(id)}</div>` : `<div class="slot empty"><kbd>${k}</kbd></div>`);
+  }
+  slots.push(`<div class="slot cant"><kbd>-</kbd>${ico('interrupt')}</div>`);
+  html = idbar + cls() + `<div class="scrim"></div><div style="position:fixed;inset:0;display:grid;align-content:center">
+    <div class="book"><div class="bk-h">${ico('command')}<h2>Toolkit</h2><nav class="tabs" style="margin-left:24px"><button class="on">Demolitionist</button><button>Run</button></nav><button class="x">×</button></div>
+      <div class="spread"><div class="pg"><p class="kick">Breaker core</p><div class="sp">${a.core.map((x) => entry(x, CORE_LV[x])).join('')}${entry('spike', 1).replace('>spike<', '>Bash<')}${entry('sigint', 5)}</div></div>
+        <div class="pg"><p class="kick">Demolitionist</p><div class="sp">${lineOf(A).map((x) => entry(x.id, x.level, x.id === 'fork-bomb')).join('')}</div></div></div>
+      <div class="dock"><span class="kick">Bar</span><div class="slots" id="slots">${slots.join('')}</div><div class="presets"><span class="chip on">rotation</span><span class="chip">area</span><span class="chip">+ save</span></div></div>
+    </div></div><div class="dragghost" id="ghost">${sIco('fork-bomb')}</div>`;
+}
+document.getElementById('root').innerHTML = html;
+if (v === 'book') { const r = document.querySelectorAll('#slots .slot')[7].getBoundingClientRect(); const g = document.getElementById('ghost'); g.style.position = 'fixed'; g.style.left = (r.left + 18) + 'px'; g.style.top = (r.top - 22) + 'px'; }
+</script>
+</body>
+</html>
