@@ -2114,8 +2114,8 @@ radio in a window beside it), **[2] recordings** (the tape), **[3] log**, **[0] 
 - **Found** through a thread, **Nine Days Deaf**: the first broadcast on the air outside a fight breaks into the radio
   chatter as numbers, from a LANTERN repeater on a server of yours (traced, no thread, nearest your level; with none
   yet, a later broadcast tries again). Its ! goes on that server. Read the repeater, fight to LANTERN's relay a link or
-  two off and restart it, talk to LANTERN there, and the post shows on the map (`s.scanner.found`; already true for a save that had the
-  old top-bar radio).
+  two off and restart it, talk to LANTERN there, and the post shows on the map (`s.scanner.found`; already true for a
+  save that had the old top-bar radio).
 - **On the air.** One station at a time, for 2–3 minutes, then 15–30 minutes quiet (the first 5 minutes into a new
   save). Stations not yet logged come up first, then the ones that still pay. A broadcast starts with a quiet two-tone
   ping once the post is found, never in a fight.
