@@ -1027,7 +1027,7 @@ docs/threads.md). Never given, never timed, nothing missable.
 | Restore Point | 1 (3) | M. Wren's photos | Talk to a stalled restore job; reach her archive; walk it to the restore point a link or two off; talk to it |
 | The Night Operator | 2 (7) | Forty people's payroll | Talk to an idle session; fight to the payroll file on another server; carry it to her terminal two servers over; hand it over (Kestrel +12) or sell it to GLASSJAW (GLASSJAW +10, Kestrel −8, 150 + 25L credits) |
 | Mirror | 3 (13) | Your ground, copied and sold | Read an index (MIRROR-nn appears, copied from your server); read its logs; talk to its builder Quill a floor up (he unseals the kill switch); beat its Core |
-| Nine Days Deaf | the clue's server (any) | LANTERN's mast | Read a repeater stuck on the numbers; fight to its mast a link or two off; answer LANTERN. The Listening Post shows on the map |
+| Nine Days Deaf | the clue's server (any) | LANTERN's mast | Read a LANTERN repeater replaying a numbers broadcast; reconnect its mast a link or two off; talk to LANTERN there. The Listening Post shows on the map |
 | One-offs | any | Each its own | An escort, a talk, or a temporary server (a beacon names it) |
 
 ## Floors and tracing

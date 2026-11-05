@@ -215,13 +215,13 @@ test('Nine Days Deaf: the radio clue pins it on a server of yours near your leve
   assert.equal(SC.postFound(s), false, 'not until the thread is done');
   connect(s, loc);
   walk(s, TH.startHere(s, loc).room);
-  assert.match(said(FP.act(s, 'talk')), /repeater · lantern[\s\S]*Its mast is on [A-Z]+-[A-Z]+-\d+, [A-Z]\d+\./);
+  assert.match(said(FP.act(s, 'talk')), /repeater · lantern[\s\S]*The mast is on [A-Z]+-[A-Z]+-\d+, [A-Z]\d+\./);
   const t = TH.activeThreads(s).at(-1), mast = locOf(s, t.places.mast.loc);
   if (mast.id !== loc.id) connect(s, mast);
   walk(s, t.places.mast.room);
   assert.equal(t.step, 2);
   assert.equal(SC.postFound(s), false);
-  assert.match(said(FP.act(s, 'talk')), /Our post is beside your HOME/);
+  assert.match(said(FP.act(s, 'talk')), /Our Listening Post is next to your HOME server/);
   assert.equal(t.state, 'done');
   assert.equal(SC.postFound(s), true);
   assert.equal(SC.findPost(s, clock), null);
