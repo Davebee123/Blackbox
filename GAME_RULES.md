@@ -2486,11 +2486,11 @@ moves.
 **A new fight boots in.** The first time you see a fight, the screen goes dark and the virus comes up first, alone
 at the centre, before dropping into its panel; a boot console checks your system and your panels come up. About two
 seconds; any key or click ends it (and still acts). Leaving a won fight, the page folds to a teal line like a tube
-switching channel and the map opens back out of it, your room ringing. Connecting to a server dials it: its node locks
-teal and pings, the screen dims into black, its name decodes over a dial readout and flies into the server strip, and
-the rooms switch on outward from the entry (about two seconds; a first run's XP waits for it). **Jacking out** hangs
-up: your room locks teal and the rooms go dark toward it, the hang-up's readout holds the dark, then the map comes up
-with the server's node ringed (under two seconds; the Banked card waits for it). None of them flashes or blinks: a
+switching channel and the map opens back out of it, your room ringing. Connecting to a server plays inside the page:
+the map dims, the dial-up's readout types out where it stood, and the rooms switch on outward from the entry (about a
+second; a first run's XP waits for it). **Jacking out** hangs up the same way: the rooms go dark toward yours, the
+hang-up's readout types out, then the map comes up (under a second; the Banked card waits for it). Neither covers your
+chrome or adds a teal ring. None of them flashes or blinks: a
 panel only brightens or only dims, and your chrome dims rather than going out. Screen effects off or Motion off:
 straight in and out.
 

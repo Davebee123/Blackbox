@@ -1587,8 +1587,8 @@ function go(name, quiet = false) {
   focusPrompt();
   if (boot) { bootFor = campaign.encounter; playBoot($('app'), held, bootLines(bootInfo())); }
 }
-// Connecting to a server: the screen dials it (bootfx.mjs, Handshake); from the map, its node locks on first. Screen
-// effects off or Motion off: straight in.
+// Connecting to a server: the dial-up types into the page (bootfx.mjs, Terminal); from the map, the map dims first.
+// Screen effects off or Motion off: straight in.
 const dialFx = () => canMove() && fxLevel() !== 'minimal' && !shell.booting;
 function connectTo(e) {
   const sel = e.location && `[data-select="${CSS.escape(e.location)}"]`, shown = (q) => [...$('page-view').querySelectorAll(q)].find((g) => g.getBoundingClientRect().width);
@@ -1600,9 +1600,8 @@ function connectTo(e) {
   const name = q('.fp-hud .fp-id b') || campaign.locations?.find((l) => l.id === e.location)?.name || '';
   playConnect($('app'), held, name, connectLines({ name, level: q('.fp-hud .fp-id small').match(/lv ([\d–-]+)/)?.[1] || '', rooms: Number(q('.fp-hud .fp-prog b').split('/')[1]) || 0 }));
 }
-// Jacking out: the dial-up backwards (bootfx.mjs, Hang-up): from the rooms page your room locks teal and the rooms go
-// dark toward it, the hang-up's readout holds the dark, then the map comes up with the server's node ringed. Screen
-// effects off or Motion off: straight to the map.
+// Jacking out (bootfx.mjs, Terminal): from the rooms page the rooms go dark toward yours, the hang-up's readout types
+// into the page, then the map comes up. Screen effects off or Motion off: straight to the map.
 function hangUp(events) {
   const e = events.findLast((x) => x.type === 'jacked-out'), shown = (q) => [...$('page-view').querySelectorAll(q)].find((g) => g.getBoundingClientRect().width);
   const fx = dialFx() && !CAMP, here = fx && module === 'rooms' ? shown('.fp-room.here') : null;
@@ -1610,7 +1609,7 @@ function hangUp(events) {
   go('map', true);
   if (!fx || module !== 'map') return;
   const name = e?.message.match(/JACKED OUT of (.+?)\./)?.[1] || '', sel = e?.out && `[data-select="${CSS.escape(e.out)}"]`;
-  playHangup($('app'), held, name, hangupLines({ name, banked: e?.gains?.length || 0 }), () => (sel ? shown(`${sel} .core`) || shown(sel) : null));
+  playHangup($('app'), held, name, hangupLines({ name, banked: e?.gains?.length || 0 }));
 }
 // What the boot console checks: read off the fight's page as it now stands.
 function bootInfo() {

@@ -9,7 +9,7 @@
 // with a black layer behind them and the console, noise and glow on top (bootfx.css).
 // Leaving a won fight (app.js leaveFight, the designer's pick, Channel cut): the page collapses to a teal line, then a
 // dot, like a tube switching channel; the page you go back to opens out of the line, and your room rings teal.
-// Jacking out (app.js hangUp, Hang-up): the dial-up backwards; see playHangup.
+// Connecting to a server and jacking out (app.js connectTo, hangUp, Terminal): inside the page; see playConnect.
 // Screen effects off, Motion off or reduced motion: none of them plays (app.js doesn't call them).
 
 // When each beat comes, in ms; without the brackets (not from the rooms page) everything comes LOCK sooner.
@@ -188,20 +188,17 @@ export function playCut(app, regions, swap, room) {
   addEventListener('keydown', end, true); addEventListener('pointerdown', end, true);
 }
 
-// Connecting to a server (app.js, the designer's pick, Handshake): from the map, teal brackets lock on the server's
-// node and two pings ring out; the map dims into black, your chrome with it (never a dip back up), the tube's edge
-// glowing teal. The server's name decodes at the centre over a dial readout; the name flies into the server strip, and the
-// rooms catch outward from the entry, which rings teal; then your chrome. Not from the map: it starts at the black.
+// Connecting to a server (app.js, Terminal): it plays inside the monitor's page, like the rest of the game, not over
+// the screen. From the map, the map dims in place; the dial-up types into the page as terminal output (no big title,
+// no black screen, your chrome stays lit); then the rooms catch outward from the entry. Nothing teal pops: no
+// brackets, pings or rings. Not from the map: it starts at the readout.
 // When each beat comes, in ms; without the map (not from the map page) everything comes DIAL sooner.
-export const CONNECT = { lock: 0, ping: 200, dim: 380, black: 520, name: 600, lines: 760, line: 95, fly: 1400, strip: 1460, rooms: 1520, ring: 70, chrome: 1700, done: 2300 };
-const DIAL = 440;
+export const CONNECT = { dim: 0, term: 140, line: 70, out: 560, strip: 600, rooms: 640, ring: 50, done: 1050 };
+const DIAL = 140;
 // The map dimming as it powers down: [ms from CONNECT.dim, brightness], each held until the next. It only ever dims.
-export const DIM = [[0, 1], [35, 0.75], [70, 0.5], [105, 0.3], [140, 0.15]];
-const GLYPHS = '#%&*+=/<>?01ABCDEFX';
-// The name part-decoded: its first n characters, the rest noise.
-export const decoded = (name, n) => [...name].map((c, j) => (c === ' ' || j < n ? c : GLYPHS[(j * 7 + n * 13) % GLYPHS.length])).join('');
+export const DIM = [[0, 1], [35, 0.6], [70, 0.35], [105, 0.15]];
 
-// The readout under the name: what the dial-up checks. The last line, CONNECT, is yours (teal).
+// The readout: what the dial-up checks. The last line, CONNECT, is yours (teal).
 export function connectLines({ name = '', kind = '', level = '', rooms = 0 }) {
   const row = (k, v) => `${k} ${'.'.repeat(Math.max(3, 24 - k.length))} ${v}`;
   return [
@@ -220,70 +217,45 @@ const after = [];
 // Run fn once the connect is over (at once if none is playing): the first-run reward waits for it.
 export function whenConnected(fn) { if (dialing) after.push(fn); else fn(); }
 
+// The page's box in the effect layer, and the layer: a terminal readout there types out the lines.
+function termIn(app, add, nodes, lines, at, line) {
+  const top = add(app, 'bootfx'), lr = top.getBoundingClientRect(), lk = lr.width / (top.offsetWidth || lr.width) || 1;
+  const pv = app.querySelector('#page-view'), r = pv?.getBoundingClientRect();
+  const term = add(top, 'bootfx-term');
+  if (r?.width) Object.assign(term.style, { left: `${(r.left - lr.left) / lk}px`, top: `${(r.top - lr.top) / lk}px`, width: `${r.width / lk}px`, height: `${r.height / lk}px` });
+  const rows = lines.map((l, i) => { const d = document.createElement('div'); d.textContent = l.text; if (l.you) d.className = 'you'; term.append(d); return [d, at + i * line]; });
+  return { top, term, rows, lr, lk };
+}
+
 // Play it. app: #app; held: capture()'s result on the map with the server's node, or null; name: the server's; lines:
 // connectLines(). The rooms page must already be drawn in #page-view.
 export function playConnect(app, held, name, lines) {
   stopConnect();
   const T = CONNECT, $ = (q) => app.querySelector(q), anims = [], nodes = [], o = held ? 0 : -DIAL, at = (ms) => Math.max(0, ms + o);
-  $('#workspace')?.classList.remove('refresh'); // the page change's own sweep: this stands in for it (and its filter would move the map)
+  $('#workspace')?.classList.remove('refresh'); document.getElementById('crt-sweep')?.classList.remove('go'); // the page change's own sweep: this stands in for it
   const play = (el, frames, delay, duration, easing = 'linear') => { if (el) anims.push(el.animate(frames, { delay, duration, easing, fill: 'both' })); };
   const steps = (el, prop, pts) => { if (!el) return; const end = pts[pts.length - 1][0] || 1; play(el, pts.map(([ms, v]) => ({ [prop]: v, offset: ms / end, easing: 'steps(1, end)' })), 0, end); };
   const tubeOn = (from, lo = 0) => TUBE_ON.map(([ms, v]) => [from + ms, lo + v * (1 - lo)]);
   const add = (parent, cls, before = null) => { const d = document.createElement('div'); d.className = cls; d.setAttribute('aria-hidden', 'true'); parent.insertBefore(d, before); nodes.push(d); return d; };
-  const black = add(app, 'bootfx-black', $('#fx-back')?.nextSibling || app.firstChild);
-  const b0 = Math.max(0, at(T.black) - 140);
-  play(black, [{ opacity: 0 }, { opacity: 1, offset: 0.08 }, { opacity: 1, offset: 0.9 }, { opacity: 0 }], b0, at(T.chrome) - b0 + 150, 'ease-in-out');
-  const top = add(app, 'bootfx'), lr = top.getBoundingClientRect(), lk = lr.width / (top.offsetWidth || lr.width) || 1;
-  const box = (r, pad = 0) => ({ left: `${(r.left - lr.left) / lk - pad}px`, top: `${(r.top - lr.top) / lk - pad}px`, width: `${r.width / lk + pad * 2}px`, height: `${r.height / lk + pad * 2}px` });
-  const dim = DIM.map(([ms, v]) => [at(T.dim) + ms, `brightness(${v})`]);
 
-  // The map holding, the node locking teal and pinging, then powering down.
+  // The map holding where it stood, dimming out in the page.
   if (held) {
+    held.lock?.remove();
     held.parent.append(held.clone); nodes.push(held.clone);
     const r = held.clone.getBoundingClientRect();
     Object.assign(held.clone.style, { left: `${(held.at.left - r.left) / held.k}px`, top: `${(held.at.top - r.top) / held.k}px` });
-    held.lock.classList.add('you');
-    play(held.lock, [{ opacity: 0, transform: 'scale(2.2)' }, { opacity: 1, transform: 'scale(1)', offset: 0.55 }, { opacity: 1, transform: 'scale(1)' }], 0, 240, 'ease-out');
-    steps(held.clone, 'filter', [[0, 'brightness(1)'], ...dim]);
-    steps(held.clone, 'opacity', [[0, 1], [T.black, 0], [T.black + 1, 0]]);
-    const nr = held.lock.getBoundingClientRect(), cx = (nr.left + nr.width / 2 - lr.left) / lk, cy = (nr.top + nr.height / 2 - lr.top) / lk;
-    for (const i of [0, 1]) {
-      const p = add(top, 'bootfx-ping');
-      Object.assign(p.style, { left: `${cx - 20}px`, top: `${cy - 20}px` });
-      play(p, [{ opacity: 0, transform: 'scale(.5)' }, { opacity: 1, transform: 'scale(1)', offset: 0.1 }, { opacity: 0, transform: 'scale(9)' }], T.ping + i * 110, 420, 'cubic-bezier(.2,.7,.3,1)');
-    }
+    steps(held.clone, 'filter', DIM.map(([ms, v]) => [at(T.dim) + ms, `brightness(${v})`]));
+    steps(held.clone, 'opacity', [[0, 1], [at(T.term), 0], [at(T.term) + 1, 0]]);
   }
-  const glow = add(top, 'bootfx-glow');
-  play(glow, [{ opacity: 0 }, { opacity: 0.45, offset: 0.3 }, { opacity: 0.25, offset: 0.6 }, { opacity: 0 }], at(T.black), 900, 'ease-in-out');
-  // Your chrome dims with the map and comes back up at the end.
-  for (const q of ['.topbar', '#sidebar', '#crewwin', '#statusline', '#net-line', '.prompt-row', '#tray'])
-    steps($(q), 'opacity', [[0, 1], ...(held ? DIM.map(([ms, v]) => [at(T.dim) + ms, Math.max(CHROME_LOW, v)]) : DOWN(at(T.black))), ...tubeOn(at(T.chrome), CHROME_LOW)]);
+  // The rooms page waits dark while the readout types into it.
+  const pv = $('#page-view');
+  steps(pv, 'opacity', [[0, 0], [at(T.out), 0], [at(T.out) + 1, 1]]);
+  const { term, rows } = termIn(app, add, nodes, lines, at(T.term), T.line);
+  steps(term, 'opacity', [[0, 1], [at(T.out), 1], ...[[at(T.out) + 40, 0.5], [at(T.out) + 80, 0], [at(T.out) + 81, 0]]]);
+  for (const [d, t] of rows) steps(d, 'opacity', [[0, 0], [t, 1], [t + 1, 1]]);
 
-  // The name at the centre, decoding, with its carrier bar and the readout.
-  const card = add(top, 'bootfx-dial'), nm = document.createElement('div'), bar = document.createElement('div'), sub = document.createElement('div');
-  nm.className = 'bootfx-dial-name'; bar.className = 'bootfx-dial-bar'; sub.className = 'bootfx-dial-lines';
-  card.append(nm, bar, sub);
-  const N = 8;
-  for (let i = 0; i <= N; i++) {
-    const s = document.createElement('div'), t0 = at(T.name) + i * 45;
-    s.textContent = decoded(name, Math.round((i / N) * name.length));
-    nm.append(s);
-    steps(s, 'opacity', i < N ? [[0, 0], [t0, 1], [t0 + 45, 0], [t0 + 46, 0]] : [[0, 0], [t0, 1], [t0 + 1, 1]]);
-  }
-  play(bar, [{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], at(T.lines), 420, 'steps(12)');
-  lines.forEach((l, i) => { const d = document.createElement('div'); d.textContent = l.text; if (l.you) d.className = 'you'; sub.append(d); steps(d, 'opacity', [[0, 0], [at(T.lines) + i * T.line, 1], [at(T.lines) + i * T.line + 1, 1]]); });
-  // The name flies into the strip's; the readout goes out.
-  const strip = $('#page-view .fp-hud'), target = strip?.querySelector('.fp-id b');
-  if (target) {
-    const tr = target.getBoundingClientRect(), br = nm.getBoundingClientRect();
-    const dx = (tr.left + tr.width / 2 - (br.left + br.width / 2)) / lk, dy = (tr.top + tr.height / 2 - (br.top + br.height / 2)) / lk;
-    play(nm, [{ transform: 'none' }, { transform: `translate(${dx}px, ${dy}px) scale(${Math.max(0.3, tr.height / (br.height || 1))})` }], at(T.fly), 200, 'cubic-bezier(.6,0,.4,1)');
-  }
-  steps(nm, 'opacity', [[0, 1], [at(T.fly) + 200, 0], [at(T.fly) + 201, 0]]);
-  steps(sub, 'opacity', [[0, 1], [at(T.fly), 0.6], [at(T.fly) + 40, 0.25], [at(T.fly) + 80, 0], [at(T.fly) + 81, 0]]);
-  steps(bar, 'opacity', [[0, 1], [at(T.fly), 0], [at(T.fly) + 1, 0]]);
-
-  // The rooms page: the strip, then the rooms and links catching outward from the entry, a ring on each step out.
+  // The strip, then the rooms and links catching outward from the entry.
+  const strip = $('#page-view .fp-hud');
   steps(strip, 'opacity', [[0, 0], ...tubeOn(at(T.strip))]);
   const svg = [...app.querySelectorAll('#page-view .fp-svg')].find((s) => s.getBoundingClientRect().width), here = svg?.querySelector('.fp-room.here');
   if (svg && here) {
@@ -291,9 +263,6 @@ export function playConnect(app, held, name, lines) {
     const ringOf = (el) => { const r = el.getBoundingClientRect(); return Math.round(Math.hypot(r.left + r.width / 2 - hx, r.top + r.height / 2 - hy) / unit); };
     for (const el of svg.querySelectorAll('.fp-room, .fp-bed, .fp-under, .fp-link')) steps(el, 'opacity', [[0, 0], ...tubeOn(at(T.rooms) + ringOf(el) * T.ring)]);
     for (const el of svg.children) if (!el.matches('defs, symbol') && !el.querySelector('.fp-room, .fp-link') && !el.matches('.fp-room, .fp-link, .fp-bed, .fp-under')) steps(el, 'opacity', [[0, 0], ...tubeOn(at(T.rooms) + T.ring)]);
-    const ring = add(top, 'bootfx-ring');
-    Object.assign(ring.style, box(h, 8));
-    play(ring, [{ opacity: 0, transform: 'scale(1.4)' }, { opacity: 1, transform: 'scale(1)', offset: 0.35 }, { opacity: 0, transform: 'scale(1)' }], at(T.rooms), 520, 'ease-out');
   }
 
   let timer = 0;
@@ -309,12 +278,11 @@ export function playConnect(app, held, name, lines) {
   addEventListener('keydown', end, true); addEventListener('pointerdown', end, true);
 }
 
-// Jacking out (app.js hangUp): the dial-up backwards. On the rooms page your room locks teal and the rooms go dark from
-// the far ones in to yours; the dark holds the server's name and the hang-up's readout (your pack banked); then the map
-// comes up and the server's node rings teal: where you were. Not from the rooms page: it starts at the black. Calm like
-// the rest: a thing only dims or only brightens.
-export const HANGUP = { lock: 0, out: 120, ring: 60, black: 520, name: 560, lines: 640, line: 90, map: 1180, mark: 1300, chrome: 1240, done: 1700 };
-const HANG = 400; // without the rooms page, everything comes this much sooner
+// Jacking out (app.js hangUp, Terminal like the connect): inside the page, the rooms go dark from the far ones in to
+// yours, the hang-up's readout types into the page (your pack banked), then the map comes up. Your chrome stays lit and
+// nothing teal pops. Not from the rooms page: it starts at the readout.
+export const HANGUP = { out: 0, ring: 40, term: 260, line: 70, map: 640, done: 950 };
+const HANG = 200; // without the rooms page, everything comes this much sooner
 export function hangupLines({ name = '', banked = 0 }) {
   const row = (k, v) => `${k} ${'.'.repeat(Math.max(3, 24 - k.length))} ${v}`;
   return [
@@ -332,30 +300,23 @@ export function stopHangup() { hanging?.(); }
 export function whenHome(fn) { if (hanging) afterHome.push(fn); else fn(); }
 
 // Play it. app: #app; held: capture()'s result on the rooms page with your room, or null; name: the server's; lines:
-// hangupLines(); node: finds the server's node on the map (now drawn in #page-view), or null.
-export function playHangup(app, held, name, lines, node) {
+// hangupLines(); node: unused (the map comes up as it is).
+export function playHangup(app, held, name, lines) {
   stopHangup();
   const T = HANGUP, $ = (q) => app.querySelector(q), anims = [], nodes = [], o = held ? 0 : -HANG, at = (ms) => Math.max(0, ms + o);
-  $('#workspace')?.classList.remove('refresh');
+  $('#workspace')?.classList.remove('refresh'); document.getElementById('crt-sweep')?.classList.remove('go');
   const play = (el, frames, delay, duration, easing = 'linear') => { if (el) anims.push(el.animate(frames, { delay, duration, easing, fill: 'both' })); };
   const steps = (el, prop, pts) => { if (!el) return; const end = pts[pts.length - 1][0] || 1; play(el, pts.map(([ms, v]) => ({ [prop]: v, offset: ms / end, easing: 'steps(1, end)' })), 0, end); };
   const tubeOn = (from, lo = 0) => TUBE_ON.map(([ms, v]) => [from + ms, lo + v * (1 - lo)]);
   const fade = (from, hi = 1) => [[from, hi * 0.6], [from + 40, hi * 0.3], [from + 80, 0], [from + 81, 0]];
   const add = (parent, cls, before = null) => { const d = document.createElement('div'); d.className = cls; d.setAttribute('aria-hidden', 'true'); parent.insertBefore(d, before); nodes.push(d); return d; };
-  const black = add(app, 'bootfx-black', $('#fx-back')?.nextSibling || app.firstChild);
-  const b0 = Math.max(0, at(T.black) - 140);
-  play(black, [{ opacity: 0 }, { opacity: 1, offset: 0.12 }, { opacity: 1, offset: 0.85 }, { opacity: 0 }], b0, at(T.map) - b0 + 150, 'ease-in-out');
-  const top = add(app, 'bootfx'), lr = top.getBoundingClientRect(), lk = lr.width / (top.offsetWidth || lr.width) || 1;
-  const glow = add(top, 'bootfx-glow');
-  play(glow, [{ opacity: 0 }, { opacity: 0.3, offset: 0.3 }, { opacity: 0 }], at(T.black), 800, 'ease-in-out');
 
-  // The rooms page holding, your room locked, the rest going dark from the far ones in.
+  // The rooms page holding, the rooms going dark from the far ones in to yours.
   if (held) {
+    held.lock?.remove();
     held.parent.append(held.clone); nodes.push(held.clone);
     const r = held.clone.getBoundingClientRect();
     Object.assign(held.clone.style, { left: `${(held.at.left - r.left) / held.k}px`, top: `${(held.at.top - r.top) / held.k}px` });
-    held.lock.classList.add('you');
-    play(held.lock, [{ opacity: 0, transform: 'scale(2)' }, { opacity: 1, transform: 'scale(1)', offset: 0.55 }, { opacity: 1, transform: 'scale(1)' }], 0, 240, 'ease-out');
     const svg = [...held.clone.querySelectorAll('.fp-svg')].find((s) => s.getBoundingClientRect().width), here = svg?.querySelector('.fp-room.here');
     if (svg && here) {
       const h = here.getBoundingClientRect(), hx = h.left + h.width / 2, hy = h.top + h.height / 2, unit = h.width * 1.6 || 1;
@@ -364,28 +325,14 @@ export function playHangup(app, held, name, lines, node) {
       const far = Math.max(1, ...els.map(ringOf));
       for (const el of els) steps(el, 'opacity', [[0, 1], ...fade(T.out + Math.max(0, far - ringOf(el)) * T.ring)]);
     }
-    steps(held.clone, 'opacity', [[0, 1], ...fade(T.black - 80)]);
+    steps(held.clone, 'opacity', [[0, 1], ...fade(T.term - 80)]);
   }
-  // Your chrome dims with the cut and comes back up with the map.
-  for (const q of ['.topbar', '#sidebar', '#crewwin', '#statusline', '#net-line', '.prompt-row', '#tray'])
-    steps($(q), 'opacity', [[0, 1], [Math.max(0, at(T.black) - 80), 0.6], [Math.max(0, at(T.black) - 40), 0.3], [at(T.black), CHROME_LOW], ...tubeOn(at(T.chrome), CHROME_LOW)]);
-
-  // The name and the readout in the dark.
-  const card = add(top, 'bootfx-dial'), nm = document.createElement('div'), sub = document.createElement('div');
-  nm.className = 'bootfx-dial-name'; sub.className = 'bootfx-dial-lines';
-  nm.innerHTML = '<div></div>'; nm.firstChild.textContent = name;
-  card.append(nm, sub);
-  steps(nm.firstChild, 'opacity', [[0, 0], ...tubeOn(at(T.name)).slice(1), ...fade(at(T.map) - 80)]);
-  lines.forEach((l, i) => { const d = document.createElement('div'); d.textContent = l.text; if (l.you) d.className = 'you'; sub.append(d); steps(d, 'opacity', [[0, 0], [at(T.lines) + i * T.line, 1], ...fade(at(T.map) - 80)]); });
-
-  // The map comes up, and the server's node rings: where you were.
-  steps($('#page-view'), 'opacity', [[0, 0], ...tubeOn(at(T.map))]);
-  const n = node?.(), nr = n?.getBoundingClientRect();
-  if (nr?.width) {
-    const ring = add(top, 'bootfx-ring');
-    Object.assign(ring.style, { left: `${(nr.left - lr.left) / lk - 8}px`, top: `${(nr.top - lr.top) / lk - 8}px`, width: `${nr.width / lk + 16}px`, height: `${nr.height / lk + 16}px`, borderRadius: '50%' });
-    play(ring, [{ opacity: 0, transform: 'scale(1.6)' }, { opacity: 1, transform: 'scale(1)', offset: 0.35 }, { opacity: 0, transform: 'scale(1)' }], at(T.mark), 520, 'ease-out');
-  }
+  // The map waits dark while the readout types into the page, then comes up.
+  const pv = $('#page-view');
+  steps(pv, 'opacity', [[0, 0], ...tubeOn(at(T.map))]);
+  const { term, rows } = termIn(app, add, nodes, lines, at(T.term), T.line);
+  steps(term, 'opacity', [[0, 1], ...fade(at(T.map) - 40)]);
+  for (const [d, t] of rows) steps(d, 'opacity', [[0, 0], [t, 1], [t + 1, 1]]);
 
   let timer = 0;
   const end = () => {

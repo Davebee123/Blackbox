@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { BOOT, TUBE_ON, VIRUS_ON, CHROME_LOW, HANGUP, hangupLines, bootLines, CUT, CONNECT, DIM, decoded, connectLines } from './dist/bootfx.mjs';
+import { BOOT, TUBE_ON, VIRUS_ON, CHROME_LOW, HANGUP, hangupLines, bootLines, CUT, CONNECT, DIM, connectLines } from './dist/bootfx.mjs';
 
 test('the virus comes on before anything of yours, and it is all over in a little over two seconds', () => {
   for (const k of ['console', 'chrome', 'you', 'youBar', 'board', 'log', 'prompt', 'tray']) assert.ok(BOOT.virus < BOOT[k] && BOOT.enemy < BOOT[k], k);
@@ -50,19 +50,13 @@ test('leaving a won fight is quick: the page folds, the next one opens out of th
   assert.ok(CUT.done <= 900);
 });
 
-test('connecting dials in order: the lock, the dim with no flash, the name, then the rooms outward, then your chrome', () => {
+test('connecting plays in the page and is quick: the map dims, the readout types, then the rooms come up outward', () => {
   const C = CONNECT;
-  assert.ok(C.lock < C.ping && C.ping < C.dim && C.dim < C.black && C.black < C.name && C.name < C.lines && C.lines < C.fly);
-  assert.ok(C.fly < C.strip && C.strip < C.rooms && C.rooms < C.chrome && C.chrome + TUBE_ON.at(-1)[0] <= C.done);
-  assert.ok(C.dim + DIM.at(-1)[0] <= C.black, 'the dim is over by the black');
+  assert.ok(C.dim < C.term && C.term < C.out && C.out < C.strip && C.strip < C.rooms);
+  assert.ok(C.dim + DIM.at(-1)[0] <= C.term, 'the dim is over by the readout');
   assert.ok(DIM.every(([, v]) => v <= 1) && DIM.at(-1)[1] < 0.3, 'it only ever dims');
-  assert.ok(C.done <= 2400);
-});
-
-test('the name decodes from noise to itself', () => {
-  assert.equal(decoded('KESSLER-MIRROR-50', 17), 'KESSLER-MIRROR-50');
-  assert.notEqual(decoded('KESSLER-MIRROR-50', 0), 'KESSLER-MIRROR-50');
-  assert.equal(decoded('KESSLER-MIRROR-50', 8).slice(0, 8), 'KESSLER-');
+  assert.ok(C.term + 5 * C.line <= C.out, 'every line is up before the page comes back');
+  assert.ok(C.done <= 1100);
 });
 
 test('the dial readout names the server, its level and rooms, and ends on your CONNECT', () => {
@@ -78,11 +72,10 @@ test('the dial readout names the server, its level and rooms, and ends on your C
   assert.equal(connectLines({ name: 'X' })[3].text, 'server .................. up');
 });
 
-test('jacking out is the dial-up backwards: the rooms go dark toward yours, the readout, then the map and your server ringed', () => {
+test('jacking out plays in the page: the rooms go dark toward yours, the readout, then the map', () => {
   const H = HANGUP;
-  assert.ok(H.lock < H.out && H.out < H.black && H.black < H.name && H.name < H.lines && H.lines < H.map && H.map < H.mark);
-  assert.ok(H.chrome + TUBE_ON.at(-1)[0] <= H.done && H.mark + 400 <= H.done + 200);
-  assert.ok(H.done <= 1800, 'quicker than the dial-up');
+  assert.ok(H.out < H.term && H.term + 4 * H.line <= H.map && H.map + TUBE_ON.at(-1)[0] <= H.done);
+  assert.ok(H.done <= 1000, 'quicker than the dial-up');
   assert.deepEqual(hangupLines({ name: 'KESSLER-MIRROR-50', banked: 3 }).map((l) => l.text), [
     'ath0 kessler-mirror-50 ... ok',
     'carrier ................. dropped',
@@ -91,4 +84,10 @@ test('jacking out is the dial-up backwards: the rooms go dark toward yours, the 
   ]);
   assert.equal(hangupLines({ name: 'X' })[2].text, 'pack .................... empty');
   assert.deepEqual(hangupLines({ name: 'X' }).filter((l) => l.you).map((l) => l.text), ['HOME_']);
+});
+
+test('connecting and jacking out stay inside the game: no black screen, no chrome dimming, nothing teal pops', () => {
+  const src = readFileSync(new URL('./dist/bootfx.mjs', import.meta.url), 'utf8');
+  const body = src.slice(src.indexOf('export function playConnect'));
+  for (const bad of ['bootfx-black', 'bootfx-glow', 'bootfx-ping', 'bootfx-ring', "'.topbar'"]) assert.ok(!body.includes(bad), bad);
 });
