@@ -17,6 +17,7 @@ import { roomsMarkup } from './dist/floorplan-view.mjs';
 import { mailMarkup, mapMarkup } from './dist/view.mjs';
 import { offerMarkup, threadPanel } from './dist/threads-view.mjs';
 import { RIVAL } from './dist/rivals.mjs';
+import * as SC from './dist/scanner.mjs';
 RIVAL.chance = 0; // a rival rolls at connect (rivals.mjs): these walks are scripted (rivals.test.mjs plays them)
 
 CONFIG.enemyCrit = 0; CONFIG.misses = false; CONFIG.exfil.chance = 0;
@@ -200,6 +201,30 @@ test('Restore Point (floor 1): talk at its start, reach the archive, walk the fi
   assert.equal(s.stash.length, n0 + 1);
   assert.equal(s.threads.offer, null);
   assert.ok(t.reward);
+});
+
+test('Nine Days Deaf: the radio clue pins it on a server of yours near your level; read the repeater, fight to its mast, answer LANTERN, and the Listening Post shows on the map', () => {
+  const s = setup(6, { n1: 5 });
+  const S = SC.scannerOf(s);
+  assert.equal(SC.findPost(s, clock), null, 'nothing on the air');
+  SC.startBroadcast(s, clock, 'sparrow');
+  const loc = SC.findPost(s, clock);
+  assert.ok(loc && TH.startHere(s, loc)?.chain === 'listening-post');
+  assert.equal(S.clue, loc.id);
+  assert.equal(SC.findPost(s, clock), null, 'once');
+  assert.equal(SC.postFound(s), false, 'not until the thread is done');
+  connect(s, loc);
+  walk(s, TH.startHere(s, loc).room);
+  assert.match(said(FP.act(s, 'talk')), /repeater · lantern[\s\S]*Its mast is on [A-Z]+-[A-Z]+-\d+, [A-Z]\d+\./);
+  const t = TH.activeThreads(s).at(-1), mast = locOf(s, t.places.mast.loc);
+  if (mast.id !== loc.id) connect(s, mast);
+  walk(s, t.places.mast.room);
+  assert.equal(t.step, 2);
+  assert.equal(SC.postFound(s), false);
+  assert.match(said(FP.act(s, 'talk')), /Our post is beside your HOME/);
+  assert.equal(t.state, 'done');
+  assert.equal(SC.postFound(s), true);
+  assert.equal(SC.findPost(s, clock), null);
 });
 
 test('a chain\'s reward: three blues at its level, a yellow among them one time in ten; a one-off\'s blue or white', () => {

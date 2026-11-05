@@ -67,6 +67,23 @@ export default {
         { kind: 'temp', server: 'copy', goal: 'kill', text: 'Shut the copy down: its Core, on {copy}.' },
       ],
     },
+    // No floor: the scanner's clue pins it (scanner.mjs findPost), on a server of yours near your level. Its end puts
+    // the Listening Post on your map (opens: 'post').
+    'listening-post': {
+      title: 'Nine Days Deaf', giver: 'repeater · lantern', faction: 'lantern', opens: 'post',
+      reason: 'A LANTERN repeater on your ground plays the same numbers over and over. Its mast stopped answering.',
+      lore: "LANTERN's post sits beside your HOME. It hears the whole band.",
+      places: { mast: { near: [1, 2], label: 'Mast' } },
+      steps: [
+        { kind: 'talk', at: 'start', who: 'repeater · lantern', icon: 'file', verb: 'Read',
+          lines: ['> repeater · owner: lantern · feed: none', '> replaying last capture · 6.815 MHz · loop 1,204', 'Its mast is on {mast}, {mast.at}. Nothing has come down it for nine days.'],
+          text: 'Read the repeater.' },
+        { kind: 'goto', at: 'mast', text: 'Fight to the mast on {mast}, {mast.at}.', lines: ['The feed was pulled at the socket. You seat it, and the band comes in clean.'] },
+        { kind: 'talk', at: 'mast', who: 'LANTERN · on the mast feed', icon: 'npc', verb: 'Talk',
+          lines: ['Nine days deaf. Thanks.', "Those numbers aren't ours. Somebody reads them out most nights, and we write them down.", 'Our post is beside your HOME, post-07. Come and listen.'],
+          text: 'Answer LANTERN on the mast.' },
+      ],
+    },
   },
   // The one-off threads: seeded on any floor, a variant each from the server's seed.
   templates: {

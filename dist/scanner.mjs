@@ -3,13 +3,14 @@
 // S-meter and the static clearing (the dial never shows where an unlogged one is). Close in and it bites: the dial
 // zooms in, the carrier moves its kind's way, and holding it in the hold zone round the needle fills the lock. A full
 // lock logs it, and it signs off. A numbers station pays once; a pirate or a distress call pays each time it's caught:
-//   numbers   a line of lore, kept in the log (LANTERN's voice: the coordinates wait for off-map servers)
+//   numbers   a line of lore, kept in the log: LANTERN's decode of a hit schedule read out to the crews
 //   pirate    a tip: one hub's price for one ware moves for a while (market.mjs outsideMult, tipMult)
 //   distress  a thread starts on the server it names (threads.mjs pinDistress)
 // Radio traffic sits across the band too: transmissions you run into while sweeping, nothing to catch.
 // The post records each broadcast: the tape holds the last one until the next starts, and Play back puts it back on
 // the air once, so the trip to the post never costs you a broadcast. It's found from a clue: the first broadcast
-// on the air outside a fight breaks into the radio chatter as numbers, and the post shows on the map (S.found).
+// on the air outside a fight breaks into the radio chatter as numbers, and starts the thread Nine Days Deaf on a server of
+// yours; finishing it shows the post on the map (S.found).
 //
 // State: s.scanner (scannerOf, made on first use: the save keys on the field). The needle, the bite and the lock are
 // the view's (scanner-view.mjs), worked by tuneStep here. Times in the save are ms; the rules' clock t is seconds.
@@ -34,14 +35,14 @@ export const SCANNER = {
 
 // The stations. A pirate's tip lands on a hub you've found ({hub}); a distress call names a server of yours ({server}).
 export const STATIONS = [
-  { id: 'sparrow', kind: 'numbers', f: 6.815, name: 'SPARROW-9', text: '47190 22816 03375 · 47190 22816 03375 · end',
-    lore: { title: 'Retired', line: 'Old viruses never die. Someone keeps them, out past the floors you can trace.' } },
-  { id: 'kite', kind: 'numbers', f: 11.140, name: 'KITE-4', text: 'achtung. 3 3 1. 3 3 1. null null 7 2. ende',
-    lore: { title: 'Debug build', line: 'A dev box was left running somewhere below. Every number on it shows.' } },
-  { id: 'wren', kind: 'numbers', f: 8.215, name: 'WREN-2', text: '00412 00412 · 9 9 1 4 0 · 00412 · repeat',
-    lore: { title: 'Last log', line: 'A crashed session keeps its last log. Its runner wrote down what killed them.' } },
-  { id: 'owl', kind: 'numbers', f: 5.235, name: 'OWL-7', text: 'the floor under bedrock is not empty. repeat. not empty',
-    lore: { title: 'Under Bedrock', line: 'Bedrock is the last floor on the map. It is not the last floor.' } },
+  { id: 'sparrow', kind: 'numbers', f: 6.815, name: 'SPARROW-9', text: '58331 · 0300 · 58331 · 0300 · 22816 · end',
+    lore: { title: 'Orders', line: 'A server, an hour, a crew. TOLLGATE hit that server at 0300, to the minute. The crews are told where to hit.' } },
+  { id: 'kite', kind: 'numbers', f: 11.140, name: 'KITE-4', text: 'achtung. 7 7 2. 7 7 2. 0 6 0 0. 2 2 8 1 6. ende',
+    lore: { title: 'One voice', line: "SWARMLINE's targets, read in the same voice as TOLLGATE's. The crews you fight take orders from one sender." } },
+  { id: 'wren', kind: 'numbers', f: 8.215, name: 'WREN-2', text: '00412 00412 · 9 9 1 4 0 · 00412 · 22816 · repeat',
+    lore: { title: 'Page 0412', line: '00412 is a page number. Someone reads out a schedule of hits, a page a night. LANTERN wants the whole thing.' } },
+  { id: 'owl', kind: 'numbers', f: 5.235, name: 'OWL-7', text: '22816 · 22816 · 22816 · 0 · 22816 · end',
+    lore: { title: 'Sign-off', line: 'Every broadcast ends on 22816. It is an account number, and Halcyon Mutual pays into it every month.' } },
   { id: 'tarbeach', kind: 'pirate', f: 9.355, name: 'TAR BEACH FM', text: 'kernel moves at {hub}. twenty minutes. you never heard it here',
     tip: { ware: 'kernel', mult: 1.3, mins: 20 } },
   { id: 'nullhour', kind: 'pirate', f: 7.640, name: 'NULL HOUR', text: 'cipher is cheap at {hub} till the hour turns. buy, buy',
@@ -56,7 +57,7 @@ export const STATIONS = [
     chain: 'tpl:temp:1' },
 ];
 export const KINDS = {
-  numbers: { name: 'Numbers station', does: 'Reads out groups of digits. They decode to a line of lore.' },
+  numbers: { name: 'Numbers station', does: 'Reads out groups of digits. LANTERN decodes them.' },
   pirate: { name: 'Pirate broadcast', does: 'Reads out a market tip for a hub. Catching it moves that price for a while. Works every time it is caught.' },
   distress: { name: 'Distress call', does: 'Repeats a call for help from one of your servers. Catching it starts a thread there. Works every time it is caught.' },
 };
@@ -90,13 +91,21 @@ export function scannerOf(s) {
   return S;
 }
 // ---------- the Listening Post, found ----------
+// The clue: the first broadcast on the air outside a fight breaks into the chatter, rebroadcast by a LANTERN repeater
+// on a server of yours (distressTargets' first: traced, no thread, nearest your level). It pins the thread Nine Days Deaf
+// there (threads.mjs); its end finds the post. With no such server yet it waits for a later broadcast. A pinned clue
+// whose start went (its server gone) is heard again.
+export const CLUE = 'listening-post';
 export const postFound = (s) => !!s.scanner?.found;
-// The clue: true the first time, while a broadcast is on the air (the view calls it outside a fight).
+const clueLive = (s, S) => (s.threads?.list || []).some((t) => t.chain === CLUE) || s.threads?.starts?.[S.clue]?.chain === CLUE;
+// The server the clue pinned Nine Days Deaf on, once (the view calls it outside a fight), else null.
 export function findPost(s, at = now()) {
   const S = scannerOf(s);
-  if (S.found || !onAir(s, at)) return false;
-  S.found = true;
-  return true;
+  if (S.found || (S.clue && clueLive(s, S)) || !onAir(s, at)) return null;
+  const loc = distressTargets(s).find((l) => pinDistress(s, l, CLUE));
+  if (!loc) return null;
+  S.clue = loc.id;
+  return loc;
 }
 export const logged = (s, id) => !!s.scanner?.log?.[id];
 // A numbers station pays once; a pirate or a distress call pays each time, once a broadcast.
