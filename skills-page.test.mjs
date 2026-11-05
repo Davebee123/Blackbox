@@ -113,7 +113,8 @@ test('from level 10 with no pick, a class plays its core alone (no default subcl
     assert.match(html, /class="sk-tree"/, `${cls}: its tree, to look at`);
     assert.doesNotMatch(html, /data-command="talent|class="sk-presets"|<i class="sk-yours"/, `${cls}: nothing to spend or keep before the pick`);
     assert.match(html, /<b>\d+ free<\/b><span class="sk-ptbar">/, `${cls}: its points, waiting for the tree`);
-    for (const n of names(cls)) assert.ok(!card(core).includes(n) || core.includes(`>${n}</button>`), `${cls}: the core view shows only the nav's ${n}`);
+    const bare = card(core).replace(/<button type="button" class="sk-spec[^"]*"[\s\S]*?<\/button>/g, '');
+    for (const n of names(cls)) assert.ok(!bare.includes(n), `${cls}: the core view shows ${n} only on its tab`);
     assert.doesNotMatch(core, /class="sk-tree"|sk-choose/, `${cls}: the core alone`);
     assert.doesNotMatch(loadoutMarkup(s, cls, 'skills'), /Skills and talents · \d+ free/, 'nothing to spend yet');
   }
