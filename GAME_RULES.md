@@ -1255,8 +1255,9 @@ free:** until any class reaches level 5, switching to a class you haven't played
 - **Keys 2–8, then 9 and 0:** your equipped skills: seven from level 1, an eighth at 22, a ninth at 30. A skill you
   unlock goes on the bar by itself (a bar that follows a shipped preset fills from it). `equip <skill> <key>`,
   `unequip`, anywhere out of a fight; every key a swap brings in starts your next fight cooling. The **Toolkit** (key T,
-  or its button on Skills and talents) does the same by hand: drag an ability onto a key (onto a filled key, they
-  swap), drag one off the bar to clear it, or tap an ability and then a key.
+  or its button on Skills and talents or the fight tray) does the same by hand: drag an ability onto a key (onto a
+  filled key, they swap), drag one off the bar to clear it, or tap an ability and then a key. In a fight it only
+  shows: nothing moves, and the fight runs on under it.
 - **The - key:** SIGINT, from level 10 (SIGINT).
 - **Presets** (docs/kits.md): from level 10 a subclass has fifteen skills to choose from (its class's four core skills
   and its eleven-skill line) and two shipped presets, `rotation` and a second with a playstyle of its own. `loadout

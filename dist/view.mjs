@@ -1101,6 +1101,8 @@ export function trayMarkup(s, selected = null) {
   // The next thing your level will unlock, as a faint slot.
   const nx = nextUnlock(s);
   if (nx) cards.push(`<div class="ability ghost" title="${esc(`${nx.name}: Unlocks at level ${nx.level}.`)}">${keyFace(ABILITIES[nx.id]?.icon || 'command', nx.name)}</div>`);
+  // The Toolkit (skills-view.mjs), quiet at the tray's end and out of its grid (style.css .tk-open): the way in on a phone.
+  cards.push(`<button type="button" class="tk-open" data-toolkit="${classOf(s)}" title="Toolkit: Your abilities and your bar. Keys change between fights." data-tt-kind="Key T" aria-label="Toolkit"><span class="ico" ${icon('command')}></span></button>`);
   return cards.join('');
 }
 

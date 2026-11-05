@@ -309,9 +309,15 @@ code { font-family: var(--mono); color: var(--amber); }
 .notice.bad { border-color: var(--hot); color: var(--bright); }
 
 .tray { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 6px; } /* one row: Spike · 7 to 9 skills · SIGINT · next unlock */
-.tray:has(> :nth-child(11)) .ability { column-gap: 8px; padding: 0 8px 3px; } /* eleven keys or more (an eighth slot at 22, a ninth at 30): a size down */
-.tray:has(> :nth-child(11)) .ability .name { font-size: 13px; }
-.tray:has(> :nth-child(11)) .ability .cd { left: 8px; }
+.tray:has(> :nth-child(11 of .ability)) .ability { column-gap: 8px; padding: 0 8px 3px; } /* eleven keys or more (an eighth slot at 22, a ninth at 30): a size down */
+.tray:has(> :nth-child(11 of .ability)) .ability .name { font-size: 13px; }
+.tray:has(> :nth-child(11 of .ability)) .ability .cd { left: 8px; }
+/* The Toolkit's button (view.mjs trayMarkup): small and quiet past the last key, out of the grid, so no key moves. */
+.tray:has(> .tk-open) { position: relative; padding-right: 32px; }
+.tk-open { position: absolute; right: 0; top: 50%; transform: translateY(-50%); display: grid; place-items: center; width: 26px; height: 26px; padding: 0; background: none; border: 1px solid var(--line); border-radius: var(--r-btn); cursor: pointer; }
+.tk-open .ico { width: 14px; height: 14px; background: var(--muted); -webkit-mask: var(--icon) center/contain no-repeat; mask: var(--icon) center/contain no-repeat; }
+.tk-open:hover, .tk-open:focus-visible { border-color: var(--line-strong); }
+.tk-open:hover .ico, .tk-open:focus-visible .ico { background: var(--amber); }
 .ability.cantrip { background: var(--inset); }
 .tag.daemon { color: var(--daemon); border-color: var(--daemon); }
 /* A tray key: its icon and its name, one height and one padding everywhere (view.mjs keyFace). The name takes two lines

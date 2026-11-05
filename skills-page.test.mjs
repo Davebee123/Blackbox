@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { ARCHETYPES, SUBS, SUBCLASS, LOADOUT, TREE, defaultSub, presetBar, skillOrder, lineOf } from './dist/data.mjs';
 import { fresh, command, restore, subOf, subPicked, subWaiting, subPrompted, edge, kitOf, knownSkills, equippedSkills, talentPoints, pointsSpent, picksOf, ranksOf, capPickOf, SAVE_VERSION } from './dist/combat.mjs';
-import { loadoutMarkup, toolkitMarkup, subPromptDue } from './dist/view.mjs';
+import { loadoutMarkup, toolkitMarkup, subPromptDue, trayMarkup } from './dist/view.mjs';
 import { play } from './dist/run.mjs';
 
 const at = (cls, level, sub = null) => {
@@ -153,6 +153,18 @@ test('the Toolkit: core and cantrips left, the subclass right, the bar and prese
   const f = toolkitMarkup(s, 'breaker');
   assert.doesNotMatch(f, /draggable="true"|data-command="loadout use/);
   assert.match(f, /<span class="tk-busy">Between fights<\/span>/);
+});
+
+test('the fight tray carries a quiet Toolkit button; opened in a fight, nothing in it moves', () => {
+  const s = at('breaker', 30, 'demolitionist');
+  command(s, 'encounter cryptjack'); command(s, 'engage');
+  const tray = trayMarkup(s);
+  assert.match(tray, /<button type="button" class="tk-open" data-toolkit="breaker" title="Toolkit: Your abilities and your bar\. Keys change between fights\."/);
+  assert.equal(tray.match(/class="tk-open"/g).length, 1);
+  assert.doesNotMatch(tray, /class="ability[^"]*"[^>]*data-toolkit/, 'not an ability key');
+  const f = toolkitMarkup(s, 'breaker');
+  assert.doesNotMatch(f, /draggable="true"/);
+  assert.doesNotMatch(f, /data-command="loadout use/);
 });
 
 test('the old four-step breakout is gone; app.js wires the prompt, key T and the drags', () => {

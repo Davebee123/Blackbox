@@ -3218,9 +3218,9 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && (mapPop || mapSel) && module === 'map') { mapPop = false; mapSel = null; dirty = true; }
 });
 
-// Typing anywhere goes to the prompt.
+// Typing anywhere goes to the prompt; in a fight, from the Toolkit too (it never holds up the fight's keys).
 document.addEventListener('keydown', (e) => {
-  if (e.target === $('command-input') || e.target.closest?.('[data-select], [data-rooms], [data-fp-sel], [data-pdetail], #toolkit') || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.target === $('command-input') || e.target.closest?.('[data-select], [data-rooms], [data-fp-sel], [data-pdetail]') || (!active(campaign) && e.target.closest?.('#toolkit')) || e.metaKey || e.ctrlKey || e.altKey) return;
   if (e.key.length === 1 && !/input|textarea|select/i.test(e.target.tagName)) $('command-input').focus();
 });
 
@@ -3497,7 +3497,8 @@ function subPrompt() {
 
 // The Toolkit (key T, the page's button): your abilities and your bar. Drag an ability onto a key (one on another key
 // swaps), drag a key's ability off the bar to clear it; or click (tap) an ability, then a key. A key's ability tapped
-// twice comes off. Keys change between fights: the commands say so in a fight.
+// twice comes off. Keys change between fights: the commands say so in a fight. The fight tray's button opens it too
+// (view.mjs trayMarkup); the fight runs on under it and its keys still work.
 function tkOpen(arch) { tk = { arch: arch || (module === 'loadout' && archView) || classOf(campaign), pick: null }; ttHide(); feel.add('channel', null); renderToolkit(); }
 function tkClose() { tk = null; renderToolkit(); }
 function renderToolkit() {

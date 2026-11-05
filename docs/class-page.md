@@ -40,4 +40,5 @@ lower-case t starts commands. A mastered ability's effect tier is picked on its 
 ## Decided since
 
 - The eight subclass icons stay as they are for now.
-- The Toolkit also opens from the fight tray (next: a tray button; in a fight it shows the abilities, keys frozen).
+- The Toolkit also opens from the fight tray: a small quiet button past the last key (the way in on a phone). In a
+  fight it shows the abilities, keys frozen and no presets; the fight runs on and its keys still work. Esc closes it.
