@@ -23,6 +23,7 @@
 // Part state (Bit Rot, Exposed Wiring) lives on the shared parts and remembers whose it is.
 import { sustained, subOf, subEdge, hasTalent, rank, capValue, emit, hit, rand, part, alive, livingParts, attackers, soonestAttacker, on, buffed, openProc, scaled, powerOf, defender, momentumStacks, classOf, missChance, patchDelay, toIntent, readyIn, damageMultiplier, gearStat, edge, previewDamage, ignoresArmor, usable, stripMark, mirrorOn, intents, heal, healScaled, fxOn } from '../combat.mjs';
 import { ABILITIES, SKILLS, EDGE } from '../data.mjs';
+import { alliesOf } from '../combat.mjs';
 import { tellOn, tellOpen, tellAnswer, chargeSize } from '../tells.mjs';
 import { subs } from './breaker.data.mjs';
 
@@ -221,6 +222,14 @@ const use = {
     if (!low) pay(s, 'turbo-boost');
     addMomentum(s, a.gain + (low ? 1 : 0), a.cycles);
     emit(s, 'status', `Turbo Boost gives you ${momentumStacks(s)} Momentum ${momentumStacks(s) === 1 ? 'stack' : 'stacks'} for ${e.momentum.until - e.cycle} cycles.`, { mark: 'buff', ability: 'turbo-boost' });
+
+    // In a crew: every crewmate's cooldowns tick crewTick cycles (as a Clock Speed payout does yours).
+    for (const { who: name, st } of alliesOf(s)) {
+      const m = st.encounter, cooling = m ? Object.keys(m.readyAt || {}).filter((k) => m.readyAt[k] > e.cycle + 1) : [];
+      if (!cooling.length) continue;
+      for (const k of cooling) m.readyAt[k] = Math.max(e.cycle + 1, m.readyAt[k] - a.crewTick);
+      emit(s, 'status', `Turbo Boost: ${name === 'you' ? 'your' : `${name}'s`} cooldowns tick ${a.crewTick} cycles.`, { mark: 'buff', ability: 'turbo-boost', ally: name });
+    }
   },
 };
 
@@ -509,6 +518,8 @@ function planOC(s, t) {
   // or thick armor with Crack cooling: for two cycles every hit goes through.
   const rule = (t.lockHp > 0 && livingParts(s).some((p) => p.lock === t.id)) || livingParts(s).some((p) => p.ward === t.id) || (t.deadman && livingParts(s).filter((p) => p.kind === 'system').length > 1) || mirrorOn(s) || mirrorOn(s, e.cycle + 1);
   if ((rule || (t.armor >= 3 && !ok(s, 'crack ' + t.id))) && ok(s, 'sudo')) return 'sudo';
+  // Turbo Boost in a crew, whenever it's up: every crewmate's cooldowns tick.
+  if (alliesOf(s).length && ok(s, 'turbo-boost')) return 'turbo-boost';
   // Turbo Boost when you're hurt: free stacks for a Thermal Throttle.
   if (!healthy(s, 0.5) && usable(s).includes('thermal-throttle') && readyIn(s, 'thermal-throttle') <= 1 && ok(s, 'turbo-boost')) return 'turbo-boost';
   const tt = (p) => st >= 1 && ok(s, 'thermal-throttle ' + p.id);
