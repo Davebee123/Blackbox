@@ -80,7 +80,7 @@ export default {
           text: 'Read the repeater.' },
         { kind: 'goto', at: 'mast', text: 'Fight to the mast on {mast}, {mast.at}.', lines: ['The feed was pulled at the socket. You seat it, and the band comes in clean.'] },
         { kind: 'talk', at: 'mast', who: 'LANTERN · on the mast feed', icon: 'npc', verb: 'Talk',
-          lines: ['Nine days deaf. Thanks.', "Those numbers aren't ours. Somebody reads them out most nights, and we write them down.", 'Our post is beside your HOME, post-07. Come and listen.'],
+          lines: ['Nine days deaf. Thanks.', 'Somebody reads those numbers out most nights, and we write them down.', 'Our post is beside your HOME, post-07. Come and listen.'],
           text: 'Answer LANTERN on the mast.' },
       ],
     },
