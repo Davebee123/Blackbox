@@ -291,6 +291,7 @@ and `style.test.mjs` the tooltip grammar.
 | [`docs/progression.md`](docs/progression.md), [`docs/economy.md`](docs/economy.md), [`docs/content.md`](docs/content.md), [`docs/variety-plan.md`](docs/variety-plan.md) | Pacing, the economy, activities and variety. |
 | [`docs/rivals.md`](docs/rivals.md) | Rivals: the roster, the rules and the picked look. |
 | [`docs/loot-plan.md`](docs/loot-plan.md) | Sets and uniques. |
+| [`docs/builds.md`](docs/builds.md) | Builds: skill ranks, skill affixes on gear and combos (design, not built). |
 | [`docs/house.md`](docs/house.md) | Your house and its furniture (decided, not built). |
 | [`docs/leanings.md`](docs/leanings.md) | Leanings: a server's one positive rule (built: GAME_RULES.md "Server kinds, specials and quirks"). |
 | [`docs/server-specials.md`](docs/server-specials.md) | Server specials: an upside, a cost and the programs for each (picked, not built). |
