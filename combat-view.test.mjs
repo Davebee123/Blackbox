@@ -310,7 +310,7 @@ test('the ◆ badge: on a damaging key armor would absorb, aimed at an armored p
 });
 
 // An Overclocker crewmate's shared Momentum (combat.mjs crewMomentum) shows on your bar, with whose it is.
-test('Crew Momentum shows on a crewmate\'s bar', async () => {
+test('Crew Momentum and Overheated show on a crewmate\'s bar', async () => {
   const { hooks } = await import('./dist/combat.mjs');
   const { statusSpans } = await import('./dist/view.mjs');
   const { SKILLS } = await import('./dist/data.mjs');
@@ -322,5 +322,8 @@ test('Crew Momentum shows on a crewmate\'s bar', async () => {
   try {
     const x = statusSpans(d).find((y) => y.name === 'Crew Momentum');
     assert.ok(x && x.value === `+${Math.round(3 * SKILLS.crewMomentum * 100)}%` && /Buff from Ada/.test(x.title), JSON.stringify(x));
+    d.encounter.overheat = { until: d.encounter.cycle + 2, taken: 1.1, who: 'Ada' };
+    const h = statusSpans(d).find((y) => y.name === 'Overheated');
+    assert.ok(h && h.value === '+10% taken' && h.kind === 'hot' && /Debuff from Ada's Turbo Boost/.test(h.title), JSON.stringify(h));
   } finally { hooks.crewAllies = was; }
 });

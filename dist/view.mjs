@@ -682,6 +682,7 @@ export function statusSpans(s) {
   const st = momentumStacks(s);
   if (st) add('Momentum', e.momentum.until, 'you', `Momentum: +${Math.round(momentumBonus(s) * 100)}% damage (${st} of ${momentumCap(s)} stacks). Each break adds a stack and resets the timer.`, `+${Math.round(momentumBonus(s) * 100)}%${st > 1 ? ` ×${st}` : ''}`);
   const cm = crewMomentum(s); // an Overclocker crewmate's Momentum, shared
+  if (e.overheat) add('Overheated', e.overheat.until, 'hot', `Overheated\nDebuff from ${e.overheat.who === 'you' ? 'you' : e.overheat.who}'s Turbo Boost\nYou take ${Math.round((e.overheat.taken - 1) * 100)}% more damage from attacks.`, `+${Math.round((e.overheat.taken - 1) * 100)}% taken`);
   if (cm.bonus) add('Crew Momentum', cm.until, 'you', `Crew Momentum\nBuff from ${cm.who === 'you' ? 'you' : cm.who}\nYou deal ${Math.round(cm.bonus * 100)}% more damage: ${Math.round(SKILLS.crewMomentum * 100)}% for each of the Overclocker's ${cm.stacks} Momentum stacks. It lasts while they hold them.`, `+${Math.round(cm.bonus * 100)}%`);
   for (const [k, until] of Object.entries(e.buffs || {})) if (k !== 'null-route') add(k === 'sinkhole' ? 'Drawing fire' : k === 'stolen' ? 'Stolen cast' : ABILITIES[k]?.name || k, until, 'you', k === 'sinkhole' ? 'Every attack comes at you (Firewall or Bulkhead, with a crew).' : k === 'stolen' ? 'A cast you hijacked: your hits deal 35% more.' : ABILITIES[k]?.help || '');
   add('Null-routed', e.buffs?.['null-route'] ?? -1, 'you', "This cycle's attacks miss you, and your next skill is a critical strike.");

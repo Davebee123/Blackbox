@@ -3762,13 +3762,15 @@ function noteSignal(s, at = s.encounter.cycle) {
 // A crew boss's mechanic landing on one player (raid.mjs): a buster, a pulse, a burst, a tick of
 // Corruption. It can't miss or crit, but your armor chit stops it whole, Null Route dodges it (not a tick
 // of damage over time), and shields, Block, Bulkhead, DMZ, Thermal Stress and Hot Standby all count.
+// Overheated (an Overclocker crewmate's Turbo Boost, classes/breaker.mjs): what you take is × its share for its cycles.
+export const overheatOf = (e) => (e?.overheat?.until >= e.cycle ? e.overheat.taken : 1);
 export function mechanicHit(s, amount, label, source = 'raid', opts = {}) {
   const e = s.encounter;
   if (!e || defender(s).integrity <= 0) return 0;
   if (!opts.dot && (e.nullRoute > 0 || e.buffs['null-route'] >= e.cycle)) { dodged(e); emit(s, 'blocked', `${label} misses ${s.who || 'you'}, null-routed.`, { source }); openProc(s, 'slipped'); slipLonger(s); return 0; }
   if (!opts.dot && e.chits > 0) { e.chits--; emit(s, 'blocked', `${label} hits ${s.who ? s.who + '\'s' : 'your'} ◆ and does nothing.`, { source }); return 0; }
   const p = { id: source, name: label, integrity: 1, max: 1, attack: { name: label, effect: 'damage', amount, interval: 99 } };
-  const dealt = takeDamage(s, absorbed(s, Math.max(1, Math.round(amount * classMult('taken', s, p.attack, p) * raidTaken(s))), p.attack, p), source, label);
+  const dealt = takeDamage(s, absorbed(s, Math.max(1, Math.round(amount * overheatOf(e) * classMult('taken', s, p.attack, p) * raidTaken(s))), p.attack, p), source, label);
   if (dealt) { classEach('struck', s, p.attack, dealt, p); e.undo = { type: 'damage', amount: dealt }; }
   return dealt;
 }
@@ -3867,7 +3869,7 @@ function landAttack(s, p) {
   const e = s.encounter;
   const atk = p.attack;
   liftOf(s);
-  const power = attackAmount(p) * (roundOf(e.virus, e.cycle)?.mult ?? 1) * c2Gnaw(s, p) * (e.soft || 1) * gapTaken(levelGap(s)) * (p.boosted ? CONFIG.reactiveBonus : 1) * (on(s, p, 'throttled') ? (hasTalent(s, 'backpressure') ? 0.25 : SKILLS.throttled) : 1) * mechPower(s, p, true);
+  const power = attackAmount(p) * (roundOf(e.virus, e.cycle)?.mult ?? 1) * overheatOf(e) * c2Gnaw(s, p) * (e.soft || 1) * gapTaken(levelGap(s)) * (p.boosted ? CONFIG.reactiveBonus : 1) * (on(s, p, 'throttled') ? (hasTalent(s, 'backpressure') ? 0.25 : SKILLS.throttled) : 1) * mechPower(s, p, true);
   // A hit: a damage attack, or a special that also hits (the Scrambler's Scramble). Its size is `hit`, scaled like the rest.
   const hits = atk.effect === 'damage' || !!atk.hit, hitPower = atk.hit ? (power * atk.hit) / Math.max(1, atk.amount) : power;
   p.boosted = false;

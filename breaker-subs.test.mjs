@@ -321,8 +321,8 @@ test('Turbo Boost: 2 Momentum stacks for 3 cycles, for 6; not when your Momentum
 
 // In a crew (docs/kits.md): the Overclocker's Momentum is shared, SKILLS.crewMomentum a stack, and Turbo Boost ticks every
 // crewmate's cooldowns crewTick cycles (combat-view.test.mjs: its crewmate's bar shows Crew Momentum).
-test('Overclocker in a crew: crewmates share its Momentum, and Turbo Boost ticks their cooldowns', async () => {
-  const { hooks, damageMultiplier, crewMomentum } = await import('./dist/combat.mjs');
+test('Overclocker in a crew: crewmates share its Momentum, and Turbo Boost ticks their cooldowns and overheats them', async () => {
+  const { hooks, damageMultiplier, crewMomentum, overheatOf } = await import('./dist/combat.mjs');
   const o = noArmor(quiet(oc())), d = noArmor(quiet(demo()));
   const was = hooks.crewAllies;
   hooks.crewAllies = (x) => (x === d ? [{ who: 'Ada', st: o }] : x === o ? [{ who: 'Bo', st: d }] : []);
@@ -335,6 +335,11 @@ test('Overclocker in a crew: crewmates share its Momentum, and Turbo Boost ticks
     const after = damageMultiplier(d, part(d, 'pulse'), { mine: true });
     assert.ok(Math.abs(after / before - (1 + 2 * SKILLS.crewMomentum)) < 1e-9);
     assert.equal(crewMomentum(o).bonus, 0, 'a Demolitionist shares nothing');
+    // Overheated: the crewmate takes 10% more for Turbo Boost's 3 cycles, the Overclocker itself nothing more.
+    assert.equal(overheatOf(d.encounter), ABILITIES['turbo-boost'].overheat);
+    assert.equal(overheatOf(o.encounter), 1);
+    d.encounter.cycle += ABILITIES['turbo-boost'].cycles;
+    assert.equal(overheatOf(d.encounter), 1, 'gone after 3 cycles');
   } finally { hooks.crewAllies = was; }
 });
 

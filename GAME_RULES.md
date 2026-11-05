@@ -1308,7 +1308,8 @@ capstones; docs/subclasses/ has every skill.
 | Operator | Hijacker | **Man in the Middle**: Jammed parts take 20% more from everyone, and a part with your helper on it 20% more from you |
 
 **The Overclocker in a crew** (`SKILLS.crewMomentum`): each crewmate deals 8% more damage for each Momentum stack it
-holds (**Crew Momentum** on their bar), and its Turbo Boost (from level 18) ticks every crewmate's cooldowns 1 cycle.
+holds (**Crew Momentum** on their bar), and its Turbo Boost (from level 18) ticks every crewmate's cooldowns 1 cycle but
+**overheats** them: they take 10% more damage for its 3 cycles, crew-boss mechanics included. Press it between big moves.
 
 **The Sysop** is the healer, built for a crew (Multicast heals everyone; Checksum heals the lowest). Alone its hits and
 burns deal 75% (`SUBS.sysop.alone`), though its heals still come from the full hit: it fights slowly and ends most fights
