@@ -24,7 +24,7 @@ test('crew-leaning damage dealers carry a crew: over Lv 18 and 30, more boss tri
     // Phantom 77%, the Herder 69%, the Overclocker 68%, the Hijacker 61%. Held: the Hijacker at 60% and within 8.5 points
     // of the Overclocker; the Herder at 65%, beating the Overclocker and to the low points, not to the others' wins,
     // until the designer has played the crew farm on the arc.
-    // The Overclocker leans crew since Crew Momentum (GAME_RULES.md "Subclasses"): 88% of boss tries on these seeds (91% on
+    // The Overclocker leans crew since its Turbo Boost runs the crew hot (GAME_RULES.md "Subclasses"): 88% of boss tries on these seeds (91% on
     // 24), within 5 points of the Demolitionist's 92%, and the highest low point of the damage dealers but the Payload's.
     // Held: 85%, within 5 of every solo-leaning one, and a higher low point than each, until the designer has played it.
     if (c === 'overclocker') { for (const s of solo) assert.ok(r[c].won >= 0.85 && r[c].won >= r[s].won - 0.05 && r[c].low > r[s].low, `${c} vs ${s}: ${line}`); continue; }

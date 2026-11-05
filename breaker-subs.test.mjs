@@ -319,27 +319,24 @@ test('Turbo Boost: 2 Momentum stacks for 3 cycles, for 6; not when your Momentum
   assert.match(refused(f, 'turbo-boost').message, /already full/);
 });
 
-// In a crew (docs/kits.md): the Overclocker's Momentum is shared, SKILLS.crewMomentum a stack, and Turbo Boost ticks every
-// crewmate's cooldowns crewTick cycles (combat-view.test.mjs: its crewmate's bar shows Crew Momentum).
-test('Overclocker in a crew: crewmates share its Momentum, and Turbo Boost ticks their cooldowns and overheats them', async () => {
-  const { hooks, damageMultiplier, crewMomentum, overheatOf } = await import('./dist/combat.mjs');
-  const o = noArmor(quiet(oc())), d = noArmor(quiet(demo()));
+// In a crew (GAME_RULES.md "Subclasses"): Turbo Boost runs every crewmate hot for its 3 cycles (more damage dealt and taken)
+// and ticks their cooldowns crewTick cycles; the Overclocker itself is untouched (combat-view.test.mjs: the Turbo bar).
+test('Overclocker in a crew: Turbo Boost runs every crewmate hot and ticks their cooldowns', async () => {
+  const { hooks, damageMultiplier, turboOn } = await import('./dist/combat.mjs');
+  const A = ABILITIES['turbo-boost'], o = noArmor(quiet(oc())), d = noArmor(quiet(demo()));
   const was = hooks.crewAllies;
   hooks.crewAllies = (x) => (x === d ? [{ who: 'Ada', st: o }] : x === o ? [{ who: 'Bo', st: d }] : []);
   try {
     const before = damageMultiplier(d, part(d, 'pulse'), { mine: true });
     d.encounter.readyAt.overload = d.encounter.cycle + 4;
     act(o, 'turbo-boost');
-    assert.equal(d.encounter.readyAt.overload, d.encounter.cycle + 4 - ABILITIES['turbo-boost'].crewTick, 'its cooldown ticked');
-    assert.equal(crewMomentum(d).stacks, 2);
-    const after = damageMultiplier(d, part(d, 'pulse'), { mine: true });
-    assert.ok(Math.abs(after / before - (1 + 2 * SKILLS.crewMomentum)) < 1e-9);
-    assert.equal(crewMomentum(o).bonus, 0, 'a Demolitionist shares nothing');
-    // Overheated: the crewmate takes 10% more for Turbo Boost's 3 cycles, the Overclocker itself nothing more.
-    assert.equal(overheatOf(d.encounter), ABILITIES['turbo-boost'].overheat);
-    assert.equal(overheatOf(o.encounter), 1);
-    d.encounter.cycle += ABILITIES['turbo-boost'].cycles;
-    assert.equal(overheatOf(d.encounter), 1, 'gone after 3 cycles');
+    assert.equal(d.encounter.readyAt.overload, d.encounter.cycle + 4 - A.crewTick, 'its cooldown ticked');
+    assert.ok(Math.abs(damageMultiplier(d, part(d, 'pulse'), { mine: true }) / before - A.crewDealt) < 1e-9);
+    assert.equal(turboOn(d.encounter).taken, A.crewTaken);
+    assert.equal(turboOn(o.encounter), null, 'not the Overclocker itself');
+    d.encounter.cycle += A.cycles;
+    assert.equal(turboOn(d.encounter), null, 'gone after 3 cycles');
+    assert.equal(A.cooldown, 15);
   } finally { hooks.crewAllies = was; }
 });
 

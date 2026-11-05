@@ -47,7 +47,7 @@ Choice tiers (pick one of two):
 
 ## Overclocker
 
-**DPS, Burst.** Run it hot until something melts. Solo, the Overclocker lands the biggest single hits in the game. In a crew it runs everyone hot: each crewmate deals 8% more damage for each Momentum stack it holds. It pays for that in Signal and in the damage it takes.
+**DPS, Burst.** Run it hot until something melts. Solo, the Overclocker lands the biggest single hits in the game. In a crew its Turbo Boost runs everyone hot: 30% more damage dealt and 20% more taken for 3 cycles. It pays for that in Signal and in the damage it takes.
 
 **Edge: Redline.** Momentum stacks to 5 instead of 3, but you take 10% more damage from attacks while you have any stacks.
 
@@ -57,7 +57,7 @@ Choice tiers (pick one of two):
 | 12 | `overvolt <part>` | Hits the target twice for 20 damage in one command. Both hits count against a tell, so one Overvolt stops a cast. Costs 6 Signal (Integrity at home). | 4 |
 | 14 | `segfault <part>` | Deals 30 damage to the target. Damage is tripled against a part winding up a charge. | 3 |
 | 16 | `thermal-throttle <part>` | Spends all your Momentum to deal 20 damage, plus 20 for each stack spent. With 2 or more stacks it goes straight through armor, locks and wards. Requires Momentum. | 3 |
-| 18 | `turbo-boost` | Gives you 2 Momentum stacks that last 3 cycles, for 6 Signal (Integrity at home), and ticks every crewmate's cooldowns 1 cycle, but overheats them: they take 10% more damage for 3 cycles. Below half your Signal it costs nothing and gives 3. | 5 |
+| 18 | `turbo-boost` | Gives you 2 Momentum stacks that last 3 cycles, for 6 Signal (Integrity at home). Below half your Signal it costs nothing and gives 3. In a crew, for those 3 cycles every crewmate deals 30% more damage and takes 20% more, and their cooldowns tick 1 cycle. | 15 |
 | 20 | `brace` | For 2 cycles, hits on you deal 30% less damage. Whatever hits you takes twice the damage Brace saved. | 5 |
 | 22 | `vent` | Spends all your Momentum to clear Corrupted, encryption and Scrambled, and heals you for 5 per stack spent, at least 5. | 5 |
 | 26 | `stack-smash <part>` | Deals 30 damage to the target. Hits twice against an Exposed part, and each critical strike hits again, up to 3 more times. | 3 |

@@ -24,16 +24,11 @@
 import { sustained, subOf, subEdge, hasTalent, rank, capValue, emit, hit, rand, part, alive, livingParts, attackers, soonestAttacker, on, buffed, openProc, scaled, powerOf, defender, momentumStacks, classOf, missChance, patchDelay, toIntent, readyIn, damageMultiplier, gearStat, edge, previewDamage, ignoresArmor, usable, stripMark, mirrorOn, intents, heal, healScaled, fxOn } from '../combat.mjs';
 import { ABILITIES, SKILLS, EDGE } from '../data.mjs';
 import { alliesOf } from '../combat.mjs';
-import { raidIntents } from '../raid.mjs';
 import { tellOn, tellOpen, tellAnswer, chargeSize } from '../tells.mjs';
 import { subs } from './breaker.data.mjs';
 
 const A = (id) => ABILITIES[id];
 const who = (s) => s.who || '';
-// A big move on the way within Turbo Boost's 3 cycles (a charge, a cast, a boss's beat, a crew boss's mechanic): its Overheated
-// would make the crew take more, so the planner holds it. TURBO_CARELESS (the sims): press it anyway.
-export const TURBO = { careless: false };
-const bigSoon = (s) => !TURBO.careless && (intents(s, 3).some((i) => i.tell || i.effect === 'backlash') || (s.encounter.virus?.raid ? raidIntents(s, 3).some((i) => i.kind && !['shield', 'priority'].includes(i.kind)) : false));
 const breaker = (s) => classOf(s) === 'breaker';
 const isDemo = (s) => breaker(s) && subOf(s) === 'demolitionist';
 const isOC = (s) => breaker(s) && subOf(s) === 'overclocker';
@@ -230,7 +225,7 @@ const use = {
 
     // In a crew: every crewmate's cooldowns tick crewTick cycles (as a Clock Speed payout does yours).
     for (const { who: name, st } of alliesOf(s)) {
-      if (st.encounter) st.encounter.overheat = { until: e.cycle + a.cycles - 1, taken: a.overheat, who: s.who || 'you' }; // Overheated: they take more for its cycles
+      if (st.encounter) st.encounter.turbo = { until: e.cycle + a.cycles - 1, dealt: a.crewDealt, taken: a.crewTaken, who: s.who || 'you' }; // Turbo: more dealt and taken for its cycles
       const m = st.encounter, cooling = m ? Object.keys(m.readyAt || {}).filter((k) => m.readyAt[k] > e.cycle + 1) : [];
       if (!cooling.length) continue;
       for (const k of cooling) m.readyAt[k] = Math.max(e.cycle + 1, m.readyAt[k] - a.crewTick);
@@ -524,8 +519,8 @@ function planOC(s, t) {
   // or thick armor with Crack cooling: for two cycles every hit goes through.
   const rule = (t.lockHp > 0 && livingParts(s).some((p) => p.lock === t.id)) || livingParts(s).some((p) => p.ward === t.id) || (t.deadman && livingParts(s).filter((p) => p.kind === 'system').length > 1) || mirrorOn(s) || mirrorOn(s, e.cycle + 1);
   if ((rule || (t.armor >= 3 && !ok(s, 'crack ' + t.id))) && ok(s, 'sudo')) return 'sudo';
-  // Turbo Boost in a crew, whenever it's up: every crewmate's cooldowns tick.
-  if (alliesOf(s).length && !bigSoon(s) && ok(s, 'turbo-boost')) return 'turbo-boost';
+  // Turbo Boost in a crew, whenever it's up (the sims: +30% dealt is worth more than timing it around the +20% taken).
+  if (alliesOf(s).length && ok(s, 'turbo-boost')) return 'turbo-boost';
   // Turbo Boost when you're hurt: free stacks for a Thermal Throttle.
   if (!healthy(s, 0.5) && usable(s).includes('thermal-throttle') && readyIn(s, 'thermal-throttle') <= 1 && ok(s, 'turbo-boost')) return 'turbo-boost';
   const tt = (p) => st >= 1 && ok(s, 'thermal-throttle ' + p.id);

@@ -305,16 +305,6 @@ export const buffed = (e, k) => e.buffs?.[k] >= e.cycle;
 // Breaker Momentum: stacks still running, and the damage they add (Chain Exploit +2% a stack per rank).
 export const momentumStacks = (s) => { const m = s.encounter?.momentum; return m && m.until >= s.encounter.cycle ? m.stacks : 0; };
 export const momentumBonus = (s) => (SKILLS.momentum + 0.02 * rank(s, 'chain-exploit')) * momentumStacks(s);
-// An Overclocker crewmate's Momentum, shared (SKILLS.crewMomentum a stack; the most from any one Overclocker), and whose.
-export function crewMomentum(s) {
-  const c = s.encounter?.cycle;
-  let best = { bonus: 0, who: null, stacks: 0 };
-  for (const { who, st } of alliesOf(s)) {
-    const m = st.encounter?.momentum, n = subOf(st) === 'overclocker' && m && m.until >= c ? m.stacks : 0;
-    if (n * SKILLS.crewMomentum > best.bonus) best = { bonus: n * SKILLS.crewMomentum, who, stacks: n, until: m.until };
-  }
-  return best;
-}
 
 // Level gap (CONFIG.gap): what you deal to something above you, and what it deals you.
 // It counts from the first level up.
@@ -335,7 +325,7 @@ export function damageMultiplier(s, p, opts = {}) {
   if (opts.mine) {
     m *= 1 + 0.03 * rank(s, 'overclocked');
     if (classOf(s) === 'breaker') m *= 1 + momentumBonus(s);
-    m *= 1 + crewMomentum(s).bonus; // an Overclocker crewmate running the crew hot
+    m *= turboOn(e)?.dealt ?? 1; // an Overclocker crewmate's Turbo Boost
     if (hasTalent(s, 'unsafe-mode')) m *= 1.3;
     if (e.synced) m *= 1 + CONFIG.sync.bonus;
     for (const x of fxFire(s, 'hit', { target: p, do: 'damage%', cmd: !opts.dot && !opts.by ? e.commanding?.id : null })) m *= 1 + x.value / 100;
@@ -3762,15 +3752,15 @@ function noteSignal(s, at = s.encounter.cycle) {
 // A crew boss's mechanic landing on one player (raid.mjs): a buster, a pulse, a burst, a tick of
 // Corruption. It can't miss or crit, but your armor chit stops it whole, Null Route dodges it (not a tick
 // of damage over time), and shields, Block, Bulkhead, DMZ, Thermal Stress and Hot Standby all count.
-// Overheated (an Overclocker crewmate's Turbo Boost, classes/breaker.mjs): what you take is × its share for its cycles.
-export const overheatOf = (e) => (e?.overheat?.until >= e.cycle ? e.overheat.taken : 1);
+// Turbo (an Overclocker crewmate's Turbo Boost, classes/breaker.mjs): for its cycles you deal × dealt and take × taken.
+export const turboOn = (e) => (e?.turbo?.until >= e.cycle ? e.turbo : null);
 export function mechanicHit(s, amount, label, source = 'raid', opts = {}) {
   const e = s.encounter;
   if (!e || defender(s).integrity <= 0) return 0;
   if (!opts.dot && (e.nullRoute > 0 || e.buffs['null-route'] >= e.cycle)) { dodged(e); emit(s, 'blocked', `${label} misses ${s.who || 'you'}, null-routed.`, { source }); openProc(s, 'slipped'); slipLonger(s); return 0; }
   if (!opts.dot && e.chits > 0) { e.chits--; emit(s, 'blocked', `${label} hits ${s.who ? s.who + '\'s' : 'your'} ◆ and does nothing.`, { source }); return 0; }
   const p = { id: source, name: label, integrity: 1, max: 1, attack: { name: label, effect: 'damage', amount, interval: 99 } };
-  const dealt = takeDamage(s, absorbed(s, Math.max(1, Math.round(amount * overheatOf(e) * classMult('taken', s, p.attack, p) * raidTaken(s))), p.attack, p), source, label);
+  const dealt = takeDamage(s, absorbed(s, Math.max(1, Math.round(amount * (turboOn(e)?.taken ?? 1) * classMult('taken', s, p.attack, p) * raidTaken(s))), p.attack, p), source, label);
   if (dealt) { classEach('struck', s, p.attack, dealt, p); e.undo = { type: 'damage', amount: dealt }; }
   return dealt;
 }
@@ -3869,7 +3859,7 @@ function landAttack(s, p) {
   const e = s.encounter;
   const atk = p.attack;
   liftOf(s);
-  const power = attackAmount(p) * (roundOf(e.virus, e.cycle)?.mult ?? 1) * overheatOf(e) * c2Gnaw(s, p) * (e.soft || 1) * gapTaken(levelGap(s)) * (p.boosted ? CONFIG.reactiveBonus : 1) * (on(s, p, 'throttled') ? (hasTalent(s, 'backpressure') ? 0.25 : SKILLS.throttled) : 1) * mechPower(s, p, true);
+  const power = attackAmount(p) * (roundOf(e.virus, e.cycle)?.mult ?? 1) * (turboOn(e)?.taken ?? 1) * c2Gnaw(s, p) * (e.soft || 1) * gapTaken(levelGap(s)) * (p.boosted ? CONFIG.reactiveBonus : 1) * (on(s, p, 'throttled') ? (hasTalent(s, 'backpressure') ? 0.25 : SKILLS.throttled) : 1) * mechPower(s, p, true);
   // A hit: a damage attack, or a special that also hits (the Scrambler's Scramble). Its size is `hit`, scaled like the rest.
   const hits = atk.effect === 'damage' || !!atk.hit, hitPower = atk.hit ? (power * atk.hit) / Math.max(1, atk.amount) : power;
   p.boosted = false;
