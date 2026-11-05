@@ -37,7 +37,7 @@ swaps); drag it off to clear. On a phone: tap an ability, then tap a key (a key'
 Keys change between fights, as now. T works anywhere but a text field; on an empty prompt only as a capital, since a
 lower-case t starts commands. A mastered ability's effect tier is picked on its Toolkit entry.
 
-## Not decided yet
+## Decided since
 
-- The subclass icons are drafts; the designer has not kept them (Demolitionist and Herder may be redrawn).
-- Where the Toolkit opens from in a fight (the tray), if anywhere.
+- The eight subclass icons stay as they are for now.
+- The Toolkit also opens from the fight tray (next: a tray button; in a fight it shows the abilities, keys frozen).
