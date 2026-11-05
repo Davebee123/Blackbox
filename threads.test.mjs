@@ -203,7 +203,7 @@ test('Restore Point (floor 1): talk at its start, reach the archive, walk the fi
   assert.ok(t.reward);
 });
 
-test('Nine Days Deaf: the radio clue pins it on a server of yours near your level; read the repeater, fight to its mast, answer LANTERN, and the Listening Post shows on the map', () => {
+test('Nine Days Deaf: the radio clue pins it on a server of yours near your level; read the repeater, restart its relay, talk to LANTERN, and the Listening Post shows on the map', () => {
   const s = setup(6, { n1: 5 });
   const S = SC.scannerOf(s);
   assert.equal(SC.findPost(s, clock), null, 'nothing on the air');
@@ -215,10 +215,10 @@ test('Nine Days Deaf: the radio clue pins it on a server of yours near your leve
   assert.equal(SC.postFound(s), false, 'not until the thread is done');
   connect(s, loc);
   walk(s, TH.startHere(s, loc).room);
-  assert.match(said(FP.act(s, 'talk')), /repeater · lantern[\s\S]*The mast is on [A-Z]+-[A-Z]+-\d+, [A-Z]\d+\./);
-  const t = TH.activeThreads(s).at(-1), mast = locOf(s, t.places.mast.loc);
-  if (mast.id !== loc.id) connect(s, mast);
-  walk(s, t.places.mast.room);
+  assert.match(said(FP.act(s, 'talk')), /repeater · lantern[\s\S]*The relay is on [A-Z]+-[A-Z]+-\d+, [A-Z]\d+\./);
+  const t = TH.activeThreads(s).at(-1), relay = locOf(s, t.places.relay.loc);
+  if (relay.id !== loc.id) connect(s, relay);
+  walk(s, t.places.relay.room);
   assert.equal(t.step, 2);
   assert.equal(SC.postFound(s), false);
   assert.match(said(FP.act(s, 'talk')), /Our Listening Post is next to your HOME server/);

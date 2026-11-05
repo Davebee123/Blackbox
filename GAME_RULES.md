@@ -1027,7 +1027,7 @@ docs/threads.md). Never given, never timed, nothing missable.
 | Restore Point | 1 (3) | M. Wren's photos | Talk to a stalled restore job; reach her archive; walk it to the restore point a link or two off; talk to it |
 | The Night Operator | 2 (7) | Forty people's payroll | Talk to an idle session; fight to the payroll file on another server; carry it to her terminal two servers over; hand it over (Kestrel +12) or sell it to GLASSJAW (GLASSJAW +10, Kestrel −8, 150 + 25L credits) |
 | Mirror | 3 (13) | Your ground, copied and sold | Read an index (MIRROR-nn appears, copied from your server); read its logs; talk to its builder Quill a floor up (he unseals the kill switch); beat its Core |
-| Nine Days Deaf | the clue's server (any) | LANTERN's mast | Read a LANTERN repeater replaying a numbers broadcast; reconnect its mast a link or two off; talk to LANTERN there. The Listening Post shows on the map |
+| Nine Days Deaf | the clue's server (any) | LANTERN's relay | Read a LANTERN repeater replaying a numbers broadcast; fight to its relay a link or two off and restart it; talk to LANTERN there. The Listening Post shows on the map |
 | One-offs | any | Each its own | An escort, a talk, or a temporary server (a beacon names it) |
 
 ## Floors and tracing
@@ -2113,8 +2113,8 @@ radio in a window beside it), **[2] recordings** (the tape), **[3] log**, **[0] 
 
 - **Found** through a thread, **Nine Days Deaf**: the first broadcast on the air outside a fight breaks into the radio
   chatter as numbers, from a LANTERN repeater on a server of yours (traced, no thread, nearest your level; with none
-  yet, a later broadcast tries again). Its ! goes on that server. Read the repeater, fight to its mast a link or two
-  off, answer LANTERN there, and the post shows on the map (`s.scanner.found`; already true for a save that had the
+  yet, a later broadcast tries again). Its ! goes on that server. Read the repeater, fight to LANTERN's relay a link or
+  two off and restart it, talk to LANTERN there, and the post shows on the map (`s.scanner.found`; already true for a save that had the
   old top-bar radio).
 - **On the air.** One station at a time, for 2–3 minutes, then 15–30 minutes quiet (the first 5 minutes into a new
   save). Stations not yet logged come up first, then the ones that still pay. A broadcast starts with a quiet two-tone
