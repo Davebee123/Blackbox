@@ -94,10 +94,10 @@ export const abilities = {
     desc: 'Glitches the target\'s clock, dealing 20 damage. For 3 cycles, all your hits against it are critical strikes, so Segfault, Stack Smash and Thermal Throttle land at their biggest. Plan the fight around it.',
   },
   'turbo-boost': {
-    cls: 'breaker', sub: 'overclocker', verb: 'buff', name: 'Turbo Boost', target: 'none', damage: 0, cycles: 3, gain: 2, crewTick: 2, cost: 6, scales: ['cost'], cooldown: 5, icon: 'behavior',
-    short: '+2 Momentum; crew cooldowns −2',
-    help: 'turbo-boost — Grants 2 Momentum for 3 cycles, and every crewmate\'s cooldowns tick 2 cycles. Costs 6 Signal. Below half Signal, costs nothing and grants 3.',
-    desc: 'Runs past the safe clock, granting 2 Momentum for 3 cycles, and runs your crew hot too: every crewmate\'s cooldowns tick 2 cycles. Costs 6 Signal, or 6 Integrity at home. Below half Signal, costs nothing and grants 3.',
+    cls: 'breaker', sub: 'overclocker', verb: 'buff', name: 'Turbo Boost', target: 'none', damage: 0, cycles: 3, gain: 2, crewTick: 1, cost: 6, scales: ['cost'], cooldown: 5, icon: 'behavior',
+    short: '+2 Momentum; your crew shares it',
+    help: 'turbo-boost — Grants 2 Momentum for 3 cycles, and every crewmate\'s cooldowns tick 1 cycle. Costs 6 Signal. Below half Signal, costs nothing and grants 3. In a crew, every crewmate deals 8% more damage for each Momentum stack you hold.',
+    desc: 'Runs past the safe clock, granting 2 Momentum for 3 cycles, and runs your crew hot too: every crewmate\'s cooldowns tick 1 cycle, and while you hold Momentum each crewmate deals 8% more damage a stack. Costs 6 Signal, or 6 Integrity at home. Below half Signal, costs nothing and grants 3.',
   },
 };
 
@@ -132,7 +132,7 @@ export const subs = {
     ],
   },
   overclocker: {
-    name: 'Overclocker', role: ['DPS', 'Burst'], idea: 'Run it hot until something melts.', solo: 'The biggest single hits in the game.', crew: 'Runs the whole crew hot: Turbo Boost speeds every cooldown.', lean: 'crew',
+    name: 'Overclocker', role: ['DPS', 'Burst'], idea: 'Run it hot until something melts.', solo: 'The biggest single hits in the game.', crew: 'Runs the whole crew hot: they share its Momentum.', lean: 'crew',
     chase: ['crit', 'damage'], // what a player of it chases on gear, one per protocol in turn (balance sims, sim crewmates)
     edge: { name: 'Redline', rule: 'Momentum stacks to 5, but you take 10% more damage while you have any.', max: 5, taken: 1.1 },
     skills: ['hot-loop', 'overvolt', 'segfault', 'thermal-throttle', 'turbo-boost', 'brace', 'vent', 'stack-smash', 'fault-injection', 'sudo', 'zero-day'],

@@ -308,3 +308,19 @@ test('the ◆ badge: on a damaging key armor would absorb, aimed at an armored p
   command(s, 'crack encryptor');
   assert.doesNotMatch(boardMarkup(s, null).match(/<div class="intent mine"[^]*?<\/div>/)[0], /armd/, 'Crack queued: no badge');
 });
+
+// An Overclocker crewmate's shared Momentum (combat.mjs crewMomentum) shows on your bar, with whose it is.
+test('Crew Momentum shows on a crewmate\'s bar', async () => {
+  const { hooks } = await import('./dist/combat.mjs');
+  const { statusSpans } = await import('./dist/view.mjs');
+  const { SKILLS } = await import('./dist/data.mjs');
+  const mk = (sub) => { const s = fresh(); s.loadout.archetype = 'breaker'; s.hackers = { breaker: { level: 30, xp: 0 } }; s.loadout.sub = { breaker: sub }; selectEncounter(s, 'cryptjack', 7, { level: 6 }); command(s, 'engage'); return s; };
+  const o = mk('overclocker'), d = mk('demolitionist');
+  o.encounter.momentum = { stacks: 3, until: o.encounter.cycle + 2 };
+  const was = hooks.crewAllies;
+  hooks.crewAllies = (x) => (x === d ? [{ who: 'Ada', st: o }] : []);
+  try {
+    const x = statusSpans(d).find((y) => y.name === 'Crew Momentum');
+    assert.ok(x && x.value === `+${Math.round(3 * SKILLS.crewMomentum * 100)}%` && /Buff from Ada/.test(x.title), JSON.stringify(x));
+  } finally { hooks.crewAllies = was; }
+});

@@ -169,7 +169,7 @@ test('the solo-leaning subclasses lose less Signal alone than the crew-leaning d
   const lost = Object.fromEntries(ALL.filter((sub) => SUBS[sub].cls !== 'bastion').map((sub) => [sub, [18, 30].reduce((a, L) => a + score(policyOf(sub), at(L), { sub }).lost, 0) / 2]));
   const line = Object.entries(lost).map(([sub, l]) => `${sub} ${l.toFixed(0)}`).join(' / ');
   const solo = Object.keys(lost).filter((sub) => SUBS[sub].lean === 'solo'), crew = Object.keys(lost).filter((sub) => SUBS[sub].lean === 'crew');
-  assert.deepEqual(solo, ['demolitionist', 'overclocker', 'phantom']);
+  assert.deepEqual(solo, ['demolitionist', 'phantom']); // the Overclocker leans crew since its Crew Momentum (docs/kits.md)
   const avg = (xs) => xs.reduce((n, x) => n + lost[x], 0) / xs.length;
   // Since the parts plan's P1 the crew side runs lower alone: before it, the Hijacker's 42% and 30% at Lv 18 and 30 (a
   // known gap) carried the crew side's average and its worst. With the damage profiles it loses 27% and 23%, at its

@@ -319,6 +319,25 @@ test('Turbo Boost: 2 Momentum stacks for 3 cycles, for 6; not when your Momentum
   assert.match(refused(f, 'turbo-boost').message, /already full/);
 });
 
+// In a crew (docs/kits.md): the Overclocker's Momentum is shared, SKILLS.crewMomentum a stack, and Turbo Boost ticks every
+// crewmate's cooldowns crewTick cycles (combat-view.test.mjs: its crewmate's bar shows Crew Momentum).
+test('Overclocker in a crew: crewmates share its Momentum, and Turbo Boost ticks their cooldowns', async () => {
+  const { hooks, damageMultiplier, crewMomentum } = await import('./dist/combat.mjs');
+  const o = noArmor(quiet(oc())), d = noArmor(quiet(demo()));
+  const was = hooks.crewAllies;
+  hooks.crewAllies = (x) => (x === d ? [{ who: 'Ada', st: o }] : x === o ? [{ who: 'Bo', st: d }] : []);
+  try {
+    const before = damageMultiplier(d, part(d, 'pulse'), { mine: true });
+    d.encounter.readyAt.overload = d.encounter.cycle + 4;
+    act(o, 'turbo-boost');
+    assert.equal(d.encounter.readyAt.overload, d.encounter.cycle + 4 - ABILITIES['turbo-boost'].crewTick, 'its cooldown ticked');
+    assert.equal(crewMomentum(d).stacks, 2);
+    const after = damageMultiplier(d, part(d, 'pulse'), { mine: true });
+    assert.ok(Math.abs(after / before - (1 + 2 * SKILLS.crewMomentum)) < 1e-9);
+    assert.equal(crewMomentum(o).bonus, 0, 'a Demolitionist shares nothing');
+  } finally { hooks.crewAllies = was; }
+});
+
 test('Overclocker fillers: Core Voltage, Heat Spreader, Liquid Cooling', () => {
   const s = noArmor(quiet(oc({ ranks: { 'core-voltage': 2 } })));
   big(s, 'pulse');

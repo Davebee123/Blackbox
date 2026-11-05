@@ -305,6 +305,16 @@ export const buffed = (e, k) => e.buffs?.[k] >= e.cycle;
 // Breaker Momentum: stacks still running, and the damage they add (Chain Exploit +2% a stack per rank).
 export const momentumStacks = (s) => { const m = s.encounter?.momentum; return m && m.until >= s.encounter.cycle ? m.stacks : 0; };
 export const momentumBonus = (s) => (SKILLS.momentum + 0.02 * rank(s, 'chain-exploit')) * momentumStacks(s);
+// An Overclocker crewmate's Momentum, shared (SKILLS.crewMomentum a stack; the most from any one Overclocker), and whose.
+export function crewMomentum(s) {
+  const c = s.encounter?.cycle;
+  let best = { bonus: 0, who: null, stacks: 0 };
+  for (const { who, st } of alliesOf(s)) {
+    const m = st.encounter?.momentum, n = subOf(st) === 'overclocker' && m && m.until >= c ? m.stacks : 0;
+    if (n * SKILLS.crewMomentum > best.bonus) best = { bonus: n * SKILLS.crewMomentum, who, stacks: n, until: m.until };
+  }
+  return best;
+}
 
 // Level gap (CONFIG.gap): what you deal to something above you, and what it deals you.
 // It counts from the first level up.
@@ -325,6 +335,7 @@ export function damageMultiplier(s, p, opts = {}) {
   if (opts.mine) {
     m *= 1 + 0.03 * rank(s, 'overclocked');
     if (classOf(s) === 'breaker') m *= 1 + momentumBonus(s);
+    m *= 1 + crewMomentum(s).bonus; // an Overclocker crewmate running the crew hot
     if (hasTalent(s, 'unsafe-mode')) m *= 1.3;
     if (e.synced) m *= 1 + CONFIG.sync.bonus;
     for (const x of fxFire(s, 'hit', { target: p, do: 'damage%', cmd: !opts.dot && !opts.by ? e.commanding?.id : null })) m *= 1 + x.value / 100;

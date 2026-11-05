@@ -47,7 +47,7 @@ Choice tiers (pick one of two):
 
 ## Overclocker
 
-**DPS, Burst.** Run it hot until something melts. Solo, the Overclocker lands the biggest single hits in the game. In a crew it deletes the part that matters. It pays for that in Signal and in the damage it takes.
+**DPS, Burst.** Run it hot until something melts. Solo, the Overclocker lands the biggest single hits in the game. In a crew it runs everyone hot: each crewmate deals 8% more damage for each Momentum stack it holds. It pays for that in Signal and in the damage it takes.
 
 **Edge: Redline.** Momentum stacks to 5 instead of 3, but you take 10% more damage from attacks while you have any stacks.
 
@@ -57,12 +57,12 @@ Choice tiers (pick one of two):
 | 12 | `overvolt <part>` | Hits the target twice for 20 damage in one command. Both hits count against a tell, so one Overvolt stops a cast. Costs 6 Signal (Integrity at home). | 4 |
 | 14 | `segfault <part>` | Deals 30 damage to the target. Damage is tripled against a part winding up a charge. | 3 |
 | 16 | `thermal-throttle <part>` | Spends all your Momentum to deal 20 damage, plus 20 for each stack spent. With 2 or more stacks it goes straight through armor, locks and wards. Requires Momentum. | 3 |
-| 18 | `brace` | For 2 cycles, hits on you deal 30% less damage. Whatever hits you takes twice the damage Brace saved. | 5 |
-| 20 | `vent` | Spends all your Momentum to clear Corrupted, encryption and Scrambled, and heals you for 5 per stack spent, at least 5. | 5 |
-| 22 | `stack-smash <part>` | Deals 30 damage to the target. Hits twice against an Exposed part, and each critical strike hits again, up to 3 more times. | 3 |
-| 26 | `fault-injection <part>` | Deals 20 damage to the target. For 3 cycles, every hit you land on it is a critical strike. | 10 |
-| 30 | `sudo` | For 2 cycles, your hits go through ◆ and still break one each. Locks and wards don't hold them, a Tripwire you break stays quiet, and a Decoy or the Mimic can't copy you. | 8 |
-| 34 | `turbo-boost` | Gives you 2 Momentum stacks that last 3 cycles, for 6 Signal (Integrity at home). Below half your Signal it costs nothing and gives 3. | 5 |
+| 18 | `turbo-boost` | Gives you 2 Momentum stacks that last 3 cycles, for 6 Signal (Integrity at home), and ticks every crewmate's cooldowns 1 cycle. Below half your Signal it costs nothing and gives 3. | 5 |
+| 20 | `brace` | For 2 cycles, hits on you deal 30% less damage. Whatever hits you takes twice the damage Brace saved. | 5 |
+| 22 | `vent` | Spends all your Momentum to clear Corrupted, encryption and Scrambled, and heals you for 5 per stack spent, at least 5. | 5 |
+| 26 | `stack-smash <part>` | Deals 30 damage to the target. Hits twice against an Exposed part, and each critical strike hits again, up to 3 more times. | 3 |
+| 30 | `fault-injection <part>` | Deals 20 damage to the target. For 3 cycles, every hit you land on it is a critical strike. | 10 |
+| 34 | `sudo` | For 2 cycles, your hits go through ◆ and still break one each. Locks and wards don't hold them, a Tripwire you break stays quiet, and a Decoy or the Mimic can't copy you. | 8 |
 | 38 | `zero-day <part>` | Deals 65 damage to the target, straight through armor, locks and wards. Once per fight. | once |
 
 ### Overclocker talents
