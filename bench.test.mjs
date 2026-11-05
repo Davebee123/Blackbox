@@ -131,7 +131,7 @@ test('bench at any level: a class name is that class with no subclass picked (a 
   assert.equal(h.gear.rigs.operator.length, protocolSlots(30));
   const c = benched('bastion', 50).s;
   assert.equal(subOf(c), null, 'a class from 10: no subclass picked yet, the core alone');
-  assert.ok(subWaiting(c), 'its breakout waiting');
+  assert.ok(subWaiting(c), 'its pick waiting');
   assert.equal(pointsSpent(c, 'bastion'), 0);
   assert.equal(c.floors.reached, FLOORS.length);
   for (const sub of Object.keys(SUBS)) assert.equal(subOf(benched(sub, 20).s), sub, sub);

@@ -71,9 +71,9 @@ teal, violet or a threat's red.
 - **Tiles** (`.ptile`): daemons, protocols, shop wares; the action row sits on the tile's floor.
 - **Hover tips** (`.tt`): every `title` shows in the game's own card (amber top rule, mono title line); never the
   browser's default.
-- **Card and detail panel** (`.sk-page`, `skills-view.mjs`; the Server page too): a card of picks (names and state
-  only) beside one sticky panel that explains the picked, hovered or focused item, the only place its facts are lit. On
-  a phone the panel is a bottom sheet.
+- **Card and detail panel** (the Server page): a card of picks (names and state only) beside one sticky panel that
+  explains the picked, hovered or focused item, the only place its facts are lit. On a phone the panel is a bottom
+  sheet. Skills and talents is a card alone (`.cls`, docs/class-page.md): its rules are tooltips.
 - **Tethers** (`.tether`, `view.mjs` `tethers`, `fightread.mjs` `partLinks`): one look for every rule that reaches from
   one part to another. A steel bracket in the board's left gutter from the part the rule sits on (a square) to the part
   it reaches (an arrow), drawn a piece per row; a round node mid-span carries the rule's icon, or **?** until the codex

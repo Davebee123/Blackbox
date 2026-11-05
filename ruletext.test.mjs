@@ -54,19 +54,12 @@ const breaker = (level, sub = null) => {
   if (sub) command(s, `subclass breaker ${sub}`);
   return s;
 };
-// The detail panel: the one place on the Skills and talents page a rule is written out, with its facts lit.
-const panelOf = (html) => html.match(/<aside class="sk-panel[^"]*"[^>]*>([\s\S]*?)<\/aside>/)?.[1] || '';
-
-test('the Skills and talents page draws its rule text through the highlighter, in its detail panel', () => {
+// The Skills and talents page writes its rules only in tooltips, plain text (the highlighter is for cards with room).
+test('the Skills and talents page keeps its rules in plain-text tooltips; the class picker lights its facts', () => {
   const s = breaker(12, 'demolitionist');
-  const shaped = panelOf(loadoutMarkup(s, 'breaker', 'skills', { sel: 's:shaped-charge' }));
-  assert.match(shaped, /<p class="sk-rule">[^]*<b class="hi">all its ◆<\/b>/);
-  assert.match(shaped, /<b class="hi">1 cycle sooner<\/b>/);
-  assert.match(shaped, /<b class="hi">\d+ damage<\/b>/, 'the scaled number, lit');
-  for (const p of shaped.matchAll(/<p class="sk-rule">(.*?)<\/p>/gs)) assert.doesNotMatch(p[1], /<(?!\/?b[ >])/, 'nothing but the marks inside');
-  const node = SUBS.demolitionist.fillers[0][0];
-  assert.match(panelOf(loadoutMarkup(s, 'breaker', 'skills', { sel: 't:' + node.id })), /<p class="sk-rule">[^<]*<b class="hi">/, 'the tree’s rules too');
-  assert.match(panelOf(loadoutMarkup(s, 'breaker', 'skills', { sel: 'r:edge' })), /<p class="sk-rule">[^<]*<b class="hi">/, 'and the edge');
-  assert.match(loadoutMarkup(s, 'breaker', 'skills'), /<span class="tag stag status sk-status" title="Exposed: [^"<]*"/, 'a tooltip stays plain text');
+  const html = loadoutMarkup(s, 'breaker', 'skills');
+  assert.doesNotMatch(html, /class="hi"/);
+  assert.match(html, /title="Shaped Charge: [^"<]*all its ◆/);
+  assert.match(html, /<span class="tag stag status sk-status" title="Exposed: [^"<]*"/, 'a tooltip stays plain text');
   assert.match(classPickMarkup(), /<small>[^<]*<b class="hi">/, 'and the class picker’s');
 });

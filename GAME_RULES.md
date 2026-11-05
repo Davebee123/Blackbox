@@ -1232,7 +1232,9 @@ free:** until any class reaches level 5, switching to a class you haven't played
   (Breaker), Ban (Bastion), Poke (Infiltrator), Ping (Operator); `spike` works for all.
 - **Keys 2–8, then 9 and 0:** your equipped skills: seven from level 1, an eighth at 22, a ninth at 30. A skill you
   unlock goes on the bar by itself (a bar that follows a shipped preset fills from it). `equip <skill> <key>`,
-  `unequip`, anywhere out of a fight; every key a swap brings in starts your next fight cooling.
+  `unequip`, anywhere out of a fight; every key a swap brings in starts your next fight cooling. The **Toolkit** (key T,
+  or its button on Skills and talents) does the same by hand: drag an ability onto a key (onto a filled key, they
+  swap), drag one off the bar to clear it, or tap an ability and then a key.
 - **The - key:** SIGINT, from level 10 (SIGINT).
 - **Presets** (docs/kits.md): from level 10 a subclass has fifteen skills to choose from (its class's four core skills
   and its eleven-skill line) and two shipped presets, `rotation` and a second with a playstyle of its own. `loadout
@@ -1269,10 +1271,12 @@ free:** until any class reaches level 5, switching to a class you haven't played
 ### Subclasses
 
 Picked at level 10 (`subclass <id>`; the first pick anywhere out of a fight, switching free at home). Until you pick, a
-class past 10 plays its **core alone**: its four core skills and kit talent, no edge, presets or tree. The first time
-you're home with no pick, the **subclass breakout** opens: both subclasses side by side in four steps (Idea, Skills,
-Talents, Choose); **Later** puts it off. Each subclass has its own eleven-skill line, edge, presets, talent tree and
-capstones; docs/subclasses/ has every skill.
+class past 10 plays its **core alone**: its four core skills and kit talent, no edge, presets or tree. Loadout → Skills
+and talents shows both subclasses beside the class (docs/class-page.md): dimmed and marked Level 10 before it, then
+each with **Choose**; once picked, yours is wide and the other a strip with **Switch**. The tree is spent there (a
+click adds a rank or picks; a right-click takes a rank back). The first time you're home with no pick, the game takes
+you there once. Each subclass has its own eleven-skill line, edge, presets, talent tree and capstones;
+docs/subclasses/ has every skill.
 
 | Class | Subclass | Edge (from level 10) |
 |---|---|---|
@@ -2612,7 +2616,7 @@ so it is safe to run twice; nothing a save held is lost.
   source the Zero-day (`craftRestore`).
 - **v48** unspent Indemnity becomes credits once, with a letter from Halcyon (`indemnityRestore`).
 - **v47** a pile of named salvage becomes the components count (`componentsRestore`).
-- **v46** a class past level 10 with no subclass picked plays its core, the breakout due (`subRestore`).
+- **v46** a class past level 10 with no subclass picked plays its core, the pick waiting (`subRestore`).
 - **v45** sets: loaded protocols stamped, the Badge's beat armed (`setsRestore`). **v44** whole-number stats
   (`statsRestore`). **v43** threads. **v42** the long climb keeps your share of a level (`climbRestore`). **v41** layers
   become floors (`floorsRestore`). **v40** outposts, buildings, services and plans pay back, plans become codebases

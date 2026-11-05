@@ -157,7 +157,7 @@ test('app.js: every level-up goes to the firmware update and waits; the old bann
   assert.doesNotMatch(app, /function levelUp\(|levelUpLines|privileges escalated|luStyle|params\.get\('levelup'\)|settings\.levelup/);
   assert.match(app, /\/\^developer levelup\( \|\$\)\/\.test\(text\)\) return levelUpCommand/);
   assert.match(app, /const m = arg\.match\(\/\^preview\(\?: \(\\d\+\|all\)\)\?\$\/\);/, 'only preview [level|all]');
-  assert.match(app, /function boFree\(\) \{ return !introOn && !lu\.showing\(\) && !lu\.pending\(\)/, 'the subclass breakout waits its turn');
+  assert.match(app, /function subPrompt\(\) \{\n  if \(CAMP \|\| !V\.subPromptDue\(campaign\) \|\| introOn \|\| lu\.showing\(\) \|\| lu\.pending\(\)/, 'the subclass prompt waits its turn');
   // Developer commands stay behind ?dev (the gate turns them into developer-off before they reach levelUpCommand).
   assert.ok(app.indexOf("text = 'developer-off'") < app.indexOf('return levelUpCommand'));
   assert.doesNotMatch(systemMarkup(fresh()), /levelup|Level-up/, 'no Level-up setting');

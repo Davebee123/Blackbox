@@ -189,7 +189,7 @@ comment saying what it does.
 | `dist/view.mjs` | Markup builders for every page and the fight board. Pure functions of state. |
 | `dist/fightread.mjs` | Reading a fight: what a tell does and how to stop it, live gear rules, decoded parts. |
 | `dist/ruletext.mjs` | Picks out a rule's key facts (numbers, ◆, statuses) for highlighting. |
-| `dist/skills-view.mjs` | Loadout → Skills and talents, and the subclass breakout. |
+| `dist/skills-view.mjs` | Loadout → Skills and talents (the class page, where you choose your subclass) and the Toolkit (key T). |
 | `dist/routines.mjs` | Routines: a program per virus that plays your moves when you don't; its RAM, benchmark and cues. |
 | `dist/routines-view.mjs`, `dist/routines-ui.mjs`, `dist/routines.css` | The Program tab, its drag and drop, and the program's marks on the board. |
 | `dist/levelup-view.mjs`, `dist/levelup-ui.mjs`, `dist/levelup.css` | The level-up: a firmware update under the top bar. |
@@ -287,6 +287,7 @@ and `style.test.mjs` the tooltip grammar.
 | [`docs/genome.md`](docs/genome.md), [`docs/parts-plan.md`](docs/parts-plan.md), [`docs/mechanics-list.md`](docs/mechanics-list.md) | How viruses are built, their parts, and the mechanics to play. |
 | [`docs/puzzle-fights.md`](docs/puzzle-fights.md), [`docs/puzzle-levers.md`](docs/puzzle-levers.md) | Fights you read or prepare for, and their levers. |
 | [`docs/kits.md`](docs/kits.md), [`docs/subclasses/`](docs/subclasses/) | Class kits and the eight subclasses. |
+| [`docs/class-page.md`](docs/class-page.md) | Loadout → Skills and talents and the Toolkit: the design and its states. |
 | [`docs/routines.md`](docs/routines.md) | Routines. |
 | [`docs/progression.md`](docs/progression.md), [`docs/economy.md`](docs/economy.md), [`docs/content.md`](docs/content.md), [`docs/variety-plan.md`](docs/variety-plan.md) | Pacing, the economy, activities and variety. |
 | [`docs/rivals.md`](docs/rivals.md) | Rivals: the roster, the rules and the picked look. |

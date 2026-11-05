@@ -207,15 +207,15 @@ function shownTargets(s, text) {
 export const classOf = (s) => s.loadout?.archetype || 'breaker';
 // Your subclass (SUBS in data.mjs; dist/classes/): from SUBCLASS.from, the one you picked. There is no default:
 // until you pick, a class plays its core alone (no subclass skills, edge, presets or tree), and the Loadout's
-// subclass breakout waits for you (skills-view.mjs). Before that level, none.
+// Skills and talents page asks you to choose (skills-view.mjs). Before that level, none.
 // A pick only counts if it names a subclass of that class (an unknown id is no pick).
 const pickedSub = (s, arch) => { const x = s.loadout?.sub?.[arch]; return SUBS[x]?.cls === arch ? x : null; };
 export const subOf = (s, arch = classOf(s)) => (hackerLevel(s, arch) >= SUBCLASS.from ? pickedSub(s, arch) : null);
 export const subPicked = (s, arch = classOf(s)) => !!pickedSub(s, arch);
-// A class at SUBCLASS.from or past it that hasn't picked: the breakout's moment (skills-view.mjs breakoutDue).
+// A class at SUBCLASS.from or past it that hasn't picked: the page asks for a pick (skills-view.mjs).
 export const subWaiting = (s, arch = classOf(s)) => hackerLevel(s, arch) >= SUBCLASS.from && !pickedSub(s, arch);
-// "Later" on the breakout: it stops opening by itself for that class (s.loadout.subLater); the page keeps its entry.
-export function subLater(s, arch = classOf(s)) { (s.loadout.subLater ||= {})[arch] = true; }
+// The page has brought you to the choice once for that class (s.loadout.subLater); it doesn't again.
+export function subPrompted(s, arch = classOf(s)) { (s.loadout.subLater ||= {})[arch] = true; }
 // Is this subclass's edge on? Class modules check their own edges with it.
 export const subEdge = (s, id) => CONFIG.edges !== false && subOf(s) === id;
 // Your subclass's tree and skill line (null before SUBCLASS.from).
@@ -1473,7 +1473,7 @@ function retireClassTrees(s, was) {
 // Demolitionist, Warden, Phantom, Herder). Now it plays its core until you pick, so such a save loses what the
 // default lent it: its bar keeps its core keys (the default's keys go), the talent
 // points it spent in the default's tree come back (ranks, tier picks and the capstone cleared), and its program moves
-// to the class (the routines it wrote). Its presets stay, for a pick. The breakout opens the next time you're home
+// to the class (the routines it wrote). Its presets stay, for a pick. The page asks for a pick the next time you're home
 // (no Later is set). A key the default's skill held goes back to a core skill that wasn't on the bar, else empty; a
 // bar the player trimmed stays trimmed.
 export function subRestore(s, was) {

@@ -87,5 +87,5 @@ export function firmwareMarkup(sum) {
 }
 
 // When the level-up may come up: never during a fight, and not over a card that waits for you (the spoils of a won
-// fight, a card that waits for Enter, the boot screen, the subclass breakout). It waits for the next calm moment.
+// fight, a card that waits for Enter, the boot screen). It waits for the next calm moment.
 export const luCalm = ({ fighting = false, ended = false, spoils = false, gainModal = false, booting = false } = {}) => !fighting && !ended && !spoils && !gainModal && !booting;
