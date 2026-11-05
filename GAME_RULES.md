@@ -2135,7 +2135,7 @@ radio in a window beside it), **[2] recordings** (the tape), **[3] log**, **[0] 
 
 | Kind | Stations | Pays |
 |---|---|---|
-| Numbers station | 4 | LANTERN's decode, kept in the log: a hit schedule read out to the rival crews, and who pays for it |
+| Numbers station | 4 | LANTERN's decode, kept in the log: a hit schedule read out to the rival crews |
 | Pirate broadcast | 3 | A tip for a hub you've found: one ware's price there moves (Kernel ×1.3 for 20 min, Cipher ×0.75 for 60, Worm ×1.5 for 40), shown on the hub like a market shock. Only once you've found a hub |
 | Distress call | 3 | A one-off thread on the traced server it names (one with no thread, at most 3 levels over you), its ! on the map |
 

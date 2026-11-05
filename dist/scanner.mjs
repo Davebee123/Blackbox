@@ -42,7 +42,7 @@ export const STATIONS = [
   { id: 'wren', kind: 'numbers', f: 8.215, name: 'WREN-2', text: '00412 00412 · 9 9 1 4 0 · 00412 · 22816 · repeat',
     lore: { title: 'Page 0412', line: '00412 is a page number. Someone reads out a schedule of hits, a page a night. LANTERN wants the whole thing.' } },
   { id: 'owl', kind: 'numbers', f: 5.235, name: 'OWL-7', text: '22816 · 22816 · 22816 · 0 · 22816 · end',
-    lore: { title: 'Sign-off', line: 'Every broadcast ends on 22816. It is an account number, and Halcyon Mutual pays into it every month.' } },
+    lore: { title: 'Sign-off', line: "Every broadcast ends on 22816. It isn't a target. LANTERN thinks it's whoever sends the orders." } },
   { id: 'tarbeach', kind: 'pirate', f: 9.355, name: 'TAR BEACH FM', text: 'kernel moves at {hub}. twenty minutes. you never heard it here',
     tip: { ware: 'kernel', mult: 1.3, mins: 20 } },
   { id: 'nullhour', kind: 'pirate', f: 7.640, name: 'NULL HOUR', text: 'cipher is cheap at {hub} till the hour turns. buy, buy',
