@@ -1,8 +1,8 @@
-# Builds: skill ranks, skill affixes and combos
+# Builds: skill affixes and combos
 
 **Status.** Design, nothing built. The designer's picks (November 2026): a large build layer for players to experiment
-in; some builds clearly stronger than others, as long as they still have to play the fight. Ranks are plain efficiency
-(Diablo 2), not special effects at breakpoints; gear carries most of the efficiency.
+in; some builds clearly stronger than others, as long as they still have to play the fight. No skill ranks: gear
+carries skill efficiency, the talent tree the rest.
 
 ## 1. The rule for a build
 
@@ -12,22 +12,13 @@ in; some builds clearly stronger than others, as long as they still have to play
   docs/kits.md 1.1) and plain outside it. This replaces loot-plan.md's *modest on their own* for combo pieces.
 - **The biggest combos come past the level cap** (GAME_RULES.md *Items*: power spikes are earned).
 
-## 2. Skill ranks
-
-| | |
-|---|---|
-| What a rank does | One or two of the skill's numbers grow: cost, cooldown, duration, ticks, shield or helper size. Damage only a little. |
-| Curve | Each rank gives less than the last (about +10, +8, +6, +5, +4%), to a hard cap well under what points allow, so spreading stays a choice. |
-| Respec | Free at home, like talents. |
-| Board mark | Pips under the skill's icon. The tooltip gives this rank's number, then the next rank's, muted. |
-
-## 3. Skill affixes on gear
+## 2. Skill affixes on gear
 
 Eight skill rules roll today (gear.mjs `RULES` with a `skill`, skillrules.mjs), each changing how one skill plays.
-Add efficiency lines beside them, Grim Dawn's way: *+1 rank to Flood*, *Tag cools a cycle faster*, *Inject lasts a
+Add efficiency lines beside them, Grim Dawn's way: *Flood costs 1 less*, *Tag cools a cycle faster*, *Inject lasts a
 cycle longer*. They roll only for your class, as skill rules do.
 
-## 4. Shared events
+## 3. Shared events
 
 A combo is two pieces from different systems firing on the same event. Effects already trigger on `FX_WHEN`
 (content.mjs): hit, crit, break, start, struck, answer, cycle, helper, expire. Add:
@@ -40,12 +31,12 @@ A combo is two pieces from different systems firing on the same event. Effects a
 Talents, uniques, sets, implants, daemons and skill rules all read the same list, and every class gets a few pieces
 that trigger on another class's events, so off-class builds exist.
 
-## 5. Stacking
+## 4. Stacking
 
 Today the same rule on two items counts once (GAME_RULES.md *Items*). Instead, a second copy counts half and a third a
 quarter. An effect's *limits* (once per cycle, per fight) holds the loops.
 
-## 6. Example builds, for the prototype
+## 5. Example builds, for the prototype
 
 | Build | Pieces | What it does |
 |---|---|---|
@@ -54,15 +45,14 @@ quarter. An effect's *limits* (once per cycle, per fight) holds the loops.
 | Mirror (Bastion) | Reflective ACL, *shielded* pieces | Shields turn incoming hits into damage. |
 | Plague herd (Operator, off-class) | Helpers that burn, Infiltrator burn-tick pieces | Helpers spread burns the burn pieces feed on. |
 
-## 7. Order
+## 6. Order
 
 1. Prototype: a standalone page with the four builds, their pieces and how they connect, as screenshots.
 2. The shared events and the stacking rule.
-3. Skill affixes on gear, then ranks.
+3. Skill affixes on gear.
 4. Content: combo pieces for every class, the off-class ones first.
 
-## 8. Open decisions
+## 7. Open decisions
 
-1. **Where ranks come from:** level points, gear only, or both.
-2. **Ranks and the ranked talent rows** (+X% to a skill per rank) overlap: ranks replace them, or the rows move to
-   stats that aren't a skill's.
+1. **More talent choices:** today the ranked rows fill up almost whole (18 points, 18 rank slots and three picks),
+   so a subclass has 16 builds. Turning ranked rows into pick-one-of-three tiers is the candidate.
