@@ -6,7 +6,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, selectEncounter, resolveCycle, part, addItem, loaded, hooks, UNIQUES, gearStat, maxSignal, damageMultiplier, hit, heal, takeDamage, takenMult, cooldownOf, timersHidden, fxOn, fxPct, rollDrop, setBonusCount, puzzleUnique, floorUniques, strainTrophies, WORLD_SOURCES, addLocation, finish, hackerLevel, critChance } from './dist/combat.mjs';
 import { uniqueItem, seeded, BASES, STATS, LOOT } from './dist/gear.mjs';
-import { CONFIG, BOSS_LOOT, ABILITIES, defaultSub, lifted } from './dist/data.mjs';
+import { CONFIG, BOSS_LOOT, ABILITIES, defaultSub, lifted, filled, own } from './dist/data.mjs';
+// These test each heal's and shield's own numbers: sustain potency (CONFIG.length.heal, docs/scaling.md step 3) off.
+CONFIG.length = { ...CONFIG.length, heal: null };
 import { checkItems, fxText, fxList } from './dist/content.mjs';
 import ITEMS from './dist/content/items.mjs';
 
@@ -110,11 +112,11 @@ test('stat+ and stat%: Siltstone\'s Block for each ◆, Depth Gauge\'s Regen bel
   e.shield = 5;
   assert.equal(gearStat(t, 'reduction', 'hacker'), Math.round(block * 1.25), 'Pressure Hull: Block 25% stronger behind a shield');
   const s = vet();
-  const [gauge] = ['depth-gauge', 'siphon-tube', 'signal-floor'].map((id) => wear(s, id)), four = lifted(4, gauge.level);
+  const [gauge] = ['depth-gauge', 'siphon-tube', 'signal-floor'].map((id) => wear(s, id)), four = filled(4, gauge.level);
   fight(s);
   const regen = gearStat(s, 'regen', 'hacker'), leech = gearStat(s, 'leech', 'hacker');
   s.run.integrity = Math.floor(s.run.max * 0.4); // below half
-  assert.equal(gearStat(s, 'regen', 'hacker'), regen + four, 'Depth Gauge: +4 Regen below half, lifted');
+  assert.equal(gearStat(s, 'regen', 'hacker'), regen + four, 'Depth Gauge: +4 Regen below half, lifted and filled');
   assert.equal(gearStat(s, 'leech', 'hacker'), Math.round(leech * 1.5), 'Siphon Tube: Leech half again below half');
   s.run.integrity = Math.floor(s.run.max * 0.2); // below 25%
   assert.equal(gearStat(s, 'regen', 'hacker'), (regen + four) * 2, 'Signal Floor: Regen doubles below 25%');
@@ -184,7 +186,7 @@ test('one hit at a time: Drain Plug halves the first big one, Read-Only cuts the
   const t = vet(); wear(t, 'read-only'); fight(t);
   const bt = gearStat(t, 'reduction', 'hacker');
   assert.equal(landed(t, 200), 200 - bt, 'it stays above half: untouched');
-  assert.equal(landed(t, 400), Math.round(400 * 0.6) - bt, 'the hit that takes you below half: 40% less');
+  assert.equal(landed(t, 520), Math.round(520 * 0.6) - bt, 'the hit that takes you below half (from anywhere above it, your Regen in): 40% less');
   t.run.integrity = 1000;
   assert.equal(landed(t, 600), 600 - bt, 'once a fight');
   const u = vet(); wear(u, 'mooring'); fight(u);
@@ -311,15 +313,15 @@ test("critical strikes: Deepwater on armored parts, Bit Flip's every fourth, POS
   assert.equal(v.run.integrity, 500 + Math.round(v.run.max * 0.02), 'Root of Trust: 2% of your max on a crit');
 });
 
-const power50 = () => (1 + CONFIG.powerPerLevel) ** (L - 1);
+const power50 = () => own(L); // your own line at 50
 test('Dead Reckoning goes through ◆ on its first hit on each part; Spillway carries the leftover of a breaking hit', () => {
   const s = vet(); wear(s, 'dead-reckoning'); fight(s);
   const p = pulse(s);
   p.integrity = p.max = 100000;
   const a0 = p.armor;
-  const r1 = hit(s, p, 100, { mine: true });
+  const r1 = hit(s, p, 20, { mine: true });
   assert.ok(r1.dealt > 0 && p.armor === a0, 'the first hit: through its ◆');
-  const r2 = hit(s, p, 100, { mine: true });
+  const r2 = hit(s, p, 20, { mine: true }); // not a heavy hit (CONFIG.heavyHit)
   assert.ok(!r2.dealt && p.armor === a0 - 1, 'the next breaks a ◆ as usual');
   const t = vet('operator'); wear(t, 'spillway').stats.crit = 0; fight(t);
   const q = pulse(t), next = part(t, 'encryptor');

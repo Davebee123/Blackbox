@@ -193,8 +193,8 @@ test('a talent id two subclasses share works only for its own class: a Phantom\'
 
 test('subclass skills whose numbers grow with your level say so on screen (scales)', async () => {
   const { scaledText } = await import('./dist/view.mjs');
-  const { ABILITIES, power } = await import('./dist/data.mjs');
-  const s = at('breaker', 26), k = power(26);
+  const { ABILITIES, own } = await import('./dist/data.mjs');
+  const s = at('breaker', 26), k = own(26);
   const n = (x) => String(Math.round(x * k));
   assert.match(scaledText(s, 'logic-bomb', ABILITIES['logic-bomb'].short), new RegExp(`Bomb: ${n(50)}, and ${n(20)} to all`));
   assert.match(scaledText(s, 'chain-reaction', ABILITIES['chain-reaction'].help), new RegExp(`explodes for ${n(30)} damage to every other part`));

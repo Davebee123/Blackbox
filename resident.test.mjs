@@ -69,7 +69,7 @@ test('a boss has phases (GAME_RULES.md "Solo bosses", rule a): taking the Reside
   openVault(s);
   toCore(s);
   const e = s.encounter, v = e.virus;
-  assert.ok(v.phases.length && v.enrageAt === BOSSES.resident.enrageAt);
+  assert.ok(v.phases.length && v.enrageAt === BOSSES.resident.long.enrageAt, 'on your Signal it enrages at its long cycle (CONFIG.length)');
   assert.equal(e.bossRule, 'a');
   const core = v.parts.find((p) => p.core);
   assert.ok(core && core.special && core.ticks.every((t) => t.phase != null), 'its ♛ part carries phase ticks');

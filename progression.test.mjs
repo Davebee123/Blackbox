@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, selectEncounter, resolveCycle, part, addItem, loaded, restore, serverLevel, syncServer, gainXp, hackerOf, finish, UNIQUES, fxAnswer, patchDelay, gearStat, daemonLevel, SAVE_VERSION, DECODE_XP, effectLine, previewDamage, bossTable } from './dist/combat.mjs';
-import { CONFIG, CLIMB, levelMinutes, xpToNext, killXp, killsToNext, v41XpToNext, deedScale, DEED, power, LOADOUT, BOSS_LOOT, lifted } from './dist/data.mjs';
+import { CONFIG, CLIMB, levelMinutes, xpToNext, killXp, killsToNext, v41XpToNext, deedScale, DEED, power, LOADOUT, BOSS_LOOT, lifted, filled } from './dist/data.mjs';
 import { uniqueItem, rollItem, seeded, RULES, RARITIES, BASES, baseFor, primaries, SERVICES } from './dist/gear.mjs';
 const VERSIONS = [{ code: 12, credits: 120 }, { code: 40, credits: 600 }]; // what a service's v1 and v2 cost (the retired table)
 import { tickPlay, CRAFT_REFUND } from './dist/progression.mjs';
@@ -45,7 +45,7 @@ test('one level: your server is at your highest class level, with no XP of its o
   assert.ok(b.gains.some((g) => /\(floor 3\)$/.test(g)), 'its own tracks still count: a floor');
   assert.ok(!b.gains.includes('an outpost slot') && b.server === null, 'not the server\'s');
   const sum = levelUpSummary([up]);
-  assert.ok(sum.items.length >= 3 && sum.items.at(-2).kind === 'power' && sum.items.at(-1).kind === 'integrity' && sum.next.level === up.next.level, 'the level-up: what it brings, the power line and the Integrity, then the next level');
+  assert.ok(sum.items.length >= 2 && !sum.items.some((it) => it.kind === 'power') && sum.items.at(-1).kind === 'integrity' && sum.next.level === up.next.level, 'the level-up: what it brings and the Integrity (no power line past level 6: gear carries you), then the next level');
 });
 
 test('the long climb: a level is CLIMB.kills kills of your level (straight between its points), always longer than the last; one-off deeds keep their share of a level', () => {
@@ -213,7 +213,7 @@ test('the new world uniques: Rowhammer, Slammer, Log4Shell, Shellshock, Blue Pil
   pulse.integrity = 1;
   telling(c, enc);
   command(c, 'spike pulse'); resolveCycle(c);
-  assert.equal(enc.max - enc.integrity, lifted(UNIQUES.log4shell.effect.value, 24), 'the Encryptor, winding up, took 22, lifted at its item level');
+  assert.equal(enc.max - enc.integrity, filled(UNIQUES.log4shell.effect.value, 24), 'the Encryptor, winding up, took 22, lifted and filled at its item level');
   // Slammer: burns on a broken part jump on.
   const d = at({ infiltrator: 22 });
   wear(d, uniqueItem(UNIQUES.slammer, 22, seeded(1)));
@@ -250,7 +250,7 @@ test('the new world uniques: Rowhammer, Slammer, Log4Shell, Shellshock, Blue Pil
   wear(g, uniqueItem(UNIQUES['ctrl-c'], 32, seeded(1)));
   fight(f, 32); fight(g, 32);
   fxAnswer(f);
-  assert.equal(f.encounter.shield, lifted(30, 32), 'a 30 shield, lifted at its item level');
+  assert.equal(f.encounter.shield, filled(30, 32), 'a 30 shield, lifted and filled at its item level');
   g.encounter.readyAt = { firewall: g.encounter.cycle + 3 };
   fxAnswer(g);
   assert.equal(g.encounter.readyAt.firewall, g.encounter.cycle + 1, 'every cooldown 2 sooner');

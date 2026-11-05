@@ -5,7 +5,7 @@
 // like Corepunk. Loot and salvage build you.
 // Your server runs no services any more (R2): the home fight is the firewall's job (filters, tiers) and the daemons',
 // and a server's programs (sockets.mjs) are the building. Code builds them, and the wall.
-import { power, line, lift, lifted } from './data.mjs';
+import { power, line, lift, lifted, filled, gearFill, runLate } from './data.mjs';
 
 // Slots by class level: 4 to start, 5 at 15, 6 at 30. Each slot takes one kind of item (SLOTS).
 export const PROTOCOL_SLOTS = [{ level: 1, slots: 4 }, { level: 15, slots: 5 }, { level: 30, slots: 6 }];
@@ -31,7 +31,7 @@ export const OLD_SLOT = { offense: 'exploit', survival: 'proxy', utility: 'scrip
 // group: the protocol's category (its slot kind) and how the pages list stats.
 export const STATS = {
   // Offense (rig, everywhere)
-  damage: { side: 'hacker', group: 'offense', name: 'Damage', unit: '', base: 2, flat: true, about: 'Adds this much damage to every skill hit you land.' },
+  damage: { side: 'hacker', group: 'offense', name: 'Damage', unit: '', base: 2, flat: true, about: 'Adds this much damage to a Spike-sized skill hit, and a share of it to every burn tick and helper hit. A bigger hit gets more of it, a smaller one less.' },
   crit: { side: 'hacker', group: 'offense', name: 'Crit', unit: '%', base: 4, about: 'Increases the chance that a damaging hit is a critical strike. Everyone starts at 5%.' },
   critDamage: { side: 'hacker', group: 'offense', name: 'Crit Damage', unit: '', base: 6, flat: true, about: 'Adds this much damage to every critical strike, on top of the half again a crit deals.' },
   accuracy: { side: 'hacker', group: 'offense', name: 'Accuracy', unit: '%', base: 2.5, about: 'Offsets the enemy\'s evasion, so your damaging skills miss less often. A miss still spends the cooldown.' },
@@ -40,8 +40,8 @@ export const STATS = {
   // A budget point is 60% of Damage's (base 1.2 to its 2): a burn or helper build lands about twice as many of them as
   // skill hits, most of them smaller. Its numbers on the bases, the Loaded affix and uniques are what the old percentage
   // added to a 12 tick at their level, a tick keeping half the level growth (save v44, statsRestore). Damage over time
-  // keeps only part of the level growth (CONFIG.dotLevel), and Payload makes up the rest.
-  payload: { side: 'hacker', group: 'offense', name: 'Payload', unit: '', base: 1.2, flat: true, about: 'Adds this much damage to every burn tick and helper hit.' },
+  // grows on your own line (data.mjs own); gear Damage and Payload carry the rest, × each tick's size (combat.mjs gearTick).
+  payload: { side: 'hacker', group: 'offense', name: 'Payload', unit: '', base: 1.2, flat: true, about: 'Adds damage to every burn tick and helper hit, on top of Damage\'s share: half this much to a typical tick. A bigger one gets more of it, a smaller one less.' },
   // Defense (health on its side; the rest on both sides)
   signal: { side: 'hacker', group: 'survival', name: 'Signal', unit: '', base: 10, flat: true, about: 'Increases your max Signal on runs.' },
   integrity: { side: 'server', group: 'survival', name: 'Integrity', unit: '', base: 20, flat: true, about: 'Increases your server\'s max Integrity.' },
@@ -52,7 +52,7 @@ export const STATS = {
   reduction: { side: 'both', group: 'survival', name: 'Block', unit: '', base: 1, flat: true, about: 'Reduces the damage of every hit against you by this much, but never below half.' },
   evasion: { side: 'both', group: 'survival', name: 'Evasion', unit: '%', base: 2.5, cap: 20, about: 'Gives each enemy damage attack a chance to miss you, up to 20%.' },
   sanitize: { side: 'both', group: 'survival', name: 'Sanitize', unit: '%', base: 8, cap: 50, about: 'Gives each Encrypt, Scramble or Replicate against you a chance to fail, up to 50%.' },
-  restore: { side: 'hacker', group: 'survival', name: 'Restore', unit: '%', base: 6, about: 'Increases every heal you cast, on yourself or a crewmate, by this percentage.' }, // Heals keep only part of the level growth (CONFIG.healLevel), and Restore makes up the rest.
+  restore: { side: 'hacker', group: 'survival', name: 'Restore', unit: '%', base: 6, about: 'Increases every heal you cast, on yourself or a crewmate, by this percentage.' },
   leech: { side: 'hacker', group: 'survival', name: 'Leech', unit: '', base: 1, flat: true, about: 'Heals you this much for every skill hit that deals damage. It heals your server at home and your Signal on runs.' },
   shield: { side: 'server', group: 'survival', name: 'Shield', unit: '', base: 10, flat: true, about: 'Shields your server for this much at the start of every home fight.' },
   countermeasures: { side: 'server', group: 'survival', name: 'Countermeasures', unit: '', base: 6, flat: true, about: 'Deals this much damage to a part when its attack lands on your server. It counts as a hit, so against an armored part it breaks a ◆.' },
@@ -348,23 +348,36 @@ const round = (stat, v) => Math.round(v); // every stat is a whole number
 // is worked out on the level line, then × lift(its item level). It stays a flat number; it never becomes a share.
 // RAM and Lead don't meet power, so they stay as they are.
 export const grows = (k) => !!STATS[k]?.flat && k !== 'ram' && k !== 'lead';
+// The rig's stats that carry what your level no longer gives (data.mjs gearFill): they're lifted and filled. Block and
+// the server's stats are only lifted.
+export const FILLS = new Set(['damage', 'critDamage', 'payload', 'signal', 'regen', 'leech']);
+const up = (k, n, L) => (FILLS.has(k) ? filled(n, L) : lifted(n, L));
 // Effect kinds whose value is a flat number (damage, healing, shield, burn growth), and those that add a stat.
 const FLAT_FX = new Set(['damage+', 'heal', 'shield', 'break-hit', 'read-hit', 'burn-grow']), STAT_FX = new Set(['stat+', 'stack', 'stat', 'buff']);
 export const liftsFx = (fx) => !!fx && Number.isFinite(Number(fx.value)) && (FLAT_FX.has(fx.do) || (STAT_FX.has(fx.do) && grows(fx.stat)));
 // An effect block at an item level: its flat value (and cap) lifted, and its written text with it. Others as they are.
 export function liftFx(fx, level) {
   if (!liftsFx(fx)) return fx;
-  const v = lifted(Number(fx.value), level), out = { ...fx, value: v };
-  if (Number.isFinite(fx.cap)) out.cap = lifted(fx.cap, level);
+  const k = FLAT_FX.has(fx.do) ? 'damage' : fx.stat, v = up(k, Number(fx.value), level), out = { ...fx, value: v };
+  if (Number.isFinite(fx.cap)) out.cap = up(k, fx.cap, level);
   if (typeof fx.text === 'string') out.text = fx.text.replace(new RegExp(`(^|[^\\d.])${fx.value}(?![\\d.])`), `$1${v}`);
   return out;
 }
 // An item's flat stats and flat rule value, lifted at its level (rollItem, uniqueItem, curveRestore).
 export function liftItem(it) {
   const L = Math.max(1, it.level || 1);
-  for (const k of Object.keys(it.stats || {})) if (grows(k) && it.stats[k]) it.stats[k] = it.stats[k] < 0 ? -lifted(-it.stats[k], L) : lifted(it.stats[k], L);
-  if (it.ruleValue && RULES[it.rule]?.fx && liftsFx({ ...RULES[it.rule].fx, value: it.ruleValue })) it.ruleValue = lifted(it.ruleValue, L);
+  for (const k of Object.keys(it.stats || {})) if (grows(k) && it.stats[k]) it.stats[k] = it.stats[k] < 0 ? -up(k, -it.stats[k], L) : up(k, it.stats[k], L);
+  const fx = RULES[it.rule]?.fx;
+  if (it.ruleValue && fx && liftsFx({ ...fx, value: it.ruleValue })) it.ruleValue = up(FLAT_FX.has(fx.do) ? 'damage' : fx.stat, it.ruleValue, L);
   return it;
+}
+// Save v55 (step 2): a lifted item's filling stats and rule value × the fill at its level (the lift already in them).
+// by: what to multiply by (v56, the floor tiers: the new fill over the one it was filled with).
+function fillItem(it, by = gearFill) {
+  const L = Math.max(1, it.level || 1), f = (n) => Math.max(1, Math.round(n * by(L)));
+  for (const k of Object.keys(it.stats || {})) if (FILLS.has(k) && it.stats[k]) it.stats[k] = it.stats[k] < 0 ? -f(-it.stats[k]) : f(it.stats[k]);
+  const fx = RULES[it.rule]?.fx;
+  if (it.ruleValue && fx && liftsFx({ ...fx, value: it.ruleValue }) && (FLAT_FX.has(fx.do) || FILLS.has(fx.stat))) it.ruleValue = f(it.ruleValue);
 }
 // What a base's listed primaries are multiplied by at an item level (before ITEM_SCALE and rarity): its mix at the
 // size of the slot's last base, the size that base had at the level cap (grown 4% a level from its own), along ITEM_CURVE.
@@ -480,21 +493,26 @@ export function statsRestore(s, was) {
 // The compounding curve (docs/scaling.md): an older save's items carry stats rolled on the level line. Each protocol's
 // flat stats and flat rule value, and each filter's growing stats, are lifted at its item level once. Keyed on the
 // field: s.curve marks a save whose items are on the curve (fresh saves start with it).
+// The fill before the floor tiers (save v56: s.curve 3 refills an item filled on it, × the new fill over this).
+const FILL_V55 = [[6, 1], [10, 1.46], [15, 1.67], [25, 1.77], [30, 1.66], [40, 1.6], [50, 1.52]];
+const refill = (L) => gearFill(L) / runLate(L, FILL_V55);
 export function curveRestore(s) {
-  if (s.curve) return;
+  if (s.curve >= 3) return;
+  const was = s.curve || 0;
   const seen = new Set();
   const walk = (x) => {
     if (!x || typeof x !== 'object' || seen.has(x)) return;
     seen.add(x);
-    if (x.kind === 'protocol' && x.stats && typeof x.stats === 'object') return void liftItem(x);
+    if (x.kind === 'protocol' && x.stats && typeof x.stats === 'object') return void (was >= 2 ? fillItem(x, refill) : was ? fillItem(x) : liftItem(x)); // filled already (v55): refilled on the tiers; lifted (v54): filled
     if (x.kind === 'filter' && x.stats && typeof x.stats === 'object') {
+      if (was) return;
       for (const k of ['reduction', 'regen', 'countermeasures']) if (x.stats[k] > 0) x.stats[k] = lifted(x.stats[k], Math.max(1, x.level || 1));
       return;
     }
     for (const v of Array.isArray(x) ? x : Object.values(x)) walk(v);
   };
   walk(s);
-  s.curve = 1;
+  s.curve = 3;
 }
 
 // "+6% Damage · +2% Crit"

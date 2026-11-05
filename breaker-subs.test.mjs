@@ -16,7 +16,8 @@ CONFIG.partToughness = 1;
 CONFIG.enemyRamp = 0;
 CONFIG.misses = false;
 CONFIG.edges = false;
-CONFIG.powerPerLevel = 0; CONFIG.levelLine = 0;
+const OWN0 = CONFIG.ownPerLevel, FILL0 = CONFIG.gearFill; // your own line and gear's fill, to turn back on
+CONFIG.powerPerLevel = 0; CONFIG.levelLine = 0; CONFIG.ownPerLevel = 0; CONFIG.gearFill = [[1, 1]];
 CONFIG.gap = { dealt: 0, taken: 0, floor: 1, below: 0 };
 (await import('./dist/data.mjs')).LOADOUT.specRanks = 0; // the kit talent's two free ranks (progression.mjs): off, for exact numbers
 
@@ -316,6 +317,27 @@ test('Turbo Boost: 2 Momentum stacks for 3 cycles, for 6; not when your Momentum
   const f = oc();
   stacks(f, SKILLS.momentumMax);
   assert.match(refused(f, 'turbo-boost').message, /already full/);
+});
+
+// In a crew (GAME_RULES.md "Subclasses"): Turbo Boost runs every crewmate hot for its 3 cycles (more damage dealt and taken)
+// and ticks their cooldowns crewTick cycles; the Overclocker itself is untouched (combat-view.test.mjs: the Turbo bar).
+test('Overclocker in a crew: Turbo Boost runs every crewmate hot and ticks their cooldowns', async () => {
+  const { hooks, damageMultiplier, turboOn } = await import('./dist/combat.mjs');
+  const A = ABILITIES['turbo-boost'], o = noArmor(quiet(oc())), d = noArmor(quiet(demo()));
+  const was = hooks.crewAllies;
+  hooks.crewAllies = (x) => (x === d ? [{ who: 'Ada', st: o }] : x === o ? [{ who: 'Bo', st: d }] : []);
+  try {
+    const before = damageMultiplier(d, part(d, 'pulse'), { mine: true });
+    d.encounter.readyAt.overload = d.encounter.cycle + 4;
+    act(o, 'turbo-boost');
+    assert.equal(d.encounter.readyAt.overload, d.encounter.cycle + 4 - A.crewTick, 'its cooldown ticked');
+    assert.ok(Math.abs(damageMultiplier(d, part(d, 'pulse'), { mine: true }) / before - A.crewDealt) < 1e-9);
+    assert.equal(turboOn(d.encounter).taken, A.crewTaken);
+    assert.equal(turboOn(o.encounter), null, 'not the Overclocker itself');
+    d.encounter.cycle += A.cycles;
+    assert.equal(turboOn(d.encounter), null, 'gone after 3 cycles');
+    assert.equal(A.cooldown, 15);
+  } finally { hooks.crewAllies = was; }
 });
 
 test('Overclocker fillers: Core Voltage, Heat Spreader, Liquid Cooling', () => {

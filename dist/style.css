@@ -3548,8 +3548,6 @@ body.no-motion .recap { animation: none; }
 
 /* Sync bonus: the class's Sync Window extra, in the window's yellow (talent tree root, class picker). */
 
-/* Map: the breach prototype's door (?playtest=breach), in the Sync Window's yellow so it reads as new. */
-
 /* Breach healing cap: the bar past the Signal you came into the fight with is fenced off (hatched, a hard edge). */
 .bigbar { position: relative; }
 .bigbar .heal-cap { position: absolute; top: 0; bottom: 0; display: block; pointer-events: auto; border-left: 2px solid var(--bright); background: repeating-linear-gradient(135deg, rgba(0, 0, 0, 0.6) 0 3px, rgba(255, 255, 255, 0.16) 3px 6px); }

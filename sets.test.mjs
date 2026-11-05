@@ -562,7 +562,10 @@ test('Hot Spare (2): the first time a fight drops you below 30%, a heal of 20% a
   const e = guardFight(s), p = e.virus.parts[0];
   s.run.max = 1000; s.run.integrity = 250;
   const before = damageMultiplier(s, p, { mine: true });
-  SET_HOOKS.struck(s, { name: 'Bite' }, 10, p);
+  // This checks the heal's own number: sustain potency (CONFIG.length.heal, docs/scaling.md step 3) off.
+  const was = CONFIG.length;
+  CONFIG.length = { ...was, heal: null };
+  try { SET_HOOKS.struck(s, { name: 'Bite' }, 10, p); } finally { CONFIG.length = was; }
   assert.equal(s.run.integrity, 450, 'heals 20% of max');
   assert.equal(ratio(damageMultiplier(s, p, { mine: true }), before), 1.1);
   s.run.integrity = 250;
@@ -631,7 +634,7 @@ test('a class set: anyone wears its 2- and 3-piece and the 4-piece\'s base line;
 });
 
 test('Kestrel pieces held from save v45 keep working, as the retuned set', () => {
-  assert.equal(SAVE_VERSION, 54, 'no save bump since v45 for sets (v46 is the subclass pick, v47 components, v48 Indemnity, v49 crafting, v50 specials, v51 the scanner, v52 rivals, v54 the curve lifts every item alike): a piece reads its bonuses from its unique, and its id and stats are unchanged');
+  assert.equal(SAVE_VERSION, 56, 'no save bump since v45 for sets (v46 is the subclass pick, v47 components, v48 Indemnity, v49 crafting, v50 specials, v51 the scanner, v52 rivals, v54 the curve lifts every item alike, v55 fills them, v56 refills them on the tiers): a piece reads its bonuses from its unique, and its id and stats are unchanged');
   const s = at(12);
   const items = wear(s, KESTREL);
   (s.pity ||= {})['set:bouncer'] = 3;
@@ -763,7 +766,7 @@ test('a tier set drop comes up three times as often for your own class, pieces y
 });
 
 test('tier pieces held from the floor 3 to 6 version keep their item level and stats, and work as the set', () => {
-  assert.equal(SAVE_VERSION, 54, 'no save bump since v45 for sets (v46 is the subclass pick, v47 components, v48 Indemnity, v49 crafting, v50 specials, v51 the scanner, v52 rivals, v54 the curve lifts every item alike): a held piece keeps its stats and reads its bonuses from its unique and its set');
+  assert.equal(SAVE_VERSION, 56, 'no save bump since v45 for sets (v46 is the subclass pick, v47 components, v48 Indemnity, v49 crafting, v50 specials, v51 the scanner, v52 rivals, v54 the curve lifts every item alike, v55 fills them, v56 refills them on the tiers): a held piece keeps its stats and reads its bonuses from its unique and its set');
   // A Wrecking Crew found before, at its old levels and bases.
   const OLD = { crowbar: ['exploit-chain', 15, { damage: [15, 19] }], 'det-cord': ['loader', 20, { damage: 9, signal: 40, payload: 4 }], 'hard-hat': ['ghost-shell', 26, { signal: 70, regen: 15, restore: 30 }], 'blast-map': ['implant', 32, { damage: 6, signal: 30 }] };
   const s = as('breaker', 'demolitionist', 32);

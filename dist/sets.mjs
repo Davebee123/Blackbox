@@ -451,7 +451,7 @@ export const SET_HOOKS = {
     const share = total(custom(s, 'crew-share'));
     if (share) for (const a of before.allies) {
       const healed = defender(a.st).integrity - a.integrity, shielded = (a.st.encounter?.shield || 0) - a.shield;
-      if (healed > 0) heal(s, Math.max(1, Math.round((healed * share) / 100)), `Mesh (3) from ${a.who}`);
+      if (healed > 0) heal(s, Math.max(1, Math.round((healed * share) / 100)), `Mesh (3) from ${a.who}`, { potent: true }); // a share of a heal already sized
       if (shielded > 0) e.shield = (e.shield || 0) + Math.max(1, Math.round((shielded * share) / 100));
     }
   },

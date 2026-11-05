@@ -8,9 +8,9 @@ import OPERATOR from './dist/classes/operator.mjs';
 CONFIG.tells = false; // these check skill numbers; tells.test.mjs checks the tells
 
 // The balance run at the end plays with the real numbers: keep them before these tests flatten them.
-const REAL = { baseCrit: CONFIG.baseCrit, enemyCrit: CONFIG.enemyCrit, partToughness: CONFIG.partToughness, enemyRamp: CONFIG.enemyRamp, misses: CONFIG.misses, edges: CONFIG.edges, powerPerLevel: CONFIG.powerPerLevel, levelLine: CONFIG.levelLine, gap: CONFIG.gap };
+const REAL = { baseCrit: CONFIG.baseCrit, enemyCrit: CONFIG.enemyCrit, partToughness: CONFIG.partToughness, enemyRamp: CONFIG.enemyRamp, misses: CONFIG.misses, edges: CONFIG.edges, powerPerLevel: CONFIG.powerPerLevel, levelLine: CONFIG.levelLine, ownPerLevel: CONFIG.ownPerLevel, gearFill: CONFIG.gearFill, gap: CONFIG.gap };
 // Exact numbers: no crits, no misses, base part numbers, flat power, no level gap; edges off unless a test turns one on.
-Object.assign(CONFIG, { baseCrit: 0, enemyCrit: 0, partToughness: 1, enemyRamp: 0, misses: false, edges: false, powerPerLevel: 0, levelLine: 0, gap: { dealt: 0, taken: 0, floor: 1, below: 0 } });
+Object.assign(CONFIG, { baseCrit: 0, enemyCrit: 0, partToughness: 1, enemyRamp: 0, misses: false, edges: false, powerPerLevel: 0, levelLine: 0, ownPerLevel: 0, gearFill: [[1, 1]], gap: { dealt: 0, taken: 0, floor: 1, below: 0 } });
 (await import('./dist/data.mjs')).LOADOUT.specRanks = 0; // the kit talent's two free ranks (progression.mjs): off, for exact numbers
 
 // A level-50 Operator in a quiet cryptjack fight (Pulse and Encryptor), with the dev kit: every skill

@@ -83,12 +83,13 @@ export function build(s, cls, b, opts) {
   // the level implants start to drop (item level 15). From the subclass, each carries the stat its
   // player chases (the subclass's `chase` list in turn: Restore for a Sysop, Payload for a burn or
   // helper class), as a player would build; a white has no affix to carry one. Services: the bracket's set.
+  // opts.gearLevel: the protocols rolled at another item level (gear you've outgrown), in the same slots.
   if (!opts.noGear) {
-    const rarity = opts.rarity || 'tuned';
+    const rarity = opts.rarity || 'tuned', G = Math.max(1, opts.gearLevel || b.level);
     for (let i = 0; i < protocolSlots(b.level); i++) {
-      if (SLOT_KINDS[i] === 'implant' && b.level < 15) continue;
+      if (SLOT_KINDS[i] === 'implant' && G < 15) continue;
       const stat = opts.randomGear ? undefined : chaseStat(kit?.chase, i, rarity);
-      const it = addItem(s, rollItem(seeded(b.level * 100 + i + (opts.gearSeed || 0) * 7919), { level: b.level, rarity, group: SLOT_KINDS[i], stat }));
+      const it = addItem(s, rollItem(seeded(G * 100 + i + (opts.gearSeed || 0) * 7919), { level: G, rarity, group: SLOT_KINDS[i], stat }));
       command(s, 'load ' + it.id);
     }
   }

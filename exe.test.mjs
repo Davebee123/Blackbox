@@ -147,6 +147,7 @@ test('Replicator.exe hatches two; Encryptor.exe leaves your encryption on, a ste
   assert.ok(stack >= 2 * en.attack.amount, 'two Encrypts on');
   assert.ok(stack > 0);
   Object.assign(en, { armor: 0, integrity: 1, patchAt: 99 });
+  Object.assign(s.server, { integrity: 1000, max: 1000 }); // room for the encryption (floor 4's step) to tick
   step(s, 'spike encryptor');
   assert.equal(s.encounter.drain, en.attack.amount, 'broken, it drains');
   assert.equal(s.encounter.encrypt, stack - en.attack.amount, 'one step lighter after the tick');

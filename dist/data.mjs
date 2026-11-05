@@ -12,20 +12,18 @@ import { rollExe, makeExe, EXE, EXE_ROLL } from './exe.mjs';
 import { crewOf, buildAuthor, bossAuthor } from './authors.mjs';
 
 export const CONFIG = {
-  // Heals you cast and damage over time (burns, helpers) keep this share of the level line's growth (levelLine)
-  // and all of the lift above it; the rest comes from gear (Restore, Payload), so a built healer or burn class outscales a bare one.
+  // Heals you cast keep this share of the level line's growth (levelLine) and all of the lift above it, off your own
+  // line (docs/scaling.md step 2): no item stat fills a heal; Restore adds to them.
   healLevel: 0.5,
-  dotLevel: 0.5,
   cycleMs: 8000, // default; players pick a speed below
   speeds: { relaxed: 12000, normal: 8000, fast: 5000 },
   // Server
   maxIntegrity: 100,
   scramble: { chance: 0.25, self: 0.5 }, // Ghostroot's Scrambler: while you're Scrambled, each attack may hit you instead, at half
-  // Level gap, WoW-style: something above you takes less from you (−7% a level past the first,
-  // never under 40%) and hits you harder (+10% a level past the first), so orange (3–4 up) is a
-  // real fight and red a gamble.
+  // Level gap, WoW-style, from the first level up: something above you takes 5% less from you a level (never under
+  // 40%) and hits you 6% harder, on top of its own level's numbers, so +1 costs more, +3 is a coin flip and +5 a loss.
   // Below you, a little the other way (3% a level, up to +15% dealt / −30% taken).
-  gap: { dealt: 0.07, taken: 0.1, floor: 0.4, below: 0.03 },
+  gap: { dealt: 0.05, taken: 0.06, floor: 0.4, below: 0.03 },
   phaseBounce: 0.15, // Flicker: 15% of your command's hit on an out-of-phase part bounces back at you
   enrage: 1.3, // Bricker: a part under half Integrity hits this much harder
   linked: 0.33, // Linked parts (v2+): the share of a broken part's hit its survivor takes on (a half broke Breakers on v2 Ghostroots)
@@ -40,17 +38,39 @@ export const CONFIG = {
   enemyCrit: 0.1,
   // Misses, Classic-style: against a same-level target, 5% of damaging hits miss; each level
   // the target is above you adds 1%, each level below takes 1% off (never under 0). Your
-  // Accuracy (and the defender's Evasion) adjust it. A miss still spends the cooldown.
+  // Accuracy (and the defender's Evasion) adjust it. A miss still spends the cooldown. Resists: a part above
+  // you resists your delays, stuns, jams and statuses resist% a level (Accuracy doesn't help), cooldown spent too.
   misses: true,
   baseMiss: 5,
   maxMiss: 60,
+  resist: 10, // % a level a part above you resists your delays and statuses (combat.mjs resistChance)
+  maxResist: 75,
   // Power: every level, players' and enemies' numbers grow this much, compounding (level 1 = the base numbers),
   // so a mob a few levels below you is clearly weaker and one ten below is trivial (docs/scaling.md).
   powerPerLevel: 0.06,
   // The level line: 4% a level, linear, the curve the game's flat numbers were tuned on. What grows only partly with
-  // level (heals and burns: healLevel, dotLevel; gear's edge: gear.mjs ITEM_CURVE) is measured on it, and lift()
+  // level (gear's edge: gear.mjs ITEM_CURVE) is measured on it, and lift()
   // carries it up to power().
   levelLine: 0.04,
+  // Gear carries your power (docs/scaling.md step 2): your own numbers (skill damage, base Signal, heals, shields) grow
+  // with power() to level ownFrom (the first levels play as they did), then ownPerLevel a level; mobs keep compounding.
+  // Item stats that stand in for what level no longer gives (gear.mjs FILLS) are × gearFill at their item level
+  // ([level, fill] points, linear between), so a fight at your level in its blues costs what it did.
+  ownPerLevel: 0,
+  ownFrom: 6,
+  // WoW's coefficients (combat.mjs gearDamage, gearTick): gear Damage counts in full on a skill hit of damageRef (Spike's)
+  // and on a burn tick or helper hit of tickRef, Payload on a tick of dotRef, all at your level; a bigger hit gets more of
+  // it, a smaller one less. A typical 14 tick takes about a third of Damage's share and half of Payload's, so a burn or
+  // helper class gains about the share of its damage from gear a skill-hit one does (docs/scaling.md).
+  damageRef: 25,
+  tickRef: 50,
+  dotRef: 28,
+  // Reshaped with the floor tiers: more at a floor's first levels where gear carries little (7), less by the late floors' tops.
+  gearFill: [[6, 1], [7, 2.2], [12, 1.45], [15, 1.75], [25, 1.95], [30, 1.66], [37, 1.6], [42, 1.35], [50, 1.25]],
+  // Floors as tiers (docs/scaling.md step 4): a mob takes its floor's step on top of its level, mob a floor, compounding
+  // (mobPower). Gear takes a bigger step, gear a floor, and its fill drifts down drift a level inside its floor
+  // (gearTier), so a floor's first drops outclass the last floor's best and its own gear has aged by the floor's top.
+  floorStep: { mob: 0.15, gear: 0.25, drift: 0.06 },
   // Enemy parts are tougher than one or two of your hits: fights run long enough that attacks
   // land, so gear and planning are what keep you standing.
   partToughness: 1.7,
@@ -61,6 +81,18 @@ export const CONFIG = {
   // tuned against the gear you're likely to have, so a level is a grind until an item lands.
   runHp: 1.4, // × part Integrity on top of partToughness
   runDamage: 2.1, // × enemy attacks
+  // Fight length (docs/scaling.md step 3): a Signal fight's Integrity × hp and its hits × dmg, by enemy level (runLate
+  // points: linear between, flat after the last), so a fight at your level in its blues runs longer for about the Signal
+  // it cost before. Steeper late: your damage outgrows a mob's Integrity with level, and a fight bound by its ◆ is as long
+  // ten levels down as at your level. boss: a solo boss's on top, unless it has its own (BOSSES long: its Integrity, hits
+  // and enrage, about 15% past a geared kill). Adds keep their size (addPower). Crew bosses (raid.mjs) and breaches (their
+  // own pace) skip it.
+  length: { hp: [[1, 2.2], [10, 2.5], [18, 2.3], [30, 3.5], [45, 5.5]], dmg: [[1, 0.42], [10, 0.4], [18, 0.5], [30, 0.42], [45, 0.33]], boss: { hp: 1.4, dmg: 0.45 },
+    // heal: your sustain's potency in such a fight (combat.mjs potency): every heal you take and your skills' flat shields,
+    // by the virus's level, so a longer fight doesn't hand a healer or a tank twice the casts against the same damage
+    // (0.6 of the hits' factor). drawn: a heal drawn from what you deal (lifesteal, Leech, Reclaim) is this share of
+    // 1 / hp, the Integrity it draws on (without it the Sysop alone lost nothing at 20 and 30, and won five levels up).
+    heal: [[1, 0.25], [10, 0.24], [18, 0.3], [30, 0.25], [45, 0.2]], drawn: 0.5 },
   thirdTrim: 0.85, // a family's third part (Lockbox, Mirror, Decoy) comes out of the other two's Integrity
   ward: 0.25, // Lockbox: the warded part loses at most this share of its max a cycle
   wardHeld: 0.5, // Lockbox: what the cap holds back isn't lost; the Lockbox holds it, and when it breaks this share lands on the partner at once (docs/puzzle-levers.md 3.4)
@@ -138,10 +170,6 @@ export const CONFIG = {
   trapSignal: 10, // pulling honeypot bait
   // Worm fragments
   rearmMax: 3, // the Bouncer's Keyring re-arms this many times, then overheats
-  // The spike cap (docs/genome.md rule 5, as the designer set it in docs/kits.md 11). A solo boss's single landing on
-  // you, charged or plain, never takes more than 60% of your max Signal (Integrity at home), so it hurts but never
-  // one-shots you. A wild virus's or a guard's charge stops at 45% (tells.mjs). Crew bosses (raid.mjs) have their own rules.
-  spikeCap: { wild: 0.45, boss: 0.6 },
   fragmentIntegrity: 18, // no armor: one Spike breaks one
   fragmentDamage: 3,
   fragmentCap: 3,
@@ -946,8 +974,18 @@ export const line = (level) => 1 + CONFIG.levelLine * (Math.max(1, level) - 1);
 export const lift = (level) => power(level) / line(level);
 // A flat number at a level: n × lift, whole, never under 1.
 export const lifted = (n, level) => Math.max(1, Math.round(n * lift(level)));
-// Enemies match you level for level (no soft start: the first fights should cost something).
-export const mobPower = (level) => power(level) * 1;
+// Your own line (CONFIG.ownPerLevel): what your level alone gives you.
+export const own = (level) => { const L = Math.max(1, level), F = Math.max(1, CONFIG.ownFrom || 1); return power(Math.min(L, F)) * (1 + CONFIG.ownPerLevel * Math.max(0, L - F)); };
+// Gear's fill at an item level (CONFIG.gearFill), and a flat item number lifted and filled.
+// The floor tier of gear at an item level (CONFIG.floorStep): its floor's step (floorFor), less the drift for each level
+// past the floor's first. Floor 1's gear is as it was (the first levels' tuning).
+export const gearTier = (level) => { const L = Math.max(1, level), f = floorFor(L), F = CONFIG.floorStep; return f < 2 ? 1 : (1 + F.gear) ** (f - 1) * (1 - F.drift) ** (L - bandOf(f)[0]); };
+export const gearFill = (level) => runLate(level, CONFIG.gearFill) * gearTier(level);
+export const filled = (n, level) => Math.max(1, Math.round(n * lift(level) * gearFill(level)));
+// Enemies match you level for level (no soft start: the first fights should cost something), and take their floor's
+// step (CONFIG.floorStep.mob): the floor they're on when it's known, else the one their level is on. A breach's fights
+// (overrides.short) keep their own pace without it, as they skip fight length.
+export const mobPower = (level, floor = floorFor(level)) => power(level) * (1 + CONFIG.floorStep.mob) ** (Math.min(FLOORS.length, Math.max(1, floor || 1)) - 1);
 
 // ---------- crew bosses (raid.mjs) ----------
 // Each phase gives every role a job (docs/bosses.md has the review sheet). Mechanic kinds and their fields
@@ -1020,7 +1058,9 @@ const COLDWALLET = {
 // unique chance. Only in Pit folders, never on the way to anything you need.
 // Bosses: a solo fight with phases. hp and dmg scale the whole virus; at each phase's share of its
 // total Integrity it does something (re-arm every part, call in a Sentry, attack faster), and from
-// enrageAt every attack lands every cycle, a quarter harder. healerDmg (optional): damage that steps up by
+// enrageAt every attack lands every cycle, a quarter harder. long: on your Signal (fight length, CONFIG.length), its
+// Integrity and hits in place of CONFIG.length.boss's, fitted so it runs 30 to 35 cycles for about the Signal it cost
+// before, and its enrage, about 15% past a geared kill (enrageAt stays a breach's). healerDmg (optional): damage that steps up by
 // level (runLate points). raid: a crew boss on the group boss framework (raid.mjs, the farm's three): its
 // phases are mechanics with target rules and telegraphs, and its own parts hit softly (dmg).
 // A strain boss (two parts, its strain's rule) is soft at 10 and hard to keep up with by 30: its hits step with level.
@@ -1033,20 +1073,20 @@ export const BOSSES = {
   // P4 (acts.mjs, docs/puzzle-fights.md 7): a P4 boss plays in three acts, each from a tick on its ♛ part. acts: its beat
   // (backlash, copy, bend, broadcast or collect), every and first its rhythm; a phase's every quickens it. The Resident's are by family: the
   // worm's and the ransomware's are built, the ghostroot's keeps the old phase until P4's next batch.
-  resident: { name: 'Resident', hp: 1.4, dmg: 1, enrageAt: 18, phases: [{ at: 0.5, do: ['rearm'], say: 'The Resident re-arms every part.' }],
+  resident: { long: { hp: 1.6, dmg: 0.54, enrageAt: 36 }, name: 'Resident', hp: 1.4, dmg: 1, enrageAt: 18, phases: [{ at: 0.5, do: ['rearm'], say: 'The Resident re-arms every part.' }],
     acts: { worm: { beat: 'backlash', every: 4, first: 3, hp: 1.1, enrageAt: 24 }, ransomware: { beat: 'backlash', every: 4, first: 4, hp: 1.1, enrageAt: 24 } },
     actPhases: [{ at: 0.5, do: [], every: 3, say: 'The Resident quickens. Its Backlash comes every 3 cycles.' }, { at: 0.25, do: ['faster'], say: 'The Resident gets desperate. Every attack comes a cycle sooner.' }] },
   // The three solo bosses (docs/solo-bosses.md) play in acts too: each has a part and a rule of its own, its beat on that
   // part (acts.mjs), and a mechanic an act, from its ♛ part's ticks (combat.mjs bossPhases).
   // RELAY-KING (run.mjs): a worm boss in SPRAWL-00's /net from level 3, back every half hour. Its Relay's Broadcast grows
   // for each fragment on the board (a Fan-in's lift); at 50% the ♛ hops to its healthiest part, at 25% the Flood.
-  relayking: { name: 'RELAY-KING', family: 'worm', hp: 1.25, dmg: 1, enrageAt: 16, acts: { beat: 'broadcast' },
+  relayking: { long: { hp: 1.05, dmg: 1.6, enrageAt: 36 }, name: 'RELAY-KING', family: 'worm', hp: 1.25, dmg: 1, enrageAt: 16, acts: { beat: 'broadcast' },
     extra: [{ id: 'relay', name: 'Relay', integrity: 30, armor: 1, loot: 'Crown Relay', fanin: 1, broadcast: true, attack: { name: 'Broadcast', effect: 'damage', amount: 3, interval: 4, first: 5 } }],
     signature: { name: 'Broadcast', rule: 'The Relay\'s Broadcast hits harder for each fragment on the board. At 50% the ♛ hops to its healthiest part, and at 25% the Flood starts.' },
     phases: [{ at: 0.5, do: ['hop'], say: 'RELAY-KING reroutes. Its ♛ hops to its healthiest part.' }, { at: 0.25, do: ['flood'], say: 'RELAY-KING floods the network. The Replicator hatches every 2 cycles, and the Relay broadcasts every 3.' }] },
   // REPO MAN (events.mjs): the bounty from level 8. Each command a ◆ absorbs puts a Lien on its Ledger; the Ledger's
   // Collection hits harder for each Lien and pays them off. Each phase calls a Collection in 3 cycles.
-  repoman: { name: 'REPO MAN', family: 'ransomware', hp: 1.6, dmg: 1, enrageAt: 18, acts: { beat: 'collect' },
+  repoman: { long: { hp: 1.15, dmg: 0.54, enrageAt: 34 }, name: 'REPO MAN', family: 'ransomware', hp: 1.6, dmg: 1, enrageAt: 18, acts: { beat: 'collect' },
     extra: [{ id: 'ledger', name: 'Ledger', integrity: 32, armor: 2, loot: 'Ledger Page', lien: 1, attack: { name: 'Collection', effect: 'damage', amount: 3, interval: 5, first: 6 } }],
     signature: { name: 'Lien', rule: 'Each command a ◆ absorbs puts a Lien on the Ledger. Its Collection hits harder for each Lien, then clears them. Each phase calls a Collection in 3 cycles.' },
     phases: [{ at: 0.5, do: ['rearm', 'collect'], say: 'REPO MAN repossesses. Every part re-arms, and the Ledger collects in 3 cycles.' }, { at: 0.25, do: ['interest', 'collect'], say: 'REPO MAN compounds the interest. Each Lien counts twice, and the Ledger collects in 3 cycles.' }] },
@@ -1058,14 +1098,14 @@ export const BOSSES = {
   coldwallet: { name: 'COLDWALLET', family: 'ghostroot', hp: 8.8, dmg: 0.45, enrageAt: 18, phases: [], raid: COLDWALLET },
   // HOLLOW CHOIR (events.mjs): a ghostroot boss from level 10 that sings in rounds. A Mimic from the start; at 50% a
   // second voice, beating two cycles behind the first; at 25% the Round: each beat plays back your last three commands.
-  choir: { name: 'HOLLOW CHOIR', family: 'ghostroot', third: 'mimic', hp: 1.4, dmg: 1, enrageAt: 16, acts: { beat: 'copy' }, signature: { name: 'Canon', rule: 'Its Mimic copies your command on its beat. At 50% a second voice beats 2 cycles behind the first, and at 25% each beat plays back your last three commands.' },
+  choir: { long: { hp: 0.95, dmg: 1.6, enrageAt: 40 }, name: 'HOLLOW CHOIR', family: 'ghostroot', third: 'mimic', hp: 1.4, dmg: 1, enrageAt: 16, acts: { beat: 'copy' }, signature: { name: 'Canon', rule: 'Its Mimic copies your command on its beat. At 50% a second voice beats 2 cycles behind the first, and at 25% each beat plays back your last three commands.' },
     phases: [{ at: 0.5, do: ['fork:mimic', 'voice'], say: 'A second voice joins the Hollow Choir, two beats behind the first.' }, { at: 0.25, do: ['round'], say: 'The Hollow Choir sings the round. Each beat plays back your last three commands.' }] },
   // Native bosses (network.mjs): each network rolls one of these for its lair, a rogue server of its own. Solo bosses
   // on the tells framework: every tell open at their level, a signature charge of their own (TELLS, TELL_SETS by id;
   // a strain boss renames its strain's charge), a third part they always bring (third), and phases. Their drops are
   // their network's native uniques (BOSS_LOOT odds and pity).
-  'nb-deadbolt': { name: 'DEADBOLT', family: 'ransomware', third: 'mutex', native: true, lair: 'DEADBOLT-VAULT', hp: 1.25, dmg: 1, enrageAt: 18, about: 'A Mutex locks its Encryptor. At 60% Integrity it re-arms every part, and at 30% a second Mutex throws a fresh lock.', phases: [{ at: 0.6, do: ['rearm'], say: 'DEADBOLT re-arms every part.' }, { at: 0.3, do: ['spawn:mutex'], say: 'DEADBOLT throws a second Mutex. The Encryptor is locked again.' }] },
-  'nb-tripmine': { name: 'TRIPMINE', family: 'ransomware', third: 'tripwire', native: true, lair: 'TRIPMINE-YARD', hp: 1.6, dmg: 1, enrageAt: 18, about: 'If its Tripwire breaks first, the other parts go loud. Below level 20 it brings a Lockbox instead. At half Integrity, every attack comes 1 cycle sooner.', phases: [{ at: 0.5, do: ['faster'], say: 'TRIPMINE arms the yard. Every attack comes a cycle sooner.' }] },
+  'nb-deadbolt': { long: { hp: 1.6, dmg: 0.38, enrageAt: 37 }, name: 'DEADBOLT', family: 'ransomware', third: 'mutex', native: true, lair: 'DEADBOLT-VAULT', hp: 1.25, dmg: 1, enrageAt: 18, about: 'A Mutex locks its Encryptor. At 60% Integrity it re-arms every part, and at 30% a second Mutex throws a fresh lock.', phases: [{ at: 0.6, do: ['rearm'], say: 'DEADBOLT re-arms every part.' }, { at: 0.3, do: ['spawn:mutex'], say: 'DEADBOLT throws a second Mutex. The Encryptor is locked again.' }] },
+  'nb-tripmine': { long: { hp: 1.95, dmg: 0.36, enrageAt: 35 }, name: 'TRIPMINE', family: 'ransomware', third: 'tripwire', native: true, lair: 'TRIPMINE-YARD', hp: 1.6, dmg: 1, enrageAt: 18, about: 'If its Tripwire breaks first, the other parts go loud. Below level 20 it brings a Lockbox instead. At half Integrity, every attack comes 1 cycle sooner.', phases: [{ at: 0.5, do: ['faster'], say: 'TRIPMINE arms the yard. Every attack comes a cycle sooner.' }] },
   // Since R1 (docs/servers.md 3.5) the interrupt answers a charge for every class, and a boss's charges and casts sit off
   // its ♛ part, so HASHLORD hits harder (dmg 1.5, was 1.1) and MIRRORSHADE too (1.15, was 0.9) to stay in the boss band.
   // Since gear follows one smooth curve (gear.mjs ITEM_CURVE) a player at their floors carries less Signal than the old
@@ -1075,28 +1115,32 @@ export const BOSSES = {
   // at half, when a second Miner spins up (the tax comes back if the first is gone, and the Pool Lock wards it too).
   // Its family stays the Ransomware's though the Hashrat is the Cryptominer's since P3: as a Cryptominer its tells' jitter
   // (keyed on its id) moved its band past the read-over-blind margin (genesim.test.mjs). The designer's call.
-  'nb-hashlord': { name: 'HASHLORD', family: 'ransomware', strain: 'hashrat', native: true, lair: 'HASHLORD-RIG', charge: 'Difficulty Bomb', floor: 16, band: 'B',
+  'nb-hashlord': { long: { hp: 0.6, dmg: 1.55, enrageAt: 40 }, name: 'HASHLORD', family: 'ransomware', strain: 'hashrat', native: true, lair: 'HASHLORD-RIG', charge: 'Difficulty Bomb', floor: 16, band: 'B',
     extra: [{ id: 'poollock', name: 'Pool Lock', integrity: 16, armor: 0, loot: 'Lock Pin', ward: 'miner', wardCommands: true }],
     signature: { name: 'Chain Fork', rule: 'At half Integrity, a second Miner spins up. Its cycle tax returns if the first Miner is gone, and the Pool Lock wards it too while the Lock stands.' },
     // hp 3.9 → 4.3 with the seal a dial and Block Reward on current Integrity (docs/puzzle-levers.md 3.5, 3.6): its band holds (genesim.test.mjs)
     hp: 4.3, dmg: 1.45, healerDmg: HASHLORD_LATE, enrageAt: 18, about: 'A Hashrat boss. While its Miner stands, your cooldowns tick down only every other cycle. A Pool Lock wards the Miner against your commands. Burns and helpers deal full damage. At 60% Integrity it re-arms every part, and at half the Chain Fork spins up a second Miner.', phases: [{ at: 0.6, do: ['rearm'], say: 'HASHLORD re-arms every part.' }, { at: 0.5, do: ['spawn:miner'], say: 'HASHLORD forks the chain. A second Miner spins up.' }] },
-  'nb-backorifice': { name: 'BACK ORIFICE', family: 'worm', third: 'c2', native: true, lair: 'BACKORIFICE-C2', hp: 1.3, dmg: 0.95, enrageAt: 17, about: 'A C2 Node commands its fragments. At half Integrity, every attack comes 1 cycle sooner, and at 25% a Mirror twins the Replicator.', phases: [{ at: 0.5, do: ['faster'], say: 'BACK ORIFICE opens every port. Every attack comes a cycle sooner.' }, { at: 0.25, do: ['spawn:mirror'], say: 'BACK ORIFICE spins up a Mirror. Break it and the Replicator together.' }] },
-  'nb-patchday': { name: 'PATCH TUESDAY', family: 'worm', strain: 'patchwork', native: true, lair: 'PATCHDAY-WSUS', charge: 'Rollup', hp: 2.2, dmg: 1.45, healerDmg: STRAIN_BOSS_LATE, enrageAt: 18, about: 'A Patchwork boss. Its Patcher heals the most damaged part, and takes over the Surge if its Pulse Node breaks first. At 60% Integrity it re-arms every part, and at 30% every attack comes 1 cycle sooner.', phases: [{ at: 0.6, do: ['rearm'], say: 'PATCH TUESDAY re-arms every part.' }, { at: 0.3, do: ['faster'], say: 'PATCH TUESDAY forces a reboot. Every attack comes a cycle sooner.' }] },
-  'nb-floodwall': { name: 'FLOODWALL', family: 'worm', strain: 'floodgate', native: true, lair: 'FLOODWALL-SLUICE', charge: 'Storm Surge', hp: 1.6, dmg: 0.95, healerDmg: STRAIN_BOSS_LATE, enrageAt: 18, about: 'A Floodgate boss. Its Flooder attacks every cycle, harder each time, and any delay resets it. At half Integrity it re-arms every part.', phases: [{ at: 0.5, do: ['rearm'], say: 'FLOODWALL re-arms every part.' }] },
+  'nb-backorifice': { long: { hp: 1.4, dmg: 1.25, enrageAt: 37 }, name: 'BACK ORIFICE', family: 'worm', third: 'c2', native: true, lair: 'BACKORIFICE-C2', hp: 1.3, dmg: 0.95, enrageAt: 17, about: 'A C2 Node commands its fragments. At half Integrity, every attack comes 1 cycle sooner, and at 25% a Mirror twins the Replicator.', phases: [{ at: 0.5, do: ['faster'], say: 'BACK ORIFICE opens every port. Every attack comes a cycle sooner.' }, { at: 0.25, do: ['spawn:mirror'], say: 'BACK ORIFICE spins up a Mirror. Break it and the Replicator together.' }] },
+  'nb-patchday': { long: { hp: 1.45, dmg: 0.59, enrageAt: 34 }, name: 'PATCH TUESDAY', family: 'worm', strain: 'patchwork', native: true, lair: 'PATCHDAY-WSUS', charge: 'Rollup', hp: 2.2, dmg: 1.45, healerDmg: STRAIN_BOSS_LATE, enrageAt: 18, about: 'A Patchwork boss. Its Patcher heals the most damaged part, and takes over the Surge if its Pulse Node breaks first. At 60% Integrity it re-arms every part, and at 30% every attack comes 1 cycle sooner.', phases: [{ at: 0.6, do: ['rearm'], say: 'PATCH TUESDAY re-arms every part.' }, { at: 0.3, do: ['faster'], say: 'PATCH TUESDAY forces a reboot. Every attack comes a cycle sooner.' }] },
+  'nb-floodwall': { long: { hp: 2.3, dmg: 0.158, enrageAt: 31 }, name: 'FLOODWALL', family: 'worm', strain: 'floodgate', native: true, lair: 'FLOODWALL-SLUICE', charge: 'Storm Surge', hp: 1.6, dmg: 0.95, healerDmg: STRAIN_BOSS_LATE, enrageAt: 18, about: 'A Floodgate boss. Its Flooder attacks every cycle, harder each time, and any delay resets it. At half Integrity it re-arms every part.', phases: [{ at: 0.5, do: ['rearm'], say: 'FLOODWALL re-arms every part.' }] },
   // MIRRORSHADE, rebuilt (GAME_RULES.md "Solo bosses"): NULL CHOIR's, from level 12. One feedback amplifier (the Mimic) on its Scramble,
   // a plain charge (Glass Cut), and the Doppelganger at half: the Mimic stops recording and takes the shape of the first part
   // you broke, or of the Pulse Node. At 12 and 13 its Scrambler is trimmed (trim): ◆3, and a Scramble every 5 cycles.
   // mimic: while you're Scrambled its Mimic plays your hit back twice over (tells.mjs mimicLands). Its beats fall in the
   // Scramble, and with the class kits' openers going quiet there by habit, a plain playback cost a blind player too little.
-  'nb-mirrorshade': { name: 'MIRRORSHADE', family: 'ghostroot', third: 'mimic', native: true, lair: 'MIRRORSHADE-HALL', floor: 12, band: 'A',
+  // Its long size refit with the floor tiers (fought at 12, floor 2's top): 1.45 and 0.8 left a reader 38%; now 72%.
+  'nb-mirrorshade': { long: { hp: 1.25, dmg: 0.6, enrageAt: 35 }, name: 'MIRRORSHADE', family: 'ghostroot', third: 'mimic', native: true, lair: 'MIRRORSHADE-HALL', floor: 12, band: 'A',
     trim: { below: 14, part: 'scrambler', armor: 3, interval: 5 },
     signature: { name: 'Doppelganger', rule: 'At half Integrity, the Mimic stops recording and takes the shape of the first part you broke, with its attack and its ◆. If you have not broken one, it takes the shape of the Pulse Node.' },
     hp: 1.34, dmg: 1.08, mimic: 2, enrageAt: 17, about: 'A Mimic plays your commands back at you on its beat, at double damage while you are Scrambled. At 60% Integrity it re-arms every part, and at half the Mimic stops recording and becomes a Doppelganger of the first part you broke.', phases: [{ at: 0.6, do: ['rearm'], say: 'MIRRORSHADE re-arms every part.' }, { at: 0.5, do: ['doppelganger'], say: 'MIRRORSHADE\'s Mimic stops recording and takes a shape.' }] },
-  'nb-sleepwalker': { name: 'SLEEPWALKER', family: 'ghostroot', strain: 'sleeper', native: true, lair: 'SLEEPWALKER-WARD', charge: 'Night Terror', hp: 1.5, dmg: 1, healerDmg: STRAIN_BOSS_LATE, enrageAt: 18, about: 'A Sleeper boss. Dormant until you hit it. Then its Cell sounds the Alarm. At half Integrity it re-arms every part.', phases: [{ at: 0.5, do: ['rearm'], say: 'SLEEPWALKER wakes all the way. Every part re-arms.' }] },
-  'nb-echolalia': { name: 'ECHOLALIA', family: 'ghostroot', strain: 'echo', native: true, lair: 'ECHOLALIA-CHAMBER', charge: 'Last Word', hp: 1.6, dmg: 1, healerDmg: STRAIN_BOSS_LATE, enrageAt: 18, about: 'An Echo boss. Every hit that gets through to you repeats 1 cycle later at half damage. At 60% Integrity it re-arms every part, and at 30% every attack comes 1 cycle sooner.', phases: [{ at: 0.6, do: ['rearm'], say: 'ECHOLALIA re-arms every part.' }, { at: 0.3, do: ['faster'], say: 'ECHOLALIA starts talking over you. Every attack comes a cycle sooner.' }] },
+  'nb-sleepwalker': { long: { hp: 2.5, dmg: 0.6, enrageAt: 34 }, name: 'SLEEPWALKER', family: 'ghostroot', strain: 'sleeper', native: true, lair: 'SLEEPWALKER-WARD', charge: 'Night Terror', hp: 1.5, dmg: 1, healerDmg: STRAIN_BOSS_LATE, enrageAt: 18, about: 'A Sleeper boss. Dormant until you hit it. Then its Cell sounds the Alarm. At half Integrity it re-arms every part.', phases: [{ at: 0.5, do: ['rearm'], say: 'SLEEPWALKER wakes all the way. Every part re-arms.' }] },
+  'nb-echolalia': { long: { hp: 2.4, dmg: 0.59, enrageAt: 34 }, name: 'ECHOLALIA', family: 'ghostroot', strain: 'echo', native: true, lair: 'ECHOLALIA-CHAMBER', charge: 'Last Word', hp: 1.6, dmg: 1, healerDmg: STRAIN_BOSS_LATE, enrageAt: 18, about: 'An Echo boss. Every hit that gets through to you repeats 1 cycle later at half damage. At 60% Integrity it re-arms every part, and at 30% every attack comes 1 cycle sooner.', phases: [{ at: 0.6, do: ['rearm'], say: 'ECHOLALIA re-arms every part.' }, { at: 0.3, do: ['faster'], say: 'ECHOLALIA starts talking over you. Every attack comes a cycle sooner.' }] },
 };
 export const NATIVE_BOSSES = Object.keys(BOSSES).filter((k) => BOSSES[k].native);
 export const ENRAGE = { dmg: 1.25, warn: 3 };
+// Boss rounds (docs/scaling.md step 5, WoW's damage check): a solo boss fights in rounds of `every` cycles, and each round
+// its hits are × (1 + grow) the last's (combat.mjs roundOf). A slow kill meets a round it can't survive.
+export const ROUNDS = { every: 4, grow: 0.08 };
 // A boss's loot (WoW's dungeon bosses, combat.mjs bossLoot): one item every kill, a blue at its level or a yellow
 // `yellow` of the time, and its uniques (two each, content/items.mjs source kind 'boss'; a native boss, its network's):
 // `chance` a kill, `pity` more for each kill that gave none, back to `chance` on a drop (the log, the Collection and
@@ -1107,7 +1151,8 @@ export const BOSS_LOOT = { chance: 0.15, pity: 0.05, yellow: 0.25, raid: { chanc
 // Elites are puzzles (docs/puzzle-fights.md P3): Integrity and hits down (5.2 and 1.3 before) until the planner wins 85%
 // of them, the difficulty back as their clash (parts.mjs, genes.mjs CLASHES). A server room's elite takes these too.
 // sizedDmg: the hits of an elite sized on its own (a champion, a feud, the farm's packs: eliteHp), as before P3, with no clash.
-export const ELITE = { hp: 1.5, dmg: 0.7, sizedDmg: 1.3, armor: 1, xp: 3, share: 1 / 3, goneMs: 30 * 60000 }; // goneMs: an elite that beats you moves on, and its folder fills again this much later
+export const ELITE = { hp: 1.65, dmg: 0.62, // 1.5 and 0.7 before fight length (CONFIG.length)
+  sizedDmg: 1.3, armor: 1, xp: 3, share: 1 / 3, goneMs: 30 * 60000 }; // goneMs: an elite that beats you moves on, and its folder fills again this much later
 
 // ---------- solo tells (tells.mjs) ----------
 // A tell is a big move a part announces ahead, on its row of the board and in the log, that you plan your interrupts
@@ -1127,23 +1172,22 @@ export const ELITE = { hp: 1.5, dmg: 0.7, sizedDmg: 1.3, armor: 1, xp: 3, share:
 export const TELL = {
   // By the virus's level: how many tells it brings (count: none to level 5, the ticks are the lesson; one from 6;
   // two from 17), how many can be live at once (live), how far ahead each shows (lead), how much bigger a charge is
-  // (mult), the most a charge adds to the hit it rides on as a share of your max (cap; dot: Full Disk's burst a
-  // cycle), and the after-effects of a tell that lands (after: your last skill locked that many cycles; burn:
-  // Corrupted, a share of your max a cycle for 3; hang: your next command doesn't fire).
+  // (mult: its hit × mult; Full Disk's burst a cycle its Encrypt × (mult − 1); no cap, as in WoW), and the
+  // after-effects of a tell that lands (after: your last skill locked that many cycles; burn: Corrupted, a share of
+  // your max a cycle for 3; hang: your next command doesn't fire).
   tiers: [
-    { to: 5, count: 0, live: 1, lead: 3, mult: 2.5, cap: 0.12, dot: 0.03, after: 0, burn: 0, hang: 0 },
-    { to: 9, count: 1, live: 1, lead: 3, mult: 2.5, cap: 0.12, dot: 0.03, after: 1, burn: 0, hang: 0 },
-    { to: 16, count: 1, live: 1, lead: 3, mult: 2.5, cap: 0.18, dot: 0.045, after: 1, burn: 0.03, hang: 0 },
-    { to: 99, count: 2, live: 2, lead: 3, mult: 3, cap: 0.25, dot: 0.06, after: 1, burn: 0.04, hang: 0 },
+    { to: 5, count: 0, live: 1, lead: 3, mult: 2.5, after: 0, burn: 0, hang: 0 },
+    { to: 9, count: 1, live: 1, lead: 3, mult: 2.5, after: 1, burn: 0, hang: 0 },
+    { to: 16, count: 1, live: 1, lead: 3, mult: 2.5, after: 1, burn: 0.03, hang: 0 },
+    { to: 99, count: 2, live: 2, lead: 3, mult: 3, after: 1, burn: 0.04, hang: 0 },
   ],
   castWindow: 2, // a cast can be answered on the cycle it lands and the one before
-  ceiling: 0.6, // a solo boss's tell never lands for more than this share of your max (or the plain hit, if that's bigger); a wild virus's stops at CONFIG.spikeCap.wild (tells.mjs ceilingOf)
-  // An elite brings one more tell (from level 6), and each can cost 15% more (never past the ceiling). A solo boss
+  // An elite brings one more tell (from level 6), and a charge's extra is 15% more (extra). A solo boss
   // brings every tell open at its level, at least `count`. A boss staggers Open like any part, but keeps its clock
   // (delay 0).
-  elite: { count: 1, cap: 1.15, live: 1 }, // live: an elite with a clash has one more at once, and its pile-ups are lifted where a cast is in them (tells.mjs announce)
-  boss: { count: 3, cap: 1.1, delay: 0 },
-  champion: { cap: 1.1 }, // a champion invasion (elite-grade, but sized for one): the usual tells, its charges a little bigger
+  elite: { count: 1, extra: 1.15, live: 1 }, // live: an elite with a clash has one more at once, and its pile-ups are lifted where a cast is in them (tells.mjs announce)
+  boss: { count: 3, extra: 1, mult: 2, delay: 0 }, // a solo boss's charge is its hit × 2: its plain hits carry the pressure, its big move about twice one
+  champion: { extra: 1.1 }, // a champion invasion (elite-grade, but sized for one): the usual tells, its charges a little bigger
 
   castFrom: 10, // casts come with SIGINT
   first: 3, // the first tell lands no sooner than this cycle (a cast and a second charge one later, a seal sealAfter later)
@@ -1385,7 +1429,8 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   const clashes = (g) => compatible([...strain.genes, g]).length > compatible(strain.genes).length;
   if (strain && mutation && MUTATIONS[mutation] && clashes(MUTATIONS[mutation].gene)) mutation = null;
   const unlinked = !!strain && grade >= 2 && clashes('linked');
-  const scale = mobPower(level) * (mutation === 'hasty' ? 0.9 : 1) * (overrides.run ? CONFIG.runHp * (overrides.boss || overrides.elite ? 1 : runLate(level, CONFIG.runLateHp)) : 1);
+  const long = !!overrides.run && !overrides.short && !BOSSES[overrides.boss]?.raid; // fight length (CONFIG.length)
+  const scale = mobPower(level, overrides.short ? 1 : overrides.tier ?? overrides.floor) * (mutation === 'hasty' ? 0.9 : 1) * (overrides.run ? CONFIG.runHp * (overrides.boss || overrides.elite ? 1 : runLate(level, CONFIG.runLateHp)) : 1) * (long ? runLate(level, CONFIG.length.hp) : 1);
 
   // Tougher viruses wear more armor and strike sooner (see THREAT_STEPS).
   const extra = (spec) => (mutation === 'armored' ? 1 : 0) + THREAT_STEPS.armor.filter((x) => threat >= x.threat && (x.part === 'any' || (x.part === 'special') === !!spec.special)).length;
@@ -1442,7 +1487,7 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   // "Viruses"), shared out by role (shareProfile).
   if (rolled2) shareProfile(familyId, family, specs, parts, rolled2, level);
   const step = overrides.run ? (CONFIG.runEarly[level - 1] ?? 1) * (overrides.boss || overrides.elite ? 1 : runLate(level)) : 1;
-  const dmgScale = mobPower(level) * (1 + CONFIG.enemyRamp * (level - 1)) * g.dmg * (overrides.run ? CONFIG.runDamage * step : 1);
+  const dmgScale = mobPower(level, overrides.short ? 1 : overrides.tier ?? overrides.floor) * (1 + CONFIG.enemyRamp * (level - 1)) * g.dmg * (overrides.run ? CONFIG.runDamage * step : 1) * (long ? runLate(level, CONFIG.length.dmg) : 1);
   // Encryption stacks, so it skips the early-game and late steps (they would compound).
   for (const p of parts) if (p.attack && ['damage', 'encrypt'].includes(p.attack.effect)) p.attack.amount = Math.max(1, Math.round(p.attack.amount * dmgScale / (p.attack.effect === 'encrypt' || p.hash || p.twinrig ? step : 1))); // a Rig's Hash climbs like encryption: it skips them too
   for (const p of parts) if (p.attack?.effect === 'heal') p.attack.amount = Math.max(1, Math.round(p.attack.amount * scale * g.hp));
@@ -1480,9 +1525,10 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   }
   // A boss (BOSSES): bigger and a little harder; its phases and enrage timer ride on the virus.
   const boss = BOSSES[overrides.boss] || null, acts = boss?.acts?.beat ? boss.acts : boss?.acts?.[familyId] || null; // a P4 boss's acts (acts.mjs): its own Integrity and enrage
+  const solo = long && boss ? CONFIG.length.boss : { hp: 1, dmg: 1 };
   if (boss) for (const p of parts) {
-    p.max = p.integrity = Math.round(p.max * (overrides.bossHp ?? acts?.hp ?? boss.hp));
-    const dmg = boss.dmg * (boss.healerDmg ? runLate(level, boss.healerDmg) : 1);
+    p.max = p.integrity = Math.round(p.max * (overrides.bossHp ?? acts?.hp ?? boss.hp) * (long ? boss.long?.hp ?? solo.hp : 1));
+    const dmg = boss.dmg * (boss.healerDmg ? runLate(level, boss.healerDmg) : 1) * (long ? boss.long?.dmg ?? solo.dmg : 1);
     for (const k of ['amount', 'hit', 'rampBy']) if (p.attack?.[k] && (k !== 'amount' || ['damage', 'encrypt'].includes(p.attack.effect))) p.attack[k] = Math.max(1, Math.round(p.attack[k] * dmg));
   }
   // Under its trim level a boss's budget trims a part: fewer ◆, a slower attack (MIRRORSHADE's Scrambler at 12 and 13).
@@ -1512,7 +1558,7 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   // Enemy damage can crit, from level 3 (like mutations).
   const crit = level >= SERVER.mutationsFrom ? CONFIG.enemyCrit : 0;
   const author = authorOf({ family: familyId, strain: strainId, boss: overrides.boss || null }, overrides.author);
-  return { id: familyId + '-' + seed, name, family: familyId, strain: strainId, grade, dormant: strain?.dormant ? true : false, art: family.art || familyId, mutation, threat, level, power: dmgScale * (overrides.elite ? eliteDmg : 1), hpPower: scale, crit, threatens: family.threatens, parts, weakPoint, weakKnown: false, ...(overrides.elite ? { elite: true } : {}), ...(rolled2?.clash ? { clash: rolled2.clash } : {}), ...(boss ? { boss: overrides.boss, phases: (boss.acts?.[familyId] ? boss.actPhases : boss.phases).map((x) => ({ ...x, done: false })), enrageAt: acts?.enrageAt ?? boss.enrageAt } : {}),
+  return { id: familyId + '-' + seed, name, family: familyId, strain: strainId, grade, dormant: strain?.dormant ? true : false, art: family.art || familyId, mutation, threat, level, power: dmgScale * (overrides.elite ? eliteDmg : 1), hpPower: scale, addPower: scale / (long ? runLate(level, CONFIG.length.hp) : 1), ...(long ? { long: true } : {}), crit, threatens: family.threatens, parts, weakPoint, weakKnown: false, ...(overrides.elite ? { elite: true } : {}), ...(rolled2?.clash ? { clash: rolled2.clash } : {}), ...(boss ? { boss: overrides.boss, phases: (boss.acts?.[familyId] ? boss.actPhases : boss.phases).map((x) => ({ ...x, done: false })), enrageAt: (long && boss.long?.enrageAt) || (acts?.enrageAt ?? boss.enrageAt) } : {}),
     genes: genome, author, ...unsigned, ...(unlinked ? { unlinked: true } : {}) };
 }
 

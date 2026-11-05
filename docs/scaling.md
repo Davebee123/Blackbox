@@ -77,6 +77,205 @@ built): if a virus below you wore ◆ × (1 − gap ÷ 10), none at ten under, t
 six over 6–7 cycles. A lean rule for the designer to pick, or step 2's longer fights may change the balance of ◆ and
 Integrity enough on their own.
 
+### After step 2 (November 3): gear carries your power
+
+WoW's model. Your own numbers (skill damage, burns, base Signal, shields, talents' Signal) grow with `power` to level 6,
+then stop (`CONFIG.ownFrom`, `ownPerLevel` 0); mobs still compound 6%. Your gear's Damage, Crit Damage, Payload,
+Signal, Regen and Leech are × a fill at their item level (`CONFIG.gearFill`: 1 to 6, 1.46 at 10, 1.77 at 25, 1.52 at
+50), fitted so a level's blues give the Signal and Damage step 1 did. Damage and Payload work like spell power: each hit
+gets them × its size over a reference, so a nuke stays a nuke: Damage on a skill hit over Spike's (`damageRef` 25), on a
+burn tick or helper hit over 50 (`tickRef`), and Payload on top over 28 (`dotRef`). Heals keep step
+1's growth: no gear stat feeds a heal but Restore. In its level's blues, gear is 74% of your Signal at 20 and 88% at 30
+(was 42% and 52%).
+
+Same harness, wild fights at your level; won · cycles · Signal lost (step 1 in brackets):
+
+| You | Its level's blues | Ten levels old | None | Level-10 blues |
+|---|---|---|---|---|
+| 10 | 98% · 10 · 30% (98% · 33%) | 88% · 54% (98% · 38%) | 69% · 68% (94% · 48%) | — |
+| 20 | 100% · 11 · 27% (100% · 30%) | 63% · 71% (85% · 45%) | 13% · 95% (73% · 65%) | (ten old) |
+| 30 | 96% · 10 · 34% (96% · 32%) | 63% · 73% (85% · 50%) | 0% (60% · 75%) | 8% · 94% (63% · 73%) |
+
+At your level in its blues (cycles · Signal lost): 3: 8 · 29%; 10: 10 · 30% (elite 14 · 38%); 18: 11 · 21% (16 ·
+23%); 30: 10 · 34% (12 · 31%); 45: 9 · 28% (11 · 31%). Subclasses alone and their core rotations sit within a few
+points of main; crew bosses at 18 win 72 of 74 tries (72 of 73); the campaign bot reaches level 10 in 11–15 breaches.
+
+**Ticks and helpers (November 4).** With Damage on skill hits only, a burn or helper class's hits gained ×6 from its blues
+at 30 and its ticks ×2.9 (×2.4 against ×2.0 at 18), and in a crew the solo-leaning Demolitionist and Overclocker won
+100% of the farm's boss tries, the Herder 91% and the Hijacker 83%. Now Damage reaches ticks too (`gearTick`), and
+Payload's reference went from 14 to 28 so a burn or helper class alone plays as before: ticks gain ×1.4 · ×2.2 · ×4.5
+at 10 · 18 · 30, against hits' ×1.5 · ×2.4 · ×6.0. Alone, Signal lost at 10 · 18 · 30 (main in brackets): Payload 19 ·
+18 · 23% (19 · 19 · 24), Herder 13 · 20 · 20% (15 · 22 · 28), Hijacker 21 · 29 · 36% (23 · 29 · 38), Sysop 24 · 2 · 7%
+(25 · 3 · 11). As a crew's third member (Lv 18 · 30): Payload 100 · 100%, Herder 97 · 100% (81 · 100), Hijacker
+90 · 100% (65 · 100); the Demolitionist 100 · 100, the Overclocker 97 · 100; the full crew at 18 100% (97%).
+
+Back where they were before step 2: key 1 for the Payload and Herder, the Warden's Throttle, the Payload out-carrying
+the solo ones in a crew. Still held (each test says what it measures): the Herder carries a crew within 2 points of the
+solo ones (99% to the Demolitionist's 100%) and the Hijacker 95% (floor raised from 65% to 90%); the Herder alone at 10
+loses 13% (band floor 15: one fight of 24); the Hijacker's key 1 21% at 18 and its core 21 under its full build at 30;
+the Overclocker 20 of 24 alone at 30; the Sysop 1.95× the pace at 18; the Herder's OOM Kill; Umbrella Policy 5.5. New
+since the tick rule: the Sysop's healers preset 10.7 worse on its own fights, the Herder's swarm preset 0.2 and the
+Payload's 5.8 on the generic fights. They wait on a kit pass after the designer has played it.
+
+**Why the coefficients:** with a flat Damage stat and your level no longer growing hits, every hit is a small base plus
+the same gear Damage, so a nuke and a jab converge (at 30, a 40 hit 282 and a 10 hit 241) and big-hit kits sink (core
+rotations at 30: Demolitionist 51%, main 26%). With burns on your level instead, the Sysop lost 20% alone at 30 and a
+crew won 72 of 93 boss tries.
+
+**Why level 6:** with your own line flat from level 1, gear a few levels old at 5–10 cost a lot (level 5 in starter
+whites: 81% won). From 6, SPRAWL-00 and the first levels play as they did. The cost: at 10, no gear still wins 69%.
+
+**Ten levels old still wins about 60%.** A level's blues must keep up with its mobs, which grow 1.8× in ten levels, so
+gear ten levels old is about 45% of you however little your level gives. WoW is the same while levelling; its wall is
+the tier. Ours is step 4: each floor a gear step, its elites, lair and exit tuned to its own blues.
+
+### After step 3 (November 4): fight length
+
+On your Signal a virus's Integrity is × `CONFIG.length.hp` at its level (2.2 at 1, 2.5 at 10, 2.3 at 18, 3.5 at 30, 5.5
+at 45) and its hits × `length.dmg` (0.42, 0.4, 0.5, 0.42, 0.33): steeper late, where your damage had outgrown a mob's
+Integrity and fights were bound by ◆. Elites ×1.65 Integrity, ×0.62 hits (from 1.5 and 0.7). Each solo boss has its own
+(`BOSSES` long: Integrity, hits, and an enrage about 15% past its geared kill, cycles 31 to 40), fitted to its Signal
+cost on main. The spike cap: 25% of your max from a solo boss (was 60%), 20% from a wild charge (45%); the Backlash
+15–25% (30–60%). Room elites enrage at 17 (9). Adds (fragments, Packages, Droppers) keep their size, breaches keep
+their pace, crew bosses are untouched. The planner breaks a Trojan's Loader first (a sturdier Courier outlasts the chase).
+
+Same harness, at your level in its blues; cycles · Signal lost · the 90th-percentile single hit (main in brackets):
+
+| Level | Ordinary | Elite | Solo boss (won) |
+|---|---|---|---|
+| 3 | 15 · 30% · 18% (8 · 29% · 21%) | 26 · 48% (13 · 48%) | 33 · 65%, 79% (14 · 65%, 71%) |
+| 10 | 15 · 23% · 19% (9 · 27% · 25%) | 27 · 34% (13 · 30%) | 35 · 49%, 75% (14 · 61%, 71%) |
+| 18 | 17 · 23% · 11% (11 · 19% · 15%) | 23 · 13% (15 · 15%) | 34 · 45%, 71% (14 · 52%, 79%) |
+| 30 | 16 · 28% · 13% (10 · 31% · 22%) | 26 · 24% (11 · 25%) | 36 · 33%, 83% (12 · 40%, 88%) |
+| 45 | 16 · 21% · 13% (8 · 24% · 20%) | 26 · 18% (9 · 19%) | 36 · 27%, 79% (11 · 31%, 96%) |
+
+Plain hits now stay under about 12% (main reached 30–41%); what goes past is a charge or a Mimic's playback, capped.
+
+| You | At your level | 3 below | 6 below | 10 below |
+|---|---|---|---|---|
+| 10 | 14 · 19% | 12 · 13% | 8 · 2% | — |
+| 20 | 15 · 23% | 14 · 7% | 11 · 2% | 9 · 3% |
+| 30 | 16 · 25% | 12 · 13% | 10 · 5% | 9 · 0% |
+| 45 | 16 · 20% | 15 · 13% | 12 · 3% | 9 · 3% |
+
+Gear (won · Signal lost): its level's blues 100% · 19–25% at 10, 20, 30; ten levels old at 20 63% · 68% (88% · 62%), at
+30 38% · 73% (63% · 66%); none at 10 67% · 66% (71% · 62%), at 20 8%, at 30 0%. The full crew wins 36 of 36 boss tries at
+18 and 30. The rooms bot maps 6 of 12 medium servers at 10 (12 on main: the Warden's room fights run 25–45 cycles).
+
+**Sustain potency (the designer, November 4: healing too strong; potency and cooldowns, since there is no mana).** A longer
+fight lands less a cycle, so heals and shields went further: alone, the Warden lost 8% at 10, 18 and 30 and the Sysop
+0–8%, and both won five levels up. Now every heal you take and your skills' flat shields are × `length.heal` (0.6 of the
+hits' factor) and a heal drawn from your damage × `length.drawn` ÷ `length.hp` (Reclaim's lifesteal off a mob's whole
+Integrity had healed back all of it). Alone at 10 · 18 · 30: the Sysop 33 · 8 · 21% (24 · 2 · 7% before step 3), the
+Warden 24 · 12 · 12% (27 · 13 · 25%). Five levels up the Sysop wins 1–3 of 8; the Warden still 5–7 (its cuts and blocks
+scale with the hits). Damage dealers: +2 wins about 85% for 50–65% lost, +3 about half, +5 one in eight.
+
+**No damage caps (the designer, November 4: as in WoW).** The spike cap, the tell ceiling, the tiers' caps and the
+Backlash's floor and ceiling are gone: a charge is its hit × `mult`, a Backlash its hit × 2. A solo boss's charge is its
+hit × 2 (`TELL.boss.mult`, was 2.5–3 × 1.1), so its plain hits carry the pressure. The designer found the bosses too easy:
+each solo boss's `long.dmg` is set where the four default subclasses win about 70% at 10, 18 and 30 in blues (FLOODWALL
+and REPO MAN already did; MIRRORSHADE keeps 0.8, where its band at 12 reads 67%: more drops its misreader under 45%). Most bosses' hits rose 1.1 to 5.5×; HASHLORD's (fitted under the cap, every Surge
+at 25%) fell 3 → 1.55. Plain hits now reach 7–13% (p90), HASHLORD's Surge 19–26%; charges land 15–30%, HASHLORD's
+Difficulty Bomb about 45% and RELAY-KING's about 40% at 10. Signal lost 50–90% a boss. A wild charge, no longer stopped
+at 20%, is ×2.5 to ×3 its hit: the Sysop alone loses 25% at 30 (20%), its core rotation 63% (49%), and the Breaker's
+climb to 10 takes 17 breaches (16); each held in its test.
+
+Held (each test says what it measures): the Demolitionist's core rotation 27 points under its full build at 18; five
+second presets (the Payload's swarm +14.7 on the generic fights, the Hijacker's rules −14.6 on its own, the Phantom's
+evasion −7.8, the Herder's swarm +5.6, the Warden's swarm +5.2); the Warden's DMZ pressed in 3 of 24 at 30; ignoring the
+Mimic 32 points; the Herder carrying a crew 97% to the Demolitionist's 100%; the Warden's Circuit Breaker pressed in none of its moments at 30; the Demolitionist's floor at 18 held at 13 (10% with the Kestrel pair); the Infiltrator's climb on seed 7, which from level 19 farms one held server's respawns and meets 2% strains and ICE (15% asked).
+
+### Above your level (November 4)
+
+The designer: one or two levels up should cost 30–50% of your Signal in its blues, +3 often lost, +5 nearly always;
+the Warden won 5–7 of 8 five levels up (one attack in four cycles landed). The gap now counts from +1: 5% less dealt and
+6% more taken a level (`CONFIG.gap`, was 7% and 10% from +2), with the miss chance's +1% a level. A part above you
+resists your delays, stuns, jams and statuses 10% a level (`CONFIG.resist`, up to 75%): the skill does nothing, its
+cooldown is spent, the board says RESISTED.
+
+Scratch harness, wins · Signal lost (a loss is 100%) at Lv 10, 20 and 30 together; the damage dealers are the
+Demolitionist, Phantom and Herder at 16 seeds, the Warden and Sysop at 8:
+
+| | +0 | +1 | +2 | +3 | +5 |
+|---|---|---|---|---|---|
+| Damage dealers | 94% · 36% | 84% · 52% | 76% · 62% | 48% · 78% | 10% · 97% |
+| … in the fights won | 32% | 42% | 51% | 54% | 68% |
+| Warden | 100% · 17% | 96% · 34% | 92% · 41% | 71% · 58% | 29% · 87% |
+| Sysop | 92% · 27% | 79% · 50% | 50% · 71% | 13% · 95% | 0% |
+
+Before: damage dealers 89% · 48% at +1, 76% · 62% at +2, 49% at +3, 13% at +5; the Warden 67% at +5. The mob's own 6% a
+level already makes +1 cost about 10 points more than an even fight (42% in the fights won, against the 30–40% asked):
+less than that would need the gap to help you at +1. The Warden at 30 still wins 3 of 8 at +5 (its cuts and
+Blowback grow with the hits).
+The class sims hold; the breach playtest fell from 45% to 34% a class (acts, gate and core one or two levels up). The playtest is cut since.
+
+### After step 4 (November 4): floors as tiers
+
+A mob takes +15% a floor on top of its level, compounding (`CONFIG.floorStep.mob`, `mobPower`: the floor it's on, else
+its level's; the crew dungeon's, which keeps up with you, its level's; a breach's fights keep their own pace without it). Gear from floor 2 takes +25% a floor and drifts down 6% a level inside its floor (`gearTier`, on
+`gearFill`), and the fill was reshaped (2.2 at 7, 1.45 at 12, 1.95 at 25, 1.35 at 42, 1.25 at 50), so a floor's first
+blue outclasses the last floor's best. Save v56 refills old items on the tiers.
+
+The designer chose the gear-tier sawtooth (November 4). With the same step at a floor's start for mobs, *bottom in the last
+floor's best* can't be easier than *the last floor's top in that same gear*: the mob is one level lower but +15%. So the arc
+is in the floor's own gear: easy on its first drops, 35–45% at its top. Arriving in old gear costs about what the last
+floor's top did, and that's the cue to pick up the new drops.
+
+Scratch harness: the four default subclasses (their mean, then each) and the Sysop, 8 wilds each at the level; wins ·
+Signal lost (a loss is 100%) · cycles. A floor's levels are its `floorFor` ones (floor 2: 7–12):
+
+| Floor | Bottom, last floor's best | Bottom, its own | Top, its own | Top, last floor's best |
+|---|---|---|---|---|
+| 2 (Lv 7, 12; gear 6) | 81% · 53% · 18 | 97% · 21% · 15 | 81% · 46% · 16 | 59% · 62% |
+| 4 (Lv 19, 24; gear 18) | 69% · 55% · 17 | 100% · 13% · 13 | 91% · 38% · 16 | 47% · 76% |
+| 6 (Lv 31, 36; gear 30) | 72% · 52% · 18 | 97% · 25% · 14 | 88% · 40% · 17 | 41% · 73% |
+| Sysop, 2 · 4 · 6 | 60 · 89 · 95% | 12 · 36 · 62% | 93 · 82 · 88% | 100% |
+
+Floors 3, 5, 7 and 8 in their own gear: 24 → 30%, 30 → 42%, 14 → 35%, 10 → 29% (bottom → top). By class at a top the
+Bastion loses 8–18% and the Breaker or Infiltrator 43–66%. The Sysop alone loses 82–93% at a floor's top (it was 27–37%
+at level): a healer leveling solo feels the arc most. Before (no tiers): 30% at the bottom and 17–40% at the top.
+
+Held (each test says what it measures): Lv 18 and 30 are floor tops now, so the Overclocker wins 20 of 24 at 18 and 30,
+the Infiltrator 20 of 24 at 50, the Sysop alone 18 of 24 at 30 (74% and 35% lost over the wider sample) and 18 of 45 of
+its hard slice; natives, set pieces
+and sets keep a 0.7 (sets 0.6) wins floor at 18 and 30, and Kestrel's three-piece moves the average 8.6 at 30; the core
+rotations' gaps (the Demolitionist 35 at 18, the Sysop 53 at 18 and 9 of 17 at 30) and the second presets (the Payload's
+swarm 18.2 on the generic fights, the Phantom's evasion 11.4); the Payload's crew low point a point under the Phantom's;
+the full crew wins 72 of 76 farm boss tries at 18 (the farm, on floor 1 at your level, gives its mobs your level's floor),
+and at 30 the farm is a real check: over 18 and 30 the Herder carries 69% and the Hijacker 61% (the Demolitionist 92%); the Operator's climb on seed 7
+farms the floor below from 10 (40% grey, no strain or ICE from 12); the rooms bot clears 4–6 of 12 of a Lab. MIRRORSHADE
+(fought at 12, floor 2's top) is refit: Integrity 1.45 → 1.25, hits 0.8 → 0.6, a reader 38% → 72%.
+
+### After step 5 (November 4): boss rounds that grow
+
+One number: a solo boss fights in rounds of 4 cycles, and each round its hits are 8% harder than the last round's,
+compounding (`ROUNDS.grow`; ×1.85 by round 9, cycle 33), at home and on your Signal, its enrage behind it. Its bar shows
+the round (R3 ×1.2). No per-boss numbers: each boss keeps its step 3 size, so every boss is harder, the slow kill most.
+(A first cut with a growth per boss and its opening hits refit down, to keep a geared kill's cost, moved the pressure
+around without adding any: 26 numbers, cut.)
+
+Scratch harness: the 13 solo bosses on your Signal (a lair's /core), 10 seeds, Lv 10, 18 and 30 pooled; wins · Signal
+lost · cycles of a win, at each growth (0 is main):
+
+| Growth a round | 0 | 0.05 | **0.08** | 0.12 |
+|---|---|---|---|---|
+| Four default subclasses | 60% · 69% · 33 | 52% · 74% | **47% · 78% · 32** | 41% · 81% |
+| Damage dealers (Demolitionist, Phantom, Herder) | 56% · 74% · 28 | 48% · 78% | **44% · 80% · 27** | 39% · 83% |
+| Warden | 70% · 53% · 46 | 63% · 62% | **55% · 69% · 45** | 46% · 76% |
+| Sysop | 22% · 81% · 65 | 13% · 91% | **9% · 95% · 62** | 3% · 99% |
+| Four default, a 30% slower kill (Integrity ×1.3) | 37% · 82% | 30% · 87% | **25% · 89%** | |
+| Four default, one level under | 30% · 85% | 24% · 89% | **20% · 91%** | |
+
+By level, the four at 10 · 18 · 30: 49 · 53 · 76% → 36 · 37 · 68%. At home (REPO MAN's and HOLLOW CHOIR's events, about 13
+and 18 cycles), the four: REPO MAN 54 → 49%, HOLLOW CHOIR 81 → 72%; the Sysop 93 → 57% and 80 → 57%.
+
+The slow kills pay the most (the Warden −15 points, the Sysop −13, from fewer wins to start with), but every class loses
+some: a damage dealer's geared kill at 27 cycles is round 7, ×1.6. Turn `ROUNDS.grow` to taste; 0.05 is the gentle end.
+
+Held (each test says what it measures): HASHLORD's reader 53% at 16 (the Herder 1 of 12, the Sysop 0) and MIRRORSHADE's
+54% at 12 (misreader 40%; the Warden and the Overclocker 1 of 12), against a 55% floor; the level-10 Breakers beat the
+three-part solo bosses 21 and 18 times in 48 (24 asked); the campaign bot's Breaker takes 18.7 breaches to 10 (18).
+
 ## 2. The WoW model, mapped
 
 | WoW | BLACKBOX |
@@ -87,6 +286,11 @@ Integrity enough on their own.
 | A new expansion's first greens beat last tier's epics | Each floor's gear a step above the last |
 | Dungeon → heroic → raid, each gated by gear from the one before | A floor's servers → its elites → its lair boss and exit |
 | Enrage timers and repeating mechanics | Boss mechanics that grow each round, and a tight enrage |
+| Item level: one number sets an item's stat budget | Item level × the fill (`gearFill`) |
+| Health is mostly Stamina from gear | Signal is mostly gear (step 2: 88% at 30) |
+| An ability is a base plus a coefficient × spell or attack power from gear; a big spell gets more of it | Gear Damage × the skill's size over Spike's (`damageRef`) |
+| A DoT tick or a pet's hit gets its own, smaller coefficient of the same spell power | Gear Damage × the tick's size over 50 (`tickRef`), Payload × it over 28 (`dotRef`) |
+| Heals scale with spell power from gear | Not yet: heals keep step 1's growth with your level |
 
 **The sawtooth, per floor:** you arrive at the band's bottom wearing the last floor's best: strong. The floor's servers
 climb toward its top while its mobs carry the floor's step: it gets harder. Its elites, lair boss and exit are tuned for
@@ -122,7 +326,7 @@ One session each, one after the other (they share the economy, pacing and combat
    number that doesn't keeps its flat form with its value rescaled (never turned into a share): gear stats (anchored at level 50 by `itemPower`, so the low levels
    shrink), flat affixes and uniques (*+6 damage*), heals, shields, Signal, prices and anything shown as a fixed number.
    Events and lairs at their place's level.
-2. **Next: gear carries your power** (decided November 3, section 5.5). Your own numbers (skill damage, base Signal,
+2. **Built (November 3): gear carries your power** (decided November 3, section 5.5; section 1 has the numbers). Your own numbers (skill damage, base Signal,
    heals, shields) grow on a slow line instead of `power`; mobs keep compounding 6%; item stats grow to fill the gap, so
    in level-appropriate blues most of your Signal and damage is gear. Targets at your level, on the harness:
 
@@ -135,10 +339,10 @@ One session each, one after the other (they share the economy, pacing and combat
    Now, at 30: level-30 blues win 100% (29% lost), level-20 blues 92%, level-10 whites or level-1 gear 63% (73% lost):
    your level alone carries you (540 of 1028 Signal is level, the rest gear). The cost: the friction table's "nothing"
    row (60–75%, a win) goes; the low levels (starter gear at 3) must still win; elites, bosses and the class sims are
-   re-measured against the new split. Then step 2.
-3. Fight length: Integrity up, hits down, enrages, the balance targets moved.
-4. Floors as tiers: the mob step and the gear step.
-5. Boss rounds that grow (the solo bosses first, then the lairs as they're built).
+   re-measured against the new split.
+3. **Built (November 4): fight length** (section 1 has the numbers): Integrity up, hits down, enrages, the balance targets moved.
+4. **Built (November 4): floors as tiers** (section 1 has the numbers): the mob step, the gear step and its drift.
+5. **Built (November 4): boss rounds that grow**, the solo bosses (section 1 has the numbers); the lairs' as they're built.
 
 ## 5. Decided
 
@@ -151,3 +355,5 @@ The designer, November 3, 2026:
 4. **Items keep flat values:** *"Don't convert items into %s. Just adjust their flat values."*
 5. **Gear over level:** *"There is no way a level 30 should be winning any fights at level 30 with level 10 gear."*
    *"Level should not contribute to your power as much at all."*
+6. **WoW's coefficients:** gear Damage and Payload scale with each hit's size, like spell power: *"focus the design close
+   to [WoW]"*, *"keep the coefficients and land step 2"*.

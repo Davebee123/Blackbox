@@ -47,6 +47,14 @@ on the cycle it would fire never fires. Only attacks cost you anything. Leave a 
 chit back. From level 6 a virus also announces big moves ahead (**tells**), and the part you've left alone is the one
 that winds up.
 
+**Fight length** (`CONFIG.length`): on your Signal, a fight at your level in its blues runs about 15 cycles, an elite
+about 25, a solo boss 30 to 35, for about the Signal a shorter one cost. A virus's Integrity is ×2.2 at level 1 up to
+×5.5 at 45 and its hits ×0.33 to ×0.5 (steeper late, so a mob ten levels down still falls fast); a plain hit stays
+under about 12% of your max. No hit is capped: each is its attack's own number.
+Your sustain shrinks with it (`potency`): a heal you take and your skills' flat shields are ×0.2 to
+×0.3 (`length.heal`), and a heal drawn from your damage (lifesteal, Leech, Reclaim, Checksum) half of 1 ÷ the Integrity
+factor (`length.drawn`). Adds (fragments, Packages, Droppers), breaches and crew bosses keep their size.
+
 ### Rules, one per layer
 
 | Layer | Rule |
@@ -61,7 +69,8 @@ that winds up.
 | Order | Your command (or your routine's) → your daemons → burns → helpers → heals over time → encryption → attacks due → patches. |
 | Crits | Any hit you land that does damage can crit for +50% (5% base, plus Crit and Crit Damage). Enemy damage attacks crit 10% of the time from enemy level 3. Timeline numbers show the normal hit, after your Block. |
 | Misses | Your damaging skills miss 5% of the time against a same-level enemy, +1% a level it's above you, −1% a level below, less your Accuracy; the HUD shows *you miss N%*. A miss spends the cooldown. Enemy attacks miss you the same way, plus your Evasion (up to 20%). Burns, helpers and utility skills never miss. |
-| Level gap | One level up is about even. Each level an enemy has over you takes 7% off what you deal it (never under 40%) and adds 10% to what it deals you (`CONFIG.gap`); below you, 3% a level the other way (up to +15% dealt, −30% taken). |
+| Level gap | From one level up, each level an enemy has over you takes 5% off what you deal it (never under 40%) and adds 6% to what it deals you (`CONFIG.gap`), on top of its own level's 6%; below you, 3% a level the other way (up to +15% dealt, −30% taken). |
+| Resists | A part above you resists your delays, stuns, jams and statuses (Rate Limit, Throttle, Quarantine, Suspend, SIGINT, Tag and the like) 10% of the time a level, up to 75% (`CONFIG.resist`): the skill does nothing, its cooldown is spent, and the board shows **RESISTED** and a *resisted* tag on the part. Accuracy doesn't help. |
 | Clean | A fight where nothing got through says so. |
 | Idle | Type nothing and you fire key 1 at the last part you hit (from level 5, your routine moves instead: Routines). `hold` does nothing. |
 | No part picked | A skill that needs a part goes at the last part you hit, else the part that attacks soonest. |
@@ -95,10 +104,10 @@ Hover it for what happens and, on its own muted ▸ line, how to stop it. Breaki
 
 | Kind | What it is | What answers it | If you don't |
 |---|---|---|---|
-| Charge | The part's next scheduled attack, much bigger, 3 cycles ahead. | A cut on that cycle, or a built answer (Suspend, Jam, Spoofed ACK, Hijack, Blackhole, Backfire); soften it with ◆, a shield, Brace, Bulkhead. From level 17 SIGINT cuts a charge too. | ×2.5 to ×3 the plain hit, capped at 45% of your max (a solo boss's 60%: `CONFIG.spikeCap`). Charges don't crit. Then the after-effects. |
+| Charge | The part's next scheduled attack, much bigger, 3 cycles ahead. | A cut on that cycle, or a built answer (Suspend, Jam, Spoofed ACK, Hijack, Blackhole, Backfire); soften it with ◆, a shield, Brace, Bulkhead. From level 17 SIGINT cuts a charge too. | ×2.5 to ×3 the plain hit. Charges don't crit. Then the after-effects. |
 | Cast | *Casting*: a buff on the virus for 4 cycles. From level 10. | SIGINT or a cut on its part in its two-cycle window, or a skill built for it (Quarantine, Hijack). SIGINT before the window is refused and keeps its cooldown. | Double Extortion: its attacks hit 35% harder. Persistence and Call Home: its attacks repeat a cycle faster. Self-Update: every part grows by a quarter of the Integrity it has left. Then the after-effects. |
 | Seal | A dial, from level 6: the Sentinel's Blacklist, elites and bosses. | Strip its part first, as far as it pays. Bit Rot and Cache Poison make it fail even with ◆ on. | Each ◆ its part still wears gives one ◆ back to every part, never past a part's max. It takes the same share of your ◆ and shield and leaves you Corrupted at that share. |
-| Mimic | The Mimic (ghostroot, from level 8) records you; on its beat it copies the command you fire and turns it on you, with each helper you sent onto it after the beat was said. | Fire what costs least to have copied (a strip when you wear no ◆, a heal when every part is whole, a small hit), hold, or cut the Mimic on its beat. | What it copied, never past the tell ceiling (Third parts: the Mimic). |
+| Mimic | The Mimic (ghostroot, from level 8) records you; on its beat it copies the command you fire and turns it on you, with each helper you sent onto it after the beat was said. | Fire what costs least to have copied (a strip when you wear no ◆, a heal when every part is whole, a small hit), hold, or cut the Mimic on its beat. | What it copied (Third parts: the Mimic). |
 
 - **No pile-ups.** A charge never lands on the same cycle as another part's heavy attack, or on the Mimic's beat.
   Below level 17 one tell is live at a time; from 17 two can be, never on the same cycle. **An elite** with a clash has one
@@ -120,18 +129,18 @@ Hover it for what happens and, on its own muted ▸ line, how to stop it. Breaki
   said is played back at its own size (`caughtHelpers`). Helpers never cut a tell on their own. On the board each
   helper's hits left show as teal pips in its part's columns; a pip that trips a lever is edged red.
 
-| Levels | A wild virus brings | Live at once | Charge (extra over the plain hit, at most) | After-effects |
+| Levels | A wild virus brings | Live at once | Charge | After-effects |
 |---|---|---|---|---|
 | 1–5 | None: the ticks are the lesson | — | — | — |
-| 6–9 | Its charge | 1 | ×2.5, 12% of your max | Offline |
-| 10–16 | Its charge | 1 | ×2.5, 18% | Offline, Corrupted 3% |
-| 17+ | Its charge and its cast | 2 | ×3, 25% | Offline, Corrupted 4% |
+| 6–9 | Its charge | 1 | ×2.5 | Offline |
+| 10–16 | Its charge | 1 | ×2.5 | Offline, Corrupted 3% |
+| 17+ | Its charge and its cast | 2 | ×3 | Offline, Corrupted 4% |
 
-An **elite** brings one more from level 6 (its clash's tell first, then its family's seal and cast), each charge up to 15% bigger; a **solo
-boss** brings three; a **champion** invader the usual ones, its charges a tenth bigger. SPRAWL-00's first two kills
+An **elite** brings one more from level 6 (its clash's tell first, then its family's seal and cast), each charge's extra 15% bigger; a **solo
+boss** brings three, its charges ×2; a **champion** invader the usual ones, its charges' extra a tenth bigger. SPRAWL-00's first two kills
 bring none.
 
-**Who brings what** (`TELL_SETS`): Ransomware Full Disk (its Encrypt plus a burst of encryption for 3 cycles), Double
+**Who brings what** (`TELL_SETS`): Ransomware Full Disk (its Encrypt plus a burst of encryption for 3 cycles, its Encrypt × (mult − 1) a cycle), Double
 Extortion, Overcharge, Key Rotation. Worm Mass Mailer (a Replicate that hatches two fragments), Self-Update, Overcharge,
 Resync. Ghostroot Possession (a Scramble two cycles longer), Persistence, Overcharge, Go Dark. A strain brings a charge
 of its own on its rule's part, and its lineage's cast and seal. Guards: the Watchdog's and the Tracer's Lock-on, the
@@ -554,15 +563,22 @@ flashes on screen.
 
 **The Resident.** Opening a server's vault unseals its **Core**, where the Resident waits: the owner's process, a boss of
 the server's family (all three parts) at the server's level, 1.4× Integrity (1.1× on your first server). Its phase
-re-arms every part; it enrages at cycle 18. A worm or ransomware Resident plays in acts instead (below): 1.1× Integrity,
-enraging at cycle 24. Beat it and the server is **taken over**: yours, teal on the map, its Core
+re-arms every part. A worm or ransomware Resident plays in acts instead (below): 1.1× Integrity. Beat it and the server is **taken over**: yours, teal on the map, its Core
 quiet for good. Lose and you're disconnected, and for 6 hours it is a level stronger, up to three levels.
+
+On your Signal each solo boss takes its own Integrity and hits on top of the fight length (`BOSSES` long), so it runs
+30 to 35 cycles, and enrages about 15% past a geared kill: the Resident at 36, the lair bosses at 31 to 40. In a
+breach the Resident keeps its old size and enrages at 18 (24 in acts).
+
+**Rounds** (`ROUNDS`): a solo boss fights in rounds of 4 cycles, and each round every hit it lands is 8% harder than the
+last round's, compounding (×1.4 by round 5, ×1.85 by round 9), its enrage on top. Its bar shows the round and its
+multiple (R3 ×1.2). A slow kill meets a round it can't survive. Crew bosses have none.
 
 | Boss | Where | From | Integrity | Enrages |
 |---|---|---|---|---|
-| RELAY-KING (worm) | SPRAWL-00's relay room (level 5), a Core sealed until level 3; back 30 minutes after it falls | level 3 | 1.25× | cycle 16 |
-| REPO MAN (ransomware) | The Bounty event from level 8 | level 8 | 1.6× | cycle 18 |
-| HOLLOW CHOIR (ghostroot) | Its own event, from level 10 | level 10 | 1.4× | cycle 16 |
+| RELAY-KING (worm) | SPRAWL-00's relay room (level 5), a Core sealed until level 3; back 30 minutes after it falls | level 3 | 1.31× | cycle 36 |
+| REPO MAN (ransomware) | The Bounty event from level 8 | level 8 | 1.84× | cycle 34 |
+| HOLLOW CHOIR (ghostroot) | Its own event, from level 10 | level 10 | 1.33× | cycle 40 |
 
 Each plays in acts (below) with a part and a rule of its own, and a mechanic an act (docs/solo-bosses.md).
 
@@ -588,7 +604,7 @@ ticks at 50% and 25%. Built: the worm and ransomware Residents and the three sol
 
 | Boss | The beat | Every | What answers it |
 |---|---|---|---|
-| Resident (worm, ransomware) | **Backlash**: a part with an attack that your command hits on the beat lashes back for its attack doubled (30% of your max at least, 60% at most), and an Encrypt or Replicate does its own thing once on top. A hit that breaks it doesn't lash, nor do burns or helpers sent before. | 4, then 3 | A shield, a buff or hold, a part with no attack (the Lockbox), or a hit that breaks its part |
+| Resident (worm, ransomware) | **Backlash**: a part with an attack that your command hits on the beat lashes back for its attack doubled, and an Encrypt or Replicate does its own thing once on top. A hit that breaks it doesn't lash, nor do burns or helpers sent before. | 4, then 3 | A shield, a buff or hold, a part with no attack (the Lockbox), or a hit that breaks its part |
 | RELAY-KING | **Broadcast**: its Relay's attack, bigger for each fragment | 4, 3 from act 3 | Clear the fragments, cut it, or a ◆ on you |
 | REPO MAN | **Collection**: its Ledger's attack, bigger for each Lien; each act calls one 3 cycles out | 5 | Few Liens, a cut, or a ◆ on you |
 | HOLLOW CHOIR | **Copy**: its Mimic copies what you fire and turns it on you (a second voice from act 2) | 4 | What costs least to have copied, hold, or break a voice |
@@ -729,7 +745,7 @@ strip (the server, its kind, level and rule, your Signal, **Rooms n/N**, your ke
 |---|---|---|
 | Entry | door | Where you come in. Files left for you (a relay's route files) are `pull`ed here. |
 | Process | ▣ | A virus of the server's author at the server's level; the same family every time, its set and mutation fresh each respawn. |
-| Elite | ◆▣ | An elite (`ELITE`) with a clash, one more tell, enrages from cycle 9. |
+| Elite | ◆▣ | An elite (`ELITE`) with a clash, one more tell, enrages from cycle 17. |
 | Guard post | ◆▣ KEY | A guard or ICE holding the vault's key, shown as an elite. Hoard, Rich and Hardened servers' are Armored. |
 | Vault | ▥ | `open` with its key, or `force` it for 15% of your max Signal. It holds the server's files: a protocol half the time (your first server's always), code, a trace record, spare credits, now and then a Zero-day (floor 2+) or a filter, and a contract's planted file. Everything goes in your pack. |
 | Core | ♛ | The Resident, **SEALED** until the vault opens. |
@@ -1160,13 +1176,19 @@ a favoured card once it has come up twice, its rich code once it leans your way;
 ### Levels
 
 - **Hacker level** (per class, 1–50): a long, WoW-style climb. Each class starts at level 1 and levels on its own.
-  **Every level adds 6% power, compounding** (`CONFIG.powerPerLevel`, `power`): damage, heals, shields and Signal, for
-  you and enemies alike (key 1 hits 25 at level 1, 76 at 20, 434 at 50). A virus 10 levels under you has about half
-  your numbers. Heals you cast and damage over time keep half of the 4% **level line** (`CONFIG.levelLine`, +2% a
-  level, `healLevel`, `dotLevel`) and all of the **lift** above it (`lift` = power ÷ line); Restore and Payload on
-  your gear make up the rest (Items). Every flat number tuned on the line (an item's stats, a unique's +6 damage, a
-  talent's +4 Signal, a run's Signal costs) is that number × the lift at its level: still a flat number.
-- **Your server's level is your highest class level.** It sets your server's Integrity (100, +6% a level, compounding) and opens
+  **Enemies grow 6% a level, compounding** (`CONFIG.powerPerLevel`, `power`): a virus 10 levels under you has about
+  half its match's numbers. **Floors are tiers** (`CONFIG.floorStep`): a mob takes +15% a floor on top of its level,
+  compounding (`mobPower`: the floor it's on, else its level's; KESSLER-FARM-00's mobs their level's; a breach's fights skip it), and gear a bigger step that drifts down inside its
+  floor (Items), so a floor plays as an arc: its first drops make you strong, by its top you need its gear.
+  **Gear carries your power** (WoW's model): your own numbers (skill damage, burns, base
+  Signal, shields, talents' Signal) grow 6% a level to level 6, then stop (`CONFIG.ownFrom`, `ownPerLevel`, `own`;
+  key 1 hits 25 at level 1, 33 from 6 on), and your gear's Damage, Crit Damage, Payload, Signal, Regen and Leech carry
+  the rest (Items): in its level's blues, three quarters of your Signal at 20 and seven eighths at 30. Damage and
+  Payload work like spell power: each hit gets them in proportion to its size (below). Heals you cast keep half of the
+  4% level line and the lift (`healLevel`); Restore adds to them. Every flat number tuned on the 4% **level line**
+  (`CONFIG.levelLine`; an item's stats, a unique's +6 damage, a run's Signal costs) is that number × the **lift** at its
+  level (`lift` = power ÷ line): still a flat number.
+- **Your server's level is your highest class level.** It sets your server's Integrity (100, +6% a level, compounding: the server isn't on your own line) and opens
   daemon slots (+1 at 15, 30 and 45).
 - **Enemies have a level (1–60).** A server keeps the level it was found at, so old servers get easier. Enemy levels
   are coloured WoW-style: red (5+ above you), orange (3–4), yellow (about even), green (below), grey (10+ below, no XP).
@@ -1206,8 +1228,8 @@ a favoured card once it has come up twice, its rich code once it leans your way;
 ### The level-up
 
 It lists what the level brings: skills (with the key each went on), your subclass, SIGINT, a talent or capstone point,
-a protocol slot, new protocol bases, a floor's band, and a daemon slot when your server rises; then the power line and
-the next level that brings something. Several levels at once are one level-up. It is a **firmware update**: a compact
+a protocol slot, new protocol bases, a floor's band, and a daemon slot when your server rises; then the power line (to
+level 6), the server's Integrity and the next level that brings something. Several levels at once are one level-up. It is a **firmware update**: a compact
 panel under the top bar, an amber *Firmware update · <class>.rom* strip, the level in big teal dot-font digits beside
 *v9 → v10*, then `[ OK ]` per unlock as the flash finishes, **Loadout** (when there's something to set) and
 **Continue**. It closes by itself 12 seconds after the flash, never comes up during a fight or over a card that waits,
@@ -1247,7 +1269,7 @@ free:** until any class reaches level 5, switching to a class you haven't played
   queued. A few skills only work in the cycle or two after their event (Shatter after you strip a part's last ◆,
   Retaliate after you're hit, Opening after an attack misses you or is delayed).
 
-**The core skills** (numbers at level 1; they grow 6% a level, compounding):
+**The core skills** (numbers at level 1; ×1.34 from level 6 on, your own line):
 
 | Skill | What it does | Cooldown |
 |---|---|---:|
@@ -1288,6 +1310,10 @@ docs/subclasses/ has every skill.
 | Infiltrator | Phantom | **Weak Spot**: your first damaging hit on each part crits (a hit through armor doesn't count) |
 | Operator | Herder | **Last Gasp**: each helper strikes once more as it expires |
 | Operator | Hijacker | **Man in the Middle**: Jammed parts take 20% more from everyone, and a part with your helper on it 20% more from you |
+
+**The Overclocker in a crew**: its Turbo Boost (from level 18, cooldown 15) runs every crewmate hot for 3 cycles: they
+deal 30% more damage and take 20% more, crew-boss mechanics included (**Turbo** on their bar), and their cooldowns tick 1
+cycle.
 
 **The Sysop** is the healer, built for a crew (Multicast heals everyone; Checksum heals the lowest). Alone its hits and
 burns deal 75% (`SUBS.sysop.alone`), though its heals still come from the full hit: it fights slowly and ends most fights
@@ -1403,7 +1429,11 @@ deconstructed.
   gear grows about 12% a level at level 1, 11% at 10, 9% at 30 and 8% at 50, outgrowing the enemies' hits so a
   same-level fight costs about the same share of your Signal throughout. An item's numbers are worked out on the level
   line, then its flat stats (all but RAM and Lead), its flat rule and a unique's or set's flat effect are lifted at its
-  item level (`liftItem`, `liftFx`). Chances stay percentages.
+  item level (`liftItem`, `liftFx`). The ones that carry your power (Damage, Crit Damage, Signal, Regen, Leech, and
+  flat damage, heal and shield effects) are also × the **fill** at their item level (`gearFill`: `CONFIG.gearFill`, 1
+  to level 6, 2.2 at 7, 1.95 at 25, 1.25 at 50, × the floor tier, `gearTier`: +25% a floor from floor 2, compounding,
+  less 6% a level past the floor's first). A floor's first blue outclasses the last floor's best; at its first level
+  in its own blues a fight costs about 10–25% of your Signal, at its top 35–45%. Gear ten levels old loses about a third of fights at your level; twenty, nearly all. Chances stay percentages.
 - **Power spikes are earned** (the designer's rule): base power never spikes; a new skill, a talent tier, a capstone, a
   slot, a unique, a set bonus or a tier set does, and the big jumps belong past the level cap. A spike that takes the
   friction away is a problem to fix in its kit.
@@ -1441,12 +1471,12 @@ Every stat is a whole number. The stat sheet lists them all.
 
 | Stat | What it does | Rolls on |
 |---|---|---|
-| Damage | Added to every skill hit you land | Exploit, Script, Implant; Weaponized |
+| Damage | Added to a skill hit in proportion to its size: all of it on a Spike-sized hit (`damageRef`), twice on one twice as big, less on a smaller one (`gearDamage`); and to every burn tick and helper hit you start: all of it on a 50 tick (`tickRef`, `gearTick`), a third on a typical 14 | Exploit, Script, Implant; Weaponized |
 | Crit (%) | Chance a damaging hit crits (5% base) | Precise |
 | Crit Damage | Added to every crit, on top of its +50% | Brutal |
 | Accuracy (%) | Cancels the enemy's evasion | Calibrated |
 | Echo (%) | Chance a skill hit repeats at half; on armor it breaks another ◆ | Recursive |
-| Payload | Added to every burn tick and helper hit you start (a budget point is 60% of Damage's) | Script; Loaded |
+| Payload | Added to every burn tick and helper hit you start on top of Damage's share, in proportion to its size: all of it on a 28 tick, half on a typical 14 (`dotRef`, `gearPayload`) (a budget point is 60% of Damage's) | Script; Loaded |
 | Signal | Max Signal | Proxy, Shell, Script, Implant; of the Bunker |
 | Regen | Heals this much every 5 cycles in a fight, a fifth a cycle; on runs also every 5 moves; at home every 5 minutes | Shell; of Mending |
 | Block | Taken off every hit (never below half) | Proxy |
@@ -1460,10 +1490,10 @@ Every stat is a whole number. The stat sheet lists them all.
 | Scavenge (%) | Magic find (below) | of the Scavenger |
 | RAM | Every routine's RAM, up to 3 from all your gear (Routines) | of the Heap (from item level 10; 1, 2 from about 30) |
 
-**Heals and burns grow with gear.** Heals you cast and damage over time keep +2% a level of the 4% level line, and the
-lift; Restore and Payload
-make up the rest and more (a blue Sysop at 30 carries about 65% Restore). Heals that give back damage (Reclaim,
-Rollback, OOM Kill) take Restore only. Payload is flat on every tick, so it counts most on small, frequent ones.
+**Heals and burns grow with gear.** Heals you cast keep half of the 4% level line and the lift, and Restore makes up
+the rest and more (a blue Sysop at 30 carries about 65% Restore). Heals that give back damage (Reclaim, Rollback, OOM
+Kill) take Restore only. Burns and helper hits grow on your own line, and gear Damage and Payload carry the rest, in proportion
+to each tick's size: a burn or helper class gains about the share of its damage from gear a skill-hit one does.
 
 **Scavenge is magic find** with diminishing returns (+50% Scavenge = +33% better odds) and more cache credits. It
 **costs stats**, as in D2: of the Scavenger rolls 3% at item level 1 to 10% at most, and a rolled blue or yellow
@@ -2398,7 +2428,7 @@ developer mode, `crew sim <classes>` adds bot crewmates from level 5 (`crew`, `c
 - **MMO, not ARPG:** a normal virus gets +50% Integrity a player (`CREW.hpPer`), a boss +80%, an elite +5%; its hits
   stay their solo size. **Kill XP is split**, plus 10% a player (`PARTY_XP`: a pair 55% each, a four 32.5%). Drops
   stay personal; rewards are yours.
-- **◆ CREW elites** (a third of a Pit's rooms, and the trunk server, and every elite room): ×1.5 Integrity, ×0.7
+- **◆ CREW elites** (a third of a Pit's rooms, and the trunk server, and every elite room): ×1.65 Integrity, ×0.62
   damage, one more ◆ and a clash (`ELITE`; Fights), only +5% a player. A champion, a feud and the farm's packs size
   their own Integrity, keep ×1.3 damage and roll no clash. Three times the XP, three drop rolls, never less than a blue, 8% a
   unique. Never in the way of anything you need.
@@ -2564,7 +2594,7 @@ breaches once you capture the server. Gear, scripts and XP bank at gates and on 
 checkpoint. **Heat 1–8** adds a modifier a rank and pays more. **LOWLIGHT's room** (`world.mjs`, `room.mjs`) is where
 you come back after each breach: wick has a line about it, the board lists what moved, and from your second capture a
 **world turn** runs after every breach (an author digs in on its nearest open server, dead drops appear, never on a
-clock). `?playtest=breach` plays one breach with a throwaway character. Code: `breach.mjs`, `campaign.mjs`,
+clock). Code: `breach.mjs`, `campaign.mjs`,
 `scripts.mjs`, `rewrites.mjs`, `heat.mjs`, `world.mjs`; bots `breachsim.mjs`, `campaignsim.mjs`.
 
 ## Balance targets
@@ -2602,9 +2632,11 @@ Checked by `node balance.mjs` (docs/BALANCE.md, `balance.test.mjs`), `farmsim.mj
 
 ## Saves
 
-The save is `SAVE_VERSION` 54 (combat.mjs). An older save is migrated on load, each step keyed on the field it converts,
+The save is `SAVE_VERSION` 56 (combat.mjs). An older save is migrated on load, each step keyed on the field it converts,
 so it is safe to run twice; nothing a save held is lost.
 
+- **v56** floors as tiers: every protocol's filling stats and flat rule × its new fill over the one it was filled with, once (`curveRestore`, keyed on `s.curve` 3).
+- **v55** gear carries your power: every protocol's filling stats (Damage, Crit Damage, Signal, Regen, Leech) and flat damage, heal or shield rule × the fill at its item level, once (`curveRestore`, keyed on `s.curve` 2).
 - **v54** the compounding curve: every protocol's flat stats and flat rule, and each filter's Block, Regen and barbs,
   lifted once at its item level (`curveRestore`, keyed on `s.curve`).
 - **v53** the cryptogram's key, `s.cipher`, made on first use (`cipherOf`).

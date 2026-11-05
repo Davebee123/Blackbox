@@ -12,7 +12,8 @@ CONFIG.partToughness = 1; // mechanics tests use the parts' base numbers
 CONFIG.enemyRamp = 0;
 CONFIG.salvageChance = 1;
 CONFIG.misses = false; // and no misses
-CONFIG.powerPerLevel = 0; CONFIG.levelLine = 0; // flat numbers at every level (level tests turn it back on)
+const OWN0 = CONFIG.ownPerLevel, FILL0 = CONFIG.gearFill; // your own line and gear's fill, to turn back on
+CONFIG.powerPerLevel = 0; CONFIG.levelLine = 0; CONFIG.ownPerLevel = 0; CONFIG.gearFill = [[1, 1]]; // flat numbers at every level (level tests turn it back on)
 CONFIG.gap = { dealt: 0, taken: 0, floor: 1, below: 0 }; // and no level-gap scaling (combat.test.mjs tests it)
 
 const start = (id = 'cryptjack') => { const s = fresh(); s.hackers = { breaker: { level: 50, xp: 0 } }; selectEncounter(s, id, 7, { level: 6 }); command(s, 'engage'); return s; };
@@ -306,4 +307,14 @@ test('the ◆ badge: on a damaging key armor would absorb, aimed at an armored p
   assert.match(boardMarkup(s, null), /<div class="intent mine"[^>]*>overload encryptor<span class="armd" title="Armor takes this hit/);
   command(s, 'crack encryptor');
   assert.doesNotMatch(boardMarkup(s, null).match(/<div class="intent mine"[^]*?<\/div>/)[0], /armd/, 'Crack queued: no badge');
+});
+
+// An Overclocker crewmate's Turbo Boost (combat.mjs turboOn) shows on your bar, with whose it is.
+test('Turbo shows on a crewmate\'s bar', async () => {
+  const { statusSpans } = await import('./dist/view.mjs');
+  const s = fresh(); s.loadout.archetype = 'breaker'; s.hackers = { breaker: { level: 30, xp: 0 } };
+  selectEncounter(s, 'cryptjack', 7, { level: 6 }); command(s, 'engage');
+  s.encounter.turbo = { until: s.encounter.cycle + 2, dealt: 1.3, taken: 1.2, who: 'Ada' };
+  const x = statusSpans(s).find((y) => y.name === 'Turbo');
+  assert.ok(x && x.value === '+30% · +20% taken' && x.cycles === 3 && /Buff from Ada's Turbo Boost/.test(x.title) && /30% more damage and take 20% more/.test(x.title), JSON.stringify(x));
 });

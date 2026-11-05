@@ -16,7 +16,8 @@ CONFIG.partToughness = 1;
 CONFIG.enemyRamp = 0;
 CONFIG.misses = false;
 CONFIG.edges = false;
-CONFIG.powerPerLevel = 0; CONFIG.levelLine = 0;
+const OWN0 = CONFIG.ownPerLevel, FILL0 = CONFIG.gearFill; // your own line and gear's fill, to turn back on
+CONFIG.powerPerLevel = 0; CONFIG.levelLine = 0; CONFIG.ownPerLevel = 0; CONFIG.gearFill = [[1, 1]];
 CONFIG.gap = { dealt: 0, taken: 0, floor: 1, below: 0 };
 (await import('./dist/data.mjs')).LOADOUT.specRanks = 0; // the kit talent's two free ranks (progression.mjs): off, for exact numbers
 

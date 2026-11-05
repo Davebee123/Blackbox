@@ -273,7 +273,7 @@ function spawnFragment(s, p) {
   if (e.buffs?.dmz >= e.cycle) return emit(s, 'blocked', `The ${p.name} calls in a fragment, but nothing new gets into the DMZ.`, { source: p.id });
   if (livingParts(s).filter((x) => x.kind === 'fragment').length >= CONFIG.fragmentCap) return;
   const n = e.nextFragment++, pw = e.virus.power || 1;
-  const amount = Math.max(1, Math.round(CONFIG.fragmentDamage * pw)), hp = Math.max(1, Math.round(CONFIG.fragmentIntegrity * (e.virus.hpPower ?? pw)));
+  const amount = Math.max(1, Math.round(CONFIG.fragmentDamage * pw)), hp = Math.max(1, Math.round(CONFIG.fragmentIntegrity * (e.virus.addPower ?? e.virus.hpPower ?? pw)));
   e.virus.parts.push({ id: 'frag' + n, name: 'Fragment ' + n, kind: 'fragment', integrity: hp, max: hp, armor: 0, maxArmor: 0, patchAt: null, veiled: false, loot: null, special: false, attack: { name: 'Gnaw', effect: 'damage', amount, interval: 1, due: e.cycle + 1 }, exposedUntil: 0, lastDamaged: 0, boosted: false });
   emit(s, 'spawn', `BACKTRACE. The ${p.name} traces you and calls in Fragment ${n}.`, { source: p.id, target: 'frag' + n, mech: 'backtrace' });
 }

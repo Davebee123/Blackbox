@@ -71,7 +71,7 @@ A Deploy is four cycles of hits set going now, so the Operator's puzzle is where
 | Ordinary | Wild viruses, guards and invasions, from level 6 | One, that a routine can answer | The solo band (15–50%) |
 | Hard | Elites, Residents, solo bosses, lair bosses, feuds | Two or three | The boss band |
 
-- **Elites are puzzles** (P3, built): Integrity ×1.5 and hits ×0.7 (from ×5.2 and ×1.3), difficulty back as a clash.
+- **Elites are puzzles** (P3, built): Integrity ×1.65 and hits ×0.62 (×1.5 and ×0.7 before fight length; ×5.2 and ×1.3 before P3), difficulty back as a clash.
 - **Residents keep their puzzle every time**: no fallback after a loss.
 - **The Debugger room** (a practice board whose loss costs nothing) is parked.
 

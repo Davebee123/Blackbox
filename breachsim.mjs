@@ -1,10 +1,8 @@
-// Breach sim (GAME_RULES.md "Side modes"): a bot plays whole breaches of MERIDIAN-MX-14. It walks the map (breach.mjs
+// Breach sim (GAME_RULES.md "Side modes"): a bot plays the campaign's breaches, one at a time. It walks the map (breach.mjs
 // botRoute: keycards, vaults, switches, away from the hunter), decides each screen (botPick), runs a script when one
 // fits (botScript), loads gear that beats what's in its slot, and fights with the planner (planner.mjs), the same
 // scripted player the balance harness uses. Blue gear, the class's subclass.
-//   node breachsim.mjs [runs=20] [level=10] [heat=0]   win rates per class, and where the losses happen
-//   node breachsim.mjs subs [runs=40] [level=10] [heat=0]   win rates per subclass, with Trace, hunters and loot
-//   node breachsim.mjs servers [runs=8] [heat=0]   every subclass on seven campaign servers (levels 7 to 19), each at
+//   node breachsim.mjs [runs=8] [heat=0]           every subclass on seven campaign servers (levels 7 to 19), each at
 //                                                  the server's level: the campaign's breaches, one at a time
 import { fresh, command, resolveCycle, active, finish, stashItem, rigOf } from './dist/combat.mjs';
 import { startBreach, outfit, act, go, botRoute, botPick, botScriptRun } from './dist/breach.mjs';
@@ -75,22 +73,10 @@ export function winRate(cls, { runs = 20, level = 10, from = 1, heat = 0, sub = 
   return { cls, sub, runs, wins, rate: wins / runs, where, fights: avg((r) => r.fights), trace: avg((r) => r.trace), hunted: avg((r) => (r.hunted ? 1 : 0)), vaults: avg((r) => r.vaults), scripts: avg((r) => r.scripts), found: avg((r) => r.found), runsOut: out };
 }
 
-if (import.meta.url === `file://${process.argv[1]}` && process.argv[2] === 'servers') {
-  const runs = Number(process.argv[3]) || 8, heat = Number(process.argv[4]) || 0, pct = (x) => `${Math.round(x * 100)}%`;
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const runs = Number(process.argv[2]) || 8, heat = Number(process.argv[3]) || 0, pct = (x) => `${Math.round(x * 100)}%`;
   for (const sub of Object.keys(SUBS)) {
     const r = winRate(SUBS[sub].cls, { runs, heat, sub, servers: SIM_SERVERS });
     console.log(`${SUBS[sub].cls.padEnd(12)} ${sub.padEnd(14)} ${pct(r.rate).padStart(4)}  ${SIM_SERVERS.map((id, k) => `${id} ${pct(r.runsOut.filter((_, j) => j % SIM_SERVERS.length === k).filter((x) => x.won).length / runs)}`).join(' ')}`);
-  }
-} else if (import.meta.url === `file://${process.argv[1]}` && process.argv[2] === 'subs') {
-  const [, , , a, b, c] = process.argv, runs = Number(a) || 40, level = Number(b) || 10, heat = Number(c) || 0, pct = (x) => `${Math.round(x * 100)}%`;
-  for (const sub of Object.keys(SUBS)) {
-    const r = winRate(SUBS[sub].cls, { runs, level, heat, sub });
-    console.log(`${SUBS[sub].cls.padEnd(12)} ${sub.padEnd(14)} ${pct(r.rate).padStart(4)}  fights ${r.fights.toFixed(1)}  trace peak ${r.trace.toFixed(0)}  hunted ${pct(r.hunted)}  vaults ${r.vaults.toFixed(2)}  scripts run ${r.scripts.toFixed(1)}  items ${r.found.toFixed(1)}  losses: ${Object.entries(r.where).map(([k, v]) => `${k} ${v}`).join(', ') || 'none'}`);
-  }
-} else if (import.meta.url === `file://${process.argv[1]}`) {
-  const runs = Number(process.argv[2]) || 20, level = Number(process.argv[3]) || 10, heat = Number(process.argv[4]) || 0;
-  for (const cls of CLASSES) {
-    const r = winRate(cls, { runs, level, heat, sub: PICK[cls] });
-    console.log(`${cls.padEnd(12)} ${String(r.wins).padStart(3)}/${runs}  ${Math.round(r.rate * 100)}%  fights/run ${r.fights.toFixed(1)}  losses: ${Object.entries(r.where).map(([k, v]) => `${k} ${v}`).join(', ') || 'none'}`);
   }
 }

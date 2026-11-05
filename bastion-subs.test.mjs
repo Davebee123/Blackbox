@@ -4,6 +4,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, selectEncounter, resolveCycle, part, readyIn, hasTalent, rank, defender, subOf, edge, knownSkills, active } from './dist/combat.mjs';
 import { CONFIG, ABILITIES, SUBS, SUBCLASS, unlockLevel } from './dist/data.mjs';
+// These test each heal's and shield's own numbers: sustain potency (CONFIG.length.heal, docs/scaling.md step 3) off.
+CONFIG.length = { ...CONFIG.length, heal: null };
 import { play } from './dist/run.mjs';
 import { matesOf } from './dist/crew.mjs';
 import { planner } from './dist/planner.mjs';
@@ -12,7 +14,8 @@ CONFIG.tells = false; // these check skill numbers; tells.test.mjs checks the te
 CONFIG.baseCrit = 0;
 CONFIG.enemyCrit = 0;
 CONFIG.misses = false;
-CONFIG.powerPerLevel = 0; CONFIG.levelLine = 0;
+const OWN0 = CONFIG.ownPerLevel, FILL0 = CONFIG.gearFill; // your own line and gear's fill, to turn back on
+CONFIG.powerPerLevel = 0; CONFIG.levelLine = 0; CONFIG.ownPerLevel = 0; CONFIG.gearFill = [[1, 1]];
 CONFIG.partToughness = 1;
 CONFIG.enemyRamp = 0;
 CONFIG.gap = { dealt: 0, taken: 0, floor: 1, below: 0 };
@@ -440,10 +443,11 @@ test('a Warden draws fire with Bulkhead and takes it at half; DMZ covers the who
   const d = crewFight('warden', 'breaker', 38, ['rate-limit', 'firewall', 'retaliate', 'dmz']);
   const [kilo] = matesOf(d);
   const k = kilo.run.integrity;
-  crewSurge(d, 60);
+  const big = Math.ceil(kilo.run.max * 0.12); // over a tenth of the crewmate's max (DMZ's minor)
+  crewSurge(d, big);
   order(kilo, 'hold');
   act(d, 'dmz');
-  assert.equal(k - kilo.run.integrity, 42);
+  assert.equal(k - kilo.run.integrity, Math.round(big * 0.7));
   const m = crewFight('warden', 'breaker', 38, ['rate-limit', 'firewall', 'retaliate', 'dmz']);
   const [lima] = matesOf(m);
   const l = lima.run.integrity;
@@ -488,4 +492,24 @@ test('a Sysop alone still works: its heals land on itself, and it wins', () => {
   assert.equal(s.reports.at(-1).result, 'victory');
   assert.ok(knownSkills(s, 'bastion').includes('heartbeat'));
   assert.ok(rank(s, 'patch-notes') === 0);
+});
+
+test('resists: a part above you shrugs off Suspend like a miss (cooldown spent, Resisted on the board); at your level it lands', async () => {
+  const { boardMarkup } = await import('./dist/view.mjs');
+  const saved = { misses: CONFIG.misses, resist: CONFIG.resist, maxResist: CONFIG.maxResist, baseMiss: CONFIG.baseMiss };
+  try {
+    Object.assign(CONFIG, { misses: true, resist: 100, maxResist: 100, baseMiss: 0 });
+    const s = start('warden', ['suspend']);
+    s.encounter.virus.level = 38 + 5;
+    const p = part(s, 'pulse'), due = p.attack.due;
+    const ev = act(s, 'suspend pulse');
+    assert.ok(ev.some((x) => x.type === 'miss' && x.resisted && x.target === 'pulse'), 'resisted, as a miss');
+    assert.equal(p.attack.due, due, 'its attack is not delayed');
+    assert.ok(readyIn(s, 'suspend') > 0, 'the cooldown is spent');
+    assert.match(boardMarkup(s, null), /title="Resisted: 5 levels above you, it shrugged off your Suspend\./);
+    const t = start('warden', ['suspend']); // at your level: never resisted
+    const q = part(t, 'pulse'), was = q.attack.due;
+    act(t, 'suspend pulse');
+    assert.equal(q.attack.due, was + 2);
+  } finally { Object.assign(CONFIG, saved); }
 });

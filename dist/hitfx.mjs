@@ -33,7 +33,7 @@ export function createHitFx(board, { canMove = () => true } = {}) {
   // flies out of it (in your colour, a crewmate's in violet; a crit: more, bigger, gold-white).
   // A broken chit throws a few white bits; a miss only shakes it.
   const BITS = { hit: 16, crit: 28, chit: 8, miss: 0 };
-  function strike(row, { kind, result }) {
+  function strike(row, { kind, result, word = 'MISS' }) {
     if (!row?.isConnected || !canMove()) return;
     const f = frame(), name = row.querySelector('.bname');
     if (!name) return;
@@ -49,8 +49,8 @@ export function createHitFx(board, { canMove = () => true } = {}) {
         '--d': (0.45 + Math.random() * 0.35).toFixed(2) + 's',
       }, Math.random() < 0.5 ? '0' : '1', 900);
     }
-    // A miss: a big MISS stamped across the part, so you can't overlook it.
-    if (result === 'miss') add(`fx-miss ${kind}`, { left: n.l + n.w * 0.5 + 'px', top: n.t + n.h / 2 + 'px' }, 'MISS', 1100);
+    // A miss: a big MISS (or RESISTED) stamped across the part, so you can't overlook it.
+    if (result === 'miss') add(`fx-miss ${kind}`, { left: n.l + n.w * 0.5 + 'px', top: n.t + n.h / 2 + 'px' }, word, 1100);
     jolt(row, result);
   }
   // The part's name brightens as a hit lands (light only, it never moves): a strike's, or an ability effect's

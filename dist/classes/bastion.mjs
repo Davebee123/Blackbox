@@ -23,7 +23,7 @@
 //              [{ id, name, amount, left, from, cap, crit, loop }] (cap: the healer's Overprovision cap,
 //              0 without the edge; crit: Critical Path; loop: the healer's name, for Loopback)
 //   e.standby  Hot Standby: the next attack that would drop this player to 0 leaves them at 1
-import { slotsOf, subOf, subEdge, hasTalent, capValue, soonestAttacker, rank, emit, heal, hit, alive, part, livingParts, defender, alliesOf, buffed, on, scaled, attackAmount, gapTaken, levelGap, classOf, usable, intents, toIntent, readyIn, knownSkills, healScaled, restoreMult, previewDamage, attackers, openProc } from '../combat.mjs';
+import { sustained, slotsOf, subOf, subEdge, hasTalent, capValue, soonestAttacker, rank, emit, heal, hit, alive, part, livingParts, defender, alliesOf, buffed, on, scaled, attackAmount, gapTaken, levelGap, classOf, usable, intents, toIntent, readyIn, knownSkills, healScaled, restoreMult, previewDamage, attackers, openProc } from '../combat.mjs';
 import { ABILITIES, SKILLS } from '../data.mjs';
 import { tankMove, healMove, cleanse, savePatch, saveBulkhead } from '../raid.mjs';
 import { tellOn, tellOpen, tellAnswer, undoCast, landsAt } from '../tells.mjs';
@@ -67,8 +67,9 @@ function mend(s, to, amount, label, opts = {}) {
   const crit = opts.crit ?? hasTalent(s, 'critical-path');
   if (crit && d.integrity < d.max / 3) amount = Math.round(amount * 1.5);
   if (!opts.plain && windowOpen(s)) amount = Math.round(amount * (1 + A('maintenance-window').boost)); // Maintenance Window: heals +50%
+  if (!opts.potent) amount = sustained(to, amount, opts.drawn); // potency (data.mjs CONFIG.length.heal), before Overprovision reads the spill
   const room = d.max - d.integrity;
-  heal(to, amount, label);
+  heal(to, amount, label, { potent: true });
   overprovision(to, amount - Math.min(amount, room), opts.cap ?? capOf(s));
   if (!opts.looped) rootCause(s, amount);
   const loop = 'loop' in opts ? opts.loop : hasTalent(s, 'loopback') ? s : null;
@@ -121,7 +122,7 @@ const use = {
   // Warden: Reject throws it back, and shields you against the part that last hit you.
   reject(s, { a, target, e }) {
     if (e.grudge !== target.id) return;
-    const n = scaled(s, a.guard);
+    const n = sustained(s, scaled(s, a.guard));
     e.shield = (e.shield || 0) + n;
     emit(s, 'status', `Reject: the ${target.name} hit you last, so you shield ${n} (${e.shield}).`, { mark: 'shield', ability: 'reject' });
   },
@@ -139,7 +140,7 @@ const use = {
     if (!(res?.dealt > 0)) return;
     const others = alliesOf(s).filter((x) => defender(x.st).integrity > 0).map((x) => x.st).sort((x, y) => frac(x) - frac(y));
     const to = others.length && frac(others[0]) < frac(s) ? others[0] : s; // in a crew, the lowest crewmate
-    mend(s, to, Math.max(1, Math.round(res.dealt * a.share * restoreMult(s) * drawn(s))), to === s ? a.name : `${a.name} from ${s.who || 'you'}`);
+    mend(s, to, Math.max(1, Math.round(res.dealt * a.share * restoreMult(s) * drawn(s))), to === s ? a.name : `${a.name} from ${s.who || 'you'}`, { drawn: true });
   },
   'maintenance-window'(s, { a, e }) {
     e.buffs['maintenance-window'] = e.cycle + a.cycles - 1;
@@ -263,14 +264,14 @@ const use = {
   },
   reclaim(s, { res }) {
     if (!(res?.dealt > 0)) return;
-    const amount = Math.max(1, Math.round(res.dealt * A('reclaim').lifesteal * restoreMult(s) * drawn(s)));
+    const amount = sustained(s, Math.max(1, Math.round(res.dealt * A('reclaim').lifesteal * restoreMult(s) * drawn(s))), true);
     // The generic lifesteal has healed you: what spilled past full is Overprovision's.
     overprovision(s, amount - (lastHeal(s, A('reclaim').name) ?? amount), capOf(s));
-    if (windowOpen(s)) mend(s, s, Math.round(amount * A('maintenance-window').boost), 'Maintenance Window', { plain: true });
+    if (windowOpen(s)) mend(s, s, Math.round(amount * A('maintenance-window').boost), 'Maintenance Window', { plain: true, potent: true });
     if (!hasTalent(s, 'redistribute')) return;
     const others = alliesOf(s).filter((x) => defender(x.st).integrity > 0).sort((x, y) => frac(x.st) - frac(y.st));
-    if (others.length) mend(s, others[0].st, amount, `Redistribute from ${s.who || 'you'}`);
-    else mend(s, s, amount, 'Redistribute');
+    if (others.length) mend(s, others[0].st, amount, `Redistribute from ${s.who || 'you'}`, { potent: true });
+    else mend(s, s, amount, 'Redistribute', { potent: true });
   },
 };
 
@@ -531,7 +532,7 @@ export default {
   // Maintenance Window: your hits heal you for a quarter of what they deal.
   hit(s, p, res, opts) {
     if (!windowOpen(s) || !opts.mine || opts.dot || opts.server || !(res.dealt > 0)) return;
-    mend(s, s, Math.max(1, Math.round(res.dealt * A('maintenance-window').share * restoreMult(s) * drawn(s))), 'Maintenance Window', { plain: true, loop: null });
+    mend(s, s, Math.max(1, Math.round(res.dealt * A('maintenance-window').share * restoreMult(s) * drawn(s))), 'Maintenance Window', { plain: true, loop: null, drawn: true });
   },
   drawn: (s) => drawn(s),
   dealt(s, p, opts) {

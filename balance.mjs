@@ -117,7 +117,11 @@ export const MATCH_OF = { demolitionist: 'swarm', overclocker: 'rules', warden: 
 // Held since the damage profiles (GAME_RULES.md "Viruses"), on the 24 fights of a bracket only: the
 // Phantom loses 10–12% at Lv 30 (16% over 160 fights, 17% before P1: these seeds suit its burst) and the Overclocker
 // 50% at Lv 10 (39% over 160, as before P1). level: the bracket's, for the hold; without it, the band.
-const HELD_BAND = { 'phantom 30': [8, 50], 'overclocker 10': [15, 52] };
+// Since gear Damage reaches ticks and helper hits (docs/scaling.md step 2) the Herder loses 13% at Lv 10 (15% before, 17%
+// at step 1: one fight of 24 went its way): held at 12.
+// Since fight length (docs/scaling.md step 3) the Demolitionist loses 16% at Lv 18 (21% before), 10% with the Kestrel
+// pair (sets-balance.test.mjs): held at 13.
+const HELD_BAND = { 'phantom 30': [8, 50], 'overclocker 10': [15, 52], 'herder 10': [12, 50], 'demolitionist 18': [13, 50] };
 export const soloBand = (sub, level) => HELD_BAND[`${sub} ${level}`] || (sub && SUBS[sub].cls === 'bastion' ? [0, 50] : [15, 50]);
 // Average Signal lost (capped at 100) playing a bar over a set, each fight on `seeds` seeds.
 export function setScore(sub, b, bar, set, seeds = [1, 2]) {

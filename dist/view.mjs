@@ -23,7 +23,7 @@ import { ruleHtml } from './ruletext.mjs';
 import { postsOf, sizeOf as serverSize, PROGRAMS, programsOn, shopCodebases } from './sockets.mjs';
 import { SPECIALS, specialsOf, leaningOf } from './specials.mjs';
 import { LEANINGS, leanShown } from './leanings.mjs';
-import { ABILITIES, CONFIG, FAMILIES, MUTATIONS, TICKER, QUIRKS, DAEMONS, STRAINS, GUARDS, BOSSES, STRAIN_NATIVE, DAEMON_BANDS, bandDaemons, daemonWhen, daemonBand, FLOORS, bandOf, floorOfLayer } from './data.mjs';
+import { ABILITIES, CONFIG, FAMILIES, MUTATIONS, TICKER, QUIRKS, DAEMONS, STRAINS, GUARDS, BOSSES, ROUNDS, STRAIN_NATIVE, DAEMON_BANDS, bandDaemons, daemonWhen, daemonBand, FLOORS, bandOf, floorOfLayer } from './data.mjs';
 import { GENES, CATS, AXES, CLASHES } from './genes.mjs';
 import { AUTHORS } from './authors.mjs';
 import { PUZZLES } from './puzzles.mjs';
@@ -60,13 +60,13 @@ import { RULES, LOOT, SLOTS, BASES, STATS, GROUPS, RARITIES, RARITY_ORDER, ZERO_
 import { raidIntents, raidMarks, raidOf, attackTarget } from './raid.mjs';
 import { EMBLEMS } from './class-emblems.mjs';
 import { ARCHETYPES, CANTRIPS, EDGE, SYNC, STATUSES, LOADOUT, TREE, SERVER, SKILLS, xpToNext, unlockLevel, power, SUBS, SUBCLASS, skillOrder, barSlots, isRunSkill } from './data.mjs';
-import { XP_KINDS, rebootSick, cooldownOf, subOf, subPicked, kitTalent, specRule, skillBase, knowsPart, codexKey, previewDamage, ignoresArmor, armorTakes, parse, blocked, attackAmount, drawingFire, momentumStacks, momentumBonus, topUpCost, UNIQUES, bossChance, listenBoost, effectLine, implicitText, paceOf, keyMap, barKeys, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverClass, daemonSlots, procOpen, slottedDaemons, daemonNext, talentPoints, loaded, loadedOn, slotCount, maxSignal, materialsOf, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, picksOf, ranksOf, freeSlot, rigOf, stashItem, pointsSpent, tierState, rowState, spentAbove, knownSkills, equippedSkills, cycleLength, familyInfo, defender, healCap, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, part, daemonLevel, packed, capOf, asleep, frozenNow } from './combat.mjs';
+import { XP_KINDS, rebootSick, cooldownOf, subOf, subPicked, kitTalent, specRule, skillBase, knowsPart, codexKey, previewDamage, ignoresArmor, armorTakes, parse, blocked, attackAmount, drawingFire, momentumStacks, momentumBonus, turboOn, topUpCost, UNIQUES, bossChance, listenBoost, effectLine, implicitText, paceOf, keyMap, barKeys, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverClass, daemonSlots, procOpen, slottedDaemons, daemonNext, talentPoints, loaded, loadedOn, slotCount, maxSignal, materialsOf, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, picksOf, ranksOf, freeSlot, rigOf, stashItem, pointsSpent, tierState, rowState, spentAbove, knownSkills, equippedSkills, cycleLength, familyInfo, defender, healCap, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, part, daemonLevel, packed, capOf, asleep, frozenNow } from './combat.mjs';
 import { sigOf, named, lairOf, intelOf, knowsStrain, knowsEvent, knowsRich, nameOf, NETWORK, nativeChance, homeName, isNative, whoLabel, homeOf, netSeedOf, knownNets, NATIVE_POOL, awayChance } from './network.mjs';
 import { guardSetChance, lairChance, bossOdds, presetsOf, presetKeys, followOf, spikeName, said, mutated, capstonePoints, capPickOf, capState, blastOf, livingParts } from './combat.mjs';
 import { tripwireOf, zipOf, heldOf } from './order.mjs';
 import { youMarks, junkKey } from './mechanics.mjs';
-import { cantripsOf, TELL, lifted } from './data.mjs';
-import { usable, hooks } from './combat.mjs';
+import { cantripsOf, TELL, lifted, own, lift, line } from './data.mjs';
+import { usable, hooks, roundOf } from './combat.mjs';
 import { EXE } from './exe.mjs';
 import { sigintWindows, sigintCharges, plannedTells } from './tells.mjs';
 import { daemonText } from './daemons.mjs';
@@ -92,19 +92,18 @@ export const conClass = (gap) => (gap >= 5 ? 'con-red' : gap >= 3 ? 'con-orange'
 const longChip = (i) => i.name.length > 6 || i.name.length + String(effectLabel(i)).length > 14;
 export const attackCode = (name = '') => (name[0] + name.slice(1).replace(/[aeiou\s'-]/gi, '')).slice(0, 3).toUpperCase();
 export const levelTag = (s, level, label = `Level ${level}`) => `<b class="${conClass(level - hackerLevel(s))}" title="${level > hackerLevel(s) ? `${level - hackerLevel(s)} levels above you` : level < hackerLevel(s) ? `${hackerLevel(s) - level} levels below you` : 'your level'}">${label}</b>`;
-// Skill text with this level's numbers: every level adds 4% to damage and shields. Heals you cast and
-// damage over time (burn ticks, helpers) take CONFIG.healLevel / dotLevel of that; heals times Restore, and
-// Payload adds its flat number to every burn tick and helper hit.
+// Skill text with this level's numbers: your own line (data.mjs own) on damage, shields and burns; heals keep half the
+// level line and the lift (CONFIG.healLevel), times Restore; gear Damage and Payload add their share to every burn tick and helper hit.
 export function scaledText(s, id, text, arch = null) {
   const a = ABILITIES[id];
-  const k = arch ? power(hackerLevel(s, arch)) : powerOf(s);
-  const kHeal = (1 + (k - 1) * CONFIG.healLevel) * (1 + gearStat(s, 'restore') / 100);
-  const kDot = 1 + (k - 1) * CONFIG.dotLevel, pay = gearStat(s, 'payload');
+  const L = hackerLevel(s, arch || undefined), k = arch ? own(L) : powerOf(s);
+  const kHeal = lift(L) * (1 + (line(L) - 1) * CONFIG.healLevel) * (1 + gearStat(s, 'restore') / 100);
+  const kDot = k, pay = gearStat(s, 'payload') / CONFIG.dotRef + gearStat(s, 'damage') / CONFIG.tickRef; // per point of tick (combat.mjs gearTick)
   if (!a || !text || (k === 1 && kHeal === 1 && kDot === 1 && !pay)) return text;
   const healing = a.verb === 'heal' || id === 'patch';
-  const factor = { heal: kHeal, drain: kHeal, tick: healing ? kHeal : kDot, helper: kDot }, plus = { tick: healing ? 0 : pay, helper: pay }; // Payload: flat, on each tick and helper hit
+  const factor = { heal: kHeal, drain: kHeal, tick: healing ? kHeal : kDot, helper: kDot }, plus = { tick: healing ? 0 : pay, helper: pay }; // gear's share on each tick and helper hit (combat.mjs gearTick)
   // a.scales: the extra numbers a subclass skill writes in its text (dist/classes), as fields to scale.
-  const nums = ['damage', 'heal', 'shield', 'tick', 'helper', 'all', 'cap', 'floor', ...(a.scales || [])].map((f) => [a[f], factor[f] ?? k, plus[f] || 0]).filter(([n]) => typeof n === 'number' && n > 1);
+  const nums = ['damage', 'heal', 'shield', 'tick', 'helper', 'all', 'cap', 'floor', ...(a.scales || [])].map((f) => [a[f], factor[f] ?? k, (plus[f] || 0) * a[f]]).filter(([n]) => typeof n === 'number' && n > 1);
   if (id === 'counter') nums.push([SKILLS.fixedCounter, k, 0]);
   if (id === 'hook') nums.push([SKILLS.hooked, k, 0]);
   let out = text;
@@ -335,7 +334,7 @@ export function hudMarkup(s, { party = true, preview = null } = {}) {
   // Yours first (what you watch): your Signal with the crew under it; the virus's total at the right,
   // over its picture.
   return `<div class="hud-left"><div class="hud-you"><div class="hud-bar mine ${level}"><div class="bar-top"><strong>${glyph(runMode ? 'signal' : 'integrity', 'bar-ico')}${mine}</strong><span>${d.integrity}<small>/${d.max}</small></span></div><div class="bigbar"><span style="width:${dp}%"></span>${capMark(s, d)}${crackMark(s, d)}${lossMark(d.integrity, d.max, fc.you)}${copyGhost(d, fc.you, cp)}${claimMarks(s, d)}</div>${clockMeter(s)}</div></div>${statusPanel(s, cp)}</div>
-    <div class="hud-bar enemy"><div class="bar-top"><span class="vname"><strong>${esc(v.name)}</strong>${byline(v)}<span class="meta">${levelTag(s, v.level)}${v.strain || GUARDS[v.family]?.ice ? '' : ' ' + esc(familyInfo(v.family).name)}</span></span><span>${hp.current}<small>/${hp.max}</small></span></div><div class="bigbar"><span style="width:${vp}%"></span>${lossMark(hp.current, hp.max, fc.total)}</div><p class="clock-line">${armor.max ? `<span class="chits">${'◆'.repeat(armor.current)}<i>${'◇'.repeat(armor.max - armor.current)}</i></span>` : ''}${tags}${roomBossTag(s)}${rivalTag(s)}${progFight(s)}</p>${geneChips(s, v)}</div>`;
+    <div class="hud-bar enemy"><div class="bar-top"><span class="vname"><strong>${esc(v.name)}</strong>${byline(v)}<span class="meta">${levelTag(s, v.level)}${v.strain || GUARDS[v.family]?.ice ? '' : ' ' + esc(familyInfo(v.family).name)}</span></span><span>${hp.current}<small>/${hp.max}</small></span></div><div class="bigbar"><span style="width:${vp}%"></span>${lossMark(hp.current, hp.max, fc.total)}</div><p class="clock-line">${armor.max ? `<span class="chits">${'◆'.repeat(armor.current)}<i>${'◇'.repeat(armor.max - armor.current)}</i></span>` : ''}${tags}${roundTag(s)}${roomBossTag(s)}${rivalTag(s)}${progFight(s)}</p>${geneChips(s, v)}</div>`;
 }
 // An elite's clash (docs/puzzle-levers.md 4, genes.mjs CLASHES): its two levers by name, the pull and the answer in its tooltip.
 export function clashTag(v) {
@@ -351,6 +350,13 @@ function rivalTag(s) {
   if (!v) return '';
   const P = RIVALS[v.id];
   return `<span class="tag hot" title="${esc(`${P.name}\nRival · fight ${v.fight + 1} of ${v.fights}\nYour Signal carries to its next fight. Your cooldowns start fresh.\n▸ Win all ${v.fights} to take its pack.`)}">${esc(P.name)} ${v.fight + 1}/${v.fights}</span>`;
+}
+// A solo boss's rounds on your Signal (combat.mjs roundOf): the round it's in and its hits' size.
+function roundTag(s) {
+  const e = s.encounter, r = roundOf(e?.virus, e?.cycle);
+  if (!r) return '';
+  const next = r.next === 1 ? 'next cycle' : `in ${r.next} cycles`;
+  return `<span class="tag hot rounds" title="${esc(`Rounds\nBoss rule\nEach round of ${ROUNDS.every} cycles, its hits grow ${Math.round(r.grow * 100)}% over the last round's. Round ${r.n}: its hits are ×${r.mult.toFixed(2)}. The next round starts ${next}.${answerLine('Kill it before the rounds outgrow you.')}`)}">${glyph('clock')}R${r.n} ×${r.mult.toFixed(1)}</span>`;
 }
 function roomBossTag(s) {
   const e = s.encounter;
@@ -591,6 +597,7 @@ function partTags(s, p) {
   if (p.taggedUntil >= e.cycle) tags.push(`<span class="tag you" title="Tagged: burns on it deal 50% more damage, and its timer shows through a veil">tagged ${p.taggedUntil - e.cycle + 1}</span>`);
   if (p.hookedUntil >= e.cycle) tags.push(`<span class="tag you" title="Hooked: every hit on it deals 6 additional damage">hooked ${p.hookedUntil - e.cycle + 1}</span>`);
   if (p.throttledUntil >= e.cycle) tags.push(`<span class="tag you" title="Throttled: its attacks deal half damage">throttled ${p.throttledUntil - e.cycle + 1}</span>`);
+  if (p.resisted && e.cycle - p.resisted.cycle <= 1 && p.integrity > 0) tags.push(`<span class="tag hot" title="${esc(`Resisted: ${levelGap(s)} ${levelGap(s) === 1 ? 'level' : 'levels'} above you, it shrugged off your ${p.resisted.name}. A part resists your delays and statuses 10% more often for each level it is above you.${answerLine('Fight nearer your level, or lean on plain damage.')}`)}" data-tt-kind="Level gap">resisted</span>`);
   if (p.quarantinedUntil >= e.cycle) tags.push(`<span class="tag you" title="Quarantined: it takes 25% more damage while its attack waits">quarantined ${p.quarantinedUntil - e.cycle + 1}</span>`);
   if (p.phase && p.integrity > 0) tags.push(e.cycle % 2 ? '<span class="tag hot" title="Out of phase: your hits pass through it this cycle, and 15% of each command hits you">phased out</span>' : '<span class="tag you" title="In phase: takes damage this cycle">in phase</span>');
   if (p.attack?.windup && p.attack.due - e.cycle <= 2 && p.integrity > 0) tags.push(`<span class="tag hot" title="Winding up: dealing ${p.attack.windup} damage to it before it lands calls it off">wind-up ${p.attack.wound || 0}/${p.attack.windup}</span>`);
@@ -674,6 +681,8 @@ export function statusSpans(s) {
   const add = (name, until, kind, title, value = '') => { if (until >= e.cycle) out.push({ name, value, cycles: until - e.cycle + 1, kind, title }); };
   const st = momentumStacks(s);
   if (st) add('Momentum', e.momentum.until, 'you', `Momentum: +${Math.round(momentumBonus(s) * 100)}% damage (${st} of ${momentumCap(s)} stacks). Each break adds a stack and resets the timer.`, `+${Math.round(momentumBonus(s) * 100)}%${st > 1 ? ` ×${st}` : ''}`);
+  const tb = turboOn(e); // an Overclocker crewmate's Turbo Boost
+  if (tb) add('Turbo', tb.until, 'you', `Turbo\nBuff from ${tb.who === 'you' ? 'your' : `${tb.who}'s`} Turbo Boost\nYou deal ${Math.round((tb.dealt - 1) * 100)}% more damage and take ${Math.round((tb.taken - 1) * 100)}% more.`, `+${Math.round((tb.dealt - 1) * 100)}% · +${Math.round((tb.taken - 1) * 100)}% taken`);
   for (const [k, until] of Object.entries(e.buffs || {})) if (k !== 'null-route') add(k === 'sinkhole' ? 'Drawing fire' : k === 'stolen' ? 'Stolen cast' : ABILITIES[k]?.name || k, until, 'you', k === 'sinkhole' ? 'Every attack comes at you (Firewall or Bulkhead, with a crew).' : k === 'stolen' ? 'A cast you hijacked: your hits deal 35% more.' : ABILITIES[k]?.help || '');
   add('Null-routed', e.buffs?.['null-route'] ?? -1, 'you', "This cycle's attacks miss you, and your next skill is a critical strike.");
   // What a tell that landed left on you (tells.mjs): Corrupted, a hung command, a skill knocked offline.

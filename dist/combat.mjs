@@ -3,7 +3,7 @@
 // later run on a shared server unchanged.
 import { onFound, memoryCommand, isLive, joinCost, memoryRestore } from './memory.mjs';
 import { onFirstServer } from './scenes.mjs';
-import { barSlots, isRunSkill, SUBCLASS, SUBS, defaultSub, ELITE, BOSS_LOOT, BOSSES, ENRAGE, makePart, EDGE, SYNC, CONFIG, ABILITIES, SKILLS, DAEMONS, SPARE_EXPLOIT, FAMILIES, FIXTURES, GUARDS, MUTATIONS, STRAINS, SERVER, TEMPLATES, layerOf, floorOfLayer, createVirus, createLocation, ARCHETYPES, CANTRIPS, LOADOUT, TREE, UNLOCKS, XP, xpToNext, killXp, xpScale, deedScale, power, mobPower, skillOrder, unlockLevel, lineOf, presetBar, shippedPresets, spikeOf, SPIKE } from './data.mjs';
+import { barSlots, isRunSkill, SUBCLASS, SUBS, defaultSub, ELITE, BOSS_LOOT, BOSSES, ENRAGE, ROUNDS, makePart, EDGE, SYNC, CONFIG, ABILITIES, SKILLS, DAEMONS, SPARE_EXPLOIT, FAMILIES, FIXTURES, GUARDS, MUTATIONS, STRAINS, SERVER, TEMPLATES, layerOf, floorOfLayer, createVirus, createLocation, ARCHETYPES, CANTRIPS, LOADOUT, TREE, UNLOCKS, XP, xpToNext, killXp, xpScale, deedScale, power, mobPower, skillOrder, unlockLevel, lineOf, presetBar, shippedPresets, spikeOf, SPIKE } from './data.mjs';
 // The subclasses' engine side (dist/classes/<class>.mjs): what their skills, talents and edges do.
 import BREAKER_FX, { momentumCap } from './classes/breaker.mjs';
 import BASTION_FX from './classes/bastion.mjs';
@@ -30,7 +30,7 @@ import { raidStart, raidLand, raidCycle, raidShield, raidBroke, raidTaken, raidA
 import { tellStart, tellCycle, tellLand, tellBroke, chargeNow, tellIntents, tellSigint, tellSigintCheck, tellOn, tellsOf, overclockMult, hotCharge } from './tells.mjs';
 import { prepareTicks, onHit as tickHit, blastCut, BOSS_RULES, TICKS } from './interrupt.mjs';
 import { actsStart, lashHit, lashLand, actIntents, actBegins, actCap } from './acts.mjs';
-import { TELL, TELLS, ROOM_FAMILIES, DAMPER_KINDS, floorFor, line, lift, lifted } from './data.mjs';
+import { runLate, TELL, TELLS, ROOM_FAMILIES, DAMPER_KINDS, floorFor, line, lift, own } from './data.mjs';
 import { holdsPart, objectiveBroke, objectiveCycle, objectiveBonus, bonusXp, bonusRolls, backupHit } from './objectives.mjs';
 import { mechValidate, mechIntercept, mechFired, mechPower, exposedCut, mechLanded, mechCommandHit, mechStart, mechClose, mechBroke, lagged, stunnedNow, missedTurn } from './mechanics.mjs';
 import { tickRoot, processWon } from './root.mjs';
@@ -60,7 +60,7 @@ import { crewOf, factionAuthor, AUTHORS } from './authors.mjs';
 import { noteUse } from './mastery.mjs';
 import { fightNet, noteKill, nativeRoll, biasCode, richMult, networkRestore, networkCommand, lairUniques, lairFell, mine, netOf, isNative, named, nameOf, nameNative, openLair } from './network.mjs';
 
-export const SAVE_VERSION = 54; // v54: the compounding curve: items lifted at their level (gear.mjs curveRestore, keyed on s.curve); v53: the cryptogram's key, s.cipher (puzzles.mjs cipherOf: made on first use, keyed on the field); v52: rivals' memory, s.rivals (rivals.mjs rivalsRestore: made on first use, keyed on the field); v51: the scanner's log, s.scanner (scanner.mjs scannerOf: made on first use, keyed on the field); v50: site traits become server specials (specials.mjs specialsRestore); v49: crafting is gone: recipes, plans and their files become credits, Zero-day source the Zero-day (progression.mjs craftRestore); v48: Indemnity retires: an older save's unspent Indemnity becomes credits once, with a letter from Halcyon (store.mjs indemnityRestore); v47: one kind of component: an older save's pile of named pieces (s.salvage) becomes its count, s.components (salvage.mjs componentsRestore); v46: no default subclass: a class past level 10 that never picked plays its core until it does (subRestore); v45: sets, each loaded protocol stamped with when it went on and the storyline's LOWLIGHT Badge beat armed (sets.mjs setsRestore); v44: whole-number stats, Regen over 5 cycles and Payload flat (gear.mjs statsRestore); v43: threads, quests found in rooms (threads.mjs threadsRestore); v42: the long climb, XP into a level keeps its share (progression.mjs climbRestore); v41: layers become floors (floors.mjs floorsRestore); v40: outposts, buildings, plans, services, architecture and the dividend retire for sockets (sockets.mjs retireOutposts, netrooms.mjs socketRoomsRestore, GAME_RULES.md "Saves"); v39: every server is a room graph (netrooms.mjs roomsRestore, GAME_RULES.md "Runs: servers as rooms"); v38: two shipped presets renamed (presetRenameRestore); v37: 15-key pools, reordered lines and presets (kitRestore); v36: networks (network.mjs networkRestore: a network seed for every save); v31: subclasses (retireClassTrees); v32: Payload is a percentage; v33: invasion kinds, bounties, signatures, and the firewall follows the network (invasionRestore, firewallRestore); v34: one level, no server XP, specialty, ports, home-fight services or greys (progression.mjs progressionRestore); v35: the nine-key bar, run skills off it, one-clock tells (barRestore)
+export const SAVE_VERSION = 56; // v56: floors as tiers: items refilled on the tiers (gear.mjs curveRestore, keyed on s.curve 3); v55: gear carries your power: items filled at their level (gear.mjs curveRestore, keyed on s.curve 2); v54: the compounding curve: items lifted at their level (gear.mjs curveRestore, keyed on s.curve); v53: the cryptogram's key, s.cipher (puzzles.mjs cipherOf: made on first use, keyed on the field); v52: rivals' memory, s.rivals (rivals.mjs rivalsRestore: made on first use, keyed on the field); v51: the scanner's log, s.scanner (scanner.mjs scannerOf: made on first use, keyed on the field); v50: site traits become server specials (specials.mjs specialsRestore); v49: crafting is gone: recipes, plans and their files become credits, Zero-day source the Zero-day (progression.mjs craftRestore); v48: Indemnity retires: an older save's unspent Indemnity becomes credits once, with a letter from Halcyon (store.mjs indemnityRestore); v47: one kind of component: an older save's pile of named pieces (s.salvage) becomes its count, s.components (salvage.mjs componentsRestore); v46: no default subclass: a class past level 10 that never picked plays its core until it does (subRestore); v45: sets, each loaded protocol stamped with when it went on and the storyline's LOWLIGHT Badge beat armed (sets.mjs setsRestore); v44: whole-number stats, Regen over 5 cycles and Payload flat (gear.mjs statsRestore); v43: threads, quests found in rooms (threads.mjs threadsRestore); v42: the long climb, XP into a level keeps its share (progression.mjs climbRestore); v41: layers become floors (floors.mjs floorsRestore); v40: outposts, buildings, plans, services, architecture and the dividend retire for sockets (sockets.mjs retireOutposts, netrooms.mjs socketRoomsRestore, GAME_RULES.md "Saves"); v39: every server is a room graph (netrooms.mjs roomsRestore, GAME_RULES.md "Runs: servers as rooms"); v38: two shipped presets renamed (presetRenameRestore); v37: 15-key pools, reordered lines and presets (kitRestore); v36: networks (network.mjs networkRestore: a network seed for every save); v31: subclasses (retireClassTrees); v32: Payload is a percentage; v33: invasion kinds, bounties, signatures, and the firewall follows the network (invasionRestore, firewallRestore); v34: one level, no server XP, specialty, ports, home-fight services or greys (progression.mjs progressionRestore); v35: the nine-key bar, run skills off it, one-clock tells (barRestore)
 
 // run.mjs registers callbacks here (it imports this file, so we can't import it).
 export const hooks = { flee: null, now: null };
@@ -87,7 +87,7 @@ export const classFill = (s, t) => classHooks().flatMap((h) => (h.fill ? h.fill(
 export function fresh() {
   const s = {
     version: SAVE_VERSION,
-    curve: 1, // items rolled on the compounding curve (gear.mjs curveRestore)
+    curve: 3, // items rolled on the compounding curve and filled, on the floor tiers (gear.mjs curveRestore)
     server: { integrity: CONFIG.maxIntegrity, max: CONFIG.maxIntegrity, credits: CONFIG.startingCredits },
     encounter: null,
     leadProgress: { ransomware: 0, worm: 0, ghostroot: 0 },
@@ -307,8 +307,8 @@ export const momentumStacks = (s) => { const m = s.encounter?.momentum; return m
 export const momentumBonus = (s) => (SKILLS.momentum + 0.02 * rank(s, 'chain-exploit')) * momentumStacks(s);
 
 // Level gap (CONFIG.gap): what you deal to something above you, and what it deals you.
-// One level up is still about even; it counts from the second.
-const over = (g) => Math.max(0, g - 1);
+// It counts from the first level up.
+const over = (g) => Math.max(0, g);
 export const gapDealt = (g) => (g > 0 ? Math.max(CONFIG.gap.floor, 1 - CONFIG.gap.dealt * over(g)) : 1 + Math.min(0.15, CONFIG.gap.below * -g));
 export const gapTaken = (g) => (g > 0 ? 1 + CONFIG.gap.taken * over(g) : Math.max(0.7, 1 - CONFIG.gap.below * -g));
 export function damageMultiplier(s, p, opts = {}) {
@@ -325,6 +325,7 @@ export function damageMultiplier(s, p, opts = {}) {
   if (opts.mine) {
     m *= 1 + 0.03 * rank(s, 'overclocked');
     if (classOf(s) === 'breaker') m *= 1 + momentumBonus(s);
+    m *= turboOn(e)?.dealt ?? 1; // an Overclocker crewmate's Turbo Boost
     if (hasTalent(s, 'unsafe-mode')) m *= 1.3;
     if (e.synced) m *= 1 + CONFIG.sync.bonus;
     for (const x of fxFire(s, 'hit', { target: p, do: 'damage%', cmd: !opts.dot && !opts.by ? e.commanding?.id : null })) m *= 1 + x.value / 100;
@@ -421,7 +422,7 @@ export const ignoresArmor = (s, id) => !!ABILITIES[id]?.pierce || (id === 'overl
 export function previewDamage(s, abilityId, p) {
   if (!p || !skillBase(s, abilityId, p) || frozenNow(s, p)) return 0;
   if (p.armor > 0 && !ignoresArmor(s, abilityId) && !rootkitReady(s)) return 0;
-  let n = Math.floor((skillBase(s, abilityId, p) + gearStat(s, 'damage')) * damageMultiplier(s, p, { mine: true }) + 1e-9);
+  let n = Math.floor((skillBase(s, abilityId, p) + gearDamage(s, skillBase(s, abilityId, p))) * damageMultiplier(s, p, { mine: true }) + 1e-9);
   const root = s.encounter && buffed(s.encounter, 'sudo');
   const capN = !root ? capOf(s, p) : null;
   if (capN) n = Math.min(n, capN); // a Limiter's cap (a Limiter.exe's on every part)
@@ -512,17 +513,27 @@ export function gearStat(s, stat, side = null) {
 export const guarding = (s) => (s.encounter && (active(s) || s.encounter.phase === 'alert') ? (s.encounter.mode === 'run' ? 'hacker' : 'server') : s.run ? 'hacker' : 'server');
 export const defense = (s, stat) => gearStat(s, stat, guarding(s));
 export const critMultiplier = () => CRIT.multiplier;
-// Your power: every level, your numbers grow CONFIG.powerPerLevel, compounding (damage, heals, shields, Signal).
-export const powerOf = (s) => power(hackerLevel(s));
+// Your power: your own numbers (damage, heals, shields, Signal) grow on your slow line (data.mjs own); gear carries the rest.
+export const powerOf = (s) => own(hackerLevel(s));
 export const scaled = (s, n) => Math.max(1, Math.round(n * powerOf(s)));
-// Heals you cast: CONFIG.healLevel of the level growth, times Restore. restoreMult alone for heals that
-// give back damage (Reclaim's half, Rollback), which already grow with it.
+// Sustain's potency in a fight with fight length (data.mjs CONFIG.length.heal, by the virus's level): heals you take and
+// your skills' flat shields shrink with its hits, so twice the casts in a longer fight don't double what you sustain.
+// drawn: a heal drawn from the damage you deal (lifesteal, Leech, Reclaim) shrinks with the Integrity it draws on instead.
+export const potency = (s, drawn = false) => { const v = s.encounter?.virus; return !v?.long || !CONFIG.length.heal ? 1 : drawn ? (CONFIG.length.drawn ?? 1) / runLate(v.level, CONFIG.length.hp) : runLate(v.level, CONFIG.length.heal); };
+export const sustained = (s, n, drawn = false) => Math.max(1, Math.round(n * potency(s, drawn)));
+// Heals you cast: CONFIG.healLevel of the level line's growth and the lift (step 1's curve), times Restore.
+// restoreMult alone for heals that give back damage (Reclaim's half, Rollback), which already grow with it.
 export const restoreMult = (s) => 1 + gearStat(s, 'restore') / 100;
 export const healScaled = (s, n) => { const L = hackerLevel(s); return Math.max(1, Math.round(n * lift(L) * (1 + (line(L) - 1) * CONFIG.healLevel) * restoreMult(s) * setHealMult(s))); }; // setHealMult: Link, Mesh (sets.mjs)
-// Damage over time (burn ticks, helper hits): built with scaled(), it keeps CONFIG.dotLevel of the level line's
-// growth and the whole lift at the hit (dotMult), and Payload adds its flat number to each one (dotHit), as Damage does to a skill hit.
-export const dotMult = (s) => { const L = hackerLevel(s); return (1 + (line(L) - 1) * CONFIG.dotLevel) / line(L); };
-export const dotHit = (s, base) => base * dotMult(s) + gearStat(s, 'payload');
+// Gear on a hit, WoW's coefficient: gear Damage on a skill hit, and Payload on a burn tick or helper hit, scale with
+// the hit's size: a hit the size of Spike's (CONFIG.damageRef at your level) gets all of its Damage, a tick of
+// CONFIG.tickRef all of its Damage and of CONFIG.dotRef all of its Payload; a bigger one more, a smaller one less.
+export const gearDamage = (s, base) => (gearStat(s, 'damage') * base) / (CONFIG.damageRef * powerOf(s));
+export const gearPayload = (s, base) => (gearStat(s, 'payload') * base) / (CONFIG.dotRef * powerOf(s));
+// A burn tick or helper hit: gear Damage by the tick's coefficient (all of it on a tick of CONFIG.tickRef), Payload on top.
+export const gearTick = (s, base) => (gearStat(s, 'damage') * base) / (CONFIG.tickRef * powerOf(s)) + gearPayload(s, base);
+// Damage over time (burn ticks, helper hits): built with scaled(), plus its share of gear Damage and Payload.
+export const dotHit = (s, base) => base + gearTick(s, base);
 // Regen a cycle (or a move, or a minute at home): Regen counts over STATS.regen.every of them.
 export const regenRate = (n) => n / (STATS.regen.every || 1);
 // The level gap to the enemy you're fighting (positive: it's above you).
@@ -531,6 +542,10 @@ export const levelGap = (s) => (s.encounter?.virus?.level || hackerLevel(s)) - h
 // level below (never under 0). Your hits: less your Accuracy. Its hits: plus your Evasion.
 const gapMiss = (gap) => Math.min(CONFIG.maxMiss, Math.max(0, CONFIG.baseMiss + gap));
 export const missChance = (s) => (CONFIG.misses ? Math.max(0, gapMiss(levelGap(s)) - gearStat(s, 'accuracy')) : 0);
+// Resists: a part above you shrugs off your delays and statuses CONFIG.resist% more often a level (none at or below).
+// What a resist can stop: a skill that delays, stuns, jams or puts a status on a part.
+export const controls = (a, id) => !!(a?.status || a?.delay || a?.verb === 'stun' || id === 'jam');
+export const resistChance = (s) => (CONFIG.misses ? Math.min(CONFIG.maxResist, CONFIG.resist * Math.max(0, levelGap(s))) : 0);
 export const enemyMissChance = (s) => (CONFIG.misses ? Math.min(75, gapMiss(-levelGap(s)) + defense(s, 'evasion')) : defense(s, 'evasion'));
 // Server Regen between fights: very slow (its number every 5 real minutes, as in a fight it is every 5 cycles).
 // Between fights: resting (see CONFIG.restRegen) plus any Self-healing filter's Regen.
@@ -1195,10 +1210,14 @@ export function encounterVirus(s, key, seed, opts = {}) {
   if (Array.isArray(opts.exe)) over.exe = opts.exe; // forced .exe builds (exe.mjs: the playtest page, the tests)
   if (opts.classic) over.classic = true; // the shape from before the parts roll (a Pulse Node, the signature, one third): balance.mjs's designed fight sets
   if (mode === 'run') over.run = true; // tuned for Signal fights (CONFIG.runHp, runDamage)
+  if (opts.short) over.short = true; // a breach's fights keep their own pace (CONFIG.length skipped)
   if (opts.tag) over.tag = opts.tag; // a file's four digits: the fight carries its file's tag (WARDED CRYPTJACK-4821)
   // Its floor (parts.mjs PARTS.floor, natives): the server's, or with no server (home, SPRAWL-00, a sim) your floor at
   // the fight's level. A ★ rare spawn (floorplan.mjs) brings a native like an elite.
   over.floor = floorOfFight(s, mode, opts, lvl ?? Math.max(1, (over.threat ?? SERVER.threat(1)) - 9));
+  // Its floor step (data.mjs mobPower) is its floor's, but the crew dungeon sits on floor 1 and keeps up with you
+  // (rogue.mjs openFarm): its mobs take the floor of their level.
+  if (mode === 'run' && s.run && findLocation(s, opts.wild || opts.process || s.run.loc)?.farm) over.tier = floorFor(lvl ?? Math.max(1, (over.threat ?? SERVER.threat(1)) - 9));
   if (opts.rare) over.rare = true;
   // Kestrel's Idle Timer (PARTS.kestrel): from floor 3, half the guard posts and ICE bring one, by their seed.
   if (PARTS.on && GUARDS[key] && mode === 'run' && !opts.nest && !opts.genes && over.floor >= PARTS.kestrel.floor && ((Math.imul((seed >>> 0) ^ 0x6a09e667, 2246822519) >>> 0) / 2 ** 32) < PARTS.kestrel.share) over.genes = ['idletimer'];
@@ -1911,7 +1930,7 @@ function loadoutCommand(s, text) {
 
 // ---------- upgrades ----------
 // Max Signal%: set pieces and bonuses (sets.mjs) and Bedframe, Firmware (max-signal%) raise the whole of it.
-const signalOf = (s) => { const t = 4 * rank(s, 'redundancy') + 3 * rank(s, 'onion-routing') + 3 * rank(s, 'extra-memory'); return Math.round(CONFIG.maxSignal * powerOf(s)) + gearStat(s, 'signal') + (t ? lifted(t, hackerLevel(s)) : 0); }; // talents' flat Signal, lifted (data.mjs lift)
+const signalOf = (s) => { const t = 4 * rank(s, 'redundancy') + 3 * rank(s, 'onion-routing') + 3 * rank(s, 'extra-memory'); return Math.round(CONFIG.maxSignal * powerOf(s)) + gearStat(s, 'signal') + (t ? scaled(s, t) : 0); }; // talents' Signal, on your own line
 export const maxSignal = (s) => {
   const n = signalOf(s), pct = (piecesOn(s) ? setSignal(s) : 0) + fxSum(s, 'always', 'max-signal%'), sick = rebootSick(s), m = pct ? n + Math.round((n * pct) / 100) : n;
   return sick ? Math.max(1, Math.round(m * (1 - sick))) : m;
@@ -2800,14 +2819,14 @@ export function hit(s, p, base, opts = {}) {
   const root = opts.mine && !opts.server && (buffed(e, 'sudo') || opts.unlock); // Sudo (Overclocker): the parts' rules don't hold you; Zero-day goes through locks
   if (cmd && e.commanding?.maze) base = Math.max(1, Math.round((base * e.commanding.maze) / 100));
   if (cmd && e.commanding?.bounce === p.id) {
-    const by = e.commanding.bounceBy || p.name, back = Math.min(Math.max(1, Math.round(base * (e.commanding.bounceShare ?? p.bounce ?? CONFIG.mirrorBounce))), defender(s).integrity - 1);
+    const by = e.commanding.bounceBy || p.name, whole = base + (opts.mine && !opts.server && !opts.dot ? gearDamage(s, base) : 0), back = Math.min(Math.max(1, Math.round(whole * (e.commanding.bounceShare ?? p.bounce ?? CONFIG.mirrorBounce))), defender(s).integrity - 1); // the whole hit, your gear's Damage in it
     const took = back > 0 ? takeDamage(s, back, p.id, `${by} bounce`) : 0;
     if (took) emit(s, 'server-hit', `Part of it bounces back off the ${by}: −${took}.`, { source: p.id, amount: took, bounce: true });
   }
   // A crew boss's firewall phase (raid.mjs): while its shield is up, every hit on the boss lands on the shield,
   // armor or not.
   if (base > 0 && e.virus.raid?.shield && !p.raidAdd) {
-    const n = Math.floor((opts.dot ? dotHit(s, base) : base + (opts.mine && !opts.server ? gearStat(s, 'damage') : 0)) * damageMultiplier(s, p, opts) + 1e-9);
+    const n = Math.floor((opts.dot ? dotHit(s, base) : base + (opts.mine && !opts.server ? gearDamage(s, base) : 0)) * damageMultiplier(s, p, opts) + 1e-9);
     raidShield(s, p, n, true);
     if (!opts.server) noteDealt(s, n); // it still draws aggro
     return { dealt: 0, overflow: 0, absorbed: true };
@@ -2849,7 +2868,7 @@ export function hit(s, p, base, opts = {}) {
   // Flat gear: Damage on your skill hits, Payload on burn ticks and helper hits.
   if (base > 0 && !opts.server) {
     if (opts.dot) base = dotHit(s, base); // damage over time's share of level growth, plus Payload
-    else if (opts.mine) base += gearStat(s, 'damage') + fxFire(s, 'hit', { target: p, do: 'damage+' }).reduce((n, x) => n + x.value, 0);
+    else if (opts.mine) base += gearDamage(s, base) + fxFire(s, 'hit', { target: p, do: 'damage+' }).reduce((n, x) => n + x.value, 0);
   }
   let raw = Math.floor(base * damageMultiplier(s, p, opts) + 1e-9); // tolerance: 25 × 1.5 × 1.2 is 45, not 44.999…
   const lean = leanDealt(e, p);
@@ -3433,6 +3452,14 @@ function useAbility(s, intent, auto = false) {
     classEach('used', s, { id, target, res: null, before }); // a miss still counts as a skill used (sets.mjs)
     return;
   }
+  // Resisted: a part above your level shrugs off a delay, a stun or a status (CONFIG.resist a level), like a miss.
+  if (controls(a, id) && resistChance(s) > 0 && rand(s) * 100 < resistChance(s)) {
+    e.metrics.resists = (e.metrics.resists || 0) + 1;
+    if (target) target.resisted = { cycle: e.cycle, name: a.name };
+    emit(s, 'miss', `${target ? target.name : 'The virus'} RESISTS ${a.name}.${cooldownOf(s, id) > 1 && !intent.ignoreCooldown ? ` Cooldown spent (${cooldownOf(s, id)}).` : ''}`, { target: target?.id, ability: id, resisted: true });
+    classEach('used', s, { id, target, res: null, before });
+    return;
+  }
   // Scrambled (Ghostroot's Scrambler): the attack may turn on you, at half strength. The cooldown is spent.
   if ((base || a.all) && e.scrambleUntil >= e.cycle && rand(s) < CONFIG.scramble.chance) {
     const amount = Math.max(1, Math.round((base || a.all * powerOf(s)) * (e.scrambleSelf ?? CONFIG.scramble.self))); // a Scrambler.exe's: at full
@@ -3456,7 +3483,7 @@ function useAbility(s, intent, auto = false) {
   // Overload: a crit resets its cooldown.
   if (id === 'overload' && res?.crit) { delete e.readyAt.overload; emit(s, 'proc', 'Overload lands a critical strike and is ready again.', { ability: 'overload' }); }
   if (a.proc) delete e.procs[a.proc]; // Shatter, Retaliate, Opening spend their window
-  if (a.lifesteal && res?.dealt) heal(s, Math.max(1, Math.round(res.dealt * a.lifesteal * restoreMult(s) * classMult('drawn', s))), a.name); // drawn: a class's heals from its hits (the Sysop alone heals from what it would have dealt)
+  if (a.lifesteal && res?.dealt) heal(s, Math.max(1, Math.round(res.dealt * a.lifesteal * restoreMult(s) * classMult('drawn', s))), a.name, { drawn: true }); // drawn: a class's heals from its hits (the Sysop alone heals from what it would have dealt)
   if (a.all) for (const p of livingParts(s)) hit(s, p, a.all * powerOf(s) * (a.fragx && p.kind === 'fragment' ? a.fragx : 1), { mine: true, by: a.name }); // fragments take more (Fork Bomb, Garbage Collect)
   if (id === 'garbage-collect') for (const h of e.helpers) h.left++;
   if (id === 'failover') {
@@ -3526,7 +3553,7 @@ function useAbility(s, intent, auto = false) {
     emit(s, 'status', `${a.name} for ${a.cycles} cycles.`, { mark: 'buff', ability: id });
   }
   if (a.shield) {
-    const amount = scaled(s, id === 'firewall' ? (hasTalent(s, 'deep-packet-inspection') ? 30 : a.shield) + 5 * rank(s, 'stateful-firewall') : a.shield);
+    const amount = sustained(s, scaled(s, id === 'firewall' ? (hasTalent(s, 'deep-packet-inspection') ? 30 : a.shield) + 5 * rank(s, 'stateful-firewall') : a.shield));
     e.shield = Math.max(e.shield || 0, amount);
     emit(s, 'status', `Shield up. It absorbs the next ${amount} damage.`, { mark: 'shield', ability: id });
   }
@@ -3557,7 +3584,7 @@ function useAbility(s, intent, auto = false) {
     const mine = burnsOn(s, target).filter((b) => b.id !== 'implant');
     let total = 0, ticks = 0;
     for (const b of mine) { for (let k = 0; k < b.left; k++) total += b.damage + (b.grow || 0) * k; ticks += b.left; e.burns.splice(e.burns.indexOf(b), 1); }
-    hit(s, target, Math.round((total * dotMult(s) + ticks * gearStat(s, 'payload')) * a.mult * (hasTalent(s, 'assassinate') && on(s, target, 'tagged') ? 2 : 1)), { by: 'Detonate', pierce: true }); // burns' worth, Payload included
+    hit(s, target, Math.round((total + gearTick(s, total)) * a.mult * (hasTalent(s, 'assassinate') && on(s, target, 'tagged') ? 2 : 1)), { by: 'Detonate', pierce: true }); // burns' worth, gear Damage and Payload included
   }
   if (id === 'propagate') {
     // Fragments catch the copies at double.
@@ -3616,10 +3643,11 @@ const allyOf = (s, who) => hooks.crewAllies?.(s)?.find((x) => x.who === who)?.st
 const fightFromOf = (s) => (s.run?.breach ? s.breach?.fightFrom : s.run?.rooms ? s.rooms?.fightFrom : null); // a breach's, or a server room's (floorplan.mjs)
 export const healCap = (s) => { const d = defender(s), from = fightFromOf(s); return from != null ? Math.min(d.max, from) : d.max; };
 // lift: a restore that counts like a patch (the Sasser script): it ignores the cap and raises it with you.
-export function heal(s, amount, label, { lift = false, gear = null } = {}) {
+export function heal(s, amount, label, { lift = false, gear = null, drawn = false, potent = false } = {}) {
   const d = defender(s);
   const more = s.encounter ? fxSum(s, 'always', 'heal%') : 0; // the healing you receive (Sump Pump, Bedframe)
   if (more) amount = Math.max(1, Math.round(amount * (1 + more / 100)));
+  if (!lift && !potent && amount > 0) amount = sustained(s, amount, drawn); // potency (CONFIG.length.heal); potent: already applied
   if (s.encounter?.virus?.raid) amount = raidAbsorb(s, amount); // encrypted sectors (raid.mjs)
   amount = Math.round(amount * classMult('healing', s, label)); // a heal you cast, larger (Runbook: sets.mjs)
   const bb = s.encounter?.badBlock; // Bad Block: the cracked cells eat the heal first
@@ -3724,13 +3752,15 @@ function noteSignal(s, at = s.encounter.cycle) {
 // A crew boss's mechanic landing on one player (raid.mjs): a buster, a pulse, a burst, a tick of
 // Corruption. It can't miss or crit, but your armor chit stops it whole, Null Route dodges it (not a tick
 // of damage over time), and shields, Block, Bulkhead, DMZ, Thermal Stress and Hot Standby all count.
+// Turbo (an Overclocker crewmate's Turbo Boost, classes/breaker.mjs): for its cycles you deal × dealt and take × taken.
+export const turboOn = (e) => (e?.turbo?.until >= e.cycle ? e.turbo : null);
 export function mechanicHit(s, amount, label, source = 'raid', opts = {}) {
   const e = s.encounter;
   if (!e || defender(s).integrity <= 0) return 0;
   if (!opts.dot && (e.nullRoute > 0 || e.buffs['null-route'] >= e.cycle)) { dodged(e); emit(s, 'blocked', `${label} misses ${s.who || 'you'}, null-routed.`, { source }); openProc(s, 'slipped'); slipLonger(s); return 0; }
   if (!opts.dot && e.chits > 0) { e.chits--; emit(s, 'blocked', `${label} hits ${s.who ? s.who + '\'s' : 'your'} ◆ and does nothing.`, { source }); return 0; }
   const p = { id: source, name: label, integrity: 1, max: 1, attack: { name: label, effect: 'damage', amount, interval: 99 } };
-  const dealt = takeDamage(s, absorbed(s, Math.max(1, Math.round(amount * classMult('taken', s, p.attack, p) * raidTaken(s))), p.attack, p), source, label);
+  const dealt = takeDamage(s, absorbed(s, Math.max(1, Math.round(amount * (turboOn(e)?.taken ?? 1) * classMult('taken', s, p.attack, p) * raidTaken(s))), p.attack, p), source, label);
   if (dealt) { classEach('struck', s, p.attack, dealt, p); e.undo = { type: 'damage', amount: dealt }; }
   return dealt;
 }
@@ -3785,13 +3815,6 @@ export const c2Gnaw = (s, p) => { const c = p.kind === 'fragment' ? livingParts(
 // A player drawing fire this cycle (Bastion Firewall in a crew): the one every attack goes at.
 export const drawingFire = (s) => (s.encounter?.buffs?.sinkhole >= s.encounter?.cycle ? s : null);
 
-// The spike cap (CONFIG.spikeCap): a solo boss's single landing never takes more than 60% of your max, and a wild
-// virus's or a guard's charge (a tell, atk.tell) no more than 45%. A crew boss (raid.mjs) is left to its own rules.
-export const spikeCap = (s, atk = null) => {
-  const e = s.encounter, share = e?.virus?.raid ? null : e?.virus?.boss ? CONFIG.spikeCap.boss : atk?.tell ? CONFIG.spikeCap.wild : null;
-  return share ? Math.max(1, Math.floor(defender(s).max * share)) : Infinity;
-};
-const spikeCapped = (s, n, atk) => Math.min(n, spikeCap(s, atk));
 // Mooring (hit-cap): no single attack takes more than its share of your max.
 const hitCapped = (s, n) => { const x = fxHas(s, 'hit-cap'); return x ? Math.min(n, Math.max(1, Math.floor((defender(s).max * (Number(x.fx.value) || 100)) / 100))) : n; };
 // Bilge (burn-sap): each burn you started on a part this fight takes a share off its hits on you, up to the cap.
@@ -3824,11 +3847,19 @@ function scrapeYou(s, p, atk, { chits = 0, shield = 0, buffs = [] }) {
   const what = [chits ? `${chits} ◆` : '', shield ? `${shield} shield` : '', ...buffs.map((b) => b.name)].filter(Boolean);
   emit(s, 'blind', `${atk.name} scrapes off your ${andList(what)}${gain ? `. The ${p.name} wears ${gain} more ◆` : ''}.`, { source: p.id, scrape: true, shield, chits, buffs: buffs.map((b) => b.name), gain });
 }
+// Boss rounds (data.mjs ROUNDS): for a solo boss, the round this cycle is in, its hits' multiple, and the cycles until the
+// next round (null: not a solo boss).
+export function roundOf(v, cycle) {
+  const g = BOSSES[v?.boss] && !BOSSES[v.boss].raid ? ROUNDS.grow : 0;
+  if (!g) return null;
+  const n = Math.floor((Math.max(1, cycle) - 1) / ROUNDS.every) + 1;
+  return { n, grow: g, mult: (1 + g) ** (n - 1), next: n * ROUNDS.every + 1 - cycle };
+}
 function landAttack(s, p) {
   const e = s.encounter;
   const atk = p.attack;
   liftOf(s);
-  const power = attackAmount(p) * c2Gnaw(s, p) * (e.soft || 1) * gapTaken(levelGap(s)) * (p.boosted ? CONFIG.reactiveBonus : 1) * (on(s, p, 'throttled') ? (hasTalent(s, 'backpressure') ? 0.25 : SKILLS.throttled) : 1) * mechPower(s, p, true);
+  const power = attackAmount(p) * (roundOf(e.virus, e.cycle)?.mult ?? 1) * (turboOn(e)?.taken ?? 1) * c2Gnaw(s, p) * (e.soft || 1) * gapTaken(levelGap(s)) * (p.boosted ? CONFIG.reactiveBonus : 1) * (on(s, p, 'throttled') ? (hasTalent(s, 'backpressure') ? 0.25 : SKILLS.throttled) : 1) * mechPower(s, p, true);
   // A hit: a damage attack, or a special that also hits (the Scrambler's Scramble). Its size is `hit`, scaled like the rest.
   const hits = atk.effect === 'damage' || !!atk.hit, hitPower = atk.hit ? (power * atk.hit) / Math.max(1, atk.amount) : power;
   p.boosted = false;
@@ -3915,7 +3946,7 @@ function landAttack(s, p) {
     const brown = leanTaken(e, p); // Brownout (leanings.mjs): your command aimed at its part this cycle
     if (brown < 1) { leanPaid(e, p, Math.round(pre * cut * (1 - brown))); cut *= brown; }
     // Blindside (Ghostroot): a hit you couldn't see coming lands harder.
-    const dealt = takeDamage(s, absorbed(s, hitCapped(s, spikeCapped(s, Math.round(hitPower * sap * (hasTalent(s, 'unsafe-mode') ? 1.2 : 1) * tough * (crit ? CRIT.multiplier : 1) * cut * took * (e.virus.raid ? raidTaken(s) : 1)), atk)), atk, p), p.id, atk.name);
+    const dealt = takeDamage(s, absorbed(s, hitCapped(s, Math.round(hitPower * sap * (hasTalent(s, 'unsafe-mode') ? 1.2 : 1) * tough * (crit ? CRIT.multiplier : 1) * cut * took * (e.virus.raid ? raidTaken(s) : 1))), atk, p), p.id, atk.name);
     struckFx(s, atk);
     if (dealt) classEach('struck', s, atk, dealt, p);
     if (p.mech) mechLanded(s, p, atk); // the status it leaves on you, or what it cashes in (mechanics.mjs)
@@ -3985,7 +4016,7 @@ function landAttack(s, p) {
       const n = e.nextFragment++;
       const pw = e.virus.power || 1;
       const amount = Math.max(1, Math.round(CONFIG.fragmentDamage * pw));
-      const hp = Math.max(1, Math.round(CONFIG.fragmentIntegrity * (e.virus.hpPower ?? pw))); // health follows the virus's health scale, not its damage
+      const hp = Math.max(1, Math.round(CONFIG.fragmentIntegrity * (e.virus.addPower ?? e.virus.hpPower ?? pw))); // health follows the virus's health scale, not its damage
       e.virus.parts.push({ id: 'frag' + n, name: 'Fragment ' + n, kind: 'fragment', integrity: hp, max: hp, armor: 0, maxArmor: 0, patchAt: null, veiled: false, loot: null, special: false, attack: { name: 'Gnaw', effect: 'damage', amount, interval: 1, due: e.cycle + 1 }, exposedUntil: 0, lastDamaged: 0, boosted: false });
       if (p.overrun) { const f = e.virus.parts.at(-1); f.attack.ramp = 1; f.attack.rampBy = Math.max(1, Math.round(pw)); f.attack.step = 0; }
       e.undo = { type: 'replicate', part: 'frag' + n };
@@ -4156,7 +4187,7 @@ export function playerPhase(s, phase = 'all') {
   if (e.regen && e.regen.from <= e.cycle && e.regen.left > 0) { heal(s, e.regen.amount, e.regen.name || 'Patch'); e.regen.left--; }
   classEach('cycle', s); // class modules: the end of this player's turn
   // Leech pays out; Regen ticks (the rig's on runs, the server's at home).
-  if (e.leechAcc >= 1) { const n = Math.floor(e.leechAcc); e.leechAcc -= n; heal(s, n, 'Leech'); }
+  if (e.leechAcc >= 1) { const n = Math.floor(e.leechAcc); e.leechAcc -= n; heal(s, n, 'Leech', { drawn: true }); }
   const rg = regenRate(defense(s, 'regen')) * (1 + fxSum(s, 'always', 'heal%') / 100); // Regen R: R every 5 cycles (more with Sump Pump, Bedframe: heal%)
   if (rg) {
     e.regenAcc = (e.regenAcc || 0) + rg;
@@ -4844,7 +4875,7 @@ export function shuntRestore(s) {
   walk(s, 0);
 }
 export function restore(raw) {
-  if (!raw || ![6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, SAVE_VERSION].includes(raw.version)) return fresh();
+  if (!raw || ![6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, SAVE_VERSION].includes(raw.version)) return fresh();
   try {
     const s = bindRooms(structuredClone(raw));
     const was = s.version;
