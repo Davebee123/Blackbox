@@ -4110,6 +4110,18 @@ p.impl { margin: 6px 0 0; padding: 4px 2px; border-bottom: 1px dotted color-mix(
 .sk-subnav button[aria-pressed='true'] { color: var(--bright); }
 .sk-subnav button[aria-pressed='true']::before { content: '▸ '; color: var(--amber); }
 .sk-yours { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--you); margin-left: 6px; vertical-align: 1px; }
+/* before a pick: the subclasses as big tabs, the one shown lit; Choose beside them */
+.sk-specs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)) auto; gap: var(--s4); align-items: stretch; padding: 14px 22px; border-bottom: 1px solid var(--line); }
+.sk-specs.col { grid-template-columns: minmax(220px, 1fr); padding: 0; border: 0; }
+.sk-spec { display: grid; gap: 4px; justify-items: start; padding: 12px 16px; border: 1px solid var(--line-strong); border-radius: var(--r-card); background: var(--inset); color: var(--muted); text-align: left; cursor: pointer; }
+.sk-spec b { font: 600 18px var(--sans); color: var(--text); }
+.sk-spec small { font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--dim); }
+.sk-spec:hover { border-color: var(--amber-soft); }
+.sk-spec.on { border-color: var(--amber); background: var(--amber-wash); }
+.sk-spec.on b { color: var(--bright); }
+.sk-specs-act { display: grid; gap: var(--s3); align-content: center; justify-items: center; }
+.sk-spec-core { padding: 0; border: 0; background: none; font: 500 12px var(--sans); color: var(--dim); cursor: pointer; }
+.sk-spec-core:hover, .sk-spec-core[aria-pressed='true'] { color: var(--text); }
 
 .sk-sec { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 14px; padding: 16px 22px; }
 .sk-sec + .sk-sec { border-top: 1px solid var(--line); }
@@ -4252,6 +4264,8 @@ p.impl { margin: 6px 0 0; padding: 4px 2px; border-bottom: 1px dotted color-mix(
   .sk-page { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 900px) {
+  .sk-specs { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 12px 14px; }
+  .sk-specs-act { grid-column: 1 / -1; grid-auto-flow: column; justify-content: start; gap: var(--s5); }
   .arch-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .arch { justify-content: space-between; }
   .arch-use { grid-column: 1 / -1; margin-left: 0; }

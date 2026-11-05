@@ -193,21 +193,28 @@ export function skillsTabMarkup(s, view, ui = {}) {
   const st = STATUSES[a.status];
   const next = xpToNext(lvl), pct = lvl < LOADOUT.maxLevel ? Math.max(0, Math.min(100, (hk.xp / next) * 100)) : 100;
   // The head's right side: the subclasses and the class alone to look at, with Switch on another, or Choose before a pick.
-  let side = '';
-  if (p.mine || p.waiting) {
+  let side = '', specs = '';
+  if (p.waiting) {
+    // Before a pick: the subclasses as big tabs (name and role), the one shown lit, and Choose for it.
+    const look = globalThis.__specLook || 'row';
+    const tab = (x) => `<button type="button" class="sk-spec${x.id === p.shown ? ' on' : ''}" data-arch="${id}/${x.id}" aria-pressed="${x.id === p.shown}"><b>${esc(x.name)}</b><small>${x.role.map(esc).join(' · ')}</small></button>`;
+    const choose = kit ? `<button type="button" class="btn primary sk-choose" ${p.keysBusy ? 'disabled title="Between fights"' : `data-command="subclass ${id} ${kit.id}" title="Switching later is free at home"`}>Choose ${esc(kit.name)}</button>` : '';
+    const coreLink = `<button type="button" class="sk-spec-core" data-arch="${id}/core" aria-pressed="${!kit}">${esc(a.name)} core</button>`;
+    if (look === 'row') specs = `<div class="sk-specs" role="group" aria-label="Subclass">${Object.values(a.subs).map(tab).join('')}<div class="sk-specs-act">${choose}${coreLink}</div></div>`;
+    else side = `<div class="sk-specs col" role="group" aria-label="Subclass">${Object.values(a.subs).map(tab).join('')}</div>${choose}${coreLink}`;
+  } else if (p.mine) {
     const nav = [['core', `${a.name} core`], ...Object.values(a.subs).map((x) => [x.id, x.name])].map(([k, name]) => {
       const on = (k === 'core' && !kit) || k === p.shown;
       return `<button type="button" data-arch="${id}/${k}" aria-pressed="${on}">${esc(name)}${k === p.mine ? '<i class="sk-yours" title="Yours"></i>' : ''}</button>`;
     }).join('');
     let act = '';
-    if (p.waiting && kit) act = `<button type="button" class="btn primary sk-choose" ${p.keysBusy ? 'disabled title="Between fights"' : `data-command="subclass ${id} ${kit.id}" title="Switching later is free at home"`}>Choose ${esc(kit.name)}</button>`;
-    else if (p.previewing) { const why = p.keysBusy ? 'Between fights' : p.busy ? 'At home' : `Switch to ${kit.name}`; act = `<button type="button" class="btn small" ${p.busy ? 'disabled' : `data-command="subclass ${id} ${kit.id}"`} title="${esc(why)}">Switch</button>`; }
+    if (p.previewing) { const why = p.keysBusy ? 'Between fights' : p.busy ? 'At home' : `Switch to ${kit.name}`; act = `<button type="button" class="btn small" ${p.busy ? 'disabled' : `data-command="subclass ${id} ${kit.id}"`} title="${esc(why)}">Switch</button>`; }
     side = `<nav class="sk-subnav" aria-label="Subclass">${nav}</nav>${act}`;
   }
   const head = `<header class="sk-head"><pre class="sk-emblem" aria-hidden="true">${esc(EMBLEMS[id].join('\n'))}</pre>
     <div class="sk-id"><h2>${p.waiting ? `${esc(a.name)} · Choose a subclass` : kit ? esc(a.name) : a.role.map(esc).join(' · ')}</h2><h1>${esc(kit ? kit.name : a.name)}${p.previewing && !p.waiting ? ' <span class="tag preview">Preview</span>' : ''}</h1>
       <div class="sk-lv"><b>Lv ${lvl}</b>${lvl < LOADOUT.maxLevel ? `<span class="lvl-bar" title="${fmt(hk.xp)} / ${fmt(next)} XP"><span style="width:${pct.toFixed(1)}%"></span></span><small>${Math.floor(pct)}%</small>` : '<small>max level</small>'}<span class="tag stag status sk-status" title="${esc(`${st.name}: ${st.rule}`)}">${esc(st.name)}</span></div></div>
-    <div class="sk-side">${side}</div></header>`;
+    <div class="sk-side">${side}</div></header>${specs}`;
 
   const bar = `<section class="sk-sec sk-barsec"><h3>Bar</h3><div><ol class="sk-bar" aria-label="Your bar">${[cantripHtml(p, cantripsOf(id)[0], sk), ...Array.from({ length: LOADOUT.equipSlots }, (_, i) => keyHtml(p, i, sk)), ...cantripsOf(id).slice(1).map((c) => cantripHtml(p, c, sk))].join('')}</ol>${presetsHtml(p)}</div></section>`;
 
