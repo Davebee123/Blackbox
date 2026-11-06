@@ -3507,7 +3507,7 @@ function useAbility(s, intent, auto = false) {
     let dmg = a.helper, n = a.ticks, count = a.helpers || 1;
     if (id === 'deploy') {
       dmg += rank(s, 'thread-pool');
-      if (hasTalent(s, 'long-running')) n = 6;
+      if (hasTalent(s, 'long-running')) n = Math.max(n, 6); // never shorter than a longer helper (Daemonize)
       if (hasTalent(s, 'parallel-deploy')) { count = 2; dmg = Math.round(dmg / 2); }
     }
     if (id === 'botnet') { if (hasTalent(s, 'extra-nodes')) count = 4; if (hasTalent(s, 'node-pool')) dmg += 3; } // Node Pool (Herder)
@@ -4863,7 +4863,7 @@ export function shuntRestore(s) {
   walk(s, 0);
 }
 export function restore(raw) {
-  if (!raw || ![6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, SAVE_VERSION].includes(raw.version)) return fresh();
+  if (!raw || ![6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, SAVE_VERSION].includes(raw.version)) return fresh();
   try {
     const s = bindRooms(structuredClone(raw));
     const was = s.version;

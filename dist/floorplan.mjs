@@ -1824,7 +1824,7 @@ export function outfit(s, { cls = 'breaker', level = 10, sub = null, rarity = 't
   const pickSub = level >= SUBCLASS.from ? (SUBS[sub]?.cls === cls ? sub : defaultSub(cls)) : null, kit = SUBS[pickSub];
   if (pickSub) s.loadout.sub = { ...(s.loadout.sub || {}), [cls]: pickSub };
   if (kit) {
-    (s.loadout.tiers ||= {})[pickSub] = botTiers(level); // the plain pick in each open tier
+    (s.loadout.tiers ||= {})[pickSub] = botTiers(level, null, pickSub); // a bot's pick in each open tier (talents.mjs BOT_PICKS)
     if (level >= LOADOUT.capstoneAt[0]) (s.loadout.caps ||= {})[pickSub] = 0; // the first capstone
   }
   for (let i = 0; i < protocolSlots(level); i++) {

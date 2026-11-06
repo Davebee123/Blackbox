@@ -414,7 +414,7 @@ export function spendTalents(s, { cls = classOf(s), level = hackerLevel(s), sub 
   const pick = level >= SUBCLASS.from ? (SUBS[sub]?.cls === cls ? sub : SUBS[s.loadout.sub?.[cls]]?.cls === cls ? s.loadout.sub[cls] : defaultSub(cls)) : null, key = pick || cls, kit = SUBS[pick];
   if (pick) s.loadout.sub = { ...(s.loadout.sub || {}), [cls]: pick };
   if (kit) {
-    (s.loadout.tiers ||= {})[key] = botTiers(level); // the plain pick in each open tier
+    (s.loadout.tiers ||= {})[key] = botTiers(level, null, pick); // a bot's pick in each open tier (talents.mjs BOT_PICKS)
     if (level >= LOADOUT.capstoneAt[0]) (s.loadout.caps ||= {})[key] = 0; // the first capstone
   }
   return kit || null;

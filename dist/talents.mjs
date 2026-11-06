@@ -34,5 +34,12 @@ export function tiersRestore(s) {
   delete L.picks;
   delete L.ranks;
 }
-// The tiers a bot or a test takes at a level: picks[i] where given, else the plain pick (the first), each tier once open.
-export const botTiers = (level, picks = []) => LOADOUT.tiers.map((l, i) => (level >= l ? picks[i] ?? 0 : null));
+// The pick a bot takes in each tier (0, 1 or 2; the plain one where none is named): a sensible player's, by subclass,
+// measured with balance.mjs score at levels 10 to 50 (each tier's picks against the plain one, then together).
+export const BOT_PICKS = {
+  demolitionist: [1, 1, 1, 2, 0, 1], overclocker: [0, 2, 2, 0, 2, 0], warden: [0, 0, 2], sysop: [0, 0, 0, 1],
+  payload: [0, 0, 2, 1], phantom: [], herder: [1, 2, 0, 1, 0, 2], hijacker: [1, 1, 2],
+};
+// The tiers a bot or a test takes at a level: picks[i] where given, else the subclass's bot pick, else the plain one,
+// each tier once open.
+export const botTiers = (level, picks = null, sub = null) => LOADOUT.tiers.map((l, i) => (level >= l ? (picks || BOT_PICKS[sub] || [])[i] ?? 0 : null));

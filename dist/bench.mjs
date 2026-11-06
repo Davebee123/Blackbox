@@ -61,8 +61,9 @@ export function build(s, cls, b, opts) {
   // none picked yet, the class's core alone (the bench's `bench <class> <level>`, its pick waiting).
   const sub = b.level >= SUBCLASS.from && !opts.noSub ? opts.sub || defaultSub(cls) : null, key = sub || cls, kit = SUBS[sub];
   if (sub) s.loadout.sub = { [cls]: sub };
-  // Its tiers: the plain pick in each open one (opts.tiers: a pick a tier, a, b or c as 0, 1 or 2; `tree: 'full'` opens all six).
-  if (kit) s.loadout.tiers = { [key]: botTiers(b.tree === 'full' ? LOADOUT.maxLevel : b.level, opts.tiers) };
+  // Its tiers: a bot's pick in each open one (talents.mjs BOT_PICKS; opts.tiers: a pick a tier, a, b or c as 0, 1 or 2,
+  // [] for the plain ones; `tree: 'full'` opens all six).
+  if (kit) s.loadout.tiers = { [key]: botTiers(b.tree === 'full' ? LOADOUT.maxLevel : b.level, opts.tiers, sub) };
   // The capstone (from level 45, rank 2 at 50): opts.capstone 0 or 1, the first by default; null for none.
   if (kit && b.level >= LOADOUT.capstoneAt[0] && opts.capstone !== null) s.loadout.caps = { [key]: opts.capstone ?? 0 };
   if (opts.extra) s.loadout.equipped[key] = [...skillOrder(cls).slice(0, 4), opts.extra];
