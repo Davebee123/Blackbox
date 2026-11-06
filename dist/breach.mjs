@@ -32,6 +32,7 @@
 // Signal, as on any run.
 import { hooks, emit, warn, active, selectEncounter, command, maxSignal, hackerOf, hackerLevel, classOf, subOf, addItem, stashItem, rigOf, attackers, gainXp, part, livingParts, defender, hit } from './combat.mjs';
 import { GUARDS, STRAINS, TELL, SUBS, LOADOUT, SUBCLASS, defaultSub, ARCHETYPES, BOSSES, FAMILIES, TELL_SETS, stemOf, makePart, climbStretch } from './data.mjs';
+import { botTiers } from './talents.mjs';
 import { seeded, rollItem, itemLabel, protocolSlots, SLOT_KINDS, chaseStat } from './gear.mjs';
 import { SUBSYSTEMS, REWRITES } from './rewrites.mjs';
 import { GENES, rollGenome, partGenes, compatible } from './genes.mjs';
@@ -407,22 +408,13 @@ export const CORE_DUMP = {
 // ---------- your hacker, for the tests and the bots ----------
 // A class at a level with a subclass, its talents spent as a player would (balance.mjs build), and a blue protocol in
 // every open slot, chasing its subclass's stats.
-const fillOrder = (F) => [[F[0][0].id, 3], ['c0'], [F[1][0].id, 3], [F[1][1].id, 1], ['c1'], [F[2][0].id, 3], [F[2][1].id, 2], ['c2'], [F[0][1].id, 3], [F[1][1].id, 2], [F[2][1].id, 1]];
-// The talent pick each tier takes (0 or 1): a sensible player's, by subclass (breachsim.mjs measures them).
-export const TALENT_PICKS = { phantom: [0, 1, 1] };
 // A subclass from level 10 and the talent points a level has, spent as a player would (the campaign bot calls it as it
 // levels too). Returns the subclass's kit, or null below level 10.
 export function spendTalents(s, { cls = classOf(s), level = hackerLevel(s), sub = null } = {}) {
   const pick = level >= SUBCLASS.from ? (SUBS[sub]?.cls === cls ? sub : SUBS[s.loadout.sub?.[cls]]?.cls === cls ? s.loadout.sub[cls] : defaultSub(cls)) : null, key = pick || cls, kit = SUBS[pick];
   if (pick) s.loadout.sub = { ...(s.loadout.sub || {}), [cls]: pick };
   if (kit) {
-    let left = level < LOADOUT.talentFrom ? 0 : Math.floor((level - LOADOUT.talentFrom) / LOADOUT.talentEvery) + 1;
-    const ranks = {}, picks = [], tp = TALENT_PICKS[pick] || [0, 0, 0];
-    for (const [id, n] of fillOrder(kit.fillers)) {
-      if (left <= 0) break;
-      if (!n) { picks[+id[1]] = tp[+id[1]]; left--; } else { const k = Math.min(n, left); ranks[id] = (ranks[id] || 0) + k; left -= k; }
-    }
-    s.loadout.picks[key] = picks; s.loadout.ranks[key] = ranks;
+    (s.loadout.tiers ||= {})[key] = botTiers(level); // the plain pick in each open tier
     if (level >= LOADOUT.capstoneAt[0]) (s.loadout.caps ||= {})[key] = 0; // the first capstone
   }
   return kit || null;

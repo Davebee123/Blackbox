@@ -189,12 +189,13 @@ if (isMain) {
       md += `| ${p} | ${ARCHETYPES[cls].skills.find((x) => x.id === id).name} | ${r.wins}/${r.total} | ${r.lost.toFixed(0)}% | ${(r.lost - base.lost >= 0 ? '+' : '') + (r.lost - base.lost).toFixed(0)} | ${r.cycles.toFixed(1)} | ${(r.cycles - base.cycles >= 0 ? '+' : '') + (r.cycles - base.cycles).toFixed(1)} |\n`;
     }
   }
-  // Every combination of the three talent picks, at level 50's talent points.
-  md += '\n## Every talent pick (level 50)\n\nThe eight combinations of the three picks, in the default subclass.\n\n| Class | Best build | Health lost · cycles | Worst build | Health lost · cycles |\n|---|---|---:|---|---:|\n';
+  // Each talent pick, the other tiers on their plain pick, at level 50.
+  md += '\n## Every talent pick (level 50)\n\nEach tier\'s other two picks against all plain picks, in the default subclass.\n\n| Class | Best build | Health lost · cycles | Worst build | Health lost · cycles |\n|---|---|---:|---|---:|\n';
   for (const p of classes) {
     const cls = CLASS[p], a = SUBS[defaultSub(cls)];
     const rows = [];
-    for (let m = 0; m < 8; m++) { const picks = [m & 1, (m >> 1) & 1, (m >> 2) & 1]; const r = score(p, top, { picks }); rows.push({ name: picks.map((x, i) => a.talents[i][x].name).join(' / '), ...r }); }
+    rows.push({ name: 'All plain', ...score(p, top, { tiers: [] }) });
+    for (let i = 0; i < a.tiers.length; i++) for (const j of [1, 2]) { const tiers = []; tiers[i] = j; rows.push({ name: a.tiers[i][j].name, ...score(p, top, { tiers }) }); }
     rows.sort((x, y) => x.lost - y.lost);
     const [best, worst] = [rows[0], rows.at(-1)];
     md += `| ${p} | ${best.name} | ${best.lost.toFixed(0)}% · ${best.cycles.toFixed(1)} | ${worst.name} | ${worst.lost.toFixed(0)}% · ${worst.cycles.toFixed(1)} |\n`;

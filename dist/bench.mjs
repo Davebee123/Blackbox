@@ -11,6 +11,7 @@
 import { fresh, bindRooms, command, addItem, addLocation, syncServer, emit, warn, hackerLevel, classOf, subOf, presetKeys, UNIQUES } from './combat.mjs';
 import { rollItem, seeded, protocolSlots, SLOT_KINDS, chaseStat, uniqueItem } from './gear.mjs';
 import { ARCHETYPES, SUBS, SUBCLASS, LOADOUT, FAMILIES, defaultSub, skillOrder, floorFor } from './data.mjs';
+import { botTiers } from './talents.mjs';
 import { floorsOf, graphOf, neighbours, serverSlot, locAt, descend } from './floors.mjs';
 import { CARDS as EVENT_CARDS } from './events.mjs';
 import { PARTS } from './parts.mjs';
@@ -52,8 +53,6 @@ export function benchDelete(store, name) {
 
 // ---------- the character ----------
 // Talents as a player would have them: a point at 10 and every 2 levels after (LOADOUT), spent in a
-// fixed order (rank up a row's first node, take the tier's choice, move down). `tree: 'full'` maxes it.
-const fillOrder = (F) => [[F[0][0].id, 3], ['c0'], [F[1][0].id, 3], [F[1][1].id, 1], ['c1'], [F[2][0].id, 3], [F[2][1].id, 2], ['c2'], [F[0][1].id, 3], [F[1][1].id, 2], [F[2][1].id, 1]];
 export function build(s, cls, b, opts) {
   s.loadout.archetype = cls;
   s.metAll = true; // a veteran: every part met, so the parts roll (dist/parts.mjs) brings its whole mix, strangers and all
@@ -62,19 +61,8 @@ export function build(s, cls, b, opts) {
   // none picked yet, the class's core alone (the bench's `bench <class> <level>`, its pick waiting).
   const sub = b.level >= SUBCLASS.from && !opts.noSub ? opts.sub || defaultSub(cls) : null, key = sub || cls, kit = SUBS[sub];
   if (sub) s.loadout.sub = { [cls]: sub };
-  if (!kit) { /* no tree before the subclass */ }
-  else if (b.tree === 'full') { s.loadout.picks[key] = [0, 0, 0]; s.loadout.ranks[key] = Object.fromEntries(kit.fillers.flat().map((n) => [n.id, 3])); }
-  else {
-    let left = b.level < LOADOUT.talentFrom ? 0 : Math.floor((b.level - LOADOUT.talentFrom) / LOADOUT.talentEvery) + 1;
-    const ranks = {}, picks = [];
-    for (const [id, n] of fillOrder(kit.fillers)) {
-      if (left <= 0) break;
-      if (!n) { picks[+id[1]] = (opts.picks || [0, 0, 0])[+id[1]]; left--; } else { const k = Math.min(n, left); ranks[id] = (ranks[id] || 0) + k; left -= k; }
-    }
-    s.loadout.picks[key] = picks; s.loadout.ranks[key] = ranks;
-  }
-  if (opts.picks) s.loadout.picks[key] = opts.picks;
-  if (opts.ranks) s.loadout.ranks[key] = opts.ranks;
+  // Its tiers: the plain pick in each open one (opts.tiers: a pick a tier, a, b or c as 0, 1 or 2; `tree: 'full'` opens all six).
+  if (kit) s.loadout.tiers = { [key]: botTiers(b.tree === 'full' ? LOADOUT.maxLevel : b.level, opts.tiers) };
   // The capstone (from level 45, rank 2 at 50): opts.capstone 0 or 1, the first by default; null for none.
   if (kit && b.level >= LOADOUT.capstoneAt[0] && opts.capstone !== null) s.loadout.caps = { [key]: opts.capstone ?? 0 };
   if (opts.extra) s.loadout.equipped[key] = [...skillOrder(cls).slice(0, 4), opts.extra];

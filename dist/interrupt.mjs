@@ -20,7 +20,7 @@
 //      other parts interrupt as usual, and its phases no longer follow its total Integrity.
 //   b  every part interrupts; phases stay on total Integrity; it brings one more charge.
 //   c  phases at 50% and 25% of total; ticks interrupt, but the fight has a budget of TICKS.budget cancels.
-import { emit, alive, part, livingParts, hooks, previewDamage, ignoresArmor, toIntent, usable, readyIn, fxOn, frontOf, liensPaid } from './combat.mjs';
+import { emit, alive, part, livingParts, hooks, previewDamage, ignoresArmor, toIntent, usable, readyIn, fxOn, frontOf, liensPaid, fireEvent } from './combat.mjs';
 import { FAMILIES, GUARDS, STRAINS, BOSSES, ROOM_FAMILIES, ABILITIES, TELL } from './data.mjs';
 import { tellsOf, tellAnswer, tellNext, tierOf, inWindow, answers } from './tells.mjs';
 import { raidDef } from './raid.mjs';
@@ -169,6 +169,7 @@ function cancel(s, p, due, t) {
   emit(s, 'cut', `INTERRUPTED. You take the ${p.name} under ${pct(t.at)}. Its ${what} cancelled.${e.cutBudget != null ? ` ${e.cutBudget} of ${TICKS.budget} interrupts left this fight.` : ''}`, { target: p.id, tick: t.at, cut: true });
   gainResearch(s, e.virus, p, 'cut'); // +1 research on the part you cut (research.mjs; a crewmate's cut is theirs)
   daemonsOn(s, 'cut', { part: p.id }); // Breakpoint, Guillotine
+  fireEvent(s, 'cut', { part: p }); // talents and gear (combat.mjs)
 }
 
 // A Zip Bomb's blast cuts (docs/puzzle-levers.md 3.3): what a part has due on the cycle it goes off is cancelled, a
