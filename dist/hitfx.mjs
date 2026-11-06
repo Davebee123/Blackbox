@@ -100,14 +100,26 @@ export function createHitFx(board, { canMove = () => true } = {}) {
     if (!row?.isConnected || !canMove()) return;
     const f = frame(), r = local(f, row.getBoundingClientRect());
     letters(row, f);
-    for (let i = 0; i < 28; i++) {
-      const x = r.l + Math.random() * r.w * 0.55, y = r.t + r.h * (0.2 + Math.random() * 0.6);
-      add('fx-bit dissolve', {
-        left: x + 'px', top: y + 'px',
-        '--tx': (Math.random() - 0.3) * 70 + 'px', '--ty': -(20 + Math.random() * 60) + 'px',
-        '--r': '0deg', '--s': (0.6 + Math.random() * 0.5).toFixed(2),
-        '--d': (0.6 + Math.random() * 0.5).toFixed(2) + 's', animationDelay: (Math.random() * 0.45).toFixed(2) + 's',
-      }, Math.random() < 0.5 ? '0' : '1', 1700);
+    // The row itself becomes a block of 1s and 0s where it stood: each one blinks in, flickers, then drifts up and fades.
+    const cw = 9, chh = 13, cols = Math.max(1, Math.floor(r.w / cw)), lines = Math.max(1, Math.floor(r.h / chh));
+    const step = Math.max(1, Math.ceil((cols * lines) / 170)); // never more than ~170 of them
+    for (let k = 0; k < cols * lines; k += step) {
+      const c = k % cols, l = Math.floor(k / cols);
+      const el = document.createElement('span');
+      el.className = 'fx-letter fx-cell';
+      el.textContent = Math.random() < 0.5 ? '0' : '1';
+      Object.assign(el.style, { left: r.l + (c + 0.5) * (r.w / cols) + 'px', top: r.t + (l + 0.5) * (r.h / lines) + 'px' });
+      layer.appendChild(el);
+      const appear = 20 + Math.random() * 180, go = appear + 200 + Math.random() * 300, end = go + 500 + Math.random() * 300;
+      const flick = setInterval(() => { if (Math.random() < 0.35) el.textContent = el.textContent === '0' ? '1' : '0'; }, 80);
+      el.animate([
+        { transform: 'translate(-50%, -50%)', opacity: 0, offset: 0 },
+        { transform: 'translate(-50%, -50%)', opacity: 0, offset: appear / end },
+        { transform: 'translate(-50%, -50%)', opacity: 0.9, color: 'var(--bright)', offset: Math.min(0.99, (appear + 50) / end) },
+        { transform: 'translate(-50%, -50%)', opacity: 0.75, color: 'var(--amber)', offset: go / end },
+        { transform: `translate(calc(-50% + ${(Math.random() - 0.5) * 24}px), calc(-50% - ${18 + Math.random() * 36}px))`, opacity: 0, color: 'var(--dim)', offset: 1 },
+      ], { duration: end, easing: 'ease-out', fill: 'forwards' });
+      setTimeout(() => { clearInterval(flick); el.remove(); }, end + 60);
     }
   }
   return { strike, dissolve, jolt };

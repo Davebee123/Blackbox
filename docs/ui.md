@@ -247,7 +247,7 @@ interface**. CSS, the DOM and text only (no canvas, WebGL or PixiJS on the scree
   A body can move its core and its limbs differently: a hound barks rings from its head and rakes with its legs; a
   trojan's hatch spills packets over the page while its head rears and slams out at you.
   The body never leaves its window. No
-  input; Screen effects off or Motion off: none. A broken part dissolves into drifting 1s and 0s inside the render, and on the board its name and health break up
+  input; Screen effects off or Motion off: none. A broken part dissolves into drifting 1s and 0s inside the render, and on the board the row flickers out into a block of 1s and 0s, its name and health breaking up
   letter by letter into 1s and 0s that drift up and fade (hitfx.mjs).
 - **The fight boot** (bootfx.mjs, bootfx.css) is another effect on the panels, approved by the designer (*Centre stage*).
   The first time you see a fight: brackets lock on its room (from the rooms page), the tube goes dark with a red edge,
