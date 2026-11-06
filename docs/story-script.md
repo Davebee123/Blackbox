@@ -1,6 +1,6 @@
 # Story script (draft)
 
-**Status.** A draft for the designer to mark up; nothing here is built. It carries docs/lore.md's beats in the built
+**Status.** Floor jobs, extra letters, the Boss step (with stand-ins) and the two storyline mails are built (lore.md 9.2, session 1); the rest isn't. It carries docs/lore.md's beats in the built
 floor jobs (`content/contracts.mjs` `floors`): **every step's kind and target stay**, only the words change, and
 **every chain ends on a named boss** (the *Boss* step, new: a fixed boss in a server's Core; the floor's lair boss
 stands in until that boss is built). Where a
@@ -318,9 +318,7 @@ Bedrock's own lair boss (46) is still to write; it stands between the actuary an
 
 ## What the script needs that isn't built
 
-- **Extra letters** in a floor job: a letter with no job, from someone other than the chain's giver, after a named step.
-- **The Boss step:** a fixed boss in a server's Core, with its challenge and fall lines; the floor's lair boss stands
-  in until it's built. To build: PAGE NINE (an elite, no new rules), CENTRIFUGE, SHOULDER SURFER, NIGHT DESK (new),
+- **The named bosses** (the Boss step and its stand-ins are built). To build: PAGE NINE (an elite, no new rules), CENTRIFUGE, SHOULDER SURFER, NIGHT DESK (new),
   EXIT NODE, BULKHEAD (new), GOLDEN PARACHUTE, INIT.
 - **Five transmissions** on reaching floor 5 (`scenes.mjs` has the format; the trigger is new).
 - **The seal** on floor 6: a set piece, designed and prototyped first.

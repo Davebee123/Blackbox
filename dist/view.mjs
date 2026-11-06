@@ -1753,7 +1753,7 @@ const floorTag = (c) => `<span title="A floor job: floor ${c.chain}'s own chain"
 // Where a contract's work is: its server, an unknown one it points at, or SPRAWL-00 (the WoW quest tracker).
 const trackGo = (c) => (c.loc ? `map:${c.loc}` : c.hidden ? `map:${c.hidden}` : c.type === 'bounty' || c.where === 'sprawl' ? 'map:sprawl' : null);
 // A contract's icon, by its kind (the mail's contract card and the map's tracker).
-const jobIcon = (c) => ({ kill: 'kill', strain: 'kill', bounty: 'bounty', takeover: 'takeover', materials: 'materials', item: 'item', side: 'f-' + c.faction, install: 'canary', defuse: 'lock', sweep: 'trace', exfil: 'upload', heist: 'stealth', puzzle: 'cipher', lair: 'bounty', rooms: 'trace', map: 'trace' }[c.type] || 'item');
+const jobIcon = (c) => ({ kill: 'kill', strain: 'kill', bounty: 'bounty', takeover: 'takeover', materials: 'materials', item: 'item', side: 'f-' + c.faction, install: 'canary', defuse: 'lock', sweep: 'trace', exfil: 'upload', heist: 'stealth', puzzle: 'cipher', lair: 'bounty', boss: 'bounty', rooms: 'trace', map: 'trace' }[c.type] || 'item');
 // Whose contract it is: its faction, Halcyon's board, or none for LOWLIGHT (the mail's rows and the map's tracker).
 const jobFaction = (c) => c.faction || (c.story !== undefined || /LOWLIGHT/.test(c.from) ? null : 'halcyon');
 function jobBox(s, c, now) {

@@ -592,7 +592,7 @@ const cap = (x) => (x ? x[0].toUpperCase() + x.slice(1) : '');
 // Strain contracts: every fifth one in a row pays double and rolls for the strain's trophy; dropping one resets it.
 export const SLAYER = { every: 5 };
 // What a contract's XP counts as in the XP mix (combat.mjs gainXp): the activity behind it.
-const CONTRACT_KIND = { puzzle: 'intel', lair: 'fight', side: null, strain: 'fight', kill: 'fight', bounty: 'fight', materials: 'fight', takeover: 'breakin', item: 'breakin', rooms: 'fight', map: 'breakin', install: 'breakin', defuse: 'fight', sweep: 'breakin', exfil: 'fight', heist: 'breakin', grind: 'fight', solve: 'intel', decode: 'intel', sweeps: 'intel', interrupt: 'fight', root: 'build', hold: 'fight' };
+const CONTRACT_KIND = { puzzle: 'intel', lair: 'fight', boss: 'fight', side: null, strain: 'fight', kill: 'fight', bounty: 'fight', materials: 'fight', takeover: 'breakin', item: 'breakin', rooms: 'fight', map: 'breakin', install: 'breakin', defuse: 'fight', sweep: 'breakin', exfil: 'fight', heist: 'breakin', grind: 'fight', solve: 'intel', decode: 'intel', sweeps: 'intel', interrupt: 'fight', root: 'build', hold: 'fight' };
 // A kill contract counts kills no more than 4 levels under the level it was posted at.
 export const KILL_RANGE = 4;
 const inRange = (c, level) => level == null || c.level == null || level >= c.level - KILL_RANGE;
@@ -775,7 +775,7 @@ export const BASE = {
   kill: 1.5, strain: 2, bounty: 2, materials: 1, rooms: 2, map: 3, takeover: 3, item: 2.5, side: 0,
   install: 3, defuse: 2.5, sweep: 4, exfil: 2.5, heist: 3.5,
   grind: 1.5, solve: 2, decode: 1.5, sweeps: 2, interrupt: 1.5, root: 3, hold: 2.5,
-  puzzle: 2, lair: 4, // a floor job's own steps (arcs.mjs): a board won on its server, the floor's lair boss beaten
+  puzzle: 2, lair: 4, boss: 4, // a floor job's own steps (arcs.mjs): a board won on its server, the floor's lair boss or a named boss beaten
 };
 export const SIZE = {
   mult: [1, 2, 3],

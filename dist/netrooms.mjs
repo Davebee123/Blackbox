@@ -40,6 +40,7 @@ import { consortiumSockets } from './consortium.mjs';
 import { owned, rootOf, ROOT, ROOT_PERKS } from './root.mjs';
 import { contractTakeover, contractRooms, contractMapped, contractConnect, contractInstall, contractStood, contractExfil, payloadFor, roomMarks, jobsOn } from './mail.mjs';
 import { giveScript, rollScript } from './scripts.mjs';
+import { arcChallenge } from './arcs.mjs';
 import { itemLabel, uniqueItem } from './gear.mjs';
 import { strikeServer, clearedFor } from './factions.mjs';
 import { traceNear, hiddenLead, HIDDEN } from './hidden.mjs';
@@ -568,7 +569,7 @@ FP.WORLD.view = {
   sealed: (s) => { const loc = locOf(s); return loc?.zone ? 'RELAY-KING holds it from level 3.' : loc?.farm ? 'Behind the ledger.' : loc?.lair ? `${BOSSES[loc.lair]?.name || 'Its boss'} holds it from level ${BOSSES[loc.lair]?.floor || 1}.` : undefined; },
   elite: (s, room) => { const sp = spawnOf(s, room); return !!(sp?.elite || sp?.bounty); },
   packLine: (s, f) => (f.kind === 'credits' ? `${f.amount} credits` : f.kind === 'code' ? `${f.amount} ${MATERIALS[f.material]?.name || f.material}` : f.kind === 'gear' ? itemLabel(f.item) : f.label || f.name),
-  fightNote: (s, room) => { const sp = room.wild ? spawnOf(s, room) : null; return sp?.bounty ? 'A named target: a contract wants it.' : sp?.boss && BOSSES[sp.boss]?.raid ? 'A crew boss, sized for your crew.' : room.kind === 'core' && s.rooms.type === 'server' ? 'Beat it and the server is yours.' : ''; },
+  fightNote: (s, room) => { const sp = room.wild ? spawnOf(s, room) : null, line = arcChallenge(s, locOf(s), room); return line ? line : sp?.bounty ? 'A named target: a contract wants it.' : sp?.boss && BOSSES[sp.boss]?.raid ? 'A crew boss, sized for your crew.' : room.kind === 'core' && s.rooms.type === 'server' ? 'Beat it and the server is yours.' : ''; },
   vaultLeft: (s, room) => { const loc = locOf(s); if (!loc || room.id !== s.rooms.graph.vaults[0]) return 0; return vaultFiles(loc).filter(({ dir, name }) => { const info = fileInfo(loc, dir, name); return info && !['text', 'trap', 'sweep'].includes(info.kind) && !loc.state?.taken?.[`${dir}/${name}`] && !s.run?.pack.some((f) => f.path === `${dir}/${name}`); }).length; },
   entryFiles: (s) => entryFiles(s, locOf(s)).length,
   downNote: (s, room) => { if (!room.wild) return undefined; const at = FP.backAt(s, room); return at ? `Back in ${FP.fmtLeft(at - now())}.` : undefined; },

@@ -2023,19 +2023,23 @@ ledger, and its trail leads down the floors. A floor's chain opens once you've r
 One step is open at a time; delivering it brings the next as a letter. Floor jobs never expire, can't be dropped and
 don't count toward your six. The words are in `dist/content/contracts.mjs` (`floors`).
 
-| Floor | Chain | From | Steps |
-|---|---|---|---|
-| 1 The Sprawl | Page nine | wick | named process in SPRAWL-00 · Map · Recover a file · puzzle board |
-| 2 Backhaul | Carrier | LANTERN | Install · Rooms · Past the Tracker · Map without resting · lair boss |
-| 3 The Stacks | Underwriting | Halcyon Claims | Map · Recover a file · Takeover · puzzle board · Takeover |
-| 4 Coldline | Cold storage | Kestrel | Rooms · Install · Past the Tracker · Map without resting · Takeover |
-| 5 Deep Core | Static | NULL CHOIR | puzzle board · Recover a file · Rooms · Install · lair boss |
-| 6 Kernel Space | Ring zero | wick | Map · Past the Tracker · Takeover · lair boss |
-| 7 The Sink | Minutes | Halcyon Claims | Install · Rooms · Recover a file · Map without resting · Takeover |
-| 8 Bedrock | Bedrock | wick | Map · puzzle board · Past the Tracker · Install · Takeover · lair boss |
+| Floor | Chain | From | Steps | Extra letter (after step) |
+|---|---|---|---|---|
+| 1 The Sprawl | Page nine | wick | named process in SPRAWL-00 · Map · Recover a file · puzzle board · Boss PAGE NINE | — |
+| 2 Backhaul | Carrier | LANTERN | Install · Rooms · Past the Tracker · Map without resting · Boss CENTRIFUGE | — |
+| 3 The Stacks | Underwriting | Halcyon Claims | Map · Recover a file · Takeover · puzzle board · Boss SHOULDER SURFER | NULL CHOIR (2) |
+| 4 Coldline | Cold storage | Kestrel | Rooms · Install · Past the Tracker · Map without resting · Boss NIGHT DESK | wick (2) |
+| 5 Deep Core | Static | NULL CHOIR | puzzle board · Recover a file · Rooms · Install · Boss EXIT NODE | wick (2) |
+| 6 Kernel Space | Ring zero | wick | Map · Past the Tracker · Takeover · Boss BULKHEAD | Kestrel (3) |
+| 7 The Sink | Minutes | Halcyon Claims | Install · Rooms · Recover a file · Map without resting · Boss GOLDEN PARACHUTE | GLASSJAW (2) |
+| 8 Bedrock | Bedrock | wick | Map · puzzle board · Past the Tracker · Install · Takeover · lair boss | — |
 
-- **Steps** are the board's contract types with fixed targets, plus two of their own: **Win a puzzle board** on a named
-  server and **Beat the lair boss** (each after the step arrived).
+- **Steps** are the board's contract types with fixed targets, plus three of their own, each counted after the step
+  arrived: **Win a puzzle board** on a named server, **Beat the lair boss**, and **Boss**: a named boss in a Core. Until
+  each named boss is built, the floor's lair boss stands in (on floor 1, SPRAWL-00's RELAY-KING): the letter names the
+  boss, the title the stand-in. Its challenge line shows on the Core's card, its fall line when it's beaten.
+- **Extra letters** come with no job, from someone other than the chain's sender, when their step is delivered.
+- **Saves:** a chain finished before it gained a step (floor 1's Boss) opens again at that step.
 - **Targets** come from the floor's diagram, so a network always gives the same ones: the landing server, a server along
   the main road (never a rogue or the lair), the first main-road server with a Tracker, or the lair. A target you haven't
   located reads *the server 2 links past ORIN-CACHE-57* until you do. A Past the Tracker step on a server with no

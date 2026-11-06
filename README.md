@@ -171,7 +171,7 @@ comment saying what it does.
 | `dist/mail.mjs` | Letters, contracts and the Halcyon retainer. |
 | `dist/content.mjs` | Fills and checks the written content's blanks. |
 | `dist/content/story.mjs`, `dist/content/contracts.mjs` | The story beats and contract templates, written in the editor. |
-| `dist/arcs.mjs`, `dist/arcs-view.mjs` | Floor jobs: each floor's fixed chain of contracts, and its page in Mail. |
+| `dist/arcs.mjs`, `dist/arcs-view.mjs` | Floor jobs: each floor's fixed chain of contracts (its Boss step and extra letters), and its page in Mail. |
 | `dist/threads.mjs`, `dist/threads-view.mjs`, `dist/content/threads.mjs` | Threads: quests found in rooms, their marks and dialogue, and their data. |
 | `dist/scanner.mjs`, `dist/scanner-view.mjs`, `dist/scanner.css` | The scanner: the Listening Post (its map node, card and hub terminal), its radio, the stations, the reel, the tape and what each pays. |
 | `dist/quest-view.mjs`, `dist/quest.css` | The quest window: a thread as an intercepted transmission. |

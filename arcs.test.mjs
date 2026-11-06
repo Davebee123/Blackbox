@@ -5,10 +5,12 @@ import { fresh, command, hooks, addLocation, hackerLevel } from './dist/combat.m
 import { storyAt, tickMail, openContracts, doneContracts, heldCount, title, progress, ready, MAIL } from './dist/mail.mjs';
 import { ARC, CHAINS, chainOf, slotFor, arcOffer, arcsOf } from './dist/arcs.mjs';
 import { graphOf, locAt, slotNode } from './dist/floors.mjs';
-import { FLOORS } from './dist/data.mjs';
+import { FLOORS, CONFIG } from './dist/data.mjs';
 import { mailMarkup } from './dist/view.mjs';
 import { arcOfferMarkup } from './dist/arcs-view.mjs';
 import { NETWORK } from './dist/network.mjs';
+import { zoneOf } from './dist/zone.mjs';
+import { arcChallenge } from './dist/arcs.mjs';
 
 let T = 1_000_000;
 hooks.now = () => T;
@@ -26,7 +28,8 @@ function finish(s, n) {
   if (c.type === 'takeover') s.locations.find((l) => l.id === c.loc).takenOver = true;
   if (c.type === 'item' || c.type === 'heist') s.cargo.push({ contract: c.id, name: c.file, label: c.label });
   if (c.type === 'puzzle') { const l = s.locations.find((x) => x.id === c.loc); (l.floorplan ||= {}).puzzles = { p1: { won: true, at: T } }; }
-  if (c.type === 'lair') { const l = s.locations.find((x) => x.id === c.loc); (l.spawns ||= {})['/core'] = { alive: false, respawnAt: T + NETWORK.lairMs }; }
+  if (c.type === 'boss' && !c.slot) s.zone.spawns['/net/relay'] = { alive: false, respawnAt: T + CONFIG.zone.bossRespawnMs };
+  if (c.type === 'lair' || (c.type === 'boss' && c.slot)) { const l = s.locations.find((x) => x.id === c.loc); (l.spawns ||= {})['/core'] = { alive: false, respawnAt: T + NETWORK.lairMs }; }
   T += 1000; tickMail(s, T);
   assert.ok(ready(s, c), `${title(s, c)} is ready`);
   return c;
@@ -45,6 +48,8 @@ test('content: a chain for every floor, 4 to 6 steps, the last one a pick, the w
       assert.ok(['bounty', 'map', 'rooms', 'takeover', 'item', 'install', 'sweep', 'heist', ...ARC.own].includes(st.kind), st.kind);
       assert.ok(st.kind !== 'bounty' || n === 1, 'a named process lives in SPRAWL-00, on floor 1');
       assert.ok(st.kind !== 'lair' || n >= 2, 'lairs start on floor 2');
+      if (st.kind === 'boss') assert.ok(st.boss && st.challenge && st.fall && (st.at === 'lair' || (n === 1 && st.at === 'sprawl')), `${c.title}: a Boss step names its boss, its lines, and a lair (SPRAWL-00 on floor 1)`);
+      if (st.letter) assert.ok(st.letter.from !== c.from && st.letter.from !== c.faction && st.letter.subject && st.letter.body.length, `${c.title}: an extra letter is from someone else`);
       const words = [st.subject, ...st.body, c.reason, c.lore, st.line || ''].join(' ');
       assert.doesNotMatch(words, /keyhole|backdoor|back door|way in\b/i, 'no intrusion metaphors');
       assert.doesNotMatch(words, /;/, 'no semicolon chains');
@@ -59,9 +64,9 @@ test('targets are fixed by the floor: the same slots every time, on the main roa
     assert.deepEqual(slots, CHAINS[n].steps.map((st) => slotFor(s, n, st)));
     for (const [k, id] of slots.entries()) {
       const st = CHAINS[n].steps[k];
-      if (st.kind === 'bounty') { assert.equal(id, null); continue; }
+      if (st.kind === 'bounty' || st.at === 'sprawl') { assert.equal(id, null); continue; }
       assert.ok(g.nodes[id], `${CHAINS[n].title} step ${k + 1}: a slot on floor ${n}`);
-      assert.ok(st.kind === 'lair' ? id === g.lair : g.nodes[id].main || st.at === 'land', `${CHAINS[n].title} step ${k + 1} stays on the main road`);
+      assert.ok(st.at === 'lair' ? id === g.lair : g.nodes[id].main || st.at === 'land', `${CHAINS[n].title} step ${k + 1} stays on the main road`);
     }
     const road = slots.filter((x, k) => x && CHAINS[n].steps[k].at === 'road');
     if (Object.values(g.nodes).filter((x) => x.main).length >= road.length) assert.equal(new Set(road).size, road.length, `${CHAINS[n].title}: its road steps go to different servers`);
@@ -168,4 +173,56 @@ test('a puzzle step counts a board won after it was posted, a lair step its boss
   loc.floorplan.puzzles.now = { won: true, at: T };
   T += 1000; tickMail(s, T);
   assert.ok(ready(s, c), 'one won since does');
+});
+
+test('a Boss step: the script’s boss in the letter, the stand-in in the title, its challenge on the Core and its fall line', () => {
+  const s = boarded();
+  for (let k = 0; k < CHAINS[1].steps.length - 1; k++) { const c = finish(s, 1); command(s, `mail deliver ${c.id}`); }
+  const c = chainJob(s, 1);
+  assert.equal(c.type, 'boss');
+  assert.equal(c.named, 'PAGE NINE');
+  assert.match(c.body.join(' '), /page nine/, 'the letter names the script’s boss');
+  assert.match(c.body.join(' '), /Core of SPRAWL-00/);
+  assert.equal(title(s, c), 'Beat RELAY-KING on SPRAWL-00', 'RELAY-KING stands in on floor 1');
+  const z = zoneOf(s);
+  assert.equal(arcChallenge(s, z, { path0: '/net/relay' }), CHAINS[1].steps.at(-1).challenge, 'its challenge on SPRAWL-00’s Core');
+  assert.equal(arcChallenge(s, z, { path0: '/var' }), '', 'only there');
+  z.spawns['/net/relay'] = { alive: false, respawnAt: c.at - 1 + CONFIG.zone.bossRespawnMs };
+  T += 1000; tickMail(s, T);
+  assert.equal(ready(s, c), false, 'beaten before it was posted doesn’t count');
+  z.spawns['/net/relay'] = { alive: false, respawnAt: T + CONFIG.zone.bossRespawnMs };
+  T += 1000; tickMail(s, T);
+  assert.ok(ready(s, c), 'beaten since');
+  assert.ok(s.logs.some((e) => e.type === 'arc-fall' && e.message === CHAINS[1].steps.at(-1).fall), 'its fall line');
+  command(s, `mail deliver ${c.id}`);
+  assert.ok(arcsOf(s)[1].done, 'floor 1 ends on its Boss step');
+});
+
+test('an extra letter comes from its sender when its step is delivered, with no job', () => {
+  const s = boarded();
+  s.floors.reached = 3;
+  T += 1000; tickMail(s, T);
+  const k = CHAINS[3].steps.findIndex((x) => x.letter);
+  for (let i = 0; i <= k; i++) { const c = finish(s, 3); command(s, `mail deliver ${c.id}`); }
+  const L = s.mail.list.find((m) => m.subject === CHAINS[3].steps[k].letter.subject);
+  assert.ok(L, 'the letter arrives');
+  assert.equal(L.from, 'NULL CHOIR');
+  assert.equal(L.job, undefined, 'no job with it');
+  assert.equal(chainJob(s, 3).step, k + 1, 'and the chain goes on');
+});
+
+test('a save whose chain finished before it gained a step opens again at the new step, once', () => {
+  const s = boarded();
+  for (let k = 0; k < 4; k++) { const c = finish(s, 1); command(s, `mail deliver ${c.id}`); }
+  // As an old save: floor 1 done after its fourth step.
+  for (const j of openContracts(s).filter((x) => x.chain === 1)) j.done = true;
+  s.mail.jobs = s.mail.jobs.filter((x) => !(x.chain === 1 && x.step === 4));
+  Object.assign(arcsOf(s)[1], { done: true, doneAt: T });
+  arcsOf(s)[1].titles.length = 4;
+  T += 1000; tickMail(s, T);
+  const c = chainJob(s, 1);
+  assert.equal(c?.step, 4, 'PAGE NINE opens');
+  assert.equal(arcsOf(s)[1].done, undefined);
+  T += 1000; tickMail(s, T);
+  assert.equal(openContracts(s).filter((x) => x.chain === 1).length, 1, 'just once');
 });
