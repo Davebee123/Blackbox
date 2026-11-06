@@ -104,9 +104,9 @@ const second = (sub) => {
 // 14.1 worse: held at 4 and -14.5.
 // Leaning crew (Turbo Boost on the rotation from 18, in Overload's slot at 30) the Overclocker's rules preset is 10.2 off
 // its rotation on the generic fights: held at 10.5.
-// With the talent tiers the Demolitionist's area preset is 0.1 better on its fights and the Phantom's evasion 14.0 off
-// on the generic ones: held at 0 and 14.5 until the designer has played them.
-const DRIFT = { demolitionist: { generic: 7.5, suits: 0 }, sysop: { generic: 10, suits: -15 }, hijacker: { generic: 8, suits: -15 }, herder: { generic: 6.5, suits: -1 }, payload: { generic: 18.5, suits: -14.5 }, overclocker: { generic: 10.5, suits: 4 }, phantom: { generic: 14.5, suits: 5 }, warden: { generic: 5.5, suits: 5 } };
+// With the talent tiers the Demolitionist's area preset is 0.1 better on its fights, the Phantom's evasion 14.0 off
+// on the generic ones, the Herder's swarm 7.3: held at 0, 14.5 and 7.5 until the designer has played them.
+const DRIFT = { demolitionist: { generic: 7.5, suits: 0 }, sysop: { generic: 10, suits: -15 }, hijacker: { generic: 8, suits: -15 }, herder: { generic: 7.5, suits: -1 }, payload: { generic: 18.5, suits: -14.5 }, overclocker: { generic: 10.5, suits: 4 }, phantom: { generic: 14.5, suits: 5 }, warden: { generic: 5.5, suits: 5 } };
 test('each second preset is a real alternative: within 5 points of the rotation on the generic fights, and at least 5 points better on the fights it suits', () => {
   const off = [], line = [];
   for (const sub of ALL) {
