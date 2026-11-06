@@ -233,12 +233,13 @@ Each lands before the next starts. 1 and 2 can run side by side (2 is applets in
 
 | # | Session | Lane (owns) | Needs first |
 |---:|---|---|---|
-| 1 | **Story text.** The floor jobs' letters rewritten to 9.1 (drafted: docs/story-script.md); the ledger file, the faction `about` lines. Text only. | `content/contracts.mjs` floors, `content/story.mjs`, `factions.mjs` about | The designer's call on 9.1 |
+| 1 | **Story text.** The floor jobs' letters rewritten to 9.1 (drafted: docs/story-script.md), each chain ending on a named boss; the ledger file, the faction `about` lines. Text only. | `content/contracts.mjs` floors, `content/story.mjs`, `factions.mjs` about | The designer's call on 9.1 |
 | 2 | **Lore surfaces, prototype.** Vault records, Codex lines, LANTERN on the pager, ??? until found: applets and screenshots. | scratchpad | — |
 | 3 | **Stance.** The badge's stance line; floor 5's four transmissions (`scenes.mjs`, opened by the floor). | `profile.mjs` badge, `scenes.mjs` | 1 |
 | 4 | **Lore surfaces, built** from 2's pick, with the living-network content (8.1–8.3) the designer keeps from 8.4. | the record kind, server names, contract and vendor text | 2, the designer's picks |
 | 5 | **Threads:** the *hold* and *follow* step kinds, then Cold Start (4) and Orphans (6). | `threads.mjs`, `content/threads.mjs` | — |
 | 6 | **Floor 6's seal.** Prototype first. | the floor-6 chain | 1, 5 |
+| 6b | **The climaxes**, two or three bosses a session: the Boss step (the lair boss stands in), then CENTRIFUGE, SHOULDER SURFER, NIGHT DESK, EXIT NODE, BULKHEAD, GOLDEN PARACHUTE (docs/story-script.md). Each a puzzle fight (docs/puzzle-fights.md). | data.mjs BOSSES, the floor jobs | 1 |
 | 7 | **The end.** INIT, wick's five letters, an achievement and cosmetic a stance, Final Settlement (a part's spawn tracked, so it breaks with it). | Bedrock, `achievements.mjs`, combat | Floor 8's content (docs/content.md 3.2) |
 
 Story text (1, 3) and the end (7) touch the storyline and achievements; the save only in 7. None run side by side with

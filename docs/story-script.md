@@ -1,7 +1,9 @@
 # Story script (draft)
 
 **Status.** A draft for the designer to mark up; nothing here is built. It carries docs/lore.md's beats in the built
-floor jobs (`content/contracts.mjs` `floors`): **every step's kind and target stay**, only the words change. Where a
+floor jobs (`content/contracts.mjs` `floors`): **every step's kind and target stay**, only the words change, and
+**every chain ends on a named boss** (the *Boss* step, new: a fixed boss in a server's Core; the floor's lair boss
+stands in until that boss is built). Where a
 beat belongs to someone other than the chain's giver, it comes as an **extra letter** (a letter with no job, between
 steps: new to the floor jobs). *Kept* marks a built line left as it is.
 
@@ -41,10 +43,17 @@ Only two change.
    > read the dates. then read them again.
 
    *File:* text: fourteen claims. each dated the day before the payment it claims for was cancelled.
-4. **Puzzle board** · *the board on {server}* (*kept*)
+4. **Puzzle board** · *the board on {server}*
    > whoever files those claims left a puzzle board running on {server}. win it. the board keeps their schedule.
+   > and the thing that files them lives behind it.
+5. **Boss** · *the account* · **PAGE NINE** (elite ransomware at the floor's top level; *new*, a named elite, no new rules)
+   > the board says the account runs itself. a process in the Core of {server}, paying a dead man's premium and filing his claims. thirty years of it.
+   > it calls itself page nine. switch it off.
 
-*Closing line:* fourteen payments cancelled, each claimed for the day before. somebody knows the schedule.
+   *On the challenge card:* `PREMIUM RECEIVED. CLAIM FILED. PREMIUM RECEIVED. CLAIM FILED.`
+   *When it falls:* `ACCOUNT CLOSED. BENEFICIARY: NONE.`
+
+*Closing line:* fourteen payments cancelled, each claimed for the day before. somebody gave a dead account the schedule.
 
 ---
 
@@ -65,8 +74,12 @@ Only two change.
 4. **Map without resting** · *Who's counting*
    > Something sends a count down this line every night, the way an old machine once did. Some of us read that count for a living, once.
    > Walk {server} end to end in one visit, and don't rest. We want to hear who else is listening.
-5. **Lair boss** · *It heard us* (*kept*)
-   > {boss} keeps the Core of {server}. It heard our listener. Beat it before it tells anyone what we heard.
+5. **Boss** · *It heard us* · **CENTRIFUGE** (14, GLASSJAW; designed: it spins up each time its Surge lands)
+   > GLASSJAW sent something to the Core of {server}. It heard our listener, and it wants to sell what it heard.
+   > It is called CENTRIFUGE. It spins faster every time it lands. Slow it down. Then beat it.
+
+   *On the challenge card:* `bid received. bid received. bid received.`
+   *When it falls (LANTERN):* `Four. Nine. Nine. The line is clear.`
 
 *Closing line:* The schedule is signed. Not by a crew. By a pricing model. And the count at its foot says eighty-one percent.
 
@@ -87,9 +100,15 @@ Only two change.
    > You carried Halcyon's homework home and didn't peek. Good dog.
    > That file decides whose money dies next. Everyone it picks has been dead for thirty years. Funny, isn't it?
    > We'd let it all roll back. Every debt, every saving, every promise. Come and sing with us, NULLCHOIR-SQUAT-13.
+   > Or don't. We'll be watching you type either way.
 3. **Takeover** · *Archive custody* (*kept*)
 4. **Puzzle board** · *Sealed records* (*kept*)
-5. **Takeover** · *Final custody* (*kept*)
+5. **Boss** · *Final custody* · **SHOULDER SURFER** (18, NULL CHOIR; designed: it replays the last command you fired)
+   > One server left: {server}. Its Core now holds a NULL CHOIR process that has been reading over our contractors' shoulders. Remove it and the Stacks are in order.
+   > Your retainer has been reviewed. It stands.
+
+   *On the challenge card:* it types your last command back at you, then: `again. from the top.`
+   *When it falls:* `you type like halcyon pays you.`
 
 *Closing line:* The config came back with one field changed: next_cancel. Claims thanks you for your discretion.
 
@@ -113,10 +132,18 @@ Only two change.
    > Our oldest lease on Coldline is in the vault on {server}, as {file}. It predates us. Bring it out past the Tracker.
 
    *File:* text: kessler settlement, night desk, forty years ago. change approved: settlement timeout disabled. engineer's note: objection on file. switching it off.
-4. **Map without resting** · *Walkthrough* (*kept*)
-5. **Takeover** · *Eviction* (*kept*)
+4. **Map without resting** · *Walkthrough*
+   > Walk {server} end to end in one visit, without a rest. Our auditors found a process there that answers to Kessler's night desk. Kessler has not had a night desk for thirty years.
+5. **Boss** · *Eviction* · **NIGHT DESK** (24, nobody's: Kessler's old settlement process; *new*)
+   > The unpaid jobs run from the Core of {server}. Something there is still settling trades for a company that no longer exists. Evict it, and the lease is void.
 
-*Closing line:* The lease was Kessler's, and so were its logs. Kestrel has archived them, and is raising its rates.
+   *On the challenge card:* `night desk. awaiting counterparty.`
+   *When it falls:* `shift ended. 0 trades settled.`
+
+   *A sketch for the boss session:* **Finality.** Nothing it starts can be stopped: each attack waits for an answer.
+   Hit the part that's charging and it settles at half; leave it and it settles in full.
+
+*Closing line:* The lease was Kessler's, and so were its logs, and so was the thing still working the night shift. Kestrel has archived them all, and is raising its rates.
 
 ---
 
@@ -147,7 +174,11 @@ Only two change.
    > holding was meant to mean nobody cancels again. it just meant nobody saw.
 3. **Rooms** · *Noise* (*kept*)
 4. **Install** · *Jammer* (*kept*)
-5. **Lair boss** · *Encore* (*kept*)
+5. **Boss** · *Encore* · **EXIT NODE** (30, PALEMASK; designed: three onion layers over its core)
+   > The model keeps its backups behind {server}'s Core, three layers deep. It hired PALEMASK to hide them. Peel it. We'll do the rest.
+
+   *On the challenge card:* `route: unknown. route: unknown. route: unknown.`
+   *When it falls (NULL CHOIR):* `There it is. Naked. Sing.`
 
 *Closing line:* The model has one rule: an insured trade is never picked. Its cancel code is thirty years old, and it has one author.
 
@@ -167,14 +198,19 @@ Only two change.
 3. **Takeover** · *our shelf*
    > take {server} over, or don't. it's your shelf.
 
-   **Extra letters: the seal** (a set piece, prototype first)
-   > **Kestrel · *Notice of closure*.** Kernel Space and every floor beneath it will be sealed at the end of this cycle. Please collect your belongings.
+   **Extra letter · Kestrel · *Notice of closure***
+   > Kernel Space and every floor beneath it will be sealed at the end of this cycle. Please collect your belongings.
+4. **Boss** · *the seal* · **BULKHEAD** (36, Kestrel ICE; *new*)
+   > they're sealing it with you under. the lock sits in the Core of {server}.
+   > break it and the floors stay open. or walk out and let it close. you pick. i picked twice.
 
-   > **wick.** they're sealing it with you under. you pick. i picked twice.
-4. **Lair boss** · *the landlord*
-   > {boss} sits on {server}, two links from the shelf. i don't like neighbours. your call.
+   *On the challenge card:* `SEAL IN PROGRESS. OCCUPANTS: 1.`
+   *When it falls:* `SEAL ABORTED. Kestrel apologises for any inconvenience.`
 
-*Closing line:* the model has a name inside halcyon: the actuary. and kestrel had a date for the seal.
+   *A sketch for the boss session:* **Seal.** Each cycle it seals one more of your keys; breaking a part opens one
+   back: a race to keep your bar open. Walking out instead is the set piece's other choice, prototyped first.
+
+*Closing line:* the model has a name inside halcyon: the actuary. kestrel had a date for the seal, and now it doesn't.
 
 ---
 
@@ -194,7 +230,12 @@ Only two change.
 
    *File:* text: resolved, that the actuary programme continue, a restart being unaffordable under the guarantee. three signatures.
 4. **Map without resting** · *Clean hands* (*kept*)
-5. **Takeover** · *Resignation* (*kept*)
+5. **Boss** · *Resignation* · **GOLDEN PARACHUTE** (38, GLASSJAW; designed: every part it loses makes the rest charge)
+   > One of the three who signed is leaving tonight, with a payout and the renewal's only copy. GLASSJAW is carrying both out through the Core of {server}.
+   > Stop it. After that, I will not write again.
+
+   *On the challenge card:* `severance approved.`
+   *When it falls (the insider):* `Thank you. Please do not reply.`
 
 *Closing line:* The minutes renew the Actuary for another year, because a restart would cost the Guarantee. Three names signed them. One of them signs your retainer.
 
@@ -212,9 +253,13 @@ Only two change.
    > its image sits in the vault on {server}, as {file}. bring it out past the tracker. then i'll know where every copy is.
 4. **Install** · *a watchdog* (*kept*)
 5. **Takeover** · *its host* (*kept*)
-6. **Lair boss** · *last one*
+6. **Lair boss** · *last one* (Bedrock's own lair boss, to write at 46)
    > {boss} guards what is left of it, in the Core of {server}. beat it.
    > after that there's only init. i won't ask you to go. you'll go anyway.
+7. **INIT** · Bedrock's deepest server, level 50. No letter sends you; the chain's closing line points the way.
+
+   *On the challenge card:* `pid 1. process table at 97%. adopting.`
+   *When it falls (the first time):* `process table at 61%.` Then wick's letter.
 
 *Closing line:* the actuary is off. the table is at 97%, and nobody is counting it but you.
 
@@ -259,6 +304,9 @@ with your stance.
 ## What the script needs that isn't built
 
 - **Extra letters** in a floor job: a letter with no job, from someone other than the chain's giver, after a named step.
+- **The Boss step:** a fixed boss in a server's Core, with its challenge and fall lines; the floor's lair boss stands
+  in until it's built. To build: PAGE NINE (an elite, no new rules), CENTRIFUGE, SHOULDER SURFER, NIGHT DESK (new),
+  EXIT NODE, BULKHEAD (new), GOLDEN PARACHUTE, INIT.
 - **Five transmissions** on reaching floor 5 (`scenes.mjs` has the format; the trigger is new).
 - **The seal** on floor 6: a set piece, designed and prototyped first.
 - **The stance** (the badge line) and **wick's letter** by stance, at INIT's first fall.
