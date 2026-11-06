@@ -87,7 +87,8 @@ comment saying what it does.
 |---|---|
 | `dist/combat.mjs` | The engine: pure and deterministic, commands in, events out. Fights, XP and levels, the save and its migrations. |
 | `dist/data.mjs` | Every tunable number: abilities, classes, families, strains, guards, bosses, floors, and `createVirus`; the level curve (`power` compounding for enemies, your slow `own` line, the 4% `line`, the `lift` between, gear's `gearFill`, the floor tiers (`CONFIG.floorStep`: `mobPower`'s step, `gearTier`), the coefficients' `damageRef`, `tickRef` and `dotRef`); fight length (`CONFIG.length`: Integrity up and hits down by level, a solo boss's own `long` size and enrage); boss rounds (`ROUNDS`: combat.mjs `roundOf`); the level gap above you (`CONFIG.gap`, misses, `resist`: combat.mjs `gapDealt`, `gapTaken`, `resistChance`). |
-| `dist/classes/` | Each class's subclasses: `<class>.data.mjs` their skills and trees, `<class>.mjs` what they do in a fight; `kit.mjs` talent helpers. |
+| `dist/classes/` | Each class's subclasses: `<class>.data.mjs` their skills and talent tiers, `<class>.mjs` what they do in a fight (talents on the shared events: the `event` hook); `kit.mjs` talent helpers. |
+| `dist/talents.mjs` | The talent tiers' save migration (old ranks and picks to tiers) and the bots' picks (`botTiers`). |
 | `dist/parts.mjs` | What a wild virus is made of: its basic, signature and third parts, rolled by named constants (`PARTS`), the strains' spread (`PARTS.spread`), and an elite's clash. |
 | `dist/exe.mjs` | The .exe builds: a part's rule harder or bent (`EXE`), and their roll from floor 4 (`EXE_ROLL`; echoes are `PARTS.echo`). |
 | `dist/genes.mjs` | The gene library: every family, strain, third part, mutation, tell and guard rule in one shape, and the elites' clashes (`CLASHES`). Data only. |

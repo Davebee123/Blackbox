@@ -1325,12 +1325,21 @@ nearly full.
 - **The kit talent (level 5):** one of your class's first talents is part of its kit, two free ranks: Breaker
   Overclocked Core (+6% damage), Bastion Patch Notes (Patch heals +6), Infiltrator Recon (Opening +10 damage), Operator
   Thread Pool (Deploy helpers +2) (`LOADOUT.kit`).
-- **The tree** (each subclass's own): six rows, three **choice tiers** (pick one of two) with a **ranked row** before
-  each (two nodes, up to 3 ranks). A row opens once you've spent enough above it: ranks 0, tier 1 needs 3, ranks 4,
-  tier 2 needs 8, ranks 9, tier 3 needs 14. Changing picks and ranks is free at home. `talent <1-3> <a|b>`, `talent
-  add|remove <node>`, `talent reset`.
-- **Capstones:** a row under the tree (15 points above it), two a subclass, picked with the capstone point at 45; the
-  point at 50 gives the one you picked its second rank. `talent capstone <a|b>`.
+- **The tree** (each subclass's own): six **tiers** of three, opening at levels 10, 16, 22, 28, 34 and 40 (`LOADOUT.tiers`).
+  Pick one a tier; changing picks is free at home. `talent <1-6> <a|b|c>`, `talent reset`. The talents, word for word:
+  docs/builds.md, *Talent tiers* (the class data files hold them). In each tier the first is plain, the second changes a
+  skill, the third fires on a shared event.
+- **Shared events** (`combat.mjs fireEvent`): crit, break, answer, struck, and **burn** (one of your burns ticks),
+  **shielded** (you gain a shield, or your shield absorbs a hit), **Tagged** (you hit a Tagged part, whoever Tagged it)
+  and **cut** (you cut a part's move). Gear can heal on any of the four new ones, and shield or lower cooldowns on a cut.
+  An event doesn't fire again inside its own effects. *Works once per cycle* is once per fight cycle.
+- **Readings:** Cook-Off counts a tick its part's armor took whole; Flashpoint's crit is your next command's hit;
+  Third-Party Cookie and Web Beacon fire when you use Tag; Heat Sink's target is the part your last command hit;
+  Spillover stops at 20 shield; Flow Control's Retaliate sends back the larger of the last hit on you and the answered
+  part's attack; Final Run's helpers then expire, each with its Last Gasp; with Fail-Fast, Failover takes a part
+  (`failover <part>`).
+- **Capstones:** a row under the tree, two a subclass, picked with the capstone point at 45; the point at 50 gives the
+  one you picked its second rank. `talent capstone <a|b>`.
 
 | Subclass | Capstones (rank 1 · rank 2) |
 |---|---|
@@ -2633,9 +2642,10 @@ Checked by `node balance.mjs` (docs/BALANCE.md, `balance.test.mjs`), `farmsim.mj
 
 ## Saves
 
-The save is `SAVE_VERSION` 56 (combat.mjs). An older save is migrated on load, each step keyed on the field it converts,
+The save is `SAVE_VERSION` 57 (combat.mjs). An older save is migrated on load, each step keyed on the field it converts,
 so it is safe to run twice; nothing a save held is lost.
 
+- **v57** the talent tiers: a subclass's old ranks and two-way picks become tier picks where the same talent survives (Polymorphic is Long Fuse, the Hijacker's Kill Chain is Handoff); the rest of its tiers wait (`tiersRestore`, keyed on `loadout.ranks` and `loadout.picks`).
 - **v56** floors as tiers: every protocol's filling stats and flat rule × its new fill over the one it was filled with, once (`curveRestore`, keyed on `s.curve` 3).
 - **v55** gear carries your power: every protocol's filling stats (Damage, Crit Damage, Signal, Regen, Leech) and flat damage, heal or shield rule × the fill at its item level, once (`curveRestore`, keyed on `s.curve` 2).
 - **v54** the compounding curve: every protocol's flat stats and flat rule, and each filter's Block, Regen and barbs,

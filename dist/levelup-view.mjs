@@ -27,7 +27,7 @@ export function gainItem(g, e, keys = []) {
   let m;
   if (g === 'a subclass to pick') { const subs = Object.values(A.subs).map((x) => x.name); return { kind: 'subclass', label: 'Subclass', value: 'pick one', tip: `Subclass: Choose ${subs.join(' or ')} on the Loadout. Until you do, you play the ${A.name} core.` }; }
   if (sub && g === SUBS[sub].edge.name) return { kind: 'edge', label: g, value: 'edge', tip: `${g}: ${SUBS[sub].edge.rule}` };
-  if (g === 'a talent point') return { kind: 'talent', label: 'Talent point', value: '+1', n: 1, tip: 'Talent point: Spend it on the Loadout, under Skills and talents.' };
+  if (g === 'a talent tier (pick one of three)') return { kind: 'talent', label: 'Talent tier', value: '+1', n: 1, tip: 'Talent tier: Pick one of its three talents on the Loadout, under Skills and talents.' };
   if (/^a capstone point/.test(g)) return { kind: 'capstone', label: 'Capstone point', value: '+1', tip: 'Capstone point: Pick one of your subclass\'s two capstones on the Loadout.' };
   if (g === "your capstone's second rank") return { kind: 'capstone', label: 'Capstone', value: 'rank 2', tip: 'Capstone: Your capstone reaches rank 2.' };
   if (/^a protocol slot \(Implant\)/.test(g)) return { kind: 'slot', label: 'Implant slot', value: '+1', n: 1, tip: 'Implant slot: You load one more protocol, an Implant. Implants start to drop.' };

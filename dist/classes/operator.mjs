@@ -21,9 +21,10 @@
 //   jammedUntil            Jammed (Jam, Spoofed ACK, Hijack, Blackhole): until its held attack goes off.
 //   mitmUntil, mitmBonus   Man in the Middle (Hijacker's edge): a Jammed part takes +20% from everyone.
 //   hijack                 { left, share, cap, cross }: its next attack(s) turn on its own side (Hijack).
-//   blackhole              its next attack does nothing (Blackhole).
+//   blackhole              its next attack does nothing (Blackhole); a number: that many (Event Horizon).
 //   poisonedUntil, poison  Cache Poison: its patches and heals turn into damage.
 // Held attacks resolve in cycle(), which runs after a player's turn and before the virus attacks.
+// On the encounter: e.opOnce { [talent]: cycle }, the cycle a once-a-cycle talent last fired.
 import { alliesOf, subOf, subEdge, hasTalent, rank, capValue, emit, hit, heal, part, alive, livingParts, helpersOn, helperCap, on, buffed, scaled, soonestAttacker, classOf, attackAmount, toIntent, usable, intents, defender, previewDamage, readyIn, patchDelay, restoreMult, openProc, attackers, fxOn, delayAttack, delayHeld, heldNote } from '../combat.mjs';
 import { ABILITIES } from '../data.mjs';
 import { chargeNow, tellOn, tellOpen, landsAt, tellAnswer, chargeSize } from '../tells.mjs';
@@ -56,7 +57,7 @@ function jamMark(s, p) {
   p.jammedUntil = Math.max(p.jammedUntil || 0, until);
   if (subEdge(s, 'hijacker')) {
     p.mitmUntil = Math.max(p.mitmUntil || 0, until);
-    p.mitmBonus = Math.max(p.mitmBonus || 0, hasTalent(s, 'full-duplex') ? 0.4 : 0.2);
+    p.mitmBonus = Math.max(p.mitmBonus || 0, hasTalent(s, 'full-duplex') ? 0.3 : 0.2); // Full Duplex: 30%
   }
 }
 
@@ -76,6 +77,28 @@ function loopback(s, target) {
   s.encounter.helpers.push(h);
   emit(s, 'status', `Loopback: your helper keeps running on the ${target.name}.`, { target: target.id, mark: 'helper' });
 }
+
+// A talent that works once per cycle: true the first time this cycle, and stamps it.
+function onceACycle(s, id) {
+  const e = s.encounter, o = (e.opOnce ||= {});
+  if (o[id] === e.cycle) return false;
+  o[id] = e.cycle;
+  return true;
+}
+// A helper of a skill's size (Spawn's, Sniff's) started on a part by a talent, under the cap.
+function addHelper(s, p, id, by) {
+  const e = s.encounter, a = A(id);
+  if (!alive(p) || e.helpers.length >= helperCap(s)) return false;
+  e.helpers.push({ target: p.id, damage: scaled(s, a.helper), left: a.ticks, synced: !!e.synced, sent: e.cycle, by });
+  return true;
+}
+// Every helper of yours on a part hits it once more (SIGHUP, Host Vector).
+function helpersStrike(s, p, by) {
+  for (const h of helpersOn(s, p)) { if (!alive(p)) break; hit(s, p, h.damage, { by: 'Helper', dot: true, synced: h.synced, src: 'helper' }); }
+  emit(s, 'status', `${by}: your helpers on the ${p.name} hit it again.`, { target: p.id, mark: 'helper' });
+}
+// Refcount (Hijacker): spending a helper heals you for 5.
+const refcount = (s) => { if (hasTalent(s, 'refcount')) heal(s, scaled(s, 5), 'Refcount'); };
 
 // Malloc (Herder): the next helpers started deal more and run longer. Helpers this command started
 // are the ones not seen yet (cycle() marks every helper seen at the end of each turn).
@@ -100,7 +123,7 @@ function resolveHeld(s) {
     const atk = p.attack;
     if (!alive(p) || !atk || atk.due > e.cycle || (atk.alone && living.length > 1)) continue;
     if (p.blackhole && !chargeNow(s, p)) { // a charged attack: tells.mjs drops it into the blackhole as it lands
-      delete p.blackhole;
+      if (p.blackhole > 1) p.blackhole--; else delete p.blackhole; // Event Horizon: two
       atk.due = e.cycle + atk.interval;
       atk.n = (atk.n || 0) + 1;
       if (atk.windup) atk.wound = 0;
@@ -285,7 +308,7 @@ export default {
   use: {
     // ----- Herder -----
     'fan-out': (s, { a, target, e }) => {
-      const dmg = scaled(s, a.helper + rank(s, 'wide-area'));
+      const dmg = scaled(s, a.helper);
       for (const h of e.helpers) if (!h.seen) h.damage = dmg;
       let n = 0;
       for (const p of livingParts(s)) {
@@ -303,7 +326,7 @@ export default {
     sniff: (s) => freshHelpers(s),
     mesh: (s, { a, e }) => {
       e.buffs.mesh = e.cycle + a.cycles - 1;
-      emit(s, 'status', `Mesh for ${cycles(a.cycles)}. Every helper hit splashes half its damage onto every other part.`, { mark: 'buff', ability: 'mesh' });
+      emit(s, 'status', `Mesh for ${cycles(a.cycles)}. Every helper hit splashes ${hasTalent(s, 'full-mesh') ? 'its full' : 'half its'} damage onto every other part.`, { mark: 'buff', ability: 'mesh' });
       // Every helper hits once now, so the command is never wasted.
       for (const h of [...e.helpers]) { let t = part(s, h.target); if (!alive(t)) t = soonestAttacker(s); if (t) hit(s, t, h.damage, { by: 'Helper', dot: true, synced: h.synced, src: 'helper' }); if (!livingParts(s).length) break; }
     },
@@ -323,7 +346,16 @@ export default {
       const total = helperValue(s), n = e.helpers.length;
       e.helpers = [];
       emit(s, 'status', `OOM Kill reaps ${n === 1 ? 'one helper' : n + ' helpers'}.`, { ability: 'oom-kill' });
-      heal(s, Math.max(1, Math.round(total * a.share * restoreMult(s))), 'OOM Kill', { drawn: true });
+      // Page Out: a shield of 60% instead of a heal of 40%.
+      if (hasTalent(s, 'page-out')) { e.shield = (e.shield || 0) + Math.max(1, Math.round(total * 0.6)); emit(s, 'status', `Page Out: shield ${e.shield}.`, { mark: 'shield', ability: 'oom-kill' }); }
+      else heal(s, Math.max(1, Math.round(total * a.share * restoreMult(s))), 'OOM Kill', { drawn: true });
+    },
+    // Final Run: every helper strikes once more (three in all, with its tick), and ends with its Last Gasp this cycle.
+    'cron-storm': (s, { e }) => {
+      if (!hasTalent(s, 'final-run')) return;
+      for (const h of [...e.helpers]) { const t = alive(part(s, h.target)) ? part(s, h.target) : soonestAttacker(s); if (t) hit(s, t, h.damage, { by: 'Cron Storm', dot: true, src: 'helper' }); if (!livingParts(s).length) break; }
+      for (const h of e.helpers) h.left = 1;
+      emit(s, 'status', 'Final Run: your helpers end this cycle.', { mark: 'helper', ability: 'cron-storm' });
     },
     // ----- Hijacker -----
     // Jam: a hit that leaves it Jammed. With one of your helpers on it, the helper goes too and the attack waits a cycle.
@@ -332,10 +364,11 @@ export default {
       const h = helpersOn(s, target)[0];
       if (h && target.attack) {
         e.helpers.splice(e.helpers.indexOf(h), 1);
+        refcount(s);
         // A charge on the attack you jammed loses its signal: it lands plain, a cycle later (a read, tells.mjs).
         const ch = tellOn(s, target, 'charge');
         if (ch && ch.n === (target.attack.n || 0)) tellAnswer(s, ch, target, `JAMMED: ${ch.name.toUpperCase()} loses its signal. The ${target.name}'s ${target.attack.name} lands plain${delayHeld(target) ? '' : ', a cycle later'}.`, { stagger: false });
-        const n = delayAttack(s, target, 1 + (hasTalent(s, 'long-jam') ? 1 : 0)); // Long Jam: a second cycle
+        const n = delayAttack(s, target, 1);
         if (n) {
           if (target.attack.ramp && target.attack.step) target.attack.step = 0;
           e.metrics.interrupts++;
@@ -360,14 +393,16 @@ export default {
       if (target.echo && e.echoes?.length) { e.echoes = []; emit(s, 'status', `Echo Cancel quiets the ${target.name}'s echoes.`, { target: target.id }); }
       if (target.reflect || target.mimic) target.unmaskUntil = e.cycle + a.cycles;
       if (target.reflect || target.mimic || target.echo) emit(s, 'status', `Echo Cancel on the ${target.name}. Its next beat plays back into the virus.`, { target: target.id, ability: 'echo-cancel' });
+      if (hasTalent(s, 'sidetone')) jamMark(s, target); // Sidetone: Jammed until its next attack
     },
     barrier: (s, { target, e }) => {
-      const r = recalled(s, target), k = 0.1 * rank(s, 'cold-storage');
+      const r = recalled(s, target), k = hasTalent(s, 'cold-storage') ? 0.25 : 0; // Cold Storage: +25%
+      if (r) refcount(s);
       if (r && k) { const more = Math.round(r.damage * r.left * k); e.shield = (e.shield || 0) + more; emit(s, 'status', `Cold Storage: +${more} shield (${e.shield}).`, { mark: 'shield' }); }
     },
     'spoofed-ack': (s, { a, target, moved }) => {
       if (!alive(target)) return;
-      const share = a.share + 0.1 * rank(s, 'ack-flood');
+      const share = hasTalent(s, 'ack-flood') ? 0.75 : a.share; // ACK Flood: three quarters
       // A charge on the attack it fakes out: the ACK takes the charge's size, and the charge drains (a read, tells.mjs).
       const ch = chargeSize(s, target), riding = ch && target.attack && ch.t.n === (target.attack.n || 0);
       const size = riding ? ch.amount : attackSize(s, target);
@@ -377,6 +412,7 @@ export default {
       hit(s, target, back, { mine: true, by: 'Spoofed ACK', src: 'reflect' });
     },
     hijack: (s, { a, target, e }) => {
+      if (recalled(s, target)) refcount(s);
       if (!alive(target)) return;
       // A cast it's compiling compiles for you instead: your hits deal 35% more for 4 cycles (tells.mjs).
       const cast = tellOn(s, target, 'cast');
@@ -386,11 +422,12 @@ export default {
       emit(s, 'status', `${target.name} hijacked. Its next ${target.hijack.left === 2 ? 'two attacks turn' : 'attack turns'} on its own side, and it is Jammed.`, { target: target.id, ability: 'hijack' });
     },
     blackhole: (s, { target }) => {
+      if (recalled(s, target)) refcount(s);
       if (!alive(target)) return;
-      target.blackhole = true;
-      loopback(s, target);
+      const two = hasTalent(s, 'event-horizon'); // Event Horizon: its next two
+      target.blackhole = two ? 2 : true;
       jamMark(s, target);
-      emit(s, 'status', `Blackhole: ${target.name}'s next attack goes nowhere, and it is Jammed.`, { target: target.id, ability: 'blackhole' });
+      emit(s, 'status', `Blackhole: ${target.name}'s next ${two ? 'two attacks go' : 'attack goes'} nowhere, and it is Jammed.`, { target: target.id, ability: 'blackhole' });
     },
     'cache-poison': (s, { a, target, e }) => {
       if (!alive(target)) return;
@@ -402,7 +439,7 @@ export default {
     replay: (s, { a, target }) => {
       if (!alive(target)) return;
       const ch = chargeSize(s, target); // a charge winding up plays back at its charged size, up to twice the cap
-      const amount = clamp(ch ? ch.amount : attackSize(s, target), scaled(s, a.floor), scaled(s, a.cap) * (ch ? 2 : 1)) + (rank(s, 'packet-capture') ? scaled(s, 5 * rank(s, 'packet-capture')) : 0);
+      const amount = clamp(ch ? ch.amount : attackSize(s, target), scaled(s, a.floor), scaled(s, a.cap) * (ch ? 2 : 1)) + (hasTalent(s, 'packet-capture') ? scaled(s, 15) : 0); // Packet Capture: +15
       emit(s, 'status', `Replay plays the ${target.name}'s ${target.attack?.name || 'attack'} back at it.`, { target: target.id, ability: 'replay' });
       hit(s, target, amount, { mine: true, pierce: true, by: 'Replay' });
     },
@@ -448,7 +485,10 @@ export default {
   },
   // Cache Poison (Hijacker): a poisoned part's attacks deal less, on anyone.
   // Dead Air (Hijacker capstone): a Jammed part's attacks land softer on you.
-  taken(s, atk, p) { return (p && on(s, p, 'poisoned') ? 1 - A('cache-poison').weaken : 1) * (p?.jammedUntil >= s.encounter?.cycle ? 1 - capValue(s, 'dead-air') : 1); },
+  // Load Balancer (Herder): 3% less for each helper running, up to 12%.
+  taken(s, atk, p) { return (p && on(s, p, 'poisoned') ? 1 - A('cache-poison').weaken : 1) * (p?.jammedUntil >= s.encounter?.cycle ? 1 - capValue(s, 'dead-air') : 1) * (hasTalent(s, 'load-balancer') ? 1 - Math.min(0.12, 0.03 * (s.encounter?.helpers?.length || 0)) : 1); },
+  // Full Mesh: 12 cycles; Event Horizon: 9.
+  cooldown(s, id, cd) { return id === 'mesh' && hasTalent(s, 'full-mesh') ? 12 : id === 'blackhole' && hasTalent(s, 'event-horizon') ? 9 : cd; },
   // Load Shed (Herder): the next attack is split over your helpers; each loses that much of what it had left.
   absorb(s, amount, atk, p) {
     const e = s.encounter;
@@ -472,13 +512,13 @@ export default {
     return amount - took;
   },
   // Man in the Middle: a Jammed part takes more from everyone (the mark is on the part).
-  // GC Tuning (Herder rank): Garbage Collect hits harder.
   dealt(s, p, opts = {}) {
     let m = p.mitmUntil >= s.encounter.cycle ? 1 + (p.mitmBonus || 0.2) : 1;
     // Man in the Middle: a helper of yours on a part is a foothold, and your hits on it take the same.
     if (m === 1 && opts.mine && !['Helper', 'Last Gasp'].includes(opts.by) && subEdge(s, 'hijacker') && helpersOn(s, p).length >= 1) m = 1.2; // your command's hits only, not the helpers'
     if (opts.mine && buffed(s.encounter, 'stolen')) m *= 1.35; // a cast hijacked (Hijack)
-    if (opts.mine && opts.by === 'Garbage Collect' && rank(s, 'gc-tuning')) m *= 1 + 0.3 * rank(s, 'gc-tuning');
+    if (opts.mine && opts.by === 'Garbage Collect' && hasTalent(s, 'gc-tuning')) m *= 1.5; // GC Tuning: +50%
+    if (opts.src === 'helper' && hasTalent(s, 'renice')) m *= 1.1; // Renice: your helpers +10%
     return m;
   },
   hit(s, p, res, opts) {
@@ -488,7 +528,7 @@ export default {
     if (herd) { const n = Math.max(1, Math.round(res.dealt * herd)); for (const x of livingParts(s)) if (x !== p && alive(x)) hit(s, x, n, { by: 'Thundering Herd', pierce: true, noHook: true, server: true }); }
     // Mesh (Herder): a helper hit that does damage splashes half onto every other part.
     if (res.dealt > 0 && (opts.by === 'Helper' || opts.by === 'Last Gasp') && buffed(e, 'mesh') && classOf(s) === 'operator') {
-      const half = Math.max(1, Math.round(res.dealt * A('mesh').share));
+      const half = Math.max(1, Math.round(res.dealt * (hasTalent(s, 'full-mesh') ? 1 : A('mesh').share))); // Full Mesh: all of it
       for (const x of livingParts(s)) if (x !== p) hit(s, x, half, { by: 'Mesh', server: true });
     }
   },
@@ -506,11 +546,39 @@ export default {
         emit(s, 'status', `Hydra: ${mine.length === 1 ? 'a helper moves' : mine.length + ' helpers move'} to the ${next.name}${n ? ` and ${n === 1 ? 'one splits' : n + ' split'}` : ''}.`, { target: next.id, mark: 'helper' });
       }
     }
-    // Kill Chain (Hijacker talent): breaking a Jammed part readies your control skills.
-    if (hasTalent(s, 'kill-chain') && p.jammedUntil >= e.cycle) {
+    // Handoff (Hijacker talent): breaking a Jammed part readies your control skills.
+    if (hasTalent(s, 'handoff') && p.jammedUntil >= e.cycle) {
       for (const id of ['jam', 'spoofed-ack', 'hijack']) delete e.readyAt[id];
-      emit(s, 'proc', 'Kill Chain: Jam, Spoofed ACK and Hijack are ready.', { ability: 'jam' });
+      emit(s, 'proc', 'Handoff: Jam, Spoofed ACK and Hijack are ready.', { ability: 'jam' });
     }
+  },
+  // Shared events (combat.mjs fireEvent): the combo talents.
+  event(s, when, ctx) {
+    const e = s.encounter, p = ctx.part;
+    if (classOf(s) !== 'operator' || !e) return;
+    const ready = (id, by) => { if (readyIn(s, id) > 0) { delete e.readyAt[id]; emit(s, 'proc', `${by}: ${A(id).name} is ready.`, { ability: id }); } };
+    if (when === 'cut') {
+      if (hasTalent(s, 'auto-restart') && addHelper(s, p, 'spawn', 'Auto-restart')) emit(s, 'status', `Auto-restart: a helper on the ${p.name}.`, { target: p.id, mark: 'helper' });
+      if (hasTalent(s, 'line-tap')) ready('sniff', 'Line Tap');
+    }
+    if (when === 'struck' && alive(p)) {
+      if (hasTalent(s, 'sighup') && helpersOn(s, p).length && onceACycle(s, 'sighup')) helpersStrike(s, p, 'SIGHUP');
+      if (hasTalent(s, 'traceback') && onceACycle(s, 'traceback')) { jamMark(s, p); emit(s, 'status', `Traceback: the ${p.name} is Jammed.`, { target: p.id, mark: 'jammed' }); }
+    }
+    if (when === 'answer') {
+      if (hasTalent(s, 'watchdog-reset') && e.helpers.length) { for (const h of e.helpers) h.left++; emit(s, 'status', 'Watchdog Reset: your helpers run a cycle longer.', { mark: 'helper' }); }
+      if (hasTalent(s, 'rebroadcast')) ready('replay', 'Rebroadcast');
+    }
+    if (when === 'tagged' && alive(p) && hasTalent(s, 'host-vector') && helpersOn(s, p).length && onceACycle(s, 'host-vector')) helpersStrike(s, p, 'Host Vector');
+    if (when === 'shielded') {
+      if (ctx.gained && hasTalent(s, 'hot-swap') && onceACycle(s, 'hot-swap')) {
+        let n = 0;
+        for (const x of livingParts(s)) if (!helpersOn(s, x).length && addHelper(s, x, 'spawn', 'Hot Swap')) n++;
+        if (n) emit(s, 'status', `Hot Swap: a helper on ${n === 1 ? 'one part' : n + ' parts'}.`, { mark: 'helper' });
+      }
+      if (ctx.absorbed > 0 && hasTalent(s, 'shim') && addHelper(s, p, 'sniff', 'Shim')) emit(s, 'status', `Shim: a foothold on the ${p.name}.`, { target: p.id, mark: 'helper' });
+    }
+    if (when === 'crit' && hasTalent(s, 'elevate') && p?.jammedUntil >= e.cycle && readyIn(s, 'hijack') > 0 && onceACycle(s, 'elevate')) ready('hijack', 'Elevate');
   },
   plan(s, t) {
     if (classOf(s) !== 'operator' || !t) return null;

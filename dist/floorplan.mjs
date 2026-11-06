@@ -50,6 +50,7 @@
 // the interrupt). The Resident is DEADBOLT, under the boss rule the playtest switches (interrupt.mjs BOSS_RULES).
 import { hooks, emit, warn, active, selectEncounter, encounterVirus, command, maxSignal, hackerOf, hackerLevel, classOf, addItem, stashItem, gainXp, gainCode, xpFor, deedXpFor, rollDrop, fxPct, puzzleUnique } from './combat.mjs';
 import { GUARDS, SUBS, LOADOUT, SUBCLASS, defaultSub, ARCHETYPES, BOSSES, FAMILIES, CONFIG, ELITE, ROLLED_MUTATIONS, SERVER, xpToNext, spreadOf } from './data.mjs';
+import { botTiers } from './talents.mjs';
 import { LOOT, vaultRarity, seeded, rollItem, itemLabel, protocolSlots, SLOT_KINDS, chaseStat, MATERIALS } from './gear.mjs';
 import { AUTHORS } from './authors.mjs';
 import { giveScript, rollScript } from './scripts.mjs';
@@ -1816,7 +1817,6 @@ export function treeLines(s) {
 // ---------- your character, for the playtest ----------
 // A class at a level with its subclass, its talents spent as a player would, and a blue protocol in every open slot
 // (the breach playtest's outfit, here so the room playtest doesn't lean on breach code).
-const fillOrder = (F) => [[F[0][0].id, 3], ['c0'], [F[1][0].id, 3], [F[1][1].id, 1], ['c1'], [F[2][0].id, 3], [F[2][1].id, 2], ['c2'], [F[0][1].id, 3], [F[1][1].id, 2], [F[2][1].id, 1]];
 export function outfit(s, { cls = 'breaker', level = 10, sub = null, rarity = 'tuned', gearSeed = 0 } = {}) {
   s.loadout.archetype = ARCHETYPES[cls] ? cls : 'breaker';
   cls = s.loadout.archetype;
@@ -1824,13 +1824,7 @@ export function outfit(s, { cls = 'breaker', level = 10, sub = null, rarity = 't
   const pickSub = level >= SUBCLASS.from ? (SUBS[sub]?.cls === cls ? sub : defaultSub(cls)) : null, kit = SUBS[pickSub];
   if (pickSub) s.loadout.sub = { ...(s.loadout.sub || {}), [cls]: pickSub };
   if (kit) {
-    let left = level < LOADOUT.talentFrom ? 0 : Math.floor((level - LOADOUT.talentFrom) / LOADOUT.talentEvery) + 1;
-    const ranks = {}, picks = [];
-    for (const [id, n] of fillOrder(kit.fillers)) {
-      if (left <= 0) break;
-      if (!n) { picks[+id[1]] = 0; left--; } else { const k = Math.min(n, left); ranks[id] = (ranks[id] || 0) + k; left -= k; }
-    }
-    s.loadout.picks[pickSub] = picks; s.loadout.ranks[pickSub] = ranks;
+    (s.loadout.tiers ||= {})[pickSub] = botTiers(level, null, pickSub); // a bot's pick in each open tier (talents.mjs BOT_PICKS)
     if (level >= LOADOUT.capstoneAt[0]) (s.loadout.caps ||= {})[pickSub] = 0; // the first capstone
   }
   for (let i = 0; i < protocolSlots(level); i++) {

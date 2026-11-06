@@ -67,7 +67,7 @@ test('a skill: a second Suspend on the same attack does nothing, says so, and th
 
 test('a talent: Ghost Route delays the soonest attack once, not again before it lands', () => {
   const s = vet('infiltrator', 'phantom', ['null-route']);
-  s.loadout.picks.phantom = [0, 1, 0]; // Ghost Route
+  (s.loadout.tiers ||= {}).phantom = [0, 0, 1]; // Ghost Route
   const e = fight(s), p = pulse(s), due = p.attack.due;
   go(s, 'null-route');
   assert.equal(p.attack.due, due + 2);

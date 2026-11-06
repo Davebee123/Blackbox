@@ -45,7 +45,7 @@ test('one level: your server is at your highest class level, with no XP of its o
   assert.ok(b.gains.some((g) => /\(floor 3\)$/.test(g)), 'its own tracks still count: a floor');
   assert.ok(!b.gains.includes('an outpost slot') && b.server === null, 'not the server\'s');
   const sum = levelUpSummary([up]);
-  assert.ok(sum.items.length >= 2 && !sum.items.some((it) => it.kind === 'power') && sum.items.at(-1).kind === 'integrity' && sum.next.level === up.next.level, 'the level-up: what it brings and the Integrity (no power line past level 6: gear carries you), then the next level');
+  assert.ok(sum.items.length >= 1 && !sum.items.some((it) => it.kind === 'power') && sum.items.at(-1).kind === 'integrity' && sum.next.level === up.next.level, 'the level-up: what it brings and the Integrity (no power line past level 6: gear carries you), then the next level');
 });
 
 test('the long climb: a level is CLIMB.kills kills of your level (straight between its points), always longer than the last; one-off deeds keep their share of a level', () => {

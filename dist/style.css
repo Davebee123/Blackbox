@@ -4158,6 +4158,10 @@ button.cls-ab:hover .cls-fr, button.cls-ab:focus-visible .cls-fr { border-color:
 .cls-id .cls-roles { justify-content: center; margin: 0; }
 .cls-tree { display: grid; gap: 8px; }
 .cls-row { display: grid; grid-template-columns: minmax(0, 1fr) 22px minmax(0, 1fr); align-items: center; }
+.cls-row.t3 { position: relative; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.cls-row.t3 .cls-tn { height: auto; min-height: 36px; padding: 4px 10px; }
+.cls-row.t3 .cls-tn b { white-space: normal; line-height: 1.15; }
+.cls-tl { position: absolute; right: 100%; margin-right: 6px; font: 600 9px var(--mono); color: var(--dim); }
 .cls-or { text-align: center; font: 600 9px var(--mono); color: var(--dim); text-transform: uppercase; }
 .cls-tn { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; height: 36px; padding: 0 12px; border: 1px solid var(--line); border-radius: var(--r-btn); background: none; color: var(--muted); font: 500 13px var(--sans); text-align: left; cursor: help; }
 .cls-tn b { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -1,9 +1,9 @@
 // The capstone row (docs/progression.md 7): two capstones under each subclass's tree, on points of their own: one at
-// level 45 picks one, one at 50 gives it its second rank. Talent points never reach the row and its points go nowhere
+// level 45 picks one, one at 50 gives it its second rank. Its points go nowhere
 // else. Each capstone's rule: the class modules (dist/classes/*.mjs), read with capValue.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fresh, command, takenMult, talentPoints, pointsSpent, capstonePoints, capRank, capValue, capState, kitOf, selectEncounter, resolveCycle, active, defender, livingParts, maxSignal } from './dist/combat.mjs';
+import { fresh, command, takenMult, freeTiers, tiersOf, capstonePoints, capRank, capValue, capState, kitOf, selectEncounter, resolveCycle, active, defender, livingParts, maxSignal } from './dist/combat.mjs';
 import { LOADOUT, SUBS, TREE } from './dist/data.mjs';
 import { build, at } from './balance.mjs';
 import { planner } from './dist/planner.mjs';
@@ -29,47 +29,33 @@ test('every subclass has a capstone row: two capstones, two ranks each, a rule a
   assert.equal(ids.size, 16);
 });
 
-test('capstone points: one at 45, two at 50, never talent points; the regular tree stays 21 points', () => {
+test('capstone points: one at 45, two at 50; the tiers are all open by then', () => {
   const s = filled('breaker', 'demolitionist', 44);
   assert.equal(capstonePoints(s), 0);
   assert.equal(capState(s, 'breaker'), 'locked');
   assert.match(last(s, 'talent capstone a'), /Capstones come at level 45/);
-  for (const [L, cp, tp] of [[45, 1, 18], [49, 1, 20], [50, 2, 21]]) {
+  for (const [L, cp] of [[45, 1], [49, 1], [50, 2]]) {
     s.hackers.breaker.level = L;
     assert.equal(capstonePoints(s), cp, `level ${L}`);
-    assert.equal(talentPoints(s), tp, `level ${L}: talent points unchanged`);
+    assert.equal(freeTiers(s), 0, `level ${L}: every tier picked`);
   }
 });
 
-test('the capstone row spends only its own points: a full tree has none left for it, and its points buy no rank above', () => {
+test('the capstone row: picked on its own point, rank 2 at 50, swapping free, a reset clears it', () => {
   const s = filled('breaker', 'demolitionist', 50);
-  const kit = kitOf(s), demo = kit.capstones;
-  assert.equal(pointsSpent(s, 'breaker'), 21, 'a full tree');
-  assert.equal(talentPoints(s) - pointsSpent(s, 'breaker'), 0);
-  // Its points are only spendable on the row: with two capstone points free, a filler rank or a tier still finds none.
-  assert.equal(capState(s, 'breaker'), 'open', 'a full tree and a capstone point: open');
-  command(s, 'talent remove ' + kit.fillers[2][1].id);
-  assert.equal(pointsSpent(s, 'breaker'), 20);
-  command(s, 'talent add ' + kit.fillers[2][1].id);
-  assert.match(last(s, 'talent add ' + kit.fillers[2][1].id), /max rank/);
-  assert.match(last(s, 'talent add ' + kit.fillers[0][0].id), /max rank/);
-  assert.equal(pointsSpent(s, 'breaker'), 21, 'still 21: the capstone points never went into the tree');
+  const demo = kitOf(s).capstones, tiers = [...tiersOf(s, 'breaker')];
+  assert.equal(capState(s, 'breaker'), 'open');
   assert.match(last(s, 'talent capstone a'), new RegExp(`${demo[0].name} \\(rank 2/2\\)`));
   assert.equal(capRank(s, demo[0].id), 2, 'rank 2 at 50');
   assert.equal(capValue(s, demo[0].id), demo[0].ranks[1]);
   assert.equal(capRank(s, demo[1].id), 0);
-  assert.equal(pointsSpent(s, 'breaker'), 21, 'the pick spent no talent point');
-  // Swapping is free, like a tier's pick.
+  assert.deepEqual(tiersOf(s, 'breaker'), tiers, 'the tiers are untouched');
   assert.match(last(s, 'talent capstone b'), new RegExp(demo[1].name));
   assert.equal(capRank(s, demo[1].id), 2); assert.equal(capRank(s, demo[0].id), 0);
-  // At 45: rank 1, and the rank-1 number.
   s.hackers.breaker.level = 45;
   assert.equal(capRank(s, demo[1].id), 1); assert.equal(capValue(s, demo[1].id), demo[1].ranks[0]);
-  // The row needs 15 points above it (the third tier picked): a reset clears the capstone too, to pick again.
-  assert.match(last(s, 'talent reset'), /capstone to pick again/);
+  assert.match(last(s, 'talent reset'), /and your capstone/);
   assert.equal(capRank(s, demo[1].id), 0);
-  assert.equal(capState(s, 'breaker'), 'blocked');
-  assert.match(last(s, 'talent capstone a'), /needs 15 points/);
 });
 
 // One rule each, checked on a fight: the capstone changes what it says it changes.

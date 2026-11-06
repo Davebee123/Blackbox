@@ -440,8 +440,8 @@ export function tellLand(s) {
     const done = () => { const lost = was - defender(s).integrity; if (lost > 0) tally(s, t, 'cost', lost); };
     if (t.kind !== 'seal' || p.armor > 0) { if (t.kind !== 'mimic') tally(s, t, 'landed'); }
     if (t.kind === 'charge') {
-      // Blackhole (Hijacker): the charged attack goes into it like any other.
-      if (p.blackhole) { delete p.blackhole; emit(s, 'blocked', `${label(t)} falls into the blackhole and does nothing.`, { source: p.id, tell: t.id, answered: true }); advance(p, e); tally(s, t, 'answered'); credit(s, t, p); rest(s, t, e.cycle, false); continue; }
+      // Blackhole (Hijacker): the charged attack goes into it like any other (Event Horizon: one of its two).
+      if (p.blackhole) { if (p.blackhole > 1) p.blackhole--; else delete p.blackhole; emit(s, 'blocked', `${label(t)} falls into the blackhole and does nothing.`, { source: p.id, tell: t.id, answered: true }); advance(p, e); tally(s, t, 'answered'); credit(s, t, p); rest(s, t, e.cycle, false); continue; }
       const atk = chargeAttack(s, t, p), locked = s.encounter.encrypt || 0, shield = e.shield || 0;
       if (strikeWith(s, p, atk)) return done(), true;
       advance(p, e);

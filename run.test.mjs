@@ -430,36 +430,28 @@ test('every location gets its family quirk', async () => {
   assert.deepEqual(s.locations.map((l) => l.quirk), ['hoard', 'nest', 'hidden']);
 });
 
-test('talent tree: points come from levels, ranks open the tiers, swapping is free, refunds keep it valid', async () => {
-  const { picksOf, ranksOf, tierState, pointsSpent, talentPoints, kitOf } = await import('./dist/combat.mjs');
+test('talent tree: six tiers of three open by level, picking and swapping is free at home, reset clears them', async () => {
+  const { tiersOf, tierState, freeTiers, hasTalent } = await import('./dist/combat.mjs');
   const s = fresh();
-  assert.equal(talentPoints(s), 0);
-  assert.match(command(s, 'talent add overclocked').at(-1).message, /Talents start at level 10/);
-  command(s, 'developer level 18'); // points at 10, 12, 14, 16, 18
-  assert.equal(talentPoints(s), 5);
-  assert.match(command(s, 'talent add armor-cracker').at(-1).message, /with your subclass/, 'no tree before a subclass is picked');
+  assert.match(command(s, 'talent 1 a').at(-1).message, /Talents start at level 10/);
+  command(s, 'developer level 18'); // tiers at 10 and 16
+  assert.match(command(s, 'talent 1 a').at(-1).message, /with your subclass/, 'no tree before a subclass is picked');
   command(s, 'subclass demolitionist');
-  // The tree is your subclass's: its first row, then its second.
-  const [[a, b], [c]] = kitOf(s).fillers;
-  assert.match(command(s, 'talent 1 a').at(-1).message, /needs 3 points/);
-  command(s, `talent add ${a.id}`);
-  command(s, `talent add ${a.id}`);
-  command(s, `talent add ${b.id}`);
-  assert.match(command(s, `talent add ${a.id}`).at(-1).message, new RegExp(`${a.name} 3/3`));
-  assert.match(command(s, `talent add ${a.id}`).at(-1).message, /max rank/);
-  assert.equal(tierState(s, 'breaker', 0), 'open');
-  command(s, 'talent 1 a');
+  assert.equal(freeTiers(s), 2);
+  assert.equal(tierState(s, 'breaker', 2), 'locked');
+  assert.match(command(s, 'talent 3 a').at(-1).message, /Tier 3 opens at level 22/);
+  assert.match(command(s, 'talent 1 c').at(-1).message, /Demolitionist tier 1: Exposed Wiring\. /);
   command(s, 'talent 1 b');
-  assert.deepEqual(picksOf(s, 'breaker'), [1], 'swapping is free');
-  assert.equal(pointsSpent(s, 'breaker'), 5);
-  assert.match(command(s, `talent add ${c.id}`).at(-1).message, /No free talent points/);
-  command(s, `talent remove ${b.id}`);
-  assert.match(command(s, `talent remove ${a.id}`).at(-1).message, /Deeper picks depend/);
-  assert.equal(talentPoints(s, 'bastion'), 0, 'each class levels on its own');
+  assert.deepEqual(tiersOf(s, 'breaker'), [1], 'swapping is free');
+  assert.ok(hasTalent(s, 'splintering') && !hasTalent(s, 'exposed-wiring'));
+  command(s, 'talent 2 a');
+  assert.equal(freeTiers(s), 0);
+  assert.match(command(s, 'talent 7 a').at(-1).message, /usage: talent <1-6> <a\|b\|c>/);
+  assert.match(command(s, 'talent 1 d').at(-1).message, /usage/);
   command(s, 'talent reset breaker');
-  assert.deepEqual(picksOf(s, 'breaker'), []);
+  assert.deepEqual(tiersOf(s, 'breaker'), []);
   command(s, 'encounter cryptjack'); command(s, 'engage');
-  assert.match(command(s, `talent add ${a.id}`).at(-1).message, /at home/);
+  assert.match(command(s, 'talent 1 a').at(-1).message, /at home/);
 });
 
 test('the loadout page: Protocols (the board, the stash, the stats), then Skills and talents, picks locked during a fight', async () => {
@@ -483,10 +475,13 @@ test('the loadout page: Protocols (the board, the stash, the stats), then Skills
   assert.match(html, /data-command="subclass operator herder">Choose</, 'and the way to pick one');
   command(s, 'subclass operator herder');
   html = loadoutMarkup(s, 'operator', 'skills');
-  assert.match(html, /<span class="cls-pts"[^>]*><b>5<\/b> talent points<\/span>/, 'the points to spend');
+  assert.match(html, /<span class="cls-pts"[^>]*><b>2<\/b> tiers to pick<\/span>/, 'the open tiers to pick');
   const { SUBS } = await import('./dist/data.mjs');
-  const node = SUBS.herder.fillers[0][0].id;
-  assert.match(html, new RegExp(`data-tn="${node}" data-command="talent operator add ${node}"`));
+  const [n0, n1, n2] = SUBS.herder.tiers[0];
+  assert.match(html, new RegExp(`data-tn="${n0.id}" data-command="talent operator 1 a"`));
+  assert.match(html, new RegExp(`data-tn="${n2.id}" data-command="talent operator 1 c"`));
+  assert.ok(html.includes(`data-tn="${n1.id}" data-command="talent operator 1 b" title="${n1.name}: ${n1.rule.replace(/'/g, '&#39;')}" data-tt-kind="Tier 1 talent">`), 'its tooltip: the name, what it does, and its kind, nothing more');
+  assert.match(html, /<span class="cls-tl">22<\/span>/, 'a locked tier shows the level it opens at');
   assert.match(html, /data-command="subclass operator hijacker">Switch</, 'the other subclass, to switch to');
   command(s, 'encounter cryptjack'); command(s, 'engage');
   html = loadoutMarkup(s, 'operator', 'skills');

@@ -78,9 +78,10 @@ test('the Bastions alone are the slow ones: the Warden at least 1.4 times the da
     // held at 21, a healer alone no longer safe. With no damage caps (docs/scaling.md "After step 3": a wild charge is its hit × mult, no longer stopped at 20%) it loses 25% at 30 and wins 84%: held
     // at 26 and 83% until the designer has played it. With the floor tiers (step 4) Lv 30 is floor 5's top, the arc's
     // hardest point: the Sysop alone loses 35% there and wins 74%: held at 36 and 72%.
+    // With the talent tiers (six picks, no ranked rows) it loses 36% and wins 72% there, on the line: held at 37 and 71%.
     const top = b.level === 30;
-    assert.ok(rs.sysop.lost <= (top ? 36 : 26), `${b.name}: ${line}`);
-    for (const sub of ['warden', 'sysop']) assert.ok(rs[sub].wins >= (sub === 'sysop' ? (top ? 0.72 : 0.83) : 0.85), `${b.name}: ${line}`);
+    assert.ok(rs.sysop.lost <= (top ? 37 : 26), `${b.name}: ${line}`);
+    for (const sub of ['warden', 'sysop']) assert.ok(rs[sub].wins >= (sub === 'sysop' ? (top ? 0.71 : 0.83) : 0.85), `${b.name}: ${line}`);
   }
 });
 

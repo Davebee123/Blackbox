@@ -22,7 +22,8 @@ const SLACK = 4;
 // the Overclocker at 18 and the Sysop at 30 win 17–19 of 24 there with a native in: the wins floor held at 0.7 at both,
 // and the moves held where they measure (Quiet Wire 4.8 at 18, Preempt 6.2 and Blank Check 4.6 at 30).
 const WINS = (b) => (b.level >= 18 ? 0.7 : 0.8);
-const TIER_MOVES = { 'quiet-wire': 5, preempt: 6.5, 'blank-check': 5 };
+// With the talent tiers Brood Tap moves the Lv 30 average 4.5 to 6.6 (with the bots' picks): held at 7.
+const TIER_MOVES = { 'quiet-wire': 5, preempt: 6.5, 'blank-check': 5, 'brood-tap': 7 };
 test('native uniques keep the bands: sidegrades, not upgrades', () => {
   const CLASSES = ['Breaker', 'Bastion', 'Infiltrator', 'Operator'];
   const SUBS = CLASSES.flatMap((c) => Object.keys(ARCHETYPES[c.toLowerCase()].subs).map((sub) => [c, sub]));

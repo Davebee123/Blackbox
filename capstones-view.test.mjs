@@ -23,7 +23,7 @@ test('each subclass keeps its own capstone, and the Loadout page draws the row w
   // The other subclass's tree has its own row, unpicked.
   command(s, 'subclass payload');
   assert.equal(capRank(s, ph.id), 0);
-  assert.equal(capState(s, 'infiltrator'), 'blocked', 'a fresh tree');
+  assert.equal(capState(s, 'infiltrator'), 'open', 'a fresh row, to pick');
   // The level-up names them.
   assert.ok(levelGains('breaker', 45).some((g) => /capstone point/.test(g)));
   assert.ok(levelGains('breaker', 50).some((g) => /second rank/.test(g)));
