@@ -62,11 +62,45 @@ export function createHitFx(board, { canMove = () => true } = {}) {
     name.classList.add('fx-jolt'); if (result === 'crit' || result === 'miss') name.classList.add(result);
     setTimeout(() => name.classList.remove('fx-jolt', 'crit', 'miss'), 500);
   }
-  // A part broken: its row dissolves (style.css .dying) while 1s and 0s rise off it and scatter.
+  // A part broken: its row dissolves (style.css .dying) while 1s and 0s rise off it and scatter, and its name and
+  // health break up letter by letter: each one flickers into a 1 or a 0, then drifts up and fades. The letters are
+  // copies on this layer (the row's own are hidden while it dies), so the board redrawing doesn't cut them short.
+  function letters(row, f) {
+    const top = row.querySelector('.part-top');
+    if (!top) return;
+    const walk = document.createTreeWalker(top, NodeFilter.SHOW_TEXT), range = document.createRange();
+    let n = 0;
+    for (let node = walk.nextNode(); node && n < 60; node = walk.nextNode()) {
+      const cs = getComputedStyle(node.parentElement), font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+      for (let i = 0; i < node.length && n < 60; i++) {
+        const ch = node.data[i];
+        if (!ch.trim()) continue;
+        range.setStart(node, i); range.setEnd(node, i + 1);
+        const b = local(f, range.getBoundingClientRect());
+        if (!b.w) continue;
+        const el = document.createElement('span');
+        el.className = 'fx-letter';
+        el.textContent = ch;
+        Object.assign(el.style, { left: b.l + b.w / 2 + 'px', top: b.t + b.h / 2 + 'px', font, color: cs.color });
+        layer.appendChild(el);
+        const turn = 60 + Math.random() * 360, go = turn + 140 + Math.random() * 260; // when it turns to a bit, when it lets go
+        const t0 = performance.now(), flick = setInterval(() => { if (performance.now() - t0 > turn) el.textContent = Math.random() < 0.5 ? '0' : '1'; }, 70);
+        el.animate([
+          { transform: 'translate(-50%, -50%)', opacity: 1, offset: 0 },
+          { transform: 'translate(-50%, -50%)', opacity: 1, color: 'var(--bright)', offset: turn / (go + 700) },
+          { transform: 'translate(-50%, -50%)', opacity: 1, color: 'var(--amber)', offset: go / (go + 700) },
+          { transform: `translate(calc(-50% + ${(Math.random() - 0.5) * 30}px), calc(-50% - ${24 + Math.random() * 40}px))`, opacity: 0, color: 'var(--dim)', offset: 1 },
+        ], { duration: go + 700, easing: 'ease-out', fill: 'forwards' });
+        setTimeout(() => { clearInterval(flick); el.remove(); }, go + 760);
+        n++;
+      }
+    }
+  }
   function dissolve(row) {
     if (!row?.isConnected || !canMove()) return;
     const f = frame(), r = local(f, row.getBoundingClientRect());
-    for (let i = 0; i < 46; i++) {
+    letters(row, f);
+    for (let i = 0; i < 28; i++) {
       const x = r.l + Math.random() * r.w * 0.55, y = r.t + r.h * (0.2 + Math.random() * 0.6);
       add('fx-bit dissolve', {
         left: x + 'px', top: y + 'px',

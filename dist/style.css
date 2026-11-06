@@ -2372,6 +2372,8 @@ body.phase-wait .cmdline, body.phase-wait #command-input { box-shadow: 0 0 0 1px
 /* A broken part's last moment: its row flickers and dissolves while bits rise off it (hitfx.mjs). */
 .brow.dying { pointer-events: none; animation: part-dissolve 1s steps(10, end) forwards; }
 .brow.dying .bname { color: var(--amber); }
+.brow.dying .part-top { visibility: hidden; } /* its letters are breaking up on the effects layer (hitfx.mjs) */
+.fx-letter { position: absolute; z-index: 2; transform: translate(-50%, -50%); white-space: pre; pointer-events: none; text-shadow: 0 0 6px rgba(241, 185, 47, 0.7); }
 @keyframes part-dissolve {
   0% { opacity: 1; filter: none; clip-path: inset(0 0 0 0); background: rgba(255, 236, 190, 0.25); }
   20% { opacity: 1; filter: brightness(1.6); }
