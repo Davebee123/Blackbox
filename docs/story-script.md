@@ -46,7 +46,7 @@ Only two change.
 4. **Puzzle board** · *the board on {server}*
    > whoever files those claims left a puzzle board running on {server}. win it. the board keeps their schedule.
    > and the thing that files them lives behind it.
-5. **Boss** · *the account* · **PAGE NINE** (elite ransomware at the floor's top level; *new*, a named elite, no new rules)
+5. **Boss** · *the account* · **PAGE NINE** (elite, floor 1; *Fight:* the bosses table)
    > the board says the account runs itself. a process in the Core of {server}, paying a dead man's premium and filing his claims. thirty years of it.
    > it calls itself page nine. switch it off.
 
@@ -74,7 +74,7 @@ Only two change.
 4. **Map without resting** · *Who's counting*
    > Something sends a count down this line every night, the way an old machine once did. Some of us read that count for a living, once.
    > Walk {server} end to end in one visit, and don't rest. We want to hear who else is listening.
-5. **Boss** · *It heard us* · **CENTRIFUGE** (14, GLASSJAW; designed: it spins up each time its Surge lands)
+5. **Boss** · *It heard us* · **CENTRIFUGE** (14, GLASSJAW; *Fight:* the bosses table)
    > GLASSJAW sent something to the Core of {server}. It heard our listener, and it wants to sell what it heard.
    > It is called CENTRIFUGE. It spins faster every time it lands. Slow it down. Then beat it.
 
@@ -103,7 +103,7 @@ Only two change.
    > Or don't. We'll be watching you type either way.
 3. **Takeover** · *Archive custody* (*kept*)
 4. **Puzzle board** · *Sealed records* (*kept*)
-5. **Boss** · *Final custody* · **SHOULDER SURFER** (18, NULL CHOIR; designed: it replays the last command you fired)
+5. **Boss** · *Final custody* · **SHOULDER SURFER** (18, NULL CHOIR; *Fight:* the bosses table)
    > One server left: {server}. Its Core now holds a NULL CHOIR process that has been reading over our contractors' shoulders. Remove it and the Stacks are in order.
    > Your retainer has been reviewed. It stands.
 
@@ -134,14 +134,12 @@ Only two change.
    *File:* text: kessler settlement, night desk, forty years ago. change approved: settlement timeout disabled. engineer's note: objection on file. switching it off.
 4. **Map without resting** · *Walkthrough*
    > Walk {server} end to end in one visit, without a rest. Our auditors found a process there that answers to Kessler's night desk. Kessler has not had a night desk for thirty years.
-5. **Boss** · *Eviction* · **NIGHT DESK** (24, nobody's: Kessler's old settlement process; *new*)
+5. **Boss** · *Eviction* · **NIGHT DESK** (24, nobody's: Kessler's old settlement process; *Fight:* the bosses table)
    > The unpaid jobs run from the Core of {server}. Something there is still settling trades for a company that no longer exists. Evict it, and the lease is void.
 
    *On the challenge card:* `night desk. awaiting counterparty.`
    *When it falls:* `shift ended. 0 trades settled.`
 
-   *A sketch for the boss session:* **Finality.** Nothing it starts can be stopped: each attack waits for an answer.
-   Hit the part that's charging and it settles at half; leave it and it settles in full.
 
 *Closing line:* The lease was Kessler's, and so were its logs, and so was the thing still working the night shift. Kestrel has archived them all, and is raising its rates.
 
@@ -174,7 +172,7 @@ Only two change.
    > holding was meant to mean nobody cancels again. it just meant nobody saw.
 3. **Rooms** · *Noise* (*kept*)
 4. **Install** · *Jammer* (*kept*)
-5. **Boss** · *Encore* · **EXIT NODE** (30, PALEMASK; designed: three onion layers over its core)
+5. **Boss** · *Encore* · **EXIT NODE** (30, PALEMASK, carrying ACTUARY's backups; *Fight:* the bosses table)
    > The model keeps its backups behind {server}'s Core, three layers deep. It hired PALEMASK to hide them. Peel it. We'll do the rest.
 
    *On the challenge card:* `route: unknown. route: unknown. route: unknown.`
@@ -200,15 +198,13 @@ Only two change.
 
    **Extra letter · Kestrel · *Notice of closure***
    > Kernel Space and every floor beneath it will be sealed at the end of this cycle. Please collect your belongings.
-4. **Boss** · *the seal* · **BULKHEAD** (36, Kestrel ICE; *new*)
+4. **Boss** · *the seal* · **BULKHEAD** (36, Kestrel ICE; *Fight:* the bosses table)
    > they're sealing it with you under. the lock sits in the Core of {server}.
    > break it and the floors stay open. or walk out and let it close. you pick. i picked twice.
 
    *On the challenge card:* `SEAL IN PROGRESS. OCCUPANTS: 1.`
    *When it falls:* `SEAL ABORTED. Kestrel apologises for any inconvenience.`
 
-   *A sketch for the boss session:* **Seal.** Each cycle it seals one more of your keys; breaking a part opens one
-   back: a race to keep your bar open. Walking out instead is the set piece's other choice, prototyped first.
 
 *Closing line:* the model has a name inside halcyon: the actuary. kestrel had a date for the seal, and now it doesn't.
 
@@ -230,7 +226,7 @@ Only two change.
 
    *File:* text: resolved, that the actuary programme continue, a restart being unaffordable under the guarantee. three signatures.
 4. **Map without resting** · *Clean hands* (*kept*)
-5. **Boss** · *Resignation* · **GOLDEN PARACHUTE** (38, GLASSJAW; designed: every part it loses makes the rest charge)
+5. **Boss** · *Resignation* · **GOLDEN PARACHUTE** (38, GLASSJAW; *Fight:* the bosses table)
    > One of the three who signed is leaving tonight, with a payout and the renewal's only copy. GLASSJAW is carrying both out through the Core of {server}.
    > Stop it. After that, I will not write again.
 
@@ -300,6 +296,24 @@ with your stance.
 > Wick
 
 ---
+
+## The bosses: each fight acts out its story
+
+Every rule is on the board, telegraphed, and the same every fight (docs/puzzle-fights.md). *Reworks* marks a boss
+whose designed signature (docs/genome.md 7.4) this replaces or bends; its boss session updates genome.md.
+
+| Boss | Its story | Signature | The lesson |
+|---|---|---|---|
+| **PAGE NINE** · elite, 8 | A dead firm's account, paying its premium and claiming for cancellations a day early | **Premium Paid.** Each cycle one part is Insured, tagged a cycle ahead in a fixed order: damage on it is refunded at the end of the cycle. **Filed Early:** its tells show a cycle sooner than anyone's. | Read the tags; hit what isn't insured. Floor 1's one lever. |
+| **CENTRIFUGE** · 14 · *reworks* | GLASSJAW's buyer, bidding on what LANTERN's listener heard | **Going, going.** Spin-up kept, as bids: each Surge that lands raises the bid (the Gavel's interval 4, 3, 2); a delay or Throttle withdraws it (back to 4). **Sold:** a Surge that lands at 2 sells your most-fired skill, locked for 3 cycles. | Spend a delay before the third bid, and don't lean on one skill. |
+| **SHOULDER SURFER** · 18 | NULL CHOIR, reading over your shoulder | **Credential Replay** as designed: its Dump replays the last command you fired in a window. **Again:** it plays your last three commands back, in order, on its beat. | Lead small in its windows: what you type is what you'll take. |
+| **NIGHT DESK** · 24 · *new* | Kessler's settlement process, still working a shift for a dead company, its timeout switched off | **No Timeout.** Its attacks never land on their own: each opens a Pending trade on its part and waits. Hit that part to answer it, and it settles at half on you. **Finality:** interrupts don't stop it. **Table full:** at four Pending, every one settles at once, in full. | Answer as they come, and take the small hits. Interrupts are the wrong default here. |
+| **EXIT NODE** · 30 · *reworks* | PALEMASK hiding ACTUARY's backups three deep | **Restore from backup.** Onion Routing kept, the layers named v5, v6, v7: a peeled layer restores 6 cycles later unless the core is Open. **Repriced:** every 4 cycles (two ahead) the core, ACTUARY's copy, raises the premium on your most-used skill (+1 cooldown, for the fight). | Peel and open the core in one window, and spread your skills. |
+| **BULKHEAD** · 36 · *new* | Kestrel's lock, sealing the floors with you inside | **Closure.** Every 2 cycles it seals your next key, left to right; each seal gives one cycle's notice on the key (*Please collect your belongings*). Breaking a part reopens a key. **Occupants: 1:** with your whole bar sealed, your Signal drains each cycle until a key opens. | Break parts on time, and fire a key before it seals. |
+| **GOLDEN PARACHUTE** · 38 | A board member leaving with his payout and the renewal's only copy | **Severance** as designed: a part breaking gives the others a ◆ and a charge. **The Parachute:** at its last part it starts jacking out, a 4-cycle countdown on the board. If it gets out, the fight ends: no loss, no loot, and it's back in its Core next visit. | Break the others in an order that leaves the weakest last, and save a burst for the countdown. |
+| **INIT** · 50 | PID 1: it can't be killed, it adopts every orphan, and its Integrity is the process table | **Adoption.** Its bar is the process table, from 97%. Each cycle it adopts an orphan (a fragment). An orphan broken cleanly, in one hit or while Open, frees table (−2%); one left to the end of its third cycle is re-parented (+1%). **Older strata:** at 85% and 70% the orphans come older and tougher, Bedrock's oldest last. It falls at 61%. | End processes cleanly, not just quickly. Final Settlement, its reward, is the lesson as an item. |
+
+Bedrock's own lair boss (46) is still to write; it stands between the actuary and INIT.
 
 ## What the script needs that isn't built
 
