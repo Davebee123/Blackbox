@@ -37,11 +37,12 @@ const pick = (s, xs) => xs[Math.floor(roll(s) * xs.length)];
 const between = (s, [lo, hi]) => lo + Math.floor(roll(s) * (hi - lo));
 
 // A line: { id, t, kind (wire | contact | sim | you | feat), from, text, title?, faction?, items? }.
+let trimmed = []; // what the last post pushed off the history, put back if that line is taken back (ambient)
 function post(s, line) {
   const c = channelOf(s);
   const l = { id: ++c.n, t: clock(), ...line };
   c.lines.push(l);
-  if (c.lines.length > CHANNEL.keep) c.lines.splice(0, c.lines.length - CHANNEL.keep);
+  trimmed = c.lines.length > CHANNEL.keep ? c.lines.splice(0, c.lines.length - CHANNEL.keep) : [];
   return l;
 }
 const wire = (s, text, extra = {}) => post(s, { kind: 'wire', from: 'wire', text, ...extra });
@@ -248,7 +249,7 @@ function ambient(s) {
   for (const f of order) {
     const l = f(s);
     if (!l) continue;
-    if (c.lines.slice(-13, -1).some((x) => x.text === l.text)) { c.lines.pop(); continue; } // not the same line twice in a while
+    if (c.lines.slice(-13, -1).some((x) => x.text === l.text)) { c.lines.pop(); c.lines.unshift(...trimmed); continue; } // not the same line twice in a while
     return l;
   }
   return null;

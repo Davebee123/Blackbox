@@ -590,7 +590,7 @@ export function syncServer(s) {
 export function addItem(s, item, why = 'Loot: ') {
   s.stash ||= [];
   if (item.unique && !(s.collection ||= {})[item.unique]) { s.collection[item.unique] = hooks.now?.() ?? Date.now(); emit(s, 'collected', `Collection: ${item.name}.`, { unique: item.unique, go: logGo(homeOfUnique(item.unique)) }); }
-  if (s.stash.length >= STASH_CAP) {
+  if (s.stash.length >= STASH_CAP && !keptItem(item)) {
     const got = deconstruct(s, item);
     emit(s, 'info', `Your stash is full (${STASH_CAP}), so ${itemLabel(item)} was deconstructed for ${got}.`);
     return null;
@@ -617,6 +617,8 @@ export function deconstruct(s, item, out = null) {
 // ---------- drops ----------
 // Uniques written in content/items.mjs (the editor's Uniques page).
 export const UNIQUES = Object.fromEntries((ITEMS.uniques || []).map((u) => [u.id, u]));
+// A unique you can't deconstruct (keep: wick's Old Toolkit, his cancel code: docs/lore.md). A full stash takes it anyway.
+export const keptItem = (it) => !!(it?.unique && UNIQUES[it.unique]?.keep);
 const uniqueById = (id) => UNIQUES[id] || null;
 // Does a unique drop from here? ctx: { kind: sprawl|home|guard|rogue|vault, id, layer, floor, rare, strain }.
 // A source with a floor (floor: 7, The Sink) drops on that floor only. A ★ rare spawn's (kind rare) whatever room it is in.
@@ -1987,6 +1989,7 @@ function protocolCommand(s, text) {
   if (word === 'scrap' || word === 'deconstruct') {
     const it = stashItem(s, arg);
     if (!it) return warn(s, arg ? `No item ${arg} in your stash.` : 'deconstruct <item>.');
+    if (keptItem(it)) return warn(s, `${itemLabel(it)} can’t be deconstructed.`);
     unslot(s, it.id);
     s.stash = s.stash.filter((x) => x.id !== it.id);
     const gains = [];
@@ -5035,6 +5038,7 @@ export function restore(raw) {
     hardenRestore(s); // harden.sh is gone: scripts you held come back as credits (firewall.mjs)
     componentsRestore(s); // v47: a pile of named components becomes its count (salvage.mjs); keyed on the field
     { const l = craftRestore(s); if (l) systemLetter(s, l); } // v49: crafting goes (progression.mjs): keyed on what the save holds
+    { const w = (h) => (h === 'moth' ? 'wisp' : h); for (const x of s.crewSim || []) x.name = w(x.name); if (s.friends) s.friends = s.friends.map(w); const c = s.consortium; if (c) { c.members = (c.members || []).map(w); c.founder = w(c.founder); } } // moth is the story's (docs/lore.md): the handle is wisp now; keyed on the name
     shuntRestore(s); // the Shunt was cut (docs/parts-plan.md): keyed on the part, not the version
     collectionRestore(s); // the collection log (collection.mjs): an older save's mastered parts, beaten strains and won bosses, stamped quietly; keyed on each slot
     try { achievementsRestore(s); } catch (err) { hooks.restoreError?.(err); } // achievements.mjs: an older save earns what it has already done (its titles and stickers too), quietly; never costs the save

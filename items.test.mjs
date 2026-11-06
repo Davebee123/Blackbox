@@ -121,3 +121,12 @@ test('class uniques: Tagged and burning targets, a shorter skill cooldown, and a
   const inf = count('infiltrator'), brk = count('breaker');
   assert.ok(inf > brk * 2, `${inf} vs ${brk}`);
 });
+
+test("wick's Old Toolkit can't be deconstructed, and a full stash still takes it", () => {
+  const s = vet();
+  const it = giveUnique(s, 'wicks-old-toolkit');
+  command(s, 'deconstruct ' + it.id);
+  assert.ok(s.stash.some((x) => x.id === it.id));
+  s.stash.push(...Array.from({ length: 200 }, (_, i) => ({ ...s.stash[0], id: 'pad' + i, unique: null })));
+  assert.ok(giveUnique(s, 'wicks-old-toolkit'));
+});

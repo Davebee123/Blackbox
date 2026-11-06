@@ -67,7 +67,7 @@ The rest stays sandbox.
 |---:|---|---|
 | 1 · The Sprawl | The ledger. | The handler: terse and funny. He wants you to read it. |
 | 2 · Backhaul | A LANTERN broadcast: the strays come from below, and someone is counting them. | Same. |
-| (level 22) | The badge mail. | He takes his Old Toolkit back "to rebuild it". It is his cancel code; he doesn't want you carrying it. |
+| (level 22) | The badge mail. | He rebuilds his Old Toolkit and gives it back. It's his cancel code, and it can't be deconstructed (*built*): you carry it now. |
 | 3 · The Stacks | NULL CHOIR's offer. | — |
 | 4 · Coldline | moth goes dark (Cold Start). The first Kessler logs show the timeout switched off. | His lines get shorter. |
 | 5 · Deep Core | ACTUARY. | It's built from his code. Holding never stopped the cancelling; it hid it. |
@@ -107,7 +107,7 @@ capital letters. It half agrees and half argues with your stance, then ends on h
 
 ## 6. Final Settlement (designed, not built)
 
-The rebuilt toolkit, sent with wick's letter at INIT's first fall. The same item for every stance.
+The Old Toolkit finished, sent with wick's letter at INIT's first fall. The same item for every stance.
 
 > **Final Settlement** · Exploit · Unique · Level 50
 > When you break a part, everything it spawned breaks with it.
@@ -199,7 +199,7 @@ Don't edit these here; each wants the designer's pass.
 
 | Where | Today | Under this lore |
 |---|---|---|
-| `dist/content/story.mjs` *badge* | wick takes the Old Toolkit and gives it back rebuilt at your level (`mail.mjs` gives `items`). | He keeps it; it comes back as Final Settlement at INIT. Collides with the built reward: the designer decides. |
+| `dist/content/contracts.mjs` `floors` (the floor jobs, GAME_RULES *Floor jobs*) | Eight built chains: page nine, LANTERN's schedule, Underwriting, Kestrel's forged lease, NULL CHOIR and the model, wick shelving a copy, a Claims insider, and the actuary killed at Bedrock. | They are the storyline mails (9). F1, F2, F4 and F6 fit with a rewrite; F3, F5, F7 and F8 collide (9.1). |
 | `dist/content/story.mjs` *ledger* file text | *"Fourteen months of payouts, every client named."* | Premiums still collected on frozen accounts whose holders are long dead. |
 | `dist/content/story.mjs` *welcome* | Halcyon pays crews because each breach is a claim. | Still true; the deeper reason (the table, the Guarantee) is learned later. No change needed. |
 | `dist/factions.mjs` NULL CHOIR `about` | *"Breaks corporate servers for fun…"* | Breaks servers as small rollbacks; *"Let it roll back."* |
@@ -208,5 +208,38 @@ Don't edit these here; each wants the designer's pass.
 | `dist/factions.mjs` GLASSJAW `about` | *"Halcyon's competitor."* | A broker of INIT's reports. |
 | `docs/threads.md` 10 *Orphans* | A kernel thread forked off a dead parent. | An orphaned trade; *"tell them to stop"* is its dead counterparty's dump. |
 | `docs/threads.md` 7 *Cold Start* | moth, a LOWLIGHT runner. | Same, plus the floor-4 beat and wick's shorter lines. |
-| `dist/presence.mjs`, `dist/crew.mjs` name pools; `dist/profile.mjs` *Moth* | `moth` is a random player or crewmate name. | moth is a story character; drop it from the pools. |
 | `GAME_RULES.md` KESSLER-FARM-00 | *"a mining farm somebody stopped paying for"* | A Kessler-era farm (8.4). |
+
+## 9. Building it
+
+The floor jobs (`arcs.mjs`) already carry a storyline a floor; they are where the beats go. Steps stay; letters change.
+
+### 9.1 The beats against the built chains
+
+| Floor | Built chain (giver) | Lore beat | Fit |
+|---:|---|---|---|
+| 1 | Page nine (wick) | The ledger | Fits: page nine becomes premiums on a dead holder's account. |
+| 2 | Carrier (LANTERN) | LANTERN's broadcast | Fits: *the schedule* becomes INIT's count. |
+| 3 | Underwriting (Claims) | NULL CHOIR's offer | Collides: another giver. |
+| 4 | Cold storage (Kestrel) | moth goes dark; the Kessler logs | Fits: the forged lease becomes the timeout log. moth's half needs Cold Start. |
+| 5 | Static (NULL CHOIR, after the model) | ACTUARY | Half: the right subject, another giver. |
+| 6 | Ring zero (wick shelves a copy) | Kestrel seals the floors | Collides. |
+| 7 | Minutes (a Claims insider) | GLASSJAW's archive | Collides. |
+| 8 | Bedrock (wick: kill the actuary) | INIT and the letter | Collides: the built climb ends on the actuary. |
+
+### 9.2 Sessions, in order
+
+Each lands before the next starts. 1 and 2 can run side by side (2 is applets in the scratchpad).
+
+| # | Session | Lane (owns) | Needs first |
+|---:|---|---|---|
+| 1 | **Story text.** The floor jobs' letters rewritten to 9.1; the ledger file, the faction `about` lines. Text only. | `content/contracts.mjs` floors, `content/story.mjs`, `factions.mjs` about | The designer's call on 9.1 |
+| 2 | **Lore surfaces, prototype.** Vault records, Codex lines, LANTERN on the pager, ??? until found: applets and screenshots. | scratchpad | — |
+| 3 | **Stance.** The badge's stance line; floor 5's four transmissions (`scenes.mjs`, opened by the floor). | `profile.mjs` badge, `scenes.mjs` | 1 |
+| 4 | **Lore surfaces, built** from 2's pick, with the living-network content (8.1–8.3) the designer keeps from 8.4. | the record kind, server names, contract and vendor text | 2, the designer's picks |
+| 5 | **Threads:** the *hold* and *follow* step kinds, then Cold Start (4) and Orphans (6). | `threads.mjs`, `content/threads.mjs` | — |
+| 6 | **Floor 6's seal.** Prototype first. | the floor-6 chain | 1, 5 |
+| 7 | **The end.** INIT, wick's five letters, an achievement and cosmetic a stance, Final Settlement (a part's spawn tracked, so it breaks with it). | Bedrock, `achievements.mjs`, combat | Floor 8's content (docs/content.md 3.2) |
+
+Story text (1, 3) and the end (7) touch the storyline and achievements; the save only in 7. None run side by side with
+another session on those systems.
