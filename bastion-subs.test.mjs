@@ -651,3 +651,14 @@ test('Graceful Restart: Hot Standby saves you at half your Signal', () => {
   act(s, 'hold');
   assert.equal(hp(s), Math.round(defender(s).max / 2));
 });
+
+test('Fail-Fast: Failover takes a part and hits only it, for double; without it Failover takes no target', () => {
+  const f = noArmor(quiet(start('warden', ['failover'], ['fail-fast'])));
+  big(f, 'pulse'); big(f, 'encryptor');
+  defender(f).integrity = defender(f).max - 100;
+  act(f, 'failover pulse');
+  assert.equal(lost(f, 'pulse'), 2 * 25, 'a quarter of 100 missing, doubled');
+  assert.equal(lost(f, 'encryptor'), 0, 'only the target');
+  const n = noArmor(quiet(start('warden', ['failover'])));
+  assert.match(command(n, 'failover pulse').at(-1).message, /doesn't take a target/);
+});

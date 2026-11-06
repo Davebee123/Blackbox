@@ -1336,8 +1336,8 @@ nearly full.
 - **Readings:** Cook-Off counts a tick its part's armor took whole; Flashpoint's crit is your next command's hit;
   Third-Party Cookie and Web Beacon fire when you use Tag; Heat Sink's target is the part your last command hit;
   Spillover stops at 20 shield; Flow Control's Retaliate sends back the larger of the last hit on you and the answered
-  part's attack; Final Run's helpers then expire, each with its Last Gasp. Fail-Fast does nothing yet: Failover has no
-  target (a design call).
+  part's attack; Final Run's helpers then expire, each with its Last Gasp; with Fail-Fast, Failover takes a part
+  (`failover <part>`).
 - **Capstones:** a row under the tree, two a subclass, picked with the capstone point at 45; the point at 50 gives the
   one you picked its second rank. `talent capstone <a|b>`.
 

@@ -2390,7 +2390,7 @@ export function parse(s, input) {
   const arg = rest.join(' ');
   // In a crew, Patch takes a crewmate's name and heals them instead (crew.mjs hooks.crewAllies).
   if ((ability === 'patch' || a.ally) && arg) return allyOf(s, arg) ? { ability, ally: arg } : { error: `${arg} isn't in this fight with you.` };
-  if (a.target === 'none') return arg ? { error: `${a.name} doesn't take a target.` } : { ability };
+  if (a.target === 'none' && !(ability === 'failover' && hasTalent(s, 'fail-fast'))) return arg ? { error: `${a.name} doesn't take a target.` } : { ability }; // Fail-Fast: Failover takes a part
   if (a.target === 'attack' && !arg) {
     const soonest = attackers(s).sort((x, y) => x.attack.due - y.attack.due)[0];
     return soonest ? { ability, target: soonest.id } : { error: 'Nothing left to interrupt.' };
@@ -3471,7 +3471,8 @@ function useAbility(s, intent, auto = false) {
   if (id === 'failover') {
     const d = defender(s);
     const amount = Math.max(scaled(s, 20), Math.round((d.max - d.integrity) / 4));
-    for (const p of livingParts(s)) hit(s, p, amount, { mine: true, by: a.name });
+    if (hasTalent(s, 'fail-fast') && alive(target)) hit(s, target, amount * 2, { mine: true, by: a.name }); // Fail-Fast: only the target, for double
+    else for (const p of livingParts(s)) hit(s, p, amount, { mine: true, by: a.name });
   }
   if (a.status && alive(target)) {
     let n = a.cycles;
