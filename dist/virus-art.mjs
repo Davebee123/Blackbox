@@ -12,6 +12,7 @@ const RAMP = ' .,:-=+*#%@'; // dark → lit
 const SHARDS = '#*+=:.01';
 const BITS = '0101010#*';
 const SPARKS = '*+/-x1010';
+const PACKETS = '[]#=01010110';
 
 // Which shape a virus wears: its strain first, then a guard's or a room body's own kind, then its family's.
 const STRAIN_SHAPE = { keylogger: 'eye', hashrat: 'cube', floodgate: 'fountain', leech: 'tick', sleeper: 'cocoon', patchwork: 'crab', flicker: 'wraith', extortion: 'padlock', echo: 'rings', bricker: 'block', overrun: 'hive' };
@@ -37,18 +38,21 @@ export function lungeAt(u) {
 //   snap: two quick jabs, the pincers closing on each;   strike: darts down at you, whipping side to side;
 //   phase: blinks out, reappears at the glass, smeared;   stab: its limbs jab out one after another;
 //   shock: the part stays, rears and throws rings of characters that swell out past the window at you;
-//   grind: the part spins up where it is and sprays sparks that fly out at the glass.
+//   grind: the part spins up where it is and sprays sparks that fly out at the glass;
+//   rake: legs swipe out at the glass and drag down it, one after another;
+//   headbutt: rears up, then slams its head out at you;  spill: a hatch bursts and pours bits out over the page.
+// A body can move its core and its limbs (the special part) differently: { core, limb }.
 // The body never leaves: only the attacking part comes out, or what it throws.
-export const STRIKES = { snap: 700, strike: 520, phase: 680, stab: 780, shock: 760, grind: 720, lunge: 560 };
+export const STRIKES = { snap: 700, strike: 520, phase: 680, stab: 780, shock: 760, grind: 720, rake: 760, headbutt: 640, spill: 780, lunge: 560 };
 const STRIKE_OF = {
   crab: 'snap', padlock: 'snap', tick: 'snap', magnet: 'snap',
   serpent: 'strike', fountain: 'strike', hive: 'strike',
   wraith: 'phase', eye: 'phase', cocoon: 'phase', rings: 'phase',
-  hound: 'shock', horse: 'shock', block: 'shock', gate: 'shock', boiler: 'shock', bomb: 'shock', mast: 'shock', dish: 'shock',
+  hound: { core: 'shock', limb: 'rake' }, horse: { core: 'spill', limb: 'headbutt' }, block: 'shock', gate: 'shock', boiler: 'shock', bomb: 'shock', mast: 'shock', dish: 'shock',
   spider: 'stab',
   blades: 'grind', cube: 'grind',
 };
-export const strikeOf = (shape) => STRIKE_OF[shape] || 'lunge';
+export const strikeOf = (shape, limb = false) => { const s = STRIKE_OF[shape] || 'lunge'; return typeof s === 'string' ? s : limb ? s.limb : s.core; };
 const clamp01 = (u) => Math.max(0, Math.min(1, u));
 
 // One point of an attacking part at u (0–1) of its strike: reach (how near it comes, 0–1, negative pulls back),
@@ -78,6 +82,20 @@ export function strikeAt(style, u, i, x, y, c) {
       const k = (u - 0.18) / 0.82, shake = u < 0.6 ? 1.8 : 0;
       return { reach: -0.25 * (1 - k) ** 2 + 0.2 * Math.sin(Math.PI * k), dx: ((i * 13) % 7 - 3) * shake * Math.sin(u * 90), dy: 0 };
     }
+    case 'rake': { // each leg in turn swipes out at the glass and drags down it, raking inward
+      const a = (Math.atan2(oy, ox) / (Math.PI * 2) + 0.5) % 1, r = lungeAt(clamp01((u - a * 0.3) / 0.7)), w = Math.max(0, r);
+      return { reach: r * 0.9, dx: -Math.sign(ox) * w * 10, dy: w * w * 26 };
+    }
+    case 'headbutt': { // rears up, slams out and down at you, comes home
+      if (u < 0.25) { const k = u / 0.25; return { reach: -0.2 * k, dx: 0, dy: -16 * Math.sin((k * Math.PI) / 2) }; }
+      if (u < 0.45) { const k = (u - 0.25) / 0.2; return { reach: -0.2 + 1.2 * (1 - (1 - k) ** 3), dx: 0, dy: -16 + 34 * k }; }
+      const k = (u - 0.45) / 0.55, e = (1 - k) ** 2 * (1 + 2 * k);
+      return { reach: e, dx: 0, dy: 18 * e };
+    }
+    case 'spill': { // swells as the hatch bursts, then shudders while it pours
+      const w = Math.sin(Math.PI * u);
+      return { reach: w * 0.15, dx: u > 0.15 && u < 0.75 ? ((i * 13) % 7 - 3) * 0.8 * Math.sin(u * 80) : 0, dy: 0 };
+    }
     case 'grind': { // spins up where it is, leaning in a little, and spins down
       const w = Math.sin(Math.PI * u), a = Math.PI * 7 * (u - Math.sin(2 * Math.PI * u) / (2 * Math.PI));
       return { reach: w * 0.18, dx: ox * Math.cos(a) - oy * Math.sin(a) - ox, dy: ox * Math.sin(a) + oy * Math.cos(a) - oy };
@@ -95,7 +113,7 @@ export const releaseOf = (i) => ((i * 0.6180339887) % 1) * 0.8;
 
 export function createArt({ getState, canMove, getSelected, getNowSources, breakout = () => true }) {
   let canvas = null, ctx = null, previous = 0, angle = 0, clock = 0;
-  let builtFor = '', points = [], anims = [], radius = 1, rx = 1, ry = 1, style = 'lunge';
+  let builtFor = '', points = [], anims = [], radius = 1, rx = 1, ry = 1, style = { core: 'lunge', limb: 'lunge' };
   const hits = new Map();
   let shake = null, glitch = 0;
   const shards = [];
@@ -171,7 +189,7 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
     const S = (side = 1) => `${specialBase}@${side < 0 ? 'L' : 'R'}`;
     const breathe = anim({ k: 'breathe', c: [0, 0, 0], amp: 0.06, speed: 2.2 });
     const shape = shapeOf(v);
-    style = strikeOf(shape);
+    style = { core: strikeOf(shape), limb: strikeOf(shape, true) };
     const sway = (anchor, amp = 0.25, speed = 1.4, phase = r() * 6) => anim({ k: 'sway', c: anchor, amp, speed, phase });
     const orbit = (c, speed, tilt = 0) => anim({ k: 'orbit', c, speed, tilt });
     const spin = (c, speed, axis = 'z') => anim({ k: 'spin', c, speed, axis });
@@ -496,8 +514,9 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
     // around it).
     const strikes = new Map();
     if (motion) for (const [id, h] of hits) {
-      const u = h.kind === 'attack' ? (now - h.time) / STRIKES[style] : 1;
-      if (u > 0 && u < 1 && resolvePartById(v, id)?.integrity > 0) strikes.set(id, { u, h, c: { x: 0, y: 0 }, n: 0 });
+      const who = resolvePartById(v, id), how = who?.special ? style.limb : style.core;
+      const u = h.kind === 'attack' ? (now - h.time) / STRIKES[how] : 1;
+      if (u > 0 && u < 1 && who?.integrity > 0) strikes.set(id, { u, h, how, c: { x: 0, y: 0 }, n: 0 });
     }
     if (strikes.size) for (const p of points) {
       const part = resolvePart(v, p.region), st = part?.id && strikes.get(part.id);
@@ -526,7 +545,7 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
       const fresh = h && part.integrity > 0 && motion ? (1 - age) ** 2 : 0;
       // The strike: the attacking part comes at you its own way (nearer, so bigger and spread from the middle), past its frame.
       const st = strikes.size && part.id && part.integrity > 0 ? strikes.get(part.id) : null;
-      const m = st ? strikeAt(style, st.u, i, x1, y1, st.c) : null;
+      const m = st ? strikeAt(st.how, st.u, i, x1, y1, st.c) : null;
       if (m?.hide) continue;
       const reach = m ? m.reach : 0;
       const k0 = 300 / (300 + z1);
@@ -583,13 +602,19 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
 
     // What strikes throw: shock rings and grind sparks, from the part's middle on the panel, out over the page.
     if (striking) for (const [id, st] of strikes) {
-      if (style !== 'shock' && style !== 'grind') continue;
+      if (!['shock', 'grind', 'spill'].includes(st.how)) continue;
       const mine = [...cells.values()].filter((c) => c.part?.id === id);
       if (!mine.length) continue;
       const mx = mine.reduce((a, c) => a + c.x, 0) / mine.length, my = mine.reduce((a, c) => a + c.y, 0) / mine.length;
       const ext = Math.max(12, Math.sqrt(mine.reduce((a, c) => a + (c.x - mx) ** 2 + (c.y - my) ** 2, 0) / mine.length));
       const chars = mine.map((c) => c.ch).filter((ch) => ch && ch.trim());
-      if (style === 'shock') {
+      if (st.how === 'spill') { // bits and packets pour up out of the hatch and arc over at you
+        const want = Math.round(sprayAt(st.u) * 9);
+        for (let k = 0; k < want; k++) {
+          const a = -Math.PI / 2 + (Math.random() - 0.5) * 1.6, sp = 3 + Math.random() * 4;
+          flung.push({ x: mx + (Math.random() - 0.5) * ext, y: my, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, g: 0.32, grow: 2.6, life: 600 + Math.random() * 300, max: 900, keep: true, c: PACKETS[Math.floor(Math.random() * PACKETS.length)] });
+        }
+      } else if (st.how === 'shock') {
         st.h.rings ??= 0;
         while (st.h.rings < SHOCK_RINGS.length && st.u >= SHOCK_RINGS[st.h.rings]) {
           const n = 30 + st.h.rings * 6, tilt = 0.5 + Math.random() * 0.15, spin = Math.random() * 6;
@@ -625,8 +650,9 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
         d.life -= delta;
         if (d.life <= 0 || !motion) { flung.splice(k, 1); continue; }
         const age = 1 - d.life / d.max, size = 1 + age * d.grow;
+        if (d.g) d.vy += d.g * delta / 16;
         d.x += d.vx * size * delta / 16; d.y += d.vy * size * delta / 16;
-        if (!d.ring && Math.random() < 0.1) d.c = Math.random() < 0.5 ? '1' : '0';
+        if (!d.ring && !d.keep && Math.random() < 0.1) d.c = Math.random() < 0.5 ? '1' : '0';
         o.font = `700 ${glyph * size * fx}px "IBM Plex Mono", monospace`;
         o.fillStyle = age < 0.3 ? COLORS.bright : COLORS.hot;
         o.shadowColor = COLORS.hot; o.shadowBlur = 5 * size;

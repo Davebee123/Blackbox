@@ -30,5 +30,10 @@ test('each body strikes its own way', async () => {
   const spun = strikeAt('grind', 0.4, 0, 10, 0, c);
   assert.ok(Math.abs(spun.dx) + Math.abs(spun.dy) > 1, 'a grinder turns');
   for (const style of ['shock', 'grind']) for (let u = 0; u <= 1; u += 0.05) assert.ok(strikeAt(style, u, 3, 10, 10, c).reach <= 0.2, `${style} stays home: what it throws comes out, not the part`);
-  assert.equal(strikeOf('hound'), 'shock');
+  assert.equal(strikeOf('hound'), 'shock', 'a hound barks with its head');
+  assert.equal(strikeOf('hound', true), 'rake', 'and rakes with its legs');
+  assert.equal(strikeOf('horse'), 'spill', 'a trojan spills from its hatch');
+  assert.equal(strikeOf('horse', true), 'headbutt', 'and butts with its head');
+  assert.equal(strikeOf('crab', true), 'snap', 'one move for both when a body has one');
+  assert.ok(strikeAt('headbutt', 0.2, 0, 0, 0, c).dy < 0, 'a headbutt rears first');
 });

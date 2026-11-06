@@ -244,6 +244,8 @@ interface**. CSS, the DOM and text only (no canvas, WebGL or PixiJS on the scree
   window, nearer and bigger, over the page for about half a second, and back. Each body moves its own way (`STRIKES`):
   claws snap twice, serpents whip down at you, ghosts blink to the glass, spiders jab leg by leg; hounds, masts and
   bulky bodies stay put and throw rings of characters that swell out at you; blades grind in place and spray sparks.
+  A body can move its core and its limbs differently: a hound barks rings from its head and rakes with its legs; a
+  trojan's hatch spills packets over the page while its head rears and slams out at you.
   The body never leaves its window. No
   input; Screen effects off or Motion off: none. A broken part dissolves into drifting 1s and 0s inside the render.
 - **The fight boot** (bootfx.mjs, bootfx.css) is another effect on the panels, approved by the designer (*Centre stage*).
