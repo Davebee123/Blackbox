@@ -41,16 +41,35 @@ export function lungeAt(u) {
 //   grind: the part spins up where it is and sprays sparks that fly out at the glass;
 //   rake: legs swipe out at the glass and drag down it, one after another;
 //   headbutt: rears up, then slams its head out at you;  spill: a hatch bursts and pours bits out over the page.
-// A body can move its core and its limbs (the special part) differently: { core, limb }.
+//   pulse: swells out at you in a double heartbeat;      lash: whips across the glass, its far end trailing;
+//   swarm: its pieces fly out at you each its own way and come home;
+//   volley: recoils three times, each throwing a clump of characters straight at you;
+//   beam: shudders and pours a stream of characters that sweeps across the glass.
+// Every body moves its core and its limbs (the special part) differently: { core, limb }.
 // The body never leaves: only the attacking part comes out, or what it throws.
-export const STRIKES = { snap: 700, strike: 520, phase: 680, stab: 780, shock: 760, grind: 720, rake: 760, headbutt: 640, spill: 780, lunge: 560 };
+export const STRIKES = { snap: 700, strike: 520, phase: 680, stab: 780, shock: 760, grind: 720, rake: 760, headbutt: 640, spill: 780, pulse: 700, lash: 640, swarm: 820, volley: 760, beam: 760, lunge: 560 };
 const STRIKE_OF = {
-  crab: 'snap', padlock: 'snap', tick: 'snap', magnet: 'snap',
-  serpent: 'strike', fountain: 'strike', hive: 'strike',
-  wraith: 'phase', eye: 'phase', cocoon: 'phase', rings: 'phase',
-  hound: { core: 'shock', limb: 'rake' }, horse: { core: 'spill', limb: 'headbutt' }, block: 'shock', gate: 'shock', boiler: 'shock', bomb: 'shock', mast: 'shock', dish: 'shock',
-  spider: 'stab',
-  blades: 'grind', cube: 'grind',
+  crab: { core: 'pulse', limb: 'snap' }, // the lock face throbs; the claws snap
+  padlock: { core: 'volley', limb: 'lash' }, // the face spits; the shackle swings
+  serpent: { core: 'strike', limb: 'lash' }, // the head darts; the tail whips
+  wraith: { core: 'phase', limb: 'stab' }, // the node blinks to the glass; the roots spear out
+  hound: { core: 'shock', limb: 'rake' }, // barks; rakes
+  eye: { core: 'beam', limb: 'shock' }, // a gaze sweeps you; the watcher rings ripple out
+  spider: { core: 'volley', limb: 'stab' }, // spits; legs jab
+  tick: { core: 'pulse', limb: 'strike' }, // swells; the mouthparts dart
+  blades: { core: 'shock', limb: 'grind' }, // the hub thumps; the discs grind
+  block: { core: 'shock', limb: 'grind' }, gate: { core: 'shock', limb: 'grind' }, // the wall booms; the ring spins up
+  dish: { core: 'shock', limb: 'beam' }, // the base hums; the coil beams
+  cube: { core: 'volley', limb: 'grind' }, // the core spits; the cube grinds
+  fountain: { core: 'spill', limb: 'strike' }, // the column floods; the streams dart
+  cocoon: { core: 'volley', limb: 'phase' }, // the thread spits; the cell blinks
+  rings: { core: 'pulse', limb: 'shock' }, // the core throbs; the rings ripple out
+  hive: { core: 'pulse', limb: 'swarm' }, // the queen cell throbs; the cells swarm
+  horse: { core: 'spill', limb: 'headbutt' }, // the hatch spills; the head slams
+  boiler: { core: 'pulse', limb: 'spill' }, // the coil throbs; the tank vents
+  magnet: { core: 'grind', limb: 'snap' }, // the drive spins up; the arms snap
+  mast: { core: 'shock', limb: 'beam' }, // the housing booms; the dish beams
+  bomb: { core: 'pulse', limb: 'shock' }, // the clock throbs; the bomb blasts rings
 };
 export const strikeOf = (shape, limb = false) => { const s = STRIKE_OF[shape] || 'lunge'; return typeof s === 'string' ? s : limb ? s.limb : s.core; };
 const clamp01 = (u) => Math.max(0, Math.min(1, u));
@@ -96,8 +115,27 @@ export function strikeAt(style, u, i, x, y, c) {
       const w = Math.sin(Math.PI * u);
       return { reach: w * 0.15, dx: u > 0.15 && u < 0.75 ? ((i * 13) % 7 - 3) * 0.8 * Math.sin(u * 80) : 0, dy: 0 };
     }
+    case 'pulse': { // a double heartbeat: a small swell, then a big one at you
+      const b = u < 0.35 ? 0.5 * Math.sin((u / 0.35) * Math.PI) : u < 0.85 ? 0.95 * Math.sin(((u - 0.35) / 0.5) * Math.PI) : 0;
+      return { reach: b * 0.6, dx: ox * b * 0.5, dy: oy * b * 0.5 };
+    }
+    case 'lash': { // whips across the glass; the far end trails behind
+      const lag = Math.min(0.15, Math.hypot(ox, oy) / 400), v = clamp01((u - lag) / 0.85), w = Math.max(0, lungeAt(v));
+      return { reach: lungeAt(v) * 0.9, dx: w * 34 * Math.cos(Math.PI * v), dy: w * 8 };
+    }
+    case 'swarm': { // each piece flies out its own way, a little after the last, and back
+      const ang = i * 2.39996, v = clamp01((u - (i % 11) * 0.022) / 0.75), r = lungeAt(v), w = Math.max(0, r);
+      return { reach: r * 0.55, dx: Math.cos(ang) * w * 20, dy: Math.sin(ang) * w * 14 };
+    }
+    case 'volley': { // three recoils, one per clump it throws
+      return { reach: u < 0.75 ? -0.15 * Math.abs(Math.sin(u * 4 * Math.PI)) : 0, dx: 0, dy: 0 };
+    }
+    case 'beam': { // leans in and shudders while it pours
+      const w = Math.sin(Math.PI * u);
+      return { reach: w * 0.12, dx: u > 0.15 && u < 0.8 ? ((i * 13) % 7 - 3) * 0.6 * Math.sin(u * 90) : 0, dy: 0 };
+    }
     case 'grind': { // spins up where it is, leaning in a little, and spins down
-      const w = Math.sin(Math.PI * u), a = Math.PI * 7 * (u - Math.sin(2 * Math.PI * u) / (2 * Math.PI));
+      const w = Math.sin(Math.PI * u), a = Math.PI * 8 * (u - Math.sin(2 * Math.PI * u) / (2 * Math.PI)); // whole turns: it ends where it began
       return { reach: w * 0.18, dx: ox * Math.cos(a) - oy * Math.sin(a) - ox, dy: ox * Math.sin(a) + oy * Math.cos(a) - oy };
     }
     default: return { reach: lungeAt(u), dx: 0, dy: 0 };
@@ -106,6 +144,7 @@ export function strikeAt(style, u, i, x, y, c) {
 
 // What a part throws while it strikes: the moments its rings go (shock), how hard it sprays (grind, 0–1).
 export const SHOCK_RINGS = [0.2, 0.34, 0.48];
+export const VOLLEYS = [0.125, 0.375, 0.625]; // when a volley's clumps go: at the bottom of each recoil
 export const sprayAt = (u) => (u > 0.15 && u < 0.75 ? Math.sin(((u - 0.15) / 0.6) * Math.PI) : 0);
 
 // When a broken part's point lets go, 0–1 of the dissolve: stable per point, so it crumbles in a scatter.
@@ -602,13 +641,30 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
 
     // What strikes throw: shock rings and grind sparks, from the part's middle on the panel, out over the page.
     if (striking) for (const [id, st] of strikes) {
-      if (!['shock', 'grind', 'spill'].includes(st.how)) continue;
+      if (!['shock', 'grind', 'spill', 'volley', 'beam'].includes(st.how)) continue;
       const mine = [...cells.values()].filter((c) => c.part?.id === id);
       if (!mine.length) continue;
       const mx = mine.reduce((a, c) => a + c.x, 0) / mine.length, my = mine.reduce((a, c) => a + c.y, 0) / mine.length;
       const ext = Math.max(12, Math.sqrt(mine.reduce((a, c) => a + (c.x - mx) ** 2 + (c.y - my) ** 2, 0) / mine.length));
       const chars = mine.map((c) => c.ch).filter((ch) => ch && ch.trim());
-      if (st.how === 'spill') { // bits and packets pour up out of the hatch and arc over at you
+      if (st.how === 'volley') { // a tight clump that swells fast: it comes straight at you
+        st.h.shots ??= 0;
+        while (st.h.shots < VOLLEYS.length && st.u >= VOLLEYS[st.h.shots]) {
+          for (let k = 0; k < 12; k++) {
+            const a = Math.random() * Math.PI * 2, sp = 0.4 + Math.random() * 1.1;
+            flung.push({ x: mx + Math.cos(a) * ext * 0.3, y: my + Math.sin(a) * ext * 0.3, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp + 0.6, grow: 4.5, life: 460, max: 460, c: chars[k % (chars.length || 1)] || '#' });
+          }
+          st.h.shots++;
+        }
+      } else if (st.how === 'beam') { // a stream that sweeps from one side of the glass to the other
+        if (sprayAt(st.u) > 0) {
+          const a = Math.PI / 2 + Math.cos(Math.PI * clamp01((st.u - 0.15) / 0.6)) * 0.9;
+          for (let k = 0; k < 5; k++) {
+            const sp = 6 + Math.random() * 2, j = (Math.random() - 0.5) * 0.08;
+            flung.push({ x: mx, y: my, vx: Math.cos(a + j) * sp, vy: Math.sin(a + j) * sp, grow: 2.2, life: 420, max: 420, c: Math.random() < 0.5 ? '1' : '0' });
+          }
+        }
+      } else if (st.how === 'spill') { // bits and packets pour up out of the hatch and arc over at you
         const want = Math.round(sprayAt(st.u) * 9);
         for (let k = 0; k < want; k++) {
           const a = -Math.PI / 2 + (Math.random() - 0.5) * 1.6, sp = 3 + Math.random() * 4;

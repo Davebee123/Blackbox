@@ -241,14 +241,13 @@ interface**. CSS, the DOM and text only (no canvas, WebGL or PixiJS on the scree
   switchable on its own; it also sets how much moves on the fight board. Motion off (`.no-motion`) and
   `prefers-reduced-motion` stop every animation in the file.
 - **The strike** (virus-art.mjs, `#art-out`), asked for by the designer: an attacking part comes out of the render's
-  window, nearer and bigger, over the page for about half a second, and back. Each body moves its own way (`STRIKES`):
-  claws snap twice, serpents whip down at you, ghosts blink to the glass, spiders jab leg by leg; hounds, masts and
-  bulky bodies stay put and throw rings of characters that swell out at you; blades grind in place and spray sparks.
-  A body can move its core and its limbs differently: a hound barks rings from its head and rakes with its legs; a
-  trojan's hatch spills packets over the page while its head rears and slams out at you.
-  The body never leaves its window. No
-  input; Screen effects off or Motion off: none. A broken part dissolves into drifting 1s and 0s inside the render, and on the board the row flickers out into a block of 1s and 0s, its name and health breaking up
-  letter by letter into 1s and 0s that drift up and fade (hitfx.mjs).
+  window, nearer and bigger, over the page for about half a second, and back. Every body moves its core and its limbs
+  differently (`STRIKE_OF`, fourteen moves in `STRIKES`): claws snap, tails and shackles lash, heads dart or slam,
+  roots and legs stab or rake, nodes and cells blink to the glass, cores throb at you, cells swarm; and some stay put
+  and throw something instead: rings, sparks, a spill of packets, clumps of characters, a sweeping beam. The body
+  never leaves its window. No input; Screen effects off or Motion off: none.
+- **A broken part** dissolves into drifting 1s and 0s inside the render; on the board its row flickers out into a block
+  of 1s and 0s, its name and health breaking up letter by letter, which drift up and fade (hitfx.mjs).
 - **The fight boot** (bootfx.mjs, bootfx.css) is another effect on the panels, approved by the designer (*Centre stage*).
   The first time you see a fight: brackets lock on its room (from the rooms page), the tube goes dark with a red edge,
   the virus comes up alone at the centre, decoding out of red noise, and drops into its panel; a boot console types

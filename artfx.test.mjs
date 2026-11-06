@@ -20,10 +20,14 @@ test('a broken part lets go point by point, all before its dissolve ends', () =>
 test('each body strikes its own way', async () => {
   const { strikeAt, strikeOf, STRIKES } = await import('./dist/virus-art.mjs');
   const c = { x: 0, y: 0 };
-  assert.equal(strikeOf('crab'), 'snap');
+  assert.equal(strikeOf('crab'), 'pulse');
+  assert.equal(strikeOf('crab', true), 'snap');
   assert.equal(strikeOf('wraith'), 'phase');
   assert.equal(strikeOf('nothing-like-it'), 'lunge');
-  for (const style of Object.keys(STRIKES)) assert.ok(Math.abs(strikeAt(style, 1, 3, 10, 10, c).reach) < 0.001, `${style} comes home`);
+  for (const style of Object.keys(STRIKES)) for (const i of [0, 3, 8]) {
+    const end = strikeAt(style, 1, i, 10, 10, c);
+    assert.ok(Math.abs(end.reach) + Math.abs(end.dx) + Math.abs(end.dy) < 0.01, `${style} comes home where it began`);
+  }
   assert.ok(strikeAt('phase', 0.2, 0, 10, 10, c).hide, 'a ghost blinks out');
   assert.ok(strikeAt('strike', 0.4, 0, 10, 10, c).dy > 0, 'a serpent dives at you');
   assert.ok(strikeAt('snap', 0.25, 0, 10, 0, c).dx < 0, 'a claw closes as it jabs');
@@ -34,6 +38,11 @@ test('each body strikes its own way', async () => {
   assert.equal(strikeOf('hound', true), 'rake', 'and rakes with its legs');
   assert.equal(strikeOf('horse'), 'spill', 'a trojan spills from its hatch');
   assert.equal(strikeOf('horse', true), 'headbutt', 'and butts with its head');
-  assert.equal(strikeOf('crab', true), 'snap', 'one move for both when a body has one');
+  const { shapeOf } = await import('./dist/virus-art.mjs');
+  for (const shape of ['crab', 'padlock', 'serpent', 'wraith', 'hound', 'eye', 'spider', 'tick', 'blades', 'block', 'gate', 'dish', 'cube', 'fountain', 'cocoon', 'rings', 'hive', 'horse', 'boiler', 'magnet', 'mast', 'bomb']) {
+    assert.ok(STRIKES[strikeOf(shape)] && STRIKES[strikeOf(shape, true)], `${shape} has moves`);
+    assert.notEqual(strikeOf(shape), strikeOf(shape, true), `${shape}'s core and limbs move differently`);
+  }
+  assert.equal(shapeOf({ family: 'ransomware' }), 'crab');
   assert.ok(strikeAt('headbutt', 0.2, 0, 0, 0, c).dy < 0, 'a headbutt rears first');
 });
