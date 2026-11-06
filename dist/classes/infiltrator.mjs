@@ -16,6 +16,9 @@
 //   broke(s, p)            this player broke part p
 //   struck(s, atk, dealt, p) an attack landed on this player
 //   plan(s, t)             a command for the planner (bots, crewmates, balance scripts), or null to fall through
+//   event(s, when, ctx)    a shared event (combat.mjs fireEvent): crit, break, answer, struck, burn, shielded, tagged, cut
+//   evade(s, p)            extra chance (percent) that p's attack misses you
+//   overheal(s, b, n)      your burn b's drain healed n past your max
 //
 // Payload: Bloom (a broken part's burns jump on), Wormable (spreads a copy a cycle), Polymorph (a burn
 // through armor, ticked here), Thrash (burns on a part tick twice), IRQ Storm (every burn ticks now).
@@ -29,7 +32,8 @@ import { subOf, subEdge, hasTalent, rank, capValue, heal, emit, hit, part, alive
 const A = (id) => ABILITIES[id];
 const isInf = (s) => classOf(s) === 'infiltrator';
 const talent = (s, id) => isInf(s) && hasTalent(s, id);
-const ranked = (s, id) => (isInf(s) ? rank(s, id) : 0);
+// Once a cycle ("Works once per cycle"): true the first time a key asks in a cycle.
+const onceACycle = (s, key) => { const st = mine(s), e = s.encounter; (st.once ||= {}); if (st.once[key] === e.cycle) return false; st.once[key] = e.cycle; return true; };
 // This player's own Infiltrator state in the fight. Crewmates' encounters are shallow copies of the
 // leader's, so a state that isn't tagged with this player's name is someone else's: start over.
 function mine(s) {
@@ -37,7 +41,7 @@ function mine(s) {
   if (!e.infil || e.infil.who !== who) e.infil = { who, poly: [], weakDot: {}, decoy: null, wiped: false, implants: 0 };
   return e.infil;
 }
-const virulence = (s) => (ranked(s, 'virulence') ? scaled(s, 2 * ranked(s, 'virulence')) : 0); // Virulence (Payload filler): +2 a tick a rank
+const virulence = (s) => (talent(s, 'virulence') ? scaled(s, 5) : 0); // Virulence: +5 a tick
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 // Polymorph's burns: kept apart from the engine's (which armor stops) and ticked here, through armor.
 const polyOn = (s, p) => (s.encounter.infil?.who === (s.who || '') ? s.encounter.infil.poly.filter((b) => b.target === p.id) : []);
@@ -45,6 +49,8 @@ const allBurnsOn = (s, p) => [...burnsOn(s, p), ...polyOn(s, p)];
 // Polymorph burns full through ◆ and half once the part is bare.
 const tick = (s, b, t, by = b.name) => hit(s, t, (b.poly && !(t.armor > 0) ? b.bare ?? Math.max(1, Math.round(b.damage / 2)) : b.damage) + (b.fxGrow || 0), { by, dot: true, synced: b.synced, pierce: !!b.poly });
 // Everyone standing in this fight, you first (crewmates' states too): Bloom and Thrash reach them all.
+// Every burn of yours on a part ticks once now (Third-Party Cookie, Fault Handler, Heat Sink).
+const tickAll = (s, p, by) => { for (const b of allBurnsOn(s, p)) { if (!alive(p)) break; tick(s, b, p, `${b.name} (${by})`); } };
 const everyone = (s) => { const out = [s]; for (const x of alliesOf(s)) if (x.st && !out.includes(x.st)) out.push(x.st); return out; };
 const thrashing = (s, p) => alive(p) && p.thrashUntil >= s.encounter.cycle;
 const SEEN = 'infilSeen'; // the burns at the end of this player's last turn (for Thrash), never saved
@@ -101,6 +107,7 @@ export default {
       const tick = scaled(s, injectTick(s));
       for (const p of livingParts(s)) addBurn(e, { id: 'inject', target: p.id, damage: tick, grow: 0, left: injectTicks(s), name: 'Inject', drain: 0, synced: !!e.synced });
       e.stickyUntil = e.cycle + a.cycles - 1;
+      if (talent(s, 'index-case')) for (const p of livingParts(s)) p.taggedUntil = Math.max(p.taggedUntil || 0, e.cycle + 3); // Index Case: Tagged for 4 cycles
       emit(s, 'status', `Outbreak: every part catches an Inject for ${tick} every cycle, and for ${a.cycles} cycles nothing clears your burns.`, { mark: 'burn', ability: 'outbreak' });
     },
     fingerprint(s, { target, e }) {
@@ -113,7 +120,7 @@ export default {
     unmask(s, { a, target, e }) {
       if (!alive(target)) return;
       target.seenUntil = Math.max(target.seenUntil || 0, e.cycle + a.cycles - 1);
-      target.unmasked = { who: s.who || '', until: e.cycle + a.cycles - 1 };
+      target.unmasked = { who: s.who || '', until: talent(s, 'full-disclosure') ? 1e9 : e.cycle + a.cycles - 1 }; // Full Disclosure: until it breaks
       if (target.reflect || target.mimic) target.unmaskUntil = e.cycle + a.cycles;
       emit(s, 'status', `${target.name} unmasked for ${a.cycles} cycles. Your hits on it have a ${a.crit}% higher chance to critically strike, and its timer shows${target.reflect || target.mimic ? ', and it has nothing of you to copy on its next beat' : ''}.`, { target: target.id, mark: 'debuff', ability: 'unmask' });
     },
@@ -139,6 +146,7 @@ export default {
       emit(s, 'status', `${target.name} is Thrashing for ${plural(a.cycles, 'cycle')}. Every burn on it ticks twice a cycle.`, { target: target.id, mark: 'burn', ability: 'thrash' });
     },
     'irq-storm'(s, { e }) {
+      mine(s).storming = e.cycle; // IRQ Chain: its own answers don't count
       const all = [...e.burns, ...mine(s).poly];
       let n = 0;
       for (const b of all) { if (virusIntegrity(s).current === 0) break; const t = part(s, b.target); if (alive(t)) { tick(s, b, t, `IRQ Storm (${b.name})`); n++; } }
@@ -153,6 +161,12 @@ export default {
       hit(s, target, Math.round(total * A('detonate').mult * (talent(s, 'assassinate') && on(s, target, 'tagged') ? 2 : 1)), { by: 'Detonate', pierce: true });
     },
     keepalive(s, { target, a, e }) { for (const b of polyOn(s, target)) { if (alive(target)) tick(s, b, target, `Keepalive (${b.name})`); b.left += e.surprise ? CONFIG.surprise.keepalive : a.cycles; } },
+    // Third-Party Cookie: every burn on the part ticks once. Web Beacon: Weak Spot is fresh on it again.
+    tag(s, { target, e }) {
+      if (!alive(target)) return;
+      if (talent(s, 'third-party-cookie')) tickAll(s, target, 'Third-Party Cookie');
+      if (talent(s, 'web-beacon') && e.weakHit?.[target.id]) { delete e.weakHit[target.id]; emit(s, 'status', `Web Beacon: Weak Spot is fresh on the ${target.name}.`, { target: target.id }); }
+    },
     // Contagion (Payload talent): the new Inject also starts on the part attacking soonest.
     inject(s, { target, e }) {
       if (!talent(s, 'contagion')) return;
@@ -194,8 +208,29 @@ export default {
     'irq-storm': (s) => (s.encounter.burns.length || mine(s).poly.length ? null : 'No burns running.'),
   },
   start(s) { if (isInf(s)) mine(s); },
-  // Log Rotation (Phantom filler): Log Wipe's cooldown 1 shorter a rank.
-  cooldown(s, id, cd) { return id === 'log-wipe' && ranked(s, 'log-rotation') ? Math.max(1, cd - ranked(s, 'log-rotation')) : cd; },
+  // Log Rotation: Log Wipe's cooldown is 4. Full Disclosure: Unmask's is 8.
+  cooldown(s, id, cd) { return id === 'log-wipe' && talent(s, 'log-rotation') ? 4 : id === 'unmask' && talent(s, 'full-disclosure') ? 8 : cd; },
+  // Packet Loss: 10% of attacks on you miss.
+  evade: (s) => (talent(s, 'packet-loss') ? 10 : 0),
+  // Clean Exploit: your crits deal 20% more.
+  critDealt: (s, p, opts) => (talent(s, 'clean-exploit') && (opts.mine || opts.dot) ? 1.2 : 1),
+  // Spillover: Skim's heal past your max shields you instead, up to 20 shield.
+  overheal(s, b, n) {
+    if (b.id !== 'skim' || !talent(s, 'spillover')) return;
+    const e = s.encounter, add = Math.min(n, Math.max(0, 20 - (e.shield || 0)));
+    if (add > 0) { e.shield = (e.shield || 0) + add; emit(s, 'status', `Spillover: +${add} shield (${e.shield}).`, { mark: 'shield', ability: 'skim' }); }
+  },
+  event(s, when, ctx) {
+    if (!isInf(s)) return;
+    const e = s.encounter, p = ctx.part, st = mine(s);
+    if (when === 'struck' && alive(p) && talent(s, 'fault-handler') && allBurnsOn(s, p).length && onceACycle(s, 'fault')) tickAll(s, p, 'Fault Handler');
+    if (when === 'shielded' && ctx.gained && talent(s, 'heat-sink')) { const t = part(s, (e.lastAttack || '').split(' ')[1]); if (alive(t) && allBurnsOn(s, t).length && onceACycle(s, 'heat')) tickAll(s, t, 'Heat Sink'); }
+    if (when === 'answer' && talent(s, 'irq-chain') && st.storming !== e.cycle && e.readyAt['irq-storm'] > e.cycle) { delete e.readyAt['irq-storm']; emit(s, 'proc', 'IRQ Chain: IRQ Storm is ready.', { ability: 'irq-storm' }); }
+    if (when === 'answer' && talent(s, 'timing-attack')) openProc(s, 'slipped');
+    if (when === 'crit' && alive(p) && talent(s, 'data-leak')) { const inj = e.burns.find((b) => b.id === 'inject' && b.target === p.id && b.left > 0); if (inj && onceACycle(s, 'leak')) tick(s, inj, p, 'Inject (Data Leak)'); }
+    if (when === 'shielded' && ctx.absorbed && talent(s, 'cover-traffic')) openProc(s, 'slipped');
+    if (when === 'cut' && talent(s, 'zeroize') && onceACycle(s, 'zeroize')) { e.weakHit = {}; st.weakDot = {}; emit(s, 'status', 'Zeroize: Weak Spot is fresh on every part.'); }
+  },
   // Siphon (Payload capstone): your burn ticks bank a share of what they deal, paid out as a heal at the end of your turn.
   // Pandemic (Payload capstone): each tick also lands a share on every other part, past armor.
   hit(s, p, res, opts) {
@@ -253,10 +288,12 @@ export default {
     if (!isInf(s)) return 1;
     const e = s.encounter;
     let m = 1;
-    if (opts.by === 'Detonate') m *= 1 + 0.1 * rank(s, 'shaped-charge');
+    if (opts.by === 'Detonate' && talent(s, 'shaped-charge')) m *= 1.25;
     // Cold Open: the hit Weak Spot is about to crit.
-    if (opts.mine && !opts.dot && !opts.by && subEdge(s, 'phantom') && !(opts.pierce && p.armor > 0) && !e.weakHit?.[p.id]) m *= 1 + 0.05 * rank(s, 'cold-open');
-    if (opts.mine && !opts.dot && !opts.by && e.lastSkill === 'backstab') m *= 1 + 0.1 * rank(s, 'pivot');
+    if (opts.mine && !opts.dot && !opts.by && subEdge(s, 'phantom') && !(opts.pierce && p.armor > 0) && !e.weakHit?.[p.id] && talent(s, 'cold-open')) m *= 1.15;
+    if (opts.mine && !opts.dot && !opts.by && e.lastSkill === 'backstab' && talent(s, 'pivot')) m *= 1.25;
+    // Thermal Load: your burns (not helpers).
+    if (opts.dot && opts.src !== 'helper' && talent(s, 'thermal-load')) m *= 1.1;
     return m;
   },
   crit(s, p, opts) {
@@ -267,11 +304,14 @@ export default {
     if (opts.mine && !opts.dot && p.unmasked && p.unmasked.who === (s.who || '') && p.unmasked.until >= e.cycle) return A('unmask').crit;
     // Blind Spot (Phantom talent): your first burn tick on each part crits too.
     if (opts.dot && subEdge(s, 'phantom') && hasTalent(s, 'blind-spot')) { const st = mine(s); if (!st.weakDot[p.id]) { st.weakDot[p.id] = true; return 100; } }
+    // Fever: every third tick of your Inject crits.
+    if (opts.burn?.id === 'inject' && talent(s, 'fever')) { opts.burn.fever = (opts.burn.fever || 0) + 1; if (opts.burn.fever % 3 === 0) return 100; }
     return 0;
   },
   taken(s, atk, p) {
     const st = s.encounter?.infil;
     if (!st || st.who !== (s.who || '')) return 1;
+    const low = p && talent(s, 'low-profile') && allBurnsOn(s, p).length ? 0.9 : 1; // Low Profile: a part you're burning hits softer
     if (st.decoy) {
       const from = st.decoy.from;
       st.decoy = null;
@@ -292,9 +332,11 @@ export default {
       emit(s, 'blocked', `${atk.name} springs your Logic Trap and deals half damage${copies.length ? `, and the ${p.name} catches ${plural(copies.length, 'burn')}` : ''}.`, { source: p.id, ability: 'logic-trap' });
       m *= 1 - A('logic-trap').cut;
     }
-    return m;
+    return m * low;
   },
   broke(s, p) {
+    // Chain Letter: a part you were burning breaks, and Detonate is usable again (before Bloom moves the burns on).
+    if (talent(s, 'chain-letter') && allBurnsOn(s, p).length && s.encounter.readyAt.detonate > s.encounter.cycle) { delete s.encounter.readyAt.detonate; emit(s, 'proc', 'Chain Letter: Detonate is ready.', { ability: 'detonate' }); }
     for (const st of everyone(s)) bloom(st, p);
     // Ghost Step (Phantom capstone): a break buys time: the attack that lands soonest comes later, unless it's already
     // delayed (one delay a wind-up, combat.mjs delayAttack).

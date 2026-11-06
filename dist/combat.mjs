@@ -3,7 +3,7 @@
 // later run on a shared server unchanged.
 import { onFound, memoryCommand, isLive, joinCost, memoryRestore } from './memory.mjs';
 import { onFirstServer } from './scenes.mjs';
-import { barSlots, isRunSkill, SUBCLASS, SUBS, defaultSub, ELITE, BOSS_LOOT, BOSSES, ENRAGE, ROUNDS, makePart, EDGE, SYNC, CONFIG, ABILITIES, SKILLS, DAEMONS, SPARE_EXPLOIT, FAMILIES, FIXTURES, GUARDS, MUTATIONS, STRAINS, SERVER, TEMPLATES, layerOf, floorOfLayer, createVirus, createLocation, ARCHETYPES, CANTRIPS, LOADOUT, TREE, UNLOCKS, XP, xpToNext, killXp, xpScale, deedScale, power, mobPower, skillOrder, unlockLevel, lineOf, presetBar, shippedPresets, spikeOf, SPIKE } from './data.mjs';
+import { barSlots, isRunSkill, SUBCLASS, SUBS, defaultSub, ELITE, BOSS_LOOT, BOSSES, ENRAGE, ROUNDS, makePart, EDGE, SYNC, CONFIG, ABILITIES, SKILLS, DAEMONS, SPARE_EXPLOIT, FAMILIES, FIXTURES, GUARDS, MUTATIONS, STRAINS, SERVER, TEMPLATES, layerOf, floorOfLayer, createVirus, createLocation, ARCHETYPES, CANTRIPS, LOADOUT, UNLOCKS, XP, xpToNext, killXp, xpScale, deedScale, power, mobPower, skillOrder, unlockLevel, lineOf, presetBar, shippedPresets, spikeOf, SPIKE } from './data.mjs';
 // The subclasses' engine side (dist/classes/<class>.mjs): what their skills, talents and edges do.
 import BREAKER_FX, { momentumCap } from './classes/breaker.mjs';
 import BASTION_FX from './classes/bastion.mjs';
@@ -35,6 +35,7 @@ import { holdsPart, objectiveBroke, objectiveCycle, objectiveBonus, bonusXp, bon
 import { mechValidate, mechIntercept, mechFired, mechPower, exposedCut, mechLanded, mechCommandHit, mechStart, mechClose, mechBroke, lagged, stunnedNow, missedTurn } from './mechanics.mjs';
 import { tickRoot, processWon } from './root.mjs';
 import { firewallCommand, wear, raidShare, hardenRestore } from './firewall.mjs';
+import { tiersRestore, LEGACY_TREES } from './talents.mjs';
 import { rollSpecials, specialsRestore, hasSpecial, SPECIAL, leaningOf } from './specials.mjs';
 import { leanDealt, leanTaken, leanPaid } from './leanings.mjs';
 import { levelGains, nextGains, progressionRestore, climbRestore, craftRestore, RETIRED } from './progression.mjs';
@@ -110,7 +111,7 @@ export function fresh() {
     gate: null,
     nextItem: 0,
     rng: 0x2545f491,
-    loadout: { archetype: 'breaker', picks: {}, ranks: {}, equipped: {} },
+    loadout: { archetype: 'breaker', tiers: {}, equipped: {} },
     // Each class levels on its own and starts at 1. The server's level is your highest class's.
     hackers: {},
     components: 0, // salvage.mjs
@@ -182,7 +183,7 @@ export function cycleLength(s) {
 // A virus's mutation, in force: its own (createVirus), or a breach's rolled one (breach.mjs v.mutations), which lives
 // on a part and ends when that part breaks.
 export const mutated = (s, id) => { const v = s.encounter?.virus; return !!v && (v.mutation === id || !!v.mutations?.some((m) => m.id === id && alive(part(s, m.part)))); };
-export const patchDelay = (s) => CONFIG.patchDelay - (mutated(s, 'regenerative') ? 1 : 0) + rank(s, 'armor-cracker') + fxFire(s, 'custom', { do: 'patch-slow' }, false).reduce((n, x) => n + x.value, 0);
+export const patchDelay = (s) => CONFIG.patchDelay - (mutated(s, 'regenerative') ? 1 : 0) + fxFire(s, 'custom', { do: 'patch-slow' }, false).reduce((n, x) => n + x.value, 0);
 // Total armor chits left on the virus (and how many it started with).
 export function armorLeft(s) {
   const all = livingParts(s);
@@ -226,10 +227,10 @@ const kitKey = (s, arch) => (s.loadout?.devKit ? arch : subOf(s, arch) || arch);
 // s.loadout.devKit (tests of single mechanics): every skill of the class by its level, and the talents it names.
 export function hasTalent(s, id) {
   if (s.loadout?.devKit) return (s.loadout.devKit.talents || []).includes(id);
-  const kit = kitOf(s);
+  const kit = kitOf(s), arch = classOf(s);
   if (!kit) return false;
-  const picks = picksOf(s, classOf(s));
-  return kit.talents.some((pair, i) => (picks[i] === 0 || picks[i] === 1) && pair[picks[i]].id === id);
+  const picks = tiersOf(s, arch);
+  return kit.tiers.some((row, i) => picked(picks[i]) && row[picks[i]].id === id && tierOpen(s, arch, i));
 }
 // Cooldowns after talents.
 function talentCooldown(s, id) {
@@ -315,7 +316,7 @@ export function damageMultiplier(s, p, opts = {}) {
   const e = s.encounter;
   if (opts.flat) return 1; // damage already counted once (a Lockbox's held damage landing)
   let m = opts.server ? 1 : gapDealt(levelGap(s));
-  if (opts.dot && on(s, p, 'tagged')) m *= SKILLS.tagged + (p.tagBoost || 0) + 0.1 * rank(s, 'persistent-tag');
+  if (opts.dot && on(s, p, 'tagged')) m *= SKILLS.tagged + (p.tagBoost || 0);
   if (on(s, p, 'quarantined')) m *= SKILLS.quarantined;
   if (on(s, p, 'open')) m *= TELL.open.mult; // a tell read: the part is open (tells.mjs)
   m *= overclockMult(s); // an Overclock that landed: every part takes double (tells.mjs, breaches only)
@@ -326,7 +327,6 @@ export function damageMultiplier(s, p, opts = {}) {
     m *= 1 + 0.03 * rank(s, 'overclocked');
     if (classOf(s) === 'breaker') m *= 1 + momentumBonus(s);
     m *= turboOn(e)?.dealt ?? 1; // an Overclocker crewmate's Turbo Boost
-    if (hasTalent(s, 'unsafe-mode')) m *= 1.3;
     if (e.synced) m *= 1 + CONFIG.sync.bonus;
     for (const x of fxFire(s, 'hit', { target: p, do: 'damage%', cmd: !opts.dot && !opts.by ? e.commanding?.id : null })) m *= 1 + x.value / 100;
     m *= buffMult(s); // a timed buff from a break (Floodgate, Fuse Map)
@@ -344,15 +344,15 @@ export function damageMultiplier(s, p, opts = {}) {
 export function skillBase(s, id, p) {
   const a = ABILITIES[id];
   let base = a?.damage || 0;
-  if (id === 'overload') base = (hasTalent(s, 'hair-trigger') ? 35 : base) + 4 * rank(s, 'heat-sink');
+  if (id === 'overload') base = (base + (hasTalent(s, 'boost-clock') ? 10 : 0)) * (hasTalent(s, 'hair-trigger') ? 0.85 : 1); // Boost Clock, Hair Trigger
   const e = s.encounter;
   if (id === 'rate-limit') base += 4 * rank(s, 'token-bucket') + (p?.attack && p.attack.due <= e?.cycle ? a.due : 0); // choke it as it sends: more if its attack is due now
-  if (id === 'backdoor') base += 4 * rank(s, 'backchannel') + (burnsOn(s, p).length ? a.burning : 0); // a flat bonus on a burning part, however many burns
+  if (id === 'backdoor') base += (burnsOn(s, p).length ? a.burning : 0); // a flat bonus on a burning part, however many burns
   if (id === 'opening') base += 5 * rank(s, 'recon');
   if (id === 'flood' && p && !(p.armor > 0)) base *= 2;
   if (id === 'exploit' && hasTalent(s, 'sharp-exploit')) base = 20;
   // Segfault: crash it mid-wind-up (a charge on it, tells.mjs); Core Dump: under 30% too.
-  if (id === 'segfault' && p && (tellOn(s, p, 'charge') || (hasTalent(s, 'core-dump') && p.integrity < p.max * 0.3))) base *= a.execute;
+  if (id === 'segfault' && p && tellOn(s, p, 'charge')) base *= a.execute;
   // Retaliate: twice the attack that reached you (it's already your size: no power scaling).
   if (id === 'retaliate') return Math.min(scaled(s, a.cap), 2 * (e?.procs?.struck?.amount || 0)) + (rank(s, 'reverse-shell') ? scaled(s, 5 * rank(s, 'reverse-shell')) : 0);
   return base * powerOf(s);
@@ -377,9 +377,9 @@ export function mergeBurns(e, b = null) {
 // Start a burn (or refresh the one of its kind already there): the burn now running.
 export function addBurn(e, b) { e.burns.push(b); return mergeBurns(e, b); }
 // Inject's length: 4 cycles (Long Fuse 6).
-export const injectTicks = (s) => (hasTalent(s, 'polymorphic') ? 6 : ABILITIES.inject.ticks);
+export const injectTicks = (s) => (hasTalent(s, 'long-fuse') ? 6 : ABILITIES.inject.ticks); // Long Fuse
 // Inject's tick before scaling: Heap Spray +3 a rank.
-export const injectTick = (s) => ABILITIES.inject.tick + 3 * rank(s, 'heap-spray');
+export const injectTick = (s) => ABILITIES.inject.tick + (hasTalent(s, 'heap-spray') ? 6 : 0); // Heap Spray
 export const helpersOn = (s, p) => (p && s.encounter?.helpers ? s.encounter.helpers.filter((h) => h.target === p.id) : []);
 export const helperCap = (s) => (hasTalent(s, 'hive') ? 9 : SKILLS.helperCap);
 // Procs and reactive windows: a key lights up after an event and stays lit through `until`.
@@ -1066,6 +1066,7 @@ export const implicitText = (it) => IMPLICITS[it?.implicit]?.text(it.implicitVal
 export function fxAnswer(s, p = null) {
   const e = s.encounter;
   if (!e) return;
+  fireEvent(s, 'answer', { part: p });
   for (const x of fxFire(s, 'answer')) {
     const who = x.name || x.it.name;
     if (x.fx.do === 'read-hit' && alive(p) && !e.reading) { e.reading = true; hit(s, p, x.value, { by: who }); e.reading = false; } // Ping of Death: the part you read takes it
@@ -1074,6 +1075,38 @@ export function fxAnswer(s, p = null) {
     if (x.fx.do === 'shield') { e.shield = (e.shield || 0) + x.value; emit(s, 'status', `${who} raises your shield to ${e.shield}.`, { mark: 'shield', ...firedOf([x]) }); }
     if (x.fx.do === 'shield%') { e.shield = (e.shield || 0) + Math.max(1, Math.round((defender(s).max * x.value) / 100)); emit(s, 'status', `${who} raises your shield to ${e.shield}.`, { mark: 'shield', ...firedOf([x]) }); } // Choirbook (2): a share of your max
   }
+}
+// ---------- shared events (docs/builds.md 3) ----------
+// What talents and gear fire on: hit, crit, break, answer, struck (FX_WHEN's own), and burn (one of your burns ticks),
+// shielded (you gain a shield, or your shield absorbs a hit), tagged (you hit a Tagged part, whoever Tagged it) and cut
+// (you cut a part's move). Each counts in e.metrics.events, runs the class modules' event hook (talents), and for the
+// four new ones your gear's heal, shield and refund blocks. ctx.part: the part it happened on. An event its own effects
+// set off doesn't fire again inside it.
+const NEW_EVENTS = new Set(['burn', 'shielded', 'tagged', 'cut']);
+export function fireEvent(s, when, ctx = {}) {
+  const e = s.encounter;
+  if (!e?.metrics || (e.firing ||= {})[when]) return;
+  e.firing[when] = true;
+  try {
+    const m = (e.metrics.events ||= {});
+    m[when] = (m[when] || 0) + 1;
+    classEach('event', s, when, ctx);
+    if (NEW_EVENTS.has(when)) for (const x of fxFire(s, when, { target: ctx.part })) {
+      const who = x.name || x.it.name;
+      if (x.fx.do === 'heal') heal(s, x.value, who, firedOf([x]));
+      if (x.fx.do === 'shield') { e.shield = (e.shield || 0) + x.value; emit(s, 'status', `${who} raises your shield to ${e.shield}.`, { mark: 'shield', ...firedOf([x]) }); }
+      if (x.fx.do === 'refund') { for (const k of Object.keys(e.readyAt)) e.readyAt[k] = Math.max(e.cycle, e.readyAt[k] - x.value); emit(s, 'status', `${who} reduces your cooldowns by ${x.value}.`, firedOf([x])); }
+    }
+  } finally { delete e.firing[when]; }
+}
+// shielded, when you gain one: shields come from many places, so the fight checks after each step whether yours grew
+// (e.shieldSeen: what it was at the last check; an absorb lowers it with the shield).
+export function shieldWatch(s) {
+  const e = s.encounter;
+  if (!e) return;
+  const now = e.shield || 0;
+  if (now > (e.shieldSeen || 0)) { e.shieldSeen = now; fireEvent(s, 'shielded', { gained: true }); }
+  e.shieldSeen = e.shield || 0;
 }
 // How much one command counts toward calling off a tell (Double Tap, Spectre: twice).
 
@@ -1333,7 +1366,7 @@ export const xpFor = (s, level, share = 1) => Math.round(killXp(level) * share *
 // XP for a one-off deed (a first clear, Mapped, a takeover, a Root level, a decode, a first trade): its share of a
 // kill on the old curve, scaled with the climb at your level (deedScale in data.mjs), so it stays a share of a level.
 export const deedXpFor = (s, level, share = 1) => xpFor(s, level, share * deedScale(hackerLevel(s)));
-export const gainsTalent = (level) => level >= LOADOUT.talentFrom && (level - LOADOUT.talentFrom) % LOADOUT.talentEvery === 0;
+export const gainsTalent = (level) => LOADOUT.tiers.includes(level);
 // The first time you do something (a trade at a hub):
 // half a kill of XP, once. id: what it was, so it never pays twice.
 export function firstTime(s, id, why, kind = 'build', share = 0.5) {
@@ -1427,7 +1460,7 @@ export function gainXp(s, amount, why, kind = null, tally = kind) {
     const shelf = shelved.map((g) => `${ABILITIES[g].name} ${got.includes(g) ? 'goes on' : 'moves to'} the shelf${wants(g).length ? `: your ${andList(wants(g))} preset${wants(g).length === 1 ? ' uses' : 's use'} it (loadout use ${wants(g)[0]})` : ''}.`).join(' ');
     const names = got.filter((id) => id !== 'edge' || sub).map((id) => (id === 'edge' ? `${SUBS[sub].edge.name} (${SUBS[sub].edge.rule.replace(/\.$/, '')})` : ARCHETYPES[arch].skills.find((x) => x.id === id)?.name || ABILITIES[id]?.name || id));
     const pickSub = h.level === SUBCLASS.from && !subPicked(s, arch) ? ` Choose a subclass: ${Object.values(ARCHETYPES[arch].subs).map((x) => `${x.name} (subclass ${x.id})`).join(' or ')}. Until you do, you play the ${ARCHETYPES[arch].name} core.` : '';
-    const talent = (gainsTalent(h.level) ? ' +1 talent point.' : '') + (h.level === LOADOUT.capstoneAt[0] ? ' +1 capstone point: pick a capstone (talent capstone a|b).' : h.level === LOADOUT.capstoneAt[1] ? ' Your capstone reaches rank 2.' : '') + pickSub;
+    const talent = (gainsTalent(h.level) ? ` Talent tier ${LOADOUT.tiers.indexOf(h.level) + 1} opens.` : '') + (h.level === LOADOUT.capstoneAt[0] ? ' +1 capstone point: pick a capstone (talent capstone a|b).' : h.level === LOADOUT.capstoneAt[1] ? ' Your capstone reaches rank 2.' : '') + pickSub;
     const { gains, next } = levelUpGains(arch, sub, h.level, top);
     emit(s, 'level-up', `LEVEL ${h.level} ${ARCHETYPES[arch].name.toUpperCase()}.${names.length ? ' New: ' + names.join(', ') + '.' : ''}${shelf ? ' ' + shelf : ''}${talent} Power +4%.`, { level: h.level, arch, sub: sub || null, unlocked: got, gains, next, server: h.level > top ? s.server.max : null });
   }
@@ -1475,7 +1508,7 @@ function retireClassTrees(s, was) {
   // A subclass pick that isn't one of that class's (renamed, or a hand-edited save) is dropped.
   if (L.sub) for (const [arch, x] of Object.entries(L.sub)) if (SUBS[x]?.cls !== arch) delete L.sub[arch];
   for (const arch of Object.keys(ARCHETYPES)) {
-    const sub = defaultSub(arch), ids = new Set(SUBS[sub].fillers.flat().map((n) => n.id));
+    const sub = defaultSub(arch), ids = new Set(LEGACY_TREES[sub].ranked.flatMap((r) => r.split(' ')));
     const old = L.ranks?.[arch];
     if (old && Object.keys(old).length && !L.ranks[sub]) L.ranks[sub] = Object.fromEntries(Object.entries(old).filter(([id]) => ids.has(id)));
     if (L.ranks?.[arch]) delete L.ranks[arch];
@@ -1604,15 +1637,19 @@ function nodeSwapRestore(s) {
   }
 }
 // ---------- talents ----------
-// Talent points: one every other level from 10 (21 by level 50). Per class; changing picks is free.
-export const talentPoints = (s, arch = classOf(s)) => { const l = hackerLevel(s, arch); return l < LOADOUT.talentFrom ? 0 : Math.floor((l - LOADOUT.talentFrom) / LOADOUT.talentEvery) + 1; };
-// Talent picks and ranks are kept per subclass (each subclass has its own tree).
-export const picksOf = (s, arch) => s.loadout?.picks?.[kitKey(s, arch)] || [];
-export const ranksOf = (s, arch) => s.loadout?.ranks?.[kitKey(s, arch)] || {};
+// Six tiers, one pick of three each (SUBS[sub].tiers), each opening at its LOADOUT.tiers level (10, 16, 22, 28, 34, 40).
+// Kept per subclass (each has its own tree): s.loadout.tiers[subclass] = [0, 1, 2 or null] a tier. Changing them is free
+// at home.
+export const tiersOf = (s, arch) => s.loadout?.tiers?.[kitKey(s, arch)] || [];
+export const picked = (x) => x === 0 || x === 1 || x === 2;
+export const tierOpen = (s, arch, tier) => hackerLevel(s, arch) >= LOADOUT.tiers[tier];
+// A tier's state: 'picked', 'open' (to pick) or 'locked' (before its level).
+export const tierState = (s, arch, tier) => (picked(tiersOf(s, arch)[tier]) && tierOpen(s, arch, tier) ? 'picked' : tierOpen(s, arch, tier) ? 'open' : 'locked');
+// Open tiers with nothing picked (none before the subclass).
+export const freeTiers = (s, arch = classOf(s)) => (kitOf(s, arch) ? LOADOUT.tiers.filter((_, i) => tierState(s, arch, i) === 'open').length : 0);
 // ---------- capstones (the row under the tree: TREE's last row, each subclass's `capstones`) ----------
-// Their own points, one at each LOADOUT.capstoneAt level (45, 50): talent points never reach the row, and its
-// points go nowhere else. The first picks one of the two (s.loadout.caps[subclass]: 0 or 1; changing it is free, like
-// a tier's pick); the second, at 50, gives the picked one its second rank on its own (it has nowhere else to go).
+// Their own points, one at each LOADOUT.capstoneAt level (45, 50). The first picks one of the two (s.loadout.caps[subclass]:
+// 0 or 1; changing it is free, like a tier's pick); the second, at 50, gives the picked one its second rank.
 export const capstonePoints = (s, arch = classOf(s)) => LOADOUT.capstoneAt.filter((l) => hackerLevel(s, arch) >= l).length;
 export const capPickOf = (s, arch = classOf(s)) => s.loadout?.caps?.[kitKey(s, arch)];
 const CAPSTONES = () => (CAPS_BY_ID ||= Object.fromEntries(Object.values(SUBS).flatMap((x) => (x.capstones || []).map((c) => [c.id, c]))));
@@ -1628,11 +1665,10 @@ export function capRank(s, id) {
 }
 // The number a capstone uses at your rank (its `ranks`), or 0 without it.
 export const capValue = (s, id) => { const r = capRank(s, id); return r ? capstoneNode(id).ranks[r - 1] : 0; };
-// The capstone row's state: 'picked', 'open' (a point to spend), 'blocked' (needs points above it), 'locked' (before 45).
+// The capstone row's state: 'picked', 'open' (a point to spend) or 'locked' (before 45).
 export function capState(s, arch) {
   if (picked(capPickOf(s, arch))) return 'picked';
-  if (!capstonePoints(s, arch)) return 'locked';
-  return spentAbove(s, arch, TREE.findIndex((r) => r.kind === 'capstone')) < TREE.find((r) => r.kind === 'capstone').need ? 'blocked' : 'open';
+  return capstonePoints(s, arch) ? 'open' : 'locked';
 }
 // Skills a class knows at its level (its core, and its subclass's line), and the ones on its bar.
 // The bar a player who kept the defaults has at their level: every skill that unlocked while a slot was free
@@ -1748,45 +1784,12 @@ function presetCommand(s, words) {
   const cooling = r.in.filter((id) => cooldownOf(s, id) || ABILITIES[id]?.once);
   emit(s, 'loadout', `Bar set from ${name}.${moved ? ` In: ${r.in.map((id) => `${id} (${slotKey(bar.indexOf(id))})`).join(', ') || 'nothing'}. Out: ${r.out.join(', ') || 'nothing'}.` : ' It was already on your bar.'}${missing.length ? ` You don't know ${andList(missing)}, so ${missing.length === 1 ? 'it stays' : 'they stay'} off.` : ''}${cooling.length ? ` ${andList(nameList(cooling))} start${cooling.length === 1 ? 's' : ''} your next fight cooling.` : ''}`);
 }
-const picked = (x) => x === 0 || x === 1;
-
-// Points spent in one row of the tree (see TREE in data.mjs).
-// kit: a subclass (SUBS), whose fillers and talents make the tree.
-function rowSpent(picks, ranks, kit, row) {
-  if (!kit || row.kind === 'capstone') return 0; // the capstone row spends its own points (capstonePoints)
-  if (row.kind === 'choice') return picked(picks[row.tier]) ? 1 : 0;
-  return kit.fillers[row.row].reduce((n, node) => n + (ranks[node.id] || 0), 0);
-}
-const spentAboveWith = (picks, ranks, kit, i) => TREE.slice(0, i).reduce((n, row) => n + rowSpent(picks, ranks, kit, row), 0);
-export const pointsSpent = (s, arch) => TREE.reduce((n, row) => n + rowSpent(picksOf(s, arch), ranksOf(s, arch), kitOf(s, arch), row), 0);
-export const spentAbove = (s, arch, i) => spentAboveWith(picksOf(s, arch), ranksOf(s, arch), kitOf(s, arch), i);
-// cap: the capstone picked (0, 1, or nothing): it needs its row's points above it too.
-function treeValid(picks, ranks, kit, cap) {
-  return TREE.every((row, i) => !(row.kind === 'capstone' ? picked(cap) : rowSpent(picks, ranks, kit, row)) || spentAboveWith(picks, ranks, kit, i) >= row.need);
-}
-// Can a rank in this node come back without leaving a deeper pick short of the points above it?
-export function canTakeBack(s, arch, id) {
-  const kit = kitOf(s, arch), ranks = { ...ranksOf(s, arch) };
-  if (!kit || !ranks[id]) return false;
-  ranks[id]--;
-  return treeValid(picksOf(s, arch), ranks, kit, capPickOf(s, arch));
-}
-// Row state: 'open' (can spend here), 'locked' (open but no free points), 'blocked' (needs more points above).
-export function rowState(s, arch, i) {
-  if (spentAbove(s, arch, i) < TREE[i].need) return 'blocked';
-  return pointsSpent(s, arch) < talentPoints(s, arch) ? 'open' : 'locked';
-}
-export function tierState(s, arch, tier) {
-  if (picked(picksOf(s, arch)[tier])) return 'picked';
-  return rowState(s, arch, TREE.findIndex((r) => r.kind === 'choice' && r.tier === tier));
-}
-// Your current class's rank in a filler node.
-export const rank = (s, id) => (ranksOf(s, classOf(s))[id] || 0) + (kitTalent(classOf(s)).id === id && hackerLevel(s) >= LOADOUT.specFrom ? LOADOUT.specRanks : 0);
+// Your current class's ranks in its kit talent (LOADOUT.specRanks from level 5), or 0 for any other id.
+export const rank = (s, id) => (kitTalent(classOf(s)).id === id && hackerLevel(s) >= LOADOUT.specFrom ? LOADOUT.specRanks : 0);
 // The class's kit talent: from level 5, the first of its two first-row talents, LOADOUT.specRanks free
 // ranks in it (it was the level-5 specialty pick; the measured gain was a few percent, so it's simply yours).
 export const kitTalent = (arch) => ARCHETYPES[arch].spec.find((o) => o.id === LOADOUT.kit[arch]) || ARCHETYPES[arch].spec[0];
 export const specRule = (o) => o.rule.replace(/\d+/, (n) => String(Number(n) * LOADOUT.specRanks)).replace(' per rank', '');
-const fillerNode = (kit, id) => kit?.fillers.flat().find((n) => n.id === id || n.name.toLowerCase() === id);
 
 // subclass [class] [<id>]: the first pick anywhere out of a fight; switching back and forth, at home.
 // Free. Each subclass keeps its own bar and talent tree, so switching back finds them as you left them.
@@ -1870,67 +1873,41 @@ function loadoutCommand(s, text) {
     s.loadout.archetype = id;
     return emit(s, 'loadout', `Class: ${ARCHETYPES[id].name}, level ${hackerLevel(s, id)}.${trial ? ' Your level came with you.' : ''} ${ARCHETYPES[id].solo}`);
   }
-  // talent [class] <1-3> <a|b> · talent add|remove <node> · talent reset [class]
+  // talent [class] <1-6> <a|b|c> · talent capstone <a|b> · talent reset [class]
   let rest = words.slice(1);
   let arch = s.loadout.archetype;
   if (ARCHETYPES[rest[0]]) { arch = rest[0]; rest = rest.slice(1); }
   if (ARCHETYPES[rest[1]] && rest[0] === 'reset') arch = rest[1];
+  const kit = kitOf(s, arch);
   if (rest[0] === 'reset') {
-    s.loadout.picks[kitKey(s, arch)] = [];
-    s.loadout.ranks[kitKey(s, arch)] = {};
+    (s.loadout.tiers ||= {})[kitKey(s, arch)] = [];
     if (s.loadout.caps) delete s.loadout.caps[kitKey(s, arch)];
-    const cp = capstonePoints(s, arch);
-    return emit(s, 'loadout', `${ARCHETYPES[arch].name} talents cleared. ${talentPoints(s, arch)} point(s) free${cp ? `, and your capstone to pick again` : ''}.`);
+    const n = freeTiers(s, arch), cp = capstonePoints(s, arch);
+    return emit(s, 'loadout', `${ARCHETYPES[arch].name} talents cleared. ${n} ${n === 1 ? 'tier' : 'tiers'} to pick${cp ? ', and your capstone' : ''}.`);
   }
-  const noPoints = hackerLevel(s, arch) < LOADOUT.talentFrom ? `Talents start at level ${LOADOUT.talentFrom}.` : `No free talent points. You get one every ${LOADOUT.talentEvery} levels.`;
-  if (rest[0] === 'add' || rest[0] === 'remove') {
-    const kit = kitOf(s, arch);
-    if (!kit) return warn(s, `Talents start at level ${LOADOUT.talentFrom}, with your subclass.`);
-    const node = fillerNode(kit, rest.slice(1).join(' '));
-    if (!node) return warn(s, `usage: talent add|remove <node>. ${kit.name} nodes: ${kit.fillers.flat().map((n) => n.id).join(', ')}.`);
-    const ranks = { ...ranksOf(s, arch) };
-    const i = TREE.findIndex((r) => r.kind === 'filler' && kit.fillers[r.row].includes(node));
-    if (rest[0] === 'add') {
-      if ((ranks[node.id] || 0) >= node.max) return warn(s, `${node.name} is at max rank.`);
-      const st = rowState(s, arch, i);
-      if (st === 'blocked') return warn(s, `${node.name} needs ${TREE[i].need} points spent above it.`);
-      if (st === 'locked') return warn(s, noPoints);
-      ranks[node.id] = (ranks[node.id] || 0) + 1;
-    } else {
-      if (!ranks[node.id]) return warn(s, `${node.name} has no ranks.`);
-      ranks[node.id]--;
-      if (!treeValid(picksOf(s, arch), ranks, kit, capPickOf(s, arch))) return warn(s, 'Deeper picks depend on that point. Take those back first.');
-    }
-    s.loadout.ranks[kitKey(s, arch)] = ranks;
-    return emit(s, 'loadout', `${node.name} ${ranks[node.id]}/${node.max}. ${node.rule}`);
-  }
-  // talent capstone <a|b> (or talent 4 <a|b>): the row under the tree, from level 45, on its own points.
-  if (rest[0] === 'capstone' || rest[0] === '4') {
-    const kit = kitOf(s, arch), side = rest[1];
-    if (!kit) return warn(s, `Talents start at level ${LOADOUT.talentFrom}, with your subclass.`);
+  if (!kit) return warn(s, `Talents start at level ${LOADOUT.talentFrom}, with your subclass.`);
+  // talent capstone <a|b>: the row under the tree, from level 45, on its own points.
+  if (rest[0] === 'capstone') {
+    const side = rest[1];
     if (!['a', 'b'].includes(side)) return warn(s, `usage: talent capstone <a|b>. ${kit.name} capstones: ${kit.capstones.map((x, j) => `${j ? 'b' : 'a'} ${x.name}`).join(', ')}.`);
-    const st = capState(s, arch);
-    if (st === 'locked') return warn(s, `Capstones come at level ${LOADOUT.capstoneAt[0]}, on a point of their own (its second rank at ${LOADOUT.capstoneAt[1]}).`);
-    if (st === 'blocked') return warn(s, `The capstone needs ${TREE.find((r) => r.kind === 'capstone').need} points spent above it.`);
+    if (capState(s, arch) === 'locked') return warn(s, `Capstones come at level ${LOADOUT.capstoneAt[0]}, on a point of their own (its second rank at ${LOADOUT.capstoneAt[1]}).`);
     (s.loadout.caps ||= {})[kitKey(s, arch)] = side === 'a' ? 0 : 1;
     const node = kit.capstones[side === 'a' ? 0 : 1], r = Math.min(node.max, capstonePoints(s, arch));
     return emit(s, 'loadout', `${kit.name} capstone: ${node.name} (rank ${r}/${node.max}). ${node.rules[r - 1]}${r < node.max ? ` Rank ${node.max} at level ${LOADOUT.capstoneAt[node.max - 1]}: ${node.rules[node.max - 1]}` : ''}`);
   }
-  const tier = Number(rest[0]), side = rest[1];
-  if (!(tier >= 1 && tier <= 3) || !['a', 'b'].includes(side)) return warn(s, 'usage: talent <1-3> <a|b> · talent capstone <a|b> · talent add|remove <node> · talent reset');
-  const state = tierState(s, arch, tier - 1);
-  if (state === 'blocked') return warn(s, `Tier ${tier} needs ${TREE.find((r) => r.kind === 'choice' && r.tier === tier - 1).need} points spent above it.`);
-  if (state === 'locked') return warn(s, noPoints);
-  const picks = [...picksOf(s, arch)];
-  picks[tier - 1] = side === 'a' ? 0 : 1;
-  s.loadout.picks[kitKey(s, arch)] = picks;
-  const talent = kitOf(s, arch).talents[tier - 1][picks[tier - 1]];
-  emit(s, 'loadout', `${kitOf(s, arch).name} tier ${tier}: ${talent.name}. ${talent.rule}`);
+  const tier = Number(rest[0]), side = 'abc'.indexOf(rest[1]);
+  if (!(tier >= 1 && tier <= LOADOUT.tiers.length) || !rest[1] || side < 0) return warn(s, `usage: talent <1-${LOADOUT.tiers.length}> <a|b|c> · talent capstone <a|b> · talent reset`);
+  if (!tierOpen(s, arch, tier - 1)) return warn(s, `Tier ${tier} opens at level ${LOADOUT.tiers[tier - 1]}.`);
+  const picks = [...tiersOf(s, arch)];
+  picks[tier - 1] = side;
+  (s.loadout.tiers ||= {})[kitKey(s, arch)] = picks;
+  const talent = kit.tiers[tier - 1][side];
+  emit(s, 'loadout', `${kit.name} tier ${tier}: ${talent.name}. ${talent.rule}`);
 }
 
 // ---------- upgrades ----------
 // Max Signal%: set pieces and bonuses (sets.mjs) and Bedframe, Firmware (max-signal%) raise the whole of it.
-const signalOf = (s) => { const t = 4 * rank(s, 'redundancy') + 3 * rank(s, 'onion-routing') + 3 * rank(s, 'extra-memory'); return Math.round(CONFIG.maxSignal * powerOf(s)) + gearStat(s, 'signal') + (t ? scaled(s, t) : 0); }; // talents' Signal, on your own line
+const signalOf = (s) => { const t = 4 * rank(s, 'redundancy') + (hasTalent(s, 'onion-routing') ? 8 : 0) + 3 * rank(s, 'extra-memory'); return Math.round(CONFIG.maxSignal * powerOf(s)) + gearStat(s, 'signal') + (t ? scaled(s, t) : 0); }; // talents' Signal, on your own line
 export const maxSignal = (s) => {
   const n = signalOf(s), pct = (piecesOn(s) ? setSignal(s) : 0) + fxSum(s, 'always', 'max-signal%'), sick = rebootSick(s), m = pct ? n + Math.round((n * pct) / 100) : n;
   return sick ? Math.max(1, Math.round(m * (1 - sick))) : m;
@@ -2889,7 +2866,7 @@ export function hit(s, p, base, opts = {}) {
   const forced = raw > 0 && !opts.server && (weak || e.forceCrit || opts.crit || first);
   if (forced && e.forceCrit) e.forceCrit = false;
   // Exposed: every hit on it, from anyone, has a better crit chance.
-  const chance = critChance(s) + (opts.server ? 0 : classSum('crit', s, p, opts)) + (on(s, p, 'exposed') ? SKILLS.exposed + 5 * rank(s, 'exploit-kit') : 0) + (opts.mine ? fxFire(s, 'hit', { target: p, do: 'crit%' }).reduce((n, x) => n + x.value, 0) : 0);
+  const chance = critChance(s) + (opts.server ? 0 : classSum('crit', s, p, opts)) + (on(s, p, 'exposed') ? SKILLS.exposed : 0) + (opts.mine ? fxFire(s, 'hit', { target: p, do: 'crit%' }).reduce((n, x) => n + x.value, 0) : 0);
   const crit = forced || (raw > 0 && !opts.flat && !opts.blast && chance > 0 && rand(s) * 100 < chance); // a held cash-in or a blast never crits
   let doubled = false;
   if (crit) {
@@ -3000,6 +2977,11 @@ export function hit(s, p, base, opts = {}) {
   }
   const out = { dealt, overflow: Math.max(0, raw - dealt), crit, broke: p.integrity === 0 };
   if (!opts.server) classEach('hit', s, p, out, opts);
+  // Shared events (fireEvent): a crit of yours (a burn's and a helper's too), and your hit on a Tagged part.
+  if (!opts.server && dealt > 0) {
+    if (crit && (opts.mine || opts.dot)) fireEvent(s, 'crit', { part: p, opts, res: out });
+    if (!opts.dot && !opts.overkill && notes.includes('tagged')) fireEvent(s, 'tagged', { part: p, opts, res: out });
+  }
   return out;
 }
 
@@ -3211,8 +3193,8 @@ function breakPart(s, p) {
   // Breaker Momentum: a stack per break (up to SKILLS.momentumMax), for SKILLS.momentumCycles cycles after the last one.
   if (p.kind !== 'fragment' && classOf(s) === 'breaker') e.momentum = { stacks: Math.min(SKILLS.momentumMax, momentumStacks(s) + 1), until: e.cycle + SKILLS.momentumCycles };
   // Breaker Cascade Failure talent: the first break resets your cooldowns.
-  if (hasTalent(s, 'cascade-failure') && !e.once.rampage) { e.once.rampage = true; e.readyAt = {}; emit(s, 'status', 'Cascade Failure resets your cooldowns.'); }
   classEach('broke', s, p);
+  fireEvent(s, 'break', { part: p });
   if (p.kind !== 'fragment') daemonsOn(s, 'broke', { part: p.id }); // Domino
   if (bodyRules(e)) hooks.roomBroke?.(s, p); // a room body's rule on a break (families.mjs)
   // Uniques that fire on a break (Cryptominer, Zero Cool).
@@ -3493,7 +3475,6 @@ function useAbility(s, intent, auto = false) {
   }
   if (a.status && alive(target)) {
     let n = a.cycles;
-    if (id === 'tag' && hasTalent(s, 'supercookie')) n = 6;
     if (id === 'tag') { target.tagBoost = e.surprise ? CONFIG.surprise.tagged - SKILLS.tagged : 0; if (e.surprise) n = Math.max(n, CONFIG.surprise.tagCycles); }
     // Rate Limit: Throttled through its next attack (never shortening a longer Throttle).
     if (id === 'rate-limit') n = Math.max(0, (target.attack?.due ?? e.cycle) - e.cycle);
@@ -3570,7 +3551,7 @@ function useAbility(s, intent, auto = false) {
   }
   if (id === 'null-route') { e.nullRoute = 1; e.nextCrit = true; emit(s, 'status', 'Null-routed. The next attack misses you, and your next skill is a critical strike.', { mark: 'buff', ability: id }); }
   if (id === 'crack') {
-    const n = Math.min(a.strip, target.armor);
+    const n = Math.min(a.strip + (hasTalent(s, 'pressure-test') ? 1 : 0), target.armor); // Pressure Test: 4
     target.armor -= n;
     if (n) classEach('chipped', s, target, n, { mine: true });
     if (!target.armor) stripMark(s, target);
@@ -3718,6 +3699,8 @@ export function takeDamage(s, amount, source, label, { dot = false } = {}) {
     amount -= soaked;
     emit(s, 'blocked', `Shield absorbs ${soaked} of ${label}${e.shield ? ` (${e.shield} left)` : ''}.`, { source, amount: soaked, shield: true });
     if (soaked) daemonsOn(s, 'soaked', { source }); // Backscatter
+    if (e.shieldSeen > e.shield) e.shieldSeen = e.shield;
+    if (soaked) fireEvent(s, 'shielded', { absorbed: soaked, part: part(s, source) });
   }
   const dealt = survive(s, d, Math.min(d.integrity, amount));
   d.integrity -= dealt;
@@ -3761,7 +3744,7 @@ export function mechanicHit(s, amount, label, source = 'raid', opts = {}) {
   if (!opts.dot && e.chits > 0) { e.chits--; emit(s, 'blocked', `${label} hits ${s.who ? s.who + '\'s' : 'your'} ◆ and does nothing.`, { source }); return 0; }
   const p = { id: source, name: label, integrity: 1, max: 1, attack: { name: label, effect: 'damage', amount, interval: 99 } };
   const dealt = takeDamage(s, absorbed(s, Math.max(1, Math.round(amount * (turboOn(e)?.taken ?? 1) * classMult('taken', s, p.attack, p) * raidTaken(s))), p.attack, p), source, label);
-  if (dealt) { classEach('struck', s, p.attack, dealt, p); e.undo = { type: 'damage', amount: dealt }; }
+  if (dealt) { classEach('struck', s, p.attack, dealt, p); fireEvent(s, 'struck', { atk: p.attack, dealt, part: p }); e.undo = { type: 'damage', amount: dealt }; }
   return dealt;
 }
 
@@ -3910,7 +3893,8 @@ function landAttack(s, p) {
   // Sanitize: a special attack may fail outright.
   if (SPECIALS.includes(atk.effect) && defense(s, 'sanitize') && rand(s) * 100 < defense(s, 'sanitize')) return emit(s, 'blocked', `${atk.name} fails. Sanitize stopped it.`, { source: p.id });
   // Misses: a damage attack can miss you (level gap, plus your Evasion).
-  if (hits && enemyMissChance(s) > 0 && rand(s) * 100 < enemyMissChance(s)) {
+  const evade = enemyMissChance(s) + classSum('evade', s, p); // evade: a class module's miss chance on attacks on you (Packet Loss)
+  if (hits && evade > 0 && rand(s) * 100 < evade) {
     e.metrics.evaded++;
     openProc(s, 'slipped');
     return emit(s, 'evaded', `${atk.name} misses you${defense(s, 'evasion') ? ' (evaded)' : ''}.`, { source: p.id });
@@ -3935,7 +3919,7 @@ function landAttack(s, p) {
     }
     // Its size as it reaches you, before any cut (Drain Plug's big hit), and what would get through to your Signal (Read-Only).
     const sap = sapOf(s, p), took = classMult('taken', s, atk, p);
-    const pre = Math.round(hitPower * sap * (hasTalent(s, 'unsafe-mode') ? 1.2 : 1) * tough * (crit ? CRIT.multiplier : 1) * took * (e.virus.raid ? raidTaken(s) : 1));
+    const pre = Math.round(hitPower * sap * tough * (crit ? CRIT.multiplier : 1) * took * (e.virus.raid ? raidTaken(s) : 1));
     const lands = Math.max(0, blocked(s, pre) - (e.shield || 0));
     let half = fxFire(s, 'struck', { do: 'halve', atk, amount: pre, lands })[0];
     if (half) emit(s, 'blocked', `${half.name || half.it.name}: ${atk.name} deals half damage.`, { source: p.id, ...firedOf([half]) });
@@ -3946,9 +3930,9 @@ function landAttack(s, p) {
     const brown = leanTaken(e, p); // Brownout (leanings.mjs): your command aimed at its part this cycle
     if (brown < 1) { leanPaid(e, p, Math.round(pre * cut * (1 - brown))); cut *= brown; }
     // Blindside (Ghostroot): a hit you couldn't see coming lands harder.
-    const dealt = takeDamage(s, absorbed(s, hitCapped(s, Math.round(hitPower * sap * (hasTalent(s, 'unsafe-mode') ? 1.2 : 1) * tough * (crit ? CRIT.multiplier : 1) * cut * took * (e.virus.raid ? raidTaken(s) : 1))), atk, p), p.id, atk.name);
+    const dealt = takeDamage(s, absorbed(s, hitCapped(s, Math.round(hitPower * sap * tough * (crit ? CRIT.multiplier : 1) * cut * took * (e.virus.raid ? raidTaken(s) : 1))), atk, p), p.id, atk.name);
     struckFx(s, atk);
-    if (dealt) classEach('struck', s, atk, dealt, p);
+    if (dealt) { classEach('struck', s, atk, dealt, p); fireEvent(s, 'struck', { atk, dealt, part: p }); }
     if (p.mech) mechLanded(s, p, atk); // the status it leaves on you, or what it cashes in (mechanics.mjs)
     if (p.scrape && (e.shield > 0 || timedBuffs(s).length)) scrapeYou(s, p, atk, { shield: e.shield, buffs: timedBuffs(s) });
     // Bad Block: your next heals lose up to its share of your max (a fresh pool each time it lands, not a bigger one).
@@ -4140,6 +4124,7 @@ export function playerPhase(s, phase = 'all') {
   mechFired(s); // Leak's price, the Countdown's count, a Volatile Corrupted cleansed (mechanics.mjs)
   e.synced = false;
   flushDaemons(s); // what your command set off (daemons.mjs)
+  shieldWatch(s); // a shield your command gave you (fireEvent: shielded)
   }
   if (phase === 'command') return active(s);
   // 1a. Slotted daemons act too, each on its own cooldown.
@@ -4155,8 +4140,9 @@ export function playerPhase(s, phase = 'all') {
     if (!e.burns.includes(b)) continue; // merged into another as it moved (a break's burns jumping on)
     const t = part(s, b.target);
     if (alive(t)) {
-      const r = hit(s, t, b.damage + (b.fxGrow || 0), { by: b.name, dot: true, synced: b.synced });
-      if (b.drain && r.dealt) heal(s, b.drain, b.name);
+      const r = hit(s, t, b.damage + (b.fxGrow || 0), { by: b.name, dot: true, synced: b.synced, burn: b });
+      if (b.drain && r.dealt) { const d = defender(s), room = Math.max(0, d.max - d.integrity); heal(s, b.drain, b.name); if (b.drain > room) classEach('overheal', s, b, b.drain - room); } // overheal: Spillover
+      fireEvent(s, 'burn', { part: t, burn: b, res: r });
       const grow = fxHas(s, 'burn-grow');
       if (grow) b.fxGrow = Math.min(grow.fx.cap || 99, (b.fxGrow || 0) + (Number(grow.fx.value) || 1));
     }
@@ -4186,6 +4172,7 @@ export function playerPhase(s, phase = 'all') {
   flushDaemons(s);
   if (e.regen && e.regen.from <= e.cycle && e.regen.left > 0) { heal(s, e.regen.amount, e.regen.name || 'Patch'); e.regen.left--; }
   classEach('cycle', s); // class modules: the end of this player's turn
+  shieldWatch(s);
   // Leech pays out; Regen ticks (the rig's on runs, the server's at home).
   if (e.leechAcc >= 1) { const n = Math.floor(e.leechAcc); e.leechAcc -= n; heal(s, n, 'Leech', { drawn: true }); }
   const rg = regenRate(defense(s, 'regen')) * (1 + fxSum(s, 'always', 'heal%') / 100); // Regen R: R every 5 cycles (more with Sump Pump, Bedframe: heal%)
@@ -5032,6 +5019,7 @@ export function restore(raw) {
     curveRestore(s); // the compounding curve: every item's flat stats lifted at its level, once (gear.mjs); keyed on s.curve
     setsRestore(s, was); // v45: sets: loaded protocols stamped in slot order, set pieces you hold found, the Badge beat armed (sets.mjs)
     subRestore(s, was); // v46: no default subclass: a class past 10 that never picked plays its core (its default's keys and talent points back)
+    tiersRestore(s); // the talent tiers: old ranks and picks become tier picks where the talent survives (talents.mjs); keyed on the old fields
     hardenRestore(s); // harden.sh is gone: scripts you held come back as credits (firewall.mjs)
     componentsRestore(s); // v47: a pile of named components becomes its count (salvage.mjs); keyed on the field
     { const l = craftRestore(s); if (l) systemLetter(s, l); } // v49: crafting goes (progression.mjs): keyed on what the save holds

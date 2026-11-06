@@ -5,7 +5,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { ARCHETYPES, SUBS, SUBCLASS, LOADOUT, TREE, defaultSub, presetBar, skillOrder, lineOf } from './dist/data.mjs';
-import { fresh, command, restore, subOf, subPicked, subWaiting, subPrompted, edge, kitOf, knownSkills, equippedSkills, talentPoints, pointsSpent, picksOf, ranksOf, capPickOf, SAVE_VERSION } from './dist/combat.mjs';
+import { fresh, command, restore, subOf, subPicked, subWaiting, subPrompted, edge, kitOf, knownSkills, equippedSkills, freeTiers, tiersOf, capPickOf, SAVE_VERSION } from './dist/combat.mjs';
 import { loadoutMarkup, toolkitMarkup, subPromptDue, trayMarkup } from './dist/view.mjs';
 import { play } from './dist/run.mjs';
 
@@ -45,7 +45,7 @@ test('10+ with no pick: both lit with Choose; the class plays its core alone (no
     assert.match(html, /<p class="cls-ban">Choose a subclass<\/p>/, cls);
     for (const k of Object.values(ARCHETYPES[cls].subs)) assert.match(html, new RegExp(`<section class="cls-col cls-sub" data-sub="${k.id}">[\\s\\S]*?data-command="subclass ${cls} ${k.id}">Choose</button>`), `${cls} ${k.id}`);
     assert.doesNotMatch(html, /data-command="talent/, `${cls}: no tree to spend in`);
-    assert.match(html, /<span class="cls-pts"[^>]*><b>\d+<\/b> talent points<\/span>/, `${cls}: its points wait for the tree`);
+    assert.match(html, /<span class="cls-pts"[^>]*><b>\d+<\/b> tiers? to pick<\/span>/, `${cls}: its tiers wait for the tree`);
   }
   const s = at('breaker', 10);
   command(s, 'encounter cryptjack'); command(s, 'engage');
@@ -59,24 +59,21 @@ test('picked: yours wide and marked Yours, the other folded with Switch; keys as
   assert.match(html, /<pre class="sk-emblem" aria-hidden="true">[\s\S]*<h2>Breaker<\/h2>/, 'the class in the middle, its emblem and name');
   for (const [i, id] of equippedSkills(s, 'breaker').entries()) assert.match(html, new RegExp(`<button type="button" class="cls-ab on" data-toolkit="breaker"[^>]*>(?:(?!</button>).)*<span class="cls-k">${LOADOUT.keys[i]}</span><b>[^<]+</b></button>`, 's'), `${id} on key ${LOADOUT.keys[i]}`);
   for (const c of cmds(html)) assert.equal(runs(s, c), null, c);
-  assert.ok(cmds(html).some((c) => /^talent breaker add /.test(c)), 'ranks to add, on the tree itself');
-  // A tier pick, a swap, a rank back, the capstone.
-  const k = SUBS.demolitionist, [a] = k.fillers[0];
-  for (let i = 0; i < 3; i++) command(s, `talent breaker add ${a.id}`);
-  let h = page(s, 'breaker');
-  assert.match(h, new RegExp(`data-tn="${k.talents[0][1].id}" data-command="talent breaker 1 b"`));
-  assert.match(h, new RegExp(`data-tn="${a.id}" data-command-alt="talent breaker remove ${a.id}"`), 'a full row: right-click takes a rank back');
+  assert.ok(cmds(html).some((c) => /^talent breaker 1 [abc]$/.test(c)), 'picks, on the tree itself');
+  // Six rows of three, a pick, a swap, the capstone.
+  const k = SUBS.demolitionist;
+  assert.equal((html.match(/class="cls-row t3"/g) || []).length, 6, 'six tiers');
+  assert.equal(freeTiers(s), 4, 'level 30: four tiers open');
+  assert.doesNotMatch(html, new RegExp(`data-tn="${k.tiers[4][0].id}" data-command`), 'tier 5 (34) is locked');
   command(s, 'talent breaker 1 b');
-  h = page(s, 'breaker');
-  assert.match(h, new RegExp(`class="cls-tn pick" data-tn="${k.talents[0][1].id}" aria-disabled="true"`));
-  assert.match(h, new RegExp(`data-tn="${k.talents[0][0].id}" data-command="talent breaker 1 a"[^>]*title="[^"]*▸ Click to swap to it\\."`), 'the other side swaps');
+  let h = page(s, 'breaker');
+  assert.match(h, new RegExp(`class="cls-tn pick" data-tn="${k.tiers[0][1].id}" aria-disabled="true"`));
+  assert.match(h, new RegExp(`data-tn="${k.tiers[0][2].id}" data-command="talent breaker 1 c"`), 'the others swap');
+  assert.doesNotMatch(h, /Tier 1 talent"[^>]*data-tt-state|▸ Click to pick it/, 'a tier talent tooltip is its name, kind and rule only');
   assert.match(h, /data-command="talent reset breaker"[^>]*>Reset</);
-  assert.deepEqual(picksOf(s, 'breaker'), [1]);
+  assert.deepEqual(tiersOf(s, 'breaker'), [1]);
   const b = at('breaker', 50, 'demolitionist');
-  for (const row of TREE) {
-    if (row.kind === 'filler') for (const n of k.fillers[row.row]) for (let r = 0; r < 3 && pointsSpent(b, 'breaker') < talentPoints(b, 'breaker'); r++) command(b, `talent breaker add ${n.id}`);
-    if (row.kind === 'choice') command(b, `talent breaker ${row.tier + 1} a`);
-  }
+  for (const row of TREE) if (row.kind === 'tier') command(b, `talent breaker ${row.tier + 1} a`);
   assert.match(page(b, 'breaker'), /data-command="talent breaker capstone b"/);
   command(b, 'talent breaker capstone b');
   assert.equal(capPickOf(b, 'breaker'), 1);
@@ -185,7 +182,7 @@ test('an old save whose class is past 10 with no pick loads cleanly: the default
   const demo = ['crack', 'shatter', 'flood', 'overload', 'shaped-charge', 'fork-bomb', 'exploit', 'logic-bomb'];
   s.loadout.equipped = { demolitionist: demo, warden: presetBar('bastion', 'warden', 30, SUBS.warden.presets.rotation) };
   s.loadout.follow = { demolitionist: null, warden: 'rotation' };
-  s.loadout.ranks = { demolitionist: { 'armor-cracker': 3, 'blast-radius': 1 }, warden: { [SUBS.warden.fillers[0][0].id]: 2 } };
+  s.loadout.ranks = { demolitionist: { 'armor-cracker': 3, 'blast-radius': 1 }, warden: { 'reverse-shell': 2 } };
   s.loadout.picks = { demolitionist: [0], warden: [1] };
   s.loadout.presets = { demolitionist: { rotation: { shipped: true }, area: { shipped: true }, mine: ['crack', 'shatter'] } };
   s.loadout.cooling = { demolitionist: ['shaped-charge'] };
@@ -197,11 +194,9 @@ test('an old save whose class is past 10 with no pick loads cleanly: the default
   assert.equal(subOf(t), null, 'no subclass: the default is gone');
   assert.deepEqual(equippedSkills(t, 'breaker'), ['crack', 'flood', 'overload', 'exploit'], 'its core keys stay, in order; the Demolitionist\'s go');
   assert.equal(t.loadout.equipped.demolitionist, undefined);
-  assert.equal(t.loadout.ranks.demolitionist, undefined, 'the points it spent in the default\'s tree come back');
-  assert.equal(t.loadout.picks.demolitionist, undefined);
+  assert.equal(t.loadout.tiers.demolitionist, undefined, 'nothing kept in the default\'s tree');
   assert.equal(t.loadout.cooling.demolitionist, undefined);
-  assert.equal(pointsSpent(t, 'breaker'), 0);
-  assert.equal(talentPoints(t, 'breaker'), 7, 'every point it earned, free for the tree it picks');
+  assert.equal(freeTiers(t, 'breaker'), 0, 'no tree until it picks');
   assert.deepEqual(t.loadout.presets.demolitionist.mine, ['crack', 'shatter'], 'a preset it saved waits for a pick');
   assert.ok(t.programs.by.breaker.routines.worm, 'the routines it wrote are the class\'s now');
   assert.equal(subPromptDue(t), true, 'the page asks for a pick');
@@ -209,11 +204,10 @@ test('an old save whose class is past 10 with no pick loads cleanly: the default
   // The class that picked: as it was.
   assert.equal(subOf(t, 'bastion'), 'warden');
   assert.deepEqual(t.loadout.equipped.warden, s.loadout.equipped.warden);
-  assert.deepEqual(ranksOf({ ...t, loadout: { ...t.loadout, archetype: 'bastion' } }, 'bastion'), s.loadout.ranks.warden);
-  assert.deepEqual(t.loadout.picks.warden, [1]);
+  assert.deepEqual(t.loadout.tiers.warden, [0, null, null, null, null, null], 'its old tier pick (Deep Packet Inspection) lands in its new tier; its ranks (Reverse Shell) are gone');
   // Picking the old default gives it a fresh tree and its rotation bar; its saved preset is there.
   command(t, 'subclass demolitionist');
-  assert.equal(pointsSpent(t, 'breaker'), 0);
+  assert.equal(freeTiers(t, 'breaker'), 3, 'a fresh tree: level 22, three tiers to pick');
   assert.deepEqual(equippedSkills(t, 'breaker'), presetBar('breaker', 'demolitionist', 22, SUBS.demolitionist.presets.rotation));
   assert.match(command(t, 'loadout use mine').at(-1).message, /Bar set from mine/);
   // A bar the player trimmed stays trimmed; a key a default skill held goes back to a core skill that was off the bar.

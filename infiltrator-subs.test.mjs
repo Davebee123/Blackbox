@@ -2,7 +2,8 @@
 // edges (Bloom, Weak Spot) and every new talent does what its card says; the planner plays both.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fresh, command, selectEncounter, resolveCycle, part, keyMap, knownSkills, readyIn, procOpen, active, subOf, hasTalent, cooldownOf, restore } from './dist/combat.mjs';
+import fs from 'node:fs';
+import { fresh, command, selectEncounter, resolveCycle, part, keyMap, knownSkills, readyIn, procOpen, active, subOf, hasTalent, cooldownOf, fxAnswer, fireEvent, takeDamage, takenMult, maxSignal } from './dist/combat.mjs';
 import { CONFIG, ABILITIES, ARCHETYPES, SUBS, SUBCLASS, unlockLevel } from './dist/data.mjs';
 import { play } from './dist/run.mjs';
 import { matesOf } from './dist/crew.mjs';
@@ -21,14 +22,13 @@ CONFIG.powerPerLevel = 0; CONFIG.levelLine = 0; CONFIG.ownPerLevel = 0; CONFIG.g
 CONFIG.gap = { dealt: 0, taken: 0, floor: 1, below: 0 };
 (await import('./dist/data.mjs')).LOADOUT.specRanks = 0; // the kit talent's two free ranks (progression.mjs): off, for exact numbers
 
-// A level-50 Infiltrator in a subclass, with these talents (dev kit: every class skill) and ranks.
-const start = (sub, { talents = [], ranks = {}, id = 'cryptjack', seed = 7 } = {}) => {
+// A level-50 Infiltrator in a subclass, with these talents (dev kit: every class skill).
+const start = (sub, { talents = [], id = 'cryptjack', seed = 7 } = {}) => {
   const s = fresh();
   s.loadout.archetype = 'infiltrator';
   s.hackers = { infiltrator: { level: 50, xp: 0 } };
   s.loadout.sub = { infiltrator: sub };
   s.loadout.devKit = { talents };
-  s.loadout.ranks.infiltrator = ranks;
   s.loadout.equipped.infiltrator = [];
   selectEncounter(s, id, seed, { level: 6 });
   command(s, 'engage');
@@ -56,16 +56,17 @@ test('both lines: eight skills each in unlock order, every new skill has its car
     const x = SUBS[id];
     assert.equal(x.skills.length, SUBCLASS.unlocks.length, id);
     x.skills.forEach((k, i) => assert.equal(unlockLevel('infiltrator', k, id), SUBCLASS.unlocks[i], k));
-    assert.equal(x.fillers.flat().length, 6); assert.equal(x.talents.flat().length, 6);
+    assert.equal(x.tiers.length, 6); assert.ok(x.tiers.every((r) => r.length === 3), id);
   }
   for (const [id, a] of Object.entries(ABILITIES).filter(([, a]) => a.cls === 'infiltrator' && a.sub)) {
     assert.ok(SUBS[a.sub].skills.includes(id), id);
     assert.ok(a.help.startsWith(id + ' ') && a.help.includes(' — ') && a.help.endsWith('.'), id);
     assert.ok(a.short && a.desc && a.icon && a.cooldown >= 1, id);
   }
-  const ids = (x) => new Set([...x.fillers.flat(), ...x.talents.flat()].map((n) => n.id));
-  const shared = [...ids(SUBS.payload)].filter((k) => ids(SUBS.phantom).has(k));
-  assert.ok(shared.length <= 2, `mostly distinct trees (shared: ${shared})`);
+  const ids = (x) => new Set(x.tiers.flat().map((n) => n.id));
+  assert.deepEqual([...ids(SUBS.payload)].filter((k) => ids(SUBS.phantom).has(k)), [], 'distinct trees');
+  const src = fs.readFileSync('dist/combat.mjs', 'utf8') + fs.readFileSync('dist/classes/infiltrator.mjs', 'utf8');
+  for (const x of [SUBS.payload, SUBS.phantom]) for (const id of ids(x)) assert.ok(src.includes(`'${id}'`), `${x.id}: ${id} is implemented`);
   assert.ok(ARCHETYPES.infiltrator.skills.some((k) => k.id === 'wormable') && ARCHETYPES.infiltrator.skills.some((k) => k.id === 'backstab'));
 });
 
@@ -193,7 +194,57 @@ test('Bloom (Payload edge): when a burning part breaks, its burns jump a cycle s
   });
 });
 
-test('Payload talents: Contagion, Persistence, Superspreader; ranks: Shaped Charge, Virulence', () => {
+const inj = (s, id, damage = 10, left = 4) => s.encounter.burns.push({ id: 'inject', name: 'Inject', target: id, damage, grow: 0, left, drain: 0 });
+test('Payload tier 1: Heap Spray, Long Fuse, Third-Party Cookie', () => {
+  const h = noArmor(quiet(start('payload', { talents: ['heap-spray'] })));
+  big(h, 'pulse');
+  act(h, 'inject pulse');
+  assert.equal(lost(h, 'pulse'), 26, '+6 a tick');
+  const l = noArmor(quiet(start('payload', { talents: ['long-fuse'] })));
+  big(l, 'pulse');
+  act(l, 'inject pulse');
+  assert.equal(l.encounter.burns[0].left, 5, 'Inject lasts 6 cycles');
+  const c = noArmor(quiet(start('payload', { talents: ['third-party-cookie'] })));
+  const n = noArmor(quiet(start('payload')));
+  for (const x of [c, n]) { big(x, 'pulse'); inj(x, 'pulse'); act(x, 'tag pulse'); }
+  assert.equal(lost(c, 'pulse') - lost(n, 'pulse'), Math.round(10 * 1.5), 'Tag, and the burn on it ticks once (Tagged)');
+});
+
+test('Payload tier 2: Shaped Charge, Assassinate, Chain Letter', () => {
+  const d = noArmor(quiet(start('payload', { talents: ['shaped-charge'] })));
+  big(d, 'pulse');
+  act(d, 'inject pulse');
+  const before = lost(d, 'pulse');
+  act(d, 'detonate pulse');
+  assert.equal(lost(d, 'pulse') - before, Math.floor(Math.round(3 * 20 * ABILITIES.detonate.mult) * 1.25), 'Detonate +25%');
+  const c = noArmor(quiet(start('payload', { talents: ['chain-letter'] })));
+  c.encounter.readyAt.detonate = c.encounter.cycle + 5;
+  inj(c, 'pulse'); part(c, 'pulse').integrity = 1;
+  act(c, 'spike pulse');
+  assert.equal(readyIn(c, 'detonate'), 0, 'a burning part breaks: Detonate is ready');
+});
+
+test('Payload tier 3: Low Profile, Spillover, Fault Handler', () => {
+  const l = start('payload', { talents: ['low-profile'] }), p = part(l, 'pulse');
+  assert.equal(takenMult(l, p), 1);
+  inj(l, 'pulse');
+  assert.equal(takenMult(l, p), 0.9, 'a part you are burning hits 10% softer');
+  const sp = noArmor(quiet(start('payload', { talents: ['spillover'] })));
+  big(sp, 'pulse');
+  act(sp, 'skim pulse');
+  assert.ok(sp.encounter.shield > 0 && sp.encounter.shield <= 20, 'Skim at full Signal shields you instead');
+  const f = noArmor(quiet(start('payload', { talents: ['fault-handler'] })));
+  big(f, 'pulse'); inj(f, 'pulse');
+  fireEvent(f, 'struck', { part: part(f, 'pulse') });
+  fireEvent(f, 'struck', { part: part(f, 'pulse') });
+  assert.equal(lost(f, 'pulse'), 10, 'its part hits you: your burns on it tick once, once a cycle');
+});
+
+test('Payload tier 4: Virulence, Contagion, Fever', () => {
+  const v = noArmor(quiet(start('payload', { talents: ['virulence'] })));
+  big(v, 'pulse');
+  act(v, 'wormable pulse');
+  assert.equal(lost(v, 'pulse'), 13, 'Wormable 8 +5');
   const c = noArmor(quiet(start('payload', { talents: ['contagion'] })));
   big(c, 'pulse'); big(c, 'encryptor');
   act(c, 'inject pulse');
@@ -201,7 +252,13 @@ test('Payload talents: Contagion, Persistence, Superspreader; ranks: Shaped Char
   c.encounter.readyAt = {};
   act(c, 'inject pulse');
   assert.equal(c.encounter.burns.filter((b) => b.id === 'inject' && b.target === 'encryptor').length, 1, 'a second Inject refreshes the copy there, never stacks');
-  assert.equal(lost(c, 'encryptor'), 40);
+  const f = noArmor(quiet(start('payload', { talents: ['fever'] })));
+  big(f, 'pulse'); inj(f, 'pulse', 10, 6);
+  for (let k = 0; k < 3; k++) act(f, 'hold');
+  assert.equal(lost(f, 'pulse'), 10 + 10 + 15, 'the third tick crits');
+});
+
+test('Payload tier 5: Persistence, Superspreader, Heat Sink', () => {
   const p = noArmor(quiet(start('payload', { talents: ['persistence'] })));
   big(p, 'pulse'); big(p, 'encryptor');
   act(p, 'implant pulse');
@@ -217,22 +274,32 @@ test('Payload talents: Contagion, Persistence, Superspreader; ranks: Shaped Char
     assert.ok(msgs(u, /Superspreader copies one to every other part/).length);
     assert.deepEqual([lost(u, 'encryptor'), lost(u, 'c')], [20, 20], 'the burn ticked on both');
   });
-  const d = noArmor(quiet(start('payload', { ranks: { 'shaped-charge': 2 } })));
-  big(d, 'pulse');
-  act(d, 'inject pulse');
-  const before = lost(d, 'pulse');
-  act(d, 'detonate pulse');
-  assert.equal(lost(d, 'pulse') - before, Math.floor(Math.round(3 * 20 * ABILITIES.detonate.mult) * 1.2), 'Detonate +20%');
-  const v = noArmor(quiet(start('payload', { ranks: { virulence: 3 } })));
-  big(v, 'pulse');
-  act(v, 'wormable pulse');
-  assert.equal(lost(v, 'pulse'), 14, 'Wormable 8 +6');
+  const h = noArmor(quiet(start('payload', { talents: ['heat-sink'] })));
+  big(h, 'pulse'); inj(h, 'pulse');
+  h.encounter.lastAttack = 'spike pulse';
+  h.encounter.shield = 10;
+  act(h, 'hold');
+  assert.equal(lost(h, 'pulse'), 20, 'a shield: the burn on your target ticks once more');
+});
+
+test('Payload tier 6: Thermal Load, Index Case, IRQ Chain', () => {
+  const t = noArmor(quiet(start('payload', { talents: ['thermal-load'] })));
+  big(t, 'pulse'); inj(t, 'pulse');
+  act(t, 'hold');
+  assert.equal(lost(t, 'pulse'), 11, 'burns +10%');
+  const x = noArmor(quiet(start('payload', { talents: ['index-case'] })));
+  act(x, 'outbreak');
+  assert.ok(x.encounter.virus.parts.every((p) => p.taggedUntil >= x.encounter.cycle + 2), 'Outbreak Tags every part for 4 cycles');
+  const q = noArmor(quiet(start('payload', { talents: ['irq-chain'] })));
+  q.encounter.readyAt['irq-storm'] = q.encounter.cycle + 5;
+  fxAnswer(q, part(q, 'pulse'));
+  assert.equal(readyIn(q, 'irq-storm'), 0, 'answering a tell readies IRQ Storm');
 });
 
 // ---------- Phantom ----------
 // A tell said on a part (tells.mjs), for skills that read one.
 const busy = (s, id, kind = 'charge') => { s.encounter.virus.tells = { list: [{ id: 'x', kind, name: 'Test', part: id, told: true, said: s.encounter.cycle, next: s.encounter.cycle + 2, n: part(s, id).attack?.n || 0, need: 1, wound: 0, hitBy: [], after: 0, count: 0 }], tier: { lead: 2, live: 1, hits: 1, castHits: 2, mult: 2, cap: 0.1, dot: 0.03, after: 0, burn: 0, hang: 0 } }; };
-test('Backstab: 32, a sure crit on a part busy with a tell (charging, compiling, sealing, recording); Pivot +10% a rank', () => {
+test('Backstab: 32, a sure crit on a part busy with a tell (charging, compiling, sealing, recording); Pivot +25%', () => {
   const s = noArmor(start('phantom'));
   big(s, 'pulse'); part(s, 'encryptor').attack = null;
   busy(s, 'pulse', 'cast');
@@ -242,10 +309,10 @@ test('Backstab: 32, a sure crit on a part busy with a tell (charging, compiling,
   big(d, 'pulse'); part(d, 'encryptor').attack = null;
   act(d, 'backstab pulse');
   assert.equal(lost(d, 'pulse'), 32, 'nothing on it: no crit');
-  const r = noArmor(quiet(start('phantom', { ranks: { pivot: 2 } })));
+  const r = noArmor(quiet(start('phantom', { talents: ['pivot'] })));
   big(r, 'pulse'); busy(r, 'pulse');
   act(r, 'backstab pulse');
-  assert.equal(lost(r, 'pulse'), Math.floor(32 * 1.2 * 1.5));
+  assert.equal(lost(r, 'pulse'), Math.floor(32 * 1.25 * 1.5));
 });
 
 test('Shadow Copy: the next hit on you does nothing and Opening lights; on a crewmate, the decoy takes their hit', () => {
@@ -313,11 +380,11 @@ test('Weak Spot (Phantom edge) and Log Wipe: the first hit on each part crits; L
     big(y, 'pulse');
     act(y, 'spike pulse');
     assert.equal(lost(y, 'pulse'), 25);
-    // Cold Open: +5% a rank on the Weak Spot hit.
-    const c = noArmor(quiet(start('phantom', { ranks: { 'cold-open': 2 } })));
+    // Cold Open: +15% on the Weak Spot hit.
+    const c = noArmor(quiet(start('phantom', { talents: ['cold-open'] })));
     big(c, 'pulse');
     act(c, 'spike pulse');
-    assert.equal(lost(c, 'pulse'), Math.floor(Math.floor(25 * 1.1) * 1.5));
+    assert.equal(lost(c, 'pulse'), Math.floor(Math.floor(25 * 1.15) * 1.5));
   });
 });
 
@@ -366,14 +433,62 @@ test('Phantom talents: Blind Spot (your first burn tick on each part crits), Kil
   assert.ok(procOpen(k, 'slipped'));
 });
 
-test('old talents still in the trees keep working by id: Long Fuse is Polymorphic (Inject lasts 6 cycles)', () => {
-  assert.ok(SUBS.payload.talents.flat().some((n) => n.id === 'polymorphic' && n.name === 'Long Fuse'));
-  const s = noArmor(quiet(start('payload', { talents: ['polymorphic'] })));
-  big(s, 'pulse');
-  act(s, 'inject pulse');
-  assert.equal(s.encounter.burns[0].left, 5);
-  assert.ok(hasTalent(s, 'polymorphic'));
-  for (const id of ['ghost-route', 'tracking-pixel', 'fast-hands']) assert.ok(SUBS.phantom.talents.flat().some((n) => n.id === id), id);
+test('Phantom tier 1 and 2: Web Beacon, Fast Hands, Timing Attack', () => {
+  withEdges(() => {
+    const w = noArmor(quiet(start('phantom', { talents: ['web-beacon'] })));
+    big(w, 'pulse');
+    act(w, 'spike pulse');
+    assert.ok(w.encounter.weakHit.pulse, 'Weak Spot used');
+    act(w, 'tag pulse');
+    assert.ok(!w.encounter.weakHit.pulse, 'Tag makes it fresh again');
+  });
+  const t = quiet(start('phantom', { talents: ['timing-attack'] }));
+  t.loadout.equipped.infiltrator = ['opening'];
+  fxAnswer(t, part(t, 'pulse'));
+  assert.ok(procOpen(t, 'slipped'), 'answering a tell lights Opening');
+});
+
+test('Phantom tier 3 and 4: Onion Routing, Log Rotation, Data Leak', () => {
+  const o = start('phantom', { talents: ['onion-routing'] }), n = start('phantom');
+  assert.equal(maxSignal(o) - maxSignal(n), 8);
+  assert.equal(cooldownOf(start('phantom', { talents: ['log-rotation'] }), 'log-wipe'), 4);
+  assert.equal(cooldownOf(start('phantom'), 'log-wipe'), ABILITIES['log-wipe'].cooldown);
+  CONFIG.baseCrit = 100;
+  try {
+    const d = noArmor(quiet(start('phantom', { talents: ['data-leak'] }))), n = noArmor(quiet(start('phantom')));
+    for (const x of [d, n]) { big(x, 'pulse'); inj(x, 'pulse'); act(x, 'spike pulse'); }
+    assert.equal(lost(d, 'pulse') - lost(n, 'pulse'), 15, 'a crit ticks your Inject on it once (a crit too)');
+  } finally { CONFIG.baseCrit = 0; }
+});
+
+test('Phantom tier 5: Packet Loss, Full Disclosure, Cover Traffic', () => {
+  const p = start('phantom', { talents: ['packet-loss'] });
+  assert.equal(INFIL.evade(p, part(p, 'pulse')), 10);
+  const f = noArmor(quiet(start('phantom', { talents: ['full-disclosure'] })));
+  big(f, 'pulse');
+  act(f, 'unmask pulse');
+  assert.ok(part(f, 'pulse').unmasked.until > f.encounter.cycle + 100, 'until it breaks');
+  assert.equal(cooldownOf(f, 'unmask'), 8);
+  const c = quiet(start('phantom', { talents: ['cover-traffic'] }));
+  c.loadout.equipped.infiltrator = ['opening'];
+  c.encounter.shield = 20;
+  takeDamage(c, 5, 'pulse', 'a test hit');
+  assert.ok(procOpen(c, 'slipped'), 'a hit on your shield lights Opening');
+});
+
+test('Phantom tier 6: Clean Exploit, Tracking Pixel, Zeroize', () => {
+  CONFIG.baseCrit = 100;
+  try {
+    const c = noArmor(quiet(start('phantom', { talents: ['clean-exploit'] })));
+    big(c, 'pulse');
+    act(c, 'spike pulse');
+    assert.equal(lost(c, 'pulse'), Math.floor(25 * (1.5 * 1.2)), 'crits deal 20% more');
+  } finally { CONFIG.baseCrit = 0; }
+  const z = quiet(start('phantom', { talents: ['zeroize'] }));
+  z.encounter.weakHit = { pulse: true };
+  fireEvent(z, 'cut', { part: part(z, 'pulse') });
+  assert.deepEqual(z.encounter.weakHit, {}, 'a cut makes Weak Spot fresh on every part');
+  assert.ok(SUBS.phantom.tiers.flat().some((n) => n.id === 'tracking-pixel'));
 });
 
 // ---------- the planner ----------
@@ -402,18 +517,3 @@ test('the planner plays both subclasses: their own skills show up, and they win 
   assert.equal(INFIL.plan(fresh(), null), null, 'another class falls through');
 });
 
-test('Log Rotation: the Phantom\'s rank node where Backchannel was; Log Wipe comes back sooner', () => {
-  const ids = (sub) => SUBS[sub].fillers.flat().map((n) => n.id);
-  assert.ok(!ids('phantom').includes('backchannel') && ids('phantom').includes('log-rotation'), 'Phantom: no Backchannel');
-  assert.ok(ids('payload').includes('backchannel'), 'Payload keeps Backchannel');
-  const cd = ABILITIES['log-wipe'].cooldown;
-  assert.equal(cooldownOf(start('phantom', { ranks: { 'log-rotation': 2 } }), 'log-wipe'), cd - 2);
-  assert.equal(cooldownOf(start('phantom', { ranks: { 'log-rotation': 3 } }), 'null-route'), ABILITIES['null-route'].cooldown, 'only Log Wipe');
-  assert.equal(cooldownOf(start('phantom'), 'log-wipe'), cd);
-  // A save with Phantom ranks in Backchannel gets them back in Log Rotation, in the same row.
-  const s = fresh();
-  s.loadout.ranks = { phantom: { backchannel: 2, 'low-profile': 1 }, payload: { backchannel: 3 } };
-  const r = restore(JSON.parse(JSON.stringify(s)));
-  assert.deepEqual(r.loadout.ranks.phantom, { 'low-profile': 1, 'log-rotation': 2 });
-  assert.deepEqual(r.loadout.ranks.payload, { backchannel: 3 });
-});

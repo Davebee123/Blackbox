@@ -3,7 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { fresh, command, selectEncounter, resolveCycle, part, keyMap, knownSkills, readyIn, momentumStacks, patchDelay } from './dist/combat.mjs';
+import { fresh, command, selectEncounter, resolveCycle, part, keyMap, knownSkills, readyIn, momentumStacks, patchDelay, cooldownOf, fxAnswer, fireEvent, takeDamage, takenMult } from './dist/combat.mjs';
 import { CONFIG, SKILLS, ABILITIES, SUBS, SUBCLASS, unlockLevel, skillOrder } from './dist/data.mjs';
 import { planner } from './dist/planner.mjs';
 import * as BREAKER_DATA from './dist/classes/breaker.data.mjs';
@@ -21,14 +21,13 @@ CONFIG.powerPerLevel = 0; CONFIG.levelLine = 0; CONFIG.ownPerLevel = 0; CONFIG.g
 CONFIG.gap = { dealt: 0, taken: 0, floor: 1, below: 0 };
 (await import('./dist/data.mjs')).LOADOUT.specRanks = 0; // the kit talent's two free ranks (progression.mjs): off, for exact numbers
 
-// A Breaker of a subclass, with every class skill it has by level 50 (the dev kit) and these talents and ranks.
-const start = (sub, { talents = [], ranks = {}, level = 50 } = {}) => {
+// A Breaker of a subclass, with every class skill it has by level 50 (the dev kit) and these talents.
+const start = (sub, { talents = [], level = 50 } = {}) => {
   const s = fresh();
   s.loadout.archetype = 'breaker';
   s.hackers = { breaker: { level, xp: 0 } };
   s.loadout.sub = { breaker: sub };
   s.loadout.devKit = { talents };
-  s.loadout.ranks.breaker = ranks;
   selectEncounter(s, 'cryptjack', 7, { level: 6 });
   command(s, 'engage');
   s.encounter.hardened = 0;
@@ -76,13 +75,11 @@ test('both lines hold 11 skills in unlock order (10 to 38), and every new skill 
   assert.equal(SUBS.overclocker.edge.name, 'Redline');
 });
 
-test('every talent and filler in both trees is implemented somewhere, and the two trees share no tier pick', () => {
+test('every talent in both trees is implemented somewhere, and the two trees share no talent', () => {
   const src = fs.readFileSync('dist/combat.mjs', 'utf8') + fs.readFileSync('dist/classes/breaker.mjs', 'utf8');
-  for (const sub of ['demolitionist', 'overclocker']) {
-    for (const n of [...SUBS[sub].fillers.flat(), ...SUBS[sub].talents.flat()]) assert.ok(src.includes(`'${n.id}'`), `${sub}: ${n.id}`);
-  }
-  const picks = (sub) => SUBS[sub].talents.flat().map((n) => n.id);
-  assert.deepEqual(picks('demolitionist').filter((id) => picks('overclocker').includes(id)), []);
+  const ids = (sub) => SUBS[sub].tiers.flat().map((n) => n.id);
+  for (const sub of ['demolitionist', 'overclocker']) for (const id of ids(sub)) assert.ok(src.includes(`'${id}'`), `${sub}: ${id}`);
+  assert.deepEqual(ids('demolitionist').filter((id) => ids('overclocker').includes(id)), []);
 });
 
 // ---------- Demolitionist ----------
@@ -183,45 +180,45 @@ test('Bit Rot: 25 now (2 ◆ on armor), then a ◆ off at the end of each of you
   assert.equal(lost(n, 'pulse'), 25 + Math.floor(25 * 1.2), 'and takes 20% more from you');
 });
 
-test('Demolitionist fillers: Blast Radius, Shrapnel, Deep Burn', () => {
-  const s = noArmor(quiet(demo({ ranks: { 'blast-radius': 2 } })));
-  big(s, 'pulse');
-  act(s, 'fork-bomb');
-  assert.equal(lost(s, 'pulse'), Math.floor(16 * 1.2), 'Blast Radius: +10% a rank on Fork Bomb');
-  const l = noArmor(quiet(demo({ ranks: { 'blast-radius': 1 } })));
-  big(l, 'pulse'); big(l, 'encryptor');
-  act(l, 'logic-bomb pulse'); act(l, 'hold'); act(l, 'hold');
-  assert.equal(lost(l, 'pulse'), 55);
-  assert.equal(lost(l, 'encryptor'), 22, 'and on Logic Bomb');
-  const h = quiet(demo({ ranks: { shrapnel: 1 } }));
+test('Demolitionist tier 1: Shrapnel, Splintering, Exposed Wiring', () => {
+  const h = quiet(demo({ talents: ['shrapnel'] }));
   armor(h, 'pulse', 2); big(h, 'pulse');
   act(h, 'shaped-charge pulse');
   act(h, 'shatter pulse');
-  assert.equal(lost(h, 'pulse'), Math.floor(38 * 1.08), 'Shrapnel: +8% a rank on Shatter');
-  const d = noArmor(quiet(demo({ ranks: { 'deep-burn': 2 } })));
-  big(d, 'pulse');
-  act(d, 'thermal-runaway pulse');
-  assert.equal(lost(d, 'pulse'), 8, 'Deep Burn: +2 a tick per rank');
-  act(d, 'hold');
-  assert.equal(lost(d, 'pulse'), 8 + 12, 'it still grows by 4');
+  assert.equal(lost(h, 'pulse'), Math.floor(38 * 1.2), 'Shrapnel: +20% on Shatter');
+  const p = quiet(demo({ talents: ['splintering'] }));
+  armor(p, 'pulse', 2); big(p, 'pulse'); armor(p, 'encryptor', 3);
+  act(p, 'shaped-charge pulse');
+  act(p, 'shatter pulse');
+  assert.equal(part(p, 'encryptor').armor, 1, "Splintering: the shards break 2 ◆ on an armored part");
+  const w = noArmor(demo({ talents: ['exposed-wiring'] }));
+  part(w, 'pulse').integrity = 1;
+  act(w, 'spike pulse');
+  assert.ok(w.encounter.virus.parts.some((x) => x.integrity > 0 && x.exposedUntil >= w.encounter.cycle), 'Exposed Wiring: a break exposes the next part to attack');
 });
 
-test('Demolitionist tier 1: Cluster Charge strips 2 ◆ off every other part; Exposed Wiring exposes a part that loses its last ◆', () => {
+test('Demolitionist tier 2: Pressure Test, Cluster Charge, Shock Front', () => {
+  const t = quiet(demo({ talents: ['pressure-test'] }));
+  armor(t, 'pulse', 5);
+  act(t, 'crack pulse');
+  assert.equal(part(t, 'pulse').armor, 1, 'Crack breaks 4');
   const s = quiet(demo({ talents: ['cluster-charge'] }));
   armor(s, 'pulse', 3); armor(s, 'encryptor', 3);
   act(s, 'shaped-charge pulse');
   assert.equal(part(s, 'encryptor').armor, 1);
-  const w = quiet(demo({ talents: ['exposed-wiring'] }));
-  armor(w, 'pulse', 2); big(w, 'pulse');
-  act(w, 'crack pulse');
-  assert.ok(part(w, 'pulse').exposedUntil >= w.encounter.cycle + 1, 'Exposed through your next two cycles');
-  assert.ok(w.logs.some((e) => /^Exposed Wiring leaves /.test(e.message)));
-  part(w, 'pulse').exposedUntil = 0;
-  act(w, 'hold');
-  assert.equal(part(w, 'pulse').exposedUntil, 0, 'once per strip');
+  const f = quiet(demo({ talents: ['shock-front'] }));
+  armor(f, 'pulse', 4);
+  fxAnswer(f, part(f, 'pulse'));
+  assert.equal(part(f, 'pulse').armor, 0, 'answering its tell breaks every ◆');
 });
 
-test('Demolitionist tier 2: Meltdown burns every other part at half', () => {
+test('Demolitionist tier 3: Deep Burn, Meltdown, Cook-Off', () => {
+  const d = noArmor(quiet(demo({ talents: ['deep-burn'] })));
+  big(d, 'pulse');
+  act(d, 'thermal-runaway pulse');
+  assert.equal(lost(d, 'pulse'), 9, 'Deep Burn: +5 a tick');
+  act(d, 'hold');
+  assert.equal(lost(d, 'pulse'), 9 + 13, 'it still grows by 4');
   const s = noArmor(quiet(demo({ talents: ['meltdown'] })));
   big(s, 'pulse'); big(s, 'encryptor');
   act(s, 'thermal-runaway pulse');
@@ -229,9 +226,18 @@ test('Demolitionist tier 2: Meltdown burns every other part at half', () => {
   assert.equal(lost(s, 'encryptor'), 2);
   act(s, 'hold');
   assert.equal(lost(s, 'encryptor'), 2 + 4, 'it grows by half as much');
+  const c = quiet(demo({ talents: ['cook-off'] })), n = quiet(demo());
+  for (const x of [c, n]) { big(x, 'pulse'); armor(x, 'pulse', 6); x.encounter.burns.push({ id: 'thermal-runaway', name: 'Thermal Runaway', target: 'pulse', damage: 10, left: 3 }); act(x, 'hold'); }
+  assert.equal(lost(n, 'pulse'), 0, 'a tick on armor breaks a ◆');
+  assert.equal(lost(c, 'pulse'), 10, 'Cook-Off: and deals its damage');
+  assert.equal(part(c, 'pulse').armor, part(n, 'pulse').armor);
 });
 
-test('Demolitionist tier 3: Total Overkill spills onto every other part; Scorched Earth stops patching', () => {
+test('Demolitionist tier 4: Crumple Zone, Total Overkill, Reactive Plating', () => {
+  const z = demo({ talents: ['crumple-zone'] }), p = part(z, 'pulse');
+  assert.equal(takenMult(z, p), 1);
+  z.encounter.virus.tells = { list: [{ told: true, part: 'pulse', kind: 'charge', name: 'x' }] };
+  assert.equal(takenMult(z, p), 0.8, 'a charged attack deals 20% less');
   withEdges(() => {
     const s = noArmor(quiet(demo({ talents: ['total-overkill'] })));
     big(s, 'encryptor'); extra(s, 'x1');
@@ -239,18 +245,46 @@ test('Demolitionist tier 3: Total Overkill spills onto every other part; Scorche
     act(s, 'spike pulse');
     assert.equal(lost(s, 'encryptor'), 20);
     assert.equal(lost(s, 'x1'), 20);
-    const n = noArmor(quiet(demo()));
-    big(n, 'encryptor'); extra(n, 'x1');
-    part(n, 'pulse').integrity = 1;
-    act(n, 'spike pulse');
-    assert.equal(lost(n, 'encryptor') + lost(n, 'x1'), 20, 'without it, one part');
   });
-  const s = quiet(demo({ talents: ['scorched-earth'] }));
-  armor(s, 'pulse', 1);
-  act(s, 'spike pulse');
-  assert.equal(part(s, 'pulse').patchAt, null);
-  for (let k = 0; k < patchDelay(s) + 2; k++) act(s, 'hold');
-  assert.equal(part(s, 'pulse').armor, 0, 'it never patches');
+  const r = quiet(demo({ talents: ['reactive-plating'] }));
+  armor(r, 'pulse', 3);
+  r.encounter.shield = 20;
+  takeDamage(r, 10, 'pulse', 'a test hit');
+  assert.equal(part(r, 'pulse').armor, 1, 'its hit on your shield breaks 2 ◆ on it');
+});
+
+test('Demolitionist tier 5: Blast Radius, Ring Circuit, Cascade Failure', () => {
+  const s = noArmor(quiet(demo({ talents: ['blast-radius'] })));
+  big(s, 'pulse');
+  act(s, 'fork-bomb');
+  assert.equal(lost(s, 'pulse'), Math.floor(16 * 1.15), 'Blast Radius: +15% on Fork Bomb');
+  const r = noArmor(quiet(demo({ talents: ['ring-circuit'] })));
+  big(r, 'pulse'); big(r, 'encryptor');
+  act(r, 'chain-reaction pulse');
+  assert.ok(part(r, 'encryptor').bkChain, 'every part is wired');
+  const c = quiet(demo({ talents: ['cascade-failure'] })), e = c.encounter;
+  e.readyAt.flood = e.cycle + 5;
+  fireEvent(c, 'cut', { part: part(c, 'pulse') });
+  assert.equal(e.readyAt.flood, e.cycle + 4, 'a cut lowers every cooldown by 1');
+});
+
+test('Demolitionist tier 6: Soft Target, Recursion, Critical Mass', () => {
+  const t = noArmor(quiet(demo({ talents: ['soft-target'] })));
+  big(t, 'pulse');
+  act(t, 'spike pulse');
+  assert.equal(lost(t, 'pulse'), Math.floor(25 * 1.1));
+  const r = noArmor(quiet(demo({ talents: ['recursion'] })));
+  big(r, 'pulse');
+  act(r, 'fork-bomb');
+  act(r, 'hold');
+  assert.equal(lost(r, 'pulse'), 16 + 8, 'Fork Bomb again next cycle, at half');
+  CONFIG.baseCrit = 100;
+  try {
+    const m = quiet(demo({ talents: ['critical-mass'] }));
+    big(m, 'pulse'); armor(m, 'pulse', 0); armor(m, 'encryptor', 3);
+    act(m, 'spike pulse');
+    assert.equal(part(m, 'encryptor').armor, 2, 'a crit breaks 1 ◆ on every other part');
+  } finally { CONFIG.baseCrit = 0; }
 });
 
 // ---------- Overclocker ----------
@@ -340,47 +374,113 @@ test('Overclocker in a crew: Turbo Boost runs every crewmate hot and ticks their
   } finally { hooks.crewAllies = was; }
 });
 
-test('Overclocker fillers: Core Voltage, Heat Spreader, Liquid Cooling', () => {
-  const s = noArmor(quiet(oc({ ranks: { 'core-voltage': 2 } })));
-  big(s, 'pulse');
-  act(s, 'segfault pulse');
-  assert.equal(lost(s, 'pulse'), Math.floor(30 * 1.16));
-  const h = noArmor(quiet(oc({ ranks: { 'heat-spreader': 2 } })));
-  part(h, 'pulse').integrity = 1;
-  act(h, 'spike pulse');
-  assert.equal(h.encounter.momentum.until, h.encounter.cycle - 1 + SKILLS.momentumCycles + 2);
-  const l = oc({ ranks: { 'liquid-cooling': 1 } });
-  act(l, 'overvolt');
-  assert.equal(l.server.integrity, 96, 'Overvolt costs 2 less a rank');
-  const free = oc({ ranks: { 'liquid-cooling': 3 } });
-  act(free, 'turbo-boost');
-  assert.equal(free.server.integrity, 100, 'free at 3 ranks');
-});
-
-test('Overclocker tiers: Feedback Loop, Burn-in, Critical Heat', () => {
+test('Overclocker tier 1: Boost Clock, Hair Trigger, Feedback Loop', () => {
+  const o = ABILITIES.overload.damage;
+  const b = noArmor(quiet(oc({ talents: ['boost-clock'] })));
+  big(b, 'pulse');
+  act(b, 'overload pulse');
+  assert.equal(lost(b, 'pulse'), o + 10);
+  const h = noArmor(quiet(oc({ talents: ['hair-trigger'] })));
+  big(h, 'pulse');
+  act(h, 'overload pulse');
+  assert.equal(lost(h, 'pulse'), Math.floor(o * 0.85), '15% less');
+  assert.equal(cooldownOf(h, 'overload'), 2);
   CONFIG.baseCrit = 100;
   try {
     const s = noArmor(quiet(oc({ talents: ['feedback-loop'] })));
     big(s, 'pulse');
-    act(s, 'spike pulse');
-    assert.equal(momentumStacks(s), 1, 'a crit adds a stack');
+    act(s, 'overvolt pulse');
+    assert.equal(momentumStacks(s), 1, 'a crit adds a stack, once a cycle');
   } finally { CONFIG.baseCrit = 0; }
+});
+
+test('Overclocker tier 2: Core Voltage, Burn-in, Clock Glitch', () => {
+  const s = noArmor(quiet(oc({ talents: ['core-voltage'] })));
+  big(s, 'pulse');
+  act(s, 'segfault pulse');
+  assert.equal(lost(s, 'pulse'), Math.floor(30 * 1.2));
   const b = noArmor(quiet(oc({ talents: ['burn-in'] })));
   big(b, 'pulse');
   stacks(b, 3);
   act(b, 'thermal-throttle pulse');
   assert.equal(momentumStacks(b), 1, 'half the stacks kept');
   assert.equal(lost(b, 'pulse'), Math.floor(80 * 1.1), 'the kept stack still counts');
-  const c = noArmor(quiet(oc({ talents: ['critical-heat'] })));
-  big(c, 'pulse');
-  stacks(c, 4);
-  act(c, 'spike pulse');
-  assert.equal(lost(c, 'pulse'), Math.floor(Math.floor(25 * 1.4) * 1.5), 'four stacks: it crits');
-  const d = noArmor(quiet(oc({ talents: ['critical-heat'] })));
-  big(d, 'pulse');
-  stacks(d, 3);
-  act(d, 'spike pulse');
-  assert.equal(lost(d, 'pulse'), Math.floor(25 * 1.3), 'three: it doesn\'t have to');
+  const g = quiet(oc({ talents: ['clock-glitch'] }));
+  fxAnswer(g, part(g, 'pulse'));
+  assert.equal(momentumStacks(g), 2, 'answering a tell gives 2 stacks');
+});
+
+test('Overclocker tier 3: Liquid Cooling, Coolant Dump, Back-EMF', () => {
+  const l = oc({ talents: ['liquid-cooling'] });
+  act(l, 'overvolt');
+  assert.equal(l.server.integrity, 100, 'Overvolt costs nothing');
+  const c = quiet(oc({ talents: ['coolant-dump'] }));
+  stacks(c, 2);
+  act(c, 'vent');
+  assert.equal(c.encounter.shield, 16, '8 shield a stack Vent spends');
+  const m = quiet(oc({ talents: ['back-emf'] }));
+  fireEvent(m, 'struck', { part: part(m, 'pulse') });
+  fireEvent(m, 'struck', { part: part(m, 'pulse') });
+  assert.equal(momentumStacks(m), 1, 'a stack when hit, once a cycle');
+});
+
+test('Overclocker tier 4: Heat Spreader, Stack Overflow, Context Switch', () => {
+  const h = noArmor(quiet(oc({ talents: ['heat-spreader'] })));
+  part(h, 'pulse').integrity = 1;
+  act(h, 'spike pulse');
+  assert.equal(h.encounter.momentum.until, h.encounter.cycle - 1 + SKILLS.momentumCycles + 2);
+  const o = noArmor(quiet(oc({ talents: ['stack-overflow'] })));
+  big(o, 'pulse');
+  act(o, 'stack-smash pulse');
+  assert.equal(lost(o, 'pulse'), 60, 'twice against any part');
+  const x = noArmor(quiet(oc({ talents: ['stack-overflow'] }))), ex = SKILLS.exposed;
+  big(x, 'pulse');
+  part(x, 'pulse').exposedUntil = x.encounter.cycle + 3;
+  SKILLS.exposed = 0; // Exposed's crit chance off, for exact numbers
+  try { act(x, 'stack-smash pulse'); } finally { SKILLS.exposed = ex; }
+  assert.equal(lost(x, 'pulse'), 90, 'three times against an Exposed one');
+  const c = quiet(oc({ talents: ['context-switch'] }));
+  c.encounter.readyAt.segfault = c.encounter.cycle + 4;
+  fireEvent(c, 'cut', { part: part(c, 'pulse') });
+  assert.equal(c.encounter.readyAt.segfault, undefined, 'a cut makes Segfault usable');
+});
+
+test('Overclocker tier 5: Exploit Kit, Fault Storm, Cold Plate', () => {
+  CONFIG.baseCrit = 92;
+  try {
+    const k = noArmor(quiet(oc({ talents: ['exploit-kit'] })));
+    big(k, 'pulse');
+    for (let i = 0; i < 4; i++) act(k, 'spike pulse');
+    assert.equal(lost(k, 'pulse'), 4 * Math.floor(25 * 1.5), '8% more crit chance');
+  } finally { CONFIG.baseCrit = 0; }
+  const f = quiet(oc({ talents: ['fault-storm'] }));
+  act(f, 'fault-injection pulse');
+  assert.equal(part(f, 'encryptor').bkFault.until, f.encounter.cycle, 'every part, for 2 cycles');
+  const c = quiet(oc({ talents: ['cold-plate'] }));
+  c.encounter.shield = 10;
+  act(c, 'hold');
+  assert.equal(momentumStacks(c), 2, 'gaining a shield gives 2 stacks');
+});
+
+test('Overclocker tier 6: Junction Temp, Setuid, Flashpoint', () => {
+  const j = noArmor(quiet(oc({ talents: ['junction-temp'] })));
+  big(j, 'pulse');
+  stacks(j, 3);
+  act(j, 'thermal-throttle pulse');
+  assert.equal(lost(j, 'pulse'), Math.floor(80 * 1.25));
+  const u = noArmor(quiet(oc({ talents: ['setuid'] })));
+  big(u, 'pulse');
+  act(u, 'sudo');
+  const was = lost(u, 'pulse');
+  act(u, 'spike pulse');
+  assert.equal(lost(u, 'pulse') - was, Math.floor(25 * 1.5), 'every hit during Sudo crits');
+  const f = noArmor(quiet(oc({ talents: ['flashpoint'] })));
+  big(f, 'encryptor');
+  part(f, 'pulse').integrity = 1;
+  act(f, 'spike pulse');
+  f.encounter.momentum = null;
+  act(f, 'spike encryptor');
+  assert.equal(lost(f, 'encryptor'), Math.floor(25 * 1.5), 'the hit after a break crits');
 });
 
 // ---------- the edges ----------

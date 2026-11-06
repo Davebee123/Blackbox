@@ -42,7 +42,7 @@ test('the highlighter escapes the text, and only adds the marks', () => {
   for (const [k, a] of Object.entries(ARCHETYPES)) {
     rules.push(a.passive.rule, SYNC[k].rule, ...a.spec.map((x) => x.rule));
     for (const x of a.skills) rules.push(SKILL_TEXT[x.id]?.desc || ABILITIES[x.id]?.desc || x.rule, ABILITIES[x.id]?.short || '');
-    for (const x of Object.values(a.subs)) rules.push(x.edge.rule, ...x.fillers.flat().map((n) => n.rule), ...x.talents.flat().map((n) => n.rule), ...(x.capstones || []).flatMap((c) => c.rules));
+    for (const x of Object.values(a.subs)) rules.push(x.edge.rule, ...x.tiers.flat().map((n) => n.rule), ...(x.capstones || []).flatMap((c) => c.rules));
   }
   for (const r of rules) assert.equal(plain(ruleHtml(r)), r);
   for (const r of rules.filter((r) => /\d+ damage/.test(r))) assert.ok(lit(ruleHtml(r)).some((x) => /\d+ damage/.test(x)), r);

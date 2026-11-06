@@ -1,6 +1,6 @@
 # Builds: skill affixes and combos
 
-**Status.** Design, nothing built. The designer's picks (November 2026): a large build layer for players to experiment
+**Status.** The talent tiers and the shared events (section 3) are built (GAME_RULES.md *Talents*); the rest is design. The designer's picks (November 2026): a large build layer for players to experiment
 in; some builds clearly stronger than others, as long as they still have to play the fight. No skill ranks: gear
 carries skill efficiency, the talent tree the rest.
 
@@ -45,7 +45,7 @@ quarter. An effect's *limits* (once per cycle, per fight) holds the loops.
 | Mirror (Bastion) | Reflective ACL, *shielded* pieces | Shields turn incoming hits into damage. |
 | Plague herd (Operator, off-class) | Helpers that burn, Infiltrator burn-tick pieces | Helpers spread burns the burn pieces feed on. |
 
-## Talent tiers (decided)
+## Talent tiers (built)
 
 Decision 7.1, the designer's pick (November 2026; the review page was a scratchpad artifact). Six pick-one-of-three
 tiers replace the three pick-one-of-two tiers and the three ranked rows; the capstone row stays as it is (45, rank 2
@@ -156,4 +156,4 @@ against Log Wipe, Host Vector without a crewmate's Tag, and whether Replay is an
 
 ## 7. Open decisions
 
-1. **More talent choices:** decided, *Talent tiers (decided)* above.
+1. **More talent choices:** built, *Talent tiers (built)* above.

@@ -16,11 +16,11 @@ const strip = (css) => css.replace(/\/\*[\s\S]*?\*\//g, '');
 const plain = (h) => h.replace(/<[^>]+>/g, '').replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
 const at = (cls, level, sub = null) => { const s = fresh(); s.loadout.archetype = cls; s.hackers = { [cls]: { level, xp: 0 } }; if (sub) s.loadout.sub = { [cls]: sub }; return s; };
 // Every kind of unlock: skills (3), protocol bases and the kit talent (5), a floor (7), the subclass to pick and SIGINT
-// and a talent point (10), the Implant slot and a daemon slot (15), a protocol slot (30), the capstone point (45) and
+// and a talent tier (10, 16), the Implant slot and a daemon slot (15), a protocol slot (30), the capstone point (45) and
 // its second rank (50); a picked subclass's edge (10); server memory (off for now: its words, by hand).
 function everyKind() {
   const s = at('breaker', 1);
-  const evs = [3, 5, 7, 10, 15, 30, 45, 50].map((L) => levelUpPreview(s, L));
+  const evs = [3, 5, 7, 10, 15, 16, 30, 45, 50].map((L) => levelUpPreview(s, L));
   evs.push(levelUpPreview(at('breaker', 10, 'demolitionist'), 10));
   evs.push({ ...levelUpPreview(s, 12), gains: ['server memory +1'] });
   return evs;
@@ -73,7 +73,7 @@ test('the tooltips read in the game\'s voice: Name, then plain sentences with th
   assert.match(g('kit').tip, /^Overclocked Core: Increases all damage you deal by 6%/);
   assert.equal(g('skill').value, 'key 3', 'a new skill shows the key it went on');
   assert.equal(g('sigint').value, 'key -');
-  assert.equal(sum.items.find((it) => it.label === 'Talent point').value, '+4', 'counted kinds add up (10, 10 with a subclass, 30, 50)');
+  assert.equal(sum.items.find((it) => it.label === 'Talent tier').value, '+3', 'counted kinds add up (10, 10 with a subclass, 16)');
   for (const it of sum.items) assert.ok(it.label.length <= 24 && /^[A-Z]/.test(it.label), it.label);
 });
 
