@@ -11,6 +11,7 @@ const COLORS = { amber: '#f1b92f', bright: '#fff2c8', hot: '#ff5b3d', dim: '#7e5
 const RAMP = ' .,:-=+*#%@'; // dark → lit
 const SHARDS = '#*+=:.01';
 const BITS = '0101010#*';
+const SPARKS = '*+/-x1010';
 
 // Which shape a virus wears: its strain first, then a guard's or a room body's own kind, then its family's.
 const STRAIN_SHAPE = { keylogger: 'eye', hashrat: 'cube', floodgate: 'fountain', leech: 'tick', sleeper: 'cocoon', patchwork: 'crab', flicker: 'wraith', extortion: 'padlock', echo: 'rings', bricker: 'block', overrun: 'hive' };
@@ -34,16 +35,18 @@ export function lungeAt(u) {
 }
 // How each body attacks: the move its part makes coming out of the window, and how long it takes (ms).
 //   snap: two quick jabs, the pincers closing on each;   strike: darts down at you, whipping side to side;
-//   phase: blinks out, reappears at the glass, smeared;   pounce: the whole body leaps at you;
-//   stab: its limbs jab out one after another;            spin: it spins up and flies out like a saw.
-export const STRIKES = { snap: 700, strike: 520, phase: 680, pounce: 720, stab: 780, spin: 640, lunge: 560 };
+//   phase: blinks out, reappears at the glass, smeared;   stab: its limbs jab out one after another;
+//   shock: the part stays, rears and throws rings of characters that swell out past the window at you;
+//   grind: the part spins up where it is and sprays sparks that fly out at the glass.
+// The body never leaves: only the attacking part comes out, or what it throws.
+export const STRIKES = { snap: 700, strike: 520, phase: 680, stab: 780, shock: 760, grind: 720, lunge: 560 };
 const STRIKE_OF = {
   crab: 'snap', padlock: 'snap', tick: 'snap', magnet: 'snap',
   serpent: 'strike', fountain: 'strike', hive: 'strike',
   wraith: 'phase', eye: 'phase', cocoon: 'phase', rings: 'phase',
-  hound: 'pounce', horse: 'pounce', block: 'pounce', gate: 'pounce', boiler: 'pounce', bomb: 'pounce',
-  spider: 'stab', mast: 'stab',
-  blades: 'spin', dish: 'spin', cube: 'spin',
+  hound: 'shock', horse: 'shock', block: 'shock', gate: 'shock', boiler: 'shock', bomb: 'shock', mast: 'shock', dish: 'shock',
+  spider: 'stab',
+  blades: 'grind', cube: 'grind',
 };
 export const strikeOf = (shape) => STRIKE_OF[shape] || 'lunge';
 const clamp01 = (u) => Math.max(0, Math.min(1, u));
@@ -70,22 +73,22 @@ export function strikeAt(style, u, i, x, y, c) {
       const r = v < 0.5 ? 1 : lungeAt(0.46 + ((v - 0.5) / 0.5) * 0.54);
       return { reach: r, dx: v < 0.36 ? ((i * 7) % 11 - 5) * 1.6 : 0, dy: 0, glitch: v < 0.36 };
     }
-    case 'pounce': { // the whole body: crouch, leap up and at you, land
-      const r = lungeAt(u) * 0.85;
-      return { reach: r, dx: 0, dy: -Math.sin(Math.PI * clamp01(u / 0.6)) * 30 + (u < 0.16 ? (u / 0.16) * 6 : 0) };
+    case 'shock': { // breathes in, then shudders in place as each ring goes, and settles
+      if (u < 0.18) return { reach: -0.25 * Math.sin((u / 0.18) * Math.PI / 2), dx: 0, dy: 0 };
+      const k = (u - 0.18) / 0.82, shake = u < 0.6 ? 1.8 : 0;
+      return { reach: -0.25 * (1 - k) ** 2 + 0.2 * Math.sin(Math.PI * k), dx: ((i * 13) % 7 - 3) * shake * Math.sin(u * 90), dy: 0 };
     }
-    case 'stab': { // limbs jab out radially, one after another around the body
-      const a = (Math.atan2(oy, ox) / (Math.PI * 2) + 0.5) % 1, r = lungeAt(clamp01((u - a * 0.4) / 0.6));
-      const out = Math.max(0, r) * 0.6;
-      return { reach: r * 0.9, dx: ox * out, dy: oy * out };
-    }
-    case 'spin': { // spins up as it flies out, spinning down as it comes home
-      const r = lungeAt(u) * 0.7, a = Math.PI * 5 * (1 - (1 - u) ** 2);
-      return { reach: r, dx: ox * Math.cos(a) - oy * Math.sin(a) - ox, dy: ox * Math.sin(a) + oy * Math.cos(a) - oy };
+    case 'grind': { // spins up where it is, leaning in a little, and spins down
+      const w = Math.sin(Math.PI * u), a = Math.PI * 7 * (u - Math.sin(2 * Math.PI * u) / (2 * Math.PI));
+      return { reach: w * 0.18, dx: ox * Math.cos(a) - oy * Math.sin(a) - ox, dy: ox * Math.sin(a) + oy * Math.cos(a) - oy };
     }
     default: return { reach: lungeAt(u), dx: 0, dy: 0 };
   }
 }
+
+// What a part throws while it strikes: the moments its rings go (shock), how hard it sprays (grind, 0–1).
+export const SHOCK_RINGS = [0.2, 0.34, 0.48];
+export const sprayAt = (u) => (u > 0.15 && u < 0.75 ? Math.sin(((u - 0.15) / 0.6) * Math.PI) : 0);
 
 // When a broken part's point lets go, 0–1 of the dissolve: stable per point, so it crumbles in a scatter.
 export const releaseOf = (i) => ((i * 0.6180339887) % 1) * 0.8;
@@ -96,6 +99,7 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
   const hits = new Map();
   let shake = null, glitch = 0;
   const shards = [];
+  const flung = []; // characters a strike throws out over the page (shock rings, grind sparks)
   const rain = [];
   // The layer an attacking part strikes out onto: fixed over the page, takes no input, made on first use.
   let out = null, octx = null, outDirty = false;
@@ -489,14 +493,14 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
     const phased = s.encounter.cycle % 2 === 1;
 
     // Strikes under way: each attacking part's time through its move, and its middle on screen (the move bends
-    // around it). A pounce moves the whole body.
+    // around it).
     const strikes = new Map();
     if (motion) for (const [id, h] of hits) {
       const u = h.kind === 'attack' ? (now - h.time) / STRIKES[style] : 1;
-      if (u > 0 && u < 1 && resolvePartById(v, id)?.integrity > 0) strikes.set(style === 'pounce' ? '*' : id, { u, c: { x: 0, y: 0 }, n: 0 });
+      if (u > 0 && u < 1 && resolvePartById(v, id)?.integrity > 0) strikes.set(id, { u, h, c: { x: 0, y: 0 }, n: 0 });
     }
     if (strikes.size) for (const p of points) {
-      const part = resolvePart(v, p.region), st = strikes.get('*') || (part?.id && strikes.get(part.id));
+      const part = resolvePart(v, p.region), st = part?.id && strikes.get(part.id);
       if (!st) continue;
       const q = animate(p, clock), [x1, z1] = rotY(q.x, q.z, yaw);
       st.c.x += x1; st.c.y += q.y * cp - z1 * sp; st.n++;
@@ -521,7 +525,7 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
       const age = h ? (now - h.time) / 900 : 0;
       const fresh = h && part.integrity > 0 && motion ? (1 - age) ** 2 : 0;
       // The strike: the attacking part comes at you its own way (nearer, so bigger and spread from the middle), past its frame.
-      const st = strikes.size ? strikes.get('*') || (part.id && part.integrity > 0 ? strikes.get(part.id) : null) : null;
+      const st = strikes.size && part.id && part.integrity > 0 ? strikes.get(part.id) : null;
       const m = st ? strikeAt(style, st.u, i, x1, y1, st.c) : null;
       if (m?.hide) continue;
       const reach = m ? m.reach : 0;
@@ -577,16 +581,58 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
       c.ch = ch;
     }
 
+    // What strikes throw: shock rings and grind sparks, from the part's middle on the panel, out over the page.
+    if (striking) for (const [id, st] of strikes) {
+      if (style !== 'shock' && style !== 'grind') continue;
+      const mine = [...cells.values()].filter((c) => c.part?.id === id);
+      if (!mine.length) continue;
+      const mx = mine.reduce((a, c) => a + c.x, 0) / mine.length, my = mine.reduce((a, c) => a + c.y, 0) / mine.length;
+      const ext = Math.max(12, Math.sqrt(mine.reduce((a, c) => a + (c.x - mx) ** 2 + (c.y - my) ** 2, 0) / mine.length));
+      const chars = mine.map((c) => c.ch).filter((ch) => ch && ch.trim());
+      if (style === 'shock') {
+        st.h.rings ??= 0;
+        while (st.h.rings < SHOCK_RINGS.length && st.u >= SHOCK_RINGS[st.h.rings]) {
+          const n = 30 + st.h.rings * 6, tilt = 0.5 + Math.random() * 0.15, spin = Math.random() * 6;
+          for (let k = 0; k < n; k++) {
+            const a = spin + (k / n) * Math.PI * 2, sp = 4.2 + st.h.rings * 0.8;
+            flung.push({ x: mx + Math.cos(a) * ext, y: my + Math.sin(a) * ext * tilt, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * tilt, grow: 2.4, life: 620, max: 620, c: k % 3 ? (k % 2 ? '1' : '0') : chars[k % (chars.length || 1)] || '#', ring: true });
+          }
+          st.h.rings++;
+        }
+      } else {
+        const want = Math.round(sprayAt(st.u) * 7);
+        for (let k = 0; k < want; k++) {
+          const from = mine[Math.floor(Math.random() * mine.length)], a = Math.atan2(from.y - my, from.x - mx) + Math.PI / 2 * (Math.random() < 0.8 ? 1 : -1) * 0.7;
+          const sp = 3 + Math.random() * 5;
+          flung.push({ x: from.x, y: from.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, grow: 2.8, life: 380 + Math.random() * 260, max: 640, c: SPARKS[Math.floor(Math.random() * SPARKS.length)] });
+        }
+      }
+    }
+
     // The strike: the lunging part on the layer over the page, so it breaks past its window's edge.
-    if (near.length || outDirty) {
+    if (near.length || outDirty || flung.length) {
       const o = outLayer(), r = canvas.getBoundingClientRect();
       const W = innerWidth, H = innerHeight;
       if (out.width !== Math.round(W * dpr) || out.height !== Math.round(H * dpr)) { out.width = Math.round(W * dpr); out.height = Math.round(H * dpr); }
       o.setTransform(dpr, 0, 0, dpr, 0, 0);
       o.clearRect(0, 0, W, H);
-      outDirty = near.length > 0;
+      outDirty = near.length > 0 || flung.length > 0;
       const fx = r.width / width, fy = r.height / height;
       o.textAlign = 'center'; o.textBaseline = 'middle';
+      // Thrown characters come at you: they grow as they go, and fade.
+      for (let k = flung.length - 1; k >= 0; k--) {
+        const d = flung[k];
+        d.life -= delta;
+        if (d.life <= 0 || !motion) { flung.splice(k, 1); continue; }
+        const age = 1 - d.life / d.max, size = 1 + age * d.grow;
+        d.x += d.vx * size * delta / 16; d.y += d.vy * size * delta / 16;
+        if (!d.ring && Math.random() < 0.1) d.c = Math.random() < 0.5 ? '1' : '0';
+        o.font = `700 ${glyph * size * fx}px "IBM Plex Mono", monospace`;
+        o.fillStyle = age < 0.3 ? COLORS.bright : COLORS.hot;
+        o.shadowColor = COLORS.hot; o.shadowBlur = 5 * size;
+        o.globalAlpha = Math.min(1, (d.life / d.max) * 1.6) * 0.9;
+        o.fillText(d.c, r.left + d.x * fx, r.top + d.y * fy);
+      }
       near.sort((a, b) => a.step - b.step || b.z - a.z);
       for (const c of near) {
         const lit = 0.18 + c.lum * 0.82;

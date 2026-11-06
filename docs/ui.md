@@ -242,8 +242,9 @@ interface**. CSS, the DOM and text only (no canvas, WebGL or PixiJS on the scree
   `prefers-reduced-motion` stop every animation in the file.
 - **The strike** (virus-art.mjs, `#art-out`), asked for by the designer: an attacking part comes out of the render's
   window, nearer and bigger, over the page for about half a second, and back. Each body moves its own way (`STRIKES`):
-  claws snap twice, serpents whip down at you, ghosts blink to the glass, hounds and bulky bodies pounce whole, spiders
-  jab leg by leg, blades and dishes spin out like a saw. No
+  claws snap twice, serpents whip down at you, ghosts blink to the glass, spiders jab leg by leg; hounds, masts and
+  bulky bodies stay put and throw rings of characters that swell out at you; blades grind in place and spray sparks.
+  The body never leaves its window. No
   input; Screen effects off or Motion off: none. A broken part dissolves into drifting 1s and 0s inside the render.
 - **The fight boot** (bootfx.mjs, bootfx.css) is another effect on the panels, approved by the designer (*Centre stage*).
   The first time you see a fight: brackets lock on its room (from the rooms page), the tube goes dark with a red edge,
