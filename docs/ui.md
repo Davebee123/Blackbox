@@ -240,7 +240,10 @@ interface**. CSS, the DOM and text only (no canvas, WebGL or PixiJS on the scree
 - Strength is one setting, off / subtle / medium (default) / bold, as `--sfx-k` on `<html data-sfx>`, each effect
   switchable on its own; it also sets how much moves on the fight board. Motion off (`.no-motion`) and
   `prefers-reduced-motion` stop every animation in the file.
-- **The fight boot** (bootfx.mjs, bootfx.css) is the one effect on the panels, approved by the designer (*Centre stage*).
+- **The strike** (virus-art.mjs, `#art-out`), asked for by the designer: an attacking part pulls back, then lunges out
+  of the render's window, nearer and bigger, over the page for about half a second (`ATTACK_MS`), and snaps back. No
+  input; Screen effects off or Motion off: none. A broken part dissolves into drifting 1s and 0s inside the render.
+- **The fight boot** (bootfx.mjs, bootfx.css) is another effect on the panels, approved by the designer (*Centre stage*).
   The first time you see a fight: brackets lock on its room (from the rooms page), the tube goes dark with a red edge,
   the virus comes up alone at the centre, decoding out of red noise, and drops into its panel; a boot console types
   your bar, class, keys and the virus where the board will be; your panels come up. About two seconds; any key or

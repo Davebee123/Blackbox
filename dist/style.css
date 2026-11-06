@@ -4366,3 +4366,6 @@ p.impl { margin: 6px 0 0; padding: 4px 2px; border-bottom: 1px dotted color-mix(
 }
 @media (prefers-reduced-motion: reduce) { .sk-panel.open { animation: none; } }
 .no-motion .sk-panel.open { animation: none; }
+/* An attacking part striking out of the render's window (virus-art.mjs): drawn over the page for half a second, no input. */
+#art-out { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 45; pointer-events: none; }
+.no-motion #art-out { display: none; }

@@ -2,12 +2,15 @@
 // drawn as terminal characters on a fixed grid. Every point has a surface normal, so the lit side
 // draws in dense characters (#%@) and the far side in light ones (.:-), with 0/1 flickering
 // through it. Parts animate (serpents undulate, tendrils sway, rings orbit, blades spin, cores
-// breathe), light up when hit, pulse red when their attack lands this cycle, and burst into
-// flying characters when broken. Reads state; never changes it.
+// breathe), light up when hit, pulse red when their attack lands this cycle, and dissipate into
+// drifting 1s and 0s when broken. An attacking part lunges at you: it pulls back, then strikes out of
+// its window, drawn bigger and nearer on a layer over the page (#art-out), and snaps back. Reads
+// state; never changes it.
 
 const COLORS = { amber: '#f1b92f', bright: '#fff2c8', hot: '#ff5b3d', dim: '#7e5311', gold: '#ffd85c', deep: '#a8741c' };
 const RAMP = ' .,:-=+*#%@'; // dark → lit
 const SHARDS = '#*+=:.01';
+const BITS = '0101010#*';
 
 // Which shape a virus wears: its strain first, then a guard's or a room body's own kind, then its family's.
 const STRAIN_SHAPE = { keylogger: 'eye', hashrat: 'cube', floodgate: 'fountain', leech: 'tick', sleeper: 'cocoon', patchwork: 'crab', flicker: 'wraith', extortion: 'padlock', echo: 'rings', bricker: 'block', overrun: 'hive' };
@@ -19,13 +22,33 @@ export const shapeOf = (v) => STRAIN_SHAPE[v.strain] || OWN_SHAPE[v.family] || F
 function rng(seed) { let x = (seed >>> 0) || 1; return () => ((x = (x * 1664525 + 1013904223) >>> 0) / 4294967296); }
 const hash = (s) => [...String(s)].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
 
-export function createArt({ getState, canMove, getSelected, getNowSources }) {
+const BREAK_MS = 1500; // a broken part dissolving
+const ATTACK_MS = 560; // an attacking part's lunge, out and back
+
+// The lunge's reach, 0–1, at a share of its time: a short pull back (negative), a fast strike, a hold, an ease home.
+export function lungeAt(u) {
+  if (u <= 0 || u >= 1) return 0;
+  if (u < 0.16) return -0.18 * Math.sin((u / 0.16) * Math.PI / 2);
+  if (u < 0.34) { const k = (u - 0.16) / 0.18; return -0.18 + 1.18 * (1 - (1 - k) ** 3); }
+  if (u < 0.46) return 1;
+  const k = (u - 0.46) / 0.54; return (1 - k) ** 2 * (1 + 2 * k) * 1; // smooth back to rest
+}
+// When a broken part's point lets go, 0–1 of the dissolve: stable per point, so it crumbles in a scatter.
+export const releaseOf = (i) => ((i * 0.6180339887) % 1) * 0.8;
+
+export function createArt({ getState, canMove, getSelected, getNowSources, breakout = () => true }) {
   let canvas = null, ctx = null, previous = 0, angle = 0, clock = 0;
   let builtFor = '', points = [], anims = [], radius = 1, rx = 1, ry = 1;
   const hits = new Map();
   let shake = null, glitch = 0;
   const shards = [];
   const rain = [];
+  // The layer an attacking part strikes out onto: fixed over the page, takes no input, made on first use.
+  let out = null, octx = null, outDirty = false;
+  const outLayer = () => {
+    if (!out?.isConnected) { out = document.createElement('canvas'); out.id = 'art-out'; out.setAttribute('aria-hidden', 'true'); document.body.appendChild(out); octx = out.getContext('2d'); }
+    return octx;
+  };
 
   // ---------- building: primitives with normals ----------
   const add = (x, y, z, nx, ny, nz, region, a = 0) => { const l = Math.hypot(nx, ny, nz) || 1; points.push({ x, y, z, nx: nx / l, ny: ny / l, nz: nz / l, region, a }); };
@@ -398,7 +421,8 @@ export function createArt({ getState, canMove, getSelected, getNowSources }) {
 
     const yaw = Math.sin(angle) * 0.9 + angle * 0.15, pitch = 0.2 + Math.sin(clock * 0.4) * 0.06;
     const cyw = Math.cos(yaw), syw = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
-    for (const [id, h] of hits) if (now - h.time > 900) hits.delete(id);
+    for (const [id, h] of hits) if (now - h.time > (h.kind === 'break' ? BREAK_MS : 900)) hits.delete(id);
+    const striking = motion && breakout();
     const quake = motion && shake && now - shake.time < 350 ? (1 - (now - shake.time) / 350) ** 2 * shake.power : 0;
     const qx = quake ? (Math.random() - 0.5) * quake : 0, qy = quake ? (Math.random() - 0.5) * quake : 0;
     const tearing = motion && now < glitch; // a hit tears a few rows sideways
@@ -423,26 +447,41 @@ export function createArt({ getState, canMove, getSelected, getNowSources }) {
       const y1 = q.y * cp - z1 * sp; z1 = q.y * sp + z1 * cp;
       let [nx1, nz1] = rotY(q.nx, q.nz, yaw);
       const ny1 = q.ny * cp - nz1 * sp; nz1 = q.ny * sp + nz1 * cp;
-      const k = 300 / (300 + z1);
       const age = h ? (now - h.time) / 900 : 0;
       const fresh = h && part.integrity > 0 && motion ? (1 - age) ** 2 : 0;
+      // The lunge: the attacking part comes at you (nearer, so bigger and spread from the middle), past its frame.
+      const reach = h?.kind === 'attack' && part.integrity > 0 && motion ? lungeAt((now - h.time) / ATTACK_MS) : 0;
+      const k0 = 300 / (300 + z1);
+      if (reach) z1 -= reach * 175;
+      const k = reach > 0 ? Math.min(k0 * 3, 300 / (300 + Math.max(-205, z1))) : 300 / (300 + z1);
+      const grow = k / k0; // how much nearer than at rest: the size its characters draw at
       const jolt = fresh * (h?.kind === 'crit' ? 12 : h?.kind === 'attack' ? 0 : h?.kind === 'chit' ? 4 : 7);
-      const lunge = h?.kind === 'attack' ? fresh * 14 : 0;
-      let sx = width / 2 + qx + x1 * k * scale * (1 + lunge / 200) + Math.sin(i * 7.3) * jolt;
-      let sy = height / 2 + qy + y1 * k * scale * (1 + lunge / 200) + lunge + Math.cos(i * 3.1) * jolt;
-      const row = Math.round(sy / gy);
-      if (tearRows?.has(row)) sx += (Math.random() < 0.5 ? -1 : 1) * gx * 3;
-      const cx = Math.round(sx / gx), cyc = row;
-      const cell = cx * 10000 + cyc;
+      let sx = width / 2 + qx + x1 * k * scale + Math.sin(i * 7.3) * jolt;
+      let sy = height / 2 + qy + y1 * k * scale + reach * 10 + Math.cos(i * 3.1) * jolt;
+      const lunging = striking && grow > 1.12;
+      const step = lunging ? Math.round(grow * 4) / 4 : 1; // near characters sit on a coarser grid, bigger
+      const row = Math.round(sy / (gy * step));
+      if (tearRows?.has(row) && !lunging) sx += (Math.random() < 0.5 ? -1 : 1) * gx * 3;
+      const cx = Math.round(sx / (gx * step)), cyc = row;
+      const cell = lunging ? -(step * 4 * 1e8 + cx * 10000 + cyc) : cx * 10000 + cyc;
       const was = cells.get(cell);
       if (was && was.z <= z1) continue;
       const lum = Math.max(0, nx1 * LIGHT[0] + ny1 * LIGHT[1] + nz1 * LIGHT[2]);
-      cells.set(cell, { x: cx * gx, y: cyc * gy, z: z1, lum, part, h, fresh, i, region: p.region });
+      cells.set(cell, { x: cx * gx * step, y: cyc * gy * step, z: z1, lum, part, h, fresh, i, region: p.region, step: lunging ? step : 0 });
     }
 
+    // An attacking part's cells draw last, on the layer over the page; the rest on the panel.
+    const near = [];
     for (const c of cells.values()) {
       const { part, h, fresh } = c;
+      if (c.step) { near.push(c); continue; }
       const broken = part.integrity === 0;
+      // Broken: each point turns to a bit, then lets go as a drifting 1 or 0 (shards below).
+      const done = broken && h ? (now - h.time) / BREAK_MS : 0;
+      if (broken && h) {
+        const at = releaseOf(c.i);
+        if (done > at) { if (motion && !h.gone.has(c.i)) { h.gone.add(c.i); drift(c.x, c.y, h); } continue; }
+      }
       const ratio = part.integrity / part.max;
       const depth = Math.max(0.35, Math.min(1, 0.95 - c.z / (radius * 2.2)));
       const faded = selected && part.id !== selected && c.region !== 'body' ? 0.55 : 1;
@@ -453,13 +492,38 @@ export function createArt({ getState, canMove, getSelected, getNowSources }) {
       if (ratio < 0.35 && !broken && Math.random() < 0.12) ch = '%&$?!'[Math.floor(Math.random() * 5)];
       if (h?.kind === 'chit' && fresh > 0.3 && c.i % 5 === 0) ch = '*';
       if (h?.kind === 'crit' && fresh > 0.4 && c.i % 3 === 0) ch = '#';
-      const flare = h && !broken ? (h.kind === 'attack' ? COLORS.hot : h.kind === 'crit' ? COLORS.gold : COLORS.bright) : null;
+      if (broken && done > releaseOf(c.i) * 0.5) ch = (c.i + Math.floor(now / 70)) % 2 ? '1' : '0';
+      const flare = h ? (broken ? COLORS.bright : h.kind === 'attack' ? COLORS.hot : h.kind === 'crit' ? COLORS.gold : COLORS.bright) : null;
       const attacking = part.id && nowSources.has(part.id);
       ctx.fillStyle = flare || (attacking ? COLORS.hot : part.id === selected ? COLORS.gold : c.region === 'body' ? (ratio < 0.4 ? COLORS.dim : COLORS.deep) : ratio < 0.4 ? COLORS.dim : lit > 0.7 ? COLORS.bright : COLORS.amber);
       const age = h ? (now - h.time) / 900 : 0;
-      ctx.globalAlpha = Math.min(1, depth * faded * (attacking && !flare ? pulse + 0.25 : 1) * (broken ? Math.max(0, 1 - age * 1.6) : 1) * (0.55 + lit * 0.6));
+      ctx.globalAlpha = Math.min(1, depth * faded * (attacking && !flare ? pulse + 0.25 : 1) * (broken ? 1 - done * 0.4 : 1) * (0.55 + lit * 0.6));
       ctx.fillText(ch, c.x, c.y);
       c.ch = ch;
+    }
+
+    // The strike: the lunging part on the layer over the page, so it breaks past its window's edge.
+    if (near.length || outDirty) {
+      const o = outLayer(), r = canvas.getBoundingClientRect();
+      const W = innerWidth, H = innerHeight;
+      if (out.width !== Math.round(W * dpr) || out.height !== Math.round(H * dpr)) { out.width = Math.round(W * dpr); out.height = Math.round(H * dpr); }
+      o.setTransform(dpr, 0, 0, dpr, 0, 0);
+      o.clearRect(0, 0, W, H);
+      outDirty = near.length > 0;
+      const fx = r.width / width, fy = r.height / height;
+      o.textAlign = 'center'; o.textBaseline = 'middle';
+      near.sort((a, b) => a.step - b.step || b.z - a.z);
+      for (const c of near) {
+        const lit = 0.18 + c.lum * 0.82;
+        const ch = (c.i + Math.floor(now / 60)) % 9 === 0 ? (c.i % 2 ? '1' : '0') : RAMP[Math.max(2, Math.min(RAMP.length - 1, Math.round(lit * (RAMP.length - 1))))];
+        o.font = `700 ${glyph * c.step * fx}px "IBM Plex Mono", monospace`;
+        o.fillStyle = lit > 0.75 ? COLORS.bright : COLORS.hot;
+        o.shadowColor = COLORS.hot; o.shadowBlur = 6 * c.step;
+        o.globalAlpha = Math.min(1, 0.6 + lit * 0.5);
+        o.fillText(ch, r.left + c.x * fx, r.top + c.y * fy);
+        c.ch = ch;
+      }
+      o.shadowBlur = 0; o.globalAlpha = 1;
     }
 
     // Shards: characters thrown off a broken part, falling away.
@@ -469,9 +533,18 @@ export function createArt({ getState, canMove, getSelected, getNowSources }) {
         const d = shards[i];
         d.life -= delta;
         if (d.life <= 0) { shards.splice(i, 1); continue; }
-        d.vy += 0.00025 * delta * 60; d.x += d.vx * delta / 16; d.y += d.vy * delta / 16;
-        ctx.globalAlpha = Math.min(1, d.life / 500);
-        ctx.fillStyle = d.life > 600 ? COLORS.bright : COLORS.amber;
+        if (d.bit) { // a dissolving point: drifts up and out, wavering, flipping between 1 and 0, dimming
+          d.t += delta;
+          d.x += (d.vx + Math.sin(d.t / 140 + d.ph) * 0.35) * delta / 16; d.y += d.vy * delta / 16; d.vy *= 0.995;
+          if (Math.random() < 0.08) d.c = d.c === '1' ? '0' : '1';
+          const f = d.life / d.max;
+          ctx.globalAlpha = Math.min(1, f * 1.4) * 0.9;
+          ctx.fillStyle = f > 0.7 ? COLORS.bright : f > 0.35 ? COLORS.amber : COLORS.deep;
+        } else {
+          d.vy += 0.00025 * delta * 60; d.x += d.vx * delta / 16; d.y += d.vy * delta / 16;
+          ctx.globalAlpha = Math.min(1, d.life / 500);
+          ctx.fillStyle = d.life > 600 ? COLORS.bright : COLORS.amber;
+        }
         ctx.fillText(d.c, Math.round(d.x / gx) * gx, Math.round(d.y / gy) * gy);
       }
     }
@@ -479,8 +552,13 @@ export function createArt({ getState, canMove, getSelected, getNowSources }) {
     lastFrame = { cells, width, height };
   }
   let lastFrame = null;
+  // A broken part's point letting go: a bit that drifts up and away from the part's middle.
+  function drift(x, y, h) {
+    const dx = x - h.cx, dy = y - h.cy, d = Math.hypot(dx, dy) || 1, max = 700 + Math.random() * 700;
+    shards.push({ bit: true, x, y, vx: (dx / d) * (0.2 + Math.random() * 0.6), vy: -(0.5 + Math.random() * 1.1), c: Math.random() < 0.5 ? '1' : '0', life: max, max, t: 0, ph: Math.random() * 6 });
+  }
   // Throw a burst of characters from where a part was drawn.
-  function burst(id, n = 46) {
+  function burst(id, n = 46, set = SHARDS) {
     if (!lastFrame || !canMove()) return;
     const mine = [...lastFrame.cells.values()].filter((c) => c.part?.id === id);
     const cx = mine.length ? mine.reduce((a, c) => a + c.x, 0) / mine.length : lastFrame.width / 2;
@@ -488,7 +566,7 @@ export function createArt({ getState, canMove, getSelected, getNowSources }) {
     for (let i = 0; i < n; i++) {
       const from = mine.length ? mine[Math.floor(Math.random() * mine.length)] : { x: cx, y: cy };
       const a = Math.atan2(from.y - cy, from.x - cx) + (Math.random() - 0.5) * 1.2, sp = 1.5 + Math.random() * 4;
-      shards.push({ x: from.x, y: from.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 2, c: SHARDS[Math.floor(Math.random() * SHARDS.length)], life: 700 + Math.random() * 500 });
+      shards.push({ x: from.x, y: from.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 2, c: set[Math.floor(Math.random() * set.length)], life: 700 + Math.random() * 500 });
     }
   }
   requestAnimationFrame(draw);
@@ -511,10 +589,17 @@ export function createArt({ getState, canMove, getSelected, getNowSources }) {
     // kind: 'hit' (you hit it), 'crit', 'chit' (an armor chit broke), 'attack' (its attack landed on you), 'break'.
     hit(id, kind = 'hit') {
       const t = performance.now();
-      hits.set(id, { time: t, kind });
+      const h = { time: t, kind };
+      if (kind === 'break') { // where it dissolves from: its middle on the last frame
+        const mine = lastFrame ? [...lastFrame.cells.values()].filter((c) => c.part?.id === id) : [];
+        h.gone = new Set();
+        h.cx = mine.length ? mine.reduce((a, c) => a + c.x, 0) / mine.length : (lastFrame?.width || 0) / 2;
+        h.cy = mine.length ? mine.reduce((a, c) => a + c.y, 0) / mine.length : (lastFrame?.height || 0) / 2;
+      }
+      hits.set(id, h);
       if (kind === 'crit' || kind === 'attack' || kind === 'break') shake = { time: t, power: kind === 'attack' ? 9 : kind === 'break' ? 12 : 7 };
       if (kind !== 'chit') glitch = t + (kind === 'break' || kind === 'crit' ? 220 : 130);
-      if (kind === 'break') burst(id);
+      if (kind === 'break') burst(id, 14, BITS);
       if (kind === 'chit') burst(id, 10);
     },
   };

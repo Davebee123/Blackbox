@@ -368,6 +368,7 @@ const DISSOLVE_MS = 1000; // a broken part's last moment on the board
 const art = createArt({
   getState: shown,
   canMove: () => canMove(),
+  breakout: () => fxLevel() !== 'minimal', // an attack strikes out of the render's window (Screen effects on)
   getSelected: () => selected,
   getNowSources: () => {
     const s = shown();
