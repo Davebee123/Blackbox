@@ -20,10 +20,13 @@
 // State this module keeps on a player's encounter (plain data, so a saved fight still loads):
 //   e.ledger   Warden: the size of every attack that has hit you since your last Blowback
 //   e.hots     heals over time from a Sysop (Heartbeat, and Patch's ticks under Overprovision):
-//              [{ id, name, amount, left, from, cap, crit, loop }] (cap: the healer's Overprovision cap,
-//              0 without the edge; crit: Critical Path; loop: the healer's name, for Loopback)
-//   e.standby  Hot Standby: the next attack that would drop this player to 0 leaves them at 1
-import { sustained, slotsOf, subOf, subEdge, hasTalent, capValue, soonestAttacker, rank, emit, heal, hit, alive, part, livingParts, defender, alliesOf, buffed, on, scaled, attackAmount, gapTaken, levelGap, classOf, usable, intents, toIntent, readyIn, knownSkills, healScaled, restoreMult, previewDamage, attackers, openProc } from '../combat.mjs';
+//              [{ id, name, amount, left, from, cap, crit, by }] (cap: the healer's Overprovision cap,
+//              0 without the edge; crit: Critical Path; by: the healer's name)
+//   e.standby  Hot Standby: the next attack that would drop this player to 0 leaves them at 1 (e.standbyHalf:
+//              Graceful Restart, it heals them to half)
+//   e.bsOnce   { [talent]: cycle }: the cycle a once-a-cycle talent last fired
+//   e.bsRebound, e.bsClean  Rebound (next Reject x2) and Clean Slate (next heal +50%) armed
+import { sustained, skillBase, slotsOf, subOf, subEdge, hasTalent, capValue, soonestAttacker, rank, emit, heal, hit, alive, part, livingParts, defender, alliesOf, buffed, on, scaled, attackAmount, gapTaken, levelGap, classOf, usable, intents, toIntent, readyIn, knownSkills, healScaled, restoreMult, previewDamage, attackers, openProc } from '../combat.mjs';
 import { ABILITIES, SKILLS } from '../data.mjs';
 import { tankMove, healMove, cleanse, savePatch, saveBulkhead } from '../raid.mjs';
 import { tellOn, tellOpen, tellAnswer, undoCast, landsAt } from '../tells.mjs';
@@ -42,9 +45,23 @@ const nameOf = (st) => st.who || 'you';
 // The command that aims an ally skill at st, as s would type it.
 const aim = (s, id, st) => (st === s ? id : `${id} ${nameOf(st)}`);
 
-// Overprovision (Sysop's edge): healing past full turns into a shield, up to 20 (40 with Overcommit;
-// Reserve Pool adds 5 a rank). cap: the healer's, worked out when the heal was cast.
-const capOf = (s) => (subEdge(s, 'sysop') ? scaled(s, 20 + 5 * rank(s, 'reserve-pool')) * (hasTalent(s, 'overcommit') ? 2 : 1) : 0);
+// Overprovision (Sysop's edge): healing past full turns into a shield, up to 20 (40 with Overcommit).
+// cap: the healer's, worked out when the heal was cast.
+const capOf = (s) => (subEdge(s, 'sysop') ? scaled(s, hasTalent(s, 'overcommit') ? 40 : 20) : 0);
+// A talent that works once per cycle: true the first time this cycle, and stamps it.
+function onceACycle(s, id) {
+  const e = s.encounter, o = (e.bsOnce ||= {});
+  if (o[id] === e.cycle) return false;
+  o[id] = e.cycle;
+  return true;
+}
+// What a Sysop's heal is multiplied by: High Availability (+15%) and an armed Clean Slate (+50%, spent here).
+function healBoost(s) {
+  const e = s.encounter;
+  let m = hasTalent(s, 'high-availability') ? 1.15 : 1;
+  if (e?.bsClean) { e.bsClean = false; m *= 1.5; }
+  return m;
+}
 function overprovision(to, over, cap) {
   const e = to.encounter;
   if (!e || over <= 0 || cap <= 0) return 0;
@@ -54,8 +71,9 @@ function overprovision(to, over, cap) {
   emit(to, 'status', `Overprovision: ${add} of it becomes a shield (${e.shield}).`, { mark: 'shield' });
   return add;
 }
-// A Sysop's heal: Critical Path, the heal itself, Overprovision on what spills past full, and Loopback.
-// opts.cap / opts.crit / opts.loop override the healer's own (heals over time keep the numbers they were cast with).
+// A Sysop's heal: Critical Path, High Availability and Clean Slate, the heal itself, and Overprovision on what spills
+// past full. opts.cap / opts.crit override the healer's own (heals over time keep the numbers they were cast with);
+// opts.flat: an extra on a heal already boosted.
 // The Sysop alone (no crew in the fight): its hits and burns deal SUBS.sysop.alone of their size, so a solo fight takes
 // it about twice as long as a damage dealer. The heals it draws from its hits (Checksum, Reclaim, Maintenance Window)
 // still come from the full size, so it is as safe as before.
@@ -66,14 +84,13 @@ function mend(s, to, amount, label, opts = {}) {
   if (!d || d.integrity <= 0) return 0;
   const crit = opts.crit ?? hasTalent(s, 'critical-path');
   if (crit && d.integrity < d.max / 3) amount = Math.round(amount * 1.5);
+  if (!opts.flat) amount = Math.round(amount * healBoost(s));
   if (!opts.plain && windowOpen(s)) amount = Math.round(amount * (1 + A('maintenance-window').boost)); // Maintenance Window: heals +50%
   if (!opts.potent) amount = sustained(to, amount, opts.drawn); // potency (data.mjs CONFIG.length.heal), before Overprovision reads the spill
   const room = d.max - d.integrity;
   heal(to, amount, label, { potent: true });
   overprovision(to, amount - Math.min(amount, room), opts.cap ?? capOf(s));
-  if (!opts.looped) rootCause(s, amount);
-  const loop = 'loop' in opts ? opts.loop : hasTalent(s, 'loopback') ? s : null;
-  if (loop && !opts.looped && amount > 0) mend(loop, loop, Math.max(1, Math.round(amount / 3)), 'Loopback', { looped: true, crit: false, cap: opts.cap ?? capOf(loop), loop: null });
+  rootCause(s, amount);
   return amount;
 }
 // Root Cause (Sysop capstone): each heal you cast also hits the part that last hit you (else the one attacking soonest)
@@ -99,19 +116,24 @@ function lastHeal(to, label) {
 
 // The size of an attack as it reaches you, before shields, cuts and armor (Blowback's ledger).
 function attackSize(s, atk, p) {
-  const throttled = on(s, p, 'throttled') ? (hasTalent(s, 'backpressure') ? 0.25 : SKILLS.throttled) : 1;
+  const throttled = on(s, p, 'throttled') ? SKILLS.throttled : 1;
   const power = attackAmount(p) * (s.encounter.soft || 1) * gapTaken(levelGap(s)) * throttled;
   return Math.round(atk.hit ? (power * atk.hit) / Math.max(1, atk.amount) : power);
 }
-const blowbackOf = (s) => Math.min(scaled(s, A('blowback').cap), Math.round((s.encounter.ledger || 0) * (1 + 0.1 * rank(s, 'deep-buffer'))));
+// Deep Buffer (Warden): +25%, past the cap.
+const blowbackOf = (s) => Math.round(Math.min(scaled(s, A('blowback').cap), s.encounter.ledger || 0) * (hasTalent(s, 'deep-buffer') ? 1.25 : 1));
+// Retaliate lit (Flow Control, Retransmit): twice the last hit that reached you, or twice `size` if that is bigger.
+const lightRetaliate = (s, size = 0) => openProc(s, 'struck', { amount: Math.max(s.encounter.procs?.struck?.amount || 0, size) });
+// The player in this fight with the lowest share of their Signal (Trickle Charge).
+const lowest = (s) => crewOf(s).filter((x) => defender(x.st).integrity > 0).sort((x, y) => frac(x.st) - frac(y.st))[0]?.st || null;
 
 // A Sysop's heal over time on a player: one per kind (a new one replaces the old).
 function addHot(s, to, hot) {
   const e = to.encounter;
   e.hots = (e.hots || []).filter((h) => h.id !== hot.id);
-  e.hots.push({ ...hot, cap: capOf(s), crit: hasTalent(s, 'critical-path'), loop: hasTalent(s, 'loopback') ? nameOf(s) : null });
+  e.hots.push({ ...hot, cap: capOf(s), crit: hasTalent(s, 'critical-path'), by: nameOf(s) });
 }
-// Who cast a heal over time, from the player it ticks on (for Loopback): by name.
+// Who cast a heal over time, from the player it ticks on: by name.
 const caster = (to, who) => (nameOf(to) === who ? to : alliesOf(to).find((x) => x.who === who)?.st || null);
 
 // Maintenance Window (Sysop): this healer's window is open.
@@ -121,6 +143,7 @@ const windowOpen = (s) => !!s?.encounter && buffed(s.encounter, 'maintenance-win
 const use = {
   // Warden: Reject throws it back, and shields you against the part that last hit you.
   reject(s, { a, target, e }) {
+    e.bsRebound = false; // Rebound spent (dealt doubled the hit)
     if (e.grudge !== target.id) return;
     const n = sustained(s, scaled(s, a.guard));
     e.shield = (e.shield || 0) + n;
@@ -133,6 +156,7 @@ const use = {
   honeypot(s, { a, e }) {
     e.buffs.honeypot = e.cycle + a.cycles - 1;
     e.honeyCut = scaled(s, a.cut);
+    e.honeyLeft = hasTalent(s, 'honey-farm') ? 2 : 1; // Honey Farm: the next 2 hits
     emit(s, 'status', `Honeypot for ${a.cycles} cycles. The next hit on you deals ${e.honeyCut} less damage, and a Scramble or the Mimic's beat goes after the honeypot.`, { mark: 'buff', ability: 'honeypot' });
   },
   // Sysop
@@ -140,15 +164,25 @@ const use = {
     if (!(res?.dealt > 0)) return;
     const others = alliesOf(s).filter((x) => defender(x.st).integrity > 0).map((x) => x.st).sort((x, y) => frac(x) - frac(y));
     const to = others.length && frac(others[0]) < frac(s) ? others[0] : s; // in a crew, the lowest crewmate
-    mend(s, to, Math.max(1, Math.round(res.dealt * a.share * restoreMult(s) * drawn(s))), to === s ? a.name : `${a.name} from ${s.who || 'you'}`, { drawn: true });
+    const share = hasTalent(s, 'parity-bit') ? 0.5 : a.share; // Parity Bit: half
+    mend(s, to, Math.max(1, Math.round(res.dealt * share * restoreMult(s) * drawn(s))), to === s ? a.name : `${a.name} from ${s.who || 'you'}`, { drawn: true });
   },
   'maintenance-window'(s, { a, e }) {
     e.buffs['maintenance-window'] = e.cycle + a.cycles - 1;
     emit(s, 'status', `Maintenance Window for ${a.cycles} cycles. Your heals heal ${Math.round(a.boost * 100)}% more, and your hits heal you for 25% of the damage they deal.`, { mark: 'buff', ability: 'maintenance-window' });
   },
   revoke(s, { a, target, e }) {
+    // Revocation List: every part takes half and is revoked for 2 cycles (dealt halves the target's own hit).
+    const list = hasTalent(s, 'revocation-list');
+    if (list) {
+      for (const p of livingParts(s)) {
+        if (p !== target) hit(s, p, Math.max(1, Math.round(skillBase(s, 'revoke', p) / 2)), { mine: true, by: 'Revocation List' });
+        if (alive(p)) p.revokedUntil = e.cycle + 1;
+      }
+      emit(s, 'status', 'Revocation List: every part is revoked for 2 cycles.', { mark: 'debuff', ability: 'revoke' });
+    }
     if (!alive(target)) return;
-    target.revokedUntil = e.cycle + a.cycles - 1;
+    target.revokedUntil = e.cycle + (list ? 2 : a.cycles) - 1;
     emit(s, 'status', `${target.name} revoked for ${a.cycles} cycles. Its heals, patches and updates fail.`, { target: target.id, mark: 'debuff', ability: 'revoke' });
     // A Self-Update it's compiling fails now (a read, tells.mjs).
     const c = tellOn(s, target, 'cast');
@@ -175,6 +209,7 @@ const use = {
     e.buffs.dmz = e.cycle + a.cycles - 1;
     emit(s, 'status', `DMZ: attacks deal ${Math.round(a.cut * 100)}% less to ${alliesOf(s).length ? 'the whole crew' : s.who || 'you'} for ${a.cycles} cycles.`, { mark: 'buff', ability: 'dmz' });
   },
+  firewall(s) { if (hasTalent(s, 'hot-fix')) mend(s, s, healScaled(s, 10), 'Hot Fix'); }, // Hot Fix (Sysop): it heals 10 too
   // Warden talents on old skills
   suspend(s, { a, target, e, moved }) {
     // A charge on the attack it pushed back drains out in its window: it lands plain (a read, tells.mjs). Before the
@@ -205,27 +240,29 @@ const use = {
     const want = healScaled(s, (hasTalent(s, 'service-pack') ? a.pack : a.heal) + 3 * rank(s, 'patch-notes'));
     const got = lastHeal(to, label) ?? want;
     const d = defender(to);
-    if (windowOpen(s)) mend(s, to, Math.round(want * A('maintenance-window').boost), label, { plain: true }); // Maintenance Window
-    if (hasTalent(s, 'critical-path') && d.integrity - got < d.max / 3) mend(s, to, Math.round(want / 2), 'Critical Path', { loop: null });
+    if (windowOpen(s)) mend(s, to, Math.round(want * A('maintenance-window').boost), label, { plain: true, flat: true }); // Maintenance Window
+    if (hasTalent(s, 'critical-path') && d.integrity - got < d.max / 3) mend(s, to, Math.round(want / 2), 'Critical Path', { flat: true });
     overprovision(to, want - got, capOf(s));
-    if (hasTalent(s, 'loopback')) mend(s, s, Math.max(1, Math.round(want / 3)), 'Loopback', { looped: true, crit: false });
+    const more = healBoost(s); // High Availability, Clean Slate: on top of the generic heal
+    if (more > 1) mend(s, to, Math.round(want * (more - 1)), label, { plain: true, flat: true, crit: false });
     // Under Overprovision, Patch's ticks run as the Sysop's own heal over time, so they spill into a shield too.
     const r = to.encounter.regen;
-    if (r && r.name === label && (subEdge(s, 'sysop') || hasTalent(s, 'critical-path') || hasTalent(s, 'loopback'))) {
+    if (r && r.name === label && (subEdge(s, 'sysop') || hasTalent(s, 'critical-path') || hasTalent(s, 'high-availability'))) {
       to.encounter.regen = null;
       addHot(s, to, { id: 'patch', name: label, amount: r.amount, left: r.left, from: r.from });
     }
   },
   multicast(s, { a }) {
-    const amount = healScaled(s, a.heal + 3 * rank(s, 'fan-out'));
+    const amount = healScaled(s, a.heal + (hasTalent(s, 'anycast') ? 8 : 0)); // Anycast: +8
     for (const x of crewOf(s)) mend(s, x.st, amount, x.me ? a.name : `${a.name} from ${s.who || 'you'}`);
     // The same packet floods every fragment for the heal, and splashes every other part (Ping Flood: the heal on every part).
     for (const p of livingParts(s)) hit(s, p, p.kind === 'fragment' || hasTalent(s, 'ping-flood') ? amount : scaled(s, a.splash), { mine: true, by: hasTalent(s, 'ping-flood') ? 'Ping Flood' : 'Multicast' });
   },
   heartbeat(s, { a, to }) {
     const label = to === s ? a.name : `${a.name} from ${s.who || 'you'}`;
-    addHot(s, to, { id: 'heartbeat', name: label, amount: healScaled(s, a.tick + rank(s, 'tick-rate')), left: a.ticks, from: to.encounter.cycle });
-    emit(to, 'status', `${label}: ${healScaled(s, a.tick + rank(s, 'tick-rate'))} a cycle for ${a.ticks} cycles.`, { mark: 'buff', ability: 'heartbeat' });
+    const tick = healScaled(s, a.tick + (hasTalent(s, 'tick-rate') ? 3 : 0)); // Tick Rate: +3
+    addHot(s, to, { id: 'heartbeat', name: label, amount: tick, left: a.ticks, from: to.encounter.cycle });
+    emit(to, 'status', `${label}: ${tick} a cycle for ${a.ticks} cycles.`, { mark: 'buff', ability: 'heartbeat' });
   },
   scrub(s, { a, to }) {
     const e = to.encounter, label = to === s ? a.name : `${a.name} from ${s.who || 'you'}`;
@@ -250,6 +287,7 @@ const use = {
   },
   'hot-standby'(s, { a, to }) {
     to.encounter.standby = true;
+    to.encounter.standbyHalf = hasTalent(s, 'graceful-restart'); // Graceful Restart: it heals them to half
     emit(to, 'status', `${to === s ? a.name : `${a.name} from ${s.who || 'you'}`}: the next attack that would drop ${nameOf(to)} to 0 leaves ${to === s ? 'you' : 'them'} at 1.`, { mark: 'buff', ability: 'hot-standby' });
   },
   rebalance(s, { a }) {
@@ -267,11 +305,13 @@ const use = {
     const amount = sustained(s, Math.max(1, Math.round(res.dealt * A('reclaim').lifesteal * restoreMult(s) * drawn(s))), true);
     // The generic lifesteal has healed you: what spilled past full is Overprovision's.
     overprovision(s, amount - (lastHeal(s, A('reclaim').name) ?? amount), capOf(s));
-    if (windowOpen(s)) mend(s, s, Math.round(amount * A('maintenance-window').boost), 'Maintenance Window', { plain: true, potent: true });
+    if (windowOpen(s)) mend(s, s, Math.round(amount * A('maintenance-window').boost), 'Maintenance Window', { plain: true, potent: true, flat: true });
+    const more = healBoost(s); // High Availability, Clean Slate
+    if (more > 1) mend(s, s, Math.round(amount * (more - 1)), A('reclaim').name, { plain: true, potent: true, flat: true, crit: false });
     if (!hasTalent(s, 'redistribute')) return;
     const others = alliesOf(s).filter((x) => defender(x.st).integrity > 0).sort((x, y) => frac(x.st) - frac(y.st));
-    if (others.length) mend(s, others[0].st, amount, `Redistribute from ${s.who || 'you'}`, { potent: true });
-    else mend(s, s, amount, 'Redistribute', { potent: true });
+    if (others.length) mend(s, others[0].st, amount, `Redistribute from ${s.who || 'you'}`, { potent: true, flat: true });
+    else mend(s, s, amount, 'Redistribute', { potent: true, flat: true });
   },
 };
 
@@ -478,8 +518,8 @@ export default {
     if (!e.hots?.length) return;
     for (const h of e.hots) {
       if (h.left <= 0 || h.from > e.cycle) continue;
-      const by = h.loop ? caster(s, h.loop) : null;
-      mend(by || s, s, h.amount, h.name, { cap: h.cap, crit: h.crit, loop: by });
+      const by = h.by ? caster(s, h.by) : null;
+      mend(by || s, s, h.amount, h.name, { cap: h.cap, crit: h.crit, flat: true });
       h.left--;
     }
     e.hots = e.hots.filter((h) => h.left > 0);
@@ -507,7 +547,7 @@ export default {
   absorb(s, amount, atk, p) {
     const e = s.encounter;
     if (classOf(s) !== 'bastion' || !e) return amount;
-    if (e.buffs?.honeypot >= e.cycle && e.honeyCut > 0 && amount > 0) { const cut = Math.min(amount, e.honeyCut); e.honeyCut = 0; amount -= cut; emit(s, 'blocked', `The honeypot takes ${cut} of ${atk.name}.`, { source: p?.id, ability: 'honeypot' }); }
+    if (e.buffs?.honeypot >= e.cycle && e.honeyCut > 0 && amount > 0) { const cut = Math.min(amount, e.honeyCut); e.honeyLeft = (e.honeyLeft || 1) - 1; if (e.honeyLeft <= 0) e.honeyCut = 0; amount -= cut; emit(s, 'blocked', `The honeypot takes ${cut} of ${atk.name}.`, { source: p?.id, ability: 'honeypot' }); }
     const cap = Math.max(1, Math.round(defender(s).max * A('circuit-breaker').most));
     if (buffed(e, 'circuit-breaker') && amount > cap) {
       if (subOf(s) === 'warden' && usable(s).includes('blowback')) e.ledger = (e.ledger || 0) + (amount - cap);
@@ -524,24 +564,61 @@ export default {
     if (eye && dealt > 0 && alive(p) && livingParts(s).includes(p)) hit(s, p, Math.max(1, Math.round(dealt * eye)), { by: 'Eye for an Eye', pierce: true, noHook: true, src: 'reflect' });
     if (e.standby && d.integrity <= 0) {
       e.standby = false;
-      d.integrity = 1;
-      emit(s, 'heal', `Hot Standby: ${s.who || 'you'} ${s.who ? 'holds' : 'hold'} at 1.`, { amount: 1 });
+      d.integrity = e.standbyHalf ? Math.max(1, Math.round(d.max / 2)) : 1;
+      emit(s, 'heal', `${e.standbyHalf ? 'Graceful Restart' : 'Hot Standby'}: ${s.who || 'you'} ${s.who ? 'holds' : 'hold'} at ${d.integrity}.`, { amount: d.integrity });
     }
   },
-  // Vendetta (Grudge +5% a rank) and Kernel Panic (+30% under a third).
   // Maintenance Window: your hits heal you for a quarter of what they deal.
   hit(s, p, res, opts) {
     if (!windowOpen(s) || !opts.mine || opts.dot || opts.server || !(res.dealt > 0)) return;
-    mend(s, s, Math.max(1, Math.round(res.dealt * A('maintenance-window').share * restoreMult(s) * drawn(s))), 'Maintenance Window', { plain: true, loop: null, drawn: true });
+    mend(s, s, Math.max(1, Math.round(res.dealt * A('maintenance-window').share * restoreMult(s) * drawn(s))), 'Maintenance Window', { plain: true, flat: true, drawn: true });
   },
   drawn: (s) => drawn(s),
+  // Shared events (combat.mjs fireEvent): the combo talents.
+  event(s, when, ctx) {
+    const e = s.encounter, p = ctx.part;
+    if (classOf(s) !== 'bastion' || !e) return;
+    if (when === 'struck') {
+      if (hasTalent(s, 'rebound')) e.bsRebound = true; // Rebound: the next Reject deals double
+      // Health Check: your Heartbeat on you ticks once more.
+      const h = hasTalent(s, 'health-check') && e.hots?.find((x) => x.id === 'heartbeat' && x.left > 0 && x.by === nameOf(s));
+      if (h && defender(s).integrity > 0 && onceACycle(s, 'health-check')) mend(s, s, h.amount, 'Health Check', { cap: h.cap, crit: h.crit, flat: true });
+    }
+    if (when === 'answer') {
+      if (hasTalent(s, 'flow-control')) lightRetaliate(s, p?.attack ? attackSize(s, p.attack, p) : 0); // Flow Control: Retaliate, on the attack you answered
+      if (hasTalent(s, 'clean-slate')) e.bsClean = true; // Clean Slate: your next heal +50%
+    }
+    if (when === 'crit' && hasTalent(s, 'retransmit')) lightRetaliate(s); // Retransmit
+    if (when === 'shielded') {
+      // Bounce Buffer: what your shield absorbs goes back into the part that sent it.
+      if (ctx.absorbed > 0 && alive(p) && hasTalent(s, 'bounce-buffer')) hit(s, p, ctx.absorbed, { mine: true, by: 'Bounce Buffer', src: 'reflect' });
+      // Health Probe: Checksum is ready again.
+      if (ctx.gained && hasTalent(s, 'health-probe') && readyIn(s, 'checksum') > 0 && onceACycle(s, 'health-probe')) { delete e.readyAt.checksum; emit(s, 'proc', 'Health Probe: Checksum is ready.', { ability: 'checksum' }); }
+    }
+    if (when === 'cut') {
+      // Dead Letter: the move you cut goes into your next Blowback, as if it had hit you.
+      if (hasTalent(s, 'dead-letter') && p?.attack && usable(s).includes('blowback')) { const n = attackSize(s, p.attack, p); e.ledger = (e.ledger || 0) + n; emit(s, 'status', `Dead Letter: Blowback stores ${n} from the ${p.name}.`, { target: p.id, ability: 'blowback' }); }
+      // Change Freeze: you and every crewmate shield 8.
+      if (hasTalent(s, 'change-freeze')) for (const x of crewOf(s)) { const xe = x.st.encounter; xe.shield = (xe.shield || 0) + scaled(s, 8); emit(x.st, 'status', `Change Freeze: shield ${xe.shield}.`, { mark: 'shield' }); }
+    }
+    if (when === 'burn') {
+      if (hasTalent(s, 'heat-shield')) { e.shield = (e.shield || 0) + scaled(s, 3); emit(s, 'status', `Heat Shield: shield ${e.shield}.`, { mark: 'shield' }); }
+      const low = hasTalent(s, 'trickle-charge') && lowest(s);
+      if (low) mend(s, low, healScaled(s, 3), low === s ? 'Trickle Charge' : `Trickle Charge from ${s.who || 'you'}`);
+    }
+    // Teardown: a part breaks, and you and every crewmate heal 10.
+    if (when === 'break' && hasTalent(s, 'teardown')) for (const x of crewOf(s)) mend(s, x.st, healScaled(s, 10), x.me ? 'Teardown' : `Teardown from ${s.who || 'you'}`);
+  },
   dealt(s, p, opts) {
     if (!opts.mine || opts.server) return 1;
     let m = 1;
     // A healer alone (the Sysop with no crew): its hits are small, so a solo fight takes it about twice as long.
     m *= aloneCut(s);
-    if (rank(s, 'vendetta') && s.encounter.grudge === p.id && subEdge(s, 'warden')) m *= 1 + 0.05 * rank(s, 'vendetta');
-    if (hasTalent(s, 'kernel-panic')) { const d = defender(s); if (d.integrity < d.max / 3) m *= 1.3; }
+    if (hasTalent(s, 'kernel-panic')) { const d = defender(s); if (d.integrity < d.max / 3) m *= 1.3; } // Kernel Panic: +30% under a third
+    // Your command's own hit (no by, not a burn): Rebound doubles a Reject, Revocation List halves Revoke on its target.
+    const cmd = !opts.dot && !opts.by ? s.encounter.commanding?.id : null;
+    if (cmd === 'reject' && s.encounter.bsRebound) m *= 2;
+    if (cmd === 'revoke' && hasTalent(s, 'revocation-list')) m *= 0.5;
     return m;
   },
   plan(s, t) {

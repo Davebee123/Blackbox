@@ -299,7 +299,7 @@ export function statusesOn(s, p) {
 }
 export const on = (s, p, k) => p[k + 'Until'] >= s.encounter.cycle;
 // What a Hooked part takes on top of each hit (the planner counts it on helpers).
-export const hookHit = (s, p) => (on(s, p, 'hooked') ? scaled(s, SKILLS.hooked + rank(s, 'kernel-hook')) : 0);
+export const hookHit = (s, p) => (on(s, p, 'hooked') ? scaled(s, SKILLS.hooked + (hasTalent(s, 'kernel-hook') ? 3 : 0)) : 0); // Kernel Hook (Hijacker): +3
 export const buffed = (e, k) => e.buffs?.[k] >= e.cycle;
 
 // opts.mine: your own hit (your buffs apply). Armor isn't a multiplier: see hit().
@@ -347,7 +347,7 @@ export function skillBase(s, id, p) {
   let base = a?.damage || 0;
   if (id === 'overload') base = (hasTalent(s, 'hair-trigger') ? 35 : base) + 4 * rank(s, 'heat-sink');
   const e = s.encounter;
-  if (id === 'rate-limit') base += 4 * rank(s, 'token-bucket') + (p?.attack && p.attack.due <= e?.cycle ? a.due : 0); // choke it as it sends: more if its attack is due now
+  if (id === 'rate-limit') base += (p?.attack && p.attack.due <= e?.cycle ? a.due : 0); // choke it as it sends: more if its attack is due now
   if (id === 'backdoor') base += 4 * rank(s, 'backchannel') + (burnsOn(s, p).length ? a.burning : 0); // a flat bonus on a burning part, however many burns
   if (id === 'opening') base += 5 * rank(s, 'recon');
   if (id === 'flood' && p && !(p.armor > 0)) base *= 2;
@@ -355,7 +355,7 @@ export function skillBase(s, id, p) {
   // Segfault: crash it mid-wind-up (a charge on it, tells.mjs); Core Dump: under 30% too.
   if (id === 'segfault' && p && (tellOn(s, p, 'charge') || (hasTalent(s, 'core-dump') && p.integrity < p.max * 0.3))) base *= a.execute;
   // Retaliate: twice the attack that reached you (it's already your size: no power scaling).
-  if (id === 'retaliate') return Math.min(scaled(s, a.cap), 2 * (e?.procs?.struck?.amount || 0)) + (rank(s, 'reverse-shell') ? scaled(s, 5 * rank(s, 'reverse-shell')) : 0);
+  if (id === 'retaliate') return Math.min(scaled(s, a.cap), 2 * (e?.procs?.struck?.amount || 0));
   return base * powerOf(s);
 }
 // Your burns on a part (Inject, Purge, Thermal Runaway…).
@@ -1908,7 +1908,7 @@ function loadoutCommand(s, text) {
 
 // ---------- upgrades ----------
 // Max Signal%: set pieces and bonuses (sets.mjs) and Bedframe, Firmware (max-signal%) raise the whole of it.
-const signalOf = (s) => { const t = 4 * rank(s, 'redundancy') + 3 * rank(s, 'onion-routing') + 3 * rank(s, 'extra-memory'); return Math.round(CONFIG.maxSignal * powerOf(s)) + gearStat(s, 'signal') + (t ? scaled(s, t) : 0); }; // talents' Signal, on your own line
+const signalOf = (s) => { const t = 3 * rank(s, 'onion-routing') + 3 * rank(s, 'extra-memory'); return Math.round((Math.round(CONFIG.maxSignal * powerOf(s)) + gearStat(s, 'signal') + (t ? scaled(s, t) : 0)) * (hasTalent(s, 'hardened-kernel') ? 1.1 : 1)); }; // talents' Signal, on your own line (Hardened Kernel, Warden: +10%)
 export const maxSignal = (s) => {
   const n = signalOf(s), pct = (piecesOn(s) ? setSignal(s) : 0) + fxSum(s, 'always', 'max-signal%'), sick = rebootSick(s), m = pct ? n + Math.round((n * pct) / 100) : n;
   return sick ? Math.max(1, Math.round(m * (1 - sick))) : m;
@@ -2854,7 +2854,7 @@ export function hit(s, p, base, opts = {}) {
   // Subrogation (Halcyon): the part that last hit you takes double from your next skill hit.
   if (raw > 0 && opts.mine && e.subro === p.id) { raw *= 2; e.subro = null; emit(s, 'status', `Subrogation: ${p.name} pays double.`, { target: p.id }); }
   // Grudge (Bastion's edge): the part that last hit you takes more from your hits.
-  if (raw > 0 && opts.mine && !opts.server && e.grudge === p.id && edge(s, 'bastion')) raw = Math.floor(raw * (1 + EDGE.bastion.bonus));
+  if (raw > 0 && opts.mine && !opts.server && e.grudge === p.id && edge(s, 'bastion')) raw = Math.floor(raw * (1 + (hasTalent(s, 'denylist') ? 0.3 : EDGE.bastion.bonus))); // Denylist (Warden): 30%
   // Weak Spot (Infiltrator's edge): your first damaging hit on each part's bare code crits (a hit
   // through armor doesn't find it, and doesn't use it up).
   const weak = raw > 0 && opts.mine && !opts.dot && !opts.server && edge(s, 'infiltrator') && !(opts.pierce && p.armor > 0) && !(e.weakHit ||= {})[p.id];
@@ -2967,7 +2967,7 @@ export function hit(s, p, base, opts = {}) {
     // Spillway (spill): up to its number (a skill's number, grown with your level) of what was left after that.
     const sw = opts.mine && !opts.overkill ? fxHas(s, 'spill') : null, more = sw ? Math.min(scaled(s, Number(sw.fx.value) || 0), raw - dealt - (next ? spill : 0)) : 0, to = more > 0 ? soonestAttacker(s) : null;
     if (to && alive(to)) hit(s, to, more, { by: sw.it?.name || sw.name, overkill: true, pierce: true, noHook: true });
-  } else if (on(s, p, 'hooked') && !opts.noHook) hit(s, p, scaled(s, SKILLS.hooked + rank(s, 'kernel-hook')), { by: 'Hook', noHook: true });
+  } else if (on(s, p, 'hooked') && !opts.noHook) hit(s, p, hookHit(s, p), { by: 'Hook', noHook: true });
   // Wire Wrap (momentum-cleave): armed by a break that left your Momentum full, your next skill's hit lands on every other part too.
   const wrap = e.fxs?.cleave;
   if (wrap && wrap.at < e.cycle && raw > 0 && opts.mine && !opts.dot && !opts.by && e.commanding) {
@@ -3480,7 +3480,7 @@ function useAbility(s, intent, auto = false) {
     if (id === 'tag' && hasTalent(s, 'supercookie')) n = 6;
     if (id === 'tag') { target.tagBoost = e.surprise ? CONFIG.surprise.tagged - SKILLS.tagged : 0; if (e.surprise) n = Math.max(n, CONFIG.surprise.tagCycles); }
     // Rate Limit: Throttled through its next attack (never shortening a longer Throttle).
-    if (id === 'rate-limit') n = Math.max(0, (target.attack?.due ?? e.cycle) - e.cycle);
+    if (id === 'rate-limit') n = Math.max(0, (target.attack?.due ?? e.cycle) - e.cycle + (hasTalent(s, 'token-bucket') && target.attack ? target.attack.interval : 0)); // Token Bucket (Warden): its next 2
     // Throttle (Warden) on a part gone loud: longer, and the loud wears off.
     if (id === 'throttle' && (target.loud || e.virus.buffs?.loud >= e.cycle || (target.enrage && target.integrity < target.max / 2))) {
       n = a.loud;
@@ -3508,12 +3508,12 @@ function useAbility(s, intent, auto = false) {
   if (a.helper) {
     let dmg = a.helper, n = a.ticks, count = a.helpers || 1;
     if (id === 'deploy') {
-      if (hasTalent(s, 'big-process')) dmg = 14;
       dmg += rank(s, 'thread-pool');
       if (hasTalent(s, 'long-running')) n = 6;
       if (hasTalent(s, 'parallel-deploy')) { count = 2; dmg = Math.round(dmg / 2); }
     }
-    if (id === 'botnet') { if (hasTalent(s, 'extra-nodes')) count = 4; dmg += rank(s, 'node-pool'); }
+    if (id === 'botnet') { if (hasTalent(s, 'extra-nodes')) count = 4; if (hasTalent(s, 'node-pool')) dmg += 3; } // Node Pool (Herder)
+    if (id === 'sniff' && hasTalent(s, 'port-mirror')) count = 2; // Port Mirror (Hijacker): two footholds
     dmg = scaled(s, dmg);
     count = Math.min(count, helperCap(s) - e.helpers.length);
     for (let k = 0; k < count; k++) e.helpers.push({ target: target.id, damage: dmg, left: n, synced: !!e.synced, sent: e.cycle, by: a.name });
@@ -3537,7 +3537,7 @@ function useAbility(s, intent, auto = false) {
     emit(s, 'status', `${a.name} for ${a.cycles} cycles.`, { mark: 'buff', ability: id });
   }
   if (a.shield) {
-    const amount = sustained(s, scaled(s, id === 'firewall' ? (hasTalent(s, 'deep-packet-inspection') ? 30 : a.shield) + 5 * rank(s, 'stateful-firewall') : a.shield));
+    const amount = sustained(s, scaled(s, id === 'firewall' ? (hasTalent(s, 'deep-packet-inspection') ? 30 : a.shield) : a.shield));
     e.shield = Math.max(e.shield || 0, amount);
     emit(s, 'status', `Shield up. It absorbs the next ${amount} damage.`, { mark: 'shield', ability: id });
   }
@@ -3549,7 +3549,8 @@ function useAbility(s, intent, auto = false) {
   if (id === 'patch') {
     const to = (intent.ally && allyOf(s, intent.ally)) || s, label = to === s ? a.name : `${a.name} from ${s.who || 'you'}`;
     heal(to, healScaled(s, (hasTalent(s, 'service-pack') ? a.pack : a.heal) + 3 * rank(s, 'patch-notes')), label);
-    to.encounter.regen = { amount: healScaled(s, a.tick), left: a.ticks, from: to.encounter.cycle + 1, name: label };
+    // Service Pack (Sysop): the whole heal up front, no ticks.
+    if (!hasTalent(s, 'service-pack')) to.encounter.regen = { amount: healScaled(s, a.tick), left: a.ticks, from: to.encounter.cycle + 1, name: label };
     if (e.virus.raid) cleanse(to, ['dots']); // a crew boss's Corruption: Patch cleanses it (raid.mjs)
   }
   if (id === 'null-route') { e.nullRoute = 1; e.nextCrit = true; emit(s, 'status', 'Null-routed. The next attack misses you, and your next skill is a critical strike.', { mark: 'buff', ability: id }); }
@@ -3591,7 +3592,7 @@ function useAbility(s, intent, auto = false) {
       // Last Gasp comes with it, so cashing in early loses nothing. On armor each hit it had left breaks a ◆ first,
       // as it would have, and the rest land at once.
       let n = h.left + (edge(s, 'operator') ? 1 : 0);
-      if (t) { while (n > 0 && t.armor > 0 && alive(t)) { hit(s, t, h.damage, { by: 'Kill Switch', dot: true, src: 'helper' }); n--; } if (n > 0 && alive(t)) hit(s, t, Math.round(h.damage * n * (1 + 0.05 * rank(s, 'dead-mans-switch'))), { by: 'Kill Switch', dot: true, src: 'helper' }); }
+      if (t) { while (n > 0 && t.armor > 0 && alive(t)) { hit(s, t, h.damage, { by: 'Kill Switch', dot: true, src: 'helper' }); n--; } if (n > 0 && alive(t)) hit(s, t, Math.round(h.damage * n * (hasTalent(s, 'dead-mans-switch') ? 1.15 : 1)), { by: 'Kill Switch', dot: true, src: 'helper' }); }
     }
   }
   if (id === 'keepalive') {
@@ -3907,7 +3908,7 @@ function landAttack(s, p) {
     return emit(s, 'blocked', `Deductible: ${atk.name} is covered.`, { source: p.id });
   }
   if (hits) {
-    const tough = 1 - 0.03 * (rank(s, 'failsafe') + rank(s, 'hardened-kernel') + rank(s, 'low-profile') + rank(s, 'load-balancer'));
+    const tough = 1 - 0.03 * (rank(s, 'failsafe') + rank(s, 'low-profile'));
     // Enemy crits: a roll on every damage attack (from enemy level 3).
     let crit = !atk.noCrit && (e.virus.crit || 0) > 0 && rand(s) < e.virus.crit; // a tell never crits (tells.mjs): it's already as big as it gets
     const normal = crit && fxFire(s, 'struck', { do: 'crit-normal', atk })[0]; // Underwriter's Seal, Cold Wallet, Ground Plane
