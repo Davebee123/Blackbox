@@ -2,7 +2,7 @@
 // solo and in a crew. Each does what its card says.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fresh, command, selectEncounter, resolveCycle, part, readyIn, hasTalent, rank, defender, subOf, edge, knownSkills, active } from './dist/combat.mjs';
+import { fresh, command, selectEncounter, resolveCycle, part, readyIn, hasTalent, rank, defender, subOf, edge, knownSkills, active, fireEvent, procOpen, maxSignal } from './dist/combat.mjs';
 import { CONFIG, ABILITIES, SUBS, SUBCLASS, unlockLevel } from './dist/data.mjs';
 // These test each heal's and shield's own numbers: sustain potency (CONFIG.length.heal, docs/scaling.md step 3) off.
 CONFIG.length = { ...CONFIG.length, heal: null };
@@ -21,15 +21,14 @@ CONFIG.enemyRamp = 0;
 CONFIG.gap = { dealt: 0, taken: 0, floor: 1, below: 0 };
 (await import('./dist/data.mjs')).LOADOUT.specRanks = 0; // the kit talent's two free ranks (progression.mjs): off, for exact numbers
 
-// A level-38 Bastion of a subclass with these skills on the bar and these talents (by id) and ranks.
-function start(sub, bar = [], talents = [], ranks = {}, id = 'cryptjack') {
+// A level-38 Bastion of a subclass with these skills on the bar and these talents (by id: the dev kit).
+function start(sub, bar = [], talents = [], id = 'cryptjack') {
   const s = fresh();
   s.loadout.archetype = 'bastion';
   s.hackers = { bastion: { level: 38, xp: 0 } };
   s.loadout.sub = { bastion: sub };
-  s.loadout.picks[sub] = SUBS[sub].talents.map((pair) => pair.findIndex((x) => talents.includes(x.id))).map((i) => (i < 0 ? undefined : i));
-  s.loadout.ranks[sub] = ranks;
-  s.loadout.equipped[sub] = [...new Set(['firewall', 'retaliate', ...bar])].slice(0, 7);
+  s.loadout.devKit = { talents };
+  s.loadout.equipped.bastion = [...new Set(['firewall', 'retaliate', ...bar])].slice(0, 7);
   selectEncounter(s, id, 7, { level: 6 });
   command(s, 'engage');
   s.encounter.hardened = 0; // the passive takes a quarter off the first hit: off, for exact numbers
@@ -85,8 +84,8 @@ test('both lines are full: eleven skills each, unlocking at 10 to 38, each with 
   }
   assert.equal(SUBS.warden.edge.name, 'Grudge');
   assert.equal(SUBS.sysop.edge.name, 'Overprovision');
-  // The trees are their own: no talent pick in both.
-  const picks = (sub) => SUBS[sub].talents.flat().map((x) => x.id);
+  // The trees are their own: no talent in both.
+  const picks = (sub) => SUBS[sub].tiers.flat().map((x) => x.id);
   assert.deepEqual(picks('warden').filter((id) => picks('sysop').includes(id)), []);
 });
 
@@ -125,12 +124,12 @@ test('Blowback: hits for every attack that hit you since the last one, shields i
   s.encounter.readyAt = {};
   act(s, 'blowback encryptor');
   assert.equal(lost(s, 'encryptor'), 35 + 70, 'capped at 70');
-  // Deep Buffer: +10% a rank.
-  const d = noArmor(start('warden', ['blowback'], [], { 'deep-buffer': 3 }));
+  // Deep Buffer: +25%.
+  const d = noArmor(start('warden', ['blowback'], ['deep-buffer']));
   big(d, 'pulse');
   d.encounter.ledger = 40;
   act(d, 'blowback pulse');
-  assert.equal(lost(d, 'pulse'), 52);
+  assert.equal(lost(d, 'pulse'), 50);
   // On armor it breaks two chits.
   const a = start('warden', ['blowback']);
   const p = part(a, 'pulse');
@@ -150,7 +149,7 @@ test('DMZ: this cycle and next, attacks deal 30% less', () => {
   assert.equal(hp(s), defender(s).max - 28);
 });
 
-test('Warden talents: Tarpit, Counterflow, Write Protect, Kernel Panic, Vendetta; Uptime is still the old one', () => {
+test('Warden talents: Tarpit, Counterflow, Write Protect, Kernel Panic, Denylist, Uptime', () => {
   // Tarpit: Suspend also Throttles until its attack lands.
   const t = start('warden', ['suspend'], ['tarpit']);
   assert.ok(hasTalent(t, 'tarpit'));
@@ -183,12 +182,12 @@ test('Warden talents: Tarpit, Counterflow, Write Protect, Kernel Panic, Vendetta
   defender(k).integrity = Math.floor(defender(k).max / 4);
   act(k, 'spike pulse');
   assert.equal(lost(k, 'pulse'), Math.floor(25 * 1.3));
-  // Vendetta: Grudge +5% a rank (on top of Grudge's 20%).
-  const v = noArmor(quiet(start('warden', [], [], { vendetta: 2 })));
+  // Denylist: Grudge's bonus is 30%.
+  const v = noArmor(quiet(start('warden', [], ['denylist'])));
   big(v, 'pulse');
   v.encounter.grudge = 'pulse';
   act(v, 'spike pulse');
-  assert.equal(lost(v, 'pulse'), Math.floor(Math.floor(25 * 1.1) * 1.2));
+  assert.equal(lost(v, 'pulse'), Math.floor(25 * 1.3));
   // Uptime holds at 1.
   const u = start('warden', [], ['uptime']);
   defender(u).integrity = 5;
@@ -209,7 +208,7 @@ test('Grudge is the Warden\'s edge, Overprovision the Sysop\'s', () => {
 });
 
 // ---------- Sysop ----------
-test('Overprovision: healing past full becomes a shield, up to 20 (Reserve Pool +5 a rank, Overcommit twice)', () => {
+test('Overprovision: healing past full becomes a shield, up to 20 (Overcommit: 40)', () => {
   const s = quiet(start('sysop', ['multicast']));
   defender(s).integrity = defender(s).max - 4;
   act(s, 'multicast');
@@ -217,9 +216,9 @@ test('Overprovision: healing past full becomes a shield, up to 20 (Reserve Pool 
   assert.equal(s.encounter.shield, 12, '16 healed, 4 of it needed: 12 shield');
   for (let i = 0; i < 4; i++) { s.encounter.readyAt = {}; act(s, 'multicast'); }
   assert.equal(s.encounter.shield, 20, 'capped at 20');
-  const r = quiet(start('sysop', ['multicast'], ['overcommit'], { 'reserve-pool': 2 }));
+  const r = quiet(start('sysop', ['multicast'], ['overcommit']));
   for (let i = 0; i < 6; i++) { r.encounter.readyAt = {}; act(r, 'multicast'); }
-  assert.equal(r.encounter.shield, 60, '(20 + 10) × 2');
+  assert.equal(r.encounter.shield, 40);
   // Patch spills too, up front and as it ticks.
   const p = quiet(start('sysop', ['patch']));
   defender(p).integrity = defender(p).max - 2;
@@ -233,25 +232,25 @@ test('Overprovision: healing past full becomes a shield, up to 20 (Reserve Pool 
   assert.equal(w.encounter.shield || 0, 0);
 });
 
-test('Multicast heals everyone; Fan-out +3 a rank; Ping Flood also hits every part', () => {
-  const s = noArmor(quiet(start('sysop', ['multicast'], ['ping-flood'], { 'fan-out': 2 })));
+test('Multicast heals everyone; Anycast +8; Ping Flood also hits every part', () => {
+  const s = noArmor(quiet(start('sysop', ['multicast'], ['ping-flood', 'anycast'])));
   big(s, 'pulse'); big(s, 'encryptor');
   defender(s).integrity = 50;
   act(s, 'multicast');
-  assert.equal(hp(s), 72, '16 + 2 × 3');
-  // Alone, the Sysop's hits deal SUBS.sysop.alone of their size (docs/kits.md 11): 22 × 0.75.
-  assert.equal(lost(s, 'pulse'), Math.floor(22 * SUBS.sysop.alone));
-  assert.equal(lost(s, 'encryptor'), Math.floor(22 * SUBS.sysop.alone));
+  assert.equal(hp(s), 74, '16 + 8');
+  // Alone, the Sysop's hits deal SUBS.sysop.alone of their size (docs/kits.md 11): 24 × 0.75.
+  assert.equal(lost(s, 'pulse'), Math.floor(24 * SUBS.sysop.alone));
+  assert.equal(lost(s, 'encryptor'), Math.floor(24 * SUBS.sysop.alone));
   assert.equal(readyIn(s, 'multicast'), ABILITIES.multicast.cooldown - 1);
 });
 
-test('Heartbeat: 4 a cycle for 4 cycles from now, a new one replaces the old; Tick Rate +1 a rank', () => {
-  const s = quiet(start('sysop', ['heartbeat'], [], { 'tick-rate': 2 }));
+test('Heartbeat: 4 a cycle for 4 cycles from now, a new one replaces the old; Tick Rate +3', () => {
+  const s = quiet(start('sysop', ['heartbeat'], ['tick-rate']));
   defender(s).integrity = 40;
   act(s, 'heartbeat');
-  assert.equal(hp(s), 46, '4 + 2 for Tick Rate');
+  assert.equal(hp(s), 47, '4 + 3 for Tick Rate');
   act(s, 'hold'); act(s, 'hold'); act(s, 'hold'); act(s, 'hold');
-  assert.equal(hp(s), 40 + 4 * 6, 'four ticks, then it stops');
+  assert.equal(hp(s), 40 + 4 * 7, 'four ticks, then it stops');
   s.encounter.readyAt = {};
   act(s, 'heartbeat');
   s.encounter.readyAt = {};
@@ -287,7 +286,7 @@ test('Rollback undoes the last attack: heals what it did, or deletes the fragmen
   act(s, 'rollback');
   assert.equal(hp(s), defender(s).max);
   assert.equal(readyIn(s, 'rollback'), ABILITIES.rollback.cooldown - 1);
-  const w = start('sysop', ['rollback'], [], {}, 'splinter'); // a worm: its Replicator spawns fragments
+  const w = start('sysop', ['rollback'], [], 'splinter'); // a worm: its Replicator spawns fragments
   const rep = w.encounter.virus.parts.find((p) => p.attack?.effect === 'replicate');
   for (const p of w.encounter.virus.parts) if (p.attack && p !== rep) p.attack.due = 999;
   rep.attack.due = w.encounter.cycle;
@@ -317,11 +316,13 @@ test('Rebalance: alone it heals 12', () => {
   assert.equal(hp(s), 62);
 });
 
-test('Sysop talents: Service Pack, Critical Path, Redistribute, Loopback', () => {
+test('Sysop talents: Service Pack, Critical Path, Redistribute', () => {
   const sp = quiet(start('sysop', ['patch'], ['service-pack']));
   defender(sp).integrity = 50;
   act(sp, 'patch');
   assert.equal(hp(sp), 50 + 10, 'Service Pack: 10 up front');
+  act(sp, 'hold');
+  assert.equal(hp(sp), 50 + 10, 'and no ticks after');
   // Critical Path: +50% on someone under a third.
   const cp = quiet(start('sysop', ['scrub'], ['critical-path']));
   defender(cp).integrity = 10;
@@ -334,11 +335,6 @@ test('Sysop talents: Service Pack, Critical Path, Redistribute, Loopback', () =>
   act(rd, 'reclaim pulse');
   // Alone its hit deals 75% (26 of 35), and the heal is drawn from the full hit: 17, and 17 again.
   assert.equal(hp(rd), 20 + 17 + 17);
-  // Loopback: a third of each heal comes back to you.
-  const lb = quiet(start('sysop', ['scrub'], ['loopback']));
-  defender(lb).integrity = 20;
-  act(lb, 'scrub');
-  assert.equal(hp(lb), 20 + 8 + 3);
 });
 
 // ---------- in a crew ----------
@@ -410,10 +406,10 @@ test('Overprovision lands on the crewmate: healing them past full shields them',
   assert.equal(nyx.encounter.shield, 2 + 2, 'and a tick of 2');
 });
 
-test('Sysop talents in a crew: Redistribute heals the lowest crewmate, Loopback heals you for a third of a heal on someone else', () => {
+test('Sysop talents in a crew: Redistribute heals the lowest crewmate', () => {
   const s = crewFight('sysop', 'breaker operator', 38, ['rate-limit', 'firewall', 'retaliate', 'reclaim', 'scrub']);
-  s.loadout.picks.sysop = [undefined, 1, 1]; // Redistribute, Loopback
-  assert.ok(hasTalent(s, 'redistribute') && hasTalent(s, 'loopback'));
+  s.loadout.tiers = { ...s.loadout.tiers, sysop: [null, null, null, 1, null, null] }; // Redistribute
+  assert.ok(hasTalent(s, 'redistribute'));
   const [nyx, kilo] = matesOf(s);
   hush(s);
   for (const p of s.encounter.virus.parts) Object.assign(p, { armor: 0, maxArmor: 0, patchAt: null, integrity: 500, max: 500 });
@@ -423,10 +419,6 @@ test('Sysop talents in a crew: Redistribute heals the lowest crewmate, Loopback 
   const t = s.encounter.virus.parts.find((p) => p.integrity > 0);
   const ev = act(s, 'reclaim ' + t.id);
   assert.ok(ev.some((e) => e.who === 'kilo' && e.type === 'heal' && /^Redistribute from you \+18/.test(e.message)), 'kilo, the lowest, gets as much as you');
-  assert.ok(ev.some((e) => !e.who && e.type === 'heal' && /^Loopback \+6/.test(e.message)), 'and a third of it comes back to you');
-  for (const m of [nyx, kilo]) order(m, 'hold');
-  const ev2 = act(s, 'scrub nyx');
-  assert.ok(ev2.some((e) => !e.who && /^Loopback \+3/.test(e.message)), 'Scrub on nyx: a third of 8 back to you');
 });
 
 test('a Warden draws fire with Bulkhead and takes it at half; DMZ covers the whole crew', () => {
@@ -512,4 +504,150 @@ test('resists: a part above you shrugs off Suspend like a miss (cooldown spent, 
     act(t, 'suspend pulse');
     assert.equal(q.attack.due, was + 2);
   } finally { Object.assign(CONFIG, saved); }
+});
+
+// ---------- the talent tiers (docs/builds.md): one test a new talent ----------
+const pulse = (s, amount = 20) => { part(s, 'encryptor').attack = null; return Object.assign(part(s, 'pulse').attack, { amount, interval: 99, due: 99 }) && part(s, 'pulse'); };
+
+test('Token Bucket: Rate Limit Throttles the next 2 attacks', () => {
+  const s = start('warden', ['rate-limit'], ['token-bucket']);
+  const p = part(s, 'pulse'), { due, interval } = p.attack;
+  act(s, 'rate-limit pulse');
+  assert.equal(p.throttledUntil, due + interval);
+});
+
+test('Rebound: struck, your next Reject deals double', () => {
+  const s = noArmor(start('warden', ['reject'], ['rebound']));
+  big(s, 'pulse');
+  surge(s, 10);
+  act(s, 'hold');
+  assert.ok(s.encounter.bsRebound);
+  quiet(s); s.encounter.grudge = null;
+  act(s, 'reject pulse');
+  assert.equal(lost(s, 'pulse'), 56);
+  assert.ok(!s.encounter.bsRebound, 'spent');
+});
+
+test('Flow Control: answering a tell lights Retaliate, at twice the attack you answered', () => {
+  const s = noArmor(start('warden', [], ['flow-control']));
+  big(s, 'pulse');
+  const p = pulse(s, 20);
+  fireEvent(s, 'answer', { part: p });
+  assert.ok(procOpen(s, 'struck'));
+  act(s, 'retaliate pulse');
+  assert.equal(lost(s, 'pulse'), 40);
+});
+
+test('Hardened Kernel: max Signal +10%', () => {
+  assert.equal(maxSignal(start('warden', [], ['hardened-kernel'])), Math.round(maxSignal(start('warden')) * 1.1));
+});
+
+test('Bounce Buffer: what your shield absorbs goes back into the part that hit you', () => {
+  const s = noArmor(start('warden', [], ['bounce-buffer']));
+  big(s, 'pulse');
+  surge(s, 20);
+  act(s, 'firewall');
+  assert.equal(lost(s, 'pulse'), 16);
+});
+
+test('Dead Letter: a move you cut goes into Blowback', () => {
+  const s = start('warden', ['blowback'], ['dead-letter']);
+  fireEvent(s, 'cut', { part: pulse(s, 20) });
+  assert.equal(s.encounter.ledger, 20);
+});
+
+test('Honey Farm: Honeypot softens the next 2 hits', () => {
+  const s = start('warden', ['honeypot'], ['honey-farm']);
+  surge(s, 20);
+  act(s, 'honeypot');
+  surge(s, 20);
+  act(s, 'hold');
+  assert.equal(hp(s), defender(s).max - 10);
+});
+
+test('Heat Shield: a burn tick shields 3; Retransmit: a crit lights Retaliate', () => {
+  const s = start('warden', [], ['heat-shield', 'retransmit']);
+  fireEvent(s, 'burn', { part: part(s, 'pulse') });
+  assert.equal(s.encounter.shield, 3);
+  fireEvent(s, 'crit', { part: part(s, 'pulse') });
+  assert.ok(procOpen(s, 'struck'));
+});
+
+test('Parity Bit: Checksum heals half; Hot Fix: Firewall heals 10', () => {
+  const s = noArmor(quiet(start('sysop', ['checksum'], ['parity-bit'])));
+  big(s, 'pulse');
+  defender(s).integrity = 20;
+  act(s, 'checksum pulse');
+  assert.equal(hp(s), 20 + 12, 'half of 24, drawn from the full hit');
+  const f = quiet(start('sysop', [], ['hot-fix']));
+  defender(f).integrity = 50;
+  act(f, 'firewall');
+  assert.equal(hp(f), 60);
+});
+
+test('Health Probe: gaining a shield readies Checksum', () => {
+  const s = noArmor(quiet(start('sysop', ['checksum'], ['health-probe'])));
+  big(s, 'pulse');
+  defender(s).integrity = 20; // no Overprovision shield from the heal
+  act(s, 'checksum pulse');
+  assert.ok(readyIn(s, 'checksum') > 0);
+  act(s, 'firewall');
+  assert.equal(readyIn(s, 'checksum'), 0);
+});
+
+test('Health Check: struck, your Heartbeat ticks once more', () => {
+  const s = start('sysop', ['heartbeat'], ['health-check']);
+  quiet(s);
+  defender(s).integrity = 40;
+  act(s, 'heartbeat');
+  assert.equal(hp(s), 44);
+  part(s, 'pulse').attack = { name: 'Surge', effect: 'damage', amount: 10, interval: 99, due: s.encounter.cycle };
+  act(s, 'hold');
+  assert.equal(hp(s), 44 + 4 + 4 - 10);
+});
+
+test('Clean Slate: answering a tell makes your next heal +50%; High Availability: heals +15%', () => {
+  const s = quiet(start('sysop', ['scrub'], ['clean-slate']));
+  defender(s).integrity = 20;
+  fireEvent(s, 'answer', { part: null });
+  act(s, 'scrub');
+  assert.equal(hp(s), 32);
+  s.encounter.readyAt = {};
+  act(s, 'scrub');
+  assert.equal(hp(s), 40, 'only the next one');
+  const h = quiet(start('sysop', ['scrub'], ['high-availability']));
+  defender(h).integrity = 20;
+  act(h, 'scrub');
+  assert.equal(hp(h), 29);
+});
+
+test('Change Freeze: a cut shields you 8; Trickle Charge: a burn tick heals the lowest 3; Teardown: a break heals 10', () => {
+  const s = start('sysop', [], ['change-freeze', 'trickle-charge', 'teardown']);
+  defender(s).integrity = 20;
+  fireEvent(s, 'cut', { part: part(s, 'pulse') });
+  assert.equal(s.encounter.shield, 8);
+  fireEvent(s, 'burn', { part: part(s, 'pulse') });
+  assert.equal(hp(s), 23);
+  fireEvent(s, 'break', { part: part(s, 'pulse') });
+  assert.equal(hp(s), 33);
+});
+
+test('Revocation List: Revoke hits every part for half, and revokes them all for 2 cycles', () => {
+  const s = noArmor(quiet(start('sysop', ['revoke'], ['revocation-list'])));
+  big(s, 'pulse'); big(s, 'encryptor');
+  const c = s.encounter.cycle;
+  act(s, 'revoke pulse');
+  assert.equal(lost(s, 'pulse'), Math.floor(11 * SUBS.sysop.alone));
+  assert.equal(lost(s, 'encryptor'), Math.floor(11 * SUBS.sysop.alone));
+  for (const id of ['pulse', 'encryptor']) assert.equal(part(s, id).revokedUntil, c + 1, id);
+});
+
+test('Graceful Restart: Hot Standby saves you at half your Signal', () => {
+  const s = start('sysop', ['hot-standby'], ['graceful-restart']);
+  quiet(s);
+  act(s, 'hot-standby');
+  defender(s).integrity = 5;
+  part(s, 'pulse').attack = { name: 'Surge', effect: 'damage', amount: 20, interval: 99, due: s.encounter.cycle };
+  act(s, 'hold');
+  assert.equal(hp(s), Math.round(defender(s).max / 2));
 });
