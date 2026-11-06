@@ -23,7 +23,6 @@ function rng(seed) { let x = (seed >>> 0) || 1; return () => ((x = (x * 1664525 
 const hash = (s) => [...String(s)].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
 
 const BREAK_MS = 1500; // a broken part dissolving
-const ATTACK_MS = 560; // an attacking part's lunge, out and back
 
 // The lunge's reach, 0–1, at a share of its time: a short pull back (negative), a fast strike, a hold, an ease home.
 export function lungeAt(u) {
@@ -33,12 +32,67 @@ export function lungeAt(u) {
   if (u < 0.46) return 1;
   const k = (u - 0.46) / 0.54; return (1 - k) ** 2 * (1 + 2 * k) * 1; // smooth back to rest
 }
+// How each body attacks: the move its part makes coming out of the window, and how long it takes (ms).
+//   snap: two quick jabs, the pincers closing on each;   strike: darts down at you, whipping side to side;
+//   phase: blinks out, reappears at the glass, smeared;   pounce: the whole body leaps at you;
+//   stab: its limbs jab out one after another;            spin: it spins up and flies out like a saw.
+export const STRIKES = { snap: 700, strike: 520, phase: 680, pounce: 720, stab: 780, spin: 640, lunge: 560 };
+const STRIKE_OF = {
+  crab: 'snap', padlock: 'snap', tick: 'snap', magnet: 'snap',
+  serpent: 'strike', fountain: 'strike', hive: 'strike',
+  wraith: 'phase', eye: 'phase', cocoon: 'phase', rings: 'phase',
+  hound: 'pounce', horse: 'pounce', block: 'pounce', gate: 'pounce', boiler: 'pounce', bomb: 'pounce',
+  spider: 'stab', mast: 'stab',
+  blades: 'spin', dish: 'spin', cube: 'spin',
+};
+export const strikeOf = (shape) => STRIKE_OF[shape] || 'lunge';
+const clamp01 = (u) => Math.max(0, Math.min(1, u));
+
+// One point of an attacking part at u (0–1) of its strike: reach (how near it comes, 0–1, negative pulls back),
+// dx/dy (how far it moves across, in model units; c is the part's middle on screen), hide (gone this frame) and
+// glitch (drawn as 1s and 0s).
+export function strikeAt(style, u, i, x, y, c) {
+  const ox = x - c.x, oy = y - c.y;
+  switch (style) {
+    case 'snap': { // two jabs, the second harder; the claw closes as it lands
+      const r = u < 0.45 ? lungeAt(u / 0.45) * 0.7 : lungeAt((u - 0.45) / 0.55);
+      const close = Math.max(0, r) * 0.4;
+      return { reach: r, dx: -ox * close, dy: -oy * close * 0.3 };
+    }
+    case 'strike': { // darts at you and down toward your bar, whipping across as it goes
+      const r = lungeAt(u), w = Math.max(0, r);
+      return { reach: r * 1.1, dx: Math.sin(oy * 0.09 + u * 22) * 16 * w, dy: w * 26 };
+    }
+    case 'phase': { // gone, then at the glass all at once, each point a little late (a smear), then back
+      const v = (u - (i % 9) * 0.02) / 0.84; // the smear's lag fits inside the strike
+      if (v > 0.1 && v < 0.28) return { reach: 0, dx: 0, dy: 0, hide: true };
+      if (v <= 0.1) return { reach: -0.15 * Math.sin((clamp01(v / 0.1)) * Math.PI / 2), dx: 0, dy: 0, glitch: v > 0.06 };
+      const r = v < 0.5 ? 1 : lungeAt(0.46 + ((v - 0.5) / 0.5) * 0.54);
+      return { reach: r, dx: v < 0.36 ? ((i * 7) % 11 - 5) * 1.6 : 0, dy: 0, glitch: v < 0.36 };
+    }
+    case 'pounce': { // the whole body: crouch, leap up and at you, land
+      const r = lungeAt(u) * 0.85;
+      return { reach: r, dx: 0, dy: -Math.sin(Math.PI * clamp01(u / 0.6)) * 30 + (u < 0.16 ? (u / 0.16) * 6 : 0) };
+    }
+    case 'stab': { // limbs jab out radially, one after another around the body
+      const a = (Math.atan2(oy, ox) / (Math.PI * 2) + 0.5) % 1, r = lungeAt(clamp01((u - a * 0.4) / 0.6));
+      const out = Math.max(0, r) * 0.6;
+      return { reach: r * 0.9, dx: ox * out, dy: oy * out };
+    }
+    case 'spin': { // spins up as it flies out, spinning down as it comes home
+      const r = lungeAt(u) * 0.7, a = Math.PI * 5 * (1 - (1 - u) ** 2);
+      return { reach: r, dx: ox * Math.cos(a) - oy * Math.sin(a) - ox, dy: ox * Math.sin(a) + oy * Math.cos(a) - oy };
+    }
+    default: return { reach: lungeAt(u), dx: 0, dy: 0 };
+  }
+}
+
 // When a broken part's point lets go, 0–1 of the dissolve: stable per point, so it crumbles in a scatter.
 export const releaseOf = (i) => ((i * 0.6180339887) % 1) * 0.8;
 
 export function createArt({ getState, canMove, getSelected, getNowSources, breakout = () => true }) {
   let canvas = null, ctx = null, previous = 0, angle = 0, clock = 0;
-  let builtFor = '', points = [], anims = [], radius = 1, rx = 1, ry = 1;
+  let builtFor = '', points = [], anims = [], radius = 1, rx = 1, ry = 1, style = 'lunge';
   const hits = new Map();
   let shake = null, glitch = 0;
   const shards = [];
@@ -113,6 +167,7 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
     const S = (side = 1) => `${specialBase}@${side < 0 ? 'L' : 'R'}`;
     const breathe = anim({ k: 'breathe', c: [0, 0, 0], amp: 0.06, speed: 2.2 });
     const shape = shapeOf(v);
+    style = strikeOf(shape);
     const sway = (anchor, amp = 0.25, speed = 1.4, phase = r() * 6) => anim({ k: 'sway', c: anchor, amp, speed, phase });
     const orbit = (c, speed, tilt = 0) => anim({ k: 'orbit', c, speed, tilt });
     const spin = (c, speed, axis = 'z') => anim({ k: 'spin', c, speed, axis });
@@ -345,6 +400,7 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
     const left = v.parts.reduce((n, p) => n + (p.integrity > 0 ? p.armor || 0 : 0), 0);
     return { id: 'body', integrity: max ? Math.max(0.2, left) : 1, max: max || 1 };
   }
+  const resolvePartById = (v, id) => v.parts.find((p) => p.id === id);
   function resolvePart(v, region) {
     if (region === 'body') return body(v);
     if (region.startsWith('frag')) {
@@ -432,6 +488,21 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
     const pulse = 0.55 + 0.45 * Math.sin(now / 160); // parts about to attack throb
     const phased = s.encounter.cycle % 2 === 1;
 
+    // Strikes under way: each attacking part's time through its move, and its middle on screen (the move bends
+    // around it). A pounce moves the whole body.
+    const strikes = new Map();
+    if (motion) for (const [id, h] of hits) {
+      const u = h.kind === 'attack' ? (now - h.time) / STRIKES[style] : 1;
+      if (u > 0 && u < 1 && resolvePartById(v, id)?.integrity > 0) strikes.set(style === 'pounce' ? '*' : id, { u, c: { x: 0, y: 0 }, n: 0 });
+    }
+    if (strikes.size) for (const p of points) {
+      const part = resolvePart(v, p.region), st = strikes.get('*') || (part?.id && strikes.get(part.id));
+      if (!st) continue;
+      const q = animate(p, clock), [x1, z1] = rotY(q.x, q.z, yaw);
+      st.c.x += x1; st.c.y += q.y * cp - z1 * sp; st.n++;
+    }
+    for (const st of strikes.values()) if (st.n) { st.c.x /= st.n; st.c.y /= st.n; }
+
     // Project every point; keep the nearest one per grid cell.
     const cells = new Map();
     for (let i = 0; i < points.length; i++) {
@@ -449,15 +520,18 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
       const ny1 = q.ny * cp - nz1 * sp; nz1 = q.ny * sp + nz1 * cp;
       const age = h ? (now - h.time) / 900 : 0;
       const fresh = h && part.integrity > 0 && motion ? (1 - age) ** 2 : 0;
-      // The lunge: the attacking part comes at you (nearer, so bigger and spread from the middle), past its frame.
-      const reach = h?.kind === 'attack' && part.integrity > 0 && motion ? lungeAt((now - h.time) / ATTACK_MS) : 0;
+      // The strike: the attacking part comes at you its own way (nearer, so bigger and spread from the middle), past its frame.
+      const st = strikes.size ? strikes.get('*') || (part.id && part.integrity > 0 ? strikes.get(part.id) : null) : null;
+      const m = st ? strikeAt(style, st.u, i, x1, y1, st.c) : null;
+      if (m?.hide) continue;
+      const reach = m ? m.reach : 0;
       const k0 = 300 / (300 + z1);
       if (reach) z1 -= reach * 175;
       const k = reach > 0 ? Math.min(k0 * 3, 300 / (300 + Math.max(-205, z1))) : 300 / (300 + z1);
       const grow = k / k0; // how much nearer than at rest: the size its characters draw at
       const jolt = fresh * (h?.kind === 'crit' ? 12 : h?.kind === 'attack' ? 0 : h?.kind === 'chit' ? 4 : 7);
-      let sx = width / 2 + qx + x1 * k * scale + Math.sin(i * 7.3) * jolt;
-      let sy = height / 2 + qy + y1 * k * scale + reach * 10 + Math.cos(i * 3.1) * jolt;
+      let sx = width / 2 + qx + (x1 + (m?.dx || 0)) * k * scale + Math.sin(i * 7.3) * jolt;
+      let sy = height / 2 + qy + (y1 + (m?.dy || 0)) * k * scale + Math.cos(i * 3.1) * jolt;
       const lunging = striking && grow > 1.12;
       const step = lunging ? Math.round(grow * 4) / 4 : 1; // near characters sit on a coarser grid, bigger
       const row = Math.round(sy / (gy * step));
@@ -467,7 +541,7 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
       const was = cells.get(cell);
       if (was && was.z <= z1) continue;
       const lum = Math.max(0, nx1 * LIGHT[0] + ny1 * LIGHT[1] + nz1 * LIGHT[2]);
-      cells.set(cell, { x: cx * gx * step, y: cyc * gy * step, z: z1, lum, part, h, fresh, i, region: p.region, step: lunging ? step : 0 });
+      cells.set(cell, { x: cx * gx * step, y: cyc * gy * step, z: z1, lum, part, h, fresh, i, region: p.region, step: lunging ? step : 0, glitch: m?.glitch });
     }
 
     // An attacking part's cells draw last, on the layer over the page; the rest on the panel.
@@ -492,6 +566,7 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
       if (ratio < 0.35 && !broken && Math.random() < 0.12) ch = '%&$?!'[Math.floor(Math.random() * 5)];
       if (h?.kind === 'chit' && fresh > 0.3 && c.i % 5 === 0) ch = '*';
       if (h?.kind === 'crit' && fresh > 0.4 && c.i % 3 === 0) ch = '#';
+      if (c.glitch) ch = (c.i + Math.floor(now / 50)) % 2 ? '1' : '0';
       if (broken && done > releaseOf(c.i) * 0.5) ch = (c.i + Math.floor(now / 70)) % 2 ? '1' : '0';
       const flare = h ? (broken ? COLORS.bright : h.kind === 'attack' ? COLORS.hot : h.kind === 'crit' ? COLORS.gold : COLORS.bright) : null;
       const attacking = part.id && nowSources.has(part.id);
@@ -515,7 +590,7 @@ export function createArt({ getState, canMove, getSelected, getNowSources, break
       near.sort((a, b) => a.step - b.step || b.z - a.z);
       for (const c of near) {
         const lit = 0.18 + c.lum * 0.82;
-        const ch = (c.i + Math.floor(now / 60)) % 9 === 0 ? (c.i % 2 ? '1' : '0') : RAMP[Math.max(2, Math.min(RAMP.length - 1, Math.round(lit * (RAMP.length - 1))))];
+        const ch = c.glitch || (c.i + Math.floor(now / 60)) % 9 === 0 ? (c.i % 2 ? '1' : '0') : RAMP[Math.max(2, Math.min(RAMP.length - 1, Math.round(lit * (RAMP.length - 1))))];
         o.font = `700 ${glyph * c.step * fx}px "IBM Plex Mono", monospace`;
         o.fillStyle = lit > 0.75 ? COLORS.bright : COLORS.hot;
         o.shadowColor = COLORS.hot; o.shadowBlur = 6 * c.step;

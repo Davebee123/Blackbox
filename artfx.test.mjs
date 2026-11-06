@@ -16,3 +16,17 @@ test('a broken part lets go point by point, all before its dissolve ends', () =>
   assert.ok(at.every((u) => u >= 0 && u < 0.8));
   assert.ok(new Set(at.map((u) => Math.floor(u * 10))).size >= 8, 'spread across the dissolve');
 });
+
+test('each body strikes its own way', async () => {
+  const { strikeAt, strikeOf, STRIKES } = await import('./dist/virus-art.mjs');
+  const c = { x: 0, y: 0 };
+  assert.equal(strikeOf('crab'), 'snap');
+  assert.equal(strikeOf('wraith'), 'phase');
+  assert.equal(strikeOf('nothing-like-it'), 'lunge');
+  for (const style of Object.keys(STRIKES)) assert.equal(Math.round(strikeAt(style, 1, 3, 10, 10, c).reach * 1000), 0, `${style} comes home`);
+  assert.ok(strikeAt('phase', 0.2, 0, 10, 10, c).hide, 'a ghost blinks out');
+  assert.ok(strikeAt('strike', 0.4, 0, 10, 10, c).dy > 0, 'a serpent dives at you');
+  assert.ok(strikeAt('snap', 0.25, 0, 10, 0, c).dx < 0, 'a claw closes as it jabs');
+  const spun = strikeAt('spin', 0.4, 0, 10, 0, c);
+  assert.ok(Math.abs(spun.dx) + Math.abs(spun.dy) > 1, 'a saw turns');
+});

@@ -226,7 +226,7 @@ comment saying what it does.
 | `dist/window.mjs` | The slum outside the window behind the monitor, and its weather. |
 | `dist/abilityfx.mjs`, `dist/abilityfx-table.mjs`, `dist/abilityfx-playtest.mjs` | Ability effects on the board, the table of every ability's effect, and its playtest. |
 | `dist/hitfx.mjs`, `dist/dmgfx.mjs`, `dist/lash.mjs` | Hits landing on a part, damage numbers one per source, a virus lashing at the screen. |
-| `dist/virus-art.mjs` | Each virus as animated 3D ASCII art: an attacking part lunges out of its window, a broken one dissolves into 1s and 0s. |
+| `dist/virus-art.mjs` | Each virus as animated 3D ASCII art: each body attacks its own way out of its window (`STRIKES`), a broken part dissolves into 1s and 0s. |
 | `dist/nocarrier.mjs`, `dist/nocarrier.css` | Losing a fight: static and NO CARRIER, then the Disconnected card. |
 | `dist/class-emblems.mjs` | The class picker's ASCII emblems. |
 | `dist/feel.mjs` | The feedback language: each kind of event's one signature in motion and sound. |
