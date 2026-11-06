@@ -186,7 +186,7 @@ economy's in **docs/economy.md, Programs still to build**.
 | Phase | What |
 |---|---|
 | **R4, depth** | The seven families (4.3), nest rooms (4.4), Linked tells (3.5), help requests (2.9), the other programs (6.4). |
-| **R5, the cut** | Delete the breach and campaign code and tests (`breach.mjs`, `campaign.mjs` and their views, sims and tests). They stay as GAME_RULES *Side modes* until then. |
+| **R5, the cut** | Delete the breach and campaign code and tests (`breach.mjs`, `campaign.mjs` and their views, sims and tests). They stay as GAME_RULES *Side modes* until then; the standalone breach playtest is already gone. |
 
 Each phase ends with the balance checks: every class at 85%+ wins against a same-level room fight at 20–30% Signal
 lost, and every new family passing rule 4 with the per-gene harness (genesim.mjs).

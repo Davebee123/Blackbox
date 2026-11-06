@@ -4,8 +4,8 @@
 // takes no cycle, and one script a fight. They drop rarely (a vault, an elite, the hunter, the Resident), a bounty
 // pays one, and brokers sell them for tokens. A script you find with every slot full stays where it was.
 //
-// Where they live: the campaign keeps them on s.camp.scripts (they persist, like gear); a playtest breach, which has
-// no campaign, on s.breach.scripts. giveScript is the one way in, for anything that hands one over (a broker, a
+// Where they live: the campaign keeps them on s.camp.scripts (they persist, like gear); a breach without a campaign
+// (the tests'), on s.breach.scripts. giveScript is the one way in, for anything that hands one over (a broker, a
 // drop, a bounty, and LOWLIGHT's room or a dead drop once the world has them).
 import { emit, warn, heal, hit, alive, part, livingParts, soonestAttacker, attackers, defender, scaled, usable, active, finish, virusIntegrity, delayAttack } from './combat.mjs';
 import { tellCallOff } from './tells.mjs';
@@ -31,7 +31,7 @@ for (const [id, x] of Object.entries(SCRIPTS)) x.id = id;
 export const TIER = { common: 'stock', uncommon: 'tuned', rare: 'custom' }; // a script's rarity in the item colours
 
 // ---------- what you carry ----------
-// Your slots: the campaign's (Archive adds one, two at tier II), or the playtest breach's.
+// Your slots: the campaign's (Archive adds one, two at tier II), or a test breach's.
 export const scriptHooks = { slots: null }; // campaign.mjs: Archive's extra slots, from your network
 export const slotsOf = (s) => SCRIPT.slots + (scriptHooks.slots?.(s) || 0);
 export function scriptsOf(s) {

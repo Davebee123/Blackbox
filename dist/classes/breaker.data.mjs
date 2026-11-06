@@ -3,10 +3,10 @@
 // talents, the edge, how the planner plays them) lives in ./breaker.mjs.
 //
 // A subclass is picked at level 10 (`subclass <id>`; switching is free, at home). Its skill line unlocks
-// at SUBCLASS.unlocks in data.mjs (levels 10 to 38), in the order written here (eleven skills). Its talent tree has the same shape as
-// before: three filler rows of two ranked nodes, and three tiers of two picks.
+// at SUBCLASS.unlocks in data.mjs (levels 10 to 38), in the order written here (eleven skills). Its talent tree is six tiers
+// of three picks.
 // edge.legacy: the class's old edge (EDGE in data.mjs), now this subclass's.
-import { f, t, c } from './kit.mjs';
+import { t, c } from './kit.mjs';
 
 // New skills (ABILITIES entries, same fields as data.mjs). Give each a cls and a sub.
 // damage 0 with a number in the help: breaker.mjs deals it (it depends on armor, Momentum or a timer).
@@ -94,10 +94,10 @@ export const abilities = {
     desc: 'Glitches the target\'s clock, dealing 20 damage. For 3 cycles, all your hits against it are critical strikes, so Segfault, Stack Smash and Thermal Throttle land at their biggest. Plan the fight around it.',
   },
   'turbo-boost': {
-    cls: 'breaker', sub: 'overclocker', verb: 'buff', name: 'Turbo Boost', target: 'none', damage: 0, cycles: 3, gain: 2, cost: 6, scales: ['cost'], cooldown: 5, icon: 'behavior',
-    short: '+2 Momentum; free when low',
-    help: 'turbo-boost — Grants 2 Momentum for 3 cycles. Costs 6 Signal. Below half Signal, costs nothing and grants 3.',
-    desc: 'Runs past the safe clock, granting 2 Momentum for 3 cycles. Costs 6 Signal, or 6 Integrity at home. Below half Signal, costs nothing and grants 3.',
+    cls: 'breaker', sub: 'overclocker', verb: 'buff', name: 'Turbo Boost', target: 'none', damage: 0, cycles: 3, gain: 2, crewTick: 1, crewDealt: 1.3, crewTaken: 1.2, cost: 6, scales: ['cost'], cooldown: 15, icon: 'behavior',
+    short: '+2 Momentum; crew +30% damage',
+    help: 'turbo-boost — Grants 2 Momentum for 3 cycles. Costs 6 Signal. Below half Signal, costs nothing and grants 3. In a crew, for those 3 cycles every crewmate deals 30% more damage and takes 20% more, and their cooldowns tick 1 cycle.',
+    desc: 'Runs past the safe clock, granting 2 Momentum for 3 cycles. Costs 6 Signal, or 6 Integrity at home. Below half Signal, costs nothing and grants 3. It runs your crew hot too: for those 3 cycles every crewmate deals 30% more damage and takes 20% more, and their cooldowns tick 1 cycle.',
   },
 };
 
@@ -115,15 +115,15 @@ export const subs = {
     },
     layers: { core: ['crack', 'shatter', 'flood', 'overload', 'exploit'], utility: ['shaped-charge', 'debris-field', 'thermal-runaway', 'backfire'], cooldown: ['logic-bomb', 'rm-rf', 'zero-day'], specialist: ['fork-bomb', 'chain-reaction', 'bit-rot'] },
     tags: { 'fork-bomb': 'Fragments', 'chain-reaction': 'Fragments', 'bit-rot': 'Seals', 'logic-bomb': 'Part rules', 'zero-day': 'Bosses' },
-    fillers: [
-      [f('armor-cracker', 'Armor Cracker', 'Increases the time parts you strip take to patch their ◆ back by 1 cycle per rank.', 1), f('blast-radius', 'Blast Radius', 'Increases the damage of Fork Bomb, Logic Bomb and Chain Reaction by 10% per rank.', 0.1)],
-      [f('overclocked', 'Overclocked Core', 'Increases all damage you deal by 3% per rank.', 0.03), f('shrapnel', 'Shrapnel', 'Increases the damage of Shatter by 8% per rank.', 0.08)],
-      [f('failsafe', 'Failsafe', 'Reduces the damage you take from attacks by 3% per rank.', 0.03), f('deep-burn', 'Deep Burn', 'Increases the damage of each Thermal Runaway tick by 2 per rank.', 2)],
-    ],
-    talents: [
-      [t('cluster-charge', 'Cluster Charge', 'Shaped Charge also breaks 2 ◆ on every other part.'), t('exposed-wiring', 'Exposed Wiring', 'A part that loses its last ◆ is Exposed for your next 2 cycles.')],
-      [t('cascade-failure', 'Cascade Failure', 'The first part you break in each fight resets all your cooldowns.'), t('meltdown', 'Meltdown', 'Thermal Runaway also burns every other part for half damage.')],
-      [t('total-overkill', 'Total Overkill', 'Overkill spills onto every other part, not just the next one.'), t('scorched-earth', 'Scorched Earth', 'Parts cannot patch their ◆ back while you are in the fight.')],
+    // The talent tiers (docs/builds.md): one of three a tier, each opening at its level (LOADOUT.tiers). The first is
+    // the plain pick, the middle changes how a skill plays, the third fires on a shared event (combat.mjs fireEvent).
+    tiers: [
+      [t('shrapnel', 'Shrapnel', 'Increases the damage of Shatter by 20%.'), t('splintering', 'Splintering', 'Makes Shatter\'s shards break 2 ◆ on every armored part as well.'), t('exposed-wiring', 'Exposed Wiring', 'Exposes the part whose attack lands soonest for 2 cycles when you break a part.')],
+      [t('pressure-test', 'Pressure Test', 'Makes Crack break 4 ◆ instead of 3.'), t('cluster-charge', 'Cluster Charge', 'Makes Shaped Charge break 2 ◆ on every other part as well.'), t('shock-front', 'Shock Front', 'Breaks every ◆ on a part when you answer its tell.')],
+      [t('deep-burn', 'Deep Burn', 'Increases the damage of every Thermal Runaway tick by 5.'), t('meltdown', 'Meltdown', 'Makes Thermal Runaway start on every other part as well, at half strength.'), t('cook-off', 'Cook-Off', 'Lets your burn ticks on an armored part deal their damage as well as break a ◆.')],
+      [t('crumple-zone', 'Crumple Zone', 'Reduces the damage charged attacks deal to you by 20%.'), t('total-overkill', 'Total Overkill', 'Makes Overkill spill onto every other part, not just the next one.'), t('reactive-plating', 'Reactive Plating', 'Breaks 2 ◆ on the part that hit you when your shield absorbs its hit.')],
+      [t('blast-radius', 'Blast Radius', 'Increases the damage of Fork Bomb, Logic Bomb and Chain Reaction by 15%.'), t('ring-circuit', 'Ring Circuit', 'Makes Chain Reaction wire every part, not just the target.'), t('cascade-failure', 'Cascade Failure', 'Lowers all your cooldowns by 1 cycle when you cut a part\'s move.')],
+      [t('soft-target', 'Soft Target', 'Increases your damage to parts with no armor by 10%.'), t('recursion', 'Recursion', 'Makes Fork Bomb go off again the next cycle, at half strength.'), t('critical-mass', 'Critical Mass', 'Breaks 1 ◆ on every other part when you land a critical strike. Works once per cycle.')],
     ],
     // The capstone row (levels 45 and 50): pick one; its second rank comes at 50.
     capstones: [
@@ -132,26 +132,26 @@ export const subs = {
     ],
   },
   overclocker: {
-    name: 'Overclocker', role: ['DPS', 'Burst'], idea: 'Run it hot until something melts.', solo: 'The biggest single hits in the game.', crew: 'Deletes the part that matters.', lean: 'solo',
+    name: 'Overclocker', role: ['DPS', 'Burst'], idea: 'Run it hot until something melts.', solo: 'The biggest single hits in the game.', crew: 'Runs the whole crew hot: Turbo Boost, more damage dealt and taken.', lean: 'crew',
     chase: ['crit', 'damage'], // what a player of it chases on gear, one per protocol in turn (balance sims, sim crewmates)
     edge: { name: 'Redline', rule: 'Momentum stacks to 5, but you take 10% more damage while you have any.', max: 5, taken: 1.1 },
-    skills: ['hot-loop', 'overvolt', 'segfault', 'thermal-throttle', 'brace', 'vent', 'stack-smash', 'fault-injection', 'sudo', 'turbo-boost', 'zero-day'],
+    skills: ['hot-loop', 'overvolt', 'segfault', 'thermal-throttle', 'turbo-boost', 'brace', 'vent', 'stack-smash', 'fault-injection', 'sudo', 'zero-day'],
     rotationCore: ['crack', 'hot-loop', 'segfault', 'flood'],
     presets: {
-      rotation: ['crack', 'hot-loop', 'segfault', 'flood', 'thermal-throttle', 'overvolt', 'brace', 'fault-injection', 'overload', 'zero-day', 'vent', 'stack-smash', 'exploit'],
+      rotation: ['crack', 'hot-loop', 'segfault', 'flood', 'thermal-throttle', 'overvolt', 'turbo-boost', 'brace', 'fault-injection', 'overload', 'zero-day', 'vent', 'stack-smash', 'exploit'],
       rules: ['crack', 'hot-loop', 'segfault', 'flood', 'thermal-throttle', 'overvolt', 'overload', 'sudo', 'vent', 'brace', 'fault-injection', 'stack-smash', 'exploit'],
     },
     layers: { core: ['crack', 'hot-loop', 'segfault', 'thermal-throttle', 'overload', 'flood', 'exploit', 'stack-smash'], utility: ['overvolt', 'brace', 'vent'], cooldown: ['fault-injection', 'turbo-boost', 'zero-day'], specialist: ['sudo'] },
     tags: { sudo: 'Part rules', 'zero-day': 'Bosses' },
-    fillers: [
-      [f('heat-sink', 'Heat Sink', 'Increases the damage of Overload by 4 per rank.', 4), f('chain-exploit', 'Chain Exploit', 'Increases the damage each Momentum stack gives by 2% per rank.', 0.02)],
-      [f('exploit-kit', 'Exploit Kit', 'Increases the critical strike chance Exposed gives by 5% per rank.', 5), f('core-voltage', 'Core Voltage', 'Increases the damage of Segfault and Stack Smash by 8% per rank.', 0.08)],
-      [f('heat-spreader', 'Heat Spreader', 'Increases the duration of Momentum by 1 cycle per rank.', 1), f('liquid-cooling', 'Liquid Cooling', 'Reduces the Signal cost of Overvolt and Turbo Boost by 2 per rank.', 2)],
-    ],
-    talents: [
-      [t('hair-trigger', 'Hair Trigger', 'Overload deals 35 damage, and its cooldown is 2 cycles.'), t('feedback-loop', 'Feedback Loop', 'Each critical strike you land grants you 1 Momentum.')],
-      [t('core-dump', 'Core Dump', 'Segfault also deals triple damage to a part below 30% Integrity.'), t('burn-in', 'Burn-in', 'Thermal Throttle spends only half your Momentum stacks.')],
-      [t('unsafe-mode', 'Unsafe Mode', 'You deal 30% more damage and take 20% more.'), t('critical-heat', 'Critical Heat', 'Every hit you land is a critical strike while you have 4 or more Momentum stacks.')],
+    // The talent tiers (docs/builds.md): one of three a tier, each opening at its level (LOADOUT.tiers). The first is
+    // the plain pick, the middle changes how a skill plays, the third fires on a shared event (combat.mjs fireEvent).
+    tiers: [
+      [t('boost-clock', 'Boost Clock', 'Increases the damage of Overload by 10.'), t('hair-trigger', 'Hair Trigger', 'Lowers Overload\'s cooldown to 2 cycles, but it deals 15% less damage.'), t('feedback-loop', 'Feedback Loop', 'Gives you a Momentum stack when you land a critical strike. Works once per cycle.')],
+      [t('core-voltage', 'Core Voltage', 'Increases the damage of Segfault by 20%.'), t('burn-in', 'Burn-in', 'Makes Thermal Throttle spend only half your Momentum stacks, rounded down. The rest stay.'), t('clock-glitch', 'Clock Glitch', 'Gives you 2 Momentum stacks when you answer a tell.')],
+      [t('liquid-cooling', 'Liquid Cooling', 'Makes Overvolt and Turbo Boost cost no Signal.'), t('coolant-dump', 'Coolant Dump', 'Makes Vent also shield you for 8 for each Momentum stack it spends.'), t('back-emf', 'Back-EMF', 'Gives you a Momentum stack when an attack hits you. Works once per cycle.')],
+      [t('heat-spreader', 'Heat Spreader', 'Makes your Momentum stacks last 2 cycles longer.'), t('stack-overflow', 'Stack Overflow', 'Makes Stack Smash hit twice against any part, and three times against an Exposed one.'), t('context-switch', 'Context Switch', 'Makes Segfault usable again when you cut a part\'s move.')],
+      [t('exploit-kit', 'Exploit Kit', 'Increases your chance to critically strike by 8%.'), t('fault-storm', 'Fault Storm', 'Makes Fault Injection work on every part, for 2 cycles instead of 3.'), t('cold-plate', 'Cold Plate', 'Gives you 2 Momentum stacks when you gain a shield. Works once per cycle.')],
+      [t('junction-temp', 'Junction Temp', 'Increases the damage of Thermal Throttle by 25%.'), t('setuid', 'Setuid', 'Makes every hit you land during Sudo a critical strike.'), t('flashpoint', 'Flashpoint', 'Makes your next hit a critical strike when you break a part.')],
     ],
     // The capstone row (levels 45 and 50): pick one; its second rank comes at 50.
     capstones: [

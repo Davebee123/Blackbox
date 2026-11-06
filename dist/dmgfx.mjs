@@ -55,7 +55,7 @@ export function armorFloat(e) {
   if (e.absorbed) return { sign: 'absorbed', text: '◆ ABSORBED' };
   return { sign: 'chit', text: 'CRACKED' };
 }
-export const missFloat = (e) => (e?.type === 'miss' ? { sign: 'miss', text: 'MISS' } : null);
+export const missFloat = (e) => (e?.type === 'miss' ? { sign: 'miss', text: e.resisted ? 'RESISTED' : 'MISS' } : null);
 // The kind a hit on a part is: a crit first (whatever made it), then where it came from.
 function partKind(e) {
   if (e.crit) return 'crit';

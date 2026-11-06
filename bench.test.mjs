@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { fresh, restore, hackerLevel, classOf, subOf, subWaiting, talentPoints, pointsSpent, equippedSkills, presetKeys, maxSignal, active } from './dist/combat.mjs';
+import { fresh, restore, hackerLevel, classOf, subOf, subWaiting, freeTiers, tiersOf, equippedSkills, presetKeys, maxSignal, active } from './dist/combat.mjs';
 import { protocolSlots, SLOT_KINDS } from './dist/gear.mjs';
 import { SUBS, ARCHETYPES, FLOORS, floorFor } from './dist/data.mjs';
 import { CAMPAIGN_KEY } from './dist/campaign.mjs';
@@ -90,12 +90,10 @@ test('bench phantom 10: an Infiltrator Phantom at 10, talents spent, level-10 bl
   assert.equal(classOf(s), 'infiltrator');
   assert.equal(subOf(s), 'phantom');
   assert.equal(hackerLevel(s), 10);
-  assert.equal(talentPoints(s), 1);
-  assert.equal(pointsSpent(s, 'infiltrator'), 1, 'every point spent');
+  assert.deepEqual(tiersOf(s, 'infiltrator'), [0, null, null, null, null, null], 'the open tier picked');
   // Talents and gear as balance.mjs build() makes them (it is the same function).
   const ref = fresh(); build(ref, 'infiltrator', { level: 10 }, { sub: 'phantom' });
-  assert.deepEqual(s.loadout.ranks.phantom, ref.loadout.ranks.phantom);
-  assert.deepEqual(s.loadout.picks.phantom, ref.loadout.picks.phantom);
+  assert.deepEqual(s.loadout.tiers.phantom, ref.loadout.tiers.phantom);
   const rig = s.gear.rigs.infiltrator.map((id) => s.stash.find((x) => x.id === id));
   const open = Array.from({ length: protocolSlots(10) }, (_, i) => i).filter((i) => SLOT_KINDS[i] !== 'implant');
   assert.equal(rig.length, open.length, 'every open slot filled (no implant below 15)');
@@ -125,14 +123,14 @@ test('bench at any level: a class name is that class with no subclass picked (a 
   assert.equal(classOf(b), 'breaker'); assert.equal(hackerLevel(b), 5);
   const h = benched('herder', 30).s;
   assert.equal(classOf(h), 'operator'); assert.equal(subOf(h), 'herder');
-  assert.equal(talentPoints(h), pointsSpent(h, 'operator'));
+  assert.equal(freeTiers(h), 0, 'every open tier picked');
   assert.equal(h.floors.reached, floorFor(30)); assert.equal(h.floors.at, floorFor(30));
   assert.ok(30 >= FLOORS[h.floors.at - 1].band[0] && 30 <= FLOORS[h.floors.at - 1].band[1]);
   assert.equal(h.gear.rigs.operator.length, protocolSlots(30));
   const c = benched('bastion', 50).s;
   assert.equal(subOf(c), null, 'a class from 10: no subclass picked yet, the core alone');
-  assert.ok(subWaiting(c), 'its breakout waiting');
-  assert.equal(pointsSpent(c, 'bastion'), 0);
+  assert.ok(subWaiting(c), 'its pick waiting');
+  assert.equal(freeTiers(c), 0, 'no tree before the subclass');
   assert.equal(c.floors.reached, FLOORS.length);
   for (const sub of Object.keys(SUBS)) assert.equal(subOf(benched(sub, 20).s), sub, sub);
   for (const cls of Object.keys(ARCHETYPES)) assert.equal(classOf(benched(cls, 12).s), cls, cls);

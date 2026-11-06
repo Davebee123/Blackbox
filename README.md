@@ -47,7 +47,7 @@ Every playtest URL runs on a fresh state that is never saved. The real save is n
 | `/?playtest=run` | Connected to a fresh server. `&family=worm\|ghostroot`, `&template=mailhub\|mirror\|archive\|lab` (its rooms' kind), `&depth=<floor>`. |
 | `/?playtest=rooms` | One server as rooms, clocks ten times as fast. `&class=`, `&level=`, `&kind=`, `&size=small\|medium\|large`, `&floor=`, `&boss=a\|b\|c`, `&hunter=patrol\|track`, `&seed=`, `&puzzle=<board>` (its room, and you in it), `&seen` (every room discovered). |
 | `/?playtest=story&beat=<id>` | A test save at a story beat (the editor's *Play from here*). |
-| `/?playtest=breach`, `/?campaign=breach` | The side modes (GAME_RULES.md "Side modes"): one breach, or the breach campaign under its own save. |
+| `/?campaign=breach` | The breach campaign under its own save (GAME_RULES.md "Side modes"). |
 | `/?shell=plain`, `/?tod=night\|dawn\|day\|dusk` | No CRT shell; another time of day outside the window. |
 | Co-op | Two benches in two tabs, then `coop host` and `coop join <code>`: [`docs/coop.md`](docs/coop.md). |
 
@@ -86,8 +86,9 @@ comment saying what it does.
 | File | What it does |
 |---|---|
 | `dist/combat.mjs` | The engine: pure and deterministic, commands in, events out. Fights, XP and levels, the save and its migrations. |
-| `dist/data.mjs` | Every tunable number: abilities, classes, families, strains, guards, bosses, floors, and `createVirus`; the level curve (`power` compounding, the 4% `line`, the `lift` between). |
-| `dist/classes/` | Each class's subclasses: `<class>.data.mjs` their skills and trees, `<class>.mjs` what they do in a fight; `kit.mjs` talent helpers. |
+| `dist/data.mjs` | Every tunable number: abilities, classes, families, strains, guards, bosses, floors, and `createVirus`; the level curve (`power` compounding for enemies, your slow `own` line, the 4% `line`, the `lift` between, gear's `gearFill`, the floor tiers (`CONFIG.floorStep`: `mobPower`'s step, `gearTier`), the coefficients' `damageRef`, `tickRef` and `dotRef`); fight length (`CONFIG.length`: Integrity up and hits down by level, a solo boss's own `long` size and enrage); boss rounds (`ROUNDS`: combat.mjs `roundOf`); the level gap above you (`CONFIG.gap`, misses, `resist`: combat.mjs `gapDealt`, `gapTaken`, `resistChance`). |
+| `dist/classes/` | Each class's subclasses: `<class>.data.mjs` their skills and talent tiers, `<class>.mjs` what they do in a fight (talents on the shared events: the `event` hook); `kit.mjs` talent helpers. |
+| `dist/talents.mjs` | The talent tiers' save migration (old ranks and picks to tiers) and the bots' picks (`botTiers`). |
 | `dist/parts.mjs` | What a wild virus is made of: its basic, signature and third parts, rolled by named constants (`PARTS`), the strains' spread (`PARTS.spread`), and an elite's clash. |
 | `dist/exe.mjs` | The .exe builds: a part's rule harder or bent (`EXE`), and their roll from floor 4 (`EXE_ROLL`; echoes are `PARTS.echo`). |
 | `dist/genes.mjs` | The gene library: every family, strain, third part, mutation, tell and guard rule in one shape, and the elites' clashes (`CLASHES`). Data only. |
@@ -110,7 +111,7 @@ comment saying what it does.
 
 | File | What it does |
 |---|---|
-| `dist/gear.mjs` | Protocols: slots, rarities, item levels, stats and rule affixes; flat numbers lifted at their level (`liftItem`, `liftFx`, `curveRestore`). Pure data and functions. |
+| `dist/gear.mjs` | Protocols: slots, rarities, item levels, stats and rule affixes; flat numbers lifted at their level, and the ones that carry your power filled (`liftItem`, `liftFx`, `FILLS`, `curveRestore`). Pure data and functions. |
 | `dist/sets.mjs` | Sets: piece counts and their bonuses in a fight. |
 | `dist/faction-gear.mjs` | Faction gear: implicit lines on a faction's items, and the five faction uniques assembled from feud parts. |
 | `dist/filters.mjs` | Filters: rolled gear for your firewall's slots. |
@@ -170,7 +171,7 @@ comment saying what it does.
 | `dist/mail.mjs` | Letters, contracts and the Halcyon retainer. |
 | `dist/content.mjs` | Fills and checks the written content's blanks. |
 | `dist/content/story.mjs`, `dist/content/contracts.mjs` | The story beats and contract templates, written in the editor. |
-| `dist/arcs.mjs`, `dist/arcs-view.mjs` | Floor jobs: each floor's fixed chain of contracts, and its page in Mail. |
+| `dist/arcs.mjs`, `dist/arcs-view.mjs` | Floor jobs: each floor's fixed chain of contracts (its Boss step and extra letters), and its page in Mail. |
 | `dist/threads.mjs`, `dist/threads-view.mjs`, `dist/content/threads.mjs` | Threads: quests found in rooms, their marks and dialogue, and their data. |
 | `dist/scanner.mjs`, `dist/scanner-view.mjs`, `dist/scanner.css` | The scanner: the Listening Post (its map node, card and hub terminal), its radio, the stations, the reel, the tape and what each pays. |
 | `dist/quest-view.mjs`, `dist/quest.css` | The quest window: a thread as an intercepted transmission. |
@@ -189,7 +190,7 @@ comment saying what it does.
 | `dist/view.mjs` | Markup builders for every page and the fight board. Pure functions of state. |
 | `dist/fightread.mjs` | Reading a fight: what a tell does and how to stop it, live gear rules, decoded parts. |
 | `dist/ruletext.mjs` | Picks out a rule's key facts (numbers, ◆, statuses) for highlighting. |
-| `dist/skills-view.mjs` | Loadout → Skills and talents, and the subclass breakout. |
+| `dist/skills-view.mjs` | Loadout → Skills and talents (the class page, where you choose your subclass) and the Toolkit (key T). |
 | `dist/routines.mjs` | Routines: a program per virus that plays your moves when you don't; its RAM, benchmark and cues. |
 | `dist/routines-view.mjs`, `dist/routines-ui.mjs`, `dist/routines.css` | The Program tab, its drag and drop, and the program's marks on the board. |
 | `dist/levelup-view.mjs`, `dist/levelup-ui.mjs`, `dist/levelup.css` | The level-up: a firmware update under the top bar. |
@@ -225,7 +226,7 @@ comment saying what it does.
 | `dist/bootfx.mjs`, `dist/bootfx.css` | A new fight: the screen boots into it, the virus first; leaving a won one, a channel cut; connecting to a server, the dial-up; jacking out, the hang-up. |
 | `dist/window.mjs` | The slum outside the window behind the monitor, and its weather. |
 | `dist/abilityfx.mjs`, `dist/abilityfx-table.mjs`, `dist/abilityfx-playtest.mjs` | Ability effects on the board, the table of every ability's effect, and its playtest. |
-| `dist/hitfx.mjs`, `dist/dmgfx.mjs`, `dist/lash.mjs` | Hits landing on a part (a broken one's name breaking into 1s and 0s), damage numbers one per source, a virus lashing at the screen. |
+| `dist/hitfx.mjs`, `dist/dmgfx.mjs`, `dist/lash.mjs` | Hits landing on a part (a MISS or RESISTED stamped on it; a broken one's row and name breaking into 1s and 0s), damage numbers one per source, a virus lashing at the screen. |
 | `dist/virus-art.mjs` | Each virus as animated 3D ASCII art: each body attacks its own way out of its window (`STRIKES`), a broken part dissolves into 1s and 0s. |
 | `dist/nocarrier.mjs`, `dist/nocarrier.css` | Losing a fight: static and NO CARRIER, then the Disconnected card. |
 | `dist/class-emblems.mjs` | The class picker's ASCII emblems. |
@@ -240,7 +241,7 @@ comment saying what it does.
 
 | File | What it does |
 |---|---|
-| `dist/breach.mjs`, `dist/breach-view.mjs`, `dist/breach.css` | A breach: one run through one server on a branching map. |
+| `dist/breach.mjs`, `dist/breach-view.mjs`, `dist/breach.css` | The campaign's breach: one run through one server on a branching map. |
 | `dist/campaign.mjs`, `dist/campaign-view.mjs`, `dist/campaign.css` | The breach campaign: servers by layer, its own save. |
 | `dist/heat.mjs`, `dist/scripts.mjs`, `dist/rewrites.mjs`, `dist/skillrules.mjs` | The breach's heat ranks, one-shot scripts, rewrites and skill rules. |
 | `dist/world.mjs`, `dist/room.mjs`, `dist/room-view.mjs`, `dist/room.css`, `dist/content/room.mjs` | LOWLIGHT's back room and the world turn between breaches. |
@@ -261,9 +262,9 @@ comment saying what it does.
 | `econ.mjs` | What the bot earns and spends, resting or topping up. |
 | `farmsim.mjs` | Crews against KESSLER-FARM-00's bosses. |
 | `friction.mjs` | Health a same-level fight costs, by gear. |
-| `genesim.mjs` | The genome harness: boss bands, the spike cap, per-gene checks. |
+| `genesim.mjs` | The genome harness: boss bands, the worst three cycles, per-gene checks. |
 | `solved.mjs` | How solved fights are: eight kinds of player by class and tier. |
-| `roomsim.mjs`, `breachsim.mjs`, `campaignsim.mjs` | Bots playing a server's rooms, a breach, and the breach campaign. |
+| `roomsim.mjs`, `breachsim.mjs`, `campaignsim.mjs` | Bots playing a server's rooms, the campaign's breaches one at a time, and the whole campaign. |
 | `playtest.mjs` | Kill-order strategies against the fixtures; prints its tables. |
 | `golden-virus.mjs` | The virus builder before genes, frozen for `golden.test.mjs`. |
 | `tools/sound-preview/` | Renders sound preview clips to MP3 for the designer to hear. |
@@ -282,15 +283,18 @@ and `style.test.mjs` the tooltip grammar.
 |---|---|
 | [`GAME_RULES.md`](GAME_RULES.md) | The rules as built. |
 | [`docs/ui.md`](docs/ui.md), [`docs/style-guide.md`](docs/style-guide.md) | The look (colours, tokens, components); how every line is written. |
+| [`docs/lore.md`](docs/lore.md) | The world and the story: the machine, the factions' answers, wick (decided, not built). [`docs/story-script.md`](docs/story-script.md): its letters and dialogue, drafted. |
 | [`docs/servers.md`](docs/servers.md) | Servers as rooms, floors, sockets and puzzle rooms. |
 | [`docs/puzzle-rooms-plan.md`](docs/puzzle-rooms-plan.md) | Plan: three new puzzle rooms (Packet routing, Deadlock, Cryptogram). Built. |
 | [`docs/genome.md`](docs/genome.md), [`docs/parts-plan.md`](docs/parts-plan.md), [`docs/mechanics-list.md`](docs/mechanics-list.md) | How viruses are built, their parts, and the mechanics to play. |
 | [`docs/puzzle-fights.md`](docs/puzzle-fights.md), [`docs/puzzle-levers.md`](docs/puzzle-levers.md) | Fights you read or prepare for, and their levers. |
 | [`docs/kits.md`](docs/kits.md), [`docs/subclasses/`](docs/subclasses/) | Class kits and the eight subclasses. |
+| [`docs/class-page.md`](docs/class-page.md) | Loadout → Skills and talents and the Toolkit: the design and its states. |
 | [`docs/routines.md`](docs/routines.md) | Routines. |
 | [`docs/progression.md`](docs/progression.md), [`docs/economy.md`](docs/economy.md), [`docs/content.md`](docs/content.md), [`docs/variety-plan.md`](docs/variety-plan.md) | Pacing, the economy, activities and variety. |
 | [`docs/rivals.md`](docs/rivals.md) | Rivals: the roster, the rules and the picked look. |
 | [`docs/loot-plan.md`](docs/loot-plan.md) | Sets and uniques. |
+| [`docs/builds.md`](docs/builds.md) | Builds: skill affixes on gear and combos (design, not built). |
 | [`docs/house.md`](docs/house.md) | Your house and its furniture (decided, not built). |
 | [`docs/leanings.md`](docs/leanings.md) | Leanings: a server's one positive rule (built: GAME_RULES.md "Server kinds, specials and quirks"). |
 | [`docs/server-specials.md`](docs/server-specials.md) | Server specials: an upside, a cost and the programs for each (picked, not built). |

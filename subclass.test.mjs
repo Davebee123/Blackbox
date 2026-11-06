@@ -16,8 +16,7 @@ test('every class has two subclasses, each with its own line, edge and full tree
       assert.equal(SUBS[x.id].cls, cls);
       assert.ok(x.skills.length >= 2 && x.skills.length <= SUBCLASS.unlocks.length, x.id);
       assert.ok(x.edge?.name && x.edge?.rule, x.id);
-      assert.equal(x.fillers.length, 3); assert.ok(x.fillers.every((r) => r.length === 2));
-      assert.equal(x.talents.length, 3); assert.ok(x.talents.every((r) => r.length === 2));
+      assert.equal(x.tiers.length, 6); assert.ok(x.tiers.every((r) => r.length === 3));
       for (const id of x.skills) assert.ok(a.skills.some((k) => k.id === id), `${id} is a ${cls} skill`);
     }
     assert.ok(a.subs[EDGE[cls].sub], `${cls}'s old edge goes to a subclass of it`);
@@ -39,7 +38,7 @@ test('before level 10 a class has its core; from 10 it plays its core alone unti
     assert.ok(!edge(s, 'breaker'), 'and not the default\'s edge (Overkill)');
   }
   assert.match(command(s, 'equip shatter').at(-1).message, /Demolitionist skill/);
-  assert.match(command(s, 'talent add armor-cracker').at(-1).message, /with your subclass/);
+  assert.match(command(s, 'talent 1 a').at(-1).message, /with your subclass/);
   assert.match(command(s, 'loadout list').at(-1).message, /Presets come with your subclass/);
   assert.match(command(s, 'subclass').at(-1).message, /not picked yet/);
   s.hackers.breaker.level = 9; s.hackers.breaker.xp = 0;
@@ -90,13 +89,13 @@ test('subclass <id>: the first pick anywhere out of a fight, switching only at h
   assert.equal(subOf(s), 'demolitionist');
   command(s, 'unequip shatter');
   assert.ok(!equippedSkills(s, 'breaker').includes('shatter'));
-  command(s, 'talent add armor-cracker');
-  assert.equal(rank(s, 'armor-cracker'), 1);
+  command(s, 'talent 1 a');
+  assert.ok(hasTalent(s, 'shrapnel'));
   command(s, 'subclass overclocker');
-  assert.equal(rank(s, 'armor-cracker'), 0, 'its own tree');
+  assert.ok(!hasTalent(s, 'shrapnel') && !hasTalent(s, 'boost-clock'), 'its own tree');
   assert.ok(equippedSkills(s, 'breaker').includes('segfault'));
   command(s, 'subclass demolitionist');
-  assert.equal(rank(s, 'armor-cracker'), 1, 'and back as you left it');
+  assert.ok(hasTalent(s, 'shrapnel'), 'and back as you left it');
   assert.ok(!equippedSkills(s, 'breaker').includes('shatter'), 'the bar too');
   assert.match(command(s, 'equip segfault').at(-1).message, /an? Overclocker skill/);
 });
@@ -119,13 +118,12 @@ test('an old save from before subclasses: its talent points all come back (no su
   s.loadout.picks = { breaker: [1, 0] };
   s.version = 30;
   const t = restore(JSON.parse(JSON.stringify(s)));
-  assert.equal(t.loadout.ranks.demolitionist, undefined, 'the default subclass no longer keeps them');
-  assert.equal(t.loadout.ranks.breaker, undefined);
-  assert.equal(t.loadout.picks.breaker, undefined);
-  assert.equal(rank(t, 'armor-cracker'), 0);
+  assert.equal(t.loadout.ranks, undefined, 'ranks and old picks are gone (talents.mjs)');
+  assert.equal(t.loadout.picks, undefined);
+  assert.equal(t.loadout.tiers.demolitionist, undefined, 'the default subclass keeps nothing');
   assert.ok(!hasTalent(t, 'hair-trigger'));
   command(t, 'subclass demolitionist');
-  assert.equal(rank(t, 'armor-cracker'), 0, 'a fresh tree to spend in');
+  assert.ok(!hasTalent(t, 'blast-radius'), 'a fresh tree to pick in');
 });
 
 test('crew sim takes a subclass: a Sysop crewmate', async () => {
@@ -175,11 +173,11 @@ test('an old save from before subclasses, past level 10: its bar keeps its core 
   assert.deepEqual(equippedSkills(restore(JSON.parse(JSON.stringify(low))), 'bastion'), ['rate-limit', 'firewall']);
 });
 
-test('a talent id two subclasses share works only for its own class: a Phantom\'s Kill Chain is not the Hijacker\'s', async () => {
+test('a talent works only for its own subclass: a Phantom\'s Kill Chain is not the Hijacker\'s Handoff', async () => {
   const { selectEncounter, resolveCycle, part } = await import('./dist/combat.mjs');
   const s = at('infiltrator', 50);
   s.loadout.sub = { infiltrator: 'phantom' };
-  s.loadout.picks.phantom = [undefined, 0, undefined];
+  s.loadout.tiers.phantom = [null, null, 2];
   assert.ok(hasTalent(s, 'kill-chain'));
   selectEncounter(s, 'cryptjack', 7, { level: 6 });
   command(s, 'engage');
@@ -193,8 +191,8 @@ test('a talent id two subclasses share works only for its own class: a Phantom\'
 
 test('subclass skills whose numbers grow with your level say so on screen (scales)', async () => {
   const { scaledText } = await import('./dist/view.mjs');
-  const { ABILITIES, power } = await import('./dist/data.mjs');
-  const s = at('breaker', 26), k = power(26);
+  const { ABILITIES, own } = await import('./dist/data.mjs');
+  const s = at('breaker', 26), k = own(26);
   const n = (x) => String(Math.round(x * k));
   assert.match(scaledText(s, 'logic-bomb', ABILITIES['logic-bomb'].short), new RegExp(`Bomb: ${n(50)}, and ${n(20)} to all`));
   assert.match(scaledText(s, 'chain-reaction', ABILITIES['chain-reaction'].help), new RegExp(`explodes for ${n(30)} damage to every other part`));

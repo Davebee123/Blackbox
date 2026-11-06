@@ -17,12 +17,14 @@
 //   struck(s, atk, dealt, p) an attack landed on this player
 //   plan(s, t)             a command for the planner (bots, crewmates, balance scripts), or null to fall through
 //   gain(s, n, who)        Momentum from your gear (a unique's momentum effect), up to your cap
+//   event(s, when, ctx)    a shared event (combat.mjs fireEvent): crit, break, answer, struck, burn, shielded, tagged, cut
 //
 // State: fight state this module keeps lives on the encounter under bk* names, created when first
 // needed (a crewmate's encounter is a copy of the leader's at engage, so nothing is made at start).
 // Part state (Bit Rot, Exposed Wiring) lives on the shared parts and remembers whose it is.
-import { subOf, subEdge, hasTalent, rank, capValue, emit, hit, rand, part, alive, livingParts, attackers, soonestAttacker, on, buffed, openProc, scaled, powerOf, defender, momentumStacks, classOf, missChance, patchDelay, toIntent, readyIn, damageMultiplier, gearStat, edge, previewDamage, ignoresArmor, usable, stripMark, mirrorOn, intents, heal, healScaled, fxOn } from '../combat.mjs';
+import { sustained, subOf, subEdge, hasTalent, rank, capValue, emit, hit, rand, part, alive, livingParts, attackers, soonestAttacker, on, buffed, openProc, scaled, powerOf, defender, momentumStacks, classOf, missChance, patchDelay, toIntent, readyIn, damageMultiplier, gearStat, edge, previewDamage, ignoresArmor, usable, stripMark, mirrorOn, intents, heal, healScaled, fxOn } from '../combat.mjs';
 import { ABILITIES, SKILLS, EDGE } from '../data.mjs';
+import { alliesOf } from '../combat.mjs';
 import { tellOn, tellOpen, tellAnswer, chargeSize } from '../tells.mjs';
 import { subs } from './breaker.data.mjs';
 
@@ -37,7 +39,7 @@ const isOC = (s) => breaker(s) && subOf(s) === 'overclocker';
 // mirrors what it sets in e.bkMomentum, so a break can stack past 3 under Redline.
 const redline = (s) => subEdge(s, 'overclocker');
 export const momentumCap = (s) => (redline(s) ? subs.overclocker.edge.max : SKILLS.momentumMax);
-const lasts = (s, cycles) => cycles + rank(s, 'heat-spreader');
+const lasts = (s, cycles) => cycles + (hasTalent(s, 'heat-spreader') ? 2 : 0);
 function setMomentum(s, stacks, until) {
   const e = s.encounter;
   e.momentum = stacks > 0 ? { stacks, until } : null;
@@ -70,7 +72,7 @@ function missed(s, ctx) {
   return true;
 }
 // Signal (Integrity at home) a skill costs. Never your last point.
-const costOf = (s, id) => { const n = A(id).cost - 2 * rank(s, 'liquid-cooling'); return n > 0 ? scaled(s, n) : 0; };
+const costOf = (s, id) => (hasTalent(s, 'liquid-cooling') ? 0 : scaled(s, A(id).cost)); // Liquid Cooling: free
 function pay(s, id) {
   const d = defender(s), n = Math.min(costOf(s, id), d.integrity - 1);
   if (n <= 0) return;
@@ -90,7 +92,19 @@ function strip(s, p, n, label) {
   emit(s, 'armor', `${label}: ${p.name} loses ${k} ◆${p.armor ? ` (${p.armor} left)` : `. Its armor is broken, and it patches in ${patchDelay(s)} ${patchDelay(s) === 1 ? 'cycle' : 'cycles'}`}.`, { target: p.id, left: p.armor });
   return k;
 }
-const blastMult = (s) => 1 + 0.1 * rank(s, 'blast-radius');
+const blastMult = (s) => (hasTalent(s, 'blast-radius') ? 1.15 : 1);
+// Once a cycle ("Works once per cycle"): true the first time a key asks in a cycle.
+const onceACycle = (s, key) => { const e = s.encounter, o = (e.bkOnce ||= {}); if (o[key] === e.cycle) return false; o[key] = e.cycle; return true; };
+
+// Fork Bomb's blast: a strip on every armored part and a hit on every bare one, k its strength (Recursion's echo: half).
+function forkBomb(s, a, k) {
+  const order = [...livingParts(s)].sort((x, y) => (y.attack?.due ?? 99) - (x.attack?.due ?? 99));
+  for (const p of order) {
+    if (!alive(p)) continue;
+    if (p.armor > 0) strip(s, p, Math.max(1, Math.round(a.strip * k)), a.name);
+    else hit(s, p, a.bareHit * powerOf(s) * k * (p.kind === 'fragment' ? a.fragx : 1), { mine: true, by: a.name });
+  }
+}
 
 // ---------- skills ----------
 const use = {
@@ -111,7 +125,7 @@ const use = {
   // Chain Reaction: the part is wired to blow if it breaks within its cycles (broke, below).
   'chain-reaction'(s, { a, target, e }) {
     if (!alive(target)) return;
-    target.bkChain = { until: e.cycle + a.cycles - 1, who: who(s) };
+    for (const p of hasTalent(s, 'ring-circuit') ? livingParts(s) : [target]) p.bkChain = { until: e.cycle + a.cycles - 1, who: who(s) }; // Ring Circuit: every part
     emit(s, 'status', `${target.name} is wired to blow. If it breaks in the next ${a.cycles} cycles, it hits every other part for ${scaled(s, a.blast)}.`, { target: target.id, mark: 'debuff', ability: 'chain-reaction' });
   },
   // Bit Rot: any part rots and takes more from you; one that wears armor also loses a ◆ a cycle and can't patch.
@@ -125,17 +139,14 @@ const use = {
   // attack lands soonest goes last, so a Shatter it lights is on that one.
   'fork-bomb'(s, { a, id, e }) {
     if (missed(s, { a, id })) return;
-    const order = [...livingParts(s)].sort((x, y) => (y.attack?.due ?? 99) - (x.attack?.due ?? 99));
-    for (const p of order) {
-      if (!alive(p)) continue;
-      if (p.armor > 0) strip(s, p, a.strip, a.name);
-      else hit(s, p, a.bareHit * powerOf(s) * (p.kind === 'fragment' ? a.fragx : 1), { mine: true, by: a.name });
-    }
+    forkBomb(s, a, 1);
+    if (hasTalent(s, 'recursion')) e.bkRecur = { at: e.cycle + 1, who: who(s) }; // Recursion: again next cycle, at half
     e.lastAttack = null;
   },
-  // Shatter: its shards hit every other bare part.
+  // Shatter: its shards hit every other bare part (Splintering: and break 2 ◆ on every armored one).
   shatter(s, { a, target }) {
     for (const p of livingParts(s)) if (p !== target && !(p.armor > 0)) hit(s, p, a.shards * powerOf(s), { mine: true, by: 'Shatter shards' });
+    if (hasTalent(s, 'splintering')) for (const p of livingParts(s)) if (p !== target && p.armor > 0) strip(s, p, 2, 'Splintering');
   },
   'debris-field'(s, { a, e }) {
     e.buffs['debris-field'] = e.cycle + a.cycles - 1;
@@ -162,8 +173,8 @@ const use = {
     const burn = e.burns.filter((b) => b.id === 'thermal-runaway' && b.target === target.id).at(-1);
     if (!burn) return;
     burn.who = who(s);
-    // Deep Burn: +2 a tick per rank.
-    if (rank(s, 'deep-burn')) burn.damage += scaled(s, 2 * rank(s, 'deep-burn'));
+    // Deep Burn: +5 a tick.
+    if (hasTalent(s, 'deep-burn')) burn.damage += scaled(s, 5);
     // Meltdown: the same burn on every other part, at half.
     if (hasTalent(s, 'meltdown')) {
       const others = livingParts(s).filter((p) => p !== target);
@@ -195,7 +206,9 @@ const use = {
   'stack-smash'(s, { a, target, res, base }) {
     let r = res;
     const exposed = target.exposedUntil >= s.encounter.cycle; // Exposed: the second hit comes for sure
-    for (let k = 0; k < a.repeats && (r?.crit || (k === 0 && exposed)) && alive(target); k++) r = hit(s, target, base, { mine: true, by: 'Stack Smash' });
+    // Stack Overflow: twice against any part, three times against an Exposed one (and crits still strike again).
+    const sure = hasTalent(s, 'stack-overflow') ? (exposed ? 2 : 1) : exposed ? 1 : 0;
+    for (let k = 0; k < a.repeats + (sure > 1 ? 1 : 0) && (r?.crit || k < sure) && alive(target); k++) r = hit(s, target, base, { mine: true, by: 'Stack Smash' });
   },
   'hot-loop'(s, { a }) { addMomentum(s, 1, a.cycles); },
   vent(s, { a, e }) {
@@ -208,19 +221,32 @@ const use = {
     if (e.scrambleUntil >= e.cycle) { e.scrambleUntil = 0; cleared.push('Scrambled'); }
     emit(s, 'status', `Vent: ${stacks ? `${stacks} Momentum ${stacks === 1 ? 'stack' : 'stacks'} dumped` : 'nothing to dump'}${cleared.length ? `, and ${cleared.join(' and ')} cleared` : ''}.`, { ability: 'vent' });
     heal(s, Math.round(healScaled(s, a.heal * Math.max(1, stacks)) * spendMult(s, stacks)), 'Vent');
+    // Coolant Dump: 8 shield a stack it spends.
+    if (stacks && hasTalent(s, 'coolant-dump')) { const n = sustained(s, scaled(s, 8 * stacks)); e.shield = (e.shield || 0) + n; emit(s, 'status', `Coolant Dump: +${n} shield (${e.shield}).`, { mark: 'shield', ability: 'vent' }); }
     if (d.integrity > d.max) d.integrity = d.max;
     thermalPaste(s, stacks);
   },
   'fault-injection'(s, { a, target, e }) {
     if (!alive(target)) return;
-    target.bkFault = { until: e.cycle + a.cycles - 1, who: who(s) };
-    emit(s, 'status', `Fault Injection: every hit you land on the ${target.name} is a critical strike for ${a.cycles} cycles.`, { target: target.id, mark: 'debuff', ability: 'fault-injection' });
+    // Fault Storm: every part, for 2 cycles.
+    const storm = hasTalent(s, 'fault-storm'), n = storm ? 2 : a.cycles;
+    for (const p of storm ? livingParts(s) : [target]) p.bkFault = { until: e.cycle + n - 1, who: who(s) };
+    emit(s, 'status', `Fault Injection: every hit you land on ${storm ? 'every part' : `the ${target.name}`} is a critical strike for ${n} cycles.`, { target: target.id, mark: 'debuff', ability: 'fault-injection' });
   },
   'turbo-boost'(s, { a, e }) {
     const low = defender(s).integrity < defender(s).max / 2; // run it hot when you're hurt: free, and one more stack
     if (!low) pay(s, 'turbo-boost');
     addMomentum(s, a.gain + (low ? 1 : 0), a.cycles);
     emit(s, 'status', `Turbo Boost gives you ${momentumStacks(s)} Momentum ${momentumStacks(s) === 1 ? 'stack' : 'stacks'} for ${e.momentum.until - e.cycle} cycles.`, { mark: 'buff', ability: 'turbo-boost' });
+
+    // In a crew: every crewmate's cooldowns tick crewTick cycles (as a Clock Speed payout does yours).
+    for (const { who: name, st } of alliesOf(s)) {
+      if (st.encounter) st.encounter.turbo = { until: e.cycle + a.cycles - 1, dealt: a.crewDealt, taken: a.crewTaken, who: s.who || 'you' }; // Turbo: more dealt and taken for its cycles
+      const m = st.encounter, cooling = m ? Object.keys(m.readyAt || {}).filter((k) => m.readyAt[k] > e.cycle + 1) : [];
+      if (!cooling.length) continue;
+      for (const k of cooling) m.readyAt[k] = Math.max(e.cycle + 1, m.readyAt[k] - a.crewTick);
+      emit(s, 'status', `Turbo Boost: ${name === 'you' ? 'your' : `${name}'s`} cooldowns tick ${a.crewTick} cycles.`, { mark: 'buff', ability: 'turbo-boost', ally: name });
+    }
   },
 };
 
@@ -286,16 +312,9 @@ function cycle(s) {
       if (p.armor > 0) strip(s, p, 1, 'Bit Rot');
       if (!p.armor && p.patchAt != null) p.patchAt = Math.max(p.patchAt, rot.until + 1);
     }
-    // Exposed Wiring: a part that loses its last ◆ is Exposed for your next 2 cycles.
-    if (p.maxArmor > 0 && p.armor > 0) delete p.bkBare;
-    else if (p.maxArmor > 0 && !p.armor && hasTalent(s, 'exposed-wiring') && !p.bkBare) {
-      p.bkBare = true;
-      p.exposedUntil = Math.max(p.exposedUntil || 0, e.cycle + 2);
-      emit(s, 'status', `Exposed Wiring leaves ${p.name} Exposed for 2 cycles.`, { target: p.id, mark: 'exposed' });
-    }
-    // Scorched Earth: nothing patches back.
-    if (hasTalent(s, 'scorched-earth') && !p.armor && p.patchAt != null) p.patchAt = null;
   }
+  // Recursion: last cycle's Fork Bomb goes off again, at half.
+  if (e.bkRecur && e.bkRecur.who === who(s) && e.bkRecur.at <= e.cycle) { e.bkRecur = null; if (livingParts(s).length) { emit(s, 'status', 'Recursion: Fork Bomb goes off again.', { ability: 'fork-bomb' }); forkBomb(s, A('fork-bomb'), 0.5); } }
 }
 
 function dealt(s, p, opts) {
@@ -307,28 +326,37 @@ function dealt(s, p, opts) {
   let m = rot;
   // Blast Radius: the spread hits.
   if (['Fork Bomb', 'Logic Bomb', 'Chain Reaction'].includes(opts.by)) m *= blastMult(s);
-  // Shrapnel: Shatter.
-  if (!opts.by && e.lastSkill === 'shatter') m *= 1 + 0.08 * rank(s, 'shrapnel');
-  // Core Voltage: Segfault and Stack Smash (its repeats too).
-  if ((!opts.by && ['segfault', 'stack-smash'].includes(e.lastSkill)) || opts.by === 'Stack Smash') m *= 1 + 0.08 * rank(s, 'core-voltage');
+  // Shrapnel, Core Voltage, Junction Temp: one skill's hit.
+  if (!opts.by && e.lastSkill === 'shatter' && hasTalent(s, 'shrapnel')) m *= 1.2;
+  if (!opts.by && e.lastSkill === 'segfault' && hasTalent(s, 'core-voltage')) m *= 1.2;
+  if (!opts.by && e.lastSkill === 'thermal-throttle' && hasTalent(s, 'junction-temp')) m *= 1.25;
+  // Soft Target: parts with no armor.
+  if (!(p.armor > 0) && hasTalent(s, 'soft-target')) m *= 1.1;
   return m;
 }
 
 // Redline: 10% more damage taken while you have Momentum (none with Undervolt: momentum-safe). Brace: 30% less, and what it saved goes back (struck).
-const taken = (s) => (redline(s) && momentumStacks(s) > 0 && !fxOn(s, 'momentum-safe') ? subs.overclocker.edge.taken : 1) * (breaker(s) && buffed(s.encounter, 'brace') ? 1 - A('brace').cut : 1) * wallCut(s);
+const taken = (s, atk, p) => (breaker(s) && hasTalent(s, 'crumple-zone') && p && tellOn(s, p, 'charge') ? 0.8 : 1) * (redline(s) && momentumStacks(s) > 0 && !fxOn(s, 'momentum-safe') ? subs.overclocker.edge.taken : 1) * (breaker(s) && buffed(s.encounter, 'brace') ? 1 - A('brace').cut : 1) * wallCut(s);
 function struck(s, atk, dealt, p) {
   if (!breaker(s) || !buffed(s.encounter, 'brace') || !alive(p) || !(dealt > 0)) return;
   const a = A('brace'), saved = Math.round((dealt * a.cut) / (1 - a.cut));
   if (saved > 0) hit(s, p, saved * a.back, { mine: true, by: 'Brace', src: 'reflect' });
 }
 
-// Critical Heat: with 4 or more stacks, every hit you land crits. Fault Injection: every hit you land on its part.
-const crit = (s, p, opts) => (opts.mine && ((hasTalent(s, 'critical-heat') && momentumStacks(s) >= 4) || (p.bkFault?.who === who(s) && p.bkFault.until >= s.encounter.cycle && breaker(s))) ? 100 : 0);
+// Fault Injection: every hit you land on its part crits; Setuid: every hit during Sudo; Flashpoint: your next hit after a
+// break (spent by it). Exploit Kit: 8% more.
+const crit = (s, p, opts) => {
+  if (!opts.mine || !breaker(s)) return 0;
+  const e = s.encounter;
+  if ((p.bkFault?.who === who(s) && p.bkFault.until >= e.cycle) || (hasTalent(s, 'setuid') && buffed(e, 'sudo'))) return 100;
+  if (e.bkFlash && !opts.dot && !opts.by) { e.bkFlash = false; return 100; } // Flashpoint, spent
+  return hasTalent(s, 'exploit-kit') ? 8 : 0;
+};
 // Debris Field: every ◆ you break while it runs shields you, up to its most.
 function chipped(s, p, n) {
   const e = s.encounter;
   if (!breaker(s) || !buffed(e, 'debris-field') || !(n > 0)) return;
-  const a = A('debris-field'), room = scaled(s, a.most) - (e.bkDebris || 0), add = Math.min(room, n * scaled(s, a.per));
+  const a = A('debris-field'), room = scaled(s, a.most) - (e.bkDebris || 0), add = Math.min(room, n * sustained(s, scaled(s, a.per)));
   if (add <= 0) return;
   e.bkDebris = (e.bkDebris || 0) + add;
   e.shield = (e.shield || 0) + add;
@@ -341,8 +369,6 @@ function onHit(s, p, res, opts) {
   // combat.mjs's own Overkill spill (not `mine`): remember where it went, for Total Overkill below.
   if (opts.by === 'Overkill') { e.bkSpilled = p.id; return; }
   if (!opts.mine) return;
-  // Feedback Loop: every crit you land adds a stack.
-  if (res.crit && res.dealt > 0 && !opts.dot && hasTalent(s, 'feedback-loop')) addMomentum(s, 1);
   // Total Overkill: the spill goes onto every other part, not just the one combat.mjs picked.
   if (res.broke && !opts.overkill && res.overflow > 0 && hasTalent(s, 'total-overkill') && edge(s, 'breaker')) {
     const spill = Math.min(EDGE.breaker.cap, res.overflow), skip = e.bkSpilled;
@@ -375,6 +401,34 @@ function broke(s, p) {
     e.bkBlasting = true; // a part the blast breaks blows up too
     try { for (const x of rest) if (alive(x)) hit(s, x, A('chain-reaction').blast * powerOf(s), { mine: true, by: 'Chain Reaction' }); } finally { e.bkBlasting = was; }
   }
+}
+
+// ---------- talents on the shared events (combat.mjs fireEvent) ----------
+function event(s, when, ctx) {
+  if (!breaker(s)) return;
+  const e = s.encounter, p = ctx.part;
+  if (when === 'break') {
+    // Exposed Wiring: the part whose attack lands soonest is Exposed for 2 cycles.
+    const next = hasTalent(s, 'exposed-wiring') ? soonestAttacker(s) : null;
+    if (next) { next.exposedUntil = Math.max(next.exposedUntil || 0, e.cycle + 2); emit(s, 'status', `Exposed Wiring leaves the ${next.name} Exposed for 2 cycles.`, { target: next.id, mark: 'exposed' }); }
+    if (hasTalent(s, 'flashpoint')) e.bkFlash = true; // Flashpoint: your next hit crits
+  }
+  // Shock Front: every ◆ on a part whose tell you answer.
+  if (when === 'answer' && p && alive(p) && p.armor > 0 && hasTalent(s, 'shock-front')) strip(s, p, p.armor, 'Shock Front');
+  // Cook-Off: a burn tick an armored part soaked lands as damage too.
+  if (when === 'burn' && p && alive(p) && ctx.res?.absorbed && !ctx.res.dealt && hasTalent(s, 'cook-off')) hit(s, p, ctx.burn.damage, { by: 'Cook-Off', pierce: true, noHook: true });
+  // Reactive Plating: 2 ◆ off the part whose hit your shield took.
+  if (when === 'shielded' && ctx.absorbed && p && alive(p) && p.armor > 0 && hasTalent(s, 'reactive-plating')) strip(s, p, 2, 'Reactive Plating');
+  // Cascade Failure: a cut lowers every cooldown by a cycle.
+  if (when === 'cut' && hasTalent(s, 'cascade-failure')) { for (const k of Object.keys(e.readyAt)) e.readyAt[k] = Math.max(e.cycle, e.readyAt[k] - 1); emit(s, 'status', 'Cascade Failure: your cooldowns drop by a cycle.'); }
+  // Critical Mass: a crit breaks 1 ◆ on every other part, once a cycle.
+  if (when === 'crit' && p && hasTalent(s, 'critical-mass') && livingParts(s).some((x) => x !== p && x.armor > 0) && onceACycle(s, 'mass')) for (const x of livingParts(s)) if (x !== p && x.armor > 0) strip(s, x, 1, 'Critical Mass');
+  // Overclocker: Momentum from crits, answers, hits on you and shields; Segfault back on a cut.
+  if (when === 'crit' && hasTalent(s, 'feedback-loop') && onceACycle(s, 'feedback')) gain(s, 1, 'Feedback Loop');
+  if (when === 'answer' && hasTalent(s, 'clock-glitch')) gain(s, 2, 'Clock Glitch');
+  if (when === 'struck' && hasTalent(s, 'back-emf') && onceACycle(s, 'emf')) gain(s, 1, 'Back-EMF');
+  if (when === 'shielded' && ctx.gained && hasTalent(s, 'cold-plate') && onceACycle(s, 'plate')) gain(s, 2, 'Cold Plate');
+  if (when === 'cut' && hasTalent(s, 'context-switch') && e.readyAt.segfault > e.cycle) { delete e.readyAt.segfault; emit(s, 'proc', 'Context Switch: Segfault is ready.', { ability: 'segfault' }); }
 }
 
 // ---------- the planner ----------
@@ -509,6 +563,8 @@ function planOC(s, t) {
   // or thick armor with Crack cooling: for two cycles every hit goes through.
   const rule = (t.lockHp > 0 && livingParts(s).some((p) => p.lock === t.id)) || livingParts(s).some((p) => p.ward === t.id) || (t.deadman && livingParts(s).filter((p) => p.kind === 'system').length > 1) || mirrorOn(s) || mirrorOn(s, e.cycle + 1);
   if ((rule || (t.armor >= 3 && !ok(s, 'crack ' + t.id))) && ok(s, 'sudo')) return 'sudo';
+  // Turbo Boost in a crew, whenever it's up (the sims: +30% dealt is worth more than timing it around the +20% taken).
+  if (alliesOf(s).length && ok(s, 'turbo-boost')) return 'turbo-boost';
   // Turbo Boost when you're hurt: free stacks for a Thermal Throttle.
   if (!healthy(s, 0.5) && usable(s).includes('thermal-throttle') && readyIn(s, 'thermal-throttle') <= 1 && ok(s, 'turbo-boost')) return 'turbo-boost';
   const tt = (p) => st >= 1 && ok(s, 'thermal-throttle ' + p.id);
@@ -526,8 +582,8 @@ function planOC(s, t) {
   if (st < 2 && usable(s).includes('thermal-throttle') && readyIn(s, 'thermal-throttle') <= 1 && ok(s, 'hot-loop ' + t.id) && t.integrity > estimate(s, t, 22)) return 'hot-loop ' + t.id;
   // Stack Smash wants Exposed (every crit hits again): Exploit first on a big bare part.
   if (usable(s).includes('stack-smash') && readyIn(s, 'stack-smash') <= 1 && !on(s, t, 'exposed') && t.integrity > estimate(s, t, 60) && ok(s, 'exploit ' + t.id)) return 'exploit ' + t.id;
-  // Stack Smash when its crits are likely (Exposed, Critical Heat), or when nothing bigger is ready.
-  const likely = on(s, t, 'exposed') || (hasTalent(s, 'critical-heat') && st >= 4);
+  // Stack Smash when its crits are likely (Exposed), or when nothing bigger is ready.
+  const likely = on(s, t, 'exposed');
   if (ok(s, 'stack-smash ' + t.id) && (likely || !['overload', 'flood', 'segfault'].some((id) => ok(s, id + ' ' + t.id)))) return 'stack-smash ' + t.id;
   return null;
 }
@@ -546,4 +602,4 @@ function fill(s, t) {
   return [];
 }
 
-export default { use, validate, cycle, dealt, taken, struck, crit, hit: onHit, broke, chipped, plan, fill, gain };
+export default { use, validate, cycle, dealt, taken, struck, crit, hit: onHit, broke, chipped, plan, fill, gain, event };

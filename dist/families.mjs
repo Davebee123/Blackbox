@@ -218,7 +218,7 @@ export function jitterFirst(v, r) {
 export const setName = (family, id) => ATTACK_SETS[family]?.[id]?.name || null;
 
 // ---------- the bodies' rules ----------
-const scaleOf = (v) => v.hpPower || 1;
+const scaleOf = (v) => v.addPower || v.hpPower || 1; // adds (Packages, Droppers) keep their size: no fight length (data.mjs CONFIG.length)
 const nextId = (v, stem) => { let n = 1; while (v.parts.some((p) => p.id === `${stem}${n}`)) n++; return `${stem}${n}`; };
 function fragment(v, id, name, hp, extra = {}) {
   const p = { id, name, kind: 'fragment', integrity: hp, max: hp, armor: 0, maxArmor: 0, patchAt: null, veiled: false, loot: null, special: false, attack: null, exposedUntil: 0, lastDamaged: 0, boosted: false, ...extra };
@@ -425,7 +425,7 @@ hooks.roomIntents = (s, columns) => {
 };
 // The end of a room fight's cycle: deliveries and unpacking, a Rig's heat, an elite's enrage, a Lab's overheat.
 export const ROOM_RULES = {
-  enrage: { elite: 9, first: 1.5, step: 1.25, every: 3 }, // an elite still up at cycle 9 hits 50% harder, then a quarter more every 3 (GAME_RULES.md "Families")
+  enrage: { elite: 17, first: 1.5, step: 1.25, every: 3 }, // an elite still up at cycle 17 (9 before fight length, data.mjs CONFIG.length) hits 50% harder, then a quarter more every 3 (GAME_RULES.md "Families")
   overheat: { from: 10, you: 0.02, parts: 0.03 }, // a Lab: from the 10th cycle the rack burns you and every part
 };
 hooks.roomCycle = (s) => {

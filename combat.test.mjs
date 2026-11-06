@@ -10,7 +10,8 @@ CONFIG.partToughness = 1; // mechanics tests use the parts' base numbers
 CONFIG.enemyRamp = 0;
 CONFIG.salvageChance = 1;
 CONFIG.misses = false; // and no misses
-CONFIG.powerPerLevel = 0; CONFIG.levelLine = 0; // flat numbers at every level (level tests turn it back on)
+const OWN0 = CONFIG.ownPerLevel, FILL0 = CONFIG.gearFill; // your own line and gear's fill, to turn back on
+CONFIG.powerPerLevel = 0; CONFIG.levelLine = 0; CONFIG.ownPerLevel = 0; CONFIG.gearFill = [[1, 1]]; // flat numbers at every level (level tests turn it back on)
 CONFIG.gap = { dealt: 0, taken: 0, floor: 1, below: 0 }; // and no level-gap scaling (combat.test.mjs tests it)
 (await import('./dist/data.mjs')).LOADOUT.specRanks = 0; // the kit talent's two free ranks (progression.mjs): off, for exact numbers
 
@@ -389,7 +390,7 @@ test('daemon slots: slot and unslot between fights; the slot count is the limit'
 
 test('enemies have a level: home intrusions come in at your level, and grow with you', async () => {
   const { SERVER, mobPower, power } = await import('./dist/data.mjs');
-  CONFIG.powerPerLevel = 0.06; CONFIG.levelLine = 0.04;
+  CONFIG.powerPerLevel = 0.06; CONFIG.levelLine = 0.04; CONFIG.ownPerLevel = OWN0; CONFIG.gearFill = FILL0;
   const s = fresh();
   selectEncounter(s, 'cryptjack', 1);
   const v = s.encounter.virus;
@@ -413,7 +414,7 @@ test('enemies have a level: home intrusions come in at your level, and grow with
   assert.ok(Math.abs(power(50) - 1.06 ** 49) < 1e-9 && Math.abs(power(11) / power(10) - 1.06) < 1e-9, '+6% a level, compounding');
   const { line, lift } = await import('./dist/data.mjs');
   assert.ok(Math.abs(line(50) - 2.96) < 1e-9 && Math.abs(lift(30) * line(30) - power(30)) < 1e-9, 'the level line: 4% a level; the lift carries it to power');
-  CONFIG.powerPerLevel = 0; CONFIG.levelLine = 0;
+  CONFIG.powerPerLevel = 0; CONFIG.levelLine = 0; CONFIG.ownPerLevel = 0; CONFIG.gearFill = [[1, 1]];
 });
 
 test('level-gap misses, Classic-style: 5% at your level, ±1% per level of difference', async () => {
@@ -526,14 +527,14 @@ test('stepped (the browser): solo, the virus answers as its own step after yours
   } finally { hooks.stepped = false; }
 });
 
-test('level gap, WoW-style: one level up is about even; past that, it takes less and hits harder', async () => {
+test('level gap, WoW-style: from one level up, it takes less and hits harder', async () => {
   const { gapDealt, gapTaken } = await import('./dist/combat.mjs');
   const saved = CONFIG.gap;
-  CONFIG.gap = { dealt: 0.07, taken: 0.1, floor: 0.4, below: 0.03 };
+  CONFIG.gap = { dealt: 0.05, taken: 0.06, floor: 0.4, below: 0.03 };
   try {
     assert.equal(gapDealt(0), 1); assert.equal(gapTaken(0), 1);
-    assert.equal(gapDealt(1), 1); assert.equal(gapTaken(1), 1);
-    assert.ok(Math.abs(gapDealt(4) - 0.79) < 1e-9 && Math.abs(gapTaken(4) - 1.3) < 1e-9, 'orange: a real fight');
+    assert.ok(Math.abs(gapDealt(1) - 0.95) < 1e-9 && Math.abs(gapTaken(1) - 1.06) < 1e-9, 'one level up already counts');
+    assert.ok(Math.abs(gapDealt(4) - 0.8) < 1e-9 && Math.abs(gapTaken(4) - 1.24) < 1e-9, 'orange: a real fight');
     assert.equal(gapDealt(20), 0.4, 'never under 40%');
     assert.ok(gapDealt(-3) > 1 && gapTaken(-3) < 1, 'below you, a little easier');
     const s = fresh();

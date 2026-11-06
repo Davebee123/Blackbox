@@ -16,11 +16,11 @@ const strip = (css) => css.replace(/\/\*[\s\S]*?\*\//g, '');
 const plain = (h) => h.replace(/<[^>]+>/g, '').replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
 const at = (cls, level, sub = null) => { const s = fresh(); s.loadout.archetype = cls; s.hackers = { [cls]: { level, xp: 0 } }; if (sub) s.loadout.sub = { [cls]: sub }; return s; };
 // Every kind of unlock: skills (3), protocol bases and the kit talent (5), a floor (7), the subclass to pick and SIGINT
-// and a talent point (10), the Implant slot and a daemon slot (15), a protocol slot (30), the capstone point (45) and
+// and a talent tier (10, 16), the Implant slot and a daemon slot (15), a protocol slot (30), the capstone point (45) and
 // its second rank (50); a picked subclass's edge (10); server memory (off for now: its words, by hand).
 function everyKind() {
   const s = at('breaker', 1);
-  const evs = [3, 5, 7, 10, 15, 30, 45, 50].map((L) => levelUpPreview(s, L));
+  const evs = [3, 5, 7, 10, 15, 16, 30, 45, 50].map((L) => levelUpPreview(s, L));
   evs.push(levelUpPreview(at('breaker', 10, 'demolitionist'), 10));
   evs.push({ ...levelUpPreview(s, 12), gains: ['server memory +1'] });
   return evs;
@@ -50,7 +50,9 @@ test('every unlock is a row, with its detail in a tooltip; the power line, the I
   assert.doesNotMatch(h, /undefined|NaN|\[object/);
   assert.ok(h.includes('data-module="loadout"') && h.includes('data-lu-close'), 'Loadout and Continue');
   const one = levelUpPreview(at('breaker', 9), 10), s1 = levelUpSummary([one]), h1 = plain(firmwareMarkup(s1));
-  assert.ok(s1.items.some((it) => it.kind === 'power' && it.value === '+6%') && s1.items.some((it) => it.kind === 'integrity' && it.value === String(one.server)));
+  assert.ok(!s1.items.some((it) => it.kind === 'power') && s1.items.some((it) => it.kind === 'integrity' && it.value === String(one.server)), 'past level 6 a level brings no power of its own (gear carries you)');
+  const early = levelUpSummary([levelUpPreview(at('breaker', 4), 5)]);
+  assert.ok(early.items.some((it) => it.kind === 'power' && it.value === '+6%'), 'to level 6: +6%');
   assert.ok(s1.next && s1.next.level === one.next.level && h1.includes('v11 · Protocol bases +4'), 'the next level that brings something');
   assert.match(h1, /Firmware update · breaker\.rom/);
   assert.match(firmwareMarkup(s1), /v9 → <b>v10<\/b>/);
@@ -71,7 +73,7 @@ test('the tooltips read in the game\'s voice: Name, then plain sentences with th
   assert.match(g('kit').tip, /^Overclocked Core: Increases all damage you deal by 6%/);
   assert.equal(g('skill').value, 'key 3', 'a new skill shows the key it went on');
   assert.equal(g('sigint').value, 'key -');
-  assert.equal(sum.items.find((it) => it.label === 'Talent point').value, '+4', 'counted kinds add up (10, 10 with a subclass, 30, 50)');
+  assert.equal(sum.items.find((it) => it.label === 'Talent tier').value, '+3', 'counted kinds add up (10, 10 with a subclass, 16)');
   for (const it of sum.items) assert.ok(it.label.length <= 24 && /^[A-Z]/.test(it.label), it.label);
 });
 
@@ -157,7 +159,7 @@ test('app.js: every level-up goes to the firmware update and waits; the old bann
   assert.doesNotMatch(app, /function levelUp\(|levelUpLines|privileges escalated|luStyle|params\.get\('levelup'\)|settings\.levelup/);
   assert.match(app, /\/\^developer levelup\( \|\$\)\/\.test\(text\)\) return levelUpCommand/);
   assert.match(app, /const m = arg\.match\(\/\^preview\(\?: \(\\d\+\|all\)\)\?\$\/\);/, 'only preview [level|all]');
-  assert.match(app, /function boFree\(\) \{ return !introOn && !lu\.showing\(\) && !lu\.pending\(\)/, 'the subclass breakout waits its turn');
+  assert.match(app, /function subPrompt\(\) \{\n  if \(CAMP \|\| !V\.subPromptDue\(campaign\) \|\| introOn \|\| lu\.showing\(\) \|\| lu\.pending\(\)/, 'the subclass prompt waits its turn');
   // Developer commands stay behind ?dev (the gate turns them into developer-off before they reach levelUpCommand).
   assert.ok(app.indexOf("text = 'developer-off'") < app.indexOf('return levelUpCommand'));
   assert.doesNotMatch(systemMarkup(fresh()), /levelup|Level-up/, 'no Level-up setting');

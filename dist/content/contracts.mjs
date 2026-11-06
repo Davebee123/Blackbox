@@ -6,8 +6,8 @@ export default {
       "title": "Page nine",
       "from": "wick",
       "faction": null,
-      "reason": "wick read the claims ledger. One client on page nine gets paid every month.",
-      "lore": "fourteen claims, each filed the day before its hit. somebody knows the schedule.",
+      "reason": "wick read the claims ledger. Page nine is an account whose holders died thirty years ago.",
+      "lore": "fourteen payments cancelled, each claimed for the day before. somebody gave a dead account the schedule.",
       "steps": [
         {
           "kind": "bounty",
@@ -16,8 +16,9 @@ export default {
           "family": "ransomware",
           "subject": "page nine",
           "body": [
-            "i read the ledger. page nine is one client, marrow & vane, paid fourteen times in fourteen months.",
-            "a process called {name} files their claims from SPRAWL-00. take it down before it files another."
+            "i read the ledger. so did you, or you lie better than i do.",
+            "page nine is marrow & vane. both partners died before the cascade. halcyon still takes their premium every month, and still pays their claims.",
+            "a process called {name} files those claims from SPRAWL-00. take it down before it files another."
           ],
           "reward": {
             "credits": [
@@ -33,7 +34,7 @@ export default {
           "k": 0,
           "subject": "where it reported",
           "body": [
-            "pagenine-0909 reported to {server}. map it, every room. i want to see what it carries."
+            "pagenine-0909 reported to {server}. map it, every room. i want to know who reads dead men’s mail."
           ],
           "reward": {
             "credits": [
@@ -49,11 +50,11 @@ export default {
           "k": 1,
           "file": "mv-claims.log",
           "label": "marrow & vane’s claim log",
-          "line": "text: fourteen claims. each one is dated the day before the hit it claims for.",
+          "line": "text: fourteen claims. each dated the day before the payment it claims for was cancelled.",
           "subject": "filed early",
           "body": [
             "there is a claim log in a vault on {server}: {file}. bring it home.",
-            "read the dates when you have it. then read them again."
+            "read the dates. then read them again."
           ],
           "reward": {
             "credits": [
@@ -69,13 +70,33 @@ export default {
           "k": 2,
           "subject": "the board on {server}",
           "body": [
-            "whoever filed those claims left a puzzle board running on {server}.",
-            "win it. the board keeps their schedule."
+            "whoever files those claims left a puzzle board running on {server}. win it. the board keeps their schedule.",
+            "and the thing that files them lives behind it."
           ],
           "reward": {
             "credits": [
               80,
               12
+            ],
+            "rep": 6,
+            "pick": true
+          }
+        },
+        {
+          "kind": "boss",
+          "at": "sprawl",
+          "subject": "the account",
+          "boss": "PAGE NINE",
+          "challenge": "PREMIUM RECEIVED. CLAIM FILED. PREMIUM RECEIVED. CLAIM FILED.",
+          "fall": "ACCOUNT CLOSED. BENEFICIARY: NONE.",
+          "body": [
+            "the board says the account runs itself. a process in the Core of {server}, paying a dead man’s premium and filing his claims. thirty years of it.",
+            "it calls itself page nine. switch it off."
+          ],
+          "reward": {
+            "credits": [
+              90,
+              13
             ],
             "rep": 6,
             "pick": true
@@ -88,8 +109,8 @@ export default {
       "title": "Carrier",
       "from": "lantern",
       "faction": "lantern",
-      "reason": "LANTERN hears the schedule on the Backhaul, and sells it to you a page at a time.",
-      "lore": "The schedule is signed. Not by a crew. By a pricing model.",
+      "reason": "LANTERN hears a count on the Backhaul, and sells it to you a page at a time.",
+      "lore": "The schedule is signed. Not by a crew. By a pricing model. And the count at its foot says eighty-one percent.",
       "steps": [
         {
           "kind": "install",
@@ -98,8 +119,8 @@ export default {
           "label": "a LANTERN listener",
           "subject": "Tune in",
           "body": [
-            "wick says you want the schedule. We hear it on the Backhaul.",
-            "Put our listener on {server}. We hear what crosses it, and so will you."
+            "Four. Nine. Nine. This is LANTERN.",
+            "wick says you want the schedule. We hear it on the Backhaul. Put our listener on {server}. What crosses it, we hear. Then you hear."
           ],
           "reward": {
             "credits": [
@@ -116,8 +137,8 @@ export default {
           "count": 4,
           "subject": "A clear line",
           "body": [
-            "The schedule crosses {server}. Clear {count} rooms there that you haven’t cleared before.",
-            "The listener needs a clear line."
+            "The strays on {server} come up from below. They are not lost. They are looking for someone who owes them an answer.",
+            "Clear {count} rooms you haven’t cleared before. The listener needs a clear line."
           ],
           "reward": {
             "credits": [
@@ -133,7 +154,7 @@ export default {
           "k": 2,
           "file": "sched.0412",
           "label": "a page of the schedule",
-          "line": "text: twelve servers, twelve dates, twelve crews. every client on it is insured by halcyon.",
+          "line": "text: twelve dates, twelve trades, each marked cancel. none of them insured. at the foot: process table at 81%.",
           "subject": "One page",
           "body": [
             "One page of the schedule sits in the vault on {server}, as {file}.",
@@ -152,10 +173,10 @@ export default {
           "kind": "sweep",
           "at": "road",
           "k": 3,
-          "subject": "Who reads it",
+          "subject": "Who’s counting",
           "body": [
-            "Whoever reads the schedule passes through {server}.",
-            "Walk it end to end in one visit, and don’t rest. We want to hear who else is there."
+            "Something sends a count down this line every night, the way an old machine once did. Some of us read that count for a living, once.",
+            "Walk {server} end to end in one visit, and don’t rest. We want to hear who else is listening."
           ],
           "reward": {
             "credits": [
@@ -166,12 +187,15 @@ export default {
           }
         },
         {
-          "kind": "lair",
+          "kind": "boss",
           "at": "lair",
           "subject": "It heard us",
+          "boss": "CENTRIFUGE",
+          "challenge": "bid received. bid received. bid received.",
+          "fall": "Four. Nine. Nine. The line is clear.",
           "body": [
-            "{boss} keeps the Core of {server}. It heard our listener.",
-            "Beat it before it tells anyone what we heard."
+            "GLASSJAW sent something to the Core of {server}. It heard our listener, and it wants to sell what it heard.",
+            "It is called CENTRIFUGE. It spins faster every time it lands. Slow it down. Then beat it."
           ],
           "reward": {
             "credits": [
@@ -190,7 +214,7 @@ export default {
       "from": "claims",
       "faction": null,
       "reason": "Halcyon’s Claims desk wants the Stacks tidied up. It doesn’t say why.",
-      "lore": "The config came back with one field changed: next_hit. Claims thanks you for your discretion.",
+      "lore": "The config came back with one field changed: next_cancel. Claims thanks you for your discretion.",
       "steps": [
         {
           "kind": "map",
@@ -214,7 +238,7 @@ export default {
           "k": 1,
           "file": "model-v7.cfg",
           "label": "a pricing model’s config",
-          "line": "text: actuary v7. client weights, crew rates, and a field called next_hit.",
+          "line": "text: actuary v7. a weight on every waiting trade, insured or not, and a field called next_cancel.",
           "subject": "Misfiled document",
           "body": [
             "A configuration file, {file}, was misfiled to a vault on {server}.",
@@ -226,6 +250,16 @@ export default {
               8
             ],
             "rep": 4
+          },
+          "letter": {
+            "from": "nullchoir",
+            "subject": "an offer",
+            "body": [
+              "You carried Halcyon’s homework home and didn’t peek. Good dog.",
+              "That file decides whose money dies next. Everyone it picks has been dead for thirty years. Funny, isn’t it?",
+              "We’d let it all roll back. Every debt, every saving, every promise. Come and sing with us, NULLCHOIR-SQUAT-13.",
+              "Or don’t. We’ll be watching you type either way."
+            ]
           }
         },
         {
@@ -264,12 +298,14 @@ export default {
           }
         },
         {
-          "kind": "takeover",
-          "at": "road",
-          "k": 9,
+          "kind": "boss",
+          "at": "lair",
           "subject": "Final custody",
+          "boss": "SHOULDER SURFER",
+          "challenge": "again. from the top.",
+          "fall": "you type like halcyon pays you.",
           "body": [
-            "One server left: {server}. Take it over and the Stacks are in order.",
+            "One server left: {server}. Its Core now holds a NULL CHOIR process that has been reading over our contractors’ shoulders. Remove it and the Stacks are in order.",
             "Your retainer has been reviewed. It stands."
           ],
           "reward": {
@@ -288,8 +324,8 @@ export default {
       "title": "Cold storage",
       "from": "kestrel",
       "faction": "kestrel",
-      "reason": "Kestrel rents the racks on Coldline. Someone runs jobs on them without paying.",
-      "lore": "The racks were leased by Halcyon Mutual, under a client’s name. Kestrel is raising its rates.",
+      "reason": "Kestrel owns the racks on Coldline. Someone runs jobs on them without paying.",
+      "lore": "The lease was Kessler’s, and so were its logs, and so was the thing still working the night shift. Kestrel has archived them all, and is raising its rates.",
       "steps": [
         {
           "kind": "rooms",
@@ -317,7 +353,7 @@ export default {
           "label": "a Kestrel meter",
           "subject": "Metering",
           "body": [
-            "Put a meter on {server}. It counts what we are not paid for."
+            "Put a meter on {server}. It counts what we are not paid for. On Coldline, that has been most things for thirty years."
           ],
           "reward": {
             "credits": [
@@ -325,19 +361,27 @@ export default {
               8
             ],
             "rep": 4
+          },
+          "letter": {
+            "from": "wick",
+            "subject": "moth",
+            "body": [
+              "moth dropped on coldline. mid-raid.",
+              "not your job. telling you anyway.",
+              "if you find a session that won’t close, it’s them. it won’t time out. nothing down here does."
+            ]
           }
         },
         {
           "kind": "heist",
           "at": "track",
           "k": 2,
-          "file": "lease.db",
-          "label": "the forged lease",
-          "line": "binary: a rack lease for marrow & vane, signed by halcyon mutual’s procurement desk.",
+          "file": "kessler-ops.log",
+          "label": "Kessler’s night-desk log",
+          "line": "text: kessler settlement, night desk, forty years ago. change approved: settlement timeout disabled. engineer’s note: objection on file. switching it off.",
           "subject": "The lease",
           "body": [
-            "The lease for those racks is in the vault on {server}, as {file}. It is forged.",
-            "Bring it out past the Tracker."
+            "Our oldest lease on Coldline is in the vault on {server}, as {file}. It predates us. Bring it out past the Tracker."
           ],
           "reward": {
             "credits": [
@@ -354,8 +398,7 @@ export default {
           "k": 3,
           "subject": "Walkthrough",
           "body": [
-            "Walk {server} end to end in one visit, without a rest.",
-            "Our auditors will want to know it was all looked at."
+            "Walk {server} end to end in one visit, without a rest. Our auditors found a process there that answers to Kessler’s night desk. Kessler has not had a night desk for thirty years."
           ],
           "reward": {
             "credits": [
@@ -366,12 +409,14 @@ export default {
           }
         },
         {
-          "kind": "takeover",
-          "at": "road",
-          "k": 9,
+          "kind": "boss",
+          "at": "lair",
           "subject": "Eviction",
+          "boss": "NIGHT DESK",
+          "challenge": "night desk. awaiting counterparty.",
+          "fall": "shift ended. 0 trades settled.",
           "body": [
-            "The jobs run from {server}. Take it over and the lease is void."
+            "The unpaid jobs run from the Core of {server}. Something there is still settling trades for a company that no longer exists. Evict it, and the lease is void."
           ],
           "reward": {
             "credits": [
@@ -390,7 +435,7 @@ export default {
       "from": "nullchoir",
       "faction": "nullchoir",
       "reason": "NULL CHOIR wants the pricing model broken. You want to read it first.",
-      "lore": "The model has one rule: a client who pays more is hit less. Whoever paid the most this year paid Halcyon.",
+      "lore": "The model has one rule: an insured trade is never picked. Its cancel code is thirty years old, and it has one author.",
       "steps": [
         {
           "kind": "puzzle",
@@ -398,8 +443,7 @@ export default {
           "k": 0,
           "subject": "Audition",
           "body": [
-            "You want the model. So do we.",
-            "Win the puzzle board on {server} and we talk."
+            "You want the model. So do we. Win the puzzle board on {server} and we’ll talk. Keep time."
           ],
           "reward": {
             "credits": [
@@ -415,7 +459,7 @@ export default {
           "k": 2,
           "file": "weights.bin",
           "label": "the model’s weights",
-          "line": "binary: actuary v7 weights. two thousand clients, a price on each.",
+          "line": "binary: actuary v7. ninety thousand uninsured trades, a price on each. its cancel routine is older than the model: kessler’s recovery job, thirty years old. one author.",
           "subject": "Weights",
           "body": [
             "The model’s weights are in a vault on {server}, as {file}.",
@@ -427,6 +471,15 @@ export default {
               8
             ],
             "rep": 5
+          },
+          "letter": {
+            "from": "wick",
+            "subject": "the code",
+            "body": [
+              "it’s mine.",
+              "i wrote it in one night, thirty years ago. i thought they’d deleted it.",
+              "holding was meant to mean nobody cancels again. it just meant nobody saw."
+            ]
           }
         },
         {
@@ -467,12 +520,14 @@ export default {
           }
         },
         {
-          "kind": "lair",
+          "kind": "boss",
           "at": "lair",
           "subject": "Encore",
+          "boss": "EXIT NODE",
+          "challenge": "route: unknown. route: unknown. route: unknown.",
+          "fall": "There it is. Naked. Sing.",
           "body": [
-            "{boss} keeps the model’s backups in the Core of {server}.",
-            "Beat it, and the backups are ours to break."
+            "The model keeps its backups behind {server}’s Core, three layers deep. It hired PALEMASK to hide them. Peel it. We’ll do the rest."
           ],
           "reward": {
             "credits": [
@@ -490,8 +545,8 @@ export default {
       "title": "Ring zero",
       "from": "wick",
       "faction": null,
-      "reason": "wick wants a copy of the model somewhere only LOWLIGHT can reach it.",
-      "lore": "the model has a name inside halcyon. they call it the actuary.",
+      "reason": "wick wants a copy of the model somewhere only LOWLIGHT can reach it. He has stopped telling you where.",
+      "lore": "the model has a name inside halcyon: the actuary. kestrel had a date for the seal, and now it doesn’t.",
       "steps": [
         {
           "kind": "map",
@@ -499,8 +554,8 @@ export default {
           "k": 1,
           "subject": "somewhere to put it",
           "body": [
-            "the choir broke their copy. i kept ours.",
-            "it needs a home down here. map {server}, every room, and i will pick a shelf."
+            "the choir broke their copy. i kept ours. it needs a shelf.",
+            "map {server}. if you like it, it’s the shelf. you pick."
           ],
           "reward": {
             "credits": [
@@ -516,11 +571,10 @@ export default {
           "k": 2,
           "file": "actuary.trace",
           "label": "the model’s call log",
-          "line": "text: every call the model made this quarter. each one goes to a halcyon address.",
+          "line": "text: every call the model made this quarter, each to a halcyon address. one to kestrel: seal schedule, kernel space and below.",
           "subject": "who it calls",
           "body": [
-            "the model calls home. the log is in the vault on {server}: {file}.",
-            "the tracker there is quick. don’t let it reach you."
+            "the model calls home. the log is in the vault on {server}: {file}. the tracker there is quick."
           ],
           "reward": {
             "credits": [
@@ -537,7 +591,7 @@ export default {
           "k": 3,
           "subject": "our shelf",
           "body": [
-            "take {server} over. that is where the copy lives now."
+            "take {server} over, or don’t. it’s your shelf."
           ],
           "reward": {
             "credits": [
@@ -545,15 +599,25 @@ export default {
               10
             ],
             "rep": 4
+          },
+          "letter": {
+            "from": "kestrel",
+            "subject": "Notice of closure",
+            "body": [
+              "Kernel Space and every floor beneath it will be sealed at the end of this cycle. Please collect your belongings."
+            ]
           }
         },
         {
-          "kind": "lair",
+          "kind": "boss",
           "at": "lair",
-          "subject": "the landlord",
+          "subject": "the seal",
+          "boss": "BULKHEAD",
+          "challenge": "SEAL IN PROGRESS. OCCUPANTS: 1.",
+          "fall": "SEAL ABORTED. Kestrel apologises for any inconvenience.",
           "body": [
-            "{boss} sits on {server}, two links from our shelf.",
-            "beat it. i don’t like neighbours."
+            "they’re sealing it with you under. the lock sits in the Core of {server}.",
+            "break it and the floors stay open. or walk out and let it close. you pick. i picked twice."
           ],
           "reward": {
             "credits": [
@@ -572,7 +636,7 @@ export default {
       "from": "claims",
       "faction": null,
       "reason": "Someone at Halcyon’s Claims desk writes to you off the record.",
-      "lore": "The minutes renew the Actuary for another year. Three names signed them. One of them signs your retainer.",
+      "lore": "The minutes renew the Actuary for another year, because a restart would cost the Guarantee. Three names signed them. One of them signs your retainer.",
       "steps": [
         {
           "kind": "install",
@@ -608,6 +672,15 @@ export default {
               8
             ],
             "rep": 4
+          },
+          "letter": {
+            "from": "glassjaw",
+            "subject": "the archive",
+            "body": [
+              "Every report INIT ever filed, thirty-five years of them. Halcyon bought them retail. I bought the archive.",
+              "The last one reads process table at 99%. It was filed from Kessler’s night desk. Ask your handler who was on shift.",
+              "For sale, naturally."
+            ]
           }
         },
         {
@@ -616,7 +689,7 @@ export default {
           "k": 3,
           "file": "minutes.pdf",
           "label": "the board’s minutes",
-          "line": "text: resolved, that the actuary programme continue. three signatures.",
+          "line": "text: resolved, that the actuary programme continue, a restart being unaffordable under the guarantee. three signatures.",
           "subject": "The minutes",
           "body": [
             "The board’s minutes went to a vault on {server}, as {file}.",
@@ -649,13 +722,15 @@ export default {
           }
         },
         {
-          "kind": "takeover",
-          "at": "road",
-          "k": 9,
+          "kind": "boss",
+          "at": "lair",
           "subject": "Resignation",
+          "boss": "GOLDEN PARACHUTE",
+          "challenge": "severance approved.",
+          "fall": "Thank you. Please do not reply.",
           "body": [
-            "Take {server} over. The Actuary’s renewal goes through it.",
-            "After that, I will not write again."
+            "One of the three who signed is leaving tonight, with a payout and the renewal’s only copy. GLASSJAW is carrying both out through the Core of {server}.",
+            "Stop it. After that, I will not write again."
           ],
           "reward": {
             "credits": [
@@ -673,16 +748,16 @@ export default {
       "title": "Bedrock",
       "from": "wick",
       "faction": null,
-      "reason": "The Actuary runs on Bedrock. wick wants it switched off, and a copy kept.",
-      "lore": "we kept a copy of everything. halcyon keeps paying the retainer. call it insurance.",
+      "reason": "The Actuary runs on Bedrock. wick wants it switched off.",
+      "lore": "the actuary is off. the table is at 97%, and nobody is counting it but you.",
       "steps": [
         {
           "kind": "map",
           "at": "land",
           "subject": "the bottom",
           "body": [
-            "this is as far down as it goes. the actuary runs here.",
-            "map {server} first. every room."
+            "this is as far down as it goes. the clearing house. the first machine. it never stopped running.",
+            "map {server}. every room. look at the dates on things."
           ],
           "reward": {
             "credits": [
@@ -718,8 +793,7 @@ export default {
           "line": "binary: the actuary, whole. it still runs if you load it.",
           "subject": "the whole thing",
           "body": [
-            "its image sits in the vault on {server}, as {file}.",
-            "bring it out past the tracker. this one we keep."
+            "its image sits in the vault on {server}, as {file}. bring it out past the tracker. then i’ll know where every copy is."
           ],
           "reward": {
             "credits": [
@@ -770,8 +844,8 @@ export default {
           "at": "lair",
           "subject": "last one",
           "body": [
-            "{boss} guards what is left of it, in the Core of {server}.",
-            "beat it, and come home. drinks are on halcyon."
+            "{boss} guards what is left of it, in the Core of {server}. beat it.",
+            "after that there’s only init. i won’t ask you to go. you’ll go anyway."
           ],
           "reward": {
             "credits": [

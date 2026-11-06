@@ -12,7 +12,7 @@ import { zoneRooms } from './zone.mjs';
 import { groundOf, isMember } from './consortium.mjs';
 
 export const PRESENCE = {
-  pool: ['nyx', 'kilo', 'vanta', 'sable', 'moth', 'quill', 'rook', 'byte', 'ash', 'lumen', 'cipher_', 'zer0', 'echo9', 'grim', 'static', 'wren', 'halt', 'fen', 'oxide', 'marrow'],
+  pool: ['nyx', 'kilo', 'vanta', 'sable', 'wisp', 'quill', 'rook', 'byte', 'ash', 'lumen', 'cipher_', 'zer0', 'echo9', 'grim', 'static', 'wren', 'halt', 'fen', 'oxide', 'marrow'],
   onlineShare: 0.55, // of the pool, at any time
   sessionMs: 20 * 60000, // how long a stretch online (or off) lasts
   moveMs: 75000, // how often someone moves on

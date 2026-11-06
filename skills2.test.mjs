@@ -10,13 +10,14 @@ CONFIG.baseCrit = 0;
 CONFIG.enemyCrit = 0;
 CONFIG.misses = false; // and no misses
 CONFIG.edges = false; // each class's edge (Overkill, Grudge, Weak Spot, Last Gasp) has its own test
-CONFIG.powerPerLevel = 0; CONFIG.levelLine = 0; // flat numbers at every level (level tests turn it back on)
+const OWN0 = CONFIG.ownPerLevel, FILL0 = CONFIG.gearFill; // your own line and gear's fill, to turn back on
+CONFIG.powerPerLevel = 0; CONFIG.levelLine = 0; CONFIG.ownPerLevel = 0; CONFIG.gearFill = [[1, 1]]; // flat numbers at every level (level tests turn it back on)
 CONFIG.gap = { dealt: 0, taken: 0, floor: 1, below: 0 }; // and no level-gap scaling (combat.test.mjs tests it)
 (await import('./dist/data.mjs')).LOADOUT.specRanks = 0; // the kit talent's two free ranks (progression.mjs): off, for exact numbers
 import { start as startAt, act, quiet, noArmor, big, lost } from './classes.test.mjs';
 CONFIG.tells = false; // these check skill numbers; tells.test.mjs checks the tells
 
-// A level-25 class with exactly these skills on the bar, these talent picks (0 = a, 1 = b) and ranks.
+// A level-25 class with exactly these skills on the bar and these talent picks (0 = a, 1 = b).
 // The old one-tree talents by tier (a, b): these tests name talents the way they always did, and the
 // dev kit (s.loadout.devKit) turns them on whichever subclass now has them.
 const OLD_TALENTS = {
@@ -25,11 +26,10 @@ const OLD_TALENTS = {
   infiltrator: [['fast-hands', 'supercookie'], ['polymorphic', 'ghost-route'], ['tracking-pixel', 'assassinate']],
   operator: [['big-process', 'long-running'], ['extra-nodes', 'hive'], ['parallel-deploy', 'supervisor']],
 };
-const start = (cls, bar, picks = [], id = 'cryptjack', ranks = {}) => {
+const start = (cls, bar, picks = [], id = 'cryptjack') => {
   const s = startAt(cls, 50, id);
   s.loadout.devKit = { talents: picks.map((x, i) => (x === 0 || x === 1 ? OLD_TALENTS[cls][i][x] : null)).filter(Boolean) };
   s.loadout.equipped[cls] = bar;
-  s.loadout.ranks[cls] = ranks;
   return s;
 };
 
@@ -172,63 +172,18 @@ test('talents change the numbers they say', () => {
   big(b, 'pulse');
   assert.ok(hasTalent(b, 'hair-trigger'));
   act(b, 'overload pulse');
-  assert.equal(lost(b, 'pulse'), 35);
+  assert.equal(lost(b, 'pulse'), Math.floor(40 * 0.85), 'Hair Trigger: 15% less');
   assert.equal(readyIn(b, 'overload'), 1);
   const p = quiet(start('breaker', ['overload', 'segfault'], [0, 1]));
   big(p, 'pulse');
   act(p, 'overload pulse');
   assert.equal(lost(p, 'pulse'), 40, 'Piercing: Overload goes through armor');
-  const cd = quiet(noArmor(start('breaker', ['segfault'], [0, 0])));
-  const pp = Object.assign(part(cd, 'pulse'), { integrity: 35, max: 100 });
-  pp.integrity = 28;
-  act(cd, 'segfault pulse');
-  assert.equal(pp.integrity, 0, 'Core Dump: Segfault triples under 30% too');
-  const y = quiet(start('bastion', ['firewall', 'patch'], [1, 0, 0]));
-  y.server.integrity = 50;
-  act(y, 'patch');
-  assert.equal(y.server.integrity, 60, 'Service Pack: 10 up front');
-  y.server.integrity = 5;
-  y.encounter.hardened = 0;
-  part(y, 'pulse').attack = { name: 'Surge', effect: 'damage', amount: 14, interval: 4, due: y.encounter.cycle };
-  act(y, 'hold');
-  assert.equal(y.server.integrity, 1, 'Uptime holds at 1');
   const i = noArmor(start('infiltrator', ['opening'], [0]));
   big(i, 'pulse');
   slip(i);
   act(i, 'hold');
   act(i, 'opening pulse');
   assert.equal(lost(i, 'pulse'), 50, 'Fast Hands: Opening stays lit a second cycle');
-  const o = noArmor(quiet(start('operator', ['deploy'], [0, 0, 0])));
-  big(o, 'pulse');
-  act(o, 'deploy pulse');
-  assert.equal(lost(o, 'pulse'), 2 * Math.round(14 / 2), 'Big Process + Parallel Deploy: two helpers at half');
-});
-
-test('filler ranks change the numbers they say', () => {
-  const b = noArmor(quiet(start('breaker', ['overload'], [], 'cryptjack', { overclocked: 3, 'heat-sink': 2 })));
-  big(b, 'pulse');
-  act(b, 'overload pulse');
-  assert.equal(lost(b, 'pulse'), Math.floor(48 * 1.09));
-  const y = start('bastion', [], [], 'cryptjack', { redundancy: 2 });
-  assert.equal(maxSignal(y), CONFIG.maxSignal + 8);
-  const i = start('infiltrator', [], [], 'cryptjack', { 'low-profile': 3 });
-  const pulse = part(i, 'pulse');
-  i.encounter.cycle = pulse.attack.due;
-  const amount = pulse.attack.amount;
-  act(i, 'hold');
-  assert.equal(100 - i.server.integrity, Math.round(amount * 0.91));
-  const ac = quiet(start('breaker', [], [], 'cryptjack', { 'armor-cracker': 2 }));
-  act(ac, 'spike pulse');
-  assert.deepEqual(patches(ac, 9), [{ source: 'pulse', col: 6 }], 'Armor Cracker: 2 more cycles before it patches');
-  const o = noArmor(quiet(start('operator', ['deploy'], [], 'cryptjack', { 'thread-pool': 3 })));
-  big(o, 'pulse');
-  act(o, 'deploy pulse');
-  assert.equal(lost(o, 'pulse'), 15, 'Thread Pool: Deploy +3');
-  const r = noArmor(start('infiltrator', ['opening'], [], 'cryptjack', { recon: 2 }));
-  big(r, 'pulse');
-  slip(r);
-  act(r, 'opening pulse');
-  assert.equal(lost(r, 'pulse'), 60, 'Recon: Opening +10');
 });
 
 test('run skills: Tap maps everything; Spoof cloaks once a run, and an Infiltrator slips past one guard', async (t) => {

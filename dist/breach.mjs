@@ -1,6 +1,6 @@
 // A breach: one run through one server on a branching map (GAME_RULES.md "Side modes", phase 0: "one breach, playable end to
-// end"). Pure like the combat engine: state in, events out. It lives on s.breach, which only a playtest campaign
-// carries (app.js ?playtest=breach), or the breach campaign (campaign.mjs).
+// end"). Pure like the combat engine: state in, events out. It lives on s.breach, which only the breach campaign
+// (campaign.mjs) carries; the tests play SERVER_CARD.
 //
 // The run: three acts (Perimeter, Services, Kernel) of four rows each, a gate (a guard) after acts 1 and 2, and the
 // Resident (DEADBOLT) at /core. A campaign server (campaign.mjs) brings its own card: fewer acts or rows early on,
@@ -32,6 +32,7 @@
 // Signal, as on any run.
 import { hooks, emit, warn, active, selectEncounter, command, maxSignal, hackerOf, hackerLevel, classOf, subOf, addItem, stashItem, rigOf, attackers, gainXp, part, livingParts, defender, hit } from './combat.mjs';
 import { GUARDS, STRAINS, TELL, SUBS, LOADOUT, SUBCLASS, defaultSub, ARCHETYPES, BOSSES, FAMILIES, TELL_SETS, stemOf, makePart, climbStretch } from './data.mjs';
+import { botTiers } from './talents.mjs';
 import { seeded, rollItem, itemLabel, protocolSlots, SLOT_KINDS, chaseStat } from './gear.mjs';
 import { SUBSYSTEMS, REWRITES } from './rewrites.mjs';
 import { GENES, rollGenome, partGenes, compatible } from './genes.mjs';
@@ -404,25 +405,16 @@ export const CORE_DUMP = {
   ],
 };
 
-// ---------- your hacker, for a playtest ----------
+// ---------- your hacker, for the tests and the bots ----------
 // A class at a level with a subclass, its talents spent as a player would (balance.mjs build), and a blue protocol in
 // every open slot, chasing its subclass's stats.
-const fillOrder = (F) => [[F[0][0].id, 3], ['c0'], [F[1][0].id, 3], [F[1][1].id, 1], ['c1'], [F[2][0].id, 3], [F[2][1].id, 2], ['c2'], [F[0][1].id, 3], [F[1][1].id, 2], [F[2][1].id, 1]];
-// The talent pick each tier takes (0 or 1): a sensible player's, by subclass (breachsim.mjs measures them).
-export const TALENT_PICKS = { phantom: [0, 1, 1] };
 // A subclass from level 10 and the talent points a level has, spent as a player would (the campaign bot calls it as it
 // levels too). Returns the subclass's kit, or null below level 10.
 export function spendTalents(s, { cls = classOf(s), level = hackerLevel(s), sub = null } = {}) {
   const pick = level >= SUBCLASS.from ? (SUBS[sub]?.cls === cls ? sub : SUBS[s.loadout.sub?.[cls]]?.cls === cls ? s.loadout.sub[cls] : defaultSub(cls)) : null, key = pick || cls, kit = SUBS[pick];
   if (pick) s.loadout.sub = { ...(s.loadout.sub || {}), [cls]: pick };
   if (kit) {
-    let left = level < LOADOUT.talentFrom ? 0 : Math.floor((level - LOADOUT.talentFrom) / LOADOUT.talentEvery) + 1;
-    const ranks = {}, picks = [], tp = TALENT_PICKS[pick] || [0, 0, 0];
-    for (const [id, n] of fillOrder(kit.fillers)) {
-      if (left <= 0) break;
-      if (!n) { picks[+id[1]] = tp[+id[1]]; left--; } else { const k = Math.min(n, left); ranks[id] = (ranks[id] || 0) + k; left -= k; }
-    }
-    s.loadout.picks[key] = picks; s.loadout.ranks[key] = ranks;
+    (s.loadout.tiers ||= {})[key] = botTiers(level, null, pick); // a bot's pick in each open tier (talents.mjs BOT_PICKS)
     if (level >= LOADOUT.capstoneAt[0]) (s.loadout.caps ||= {})[key] = 0; // the first capstone
   }
   return kit || null;
@@ -451,13 +443,13 @@ export const fogOf = (s) => {
   if (b?.rules?.fog) return Math.min(2, b.rules.fog + inf + (b.fx?.zone || 0));
   return (inf ? BREACH.infiltratorFog : BREACH.fog) + (b?.fx?.zone || 0);
 };
-// opts (a campaign breach, campaign.mjs; the playtest passes none of them):
+// opts (a campaign breach, campaign.mjs; the tests pass none of them):
 //   card      the server: its name, kind, author, family, Resident, subsystems an act, gates, strains, rows
 //   outputs   { rewriteId: tier } the rewrites your captured servers run for you (each once, at its best tier)
 //   from      gates already beaten (a retry from a checkpoint): you start past the last one, with keep's rewrites
 //   prior     the rewrites the server runs now (re-imaging: each subsystem you clear keeps it or changes it)
 //   bounty    the bounty you took
-//   xp        what each kill's XP is worth here (the campaign pays more than the playtest's flat guard XP)
+//   xp        what each kill's XP is worth here (the campaign pays more than SERVER_CARD's flat guard XP)
 //   heat      the breach's heat (heat.mjs): each rank adds a modifier and pays for it
 //   replay    a Range replay: the Resident alone (campaign.mjs)
 export function startBreach(s, { seed = 1, level = hackerLevel(s), card = SERVER_CARD, outputs = {}, from = 0, keep = {}, prior = null, bounty = null, xp = 1, heat = 0, replay = false } = {}) {
@@ -466,7 +458,6 @@ export function startBreach(s, { seed = 1, level = hackerLevel(s), card = SERVER
   // them to genes you've decoded.
   const gen = { bonus: (outputs.testbed ? 1 : 0) - (outputs.sinkhole > 1 ? 1 : 0), known: outputs.sinkhole ? new Set(Object.keys(GENES).filter((id) => decoded(s, id))) : null };
   const map = replay ? replayMap(seed, level, card) : generateMap(seed, level, card, { heat, gen, dropAct: from });
-  const playtest = card === SERVER_CARD && !s.camp;
   s.breach = {
     v: 3, seed, level, server: card.id, map, at: null, path: [], cleared: {}, rolls: 0, heat: rules.heat, rules,
     signal: 0, max: 0, tokens: BREACH.startTokens, trace: rules.audit, tracePeak: rules.audit, keys: 0, hunter: null, switches: {},
@@ -484,8 +475,6 @@ export function startBreach(s, { seed = 1, level = hackerLevel(s), card = SERVER
   b.max = sigMax(s, b); b.signal = b.max;
   s.run = null;
   unpatchRules();
-  // A playtest has no campaign to carry scripts in: it hands you two to try.
-  if (playtest && !scriptsOf(s).length) { scriptsOf(s).push('sasser', rollScript(rnd(b, 3), 'uncommon')); }
   say(s, `CONNECTED to ${card.name}. ${card.kind}, level ${level}, ${card.author.toUpperCase()}.${rules.heat ? ` Heat ${rules.heat}.` : ''} Resident: ${residentName(card)}.`);
   // A retry from a checkpoint: you stand on the last gate you beat, with the rewrites from the acts behind it.
   if (from > 0 && map.nodes[`gate${from}`]) {
@@ -648,7 +637,7 @@ export function fight(s, n, { pause = false, sample = null, as = null } = {}) {
   b.fightFrom = b.signal;
   s.run = { loc: 'breach', breach: true, cwd: n.path, integrity: b.signal, max: b.max, pack: [], visited: [n.path] };
   const [key, seed, opts] = fightOf(s, sample ? { ...n, kind: 'virus', sample } : n, as);
-  selectEncounter(s, key, seed, { ...opts, quiet: true });
+  selectEncounter(s, key, seed, { ...opts, quiet: true, short: true }); // its own pace: no fight length (data.mjs CONFIG.length)
   const e = s.encounter;
   if (!e) return;
   e.breach = n.id;

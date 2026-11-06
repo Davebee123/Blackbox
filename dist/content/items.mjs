@@ -27,7 +27,8 @@ export default {
           "id": "claimjack"
         }
       ],
-      "flavour": "Comments in three languages. None of them polite."
+      "flavour": "Comments in three languages. None of them polite.",
+      "keep": true
     },
     {
       "id": "neighbours-wifi",

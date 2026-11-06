@@ -66,6 +66,7 @@ test('Keylogger: the Logger only feels synced commands, and three unsynced ones 
   fire(s, 'spike logger', true);
   assert.ok(logger.integrity < hp, 'in sync: it lands');
   assert.equal(s.encounter.keylog, 1, 'a synced command is not logged');
+  Object.assign(part(s, 'pulse'), { integrity: 9999, max: 9999 }); // the Pulse holds: no break, no Overkill onto the Logger
   fire(s, 'spike pulse');
   fire(s, 'spike pulse');
   assert.equal(logger.attack.due, s.encounter.cycle, 'the Dump comes next cycle');
@@ -525,6 +526,7 @@ test('mutated strains: each one\'s part works beside its strain', () => {
     assert.ok(tap.integrity > was, 'fed'); }
   // The Lurking Sleeper: a hit wakes the virus, but its Opportunist sleeps on until you carry a debuff.
   { const s = mstart('lurkingsleeper'), e = s.encounter, o = part(s, 'opportunist');
+    Object.assign(s.server, { integrity: 10000, max: 10000 }); // its wake-up hits (floor 4's step) don't end the fight
     fire(s, 'spike pulse');
     assert.ok(!e.virus.dormant && !o.woke && o.attack.due >= 900, 'the virus wakes, the Opportunist sleeps');
     e.exposedHit = true; fire(s, 'hold');

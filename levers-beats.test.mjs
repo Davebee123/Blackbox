@@ -4,7 +4,7 @@
 // preset, its board marks, and its entry in the no-fixed-rule test (solved.mjs FIXED).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fresh, command, selectEncounter, resolveCycle, part, livingParts, intents, mirrorOn, bendOf, previewDamage, damageMultiplier, blocked, skillBase } from './dist/combat.mjs';
+import { gearDamage, fresh, command, selectEncounter, resolveCycle, part, livingParts, intents, mirrorOn, bendOf, previewDamage, damageMultiplier, blocked, skillBase } from './dist/combat.mjs';
 import { CONFIG, TELL, createVirus } from './dist/data.mjs';
 import { tellsOf, copyOf, copyKind, dearCopy, paceOf } from './dist/tells.mjs';
 import { planner } from './dist/planner.mjs';
@@ -56,16 +56,15 @@ test('the Mimic copies everything: each kind of command, by its data', () => {
   assert.equal(copyKind('hold'), 'hold');
 });
 
-test('a hit copied hits you, never past the tell ceiling; a ◆ on you takes it', () => {
+test('a hit copied hits you at its own size, whatever your max; a ◆ on you takes it', () => {
   const s = fight('mimic');
   beat(s);
   const t = other(s), was = s.server.integrity, c = copyOf(s, 'overload', t);
   fire(s, `overload ${t.id}`);
   assert.equal(was - s.server.integrity, c.amount);
-  assert.ok(c.amount <= TELL.ceiling * 1000, 'under the ceiling');
   const s2 = fight('mimic', { max: 60 });
   beat(s2);
-  assert.ok(copyOf(s2, 'overload', other(s2)).amount <= Math.ceil(CONFIG.spikeCap.wild * 60), 'a wild virus: the spike cap');
+  assert.equal(copyOf(s2, 'overload', other(s2)).amount, c.amount, 'no cap: a small max takes the whole hit');
   const s3 = fight('mimic');
   beat(s3); s3.encounter.chits = 1;
   const w3 = s3.server.integrity;
@@ -228,7 +227,7 @@ test('pointing at itself, your hit lands on the Decoy and half of it bounces bac
   const d = livingParts(s).find((p) => p.reflect), t = livingParts(s).find((p) => p !== d);
   while (!mirrorOn(s)) fire(s, 'hold');
   d.bend = { at: s.encounter.cycle, to: d.id, was: null };
-  const dw = d.integrity, hw = s.server.integrity, back = blocked(s, Math.round(skillBase(s, 'spike', d) * CONFIG.mirrorBounce));
+  const b0 = skillBase(s, 'spike', d), dw = d.integrity, hw = s.server.integrity, back = blocked(s, Math.round((b0 + gearDamage(s, b0)) * CONFIG.mirrorBounce)); // the whole hit, gear Damage in it
   fire(s, `spike ${t.id}`);
   assert.ok(dw - d.integrity > 0, 'it lands on the Decoy');
   assert.ok(Math.abs(hw - s.server.integrity - back) <= 1, `${CONFIG.mirrorBounce * 100}% of the hit back: ${hw - s.server.integrity} against ${back}`);
