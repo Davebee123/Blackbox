@@ -31,7 +31,7 @@ export const CREW = {
   dmgPer: 0, // enemy damage per extra player (0: each player takes each hit at its solo size)
   from: 5, // class level for crew sim
   reboot: 0.25, // a crewmate that went down comes back at this much Signal for the next fight
-  names: ['nyx', 'kilo', 'vanta', 'sable', 'moth', 'quill'],
+  names: ['nyx', 'kilo', 'vanta', 'sable', 'wisp', 'quill'],
 };
 
 // The crewmates' states, rebuilt from s.crewSim when needed. Kept off the save (not enumerable).
