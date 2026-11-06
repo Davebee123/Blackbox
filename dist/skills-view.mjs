@@ -18,7 +18,7 @@
 // The first time you're home at SUBCLASS.from with no pick, app.js brings you to this page once (subPromptDue,
 // combat.mjs subPrompted).
 import { ABILITIES, ARCHETYPES, LOADOUT, SUBCLASS, SUBS, SYNC, CONFIG, STATUSES, TREE, barSlots, cantripsOf, isRunSkill, lineOf, unlockLevel, xpToNext } from './data.mjs';
-import { active, canTakeBack, capPickOf, capState, capstonePoints, classOf, cooldownOf, equippedSkills, followOf, hackerLevel, hackerOf, kitTalent, knownSkills, picksOf, pointsSpent, presetKeys, presetsOf, ranksOf, rowState, spentAbove, specRule, subOf, subWaiting, talentPoints, tierState } from './combat.mjs';
+import { active, capPickOf, capState, capstonePoints, classOf, cooldownOf, equippedSkills, followOf, freeTiers, hackerLevel, hackerOf, kitTalent, knownSkills, picked, presetKeys, presetsOf, specRule, subOf, subWaiting, tiersOf, tierState } from './combat.mjs';
 import { glyph } from './glyphs.mjs';
 import { SKILL_TEXT } from './lore.mjs';
 import { EMBLEMS } from './class-emblems.mjs';
@@ -31,7 +31,6 @@ const ico = (name) => `<span class="sk-ico" style="--icon:url('ui/icons/${name}.
 const skIco = (id) => ico(ABILITIES[id]?.icon || (id === 'spike' ? 'spike' : id === 'sigint' ? 'interrupt' : 'command'));
 const subIco = (id) => ico(`sub-${id}`);
 const pips = (n, max) => `<span class="sk-pips" aria-label="${n} of ${max}">${Array.from({ length: max }, (_, k) => `<i${k < n ? ' class="on"' : ''}></i>`).join('')}</span>`;
-const picked = (x) => x === 0 || x === 1;
 const KIND = { hit: 'Hit', burn: 'Burn', stun: 'Stun', debuff: 'Debuff', shield: 'Shield', heal: 'Heal', buff: 'Buff' };
 // Lit skills (Shatter, Retaliate, Opening) have no cooldown: they're usable just after their moment.
 const LIT = new Set(['shatter', 'retaliate', 'opening']);
@@ -82,48 +81,43 @@ function tile(p, x, sub, mineLine) {
 }
 
 // ---------- the tree ----------
-// A node's state: its ranks or pick, whether a click spends on it, and why not.
-function nodeState(p, n, row, i, j) {
+// A node's state: picked or not, whether a click picks it, and whether its row is still locked.
+function nodeState(p, n, row, j) {
   const { s, id } = p, ro = p.busy;
-  if (row.kind === 'filler') {
-    const r = ranksOf(s, id)[n.id] || 0, rs = rowState(s, id, i);
-    return { r, max: n.max, can: !ro && rs === 'open' && r < n.max, back: !ro && r > 0 && canTakeBack(s, id, n.id), cls: r ? 'has' : rs === 'blocked' ? 'locked' : '', need: rs === 'blocked' };
-  }
-  if (row.kind === 'choice') {
-    const pk = picksOf(s, id)[row.tier], ts = picked(pk) ? 'picked' : tierState(s, id, row.tier);
-    const on = pk === j, other = ts === 'picked' && !on;
-    return { on, other, can: !ro && (ts === 'open' || other), cls: on ? 'pick' : ts === 'blocked' ? 'locked' : '', need: ts === 'blocked' };
+  if (row.kind === 'tier') {
+    const ts = tierState(s, id, row.tier), on = ts === 'picked' && tiersOf(s, id)[row.tier] === j;
+    return { on, can: !ro && ts !== 'locked' && !on, cls: on ? 'pick' : ts === 'locked' ? 'locked' : '' };
   }
   const pk = capPickOf(s, id), cs = picked(pk) ? 'picked' : capState(s, id);
   const on = pk === j, other = cs === 'picked' && !on, r = on ? Math.min(n.max, capstonePoints(s, id)) : 0;
-  return { on, other, r, max: n.max, cs, can: !ro && (cs === 'open' || other), cls: on ? 'pick' : cs === 'blocked' || cs === 'locked' ? 'locked' : '', need: cs === 'blocked' };
+  return { on, other, r, max: n.max, cs, can: !ro && (cs === 'open' || other), cls: on ? 'pick' : cs === 'locked' ? 'locked' : '' };
 }
-// A node's tooltip: its rule, its kind, then what holds and the answer.
-function nodeTip(p, n, row, i, st, alt, live) {
-  const kind = row.kind === 'filler' ? `Ranks · ${st?.r || 0}/${n.max}` : row.kind === 'choice' ? `Tier ${row.tier + 1} talent` : `Capstone · Level ${LOADOUT.capstoneAt[0]}`;
-  const body = row.kind === 'capstone' ? `${n.rules[0]}\nAt rank ${n.max} (level ${LOADOUT.capstoneAt[n.max - 1]}): ${n.rules[n.max - 1]}` : n.rule;
-  const or = row.kind !== 'filler' && alt ? `\n${st?.on ? 'Instead of' : 'Or'} ${alt.name}.` : '';
+// A node's tooltip: its name, its kind and what it does. A capstone adds its second rank and what holds it.
+function nodeTip(p, n, row, st, alt, live) {
+  if (row.kind === 'tier') return tip(n.name, n.rule, `Tier ${row.tier + 1} talent`);
+  const body = `${n.rules[0]}\nAt rank ${n.max} (level ${LOADOUT.capstoneAt[n.max - 1]}): ${n.rules[n.max - 1]}`;
+  const or = alt ? `\n${st?.on ? 'Instead of' : 'Or'} ${alt.name}.` : '';
+  const kind = `Capstone · Level ${LOADOUT.capstoneAt[0]}`;
   if (!live) return tip(n.name, body + or, kind);
-  const why = p.keysBusy ? 'Between fights.' : p.busy ? 'At home.' : st.need ? `Needs ${row.need} points above it (${spentAbove(p.s, p.id, i)} now).` : row.kind === 'capstone' && st.cs === 'locked' ? `Opens at level ${LOADOUT.capstoneAt[0]}.` : '';
-  const state = [st.on && ['you', 'Picked.'], why && ['muted', why]];
-  const ans = row.kind === 'filler' ? (st.can && st.back ? '\n▸ Click to add a rank, right-click to remove one.' : st.can ? '\n▸ Click to add a rank.' : st.back ? '\n▸ Right-click to take a rank back.' : '')
-    : st.can ? `\n▸ Click to ${st.other ? 'swap to it' : 'pick it'}.` : '';
-  return tip(n.name, body + or + ans, kind, state);
+  const why = p.keysBusy ? 'Between fights.' : p.busy ? 'At home.' : st.cs === 'locked' ? `Opens at level ${LOADOUT.capstoneAt[0]}.` : '';
+  return tip(n.name, body + or + (st.can ? `\n▸ Click to ${st.other ? 'swap to it' : 'pick it'}.` : ''), kind, [st.on && ['you', 'Picked.'], why && ['muted', why]]);
 }
-// The tree: ranks as diamond pips, a picked side lit, an OR between a tier's two. live: yours, to spend on.
+// The tree: six rows of three, the picked one lit, a locked row's level at its start; the capstone row's two under them.
+// live: yours, to pick from.
 function treeHtml(p, k, live) {
-  const rows = TREE.map((row, i) => {
-    const nodes = row.kind === 'filler' ? k.fillers[row.row] : row.kind === 'choice' ? k.talents[row.tier] : k.capstones || [];
+  const rows = TREE.map((row) => {
+    const nodes = row.kind === 'tier' ? k.tiers[row.tier] : k.capstones || [];
     const node = (n, j) => {
-      const st = live ? nodeState(p, n, row, i, j) : null;
-      const tail = row.kind === 'choice' ? '' : pips(st?.r || 0, n.max);
-      const cmd = !live ? '' : row.kind === 'filler' ? `${st.can ? ` data-command="talent ${p.id} add ${n.id}"` : ''}${st.back ? ` data-command-alt="talent ${p.id} remove ${n.id}"` : ''}`
-        : st.can ? ` data-command="${row.kind === 'choice' ? `talent ${p.id} ${row.tier + 1} ${j ? 'b' : 'a'}` : `talent ${p.id} capstone ${j ? 'b' : 'a'}`}"` : '';
+      const st = live ? nodeState(p, n, row, j) : null;
+      const tail = row.kind === 'capstone' ? pips(st?.r || 0, n.max) : '';
+      const cmd = live && st.can ? ` data-command="${row.kind === 'tier' ? `talent ${p.id} ${row.tier + 1} ${'abc'[j]}` : `talent ${p.id} capstone ${j ? 'b' : 'a'}`}"` : '';
       const cls = `cls-tn${st?.cls ? ' ' + st.cls : ''}${row.kind === 'capstone' ? ' cap' : ''}${cmd ? ' can' : ''}`;
-      return live ? `<button type="button" class="${cls}" data-tn="${esc(n.id)}"${cmd}${cmd ? '' : ' aria-disabled="true"'}${nodeTip(p, n, row, i, st, nodes[1 - j], true)}><b>${esc(n.name)}</b>${tail}</button>`
-        : `<span class="${cls}" tabindex="0" data-tn="${esc(n.id)}"${nodeTip(p, n, row, i, st, nodes[1 - j], false)}><b>${esc(n.name)}</b>${tail}</span>`;
+      return live ? `<button type="button" class="${cls}" data-tn="${esc(n.id)}"${cmd}${cmd ? '' : ' aria-disabled="true"'}${nodeTip(p, n, row, st, nodes[1 - j], true)}><b>${esc(n.name)}</b>${tail}</button>`
+        : `<span class="${cls}" tabindex="0" data-tn="${esc(n.id)}"${nodeTip(p, n, row, st, nodes[1 - j], false)}><b>${esc(n.name)}</b>${tail}</span>`;
     };
-    return `<div class="cls-row${row.kind === 'capstone' ? ' cap' : ''}">${node(nodes[0], 0)}<span class="cls-or">${row.kind === 'filler' ? '' : 'or'}</span>${node(nodes[1], 1)}</div>`;
+    if (row.kind === 'capstone') return `<div class="cls-row cap">${node(nodes[0], 0)}<span class="cls-or">or</span>${node(nodes[1], 1)}</div>`;
+    const lv = live && p.lvl < row.level ? `<span class="cls-tl">${row.level}</span>` : '';
+    return `<div class="cls-row t3">${lv}${nodes.map(node).join('')}</div>`;
   }).join('');
   return `<div class="cls-tree">${rows}</div>`;
 }
@@ -164,9 +158,9 @@ function midCol(p) {
 export function skillsTabMarkup(s, view) {
   const p = pageOf(s, view), { id, a, kit, lvl, hk } = p, [A, B] = Object.values(a.subs);
   const next = xpToNext(lvl), pct = lvl < LOADOUT.maxLevel ? Math.max(0, Math.min(100, (hk.xp / next) * 100)) : 100;
-  const points = talentPoints(s, id), spent = kit ? pointsSpent(s, id) : 0, free = Math.max(0, points - spent);
-  const pts = free && !p.early ? `<span class="cls-pts" title="${esc(`Talent points: You earn one every ${LOADOUT.talentEvery} levels from level ${LOADOUT.talentFrom}, for your subclass's tree.`)}"><b>${free}</b> ${free === 1 ? 'talent point' : 'talent points'}</span>` : '';
-  const reset = spent && !p.busy ? `<button type="button" class="btn small" data-command="talent reset ${id}" title="Reset: takes back every point and pick. Free at home.">Reset</button>` : '';
+  const free = freeTiers(s, id), spent = kit ? tiersOf(s, id).some(picked) || picked(capPickOf(s, id)) : false;
+  const pts = free && !p.early ? `<span class="cls-pts" title="${esc(`Talent tiers: one opens at each of levels ${LOADOUT.tiers.join(', ')}. Pick one of its three.`)}"><b>${free}</b> ${free === 1 ? 'tier to pick' : 'tiers to pick'}</span>` : '';
+  const reset = spent && !p.busy ? `<button type="button" class="btn small" data-command="talent reset ${id}" title="Reset: takes back every pick. Free at home.">Reset</button>` : '';
   const top = `<header class="cls-top"><div class="cls-lv"><b>Lv ${lvl}</b>${lvl < LOADOUT.maxLevel ? `<span class="cls-xp" title="${fmt(hk.xp)} / ${fmt(next)} XP"><i style="width:${pct.toFixed(1)}%"></i></span>` : '<small>max level</small>'}</div><span class="cls-sp"></span>${pts}${reset}<button type="button" class="btn cls-toolkit" data-toolkit="${id}" title="Toolkit: Your abilities and your bar. Drag an ability onto a key.">${ico('command')}Toolkit<kbd>T</kbd></button></header>`;
   const ban = p.early ? `<p class="cls-ban dim">Subclass at level ${SUBCLASS.from}</p>` : p.waiting ? '<p class="cls-ban">Choose a subclass</p>' : '';
   const yours = kit, other = kit ? (kit.id === A.id ? B : A) : null;

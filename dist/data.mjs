@@ -1656,12 +1656,12 @@ export const SERVER = {
 // ---------- classes, skills, levels and talents ----------
 // Each class levels on its own, from 1 to 50, a long WoW-style climb. Every level adds 4%
 // power; skills unlock along the way (seven bar slots, an eighth at 22 and a ninth at 30; the last skill at 38);
-// a talent point every other level from 10 (21 by level 50, a full tree).
+// a talent tier at each of LOADOUT.tiers (10, 16, 22, 28, 34, 40), the capstone at 45.
 // bar: [level, slots] steps; equipSlots: the most you'll ever have. keys: the key each slot is on, in order.
 // kit: from level 5 (specFrom) one of a class's two first-row talents (ARCHETYPES[cls].spec) is part of its base kit, specRanks
 // free ranks: the level-5 specialty pick is gone. The Infiltrator's is Recon: two ranks of Heap Spray took a blue Payload from
 // 34% to 21% of its Signal a fight at level 10 (docs/progression.md), far past the few percent the others add.
-export const LOADOUT = { equipSlots: 9, bar: [[1, 7], [22, 8], [30, 9]], keys: ['2', '3', '4', '5', '6', '7', '8', '9', '0'], maxLevel: 50, talentFrom: 10, talentEvery: 2, capstoneAt: [45, 50], trialUntil: 5, specFrom: 5, specRanks: 2, kit: { breaker: 'overclocked', bastion: 'patch-notes', infiltrator: 'recon', operator: 'thread-pool' } }; // trialUntil: until a class reaches it, switching carries your level over
+export const LOADOUT = { equipSlots: 9, bar: [[1, 7], [22, 8], [30, 9]], keys: ['2', '3', '4', '5', '6', '7', '8', '9', '0'], maxLevel: 50, talentFrom: 10, tiers: [10, 16, 22, 28, 34, 40], capstoneAt: [45, 50], trialUntil: 5, specFrom: 5, specRanks: 2, kit: { breaker: 'overclocked', bastion: 'patch-notes', infiltrator: 'recon', operator: 'thread-pool' } }; // trialUntil: until a class reaches it, switching carries your level over
 // What unlocks at each hacker level (same shape for every class; `order` fills the skill steps).
 export const UNLOCKS = [
   { level: 1, what: 'spike' }, { level: 1, what: 0 }, { level: 3, what: 1 }, { level: 5, what: 2 },
@@ -1716,20 +1716,10 @@ export const levelMinutes = (level) => along(CLIMB.minutes, Math.max(1, level));
 export const RESTED = { share: 0.05, everyMs: 8 * 3600000, cap: 1.5 };
 export const restedGain = (level, ms) => (xpToNext(level) * RESTED.share * ms) / RESTED.everyMs;
 export const restedCap = (level) => Math.round(RESTED.cap * xpToNext(level));
-// The talent tree, top to bottom: filler rows (ranked, up to 3 each) between the
-// three choice tiers. A row opens once you've spent `need` points in the rows above it.
-// The capstone row under them (each subclass's `capstones`, two of them) has its own points, one at each
-// LOADOUT.capstoneAt level (45 and 50): the first picks one, the second gives it its second rank. Talent points
-// never reach it, and its points go nowhere else. It opens with 15 points spent above it (the third tier picked).
-export const TREE = [
-  { kind: 'filler', row: 0, need: 0 },
-  { kind: 'choice', tier: 0, need: 3 },
-  { kind: 'filler', row: 1, need: 4 },
-  { kind: 'choice', tier: 1, need: 8 },
-  { kind: 'filler', row: 2, need: 9 },
-  { kind: 'choice', tier: 2, need: 14 },
-  { kind: 'capstone', need: 15 },
-];
+// The talent tree, top to bottom: six tiers (each subclass's `tiers`, one pick of three a tier), each opening at its
+// LOADOUT.tiers level, then the capstone row (each subclass's `capstones`, two of them), with its own points, one at each
+// LOADOUT.capstoneAt level (45 and 50): the first picks one, the second gives it its second rank.
+export const TREE = [...LOADOUT.tiers.map((level, tier) => ({ kind: 'tier', tier, level })), { kind: 'capstone', level: LOADOUT.capstoneAt[0] }];
 const f = (id, name, rule, per) => ({ id, name, rule, per, max: 3 });
 // Key 1, the plain hit every class has: a plain 25 with no cooldown, the filler under every rotation. Each class
 // calls it by its own name and types its own word for it (`spike` works for every class too). Its id stays
