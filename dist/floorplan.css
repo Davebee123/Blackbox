@@ -661,3 +661,20 @@
 /* The terminal: the log sweep's log in the well. */
 .ls-board .sweep { margin: 0; border: 0; background: none; }
 .ls-board.done .sw-line { pointer-events: none; }
+/* Run cards (runcards.mjs): the director's violet for a surge and a courier, red for the pack. */
+.fp-card-ring { fill: none; stroke-width: 2; pointer-events: none; }
+.fp-card-ring.surge { stroke: var(--daemon); }
+.fp-card-ring.pack { stroke: var(--hot); }
+.fp-card-tab rect { stroke-width: 1; }
+.fp-card-tab text { font-size: 9px; font-weight: 700; letter-spacing: 1px; }
+.fp-card-tab.surge rect { fill: #120d1c; stroke: var(--daemon); } .fp-card-tab.surge text { fill: var(--daemon); }
+.fp-card-tab.pack rect { fill: #140503; stroke: var(--hot); } .fp-card-tab.pack text { fill: var(--hot); }
+.fp-card-bar rect { fill: #120d1c; stroke: var(--daemon); stroke-width: 1; }
+.fp-card-bar rect.fill { fill: var(--daemon); stroke: none; }
+.fp-courier rect { fill: #0d0a06; stroke: var(--daemon); stroke-width: 1.5; }
+.fp-courier use { color: var(--daemon); }
+.fp-cr-route { fill: none; stroke: var(--daemon); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 0.5 7; opacity: 0.9; pointer-events: none; }
+.fp-pk-route { fill: none; stroke: var(--hot); stroke-width: 3; stroke-dasharray: 8 6; opacity: 0.85; pointer-events: none; }
+.fp-cardstat.surge .lbl, .fp-cardstat.surge b { color: var(--daemon); }
+.fp-cardstat.pack .lbl, .fp-cardstat.pack b { color: var(--hot); }
+.fp-cardbar { display: inline-block; width: 56px; height: 7px; margin: 0 6px; vertical-align: middle; border: 1px solid var(--daemon); background: linear-gradient(90deg, var(--daemon) calc(var(--f, 0) * 100%), transparent 0); }

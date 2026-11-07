@@ -67,6 +67,7 @@ import { GENES } from './genes.mjs';
 import { PROGRAMS, SOCKET, buildProgram, uninstallProgram, programCost, buildBlock as programBlock, costLine as programCostLine, codebasesOf } from './sockets.mjs';
 import { PUZZLES, PUZZLE_KINDS, isPuzzle, cipherOf, cgOpen, newPuzzle, puzzleMove, puzzleScore, puzzleStarted, cellOf, boardLines, moveLine } from './puzzles.mjs';
 import { RIVALS, spawnRival, rivalOf, rivalAt, rivalMove, rivalMeet, rivalLeave, rivalFight, rivalArm, rivalWon, rivalLost, rivalLine } from './rivals.mjs';
+import { dealCard, cardLeave, surgeAt, surgeScreen, surgeFight, surgeWon, escortMove, escortArm, escortAfter, packAt, packMove, packFight, packWon } from './runcards.mjs';
 
 // ---------- tuning ----------
 export const ROOMS = {
@@ -982,6 +983,7 @@ export function enter(s, now = nowOf(), { keys = [] } = {}) {
   if (!fresh && !R.mapped) { const p = progressOf(s); if (p.done === p.total) mapped(s); } // done before caches and boards stopped counting
   if (R.world) { const seed = ask('exfil', s, now); if (seed) spawnExfil(s, seed); } // an Exfil this visit (netrooms.mjs: rogue servers, your cooldown)
   if (R.world) { const seed = ask('rival', s, now); if (seed) spawnRival(s, seed); } // a rival this visit (rivals.mjs: a traced server's shut vault, your cooldown)
+  if (R.world && !R.visit.rival) { const c = ask('runcard', s); if (c && dealCard(s, c.kind, c.seed)) ask('cardUp', s, R.visit.card); } // a run card (runcards.mjs: the director's, one run in four)
 }
 // Jack out from any room: home, with the pack banked. A key you didn't use goes back to its post, guard and all.
 export function jackOut(s, why = '') {
@@ -1016,6 +1018,7 @@ function keysBack(s) {
 function goHome(s, R = s.rooms) {
   const now = nowOf();
   rivalLeave(s); // a rival still walking finishes the job (rivals.mjs)
+  if (R.at) cardLeave(s); // a run card still up ends here (runcards.mjs)
   R.fightFrom = null; // the fight you left (or lost) is over: its Signal never caps your next visit's
   R.at = null; R.screen = null; R.homeAt = now; R.reconnectAt = now + (R.world ? ROOMS.reconnect : Math.min(CONFIG.deathWait.cap, ROOMS.reconnect + (R.deaths || 0) * CONFIG.deathWait.each)) / R.speed;
   R.visit = { ...R.visit, hunter: null, exfil: R.visit?.exfil?.state === 'loose' ? { ...R.visit.exfil, state: 'gone' } : R.visit?.exfil || null }; // an Exfil you left is gone
@@ -1087,8 +1090,11 @@ function step(s, room, opts) {
   if (h && !h.down && h.at === room.id) return meet(s, room, opts);
   if (hunterMove(s)) return meet(s, room, opts);
   if (rivalAt(s, room.id)) return rivalMeet(s, room, opts);
+  if (packAt(s, room.id)) return packMeet(s, room, opts);
   if (exfilOf(s)?.at === room.id) return catchExfil(s, room, opts);
   exfilMove(s);
+  escortMove(s, isUp); // the courier walks a room for each of yours (runcards.mjs)
+  if (packMove(s)) return packMeet(s, room, opts); // and the pack
   if (rivalMove(s)) return rivalMeet(s, room, opts); // a rival walks a room for each of yours (rivals.mjs)
   if (R.world) ask('moved', s); // a thread's file walks (threads.mjs)
   arrive(s, room, opts);
@@ -1102,6 +1108,7 @@ export function wait(s, opts = {}) {
   say(s, 'wait', 'rooms-cmd');
   if (hunterMove(s)) meet(s, hereOf(s), opts);
   else if (rivalMove(s)) rivalMeet(s, hereOf(s), opts);
+  else if ((escortMove(s, isUp), packMove(s))) packMeet(s, hereOf(s), opts);
   else { exfilMove(s); if (R.world) ask('moved', s); const line = [hunterLine(s), rivalLine(s)].filter(Boolean).join(' '); if (line) say(s, line); }
   return out(s, first);
 }
@@ -1122,6 +1129,7 @@ function arrive(s, room, opts = {}) {
   if (people.length) say(s, `${people.join(', ')} ${people.length === 1 ? 'is' : 'are'} here.`, 'rooms');
   if (['junction', 'den', 'empty'].includes(room.kind)) clear(s, room);
   if (room.kind === 'purse' && cacheFull(s, room)) takePurse(s, room); // a rogue server's Stash: taken as you walk in
+  if (surgeAt(s, room.id)) { surgeScreen(s, room, opts, virusName(s, room, 'surge')); return; } // a lit surge room: its next wave (runcards.mjs)
   if (isUp(s, room)) {
     const f = fightOf(s, room), v = encounterVirus(s, f.key, f.seed, f.opts), name = f.name || v.name;
     R.screen = { kind: 'virus', room: room.id, name, pause: !!opts.pause };
@@ -1144,6 +1152,14 @@ function meet(s, room, opts = {}) {
   if (classOf(s) === 'infiltrator' && !R.visit.slipped) { R.screen = { kind: 'hunter', room: room.id, pause: !!opts.pause }; return; }
   R.visit.pending = room.id;
   fight(s, room, { as: 'hunter', pause: !!opts.pause });
+}
+
+// A run card's pack on you (runcards.mjs): the fight starts, then the room you walked into.
+function packMeet(s, room, opts = {}) {
+  const R = s.rooms;
+  say(s, 'The pack is on you.', 'rooms-bad');
+  R.visit.pending = room.id;
+  fight(s, room, { as: 'pack', pause: !!opts.pause });
 }
 
 // ---------- the verbs ----------
@@ -1175,7 +1191,7 @@ export function act(s, verb, arg = null, opts = {}) {
   }
   if (verb === 'engage') {
     if (sc?.kind !== 'virus') deny(s, 'Nothing here to fight.');
-    else { R.screen = null; fight(s, here, { pause: !!opts.pause || !!sc.pause }); }
+    else { R.screen = null; fight(s, here, { pause: !!opts.pause || !!sc.pause, as: sc.as || null }); }
     return out(s, first);
   }
   if (sc?.kind === 'virus') { deny(s, `The ${sc.name} holds this room. Engage it, or step back.`); return out(s, first); }
@@ -1405,6 +1421,8 @@ export function setLure(s, arg) {
 export function fightOf(s, room, as = null) {
   if (as === 'exfil') return exfilFight(s, room);
   if (as === 'rival') return rivalFight(s, room);
+  if (as === 'surge') return surgeFight(s, room);
+  if (as === 'pack') return packFight(s, room);
   const w = world(s) && as !== 'hunter' ? ask('fight', s, room, as) : undefined;
   if (w) return w;
   const R = s.rooms, n = R.spawns[room.id] || 0, rare = !as && !!R.rare[room.id], level = (R.world ? ask('level', s) ?? R.level : R.level) + (rare ? ROOMS.rareLevel : 0);
@@ -1500,9 +1518,10 @@ export function fight(s, room, { pause = false, as = null } = {}) {
   const set = fresh ? (f.set !== undefined ? f.set : spawnSet(v.family, f.author, f.seed)) : null;
   if (set) { applySet(v, set, seeded((f.seed ^ 0x5e7) >>> 0)); R.codex[`${v.family}:${set}`] = true; logSet(s, v.family, set); }
   else if (fresh) jitterFirst(v, seeded((f.seed ^ 0x5e7) >>> 0));
-  if (room.queue && R.kind === 'Mailhub' && !['hunter', 'exfil', 'rival'].includes(as)) spamFlood(s, e);
+  if (room.queue && R.kind === 'Mailhub' && !['hunter', 'exfil', 'rival', 'pack'].includes(as)) spamFlood(s, e);
   if (f.brood) brood(s, e, f.brood);
   if (f.objective) armObjective(s, e, f.objective);
+  if (as !== 'exfil') escortArm(s, e, room, armObjective); // the courier beside you takes the even cycles' hits (runcards.mjs)
   if (as === 'exfil') { armObjective(s, e, 'exfil', CONFIG.exfil.escape); for (const p of v.parts) { p.armor = p.maxArmor = Math.min(p.maxArmor, 1); p.patchAt = null; } } // still up after its cycles: it gets away (objectives.mjs); a runner wears 1 ◆ at most
   if (v.boss && !v.raid) bossRule(s, R.bossRule || s.bossRule || 'a');
   if (R.kind === 'Cold' && !ice && !v.raid && !v.dormant) coldSleep(v);
@@ -1566,6 +1585,7 @@ hooks.roomEnd = (s, result) => {
   (R.stats.signalBy[kind] ||= []).push(lost / Math.max(1, R.max));
   const fam = ((R.stats.fam ||= {})[as === 'hunter' ? 'hunter' : e.virus.boss ? 'boss' : (e.virus.elite ? 'elite ' : '') + e.virus.family] ||= { n: 0, won: 0, lost: 0, cycles: 0 });
   fam.n++; fam.won += result === 'victory' ? 1 : 0; fam.lost += lost / Math.max(1, R.max); fam.cycles += e.cycle;
+  escortAfter(s, e); // what the courier has left (runcards.mjs)
   if (as === 'exfil') {
     const m = R.visit?.exfil;
     if (m) m.state = result === 'victory' ? 'down' : 'gone';
@@ -1602,6 +1622,12 @@ hooks.roomEnd = (s, result) => {
     const pending = R.visit.pending;
     R.visit.pending = null;
     if (pending && R.at) arrive(s, R.graph.rooms[pending]);
+    return;
+  }
+  if (as === 'surge' || as === 'pack') { // a run card's fight (runcards.mjs): the kill's loot, never a room's clear
+    if (R.world) ask('cardKill', s, room, e); else drops(s, room, e, false);
+    if (as === 'pack') { packWon(s); const pending = R.visit.pending; R.visit.pending = null; if (pending && R.at) arrive(s, R.graph.rooms[pending]); return; }
+    if (surgeWon(s, room) && R.at === room.id) surgeScreen(s, room, {}, virusName(s, room, 'surge'));
     return;
   }
   if (as === 'hunter') {

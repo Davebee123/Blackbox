@@ -2147,6 +2147,21 @@ nothing. `developer blip [cache|flicker|rumour|sighting]`.
 | **Rumour** | a traced server | 2–4 min | Names where the next event lands. It's true: the director deals that card there while it still fits | — |
 | **Sighting** | a fight room you've cleared on one of your servers | 4–8 min | Its next virus is a ★ rare spawn, up within 1–4 minutes. Not met in time, it moves on (the room's next virus is ordinary) | A rare spawn's kill |
 
+### Run cards
+
+When you connect to a traced server (not SPRAWL-00, a rogue server, a lair, the farm or a temporary server), the director
+deals a **run card** into the run one time in four, from level 3, never the same kind twice running and never beside a
+rival, on dice of its own (docs/director.md 4, `runcards.mjs`). Its rooms show through the fog; the strip shows how it's
+going. Jack out and it ends; missing one costs nothing. `developer runcard [surge|escort|pack]`.
+
+| Card | On the map | What it is | What you get |
+|---|---|---|---|
+| **Surge room** | a fight room ringed violet, SURGE, a bar | Walk in and waves of the room's family hold it, one fight after another. After 3 kills a guardian (an elite) holds it; beat it and the surge ends. Step back between fights | Each wave: its kill's pay and (40 + 12L) / 3 credits; the guardian an elite's |
+| **Escort** | a courier at the entry, a violet dotted route, DROP on the farthest room | It walks a room each time you move or wait, never into a room something holds. In a fight in its room or the one it waits to walk into, it's a Backup (*Objectives*) with Integrity 60% of your max Signal, carried fight to fight. At 0 it's lost | At the drop: 40 + 12L credits and a protocol (85% Tuned, 15% Custom) |
+| **Hunter pack** | a room ringed red, PACK ×3, a red dashed way to you | An elite of the server's family and 2 runners, starting 3 rooms or more from you (somewhere it can reach you), a room toward you for each of your moves; never into the Core, the entry or a rest room. On you, the fight starts | An elite's kill |
+
+The history (below) lists each, ending *won*, *taken* (a surge you fought in, left), *gone* (the courier lost) or *missed*.
+
 ### History
 
 The director's last 20 (events, follow-ups and blips) and how each ended (*up*, *won*, *gone*, *taken*, *missed*,
