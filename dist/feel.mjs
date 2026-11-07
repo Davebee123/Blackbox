@@ -196,6 +196,8 @@ export function createFeel({ settings, reducedMotion }) {
     preview(name) { sound.play(name, name === 'hit' ? { amount: 12 } : {}); },
     // A key on the prompt or a button press (only with Sound on).
     key(kind) { if (settings().sound) sound.key(kind); },
+    // A scene with its own mix (the cold open): { ctx, out } at the effects volume, or null with Sound off.
+    scene() { return settings().sound ? sound.out() : null; },
     // The room tone (CRT hum, fan) follows the Sound setting.
     ambience(on) { sound.ambience(on); },
     // Music and radio chatter: { on, music, radio, mood: 'home'|'run'|'fight' }.
