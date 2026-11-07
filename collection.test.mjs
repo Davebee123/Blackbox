@@ -15,14 +15,14 @@ const events = (s, type, first) => s.logs.filter((e) => e.type === type && e.id 
 
 test('the log: families to floors and elsewhere, no daemons, every slot counted once, nothing yours at the start', () => {
   const log = logOf(me()), all = log.flatMap((g) => g.rows);
-  assert.deepEqual(log.map((g) => g.id), ['family', 'strain', 'guard', 'boss', 'floor', 'other']);
+  assert.deepEqual(log.map((g) => g.id), ['family', 'strain', 'guard', 'boss', 'floor', 'other', 'journal']);
   assert.ok(all.length >= 50, `${all.length} entries`);
   for (const e of all) {
     const keys = e.sections.flatMap((x) => x.slots.map((y) => y.key));
     assert.equal(new Set(keys).size, keys.length, `${e.key}: a slot once`);
     assert.equal(e.total, keys.length);
     assert.equal(e.have, 0, `${e.key}: empty at the start`);
-    assert.ok(e.sections.every((x) => ['unique', 'set', 'mastered', 'beaten', 'feat'].includes(x.kind)), 'daemons have their own log');
+    assert.ok(e.sections.every((x) => ['unique', 'set', 'mastered', 'beaten', 'feat', 'journal'].includes(x.kind)), 'daemons have their own log');
   }
   assert.equal(logTotals(log).have, 0);
   // Every unique but a network's own has a place, under its sources.

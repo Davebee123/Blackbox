@@ -198,6 +198,7 @@ comment saying what it does.
 | `dist/levelup-view.mjs`, `dist/levelup-ui.mjs`, `dist/levelup.css` | The level-up: a firmware update under the top bar. |
 | `dist/codex.mjs`, `dist/codex-view.mjs`, `dist/codex.css` | The Codex: every virus you can meet, and what you know of it. |
 | `dist/collection.mjs`, `dist/collection-log.mjs`, `dist/collection-view.mjs` | The collection log: its slots and save, the log built from the Codex, and the Codex's Collection tab (the Ledger). |
+| `dist/journals.mjs`, `dist/journals-view.mjs`, `dist/content/journals.mjs` | Journals: the 51 entries, the vault's find and its save, the Ledger's Journals entry and the first find's card. |
 | `dist/achievements.mjs`, `dist/achievements-view.mjs`, `dist/achievements.css` | Achievements and their cosmetic rewards. |
 | `dist/profile.mjs`, `dist/profile-view.mjs` | Your profile card (`finger`), and #net's markup. |
 | `dist/channel.mjs`, `dist/presence.mjs` | #net, the public channel; who's online and your friends. |
@@ -286,7 +287,7 @@ and `style.test.mjs` the tooltip grammar.
 | [`GAME_RULES.md`](GAME_RULES.md) | The rules as built. |
 | [`docs/ui.md`](docs/ui.md), [`docs/style-guide.md`](docs/style-guide.md) | The look (colours, tokens, components); how every line is written. |
 | [`docs/lore.md`](docs/lore.md) | The world and the story: the machine, the factions' answers, wick (decided, not built). [`docs/story-script.md`](docs/story-script.md): its letters and dialogue, drafted. [`docs/receipts.md`](docs/receipts.md): the vault receipt stamped for a faction at each takeover (designed, not built). [`docs/factions-plan.md`](docs/factions-plan.md): commissions, every hub's board, rep from contracts and receipts (decided, not built). |
-| [`docs/journals.md`](docs/journals.md) | Journals: dated entries from people across the city, either side of the Cascade, found in vaults (drafted, not built). |
+| [`docs/journals.md`](docs/journals.md) | Journals: dated entries from people across the city, either side of the Cascade, found in vaults. |
 | [`docs/servers.md`](docs/servers.md) | Servers as rooms, floors, sockets and puzzle rooms. |
 | [`docs/puzzle-rooms-plan.md`](docs/puzzle-rooms-plan.md) | Plan: three new puzzle rooms (Packet routing, Deadlock, Cryptogram). Built. |
 | [`docs/genome.md`](docs/genome.md), [`docs/parts-plan.md`](docs/parts-plan.md), [`docs/mechanics-list.md`](docs/mechanics-list.md) | How viruses are built, their parts, and the mechanics to play. |

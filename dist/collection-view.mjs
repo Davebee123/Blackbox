@@ -8,13 +8,14 @@ import { UNIQUES } from './combat.mjs';
 import { RESEARCH } from './research.mjs';
 import { achById } from './achievements.mjs';
 import { logOf, logTotals } from './collection-log.mjs';
+import { journalLedgerMarkup } from './journals-view.mjs';
 
 const UNKNOWN = '???';
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const day = (t) => (t > 1 ? `${MON[new Date(t).getMonth()]} ${new Date(t).getDate()}` : '');
 const SLOT_ICON = { Exploit: 'exploit', Proxy: 'relay', Shell: 'module', Script: 'cipher', Implant: 'injector' };
-const ICON = { family: 'worm', strain: 'cipher', guard: 'watchman', boss: 'bounty', floor: 'node', other: 'crate' };
-const KIND = { family: 'Family', strain: 'Strain', guard: 'Guard', boss: 'Boss', floor: 'Floor', other: 'Source' };
+const ICON = { family: 'worm', strain: 'cipher', guard: 'watchman', boss: 'bounty', floor: 'node', other: 'crate', journal: 'letter' };
+const KIND = { family: 'Family', strain: 'Strain', guard: 'Guard', boss: 'Boss', floor: 'Floor', other: 'Source', journal: 'Lore' };
 const LABEL = { unique: 'Uniques', mastered: 'Mastered', beaten: 'Beaten', feat: 'Feats' };
 const bar = (n, N, cls = '') => `<i class="lg-bar${cls ? ' ' + cls : ''}" aria-hidden="true"><b style="width:${Math.round((n / Math.max(1, N)) * 100)}%"></b></i>`;
 const count = (n, N, tip) => `<small class="lg-n${N && n >= N ? ' full' : ''}"${tip ? ` title="${esc(tip)}"` : ''}>${n}/${N}</small>`;
@@ -45,8 +46,9 @@ function line(e, x) {
   const research = x.kind === 'mastered' && !x.got ? `<span class="lg-rs">${bar(Math.min(x.n, RESEARCH.max), RESEARCH.max)}<small>${Math.min(x.n, RESEARCH.max)}/${RESEARCH.max}</small></span>` : `<small class="lg-hint">${esc(hint)}</small>`;
   return `<li class="lg-line${x.got ? ' got' : ''}${x.kind === 'set' ? ' set' : ''}" title="${esc(tip)}"><span class="lg-ico" aria-hidden="true">${glyph(icon)}</span><b class="${name ? cls : 'unk'}">${esc(name || UNKNOWN)}</b>${research}<time>${esc(day(x.when))}</time></li>`;
 }
-function entryMarkup(e) {
+function entryMarkup(e, s, jr) {
   const head = `<header class="lg-head"><div class="cx-title"><h2>${KIND[e.group]}${(e.group === 'floor' || e.group === 'boss') && e.lv ? ` <span class="tag dim">Lv ${e.lv}+</span>` : ''}</h2><h1${e.name ? '' : ' class="unknown"'}>${esc(e.name || UNKNOWN)}</h1></div><div class="lg-total"><b>${e.have}<small>/${e.total}</small></b>${bar(e.have, e.total)}</div></header>`;
+  if (e.group === 'journal') return head + journalLedgerMarkup(s, jr); // the timeline, the writers, the reading view
   const secs = e.sections.map((sec) => {
     const lines = sec.slots.map((x) => line(e, sec.kind === 'set' ? { ...x, setName: sec.name } : x)).join('');
     const kick = sec.kind === 'set'
@@ -75,7 +77,8 @@ function findText(e) {
 export const finds = (text, q) => !q || String(q).toLowerCase().trim().split(/\s+/).every((w) => text.includes(w));
 // The tab. sel: the entry picked (app.js logSel), idx: the phone's index open.
 // shut: the index folded to a rail; find: the search (app.js logFind), which hides the rows it doesn't match.
-export function collectionPageMarkup(s, sel = null, idx = false, shut = false, find = '') {
+// jr: the Journals entry's writer open and entry being read (journals-view.mjs).
+export function collectionPageMarkup(s, sel = null, idx = false, shut = false, find = '', jr = {}) {
   const log = logOf(s), all = log.flatMap((g) => g.rows), T = logTotals(log);
   const e = all.find((x) => x.key === sel) || all.find((x) => x.known) || all[0];
   const hit = (r) => finds(findText(r), find);
@@ -83,5 +86,5 @@ export function collectionPageMarkup(s, sel = null, idx = false, shut = false, f
   const none = !all.some(hit);
   return `<div class="cx-page${idx ? ' idx-open' : ''}${shut ? ' side-shut' : ''}">
     <nav class="cx-index card" aria-label="Collection index">${codexTabs('log', T.have, T.total, shut)}<button type="button" class="cx-fold" data-codex-fold aria-expanded="${idx}"><span class="cx-label">Index</span><b>${esc(e?.name || UNKNOWN)}</b><span class="cx-caret" aria-hidden="true">${idx ? '▴' : '▾'}</span></button><div class="cx-groups"><input type="search" id="lg-find" class="lg-find" placeholder="Search" value="${esc(find)}" aria-label="Search the collection log" autocomplete="off" spellcheck="false"><p class="lg-none"${none ? '' : ' hidden'}>No match.</p>${rows}</div></nav>
-    <article class="cx-entry card lg-entry" aria-label="Collection entry" data-log-entry="${esc(e?.key || '')}">${e ? entryMarkup(e) : ''}</article></div>`;
+    <article class="cx-entry card lg-entry" aria-label="Collection entry" data-log-entry="${esc(e?.key || '')}">${e ? entryMarkup(e, s, jr) : ''}</article></div>`;
 }

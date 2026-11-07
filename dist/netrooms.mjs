@@ -38,6 +38,7 @@ import { SPECIAL, SPECIALS, specialsOf, hasSpecial, armoredAt } from './specials
 import { gainComponents } from './salvage.mjs';
 import { consortiumSockets } from './consortium.mjs';
 import { owned, rootOf, ROOT, ROOT_PERKS } from './root.mjs';
+import { journalFor, findJournal } from './journals.mjs';
 import { contractTakeover, contractRooms, contractMapped, contractConnect, contractInstall, contractStood, contractExfil, payloadFor, roomMarks, jobsOn } from './mail.mjs';
 import { giveScript, rollScript } from './scripts.mjs';
 import { arcChallenge } from './arcs.mjs';
@@ -521,6 +522,9 @@ function takeVault(s, loc) {
     const u = guardedUnique(s, loc.depth || 1, levelOf(loc));
     if (u) got.push(packFile(s, { path: 'vault/#guarded', name: 'protocol.bin', kind: 'gear', size: '32k', item: uniqueItem(u, levelOf(loc), () => rand(s)), loc: loc.id }));
   }
+  // A journal entry (journals.mjs): read at once, kept in the Ledger; never in the pack, never in the balance.
+  const taken = ((loc.state ||= {}).taken ||= {});
+  if (!taken['vault/#journal']) { const j = journalFor(s, loc); taken['vault/#journal'] = true; if (j) findJournal(s, j.id, now()); }
   return got;
 }
 // A vault file's pay: Lantern Route's credits (sets.mjs); a Hardened server's credits and code ×2, a Rich server's code ×2.

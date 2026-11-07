@@ -28,6 +28,8 @@ import { createIntro } from './intro.mjs';
 import { coldOpen } from './coldopen.mjs';
 import * as SC from './scenes.mjs';
 import { sceneMarkup } from './scenes-view.mjs';
+import { journalCardMarkup } from './journals-view.mjs';
+import { JOURNAL_BY } from './journals.mjs';
 import { powerOn } from './poweron.mjs';
 import { relockLeft } from './rogue.mjs';
 import { createHitFx } from './hitfx.mjs';
@@ -107,6 +109,7 @@ let nag = {}; // when the pager last shook for an alert, and the breach last pin
 let wasCooling = new Set(); // abilities on cooldown at the last render (the tray flashes the ones that come back)
 let mapView = 'mine'; // the Map: 'mine' (your network) or 'consortium' (the merged servers)
 let mailSel = null; // the open item on the Mail page: 'l<id>' a letter, 'j<id>' a contract
+let logJr = { writer: null, read: null }; // the Ledger's Journals entry: the writer open, the entry being read (journals-view.mjs)
 let codexSel = null, codexIdx = false, codexTab = 'codex', logSel = null, logFind = '', codexShut = false; // and its tab ('codex' or 'log', the Collection: collection-view.mjs) and the log's entry open; // the Codex tab: the entry open ('family:worm'), and the phone's index unfolded
 let srvUi = { sel: null, open: false, preview: null, armed: null }; // the Server page (server-view.mjs): what's picked, the phone's sheet, the before and after showing and the one a tap armed
 let history = [];
@@ -389,6 +392,10 @@ document.addEventListener('click', (e) => {
   if (row) { codexSel = row.dataset.codex; codexTab = 'codex'; codexIdx = false; if (module !== 'codex') go('codex'); else { dirty = true; $('page-view').scrollTop = 0; } return; }
   const lrow = e.target.closest?.('[data-log]'), tab = e.target.closest?.('[data-codex-tab]');
   if (lrow) { logSel = lrow.dataset.log; codexIdx = false; dirty = true; $('page-view').scrollTop = 0; return; }
+  const jw = e.target.closest?.('[data-jr-writer]'), jread = e.target.closest?.('.lg-entry [data-jr-read]');
+  if (jw) { logJr = { writer: logJr.writer === jw.dataset.jrWriter ? null : jw.dataset.jrWriter, read: null }; dirty = true; return; }
+  if (jread) { logJr = { writer: null, read: jread.dataset.jrRead }; dirty = true; return; }
+  if (e.target.closest?.('.lg-entry [data-jr-back]')) { logJr = { writer: JOURNAL_BY[logJr.read]?.writer || null, read: null }; dirty = true; return; }
   if (tab) { codexTab = tab.dataset.codexTab === 'log' ? 'log' : 'codex'; dirty = true; return; }
   if (e.target.closest?.('[data-codex-side]')) { codexShut = !codexShut; try { localStorage.setItem('bb-codex-side', codexShut ? 'shut' : 'open'); } catch { /* storage unavailable */ } dirty = true; return; }
   if (e.target.closest?.('[data-codex-fold]')) { codexIdx = !codexIdx; dirty = true; }
@@ -1984,7 +1991,7 @@ const thOffer = { later: null };
 const offerKey = () => (campaign.threads?.offer ? campaign.threads.offer.tid : campaign.arcs?.offers?.[0] ? `arc:${campaign.arcs.offers[0].floor}:${campaign.arcs.offers[0].step}` : null);
 function renderOffer() {
   const el = $('th-offer'), o = offerKey() && { tid: offerKey() };
-  const want = !!o && !SC.sceneNow(campaign) && thOffer.later !== o.tid && module !== 'combat' && !active(campaign) && !gainOpen() && !CAMP && !campaign.roomsPlay && !document.getElementById('th-panel'); // the last lines first: it comes up once you close them
+  const want = !!o && !SC.sceneNow(campaign) && !campaign.journalCard && thOffer.later !== o.tid && module !== 'combat' && !active(campaign) && !gainOpen() && !CAMP && !campaign.roomsPlay && !document.getElementById('th-panel'); // the last lines first: it comes up once you close them
   if (!el) return;
   el.hidden = !want;
   if (want) put('th-offer', campaign.threads?.offer ? thOfferMarkup(campaign) : arcOfferMarkup(campaign)); else if (cache.get('th-offer')) { cache.delete('th-offer'); el.innerHTML = ''; }
@@ -2007,6 +2014,25 @@ function renderScene() {
   el.hidden = !want;
   if (want) { const was = cache.get('scene'); put('scene', sceneMarkup(campaign)); if (cache.get('scene') !== was) { const log = el.querySelector('.sc-log'); if (log) log.scrollTop = log.scrollHeight; } } else if (cache.get('scene')) { cache.delete('scene'); el.innerHTML = ''; }
 }
+// A journal's first find (journals.mjs findJournal): its document card, once nothing else is up.
+function renderJournal() {
+  const el = $('jr-find'), want = !!campaign.journalCard && !SC.sceneNow(campaign) && !CAMP && !introOn && module !== 'combat' && !active(campaign) && !gainOpen();
+  el.hidden = !want;
+  if (want) put('jr-find', journalCardMarkup(campaign)); else if (cache.get('jr-find')) { cache.delete('jr-find'); el.innerHTML = ''; }
+}
+function journalDone(ledger = false) {
+  const id = campaign.journalCard;
+  campaign.journalCard = null; feel.key('enter'); save(); dirty = true;
+  if (ledger && id) { logJr = { writer: null, read: id }; goTo('log:journal:journals'); }
+}
+$('jr-find').addEventListener('click', (e) => {
+  if (e.target.closest('[data-jr-done]')) { e.stopPropagation(); journalDone(); }
+  else if (e.target.closest('[data-jr-ledger]')) { e.stopPropagation(); journalDone(true); }
+});
+document.addEventListener('keydown', (e) => {
+  if ($('jr-find').hidden || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.key === 'Enter' || e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); journalDone(); }
+}, true);
 function sceneAnswer(n) {
   const r = SC.choose(campaign, n);
   if (!r) return;
@@ -2064,6 +2090,7 @@ function render(force = false) {
   if (force) cache.clear();
   renderMeters();
   renderScene();
+  renderJournal();
   renderOffer();
   renderPreview();
   shell.apply(module);
@@ -2119,7 +2146,7 @@ function render(force = false) {
       $('term').scrollTop = $('term').scrollHeight;
     }
   } else {
-    const pages = { rooms: (x) => roomsMarkup(x), campaign: (x) => campaignMarkup(x), room: (x) => roomMarkup(x), archive: (x) => archiveMarkup(x), breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => (hubSel === POST.id ? postTerminalMarkup(x, hubLines, hubWin, Date.now()) : V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now())), server: (x) => V.serverMarkup(x, Date.now(), srvUi), daemons: V.daemonsMarkup, codex: (x) => (codexTab === 'log' ? collectionPageMarkup(x, logSel, codexIdx, codexShut, logFind) : codexPageMarkup(x, codexSel, codexIdx, codexShut)), system: (x) => V.systemMarkup(x, { coop: !!coop, tab: systemTab, ach: achUi, cs: caseUi }) };
+    const pages = { rooms: (x) => roomsMarkup(x), campaign: (x) => campaignMarkup(x), room: (x) => roomMarkup(x), archive: (x) => archiveMarkup(x), breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => (hubSel === POST.id ? postTerminalMarkup(x, hubLines, hubWin, Date.now()) : V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now())), server: (x) => V.serverMarkup(x, Date.now(), srvUi), daemons: V.daemonsMarkup, codex: (x) => (codexTab === 'log' ? collectionPageMarkup(x, logSel, codexIdx, codexShut, logFind, logJr) : codexPageMarkup(x, codexSel, codexIdx, codexShut)), system: (x) => V.systemMarkup(x, { coop: !!coop, tab: systemTab, ach: achUi, cs: caseUi }) };
     // A page that throws shows what broke (and a way back) instead of stopping every render after it.
     const keep = module === 'breach' ? $('bx-scroll')?.scrollTop : null;
     const focusRoom = module === 'rooms' ? document.activeElement?.closest?.('.fp-room')?.dataset.room : null; // a redraw keeps a focused room focused

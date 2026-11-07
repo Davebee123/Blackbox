@@ -12,6 +12,7 @@ import { SETS, setOf, piecesOf } from './sets.mjs';
 import { isNative } from './network.mjs';
 import { entries, partsOf } from './codex.mjs';
 import { syncSlots, homes, OTHER, BOSS_FEATS, floorFeat } from './collection.mjs';
+import { JOURNALS, foundOf } from './journals.mjs';
 
 export const LOG_GROUPS = [
   { id: 'family', name: 'Families' },
@@ -20,6 +21,7 @@ export const LOG_GROUPS = [
   { id: 'boss', name: 'Bosses' },
   { id: 'floor', name: 'Floors' },
   { id: 'other', name: 'Elsewhere' },
+  { id: 'journal', name: 'Journals' },
 ];
 const slotName = (u) => SLOTS[BASES[u.base]?.slot]?.name || '';
 const achGot = (s, id) => s.achievements?.got?.[id] || null;
@@ -52,6 +54,9 @@ export function logOf(s) {
       else if (!e.uniques.some((x) => x.key === u.id)) e.uniques.push(slot);
     }
   }
+  // The journals (journals.mjs): one entry, a slot an entry, its date the day you found it.
+  const jr = add('journal', 'journals', 'Journals', true, 1);
+  jr.journals = JOURNALS.map((j) => ({ key: 'j:' + j.id, kind: 'journal', id: j.id }));
   const out = [];
   for (const e of E.values()) {
     for (const id of e.sets.keys()) e.feats.push({ ach: (SETS[id]?.tier ? 'cl-set-' : 'k-set-') + id });
@@ -62,8 +67,9 @@ export function logOf(s) {
     if (e.beaten.length) sections.push({ kind: 'beaten', slots: e.beaten });
     const feats = [...new Set(e.feats.map((f) => f.ach))].map((a) => ({ key: 'ach:' + a, kind: 'feat', ach: a }));
     if (feats.length) sections.push({ kind: 'feat', slots: feats });
+    if (e.journals) sections.push({ kind: 'journal', slots: e.journals });
     const slots = sections.flatMap((x) => x.slots);
-    for (const x of slots) { x.when = x.kind === 'feat' ? achGot(s, x.ach) : got[x.key] || null; x.got = !!x.when; }
+    for (const x of slots) { x.when = x.kind === 'feat' ? achGot(s, x.ach) : x.kind === 'journal' ? foundOf(s)[x.id] || null : got[x.key] || null; x.got = !!x.when; }
     const have = slots.filter((x) => x.got).length;
     if (slots.length) out.push({ key: e.key, group: e.group, id: e.id, name: e.name, known: e.known, lv: e.lv, sections, have, total: slots.length, full: have === slots.length, below: e.lv <= L });
   }
@@ -76,7 +82,7 @@ const sigs = new WeakMap(); // the log is rebuilt only when what fills it change
 export function syncCollection(s, now = hooks.now?.() ?? Date.now()) {
   const fresh = syncSlots(s, now);
   if (s.who) return fresh;
-  const c = (s.collection ||= {}), sig = () => `${Object.keys(c).length}:${Object.keys(s.achievements?.got || {}).length}:${hackerLevel(s)}`;
+  const c = (s.collection ||= {}), sig = () => `${Object.keys(c).length}:${Object.keys(s.journals || {}).length}:${Object.keys(s.achievements?.got || {}).length}:${hackerLevel(s)}`;
   if (sigs.get(s) !== sig()) {
     for (const g of logOf(s)) for (const e of g.rows) if (e.full) c['full:' + e.key] ||= now;
     sigs.set(s, sig());

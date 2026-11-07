@@ -749,7 +749,7 @@ strip (the server, its kind, level and rule, your Signal, **Rooms n/N**, your ke
 | Process | ▣ | A virus of the server's author at the server's level; the same family every time, its set and mutation fresh each respawn. |
 | Elite | ◆▣ | An elite (`ELITE`) with a clash, one more tell, enrages from cycle 17. |
 | Guard post | ◆▣ KEY | A guard or ICE holding the vault's key, shown as an elite. Hoard, Rich and Hardened servers' are Armored. |
-| Vault | ▥ | `open` with its key, or `force` it for 15% of your max Signal. It holds the server's files: a protocol half the time (your first server's always), code, a trace record, spare credits, now and then a Zero-day (floor 2+) or a filter, and a contract's planted file. Everything goes in your pack. |
+| Vault | ▥ | `open` with its key, or `force` it for 15% of your max Signal. It holds the server's files: a protocol half the time (your first server's always), code, a trace record, spare credits, now and then a Zero-day (floor 2+) or a filter, a contract's planted file, and on half the servers a journal entry (*Journals*). Everything goes in your pack. |
 | Core | ♛ | The Resident, **SEALED** until the vault opens. |
 | Cache | ▤ | Credits and code, now and then a script; one in four is **bait** (10% of your max Signal; `cat` shows it). Refills 2 hours after you take it. |
 | Rest room | ☰ | `rest`: 30% of your max Signal, once a visit. |
@@ -1749,7 +1749,7 @@ pieces (*Kestrel Clearance 1/3*, ??? until found); faction pieces their parts as
 
 The **collection log** is the Codex's second tab, **Collection n/N** (`collection.mjs` keeps it, `collection-log.mjs`
 builds it, `collection-view.mjs` draws it: the *Ledger*). Its index: Families, Strains, Guards & ICE, Bosses, Floors and
-Elsewhere (every other source), each entry its n of N and a thin bar, and a search over the entries by their names and
+Elsewhere (every other source), and Journals (*Journals* below), each entry its n of N and a thin bar, and a search over the entries by their names and
 what you've found or named on them (never a ??? slot). The **‹** over either tab folds the index to a rail, and stays
 as you left it. An entry lists its slots, one line each, in sections; daemons have their own log.
 
@@ -1766,6 +1766,19 @@ research toward 60), and the date it first came. The rest is its tooltip. The fi
 line says so and opens its entry. A save keeps `s.collection = { slot: when }`: a unique by its id, `m:` a part
 mastered, `b:` a strain beaten, `w:` a boss won, `full:` an entry filled. An older save stamps what it has already
 done on load (as *before the log*), with one pager line.
+
+### Journals
+
+51 journal entries by 13 writers (`journals.mjs`, the text in `content/journals.mjs`, from docs/journals.md). Each is a
+file in a vault on the floor its header names. Half the traced servers (by seed) hold their floor's earliest unfound
+entry in their vault; opening it reads the entry at once. No pack, no credits, no stats. The first time, a document
+card opens over the map: **Continue** (Enter) or **Ledger ›**.
+
+The Ledger's **Journals** entry, n of 51 in the Collection total: a **timeline** (a column a C-year, C−13 to C+30, a
+found entry an amber chip with the writer's initials, an unfound one a dashed **?**, the Cascade an ivory line through
+C0), the **writers** (a row each, pips and n/N; a click lists their entries and fades the others' chips), and the
+**reading view** (‹ › through that writer's found entries). The sheet takes the writer's type: Sabine typed, moth and
+Dace notes, Margit's night desk amber mono. A save keeps `s.journals = { entry: when }`.
 
 ## The economy
 

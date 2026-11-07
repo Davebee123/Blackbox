@@ -1,6 +1,6 @@
 # Journals
 
-**Status.** Drafted, look picked, not built. Facts from docs/lore.md; the storyline's beats from docs/story-script.md.
+**Status.** Built (journals.mjs, journals-view.mjs; GAME_RULES.md *Journals*). Facts from docs/lore.md; the storyline's beats from docs/story-script.md.
 
 ## How they surface (picked in lore.md 9.2 session 2; built in session 4)
 

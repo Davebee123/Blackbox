@@ -217,3 +217,80 @@
   .lg-line { grid-template-columns: 16px minmax(0, 1fr) 48px; }
   .lg-line .lg-hint, .lg-line .lg-rs { grid-column: 2 / 4; grid-row: 2; padding-bottom: var(--s2); }
 }
+
+/* ---------- Journals (journals-view.mjs): the Ledger's entry and the first find's card. Amber is found, the Cascade
+   ivory (never red), unfound faint and dashed. The sheet takes the writer's type. Nothing moves. ---------- */
+.lg-entry, .jr-wrap { --ivory: #e9e2cf; }
+.jr-tl { display: grid; grid-template-columns: repeat(44, minmax(0, 1fr)); gap: 2px; align-items: end; padding-top: 22px; position: relative; }
+.jr-col { position: relative; display: grid; grid-template-rows: auto 26px; align-items: end; min-height: 40px; }
+.jr-stack { display: flex; flex-direction: column-reverse; gap: 2px; align-items: center; }
+.jr-col.c0 { align-self: stretch; }
+.jr-chip { display: grid; place-items: center; justify-self: center; width: min(100%, 24px); height: 16px; min-width: 0; padding: 0; font: 600 8px/1 var(--mono); letter-spacing: 0; color: var(--dim); border: 1px dashed var(--line); border-radius: 2px; background: none; font-style: normal; }
+.jr-chip.got { color: var(--bg); background: var(--amber-soft); border: 1px solid var(--amber); cursor: pointer; }
+.jr-chip.got:hover, .jr-chip.lit { background: var(--amber); color: var(--bg); box-shadow: 0 0 0 1px var(--bright); }
+.jr-chip.fade { opacity: 0.22; }
+.jr-col.c0::before { content: ''; position: absolute; left: 50%; top: -6px; bottom: 26px; width: 1px; background: var(--ivory); opacity: 0.7; }
+.jr-cascade { position: absolute; left: 50%; top: -22px; transform: translateX(-50%); font: var(--label); letter-spacing: var(--label-track); color: var(--ivory); white-space: nowrap; }
+.jr-ax { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); display: grid; justify-items: center; font: 10px/1.2 var(--mono); color: var(--dim); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.jr-ax b { font-weight: 500; color: var(--muted); }
+.jr-col:first-child .jr-ax { left: 0; transform: none; justify-items: start; }
+.jr-col:last-child .jr-ax { left: auto; right: 0; transform: none; justify-items: end; }
+.jr-writers { list-style: none; margin: 0; padding: 0; display: grid; max-width: 760px; }
+.jr-row { display: grid; grid-template-columns: 16px 140px minmax(0, 1fr) auto 36px; gap: var(--s4); align-items: center; width: 100%; min-height: 30px; padding: 0 var(--s3); text-align: left; border-bottom: 1px solid var(--amber-wash); }
+.jr-row:hover { background: var(--amber-wash); }
+.jr-row .lg-ico { display: inline-flex; color: var(--gray); }
+.jr-row .lg-ico .glyph { width: 14px; height: 14px; margin: 0; }
+.jr-row.known .lg-ico { color: var(--amber); }
+.jr-row b { font: 500 13px var(--sans); color: var(--bright); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.jr-row b.unk, .jr-line b.unk { font-family: var(--mono); letter-spacing: 1px; color: var(--gray); }
+.jr-role { font: 12px var(--sans); color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.jr-pips { display: flex; gap: 3px; }
+.jr-pip { width: 6px; height: 6px; border: 1px solid var(--line-strong); border-radius: 1px; }
+.jr-pip.got { background: var(--amber); border-color: var(--amber); }
+.jr-row .lg-n { text-align: right; }
+.jr-wr.open > .jr-row { background: var(--amber-wash); }
+.jr-lines { list-style: none; margin: 0 0 var(--s3); padding: 0 0 0 calc(16px + var(--s4) + var(--s3)); display: grid; }
+.jr-line { display: grid; grid-template-columns: 140px minmax(0, 1fr) 56px; gap: var(--s4); align-items: center; width: 100%; min-height: 26px; padding: 0 var(--s3); text-align: left; border-bottom: 1px solid var(--amber-wash); }
+.jr-line b { font: 500 13px var(--sans); color: var(--bright); }
+.jr-line small { font: 12px var(--sans); color: var(--dim); }
+.jr-line time { font: 11px var(--mono); color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+button.jr-line:hover { background: var(--amber-wash); }
+.jr-read { display: grid; gap: var(--s5); max-width: 760px; }
+.jr-nav { display: flex; justify-content: space-between; align-items: center; gap: var(--s4); }
+.jr-step { display: inline-flex; align-items: center; gap: var(--s4); }
+.jr-head { display: grid; width: 100%; }
+.jr-head h2 { margin: 0; font: 600 18px/1.2 var(--sans); color: var(--bright); letter-spacing: 0.2px; text-transform: none; }
+.jr-by { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--s2) var(--s5); margin: var(--s1) 0 0; font: 12px var(--sans); color: var(--muted); max-width: none; }
+.jr-by span + span { font-family: var(--mono); font-size: 11px; color: var(--dim); }
+.jr-found { margin: 0; font: 11px var(--mono); color: var(--dim); }
+/* The sheet: a framed page, one muted header line, the writer's type. */
+.jr-sheet { display: grid; gap: var(--s4); padding: var(--s5) var(--s6); background: var(--inset); border: 1px solid var(--line); border-radius: var(--r-card); }
+.jr-sheet p { margin: 0; max-width: 68ch; font: 14px/1.6 var(--sans); color: var(--text); }
+.jr-sheet .jr-medium { padding-bottom: var(--s3); border-bottom: 1px solid var(--line); font: var(--label); letter-spacing: var(--label-track); color: var(--dim); }
+.jr-sheet.m-typed p:not(.jr-medium) { font: 14px/1.6 'Courier Prime', 'Courier New', monospace; color: var(--bright); }
+.jr-sheet.m-notes p:not(.jr-medium) { font: 13px/1.6 var(--mono); text-transform: lowercase; }
+.jr-sheet.m-notes .jr-medium { text-transform: none; letter-spacing: 0; font-weight: 400; }
+.jr-sheet.m-desk p:not(.jr-medium) { font: 13px/1.6 var(--mono); color: var(--amber); }
+/* The first find: a document card over the map. */
+.gain.jr-wrap { z-index: 41; animation: none; }
+.gain.jr-wrap .pz-card.jr-card { width: min(640px, 100%); gap: var(--s5); }
+.jr-card .jr-sheet { max-height: min(52vh, 460px); overflow-y: auto; }
+.jr-acts { display: flex; gap: var(--s4); }
+.jr-acts kbd { margin-left: var(--s3); font: 10px var(--mono); color: var(--dim); }
+@media (max-width: 640px) {
+  .jr-tl { gap: 1px; }
+  .jr-chip { width: 6px; height: 6px; font-size: 0; border-radius: 1px; }
+  .jr-cascade { font-size: 8px; letter-spacing: 0.5px; }
+  .jr-ax { font-size: 9px; }
+  .jr-row { grid-template-columns: 16px minmax(0, 1fr) auto 32px; }
+  .jr-role { grid-column: 2 / -1; grid-row: 2; padding-bottom: var(--s2); }
+  .jr-lines { padding-left: var(--s3); }
+  .jr-line { grid-template-columns: minmax(0, 1fr) 48px; }
+  .jr-line small { grid-column: 1 / -1; grid-row: 2; padding-bottom: var(--s2); }
+  .jr-sheet { padding: var(--s4); }
+  .gain.jr-wrap { position: fixed; inset: 0; place-items: end stretch; padding: 0; }
+  .gain.jr-wrap .pz-card.jr-card { width: 100%; max-height: 88dvh; overflow-y: auto; border-radius: var(--r-card) var(--r-card) 0 0; border-bottom: 0; }
+  .jr-card .jr-sheet { max-height: none; overflow: visible; }
+  .jr-acts { position: sticky; bottom: calc(-1 * var(--s5)); margin: 0 calc(-1 * var(--s4)) calc(-1 * var(--s5)); padding: var(--s4) var(--s4) var(--s5); background: var(--panel); border-top: 1px solid var(--line); }
+  .jr-acts .btn { flex: 1; }
+}
