@@ -285,7 +285,7 @@ and `style.test.mjs` the tooltip grammar.
 |---|---|
 | [`GAME_RULES.md`](GAME_RULES.md) | The rules as built. |
 | [`docs/ui.md`](docs/ui.md), [`docs/style-guide.md`](docs/style-guide.md) | The look (colours, tokens, components); how every line is written. |
-| [`docs/lore.md`](docs/lore.md) | The world and the story: the machine, the factions' answers, wick (decided, not built). [`docs/story-script.md`](docs/story-script.md): its letters and dialogue, drafte [`docs/receipts.md`](docs/receipts.md): the vault receipt stamped for a faction at each takeover (designed, not built). |
+| [`docs/lore.md`](docs/lore.md) | The world and the story: the machine, the factions' answers, wick (decided, not built). [`docs/story-script.md`](docs/story-script.md): its letters and dialogue, drafted. [`docs/receipts.md`](docs/receipts.md): the vault receipt stamped for a faction at each takeover (designed, not built). |
 | [`docs/journals.md`](docs/journals.md) | Journals: dated entries from people across the city, either side of the Cascade, found in vaults (drafted, not built). |
 | [`docs/servers.md`](docs/servers.md) | Servers as rooms, floors, sockets and puzzle rooms. |
 | [`docs/puzzle-rooms-plan.md`](docs/puzzle-rooms-plan.md) | Plan: three new puzzle rooms (Packet routing, Deadlock, Cryptogram). Built. |
