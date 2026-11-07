@@ -81,7 +81,7 @@ Only two change.
    *On the challenge card:* `bid received. bid received. bid received.`
    *When it falls (LANTERN):* `Four. Nine. Nine. The line is clear.`
 
-*Closing line:* The schedule is signed. Not by a crew. By a pricing model. And the count at its foot says eighty-one percent.
+*Closing line:* The schedule is signed by a pricing model. The count at its foot says eighty-one percent.
 
 ---
 
@@ -162,7 +162,7 @@ Only two change.
 1. **Puzzle board** · *Audition*
    > You want the model. So do we. Win the puzzle board on {server} and we'll talk. Keep time.
 2. **Recover a file** · *Weights* (*kept*) · `weights.bin`, the model's weights
-   > The model's weights are in a vault on {server}, as {file}. Copy them out. We break things. We don't build them.
+   > The model's weights are in a vault on {server}, as {file}. Copy them out. Breaking is our end of it.
 
    *File:* binary: actuary v7. ninety thousand uninsured trades, a price on each. its cancel routine is older than the model: kessler's recovery job, thirty years old. one author.
 
@@ -274,13 +274,13 @@ with your stance.
 > reports. When I leaked one, Kessler fined me a year's pay, and he paid it without being asked. *Pay me back when
 > you can.*
 >
-> It took me five years. I sent it the night of the Cascade, and it was the last trade into the table. I know one
+> It took me four years. I sent it the night of the Cascade, and it was the last trade into the table. I know one
 > payment didn't freeze the city. I've known it for thirty years. I still filed the report that said 99%.
 >
 > The next morning I wrote the job that cancelled everything uninsured. I left my own payment out of it. He died still
 > owed. His child is moth. moth doesn't know any of this.
 >
-> You've broken INIT. Not killed it: nobody can. But the table has room again, and someone decides what fills it. You
+> You've broken INIT, as far as anyone can break PID 1. The table has room again, and someone decides what fills it. You
 > already have. Your badge says so.
 
 | Stance | The rest of the letter |
@@ -289,7 +289,7 @@ with your stance.
 | **Seal** | You'd seal it: wall off the old floors and let the living net live. I can't argue with the living. But there are thirty years of people under that wall, and one of them is him. My payment goes under with the rest. I can't send it now, so I'll tell moth the truth instead. It's the only debt I have left that I can pay. |
 | **Settle** | You'd settle every trade, one at a time, the way each was meant to close. It's slow, it may never end, and someone has to decide who was owed. I spent one night deciding who wasn't. You'll do it better. Mine cleared this morning, to moth as his heir. Thirty years late, to the cent. They'll want to know why. I'll tell them. |
 | **Roll back** | You'd roll it all back. The debts are old and the people they bind are dead, and every saving still in there goes with them. The Choir calls that freedom. I called it a job once, and ran it in one night. If it rolls back, my payment comes home to me. I won't keep it. I'll hand it to moth myself, and tell them what it was for. |
-| **Sell** (*open*) | You'd sell it. GLASSJAW would say that isn't an answer, only a price, and it wouldn't be wrong: somebody has always profited from the wait. At least you're honest about it. My payment stays frozen. One day someone will buy the right to it. I hope it's moth. |
+| **Sell** (*open*) | You'd sell it. GLASSJAW would call that a price, and it would be right: somebody has always profited from the wait. At least you're honest about it. My payment stays frozen. One day someone will buy the right to it. I hope it's moth. |
 
 > The toolkit's attached. I rebuilt it. It finishes what it starts now.
 >
