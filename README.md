@@ -45,7 +45,7 @@ Every playtest URL runs on a fresh state that is never saved. The real save is n
 | `/?playtest=part:<id>` | A fight with that part, at the level it opens (or `&level=`); `part:<id>.exe` its .exe build. |
 | `/?playtest=fx` | The ability effects playtest: a panel that fires every ability's effect, at each Screen effects level and mastery tier. `&cls=`, `&crew=<class>`. |
 | `/?playtest=run` | Connected to a fresh server. `&family=worm\|ghostroot`, `&template=mailhub\|mirror\|archive\|lab` (its rooms' kind), `&depth=<floor>`. |
-| `/?playtest=rooms` | One server as rooms, clocks ten times as fast. `&class=`, `&level=`, `&kind=`, `&size=small\|medium\|large`, `&floor=`, `&boss=a\|b\|c`, `&hunter=patrol\|track`, `&seed=`, `&puzzle=<board>` (its room, and you in it), `&seen` (every room discovered). |
+| `/?playtest=rooms` | One server as rooms, clocks ten times as fast. `&class=`, `&level=`, `&kind=`, `&size=small\|medium\|large`, `&floor=`, `&boss=a\|b\|c`, `&hunter=patrol\|track`, `&card=surge\|escort\|pack` (a run card), `&seed=`, `&puzzle=<board>` (its room, and you in it), `&seen` (every room discovered). |
 | `/?playtest=story&beat=<id>` | A test save at a story beat (the editor's *Play from here*). |
 | `/?campaign=breach` | The breach campaign under its own save (GAME_RULES.md "Side modes"). |
 | `/?shell=plain`, `/?tod=night\|dawn\|day\|dusk` | No CRT shell; another time of day outside the window. |
@@ -60,7 +60,7 @@ Common developer commands (with `?dev` or on a bench; the **Dev** drawer above t
 | `developer location <family>` | Traces a new server of that family on the map. |
 | `developer fight <kind>:<id> [level] [seed] [leaning=…] [objective=…]` | Starts a fight at home: kinds `family`, `strain`, `ice`, `part` (`part:<id>.exe`), `elite`, `boss`, `holder`, `rival` (`rival:kudzu.2`), `invader`. `developer fight again [refill]` the last one again. |
 | `developer parts` | The parts roll's numbers and mix. |
-| `developer event [card]`, `developer invade [kind]` | Deals an event card; sends an invasion. |
+| `developer event [card]`, `developer runcard [kind]`, `developer invade [kind]` | Deals an event card; a run card (this run, or the next connect); sends an invasion. |
 | `developer levelup preview`, `developer thread preview`, `developer scene <id>`, `terminal preview` | Plays the level-up, a thread's windows, a transmission, a boot look. |
 | `crew sim <class…>`, `online sim` | Bot crewmates in your fights; simulated hackers online. |
 | `reset game` (twice) | Starts over from level 1. Settings stay. |
@@ -144,6 +144,7 @@ comment saying what it does.
 | `dist/specials.mjs` | Server specials: each traced server's rule (an upside and a cost) from its seed, its pull on invasions, and its leaning's id (`leaningOf`). |
 | `dist/leanings.mjs` | Leanings: a server's one positive rule (Venting, Wind-up, Brownout), its multipliers in the fight and what it has paid. |
 | `dist/rivals.mjs` | Rivals: named runners who race you to a server's vault and fight you two or three in a row. |
+| `dist/runcards.mjs` | Run cards: the director's Surge room, Escort and Hunter pack inside a run. |
 | `dist/puzzles.mjs`, `dist/puzzle-view.mjs` | Puzzle rooms: eight boards that aren't fights (deeper chase and Cascade boards from floor 3), and the cryptogram's key (`s.cipher`). |
 | `dist/forensics.mjs`, `dist/logsweep.mjs` | Log sweep: a short detective puzzle in an incident file (logsweep.mjs builds the logs: a thread's process log, the Terminal room). |
 | `dist/traffic.mjs`, `dist/travelfx.mjs` | Ambient packets on the room map; the step between rooms as a train of code. |

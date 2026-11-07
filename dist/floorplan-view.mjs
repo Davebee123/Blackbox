@@ -47,6 +47,7 @@ import { AUTHORS } from './authors.mjs';
 import { SCRIPTS, TIER, scriptsOf, slotsOf, scriptTip } from './scripts.mjs';
 import { BOSS_RULES } from './interrupt.mjs';
 import { familyName } from './families.mjs';
+import { RUNCARD, RUN_CARDS, cardOf as runCardOf, surgeAt, surgeFill, escortOf, escortRoute, packOf, packRoute, packRooms } from './runcards.mjs';
 import { RIVALS, COUNTERS, READS, rivalOf, routeOf, raceOf, lineupOf, memoryOf, wickLine, crewName, crewColour, rivalSays, rivalLine } from './rivals.mjs';
 import { GENES } from './genes.mjs';
 import { ROOMS, KINDS, kindName, HUNTERS, RESIDENT, WORLD, STOCKED, farmed, respawnMs, roomList, hereOf, neighbours, linksOf, seenOf, isUp, backAt, downAt, cacheFull, refillAt, isBait, coreOpen, opened, signalNow, sigOf, progressOf, fmtLeft, hunterOf, hunterNext, paceOf, moveCost, fightOf, exits, hunterLine, xpEarned, virusName, exfilOf, exfilNext, exfilSeen, exfilLine, known, nameOf, hunterSeen, isSocket, socketOpen, socketOff, programIn, roomRuns, tunnelOf, restUsed, lureFamilies, addrOf, PUZZLES, isPuzzle, puzzleState } from './floorplan.mjs';
@@ -397,11 +398,14 @@ function mapSvg(s, tall, pop = null) {
   // A rival's whole route, a red dotted trace from its room to where it's going (rivals.mjs: it shows through the fog).
   const rv = rivalOf(s), route = rv ? routeOf(s, rv) : [];
   const trail = route.length > 1 ? `<polyline class="fp-rv-route" points="${route.map((id) => { const p = at(g.rooms[id]); return `${p.x},${p.y}`; }).join(' ')}"/>` : '';
+  // A run card's way (runcards.mjs): the courier's route to its drop, violet dots; the pack's way to you, red dashes.
+  const line = (ids, cls) => (ids.length > 1 ? `<polyline class="${cls}" points="${ids.map((id) => { const p = at(g.rooms[id]); return `${p.x},${p.y}`; }).join(' ')}"/>` : '');
+  const cardWay = line(escortRoute(s), 'fp-cr-route') + line(packRoute(s), 'fp-pk-route');
   const ctx = { reach, next, pop, near, G, marks: net(s, 'marks') || {}, th: R_th(s), bl: net(s, 'blips') || {}, files, rv };
   const rooms = roomList(s).filter((r) => shown(r.id)).map((room) => roomSvg(s, room, at(room), ctx)).join('');
   const bits = here ? bitsSvg(at(g.rooms[here]), G, here) : '';
   const vw = width + 2 * PAD, vh = height + 2 * PAD, vb = `${-PAD} ${-PAD} ${vw} ${vh}`;
-  return `<svg class="fp-svg ${tall ? 'tall' : 'wide'}" viewBox="${vb}" data-vb="${vb}" width="${vw}" height="${vh}" preserveAspectRatio="xMidYMid meet" style="--w:${vw}px;--h:${vh}px" role="group" aria-label="Room map of ${esc(R.name)}">${lines}${tunnel}${trail}${rooms}${arrow}${bits}</svg>`;
+  return `<svg class="fp-svg ${tall ? 'tall' : 'wide'}" viewBox="${vb}" data-vb="${vb}" width="${vw}" height="${vh}" preserveAspectRatio="xMidYMid meet" style="--w:${vw}px;--h:${vh}px" role="group" aria-label="Room map of ${esc(R.name)}">${lines}${tunnel}${trail}${cardWay}${rooms}${arrow}${bits}</svg>`;
 }
 // A dashed arrow, bowed off the trace, from one room into the next (the hunter's red, the Exfil's amber).
 function routeSvg(p, q, G, kind) {
@@ -493,6 +497,9 @@ function roomSvg(s, room, p, { reach, next, pop, near, G, marks, th = {}, bl = {
   if (here) out += `<polygon class="fp-you-glow" points="${pts}" filter="url(#fp-glow)"/><polygon class="fp-you-ring" points="${pts}"/>`;
   const rival = rv?.at === room.id;
   if (rival) out += `<polygon class="fp-rv-ring" points="${chipPts(p.x, p.y, hw + 5, hh + 5, G.ch + 2)}"/>`;
+  // A run card here (runcards.mjs): the lit surge room, the pack's room, the courier's room and its drop.
+  const surge = surgeAt(s, room.id), pk = packOf(s)?.at === room.id ? packOf(s) : null, cr = escortOf(s), crHere = cr?.at === room.id, drop = cr?.dest === room.id;
+  if (surge || pk) out += `<polygon class="fp-card-ring ${pk ? 'pack' : 'surge'}" points="${chipPts(p.x, p.y, hw + 5, hh + 5, G.ch + 2)}"/>`;
   if (near === room.id) out += `<polygon class="fp-near" points="${pts}" title="${esc(`${huntName(h)}: just out of sight.`)}"/>`;
   const after = !kind && rv && room.id === g.vaults[0]; // the vault a rival is after shows through the fog
   if (after) { const sz = n1(24 * G.ic); out += `<polygon class="fp-body" points="${pts}"/><use class="fp-icon fp-rv-vault" href="#fp-i-vault" x="${n1(p.x - sz / 2)}" y="${n1(p.y - sz / 2)}" width="${sz}" height="${sz}"/>`; }
@@ -529,6 +536,12 @@ function roomSvg(s, room, p, { reach, next, pop, near, G, marks, th = {}, bl = {
   }
   // Top centre: YOU, and the hunter's skull (beside YOU when it's on you).
   if (here) { const ux = n1(Math.max(p.x, tx + 20)); out += `<g class="fp-you-tab"><rect x="${n1(ux - 20)}" y="${n1(y0 - 9)}" width="40" height="16" rx="2"/><text x="${ux}" y="${n1(y0 + 3)}" text-anchor="middle">YOU</text></g>`; tx = ux + 24; }
+  const cardTab = (t, cls, tip) => { const w = tagW(t) + 4, rx = n1(Math.max(p.x - w / 2, tx + 2)); tx = rx + w + 4; return `<g class="fp-card-tab ${cls}" title="${esc(tip)}"><rect x="${rx}" y="${n1(y0 - 9)}" width="${w}" height="16" rx="2"/><text x="${n1(rx + w / 2)}" y="${n1(y0 + 3)}" text-anchor="middle">${t}</text></g>`; };
+  const cardBar = (f, cls, tip) => `<g class="fp-card-bar ${cls}" title="${esc(tip)}"><rect x="${n1(x0)}" y="${n1(y0 + G.nh + 5)}" width="${G.nw}" height="6"/><rect class="fill" x="${n1(x0)}" y="${n1(y0 + G.nh + 5)}" width="${n1(G.nw * f)}" height="6"/></g>`;
+  if (surge) out += cardTab('SURGE', 'surge', cardTip(s, surge)) + cardBar(surgeFill(surge), 'surge', `Surge: ${surge.kills}/${RUNCARD.surge.waves} waves${surge.guardian ? ', the guardian up' : ''}.`);
+  if (pk) out += cardTab(`PACK ×${pk.n}`, 'pack', cardTip(s, pk));
+  if (drop) out += cardTab('DROP', 'surge', cardTip(s, cr));
+  if (crHere) { const k = 18, bx = n1(x0 - 4), by = n1(y0 + G.nh - k + 4); out += `<g class="fp-courier" title="${esc(cardTip(s, cr))}"><rect x="${bx}" y="${by}" width="${k}" height="${k}" rx="2"/><use href="#fp-i-archive" x="${n1(bx + 2)}" y="${n1(by + 2)}" width="${k - 4}" height="${k - 4}"/></g>` + cardBar(cr.hp / cr.max, 'surge', `Courier: ${cr.hp}/${cr.max} Integrity.`); }
   if (rival) { const nm = RIVALS[rv.id].name, w = tagW(nm) + 4, rx = n1(Math.max(p.x - w / 2, tx + 2)); out += `<g class="fp-rv-tab"><rect x="${rx}" y="${n1(y0 - 9)}" width="${w}" height="16" rx="2"/><text x="${n1(rx + w / 2)}" y="${n1(y0 + 3)}" text-anchor="middle">${esc(nm)}</text></g>`; tx = rx + w + 4; out += lineupSvg(s, rv, p.x, y0 + G.nh + 6); }
   if (hunted) { const half = 5.5 * G.px + 4; out += skullSvg(n1(Math.max(p.x, tx + half)), n1(y0 - 2), G.px, h.kind === 'track' && !h.awake && !h.returning); }
   if (exfil) { const k = G.px / 2.2, half = 10 * k; out += exfilSvg(n1(Math.max(p.x, tx + half + 2)), n1(y0 + 1), k, !exfilNext(s)); tx += 2 * half + 6; }
@@ -587,6 +600,7 @@ function hudMarkup(s) {
   const ml = R.at && exfilShown(s) ? `<span class="fp-stat fp-exfilstat" title="${esc(`${exfilLine(s)}\nAn Exfil is uploading a stolen archive off this server. It runs from you, a room for each of your moves. Corner it where it can't run, then walk in: its upload completes after ${CONFIG.exfil.escape} cycles.`)}">${ic('archive')}<span class="lbl">Exfil</span><b>${exfilNext(s) ? 'running' : 'cornered'}</b></span>` : '';
   const rv = R.at ? rivalOf(s) : null, race = rv ? raceOf(s, rv) : null;
   const rival = rv ? `<span class="fp-stat fp-rvstat" title="${esc(rivalTip(s, rv))}">${ic('rival')}<span class="lbl">${esc(RIVALS[rv.id].name)}</span><b>${rv.state === 'on' ? 'on you' : race ? `${race.it} to vault` : 'leaving'}</b></span>` : '';
+  const card = R.at ? runCardOf(s) : null, cardStat = card ? `<span class="fp-stat fp-cardstat ${card.kind === 'pack' ? 'pack' : 'surge'}" title="${esc(cardTip(s, card))}"><span class="lbl">${card.kind === 'surge' ? 'Surge' : card.kind === 'escort' ? 'Courier' : 'Pack'}</span>${card.kind === 'pack' ? '' : `<i class="fp-cardbar" style="--f:${card.kind === 'surge' ? surgeFill(card) : card.hp / card.max}"></i>`}<b>${card.kind === 'surge' ? `${Math.round(surgeFill(card) * 100)}%` : card.kind === 'escort' ? `${Math.max(0, escortRoute(s, card).length - 1)} rooms` : `${packRooms(s, card)} rooms off`}</b></span>` : '';
   const keys = R.at && R.visit?.keys.length ? `<span class="fp-stat fp-keys" title="Keys: each opens its vault, this visit only. Jack out and it goes back to the elite that held it.">${ic('key')}<b>${R.visit.keys.length}</b></span>` : '';
   const packed = R.world ? (s.run?.pack || []).map((f) => net(s, 'packLine', f)) : R.pack.map((id) => itemLabel(stashItem(s, id) || { name: '?' }));
   const pack = packed.length ? `<span class="fp-stat" title="${esc(`Pack: ${packed.join(', ')}.\nBanks when you jack out. Lost if your Signal hits 0.`)}"><span class="lbl">Pack</span><b>${packed.length}</b></span>` : '';
@@ -604,7 +618,7 @@ function hudMarkup(s) {
     <span class="fp-id" title="${esc(net(s, 'idTip') ?? `${R.name}: ${author} ${kindName(R.kind)}, level ${R.level}, floor ${R.floor}.\n${K.rule}: ${K.text}`)}"><span class="ico" ${icon('server')}></span><b>${esc(R.name)}</b><small>${esc(net(s, 'idLine') ?? `${kindName(R.kind)} · lv ${R.level} · ${K.rule}`)}</small></span>
     <div class="fp-sig ${lvl}" title="${esc(`Signal: carries from fight to fight and rests back at home.\nA room's first step each visit costs ${step}, or ${stepNew} into one you've never been in.`)}"><span class="lbl">Signal</span><span class="sigbar"><span style="width:${(f * 100).toFixed(1)}%"></span></span><strong>${sig}</strong><small>/${max}</small>${R.world && sickPct(s) ? `<em class="sig-sick" title="${esc(sickTip(s))}">−${sickPct(s)}%</em>` : ''}</div>
     <div class="fp-prog" title="${esc(`Rooms cleared for good: at ${Math.ceil(prog.total / 2)} the whole map is drawn, at ${prog.total} the server is Mapped.`)}"><span class="lbl">Rooms</span><span class="pbar"><span style="width:${(prog.done / prog.total) * 100}%"></span><i style="left:50%"></i></span><b>${prog.done}/${prog.total}</b>${R.mapped ? '<small class="fp-mapped">MAPPED</small>' : ''}</div>
-    ${keys}${hunt}${rival}${ml}${pack}${job}${R.world && s.threads ? threadHud(s) : ''}
+    ${keys}${hunt}${rival}${cardStat}${ml}${pack}${job}${R.world && s.threads ? threadHud(s) : ''}
     <span class="fp-tools">${R.world ? '' : `<span class="fp-rules" role="group" aria-label="Boss rule"><span class="lbl" title="${esc(`Boss rule: how ${BOSSES[RESIDENT].name}'s ticks work. It applies to your next fight with it.`)}">Boss</span>${rule}</span>`}
     <ul class="fp-perks" aria-label="Scripts"><li class="lbl" title="Scripts: run one a fight, from the fight's tray. It takes no cycle.">Scripts ${bag.length}/${slotsOf(s)}</li>${scripts}</ul>
     <span class="fp-acts">${acts}</span></span>
@@ -649,6 +663,8 @@ export function closePop(s, ui = fpUi) {
 }
 
 const btn = (verb, label, { arg = null, primary = false, hot = false, small = false, disabled = false, note = '', tip = '' } = {}) => `<button type="button" class="btn${small ? ' small' : ''}${primary ? ' primary' : ''}${hot ? ' hot-btn' : ''}" data-rooms="${verb}"${arg != null ? ` data-arg="${esc(arg)}"` : ''}${disabled ? ' disabled' : ''}${tip ? ` title="${esc(tip)}"` : ''}>${esc(label)}${note ? `<small>${esc(note)}</small>` : ''}</button>`;
+// A run card's tooltip: its name, its kind, what it does, then the answer, muted.
+function cardTip(s, c) { const C = RUN_CARDS[c.kind]; return `${C.name}\nRun card\n${C.tip}\n${C.muted}`; }
 const note = (html, cls = '') => `<p class="fp-note${cls ? ' ' + cls : ''}">${html}</p>`;
 // What holds the room: its icon, its name, and its line.
 const holder = (name, title, sub, tip = '', cls = 'hot') => `<div class="fp-virus ${cls}"${tip ? ` title="${esc(tip)}"` : ''}>${ic(name)}<span><b>${esc(title)}</b><small>${esc(sub)}</small></span></div>`;
@@ -693,6 +709,10 @@ function hereCard(s) {
     st = { word: 'caught', cls: 'hot' };
     body = holder('den', `${huntName(h).toUpperCase()} ICE`, `Level ${fightOf(s, room, 'hunter').level} hunter`) + note('Beat it for a script. It stays down the rest of the visit.');
     acts = btn('engage', 'Fight it', { primary: true }) + btn('slip', 'Slip past', { tip: 'Slip past: once a visit.' });
+  } else if (sc?.kind === 'virus' && sc.as === 'surge') {
+    const c = surgeAt(s, room.id);
+    body = holder(iconOf(s, room), sc.name, c?.guardian ? 'Guardian · elite' : `Wave ${(c?.kills || 0) + 1} of ${RUNCARD.surge.waves}`, c ? cardTip(s, c) : '') + note(`<i class="fp-cardbar" style="--f:${c ? surgeFill(c) : 0}"></i> ${c?.guardian ? 'Beat it and the surge ends.' : 'Each kill drops a cache into your pack.'}`);
+    acts = btn('engage', 'Engage', { primary: true }) + (R.visit.back ? btn('back', 'Step back', { tip: `Step back: to ${g.rooms[R.visit.back].path}. What you've earned stays in your pack.` }) : '');
   } else if (sc?.kind === 'virus') {
     const k = whoOf(s, room), G = room.kind === 'guard' ? GUARDS[room.guard] : null;
     const tip = G ? `${G.name}: ${G.summary.split('. ').slice(1).join('. ') || G.summary}` : room.kind === 'core' && !R.world ? `${BOSSES[RESIDENT].name}: ${BOSSES[RESIDENT].about}` : '';

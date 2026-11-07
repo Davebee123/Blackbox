@@ -19,7 +19,8 @@ import { contractTakeover, bankCargo, payloadHome, wantedBy, title as contractTi
 import { hiddenNodes, locate, flagged, bankRoute, hiddenLead, spawnHidden, HIDDEN, routed } from './hidden.mjs';
 import { hiddenNear, reached as floorsReached } from './floors.mjs';
 import { SPRAWL, zoneOf, zoneRooms } from './zone.mjs';
-import { deal, developerChain, CARDS as EVENT_CARDS, dealBlip, BLIPS } from './events.mjs';
+import { deal, developerChain, CARDS as EVENT_CARDS, dealBlip, BLIPS, RUNCARD_DEAL } from './events.mjs';
+import { RUN_CARDS, dealCard } from './runcards.mjs';
 import { crewCommand } from './crew.mjs';
 import { presenceCommand, at, simOn, PRESENCE, online } from './presence.mjs';
 import { profileCommand } from './profile.mjs';
@@ -36,7 +37,7 @@ import { biasCode, netOf } from './network.mjs';
 import { showCard } from './genome.mjs';
 import { owned, procIn, procOf, rootFileInfo, rootFiles, rootOf, CACHE_FILE, STASH_DIR, STASH_FILE } from './root.mjs';
 import { enterRooms, roomsFor } from './netrooms.mjs';
-import { roomsCommand, jackOut as roomsJackOut, settle as roomsSettle, hereOf, FIGHTS, roomList, neighbours, isUp, coreOpen, walkToRoom, seenOf, fightOf } from './floorplan.mjs';
+import { roomsCommand, jackOut as roomsJackOut, settle as roomsSettle, hereOf, FIGHTS, roomList, neighbours, isUp, coreOpen, walkToRoom, seenOf, fightOf, WORLD as ROOMS_WORLD } from './floorplan.mjs';
 import { threadCommand, developerThread, isDark } from './threads.mjs';
 export { zoneOf, zoneRooms };
 
@@ -773,6 +774,13 @@ export function play(s, input) {
     return since(s, first);
   }
   if (/^developer pager( \w+)?$/.test(text)) { const first = s.serial; developerPager(s, text.split(' ')[2] || 'fill'); return since(s, first); } // a realistic mix on the pager, or none (pager.mjs)
+  if (/^developer runcard( \w+)?$/.test(text)) { // a run card (runcards.mjs): developer runcard [surge|escort|pack], into this run or the next connect
+    const first = s.serial, kind = text.split(' ')[2] || RUNCARD_DEAL.kinds[Math.floor(Math.random() * 3)];
+    if (!RUN_CARDS[kind]) warn(s, `developer runcard [${Object.keys(RUN_CARDS).join('|')}]`);
+    else if (s.rooms?.world && s.rooms.at) { if (dealCard(s, kind, (Date.now() >>> 0) || 1)) ROOMS_WORLD.cardUp?.(s, s.rooms.visit.card); else warn(s, 'No room for it on this server.'); }
+    else { (s.director ||= { next: null, n: 0, last: null }).forceCard = kind; emit(s, 'status', `The next server you connect to deals a ${RUN_CARDS[kind].name.toLowerCase()}.`); }
+    return since(s, first);
+  }
   if (/^developer blip( \w+)?$/.test(text)) { // a blip now (events.mjs): developer blip [cache|flicker|rumour|sighting]
     const first = s.serial, kind = text.split(' ')[2] || null;
     if (kind && !BLIPS[kind]) warn(s, `developer blip [${Object.keys(BLIPS).join('|')}]`);
