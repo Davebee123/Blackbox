@@ -84,7 +84,7 @@ function faction(s, f) {
     fc: F.color,
     steps: [
       { art: FACTION_MARKS[f], c: 'm', ms: 300 },
-      { t: `${F.name} · ${F.tiers[4]}`, c: 'b', ms: 160 },
+      { t: `${F.name} · ${F.tiers[3]}`, c: 'b', ms: 160 },
       { t: FACTION_VOICE[f], ms: 380 },
       { t: dots('integrity', `${s.server.integrity}/${s.server.max}`, crit(s) ? 'crit' : 'ok'), c: crit(s) ? 'h' : '', ms: 110 },
       ...waiting(s).map((l) => ({ ...l, ms: 220 })),

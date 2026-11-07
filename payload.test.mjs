@@ -41,7 +41,7 @@ test('a payload travels, then lands on its own: breach pays out, the hub goes on
   assert.equal(flyingOf(s).length, 0);
   assert.ok(s.server.credits > c0);
   assert.ok(materialsOf(s).kernel > k0, 'Kestrel hoards Kernel code');
-  assert.equal(rep(s, 'kestrel'), r0 + PAYLOAD.rep.breach);
+  assert.equal(rep(s, 'kestrel'), Math.max(1, r0 + PAYLOAD.rep.breach), 'never under 1');
   assert.equal(alertOf(s, 'kestrel', T0 + travelMs(s, 'kestrel')), 1);
   assert.ok(defenceOf(s, 'kestrel', T0 + travelMs(s, 'kestrel')) > d0);
   assert.equal(alertOf(s, 'kestrel', T0 + travelMs(s, 'kestrel') + PAYLOAD.alertEaseMs), 0, 'eases back');

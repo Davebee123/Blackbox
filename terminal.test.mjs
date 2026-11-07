@@ -84,7 +84,7 @@ test('every boot renders: words on every line, as long as stock\'s or shorter, w
     assert.equal(b.cls, 'boot-faction');
     assert.deepEqual(b.steps[0], { art: FACTION_MARKS[f], c: 'm', ms: 300 });
     assert.ok(FACTION_MARKS[f].length >= 3 && FACTION_MARKS[f].every((r) => /^[\x20-\x7e]{1,14}$/.test(r)), `${f}: plain ASCII, small`);
-    assert.ok(b.steps.some((l) => l.t === `${FACTIONS[f].name} · ${FACTIONS[f].tiers[4]}`));
+    assert.ok(b.steps.some((l) => l.t === `${FACTIONS[f].name} · ${FACTIONS[f].tiers[3]}`));
     assert.ok(b.steps.some((l) => l.t === FACTION_VOICE[f]));
     assert.match(FACTION_VOICE[f], /^[A-Z][^:;]{8,60}\.$/, `${f}: one or two short sentences`);
   }

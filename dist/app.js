@@ -987,14 +987,14 @@ let bxScreen = null;
 let gainTimer = 0;
 // Rewards land in one place: a centred card (a toast for small things). A card already up queues the next.
 let gainQueue = [];
-function showGain(kicker, name, rows, toast, lead = '') {
+function showGain(kicker, name, rows, toast, lead = '', go = !toast) {
   const el = $('gain');
   if (!el) return;
-  if (gainOpen()) { gainQueue.push([kicker, name, rows, toast, lead]); return; } // never over a card that waits for Enter
-  if (connecting()) return whenConnected(() => showGain(kicker, name, rows, toast, lead)); // never over the connect
+  if (gainOpen()) { gainQueue.push([kicker, name, rows, toast, lead, go]); return; } // never over a card that waits for Enter
+  if (connecting()) return whenConnected(() => showGain(kicker, name, rows, toast, lead, go)); // never over the connect
   clearTimeout(gainTimer);
   el.className = `gain${toast ? ' toast' : ''}`;
-  el.innerHTML = V.gainMarkup(kicker, name, rows, !toast, lead);
+  el.innerHTML = V.gainMarkup(kicker, name, rows, go, lead);
   el.hidden = false;
   const motion = campaign.settings.motion !== false;
   el.querySelectorAll('.sp-row').forEach((node, i) => setTimeout(() => {
@@ -1009,6 +1009,11 @@ function rewardCard(kicker, e, events, toast = false) {
   const name = e.location ? campaign.locations?.find((l) => l.id === e.location)?.name || '' : '';
   const rows = [{ label: String(e.message || '').replace(/^[A-Z ]+: /, '').replace(/\.$/, ''), qty: '', kind: 'found', text: e.message || '' }, ...V.spoilsOf(events.filter((x) => ['xp', 'fresh', 'code'].includes(x.type) && x.id > e.id - 6))];
   showGain(kicker, name, rows, toast);
+}
+// The takeover with its vault's receipt (receipts.mjs): the receipt and five stamps; a stamp or Later closes it.
+function receiptCard(e, events) {
+  const name = campaign.locations?.find((l) => l.id === e.location)?.name || '';
+  showGain(`${name} · Taken over`, '', V.spoilsOf(events.filter((x) => ['xp', 'fresh', 'code'].includes(x.type) && x.id > e.id - 6)), false, V.receiptLead(campaign, e.receipt), false);
 }
 // Losing a run: how it went (the death recap over the last cycles: recap.mjs), what took you out, what it cost, and
 // when you can go back.
@@ -1242,7 +1247,7 @@ function react(events) {
       case 'harvest': feel.add('pickup', null); break;
       case 'consortium-siege': case 'consortium-raid': case 'consortium-roam': feel.add('prewarn', null); break;
       case 'outpost-held': feel.add('good', null); notice(e.message); break;
-      case 'takeover': flash('TAKEN OVER'); feel.add('win', null); rewardCard('Taken over', e, events); break;
+      case 'takeover': flash('TAKEN OVER'); feel.add('win', null); if (e.receipt) receiptCard(e, events); else rewardCard('Taken over', e, events); break;
       case 'root': feel.add('unlock', null); rewardCard(`Root ${e.root}`, e, events); break;
       case 'streak': feel.add('win', null); rewardCard('Streak', e, events); break;
       case 'rotation': feel.add(e.rare ? 'prewarn' : 'good', null); break;
@@ -2786,6 +2791,8 @@ document.addEventListener('click', (e) => {
   if (tip && !e.target.closest('#tip') && (e.target.closest(tip.cur.at) || (tip.cur.also && e.target.closest(tip.cur.also)))) advanceTip();
   if (e.target.closest('[data-spoils-go]')) { if (ended) leaveFight(); else hideSpoils(); return; }
   if (e.target.closest('[data-gain-go]')) { hideGain(); return; }
+  const gc = e.target.closest('[data-gain-cmd]');
+  if (gc) { run(gc.dataset.gainCmd); hideGain(); return; } // a takeover card's stamp, or Later
   const pick = e.target.closest('[data-mk-pick]');
   if (pick) { const w = pick.dataset.mkPick; setMkOrder(mkOrder?.w === w && mkOrder.f === hubSel ? null : { f: hubSel, w, side: w === 'salvage' || (campaign.materials?.[w] || 0) > 0 ? 'sell' : 'buy', n: 1 }); return; }
   const side = e.target.closest('[data-mk-side]');

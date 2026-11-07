@@ -337,7 +337,7 @@ test('never timed, nothing missable: set a thread aside and pick it up again (fr
 });
 
 test('the save (v43): an older save starts with no threads and pins starts as you connect; a save keeps threads, a temporary server and a file mid-walk', () => {
-  assert.equal(SAVE_VERSION, 57); // v57 the talent tiers; v56 floors as tiers; v55 gear carries your power; v54 the compounding curve; v53 (the cryptogram key); // v44 (whole-number stats), v45 (sets), v46 (no default subclass), v47 (one kind of component), v48 (Indemnity retires), v49 (crafting goes), v50 (specials) and v51 (the scanner) and v52 (rivals) came after
+  assert.equal(SAVE_VERSION, 58); // v58 one rep scale; v57 the talent tiers; v56 floors as tiers; v55 gear carries your power; v54 the compounding curve; v53 (the cryptogram key); // v44 (whole-number stats), v45 (sets), v46 (no default subclass), v47 (one kind of component), v48 (Indemnity retires), v49 (crafting goes), v50 (specials) and v51 (the scanner) and v52 (rivals) came after
   const old = setup(6, { n1: 4 });
   delete old.threads; old.version = 42;
   const back = restore(JSON.parse(JSON.stringify(old)));

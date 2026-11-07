@@ -133,7 +133,7 @@ test('codebases are bought (Halcyon\'s store, the hubs\' shelves): a vault, a Re
   // Halcyon's store and the faction hubs sell theirs by tier.
   assert.deepEqual(SK.CODEBASE_SHOPS.halcyon.map(([id]) => id), ['harvester', 'defrag', 'mill']);
   assert.ok(FACTION_GOODS['cb-snare'] && FACTION_GOODS['cb-post'] && FACTION_GOODS['cb-tunnel'] && FACTION_GOODS['cb-siphon'] && FACTION_GOODS['cb-cron']);
-  assert.equal(FACTION_GOODS['cb-snare'].tier, 2);
+  assert.equal(FACTION_GOODS['cb-snare'].tier, 1, 'the second tier');
   const shop = shopOf(s, 'kestrel', clock).find((x) => x.id === 'cb-snare');
   assert.ok(shop && shop.codebase === 'snare');
 });
@@ -373,7 +373,7 @@ test('the save (v40): outposts, buildings, plans, services, architecture and the
   s.version = 39;
   const t = restore(JSON.parse(JSON.stringify(s)));
   assert.equal(t.version, SAVE_VERSION);
-  assert.equal(SAVE_VERSION, 57); // v57 the talent tiers; v56 floors as tiers; v55 gear carries your power; v54 the compounding curve; v53 the cryptogram key; // v41: floors (R3) came after, v42 the long climb, v43 threads, v44 whole-number stats, v45 sets, v46 no default subclass, v47 one kind of component, v48 Indemnity retires, v49 crafting goes, v50 specials, v51 the scanner, v52 rivals
+  assert.equal(SAVE_VERSION, 58); // v58 one rep scale; v57 the talent tiers; v56 floors as tiers; v55 gear carries your power; v54 the compounding curve; v53 the cryptogram key; // v41: floors (R3) came after, v42 the long climb, v43 threads, v44 whole-number stats, v45 sets, v46 no default subclass, v47 one kind of component, v48 Indemnity retires, v49 crafting goes, v50 specials, v51 the scanner, v52 rivals
   const l2 = t.locations.find((x) => x.id === loc.id);
   for (const k of ['buildings', 'build', 'outpost']) assert.equal(l2[k], undefined, `${k} gone`);
   assert.ok(l2.takenOver, 'still yours');

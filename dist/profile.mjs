@@ -8,7 +8,7 @@
 // (counts the log feeds: feuds, couriers, hunts) and seen (the last log serial read). An older save starts empty.
 import { emit, warn, UNIQUES, WORLD_SOURCES, hooks } from './combat.mjs';
 import { ARCHETYPES, BOSSES } from './data.mjs';
-import { FACTIONS, FACTION_IDS, rep, REP_TIERS, hubFound } from './factions.mjs';
+import { FACTIONS, FACTION_IDS, rep, REP_TIERS, hubFound, commissionOf, stanceLine } from './factions.mjs';
 import { PIECES } from './faction-gear.mjs';
 import { SETS, piecesOf, isPiece } from './sets.mjs';
 import { PRESENCE, profileOf as simOf, online, simOn, whereText } from './presence.mjs';
@@ -184,7 +184,7 @@ export const titles = () => (TITLE_LIST ||= [
   { id: 'thorough', name: 'the Thorough', rule: 'Fill an entry in the collection log.', lv: 12, has: (s) => Object.keys(s.collection || {}).some((k) => k.startsWith('full:')) },
   { id: 'deepwalker', name: 'Deepwalker', rule: 'Reach floor 5.', lv: 20, has: (s) => (s.floors?.reached || 1) >= 5 },
   { id: 'virtuoso', name: 'the Virtuoso', rule: 'Reach Mastery 3 with 5 abilities.', lv: 40, has: (s) => masteredN(s) >= 5 },
-  ...FACTION_IDS.map((f) => ({ id: 'of-' + f, name: `of ${FACTIONS[f].short}`, rule: `Reach ${FACTIONS[f].tiers[4]} with ${FACTIONS[f].name}.`, lv: 16, faction: f, has: (s) => (s.standing?.[f] ?? -1) >= REP_TIERS[4] })),
+  ...FACTION_IDS.map((f) => ({ id: 'of-' + f, name: `of ${FACTIONS[f].short}`, rule: `Reach ${FACTIONS[f].tiers[3]} with ${FACTIONS[f].name}.`, lv: 16, faction: f, has: (s) => (s.standing?.[f] ?? -1) >= REP_TIERS[3] })),
   ...Object.keys(CLASS_TITLE).map((c) => ({ id: 'max-' + c, name: CLASS_TITLE[c], rule: `Take a ${ARCHETYPES[c].name} to level 50.`, lv: 50, cls: c, has: (s) => (s.hackers?.[c]?.level || 0) >= 50 })),
 ]);
 export const titleById = (id) => titles().find((t) => t.id === id) || null;
@@ -230,7 +230,7 @@ export function tickProfile(s) {
 // few an achievement brings. Each is the reward of an achievement (achievements.mjs), earned by the same deed.
 export function stickersOf(s) {
   const out = [];
-  for (const f of FACTION_IDS) if ((s.standing?.[f] ?? -1) >= REP_TIERS[4]) out.push({ id: 'f-' + f, kind: 'faction', label: FACTIONS[f].tiers[4], color: FACTIONS[f].color, glyph: 'f-' + f, tip: `${FACTIONS[f].tiers[4]} with ${FACTIONS[f].name}` });
+  for (const f of FACTION_IDS) if ((s.standing?.[f] ?? -1) >= REP_TIERS[3]) out.push({ id: 'f-' + f, kind: 'faction', label: FACTIONS[f].tiers[3], color: FACTIONS[f].color, glyph: 'f-' + f, tip: `${FACTIONS[f].tiers[3]} with ${FACTIONS[f].name}` });
   for (const id of setsDone(s)) out.push({ id: 'set-' + id, kind: 'set', label: SETS[id].name, color: '#7ee787', glyph: 'item', tip: `Every piece of ${SETS[id].name}` });
   for (let n = 2; n <= (s.floors?.reached || 1); n++) out.push({ id: 'floor-' + n, kind: 'floor', label: `F${n}`, color: '#9aa7b4', glyph: 'node', tip: `Reached floor ${n}` });
   for (const b of natives().filter((k) => won(s, k))) out.push({ id: 'lair-' + b, kind: 'lair', label: BOSSES[b].name, color: '#ff8a5c', glyph: 'kill', tip: `Beat ${BOSSES[b].name} in its lair` });
@@ -246,7 +246,7 @@ export function stickerById(id) {
   if (DEED_STICKERS[id]) return { id, kind: 'deed', ...DEED_STICKERS[id] };
   if (!m) return null;
   const [, k, x] = m;
-  if (k === 'f' && FACTIONS[x]) return { id, kind: 'faction', label: FACTIONS[x].tiers[4], color: FACTIONS[x].color, glyph: id, tip: `${FACTIONS[x].tiers[4]} with ${FACTIONS[x].name}` };
+  if (k === 'f' && FACTIONS[x]) return { id, kind: 'faction', label: FACTIONS[x].tiers[3], color: FACTIONS[x].color, glyph: id, tip: `${FACTIONS[x].tiers[3]} with ${FACTIONS[x].name}` };
   if (k === 'set' && SETS[x]) return { id, kind: 'set', label: SETS[x].name, color: '#7ee787', glyph: 'item', tip: `Every piece of ${SETS[x].name}` };
   if (k === 'floor') return { id, kind: 'floor', label: `F${x}`, color: '#9aa7b4', glyph: 'node', tip: `Reached floor ${x}` };
   if (k === 'lair' && BOSSES[x]) return { id, kind: 'lair', label: BOSSES[x].name, color: '#ff8a5c', glyph: 'kill', tip: `Beat ${BOSSES[x].name} in its lair` };
@@ -254,7 +254,7 @@ export function stickerById(id) {
 }
 
 // ---------- the card ----------
-// Faction marks: each faction you've met, its tier (0–4).
+// Faction marks: each faction you've met, its tier (0–3).
 const tierOf = (r) => { let i = 0; REP_TIERS.forEach((m, k) => { if (r >= m) i = k; }); return i; };
 const met = (s, f) => f === 'halcyon' || hubFound(s, f) || (s.locations || []).some((l) => l.faction === f) || (s.standing?.[f] ?? FACTIONS[f].start) !== FACTIONS[f].start; // its hub, a server of its, or rep that moved
 // Your best few pieces: faction pieces, then set pieces, then the other uniques, highest level first; one of each.
@@ -271,6 +271,7 @@ export function fingerOf(s, handle) {
     return {
       handle: me, you: true, banner: bannerRows(p.banner), title: t?.name || null, plan: p.plan,
       classes: Object.entries(s.hackers || {}).filter(([c, h]) => ARCHETYPES[c] && h.level >= 1).sort((a, b) => b[1].level - a[1].level).map(([c, h]) => ({ cls: c, level: h.level })),
+      stance: { f: commissionOf(s), line: stanceLine(s) }, // your commission is your stance (factions.mjs)
       pieces: bestPieces(s), marks: FACTION_IDS.filter((f) => met(s, f)).map((f) => ({ f, tier: tierOf(rep(s, f)) })),
       stickers: stickersOf(s), since: p.since || null, where: 'on your server',
       points: pointsOf(s), achievements: shownAchievements(s), got: s.achievements?.got || {}, // achievements.mjs: your points, and the few you pinned or earned last
@@ -330,7 +331,7 @@ export function simCard(s, h) {
   return {
     handle: h, you: false, banner: BANNERS[BANNER_IDS[Math.floor(hash(h, 41) * BANNER_IDS.length)]].rows, title: title?.name || null, plan,
     classes, pieces, marks: facs.map((f, i) => ({ f, tier: Math.min(4, 1 + Math.floor(hash(h, 80 + i) * (1 + p.level / 8))) })),
-    stickers: (title?.faction ? [{ id: 'f-' + title.faction, kind: 'faction', label: FACTIONS[title.faction].tiers[4], color: FACTIONS[title.faction].color, glyph: 'f-' + title.faction, tip: `${FACTIONS[title.faction].tiers[4]} with ${FACTIONS[title.faction].name}` }] : [])
+    stickers: (title?.faction ? [{ id: 'f-' + title.faction, kind: 'faction', label: FACTIONS[title.faction].tiers[3], color: FACTIONS[title.faction].color, glyph: 'f-' + title.faction, tip: `${FACTIONS[title.faction].tiers[3]} with ${FACTIONS[title.faction].name}` }] : [])
       .concat(p.level >= 12 ? [{ id: 'floor-2', kind: 'floor', label: 'F2', color: '#9aa7b4', glyph: 'node', tip: 'Reached floor 2' }] : []),
     since: null, where: here ? whereText(here.place) : 'offline',
     // Their achievement points (a hacker of their level's, from the handle) and the one behind their title.

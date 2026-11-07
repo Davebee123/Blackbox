@@ -113,7 +113,7 @@ comment saying what it does.
 |---|---|
 | `dist/gear.mjs` | Protocols: slots, rarities, item levels, stats and rule affixes; flat numbers lifted at their level, and the ones that carry your power filled (`liftItem`, `liftFx`, `FILLS`, `curveRestore`). Pure data and functions. |
 | `dist/sets.mjs` | Sets: piece counts and their bonuses in a fight. |
-| `dist/faction-gear.mjs` | Faction gear: implicit lines on a faction's items, and the five faction uniques assembled from feud parts. |
+| `dist/faction-gear.mjs` | Faction gear: implicit lines on a faction's items, and the five faction uniques assembled from parts (feuds, receipts). |
 | `dist/filters.mjs` | Filters: rolled gear for your firewall's slots. |
 | `dist/salvage.mjs` | Components, one currency every broken part drops. |
 | `dist/store.mjs` | The Halcyon store: Halcyon's own line and the premium shelf. |
@@ -159,7 +159,8 @@ comment saying what it does.
 | `dist/firewall.mjs` | The firewall: its base follows your network, plus the margin you buy. |
 | `dist/server-view.mjs`, `dist/server.css` | The Server page: your home server's ring, rows and detail panel. |
 | `dist/events.mjs`, `dist/event-cards.mjs` | The event director's deck, chains, blips and history; each card's panel, the blips' sparks and the history list. |
-| `dist/factions.mjs` | Factions: hubs, shops, rep, friends and enemies. |
+| `dist/factions.mjs` | Factions: hubs, shops, rep (1 to 100, four tiers), friends and enemies, and your commission. |
+| `dist/receipts.mjs` | Receipts: each traced server's vault receipt, stamped for a faction at the takeover or handed in at your commission's hub. |
 | `dist/market.mjs` | Hub markets: prices that move with conditions, world events and sales. |
 | `dist/hubs.mjs`, `dist/fleet.mjs` | Holding a hub, and the swarms its old owner sends. Hub capture is off with Payloads. |
 | `dist/payload.mjs` | Payloads against a faction hub. Switched off (`PAYLOAD.on`). |
@@ -169,7 +170,7 @@ comment saying what it does.
 
 | File | What it does |
 |---|---|
-| `dist/mail.mjs` | Letters, contracts and the Halcyon retainer. |
+| `dist/mail.mjs` | Letters, contracts (one engine, five givers) and your commission's retainer. |
 | `dist/content.mjs` | Fills and checks the written content's blanks. |
 | `dist/content/story.mjs`, `dist/content/contracts.mjs` | The story beats and contract templates, written in the editor. |
 | `dist/arcs.mjs`, `dist/arcs-view.mjs` | Floor jobs: each floor's fixed chain of contracts (its Boss step and extra letters), and its page in Mail. |
@@ -285,7 +286,7 @@ and `style.test.mjs` the tooltip grammar.
 |---|---|
 | [`GAME_RULES.md`](GAME_RULES.md) | The rules as built. |
 | [`docs/ui.md`](docs/ui.md), [`docs/style-guide.md`](docs/style-guide.md) | The look (colours, tokens, components); how every line is written. |
-| [`docs/lore.md`](docs/lore.md) | The world and the story: the machine, the factions' answers, wick (decided, not built). [`docs/story-script.md`](docs/story-script.md): its letters and dialogue, drafted. [`docs/receipts.md`](docs/receipts.md): the vault receipt stamped for a faction at each takeover (designed, not built). [`docs/factions-plan.md`](docs/factions-plan.md): commissions, every hub's board, rep from contracts and receipts (decided, not built). |
+| [`docs/lore.md`](docs/lore.md) | The world and the story: the machine, the factions' answers, wick (decided, not built). [`docs/story-script.md`](docs/story-script.md): its letters and dialogue, drafted. [`docs/receipts.md`](docs/receipts.md): the vault receipt stamped for a faction at each takeover (built lean; its payoffs wait). [`docs/factions-plan.md`](docs/factions-plan.md): commissions, every hub's board, rep from contracts and receipts (1–4 built lean; the shops' shape waits). |
 | [`docs/journals.md`](docs/journals.md) | Journals: dated entries from people across the city, either side of the Cascade, found in vaults (drafted, not built). |
 | [`docs/servers.md`](docs/servers.md) | Servers as rooms, floors, sockets and puzzle rooms. |
 | [`docs/puzzle-rooms-plan.md`](docs/puzzle-rooms-plan.md) | Plan: three new puzzle rooms (Packet routing, Deadlock, Cryptogram). Built. |

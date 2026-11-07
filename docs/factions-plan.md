@@ -1,6 +1,8 @@
 # Factions plan: patrons, boards, receipts
 
-**Status.** Decided with the designer, not built. One session (it changes the economy and the factions; nothing else on
+**Status.** 1–4 built lean (GAME_RULES *Commission*, *Contracts*, *Factions*). Not yet: floor 5's Commission buttons
+(its transmissions aren't built), wick's letter at INIT's fall and the ACTUARY line (not built), per-faction board text,
+and 5. One session (it changes the economy and the factions; nothing else on
 those systems runs beside it). The shops (docs/economy.md *Shops*) follow it, since their yellows open by rep.
 
 **The loop:** pick a patron, take anyone's work, stamp receipts. Starsector's model: work for anyone, hold one

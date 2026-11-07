@@ -61,7 +61,7 @@ holders are long dead.
 | **Roll back** | NULL CHOIR | The debts are decades old and the people they bind are dead. | Every saving still in the system goes with it. |
 | *Sell* | GLASSJAW | For players who don't care: the reports go to the highest bidder. | — |
 
-- **Your stance is your commission** (docs/factions-plan.md 3; was: the faction you stand highest with), a line on the NET ID badge (*Holds with
+- **Your stance is your commission** (docs/factions-plan.md 3), a line on the NET ID badge (*Holds with
   Halcyon*, *Seals with Kestrel*, *Settles with LANTERN*, *Rolls back with NULL CHOIR*, *Sells to GLASSJAW*), set at a hub (*Commission*).
 - **Floor 5:** each faction sends its case in a short transmission.
 - **The built choices lean the same way:** Two Buyers, feuds, and Orphans,

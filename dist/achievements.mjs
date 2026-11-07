@@ -57,7 +57,7 @@ const setDone = (s, id) => piecesOf(id).length > 0 && piecesOf(id).every((p) => 
 const mappedN = (s) => (s.locations || []).filter((l) => l.floorplan?.mapped && !l.member).length;
 const takenN = (s) => Math.max(s.achievements?.n?.takeovers || 0,(s.locations || []).filter((l) => l.takenOver && !l.member).length);
 const floor = (s) => s.floors?.reached || 1;
-const top = (s, f) => (s.standing?.[f] ?? -1) >= REP_TIERS[4];
+const top = (s, f) => (s.standing?.[f] ?? -1) >= REP_TIERS[3];
 const level = (s, c) => s.hackers?.[c]?.level || 0;
 // A class's subclass, read without touching the save (combat.mjs subOf makes a class's record on first look).
 const picked = (s, c) => { const x = s.loadout?.sub?.[c]; return SUBS[x]?.cls === c && level(s, c) >= 10 ? x : null; };
@@ -126,7 +126,7 @@ const listed = () => (LIST ||= [ // the list as written; achievements() (below, 
   A('k-log-floor', 'collect', 'Floor Plan', "Fill a floor's entry in the collection log.", 25, { group: 'Log', has: (s) => filled(s).some((k) => k.startsWith('floor:')), reward: { sticker: 'log-floor' } }),
   ...Object.values(SETS).filter((x) => !x.tier).map((x) => A('k-set-' + x.id, 'collect', x.name, `Find every piece of ${x.name}.`, BIG_SETS.has(x.id) ? 25 : 10, { group: 'Sets', progress: (s) => of(piecesOf(x.id).filter((p) => s.collection?.[p]).length, piecesOf(x.id).length), has: (s) => setDone(s, x.id), reward: { sticker: 'set-' + x.id } })),
   // ---------- Factions ----------
-  ...FACTION_IDS.map((f) => A('f-' + f, 'faction', FACTION_ACH[f], `Reach ${FACTIONS[f].tiers[4]} with ${FACTIONS[f].name}.`, 25, { has: (s) => top(s, f) || titled(s, 'of-' + f), reward: { title: 'of-' + f, sticker: 'f-' + f, casing: f } })),
+  ...FACTION_IDS.map((f) => A('f-' + f, 'faction', FACTION_ACH[f], `Reach ${FACTIONS[f].tiers[3]} with ${FACTIONS[f].name}.`, 25, { has: (s) => top(s, f) || titled(s, 'of-' + f), reward: { title: 'of-' + f, sticker: 'f-' + f, casing: f } })),
   A('f-couriers', 'faction', "Courier's Bane", 'Intercept 10 couriers.', 10, { progress: (s) => of(deeds(s).couriers || 0, 10), has: (s) => titleHas(s, 'couriersbane'), reward: { title: 'couriersbane' } }),
   A('f-hunts', 'faction', 'Tracker', 'Collect 5 bounty hunts.', 10, { progress: (s) => of(deeds(s).hunts || 0, 5), has: (s) => titleHas(s, 'tracker'), reward: { title: 'tracker' } }),
   A('f-feuds', 'faction', 'Feudbreaker', 'Win 5 feuds.', 25, { progress: (s) => of(deeds(s).feuds || 0, 5), has: (s) => titleHas(s, 'feudbreaker'), reward: { title: 'feudbreaker' } }),

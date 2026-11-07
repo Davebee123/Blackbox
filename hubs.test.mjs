@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, resolveCycle, active, materialsOf } from './dist/combat.mjs';
 import { compilePayload, deployPayload, resolveStrike, builtOf, flyingOf, PAYLOAD, forecastStrike } from './dist/payload.mjs';
-import { rep, captured, donationOf, donate, hostile, shopOf } from './dist/factions.mjs';
+import { rep, captured, shopOf, REP_TIERS } from './dist/factions.mjs';
 import { quote, trade, tickMarket } from './dist/market.mjs';
 import { tickPayloads } from './dist/payload.mjs';
 import { HUBS, tickHubs, tickRetake as gather, collect, bankOf, retakeOf, lockedDown, heldOf } from './dist/hubs.mjs';
@@ -27,7 +27,7 @@ const win = (s) => {
   for (let i = 0; i < 6 && active(s); i++) { const p = s.encounter.virus.parts.find((x) => x.integrity > 0); command(s, 'spike ' + p.id); resolveCycle(s); }
 };
 
-test('a Backdoor only takes a hub that is offline; capture makes its owner deeply hostile', () => {
+test('a Backdoor only takes a hub that is offline; capture drops its owner to your bottom tier', () => {
   const s = open();
   compilePayload(s, 'backdoor');
   assert.equal(forecastStrike(s, builtOf(s)[0], 'kestrel'), 'blocked', 'not while it is up');
@@ -41,8 +41,8 @@ test('a Backdoor only takes a hub that is offline; capture makes its owner deepl
   assert.ok(r1 < r0);
   assert.equal(strike(s, 'backdoor', 'kestrel', Date.now()), 'breach');
   assert.ok(captured(s, 'kestrel'));
-  assert.equal(rep(s, 'kestrel'), r1 + PAYLOAD.captureHit);
-  assert.ok(rep(s, 'kestrel') < 0, 'hostility has depth');
+  assert.equal(rep(s, 'kestrel'), Math.max(1, r1 + PAYLOAD.captureHit));
+  assert.ok(rep(s, 'kestrel') < REP_TIERS[1], 'the bottom tier: it wants its hub back');
 });
 
 test('never Halcyon’s; two hubs at most', () => {
@@ -65,7 +65,6 @@ test('a held hub: no spread, shop at cost and unlocked, earns over time, collect
   const q = quote(s, 'kestrel', 'kernel');
   assert.ok(q.buy - q.sell <= 1, 'true price both ways');
   assert.ok(!shopOf(s, 'kestrel').some((g) => g.locked));
-  assert.ok(!hostile(s, 'kestrel'), 'you can trade at your own hub');
   s.hubs.kestrel.captured.bankAt = T0;
   tickHubs(s, T0 + 3 * 3600000);
   const bank = bankOf(s, 'kestrel');
@@ -104,31 +103,18 @@ test('a lost retake locks the hub down: no income until you clear it, never lost
   assert.ok(!lockedDown(s, 'kestrel'));
 });
 
-test('donations: inflated by how deep you are, +5 each, never past Neutral; no drift back', () => {
+test('rep never comes back on its own', () => {
   const s = open();
-  s.standing.nullchoir = -30;
-  const deep = donationOf(s, 'nullchoir');
-  s.standing.nullchoir = 0;
-  const shallow = donationOf(s, 'nullchoir');
-  assert.ok(deep.credits > 3 * shallow.credits * 0.9, 'about 4× at −30 against 1.1× at 0');
-  s.standing.nullchoir = -30;
-  donate(s, 'nullchoir');
-  assert.equal(rep(s, 'nullchoir'), -25);
-  s.standing.nullchoir = 22;
-  donate(s, 'nullchoir');
-  assert.equal(rep(s, 'nullchoir'), 24, 'stops short of trust');
-  donate(s, 'nullchoir');
-  assert.equal(rep(s, 'nullchoir'), 24);
-  s.standing.lantern = -20;
+  s.standing.lantern = 1;
   tickHubs(s, T0); tickHubs(s, T0 + 48 * 3600000); tickRetake(s, 1000, false, T0 + 48 * 3600000);
-  assert.equal(rep(s, 'lantern'), -20, 'rep never comes back on its own');
+  assert.equal(rep(s, 'lantern'), 1);
 });
 
 test('hitting a faction’s rival wins it back', () => {
   const s = open();
-  s.standing.kestrel = -20;
+  s.standing.kestrel = 1; s.standing.nullchoir = 50;
   strike(s, 'exfil', 'nullchoir', Date.now()); // NULL CHOIR is Kestrel's rival
-  assert.equal(rep(s, 'kestrel'), -20 + Math.round(-PAYLOAD.rep.breach * 0.5));
+  assert.equal(rep(s, 'kestrel'), 1 + Math.round(-PAYLOAD.rep.breach * 0.5));
 });
 
 test('no dodging by logging off: retakes gather and travel on real time, and stop the income; the siege waits for you', () => {

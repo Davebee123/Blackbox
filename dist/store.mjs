@@ -28,13 +28,13 @@ export const AGENCIES = ['Kestrel Underwriting', 'Norrland Re', 'Blue Ledger Sec
 // credits, rising with your level the way the rest of the store does.
 export const chaseRate = (L) => 40 * (1 + L / 15);
 const chase = (n) => (L) => Math.round((n * chaseRate(L)) / 10) * 10;
-// Halcyon's own line. tier: the standing tier (index in TIERS) it takes to buy.
+// Halcyon's own line. tier: the Halcyon tier (index in TIERS) it takes to buy.
 export const LINE = [
-  { id: 'relay', name: 'Relay', about: 'Pings the unknown servers next to a server you have taken over, and flags a contract’s signal. Install it on a server you hold.', credits: (L) => 120 + 8 * L, tier: 1 },
-  { id: 'deductible', chase: true, credits: chase(30), tier: 2 },
-  { id: 'subrogation', chase: true, credits: chase(45), tier: 3 },
-  { id: 'actuarial', chase: true, credits: chase(45), tier: 3 },
-  { id: 'total-loss', chase: true, credits: chase(80), tier: 4 }, // the Preferred weapon
+  { id: 'relay', name: 'Relay', about: 'Pings the unknown servers next to a server you have taken over, and flags a contract’s signal. Install it on a server you hold.', credits: (L) => 120 + 8 * L, tier: 0 },
+  { id: 'deductible', chase: true, credits: chase(30), tier: 1 },
+  { id: 'subrogation', chase: true, credits: chase(45), tier: 2 },
+  { id: 'actuarial', chase: true, credits: chase(45), tier: 2 },
+  { id: 'total-loss', chase: true, credits: chase(80), tier: 3 }, // the Preferred weapon
 ];
 export const lineName = (x) => x.name || ZERO_DAYS[x.id].name;
 export const lineAbout = (x) => x.about || ZERO_DAYS[x.id].effect;
@@ -92,7 +92,7 @@ export function buy(s, what) {
   const L = hackerLevel(s);
   const line = LINE.find((x) => x.id === what);
   if (line) {
-    if (tierIndex(s) < line.tier) return warn(s, `${lineName(line)} is for ${TIERS[line.tier].name} standing and up.`);
+    if (tierIndex(s) < line.tier) return warn(s, `${lineName(line)} is for Halcyon ${TIERS[line.tier].name} and up.`);
     const price = line.credits(L);
     if (s.server.credits < price) return warn(s, `${lineName(line)} costs ${price} credits.`);
     s.server.credits -= price;
@@ -109,7 +109,7 @@ export function buy(s, what) {
     const cb = shopCodebases(s, 'halcyon', L).find((x) => x.id === what.slice(9));
     if (!cb) return warn(s, 'Halcyon has no such codebase.');
     if (cb.known) return warn(s, `You already know the ${cb.name}.`);
-    if (tierIndex(s) < cb.tier) return warn(s, `The ${cb.name} is for ${TIERS[cb.tier].name} standing and up.`);
+    if (tierIndex(s) < cb.tier) return warn(s, `The ${cb.name} is for Halcyon ${TIERS[cb.tier].name} and up.`);
     if (s.server.credits < cb.price) return warn(s, `The ${cb.name} costs ${cb.price} credits.`);
     s.server.credits -= cb.price;
     emit(s, 'bought', `Bought the ${cb.name} for ${cb.price} credits.`, { codebase: cb.id });
