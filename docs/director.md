@@ -93,8 +93,9 @@ Each phase gets a pacing check in the sims: events and blips per hour of play, r
 
 - **Blips** come about every 5 minutes of logged-on time.
 - **No loss aversion with factions.** Feuds, counter-raids and turf wars only ever add rep or a discount; nothing lowers rep or closes a shop.
+- **A crisis runs on logged-on time**, like the director's other clocks: it pauses while you're logged off.
+- **Run cards (D3) come before crises (D4).**
 
 ## 9. Open questions
 
-- **Crisis length.** 45–90 minutes assumes a long session. Should a crisis pause while you're logged off, or run on real time?
 - **Run cards.** About one run in four: more, less, or tied to the server's kind (Mailhubs deal Surges, Relays deal Escorts)?
