@@ -46,7 +46,8 @@ import { strikeServer, clearedFor } from './factions.mjs';
 import { traceNear, hiddenLead, HIDDEN } from './hidden.mjs';
 import { hiddenNear } from './floors.mjs';
 import { zoneSpawns, kingOpen, spawnFight, levelOf, layoutOf, fileInfo, residentLevel, RESIDENT, bank, KING_ROOM, packGain, peopleIn, scanButton } from './run.mjs';
-import { blipStood, blipRooms } from './events.mjs';
+import { blipStood, blipRooms, runCardRoll, runCardUp, runCardEnd } from './events.mjs';
+import { RUN_CARDS } from './runcards.mjs';
 import { threadsConnect, threadsMoved, threadsStood, threadVerb, tempCoreOpen, tempKilled, threadsRestore } from './threads.mjs';
 
 export const KIND_OF = FP.KIND_OF;
@@ -463,6 +464,13 @@ WORLD_hook('exfilWon', (s, room, e) => {
 // A contract's item installed in its room (an Install job, mail.mjs): undefined when you carry none for this server.
 WORLD_hook('plant', (s, room, arg) => { const loc = locOf(s); return loc ? contractInstall(s, loc, room, arg) : undefined; });
 // You stand in a room with nothing live in it: a no-rest map job counts the visit's rooms (mail.mjs).
+// Run cards (runcards.mjs, events.mjs runCardRoll): a traced server's run, never SPRAWL-00, a rogue server, a lair, the
+// farm or a temporary server. s.director.forceCard forces one on the next connect (developer runcard).
+WORLD_hook('runcard', (s) => { const loc = locOf(s), forced = s.director?.forceCard; if (forced) delete s.director.forceCard; return loc && !isWild(loc) && !loc.lair && !loc.farm && !loc.temp ? runCardRoll(s, forced || null) : null; });
+WORLD_hook('cardUp', (s, c) => runCardUp(s, locOf(s), c, RUN_CARDS[c.kind].name, RUN_CARDS[c.kind].icon));
+WORLD_hook('cardEnd', (s, c, how) => runCardEnd(s, c, how));
+// A run card's kill (a surge wave, its guardian, the pack): the kill's own pay, an elite's for an elite; no room cleared.
+WORLD_hook('cardKill', (s, room, e) => { const loc = locOf(s); if (loc) roomKill(s, e, { pack: true, guard: !!e.virus.elite, family: lineageOf(e.virus.family), loc }); });
 WORLD_hook('stood', (s, room) => { const loc = locOf(s); if (loc) { contractStood(s, loc, s.rooms); threadsStood(s, loc, room); blipStood(s, loc, room); } }); // and a thread's goto (threads.mjs), a stray cache (events.mjs blips)
 // Threads (threads.mjs): a file walking after each of your moves; talk, read and sweep in a thread's room.
 WORLD_hook('moved', (s) => threadsMoved(s));

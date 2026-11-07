@@ -198,7 +198,7 @@ export function historyMarkup(s) {
   const h = historyOf(s);
   if (!h.length) return '';
   const row = (e) => {
-    const icon = e.blip ? BLIPS[e.k]?.icon : EVENT_ICON[e.k], at = e.loc && placeOf(s, e.loc);
+    const icon = e.icon || (e.blip ? BLIPS[e.k]?.icon : EVENT_ICON[e.k]), at = e.loc && placeOf(s, e.loc);
     return `<li class="pgh dh-${e.how}${e.blip ? ' blip' : ''}" title="${esc(`${e.name}${at ? ` on ${at.name}` : ''}: ${HOW[e.how] || e.how}.${e.cause ? ` ${e.cause}` : ''}`)}"><span class="pgh-k">${glyph(icon || 'signal')}${e.cause ? `<i class="cchain">${glyph('chain')}</i>` : ''}</span><span class="pgh-t">${esc(e.name)}</span><span class="pgh-age">${esc(HOW[e.how] || e.how)}</span></li>`;
   };
   return `<details class="pg-hist dh"><summary>History <b>${h.length}</b></summary><ul class="comms-list">${h.map(row).join('')}</ul></details>`;

@@ -724,6 +724,32 @@ export function blipStood(s, loc, room) {
 // The marks on a server's room map (netrooms.mjs 'blips'): { roomId: { kind, text } }.
 export const blipRooms = (s, loc) => Object.fromEntries(blipsOf(s).filter((b) => loc && b.loc === loc.id && b.room).map((b) => [b.room, { kind: b.kind, name: BLIPS[b.kind].name, text: blipText(s, b) }]));
 
+// ---------- run cards (docs/director.md section 4, runcards.mjs) ----------
+// One run in four on a traced server (netrooms.mjs WORLD.runcard picks which servers), from DIRECTOR.from, on dice of its
+// own (never shifting the deck's or the blips'). A forced kind (developer runcard) skips the roll.
+export const RUNCARD_DEAL = { chance: 0.25, kinds: ['surge', 'escort', 'pack'] };
+function croll(s) {
+  const d = s.director;
+  let t = (d.cr = ((d.cr ?? ((s.seed || 1) ^ 0x5c4d1e7)) + 0x6d2b79f5) >>> 0);
+  t = Math.imul(t ^ (t >>> 15), t | 1);
+  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
+export function runCardRoll(s, kind = null) {
+  const d = (s.director ||= { next: null, n: 0, last: null });
+  if (!kind && (hackerLevel(s) < DIRECTOR.from || croll(s) >= RUNCARD_DEAL.chance)) return null;
+  const ks = RUNCARD_DEAL.kinds.filter((x) => x !== d.lastCard), k = kind || ks[Math.floor(croll(s) * ks.length)]; // never the same kind twice running
+  return { kind: k, seed: Math.floor(croll(s) * 4294967296) >>> 0 };
+}
+// Dealt, and how it ended: the history's line (name and icon from runcards.mjs).
+export function runCardUp(s, loc, c, name, icon) {
+  const d = (s.director ||= { next: null, n: 0, last: null });
+  d.lastCard = c.kind;
+  c.hid = `r${(d.rn = (d.rn || 0) + 1)}`;
+  noteHistory(s, c.hid, null, { k: c.kind, name, icon, loc: loc?.id || null, how: 'up' });
+}
+export const runCardEnd = (s, c, how) => noteHistory(s, c.hid, how);
+
 // ---------- the history (docs/director.md section 5) ----------
 // { id, k, name, loc, how, cause } newest first, HISTORY.keep at most. how: up, won, gone, taken, missed, true, done.
 function noteHistory(s, id, how, fresh = null) {
