@@ -189,7 +189,7 @@ sentence or two, ??? until found, never timed.
 | System | The one way it carries the world |
 |---|---|
 | SPRAWL-00 | Its strays' names are trade IDs: `TRD-…`, a payer and a sum, ??? until scanned. |
-| Vaults | One file a vault is a frozen trade's receipt: who paid whom, and when. |
+| Vaults | One file a vault is a frozen trade's receipt: who paid whom, and when. Stamped at the takeover: docs/receipts.md. |
 | Codex | A line a family on who wrote it and why, earned with mastery. |
 | Residents | A Resident is the oldest orphan on its server; its scan card names its counterparty. |
 | Threads | Every chain's ending is one sentence that settles, seals or rolls back something small. |
