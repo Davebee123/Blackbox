@@ -795,7 +795,7 @@ objective too (it pays its archive, not the bonus).
   **discovered** for good. A virus in an unknown room still stops you at the door (**Engage** / **Step back**).
 - **A room's look.** A discovered room's outline and hue say its kind: a process a red cut-corner chip, an elite a
   magenta bevel, the Core red with a point at its foot, a socket orange with pins, a cache an amber rounded chip, the
-  vault a gold square, the rest room a green pill, the entry and the den white hexagons. Cleared or used, it goes gray.
+  vault a gold square, the rest room a green chip with deeply rounded corners, the entry and the den white hexagons. Cleared or used, it goes gray.
 - **Live viruses hold their rooms:** `engage`, or `back` out (the move in is spent).
 - **Scan** (`scan [room]`, or **SCAN −1** on a discovered neighbour's chip): 1 Signal (an Infiltrator's is free and
   reads deeper) for a card naming every rule the virus carries; it unpacks a Packer.

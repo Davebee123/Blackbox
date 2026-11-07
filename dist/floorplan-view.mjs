@@ -334,7 +334,7 @@ const LOOKS = { process: 'process', elite: 'elite', guard: 'elite', core: 'core'
 const lookOf = (s, room) => (!known(s, room.id) || room.nook ? null : room.kind === 'socket' ? 'socket' : LOOKS[iconOf(s, room)] || LOOKS[room.kind] || null);
 // Its outline as a path, centred on (x, y): process (and anything without a look) the cut-corner chip; an elite deep
 // bevels; the Core a point at the foot; a socket a bus slot's pins on both sides; a cache rounded; the vault square;
-// the rest room a pill; the entry and the den a hexagon.
+// the rest room deeply rounded; the entry and the den a hexagon.
 function chipD(look, x, y, hw, hh, c) {
   const P = (pts) => 'M' + pts.map(([a, b]) => `${n1(a)} ${n1(b)}`).join('L') + 'Z';
   const L = x - hw, T = y - hh, R = x + hw, B = y + hh;
@@ -348,7 +348,7 @@ function chipD(look, x, y, hw, hh, c) {
   }
   if (look === 'cache') return round(c * 1.4);
   if (look === 'vault') return P([[L, T], [R, T], [R, B], [L, B]]);
-  if (look === 'rest') return round(hh);
+  if (look === 'rest') return round(c * 2.6);
   if (look === 'hall') return P([[L + c, T], [R - c, T], [R, y], [R - c, B], [L + c, B], [L, y]]);
   return cut(c);
 }
