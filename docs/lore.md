@@ -32,7 +32,7 @@ ordinary network can't do that: each of its machines has its own PID 1.
 | **NULL CHOIR** | *"Let it roll back."* Every server it breaks is a small rollback. |
 | **GLASSJAW** | A broker selling INIT's reports to the highest bidder. Buys what ends up in the Sink. Grey, not evil. |
 | **TOLLGATE, SWARMLINE, PALEMASK** | Crews with no paymaster: ransoms, rented botnets, stolen data. Their attacks lock and interrupt trades mid-settlement, which makes new orphans. |
-| **Strays and Residents** | Orphans: uninsured trades retrying the handshake with anything that might be their counterparty, taking every wrong answer as hostile. "Nobody's" because their parents are dead. Crews still write the viruses (*viruses are written, not grown*). |
+| **Strays and Residents** | Orphans running dead crews' code. A crew's attack left a virus in the trade it interrupted, and the virus outlived the crew: it retries the handshake with anything that might be the counterparty, and takes every wrong answer as hostile. You fight the virus; the trade dies with it. "Nobody's" because their parents are dead. Crews still write the viruses (*viruses are written, not grown*). |
 | **You** | Your kills end processes cleanly, which frees space. Killing a stray cancels an uninsured payment, someone's money. That grey is deliberate. |
 
 **Now.** The table is filling again.
