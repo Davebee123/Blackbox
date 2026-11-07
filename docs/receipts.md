@@ -17,7 +17,7 @@
 | **Settle** | LANTERN | Closed the way it was meant to close. |
 | **Roll back** | NULL CHOIR | Both sides get their money back, decades late. |
 
-- **Every stamp pays the same amount:** +4 rep with its faction (the usual ripples) and one receipt toward that
+- **Every stamp pays the same amount:** +10 rep (docs/factions-plan.md: receipts and contracts are rep's two sources) with its faction (the usual ripples) and one receipt toward that
   faction's piece (Faction gear). **3 receipts make one part**, beside the parts feuds give. No credits on any stamp.
   Halcyon's pull is the retainer its standing already pays; the piece you want is the reason to stamp elsewhere.
 - **Later** keeps the receipt in your files. Hand it in at Halcyon's hub; each other hub takes it once found. No
