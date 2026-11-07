@@ -795,6 +795,12 @@ export function createSound() {
     },
     // Volume sliders (0–1; 0.8 is the level the game was mixed at).
     volumes(v = {}) { if (v.sfx != null) vol.sfx = v.sfx; if (v.ambience != null) vol.ambience = v.ambience; applyVol(); },
+    // An output at the effects volume for a scene with its own mix (the cold open): { ctx, out }, or null.
+    out() {
+      if (!ready()) return null;
+      const g = ctx.createGain(); g.gain.value = vol.sfx / 0.8; g.connect(ctx.destination);
+      return { ctx, out: g };
+    },
     // The shared context, for the soundtrack (null if audio can't start).
     context() { return ready() ? ctx : null; },
     // The room tone runs while Sound is on.

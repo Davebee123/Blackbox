@@ -8,15 +8,26 @@ The net is one computer: every server under one operating system, one process ta
 single-system-image cluster). Processes move from server to server, which is why viruses walk room to room. An
 ordinary network can't do that: each of its machines has its own PID 1.
 
-| Years ago | What happened |
+| Year | What happened |
 |---:|---|
-| ~50 | **Kessler Systems** builds a payment clearing house as a pilot for about 40 banks, on one machine. |
-| after | **It grows.** Instant settlement is too good: insurers, exchanges, payroll, rents and the city's own accounts join, each by adding servers. It is never rebuilt for that size. |
-| ~40 | **Settlement finality.** The members demand that a payment, once in, can never be cancelled. Halcyon pushes hardest: a rolled-back payment is a failed payment, and a failed payment is a claim. The safety valve, a timeout that rolled back any trade unanswered after a few seconds, is switched off by **moth's dad**, Kessler's senior settlement engineer. He had argued against it and lost. |
-| ~40–30 | **Orphans.** A bank fails mid-trade; its side dies; the other side waits forever for an answer. INIT must adopt every orphan, and can only clear one when it finishes. These never finish. The table fills. |
-| ~35 | **INIT's reports:** *"process table at N%"*. Kessler sells them to Halcyon. Halcyon adds a clause excluding "failure of the underlying system". |
-| ~30 | **The Cascade.** The table reaches 100%. Nothing new can start; the old net freezes, still running. wick files the last report: *"process table at 99%."* Other insurers go broke paying out; Halcyon pays little. |
-| ~30–now | **The recovery.** Finality protected only insured trades, so Kessler cancels every uninsured waiting trade to free room. wick writes and runs the cancel job, in one night. It takes several rounds over the years; each frees a slice the city builds a new layer in. |
+| 2041 | **Kessler Systems** builds a payment clearing house as a pilot for about 40 banks, on one machine. |
+| 2041–61 | **It grows.** Instant settlement is too good: insurers, exchanges, payroll, rents and the city's own accounts join, each by adding servers. It is never rebuilt for that size. |
+| 2051 | **Settlement finality.** The members demand that a payment, once in, can never be cancelled. Halcyon pushes hardest: a rolled-back payment is a failed payment, and a failed payment is a claim. The safety valve, a timeout that rolled back any trade unanswered after a few seconds, is switched off by **moth's dad**, Kessler's senior settlement engineer. He had argued against it and lost. |
+| 2051–61 | **Orphans.** A bank fails mid-trade; its side dies; the other side waits forever for an answer. INIT must adopt every orphan, and can only clear one when it finishes. These never finish. The table fills. |
+| 2056 | **INIT's reports:** *"process table at N%"*. Kessler sells them to Halcyon. Halcyon adds a clause excluding "failure of the underlying system". |
+| 2057 | **The leak.** wick leaks a report to a city paper; nobody acts. Kessler fines him; moth's dad pays it. |
+| **10 Nov 2061** | **The Cascade**, at 02:14. The table reaches 100%. Nothing new can start; the old net freezes, still running. wick files the last report: *"process table at 99%."* Other insurers go broke paying out; Halcyon pays little. |
+| 2061–86 | **The recovery.** Finality protected only insured trades, so Kessler cancels every uninsured waiting trade to free room. wick writes and runs the cancel job, in one night. It takes several rounds over the years; each frees a slice the city builds a new layer in. The first runs the morning after. |
+| 2062 | **The Halcyon Guarantee.** |
+| 2070 | moth's dad dies, still owed. |
+| 2091 | **Now.** |
+
+**Dates.** Every dated line in the game uses this calendar, marked against the Cascade (*C−4*, *C+29*). Now is 2091,
+C+30. The floors mounted deepest first:
+
+| Floor | 8 Bedrock | 7 The Sink | 6 Kernel Space | 5 Deep Core | 4 Coldline | 3 The Stacks | 2 Backhaul | 1 The Sprawl |
+|---|---|---|---|---|---|---|---|---|
+| Mounted | 2041 (the pilot) | 2062 | 2064 | 2067 | 2071 | 2075 | 2080 | 2086 |
 
 **The floors** are those layers: each a later layer of the same machine, its orphans still handed down to INIT.
 **Bedrock** is the original clearing house, frozen and still running. Deeper floors hold older orphans, and are harder.

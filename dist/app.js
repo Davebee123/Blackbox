@@ -25,6 +25,7 @@ import { logComms, commsOf, unseenAlert, seeAll, markDone, pruneComms } from './
 import { nextTip, markSeen, TOUR, tourDone, skipTour } from './tips.mjs';
 import { createWindow } from './window.mjs';
 import { createIntro } from './intro.mjs';
+import { coldOpen } from './coldopen.mjs';
 import * as SC from './scenes.mjs';
 import { sceneMarkup } from './scenes-view.mjs';
 import { powerOn } from './poweron.mjs';
@@ -445,14 +446,20 @@ const shellOn = () => (shellParam || campaign.settings.shell || 'immersive') !==
 const outside = createWindow({ canMove: () => canMove(), onThunder: (d) => feel.thunder(d), onWeather: (_, w) => { outsideRain = w.rain; feel.rain(outsideRain); } });
 if (params.get('tod')) outside.hour(params.get('tod'));
 let outsideRain = 0, outsideShown = false, lastVols = '';
-// First launch (or after Reset game): log in, then Halcyon's transmission.
+// First launch (or after Reset game): the cold open (coldopen.mjs), log in, then Halcyon's transmission.
 const intro = createIntro({ key: (k) => feel.key(k), sound: (v) => { feel.add(v, null); feel.flush(); }, reducedMotion: () => !canMove() });
-let introOn = false;
+let introOn = false, coldOn = false;
+// The game's own room tone, music and places hold off while the cold open plays its mix.
+function playColdOpen() {
+  coldOn = true;
+  feel.ambience(false); feel.soundtrack({ on: false }); feel.places({ on: false });
+  return coldOpen({ audio: () => feel.scene(), reducedMotion: () => !canMove() }).then(() => { coldOn = false; dirty = true; });
+}
 function firstLogin() {
   if (CAMP) return firstCampaign();
   introOn = true;
-  powerOn({ sound: (v) => { feel.add(v, null); feel.flush(); }, reducedMotion: () => !canMove() }).then(() => intro.run()).then(({ handle, pwLen }) => {
-    campaign.profile = { handle, pwLen, since: Date.now() };
+  powerOn({ sound: (v) => { feel.add(v, null); feel.flush(); }, reducedMotion: () => !canMove() }).then(playColdOpen).then(() => intro.run()).then(({ handle, pwLen }) => {
+    campaign.profile = { ...campaign.profile, handle, pwLen, since: Date.now() };
     return pickClass();
   }).then(() => {
     introOn = false;
@@ -475,8 +482,8 @@ const CAMPAIGN_LETTER = (handle) => [
 ];
 function firstCampaign() {
   introOn = true;
-  powerOn({ sound: (v) => { feel.add(v, null); feel.flush(); }, reducedMotion: () => !canMove() }).then(() => intro.run({ letter: CAMPAIGN_LETTER })).then(({ handle, pwLen }) => {
-    campaign.profile = { handle, pwLen, since: Date.now() };
+  powerOn({ sound: (v) => { feel.add(v, null); feel.flush(); }, reducedMotion: () => !canMove() }).then(playColdOpen).then(() => intro.run({ letter: CAMPAIGN_LETTER })).then(({ handle, pwLen }) => {
+    campaign.profile = { ...campaign.profile, handle, pwLen, since: Date.now() };
     return pickClass();
   }).then(() => {
     introOn = false;
@@ -1904,14 +1911,14 @@ function renderMeters() {
   }
   $('sound').textContent = 'Sound';
   $('sound').setAttribute('aria-pressed', String(campaign.settings.sound));
-  feel.ambience(!!campaign.settings.sound);
+  feel.ambience(!!campaign.settings.sound && !coldOn);
   const vols = V.volumesOf(campaign);
   if (JSON.stringify(vols) !== lastVols) { lastVols = JSON.stringify(vols); feel.volumes(vols); }
   // A fight plays its family's theme (fightmusic.mjs), building as the virus breaks: heat is how much of it is gone.
   const fighting = active(campaign), vi = fighting ? virusIntegrity(campaign) : null;
-  feel.soundtrack({ on: !!campaign.settings.sound, music: campaign.settings.music !== false, radio: campaign.settings.radio !== false, mood: fighting ? 'fight' : campaign.run ? 'run' : 'home', family: fighting ? campaign.encounter.virus.family : null, heat: vi?.max ? Math.round((0.15 + 0.85 * (1 - vi.current / vi.max)) * 10) / 10 : 0 });
+  feel.soundtrack({ on: !!campaign.settings.sound && !coldOn, music: campaign.settings.music !== false, radio: campaign.settings.radio !== false, mood: fighting ? 'fight' : campaign.run ? 'run' : 'home', family: fighting ? campaign.encounter.virus.family : null, heat: vi?.max ? Math.round((0.15 + 0.85 * (1 - vi.current / vi.max)) * 10) / 10 : 0 });
   // The place under the music (places.mjs): the hub whose session shows, the run's or fight's floor, the floor on the map.
-  feel.places({ on: !!campaign.settings.sound, ...placeOf(campaign, { hub: hubShown() ? hubSel : null, map: module === 'map' && mapView === 'mine' ? V.mapFloorOf(campaign, mapSel, mapFloor) : null }) });
+  feel.places({ on: !!campaign.settings.sound && !coldOn, ...placeOf(campaign, { hub: hubShown() ? hubSel : null, map: module === 'map' && mapView === 'mine' ? V.mapFloorOf(campaign, mapSel, mapFloor) : null }) });
   $('speed').textContent = `${cycleLength(campaign) / 1000}s cycle`;
   $('speed').title = `Speed: ${campaign.settings.speed || 'normal'}. Click for relaxed (12s) / normal (8s) / fast (5s). Rules count cycles, so balance never changes.`;
   $('motion').textContent = 'Motion';
@@ -3291,7 +3298,8 @@ go(active(campaign) ? 'combat' : campaign.breach ? 'breach' : campaign.rooms ? '
 // No intrusion waits at the gate any more: you go to the rogue server to find fights.
 if (campaign.encounter?.phase === 'alert' && campaign.encounter.mode === 'home' && !campaign.encounter.invader) campaign.encounter = null;
 if (!campaign.breach && !campaign.roomsPlay && !CAMP) { const done = [...tickNetwork(campaign, Date.now()), ...tickServices(campaign, Date.now())]; if (done.length) { react(done); save(); } } // installs that finished (or Degraded mode that ran out) while you were away
-if (!playtest) { if (!campaign.profile || (CAMP && !campaign.camp)) firstLogin(); else shell.boot(); }
+// A new game has no handle yet (the profile card's empty profile doesn't count: profile.mjs myProfile).
+if (!playtest) { if (!campaign.profile?.handle || (CAMP && !campaign.camp)) firstLogin(); else shell.boot(); }
 requestAnimationFrame(frame);
 window.blackbox = { get state() { return campaign; }, run, places: () => feel.placesNow() }; // places: what the place layer plays (places.mjs)
 

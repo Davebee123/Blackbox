@@ -47,6 +47,9 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
   a tooltip, never a paragraph. Cut every word the screen can do without, in new UI and whenever you touch old UI.
   Assume the player knows the basics; what needs teaching goes in the tutorial, everything else is left out. Rewards
   and costs are icons, in tooltips too.
+- **Prose** (letters, journals, lore): a science fiction writer's, concrete and plain. Never the contrast pattern
+  (*not X, but Y*; *you don't X, you Y*; *it isn't X, it's Y*), in any form, and no stacked triplets or closing
+  aphorisms.
 - **Tooltips use WoW's grammar:** a name, its kind, what it does, then the answer, muted. Use sentence case and good
   grammar: whole sentences, never cryptic labels.
 - **Colours keep one meaning each:** teal is only ever the player, red is threat, amber is loot and what you use,

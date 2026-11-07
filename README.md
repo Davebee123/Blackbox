@@ -177,6 +177,7 @@ comment saying what it does.
 | `dist/scanner.mjs`, `dist/scanner-view.mjs`, `dist/scanner.css` | The scanner: the Listening Post (its map node, card and hub terminal), its radio, the stations, the reel, the tape and what each pays. |
 | `dist/quest-view.mjs`, `dist/quest.css` | The quest window: a thread as an intercepted transmission. |
 | `dist/portraits.mjs` | The speaker's portrait in the quest window: a backlit ASCII silhouette, the cast's own or one from their name. |
+| `dist/coldopen.mjs` | First launch: the cold open (KESSLER's clearing house crashing), its own sound mix through `feel.scene()`. |
 | `dist/intro.mjs` | First launch: the login, then Halcyon's transmission. |
 | `dist/scenes.mjs`, `dist/scenes-view.mjs`, `dist/scenes.css`, `dist/content/scenes.mjs` | Transmissions: conversations with a contact over the map, their window and their words. |
 | `dist/tips.mjs` | First-time tips, the game's only tutorial text. |
@@ -285,6 +286,7 @@ and `style.test.mjs` the tooltip grammar.
 | [`GAME_RULES.md`](GAME_RULES.md) | The rules as built. |
 | [`docs/ui.md`](docs/ui.md), [`docs/style-guide.md`](docs/style-guide.md) | The look (colours, tokens, components); how every line is written. |
 | [`docs/lore.md`](docs/lore.md) | The world and the story: the machine, the factions' answers, wick (decided, not built). [`docs/story-script.md`](docs/story-script.md): its letters and dialogue, drafted. |
+| [`docs/journals.md`](docs/journals.md) | Journals: dated entries from people across the city, either side of the Cascade, found in vaults (drafted, not built). |
 | [`docs/servers.md`](docs/servers.md) | Servers as rooms, floors, sockets and puzzle rooms. |
 | [`docs/puzzle-rooms-plan.md`](docs/puzzle-rooms-plan.md) | Plan: three new puzzle rooms (Packet routing, Deadlock, Cryptogram). Built. |
 | [`docs/genome.md`](docs/genome.md), [`docs/parts-plan.md`](docs/parts-plan.md), [`docs/mechanics-list.md`](docs/mechanics-list.md) | How viruses are built, their parts, and the mechanics to play. |

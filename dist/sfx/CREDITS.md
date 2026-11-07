@@ -23,6 +23,10 @@ in `sound.mjs`; they are not samples.
 - `city-ambience.mp3`: "Small city ambience with traffic, motors, horn, siren, slight passerby hubbub" by felix.blume, https://freesound.org/people/felix.blume/sounds/705049/ (Freesound HQ preview)
 - `horn-double.mp3`: "Car horn beep beep two beeps honk honk" by AmishRob, https://freesound.org/people/AmishRob/sounds/423990/ (Freesound HQ preview)
 
+## The cold open (`coldopen/`, CC0)
+
+- `crowd.mp3`: "Crowd talking / murmur" by trezz77, https://freesound.org/people/trezz77/sounds/546676/ (Freesound HQ preview)
+
 ## Places, virus families and bodies (`floors/`, `hubs/`, `families/`, `bodies/`, Ogg Vorbis)
 
 Synthesized for BLACKBOX: rendered offline with Web Audio by `tools/sound-preview/` (`FORMAT=ogg node
