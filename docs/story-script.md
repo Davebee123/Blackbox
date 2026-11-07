@@ -65,7 +65,7 @@ Only two change.
    > Four. Nine. Nine. This is LANTERN.
    > wick says you want the schedule. We hear it on the Backhaul. Put our listener on {server}. What crosses it, we hear. Then you hear.
 2. **Rooms** · *A clear line*
-   > The strays on {server} come up from below. They are not lost. They are looking for someone who owes them an answer.
+   > The strays on {server} come up from below, looking for someone who owes them an answer.
    > Clear {count} rooms you haven't cleared before. The listener needs a clear line.
 3. **Past the Tracker** · *One page* · `sched.0412`, a page of the schedule
    > One page of the schedule sits in the vault on {server}, as {file}. Its Tracker guards it. Bring it out unseen, or it is worth nothing to us.
