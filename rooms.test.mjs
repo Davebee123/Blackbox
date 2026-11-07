@@ -536,6 +536,23 @@ test('the map chips: one badge language for state, countdowns and rings that tic
   assert.ok(!R.log.some((l) => new RegExp(`${R.max}\\b`).test(l) && /\/\d+/.test(l)), R.log.join(' | '));
 });
 
+test('a room\'s look: its kind sets its outline and hue; an unknown room has none', () => {
+  const s = server({ hunter: 'patrol' }), R = s.rooms, g = R.graph;
+  const fog = chipOf(wideOf(roomsMarkup(s)), FP.neighbours(g, g.entry)[0]);
+  assert.doesNotMatch(fog, /look-/, 'a ghost chip keeps no kind');
+  for (const id of Object.keys(g.rooms)) R.seen[id] = 'kind';
+  const wide = wideOf(roomsMarkup(s)), lookOf = (id) => chipOf(wide, id).match(/<g class="fp-room [^"]*look-(\w+)/)?.[1];
+  const want = { process: 'process', elite: 'elite', guard: 'elite', core: 'core', cache: 'cache', vault: 'vault', rest: 'rest', entry: 'hall', den: 'hall' };
+  const looks = new Map();
+  for (const room of FP.roomList(s)) if (want[room.kind] && !room.mirror && !room.wild) {
+    assert.equal(lookOf(room.id), want[room.kind], room.kind);
+    looks.set(lookOf(room.id), chipOf(wide, room.id).match(/<path class="fp-body" d="M[\d.]+ [\d.]+((?:L[\d.]+ [\d.]+)*|[^"]*)"/)[1].split('L').length);
+  }
+  assert.ok(looks.has('process') && looks.has('elite') && looks.has('core') && looks.has('vault'));
+  assert.equal(looks.get('vault'), 4, 'the vault is a square');
+  assert.equal(looks.get('core'), 7, 'the Core comes to a point at its foot');
+});
+
 test('Schematic HD: chips by kind and colour, KEY, LOCKED and SEALED, the hunter\'s skull and its one arrow, traces without vias', () => {
   const s = server({ hunter: 'patrol' }), R = s.rooms, g = R.graph;
   for (const id of Object.keys(g.rooms)) R.seen[id] = 'kind';

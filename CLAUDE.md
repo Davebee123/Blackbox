@@ -73,7 +73,9 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
   - pager: the *Tray*;
   - player card: the *NET ID badge*;
   - collection log: the *Ledger*;
-  - journals: one Ledger entry, a timeline over the writers, a document card on the first find (docs/journals.md).
+  - journals: one Ledger entry, a timeline over the writers, a document card on the first find (docs/journals.md);
+  - rooms map: each room kind its own outline and hue (the *Hues*: magenta elite, orange socket, green rest, gold
+    vault, white entry and den), thick borders. The one place a colour means a kind.
 - **Rejected looks:**
   - the *View* background behind the monitor; keep the original city, with more detail at the same size;
   - card-first clicks on the rooms map; one click walks;

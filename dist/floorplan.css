@@ -90,14 +90,24 @@
 .fp-room { --t: var(--amber); }
 .fp-room.t-hot { --t: var(--hot); } .fp-room.t-gray { --t: var(--gray); } .fp-room.t-you { --t: var(--you); }
 .fp-room text { font-family: var(--mono); pointer-events: none; }
-.fp-body { fill: url(#fp-g-node); stroke: var(--t); stroke-width: 1.4; }
+.fp-body { fill: url(#fp-g-node); stroke: var(--t); stroke-width: 2.2; }
 .fp-room.t-hot .fp-body { fill: url(#fp-g-hot); }
-.fp-room.t-you .fp-body { fill: url(#fp-g-here); stroke-width: 2.4; }
+.fp-room.t-you .fp-body { fill: url(#fp-g-here); stroke-width: 3; }
 /* an unknown room (never been in): a ghost, no kind colour; one you can walk into a touch brighter, its cost badge on it */
 .fp-room.k-fog .fp-body { fill: #0b0804; stroke: #4a3c22; stroke-width: 1; stroke-dasharray: 4 5; }
 .fp-room.k-fog.reach .fp-body { stroke: #8a7346; stroke-width: 1.3; }
 .fp-room.k-fog.reach .fp-q { fill: #8a7346; }
-.fp-hair { fill: none; stroke: var(--t); stroke-width: 0.6; opacity: 0.35; pointer-events: none; }
+.fp-hair { fill: none; stroke: var(--t); stroke-width: 1; opacity: 0.35; pointer-events: none; }
+/* a room's kind as its hue (floorplan-view.mjs lookOf), while it's live or unused: cleared stays gray, yours teal.
+   The rooms map is the one place these hues mean a kind: magenta an elite, orange a socket, green the rest room,
+   gold the vault, white the entry and the den; red is still a process and the Core, amber a cache. */
+.fp-room.look-elite:is(.t-hot, .t-amber) { --t: #ff4fd8; }
+.fp-room.look-core:is(.t-hot, .t-amber) { --t: #ff2626; }
+.fp-room.look-socket:is(.t-hot, .t-amber) { --t: #ff9a2a; }
+.fp-room.look-vault:is(.t-hot, .t-amber) { --t: #ffe066; }
+.fp-room.look-rest:is(.t-hot, .t-amber) { --t: #7fdc7a; }
+.fp-room.look-hall:is(.t-hot, .t-amber) { --t: #e6e1d6; }
+.fp-room:is(.look-elite, .look-core, .look-socket, .look-vault, .look-rest, .look-hall):is(.t-hot, .t-amber) .fp-body { fill: color-mix(in srgb, var(--t) 12%, #120d08); }
 .fp-icon { color: var(--t); pointer-events: none; }
 .fp-room.t-gray .fp-icon { opacity: 0.6; }
 .fp-plate { fill: rgba(0, 0, 0, 0.45); pointer-events: none; }

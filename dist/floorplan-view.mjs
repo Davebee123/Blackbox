@@ -7,7 +7,8 @@
 // and no tty: what happens goes up as a notice, and the prompt still takes every verb.
 //
 // The map is "Schematic HD": the server drawn as a circuit. Each room is a chip (cut corners, a dark depth gradient,
-// a drop shadow, an inner hairline) with its icon, the largest thing on it, over a fixed-width name plate. Colour:
+// a drop shadow, an inner hairline) with its icon, the largest thing on it, over a fixed-width name plate. Its kind
+// sets its outline and, while it's live or unused, its hue (chipD, lookOf; GAME_RULES.md "A room's look"). Colour:
 // teal is only ever you (your chip, its pulsing ring, the YOU tab and the bits drifting off it); red is a live threat
 // (a fight room with its virus up, the Core, a mirror with its elite behind it, the hunter); amber is loot, what you
 // use and structure (a cache, the vault, the rest room, a room you haven't cleared); gray is cleared or used; a room
@@ -327,8 +328,30 @@ function huntStep(s) {
   return next && near && (seenOf(s, next) || classOf(s) === 'infiltrator') ? next : null;
 }
 const n1 = (v) => +v.toFixed(1);
-// A chip's outline: a rectangle with its corners cut.
-const chipPts = (x, y, hw, hh, c) => [[x - hw + c, y - hh], [x + hw - c, y - hh], [x + hw, y - hh + c], [x + hw, y + hh - c], [x + hw - c, y + hh], [x - hw + c, y + hh], [x - hw, y + hh - c], [x - hw, y - hh + c]].map(([a, b]) => `${n1(a)},${n1(b)}`).join(' ');
+// A room's look on the map: its kind's outline and hue (floorplan.css .look-*), so a room reads before its name does.
+// An elite (a guard post, a wild elite) looks like an elite; a socket keeps its pins with a program in it.
+const LOOKS = { process: 'process', elite: 'elite', guard: 'elite', core: 'core', socket: 'socket', cache: 'cache', stash: 'cache', secret: 'cache', purse: 'cache', vault: 'vault', rest: 'rest', entry: 'hall', den: 'hall' };
+const lookOf = (s, room) => (!known(s, room.id) || room.nook ? null : room.kind === 'socket' ? 'socket' : LOOKS[iconOf(s, room)] || LOOKS[room.kind] || null);
+// Its outline as a path, centred on (x, y): process (and anything without a look) the cut-corner chip; an elite deep
+// bevels; the Core a point at the foot; a socket a bus slot's pins on both sides; a cache rounded; the vault square;
+// the rest room a pill; the entry and the den a hexagon.
+function chipD(look, x, y, hw, hh, c) {
+  const P = (pts) => 'M' + pts.map(([a, b]) => `${n1(a)} ${n1(b)}`).join('L') + 'Z';
+  const L = x - hw, T = y - hh, R = x + hw, B = y + hh;
+  const round = (r) => `M${n1(L + r)} ${n1(T)}H${n1(R - r)}A${n1(r)} ${n1(r)} 0 0 1 ${n1(R)} ${n1(T + r)}V${n1(B - r)}A${n1(r)} ${n1(r)} 0 0 1 ${n1(R - r)} ${n1(B)}H${n1(L + r)}A${n1(r)} ${n1(r)} 0 0 1 ${n1(L)} ${n1(B - r)}V${n1(T + r)}A${n1(r)} ${n1(r)} 0 0 1 ${n1(L + r)} ${n1(T)}Z`;
+  const cut = (k) => P([[L + k, T], [R - k, T], [R, T + k], [R, B - k], [R - k, B], [L + k, B], [L, B - k], [L, T + k]]);
+  if (look === 'elite') return cut(c * 2.4);
+  if (look === 'core') return P([[L + c, T], [R - c, T], [R, T + c], [R, B - c * 1.6], [x, B + c * 0.6], [L, B - c * 1.6], [L, T + c]]);
+  if (look === 'socket') {
+    const t = c / 2, pin = (side) => [1, 2, 3, 4].flatMap((i) => { const py = T + (i * 2 * hh) / 5, e = side > 0 ? R : L; return [[e, py - 4], [e + side * t, py - 4], [e + side * t, py + 4], [e, py + 4]]; });
+    return P([[L, T], [R, T], ...pin(1), [R, B], [L, B], ...pin(-1).reverse()]);
+  }
+  if (look === 'cache') return round(c * 1.4);
+  if (look === 'vault') return P([[L, T], [R, T], [R, B], [L, B]]);
+  if (look === 'rest') return round(hh);
+  if (look === 'hall') return P([[L + c, T], [R - c, T], [R, y], [R - c, B], [L + c, B], [L, y]]);
+  return cut(c);
+}
 const hashOf = (str) => { let x = 7; for (const c of str) x = (x * 31 + c.charCodeAt(0)) % 233280; return x; };
 // A hop's trace bows out; a Tunnel's arc, from the entry to its room, bows a little less.
 const hopD = (p, q) => `M${p.x} ${p.y} Q${n1((p.x + q.x) / 2 + (q.y - p.y) * 0.35)} ${n1((p.y + q.y) / 2 - (q.x - p.x) * 0.35)} ${q.x} ${q.y}`;
@@ -476,6 +499,7 @@ function revealing(s, id) {
 }
 function roomSvg(s, room, p, { reach, next, pop, near, G, marks, th = {}, bl = {}, files = [], rv = null }) {
   const R = s.rooms, g = R.graph, kind = known(s, room.id), h = hunterOf(s);
+  const look = lookOf(s, room);
   const sock = kind && isSocket(s, room) && socketOpen(s, room), prog = sock ? programIn(s, room.id) : null; // an open socket (a held server's Core too) and what runs in it
   const here = R.at === room.id, can = reach.has(room.id), fight = kind && fightKind(room) && !sock, up = fight && isUp(s, room), down = fight && !up;
   const hunted = hunterSeen(s) && h.at === room.id;
@@ -488,26 +512,26 @@ function roomSvg(s, room, p, { reach, next, pop, near, G, marks, th = {}, bl = {
   const denEdge = kind && g.hunter === 'track' && g.den && neighbours(g, g.den).includes(room.id) && h && !h.awake && !h.down;
   // Its colour: you, a live threat, used up (or a plain room you've cleared), or something there for you.
   const tone = here ? 'you' : !kind ? 'fog' : room.nook ? (nookLive(s, room, th) ? 'amber' : 'gray') : live ? 'hot' : down || used || (['entry', 'junction', 'den', 'empty'].includes(room.kind) && R.cleared[room.id]) ? 'gray' : 'amber';
-  const cls = ['fp-room', revealing(s, room.id) ? 'reveal' : '', `k-${kind ? room.kind : 'fog'}`, `t-${tone}`, prog ? `prog p-${prog}` : sock ? 'open' : '', prog && socketOff(s, room) ? 'off' : '', here ? 'here' : can ? 'reach' : kind ? 'seen' : 'shape', up ? 'up' : '', down ? 'down' : '', used ? 'used' : '', room.mirror && kind ? 'mirror' : '', sealed ? 'sealed' : '', hunted ? 'hunted' : '', pop === room.id ? 'sel' : ''].filter(Boolean).join(' ');
+  const cls = ['fp-room', revealing(s, room.id) ? 'reveal' : '', `k-${kind ? room.kind : 'fog'}`, `t-${tone}`, prog ? `prog p-${prog}` : sock ? 'open' : '', prog && socketOff(s, room) ? 'off' : '', here ? 'here' : can ? 'reach' : kind ? 'seen' : 'shape', up ? 'up' : '', down ? 'down' : '', used ? 'used' : '', room.mirror && kind ? 'mirror' : '', sealed ? 'sealed' : '', hunted ? 'hunted' : '', pop === room.id ? 'sel' : '', look ? `look-${look}` : ''].filter(Boolean).join(' ');
   // A room you can walk into walks on one click (Enter too); any other room on the map opens its pop-up.
   const attrs = can ? ` data-rooms="go" data-arg="${esc(room.id)}" tabindex="0" role="button"` : ` data-fp-sel="${esc(room.id)}" tabindex="0" role="button" aria-haspopup="dialog"`;
-  const hw = G.nw / 2, hh = G.nh / 2, x0 = n1(p.x - hw), y0 = n1(p.y - hh), pts = chipPts(p.x, p.y, hw, hh, G.ch);
+  const hw = G.nw / 2, hh = G.nh / 2, x0 = n1(p.x - hw), y0 = n1(p.y - hh), d = chipD(look, p.x, p.y, hw, hh, G.ch), ring = chipD(look, p.x, p.y, hw + 5, hh + 5, G.ch + 2);
   let out = `<g class="${cls}" data-room="${esc(room.id)}"${attrs}${pop === room.id ? '' : ` title="${esc(tileTip(s, room, marks))}"`} aria-label="${esc(kind ? labelOf(s, room) : 'Unknown room')}">`;
   // You: a soft teal glow and a pulsing outline. The hunter just out of sight next door: a red pulse.
-  if (here) out += `<polygon class="fp-you-glow" points="${pts}" filter="url(#fp-glow)"/><polygon class="fp-you-ring" points="${pts}"/>`;
+  if (here) out += `<path class="fp-you-glow" d="${d}" filter="url(#fp-glow)"/><path class="fp-you-ring" d="${d}"/>`;
   const rival = rv?.at === room.id;
-  if (rival) out += `<polygon class="fp-rv-ring" points="${chipPts(p.x, p.y, hw + 5, hh + 5, G.ch + 2)}"/>`;
+  if (rival) out += `<path class="fp-rv-ring" d="${ring}"/>`;
   // A run card here (runcards.mjs): the lit surge room, the pack's room, the courier's room and its drop.
   const surge = surgeAt(s, room.id), pk = packOf(s)?.at === room.id ? packOf(s) : null, cr = escortOf(s), crHere = cr?.at === room.id, drop = cr?.dest === room.id;
-  if (surge || pk) out += `<polygon class="fp-card-ring ${pk ? 'pack' : 'surge'}" points="${chipPts(p.x, p.y, hw + 5, hh + 5, G.ch + 2)}"/>`;
-  if (near === room.id) out += `<polygon class="fp-near" points="${pts}" title="${esc(`${huntName(h)}: just out of sight.`)}"/>`;
+  if (surge || pk) out += `<path class="fp-card-ring ${pk ? 'pack' : 'surge'}" d="${ring}"/>`;
+  if (near === room.id) out += `<path class="fp-near" d="${d}" title="${esc(`${huntName(h)}: just out of sight.`)}"/>`;
   const after = !kind && rv && room.id === g.vaults[0]; // the vault a rival is after shows through the fog
-  if (after) { const sz = n1(24 * G.ic); out += `<polygon class="fp-body" points="${pts}"/><use class="fp-icon fp-rv-vault" href="#fp-i-vault" x="${n1(p.x - sz / 2)}" y="${n1(p.y - sz / 2)}" width="${sz}" height="${sz}"/>`; }
-  else if (!kind) out += `<polygon class="fp-body" points="${pts}"/><text class="fp-q" x="${p.x}" y="${n1(p.y + 8)}" text-anchor="middle">?</text>`;
+  if (after) { const sz = n1(24 * G.ic); out += `<path class="fp-body" d="${d}"/><use class="fp-icon fp-rv-vault" href="#fp-i-vault" x="${n1(p.x - sz / 2)}" y="${n1(p.y - sz / 2)}" width="${sz}" height="${sz}"/>`; }
+  else if (!kind) out += `<path class="fp-body" d="${d}"/><text class="fp-q" x="${p.x}" y="${n1(p.y + 8)}" text-anchor="middle">?</text>`;
   else {
     // The chip, its hairline, the icon (the largest thing on it) and the name plate under it, centred as one block.
     const sz = n1(24 * G.ic), name = (room.kind === 'socket' && prog ? PROGRAMS[prog].name : plateOf(s, room)).toUpperCase(), t = plateType(name, G);
-    out += `<g filter="url(#fp-shadow)"><polygon class="fp-body" points="${pts}"/></g><polygon class="fp-hair" points="${chipPts(p.x, p.y, hw * 0.9, hh * 0.9, G.ch * 0.9)}"/>`;
+    out += `<g filter="url(#fp-shadow)"><path class="fp-body" d="${d}"/></g><path class="fp-hair" d="${chipD(look, p.x, p.y, hw * 0.9, hh * 0.9, G.ch * 0.9)}"/>`;
     // A Stash is a minor thing: a smaller mark, lower on the chip.
     const isz = room.kind === 'purse' ? n1(sz * 0.62) : sz, iy = room.kind === 'purse' ? n1(y0 + G.icY + (sz - isz) * 0.7) : n1(y0 + G.icY);
     out += `<use class="fp-icon" href="#fp-i-${iconOf(s, room)}" x="${n1(p.x - isz / 2)}" y="${iy}" width="${isz}" height="${isz}"${tone === 'gray' || room.kind === 'empty' ? '' : ' filter="url(#fp-glow)"'}/>`;
