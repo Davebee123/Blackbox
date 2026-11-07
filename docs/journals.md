@@ -17,11 +17,11 @@
 
 | Writer | Role · faction | Entries | Arc |
 |---|---|---|---|
-| Margit Sorensen | Night-desk operator · Kessler Systems | C−13 to C0 | The desk from the inside, to the last minutes. Nell's mother. |
-| Corin Wade | Senior underwriter · Halcyon Mutual | C−12 to C−6 | Argues finality through, then writes the exclusion clause. |
-| Sabine Roth | City desk · *The Evening Courant* | C−5 to C+2 | Gets the leaked page; prints it on page fourteen. |
-| Maud Ilic | Teller · Brandt & Vey, then Harrow Street Credit Union | C−1 to C+29 | Serves the Marrs and Mrs. Kowal before the freeze, and for thirty years after. |
-| Abena Oduya | Night-run supervisor · Pellucid Payroll | C−1 to C0 | October's wages, going in on the night. |
+| Margit Sorensen | Night-desk operator · Kessler Systems | C−13 to C0 | Wry; calls INIT Grandad. The growth, finality, the first orphans, the fine, the last night. Nell's mother. |
+| Corin Wade | Senior underwriter · Halcyon Mutual | C−12 to C+1 | Vain and polished. Pushes finality, writes the clause, invents the Guarantee. |
+| Sabine Roth | City desk · *The Evening Courant* | C−5 to C+2 | Sardonic. Prints the leak on page fourteen; walks the city the morning it stops. |
+| Maud Ilic | Teller · Brandt & Vey, then Harrow Street Credit Union | C−1 to C+29 | Chatty. Serves the Marrs and Mrs. Kowal before the freeze, and for thirty years after. |
+| Abena Oduya | Night-run supervisor · Pellucid Payroll | C−1 to C0 | Formal and devout. October's wages, going in on the night. |
 | Benedikt Sauer | Pensions clerk · City Treasury Office | C+5 to C+28 | His mother's frozen pension, until it's gone. |
 | Nell Sorensen | Reader, LANTERN-RELAY-88 · LANTERN | C+12 to C+30 | Takes over the count from her mother. |
 | Yusuf Lamb | Broker · GLASSJAW | C+15 to C+30 | Buys INIT's reports, one box at a time, up to the last page. |
@@ -40,56 +40,115 @@ Corvid Row; the night desk's two operators; the lift that stops on nine; rack 40
 
 **Margit Sorensen** · Night-desk operator · Kessler Systems · *22 June 2049 · C−13* · found on 8 Bedrock, Kessler's night-desk terminal
 
-> Annick Life came on tonight. Their engineers wheeled forty servers in on trolleys and racked them while we watched.
-> At one in the morning a process on rack two walked across to one of the new boxes and carried on as if it had always
-> lived there. The senior watched it go and said, there, one machine.
+> Grandad took in forty new servers tonight and never so much as hiccupped.
 >
-> Nine hundred thousand trades by six. Twelve timed out and went back to their senders. I logged each one in the blue
-> book, which nobody reads.
+> That's what the desk calls INIT: Grandad, because he's process number one and everything else on the machine is
+> family to him somehow. Annick Life wheeled their boxes in at eleven, still in the plastic, and their engineers stood
+> about in clean shoes while ours racked them. At ten past one a payroll job that had been running on rack two since
+> Tuesday got up and walked onto one of Annick's boxes, the way a cat moves to a warmer chair. I watched it go on the
+> big board. Petrov says no other machine on earth can do that. Petrov says a lot of things, but I believe that one.
 >
-> Erik bought a test bench at the Kessler surplus sale and put it on our kitchen table. He says it will be a radio. I
-> eat my breakfast standing up.
+> Eight years ago Kessler was forty banks on one floor of this building. Now it's insurers and two exchanges and the
+> tram company's wages, and next spring the city's own accounts come on, rents and pensions and dog licences. Every
+> time somebody joins, Kessler buys more boxes and Grandad takes them in. I asked the senior once what would happen if
+> anybody switched him off. He said the city would find out what money was.
+>
+> Nine hundred thousand trades between midnight and six. Twelve timed out and went back to whoever sent them, no harm
+> done, and I logged each one in the blue book in my best handwriting, for nobody.
+>
+> Home at seven on the empty tram. Erik had bought a Kessler test bench at the surplus sale for the price of a pair of
+> boots, and put it on the kitchen table where the bread goes. He wants to build a radio and listen to ships. I ate my
+> toast standing up while he explained valves to me, and fell asleep in my coat.
 
 **Margit Sorensen** · Night-desk operator · Kessler Systems · *3 March 2051 · C−11* · found on 8 Bedrock, Kessler's night-desk terminal
 
-> The members voted this afternoon. The senior was on the call for an hour first, and I heard his half from the
-> kettle. He read names off a printout: a hospital payroll, a ferry company that went under at four in the morning
-> with half its fuel bought. Halcyon's man let him finish.
+> The members voted for finality this afternoon, and the desk ran a sweep on it. I had Halcyon by a landslide and won
+> four and six off Petrov.
 >
-> At 23:40 the senior typed the change in himself and signed the log. Under his signature he added a line: *objection
-> on file*. Then he made us all tea, which he never does.
+> The senior was on the call for an hour before the vote. He'd printed every trade the timeout had saved in ten years,
+> and he read them out in the voice he uses for the fire drill: a hospital's wages in '46, a ferry company that went
+> under at four in the morning with half its diesel bought. He went on so long that Petrov started the crossword.
+> Halcyon's man let him finish. Then Halcyon's man said, in one sentence, that a payment which comes back is a payment
+> which failed, and that Halcyon was tired of paying for failures. They voted, and that was that.
 >
-> Nothing timed out tonight. I left the blue book in the drawer.
+> It was the senior's timeout. He wrote it when he was younger than I am now. He could have left it to the day shift.
+> At twenty to midnight he sat down at the console and typed it out of the world himself, and signed the log, and
+> under his name he wrote *objection on file*, very small.
+>
+> Then he went down to the street and bought a bag of hot chestnuts from the man outside the station and shared them
+> round the desk, which is the nearest thing to a party he's thrown in the six years I've known him.
+>
+> Nothing timed out tonight. The blue book is in my drawer with a rubber band round it.
+>
+> Erik's radio picked up a trawler off the Point, and a man on board singing in a language neither of us knew.
+
+**Margit Sorensen** · Night-desk operator · Kessler Systems · *14 August 2053 · C−9* · found on 8 Bedrock, Kessler's night-desk terminal
+
+> Calloway Shipping went bust at eleven this morning while I was asleep, and by the time I came on it was all the desk
+> could talk about.
+>
+> Calloway had three hundred and twelve payments in the machine when the receivers padlocked its doors. Two hundred
+> and ninety closed before lunch. Twenty-two didn't. Calloway paying people, or being paid by them, and Calloway no
+> longer there to say yes.
+>
+> Two years ago the timeout would have sent them home in four seconds. Now they sit. The senior put one up on the big
+> board for us: Calloway to a chandler in the Narrows, eighteen hundred for rope. It has its own number in the process
+> table, and every second it asks whether Calloway is still there. Calloway is a padlock and a notice on a door in
+> Dock Road.
+>
+> Grandad has adopted all twenty-two. When a process loses its parent, the old man takes it in and waits for it to
+> finish so he can tidy it away. The senior watched the board for a long time, and then he said, quietly, to nobody,
+> that these weren't going to finish. Then he went back to his desk and didn't speak again till six.
+>
+> Petrov named the rope one Hemp. By three in the morning we were all saying goodnight to Hemp on the board. I said it
+> too.
+>
+> The chandler rang at six, the minute the day line opened, and asked where his money was. I told him it was in
+> progress. He asked how long. I gave him the senior's extension.
 
 **Margit Sorensen** · Night-desk operator · Kessler Systems · *28 September 2057 · C−5* · found on 8 Bedrock, Kessler's night-desk terminal
 
-> The four o'clock page: *process table at 52%*. Halcyon's courier collects it at five.
+> Kessler fined the boy a year's wages today.
 >
-> Today the junior got a letter from Kessler in a brown envelope, delivered to the desk by hand. He read it twice and
-> put it in his coat. On Tuesday he borrowed his tram fare from me.
+> The boy is our junior, the one the senior's been training since last spring: all elbows, and lower case in
+> everything he types, because he says capitals waste a keystroke. Since the reports started he reads the four o'clock
+> page before anyone, *process table at* whatever it is, before Halcyon's courier comes for it at five. It was
+> fifty-two this morning. It was forty-one when Halcyon started buying them. He keeps the figures in pencil on the
+> inside of his locker door, a column of them running down towards the floor.
 >
-> At midnight his screen showed the fine as paid. He went and stood by the senior's desk. The senior was eating a
-> boiled egg with his back to the room, and he didn't look round.
+> A fortnight ago one of those pages turned up in the *Courant* on page fourteen, under a recipe. I knew it was him
+> before anyone said, because he came in that night and couldn't sit still. Head office knew by Friday.
 >
-> This evening a woman from the *Courant* rang and described someone's handwriting to me. I said there was nobody here
-> by that name.
+> The letter came by hand. They sent a man up in the lift just to put it on the desk in front of him. He read it twice
+> and folded it into his coat, and his ears went red to the tips. He has seventy in his account. I know, because on
+> Tuesday he borrowed his tram fare off me.
 >
-> Erik's radio picked up a ferry pilot in the estuary reading out his position. Erik switched it off to save the
-> battery.
+> At midnight his screen showed the fine as paid in full. He looked at it a long time. Then he walked over to the
+> senior's desk and stood there with his hands in his pockets. The senior was eating a boiled egg out of a paper bag,
+> with his back to the room, and he didn't turn round. After a while the boy went back to his chair.
+>
+> A woman from the *Courant* rang at nine and asked for him by the shape of his handwriting. I said there was nobody
+> here like that. She was quiet for a moment, and then she said goodnight.
 
 **Margit Sorensen** · Night-desk operator · Kessler Systems · *10 November 2061 · C0* · found on 8 Bedrock, Kessler's night-desk terminal
 
-> 01:20. Ninety-six. At this time yesterday it was ninety-one. The board has gone the colour of a bruise.
+> 00:40. Ninety-four. Grandad's slow tonight. Everything that comes in stands in the queue behind ten years of Hemps
+> and waits its turn.
 >
-> The senior is home. It's the junior and me and the kettle.
+> The senior's at home. It's the boy and me. Petrov retired in the spring and sends postcards of the sea.
 >
-> At midnight the junior sent a payment with his coat still on. The last of it, he said. Four years of bread and
-> margarine. It hasn't gone through. He keeps looking at the screen like a man waiting for a bus.
+> At midnight the boy sent a payment from his own account with his coat still on. The last of it, he said. Four years
+> of bread and margarine and walking to work in the rain. He was grinning, and he hasn't grinned since the fine. It's
+> in the queue behind Pellucid's month-end run, and he keeps looking at it like a man watching for his bus.
 >
-> 02:02. Ninety-eight. I rang Pellucid's night supervisor and asked her to stop the run. She said it was already in. I
-> said I was sorry, and put the phone down before she could ask me what for.
+> 01:20. Ninety-six. At this time yesterday it was ninety-one.
 >
-> 02:09. The junior is typing the report. His hands are steady. I have put the kettle on.
+> 02:02. Ninety-eight. I rang Pellucid's night supervisor and asked her to hold the run. She said it was already in. I
+> knew it was, and I'd asked anyway. I said I was sorry and put the phone down before she could ask me what for.
+>
+> 02:09. The boy is typing the report. He hasn't asked me to check his spelling. His hands are quite steady.
+>
+> Erik will be up. On the nights I work he keeps the set on and listens to the ships till I'm home.
 >
 > 02:13.
 
@@ -99,43 +158,90 @@ Corvid Row; the night desk's two operators; the lift that stops on nine; rack 40
 
 **Corin Wade** · Senior underwriter · Halcyon Mutual · *8 November 2050 · C−12* · found on 7 The Sink, in a restored archive
 
-> Paid Calloway Shipping today. Their grain payment went in at four in the morning, the buyer's bank was slow, and
-> Kessler's timeout sent it back. By breakfast the grain belonged to somebody else. Two hundred and six thousand, plus
-> costs. The ninth this year.
+> Lunch at the Marchmont with Calloway's man, who ate nothing and wanted to know why his claim had taken eleven days.
+> I gave him the soup and the explanation, in that order.
 >
-> I took a chart to the board: one line, timeout claims, going up. Dorothea wants a proposal to the members by the
-> spring.
+> His grain payment went into Kessler's clearing house at four in the morning. The buyer's bank, a sleepy provincial
+> outfit, took five seconds to answer, and Kessler's timeout, which allows four, sent the payment home like a letter
+> with the wrong stamp. By the time Calloway tried again a rival had bought the grain. Two hundred and six thousand,
+> plus costs, plus my afternoon.
 >
-> On my way down the lift stopped on nine. The doors opened on an empty corridor and closed again. Facilities have
-> raised a ticket.
+> It is the ninth such claim this year. Each one is a policy behaving impeccably, and each one is a hole in my book
+> that I am expected to explain to the twelfth floor in a suit I can't yet afford.
+>
+> So I have stopped explaining and started drawing. The chart I took up to Mrs. Lisle this evening has one line on it,
+> rising, and a small red arrow at its foot marked *timeout*. She held it at arm's length, the way she holds menus,
+> and said, Corin, can it be switched off? I said anything at Kessler can be switched off by the man who switched it
+> on. She wants a paper to the members by the spring.
+>
+> The lift stopped on nine on my way down. Nine has been empty since the Tower went up. The doors opened on a dark
+> corridor with dust sheets over the furniture, and stood open long enough for me to feel looked at, and closed.
+> Facilities have raised a ticket. I took the stairs from eight.
 
 **Corin Wade** · Senior underwriter · Halcyon Mutual · *3 March 2051 · C−11* · found on 7 The Sink, in a restored archive
 
-> Passed at four, every member but Brandt & Vey. Old Vey abstained, and will remember it at renewal.
+> Carried at four o'clock by every member of the clearing house except Brandt & Vey, which abstained. Old Vey will
+> learn at renewal what an abstention costs.
 >
-> Kessler's engineer had an hour and used all of it, reading out trades in a flat voice, like a man reading a
-> manifest. I let him finish. Then I put up the chart.
+> I had expected Kessler to send a lawyer. They sent their settlement engineer, a tall, tired man in a cardigan, who
+> spoke for an hour from a stack of printouts without once looking up. He read out the trades his timeout had saved: a
+> hospital's wages, a ferry line that sank on paper at four in the morning. He read them like names on a war memorial,
+> and it was quite effective. By the end half the members were looking at their shoes.
 >
-> His one question at the end: what happens to a trade whose other side is never coming back? Dorothea said banks
-> don't vanish.
+> When he had finished I thanked him, put up the chart, and let the members look at their own premiums. That did the
+> rest.
 >
-> Dinner at the Marchmont. I had the duck. Dorothea raised a glass to the engineer.
+> He asked one question afterwards, in the corridor, while people were finding their coats. What happens to a trade,
+> he said, when the other side is never coming back? Mrs. Lisle told him that banks do not simply vanish, and that if
+> any looked likely to, Halcyon would be delighted to insure it. He nodded as though she had answered him.
 >
-> The lift went straight down to the lobby.
+> Dinner in the long room at the Marchmont: the duck, a Saint-Aubin, the good cigars. Our settlement premiums will
+> fall by a third and our claims by nine-tenths, and at the end Mrs. Lisle stood and toasted the engineer in his
+> absence, which I thought handsome of her.
+>
+> The lift came down from the forty-first floor without stopping anywhere.
 
 **Corin Wade** · Senior underwriter · Halcyon Mutual · *14 May 2056 · C−6* · found on 7 The Sink, in a restored archive
 
-> Kessler's page comes with the morning post now. *INIT: process table at 41%.* Legal asked what it was a percentage
-> of. I told them to read the new clause.
+> Kessler has begun selling us a page a night, and I have begun reading it with my breakfast, which Marta finds
+> morbid.
 >
-> I wrote it myself. *Losses arising from failure of the underlying system are excluded.* Dorothea set it above the
-> signature line, in the same size type as everything else.
+> *INIT: process table at 41%.* Kessler's people explained it to the twelfth floor with diagrams. Mrs. Lisle put it
+> more briefly afterwards: a theatre with a fixed number of seats, filling up with an audience that never goes home.
 >
-> Annick Life's underwriter rang to ask where we'd found the wording. He said it was like insuring a house against the
-> ground, and laughed. Annick is keeping its old wording.
+> Legal asked me, with some anxiety, what the number would be in ten years. I asked them for a clause, and then
+> rewrote it myself, because Legal writes like a frightened curate. *Losses arising from failure of the underlying
+> system are excluded.* Mrs. Lisle had it set above the signature line on every renewal, in the same size of type as
+> everything else. We do these things properly at Halcyon.
 >
-> Forty-one on Monday. Forty-one on Wednesday. On Friday it said forty-two. I've asked Marta to move our savings out
-> of Brandt & Vey.
+> Pardoe, Annick Life's chief underwriter, rang this afternoon to ask where we had found the wording. I said in a
+> drawer. He laughed and said it was like insuring a house against the ground it stood on. Annick will keep its old
+> terms. Pardoe has always been sentimental.
+>
+> Forty-one on Monday. Forty-one on Wednesday. Forty-two on Friday.
+>
+> Tonight I asked Marta to move our savings out of Brandt & Vey and into bonds. She asked me why. I said the carpets
+> in the Vey Street branch were looking shabby.
+
+**Corin Wade** · Senior underwriter · Halcyon Mutual · *3 February 2062 · C+1* · found on 7 The Sink, in a restored archive
+
+> Pardoe came to see me today. Annick Life stops paying claims on Friday, because there is nothing left to pay them
+> with. He didn't sit down. He wanted me to know he had read our clause again, in a newspaper this time, reprinted in
+> full under the headline HOUSE AGAINST THE GROUND, and that he hoped I slept well. I told him I sleep perfectly well.
+>
+> The twelfth floor met at six. Halcyon has paid out less in three months than Annick paid in a week, and the city has
+> noticed. Mrs. Lisle wants something to put on the trams.
+>
+> I gave her something. Every payment frozen in the machine will clear one day, and Halcyon guarantees it, for a small
+> monthly premium. When a payment clears, we pay the claim. The actuaries ran the figures twice and came back pale,
+> and then they came back smiling. It is the cheapest promise this company has ever made.
+>
+> Mrs. Lisle asked what would happen if somebody restarted the machine one day and the whole lot cleared at once. I
+> said I would see to it that nobody did.
+>
+> She asked me to choose the colour for the seal. I chose green. It looks like money.
+>
+> The lift stopped on nine on my way out. I pressed eight to get away from it, and the doors opened on nine again.
 
 ---
 
@@ -143,37 +249,84 @@ Corvid Row; the night desk's two operators; the lift that stops on nine; rack 40
 
 **Sabine Roth** · City desk · *The Evening Courant* · *12 September 2057 · C−5* · found on 8 Bedrock
 
-> An envelope in my pigeonhole after lunch, one printed page. *INIT: process table at 51%.* Clipped to it, a note in
-> pencil, all lower case: *this goes up every night. ask kessler what happens at a hundred.*
+> Wednesday. Council budget day, so the newsroom smells of fear and cold chips. I file eight hundred words on the tram
+> subsidy. Morrow cuts it to three hundred and runs it under a photograph of a goat that got onto the Harrow line. The
+> goat is page three. The subsidy is page nine.
 >
-> Kessler's press office said the figure was diagnostic, and asked where I'd got it. Halcyon's name was on the
-> distribution list at the foot of the page, so I rang them too. A man there asked the same question in a nicer voice.
+> After lunch there's an envelope in my pigeonhole. No stamp: somebody walked it in past Doreen on the front desk,
+> which takes nerve. One printed page, headed INIT. Under it, one line: *process table at 51%.* At the foot, Halcyon
+> Mutual's crest and a distribution list. Clipped to the top, a note in pencil, all lower case, the letters very
+> careful, like a child's on a birthday card: *this goes up every night. it has never gone down. ask kessler what
+> happens at a hundred.*
 >
-> On the tram home I passed Kessler House. The top floor was lit, and someone stood at the window with a mug.
+> I ring Kessler. A woman in their press office tells me the figure is diagnostic and of no public interest, and asks
+> where I got it. I ring Halcyon, because their crest is on it, and a man in Underwriting asks the same thing in a
+> voice like warm butter, then asks after my editor by his first name.
+>
+> Hollis on the science desk says INIT is the first process on Kessler's machine. The grandfather, he says. Everything
+> else on it is family.
+>
+> I go home past Kessler House on the number eleven. Every floor is dark except the top one, where somebody stands at
+> the window with a mug, looking down at the city.
 
 **Sabine Roth** · City desk · *The Evening Courant* · *30 September 2057 · C−5* · found on 8 Bedrock
 
-> It ran on Tuesday the eighteenth, page fourteen, between the ferry timetable and a recipe for plum cake. Morrow cut
-> the word *hundred*.
+> It runs on Tuesday the eighteenth. Page fourteen, below the ferry timetable, above a reader's recipe for plum cake.
+> Morrow cuts it to six paragraphs and takes out the word *hundred*, because a hundred of what, Sabine, and I can't
+> tell him. The headline is CLEARING HOUSE FIGURES QUERIED. I've written livelier captions for cattle shows.
 >
-> Nobody wrote in. Kessler's shares rose a point.
+> Reaction, in full: one letter, from a retired actuary in Low Harrow, correcting my use of *per cent*. Kessler shares
+> up a point on Thursday. The *Morning Signal* doesn't follow it. The council's finance committee meets on Wednesday
+> and spends forty minutes on the goat.
 >
-> On Friday I heard Kessler had fined someone on its night desk a year's wages. I rang the desk that evening and
-> described the pencil, the careful lower case. A woman said there was nobody there by that name. I hadn't given one.
+> Friday, a friend in Kessler's post room tells me head office has fined somebody on the night desk a year's pay for
+> talking to the press. Nobody else has talked to the press. The somebody is mine.
 >
-> I've pinned the page over my desk, where Morrow passes it on his way to the lift.
+> I ring the night desk at nine. A woman answers, very calm. I describe the handwriting: small, careful, lower case,
+> someone who's been told off for his spelling. She says there's nobody there of that description. Then, after a
+> pause, she says goodnight.
+>
+> Monday morning I pin the page over my typewriter, where Morrow has to pass it on his way to the lift. He reads it
+> every day. He has never once asked me about it.
+
+**Sabine Roth** · City desk · *The Evening Courant* · *10 November 2061 · C0* · found on 7 The Sink, in a restored archive
+
+> The tram stops at Harrow Cross at a quarter past seven and doesn't start again. The driver gets out and stands in
+> the road looking at his card reader, then at us, then at the sky. We walk.
+>
+> Every card reader in the city shows a green light and a little clock that turns and turns. The bakery on Vey Street
+> is giving bread to anyone with a child. The queue outside Brandt & Vey goes round two corners, and a clerk inside is
+> taping a notice to the glass: *in progress*.
+>
+> At the paper the switchboard is lit end to end. Pellucid hasn't paid anyone. The Treasury hasn't paid anyone.
+> Halcyon's press office has a statement out by nine, which is quick, and which says nothing. Annick Life has none.
+>
+> Morrow gives me the front page and a word limit he doesn't mean. I ring Kessler House eleven times. On the eleventh
+> a man picks up and says, very slowly, that the clearing house is operating normally and is unable to accept new
+> instructions at this time. Then he starts to laugh, and puts the phone down.
+>
+> I write it with the page from four years ago propped against my typewriter. *process table at 51%.* Morrow comes by
+> at six and looks at it, and at me, and asks if I want a coffee. He has never asked me that.
+>
+> The lead: *At 02:14 this morning, the city's money stopped.* He doesn't change a word.
 
 **Sabine Roth** · City desk · *The Evening Courant* · *21 December 2062 · C+2* · found on 7 The Sink
 
 > The Guarantee is on the side of every tram: a green seal, a family on a doorstep, *Every frozen payment will clear.*
+> Halcyon seems to have bought the whole fleet. The number eleven has it on both sides and the back.
 >
-> In March we ran my Cascade piece on the front page, with the old page fourteen beside it, shrunk to the size of a
-> stamp. Three readers wrote in to say we should have said something sooner.
+> For the anniversary the *Courant* reprinted page fourteen, shrunk to the size of a stamp, opposite a full-page
+> Guarantee advertisement that paid for the issue. Three readers wrote in to say we should have said something sooner.
+> Morrow had their letters framed and hung them in the lift.
 >
-> Kessler House is chained, and Kestrel's name is on the board. A man in a Kestrel jacket was carrying servers out to
-> a lorry two at a time, the way you clear a flat after a funeral.
+> Kessler House is chained. Kestrel's name is on the board where Kessler's was, painted over in a hurry, the old
+> letters showing through. A man in a Kestrel jacket was carrying servers out to a lorry two at a time, the way you
+> clear a flat after a funeral. I asked where they were going. He said wherever Kestrel liked, and gave me a leaflet
+> about rack rental.
 >
-> On the anniversary I rang the night desk's number out of habit. A recorded voice offered me the Guarantee.
+> The city has started building on top of whatever's left down there. They're calling the new layer the Sink.
+>
+> On the anniversary I rang the night desk's old number, out of habit. A recorded voice offered me the Guarantee.
 
 ---
 
@@ -181,31 +334,47 @@ Corvid Row; the night desk's two operators; the lift that stops on nine; rack 40
 
 **Maud Ilic** · Teller · Brandt & Vey · *27 October 2061 · C−1* · found on 8 Bedrock
 
-> Vey Street branch, counter three. Brass rails, and a clock Mr. Haldane winds on Mondays.
+> Counter three, Vey Street. Thursday, the day the whole street gets paid and comes in to look at it.
 >
-> Anton Marr paid in his week at lunch. Ten thousand eight hundred and forty. He's saving for a second bedroom. Liesl
-> drew a horse on the back of a paying-in slip while he counted, and I let her keep the pen.
+> Mr. Haldane wound the clock on Monday and it's already four minutes fast, and he says it'll keep, which is what he
+> says about everything, including the damp in the vault and his own heart. Brass rails, green lamps, and a carpet
+> that's been the colour of strong tea since my mother banked here. Brandt & Vey is older than the clearing house, and
+> Mr. Haldane would like you to know it.
 >
-> Mrs. Kowal has sold the yellow house opposite the laundry to a couple from Corvid Row. The money sits in our escrow
-> until the deeds go through. She asked me three times how long. I said a week, perhaps two.
+> Anton Marr came in at lunch with Liesl, who's eight and has decided she's going to be a teller. I let her stamp his
+> paying-in slip, and then she drew a horse on the back of it with my good pen, and I let her keep that too. He's
+> saving for a flat with a second bedroom so she can stop sleeping in the box room with the boiler. Ten thousand eight
+> hundred and forty. He likes to watch me write the number, and leans right over the rail to see it.
 >
-> Mr. Haldane has told us not to say *pending* any more. We say *in progress*.
+> Mrs. Kowal has finally sold the yellow house opposite the laundry, to a young couple from Corvid Row with a baby and
+> a pram the size of a car. The money sits in our escrow until the deeds go through. She asked me three times how
+> long, and I said a week, perhaps two, because that's what Mr. Haldane says to say. Everything's been slow since the
+> summer. Transfers sit on my screen in a little grey box that used to say *pending*, until Head Office had it changed
+> to *in progress*, because *pending* upset people.
 >
-> At closing the clock was four minutes fast. He said it would keep till Monday.
+> Tomas is taking me dancing at the Pavilion on Saturday if Corvid lets him off his shift. I've told Mum it's the
+> pictures.
 
 **Maud Ilic** · Teller · Brandt & Vey · *9 November 2061 · C−1* · found on 8 Bedrock
 
-> Anton Marr paid in at four and went over eleven thousand. He asked for a printed statement to put on his fridge.
-> Liesl wasn't with him. She has a cold.
+> Anton Marr came in at four with his hair still wet from the docks and paid in his week, and he went over eleven
+> thousand, and he actually whooped, right there at the rail, and Mrs. Penhaligon at counter two put her hand on her
+> chest. He asked for a printed statement to put on the fridge, so Liesl would see it when she got up. She's off
+> school with a cold. I printed it on the good paper.
 >
-> Mrs. Kowal's escrow is still in progress. She came in twice. The second time she brought me a slice of cake in a
-> napkin and stood at the rail while I ate it.
+> Mrs. Kowal came in twice about her escrow. The second time she brought me a slice of her lemon cake wrapped in a
+> napkin, and stood at the rail watching me eat it, as if that might hurry things along. I would have hurried it if I
+> could. The little grey box said *in progress*, and the little clock in its corner went round.
 >
-> At five Mr. Haldane called us into the back. No transfers to other banks until Monday. Deposits only. We were to
-> smile.
+> At five Mr. Haldane called us all into the back, where the coats are. Head Office had rung. No transfers to other
+> banks until Monday, deposits only, and if anybody asked it was routine maintenance at the clearing house, and we
+> were to smile. Mrs. Penhaligon asked whether we were in trouble. Mr. Haldane said Brandt & Vey had been in this
+> building for ninety years. Then he went out and wound the clock, though it wasn't Monday.
 >
-> I walked home along Vey Street. The lights were on in the yellow house, and Mrs. Kowal had already taken the
-> curtains down.
+> Tomas rang the branch at half past five to say the floor at Corvid was in uproar and he'd be working all night, so
+> no pictures. I walked home along Vey Street in the dark. The lights were on in the yellow house. Mrs. Kowal had
+> already taken the curtains down, and she was sitting in the bare window with her coat on, like someone waiting for a
+> taxi.
 
 **Maud Ilic** · Teller · Harrow Street Credit Union · *15 January 2063 · C+2* · found on 7 The Sink
 
@@ -249,26 +418,51 @@ Corvid Row; the night desk's two operators; the lift that stops on nine; rack 40
 
 **Abena Oduya** · Night-run supervisor · Pellucid Payroll · *31 October 2061 · C−1* · found on 7 The Sink, in a restored archive
 
-> October should have gone in tonight. The clearing house took the batch and sat on it, as it has every month since
-> the summer. I sent the night shift home at two and stayed with the screen and the biscuits. October goes back in the
-> queue tomorrow.
+> The October run did not go in tonight.
 >
-> Kofi wrote from the shipyard. The work is good, the bunks are cold, and he's home when the contract finishes in
-> November. He numbers his letters. This was thirty-one.
+> I have supervised the night run at Pellucid for fourteen years, and in fourteen years I have missed a month-end
+> twice: once in the floods of '52, and once tonight. Three hundred and eighty-one thousand, two hundred and six
+> payslips. The tram drivers, the nurses at St. Agnes and the Royal, the Treasury's own clerks, the bin men, the
+> teachers in the north district, and the eleven men who sweep Corvid Row, whose names I know because their foreman
+> sends me a card at Christmas. All of them waiting on a batch the clearing house took from us at nine o'clock and is
+> holding, politely, while it finishes something else.
 >
-> Thirty-two should come next week.
+> It has been finishing something else since June. In August we went in two days late, in September five. Mr.
+> Achterberg upstairs says it is a capacity matter at Kessler and will be resolved. He has said this every month since
+> June, in the same words, and I have begun to write them down.
+>
+> I sent my clerks home at two. They have children. I stayed with the screen and prayed the long way through, as my
+> mother did, and at four I ate the biscuits meant for Friday.
+>
+> A letter from Kofi, number thirty-one. He numbers them so that I will know if one goes astray, which is his father's
+> habit. The shipyard work is good. The bunks are cold. There is a girl in the canteen who saves him the end of the
+> loaf, and he mentions her three times in two pages and believes I have not noticed. His contract finishes on the
+> fourteenth of November, and he will be home for my birthday.
+>
+> October goes back in the queue tomorrow at midnight. Thirty-two should come by Thursday.
 
 **Abena Oduya** · Night-run supervisor · Pellucid Payroll · *10 November 2061 · C0* · found on 7 The Sink, in a restored archive
 
-> October started going in at midnight, ten days late, a line a second. By half past one it was a line a minute.
+> October began going in at midnight, ten days late, a line a second. St. Agnes first, because I put the hospitals
+> first, then the Royal, then the trams. I said the Lord's Prayer once for every hundred lines, because it gave my
+> mouth something to do.
 >
-> Kessler's night desk rang at two minutes past two. A woman, very calm, asking if I could stop the run. I said it was
-> in. She said she was sorry and rang off.
+> By half past one it was a line a minute. By two I could read each name as it went: a porter, a cook, a ward sister,
+> a conductor on the number eleven.
 >
-> 02:14 by the wall clock. The screen stopped. The cursor kept blinking on *Corvid Row street cleansing, week four, in
-> progress*.
+> At two minutes past two Kessler's night desk rang me. A woman, very calm. In fourteen years I have never had a call
+> from Kessler at night. She asked whether I could stop the run. I told her it was in, and that she must know better
+> than anyone that what is in cannot come out. She said she was sorry, and put the telephone down before I could ask
+> what for.
 >
-> Half past three. Six calls to Kessler, six engaged tones. The biscuits are gone. Kofi's thirty-two hasn't come.
+> At 02:14 by the wall clock the screen stopped. The cursor went on blinking. The line it blinked on said *Corvid Row
+> street cleansing, week four, in progress*. Eleven men.
+>
+> It is half past three. I have rung Kessler six times and heard the engaged tone six times. I have rung Mr.
+> Achterberg at home, and his wife says he is asleep and will deal with it in the morning. I have read the line about
+> Corvid Row until I can see it with my eyes shut.
+>
+> Kofi's thirty-two did not come.
 
 ---
 
@@ -581,8 +775,8 @@ Corvid Row; the night desk's two operators; the lift that stops on nine; rack 40
 
 > coldline. halcyon wants a rack cleared before kestrel closes it. wick said in and out.
 >
-> cold down here. the fans are louder than the backhaul, and there are strays in every rack, knocking. one followed me
-> two rooms.
+> jacked in from the flat with the blanket over my knees. coldline is all sleeping racks and fans spinning down, and
+> there are strays in every rack, knocking. one followed me two rooms.
 >
 > signal's at 30. tried to jack out. the line just sits there, waiting. rack 40.
 >
