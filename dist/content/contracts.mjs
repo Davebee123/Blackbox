@@ -110,7 +110,7 @@ export default {
       "from": "lantern",
       "faction": "lantern",
       "reason": "LANTERN hears a count on the Backhaul, and sells it to you a page at a time.",
-      "lore": "The schedule is signed. Not by a crew. By a pricing model. And the count at its foot says eighty-one percent.",
+      "lore": "The schedule is signed by a pricing model. The count at its foot says eighty-one percent.",
       "steps": [
         {
           "kind": "install",
@@ -137,7 +137,7 @@ export default {
           "count": 4,
           "subject": "A clear line",
           "body": [
-            "The strays on {server} come up from below. They are not lost. They are looking for someone who owes them an answer.",
+            "The strays on {server} come up from below, looking for someone who owes them an answer.",
             "Clear {count} rooms you haven’t cleared before. The listener needs a clear line."
           ],
           "reward": {
@@ -463,7 +463,7 @@ export default {
           "subject": "Weights",
           "body": [
             "The model’s weights are in a vault on {server}, as {file}.",
-            "Copy them out. We break things. We don’t build them."
+            "Copy them out. Breaking is our end of it."
           ],
           "reward": {
             "credits": [
@@ -646,7 +646,7 @@ export default {
           "label": "an audit hook",
           "subject": "Not an official request",
           "body": [
-            "This letter is not from Claims. It is from someone in Claims.",
+            "This letter comes from someone in Claims, and Claims doesn’t know I wrote it.",
             "Put an audit hook on {server}. I need to see who approves the model."
           ],
           "reward": {
