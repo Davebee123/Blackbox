@@ -62,7 +62,7 @@ holders are long dead.
 | *Sell* | GLASSJAW | For players who don't care: the reports go to the highest bidder. | — |
 
 - **Your stance is your commission** (docs/factions-plan.md 3; was: the faction you stand highest with), a line on the NET ID badge (*Holds with
-  Halcyon*, *Seals with Kestrel*, *Settles with LANTERN*, *Rolls back with NULL CHOIR*, *Sells to GLASSJAW*). No new menu.
+  Halcyon*, *Seals with Kestrel*, *Settles with LANTERN*, *Rolls back with NULL CHOIR*, *Sells to GLASSJAW*), set at a hub (*Commission*).
 - **Floor 5:** each faction sends its case in a short transmission.
 - **The built choices lean the same way:** Two Buyers, the Kestrel or NULL CHOIR side contract, feuds, and Orphans,
   whose clean exit is Settle in miniature.
