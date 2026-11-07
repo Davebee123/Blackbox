@@ -132,7 +132,7 @@ An old save keeps its count; its rank follows the new table, and its stash room 
 - **The shelf rerolls every 30 minutes of play** (`s.pace.ms`, the clock Fresh XP runs on), never on the wall clock:
   nothing turns over while you're away.
 - **Prices are very high,** since the item is guaranteed: drops stay the main source of gear, the shelf the credit
-  sink. Rep tiers open the yellows.
+  sink. Rep tiers open the yellows. Every hub's shop has one shape (docs/factions-plan.md 5).
 - Open: the prices, set against `node econ.mjs`. An economy session, prototyped first.
 
 ## Trading between players (needs a server)

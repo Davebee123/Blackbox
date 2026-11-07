@@ -64,7 +64,7 @@ holders are long dead.
 - **Your stance is your commission** (docs/factions-plan.md 3; was: the faction you stand highest with), a line on the NET ID badge (*Holds with
   Halcyon*, *Seals with Kestrel*, *Settles with LANTERN*, *Rolls back with NULL CHOIR*, *Sells to GLASSJAW*), set at a hub (*Commission*).
 - **Floor 5:** each faction sends its case in a short transmission.
-- **The built choices lean the same way:** Two Buyers, the Kestrel or NULL CHOIR side contract, feuds, and Orphans,
+- **The built choices lean the same way:** Two Buyers, feuds, and Orphans,
   whose clean exit is Settle in miniature.
 - **INIT's first fall** is still the end of the climb. You can't kill PID 1, so the fall frees a large block of the
   table. It reads your stance: wick's letter changes, and each stance has an achievement and its cosmetic. The world's
@@ -182,7 +182,6 @@ sentence or two, ??? until found, never timed.
 | Break Encryptors | An encrypted trade can't answer; it orphans. |
 | Catch an Exfil | Stolen data heading for the Sink. |
 | Map without resting, Past the Tracker | Proof you can walk a server without waking it: Halcyon's audit test. |
-| Side (Kestrel or NULL CHOIR) | Seal or roll back, in a single job: the first lean. |
 
 ### 8.4 Hand-off: what each system could carry
 

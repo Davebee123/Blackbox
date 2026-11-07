@@ -10,7 +10,8 @@ commission.
 
 Rep already shares one store with Halcyon's old standing (`s.standing`, `factions.mjs` `rep`, `rippleRep`). Finish it:
 
-- **Every faction runs 0 to 100**, tiers at 1/25/50/75, each faction naming its own. Halcyon's tiers keep their names.
+- **Every faction runs 1 to 100**, four tiers at 1/25/50/75, shown as **four pips**; the tier's name (each faction's
+  own) is in the tooltip. The bottom tier's names (*Suspended*, *Burned*…) go.
 - **No Hostile.** Nothing drives a faction under 1, so a shop never closes. Donations go with it.
 - **GLASSJAW's −8 Halcyon standing** goes: a GLASSJAW job pays GLASSJAW rep, and the ripple cools Halcyon.
 - A crash on your own server no longer costs Halcyon standing.
@@ -25,7 +26,7 @@ Rep already shares one store with Halcyon's old standing (`s.standing`, `faction
 Ripples stay: rivals move half the other way, allies a quarter the same way, never under 1.
 
 **Cut:** rep from clearing a faction's server (it still traces the hub); a faction server's vault (−6) and takeover
-(−15) costs; feud rep (feuds keep their parts and goods). The Side contract stays: it is a contract.
+(−15) costs; feud rep (feuds keep their parts and goods). **The Side contract goes:** commissions are the one way to pick a side.
 
 ## 3. Commissions
 
@@ -36,6 +37,9 @@ Ripples stay: rivals move half the other way, allies a quarter the same way, nev
   letter at INIT's fall read it. lore.md 3 changes to match.
 - **wick** has one line on each switch (*"lantern pays now. i still point."*). Floor 5's ACTUARY beat lands on a
   Halcyon commission as written; on another, one line from Claims.
+- **Floor 5's five transmissions** (each faction's case, lore.md 3) each carry a **Commission** button: the story's
+  question is the moment you can answer it.
+- **Receipts kept for later** hand in at your commission's hub.
 
 ## 4. Every hub posts its own work
 
@@ -45,12 +49,19 @@ how you play. A faction differs in its voice (the job's letter and its reason, l
 and its targets (its takeovers aim at its rivals' servers). Pay stays one table (credits, XP); GLASSJAW's premium
 stays.
 
-## 5. The session
+## 5. Every hub's shop has one shape
+
+Tools (relays, key crackers, trace injectors, Signal patches, hot-swap kits), **the shelf** (docs/economy.md *Shops*),
+and **a chase line** at Contractor, Trusted and Preferred (the tiers at 25, 50, 75). Halcyon's Indemnified protocols are
+its line; each other faction gets one of its own, with its implicit. Built after the shops session: the layout first,
+then the four new lines (content).
+
+## 6. The session
 
 - **Lane:** `factions.mjs`, `mail.mjs` (board, retainer), `store.mjs` gating, the badge's stance line, receipts
-  (vault file, takeover card, hub hand-in), `achievements.mjs` where it reads standing. Not combat, not the shops.
+  (vault file, takeover card, hub hand-in), `achievements.mjs` where it reads standing, floor 5's transmissions (`scenes.mjs`). Not combat, not the shops (5).
 - **Save:** `s.commission` is new (absent reads as Halcyon). Clamp rep under 1 to 1 on load, keyed on the value, so it
   runs twice safely.
 - **Lean:** the rules, the takeover card (the *Stamps* look), the commission menu line, tooltips, a unit test each,
   GAME_RULES and README. Per-faction board text can start with one line a kind.
-- **Docs to change with it:** GAME_RULES *Standing*, *Contracts*, *Factions*, *Events* (feuds); lore.md 3; receipts.md.
+- **Docs to change with it:** GAME_RULES *Standing*, *Contracts* (the Side row), *Factions*, *Events* (feuds); lore.md 3; receipts.md.
