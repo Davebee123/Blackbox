@@ -40,19 +40,10 @@ Ripples stay: rivals move half the other way, allies a quarter the same way, nev
 ## 4. Every hub posts its own work
 
 One contract engine (`mail.mjs`), five givers. Each hub's **Work** shows its faction's board; Mail shows them all,
-your commission's first. Each faction weights the kinds that fit it (lore.md 8.3) and posts in its own voice
-(story-script.md *Voices*):
-
-| Faction | Weights toward |
-|---|---|
-| Halcyon | Kill, Grind, Install, Map without resting |
-| Kestrel | Map, Rooms, Hold, Root |
-| LANTERN | Decode, Recover a file, Solve, Sweep |
-| NULL CHOIR | Takeover (its rivals' servers), Break Encryptors, Interrupt |
-| GLASSJAW | Catch an Exfil, Recover a file, Past the Tracker |
-
-Pay stays one table (credits, XP); GLASSJAW's premium stays. A board offers every kind your level opens, at a lower
-weight, so no patron locks content away.
+your commission's first. **Every faction posts every kind your level opens, at the same odds:** a patron never decides
+how you play. A faction differs in its voice (the job's letter and its reason, lore.md 8.3, story-script.md *Voices*)
+and its targets (its takeovers aim at its rivals' servers). Pay stays one table (credits, XP); GLASSJAW's premium
+stays.
 
 ## 5. The session
 
