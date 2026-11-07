@@ -274,7 +274,7 @@ with your stance.
 > reports. When I leaked one, Kessler fined me a year's pay, and he paid it without being asked. *Pay me back when
 > you can.*
 >
-> It took me five years. I sent it the night of the Cascade, and it was the last trade into the table. I know one
+> It took me four years. I sent it the night of the Cascade, and it was the last trade into the table. I know one
 > payment didn't freeze the city. I've known it for thirty years. I still filed the report that said 99%.
 >
 > The next morning I wrote the job that cancelled everything uninsured. I left my own payment out of it. He died still
