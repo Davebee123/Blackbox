@@ -1,17 +1,37 @@
 # Journals
 
-**Status.** Drafted, not built. Facts from docs/lore.md; the storyline's beats from docs/story-script.md.
+**Status.** Drafted, look picked, not built. Facts from docs/lore.md; the storyline's beats from docs/story-script.md.
 
-## How they surface (hand-off: lore.md 9.2, session 2)
+## How they surface (picked in lore.md 9.2 session 2; built in session 4)
 
 - **A journal entry is a file in a vault**, one entry a file, on the floor its header names.
-- **It lands on a Journals page in the Ledger.** Every entry is ??? until found, and none is timed.
-- **The page is a timeline** from 2049 to 2091 with the Cascade marked (02:14, 10 November 2061). Each found entry
-  sits at its date.
 - **Dates.** *C−N* is the Nth year before the Cascade, *C+N* the Nth year after; the day itself is *C0*. So 14 March
   2058 is C−4, 2 May 2090 is C+29, and now, 2091, is C+30.
 - **Found on.** A floor that existed when the entry was written (lore.md 1). Anything older comes from Bedrock or
   from a restored archive on a later floor.
+
+The designer's picks from the prototype:
+
+- **Where: one Journals entry in the Ledger** (collection-view.mjs), its own index group, n of 51. The entry's head as
+  any Ledger entry's, then the **timeline**, then the **writers**.
+  - **Timeline:** one column a C-year, C−13 (2049) to C+30 (2091), entries stacked in date order. A found entry is an
+    amber chip with the writer's initials; an unfound one a faint dashed **?**. Axis labels: year over C-year at 2049,
+    2057, 2071, 2081, 2091. **The Cascade** is a thin ivory line through the C0 column, labelled *CASCADE 02:14 ·
+    10 NOV 2061*; never red. On a phone the chips are 6px squares, no initials.
+  - **Writers:** one row each: the letter icon, the name (??? until one entry is found), the latest role muted, a pip
+    per entry (amber found), n/N. A click opens the writer's lines under the row and fades the others' chips. A line:
+    the date as the name (??? until found), *C-year · floor* muted, the date found.
+  - **Reading:** a found line or chip opens the entry under the timeline (its chip lit), with *‹ Writers*, ‹ › through
+    that writer's found entries, and the floor and date found.
+- **The find:** the first time you take one from a vault, a **document card** opens over the map (the `.gain` and
+  `.pz-card` look): *Journal* kicker with n/51, the writer, role, date and C-year, the text, **Continue** (Enter) and
+  **Ledger ›**. A bottom sheet on a phone. After that it's only in the Ledger.
+- **The writer's medium,** a light touch in the card and the Ledger: a framed sheet with one muted header line and the
+  writer's type. Sabine: typewriter (Courier Prime), *COURANT · CITY DESK · ROTH*. moth (and Dace): lowercase mono,
+  *~/notes/2088-03-12.txt*. Margit's night-desk entries: amber mono, *KESSLER SYSTEMS · NIGHT DESK · <date>*. Everyone
+  else plain sans. Nothing moves.
+- **Tooltips:** a found slot *Maud Ilic, 9 November 2061: Journal entry, C−1. Found on 8 Bedrock, Oct 3.*; an unfound
+  one *???: Journal entry, C+19.* then *▸ Open vaults on Backhaul.*
 
 ## The writers
 
