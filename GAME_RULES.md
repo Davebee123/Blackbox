@@ -8,7 +8,9 @@ Design plans live in `docs/`; the code map is README.md.
 ### First launch
 
 Every session opens with the power-up: the monitor comes on, the BLACKBOX mark (a black square eclipsing an amber
-light) rises, and **Press any key to start** waits (a tap on a phone). A new game opens on a bare terminal:
+light) rises, and **Press any key to start** waits (a tap on a phone). A new game first plays the cold open (about
+55 s; any key or tap skips it, and Motion off leaves it out): KESSLER's clearing house over fifty years, its process table
+filling until the frame sticks and NETWORK OFFLINE, then a colder machine recovering. Then a bare terminal:
 `blackbox login:` asks for a handle (2–16 letters, numbers, dots, dashes or underscores) and a password (4+
 characters, never stored). An encrypted transmission from Halcyon Mutual's Office of Loss Prevention says the terminal
 was set up for you and that wick of LOWLIGHT will write. Then you pick a class (Classes and loadout), and wick's
