@@ -11,13 +11,16 @@ const keys = (s, f) => hubOptions(s, f).map((o) => o.key);
 test('a hub session offers a short menu that fits the situation', () => {
   const s = open();
   assert.deepEqual(keys(fresh(), 'kestrel'), [], 'no hubs before the board');
-  assert.deepEqual(keys(s, 'kestrel').slice(0, 4), ['market', 'shop', 'work', 'payloads'], 'every hub has a Shop');
+  assert.deepEqual(keys(s, 'kestrel').slice(0, 5), ['market', 'shop', 'work', 'commission', 'payloads'], 'every hub has a Shop, its Work and a Commission');
   assert.ok(keys(s, 'halcyon').includes('shop'), 'Halcyon’s Shop is its store');
   assert.ok(!keys(s, 'halcyon').includes('donate'));
-  s.standing.nullchoir = -20;
-  assert.deepEqual(keys(s, 'nullchoir'), ['payloads', 'donate', 'servers'], 'hostile: no market, no work');
+  s.standing.nullchoir = 1;
+  assert.ok(keys(s, 'nullchoir').includes('market') && keys(s, 'nullchoir').includes('work'), 'the bottom tier still trades: no Hostile');
+  assert.ok(!keys(s, 'halcyon').includes('receipts'), 'Receipts only once you keep one');
+  s.receipts = { kept: [{ id: 'TRD-77-1', payer: 'a', payee: 'b', sum: 100, date: '1 Jan 2077', c: 'C+16', server: 'X' }], fresh: null, tally: {}, closed: {} };
+  assert.ok(keys(s, 'halcyon').includes('receipts') && !keys(s, 'kestrel').includes('receipts'), 'at your commission’s hub');
   s.hubs.lantern.captured = { at: 0, bank: 5, bankAt: 0 };
-  assert.deepEqual(keys(s, 'lantern'), ['hold', 'market', 'shop'], 'yours: the hub, its market and its shop (at cost)');
+  assert.deepEqual(keys(s, 'lantern'), ['hold', 'market', 'shop', 'commission'], 'yours: the hub, its market, its shop (at cost) and its commission');
 });
 
 test('connecting reads like jacking into a server: handshake, banner, who answers, the menu', () => {
@@ -42,8 +45,8 @@ test('connecting reads like jacking into a server: handshake, banner, who answer
   assert.match(ticket, /You get/);
   setOrder(null);
   assert.doesNotMatch(market, /payload compile/, 'only the window you picked');
-  s.standing.nullchoir = -30;
-  assert.match(hubBanner(s, 'nullchoir')[2].html, /Filtered/);
+  s.standing.nullchoir = 1;
+  assert.match(hubBanner(s, 'nullchoir')[2].html, /Connected\./);
 });
 
 test('the Shop window: a faction’s own shelf as tiles; Halcyon’s is its store', () => {

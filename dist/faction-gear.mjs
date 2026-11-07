@@ -118,7 +118,7 @@ export function assemble(s, f) {
   if (!hubOf(s, f)) return warn(s, `Assemble ${u.name} at ${FACTIONS[f].hub.name}, once you have found it.`);
   if (active(s)) return warn(s, 'Finish the fight first.');
   const st = pieceState(s, f);
-  if (st.parts < PARTS.need) return warn(s, `${u.name} takes ${PARTS.need} parts. You hold ${st.parts}. Win feuds for ${FACTIONS[f].short} for more.`);
+  if (st.parts < PARTS.need) return warn(s, `${u.name} takes ${PARTS.need} parts. You hold ${st.parts}. Win feuds or stamp receipts for ${FACTIONS[f].short} for more.`);
   if (st.current) return warn(s, `Your ${u.name} is already at your level (${st.held.level}). Keep the parts for the next level.`);
   const fresh = uniqueItem(u, st.level, () => rand(s));
   if (st.held) {

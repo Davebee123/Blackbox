@@ -69,27 +69,27 @@ export const CONTACTS = {
   halcyon: {
     who: 'concierge@halcyon',
     won: (x) => `${x.loser} lost the ${x.loc} feud. Claims are open as usual.`, lost: (x) => `${x.loc} went to ${x.winner}. Halcyon will be back.`, thanks: (x) => `Thank you, ${x.you}.`,
-    tier: [['The clearing house is open as usual.'], ['Contractors: keep your claim numbers ready.'], ['Good to see the contractors busy.', 'Bounties pay within one business cycle.'], ['Trusted contractors get first look at the board.'], ['Preferred clients: the clearing house is at your disposal.']],
+    tier: [['Contractors: keep your claim numbers ready.'], ['Good to see the contractors busy.', 'Bounties pay within one business cycle.'], ['Trusted contractors get first look at the board.'], ['Preferred clients: the clearing house is at your disposal.']],
   },
   glassjaw: {
     who: '—@glassjaw',
     won: (x) => `${x.loc} is ours. ${x.loser} can file a complaint.`, lost: (x) => `${x.loc}. Noted.`, thanks: (x) => `${x.you} was useful.`,
-    tier: [['Quiet on this line.'], ["Don't know you. Don't need to."], ['Quiet work pays.'], ['Partners hear about the good jobs first.'], ['Whatever happens tonight, it never happened.']],
+    tier: [["Don't know you. Don't need to."], ['Quiet work pays.'], ['Partners hear about the good jobs first.'], ['Whatever happens tonight, it never happened.']],
   },
   kestrel: {
     who: 'helpdesk@kestrel',
     won: (x) => `Ticket closed: ${x.loc} stays with Kestrel. ${x.loser} has been notified.`, lost: (x) => `${x.loc} lost to ${x.winner}. Reopening next quarter.`, thanks: (x) => `Thanks to ${x.you}.`,
-    tier: [['Scheduled maintenance tonight. Expect delays.'], ['Ticket queue is long tonight.'], ['All racks green.', 'Clients: tickets are moving.'], ['Accounts: priority routing is on.'], ['Key accounts, a human is standing by. Really.']],
+    tier: [['Ticket queue is long tonight.'], ['All racks green.', 'Clients: tickets are moving.'], ['Accounts: priority routing is on.'], ['Key accounts, a human is standing by. Really.']],
   },
   lantern: {
     who: 'ops@lantern',
     won: (x) => `${x.loc} is on our frequency now. ${x.loser} lost the signal.`, lost: (x) => `${x.winner} has ${x.loc}. For now.`, thanks: (x) => `${x.you}, loud and clear.`,
-    tier: [['…static.'], ['Numbers at the top of the hour. Listen first.'], ['Regulars know the dial.'], ['Confidants, the next drop is a good one.'], ["Signal's strong tonight."]],
+    tier: [['Numbers at the top of the hour. Listen first.'], ['Regulars know the dial.'], ['Confidants, the next drop is a good one.'], ["Signal's strong tonight."]],
   },
   nullchoir: {
     who: 'vesper@nullchoir',
     won: (x) => `${x.loser} lost the ${x.loc} feud.${x.again ? ' Again.' : ''}`, lost: (x) => `${x.winner} got ${x.loc}. We sing louder next time.`, thanks: (x) => `${x.you} sang with us.`,
-    tier: [['The choir is rehearsing.'], ['Corporate smell on this channel tonight.'], ["The choir's listening."], ['Choir, keep the corporate servers honest.'], ['Cantors lead tonight.']],
+    tier: [['Corporate smell on this channel tonight.'], ["The choir's listening."], ['Choir, keep the corporate servers honest.'], ['Cantors lead tonight.']],
   },
 };
 const tierOf = (s, f) => { const r = rep(s, f); let i = 0; REP_TIERS.forEach((m, k) => { if (r >= m) i = k; }); return i; };

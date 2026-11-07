@@ -918,8 +918,7 @@ with its icon). In a fight a *Leaning* row under Gear counts what it has paid (d
 on the cycle after it paid; that cycle the part it paid on carries an amber tag with the amount. Nothing shows ahead of
 time.
 
-A server's kind, specials and quirk are tags on its card, each with its rule on hover. A server a faction owns shows its owner and the standing that taking
-it moves (−15 with the owner, +8 with each rival).
+A server's kind, specials and quirk are tags on its card, each with its rule on hover. A server a faction owns shows its owner.
 
 ### Quirks
 
@@ -1036,7 +1035,7 @@ docs/threads.md). Never given, never timed, nothing missable.
   2.5 each, its last 4; a one-off's 1.5 and 2.5). At the end, the **reward card**: three items, pick one (**Later**
   keeps it in Mail). One leans to your class and your subclass's stat. A chain's are blues, a yellow one time in ten; a
   one-off's blue half the time, else white. On The Sink or Bedrock one time in ten an item is one of the floor's own
-  uniques. Faction standing where a faction is in it, and a line of lore.
+  uniques. Faction rep where a faction is in it, and a line of lore.
 - **The quest window** reads a thread as an intercepted *Transmission*: the sender and their mark, the title, its lines
   (the opening resolving out of noise, once) beside the speaker's portrait (a backlit ASCII silhouette, or a page for a
   file or log, scanning in once), its steps as a job (✓ done, ▸ current, the rest encrypted). The reward
@@ -1726,8 +1725,8 @@ Never on a unique, a set piece or a Zero-day, and kills never roll one.
 | LANTERN | **Clean Signal** | Each cycle no attack lands on you, your skills deal that much more, up to three times; a hit clears it | 4% a stack | 5% | 7% |
 | NULL CHOIR | **Chorus** | The same damaging skill twice in a row: the second hits again for that share | 28% | 36% | 44% |
 
-**Faction pieces.** One faction unique each, built from **3 parts**. Winning a feud for a side gives one part of its
-piece. At the faction's hub, **Assemble** (`hub assemble <faction>`) with 3 parts gives you the piece **at your
+**Faction pieces.** One faction unique each, built from **3 parts**. Winning a feud for a side, or stamping 3 receipts
+for it, gives one part of its piece. At the faction's hub, **Assemble** (`hub assemble <faction>`) with 3 parts gives you the piece **at your
 level**; every 3 more parts **re-tune** it to your level. The parts are yours whatever your rep. Each is a sidegrade
 (its slot's best base ×1.2), with a signature effect and its faction's implicit a quarter stronger.
 
@@ -1866,11 +1865,11 @@ hubs.
   rush (Exploits ×1.6), Grid blackout (components ×1.5, Kernel ×1.25), Quiet market.
 - **The order ticket:** click a ware for **Sell** or **Buy**, a slider for how many, and a live preview (the total, the
   first and last unit's price, the same order at other hubs, your credits after). `market sell|buy <faction> <ware> <n>`.
-- **Spread and pressure:** a hub asks 15% over its price and pays 15% under (2% better a rep tier above Probation's).
+- **Spread and pressure:** a hub asks 15% over its price and pays 15% under (2% better a rep tier above the first).
   Each unit you sell takes 4% off its price there, each you buy adds 4% (between 35% and 160% of normal), easing 12% an
   hour. Each unit of a lot is priced after its own push, so no round trip profits.
 - **File transfers:** a sale leaves now and pays on arrival; a purchase is paid now and arrives later. Halcyon 5 min,
-  Kestrel 8, LANTERN 10, GLASSJAW 12, NULL CHOIR 15; each relay cuts 10% (up to 40%). Hostile factions won't trade.
+  Kestrel 8, LANTERN 10, GLASSJAW 12, NULL CHOIR 15; each relay cuts 10% (up to 40%).
 - **Tips.** A pirate broadcast logged on the scanner moves one ware's price at one hub for a while ("The scanner").
 
 ### Sockets and programs
@@ -1944,21 +1943,22 @@ waits its turn.
 | wick's welcome | Your first login, after you pick a class: who LOWLIGHT is, what Halcyon wants, where to start (your first job in Mail). |
 | Your first server | Your first server located: what a server is, getting in, the vault; **Show me** opens it on the map. Only on a save that heard the welcome. |
 
-### Standing
+### Commission
 
-Standing with Halcyon runs 0 to 100 and starts at 10. It sets the retainer, paid every 30 real minutes, offline too (up
-to 8 hours of it builds up), and what the store sells you. L is your server level.
+You hold one **commission** (`factions.mjs`), Halcyon's to start: the faction that pays your retainer, every 30 real
+minutes, offline too (up to 8 hours of it builds up), by your tier with it. Switch at any hub you've found
+(**Commission** in its menu, `commission <faction>`), free, out of a fight; wick has a line each time. It is your
+stance, the NET ID badge's line: *Holds with Halcyon*, *Seals with Kestrel*, *Settles with LANTERN*, *Rolls back with
+NULL CHOIR*, *Sells to GLASSJAW*. L is your server level.
 
-| Standing | Tier | Retainer every 30 min |
+| Rep | Tier | Retainer every 30 min |
 |---|---|---|
-| 0 | Suspended | nothing |
-| 1–24 | Probation | 5 + L |
-| 25–49 | Contractor | 10 + 2L |
-| 50–74 | Trusted | 15 + 3L |
-| 75–100 | Preferred | 20 + 4L |
+| 1–24 | first (Halcyon's Probation) | 5 + L |
+| 25–49 | second (Contractor) | 10 + 2L |
+| 50–74 | third (Trusted) | 15 + 3L |
+| 75–100 | fourth (Preferred) | 20 + 4L |
 
-Delivering a contract raises standing. A crash on your own server costs 10, never below 1. GLASSJAW's work costs 8 a
-job, and only that can suspend you. Declining or dropping a contract costs nothing.
+Halcyon's tiers also gate its store. A crash costs no rep; declining or dropping a contract costs nothing.
 
 ### Contracts
 
@@ -1996,7 +1996,6 @@ large; `SIZE`), times the **level curve** at the level it was posted (`MAIL.xp`:
 | Hold | Stop an invasion, at your wall or by hand (once you've traced a server) | 5 |
 | Root | Reach the next Root level on a server you hold | 5 |
 | Interrupt | Answer N attacks (6, +1 every 10 levels): a cast stopped, a charge or a seal blocked | 10 |
-| Side | KESTREL and NULL CHOIR each post one when the board opens; take one and the other is gone. +20 rep with that faction, and its rival turns against you (WoW's Aldor or Scryers) | — |
 
 **Room contracts** have no clock: one waits on the board at a time, outside the ten, each kind once, the next 8 to 20
 minutes after you take it.
@@ -2018,10 +2017,11 @@ trace it to find it.
 hour. Up to ten offers sit on it; a new one arrives every 1 to 3 minutes, and an untaken offer is gone after 15. Its kind
 is drawn from what your level opens. You hold six at a time (`mail accept <n>`, `mail drop <n>`). Pay at your level L:
 kill 30 + 5L credits, strain and named process 40 + 6L, materials, rooms and the activity kinds 35 + 6L, recovery 50 +
-8L, map and takeover 60 + 10L, plus XP and +5 standing (+6 recovery, +7 map, +8 takeover). A fifth of offers (from
-standing 10) come off the books from GLASSJAW: −8 Halcyon standing, but 2.5× the credits, 1.5× the XP, 5 GLASSJAW rep and
-a protocol, Tuned or better. Once the hubs are up, about half the rest of the board is Kestrel's, LANTERN's or NULL
-CHOIR's: 20% more credits and their own rep instead of standing, their takeovers often aimed at their rivals' servers.
+8L, map and takeover 60 + 10L, plus XP and +5 rep with whoever posted it (+6 recovery, +7 map, +8 takeover). One
+engine, five givers: every faction posts every kind your level opens at the same odds (room contracts too), and aims its
+takeovers at its rivals' servers. A fifth of offers come off the books from GLASSJAW: 2.5× the credits, 1.5× the XP and
+a protocol, Tuned or better. Once the hubs are up, about half the rest is Kestrel's, LANTERN's or NULL CHOIR's, at 20%
+more credits. Each hub's **Work** shows its own.
 Delivered contracts move to **Completed**, greyed, newest first.
 
 ### The initiate storyline
@@ -2030,9 +2030,9 @@ LOWLIGHT's jobs, in order (they can't be dropped and don't count toward your six
 processes in SPRAWL-00 (60 credits); hand over two Worm code (80); kill the named process `claimjack`, an elite (one
 level above you, never above 4; after two losses it's worn down to v1) (100, wick's Old Toolkit); take over any server
 you've traced (250 and your first **relay**); recover Halcyon's stolen `claims.db` from an unknown server next to the
-one you took (150, a protocol, Tuned or better). Each pays standing (+3, +3, +3, +4, +4), so you finish at Contractor.
+one you took (150, a protocol, Tuned or better). Each pays Halcyon rep (+3, +3, +3, +4, +4), so you finish at Contractor.
 The board and the store open with the turf letter. At level 22 wick writes once more (*crew colours*): take over one
-more server (400 credits, +4 standing, the **LOWLIGHT Badge** and wick's Old Toolkit rebuilt at your level).
+more server (400 credits, +4 Halcyon rep, the **LOWLIGHT Badge** and wick's Old Toolkit rebuilt at your level).
 
 ### Floor jobs (arcs.mjs)
 
@@ -2062,7 +2062,7 @@ don't count toward your six. The words are in `dist/content/contracts.mjs` (`flo
   the main road (never a rogue or the lair), the first main-road server with a Tracker, or the lair. A target you haven't
   located reads *the server 2 links past ORIN-CACHE-57* until you do. A Past the Tracker step on a server with no
   Tracker becomes a plain recovery.
-- **Pay** at your level when the step arrives: credits (40 + 7L up to 120 + 16L by step), Halcyon standing or the
+- **Pay** at your level when the step arrives: credits (40 + 7L up to 120 + 16L by step), Halcyon rep or the
   sender's rep, and contract XP by its kind and size.
 - **A pick of three** on a chain's last step and some middle steps: three protocols at your level, each a different
   slot, the first for your class and your subclass's stat: **Custom** on a last step, **Tuned** on a middle one. **Later**
@@ -2074,7 +2074,7 @@ don't count toward your six. The words are in `dist/content/contracts.mjs` (`flo
 ## Factions
 
 Five PvE factions, companies and hacker crews, each with a colour, a mark and a hub (`factions.mjs`). Halcyon is the
-first: its standing is its rep.
+first.
 
 | Faction | Kind | Colour | Hub (level) | Allies | Rivals | Goods |
 |---|---|---|---|---|---|---|
@@ -2085,23 +2085,27 @@ first: its standing is its rep.
 | NULL CHOIR | hacker crew | rose | NULLCHOIR-SQUAT-13 (12) | LANTERN | Halcyon, Kestrel | sealed items, key crackers |
 
 - **Finding the hubs.** When the board opens only Halcyon's hub is on your map. Every other hub's trace grows when you
-  locate a server that faction owns (+40%) and when you clear a guard or virus off one (+20%, and +2 rep). At 100% it's
+  locate a server that faction owns (+40%) and when you clear a guard or virus off one (+20%). At 100% it's
   located and `connect <faction>` reaches it. Until then you can't trade there or take its work.
-- **Rep** runs −100 to 100, five tiers at 1/25/50/75, each faction naming its own (Kestrel's: Blacklisted, Prospect,
-  Client, Account, Key account). Below 1 a faction is **Hostile**: its market shut, no work. Rep never comes back on its
-  own: win a faction back by hitting its rivals, working for its allies, or donating. Everyone starts at 10 (GLASSJAW 5).
+- **Rep** runs 1 to 100 for every faction: four tiers at 1/25/50/75, shown as four pips, each faction naming its own in
+  the tooltip (Kestrel's: Prospect, Client, Account, Key account). Nothing drives it under 1, so no hub shuts. It comes
+  from contracts the faction posts and receipts you stamp for it, and never moves on its own. Everyone starts at 10
+  (GLASSJAW 5).
 - **Ripples:** whatever rep you gain or lose with a faction, its rivals move half the other way and its allies a quarter
-  the same way. Halcyon's standing ripples too, but never pushes a rival below 0.
+  the same way, never under 1.
 - **A hub session:** **Connect** jacks you into the hub's terminal (its banner, one line from whoever answers, changing
   with your rep, and its menu as tokens). Each choice opens a window beside it: **Market**, **Shop** (the faction's own
   shelf: its premium protocol first, then its codebases and goods; better rep unlocks more and trims prices; Halcyon's
-  Shop is its store), **Work**, **Donate**, **Their servers**. Goods are buy-only, a few of each, refilled hourly,
+  Shop is its store), **Work**, **Commission**, **Receipts** (at your commission's hub, while you keep one), **Their
+  servers**. Goods are buy-only, a few of each, refilled hourly,
   priced at the hub's level or yours, whichever's higher, and arrive by file transfer (Halcyon's at once).
-- **Donations:** while your rep is under 24, **Donate** (`hub donate <faction>`): credits (80 + 10 × hub level) and 5 of
-  the code it wants, × (1 + depth/10) below 1. +5 rep each, never past 24.
 - **Faction servers:** about one in eight servers you trace (never your first two, never rogue) belongs to Kestrel,
-  GLASSJAW, LANTERN or NULL CHOIR. Opening its vault costs 6 rep with it, taking it over 15 (`OWNED`); the ripple warms
-  its rivals.
+  GLASSJAW, LANTERN or NULL CHOIR. Taking one over takes it from its owner, at no rep.
+- **Receipts** (`receipts.mjs`): every traced server's vault holds one, the frozen trade its Resident orphaned
+  (`TRD-79-4250120 · Brandt & Vey → Harrow Street Credit Union · ¤61,900 · 15 Nov 2079 · C+18`, dated in its floor's
+  era). The takeover card shows it with five stamps: File (Halcyon), Seal (Kestrel), Sell (GLASSJAW), Settle (LANTERN),
+  Roll back (NULL CHOIR). A stamp pays +10 rep with its faction (the ripples too) and one receipt toward its piece; 3 make
+  a part. No credits. **Later** keeps it in your files, to hand in at your commission's hub (`receipt <id> <faction>`).
 - **Switched off:** payloads (`PAYLOAD.on` false: no Payloads window, nothing compiles), and with them hub capture. A
   hub a save already holds stays its own: no spread at its market, its goods at 60%, a cut of its trade
   (`hub collect`), and its old owner's swarms (one at a time; lockdown until you `hub retake` it; `fleet.mjs`).
@@ -2115,12 +2119,12 @@ Each goes to the pager and to #net; missing one costs nothing. The director roll
 | Event | Where | Lasts | What it is | What you get |
 |---|---|---|---|---|
 | **Courier** (weight 3) | a traced server | 15 min | LANTERN's courier passes through: *Intercept* it, a fight. From level 10, one in twenty carries a unique you lack, and says which | 40 + 12L credits and a protocol (85% Tuned, 15% Custom), or that unique |
-| **Bounty** (2) | a traced server | 25 min | A named virus two levels above its server (from level 8, REPO MAN) | 80 + 15L credits, +2 standing |
+| **Bounty** (2) | a traced server | 25 min | A named virus two levels above its server (from level 8, REPO MAN) | 80 + 15L credits, +2 Halcyon rep |
 | **Hollow Choir** (1) | a traced server, from 10 | 25 min | The boss | Twice the bounty's credits and a Custom protocol |
 | **Outbreak** (2) | the net | 30 min | One family surges | Its kills drop double code |
 | **Leak** (1) | a server you've found, not taken | at once | Someone leaks its vault key | You hold the key as you connect |
 | **Darknet listing** (0.5) | the net, from 8 | 20 min | A broker lists a native unique from another network, naming it (`event buy <id>`) | It, for 400 + 40L credits and 2 Exploits |
-| **Feud** (1) | a traced server, from 8, with two rival hubs located | 20 min | A tug-of-war between two rival factions (the bar drifts 2–5% a minute, never past 20/80 alone). *Pick a side* (`event fight <id> <faction>`): fight the other side's runner (an elite of its family at your level); each win pushes your side +25% and brings a fresh runner. Your side wins at 100%, or ahead when time runs out | Each win: 40 + 7.5L credits, +4 rep, a protocol with your side's implicit. The feud: a **part** of your side's faction piece, one of its goods, +6 rep (its allies +3). A feud never costs rep |
+| **Feud** (1) | a traced server, from 8, with two rival hubs located | 20 min | A tug-of-war between two rival factions (the bar drifts 2–5% a minute, never past 20/80 alone). *Pick a side* (`event fight <id> <faction>`): fight the other side's runner (an elite of its family at your level); each win pushes your side +25% and brings a fresh runner. Your side wins at 100%, or ahead when time runs out | Each win: 40 + 7.5L credits, a protocol with your side's implicit. The feud: a **part** of your side's faction piece and one of its goods. No rep |
 | **Bounty hunt** (1.5) | a traced server, from 6, two or more traced | 20 min | A named elite that hops to another of your servers every 5 minutes, 3 hops, a level each | 80 + 15L credits ×1, ×1.3, ×1.6, ×2 by hops made, +2 Kestrel rep |
 | **Market shock** (1) | a hub you can trade at, from 5 | 15 min | One ware's price ×2.5 there, or one time in three ×0.4 | No fight |
 | **Spotter** (1) | your wall, from 6 | 10 min | A spotter watching your wall: *Fight* it | The next invasion comes 2 levels weaker, and you know where from and what kind |
@@ -2514,7 +2518,7 @@ The log and terminal still say what happened, in a line; they don't teach.
 
 On the top bar: a lamp, then one icon per thing you can act on (`pager.mjs`). A **page** is a line you can act on (a
 threat, a world event, a contract ready, an offer, a letter, a thread, wick's lead, an invite); everything else is
-**news** (pay, the retainer, standing, restocks, finds, a blocked invasion, titles), gone 10 minutes after it came in.
+**news** (pay, the retainer, rep, restocks, finds, a blocked invasion, titles), gone 10 minutes after it came in.
 A page stays while it's true, an hour at most; the same news again replaces the old line.
 
 - **The tray:** one icon per waiting page, most urgent first (threats, then events by time left, then a ready contract,
@@ -2679,10 +2683,12 @@ Checked by `node balance.mjs` (docs/BALANCE.md, `balance.test.mjs`), `farmsim.mj
 
 ## Saves
 
-The save is `SAVE_VERSION` 58 (combat.mjs). An older save is migrated on load, each step keyed on the field it converts,
+The save is `SAVE_VERSION` 59 (combat.mjs). An older save is migrated on load, each step keyed on the field it converts,
 so it is safe to run twice; nothing a save held is lost.
 
-- **v58** journals: `s.journals`, made on first use (`journals.mjs`).
+- **v59** journals: `s.journals`, made on first use (`journals.mjs`).
+- **v58** one rep scale: rep under 1 (Hostile, Halcyon's Suspended) comes back as 1 (`repRestore`, keyed on the value);
+  `s.commission` and `s.receipts` are new (absent: Halcyon's commission, no receipts); a held Side contract is dropped.
 - **v57** the talent tiers: a subclass's old ranks and two-way picks become tier picks where the same talent survives (Polymorphic is Long Fuse, the Hijacker's Kill Chain is Handoff); the rest of its tiers wait (`tiersRestore`, keyed on `loadout.ranks` and `loadout.picks`).
 - **v56** floors as tiers: every protocol's filling stats and flat rule × its new fill over the one it was filled with, once (`curveRestore`, keyed on `s.curve` 3).
 - **v55** gear carries your power: every protocol's filling stats (Damage, Crit Damage, Signal, Regen, Leech) and flat damage, heal or shield rule × the fill at its item level, once (`curveRestore`, keyed on `s.curve` 2).

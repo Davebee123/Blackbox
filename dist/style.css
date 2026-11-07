@@ -1257,10 +1257,12 @@ body.no-motion .sp-go { animation: none; opacity: 1; }
 .mnode .fmark { fill: none; stroke: var(--fc); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .fcard { border-top: 2px solid var(--fc); } .fcard h1 { color: var(--fc); display: flex; align-items: center; }
 .repbar { display: flex; align-items: center; gap: 3px; margin: 8px 0; }
-.rb-seg { flex: 1; height: 7px; border: 1px solid color-mix(in srgb, var(--fc) 45%, transparent); background: rgba(0, 0, 0, 0.3); }
-.rb-seg i { display: block; height: 100%; background: var(--fc); }
-.rb-seg.on { box-shadow: 0 0 6px color-mix(in srgb, var(--fc) 50%, transparent); }
-.repbar b { margin-left: 8px; font: 600 12px var(--mono); color: var(--fc); white-space: nowrap; }
+/* Rep: four pips, one a tier (factions.mjs), lit to where you stand. */
+.rpips { display: inline-flex; gap: 3px; vertical-align: middle; }
+.rpips i { width: 10px; height: 7px; border: 1px solid color-mix(in srgb, var(--fc) 55%, transparent); background: rgba(0, 0, 0, 0.3); }
+.rpips i.on { background: var(--fc); box-shadow: 0 0 5px color-mix(in srgb, var(--fc) 45%, transparent); }
+.rep-chip .rpips i { width: 6px; height: 6px; }
+.standing .rpips { margin-left: auto; }
 .frel { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font-size: 11px; color: var(--muted); }
 .frel-k { text-transform: uppercase; letter-spacing: 1px; font-size: 10px; color: var(--dim); margin-left: 6px; } .frel-k:first-child { margin-left: 0; }
 .fline .fmark-i { margin-right: 2px; } .fline b { color: var(--fc); margin-right: 4px; }
@@ -2145,8 +2147,6 @@ body:has(.silk-stash .silk-tile[data-kind="implant"]:hover) .silk-fp[data-kind="
 .mnode.hub.yours .hub-frame { stroke-width: 2; }
 .mnode.hub.threat .hub-frame { stroke: var(--hot); animation: hubthreat 1.2s ease-in-out infinite; }
 @keyframes hubthreat { 50% { opacity: 0.45; } }
-.repbar .rb-neg { flex: 0.8; border-color: color-mix(in srgb, var(--hot) 50%, transparent); }
-.repbar .rb-neg i { background: var(--hot); margin-left: auto; float: right; }
 .mnode.fleet[data-faction] path { fill: var(--fc); stroke: var(--fc); }
 .craft-list .btn { white-space: nowrap; }
 .craft-list li.mk-row, .craft-list li.mk-xfer { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 10px; }
@@ -3945,6 +3945,8 @@ p.impl { margin: 6px 0 0; padding: 4px 2px; border-bottom: 1px dotted color-mix(
 .pf-pieces { display: flex; gap: 8px; }
 .pf-piece .pglyph { --pg-size: 3.6px; padding: 0.3em; }
 .pf-marks { display: flex; gap: 12px; }
+.pf-stance { display: inline-flex; align-items: center; gap: 5px; font: 600 11px var(--mono); letter-spacing: 0.5px; color: var(--fc); }
+.pf-stance .glyph { width: 12px; height: 12px; margin: 0; }
 .pf-mark { display: grid; justify-items: center; gap: 4px; color: var(--fc); }
 .pf-mark .glyph { width: 16px; height: 16px; margin: 0; }
 .pf-pips { display: flex; gap: 2px; }
@@ -4289,3 +4291,22 @@ button.tk-b:hover, button.tk-b:focus-visible { border-color: var(--line); }
 /* An attacking part striking out of the render's window (virus-art.mjs): drawn over the page for half a second, no input. */
 #art-out { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 45; pointer-events: none; }
 .no-motion #art-out { display: none; }
+
+/* The takeover card's receipt (receipts.mjs; the Stamps look): an inset mono block, five square stamps, Later. */
+.rc-block { display: grid; gap: 2px; margin: 10px 0 12px; padding: 10px 12px; font: 400 12px/1.45 var(--mono); color: var(--text); background: var(--inset); border: 1px solid var(--line); border-radius: var(--r-tag); }
+.rc-block .rc-id { color: var(--muted); letter-spacing: 1px; }
+.rc-block .rc-sum { color: var(--amber); font-weight: 600; }
+.rc-block .rc-wait { color: var(--dim); }
+.rc-stamps { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; }
+.gain-card:has(.rc-stamps) { width: min(380px, calc(100vw - 32px)); }
+.rc-stamp { display: grid; justify-items: center; align-content: center; gap: 5px; min-width: 0; aspect-ratio: 1; padding: 6px 2px; color: var(--fc); background: color-mix(in srgb, var(--fc) 7%, transparent); border: 1px solid color-mix(in srgb, var(--fc) 45%, transparent); border-radius: var(--r-btn); cursor: pointer; font: 600 9px/1.15 var(--mono); letter-spacing: 0.3px; text-transform: uppercase; text-align: center; }
+.rc-stamp:hover, .rc-stamp:focus-visible { background: color-mix(in srgb, var(--fc) 16%, transparent); border-color: var(--fc); outline: none; }
+.rc-stamp .glyph { width: 18px; height: 18px; margin: 0; }
+.rc-pips { display: flex; gap: 3px; }
+.rc-pips i { width: 5px; height: 5px; border: 1px solid currentColor; opacity: 0.5; }
+.rc-pips i.on { background: currentColor; opacity: 1; }
+.gain-card .rc-later { opacity: 1; animation: none; }
+.rc-mono { font: 400 11px/1.4 var(--mono); color: var(--text); }
+.comm-line { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; color: var(--fc); }
+.comm-line .comm-pay { color: var(--amber); font: 600 12px var(--mono); }
+.comm-line .btn, .comm-line .tag { margin-left: auto; }

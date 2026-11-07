@@ -1,6 +1,7 @@
 # Receipts
 
-**Status.** Designed and prototyped (look picked), not built. Lore: docs/lore.md 8.4 (*Vaults*).
+**Status.** Built lean (`receipts.mjs`; GAME_RULES *Factions*): the takeover card, the stamps, Later and the hand-in.
+Not yet: a rival who gets away leaving the receipt, and the payoffs below. Lore: docs/lore.md 8.4 (*Vaults*).
 
 ## The rule
 
@@ -29,7 +30,7 @@
 The takeover card: the amber kicker (*STACKS-31 · TAKEN OVER*), the receipt in an inset mono block (id, payer → payee,
 sum in amber, date, *awaiting counterparty* dim), then five square stamps in a row, each its faction's mark, verb and
 three pips toward its next part, in the faction's colour. **Later** sits under them. A stamp's tooltip: the verb, *<faction>
-· Receipt*, one sentence on what happens to the trade, the chips (mark +4, pips and the piece's name), and
+· Receipt*, one sentence on what happens to the trade, the chips (+10 rep, pips and the piece's name), and
 *▸ Three receipts make one part.* Rejected: *Rows* (one row a faction) and *Banner* (marks on the takeover banner).
 
 ## Payoff, later

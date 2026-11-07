@@ -12,7 +12,7 @@
 // until you clear it. You never lose it for good. (A Hostile faction's answer at one of your outposts went with outposts in R2.)
 import { CONFIG, variantFor } from './data.mjs';
 import { emit, warn, rand, active, holding, selectEncounter, command, gainXp, xpFor, gainCode, hackerLevel, hooks } from './combat.mjs';
-import { FACTIONS, rep, REP_TIERS, captured, donate } from './factions.mjs';
+import { FACTIONS, rep, REP_TIERS, captured } from './factions.mjs';
 import { assemble } from './faction-gear.mjs';
 import { CONDITIONS, HUB_CONDITION, outsideMult } from './market.mjs';
 import { codeOf, codeDrop } from './gear.mjs';
@@ -36,7 +36,7 @@ const KEY = { ransomware: 'cryptjack', worm: 'splinter', ghostroot: 'ghostroot',
 
 const hub = (s, f) => s.hubs?.[f];
 export const heldOf = (s) => Object.keys(s.hubs || {}).filter((f) => captured(s, f));
-export const angry = (s, f) => rep(s, f) < REP_TIERS[1];
+export const angry = (s, f) => rep(s, f) < REP_TIERS[1]; // a held hub's old owner in your bottom tier wants it back
 export const lockedDown = (s, f) => !!hub(s, f)?.captured?.lockdown;
 // A hub's old owner sends a swarm (fleet.mjs, aimed at the hub). The same object, read as a retake.
 export const retakeOf = (s) => (s.fleet?.hub ? { ...s.fleet, f: s.fleet.hub } : null);
@@ -126,11 +126,10 @@ export function hubWon(s, e) {
 
 export function hubCommand(s, text) {
   const [, verb, f] = text.split(' ');
-  if (!FACTIONS[f]) return warn(s, 'hub collect|defend|retake|donate|assemble <faction>');
+  if (!FACTIONS[f]) return warn(s, 'hub collect|defend|retake|assemble <faction>');
   if (verb === 'collect') return collect(s, f);
   if (verb === 'defend') return defend(s, f);
   if (verb === 'retake' || verb === 'clear') return clear(s, f);
-  if (verb === 'donate') return donate(s, f);
   if (verb === 'assemble' || verb === 'retune') return assemble(s, f); // a faction piece (faction-gear.mjs)
-  return warn(s, 'hub collect|defend|retake|donate|assemble <faction>');
+  return warn(s, 'hub collect|defend|retake|assemble <faction>');
 }

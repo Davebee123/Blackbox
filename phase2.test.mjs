@@ -280,19 +280,11 @@ test('Phase 4: strain contracts count only their strain, and every fifth in a ro
   assert.equal(s.server.credits - credits, 2 * pay, 'the fifth pays double');
 });
 
-test('Phase 4: when the board opens, KESTREL and NULL CHOIR each ask you to pick a side; taking one withdraws the other', async () => {
+test('Phase 4: when the board opens there is no side to pick: a commission is the one way to pick a side', async () => {
   const { storyAt, offers } = await import('./dist/mail.mjs');
-  const { rep } = await import('./dist/factions.mjs');
   const s = at(8);
   storyAt(s, 'ledger', 0); // past the turf job: the board is open
-  const sides = offers(s).filter((o) => o.type === 'side');
-  assert.equal(sides.length, 2);
-  const k = sides.find((o) => o.faction === 'kestrel');
-  const before = { k: rep(s, 'kestrel'), n: rep(s, 'nullchoir') };
-  command(s, 'mail accept ' + k.id);
-  assert.ok(!offers(s).some((o) => o.type === 'side'), 'the other side is gone');
-  command(s, 'mail deliver ' + k.id);
-  assert.ok(rep(s, 'kestrel') > before.k && rep(s, 'nullchoir') < before.n, 'one up, its rival down');
+  assert.ok(offers(s).length && !offers(s).some((o) => o.type === 'side'));
 });
 
 test('the leads list shows at most HIDDEN.shown unknown servers: flagged and most traced first', async () => {

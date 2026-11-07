@@ -9,7 +9,7 @@
 // relays on servers you hold shorten it. A transfer can't be lost: the worst case is waiting.
 import { emit, warn, materialsOf, hooks, rand, firstTime, addItem } from './combat.mjs';
 import { addFilter, rollFilter } from './filters.mjs';
-import { FACTIONS, hubsOf, hostile, repTier, buyFrom, hubFound } from './factions.mjs';
+import { FACTIONS, hubsOf, repTier, buyFrom, hubFound } from './factions.mjs';
 import { seeded } from './gear.mjs';
 import { deliverGoods } from './store.mjs';
 import { deal, shockMult, flickerMult } from './events.mjs';
@@ -77,7 +77,7 @@ export function priceOf(s, f, w) {
 }
 // What you'd get selling one, and pay buying one (whole credits). Better rep trades a little better.
 export function quote(s, f, w) {
-  const t = repTier(s, f).i, mine = !!s.hubs?.[f]?.captured, edge = mine ? MARKET.spread : Math.max(0, t - 1) * 0.02; // a hub you hold trades at its true price
+  const t = repTier(s, f).i, mine = !!s.hubs?.[f]?.captured, edge = mine ? MARKET.spread : t * 0.02; // a hub you hold trades at its true price
   const p = priceOf(s, f, w);
   return { sell: Math.max(1, Math.floor(p * (1 - MARKET.spread + edge))), buy: Math.max(1, Math.ceil(p * (1 + MARKET.spread - edge))), mult: p / WARES[w].base };
 }
@@ -91,7 +91,6 @@ export function trade(s, side, f, w, n, at = now()) {
   if (!FACTIONS[f] || !hubsOf(s).length) return warn(s, 'Markets open with the faction hubs.');
   if (!hubFound(s, f)) return warn(s, `You haven't located ${FACTIONS[f].short}'s hub yet.`);
   if (!WARES[w]) return warn(s, `Wares: ${WARE_IDS.join(', ')}.`);
-  if (hostile(s, f)) return warn(s, `${FACTIONS[f].short} won’t trade with you.`);
   if ((s.hubs?.[f]?.offlineUntil || 0) > at) return warn(s, `${FACTIONS[f].hub.name} is offline.`);
   if (n < 1 || n > MARKET.maxLots) return warn(s, `How many? 1–${MARKET.maxLots}.`);
   if (side === 'buy' && WARES[w].sellOnly) return warn(s, `Hubs buy ${WARES[w].name.toLowerCase()} but don't sell them.`);
@@ -136,7 +135,7 @@ function lotTotal(s, side, f, w, n) {
 export function orderQuote(s, side, f, w, n) {
   n = Math.max(1, Math.floor(n));
   const here = lotTotal(s, side, f, w, n);
-  const others = hubsOf(s).map((h) => h.faction).filter((g) => g !== f && !hostile(s, g));
+  const others = hubsOf(s).map((h) => h.faction).filter((g) => g !== f);
   const avg = others.length ? Math.round(others.reduce((a, g) => a + lotTotal(s, side, g, w, n).total, 0) / others.length) : here.total;
   const vs = side === 'sell' ? here.total - avg : avg - here.total; // positive: better than the average elsewhere
   return { n, side, ...here, credits: side === 'sell' ? here.total : -here.total, after: s.server.credits + (side === 'sell' ? here.total : -here.total), vs, minutes: Math.round(travelMs(s, f) / 60000) };
