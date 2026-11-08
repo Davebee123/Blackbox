@@ -19,13 +19,8 @@ docs/ui.md "Themed chips".
 | strobe | light columns fire in chases and bursts, a flare on the big ones | three pulses chase across the bar, cones of light, the bar flickers | Strobe, Repeater, Jitter, Amplifier, Stunner |
 | copy | a copier's light sweeps, outline copies lift off and sink back | four outlines fly over, stack on the bar, collapse into it | Replicator, Mirror, Fan-in, Spare, Mimic, Swap |
 | scan | a laser line sweeps a hidden dot grid, brackets snap on finds | a laser fan rakes the bar, data bits rise, brackets snap | Scraper, Prober, Harvester, Leaker, Feeder, Tripwire |
+| plate | plates slide in and clang shut over a hex shield, sparks, a ripple | the joined plate flies over and slams down, a hex ripple | Front End, Bodyguard, Mutex, Lockbox, Limiter |
+| ledger | odometer reels tick over ruled lines, spinning as the cycle runs out | reels lock a number, its digits fly in, count down, a strike-through | Buffer, Cooler, Damper |
+| mask | a line-drawn mask turns like a coin between two faces, eyes glinting | it flies over turning, lands frowning, eyes flare, it splits | Turncoat, Backtrace, C&C |
 
-## Proposed, not built
-
-| Theme | Inside the chip | Strike | Parts |
-|---|---|---|---|
-| plate | plates slide in and click shut | a plate slams down on the bar | Front End, Bodyguard, Mutex, Lockbox, Limiter |
-| ledger | digits drift up | numbers fly into the bar | Buffer, Cooler, Damper |
-| mask | a mask flickers between two faces | the mask flies over and flips | Turncoat, Backtrace, C&C |
-
-A part a family shares wears one theme in every family.
+Every part in `FAMILIES` wears a theme; a part a family shares wears one theme in every family.
