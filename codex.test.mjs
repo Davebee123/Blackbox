@@ -170,7 +170,7 @@ test('mutations: named with their rule once met, and where you saw them; the dec
 
 test('no Genes group or gene card anywhere: the System page has none, and a gene key is no entry', () => {
   const s = fresh();
-  assert.doesNotMatch(systemMarkup(s), /codex-card|cx-gene|Codex ·/, 'no gene card on System');
+  assert.doesNotMatch(systemMarkup(s), /codex-card|cx-gene|Codex ·/, 'no gene card on Settings');
   const html = codexPageMarkup(s, 'gene:attack');
   assert.doesNotMatch(html, /Genes|Attack types|cx-gene/i, 'an old gene key opens the first entry');
   assert.match(html, /data-entry="family:ransomware"/);

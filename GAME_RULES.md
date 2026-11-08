@@ -1627,8 +1627,8 @@ yellow, its epic our gold). Targets, at about 150 kills an hour of real play (`L
 - **The Resident** rolls like an elite (no sure item) and for its two uniques once each.
 - **Vaults:** half hold a protocol (`kit.bin`; your first server's always), white 94 · blue 6 · yellow 0.4 · gold 0.03
   (a unique that drops from vaults that deep). A second vault holds the same a third of the time, else a script.
-- **Pace:** the System page shows your kills an hour of active play. Odds are set a kill at a time, so a faster or
-  slower player sees the same drops a kill.
+- **Pace:** Settings → **Dev** (with `?dev`) shows your kills an hour of active play. Odds are set a kill at a
+  time, so a faster or slower player sees the same drops a kill.
 - A good drop shows as a notice; whites drop quietly. **Deconstruct** (`deconstruct <id>`, `scrap`): white 1–2
   components, blue 2–3 + 1 code, yellow 5 + 2 code + 1 Exploit, gold 10 + 4 code + 3 Exploits (an Indemnified one gives
   no Exploits); +1 component per 10 item levels; the code is the family it dropped from. A card lists what you got.
@@ -1740,7 +1740,7 @@ level**; every 3 more parts **re-tune** it to your level. The parts are yours wh
 
 ### Collection log
 
-Every unique, strain trophy, set piece and faction piece has a place in the **Collection** on the System page, by
+Every unique, strain trophy, set piece and faction piece has a place in the **Collection** on the Settings page, by
 level: the ones you've found by name, the rest **???** with their level and where they come from. A missing boss unique
 shows its boss's chance a kill, pity included. A bar counts the total; the card shows from your first unique. A new
 find adds a *New in collection* row to the reward card, and counts even if a full stash breaks it down. Sets show their
@@ -2415,7 +2415,7 @@ props, boots, prompts and cursors. None changes a number.
 - **Checked cheaply:** every second, only the ones not yet earned, each a look at state the game already keeps; what
   only a fight knows is noted as the fight ends. A loss counts for nothing. Nothing is time-limited or missable.
 - **Earning one** is a quiet pager line and a #net line naming it (and the title it brings). No new sound.
-- **The page:** System → **Achievements** (`achievements`): the categories down the left with their bars, *Summary*
+- **The page:** Settings → **Achievements** (`achievements`): the categories down the left with their bars, *Summary*
   first; each achievement's points on a medal, its bar while under way, what it brings shown as itself, and once earned
   the date and **Pin** (up to three on your card; `achieve pin|unpin <name>`). Its rule is its tooltip. Three are
   **hidden** (*???* and a hint).
@@ -2489,8 +2489,8 @@ developer mode, `crew sim <classes>` adds bot crewmates from level 5 (`crew`, `c
 
 Two players, two saves, no server; developer mode while it's a prototype (docs/coop.md).
 
-- **Starting:** `coop` (or *Open Co-op* on the System page). *Host* shows a room code for a tab in the same browser;
-  for another machine, invite and reply codes are pasted across. `coop host`, `coop join <code>`, `coop leave`.
+- **Starting:** `coop` (or *Open Co-op* on Settings → **Dev**, with `?dev`). *Host* shows a room code for a tab in the
+  same browser; for another machine, invite and reply codes are pasted across. `coop host`, `coop join <code>`, `coop leave`.
 - **Who runs what:** the host's game runs the world (their network, run and fights); the guest's sends its character
   (class, level, bar, talents, gear, daemons, routines, research) and commands. Nothing else crosses; the handle is the
   only name. The guest fights as the host's crewmate, so the crew rules hold. The guest's own home and mail stay theirs.
@@ -2510,7 +2510,7 @@ Screens carry names, numbers and state, never how-to text. Rules live in **hover
 mutation and wall band shows its rule, in WoW's tooltip grammar) and in **first-time tips**: the first time something
 is on screen, a small tip points at it and says how it works, once, one at a time. Your first fight is one tip you step
 through (the timeline, your skills, the interrupt's ticks, armor, the Sync Window). Tips in a fight pause it. **Turn
-tips off** on any tip or the System page; **Replay tips** shows them again. Your first server's room map gets a short
+tips off** on any tip or the Settings page; **Replay tips** shows them again. Your first server's room map gets a short
 **rooms tour**, a step at a time (walk, engage, jack out; a cache, the hunter, the rest room and SCAN as you meet them).
 The log and terminal still say what happened, in a line; they don't teach.
 
@@ -2532,9 +2532,10 @@ A page stays while it's true, an hour at most; the same news again replaces the 
 
 ### Settings
 
-On the System page: **speed** (relaxed 12 s, normal 8 s, fast 5 s a cycle), **sound** with four sliders (Music,
+On the **Settings** page (beside Codex; tabs Settings, Achievements, Casing, Terminal): **speed** (relaxed 12 s, normal 8 s, fast 5 s a cycle), **sound** with four sliders (Music,
 Ambience, Places, Effects), **motion**, **vibration** (on phones that have it), **Screen effects**, **UI scale** and the
-casing's options. Nothing plays before your first click or key.
+casing's options. Nothing plays before your first click or key. With `?dev` a **Dev** tab adds co-op, pace, a sound
+test, the wire, fight reports and the log (`logs` opens it).
 
 - **Sound** is recorded CC0 samples and a little synthesis in an old-hardware palette (`dist/sfx/CREDITS.md`), with a
   quiet room tone under it. **Places:** each floor and hub has its own quiet loop, and each virus family a sound under
@@ -2542,7 +2543,7 @@ casing's options. Nothing plays before your first click or key.
 - **Music:** a track on your server and another on a run. Each virus family's fights have their own theme (dark,
   gritty industrial synthwave, synthesized live): it fades in as the fight starts, builds as the virus breaks, and fades
   back to the track when the fight is over. It plays a little under the track, on the Music slider.
-- **UI scale** (System → Settings, `ui scale <auto|80–200>`, 100% by default) draws the whole screen larger or smaller;
+- **UI scale** (Settings, `ui scale <auto|80–200>`, 100% by default) draws the whole screen larger or smaller;
   it grows only while the screen stays 1700px wide in its own pixels. **Auto** sizes it to 1800px.
 - **On a phone** (under 480 px) the board shows Now, +1 and +2 and the tray is three wide: tap a skill to pick it, tap
   again to fire. Only a tap on the prompt itself opens the keyboard.
@@ -2584,22 +2585,22 @@ straight in and out.
 With the immersive shell on a desktop-sized window, the screen sits in a dark monitor (BLACKBOX · MODEL 7) whose bottom
 bezel has two knobs (sound, speed) and lamps that show real state: **PWR** (red while Degraded), **GATE** (an invader
 at your wall), **WALL** (contested, a breach), **NET** (teal on a run; amber while a world event is up), **INST** (a
-market transfer on its way), **DMN** (a daemon slotted; bright when one fires). System → Settings → Casing turns it off;
+market transfer on its way), **DMN** (a daemon slotted; bright when one fires). Settings → Casing turns it off;
 phones never show it.
 
-**The window behind it** (window.mjs; System → Settings → Window, on by default, at 1700px and wider): the strips beside
+**The window behind it** (window.mjs; Settings → Window, on by default, at 1700px and wider): the strips beside
 and above the monitor look out through grimy glass onto the city, its sky following your clock and its weather turning
 every five minutes (`weather <…>` holds one). **Districts:** The Sprawl (always yours), Backhaul (*Down the Line*), The
 Stacks (*Mapper*), Coldline (*On the Signal*) and Tar Beach (*Every Crown*); `district <name>`.
 
-**Casing cosmetics** (System → **Casing**), each an achievement's reward, only ever the casing: a **colourway** (Stock
+**Casing cosmetics** (Settings → **Casing**), each an achievement's reward, only ever the casing: a **colourway** (Stock
 and eight more; `casing color <name>`), the **nameplate** (stock, a title you hold, or 16 characters of your own;
 `casing plate …`), four **stickers** on the chin (`casing sticker <1-4> <sticker>|off`) and two **desk props** (`casing
 prop <1-2> <prop>|off`).
 
 ### The terminal
 
-How the screen boots, what the prompt says and how the cursor looks (terminal.mjs; System → **Terminal**). Cosmetic, each
+How the screen boots, what the prompt says and how the cursor looks (terminal.mjs; Settings → **Terminal**). Cosmetic, each
 an achievement's reward; the stock look is the default and nothing changes how the command line takes what you type.
 
 - **Boot** (after the power-up, skippable): **Stock** (your server read back to you, then the login), **POST** (a BIOS

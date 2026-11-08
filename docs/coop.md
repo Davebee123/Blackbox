@@ -2,7 +2,7 @@
 
 The question: can two players share a run and its fights with no server, each keeping their own save? This is the
 smallest real thing that answers it. Developer mode only (`?dev`, or a test bench), behind the `coop` command and the
-Co-op card on the System page. A visible entry would read as a finished feature; it is not one yet. GAME_RULES.md
+Co-op card on Settings → Dev. A visible entry would read as a finished feature; it is not one yet. GAME_RULES.md
 (Co-op, peer to peer) has the rules.
 
 ## Try it
