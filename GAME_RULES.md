@@ -2414,7 +2414,7 @@ props, boots, prompts and cursors. None changes a number.
 - **Checked cheaply:** every second, only the ones not yet earned, each a look at state the game already keeps; what
   only a fight knows is noted as the fight ends. A loss counts for nothing. Nothing is time-limited or missable.
 - **Earning one** is a quiet pager line and a #net line naming it (and the title it brings). No new sound.
-- **The page:** Settings → **Achievements** (`achievements`): the categories down the left with their bars, *Summary*
+- **The page:** Rig → **Achievements** (`achievements`): the categories down the left with their bars, *Summary*
   first; each achievement's points on a medal, its bar while under way, what it brings shown as itself, and once earned
   the date and **Pin** (up to three on your card; `achieve pin|unpin <name>`). Its rule is its tooltip. Three are
   **hidden** (*???* and a hint).
@@ -2531,7 +2531,7 @@ A page stays while it's true, an hour at most; the same news again replaces the 
 
 ### Settings
 
-On the **Settings** page (beside Codex; tabs Settings, Achievements, Casing, Terminal): **speed** (relaxed 12 s, normal 8 s, fast 5 s a cycle), **sound** with four sliders (Music,
+On the **Settings** page: **speed** (relaxed 12 s, normal 8 s, fast 5 s a cycle), **sound** with four sliders (Music,
 Ambience, Places, Effects), **motion**, **vibration** (on phones that have it), **Screen effects**, **UI scale** and the
 casing's options. Nothing plays before your first click or key. With `?dev` a **Dev** tab adds co-op, pace, a sound
 test, the wire, fight reports and the log (`logs` opens it).
@@ -2590,16 +2590,16 @@ phones never show it.
 **The window behind it** (window.mjs; Settings → Window, on by default, at 1700px and wider): the strips beside
 and above the monitor look out through grimy glass onto the city, its sky following your clock and its weather turning
 every five minutes (`weather <…>` holds one). **Districts:** The Sprawl (always yours), Backhaul (*Down the Line*), The
-Stacks (*Mapper*), Coldline (*On the Signal*) and Tar Beach (*Every Crown*); `district <name>`.
+Stacks (*Mapper*), Coldline (*On the Signal*) and Tar Beach (*Every Crown*), picked on Rig → **Casing** or with `district <name>`.
 
-**Casing cosmetics** (Settings → **Casing**), each an achievement's reward, only ever the casing: a **colourway** (Stock
+**Casing cosmetics** (Rig → **Casing**), each an achievement's reward, only ever the casing: a **colourway** (Stock
 and eight more; `casing color <name>`), the **nameplate** (stock, a title you hold, or 16 characters of your own;
 `casing plate …`), four **stickers** on the chin (`casing sticker <1-4> <sticker>|off`) and two **desk props** (`casing
 prop <1-2> <prop>|off`).
 
 ### The terminal
 
-How the screen boots, what the prompt says and how the cursor looks (terminal.mjs; Settings → **Terminal**). Cosmetic, each
+How the screen boots, what the prompt says and how the cursor looks (terminal.mjs; Rig → **Terminal**). Cosmetic, each
 an achievement's reward; the stock look is the default and nothing changes how the command line takes what you type.
 
 - **Boot** (after the power-up, skippable): **Stock** (your server read back to you, then the login), **POST** (a BIOS

@@ -107,3 +107,4 @@ body.cased[data-case="beige"] #casing .badge { text-shadow: 0 1px 0 rgba(255, 25
 .cs-prop .glyph { position: absolute; top: 6px; right: 6px; width: 10px; height: 10px; margin: 0; color: var(--dim); }
 .cs-prop svg, .cs-pslot svg { flex: none; }
 .cs-prop .steam, .cs-pslot .steam { fill: none; stroke: rgba(236, 226, 214, 0.45); stroke-width: 1.1; stroke-linecap: round; }
+.cs-stack { display: grid; gap: var(--s5); align-content: start; }

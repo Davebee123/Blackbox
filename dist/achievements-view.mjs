@@ -1,4 +1,4 @@
-// The Achievements page (System → Achievements): the categories on the left with their totals, the chosen
+// The Achievements page (Rig → Achievements): the categories on the left with their totals, the chosen
 // category's achievements beside them. Pure functions of state. Each row shows; its rule is its tooltip.
 //   ui: { cat: 'summary' | a category id, focus: an achievement id to light (a pager line opened it) }
 import { glyph } from './glyphs.mjs';

@@ -78,7 +78,7 @@ import { tipOf, postFound } from './scanner.mjs';
 import { POST, postNodeSvg, postNodeSub, postCard } from './scanner-view.mjs';
 import { skillsTabMarkup } from './skills-view.mjs';
 import { achievementsMarkup } from './achievements-view.mjs';
-import { casingPageMarkup, districtCardMarkup } from './casing-view.mjs';
+import { casingPageMarkup } from './casing-view.mjs';
 import { terminalPageMarkup } from './terminal-view.mjs';
 import { objectiveText, objectiveTip, backupAims } from './objectives.mjs';
 import { pointsOf } from './achievements.mjs';
@@ -2795,11 +2795,18 @@ function paceCard(s) {
   return `<section class="card"><h2>Pace</h2><p class="svc-line" title="Counts time while the game is open and you've used it in the last 2 minutes. Loot targets assume ${LOOT.killsPerHour} kills an hour.">${line}</p></section>`;
 }
 
-// The Settings page (nav id 'system'): Settings (the player's options), Achievements (achievements-view.mjs), Casing
-// (casing-view.mjs: the monitor's colourway, plate and stickers), Terminal (terminal-view.mjs: the boot, the prompt and
-// the cursor), and with ?dev a Dev tab (co-op, pace, the sound test, the wire, fight reports, the log).
-export const SYSTEM_TABS = [['settings', 'Settings'], ['achievements', 'Achievements'], ['casing', 'Casing'], ['terminal', 'Terminal']];
-const systemTabs = (s, tab, dev) => `<nav class="ltabs sys-tabs" role="tablist" aria-label="Settings">${[...SYSTEM_TABS, ...(dev ? [['dev', 'Dev']] : [])].map(([k, l]) => `<button type="button" role="tab" data-stab="${k}" aria-selected="${tab === k}">${esc(l)}${k === 'achievements' ? `<small class="sys-pts">${glyph('medal')}${pointsOf(s)}</small>` : ''}</button>`).join('')}</nav>`;
+// The Settings page (nav id 'system'): the player's options, and with ?dev a Dev tab (co-op, pace, the sound test, the
+// wire, fight reports, the log).
+const systemTabs = (tab, dev) => dev ? `<nav class="ltabs sys-tabs" role="tablist" aria-label="Settings">${[['settings', 'Settings'], ['dev', 'Dev']].map(([k, l]) => `<button type="button" role="tab" data-stab="${k}" aria-selected="${tab === k}">${l}</button>`).join('')}</nav>` : '';
+// The Rig page: Achievements (achievements-view.mjs), and what they unlock for your machine: Casing (casing-view.mjs:
+// the monitor's colourway, plate and stickers) and Terminal (terminal-view.mjs: the boot, the prompt and the cursor).
+export const RIG_TABS = [['achievements', 'Achievements'], ['casing', 'Casing'], ['terminal', 'Terminal']];
+const rigTabs = (s, tab) => `<nav class="ltabs sys-tabs" role="tablist" aria-label="Rig">${RIG_TABS.map(([k, l]) => `<button type="button" role="tab" data-rtab="${k}" aria-selected="${tab === k}">${esc(l)}${k === 'achievements' ? `<small class="sys-pts">${glyph('medal')}${pointsOf(s)}</small>` : ''}</button>`).join('')}</nav>`;
+export function rigMarkup(s, { tab = 'achievements', ach = {}, cs = {} } = {}) {
+  if (tab === 'casing') return rigTabs(s, tab) + casingPageMarkup(s, cs);
+  if (tab === 'terminal') return rigTabs(s, tab) + terminalPageMarkup(s);
+  return rigTabs(s, 'achievements') + achievementsMarkup(s, ach);
+}
 // Developer tools: not part of the game, so only with ?dev.
 function devMarkup(s, coop) {
   const co = coop ? '<section class="card coop-card"><h2>Co-op</h2><p>Play a run with another player. Your game runs the world, theirs sends their character. Prototype.</p><div class="row"><button type="button" class="btn" data-run="coop">Open Co-op</button></div></section>' : '';
@@ -2809,12 +2816,9 @@ function devMarkup(s, coop) {
     <section class="card"><h2>Fight reports</h2>${s.reports.length ? `<details><summary>${s.reports.length} report(s)</summary><pre>${esc(JSON.stringify(s.reports.slice(-5), null, 1))}</pre></details>` : '<p>None yet.</p>'}</section></div>
     <section class="card"><h2>Log</h2><ol class="fulllog">${s.logs.slice(-300).map((e) => `<li>c${e.cycle} · ${esc(e.message)}</li>`).join('')}</ol></section></div>`;
 }
-export function systemMarkup(s, { coop = false, dev = false, tab = 'settings', ach = {}, cs = {} } = {}) {
-  if (tab === 'dev' && !dev) tab = 'settings';
-  const head = systemTabs(s, tab, dev);
-  if (tab === 'achievements') return head + achievementsMarkup(s, ach);
-  if (tab === 'casing') return head + casingPageMarkup(s, cs);
-  if (tab === 'terminal') return head + terminalPageMarkup(s);
+export function systemMarkup(s, { coop = false, dev = false, tab = 'settings' } = {}) {
+  if (tab !== 'dev' || !dev) tab = 'settings';
+  const head = systemTabs(tab, dev);
   if (tab === 'dev') return head + devMarkup(s, coop);
   return `${head}<div class="page-grid"><div style="display:grid;gap:12px">${volumeCard(s)}
     <section class="card settings-card"><h2>Options</h2><div class="row settings-grid">
@@ -2835,7 +2839,7 @@ export function systemMarkup(s, { coop = false, dev = false, tab = 'settings', a
       <button type="button" class="btn" data-run="tips replay">Replay tips</button>
       <button type="button" class="btn" data-run="channel ${s.settings.channel === false ? 'on' : 'off'}" aria-pressed="${s.settings.channel !== false}" title="#net's latest line over the prompt">#net ${s.settings.channel === false ? 'muted' : 'on'}</button>
     </div></section></div>
-    <div style="display:grid;gap:12px">${districtCardMarkup(s)}${collectionMarkup(s)}
+    <div style="display:grid;gap:12px">${collectionMarkup(s)}
     <section class="card"><h2>New game</h2><div class="row"><button type="button" class="btn" data-run="reset game">Reset game</button></div></section></div></div>`;
 }
 
