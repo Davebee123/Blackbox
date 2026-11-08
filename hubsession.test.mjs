@@ -44,14 +44,13 @@ test('connecting reads like jacking into a server: handshake, banner, who answer
   assert.match(hubBanner(s, 'nullchoir')[2].html, /Connected\./);
 });
 
-test('the Shop window: a faction’s own shelf as tiles; Halcyon’s is its store', () => {
+test('the Shop window: one shape at every hub, the shelf, the chase line, tools', () => {
   const s = open(); s.server.credits = 5000;
-  const k = hubTerminalMarkup(s, 'kestrel', hubBanner(s, 'kestrel'), 'shop');
-  assert.match(k, /class="ptiles stash"/);
-  assert.match(k, /data-command="buy kestrel /);
-  const h = hubTerminalMarkup(s, 'halcyon', hubBanner(s, 'halcyon'), 'shop');
-  assert.match(h, /Halcyon Mutual/);
-  assert.match(h, /Agency stock/);
+  for (const [f, line] of [['kestrel', 'Bonded'], ['halcyon', 'Indemnified']]) {
+    const k = hubTerminalMarkup(s, f, hubBanner(s, f), 'shop');
+    assert.match(k, new RegExp(`Shelf[\\s\\S]*${line}[\\s\\S]*Tools`), f);
+    assert.match(k, new RegExp(`data-command="buy ${f} `));
+  }
   const m = hubTerminalMarkup(s, 'kestrel', hubBanner(s, 'kestrel'), 'market');
   assert.doesNotMatch(m, /mk-goods/, 'the market is wares only');
 });

@@ -16,7 +16,7 @@ let order = null;
 export const setOrder = (o) => { order = o; };
 import { PIECES, PARTS, pieceState, isFactionPiece, pendingClaims, appraisedOf, cleanStacks } from './faction-gear.mjs';
 import { keptReceipts, receiptLine, STAMPS, STAMP_ORDER, RECEIPT, tallyOf, sumText } from './receipts.mjs';
-import { FACTIONS as FX, FACTION_IDS, rep, repTier, REP_TIERS, hubsOf, hubOf, shopOf, hubPremium, hubFound, hubTraceOf, commissionOf, stanceLine, STANCE } from './factions.mjs';
+import { FACTIONS as FX, FACTION_IDS, rep, repTier, REP_TIERS, hubsOf, hubOf, hubFound, hubTraceOf, commissionOf, stanceLine, STANCE } from './factions.mjs';
 import { GLYPHS } from './glyphs.mjs';
 import { SKILL_TEXT } from './lore.mjs';
 import { ruleHtml } from './ruletext.mjs';
@@ -41,7 +41,7 @@ import { online, inSprawl, whereText, simOn, friends, profileOf } from './presen
 import { consortiumOf, isGround, sizeOf, tiersOf, nextTier as nextConTier, serversOf, memberServers, memberLevel, CONSORTIUM, rebooting, consortiumWall, alertsOf, tiersOf as conTiers } from './consortium.mjs';
 import { FACTIONS, MAIL, TIERS, openContracts, doneContracts, offers as mailOffers, findJob, heldCount, boardOpen, tierIndex, standing, tierOf, nextTier, retainer, retainerWith, unread, title as contractTitle, progress as contractProgress, rewardLine, ready as contractReady, nextPayIn, xpOf } from './mail.mjs';
 import { commsOf } from './comms.mjs';
-import { LINE, GOODS, storeOf, lineName, lineAbout, goodsAbout, priceNow, premiumOf, premiumPrice, premiumBlock } from './store.mjs';
+import { shopOf, chaseItem, blockOf } from './store.mjs';
 import { shownHidden, flagged as hiddenFlagged, items as kitOf, HIDDEN, leadOf, connectedTo, viaName } from './hidden.mjs';
 import { floorsOf, graphOf, locAt, hiddenAt, exitOpen, floorOfSlot, floorName, FLOOR, canDescend, waypointOf, holderOf } from './floors.mjs';
 import { ROOT, ROOT_PERKS, rootOf, rootProgress, procOf, freeOfMemory } from './root.mjs';
@@ -56,7 +56,7 @@ import { unlocked as routinesOpen, LOCKED as ROUTINES_LOCKED } from './routines.
 import { bodyTags, AUTHOR_FAMILIES, familyName } from './families.mjs';
 import { heatOf } from './parts.mjs';
 import { wallRating, wallBands, ratioOf, outcome, chipRate, grindRate, fighting, degradedLeft, fmtLeft, bountyOf, tellOf, quirkLine, labelOf, verdictOf, strength, sendersOf, senderGrade, sendsAt, streakOf, streakMult, STREAK, SCOUT, daemonChance, SCOUTED, KINDS as INV_KINDS, scoutedLine, sendTop, countsAt, wallSafety } from './invasion.mjs';
-import { RULES, LOOT, SLOTS, BASES, STATS, GROUPS, RARITIES, RARITY_ORDER, ZERO_DAYS, STASH_CAP, PROTOCOL_SLOTS, SERVICES, MATERIALS, statLine, itemLabel, fmtStat, sideStats, SLOT_KINDS, groupOf, codeOf, uniqueItem, seeded, IMPLICITS } from './gear.mjs';
+import { RULES, LOOT, SLOTS, BASES, STATS, GROUPS, RARITIES, RARITY_ORDER, ZERO_DAYS, STASH_CAP, PROTOCOL_SLOTS, SERVICES, MATERIALS, statLine, itemLabel, fmtStat, sideStats, SLOT_KINDS, groupOf, codeOf, uniqueItem, seeded, IMPLICITS, rarityName, CHASE_LINE } from './gear.mjs';
 import { raidIntents, raidMarks, raidOf, attackTarget } from './raid.mjs';
 import { EMBLEMS } from './class-emblems.mjs';
 import { ARCHETYPES, CANTRIPS, EDGE, SYNC, STATUSES, LOADOUT, TREE, SERVER, SKILLS, xpToNext, unlockLevel, power, SUBS, SUBCLASS, skillOrder, barSlots, isRunSkill } from './data.mjs';
@@ -1129,7 +1129,7 @@ function locationList(s) {
 // ---------- protocols (you) ----------
 const rarityClass = (it) => `r-${it.rarity}`;
 const leadStat = (it) => Object.keys(it?.stats || {})[0] || 'protocol';
-const itemTitle = (it) => [`${RARITIES[it.rarity]?.name || ''} ${SLOTS[groupOf(it)]?.name || ''}${it.base && BASES[it.base] && !it.unique && it.rarity !== 'custom' ? '' : it.base && BASES[it.base] ? ` (${BASES[it.base].name})` : ''}`.trim(), it.unique && isNative(it.unique) && it.home?.name ? `Native to ${it.home.name}` : '', it.unique ? UNIQUES[it.unique]?.flavour : BASES[it.base]?.flavour].filter(Boolean).join('. ');
+const itemTitle = (it) => [`${rarityName(it)} ${SLOTS[groupOf(it)]?.name || ''}${it.base && BASES[it.base] && !it.unique && it.rarity !== 'custom' ? '' : it.base && BASES[it.base] ? ` (${BASES[it.base].name})` : ''}`.trim(), it.unique && isNative(it.unique) && it.home?.name ? `Native to ${it.home.name}` : '', it.unique ? UNIQUES[it.unique]?.flavour : BASES[it.base]?.flavour].filter(Boolean).join('. ');
 const itemName = (it) => `<b class="iname ${rarityClass(it)}" title="${esc(itemTitle(it))}">${glyph(leadStat(it), 'badge')}${esc(itemLabel(it))}</b>`;
 // A unique's effect (or a found Zero-day's), under its stats.
 const itemEffect = (it) => (it.zeroDay ? `<small class="zd">${esc(ZERO_DAYS[it.zeroDay].effect)}</small>` : (it.unique || it.rule) && effectLine(it) ? `<small class="zd${it.rule ? ' rule' : ''}">${esc(effectLine(it))}</small>` : '');
@@ -1146,7 +1146,7 @@ export function nativeHome(s, it) {
 // wireframe, which app.js spins), in its rarity colour, over its name, rarity, kind, level, stats one a line and effect.
 export function itemTipMarkup(s, ref) {
   const f = ref?.startsWith('f:') ? filtersOf(s)[Number(ref.slice(2))] : null;
-  const shelf = ref?.startsWith('p:') ? shelfOf(s, ref) : null; // a premium protocol on a shelf: p:<seller>:<i>
+  const shelf = ref?.startsWith('p:') ? shelfOf(s, ref) : null; // a Shop's protocol: p:<hub>:<n> or p:<hub>:c-<id>
   const it = f || shelf?.it || stashItem(s, ref);
   if (!it) return '';
   const kind = f ? 'filter' : groupOf(it), r = it.rarity;
@@ -1155,19 +1155,18 @@ export function itemTipMarkup(s, ref) {
   const flavour = !f && (it.unique ? UNIQUES[it.unique]?.flavour : BASES[it.base]?.flavour);
   const vs = f || loadedOn(s, it.id) === classOf(s) ? '' : swapCompare(s, it);
   const home = !f && it.unique && isNative(it.unique) ? nativeHome(s, it) : null;
-  return `<div class="ptip-card r-${r}">${f ? `<pre class="ptip-art" data-shape="${kind}" aria-hidden="true"></pre>` : `<span class="ptip-glyph">${glyphMarkup(it, 'tip')}</span>`}<div class="ptip-body"><b class="iname r-${r}">${esc(f ? f.name : itemLabel(it))}</b><small>${esc(RARITIES[r]?.name || '')} ${esc(f ? 'filter' : SLOTS[kind]?.name || '')} · Lv ${it.level}</small>${where}${home ? `<span class="tag native" title="About ten times as likely on its home network as anywhere else">Native · ${esc(home)}</span>` : ''}<div class="ptip-stats">${stats}</div>${!f ? implicitRow(it) : ''}${!f && (it.zeroDay || it.unique || it.rule) ? itemEffect(it) : ''}${!f && it.unique && setOf(it.unique) ? setLines(s, it.unique) : ''}${flavour ? `<em>${esc(flavour)}</em>` : ''}${keptItem(it) ? '<small class="ptip-ans">Can’t be deconstructed.</small>' : ''}${vs}${shelf ? `<small class="ptip-ans">${esc(premiumBlock(s, shelf.price) || `${shelf.price} credits. You have ${s.server.credits}.`)}</small>` : ''}</div></div>`;
+  return `<div class="ptip-card r-${r}">${f ? `<pre class="ptip-art" data-shape="${kind}" aria-hidden="true"></pre>` : `<span class="ptip-glyph">${glyphMarkup(it, 'tip')}</span>`}<div class="ptip-body"><b class="iname r-${r}">${esc(f ? f.name : itemLabel(it))}</b><small>${esc(f ? RARITIES[r]?.name || '' : rarityName(it))} ${esc(f ? 'filter' : SLOTS[kind]?.name || '')} · Lv ${it.level}</small>${where}${home ? `<span class="tag native" title="About ten times as likely on its home network as anywhere else">Native · ${esc(home)}</span>` : ''}<div class="ptip-stats">${stats}</div>${!f ? implicitRow(it) : ''}${!f && (it.zeroDay || it.unique || it.rule) ? itemEffect(it) : ''}${!f && it.unique && setOf(it.unique) ? setLines(s, it.unique) : ''}${flavour ? `<em>${esc(flavour)}</em>` : ''}${keptItem(it) ? '<small class="ptip-ans">Can’t be deconstructed.</small>' : ''}${vs}${shelf ? `<small class="ptip-ans">${esc(shelf.why)}</small>` : ''}</div></div>`;
 }
-// A premium protocol by its tooltip ref (p:<seller>:<i>): { it, price }, at that seller's price.
-const shelfOf = (s, ref) => { const [, f, i] = ref.split(':'); return f === 'halcyon' ? ((it) => it && { it, price: premiumPrice(it, hackerLevel(s)) })(premiumOf(s)[+i]) : hubPremium(s, f)[+i] || null; };
-// A premium shelf's tile: the glyph, the name in its rarity colour, its kind and level, its three biggest stats (▲ ▼
-// against what its slot runs now), the price and Buy. Its card (itemTipMarkup) has the rest.
-function premiumTile(s, f, { it, i, price }, cmd, kicker = '') {
-  const out = loadOut(s, it), vs = loadSlot(s, it) >= 0, why = premiumBlock(s, price);
-  const top = Object.entries(it.stats).filter(([k]) => STATS[k]).sort(([a, x], [b, y]) => Math.abs(y) / STATS[b].base - Math.abs(x) / STATS[a].base).slice(0, 3);
-  const stats = top.map(([k, v]) => { const d = v - (out?.stats?.[k] || 0); return `<span class="silk-st${v < 0 ? ' neg' : ''}">${glyph(k)}<b>${v < 0 ? '−' : '+'}${fmtStat(k, Math.abs(v))}</b><span class="sr-only"> ${esc(STATS[k].name)}</span>${vs && Math.abs(d) > 1e-9 ? `<i class="${d > 0 ? 'up' : 'down'}">${d > 0 ? '▲' : '▼'}</i>` : ''}</span>`; }).join('');
-  return `<li class="ptile prem ${rarityClass(it)}" data-ptip="p:${f}:${i}">${kicker ? `<span class="agency">${esc(kicker)}</span>` : ''}<span class="prem-glyph">${glyphMarkup(it, 'sm')}</span><b class="iname ${rarityClass(it)}">${esc(itemLabel(it))}</b><small>${esc(RARITIES[it.rarity]?.name || '')} ${esc(SLOTS[groupOf(it)]?.name || '')} · Lv ${it.level}</small><span class="silk-sts">${stats}</span>
-      <div class="ptile-acts"><span class="price">${price} credits</span><button type="button" class="btn small ${why ? '' : 'primary'}" data-command="${cmd}" ${why ? `disabled title="${esc(why)}"` : ''}>Buy</button></div></li>`;
-}
+// A Shop's protocol by its tooltip ref: p:<hub>:<n> on its shelf, p:<hub>:c-<id> a chase protocol as it comes out at
+// your level (its preview: the dice are fixed, so its stats stay put while you look). { it }.
+const shelfOf = (s, ref) => {
+  const [, f, i] = ref.split(':');
+  if (!FX[f]) return null;
+  const shop = shopOf(s, f), x = i?.startsWith('c-') ? shop.chase.find((c) => c.id === i.slice(2)) : shop.shelf[+i];
+  if (!x) return null;
+  const why = x.sold ? 'Sold. New stock soon.' : x.locked ? `For ${FX[f].tiers[x.need]} and up.` : blockOf(s, x.price) || `${x.price} credits. You have ${s.server.credits}.`;
+  return { it: x.it || chaseItem(s, f, x.id, seeded(7)), price: x.price, why };
+};
 // The name of an item's effect (its Zero-day's, the unique's own, its rule's), or ''.
 const fxName = (x) => x && (x.zeroDay ? ZERO_DAYS[x.zeroDay].name : x.unique ? x.name : x.rule ? RULES[x.rule]?.name || '' : '');
 // Loading a stash protocol: what changes against what's in that slot now (▲ gains, ▼ losses).
@@ -1344,7 +1343,7 @@ function itemSheet(s, it, vs = null, acts = '') {
   const [fxHead, ...fxRest] = fxText(it).split(' — ');
   const effect = fxHead ? `<h4 class="silk-kicker">Effect</h4><p class="silk-fx">${fxRest.length ? `<b>${esc(fxHead)}</b> — ${esc(fxRest.join(' — '))}` : esc(fxHead)}</p>` : '';
   return `<div class="silk-head"><div class="silk-headtext"><h3 class="silk-title iname ${rarityClass(it)}">${esc(itemLabel(it))}</h3>
-    <p class="silk-sub">${esc(RARITIES[it.rarity]?.name || '')} · ${esc(SLOTS[groupOf(it)]?.name || '')} · Lv ${it.level}${where && where !== classOf(s) ? ` <span class="tag dim">on ${esc(ARCHETYPES[where].name)}</span>` : ''}${home ? ` <span class="tag native" title="About ten times as likely on its home network as anywhere else">Native · ${esc(home)}</span>` : ''}</p>${acts}</div><div class="silk-plate">${glyphMarkup(it, 'lg')}</div></div>
+    <p class="silk-sub">${esc(rarityName(it))} · ${esc(SLOTS[groupOf(it)]?.name || '')} · Lv ${it.level}${where && where !== classOf(s) ? ` <span class="tag dim">on ${esc(ARCHETYPES[where].name)}</span>` : ''}${home ? ` <span class="tag native" title="About ten times as likely on its home network as anywhere else">Native · ${esc(home)}</span>` : ''}</p>${acts}</div><div class="silk-plate">${glyphMarkup(it, 'lg')}</div></div>
     <h4 class="silk-kicker">${vs ? (out ? `Stats · vs ${esc(itemLabel(out))}` : 'Stats') : 'Stats'}</h4><dl class="silk-stats${vs ? ' vs' : ''}">${rows}</dl>${implicitRow(it, 'p')}${lost}${effect}${it.unique && setOf(it.unique) ? setLines(s, it.unique) : ''}${flavour ? `<em class="silk-flavour">${esc(flavour)}</em>` : ''}`;
 }
 
@@ -1925,30 +1924,8 @@ export function consortiumMarkup(s, now = Date.now()) {
 }
 
 // ---------- the Halcyon store ----------
-export function storeMarkup(s, now = Date.now()) {
-  const L = hackerLevel(s), tierAt = tierIndex(s), have = kitOf(s);
-  const credits = s.server.credits;
-  const line = LINE.map((x) => {
-    const locked = tierAt < x.tier;
-    const price = `${x.credits(L)} credits`;
-    const can = !locked && credits >= x.credits(L);
-    return `<li class="ptile${x.chase ? ' chase' : ''}${locked ? ' locked' : ''}"><b class="iname${x.chase ? ' r-indemnified' : ''}">${glyph({ relay: 'relay', deductible: 'reduction', subrogation: 'countermeasures', actuarial: 'watchman', 'total-loss': 'hit' }[x.id], 'badge')}${esc(lineName(x))}</b><small>${esc(lineAbout(x))}</small>
-      <div class="ptile-acts"><span class="price">${price}</span>${locked ? `<span class="tag dim">${esc(TIERS[x.tier].name)}</span>` : `<button type="button" class="btn ${can ? 'primary' : ''} small" data-command="buy ${x.id}" ${can ? '' : 'disabled'}>Buy</button>`}</div></li>`;
-  }).join('');
-  const shelf = storeOf(s).slots.map((slot) => {
-    const g = GOODS[slot.id], x = { ...slot, price: priceNow(s, slot.id, slot.price, L) };
-    const trend = x.drift > 1.08 ? '<i class="up" title="Above its usual price">▲</i>' : x.drift < 0.92 ? '<i class="down" title="Below its usual price">▼</i>' : '';
-    return `<li class="ptile stash"><span class="agency">${esc(x.agency)}</span><b class="iname">${glyph({ signal: 'booster', crate: 'protocol' }[x.id] || x.id, 'badge')}${esc(g.name)}</b><small>${esc(goodsAbout(g, L))}</small>
-      <div class="ptile-acts"><span class="price">${x.price} credits ${trend}</span><small class="qty">×${x.qty}</small><button type="button" class="btn ${credits >= x.price ? 'primary' : ''} small" data-command="buy ${x.key}" ${credits >= x.price && x.qty ? '' : 'disabled'}>Buy</button></div></li>`;
-  }).join('');
-  const kit = [['relay', 'Relays'], ['cracker', 'Key crackers'], ['injector', 'Trace injectors']].map(([k, n]) => stat(n, have[k] || 0)).join('');
-  return `<div class="page-grid store-page"><div class="stack"><section class="card"><h2>Halcyon Mutual</h2>
-      <div class="stats">${stat('Credits', credits)}${stat('Rep', `${standing(s)} · ${tierOf(s).name}`)}</div>
-      <ul class="ptiles">${line}</ul></section>
-    <section class="card"><h2>Codebases</h2><ul class="plan-shelf">${shopCodebases(s, 'halcyon', L).map((x) => `<li class="${x.known ? 'known' : ''}"><span class="iname" title="${esc(PROGRAMS[x.id].rule)}">${glyph('module')}${esc(PROGRAMS[x.id].name)}</span><span class="tag dim">${PROGRAMS[x.id].weight}</span>${x.known ? '<span class="tag dim">known</span>' : tierAt < x.tier ? `<span class="tag dim">${esc(TIERS[x.tier].name)}</span>` : `<span class="price">${x.price}</span><button type="button" class="btn small ${credits >= x.price ? 'primary' : ''}" data-command="buy codebase-${x.id}" ${credits >= x.price ? '' : 'disabled'}>Buy</button>`}</li>`).join('')}</ul></section>
-    <section class="card"><h2>Your kit</h2><div class="stats">${kit}</div></section></div>
-    <section class="card"><h2>Agency stock</h2><ul class="ptiles stash">${premiumOf(s).map((it, i) => premiumTile(s, 'halcyon', { it, i, price: premiumPrice(it, L) }, `buy premium-${i}`, 'Premium')).join('')}${shelf}</ul></section></div>`;
-}
+// Halcyon's Shop as a page of its own (the store page): the same window every hub has.
+export const storeMarkup = (s) => `<div class="page-grid store-page"><section class="card hub-win">${shopMarkup(s, 'halcyon')}</section></div>`;
 
 // ---------- loadout: the classes, then its tabs ----------
 // `view` is the archetype being browsed (class/subclass on Skills and talents); the equipped one is s.loadout.archetype.
@@ -3089,7 +3066,7 @@ export function hubOptions(s, f, now = Date.now()) {
   const comm = [{ key: 'commission', label: 'Commission', meta: mine ? '<span class="tag you">yours</span>' : `${glyph('credits')}${retainerWith(s, f)}` }, ...(mine && kept ? [{ key: 'receipts', label: 'Receipts', meta: `${kept}` }] : [])];
   return [
     { key: 'market', label: 'Market', meta: `⇄ ${Math.round(travelMs(s, f) / 60000)}m` },
-    { key: 'shop', label: 'Shop', meta: f === 'halcyon' ? 'instant' : `${shopOf(s, f, now).filter((g) => !g.locked && g.left).length}` },
+    { key: 'shop', label: 'Shop', meta: f === 'halcyon' ? 'instant' : `${shopOf(s, f).shelf.filter((x) => !x.locked && !x.sold).length}` },
     { key: 'work', label: 'Work', meta: `${offers}` },
     ...comm,
     ...piece,
@@ -3107,16 +3084,36 @@ function pieceMarkup(s, f) {
     <button type="button" class="btn small${st.ready && !why ? ' primary' : ''}" data-command="hub assemble ${f}" ${st.ready && !why ? '' : `disabled title="${esc(why)}"`}>${esc(verb)}</button></div>`;
 }
 const busyOf = (s) => (active(s) ? 'Finish the fight first' : '');
-// A faction's Shop: its own shelf as tiles, like Halcyon's store (Halcyon's Shop is its store).
-function shopMarkup(s, f, now) {
-  const F = FX[f];
-  const tiles = shopOf(s, f, now).map((g) => {
-    const can = !g.locked && g.left > 0 && s.server.credits >= g.price;
-    return `<li class="ptile stash${g.locked ? ' locked' : ''}"><b class="iname">${glyph(g.id === 'bootleg' ? 'firewall' : GLYPH_OF_GOOD[g.id] || 'crate', 'badge')}${esc(g.name)}</b><small>${esc(g.about)}</small>
-      <div class="ptile-acts"><span class="price">${g.price} credits</span><small class="qty">×${g.left}</small>${g.locked ? `<span class="tag dim">${esc(F.tiers[g.need])}</span>` : `<button type="button" class="btn small ${can ? 'primary' : ''}" data-command="buy ${f} ${g.id}" ${can ? '' : 'disabled'}>Buy</button>`}</div></li>`;
-  }).join('');
-  const prem = hubPremium(s, f).map((p) => premiumTile(s, f, p, `buy ${f} premium-${p.i}`)).join('');
-  return `<ul class="ptiles stash">${prem}${tiles}</ul>`;
+// A hub's Shop (store.mjs), one shape for every hub, top to bottom: the shelf (its clock), the chase line on its tier
+// rail, the tools, the codebases. Prices are credit icons; a locked thing shows the tier pips it needs, its tier on hover.
+const tierPips = (f, need) => `<span class="rpips" style="--fc:${FX[f].color}" title="${esc(`For ${FX[f].tiers[need]} and up (${REP_TIERS[need]} rep).`)}">${REP_TIERS.map((_, i) => `<i class="${i <= need ? 'on' : ''}"></i>`).join('')}</span>`;
+const credits = (n) => `<span class="price">${glyph('credits')}${Number(n).toLocaleString('en-US')}</span>`;
+const buyBtn = (s, cmd, why) => `<button type="button" class="btn small${why ? '' : ' primary'}" data-command="${esc(cmd)}" ${why ? `disabled title="${esc(why)}"` : ''}>Buy</button>`;
+const shortOf = (s, price) => (s.server.credits < price ? `It costs ${price} credits. You have ${s.server.credits}.` : '');
+// A protocol's tile: its glyph, name in its rarity colour, kind and level, its three biggest stats (▲ ▼ against what its
+// slot runs now) and implicit, then the price and Buy (Sold, or the pips it needs). The card on hover has the rest.
+function shopTile(s, f, { it, ref, price, need, locked, sold, cmd, name }) {
+  const out = loadOut(s, it), vs = loadSlot(s, it) >= 0, why = blockOf(s, price);
+  const top = Object.entries(it.stats).filter(([k]) => STATS[k]).sort(([a, x], [b, y]) => Math.abs(y) / STATS[b].base - Math.abs(x) / STATS[a].base).slice(0, 3);
+  const stats = top.map(([k, v]) => { const d = v - (out?.stats?.[k] || 0); return `<span class="silk-st${v < 0 ? ' neg' : ''}">${glyph(k)}<b>${v < 0 ? '−' : '+'}${fmtStat(k, Math.abs(v))}</b><span class="sr-only"> ${esc(STATS[k].name)}</span>${vs && Math.abs(d) > 1e-9 ? `<i class="${d > 0 ? 'up' : 'down'}">${d > 0 ? '▲' : '▼'}</i>` : ''}</span>`; }).join('');
+  const imp = it.implicit && IMPLICITS[it.implicit] ? `<span class="shop-imp" style="--fc:${FX[it.implicit].color}">${glyph('f-' + it.implicit)}${esc(IMPLICITS[it.implicit].name)}</span>` : '';
+  const acts = sold ? '<span class="tag dim">Sold</span>' : `${credits(price)}${locked ? tierPips(f, need) : buyBtn(s, cmd, why)}`;
+  return `<li class="ptile prem ${rarityClass(it)}${locked ? ' locked' : ''}${sold ? ' sold' : ''}" data-ptip="${esc(ref)}"><span class="prem-glyph">${glyphMarkup(it, 'sm')}</span><b class="iname ${rarityClass(it)}">${esc(name || itemLabel(it))}</b><small>${name ? '' : `${esc(rarityName(it))} `}${esc(SLOTS[groupOf(it)]?.name || '')} · Lv ${it.level}</small><span class="silk-sts">${stats}${imp}</span>
+      <div class="ptile-acts">${acts}</div></li>`;
+}
+export function shopMarkup(s, f) {
+  const shop = shopOf(s, f), mins = Math.ceil(shop.leftMs / 60000);
+  const head = (title, right = '', tip = '') => `<h3 class="shop-h"><span${tip ? ` title="${esc(tip)}"` : ''}>${esc(title)}</span>${right}</h3>`;
+  const clock = `<span class="shop-clock" title="${esc(`New stock in ${mins} ${mins === 1 ? 'minute' : 'minutes'} of play, and at each level.`)}">${glyph('clock')}${mins}m</span>`;
+  const shelf = shop.shelf.map((x) => shopTile(s, f, { it: x.it, ref: `p:${f}:${x.i}`, price: x.price, need: x.need, locked: x.locked, sold: x.sold, cmd: `buy ${f} shelf-${x.i}` })).join('');
+  const rail = [1, 2, 3].map((t) => { const xs = shop.chase.filter((c) => c.need === t); return xs.length ? `<div class="shop-col${repTier(s, f).i < t ? ' shut' : ''}" style="--n:${xs.length}"><span class="shop-tier">${tierPips(f, t)}<small>${esc(FX[f].tiers[t])}</small></span><ul class="ptiles">${xs.map((c) => shopTile(s, f, { it: chaseItem(s, f, c.id, seeded(7)), ref: `p:${f}:c-${c.id}`, price: c.price, need: c.need, locked: c.locked, cmd: `buy ${f} ${c.id}`, name: c.name })).join('')}</ul></div>` : ''; }).join('');
+  const tools = shop.tools.map((t) => `<li class="shop-tool" title="${esc(`${t.name}. ${t.about} You have ${t.have}.`)}">${glyph(t.id, 'badge')}<b>${esc(t.name)}</b>${credits(t.price)}${buyBtn(s, `buy ${f} ${t.id}`, shortOf(s, t.price))}</li>`).join('');
+  const cbs = shop.codebases.filter((x) => !x.known);
+  const codebases = cbs.map((x) => `<li class="shop-tool" title="${esc(`${PROGRAMS[x.id].name} codebase, ${PROGRAMS[x.id].weight}. ${PROGRAMS[x.id].rule}`)}">${glyph('module', 'badge')}<b>${esc(PROGRAMS[x.id].name)}</b>${credits(x.price)}${x.locked ? tierPips(f, x.need) : buyBtn(s, `buy ${f} codebase-${x.id}`, shortOf(s, x.price))}</li>`).join('');
+  return `<div class="shop">${head('Shelf', clock)}<ul class="ptiles shop-shelf">${shelf}</ul>
+    ${head(CHASE_LINE[f], '', `${FX[f].short}’s own protocols: a signature rule and its implicit, rolled at your level when you buy one.`)}<div class="shop-rail" style="grid-template-columns:${[1, 2, 3].map((t) => `${shop.chase.filter((c) => c.need === t).length}fr`).join(' ')}">${rail}</div>
+    ${head('Tools')}<ul class="shop-tools">${tools}</ul>
+    ${codebases ? `${head('Codebases')}<ul class="shop-tools">${codebases}</ul>` : ''}</div>`;
 }
 function workMarkup(s, f) {
   const offers = mailOffers(s).filter((o) => (o.faction || 'halcyon') === f);
@@ -3130,7 +3127,7 @@ function serversMarkup(s, f) {
 }
 const WINDOWS = {
   market: { title: 'Market', body: (s, f, now) => marketMarkup(s, f, now) },
-  shop: { title: 'Shop', body: (s, f, now) => (f === 'halcyon' ? storeMarkup(s, now) : shopMarkup(s, f, now)) },
+  shop: { title: 'Shop', body: (s, f) => shopMarkup(s, f) },
   work: { title: 'Work', body: (s, f) => workMarkup(s, f) },
   commission: { title: 'Commission', body: (s, f) => commissionMarkup(s, f), tip: () => 'Your commission pays your retainer, set by your rep with it, and is your stance. Switch at any hub you have found.' },
   receipts: { title: 'Receipts', body: (s, f) => receiptsMarkup(s, f), tip: (f) => `Kept receipts, handed in for ${FX[f].short}: +${RECEIPT.rep} rep each, and ${RECEIPT.perPart} make a part of its piece` },
@@ -3237,7 +3234,7 @@ function marketMarkup(s, f, now) {
   return `<div class="mk-tags"><span class="tag" title="${esc(cond.about)}">${esc(cond.name)}</span><span class="tag dim" title="${esc(ev.about)}">${esc(ev.name)}</span><span class="tag dim" title="File transfer">⇄ ${min} min</span>${shockTag(s, f)}</div>
     <div class="mk-table mk-wares">${head}${rows}</div>${flying}`;
 }
-const GLYPH_OF_GOOD = { relay: 'relay', cracker: 'cracker', injector: 'injector', signal: 'signal', repair: 'repair', cipher: 'cipher', worm: 'worm', kernel: 'kernel', exploit: 'exploit', salvage: 'salvage', crate: 'crate', blueprint: 'blueprint' };
+const GLYPH_OF_GOOD = { shelf: 'protocol', chase: 'protocol', relay: 'relay', cracker: 'cracker', injector: 'injector', signal: 'signal', repair: 'repair', cipher: 'cipher', worm: 'worm', kernel: 'kernel', exploit: 'exploit', salvage: 'salvage', crate: 'crate', blueprint: 'blueprint' };
 
 // Your first class, picked right after you log in: a choice of four on the screen, each with its emblem, its archetype,
 // its passive and Sync, the two skills it starts with and the subclasses it opens. Pick one, then start

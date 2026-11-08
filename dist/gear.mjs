@@ -217,8 +217,8 @@ export const IMPLICITS = {
 };
 export const IMPLICIT = { piece: 1.25 };
 export const implicitValue = (f, level, mult = 1) => { const v = IMPLICITS[f]?.value; return v ? Math.max(1, Math.round((v[0] + (v[1] - v[0]) * Math.min(1.25, (Math.max(1, level) - 1) / 39)) * mult)) : 0; };
-// An item with its faction's implicit (a rolled one; uniques, set pieces and Zero-days stay as they are).
-export const withImplicit = (it, f) => (IMPLICITS[f] && it && !it.unique && !it.zeroDay ? { ...it, implicit: f, implicitValue: implicitValue(f, it.level) } : it);
+// An item with its faction's implicit (a rolled one or a chase protocol; uniques, set pieces and found Zero-days stay as they are).
+export const withImplicit = (it, f) => (IMPLICITS[f] && it && !it.unique && (!it.zeroDay || ZERO_DAYS[it.zeroDay]?.chase) ? { ...it, implicit: f, implicitValue: implicitValue(f, it.level) } : it);
 // The implicit's effect blocks, its value in (a half block at half), or [] for an item with none.
 export const implicitFx = (it, v = it?.implicitValue) => (IMPLICITS[it?.implicit]?.fx || []).map((fx) => ({ ...fx, value: fx.half ? Math.max(1, Math.round(v / 2)) : v }));
 // The rules a roll can carry: the general ones, and a class's skill rules when the roll names that class.
@@ -270,7 +270,23 @@ export const ZERO_DAYS = {
   subrogation: { name: 'Subrogation', effect: 'When a part hits you, your next skill hit on it deals double damage.', chase: true, group: 'offense' },
   'total-loss': { name: 'Total Loss', effect: 'When you break a part, deals damage to every other part equal to 25% of the broken part\'s max Integrity. Armor absorbs it as usual, and a part this breaks sets it off again.', chase: true, group: 'offense' },
   actuarial: { name: 'Actuarial Model', effect: 'Veiled parts cannot hide their attack timers from you.', chase: true, group: 'utility' },
+  // The other hubs' chase lines (factions.mjs CHASE), each with its faction's implicit (chase.mjs runs their effects).
+  failover: { name: 'Failover', effect: 'Once each fight, a hit that would take you under 25% health leaves you at 25%.', chase: true, slot: 'proxy', faction: 'kestrel' },
+  escrow: { name: 'Escrow', effect: 'When you break a part, the damage past its last Integrity is held and added to your next hit.', chase: true, slot: 'exploit', faction: 'kestrel' },
+  'cold-aisle': { name: 'Cold Aisle', effect: 'After you break a part, your cooldowns run twice as fast for 2 cycles.', chase: true, slot: 'implant', faction: 'kestrel' },
+  'shell-company': { name: 'Shell Company', effect: 'The first hit each fight that would take you under 75% health deals half damage.', chase: true, slot: 'proxy', faction: 'glassjaw' },
+  'black-budget': { name: 'Black Budget', effect: 'Above 75% health, your critical strikes deal 50% more damage.', chase: true, slot: 'exploit', faction: 'glassjaw' },
+  'golden-parachute': { name: 'Golden Parachute', effect: 'Once each fight, falling under 25% health heals you to 50%.', chase: true, slot: 'implant', faction: 'glassjaw' },
+  'carrier-wave': { name: 'Carrier Wave', effect: 'Clean Signal keeps its stacks through the first hit each fight.', chase: true, slot: 'script', faction: 'lantern' },
+  'numbers-station': { name: 'Numbers Station', effect: 'At full Clean Signal, your next skill hit also hits every other part for the same damage, and spends the stacks.', chase: true, slot: 'exploit', faction: 'lantern' },
+  'dead-air': { name: 'Dead Air', effect: 'Each cycle no attack reaches you, blocked or not, your cooldowns tick one extra cycle.', chase: true, slot: 'proxy', faction: 'lantern' },
+  refrain: { name: 'Refrain', effect: 'Using the same skill twice in a row halves the second one\'s cooldown.', chase: true, slot: 'script', faction: 'nullchoir' },
+  round: { name: 'Round', effect: 'Chorus\'s second hit also lands on another part.', chase: true, slot: 'exploit', faction: 'nullchoir' },
+  crescendo: { name: 'Crescendo', effect: 'Each time you repeat the same skill in a row, it deals 15% more, up to 60%, until you use another.', chase: true, slot: 'implant', faction: 'nullchoir' },
 };
+// Each faction's name for its chase line (the rarity's name on the item; Halcyon's is Indemnified).
+export const CHASE_LINE = { halcyon: 'Indemnified', kestrel: 'Bonded', glassjaw: 'Off-book', lantern: 'Broadcast', nullchoir: 'Unsigned' };
+export const rarityName = (it) => (it?.rarity === 'indemnified' ? CHASE_LINE[ZERO_DAYS[it.zeroDay]?.faction || 'halcyon'] : RARITIES[it?.rarity]?.name || '');
 export const FOUND_ZERO_DAYS = Object.keys(ZERO_DAYS).filter((z) => !ZERO_DAYS[z].chase);
 
 // Drops: World of Warcraft's model, a kill at a time (WoW green = our blue, WoW blue = our yellow, epic = gold).
@@ -404,7 +420,7 @@ export function rollItem(rand, opts = {}) {
   if (rarity === 'zeroday' && !zeroDay) rarity = 'custom'; // a random gold is a unique: see uniqueItem
   if (zeroDay) rarity = ZERO_DAYS[zeroDay].chase ? 'indemnified' : 'zeroday';
   const r = RARITIES[rarity];
-  const zSlot = zeroDay ? OLD_SLOT[ZERO_DAYS[zeroDay].group] || 'script' : null;
+  const zSlot = zeroDay ? ZERO_DAYS[zeroDay].slot || OLD_SLOT[ZERO_DAYS[zeroDay].group] || 'script' : null;
   const slot = SLOTS[opts.slot] ? opts.slot : OLD_SLOT[opts.group] || (SLOTS[opts.group] ? opts.group : null) || zSlot || pick(rand, ['exploit', 'proxy', 'shell', 'script', ...(level >= 15 ? ['implant'] : [])]);
   const base = baseFor(slot, level) || baseFor(slot === 'implant' ? 'script' : slot, level) || 'proof-of-concept';
   const prim = primaries(base, level, r.mult, rand), stats = { ...prim };

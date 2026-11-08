@@ -124,16 +124,12 @@ Root still rewards cleared respawns on a server you hold, but no longer opens a 
 
 An old save keeps its count; its rank follows the new table, and its stash room goes.
 
-## Shops: guaranteed gear (decided, not built)
+## Shops: guaranteed gear (built, GAME_RULES *Shops*)
 
-- **Every hub's shelf is gear:** blue and yellow protocols at your level, with the faction's implicit. Code lots and
-  Exploits leave the shops (the markets trade them). The tools stay: relays, key crackers, trace injectors, Signal
-  patches, hot-swap kits.
-- **The shelf rerolls every 30 minutes of play** (`s.pace.ms`, the clock Fresh XP runs on), never on the wall clock:
-  nothing turns over while you're away.
-- **Prices are very high,** since the item is guaranteed: drops stay the main source of gear, the shelf the credit
-  sink. Rep tiers open the yellows. Every hub's shop has one shape (docs/factions-plan.md 5).
-- Open: the prices, set against `node econ.mjs`. An economy session, prototyped first.
+Every hub's Shop: tools, the shelf (blue and yellow protocols at your level with the faction's implicit, rerolling every
+30 minutes of play), the chase line by rep tier, codebases. Prices in hours of income at your level: shelf 3 / 6, chase
+8 / 12 / 20. Code lots, Exploits, the sealed item, LANTERN's bootleg filter and Halcyon's agency stock are cut. No
+re-tune for chase protocols (the designer's call: a bought one ages).
 
 ## Trading between players (needs a server)
 

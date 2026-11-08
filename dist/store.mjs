@@ -1,203 +1,151 @@
-// The Halcyon store. Opens with the contract board (boardOpen).
-//
-// Two shelves:
-//   Halcyon's own line, always there: relays and the chase protocols (gated by standing tier, and
-//     priced high: they're the credit sink). A chase protocol is Indemnified: bigger rolls and a
-//     signature effect nothing else has.
-//   Other agencies' stock, resold through Halcyon: four slots that turn over on their own uneven
-//     clocks. Each has a supplier, a price that drifts ±25% and a small quantity. This is where
-//     the exploring kit (key crackers, trace injectors, cheap relays), code and repairs turn up.
-//     (Daemons only come from invasions.) Above it, the premium shelf: two protocols rolled for
-//     your level, a step above what drops (PREMIUM; a hub's shop holds one, factions.mjs).
-import { ZERO_DAYS, rollItem, MATERIALS, seeded, SLOT_KINDS, STASH_CAP } from './gear.mjs';
+// Every hub's Shop, one shape (docs/factions-plan.md 5, docs/economy.md Shops). Opens with the contract board (boardOpen).
+//   Tools      relays, key crackers, trace injectors, Signal patches, hot-swap kits: always in stock, at fixed prices
+//   The shelf  four protocols at your level with the hub's implicit: two blues, a yellow at the second tier and one at
+//              the third (rep tiers, factions.mjs REP_TIERS). It rerolls every 30 minutes of play (s.pace.ms, never the
+//              wall clock), and a level up rerolls it; what you buy stays sold until then
+//   Chase line the hub's chase protocols (gear.mjs ZERO_DAYS chase, CHASE_LINE names it), at the second to fourth tiers,
+//              rolled at your level when you buy one, with the hub's implicit. Halcyon's is Indemnified
+//   Codebases  the programs it teaches (sockets.mjs CODEBASE_SHOPS), once each
+// Prices: the shelf and the chase line are hours of credits at your level (incomeAt): the credit sink, so drops stay the
+// main source of gear. Each tier above the first takes 5% off everything. Halcyon's Shop hands things over at once;
+// another hub's come by file transfer (market.mjs sendGood). Code lots, Exploits and salvage are the markets' wares.
+import { rollItem, seeded, SLOT_KINDS, STASH_CAP, ZERO_DAYS } from './gear.mjs';
 import { emit, warn, rand, hackerLevel, addItem, gainCode, maxSignal, hooks, classOf, slotCount } from './combat.mjs';
-import { tierIndex, TIERS, boardOpen, systemLetter } from './mail.mjs';
+import { boardOpen, systemLetter } from './mail.mjs';
 import { items } from './hidden.mjs';
-import { bestSell } from './market.mjs';
 import { shopCodebases, learnCodebase } from './sockets.mjs';
-import { FACTIONS } from './factions.mjs';
+import { FACTIONS, repTier, hubFound } from './factions.mjs';
+import { sendGood } from './market.mjs';
 
 const now = () => hooks.now?.() ?? Date.now();
-export const STORE = {
-  slots: 4,
-  slotLife: [40 * 60 * 1000, 150 * 60 * 1000], // each agency slot turns over somewhere in here
-  drift: 0.25, // prices move this much either way
+export const SHOP = {
+  discount: 0.05, // off everything, a rep tier above the first
+  rerollMs: 30 * 60000, // of play
+  shelf: [{ rarity: 'tuned', need: 0, hours: 3 }, { rarity: 'tuned', need: 0, hours: 3 }, { rarity: 'custom', need: 1, hours: 6 }, { rarity: 'custom', need: 2, hours: 6 }],
+  chaseHours: { 1: 8, 2: 12, 3: 20 }, // by the tier that opens it
 };
-export const AGENCIES = ['Kestrel Underwriting', 'Norrland Re', 'Blue Ledger Security', 'Mimir Actuarial', 'Quayside Claims', 'Vesper Risk'];
-
-// What a chase protocol costs per unit of its old Indemnity price (Indemnity retired in v48): 40
-// credits, rising with your level the way the rest of the store does.
-export const chaseRate = (L) => 40 * (1 + L / 15);
-const chase = (n) => (L) => Math.round((n * chaseRate(L)) / 10) * 10;
-// Halcyon's own line. tier: the Halcyon tier (index in TIERS) it takes to buy.
-export const LINE = [
-  { id: 'relay', name: 'Relay', about: 'Pings the unknown servers next to a server you have taken over, and flags a contract’s signal. Install it on a server you hold.', credits: (L) => 120 + 8 * L, tier: 0 },
-  { id: 'deductible', chase: true, credits: chase(30), tier: 1 },
-  { id: 'subrogation', chase: true, credits: chase(45), tier: 2 },
-  { id: 'actuarial', chase: true, credits: chase(45), tier: 2 },
-  { id: 'total-loss', chase: true, credits: chase(80), tier: 3 }, // the Preferred weapon
-];
-export const lineName = (x) => x.name || ZERO_DAYS[x.id].name;
-export const lineAbout = (x) => x.about || ZERO_DAYS[x.id].effect;
-
-// What agencies might have. credits: price at your level before drift.
-export const GOODS = {
-  relay: { name: 'Relay (refurbished)', about: 'A second-hand relay. It pings like a new one.', credits: (L) => 95 + 6 * L, qty: [1, 2] },
-  cracker: { name: 'Key cracker', about: 'Reveals the vault key of a server you have found. Use it from the server’s map card.', credits: (L) => 60 + 6 * L, qty: [1, 3] },
-  injector: { name: 'Trace injector', about: 'Adds 30% to the trace on an unknown server. Use it from the server’s map card.', credits: (L) => 80 + 6 * L, qty: [1, 2] },
-  signal: { name: 'Signal patch', about: 'Refills your Signal at once.', credits: (L) => 30 + 3 * L, qty: [2, 4] },
-  repair: { name: 'Hot-swap kit', about: 'Repairs your server’s Integrity at once.', credits: (L) => 40 + 5 * L, qty: [1, 3] },
-  cipher: { name: 'Cipher code lot', code: 'cipher', credits: (L) => 45 + 5 * L, qty: [1, 3] },
-  worm: { name: 'Worm code lot', code: 'worm', credits: (L) => 45 + 5 * L, qty: [1, 3] },
-  kernel: { name: 'Kernel code lot', code: 'kernel', credits: (L) => 45 + 5 * L, qty: [1, 3] },
-  exploit: { name: 'Exploit', about: 'Grants 1 Exploit. Medium socket programs take them.', credits: (L) => 150 + 10 * L, qty: [1, 1] },
-  crate: { name: 'Sealed item', about: 'Opens into a Tuned (blue) item at your level.', credits: (L) => 180 + 14 * L, qty: [1, 1] },
+export const TOOLS = {
+  relay: { name: 'Relay', about: 'Pings the unknown servers next to a server you have taken over, and flags a contract’s signal. Install it on a server you hold.', credits: (L) => 120 + 8 * L },
+  cracker: { name: 'Key cracker', about: 'Reveals the vault key of a server you have found. Use it from the server’s map card.', credits: (L) => 60 + 6 * L },
+  injector: { name: 'Trace injector', about: 'Adds 30% to the trace on an unknown server. Use it from the server’s map card.', credits: (L) => 80 + 6 * L },
+  signal: { name: 'Signal patch', about: 'Refills your Signal at once.', credits: (L) => 30 + 3 * L },
+  repair: { name: 'Hot-swap kit', about: 'Repairs your server’s Integrity at once.', credits: (L) => 40 + 5 * L },
 };
-// The daemon image's weight went to a second Sealed item.
-const WEIGHTS = { relay: 2, cracker: 3, injector: 3, signal: 3, repair: 2, cipher: 2, worm: 2, kernel: 2, exploit: 1, crate: 2 };
-export const codeAmount = (L) => 3 + Math.floor(L / 5);
-// What a lot of tradeable goods (code, an Exploit) costs now: its shelf price, but never
-// less than 10% over what the best hub market would pay for its contents.
-export function priceNow(s, id, price, L = hackerLevel(s)) {
-  const units = id === 'exploit' ? 1 : GOODS[id]?.code ? codeAmount(L) : 0;
-  return units ? Math.max(price, Math.ceil(bestSell(s, id) * units * 1.1)) : price;
-}
-export const goodsAbout = (g, L) => g.about || `Get ${codeAmount(L)} ${MATERIALS[g.code].name}.`;
-
-export const storeOf = (s) => (s.store ||= { slots: [], serial: 0 });
-const between = (s, [lo, hi]) => Math.round(lo + rand(s) * (hi - lo));
-
-function stockSlot(s, at) {
-  const st = storeOf(s), L = hackerLevel(s);
-  const keys = Object.keys(GOODS).filter((k) => (GOODS[k].tier || 0) <= tierIndex(s));
-  const total = keys.reduce((n, k) => n + WEIGHTS[k], 0);
-  let r = rand(s) * total, id = keys[0];
-  for (const k of keys) { r -= WEIGHTS[k]; if (r < 0) { id = k; break; } }
-  const g = GOODS[id];
-  const drift = 1 + (rand(s) * 2 - 1) * STORE.drift;
-  return { key: 's' + ++st.serial, id, agency: AGENCIES[Math.floor(rand(s) * AGENCIES.length)], price: Math.max(1, Math.round(g.credits(L) * drift)), drift, qty: between(s, g.qty), until: at + between(s, STORE.slotLife) };
-}
-
-// Called with the clock: expired slots are replaced, each on its own schedule.
-export function tickStore(s, at = now()) {
-  if (!boardOpen(s)) return;
-  const st = storeOf(s);
-  const before = st.slots.map((x) => x.key).join();
-  st.slots = st.slots.filter((x) => x.until > at && x.qty > 0);
-  while (st.slots.length < STORE.slots) st.slots.push(stockSlot(s, at));
-  if (before && st.slots.map((x) => x.key).join() !== before) emit(s, 'store', 'New stock at the Halcyon store.', { quiet: true });
-}
-
-export function buy(s, what) {
-  if (!boardOpen(s)) return warn(s, 'Halcyon’s store opens to contractors. Finish LOWLIGHT’s jobs first.');
-  const L = hackerLevel(s);
-  const line = LINE.find((x) => x.id === what);
-  if (line) {
-    if (tierIndex(s) < line.tier) return warn(s, `${lineName(line)} is for Halcyon ${TIERS[line.tier].name} and up.`);
-    const price = line.credits(L);
-    if (s.server.credits < price) return warn(s, `${lineName(line)} costs ${price} credits.`);
-    s.server.credits -= price;
-    if (line.chase) {
-      const item = rollItem(() => rand(s), { level: L, zeroDay: line.id });
-      emit(s, 'bought', `Bought ${lineName(line)} for ${price} credits.`, { item: line.id });
-      return addItem(s, item, 'Halcyon: ');
-    }
-    items(s)[line.id] = (items(s)[line.id] || 0) + 1;
-    return emit(s, 'bought', `Bought a ${lineName(line).toLowerCase()} for ${price} credits. You have ${items(s)[line.id]}.`, { item: line.id });
-  }
-  // Codebases (sockets.mjs): Halcyon's own, once each, by standing.
-  if (what?.startsWith('codebase-')) {
-    const cb = shopCodebases(s, 'halcyon', L).find((x) => x.id === what.slice(9));
-    if (!cb) return warn(s, 'Halcyon has no such codebase.');
-    if (cb.known) return warn(s, `You already know the ${cb.name}.`);
-    if (tierIndex(s) < cb.tier) return warn(s, `The ${cb.name} is for Halcyon ${TIERS[cb.tier].name} and up.`);
-    if (s.server.credits < cb.price) return warn(s, `The ${cb.name} costs ${cb.price} credits.`);
-    s.server.credits -= cb.price;
-    emit(s, 'bought', `Bought the ${cb.name} for ${cb.price} credits.`, { codebase: cb.id });
-    return learnCodebase(s, cb.id, 'Halcyon: ');
-  }
-  if (what?.startsWith('premium-')) return buyPremium(s, 'halcyon', Number(what.slice(8)));
-  const slot = storeOf(s).slots.find((x) => x.key === what);
-  if (!slot) return warn(s, 'That’s not on the shelf any more.');
-  const price = priceNow(s, slot.id, slot.price, L);
-  if (s.server.credits < price) return warn(s, `That costs ${price} credits.`);
-  const g = GOODS[slot.id];
-  s.server.credits -= price;
-  slot.qty--;
-  emit(s, 'bought', `Bought ${g.name} from ${slot.agency} for ${price} credits.`, { item: slot.id });
-  deliverGoods(s, slot.id, L);
-}
-
-// f: the faction that sold it (a hub's goods land through market.mjs): its sealed item carries its implicit (gear.mjs IMPLICITS).
-export function deliverGoods(s, id, L, f = 'halcyon') {
-  const g = GOODS[id];
-  if (['relay', 'cracker', 'injector'].includes(id)) { items(s)[id] = (items(s)[id] || 0) + 1; return; }
-  if (g.code) return gainCode(s, { [g.code]: codeAmount(L) }, 'Bought: ');
-  if (id === 'exploit') return gainCode(s, { exploit: 1 }, 'Bought: ');
-  if (GOODS[id]?.codebase) return learnCodebase(s, GOODS[id].codebase, 'Unsealed: ');
-  if (id === 'signal') { s.signal = maxSignal(s); if (s.run) s.run.integrity = s.run.max; return emit(s, 'heal', 'Signal patched to full.'); }
-  if (id === 'repair') { s.server.integrity = s.server.max; return emit(s, 'heal', `Server back to ${s.server.max}/${s.server.max}.`); }
-  if (id === 'crate') return addItem(s, rollItem(() => rand(s), { level: L, rarity: 'tuned', faction: f }), 'Unsealed: ');
-}
-
-// ---------- the premium shelf ----------
-// Protocols rolled for your level, a step above the drop curve: a Tuned (blue) two levels up, or a Custom (yellow) at
-// your level. Never a unique or a set piece. Priced at hours of credits at your level (incomeAt, measured with
-// econ.mjs). No clock: a new level brings new stock, and buying one puts a comparable one in its place.
-export const PREMIUM = {
-  halcyon: 2, hub: 1, // how many each shelf holds
-  kinds: [{ rarity: 'tuned', up: 2, hours: 3.5 }, { rarity: 'custom', up: 0, hours: 4.5 }],
+// Each hub's chase line: [protocol, the tier it opens at].
+export const CHASE = {
+  halcyon: [['deductible', 1], ['subrogation', 2], ['actuarial', 2], ['total-loss', 3]],
+  kestrel: [['failover', 1], ['escrow', 2], ['cold-aisle', 3]],
+  glassjaw: [['shell-company', 1], ['black-budget', 2], ['golden-parachute', 3]],
+  lantern: [['carrier-wave', 1], ['numbers-station', 2], ['dead-air', 3]],
+  nullchoir: [['refrain', 1], ['round', 2], ['crescendo', 3]],
 };
-// Credits an hour at level L, taking contracts (The economy): about 300 to level 10, 500–900 over the climb to 20, and
-// 40 more a level past it (econ.mjs: a level earns about three times the credits from 20 to 30 as from 10 to 20).
+// Credits an hour at level L, taking contracts: about 300 to level 10, 500–900 over the climb to 20, and 40 more a level
+// past it (econ.mjs: a level earns about three times the credits from 20 to 30 as from 10 to 20).
 export const incomeAt = (L) => (L <= 10 ? 300 : L <= 20 ? 300 + 60 * (L - 10) : 900 + 40 * (L - 20));
-const kindOf = (it) => PREMIUM.kinds.find((k) => k.rarity === it.rarity) || PREMIUM.kinds[0];
-// Its price at your level, before a hub's tier discount.
-export const premiumPrice = (it, L) => Math.round((kindOf(it).hours * incomeAt(L)) / 10) * 10;
+const round10 = (n) => Math.round(n / 10) * 10;
+const cut = (s, f, n) => round10(n * (1 - SHOP.discount * repTier(s, f).i));
+export const hoursPrice = (s, f, hours, L = hackerLevel(s)) => cut(s, f, hours * incomeAt(L));
+// v48's settling rate (indemnityRestore): 40 credits a unit of Indemnity, rising with your level.
+export const chaseRate = (L) => 40 * (1 + L / 15);
+
+// ---------- the shelf ----------
 const SELLERS = ['halcyon', 'glassjaw', 'kestrel', 'lantern', 'nullchoir'];
-// The shelf's dice: fixed by the save's seed, the seller, the level and how many it has sold (never the game's dice, so
-// looking at a shelf never changes anything else).
-const premiumDice = (s, f, L, n) => seeded((((s.seed || 1) * 7919 + (SELLERS.indexOf(f) + 1) * 104729 + L * 131 + n * 977) >>> 0) || 1);
-// k: its kind (PREMIUM.kinds): Halcyon's shelf holds one of each, a hub's one at random; a sold one's is the same again.
-function rollPremium(s, f, L, shelf, k = null) {
-  const r = premiumDice(s, f, L, shelf.n++);
-  const open = [...new Set(SLOT_KINDS.slice(0, slotCount(s)))], taken = shelf.items.map((x) => x.group);
-  const free = open.filter((g) => !taken.includes(g)), pool = free.length ? free : open;
-  k ||= f === 'halcyon' ? PREMIUM.kinds[shelf.items.length % PREMIUM.kinds.length] : PREMIUM.kinds[Math.floor(r() * PREMIUM.kinds.length)];
-  return rollItem(r, { level: L + k.up, rarity: k.rarity, slot: pool[Math.floor(r() * pool.length)], cls: classOf(s), faction: f });
+export const shelfWindow = (s) => Math.floor((s.pace?.ms || 0) / SHOP.rerollMs);
+export const shelfLeftMs = (s) => SHOP.rerollMs - ((s.pace?.ms || 0) % SHOP.rerollMs);
+// Its dice: the save's seed, the seller, the window and your level (never the game's dice: looking changes nothing else).
+const shelfDice = (s, f, w, L) => seeded((((s.seed || 1) * 7919 + (SELLERS.indexOf(f) + 1) * 104729 + L * 131 + w * 977) >>> 0) || 1);
+export function shelfOf(s, f) {
+  const L = hackerLevel(s), w = shelfWindow(s), box = (s.shelf ||= {});
+  if (box[f]?.window === w && box[f].level === L) return box[f].items;
+  const r = shelfDice(s, f, w, L), open = [...new Set(SLOT_KINDS.slice(0, slotCount(s)))];
+  const order = open.map((g) => [g, r()]).sort((a, b) => a[1] - b[1]).map(([g]) => g);
+  const items = SHOP.shelf.map((k, i) => ({ it: rollItem(r, { level: L, rarity: k.rarity, slot: order[i % order.length], cls: classOf(s), faction: f }), need: k.need, hours: k.hours, sold: false }));
+  box[f] = { window: w, level: L, items };
+  return items;
 }
-// A seller's premium protocols, rolled for your level (a new level re-rolls them).
-export function premiumOf(s, f = 'halcyon') {
-  const L = hackerLevel(s), box = (s.premium ||= {});
-  if (box[f]?.level !== L) box[f] = { level: L, n: 0, items: [] };
-  const shelf = box[f], want = f === 'halcyon' ? PREMIUM.halcyon : PREMIUM.hub;
-  while (shelf.items.length < want) shelf.items.push(rollPremium(s, f, L, shelf));
-  return shelf.items;
+
+// ---------- a hub's Shop, as the window shows it ----------
+export function shopOf(s, f) {
+  const L = hackerLevel(s), t = repTier(s, f).i;
+  return {
+    tools: Object.entries(TOOLS).map(([id, g]) => ({ id, name: g.name, about: g.about, price: cut(s, f, g.credits(L)), have: items(s)[id] || 0 })),
+    shelf: shelfOf(s, f).map((x, i) => ({ ...x, i, price: hoursPrice(s, f, x.hours, L), locked: t < x.need })),
+    chase: (CHASE[f] || []).map(([id, need]) => ({ id, need, name: ZERO_DAYS[id].name, about: ZERO_DAYS[id].effect, price: hoursPrice(s, f, SHOP.chaseHours[need], L), locked: t < need })),
+    codebases: shopCodebases(s, f, L).map((x) => ({ ...x, price: cut(s, f, x.price), locked: t < x.tier, need: x.tier })),
+    leftMs: shelfLeftMs(s),
+  };
 }
-// Why you can't buy it now (or null): price is what it costs here.
-export function premiumBlock(s, price) {
+// What a chase protocol comes out as when you buy it: at your level, with its hub's implicit.
+export const chaseItem = (s, f, id, r = () => rand(s)) => rollItem(r, { level: hackerLevel(s), zeroDay: id, faction: f });
+
+// Why an item can't be bought now (or null).
+function itemBlock(s, price) {
   if ((s.stash || []).length >= STASH_CAP) return `Your stash is full (${STASH_CAP}).`;
   if (s.server.credits < price) return `It costs ${price} credits. You have ${s.server.credits}.`;
   return null;
 }
-// Halcyon's: straight into your stash. A hub's comes by transfer (factions.mjs buyFrom); either way a comparable one
-// takes its place on the shelf.
-export function takePremium(s, f, i) {
-  const shelf = s.premium?.[f], it = shelf?.items[i];
-  if (!it) return null;
-  shelf.items.splice(i, 1);
-  shelf.items.splice(i, 0, rollPremium(s, f, shelf.level, shelf, kindOf(it))); // a comparable one in its place
-  return it;
+export const blockOf = itemBlock;
+
+// buy <what> at hub f. what: a tool's id, shelf-<n>, a chase protocol's id, or codebase-<id>.
+export function buyAt(s, f, what, at = now()) {
+  if (!FACTIONS[f]) return warn(s, 'No such hub.');
+  if (!boardOpen(s)) return warn(s, `${FACTIONS[f].short}’s Shop opens to contractors. Finish LOWLIGHT’s jobs first.`);
+  if (!hubFound(s, f)) return warn(s, `${FACTIONS[f].short}’s hub isn’t on your map yet.`);
+  const shop = shopOf(s, f), tiers = FACTIONS[f].tiers, here = f === 'halcyon', L = hackerLevel(s);
+  const pay = (price, name) => { s.server.credits -= price; if (here) emit(s, 'bought', `Bought ${name} for ${price} credits.`, { item: what }); };
+  const tool = shop.tools.find((x) => x.id === what);
+  if (tool) {
+    if (s.server.credits < tool.price) return warn(s, `${tool.name} costs ${tool.price} credits.`);
+    pay(tool.price, `a ${tool.name.toLowerCase()}`);
+    return here ? deliverGoods(s, what, L) : sendGood(s, f, what, tool.name, tool.price, L, at);
+  }
+  const shelf = what?.startsWith('shelf-') ? shop.shelf[Number(what.slice(6))] : null;
+  if (shelf) {
+    if (shelf.sold) return warn(s, 'Sold. The shelf restocks soon.');
+    if (shelf.locked) return warn(s, `${shelf.it.name} is for ${tiers[shelf.need]} and up.`);
+    const why = itemBlock(s, shelf.price);
+    if (why) return warn(s, why);
+    shelfOf(s, f)[shelf.i].sold = true;
+    pay(shelf.price, shelf.it.name);
+    return here ? addItem(s, shelf.it, 'Halcyon: ') : sendGood(s, f, 'shelf', shelf.it.name, shelf.price, L, at, shelf.it);
+  }
+  const ch = shop.chase.find((x) => x.id === what);
+  if (ch) {
+    if (ch.locked) return warn(s, `${ch.name} is for ${tiers[ch.need]} and up.`);
+    const why = itemBlock(s, ch.price);
+    if (why) return warn(s, why);
+    const it = chaseItem(s, f, what);
+    pay(ch.price, ch.name);
+    return here ? addItem(s, it, 'Halcyon: ') : sendGood(s, f, 'chase', ch.name, ch.price, L, at, it);
+  }
+  const cb = what?.startsWith('codebase-') ? shop.codebases.find((x) => x.id === what.slice(9)) : null;
+  if (cb) {
+    if (cb.known) return warn(s, `You already know the ${cb.name}.`);
+    if (cb.locked) return warn(s, `The ${cb.name} is for ${tiers[cb.need]} and up.`);
+    if (s.server.credits < cb.price) return warn(s, `The ${cb.name} costs ${cb.price} credits.`);
+    pay(cb.price, `the ${cb.name}`);
+    return here ? learnCodebase(s, cb.id, 'Halcyon: ') : sendGood(s, f, `cb-${cb.id}`, cb.name, cb.price, L, at);
+  }
+  return warn(s, `${FACTIONS[f].short} doesn’t sell that.`);
 }
-function buyPremium(s, f, i) {
-  const L = hackerLevel(s), it = premiumOf(s, f)[i];
-  if (!it) return warn(s, 'That’s not on the shelf any more.');
-  const price = premiumPrice(it, L), why = premiumBlock(s, price);
-  if (why) return warn(s, why);
-  s.server.credits -= price;
-  takePremium(s, f, i);
-  emit(s, 'bought', `Bought ${it.name} from Halcyon for ${price} credits.`, { item: 'premium' });
-  return addItem(s, it, 'Halcyon: ');
+// buy <what>: Halcyon's Shop.
+export const buy = (s, what) => buyAt(s, 'halcyon', what);
+
+// A tool, delivered. The cut goods (code lots, Exploits, the sealed item) still land for a transfer bought before v61.
+export function deliverGoods(s, id, L, f = 'halcyon') {
+  if (['relay', 'cracker', 'injector'].includes(id)) { items(s)[id] = (items(s)[id] || 0) + 1; return; }
+  if (id === 'signal') { s.signal = maxSignal(s); if (s.run) s.run.integrity = s.run.max; return emit(s, 'heal', 'Signal patched to full.'); }
+  if (id === 'repair') { s.server.integrity = s.server.max; return emit(s, 'heal', `Server back to ${s.server.max}/${s.server.max}.`); }
+  if (['cipher', 'worm', 'kernel'].includes(id)) return gainCode(s, { [id]: 3 + Math.floor(L / 5) }, 'Bought: ');
+  if (id === 'exploit') return gainCode(s, { exploit: 1 }, 'Bought: ');
+  if (id === 'crate') return addItem(s, rollItem(() => rand(s), { level: L, rarity: 'tuned', faction: f }), 'Unsealed: ');
+}
+
+// v61: every hub's Shop has one shape. The agency stock, the premium shelves and the hubs' stock counts go (keyed on the
+// fields, so it runs once); nothing in them was yours.
+export function shopRestore(s) {
+  delete s.store; delete s.premium;
+  for (const h of Object.values(s.hubs || {})) { delete h.stock; delete h.restockAt; }
 }
 
 // v60: payloads, held hubs and their swarms are cut (docs/factions-plan.md 10). A save that holds a hub is paid out once:

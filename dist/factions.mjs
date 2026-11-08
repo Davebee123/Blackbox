@@ -7,10 +7,8 @@
 // contracts a faction posts, and the receipts you stamp for it (receipts.mjs). You hold one
 // commission (s.commission, absent = Halcyon): the faction whose retainer you draw, and your stance.
 import { emit, warn, rand, hackerLevel, hooks, active } from './combat.mjs';
-import { GOODS, codeAmount, priceNow, premiumOf, premiumPrice, premiumBlock, takePremium } from './store.mjs';
+import { buyAt } from './store.mjs';
 import { seeded } from './gear.mjs';
-import { sendGood } from './market.mjs';
-import { CODEBASE_SHOPS, PROGRAMS, SOCKET, knowsCodebase } from './sockets.mjs';
 
 const now = () => hooks.now?.() ?? Date.now();
 
@@ -23,7 +21,6 @@ export const FACTIONS = {
     tiers: ['Probation', 'Contractor', 'Trusted', 'Preferred'],
     allies: ['kestrel'], rivals: ['glassjaw', 'nullchoir'],
     hub: { name: 'HALCYON-CLEARING-01', level: 1 },
-    shop: [], // Halcyon's goods are its store (store.mjs): instant, unlike every other hub's
   },
   glassjaw: {
     name: 'GLASSJAW', short: 'GLASSJAW', kind: 'corp', color: '#e07bd0', start: 5,
@@ -31,7 +28,6 @@ export const FACTIONS = {
     tiers: ['Unknown', 'Asset', 'Partner', 'Inner circle'],
     allies: [], rivals: ['halcyon', 'lantern'],
     hub: { name: 'GLASSJAW-ANNEX-07', level: 8 },
-    shop: ['cracker', 'crate', 'cb-siphon'],
   },
   kestrel: {
     name: 'Kestrel Underwriting', short: 'Kestrel', kind: 'corp', color: '#8fd46b', start: 10,
@@ -39,7 +35,6 @@ export const FACTIONS = {
     tiers: ['Prospect', 'Client', 'Account', 'Key account'],
     allies: ['halcyon'], rivals: ['nullchoir'],
     hub: { name: 'KESTREL-DC-NORTH', level: 4 },
-    shop: ['relay', 'injector', 'crate', 'cb-snare'],
   },
   lantern: {
     name: 'LANTERN', short: 'LANTERN', kind: 'crew', color: '#ffb347', start: 10,
@@ -47,7 +42,6 @@ export const FACTIONS = {
     tiers: ['Listener', 'Regular', 'Confidant', 'Signal'],
     allies: ['nullchoir'], rivals: ['glassjaw'],
     hub: { name: 'LANTERN-RELAY-88', level: 6 },
-    shop: ['bootleg', 'cracker', 'injector', 'cb-post', 'cb-tunnel'],
   },
   nullchoir: {
     name: 'NULL CHOIR', short: 'NULL CHOIR', kind: 'crew', color: '#ff6f91', start: 10,
@@ -55,17 +49,9 @@ export const FACTIONS = {
     tiers: ['Outsider', 'Fellow', 'Choir', 'Cantor'],
     allies: ['lantern'], rivals: ['halcyon', 'kestrel'],
     hub: { name: 'NULLCHOIR-SQUAT-13', level: 12 },
-    shop: ['crate', 'cracker', 'cb-cron'],
   },
 };
 export const FACTION_IDS = Object.keys(FACTIONS);
-// Goods only factions sell (the rest are store.mjs GOODS).
-export const FACTION_GOODS = {
-  bootleg: { name: 'Bootleg filter', about: 'A sealed firewall filter at your level, Stock or better.', credits: (L) => 90 + 8 * L },
-  // Codebases (sockets.mjs CODEBASE_SHOPS): once each, at a rep tier. Halcyon's are in its store.
-  ...Object.fromEntries(Object.entries(CODEBASE_SHOPS).filter(([f]) => f !== 'halcyon').flatMap(([, list]) => list.map(([id, tier]) => [`cb-${id}`, { name: `${PROGRAMS[id].name} codebase`, about: PROGRAMS[id].rule, credits: SOCKET.price[PROGRAMS[id].weight], tier, codebase: id }]))),
-};
-
 // ---------- rep ----------
 export const rep = (s, f) => { const st = (s.standing ||= { halcyon: FACTIONS.halcyon.start }); if (st[f] == null) st[f] = FACTIONS[f]?.start ?? 10; return st[f]; };
 export const repTier = (s, f) => { const r = rep(s, f); let i = 0; REP_TIERS.forEach((m, k) => { if (r >= m) i = k; }); return { i, name: FACTIONS[f].tiers[i], next: REP_TIERS[i + 1] ?? null, min: REP_TIERS[i] }; };
@@ -134,57 +120,14 @@ export function hubTrace(s, f, amount, why = '') {
 export function hubsOf(s) {
   if (!(s.mail?.boardOpen || (s.mail?.story || 0) >= 99)) return [];
   s.hubs ||= {};
-  for (const f of FACTION_IDS) s.hubs[f] ||= { id: 'hub-' + f, faction: f, stock: {}, restockAt: 0 };
+  for (const f of FACTION_IDS) s.hubs[f] ||= { id: 'hub-' + f, faction: f };
   return FACTION_IDS.filter((f) => hubFound(s, f)).map((f) => ({ ...s.hubs[f], ...FACTIONS[f].hub, faction: f }));
 }
 export const hubOf = (s, id) => hubsOf(s).find((h) => h.id === id || h.faction === id) || null;
 
-// ---------- a hub's goods ----------
-// Part of its market (market.mjs): the specialty goods only it sells, a few of each in stock,
-// refilled every hour. Buy-only, and they come by file transfer like everything bought at a hub.
-// Better tiers buy cheaper (−5% a tier above the first) and open the rarer goods.
-// (Code, Exploits and salvage aren't goods: they're the market's wares, bought and sold.)
-export const SHOP = { restockMs: 60 * 60000, qty: 3, discount: 0.05 };
-const goodOf = (id) => GOODS[id] || FACTION_GOODS[id];
-export function shopOf(s, f, at = now()) {
-  const h = (s.hubs ||= {})[f] ||= { id: 'hub-' + f, faction: f, stock: {}, restockAt: 0 };
-  if (at >= (h.restockAt || 0)) { h.stock = Object.fromEntries(FACTIONS[f].shop.map((id) => [id, SHOP.qty])); h.restockAt = at + SHOP.restockMs; }
-  const L = Math.max(hackerLevel(s), FACTIONS[f].hub.level), t = repTier(s, f);
-  return FACTIONS[f].shop.map((id) => {
-    const g = goodOf(id), need = g.tier || 0;
-    const price = priceNow(s, id, Math.round(g.credits(L) * (1 - SHOP.discount * t.i)), L);
-    const known = g.codebase && knowsCodebase(s, g.codebase); // a codebase you know: nothing to sell you
-    return { id, name: g.name, about: g.about || (g.code ? `${codeAmount(L)} of its code.` : ''), price, left: known ? 0 : g.codebase ? Math.min(1, h.stock[id] ?? 1) : h.stock[id] || 0, known, locked: t.i < need, need, codebase: g.codebase || null };
-  });
-}
-// Its premium protocol (store.mjs premiumOf): a step above what drops, with this faction's implicit, at the shop's
-// price for your tier. [{ it, i, price }].
-export function hubPremium(s, f) {
-  const t = repTier(s, f), L = hackerLevel(s);
-  return premiumOf(s, f).map((it, i) => ({ it, i, price: Math.round(premiumPrice(it, L) * (1 - SHOP.discount * t.i)) }));
-}
-// deliver: store.mjs's delivery for shared goods; faction goods handled here.
-export function buyFrom(s, f, id, at = now()) {
-  if (!FACTIONS[f] || f === 'halcyon') return warn(s, 'Halcyon sells through its store.');
-  if (!hubOf(s, f)) return warn(s, 'Faction hubs open with the contract board.');
-  if (id.startsWith('premium-')) {
-    const p = hubPremium(s, f)[Number(id.slice(8))];
-    if (!p) return warn(s, 'That’s not on the shelf any more.');
-    const why = premiumBlock(s, p.price);
-    if (why) return warn(s, why);
-    s.server.credits -= p.price;
-    takePremium(s, f, p.i);
-    return sendGood(s, f, 'premium', p.it.name, p.price, hackerLevel(s), at, p.it);
-  }
-  const item = shopOf(s, f, at).find((x) => x.id === id);
-  if (!item) return warn(s, `${FACTIONS[f].short} doesn’t sell that.`);
-  if (item.locked) return warn(s, `${item.name} is for ${FACTIONS[f].tiers[item.need]} and up.`);
-  if (item.left <= 0) return warn(s, `${item.name} is sold out. More within the hour.`);
-  if (s.server.credits < item.price) return warn(s, `${item.name} costs ${item.price} credits.`);
-  s.server.credits -= item.price;
-  s.hubs[f].stock[id]--;
-  sendGood(s, f, id, item.name, item.price, Math.max(hackerLevel(s), FACTIONS[f].hub.level), at);
-}
+// ---------- a hub's Shop ----------
+// Every hub's has one shape (store.mjs): tools, the shelf, its chase line, its codebases. buy <faction> <what>.
+export const buyFrom = (s, f, id, at = now()) => buyAt(s, f, id, at);
 
 // ---------- faction servers ----------
 // A few of the servers you trace (about one in eight; never your first two, never rogue ones) belong

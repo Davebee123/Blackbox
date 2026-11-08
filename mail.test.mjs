@@ -8,7 +8,7 @@ import { CONFIG } from './dist/data.mjs';
 import { tickNetwork } from './dist/invasion.mjs';
 import { boardOpen, MAIL, STORY_LENGTH, standing, tierOf, openContracts, offers, heldCount, ready, tickMail, retainer, offer } from './dist/mail.mjs';
 import { HIDDEN, hiddenNodes, flagged, items } from './dist/hidden.mjs';
-import { storeOf, LINE, chaseRate } from './dist/store.mjs';
+import { shopOf, chaseRate } from './dist/store.mjs';
 CONFIG.baseCrit = 0;
 CONFIG.enemyCrit = 0;
 CONFIG.misses = false;
@@ -274,37 +274,6 @@ test('a vault’s trace record puts part of a trace on one of the ? servers link
   assert.deepEqual(hiddenNodes(s).filter((n) => before.includes(n.id)).map((n) => n.lead).sort((a, b) => b - a)[0], HIDDEN.recordLead);
 });
 
-test('the store: Halcyon’s line, chase protocols for credits by tier, and agency stock that turns over', () => {
-  const s = contractor();
-  tickServices(s, T0);
-  const st = storeOf(s);
-  assert.equal(st.slots.length, 4);
-  assert.ok(st.slots.every((x) => x.agency && x.price > 0 && x.qty > 0));
-  s.server.credits = 10000;
-  command(s, 'buy relay');
-  assert.equal(items(s).relay, 1);
-  // chase: Contractor can buy Deductible, not Subrogation; it costs a lot of credits
-  const price = LINE.find((x) => x.id === 'deductible').credits(hackerLevel(s));
-  assert.ok(price >= 30 * 40, `about 40 credits per old Indemnity (${price})`);
-  s.server.credits = price - 1;
-  assert.match(command(s, 'buy deductible').at(-1).message, new RegExp(`costs ${price} credits`));
-  s.server.credits = price + 10000;
-  command(s, 'buy deductible');
-  assert.equal(s.server.credits, 10000);
-  const it = s.stash.at(-1);
-  assert.equal(it.zeroDay, 'deductible');
-  assert.equal(it.rarity, 'indemnified');
-  assert.match(command(s, 'buy subrogation').at(-1).message, /Trusted/);
-  // agency stock
-  const slot = st.slots[0];
-  command(s, 'buy ' + slot.key);
-  assert.ok(slot.qty >= 0);
-  const keys = st.slots.map((x) => x.key).join();
-  tickServices(s, T0 + 3 * 60 * 60 * 1000);
-  assert.notEqual(st.slots.map((x) => x.key).join(), keys, 'the shelves turn over');
-  assert.equal(LINE.find((x) => x.id === 'deductible').tier, 1, 'Contractor, the second tier');
-});
-
 test('Deductible: the first attack that lands each fight does nothing', () => {
   const s = contractor();
   s.server.credits = 1e6;
@@ -402,11 +371,10 @@ test('Indemnity is retired: no contract on the board pays it, or extra credits i
     assert.ok(!o || !('indemnity' in o.reward), `${o?.type} pays no Indemnity`);
   }
   assert.ok(!('indemnity' in s));
-  // A chase protocol is credits, by tier, and climbs with your level like the rest of the store.
-  const dd = LINE.find((x) => x.id === 'deductible'), tl = LINE.find((x) => x.id === 'total-loss');
-  assert.ok(LINE.every((x) => typeof x.credits === 'function' && !('indemnity' in x)));
-  assert.ok(Math.abs(dd.credits(1) - 30 * 40) <= 30 * 40 * 0.1, `${dd.credits(1)} is about 40× 30`);
-  assert.ok(tl.credits(30) > tl.credits(10) && tl.credits(10) > dd.credits(10));
+  // A chase protocol is credits, by tier, and climbs with your level (store.mjs shopOf).
+  const at = (L) => { command(s, `developer level ${L}`); return shopOf(s, 'halcyon').chase; };
+  const [lo, hi] = [at(10), at(30)];
+  assert.ok(hi.at(-1).price > lo.at(-1).price && lo.at(-1).price > lo[0].price);
 });
 
 test('an older save’s Indemnity becomes credits once, with a letter from Halcyon', () => {

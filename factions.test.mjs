@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, addLocation } from './dist/combat.mjs';
 import { offer, mailCommand } from './dist/mail.mjs';
-import { FACTIONS, FACTION_IDS, rep, repTier, changeRep, hubsOf, shopOf, buyFrom, claimServer, strikeServer, REP_FLOOR, commissionOf, stanceLine } from './dist/factions.mjs';
+import { shopOf } from './dist/store.mjs';
+import { FACTIONS, FACTION_IDS, rep, repTier, changeRep, hubsOf, buyFrom, claimServer, strikeServer, REP_FLOOR, commissionOf, stanceLine } from './dist/factions.mjs';
 
 const open = () => { const s = fresh(); s.tutorialCompleted = true; command(s, 'mail'); s.mail.boardOpen = true; s.hubFound = { glassjaw: true, kestrel: true, lantern: true, nullchoir: true }; s.server.credits = 5000; return s; };
 
@@ -31,24 +32,22 @@ test('rep ripples: helping one costs you with its rivals and warms its allies', 
   assert.equal(repTier(s, 'nullchoir').i, 0);
 });
 
-test('a hub’s goods: tier-gated, limited stock, delivered by file transfer; never shut by rep', async () => {
+test('a hub’s Shop: tier-gated, delivered by file transfer; never shut by rep', async () => {
   const { transfersOf, tickMarket } = await import('./dist/market.mjs');
   const { items } = await import('./dist/hidden.mjs');
   const s = open();
-  assert.ok(!shopOf(s, 'kestrel').some((g) => g.id === 'daemon') && !shopOf(s, 'nullchoir').some((g) => g.id === 'daemon'), 'no daemon images: only invasions drop daemons');
-  assert.ok(shopOf(s, 'kestrel').find((g) => g.id === 'cb-snare').locked, 'the Snare codebase takes the second tier');
-  assert.ok(!shopOf(s, 'kestrel').some((g) => ['cipher', 'worm', 'kernel', 'exploit', 'salvage', 'signal', 'repair'].includes(g.id)), 'wares trade on the market; heals are Halcyon’s');
+  const ids = (f) => shopOf(s, f).tools.map((t) => t.id);
+  assert.ok(!ids('kestrel').includes('daemon') && !ids('nullchoir').includes('daemon'), 'no daemon images: only invasions drop daemons');
+  assert.ok(shopOf(s, 'kestrel').codebases.find((x) => x.id === 'snare').locked, 'the Snare codebase takes the second tier');
+  assert.ok(!ids('kestrel').some((id) => ['cipher', 'worm', 'kernel', 'exploit', 'salvage'].includes(id)), 'wares trade on the market');
   const c0 = s.server.credits, r0 = items(s).relay || 0;
   buyFrom(s, 'kestrel', 'relay');
   assert.ok(s.server.credits < c0);
-  assert.equal(shopOf(s, 'kestrel').find((g) => g.id === 'relay').left, 2);
   assert.equal(items(s).relay || 0, r0, 'not yet: it’s in transfer');
   const t = transfersOf(s).at(-1);
   assert.equal(t.side, 'good');
   tickMarket(s, t.landsAt);
   assert.equal(items(s).relay, r0 + 1, 'landed');
-  command(s, 'market buy kestrel injector');
-  assert.equal(transfersOf(s).at(-1).good, 'injector', 'market buy takes goods too');
   s.standing.kestrel = 1;
   const c1 = s.server.credits;
   command(s, 'buy kestrel relay');
