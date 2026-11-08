@@ -232,6 +232,8 @@ export function createChipFx() {
   };
 }
 
+// The themes with a strike of their own: the lash (lash.mjs) stays out of their hits, so the eye stays on the chip.
+export const STRIKES = new Set(['zap', 'lock', 'frost']);
 // A themed chip going off (app.js fire): its strike, in screen px, from the chip's rect r to your bar at `to`, in the
 // threat's red. Pulse Node: a forked bolt that strobes into your bar, a burst and sparks there. Encryptor: its padlocks
 // arc to your bar with short trails and clamp on. Cold Store: its frost shatters (the chip's ghost still flies).

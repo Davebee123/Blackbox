@@ -111,7 +111,7 @@ teal, violet or a threat's red.
   Node arcs, Encryptor rising padlocks, Cipher Block falling hex, C2 Node rings from its icon, Cold Store frost from the
   corners, Eraser a dither its playhead eats. When one goes off (`chipStrike`), Pulse Node strikes your bar with a
   forked bolt, the Encryptor's padlocks fly over and clamp on, and Cold Store's frost shatters, in place of the chip's
-  ghost (beside it for the frost); the lash plays as well. A packed part shows none. Screen effects off, Motion off or reduced motion: none; subtle: fainter.
+  ghost (beside it for the frost); their hits throw no lash, so the eye stays on the chip. A packed part shows none. Screen effects off, Motion off or reduced motion: none; subtle: fainter.
 - **Hits land on the thing hit** (hitfx.mjs): the part's cell flashes and a burst of 1s and 0s flies out (amber yours,
   violet a crewmate's); a crit bursts gold-white; a hit spent on ◆ floats *◆ ABSORBED* in steel; a miss stamps MISS. A
   status on you shows big, then flies into the Status column. A broken part dissolves into rising 1s and 0s.

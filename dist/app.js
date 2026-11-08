@@ -1,7 +1,7 @@
 // BLACKBOX browser shell: modules, command line, clock, save, sound.
 import { CONFIG, ABILITIES, LOADOUT, FAMILIES, BOSSES, xpToNext, spikeOf, SUBS, SUBCLASS, defaultSub, partGenesFor } from './data.mjs';
 const FAMILY_NAMES = Object.fromEntries(Object.entries(FAMILIES).map(([k, f]) => [k, f.name]));
-import { selectEncounter, partKey, parse, validate, hooks, stepCycle, keyMap, hackerOf, classOf, cycleLength, fresh, restore, command, advance, active, alive, part, intents, suggestions, idleRegen, tickServices, topUpCost, defender, maxSignal, inSync } from './combat.mjs';
+import { selectEncounter, partKey, parse, validate, hooks, stepCycle, keyMap, hackerOf, classOf, cycleLength, fresh, restore, command, advance, active, alive, part, intents, suggestions, idleRegen, tickServices, topUpCost, defender, maxSignal, inSync, packed } from './combat.mjs';
 import * as V from './view.mjs';
 import { subPrompted, levelUpPreview, barKeys, hackerLevel as heroLevel, virusIntegrity } from './combat.mjs';
 import { luCalm } from './levelup-view.mjs';
@@ -39,7 +39,7 @@ import { mountFxPlaytest, abilityOfKey } from './abilityfx-playtest.mjs';
 import { plan as dmgPlan, queueAfter, absorbOf, armorFloat, missFloat } from './dmgfx.mjs';
 import { recapMarkup } from './recap.mjs';
 import { createLash } from './lash.mjs';
-import { createChipFx, chipStrike } from './chipfx.mjs';
+import { createChipFx, chipStrike, chipTheme, STRIKES } from './chipfx.mjs';
 import { online, simOn } from './presence.mjs';
 import { matesOf } from './crew.mjs';
 import { tickPlay } from './progression.mjs';
@@ -666,6 +666,7 @@ function lashFrom(id) {
   return r?.width ? { x: r.left + r.width * 0.5, y: r.top + r.height / 2, chars: (part(campaign, id)?.name || '').replace(/\W/g, '') + '#%*+=' } : null;
 }
 function lashAt(e, mode, frac = 0, heavy = false) {
+  if (mode !== 'tick' && STRIKES.has(chipTheme(part(campaign, e.source)?.name)) && !packed(campaign, campaign.encounter?.virus, part(campaign, e.source))) return; // its chip strikes instead (chipfx.mjs)
   const full = fxLevel() === 'full'; // the lash never shakes the screen: a big hit tears the backdrop instead (screenfx.mjs)
   lash.lash({ from: mode === 'tick' ? null : lashFrom(e.source), bar: document.querySelector(MINE + ' .bigbar'), power: Math.min(1, frac * 5), heavy, mode, full });
 }
