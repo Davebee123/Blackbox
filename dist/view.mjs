@@ -2183,6 +2183,7 @@ function railOf(s, ev, l) {
   if (ev.card === 'outbreak') return { name: `${FAMILIES[ev.family]?.name || ''} ×2`, where: 'code drops' };
   if (ev.card === 'darknet') return { name: UNIQUES[ev.unique]?.name || '?', where: `${ev.credits}c · ${ev.net}`, verb: 'closes' };
   if (ev.card === 'spotter') return { name: ev.name, tag: lv, where: 'your wall' };
+  if (ev.card === 'call') return { name: `${FX[ev.owner].short} · Defend`, tag: lv, where };
   return { name: ev.name, tag: lv, where };
 }
 // The map's left column: the threat rail, then the contract tracker under it (the selected server's contract lit).

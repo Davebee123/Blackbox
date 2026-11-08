@@ -7,10 +7,10 @@
 // to the wall clock (--ph), so a redraw doesn't restart it; Motion off or reduced motion keeps the still look.
 import { glyph } from './glyphs.mjs';
 import { glyphMarkup } from './protocol-glyphs.mjs';
-import { FACTIONS as FX } from './factions.mjs';
+import { FACTIONS as FX, commissionOf } from './factions.mjs';
 import { FAMILIES, CONFIG } from './data.mjs';
 import { UNIQUES, hackerLevel, active, materialsOf } from './combat.mjs';
-import { CARDS, BLIPS, blipsAt, blipText, historyOf, HUNT, huntPay, hopLeft, feudShare, feudPay, feudGood, eventText, courierPay, bountyPay, FEUD, CHAIN, counterPay, returnPay, zeroCode, causeText } from './events.mjs';
+import { CALL, callRep, CARDS, BLIPS, blipsAt, blipText, historyOf, HUNT, huntPay, hopLeft, feudShare, feudPay, feudGood, eventText, courierPay, bountyPay, FEUD, CHAIN, counterPay, returnPay, zeroCode, causeText } from './events.mjs';
 import { SCOUTED, KINDS as INV_KINDS } from './invasion.mjs';
 import { WARES } from './market.mjs';
 import { codeOf } from './gear.mjs';
@@ -18,7 +18,7 @@ import { esc, levelTag, partPips } from './view.mjs';
 import { pieceState, pieceOf } from './faction-gear.mjs';
 
 // Each card's icon (the strip, the threat list, the pager), and a family's: its code's glyph.
-export const EVENT_ICON = { courier: 'upload', bounty: 'bounty', choir: 'echo', outbreak: 'spider', leak: 'cracker', darknet: 'item', feud: 'mirror', hunt: 'kill', shock: 'sync', spotter: 'watchman', counter: 'claw', returning: 'bounty', lantern: 'upload', zero: 'accuracy' };
+export const EVENT_ICON = { courier: 'upload', bounty: 'bounty', choir: 'echo', outbreak: 'spider', leak: 'cracker', darknet: 'item', feud: 'mirror', hunt: 'kill', shock: 'sync', spotter: 'watchman', call: 'firewall', counter: 'claw', returning: 'bounty', lantern: 'upload', zero: 'accuracy' };
 export const FAM_GLYPH = { ransomware: 'cipher', worm: 'worm', ghostroot: 'kernel', cryptominer: 'kernel', wiper: 'scrubber', botnet: 'spider', logicbomb: 'clock' };
 const WARE_GLYPH = { cipher: 'cipher', worm: 'worm', kernel: 'kernel', salvage: 'salvage', exploit: 'exploit' };
 const mins = (ms) => Math.max(1, Math.ceil(ms / 60000));
@@ -154,6 +154,18 @@ function counter(s, ev) {
     body: `${blow}${target(s, ev, { cls: 'runner', face: glyph(FAM_GLYPH[ev.family] || 'claw'), tags: `<span class="tag">elite</span><small class="evc-at">${esc(to)}</small>`, pay: `${credits(counterPay(ev.level))}${repOf(ev.side, CHAIN.counter.rep)}`, tip: `Fight ${ev.name}, level ${ev.level}. ${CARDS.counter.reward(ev)}.` })}`,
   });
 }
+// Defence call: the attacker's mark, an arc onto the owner's server (its mark on it), and the invader's tile. A hold's rep
+// with the owner; what a reboot costs once you answer, muted. Your commission's call is tagged.
+function call(s, ev) {
+  const at = placeOf(s, ev.loc)?.name || 'A server', o = FX[ev.owner].short, cost = callRep(s, ev, CALL.reboot);
+  const blow = `<div class="cx-blow" style="--fc:${FX[ev.by].color};--yc:${FX[ev.owner].color}" title="${esc(`${FX[ev.by].short} is hitting ${at}, ${o}'s server`)}"><span class="cx-from">${glyph('f-' + ev.by)}</span><i class="cx-arc"></i><span class="cx-to">${glyph('firewall')}<i class="cx-hit"></i><span class="cx-mine">${glyph('f-' + ev.owner)}</span></span></div>`;
+  const risk = `<span class="evc-rw cl-risk${ev.fought ? ' on' : ''}" title="${esc(ev.fought ? `You answered: if ${at} reboots first, ${o} −${cost}.` : `Ignoring it costs nothing. Answer it and let ${at} reboot: ${o} −${cost}.`)}">${glyph('integrity')}<b>−${cost}</b></span>`;
+  const comm = commissionOf(s) === ev.owner ? `<span class="tag you" title="Your commission's call: it pays and costs half again">${glyph('f-' + ev.owner)}</span>` : '';
+  return shell(s, ev, {
+    sub: `${fmark(ev.owner)}${comm}`, ec: FX[ev.owner].color, cls: ev.fought ? 'chosen' : '',
+    body: `${blow}${target(s, ev, { cls: 'runner', face: glyph(FAM_GLYPH[ev.family] || 'claw'), tags: `<span class="tag">elite</span><small class="evc-at">${esc(at)}</small>`, pay: `${repOf(ev.owner, callRep(s, ev, CALL.hold))}${risk}`, tip: `Defend ${at}: fight ${ev.name}, level ${ev.level}, at its wall. ${CARDS.call.reward(ev, s)}.` })}`,
+  });
+}
 // Returning bounty: the wanted tile again, with a last-chance mark: back once, at the level and pay it got away with.
 function returning(s, ev) {
   return shell(s, ev, {
@@ -179,7 +191,7 @@ function zero(s, ev) {
   });
 }
 
-const BUILD = { feud, hunt, bounty, choir, courier, spotter, shock, outbreak, darknet: darknetCard, counter, returning, lantern, zero };
+const BUILD = { feud, hunt, bounty, choir, courier, spotter, shock, outbreak, darknet: darknetCard, call, counter, returning, lantern, zero };
 // An event's card, or '' for one with none (a leak is shown on its server: leakCard).
 export const eventCard = (s, ev) => BUILD[ev.card]?.(s, ev) || '';
 

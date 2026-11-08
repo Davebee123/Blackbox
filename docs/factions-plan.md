@@ -1,6 +1,6 @@
 # Factions plan: patrons, boards, receipts
 
-**Status.** 1–4, 7 and 10 built lean (GAME_RULES *Commission*, *Contracts*, *Factions*). Not yet: floor 5's Commission buttons
+**Status.** 1–4, 7, 8 and 10 built lean (GAME_RULES *Commission*, *Contracts*, *Factions*). Not yet: floor 5's Commission buttons
 (its transmissions aren't built), wick's letter at INIT's fall and the ACTUARY line (not built), per-faction board text,
 and 5. 7–10 added after the designer's first look: 7, 8 and 10 decided, 9's numbers to confirm. One session (it changes the economy and the factions; nothing else on
 those systems runs beside it). The shops (docs/economy.md *Shops*) follow it, since their yellows open by rep.
@@ -89,8 +89,8 @@ card (*Kestrel: KDC-04 under attack · Defend*).
   owner, the usual ripple cooling the attacker. It reboots while you hold the call: **−rep** with the owner.
 - **Your commission's calls carry more:** a bigger + for a hold, a bigger − for a reboot. Your patron counts on you;
   you chose that when you took the commission.
-- Numbers to set at build: the call's window, the + and − (a contract's 5–8 is the yardstick), the commission's
-  multiplier, how often calls come.
+- Built with: a 10-minute window, +6 a hold, −4 a reboot (no ripple), the commission ×1.5 (+9, −6), weight 1 in the
+  event deck (a feud's) from level 6, on faction servers at your level + 2 or under (events.mjs `CALL`).
 - Lean build: the call card, the invader at the faction server's wall (the invasion engine aimed at a server you don't
   own), the rule, a unit test, GAME_RULES *Events* and *Factions*.
 

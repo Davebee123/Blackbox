@@ -13,6 +13,7 @@
 //   hunt      A named elite that hops server to server every 5 minutes, a level tougher and better paid each hop.
 //   shock     One hub's price for one ware jumps ×2.5 (or crashes ×0.4) for 15 minutes (market.mjs outsideMult).
 //   spotter   A spotter watches your wall. Kill it at home and the next invasion comes weaker, its kind known (invasion.mjs).
+//   call      A faction server you've found is under attack from its owner's rival. Ignore it, or answer (Defend) and hold it.
 //
 // Chains (docs/director.md section 2): what you did with one card deals the next, a follow-up with a link to its cause.
 //   counter   after a feud you won a fight in: the side you fought sends a runner at a server you hold.
@@ -39,7 +40,7 @@ import { LOOT, rollItem, seeded, codeOf, vaultCode, MATERIALS } from './gear.mjs
 import { openFarm } from './rogue.mjs';
 import { eventMult, noteEvent, leanPick, darknetPick, darknetBuy, nameNative, homeName, NETWORK } from './network.mjs';
 import { isPiece } from './sets.mjs';
-import { FACTIONS, hubsOf, changeRep, hubFound, FACTION_FAMILY, RIPPLE } from './factions.mjs';
+import { FACTIONS, hubsOf, changeRep, hubFound, FACTION_FAMILY, RIPPLE, commissionOf } from './factions.mjs';
 import { addFilter, rollFilter } from './filters.mjs';
 import { invasionsLive, scoutNext, SCOUTED } from './invasion.mjs';
 import { gainPart, pieceOf } from './faction-gear.mjs';
@@ -67,6 +68,13 @@ export const FEUD = { from: 8, ms: 20 * 60000, start: 0.05, driftMs: 60000, drif
 export const HUNT = { from: 6, hopMs: 5 * 60000, hops: 3, cap: 3, mult: [1, 1.3, 1.6, 2], rep: 2 };
 export const SHOCK = { from: 5, ms: 15 * 60000, up: 2.5, down: 0.4, crash: 1 / 3, wares: ['cipher', 'worm', 'kernel', 'salvage'] }; // not Exploits: the wall's and the programs' currency stays steady
 export const SCOUT_EVENT = { from: 6, ms: 10 * 60000 };
+// CALL (docs/factions-plan.md 8), from level 6: a faction server you've found (still its owner's, at your level + 2 or under)
+// is hit by one of its owner's rivals, an elite sized like a feud's runner, for ms of logged-on time. Ignoring it costs
+// nothing. Your first fight answers it: beat the invader before the clock runs out and the owner pays +hold (the usual
+// ripples); the clock runs out while you hold the call and the server reboots, −reboot with the owner (no ripple). Your
+// commission's calls count ×commission both ways.
+export const CALL = { from: 6, ms: 10 * 60000, hold: 6, reboot: 4, commission: 1.5 };
+export const callRep = (s, ev, n) => Math.round(n * (commissionOf(s) === ev.owner ? CALL.commission : 1));
 // Chains: at most max follow-ups pending, one per kind, each dropped quietly if it isn't dealt within expireMs of logged-on
 // time. COUNTER: delay after the feud, a runner sized like a feud's, pay × a bounty's credits, +rep with your side. RETURNING:
 // delay after the escape; it comes back once, at the level and pay it had when it got away (letting one go never pays). LANTERN: after `at` couriers, +rep. ZERO:
@@ -210,6 +218,17 @@ export const CARDS = {
       if (feudShare(ev, f) >= 1) { ev.over = true; return `You beat ${beat} and won the feud for ${FACTIONS[f].short}: ${feudPay(ev.level)} credits, a protocol, ${feudBonus(s, ev)}.`; }
       return `You beat ${beat}: ${feudPay(ev.level)} credits and a protocol. ${FACTIONS[f].short} holds ${Math.round(feudShare(ev, f) * 100)}%.`;
     },
+  },
+  // A faction server under attack (CALL above). The fight is the invader at that server's wall; fighting answers the call.
+  call: {
+    name: 'Defence call', weight: 1, ms: CALL.ms, fight: true, from: CALL.from,
+    where: (s) => (hackerLevel(s) >= CALL.from ? callSpots(s) : []),
+    make: (s, loc) => { const owner = loc.faction, by = pick(s, FACTIONS[owner].rivals); return { owner, by, family: FACTION_FAMILY[by], level: placeLevel(s, loc), name: runnerName(s, by), elite: true, eliteHp: FEUD.hp }; },
+    text: (ev, where) => `${FACTIONS[ev.owner].short}: ${where} under attack from ${FACTIONS[ev.by].short}. Defend it before it reboots.`,
+    reward: (ev, s) => `Hold it: ${FACTIONS[ev.owner].short} +${callRep(s, ev, CALL.hold)}. Answered and lost: ${FACTIONS[ev.owner].short} −${callRep(s, ev, CALL.reboot)}`,
+    timeout: (s, ev, where) => { if (ev.fought) changeRep(s, ev.owner, -callRep(s, ev, CALL.reboot), `${where} rebooted on your watch`, { ripple: false }); return null; },
+    gone: (ev, where) => `${where} rebooted: ${FACTIONS[ev.by].short} got through.`,
+    won: (s, ev) => { const where = placeName(s, ev.loc); changeRep(s, ev.owner, callRep(s, ev, CALL.hold), `You held ${where} for ${FACTIONS[ev.owner].short}`); return `You beat ${ev.name}: ${where} holds.`; },
   },
   // A named elite that moves: every HUNT.hopMs it hops to another of your servers (its path is set when it's dealt, so
   // the map shows where it goes next), a level up each time and better paid. Kestrel are the hunters.
@@ -369,6 +388,8 @@ const places = (s) => {
   const near = mine.filter((l) => (l.level || 1) <= L + 2);
   return near.length ? near : [mine.reduce((a, b) => ((b.level || 1) < (a.level || 1) ? b : a))];
 };
+// Defence calls land on faction servers you've found, wherever they are, at your level + 2 or under.
+const callSpots = (s) => traced(s).filter((l) => FACTIONS[l.faction] && (l.level || 1) <= hackerLevel(s) + 2);
 // The level an event takes: its server's; one with no server (a spotter at your wall) your floor's servers' lowest
 // such level, else yours.
 const placeLevel = (s, loc) => { const ls = places(s).map((l) => l.level || 1); return Math.min(CONFIG.maxMobLevel, Math.max(1, loc?.level || (ls.length ? Math.min(...ls) : hackerLevel(s)))); };
@@ -570,7 +591,7 @@ export function eventCommand(s, text) {
   ev.fought = true; // a hunt you fought and let go got away (chains)
   s.gate = gate && gate !== s.encounter ? gate : null;
   s.encounter.event = ev.id;
-  emit(s, 'jack-in', `Intercepting ${foe.name}.`, { location: ev.loc });
+  emit(s, 'jack-in', ev.card === 'call' ? `Defending ${placeName(s, ev.loc)}: ${foe.name} at its wall.` : `Intercepting ${foe.name}.`, { location: ev.loc });
   command(s, 'engage');
 }
 

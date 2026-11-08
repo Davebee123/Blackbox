@@ -2917,6 +2917,9 @@ details.map-pick { pointer-events: auto; }
 /* Rewards: an icon and a number. */
 .evc-rw { display: inline-flex; align-items: center; gap: 3px; font: 600 12px var(--mono); color: var(--text); white-space: nowrap; cursor: help; }
 .evc-rw > .glyph { width: 13px; height: 13px; margin: 0; color: var(--amber); }
+.evc-rw.cl-risk { opacity: 0.45; } /* a defence call's cost: muted until you answer, then a threat */
+.evc-rw.cl-risk.on { opacity: 1; color: var(--hot); }
+.evc-rw.cl-risk.on > .glyph { color: var(--hot); }
 .evc-rw.r-tuned > .glyph { color: var(--r-tuned); } .evc-rw.r-custom > .glyph { color: var(--r-custom); } .evc-rw.r-zeroday > .glyph { color: var(--r-zeroday); }
 .evc-fm { display: inline-flex; color: var(--fc); } .evc-fm .glyph { width: 13px; height: 13px; margin: 0; }
 .evc-sub .evc-fm .glyph { width: 15px; height: 15px; }

@@ -2089,7 +2089,8 @@ first.
   located and `connect <faction>` reaches it. Until then you can't trade there or take its work.
 - **Rep** runs 1 to 100 for every faction: four tiers at 1/25/50/75, shown as four pips, each faction naming its own in
   the tooltip (Kestrel's: Prospect, Client, Account, Key account). Nothing drives it under 1, so no hub shuts. It comes
-  from contracts the faction posts, receipts you stamp for it and feuds you fight for it, and never moves on its own. Everyone starts at 10
+  from contracts the faction posts, receipts you stamp for it, feuds you fight for it and its defence calls you answer
+  (*Events*), and never moves on its own. Everyone starts at 10
   (GLASSJAW 5).
 - **Ripples:** whatever rep you gain or lose with a faction, its rivals move half the other way and its allies a quarter
   the same way, never under 1. A feud has no ripple: it never costs rep with anyone.
@@ -2125,6 +2126,7 @@ Each goes to the pager and to #net; missing one costs nothing. The director roll
 | **Bounty hunt** (1.5) | a traced server, from 6, two or more traced | 20 min | A named elite that hops to another of your servers every 5 minutes, 3 hops, a level each | 80 + 15L credits ×1, ×1.3, ×1.6, ×2 by hops made, +2 Kestrel rep |
 | **Market shock** (1) | a hub you can trade at, from 5 | 15 min | One ware's price ×2.5 there, or one time in three ×0.4 | No fight |
 | **Spotter** (1) | your wall, from 6 | 10 min | A spotter watching your wall: *Fight* it | The next invasion comes 2 levels weaker, and you know where from and what kind |
+| **Defence call** (1) | a faction server you've found, from 6, at your level + 2 or under | 10 min | Its owner's rival hits it (an elite of the rival's family at the server's level). Ignoring it costs nothing. *Defend* (`event fight <id>`) answers it: beat the invader at its wall before the clock runs out | Held: +6 rep with the owner (the ripples too). Answered and rebooted: −4 with the owner, no ripple. Your commission's calls ×1.5 (+9, −6) |
 
 **An event takes its place's level, never yours.** Your level picks the floor: a fight event lands on a traced server
 on your floor at your level + 2 or under (the floor's lowest when none is), at that server's level; a spotter at your
@@ -2134,7 +2136,7 @@ Your network's two favoured cards come up 2.5 times as often, and couriers', bou
 its lean. A server with an event wears an antenna on the map, and its card shows the event as a small panel: a strip
 with its icon, name and a ring of time left, then its picture with the action built in (the card's sentence is the
 strip's tooltip). An event you're fighting waits for you; losing leaves it up. `developer event [courier|bounty|choir|
-outbreak|leak|darknet|feud|hunt|shock|spotter]`.
+outbreak|leak|darknet|feud|hunt|shock|spotter|call]`.
 
 ### Chains
 
