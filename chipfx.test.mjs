@@ -54,4 +54,8 @@ test('a shared theme marks every part that wears it', () => {
   assert.equal(chipTheme('Recycle Bin'), 'crumble');
   assert.equal(chipTheme('Obfuscator.exe'), 'scramble');
   assert.equal(chipTheme('Opportunist'), 'thorn');
+  assert.equal(chipTheme('Idle Timer'), 'clock');
+  assert.equal(chipTheme('Jitter'), 'strobe');
+  assert.equal(chipTheme('Fan-in'), 'copy');
+  assert.equal(chipTheme('Tripwire'), 'scan');
 });

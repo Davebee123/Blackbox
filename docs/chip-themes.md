@@ -15,15 +15,15 @@ docs/ui.md "Themed chips".
 | crumble | glowing cracks branch in, hot tips, falling chips, dead pixels | cracks flash, glass shards tumble onto the bar, it cracks | Bad Block, Zip Bomb, Degausser, Recycle Bin, Junker |
 | scramble | a sparse glyph field, a decoding wave, rows that tear | glyphs swarm to a band on the bar, decode and tear | Scrambler, Obfuscator, Prism, Packer, Decoy, Sandbox |
 | thorn | hooked thorns spring from a bramble on both edges | a volley drives in, sticks and quivers, sparks | Thorns, Punisher, Predator, Opportunist |
+| clock | a dial steps at +1; in Now its hand sweeps the cycle, a ruler fills along the foot | the hand winds, shoots to the bar, ticks ratchet out, a stop and a chime | Idle Timer, Countdown, Backlog, Accumulator, Trigger |
+| strobe | light columns fire in chases and bursts, a flare on the big ones | three pulses chase across the bar, cones of light, the bar flickers | Strobe, Repeater, Jitter, Amplifier, Stunner |
+| copy | a copier's light sweeps, outline copies lift off and sink back | four outlines fly over, stack on the bar, collapse into it | Replicator, Mirror, Fan-in, Spare, Mimic, Swap |
+| scan | a laser line sweeps a hidden dot grid, brackets snap on finds | a laser fan rakes the bar, data bits rise, brackets snap | Scraper, Prober, Harvester, Leaker, Feeder, Tripwire |
 
 ## Proposed, not built
 
 | Theme | Inside the chip | Strike | Parts |
 |---|---|---|---|
-| clock | ticks along the foot light up with the cycle | a hand swings to the bar, ticks fire across it, a stop | Idle Timer, Countdown, Backlog, Accumulator, Trigger |
-| strobe | bars flick on and off | three beams drop onto the bar, three flashes | Strobe, Repeater, Jitter, Amplifier, Stunner |
-| copy | outlines peel off and drift behind | outlines fly over and stack onto the bar | Replicator, Mirror, Fan-in, Spare, Mimic, Swap |
-| scan | a beam sweeps the chip | a cone rakes along the bar | Scraper, Prober, Harvester, Leaker, Feeder, Tripwire |
 | plate | plates slide in and click shut | a plate slams down on the bar | Front End, Bodyguard, Mutex, Lockbox, Limiter |
 | ledger | digits drift up | numbers fly into the bar | Buffer, Cooler, Damper |
 | mask | a mask flickers between two faces | the mask flies over and flips | Turncoat, Backtrace, C&C |

@@ -363,6 +363,56 @@ svg.cfx-bolt { left: 0; top: 0; width: 100vw; height: 100vh; overflow: visible; 
 .cfx-th-streakc { fill: var(--bright); opacity: 0.6; }
 .glint .cfx-sh-body { fill: var(--bright); fill-opacity: 0.6; stroke-width: 1.2; }
 .glint .cfx-sh-halo { opacity: 0.7; }
+/* clock */
+.cfx-ck-ruler line { stroke: currentColor; stroke-width: 1; opacity: 0.35; }
+.cfx-ck-ruler line.on { stroke: var(--bright); opacity: 0.8; }
+.cfx-ck-ruler line.head { stroke: var(--bright); stroke-width: 1.6; opacity: 1; filter: drop-shadow(0 0 2px currentColor); }
+.cfx-ck-face { fill: none; stroke: currentColor; stroke-width: 1; filter: url(#cfx-soft); }
+.cfx-ck-fan { fill: currentColor; opacity: 0.3; filter: url(#cfx-soft); }
+.cfx-ck-ticks line { stroke: currentColor; stroke-width: 1.1; stroke-linecap: round; }
+.cfx-ck-ticks line.on, .cfx-ck-ticks.lit line { stroke: var(--bright); }
+.cfx-ck-halo, .cfx-ck-body, .cfx-ck-core { stroke-linecap: round; }
+.cfx-ck-halo { stroke: currentColor; opacity: 0.6; filter: url(#cfx-bloom); }
+.cfx-ck-body { stroke: currentColor; }
+.cfx-ck-core { stroke: var(--bright); }
+.cfx-ck-hub { fill: var(--bright); }
+.cfx-ck-stop { fill: var(--bright); filter: url(#cfx-bloom); }
+/* strobe */
+.cfx-sb { top: 0; height: 100%; background: linear-gradient(90deg, transparent, currentColor 30%, var(--bright) 50%, currentColor 70%, transparent); box-shadow: 0 0 8px currentColor; opacity: 0; }
+.cfx-sb.far { filter: blur(1px); box-shadow: none; }
+.cfx-sb-streak { top: calc(50% - 4px); width: 100%; height: 8px; background: linear-gradient(transparent, currentColor 40%, var(--bright) 50%, currentColor 60%, transparent); filter: blur(0.6px); opacity: 0; }
+.cfx-sb-chip { fill: var(--bright); opacity: 0.35; }
+.cfx-sb-cone { fill: currentColor; opacity: 0.45; filter: url(#cfx-bloom); }
+.cfx-sb-core { stroke: var(--bright); stroke-linecap: round; filter: drop-shadow(0 0 3px currentColor); }
+.cfx-sb-hit { fill: var(--bright); opacity: 0.85; }
+.cfx-sb-flare { fill: var(--bright); filter: drop-shadow(0 0 4px currentColor) drop-shadow(0 0 8px currentColor); }
+.cfx-sb-glow { fill: currentColor; opacity: 0.6; filter: url(#cfx-bloom); }
+/* copy */
+span.cfx-cp-wake { --x: 0px; width: 100%; height: 100%; background: radial-gradient(circle, currentColor 0.7px, transparent 1.1px) 0 0 / 4px 4px; opacity: 0; -webkit-mask-image: linear-gradient(90deg, transparent calc(var(--x) - 70px), #000 var(--x), transparent var(--x)); mask-image: linear-gradient(90deg, transparent calc(var(--x) - 70px), #000 var(--x), transparent var(--x)); }
+rect.cfx-cp-wake { fill: currentColor; filter: url(#cfx-soft); }
+.cfx-cp-lamp { top: 0; height: 100%; width: 24px; margin-left: -12px; background: linear-gradient(90deg, transparent, currentColor 38%, var(--bright) 49%, var(--bright) 51%, currentColor 62%, transparent); filter: blur(0.4px); }
+.cfx-cp-copy { border: 1px solid var(--bright); border-radius: 3px; box-shadow: 0 0 4px currentColor, inset 0 0 6px currentColor; opacity: 0; transform-origin: 50% 50%; }
+.cfx-cp-copy.far { border-color: currentColor; box-shadow: none; filter: blur(0.6px); }
+.cfx-cp-lampr { fill: var(--bright); filter: url(#cfx-bloom); }
+.cfx-cp-ghost { fill: none; stroke: currentColor; stroke-width: 1; }
+.cfx-cp-halo { fill: currentColor; fill-opacity: 0.12; stroke: currentColor; stroke-width: 3; stroke-opacity: 0.5; filter: url(#cfx-bloom); }
+.cfx-cp-edge { fill: none; stroke: var(--bright); stroke-width: 1; }
+.cfx-cp-edge.hot { stroke-width: 2; filter: drop-shadow(0 0 3px var(--bright)); }
+/* scan */
+.cfx-sn-dots circle { fill: var(--bright); }
+.cfx-sn-beam { top: 0; height: 100%; width: 1.5px; margin-left: -0.75px; background: var(--bright); box-shadow: 0 0 4px var(--bright), 0 0 9px currentColor; transform-origin: 0.75px 50%; }
+.cfx-sn-beam i { position: absolute; top: 0; right: 1px; width: 26px; height: 100%; background: linear-gradient(90deg, transparent, currentColor); opacity: 0.55; }
+.cfx-sn-tgt { width: 10px; height: 10px; --c: var(--bright); --a: 3px; --t: 1px; filter: drop-shadow(0 0 2px currentColor);
+  background: linear-gradient(var(--c), var(--c)) 0 0 / var(--a) var(--t) no-repeat, linear-gradient(var(--c), var(--c)) 0 0 / var(--t) var(--a) no-repeat,
+    linear-gradient(var(--c), var(--c)) 100% 0 / var(--a) var(--t) no-repeat, linear-gradient(var(--c), var(--c)) 100% 0 / var(--t) var(--a) no-repeat,
+    linear-gradient(var(--c), var(--c)) 0 100% / var(--a) var(--t) no-repeat, linear-gradient(var(--c), var(--c)) 0 100% / var(--t) var(--a) no-repeat,
+    linear-gradient(var(--c), var(--c)) 100% 100% / var(--a) var(--t) no-repeat, linear-gradient(var(--c), var(--c)) 100% 100% / var(--t) var(--a) no-repeat; }
+.cfx-sn-tgt.big { --a: 5px; --t: 1.5px; }
+.cfx-sn-emit { fill: var(--bright); filter: drop-shadow(0 0 3px currentColor) drop-shadow(0 0 6px currentColor); }
+.cfx-sn-cone { fill: currentColor; opacity: 0.4; filter: url(#cfx-bloom); }
+.cfx-sn-edge { stroke: var(--bright); stroke-width: 0.6; opacity: 0.6; }
+.cfx-sn-core { stroke: var(--bright); stroke-width: 1.2; filter: drop-shadow(0 0 2px currentColor); }
+.cfx-sn-rake { filter: drop-shadow(0 0 3px currentColor); }
 @media (prefers-reduced-motion: reduce) { .fxin { display: none; } }
 .crypt-line { position: relative; height: 4px; margin: 0 0 6px; border-radius: 2px; background: repeating-linear-gradient(135deg, var(--hot) 0 4px, transparent 4px 8px); opacity: 0.7; cursor: help; }
 /* Hover: it opens up into the full chip for a moment (over the cell, nothing moves). */

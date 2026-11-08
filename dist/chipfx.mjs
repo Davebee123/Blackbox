@@ -12,6 +12,10 @@ export const CHIP_THEMES = {
   'Bad Block': 'crumble', 'Zip Bomb': 'crumble', Degausser: 'crumble', 'Recycle Bin': 'crumble', Junker: 'crumble',
   Scrambler: 'scramble', Obfuscator: 'scramble', Prism: 'scramble', Packer: 'scramble', Decoy: 'scramble', Sandbox: 'scramble',
   Thorns: 'thorn', Punisher: 'thorn', Predator: 'thorn', Opportunist: 'thorn',
+  'Idle Timer': 'clock', Countdown: 'clock', Backlog: 'clock', Accumulator: 'clock', Trigger: 'clock',
+  Strobe: 'strobe', Repeater: 'strobe', Jitter: 'strobe', Amplifier: 'strobe', Stunner: 'strobe',
+  Replicator: 'copy', Mirror: 'copy', 'Fan-in': 'copy', Spare: 'copy', Mimic: 'copy', Swap: 'copy',
+  Scraper: 'scan', Prober: 'scan', Harvester: 'scan', Leaker: 'scan', Feeder: 'scan', Tripwire: 'scan',
 };
 export const chipTheme = (name) => CHIP_THEMES[String(name || '').replace(/\.exe$/i, '').trim()] || null;
 // How hard a chip plays, by its column (0 is Now) and the ms left in the cycle: [intensity, opacity].
@@ -156,6 +160,16 @@ function ribbon(h, w0) {
   });
   return pts([...L, ...R.reverse()]);
 }
+
+// ---------- clock, strobe, copy, scan ----------
+const easeOutBack = (k) => 1 + 2.70158 * (k - 1) ** 3 + 1.70158 * (k - 1) ** 2;
+const easeInOut = (k) => (k < 0.5 ? 2 * k * k : 1 - 2 * (1 - k) ** 2);
+const polar = (cx, cy, R, deg) => [cx + Math.sin(deg * Math.PI / 180) * R, cy - Math.cos(deg * Math.PI / 180) * R];
+// A pie slice of a dial from 12 o'clock clockwise to deg.
+const fanD = (cx, cy, R, a0, a1) => { const [x0, y0] = polar(cx, cy, R, a0), [x1, y1] = polar(cx, cy, R, a1); return `M${f1(cx)},${f1(cy)} L${f1(x0)},${f1(y0)} A${f1(R)},${f1(R)} 0 ${a1 - a0 > 180 ? 1 : 0} 1 ${f1(x1)},${f1(y1)}Z`; };
+// A clock hand from the hub (with a short counterweight) to length L, at deg: a halo, a body and a white core.
+const HAND = (cx, cy, L, deg, w = 1) => { const [x0, y0] = polar(cx, cy, -L * 0.18, deg), [x1, y1] = polar(cx, cy, L, deg), ln = (c, sw) => `<line class="${c}" x1="${f1(x0)}" y1="${f1(y0)}" x2="${f1(x1)}" y2="${f1(y1)}" style="stroke-width:${f1(sw * w)}"/>`; return ln('cfx-ck-halo', 3) + ln('cfx-ck-body', 1.4) + ln('cfx-ck-core', 0.6); };
+let gid = 0;
 
 // Each theme: (chip, box, state, dt ms, intensity, cycle progress 0–1).
 const THEMES = {
@@ -477,6 +491,107 @@ const THEMES = {
       }
     }
   },
+  // Clock: a dial ticks in the chip's middle, its hand stepping each half second; in Now it sweeps once round the cycle,
+  // filling the dial behind it and lighting each tick it passes, and a ruler along the chip's foot fills with it. In the
+  // last 1.5 s the ticks still dark blink and the dial glows.
+  clock(el, box, S, dt, lv, p) {
+    const w = el.offsetWidth, h = el.offsetHeight;
+    if (S.bw !== w) {
+      S.bw = w; S.svg?.remove(); S.svg = svgIn(box); S.t = 0; S.step = 0; S.since = 999;
+      S.R = h * 0.4; S.cx = w * 0.56; S.cy = h / 2; S.n = Math.max(12, Math.round(w / 6));
+      const ruler = Array.from({ length: S.n }, (_, i) => { const x = f1((i + 0.5) * w / S.n), m = i % 4 === 0; return `<line x1="${x}" y1="${f1(h - (m ? 5 : 2.5))}" x2="${x}" y2="${h}"/>`; }).join('');
+      const ticks = Array.from({ length: 12 }, (_, i) => { const [x0, y0] = polar(S.cx, S.cy, S.R * (i % 3 ? 0.78 : 0.62), i * 30), [x1, y1] = polar(S.cx, S.cy, S.R, i * 30); return `<line x1="${f1(x0)}" y1="${f1(y0)}" x2="${f1(x1)}" y2="${f1(y1)}"/>`; }).join('');
+      S.svg.innerHTML = `<g class="cfx-ck-ruler">${ruler}</g><circle class="cfx-ck-face" cx="${S.cx}" cy="${S.cy}" r="${f1(S.R)}"/><path class="cfx-ck-fan"/><g class="cfx-ck-ticks">${ticks}</g><g class="cfx-ck-hand"></g><circle class="cfx-ck-hub" cx="${S.cx}" cy="${S.cy}" r="1.4"/>`;
+      S.rl = [...S.svg.querySelector('.cfx-ck-ruler').children]; S.tk = [...S.svg.querySelector('.cfx-ck-ticks').children];
+      S.face = S.svg.querySelector('.cfx-ck-face'); S.fan = S.svg.querySelector('.cfx-ck-fan'); S.hand = S.svg.querySelector('.cfx-ck-hand');
+    }
+    S.t += dt; S.since += dt;
+    const now = lv >= 1, late = lv > 1.2;
+    if (!now && lv && S.since >= 500) { S.since = 0; S.step++; }
+    const a = now ? p * 360 : S.step * 30 - 30 + 30 * easeOutBack(clamp(S.since / 130));
+    S.hand.innerHTML = lv ? HAND(S.cx, S.cy, S.R * 0.92, a) : '';
+    S.fan.setAttribute('d', now && a > 1 ? fanD(S.cx, S.cy, S.R * 0.96, 0, Math.min(359.9, a)) : '');
+    const blink = late && (S.t / 110 | 0) % 2 === 0;
+    S.tk.forEach((t, i) => { const on = now && i * 30 <= a; t.setAttribute('class', on ? 'on' : ''); t.style.opacity = on ? 1 : late ? (blink ? 0.9 : 0.2) : 0.45; });
+    const lit = now ? p * S.n : -1;
+    S.rl.forEach((t, i) => { t.setAttribute('class', i < lit - 1 ? 'on' : i < lit ? 'head' : ''); });
+    S.face.style.opacity = late ? 0.55 + 0.35 * Math.sin(S.t / 90) : now ? 0.45 : 0.3;
+  },
+  // Strobe: soft light columns fire in patterns, a chase across the chip, a burst, or all at once with a flare streaking
+  // sideways through it; each flash is short and leaves an afterglow. Near columns wide and bright, far ones thin and
+  // soft. It fires faster as the cycle runs out, rapid in its last 1.5 s.
+  strobe(el, box, S, dt, lv, p) {
+    const w = el.offsetWidth;
+    if (S.bw !== w) {
+      S.bw = w; S.cols?.forEach((c) => c.m.remove()); S.streak?.remove();
+      const n = Math.max(5, Math.round(w / 16));
+      S.cols = Array.from({ length: n }, (_, i) => { const near = i % 2 === 0, m = span(box, `cfx-sb ${near ? '' : 'far'}`), cw = near ? 12 : 7; Object.assign(m.style, { left: f1((i + 0.5) * w / n - cw / 2) + 'px', width: cw + 'px' }); return { m, f: 0 }; });
+      S.streak = span(box, 'cfx-sb-streak'); S.sf = 0; S.t = 0; S.next = 300; S.q = [];
+    }
+    S.t += dt;
+    const n = S.cols.length;
+    if (lv && S.t >= S.next) {
+      const gap = lv > 1.2 ? rnd(120, 200) : lv >= 1 ? rnd(520, 700) - 300 * p : rnd(800, 1200), k = Math.random();
+      if (k < 0.4) { const dir = Math.random() < 0.5; for (let i = 0; i < n; i++) S.q.push({ at: S.t + i * 38, i: dir ? i : n - 1 - i, f: 0.9 }); }
+      else if (k < 0.75 || !lv) { for (let j = 0; j < 2 + (Math.random() * 2 | 0); j++) S.q.push({ at: S.t + j * 60, i: Math.random() * n | 0, f: 1 }); }
+      else { for (let i = 0; i < n; i++) S.q.push({ at: S.t, i, f: 1 }); S.q.push({ at: S.t, i: -1, f: 1 }); }
+      S.next = S.t + gap;
+    }
+    S.q = S.q.filter((e) => { if (e.at > S.t) return true; if (e.i < 0) S.sf = e.f; else S.cols[e.i].f = Math.max(S.cols[e.i].f, e.f); return false; });
+    const decay = Math.exp(-dt / 75);
+    for (const c of S.cols) { c.f *= decay; c.m.style.opacity = lv ? f1(c.f) : 0; c.m.style.transform = `scaleX(${f1(0.55 + 0.45 * c.f)})`; }
+    S.sf *= Math.exp(-dt / 110); S.streak.style.opacity = lv ? f1(S.sf) : 0;
+  },
+  // Copy: a copier's light bar sweeps across the chip leaving a faint copied dot pattern; at the end of each pass a copy
+  // of the chip's outline lifts off and sinks back into it, shrinking and fading, near copies bright, far ones soft.
+  // Passes speed up as the cycle runs out.
+  copy(el, box, S, dt, lv, p) {
+    const w = el.offsetWidth, h = el.offsetHeight;
+    if (!S.lamp) { S.wake = span(box, 'cfx-cp-wake'); S.lamp = span(box, 'cfx-cp-lamp'); S.x = -12; S.cps = []; S.n = 0; }
+    const dur = lv > 1.2 ? 420 : lv >= 1 ? 1050 - 450 * p : 1600;
+    if (lv) S.x += dt / dur * (w + 24);
+    if (S.x > w + 12) {
+      S.x = -12; const near = S.n++ % 2 === 0, m = span(box, `cfx-cp-copy ${near ? '' : 'far'}`);
+      Object.assign(m.style, { width: w - 2 + 'px', height: h - 2 + 'px' });
+      S.cps.push({ m, age: 0, life: near ? 900 : 1200, near });
+    }
+    S.lamp.style.transform = `translateX(${f1(S.x)}px)`; S.lamp.style.opacity = lv ? 1 : 0;
+    S.wake.style.setProperty('--x', f1(S.x) + 'px'); S.wake.style.opacity = lv ? (lv >= 1 ? 0.6 : 0.35) : 0;
+    S.cps = S.cps.filter((q) => {
+      q.age += dt; const k = q.age / q.life;
+      if (k >= 1) { q.m.remove(); return false; }
+      const s = 1 - (q.near ? 0.22 : 0.32) * (1 - (1 - k) ** 2);
+      q.m.style.transform = `translate(${f1(k * 6)}px, ${f1(-k * 2)}px) scale(${s.toFixed(3)})`;
+      q.m.style.opacity = f1((k < 0.12 ? k / 0.12 : 1 - (k - 0.12) / 0.88) * (q.near ? 1 : 0.5));
+      return true;
+    });
+  },
+  // Scan: a laser line sweeps back and forth over a faint dot grid, lighting the dots it crosses, their glow fading behind
+  // it; now and then it finds one and brackets snap round it. It sweeps faster as the cycle runs out.
+  scan(el, box, S, dt, lv, p) {
+    const w = el.offsetWidth, h = el.offsetHeight;
+    if (S.bw !== w) {
+      S.bw = w; S.svg?.remove(); S.beam?.remove(); S.svg = svgIn(box); S.t = 0; S.x = 0; S.dir = 1;
+      const g = 6, d = [];
+      for (let y = g / 2; y < h; y += g) for (let x = g / 2 + ((y / g | 0) % 2) * g / 2; x < w; x += g) d.push(`<circle cx="${f1(x)}" cy="${f1(y)}" r=".7"/>`);
+      S.svg.innerHTML = `<g class="cfx-sn-dots">${d.join('')}</g>`;
+      S.dots = [...S.svg.firstChild.children].map((c) => ({ c, x: +c.getAttribute('cx'), y: +c.getAttribute('cy'), l: 0 }));
+      S.beam = span(box, 'cfx-sn-beam'); S.beam.innerHTML = '<i></i>';
+    }
+    S.t += dt;
+    const dur = lv > 1.2 ? 450 : lv >= 1 ? 1000 - 420 * p : 1500;
+    if (lv) { S.x += S.dir * dt / dur * w; if (S.x > w) { S.x = w; S.dir = -1; } if (S.x < 0) { S.x = 0; S.dir = 1; } }
+    S.beam.style.transform = `translateX(${f1(S.x)}px) scaleX(${S.dir})`; S.beam.style.opacity = lv ? 1 : 0;
+    const fade = Math.exp(-dt / 380);
+    for (const q of S.dots) { if (Math.abs(q.x - S.x) < 3) q.l = 1; else q.l *= fade; q.c.style.opacity = f1(0.06 + 0.94 * q.l); q.c.setAttribute('r', q.l > 0.6 ? '1.1' : '.7'); }
+    if (lv && Math.random() < dt / 1000 * (lv > 1.2 ? 3 : 1.2) * lv) {
+      const near = S.dots.filter((q) => Math.abs(q.x - S.x) < 4), q = near[Math.random() * near.length | 0];
+      if (q) {
+        const m = span(box, 'cfx-sn-tgt'); Object.assign(m.style, { left: f1(q.x - 5) + 'px', top: f1(q.y - 5) + 'px' });
+        m.animate([{ transform: 'scale(1.9)', opacity: 0 }, { transform: 'scale(1)', opacity: 1, offset: 0.25 }, { opacity: 0.3, offset: 0.4 }, { opacity: 1, offset: 0.55 }, { opacity: 0 }], { duration: 650, easing: 'ease-out' }).onfinish = () => m.remove();
+      }
+    }
+  },
 };
 
 export function createChipFx() {
@@ -675,10 +790,127 @@ const STRIKE_FX = {
     });
     return true;
   },
+  // Clock: the chip's dial flares and its hand winds a full turn inside it, then shoots out to your bar and strikes; tick
+  // marks ratchet out along the bar from the hit, and it stops with a flash and a chime of rings.
+  clock(r, to, bar) {
+    const cx = r.left + r.width * 0.56, cy = r.top + r.height / 2, R = r.height * 0.4, L = Math.hypot(to.x - cx, to.y - cy), aim = Math.atan2(to.x - cx, cy - to.y) * 180 / Math.PI;
+    const bw = bar?.width ?? 120, bl = bar?.left ?? to.x - bw / 2, bt = bar?.top ?? to.y - 4, bh = bar?.height ?? 8, n = Math.max(12, Math.round(bw / 9)), WIND = [70, 330], OUT = 450, STOP = 700;
+    burst(cx, cy, R * 4, 0, 300);
+    stage(1150, (g, t) => {
+      let html = '';
+      if (t < OUT + 120) {
+        const fo = t < OUT ? 1 : 1 - (t - OUT) / 120, tk = Array.from({ length: 12 }, (_, i) => { const [x0, y0] = polar(cx, cy, R * (i % 3 ? 0.78 : 0.62), i * 30), [x1, y1] = polar(cx, cy, R, i * 30); return `<line x1="${f1(x0)}" y1="${f1(y0)}" x2="${f1(x1)}" y2="${f1(y1)}"/>`; }).join('');
+        html += `<g style="opacity:${f1(fo)}"><circle class="cfx-ck-face" cx="${f1(cx)}" cy="${f1(cy)}" r="${f1(R)}" style="opacity:.9"/><g class="cfx-ck-ticks lit">${tk}</g>`;
+        if (t < WIND[1]) { const k = clamp((t - WIND[0]) / (WIND[1] - WIND[0])), a = aim - 360 + 360 * easeInOut(k); html += `<path class="cfx-ck-fan" d="${fanD(cx, cy, R * 0.96, a - 70 * Math.sin(Math.PI * k), a)}"/>` + HAND(cx, cy, R * 0.92, a); }
+        html += '</g>';
+      }
+      if (t >= WIND[1] && t < STOP + 200) {
+        const k = clamp((t - WIND[1]) / (OUT - WIND[1])), len = R * 0.92 + (L - R * 0.92) * k ** 2, q = t > OUT ? 5 * Math.exp(-(t - OUT) / 90) * Math.cos((t - OUT) / 14) : 0;
+        html += `<g style="opacity:${f1(clamp(1 - (t - STOP) / 200))}">${HAND(cx, cy, len, aim + q * 360 / (2 * Math.PI * L) * 6, 1.4)}</g>`;
+      }
+      if (t >= OUT) {
+        const a = t - OUT, fo = clamp(1 - (t - STOP - 120) / 260);
+        let tk = '';
+        for (let i = 0; i < n; i++) {
+          const x = bl + (i + 0.5) * bw / n, d = Math.abs(x - to.x) / (bw / 2), at = d * 220, k = a - at;
+          if (k < 0) continue;
+          const m = i % 4 === 0, fl = Math.exp(-k / 90);
+          tk += `<line class="${fl > 0.3 ? 'head' : 'on'}" x1="${f1(x)}" y1="${f1(bt - (m ? 7 : 4))}" x2="${f1(x)}" y2="${f1(bt - 1)}"/><line class="${fl > 0.3 ? 'head' : 'on'}" x1="${f1(x)}" y1="${f1(bt + bh + 1)}" x2="${f1(x)}" y2="${f1(bt + bh + (m ? 7 : 4))}"/>`;
+        }
+        html += `<g class="cfx-ck-ruler" style="opacity:${f1(fo)}">${tk}</g>`;
+        if (t >= STOP) { const s = t - STOP; html += `<rect class="cfx-ck-stop" x="${f1(bl)}" y="${f1(bt)}" width="${f1(bw)}" height="${f1(bh)}" style="opacity:${f1(0.9 * Math.exp(-s / 90))}"/>`; }
+      }
+      g.innerHTML = html;
+    });
+    setTimeout(() => { burst(to.x, to.y, 40, 0, 300); sparks(to.x, to.y, 5, 12); }, OUT);
+    setTimeout(() => {
+      for (let i = 0; i < 3; i++) { const m = fspan('cfx-clamp', to.x - 24, to.y - 24, 48, 48); m.animate([{ transform: 'scale(.3, .2)', opacity: 0.9 }, { transform: `scale(${2.2 + i * 0.6}, ${0.8 + i * 0.25})`, opacity: 0 }], { duration: 560, delay: i * 90, easing: 'cubic-bezier(.15,.7,.3,1)', fill: 'both' }).onfinish = () => m.remove(); }
+    }, STOP);
+    return true;
+  },
+  // Strobe: three pulses, a chase across your bar: each flashes the chip, throws a cone of light from it to the bar and
+  // flares there with a streak across it; the last is the biggest, and your bar flickers after it.
+  strobe(r, to, bar) {
+    const bw = bar?.width ?? 120, bl = bar?.left ?? to.x - bw / 2, bt = bar?.top ?? to.y - 4, bh = bar?.height ?? 8, down = to.y > r.top + r.height / 2;
+    const ey = down ? r.top + r.height : r.top, P = [[0, 0.22, 0.8], [130, 0.78, 0.85], [270, 0.5, 1.25]];
+    P.forEach(([d, , s]) => setTimeout(() => burst(r.left + r.width / 2, r.top + r.height / 2, r.width * 0.5 * s, 0, 200), d));
+    stage(820, (g, t) => {
+      let html = '';
+      for (const [d, u, s] of P) {
+        const a = t - d;
+        if (a < 0) continue;
+        const f = a < 18 ? a / 18 : Math.exp(-(a - 18) / 65);
+        if (f < 0.02) continue;
+        const ex = r.left + r.width * (0.3 + 0.4 * u), x = bl + bw * u, w0 = 4 * s, w1 = 16 * s;
+        html += `<g style="opacity:${f1(f)}"><rect class="cfx-sb-chip" x="${f1(r.left)}" y="${f1(r.top)}" width="${f1(r.width)}" height="${f1(r.height)}"/><polygon class="cfx-sb-cone" points="${pts([[ex - w0, ey], [ex + w0, ey], [x + w1, to.y], [x - w1, to.y]])}"/><line class="cfx-sb-core" x1="${f1(ex)}" y1="${f1(ey)}" x2="${f1(x)}" y2="${f1(to.y)}" style="stroke-width:${f1(1.4 * s)}"/>`
+          + `<rect class="cfx-sb-hit" x="${f1(bl)}" y="${f1(bt)}" width="${f1(bw)}" height="${f1(bh)}"/><rect class="cfx-sb-flare" x="${f1(bl - 40 * s)}" y="${f1(to.y - 0.6 * s)}" width="${f1(bw + 80 * s)}" height="${f1(1.2 * s)}"/><ellipse class="cfx-sb-glow" cx="${f1(x)}" cy="${f1(to.y)}" rx="${f1(26 * s)}" ry="${f1(9 * s)}"/></g>`;
+      }
+      if (t > 420 && t < 700) { const on = ((t - 420) / 45 | 0) % 2 === 0; if (on) html += `<rect class="cfx-sb-hit" x="${f1(bl)}" y="${f1(bt)}" width="${f1(bw)}" height="${f1(bh)}" style="opacity:${f1(0.7 * (1 - (t - 420) / 280))}"/>`; }
+      g.innerHTML = html;
+    });
+    return true;
+  },
+  // Copy: a copier's light sweeps the chip; four copies of its outline peel off one after another, fly to your bar with
+  // trails, reshaping to it, and stack there with a snap; the stack collapses into the bar with a flash and a copy of the
+  // bar slides off and fades.
+  copy(r, to, bar) {
+    const bw = bar?.width ?? 120, bl = bar?.left ?? to.x - bw / 2, bt = bar?.top ?? to.y - 4, bh = bar?.height ?? 8, N = 4, F = 380, SW = 150, GAP = 95;
+    const A = { x: r.left, y: r.top, w: r.width, h: r.height }, B = (i) => ({ x: bl - 3, y: bt - 3 - i * 3.5, w: bw + 6, h: bh + 6 });
+    const lerp = (a, b, k) => a + (b - a) * k, rectAt = (i, k) => { const b = B(i), e = easeInOut(k), lift = Math.sin(Math.PI * k) * 26; return { x: lerp(A.x, b.x, e), y: lerp(A.y, b.y, e) - lift, w: lerp(A.w, b.w, e), h: lerp(A.h, b.h, e) }; };
+    const R = (q, cls, o = 1) => `<rect class="${cls}" x="${f1(q.x)}" y="${f1(q.y)}" width="${f1(q.w)}" height="${f1(q.h)}" rx="3" style="opacity:${f1(o)}"/>`;
+    const COL = SW + (N - 1) * GAP + F + 60;
+    stage(COL + 520, (g, t) => {
+      let html = '';
+      if (t < SW + 60) { const x = r.left + r.width * clamp(t / SW); html += `<rect class="cfx-cp-wake" x="${f1(r.left)}" y="${f1(r.top)}" width="${f1(x - r.left)}" height="${f1(r.height)}" style="opacity:${f1(t < SW ? 0.28 : 0.28 * (1 - (t - SW) / 60))}"/><rect class="cfx-cp-lampr" x="${f1(x - 5)}" y="${f1(r.top - 2)}" width="10" height="${f1(r.height + 4)}"/>`; }
+      for (let i = 0; i < N; i++) {
+        const a = t - SW - i * GAP;
+        if (a < 0) continue;
+        const k = clamp(a / F);
+        if (t < COL) {
+          if (k < 1) { for (const [lag, o] of [[0.14, 0.2], [0.07, 0.4]]) html += R(rectAt(i, clamp(k - lag)), 'cfx-cp-ghost', o); html += R(rectAt(i, k), 'cfx-cp-halo') + R(rectAt(i, k), 'cfx-cp-edge'); }
+          else { const snap = Math.exp(-(a - F) / 80); html += R(B(i), 'cfx-cp-halo', 0.6 + 0.4 * snap) + R(B(i), snap > 0.3 ? 'cfx-cp-edge hot' : 'cfx-cp-edge'); }
+        } else {
+          const c = clamp((t - COL) / 90), b = B(i * (1 - c));
+          html += R(b, 'cfx-cp-edge', 1 - c * 0.6);
+        }
+      }
+      if (t >= COL + 90) { const a = t - COL - 90; html += `<rect class="cfx-ck-stop" x="${f1(bl)}" y="${f1(bt)}" width="${f1(bw)}" height="${f1(bh)}" style="opacity:${f1(0.85 * Math.exp(-a / 100))}"/>` + R({ x: bl - 3 + a * 0.08, y: bt - 3, w: bw + 6, h: bh + 6 }, 'cfx-cp-edge', clamp(1 - a / 420)); }
+      g.innerHTML = html;
+    });
+    for (let i = 0; i < N; i++) setTimeout(() => { const b = B(i); for (const [x, y] of [[b.x, b.y], [b.x + b.w, b.y]]) sparks(x, y, 2, 7); }, SW + i * GAP + F);
+    setTimeout(() => burst(to.x, to.y, 60, 0, 360), COL + 90);
+    return true;
+  },
+  // Scan: an emitter lights on the chip's edge and a laser fan reaches from it to your bar, raking along it; the raked
+  // part glows and gives up bits of data that rise and fade; at the end, brackets snap round the last point and flash.
+  scan(r, to, bar) {
+    const bw = bar?.width ?? 120, bl = bar?.left ?? to.x - bw / 2, bt = bar?.top ?? to.y - 4, bh = bar?.height ?? 8, down = to.y > r.top + r.height / 2;
+    const ex = r.left + r.width / 2, ey = down ? r.top + r.height : r.top, T0 = 70, T1 = 560, id = `cfx-sn-${++gid}`;
+    burst(ex, ey, 26, 0, 260);
+    let last = bl;
+    stage(T1 + 380, (g, t) => {
+      const k = clamp((t - T0) / (T1 - T0)), x = bl + bw * easeInOut(k), on = t >= T0, fo = clamp(1 - (t - T1) / 200);
+      let html = `<defs><linearGradient id="${id}" x1="${f1(x - 70)}" x2="${f1(x)}" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="currentColor" stop-opacity="0"/><stop offset="1" stop-color="${WHITE}" stop-opacity="1"/></linearGradient></defs>`;
+      if (on && fo > 0) {
+        html += `<g style="opacity:${f1(fo)}"><circle class="cfx-sn-emit" cx="${f1(ex)}" cy="${f1(ey)}" r="3"/><polygon class="cfx-sn-cone" points="${pts([[ex - 2, ey], [ex + 2, ey], [x + 16, to.y], [x - 16, to.y]])}"/>`
+          + `<line class="cfx-sn-edge" x1="${f1(ex)}" y1="${f1(ey)}" x2="${f1(x - 16)}" y2="${f1(to.y)}"/><line class="cfx-sn-edge" x1="${f1(ex)}" y1="${f1(ey)}" x2="${f1(x + 16)}" y2="${f1(to.y)}"/><line class="cfx-sn-core" x1="${f1(ex)}" y1="${f1(ey)}" x2="${f1(x)}" y2="${f1(to.y)}"/>`
+          + `<rect x="${f1(bl)}" y="${f1(bt - 1)}" width="${f1(Math.max(0, x - bl))}" height="${f1(bh + 2)}" fill="url(#${id})" class="cfx-sn-rake"/><ellipse class="cfx-sb-glow" cx="${f1(x)}" cy="${f1(to.y)}" rx="12" ry="5"/></g>`;
+        for (let px = last; px < x; px += 5) { const d = fspan('cfx-px', px + rnd(-2, 2), bt + rnd(0, bh), 2, 2); d.style.opacity = 1; d.animate([{ transform: 'none', opacity: 1 }, { transform: `translate(${f1(rnd(-3, 3))}px, ${f1(-rnd(6, 16))}px)`, opacity: 0 }], { duration: rnd(350, 600), easing: 'ease-out' }).onfinish = () => d.remove(); }
+        last = Math.max(last, x);
+      }
+      g.innerHTML = html;
+    });
+    setTimeout(() => {
+      const x = bl + bw, m = fspan('cfx-sn-tgt big', x - 9, to.y - 9, 18, 18);
+      m.animate([{ transform: 'scale(2.2)', opacity: 0 }, { transform: 'scale(1)', opacity: 1, offset: 0.3 }, { opacity: 0.4, offset: 0.45 }, { opacity: 1, offset: 0.6 }, { opacity: 0 }], { duration: 520, easing: 'ease-out' }).onfinish = () => m.remove();
+      burst(x, to.y, 34, 100, 300);
+    }, T1 - 40);
+    return true;
+  },
 };
 
 // The themes with a strike of their own: the lash (lash.mjs) stays out of their hits, so the eye stays on the chip.
-export const STRIKES = new Set(['zap', 'lock', 'frost', 'cipher', 'ring', 'erase', 'heat', 'crumble', 'scramble', 'thorn']);
+export const STRIKES = new Set(['zap', 'lock', 'frost', 'cipher', 'ring', 'erase', 'heat', 'crumble', 'scramble', 'thorn', 'clock', 'strobe', 'copy', 'scan']);
 // A themed chip going off (app.js fire): its strike, in screen px, from the chip's rect r to your bar at `to`, in the
 // threat's red. Pulse Node: a forked bolt that strobes into your bar, a burst and sparks there. Encryptor: its padlocks
 // arc to your bar with short trails and clamp on. Cold Store: its frost shatters (the chip's ghost still flies).
