@@ -10,7 +10,7 @@ import { bootOf } from './terminal.mjs';
 
 const BOOTED_KEY = 'blackbox-booted';
 const SPARK = '▁▂▃▄▅▆▇█';
-const PATHS = { map: '~/map', server: '/srv', vault: '~/protocols', loadout: '/etc/loadout', daemons: '/etc/daemons', system: '/sys', net: '~/net', combat: '/proc/intrusion' };
+const PATHS = { map: '~/map', server: '/srv', vault: '~/protocols', loadout: '/etc/loadout', daemons: '/etc/daemons', system: '/sys', rig: '/dev/rig', net: '~/net', combat: '/proc/intrusion' };
 
 export function createShell({ getState, isOn, canMove, tick, sound, tear }) {
   const $ = (id) => document.getElementById(id);

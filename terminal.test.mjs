@@ -12,7 +12,7 @@ import { BOOT_LOOKS, PROMPTS, CURSORS, bootIds, PROMPT_IDS, CURSOR_IDS, bootOf, 
 import { bootScript, bootLength, garble, FACTION_MARKS, FACTION_VOICE } from './dist/boots.mjs';
 import { terminalPageMarkup } from './dist/terminal-view.mjs';
 import { achRow } from './dist/achievements-view.mjs';
-import { systemMarkup } from './dist/view.mjs';
+import { systemMarkup, rigMarkup } from './dist/view.mjs';
 import { createShell } from './dist/shell.mjs';
 
 const read = (f) => readFileSync(new URL(f, import.meta.url), 'utf8');
@@ -47,7 +47,7 @@ test('the stock look is today\'s: the boot, the prompt and the cursor, on a new,
   assert.match(html, /<label for="command-input" class="prompt"><span>rookie@blackbox:~\$<\/span><\/label>/);
   assert.match(html, /<input id="command-input" aria-label="Command" autocapitalize="off" spellcheck="false" maxlength="160"><span class="caret" id="caret" aria-hidden="true"><span id="caret-pad"><\/span><i><\/i><\/span>/);
   assert.match(read('./dist/style.css'), /\.caret i \{ display: inline-block; width: 0\.6em; height: 1\.1em;[^}]*animation: caret-blink 1\.06s steps\(1\) infinite; \}/);
-  // terminal.css: every rule is for a look you picked (a class or data a stock look never carries), or Settings → Terminal.
+  // terminal.css: every rule is for a look you picked (a class or data a stock look never carries), or Rig → Terminal.
   for (const m of strip(read('./dist/terminal.css')).replace(/@media [^{]+\{/g, '').matchAll(/([^{}]+)\{[^}]*\}/g)) {
     for (const sel of m[1].split(',').map((x) => x.trim()).filter(Boolean)) assert.match(sel, /\.boot-art|\.gl\b|\.boot-minimal|\.still|\.boot pre div:last-child::after|\.pf-|data-shape|data-steady|\.tm-|\.ach-rw-term/, sel);
   }
@@ -293,10 +293,10 @@ test('cursor styles apply on the caret only, blink or steady, and the input keep
   assert.match(read('./dist/style.css'), /\.no-motion \.caret i/);
 });
 
-test('Settings → Terminal: yours to pick, the rest dim and locked with what brings each, Preview, and nothing written', () => {
+test('Rig → Terminal: yours to pick, the rest dim and locked with what brings each, Preview, and nothing written', () => {
   const s = me();
-  assert.match(systemMarkup(s), /data-stab="terminal"/, 'a tab on the Settings page');
-  const html = systemMarkup(s, { tab: 'terminal' });
+  assert.match(rigMarkup(s), /data-rtab="terminal"/, 'a tab on the Rig page');
+  const html = rigMarkup(s, { tab: 'terminal' });
   assert.deepEqual(s.cosmetics, undefined, 'a view never writes the save');
   assert.match(html, /<h2>Boot<\/h2>/); assert.match(html, /<h2>Prompt<\/h2>/); assert.match(html, /<h2>Cursor<\/h2>/);
   assert.match(html, /data-run="terminal preview"[^>]*>Preview<\/button>/);
@@ -327,7 +327,7 @@ test('Settings → Terminal: yours to pick, the rest dim and locked with what br
 
 test('GAME_RULES.md says it, and README.md maps it', () => {
   const md = read('./GAME_RULES.md');
-  assert.match(md, /Settings → \*\*Terminal\*\*/);
+  assert.match(md, /Rig → \*\*Terminal\*\*/);
   for (const w of ['POST', 'Corrupted', 'Minimal', 'Two-line', 'Underline', 'Beam', '`terminal preview']) assert.ok(md.includes(w), w);
   assert.match(read('./README.md'), /\| `dist\/terminal\.mjs`/);
 });
