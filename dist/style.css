@@ -296,6 +296,12 @@ code { font-family: var(--mono); color: var(--amber); }
 .cfx-edge { height: 100%; width: 2px; margin-left: -1px; background: var(--bright); box-shadow: 0 0 6px var(--bright), 0 0 12px currentColor; }
 .cfx-flake { background: currentColor; box-shadow: 0 0 3px currentColor; }
 .no-motion .fxin { display: none; }
+/* Its strike when it goes off (chipfx.mjs chipStrike), in the threat's red: a bolt, flying padlocks, frost shards. */
+.cfx-fly { position: fixed; z-index: 56; pointer-events: none; color: var(--hot); }
+svg.cfx-bolt { left: 0; top: 0; width: 100vw; height: 100vh; overflow: visible; mix-blend-mode: screen; }
+.cfx-burst { border-radius: 50%; background: radial-gradient(circle, var(--bright) 0, currentColor 25%, transparent 65%); mix-blend-mode: screen; }
+.cfx-clamp { border: 1.5px solid currentColor; border-radius: 50%; mix-blend-mode: screen; }
+.cfx-shard { background: var(--bright); box-shadow: 0 0 3px var(--bright); }
 @media (prefers-reduced-motion: reduce) { .fxin { display: none; } }
 .crypt-line { position: relative; height: 4px; margin: 0 0 6px; border-radius: 2px; background: repeating-linear-gradient(135deg, var(--hot) 0 4px, transparent 4px 8px); opacity: 0.7; cursor: help; }
 /* Hover: it opens up into the full chip for a moment (over the cell, nothing moves). */

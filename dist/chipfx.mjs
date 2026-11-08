@@ -231,3 +231,69 @@ export function createChipFx() {
     },
   };
 }
+
+// A themed chip going off (app.js fire): its strike, in screen px, from the chip's rect r to your bar at `to`, in the
+// threat's red. Pulse Node: a forked bolt that strobes into your bar, a burst and sparks there. Encryptor: its padlocks
+// arc to your bar with short trails and clamp on. Cold Store: its frost shatters (the chip's ghost still flies).
+// True when the strike stands in for the ghost.
+export function chipStrike(th, r, to) {
+  if (!document.getElementById('cfx-defs')) document.body.insertAdjacentHTML('beforeend', DEFS);
+  const fly = (cls, x, y, w, h) => { const d = document.createElement('span'); d.className = `cfx-fly ${cls}`; Object.assign(d.style, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' }); document.body.appendChild(d); return d; };
+  if (th === 'zap') {
+    const g = document.createElementNS(NS, 'svg'); g.setAttribute('class', 'cfx-fly cfx-bolt'); document.body.appendChild(g);
+    const a = [r.left + r.width * 0.35, r.top];
+    const strike = (op) => {
+      const main = fractal(a, [to.x, to.y + 3], 6, 0.2);
+      let html = `<g class="cfx-arc" style="opacity:${op}"><polyline class="halo" points="${pts(main)}" style="stroke-width:5"/><polyline class="mid" points="${pts(main)}" style="stroke-width:2.2"/><polyline class="core" points="${pts(main)}" style="stroke-width:1.2"/>`;
+      for (let i = 0; i < 4; i++) {
+        const q = main[(4 + Math.random() * (main.length - 8)) | 0], L = rnd(10, 22), an = rnd(0, Math.PI * 2);
+        html += `<polyline class="twig" points="${pts(fractal(q, [q[0] + Math.cos(an) * L, q[1] + Math.sin(an) * L], 3, 0.3))}"/>`;
+      }
+      g.innerHTML = html + '</g>';
+    };
+    [[0, 1], [45, 0.5], [90, 1], [150, 0.7], [210, 0.35]].forEach(([d, op]) => setTimeout(() => strike(op), d));
+    setTimeout(() => g.remove(), 280);
+    setTimeout(() => {
+      const b = fly('cfx-burst', to.x - 22, to.y - 22, 44, 44);
+      b.animate([{ transform: 'scale(.3)', opacity: 1 }, { transform: 'scale(1.4)', opacity: 0 }], { duration: 380, easing: 'cubic-bezier(.2,.8,.3,1)' }).onfinish = () => b.remove();
+      const sp = document.createElementNS(NS, 'svg'); sp.setAttribute('class', 'cfx-fly cfx-bolt'); document.body.appendChild(sp);
+      let html = '';
+      for (let i = 0; i < 8; i++) { const an = rnd(0, Math.PI * 2), L = rnd(8, 18); html += `<g class="cfx-arc"><polyline class="mid" points="${pts(fractal([to.x, to.y], [to.x + Math.cos(an) * L, to.y + Math.sin(an) * L], 2, 0.35))}" style="stroke-width:1"/></g>`; }
+      sp.innerHTML = html;
+      sp.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, easing: 'ease-in' }).onfinish = () => sp.remove();
+    }, 40);
+    return true;
+  }
+  if (th === 'lock') {
+    for (let i = 0; i < 7; i++) {
+      const x0 = r.left + rnd(8, r.width - 18), y0 = r.top + rnd(0, r.height - 14), x1 = to.x - 48 + i * 15, y1 = to.y - 7;
+      const cx = (x0 + x1) / 2 + rnd(-30, 30), cy = Math.min(y0, y1) - rnd(20, 45);
+      const path = [];
+      for (let j = 0; j <= 12; j++) { const t = j / 12, e = t * t * (3 - 2 * t); path.push({ transform: `translate(${(1 - e) * (1 - e) * x0 + 2 * (1 - e) * e * cx + e * e * x1}px, ${(1 - e) * (1 - e) * y0 + 2 * (1 - e) * e * cy + e * e * y1}px) rotate(${(1 - t) * rnd(-30, 30)}deg)`, offset: t * 0.62 }); }
+      const end = path[12].transform.replace(/rotate\([^)]*\)/, 'rotate(0deg)');
+      const frames = [...path.map((f) => ({ ...f, opacity: 1 })), { transform: end + ' scale(1.45)', opacity: 1, offset: 0.7 }, { transform: end, opacity: 1, offset: 0.78 }, { transform: end, opacity: 1, offset: 0.9 }, { transform: end + ' scale(.8)', opacity: 0 }];
+      [0.25, 0.5, 1].forEach((op, k) => { // two trails, then the lock itself
+        const m = fly(`cfx-lk ${k === 2 ? 'near' : ''}`, 0, 0, 12, 13.5); m.innerHTML = LOCK;
+        const delay = i * 35 + (2 - k) * 28;
+        m.animate(k === 2 ? frames : frames.map((f) => ({ ...f, opacity: f.offset > 0.62 ? 0 : op })), { duration: 1000, delay, easing: 'linear', fill: 'both' }).onfinish = () => m.remove();
+        if (k === 2) setTimeout(() => {
+          m.classList.add('shut');
+          const ring = fly('cfx-clamp', x1 - 4, y1 - 3, 20, 20);
+          ring.animate([{ transform: 'scale(.4)', opacity: 1 }, { transform: 'scale(1.6)', opacity: 0 }], { duration: 360, easing: 'ease-out' }).onfinish = () => ring.remove();
+        }, delay + 640);
+      });
+    }
+    return true;
+  }
+  if (th === 'frost') {
+    for (let i = 0; i < 22; i++) {
+      const [ax, ay] = [[0, 0], [1, 0], [0, 1], [1, 1]][i % 4];
+      const x = r.left + ax * r.width + (ax ? -1 : 1) * rnd(0, 34), y = r.top + ay * r.height + (ay ? -1 : 1) * rnd(0, 10);
+      const m = fly('cfx-shard', x, y, 1, rnd(3, 7));
+      const vx = (x - (r.left + r.width / 2)) * rnd(0.15, 0.35), fall = rnd(28, 60), r0 = rnd(0, 180), r1 = r0 + rnd(-260, 260);
+      m.animate([{ transform: `rotate(${r0}deg)`, opacity: 1 }, { transform: `translate(${vx * 0.6}px, ${-rnd(4, 12)}px) rotate(${(r0 + r1) / 2}deg)`, opacity: 1, offset: 0.3 }, { transform: `translate(${vx}px, ${fall}px) rotate(${r1}deg)`, opacity: 0 }], { duration: rnd(500, 800), easing: 'cubic-bezier(.3,0,.7,1)' }).onfinish = () => m.remove();
+    }
+    return false;
+  }
+  return false;
+}

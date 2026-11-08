@@ -39,7 +39,7 @@ import { mountFxPlaytest, abilityOfKey } from './abilityfx-playtest.mjs';
 import { plan as dmgPlan, queueAfter, absorbOf, armorFloat, missFloat } from './dmgfx.mjs';
 import { recapMarkup } from './recap.mjs';
 import { createLash } from './lash.mjs';
-import { createChipFx } from './chipfx.mjs';
+import { createChipFx, chipStrike } from './chipfx.mjs';
 import { online, simOn } from './presence.mjs';
 import { matesOf } from './crew.mjs';
 import { tickPlay } from './progression.mjs';
@@ -2287,7 +2287,7 @@ function cycleChanged(s) {
 // anything new drifts in from the right. Motion off skips all of it.
 function chipSnapshot() {
   const plain = (el) => { const c = el.cloneNode(true); c.querySelector('.fxin')?.remove(); return c.outerHTML; }; // a resolved chip's ghost leaves its theme behind
-  return [...$('board').querySelectorAll('[data-k]')].map((el) => ({ k: el.dataset.k, at: el.dataset.at || '', rect: el.getBoundingClientRect(), html: plain(el), cls: el.className }));
+  return [...$('board').querySelectorAll('[data-k]')].map((el) => ({ k: el.dataset.k, at: el.dataset.at || '', rect: el.getBoundingClientRect(), html: plain(el), cls: el.className, th: el.closest('.brow')?.dataset.th || '' }));
 }
 function turnTimeline(before) {
   const board = $('board');
@@ -2309,6 +2309,11 @@ function turnTimeline(before) {
 }
 // What resolved this cycle: a ghost of the chip plays out where it was.
 function fire(b) {
+  // A themed part's attack going off (chipfx.mjs): its own strike into your bar, in place of the ghost or beside it.
+  if (b.th && /\bnow\b/.test(b.cls) && !/mine|daemon|patch/.test(b.cls)) {
+    const bar = document.querySelector('.hud-bar.mine .bigbar')?.getBoundingClientRect();
+    if (bar?.width && chipStrike(b.th, b.rect, { x: bar.left + bar.width / 2, y: bar.top + bar.height / 2 })) return;
+  }
   const g = document.createElement('div');
   g.className = 'fx-ghost';
   g.innerHTML = b.html;
