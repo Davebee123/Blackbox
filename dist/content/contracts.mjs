@@ -890,7 +890,7 @@ export default {
         "subject": "{strain}, again",
         "body": [
           "{strain} keeps dead trades breathing. Kill {count} of them at your level, wherever they turn up.",
-          "Each one is a small rollback."
+          "Let it roll back."
         ]
       }
     ],
@@ -916,8 +916,7 @@ export default {
       {
         "subject": "Thin the herd",
         "body": [
-          "Kill {count} {family} processes. The ones we want gone are the ones Halcyon pays you to leave alone.",
-          "Halcyon will not like it. That is why it pays."
+          "Kill {count} {family} processes. {crew} floods the market with them, and our buyers pay less every week."
         ]
       }
     ],
@@ -942,7 +941,8 @@ export default {
       {
         "subject": "Funeral work",
         "body": [
-          "{crew}'s {family} processes guard payments nobody will ever collect. Kill {count} of them, anywhere you find them."
+          "{crew}'s {family} processes guard payments nobody will ever collect. Kill {count} of them, anywhere you find them.",
+          "Let it roll back."
         ]
       }
     ]
@@ -1008,7 +1008,7 @@ export default {
         "subject": "Buying code",
         "body": [
           "We pay over the odds for {material}. Send {amount} units.",
-          "Halcyon will not like it. That is why it pays."
+          "Our buyer takes all we can find."
         ]
       }
     ],
@@ -1051,8 +1051,7 @@ export default {
       {
         "subject": "Walk the floor",
         "body": [
-          "Clear {count} new rooms on {server}. We are mapping it for a buyer.",
-          "Halcyon will not like it. That is why it pays."
+          "Clear {count} new rooms on {server}. We are mapping it for a buyer, and the buyer pays by the room."
         ]
       }
     ],
@@ -1238,8 +1237,8 @@ export default {
       {
         "subject": "A file for a friend",
         "body": [
-          "There is {label} in a vault on {server}: {file}. Bring it to us, not to them.",
-          "Halcyon will not like it. That is why it pays."
+          "There is {label} in a vault on {server}: {file}. Bring it to us.",
+          "We have two offers on it already."
         ]
       }
     ],
@@ -1285,8 +1284,8 @@ export default {
       {
         "subject": "A file for a friend",
         "body": [
-          "There is {label} in a vault on a server you haven’t found yet: {file}. Bring it to us, not to them.",
-          "Halcyon will not like it. That is why it pays."
+          "There is {label} in a vault on a server you haven’t found yet: {file}. A relay nearby will flag the server.",
+          "Trace it, then bring the file to us. We have two offers on it already."
         ]
       }
     ],
@@ -1841,7 +1840,8 @@ export default {
       {
         "subject": "Company",
         "body": [
-          "The crews hate anyone who sings with us. Stop the next invasion that comes for your server."
+          "The crews hate anyone who sings with us. Stop the next invasion that comes for your server.",
+          "Let it roll back."
         ]
       }
     ],
