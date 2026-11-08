@@ -44,7 +44,7 @@ test('nothing goes on the screen: every casing rule and element is on the bezel'
   assert.match(casing, /class="decals l"/); assert.match(casing, /class="decals r"/);
   const app = html.slice(html.indexOf('<div class="app"'), html.indexOf('<div id="casing">'));
   assert.ok(!/decal|cs-|data-case/.test(app), 'no casing element in the app');
-  // casing.css: each rule is a colourway's variables, the body's plastic, the chin (#casing) or System → Casing's page.
+  // casing.css: each rule is a colourway's variables, the body's plastic, the chin (#casing) or Settings → Casing's page.
   // the casing's own media query (style.css) and the reduced-motion one (the mug's steam): rules inside them are checked
   // like the rest; the steam's keyframes are its own (only #casing .prop .steam runs them)
   const css = strip(read('./dist/casing.css')).replace(/@media \(min-width: 1100px\) and \(min-height: 720px\) \{|@media \(prefers-reduced-motion: reduce\) \{/g, '').replace(/@keyframes cs-steam \{(?:[^{}]*\{[^}]*\})*\s*\}/g, '');
@@ -131,7 +131,7 @@ test('stickers: four slots, only ones you\'ve earned, one place each, drawn as d
   assert.equal(decalStrips(s).right, '');
 });
 
-test('System → Casing: the swatches (locked with their achievement), the plate and the chin\'s slots; a view never writes the save', () => {
+test('Settings → Casing: the swatches (locked with their achievement), the plate and the chin\'s slots; a view never writes the save', () => {
   const s = me(), snap = JSON.stringify(s);
   const html = casingPageMarkup(s, { slot: 1 });
   assert.equal(JSON.stringify(s), snap);
@@ -139,7 +139,7 @@ test('System → Casing: the swatches (locked with their achievement), the plate
   assert.match(html, /class="cs-sw locked" data-case="beige" title="Beige box: [^"]*Comes with Process Killer\."/);
   assert.match(html, /data-cs-slot="1" aria-pressed="true"/);
   assert.match(html, /None yet/);
-  assert.match(systemMarkup(s), /data-stab="casing"/, 'a tab on the System page');
+  assert.match(systemMarkup(s), /data-stab="casing"/, 'a tab on the Settings page');
   assert.match(systemMarkup(s, { tab: 'casing' }), /cs-page/);
   developerAchieve(s, 'all');
   const all = casingPageMarkup(s, {});
@@ -190,7 +190,7 @@ test('districts: each from its achievement (a separate block of rewards), locked
   assert.match(read('./dist/app.js'), /outside\.district\(districtOf\(campaign\)\);/);
 });
 
-test('System → Settings → Window: the districts, yours to pick, the rest dim with their achievement; the reward shows as a chip', () => {
+test('Settings → Window: the districts, yours to pick, the rest dim with their achievement; the reward shows as a chip', () => {
   const s = me(), snap = JSON.stringify(s);
   const html = systemMarkup(s);
   assert.equal(JSON.stringify(s), snap, 'a view never writes the save');
@@ -224,7 +224,7 @@ test('desk props: six, each from an achievement, two spots, only earned ones, on
   assert.deepEqual(propsLook(s).map((p) => p?.id || null), [null, 'cactus'], 'moved, not copied');
   assert.ok(warned(play(s, 'casing prop 3 cactus')), 'two spots');
   assert.match(propMarkup(propsLook(s)[1], 1), /^<span class="prop p-cactus" data-prop-slot="1" title="Cactus\. [^"]*"><svg viewBox="0 0 30 26"/);
-  // System → Casing → Desk
+  // Settings → Casing → Desk
   const html = casingPageMarkup(s, { pslot: 1 });
   assert.match(html, /<h2>Desk<\/h2>/);
   assert.match(html, /data-cs-pslot="1" aria-pressed="true"/);

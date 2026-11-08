@@ -26,7 +26,7 @@ test('no monitor size setting: no Full or Roomy, no command, no body class, a sa
   assert.ok(!/settings\.monitor|monitor roomy|monitor full|monitor-roomy/.test(app));
   assert.ok(!/monitor-roomy|Roomy/.test(read('./dist/style.css')));
   const s = fresh(); s.settings.monitor = 'roomy';
-  assert.ok(!/Monitor:|monitor roomy|monitor full/.test(systemMarkup(s)), 'no Monitor button on System');
+  assert.ok(!/Monitor:|monitor roomy|monitor full/.test(systemMarkup(s)), 'no Monitor button on Settings');
   assert.ok(!existsSync(new URL('./dist/window.css', import.meta.url)), 'the View stylesheet is gone');
   assert.ok(!/window\.css/.test(read('./dist/index.html')));
 });

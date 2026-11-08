@@ -123,7 +123,7 @@ let archView = null; // archetype shown on the Loadout page (defaults to the equ
 let tk = null; // the Toolkit while it's open: { arch, pick: { id, from } } (skills-view.mjs toolkitMarkup)
 let tkDrag = null; // what's being dragged in it: { id, from: a key's index or null, dropped }
 let loadoutTab = 'protocols'; // Loadout page: 'protocols' or 'skills' (skills and talents)
-let systemTab = 'settings'; // System page: 'settings' or 'achievements' (view.mjs SYSTEM_TABS)
+let systemTab = 'settings'; // Settings page (nav id 'system'): a view.mjs SYSTEM_TABS key, or 'dev' with ?dev
 let achUi = { cat: 'summary', focus: null }; // the Achievements page (achievements-view.mjs): the category shown, an achievement to light
 let caseUi = { slot: 0, pslot: 0 }; // System → Casing (casing-view.mjs): the sticker slot and the desk's spot picked
 const pd = { id: null, anchor: null, el: null, scrim: null, sheet: false, html: '', mine: false, timer: 0 }; // the Loadout's item datasheet popover (pdShow)
@@ -1413,7 +1413,7 @@ function run(raw) {
   const page = ALIAS[text] || text;
   // Daemons live on the Loadout page now (a tab beside Protocols).
   if (page === 'daemons' && !(fighting && ABILITIES[text])) { loadoutTab = 'daemons'; return go('loadout'); }
-  if (NAV.includes(page) && !(fighting && ABILITIES[text])) { if (page === 'loadout') loadoutTab = text === 'talents' || text === 'skills' ? 'skills' : 'protocols'; if (page === 'system') systemTab = 'settings'; return go(page); }
+  if (NAV.includes(page) && !(fighting && ABILITIES[text])) { if (page === 'loadout') loadoutTab = text === 'talents' || text === 'skills' ? 'skills' : 'protocols'; if (page === 'system') systemTab = text === 'logs' && DEV ? 'dev' : 'settings'; return go(page); }
   if (text === 'achievements') return goTo('achieve'); // the page; achieve pin <name> and the rest go to the engine
   if (text === 'shell' || text.startsWith('shell ')) return shellCommand(text.slice(6).trim());
   if (text === 'terminal preview' || text.startsWith('terminal preview ')) return bootPreview(text.slice(17).trim()); // the rest of terminal … is the engine's (terminal.mjs)
@@ -2148,7 +2148,7 @@ function render(force = false) {
       $('term').scrollTop = $('term').scrollHeight;
     }
   } else {
-    const pages = { rooms: (x) => roomsMarkup(x), campaign: (x) => campaignMarkup(x), room: (x) => roomMarkup(x), archive: (x) => archiveMarkup(x), breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => (hubSel === POST.id ? postTerminalMarkup(x, hubLines, hubWin, Date.now()) : V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now())), server: (x) => V.serverMarkup(x, Date.now(), srvUi), daemons: V.daemonsMarkup, codex: (x) => (codexTab === 'log' ? collectionPageMarkup(x, logSel, codexIdx, codexShut, logFind, logJr) : codexPageMarkup(x, codexSel, codexIdx, codexShut)), system: (x) => V.systemMarkup(x, { coop: !!coop, tab: systemTab, ach: achUi, cs: caseUi }) };
+    const pages = { rooms: (x) => roomsMarkup(x), campaign: (x) => campaignMarkup(x), room: (x) => roomMarkup(x), archive: (x) => archiveMarkup(x), breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => (hubSel === POST.id ? postTerminalMarkup(x, hubLines, hubWin, Date.now()) : V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now())), server: (x) => V.serverMarkup(x, Date.now(), srvUi), daemons: V.daemonsMarkup, codex: (x) => (codexTab === 'log' ? collectionPageMarkup(x, logSel, codexIdx, codexShut, logFind, logJr) : codexPageMarkup(x, codexSel, codexIdx, codexShut)), system: (x) => V.systemMarkup(x, { coop: !!coop, dev: DEV, tab: systemTab, ach: achUi, cs: caseUi }) };
     // A page that throws shows what broke (and a way back) instead of stopping every render after it.
     const keep = module === 'breach' ? $('bx-scroll')?.scrollTop : null;
     const focusRoom = module === 'rooms' ? document.activeElement?.closest?.('.fp-room')?.dataset.room : null; // a redraw keeps a focused room focused
@@ -2852,7 +2852,7 @@ document.addEventListener('click', (e) => {
   if (e.target.closest('[data-leads]')) { leadsOpen = !leadsOpen; dirty = true; return; }
   const lt = e.target.closest('[data-ltab]');
   if (lt) { loadoutTab = lt.dataset.ltab; feel.add('channel', null); dirty = true; return; }
-  const st = e.target.closest('[data-stab]'); // the System page's tabs (view.mjs SYSTEM_TABS)
+  const st = e.target.closest('[data-stab]'); // the Settings page's tabs (view.mjs SYSTEM_TABS)
   if (st) { systemTab = st.dataset.stab; achUi.focus = null; feel.add('channel', null); dirty = true; return; }
   const ac = e.target.closest('[data-ach-cat]'); // a category on the Achievements page
   if (ac) { achUi = { cat: ac.dataset.achCat, focus: null }; dirty = true; return; }
