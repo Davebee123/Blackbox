@@ -90,4 +90,3 @@ button.pf-ach-chip:hover { border-color: var(--line-strong); color: var(--bright
   .ach-rws { flex-direction: column; align-items: flex-start; } /* a phone stacks the rewards, one a line */
   .ach-name { white-space: normal; }
 }
-.rig-window { margin-top: 12px; }

@@ -80,7 +80,7 @@ import { tipOf, postFound } from './scanner.mjs';
 import { POST, postNodeSvg, postNodeSub, postCard } from './scanner-view.mjs';
 import { skillsTabMarkup } from './skills-view.mjs';
 import { achievementsMarkup } from './achievements-view.mjs';
-import { casingPageMarkup, districtCardMarkup } from './casing-view.mjs';
+import { casingPageMarkup } from './casing-view.mjs';
 import { terminalPageMarkup } from './terminal-view.mjs';
 import { objectiveText, objectiveTip, backupAims } from './objectives.mjs';
 import { pointsOf } from './achievements.mjs';
@@ -2800,7 +2800,7 @@ const systemTabs = (tab, dev) => dev ? `<nav class="ltabs sys-tabs" role="tablis
 export const RIG_TABS = [['achievements', 'Achievements'], ['casing', 'Casing'], ['terminal', 'Terminal']];
 const rigTabs = (s, tab) => `<nav class="ltabs sys-tabs" role="tablist" aria-label="Rig">${RIG_TABS.map(([k, l]) => `<button type="button" role="tab" data-rtab="${k}" aria-selected="${tab === k}">${esc(l)}${k === 'achievements' ? `<small class="sys-pts">${glyph('medal')}${pointsOf(s)}</small>` : ''}</button>`).join('')}</nav>`;
 export function rigMarkup(s, { tab = 'achievements', ach = {}, cs = {} } = {}) {
-  if (tab === 'casing') return rigTabs(s, tab) + casingPageMarkup(s, cs) + `<div class="rig-window">${districtCardMarkup(s)}</div>`;
+  if (tab === 'casing') return rigTabs(s, tab) + casingPageMarkup(s, cs);
   if (tab === 'terminal') return rigTabs(s, tab) + terminalPageMarkup(s);
   return rigTabs(s, 'achievements') + achievementsMarkup(s, ach);
 }
