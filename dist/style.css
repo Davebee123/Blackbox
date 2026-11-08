@@ -263,6 +263,157 @@ code { font-family: var(--mono); color: var(--amber); }
   .tl-window.live .tw-word { display: none; }
 }
 /* ---- end tell windows ---- */
+/* ---- Themed chips (chipfx.mjs): a part's theme plays faint inside its own chips at +1 and in Now, under the text, in
+   the chip's colour and white; its light adds up (screen). The box sits behind the chip's text (z-index -1 in the chip's
+   own stacking context); chipfx sets its opacity. Nothing leaves the chip. ---- */
+.brow[data-th] .intent[data-k] { position: relative; isolation: isolate; }
+.intent > .fxin { position: absolute; inset: 0; z-index: -1; overflow: hidden; border-radius: inherit; pointer-events: none; mix-blend-mode: screen; opacity: 0; }
+.intent.tell > .fxin { color: var(--tc); }
+.fxin > * { position: absolute; left: 0; top: 0; pointer-events: none; }
+.fxin .cfx-svg { width: 100%; height: 100%; overflow: visible; }
+.cfx-arc .halo { fill: none; stroke: currentColor; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; filter: url(#cfx-bloom); }
+.cfx-arc .mid { fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.cfx-arc .core { fill: none; stroke: var(--bright); stroke-width: 0.8; stroke-linecap: round; stroke-linejoin: round; }
+.cfx-arc .twig { fill: none; stroke: currentColor; stroke-width: 0.8; stroke-linecap: round; opacity: 0.8; }
+.cfx-hot, .cfx-glow { border-radius: 50%; background: radial-gradient(circle, var(--bright) 0, currentColor 30%, transparent 70%); }
+.cfx-hot { width: 14px; height: 14px; margin: -7px 0 0 -7px; }
+.cfx-glow { width: 22px; height: 22px; margin: -11px 0 0 -11px; }
+.cfx-lk { will-change: transform, opacity; }
+.cfx-lk svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.cfx-lk .sh { transition: transform 90ms cubic-bezier(.5, 0, .9, .4); transform: translateY(-2.6px); }
+.cfx-lk.shut .sh { transform: none; }
+.cfx-lk.near { filter: drop-shadow(0 0 2.5px currentColor); }
+.cfx-lk.far, .cfx-stream.far { filter: blur(0.6px); }
+.cfx-stream { display: grid; font-family: var(--mono); font-weight: 600; line-height: 1; will-change: transform; }
+.cfx-stream i { font-style: normal; }
+.cfx-stream .head { color: var(--bright); text-shadow: 0 0 4px currentColor, 0 0 8px var(--hot); }
+.cfx-rg { fill: none; stroke: currentColor; filter: url(#cfx-soft); }
+.cfx-br { fill: none; stroke: var(--bright); stroke-linecap: round; stroke-dasharray: 1 1; stroke-dashoffset: 1; opacity: 0.7; }
+.cfx-rime { opacity: 0; }
+.cfx-glint { width: 11px; height: 11px; margin: -5.5px 0 0 -5.5px; filter: drop-shadow(0 0 2px var(--bright)); }
+.cfx-glint svg { display: block; width: 100%; height: 100%; }
+.cfx-dith { width: 100%; height: 100%; background: repeating-conic-gradient(currentColor 0 25%, transparent 0 50%) 0 0 / 4px 4px; -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.55), #000 50%, rgba(0, 0, 0, 0.55)); mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.55), #000 50%, rgba(0, 0, 0, 0.55)); }
+.cfx-edge { height: 100%; width: 2px; margin-left: -1px; background: var(--bright); box-shadow: 0 0 6px var(--bright), 0 0 12px currentColor; }
+.cfx-flake { background: currentColor; box-shadow: 0 0 3px currentColor; }
+.cfx-fly.cfx-stream { left: 0; top: 0; }
+.cfx-fly.cfx-flake { left: 0; top: 0; }
+.cfx-fly.cfx-edge { margin-left: 0; }
+.cfx-bracket { border: 0 solid currentColor; filter: drop-shadow(0 0 3px currentColor); }
+.cfx-flash { background: currentColor; }
+.no-motion .fxin { display: none; }
+/* Its strike when it goes off (chipfx.mjs chipStrike), in the threat's red: a bolt, flying padlocks, frost shards. */
+.cfx-fly { position: fixed; z-index: 56; pointer-events: none; color: var(--hot); }
+svg.cfx-bolt { left: 0; top: 0; width: 100vw; height: 100vh; overflow: visible; mix-blend-mode: screen; }
+.cfx-burst { border-radius: 50%; background: radial-gradient(circle, var(--bright) 0, currentColor 25%, transparent 65%); mix-blend-mode: screen; }
+.cfx-clamp { border: 1.5px solid currentColor; border-radius: 50%; mix-blend-mode: screen; }
+.cfx-shard { background: var(--bright); box-shadow: 0 0 3px var(--bright); }
+/* the shared themes: heat */
+.cfx-heat { width: 100%; height: 100%; background: radial-gradient(130% 80% at 50% 135%, var(--bright) 0, currentColor 38%, transparent 78%); opacity: 0; }
+.cfx-fl-back { fill: currentColor; opacity: 0.4; filter: url(#cfx-bloom); }
+.cfx-fl-halo { fill: currentColor; opacity: 0.5; filter: url(#cfx-bloom); }
+.cfx-fl-body { fill: currentColor; opacity: 0.32; }
+.cfx-fl-core { fill: var(--bright); opacity: 0.6; filter: url(#cfx-soft); }
+.cfx-em { border-radius: 50%; background: var(--bright); box-shadow: 0 0 2px var(--bright), 0 0 5px currentColor, 0 0 9px currentColor; transition: background 0.3s, box-shadow 0.3s; }
+.cfx-em.cool { background: currentColor; box-shadow: 0 0 4px currentColor; }
+.cfx-em.far { filter: blur(0.5px); box-shadow: 0 0 3px currentColor; }
+.cfx-spark { width: 1.5px; height: 1.5px; border-radius: 50%; background: var(--bright); box-shadow: 0 0 3px currentColor; }
+.cfx-sparkln { border-radius: 1px; background: linear-gradient(90deg, transparent, var(--bright)); box-shadow: 0 0 3px currentColor; }
+.cfx-fb-halo circle { fill: currentColor; opacity: 0.55; filter: url(#cfx-bloom); }
+.cfx-fb-body circle { fill: currentColor; opacity: 0.8; }
+.cfx-fb-core circle { fill: var(--bright); }
+.cfx-fb-core { filter: url(#cfx-soft); }
+.cfx-scorch { fill: currentColor; filter: url(#cfx-bloom); }
+/* crumble */
+.cfx-cr-halo, .cfx-cr-core { fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1 1; stroke-dashoffset: 1; }
+.cfx-cr-halo { stroke: currentColor; opacity: 0.75; filter: url(#cfx-bloom); }
+.cfx-cr-core { stroke: var(--bright); }
+.cfx-tip { width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; background: radial-gradient(circle, var(--bright) 0, currentColor 35%, transparent 70%); opacity: 0; }
+.cfx-chip { background: var(--bright); filter: drop-shadow(0 0 2px currentColor); }
+.cfx-dust1 { width: 1px; height: 1px; background: currentColor; filter: blur(0.4px); }
+.cfx-px { width: 3px; height: 3px; background: var(--bright); box-shadow: 0 0 3px currentColor; opacity: 0; }
+.cfx-grit { width: 2px; height: 2px; background: var(--bright); box-shadow: 0 0 2px currentColor; }
+.cfx-puff { border-radius: 50%; background: radial-gradient(circle, currentColor 0, transparent 70%); filter: blur(1.5px); }
+.cfx-sh-halo { fill: currentColor; opacity: 0.35; filter: url(#cfx-bloom); }
+.cfx-sh-body { fill: currentColor; fill-opacity: 0.16; stroke: var(--bright); stroke-width: 0.7; stroke-opacity: 0.85; stroke-linejoin: round; }
+/* scramble */
+.cfx-sc-back, .cfx-sc-tail, .cfx-sc-head { font: 500 9px/9px var(--mono); white-space: pre; letter-spacing: 0; }
+.cfx-sc-back { color: currentColor; opacity: 0.3; filter: blur(0.35px); }
+.cfx-sc-tail { color: currentColor; text-shadow: 0 0 4px currentColor; }
+.cfx-sc-head { color: var(--bright); text-shadow: 0 0 3px var(--bright), 0 0 7px currentColor; }
+.cfx-sc-pop { font: 600 12px/12px var(--mono); color: var(--bright); text-shadow: 0 0 4px currentColor, 0 0 9px currentColor; }
+.cfx-sc-pop.set { color: currentColor; text-shadow: 0 0 4px currentColor; }
+.cfx-tear { height: 1px; background: var(--bright); box-shadow: 0 0 4px var(--bright), 0 0 8px currentColor; opacity: 0; }
+.cfx-bolt text { font: 600 12px var(--mono); }
+.cfx-sc-halo { fill: currentColor; filter: url(#cfx-bloom); }
+.cfx-sc-core { fill: var(--bright); }
+.cfx-sc-set { fill: currentColor; }
+.cfx-sc-g1 { fill: currentColor; opacity: 0.45; }
+.cfx-sc-g2 { fill: currentColor; opacity: 0.2; filter: url(#cfx-soft); }
+.cfx-sc-flash { fill: var(--bright); opacity: 0.8; filter: url(#cfx-bloom); }
+.cfx-sc-tearln { fill: var(--bright); }
+/* thorn */
+.cfx-vine path { fill: none; stroke-linecap: round; }
+.cfx-vine .halo { stroke: currentColor; stroke-width: 2.4; opacity: 0.6; filter: url(#cfx-bloom); }
+.cfx-vine .core { stroke: currentColor; stroke-width: 0.8; }
+.cfx-th-halo { fill: currentColor; opacity: 0.55; filter: url(#cfx-bloom); }
+.cfx-th-body { fill: currentColor; }
+.cfx-th-core { fill: var(--bright); opacity: 0.9; }
+.far .cfx-th-body { opacity: 0.5; filter: url(#cfx-soft); }
+.cfx-th-streak { fill: currentColor; opacity: 0.55; filter: url(#cfx-bloom); }
+.cfx-th-streakc { fill: var(--bright); opacity: 0.6; }
+.glint .cfx-sh-body { fill: var(--bright); fill-opacity: 0.6; stroke-width: 1.2; }
+.glint .cfx-sh-halo { opacity: 0.7; }
+/* clock */
+.cfx-ck-ruler line { stroke: currentColor; stroke-width: 1; opacity: 0.35; }
+.cfx-ck-ruler line.on { stroke: var(--bright); opacity: 0.8; }
+.cfx-ck-ruler line.head { stroke: var(--bright); stroke-width: 1.6; opacity: 1; filter: drop-shadow(0 0 2px currentColor); }
+.cfx-ck-face { fill: none; stroke: currentColor; stroke-width: 1; filter: url(#cfx-soft); }
+.cfx-ck-fan { fill: currentColor; opacity: 0.3; filter: url(#cfx-soft); }
+.cfx-ck-ticks line { stroke: currentColor; stroke-width: 1.1; stroke-linecap: round; }
+.cfx-ck-ticks line.on, .cfx-ck-ticks.lit line { stroke: var(--bright); }
+.cfx-ck-halo, .cfx-ck-body, .cfx-ck-core { stroke-linecap: round; }
+.cfx-ck-halo { stroke: currentColor; opacity: 0.6; filter: url(#cfx-bloom); }
+.cfx-ck-body { stroke: currentColor; }
+.cfx-ck-core { stroke: var(--bright); }
+.cfx-ck-hub { fill: var(--bright); }
+.cfx-ck-stop { fill: var(--bright); filter: url(#cfx-bloom); }
+/* strobe */
+.cfx-sb { top: 0; height: 100%; background: linear-gradient(90deg, transparent, currentColor 30%, var(--bright) 50%, currentColor 70%, transparent); box-shadow: 0 0 8px currentColor; opacity: 0; }
+.cfx-sb.far { filter: blur(1px); box-shadow: none; }
+.cfx-sb-streak { top: calc(50% - 4px); width: 100%; height: 8px; background: linear-gradient(transparent, currentColor 40%, var(--bright) 50%, currentColor 60%, transparent); filter: blur(0.6px); opacity: 0; }
+.cfx-sb-chip { fill: var(--bright); opacity: 0.35; }
+.cfx-sb-cone { fill: currentColor; opacity: 0.45; filter: url(#cfx-bloom); }
+.cfx-sb-core { stroke: var(--bright); stroke-linecap: round; filter: drop-shadow(0 0 3px currentColor); }
+.cfx-sb-hit { fill: var(--bright); opacity: 0.85; }
+.cfx-sb-flare { fill: var(--bright); filter: drop-shadow(0 0 4px currentColor) drop-shadow(0 0 8px currentColor); }
+.cfx-sb-glow { fill: currentColor; opacity: 0.6; filter: url(#cfx-bloom); }
+/* copy */
+span.cfx-cp-wake { --x: 0px; width: 100%; height: 100%; background: radial-gradient(circle, currentColor 0.7px, transparent 1.1px) 0 0 / 4px 4px; opacity: 0; -webkit-mask-image: linear-gradient(90deg, transparent calc(var(--x) - 70px), #000 var(--x), transparent var(--x)); mask-image: linear-gradient(90deg, transparent calc(var(--x) - 70px), #000 var(--x), transparent var(--x)); }
+rect.cfx-cp-wake { fill: currentColor; filter: url(#cfx-soft); }
+.cfx-cp-lamp { top: 0; height: 100%; width: 24px; margin-left: -12px; background: linear-gradient(90deg, transparent, currentColor 38%, var(--bright) 49%, var(--bright) 51%, currentColor 62%, transparent); filter: blur(0.4px); }
+.cfx-cp-copy { border: 1px solid var(--bright); border-radius: 3px; box-shadow: 0 0 4px currentColor, inset 0 0 6px currentColor; opacity: 0; transform-origin: 50% 50%; }
+.cfx-cp-copy.far { border-color: currentColor; box-shadow: none; filter: blur(0.6px); }
+.cfx-cp-lampr { fill: var(--bright); filter: url(#cfx-bloom); }
+.cfx-cp-ghost { fill: none; stroke: currentColor; stroke-width: 1; }
+.cfx-cp-halo { fill: currentColor; fill-opacity: 0.12; stroke: currentColor; stroke-width: 3; stroke-opacity: 0.5; filter: url(#cfx-bloom); }
+.cfx-cp-edge { fill: none; stroke: var(--bright); stroke-width: 1; }
+.cfx-cp-edge.hot { stroke-width: 2; filter: drop-shadow(0 0 3px var(--bright)); }
+/* scan */
+.cfx-sn-dots circle { fill: var(--bright); }
+.cfx-sn-beam { top: 0; height: 100%; width: 1.5px; margin-left: -0.75px; background: var(--bright); box-shadow: 0 0 4px var(--bright), 0 0 9px currentColor; transform-origin: 0.75px 50%; }
+.cfx-sn-beam i { position: absolute; top: 0; right: 1px; width: 26px; height: 100%; background: linear-gradient(90deg, transparent, currentColor); opacity: 0.55; }
+.cfx-sn-tgt { width: 10px; height: 10px; --c: var(--bright); --a: 3px; --t: 1px; filter: drop-shadow(0 0 2px currentColor);
+  background: linear-gradient(var(--c), var(--c)) 0 0 / var(--a) var(--t) no-repeat, linear-gradient(var(--c), var(--c)) 0 0 / var(--t) var(--a) no-repeat,
+    linear-gradient(var(--c), var(--c)) 100% 0 / var(--a) var(--t) no-repeat, linear-gradient(var(--c), var(--c)) 100% 0 / var(--t) var(--a) no-repeat,
+    linear-gradient(var(--c), var(--c)) 0 100% / var(--a) var(--t) no-repeat, linear-gradient(var(--c), var(--c)) 0 100% / var(--t) var(--a) no-repeat,
+    linear-gradient(var(--c), var(--c)) 100% 100% / var(--a) var(--t) no-repeat, linear-gradient(var(--c), var(--c)) 100% 100% / var(--t) var(--a) no-repeat; }
+.cfx-sn-tgt.big { --a: 5px; --t: 1.5px; }
+.cfx-sn-emit { fill: var(--bright); filter: drop-shadow(0 0 3px currentColor) drop-shadow(0 0 6px currentColor); }
+.cfx-sn-cone { fill: currentColor; opacity: 0.4; filter: url(#cfx-bloom); }
+.cfx-sn-edge { stroke: var(--bright); stroke-width: 0.6; opacity: 0.6; }
+.cfx-sn-core { stroke: var(--bright); stroke-width: 1.2; filter: drop-shadow(0 0 2px currentColor); }
+.cfx-sn-rake { filter: drop-shadow(0 0 3px currentColor); }
+@media (prefers-reduced-motion: reduce) { .fxin { display: none; } }
 .crypt-line { position: relative; height: 4px; margin: 0 0 6px; border-radius: 2px; background: repeating-linear-gradient(135deg, var(--hot) 0 4px, transparent 4px 8px); opacity: 0.7; cursor: help; }
 /* Hover: it opens up into the full chip for a moment (over the cell, nothing moves). */
 .crypt-line::after { content: attr(data-label); position: absolute; left: 0; top: 50%; transform: translateY(-50%) scaleY(0.2); transform-origin: left center; opacity: 0; padding: 3px 8px; border: 1px solid var(--hot); border-radius: 3px; background: repeating-linear-gradient(135deg, var(--hot-soft) 0 6px, transparent 6px 12px), var(--panel); color: var(--hot); font: 600 11px var(--mono); letter-spacing: 0.5px; white-space: nowrap; pointer-events: none; z-index: 4; transition: transform 0.15s ease-out, opacity 0.15s ease-out; }

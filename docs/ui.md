@@ -106,6 +106,11 @@ teal, violet or a threat's red.
 - **Previews:** before a cycle resolves, every bar shows what it's about to lose as a blinking white slice (the chits
   about to break blink too), following what you're typing. Timeline chips name the attack, or a three-letter code where
   the name won't fit (Surge → SRG), never an ellipsis.
+- **Themed chips** (chipfx.mjs `CHIP_THEMES`; each theme in docs/chip-themes.md): a part with a theme plays it faint
+  inside its own chips, under the text, in the chip's colour and white: nothing at +2 and +3, faint at +1, stronger in
+  Now and its last 1.5 s. When it goes off (`chipStrike`), its strike flies from the chip into your bar in the threat's
+  red, in place of the chip's ghost (beside it for the frost), and its hit throws no lash. A packed part shows none.
+  Screen effects off, Motion off or reduced motion: none; subtle: fainter.
 - **Hits land on the thing hit** (hitfx.mjs): the part's cell flashes and a burst of 1s and 0s flies out (amber yours,
   violet a crewmate's); a crit bursts gold-white; a hit spent on ◆ floats *◆ ABSORBED* in steel; a miss stamps MISS. A
   status on you shows big, then flies into the Status column. A broken part dissolves into rising 1s and 0s.
