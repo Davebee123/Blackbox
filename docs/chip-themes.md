@@ -1,22 +1,31 @@
-# Chip themes: draft for approval
+# Chip themes
 
-Built: Pulse Node (zap), Encryptor (lock), Cipher Block (cipher), C2 Node (ring), Cold Store (frost), Eraser (erase).
-Proposed: 11 more themes shared by the remaining parts. Nothing below is built until approved.
+What each theme plays inside its chips (chipfx.mjs `THEMES`) and its strike into your bar (`chipStrike`). Rules:
+docs/ui.md "Themed chips".
 
-| Theme | Plays inside the chip | Strike into your bar | Parts |
+| Theme | Inside the chip | Strike | Parts |
 |---|---|---|---|
-| heat | embers rise, the chip glows | a fireball arcs in and flares | Rig, Twin Rig, Hotspot, Volatile, Payload, Vendetta |
-| clock | tick marks sweep a faint dial | the dial's hand sweeps your bar, then a stop | Idle Timer, Countdown, Backlog, Accumulator, Trigger |
-| strobe | bars flash on and off | three flashes cut across your bar | Strobe, Repeater, Jitter, Amplifier, Stunner |
-| copy | outlines peel off and drift behind | outlines stack onto your bar, one by one | Replicator, Mirror, Fan-in, Spare, Mimic, Swap |
-| scan | a thin beam sweeps the chip | the beam rakes down your bar | Scraper, Prober, Harvester, Leaker, Feeder, Tripwire |
-| scramble | glyphs shuffle | the glyphs fly in and shuffle your bar's text | Scrambler, Obfuscator, Prism, Packer, Decoy, Sandbox |
-| crumble | hairline cracks, grit falls | the chip's fragments crash onto your bar | Bad Block, Zip Bomb, Degausser, Recycle Bin, Junker |
-| plate | armour plates slide and click | a plate slams down on your bar | Front End, Bodyguard, Mutex, Lockbox, Limiter |
-| thorn | spikes grow from the edges | spikes shoot in and stick | Thorns, Punisher, Predator, Opportunist |
-| ledger | small numbers tick over | numbers drain from your bar into the chip | Buffer, Cooler, Damper |
-| mask | a face flickers between two shapes | the mask lands and swaps | Turncoat, Backtrace, C&C |
+| zap | fractal arcs over a bloom, hot spots at the edges | a forked bolt strobes into your bar | Pulse Node |
+| lock | padlocks rise with depth, shackles snapping shut | padlocks arc over and clamp on | Encryptor |
+| cipher | hex streams fall, a bright head over a fading tail | streams fly in head first and scatter | Cipher Block |
+| ring | rings roll out from the icon | a beam, brackets lock on, the bar flashes | C2 Node |
+| frost | dendrites branch in from the corners over a rime | the frost shatters | Cold Store |
+| erase | the playhead eats a dither field | pixels fly off in wipe order, a dither sweeps the bar | Eraser |
+| heat | flames lick up from the foot, white-hot cores, embers that pop | a comet-tailed fireball, flames run along the bar | Rig, Twin Rig, Hotspot, Volatile, Payload, Vendetta |
+| crumble | glowing cracks branch in, hot tips, falling chips, dead pixels | cracks flash, glass shards tumble onto the bar, it cracks | Bad Block, Zip Bomb, Degausser, Recycle Bin, Junker |
+| scramble | a sparse glyph field, a decoding wave, rows that tear | glyphs swarm to a band on the bar, decode and tear | Scrambler, Obfuscator, Prism, Packer, Decoy, Sandbox |
+| thorn | hooked thorns spring from a bramble on both edges | a volley drives in, sticks and quivers, sparks | Thorns, Punisher, Predator, Opportunist |
 
-All 60-odd parts are covered. Themes keep the rules of the built six: faint at +1, stronger in Now, nothing at +2 and +3,
-inside the chip, and a strike from the chip into your bar in the threat's red, with no lash. Parts a family shares
-(Pulse Node, Strobe, Repeater and the rest) wear one theme in every family.
+## Proposed, not built
+
+| Theme | Inside the chip | Strike | Parts |
+|---|---|---|---|
+| clock | ticks along the foot light up with the cycle | a hand swings to the bar, ticks fire across it, a stop | Idle Timer, Countdown, Backlog, Accumulator, Trigger |
+| strobe | bars flick on and off | three beams drop onto the bar, three flashes | Strobe, Repeater, Jitter, Amplifier, Stunner |
+| copy | outlines peel off and drift behind | outlines fly over and stack onto the bar | Replicator, Mirror, Fan-in, Spare, Mimic, Swap |
+| scan | a beam sweeps the chip | a cone rakes along the bar | Scraper, Prober, Harvester, Leaker, Feeder, Tripwire |
+| plate | plates slide in and click shut | a plate slams down on the bar | Front End, Bodyguard, Mutex, Lockbox, Limiter |
+| ledger | digits drift up | numbers fly into the bar | Buffer, Cooler, Damper |
+| mask | a mask flickers between two faces | the mask flies over and flips | Turncoat, Backtrace, C&C |
+
+A part a family shares wears one theme in every family.

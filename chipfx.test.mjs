@@ -35,11 +35,23 @@ test('a themed part marks its board row; an unthemed one does not', () => {
   assert.match(row('encryptor'), /data-th="lock"/);
   const t = fresh(); t.hackers = { breaker: { level: 12, xp: 0 } }; t.metAll = true;
   selectEncounter(t, 'random', 2, { level: 12, family: 'ransomware', mutation: null }); command(t, 'engage');
-  const plain = t.encounter.virus.parts.find((p) => !chipTheme(p.name));
-  assert.ok(plain, 'this fight has an unthemed part');
-  assert.doesNotMatch(boardMarkup(t).split('data-target="').find((r) => r.startsWith(plain.id + '"')).split('>')[0], /data-th=/);
+  const rows = boardMarkup(t).split('data-target="');
+  for (const p of t.encounter.virus.parts) {
+    const r = rows.find((x) => x.startsWith(p.id + '"'))?.split('>')[0];
+    if (!r) continue;
+    const th = r.match(/data-th="([^"]+)"/)?.[1];
+    if (th) assert.equal(th, chipTheme(p.name), `${p.name} wears its own theme`);
+    if (!chipTheme(p.name)) assert.equal(th, undefined, `${p.name} wears none`);
+  }
 });
 
 test('every theme has a strike, so no themed hit throws a lash', () => {
   for (const th of new Set(Object.values(CHIP_THEMES))) assert.ok(STRIKES.has(th), `${th} strikes`);
+});
+
+test('a shared theme marks every part that wears it', () => {
+  assert.equal(chipTheme('Twin Rig'), 'heat');
+  assert.equal(chipTheme('Recycle Bin'), 'crumble');
+  assert.equal(chipTheme('Obfuscator.exe'), 'scramble');
+  assert.equal(chipTheme('Opportunist'), 'thorn');
 });
