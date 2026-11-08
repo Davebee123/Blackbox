@@ -263,6 +263,40 @@ code { font-family: var(--mono); color: var(--amber); }
   .tl-window.live .tw-word { display: none; }
 }
 /* ---- end tell windows ---- */
+/* ---- Themed chips (chipfx.mjs): a part's theme plays faint inside its own chips at +1 and in Now, under the text, in
+   the chip's colour and white; its light adds up (screen). The box sits behind the chip's text (z-index -1 in the chip's
+   own stacking context); chipfx sets its opacity. Nothing leaves the chip. ---- */
+.brow[data-th] .intent[data-k] { position: relative; isolation: isolate; }
+.intent > .fxin { position: absolute; inset: 0; z-index: -1; overflow: hidden; border-radius: inherit; pointer-events: none; mix-blend-mode: screen; opacity: 0; }
+.intent.tell > .fxin { color: var(--tc); }
+.fxin > * { position: absolute; left: 0; top: 0; pointer-events: none; }
+.fxin .cfx-svg { width: 100%; height: 100%; overflow: visible; }
+.cfx-arc .halo { fill: none; stroke: currentColor; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; filter: url(#cfx-bloom); }
+.cfx-arc .mid { fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.cfx-arc .core { fill: none; stroke: var(--bright); stroke-width: 0.8; stroke-linecap: round; stroke-linejoin: round; }
+.cfx-arc .twig { fill: none; stroke: currentColor; stroke-width: 0.8; stroke-linecap: round; opacity: 0.8; }
+.cfx-hot, .cfx-glow { border-radius: 50%; background: radial-gradient(circle, var(--bright) 0, currentColor 30%, transparent 70%); }
+.cfx-hot { width: 14px; height: 14px; margin: -7px 0 0 -7px; }
+.cfx-glow { width: 22px; height: 22px; margin: -11px 0 0 -11px; }
+.cfx-lk { will-change: transform, opacity; }
+.cfx-lk svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.cfx-lk .sh { transition: transform 90ms cubic-bezier(.5, 0, .9, .4); transform: translateY(-2.6px); }
+.cfx-lk.shut .sh { transform: none; }
+.cfx-lk.near { filter: drop-shadow(0 0 2.5px currentColor); }
+.cfx-lk.far, .cfx-stream.far { filter: blur(0.6px); }
+.cfx-stream { display: grid; font-family: var(--mono); font-weight: 600; line-height: 1; will-change: transform; }
+.cfx-stream i { font-style: normal; }
+.cfx-stream .head { color: var(--bright); text-shadow: 0 0 4px currentColor, 0 0 8px var(--hot); }
+.cfx-rg { fill: none; stroke: currentColor; filter: url(#cfx-soft); }
+.cfx-br { fill: none; stroke: var(--bright); stroke-linecap: round; stroke-dasharray: 1 1; stroke-dashoffset: 1; opacity: 0.7; }
+.cfx-rime { opacity: 0; }
+.cfx-glint { width: 11px; height: 11px; margin: -5.5px 0 0 -5.5px; filter: drop-shadow(0 0 2px var(--bright)); }
+.cfx-glint svg { display: block; width: 100%; height: 100%; }
+.cfx-dith { width: 100%; height: 100%; background: repeating-conic-gradient(currentColor 0 25%, transparent 0 50%) 0 0 / 4px 4px; -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.55), #000 50%, rgba(0, 0, 0, 0.55)); mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.55), #000 50%, rgba(0, 0, 0, 0.55)); }
+.cfx-edge { height: 100%; width: 2px; margin-left: -1px; background: var(--bright); box-shadow: 0 0 6px var(--bright), 0 0 12px currentColor; }
+.cfx-flake { background: currentColor; box-shadow: 0 0 3px currentColor; }
+.no-motion .fxin { display: none; }
+@media (prefers-reduced-motion: reduce) { .fxin { display: none; } }
 .crypt-line { position: relative; height: 4px; margin: 0 0 6px; border-radius: 2px; background: repeating-linear-gradient(135deg, var(--hot) 0 4px, transparent 4px 8px); opacity: 0.7; cursor: help; }
 /* Hover: it opens up into the full chip for a moment (over the cell, nothing moves). */
 .crypt-line::after { content: attr(data-label); position: absolute; left: 0; top: 50%; transform: translateY(-50%) scaleY(0.2); transform-origin: left center; opacity: 0; padding: 3px 8px; border: 1px solid var(--hot); border-radius: 3px; background: repeating-linear-gradient(135deg, var(--hot-soft) 0 6px, transparent 6px 12px), var(--panel); color: var(--hot); font: 600 11px var(--mono); letter-spacing: 0.5px; white-space: nowrap; pointer-events: none; z-index: 4; transition: transform 0.15s ease-out, opacity 0.15s ease-out; }

@@ -14,7 +14,7 @@ import { collectionPageMarkup, finds as findsLog } from './collection-view.mjs';
 import { createFeel } from './feel.mjs';
 import { placeOf, familyCues } from './places.mjs';
 import { createShell } from './shell.mjs';
-import { createScreenFx, screenState, screenFxCommand, SFX, boardFxOf, migrateEffects } from './screenfx.mjs';
+import { createScreenFx, screenState, screenFxCommand, SFX, boardFxOf, migrateEffects, levelOf } from './screenfx.mjs';
 import { play, runSuggestions, nextActions, currentLocation, signalNow, crewWander } from './run.mjs';
 import { tickNetwork, degradedLeft, fmtLeft } from './invasion.mjs';
 import { consortiumOf, alertsOf } from './consortium.mjs';
@@ -39,6 +39,7 @@ import { mountFxPlaytest, abilityOfKey } from './abilityfx-playtest.mjs';
 import { plan as dmgPlan, queueAfter, absorbOf, armorFloat, missFloat } from './dmgfx.mjs';
 import { recapMarkup } from './recap.mjs';
 import { createLash } from './lash.mjs';
+import { createChipFx } from './chipfx.mjs';
 import { online, simOn } from './presence.mjs';
 import { matesOf } from './crew.mjs';
 import { tickPlay } from './progression.mjs';
@@ -657,6 +658,7 @@ const juice = {
 // A virus attack on you lashes at the screen (lash.mjs): from the part on the render (or its row on the
 // board) into your Signal bar. Effects minimal or Motion off: none, a soft edge instead.
 const lash = createLash();
+const chipfx = createChipFx(); // themed telegraph chips (chipTick)
 function lashFrom(id) {
   const a = id ? art.anchor(id) : null;
   if (a) return a;
@@ -2118,6 +2120,7 @@ function render(force = false) {
     const turned = shownCycle && shownCycle !== cycleKey && shownCycle.startsWith(s.encounter.virus.id + ':') && canMove();
     const before = turned ? chipSnapshot() : null;
     put('board', (active(s) && s.encounter.paused ? '<div class="pause-strip" role="status">PAUSED · ANY ORDER RESUMES</div>' : '') + V.boardMarkup(s, selected, aimPreview));
+    chipfx.place($('board')); // themed chips get their effect back after the rebuild
     if (held.size) applyHeld(); // a batch still playing: its bars hold until each hit lands
     $('board').classList.toggle('is-paused', !!(active(s) && s.encounter.paused));
     // Every part on screen: if the rows overflow the board, tighten them (style.css .dense) for the rest of the fight.
@@ -2283,7 +2286,8 @@ function cycleChanged(s) {
 // (an attack flies at your bar, your command at its target, a patch clamps shut) and fades, and
 // anything new drifts in from the right. Motion off skips all of it.
 function chipSnapshot() {
-  return [...$('board').querySelectorAll('[data-k]')].map((el) => ({ k: el.dataset.k, at: el.dataset.at || '', rect: el.getBoundingClientRect(), html: el.outerHTML, cls: el.className }));
+  const plain = (el) => { const c = el.cloneNode(true); c.querySelector('.fxin')?.remove(); return c.outerHTML; }; // a resolved chip's ghost leaves its theme behind
+  return [...$('board').querySelectorAll('[data-k]')].map((el) => ({ k: el.dataset.k, at: el.dataset.at || '', rect: el.getBoundingClientRect(), html: plain(el), cls: el.className }));
 }
 function turnTimeline(before) {
   const board = $('board');
@@ -2434,6 +2438,17 @@ function tickUi() {
   }
 }
 let prewarned = '';
+// Themed chips (chipfx.mjs): every frame, a themed part's chips at +1 and in Now play its effect, faint, inside the chip.
+// Screen effects off, Motion off or reduced motion: none; subtle: fainter.
+let chipLast = 0;
+function chipTick() {
+  const t = performance.now(), dt = chipLast ? Math.min(100, t - chipLast) : 0;
+  chipLast = t;
+  const s = shown();
+  if (module !== 'combat' || !active(s)) return;
+  const lvl = levelOf(campaign), k = !canMove() || lvl === 'off' ? 0 : lvl === 'subtle' ? 0.7 : 1, L = cycleLength(s);
+  chipfx.tick({ dt: s.encounter.paused ? 0 : dt, p: Math.min(1, s.encounter.elapsedMs / L), left: L - s.encounter.elapsedMs, k });
+}
 
 // Once a second: finish an install whose time is up, and move the Server page's progress bar.
 // The bar and clock are patched in place so buttons (and their confirm clicks) survive.
@@ -2719,6 +2734,7 @@ function frame(now) {
   coop?.tick();
   if (dirty) render();
   else tickUi();
+  chipTick();
   scanner?.tick(Date.now());
   lu.tick();
   feel.flush();
