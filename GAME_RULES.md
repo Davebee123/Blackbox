@@ -892,7 +892,7 @@ A floor's signature kind takes about a third of its servers (`floors.mjs` FLOOR.
 **Specials** (`specials.mjs`, docs/server-specials.md): every traced server has one from its seed, two from floor 5
 down; Guarded comes 1 in 25. Each is an upside and a cost, and points at a program that leans in (⇡) and one that
 fixes the cost (⇣). It shows as one filled amber tag (its glyph and name) on the card, its rule, chips and ▸ programs
-on hover, and as its glyph in amber on the map node.
+on hover, and as its glyph in amber after the level in the server's map label, its rule on hover.
 
 | Special | Upside | Cost | ⇡ | ⇣ |
 |---|---|---|---|---|
@@ -1083,7 +1083,9 @@ from your network's seed, with its own level band, shape and size.
 - **Back up** is always open: every floor's entry is a **▲**, and travel is free: from home you connect to any server
   you've found on any floor you've reached. Each floor you've reached is a **waypoint** (its landing server): **Start
   here** on its ▲ card.
-- **The map** shows one floor at a time, home drawn above it with a line to its entry. **The floor panel** runs down
+- **The map** shows one floor at a time, home drawn above it with a line to its entry. A server is its kind's glyph
+  (its rule on hover), a bar under it filling as you clear it, a ring round one you haven't been into; under its name,
+  its level and its specials' glyphs. **The floor panel** runs down
   the map's right side like a lift's buttons (`floors`, `floor <n>`, `floor up|down`).
 - **Layers.** Content that names a layer reads floors 1, 2, 3–4, 5–6 and 7–8 as layers 1 to 5. Each layer down adds
   25% to blue and yellow drop odds and 40% to cache credits.

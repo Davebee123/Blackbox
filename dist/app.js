@@ -85,7 +85,6 @@ import { createScanner, postBanner, postOptions, postTerminalMarkup, POST } from
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const playtest = params.get('playtest');
-if (params.get('maplook')) V.setMapLook(params.get('maplook')); // TEMP: the map's server looks, to compare
 // The breach campaign (campaign.mjs, ?campaign=breach): its own save under its own key. The old game's save is never
 // read, written or migrated from here, and the old game's systems (map, mail, server, hubs, invasions, timers) sit out.
 // A test bench (bench.mjs, ?bench=<name>): its own save under blackbox-bench-<name>, developer mode on. The real save

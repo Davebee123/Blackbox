@@ -166,8 +166,11 @@ short vibration on phones that have it.
 - **The top bar:** the pages on the left; in the middle your handle · class · level with the class's XP as a thin bar;
   on the right the people button, the pager, then Integrity (a server tower that drains), Signal (five bars) and
   credits, each with its **+**. At 1440 with the casing the pager's tray tightens so the class name keeps its place.
-- **The map** shows one floor at a time. A server's level is the number under it in WoW colours; servers that ask
-  nothing of you draw as dim dots without labels until hovered, selected or zoomed. Labels never overlap: the more
+- **The map** shows one floor at a time. A server (the *Glyph*, `view.mjs` serverIcon) is its kind's glyph on a dark
+  plate, a bar under it filling as you clear it, and a ring round one you haven't been into, a pulse going out from it;
+  amber, gray when done, teal where you are and what's yours, yellow for a contract's. Its kind's rule is the glyph's
+  tooltip. Under its name, the level in WoW colours (the name's size) and its specials' glyphs. Servers that ask
+  nothing of you draw dim without labels until hovered, selected or zoomed. Labels never overlap: the more
   important one keeps its label (selected, then threats, then where you are, then a contract or fresh find). Scroll
   zooms (up to 5×), drag pans, double-click or ⤢ fits. A **Show** picker (**Mine**, **Targets**, **Threats**) dims the
   rest. **Map · List** toggles a sortable list of every server (name, family, level, floor, explored, status), then hubs
@@ -225,7 +228,9 @@ short vibration on phones that have it.
 - **Narrow columns**: board cells are size containers; a chip tightens and drops its icon below 132px instead of
   cutting words.
 - **Map labels**: one label per spot. The crowding pass in `mapMarkup` ranks every labelled node (selected, threats,
-  contracts, then the rest) and hides a label that would overlap a more important one or be cut by the edge.
+  contracts, then the rest) and tries each side of its node (outward first, then right, left, under, over); it hides
+  a label only when every side would meet a more important label, another node or the edge. A label's gap and line
+  spacing are in ems, so it hugs its node at any zoom; a halo in the map's ground keeps links out of the words.
 - **Pane titles** (`[ ssh … ]`) sit on a panel's top edge; the page leaves room above them.
 - **Balance the columns** of a two-column page.
 - **UI scale** (uiscale.mjs) scales the screen as a whole, tooltips and pop-ups included, only while it stays 1700px

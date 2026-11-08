@@ -70,7 +70,7 @@ import { usable, hooks, roundOf } from './combat.mjs';
 import { EXE } from './exe.mjs';
 import { sigintWindows, sigintCharges, plannedTells } from './tells.mjs';
 import { daemonText } from './daemons.mjs';
-import { ROOMS as ROOMS_FP, kindRule, KIND_OF } from './floorplan.mjs'; // a server card's respawn timers, its type's rule
+import { ROOMS as ROOMS_FP, kindRule, kindName, KIND_OF, KINDS as KINDS_FP } from './floorplan.mjs'; // a server card's respawn timers, its type's rule
 import { RIVALS } from './rivals.mjs';
 import { threadRows, threadReader, tempNodes, tempNodeSvg, tempCard, serverMarkSvg, transitNodes, transitSvg } from './threads-view.mjs';
 import { arcRows, arcReader } from './arcs-view.mjs';
@@ -2115,57 +2115,55 @@ function mapTags(s, l, st, job) {
 // each layer, labels set outward from home. Selection is a reticle, not a glow.
 const reticle = (r) => { const k = 5, q = r + 4; return `<path class="mreticle" d="M${-q} ${-q + k}V${-q}H${-q + k}M${q - k} ${-q}H${q}V${-q + k}M${q} ${q - k}V${q}H${q - k}M${-q + k} ${q}H${-q}V${q - k}"/>`; };
 // Where a node's name goes: outward from the floor's middle first, so labels keep off the links; the crowding pass in
-// mapMarkup moves it to another side (spots) when that one would sit on a name or a node. Beside a node, the name and
-// the line under it are centred on it (in ems: text keeps its size on screen).
+// mapMarkup moves it to another side (spots) when that one would sit on a name or a node. It starts at the node's edge
+// (r, in map units) and its gap and line spacing are in ems: text keeps its size on screen, so a label hugs its node at
+// any zoom. Beside a node, the name and the line under it are centred on it.
 let spots = {};
 function sideOf(n) {
   const ang = n.angle ?? Math.atan2(n.y, n.x) * 180 / Math.PI;
   const c = Math.cos(ang * Math.PI / 180), si = Math.sin(ang * Math.PI / 180);
   return c > 0.4 ? 'r' : c < -0.4 ? 'l' : si > 0 ? 'b' : 't';
 }
-function labelAt(n, r) {
-  const side = spots[n.id] || sideOf(n);
-  if (side === 'r') return { x: r + 8, y: '-0.3em', a: 'start' };
-  if (side === 'l') return { x: -r - 8, y: '-0.3em', a: 'end' };
-  return side === 'b' ? { x: 0, y: r + 15, a: 'middle' } : { x: 0, y: -r - 20, a: 'middle' };
+const LINES = { r: ['0.55em', '-0.3em', '0.65em', '1.1em', '0.35em'], l: ['-0.55em', '-0.3em', '-0.65em', '1.1em', '0.35em'], b: ['0', '1em', '0', '2.6em', '1em'], t: ['0', '-1.55em', '0', '-0.3em', '-0.3em'] };
+// The name's and the line under it's attributes (one = a name with no line under it).
+function labelAt(n, r, one = false) {
+  const side = spots[n.id] || sideOf(n), [dx, dy, sdx, sdy, solo] = LINES[side];
+  const at = `x="${side === 'r' ? r + 2 : side === 'l' ? -r - 2 : 0}" y="${side === 'b' ? r + 2 : side === 't' ? -r - 2 : 0}" text-anchor="${side === 'r' ? 'start' : side === 'l' ? 'end' : 'middle'}"`;
+  return { name: `${at} dx="${dx}" dy="${one ? solo : dy}"`, sub: `${at} dx="${sdx}" dy="${sdy}"` };
 }
-const label = (n, r, name, sub, cls = '') => { const p = labelAt(n, r); return `<text x="${p.x}" y="${p.y}" class="mlabel ${cls}" text-anchor="${p.a}">${esc(name)}</text>${sub ? `<text x="${p.x}" y="${p.y}" dy="1.4em" class="msub" text-anchor="${p.a}">${esc(sub)}</text>` : ''}`; }; // the line under it sits in ems: text keeps its size on screen (--z), so a phone's small map doesn't stack them
+// Its box in map units, as the crowding pass weighs it: w wide, two lines (z: screen pixels per map unit).
+function labelBox(n, side, r, w, z) {
+  const g = 6 / z;
+  if (side === 'r') return [n.x + r + 2 + g, n.y - 14 / z, n.x + r + 2 + g + w, n.y + 14 / z];
+  if (side === 'l') return [n.x - r - 2 - g - w, n.y - 14 / z, n.x - r - 2 - g, n.y + 14 / z];
+  if (side === 'b') return [n.x - w / 2, n.y + r + 2, n.x + w / 2, n.y + r + 2 + 30 / z];
+  return [n.x - w / 2, n.y - r - 2 - 29 / z, n.x + w / 2, n.y - r - 2 + 2 / z];
+}
+const label = (n, r, name, sub, cls = '') => { const p = labelAt(n, r, !sub); return `<text ${p.name} class="mlabel ${cls}">${esc(name)}</text>${sub ? `<text ${p.sub} class="msub">${esc(sub)}</text>` : ''}`; };
 // A server's label: its name, and under it the level coloured by how hard it is for you (WoW colours), its specials'
-// glyphs (marks), then whatever else (outpost, siege…). The name can hide.
-const lvLabel = (s, n, r, name, level, depth, rest = '', cls = '', marks = '') => {
-  const p = labelAt(n, r), gap = level - hackerLevel(s);
+// glyphs (each with its tooltip), then whatever else (outpost, siege…). The name can hide.
+const lvLabel = (s, n, r, name, level, depth, rest = '', cls = '', specials = []) => {
+  const gap = level - hackerLevel(s);
   // A server you own needs no level (its colour says it's yours).
-  const lv = level != null ? `<tspan class="mlv ${conClass(gap)}" dx="0">lv ${level}</tspan>` : '';
-  const sub = lv + (marks ? `<tspan class="mspecial" dx="${lv ? 6 : 0}">${marks}</tspan>` : '') + (rest ? `<tspan dx="${lv || marks ? 6 : 0}">${esc(rest)}</tspan>` : '');
-  return `<text x="${p.x}" y="${p.y}" class="mlabel ${cls}" text-anchor="${p.a}">${esc(name)}</text>${sub ? `<text x="${p.x}" y="${p.y}" dy="1.45em" class="msub" text-anchor="${p.a}">${sub}</text>` : ''}`;
+  const lv = level != null ? `<tspan class="mlv ${conClass(gap)}">lv ${level}</tspan>` : '';
+  const sp = specials.map((id, i) => { const x = SPECIALS[id]; return `<tspan class="mspecial" dx="${i ? '0.25em' : lv ? '0.5em' : 0}" title="${esc(`${x.name}: Server special.\n${x.rule}\n▸ ${x.answer}`)}">${x.glyph}\uFE0E</tspan>`; }).join('');
+  const sub = lv + sp + (rest ? `<tspan dx="${lv || sp ? '0.6em' : 0}">${esc(rest)}</tspan>` : '');
+  const p = labelAt(n, r, !sub);
+  return `<text ${p.name} class="mlabel ${cls}">${esc(name)}</text>${sub ? `<text ${p.sub} class="msub">${sub}</text>` : ''}`;
 };
-// A server's kind on the map (floorplan.mjs KINDS): its glyph in the node, so a Mailhub reads as one before its name.
+// A server on the map: its kind's glyph (floorplan.mjs KINDS), so a Mailhub reads as one before its name, with the
+// kind's rule as its tooltip; a bar under it filling as you clear it; a ring round one you haven't been into, with a
+// pulse going out from it.
+// SV_R: the ring's radius, and where the server's label starts.
+const SV_R = 16;
 const KIND_GLYPH = { Mailhub: 'letter', Relay: 'relay', Mirror: 'mirror', Archive: 'storage', Lab: 'flask', Router: 'router', Honeypot: 'honeypot', Cold: 'cold' };
-const kindGlyph = (l, size, dy = 0) => `<g class="sv-kind" transform="translate(${-size / 2} ${-size / 2 + dy}) scale(${size / 16})">${GLYPHS[KIND_GLYPH[KIND_OF[l.template]] || 'relay']}</g>`;
-let mapLook = 'ring';
-export const setMapLook = (x) => { mapLook = x; };
-// The rooms cleared as a ring of ticks, one per room (a big server's as one arc).
-function roomTicks(r, taken, total) {
-  const C = 2 * Math.PI * r, f = (v) => v.toFixed(2);
-  if (!total || total > 24) return `<circle r="${r}" class="sv-track"/><circle r="${r}" class="sv-lit" stroke-dasharray="${f(C * (total ? Math.min(1, taken / total) : 0))} ${f(C)}" transform="rotate(-90)"/>`;
-  const seg = C / total, gap = Math.min(1.8, seg * 0.4), dash = seg - gap, k = Math.min(taken, total);
-  const lit = Array.from({ length: k }, () => `${f(dash)} ${f(gap)}`).join(' ');
-  return `<circle r="${r}" class="sv-track" stroke-dasharray="${f(dash)} ${f(gap)}" stroke-dashoffset="${f(-gap / 2)}" transform="rotate(-90)"/>${k ? `<circle r="${r}" class="sv-lit" stroke-dasharray="${lit} 0 ${f(C)}" stroke-dashoffset="${f(-gap / 2)}" transform="rotate(-90)"/>` : ''}`;
-}
-// A server's mark on the map: its kind's glyph, and how much of it you've cleared.
 function serverIcon(l, st) {
-  const taken = takenOf(l), total = takeable(l).length, share = total ? Math.min(1, taken / total) : 0;
-  if (mapLook === 'chip') {
-    const h = 12, c = 4, d = `M${-h + c} ${-h}H${h - c}L${h} ${-h + c}V${h - c}L${h - c} ${h}H${-h + c}L${-h} ${h - c}V${-h + c}Z`;
-    return `<path class="sv-chip" d="${d}"/>${st === 'new' ? `<path class="ring" d="${d}"/>` : ''}${kindGlyph(l, 13, -1.5)}<rect class="sv-track" x="-7" y="7.5" width="14" height="1.8"/>${share ? `<rect class="sv-lit" x="-7" y="7.5" width="${(14 * share).toFixed(1)}" height="1.8"/>` : ''}`;
-  }
-  if (mapLook === 'bare') {
-    return `<circle r="11" class="sv-plate"/>${st === 'new' ? '<circle r="12" class="ring"/>' : ''}${kindGlyph(l, 18, -1)}<rect class="sv-track" x="-8" y="11" width="16" height="2"/>${share ? `<rect class="sv-lit" x="-8" y="11" width="${(16 * share).toFixed(1)}" height="2"/>` : ''}`;
-  }
-  return `<circle r="12" class="sv-plate"/>${roomTicks(12, taken, total)}${st === 'new' ? '<circle r="12" class="ring"/>' : ''}${kindGlyph(l, 13)}`;
+  const kind = KIND_OF[l.template] || 'Relay', taken = takenOf(l), total = takeable(l).length, share = total ? Math.min(1, taken / total) : 0;
+  const tip = `${kindName(kind)}: Server kind.\n${KINDS_FP[kind]?.text || ''}`;
+  return `<circle r="11" class="sv-plate"/>${st === 'new' ? `<circle r="${SV_R}" class="sv-ring"/><circle r="${SV_R}" class="ring"/>` : ''}<g class="sv-kind" title="${esc(tip)}" transform="translate(-9 -10) scale(1.125)"><rect width="16" height="16" class="sv-hit"/>${GLYPHS[KIND_GLYPH[kind]]}</g><rect class="sv-track" x="-8" y="11" width="16" height="2"/>${share ? `<rect class="sv-lit" x="-8" y="11" width="${(16 * share).toFixed(1)}" height="2"/>` : ''}`;
 }
 // A thin progress arc around a node (share 0–1).
-const arc =(r, share, cls) => { const c = 2 * Math.PI * r; return `<circle r="${r}" class="marc-bg ${cls}"/><circle r="${r}" class="marc ${cls}" stroke-dasharray="${(c * Math.min(1, share)).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90)"/>`; };
+const arc = (r, share, cls) => { const c = 2 * Math.PI * r; return `<circle r="${r}" class="marc-bg ${cls}"/><circle r="${r}" class="marc ${cls}" stroke-dasharray="${(c * Math.min(1, share)).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90)"/>`; };
 
 // The threat rail, down the left of the map: everything coming for you or under way, soonest first,
 // each with its timer as a bar. Click one to select it on the map.
@@ -2345,18 +2343,14 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
     const cands = nodes.filter((n) => (n.kind === 'location' && n.loc) || OTHER[n.kind]).map((n) => ({ n, r: n.kind === 'location' ? rank(n) : n.id === sel ? 0 : OTHER[n.kind] })).filter((c) => c.r < 9).sort((a, b) => a.r - b.r);
     { const h = find('server'); boxes.push([h.x - 5 * CH, h.y + 26 / z, h.x + 5 * CH, h.y + 26 / z + H]); } // HOME's label, under the server
     // Every node's mark is in the way too: a name never sits on another server, an exit or a ?.
-    const marks = nodes.filter((n) => n.kind !== 'transit').map((n) => ({ id: n.id, b: [n.x - 13, n.y - 13, n.x + 13, n.y + 13] }));
-    const meets = (a, b) => a[0] < b[2] && a[2] > b[0] && a[1] < b[3] && a[3] > b[1];
+    const marks = nodes.filter((n) => n.kind !== 'transit').map((n) => { const r = n.kind === 'location' ? SV_R : 13; return { id: n.id, b: [n.x - r, n.y - r, n.x + r, n.y + r] }; });
+    const meets = (a, b) => a[0] < b[2] && a[2] > b[0] && a[1] < b[3] && a[3] > b[1]; const pad = 4 / z; // two names keep a little apart
     spots = {};
     for (const { n } of cands) {
       const w = Math.max(nameOf(n).length, 10, (SUB[n.kind] || 0) * 0.86) * CH, first = sideOf(n);
       // Its outward side first, then the others: right, left, under, over.
-      const fit = [first, ...['r', 'l', 'b', 't'].filter((x) => x !== first)].map((side) => {
-        spots[n.id] = side;
-        const p = labelAt(n, 13), x0 = n.x + p.x - (p.a === 'end' ? w : p.a === 'middle' ? w / 2 : 0), y0 = n.y + (typeof p.y === 'number' ? p.y - 11 / z : -12 / z);
-        return { side, box: [x0, y0, x0 + w, y0 + H] };
-      }).find(({ box }) => !(n.id !== sel && (box[0] < minX || box[2] > maxX)) // a name the scope's edge would cut in half (a narrow screen) waits too
-        && !boxes.some((b) => meets(box, b)) && !marks.some((m) => m.id !== n.id && meets(box, m.b)));
+      const fit = [first, ...['r', 'l', 'b', 't'].filter((x) => x !== first)].map((side) => ({ side, box: labelBox(n, side, n.kind === 'location' && !n.loc.rogue ? SV_R : 12, w, z) })).find(({ box }) => !(n.id !== sel && (box[0] < minX || box[2] > maxX)) // a name the scope's edge would cut in half (a narrow screen) waits too
+        && !boxes.some((b) => meets(box, [b[0] - pad, b[1] - pad, b[2] + pad, b[3] + pad])) && !marks.some((m) => m.id !== n.id && meets(box, m.b)));
       if (fit) { spots[n.id] = fit.side; boxes.push(fit.box); } else { delete spots[n.id]; crowded.add(n.id); }
     }
   }
@@ -2370,7 +2364,7 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
   const thMarks = serverMarks(s); // the servers a thread marks (threads.mjs)
   const draw = nodes.map((n) => {
     const on = !none && n.id === sel ? ' selected' : '';
-    const pick = on ? reticle(n.kind === 'server' ? 13 : n.kind === 'location' && !n.loc.rogue ? 14 : 9) : '';
+    const pick = on ? reticle(n.kind === 'server' ? 13 : n.kind === 'location' && !n.loc.rogue ? SV_R : 9) : '';
     if (n.kind === 'server') {
       const srv = s.server;
       const homeEv = eventsOf(s).some((ev) => EVENT_CARDS[ev.card].home); // a spotter at your wall (events.mjs): the antenna
@@ -2408,7 +2402,7 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
       const to = n.kind === 'exit' ? n.to : n.floor - 1, [lo, hi] = bandOf(to), L = hackerLevel(s), been = to <= floorsOf(s).reached;
       const band = `<tspan class="mlv ${conClass(lo - L)}">lv ${lo}</tspan><tspan class="mlv ${conClass(hi - L)}">–${hi}</tspan>`;
       const p = labelAt(n, 12), shape = n.kind === 'exit' ? 'M-9 -6 L9 -6 L0 9 Z' : 'M0 -9 L9 6 L-9 6 Z';
-      return `<g class="mnode ${n.kind}${n.open || been ? ' open' : ''}${been ? ' been' : ''}${on}${crowded.has(n.id) ? ' crowded' : ''}" data-select="${esc(n.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${n.kind === 'exit' ? 'Exit to' : 'Up to'} floor ${to}"><circle r="18" class="mhit"/><circle r="14" class="exit-glow"/><path d="${shape}" class="exit-mark"/>${pick}<text x="${p.x}" y="${p.y}" class="mlabel" text-anchor="${p.a}">Floor ${to}</text><text x="${p.x}" y="${p.y}" dy="1.45em" class="msub" text-anchor="${p.a}">${band}</text></g>`;
+      return `<g class="mnode ${n.kind}${n.open || been ? ' open' : ''}${been ? ' been' : ''}${on}${crowded.has(n.id) ? ' crowded' : ''}" data-select="${esc(n.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${n.kind === 'exit' ? 'Exit to' : 'Up to'} floor ${to}"><circle r="18" class="mhit"/><circle r="14" class="exit-glow"/><path d="${shape}" class="exit-mark"/>${pick}<text ${p.name} class="mlabel">Floor ${to}</text><text ${p.sub} class="msub">${band}</text></g>`;
     }
     if (n.kind === 'temp') return tempNodeSvg(s, n, on + (crowded.has(n.id) ? ' crowded' : '') + (s.run?.loc === n.id ? ' here' : ''), (nn, r, name, sub, cls) => (pick || '') + label(nn, r, name, sub, cls));
     if (n.kind === 'transit') return transitSvg(n, s.settings?.motion !== false);
@@ -2417,7 +2411,6 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
       return `<g class="mnode hidden f-target${flag ? ' job' : ''}${on}${crowded.has(n.id) ? ' crowded' : ''}" data-select="${h.id}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="Unknown server"><circle r="18" class="mhit"/>${arc(8, h.lead / 100, 'lead')}<text class="qmark" text-anchor="middle" y="4">?</text>${pick}${label(n, 9, flag ? 'Flagged' : h.lead ? `${h.lead}%` : '', flag && h.lead ? `${h.lead}%` : '', 'dim')}</g>`;
     }
     const l = n.loc, st = nodeState(s, l);
-    const taken = takenOf(l), total = takeable(l).length;
     const job = openContracts(s).some((c) => c.loc === l.id);
     const progs = programsOn(l).length;
     const rest = st === 'here' ? 'here' : job ? 'contract' : progs ? `${progs} ${progs === 1 ? 'program' : 'programs'}` : l.takenOver ? '' : st === 'done' ? 'clean' : '';
@@ -2426,7 +2419,7 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
       const live = Object.values(l.spawns || {}).filter((x) => x.alive).length;
       return `<g class="mnode rogue${mapTags(s, l, st, job)}${crowded.has(n.id) ? ' crowded' : ''}${st === 'here' ? ' here' : ''}${s.locations.includes(l) && !isLive(s, l) ? ' detached' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}, rogue server"><circle r="18" class="mhit"/><path d="M0 -10 L9 -5 L9 5 L0 10 L-9 5 L-9 -5 Z"/><path d="M-4 -3 L4 3 M4 -3 L-4 3" class="rx"/>${pick}${lvLabel(s, n, 12, l.name, l.level || 1, l.depth || 1, l.occupied ? `rebooting · ${live}` : `${l.lair && BOSSES[l.lair] ? BOSSES[l.lair].name : ROGUE.kinds[l.rogue.kind].name.toLowerCase()}${st === 'here' ? ' · here' : live ? ` · ${live} hostile` : ''}`)}</g>`;
     }
-    return `<g ${l.faction ? `style="--fc:${FX[l.faction].color}" ` : ''}class="mnode loc ${st}${mapTags(s, l, st, job)}${crowded.has(n.id) ? ' crowded' : ''}${l.faction ? ' fowned' : ''}${l.takenOver ? ' owned' : ''}${s.locations.includes(l) && !isLive(s, l) ? ' detached' : ''}${op}${job ? ' job' : ''}${eventsAt(s, l.id).length ? ' drop' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}"><circle r="18" class="mhit"/>${serverIcon(l, st)}${rotMark(l)}${l.faction ? `<g class="fmark" transform="translate(9 -17) scale(0.62)">${GLYPHS['f-' + l.faction]}</g>` : ''}${dropMark(s, l)}${blipSvg(s, l)}${serverMarkSvg(s, l.id, thMarks)}${pick}${lvLabel(s, n, 13, l.name, l.takenOver ? null : l.level || 1, l.depth || 1, rest, '', specialsOf(l).map((id) => `${SPECIALS[id].glyph}\uFE0E`).join(''))}</g>`;
+    return `<g ${l.faction ? `style="--fc:${FX[l.faction].color}" ` : ''}class="mnode loc ${st}${mapTags(s, l, st, job)}${crowded.has(n.id) ? ' crowded' : ''}${l.faction ? ' fowned' : ''}${l.takenOver ? ' owned' : ''}${s.locations.includes(l) && !isLive(s, l) ? ' detached' : ''}${op}${job ? ' job' : ''}${eventsAt(s, l.id).length ? ' drop' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(`${l.name}, ${kindName(KIND_OF[l.template] || 'Relay')}`)}"><circle r="18" class="mhit"/>${serverIcon(l, st)}${rotMark(l)}${l.faction ? `<g class="fmark" transform="translate(9 -17) scale(0.62)">${GLYPHS['f-' + l.faction]}</g>` : ''}${dropMark(s, l)}${blipSvg(s, l)}${serverMarkSvg(s, l.id, thMarks)}${pick}${lvLabel(s, n, SV_R, l.name, l.takenOver ? null : l.level || 1, l.depth || 1, rest, '', specialsOf(l))}</g>`;
   }).join('');
   const hoverNames = s.settings?.mapNames === 'hover';
   const svg = `<svg class="map-svg${hoverNames ? ' names-hover' : ''}${filter.length ? ' mf' + filter.map((k) => ' mf-' + k).join('') : ''}" viewBox="${minX} ${minY} ${maxX - minX} ${maxY - minY}" data-vb="${minX} ${minY} ${maxX - minX} ${maxY - minY}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${con ? 'Map of your consortium' : `Floor ${fl}, ${esc(floorName(fl))}`}">${scope}${lines}${con ? '' : trafficMarkup(s, nodes)}${con ? '' : trails}${draw}</svg>`;

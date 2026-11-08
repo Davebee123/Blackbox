@@ -7,7 +7,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, resolveCycle, active, hooks, restore, SAVE_VERSION, finish } from './dist/combat.mjs';
 import { CONFIG, BOSSES } from './dist/data.mjs';
-import { play, currentLocation, LEGACY, KING_ROOM, ZONE_LEVEL } from './dist/run.mjs';
+import { play, currentLocation, LEGACY, KING_ROOM, ZONE_LEVEL, takeable } from './dist/run.mjs';
 import * as FP from './dist/floorplan.mjs';
 import { roomsFor, summaryOf, sprawlGraph } from './dist/netrooms.mjs';
 import { ROGUE, rogueRooms, rogueSpawns } from './dist/rogue.mjs';
@@ -135,6 +135,19 @@ test('a traced server is the R0 generator\'s graph from its seed: the key, the v
   assert.equal(s.run, null);
   assert.ok(s.server.credits > credits || s.stash.length > stash, 'banked');
   assert.ok(loc.state.taken[s.logs.findLast((e) => e.type === 'jacked-out') && Object.keys(loc.state.taken)[0]], 'its files are taken');
+});
+
+test('the network map draws a server as its kind\'s glyph (the kind\'s rule on hover), a ring round one you haven\'t been into, and a bar of what you\'ve cleared', () => {
+  const { s, loc } = traced();
+  const kind = FP.KIND_OF[loc.template] || 'Relay';
+  const node = () => { const html = mapMarkup(s, loc.id, 'net'), i = html.indexOf(`data-select="${loc.id}"`), j = html.indexOf('class="mnode', i); return html.slice(i, j < 0 ? undefined : j); };
+  assert.match(node(), new RegExp(`aria-label="${loc.name}, ${FP.kindName(kind)}"`));
+  assert.match(node(), new RegExp(`class="sv-kind" title="${FP.kindName(kind)}: Server kind\\.\n`), 'its kind\'s rule is the glyph\'s tooltip');
+  assert.match(node(), /class="sv-ring"/, 'new: ringed');
+  assert.doesNotMatch(node(), /class="sv-lit"/, 'nothing cleared yet');
+  loc.state.taken[takeable(loc)[0]] = true; loc.runs = 1;
+  assert.doesNotMatch(node(), /class="sv-ring"/, 'been in: no ring');
+  assert.match(node(), /class="sv-lit" x="-8" y="11" width="[1-9][\d.]*"/, 'the bar fills');
 });
 
 test('losing a fight on rooms disconnects you and loses the pack; progress stays', () => {
