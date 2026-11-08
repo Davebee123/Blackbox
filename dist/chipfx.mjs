@@ -233,12 +233,14 @@ export function createChipFx() {
 }
 
 // The themes with a strike of their own: the lash (lash.mjs) stays out of their hits, so the eye stays on the chip.
-export const STRIKES = new Set(['zap', 'lock', 'frost']);
+export const STRIKES = new Set(['zap', 'lock', 'frost', 'cipher', 'ring', 'erase']);
 // A themed chip going off (app.js fire): its strike, in screen px, from the chip's rect r to your bar at `to`, in the
 // threat's red. Pulse Node: a forked bolt that strobes into your bar, a burst and sparks there. Encryptor: its padlocks
 // arc to your bar with short trails and clamp on. Cold Store: its frost shatters (the chip's ghost still flies).
-// True when the strike stands in for the ghost.
-export function chipStrike(th, r, to) {
+// Cipher Block: hex streams fly into your bar, head first, and scatter there. C2 Node: rings ping out of its icon, a
+// dashed signal runs to your bar and rings close in on it. Eraser: the chip's pixels fly off in wipe order and a
+// dither sweeps your bar under an edge. `bar` is your bar's rect. True when the strike stands in for the ghost.
+export function chipStrike(th, r, to, bar) {
   if (!document.getElementById('cfx-defs')) document.body.insertAdjacentHTML('beforeend', DEFS);
   const fly = (cls, x, y, w, h) => { const d = document.createElement('span'); d.className = `cfx-fly ${cls}`; Object.assign(d.style, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' }); document.body.appendChild(d); return d; };
   if (th === 'zap') {
@@ -296,6 +298,68 @@ export function chipStrike(th, r, to) {
       m.animate([{ transform: `rotate(${r0}deg)`, opacity: 1 }, { transform: `translate(${vx * 0.6}px, ${-rnd(4, 12)}px) rotate(${(r0 + r1) / 2}deg)`, opacity: 1, offset: 0.3 }, { transform: `translate(${vx}px, ${fall}px) rotate(${r1}deg)`, opacity: 0 }], { duration: rnd(500, 800), easing: 'cubic-bezier(.3,0,.7,1)' }).onfinish = () => m.remove();
     }
     return false;
+  }
+  if (th === 'cipher') {
+    const bw = bar?.width || 120;
+    for (let i = 0; i < 16; i++) {
+      const near = i % 3 === 0, n = near ? 4 : 3, fs = near ? 11 : 9;
+      const x0 = r.left + rnd(6, r.width - 10), y0 = r.top + rnd(0, r.height - 8), x1 = to.x + rnd(-bw * 0.4, bw * 0.4), y1 = to.y + rnd(-3, 3);
+      const rot = Math.atan2(y1 - y0, x1 - x0) * 180 / Math.PI - 90, d = span(document.body, `cfx-fly cfx-stream${near ? '' : ' far'}`), dur = rnd(380, 560), delay = i * 24;
+      d.style.fontSize = fs + 'px';
+      d.innerHTML = Array.from({ length: n }, (_, j) => `<i style="opacity:${[0.15, 0.35, 0.6, 1].slice(-n)[j]}">${HEXCH[(Math.random() * 16) | 0]}</i>`).join('');
+      d.lastChild.classList.add('head');
+      d.style.transformOrigin = '50% 100%';
+      d.animate([{ transform: `translate(${x0}px, ${y0}px) rotate(${rot}deg)`, opacity: 0 }, { opacity: 1, offset: 0.15 }, { transform: `translate(${x1}px, ${y1}px) rotate(${rot}deg)`, opacity: 1, offset: 0.9 }, { transform: `translate(${x1}px, ${y1}px) rotate(${rot}deg)`, opacity: 0 }], { duration: dur, delay, easing: 'cubic-bezier(.5,0,.8,.6)', fill: 'both' }).onfinish = () => d.remove();
+      const flip = setInterval(() => { const c = d.children[(Math.random() * n) | 0]; if (c) c.textContent = HEXCH[(Math.random() * 16) | 0]; }, 55);
+      setTimeout(() => {
+        clearInterval(flip);
+        const g = span(document.body, 'cfx-fly cfx-stream'); g.style.fontSize = '10px'; g.innerHTML = `<i class="head">${HEXCH[(Math.random() * 16) | 0]}</i>`;
+        Object.assign(g.style, { left: x1 + 'px', top: y1 + 'px' });
+        const an = rnd(0, Math.PI * 2), L = rnd(6, 16);
+        g.animate([{ transform: 'scale(1.2)', opacity: 1 }, { transform: `translate(${Math.cos(an) * L}px, ${Math.sin(an) * L}px) scale(.7)`, opacity: 0 }], { duration: 300, easing: 'ease-out' }).onfinish = () => g.remove();
+      }, delay + dur * 0.9);
+    }
+    setTimeout(() => {
+      const b = fly('cfx-burst', to.x - 26, to.y - 26, 52, 52);
+      b.animate([{ transform: 'scale(.3)', opacity: 1 }, { transform: 'scale(1.5)', opacity: 0 }], { duration: 380, easing: 'cubic-bezier(.2,.8,.3,1)' }).onfinish = () => b.remove();
+    }, 440);
+    return true;
+  }
+  if (th === 'ring') {
+    const cx = r.left + 14, cy = r.top + r.height / 2;
+    [0, 110, 220].forEach((d, i) => {
+      const s = 20 + i * 4, m = fly('cfx-clamp', cx - s / 2, cy - s / 2, s, s);
+      m.animate([{ transform: 'scale(.2)', opacity: 0.9 }, { transform: `scale(${3.4 - i * 0.5})`, opacity: 0 }], { duration: 560, delay: d, easing: 'cubic-bezier(.15,.7,.3,1)', fill: 'both' }).onfinish = () => m.remove();
+    });
+    const g = document.createElementNS(NS, 'svg'); g.setAttribute('class', 'cfx-fly cfx-bolt'); document.body.appendChild(g);
+    g.innerHTML = `<g class="cfx-arc"><line class="halo" x1="${cx}" y1="${cy}" x2="${to.x}" y2="${to.y}" pathLength="1" style="stroke-dasharray:1 1;stroke-dashoffset:1;stroke-width:4"/><line class="mid" x1="${cx}" y1="${cy}" x2="${to.x}" y2="${to.y}" pathLength="1" style="stroke-dasharray:.04 .03;stroke-dashoffset:0;opacity:.9"/></g>`;
+    const mask = g.querySelector('.halo');
+    mask.animate([{ strokeDashoffset: 1, opacity: 0.8 }, { strokeDashoffset: 0, opacity: 0.8, offset: 0.6 }, { strokeDashoffset: 0, opacity: 0 }], { duration: 480, delay: 60, easing: 'ease-out', fill: 'both' });
+    g.querySelector('.mid').animate([{ opacity: 0 }, { opacity: 0.9, offset: 0.2 }, { opacity: 0 }], { duration: 480, delay: 60, fill: 'both' }).onfinish = () => g.remove();
+    [0, 90, 180].forEach((d, i) => {
+      const s = 54 - i * 10, m = fly('cfx-clamp', to.x - s / 2, to.y - s / 2, s, s);
+      m.animate([{ transform: 'scale(2.6)', opacity: 0 }, { transform: 'scale(1)', opacity: 1, offset: 0.7 }, { transform: 'scale(.35)', opacity: 0 }], { duration: 420, delay: 340 + d, easing: 'cubic-bezier(.4,0,.7,1)', fill: 'both' }).onfinish = () => m.remove();
+    });
+    setTimeout(() => {
+      const b = fly('cfx-burst', to.x - 20, to.y - 20, 40, 40);
+      b.animate([{ transform: 'scale(.3)', opacity: 1 }, { transform: 'scale(1.4)', opacity: 0 }], { duration: 360, easing: 'cubic-bezier(.2,.8,.3,1)' }).onfinish = () => b.remove();
+    }, 520);
+    return true;
+  }
+  if (th === 'erase') {
+    const bx = bar?.left ?? to.x - 60, bw = bar?.width ?? 120, by = bar?.top ?? to.y - 4, bh = bar?.height ?? 8;
+    for (let i = 0; i < 44; i++) {
+      const u = Math.random(), s = Math.random() < 0.3 ? 3 : 2, x0 = r.left + u * r.width, y0 = r.top + Math.random() * r.height;
+      const x1 = bx + (0.15 + 0.7 * u) * bw + rnd(-8, 8), y1 = by + Math.random() * bh, delay = u * 260, dur = rnd(300, 460);
+      const f = fly('cfx-flake', 0, 0, s, s);
+      f.animate([{ transform: `translate(${x0}px, ${y0}px)`, opacity: 1 }, { transform: `translate(${x0 + rnd(-10, 6)}px, ${y0 + rnd(-8, 8)}px)`, opacity: 1, offset: 0.2 }, { transform: `translate(${x1}px, ${y1}px)`, opacity: 1, offset: 0.92 }, { transform: `translate(${x1}px, ${y1}px)`, opacity: 0 }], { duration: dur, delay, easing: 'cubic-bezier(.5,0,.8,.5)', fill: 'both' }).onfinish = () => f.remove();
+    }
+    const f = fly('cfx-dith', bx, by, bw, bh), e = fly('cfx-edge', bx, by - 3, 2, bh + 6);
+    f.style.clipPath = 'inset(0 100% 0 0)'; e.style.opacity = 0; e.style.height = bh + 6 + 'px';
+    const T = { duration: 420, delay: 300, easing: 'cubic-bezier(.4,0,.6,1)', fill: 'both' };
+    f.animate([{ clipPath: 'inset(0 100% 0 0)', opacity: 1 }, { clipPath: 'inset(0 0% 0 0)', opacity: 1, offset: 0.85 }, { clipPath: 'inset(0 0% 0 0)', opacity: 0 }], { ...T, duration: 700 }).onfinish = () => f.remove();
+    e.animate([{ left: bx + 'px', opacity: 1 }, { left: bx + bw + 'px', opacity: 1, offset: 0.99 }, { left: bx + bw + 'px', opacity: 0 }], T).onfinish = () => e.remove();
+    return true;
   }
   return false;
 }

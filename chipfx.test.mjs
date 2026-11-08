@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { fresh, command, selectEncounter } from './dist/combat.mjs';
 import { FAMILIES } from './dist/data.mjs';
 import { boardMarkup } from './dist/view.mjs';
-import { CHIP_THEMES, chipTheme, chipLevel } from './dist/chipfx.mjs';
+import { CHIP_THEMES, STRIKES, chipTheme, chipLevel } from './dist/chipfx.mjs';
 
 test('every themed name is a part the game has', () => {
   const names = new Set(Object.values(FAMILIES).flatMap((f) => f.parts.map((p) => p.name)));
@@ -38,4 +38,8 @@ test('a themed part marks its board row; an unthemed one does not', () => {
   const plain = t.encounter.virus.parts.find((p) => !chipTheme(p.name));
   assert.ok(plain, 'this fight has an unthemed part');
   assert.doesNotMatch(boardMarkup(t).split('data-target="').find((r) => r.startsWith(plain.id + '"')).split('>')[0], /data-th=/);
+});
+
+test('every theme has a strike, so no themed hit throws a lash', () => {
+  for (const th of new Set(Object.values(CHIP_THEMES))) assert.ok(STRIKES.has(th), `${th} strikes`);
 });

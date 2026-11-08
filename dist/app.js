@@ -2313,7 +2313,7 @@ function fire(b) {
   // A themed part's attack going off (chipfx.mjs): its own strike into your bar, in place of the ghost or beside it.
   if (b.th && /\bnow\b/.test(b.cls) && !/mine|daemon|patch/.test(b.cls)) {
     const bar = document.querySelector('.hud-bar.mine .bigbar')?.getBoundingClientRect();
-    if (bar?.width && chipStrike(b.th, b.rect, { x: bar.left + bar.width / 2, y: bar.top + bar.height / 2 })) return;
+    if (bar?.width && chipStrike(b.th, b.rect, { x: bar.left + bar.width / 2, y: bar.top + bar.height / 2 }, bar)) return;
   }
   const g = document.createElement('div');
   g.className = 'fx-ghost';

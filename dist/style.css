@@ -295,6 +295,9 @@ code { font-family: var(--mono); color: var(--amber); }
 .cfx-dith { width: 100%; height: 100%; background: repeating-conic-gradient(currentColor 0 25%, transparent 0 50%) 0 0 / 4px 4px; -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.55), #000 50%, rgba(0, 0, 0, 0.55)); mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.55), #000 50%, rgba(0, 0, 0, 0.55)); }
 .cfx-edge { height: 100%; width: 2px; margin-left: -1px; background: var(--bright); box-shadow: 0 0 6px var(--bright), 0 0 12px currentColor; }
 .cfx-flake { background: currentColor; box-shadow: 0 0 3px currentColor; }
+.cfx-fly.cfx-stream { left: 0; top: 0; }
+.cfx-fly.cfx-flake { left: 0; top: 0; }
+.cfx-fly.cfx-edge { margin-left: 0; }
 .no-motion .fxin { display: none; }
 /* Its strike when it goes off (chipfx.mjs chipStrike), in the threat's red: a bolt, flying padlocks, frost shards. */
 .cfx-fly { position: fixed; z-index: 56; pointer-events: none; color: var(--hot); }
