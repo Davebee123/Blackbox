@@ -1255,6 +1255,7 @@ export function encounterVirus(s, key, seed, opts = {}) {
   if (PARTS.on && GUARDS[key] && key !== 'sentinel' && mode === 'run' && !opts.nest && !opts.genes && (lvl ?? 1) >= PARTS.lever) over.genes = [...(over.genes || []), 'zipbomb'];
   const by = placeAuthor(s, mode, opts);
   if (by !== undefined) over.author = by;
+  if (opts.signed) over.signed = opts.signed; // a faction's runner signs with its faction (events.mjs)
   // One stranger a fight (parts.mjs): a part you've never met (research 0) comes alone. A sim plays a veteran (s.metAll).
   if (key === 'random' && !s.metAll) over.seen = (spec, family) => researchAt(s, `${family}:${spec.id}`) > 0;
   const virus = (hooks.createVirus || createVirus)(key, seed, over); // hooks.createVirus: golden.test.mjs plays the same fight on the builder from before genes

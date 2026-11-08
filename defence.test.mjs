@@ -75,3 +75,9 @@ test('calls come only while you are logged on: none is dealt or comes due while 
   tickNetwork(s, 1_000_000 + 6 * 3600000); // six hours away
   assert.ok(eventsOf(s).includes(ev) && ev.left >= left - 120000, 'its clock barely moved while you were away');
 });
+
+test('a faction’s invader signs with its faction, over its strain’s author', () => {
+  const s = world({ owner: 'kestrel' }), ev = deal(s, 'call');
+  command(s, `event fight ${ev.id}`);
+  assert.equal(s.encounter.virus.author, ev.by);
+});

@@ -40,6 +40,7 @@ import { LOOT, rollItem, seeded, codeOf, vaultCode, MATERIALS } from './gear.mjs
 import { openFarm } from './rogue.mjs';
 import { eventMult, noteEvent, leanPick, darknetPick, darknetBuy, nameNative, homeName, NETWORK } from './network.mjs';
 import { isPiece } from './sets.mjs';
+import { factionAuthor } from './authors.mjs';
 import { FACTIONS, hubsOf, changeRep, hubFound, FACTION_FAMILY, RIPPLE, commissionOf } from './factions.mjs';
 import { addFilter, rollFilter } from './filters.mjs';
 import { invasionsLive, scoutNext, SCOUTED } from './invasion.mjs';
@@ -584,8 +585,10 @@ export function eventCommand(s, text) {
   if (s.run) return warn(s, 'Jack out first.');
   if (active(s)) return warn(s, 'Finish the fight first.');
   const foe = c.foe ? c.foe(ev, f) : { family: ev.family, name: ev.name, elite: !!ev.elite, boss: ev.boss, eliteHp: ev.eliteHp };
+  // A faction's runner or invader signs with its faction (authors.mjs), over its strain's own author. Halcyon writes none yet.
+  const sender = ev.card === 'feud' ? rival(ev, f) : ev.card === 'call' ? ev.by : ev.card === 'counter' ? ev.foe : ev.card === 'lantern' ? 'lantern' : null, signed = sender ? factionAuthor(sender) : null;
   const gate = s.encounter?.phase === 'alert' && s.encounter.mode !== 'run' ? s.encounter : s.gate;
-  selectEncounter(s, 'random', (ev.seed + (c.foe ? ev.sides.indexOf(f) * 7919 + (ev.wins || 0) * 104729 : 0)) >>> 0, { level: ev.level, family: foe.family, name: foe.name, elite: !!foe.elite, ...(foe.eliteHp ? { eliteHp: foe.eliteHp } : {}), ...(foe.boss ? { boss: foe.boss } : {}), mutation: ev.mutation ?? null, quiet: true });
+  selectEncounter(s, 'random', (ev.seed + (c.foe ? ev.sides.indexOf(f) * 7919 + (ev.wins || 0) * 104729 : 0)) >>> 0, { level: ev.level, family: foe.family, name: foe.name, elite: !!foe.elite, ...(foe.eliteHp ? { eliteHp: foe.eliteHp } : {}), ...(foe.boss ? { boss: foe.boss } : {}), mutation: ev.mutation ?? null, ...(signed ? { signed } : {}), quiet: true });
   if (!s.encounter || s.encounter.phase === 'active') return;
   if (c.foe) ev.side = f; // the side you fight for: locked from here
   ev.fought = true; // a hunt you fought and let go got away (chains)

@@ -1403,7 +1403,8 @@ function shareProfile(familyId, family, specs, parts, r, level) {
 
 // Build a virus from a named fixture or a seeded random variant.
 // overrides: family, strain, grade, mutation, threat, run, elite (eliteHp), boss (bossHp), genes (the rolled genes,
-// forced), author (who the fight's place says wrote it, when the virus has no author of its own; null: nobody's).
+// forced), author (who the fight's place says wrote it, when the virus has no author of its own; null: nobody's), signed
+// (who sent it, over even a strain's own author: a faction's runner or invader, events.mjs).
 export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   const next = rng(seed);
   const random = key === 'random';
@@ -1557,7 +1558,7 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   const name = (overrides.elite ? 'ELITE ' : '') + (strain ? strain.name.toUpperCase() + '-' + tagNo : random ? stemOf(familyId, genome) + '-' + tagNo : fixture.name) + (grade > 1 ? ` v${grade}` : '');
   // Enemy damage can crit, from level 3 (like mutations).
   const crit = level >= SERVER.mutationsFrom ? CONFIG.enemyCrit : 0;
-  const author = authorOf({ family: familyId, strain: strainId, boss: overrides.boss || null }, overrides.author);
+  const author = overrides.signed || authorOf({ family: familyId, strain: strainId, boss: overrides.boss || null }, overrides.author);
   return { id: familyId + '-' + seed, name, family: familyId, strain: strainId, grade, dormant: strain?.dormant ? true : false, art: family.art || familyId, mutation, threat, level, power: dmgScale * (overrides.elite ? eliteDmg : 1), hpPower: scale, addPower: scale / (long ? runLate(level, CONFIG.length.hp) : 1), ...(long ? { long: true } : {}), crit, threatens: family.threatens, parts, weakPoint, weakKnown: false, ...(overrides.elite ? { elite: true } : {}), ...(rolled2?.clash ? { clash: rolled2.clash } : {}), ...(boss ? { boss: overrides.boss, phases: (boss.acts?.[familyId] ? boss.actPhases : boss.phases).map((x) => ({ ...x, done: false })), enrageAt: (long && boss.long?.enrageAt) || (acts?.enrageAt ?? boss.enrageAt) } : {}),
     genes: genome, author, ...unsigned, ...(unlinked ? { unlinked: true } : {}) };
 }

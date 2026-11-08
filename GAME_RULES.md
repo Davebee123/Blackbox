@@ -499,7 +499,8 @@ PALEMASK's, the Extortion and Bricker TOLLGATE's. The mechanics strains go the s
 Bloodhound and Scythe TOLLGATE's, the Doomsday, Bad Blood and Thornwall SWARMLINE's, the Bodysnatcher NULL CHOIR's, the
 Desync and Last Stand PALEMASK's, the Junkyard and Sweatshop GLASSJAW's), and their
 parts join their authors' toolkits; a mutated strain is its strain's author's. Kestrel writes the ICE and the Sentinel. A faction's server runs its
-faction's viruses; SPRAWL-00's strays sign nothing.
+faction's viruses, and a faction's runner or invader (a feud, a defence call, a counter-raid, LANTERN's courier) signs
+with its faction, even on a strain (Halcyon writes none yet); the elite's set drop follows the byline. SPRAWL-00's strays sign nothing.
 
 - **Names.** A wild virus is named for its costliest rolled rule, its body's stem, four digits and its grade:
   *WARDED CRYPTJACK-4821 v2*. The fight header adds the author's byline in its colour.
