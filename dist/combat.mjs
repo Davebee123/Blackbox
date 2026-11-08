@@ -2337,7 +2337,7 @@ function distance(a, b) {
 }
 // A command that isn't one, with no fight running: a fight order says so; a run command says where it
 // works; anything else gets a "did you mean" (clickable in the notice).
-const HOME_WORDS = ['connect', 'jack', 'mail', 'repair', 'top', 'install', 'uninstall', 'cancel', 'load', 'unload', 'deconstruct', 'craft', 'filter', 'firewall', 'relay', 'use', 'detach', 'attach', 'encounter', 'status', 'daemon', 'speed', 'consortium', 'market', 'buy', 'sell', 'event', 'config', 'map', 'server', 'loadout', 'system', 'help', 'mail', 'equip', 'unequip', 'whoami'];
+const HOME_WORDS = ['connect', 'jack', 'mail', 'repair', 'top', 'install', 'uninstall', 'cancel', 'load', 'unload', 'deconstruct', 'craft', 'filter', 'firewall', 'relay', 'use', 'detach', 'attach', 'encounter', 'status', 'daemon', 'speed', 'consortium', 'market', 'buy', 'sell', 'event', 'config', 'map', 'server', 'loadout', 'system', 'rig', 'settings', 'help', 'mail', 'equip', 'unequip', 'whoami'];
 const RUN_WORDS = ['ls', 'cd', 'cat', 'pull', 'unlock', 'attack', 'engage', 'slip', 'spoof', 'tap', 'sweep'];
 function unknownAtHome(s, text) {
   const [w, ...rest] = text.split(' ');
