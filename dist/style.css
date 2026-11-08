@@ -3663,9 +3663,7 @@ body.no-motion .recap { animation: none; }
 .tether:has(.tt-node) { z-index: 2; } /* a node on a row's edge sits over the next row's piece of line */
 #board:has(.tether.lane1) .tt-node.clock { left: 25px; } /* two lanes: every chip in one column, over both lines */
 .tt-count { color: var(--bright); font: 700 13px/16px var(--mono); }
-/* Two arrows into one part: each its own arm, a little above and below the middle, so neither hides the other. */
-.bname:has(> .tether.lane0 .tt-arm.dst):has(> .tether.lane1 .tt-arm.dst) > .tether.lane0 { --arm: -5px; }
-.bname:has(> .tether.lane0 .tt-arm.dst):has(> .tether.lane1 .tt-arm.dst) > .tether.lane1 { --arm: 5px; }
+/* Two arms on one row (view.mjs tethers --arm): one a little above the middle, one below, so neither hides the other. */
 .tether .tt-arm.dst { top: calc(50% - 1px + var(--arm, 0px)); }
 .tether .tt-line[style*="bottom:50%"] { bottom: calc(50% - var(--arm, 0px)) !important; }
 .tether .tt-line[style*="top:50%"] { top: calc(50% + var(--arm, 0px)) !important; }
