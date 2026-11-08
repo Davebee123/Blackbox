@@ -3650,7 +3650,6 @@ body.no-motion .recap { animation: none; }
 .tt-node { position: absolute; left: var(--x); top: 50%; transform: translate(-50%, -50%); z-index: 2; display: grid; place-items: center; width: 16px; height: 16px; border: 1px solid var(--tt); border-radius: 50%; background: var(--panel); color: var(--tt); font: 700 10px/1 var(--mono); pointer-events: auto; cursor: help; }
 .tt-node.edge { top: 100%; }
 .tt-node .tt-ico { width: 10px; height: 10px; margin: 0; }
-.tt-count { position: absolute; left: 100%; top: 50%; transform: translateY(-50%); margin-left: 2px; padding: 0 3px; border: 1px solid var(--steel); border-radius: var(--r-tag); background: var(--panel); color: var(--steel); font: 600 9px/12px var(--mono); white-space: nowrap; }
 .tether.up .tt-line, .tether.up .tt-arm { box-shadow: 0 0 5px var(--steel-glow); }
 .tether.up .tt-node { box-shadow: 0 0 7px var(--steel-glow); }
 .tether.up .tt-line { animation: tt-glow 2.4s ease-in-out infinite alternate; }
@@ -3659,8 +3658,15 @@ body.no-motion .recap { animation: none; }
    countdown stays steel, so the one lit thing is how long you have. */
 .tether.down { --tt: var(--gray); }
 .tether.down .tt-line, .tether.down .tt-arm { opacity: 0.6; }
-.tt-node.clock { width: auto; height: auto; border: 0; border-radius: 0; background: none; }
-.tt-node.clock .tt-count { position: static; transform: none; margin: 0; padding: 0 4px; font: 700 12px/16px var(--mono); }
+.tt-node.clock { width: auto; height: auto; gap: 3px; grid-auto-flow: column; padding: 1px 5px 1px 4px; border-radius: var(--r-tag); }
+.tt-node.clock .tt-ico { width: 11px; height: 11px; }
+.tt-count { color: var(--bright); font: 700 13px/16px var(--mono); }
+/* Two arrows into one part: each its own arm, a little above and below the middle, so neither hides the other. */
+.bname:has(> .tether.lane0 .tt-arm.dst):has(> .tether.lane1 .tt-arm.dst) > .tether.lane0 { --arm: -5px; }
+.bname:has(> .tether.lane0 .tt-arm.dst):has(> .tether.lane1 .tt-arm.dst) > .tether.lane1 { --arm: 5px; }
+.tether .tt-arm.dst { top: calc(50% - 1px + var(--arm, 0px)); }
+.tether .tt-line[style*="bottom:50%"] { bottom: calc(50% - var(--arm, 0px)) !important; }
+.tether .tt-line[style*="top:50%"] { top: calc(50% + var(--arm, 0px)) !important; }
 .tether.unk .tt-node { color: var(--muted); border-color: var(--gray); }
 /* The part it hangs from breaks: the line flashes and pulls apart, the node bursts (a dissolving row; --snap picks the
    animation up where it was after a redraw). Effects minimal, Motion off: it's simply gone. */
@@ -4064,7 +4070,7 @@ p.impl { margin: 6px 0 0; padding: 4px 2px; border-bottom: 1px dotted color-mix(
 .tether.k-bend .tt-line { background: repeating-linear-gradient(180deg, var(--tt) 0 4px, transparent 4px 7px); }
 .tether.k-bend .tt-arm { background: repeating-linear-gradient(90deg, var(--tt) 0 4px, transparent 4px 7px); }
 .tether.k-bend.up .tt-line, .tether.k-bend.up .tt-arm, .tether.k-bend.up .tt-node { animation: none; box-shadow: none; }
-.tether.k-bend .tt-count { border-color: var(--hot); color: var(--hot); }
+.tether.k-bend .tt-count { color: var(--hot); }
 
 /* The parts plan's P2 (docs/parts-plan.md): what protects a part in steel (a Limiter's cap line, a Damper's crossed
    kind, a Cold Store's frost and its thaw bar, a sleeping Spare's ◆), what threatens you in red (a Scraper's takes-buffs
