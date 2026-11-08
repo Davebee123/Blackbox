@@ -81,7 +81,8 @@ test('a feud: pick a side by its half of the card, fight the other side\'s runne
   assert.ok(s.encounter.virus.elite);
   win(s);
   assert.ok(Math.abs(feudShare(ev, 'glassjaw') - (bar + FEUD.push)) < 1e-9, 'a win pushes your side');
-  for (const f of Object.keys(FACTIONS)) assert.equal(rep(s, f), was[f], `${f}: feuds move no rep`);
+  assert.equal(rep(s, 'glassjaw'), was.glassjaw + FEUD.rep, 'your side');
+  for (const f of Object.keys(FACTIONS)) if (f !== 'glassjaw') assert.equal(rep(s, f), was[f], `${f}: nobody loses`);
   assert.ok(s.server.credits - credits >= feudPay(ev.level), 'a win pays on its own');
   assert.equal(feudPay(ev.level), Math.round((80 + 15 * ev.level) / 2), 'half a bounty\'s credits');
   assert.ok(eventsOf(s).includes(ev), 'still up: fight again');
@@ -136,7 +137,8 @@ test('taking the bar to 100% wins the feud: the bonus, once', () => {
   command(s, `event fight ${ev.id}`); win(s);
   assert.ok(!eventsOf(s).includes(ev), 'won: over');
   assert.equal(s.stash.length, stash + 3, 'the second runner\'s protocol and GLASSJAW\'s sealed item, once');
-  for (const f of Object.keys(FACTIONS)) assert.equal(rep(s, f), was[f], `${f}: no rep from a feud`);
+  assert.equal(rep(s, mine), was[mine] + 2 * FEUD.rep + FEUD.bonusRep);
+  for (const f of Object.keys(FACTIONS)) if (f !== mine) assert.ok(rep(s, f) >= was[f], `${f}: never a loss`);
   assert.ok(s.server.credits - credits >= 2 * feudPay(ev.level));
   assert.ok(s.logs.some((e) => e.id > first && e.type === 'world-event-won'));
   command(s, `event fight ${ev.id}`);
@@ -146,7 +148,8 @@ test('taking the bar to 100% wins the feud: the bonus, once', () => {
   const e2 = deal(t, 'feud'), filters = filtersOf(t).length, w2 = reps(t);
   e2.bar = 0.5;
   command(t, `event fight ${e2.id} halcyon`); win(t); command(t, `event fight ${e2.id}`); win(t);
-  for (const f of Object.keys(FACTIONS)) assert.equal(rep(t, f), w2[f], `${f} unchanged`);
+  assert.equal(rep(t, 'kestrel'), w2.kestrel + Math.round((FEUD.rep + FEUD.bonusRep) * 0.25), 'Halcyon\'s ally warms a little');
+  for (const f of ['glassjaw', 'nullchoir', 'lantern']) assert.equal(rep(t, f), w2[f], `${f} unchanged (GLASSJAW the other side, NULL CHOIR a rival)`);
   const u = glassLantern(); u.ev.bar = 0.5;
   const uf = filtersOf(u.s).length;
   command(u.s, `event fight ${u.ev.id} lantern`); win(u.s); command(u.s, `event fight ${u.ev.id}`); win(u.s);
@@ -164,7 +167,7 @@ test('when a feud\'s time runs out: ahead, the bonus; behind, you keep what each
   try { tickEvents(a.s, FEUD.ms); } finally { FEUD.drift = [0.02, 0.05]; }
   assert.ok(!eventsOf(a.s).includes(a.ev), 'over');
   assert.equal(a.s.stash.length, stash + 1, 'the bonus');
-  assert.equal(rep(a.s, 'glassjaw'), ra, 'no rep');
+  assert.equal(rep(a.s, 'glassjaw'), ra + FEUD.bonusRep);
   // Behind at the end: what the win paid stays, nobody's rep moves, nothing more.
   const b = glassLantern();
   command(b.s, `event fight ${b.ev.id} glassjaw`); win(b.s);

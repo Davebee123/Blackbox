@@ -365,12 +365,20 @@ test('parts are shown, not told: three pips in the collection, the hub\'s Assemb
 });
 
 // ---------- the feud's rep ----------
-test('feuds move no rep (docs/factions-plan.md 2): the part and the good are the reward', () => {
-  assert.equal(FEUD.rep, undefined); assert.equal(FEUD.bonusRep, undefined);
-  for (const [a, b] of [['halcyon', 'glassjaw'], ['glassjaw', 'halcyon'], ['nullchoir', 'kestrel'], ['kestrel', 'nullchoir'], ['nullchoir', 'halcyon']]) {
+test('feud rep: +4 a runner beaten, +6 for the win (about +14 a good feud), its allies a quarter; nobody ever loses any', () => {
+  assert.equal(FEUD.rep, 4); assert.equal(FEUD.bonusRep, 6);
+  const s = world({ hubs: ['glassjaw', 'kestrel', 'nullchoir'] });
+  const was = reps(s);
+  winFeud(s, 'halcyon', 'glassjaw');
+  assert.equal(rep(s, 'halcyon') - was.halcyon, 2 * 4 + 6, 'a good feud: +14');
+  assert.equal(rep(s, 'kestrel') - was.kestrel, Math.round((4 + 6) * 0.25), 'Halcyon\'s ally: a quarter of a win and the bonus');
+  for (const f of ['glassjaw', 'nullchoir', 'lantern']) assert.equal(rep(s, f), was[f], `${f}: no ripple, no loss`);
+  // Every side, every pairing: no rep goes down.
+  for (const [a, b] of [['glassjaw', 'halcyon'], ['nullchoir', 'kestrel'], ['kestrel', 'nullchoir'], ['nullchoir', 'halcyon']]) {
     const t = world({ hubs: ['glassjaw', 'kestrel', 'nullchoir'] }), w = reps(t);
     winFeud(t, a, b);
-    for (const f of Object.keys(FACTIONS)) assert.equal(rep(t, f), w[f], `${a} over ${b}: ${f} unchanged`);
+    for (const f of Object.keys(FACTIONS)) assert.ok(rep(t, f) >= w[f], `${a} over ${b}: ${f} never down`);
+    assert.equal(rep(t, a) - w[a], Math.min(100, w[a] + 14) - w[a]);
     assert.equal(partsOf(t, a), 1);
   }
 });

@@ -1,6 +1,6 @@
 # Factions plan: patrons, boards, receipts
 
-**Status.** 1–4 and 10 built lean (GAME_RULES *Commission*, *Contracts*, *Factions*). Not yet: floor 5's Commission buttons
+**Status.** 1–4, 7 and 10 built lean (GAME_RULES *Commission*, *Contracts*, *Factions*). Not yet: floor 5's Commission buttons
 (its transmissions aren't built), wick's letter at INIT's fall and the ACTUARY line (not built), per-faction board text,
 and 5. 7–10 added after the designer's first look: 7, 8 and 10 decided, 9's numbers to confirm. One session (it changes the economy and the factions; nothing else on
 those systems runs beside it). The shops (docs/economy.md *Shops*) follow it, since their yellows open by rep.
@@ -24,7 +24,7 @@ Rep already shares one store with Halcyon's old standing (`s.standing`, `faction
 |---|---|
 | **Contracts** | The faction that posted the job |
 | **Receipts** (docs/receipts.md) | The faction you stamp, **+10** a takeover |
-| **Feuds** (7) | The side you fight for |
+| **Feuds** (7) | The side you fight for: +4 a runner beaten, +6 the win, its allies a quarter; no ripple |
 | **Defence calls** (8) | The server's owner; − on a call you answered and lost |
 
 Ripples stay: rivals move half the other way, allies a quarter the same way, never under 1.

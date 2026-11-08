@@ -2089,10 +2089,10 @@ first.
   located and `connect <faction>` reaches it. Until then you can't trade there or take its work.
 - **Rep** runs 1 to 100 for every faction: four tiers at 1/25/50/75, shown as four pips, each faction naming its own in
   the tooltip (Kestrel's: Prospect, Client, Account, Key account). Nothing drives it under 1, so no hub shuts. It comes
-  from contracts the faction posts and receipts you stamp for it, and never moves on its own. Everyone starts at 10
+  from contracts the faction posts, receipts you stamp for it and feuds you fight for it, and never moves on its own. Everyone starts at 10
   (GLASSJAW 5).
 - **Ripples:** whatever rep you gain or lose with a faction, its rivals move half the other way and its allies a quarter
-  the same way, never under 1.
+  the same way, never under 1. A feud has no ripple: it never costs rep with anyone.
 - **A hub session:** **Connect** jacks you into the hub's terminal (its banner, one line from whoever answers, changing
   with your rep, and its menu as tokens). Each choice opens a window beside it: **Market**, **Shop** (the faction's own
   shelf: its premium protocol first, then its codebases and goods; better rep unlocks more and trims prices; Halcyon's
@@ -2121,7 +2121,7 @@ Each goes to the pager and to #net; missing one costs nothing. The director roll
 | **Outbreak** (2) | the net | 30 min | One family surges | Its kills drop double code |
 | **Leak** (1) | a server you've found, not taken | at once | Someone leaks its vault key | You hold the key as you connect |
 | **Darknet listing** (0.5) | the net, from 8 | 20 min | A broker lists a native unique from another network, naming it (`event buy <id>`) | It, for 400 + 40L credits and 2 Exploits |
-| **Feud** (1) | a traced server, from 8, with two rival hubs located | 20 min | A tug-of-war between two rival factions (the bar drifts 2–5% a minute, never past 20/80 alone). *Pick a side* (`event fight <id> <faction>`): fight the other side's runner (an elite of its family at your level); each win pushes your side +25% and brings a fresh runner. Your side wins at 100%, or ahead when time runs out | Each win: 40 + 7.5L credits, a protocol with your side's implicit. The feud: a **part** of your side's faction piece and one of its goods. No rep |
+| **Feud** (1) | a traced server, from 8, with two rival hubs located | 20 min | A tug-of-war between two rival factions (the bar drifts 2–5% a minute, never past 20/80 alone). *Pick a side* (`event fight <id> <faction>`): fight the other side's runner (an elite of its family at your level); each win pushes your side +25% and brings a fresh runner. Your side wins at 100%, or ahead when time runs out | Each win: 40 + 7.5L credits, a protocol with your side's implicit. Your side +4 rep. The feud: a **part** of your side's faction piece, one of its goods and your side +6, its allies a quarter of a win and the win (+3). No ripple: a feud never costs rep with anyone |
 | **Bounty hunt** (1.5) | a traced server, from 6, two or more traced | 20 min | A named elite that hops to another of your servers every 5 minutes, 3 hops, a level each | 80 + 15L credits ×1, ×1.3, ×1.6, ×2 by hops made, +2 Kestrel rep |
 | **Market shock** (1) | a hub you can trade at, from 5 | 15 min | One ware's price ×2.5 there, or one time in three ×0.4 | No fight |
 | **Spotter** (1) | your wall, from 6 | 10 min | A spotter watching your wall: *Fight* it | The next invasion comes 2 levels weaker, and you know where from and what kind |
