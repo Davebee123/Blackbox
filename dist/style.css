@@ -641,6 +641,7 @@ pre[aria-hidden="true"] { max-height: none; overflow: visible; }
 .no-motion .mnode .pulse, .no-motion .mnode .ring, .no-motion .mlink.hot { animation: none; }
 .mnode.loc .core { fill: var(--inset); stroke: var(--amber); stroke-width: 1.3; }
 .mnode.loc .ring { fill: none; stroke: rgba(241, 185, 47, 0.5); stroke-width: 1; animation: mpulse 3s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+.no-motion .mnode.loc .ring { animation: none; } /* Motion off stills a new server's pulse too */
 .marc-bg { fill: none; stroke: rgba(241, 185, 47, 0.14); stroke-width: 1.5; }
 .marc { fill: none; stroke: var(--amber); stroke-width: 1.5; stroke-linecap: round; }
 .mnode.loc.partial .core { fill: var(--amber); }
@@ -2760,9 +2761,31 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .map-filters { margin-right: 6px; }
 .map-svg.mf-mine .mnode.f-mine:not(.server), .map-svg.mf-targets .mnode.f-target:not(.server), .map-svg.mf-threats .mnode.f-threat:not(.server) { opacity: 1; }
 .map-svg.mf-mine .mnode.f-mine:not(.server) text, .map-svg.mf-targets .mnode.f-target:not(.server) text, .map-svg.mf-threats .mnode.f-threat:not(.server) text { display: block; }
-/* Map labels, smaller; a label that would overlap a more important one waits for hover/zoom. */
-.mlabel { font-size: calc(11px / var(--z, 1)); letter-spacing: 1px; }
+/* Map labels, smaller; a label that would overlap a more important one waits for hover/zoom. A halo in the map's own
+   ground keeps the links from running through the words. The level is the name's size: the name leads. */
+.mlabel { font-size: calc(11px / var(--z, 1)); letter-spacing: 0.6px; }
 .msub { font-size: calc(9.5px / var(--z, 1)); }
+.map-svg .mlabel, .map-svg .msub { paint-order: stroke; stroke: var(--inset); stroke-width: calc(3px / var(--z, 1)); stroke-linejoin: round; }
+.msub .mlv { font-size: calc(11px / var(--z, 1)); }
+.msub .mspecial { fill: var(--amber); font-size: calc(11px / var(--z, 1)); font-weight: 700; letter-spacing: 2px; }
+/* A server on the map (view.mjs serverIcon): its kind's glyph and the rooms you've cleared, amber; gray when it's
+   done, teal where you are and what's yours, yellow (--next) for a contract's. */
+.mnode.loc .sv-plate { fill: var(--inset); stroke: none; }
+.mnode.loc .sv-chip { fill: var(--inset); stroke: rgba(241, 185, 47, 0.6); stroke-width: 1.2; }
+.mnode.loc .sv-kind { fill: none; stroke: var(--amber); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.mnode.loc circle.sv-track { fill: none; stroke: rgba(241, 185, 47, 0.22); stroke-width: 2.2; }
+.mnode.loc circle.sv-lit { fill: none; stroke: var(--amber); stroke-width: 2.2; }
+.mnode.loc rect.sv-track { fill: rgba(241, 185, 47, 0.22); } .mnode.loc rect.sv-lit { fill: var(--amber); }
+.mnode.loc.done .sv-kind, .mnode.loc.done circle.sv-lit { stroke: var(--gray); } .mnode.loc.done rect.sv-lit { fill: var(--gray); } .mnode.loc.done .sv-chip { stroke: rgba(125, 115, 98, 0.6); }
+.mnode.loc.job .sv-kind { stroke: var(--next); } .mnode.loc.job .sv-chip { stroke: var(--next); }
+.mnode.loc.fowned .sv-chip, .mnode.loc.fowned circle.sv-lit { stroke: var(--fc); } .mnode.loc.fowned rect.sv-lit { fill: var(--fc); }
+.mnode.loc.owned .sv-kind, .mnode.loc.outpost .sv-kind, .mnode.loc.here .sv-kind, .mnode.loc.owned circle.sv-lit, .mnode.loc.here circle.sv-lit { stroke: var(--you); }
+.mnode.loc.owned rect.sv-lit, .mnode.loc.here rect.sv-lit { fill: var(--you); } .mnode.loc.owned .sv-chip, .mnode.loc.here .sv-chip { stroke: var(--you); }
+.mnode.loc.locked .sv-kind { stroke: var(--hot); }
+.mnode.loc.besieged .sv-kind { stroke: var(--next); animation: opblink 1s steps(2) infinite; }
+.no-motion .mnode.loc.besieged .sv-kind { animation: none; }
+.mnode.detached .sv-kind, .mnode.detached .sv-chip { stroke-dasharray: 2 2; }
+.mnode:focus-visible .sv-kind { stroke: var(--bright); }
 .map-svg .mnode.crowded text.mlabel, .map-svg .mnode.crowded text.msub { display: none; }
 .map-svg .mnode.crowded:hover text.mlabel, .map-svg .mnode.crowded:hover text.msub, .map-svg .mnode.crowded.selected text.mlabel, .map-svg .mnode.crowded.selected text.msub, .map-svg.zoomed .mnode.crowded text.mlabel, .map-svg.zoomed .mnode.crowded text.msub { display: block; }
 /* The map's List mode: every server as a sortable row; its card beside. */
