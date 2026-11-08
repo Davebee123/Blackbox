@@ -77,7 +77,9 @@ teal, violet or a threat's red.
 - **Tethers** (`.tether`, `view.mjs` `tethers`, `fightread.mjs` `partLinks`): one look for every rule that reaches from
   one part to another. A steel bracket in the board's left gutter from the part the rule sits on (a square) to the part
   it reaches (an arrow), drawn a piece per row; a round node mid-span carries the rule's icon, or **?** until the codex
-  knows the part, and a dashed **↻ N** when it comes back in N cycles. It glows while the rule holds, goes dashed while
+  knows the part; a rule counting down shows a clock chip with the cycles left in its place, centered on the line. Two
+  arrows into one part sit a little above and below its middle, and share a lane when one comes from above and one
+  from below. It glows while the rule holds, goes dashed while
   it's down, and snaps as its part dissolves; hovering it lights both rows. The gutter (`--gut`: 38px, 56px with one
   lane, 68px with two) stays to the end of the fight. On the bar a Mutex's lock is an absorb segment (`.lockseg`,
   hatched steel with a padlock) and a Lockbox's ward a cap line (`.wardcap`).
