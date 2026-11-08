@@ -2257,6 +2257,7 @@ body:has(.silk-stash .silk-tile[data-kind="implant"]:hover) .silk-fp[data-kind="
 .combat { grid-template-rows: auto auto minmax(88px, 1fr); } /* the board as tall as its parts (three, four with a boss's add); the log takes the rest */
 .combat .board { max-height: calc(100dvh - 300px); }
 .combat .board { min-height: 0; }
+.combat .board { background-image: radial-gradient(rgba(240, 226, 182, 0.07) 1px, transparent 1.4px); background-size: 12px 12px; background-position: 6px 6px; } /* a faint dot grid behind the timeline */
 .combat .brow:not(.bhead) > .bcell { padding-top: 11px; padding-bottom: 11px; }
 .combat .intent { padding: 7px 9px; font-size: 14px; }
 .combat .intent .ico { width: 16px; height: 16px; }
