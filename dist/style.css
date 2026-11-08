@@ -3660,6 +3660,8 @@ body.no-motion .recap { animation: none; }
 .tether.down .tt-line, .tether.down .tt-arm { opacity: 0.6; }
 .tt-node.clock { width: auto; height: auto; gap: 3px; grid-auto-flow: column; padding: 1px 5px 1px 4px; border-radius: var(--r-tag); }
 .tt-node.clock .tt-ico { width: 11px; height: 11px; }
+.tether:has(.tt-node) { z-index: 2; } /* a node on a row's edge sits over the next row's piece of line */
+#board:has(.tether.lane1) .tt-node.clock { left: 25px; } /* two lanes: every chip in one column, over both lines */
 .tt-count { color: var(--bright); font: 700 13px/16px var(--mono); }
 /* Two arrows into one part: each its own arm, a little above and below the middle, so neither hides the other. */
 .bname:has(> .tether.lane0 .tt-arm.dst):has(> .tether.lane1 .tt-arm.dst) > .tether.lane0 { --arm: -5px; }
