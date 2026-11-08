@@ -116,7 +116,8 @@ comment saying what it does.
 | `dist/faction-gear.mjs` | Faction gear: implicit lines on a faction's items, and the five faction uniques assembled from parts (feuds, receipts). |
 | `dist/filters.mjs` | Filters: rolled gear for your firewall's slots. |
 | `dist/salvage.mjs` | Components, one currency every broken part drops. |
-| `dist/store.mjs` | The Halcyon store: Halcyon's own line and the premium shelf. |
+| `dist/store.mjs` | Every hub's Shop, one shape: tools, the shelf (rerolls every 30 minutes of play), the chase line, codebases; `buy`. |
+| `dist/chase.mjs` | The other hubs' chase protocols' rules (Failover to Crescendo), on the class hooks. |
 | `dist/daemons.mjs` | Daemons: programs that fight beside you, dropped only by invasions. |
 | `dist/daemons-view.mjs`, `dist/daemons.css` | The Loadout's Daemons tab: the party with each one's 12-cycle bar. |
 | `dist/daemon-sprites.mjs` | A mirrored ASCII sprite for each daemon, drawn from its id. |
@@ -159,7 +160,7 @@ comment saying what it does.
 | `dist/firewall.mjs` | The firewall: its base follows your network, plus the margin you buy. |
 | `dist/server-view.mjs`, `dist/server.css` | The Server page: your home server's ring, rows and detail panel. |
 | `dist/events.mjs`, `dist/event-cards.mjs` | The event director's deck, chains, blips and history; each card's panel, the blips' sparks and the history list. |
-| `dist/factions.mjs` | Factions: hubs, shops, rep (1 to 100, four tiers), friends and enemies, and your commission. |
+| `dist/factions.mjs` | Factions: hubs, rep (1 to 100, four tiers), friends and enemies, and your commission. |
 | `dist/receipts.mjs` | Receipts: each traced server's vault receipt, stamped for a faction at the takeover or handed in at your commission's hub. |
 | `dist/market.mjs` | Hub markets: prices that move with conditions, world events and sales. |
 | `dist/consortium.mjs` | Consortium: simulated members who merged servers with yours. |

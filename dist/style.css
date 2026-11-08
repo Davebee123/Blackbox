@@ -1212,6 +1212,30 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 .ptile { position: relative; display: grid; gap: 3px; align-content: start; min-height: 64px; padding: 8px 10px; background: var(--inset); border: 1px solid var(--line-strong); border-radius: 4px; }
 .ptile small { color: var(--muted); font-size: 12px; line-height: 1.35; }
 .ptile.empty, .ptile.locked { border-style: dashed; background: none; }
+/* A hub's Shop (view.mjs shopMarkup): the shelf, the chase line on its tier rail, tools and codebases, one shape everywhere. */
+.shop { display: grid; gap: 10px; }
+.shop-h { display: flex; justify-content: space-between; align-items: center; margin: 6px 0 0; padding-bottom: 5px; border-bottom: 1px solid var(--line); font: 600 11px var(--mono); letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
+.shop-h:first-child { margin-top: 0; }
+.shop-clock { display: inline-flex; gap: 4px; align-items: center; font: 500 11px var(--mono); letter-spacing: 0; text-transform: none; }
+.shop .glyph { flex: none; }
+.shop .price { display: inline-flex; gap: 3px; align-items: center; }
+.shop .price .glyph, .shop-clock .glyph, .shop-imp .glyph { width: 12px; height: 12px; }
+.shop-shelf { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.shop-imp { display: inline-flex; gap: 3px; align-items: center; color: var(--fc); font-size: 12px; }
+.ptile.sold { opacity: 0.45; border-style: dashed; background: none; }
+.shop-rail { display: grid; gap: 10px; }
+.shop-rail .ptiles { grid-template-columns: repeat(var(--n, 1), minmax(0, 1fr)); }
+.shop-tier { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }
+.shop-tier small { font: 500 11px var(--mono); color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
+.shop-col.shut .shop-tier small { color: var(--dim); }
+.shop-tools { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.shop-tool { display: grid; grid-template-columns: auto 1fr auto; grid-template-areas: 'g n n' 'g p b'; gap: 2px 8px; align-items: center; padding: 6px 8px; background: var(--inset); border: 1px solid var(--line-strong); border-radius: 4px; font-size: 12px; }
+.shop-tool > .glyph { grid-area: g; }
+.shop-tool > b { grid-area: n; font-weight: 500; }
+.shop-tool > .price { grid-area: p; }
+.shop-tool > .btn, .shop-tool > .rpips { grid-area: b; justify-self: end; }
+.shop-tool .price { color: var(--muted); }
+@media (max-width: 720px) { .shop-shelf { grid-template-columns: repeat(2, minmax(0, 1fr)); } .shop-rail { grid-template-columns: 1fr !important; } }
 .ptile.locked { opacity: 0.5; }
 .ptile-slot { font: 600 10px var(--mono); color: var(--dim); letter-spacing: 1px; }
 .ptile-empty { font: 12px var(--mono); color: var(--dim); }

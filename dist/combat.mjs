@@ -11,11 +11,12 @@ import INFILTRATOR_FX from './classes/infiltrator.mjs';
 import OPERATOR_FX from './classes/operator.mjs';
 
 import { contractKill, contractTakeover, mailCommand, tickMail, initMail, openContracts, systemLetter, contractPackLost, contractDefuse, contractLocated } from './mail.mjs';
-import { tickStore, buy, indemnityRestore, hubsRestore } from './store.mjs';
+import { buy, indemnityRestore, hubsRestore, shopRestore } from './store.mjs';
 import { buyFrom, claimServer, reclaimCheck, clearedFor, strikeServer, setCommission, repRestore } from './factions.mjs';
 import { receiptCommand } from './receipts.mjs';
 import { tickMarket, marketCommand } from './market.mjs';
 import { IMPLICIT_HOOKS, assemble } from './faction-gear.mjs';
+import { CHASE_HOOKS } from './chase.mjs';
 import { gainComponents, componentsRestore } from './salvage.mjs';
 // Configs are gone (service side-grades; Triage was the last). A save that owned any is refunded.
 const RETIRED_CONFIGS = ['stateful', 'reflective', 'inspection', 'adaptive', 'sticky', 'toll', 'beacon', 'tar', 'sting', 'triage'];
@@ -66,8 +67,8 @@ export const hooks = { flee: null, now: null };
 // Class modules' hooks (see the header of dist/classes/breaker.mjs for each one).
 const CLASS_HOOKS = [];
 // Set bonuses (sets.mjs SET_HOOKS) run after them, on the same hooks: a class module's own effect is in place before them.
-// The faction implicits' own kinds (faction-gear.mjs IMPLICIT_HOOKS) last.
-const classHooks = () => (CLASS_HOOKS.length ? CLASS_HOOKS : CLASS_HOOKS.push(BREAKER_FX, BASTION_FX, INFILTRATOR_FX, OPERATOR_FX, SET_HOOKS, IMPLICIT_HOOKS) && CLASS_HOOKS);
+// The hubs' chase protocols (chase.mjs CHASE_HOOKS), then the faction implicits' own kinds (faction-gear.mjs IMPLICIT_HOOKS) last.
+const classHooks = () => (CLASS_HOOKS.length ? CLASS_HOOKS : CLASS_HOOKS.push(BREAKER_FX, BASTION_FX, INFILTRATOR_FX, OPERATOR_FX, SET_HOOKS, CHASE_HOOKS, IMPLICIT_HOOKS) && CLASS_HOOKS);
 const classUse = (id) => { for (const h of classHooks()) if (h.use?.[id]) return h.use[id]; return null; };
 const classCheck = (id) => { for (const h of classHooks()) if (h.validate?.[id]) return h.validate[id]; return null; };
 // Run a hook on every class module: 'each' calls them all; 'mult' multiplies their numbers; 'sum' adds them.
@@ -1138,7 +1139,6 @@ export function codeFrom(s, family, level, source) {
 export function tickServices(s, now = Date.now()) {
   const first = s.serial;
   tickMail(s, now);
-  tickStore(s, now);
   tickMarket(s, now);
   tickRoot(s, now, (loc) => hooks.procRooms?.(loc) || []);
   tickHot(s, now);
@@ -3700,6 +3700,7 @@ export function takeDamage(s, amount, source, label, { dot = false } = {}) {
     if (e.shieldSeen > e.shield) e.shieldSeen = e.shield;
     if (soaked) fireEvent(s, 'shielded', { absorbed: soaked, part: part(s, source) });
   }
+  for (const h of classHooks()) if (h.intake && amount > 0) amount = h.intake(s, d, amount, { dot }); // a chase protocol's cut (chase.mjs)
   const dealt = survive(s, d, Math.min(d.integrity, amount));
   d.integrity -= dealt;
   if (e.mode === 'home' && dealt) wear(s, dealt); // your server's Integrity: it wears your firewall
@@ -3738,6 +3739,7 @@ export const turboOn = (e) => (e?.turbo?.until >= e.cycle ? e.turbo : null);
 export function mechanicHit(s, amount, label, source = 'raid', opts = {}) {
   const e = s.encounter;
   if (!e || defender(s).integrity <= 0) return 0;
+  if (!opts.dot) e.reached = e.cycle;
   if (!opts.dot && (e.nullRoute > 0 || e.buffs['null-route'] >= e.cycle)) { dodged(e); emit(s, 'blocked', `${label} misses ${s.who || 'you'}, null-routed.`, { source }); openProc(s, 'slipped'); slipLonger(s); return 0; }
   if (!opts.dot && e.chits > 0) { e.chits--; emit(s, 'blocked', `${label} hits ${s.who ? s.who + '\'s' : 'your'} ◆ and does nothing.`, { source }); return 0; }
   const p = { id: source, name: label, integrity: 1, max: 1, attack: { name: label, effect: 'damage', amount, interval: 99 } };
@@ -3863,6 +3865,7 @@ function landAttack(s, p) {
   if (lurk && rand(s) * 100 < lurk && delayAttack(s, p, e.cycle + 1 - atk.due)) return emit(s, 'status', `Stealth: ${p.name}'s ${atk.name} comes a cycle later.`, { source: p.id });
   if (watchman(s, p)) return; // before the landing: the attack it holds lands next cycle, as its own landing
   p.lastLanded = e.cycle;
+  e.reached = e.cycle; // an attack reached you this cycle, whatever stops it (Dead Air, chase.mjs)
   atk.due = e.cycle + atk.interval; // it lands: the next attack can be delayed again
   atk.n = (atk.n || 0) + 1; // its landings: a charge rides one of them (tells.mjs)
   liensPaid(s, p); // the Ledger's Collection: its size is set (power, above), the Liens are paid
@@ -4502,6 +4505,7 @@ function cycleClose(s, landed) {
   // Tracer: every cycle the fight goes on, its Trace-back hits harder.
   for (const p of attackers(s).filter((x) => x.attack.grow)) p.attack.bonus = (p.attack.bonus || 0) + p.attack.grow;
 
+  classEach('cycleEnd', s); // the cycle's attacks are in: Dead Air, Cold Aisle (chase.mjs)
   // Clock Speed: the meter fills each cycle; when it's full, every cooldown ticks one extra cycle.
   const clk = gearStat(s, 'clock');
   if (clk) {
@@ -4999,6 +5003,7 @@ export function restore(raw) {
     initMail(s);
     indemnityRestore(s); // v48: Indemnity retires: what you held becomes credits, once (store.mjs); keyed on the field
     hubsRestore(s); // v60: held hubs and payloads are cut: paid out once in credits, with wick's letter (store.mjs); keyed on the fields
+    shopRestore(s); // v61: every hub's Shop has one shape: the agency stock, premium shelves and hub stock go (store.mjs); keyed on the fields
     { const back = retireOutposts(s, was); const l = back && s.locations?.length ? retireLetter(back) : null; if (l) systemLetter(s, l); } // v40: outposts, services and the rest retire (sockets.mjs)
     syncFlags(s); // servers a relay already pings get their route files
     s.version = SAVE_VERSION;

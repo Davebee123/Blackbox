@@ -113,8 +113,8 @@ function runnerDrop(s, ev, f) {
 // Two located hubs that are rivals (factions.mjs), each pair once.
 export const feuds = (s) => { const fs = hubsOf(s).map((h) => h.faction); return fs.flatMap((a, i) => fs.slice(i + 1).filter((b) => FACTIONS[a].rivals.includes(b)).map((b) => [a, b])); };
 const markets = (s) => hubsOf(s).map((h) => h.faction); // hubs you can trade at
-// What your side gives from its goods: a sealed item (Tuned, at your level), or LANTERN's bootleg filter (it sells no crate).
-export const feudGood = (f) => (f === 'halcyon' || FACTIONS[f].shop.includes('crate') ? 'crate' : 'bootleg');
+// What your side gives for the win: a sealed item (Tuned, at your level), or from LANTERN a bootleg filter.
+export const feudGood = (f) => (f === 'lantern' ? 'bootleg' : 'crate');
 const NAMES = ['lapsejack', 'deductible', 'subrogate', 'rider', 'lossrun', 'waiver', 'binder', 'tallow', 'cinder', 'quarry'];
 
 export const CARDS = {

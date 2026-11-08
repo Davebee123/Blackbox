@@ -14,7 +14,7 @@ import { roomsFor, addRootSocket, socketRoomsRestore } from './dist/netrooms.mjs
 import { ROOT } from './dist/root.mjs';
 import { roomsMarkup } from './dist/floorplan-view.mjs';
 import { mapMarkup, serverMarkup, storeMarkup } from './dist/view.mjs';
-import { shopOf, FACTION_GOODS } from './dist/factions.mjs';
+import { shopOf } from './dist/store.mjs';
 import { RESEARCH } from './dist/research.mjs';
 import { CONSORTIUM } from './dist/consortium.mjs';
 
@@ -132,10 +132,8 @@ test('codebases are bought (Halcyon\'s store, the hubs\' shelves): a vault, a Re
   assert.deepEqual(SK.codebasesOf(s), ['harvester'], 'and teaches nothing');
   // Halcyon's store and the faction hubs sell theirs by tier.
   assert.deepEqual(SK.CODEBASE_SHOPS.halcyon.map(([id]) => id), ['harvester', 'defrag', 'mill']);
-  assert.ok(FACTION_GOODS['cb-snare'] && FACTION_GOODS['cb-post'] && FACTION_GOODS['cb-tunnel'] && FACTION_GOODS['cb-siphon'] && FACTION_GOODS['cb-cron']);
-  assert.equal(FACTION_GOODS['cb-snare'].tier, 1, 'the second tier');
-  const shop = shopOf(s, 'kestrel', clock).find((x) => x.id === 'cb-snare');
-  assert.ok(shop && shop.codebase === 'snare');
+  for (const [f, id] of [['kestrel', 'snare'], ['lantern', 'post'], ['lantern', 'tunnel'], ['glassjaw', 'siphon'], ['nullchoir', 'cron']]) assert.ok(shopOf(s, f).codebases.some((x) => x.id === id), id);
+  assert.equal(shopOf(s, 'kestrel').codebases.find((x) => x.id === 'snare').need, 1, 'the second tier');
 });
 
 test('components: 60% a part in a room fight, an elite\'s always and one more at the kill, 35% elsewhere; mastery adds 25%', () => {

@@ -9,7 +9,7 @@
 //               same item, its stats, base and implicit grown). Feuds are their only source.
 // Read from the written items (not combat.mjs UNIQUES), so this module loads before the engine has finished (combat.mjs imports it).
 import ITEMS from './content/items.mjs';
-import { emit, warn, rand, active, hackerLevel, addItem, gearFx, fxHolds, defender, soonestAttacker, alive, attackAmount, blocked, skillBase, hit, heal } from './combat.mjs';
+import { emit, warn, rand, active, hackerLevel, addItem, gearFx, fxHolds, defender, soonestAttacker, alive, attackAmount, blocked, skillBase, hit, heal, zeroDay, livingParts } from './combat.mjs';
 import { uniqueItem, itemLabel, STASH_CAP } from './gear.mjs';
 import { FACTIONS, hubOf } from './factions.mjs';
 
@@ -53,6 +53,7 @@ export const IMPLICIT_HOOKS = {
     }
     st.hurt = true;
     const c = st.clean && own(s, 'clean-signal');
+    if (c && st.keep) { st.keep = false; emit(s, 'status', `${c.name} holds through the hit.`, { mark: 'buff', ...chip(c) }); return; } // Carrier Wave (chase.mjs)
     if (c) emit(s, 'status', `${c.name} lost.`, { mark: 'debuff', ...chip(c) });
     st.clean = 0;
   },
@@ -82,7 +83,11 @@ export const IMPLICIT_HOOKS = {
     st.last = id;
     if (!x) return;
     st.last = null; // the copy answers the pair: a third in a row starts the next one
-    hit(s, target, Math.max(1, Math.round((skillBase(s, id, target) * x.fx.value) / 100)), { mine: true, by: x.name });
+    const n = Math.max(1, Math.round((skillBase(s, id, target) * x.fx.value) / 100));
+    hit(s, target, n, { mine: true, by: x.name });
+    // Round (a NULL CHOIR chase protocol): the second hit lands on another part too.
+    const rd = zeroDay(s, 'round'), other = rd && livingParts(s).find((p) => p !== target);
+    if (other) hit(s, other, n, { mine: true, by: rd.name });
   },
 };
 

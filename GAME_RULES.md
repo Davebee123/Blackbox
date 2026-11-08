@@ -31,12 +31,12 @@ first transmission comes in over the map (Transmissions).
 5. Each floor has an exit (▼) down to the next, deeper and higher in level.
 6. `jack out` to bank your pack. Home sees a fight only when an **invasion** gets past your **firewall** (Home).
 7. **Mail** gives it all a reason: LOWLIGHT's storyline, contracts from Halcyon Mutual and the factions, each floor's
-   job chain, and the store (Mail and contracts).
+   job chain, and the Shops (Mail and contracts).
 
 ### Found or bought
 
 Nothing is made at home. Every protocol, filter and relay is **found** (drops, vaults, contracts, events) or
-**bought** (Halcyon's store and its premium shelf, the hubs' shops).
+**bought** (the hubs' Shops).
 
 ## Fights
 
@@ -1523,7 +1523,7 @@ within the same 15%. Uniques and set pieces that carry either keep their stats.
 | Tuned | Blue | Base ×1.1, 0–1 numeric affix and a minor rule |
 | Custom | Yellow | Base ×1.2, 2–4 numeric affixes and a major rule, a random two-word name |
 | Zero-day | Gold | A **unique**, or a found Zero-day (Rootkit, Race Condition, Buffer Overflow) |
-| Indemnified | Orange | Halcyon's chase protocols (The Halcyon store) |
+| Indemnified | Orange | The hubs' chase protocols (Shops); each faction names its own line |
 
 There are no grey protocols (filters still come in Scrap). A **Zero-day** is found ready-made: a quarter of the vaults
 on floor 2 and deeper hold one (`.src`), at the server's level.
@@ -1715,8 +1715,8 @@ pieces** that only feuds give.
 **Implicits.** An item a faction gives carries one fixed extra line, its **implicit**, in the faction's colour with its
 mark on the glyph. It grows with item level. **The same implicit counts once**, at its best, however many items carry it.
 It rolls on a feud runner's protocol and the feud's sealed item, a faction's contract items (Halcyon's board Halcyon's,
-GLASSJAW's off-the-books jobs GLASSJAW's), a hub's sealed item and premium protocol, and a faction server's vault item.
-Never on a unique, a set piece or a Zero-day, and kills never roll one.
+GLASSJAW's off-the-books jobs GLASSJAW's), a hub's shelf and chase protocols, and a faction server's vault item.
+Never on a unique, a set piece or a found Zero-day, and kills never roll one.
 
 | Faction | Implicit | What it does | Lv 10 | Lv 30 | Lv 50 |
 | --- | --- | --- | --- | --- | --- |
@@ -1791,8 +1791,8 @@ kills. `node econ.mjs` measures it.
 - **Health is the everyday sink.** Signal rests back 20% of max a minute, your server 2% a minute (half that while an
   invasion is contested or breaching), offline too. Or pay now: a full Signal bar costs 8 + 1.5 × your level, a full
   server 10 + 2 × its level; less missing costs less. Click the meter's **+**, or `top up` / `repair [n]`. Short of
-  credits, you get what they buy. On a run the store's Signal patch fills it.
-- **Building:** programs and codebases (Sockets and programs). **Gear:** the store's sealed item and premium shelf.
+  credits, you get what they buy. On a run a Shop's Signal patch fills it.
+- **Building:** programs and codebases (Sockets and programs). **Gear:** the Shops' shelves and chase lines.
 
 | Sink | Price |
 |---|---|
@@ -1800,8 +1800,8 @@ kills. `node econ.mjs` measures it.
 | Server repair (full) | 10 + 2 × server level |
 | A light / medium program (floor 1) | 140 / 280 credits, 15 / 30 of the server's code, 0 / 1 Exploit; +25% of that a floor past the first |
 | A codebase, light / medium | 200 + 10L / 400 + 15L credits |
-| A sealed item (a blue at your level) | 180 + 14L credits |
-| A premium protocol: a blue at L + 2 / a yellow at L | 3.5 / 4.5 hours of income at L |
+| A shelf protocol: a blue / a yellow at L | 3 / 6 hours of income at L |
+| A chase protocol at the second / third / fourth tier | 8 / 12 / 20 hours of income at L |
 | Firewall tiers, defrag | Home |
 
 ### Code and components
@@ -1817,33 +1817,34 @@ of the time in a room fight**, always from an elite's parts with **one more** at
 in them more. Deconstructing, a stopped invasion and a scrapped filter give them too. Every hub's market buys them;
 none sells them. Nothing is built from them. Your count shows on the Server page.
 
-### The Halcyon store
+### Shops
 
-Halcyon's hub's **Shop** (store.mjs). It opens with the contract board (Mail and contracts).
+Every hub's **Shop** has one shape (store.mjs), Halcyon's included. It opens with the contract board (Mail and
+contracts). `buy <faction> <what>`; plain `buy <what>` is Halcyon's. Halcyon hands things over at once; another hub's
+come by file transfer (Markets). Each rep tier above the first takes 5% off everything. Code, Exploits and components are
+the markets' wares, never a Shop's.
 
-| Halcyon's own line | Price | Needs |
-|---|---|---|
-| Relay | 120 + 8L | Probation |
-| Deductible (survival): the first attack that lands on you each fight does nothing | 1,200 × (1 + L/15) | Contractor |
-| Subrogation (offense): when a part hits you, your next skill hit on it deals double | 1,800 × (1 + L/15) | Trusted |
-| Actuarial Model (utility): veils can't hide attack timers from you | 1,800 × (1 + L/15) | Trusted |
-| Total Loss (offense): when you break a part, every other part takes a quarter of its max Integrity (armor soaks it); breaks it causes do it again | 3,200 × (1 + L/15) | Preferred |
+- **The shelf:** four protocols at your level with the hub's implicit, each for a different open slot: two blues, a
+  yellow at the second tier and one at the third. It rerolls every **30 minutes of play** (`s.pace.ms`; nothing turns
+  over while you're away) and at each level. What you buy stays **Sold** until then. `buy <faction> shelf-<n>`.
+- **The chase line:** the hub's own protocols, at the second to fourth tiers, rolled at your level when you buy one,
+  with bigger stats than Custom (×1.4, two affixes), the hub's implicit and a signature rule; one of each loaded at a
+  time. No re-tune: a level later, you buy one again.
+- **Tools**, always in stock: relay 120 + 8L, key cracker 60 + 6L (a found server's vault key, from its map card),
+  trace injector 80 + 6L, Signal patch 30 + 3L, hot-swap kit 40 + 5L (full Integrity).
+- **Codebases:** the programs the hub teaches, once each, by tier (Sockets and programs).
 
-The four chase protocols are **Indemnified**: rolled at your level with bigger stats than Custom (×1.45 main, two
-secondaries at ×0.85) and a signature effect nothing else has, one of each loaded at a time. They are the game's credit
-sink (prices rounded to 10: at level 30, 3,600, 5,400, 5,400 and 9,600). Halcyon's codebases are on this shelf too.
+Prices are hours of credits at your level (`incomeAt`: 300 an hour to level 10, +60 a level to 900 at 20, then +40 a
+level), so they stay as far out of reach early as late: a shelf blue 3 hours, a yellow 6, a chase protocol 8, 12 and 20
+by its tier. At level 20: 2,700, 5,400, 7,200, 10,800 and 18,000 before the tier's cut.
 
-- **Agency stock**, resold from other agencies (Kestrel Underwriting, Norrland Re, Blue Ledger Security, Mimir
-  Actuarial, Quayside Claims, Vesper Risk): four slots, each turning over on its own clock (40–150 minutes), each with a
-  supplier, a price drifting up to 25% either way (▲ ▼) and a small quantity: refurbished relays, key crackers (a found
-  server's vault key, used from its map card), trace injectors, Signal patches, hot-swap kits (full Integrity), code
-  lots, Exploits and sealed items.
-- **The premium shelf** (`PREMIUM`), atop the agency stock: two protocols rolled for your level, a step above what
-  drops: a **blue two levels up** and a **yellow at your level**, each for a different open slot, with Halcyon's
-  implicit; never a unique, a set piece or a Zero-day. Each costs hours of credits at your level (`incomeAt`: 300 an
-  hour to level 10, +60 a level to 900 at 20, then +40 a level): the blue 3.5 hours, the yellow 4.5. No clock: a new
-  level brings new stock, and buying one puts a comparable one in its place. `buy premium-<n>`. Each faction hub's
-  shop holds one premium protocol with its own implicit, at its tier's price (`buy <faction> premium-0`).
+| Hub (line) | Second tier | Third tier | Fourth tier |
+|---|---|---|---|
+| Halcyon (Indemnified) | **Deductible** (Proxy): the first attack that lands on you each fight does nothing | **Subrogation** (Exploit): when a part hits you, your next skill hit on it deals double. **Actuarial Model** (Script): veils can't hide attack timers from you | **Total Loss** (Exploit): a part you break deals a quarter of its max Integrity to every other part (armor soaks it); a break it causes does it again |
+| Kestrel (Bonded) | **Failover** (Proxy): once a fight, a hit that would take you under 25% leaves you at 25% | **Escrow** (Exploit): a break's damage past the part's last Integrity is held and added to your next hit | **Cold Aisle** (Implant): after you break a part, your cooldowns tick twice for 2 cycles |
+| GLASSJAW (Off-book) | **Shell Company** (Proxy): the first hit each fight that would take you under 75% deals half | **Black Budget** (Exploit): above 75% health your crits deal 50% more | **Golden Parachute** (Implant): once a fight, falling under 25% heals you to 50% |
+| LANTERN (Broadcast) | **Carrier Wave** (Script): Clean Signal keeps its stacks through the first hit each fight | **Numbers Station** (Exploit): at full Clean Signal your next skill hit also hits every other part, and spends the stacks | **Dead Air** (Proxy): each cycle no attack reaches you, blocked or not, your cooldowns tick once more |
+| NULL CHOIR (Unsigned) | **Refrain** (Script): the same skill twice in a row, and the second cools in half the time | **Round** (Exploit): Chorus's second hit lands on another part too | **Crescendo** (Implant): each repeat of the same skill deals 15% more, up to 60%, until you use another |
 
 ### Markets
 
@@ -1959,7 +1960,7 @@ NULL CHOIR*, *Sells to GLASSJAW*. L is your server level.
 | 50–74 | third (Trusted) | 15 + 3L |
 | 75–100 | fourth (Preferred) | 20 + 4L |
 
-Halcyon's tiers also gate its store. A crash costs no rep; declining or dropping a contract costs nothing.
+Every faction's tiers also gate its Shop. A crash costs no rep; declining or dropping a contract costs nothing.
 
 ### Contracts
 
@@ -2032,7 +2033,7 @@ processes in SPRAWL-00 (60 credits); hand over two Worm code (80); kill the name
 level above you, never above 4; after two losses it's worn down to v1) (100, wick's Old Toolkit); take over any server
 you've traced (250 and your first **relay**); recover Halcyon's stolen `claims.db` from an unknown server next to the
 one you took (150, a protocol, Tuned or better). Each pays Halcyon rep (+3, +3, +3, +4, +4), so you finish at Contractor.
-The board and the store open with the turf letter. At level 22 wick writes once more (*crew colours*): take over one
+The board and the Shops open with the turf letter. At level 22 wick writes once more (*crew colours*): take over one
 more server (400 credits, +4 Halcyon rep, the **LOWLIGHT Badge** and wick's Old Toolkit rebuilt at your level).
 
 ### Floor jobs (arcs.mjs)
@@ -2077,13 +2078,13 @@ don't count toward your six. The words are in `dist/content/contracts.mjs` (`flo
 Five PvE factions, companies and hacker crews, each with a colour, a mark and a hub (`factions.mjs`). Halcyon is the
 first.
 
-| Faction | Kind | Colour | Hub (level) | Allies | Rivals | Goods |
+| Faction | Kind | Colour | Hub (level) | Allies | Rivals | Chase line |
 |---|---|---|---|---|---|---|
-| Halcyon Mutual | company | blue | HALCYON-CLEARING-01 (1) | Kestrel | GLASSJAW, NULL CHOIR | its store |
-| GLASSJAW | company | magenta | GLASSJAW-ANNEX-07 (8) | — | Halcyon, LANTERN | key crackers, sealed items |
-| Kestrel Underwriting | company | green | KESTREL-DC-NORTH (4) | Halcyon | NULL CHOIR | relays, trace injectors, sealed items |
-| LANTERN | hacker crew | orange | LANTERN-RELAY-88 (6) | NULL CHOIR | GLASSJAW | bootleg filters (a sealed Stock or Tuned filter), key crackers, trace injectors |
-| NULL CHOIR | hacker crew | rose | NULLCHOIR-SQUAT-13 (12) | LANTERN | Halcyon, Kestrel | sealed items, key crackers |
+| Halcyon Mutual | company | blue | HALCYON-CLEARING-01 (1) | Kestrel | GLASSJAW, NULL CHOIR | Indemnified |
+| GLASSJAW | company | magenta | GLASSJAW-ANNEX-07 (8) | — | Halcyon, LANTERN | Off-book |
+| Kestrel Underwriting | company | green | KESTREL-DC-NORTH (4) | Halcyon | NULL CHOIR | Bonded |
+| LANTERN | hacker crew | orange | LANTERN-RELAY-88 (6) | NULL CHOIR | GLASSJAW | Broadcast |
+| NULL CHOIR | hacker crew | rose | NULLCHOIR-SQUAT-13 (12) | LANTERN | Halcyon, Kestrel | Unsigned |
 
 - **Finding the hubs.** When the board opens only Halcyon's hub is on your map. Every other hub's trace grows when you
   locate a server that faction owns (+40%) and when you clear a guard or virus off one (+20%). At 100% it's
@@ -2096,11 +2097,8 @@ first.
 - **Ripples:** whatever rep you gain or lose with a faction, its rivals move half the other way and its allies a quarter
   the same way, never under 1. A feud has no ripple: it never costs rep with anyone.
 - **A hub session:** **Connect** jacks you into the hub's terminal (its banner, one line from whoever answers, changing
-  with your rep, and its menu as tokens). Each choice opens a window beside it: **Market**, **Shop** (the faction's own
-  shelf: its premium protocol first, then its codebases and goods; better rep unlocks more and trims prices; Halcyon's
-  Shop is its store), **Work**, **Commission**, **Receipts** (at your commission's hub, while you keep one), **Their
-  servers**. Goods are buy-only, a few of each, refilled hourly,
-  priced at the hub's level or yours, whichever's higher, and arrive by file transfer (Halcyon's at once).
+  with your rep, and its menu as tokens). Each choice opens a window beside it: **Market**, **Shop** (Shops), **Work**, **Commission**, **Receipts** (at your commission's hub, while you keep one), **Their
+  servers**.
 - **Faction servers:** about one in eight servers you trace (never your first two, never rogue) belongs to Kestrel,
   GLASSJAW, LANTERN or NULL CHOIR. Taking one over takes it from its owner, at no rep.
 - **Receipts** (`receipts.mjs`): every traced server's vault holds one, the frozen trade its Resident orphaned
@@ -2291,7 +2289,7 @@ one family (Wormguard, Lockbreak, Exorcism), 15–40% less fragmentation, 20–5
 chip, and for home fights 2–5% Evasion, 10–25% Sanitize, 2–6 Block, a 4–10% opening shield, 2–5 Regen, 2–6 back on
 every hit; Custom only: 2–5 of a family's code from every invader it stops (of Reflection), 15–30% slower invasions (of
 Tar), invasions arriving 10–25% worn (of the Hive). About one vault in seven holds a `filter.flt` (Custom one time in
-twelve, the only Custom source); LANTERN sells bootleg ones. **Put in**, **Take out**, **Scrap** (1–3 components) at home
+twelve, the only Custom source). **Put in**, **Take out**, **Scrap** (1–3 components) at home
 (`filter equip|unequip|scrap <n>`). You hold 12 at most.
 
 ### Bounties, daemons and the streak
@@ -2677,8 +2675,8 @@ Checked by `node balance.mjs` (docs/BALANCE.md, `balance.test.mjs`), `farmsim.mj
 - **Away is played out**, a minute at a time, up to a day: invasions every 2–4 hours, each meeting your firewall. What
   protects you is your network's base, the margin you bought and your filters. Programs make nothing on their own, so
   nothing raids them.
-- **No store-to-market loop.** Hubs sell code and Exploits only as market wares and never sell components; the store
-  never sells code for less than 10% over the best hub's price; a round trip at one hub never profits.
+- **No shop-to-market loop.** Code, Exploits and components are only market wares; a round trip at one hub never
+  profits.
 - **The game saves when the tab closes**, and every roll comes from the save's seed: reloading replays the same result.
 
 ## Saves
@@ -2686,6 +2684,8 @@ Checked by `node balance.mjs` (docs/BALANCE.md, `balance.test.mjs`), `farmsim.mj
 The save is `SAVE_VERSION` 60 (combat.mjs). An older save is migrated on load, each step keyed on the field it converts,
 so it is safe to run twice; nothing a save held is lost.
 
+- **v61** every hub's Shop has one shape: the agency stock, the premium shelves and the hubs' stock counts go
+  (`store.mjs shopRestore`, keyed on the fields).
 - **v60** payloads, hub capture and swarms are cut: a held hub pays out once (its bank and a day of its income, each
   payload at cost), with wick's letter (`store.mjs hubsRestore`, keyed on the fields).
 - **v59** journals: `s.journals`, made on first use (`journals.mjs`).
