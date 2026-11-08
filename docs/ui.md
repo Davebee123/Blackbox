@@ -98,7 +98,7 @@ teal, violet or a threat's red.
   rules' chips under it.
 - **Whose half.** A strip names it (`YOUR MOVE`, `YOU`, then the virus's name); the virus's half turns the board red
   (a faint wash and border) for about 1.3 s, and the prompt reads `<VIRUS> acts…`. The *You* row shows your queued
-  command; the Now column is a band with a playhead that turns red 1.5 s before the cycle ends.
+  command; the Now column is a band with a playhead that turns red 1.5 s before the cycle ends. A faint dot grid (12 px) sits behind the board.
 - **Who's aiming where:** round initials in a rail down each row's left edge (yours teal, a crewmate's violet). While
   you type a command that names a part, your avatar moves there first (dashed if it would go through, red if not).
 - **Previews:** before a cycle resolves, every bar shows what it's about to lose as a blinking white slice (the chits
