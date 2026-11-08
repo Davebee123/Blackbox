@@ -134,7 +134,7 @@ test('the market teaches itself in order: rows, ▲/▼, the news, then the tick
 
 test('every threat on the map has a tip, and none speaks of outposts (gone in R2)', () => {
   const has = (sel) => TIPS.some((t) => t.page === 'map' && t.at === sel);
-  for (const sel of ['.mnode.intrusion', '.mnode.invader[data-select="invader"]', '.mnode.invader.siege[data-select="invader"]', '.mnode.invader.breach', '.mnode.hub.yours.threat']) assert.ok(has(sel), sel);
+  for (const sel of ['.mnode.intrusion', '.mnode.invader[data-select="invader"]', '.mnode.invader.siege[data-select="invader"]', '.mnode.invader.breach']) assert.ok(has(sel), sel);
   for (const t of TIPS) assert.doesNotMatch(t.text, /outpost|bandwidth|salvage|take (it|the outpost) back|cut off/i, t.id);
 });
 

@@ -373,7 +373,7 @@ test('the save (v40): outposts, buildings, plans, services, architecture and the
   s.version = 39;
   const t = restore(JSON.parse(JSON.stringify(s)));
   assert.equal(t.version, SAVE_VERSION);
-  assert.equal(SAVE_VERSION, 59); // v59 journals; v58 one rep scale; v57 the talent tiers; v56 floors as tiers; v55 gear carries your power; v54 the compounding curve; v53 the cryptogram key; // v41: floors (R3) came after, v42 the long climb, v43 threads, v44 whole-number stats, v45 sets, v46 no default subclass, v47 one kind of component, v48 Indemnity retires, v49 crafting goes, v50 specials, v51 the scanner, v52 rivals
+  assert.equal(SAVE_VERSION, 60); // v60 payloads cut; v59 journals; v58 one rep scale; v57 the talent tiers; v56 floors as tiers; v55 gear carries your power; v54 the compounding curve; v53 the cryptogram key; // v41: floors (R3) came after, v42 the long climb, v43 threads, v44 whole-number stats, v45 sets, v46 no default subclass, v47 one kind of component, v48 Indemnity retires, v49 crafting goes, v50 specials, v51 the scanner, v52 rivals
   const l2 = t.locations.find((x) => x.id === loc.id);
   for (const k of ['buildings', 'build', 'outpost']) assert.equal(l2[k], undefined, `${k} gone`);
   assert.ok(l2.takenOver, 'still yours');
@@ -390,7 +390,7 @@ test('the save (v40): outposts, buildings, plans, services, architecture and the
   for (const id of ['harvester', 'siphon', 'snare', 'mill', 'post', 'bulkhead', 'honeytoken', 'relay']) assert.ok(t.codebases.includes(id), `${id} codebase`);
   assert.equal(t.plans, undefined, 'the Relay plan went with crafting (v47): credits');
   assert.deepEqual(t.services, {}); assert.equal(t.install, null); assert.equal(t.architecture, null);
-  assert.equal(t.fleet, null, 'the swarm at the outpost is gone');
+  assert.ok(!t.fleet, 'the swarm at the outpost is gone');
   assert.equal(t.consortium.servers[0].held, undefined, 'the member\'s outpost is just their server');
   // Sockets on the old graph: from its seed, the Root 4 room, a process you'd cleared open.
   const R2 = l2.floorplan;

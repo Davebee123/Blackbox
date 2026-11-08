@@ -40,7 +40,7 @@ import { hiddenNear } from './floors.mjs';
 import STORY_TEXT from './content/story.mjs';
 import CONTRACT_TEXT from './content/contracts.mjs';
 import { fill } from './content.mjs';
-import { FACTIONS, changeRep, rep, captured, rivalServers, hubsOf, hubFound, commissionOf } from './factions.mjs';
+import { FACTIONS, changeRep, rep, rivalServers, hubsOf, hubFound, commissionOf } from './factions.mjs';
 import { addrsOf, sweepRooms } from './address.mjs';
 import { takeReceipt } from './receipts.mjs';
 import { arcTick, arcTitle, arcProgress, arcReady, arcDelivered, arcTake } from './arcs.mjs';
@@ -287,7 +287,7 @@ const CODES = ['cipher', 'worm', 'kernel'];
 // Who posts the next job: GLASSJAW off the books now and then; once hubs are found, about half the rest is theirs.
 function giverOf(s) {
   const off = rand(s) < MAIL.offBooksChance;
-  const others = hubsOf(s).length ? ['kestrel', 'lantern', 'nullchoir'].filter((f) => hubFound(s, f) && !captured(s, f)) : []; // only factions whose hub you've found send work
+  const others = hubsOf(s).length ? ['kestrel', 'lantern', 'nullchoir'].filter((f) => hubFound(s, f)) : []; // only factions whose hub you've found send work
   const faction = off ? 'glassjaw' : others.length && rand(s) < MAIL.factionShare ? pick(s, others) : 'halcyon';
   return { faction, off, theirs: faction !== 'halcyon' && faction !== 'glassjaw' };
 }

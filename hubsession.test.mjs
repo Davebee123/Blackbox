@@ -2,8 +2,6 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command } from './dist/combat.mjs';
 import { hubOptions, hubBanner, hubTerminalMarkup, setOrder } from './dist/view.mjs';
-import { PAYLOAD as __PAYLOAD } from './dist/payload.mjs';
-__PAYLOAD.on = true; // payloads are switched off in the game for now; capturing a hub still needs them here
 
 const open = () => { const s = fresh(); s.tutorialCompleted = true; command(s, 'mail'); s.mail.boardOpen = true; s.hubFound = { glassjaw: true, kestrel: true, lantern: true, nullchoir: true }; return s; };
 const keys = (s, f) => hubOptions(s, f).map((o) => o.key);
@@ -11,7 +9,7 @@ const keys = (s, f) => hubOptions(s, f).map((o) => o.key);
 test('a hub session offers a short menu that fits the situation', () => {
   const s = open();
   assert.deepEqual(keys(fresh(), 'kestrel'), [], 'no hubs before the board');
-  assert.deepEqual(keys(s, 'kestrel').slice(0, 5), ['market', 'shop', 'work', 'commission', 'payloads'], 'every hub has a Shop, its Work and a Commission');
+  assert.deepEqual(keys(s, 'kestrel').slice(0, 5), ['market', 'shop', 'work', 'commission', 'servers'], 'every hub has a Shop, its Work and a Commission');
   assert.ok(keys(s, 'halcyon').includes('shop'), 'Halcyon’s Shop is its store');
   assert.ok(!keys(s, 'halcyon').includes('donate'));
   s.standing.nullchoir = 1;
@@ -19,8 +17,6 @@ test('a hub session offers a short menu that fits the situation', () => {
   assert.ok(!keys(s, 'halcyon').includes('receipts'), 'Receipts only once you keep one');
   s.receipts = { kept: [{ id: 'TRD-77-1', payer: 'a', payee: 'b', sum: 100, date: '1 Jan 2077', c: 'C+16', server: 'X' }], fresh: null, tally: {}, closed: {} };
   assert.ok(keys(s, 'halcyon').includes('receipts') && !keys(s, 'kestrel').includes('receipts'), 'at your commission’s hub');
-  s.hubs.lantern.captured = { at: 0, bank: 5, bankAt: 0 };
-  assert.deepEqual(keys(s, 'lantern'), ['hold', 'market', 'shop', 'commission'], 'yours: the hub, its market, its shop (at cost) and its commission');
 });
 
 test('connecting reads like jacking into a server: handshake, banner, who answers, the menu', () => {
@@ -44,7 +40,6 @@ test('connecting reads like jacking into a server: handshake, banner, who answer
   assert.match(ticket, /market sell kestrel cipher 3/, 'its order, for the slider’s amount');
   assert.match(ticket, /You get/);
   setOrder(null);
-  assert.doesNotMatch(market, /payload compile/, 'only the window you picked');
   s.standing.nullchoir = 1;
   assert.match(hubBanner(s, 'nullchoir')[2].html, /Connected\./);
 });

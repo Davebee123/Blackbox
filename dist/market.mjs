@@ -54,20 +54,18 @@ export const MARKET = {
   travelMin: { halcyon: 5, kestrel: 8, lantern: 10, glassjaw: 12, nullchoir: 15 }, // file transfer, minutes
   relayCut: 0.1, // each relay you've installed: 10% faster, up to 40%
   maxLots: 99,
-  wiperBoost: 1.25, // while a hub is wiped offline, the others pay 25% more for what it was buying
 };
 
 const marketOf = (s) => (s.market ||= { pressure: {}, transfers: [], serial: 0, event: 'calm', eventUntil: 0, at: null });
 export const eventOf = (s) => EVENTS[marketOf(s).event] || EVENTS.calm;
 
-// What moves a hub's price that you can't: its condition × the world event × a wiped hub elsewhere × a market shock
+// What moves a hub's price that you can't: its condition × the world event × a market shock
 // on this hub's ware (events.mjs, the Market shock card) × a price flicker (a blip) × a pirate's tip you logged (scanner.mjs).
 // A tip is { hub, ware, mult, until } in s.scanner.tips (scanner.mjs catchStation).
 export const tipMult = (s, f, w) => (s.scanner?.tips || []).find((x) => x.hub === f && x.ware === w && x.until > now())?.mult ?? 1;
 export function outsideMult(s, f, w) {
   const cond = CONDITIONS[HUB_CONDITION[f]]?.mult[w] ?? 1, ev = eventOf(s).mult[w] ?? 1;
-  const t = now(), gap = Object.entries(s.hubs || {}).some(([g, h]) => g !== f && (h.offlineUntil || 0) > t && (CONDITIONS[HUB_CONDITION[g]]?.mult[w] || 0) > 1) ? MARKET.wiperBoost : 1;
-  return cond * ev * gap * shockMult(s, f, w) * flickerMult(s, f, w) * tipMult(s, f, w);
+  return cond * ev * shockMult(s, f, w) * flickerMult(s, f, w) * tipMult(s, f, w);
 }
 // The price at a hub for one unit, before the spread: base × outside factors × your own pressure
 // (selling pushes it down to 35% at most, buying up to 160%).
@@ -77,7 +75,7 @@ export function priceOf(s, f, w) {
 }
 // What you'd get selling one, and pay buying one (whole credits). Better rep trades a little better.
 export function quote(s, f, w) {
-  const t = repTier(s, f).i, mine = !!s.hubs?.[f]?.captured, edge = mine ? MARKET.spread : t * 0.02; // a hub you hold trades at its true price
+  const t = repTier(s, f).i, edge = t * 0.02;
   const p = priceOf(s, f, w);
   return { sell: Math.max(1, Math.floor(p * (1 - MARKET.spread + edge))), buy: Math.max(1, Math.ceil(p * (1 + MARKET.spread - edge))), mult: p / WARES[w].base };
 }
@@ -91,7 +89,6 @@ export function trade(s, side, f, w, n, at = now()) {
   if (!FACTIONS[f] || !hubsOf(s).length) return warn(s, 'Markets open with the faction hubs.');
   if (!hubFound(s, f)) return warn(s, `You haven't located ${FACTIONS[f].short}'s hub yet.`);
   if (!WARES[w]) return warn(s, `Wares: ${WARE_IDS.join(', ')}.`);
-  if ((s.hubs?.[f]?.offlineUntil || 0) > at) return warn(s, `${FACTIONS[f].hub.name} is offline.`);
   if (n < 1 || n > MARKET.maxLots) return warn(s, `How many? 1–${MARKET.maxLots}.`);
   if (side === 'buy' && WARES[w].sellOnly) return warn(s, `Hubs buy ${WARES[w].name.toLowerCase()} but don't sell them.`);
   const m = marketOf(s), q = quote(s, f, w);

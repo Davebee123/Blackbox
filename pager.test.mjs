@@ -33,7 +33,6 @@ test('pages are the lines you can act on; news only tells you something', () => 
   const threats = [
     line(s, 'wall-breach', 'cryptjack BREACHED your wall.'),
     line(s, 'invader', 'Invasion: lapsejack left X. At your wall in 4 min.', { invader: 1 }),
-    line(s, 'hub-siege', 'A swarm reaches the Kestrel hub.', { faction: 'kestrel' }),
   ];
   const news = [
     line(s, 'retainer', 'Halcyon retainer: +38 credits.'),
@@ -109,8 +108,6 @@ test('acts follow the game: a full hand reads the offer, a contract not done ope
   assert.deepEqual(PG.actOf(t, inv), { label: 'Intercept', cmd: 'intercept' }, 'a thief can be caught on the way');
   t.invasion.state = 'siege';
   assert.deepEqual(PG.actOf(t, inv), { label: 'Jack in', cmd: 'jack in' }, 'at the wall: jack in');
-  const hub = line(t, 'hub-siege', 'A swarm reaches the Kestrel hub.', { faction: 'kestrel' });
-  assert.deepEqual(PG.actOf(t, hub), { label: 'Defend', cmd: 'hub defend kestrel' });
 });
 
 test('the count is the pages; the order is threat, clock, pay, the rest, letters, offers', () => {

@@ -70,7 +70,8 @@ export const FACTION_GOODS = {
 export const rep = (s, f) => { const st = (s.standing ||= { halcyon: FACTIONS.halcyon.start }); if (st[f] == null) st[f] = FACTIONS[f]?.start ?? 10; return st[f]; };
 export const repTier = (s, f) => { const r = rep(s, f); let i = 0; REP_TIERS.forEach((m, k) => { if (r >= m) i = k; }); return { i, name: FACTIONS[f].tiers[i], next: REP_TIERS[i + 1] ?? null, min: REP_TIERS[i] }; };
 export const REP_FLOOR = 1; // nothing drives a faction under this: no hub ever shuts
-export const captured = (s, f) => !!s.hubs?.[f]?.captured;
+// Each faction's crews write their own kind of virus (its runners in feuds, its invaders on a defence call).
+export const FACTION_FAMILY = { halcyon: 'worm', glassjaw: 'ghostroot', kestrel: 'worm', lantern: 'worm', nullchoir: 'ransomware' };
 // How rep moves through the web: a rival loses half of what you gave, an ally gains a quarter.
 export const RIPPLE = { rival: 0.5, ally: 0.25 };
 // Just the ripple: rivals move half the other way, allies a quarter the same way.
@@ -143,30 +144,29 @@ export const hubOf = (s, id) => hubsOf(s).find((h) => h.id === id || h.faction =
 // refilled every hour. Buy-only, and they come by file transfer like everything bought at a hub.
 // Better tiers buy cheaper (−5% a tier above the first) and open the rarer goods.
 // (Code, Exploits and salvage aren't goods: they're the market's wares, bought and sold.)
-export const SHOP = { restockMs: 60 * 60000, qty: 3, discount: 0.05, atCost: 0.6 }; // a hub you hold sells at cost
+export const SHOP = { restockMs: 60 * 60000, qty: 3, discount: 0.05 };
 const goodOf = (id) => GOODS[id] || FACTION_GOODS[id];
 export function shopOf(s, f, at = now()) {
   const h = (s.hubs ||= {})[f] ||= { id: 'hub-' + f, faction: f, stock: {}, restockAt: 0 };
   if (at >= (h.restockAt || 0)) { h.stock = Object.fromEntries(FACTIONS[f].shop.map((id) => [id, SHOP.qty])); h.restockAt = at + SHOP.restockMs; }
-  const L = Math.max(hackerLevel(s), FACTIONS[f].hub.level), t = repTier(s, f), mine = captured(s, f);
+  const L = Math.max(hackerLevel(s), FACTIONS[f].hub.level), t = repTier(s, f);
   return FACTIONS[f].shop.map((id) => {
     const g = goodOf(id), need = g.tier || 0;
-    const price = priceNow(s, id, Math.round(g.credits(L) * (mine ? SHOP.atCost : 1 - SHOP.discount * t.i)), L);
+    const price = priceNow(s, id, Math.round(g.credits(L) * (1 - SHOP.discount * t.i)), L);
     const known = g.codebase && knowsCodebase(s, g.codebase); // a codebase you know: nothing to sell you
-    return { id, name: g.name, about: g.about || (g.code ? `${codeAmount(L)} of its code.` : ''), price, left: known ? 0 : g.codebase ? Math.min(1, h.stock[id] ?? 1) : h.stock[id] || 0, known, locked: !mine && t.i < need, need, codebase: g.codebase || null };
+    return { id, name: g.name, about: g.about || (g.code ? `${codeAmount(L)} of its code.` : ''), price, left: known ? 0 : g.codebase ? Math.min(1, h.stock[id] ?? 1) : h.stock[id] || 0, known, locked: t.i < need, need, codebase: g.codebase || null };
   });
 }
 // Its premium protocol (store.mjs premiumOf): a step above what drops, with this faction's implicit, at the shop's
 // price for your tier. [{ it, i, price }].
 export function hubPremium(s, f) {
-  const t = repTier(s, f), mine = captured(s, f), L = hackerLevel(s);
-  return premiumOf(s, f).map((it, i) => ({ it, i, price: Math.round(premiumPrice(it, L) * (mine ? SHOP.atCost : 1 - SHOP.discount * t.i)) }));
+  const t = repTier(s, f), L = hackerLevel(s);
+  return premiumOf(s, f).map((it, i) => ({ it, i, price: Math.round(premiumPrice(it, L) * (1 - SHOP.discount * t.i)) }));
 }
 // deliver: store.mjs's delivery for shared goods; faction goods handled here.
 export function buyFrom(s, f, id, at = now()) {
   if (!FACTIONS[f] || f === 'halcyon') return warn(s, 'Halcyon sells through its store.');
   if (!hubOf(s, f)) return warn(s, 'Faction hubs open with the contract board.');
-  if ((s.hubs?.[f]?.offlineUntil || 0) > at) return warn(s, `${FACTIONS[f].hub.name} is offline.`);
   if (id.startsWith('premium-')) {
     const p = hubPremium(s, f)[Number(id.slice(8))];
     if (!p) return warn(s, 'That’s not on the shelf any more.');

@@ -39,13 +39,6 @@ const MAP = {
   'outpost-fell': (e) => ({ kind: 'alert', label: 'Lockdown', from: 'Outpost', text: e.message.replace(/^LOCKDOWN: /, ''), go: e.location ? `map:${e.location}` : 'map', beep: true }),
   'outpost-held': (e) => ({ kind: 'net', label: 'Held', from: 'Outpost', text: e.message, go: e.location ? `map:${e.location}` : 'map', beep: false }),
   'transfer-in': (e) => ({ kind: 'paid', label: 'Transfer', from: 'Market', text: e.message, go: e.faction ? `hub:${e.faction}` : 'map', beep: false }),
-  'payload-breach': (e) => ({ kind: 'net', label: 'Breach', from: 'Payload', text: e.message, go: `hub:${e.faction}`, beep: true }),
-  'payload-siege': (e) => ({ kind: 'net', label: 'Partial', from: 'Payload', text: e.message, go: `hub:${e.faction}`, beep: true }),
-  'payload-blocked': (e) => ({ kind: 'net', label: 'Blocked', from: 'Payload', text: e.message, go: `hub:${e.faction}`, beep: true }),
-  'hub-retake': (e) => ({ kind: 'alert', label: 'Swarm', from: 'Hub', text: e.message, go: `hub:${e.faction}`, beep: true, alert: true }),
-  'hub-siege': (e) => ({ kind: 'alert', label: 'Swarm', from: 'Hub', text: e.message, go: `hub:${e.faction}`, beep: true, alert: true }),
-  'hub-lockdown': (e) => ({ kind: 'alert', label: 'Lockdown', from: 'Hub', text: e.message.replace(/^LOCKDOWN: /, ''), go: `hub:${e.faction}`, beep: true }),
-  'hub-held': (e) => ({ kind: 'net', label: 'Held', from: 'Hub', text: e.message, go: `hub:${e.faction}`, beep: false }),
   fleet: (e) => ({ kind: 'alert', label: 'Swarm', from: 'Network', text: e.message.replace(/^SWARM: /, ''), go: 'map:fleet', beep: true, alert: true }),
   'fleet-siege': (e) => ({ kind: 'alert', label: 'Swarm', from: 'Outpost', text: e.message, go: 'map:fleet', beep: true, alert: true }),
   'fleet-broken': (e) => ({ kind: 'net', label: 'Broken', from: 'Swarm', text: e.message.replace(/^SWARM BROKEN\. /, ''), go: e.location ? `map:${e.location}` : 'map', beep: false }),
@@ -112,7 +105,7 @@ export function live(s, c) {
   if (c.kind === 'ready') return c.ref == null || (s.mail?.jobs || []).some((j) => j.id === c.ref && !j.done);
   if (c.kind === 'alert') {
     if (c.go === 'jack') return !!s.invasion;
-    if (c.go === 'map:fleet' || c.from === 'Hub' || c.from === 'Outpost') return !!s.fleet || c.label === 'Lockdown';
+    if (c.go === 'map:fleet' || c.from === 'Hub' || c.from === 'Outpost') return false; // swarms and held hubs are gone
   }
   if (c.event) return (s.events || []).some((x) => x.id === c.event);
   if (c.blip) return (s.director?.blips || []).some((x) => x.id === c.blip);

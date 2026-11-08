@@ -43,8 +43,6 @@ export function actOf(s, c) {
       if (inv.state === 'travel') return inv.kind === 'thief' ? { label: 'Intercept', cmd: 'intercept' } : { label: 'Show', go: 'map:invader' };
       return { label: 'Jack in', cmd: 'jack in' };
     }
-    const hub = c.from === 'Hub' && c.label === 'Swarm' && /^hub:(\w+)/.exec(c.go || '')?.[1];
-    if (hub && free) return { label: 'Defend', cmd: `hub defend ${hub}` };
     if (c.from === 'Consortium' && c.go === 'map:roamer' && free) return { label: 'Intercept', cmd: 'consortium intercept' };
     return open(c);
   }

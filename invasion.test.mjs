@@ -265,20 +265,6 @@ test('reboot sickness: while the server reboots, max Signal and your damage are 
   assert.equal(s.run.integrity, sig);
 });
 
-test('Degraded mode pauses the network: a hub\'s swarm waits while the server reboots (the install queue went in R2)', async () => {
-  const { launch } = await import('./dist/fleet.mjs');
-  const s = world();
-  (s.hubs ||= {}).kestrel = { id: 'hub-kestrel', faction: 'kestrel', stock: {}, restockAt: 0, captured: { at: 0, bank: 0 } };
-  play(s, 'developer crash');
-  wait(s, 5000); // the clock starts
-  launch(s, 5000, null, { hub: 'kestrel' });
-  const f = s.fleet;
-  wait(s, 5 * MIN);
-  assert.ok(s.degraded, 'still rebooting');
-  assert.equal(s.fleet?.state, 'travel', 'it waits: nothing lands while degraded');
-  assert.equal(f.ships, f.total);
-});
-
 test('losing a home fight reboots into Degraded mode too; losing to an invader leaves it at the wall', () => {
   const s = world();
   command(s, 'encounter cryptjack');

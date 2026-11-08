@@ -10,7 +10,6 @@ import { keyMap } from './combat.mjs';
 import { MUTATIONS, QUIRKS, STRAINS, GUARDS, ARCHETYPES, SYNC } from './data.mjs';
 import { hackerLevel, loadedOn, classOf } from './combat.mjs';
 const spare = (s) => (s.stash || []).some((it) => !loadedOn(s, it.id)); // something you could load
-import { retakeOf } from './hubs.mjs';
 
 const home = (s) => s.encounter?.mode !== 'run';
 
@@ -87,8 +86,6 @@ export const TIPS = [
   { id: 'map-invader', page: 'map', at: '.mnode.invader[data-select="invader"]', text: 'An invasion is heading for your wall. Your firewall\'s strength decides whether it is blocked, contested or breaks through.' },
   { id: 'map-contested', page: 'map', at: '.mnode.invader.siege[data-select="invader"]', text: 'Your wall is wearing this invasion down, but it costs you Integrity. Jack in to finish it now, or raise the wall to block it next time.' },
   { id: 'map-breach', page: 'map', at: '.mnode.invader.breach', text: 'A breach costs you some Integrity every minute. Jack in to fight it yourself, and it counts as a full kill.' },
-  { id: 'map-hub-swarm', page: 'map', when: (s) => !!retakeOf(s), at: '.mnode.hub.yours.threat', text: 'This hub\'s old owner is sending viruses to reclaim it, and the timer is under its name. The hub earns nothing until you beat them, one fight per virus.' },
-  { id: 'map-hub-lockdown', page: 'map', when: (s) => !retakeOf(s), at: '.mnode.hub.yours.threat', text: 'This hub is in lockdown and earns nothing until you retake it, which takes one fight. It stays yours in the meantime.' },
   { id: 'map-contract', page: 'map', at: '.mnode.job', text: 'A contract points at this server. Open its vault to find the file you were sent for, or beat the Resident in /core to take the server over.' },
   { id: 'pager', page: '*', at: '#pager .led.on', text: 'This is your pager. New mail, offers, finished contracts, your retainer and news from the network show up here. Click it to see the list.' },
   { id: 'mail', page: '*', at: '.modules [data-module="mail"]', when: (s, m) => m !== 'mail' && (s.mail?.list || []).some((x) => !x.read), text: 'You have mail. Your crew, LOWLIGHT and Halcyon Mutual send you contracts here.' },
@@ -110,7 +107,6 @@ export const TIPS = [
   { id: 'hub-preview', page: 'hub', at: '.mk-ticket .mk-prev', text: 'This is your order before you place it: the total, the price per unit, and how it compares with the same order elsewhere. Amber means it\'s better here.' },
   { id: 'hub-go', page: 'hub', at: '.mk-ticket .mk-go', text: 'Orders take the minutes shown next to ⇄ to arrive, and relays make that shorter. Prices you\'ve moved drift back over a few hours.' },
   { id: 'hub-xfers', page: 'hub', at: '.mk-xfers', text: 'These are your orders in transit. → is outgoing and pays its credits when it lands. ← is incoming. Each bar fills as its order arrives.' },
-  { id: 'hub-payloads', page: 'hub', at: '.pay-compile', text: 'Payloads are viruses you write to attack this hub. Exfil steals credits and code, Wiper knocks it offline, and Backdoor takes over an offline hub. Each one costs rep.' },
   { id: 'store-chase', page: 'hub', at: '.ptile.chase', text: 'These are Halcyon\'s own protocols. They cost a lot of credits, and your standing decides which ones you can buy.' },
   { id: 'map-drop', page: 'map', at: '.mnode.drop', text: 'Something is happening on this server. Its card says what, and how long you have to act.' },
   { id: 'map-rogue', page: 'map', at: '.mnode.rogue', text: 'This is a rogue server: nobody has ever taken it over. Viruses sit in its folders and come back a few minutes after you kill them.' },

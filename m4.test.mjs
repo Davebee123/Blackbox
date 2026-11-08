@@ -4,8 +4,6 @@ import { fresh, command, resolveCycle, active, hooks, restore, SAVE_VERSION } fr
 import { play, layoutOf } from './dist/run.mjs';
 import { CONFIG } from './dist/data.mjs';
 import { tickNetwork, ratioOf, travelMs } from './dist/invasion.mjs';
-import { launch } from './dist/fleet.mjs';
-import { HUBS as FLEET } from './dist/hubs.mjs'; // a swarm's clock is a hub's
 CONFIG.baseCrit = 0;
 CONFIG.enemyCrit = 0;
 CONFIG.misses = false;
@@ -51,42 +49,23 @@ test('configs are gone (a save that owned one gets its credits back), and the wa
   assert.ok(stats.some((k) => k.includes('tarpit')) && stats.some((k) => k.includes('evasion')), 'each retired service comes back as a filter');
 });
 
-// A hub you hold, its firewall pinned low so the swarm breaches (the wall's own tests are in firewall.test.mjs).
-const hubHeld = async (s) => {
-  const { hubWall } = await import('./dist/hubs.mjs');
-  const { fwAt } = await import('./dist/firewall.mjs');
-  (s.hubs ||= {}).kestrel = { id: 'hub-kestrel', faction: 'kestrel', stock: {}, restockAt: 0, captured: { at: 0, bank: 0 } };
-  fwAt(s, hubWall(s, 'kestrel')).pin = 1;
-};
-
-test('a swarm only comes for a hub you hold (a held server has nothing to steal since R2); it sieges, and breaks when every ship is down', async () => {
+// Payloads, held hubs and swarms are cut (docs/factions-plan.md 10): a held hub is paid out once, with wick's letter.
+test('a save that holds a hub is paid out once in credits, with a letter, and loads twice the same', async () => {
+  const { HUB_PAYOUT } = await import('./dist/store.mjs');
   const s = fresh();
-  command(s, 'developer location worm');
-  s.locations[0].takenOver = true;
-  assert.equal(launch(s), null, 'a held server is never a target');
-  await hubHeld(s);
-  const f = launch(s, T0, null, { hub: 'kestrel' });
-  assert.ok(f && f.hub === 'kestrel' && f.ships >= 2);
-  s.net.next = 1e12;
-  let t = T0; s.net.wall = t;
-  for (let i = 0; i < FLEET.travelMs / 1000 + 5; i++) tickNetwork(s, (t += 1000));
-  assert.equal(s.fleet.state, 'siege');
-  const n = s.fleet.ships, had = s.components;
-  for (let i = 0; i < n; i++) { command(s, 'swarm engage'); win(s); }
-  assert.equal(s.fleet, null);
-  assert.ok(!s.hubs.kestrel.captured.lockdown);
-  assert.ok(s.components >= had + n, 'a component a process');
-});
-
-test('an undefended swarm puts the hub in lockdown', async () => {
-  const s = fresh();
-  await hubHeld(s);
-  launch(s, T0, null, { hub: 'kestrel' });
-  s.net.next = 1e12;
-  let t = T0; s.net.wall = t;
-  for (let i = 0; i < (FLEET.travelMs + FLEET.siegeMs) / 1000 + 10; i++) tickNetwork(s, (t += 1000));
-  assert.equal(s.fleet, null);
-  assert.ok(s.hubs.kestrel.captured.lockdown);
+  command(s, 'mail');
+  (s.hubs ||= {}).kestrel = { id: 'hub-kestrel', faction: 'kestrel', stock: {}, restockAt: 0, captured: { at: 0, bank: 40, wall: { level: 9 } }, offlineUntil: 5 };
+  s.payloads = { built: [{ id: 1, kind: 'exfil', level: 3, power: 16 }], flying: [], serial: 1, last: null };
+  s.fleet = { id: 'fl1', hub: 'kestrel' }; s.net.retakeAt = 9;
+  const credits = s.server.credits, letters = s.mail.list.length;
+  const back = restore(JSON.parse(JSON.stringify({ ...s, version: 59 })));
+  const pay = 40 + HUB_PAYOUT.hours * HUB_PAYOUT.income(4) + HUB_PAYOUT.payload(3);
+  assert.equal(back.server.credits, credits + pay, 'its bank, a day of its income, the payload at cost');
+  assert.equal(back.mail.list.length, letters + 1);
+  assert.match(back.mail.list[0].subject, /sold it back/);
+  assert.ok(!back.hubs.kestrel.captured && !('offlineUntil' in back.hubs.kestrel) && !back.payloads && !back.fleet && back.net.retakeAt === undefined);
+  const again = restore(JSON.parse(JSON.stringify(back)));
+  assert.equal(again.server.credits, back.server.credits, 'keyed on the field: no second payout');
 });
 
 test('a v24 save loads with configs and no fleet', () => {
@@ -95,7 +74,7 @@ test('a v24 save loads with configs and no fleet', () => {
   const back = restore(JSON.parse(JSON.stringify({ ...s, version: 24 })));
   assert.equal(back.version, SAVE_VERSION);
   assert.deepEqual(back.configs, {});
-  assert.equal(back.fleet, null);
+  assert.ok(!back.fleet);
 });
 
 test('services, outposts and architecture are gone (R2): their commands say where the choices went, and a held server stores nothing while you are away', () => {

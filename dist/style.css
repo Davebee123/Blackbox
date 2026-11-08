@@ -2142,11 +2142,6 @@ body:has(.silk-stash .silk-tile[data-kind="implant"]:hover) .silk-fp[data-kind="
 .mk-tags { gap: 0.4em; margin-bottom: 0.5em; flex-wrap: wrap; }
 .mk-tags .tag { cursor: help; }
 .craft-list li > span.mk-btns { display: flex; gap: 0.3em; flex-wrap: nowrap; align-items: center; }
-.mnode.hub.offline .hub-frame { stroke-dasharray: 3 3; opacity: 0.5; }
-.mnode.hub.offline .hub-mark { opacity: 0.4; }
-.mnode.hub.yours .hub-frame { stroke-width: 2; }
-.mnode.hub.threat .hub-frame { stroke: var(--hot); animation: hubthreat 1.2s ease-in-out infinite; }
-@keyframes hubthreat { 50% { opacity: 0.45; } }
 .mnode.fleet[data-faction] path { fill: var(--fc); stroke: var(--fc); }
 .craft-list .btn { white-space: nowrap; }
 .craft-list li.mk-row, .craft-list li.mk-xfer { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 10px; }
@@ -2162,11 +2157,6 @@ body:has(.silk-stash .silk-tile[data-kind="implant"]:hover) .silk-fp[data-kind="
 .mk-d.flat { color: var(--dim, #8a8170); }
 .xfer-bar { display: block; width: 90px; height: 6px; border: 1px solid var(--line); background: rgba(0,0,0,0.3); }
 .xfer-bar i { display: block; height: 100%; background: var(--you, #7fd1c7); }
-.pw-bar { position: relative; display: block; width: 110px; height: 7px; border: 1px solid var(--line); background: rgba(0,0,0,0.3); margin-top: 4px; }
-.pw-bar i { display: block; height: 100%; background: var(--dim, #8a8170); }
-.pw-bar.siege i { background: #ffb347; }
-.pw-bar.breach i { background: #8fd46b; }
-.pw-bar u { position: absolute; top: -2px; bottom: -2px; width: 1px; background: var(--ink, #e8dcc0); opacity: 0.6; }
 .xfer-bar.hot i { background: var(--hot); }
 .pips { font-size: 11px; letter-spacing: 1px; color: var(--hot); }
 .mk-ware .iname { white-space: nowrap; }

@@ -162,8 +162,6 @@ comment saying what it does.
 | `dist/factions.mjs` | Factions: hubs, shops, rep (1 to 100, four tiers), friends and enemies, and your commission. |
 | `dist/receipts.mjs` | Receipts: each traced server's vault receipt, stamped for a faction at the takeover or handed in at your commission's hub. |
 | `dist/market.mjs` | Hub markets: prices that move with conditions, world events and sales. |
-| `dist/hubs.mjs`, `dist/fleet.mjs` | Holding a hub, and the swarms its old owner sends. Hub capture is off with Payloads. |
-| `dist/payload.mjs` | Payloads against a faction hub. Switched off (`PAYLOAD.on`). |
 | `dist/consortium.mjs` | Consortium: simulated members who merged servers with yours. |
 
 ### Mail, story and quests

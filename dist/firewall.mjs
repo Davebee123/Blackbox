@@ -20,7 +20,6 @@ import { rootWall } from './root.mjs';
 import { consortiumWall } from './consortium.mjs';
 import { isLive } from './memory.mjs';
 import { connectedTo } from './hidden.mjs';
-const HUB_LEVEL = (f) => FACTIONS[f].hub.level;
 
 export const FIREWALL = {
   blocks: 16, // the grid
@@ -51,8 +50,7 @@ export const netTop = (s) => Math.max(0, ...(s.locations || []).filter((l) => !l
 
 const clock = () => hooks.now?.() ?? Date.now();
 export const fwOf = (s) => (s.firewall ||= { plus: 0, frag: 0, defragUntil: 0 });
-// Every outpost has its own, based on that server's level; a hub you hold (hubs.mjs: its captured
-// record, with the hub's level) has one too. A Firewall Node module adds NODE_PLUS levels. loc null: your home server.
+// Every outpost has its own, based on that server's level. A Firewall Node module adds NODE_PLUS levels. loc null: your home server.
 export const NODE_PLUS = 3;
 const fresh = () => ({ plus: 0, frag: 0, defragUntil: 0 });
 export const fwAt = (s, loc = null) => (!loc ? fwOf(s) : loc.outpost ? (loc.outpost.fw ||= fresh()) : (loc.fw ||= fresh()));
@@ -111,11 +109,11 @@ export function fragment(s, outcome, loc = null) {
 export function wear() {}
 // The clock: a defrag that's done leaves it whole (home, and every outpost).
 export function tickFirewall(s, at = clock()) {
-  for (const loc of [null, ...(s.locations || []).filter((l) => l.takenOver && l.buildings?.length), ...Object.values(s.hubs || {}).map((h) => h.captured?.wall).filter(Boolean)]) {
+  for (const loc of [null, ...(s.locations || []).filter((l) => l.takenOver && l.buildings?.length)]) {
     const f = fwAt(s, loc);
     if (!f.defragUntil || at < f.defragUntil) continue;
     f.defragUntil = 0; f.frag = 0;
-    emit(s, 'firewall', `Defrag done${loc?.name ? ` on ${loc.name}` : loc ? ' on your hub' : ''}. The firewall is back to level ${effLevel(s, at, null, loc)}.`, loc ? { location: loc.id } : {});
+    emit(s, 'firewall', `Defrag done${loc?.name ? ` on ${loc.name}` : ''}. The firewall is back to level ${effLevel(s, at, null, loc)}.`, loc ? { location: loc.id } : {});
   }
 }
 // The wall's rating at a holding, against a threat's strength (invasion.mjs's numbers): it blocks
@@ -125,11 +123,9 @@ export const ratingAt = (s, loc, family = null, at = clock()) => { const L = eff
 // firewall upgrade|defrag [server]: your home firewall, or an outpost's.
 export function firewallCommand(s, text, at = clock()) {
   const [, verb0, id] = text.split(' '), verb = text === 'defrag' ? 'defrag' : verb0;
-  // A server (your outpost) or a faction (a hub you hold).
-  const hubF = id && s.hubs?.[id]?.captured ? id : null;
-  const loc = !id ? null : hubF ? (s.hubs[hubF].captured.wall ||= { level: HUB_LEVEL(hubF) }) : (s.locations || []).find((l) => l.id === id || l.name.toLowerCase() === id);
-  if (id && !hubF && !(loc?.takenOver && loc.buildings?.length)) return warn(s, 'Only your home server, your outposts and hubs you hold have a firewall you run.');
-  const f = fwAt(s, loc), where = hubF ? 'Your hub\'s firewall' : loc ? `${loc.name}'s firewall` : 'Firewall';
+  const loc = !id ? null : (s.locations || []).find((l) => l.id === id || l.name.toLowerCase() === id);
+  if (id && !(loc?.takenOver && loc.buildings?.length)) return warn(s, 'Only your home server and your outposts have a firewall you run.');
+  const f = fwAt(s, loc), where = loc ? `${loc.name}'s firewall` : 'Firewall';
   if (verb === 'upgrade') {
     const c = upgradeCost(s, loc), t = tierOf(s, loc) + 1;
     if (!c) return warn(s, `${where} is at +${TIERS}, the most a firewall takes over its base.`);
@@ -161,7 +157,7 @@ export function hardenRestore(s) {
   const held = s.items?.harden || 0;
   if (s.items) delete s.items.harden;
   if (s.store?.slots) s.store.slots = s.store.slots.filter((x) => x.id !== 'harden'); // Halcyon's stock
-  for (const f of [s.firewall, ...Object.values(s.hubs || {}).map((h) => h.captured?.wall)]) if (f) delete f.hardenUntil;
+  if (s.firewall) delete s.firewall.hardenUntil;
   if (held > 0 && s.server) s.server.credits += held * (70 + 6 * baseOf(s));
 }
 // developer wall <n>|off: pin your home wall's base at a level (testing), or let it follow the network again.
@@ -206,5 +202,4 @@ export function firewallRestore(s, was) {
   if (was >= 33) return;
   convert(s, s.firewall, Math.max(1, netTop(s) - BASE_GAP), 1, 'Your firewall');
   for (const l of s.locations || []) if (l.outpost?.fw) convert(s, l.outpost.fw, Math.max(1, l.level || 1), Math.max(1, l.level || 1), `${l.name}'s firewall`);
-  for (const h of Object.values(s.hubs || {})) { const w = h.captured?.wall; if (w?.fw) convert(s, w.fw, Math.max(1, w.level || 1), Math.max(1, w.level || 1), 'Your hub\'s firewall'); }
 }

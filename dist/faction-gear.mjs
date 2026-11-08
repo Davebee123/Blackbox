@@ -7,7 +7,7 @@
 //               as a count on the save (s.factionParts), not in the stash. At its hub, `hub assemble <faction>` spends
 //               the parts for the piece at your level; once you hold it, the next lot re-tunes it to your level (the
 //               same item, its stats, base and implicit grown). Feuds are their only source.
-// Read from the written items (not combat.mjs UNIQUES), so this module loads before the engine has finished (hubs.mjs).
+// Read from the written items (not combat.mjs UNIQUES), so this module loads before the engine has finished (combat.mjs imports it).
 import ITEMS from './content/items.mjs';
 import { emit, warn, rand, active, hackerLevel, addItem, gearFx, fxHolds, defender, soonestAttacker, alive, attackAmount, blocked, skillBase, hit, heal } from './combat.mjs';
 import { uniqueItem, itemLabel, STASH_CAP } from './gear.mjs';

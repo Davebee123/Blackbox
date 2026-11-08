@@ -1244,10 +1244,7 @@ function react(events) {
 
       case 'synced': feel.add(e.surprise ? 'surprise' : 'sync', row(e.target) || '.bnow', `${e.surprise ? 'SURPRISE' : 'SYNCED'}${e.bonus ? ' · ' + e.bonus.toUpperCase() : ''}`); if (fx) feel.add(() => juice.punch(0.5)); break;
       case 'boost': feel.add('unlock', '.net-signal', `+${e.amount}`); break;
-      case 'fleet': case 'fleet-siege': feel.add('prewarn', null); break;
       case 'infest': feel.add('prewarn', null); break;
-      case 'fleet-hit': feel.add('good', null); notice(e.message); break;
-      case 'fleet-broken': flash('SWARM BROKEN'); feel.add('win', null); notice(e.message); break;
       case 'config': feel.add('unlock', null); notice(e.message); break;
       case 'program': feel.add(e.off ? 'click' : 'unlock', null); if (!e.off) flash('INJECTED'); break;
       case 'harvester': feel.add('pickup', null); rewardCard('Compiled', e, events, true); break;

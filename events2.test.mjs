@@ -5,7 +5,7 @@ import { fresh, command, active, resolveCycle, addLocation } from './dist/combat
 import { deal, eventsOf, tickEvents, CARDS, FEUD, HUNT, SHOCK, huntPay, feuds, feudShare, feudPay } from './dist/events.mjs';
 import { filtersOf } from './dist/filters.mjs';
 import { rep, FACTIONS } from './dist/factions.mjs';
-import { FACTION_FAMILY } from './dist/hubs.mjs';
+import { FACTION_FAMILY } from './dist/factions.mjs';
 import { priceOf, WARE_IDS } from './dist/market.mjs';
 import { play } from './dist/run.mjs';
 import { SCOUTED, KINDS } from './dist/invasion.mjs';

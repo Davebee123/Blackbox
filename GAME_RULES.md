@@ -2106,9 +2106,6 @@ first.
   era). The takeover card shows it with five stamps: File (Halcyon), Seal (Kestrel), Sell (GLASSJAW), Settle (LANTERN),
   Roll back (NULL CHOIR). A stamp pays +10 rep with its faction (the ripples too) and one receipt toward its piece; 3 make
   a part. No credits. **Later** keeps it in your files, to hand in at your commission's hub (`receipt <id> <faction>`).
-- **Switched off:** payloads (`PAYLOAD.on` false: no Payloads window, nothing compiles), and with them hub capture. A
-  hub a save already holds stays its own: no spread at its market, its goods at 60%, a cut of its trade
-  (`hub collect`), and its old owner's swarms (one at a time; lockdown until you `hub retake` it; `fleet.mjs`).
 
 ## Events (events.mjs)
 
@@ -2324,7 +2321,7 @@ You can still fight, explore and level, weaker. The top bar, the map and the Ser
 that crashes you leaves your wall afterwards; one you lost a fight to stays, as worn as you left it.
 
 **While you're logged off** (played out a minute at a time when you come back, up to a day): invasions come every 2–4
-hours (no scouts) and meet your wall as usual; a held hub's old owner at a quarter pace; in a consortium a member
+hours (no scouts) and meet your wall as usual; in a consortium a member
 sometimes stops one. A crash while away reboots for **2 hours** and the invasion **occupies** your server: HOME shows
 **Connect**; clear its six rooms to come back at once. *Vulnerable to lv N+* is the check before you go.
 
@@ -2678,14 +2675,15 @@ Checked by `node balance.mjs` (docs/BALANCE.md, `balance.test.mjs`), `farmsim.mj
   nothing raids them.
 - **No store-to-market loop.** Hubs sell code and Exploits only as market wares and never sell components; the store
   never sells code for less than 10% over the best hub's price; a round trip at one hub never profits.
-- **A held hub earns by outside factors only:** its condition, the world event and wiped hubs elsewhere.
 - **The game saves when the tab closes**, and every roll comes from the save's seed: reloading replays the same result.
 
 ## Saves
 
-The save is `SAVE_VERSION` 59 (combat.mjs). An older save is migrated on load, each step keyed on the field it converts,
+The save is `SAVE_VERSION` 60 (combat.mjs). An older save is migrated on load, each step keyed on the field it converts,
 so it is safe to run twice; nothing a save held is lost.
 
+- **v60** payloads, hub capture and swarms are cut: a held hub pays out once (its bank and a day of its income, each
+  payload at cost), with wick's letter (`store.mjs hubsRestore`, keyed on the fields).
 - **v59** journals: `s.journals`, made on first use (`journals.mjs`).
 - **v58** one rep scale: rep under 1 (Hostile, Halcyon's Suspended) comes back as 1 (`repRestore`, keyed on the value);
   `s.commission` and `s.receipts` are new (absent: Halcyon's commission, no receipts); a held Side contract is dropped.

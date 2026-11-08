@@ -39,8 +39,7 @@ import { LOOT, rollItem, seeded, codeOf, vaultCode, MATERIALS } from './gear.mjs
 import { openFarm } from './rogue.mjs';
 import { eventMult, noteEvent, leanPick, darknetPick, darknetBuy, nameNative, homeName, NETWORK } from './network.mjs';
 import { isPiece } from './sets.mjs';
-import { FACTIONS, hubsOf, changeRep, hubFound } from './factions.mjs';
-import { FACTION_FAMILY } from './hubs.mjs';
+import { FACTIONS, hubsOf, changeRep, hubFound, FACTION_FAMILY } from './factions.mjs';
 import { addFilter, rollFilter } from './filters.mjs';
 import { invasionsLive, scoutNext, SCOUTED } from './invasion.mjs';
 import { gainPart, pieceOf } from './faction-gear.mjs';
@@ -101,7 +100,7 @@ function runnerDrop(s, ev, f) {
 }
 // Two located hubs that are rivals (factions.mjs), each pair once.
 export const feuds = (s) => { const fs = hubsOf(s).map((h) => h.faction); return fs.flatMap((a, i) => fs.slice(i + 1).filter((b) => FACTIONS[a].rivals.includes(b)).map((b) => [a, b])); };
-const markets = (s) => hubsOf(s).filter((h) => (h.offlineUntil || 0) <= (hooks.now?.() ?? Date.now())).map((h) => h.faction); // hubs you can trade at
+const markets = (s) => hubsOf(s).map((h) => h.faction); // hubs you can trade at
 // What your side gives from its goods: a sealed item (Tuned, at your level), or LANTERN's bootleg filter (it sells no crate).
 export const feudGood = (f) => (f === 'halcyon' || FACTIONS[f].shop.includes('crate') ? 'crate' : 'bootleg');
 const NAMES = ['lapsejack', 'deductible', 'subrogate', 'rider', 'lossrun', 'waiver', 'binder', 'tallow', 'cinder', 'quarry'];
@@ -173,7 +172,7 @@ export const CARDS = {
     reward: (ev) => UNIQUES[ev.unique].name,
   },
   // Two rival factions clash over one of your servers: one card, two sides, a tug-of-war bar (ev.bar, sides[0]'s share). event
-  // fight <id> <faction> sides with that faction against the other's runner (an elite of its family, hubs.mjs FACTION_FAMILY, at
+  // fight <id> <faction> sides with that faction against the other's runner (an elite of its family, factions.mjs FACTION_FAMILY, at
   // your level, sized for one); your side locks with your first fight. Each win pushes it, pays, and brings a fresh runner.
   feud: {
     name: 'Feud', weight: 1, ms: FEUD.ms, fight: true, again: true, from: FEUD.from,

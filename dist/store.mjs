@@ -15,6 +15,7 @@ import { tierIndex, TIERS, boardOpen, systemLetter } from './mail.mjs';
 import { items } from './hidden.mjs';
 import { bestSell } from './market.mjs';
 import { shopCodebases, learnCodebase } from './sockets.mjs';
+import { FACTIONS } from './factions.mjs';
 
 const now = () => hooks.now?.() ?? Date.now();
 export const STORE = {
@@ -197,6 +198,27 @@ function buyPremium(s, f, i) {
   takePremium(s, f, i);
   emit(s, 'bought', `Bought ${it.name} from Halcyon for ${price} credits.`, { item: 'premium' });
   return addItem(s, it, 'Halcyon: ');
+}
+
+// v60: payloads, held hubs and their swarms are cut (docs/factions-plan.md 10). A save that holds a hub is paid out once:
+// what its bank held plus a day of its income, and each payload built or in flight back at what it cost; wick says so.
+// Keyed on the fields (a hub's `captured`, s.payloads), so it runs once; the rest of their state goes with them.
+export const HUB_PAYOUT = { hours: 24, income: (hubLevel) => 10 + 3 * hubLevel, payload: (L) => 60 + 10 * L };
+export function hubsRestore(s) {
+  let credits = 0;
+  const held = [];
+  for (const [f, h] of Object.entries(s.hubs || {})) {
+    if (h.captured) { credits += Math.floor(h.captured.bank || 0) + HUB_PAYOUT.hours * HUB_PAYOUT.income(FACTIONS[f]?.hub.level || 1); held.push(FACTIONS[f]?.hub.name || f); }
+    for (const k of ['captured', 'offlineUntil', 'alert', 'alertAt', 'grudgeAt', 'grudgeSent']) delete h[k];
+  }
+  if (s.payloads) for (const p of [...(s.payloads.built || []), ...(s.payloads.flying || [])]) credits += HUB_PAYOUT.payload(p.level || 1);
+  delete s.payloads; delete s.fleet; delete s.fleetSeq; delete s.retake;
+  if (s.net) { delete s.net.retakeAt; delete s.net.retakeSent; }
+  if (!credits || !s.server) return 0;
+  s.server.credits = (s.server.credits || 0) + credits;
+  const what = held.length ? `${held.join(' and ')} ${held.length > 1 ? 'are' : 'is'} back with ${held.length > 1 ? 'their owners' : 'its owner'}` : 'nobody writes payloads any more';
+  systemLetter(s, { from: 'wick', subject: 'sold it back', body: [`${what}. i sold what you had for ${credits} credits. it's on your server.`, 'trade there like anyone else now.'] });
+  return credits;
 }
 
 // v48: Indemnity is retired. An older save's unspent Indemnity becomes credits once, at the rate the

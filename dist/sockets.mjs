@@ -210,8 +210,8 @@ export function retireOutposts(s, was) {
   if (s.recipes) s.recipes = s.recipes.filter((id) => !OLD_SERVICES[id]); // their blueprints
   const arch = s.architecture;
   s.architecture = null;
-  // Swarms at outposts, and the natives' clock, go; a hub's old owner still sends its own (fleet.mjs).
-  if (s.fleet && !s.fleet.hub) s.fleet = null;
+  // Swarms at outposts, and the natives' clock, go.
+  delete s.fleet;
   if (s.net) { delete s.net.fleetAt; delete s.net.fleetNext; delete s.net.schedAt; }
   // The consortium's dividend: what's waiting pays out; members' outposts are just their servers now.
   for (const l of s.consortium?.servers || []) {
