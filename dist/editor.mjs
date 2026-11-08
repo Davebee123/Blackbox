@@ -129,7 +129,7 @@ function contractForm(k) {
     const vars = { ...COMMON, ...JOB_VARS[k] };
     const rows = list.map((v, n) => {
       const p = `contracts.${k}.${side}.${n}`;
-      return `<div class="ed-variant"><div class="ed-row">${field('Subject', input(p + '.subject', v.subject))}${field('From', select(p + '.from', v.from || '', contactOpts({ '': side === 'glassjaw' ? 'GLASSJAW (default)' : 'Halcyon or wick (default)' })))}</div>
+      return `<div class="ed-variant"><div class="ed-row">${field('Subject', input(p + '.subject', v.subject))}${field('From', select(p + '.from', v.from || '', contactOpts({ '': side === 'glassjaw' ? 'GLASSJAW (default)' : side === 'halcyon' ? 'Halcyon or wick (default)' : `${SIDES[side]} (always)` })))}</div>
         ${field('Text', text(p + '.body', v.body, 'short'))}${chips(vars)}
         <div class="ed-acts"><button type="button" class="btn small" data-act="vdup" data-at="${k}.${side}.${n}">Duplicate</button><button type="button" class="btn small danger" data-act="vdel" data-at="${k}.${side}.${n}">Delete</button></div></div>`;
     }).join('');
@@ -166,7 +166,7 @@ function sampleVars(job = {}) {
   return { handle: 'dave', crewName: 'LOWLIGHT', took: 'KESSLER-RELAY-22', count: job.count ?? 4, family: job.type === 'kill' && !job.family ? 'stray' : FAMILIES[fam].toLowerCase(), crew: job.type === 'kill' && !job.family ? 'the crews' : CREWS[fam],
     name: job.name || `${contracts.bountyNames[sampleSeed % contracts.bountyNames.length] || 'rider'}-4821`, room: job.room || '/tmp', amount: job.amount ?? 3, material: CODES[job.material || 'worm'].toLowerCase(),
     server: job.any ? 'any server you have traced' : 'VANTA-MIRROR-41', owner: 'VANTA', file: job.file || contracts.files[sampleSeed % contracts.files.length]?.file, label: job.label || contracts.files[sampleSeed % contracts.files.length]?.label || '',
-    addr: 'C2', get Label() { return this.label ? this.label[0].toUpperCase() + this.label.slice(1) : ''; } };
+    addr: 'C2', strain: 'Keylogger', virus: 'cryptominer', root: 3, boards: '2 puzzle boards', logs: 'a server\'s incident log', get Label() { return this.label ? this.label[0].toUpperCase() + this.label.slice(1) : ''; } };
 }
 const letterCard = (from, subject, body, extra = '') => `<section class="card mread"><h2>${esc(from)}</h2><h1>${esc(subject)}</h1><div class="mbody">${(body || []).filter((x) => String(x).trim()).map((l) => `<p>${esc(l)}</p>`).join('')}</div>${extra}</section>`;
 function jobLine(b) {
@@ -195,7 +195,7 @@ function renderSide() {
       const list = contracts[k]?.[side] || [];
       if (!list.length) return '';
       const vv = list[sampleSeed % list.length], v = sampleVars({ type: k.replace('-unknown', ''), family: null, ...(k === 'kill' ? { family: ['worm', 'ransomware', 'ghostroot'][sampleSeed % 3] } : {}) });
-      const from = vv.from ? story.contacts[vv.from] : side === 'glassjaw' ? story.contacts.glassjaw : story.contacts.claims;
+      const from = !['halcyon', 'glassjaw'].includes(side) ? SIDES[side] : vv.from ? story.contacts[vv.from] : side === 'glassjaw' ? story.contacts.glassjaw : story.contacts.claims;
       return `<h3>${esc(SIDES[side])} · variant ${(sampleSeed % list.length) + 1} of ${list.length}</h3>${letterCard(from, fill(vv.subject, v), (vv.body || []).map((x) => fill(x, v)))}`;
     }).join('') + '<button type="button" class="btn small" data-act="reroll">Another sample</button>';
   } else {
