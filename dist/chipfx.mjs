@@ -16,6 +16,9 @@ export const CHIP_THEMES = {
   Strobe: 'strobe', Repeater: 'strobe', Jitter: 'strobe', Amplifier: 'strobe', Stunner: 'strobe',
   Replicator: 'copy', Mirror: 'copy', 'Fan-in': 'copy', Spare: 'copy', Mimic: 'copy', Swap: 'copy',
   Scraper: 'scan', Prober: 'scan', Harvester: 'scan', Leaker: 'scan', Feeder: 'scan', Tripwire: 'scan',
+  'Front End': 'plate', Bodyguard: 'plate', Mutex: 'plate', Lockbox: 'plate', Limiter: 'plate',
+  Buffer: 'ledger', Cooler: 'ledger', Damper: 'ledger',
+  Turncoat: 'mask', Backtrace: 'mask', 'C&C': 'mask',
 };
 export const chipTheme = (name) => CHIP_THEMES[String(name || '').replace(/\.exe$/i, '').trim()] || null;
 // How hard a chip plays, by its column (0 is Now) and the ms left in the cycle: [intensity, opacity].
@@ -170,6 +173,27 @@ const fanD = (cx, cy, R, a0, a1) => { const [x0, y0] = polar(cx, cy, R, a0), [x1
 // A clock hand from the hub (with a short counterweight) to length L, at deg: a halo, a body and a white core.
 const HAND = (cx, cy, L, deg, w = 1) => { const [x0, y0] = polar(cx, cy, -L * 0.18, deg), [x1, y1] = polar(cx, cy, L, deg), ln = (c, sw) => `<line class="${c}" x1="${f1(x0)}" y1="${f1(y0)}" x2="${f1(x1)}" y2="${f1(y1)}" style="stroke-width:${f1(sw * w)}"/>`; return ln('cfx-ck-halo', 3) + ln('cfx-ck-body', 1.4) + ln('cfx-ck-core', 0.6); };
 let gid = 0;
+
+// ---------- plate, ledger, mask ----------
+// A hex mesh over w × h: each cell's centre and its outline.
+function hexMesh(x0, y0, w, h, R) {
+  const dx = R * Math.sqrt(3), dy = R * 1.5, cells = [];
+  for (let row = 0, y = y0; y < y0 + h + R; row++, y += dy) for (let x = x0 + (row % 2) * dx / 2; x < x0 + w + dx / 2; x += dx) cells.push([x, y]);
+  return cells.map(([x, y]) => ({ x, y, P: pts(Array.from({ length: 6 }, (_, i) => [x + R * 0.9 * Math.cos(Math.PI / 6 + i * Math.PI / 3), y + R * 0.9 * Math.sin(Math.PI / 6 + i * Math.PI / 3)])) }));
+}
+// An armour plate whose leading edge stands at x = 0, reaching back `len` (dir 1: it comes from the left), y0..y1 tall.
+function plateSVG(len, y0, y1, dir) {
+  const c = 3, P = [[-len, y0], [-c, y0], [0, y0 + c], [0, y1 - c], [-c, y1], [-len, y1]].map(([x, y]) => [x * dir, y]);
+  const lead = pts([P[1], P[2], P[3], P[4]]), rv = [6, 14].map((d) => `<circle class="cfx-pl-rivet" cx="${f1(-d * dir)}" cy="${f1(y0 + 3.2)}" r=".9"/><circle class="cfx-pl-rivet" cx="${f1(-d * dir)}" cy="${f1(y1 - 3.2)}" r=".9"/>`).join('');
+  return `<polygon class="cfx-pl-halo" points="${pts(P)}"/><polygon class="cfx-pl-body" points="${pts(P)}"/><polyline class="cfx-pl-bevel" points="${lead}"/><line class="cfx-pl-rim" x1="${f1(-len * dir)}" y1="${f1(y0 + 0.5)}" x2="${f1(-c * dir)}" y2="${f1(y0 + 0.5)}"/>${rv}`;
+}
+// A plate with chamfered corners over x, y, w, h.
+const chamfer = (x, y, w, h, c = 3) => pts([[x + c, y], [x + w - c, y], [x + w, y + c], [x + w, y + h - c], [x + w - c, y + h], [x + c, y + h], [x, y + h - c], [x, y + c]]);
+// A mask in a 40 × 32 box: face 0 smiles, face 1 frowns.
+const MASK_D = (face) => 'M4,6 C10,1 30,1 36,6 C38.5,16 33,28.5 20,31 C7,28.5 1.5,16 4,6Z M9,13.5 Q13,9.8 17,13.5 Q13,15.8 9,13.5Z M23,13.5 Q27,9.8 31,13.5 Q27,15.8 23,13.5Z '
+  + (face ? 'M8.5,8 Q13,9 17.5,10.8 M22.5,10.8 Q27,9 31.5,8 M12.5,25 Q20,19.5 27.5,25' : 'M8.5,9.5 Q13,6.8 17.5,9 M22.5,9 Q27,6.8 31.5,9.5 M12.5,21 Q20,27 27.5,21');
+const MASK = (face, cls = '') => { const d = MASK_D(face); return `<g class="${cls}"><path class="cfx-mk-halo" d="${d}"/><path class="cfx-mk-body" d="${d}"/><path class="cfx-mk-core" d="${d}"/></g>`; };
+const STAR = (x, y, s, o = 1) => `<path class="cfx-mk-star" style="opacity:${f1(o)}" d="M${f1(x)},${f1(y - s)} L${f1(x + s * 0.18)},${f1(y - s * 0.18)} L${f1(x + s)},${f1(y)} L${f1(x + s * 0.18)},${f1(y + s * 0.18)} L${f1(x)},${f1(y + s)} L${f1(x - s * 0.18)},${f1(y + s * 0.18)} L${f1(x - s)},${f1(y)} L${f1(x - s * 0.18)},${f1(y - s * 0.18)}Z"/>`;
 
 // Each theme: (chip, box, state, dt ms, intensity, cycle progress 0–1).
 const THEMES = {
@@ -592,6 +616,87 @@ const THEMES = {
       }
     }
   },
+  // Plate: a faint hex shield lies behind the chip; armour plates with bright bevels and rivets slide in from both sides
+  // and clang shut, a flash at the seam, sparks off it, and a ripple through the shield; then they part. They clang faster
+  // as the cycle runs out, and in its last 1.5 s they stay shut and shudder, the seam glowing.
+  plate(el, box, S, dt, lv, p) {
+    const w = el.offsetWidth, h = el.offsetHeight;
+    if (S.bw !== w) {
+      S.bw = w; S.svg?.remove(); S.seam?.remove(); S.svg = svgIn(box); S.t = 0; S.u = 0; S.rip = 1e9;
+      const cells = hexMesh(0, 0, w, h, 4.6);
+      S.svg.innerHTML = `<g class="cfx-pl-mesh">${cells.map((c) => `<polygon points="${c.P}"/>`).join('')}</g><g></g><g></g>`;
+      S.cells = [...S.svg.firstChild.children].map((m, i) => ({ m, x: cells[i].x, y: cells[i].y }));
+      [, S.a, S.b] = S.svg.children; S.a.innerHTML = plateSVG(w / 2 + 4, 1, h - 1, 1); S.b.innerHTML = plateSVG(w / 2 + 4, 1, h - 1, -1);
+      S.seam = span(box, 'cfx-seam'); S.seam.style.left = f1(w / 2 - 1) + 'px'; S.sf = 0;
+    }
+    S.t += dt;
+    const late = lv > 1.2, per = lv >= 1 ? 1400 - 600 * p : 1900, was = S.u;
+    let c;
+    if (late) { c = 1; if ((S.t / 300 | 0) !== ((S.t - dt) / 300 | 0)) S.clang = true; }
+    else { if (lv) S.u = (S.u + Math.max(0, dt) / per) % 1; const u = S.u; c = u < 0.35 ? (u / 0.35) ** 2.2 : u < 0.62 ? 1 : 1 - easeInOut((u - 0.62) / 0.38); if (lv && was < 0.35 && S.u >= 0.35) S.clang = true; }
+    if (S.clang) {
+      S.clang = false; S.sf = 1; S.rip = 0;
+      for (let i = 0; i < (late ? 3 : 6); i++) { const sp = span(box, 'cfx-spark'), up = Math.random() < 0.5, an = (up ? -1 : 1) * Math.PI / 2 + rnd(-0.9, 0.9), L = rnd(5, 12); Object.assign(sp.style, { left: f1(w / 2) + 'px', top: f1(up ? 2 : h - 2) + 'px' }); sp.animate([{ transform: 'none', opacity: 1 }, { transform: `translate(${f1(Math.cos(an) * L)}px, ${f1(Math.sin(an) * L)}px)`, opacity: 0 }], { duration: rnd(200, 320), easing: 'ease-out' }).onfinish = () => sp.remove(); }
+    }
+    const jit = late ? Math.sin(S.t / 18) * 0.7 : 0;
+    S.a.setAttribute('transform', `translate(${f1(w / 2 * c - 0.5 + jit)} 0)`); S.b.setAttribute('transform', `translate(${f1(w - w / 2 * c + 0.5 - jit)} 0)`);
+    S.a.style.opacity = S.b.style.opacity = lv ? 1 : 0;
+    S.sf *= Math.exp(-dt / 140);
+    S.seam.style.opacity = lv ? f1(Math.max(S.sf, late ? 0.45 + 0.3 * Math.sin(S.t / 70) : 0)) : 0;
+    S.rip += dt * 0.32;
+    const base = lv ? (late ? 0.16 + 0.08 * Math.sin(S.t / 140) : 0.1) : 0, rp = S.rip < w;
+    if (rp || S.restRip) for (const q of S.cells) { const d = Math.hypot(q.x - w / 2, (q.y - h / 2) * 1.6); q.m.style.opacity = f1(base + (rp ? 0.85 * Math.exp(-((d - S.rip) ** 2) / 50) : 0)); }
+    S.restRip = rp;
+    if (!rp && S.base !== base) { S.base = base; for (const q of S.cells) q.m.style.opacity = f1(base); }
+  },
+  // Ledger: a few odometer reels stand behind the chip over faint ruled lines; each ticks over now and then with a snap, its
+  // window flashing; as the cycle runs out more of them spin, blurring, and in its last 1.5 s they all roll.
+  ledger(el, box, S, dt, lv, p) {
+    const w = el.offsetWidth, h = el.offsetHeight;
+    if (S.bw !== w) {
+      S.bw = w; S.reels?.forEach((r) => { r.m.remove(); r.win.remove(); }); S.lines?.remove();
+      S.lines = span(box, 'cfx-lg-lines'); S.t = 0;
+      const n = Math.max(4, Math.round(w / 32));
+      S.reels = Array.from({ length: n }, (_, i) => {
+        const far = i % 2 === 1, m = span(box, `cfx-lg-reel${far ? ' far' : ''}`), win = span(box, 'cfx-lg-win'), x = (i + 0.5) * w / n + rnd(-6, 6);
+        m.innerHTML = `<b>${'012345678901'.split('').map((d) => `<i>${d}</i>`).join('')}</b>`; m.style.left = f1(x - 4) + 'px';
+        Object.assign(win.style, { left: f1(x - 5) + 'px', top: f1(h / 2 - 6) + 'px' });
+        return { m, strip: m.firstChild, win, far, pos: Math.floor(rnd(0, 10)), from: 0, to: 0, k: 1, next: rnd(300, 1200), v: 0, i };
+      });
+    }
+    S.t += dt;
+    const n = S.reels.length, late = lv > 1.2;
+    for (const r of S.reels) {
+      const spin = lv && (late || (lv >= 1 && r.i / n < p * 0.9 - 0.1));
+      r.v += ((spin ? (late ? 26 : 14) : 0) - r.v) * Math.min(1, dt / 160);
+      if (r.v > 0.5) { r.pos = (r.pos + r.v * dt / 1000) % 10; r.k = 1; }
+      else if (lv && S.t >= r.next) { r.from = r.pos; r.to = Math.floor(r.pos) + 1; r.k = 0; r.next = S.t + rnd(500, 1300) * (lv >= 1 ? 0.7 : 1); r.win.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 260 }); }
+      if (r.k < 1) { r.k = Math.min(1, r.k + dt / 170); r.pos = (r.from + (r.to - r.from) * easeOutBack(r.k)) % 10; }
+      r.strip.style.transform = `translateY(${f1(h / 2 - 5 - r.pos * 10)}px)`;
+      r.m.classList.toggle('spin', r.v > 7);
+      r.m.style.opacity = lv ? (r.far ? 0.5 : 1) : 0;
+    }
+    S.lines.style.opacity = lv ? (lv >= 1 ? 0.5 : 0.3) : 0;
+  },
+  // Mask: a line-drawn mask behind the chip turns now and then like a coin, a glint along its edge as it passes edge-on,
+  // and shows its other face; a ghost of that face lies behind it. Its eyes glint. It turns faster as the cycle runs out
+  // and flickers between its faces in the last 1.5 s.
+  mask(el, box, S, dt, lv, p) {
+    const w = el.offsetWidth, h = el.offsetHeight;
+    if (!S.svg) { S.svg = svgIn(box); S.t = 0; S.face = 0; S.k = 1; S.next = 700; S.eye = 0; }
+    S.t += dt;
+    const late = lv > 1.2, gap = late ? 260 : lv >= 1 ? 1300 - 700 * p : 1800, dur = late ? 170 : 320;
+    if (lv && S.k >= 1 && S.t >= S.next) { S.k = 0; S.next = S.t + dur + gap; }
+    let sx = 1, face = S.face;
+    if (S.k < 1) { S.k = Math.min(1, S.k + dt / dur); const c = Math.cos(Math.PI * S.k); sx = Math.max(0.04, Math.abs(c)); face = S.k < 0.5 ? S.face : 1 - S.face; if (S.k >= 1) S.face = 1 - S.face; }
+    if (lv && Math.random() < dt / 1000 * (late ? 4 : 0.9)) S.eye = 1;
+    S.eye *= Math.exp(-dt / 160);
+    const s = h * 0.84 / 32, cx = w * 0.6, cy = h / 2, T = (x, y, sc) => `translate(${f1(x)} ${f1(y)}) scale(${(sx * sc).toFixed(3)} ${sc.toFixed(3)}) translate(-20 -16)`;
+    let html = `<g class="cfx-mk-ghost" transform="${T(cx + 2.5, cy + 1, s)}">${MASK(1 - face)}</g><g transform="${T(cx, cy, s)}">${MASK(face)}</g>`;
+    if (sx < 0.2) html += `<line class="cfx-mk-edge" x1="${f1(cx)}" y1="${f1(cy - 15 * s)}" x2="${f1(cx)}" y2="${f1(cy + 15 * s)}" style="opacity:${f1(1 - sx * 5)}"/>`;
+    if (S.eye > 0.05 && sx > 0.6) for (const ex of [13, 27]) html += STAR(cx + (ex - 20) * s * sx, cy + (13 - 16) * s, 4 * S.eye + 1, S.eye);
+    S.svg.innerHTML = lv ? html : '';
+  },
 };
 
 export function createChipFx() {
@@ -907,10 +1012,105 @@ const STRIKE_FX = {
     }, T1 - 40);
     return true;
   },
+  // Plate: plates clang shut over the chip with sparks; the joined plate lifts off, flies over your bar with a trail,
+  // widening to it, and slams down: a flash, sparks off both ends, a shock along the bar and a ripple through a hex
+  // shield over it.
+  plate(r, to, bar) {
+    const bw = bar?.width ?? 120, bl = bar?.left ?? to.x - bw / 2, bt = bar?.top ?? to.y - 4, bh = bar?.height ?? 8;
+    const SH = 120, LIFT = [140, 470], SLAM = 560, mid = r.left + r.width / 2;
+    const A = { x: r.left, y: r.top, w: r.width, h: r.height }, D = { x: bl - 5, y: bt + bh / 2 - 7, w: bw + 10, h: 14 }, H = { ...D, y: D.y + (to.y > r.top ? -36 : 36) };
+    const lerp = (a, b, k) => a + (b - a) * k, at = (a, b, k) => ({ x: lerp(a.x, b.x, k), y: lerp(a.y, b.y, k), w: lerp(a.w, b.w, k), h: lerp(a.h, b.h, k) });
+    const PL = (q, o = 1, cls = '') => `<g class="${cls}" style="opacity:${f1(o)}"><polygon class="cfx-pl-halo" points="${chamfer(q.x, q.y, q.w, q.h)}"/><polygon class="cfx-pl-body" points="${chamfer(q.x, q.y, q.w, q.h)}"/><line class="cfx-pl-rim" x1="${f1(q.x + 3)}" y1="${f1(q.y + 0.6)}" x2="${f1(q.x + q.w - 3)}" y2="${f1(q.y + 0.6)}"/>${[0.08, 0.92].map((u) => `<circle class="cfx-pl-rivet" cx="${f1(q.x + q.w * u)}" cy="${f1(q.y + q.h / 2)}" r="1.1"/>`).join('')}</g>`;
+    const mesh = hexMesh(bl - 6, bt - 12, bw + 12, bh + 24, 5);
+    setTimeout(() => { burst(mid, r.top + r.height / 2, r.height * 1.6, 0, 240); sparks(mid, r.top, 4, 10, 0, -Math.PI / 2, 1.4); sparks(mid, r.top + r.height, 4, 10, 0, Math.PI / 2, 1.4); }, SH);
+    setTimeout(() => { burst(to.x, to.y, 70, 0, 380); for (const [x, a] of [[bl, Math.PI], [bl + bw, 0]]) sparks(x, to.y, 7, 16, 0, a - 0.5 * Math.sign(Math.cos(a)), 1.4); }, SLAM);
+    stage(SLAM + 520, (g, t) => {
+      let html = '';
+      if (t < SH + 30) {
+        const c = clamp(t / SH) ** 2.2, half = r.width / 2;
+        html += `<g transform="translate(${f1(r.left + half * c)} ${f1(r.top)})">${plateSVG(half + 2, 1, r.height - 1, 1)}</g><g transform="translate(${f1(r.left + r.width - half * c)} ${f1(r.top)})">${plateSVG(half + 2, 1, r.height - 1, -1)}</g>`;
+      } else if (t < LIFT[1]) {
+        const k = easeInOut(clamp((t - LIFT[0]) / (LIFT[1] - LIFT[0])));
+        for (const [lag, o] of [[0.16, 0.2], [0.08, 0.4]]) { const q = at(A, H, easeInOut(clamp((t - LIFT[0]) / (LIFT[1] - LIFT[0]) - lag))); html += `<rect class="cfx-cp-ghost" x="${f1(q.x)}" y="${f1(q.y)}" width="${f1(q.w)}" height="${f1(q.h)}" style="opacity:${o}"/>`; }
+        html += PL(at(A, H, k));
+      } else if (t < SLAM) {
+        html += PL(at(H, D, clamp((t - LIFT[1]) / (SLAM - LIFT[1])) ** 3));
+      } else {
+        const a = t - SLAM, sq = 1 - 0.4 * Math.exp(-a / 50) * Math.cos(a / 25), q = { x: D.x, y: D.y + D.h * (1 - sq) / 2, w: D.w, h: D.h * sq };
+        html += PL(q, clamp(1 - (a - 200) / 260));
+        html += `<rect class="cfx-ck-stop" x="${f1(bl)}" y="${f1(bt)}" width="${f1(bw)}" height="${f1(bh)}" style="opacity:${f1(0.9 * Math.exp(-a / 90))}"/>`;
+        for (const dir of [-1, 1]) { const x0 = dir < 0 ? bl : bl + bw, L = a * 0.25; html += `<rect class="cfx-sb-flare" x="${f1(dir < 0 ? x0 - L : x0)}" y="${f1(to.y - 0.6)}" width="${f1(L)}" height="1.2" style="opacity:${f1(Math.exp(-a / 150))}"/>`; }
+        const R = a * 0.7;
+        html += `<g class="cfx-pl-mesh">${mesh.map((c) => { const d = Math.hypot(c.x - to.x, (c.y - to.y) * 2); return `<polygon points="${c.P}" style="opacity:${f1(0.9 * Math.exp(-((d - R) ** 2) / 120) * clamp(1 - a / 450))}"/>`; }).join('')}</g>`;
+      }
+      g.innerHTML = html;
+    });
+    return true;
+  },
+  // Ledger: reels spin up in the chip and lock one by one into a number, which tears off digit by digit and flies to your
+  // bar with trails; there the digits count down to zero, flickering, and a line strikes through the bar.
+  ledger(r, to, bar) {
+    const bw = bar?.width ?? 120, bl = bar?.left ?? to.x - bw / 2, bt = bar?.top ?? to.y - 4, bh = bar?.height ?? 8;
+    const N = 4, val = String(Math.floor(rnd(1000, 9999))), cx = r.left + r.width / 2, cy = r.top + r.height / 2 + 4.5;
+    const src = Array.from({ length: N + 1 }, (_, i) => [cx + (i - N / 2) * 10, cy]), dst = Array.from({ length: N + 1 }, (_, i) => [to.x + (i - N / 2) * 12, to.y + 4.5]);
+    const LOCK = 70, FLY = [260, 560], ROLL = [600, 860], LINE = [820, 980];
+    const D = Array.from({ length: N + 1 }, (_, i) => ({ ch: i ? val[i - 1] : '−', v: i ? +val[i - 1] : 0, next: 0, lock: 60 + i * LOCK }));
+    const T = (x, y, ch, o = 1, cls = 'cfx-sc-core') => `<text class="cfx-sc-halo" x="${f1(x - 3.5)}" y="${f1(y)}" style="opacity:${f1(o)}">${ch}</text><text class="${cls}" x="${f1(x - 3.5)}" y="${f1(y)}" style="opacity:${f1(o)}">${ch}</text>`;
+    const Q = (i, k) => { const [x0, y0] = src[i], [x1, y1] = dst[i], mx = (x0 + x1) / 2 + (i - N / 2) * 14, my = Math.min(y0, y1) - 30, v = 1 - k; return [v * v * x0 + 2 * v * k * mx + k * k * x1, v * v * y0 + 2 * v * k * my + k * k * y1]; };
+    stage(LINE[1] + 300, (g, t) => {
+      let html = '';
+      D.forEach((d, i) => {
+        if (t < FLY[0]) {
+          if (i && t < d.lock && t > d.next) { d.next = t + 35; d.ch = String(Math.random() * 10 | 0); }
+          if (i && t >= d.lock) d.ch = val[i - 1];
+          const flash = i && t >= d.lock ? Math.exp(-(t - d.lock) / 70) : 0;
+          html += T(src[i][0], src[i][1], d.ch, 1, flash > 0.3 ? 'cfx-sc-core' : 'cfx-sc-set');
+        } else if (t < FLY[1]) {
+          const k = clamp((t - FLY[0] - i * 25) / (FLY[1] - FLY[0] - N * 25));
+          for (const [lag, o] of [[0.14, 0.2], [0.07, 0.4]]) { const [x, y] = Q(i, easeInOut(clamp(k - lag))); html += `<text class="cfx-sc-g1" x="${f1(x - 3.5)}" y="${f1(y)}" style="opacity:${o}">${d.ch}</text>`; }
+          const [x, y] = Q(i, easeInOut(k)); html += T(x, y, d.ch);
+        } else {
+          if (i && t >= ROLL[0] && t > d.next && d.v > 0) { d.next = t + (ROLL[1] - ROLL[0]) / 10; d.v--; d.ch = String(d.v); }
+          const o = clamp(1 - (t - LINE[1]) / 260), fl = t < ROLL[1] && Math.random() < 0.15 ? 0.4 : 1;
+          html += T(dst[i][0], dst[i][1] + Math.max(0, t - LINE[1]) * 0.02, d.ch, o * fl, i && d.v === 0 ? 'cfx-sc-set' : 'cfx-sc-core');
+        }
+      });
+      if (t >= LINE[0]) { const k = easeInOut(clamp((t - LINE[0]) / (LINE[1] - LINE[0]))), o = clamp(1 - (t - LINE[1]) / 260); html += `<rect class="cfx-sb-flare" x="${f1(bl - 6)}" y="${f1(to.y - 0.8)}" width="${f1((bw + 12) * k)}" height="1.6" style="opacity:${f1(o)}"/><ellipse class="cfx-sb-glow" cx="${f1(bl - 6 + (bw + 12) * k)}" cy="${f1(to.y)}" rx="9" ry="4" style="opacity:${f1(o * (k < 1 ? 1 : 0))}"/>`; }
+      g.innerHTML = html;
+    });
+    setTimeout(() => burst(to.x, to.y, 50, 0, 320), FLY[1]);
+    setTimeout(() => burst(bl + bw + 6, to.y, 30, 0, 280), LINE[1]);
+    return true;
+  },
+  // Mask: the mask in the chip brightens and lifts out, turns twice as it flies to your bar with a trail, landing on its
+  // frowning face; its eyes ignite and streak across the bar, and it splits in two halves that slide apart and fade.
+  mask(r, to, bar) {
+    const bw = bar?.width ?? 120, bl = bar?.left ?? to.x - bw / 2, bt = bar?.top ?? to.y - 4, bh = bar?.height ?? 8;
+    const s0 = r.height * 0.84 / 32, s1 = s0 * 1.9, x0 = r.left + r.width * 0.6, y0 = r.top + r.height / 2, UP = 140, LAND = 600, id = `cfx-mk-${++gid}`;
+    const P = (k) => { const mx = (x0 + to.x) / 2 + (to.x > x0 ? -40 : 40), my = Math.min(y0, to.y) - 40, v = 1 - k; return [v * v * x0 + 2 * v * k * mx + k * k * to.x, v * v * y0 + 2 * v * k * my + k * k * to.y]; };
+    const T = (x, y, sx, s) => `translate(${f1(x)} ${f1(y)}) scale(${(sx * s).toFixed(3)} ${s.toFixed(3)}) translate(-20 -16)`;
+    setTimeout(() => { burst(to.x, to.y, 70, 0, 380); sparks(to.x, to.y, 6, 14); }, LAND);
+    stage(LAND + 520, (g, t) => {
+      let html = `<defs><clipPath id="${id}-l"><rect x="-10" y="-10" width="30" height="60"/></clipPath><clipPath id="${id}-r"><rect x="20" y="-10" width="30" height="60"/></clipPath></defs>`;
+      if (t < UP) { const k = t / UP; html += `<g transform="${T(x0, y0, 1, s0 * (1 + 0.4 * k))}">${MASK(0, 'hot')}</g>`; }
+      else if (t < LAND) {
+        const k = easeInOut((t - UP) / (LAND - UP)), turn = Math.cos(Math.PI * 2.5 * k), face = Math.floor(2.5 * k + 0.5) % 2, s = s0 * 1.4 + (s1 - s0 * 1.4) * k;
+        for (const [lag, o] of [[0.12, 0.18], [0.06, 0.35]]) { const kk = Math.max(0, k - lag), [x, y] = P(kk); html += `<g style="opacity:${o}" transform="${T(x, y, Math.max(0.05, Math.abs(Math.cos(Math.PI * 2.5 * kk))), s)}">${MASK(Math.floor(2.5 * kk + 0.5) % 2)}</g>`; }
+        const [x, y] = P(k); html += `<g transform="${T(x, y, Math.max(0.05, Math.abs(turn)), s)}">${MASK(face)}</g>`;
+      } else {
+        const a = t - LAND, split = easeInOut(clamp((a - 120) / 300)) * 34, o = clamp(1 - (a - 160) / 320), eyes = Math.exp(-a / 180);
+        html += `<rect class="cfx-ck-stop" x="${f1(bl)}" y="${f1(bt)}" width="${f1(bw)}" height="${f1(bh)}" style="opacity:${f1(0.8 * Math.exp(-a / 90))}"/>`;
+        html += `<g style="opacity:${f1(o)}"><g transform="translate(${f1(-split)} 0)"><g transform="${T(to.x, to.y, 1, s1)}"><g clip-path="url(#${id}-l)">${MASK(1)}</g></g></g><g transform="translate(${f1(split)} 0)"><g transform="${T(to.x, to.y, 1, s1)}"><g clip-path="url(#${id}-r)">${MASK(1)}</g></g></g></g>`;
+        for (const ex of [13, 27]) { const x = to.x + (ex - 20) * s1 + (ex < 20 ? -split : split), y = to.y + (13.4 - 16) * s1, L = bw * 0.45 * clamp(a / 120); html += `<rect class="cfx-sb-flare" x="${f1(ex < 20 ? x - L : x)}" y="${f1(y - 0.6)}" width="${f1(L)}" height="1.2" style="opacity:${f1(eyes)}"/>` + STAR(x, y, 6 * eyes + 1, eyes); }
+      }
+      g.innerHTML = html;
+    });
+    return true;
+  },
 };
 
 // The themes with a strike of their own: the lash (lash.mjs) stays out of their hits, so the eye stays on the chip.
-export const STRIKES = new Set(['zap', 'lock', 'frost', 'cipher', 'ring', 'erase', 'heat', 'crumble', 'scramble', 'thorn', 'clock', 'strobe', 'copy', 'scan']);
+export const STRIKES = new Set(['zap', 'lock', 'frost', 'cipher', 'ring', 'erase', 'heat', 'crumble', 'scramble', 'thorn', 'clock', 'strobe', 'copy', 'scan', 'plate', 'ledger', 'mask']);
 // A themed chip going off (app.js fire): its strike, in screen px, from the chip's rect r to your bar at `to`, in the
 // threat's red. Pulse Node: a forked bolt that strobes into your bar, a burst and sparks there. Encryptor: its padlocks
 // arc to your bar with short trails and clamp on. Cold Store: its frost shatters (the chip's ghost still flies).

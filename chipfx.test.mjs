@@ -12,10 +12,14 @@ test('every themed name is a part the game has', () => {
   for (const name of Object.keys(CHIP_THEMES)) assert.ok(names.has(name), `${name} is a part`);
 });
 
+test('every part wears a theme, and every theme strikes', () => {
+  for (const f of Object.values(FAMILIES)) for (const p of f.parts) assert.ok(chipTheme(p.name), `${p.name} has a theme`);
+});
+
 test('a part finds its theme by the name the player sees, .exe builds too', () => {
   assert.equal(chipTheme('Pulse Node'), 'zap');
   assert.equal(chipTheme('Encryptor.exe'), 'lock');
-  assert.equal(chipTheme('Mutex'), null);
+  assert.equal(chipTheme('Not A Part'), null);
   assert.equal(chipTheme(undefined), null);
 });
 
@@ -58,4 +62,7 @@ test('a shared theme marks every part that wears it', () => {
   assert.equal(chipTheme('Jitter'), 'strobe');
   assert.equal(chipTheme('Fan-in'), 'copy');
   assert.equal(chipTheme('Tripwire'), 'scan');
+  assert.equal(chipTheme('Lockbox'), 'plate');
+  assert.equal(chipTheme('Damper'), 'ledger');
+  assert.equal(chipTheme('C&C'), 'mask');
 });
