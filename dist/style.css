@@ -298,6 +298,8 @@ code { font-family: var(--mono); color: var(--amber); }
 .cfx-fly.cfx-stream { left: 0; top: 0; }
 .cfx-fly.cfx-flake { left: 0; top: 0; }
 .cfx-fly.cfx-edge { margin-left: 0; }
+.cfx-bracket { border: 0 solid currentColor; filter: drop-shadow(0 0 3px currentColor); }
+.cfx-flash { background: currentColor; }
 .no-motion .fxin { display: none; }
 /* Its strike when it goes off (chipfx.mjs chipStrike), in the threat's red: a bolt, flying padlocks, frost shards. */
 .cfx-fly { position: fixed; z-index: 56; pointer-events: none; color: var(--hot); }

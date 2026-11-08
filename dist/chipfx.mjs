@@ -237,8 +237,8 @@ export const STRIKES = new Set(['zap', 'lock', 'frost', 'cipher', 'ring', 'erase
 // A themed chip going off (app.js fire): its strike, in screen px, from the chip's rect r to your bar at `to`, in the
 // threat's red. Pulse Node: a forked bolt that strobes into your bar, a burst and sparks there. Encryptor: its padlocks
 // arc to your bar with short trails and clamp on. Cold Store: its frost shatters (the chip's ghost still flies).
-// Cipher Block: hex streams fly into your bar, head first, and scatter there. C2 Node: rings ping out of its icon, a
-// dashed signal runs to your bar and rings close in on it. Eraser: the chip's pixels fly off in wipe order and a
+// Cipher Block: hex streams fly into your bar, head first, and scatter there. C2 Node: a beam flashes from its icon to
+// your bar, brackets lock on and the bar flashes. Eraser: the chip's pixels fly off in wipe order and a
 // dither sweeps your bar under an edge. `bar` is your bar's rect. True when the strike stands in for the ghost.
 export function chipStrike(th, r, to, bar) {
   if (!document.getElementById('cfx-defs')) document.body.insertAdjacentHTML('beforeend', DEFS);
@@ -326,24 +326,24 @@ export function chipStrike(th, r, to, bar) {
     return true;
   }
   if (th === 'ring') {
-    const cx = r.left + 14, cy = r.top + r.height / 2;
-    [0, 110, 220].forEach((d, i) => {
-      const s = 20 + i * 4, m = fly('cfx-clamp', cx - s / 2, cy - s / 2, s, s);
-      m.animate([{ transform: 'scale(.2)', opacity: 0.9 }, { transform: `scale(${3.4 - i * 0.5})`, opacity: 0 }], { duration: 560, delay: d, easing: 'cubic-bezier(.15,.7,.3,1)', fill: 'both' }).onfinish = () => m.remove();
-    });
+    const cx = r.left + 14, cy = r.top + r.height / 2, bx = bar?.left ?? to.x - 60, by = bar?.top ?? to.y - 4, bw = bar?.width ?? 120, bh = bar?.height ?? 8;
     const g = document.createElementNS(NS, 'svg'); g.setAttribute('class', 'cfx-fly cfx-bolt'); document.body.appendChild(g);
-    g.innerHTML = `<g class="cfx-arc"><line class="halo" x1="${cx}" y1="${cy}" x2="${to.x}" y2="${to.y}" pathLength="1" style="stroke-dasharray:1 1;stroke-dashoffset:1;stroke-width:4"/><line class="mid" x1="${cx}" y1="${cy}" x2="${to.x}" y2="${to.y}" pathLength="1" style="stroke-dasharray:.04 .03;stroke-dashoffset:0;opacity:.9"/></g>`;
-    const mask = g.querySelector('.halo');
-    mask.animate([{ strokeDashoffset: 1, opacity: 0.8 }, { strokeDashoffset: 0, opacity: 0.8, offset: 0.6 }, { strokeDashoffset: 0, opacity: 0 }], { duration: 480, delay: 60, easing: 'ease-out', fill: 'both' });
-    g.querySelector('.mid').animate([{ opacity: 0 }, { opacity: 0.9, offset: 0.2 }, { opacity: 0 }], { duration: 480, delay: 60, fill: 'both' }).onfinish = () => g.remove();
-    [0, 90, 180].forEach((d, i) => {
-      const s = 54 - i * 10, m = fly('cfx-clamp', to.x - s / 2, to.y - s / 2, s, s);
-      m.animate([{ transform: 'scale(2.6)', opacity: 0 }, { transform: 'scale(1)', opacity: 1, offset: 0.7 }, { transform: 'scale(.35)', opacity: 0 }], { duration: 420, delay: 340 + d, easing: 'cubic-bezier(.4,0,.7,1)', fill: 'both' }).onfinish = () => m.remove();
-    });
-    setTimeout(() => {
-      const b = fly('cfx-burst', to.x - 20, to.y - 20, 40, 40);
-      b.animate([{ transform: 'scale(.3)', opacity: 1 }, { transform: 'scale(1.4)', opacity: 0 }], { duration: 360, easing: 'cubic-bezier(.2,.8,.3,1)' }).onfinish = () => b.remove();
-    }, 520);
+    const ln = (c) => `<line class="${c}" x1="${cx}" y1="${cy}" x2="${to.x}" y2="${to.y}"/>`;
+    g.innerHTML = `<g class="cfx-arc">${ln('halo')}${ln('mid')}${ln('core')}</g>`;
+    g.animate([{ opacity: 0 }, { opacity: 1, offset: 0.25 }, { opacity: 0.9, offset: 0.6 }, { opacity: 0 }], { duration: 520, easing: 'ease-out' }).onfinish = () => g.remove();
+    const ping = fly('cfx-clamp', cx - 11, cy - 11, 22, 22); ping.style.borderWidth = '2.5px';
+    ping.animate([{ transform: 'scale(.3)', opacity: 1 }, { transform: 'scale(3.4)', opacity: 0 }], { duration: 420, easing: 'ease-out' }).onfinish = () => ping.remove();
+    const hx = bw / 2 + 4, hy = bh / 2 + 4;
+    for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+      const m = fly('cfx-bracket', 0, 0, 12, 12);
+      m.style[sx < 0 ? 'borderLeftWidth' : 'borderRightWidth'] = '2.5px'; m.style[sy < 0 ? 'borderTopWidth' : 'borderBottomWidth'] = '2.5px';
+      const P = (ax, ay) => `translate(${to.x + sx * ax - (sx < 0 ? 0 : 12)}px, ${to.y + sy * ay - (sy < 0 ? 0 : 12)}px)`;
+      m.animate([{ transform: P(hx + 70, hy + 26), opacity: 0 }, { opacity: 1, offset: 0.3 }, { transform: P(hx, hy), opacity: 1, offset: 0.8 }, { transform: P(hx, hy), opacity: 0 }], { duration: 520, delay: 200, easing: 'cubic-bezier(.3,0,.2,1)', fill: 'both' }).onfinish = () => m.remove();
+    }
+    const f = fly('cfx-flash', bx, by, bw, bh);
+    f.animate([{ opacity: 0 }, { opacity: 0.85, offset: 0.2 }, { opacity: 0 }], { duration: 320, delay: 640, fill: 'both' }).onfinish = () => f.remove();
+    const b = fly('cfx-burst', to.x - 28, to.y - 28, 56, 56);
+    b.animate([{ transform: 'scale(.3)', opacity: 1 }, { transform: 'scale(1.5)', opacity: 0 }], { duration: 380, delay: 640, easing: 'cubic-bezier(.2,.8,.3,1)', fill: 'both' }).onfinish = () => b.remove();
     return true;
   }
   if (th === 'erase') {
