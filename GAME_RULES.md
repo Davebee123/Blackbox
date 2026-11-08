@@ -237,7 +237,7 @@ it takes the attack over.
 - **Trojan** (SWARMLINE, LANTERN). The Courier drops a hit and delivers Packages; the fight opens with one on the board.
   While the Loader lives, any damage to a Package unpacks it into two Droppers (Spray 2 every 2), and one left alone
   unpacks 5 cycles after delivery. **The Loader redeploys the Courier**: break it and it comes back 4 cycles later at
-  half its max, every time (a Redeploy chip and a tether; ↻ N while it's down). Break the Loader and the Courier stays
+  half its max, every time (a Redeploy chip and a tether with a countdown while it's down). Break the Loader and the Courier stays
   down and the Packages go inert. The Courier's ticks cancel a delivery; the Loader's delay the next by 2.
 
 **Attack sets.** Each spawn rolls its set (Ransomware Standard, Lockout, Hammer or Lockstep; Worm Standard, Bloom or
@@ -533,7 +533,7 @@ meet often is decoded in about two fights, gives up its rule in about eight and 
 
 Each tier says so once, in the log and as a float on the part. **Tethers** (`partLinks`): every rule that reaches from
 one part to another (a lock, a ward, a twin, a re-arm, a redeploy, a fallback, the Cooler, a C2 Node) draws a steel
-tether in the board's gutter, glowing while it holds, grey while it's down, with **↻ N** when it comes back in N cycles;
+tether in the board's gutter, glowing while it holds, grey while it's down, with a clock and the cycles left when it counts down;
 a Mutex's lock also sits on its partner's bar as an absorb segment, a Lockbox's ward as a cap line. Before the
 protector is decoded its node shows **?**.
 

@@ -252,7 +252,7 @@ test('the Mutex\'s lock on the Encryptor\'s own bar: a segment as wide as the lo
   assert.match(segOf(boardMarkup(s, null), 'encryptor').row, /title="Lock \d+\/500: the Mutex&#39;s shield on the Encryptor\. Every hit on it drains the lock first\."/);
 });
 
-test('a tether between the Mutex and the Encryptor: ? and ??? until decoded, glowing while the lock stands, ↻ N once it breaks, snapping and gone with the Mutex', () => {
+test('a tether between the Mutex and the Encryptor: ? and ??? until decoded, glowing while the lock stands, a countdown once it breaks, snapping and gone with the Mutex', () => {
   const s = mutexFight();
   quiet(s);
   const v = s.encounter.virus, enc = Object.assign(part(s, 'encryptor'), { armor: 0, maxArmor: 0, integrity: 200, max: 200, lockHp: 10, lockMax: 10 });
@@ -275,7 +275,7 @@ test('a tether between the Mutex and the Encryptor: ? and ??? until decoded, glo
   const n = enc.lockAt - s.encounter.cycle;
   assert.equal(n, CONFIG.mutex.every - 1);
   assert.ok(ts.every((t) => /\bdown\b/.test(t.cls)));
-  assert.match(ts.find((t) => /tt-node/.test(t.inner)).inner, new RegExp(`<b class="tt-node[^"]*\\bclock"><span class="tt-count">↻${n}</span></b>`), 'the countdown is the node, mid-span');
+  assert.match(ts.find((t) => /tt-node/.test(t.inner)).inner, new RegExp(`<b class="tt-node[^"]*\\bclock"><svg class="glyph tt-ico[^]*?</svg><span class="tt-count">${n}</span></b>`), 'the countdown is the node, mid-span');
   assert.match(ts[0].tip, new RegExp(`^Mutex lock: broken\\. The Mutex locks the Encryptor again in ${n} cycles\\.`));
   assert.doesNotMatch(segOf(boardMarkup(s, null), 'encryptor').row, /lockseg/, 'no segment while it is broken');
   // The Mutex breaks: while its row dissolves the tether snaps; then it's gone, and the lock with it for good.
@@ -321,19 +321,19 @@ test('one visual language for every relation: a Lockbox\'s ward (and a cap line 
   const stub = tethersOf(boardMarkup(w, null), 'twin');
   assert.equal(stub.length, 1);
   assert.match(stub[0].cls, /\bstub\b/); assert.match(stub[0].cls, /\bdown\b/);
-  assert.match(stub[0].inner, new RegExp(`↻${rep.rebootAt - w.encounter.cycle}<`));
+  assert.match(stub[0].inner, new RegExp(`tt-count">${rep.rebootAt - w.encounter.cycle}<`));
   // The Bouncer's Keyring and its Gate: the re-arm countdown on the tether.
   const b = at(12); selectEncounter(b, 'bouncer', 3); command(b, 'engage');
   const k = part(b, 'encryptor'), n = (k.rearm - (b.encounter.cycle % k.rearm)) % k.rearm;
   const ra = tethersOf(boardMarkup(b, null), 'rearm');
   assert.ok(ra.length >= 2 && ra.every((t) => t.links === 'encryptor pulse' && /\bup\b/.test(t.cls)));
-  assert.match(ra.find((t) => /tt-node/.test(t.inner)).inner, new RegExp(`↻${n}<`));
+  assert.match(ra.find((t) => /tt-node/.test(t.inner)).inner, new RegExp(`tt-count">${n}<`));
   assert.doesNotMatch(boardMarkup(b, null), /re-arms in/, 'the tether says it, not a tag');
   // partLinks reads the same.
   assert.deepEqual(partLinks(b).map((l) => [l.kind, l.from, l.to.join(), l.count]), [['rearm', 'encryptor', 'pulse', n]]);
 });
 
-test('the Trojan\'s redeploy and a fallback draw as tethers: Loader to Courier while both stand, a stub with ↻ N on the Loader while the Courier is down; a Brood to its Maw', async () => {
+test('the Trojan\'s redeploy and a fallback draw as tethers: Loader to Courier while both stand, a stub with a countdown on the Loader while the Courier is down; a Brood to its Maw', async () => {
   const FP = await import('./dist/floorplan.mjs');
   const s = at(12);
   FP.outfit(s, { cls: 'breaker', level: 12, gearSeed: 2 });
@@ -358,7 +358,7 @@ test('the Trojan\'s redeploy and a fallback draw as tethers: Loader to Courier w
   const stub = tethersOf(boardMarkup(s, null), 'redeploy');
   assert.equal(stub.length, 1);
   assert.match(stub[0].cls, /\bstub\b/); assert.match(stub[0].cls, /\bdown\b/);
-  assert.match(stub[0].inner, new RegExp(`↻${courier.redeployAt - s.encounter.cycle}<`));
+  assert.match(stub[0].inner, new RegExp(`tt-count">${courier.redeployAt - s.encounter.cycle}<`));
   assert.match(stub[0].tip, /^Loader redeploy: the Courier comes back in \d cycles at 50% Integrity, unless the Loader breaks first\.\n▸ Break the Loader before then\./);
   // The Redeploy chip on the Loader's row, and its tag.
   const html = boardMarkup(s, null);

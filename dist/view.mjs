@@ -752,7 +752,7 @@ function guardMarks(s, v, p, fc) {
 }
 // The tethers: a bracket in the board's left gutter from the part a rule sits on to each part it reaches, drawn a piece
 // a row (so it follows the rows at any height: dense, a phone), with a node at the middle of its span carrying the
-// rule's icon (? until the codex knows the part) and its countdown (↻ N). It glows while the rule holds, goes grey
+// rule's icon (? until the codex knows the part), or a clock and its countdown. It glows while the rule holds, goes grey
 // while it's down (a broken lock, an overheated Keyring), its countdown taking the node's place, and snaps as the part it hangs from dissolves. Two lanes at most.
 function tethers(rows, links, dying) {
   const idx = new Map(rows.map((p, i) => [p.id, i])), per = rows.map(() => '');
@@ -760,23 +760,31 @@ function tethers(rows, links, dying) {
     const at = [l.from, ...l.to].map((id) => idx.get(id)).filter((i) => i != null);
     return idx.has(l.from) ? { l, a: Math.min(...at), b: Math.max(...at), src: idx.get(l.from), ends: new Set(at) } : null;
   }).filter(Boolean).sort((x, y) => x.a - y.a || y.b - y.a - (x.b - x.a));
+  // A lane takes a span that starts below where the last one ended, or on that row when one arrives from above and the
+  // other leaves downward: their arms split there (--arm), so the two arrows share one line.
   const lanes = [];
   for (const sp of spans) {
-    let k = lanes.findIndex((end) => end < sp.a);
+    let k = lanes.findIndex((ln) => ln.end < sp.a || (ln.end === sp.a && ln.from < ln.end && sp.a < sp.b));
     if (k < 0) k = Math.min(lanes.length, 1);
-    lanes[k] = Math.max(lanes[k] ?? -1, sp.b); sp.lane = k;
+    lanes[k] = { end: Math.max(lanes[k]?.end ?? -1, sp.b), from: sp.a }; sp.lane = k;
   }
+  // Two arms on one row: the span arriving from above takes the upper one, the span leaving downward the lower.
+  const arms = new Map();
+  for (const sp of spans) for (const r of sp.ends) arms.set(r, (arms.get(r) || 0) + 1);
+  const armOf = (sp, r) => (arms.get(r) > 1 && sp.a !== sp.b ? (r === sp.b ? -5 : r === sp.a ? 5 : 0) : 0);
   for (const sp of spans) {
     const { l } = sp, mid = (sp.a + sp.b) / 2, nodeRow = Math.floor(mid), edge = mid !== nodeRow; // an even span: on the line between two rows
-    const p = rows[sp.src], snap = l.snap ? ` style="--snap:-${dying(p)}ms"` : '';
+    const p = rows[sp.src], snap = l.snap ? `--snap:-${dying(p)}ms;` : '';
     const cls = `tether k-${l.kind} lane${sp.lane} ${l.up ? 'up' : 'down'}${l.known ? '' : ' unk'}${l.snap ? ' snap' : ''}${sp.a === sp.b ? ' stub' : ''}`;
     for (let r = sp.a; r <= sp.b; r++) {
       const top = r === sp.a ? '50%' : '-1px', bottom = r === sp.b ? '50%' : '0';
       const arm = sp.ends.has(r) ? `<i class="tt-arm ${r === sp.src ? 'src' : 'dst'}"></i>` : '';
-      // Down with a countdown, the countdown is the node: the one lit thing on the grey line is how long you have.
-      const clock = !l.up && l.count != null, count = l.count != null ? `<span class="tt-count">↻${l.count}</span>` : '';
-      const node = r === nodeRow ? `<b class="tt-node${edge ? ' edge' : ''}${clock ? ' clock' : ''}">${clock ? '' : l.known ? glyph(l.icon, 'tt-ico') : '?'}${count}</b>` : '';
-      per[r] += `<span class="${cls}" data-links="${esc([l.from, ...l.to].join(' '))}" data-kind="${l.kind}"${snap} title="${esc(l.tip)}"><i class="tt-line" style="top:${top};bottom:${bottom}"></i>${arm}${node}</span>`;
+      // A countdown is the node: a clock and the cycles left, centered on the line (the part's name carries its ?).
+      const clock = l.count != null;
+      const node = r === nodeRow ? `<b class="tt-node${edge ? ' edge' : ''}${clock ? ' clock' : ''}">${clock ? `${glyph('clock', 'tt-ico')}<span class="tt-count">${l.count}</span>` : l.known ? glyph(l.icon, 'tt-ico') : '?'}</b>` : '';
+      const off = armOf(sp, r);
+      const style = snap + (off ? `--arm:${off}px;` : '');
+      per[r] += `<span class="${cls}" data-links="${esc([l.from, ...l.to].join(' '))}" data-kind="${l.kind}"${style ? ` style="${style}"` : ''} title="${esc(l.tip)}"><i class="tt-line" style="top:${top};bottom:${bottom}"></i>${arm}${node}</span>`;
     }
   }
   return per;
