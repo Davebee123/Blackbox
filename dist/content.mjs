@@ -12,10 +12,13 @@ export const JOB_VARS = {
   bounty: { name: 'the named virus (claimjack-0412)', family: 'its family, lower case', room: 'the SPRAWL-00 folder it sits in' },
   materials: { amount: 'how many units', material: 'the code, lower case (worm code)' },
   takeover: { server: 'the server to take (KESSLER-RELAY-22), or "any server you have traced"', owner: 'who runs it (KESSLER)', crew: 'the crew it belongs to' },
+  strain: { strain: 'the strain (Keylogger)', count: 'how many to kill' },
+  rooms: { server: 'the server', count: 'how many new rooms to clear' },
+  map: { server: 'the server to map' },
   'takeover-unknown': {},
   item: { file: 'the file name (policy.db)', label: 'what it is, lower case (a stolen policy database)', Label: 'the same, capitalised', server: 'the server it sits on' },
   'item-unknown': { file: 'the file name', label: 'what it is, lower case', Label: 'the same, capitalised' },
-  install: { server: 'the server it goes on', addr: 'the room\'s grid address (C2)', file: 'the item\'s file name (canary.ko)', label: 'what it is, lower case (a Halcyon canary)', Label: 'the same, capitalised' },
+  install: { server: 'the server it goes on', addr: 'the room\'s grid address (C2)', file: 'the item\'s file name (canary.ko)', label: 'what it is, lower case (a logging tap)', Label: 'the same, capitalised' },
   defuse: { count: 'how many Encryptors to break' },
   sweep: { server: 'the server to walk' },
   exfil: {},
@@ -32,29 +35,33 @@ export const JOB_VARS = {
 export const STORY_VARS = { took: 'the server you took over (once you have one)' };
 export const JOB_TYPES = ['none', 'kill', 'bounty', 'materials', 'takeover', 'item'];
 export const JOB_NAMES = { none: 'Letter only', kill: 'Kill viruses', bounty: 'Bounty: one named virus', materials: 'Hand over code', takeover: 'Take over a server', item: 'Recover a file' };
-// Contract templates: one list of variants per side. GLASSJAW only offers some kinds.
+// Contract templates: one list of variants per giver (each faction writes every kind; mail.mjs falls back to Halcyon's).
+export const SIDES = { halcyon: 'Halcyon (on the books)', glassjaw: 'GLASSJAW (off the books)', kestrel: 'Kestrel', lantern: 'LANTERN', nullchoir: 'NULL CHOIR' };
+const GIVERS = Object.keys(SIDES);
 export const CONTRACT_KINDS = {
-  kill: { name: 'Kill viruses', sides: ['halcyon', 'glassjaw'] },
-  bounty: { name: 'Bounty', sides: ['halcyon'] },
-  materials: { name: 'Hand over code', sides: ['halcyon', 'glassjaw'] },
-  takeover: { name: 'Take over a known server', sides: ['halcyon'] },
-  'takeover-unknown': { name: 'Take over an unknown server', sides: ['halcyon'] },
-  item: { name: 'Recover a file (known server)', sides: ['halcyon', 'glassjaw'] },
-  'item-unknown': { name: 'Recover a file (unknown server)', sides: ['halcyon', 'glassjaw'] },
-  install: { name: 'Install an item at an address', sides: ['halcyon'] },
-  defuse: { name: 'Break Encryptors before they Encrypt', sides: ['halcyon'] },
-  sweep: { name: 'Map a server without resting', sides: ['halcyon'] },
-  exfil: { name: 'Catch an Exfil', sides: ['halcyon'] },
-  heist: { name: 'A vault file past the Tracker', sides: ['halcyon'] },
-  grind: { name: 'Grind: many kills of one virus', sides: ['halcyon'] },
-  solve: { name: 'Solve puzzle boards', sides: ['halcyon'] },
-  decode: { name: 'Decode parts', sides: ['halcyon'] },
-  sweeps: { name: 'Sweep logs', sides: ['halcyon'] },
-  interrupt: { name: 'Answer attacks', sides: ['halcyon'] },
-  root: { name: 'Reach a Root level', sides: ['halcyon'] },
-  hold: { name: 'Stop an invasion', sides: ['halcyon'] },
+  strain: { name: 'Strain: kills of one strain', sides: GIVERS },
+  kill: { name: 'Kill viruses', sides: GIVERS },
+  bounty: { name: 'Bounty', sides: GIVERS },
+  materials: { name: 'Hand over code', sides: GIVERS },
+  rooms: { name: 'Clear new rooms on a server', sides: GIVERS },
+  map: { name: 'Map a server', sides: GIVERS },
+  takeover: { name: 'Take over a known server', sides: GIVERS },
+  'takeover-unknown': { name: 'Take over an unknown server', sides: GIVERS },
+  item: { name: 'Recover a file (known server)', sides: GIVERS },
+  'item-unknown': { name: 'Recover a file (unknown server)', sides: GIVERS },
+  install: { name: 'Install an item at an address', sides: GIVERS },
+  defuse: { name: 'Break Encryptors before they Encrypt', sides: GIVERS },
+  sweep: { name: 'Map a server without resting', sides: GIVERS },
+  exfil: { name: 'Catch an Exfil', sides: GIVERS },
+  heist: { name: 'A vault file past the Tracker', sides: GIVERS },
+  grind: { name: 'Grind: many kills of one virus', sides: GIVERS },
+  solve: { name: 'Solve puzzle boards', sides: GIVERS },
+  decode: { name: 'Decode parts', sides: GIVERS },
+  sweeps: { name: 'Sweep logs', sides: GIVERS },
+  interrupt: { name: 'Answer attacks', sides: GIVERS },
+  root: { name: 'Reach a Root level', sides: GIVERS },
+  hold: { name: 'Stop an invasion', sides: GIVERS },
 };
-export const SIDES = { halcyon: 'Halcyon (on the books)', glassjaw: 'GLASSJAW (off the books)' };
 // (A job's XP comes from its kind, its size and your level, as the board's do: mail.mjs BASE, SIZE.)
 export const REWARDS = { credits: 'Credits', standing: 'Standing', relay: 'Relays', drop: 'A protocol, Tuned or better' };
 

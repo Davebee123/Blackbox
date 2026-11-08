@@ -136,3 +136,27 @@ test('an old save: rep under 1 comes back as 1, safely twice', async () => {
   const again = restore(JSON.parse(JSON.stringify(r)));
   assert.deepEqual([again.standing.halcyon, again.standing.nullchoir], [1, 1]);
 });
+
+test('contract letters: every kind has a variant from every giver, and each giver posts in its own words', async () => {
+  const { CONTRACT_KINDS, SIDES } = await import('./dist/content.mjs');
+  const { roomOffer } = await import('./dist/mail.mjs');
+  const T = (await import('./dist/content/contracts.mjs')).default;
+  for (const k of Object.keys(CONTRACT_KINDS)) for (const g of Object.keys(SIDES)) assert.ok(T[k]?.[g]?.length, `${k} has a ${g} letter`);
+  const esc = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const fits = (line, tpl) => new RegExp('^' + tpl.split(/\{\w+\}/).map(esc).join('.+') + '$').test(line);
+  const own = (o) => { const k = ['takeover', 'item'].includes(o.type) && !o.loc ? o.type + '-unknown' : o.type; return T[k][o.faction].some((v) => fits(o.body[0], v.body[0])); };
+  const s = open(); s.hackers = { [s.loadout.archetype]: { level: 12, xp: 0 } };
+  command(s, 'developer location ransomware'); s.locations[0].lockUntil = 0;
+  const seen = new Set();
+  for (let i = 0; i < 400; i++) { s.mail.offers = []; const o = offer(s); seen.add(o.faction); assert.ok(own(o), `${o.faction} ${o.type}: "${o.body[0]}"`); }
+  assert.deepEqual([...seen].sort(), Object.keys(SIDES).sort(), 'every giver posted');
+  const rooms = new Set();
+  for (let i = 0; i < 200; i++) {
+    s.mail.offers = []; s.mail.jobs = [];
+    const o = roomOffer(s, Date.now(), 'defuse');
+    rooms.add(o.faction); assert.ok(own(o), `room ${o.faction} ${o.type}: "${o.body[0]}"`);
+    const it = roomOffer(s, Date.now(), 'install');
+    if (it) assert.ok(it.faction === 'halcyon' || !/Halcyon/.test(it.label), `${it.faction}'s install: ${it.label}`);
+  }
+  assert.equal(rooms.size, 5, 'room jobs from every giver');
+});

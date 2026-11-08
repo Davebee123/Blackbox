@@ -283,6 +283,9 @@ const pick = (s, list) => list[Math.floor(rand(s) * list.length)];
 const between = (s, [lo, hi]) => Math.round(lo + rand(s) * (hi - lo));
 const gap = (s) => between(s, MAIL.offerEvery);
 const CODES = ['cipher', 'worm', 'kernel'];
+// A giver's own letters for a kind (content/contracts.mjs), else Halcyon's; and its install items (untagged ones suit anyone).
+const textFor = (kind, faction) => CONTRACT_TEXT[kind]?.[faction]?.length ? CONTRACT_TEXT[kind][faction] : CONTRACT_TEXT[kind]?.halcyon?.length ? CONTRACT_TEXT[kind].halcyon : [{ subject: kind, body: [''] }];
+const installsFor = (faction) => (CONTRACT_TEXT.installs || []).filter((x) => !x.by || x.by === faction);
 
 // Who posts the next job: GLASSJAW off the books now and then; once hubs are found, about half the rest is theirs.
 function giverOf(s) {
@@ -342,11 +345,9 @@ export function offer(s, at = now()) {
   if (off) { j.reward.xp = Math.round(j.reward.xp * MAIL.offBooksXp); j.reward.drop = true; }
   // Halcyon sends a relay with one server job at a time, while you have none.
   if (faction === 'halcyon' && !off && ['takeover', 'item'].includes(type) && !items(s).relay && ![...openContracts(s), ...offers(s)].some((c) => c.reward?.relay)) j.reward.relay = 1;
-  // The words: a variant from content/contracts.mjs, for this kind and side.
+  // The words: the giver's own variant from content/contracts.mjs for this kind.
   const kind = ['takeover', 'item'].includes(type) && !j.loc ? type + '-unknown' : type;
-  const side = off ? 'glassjaw' : 'halcyon';
-  const variants = T[kind]?.[side]?.length ? T[kind][side] : T[kind]?.halcyon || [{ subject: kind, body: [''] }];
-  const v = pick(s, variants);
+  const v = pick(s, textFor(kind, faction));
   const vars = jobVars(s, j);
   const from = theirs ? FACTIONS[faction].name : v.from ? SENDERS[v.from] : off ? SENDERS.glassjaw : pick(s, [SENDERS.claims, SENDERS.claims, SENDERS.wick]);
   j = { subject: fill(v.subject, vars), body: (v.body || []).map((p) => fill(p, vars)).filter(Boolean), ...j };
@@ -419,8 +420,8 @@ export function contractMapped(s, loc) {
 
 // ---------- room contracts ----------
 // No clock: one waits on the board at a time (it doesn't count toward the five), from its level, until you take it; a
-// new one comes MAIL.roomEvery after. Halcyon's work. Each kind once at a time (none you already hold).
-//   install  Halcyon's item (content/contracts.mjs installs), for a room's grid address on a traced server (often one you
+// new one comes MAIL.roomEvery after. Any giver's work. Each kind once at a time (none you already hold).
+//   install  the giver's item (content/contracts.mjs installs), for a room's grid address on a traced server (often one you
 //            haven't been in yet: the address is the point). It waits in your stash and goes in your pack when you
 //            connect to that server; install it in that room (`install`, or the room card's button). Jacking out
 //            brings it home; losing your Signal with it in the pack loses it, and the job fails.
@@ -433,11 +434,11 @@ export function contractMapped(s, loc) {
 //            you. If it did, the file is flagged and goes back to the vault for another try.
 export const ROOM_JOBS = { defuse: { from: 4 }, install: { from: 5 }, exfil: { from: 6 }, sweep: { from: 8 }, heist: { from: 8 } };
 const ROOM_FROM = Math.min(...Object.values(ROOM_JOBS).map((j) => j.from));
-const INSTALLS = [{ file: 'canary.ko', label: 'a Halcyon canary' }, { file: 'tap.so', label: 'a logging tap' }, { file: 'patch.sh', label: 'a patch script' }];
+const INSTALLS = [{ file: 'tap.so', label: 'a logging tap' }, { file: 'patch.sh', label: 'a patch script' }];
 const tracedOf = (s) => (s.locations || []).filter((l) => !l.rogue && !l.member && !l.farm && !l.lair && !l.zone && !(l.fresh && l.detached));
 const roomsOfLoc = (s, l) => { try { return l.floorplan || hooks.roomsFor?.(s, l) || null; } catch { return null; } };
 const plainRogueLoc = (l) => !!l.rogue && ['nest', 'pit', 'gauntlet'].includes(l.rogue.kind) && !l.occupied && !l.lair && !l.farm;
-function roomJob(s, kind) {
+function roomJob(s, kind, faction = 'halcyon') {
   const L = hackerLevel(s), pay = (base, per) => Math.round(base + per * L), busy = busyLoc(s), T = CONTRACT_TEXT;
   const free = tracedOf(s).filter((l) => !busy.has(l.id));
   if (kind === 'install') {
@@ -445,7 +446,7 @@ function roomJob(s, kind) {
     if (!pool.length) return null;
     const { l, R } = pick(s, pool), g = R.graph, ok = sweepRooms(g).filter((id) => id !== g.entry && !['stash', 'core'].includes(g.rooms[id].kind) && !g.rooms[id].extra);
     if (!ok.length) return null;
-    const room = pick(s, ok), it = pick(s, T.installs?.length ? T.installs : INSTALLS);
+    const mine = installsFor(faction), room = pick(s, ok), it = pick(s, mine.length ? mine : INSTALLS);
     return { type: kind, loc: l.id, room, addr: addrsOf(g)[room], file: it.file, label: it.label, carry: 'stash', reward: { credits: pay(55, 9), rep: 7, ...(rand(s) < 1 / 3 ? { drop: true } : {}) } };
   }
   if (kind === 'defuse') return { type: kind, count: 3 + (L >= 20 ? 1 : 0), reward: { credits: pay(40, 7), rep: 6 } };
@@ -469,11 +470,11 @@ export function roomOffer(s, at = now(), want = null) {
   const L = hackerLevel(s), held = new Set(openContracts(s).map((c) => c.type));
   const kinds = Object.keys(ROOM_JOBS).filter((k) => L >= ROOM_JOBS[k].from && !held.has(k) && (!want || k === want)).sort(() => rand(s) - 0.5);
   for (const kind of kinds) {
-    const j = roomJob(s, kind);
-    if (!j) continue;
-    const v = pick(s, CONTRACT_TEXT[kind]?.halcyon?.length ? CONTRACT_TEXT[kind].halcyon : [{ subject: kind, body: [''] }]), vars = jobVars(s, j);
-    j.xpFixed = true; j.reward.xp = contractXp(L, j);
     const { faction, off, theirs } = giverOf(s);
+    const j = roomJob(s, kind, faction);
+    if (!j) continue;
+    const v = pick(s, textFor(kind, faction)), vars = jobVars(s, j);
+    j.xpFixed = true; j.reward.xp = contractXp(L, j);
     j.reward.credits = Math.round(j.reward.credits * (off ? MAIL.offBooksPay : theirs ? MAIL.factionPay : 1));
     if (off) { j.reward.xp = Math.round(j.reward.xp * MAIL.offBooksXp); j.reward.drop = true; }
     const o = { id: s.mail.next++, from: faction === 'halcyon' ? (v.from ? SENDERS[v.from] : SENDERS.claims) : off ? SENDERS.glassjaw : FACTIONS[faction].name, got: 0, at, level: L, expiresAt: at + 10 * 365 * 24 * 3600000, waits: true, faction, ...(off ? { offBooks: true } : {}),

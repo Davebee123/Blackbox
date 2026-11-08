@@ -868,6 +868,39 @@ export default {
           "Five of these in a row and we start paying like we mean it."
         ]
       }
+    ],
+    "kestrel": [
+      {
+        "subject": "Notice: {strain}",
+        "body": [
+          "{strain} is breeding in our racks faster than we can bill for the space. Remove {count} of them at your level, wherever they turn up."
+        ]
+      }
+    ],
+    "lantern": [
+      {
+        "subject": "Count: {strain}",
+        "body": [
+          "Three. Three. Seven. {strain} orphans trades faster than we can list them. End {count} of them at your level, wherever they turn up."
+        ]
+      }
+    ],
+    "nullchoir": [
+      {
+        "subject": "{strain}, again",
+        "body": [
+          "{strain} keeps dead trades breathing. Kill {count} of them at your level, wherever they turn up.",
+          "Each one is a small rollback."
+        ]
+      }
+    ],
+    "glassjaw": [
+      {
+        "subject": "Specimens: {strain}",
+        "body": [
+          "A buyer wants {strain} off the market. Kill {count} of them at your level, wherever they turn up."
+        ]
+      }
     ]
   },
   "kill": {
@@ -887,6 +920,31 @@ export default {
           "Halcyon will not like it. That is why it pays."
         ]
       }
+    ],
+    "kestrel": [
+      {
+        "subject": "Occupancy notice",
+        "body": [
+          "{crew} has {family} processes in our racks without a lease. Remove {count} of them, anywhere you find them."
+        ]
+      }
+    ],
+    "lantern": [
+      {
+        "subject": "Listing 220",
+        "body": [
+          "Two. Two. Zero. {crew}'s {family} keeps breaking trades mid-settlement. End {count} of its processes, anywhere you find them.",
+          "Each one you end lets us list the trade it held."
+        ]
+      }
+    ],
+    "nullchoir": [
+      {
+        "subject": "Funeral work",
+        "body": [
+          "{crew}'s {family} processes guard payments nobody will ever collect. Kill {count} of them, anywhere you find them."
+        ]
+      }
     ]
   },
   "bounty": {
@@ -896,6 +954,42 @@ export default {
         "body": [
           "A {family} process called {name} is using SPRAWL-00 as a staging point.",
           "Neutralize it."
+        ]
+      }
+    ],
+    "kestrel": [
+      {
+        "subject": "Eviction: {name}",
+        "body": [
+          "A {family} process called {name} has moved into SPRAWL-00 without a lease.",
+          "Remove it. The rack goes back on the market."
+        ]
+      }
+    ],
+    "lantern": [
+      {
+        "subject": "Name: {name}",
+        "body": [
+          "Five. One. A {family} process called {name} sits in SPRAWL-00, holding a Pellucid wage run open.",
+          "End it, and we read the run out."
+        ]
+      }
+    ],
+    "nullchoir": [
+      {
+        "subject": "{name} has a pension",
+        "body": [
+          "A {family} process called {name} sits in SPRAWL-00, paying a dead man's premium every month.",
+          "Kill it. Halcyon loses a customer."
+        ]
+      }
+    ],
+    "glassjaw": [
+      {
+        "subject": "A name on a list: {name}",
+        "body": [
+          "A {family} process called {name} sits in SPRAWL-00. Someone paid us to take its name off a list.",
+          "Kill it."
         ]
       }
     ]
@@ -915,6 +1009,30 @@ export default {
         "body": [
           "We pay over the odds for {material}. Send {amount} units.",
           "Halcyon will not like it. That is why it pays."
+        ]
+      }
+    ],
+    "kestrel": [
+      {
+        "subject": "Rack inspection",
+        "body": [
+          "Our engineers test the racks against live code. Send {amount} units of {material}."
+        ]
+      }
+    ],
+    "lantern": [
+      {
+        "subject": "Listing 104",
+        "body": [
+          "One. Zero. Four. We read old trades against live code. Send {amount} units of {material}."
+        ]
+      }
+    ],
+    "nullchoir": [
+      {
+        "subject": "Spare parts",
+        "body": [
+          "We take code apart to see how it breaks. Send {amount} units of {material}. You'll get it back in pieces."
         ]
       }
     ]
@@ -937,6 +1055,32 @@ export default {
           "Halcyon will not like it. That is why it pays."
         ]
       }
+    ],
+    "kestrel": [
+      {
+        "subject": "Inventory: {server}",
+        "body": [
+          "{server} runs on our hardware. Clear {count} of its rooms you haven't cleared before.",
+          "We bill by the room, and we have never seen most of them."
+        ]
+      }
+    ],
+    "lantern": [
+      {
+        "subject": "Listen: {server}",
+        "body": [
+          "Six. Six. Trades are asleep inside {server}. Clear {count} of its rooms you haven't cleared before.",
+          "We write down what you find."
+        ]
+      }
+    ],
+    "nullchoir": [
+      {
+        "subject": "Open house: {server}",
+        "body": [
+          "{server} is full of rooms paying rent to nobody. Clear {count} of them you haven't cleared before."
+        ]
+      }
     ]
   },
   "map": {
@@ -946,6 +1090,42 @@ export default {
         "body": [
           "Map {server}: every room of it cleared at least once.",
           "Underwriting wants the whole floor plan before it prices the client."
+        ]
+      }
+    ],
+    "kestrel": [
+      {
+        "subject": "Floor plan: {server}",
+        "body": [
+          "Map {server}: every room of it cleared at least once.",
+          "We decide which floors stay open. Send us the plan before we decide this one."
+        ]
+      }
+    ],
+    "lantern": [
+      {
+        "subject": "Survey: {server}",
+        "body": [
+          "Eight. Eight. Map {server}: every room of it cleared at least once.",
+          "A counterparty on it is still waiting for an answer."
+        ]
+      }
+    ],
+    "nullchoir": [
+      {
+        "subject": "Every room: {server}",
+        "body": [
+          "Map {server}: every room of it cleared at least once.",
+          "We like to know how much there is to roll back."
+        ]
+      }
+    ],
+    "glassjaw": [
+      {
+        "subject": "Floor plan: {server}",
+        "body": [
+          "Map {server}: every room of it cleared at least once.",
+          "We have a buyer for the plan."
         ]
       }
     ]
@@ -959,6 +1139,42 @@ export default {
           "Open its vault, then beat the Resident in its Core."
         ]
       }
+    ],
+    "kestrel": [
+      {
+        "subject": "Squatters: {server}",
+        "body": [
+          "{owner} runs {server} for {crew}, on hardware we own. Their lease ended at the Cascade.",
+          "Open its vault, then beat the Resident in its Core."
+        ]
+      }
+    ],
+    "lantern": [
+      {
+        "subject": "Station: {server}",
+        "body": [
+          "Nine. Nine. We want a beacon on {server}. {owner} runs it for {crew}.",
+          "Open its vault, then beat the Resident in its Core."
+        ]
+      }
+    ],
+    "nullchoir": [
+      {
+        "subject": "New owner: {server}",
+        "body": [
+          "{owner} keeps {server} running for {crew}. Funny, how hard they work for the dead.",
+          "Open its vault, then beat the Resident in its Core."
+        ]
+      }
+    ],
+    "glassjaw": [
+      {
+        "subject": "Change of hands: {server}",
+        "body": [
+          "{owner} runs {server} for {crew}. A client of ours would like it to change hands.",
+          "Open its vault, then beat the Resident in its Core."
+        ]
+      }
     ]
   },
   "takeover-unknown": {
@@ -967,6 +1183,42 @@ export default {
         "subject": "Turf: an unknown server",
         "body": [
           "One of the crews runs a server one hop past the ones you know. We have its signal and nothing else.",
+          "A relay nearby will flag it. Trace it, open its vault, then beat the Resident in its Core."
+        ]
+      }
+    ],
+    "kestrel": [
+      {
+        "subject": "Squatters: an unknown server",
+        "body": [
+          "Something one hop past the servers you know is drawing power from our racks. We have its signal and its power bill.",
+          "A relay nearby will flag it. Trace it, open its vault, then beat the Resident in its Core."
+        ]
+      }
+    ],
+    "lantern": [
+      {
+        "subject": "Station: an unknown server",
+        "body": [
+          "Nine. Nine. A server one hop past the ones you know answers our beacon and gives no name.",
+          "A relay nearby will flag it. Trace it, open its vault, then beat the Resident in its Core."
+        ]
+      }
+    ],
+    "nullchoir": [
+      {
+        "subject": "Hide and seek",
+        "body": [
+          "Someone is hiding a server one hop past the ones you know. From us, of all people.",
+          "A relay nearby will flag it. Trace it, open its vault, then beat the Resident in its Core."
+        ]
+      }
+    ],
+    "glassjaw": [
+      {
+        "subject": "Change of hands: an unknown server",
+        "body": [
+          "A server one hop past the ones you know has been selling under our price. We have its signal.",
           "A relay nearby will flag it. Trace it, open its vault, then beat the Resident in its Core."
         ]
       }
@@ -990,6 +1242,33 @@ export default {
           "Halcyon will not like it. That is why it pays."
         ]
       }
+    ],
+    "kestrel": [
+      {
+        "subject": "Recover {file}",
+        "body": [
+          "{Label} left our custody. It sits in a vault on {server}, as {file}.",
+          "Bring it back before the end of this cycle."
+        ]
+      }
+    ],
+    "lantern": [
+      {
+        "subject": "Recover {file}",
+        "body": [
+          "Four. Nine. Nine. {Label} sits in a vault on {server}, as {file}. Somebody is still owed by it.",
+          "Bring it back. We will read it on air."
+        ]
+      }
+    ],
+    "nullchoir": [
+      {
+        "subject": "Recover {file}",
+        "body": [
+          "{Label} sits in a vault on {server}, as {file}. Halcyon would love it back.",
+          "Bring it to us first."
+        ]
+      }
     ]
   },
   "item-unknown": {
@@ -1010,6 +1289,33 @@ export default {
           "Halcyon will not like it. That is why it pays."
         ]
       }
+    ],
+    "kestrel": [
+      {
+        "subject": "Recover {file}",
+        "body": [
+          "{Label} left our custody. It sits in a vault on a server you haven’t found yet, as {file}.",
+          "A relay nearby will flag the server. Trace it, then bring the file back."
+        ]
+      }
+    ],
+    "lantern": [
+      {
+        "subject": "Recover {file}",
+        "body": [
+          "Four. Nine. Nine. {Label} sits in a vault on a server you haven’t found yet, as {file}.",
+          "A relay nearby will flag the server. Trace it, then bring the file back."
+        ]
+      }
+    ],
+    "nullchoir": [
+      {
+        "subject": "Recover {file}",
+        "body": [
+          "{Label} sits in a vault on a server you haven’t found yet, as {file}. Halcyon would love it back.",
+          "A relay nearby will flag the server. Trace it, then bring the file to us first."
+        ]
+      }
     ]
   },
   "install": {
@@ -1028,6 +1334,42 @@ export default {
           "Jack out with it and it keeps. Drop to zero and it doesn't."
         ]
       }
+    ],
+    "kestrel": [
+      {
+        "subject": "Fitting: {server}",
+        "body": [
+          "{Label} is to be fitted inside {server}, at {addr}. It goes in your pack when you connect there.",
+          "Fit it in that room. Lose your Signal with it on you and it's gone, and so is the job."
+        ]
+      }
+    ],
+    "lantern": [
+      {
+        "subject": "Relay: {server}",
+        "body": [
+          "Seven. Seven. {Label} for {server}, the room at {addr}. It goes in your pack when you connect there.",
+          "Install it in that room. Lose your Signal with it on you and it's gone, and so is the job."
+        ]
+      }
+    ],
+    "nullchoir": [
+      {
+        "subject": "A gift for {server}",
+        "body": [
+          "{Label} for {server}, the room at {addr}. It goes in your pack when you connect there.",
+          "Install it in that room. Lose your Signal with it on you and it's gone, and so is the job."
+        ]
+      }
+    ],
+    "glassjaw": [
+      {
+        "subject": "A quiet listener",
+        "body": [
+          "{Label} for {server}, the room at {addr}. It goes in your pack when you connect there.",
+          "Install it in that room. Lose your Signal with it on you and it's gone, and so is the job."
+        ]
+      }
     ]
   },
   "defuse": {
@@ -1037,6 +1379,42 @@ export default {
         "body": [
           "TOLLGATE's Encryptors keep locking our clients out. Break {count} of them before they land a single Encrypt.",
           "Anywhere. One you cut off mid-Encrypt still counts."
+        ]
+      }
+    ],
+    "kestrel": [
+      {
+        "subject": "Locked units",
+        "body": [
+          "TOLLGATE's Encryptors keep locking tenants out of the units they rent from us. Break {count} of them before they land a single Encrypt.",
+          "Anywhere. One you cut off mid-Encrypt still counts."
+        ]
+      }
+    ],
+    "lantern": [
+      {
+        "subject": "Listing 312",
+        "body": [
+          "Three. One. Two. An encrypted trade can't answer, and then it orphans. Break {count} of TOLLGATE's Encryptors before they land a single Encrypt.",
+          "One you cut off mid-Encrypt still counts."
+        ]
+      }
+    ],
+    "nullchoir": [
+      {
+        "subject": "Ransom notes",
+        "body": [
+          "TOLLGATE's Encryptors lock trades to ransom them later. The payers are all dead. Break {count} of them before they land a single Encrypt.",
+          "One you cut off mid-Encrypt still counts."
+        ]
+      }
+    ],
+    "glassjaw": [
+      {
+        "subject": "Ransom market",
+        "body": [
+          "TOLLGATE's ransoms are crowding our market. Break {count} of their Encryptors before they land a single Encrypt.",
+          "One you cut off mid-Encrypt still counts."
         ]
       }
     ]
@@ -1050,6 +1428,42 @@ export default {
           "No rest room, no Defrag Bay. Jack out and the next visit starts again. No hurry."
         ]
       }
+    ],
+    "kestrel": [
+      {
+        "subject": "Inspection: {server}",
+        "body": [
+          "Inspect {server} in one visit: every room but the Core, nothing left running in any room you stand in.",
+          "No rest room, no Defrag Bay. Jack out and the next visit starts again."
+        ]
+      }
+    ],
+    "lantern": [
+      {
+        "subject": "Quiet: {server}",
+        "body": [
+          "Zero. Zero. Walk {server} in one visit: every room but the Core, nothing left running in any room you stand in.",
+          "No rest room, no Defrag Bay. Jack out and the next visit starts again."
+        ]
+      }
+    ],
+    "nullchoir": [
+      {
+        "subject": "Tiptoe: {server}",
+        "body": [
+          "Walk {server} in one visit: every room but the Core, nothing left running in any room you stand in.",
+          "No rest room, no Defrag Bay. Jack out and you start again. We'll be watching."
+        ]
+      }
+    ],
+    "glassjaw": [
+      {
+        "subject": "A clean walk: {server}",
+        "body": [
+          "A buyer wants proof {server} can be walked without waking it: every room but the Core, in one visit, nothing left running in any room you stand in.",
+          "No rest room, no Defrag Bay. Jack out and the next visit starts again."
+        ]
+      }
     ]
   },
   "exfil": {
@@ -1059,6 +1473,42 @@ export default {
         "body": [
           "Exfils are smuggling client archives off the rogue servers. Catch one and break its Uplink before the upload lands.",
           "Any rogue server. They don't turn up every run. The job keeps."
+        ]
+      }
+    ],
+    "kestrel": [
+      {
+        "subject": "Unpaid freight",
+        "body": [
+          "Exfils are hauling data off the rogue servers over our backbone, and nobody pays for the bandwidth. Catch one and break its Uplink before the upload lands.",
+          "Any rogue server. The job keeps."
+        ]
+      }
+    ],
+    "lantern": [
+      {
+        "subject": "Listing 641",
+        "body": [
+          "Six. Four. One. Exfils are carrying Annick Life's claim files to the Sink. Catch one and break its Uplink before the upload lands.",
+          "Any rogue server. The job keeps."
+        ]
+      }
+    ],
+    "nullchoir": [
+      {
+        "subject": "Thieves",
+        "body": [
+          "Exfils carry data to the Sink so GLASSJAW can sell it twice. Catch one and break its Uplink before the upload lands.",
+          "Any rogue server. The job keeps."
+        ]
+      }
+    ],
+    "glassjaw": [
+      {
+        "subject": "Competition",
+        "body": [
+          "Exfils are carrying data to the Sink for somebody else's auction. Catch one and break its Uplink before the upload lands.",
+          "Any rogue server. The job keeps."
         ]
       }
     ]
@@ -1072,6 +1522,42 @@ export default {
           "Bank it from a visit the Tracker never reaches you. If it does, the file is flagged: it goes back, and you try again."
         ]
       }
+    ],
+    "kestrel": [
+      {
+        "subject": "Past the Tracker: {server}",
+        "body": [
+          "{Label} is held in the vault on {server}, as {file}. A Tracker patrols the way there.",
+          "Bank it from a visit the Tracker never reaches you. If it does, the file is flagged and goes back, and you try again."
+        ]
+      }
+    ],
+    "lantern": [
+      {
+        "subject": "Past the Tracker: {server}",
+        "body": [
+          "Two. Eight. {Label} sits in the vault on {server}, as {file}. A Tracker walks the way there.",
+          "Bank it from a visit the Tracker never reaches you. If it does, the file is flagged and goes back, and you try again."
+        ]
+      }
+    ],
+    "nullchoir": [
+      {
+        "subject": "Past the Tracker: {server}",
+        "body": [
+          "{Label} sits in the vault on {server}, as {file}. A Tracker walks the way there, very proud of itself.",
+          "Bank it from a visit the Tracker never reaches you. If it does, the file is flagged and goes back, and you try again."
+        ]
+      }
+    ],
+    "glassjaw": [
+      {
+        "subject": "Past the Tracker: {server}",
+        "body": [
+          "{Label} sits in the vault on {server}, as {file}. A Tracker walks the way there, and our buyer wants the file unflagged.",
+          "Bank it from a visit the Tracker never reaches you. If it does, the file is flagged and goes back, and you try again."
+        ]
+      }
     ]
   },
   "grind": {
@@ -1080,6 +1566,38 @@ export default {
         "subject": "Cull order: {virus}",
         "body": [
           "Our clients are drowning in {virus}. Neutralize {count} of them at your level, wherever they turn up."
+        ]
+      }
+    ],
+    "kestrel": [
+      {
+        "subject": "Pest control: {virus}",
+        "body": [
+          "Three floors of our racks are full of {virus}. Remove {count} of them at your level, wherever they turn up."
+        ]
+      }
+    ],
+    "lantern": [
+      {
+        "subject": "Count: {virus}",
+        "body": [
+          "Five. Five. End {count} {virus} processes at your level, wherever they turn up. Each one holds a trade it can't finish."
+        ]
+      }
+    ],
+    "nullchoir": [
+      {
+        "subject": "Thinning: {virus}",
+        "body": [
+          "Everyone's dead and the {virus} processes are still collecting. Kill {count} of them at your level, wherever they turn up."
+        ]
+      }
+    ],
+    "glassjaw": [
+      {
+        "subject": "Oversupply: {virus}",
+        "body": [
+          "There is too much {virus} on the net, and it drags our prices down. Kill {count} of them at your level, wherever they turn up."
         ]
       }
     ]
@@ -1092,6 +1610,38 @@ export default {
           "Clients keep finding their stores locked behind puzzle boards. Win {boards}, on any server."
         ]
       }
+    ],
+    "kestrel": [
+      {
+        "subject": "Jammed doors",
+        "body": [
+          "The crews leave puzzle boards on the doors of our buildings. Win {boards}, on any server."
+        ]
+      }
+    ],
+    "lantern": [
+      {
+        "subject": "Listing 900",
+        "body": [
+          "Nine. Zero. Zero. The crews lock settled trades behind puzzle boards. Win {boards}, on any server."
+        ]
+      }
+    ],
+    "nullchoir": [
+      {
+        "subject": "Puzzles",
+        "body": [
+          "The crews leave puzzle boards on doors, as if anyone were coming back. Win {boards}, on any server."
+        ]
+      }
+    ],
+    "glassjaw": [
+      {
+        "subject": "Locked stock",
+        "body": [
+          "Some of our stock sits behind puzzle boards. Win {boards}, on any server."
+        ]
+      }
     ]
   },
   "decode": {
@@ -1100,6 +1650,38 @@ export default {
         "subject": "Know the enemy",
         "body": [
           "Actuarial wants to know what it insures against. Decode {count} virus parts in your fights."
+        ]
+      }
+    ],
+    "kestrel": [
+      {
+        "subject": "Know your tenants",
+        "body": [
+          "We like to know what runs on our hardware. Decode {count} virus parts in your fights."
+        ]
+      }
+    ],
+    "lantern": [
+      {
+        "subject": "Listing 117",
+        "body": [
+          "One. One. Seven. A crew's code says which trades it broke. Decode {count} virus parts in your fights."
+        ]
+      }
+    ],
+    "nullchoir": [
+      {
+        "subject": "Show us how it works",
+        "body": [
+          "We collect the crews' code to see where it breaks. Decode {count} virus parts in your fights."
+        ]
+      }
+    ],
+    "glassjaw": [
+      {
+        "subject": "Samples",
+        "body": [
+          "A buyer wants annotated virus code. Decode {count} virus parts in your fights."
         ]
       }
     ]
@@ -1112,6 +1694,38 @@ export default {
           "Our adjusters need the logs read. Sweep {logs} and name what happened."
         ]
       }
+    ],
+    "kestrel": [
+      {
+        "subject": "Damage report",
+        "body": [
+          "A crew hit one of our floors. Sweep {logs} and name what happened, so we know whom to bill."
+        ]
+      }
+    ],
+    "lantern": [
+      {
+        "subject": "Listing 455",
+        "body": [
+          "Four. Five. Five. Every log names a trade. Sweep {logs} and name what happened."
+        ]
+      }
+    ],
+    "nullchoir": [
+      {
+        "subject": "Obituaries",
+        "body": [
+          "Nobody reads the logs but us. Sweep {logs} and name what happened."
+        ]
+      }
+    ],
+    "glassjaw": [
+      {
+        "subject": "Incident reports",
+        "body": [
+          "Logs sell. Sweep {logs} and name what happened, and we will find the buyer."
+        ]
+      }
     ]
   },
   "interrupt": {
@@ -1120,6 +1734,38 @@ export default {
         "subject": "Live response",
         "body": [
           "We pay for incidents that never happen. Answer {count} attacks before they land."
+        ]
+      }
+    ],
+    "kestrel": [
+      {
+        "subject": "Wear and tear",
+        "body": [
+          "Every attack that lands scorches a rack. Answer {count} attacks before they land."
+        ]
+      }
+    ],
+    "lantern": [
+      {
+        "subject": "Listing 733",
+        "body": [
+          "Seven. Three. Three. An attack that lands mid-settlement makes a new orphan. Answer {count} attacks before they land."
+        ]
+      }
+    ],
+    "nullchoir": [
+      {
+        "subject": "Spoilers",
+        "body": [
+          "Every attack that lands makes one more orphan for Halcyon to bill. Answer {count} attacks before they land."
+        ]
+      }
+    ],
+    "glassjaw": [
+      {
+        "subject": "Goods in transit",
+        "body": [
+          "An attack that lands spoils whatever was in transit. Answer {count} attacks before they land."
         ]
       }
     ]
@@ -1132,6 +1778,38 @@ export default {
           "Halcyon wants more of {server}. Take it to Root {root}."
         ]
       }
+    ],
+    "kestrel": [
+      {
+        "subject": "Deeper lease: {server}",
+        "body": [
+          "You hold {server}, on our hardware. Take it to Root {root} and we will extend your lease."
+        ]
+      }
+    ],
+    "lantern": [
+      {
+        "subject": "Deeper: {server}",
+        "body": [
+          "Eight. One. Take {server} to Root {root}. Our beacon reaches further from deeper in."
+        ]
+      }
+    ],
+    "nullchoir": [
+      {
+        "subject": "Deeper: {server}",
+        "body": [
+          "Take {server} to Root {root}. We want to see what's under it."
+        ]
+      }
+    ],
+    "glassjaw": [
+      {
+        "subject": "Deeper: {server}",
+        "body": [
+          "A buyer wants what sits deep in {server}. Take it to Root {root}."
+        ]
+      }
     ]
   },
   "hold": {
@@ -1142,12 +1820,45 @@ export default {
           "The crews hit back at anyone who works for us. Stop the next invasion that comes for your server."
         ]
       }
+    ],
+    "kestrel": [
+      {
+        "subject": "Tenancy dispute",
+        "body": [
+          "The crews hit back at anyone who rents from us. Stop the next invasion that comes for your server."
+        ]
+      }
+    ],
+    "lantern": [
+      {
+        "subject": "Listing 600",
+        "body": [
+          "Six. Zero. Zero. The crews come for anyone who carries our beacon. Stop the next invasion that comes for your server."
+        ]
+      }
+    ],
+    "nullchoir": [
+      {
+        "subject": "Company",
+        "body": [
+          "The crews hate anyone who sings with us. Stop the next invasion that comes for your server."
+        ]
+      }
+    ],
+    "glassjaw": [
+      {
+        "subject": "Protect the asset",
+        "body": [
+          "The crews have noticed who you sell to. Stop the next invasion that comes for your server."
+        ]
+      }
     ]
   },
   "installs": [
     {
       "file": "canary.ko",
-      "label": "a Halcyon canary"
+      "label": "a Halcyon canary",
+      "by": "halcyon"
     },
     {
       "file": "tap.so",
@@ -1159,7 +1870,28 @@ export default {
     },
     {
       "file": "beacon.bin",
-      "label": "a claims beacon"
+      "label": "a claims beacon",
+      "by": "halcyon"
+    },
+    {
+      "file": "meter.ko",
+      "label": "a rack meter",
+      "by": "kestrel"
+    },
+    {
+      "file": "lamp.bin",
+      "label": "a LANTERN beacon",
+      "by": "lantern"
+    },
+    {
+      "file": "rollback.sh",
+      "label": "a rollback script",
+      "by": "nullchoir"
+    },
+    {
+      "file": "mirror.so",
+      "label": "a mirror tap",
+      "by": "glassjaw"
     }
   ],
   "files": [

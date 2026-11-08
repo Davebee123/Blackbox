@@ -2003,7 +2003,7 @@ minutes after you take it.
 
 | Room contract | Done when | From | Pays |
 |---|---|---:|---|
-| Install | Carry Halcyon's item (a canary, a logging tap, a patch script) to a named room on a traced server (*at C2 on MERIDIAN-MX-14*) and `install` it there. It rides in your pack on that server; lose your Signal with it and the contract **fails** | 5 | 55 + 9L, +7, a protocol one time in three |
+| Install | Carry the giver's item (a tap, a patch script, or its own: a canary, a rack meter) to a named room on a traced server (*at C2 on MERIDIAN-MX-14*) and `install` it there. It rides in your pack on that server; lose your Signal with it and the contract **fails** | 5 | 55 + 9L, +7, a protocol one time in three |
 | Break Encryptors | Break N Encryptors (3, 4 from 20) before they land an Encrypt | 4 | 40 + 7L, +6 |
 | Catch an Exfil | Recover an Exfil's archive, on any rogue server | 6 | 45 + 7L, +6 |
 | Map without resting | One visit to a named small or medium server: stand in every room but the Core with nothing live in it, and never rest | 8 | 70 + 11L (×1.3 medium), +8, a protocol |
@@ -2019,8 +2019,8 @@ hour. Up to ten offers sit on it; a new one arrives every 1 to 3 minutes, and an
 is drawn from what your level opens. You hold six at a time (`mail accept <n>`, `mail drop <n>`). Pay at your level L:
 kill 30 + 5L credits, strain and named process 40 + 6L, materials, rooms and the activity kinds 35 + 6L, recovery 50 +
 8L, map and takeover 60 + 10L, plus XP and +5 rep with whoever posted it (+6 recovery, +7 map, +8 takeover). One
-engine, five givers: every faction posts every kind your level opens at the same odds (room contracts too), and aims its
-takeovers at its rivals' servers. A fifth of offers come off the books from GLASSJAW: 2.5× the credits, 1.5× the XP and
+engine, five givers: every faction posts every kind your level opens at the same odds (room contracts too), each in its own
+words, and aims its takeovers at its rivals' servers. A fifth of offers come off the books from GLASSJAW: 2.5× the credits, 1.5× the XP and
 a protocol, Tuned or better. Once the hubs are up, about half the rest is Kestrel's, LANTERN's or NULL CHOIR's, at 20%
 more credits. Each hub's **Work** shows its own.
 Delivered contracts move to **Completed**, greyed, newest first.
