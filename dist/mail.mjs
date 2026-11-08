@@ -337,7 +337,7 @@ export function offer(s, at = now()) {
     j = { type, ...ACTIVITY[type].job(s, L, { rootAt, logs }), reward: { credits: pay(35, 6), ...repFor(5) } };
   } else {
     const f = pick(s, T.files?.length ? T.files : [{ file: 'policy.db', label: 'a stolen policy database', line: 'binary: policy records.' }]);
-    j = { type, ...target, file: f.file, label: f.label, text: [f.line, off ? 'GLASSJAW wants it. Halcyon wants it more.' : 'pull it and bank it, then deliver it from Mail.'],
+    j = { type, ...target, file: f.file, label: f.label, text: [f.line, off ? 'GLASSJAW has a buyer waiting.' : 'pull it and bank it, then deliver it from Mail.'],
       reward: { credits: pay(50, 8), ...repFor(6) } };
   }
   // Its XP, fixed now (its kind and size at this level). GLASSJAW's premium: more XP, and a protocol on delivery.
