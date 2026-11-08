@@ -2,7 +2,7 @@
 
 **Status.** 1–4, 7, 8 and 10 built lean (GAME_RULES *Commission*, *Contracts*, *Factions*). Not yet: floor 5's Commission buttons
 (its transmissions aren't built), wick's letter at INIT's fall and the ACTUARY line (not built), per-faction board text,
-and 5. 7–10 added after the designer's first look: 7, 8 and 10 decided, 9's numbers to confirm. One session (it changes the economy and the factions; nothing else on
+and 5. 7–10 added after the designer's first look: 7, 8 and 10 decided; 9's numbers confirmed, its pieces to pick. One session (it changes the economy and the factions; nothing else on
 those systems runs beside it). The shops (docs/economy.md *Shops*) follow it, since their yellows open by rep.
 
 **The loop:** pick a patron, take anyone's work, stamp receipts. Starsector's model: work for anyone, hold one
@@ -94,7 +94,7 @@ card (*Kestrel: KDC-04 under attack · Defend*).
 - Lean build: the call card, the invader at the faction server's wall (the invasion engine aimed at a server you don't
   own), the rule, a unit test, GAME_RULES *Events* and *Factions*.
 
-## 9. Faction sets (numbers to confirm)
+## 9. Faction sets (numbers confirmed)
 
 One piece is too quick a chase: at 3 receipts a part, stamping one faction finishes its piece in 9 takeovers, about a
 floor and a half. A rep gate can't slow it: a stamp's +10 reaches Trusted in a few stamps, contracts faster still.
