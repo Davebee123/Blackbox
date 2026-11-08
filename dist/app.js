@@ -123,7 +123,8 @@ let archView = null; // archetype shown on the Loadout page (defaults to the equ
 let tk = null; // the Toolkit while it's open: { arch, pick: { id, from } } (skills-view.mjs toolkitMarkup)
 let tkDrag = null; // what's being dragged in it: { id, from: a key's index or null, dropped }
 let loadoutTab = 'protocols'; // Loadout page: 'protocols' or 'skills' (skills and talents)
-let systemTab = 'settings'; // Settings page (nav id 'system'): a view.mjs SYSTEM_TABS key, or 'dev' with ?dev
+let systemTab = 'settings'; // Settings page (nav id 'system'): 'settings', or 'dev' with ?dev
+let rigTab = 'achievements'; // Rig page: a view.mjs RIG_TABS key
 let achUi = { cat: 'summary', focus: null }; // the Achievements page (achievements-view.mjs): the category shown, an achievement to light
 let caseUi = { slot: 0, pslot: 0 }; // System → Casing (casing-view.mjs): the sticker slot and the desk's spot picked
 const pd = { id: null, anchor: null, el: null, scrim: null, sheet: false, html: '', mine: false, timer: 0 }; // the Loadout's item datasheet popover (pdShow)
@@ -1336,8 +1337,8 @@ function noticeCard(html) {
 }
 
 // ---------- commands ----------
-const NAV = ['map', 'combat', 'net', 'server', 'loadout', 'daemons', 'codex', 'system', 'campaign', 'room', 'archive'];
-const ALIAS = { vault: 'loadout', gear: 'loadout', protocols: 'loadout', stash: 'loadout', inventory: 'loadout', services: 'server', ports: 'server', wall: 'server', talents: 'loadout', skills: 'loadout', archetypes: 'loadout', home: 'map', trace: 'map', leads: 'map', logs: 'system', settings: 'system', bestiary: 'codex', fight: 'combat', run: 'net' };
+const NAV = ['map', 'combat', 'net', 'server', 'loadout', 'daemons', 'codex', 'rig', 'system', 'campaign', 'room', 'archive'];
+const ALIAS = { vault: 'loadout', gear: 'loadout', protocols: 'loadout', stash: 'loadout', inventory: 'loadout', services: 'server', ports: 'server', wall: 'server', talents: 'loadout', skills: 'loadout', archetypes: 'loadout', home: 'map', trace: 'map', leads: 'map', logs: 'system', settings: 'system', achievements: 'rig', casing: 'rig', terminal: 'rig', bestiary: 'codex', fight: 'combat', run: 'net' };
 
 function run(raw) {
   let text = raw.trim().toLowerCase().replace(/\s+/g, ' ');
@@ -1413,7 +1414,7 @@ function run(raw) {
   const page = ALIAS[text] || text;
   // Daemons live on the Loadout page now (a tab beside Protocols).
   if (page === 'daemons' && !(fighting && ABILITIES[text])) { loadoutTab = 'daemons'; return go('loadout'); }
-  if (NAV.includes(page) && !(fighting && ABILITIES[text])) { if (page === 'loadout') loadoutTab = text === 'talents' || text === 'skills' ? 'skills' : 'protocols'; if (page === 'system') systemTab = text === 'logs' && DEV ? 'dev' : 'settings'; return go(page); }
+  if (NAV.includes(page) && !(fighting && ABILITIES[text])) { if (page === 'loadout') loadoutTab = text === 'talents' || text === 'skills' ? 'skills' : 'protocols'; if (page === 'system') systemTab = text === 'logs' && DEV ? 'dev' : 'settings'; if (page === 'rig') rigTab = ['casing', 'terminal'].includes(text) ? text : 'achievements'; return go(page); }
   if (text === 'achievements') return goTo('achieve'); // the page; achieve pin <name> and the rest go to the engine
   if (text === 'shell' || text.startsWith('shell ')) return shellCommand(text.slice(6).trim());
   if (text === 'terminal preview' || text.startsWith('terminal preview ')) return bootPreview(text.slice(17).trim()); // the rest of terminal … is the engine's (terminal.mjs)
@@ -2148,7 +2149,7 @@ function render(force = false) {
       $('term').scrollTop = $('term').scrollHeight;
     }
   } else {
-    const pages = { rooms: (x) => roomsMarkup(x), campaign: (x) => campaignMarkup(x), room: (x) => roomMarkup(x), archive: (x) => archiveMarkup(x), breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => (hubSel === POST.id ? postTerminalMarkup(x, hubLines, hubWin, Date.now()) : V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now())), server: (x) => V.serverMarkup(x, Date.now(), srvUi), daemons: V.daemonsMarkup, codex: (x) => (codexTab === 'log' ? collectionPageMarkup(x, logSel, codexIdx, codexShut, logFind, logJr) : codexPageMarkup(x, codexSel, codexIdx, codexShut)), system: (x) => V.systemMarkup(x, { coop: !!coop, dev: DEV, tab: systemTab, ach: achUi, cs: caseUi }) };
+    const pages = { rooms: (x) => roomsMarkup(x), campaign: (x) => campaignMarkup(x), room: (x) => roomMarkup(x), archive: (x) => archiveMarkup(x), breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => (hubSel === POST.id ? postTerminalMarkup(x, hubLines, hubWin, Date.now()) : V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now())), server: (x) => V.serverMarkup(x, Date.now(), srvUi), daemons: V.daemonsMarkup, codex: (x) => (codexTab === 'log' ? collectionPageMarkup(x, logSel, codexIdx, codexShut, logFind, logJr) : codexPageMarkup(x, codexSel, codexIdx, codexShut)), system: (x) => V.systemMarkup(x, { coop: !!coop, dev: DEV, tab: systemTab }), rig: (x) => V.rigMarkup(x, { tab: rigTab, ach: achUi, cs: caseUi }) };
     // A page that throws shows what broke (and a way back) instead of stopping every render after it.
     const keep = module === 'breach' ? $('bx-scroll')?.scrollTop : null;
     const focusRoom = module === 'rooms' ? document.activeElement?.closest?.('.fp-room')?.dataset.room : null; // a redraw keeps a focused room focused
@@ -2852,8 +2853,10 @@ document.addEventListener('click', (e) => {
   if (e.target.closest('[data-leads]')) { leadsOpen = !leadsOpen; dirty = true; return; }
   const lt = e.target.closest('[data-ltab]');
   if (lt) { loadoutTab = lt.dataset.ltab; feel.add('channel', null); dirty = true; return; }
-  const st = e.target.closest('[data-stab]'); // the Settings page's tabs (view.mjs SYSTEM_TABS)
-  if (st) { systemTab = st.dataset.stab; achUi.focus = null; feel.add('channel', null); dirty = true; return; }
+  const st = e.target.closest('[data-stab]'); // the Settings page's tabs (Settings, and Dev with ?dev)
+  if (st) { systemTab = st.dataset.stab; feel.add('channel', null); dirty = true; return; }
+  const rt = e.target.closest('[data-rtab]'); // the Rig page's tabs (view.mjs RIG_TABS)
+  if (rt) { rigTab = rt.dataset.rtab; achUi.focus = null; feel.add('channel', null); dirty = true; return; }
   const ac = e.target.closest('[data-ach-cat]'); // a category on the Achievements page
   if (ac) { achUi = { cat: ac.dataset.achCat, focus: null }; dirty = true; return; }
   const csl = e.target.closest('[data-cs-slot]'); // a sticker slot on System → Casing
@@ -3235,12 +3238,12 @@ function goTo(target) {
   else if (where === 'jack') run('jack in');
   else if (where === 'profile') { setComms(false); openProfile(what || null); pf.tab = 'title'; profileUi(); } // a title just earned: your card, on its titles
   else if (where === 'log') { setComms(false); codexTab = 'log'; if (what && sub) logSel = `${what}:${sub}`; codexIdx = false; go('codex'); dirty = true; } // the collection log (a pager line): on its entry
-  else if (where === 'achieve') { // an achievement (a pager line, a chip on your card): System → Achievements, on its category, lit
+  else if (where === 'achieve') { // an achievement (a pager line, a chip on your card): Rig → Achievements, on its category, lit
     setComms(false);
     if (profileOn) { profileOn = null; profileUi(); }
     const a = what && achById(what);
-    systemTab = 'achievements'; achUi = { cat: a ? a.cat : 'summary', focus: a ? a.id : null };
-    go('system'); dirty = true;
+    rigTab = 'achievements'; achUi = { cat: a ? a.cat : 'summary', focus: a ? a.id : null };
+    go('rig'); dirty = true;
     if (a) setTimeout(() => document.querySelector(`[data-ach="${CSS.escape(a.id)}"]`)?.scrollIntoView({ block: 'center' }), 80);
   }
 }

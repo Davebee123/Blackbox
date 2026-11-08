@@ -198,12 +198,12 @@ comment saying what it does.
 | `dist/codex.mjs`, `dist/codex-view.mjs`, `dist/codex.css` | The Codex: every virus you can meet, and what you know of it. |
 | `dist/collection.mjs`, `dist/collection-log.mjs`, `dist/collection-view.mjs` | The collection log: its slots and save, the log built from the Codex, and the Codex's Collection tab (the Ledger). |
 | `dist/journals.mjs`, `dist/journals-view.mjs`, `dist/content/journals.mjs` | Journals: the 51 entries, the vault's find and its save, the Ledger's Journals entry and the first find's card. |
-| `dist/achievements.mjs`, `dist/achievements-view.mjs`, `dist/achievements.css` | Achievements and their cosmetic rewards. |
+| `dist/achievements.mjs`, `dist/achievements-view.mjs`, `dist/achievements.css` | Achievements and their cosmetic rewards; the **Rig** page (Achievements, Casing, Terminal; `rigMarkup` in view.mjs). |
 | `dist/profile.mjs`, `dist/profile-view.mjs` | Your profile card (`finger`), and #net's markup. |
 | `dist/channel.mjs`, `dist/presence.mjs` | #net, the public channel; who's online and your friends. |
 | `dist/comms.mjs`, `dist/pager.mjs`, `dist/pager-view.mjs`, `dist/pager.css` | The pager: world events as entries, which ones ask something of you, and the tray. |
 | `dist/casing.mjs`, `dist/casing-view.mjs`, `dist/casing.css` | Casing cosmetics: the monitor's colourway, plate, stickers and desk. |
-| `dist/terminal.mjs`, `dist/terminal-view.mjs`, `dist/terminal.css`, `dist/boots.mjs` | Terminal cosmetics on Settings → **Terminal**: boot looks (POST, Corrupted…), prompts, cursors. |
+| `dist/terminal.mjs`, `dist/terminal-view.mjs`, `dist/terminal.css`, `dist/boots.mjs` | Terminal cosmetics on Rig → **Terminal**: boot looks (POST, Corrupted…), prompts, cursors. |
 | `dist/recap.mjs` | The death recap on the Disconnected card. |
 | `dist/uiscale.mjs` | UI scale: the whole screen drawn larger or smaller. |
 

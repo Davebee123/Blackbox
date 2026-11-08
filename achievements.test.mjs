@@ -12,7 +12,7 @@ import { PIECES } from './dist/faction-gear.mjs';
 import { titles, myProfile, stickersOf, tickProfile, fingerOf, stickerById, REWARD_BANNERS, setBanner } from './dist/profile.mjs';
 import { achievements, CATEGORIES, POINTS, achOf, earned, tickAchievements, fightOver, achievementsRestore, pointsOf, totalPoints, shownAchievements, achById, bannersOf } from './dist/achievements.mjs';
 import { achievementsMarkup, achRow } from './dist/achievements-view.mjs';
-import { systemMarkup } from './dist/view.mjs';
+import { systemMarkup, rigMarkup } from './dist/view.mjs';
 import { profileMarkup } from './dist/profile-view.mjs';
 import { logComms } from './dist/comms.mjs';
 import { tickChannel, channelOf } from './dist/channel.mjs';
@@ -283,11 +283,11 @@ test('the page: categories with totals, earned with a date, progress in amber, h
   assert.match(achievementsMarkup(s, {}), /<h2>Achievements<\/h2>/, 'the summary');
   assert.match(achRow(s, achById('c-relayking'), 'c-relayking'), /ach-row got focus/, 'the one a pager line opened is lit');
   // On the System page, a tab beside Settings.
-  assert.match(systemMarkup(s), /data-stab="achievements"/);
-  assert.match(systemMarkup(s, { tab: 'achievements', ach: { cat: 'feat' } }), /<h2>Feats<\/h2>/);
+  assert.match(rigMarkup(s), /data-rtab="achievements"/);
+  assert.match(rigMarkup(s, { tab: 'achievements', ach: { cat: 'feat' } }), /<h2>Feats<\/h2>/);
   // A view never writes the save.
   const t = me(), snap = JSON.stringify(t);
-  achievementsMarkup(t, { cat: 'class' }); systemMarkup(t, { tab: 'achievements' });
+  achievementsMarkup(t, { cat: 'class' }); rigMarkup(t, { tab: 'achievements' });
   assert.equal(JSON.stringify(t), snap);
 });
 

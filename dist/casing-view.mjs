@@ -1,5 +1,5 @@
-// System → Casing (casing.mjs): the colourway, the plate, the stickers on the chin and the props on the desk; and
-// System → Settings' Window card (the district outside). Pure functions of state.
+// Rig → Casing (casing.mjs): the colourway, the plate, the stickers on the chin, the props on the desk and the
+// district out the window. Pure functions of state.
 //   ui: { slot: the sticker slot picked, 0–3; pslot: the desk's spot picked, 0–1 }
 import { glyph } from './glyphs.mjs';
 import { COLORWAYS, COLORWAY_IDS, CASING, colorwayOpen, colorwayFrom, casingLook, decalsOwned, decalMarkup, districtOf, districtOpen, districtFrom, PROPS, PROP_IDS, PROP_SLOTS, propOpen, propFrom, propsLook, propsOwned, propSvg } from './casing.mjs';
@@ -28,19 +28,20 @@ export function casingPageMarkup(s, ui = {}) {
   const owned = decalsOwned(s);
   const chips = owned.map((x) => `<button type="button" class="cs-decal" data-run="casing sticker ${slot + 1} ${esc(x.id)}" aria-pressed="${look.decals[slot]?.id === x.id}" title="${esc(`${x.tip}. On slot ${slot + 1}.`)}">${decalMarkup(x, slot)}</button>`).join('');
   return `<div class="cs-page">
-    <section class="card cs-card"><h2>Colourway</h2>${off ? `<p class="cs-note">${esc('Casing off. System → Settings turns it on.')}</p>` : ''}<div class="cs-swatches">${sw}</div></section>
-    <section class="card cs-card" data-case="${cur}"><h2>Nameplate</h2><span class="cs-plate" title="The plate on the chin">${esc(look.plate)}</span>
+    <section class="card cs-card"><h2>Colourway</h2>${off ? `<p class="cs-note">${esc('Casing off. Settings turns it on.')}</p>` : ''}<div class="cs-swatches">${sw}</div></section>
+    <div class="cs-stack"><section class="card cs-card" data-case="${cur}"><h2>Nameplate</h2><span class="cs-plate" title="The plate on the chin">${esc(look.plate)}</span>
       <div class="cs-plates">${plates}</div>
       <form class="cs-own" data-cs-plate><input id="cs-plate-in" maxlength="${CASING.plate}" value="${esc(C.plate?.text || '')}" placeholder="Your own, ${CASING.plate} characters" spellcheck="false" autocomplete="off" aria-label="Your own plate"><button type="submit" class="btn small primary">Use</button></form></section>
     <section class="card cs-card" data-case="${cur}"><h2>Stickers</h2>
       <div class="cs-bezel" aria-label="The chin">${slots(0)}${slots(1)}<span class="cs-mini" aria-hidden="true">${esc(look.plate)}</span>${slots(2)}${slots(3)}</div>
       <div class="cs-row"><span>Yours · ${owned.length}</span>${look.decals[slot] ? `<button type="button" class="act dim ach-pin" data-run="casing sticker ${slot + 1} off">Remove</button>` : ''}</div>
-      ${owned.length ? `<div class="cs-decals">${chips}</div>` : `<p class="cs-note">${esc('None yet. Achievements bring them.')}</p>`}</section>
+      ${owned.length ? `<div class="cs-decals">${chips}</div>` : `<p class="cs-note">${esc('None yet. Achievements bring them.')}</p>`}</section></div>
     ${deskCardMarkup(s, ui)}
+    ${districtCardMarkup(s)}
   </div>`;
 }
 
-// ---------- the window's district (System → Settings) and the desk's props (System → Casing) ----------
+// ---------- the window's district and the desk's props (Rig → Casing) ----------
 // A district in miniature: its skyline in a few shapes, the same warm lights (the picker, the achievements page).
 const D = '#0b0709', L = (x, y, w = 1, h = 1, o = 0.75, c = '#f1b92f') => `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${c}" opacity="${o}"/>`;
 const R = (x, y, w, h, c = D) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${c}"/>`;
@@ -63,7 +64,7 @@ const MINI = {
 export const districtMini = (id) => `<svg class="cs-mini-d" viewBox="0 0 64 24" width="64" height="24" aria-hidden="true" preserveAspectRatio="xMidYMax slice">${MINI[id] || MINI.sprawl}</svg>`;
 const comes = (a, open) => (a ? ` Comes with ${a.hidden && !open ? 'a hidden achievement' : a.name}.` : '');
 
-// System → Settings → Window: the districts, yours to pick, the rest dim with the achievement that brings each.
+// Rig → Casing → Window: the districts, yours to pick, the rest dim with the achievement that brings each.
 export function districtCardMarkup(s) {
   const cur = districtOf(s), off = s.settings?.window === false || s.settings?.casing === false || s.settings?.shell === 'plain';
   const items = DISTRICT_IDS.map((id) => {
@@ -75,7 +76,7 @@ export function districtCardMarkup(s) {
   return `<section class="card cs-card cs-dists-card"><h2>Window</h2><p class="cs-note">${esc(off ? 'The window is off. Casing and Window on show it, beside the monitor on screens 1700px wide and more.' : 'Out the window beside the monitor, on screens 1700px wide and more.')}</p><div class="cs-dists">${items}</div></section>`;
 }
 
-// System → Casing → Desk: the two spots (the picked one lit), then the props, yours to put there, the rest dim.
+// Rig → Casing → Desk: the two spots (the picked one lit), then the props, yours to put there, the rest dim.
 export function deskCardMarkup(s, ui = {}) {
   const look = propsLook(s), slot = Math.max(0, Math.min(PROP_SLOTS - 1, ui.pslot || 0));
   const spot = (i) => `<button type="button" class="cs-pslot" data-cs-pslot="${i}" aria-pressed="${slot === i}" title="${esc(i ? 'The right of the desk' : 'The left of the desk')}"><small>${i ? 'Right' : 'Left'}</small>${look[i] ? propSvg(look[i].id) : '<b>+</b>'}</button>`;
