@@ -2165,6 +2165,7 @@ function render(force = false) {
   renderCrewWin(s, side);
   if (combatLike && hasFight) {
     put('hud', V.hudMarkup(s, { party: !side, preview: aimPreview }) + (F.isPhone() ? V.crewLineMarkup(s) : '')); // a phone: the crew as thin violet lines under your bar
+    phHudCards();
     flyStatuses(s);
     // A new cycle: remember where every chip was, so the board can move them instead of jumping.
     const cycleKey = s.encounter.virus.id + ':' + s.encounter.cycle;
@@ -3206,6 +3207,30 @@ function phMenuMarkup() {
   const unread = (campaign.mail?.list || []).filter((m) => !m.read).length;
   const row = (attrs, icon, label) => `<button type="button" class="ph-row" ${attrs}>${icon}<span>${label}</span></button>`;
   return `<nav class="ph-tabs ph-in-sheet" aria-label="Pages">${PH.tabBarMarkup(campaign, { module, camp: CAMP, active: active(campaign), counts: { mail: unread } })}</nav><nav class="ph-more-list">${row('data-phone="comms"', PGV.lampMarkup(campaign).replace(/^<button[^>]*>|<\/button>$/g, ''), 'Pager')}${row('data-phone="prompt"', '<span class="ph-gt" aria-hidden="true">&gt;_</span>', 'Command line')}</nav>`;
+}
+// The phone's one-line HUD (the designer's pick C) shows two bars and their numbers; the rest sits in each bar's card,
+// a tap away: the virus's name, level, family, writer, rules and tags; your statuses, gear and leaning. Read off the
+// HUD's own markup (hidden on a phone), so the cards say what the desktop's HUD says. Never on a desktop.
+function phHudCards() {
+  const en = document.querySelector('#hud .hud-bar.enemy'), me = document.querySelector('#hud .hud-bar.mine');
+  if (!en || !me) return;
+  if (!F.isPhone()) { for (const b of [en, me]) { delete b.dataset.tt; delete b.dataset.ttKind; } return; }
+  const txt = (el) => el?.textContent.replace(/\s+/g, ' ').trim() || '';
+  const tip = (el) => el.getAttribute('title') || el.dataset.tt || el.dataset.tip || '';
+  const kindOf = (el) => tip(el).split('\n')[0].replace(/^[^:]*: ?/, ''); // "Surge: Attack type" → "Attack type"
+  const name = txt(en.querySelector('.vname strong')), meta = txt(en.querySelector('.vname .meta')), by = txt(en.querySelector('.vname .byline')).replace(/^·\s*/, '');
+  const hp = txt(en.querySelector('.bar-top > span:last-child')), chits = en.querySelector('.chits');
+  const armor = chits ? (chits.textContent.match(/◆/g) || []).length : 0, armorMax = chits ? (chits.textContent.match(/[◆◇]/g) || []).length : 0;
+  const cap = (w) => w.charAt(0).toUpperCase() + w.slice(1);
+  const rules = [...en.querySelectorAll('.gene-line .gchip')].map((g) => `${cap(txt(g))} (${kindOf(g).toLowerCase()})`);
+  const tags = [...en.querySelectorAll('.clock-line .tag')].map(txt).filter(Boolean);
+  en.dataset.ttKind = [meta, by && `by ${by}`].filter(Boolean).join(' · ');
+  en.dataset.tt = `${name}: Integrity ${hp}.${armorMax ? ` Armor ${armor} of ${armorMax} ◆.` : ''}${tags.length ? `\n${tags.join(' · ')}` : ''}${rules.length ? `\nRules: ${rules.join(', ')}.` : ''}`;
+  const st = [...document.querySelectorAll('#hud .hud-status .st')].map((x) => `${txt(x)} (${tip(x).split('\n')[0]})`);
+  const gear = [...document.querySelectorAll('#hud .hud-status .gfx')].map((x) => `${txt(x)}${x.classList.contains('lit') ? ' (live)' : ''}`);
+  const mine = txt(me.querySelector('.bar-top strong')) || 'Your server', mhp = txt(me.querySelector('.bar-top > span:last-child'));
+  delete me.dataset.ttKind;
+  me.dataset.tt = `${mine}: ${mhp}.${st.length ? `\nOn you: ${st.join(', ')}.` : '\nNothing on you.'}${gear.length ? `\nGear: ${gear.join(', ')}.` : ''}`;
 }
 // The key you've picked (the prompt holds it until a second tap fires it): outlined amber on a phone's tray, which
 // has no You row.

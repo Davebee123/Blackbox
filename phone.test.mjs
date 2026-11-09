@@ -111,4 +111,8 @@ test('the fight tray: the menu key and +n are tap paths; no prompt key, no #net 
   assert.match(css, /\.command-dock :is\(\.net-line, \.channel\) \{ display: none; \}/);
   assert.match(css, /body\.ph-fight #board \.brow\.byou \{ display: none; \}/); // no You row on a phone
   assert.match(app, /function phPicked\(\)/); // the picked key outlined instead
+  assert.match(css, /body\.ph-fight \.hud :is\(\.vname, \.gene-line, \.hud-status\) \{ display: none; \}/); // the one-line HUD (pick C)
+  const cards = app.slice(app.indexOf('function phHudCards('), app.indexOf('function phPicked('));
+  assert.match(cards, /if \(!F\.isPhone\(\)\) \{ for \(const b of \[en, me\]\) \{ delete b\.dataset\.tt;/); // never a card on a desktop
+  assert.match(cards, /Rules: /);
 });
