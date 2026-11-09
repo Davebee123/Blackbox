@@ -223,6 +223,18 @@ test('Screen effects off or Motion off: nothing; subtle and medium: lighter than
   assert.equal(fx.play('hold', row), false, 'no row: no effect (app.js strikes instead)');
 });
 
+test('a part whose name is out of sight (under the phone\'s dock or a toast, or off the screen) gets no effect over what covers it', () => {
+  const { fx, row } = fakePage({});
+  const dock = { id: 'command-input' };
+  globalThis.document.elementFromPoint = () => dock;
+  assert.equal(fx.play('ban', row, { ability: 'spike' }), false, 'covered: app.js strikes instead');
+  assert.ok(fx.play('firewall', null), 'your own bar is measured as it is');
+  globalThis.document.elementFromPoint = () => null;
+  assert.equal(fx.play('ban', row, { ability: 'spike' }), false, 'nothing there: off the screen');
+  globalThis.document.elementFromPoint = () => row;
+  assert.ok(fx.play('ban', row, { ability: 'spike' }), 'in sight: it plays');
+});
+
 test('the layer is hidden from screen readers and takes no input; its pieces have no background; nothing on the page moves', () => {
   const { fx, row } = fakePage({});
   assert.ok(fx.play('firewall', null) && fx.play('ban', row, { origin: 'key', ability: 'spike' }));

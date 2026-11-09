@@ -1030,6 +1030,16 @@ export function createAbilityFx(board, { canMove = () => true, level = () => 'fu
   };
   const shows = (el) => { const r = el?.getBoundingClientRect(); return !!r && r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < (globalThis.innerHeight ?? Infinity); };
   const pad = (q) => q && { l: q.l - 1, t: q.t - 1, r: q.r + 1, b: q.b + 1 };
+  // A part's name can be out of sight: under the phone's dock or a toast, or scrolled off the screen. Its effect doesn't
+  // play over whatever covers it (the plain strike stands in, under the cover with the part).
+  const inSight = (row) => {
+    const r = row.querySelector('.bname')?.getBoundingClientRect();
+    if (!r?.width) return false;
+    const x = r.left + r.width / 2, y = r.top + r.height / 2;
+    if (y < 0 || y > (globalThis.innerHeight ?? Infinity)) return false;
+    const top = globalThis.document?.elementFromPoint?.(x, y);
+    return top === undefined || !!top && (row === top || !!row.contains?.(top));
+  };
   const rowGeo = (f, row) => {
     const p = { row: local(f, row), cell: local(f, row.querySelector('.bname')), name: local(f, row.querySelector('.part-top')), bar: local(f, row.querySelector('.part-bar')) };
     if (!(p.row && p.cell && p.name && p.bar)) return null;
@@ -1101,7 +1111,7 @@ export function createAbilityFx(board, { canMove = () => true, level = () => 'fu
     const R = tierRecipe(key, tier);
     const lvl = force || levelOf({ level: level(), motion: canMove() });
     if (!R || !lvl) return null;
-    if (R.on !== 'you' && !row?.isConnected) return null;
+    if (R.on !== 'you' && (!row?.isConnected || !inSight(row))) return null;
     const geo = measure(R.on === 'you' ? null : row, { ability, key: kEl, noKey, who });
     const out = layout(R, geo, { lvl, power, crit, result, kind, origin, marks, left, cadence: cadenceOf(key) });
     return out && Object.assign(out, { geo });

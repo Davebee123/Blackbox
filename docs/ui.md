@@ -118,8 +118,9 @@ teal, violet or a threat's red.
   at 1.5× its recipe's speed (none outlasts 0.8 s), in teal (a crit gold-white, a hit on ◆ steel, a crewmate's violet),
   drawn over the part's name. It starts from its key in the tray however it was fired, or from your bar when the key
   isn't on screen; a crewmate's from their own bar. A heal or shield travels to your bar (Firewall's bricks play on your
-  bar). The damage numbers wait for it to land. It never stops over a key's label, your bar's numbers or the crew's
-  names, has no background and takes no input.
+  bar). The damage numbers wait for it to land and show at contact, the hold following (as a hit-stop does). It never
+  stops over a key's label, your bar's numbers or the crew's names, has no background and takes no input. A part
+  whose name is out of sight (under the phone's dock or a toast, or off the screen) gets the plain strike instead.
   - **The look** (the *Glyph + light*): the ASCII piece is what you throw, with afterimages in flight, white-hot where
     it hits. What it does there is light, as the telegraphs are: a flash, a shock ring along the bar, cracks, spark
     streaks, flames, ripples; a comet carries an effect to where it plays. 1s and 0s, ◇ shards and + stay characters.
