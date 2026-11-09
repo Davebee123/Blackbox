@@ -76,7 +76,6 @@ Budget: on 375 × 667 the whole fight fits with no scroll, and the board gets at
 - **Log:** its latest line as a ticker over the tray, its side's edge in teal or red; a tap opens the log in a sheet.
 - **On its side:** the phone shell, board on the left with +3, the strip, ticker and a 2 × 4 tray in a right column.
 - **Left out:** the #net line, `>_` in the tray (combat never opens the keyboard).
-- **Known bug:** at ≤900 px chips show codes, and a *cut* chip, which has none, renders blank. P2's markup fixes it.
 
 ## The other screens
 
