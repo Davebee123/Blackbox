@@ -20,7 +20,7 @@
 //           in three small beats.
 // Nothing here is in a fight yet: the ability effects playtest (?playtest=fx) plays it, and renderBoard() bounces it.
 
-export const STYLES = { a: 'Hardware', b: 'Weighty', c: 'Digital', b1: 'Cinematic', b2: 'Electric' };
+export const STYLES = { a: 'Hardware', b: 'Weighty', c: 'Digital', b1: 'Cinematic', b2: 'Electric', b3: 'Heavy', b4: 'Seismic' };
 export const KEYS = ['bash', 'ban', 'poke', 'ping'];
 // Levels (dB), so every style is heard at today's loudness: a medium hit at about −24 LUFS (momentary max), a crit
 // about 2 dB over it, a hit on ◆ near −27.5 and a miss near −29.5 (today's hit plays at about −23). level: the whole
@@ -31,6 +31,8 @@ export const TRIM = {
   b: { bash: { level: -5.5, crit: -1.5, chit: 9.7, miss: 8.5 }, ban: { level: -4.6, crit: -2.5, chit: 12.7, miss: 10 }, poke: { level: 5.5, crit: -1.5, chit: 5.4, miss: 4.5 }, ping: { level: 3.7, crit: -4.6, chit: 2.6, miss: 0 } },
   b1: { bash: { level: -0.5, crit: -2.3, chit: 2.9, miss: 4.3 }, ban: { level: 0.4, crit: -1.8, chit: 5.3, miss: 7.8 }, poke: { level: 7, crit: -1.7, chit: -1.2, miss: 4.8 }, ping: { level: 5.9, crit: -1.5, chit: -2.4, miss: 1 } },
   b2: { bash: { level: 3.2, crit: -1.9, chit: 2.4, miss: 4.3 }, ban: { level: 3.8, crit: -1.1, chit: 2.6, miss: 2.2 }, poke: { level: 13.6, crit: -2.6, chit: -3.1, miss: 8.3 }, ping: { level: 9.9, crit: -3.3, chit: -4.8, miss: -0.4 } },
+  b3: { bash: { level: -10.6, crit: -1.9, chit: 7.1, miss: 10.4 }, ban: { level: -10.9, crit: -2.3, chit: 6.4, miss: 15.8 }, poke: { level: -3.6, crit: -4.6, chit: 0.5, miss: 7.7 }, ping: { level: -6.1, crit: -4.1, chit: 1.6, miss: 2.5 } },
+  b4: { bash: { level: -11, crit: -2.3, chit: 5.8, miss: 10 }, ban: { level: -11.8, crit: -2.3, chit: 5.9, miss: 17 }, poke: { level: -6.8, crit: -2.3, chit: 2.8, miss: 10.9 }, ping: { level: -8.4, crit: -1.9, chit: 3.7, miss: 4.4 } },
   c: { bash: { level: 4.8, crit: -0.4, chit: 2.3, miss: 1 }, ban: { level: 3.3, crit: 0, chit: 4.3, miss: 2 }, poke: { level: 10.2, crit: -2.1, chit: 0.6, miss: -1 }, ping: { level: 10.4, crit: -0.7, chit: -0.9, miss: -2 } },
 };
 // Each key 1's class: the Breaker's sound is cut dead after its hit-stop (GATE s after it).
@@ -224,6 +226,14 @@ function kit(ctx, buf) {
     g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(peak, end); g.gain.exponentialRampToValueAtTime(0.0001, end + 0.015);
     o.connect(l).connect(g); o.start(t0); o.stop(end + 0.04);
   };
+  // ---- round 1c ----
+  // A boom: a sub falling, clipped so it grows harmonics (it reads on small speakers too), a triangle an octave up for body.
+  K.boom = (dest, t, { f0 = 100, f1 = 30, glide = 0.14, d = 0.35, peak = 0.7, body = 0.35 } = {}) => {
+    K.tone(K.drive(dest, 1.6, 1), t, { f0, f1, glide, a: 0.001, d, peak });
+    if (body) K.tone(dest, t, { type: 'triangle', f0: f0 * 2, f1: f1 * 2, glide, a: 0.001, d: d * 0.6, peak: peak * body });
+  };
+  // A rumble: low noise rolling on after something heavy lands.
+  K.rumble = (dest, t, { f = 140, d = 0.6, peak = 0.3, a = 0.015 } = {}) => K.hiss(dest, t, { type: 'lowpass', f0: f, f1: f * 0.45, glide: d, q: 0.9, a, d, peak, color: 'brown' });
   return K;
 }
 function rev(ctx, b) {
@@ -719,6 +729,109 @@ const SOUNDS = {
     },
   },
 };
+
+// ===== Heavy and Seismic (round 1c): round 1's Weighty with far more low end. Every layer is tuned down, a boom and
+// the sub-drop sit under every hit, the flights carry low air. L 0: Heavy, a deep slam that stops. L 1: Seismic, lower
+// still, its booms rolling on into a rumble. =====
+function heavy(L) {
+  const far = 1 + 0.8 * L, low = 1 - 0.14 * L;
+  const lo = (K, dest) => K.g(2.2, dest); // the low end leads: booms, the sub-drop and rumbles, well over the rest
+  const clang = (K, o, t, rate, g = 1) => { // on ◆: a heavy clang, a thunk under it, and it whizzes off
+    K.S(o.dry, t, 'metal-h', { gain: 0.55 * g, rate: 0.85 * rate });
+    K.S(o.dry, t + 0.003, 'metal-l', { gain: 0.45 * g, rate: 0.7 * rate * low });
+    K.boom(lo(K, o.dry), t, { f0: 110, f1: 55 * low, glide: 0.05, d: 0.09 * far, peak: 0.3 * g, body: 0.5 });
+    K.tone(o.dry, t + 0.02, { f0: 3000 * rate, f1: 1200 * rate, glide: 0.18, d: 0.18, peak: 0.04 });
+  };
+  return {
+    // A charge, low air rushing in, a reversed swell, the slam with a boom and the sub-drop under it, rubble. Stops dead.
+    bash(K, o, T) {
+      const { t, arrive, hit, stop, k, result } = T, crit = result === 'crit', miss = result === 'miss';
+      if (T.flies) {
+        K.S(o.dry, t, 'soft-h', { gain: 0.4, rate: 0.5 * low, lp: 900 });
+        K.boom(lo(K, o.dry), t, { f0: 80, f1: 45, glide: 0.05, d: 0.09, peak: 0.2 });
+        K.swoosh(o.dry, t, arrive, { lo: [60, 240], hi: [280, 1700], peak: 0.42, pass: miss, tail: 0.3 });
+        if (!miss) K.S(o.dry, 0, 'punch-h', { reverse: true, end: hit, dur: Math.max(0.06, hit - arrive), gain: crit ? 0.55 : 0.3, rate: 0.6 * low, lp: 2500 });
+      }
+      if (miss) return;
+      if (result === 'chit') return clang(K, o, hit, 1);
+      const big = crit ? 1 : k, d = K.drive(o.dry, 2.5, 1);
+      K.crack(o.dry, hit, { peak: 0.42, f: 3200 });
+      K.S(d, hit, 'punch-h', { gain: 0.7 + 0.4 * big, rate: (0.62 - 0.08 * big) * low });
+      K.S(d, hit + 0.002, 'soft-h', { gain: 0.5 + 0.3 * big, rate: 0.55 * low });
+      K.thwack(o.dry, hit, { f: 240, d: 0.09, peak: 0.3 + 0.2 * big, tone: 110 * low });
+      K.boom(lo(K, o.dry), hit, { f0: 105, f1: 30 * low, glide: 0.14, d: (0.3 + 0.18 * big) * far, peak: 0.75 + 0.4 * big });
+      K.S(lo(K, o.dry), hit, 'subdrop', { gain: (0.4 + 0.4 * big) * (crit ? 1.2 : 1), rate: low, jitter: 0 });
+      if (L) K.rumble(lo(K, o.dry), hit + 0.01, { d: 0.3, peak: 0.25 + 0.2 * big });
+      K.spray(hit + stop + 0.01, crit ? 8 : 3 + Math.round(4 * k), 0.14, (x, i) => K.S(o.dry, x, 'mining', { gain: 0.1 - 0.008 * i, rate: 0.9 + Math.random() * 0.5, off: 0.05, dur: 0.07, hp: 500 }));
+    },
+    // A deep swing, an enormous strike: low plate and a long boom into the hall, the ground rolling on after.
+    ban(K, o, T) {
+      const { t, arrive, hit, stop, k, result } = T, crit = result === 'crit', miss = result === 'miss';
+      if (T.flies) {
+        K.S(o.dry, t, 'soft-m', { gain: 0.3, rate: 0.5 * low, lp: 800 });
+        K.swoosh(o.dry, t, crit ? arrive : hit, { lo: [50, 200], hi: [160, 800], peak: 0.45, pass: miss, tail: 0.34 });
+        if (crit) K.S(o.dry, 0, 'punch-h', { reverse: true, end: hit, dur: hit - arrive, gain: 0.6, rate: 0.5 * low, lp: 2200 });
+      }
+      if (miss) return;
+      if (result === 'chit') { clang(K, o, hit, 0.9); K.S(o.room, hit + 0.003, 'bell', { gain: 0.15, rate: 0.9, dur: 0.5, fade: 0.2 }); return; }
+      const big = crit ? 1 : k, d = K.drive(o.dry, 2.2, 1);
+      K.crack(o.dry, hit, { peak: 0.38, f: 2800 });
+      K.S(d, hit, 'punch-h', { gain: 0.65 + 0.35 * big, rate: (0.52 - 0.06 * big) * low });
+      K.S(d, hit + 0.003, 'plate-l', { gain: 0.45 + 0.3 * big, rate: 0.5 * low });
+      K.S(o.room, hit + 0.002, 'metal-l', { gain: 0.35 + 0.3 * big, rate: 0.45 * low });
+      K.thwack(o.dry, hit, { f: 200, d: 0.12, peak: 0.3 + 0.2 * big, tone: 90 * low });
+      K.boom(lo(K, o.dry), hit, { f0: 85, f1: 26 * low, glide: 0.2, d: (0.5 + 0.25 * big) * far, peak: 0.8 + 0.35 * big });
+      K.S(lo(K, o.dry), hit, 'subdrop', { gain: (0.45 + 0.4 * big) * (crit ? 1.2 : 1), rate: 0.9 * low, jitter: 0 });
+      K.rumble(lo(K, o.room), hit + stop + 0.02, { f: 160, d: 0.6 * far, peak: 0.25 + 0.25 * big });
+      K.rumble(lo(K, o.dry), hit + 0.01, { f: 110, d: 0.4 * far, peak: (0.15 + 0.15 * big) * (0.6 + L) });
+    },
+    // A quick low dart, a thick stab with a short boom, a dark bloom after.
+    poke(K, o, T) {
+      const { t, arrive, hit, stop, k, result } = T, crit = result === 'crit', miss = result === 'miss';
+      if (T.flies) {
+        K.boom(lo(K, o.dry), t, { f0: 140, f1: 70, glide: 0.03, d: 0.05, peak: 0.18 });
+        K.swoosh(o.dry, t, arrive, { lo: [160, 600], hi: [900, 4200], peak: 0.3, pass: miss, tail: 0.18 });
+      }
+      if (miss) return;
+      if (result === 'chit') return clang(K, o, hit, 1.35, 0.8);
+      const big = crit ? 1 : k, d = K.drive(o.dry, 2, 1);
+      K.crack(o.dry, hit, { peak: 0.45, f: 4200 });
+      K.S(d, hit, 'punch-m', { gain: 0.55 + 0.35 * big, rate: 0.85 * low });
+      K.S(d, hit + 0.002, 'soft-h', { gain: 0.35 + 0.2 * big, rate: 0.75 * low });
+      K.boom(lo(K, o.dry), hit, { f0: 130, f1: 40 * low, glide: 0.07, d: (0.16 + 0.1 * big) * far, peak: 0.6 + 0.35 * big });
+      if (crit || L) K.S(lo(K, o.dry), hit, 'subdrop', { gain: crit ? 0.6 : 0.25 + 0.3 * big, rate: 1.1 * low, jitter: 0 });
+      const at = hit + stop + 0.05; // the bloom
+      K.rumble(lo(K, o.room), at, { f: 220, d: 0.3 * far, peak: 0.2 + 0.2 * big, a: 0.04 });
+      K.S(o.room, at, 'shimmer', { gain: 0.06 + 0.08 * big, rate: 0.9, off: 0.3, dur: 0.35, fade: 0.12 });
+      K.spray(at, crit ? 7 : 3 + Math.round(3 * k), 0.18, (x, i) => K.S(o.dry, x, 'glass-l', { gain: 0.08 - 0.007 * i, rate: 0.9 + Math.random() * 0.4 }));
+    },
+    // A deep sonar pulse out, a low sweep, the return as three booms, each lower.
+    ping(K, o, T) {
+      const { t, arrive, hit, k, result } = T, crit = result === 'crit', miss = result === 'miss';
+      if (T.flies) {
+        K.S(o.room, t, 'bong', { gain: 0.3, rate: 0.55 * low });
+        K.boom(lo(K, o.dry), t, { f0: 90, f1: 50, glide: 0.06, d: 0.12, peak: 0.25 });
+        K.tone(o.dry, t, { f0: 110, f1: 330, glide: Math.max(0.05, arrive - t), a: 0.01, hold: Math.max(0, arrive - t - 0.03), d: 0.05, peak: 0.12 });
+        K.swoosh(o.dry, t, arrive, { lo: [90, 320], hi: [400, 1600], peak: 0.22, pass: miss, tail: 0.28 });
+      }
+      if (miss) { K.S(o.room, hit + 0.16, 'bong', { gain: 0.07, rate: 0.5, lp: 1200 }); return; }
+      if (result === 'chit') { clang(K, o, hit, 1.2, 0.8); return; }
+      const big = crit ? 1 : k, d = K.drive(o.dry, 2, 1);
+      for (let i = 0; i < 3; i++) {
+        const x = hit + i * PULSE, w = [1, 0.8, 0.65][i], dn = 1 - 0.1 * i;
+        K.boom(lo(K, o.dry), x, { f0: 125 * dn, f1: 40 * dn * low, glide: 0.06, d: 0.13 * (i === 2 ? far * 1.6 : 1), peak: (0.6 + 0.35 * big) * w });
+        K.S(d, x, 'soft-h', { gain: (0.4 + 0.25 * big) * w, rate: 0.8 * dn * low });
+        K.S(d, x, 'punch-m', { gain: (0.25 + 0.2 * big) * w, rate: 0.75 * dn * low });
+        K.hiss(o.dry, x, { type: 'highpass', f0: 3000, a: 0.0005, d: 0.006, peak: 0.32 * w });
+      }
+      K.S(o.room, hit, 'bong', { gain: 0.1 + 0.1 * big, rate: 0.4 * low });
+      if (crit || big > 0.5 || L) K.S(lo(K, o.dry), hit + 2 * PULSE, 'subdrop', { gain: crit ? 0.7 : 0.25 + 0.3 * big, rate: low, jitter: 0 });
+      if (L) K.rumble(lo(K, o.room), hit + 2 * PULSE, { d: 0.5, peak: 0.2 + 0.2 * big });
+    },
+  };
+}
+SOUNDS.b3 = heavy(0);
+SOUNDS.b4 = heavy(1);
 
 // How the hit's size and result read (plan: the effect's timing in ms, from abilityfx.mjs play()).
 export function timingOf(t, plan, { result = 'hit', power = 0.3 } = {}) {

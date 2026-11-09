@@ -1,4 +1,4 @@
-// Ability sounds, the style round (dist/abilitysound.mjs): each class's key 1 in three styles, timed to its effect.
+// Ability sounds, the style round (dist/abilitysound.mjs): each class's key 1 in each style, timed to its effect.
 // Played against a stand-in AudioContext that records when each sound source starts.
 import test from 'node:test';
 import assert from 'node:assert/strict';

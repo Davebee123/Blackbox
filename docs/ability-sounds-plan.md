@@ -36,9 +36,11 @@ Operator's comes in three beats.
    B Weighty and C Digital beside today's. `?playtest=fx` has the Sound row; the preview videos are rendered from the
    same plans. The designer kept B's weight but heard it as being hit (it shared the hurt's punches and sub-drop) and
    as thin.
-   **1b** (built, waiting on the pick): two Weighty takes with none of the hurt's samples, a bright crack where the
-   blow lands and a short tuned kick for weight: B1 Cinematic (struck metal into a hall, fuller flights) and B2
-   Electric (discharges, arcs, a breaker tripping, a hum ringing on).
+   **1b**: two Weighty takes with none of the hurt's samples: B1 Cinematic and B2 Electric. Rejected as light and
+   fluffy; the designer wants round 1's bass, and more of it.
+   **1c** (built, waiting on the pick): round 1's Weighty tuned down, a boom and the sub-drop under every hit, the low
+   end well over the rest: B3 Heavy (a deep slam that stops) and B4 Seismic (lower, rolling on into a rumble). They
+   play about 2 dB over the other styles.
 2. **Every ability**: the generic layers in the picked style, all 110 rows, and overrides for Overload, Detonate,
    Firewall, Purge, Crack, Quarantine, Botnet, Deploy, Inject, Flood, Shatter and Failover.
 3. **Tiers and finishers**: the mastery layers, the 13 tier overrides, the 12 finishers.
