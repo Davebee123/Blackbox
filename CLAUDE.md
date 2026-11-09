@@ -80,6 +80,9 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
   - network map ground: the *Chart* (faint crosshairs and hairlines that pan and zoom with the map);
   - rooms map: each room kind its own outline and hue (the *Hues*: magenta elite, orange socket, green rest, gold
     vault, white entry and den), thick borders. The one place a colour means a kind.
+  - phone shell (docs/phone-plan.md): five tabs at the bottom (Map, Mail, Loadout, Server, More); in a fight no top
+    strip, the HUD with the virus's window top right (it slides out beside the board in its half, covering no chip),
+    two rows of four keys with the menu key at the row's end; on its side, the same shell with a wider board.
 - **Rejected looks:**
   - the *View* background behind the monitor; keep the original city, with more detail at the same size;
   - card-first clicks on the rooms map; one click walks;

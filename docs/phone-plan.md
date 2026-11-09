@@ -1,6 +1,6 @@
 # Phone plan: a phone UI of its own
 
-Plan, not built. Same game, state and commands on a phone; its own shell and its own markup for the core components.
+Plan, not built (P0 picked). Same game, state and commands on a phone; its own shell and its own markup for the core components.
 P0 (prototypes for the designer's pick) comes before any code.
 
 ## Where the phone is now
@@ -62,14 +62,21 @@ Measured 2026-11-09 in a fight (`?playtest=random&level=12`), Playwright device 
 
 Budget: on 375 × 667 the whole fight fits with no scroll, and the board gets at least half the screen.
 
-- **HUD strip:** your Signal bar (teal) and the virus's (red), name and level over each, statuses as icons under
-  them, a crewmate's bar as a thin line under yours. The whose-half strip folds into the board's header.
-- **Board:** Now, +1 and +2 as now, a part's name on its own line, rows filling the height left.
-- **Tray at the bottom:** two rows of four keys (icon and name) in thumb reach, the rest behind **+n** or a swipe;
-  tap picks, a second tap fires (as now), a long press shows the key's card. `>_` sits at the row's end.
-- **Log:** its latest line as a ticker over the tray; a tap opens the log in a sheet.
-- **Tab bar:** folded into a `⋯` on the top strip while a fight runs.
-- **Left out:** the ASCII virus picture (a designer's pick, below), the #net line.
+- **No top strip in a fight.** The HUD sits at the top: the virus's bar over yours, name and level over each, its ◆
+  and rules or your statuses under them, a crewmate's bar as a thin violet line under yours. The whose-half chip
+  (*Your move* / *Its move*) folds into the board's header.
+- **The virus picture** sits in a window at the HUD's top right. In its half the whole window (panel, grid, red
+  border) slides out to the right of the Now column, where it covers no timeline chip, plays its strike (about 1.3×
+  slower than desktop), and slides home; its slot shows a dashed outline meanwhile. Motion off: it stays home.
+- **Board:** Now, +1 and +2 as now, names at 24 px with the aim rail inside, chips without icons, rows filling the
+  height left.
+- **Tray at the bottom:** two rows of four keys (icon over name, 44 px minimum) in thumb reach; the column at the
+  row's end is the **menu key** (`···`, the pager's lamp on it), with **+n** under it past eight keys. Tap picks, a
+  second tap fires, a long press shows the key's card. The menu opens the tab bar, the pager and the command line.
+- **Log:** its latest line as a ticker over the tray, its side's edge in teal or red; a tap opens the log in a sheet.
+- **On its side:** the phone shell, board on the left with +3, the strip, ticker and a 2 × 4 tray in a right column.
+- **Left out:** the #net line, `>_` in the tray (combat never opens the keyboard).
+- **Known bug:** at ≤900 px chips show codes, and a *cut* chip, which has none, renders blank. P2's markup fixes it.
 
 ## The other screens
 
@@ -113,10 +120,7 @@ render(), style.css and the fight board, so no other UI session runs beside it.
 `data-` command (a tap path), every element with a rule is tappable, and nothing on the cut list is in the markup.
 Layout budgets are checked with the scratchpad screenshot set each phase.
 
-## For the designer to pick (P0)
+## Picked (P0)
 
-1. **The tray:** two rows of four at the bottom (recommended), one swiping row, or today's 3 × 3 made compact.
-2. **The virus picture in a fight:** off, a small frame in the HUD strip, or in the log sheet. The strike needs its
-   window on screen, so off means the strike is off on a phone too.
-3. **The tab bar's five:** Map, Mail, Loadout, Server, More (recommended), or Fight-first with Map in More.
-4. **A phone on its side:** the phone shell with the board wider (recommended), or a *turn your phone* card.
+Tray: two rows of four. Virus: its window top right, stepping out in its half. Tab bar: Map, Mail, Loadout, Server,
+More. On its side: the phone shell, board wider. No top strip in a fight.
