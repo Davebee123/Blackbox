@@ -286,6 +286,15 @@ const plainStrike = (e, result) => () => hitfx.strike(partRow(e.target), { who: 
 // next one (its hits, its marks, its interrupt). How it went is its result: a miss plays its effect going on through (and
 // the strike's MISS still says it); a crit, a hit spent on ◆, or a hit. marks: the statuses it cashed in (combat.mjs
 // damage marks; Hooked: its +6 landing). A crewmate's heal or shield is on their bar, not yours.
+const afxResults = (after) => {
+  const out = {}, rank = { miss: 0, hit: 1, chit: 2, crit: 3 };
+  for (const x of after) {
+    const r = x.type === 'miss' ? 'miss' : x.type === 'damage' ? (x.crit ? 'crit' : 'hit') : x.type === 'armor' ? (x.absorbed ? 'chit' : 'hit') : null;
+    if (r && x.target && !(rank[out[x.target]] >= rank[r])) out[x.target] = r;
+  }
+  return out;
+};
+const allResult = (rs) => { const v = Object.values(rs); return v.every((r) => r === 'miss') ? 'miss' : v.includes('crit') ? 'crit' : v.every((r) => r === 'chit' || r === 'miss') ? 'chit' : 'hit'; };
 function afxCommands(events) {
   const out = [];
   for (let i = 0; i < events.length; i++) {
@@ -301,11 +310,13 @@ function afxCommands(events) {
     const mine = after.filter((x) => x.target === tgt && (x.type === 'damage' || x.type === 'armor'));
     const result = missed ? 'miss' : mine.some((x) => x.crit) ? 'crit' : mine.some((x) => x.type === 'armor' && x.absorbed) ? 'chit' : 'hit';
     const marks = [...new Set(mine.flatMap((x) => x.marks || []))];
+    // On every part (Fork Bomb, Failover…): how it went on each; it missed only if it missed them all.
+    const results = R.motion === 'all' ? afxResults(after) : null;
     const broke = mine.some((x) => x.broke != null) ? mine.reduce((n, x) => n + (x.broke || 0), 0) : null; // ◆ it broke (Crack)
     if (tgt && after.some((x) => x.type === 'damage' && x.via === 'Hook' && x.target === tgt)) marks.push('hooked');
     const pm = (tgt && part(campaign, tgt)?.max) || 50, dealt = mine.reduce((n, x) => n + (x.type === 'damage' ? x.amount || 0 : 0), 0);
     const origin = originOf(e); // its key in the tray, however it was fired (your bar when the key isn't on screen); a crewmate's: their bar
-    out.push({ e, key, R, tgt, mine, result, marks, broke, origin, landEvt: mine[0] || after.find((x) => x.target === tgt) || e, power: dealt ? Math.min(1, dealt / pm) : 0.3 });
+    out.push({ e, key, R, tgt, mine, result: results && Object.keys(results).length ? allResult(results) : result, results, marks, broke, origin, landEvt: mine[0] || after.find((x) => x.target === tgt) || e, power: dealt ? Math.min(1, dealt / pm) : 0.3 });
   }
   return out;
 }
@@ -316,7 +327,7 @@ function afxLead(events) {
   if (module !== 'combat' || fxLevel() === 'minimal' || !afxLevel({ level: fxLevel(), motion: canMove() })) return 0;
   const c = afxCommands(events)[0];
   if (!c) return 0;
-  const plan = abilityfx.plan(c.key, afxRow(c), { origin: c.origin, ability: c.e.ability, who: c.e.who || null, kind: c.e.who ? 'crew' : 'you', tier: afxTier(c.e, c.e.ability), power: c.power, crit: c.result === 'crit', result: c.result, marks: c.marks, broke: c.broke }); // a crit's swing draws back first: its numbers wait for that too
+  const plan = abilityfx.plan(c.key, afxRow(c), { origin: c.origin, ability: c.e.ability, who: c.e.who || null, kind: c.e.who ? 'crew' : 'you', tier: afxTier(c.e, c.e.ability), power: c.power, crit: c.result === 'crit', result: c.result, results: c.results, marks: c.marks, broke: c.broke }); // a crit's swing draws back first: its numbers wait for that too
   return plan ? Math.min(600, Math.round(plan.impact)) : 0;
 }
 function strikes(events, delayOf = () => 0) {
@@ -340,7 +351,7 @@ function strikes(events, delayOf = () => 0) {
     if (tgt) taken.set((e.who || 'you') + '>' + tgt, strike);
     pendingStrikes.push(() => {
       const row = afxRow(c);
-      const played = abilityfx.play(key, row, { power: c.power, crit: result === 'crit', result, marks, broke: c.broke, kind: e.who ? 'crew' : 'you', origin: c.origin, ability: e.ability, who: e.who || null, landIn: land, tier: afxTier(e, e.ability), onImpact: row ? () => hitfx.jolt(row, result) : null });
+      const played = abilityfx.play(key, row, { power: c.power, crit: result === 'crit', result, results: c.results, marks, broke: c.broke, kind: e.who ? 'crew' : 'you', origin: c.origin, ability: e.ability, who: e.who || null, landIn: land, tier: afxTier(e, e.ability), onImpact: row ? () => hitfx.jolt(row, result) : null });
       if (!played && strike) later(land, strike); // no room for it: the strike, on the number's beat
     });
   }

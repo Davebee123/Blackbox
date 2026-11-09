@@ -470,6 +470,42 @@ test('Rate Limit snaps brackets onto the attack it throttles; a crit shuts harde
   assert.ok(!miss.light.some((x) => x.kind === 'brackets') && !miss.els.some((el) => /\bhot\b/.test(el.cls)), 'and throttle nothing');
 });
 
+test('every motion reads its result: a flown piece draws back on a crit, each copy on every part says how it went there, cuts and blasts make contact, waves and helpers go on past on a miss', () => {
+  const g = marked(), main = (plan) => plan.els.find((el) => !/\bghost\b|\bhot\b/.test(el.cls) && /^art\b/.test(el.cls));
+  const hot = (plan) => plan.els.some((el) => /\bhot\b/.test(el.cls));
+  // fly: a crit (and every Breaker's) stops short and draws back first, then drives in.
+  const fly = playOn('segfault'), flyC = playOn('segfault', { crit: true, result: 'crit' });
+  assert.ok(Math.abs(flyC.impact - (fly.impact + HOLD / SPEED)) < 1e-6, 'a crit draws back first');
+  assert.ok(flyC.light.some((x) => x.kind === 'glint' && x.tone === 'crit' && x.t0 < flyC.impact), 'and gathers');
+  assert.ok(playOn('shatter', { cadence: cadenceOf('shatter') }).impact > playOn('shatter').impact, 'the Breaker\'s winds up');
+  // all: each copy reads its own part (by id): a missed one flies on past and never burns hot; one on ◆ goes steel.
+  const parts = g.parts.map((q, i) => ({ ...q, id: 'p' + i }));
+  const all = layout(RECIPES['fork-bomb'], { ...g, parts }, { rnd: seeded(3), origin: 'key', results: { p0: 'hit', p1: 'miss' } });
+  const copies = all.els.filter((el) => el.res && !/\bghost\b|\bhot\b/.test(el.cls));
+  assert.deepEqual(copies.map((el) => el.res), ['hit', 'miss']);
+  assert.ok(!all.els.some((el) => /\bhot\b/.test(el.cls) && el.res === 'miss'), 'a miss never burns hot');
+  assert.equal(all.light.filter((x) => x.kind === 'flash' && x.contact).length, 1, 'a flash on the part it hit only');
+  const onSteel = layout(RECIPES['fork-bomb'], { ...g, parts }, { rnd: seeded(3), origin: 'key', results: { p0: 'chit', p1: 'crit' } });
+  assert.ok(/\bchit\b/.test(onSteel.els.find((el) => el.res === 'chit').cls) && /\bcrit\b/.test(onSteel.els.find((el) => el.res === 'crit').cls), 'each copy in its own colour');
+  // slash and blast make contact; a cut that misses goes wide and its sign never lands.
+  assert.ok(hot(playOn('sigint')) && hot(playOn('detonate')) && playOn('detonate', { power: 0.8 }).stop > 0, 'contact');
+  const cutMiss = playOn('sigint', { result: 'miss' });
+  assert.ok(cutMiss.els.length && cutMiss.els.every((el) => /\bcut\b/.test(el.cls)) && !hot(cutMiss), 'a miss: the cut alone, wide');
+  // wave: a miss rolls on past the part, ◆ turns it back; helpers walk on past on a miss.
+  const end = (el) => boxAt(el, el.keys[el.keys.length - 1]), O = { x: (tray[3].l + tray[3].r) / 2, y: tray[3].t }, far = (b) => Math.hypot((b.l + b.r) / 2 - O.x, (b.t + b.b) / 2 - O.y);
+  const wHit = far(end(main(playOn('ping')))), wMiss = far(end(main(playOn('ping', { result: 'miss' })))), pc = playOn('ping', { result: 'chit' }), wChit = far(end(main(pc))), wAt = far(boxAt(main(pc), keyAtMs(main(pc), pc.impact)));
+  assert.ok(wMiss > wHit + 30 && wChit < wAt - 8, `a wave: past on a miss, back off ◆: ${Math.round(wMiss)} ${Math.round(wHit)} ${Math.round(wChit)}`);
+  assert.ok(end(main(playOn('deploy', { result: 'miss' }))).l > end(main(playOn('deploy'))).l + 20, 'helpers walk on past');
+  // A burn being set catches where it lands (a flash on the bar line); its ticks keep their own time.
+  assert.ok(playOn('inject').light.some((x) => x.kind === 'flash' && x.contact), 'a burn catches');
+  assert.ok(!playOn('inject:tick').light.some((x) => x.kind === 'flash' && x.contact), 'a tick does not');
+  // On your bar, only the class's rhythm: the Breaker's stamp slams down from above.
+  const bar = (k, o) => layout(RECIPES[k], geoOf(roomy(), 0), { rnd: seeded(2), origin: 'key', ...o });
+  assert.ok(main(bar('debris-field', { cadence: cadenceOf('debris-field') })).keys[0].y < main(bar('debris-field')).keys[0].y, 'the Breaker\'s stamp slams down');
+  const app = readFileSync(new URL('./dist/app.js', import.meta.url), 'utf8');
+  assert.match(app, /results: c\.results/, 'app.js passes each part\'s result for an effect on every part');
+});
+
 test('a status the hit cashed in shows doing it: Exposed\'s crosshair closes on a crit, brackets for Quarantined, Hooked\'s line pulls tight, Tagged burns hotter', () => {
   const g = marked(), mid = (q) => ({ x: (q.l + q.r) / 2, y: (q.t + q.b) / 2 });
   const crit = playOn('ban', { crit: true, result: 'crit', marks: ['exposed'] }), cross = crit.light.find((x) => x.kind === 'cross');
@@ -507,7 +543,7 @@ test('each class has its rhythm: the Breaker winds up and stops dead, the Bastio
   assert.ok(pokeC.light.some((x) => x.kind === 'ring' && x.dur >= 450 && x.t0 > pokeC.impact), 'a slow ring spreads from where it went in');
   // Operator: Ping's impact lands in three small even beats.
   const ring = (plan) => plan.light.filter((x) => x.kind === 'ring' && x.t0 >= plan.impact - 0.5).map((x) => Math.round(x.t0 - plan.impact));
-  const beats = ring(with_('ping'));
+  const pinged = with_('ping'), beats = ring(pinged).map((t) => t - Math.round(pinged.stop)); // after the hit-stop
   assert.ok(beats.length >= 3 * ring(playOn('ping')).length && beats.includes(PULSE) && beats.includes(2 * PULSE), `even beats: ${beats}`);
 });
 

@@ -127,7 +127,9 @@ teal, violet or a threat's red.
   - **What the hit says:** a hit that makes contact holds there a moment, longer the bigger it is (`stopOf`). A crit
     draws back and glints first, then cracks the bar end to end. A hit on ◆ lands on the ◆, clangs in steel and
     glances off; the bar is untouched, and each ◆ broken takes a steel strike of its own. A miss goes on through and
-    nothing lands (MISS still stamps). Marks and clamps make contact the same way.
+    nothing lands (MISS still stamps). Every motion reads it: a flown piece draws back on a crit; marks, clamps, cuts,
+    blasts and a burn being set make contact where they land; a wave or helpers go on past on a miss; an effect on every
+    part shows each part's own result (combat events by target).
   - **An ability's own rule:** Overload's bolt crackles at its key, holds lit through the hit-stop and flickers out; a
     miss grounds past the bar, ◆ throws a steel arc, and a crit (its cooldown resets) runs back to the key as a gold
     comet. Crack lands on the ◆ row and strikes each ◆ it broke a beat apart (combat.mjs `broke`), glancing off when
@@ -137,7 +139,8 @@ teal, violet or a threat's red.
     glows.
   - **Each class's rhythm** (`CADENCE`, by the skill's class): the Breaker winds up and stops dead; the Bastion's piece
     stays up a beat once it lands; the Infiltrator's goes in quick and its impact spreads after; the Operator's lands in
-    three small even beats.
+    three small even beats. On your bar only the rhythm shows: the Breaker's stamp slams down, its shell shuts harder,
+    its sweep winds up.
   - **A burn runs down** (combat.mjs tick `left`): each tick's fire stands lower than the last, the last one gutters to
     falling embers, and Keepalive stokes it up.
   - **Mastery tiers** (`tierRecipe`): tier 2 more particles and a spark burst, tier 3 a glint and each iconic skill's own

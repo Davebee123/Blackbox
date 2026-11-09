@@ -172,7 +172,7 @@ test('the hand-made tier 3s: Ban\'s crack, Bash\'s afterimages and quake, Poke\'
   const hot = (t) => { const els = P('inject', t).els.filter((el) => /\bflame\b/.test(el.cls)); return els.filter((el) => /\bhot\b/.test(el.cls)).length / els.length; };
   assert.ok(hot(1) < hot(2) && hot(2) < hot(3), `hotter: ${hot(1).toFixed(2)} ${hot(2).toFixed(2)} ${hot(3).toFixed(2)}`);
   assert.ok(P('inject', 3).light.some((x) => x.kind === 'embers'), 'cinders, in light');
-  assert.equal(P('detonate', 3).els.filter((el) => el.frames?.length === 3).length, 2, 'two blasts');
+  assert.equal(P('detonate', 3).els.filter((el) => el.frames?.length === 3 && !/\bhot\b/.test(el.cls)).length, 2, 'two blasts (its white-hot copy aside)');
   assert.equal(P('botnet', 3).els.filter((el) => el.frames).length, 5);
   assert.equal(P('deploy', 3).els.filter((el) => el.frames).length, 2);
   // Tier 3's particles burn brighter, under any tint.
