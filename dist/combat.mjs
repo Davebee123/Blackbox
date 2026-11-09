@@ -3556,7 +3556,7 @@ function useAbility(s, intent, auto = false) {
     target.armor -= n;
     if (n) classEach('chipped', s, target, n, { mine: true });
     if (!target.armor) stripMark(s, target);
-    emit(s, 'armor', `Crack: ${target.name} loses ${n} ◆${target.armor ? ` (${target.armor} left)` : `. Its armor is broken, and it patches in ${patchDelay(s)} ${patchDelay(s) === 1 ? 'cycle' : 'cycles'}`}.`, { target: target.id, left: target.armor });
+    emit(s, 'armor', `Crack: ${target.name} loses ${n} ◆${target.armor ? ` (${target.armor} left)` : `. Its armor is broken, and it patches in ${patchDelay(s)} ${patchDelay(s) === 1 ? 'cycle' : 'cycles'}`}.`, { target: target.id, left: target.armor, broke: n });
     if (!target.armor) { target.patchAt = e.cycle + patchDelay(s); openProc(s, 'stripped', { part: target.id }); }
   }
   if (id === 'harden') { e.chits = (e.chits || 0) + 1; emit(s, 'status', `Hardened. The next attack on you does nothing${e.chits > 1 ? ` (${e.chits} ◆)` : ''}.`, { mark: 'shield', ability: id }); }

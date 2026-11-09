@@ -385,7 +385,7 @@ test('on the page: every piece is taken off the layer once its effect is over', 
 // The board's part 0 with its ◆ (the one a hit on armor lands on) and its status marks, as the page measures them.
 const marked = () => {
   const g = geoOf(roomy(), 0);
-  return { ...g, part: { ...g.part, chits: { x: 150, y: 393, b: 402 }, marks: { exposed: R('200,386,12,12'), hooked: R('214,386,12,12'), tagged: R('228,386,12,12') } } };
+  return { ...g, part: { ...g.part, chits: { x: 150, y: 393, b: 402, l: 130, r: 170, n: 4, i: 1 }, marks: { exposed: R('200,386,12,12'), hooked: R('214,386,12,12'), tagged: R('228,386,12,12') } } };
 };
 const playOn = (k, o = {}) => layout(RECIPES[k], marked(), { rnd: seeded(3), origin: k.endsWith(':tick') ? 'here' : 'key', ...o });
 const hammer = (plan) => plan.els.find((el) => !/\bghost\b|\bhot\b/.test(el.cls) && el.text === RECIPES.ban.art.join('\n'));
@@ -419,10 +419,55 @@ test('the motion says how the hit went: it holds where it lands by size, a crit 
   assert.ok(miss.light.every((x) => x.kind === 'smear' || x.kind === 'comet'), 'nothing lands');
   assert.ok(keyAtMs(hammer(miss), miss.impact + 30).r < -10, 'it swings on past');
   const missed = playOn('exploit', { result: 'miss' });
-  assert.ok(!missed.els.length && missed.light.every((x) => x.kind === 'comet'), 'a mark that misses: only its comet');
+  assert.ok(!missed.els.length && missed.light.every((x) => x.kind === 'comet' || x.kind === 'puffs'), 'a mark that misses: its comet, a puff where it would have come down');
   const poke = playOn('poke', { result: 'miss' }), needle = poke.els.find((el) => !/\bghost\b|\bhot\b/.test(el.cls)), nm = marked().part.name, O = { x: (tray[3].l + tray[3].r) / 2, y: tray[3].t };
   const end = boxAt(needle, needle.keys[needle.keys.length - 1]), far = (q) => Math.hypot(q.x - O.x, q.y - O.y);
   assert.ok(far({ x: end.r, y: end.t }) > far({ x: (nm.l + nm.r) / 2, y: nm.b }) + 30, 'a needle that misses flies on past the part');
+});
+
+test('Overload\'s bolt reads its result: a miss grounds past the bar, ◆ arcs off in steel, a crit runs back to its key', () => {
+  const g = marked(), O = { x: (tray[3].l + tray[3].r) / 2, y: tray[3].t + (tray[3].b - tray[3].t) * 0.35 };
+  const hit = playOn('overload', { cadence: cadenceOf('overload'), power: 0.5 });
+  assert.ok(hit.els.some((el) => /\bhot\b/.test(el.cls)) && hit.light.some((x) => x.kind === 'glint' && Math.hypot(x.x - O.x, x.y - O.y) < 1 && x.t0 < hit.impact), 'it charges at its key, then strikes white-hot');
+  const miss = playOn('overload', { result: 'miss' }), puff = miss.light.find((x) => x.kind === 'puffs');
+  assert.ok(!miss.els.some((el) => /\bhot\b/.test(el.cls)) && puff && puff.list[0].x > g.part.bar.r, 'a miss grounds just past the bar');
+  const chit = playOn('overload', { result: 'chit', power: 0 });
+  assert.ok(chit.els.some((el) => /\bfork chit\b/.test(el.cls)) && chit.light.some((x) => x.kind === 'flash' && x.tone === 'steel'), 'an arc jumps off the ◆, in steel');
+  const crit = playOn('overload', { crit: true, result: 'crit', power: 1 }), back = crit.light.find((x) => x.kind === 'comet' && x.tone === 'crit');
+  assert.ok(back && Math.hypot(back.b.x - O.x, back.b.y - O.y) < 1 && back.t1 >= crit.impact, 'a crit runs back to its key');
+  assert.ok(crit.light.some((x) => x.kind === 'glint' && x.tone === 'crit' && x.t0 > back.t1), 'and the key glints');
+  assert.ok(!playOn('overload', { crit: true, result: 'crit', origin: 'bar' }).light.some((x) => x.kind === 'comet' && x.tone === 'crit'), 'no key on screen: nothing to run back to');
+  assert.ok(!playOn('bash', { crit: true, result: 'crit' }).light.some((x) => x.kind === 'comet' && x.tone === 'crit'), 'only an ability whose crit resets it');
+});
+
+test('Crack lands on the ◆ and strikes each one it broke, a beat apart; with none left it glances off', () => {
+  const steel = (plan) => plan.light.filter((x) => x.kind === 'flash' && x.tone === 'steel');
+  for (const n of [1, 2, 3]) {
+    const plan = playOn('crack', { broke: n }), f = steel(plan);
+    assert.equal(f.length, n, `${n} broken: ${n} strikes`);
+    assert.deepEqual(f.map((x) => Math.round(x.x)), [145, 155, 165].slice(0, n), 'on the ◆ it broke, from the first broken one');
+    assert.ok(f.every((x, k) => !k || x.t0 > f[k - 1].t0), 'one beat apart');
+  }
+  const shards = (plan) => plan.light.filter((x) => x.kind === 'shards' || x.kind === 'sparks').length + plan.els.filter((el) => /\bshard/.test(el.cls)).length;
+  const none = playOn('crack', { broke: 0 }), m = none.els.find((el) => !/\bghost\b|\bhot\b/.test(el.cls)), last = m.keys[m.keys.length - 1];
+  assert.equal(steel(none).length, 0, 'nothing to break: no strike');
+  assert.ok(last.o === 0 && last.x > m.keys[1].x + 10, 'it glances off and slides away');
+  assert.ok(shards(none) < shards(playOn('crack', { broke: 3 })), 'and throws no shards');
+  assert.ok(playOn('crack', { broke: 1, cadence: cadenceOf('crack') }).els[0].keys[0].y < playOn('crack', { broke: 1 }).els[0].keys[0].y, 'the Breaker\'s mark slams down from above');
+  const app = readFileSync(new URL('./dist/app.js', import.meta.url), 'utf8'), combat = readFileSync(new URL('./dist/combat.mjs', import.meta.url), 'utf8');
+  assert.match(combat, /left: target\.armor, broke: n \}/, 'combat.mjs says how many ◆ Crack broke');
+  assert.match(app, /broke: c\.broke/, 'app.js passes it on');
+});
+
+test('Rate Limit snaps brackets onto the attack it throttles; a crit shuts harder; a miss sends the halves past each other', () => {
+  const g = marked(), same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const hit = playOn('rate-limit');
+  assert.ok(hit.light.some((x) => x.kind === 'brackets' && same(x.box, g.part.chip)), 'brackets on its attack chip');
+  const bump = (plan) => { const L = plan.els.find((el) => el.text === '>|' && !/\bhot\b/.test(el.cls)); return L.keys[1].x - Math.min(...L.keys.slice(1).map((k) => k.x)); };
+  assert.ok(bump(playOn('rate-limit', { crit: true, result: 'crit' })) > bump(hit), 'a crit shuts it harder');
+  const miss = playOn('rate-limit', { result: 'miss' }), L = miss.els.find((el) => el.text === '>|'), Rt = miss.els.find((el) => el.text === '|<');
+  assert.ok(L.keys[L.keys.length - 1].x > Rt.keys[1].x && Rt.keys[Rt.keys.length - 1].x < L.keys[1].x, 'the halves pass each other');
+  assert.ok(!miss.light.some((x) => x.kind === 'brackets') && !miss.els.some((el) => /\bhot\b/.test(el.cls)), 'and throttle nothing');
 });
 
 test('a status the hit cashed in shows doing it: Exposed\'s crosshair closes on a crit, brackets for Quarantined, Hooked\'s line pulls tight, Tagged burns hotter', () => {

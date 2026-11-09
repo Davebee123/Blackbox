@@ -126,7 +126,12 @@ teal, violet or a threat's red.
     streaks, flames, ripples; a comet carries an effect to where it plays. 1s and 0s, ◇ shards and + stay characters.
   - **What the hit says:** a hit that makes contact holds there a moment, longer the bigger it is (`stopOf`). A crit
     draws back and glints first, then cracks the bar end to end. A hit on ◆ lands on the ◆, clangs in steel and
-    glances off; the bar is untouched. A miss goes on through and nothing lands (MISS still stamps).
+    glances off; the bar is untouched, and each ◆ broken takes a steel strike of its own. A miss goes on through and
+    nothing lands (MISS still stamps). Marks and clamps make contact the same way.
+  - **An ability's own rule:** Overload's bolt crackles at its key, holds lit through the hit-stop and flickers out; a
+    miss grounds past the bar, ◆ throws a steel arc, and a crit (its cooldown resets) runs back to the key as a gold
+    comet. Crack lands on the ◆ row and strikes each ◆ it broke a beat apart (combat.mjs `broke`), glancing off when
+    none are left. Rate Limit's brackets snap onto the attack it throttles; on a miss the halves pass each other.
   - **A status cashing in** (combat.mjs damage `marks`): Exposed's crosshair flies off its mark and closes on a crit;
     Quarantined's brackets snap onto the name; Hooked's line pulls tight as its +6 lands; Tagged burns taller. The mark
     glows.
