@@ -20,7 +20,7 @@
 //           in three small beats.
 // Nothing here is in a fight yet: the ability effects playtest (?playtest=fx) plays it, and renderBoard() bounces it.
 
-export const STYLES = { a: 'Hardware', b: 'Weighty', c: 'Digital', b1: 'Cinematic', b2: 'Electric', b3: 'Heavy', b4: 'Seismic', b5: 'Machine', b6: 'Glitch', b7: 'Echo', b8: 'Cavern', b9: 'Soft echo', b10: 'Deep echo', b11: 'Tear', b12: 'Trailer' };
+export const STYLES = { a: 'Hardware', b: 'Weighty', c: 'Digital', b1: 'Cinematic', b2: 'Electric', b3: 'Heavy', b4: 'Seismic', b5: 'Machine', b6: 'Glitch', b7: 'Echo', b8: 'Cavern', b9: 'Soft echo', b10: 'Deep echo', b11: 'Tear', b12: 'Trailer', b13: 'Deep echo, soft' };
 export const KEYS = ['bash', 'ban', 'poke', 'ping'];
 // Levels (dB), so every style is heard at today's loudness: a medium hit at about −24 LUFS (momentary max), a crit
 // about 2 dB over it, a hit on ◆ near −27.5 and a miss near −29.5 (today's hit plays at about −23). level: the whole
@@ -41,13 +41,14 @@ export const TRIM = {
   b10: { bash: { level: -8.3, crit: -2.7, chit: 8.4, miss: 8.5 }, ban: { level: -9.3, crit: -1.9, chit: 10.6, miss: 13.6 }, poke: { level: -4.7, crit: -5.2, chit: 5, miss: 6.9 }, ping: { level: -8.5, crit: -2.6, chit: 8.8, miss: 8.1 } },
   b11: { bash: { level: -10.2, crit: -1.9, chit: 8.1, miss: 16.5 }, ban: { level: -9.3, crit: -1.9, chit: 10.6, miss: 13.6 }, poke: { level: -4.6, crit: -5.3, chit: 8.8, miss: 18.8 }, ping: { level: -8.5, crit: -2.6, chit: 8.8, miss: 8.1 } },
   b12: { bash: { level: -10.1, crit: -1.7, chit: -0.5, miss: -1.6 }, ban: { level: -11.2, crit: -1.4, chit: 1.2, miss: -0.6 }, poke: { level: -5.4, crit: -4.7, chit: -1, miss: -0.7 }, ping: { level: -9.4, crit: -1.9, chit: 1.9, miss: 0.1 } },
+  b13: { bash: { level: -8.1, crit: -2.9, chit: 8.7, miss: 8.5 }, ban: { level: -9.3, crit: -1.9, chit: 10.6, miss: 13.6 }, poke: { level: -4.1, crit: -5.7, chit: 5.6, miss: 6.9 }, ping: { level: -8.5, crit: -2.6, chit: 8.8, miss: 8.1 } },
   c: { bash: { level: 4.8, crit: -0.4, chit: 2.3, miss: 1 }, ban: { level: 3.3, crit: 0, chit: 4.3, miss: 2 }, poke: { level: 10.2, crit: -2.1, chit: 0.6, miss: -1 }, ping: { level: 10.4, crit: -0.7, chit: -0.9, miss: -2 } },
 };
 // Each key 1's class: the Breaker's sound is cut dead after its hit-stop (GATE s after it).
 const CLASS = { bash: 'breaker', ban: 'bastion', poke: 'infiltrator', ping: 'operator' };
 const GATE = 0.24;
 // Styles whose Breaker echoes carry past the cut: it drops to this much there and fades over this long (s).
-const RING = { b10: [0.8, 0.7], b11: [0.8, 0.7], b12: [0.8, 0.7] };
+const RING = { b10: [0.8, 0.7], b11: [0.8, 0.7], b12: [0.8, 0.7], b13: [0.8, 0.7] };
 const PULSE = 0.09; // s between the Operator's beats (abilityfx.mjs PULSE)
 
 // ---------- building blocks (any AudioContext; mono) ----------
@@ -878,7 +879,8 @@ SOUNDS.b4 = heavy(1);
 // B: more bass, and the Breaker's echoes carry (RING lets them past its cut).
 // V: the Breaker's and the Infiltrator's with no square blips or bit-crush: 1 Tear (sample grains, a stuck buffer,
 // driven bass), 2 Trailer (a swell into a metal slam and a driven low brass, glass and shimmer; the Bastion's and the Operator's too).
-function core(L, W = 0, B = 0, V = 0) {
+// Q: the Breaker's and the Infiltrator's blips (data, cascade, stutter, pings) at this level.
+function core(L, W = 0, B = 0, V = 0, Q = 1) {
   const low = 1 - 0.15 * L;
   const bus = (K, o, e) => {
     const { time = 0.09, fb = 0.4, wet = 0.4, lp = 2600 } = e;
@@ -1033,8 +1035,8 @@ function core(L, W = 0, B = 0, V = 0) {
       const { t, arrive, hit, k, result } = T, crit = result === 'crit', miss = result === 'miss';
       const { b } = bus(K, o, B ? { time: 0.1, fb: 0.48, wet: 0.5 } : { time: 0.09, fb: 0.3, wet: 0.35 });
       if (T.flies) {
-        K.tone(b, t, { type: 'square', f0: 90, f1: 180, glide: 0.04, d: 0.05, peak: 0.16 });
-        K.stream(b, t, arrive, { lo: 260, hi: 390, baud: 110, rise: 1.7, peak: 0.05 });
+        K.tone(b, t, { type: 'square', f0: 90, f1: 180, glide: 0.04, d: 0.05, peak: 0.16 * Q });
+        K.stream(b, t, arrive, { lo: 260, hi: 390, baud: 110, rise: 1.7, peak: 0.05 * Q });
         K.flight(o.dry, t, arrive, { f0: 70, f1: 320, q: 0.7, peak: 0.3, color: 'brown', pass: miss, tail: 0.3 });
         if (!miss && hit - arrive > 0.03) K.fm(b, arrive, { fc: 55, f1: 190, ratio: 2, i0: 2, i1: 7, dur: hit - arrive, peak: crit ? 0.2 : 0.12 });
       }
@@ -1042,10 +1044,10 @@ function core(L, W = 0, B = 0, V = 0) {
       if (result === 'chit') return snap(K, o, hit, 0.9);
       const big = crit ? 1 : k;
       K.impact(b, hit, big, crit, 0.9 * low);
-      const w = K.cascade(b, hit + 0.015, crit ? 14 : 7 + Math.round(5 * k));
+      const w = K.cascade(b, hit + 0.015, crit ? 14 : 7 + Math.round(5 * k), { peak: 0.1 * Q });
       K.fm(b, hit + 0.015 + w, { fc: 110 * low, f1: 36 * low, ratio: 1.5, i0: 8, i1: 0.5, dur: 0.16 + 0.08 * big, peak: 0.4 });
       weight(K, o, hit, big, crit, { d: 0.26 });
-      stutter(K, b, hit, (L ? 3 : 1) + (crit ? 1 : 0), 0.042, 0.9 * low);
+      stutter(K, K.g(Q, b), hit, (L ? 3 : 1) + (crit ? 1 : 0), 0.042, 0.9 * low);
     },
     // A low carrier swinging in, the impact lower, a long slow cascade into a long growl, pings and a tone ringing on.
     ban(K, o, T) {
@@ -1077,7 +1079,7 @@ function core(L, W = 0, B = 0, V = 0) {
       const { fx, b } = bus(K, o, { time: 0.07, fb: 0.5, wet: 0.5, lp: 3600 });
       if (T.flies) {
         K.buzz(b, t, { d: 0.03, peak: 0.2, f0: 7000, f1: 2500 });
-        K.stream(b, t, arrive, { lo: 900, hi: 1350, baud: 200, rise: 2, peak: 0.035 });
+        K.stream(b, t, arrive, { lo: 900, hi: 1350, baud: 200, rise: 2, peak: 0.035 * Q });
         K.flight(o.dry, t, arrive, { f0: 160, f1: 900, q: 0.9, peak: 0.2, color: 'brown', pass: miss, tail: 0.18 });
       }
       if (miss) return;
@@ -1087,11 +1089,11 @@ function core(L, W = 0, B = 0, V = 0) {
       K.buzz(b, hit, { d: 0.03, peak: 0.35, f0: 7000, f1: 1200 });
       K.tone(b, hit, { type: 'square', f0: 150 * low, f1: 48 * low, glide: 0.045, a: 0.001, peak: 0.3 + 0.18 * big, d: 0.07 + 0.03 * big });
       weight(K, o, hit, big * 0.8, crit, { f0: 130, f1: 42, d: 0.16, drop: 2 });
-      if (L) stutter(K, b, hit, 2, 0.03, 1.3 * low);
-      const at = hit + stop + 0.05, w = K.cascade(K.pan(b, -0.4), at, crit ? 18 : 8 + Math.round(8 * k), { top: 6500, step: 0.009, peak: 0.08 }); // the bloom
+      if (L) stutter(K, K.g(Q, b), hit, 2, 0.03, 1.3 * low);
+      const at = hit + stop + 0.05, w = K.cascade(K.pan(b, -0.4), at, crit ? 18 : 8 + Math.round(8 * k), { top: 6500, step: 0.009, peak: 0.08 * Q }); // the bloom
       K.fm(b, at, { fc: 140 * low, f1: 50 * low, ratio: 1.5, i0: 6, i1: 0.5, dur: 0.12 + 0.06 * big, peak: 0.22 });
-      K.shards(K.pan(fx, 0.5), at + 0.02, { n: crit ? 10 : 4 + Math.round(4 * k), span: 0.2, peak: 0.07 });
-      pings(K, fx, at + w, [2093, 1568], 0.06, 0.6);
+      K.shards(K.pan(fx, 0.5), at + 0.02, { n: crit ? 10 : 4 + Math.round(4 * k), span: 0.2, peak: 0.07 * Q });
+      pings(K, K.g(Q, fx), at + w, [2093, 1568], 0.06, 0.6);
     },
     // A crushed ping out, a carrier climbing, the return as three impacts stepping down, a growl after the third, pings back.
     ping(K, o, T) {
@@ -1129,6 +1131,7 @@ SOUNDS.b9 = core(1, 1.05);
 SOUNDS.b10 = core(1, 1.05, 1);
 SOUNDS.b11 = core(1, 1.05, 1, 1);
 SOUNDS.b12 = core(1, 1.05, 1, 2);
+SOUNDS.b13 = core(1, 1.05, 1, 0, 0.45);
 
 // How the hit's size and result read (plan: the effect's timing in ms, from abilityfx.mjs play()).
 export function timingOf(t, plan, { result = 'hit', power = 0.3 } = {}) {

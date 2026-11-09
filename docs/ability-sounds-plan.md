@@ -49,8 +49,10 @@ Operator's comes in three beats.
    Good on bass and reverb; Bash and Poke want something other than the 8-bit sound, glitchier or cinematic.
    **1h**: Bash and Poke with no square blips or bit-crush: B11 Tear (sample grains, a stuck buffer, a driven bass
    hit) and B12 Trailer (a swell, a metal slam, low brass). Trailer sounds pretty good.
-   **1i** (built, waiting on the pick): Trailer for Ban (a low bell and a rumble ringing on) and Ping (three slams
-   stepping down) too.
+   **1i**: Trailer for Ban (a low bell and a rumble ringing on) and Ping (three slams stepping down) too. The
+   designer prefers Deep echo, with the blips on Bash and Poke toned down.
+   **1j** (built, waiting on the pick): B13 Deep echo, soft: Bash's and Poke's blips (data, cascade, stutter, pings)
+   about 7 dB down.
 2. **Every ability**: the generic layers in the picked style, all 110 rows, and overrides for Overload, Detonate,
    Firewall, Purge, Crack, Quarantine, Botnet, Deploy, Inject, Flood, Shatter and Failover.
 3. **Tiers and finishers**: the mastery layers, the 13 tier overrides, the 12 finishers.
