@@ -45,8 +45,10 @@ Operator's comes in three beats.
    **1e**: Glitch with longer, louder echoes, a far repeat and a hall: B7 Echo and B8 Cavern. Echo is very close;
    slightly less of both.
    **1f**: B9 Soft echo, Echo eased a third of the way back to Glitch. Bash had no echo; a little more bass on all.
-   **1g** (built, waiting on the pick): B10 Deep echo, Soft echo with a longer, fuller boom, the Breaker's echoes
-   carrying past its cut (`RING`).
+   **1g**: B10 Deep echo, Soft echo with a longer, fuller boom, the Breaker's echoes carrying past its cut (`RING`).
+   Good on bass and reverb; Bash and Poke want something other than the 8-bit sound, glitchier or cinematic.
+   **1h** (built, waiting on the pick): Bash and Poke with no square blips or bit-crush, Ban and Ping as Deep echo:
+   B11 Tear (sample grains, a stuck buffer, a driven bass hit) and B12 Trailer (a swell, a metal slam, low brass).
 2. **Every ability**: the generic layers in the picked style, all 110 rows, and overrides for Overload, Detonate,
    Firewall, Purge, Crack, Quarantine, Botnet, Deploy, Inject, Flood, Shatter and Failover.
 3. **Tiers and finishers**: the mastery layers, the 13 tier overrides, the 12 finishers.

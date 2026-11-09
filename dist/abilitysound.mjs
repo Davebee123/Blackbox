@@ -20,7 +20,7 @@
 //           in three small beats.
 // Nothing here is in a fight yet: the ability effects playtest (?playtest=fx) plays it, and renderBoard() bounces it.
 
-export const STYLES = { a: 'Hardware', b: 'Weighty', c: 'Digital', b1: 'Cinematic', b2: 'Electric', b3: 'Heavy', b4: 'Seismic', b5: 'Machine', b6: 'Glitch', b7: 'Echo', b8: 'Cavern', b9: 'Soft echo', b10: 'Deep echo' };
+export const STYLES = { a: 'Hardware', b: 'Weighty', c: 'Digital', b1: 'Cinematic', b2: 'Electric', b3: 'Heavy', b4: 'Seismic', b5: 'Machine', b6: 'Glitch', b7: 'Echo', b8: 'Cavern', b9: 'Soft echo', b10: 'Deep echo', b11: 'Tear', b12: 'Trailer' };
 export const KEYS = ['bash', 'ban', 'poke', 'ping'];
 // Levels (dB), so every style is heard at today's loudness: a medium hit at about −24 LUFS (momentary max), a crit
 // about 2 dB over it, a hit on ◆ near −27.5 and a miss near −29.5 (today's hit plays at about −23). level: the whole
@@ -39,13 +39,15 @@ export const TRIM = {
   b8: { bash: { level: -5.9, crit: -2.2, chit: 0.7, miss: 2.4 }, ban: { level: -8.7, crit: 0.9, chit: -1.6, miss: 8.3 }, poke: { level: -5.7, crit: -1.8, chit: 0.3, miss: 3.4 }, ping: { level: -8.3, crit: -0.3, chit: 2.7, miss: 3.7 } },
   b9: { bash: { level: -2.6, crit: -3.5, chit: 1.6, miss: 2.9 }, ban: { level: -4.5, crit: -1.7, chit: 5.4, miss: 8.8 }, poke: { level: -1.5, crit: -4, chit: 1.2, miss: 3.7 }, ping: { level: -4.8, crit: -2.1, chit: 4.5, miss: 4.4 } },
   b10: { bash: { level: -8.3, crit: -2.7, chit: 8.4, miss: 8.5 }, ban: { level: -9.3, crit: -1.9, chit: 10.6, miss: 13.6 }, poke: { level: -4.7, crit: -5.2, chit: 5, miss: 6.9 }, ping: { level: -8.5, crit: -2.6, chit: 8.8, miss: 8.1 } },
+  b11: { bash: { level: -10.2, crit: -1.9, chit: 8.1, miss: 16.5 }, ban: { level: -9.3, crit: -1.9, chit: 10.6, miss: 13.6 }, poke: { level: -4.6, crit: -5.3, chit: 8.8, miss: 18.8 }, ping: { level: -8.5, crit: -2.6, chit: 8.8, miss: 8.1 } },
+  b12: { bash: { level: -10.1, crit: -1.7, chit: -0.5, miss: -1.6 }, ban: { level: -9.3, crit: -1.9, chit: 10.6, miss: 13.6 }, poke: { level: -5.4, crit: -4.7, chit: -1, miss: -0.7 }, ping: { level: -8.5, crit: -2.6, chit: 8.8, miss: 8.1 } },
   c: { bash: { level: 4.8, crit: -0.4, chit: 2.3, miss: 1 }, ban: { level: 3.3, crit: 0, chit: 4.3, miss: 2 }, poke: { level: 10.2, crit: -2.1, chit: 0.6, miss: -1 }, ping: { level: 10.4, crit: -0.7, chit: -0.9, miss: -2 } },
 };
 // Each key 1's class: the Breaker's sound is cut dead after its hit-stop (GATE s after it).
 const CLASS = { bash: 'breaker', ban: 'bastion', poke: 'infiltrator', ping: 'operator' };
 const GATE = 0.24;
 // Styles whose Breaker echoes carry past the cut: it drops to this much there and fades over this long (s).
-const RING = { b10: [0.8, 0.7] };
+const RING = { b10: [0.8, 0.7], b11: [0.8, 0.7], b12: [0.8, 0.7] };
 const PULSE = 0.09; // s between the Operator's beats (abilityfx.mjs PULSE)
 
 // ---------- building blocks (any AudioContext; mono) ----------
@@ -874,7 +876,9 @@ SOUNDS.b4 = heavy(1);
 // L 1: Glitch, the hit stuttering like a stuck buffer, lower and heavier. =====
 // L: lower and stuttering (Glitch). W: wetter, its echoes longer and louder with a far repeat ringing into the room.
 // B: more bass, and the Breaker's echoes carry (RING lets them past its cut).
-function core(L, W = 0, B = 0) {
+// V: the Breaker's and the Infiltrator's with no square blips or bit-crush: 1 Tear (sample grains, a stuck buffer,
+// driven bass), 2 Trailer (a swell into a metal slam and a driven low brass, glass and shimmer).
+function core(L, W = 0, B = 0, V = 0) {
   const low = 1 - 0.15 * L;
   const bus = (K, o, e) => {
     const { time = 0.09, fb = 0.4, wet = 0.4, lp = 2600 } = e;
@@ -893,13 +897,82 @@ function core(L, W = 0, B = 0) {
     K.stat(b, x, { d: gap * 0.4, peak: 0.22 * w, hp: 1800 });
     K.S(b, x, 'glitch', { gain: 0.5 * w, rate: 0.7 + Math.random() * 0.8 });
   } };
-  const snap = (K, o, t, p = 1) => { // on ◆: today's shatter, a crushed snap, shards and a ringing ping, with a thunk
+  const snap = (K, o, t, p = 1, soft = false) => { // on ◆: today's shatter, a crushed snap, shards and a ringing ping, with a thunk
     const { fx, b } = bus(K, o, { time: 0.06, fb: 0.35, wet: 0.35, lp: 5000 });
     K.hiss(b, t, { type: 'highpass', f0: 6000, a: 0.0005, d: 0.01, peak: 0.4 });
     K.buzz(b, t, { d: 0.035, peak: 0.35, f0: 8000, f1: 2500 });
-    K.shards(b, t + 0.006, { n: 9 });
+    if (V && soft) grains(K, fx, t + 0.006, 9, 0.1, { names: ['glass-h', 'glitch'], lo: 1, hi: 2.2, gain: 0.3 }); else K.shards(b, t + 0.006, { n: 9 });
     K.ring(fx, t + 0.02, { fc: 3200 * p, fmod: 230, d: 0.12, peak: 0.07, type: 'sine' });
     K.tone(b, t, { type: 'square', f0: 130 * p, f1: 70 * p, glide: 0.04, a: 0.001, d: 0.05, peak: 0.2 });
+  };
+  // Grains: slices of samples thrown about, slowing as they go.
+  const grains = (K, dest, t, n, span, { names = ['glitch', 'scratch'], lo = 0.6, hi = 1.8, gain = 0.4, pan = 0.5, lp } = {}) => { for (let i = 0; i < n; i++) {
+    const u = i / n;
+    K.S(K.pan(dest, (Math.random() * 2 - 1) * pan), t + span * u * u, names[i % names.length], { gain: gain * (1 - 0.6 * u), rate: lo + Math.random() * (hi - lo), off: Math.random() * 0.5, dur: 0.012 + Math.random() * 0.03, fade: 0.002, lp });
+  } };
+  // A stuck buffer: one slice of a sample again and again, sagging in pitch.
+  const stuck = (K, dest, t, n, gap, name, { rate = 0.6, gain = 0.5, lp = 2400 } = {}) => { for (let i = 0; i <= n; i++) K.S(dest, t + i * gap, name, { gain: gain * (1 - i / (n + 2)), rate: rate * Math.pow(0.94, i), jitter: 0, off: 0.02, dur: gap * 0.8, fade: 0.002, lp }); };
+  const bashV = (K, o, T) => {
+    const { t, arrive, hit, k, result } = T, crit = result === 'crit', miss = result === 'miss';
+    const { fx } = bus(K, o, { time: 0.1, fb: 0.48, wet: 0.5 }), d = K.drive(K.g(0.7, fx), 2.2, 1.2);
+    if (T.flies) {
+      if (V === 1) {
+        K.zap(d, t, { f0: 2400, f1: 300, d: 0.05, peak: 0.25 }); grains(K, d, t + 0.005, 3, 0.04, { gain: 0.3 });
+        K.crackle(d, t, arrive, { f: 2600, peak: 0.16 });
+        K.flight(o.dry, t, arrive, { f0: 70, f1: 320, q: 0.7, peak: 0.3, color: 'brown', pass: miss, tail: 0.3 });
+        if (!miss && hit - arrive > 0.03) { K.fm(d, arrive, { fc: 55, f1: 190, ratio: 2, i0: 2, i1: 7, dur: hit - arrive, peak: crit ? 0.2 : 0.12 }); K.S(d, 0, 'scratch', { reverse: true, end: hit, dur: hit - arrive, gain: 0.3, rate: 0.5 }); }
+      } else {
+        K.S(d, t, 'whoosh', { gain: 0.3, rate: 0.7, lp: 2500 });
+        K.swoosh(o.dry, t, arrive, { peak: 0.3, pass: miss, tail: 0.3 });
+        if (!miss && hit - t > 0.06) K.S(fx, 0, 'shimmer', { reverse: true, end: hit, dur: hit - t - 0.01, gain: 0.3, rate: 0.8 }); // the swell
+      }
+    }
+    if (miss) return;
+    if (result === 'chit') return snap(K, o, hit, 0.9, true);
+    const big = crit ? 1 : k;
+    K.crack(d, hit, { peak: 0.4, f: 5200 });
+    if (V === 1) {
+      K.buzz(d, hit, { d: 0.05 + 0.04 * big, peak: 0.4, f0: 6000, f1: 900 });
+      K.surge(d, hit, { f0: 140 * low, f1: 36 * low, d: 0.14 + 0.08 * big, peak: 0.34 + 0.2 * big, drive: 5, bright: 4200 });
+      stuck(K, d, hit + 0.03, 3 + (crit ? 2 : 0), 0.04, 'metal-l', { rate: 0.5 * low, gain: 0.4 });
+      grains(K, d, hit + 0.02, crit ? 14 : 6 + Math.round(5 * k), 0.22, { gain: 0.35 });
+      K.fm(d, hit + 0.06, { fc: 110 * low, f1: 36 * low, ratio: 1.5, i0: 8, i1: 0.5, dur: 0.16 + 0.08 * big, peak: 0.36 });
+    } else {
+      K.S(d, hit, 'plate-l', { gain: 0.6, rate: 0.42 * low, lp: 1800, jitter: 0 });
+      K.surge(d, hit, { f0: 120 * low, f1: 32 * low, d: 0.3 + 0.1 * big, peak: 0.4 + 0.2 * big, drive: 6, bright: 2600 }); // the low brass
+      K.rumble(o.dry, hit + 0.02, { f: 120, d: 0.3, peak: 0.25 });
+      stuck(K, d, hit + 0.05, 2 + (crit ? 1 : 0), 0.055, 'plate-l', { rate: 0.42 * low, gain: 0.35, lp: 1500 });
+      K.surge(d, hit + 0.16, { f0: 420, f1: 38, d: 0.2, peak: 0.14, drive: 4, bright: 3200 }); // a tape stop
+    }
+    weight(K, o, hit, big, crit, { d: 0.26 });
+  };
+  const pokeV = (K, o, T) => {
+    const { t, arrive, hit, stop, k, result } = T, crit = result === 'crit', miss = result === 'miss';
+    const { fx } = bus(K, o, { time: 0.07, fb: 0.5, wet: 0.5, lp: 3600 }), d = K.drive(K.g(V === 2 ? 0.6 : 0.75, fx), 2, 1.2);
+    if (T.flies) {
+      if (V === 1) { K.zap(d, t, { f0: 8000, f1: 2000, d: 0.03, peak: 0.25 }); K.crackle(d, t, arrive, { f: 5000, peak: 0.12 }); K.flight(o.dry, t, arrive, { f0: 160, f1: 900, q: 0.9, peak: 0.2, color: 'brown', pass: miss, tail: 0.18 }); }
+      else { K.S(d, t, 'whoosh', { gain: 0.3, rate: 1.9, hp: 800 }); K.swoosh(o.dry, t, arrive, { lo: [200, 700], hi: [1200, 4200], peak: 0.2, pass: miss, tail: 0.18 }); }
+    }
+    if (miss) return;
+    if (result === 'chit') return snap(K, o, hit, 1.25, true);
+    const big = crit ? 1 : k, at = hit + stop + 0.05, n = crit ? 16 : 7 + Math.round(7 * k);
+    K.crack(d, hit, { peak: 0.45, f: 6500, d: 0.01 });
+    weight(K, o, hit, big * 0.8, crit, { f0: 130, f1: 42, d: 0.16, drop: 2 });
+    if (V === 1) {
+      K.zap(d, hit, { f0: 7000, f1: 1200, d: 0.03, peak: 0.35 });
+      K.surge(d, hit, { f0: 190 * low, f1: 55 * low, d: 0.07 + 0.03 * big, peak: 0.3 + 0.18 * big, drive: 4, bright: 5000 });
+      stuck(K, d, hit + 0.02, 2, 0.028, 'glass-l', { rate: 0.9, gain: 0.3, lp: 5000 });
+      grains(K, fx, at, n, 0.26, { names: ['glitch', 'glass-h', 'scratch'], lo: 0.9, hi: 2.4, gain: 0.3, pan: 0.8 }); // the bloom
+      K.fm(d, at, { fc: 140 * low, f1: 50 * low, ratio: 1.5, i0: 6, i1: 0.5, dur: 0.12 + 0.06 * big, peak: 0.22 });
+      K.modes(o.room, at + 0.03, [[2093, 1, 0.25], [3136, 0.5, 0.18]], { peak: 0.05 });
+      K.ring(fx, at + 0.05, { fc: 2600, fmod: 310, d: 0.12, peak: 0.05, type: 'sine' });
+    } else {
+      K.S(d, hit, 'glass-l', { gain: 0.5, rate: 0.7 });
+      K.surge(d, hit, { f0: 170 * low, f1: 50 * low, d: 0.09 + 0.04 * big, peak: 0.3 + 0.18 * big, drive: 5, bright: 3000 });
+      K.S(K.pan(fx, -0.3), at, 'shimmer', { gain: 0.14, rate: 1.3, dur: 0.5, hp: 1500 }); // the bloom
+      grains(K, fx, at, Math.ceil(n * 0.6), 0.3, { names: ['glass-h'], lo: 0.7, hi: 1.6, gain: 0.17, pan: 0.8 });
+      K.modes(o.room, at + 0.02, [[1568, 1, 0.4], [2349, 0.6, 0.3], [3136, 0.3, 0.2]], { peak: 0.06 });
+    }
   };
   const pings = (K, fx, t, notes, gap, pan = 0) => notes.forEach((f, i) => {
     const x = t + i * gap, d = pan ? K.pan(fx, (i % 2 ? 1 : -1) * pan) : fx;
@@ -909,6 +982,7 @@ function core(L, W = 0, B = 0) {
   return {
     // Data running up the line with low air under it, an FM charge in the draw-back, the impact, a short cascade and growl. Cut dead.
     bash(K, o, T) {
+      if (V) return bashV(K, o, T);
       const { t, arrive, hit, k, result } = T, crit = result === 'crit', miss = result === 'miss';
       const { b } = bus(K, o, B ? { time: 0.1, fb: 0.48, wet: 0.5 } : { time: 0.09, fb: 0.3, wet: 0.35 });
       if (T.flies) {
@@ -950,6 +1024,7 @@ function core(L, W = 0, B = 0) {
     },
     // A quick zap in, a tight crushed stab, then the cascade and pings spilling out wide after.
     poke(K, o, T) {
+      if (V) return pokeV(K, o, T);
       const { t, arrive, hit, stop, k, result } = T, crit = result === 'crit', miss = result === 'miss';
       const { fx, b } = bus(K, o, { time: 0.07, fb: 0.5, wet: 0.5, lp: 3600 });
       if (T.flies) {
@@ -1003,6 +1078,8 @@ SOUNDS.b7 = core(1, 1.5);
 SOUNDS.b8 = core(1, 2.5);
 SOUNDS.b9 = core(1, 1.05);
 SOUNDS.b10 = core(1, 1.05, 1);
+SOUNDS.b11 = core(1, 1.05, 1, 1);
+SOUNDS.b12 = core(1, 1.05, 1, 2);
 
 // How the hit's size and result read (plan: the effect's timing in ms, from abilityfx.mjs play()).
 export function timingOf(t, plan, { result = 'hit', power = 0.3 } = {}) {
