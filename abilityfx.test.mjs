@@ -10,7 +10,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { startOf as lightStart } from './dist/abilitylight.mjs';
-import { RECIPES, MOTIONS, PARTICLES, TRAVELS, CAP, TRAVEL, SPEED, DELIBERATE, HOLD, stopOf, keyOf, keyFor, tickKey, recipeOf, idOfName, originOf, levelOf, countOf, layout, travelOf, boxAt, keyAt, overlaps, rect, createAbilityFx } from './dist/abilityfx.mjs';
+import { RECIPES, MOTIONS, PARTICLES, TRAVELS, CAP, TRAVEL, SPEED, DELIBERATE, HOLD, CADENCE, PULSE, stopOf, cadenceOf, classOfKey, keyOf, keyFor, tickKey, recipeOf, idOfName, originOf, levelOf, countOf, layout, travelOf, boxAt, keyAt, overlaps, rect, createAbilityFx } from './dist/abilityfx.mjs';
 import { groupsOf, abilityOfKey } from './dist/abilityfx-playtest.mjs';
 import { SPIKE, ABILITIES } from './dist/data.mjs';
 
@@ -54,7 +54,7 @@ const variants = (fn, { seeds = [1, 7] } = {}) => {
     for (const [k, r] of Object.entries(RECIPES)) for (const lvl of ['full', 'calm']) for (const opt of [{}, { crit: true, power: 1, result: 'crit' }, { result: 'chit', power: 0 }, { result: 'miss' }, { kind: 'crew' }]) for (const seed of seeds) {
       if (origin === 'crew' && r.on === 'you') continue; // a crewmate's heal or shield is on their bar, not yours
       if (opt.result === 'miss' && (k.endsWith(':tick') || r.on === 'you')) continue; // a burn's tick and your own bar's never miss
-      const plan = layout(r, g, { lvl, rnd: seeded(seed), origin: k.endsWith(':tick') ? 'here' : origin === 'crew' ? 'crew' : 'key', ...(origin === 'crew' ? { kind: 'crew' } : {}), ...opt });
+      const plan = layout(r, g, { lvl, rnd: seeded(seed), origin: k.endsWith(':tick') ? 'here' : origin === 'crew' ? 'crew' : 'key', ...(origin === 'crew' ? { kind: 'crew' } : {}), cadence: cadenceOf(k), ...opt });
       assert.ok(plan && (plan.els.length || plan.light.length), `${name} ${k}`); // a miss on what plays where it lands: only its comet
       fn({ name, board, i, g, k, r, lvl, plan, origin });
     }
@@ -429,6 +429,41 @@ test('a status the hit cashed in shows doing it: Exposed\'s crosshair closes on 
   assert.ok(fire({ marks: ['tagged'] }).H > fire({}).H, 'Tagged: the burn stands taller');
   assert.ok(playOn('inject:tick', { marks: ['tagged'] }).light.some((x) => x.kind === 'halo'), 'and its mark glows');
   assert.equal(playOn('ban', { result: 'miss', marks: ['exposed', 'quarantined', 'hooked'] }).light.filter((x) => ['cross', 'brackets', 'tether', 'halo'].includes(x.kind)).length, 0, 'a miss cashes nothing in');
+});
+
+test('each class has its rhythm: the Breaker winds up and stops dead, the Bastion\'s piece stays up, the Infiltrator goes in quick and spreads after, the Operator lands in even beats', () => {
+  assert.deepEqual(['bash', 'ban', 'poke', 'ping', 'overload', 'firewall', 'inject', 'deploy'].map(classOfKey), ['breaker', 'bastion', 'infiltrator', 'operator', 'breaker', 'bastion', 'infiltrator', 'operator']);
+  assert.equal(cadenceOf('inject:tick'), null, 'a burn\'s tick keeps its own time');
+  const with_ = (k, o = {}) => playOn(k, { cadence: cadenceOf(k), ...o });
+  // Breaker: Bash draws back before it punches, and stops dead even on a light hit.
+  const bash = playOn('bash', { power: 0.1 }), bashC = with_('bash', { power: 0.1 });
+  assert.ok(Math.abs(bashC.impact - (bash.impact + CADENCE.breaker.wind / SPEED)) < 1e-6, 'it winds up');
+  assert.ok(bash.stop === 0 && bashC.stop >= 30 / SPEED - 1e-6, `it stops dead: ${bashC.stop} ms`);
+  // Bastion: Ban's hammer stays up on the part a beat longer, at rest.
+  const ban = playOn('ban'), banC = with_('ban'), h = hammer(ban), hc = hammer(banC);
+  assert.ok(hc.delay + hc.dur > h.delay + h.dur + 60, 'it stays up longer');
+  const restAt = banC.impact + banC.stop + 160 / SPEED, a = keyAtMs(hc, restAt), z = keyAtMs(hc, restAt + 80);
+  assert.ok(Math.abs(a.x - z.x) + Math.abs(a.y - z.y) + Math.abs(a.r - z.r) < 0.5 && z.o > 0.8, 'still, and still showing');
+  // Infiltrator: Poke gets there faster, hardly stops, and its impact spreads out after it goes in.
+  const poke = playOn('poke', { power: 0.8 }), pokeC = with_('poke', { power: 0.8 });
+  assert.ok(pokeC.travel < poke.travel * 0.85 && pokeC.stop < poke.stop, `quick in: ${pokeC.travel} < ${poke.travel}`);
+  assert.ok(pokeC.light.some((x) => x.kind === 'ring' && x.dur >= 450 && x.t0 > pokeC.impact), 'a slow ring spreads from where it went in');
+  // Operator: Ping's impact lands in three small even beats.
+  const ring = (plan) => plan.light.filter((x) => x.kind === 'ring' && x.t0 >= plan.impact - 0.5).map((x) => Math.round(x.t0 - plan.impact));
+  const beats = ring(with_('ping'));
+  assert.ok(beats.length >= 3 * ring(playOn('ping')).length && beats.includes(PULSE) && beats.includes(2 * PULSE), `even beats: ${beats}`);
+});
+
+test('a burn runs down: its fire stands lower tick by tick, the last tick gutters, and Keepalive stokes it up', () => {
+  const fire = (o) => playOn('inject:tick', o).light.find((x) => x.kind === 'fire');
+  const H = [3, 2, 1, 0].map((left) => fire({ left }).H);
+  assert.ok(H[0] > H[1] && H[1] > H[2] && H[2] > H[3], `lower as it runs out: ${H.map(Math.round)}`);
+  assert.equal(fire({}).H, fire({ left: 3 }).H, 'a tick that says nothing: a full fire');
+  const last = playOn('inject:tick', { left: 0 });
+  assert.ok(fire({ left: 0 }).rise < fire({ left: 2 }).rise && last.light.some((x) => x.kind === 'embers' && x.list.every((q) => q.g > 0)), 'the last one gutters, its embers falling');
+  assert.ok(playOn('keepalive').light.find((x) => x.kind === 'fire').H > playOn('inject').light.find((x) => x.kind === 'fire').H, 'Keepalive flares the fire up');
+  const app = readFileSync(new URL('./dist/app.js', import.meta.url), 'utf8');
+  assert.match(app, /marks: e\.marks \|\| \[\], left: e\.left \?\? null/, 'app.js passes a tick how far it has run down');
 });
 
 // A page just big enough for createAbilityFx: a board, its rows, your bar, the tray, and elements that remember what's

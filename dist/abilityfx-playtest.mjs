@@ -7,7 +7,8 @@
 // the panel can fire as them: from their bar in the crew window, in their violet. Mastery picks the tier an effect
 // plays at (1–3, as mastery.mjs unlocks them in play; a crewmate's is always 1), and Break finishers fires each class's
 // finisher (and each subclass's variation) on the part, as the fight-winning break plays it. Status puts a status on the
-// part (its mark shows) for the hit to cash in: Exposed on a crit, Quarantined, Hooked, Tagged on a burn's tick.
+// part (its mark shows) for the hit to cash in: Exposed on a crit, Quarantined, Hooked, Tagged on a burn's tick. Ticks
+// left: how far a burn's tick has run down (last: it gutters).
 
 import { RECIPES, FINISHERS, SUB_FINISHERS, finisherOf } from './abilityfx.mjs';
 import { SPIKE, ABILITIES, ARCHETYPES, SUBS } from './data.mjs';
@@ -31,12 +32,12 @@ export function groupsOf() {
 
 // api: parts() → [{ id, name }]; level() / setLevel(level) (the Screen effects level: off, subtle, medium, bold);
 // motion() / setMotion(on); mates() → crewmates' handles; mark(partId, status) puts a status on the part ('' clears);
-// fire(key, partId, { power, crit, result, hidden, who, tier, marks })
+// fire(key, partId, { power, crit, result, hidden, who, tier, marks, left })
 // → 'fx' | 'stand-in' | 'plain' | 'none'
 // (what played: 'stand-in' when a key's effect started from another key); plain(partId, { result }) the plain strike;
 // finish(cls, sub, partId) → 'fx' | 'plain' | 'none' (a break finisher).
 export function mountFxPlaytest(api) {
-  const ui = { target: null, hit: 'hit', power: 0.3, key: 'shown', who: '', said: '', tier: 1, mark: '' };
+  const ui = { target: null, hit: 'hit', power: 0.3, key: 'shown', who: '', said: '', tier: 1, mark: '', left: '' };
   const panel = document.createElement('aside');
   panel.id = 'fx-playtest';
   panel.setAttribute('aria-label', 'Ability effects playtest');
@@ -54,6 +55,7 @@ export function mountFxPlaytest(api) {
       ${seg('Mastery', [[1, 'tier 1'], [2, 'tier 2'], [3, 'tier 3']], ui.tier)}
       ${seg('Hit', [['hit', 'hit'], ['crit', 'crit'], ['chit', 'on ◆'], ['miss', 'miss']], ui.hit)}
       ${seg('Status', [['', 'none'], ['exposed', 'Exposed'], ['quarantined', 'Quarantined'], ['hooked', 'Hooked'], ['tagged', 'Tagged']], ui.mark)}
+      ${seg('Ticks left', [['', 'any'], ['3', '3'], ['1', '1'], ['0', 'last']], ui.left)}
       ${seg('Size', [['0.15', 'small'], ['0.4', 'medium'], ['0.9', 'big']], ui.power)}
       ${seg('Part', parts.map((p) => [p.id, p.name]), ui.target)}
       <p class="fxp-said" role="status">${esc(ui.said)}</p>
@@ -64,7 +66,7 @@ export function mountFxPlaytest(api) {
   }
   const say = (t) => { ui.said = t; const p = panel.querySelector('.fxp-said'); if (p) p.textContent = t; };
   function fire(key) {
-    const o = { power: ui.power, crit: ui.hit === 'crit', result: ui.hit, hidden: ui.key === 'hidden', who: ui.who || null, tier: ui.tier, marks: ui.mark ? [ui.mark] : [] };
+    const o = { power: ui.power, crit: ui.hit === 'crit', result: ui.hit, hidden: ui.key === 'hidden', who: ui.who || null, tier: ui.tier, marks: ui.mark ? [ui.mark] : [], left: ui.left === '' ? null : Number(ui.left) };
     if (!key) { api.plain(ui.target, o); return say('No recipe: the plain hit effect (hitfx.mjs).'); }
     const what = api.fire(key, ui.target, o), name = RECIPES[key].label;
     const at = ui.tier > 1 && !ui.who ? ` at tier ${ui.tier}` : '';
@@ -84,6 +86,7 @@ export function mountFxPlaytest(api) {
       else if (k === 'Mastery') ui.tier = Number(v);
       else if (k === 'Hit') ui.hit = v;
       else if (k === 'Status') { ui.mark = v; api.mark?.(ui.target, v); }
+      else if (k === 'Ticks left') ui.left = v;
       else if (k === 'Size') ui.power = Number(v);
       else if (k === 'Part') ui.target = v;
       return draw();

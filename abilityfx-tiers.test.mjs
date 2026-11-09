@@ -7,7 +7,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { RECIPES, TIERS, TIER_UP, FINISHERS, SUB_FINISHERS, MOTIONS, PARTICLES, FIN_MOTIONS, CAP, FIN_CAP, TIER_MAX, tierRecipe, recipeOf, layout, finisherLayout, finisherOf, finisherBreak, boxAt, keyAt, overlaps, rect, createAbilityFx } from './dist/abilityfx.mjs';
+import { cadenceOf, RECIPES, TIERS, TIER_UP, FINISHERS, SUB_FINISHERS, MOTIONS, PARTICLES, FIN_MOTIONS, CAP, FIN_CAP, TIER_MAX, tierRecipe, recipeOf, layout, finisherLayout, finisherOf, finisherBreak, boxAt, keyAt, overlaps, rect, createAbilityFx } from './dist/abilityfx.mjs';
 import { finishersOf } from './dist/abilityfx-playtest.mjs';
 import { ARCHETYPES, SUBS, SPIKE } from './dist/data.mjs';
 import { fresh, command, resolveCycle, active, selectEncounter, livingParts } from './dist/combat.mjs';
@@ -78,7 +78,7 @@ const variants = (fn) => {
     for (const k of KEYS) for (const tier of [2, 3]) for (const lvl of ['full', 'calm']) for (const opt of [{}, { crit: true, power: 1, result: 'crit' }, { result: 'chit', power: 0 }]) {
       const r = tierRecipe(k, tier);
       if (origin === 'crew' && r.on === 'you') continue;
-      const plan = layout(r, g, { lvl, rnd: seeded(5), origin: k.endsWith(':tick') ? 'here' : origin === 'crew' ? 'crew' : 'key', ...(origin === 'crew' ? { kind: 'crew' } : {}), ...opt });
+      const plan = layout(r, g, { lvl, rnd: seeded(5), origin: k.endsWith(':tick') ? 'here' : origin === 'crew' ? 'crew' : 'key', ...(origin === 'crew' ? { kind: 'crew' } : {}), cadence: cadenceOf(k), ...opt });
       assert.ok(plan?.els.length, `${name} ${k} ${tier}`);
       fn({ name, board, i, g, k, r, tier, lvl, plan, origin, opt });
     }

@@ -129,11 +129,16 @@ teal, violet or a threat's red.
   - **A status cashing in** (combat.mjs damage `marks`): Exposed's crosshair flies off its mark and closes on a crit;
     Quarantined's brackets snap onto the name; Hooked's line pulls tight as its +6 lands; Tagged burns taller. The mark
     glows.
+  - **Each class's rhythm** (`CADENCE`, by the skill's class): the Breaker winds up and stops dead; the Bastion's piece
+    stays up a beat once it lands; the Infiltrator's goes in quick and its impact spreads after; the Operator's lands in
+    three small even beats.
+  - **A burn runs down** (combat.mjs tick `left`): each tick's fire stands lower than the last, the last one gutters to
+    falling embers, and Keepalive stokes it up.
   - **Mastery tiers** (`tierRecipe`): tier 2 more particles and a spark burst, tier 3 a glint and each iconic skill's own
     flourish; a crewmate's always plays tier 1. **Break finishers** (`FINISHERS`, `SUB_FINISHERS`): the break that wins
     plays your class's flourish on that row within 0.9 s, varied by subclass. Subtle and medium drop the afterimages,
     the swing's fan and the cracks; the result's timing and a status cashing in show on both. `?playtest=fx` reviews
-    them all, by result and status.
+    them all, by result, status and ticks left.
 - **Damage numbers** (dmgfx.mjs): every source its own number with an icon (a hit, a crit, a burn, a helper or daemon,
   a reflect, a shield's soak, a heal, encryption, an interrupt, a virus's claw), landing one after another in the
   order they resolved (0.45 s apart for two, faster for more, a batch never over 2.2 s), the bars dropping with each.

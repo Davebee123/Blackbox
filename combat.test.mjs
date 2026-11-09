@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fresh, command, selectEncounter, resolveCycle, advance, restore, part, active, virusIntegrity, intents, patches, timersHidden, previewDamage } from './dist/combat.mjs';
+import { fresh, command, selectEncounter, resolveCycle, advance, restore, part, active, virusIntegrity, intents, patches, timersHidden, previewDamage, addBurn } from './dist/combat.mjs';
 import { CONFIG, createVirus } from './dist/data.mjs';
 CONFIG.tells = false; // these check skill numbers; tells.test.mjs checks the tells
 // These tests check exact numbers: no crits (gear.test.mjs covers them).
@@ -185,6 +185,15 @@ test('a hit names the statuses it cashed in, for its effect to show them (abilit
   assert.ok(!held.crit && held.marks.includes('quarantined') && !held.marks.includes('exposed'), 'no crit: Exposed did nothing');
   part(s, 'pulse').quarantinedUntil = 0;
   assert.equal(act(s, 'spike pulse').find((e) => e.type === 'damage' && e.target === 'pulse').marks, undefined, 'none: no marks');
+});
+
+test('a burn\'s tick says how many ticks it has left after it, for its effect to run down (abilityfx.mjs)', () => {
+  const s = bare(quiet(start()));
+  Object.assign(part(s, 'pulse'), { integrity: 400, max: 400 });
+  addBurn(s.encounter, { id: 'test', target: 'pulse', damage: 5, grow: 0, left: 3, name: 'Test Burn', drain: 0, synced: false });
+  const lefts = [];
+  for (let i = 0; i < 3; i++) lefts.push(act(s, 'hold').find((e) => e.type === 'damage' && e.via === 'Test Burn')?.left);
+  assert.deepEqual(lefts, [2, 1, 0]);
 });
 
 test('veiled parts hide their timers while they still have armor', () => {

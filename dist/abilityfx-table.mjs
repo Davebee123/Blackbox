@@ -20,6 +20,7 @@
 //   size    its font size (px)
 //   land    ms after it arrives that it lands (its number shows then); dur: ms after it arrives that it is gone
 //   tone    'steel': all of it in steel (armor: ◆ breaking, a ◆ of yours)
+//   stoke   its fire flares up (Keepalive stokes a burn)
 //   chars   flame and rise characters (default 1s and 0s; Purge's *, Thermal Runaway's ^ and ~)
 //   burst   what flies where it lands: { style (abilityfx.mjs PARTICLES), n, per (more per the hit's share of the
 //           part's max), full (bold only), steel (in steel) }
@@ -125,7 +126,7 @@ export const RECIPES = {
   // The id is the game's; what it does: a hit that goes straight through ◆.
   backdoor: { label: 'Backdoor', motion: 'dart', art: ['===>'], through: true, size: 13, land: 0, dur: 460, burst: [b('spark', 5, 4), b('shock', 4, 4)] },
   detonate: { label: 'Detonate', motion: 'blast', frames: ART.blast, fms: 100, size: 15, land: 0, dur: 700, burst: [b('bits', 18, 22), b('shock', 10, 8), b('flame', 12, 0, { full: true })] },
-  keepalive: { label: 'Keepalive', motion: 'mark', art: ['(+)'], size: 14, land: 80, dur: 640, burst: [b('ring', 2, 0), b('ember', 6, 0)] },
+  keepalive: { label: 'Keepalive', motion: 'mark', art: ['(+)'], stoke: true, size: 14, land: 80, dur: 640, burst: [b('ring', 2, 0), b('ember', 6, 0), b('flame', 14, 0)] },
   opening: { label: 'Opening', motion: 'dart', art: ['──────>>'], size: 14, land: 0, dur: 520, burst: [b('shock', 8, 8), b('bits', 10, 12)] },
   propagate: { label: 'Propagate', motion: 'all', art: ['~'], size: 14, land: 0, dur: 620, burst: [b('flame', 10, 0)] },
   'null-route': { label: 'Null Route', on: 'you', motion: 'stamp', art: ['(/)'], size: 16, land: 80, dur: 620, burst: [b('dust', 6, 0)] },

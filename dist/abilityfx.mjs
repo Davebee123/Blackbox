@@ -35,6 +35,11 @@
 // (marks: Exposed on a crit, Quarantined, Hooked's +6, Tagged's hotter burn) shows doing it: a crosshair flies off its
 // mark and closes on the hit, brackets snap on, a line pulls tight, the fire burns hotter; its mark glows.
 //
+// Each class has its rhythm (CADENCE, by the ability's own class): the Breaker winds up and stops dead; the Bastion's
+// piece lands and stays up a beat; the Infiltrator's goes in quick and its impact spreads after; the Operator's lands in
+// three small even beats. A burn runs down (left: the ticks after this one): its fire stands lower as it runs out, the
+// last tick gutters, and Keepalive stokes it up (stoke).
+//
 // Screen effects bold: the whole thing. Subtle and medium (calm): the piece, half the characters, no flourishes (no
 // afterimages, swing fans or cracks); the result's timing and a status cashing in show on both.
 // Off (minimal) or Motion off: none, and the plain hit effect's own rules apply. Pure but for createAbilityFx (the
@@ -53,7 +58,7 @@
 // unseen, Screen effects and Motion.
 
 import { SPIKE, ABILITIES, SUBS } from './data.mjs';
-import { NS, DEFS as LIGHT_DEFS, drawLight, throwN, crackNet, firePhases, endOf, startOf, later as lightLater, capped } from './abilitylight.mjs';
+import { NS, DEFS as LIGHT_DEFS, drawLight, throwN, crackNet, firePhases, endOf, startOf, startOf as lightStart, later as lightLater, capped } from './abilitylight.mjs';
 import { RECIPES, TIER_UP, TIERS, FINISHERS, SUB_FINISHERS } from './abilityfx-table.mjs';
 export { RECIPES, TIER_UP, TIERS, FINISHERS, SUB_FINISHERS } from './abilityfx-table.mjs';
 
@@ -77,6 +82,21 @@ export function stopOf(result = 'hit', power = 0.3) {
   if (result === 'chit') return 52;
   return power < 0.2 ? 0 : Math.round(25 + 50 * Math.min(1, (power - 0.2) / 0.5));
 }
+// Each class's rhythm on its own skills' effects (a burn's tick has none):
+//   breaker      wind: a swing or punch draws back first (ms); stop: holds longer on contact (×, 30 ms at least)
+//   bastion      linger: the piece that lands stays up that much longer before it goes (ms)
+//   infiltrator  travel: gets there faster (×); stop: holds less (×); bloom: its impact spreads out after it goes in
+//   operator     pulses: its impact comes in that many small even beats
+export const CADENCE = {
+  breaker: { wind: 50, stop: 1.5 },
+  bastion: { linger: 150 },
+  infiltrator: { travel: 0.8, stop: 0.5, bloom: true },
+  operator: { pulses: 3 },
+};
+export const PULSE = 90; // ms between an Operator's beats (real)
+// The class an effect's key belongs to (key 1 by its class's word), and its rhythm.
+export const classOfKey = (key) => { const id = String(key || '').split(':')[0]; return ABILITIES[id]?.cls || Object.entries(SPIKE).find(([, x]) => x.word === id)?.[0] || null; };
+export const cadenceOf = (key) => (String(key || '').endsWith(':tick') ? null : CADENCE[classOfKey(key)] || null);
 export const travelOf = (a, b) => { const d = Math.hypot(b.x - a.x, b.y - a.y); return d < TRAVEL.near ? 0 : Math.round(Math.max(TRAVEL.min, Math.min(TRAVEL.max, d * TRAVEL.perPx))); };
 
 // What fires from the tray but stays on the plain strike (hitfx.mjs), and why. Run skills (the Phantom's Spoof and Tap)
@@ -291,7 +311,7 @@ export const MOTIONS = {
     // Its fan: light between where the head was and where it is, down the swing (bold only); a crit's glint at the top.
     const px = x + el.ox, py = y + el.oy, Lh = el.w - 2.5 * cw, head = (r) => ({ x: px + Lh * Math.cos((180 + r) * Math.PI / 180), y: py + Lh * Math.sin((180 + r) * Math.PI / 180) });
     if (c.lvl === 'full') c.light.push({ kind: 'smear', cx: px, cy: py, r0: Lh - el.h * 0.35, r1: Lh + el.h * 0.35, a1: 180 + top, a2: 180 + (miss ? -10 : 0), t1: c.RT(T + H), t2: c.RT(hit) });
-    if (H) c.light.push({ kind: 'glint', ...head(top), t0: c.RT(T), s: 11, dur: c.RT(H) + 30, tone: 'crit' });
+    if (H && c.result === 'crit') c.light.push({ kind: 'glint', ...head(top), t0: c.RT(T), s: 11, dur: c.RT(H) + 30, tone: 'crit' });
     c.at = { x: P.S.x, y: P.S.y }; // where it makes contact: the head's face
     return [track(el, 0, ks)];
   },
@@ -719,17 +739,28 @@ export const LIGHT = {
   // Cinders: points of light flying up off a fire.
   cinder(n, R, P, c) { return [{ kind: 'embers', list: throwN(c.rnd, n, { x: P.S.x, y: P.S.y - 6 }, c.RT(c.t0) + 40, { a0: -Math.PI / 2, spread: 1.2, v: [60, 150], g: -40, drag: 1.5, life: [300, 480], jit: 200, xs: (P.bar.r - P.bar.l) * 0.7 }) }]; },
   // Flames: a fire running out along the part's bar from where it landed (your bar: along the wall's top), standing up
-  // and dying down. Tagged burns it taller and hotter, embers flying off.
+  // and dying down. Tagged burns it taller and hotter, embers flying off. A burn runs down: lower as its ticks run out
+  // (c.left), and its last tick gutters, short, its embers falling; Keepalive (stoke) flares it up.
   flame(n, R, P, c) {
     const you = R.on === 'you', x0 = you ? P.wall?.l ?? P.bar.l : P.bar.l, w = you ? (P.wall ? P.wall.r - P.wall.l : P.bar.r - P.bar.l) : P.bar.r - P.bar.l;
-    const base = you ? P.top ?? P.bar.t : P.S.y - 2, tn = Math.max(6, Math.round(w / 22)), H = (you ? 15 : n >= 30 ? 26 : n >= 12 ? 22 : 15) * (c.tagged ? 1.4 : 1);
-    const t0 = c.RT(c.t0), left = c.RT(Math.max(120, R.dur - (c.t0 - c.arrive))), rise = Math.min(110, left * 0.25), fall = Math.max(120, left - rise - 30);
+    const last = c.left === 0, runs = c.left == null ? 1 : last ? 0.45 : 0.45 + (0.55 * Math.min(3, c.left)) / 3;
+    const base = you ? P.top ?? P.bar.t : P.S.y - 2, tn = Math.max(6, Math.round(w / 22)), H = (you ? 15 : n >= 30 ? 26 : n >= 12 ? 22 : 18) * (c.tagged ? 1.4 : 1) * runs * (R.stoke ? 1.5 : 1);
+    const t0 = c.RT(c.t0), span = c.RT(Math.max(120, R.dur - (c.t0 - c.arrive))), rise = Math.min(R.stoke ? 150 : last ? 60 : 110, span * 0.25), fall = Math.max(120, (span - rise - 30) * (last ? 0.6 : 1));
     const out = [{ kind: 'fire', x0, w, base, n: tn, from: Math.max(x0, Math.min(x0 + w, P.S.x)), run: 900, H, ph: firePhases(c.rnd, tn), t0, rise, fall }];
     if (c.tagged) out.push({ kind: 'embers', list: throwN(c.rnd, 10, { x: P.S.x, y: base - 4 }, t0 + 30, { a0: -Math.PI / 2, spread: 1.4, v: [50, 150], g: -60, drag: 1.5, life: [300, 460], jit: 200, xs: w * 0.8 }) });
+    if (last) out.push({ kind: 'embers', list: throwN(c.rnd, 7, { x: P.S.x, y: base - 8 }, t0 + rise, { a0: -Math.PI / 2, spread: 2.4, v: [20, 60], g: 260, drag: 1.5, life: [300, 420], jit: 120, xs: w * 0.7 }) }, { kind: 'puffs', list: throwN(c.rnd, 2, { x: P.S.x, y: base - 6 }, t0 + rise + 40, { a0: -Math.PI / 2, spread: 0.6, v: [20, 40], g: -30, drag: 1, life: [360, 460], xs: w * 0.4 }) });
     return out;
   },
 };
 
+// A light item as n small even beats (the Operator's rhythm): a flash or a ring n smaller ones PULSE ms apart, a spray split
+// between them; anything else as it was.
+function pulsed(it, n) {
+  if (it.list) return Array.from({ length: n }, (_, k) => ({ ...it, list: it.list.filter((_, i) => i % n === k).map((q) => ({ ...q, t0: q.t0 + k * PULSE })) })).filter((x) => x.list.length);
+  if (it.kind === 'flash') return Array.from({ length: n }, (_, k) => ({ ...it, t0: it.t0 + k * PULSE, R: it.R * 0.6, dur: it.dur * 0.8 }));
+  if (it.kind === 'ring') return Array.from({ length: n }, (_, k) => ({ ...it, t0: it.t0 + k * PULSE, rx: it.rx * (0.55 + 0.45 * (k + 1) / n), ry: it.ry * (0.6 + 0.4 * (k + 1) / n), dur: it.dur * 0.75, w: (it.w || 2) * 0.8 }));
+  return [it];
+}
 // A piece's afterimage: lag ms behind it, fainter (f), gone by the time it makes contact.
 function ghost(el, at, lag, f) {
   const g = { ...el, cls: el.cls + ' ghost', delay: el.delay + lag, ghost: true };
@@ -761,18 +792,20 @@ function warp(el, at, stop) {
 // A recipe on a board → { els, light, tone, impact, dur, travel, from }, or null if it can't play there (no part, no bar
 // of yours). opts: lvl ('full' | 'calm'), power (0–1), crit, result ('hit' | 'crit' | 'chit' | 'miss'), kind ('you' |
 // 'crew'), rnd, origin ('key' | 'bar' | 'here'), marks (the statuses the hit cashed in: exposed, quarantined, hooked,
-// tagged). els: the pieces (on the page as spans); light: what is drawn in light (abilitylight.mjs), in tone.
-export function layout(R, geo, { lvl = 'full', power = 0.3, crit = false, result = 'hit', kind = 'you', rnd = Math.random, origin = 'bar', marks = [] } = {}) {
+// tagged), cadence (its class's rhythm: CADENCE), left (a burn's tick: the ticks after this one). els: the pieces (on
+// the page as spans); light: what is drawn in light (abilitylight.mjs), in tone.
+export function layout(R, geo, { lvl = 'full', power = 0.3, crit = false, result = 'hit', kind = 'you', rnd = Math.random, origin = 'bar', marks = [], cadence: cad = null, left = null } = {}) {
   if (!R || !lvl || !geo) return null;
   if (crit) result = 'crit';
   const P = pointsOf(R, geo, origin, result);
   if (!P) return null;
+  if (cad?.travel && P.T) P.T = Math.round(P.T * cad.travel); // the Infiltrator gets there faster
   const travels = TRAVELS.has(R.motion), T = P.T, miss = result === 'miss', chit = result === 'chit', contact = CONTACT.has(R.motion);
   // A hit that travels lands land ms after it arrives (a crit's swing or punch draws back first); one that plays where
   // it lands starts when the comet gets there.
-  const hold = result === 'crit' && (R.motion === 'swing' || R.motion === 'punch') ? HOLD : 0;
+  const winds = R.motion === 'swing' || R.motion === 'punch', hold = winds && result === 'crit' ? HOLD : winds && !miss && cad?.wind ? cad.wind : 0; // a crit draws back; the Breaker always does
   const arrive = T, impact = T + hold + (R.land || 0), RT = (ms) => ms / SPEED;
-  const c = { lvl, power: Math.max(0, Math.min(1, power)), crit, rnd, t0: impact, arrive, grow: 1 + Math.min(1, power) * 0.12, hold, result, RT, light: [], tagged: marks.includes('tagged'), at: null };
+  const c = { lvl, power: Math.max(0, Math.min(1, power)), crit, rnd, t0: impact, arrive, grow: 1 + Math.min(1, power) * 0.12, hold, result, RT, light: [], tagged: marks.includes('tagged'), at: null, left };
   const tint = kind === 'crew' ? ' crew' : crit ? ' crit' : R.tone === 'steel' ? ' chit' : '';
   const tone = kind === 'crew' ? 'crew' : crit ? 'crit' : R.tone === 'steel' ? 'steel' : 'you';
   // A miss: what plays where it lands never does (only the comet that would have taken it there).
@@ -848,9 +881,18 @@ export function layout(R, geo, { lvl = 'full', power = 0.3, crit = false, result
     if (c.tagged) glow('tagged', tc);
   }
   // The hit-stop: what makes contact holds there; what flies goes after it (the flash at contact shows through it).
-  const stop = contact ? stopOf(result, c.power) : 0;
+  // The Breaker stops dead (longer, and on every hit); the Infiltrator hardly stops.
+  let stop = contact ? stopOf(result, c.power) : 0;
+  if (contact && !miss && cad?.stop) stop = cad.stop > 1 ? Math.round(Math.max(30, stop * cad.stop)) : Math.round(stop * cad.stop);
   if (stop) els = els.map((el) => (el.ghost ? el : warp(el, el.hitAt ?? impact, stop))); // an afterimage is gone by contact
-  let lights = stop ? light.map((it) => (it.contact ? it : it.kind === 'cross' ? { ...it, t2: it.t2 + RT(stop) } : startOf(it) >= tc - 0.5 ? lightLater(it, RT(stop)) : it)) : light;
+  // The Infiltrator's impact spreads out after it goes in: a slow ring from where it went in, what it throws a beat late.
+  const bloom = cad?.bloom && contact && at && !miss ? 50 : 0;
+  if (bloom) light.push({ kind: 'ring', x: at.x, y: at.y, t0: tc + 40, rx: 46, ry: 13, dur: 480, w: 1 });
+  let lights = stop || bloom ? light.map((it) => (it.contact ? it : it.kind === 'cross' ? { ...it, t2: it.t2 + RT(stop) } : lightStart(it) >= tc - 0.5 ? lightLater(it, RT(stop) + bloom) : it)) : light;
+  // The Operator's impact comes in even beats: each flash, ring and spray it throws split into small ones, PULSE apart.
+  if (cad?.pulses > 1 && !miss) lights = lights.flatMap((it) => (it.contact || lightStart(it) < tc - 0.5 ? [it] : pulsed(it, cad.pulses)));
+  // The Bastion's piece stays up a beat once it has landed, where it rests (as long as it still ends by CAP).
+  if (cad?.linger && !miss) els = els.map((el) => { if (el.ghost || !/^art\b/.test(el.cls) || /\bhot\b/.test(el.cls)) return el; const ms = el.keys.map((k) => el.delay + k.at * el.dur), j = el.keys.findLastIndex((k, i) => i < el.keys.length - 1 && k.o >= 0.9), room = Math.min(cad.linger, CAP - (el.delay + el.dur)); return j > 0 && room > 10 && ms[j] >= impact - 0.5 ? warp(el, ms[j], room) : el; });
   // Every piece is gone by CAP and ends unseen: nothing stays behind (one that would start after it never does).
   els = els.filter((el) => el.delay < CAP - 1);
   for (const el of els) {
@@ -1055,13 +1097,13 @@ export function createAbilityFx(board, { canMove = () => true, level = () => 'fu
   // instead), noKey (as if its key weren't on screen: the playtest's preview of the fallback), landIn (ms from now its
   // number shows: it lands then), onImpact, tier (its mastery tier: tierRecipe).
   // Its plan (layout) on the page as it is now, without playing it: when it would land (app.js waits its numbers for it).
-  function plan(key, row, { power = 0.3, crit = false, result = 'hit', kind = 'you', origin = 'key', ability = null, who = null, keyEl: kEl = null, noKey = false, lvl: force, tier = 1, marks = [] } = {}) {
+  function plan(key, row, { power = 0.3, crit = false, result = 'hit', kind = 'you', origin = 'key', ability = null, who = null, keyEl: kEl = null, noKey = false, lvl: force, tier = 1, marks = [], left = null } = {}) {
     const R = tierRecipe(key, tier);
     const lvl = force || levelOf({ level: level(), motion: canMove() });
     if (!R || !lvl) return null;
     if (R.on !== 'you' && !row?.isConnected) return null;
     const geo = measure(R.on === 'you' ? null : row, { ability, key: kEl, noKey, who });
-    const out = layout(R, geo, { lvl, power, crit, result, kind, origin, marks });
+    const out = layout(R, geo, { lvl, power, crit, result, kind, origin, marks, left, cadence: cadenceOf(key) });
     return out && Object.assign(out, { geo });
   }
   function play(key, row, { landIn = null, onImpact = null, ...opts } = {}) {
