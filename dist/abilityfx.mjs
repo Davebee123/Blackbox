@@ -74,7 +74,9 @@ export const TRAVEL = { perPx: 0.75, min: 160, max: 340, near: 24 };
 // The motions that make contact with the part (a hit-stop holds them there) and their stop (recipe ms) by result:
 // nothing for a light hit or a miss, up to 75 for a big one, 52 on ◆, 105 for a crit. HOLD: a crit's swing or punch
 // draws back that long first.
-export const CONTACT = new Set(['swing', 'punch', 'dart', 'fly']);
+export const CONTACT = new Set(['swing', 'punch', 'dart', 'fly', 'bolt']);
+// The motions that play where they land and make contact there (a mark comes down, a clamp shuts): the same rules.
+export const LANDS = new Set(['mark', 'clamp']);
 export const HOLD = 120;
 export function stopOf(result = 'hit', power = 0.3) {
   if (result === 'miss') return 0;
@@ -262,9 +264,9 @@ function pointsOf(R, geo, origin, result = 'hit') {
     let S = { x: (name.l + name.r) / 2, y: (bar.t + bar.b) / 2 }; // the bar's line under the middle of the name cell
     let M = { x: S.x, y: ((name.t + name.b) / 2 + S.y) / 2 }; // the middle of the name cell
     if (R.at === 'chip' && part.chip) { M = mid(part.chip); S = M; } // its attack chip, when it shows one
-    else if (result === 'chit' && part.chits) { S = { x: part.chits.x, y: part.chits.b }; M = { x: part.chits.x, y: part.chits.y }; } // spent on ◆: it lands on the ◆
+    else if ((result === 'chit' || R.at === 'chits') && part.chits) { S = { x: part.chits.x, y: part.chits.b }; M = { x: part.chits.x, y: part.chits.y }; } // spent on ◆: it lands on the ◆
     const lane = { l: cell.r + 3, r: Math.max(cell.r + 60, Math.min(row.r - 4, cell.r + 230)), t: row.t + 1, b: row.b - 1 };
-    P = { S, M, D: M, lane, floor: name.b + 1, bar, row, cell, name, chip: part.chip || null, marks: part.marks || {} };
+    P = { S, M, D: M, lane, floor: name.b + 1, bar, row, cell, name, chip: part.chip || null, marks: part.marks || {}, chits: part.chits || null };
   }
   P.ybar = ybar; P.Y = Y || P.M;
   // Where it starts: its key (a crewmate's: their bar), else your bar, else (neither on screen) above the part.
@@ -370,16 +372,23 @@ export const MOTIONS = {
   // Forks (a mastery tier): from the part, branches on to the nearest other parts (none on the board: two short
   // branches off it), lit as the bolt arrives.
   bolt(R, P, c) {
-    const out = [], T = Math.max(1, P.T);
-    const runs = R.twice ? [[P.O, P.M, 0, ''], [P.O, P.M, 150, ' echo']] : c.lvl === 'full' ? [[P.O, P.M, 0, ''], [{ x: P.O.x + 26, y: P.O.y + 4 }, P.M, 40, ' echo']] : [[P.O, P.M, 0, '']];
-    if (R.forks && c.lvl === 'full') {
+    // It charges at the key first (c.hold: the Breaker's wind-up, longer on a crit), then leaps tip-first and arrives at
+    // the impact; it stays solid there (the hit-stop holds it lit), then flickers out. A miss grounds in the row beside
+    // the part; on ◆ it strikes the ◆ and an arc jumps off it in steel.
+    const out = [], T = Math.max(1, P.T), H = c.hold, miss = c.result === 'miss', chit = c.result === 'chit';
+    const end = miss ? { x: P.bar.r + 12, y: P.S.y + 1 } : P.M, hit = T + H;
+    c.at = end;
+    const runs = R.twice ? [[P.O, end, 0, ''], [P.O, end, 150, ' echo']] : c.lvl === 'full' ? [[P.O, end, 0, ''], [{ x: P.O.x + 26, y: P.O.y + 4 }, end, 40, ' echo']] : [[P.O, end, 0, '']];
+    if (R.forks && c.lvl === 'full' && !miss) {
       const others = P.parts.filter((q) => Math.hypot(q.M.x - P.M.x, q.M.y - P.M.y) > 8).sort((a, b) => Math.hypot(a.M.x - P.M.x, a.M.y - P.M.y) - Math.hypot(b.M.x - P.M.x, b.M.y - P.M.y)).slice(0, R.forks);
       const ends = others.length ? others.map((q) => q.M) : [{ x: P.M.x + 70, y: P.M.y - 14 }, { x: P.M.x + 70, y: P.M.y + 14 }].slice(0, R.forks);
-      ends.forEach((to, j) => runs.push([P.M, to, Math.round(T * 0.85) + 20 + j * 40, ' fork']));
+      ends.forEach((to, j) => runs.push([P.M, to, hit + 20 + j * 40, ' fork']));
     }
+    if (chit) runs.push([end, { x: end.x + 30, y: end.y - 24 }, hit + 10, ' fork chit']);
     for (const [from, to, lag, cls] of runs) {
-      const dx = to.x - from.x, dy = to.y - from.y, dist = Math.hypot(dx, dy) || 1, nx = -dy / dist, ny = dx / dist;
-      const steps = Math.max(5, Math.round(dist / (R.size * 0.95))), Tr = cls === ' fork' ? Math.min(180, dist * 0.6) : T;
+      const dx = to.x - from.x, dy = to.y - from.y, dist = Math.hypot(dx, dy) || 1, nx = -dy / dist, ny = dx / dist, fork = / fork/.test(cls);
+      const steps = Math.max(fork ? 3 : 5, Math.round(dist / (R.size * 0.95))), Tr = fork ? Math.min(120, dist * 0.6) : T;
+      const t0 = fork ? lag : H + lag, gone = fork ? lag + 260 : T + H + R.dur;
       let prev = from;
       for (let i = 1; i <= steps; i++) {
         const t = i / steps, side = i === steps ? 0 : (i % 2 ? 1 : -1) * (4 + c.rnd() * 6);
@@ -387,14 +396,28 @@ export const MOTIONS = {
         const sx = p.x - prev.x, sy = p.y - prev.y;
         const ch = Math.abs(sx) < Math.abs(sy) * 0.4 ? '|' : Math.abs(sy) < Math.abs(sx) * 0.4 ? '-' : (sx > 0) === (sy > 0) ? '\\' : '/';
         const el = piece('art bolt' + cls, [ch], R.size, {});
-        const x = (p.x + prev.x) / 2 - el.w / 2, y = (p.y + prev.y) / 2 - el.h / 2, lit = Math.round(t * Tr * 0.85) + lag, life = Math.max(120, (cls === ' fork' ? lag + 300 : T + R.dur) - lit - 60);
+        const x = (p.x + prev.x) / 2 - el.w / 2, y = (p.y + prev.y) / 2 - el.h / 2, lit = Math.round(t0 + t * Tr);
         // A bolt's characters stay where they're drawn: it comes out from the key's (or the bar's) edge, never over a
         // key's label or your bar's numbers.
         if (P.okeep.some((q) => overlaps({ l: x, t: y, r: x + el.w, b: y + el.h }, q))) { prev = p; continue; }
-        out.push(track(el, lit, [{ t: 0, x, y, o: 0 }, { t: life * 0.05, o: 1 }, { t: life * 0.3, o: 0.35 }, { t: life * 0.42, o: 1 }, { t: life * 0.6, o: 0.5 }, { t: life * 0.72, o: 0.9 }, { t: life, o: 0 }]));
+        // Lit as the tip passes, flickering on its way, solid from the moment it strikes; then it flickers out.
+        const at = Math.max(lit + 25, fork ? lit + 25 : hit), life = Math.max(at + 140, gone) - lit, k = (ms) => Math.max(0, ms - lit);
+        const ks = [{ t: 0, x, y, o: 0 }, { t: 18, o: 1 }];
+        if (at - lit > 60) ks.push({ t: (at - lit) * 0.5, o: 0.55 }, { t: at - lit - 12, o: 1 });
+        ks.push({ t: k(at), o: 1 }, { t: k(at) + 40, o: 0.35 }, { t: k(at) + 60, o: 1 }, { t: k(at) + 95, o: 0.5 }, { t: k(at) + 115, o: 0.9 }, { t: life, o: 0 });
+        const e2 = track(el, lit, ks);
+        e2.hitAt = fork ? lit : hit; // what's drawn by the strike holds lit through the hit-stop
+        out.push(e2);
         prev = p;
       }
     }
+    // The wind-up: it crackles at the key before it goes (bold: sparks too).
+    if (H && P.from !== 'here') {
+      c.light.push({ kind: 'glint', x: P.O.x, y: P.O.y, t0: 0, s: c.result === 'crit' ? 12 : 9, dur: c.RT(H) + 40, tone: c.result === 'crit' ? 'crit' : undefined });
+      if (c.lvl === 'full') c.light.push({ kind: 'sparks', list: throwN(c.rnd, c.result === 'crit' ? 6 : 3, P.O, 0, { a0: -Math.PI / 2, spread: Math.PI * 1.4, v: [60, 140], g: 0, drag: 6, life: [90, 150], jit: c.RT(H) * 0.7 }), w: 0.8 });
+    }
+    // A miss grounds: a puff where it strikes the floor of the row.
+    if (miss) c.light.push({ kind: 'puffs', list: throwN(c.rnd, 4, { x: end.x, y: end.y }, c.RT(hit), { a0: -Math.PI / 2, spread: 1.6, v: [30, 70], g: -30, drag: 2, life: [300, 420] }) }, { kind: 'ring', x: end.x, y: end.y + 2, t0: c.RT(hit), rx: 18, ry: 4, dur: 260, w: 1 });
     return out;
   },
   // Helpers scuttling out to the part (count of them): they walk onto its name cell, settle, blink out.
@@ -439,6 +462,9 @@ export const MOTIONS = {
   mark(R, P, c) {
     const el = pieceOf('art', R, R.size), at = ctrAt(el, P.M), D = R.dur, spin = R.spin || 0;
     const on = R.drop ? { t: 0, x: at.x, y: at.y - 30, o: 0, e: IN } : { t: 0, ...at, s: 1.6, r: spin, o: 0, e: OUT };
+    c.at = { x: P.M.x, y: P.M.y };
+    // Nothing for it to break (no ◆ left): it glances off and slides away.
+    if (c.broke === 0) return [track(el, 0, [on, { t: R.land, ...at, s: 1, r: 0, o: 1, e: OUT }, { t: R.land + 100, x: at.x + 16, y: at.y + 10, r: 28, o: 0.8 }, { t: R.land + 240, x: at.x + 22, y: at.y + 16, r: 34, o: 0 }])];
     return [track(el, 0, [on, { t: R.land, ...at, s: 1, r: 0, o: 1 }, { t: R.land + 60, s: R.drop ? 1.08 : 1 }, { t: R.land + 120, s: 1 }, { t: D - 180, o: 1, s: 1 }, { t: D, o: 0, s: R.collapse ? 0.1 : 1.05, r: R.collapse ? 180 : 0 }])];
   },
   // A cut across the part's attack chip (or its name cell): a line of slashes drawn through it, its sign over it.
@@ -457,11 +483,14 @@ export const MOTIONS = {
   },
   // Two halves closing in on the part from either side (wide: round its whole name cell), a bump as they meet.
   clamp(R, P, c) {
-    const gap = R.wide ? (P.name.r - P.name.l) / 2 + 2 : 2, out = [];
+    const gap = R.wide ? (P.name.r - P.name.l) / 2 + 2 : 2, out = [], bump = c.result === 'crit' ? 7 : 3;
+    c.at = { x: P.M.x, y: P.M.y };
     [[R.art[0], -1], [R.art[1], 1]].forEach(([art, side]) => {
       const el = piece('art', [art], R.size, {}), y = P.M.y - el.h / 2;
       const x = side < 0 ? P.M.x - gap - el.w : P.M.x + gap;
-      out.push(track(el, 0, [{ t: 0, x: x + side * 50, y, o: 0, e: IN }, { t: R.land, x, o: 1, e: OUT }, { t: R.land + 50, x: x + side * 3 }, { t: R.land + 120, x }, { t: R.dur - 160, o: 1 }, { t: R.dur, o: 0 }]));
+      // A miss: the halves shut on nothing, pass each other and are gone.
+      if (c.result === 'miss') { const past = x - side * (2 * gap + el.w + 26); out.push(track(el, 0, [{ t: 0, x: x + side * 50, y, o: 0, e: IN }, { t: R.land, x, o: 1 }, { t: R.land + 150, x: past, o: 0 }])); return; }
+      out.push(track(el, 0, [{ t: 0, x: x + side * 50, y, o: 0, e: IN }, { t: R.land, x, o: 1, e: OUT }, { t: R.land + 50, x: x + side * bump }, { t: R.land + 120, x }, { t: R.dur - 160, o: 1 }, { t: R.dur, o: 0 }]));
     });
     return out;
   },
@@ -794,22 +823,23 @@ function warp(el, at, stop) {
 // 'crew'), rnd, origin ('key' | 'bar' | 'here'), marks (the statuses the hit cashed in: exposed, quarantined, hooked,
 // tagged), cadence (its class's rhythm: CADENCE), left (a burn's tick: the ticks after this one). els: the pieces (on
 // the page as spans); light: what is drawn in light (abilitylight.mjs), in tone.
-export function layout(R, geo, { lvl = 'full', power = 0.3, crit = false, result = 'hit', kind = 'you', rnd = Math.random, origin = 'bar', marks = [], cadence: cad = null, left = null } = {}) {
+export function layout(R, geo, { lvl = 'full', power = 0.3, crit = false, result = 'hit', kind = 'you', rnd = Math.random, origin = 'bar', marks = [], cadence: cad = null, left = null, broke = null } = {}) {
   if (!R || !lvl || !geo) return null;
+  if (cad?.wind && R.motion === 'mark' && R.on !== 'you') R = { ...R, drop: true }; // the Breaker's marks slam down
   if (crit) result = 'crit';
   const P = pointsOf(R, geo, origin, result);
   if (!P) return null;
   if (cad?.travel && P.T) P.T = Math.round(P.T * cad.travel); // the Infiltrator gets there faster
-  const travels = TRAVELS.has(R.motion), T = P.T, miss = result === 'miss', chit = result === 'chit', contact = CONTACT.has(R.motion);
+  const travels = TRAVELS.has(R.motion), T = P.T, miss = result === 'miss', chit = result === 'chit', contact = CONTACT.has(R.motion) || (LANDS.has(R.motion) && R.on !== 'you');
   // A hit that travels lands land ms after it arrives (a crit's swing or punch draws back first); one that plays where
   // it lands starts when the comet gets there.
-  const winds = R.motion === 'swing' || R.motion === 'punch', hold = winds && result === 'crit' ? HOLD : winds && !miss && cad?.wind ? cad.wind : 0; // a crit draws back; the Breaker always does
+  const winds = R.motion === 'swing' || R.motion === 'punch' || R.motion === 'bolt', hold = winds && result === 'crit' ? HOLD : winds && !miss && cad?.wind ? cad.wind : 0; // a crit draws back; the Breaker always does
   const arrive = T, impact = T + hold + (R.land || 0), RT = (ms) => ms / SPEED;
-  const c = { lvl, power: Math.max(0, Math.min(1, power)), crit, rnd, t0: impact, arrive, grow: 1 + Math.min(1, power) * 0.12, hold, result, RT, light: [], tagged: marks.includes('tagged'), at: null, left };
+  const c = { lvl, power: Math.max(0, Math.min(1, power)), crit, rnd, t0: impact, arrive, grow: 1 + Math.min(1, power) * 0.12, hold, result, RT, light: [], tagged: marks.includes('tagged'), at: null, left, broke };
   const tint = kind === 'crew' ? ' crew' : crit ? ' crit' : R.tone === 'steel' ? ' chit' : '';
   const tone = kind === 'crew' ? 'crew' : crit ? 'crit' : R.tone === 'steel' ? 'steel' : 'you';
   // A miss: what plays where it lands never does (only the comet that would have taken it there).
-  let els = miss && !travels ? [] : (MOTIONS[R.motion] || MOTIONS.none)(R, P, c);
+  let els = miss && !travels && R.motion !== 'clamp' ? [] : (MOTIONS[R.motion] || MOTIONS.none)(R, P, c);
   const at = c.at, light = c.light;
   if (!travels) {
     for (const el of els) el.delay += arrive;
@@ -817,13 +847,14 @@ export function layout(R, geo, { lvl = 'full', power = 0.3, crit = false, result
   }
   // A piece that makes contact leaves afterimages on its way (bold only; a tier's own trail stands in for them) and burns
   // white-hot where it hits.
-  if (contact) els = [...(lvl === 'full' && !R.trail ? els.flatMap((el) => (/\becho\b/.test(el.cls) ? [] : [ghost(el, impact, 22, 0.3), ghost(el, impact, 45, 0.2), ghost(el, impact, 67, 0.12)])) : []), ...els, ...(miss ? [] : els.filter((el) => !/\becho\b/.test(el.cls)).map((el) => hotCopy(el, impact)))];
+  if (contact) els = [...(lvl === 'full' && !R.trail && travels && R.motion !== 'bolt' ? els.flatMap((el) => (/\becho\b/.test(el.cls) ? [] : [ghost(el, impact, 22, 0.3), ghost(el, impact, 45, 0.2), ghost(el, impact, 67, 0.12)])) : []), ...els, ...(miss ? [] : els.filter((el) => !/\becho\b/.test(el.cls)).map((el) => hotCopy(el, impact)))];
   els.forEach((el) => { el.cls += tint; });
   const ptint = (el) => kind === 'crew' ? ' crew' : chit && !/\bflame\b|\brise\b/.test(el.cls) ? ' chit' : crit ? ' crit' : R.tone === 'steel' ? ' chit' : '';
   const bright = R.bright ? ' bright' : ''; // a mastery tier 3's particles burn brighter (under any tint)
   // What flies where it lands: in light where its style is (LIGHT; none of it on ◆, where the bar is untouched), else
   // characters.
   const throwIt = (b, n, R2, P2, t0) => {
+    if (b.steel && broke != null) n = Math.round((n * broke) / 3); // ◆ shards: as many as it broke
     if (!n || miss) return;
     if (LIGHT[b.style]) {
       if (!chit) light.push(...LIGHT[b.style](n, R2, P2, { ...c, t0 }, b));
@@ -849,15 +880,23 @@ export function layout(R, geo, { lvl = 'full', power = 0.3, crit = false, result
   // Where it makes contact, by how it went: on ◆ a clang in steel at the ◆ (the bar untouched); else a flash, a hammer's
   // cracks along the bar (bold), a ram's pressure ring, a needle's glint; a crit rings the whole bar and gathers first.
   const tc = RT(impact), big = c.power;
+  // Each ◆ it broke takes a strike of its own, in steel, a beat apart: where it is on the part's row of ◆ (a hit spent on
+  // ◆ with no count: the one it hit).
+  const C = P.chits, slot = (k) => (C?.n ? { x: C.l + ((Math.min(C.n - 1, C.i + k) + 0.5) * (C.r - C.l)) / C.n, y: C.y } : at);
+  const ticks = miss || !contact ? [] : broke > 0 ? Array.from({ length: broke }, (_, k) => slot(k)) : chit && at ? [at] : [];
+  ticks.forEach((q, k) => {
+    const t0 = tc + k * (cad?.pulses ? PULSE : 70), big = k === 0 && chit;
+    light.push({ kind: 'flash', x: q.x, y: q.y, t0, R: big ? 16 : 12, dur: 200, tone: 'steel', contact: k === 0 },
+      { kind: 'ring', x: q.x, y: q.y, t0, rx: big ? 18 : 12, ry: big ? 18 : 12, dur: 260, w: 1.4, tone: 'steel' },
+      { kind: 'sparks', list: throwN(rnd, lvl === 'full' ? (big ? 12 : 6) : 3, q, t0, { a0: -Math.PI / 2 - 0.2, spread: Math.PI * 0.7, v: [140, 320], g: 1300, drag: 3, life: [160, 280] }), w: 1, tone: 'steel' });
+    if (big) light.push({ kind: 'ring', x: q.x, y: q.y, t0: tc + 50, rx: 30, ry: 30, dur: 260, w: 1, tone: 'steel' });
+  });
   if (contact && at && !miss) {
     if (chit) {
-      light.push({ kind: 'flash', x: at.x, y: at.y, t0: tc, R: 16, dur: 200, tone: 'steel', contact: true },
-        { kind: 'ring', x: at.x, y: at.y, t0: tc, rx: 18, ry: 18, dur: 280, w: 1.6, tone: 'steel' },
-        { kind: 'ring', x: at.x, y: at.y, t0: tc + 50, rx: 30, ry: 30, dur: 260, w: 1, tone: 'steel' },
-        { kind: 'sparks', list: throwN(rnd, lvl === 'full' ? 12 : 6, at, tc, { a0: -Math.PI / 2 - 0.2, spread: Math.PI * 0.7, v: [160, 340], g: 1300, drag: 3, life: [180, 300] }), w: 1, tone: 'steel' });
+      /* the ◆ strikes above */
     } else {
       if (!(R.burst || []).some((b) => b.style === 'flash')) light.push({ kind: 'flash', x: at.x, y: at.y, t0: tc, R: crit ? 30 : 16 + 10 * big, dur: 200, contact: true });
-      if (R.motion === 'swing' && lvl === 'full' && (crit || big >= 0.25)) {
+      if ((R.motion === 'swing' || (R.motion === 'bolt' && crit)) && lvl === 'full' && (crit || big >= 0.25)) {
         const mains = crit ? [[Math.PI + 0.03, Math.max(20, at.x - P.bar.l + 4)], [-0.03, Math.max(20, P.bar.r - at.x + 4)], [-Math.PI / 2 - 0.5, 18]] : [[Math.PI + 0.05, 24 + 60 * big], [-0.05, 28 + 64 * big], [-Math.PI / 2 - 0.5, 14]];
         light.push({ kind: 'cracks', net: crackNet(rnd, at.x, at.y, mains), t0: tc, grow: crit ? 120 : 90, life: crit ? 500 : 400 });
       }
@@ -867,6 +906,15 @@ export function layout(R, geo, { lvl = 'full', power = 0.3, crit = false, result
     }
     if (crit && !hold) light.push({ kind: 'glint', x: at.x, y: at.y - 2, t0: tc - 70, s: 12, dur: 85, tone: 'crit' }); // it gathers
   } else if (chit && !miss) light.push({ kind: 'ring', x: P.M.x, y: P.M.y, t0: tc, rx: 20, ry: 20, dur: 280, w: 1.4, tone: 'steel' });
+  // A crit that resets its cooldown (Overload) runs back to its key, and the key glints.
+  if (crit && R.critBack && at && P.from === 'key') {
+    const t1 = tc + 20, t2 = t1 + Math.max(140, RT(P.T));
+    light.push({ kind: 'comet', a: at, b: P.O, lift: -16, t1, t2, R0: 3.2, tone: 'crit' }, { kind: 'glint', x: P.O.x, y: P.O.y, t0: t2 - 10, s: 13, dur: 220, tone: 'crit' });
+  }
+  // What it does to the part's attack (Rate Limit throttles it): brackets snap onto its attack chip.
+  if (R.onto === 'chip' && P.chip && !miss) light.push({ kind: 'brackets', box: P.chip, t0: tc + 110, dur: 460 });
+  // A mark that misses: a puff where it would have come down.
+  if (miss && R.motion === 'mark') light.push({ kind: 'puffs', list: throwN(rnd, 4, P.M, tc, { a0: -Math.PI / 2, spread: 2.4, v: [30, 70], g: -20, drag: 2, life: [300, 420] }) });
   // A status cashing in: its mark glows and does its part where the hit lands.
   const hitAt = at || P.M, mk = (k) => P.marks?.[k] || null;
   const glow = (k, t0) => { const m = mk(k); if (m) light.push({ kind: 'halo', box: m, t0, dur: 320 }); };

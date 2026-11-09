@@ -59,10 +59,10 @@ export const RECIPES = {
 
   // ----- Breaker -----
   bash: { label: 'Bash', motion: 'punch', art: ART.ram, size: 13, land: 110, dur: 540, burst: [b('shock', 8, 8), b('bits', 7, 10)] },
-  overload: { label: 'Overload', motion: 'bolt', size: 15, land: 0, dur: 600, burst: [b('bits', 14, 18), b('shock', 8, 8), b('flash', 1, 0, { full: true })] },
+  overload: { label: 'Overload', motion: 'bolt', critBack: true, size: 15, land: 0, dur: 600, burst: [b('bits', 14, 18), b('shock', 8, 8), b('flash', 1, 0, { full: true })] },
   flood: { label: 'Flood', motion: 'fly', art: ART.wave, size: 13, land: 0, dur: 520, burst: [b('splash', 12, 10), b('shock', 6, 6)] },
   exploit: { label: 'Exploit', motion: 'mark', art: ART.crosshair, size: 13, land: 80, dur: 620, burst: [b('spark', 3, 2)] },
-  crack: { label: 'Crack', motion: 'mark', art: ['<◆>'], tone: 'steel', size: 16, land: 120, dur: 520, burst: [b('shards', 12, 0, { steel: true })] },
+  crack: { label: 'Crack', at: 'chits', motion: 'mark', art: ['<◆>'], tone: 'steel', size: 16, land: 120, dur: 520, burst: [b('shards', 12, 0, { steel: true })] },
   shatter: { label: 'Shatter', motion: 'fly', art: ['◇'], spin: 540, size: 18, land: 0, dur: 520, burst: [b('shards', 16, 10), b('shock', 6, 6)] },
   segfault: { label: 'Segfault', motion: 'fly', art: ['0x0'], size: 13, land: 0, dur: 560, burst: [b('glitch', 12, 8), b('bits', 6, 8)] },
   'fork-bomb': { label: 'Fork Bomb', motion: 'all', art: [':|:'], size: 12, land: 0, dur: 520, burst: [b('shards', 5, 0, { steel: true }), b('spark', 2, 0)] },
@@ -89,7 +89,7 @@ export const RECIPES = {
 
   // ----- Bastion -----
   ban: { label: 'Ban', motion: 'swing', art: ART.hammer, size: 12, land: 120, dur: 520, burst: [b('shock', 10, 8), b('dust', 5, 4), b('flash', 1, 0, { full: true })] },
-  'rate-limit': { label: 'Rate Limit', motion: 'clamp', art: ['>|', '|<'], size: 16, land: 120, dur: 560, burst: [b('shock', 8, 8), b('spark', 3, 0)] },
+  'rate-limit': { label: 'Rate Limit', motion: 'clamp', onto: 'chip', art: ['>|', '|<'], size: 16, land: 120, dur: 560, burst: [b('shock', 8, 8), b('spark', 3, 0)] },
   firewall: { label: 'Firewall', on: 'you', motion: 'wall', size: 11, land: 0, dur: 820, burst: [b('flame', 30, 0)] },
   retaliate: { label: 'Retaliate', motion: 'fly', art: ['<=='], turn: true, size: 14, land: 0, dur: 520, burst: [b('shock', 10, 8), b('bits', 8, 10)] },
   suspend: { label: 'Suspend', at: 'chip', motion: 'mark', art: ['||'], size: 16, land: 80, dur: 620, burst: [b('spark', 3, 0)] },
