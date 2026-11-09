@@ -61,20 +61,24 @@ Rejected: a pip under each server per runner (*Pips*), and a count tag per serve
 - **Standing:** 0–100 in four tiers: Stranger, Known (leads), Friend (hire), Close (consortium). Drawn as the tier's
   name, a bar to the next and the next one's name (the *Tier bar*); the number and how you met are its tooltip.
 - **The runner card** (a Rail row opens it beside their diamond): *Runner · faction*, the handle, class glyph, class,
-  level and a temperament tag; rows for Standing, Now (→ a server and its time) and After (the trade in words over a
-  floor strip, lit up to their nerve, the trade's floor marked); their latest line; **Hire**.
-- **The crew card** (Hire turns the runner card into it): For (the server, its floor marked on the strip); Pay as
-  two icons, both owed (MOO2's leaders): a credits fee when you connect, and a cut of the credits the run pays (items
-  and code stay yours); the bar, picked from their presets as chips over the eight named keys each one makes (the *Presets*).
+  level and a temperament tag; rows for Standing, Now (→ a server and its time) and After (the trade in words and the
+  floor it's frozen on); their latest line; **Hire**.
+- **The crew card** (Hire turns the runner card into it): Pay as two icons, both owed (MOO2's leaders): a credits fee
+  once, the first time you hire that runner, and a cut of the credits each run pays while they're with you (items and
+  code stay yours); the bar, picked from their presets as chips over the eight named keys each one makes (the
+  *Presets*). No floor limit: a hire goes wherever you go.
   Temperament (Careful, Steady, Bold) steers the planner (Starsector's officers); its tooltip says how. They level
   with you. Hired, a runner is crew: violet, like every crewmate.
 - **Busy:** Now reads Busy with the time they're free; Hire is off, the clock on it.
-- **Turned down:** a server above their nerve hatches its floor on the strip, their line takes the place of Pay and Bar
-  (*Coldline is past me. Anything on the Stacks and I'll come.*), and Hire is off, marked with the floor.
+- **On a run:** the hire's Signal carries from fight to fight, like yours. At 0 they disconnect with a line (*Signal's
+  going. I'm out.*) and go back to their server to recover; they're hireable again once they're full. If you drop to
+  0, you both jack out, the hire at whatever Signal they had.
+- **Traits** (direction, MOO2's leaders): each runner carries a perk or a drawback or two, shown as icons on the
+  runner and crew cards. Needs a pool large enough that new runners keep turning up.
 - **Consortium:** runners you're close to, merging with you. A friend joins it as one more member.
 
 Rejected: standing as pips like a faction's rep, or as the steps each tier opens; setting a runner's bar in their own
-Toolkit, or key by key from what they know; paying a fee or a cut as a choice.
+Toolkit, or key by key from what they know; paying a fee or a cut as a choice; a nerve that turns down floors above it.
 
 ## Friends
 
