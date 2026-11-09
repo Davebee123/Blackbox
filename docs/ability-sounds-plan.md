@@ -38,9 +38,10 @@ Operator's comes in three beats.
    as thin.
    **1b**: two Weighty takes with none of the hurt's samples: B1 Cinematic and B2 Electric. Rejected as light and
    fluffy; the designer wants round 1's bass, and more of it.
-   **1c** (built, waiting on the pick): round 1's Weighty tuned down, a boom and the sub-drop under every hit, the low
-   end well over the rest: B3 Heavy (a deep slam that stops) and B4 Seismic (lower, rolling on into a rumble). They
-   play about 2 dB over the other styles.
+   **1c**: round 1's Weighty with far more low end: B3 Heavy and B4 Seismic. Not good enough: the designer wants it
+   glitchier, with today's hit as the compass.
+   **1d** (built, waiting on the pick): today's hit (`sound.mjs` digitalHit) taken apart and timed to the effect, a
+   boom under it: B5 Machine and B6 Glitch (lower, the hit stuttering like a stuck buffer).
 2. **Every ability**: the generic layers in the picked style, all 110 rows, and overrides for Overload, Detonate,
    Firewall, Purge, Crack, Quarantine, Botnet, Deploy, Inject, Flood, Shatter and Failover.
 3. **Tiers and finishers**: the mastery layers, the 13 tier overrides, the 12 finishers.
