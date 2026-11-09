@@ -1,4 +1,4 @@
-/* The Server page (server-view.mjs): one quiet card for your home server and a detail panel beside it (a bottom sheet
+/* The Server page (server-view.mjs): one quiet card for your home server and a detail panel beside it (the one sheet
    on a phone). The card shows; the panel explains, and it is the only place a rule's facts are lit (b.hi). Colours
    keep their jobs: teal is you (your Integrity, your wall's blocks, what you have on), red a threat (an invasion on its
    way, a breach), amber what you use and the wall pressed at, violet your daemons. Nothing here moves the layout:
@@ -206,8 +206,8 @@
   .hsv-top { grid-template-columns: 150px minmax(0, 1fr) auto; gap: var(--s6); }
   .hsv-intbtn .bar { width: 120px; }
 }
-/* A phone: one column, and the panel a bottom sheet of a fixed height (so what it shows never moves what's in it),
-   up only once you've picked something; × or Esc puts it away. */
+/* One column: the panel sits under the page, up only once you've picked something; × or Esc puts it away. On a
+   phone it is in the one sheet (phone.css, app.js phPops). */
 @media (max-width: 900px) {
   .hsv-page { grid-template-columns: minmax(0, 1fr); gap: 0; }
   .hsv-top { grid-template-columns: 116px minmax(0, 1fr); gap: var(--s4) 14px; padding: 14px; }
@@ -221,8 +221,8 @@
   .hsv-sec > h3 small { margin: 0; }
   .hsv-wall, .hsv-chips { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .hsv-threat .big { font-size: 18px; }
-  #page-view:has(> .hsv-page) { overflow-y: visible; } /* the document scrolls on a phone: the sheet sticks to the screen, above the prompt */
-  .hsv-panel { display: none; position: sticky; top: auto; bottom: var(--dock-h, 0px); z-index: 5; height: min(52vh, 440px); overflow-y: auto; align-content: start; padding: 14px var(--s6) 18px; border-width: 2px 0 0; border-radius: 0; box-shadow: 0 -12px 28px rgba(0, 0, 0, 0.6); }
+  #page-view:has(> .hsv-page) { overflow-y: visible; } /* the document scrolls */
+  .hsv-panel { display: none; position: static; align-content: start; padding: 14px var(--s6) 18px; }
   .hsv-panel.open { display: grid; }
   .hsv-close { display: block; position: absolute; top: var(--s3); right: var(--s4); width: 32px; height: 32px; padding: 0; font: 600 18px/1 var(--mono); color: var(--muted); }
   .hsv-head { grid-template-columns: 40px minmax(0, 1fr); gap: 10px; padding-right: 32px; }

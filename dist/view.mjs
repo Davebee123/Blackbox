@@ -1264,7 +1264,7 @@ function protocolsParts(s) {
 // shell and script left; proxy and the two implants right), each traced to the rig. Protocols are software: a footprint
 // is a place on the board with the protocol's glyph and name on it, never a part plugged in. Beside it the stash (a
 // slot you pick lists every item of its kind, best first); under the board, the set bonuses and the stat sheet. An
-// item's datasheet is a popover on a stash row or a filled slot (hover or focus; a tap on a phone, as a bottom sheet
+// item's datasheet is a popover on a stash row or a filled slot (hover or focus; a tap on a phone, in the one sheet
 // with its buttons), app.js.
 const SLOT_REFS = ['U1', 'J1', 'SH1', 'U2', 'IC5', 'IC6']; // each slot's designator on the board
 const BOARD_AT = [[0, 0], [1, 0], [0, 1], [0, 2], [1, 1], [1, 2]]; // each slot's side (0 left, 1 right) and row
@@ -1348,7 +1348,7 @@ function itemSheet(s, it, vs = null, acts = '') {
     <h4 class="silk-kicker">${vs ? (out ? `Stats · vs ${esc(itemLabel(out))}` : 'Stats') : 'Stats'}</h4><dl class="silk-stats${vs ? ' vs' : ''}">${rows}</dl>${implicitRow(it, 'p')}${lost}${effect}${it.unique && setOf(it.unique) ? setLines(s, it.unique) : ''}${flavour ? `<em class="silk-flavour">${esc(flavour)}</em>` : ''}`;
 }
 
-// An item's datasheet, for its popover (app.js: beside a stash row or a filled slot on hover or focus; a bottom sheet
+// An item's datasheet, for its popover (app.js: beside a stash row or a filled slot on hover or focus; the one sheet
 // on a phone): itemSheet against what its slot runs now (▲ ▼), then its buttons: Load or Swap and Deconstruct from the
 // stash, Unload from the board. '' when it's gone.
 export function protocolDetailMarkup(s, id) {
@@ -2200,6 +2200,21 @@ function mapLeft(s, sel, runner = null) {
   const col = threatRail(s) + contractTracker(s, sel) + runnerRail(s, runner);
   return col ? `<div class="map-lcol">${col}</div>` : '';
 }
+// A phone's map (docs/phone-plan.md P3): the rail and the tracker fold into a row of chips under the floors, a red
+// count with the soonest timer, an amber count of contracts under way, a green ✓ for the ones to turn in. A tap opens
+// its list in the sheet (app.js data-phone; mapRail). A chip at zero is left out.
+export function mapChips(s, pick = null) {
+  const th = threatsOf(s), jobs = trackedJobs(s), ready = jobs.filter((j) => j.ready).length, open = jobs.length - ready, rr = runnerRail(s, pick);
+  const soon = th.filter((x) => x.left != null).sort((a, b) => a.left - b.left)[0];
+  const chips = [
+    th.length ? `<button type="button" class="ph-chip hot" data-phone="threats" aria-label="${th.length} threat${th.length > 1 ? 's' : ''} and timers">${glyph('kill')}<b>${th.length}</b>${soon ? `<small data-chip-t>${fmtTime(soon.left)}</small>` : ''}</button>` : '',
+    open || (rr && !ready) ? `<button type="button" class="ph-chip job" data-phone="jobs" aria-label="${open} contract${open === 1 ? '' : 's'} under way">${glyph('contract')}${open ? `<b>${open}</b><small>contract${open === 1 ? '' : 's'}</small>` : '<small>Runners</small>'}</button>` : '',
+    ready ? `<button type="button" class="ph-chip ok" data-phone="jobs" aria-label="${ready} contract${ready === 1 ? '' : 's'} ready to turn in"><b>✓ ${ready}</b><small>ready</small></button>` : '',
+  ].join('');
+  return chips ? `<div class="ph-chips" role="group" aria-label="Threats and contracts">${chips}</div>` : '';
+}
+// A chip's list, for the sheet: the threat rail, or the contract tracker with the Runners under it.
+export const mapRail = (s, which, sel = null, runner = null) => (which === 'threats' ? threatRail(s) : contractTracker(s, sel) + runnerRail(s, runner));
 function threatRail(s) {
   const list = threatsOf(s);
   if (!list.length) return '';
@@ -2296,7 +2311,7 @@ export const setMapScale = (z) => { const was = mapScale; mapScale = z; return M
 // Map filters: any mix of mine · targets · threats (none = everything). Old callers pass one string.
 const MAP_FILTERS = [['mine', 'Mine', 'f-mine'], ['targets', 'Targets', 'f-target'], ['threats', 'Threats', 'f-threat']];
 const filterList = (f) => (Array.isArray(f) ? f : !f || f === 'all' ? [] : [f]).filter((k) => MAP_FILTERS.some(([x]) => x === k));
-export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop = false, filter = 'all', list = false, sort = 'status', pickOpen = false, build = null, floor = null, runner = null } = {}) {
+export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop = false, filter = 'all', list = false, sort = 'status', pickOpen = false, build = null, floor = null, runner = null, phone = false } = {}) {
   const none = !sel; // nothing selected (you clicked away): no reticle, and the side card shows your server
   sel ||= 'server';
   filter = filterList(filter);
@@ -2435,8 +2450,10 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
   const card = pop ? `<div class="map-pop" id="map-pop" data-keep="${esc(sel || '')}" style="visibility:hidden"><button type="button" class="btn small map-pop-x" data-map-pop-close title="Close">×</button>${mapSide(s, sel, find(sel))}</div>` : '';
   // List mode (MOO2's planets list): every server as a row, sortable, the filters apply; the
   // selected one's card sits beside the list.
-  if (list && !con) return `<div class="map-page map-list-page"><section class="panel map-canvas map-list">${tabs}${serverList(s, sel, filter, sort)}</section><aside class="map-side">${mapSide(s, sel, find(sel))}</aside></div>`;
-  return `<div class="map-page${side ? '' : ' no-side'}"><section class="panel map-canvas">${tabs}${con ? '' : mapLeft(s, none ? null : sel, runner)}${con ? '' : floorLift(s, fl)}${svg}${card}</section>${side ? `<aside class="map-side">${mapSide(s, sel, find(sel))}</aside>` : ''}</div>`;
+  // A phone (docs/phone-plan.md P3): the floors as a segmented row, the rail and the tracker as chips under it; the
+  // selected one's card is the sheet's (app.js lifts #map-pop into it), in List mode too.
+  if (list && !con) return `<div class="map-page map-list-page"><section class="panel map-canvas map-list">${tabs}${serverList(s, sel, filter, sort)}${phone ? card : ''}</section>${phone ? '' : `<aside class="map-side">${mapSide(s, sel, find(sel))}</aside>`}</div>`;
+  return `<div class="map-page${side ? '' : ' no-side'}"><section class="panel map-canvas">${tabs}${con ? '' : phone ? floorLift(s, fl) + mapChips(s, runner) : mapLeft(s, none ? null : sel, runner)}${con || phone ? '' : floorLift(s, fl)}${svg}${card}</section>${side ? `<aside class="map-side">${mapSide(s, sel, find(sel))}</aside>` : ''}</div>`;
 }
 // The floor panel, a lift's buttons down the side of the map: the floors you've reached lit (the one on the map marked),
 // the next one dim with its band, the rest dark. A teal pip on the floor you're connected to.
