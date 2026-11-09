@@ -3,6 +3,11 @@
 //   a  Hardware  the machine room: relays, pistons, metal, tin, a modem. Recorded samples, lightly handled.
 //   b  Weighty   big whooshes, sub thumps, a hard transient, a bright tail in a bigger space.
 //   c  Digital   today's hit language per ability: bit-crushed FM, square blips, data streams, crushed echoes.
+// The designer liked b's weight but heard it as being hit (it shared the hurt's punch and sub-drop samples) and as thin
+// (plain hissing flights, stock punches). Round 1b, two takes on Weighty that use none of the hurt's samples:
+//   b1 Cinematic  a bright crack on top of each hit (dealing the blow), a short tuned kick for weight, struck metal ringing
+//                 into a hall, flights of low air, high air and a tonal swish.
+//   b2 Electric   bright distorted bass discharges, arcs crackling, a breaker tripping, a transformer humming on.
 // Each sound is timed to its effect (abilityfx.mjs play() returns the plan) in four layers:
 //   launch  as it leaves the key (its class: the Breaker's solenoid, the Bastion's latch, the Infiltrator's keystroke,
 //           the Operator's chirp)
@@ -15,7 +20,7 @@
 //           in three small beats.
 // Nothing here is in a fight yet: the ability effects playtest (?playtest=fx) plays it, and renderBoard() bounces it.
 
-export const STYLES = { a: 'Hardware', b: 'Weighty', c: 'Digital' };
+export const STYLES = { a: 'Hardware', b: 'Weighty', c: 'Digital', b1: 'Cinematic', b2: 'Electric' };
 export const KEYS = ['bash', 'ban', 'poke', 'ping'];
 // Levels (dB), so every style is heard at today's loudness: a medium hit at about −24 LUFS (momentary max), a crit
 // about 2 dB over it, a hit on ◆ near −27.5 and a miss near −29.5 (today's hit plays at about −23). level: the whole
@@ -24,6 +29,8 @@ export const KEYS = ['bash', 'ban', 'poke', 'ping'];
 export const TRIM = {
   a: { bash: { level: 0.7, crit: -4.3, chit: 3.5, miss: 2 }, ban: { level: 2.7, crit: -4, chit: 3, miss: 2 }, poke: { level: 7.2, crit: 0, chit: -1.4, miss: 3 }, ping: { level: 10.7, crit: 1.8, chit: -4.3, miss: -2.5 } },
   b: { bash: { level: -5.5, crit: -1.5, chit: 9.7, miss: 8.5 }, ban: { level: -4.6, crit: -2.5, chit: 12.7, miss: 10 }, poke: { level: 5.5, crit: -1.5, chit: 5.4, miss: 4.5 }, ping: { level: 3.7, crit: -4.6, chit: 2.6, miss: 0 } },
+  b1: { bash: { level: -0.5, crit: -2.3, chit: 2.9, miss: 4.3 }, ban: { level: 0.4, crit: -1.8, chit: 5.3, miss: 7.8 }, poke: { level: 7, crit: -1.7, chit: -1.2, miss: 4.8 }, ping: { level: 5.9, crit: -1.5, chit: -2.4, miss: 1 } },
+  b2: { bash: { level: 3.2, crit: -1.9, chit: 2.4, miss: 4.3 }, ban: { level: 3.8, crit: -1.1, chit: 2.6, miss: 2.2 }, poke: { level: 13.6, crit: -2.6, chit: -3.1, miss: 8.3 }, ping: { level: 9.9, crit: -3.3, chit: -4.8, miss: -0.4 } },
   c: { bash: { level: 4.8, crit: -0.4, chit: 2.3, miss: 1 }, ban: { level: 3.3, crit: 0, chit: 4.3, miss: 2 }, poke: { level: 10.2, crit: -2.1, chit: 0.6, miss: -1 }, ping: { level: 10.4, crit: -0.7, chit: -0.9, miss: -2 } },
 };
 // Each key 1's class: the Breaker's sound is cut dead after its hit-stop (GATE s after it).
@@ -44,6 +51,7 @@ function noiseOf(ctx, color = 'white') {
       if (color === 'pink') { b0 = 0.99765 * b0 + w * 0.099046; b1 = 0.963 * b1 + w * 0.2965164; b2 = 0.57 * b2 + w * 1.0526913; d[i] = (b0 + b1 + b2 + w * 0.1848) * 0.2; }
       else if (color === 'brown') { br = (br + 0.02 * w) / 1.02; d[i] = br * 3.5; }
       else if (color === 'sah') { if (i % 6 === 0) v = w; d[i] = v; } // sample-and-hold static
+      else if (color === 'crackle') { if (v <= 0 && Math.random() < 0.0025) { v = 20 + Math.random() * 180; b0 = 0.3 + Math.random() * 0.7; } d[i] = v > 0 ? w * b0 * (v-- / 200) : 0; } // sparse ticks: arcing
       else d[i] = w;
     }
     m[color] = b;
@@ -147,6 +155,75 @@ function kit(ctx, buf) {
   };
   // Many small things: n of fn(t, i), spread over `span` s (later ones sparser: a spray settling).
   K.spray = (t, n, span, fn) => { for (let i = 0; i < n; i++) fn(t + span * Math.pow(i / Math.max(1, n), 1.4) * (0.85 + Math.random() * 0.3), i); };
+  // ---- round 1b ----
+  // A place in the stereo field (-1 left … 1 right): a panner in front of dest.
+  K.pan = (dest, p = 0) => { if (!ctx.createStereoPanner) return dest; const s = ctx.createStereoPanner(); s.pan.value = Math.max(-1, Math.min(1, p)); s.connect(dest); return s; };
+  // A tuned kick: a sine dropping fast, softly clipped, with a click on top. Weight that stops, where a sub-drop rumbles.
+  K.kick = (dest, t, { f0 = 150, f1 = 46, drop = 0.04, d = 0.2, peak = 0.5, click = 0.25 } = {}) => {
+    K.tone(K.drive(dest, 2, 1), t, { f0, f1, glide: drop, a: 0.001, d, peak });
+    if (click) K.hiss(dest, t, { type: 'highpass', f0: 2500, a: 0.0005, d: 0.006, peak: click });
+  };
+  // A crack: the bright, hard edge of a blow landing on something (dealing it; taking one is dull and low).
+  K.crack = (dest, t, { peak = 0.4, f = 5000, d = 0.018 } = {}) => {
+    K.hiss(dest, t, { type: 'highpass', f0: 3500, a: 0.0003, d: 0.005, peak });
+    K.hiss(dest, t + 0.001, { type: 'bandpass', f0: f, f1: f * 0.6, glide: d, q: 1.2, a: 0.0005, d, peak: peak * 0.7 });
+  };
+  // A body: a band of noise and a tuned knock in the mids, what gives a hit its size.
+  K.thwack = (dest, t, { f = 600, d = 0.08, peak = 0.3, tone = 180 } = {}) => {
+    K.hiss(dest, t, { type: 'bandpass', f0: f * 1.6, f1: f, glide: d * 0.6, q: 1.1, a: 0.001, d, peak, color: 'pink' });
+    if (tone) K.tone(dest, t, { type: 'triangle', f0: tone, f1: tone * 0.55, glide: d, a: 0.001, d: d * 1.4, peak: peak * 0.6 });
+  };
+  // Struck metal: partials [f, amp, decay s] as sines, each against a twin a hair off so it beats (an anvil, a bar, glass).
+  K.modes = (dest, t, partials, { peak = 0.2, a = 0.001 } = {}) => {
+    for (const [f, amp, d] of partials) for (const det of [-2, 2]) K.tone(dest, t, { f0: f, a, d, peak: peak * amp * 0.5, detune: det });
+  };
+  // Something heavy flying: low air, high air and (tone [f0, f1]) a swish riding the high band, all rising as it comes.
+  K.swoosh = (dest, t0, t1, { lo = [140, 420], hi = [700, 2600], tone = null, peak = 0.25, pass = false, tail = 0.25 } = {}) => {
+    K.flight(dest, t0, t1, { f0: lo[0], f1: lo[1], q: 0.7, peak: peak * 0.9, color: 'brown', pass, tail });
+    K.flight(dest, t0, t1, { f0: hi[0], f1: hi[1], q: 1.3, peak: peak * 0.55, color: 'pink', pass, tail });
+    if (!tone) return;
+    const dur = Math.max(0.03, t1 - t0), o = ctx.createOscillator(), bp = K.f('bandpass', tone[0] * 3, 6), g = K.g(0, dest), end = t0 + dur + (pass ? tail : 0.02);
+    o.type = 'sawtooth';
+    o.frequency.setValueAtTime(tone[0], t0); o.frequency.exponentialRampToValueAtTime(tone[1], t0 + dur);
+    bp.frequency.setValueAtTime(tone[0] * 3, t0); bp.frequency.exponentialRampToValueAtTime(tone[1] * 3, t0 + dur);
+    g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(peak * 0.25, t0 + dur);
+    if (pass) o.frequency.exponentialRampToValueAtTime(tone[0], end);
+    g.gain.exponentialRampToValueAtTime(0.0001, end);
+    o.connect(bp).connect(g); o.start(t0); o.stop(end + 0.03);
+  };
+  // Arcing: sparse sharp ticks through a band, swelling from t0 into t1 (rise) or dying away from t0 to t1.
+  K.crackle = (dest, t0, t1, { f = 3000, q = 0.8, peak = 0.2, rise = true, pan = 0 } = {}) => {
+    const s = ctx.createBufferSource(), fl = K.f('bandpass', f, q), g = K.g(0, K.pan(dest, pan)), end = Math.max(t0 + 0.02, t1);
+    s.buffer = noiseOf(ctx, 'crackle');
+    if (rise) { g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(peak, end); g.gain.exponentialRampToValueAtTime(0.0001, end + 0.02); }
+    else { g.gain.setValueAtTime(peak, t0); g.gain.exponentialRampToValueAtTime(0.0001, end); }
+    s.connect(fl).connect(g); s.start(t0, Math.random() * 1.2); s.stop(end + 0.04);
+  };
+  // Mains hum: a buzz and its harmonics, current through a transformer; f → f1 as it sags.
+  K.hum = (dest, t, { f = 60, f1 = f, d = 0.5, peak = 0.12, a = 0.005, bright = 1400 } = {}) => {
+    const o = ctx.createOscillator(), lp = K.f('lowpass', bright, 0.9), g = K.g(0, dest);
+    o.type = 'sawtooth'; o.frequency.setValueAtTime(f, t); if (f1 !== f) o.frequency.exponentialRampToValueAtTime(f1, t + a + d);
+    K.env(g.gain, t, { a, peak, d }); o.connect(lp).connect(g); o.start(t); o.stop(t + a + d + 0.03);
+  };
+  // A discharge: a distorted bass hit (a saw and a square an octave under) whose brightness drains fast.
+  K.surge = (dest, t, { f0 = 150, f1 = 42, d = 0.2, peak = 0.4, drive = 5, bright = 5000 } = {}) => {
+    const o = ctx.createOscillator(), o2 = ctx.createOscillator(), lp = K.f('lowpass', bright, 1.5), g = K.g(0, dest), sat = K.drive(lp, drive, 1), sub = K.g(0.6, sat);
+    o.type = 'sawtooth'; o2.type = 'square';
+    for (const [x, m] of [[o, 1], [o2, 0.5]]) { x.frequency.setValueAtTime(f0 * m, t); x.frequency.exponentialRampToValueAtTime(f1 * m, t + d * 0.6); }
+    lp.frequency.setValueAtTime(bright, t); lp.frequency.exponentialRampToValueAtTime(300, t + d * 0.7);
+    lp.connect(g); K.env(g.gain, t, { a: 0.001, peak, d });
+    o.connect(sat); o2.connect(sub);
+    for (const x of [o, o2]) { x.start(t); x.stop(t + d + 0.04); }
+  };
+  // A spark jumping: noise through a band sweeping down fast.
+  K.zap = (dest, t, { f0 = 7000, f1 = 600, d = 0.06, peak = 0.3, q = 2.5 } = {}) => K.hiss(dest, t, { type: 'bandpass', f0, f1, glide: d, q, a: 0.0005, d, peak });
+  // A whine: a tone climbing from t0 to t1 as something charges, cut when it lets go.
+  K.whine = (dest, t0, t1, { f0 = 400, f1 = 1600, peak = 0.06, type = 'sawtooth', lp = 3000 } = {}) => {
+    const end = Math.max(t0 + 0.03, t1), o = ctx.createOscillator(), l = K.f('lowpass', lp, 1), g = K.g(0, dest);
+    o.type = type; o.frequency.setValueAtTime(f0, t0); o.frequency.exponentialRampToValueAtTime(f1, end);
+    g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(peak, end); g.gain.exponentialRampToValueAtTime(0.0001, end + 0.015);
+    o.connect(l).connect(g); o.start(t0); o.stop(end + 0.04);
+  };
   return K;
 }
 function rev(ctx, b) {
@@ -159,6 +236,24 @@ function rev(ctx, b) {
   }
   return m.get(b);
 }
+
+// A hit spent on ◆ (Cinematic): steel struck, ringing high, the blow glancing off it. No weight goes in.
+function glance(K, o, t, { rate = 1, heavy = false } = {}) {
+  K.crack(o.dry, t, { peak: 0.3, f: 6500 });
+  K.S(o.dry, t, 'metal-h', { gain: 0.5, rate: 1.05 * rate });
+  K.modes(o.room, t, [[1480 * rate, 1, 0.3], [3620 * rate, 0.5, 0.2], [5960 * rate, 0.3, 0.12]], { peak: 0.1 });
+  K.tone(K.pan(o.dry, 0.4), t + 0.015, { f0: 3600, f1: 1400, glide: 0.2, a: 0.01, d: 0.2, peak: 0.04 });
+  if (heavy) K.kick(o.dry, t, { f0: 120, f1: 70, d: 0.06, peak: 0.12, click: 0 });
+}
+// A hit spent on ◆ (Electric): an arc snapping on steel, sparks running off.
+function spark(K, o, t, rate = 1) {
+  K.crack(o.dry, t, { peak: 0.35, f: 7000, d: 0.01 });
+  K.zap(o.dry, t, { f0: 9000 * rate, f1: 2500 * rate, d: 0.04, peak: 0.3 });
+  K.S(o.dry, t + 0.002, 'metal-h', { gain: 0.35, rate: 1.1 * rate });
+  K.crackle(o.dry, t + 0.01, t + 0.16, { f: 6000, q: 1, peak: 0.22, rise: false, pan: 0.3 });
+  K.modes(o.room, t, [[1900 * rate, 1, 0.18], [4300 * rate, 0.5, 0.1]], { peak: 0.06 });
+}
+const side = () => Math.random() * 1.4 - 0.7;
 
 // ---------- the sounds ----------
 // Each: (K, out, T) with out { dry, room } and T the timing (seconds, on the context's clock):
@@ -436,6 +531,191 @@ const SOUNDS = {
       });
       K.ring(e, hit + 0.02, { fc: 2850, fmod: 150, d: 0.3, peak: 0.03 + 0.03 * big, type: 'sine' });
       if (crit) K.fm(K.crush(e, 10), hit + 3 * PULSE, { fc: 523, f1: 262, ratio: 3, i0: 4, i1: 0.5, dur: 0.2, peak: 0.12 });
+    },
+  },
+
+  // ===== B1: Weighty, Cinematic =====
+  b1: {
+    // The ram: a lock lets go, a mass of air, the piston cocks and thrusts, a crack and a tuned slam into plate, debris. Cut dead.
+    bash(K, o, T) {
+      const { t, arrive, hit, stop, k, result } = T, crit = result === 'crit', miss = result === 'miss';
+      if (T.flies) {
+        K.kick(o.dry, t, { f0: 95, f1: 60, d: 0.07, peak: 0.18, click: 0.1 });
+        K.S(o.dry, t + 0.003, 'metal-l', { gain: 0.2, rate: 0.5, lp: 2200 });
+        K.swoosh(o.dry, t, arrive, { lo: [120, 380], hi: [600, 2200], tone: [70, 140], peak: 0.26, pass: miss, tail: 0.3 });
+        if (!miss) {
+          if (T.hold > 0.01) K.S(o.dry, arrive, 'metal-l', { gain: crit ? 0.3 : 0.18, rate: 0.35, lp: 1200, dur: T.hold + 0.02 }); // it cocks
+          if (crit) K.whine(o.dry, arrive, hit, { f0: 60, f1: 190, peak: 0.12, lp: 900 }); // power gathering
+          K.flight(o.dry, T.strike, hit, { f0: 500, f1: 3500, q: 1, peak: crit ? 0.3 : 0.18 }); // the thrust
+        }
+      }
+      if (miss) return;
+      if (result === 'chit') { glance(K, o, hit, { heavy: true }); return; }
+      const big = crit ? 1 : k, body = K.drive(o.dry, 2.4, 1);
+      K.crack(o.dry, hit, { peak: 0.6 + 0.25 * big });
+      K.kick(o.dry, hit, { f0: 150, f1: 44, d: 0.16 + 0.1 * big, peak: 0.28 + 0.22 * big });
+      K.thwack(body, hit, { f: 620, d: 0.08 + 0.04 * big, peak: 0.3 + 0.2 * big, tone: 170 });
+      K.S(body, hit + 0.002, 'plate-l', { gain: 0.4 + 0.3 * big, rate: 0.62 });
+      K.S(o.room, hit + 0.002, 'metal-l', { gain: 0.25 + 0.2 * big, rate: 0.62 });
+      if (crit) { K.S(body, hit + 0.004, 'mining', { gain: 0.4, rate: 0.62 }); K.modes(o.room, hit, [[185, 1, 0.35], [497, 0.6, 0.25], [973, 0.35, 0.18]], { peak: 0.14 }); }
+      K.spray(hit + stop + 0.01, crit ? 7 : 3 + Math.round(3 * k), 0.16, (x) => K.S(K.pan(o.dry, side()), x, Math.random() < 0.5 ? 'tin' : 'glass-l', { gain: 0.07, rate: 1.4 + Math.random() * 0.8, hp: 1800 })); // debris
+    },
+    // The hammer: a big swing, a crack and a tuned blow, and the anvil ringing on into the hall; dust settling.
+    ban(K, o, T) {
+      const { t, arrive, hit, stop, k, result } = T, crit = result === 'crit', miss = result === 'miss';
+      if (T.flies) {
+        K.kick(o.dry, t, { f0: 80, f1: 55, d: 0.06, peak: 0.14, click: 0.06 });
+        if (!crit) K.swoosh(o.dry, t, hit, { lo: [100, 330], hi: [450, 1900], tone: [55, 120], peak: 0.3, pass: miss, tail: 0.34 });
+        else { // up, a creak at the top, then down
+          K.swoosh(o.dry, t, arrive, { lo: [100, 260], hi: [450, 1200], peak: 0.18 });
+          K.S(o.dry, arrive, 'metal-l', { gain: 0.22, rate: 0.32, lp: 900, dur: T.hold + 0.03 });
+          K.swoosh(o.dry, T.strike, hit, { lo: [150, 420], hi: [700, 2600], tone: [80, 170], peak: 0.36 });
+        }
+      }
+      if (miss) return;
+      if (result === 'chit') { glance(K, o, hit, { rate: 0.85 }); return; }
+      const big = crit ? 1 : k, body = K.drive(o.dry, 2.2, 1), r = crit ? 0.85 : 1;
+      K.crack(o.dry, hit, { peak: 0.65 + 0.25 * big, f: 5000 });
+      K.kick(o.dry, hit, { f0: 130, f1: 40, d: 0.16 + 0.1 * big, peak: 0.28 + 0.2 * big });
+      K.thwack(body, hit, { f: 520, d: 0.1, peak: 0.25 + 0.2 * big, tone: 140 });
+      K.S(body, hit + 0.002, 'plate-h', { gain: 0.35 + 0.25 * big, rate: 0.75 });
+      K.modes(o.room, hit, [[220 * r, 1, 0.9 + 0.5 * big], [563 * r, 0.6, 0.7], [1071 * r, 0.42, 0.5], [1752 * r, 0.3, 0.35], [2598 * r, 0.26, 0.25], [3650 * r, 0.2, 0.18], [4890 * r, 0.14, 0.12]], { peak: 0.1 + 0.08 * big }); // the anvil
+      K.S(o.dry, hit + 0.001, 'metal-h', { gain: 0.2 + 0.15 * big, rate: 0.8 });
+      if (crit) K.kick(o.room, hit + 0.07, { f0: 90, f1: 38, d: 0.3, peak: 0.3, click: 0 }); // a second shock through the floor
+      K.hiss(o.room, hit + stop + 0.03, { f0: 3200, f1: 1300, q: 0.7, glide: 0.4, a: 0.03, d: 0.35, peak: 0.025 + 0.02 * big, color: 'pink' }); // dust
+      K.spray(hit + stop + 0.05, 3 + Math.round(3 * big), 0.25, (x) => K.S(K.pan(o.dry, side()), x, 'glass-l', { gain: 0.05, rate: 1.3 + Math.random() * 0.6, hp: 2200 }));
+    },
+    // The needle: a crisp tick, a zip with a whistle in it, a bright crack with a small kick under it, a shimmer widening late.
+    poke(K, o, T) {
+      const { t, arrive, hit, stop, k, result } = T, crit = result === 'crit', miss = result === 'miss';
+      if (T.flies) {
+        K.crack(o.dry, t, { peak: 0.14, f: 7000, d: 0.01 });
+        K.flight(o.dry, t, arrive, { f0: 2500, f1: 9000, q: 2.5, peak: 0.12, color: 'white', pass: miss, tail: 0.15 });
+        K.whine(o.dry, t, arrive, { f0: 1800, f1: 4200, peak: 0.025, type: 'sine', lp: 8000 });
+      }
+      if (miss) return;
+      if (result === 'chit') { glance(K, o, hit, { rate: 1.35 }); return; }
+      const big = crit ? 1 : k;
+      K.crack(o.dry, hit, { peak: 0.5 + 0.15 * big, f: 6500, d: 0.012 });
+      K.kick(o.dry, hit, { f0: 210, f1: 70, drop: 0.025, d: 0.08 + 0.06 * big, peak: 0.25 + 0.25 * big, click: 0 });
+      K.thwack(o.dry, hit, { f: 1400, d: 0.04, peak: 0.15 + 0.1 * big, tone: 0 });
+      K.S(o.dry, hit + 0.001, 'glass-h', { gain: 0.18 + 0.1 * big, rate: 1.6, hp: 2000 });
+      K.modes(o.room, hit, [[2420, 1, 0.25], [3730, 0.6, 0.18], [6080, 0.35, 0.12]], { peak: 0.05 + 0.04 * big });
+      const at = hit + stop + 0.05, n = crit ? 9 : 4 + Math.round(4 * k); // the bloom: a shimmer opening out to both sides
+      for (let i = 0; i < n; i++) K.tone(K.pan(o.room, (i % 2 ? 1 : -1) * Math.min(0.9, 0.15 + i * 0.12)), at + i * (crit ? 0.025 : 0.03) * (0.8 + Math.random() * 0.4), { f0: 3200 + Math.random() * 3200, a: 0.004, d: 0.12 + Math.random() * 0.1, peak: 0.03 * (1 - i / (n * 1.3)) });
+      K.hiss(o.room, at, { type: 'highpass', f0: 5000, a: 0.03, d: 0.22, peak: 0.03 + 0.03 * big });
+    },
+    // The pulse: a deep sonar thoom goes out, a band of air rising, the return in three tuned beats with glass on top, a ring.
+    ping(K, o, T) {
+      const { t, arrive, hit, k, result } = T, crit = result === 'crit', miss = result === 'miss';
+      if (T.flies) {
+        K.tone(o.room, t, { f0: 92, f1: 58, glide: 0.18, a: 0.008, d: 0.2, peak: 0.2 });
+        K.modes(o.room, t + 0.004, [[880, 1, 0.3], [1762, 0.4, 0.2]], { peak: 0.06 });
+        K.flight(o.dry, t, arrive, { f0: 500, f1: 1800, q: 1.4, peak: 0.12, pass: miss, tail: 0.3 });
+      }
+      if (miss) { K.modes(o.room, hit + 0.16, [[880, 1, 0.2]], { peak: 0.02 }); return; } // it comes back with nothing
+      if (result === 'chit') { glance(K, o, hit, { rate: 1.15 }); K.S(o.room, hit + PULSE, 'tin', { gain: 0.1, rate: 1.6 }); return; }
+      const big = crit ? 1 : k;
+      for (let i = 0; i < 3; i++) {
+        const x = hit + i * PULSE, w = [1, 0.75, 0.55][i] * (crit && i === 2 ? 1.5 : 1), f = [1, 0.94, 0.89][i];
+        K.crack(o.dry, x, { peak: 0.4 * w, f: 5000, d: 0.01 });
+        K.kick(o.dry, x, { f0: 120, f1: 52, d: 0.11, peak: (0.18 + 0.15 * big) * w, click: 0 });
+        K.modes(K.pan(o.dry, [0, -0.35, 0.35][i]), x, [[1318 * f, 1, 0.14], [2637 * f, 0.5, 0.1], [5274 * f, 0.3, 0.06]], { peak: 0.13 * w });
+      }
+      K.modes(o.room, hit + 0.01, [[659, 1, 0.6], [1320, 0.5, 0.45], [1980, 0.3, 0.3]], { peak: 0.03 + 0.03 * big }); // the ring
+      if (crit) K.tone(o.room, hit + 2 * PULSE, { f0: 70, f1: 45, glide: 0.3, a: 0.01, d: 0.45, peak: 0.3 });
+    },
+  },
+
+  // ===== B2: Weighty, Electric =====
+  b2: {
+    // A breaker arms, an arc runs out and charges in the draw-back, a discharge slams in as the breaker trips; sparks. Cut dead.
+    bash(K, o, T) {
+      const { t, arrive, hit, stop, k, result } = T, crit = result === 'crit', miss = result === 'miss';
+      if (T.flies) {
+        K.S(o.dry, t, 'relay', { gain: 0.4, rate: 0.5 });
+        K.whine(o.dry, t, arrive, { f0: 110, f1: 220, peak: 0.1, lp: 1800 }); // current building
+        K.crackle(o.dry, t, arrive, { f: 2800, q: 0.7, peak: 0.3 });
+        if (!miss) {
+          K.whine(o.dry, arrive, hit, { f0: 500, f1: crit ? 2600 : 1500, peak: crit ? 0.07 : 0.04, type: 'sine', lp: 6000 }); // charging
+          K.crackle(o.dry, arrive, hit, { f: 4000, q: 0.8, peak: crit ? 0.4 : 0.25 });
+        }
+      }
+      if (miss) { K.zap(o.dry, hit, { f0: 3000, f1: 400, d: 0.12, peak: 0.08 }); K.crackle(o.dry, hit, hit + 0.2, { f: 2000, peak: 0.12, rise: false }); return; } // spent on the air
+      if (result === 'chit') { spark(K, o, hit, 1); return; }
+      const big = crit ? 1 : k;
+      K.crack(o.dry, hit, { peak: 0.45 + 0.2 * big });
+      K.zap(o.dry, hit, { f0: 8000, f1: 500, d: 0.07 + 0.03 * big, peak: 0.35 });
+      K.surge(o.dry, hit, { f0: 170, f1: 44, d: 0.18 + 0.1 * big, peak: 0.32 + 0.22 * big, drive: 5 });
+      K.S(o.dry, hit + 0.004, 'relay', { gain: 0.55, rate: 0.42 }); // the breaker trips
+      K.S(o.dry, hit + 0.006, 'metal-l', { gain: 0.25 + 0.2 * big, rate: 0.55, lp: 3000 });
+      if (crit) { K.surge(o.dry, hit + 0.05, { f0: 120, f1: 36, d: 0.22, peak: 0.3, drive: 6, bright: 3000 }); K.zap(o.dry, hit + 0.05, { f0: 6000, f1: 300, d: 0.1, peak: 0.25 }); }
+      for (const p of [-0.5, 0.5]) K.crackle(o.dry, hit + stop + (p > 0 ? 0.02 : 0), hit + stop + 0.14 + 0.06 * big, { f: 5000, q: 1, peak: 0.25, rise: false, pan: p }); // sparks
+    },
+    // A contactor closes, an arc swings over, an arc-welder strike with a heavy discharge, the transformer humming on, sagging.
+    ban(K, o, T) {
+      const { t, arrive, hit, stop, k, result } = T, crit = result === 'crit', miss = result === 'miss', end = crit ? arrive : hit;
+      if (T.flies) {
+        K.S(o.dry, t, 'relay', { gain: 0.35, rate: 0.42 });
+        K.kick(o.dry, t, { f0: 70, f1: 50, d: 0.06, peak: 0.12, click: 0 });
+        K.whine(o.dry, t, end, { f0: 60, f1: 120, peak: 0.12, lp: 1200 });
+        K.crackle(o.dry, t, end, { f: 2200, peak: 0.28 });
+        K.flight(o.dry, t, end, { f0: 300, f1: 1200, q: 0.8, peak: 0.1, color: 'pink', pass: miss, tail: 0.3 });
+        if (crit) { K.whine(o.dry, arrive, hit, { f0: 300, f1: 2000, peak: 0.06, type: 'sine', lp: 5000 }); K.crackle(o.dry, arrive, hit, { f: 3500, peak: 0.4 }); }
+      }
+      if (miss) { K.crackle(o.dry, hit, hit + 0.25, { f: 1800, peak: 0.1, rise: false }); return; }
+      if (result === 'chit') { spark(K, o, hit, 0.85); K.hum(o.room, hit, { f: 120, f1: 110, d: 0.25, peak: 0.04 }); return; }
+      const big = crit ? 1 : k;
+      K.crack(o.dry, hit, { peak: 0.6 + 0.2 * big, f: 5000 });
+      K.zap(o.dry, hit, { f0: 8000, f1: 500, d: 0.09, peak: 0.45 });
+      K.surge(o.dry, hit, { f0: 140, f1: 36, d: 0.3 + 0.12 * big, peak: 0.27 + 0.16 * big, drive: 5, bright: 7000 });
+      K.S(o.dry, hit + 0.003, 'plate-h', { gain: 0.25 + 0.2 * big, rate: 0.55 });
+      K.crackle(o.dry, hit, hit + 0.12, { f: 5500, q: 1, peak: 0.3, rise: false }); // sparks off the strike
+      if (crit) K.surge(o.room, hit + 0.08, { f0: 100, f1: 32, d: 0.3, peak: 0.28, drive: 6, bright: 2500 });
+      // It rings on: the transformer hums, sagging, with crackle dying away.
+      K.hum(o.room, hit + 0.01, { f: 120, f1: 104, d: 0.6 + 0.4 * big, a: 0.01, peak: 0.07 + 0.05 * big, bright: 1600 });
+      K.hum(o.room, hit + 0.01, { f: 60, f1: 52, d: 0.7 + 0.4 * big, a: 0.01, peak: 0.04, bright: 600 });
+      K.crackle(o.room, hit + stop, hit + stop + 0.5 + 0.3 * big, { f: 3000, peak: 0.12, rise: false });
+    },
+    // A static snap, a thin arc whining in, a hard spark with a small thump, and the current crawling out through it late.
+    poke(K, o, T) {
+      const { t, arrive, hit, stop, k, result } = T, crit = result === 'crit', miss = result === 'miss';
+      if (T.flies) {
+        K.zap(o.dry, t, { f0: 9000, f1: 3000, d: 0.015, peak: 0.15 });
+        K.crackle(o.dry, t, arrive, { f: 6000, q: 1.2, peak: 0.18 });
+        K.whine(o.dry, t, arrive, { f0: 2500, f1: 5500, peak: 0.02, type: 'sine', lp: 9000 });
+      }
+      if (miss) { K.crackle(o.dry, hit, hit + 0.12, { f: 5000, peak: 0.08, rise: false }); return; }
+      if (result === 'chit') { spark(K, o, hit, 1.3); return; }
+      const big = crit ? 1 : k;
+      K.crack(o.dry, hit, { peak: 0.5, f: 7000, d: 0.012 });
+      K.zap(o.dry, hit, { f0: 8500, f1: 1800, d: 0.035, peak: 0.35 });
+      K.surge(o.dry, hit, { f0: 240, f1: 80, d: 0.07 + 0.05 * big, peak: 0.2 + 0.2 * big, drive: 4, bright: 7000 });
+      const at = hit + stop + 0.05, n = crit ? 8 : 3 + Math.round(4 * k); // the bloom: current crawling out to both sides
+      K.crackle(o.dry, at, at + 0.18 + 0.1 * big, { f: 4500, peak: 0.22, rise: false, pan: -0.6 });
+      K.crackle(o.dry, at + 0.03, at + 0.2 + 0.1 * big, { f: 5200, peak: 0.2, rise: false, pan: 0.6 });
+      K.spray(at, n, 0.2, (x) => K.zap(K.pan(o.dry, side()), x, { f0: 7000 + Math.random() * 3000, f1: 3000, d: 0.012, peak: 0.08 }));
+    },
+    // An EM pulse: a charge whines up, the pulse throbs out, three discharges land, the hum fades with a last crackle.
+    ping(K, o, T) {
+      const { t, arrive, hit, k, result } = T, crit = result === 'crit', miss = result === 'miss';
+      if (T.flies) {
+        K.S(o.dry, t, 'relay', { gain: 0.3, rate: 0.7 });
+        K.whine(o.dry, t, t + 0.06, { f0: 300, f1: 900, peak: 0.06 });
+        K.whine(o.dry, t, arrive, { f0: 90, f1: 140, peak: 0.08, type: 'square', lp: 2400 });
+        K.crackle(o.dry, t, arrive, { f: 3000, peak: 0.18 });
+      }
+      if (miss) { K.crackle(o.room, hit + 0.1, hit + 0.3, { f: 3000, peak: 0.05, rise: false }); return; }
+      if (result === 'chit') { spark(K, o, hit, 1.15); spark(K, { dry: K.g(0.5, o.dry), room: K.g(0.5, o.room) }, hit + PULSE, 1.2); return; }
+      const big = crit ? 1 : k;
+      for (let i = 0; i < 3; i++) {
+        const x = hit + i * PULSE, w = [1, 0.75, 0.55][i];
+        K.surge(o.dry, x, { f0: 130 - 8 * i, f1: 55, d: 0.09, peak: (0.2 + 0.16 * big) * w, drive: 4, bright: 6500 });
+        K.zap(o.dry, x, { f0: 7000, f1: 1500, d: 0.03, peak: 0.32 * w });
+        K.crackle(o.dry, x, x + 0.07, { f: 5000, peak: 0.25 * w, rise: false, pan: [0, -0.4, 0.4][i] });
+      }
+      K.hum(o.room, hit + 0.01, { f: 120, f1: 110, d: 0.45, a: 0.01, peak: 0.04 + 0.03 * big, bright: 1400 });
+      if (crit) { K.surge(o.dry, hit + 3 * PULSE, { f0: 110, f1: 34, d: 0.25, peak: 0.35, drive: 6 }); K.zap(o.dry, hit + 3 * PULSE, { f0: 6000, f1: 300, d: 0.12, peak: 0.25 }); }
     },
   },
 };

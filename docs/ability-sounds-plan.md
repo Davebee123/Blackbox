@@ -32,9 +32,13 @@ Operator's comes in three beats.
 
 ## Rounds
 
-1. **Style** (built, waiting on the pick): Bash, Ban, Poke and Ping as a hit, small, big, crit, on ◆, a miss and three
-   in a row, in A Hardware, B Weighty and C Digital beside today's. `?playtest=fx` has the Sound row; the preview
-   videos are rendered from the same plans.
+1. **Style**: Bash, Ban, Poke and Ping as a hit, small, big, crit, on ◆, a miss and three in a row, in A Hardware,
+   B Weighty and C Digital beside today's. `?playtest=fx` has the Sound row; the preview videos are rendered from the
+   same plans. The designer kept B's weight but heard it as being hit (it shared the hurt's punches and sub-drop) and
+   as thin.
+   **1b** (built, waiting on the pick): two Weighty takes with none of the hurt's samples, a bright crack where the
+   blow lands and a short tuned kick for weight: B1 Cinematic (struck metal into a hall, fuller flights) and B2
+   Electric (discharges, arcs, a breaker tripping, a hum ringing on).
 2. **Every ability**: the generic layers in the picked style, all 110 rows, and overrides for Overload, Detonate,
    Firewall, Purge, Crack, Quarantine, Botnet, Deploy, Inject, Flood, Shatter and Failover.
 3. **Tiers and finishers**: the mastery layers, the 13 tier overrides, the 12 finishers.

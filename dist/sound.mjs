@@ -684,7 +684,7 @@ function chain(ctx) {
 }
 
 // An ability's sound (abilitysound.mjs) in a style, timed by T (timingOf): its own level, a dry bus and a send that
-// rings into the room (the Weighty style's into a bigger hall too).
+// rings into the room (Weighty's and Cinematic's into a bigger hall too).
 const halls = new WeakMap();
 function hallOf(ctx, ch) {
   if (!halls.has(ch)) {
@@ -696,14 +696,14 @@ function hallOf(ctx, ch) {
   }
   return halls.get(ch);
 }
-const ABILITY_ROOM = { a: 0.1, b: 0.16, c: 0.1 };
+const ABILITY_ROOM = { a: 0.1, b: 0.16, c: 0.1, b1: 0.12, b2: 0.1 };
 function abilityAt(ctx, ch, style, key, T) {
   if (!banks.get(ctx)?.ready) return false;
   const dry = ctx.createGain(), send = ctx.createGain(), room = ctx.createGain(), more = ctx.createGain();
   send.gain.value = ABILITY_ROOM[style] ?? 0.1; more.gain.value = 0.6;
   dry.connect(ch.master); dry.connect(send).connect(ch.room);
   room.connect(dry); room.connect(more).connect(ch.room);
-  if (style === 'b') { const h = ctx.createGain(); h.gain.value = 0.5; room.connect(h).connect(hallOf(ctx, ch)); }
+  if (style === 'b' || style === 'b1') { const h = ctx.createGain(); h.gain.value = 0.5; room.connect(h).connect(hallOf(ctx, ch)); } // Weighty and Cinematic: the bigger space
   const list = (name) => { const l = banks.get(ctx)?.buffers.get(name); return l && take(l, name); };
   return playAbility(ctx, { dry, room }, style, key, T, list);
 }
@@ -847,12 +847,12 @@ export function createSound() {
 }
 
 // Bounce voices, one after another, into a WAV (for listening outside the game).
-// Pass { synth: true } to hear the synthesized stand-ins instead of the samples.
-export async function renderBoard(names = Object.keys(RECIPES), gap = 1.3, { synth = false, base, hum = false } = {}) {
+// Pass { synth: true } to hear the synthesized stand-ins instead of the samples, { channels: 2 } for stereo (the room is).
+export async function renderBoard(names = Object.keys(RECIPES), gap = 1.3, { synth = false, base, hum = false, channels = 1 } = {}) {
   // Each entry is a name (played `gap` seconds after the last) or [name, seconds, opts] for a scene.
   // 'ability:<style>:<key>' plays an ability's sound: opts { plan, result, power } (abilitysound.mjs).
   const cues = names.map((n, i) => (Array.isArray(n) ? n : [n, 0.3 + i * gap, n === 'hit' ? { amount: 12 } : {}]));
-  const sr = 44100, ctx = new OfflineAudioContext(1, Math.ceil(sr * (Math.max(...cues.map((c) => c[1])) + 2)), sr);
+  const sr = 44100, nc = channels === 2 ? 2 : 1, ctx = new OfflineAudioContext(nc, Math.ceil(sr * (Math.max(...cues.map((c) => c[1])) + 2)), sr);
   if (!synth) await loadBank(ctx, base);
   const ch = chain(ctx);
   if (hum) ambience(ctx, ctx.destination, { seeks: false });
@@ -862,12 +862,12 @@ export async function renderBoard(names = Object.keys(RECIPES), gap = 1.3, { syn
     else voiceAt(ctx, ch, n, t, o);
   }
   const buf = await ctx.startRendering();
-  const data = buf.getChannelData(0), bytes = new DataView(new ArrayBuffer(44 + data.length * 2));
+  const chs = Array.from({ length: nc }, (_, c) => buf.getChannelData(c)), n = chs[0].length, size = n * 2 * nc, bytes = new DataView(new ArrayBuffer(44 + size));
   const str = (o, s) => [...s].forEach((c, i) => bytes.setUint8(o + i, c.charCodeAt(0)));
-  str(0, 'RIFF'); bytes.setUint32(4, 36 + data.length * 2, true); str(8, 'WAVEfmt ');
-  bytes.setUint32(16, 16, true); bytes.setUint16(20, 1, true); bytes.setUint16(22, 1, true);
-  bytes.setUint32(24, sr, true); bytes.setUint32(28, sr * 2, true); bytes.setUint16(32, 2, true); bytes.setUint16(34, 16, true);
-  str(36, 'data'); bytes.setUint32(40, data.length * 2, true);
-  for (let i = 0; i < data.length; i++) bytes.setInt16(44 + i * 2, Math.max(-1, Math.min(1, data[i])) * 0x7fff, true);
+  str(0, 'RIFF'); bytes.setUint32(4, 36 + size, true); str(8, 'WAVEfmt ');
+  bytes.setUint32(16, 16, true); bytes.setUint16(20, 1, true); bytes.setUint16(22, nc, true);
+  bytes.setUint32(24, sr, true); bytes.setUint32(28, sr * 2 * nc, true); bytes.setUint16(32, 2 * nc, true); bytes.setUint16(34, 16, true);
+  str(36, 'data'); bytes.setUint32(40, size, true);
+  for (let i = 0; i < n; i++) for (let c = 0; c < nc; c++) bytes.setInt16(44 + (i * nc + c) * 2, Math.max(-1, Math.min(1, chs[c][i])) * 0x7fff, true);
   return new Uint8Array(bytes.buffer);
 }

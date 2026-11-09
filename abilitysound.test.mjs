@@ -19,6 +19,7 @@ function fakeContext() {
     createBiquadFilter: () => node({ frequency: param(), Q: param() }),
     createWaveShaper: () => node({}),
     createDelay: () => node({ delayTime: param() }),
+    createStereoPanner: () => node({ pan: param() }),
     createOscillator: () => ({ ...source('osc'), frequency: param(), detune: param() }),
     createBufferSource: () => ({ ...source('buf'), playbackRate: param() }),
     createBuffer: buffer,
