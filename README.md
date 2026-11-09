@@ -287,6 +287,7 @@ and `style.test.mjs` the tooltip grammar.
 |---|---|
 | [`GAME_RULES.md`](GAME_RULES.md) | The rules as built. |
 | [`docs/ui.md`](docs/ui.md), [`docs/style-guide.md`](docs/style-guide.md) | The look (colours, tokens, components); how every line is written. |
+| [`docs/phone-plan.md`](docs/phone-plan.md) | Plan: a phone UI of its own, prototypes first (not built). |
 | [`docs/lore.md`](docs/lore.md) | The world and the story: the machine, the factions' answers, wick (decided, not built). [`docs/story-script.md`](docs/story-script.md): its letters and dialogue, drafted. [`docs/receipts.md`](docs/receipts.md): the vault receipt stamped for a faction at each takeover (built lean; its payoffs wait). [`docs/factions-plan.md`](docs/factions-plan.md): commissions, every hub's board, rep from contracts, receipts, feuds and defence calls, faction sets, the payload cut (1–4 built lean; 5 and 7–10 wait). |
 | [`docs/journals.md`](docs/journals.md) | Journals: dated entries from people across the city, either side of the Cascade, found in vaults. |
 | [`docs/servers.md`](docs/servers.md) | Servers as rooms, floors, sockets and puzzle rooms. |

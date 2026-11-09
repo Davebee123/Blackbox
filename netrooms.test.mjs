@@ -149,6 +149,8 @@ test('the network map draws a server as its kind\'s glyph (the kind\'s rule on h
   loc.state.taken[takeable(loc)[0]] = true; loc.runs = 1;
   assert.doesNotMatch(node(), /class="sv-ring"/, 'been in: no ring');
   assert.match(node(), /class="sv-lit" x="-8" y="11" width="[1-9][\d.]*"/, 'the bar fills');
+  // The ground, the Chart: a crosshair pattern in the map's own units, under everything, so it pans and zooms with it.
+  assert.match(mapMarkup(s, loc.id, 'net'), /<svg class="map-svg[^>]*><defs><pattern id="mchart" width="\d+" height="\d+" patternUnits="userSpaceOnUse">.*<\/defs><rect class="mchart"[^>]*fill="url\(#mchart\)"\/>/s);
 });
 
 test('losing a fight on rooms disconnects you and loses the pack; progress stays', () => {

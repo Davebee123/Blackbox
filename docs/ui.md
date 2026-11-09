@@ -170,7 +170,9 @@ short vibration on phones that have it.
   plate, a bar under it filling as you clear it, and a ring round one you haven't been into, a pulse going out from it;
   amber, gray when done, teal where you are and what's yours, yellow for a contract's. Its kind's rule is the glyph's
   tooltip; the server card's kind tag carries the same glyph and tooltip. Under its name, the level in WoW colours (the name's size) and its specials' glyphs. Servers that ask
-  nothing of you draw dim without labels until hovered, selected or zoomed. Labels never overlap: the more
+  nothing of you draw dim without labels until hovered, selected or zoomed. The ground is the *Chart*: a faint crosshair
+  every 60 map units with hairlines between, drawn in the map so it pans and zooms with it (dimmer on a desktop; cells
+  double on a phone's small map), over the floor's own backdrop. Labels never overlap: the more
   important one keeps its label (selected, then threats, then where you are, then a contract or fresh find). Scroll
   zooms (up to 5×), drag pans, double-click or ⤢ fits. A **Show** picker (**Mine**, **Targets**, **Threats**) dims the
   rest. **Map · List** toggles a sortable list of every server (name, family, level, floor, explored, status), then hubs
@@ -222,7 +224,7 @@ short vibration on phones that have it.
 - **No sideways scroll, ever.** `.app` clips horizontal overflow (`overflow-x: clip`); that's a safety net, not a fix:
   content must still fit. Grid columns are `minmax(0, 1fr)`; a `nowrap` inside a cell also gets `min-width: 0` and an
   ellipsis.
-- **Phone (≤ 900px)**: one column. Side windows (a hub's shop or market, the crew column) stack above or below their
+- **Phone (≤ 900px)**: one column (its own shell is planned: docs/phone-plan.md). Side windows (a hub's shop or market, the crew column) stack above or below their
   page. The top bar is a grid: brand, pager and credits; Integrity and Signal; then the tabs (two rows of four when
   eight show).
 - **Narrow columns**: board cells are size containers; a chip tightens and drops its icon below 132px instead of
