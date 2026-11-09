@@ -148,10 +148,9 @@ teal, violet or a threat's red.
   - **A burn runs down** (combat.mjs tick `left`): each tick's fire stands lower than the last, the last one gutters to
     falling embers, and Keepalive stokes it up.
   - **Mastery tiers** (`tierRecipe`): tier 2 more particles and a spark burst, tier 3 a glint and each iconic skill's own
-    flourish; a crewmate's always plays tier 1. **Break finishers** (`FINISHERS`, `SUB_FINISHERS`): the break that wins
-    plays your class's flourish on that row within 0.9 s, varied by subclass. Subtle and medium drop the afterimages,
-    the swing's fan and the cracks; the result's timing and a status cashing in show on both. `?playtest=fx` reviews
-    them all, by result, status and ticks left.
+    flourish; a crewmate's always plays tier 1. Every break dissolves into 1s and 0s, the fight-winning one in slow
+    motion. Subtle and medium drop the afterimages, the swing's fan and the cracks; the result's timing and a status
+    cashing in show on both. `?playtest=fx` reviews them all, by result, status and ticks left.
 - **Damage numbers** (dmgfx.mjs): every source its own number with an icon (a hit, a crit, a burn, a helper or daemon,
   a reflect, a shield's soak, a heal, encryption, an interrupt, a virus's claw), landing one after another in the
   order they resolved (0.45 s apart for two, faster for more, a batch never over 2.2 s), the bars dropping with each.
@@ -164,8 +163,10 @@ teal, violet or a threat's red.
   would take the hit.
 - **How much moves** follows Screen effects: subtle and medium show the number, the bar and the strike (a crewmate's
   quieter); bold adds impact bursts, sparks and row flashes; off shows numbers and bars only, a soft red edge when you're
-  hit, and a cycle's numbers stacked at once. Nothing on the interface moves: no screen shake, no nudge; flashes keep
-  their light and lose their movement.
+  hit, and a cycle's numbers stacked at once. Two things move the screen: an attack that hurts you shakes it as its
+  number lands (`shakeOf`: harder for a bigger hit, a crit or a charge; half on subtle and medium), and the hit that wins
+  the fight plays in slow motion (`slowAt`: a quarter speed, back to full in about half a second). Nothing else moves;
+  flashes keep their light and lose their movement.
 - **On a phone** the board shows Now, +1 and +2, chips drop their icon, and a part's name sits on its own line.
 
 ## Feedback language

@@ -4,8 +4,9 @@
 // scales with the hit. Real fights through combat.mjs check the events carry where each hit came from.
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { KINDS, STAGGER, gapFor, floatOf, plan, queueAfter } from './dist/dmgfx.mjs';
-import { sizeOf } from './dist/lash.mjs';
+import { sizeOf, shakeOf, SHAKE } from './dist/lash.mjs';
 import { GLYPHS } from './dist/glyphs.mjs';
 import { fresh, command, selectEncounter, resolveCycle, part, keyMap } from './dist/combat.mjs';
 import { CONFIG, ABILITIES } from './dist/data.mjs';
@@ -219,4 +220,15 @@ test('a hit armor absorbs floats ◆ ABSORBED and logs "absorbed by"; a real mis
   assert.notEqual(SIGNS.absorbed.float, SIGNS.miss.float);
   assert.notEqual(SIGNS.absorbed.flash, SIGNS.miss.flash);
   assert.ok(!/hot/.test(SIGNS.absorbed.float), 'never the red of a threat');
+});
+
+test('an attack that hurts you shakes the screen: harder for a bigger hit, a crit or a charge, half on subtle and medium', () => {
+  const at = (power, heavy, full) => shakeOf({ power, heavy, full });
+  assert.ok(at(0.1, false, true).px < at(0.6, false, true).px && at(0.6, false, true).px < at(0.6, true, true).px);
+  assert.ok(Math.abs(at(0.6, true, false).px - at(0.6, true, true).px / 2) < 0.1, 'half on subtle and medium');
+  for (const p of [0, 0.5, 1]) for (const h of [false, true]) { const s = at(p, h, true); assert.ok(s.px <= 9 && s.ms <= 400, JSON.stringify(s)); }
+  assert.equal(SHAKE[0], 1); assert.ok(SHAKE.every((f, i) => !i || Math.abs(f) < Math.abs(SHAKE[i - 1])), 'each swing smaller');
+  const app = readFileSync(new URL('./dist/app.js', import.meta.url), 'utf8');
+  assert.match(app, /feel\.add\(\(\) => shake\(Math\.min\(1, frac \* 5\), heavy\)\);/, 'on a server hit, with its number');
+  assert.match(app, /if \(!app\?\.animate \|\| lvl === 'minimal' \|\| !canMove\(\)\) return;/, 'none off or with Motion off');
 });

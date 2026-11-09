@@ -32,11 +32,11 @@ import { JOURNAL_BY } from './journals.mjs';
 import { powerOn } from './poweron.mjs';
 import { relockLeft } from './rogue.mjs';
 import { createHitFx } from './hitfx.mjs';
-import { createAbilityFx, keyFor, tickKey, recipeOf, originOf, idOfName, finisherBreak, levelOf as afxLevel } from './abilityfx.mjs';
+import { createAbilityFx, keyFor, tickKey, recipeOf, originOf, idOfName, winningBreak, slowAt, SLOW, levelOf as afxLevel } from './abilityfx.mjs';
 import { tierOf as masteryTier } from './mastery.mjs';
 import { plan as dmgPlan, queueAfter, absorbOf, armorFloat, missFloat } from './dmgfx.mjs';
 import { recapMarkup } from './recap.mjs';
-import { createLash } from './lash.mjs';
+import { createLash, shakeOf, SHAKE } from './lash.mjs';
 import { createChipFx, chipStrike, chipTheme, STRIKES } from './chipfx.mjs';
 import { online, peopleOn } from './presence.mjs';
 import { runnerFloor } from './runners-view.mjs';
@@ -372,9 +372,6 @@ function strikes(events, delayOf = () => 0) {
   }
 }
 const later = (ms, f) => (ms > 0 ? setTimeout(f, ms) : f());
-// A break finisher (abilityfx.mjs): your class's flourish (its subclass's, once you've picked one) on the part whose
-// break wins the fight, on its row only. Screen effects and Motion as every ability effect.
-const finisher = (e) => { const cls = classOf(campaign), sub = campaign.loadout?.sub?.[cls]; return !!abilityfx.finish(cls, heroLevel(campaign, cls) >= SUBCLASS.from ? sub : null, partRow(e.target)); };
 let pendingStrikes = [];
 const DISSOLVE_MS = 1000; // a broken part's last moment on the board
 
@@ -701,8 +698,24 @@ function lashFrom(id) {
 }
 function lashAt(e, mode, frac = 0, heavy = false) {
   if (mode !== 'tick' && STRIKES.has(chipTheme(part(campaign, e.source)?.name)) && !packed(campaign, campaign.encounter?.virus, part(campaign, e.source))) return; // its chip strikes instead (chipfx.mjs)
-  const full = fxLevel() === 'full'; // the lash never shakes the screen: a big hit tears the backdrop instead (screenfx.mjs)
+  const full = fxLevel() === 'full';
   lash.lash({ from: mode === 'tick' ? null : lashFrom(e.source), bar: document.querySelector(MINE + ' .bigbar'), power: Math.min(1, frac * 5), heavy, mode, full });
+}
+// An attack that hurts you shakes the screen as its number lands (lash.mjs shakeOf): harder for a bigger hit, a crit or
+// a charge; half on Screen effects subtle and medium, none off or with Motion off.
+function shake(power, heavy) {
+  const lvl = fxLevel(), app = document.getElementById('app');
+  if (!app?.animate || lvl === 'minimal' || !canMove()) return;
+  const { px, ms } = shakeOf({ power, heavy, full: lvl === 'full' });
+  try { app.animate([{ transform: 'none' }, ...SHAKE.map((f, i) => ({ transform: `translate(${(f * px).toFixed(1)}px, ${((i % 2 ? 0.5 : -0.6) * f * px).toFixed(1)}px)` })), { transform: 'none' }], { duration: ms, easing: 'ease-out' }); } catch { /* no shake */ }
+}
+// The hit that wins the fight plays in slow motion (abilityfx.mjs slowAt): everything animating, and the effects' light,
+// drops to a quarter speed and eases back to full in about half a second.
+function slowmo() {
+  if (!canMove() || fxLevel() === 'minimal') return;
+  const t0 = performance.now();
+  const tick = () => { const t = performance.now() - t0, r = slowAt(t); for (const an of document.getAnimations()) an.playbackRate = r; abilityfx.timeScale(r); if (t < SLOW.dur) requestAnimationFrame(tick); };
+  tick();
 }
 const LASH_TRAVEL = 140; // ms: a hit's number shows as the lash lands, not as it leaves the part
 let cueAt = 0; // when the last damage number queued lands (performance.now() ms)
@@ -1093,7 +1106,7 @@ function markFx(e, mate) {
 
 function react(events) {
   const won = events.find((e) => e.type === 'victory');
-  const fin = module === 'combat' ? finisherBreak(events) : null; // the break that wins the fight: your class's finisher (abilityfx.mjs)
+  const last = module === 'combat' ? winningBreak(events) : null; // the break that wins the fight: slow motion
   // The wall stopping a weak invasion is quiet: a log line and a pager entry, no sound or float (invasion.mjs).
   const hush = !active(campaign) && events.some((e) => e.type === 'invasion-cleared' && e.quiet);
   const fx = canMove();
@@ -1172,17 +1185,18 @@ function react(events) {
         const bp = part(campaign, e.target);
         // (It waits for the number of the hit that broke it.)
         const wait = split.delay(e);
-        if (bp && canMove()) { Object.defineProperty(bp, '_dyingUntil', { value: Date.now() + wait + DISSOLVE_MS, writable: true, configurable: true, enumerable: false }); setTimeout(() => { dirty = true; }, wait + DISSOLVE_MS + 50); pendingStrikes.push(() => later(wait, () => { if (!(e === fin && finisher(e))) hitfx.dissolve(partRow(e.target)); })); } // the winning break plays your finisher in place of the dissolve's bits
+        if (bp && canMove()) { Object.defineProperty(bp, '_dyingUntil', { value: Date.now() + wait + DISSOLVE_MS, writable: true, configurable: true, enumerable: false }); setTimeout(() => { dirty = true; }, wait + DISSOLVE_MS + 50); pendingStrikes.push(() => later(wait, () => { hitfx.dissolve(partRow(e.target)); if (e === last) slowmo(); })); }
       }
         artHit(e.target, 'break'); feel.add(() => flash(e.message)); feel.add('break', '.hud-bar.enemy', 'BROKEN'); if (selected === e.target) selected = null; break;
       case 'server-hit': {
         artHit(e.source, 'attack');
         const dm = defender(campaign).max || 100, frac = e.amount / dm, size = 1 + Math.min(1, frac * 5) * 0.8;
-        const heavy = !!(e.crit || e.tell); // a crit or a charge whips harder (lashAt: a big one shakes the screen)
+        const heavy = !!(e.crit || e.tell); // a crit or a charge whips harder and shakes the screen harder
         // Effects full or calm: the part lashes at your screen, and the number shows as it lands. Else a soft edge.
         if (lashing) { feel.add(() => lashAt(e, 'hit', frac, heavy)); feel.beat(split.delay(e) + LASH_TRAVEL); }
         if (e.crit) feel.add(() => flash('CRITICAL HIT'));
         feel.add(() => sfx.hit(frac, !!e.crit)); // a big one tears the backdrop (screenfx.mjs)
+        feel.add(() => shake(Math.min(1, frac * 5), heavy)); // and shakes the screen, with its number
         feel.add(e.crit ? 'hurtcrit' : 'hurt', MINE, f?.text || `−${e.amount}`, { amount: e.amount, frac, size: size + (e.crit ? 0.3 : 0), src, stack, noEdge: lashing, softEdge: !lashing, noFlash: lashing, floatAt: BAR, x: 0.5 });
         holdThem(); sideFx(row(e.source), MINE, 'them');
         break;
@@ -3923,13 +3937,6 @@ if (playtest === 'fx') import('./abilityfx-playtest.mjs').then(({ mountFxPlaytes
       const plan = abilityfx.play(key, row, { power, crit, result, marks, broke, left: tick ? left : null, ability, keyEl, noKey: !!hidden, who: who || null, kind: who ? 'crew' : 'you', origin: tick ? 'here' : who ? 'crew' : 'key', tier: who ? 1 : tier, onImpact: row ? () => hitfx.jolt(row, result) : null });
       if (plan) { window.__fxPlan = { travel: plan.travel, impact: plan.impact, dur: plan.dur, from: plan.from }; return stand && keyEl ? 'stand-in' : 'fx'; } // the playtest's last plan, for review captures
       if (row) hitfx.strike(row, { kind: 'you', result });
-      return 'plain';
-    },
-    // A break finisher on a part (its class's, or a subclass's), as the winning break plays it.
-    finish: (cls, sub, id) => {
-      if (fxLevel() === 'minimal' || !canMove()) return 'none';
-      const plan = abilityfx.finish(cls, sub || null, fxRow(id));
-      if (plan) { window.__fxPlan = { travel: 0, impact: plan.impact, dur: plan.dur, from: 'here' }; return 'fx'; }
       return 'plain';
     },
   });

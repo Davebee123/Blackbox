@@ -85,13 +85,13 @@ export function createHitFx(board, { canMove = () => true } = {}) {
         layer.appendChild(el);
         const turn = 60 + Math.random() * 360, go = turn + 140 + Math.random() * 260; // when it turns to a bit, when it lets go
         const t0 = performance.now(), flick = setInterval(() => { if (performance.now() - t0 > turn) el.textContent = Math.random() < 0.5 ? '0' : '1'; }, 70);
-        el.animate([
+        const an = el.animate([
           { transform: 'translate(-50%, -50%)', opacity: 1, offset: 0 },
           { transform: 'translate(-50%, -50%)', opacity: 1, color: 'var(--bright)', offset: turn / (go + 700) },
           { transform: 'translate(-50%, -50%)', opacity: 1, color: 'var(--amber)', offset: go / (go + 700) },
           { transform: `translate(calc(-50% + ${(Math.random() - 0.5) * 30}px), calc(-50% - ${24 + Math.random() * 40}px))`, opacity: 0, color: 'var(--dim)', offset: 1 },
         ], { duration: go + 700, easing: 'ease-out', fill: 'forwards' });
-        setTimeout(() => { clearInterval(flick); el.remove(); }, go + 760);
+        an.finished.then(() => { clearInterval(flick); el.remove(); }, () => {}); // in step with slow motion
         n++;
       }
     }
@@ -112,14 +112,14 @@ export function createHitFx(board, { canMove = () => true } = {}) {
       layer.appendChild(el);
       const appear = 20 + Math.random() * 180, go = appear + 200 + Math.random() * 300, end = go + 500 + Math.random() * 300;
       const flick = setInterval(() => { if (Math.random() < 0.35) el.textContent = el.textContent === '0' ? '1' : '0'; }, 80);
-      el.animate([
+      const an = el.animate([
         { transform: 'translate(-50%, -50%)', opacity: 0, offset: 0 },
         { transform: 'translate(-50%, -50%)', opacity: 0, offset: appear / end },
         { transform: 'translate(-50%, -50%)', opacity: 0.9, color: 'var(--bright)', offset: Math.min(0.99, (appear + 50) / end) },
         { transform: 'translate(-50%, -50%)', opacity: 0.75, color: 'var(--amber)', offset: go / end },
         { transform: `translate(calc(-50% + ${(Math.random() - 0.5) * 24}px), calc(-50% - ${18 + Math.random() * 36}px))`, opacity: 0, color: 'var(--dim)', offset: 1 },
       ], { duration: end, easing: 'ease-out', fill: 'forwards' });
-      setTimeout(() => { clearInterval(flick); el.remove(); }, end + 60);
+      an.finished.then(() => { clearInterval(flick); el.remove(); }, () => {});
     }
   }
   return { strike, dissolve, jolt };

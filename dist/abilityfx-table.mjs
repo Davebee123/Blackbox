@@ -259,28 +259,3 @@ export const TIERS = {
     3: { count: 5, hop: true, plus: [b('ring', 2, 0)] },
   },
 };
-
-// ---------- break finishers (abilityfx.mjs finisherLayout; app.js plays one on the fight-winning break) ----------
-// A short class flourish on the part whose break wins the fight, on that part's row only, gone within FIN_CAP
-// (900 ms). Yours only: a crewmate's winning break keeps the plain dissolve. A subclass varies its class's
-// (SUB_FINISHERS: the fields it changes).
-//   motion  shatter (shards scatter along the row) · seal (a stamp comes down on its name) · dissolve (its name falls
-//           apart into 1s and 0s, left to right) · converge (helpers walk in from both sides, meet on it and pop)
-//   word    the seal's stamp · chars: the shards' (or the 1s and 0s') · blast: a blast at its middle too ·
-//   count   how many helpers · pop: what they pop into (a flash, else this piece)
-export const FINISHERS = {
-  breaker: { label: 'Shards scatter', motion: 'shatter', chars: '◇<>/\\◇', size: 13, land: 0, dur: 820, burst: [b('flash', 1, 0, { full: true })] },
-  bastion: { label: 'Seal stamp', motion: 'seal', word: '[ SEALED ]', size: 15, land: 140, dur: 840, burst: [b('shock', 10, 0), b('dust', 6, 0)] },
-  infiltrator: { label: '1s and 0s', motion: 'dissolve', chars: '01', size: 12, land: 0, dur: 860, burst: [] },
-  operator: { label: 'Helpers converge', motion: 'converge', frames: ART.bot1, fms: 100, loop: true, count: 4, size: 12, land: 380, dur: 860, burst: [b('spark', 8, 0)] },
-};
-export const SUB_FINISHERS = {
-  demolitionist: { label: 'Shards and a blast', blast: true },
-  overclocker: { label: 'Hot shards', chars: '*^~<>' },
-  warden: { label: 'Denied stamp', word: '[ DENIED ]' },
-  sysop: { label: 'Clean stamp', word: '[ CLEAN ]' },
-  payload: { label: 'Burnt to 1s and 0s', chars: '01#' },
-  phantom: { label: 'Gone to dots', chars: '.:' },
-  herder: { label: 'The herd converges', count: 6 },
-  hijacker: { label: 'Helpers seize it', pop: '<@>' },
-};
