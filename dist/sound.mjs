@@ -696,8 +696,8 @@ function hallOf(ctx, ch) {
   }
   return halls.get(ch);
 }
-const ABILITY_ROOM = { a: 0.1, b: 0.16, c: 0.1, b1: 0.12, b2: 0.1, b3: 0.14, b4: 0.2, b7: 0.3, b8: 0.45, b9: 0.24 };
-const ABILITY_HALL = { b7: 1.2, b8: 2.2, b9: 0.85 }; // how much of the whole sound rings into the hall
+const ABILITY_ROOM = { a: 0.1, b: 0.16, c: 0.1, b1: 0.12, b2: 0.1, b3: 0.14, b4: 0.2, b7: 0.3, b8: 0.45, b9: 0.24, b10: 0.24 };
+const ABILITY_HALL = { b7: 1.2, b8: 2.2, b9: 0.85, b10: 0.85 }; // how much of the whole sound rings into the hall
 function abilityAt(ctx, ch, style, key, T) {
   if (!banks.get(ctx)?.ready) return false;
   const dry = ctx.createGain(), send = ctx.createGain(), room = ctx.createGain(), more = ctx.createGain();
@@ -705,7 +705,7 @@ function abilityAt(ctx, ch, style, key, T) {
   dry.connect(ch.master); dry.connect(send).connect(ch.room);
   room.connect(dry); room.connect(more).connect(ch.room);
   if (ABILITY_HALL[style]) { const h = ctx.createGain(); h.gain.value = ABILITY_HALL[style]; dry.connect(h).connect(hallOf(ctx, ch)); }
-  if (['b', 'b1', 'b3', 'b4', 'b7', 'b8', 'b9'].includes(style)) { const h = ctx.createGain(); h.gain.value = 0.5; room.connect(h).connect(hallOf(ctx, ch)); } // the weighty ones: the bigger space
+  if (['b', 'b1', 'b3', 'b4', 'b7', 'b8', 'b9', 'b10'].includes(style)) { const h = ctx.createGain(); h.gain.value = 0.5; room.connect(h).connect(hallOf(ctx, ch)); } // the weighty ones: the bigger space
   const list = (name) => { const l = banks.get(ctx)?.buffers.get(name); return l && take(l, name); };
   return playAbility(ctx, { dry, room }, style, key, T, list);
 }
