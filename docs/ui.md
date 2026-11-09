@@ -222,7 +222,7 @@ short vibration on phones that have it.
 - **No sideways scroll, ever.** `.app` clips horizontal overflow (`overflow-x: clip`); that's a safety net, not a fix:
   content must still fit. Grid columns are `minmax(0, 1fr)`; a `nowrap` inside a cell also gets `min-width: 0` and an
   ellipsis.
-- **Phone (≤ 900px)**: one column. Side windows (a hub's shop or market, the crew column) stack above or below their
+- **Phone (≤ 900px)**: one column (its own shell is planned: docs/phone-plan.md). Side windows (a hub's shop or market, the crew column) stack above or below their
   page. The top bar is a grid: brand, pager and credits; Integrity and Signal; then the tabs (two rows of four when
   eight show).
 - **Narrow columns**: board cells are size containers; a chip tightens and drops its icon below 132px instead of
