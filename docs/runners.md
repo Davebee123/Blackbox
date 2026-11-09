@@ -60,13 +60,15 @@ Rejected: a pip under each server per runner (*Pips*), and a count tag per serve
   standing up a tier.
 - **Standing:** 0–100 in four tiers: Stranger, Known (leads), Friend (hire), Close (consortium). Drawn as the tier's
   name, a bar to the next and the next one's name (the *Tier bar*); the number and how you met are its tooltip.
-- **The runner card** (a Rail row opens it beside their diamond): *Runner · faction*, the handle, class glyph, class,
-  level and a temperament tag; rows for Standing, Now (→ a server and its time) and After (the trade in words and the
+- **The runner card** (a Rail row opens it beside their diamond): *Runner · faction*, the handle, class glyph, class
+  and level; rows, split by hairlines, for Traits (temperament first, dashed, then the traits as named chips, ★ on a
+  starred one), Standing, Now (→ a server and its time) and After (the trade in words and the
   floor it's frozen on); their latest line; **Hire**.
 - **The crew card** (Hire turns the runner card into it): Pay as two icons, both owed (MOO2's leaders): a credits fee
   once, the first time you hire that runner, and a cut of the credits each run pays while they're with you (items and
-  code stay yours); the bar, picked from their presets as chips over the eight named keys each one makes (the
-  *Presets*). No floor limit: a hire goes wherever you go.
+  code stay yours); the bar, picked from their presets: a tile each, a lamp, its name and how it plays in two words
+  (*One target*, *Many parts*), its eight keys in the tooltip (the *Presets*). Traits sit above Pay, as on the runner
+  card. No floor limit: a hire goes wherever you go.
   Temperament (Careful, Steady, Bold) steers the planner (Starsector's officers); its tooltip says how. They level
   with you. Hired, a runner is crew: violet, like every crewmate.
 - **Busy:** Now reads Busy with the time they're free; Hire is off, the clock on it.
@@ -77,7 +79,8 @@ Rejected: a pip under each server per runner (*Pips*), and a count tag per serve
 - **Consortium:** runners you're close to, merging with you. A friend joins it as one more member.
 
 Rejected: standing as pips like a faction's rep, or as the steps each tier opens; setting a runner's bar in their own
-Toolkit, or key by key from what they know; paying a fee or a cut as a choice; a nerve that turns down floors above it.
+Toolkit, key by key from what they know, or as tiles showing their keys or their mix of skills; traits as bare
+icons; paying a fee or a cut as a choice; a nerve that turns down floors above it.
 
 ## Traits
 
