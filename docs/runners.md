@@ -1,7 +1,7 @@
 # Runners: the people on the net
 
-**Status.** Decided direction, not built. The map look is picked (the *Rail*, below); meeting and hiring are prototyped
-next. Talked through with the designer, November 2026.
+**Status.** Decided direction, not built. The looks are picked: the map (the *Rail*), and meeting and hiring (below).
+Talked through with the designer, November 2026.
 
 ## Why
 
@@ -48,14 +48,33 @@ be on the net, like Guild Wars 1's heroes and Starsector's officers and fleets.
 
 Rejected: a pip under each server per runner (*Pips*), and a count tag per server with travelling dashes (*Counts*).
 
-## Meeting and hiring (to prototype)
+## Meeting and hiring (picked)
 
 - **Meeting:** in the world. A runner fighting in a room you walk into (help them, standing rises); a rival you beat; a
   crashed runner you pull out. No invite menu.
-- **Hiring:** a runner who likes you crews for a run, for credits or a cut. You set their bar from what they know
-  (GW1's heroes); their temperament steers the planner (Starsector's officers). They level with you, and sometimes
-  they're busy, or turn down a floor above their nerve.
+- **In the room:** a paper-white tab with the handle on the room's chip (beside YOU once you're in, where a rival's tab
+  goes), a thin bar of their Signal under it. The room's tooltip adds *The runner marrow is fighting it, at 46%
+  Signal.* and ▸ *Walk in to help.*
+- **The room's card:** the virus, then the runner's row (handle, faction mark, class and level, their Signal), their
+  line, the standing it pays as an icon, and **Help** / **Step back**. Win, and it shows the room cleared and their
+  standing up a tier.
+- **Standing:** 0–100 in four tiers: Stranger, Known (leads), Friend (hire), Close (consortium). Drawn as the tier's
+  name, a bar to the next and the next one's name (the *Tier bar*); the number and how you met are its tooltip.
+- **The runner card** (a Rail row opens it beside their diamond): *Runner · faction*, the handle, class glyph, class,
+  level and a temperament tag; rows for Standing, Now (→ a server and its time) and After (the trade in words over a
+  floor strip, lit up to their nerve, the trade's floor marked); their latest line; **Hire**.
+- **The crew card** (Hire turns the runner card into it): For (the server, its floor marked on the strip); Pay as
+  two icons, both owed (MOO2's leaders): a credits fee when you connect, and a cut of the credits the run pays (items
+  and code stay yours); the bar, picked from their presets as chips over the eight named keys each one makes (the *Presets*).
+  Temperament (Careful, Steady, Bold) steers the planner (Starsector's officers); its tooltip says how. They level
+  with you. Hired, a runner is crew: violet, like every crewmate.
+- **Busy:** Now reads Busy with the time they're free; Hire is off, the clock on it.
+- **Turned down:** a server above their nerve hatches its floor on the strip, their line takes the place of Pay and Bar
+  (*Coldline is past me. Anything on the Stacks and I'll come.*), and Hire is off, marked with the floor.
 - **Consortium:** runners you're close to, merging with you. A friend joins it as one more member.
+
+Rejected: standing as pips like a faction's rep, or as the steps each tier opens; setting a runner's bar in their own
+Toolkit, or key by key from what they know; paying a fee or a cut as a choice.
 
 ## Friends
 
