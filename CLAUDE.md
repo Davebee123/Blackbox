@@ -75,6 +75,7 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
   - collection log: the *Ledger*;
   - journals: one Ledger entry, a timeline over the writers, a document card on the first find (docs/journals.md);
   - network map servers: the *Glyph* (each server its kind's glyph, a bar of what's cleared, a ring round a new one);
+  - network map ground: the *Chart* (faint crosshairs and hairlines that pan and zoom with the map);
   - rooms map: each room kind its own outline and hue (the *Hues*: magenta elite, orange socket, green rest, gold
     vault, white entry and den), thick borders. The one place a colour means a kind.
 - **Rejected looks:**
