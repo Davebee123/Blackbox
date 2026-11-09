@@ -1,0 +1,92 @@
+/* The phone's shell (docs/phone-plan.md P1). Every rule sits under [data-form=phone] (form.mjs): a desktop, or a
+   600–900 px window, never reads one of them. The tab bar and the prompt's × don't exist off a phone. */
+:root:not([data-form='phone']) .ph-tabs, :root:not([data-form='phone']) .ph-prompt-x { display: none; }
+
+/* ---- Tokens: a 44 px target, the type ramp (body 15 px, nothing under 11 px), the safe areas, the tab bar ---- */
+[data-form='phone'] {
+  --tap: 44px;
+  --ph-body: 15px; --ph-small: 13px; --ph-tiny: 11px;
+  --safe-t: env(safe-area-inset-top, 0px); --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-l: env(safe-area-inset-left, 0px); --safe-r: env(safe-area-inset-right, 0px);
+  --ph-bar: calc(56px + var(--safe-b));
+}
+[data-form='phone'] body { font-size: var(--ph-body); padding: var(--safe-t) var(--safe-r) var(--ph-bar) var(--safe-l); }
+[data-form='phone'] .app { height: auto; min-height: calc(100dvh - var(--ph-bar) - var(--safe-t)); }
+[data-form='phone'] :is(button, [data-command], [data-module], [role='button'], a[href], summary) { touch-action: manipulation; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
+
+/* ---- The top strip: one 44 px row. The pager's lamp, Integrity, Signal, credits. In a fight, none (its HUD) ---- */
+[data-form='phone'] .topbar { position: sticky; top: 0; z-index: 30; background: var(--bg); display: flex; flex-wrap: nowrap; align-items: center; gap: 0 14px; height: var(--tap); min-height: var(--tap); padding: 0 12px; overflow: hidden; }
+[data-form='phone'] .topbar > :is(.brand, .modules, .whoami, .people-btn, .toggles, .bench-tag) { display: none; }
+[data-form='phone'] .topbar > .meters { display: flex; flex: 1; flex-wrap: nowrap; width: auto; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; margin: 0; }
+[data-form='phone'] .topbar .meter { grid-area: auto; min-height: var(--tap); padding: 0; justify-self: auto; border-left: 0 !important; font-size: var(--ph-small); }
+[data-form='phone'] .topbar #meter-level { display: none; }
+[data-form='phone'] .topbar .meter-label { font-size: var(--ph-tiny); }
+[data-form='phone'] .topbar :is(#meter-integrity, #meter-signal) .meter-label { display: none; } /* the tower and the bars say which; a tap gives the card */
+[data-form='phone'] .topbar .meter { flex: none; gap: 6px; }
+[data-form='phone'] .topbar .meter strong { font-size: var(--ph-body); }
+[data-form='phone'] .topbar .meter-note, [data-form='phone'] .topbar .sig-eta, [data-form='phone'] .topbar .sig-sick { font-size: var(--ph-tiny); }
+[data-form='phone'] .topbar .meters > .meter:last-child { margin-left: auto; }
+[data-form='phone'] .topbar .pager { order: -1; height: 34px; min-height: 0; padding: 0 2px; }
+[data-form='phone'] .topbar .pg-lamp { gap: 6px; min-width: var(--tap); height: var(--tap); margin: -5px 0; justify-content: center; }
+[data-form='phone'] .pg-lamp .pg-n { color: var(--amber); font: 600 var(--ph-small) var(--mono); }
+[data-form='phone'] body.ph-fight .topbar { display: none; }
+
+/* ---- The prompt: behind >_ (More). The #net line and the channel never show ---- */
+[data-form='phone'] .command-dock { bottom: var(--ph-bar); padding: 0 12px; gap: 6px; } /* sticky over the tab bar */
+[data-form='phone'] .command-dock :is(.net-line, .channel) { display: none; }
+[data-form='phone'] body:not(.ph-prompt) :is(#command-form, #suggestions) { display: none; }
+[data-form='phone'] body:not(.ph-prompt) .ph-prompt-x { display: none; }
+[data-form='phone'] body.ph-prompt .prompt-row { display: flex; align-items: center; gap: 6px; padding: 6px 0; }
+[data-form='phone'] body.ph-prompt #command-form { flex: 1; }
+[data-form='phone'] body.ph-prompt #command-input { font-size: 16px; } /* 16 px: iOS zooms in on anything smaller */
+[data-form='phone'] .ph-prompt-x { flex: none; width: var(--tap); height: var(--tap); padding: 0; color: var(--muted); font-size: 22px; line-height: 1; }
+
+/* ---- The tab bar: five slots at the bottom; the live context in Map's place, a red dot while you're away from it ---- */
+[data-form='phone'] .ph-tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); height: var(--ph-bar); padding: 0 var(--safe-r) var(--safe-b) var(--safe-l); background: var(--panel); border-top: 1px solid var(--line-strong); }
+[data-form='phone'] .ph-tab { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-width: 0; min-height: 56px; padding: 6px 2px 4px; color: var(--muted); border: 0; border-radius: 0; font: 600 var(--ph-tiny) var(--mono); letter-spacing: 0.3px; }
+[data-form='phone'] .ph-tab:hover { border-color: transparent; }
+[data-form='phone'] .ph-tab .glyph { width: 20px; height: 20px; margin: 0; }
+[data-form='phone'] .ph-tab > span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+[data-form='phone'] .ph-tab[aria-current='page'] { color: var(--amber); }
+[data-form='phone'] .ph-tab[aria-current='page']::before { content: ''; position: absolute; top: 0; left: 22%; right: 22%; height: 2px; background: var(--amber); }
+[data-form='phone'] .ph-tab.ctx:not([aria-current='page']) { color: var(--bright); }
+[data-form='phone'] .ph-dot { position: absolute; top: 8px; left: calc(50% + 9px); width: 8px; height: 8px; border-radius: 50%; background: var(--hot); box-shadow: 0 0 6px var(--hot); }
+[data-form='phone'] .ph-n { position: absolute; top: 5px; left: calc(50% + 8px); min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--amber); color: var(--bg); font: 700 var(--ph-tiny)/16px var(--mono); text-align: center; }
+[data-form='phone'] .ph-n.ok { background: var(--ready, var(--amber)); }
+[data-form='phone'] .ph-more { font: 700 18px/20px var(--mono); letter-spacing: 1px; }
+
+/* ---- The one sheet (sheet.mjs): peek, half, full; drag down or tap outside to close ---- */
+[data-form='phone'] .sheet-root { position: fixed; inset: 0; z-index: 120; }
+[data-form='phone'] .sh-scrim { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.45); animation: sh-fade 0.16s ease-out; }
+[data-form='phone'] .sh-panel { position: absolute; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; max-height: calc(100dvh - 24px); padding: 0 var(--safe-r, 0) var(--safe-b, 0) var(--safe-l, 0); background: var(--panel); border-top: 2px solid var(--amber); border-radius: 12px 12px 0 0; box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.6); animation: sh-up 0.18s ease-out; touch-action: none; transition: transform 0.12s ease-out; }
+[data-form='phone'] .sh-panel.h-half { height: 55dvh; }
+[data-form='phone'] .sh-panel.h-full { height: calc(100dvh - 24px); }
+[data-form='phone'] .sh-grab { display: flex; justify-content: center; padding: 8px 0 6px; cursor: grab; }
+[data-form='phone'] .sh-grab i { width: 40px; height: 4px; border-radius: 2px; background: var(--line-strong); }
+[data-form='phone'] .sh-body { flex: 1; min-height: 0; overflow: auto; padding: 0 16px 16px; touch-action: pan-y; overscroll-behavior: contain; }
+@keyframes sh-up { from { transform: translateY(40px); opacity: 0; } }
+@keyframes sh-fade { from { opacity: 0; } }
+[data-form='phone'] body.no-motion .sh-panel, [data-form='phone'] body.no-motion .sh-scrim { animation: none; transition: none; }
+/* The rule's card, as the hover tip draws it, in the sheet's flow */
+[data-form='phone'] .sh-tt.tt { position: static; max-width: none; padding: 4px 0 8px; background: none; border: 0; box-shadow: none; font-size: var(--ph-body, 15px); pointer-events: auto; animation: none; }
+[data-form='phone'] .sh-tt.tt b { font-size: var(--ph-small, 13px); }
+[data-form='phone'] .sh-tt.tt :is(.tt-kind, .tt-state) { font-size: var(--ph-small, 13px); }
+
+/* ---- More: the player card row (the Net ID badge's amber strip, the handle in teal), then a row per page ---- */
+[data-form='phone'] .ph-more-list { display: flex; flex-direction: column; gap: 2px; }
+[data-form='phone'] .ph-card { display: flex; flex-direction: column; align-items: stretch; margin-bottom: 8px; padding: 0; text-align: left; background: var(--inset); border: 1px solid var(--line); border-radius: var(--r-card, 6px); overflow: hidden; }
+[data-form='phone'] .ph-strip { display: block; padding: 3px 12px; background: var(--amber); color: var(--bg); font: 700 11px/16px var(--mono); letter-spacing: 2px; text-transform: uppercase; }
+[data-form='phone'] .ph-id { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 8px 12px 10px; }
+[data-form='phone'] .ph-handle { overflow: hidden; color: var(--you); font: 700 18px var(--mono); text-overflow: ellipsis; white-space: nowrap; }
+[data-form='phone'] .ph-id small { color: var(--muted); font: 13px var(--mono); }
+[data-form='phone'] .ph-xp { display: block; height: 3px; margin-top: 4px; background: var(--line); }
+[data-form='phone'] .ph-xp i { display: block; height: 100%; background: var(--amber); }
+[data-form='phone'] .ph-row { position: relative; display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 8px; text-align: left; color: var(--text); border: 0; border-bottom: 1px solid var(--line); border-radius: 0; font: 15px var(--sans); }
+[data-form='phone'] .ph-row .glyph { width: 20px; height: 20px; margin: 0; color: var(--muted); }
+[data-form='phone'] .ph-row .ph-n { position: static; margin-left: auto; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--amber); color: var(--bg); font: 700 11px/18px var(--mono); text-align: center; }
+[data-form='phone'] .ph-gt { width: 20px; color: var(--amber); font: 700 13px var(--mono); text-align: center; }
+[data-form='phone'] .bench-panel { display: none; } /* the dev panel: a desktop's (bench commands still work at the prompt) */
+
+/* The map's floor picker: the current floor's name stays inside its pill (it ran over the next floor at 320 px). */
+[data-form='phone'] .fl-btn.on { grid-template-columns: auto minmax(0, 1fr); min-width: 0; overflow: hidden; }
+[data-form='phone'] .fl-btn.on .fl-name { justify-self: stretch; min-width: 0; }

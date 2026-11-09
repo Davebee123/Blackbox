@@ -13,7 +13,7 @@
 import { emit, warn } from './combat.mjs';
 import { earned, achievements } from './achievements.mjs';
 import { titleById, myProfile, stickerById } from './profile.mjs';
-import { DISTRICTS, DISTRICT_IDS } from './window.mjs';
+import { DISTRICTS, DISTRICT_IDS } from './districts.mjs';
 
 export const CASING = { slots: 4, plate: 16, stock: 'BLACKBOX · MODEL 7' };
 // The colourways: their name and the achievement that brings each (its id). Their colours live in casing.css.

@@ -2522,7 +2522,7 @@ threat, a world event, a contract ready, an offer, a letter, a thread, wick's le
 A page stays while it's true, an hour at most; the same news again replaces the old line.
 
 - **The tray:** one icon per waiting page, most urgent first (threats, then events by time left, then a ready contract,
-  letters, offers), amber, red for a threat; up to four on a desktop, three on a phone, then **+n**. **One tap** does
+  letters, offers), amber, red for a threat; up to four on a desktop, three under 900 px, then **+n** (a phone shows the lamp and the count). **One tap** does
   the page's thing (**Deliver**, **Read**, **Jack in**, **Show**…); mid-fight or on a run, anything that would start a
   fight shows you where it is instead. A page that takes on a task (an offer, a world event's fight) shows its quest
   first, in the quest window's look, with **Take** (or **Intercept**, **Hunt**…) and **Cancel**.
@@ -2545,8 +2545,13 @@ test, the wire, fight reports and the log (`logs` opens it).
   back to the track when the fight is over. It plays a little under the track, on the Music slider.
 - **UI scale** (Settings, `ui scale <auto|80–200>`, 100% by default) draws the whole screen larger or smaller;
   it grows only while the screen stays 1700px wide in its own pixels. **Auto** sizes it to 1800px.
-- **On a phone** (under 480 px) the board shows Now, +1 and +2 and the tray is three wide: tap a skill to pick it, tap
-  again to fire. Only a tap on the prompt itself opens the keyboard.
+- **On a phone** (up to 600 px wide, or 500 px tall on a touch screen) the top bar is one strip (the pager's lamp and
+  its count, Integrity, Signal, credits; none in a fight) and the pages are a tab bar at the bottom: Map (a fight, run
+  or breach in its place while there is one, a red dot while you're away), Mail, Loadout, Server, **More** (your Net
+  ID card, Codex, Rig, Settings, the command line). The prompt shows only from More's **>_**; in a fight it never takes
+  the focus. A tap on anything with a rule shows its card in a sheet; a long press on a button shows its card without
+  firing it. Under 480 px the board shows Now, +1 and +2 and the tray is three wide: tap a skill to pick it, tap again
+  to fire.
 
 ### Screen effects
 

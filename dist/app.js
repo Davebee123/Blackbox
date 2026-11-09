@@ -23,7 +23,6 @@ import { hubsOf, hubFound, hubTraceOf, FACTIONS } from './factions.mjs';
 import { WARES } from './market.mjs';
 import { logComms, commsOf, unseenAlert, seeAll, markDone, pruneComms } from './comms.mjs';
 import { nextTip, markSeen, TOUR, tourDone, skipTour } from './tips.mjs';
-import { createWindow } from './window.mjs';
 import { createIntro } from './intro.mjs';
 import { coldOpen } from './coldopen.mjs';
 import * as SC from './scenes.mjs';
@@ -35,7 +34,6 @@ import { relockLeft } from './rogue.mjs';
 import { createHitFx } from './hitfx.mjs';
 import { createAbilityFx, keyFor, tickKey, recipeOf, originOf, idOfName, finisherBreak, levelOf as afxLevel } from './abilityfx.mjs';
 import { tierOf as masteryTier } from './mastery.mjs';
-import { mountFxPlaytest, abilityOfKey } from './abilityfx-playtest.mjs';
 import { plan as dmgPlan, queueAfter, absorbOf, armorFloat, missFloat } from './dmgfx.mjs';
 import { recapMarkup } from './recap.mjs';
 import { createLash } from './lash.mjs';
@@ -65,7 +63,10 @@ import { setBanner, setPlan, handleOf } from './profile.mjs';
 import { achById } from './achievements.mjs';
 import { casingLook, decalStrips, districtOf, propsLook, propMarkup, propLayout } from './casing.mjs';
 import { promptLabel, cursorOf, bootOf, bootIds, BOOT_LOOKS, lookOpen } from './terminal.mjs';
-import * as BN from './bench.mjs';
+import * as BK from './bench-key.mjs';
+import * as F from './form.mjs';
+import * as PH from './phone-shell.mjs';
+import { openSheet, closeSheet, sheetKey, sheetBody } from './sheet.mjs';
 import { PARTS } from './parts.mjs';
 import { installPrograms, noteExceptions, cuesOf } from './routines.mjs';
 import { wireRoutines } from './routines-ui.mjs';
@@ -89,11 +90,11 @@ const playtest = params.get('playtest');
 // read, written or migrated from here, and the old game's systems (map, mail, server, hubs, invasions, timers) sit out.
 // A test bench (bench.mjs, ?bench=<name>): its own save under blackbox-bench-<name>, developer mode on. The real save
 // is never read, written or reset from a bench.
-const { key: KEY, bench: BENCH, camp: CAMP } = BN.pageSave(location.search, CP.CAMPAIGN_KEY);
+const { key: KEY, bench: BENCH, camp: CAMP } = BK.pageSave(location.search, CP.CAMPAIGN_KEY);
 const DEV = params.has('dev') || !!BENCH; // developer commands (and window.__bb, for tests)
-if (BENCH) { const c = BN.benchCurve(location.search); if (c != null) CONFIG.powerPerLevel = c; } // ?curve=8: the level curve at 8% on this bench (bench.mjs)
-// The pager's tray (pager-view.mjs): four slots (three icons and +n when more wait) on a desktop, three on a phone.
-const phoneBar = matchMedia('(max-width: 900px)');
+// The bench itself (bench.mjs) loads only on a bench or with ?dev.
+const BN = BENCH || DEV ? await import('./bench.mjs') : null;
+if (BENCH) { const c = BK.benchCurve(location.search); if (c != null) CONFIG.powerPerLevel = c; } // ?curve=8: the level curve at 8% on this bench (bench.mjs)
 
 // ---------- state ----------
 let campaign = load();
@@ -467,7 +468,23 @@ const shellParam = params.get('shell');
 const shellOn = () => (shellParam || campaign.settings.shell || 'immersive') !== 'plain';
 // The window behind the monitor (casing on, Window setting on): the slum outside, and its weather. The sky follows the
 // clock's hour; `?tod=night|dawn|day|dusk` shows another.
-const outside = createWindow({ canMove: () => canMove(), onThunder: (d) => feel.thunder(d), onWeather: (_, w) => { outsideRain = w.rain; feel.rain(outsideRain); } });
+// window.mjs loads only on a desktop (a phone never asks for it): until it has, the last call of each kind waits.
+const outside = (() => {
+  let w = null, loading = false;
+  const wait = new Map();
+  const load = () => {
+    if (loading || F.isPhone()) return;
+    loading = true;
+    import('./window.mjs').then(({ createWindow }) => {
+      w = createWindow({ canMove: () => canMove(), onThunder: (d) => feel.thunder(d), onWeather: (_, x) => { outsideRain = x.rain; feel.rain(outsideRain); } });
+      for (const m of ['district', 'hour', 'force', 'set', 'remeasure']) if (wait.has(m)) w[m](...wait.get(m));
+      wait.clear();
+    });
+  };
+  const call = (m) => (...a) => { if (w) return w[m](...a); wait.set(m, a); load(); };
+  load();
+  return { district: call('district'), hour: call('hour'), force: call('force'), set: call('set'), remeasure: call('remeasure') };
+})();
 if (params.get('tod')) outside.hour(params.get('tod'));
 let outsideRain = 0, outsideShown = false, lastVols = '';
 // First launch (or after Reset game): the cold open (coldopen.mjs), log in, then Halcyon's transmission.
@@ -962,7 +979,7 @@ document.addEventListener('click', (e) => {
   if (!b || b.disabled || !CAMP) return;
   const verb = b.dataset.camp, arg = b.dataset.arg || '';
   feel.key('click');
-  if (verb === 'sel') { campUi.sel = arg; dirty = true; if (matchMedia('(max-width: 900px)').matches) requestAnimationFrame(() => document.querySelector('.cp-side')?.scrollIntoView({ block: 'start', behavior: 'smooth' })); return; }
+  if (verb === 'sel') { campUi.sel = arg; dirty = true; if (F.narrow()) requestAnimationFrame(() => document.querySelector('.cp-side')?.scrollIntoView({ block: 'start', behavior: 'smooth' })); return; }
   if (verb === 'bounty') { const [id, k] = arg.split(':'); campUi.bounty[id] = campUi.bounty[id] === k ? null : k; dirty = true; return; }
   if (verb === 'heat') { const [id, d] = arg.split(':'); campUi.heat[id] = Math.max(CP.heatFloor(campaign, id), Math.min(CP.heatOpen(campaign), heatPick(id) + Number(d))); dirty = true; return; }
   if (verb === 'breach') {
@@ -1004,7 +1021,7 @@ function breachScroll(keep) {
   if (key !== bxScreen) {
     bxScreen = key;
     const side = document.querySelector('.bx-side'), hud = document.querySelector('.bx-hud');
-    if (key && side && matchMedia('(max-width: 900px)').matches) { side.style.scrollMarginTop = `${(hud?.offsetHeight || 0) + 8}px`; side.scrollIntoView({ block: 'start' }); }
+    if (key && side && F.narrow()) { side.style.scrollMarginTop = `${(hud?.offsetHeight || 0) + 8}px`; side.scrollIntoView({ block: 'start' }); }
   }
 }
 let bxScreen = null;
@@ -1511,6 +1528,7 @@ function benchRun(text) {
   if (active(campaign) && !/^bench (list|delete)\b/.test(text)) return notice('Finish the fight first.', true);
   let store = null;
   try { store = localStorage; } catch { /* storage unavailable */ }
+  if (!BN) return notice('Bench commands work on a test bench. Open the game with ?bench=<name>.', true);
   const events = BN.benchCommand(campaign, text, { bench: BENCH, dev: DEV, store });
   const built = events.find((e) => e.type === 'bench'), w = events.findLast((e) => e.type === 'warning');
   if (built) {
@@ -1655,9 +1673,8 @@ document.addEventListener('pointerdown', (e) => { lastPointer = e.pointerType ||
 // (a tap on the prompt itself still opens it). A key, a click or a suggestion only fills the prompt there.
 const focusPrompt = () => { if (touch() || lastPointer === 'touch' || lastPointer === 'pen') return; $('command-input').focus(); };
 // The phone layout draws a floor on its side (view.mjs mapLayout): the way down at the bottom.
-const portraitQ = matchMedia('(max-width: 900px)');
-V.setMapPortrait(portraitQ.matches);
-portraitQ.addEventListener?.('change', (e) => { if (V.setMapPortrait(e.matches)) dirty = true; });
+V.setMapPortrait(F.narrow());
+F.onForm(() => { V.setMapPortrait(F.narrow()); if (!F.isPhone()) { closeSheet(); phPrompt(false); } dirty = true; }); // phone ↔ desk: draw again
 function prepare(abilityId) {
   const a = ABILITIES[abilityId];
   const s = shown();
@@ -1953,6 +1970,7 @@ function renderMeters() {
   $('haptics').hidden = !feel.canBuzz();
   casing();
   pagerUi();
+  phoneUi();
   peopleUi();
   channelUi();
   profileUi();
@@ -2367,9 +2385,9 @@ function uiScale() {
   fitKey = ''; requestAnimationFrame(() => { fitKey = ''; fitTopbar(); });
 }
 function casing() {
-  // The monitor and its window only fit a desktop-sized screen (style.css, the casing media query).
+  // The monitor and its window only fit a desktop-sized screen (style.css, the casing media query). Never on a phone.
   const roomy = matchMedia('(min-width: 1100px) and (min-height: 720px)').matches;
-  const cased = shellOn() && campaign.settings.casing !== false, win = cased && roomy && campaign.settings.window !== false;
+  const cased = !F.isPhone() && shellOn() && campaign.settings.casing !== false, win = cased && roomy && campaign.settings.window !== false;
   const moved = document.body.classList.contains('cased') !== cased || document.body.classList.contains('window-on') !== win;
   document.body.classList.toggle('cased', cased);
   document.body.classList.toggle('window-on', win);
@@ -3111,11 +3129,90 @@ $('pg-ask').addEventListener('click', (e) => {
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && pgAsk != null) { pgAsk = null; dirty = true; e.stopImmediatePropagation(); } }, true);
 function pagerUi() {
   renderAsk();
-  put('pager', PGV.trayMarkup(campaign, phoneBar.matches ? 3 : 4));
+  put('pager', F.isPhone() ? PGV.lampMarkup(campaign) : PGV.trayMarkup(campaign, F.narrow() ? 3 : 4)); // the tray: four slots, three under 900 px; a phone's strip shows the lamp and its count
   $('pager').setAttribute('aria-expanded', String(commsOpen));
   $('comms').hidden = !commsOpen;
   if (commsOpen) put('comms', PGV.inboxMarkup(campaign, Date.now()));
 }
+// ---------- the phone's shell (docs/phone-plan.md P1: form.mjs, phone-shell.mjs, sheet.mjs, phone.css) ----------
+// The tab bar at the bottom, More in the one sheet, the prompt behind >_, tap for info, a long press for a button's card.
+let phMore = false, phMoreHtml = '';
+const phFight = () => module === 'combat' && !!shown().encounter;
+function phoneUi() {
+  const on = F.isPhone();
+  document.body.classList.toggle('ph-fight', on && phFight()); // a fight: no top strip (its HUD takes the top)
+  if (!on) { if (phMore) closeSheet(); return; }
+  const unread = (campaign.mail?.list || []).filter((m) => !m.read).length, due = openContracts(campaign).filter((c) => ready(campaign, c)).length;
+  const counts = { mail: unread, ready: due, loadout: Number($('new-loadout').textContent) || 0, consortium: !$('tab-consortium').hidden ? Number($('con-count').textContent) || 0 : 0 };
+  put('ph-tabs', PH.tabBarMarkup(campaign, { module, camp: CAMP, active: active(campaign), counts, moreOpen: phMore }));
+  if (phMore) { const html = phMoreMarkup(); if (html !== phMoreHtml) { phMoreHtml = html; const b = sheetBody(); if (b) b.innerHTML = html; } }
+}
+function phMoreMarkup() {
+  const h = hackerOf(campaign);
+  return PH.moreMarkup(campaign, { who: { handle: campaign.profile?.handle || 'rookie', cls: V.className(classOf(campaign)), level: h.level, xp: h.level >= 50 ? 1 : h.xp / V.xpNeeded(h.level) }, consortium: !$('tab-consortium').hidden, count: Number($('con-count').textContent) || 0, people: !$('people').hidden, camp: CAMP });
+}
+function phMoreOpen(open) {
+  if (open === phMore) return;
+  phMore = open;
+  if (open) { phMoreHtml = phMoreMarkup(); openSheet(phMoreHtml, { height: 'half', label: 'More', id: 'more', closed: () => { phMore = false; dirty = true; } }); } else closeSheet();
+  dirty = true;
+}
+// The prompt behind >_: shown on a phone only when asked for. In a fight it never takes the focus (no keyboard
+// over the board): a tap on the field still opens it.
+function phPrompt(open) {
+  document.body.classList.toggle('ph-prompt', open);
+  if (open && !active(campaign)) $('command-input').focus();
+  if (!open) $('command-input').blur();
+}
+$('ph-prompt-x').addEventListener('click', () => phPrompt(false));
+$('ph-tabs').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-module], [data-phone]');
+  if (!b) return;
+  if (b.dataset.phone === 'more') return phMoreOpen(!phMore);
+  phMoreOpen(false);
+  go(b.dataset.module);
+});
+// The More sheet's rows: a page, your card (data-finger, opened by its own handler), People, the command line.
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('#sheet [data-module], #sheet [data-phone], #sheet [data-finger]');
+  if (!b) return;
+  if (sheetKey() === 'more') phMoreOpen(false); else closeSheet();
+  if (b.dataset.module) go(b.dataset.module);
+  if (b.dataset.phone === 'prompt') phPrompt(true);
+  if (b.dataset.phone === 'people') $('people').click();
+}, true);
+// Tap for info: on a phone a tap on anything with a rule (a title or data-tt) that isn't a control shows its card in a
+// peek sheet. A long press on a control shows its card without firing it. The fight's board, HUD and level-up keep
+// their own tap cards (below).
+const PH_CONTROL = 'button, a[href], input, select, textarea, label, summary, [data-command], [data-module], [data-run], [data-select], [data-target], [data-finger], [data-pg-open], [data-pact], [role="button"], [tabindex]';
+const PH_OWN = '#board .bname, #board .intent.tell, #hud .gfx, #levelup .lu-row, #sheet .sh-tt';
+function phCard(a) {
+  const text = a.dataset.tt || a.getAttribute('title');
+  if (!text) return false;
+  openSheet(`<div class="tt sh-tt" role="note">${ttCardHtml(a, text)}</div>`, { height: 'peek', label: 'Info', id: 'info' });
+  return true;
+}
+document.addEventListener('click', (e) => {
+  if (!F.isPhone() || e.target.closest(PH_OWN)) return;
+  const a = e.target.closest?.('[title], [data-tt]');
+  if (!a || e.target.closest(PH_CONTROL)) return; // a control fires; its card is a long press
+  if (phCard(a)) e.preventDefault();
+});
+let phPress = null;
+document.addEventListener('pointerdown', (e) => {
+  if (!F.isPhone() || e.pointerType === 'mouse') return;
+  const c = e.target.closest?.(PH_CONTROL);
+  const a = c && (c.matches('[title], [data-tt]') ? c : c.querySelector('[title], [data-tt]'));
+  if (!a || c.closest('#sheet')) return;
+  clearTimeout(phPress?.timer);
+  phPress = { x: e.clientX, y: e.clientY, fired: false, timer: setTimeout(() => { if (phPress && a.isConnected && phCard(a)) { phPress.fired = true; feel.key?.('click'); } }, 480) };
+}, true);
+addEventListener('pointermove', (e) => { if (phPress && !phPress.fired && Math.hypot(e.clientX - phPress.x, e.clientY - phPress.y) > 10) { clearTimeout(phPress.timer); phPress = null; } }, true);
+addEventListener('pointerup', () => { if (phPress && !phPress.fired) { clearTimeout(phPress.timer); phPress = null; } }, true);
+// The click a long press ends in never fires the control.
+addEventListener('click', (e) => { if (phPress?.fired) { e.preventDefault(); e.stopImmediatePropagation(); phPress = null; } }, true);
+addEventListener('contextmenu', (e) => { if (F.isPhone() && e.target.closest?.(PH_CONTROL)) e.preventDefault(); }, true);
+
 // People (presence.mjs): a button on the top bar with how many are online, and its panel.
 let peopleOpen = false, peopleTab = 'friends';
 function peopleUi() {
@@ -3660,10 +3757,9 @@ function ttHide() { clearTimeout(tt.timer); clearTimeout(tt.out); tt.at = null; 
 // A redraw replaces the element under a still pointer with a copy: the pointer leaves the old one and enters the new
 // one. Leaving waits a beat, and the same tip on the copy carries on, so a live page never blinks its tip.
 const ttSame = (a) => tt.el && !tt.el.hidden && a.dataset.tt === tt.text;
-function ttShow(anchor) {
-  const text = anchor.dataset.tt;
-  if (!text || !anchor.isConnected) return ttHide();
-  if (!tt.el) { tt.el = document.createElement('div'); tt.el.className = 'tt'; tt.el.setAttribute('role', 'tooltip'); document.body.append(tt.el); }
+// A rule's card (WoW's grammar: name, kind, what it does, the answer muted), as html: the hover tip and the phone's
+// peek sheet (tap for info) both show it.
+function ttCardHtml(anchor, text) {
   const m = text.match(/^([^:.\n]{2,40}): ([\s\S]+)$/);
   const esc = (t) => t.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
   // A line that starts with ▸ is the answer (fightread.mjs answerLine): muted, on its own line, like WoW's "Use:" line.
@@ -3673,10 +3769,18 @@ function ttShow(anchor) {
   // what holds right now, a "tone|text" line each (view.mjs trayMarkup), coloured by its job like WoW's red "Not ready yet".
   const state = (anchor.dataset.ttState || '').split('\n').filter(Boolean).map((l) => { const [tone, ...t] = l.split('|'); return `<span class="tt-state ${tone}">${esc(t.join('|'))}</span>`; }).join('');
   const kind = (m && anchor.dataset.ttKind ? `<span class="tt-kind">${esc(anchor.dataset.ttKind)}</span>` : '') + state;
-  tt.el.innerHTML = m ? `<b>${esc(m[1])}</b>${kind}${body(m[2][0].toUpperCase() + m[2].slice(1))}` : body(text);
+  const box = document.createElement('div');
+  box.innerHTML = m ? `<b>${esc(m[1])}</b>${kind}${body(m[2][0].toUpperCase() + m[2].slice(1))}` : body(text);
   // Icons the text can't carry (a contract's pay chips) ride in the element's <template class="tt-more">, before the answer.
   const more = anchor.querySelector(':scope > template.tt-more');
-  if (more) { const box = document.createElement('span'); box.className = 'tt-more'; box.append(more.content.cloneNode(true)); tt.el.insertBefore(box, tt.el.querySelector('.tt-ans')); }
+  if (more) { const m2 = document.createElement('span'); m2.className = 'tt-more'; m2.append(more.content.cloneNode(true)); box.insertBefore(m2, box.querySelector('.tt-ans')); }
+  return box.innerHTML;
+}
+function ttShow(anchor) {
+  const text = anchor.dataset.tt;
+  if (!text || !anchor.isConnected) return ttHide();
+  if (!tt.el) { tt.el = document.createElement('div'); tt.el.className = 'tt'; tt.el.setAttribute('role', 'tooltip'); document.body.append(tt.el); }
+  tt.el.innerHTML = ttCardHtml(anchor, text);
   tt.text = text;
   tt.el.hidden = false;
   const r = anchor.getBoundingClientRect(), w = tt.el.offsetWidth, h = tt.el.offsetHeight, pad = 8;
@@ -3729,7 +3833,7 @@ document.addEventListener('pointerover', (e) => {
 
 // The ability effects playtest (?playtest=fx, abilityfx-playtest.mjs): its panel fires each effect on a part of the
 // paused fight, through the same gate a fight's hits go through (Screen effects, Motion), falling back the same way.
-if (playtest === 'fx') {
+if (playtest === 'fx') import('./abilityfx-playtest.mjs').then(({ mountFxPlaytest, abilityOfKey }) => { // loaded only here
   const fxRow = (id) => partRow(id) || document.querySelector('#board .bpart');
   mountFxPlaytest({
     parts: () => (campaign.encounter?.virus?.parts || []).filter((p) => alive(p)).map((p) => ({ id: p.id, name: p.name })),
@@ -3762,4 +3866,4 @@ if (playtest === 'fx') {
       return 'plain';
     },
   });
-}
+});
