@@ -1970,8 +1970,8 @@ body:has(.silk-stash .silk-tile[data-kind="implant"]:hover) .silk-fp[data-kind="
 }
 
 /* An item's datasheet (view.mjs protocolDetailMarkup), in its popover: a rarity edge down its left, the name first and
-   the glyph beside it. Beside a row or slot on hover or focus it only reads (the buttons are on the row); on a phone it
-   is a bottom sheet, its buttons along the bottom under your thumb, closed by a tap outside. */
+   the glyph beside it. Beside a row or slot on hover or focus it only reads (the buttons are on the row); after a tap
+   (.tap) its buttons are in it, and a tap outside closes it. On a phone it is in the one sheet (phone.css). */
 .pg-pop { position: fixed; z-index: 80; zoom: var(--ui, 1); width: 340px; max-width: calc((100vw - 16px) / var(--ui, 1)); max-height: calc((100vh - 16px) / var(--ui, 1)); overflow: auto; pointer-events: none; animation: ptip-in 0.14s ease-out; }
 .pg-pop[hidden] { display: none; }
 .pg-detail { --edge: var(--line-strong); display: grid; gap: 8px; padding: 14px 16px; background: #0a0805; border: 1px solid var(--line-strong); border-left: 3px solid var(--edge); border-radius: 4px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); color: var(--text); }
@@ -1979,17 +1979,12 @@ body:has(.silk-stash .silk-tile[data-kind="implant"]:hover) .silk-fp[data-kind="
 .pg-detail.r-zeroday { --edge: var(--r-zeroday); } .pg-detail.r-indemnified { --edge: var(--r-indemnified); }
 .pg-detail.r-set { --edge: var(--r-set); }
 .pg-detail .silk-title { font-size: 16px; }
-.pg-pop:not(.sheet) .pg-acts { display: none; }
+.pg-pop:not(.tap) .pg-acts { display: none; }
 .pg-scrim { position: fixed; inset: 0; z-index: 79; background: rgba(0, 0, 0, 0.45); }
 .pg-scrim[hidden] { display: none; }
-.pg-pop.sheet { left: 0 !important; right: 0; top: auto !important; bottom: 0; width: auto; max-width: none; max-height: 78vh; pointer-events: auto; animation: pg-up 0.18s ease-out; padding-bottom: env(safe-area-inset-bottom); }
-.pg-pop.sheet .pg-detail { border-radius: 12px 12px 0 0; border-left-width: 1px; border-top: 3px solid var(--edge); padding: 10px 16px 0; }
-.pg-pop.sheet .pg-detail::before { content: ''; justify-self: center; width: 40px; height: 4px; border-radius: 2px; background: var(--line-strong); } /* the grab bar */
-.pg-pop.sheet .pg-acts { position: sticky; bottom: 0; margin: 4px -16px 0; padding: 12px 16px 14px; background: rgba(10, 8, 5, 0.98); border-top: 1px solid var(--line); }
-.pg-pop.sheet .pg-acts .btn { flex: 1; min-height: 44px; }
-@keyframes pg-up { from { transform: translateY(40px); opacity: 0; } }
-.no-motion .pg-pop, .no-motion .pg-pop.sheet { animation: none; }
-@media (prefers-reduced-motion: reduce) { .pg-pop, .pg-pop.sheet { animation: none; } }
+.pg-pop.tap { pointer-events: auto; }
+.no-motion .pg-pop { animation: none; }
+@media (prefers-reduced-motion: reduce) { .pg-pop { animation: none; } }
 .silk-head { display: flex; align-items: flex-start; gap: 14px; } /* the title and its line sit at the top left, beside the art */
 .silk-headtext { display: grid; align-content: start; gap: 6px; flex: 1; min-width: 0; }
 .silk-plate { flex: none; display: grid; place-items: center; padding: 4px; background: #0c0905; border: 1px solid var(--line); border-radius: 3px; }

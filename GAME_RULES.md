@@ -2563,6 +2563,16 @@ test, the wire, fight reports and the log (`logs` opens it).
   the focus. A tap on anything with a rule shows its card in a sheet; a long press on a button shows its card without
   firing it. Under 480 px the board shows Now, +1 and +2 and the tray is three wide: tap a skill to pick it, tap again
   to fire.
+- **The maps on a phone.** The map fills the screen between the strip and the tab bar; pinch to zoom, a double tap
+  on the ground zooms in there or back out, one finger pans. The floors are one row. Under them a row of chips: red for
+  what's coming (its count and the soonest timer), amber for contracts under way, a green ✓ for the ones to turn in. A
+  tap opens the list. A tap on a server brings up its name, level and main button; ▴ opens its whole card. On a server,
+  the header is one line (its name, Signal, rooms cleared, the hunter's countdown; a tap on the name shows the rest),
+  one tap walks, and a room's choice comes up with both buttons by your thumb. Wait and Jack out float at the map's
+  bottom right. With no strip there, the pager is in More.
+- **Pop-ups on a phone** all come up as one sheet from the bottom: a server's card, a room's, the Server page's
+  panel, Comms, a daemon's panel, an item's datasheet, a journal, a quest's dialogue and its reward, the level-up.
+  Drag it down or tap outside it to close.
 - **A fight on a phone** fits one screen: the HUD is one line, your bar and its number on the left (a crewmate as a
   thin violet line under it), the virus's with its ◆ on the right, its window at the end. A tap on a bar shows its card:
   the virus's name, level, family, writer, Integrity, ◆ and rules; your Integrity, statuses and gear. Under it the

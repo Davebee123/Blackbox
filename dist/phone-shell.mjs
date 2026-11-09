@@ -34,8 +34,9 @@ export function tabBarMarkup(s, opts = {}) {
 }
 
 // More: the player card row, then the pages that don't fit the bar, then the command line.
-// opts: who { handle, cls, level, xp (0–1) }, consortium (its tab shows), count (its alerts), people (the button shows).
-export function moreMarkup(s, { who = {}, consortium = false, count = 0, people = false, camp = false } = {}) {
+// opts: who { handle, cls, level, xp (0–1) }, consortium (its tab shows), count (its alerts), people (the button shows),
+// pager (the lamp's markup: where the strip is away, on a server's rooms, the pager's row is here).
+export function moreMarkup(s, { who = {}, consortium = false, count = 0, people = false, camp = false, pager = '' } = {}) {
   const handle = who.handle || 'rookie';
   const row = (attrs, icon, label, extra = '') => `<button type="button" class="ph-row" ${attrs}>${icon}<span>${label}</span>${extra}</button>`;
   const card = `<button type="button" class="ph-card" data-finger="${esc(handle)}" aria-label="Your Net ID card"><span class="ph-strip">Net ID</span><span class="ph-id"><b class="ph-handle">${esc(handle)}</b><small>${esc(who.cls || '')} · Lv ${who.level ?? 1}</small><span class="ph-xp" aria-hidden="true"><i style="width:${Math.round((who.xp ?? 0) * 100)}%"></i></span></span></button>`;
@@ -45,6 +46,7 @@ export function moreMarkup(s, { who = {}, consortium = false, count = 0, people 
     ${row('data-module="rig"', glyph('kernel'), 'Rig')}
     ${row('data-module="system"', glyph('config'), 'Settings')}
     ${people ? row('data-phone="people"', glyph('relay'), 'People') : ''}
+    ${pager ? row('data-phone="comms"', pager, 'Pager') : ''}
     ${row('data-phone="prompt"', '<span class="ph-gt" aria-hidden="true">&gt;_</span>', 'Command line')}</nav>`;
 }
 

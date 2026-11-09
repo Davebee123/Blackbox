@@ -288,8 +288,7 @@ button.jr-line:hover { background: var(--amber-wash); }
   .jr-line { grid-template-columns: minmax(0, 1fr) 48px; }
   .jr-line small { grid-column: 1 / -1; grid-row: 2; padding-bottom: var(--s2); }
   .jr-sheet { padding: var(--s4); }
-  .gain.jr-wrap { position: fixed; inset: 0; place-items: end stretch; padding: 0; }
-  .gain.jr-wrap .pz-card.jr-card { width: 100%; max-height: 88dvh; overflow-y: auto; border-radius: var(--r-card) var(--r-card) 0 0; border-bottom: 0; }
+  .gain.jr-wrap .pz-card.jr-card { max-height: 88dvh; overflow-y: auto; }
   .jr-card .jr-sheet { max-height: none; overflow: visible; }
   .jr-acts { position: sticky; bottom: calc(-1 * var(--s5)); margin: 0 calc(-1 * var(--s4)) calc(-1 * var(--s5)); padding: var(--s4) var(--s4) var(--s5); background: var(--panel); border-top: 1px solid var(--line); }
   .jr-acts .btn { flex: 1; }
