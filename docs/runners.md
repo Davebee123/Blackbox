@@ -61,7 +61,7 @@ Rejected: a pip under each server per runner (*Pips*), and a count tag per serve
 - **Standing:** 0–100 in four tiers: Stranger, Known (leads), Friend (hire), Close (consortium). Drawn as the tier's
   name, a bar to the next and the next one's name (the *Tier bar*); the number and how you met are its tooltip.
 - **The runner card** (a Rail row opens it beside their diamond): *Runner · faction*, the handle, class glyph, class
-  and level; rows, split by hairlines, for Traits (temperament first, dashed, then the traits as named chips, ★ on a
+  and level; rows, split by hairlines and each label level with its row's first line, for Traits (temperament first, dashed, then the traits as named chips, ★ on a
   starred one), Standing, Now (→ a server and its time) and After (the trade in words and the
   floor it's frozen on); their latest line; **Hire**.
 - **The crew card** (Hire turns the runner card into it): Pay as two icons, both owed (MOO2's leaders): a credits fee
