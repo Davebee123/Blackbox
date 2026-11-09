@@ -169,7 +169,7 @@ short vibration on phones that have it.
 - **The map** shows one floor at a time. A server (the *Glyph*, `view.mjs` serverIcon) is its kind's glyph on a dark
   plate, a bar under it filling as you clear it, and a ring round one you haven't been into, a pulse going out from it;
   amber, gray when done, teal where you are and what's yours, yellow for a contract's. Its kind's rule is the glyph's
-  tooltip. Under its name, the level in WoW colours (the name's size) and its specials' glyphs. Servers that ask
+  tooltip; the server card's kind tag carries the same glyph and tooltip. Under its name, the level in WoW colours (the name's size) and its specials' glyphs. Servers that ask
   nothing of you draw dim without labels until hovered, selected or zoomed. Labels never overlap: the more
   important one keeps its label (selected, then threats, then where you are, then a contract or fresh find). Scroll
   zooms (up to 5×), drag pans, double-click or ⤢ fits. A **Show** picker (**Mine**, **Targets**, **Threats**) dims the

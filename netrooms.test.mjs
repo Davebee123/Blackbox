@@ -14,7 +14,7 @@ import { ROGUE, rogueRooms, rogueSpawns } from './dist/rogue.mjs';
 import { ROOT, ROOT_PERKS } from './dist/root.mjs';
 import { openContracts, ready } from './dist/mail.mjs';
 import { roomsMarkup } from './dist/floorplan-view.mjs';
-import { mapMarkup } from './dist/view.mjs';
+import { mapMarkup, layoutName } from './dist/view.mjs';
 import { RIVAL } from './dist/rivals.mjs';
 RIVAL.chance = 0; // a rival rolls at connect (rivals.mjs): these walks are scripted (rivals.test.mjs plays them)
 
@@ -141,8 +141,9 @@ test('the network map draws a server as its kind\'s glyph (the kind\'s rule on h
   const { s, loc } = traced();
   const kind = FP.KIND_OF[loc.template] || 'Relay';
   const node = () => { const html = mapMarkup(s, loc.id, 'net'), i = html.indexOf(`data-select="${loc.id}"`), j = html.indexOf('class="mnode', i); return html.slice(i, j < 0 ? undefined : j); };
-  assert.match(node(), new RegExp(`aria-label="${loc.name}, ${FP.kindName(kind)}"`));
-  assert.match(node(), new RegExp(`class="sv-kind" title="${FP.kindName(kind)}: Server kind\\.\n`), 'its kind\'s rule is the glyph\'s tooltip');
+  assert.match(node(), new RegExp(`aria-label="${loc.name}, ${layoutName(loc)}"`));
+  assert.match(node(), new RegExp(`class="sv-kind" title="${layoutName(loc)}: Server kind\\.\n${FP.KINDS[kind].text}"`), 'its kind\'s rule is the glyph\'s tooltip');
+  assert.match(mapMarkup(s, loc.id, 'net', { pop: true }), new RegExp(`class="tag tag-kind"[^>]*title="${layoutName(loc)}: Server kind\\.\n[^"]*"><svg`), 'the card\'s tag: the same tooltip, and the glyph');
   assert.match(node(), /class="sv-ring"/, 'new: ringed');
   assert.doesNotMatch(node(), /class="sv-lit"/, 'nothing cleared yet');
   loc.state.taken[takeable(loc)[0]] = true; loc.runs = 1;

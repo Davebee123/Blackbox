@@ -126,23 +126,23 @@ export const ROOMS = {
 };
 // The server kinds (2.2), as room themes: one rule each, the hunter they keep, and the directory names their rooms take.
 export const KINDS = {
-  Mailhub: { name: 'Mailhub', rule: 'Spam floods', text: 'Fights on its mail queue bring a weak, quick Spam Flood.', hunter: 'patrol', author: 'tollgate',
+  Mailhub: { name: 'Mailhub', rule: 'Spam floods', text: 'Fights on its mail queue bring a Spam Flood.', hunter: 'patrol', author: 'tollgate',
     dirs: ['spool', 'postfix', 'mqueue', 'smtpd', 'relay', 'aliases', 'maildrop', 'bounce', 'virtual', 'transport', 'lmtp', 'pickup', 'qmgr', 'cleanup', 'tlsmgr', 'anvil', 'scache', 'flush'] },
-  Relay: { name: 'Name server', rule: 'Hops', text: 'Two curved links skip a room. The hunter uses them too.', hunter: 'patrol', author: 'swarmline',
+  Relay: { name: 'Name server', rule: 'Hops', text: 'Two links skip a room, for the hunter too.', hunter: 'patrol', author: 'swarmline',
     dirs: ['bind', 'named', 'zones', 'resolv', 'forward', 'slave', 'keys', 'dyn', 'stats', 'hints', 'rndc', 'journal', 'views', 'acl', 'dnssec', 'notify', 'axfr', 'master'] },
   Mirror: { name: 'Mirror', rule: 'Mirrors', text: 'One cache is a mirror with an elite behind it.', hunter: 'track', author: 'palemask',
     dirs: ['www', 'private', 'html', 'assets', 'cdn', 'static', 'uploads', 'cgi-bin', 'logs', 'media', 'themes', 'vhosts', 'certs', 'cache', 'drafts', 'mirror', 'stage', 'public'] },
-  Archive: { name: 'Archive', rule: 'Deep storage', text: 'Two vaults, each with its own key. Only the vault before the Core unseals it.', hunter: 'track', author: 'glassjaw',
+  Archive: { name: 'Archive', rule: 'Deep storage', text: 'Two vaults with their own keys. The one before the Core unseals it.', hunter: 'track', author: 'glassjaw',
     dirs: ['backups', 'srv', 'cold', 'dumps', 'snapshots', 'incr', 'full', 'catalog', 'index', 'offsite', 'restore', 'media', 'rotate', 'weekly', 'monthly', 'ledger', 'escrow', 'ltfs'] },
-  Lab: { name: 'Lab', rule: 'Overheat', text: 'From cycle 10 of a fight, the rack deals 2% of your max Signal to you every cycle, and 3% of its max Integrity to every part. Once awake, its Tracker moves on every move.', hunter: 'track', fast: true, author: 'lantern',
+  Lab: { name: 'Lab', rule: 'Overheat', text: 'From cycle 10 its rack burns you and every part. Its Tracker is fast.', hunter: 'track', fast: true, author: 'lantern',
     dirs: ['lab', 'tmp', 'bench', 'rig', 'sandbox', 'builds', 'cores', 'gpu', 'scratch', 'fuzz', 'harness', 'probe', 'samples', 'jit', 'debug', 'trace', 'cold', 'kiln'] },
   // The floors' signatures (floors.mjs FLOOR.signature): a Router on Backhaul (2), a Honeypot on the Stacks (3), Cold
   // storage on Coldline (4).
-  Router: { name: 'Router', rule: 'Routes', text: 'Two links are one-way, drawn as arrows. The hunter keeps to them too.', hunter: 'track', author: 'tollgate', floor: 2,
+  Router: { name: 'Router', rule: 'Routes', text: 'Two links are one-way, for the hunter too.', hunter: 'track', author: 'tollgate', floor: 2,
     dirs: ['bgp', 'ospf', 'rib', 'fib', 'acl', 'nat', 'qos', 'vlan', 'trunk', 'uplink', 'peer', 'arp', 'mpls', 'lsp', 'edge', 'core-sw', 'lag', 'span'] },
   Honeypot: { name: 'Honeypot', rule: 'Bait', text: 'Every cache is bait, and bait pays double.', hunter: 'patrol', author: 'palemask', floor: 3,
     dirs: ['honey', 'decoy', 'lure', 'canary', 'tarpit', 'sinkhole', 'glue', 'trap', 'fake-db', 'shadow', 'mock', 'bait', 'sticky', 'comb', 'hive', 'jar', 'net', 'snare'] },
-  Cold: { name: 'Cold storage', rule: 'Cold', text: 'Every virus sleeps until you hit it or cycle 6, and the vault holds two kits.', hunter: 'track', author: 'glassjaw', floor: 4,
+  Cold: { name: 'Cold storage', rule: 'Cold', text: 'Viruses sleep until hit or cycle 6. The vault holds two kits.', hunter: 'track', author: 'glassjaw', floor: 4,
     dirs: ['vault', 'frozen', 'tape', 'glacier', 'deep', 'escrow', 'wallet', 'offline', 'airgap', 'rime', 'cellar', 'crypt', 'ledger', 'seal', 'hsm', 'shard', 'keep', 'permafrost'] },
 };
 export const KIND_IDS = Object.keys(KINDS);

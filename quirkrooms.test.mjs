@@ -192,7 +192,7 @@ test('every server type has a tooltip rule on its card, and no server type reads
     const l = { template: tmpl };
     const kind = FP.KIND_OF[tmpl];
     assert.ok(FP.KINDS[kind], tmpl);
-    assert.equal(layoutRule(l), `${FP.KINDS[kind].rule}: ${FP.KINDS[kind].text}`, `${tmpl}: its kind's one rule`);
+    assert.equal(layoutRule(l), `${layoutName(l)}: Server kind.\n${FP.KINDS[kind].text}`, `${tmpl}: its name, its kind and its one rule, as the map's glyph says it`);
     assert.doesNotMatch(layoutName(l), /relay/i, `${tmpl}: ${layoutName(l)}`);
     assert.doesNotMatch(FP.kindName(kind), /relay/i, `${kind}: ${FP.kindName(kind)}`);
   }
@@ -201,7 +201,7 @@ test('every server type has a tooltip rule on its card, and no server type reads
   // On the card: the type is a tag like the trait and the quirk, its rule on hover.
   const { s, loc } = traced('ransomware', { seed: 9, template: 'relay' });
   const card = mapMarkup(s, loc.id);
-  assert.match(card, new RegExp(`<span class="tag tag-kind" data-kind="relay" title="Hops: ${FP.KINDS.Relay.text}">Name server</span>`));
+  assert.match(card, new RegExp(`<span class="tag tag-kind" data-kind="relay" title="Name server: Server kind\\.\n${FP.KINDS.Relay.text}"><svg class="glyph"[^]*?</svg>Name server</span>`), 'the map glyph\'s icon and tooltip');
   play(s, 'connect ' + loc.id);
   assert.match(FP.WORLD.view.idLine(s), /^Name server · lv/);
   assert.match(FP.WORLD.view.idTip(s), /a [A-Z]+ Name server, level/);
