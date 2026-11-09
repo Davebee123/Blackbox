@@ -825,7 +825,7 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
   .brow { grid-template-columns: minmax(96px, 1.2fr) repeat(4, minmax(0, 1fr)); padding: 0 6px; }
   #board .brow { padding-left: var(--gut, 32px); }
   .bname small { display: none; }
-  .intent b { display: none; }
+  .intent:has(.code) b { display: none; } /* the code stands in for the name; a chip with no code (a cut) keeps its name */
   .intent .code { display: inline; }
   .intent.mine small { display: none; }
   .intent.raid b { display: block; white-space: normal; font-size: 10px; letter-spacing: 0.5px; } /* a tell or a crew boss's mechanic keeps its name: it's what you answer */
