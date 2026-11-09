@@ -506,6 +506,42 @@ test('every motion reads its result: a flown piece draws back on a crit, each co
   assert.match(app, /results: c\.results/, 'app.js passes each part\'s result for an effect on every part');
 });
 
+test('an ability shows its own rule: it spreads to every other part, it stops the attack, it heals you, Fork Bomb breaks ◆ on every part', () => {
+  const g = marked(), mid = (q) => ({ x: (q.l + q.r) / 2, y: (q.t + q.b) / 2 });
+  // Spreads: a spark from the part to each other part, nearest first, a beat apart; Shatter's in steel.
+  const sparks = (plan) => plan.light.filter((x) => x.kind === 'comet' && x.t1 > plan.impact);
+  const chain = playOn('chain-reaction'), cs = sparks(chain);
+  assert.equal(cs.length, g.parts.length - 1, 'one to every other part');
+  assert.ok(cs.every((x, k) => !k || x.t1 > cs[k - 1].t1), 'a beat apart');
+  assert.ok(sparks(playOn('shatter')).every((x) => x.tone === 'steel'), 'Shatter\'s shards in steel');
+  assert.equal(sparks(playOn('chain-reaction', { result: 'miss' })).length, 0, 'a miss spreads nothing');
+  // Propagate: each part catches fire as its spark lands.
+  const fires = (plan) => plan.light.filter((x) => x.kind === 'fire');
+  const prop = playOn('propagate'), ps = sparks(prop);
+  assert.equal(fires(prop).length, 1 + ps.length, 'its own part, and every part it spreads to');
+  assert.ok(ps.every((sp) => fires(prop).some((f) => Math.abs(f.t0 - sp.t2) < 1 && f.x0 <= sp.b.x && sp.b.x <= f.x0 + f.w)), 'each catches as its spark lands');
+  assert.equal(fires(playOn('wormable')).length, 1, 'Wormable\'s spark only');
+  // Stops the attack: a line pulled tight through its attack chip.
+  for (const k of ['sigint', 'suspend', 'jam', 'blackhole']) {
+    const t = playOn(k).light.find((x) => x.kind === 'tether');
+    assert.ok(t && t.from.x < g.part.chip.l && t.to.x > g.part.chip.r && Math.abs((t.from.y + t.to.y) / 2 - mid(g.part.chip).y) < 2, `${k} cuts its attack`);
+  }
+  // Heals: a light runs along your bar and glints; Reclaim's comes back from the part first.
+  const along = (plan) => plan.light.find((x) => x.kind === 'comet' && Math.abs(x.a.y - mid(hud.bar).y) < 1 && Math.abs(x.b.y - x.a.y) < 1);
+  for (const k of ['patch', 'reclaim']) assert.ok(along(playOn(k)) && playOn(k).light.some((x) => x.kind === 'glint' && Math.abs(x.y - mid(hud.bar).y) < 1), `${k} runs along your bar`);
+  const rc = playOn('reclaim'), back = rc.light.find((x) => x.kind === 'comet' && x.t1 > rc.impact && Math.abs(x.b.y - mid(hud.bar).y) < 1 && x.a.y > hud.bar.b);
+  assert.ok(back && back.t2 <= along(rc).t1 + 1, 'Reclaim: from the part to your bar first');
+  // Fork Bomb: each part's ◆ take a steel strike apiece, as many as it lost there.
+  const parts = g.parts.map((q, i) => ({ ...q, id: 'p' + i, chits: i ? null : g.part.chits }));
+  const fb = (brokeOn) => layout(RECIPES['fork-bomb'], { ...g, parts }, { rnd: seeded(3), origin: 'key', brokeOn }).light.filter((x) => x.kind === 'flash' && x.tone === 'steel');
+  assert.equal(fb({ p0: 2 }).length, 2, 'two ◆ lost, two strikes');
+  assert.equal(fb({}).length, 0, 'none lost: none');
+  assert.equal(fb(null).length, 3, 'the playtest, with nothing to say: its 3');
+  const breaker = readFileSync(new URL('./dist/classes/breaker.mjs', import.meta.url), 'utf8'), app = readFileSync(new URL('./dist/app.js', import.meta.url), 'utf8');
+  assert.match(breaker, /left: p\.armor, broke: k \}/, 'a strip says how many ◆ it broke');
+  assert.match(app, /brokeOn: c\.brokeOn/, 'app.js passes each part\'s');
+});
+
 test('a status the hit cashed in shows doing it: Exposed\'s crosshair closes on a crit, brackets for Quarantined, Hooked\'s line pulls tight, Tagged burns hotter', () => {
   const g = marked(), mid = (q) => ({ x: (q.l + q.r) / 2, y: (q.t + q.b) / 2 });
   const crit = playOn('ban', { crit: true, result: 'crit', marks: ['exposed'] }), cross = crit.light.find((x) => x.kind === 'cross');
