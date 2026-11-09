@@ -103,47 +103,36 @@
 [data-form='phone'] body.ph-fight .combat > .log { display: none; }
 [data-form='phone'] body.ph-fight.fight-over .combat > .log { display: block; flex: 1; min-height: 0; overflow: auto; }
 
-/* The HUD: the virus first (name and level, its bar, its ◆ and rules), yours under it (your bar, the crew's lines,
-   your statuses). Room on the right for the virus's window. */
-[data-form='phone'] body.ph-fight .hud { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-areas: 'enemy' 'you' 'crew'; row-gap: 4px; margin: 0; padding: 6px 10px; padding-right: calc(var(--ph-win) + 18px); min-height: calc(var(--ph-win) + 16px); --ph-win: 76px; }
-[data-form='phone'] body.ph-fight .hud .hud-bar.enemy { grid-area: enemy; display: flex; flex-wrap: wrap; align-items: center; column-gap: 6px; }
-[data-form='phone'] body.ph-fight .hud .hud-bar.enemy > :is(.bar-top, .bigbar) { flex: 1 1 100%; min-width: 0; }
-[data-form='phone'] body.ph-fight .hud .hud-bar.enemy > .gene-line { flex: 1 1 0; min-width: 0; }
-[data-form='phone'] body.ph-fight .hud .bar-top { display: flex; flex-wrap: nowrap; align-items: flex-end; justify-content: space-between; }
-[data-form='phone'] body.ph-fight .hud .bar-top > span:last-child { flex: none; }
-[data-form='phone'] body.ph-fight .hud .hud-left { grid-area: you; display: flex; flex-direction: column; gap: 4px; }
+/* The HUD, the designer's pick C: one line. Your bar on the left (the crew's violet lines under it), the virus's on
+   the right with its ◆ over it, each with its number; its window at the end. Its name, level, family, writer and
+   rules, and your statuses, are in the two bars' cards (a tap; app.js phHudCards). */
+[data-form='phone'] body.ph-fight .hud { --ph-win: 40px; position: relative; display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1fr); grid-template-areas: 'you enemy' 'crew enemy'; align-items: start; gap: 3px 10px; min-height: 0; margin: 0; padding: 6px 8px; padding-right: calc(var(--ph-win) + 14px); }
+[data-form='phone'] body.ph-fight .hud .hud-left { grid-area: you; display: block; min-width: 0; }
 [data-form='phone'] body.ph-fight .hud .ph-crew { grid-area: crew; }
-[data-form='phone'] body.ph-fight .hud .bar-top { min-height: 0; gap: 6px; }
-[data-form='phone'] body.ph-fight .hud .bar-top > span:last-child { font-size: var(--ph-body); line-height: 1; }
-[data-form='phone'] body.ph-fight .hud .vname { display: flex; flex: 1 1 0; flex-wrap: wrap; align-items: baseline; gap: 0 6px; min-width: 0; }
-[data-form='phone'] body.ph-fight .hud .vname strong { overflow: hidden; max-width: 100%; font-size: var(--ph-small); text-overflow: ellipsis; white-space: nowrap; }
-[data-form='phone'] body.ph-fight .hud .vname :is(.byline, .meta) { font-size: var(--ph-tiny); }
-[data-form='phone'] body.ph-fight .hud .vname strong { flex: 1 1 100%; }
-[data-form='phone'] body.ph-fight .hud .vname .byline { flex: none; }
-[data-form='phone'] body.ph-fight .hud .vname .meta { flex: 1 1 0; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-[data-form='phone'] body.ph-fight .hud .mine .bar-top strong { font-size: var(--ph-tiny); }
-[data-form='phone'] body.ph-fight .hud .bigbar { height: 8px; margin: 3px 0 0; }
-[data-form='phone'] body.ph-fight .hud .mine .bar-top strong .bar-ico { width: 12px; height: 12px; }
-[data-form='phone'] body.ph-fight .hud .gchip { font-size: var(--ph-tiny); }
-[data-form='phone'] body.ph-fight .hud :is(.clock-line, .gene-line) { display: flex; flex-wrap: nowrap; align-items: center; gap: 4px; margin: 4px 0 0; overflow-x: auto; scrollbar-width: none; }
-[data-form='phone'] body.ph-fight .hud :is(.clock-line, .gene-line) > * { flex: none; }
-[data-form='phone'] body.ph-fight .hud .hud-status { display: flex; flex-wrap: nowrap; gap: 4px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
-[data-form='phone'] body.ph-fight .hud .hud-status:not(:has(.st, .gfx)) { display: none; }
-[data-form='phone'] body.ph-fight .hud .hud-status > .bar-top, [data-form='phone'] body.ph-fight .hud .hud-status small.quiet { display: none; }
-[data-form='phone'] body.ph-fight .hud :is(.st-list, .hud-gear) { display: flex; flex: none; flex-wrap: nowrap; gap: 4px; }
-[data-form='phone'] body.ph-fight .hud .hg-k { display: none; }
+[data-form='phone'] body.ph-fight .hud .hud-bar.enemy { grid-area: enemy; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; column-gap: 4px; min-width: 0; }
+[data-form='phone'] body.ph-fight .hud .hud-bar.enemy > .bar-top { display: contents; }
+[data-form='phone'] body.ph-fight .hud .hud-bar.enemy .clock-line { grid-column: 1; grid-row: 1; margin: 0; }
+[data-form='phone'] body.ph-fight .hud .hud-bar.enemy .bar-top > span:last-child { grid-column: 3; grid-row: 1; }
+[data-form='phone'] body.ph-fight .hud .hud-bar.enemy .bigbar { grid-column: 1 / -1; grid-row: 2; }
+[data-form='phone'] body.ph-fight .hud :is(.vname, .gene-line, .hud-status) { display: none; }
+[data-form='phone'] body.ph-fight .hud .bar-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-height: 0; }
+[data-form='phone'] body.ph-fight .hud .bar-top > span:last-child { flex: none; font-size: var(--ph-small); line-height: 1; }
+[data-form='phone'] body.ph-fight .hud .mine .bar-top strong { font-size: 0; } /* its icon says server or Signal */
+[data-form='phone'] body.ph-fight .hud .mine .bar-top strong .bar-ico { width: 13px; height: 13px; margin: 0; }
+[data-form='phone'] body.ph-fight .hud .bigbar { height: 6px; margin: 2px 0 0; }
+[data-form='phone'] body.ph-fight .hud .chits { font-size: var(--ph-tiny); letter-spacing: -1px; }
 [data-form='phone'] .ph-crew { display: flex; flex-direction: column; gap: 3px; }
-[data-form='phone'] .ph-mate { display: block; height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; }
+[data-form='phone'] .ph-mate { display: block; height: 3px; background: var(--line); border-radius: 2px; overflow: hidden; }
 [data-form='phone'] .ph-mate i { display: block; height: 100%; background: var(--daemon); }
 [data-form='phone'] .ph-mate.down { opacity: 0.4; }
 
-/* The virus's window at the HUD's top right; in its half it steps out over the board (app.js phStage) and its slot
-   keeps a dashed outline. */
-[data-form='phone'] body.ph-fight .combat > .stage { position: absolute; z-index: 12; top: 6px; right: 6px; width: 76px; height: 76px; padding: 3px; border: 1px solid var(--hot); transition: transform 0.36s ease-in-out; transform: translate(0, 0); }
+/* The virus's window at the HUD's end; in its half it steps out over the board (app.js phStage) and its slot keeps a
+   dashed outline. */
+[data-form='phone'] body.ph-fight .combat > .stage { position: absolute; z-index: 12; top: 4px; right: 6px; width: 40px; height: 40px; padding: 2px; border: 1px solid var(--hot); transition: transform 0.36s ease-in-out; transform: translate(0, 0); }
 [data-form='phone'] body.ph-fight .combat > .stage .virus-stage { min-height: 0; }
 [data-form='phone'] body.ph-fight .combat > .stage .stage-flash { display: none; }
 [data-form='phone'] body.ph-fight.ph-out .combat > .stage { transform: translate(var(--ph-dx, 0), var(--ph-dy, 0)); }
-[data-form='phone'] body.ph-fight.ph-out .hud::after { content: ''; position: absolute; inset: auto; top: 0; right: 0; bottom: auto; left: auto; background: none; transform: none; width: 76px; height: 76px; border: 1px dashed var(--line-strong); border-radius: 4px; }
+[data-form='phone'] body.ph-fight.ph-out .hud::after { content: ''; position: absolute; inset: auto; top: 4px; right: 6px; bottom: auto; left: auto; background: none; transform: none; width: 40px; height: 40px; border: 1px dashed var(--line-strong); border-radius: 4px; }
 [data-form='phone'] body.ph-fight.no-motion .combat > .stage { transition: none; transform: none; }
 [data-form='phone'] body.ph-fight.fight-over .combat > .stage { position: static; width: auto; height: auto; }
 
@@ -208,7 +197,7 @@
   [data-form='phone'] body.ph-fight #board .brow { grid-template-columns: minmax(0, 1.35fr) repeat(4, minmax(0, 1fr)); }
   [data-form='phone'] body.ph-fight #board .brow > .bcell:nth-child(5) { display: block; }
   [data-form='phone'] body.ph-fight #board .phase-strip { width: calc(1.35 / 5.35 * 100% + 4px); }
-  [data-form='phone'] body.ph-fight .command-dock { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; justify-content: flex-end; padding-top: calc(var(--ph-hud, 150px) + 12px); }
+  [data-form='phone'] body.ph-fight .command-dock { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; justify-content: flex-end; padding-top: 60px; }
   [data-form='phone'] body.ph-fight .hud { position: fixed; z-index: 11; top: calc(6px + var(--safe-t)); right: calc(8px + var(--safe-r)); width: 284px; }
   [data-form='phone'] body.ph-fight .combat > .stage { position: fixed; top: calc(12px + var(--safe-t)); right: calc(14px + var(--safe-r)); }
 }

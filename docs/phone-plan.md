@@ -130,7 +130,8 @@ casing. The bench's Dev drawer is hidden on a phone; its commands work at the pr
 ## Built (P2)
 
 All in `phone.css` under `body.ph-fight`, plus app.js `phMenuKey`, `phTicker`, `phStage` and view.mjs `crewLineMarkup`.
-Measured with a crewmate: the board is 293 of 568 px on 320 × 568, 387 of 667 px on 375 × 667, no scroll. A notice
+The HUD is one line (the designer's pick *C*, 41 px): the bars and their numbers, the rest in their cards (app.js
+`phHudCards`). Measured with a crewmate: the board is 379 of 568 px on 320 × 568, 478 of 667 px on 375 × 667, no scroll. A notice
 takes the ticker's slot, one line (a tap shows it whole). The Toolkit's key is left out of the tray. The board has no You row (the designer: too busy); the picked key is outlined amber. The virus's window
 steps out to the first clear stretch right of Now, top down; with none tall enough it stays home.
 
