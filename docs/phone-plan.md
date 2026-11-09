@@ -1,6 +1,6 @@
 # Phone plan: a phone UI of its own
 
-Plan, not built (P0 picked). Same game, state and commands on a phone; its own shell and its own markup for the core components.
+P0 picked, P1 (the shell) built. Same game, state and commands on a phone; its own shell and its own markup for the core components.
 P0 (prototypes for the designer's pick) comes before any code.
 
 ## Where the phone is now
@@ -109,7 +109,7 @@ render(), style.css and the fight board, so no other UI session runs beside it.
 | Phase | What | Done when |
 |---|---|---|
 | **P0 Prototypes** | Scratchpad applets at 375 × 667 with fixture data: the shell (strip, tab bar, More), the fight in the options below, the sheet at its three heights, the map with a peek sheet. Screenshots to the designer | The designer has picked |
-| **P1 Shell** | `form.mjs`, `phone.css`, tokens and safe areas, the top strip, the tab bar and More, the prompt behind `>_`, tap for info, the one sheet, lazy desktop-only modules | Every page reachable in two taps; no hover-only rule left on the shell |
+| **P1 Shell** (done) | `form.mjs`, `phone.css`, tokens and safe areas, the top strip, the tab bar and More, the prompt behind `>_`, tap for info, the one sheet, lazy desktop-only modules | Every page reachable in two taps; no hover-only rule left on the shell |
 | **P2 Fight** | The picked fight layout | The budget above on 320 × 568 and 375 × 667, with a crew |
 | **P3 Maps and sheets** | Map, rooms map, map cards, the room pop-up, the Server panel, Comms, the quest window and level-up in the sheet | Each pop-up is the one sheet; the four old sheets are gone |
 | **P4 Pages** | Loadout, Mail, Codex and Collection, Rig, Settings, hubs | No page over three screens tall at its default state |
@@ -118,6 +118,14 @@ render(), style.css and the fight board, so no other UI session runs beside it.
 **Tests:** a `phone.test.mjs` renders each phone view from fixture saves and checks that every action has a
 `data-` command (a tap path), every element with a rule is tappable, and nothing on the cut list is in the markup.
 Layout budgets are checked with the scratchpad screenshot set each phase.
+
+## Built (P1)
+
+`form.mjs` sets `data-form`; `phone-shell.mjs` draws the tab bar and More; `sheet.mjs` is the one sheet (tap for info and
+More use it; the old four move in P3); `phone.css` holds every phone rule. The strip is the desktop's own meters and
+pager restyled. Lazy: `window.mjs` (its districts moved to `districts.mjs`), `bench.mjs` (its save keys in
+`bench-key.mjs`), the fx playtest. `casing.mjs` stays static: the Rig page's views read it; a phone never wears the
+casing. The bench's Dev drawer is hidden on a phone; its commands work at the prompt. Tested by `phone.test.mjs`.
 
 ## Picked (P0)
 

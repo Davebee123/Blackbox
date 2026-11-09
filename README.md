@@ -208,6 +208,7 @@ comment saying what it does.
 | `dist/terminal.mjs`, `dist/terminal-view.mjs`, `dist/terminal.css`, `dist/boots.mjs` | Terminal cosmetics on Rig → **Terminal**: boot looks (POST, Corrupted…), prompts, cursors. |
 | `dist/recap.mjs` | The death recap on the Disconnected card. |
 | `dist/uiscale.mjs` | UI scale: the whole screen drawn larger or smaller. |
+| `dist/form.mjs`, `dist/phone-shell.mjs`, `dist/sheet.mjs`, `dist/phone.css` | The phone: the one "is this a phone" answer (`<html data-form>`), its tab bar and More, the one bottom sheet, every phone rule (docs/phone-plan.md). |
 
 ### Co-op
 
@@ -228,7 +229,7 @@ comment saying what it does.
 | `dist/shell.mjs`, `dist/poweron.mjs` | The CRT shell, boot lines and status line; the power-up. |
 | `dist/screenfx.mjs`, `dist/screenfx.css` | Screen effects: light on the glass around the game, never on it. |
 | `dist/bootfx.mjs`, `dist/bootfx.css` | A new fight: the screen boots into it, the virus first; leaving a won one, a channel cut; connecting to a server, the dial-up; jacking out, the hang-up. |
-| `dist/window.mjs` | The slum outside the window behind the monitor, and its weather. |
+| `dist/window.mjs`, `dist/districts.mjs` | The slum outside the window behind the monitor, and its weather (loaded only on a desktop); its districts as data. |
 | `dist/abilityfx.mjs`, `dist/abilityfx-table.mjs`, `dist/abilityfx-playtest.mjs` | Ability effects on the board, the table of every ability's effect, and its playtest. |
 | `dist/abilitylight.mjs` | What an ability effect does where it lands, drawn in light: flashes, shock rings, cracks, sparks, flames, the comet, a status cashing in. |
 | `dist/hitfx.mjs`, `dist/dmgfx.mjs`, `dist/lash.mjs` | Hits landing on a part (a MISS or RESISTED stamped on it; a broken one's row and name breaking into 1s and 0s), damage numbers one per source, a virus lashing at the screen. |
@@ -251,7 +252,7 @@ comment saying what it does.
 | `dist/campaign.mjs`, `dist/campaign-view.mjs`, `dist/campaign.css` | The breach campaign: servers by layer, its own save. |
 | `dist/heat.mjs`, `dist/scripts.mjs`, `dist/rewrites.mjs`, `dist/skillrules.mjs` | The breach's heat ranks, one-shot scripts, rewrites and skill rules. |
 | `dist/world.mjs`, `dist/room.mjs`, `dist/room-view.mjs`, `dist/room.css`, `dist/content/room.mjs` | LOWLIGHT's back room and the world turn between breaches. |
-| `dist/bench.mjs` | The test bench and the Dev drawer; `build()` is shared with the simulations. |
+| `dist/bench.mjs`, `dist/bench-key.mjs` | The test bench and the Dev drawer (loaded only on a bench or with `?dev`); `build()` is shared with the simulations. The save keys. |
 | `dist/arena.mjs` | The Arena: every fightable thing from the data tables, and `developer fight`. |
 
 ### Root: server, scripts and simulations

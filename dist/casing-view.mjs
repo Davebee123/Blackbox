@@ -3,7 +3,7 @@
 //   ui: { slot: the sticker slot picked, 0–3; pslot: the desk's spot picked, 0–1 }
 import { glyph } from './glyphs.mjs';
 import { COLORWAYS, COLORWAY_IDS, CASING, colorwayOpen, colorwayFrom, casingLook, decalsOwned, decalMarkup, districtOf, districtOpen, districtFrom, PROPS, PROP_IDS, PROP_SLOTS, propOpen, propFrom, propsLook, propsOwned, propSvg } from './casing.mjs';
-import { DISTRICTS, DISTRICT_IDS } from './window.mjs';
+import { DISTRICTS, DISTRICT_IDS } from './districts.mjs';
 import { titleById } from './profile.mjs';
 
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
