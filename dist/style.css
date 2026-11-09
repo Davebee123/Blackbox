@@ -2927,6 +2927,27 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .map-lcol { position: absolute; top: 56px; left: 10px; z-index: 3; width: 230px; display: grid; align-content: start; gap: var(--s5); max-height: calc(100% - 60px); overflow-y: auto; pointer-events: none; }
 .map-lcol > * { pointer-events: auto; }
 @media (max-width: 900px) { .map-lcol { position: static; width: auto; max-height: none; overflow: visible; margin: 44px 8px 0; gap: var(--s4); } }
+/* The Rail (runners-view.mjs): the runners you know, under Contracts. Paper white (--bright): a runner is nobody's
+   colour; the one you pick is drawn on the map as a diamond, its route dotted, where it's heading ringed. */
+.rrail { display: grid; gap: var(--s2); min-width: 0; }
+.rr-head { color: var(--bright); }
+.rr-row { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 5px 8px; background: rgba(12, 10, 6, 0.88); border: 1px solid var(--line); border-left: 3px solid rgba(255, 242, 200, 0.35); border-radius: var(--r-btn); color: var(--text); font: inherit; text-align: left; cursor: pointer; backdrop-filter: blur(2px); }
+.rr-row:hover, .rr-row:focus-visible { border-color: var(--line-strong); border-left-color: var(--bright); }
+.rr-row.on { border-color: var(--bright); border-left-color: var(--bright); }
+.rr-row.down { opacity: 0.6; }
+.rr-dia { width: 7px; height: 7px; transform: rotate(45deg); border: 1.5px solid var(--bright); }
+.rr-row.on .rr-dia { background: var(--bright); }
+.rr-txt { display: grid; min-width: 0; white-space: nowrap; }
+.rr-txt b { font-size: 12px; font-weight: 600; color: var(--bright); overflow: hidden; text-overflow: ellipsis; }
+.rr-txt small, .rr-at { font: 10px var(--mono); color: var(--muted); white-space: nowrap; }
+.rr-at { max-width: 120px; overflow: hidden; text-overflow: ellipsis; text-align: right; color: var(--text); }
+.rr-head .rr-dia { margin: 0 2px; }
+.mrunner { pointer-events: none; }
+.mrunner .mr-route { fill: none; stroke: var(--bright); stroke-width: 1.6; stroke-dasharray: 1.5 5; stroke-linecap: round; opacity: 0.8; }
+.mrunner .mr-ring { fill: none; stroke: var(--bright); stroke-width: 1.4; stroke-dasharray: 5 4; opacity: 0.85; }
+.mrunner .mr-dia { fill: var(--bright); stroke: var(--bg); stroke-width: 1.5; }
+.mrunner .mr-name { fill: var(--bright); font-size: calc(12px / var(--z, 1)); font-weight: 600; letter-spacing: 1px; paint-order: stroke; stroke: var(--bg); stroke-width: 3px; }
+.mrunner.down .mr-dia { fill: none; stroke: var(--bright); }
 /* Item hover card: a spinning ASCII model of the item's kind, in its rarity colour, over its details. */
 .ptip { position: fixed; z-index: 80; zoom: var(--ui, 1); pointer-events: none; animation: ptip-in 0.14s ease-out; } /* zooms with the screen (app.js placePtip) */
 @keyframes ptip-in { from { opacity: 0; transform: translateY(4px); } }

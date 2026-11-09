@@ -2381,16 +2381,27 @@ no attaching, detaching or memory pips.
 
 ### People and #net
 
-- **People** (presence.mjs) is simulated until there's a server (`?dev`: `online sim` turns on a pool of 20 hackers who
-  log on and off; `online off`). The people button on the top bar (a dot and how many are online; violet when a friend
-  is on) opens **Friends** and **Online**: handle, class and level, and where they are (SPRAWL-00 and its room; *on a
-  run*, *at home* are private). `friend add|remove <handle>`, `friends`, `who`. SPRAWL-00 is shared: `ls` and arriving
-  in a room say who else is there.
+- **Runners** (runners.mjs, docs/runners.md R1): 32 people per network, drawn from its seed. Each has a handle, a class
+  (and subclass from 10), a level 4 below to 4 above yours, a faction, a temperament (Careful, Steady, Bold), one to
+  four traits (data only for now) and a trade: a payment frozen on a floor one to three below where they work.
+- **Their loop**, on logged-on time only (nothing moves while you're away): a 6–14 minute cycle on the floor of their
+  level: their faction's hub (else the floor's entry), out along the links to a server near their level, work it, and
+  back to be paid. A job's outcome is rolled from their level against the server's (Careful +8%, Bold −8%), never
+  fought; a crash pulls them out until the next cycle. Every cycle climbs them toward their trade's floor (300–900
+  cycles); reaching it, they start on another. They never touch your servers or move a faction. Saved: `s.runners`
+  (the logged-on clock, and who you know).
+- **The Rail**: under Contracts on the map, the runners you know (heard on #net), last heard first, six at most:
+  handle, class and level, where (`→` a server on the road). Click one to draw it on its floor: a paper-white diamond
+  with the handle, a dotted route through the servers passed, a dashed ring where it's heading. Again to drop it.
+- **People**: the people button on the top bar (how many are on; violet when a friend is) opens **Friends** and
+  **Online**: handle, class and level, where. On a network the people are its runners and your consortium's members;
+  a save with no network seed keeps the old simulated pool behind `?dev` `online sim`. `friend add|remove <handle>`,
+  `friends`, `who`. SPRAWL-00 is shared: `ls` and arriving in a room say who else is there.
 - **#net** (channel.mjs), the net talking to itself like WoW's General chat. Its latest line sits over the prompt; click
   it for the drawer. `say <text>` (or `'text`) posts, up to 120 characters; `channel off|on` mutes it. Every line comes
   from real game state: the director's events and how they end, faction contacts speaking for their side after a feud
-  (never at you), your feats (a unique found, a title, every tenth level), and simulated hackers chatting from what
-  they're doing and reacting to you. A line every 20–90 seconds of logged-on time; the last 80 stay on the save. It never
+  (never at you), your feats (a unique found, a title, every tenth level), and runners telling their real turns (a server
+  cleared, a crash, pay, a trade reached), chatting from what they're doing and reacting to you. A line every 20–90 seconds of logged-on time; the last 80 stay on the save. It never
   touches the pager and rolls its own dice.
 
 ### Profile: finger (profile.mjs)
@@ -2683,9 +2694,10 @@ Checked by `node balance.mjs` (docs/BALANCE.md, `balance.test.mjs`), `farmsim.mj
 
 ## Saves
 
-The save is `SAVE_VERSION` 61 (combat.mjs). An older save is migrated on load, each step keyed on the field it converts,
+The save is `SAVE_VERSION` 62 (combat.mjs). An older save is migrated on load, each step keyed on the field it converts,
 so it is safe to run twice; nothing a save held is lost.
 
+- **v62** runners: `s.runners` (the logged-on clock, who you know), made on first use (`runners.mjs`).
 - **v61** every hub's Shop has one shape: the agency stock, the premium shelves and the hubs' stock counts go
   (`store.mjs shopRestore`, keyed on the fields).
 - **v60** payloads, hub capture and swarms are cut: a held hub pays out once (its bank and a day of its income, each

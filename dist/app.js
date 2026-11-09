@@ -40,7 +40,8 @@ import { plan as dmgPlan, queueAfter, absorbOf, armorFloat, missFloat } from './
 import { recapMarkup } from './recap.mjs';
 import { createLash } from './lash.mjs';
 import { createChipFx, chipStrike, chipTheme, STRIKES } from './chipfx.mjs';
-import { online, simOn } from './presence.mjs';
+import { online, peopleOn } from './presence.mjs';
+import { runnerFloor } from './runners-view.mjs';
 import { matesOf } from './crew.mjs';
 import { tickPlay } from './progression.mjs';
 import * as BR from './breach.mjs';
@@ -1990,6 +1991,7 @@ addEventListener('resize', () => placeCrewWin());
 let mapPop = false;
 let mapList = false, mapSort = 'status', pendingLocate = null; // the map's List mode (MOO2's planets list), its sort column, and a Locate waiting for the map to draw
 let mapFilter = []; // the map's Show picker: any of mine · targets · threats (none = all; the rest dims)
+let mapRunner = null; // the runner picked on the Rail (runners-view.mjs): the map draws them
 let mapFloor = null; // the floor the map shows (floors.mjs): the floor panel's pick; a selection on another floor shows that one
 let mapPickOpen = false; // whether the picker's menu is open (it survives redraws)
 let leadsOpen = false; // a run's Leads panel (the run header's toggle)
@@ -2157,7 +2159,7 @@ function render(force = false) {
   } else if (combatLike && (campaign.breach || CAMP)) {
     return go(campaign.breach ? 'breach' : 'campaign', true); // a breach fight that's over: back to its page, never the old map
   } else if (combatLike) {
-    put('page-view', V.mapMarkup(campaign, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor }));
+    put('page-view', V.mapMarkup(campaign, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor, runner: mapRunner }));
     applyMapZoom();
   } else if (module === 'net') {
     const before = cache.get('page-view');
@@ -2168,7 +2170,7 @@ function render(force = false) {
       $('term').scrollTop = $('term').scrollHeight;
     }
   } else {
-    const pages = { rooms: (x) => roomsMarkup(x), campaign: (x) => campaignMarkup(x), room: (x) => roomMarkup(x), archive: (x) => archiveMarkup(x), breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => (hubSel === POST.id ? postTerminalMarkup(x, hubLines, hubWin, Date.now()) : V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now())), server: (x) => V.serverMarkup(x, Date.now(), srvUi), daemons: V.daemonsMarkup, codex: (x) => (codexTab === 'log' ? collectionPageMarkup(x, logSel, codexIdx, codexShut, logFind, logJr) : codexPageMarkup(x, codexSel, codexIdx, codexShut)), system: (x) => V.systemMarkup(x, { coop: !!coop, dev: DEV, tab: systemTab }), rig: (x) => V.rigMarkup(x, { tab: rigTab, ach: achUi, cs: caseUi }) };
+    const pages = { rooms: (x) => roomsMarkup(x), campaign: (x) => campaignMarkup(x), room: (x) => roomMarkup(x), archive: (x) => archiveMarkup(x), breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor, runner: mapRunner }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => (hubSel === POST.id ? postTerminalMarkup(x, hubLines, hubWin, Date.now()) : V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now())), server: (x) => V.serverMarkup(x, Date.now(), srvUi), daemons: V.daemonsMarkup, codex: (x) => (codexTab === 'log' ? collectionPageMarkup(x, logSel, codexIdx, codexShut, logFind, logJr) : codexPageMarkup(x, codexSel, codexIdx, codexShut)), system: (x) => V.systemMarkup(x, { coop: !!coop, dev: DEV, tab: systemTab }), rig: (x) => V.rigMarkup(x, { tab: rigTab, ach: achUi, cs: caseUi }) };
     // A page that throws shows what broke (and a way back) instead of stopping every render after it.
     const keep = module === 'breach' ? $('bx-scroll')?.scrollTop : null;
     const focusRoom = module === 'rooms' ? document.activeElement?.closest?.('.fp-room')?.dataset.room : null; // a redraw keeps a focused room focused
@@ -2763,7 +2765,7 @@ function frame(now) {
   shell.caret();
   if (now - lastSecond >= 1000) {
     lastSecond = now; shell.second(module); services();
-    if (simOn(campaign)) peopleUi(); // people move about (presence.mjs)
+    if (peopleOn(campaign)) peopleUi(); // people move about (presence.mjs)
     channelUi(); // #net's latest line (channel.mjs)
     if (pruneComms(campaign)) { save(); dirty = true; } // handled comms clear out after 5 minutes
     // Unanswered alerts shake the pager every 10 s; a breach pings every 15 s.
@@ -2875,6 +2877,8 @@ document.addEventListener('click', (e) => {
     if (cmd.classList.contains('ability') && !cmd.classList.contains('script')) { $('command-input').value = cmd.dataset.command; focusPrompt(); return; } // a script runs at once: it takes no cycle
     return run(cmd.dataset.command);
   }
+  const rr = e.target.closest('[data-runner]');
+  if (rr) { const h = rr.dataset.runner; mapRunner = mapRunner === h ? null : h; const fl = mapRunner && runnerFloor(campaign, h); if (fl && fl <= (campaign.floors?.reached || 1)) mapFloor = fl; dirty = true; return; } // the Rail: pick a runner, again to drop them
   const loc = e.target.closest('[data-locate]');
   if (loc) { pendingLocate = loc.dataset.locate === '__sel' ? mapSel : loc.dataset.locate; mapList = false; mapSel = pendingLocate; mapPop = true; if (module !== 'map') go('map'); dirty = true; return; }
   const ml = e.target.closest('[data-maplist]');
@@ -3119,7 +3123,7 @@ function pagerUi() {
 // People (presence.mjs): a button on the top bar with how many are online, and its panel.
 let peopleOpen = false, peopleTab = 'friends';
 function peopleUi() {
-  const on = simOn(campaign);
+  const on = peopleOn(campaign);
   $('people').hidden = !on;
   if (!on) { peopleOpen = false; $('people-panel').hidden = true; return; }
   const list = online(campaign);

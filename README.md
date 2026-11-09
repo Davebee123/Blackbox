@@ -62,7 +62,7 @@ Common developer commands (with `?dev` or on a bench; the **Dev** drawer above t
 | `developer parts` | The parts roll's numbers and mix. |
 | `developer event [card]`, `developer runcard [kind]`, `developer invade [kind]` | Deals an event card; a run card (this run, or the next connect); sends an invasion. |
 | `developer levelup preview`, `developer thread preview`, `developer scene <id>`, `terminal preview` | Plays the level-up, a thread's windows, a transmission, a boot look. |
-| `crew sim <class…>`, `online sim` | Bot crewmates in your fights; simulated hackers online. |
+| `crew sim <class…>`, `online sim` | Bot crewmates in your fights; the old simulated pool on a save with no network. |
 | `reset game` (twice) | Starts over from level 1. Settings stay. |
 
 ## Tests and landing
@@ -202,6 +202,7 @@ comment saying what it does.
 | `dist/achievements.mjs`, `dist/achievements-view.mjs`, `dist/achievements.css` | Achievements and their cosmetic rewards; the **Rig** page (Achievements, Casing, Terminal; `rigMarkup` in view.mjs). |
 | `dist/profile.mjs`, `dist/profile-view.mjs` | Your profile card (`finger`), and #net's markup. |
 | `dist/channel.mjs`, `dist/presence.mjs` | #net, the public channel; who's online and your friends. |
+| `dist/runners.mjs`, `dist/runners-view.mjs` | Runners: the cast from the network seed, their loop on logged-on time; the Rail. |
 | `dist/comms.mjs`, `dist/pager.mjs`, `dist/pager-view.mjs`, `dist/pager.css` | The pager: world events as entries, which ones ask something of you, and the tray. |
 | `dist/casing.mjs`, `dist/casing-view.mjs`, `dist/casing.css` | Casing cosmetics: the monitor's colourway, plate, stickers and desk. |
 | `dist/terminal.mjs`, `dist/terminal-view.mjs`, `dist/terminal.css`, `dist/boots.mjs` | Terminal cosmetics on Rig → **Terminal**: boot looks (POST, Corrupted…), prompts, cursors. |
