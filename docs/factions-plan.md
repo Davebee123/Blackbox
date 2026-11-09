@@ -102,7 +102,7 @@ floor and a half. A rep gate can't slow it: a stamp's +10 reaches Trusted in a f
 - **Each piece takes 3 parts; a part is 5 receipts or one feud win.** The full set is about 60 receipts for one
   faction, half the climb's servers (about 118): a reason to commit to one side.
 - Assembling and re-tuning work as built (faction-gear.mjs), a piece at a time.
-- Proposed below, for the designer's pick (the cards: the session's screenshots). Not built.
+- Picked (the 4-pieces, below); not built yet.
 
 **The shape.** Each set fills four of the five slot kinds and pushes its own way to play. Every piece is a faction
 piece as built: its slot's best base ×1.2 at your level, its faction's implicit a quarter stronger (it counts once),
@@ -118,8 +118,8 @@ The new names clash with nothing in the game, and with nothing on the shops' cha
 | Annuity | Script | When a claim pays out, your next skill deals 10% more | +5% damage |
 | Grace Period | Implant | A hit for more than 25% of your max lands half now, half over the next 2 cycles | +5% Clock Speed |
 
-(2) Claims pay back 8% more of each hit. (4) **A, Counterclaim:** a claim that pays out also hits the part that made
-it, for the same amount. **B, Early payout:** below 25% health, every claim waiting pays out at once, 50% larger.
+(2) Claims pay back 8% more of each hit. (4) **Counterclaim:** a claim that pays out also hits the part that made
+it, for the same amount.
 
 **Kestrel: Sealed Floor.** Seal: break the appraised part first.
 
@@ -130,9 +130,8 @@ it, for the same amount. **B, Early payout:** below 25% health, every claim wait
 | Exclusion Clause | Exploit | Breaking the appraised part takes 1 cycle off all your cooldowns | +5% damage |
 | Write-off | Implant | +3% damage for each part you've broken this fight, up to 12% | +6% max health |
 
-(2) You deal 6% more to the appraised part. (4) **A, Sealed:** breaking the appraised part appraises the next one at
-once, and its attack comes a cycle later. **B, On time:** breaking the appraised part before it attacks heals 8% of
-your max.
+(2) You deal 6% more to the appraised part. (4) **Sealed:** breaking the appraised part appraises the next one at
+once, and its attack comes a cycle later.
 
 **GLASSJAW: Top Bid.** Sell: stay above 75% and open hard.
 
@@ -143,8 +142,8 @@ your max.
 | Insider | Shell | A heal that takes you back above 75% is 20% larger | +2 Block |
 | Auction Lot | Implant | Each cycle above 75%, your next crit deals 5% more, up to 25%; a crit spends it | +5% Clock Speed |
 
-(2) Glass Jaw's extra damage holds down to 60% health. (4) **A, Sold:** breaking a part while above 75% takes 2 cycles
-off all your cooldowns. **B, Margin:** breaking a part while above 75% heals 5% of your max.
+(2) Glass Jaw's extra damage holds down to 60% health. (4) **Sold:** breaking a part while above 75% takes 2 cycles
+off all your cooldowns.
 
 **LANTERN: Night Count.** Settle: answer every tell, and the count builds.
 
@@ -155,8 +154,8 @@ off all your cooldowns. **B, Margin:** breaking a part while above 75% heals 5% 
 | Call Sign | Shell | At full Clean Signal, your Regen heals twice as much | +6% max health |
 | Tally Sheet | Implant | Each tell you answer gives +3% damage, up to 15%, until an attack lands on you | +5% Clock Speed |
 
-(2) Clean Signal stacks up to 4. (4) **A, Return to sender:** at full Clean Signal, an attack you answer hits its own
-part for the damage it would have dealt. **B, Open line:** answering a tell adds a Clean Signal stack.
+(2) Clean Signal stacks up to 4. (4) **Return to sender:** at full Clean Signal, an attack you answer hits its own
+part for the damage it would have dealt.
 
 **NULL CHOIR: Evensong.** Roll back: repeat a skill, let burns run, and undo a bad turn.
 
@@ -167,12 +166,13 @@ part for the damage it would have dealt. **B, Open line:** answering a tell adds
 | Ostinato | Exploit | Chorus's extra hit adds 1 cycle to your burns on that part | +5% crit |
 | Da Capo | Implant | Once a fight, falling under 25% rolls your health back to where it was 3 cycles ago (a tick on the bar marks it) | +6% max health |
 
-(2) Chorus's second hit deals 10% more. (4) **A, Requiem:** when a part breaks, your burns on it move to the next
-living part, their time back to full. **B, Encore:** a burn or helper that runs out comes back once, for 2 cycles at
-half strength.
+(2) Chorus's second hit deals 10% more. (4) **Requiem:** when a part breaks, your burns on it move to the next
+living part, their time back to full.
 
-- **For the pick:** each 4-piece's A or B; the set names; Da Capo against Golden Parachute (both fire under 25%).
-- **Built with (once picked):** each new piece a unique with `faction` and `set` (content/items.mjs), the five sets
+- **Picked:** each set's first 4-piece option (the other cut). A faction set piece reads in set green (its name, its
+  card's edge, its glyph), not gold. The implicit counting once across a set's pieces is fine as it is.
+- **Still open:** the set names; Da Capo beside Golden Parachute (both fire under 25%).
+- **Built with:** each new piece a unique with `faction` and `set` (content/items.mjs), the five sets
   (content/sets.mjs) with their codes in SET_HOOKS, PIECES holding four a faction, parts counted a piece at a time
   (s.factionParts by piece), GAME_RULES *Sets* and *Faction gear*.
 
