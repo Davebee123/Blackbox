@@ -3013,6 +3013,17 @@ function runMate(s, name) {
   ].join('');
   return `<div class="pm-run"><span class="pm-where">${state}<code title="Where ${esc(name)} is">${esc(c.cwd)}</code></span><span class="pm-acts">${acts}</span></div><button type="button" class="pm-kick" data-run="crew kick ${esc(name)}" title="Take ${esc(name)} out of your crew" aria-label="Remove ${esc(name)}">×</button>`;
 }
+// The phone's fight HUD (docs/phone-plan.md P2): each crewmate's bar as a thin violet line under yours, the name and
+// Signal in its card.
+export function crewLineMarkup(s) {
+  const e = s.encounter, live = active(s) && e?.mode === 'run';
+  const mates = matesOf(s);
+  if (!mates.length) return '';
+  return `<div class="ph-crew">${mates.map((m) => {
+    const up = !live || !m.encounter || mateUp(m), sig = live && m.encounter ? m.run.integrity : mateSignal(s, m), pct = up ? Math.max(0, Math.min(100, (sig / m.run.max) * 100)) : 0;
+    return `<span class="ph-mate${up ? '' : ' down'}" title="${esc(`${m.who}: ${ARCHETYPES[m.loadout.archetype].name}, Lv ${hackerLevel(m)}.\n${up ? `Signal ${sig}/${m.run.max}.` : 'Down.'}`)}"><i style="width:${pct}%"></i></span>`;
+  }).join('')}</div>`;
+}
 const CREW_PARTY = (s, mates, inFight, fc, actedWho) => `<div class="party">${mates.map((m) => {
         const live = inFight && m.encounter, up = !live || mateUp(m), sig = live ? m.run.integrity : mateSignal(s, m), pct = (sig / m.run.max) * 100, q = live ? m.encounter.queue : null;
         // What they mean to do this cycle: the skill (its verb's colour and icon) and the part.

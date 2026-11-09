@@ -1,6 +1,6 @@
 # Phone plan: a phone UI of its own
 
-P0 picked, P1 (the shell) built. Same game, state and commands on a phone; its own shell and its own markup for the core components.
+P0 picked, P1 (the shell) and P2 (the fight) built. Same game, state and commands on a phone; its own shell and its own markup for the core components.
 P0 (prototypes for the designer's pick) comes before any code.
 
 ## Where the phone is now
@@ -110,7 +110,7 @@ render(), style.css and the fight board, so no other UI session runs beside it.
 |---|---|---|
 | **P0 Prototypes** | Scratchpad applets at 375 × 667 with fixture data: the shell (strip, tab bar, More), the fight in the options below, the sheet at its three heights, the map with a peek sheet. Screenshots to the designer | The designer has picked |
 | **P1 Shell** (done) | `form.mjs`, `phone.css`, tokens and safe areas, the top strip, the tab bar and More, the prompt behind `>_`, tap for info, the one sheet, lazy desktop-only modules | Every page reachable in two taps; no hover-only rule left on the shell |
-| **P2 Fight** | The picked fight layout | The budget above on 320 × 568 and 375 × 667, with a crew |
+| **P2 Fight** (done) | The picked fight layout | The budget above on 320 × 568 and 375 × 667, with a crew |
 | **P3 Maps and sheets** | Map, rooms map, map cards, the room pop-up, the Server panel, Comms, the quest window and level-up in the sheet | Each pop-up is the one sheet; the four old sheets are gone |
 | **P4 Pages** | Loadout, Mail, Codex and Collection, Rig, Settings, hubs | No page over three screens tall at its default state |
 | **P5 Cleanup** | Delete the phone overrides the shell replaced; docs/ui.md's phone rules and GAME_RULES.md's *On a phone* rewritten | style.css has no rule under 600 px |
@@ -126,6 +126,13 @@ More use it; the old four move in P3); `phone.css` holds every phone rule. The s
 pager restyled. Lazy: `window.mjs` (its districts moved to `districts.mjs`), `bench.mjs` (its save keys in
 `bench-key.mjs`), the fx playtest. `casing.mjs` stays static: the Rig page's views read it; a phone never wears the
 casing. The bench's Dev drawer is hidden on a phone; its commands work at the prompt. Tested by `phone.test.mjs`.
+
+## Built (P2)
+
+All in `phone.css` under `body.ph-fight`, plus app.js `phMenuKey`, `phTicker`, `phStage` and view.mjs `crewLineMarkup`.
+Measured with a crewmate: the board is 293 of 568 px on 320 × 568, 387 of 667 px on 375 × 667, no scroll. A notice
+takes the ticker's slot, one line (a tap shows it whole). The Toolkit's key is left out of the tray. The virus's window
+steps out to the first clear stretch right of Now, top down; with none tall enough it stays home.
 
 ## Picked (P0)
 

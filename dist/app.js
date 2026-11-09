@@ -2150,7 +2150,7 @@ function render(force = false) {
   if (side) put('sidebar', `<section class="crewwin docked">${V.crewWindowMarkup(s, { preview: aimPreview })}</section>`);
   renderCrewWin(s, side);
   if (combatLike && hasFight) {
-    put('hud', V.hudMarkup(s, { party: !side, preview: aimPreview }));
+    put('hud', V.hudMarkup(s, { party: !side, preview: aimPreview }) + (F.isPhone() ? V.crewLineMarkup(s) : '')); // a phone: the crew as thin violet lines under your bar
     flyStatuses(s);
     // A new cycle: remember where every chip was, so the board can move them instead of jumping.
     const cycleKey = s.encounter.virus.id + ':' + s.encounter.cycle;
@@ -2168,6 +2168,7 @@ function render(force = false) {
     setBand(s);
     const logBefore = cache.get('log');
     put('log', V.logMarkup(s));
+    phTicker();
     if (cache.get('log') !== logBefore) {
       if (logBefore !== undefined) shell.typeIn($('log'), s.logs.length - (render.logLen ?? s.logs.length));
       $('log').scrollTop = $('log').scrollHeight;
@@ -2235,7 +2236,8 @@ function render(force = false) {
   const netTray = module === 'net' && !!campaign.run;
   $('tray').hidden = !(combatLike || netTray);
   $('tray').classList.toggle('net-tray', netTray);
-  put('tray', netTray ? V.netTrayMarkup(nextActions(campaign)) : V.trayMarkup(s, selected) + scriptTray(s));
+  { const keys = netTray ? V.netTrayMarkup(nextActions(campaign)) : V.trayMarkup(s, selected) + scriptTray(s); put('tray', keys + (combatLike && F.isPhone() ? phMenuKey(keys) : '')); $('tray').querySelectorAll(':scope > .ability').forEach((k, i) => k.classList.toggle('ph-over', i >= PH_KEYS)); } // a phone: past eight keys, under +n
+  phStage();
   // An ability that just came off cooldown flashes once.
   const cooling = new Set([...document.querySelectorAll('#tray .ability.cooling[data-ability]')].map((b) => b.dataset.ability));
   for (const b of document.querySelectorAll('#tray .ability.ready[data-ability]')) if (wasCooling.has(b.dataset.ability)) b.classList.add('just-ready');
@@ -3177,6 +3179,64 @@ $('ph-tabs').addEventListener('click', (e) => {
   phMoreOpen(false);
   go(b.dataset.module);
 });
+// The fight on a phone (docs/phone-plan.md P2). The tray's last column is the menu key (···, the pager's lamp on it):
+// it opens the tab bar, the pager and the command line in a sheet. Past eight keys a +n under it opens the rest.
+const PH_KEYS = 8;
+function phMenuKey(keys) {
+  const n = (keys.match(/<(button|div)[^>]*class="ability\b/g) || []).length, more = n - PH_KEYS;
+  const lamp = PGV.lampMarkup(campaign).replace(/^<button[^>]*>|<\/button>$/g, '');
+  return `<div class="ph-menu-col"><button type="button" class="ph-menu" data-phone="menu" aria-label="Menu: pages, pager, command line"><span aria-hidden="true">···</span>${lamp}</button>${more > 0 ? `<button type="button" class="ph-keys" data-phone="keys" aria-label="${more} more keys">+${more}</button>` : ''}</div>`;
+}
+function phMenuMarkup() {
+  const unread = (campaign.mail?.list || []).filter((m) => !m.read).length;
+  const row = (attrs, icon, label) => `<button type="button" class="ph-row" ${attrs}>${icon}<span>${label}</span></button>`;
+  return `<nav class="ph-tabs ph-in-sheet" aria-label="Pages">${PH.tabBarMarkup(campaign, { module, camp: CAMP, active: active(campaign), counts: { mail: unread } })}</nav><nav class="ph-more-list">${row('data-phone="comms"', PGV.lampMarkup(campaign).replace(/^<button[^>]*>|<\/button>$/g, ''), 'Pager')}${row('data-phone="prompt"', '<span class="ph-gt" aria-hidden="true">&gt;_</span>', 'Command line')}</nav>`;
+}
+// The log's latest line over the tray, its side's edge teal or red; a tap opens the whole log in a sheet.
+function phTicker() {
+  const t = $('ph-ticker'), on = F.isPhone() && phFight();
+  t.hidden = !on;
+  if (!on) return;
+  const last = $('log').lastElementChild;
+  const html = last ? last.innerHTML : '';
+  if (t.dataset.html !== html) { t.dataset.html = html; t.innerHTML = html; t.className = `ph-ticker ${last?.className || ''}`; }
+  if (sheetKey() === 'log') { const b = sheetBody(); if (b && b.dataset.n !== String(campaign.logs.length)) { b.dataset.n = campaign.logs.length; b.innerHTML = `<ol class="log-lines ph-log">${V.logMarkup(shown())}</ol>`; b.scrollTop = b.scrollHeight; } }
+}
+$('notice').addEventListener('click', () => { if (F.isPhone() && phFight() && $('notice').textContent) openSheet(`<p class="ph-note">${V.esc($('notice').textContent)}</p>`, { height: 'peek', label: 'Notice', id: 'notice' }); }); // one line over the ticker: a tap shows it whole
+$('ph-ticker').addEventListener('click', () => {
+  const b = openSheet(`<ol class="log-lines ph-log">${V.logMarkup(shown())}</ol>`, { height: 'half', label: 'Combat log', id: 'log' });
+  requestAnimationFrame(() => { b.scrollTop = b.scrollHeight; }); // the latest line in view
+});
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('#tray [data-phone]');
+  if (!b) return;
+  if (b.dataset.phone === 'menu') openSheet(phMenuMarkup(), { height: 'half', label: 'Menu', id: 'menu' });
+  if (b.dataset.phone === 'keys') openSheet(`<div class="tray ph-more-keys">${[...$('tray').querySelectorAll(':scope > .ability')].slice(PH_KEYS).map((k) => k.outerHTML).join('')}</div>`, { height: 'peek', label: 'More keys', id: 'keys' });
+});
+// The virus's window (docs/phone-plan.md P2): home at the HUD's top right. In its half it steps out over the board to
+// the right of the Now column, where no timeline chip sits, plays its strike there and goes home; its slot shows a
+// dashed outline meanwhile. No room clear of chips, or Motion off: it stays home.
+let phOut = null;
+function phStage() {
+  const st = document.querySelector('#combat-view .stage');
+  if (!st) return;
+  const out = F.isPhone() && phFight() && active(campaign) && V.phaseOf(campaign) === 'them' && canMove();
+  if (!out) { if (phOut) { phOut = null; st.style.removeProperty('--ph-dx'); st.style.removeProperty('--ph-dy'); document.body.classList.remove('ph-out'); } return; }
+  if (phOut === campaign.encounter.cycle) return;
+  phOut = campaign.encounter.cycle;
+  const now = document.querySelector('#board .bhead .bnow'), bd = $('board');
+  if (!now || !bd) return;
+  const home = st.getBoundingClientRect(), left = now.getBoundingClientRect().right + 4, right = bd.getBoundingClientRect().right - 4;
+  const busy = [...bd.querySelectorAll('.intent, .tell, .hpips')].map((c) => c.getBoundingClientRect()).filter((r) => r.right > left && r.width);
+  const top0 = now.getBoundingClientRect().bottom + 4, bottom = bd.getBoundingClientRect().bottom - 4, need = Math.min(home.height, right - left);
+  // The first clear stretch tall enough, top down.
+  let y = top0;
+  for (const r of busy.sort((a, b) => a.top - b.top)) { if (r.top - y >= need) break; y = Math.max(y, r.bottom + 4); }
+  if (y + need > bottom || right - left < need * 0.8) { phOut = campaign.encounter.cycle; return; }
+  st.style.setProperty('--ph-dx', `${Math.round(left + (right - left - home.width) / 2 - home.left)}px`);
+  st.style.setProperty('--ph-dy', `${Math.round(y - home.top)}px`);
+  document.body.classList.add('ph-out');
+}
 // The More sheet's rows: a page, your card (data-finger, opened by its own handler), People, the command line.
 document.addEventListener('click', (e) => {
   const b = e.target.closest('#sheet [data-module], #sheet [data-phone], #sheet [data-finger]');
@@ -3185,6 +3245,8 @@ document.addEventListener('click', (e) => {
   if (b.dataset.module) go(b.dataset.module);
   if (b.dataset.phone === 'prompt') phPrompt(true);
   if (b.dataset.phone === 'people') $('people').click();
+  if (b.dataset.phone === 'more') phMoreOpen(true);
+  if (b.dataset.phone === 'comms') setComms(true);
 }, true);
 // Tap for info: on a phone a tap on anything with a rule (a title or data-tt) that isn't a control shows its card in a
 // peek sheet. A long press on a control shows its card without firing it. The fight's board, HUD and level-up keep

@@ -2563,6 +2563,11 @@ test, the wire, fight reports and the log (`logs` opens it).
   the focus. A tap on anything with a rule shows its card in a sheet; a long press on a button shows its card without
   firing it. Under 480 px the board shows Now, +1 and +2 and the tray is three wide: tap a skill to pick it, tap again
   to fire.
+- **A fight on a phone** fits one screen: the virus's bar over yours (a crewmate as a thin violet line under it), the
+  virus's window top right, the board in the height left, the log's latest line over the tray (a tap opens the log),
+  and the tray in two rows of four. The column at the row's end is the menu key (the pager's lamp on it): the pages,
+  the pager and the command line. Past eight keys, **+n** under it opens the rest. In its half the virus's window steps
+  out over the board where no chip sits, and goes home after. On its side the board takes the left with +3.
 
 ### Screen effects
 

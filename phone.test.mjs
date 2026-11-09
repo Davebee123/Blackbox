@@ -80,3 +80,33 @@ test('the desktop-only modules load on demand: the window, the bench, the fx pla
   assert.ok(!/matchMedia\('\(max-width: 900px\)'\)/.test(app)); // the one answer is form.mjs
   assert.equal(pageSave('?bench=phone', 'c').bench, 'phone'); // bench.mjs still re-exports the save keys
 });
+
+// P2: the fight on a phone.
+import { fresh, selectEncounter } from './dist/combat.mjs';
+import { play } from './dist/run.mjs';
+import { crewLineMarkup } from './dist/view.mjs';
+
+test('the fight HUD: a crewmate is a thin violet line with its card; none when solo', () => {
+  const s = fresh();
+  assert.equal(crewLineMarkup(s), '');
+  s.hackers[s.loadout.archetype].level = 12; // the sim crew comes at level 5
+  play(s, 'crew sim bastion');
+  selectEncounter(s, 'random', 2, { level: 1, family: 'ransomware', mutation: null });
+  const html = crewLineMarkup(s);
+  assert.equal((html.match(/class="ph-mate/g) || []).length, 1);
+  assert.match(html, /title="[^"]+: Bastion, Lv \d+\.\n(Signal \d+\/\d+\.|Down\.)"/);
+  assert.match(html, /<i style="width:\d+(\.\d+)?%"><\/i>/);
+});
+
+test('the fight tray: the menu key and +n are tap paths; no prompt key, no #net line', () => {
+  const app = readFileSync(new URL('./dist/app.js', import.meta.url), 'utf8');
+  const menu = app.slice(app.indexOf('function phMenuKey('), app.indexOf('function phMenuMarkup('));
+  assert.match(menu, /data-phone="menu"/);
+  assert.match(menu, /data-phone="keys"/);
+  assert.match(app, /const PH_KEYS = 8;/);
+  const css = readFileSync(new URL('./dist/phone.css', import.meta.url), 'utf8');
+  assert.match(css, /body\.ph-fight #tray > :is\(\.ability\.ph-over, \.tk-open\) \{ display: none; \}/); // past eight under +n; the Toolkit's key out
+  assert.match(css, /grid-template-columns: repeat\(4, minmax\(0, 1fr\)\) 44px/); // two rows of four, the menu column
+  assert.match(css, /body\.ph-fight \.ph-tabs:not\(\.ph-in-sheet\) \{ display: none; \}/); // the tab bar behind the menu key
+  assert.match(css, /\.command-dock :is\(\.net-line, \.channel\) \{ display: none; \}/);
+});

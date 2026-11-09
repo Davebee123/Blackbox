@@ -208,7 +208,7 @@ comment saying what it does.
 | `dist/terminal.mjs`, `dist/terminal-view.mjs`, `dist/terminal.css`, `dist/boots.mjs` | Terminal cosmetics on Rig → **Terminal**: boot looks (POST, Corrupted…), prompts, cursors. |
 | `dist/recap.mjs` | The death recap on the Disconnected card. |
 | `dist/uiscale.mjs` | UI scale: the whole screen drawn larger or smaller. |
-| `dist/form.mjs`, `dist/phone-shell.mjs`, `dist/sheet.mjs`, `dist/phone.css` | The phone: the one "is this a phone" answer (`<html data-form>`), its tab bar and More, the one bottom sheet, every phone rule (docs/phone-plan.md). |
+| `dist/form.mjs`, `dist/phone-shell.mjs`, `dist/sheet.mjs`, `dist/phone.css` | The phone: the one "is this a phone" answer (`<html data-form>`), its tab bar and More, the one bottom sheet, every phone rule, the fight on one screen (docs/phone-plan.md). |
 
 ### Co-op
 
