@@ -20,7 +20,7 @@
 //           in three small beats.
 // Nothing here is in a fight yet: the ability effects playtest (?playtest=fx) plays it, and renderBoard() bounces it.
 
-export const STYLES = { a: 'Hardware', b: 'Weighty', c: 'Digital', b1: 'Cinematic', b2: 'Electric', b3: 'Heavy', b4: 'Seismic', b5: 'Machine', b6: 'Glitch' };
+export const STYLES = { a: 'Hardware', b: 'Weighty', c: 'Digital', b1: 'Cinematic', b2: 'Electric', b3: 'Heavy', b4: 'Seismic', b5: 'Machine', b6: 'Glitch', b7: 'Echo', b8: 'Cavern' };
 export const KEYS = ['bash', 'ban', 'poke', 'ping'];
 // Levels (dB), so every style is heard at today's loudness: a medium hit at about −24 LUFS (momentary max), a crit
 // about 2 dB over it, a hit on ◆ near −27.5 and a miss near −29.5 (today's hit plays at about −23). level: the whole
@@ -35,6 +35,8 @@ export const TRIM = {
   b4: { bash: { level: -11, crit: -2.3, chit: 5.8, miss: 10 }, ban: { level: -11.8, crit: -2.3, chit: 5.9, miss: 17 }, poke: { level: -6.8, crit: -2.3, chit: 2.8, miss: 10.9 }, ping: { level: -8.4, crit: -1.9, chit: 3.7, miss: 4.4 } },
   b5: { bash: { level: 0.9, crit: -3.3, chit: 2, miss: 3.4 }, ban: { level: -0.7, crit: -2.1, chit: 5.1, miss: 7.7 }, poke: { level: 3, crit: -4.8, chit: 1.1, miss: 3.5 }, ping: { level: -1.5, crit: -2.2, chit: 5, miss: 5 } },
   b6: { bash: { level: -0.4, crit: -5, chit: 3.9, miss: 4.5 }, ban: { level: -2.3, crit: -3.4, chit: 7.4, miss: 9.7 }, poke: { level: 0.9, crit: -5.9, chit: 2.9, miss: 5.6 }, ping: { level: -3.2, crit: -2.9, chit: 7.4, miss: 6.7 } },
+  b7: { bash: { level: -3.7, crit: -2.7, chit: 0.5, miss: 2.8 }, ban: { level: -5.6, crit: -1.2, chit: 4, miss: 8.3 }, poke: { level: -2.8, crit: -3.1, chit: 1.1, miss: 3.5 }, ping: { level: -5.3, crit: -1.9, chit: 3.5, miss: 3.7 } },
+  b8: { bash: { level: -5.9, crit: -2.2, chit: 0.7, miss: 2.4 }, ban: { level: -8.7, crit: 0.9, chit: -1.6, miss: 8.3 }, poke: { level: -5.7, crit: -1.8, chit: 0.3, miss: 3.4 }, ping: { level: -8.3, crit: -0.3, chit: 2.7, miss: 3.7 } },
   c: { bash: { level: 4.8, crit: -0.4, chit: 2.3, miss: 1 }, ban: { level: 3.3, crit: 0, chit: 4.3, miss: 2 }, poke: { level: 10.2, crit: -2.1, chit: 0.6, miss: -1 }, ping: { level: 10.4, crit: -0.7, chit: -0.9, miss: -2 } },
 };
 // Each key 1's class: the Breaker's sound is cut dead after its hit-stop (GATE s after it).
@@ -866,9 +868,15 @@ SOUNDS.b4 = heavy(1);
 // ===== Machine and Glitch (round 1d): today's hit (sound.mjs digitalHit: a crushed impact, a cascade of blips, an FM
 // growl, pings through crushed echoes) taken apart and timed to each effect, with a boom under it. L 0: Machine.
 // L 1: Glitch, the hit stuttering like a stuck buffer, lower and heavier. =====
-function core(L) {
+// L: lower and stuttering (Glitch). W: wetter, its echoes longer and louder with a far repeat ringing into the room.
+function core(L, W = 0) {
   const low = 1 - 0.15 * L;
-  const bus = (K, o, e) => { const fx = K.echo(o.dry, e); return { fx, b: K.crush(fx, 12, 2.8, 0.5) }; };
+  const bus = (K, o, e) => {
+    const { time = 0.09, fb = 0.4, wet = 0.4, lp = 2600 } = e;
+    const fx = K.echo(o.dry, { time: time * (1 + 0.2 * W), fb: Math.min(0.8, fb + 0.12 * W), wet: wet + 0.3 * W, lp });
+    if (W) fx.connect(K.echo(K.g(0.4 * W, o.room), { time: time * 2.6, fb: 0.4 + 0.1 * W, wet: 1, lp: 1700 })); // the far repeat
+    return { fx, b: K.crush(fx, 12, 2.8, 0.5) };
+  };
   const weight = (K, o, t, big, crit, { f0 = 105, f1 = 30, d = 0.3, drop = 0.5 } = {}) => {
     K.boom(K.g(0.55 + 0.3 * L, o.dry), t, { f0, f1: f1 * low, glide: d * 0.45, d: d * (1 + 0.5 * big), peak: 0.6 + 0.4 * big });
     if (crit || big > drop) K.S(o.dry, t, 'subdrop', { gain: (crit ? 0.55 : 0.3) * (1 + 0.5 * L), rate: low, jitter: 0 });
@@ -986,6 +994,8 @@ function core(L) {
 }
 SOUNDS.b5 = core(0);
 SOUNDS.b6 = core(1);
+SOUNDS.b7 = core(1, 1.5);
+SOUNDS.b8 = core(1, 2.5);
 
 // How the hit's size and result read (plan: the effect's timing in ms, from abilityfx.mjs play()).
 export function timingOf(t, plan, { result = 'hit', power = 0.3 } = {}) {

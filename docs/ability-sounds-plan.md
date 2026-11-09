@@ -40,8 +40,10 @@ Operator's comes in three beats.
    fluffy; the designer wants round 1's bass, and more of it.
    **1c**: round 1's Weighty with far more low end: B3 Heavy and B4 Seismic. Not good enough: the designer wants it
    glitchier, with today's hit as the compass.
-   **1d** (built, waiting on the pick): today's hit (`sound.mjs` digitalHit) taken apart and timed to the effect, a
-   boom under it: B5 Machine and B6 Glitch (lower, the hit stuttering like a stuck buffer).
+   **1d**: today's hit (`sound.mjs` digitalHit) taken apart and timed to the effect, a boom under it: B5 Machine and
+   B6 Glitch (lower, the hit stuttering like a stuck buffer). Glitch is the better; it wants more reverb and echo.
+   **1e** (built, waiting on the pick): Glitch with longer, louder echoes, a far repeat and a hall: B7 Echo and
+   B8 Cavern.
 2. **Every ability**: the generic layers in the picked style, all 110 rows, and overrides for Overload, Detonate,
    Firewall, Purge, Crack, Quarantine, Botnet, Deploy, Inject, Flood, Shatter and Failover.
 3. **Tiers and finishers**: the mastery layers, the 13 tier overrides, the 12 finishers.
