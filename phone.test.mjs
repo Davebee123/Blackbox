@@ -109,4 +109,6 @@ test('the fight tray: the menu key and +n are tap paths; no prompt key, no #net 
   assert.match(css, /grid-template-columns: repeat\(4, minmax\(0, 1fr\)\) 44px/); // two rows of four, the menu column
   assert.match(css, /body\.ph-fight \.ph-tabs:not\(\.ph-in-sheet\) \{ display: none; \}/); // the tab bar behind the menu key
   assert.match(css, /\.command-dock :is\(\.net-line, \.channel\) \{ display: none; \}/);
+  assert.match(css, /body\.ph-fight #board \.brow\.byou \{ display: none; \}/); // no You row on a phone
+  assert.match(app, /function phPicked\(\)/); // the picked key outlined instead
 });
