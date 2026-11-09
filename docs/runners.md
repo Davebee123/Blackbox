@@ -63,9 +63,9 @@ Rejected: a pip under each server per runner (*Pips*), and a count tag per serve
 - **The runner card** (a Rail row opens it beside their diamond): *Runner · faction*, the handle, class glyph, class,
   level and a temperament tag; rows for Standing, Now (→ a server and its time) and After (the trade in words over a
   floor strip, lit up to their nerve, the trade's floor marked); their latest line; **Hire**.
-- **The crew card** (Hire turns the runner card into it): For (the server, its floor marked on the strip); Pay as two
-  lamp toggles, a credits fee paid when you connect or a 20% cut of the credits the run pays (items and code stay
-  yours); the bar, picked from their presets as chips over the eight named keys each one makes (the *Presets*).
+- **The crew card** (Hire turns the runner card into it): For (the server, its floor marked on the strip); Pay as
+  two icons, both owed (MOO2's leaders): a credits fee when you connect, and a cut of the credits the run pays (items
+  and code stay yours); the bar, picked from their presets as chips over the eight named keys each one makes (the *Presets*).
   Temperament (Careful, Steady, Bold) steers the planner (Starsector's officers); its tooltip says how. They level
   with you. Hired, a runner is crew: violet, like every crewmate.
 - **Busy:** Now reads Busy with the time they're free; Hire is off, the clock on it.
@@ -74,7 +74,7 @@ Rejected: a pip under each server per runner (*Pips*), and a count tag per serve
 - **Consortium:** runners you're close to, merging with you. A friend joins it as one more member.
 
 Rejected: standing as pips like a faction's rep, or as the steps each tier opens; setting a runner's bar in their own
-Toolkit, or key by key from what they know.
+Toolkit, or key by key from what they know; paying a fee or a cut as a choice.
 
 ## Friends
 
