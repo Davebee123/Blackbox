@@ -75,8 +75,7 @@ export const TRAVEL = { perPx: 0.75, min: 160, max: 340, near: 24 };
 // nothing for a light hit or a miss, up to 75 for a big one, 52 on ◆, 105 for a crit. HOLD: a crit's swing or punch
 // draws back that long first.
 export const CONTACT = new Set(['swing', 'punch', 'dart', 'fly', 'bolt', 'all', 'wave']);
-// The motions that play where they land and make contact there (a mark comes down, a clamp shuts, a cut, a blast; a
-// burn being set catches where it lands): the same rules.
+// The motions that play where they land and make contact there (a mark comes down, a clamp shuts): the same rules.
 export const LANDS = new Set(['mark', 'clamp', 'slash', 'blast']);
 export const HOLD = 120;
 // The motions that draw back (a crit; every Breaker's) before they strike.
@@ -857,7 +856,7 @@ function warp(el, at, stop) {
 // 'crew'), rnd, origin ('key' | 'bar' | 'here'), marks (the statuses the hit cashed in: exposed, quarantined, hooked,
 // tagged), cadence (its class's rhythm: CADENCE), left (a burn's tick: the ticks after this one). els: the pieces (on
 // the page as spans); light: what is drawn in light (abilitylight.mjs), in tone.
-export function layout(R, geo, { lvl = 'full', power = 0.3, crit = false, result = 'hit', kind = 'you', rnd = Math.random, origin = 'bar', marks = [], cadence: cad = null, left = null, broke = null, results = null } = {}) {
+export function layout(R, geo, { lvl = 'full', power = 0.3, crit = false, result = 'hit', kind = 'you', rnd = Math.random, origin = 'bar', marks = [], cadence: cad = null, left = null, broke = null, results = null, brokeOn = null } = {}) {
   if (!R || !lvl || !geo) return null;
   if (cad?.wind && R.motion === 'mark' && R.on !== 'you') R = { ...R, drop: true }; // the Breaker's marks slam down
   if (crit) result = 'crit';
@@ -945,6 +944,39 @@ export function layout(R, geo, { lvl = 'full', power = 0.3, crit = false, result
   if (crit && R.critBack && at && P.from === 'key') {
     const t1 = tc + 20, t2 = t1 + Math.max(140, RT(P.T));
     light.push({ kind: 'comet', a: at, b: P.O, lift: -16, t1, t2, R0: 3.2, tone: 'crit' }, { kind: 'glint', x: P.O.x, y: P.O.y, t0: t2 - 10, s: 13, dur: 220, tone: 'crit' });
+  }
+  // An ability's own rule, shown.
+  // spread: it carries on from the part to every other (Shatter's shards in steel, Chain Reaction, Wormable): a spark
+  // jumps to each, nearest first, a beat apart, a small flash where it lands. 'burns' (Propagate): each part catches
+  // fire as its spark lands.
+  if (R.spread && at && !miss) {
+    const others = P.parts.filter((q) => Math.hypot(q.M.x - at.x, q.M.y - at.y) > 8).sort((a, b) => Math.hypot(a.M.x - at.x, a.M.y - at.y) - Math.hypot(b.M.x - at.x, b.M.y - at.y)).slice(0, 5);
+    others.forEach((q, k) => {
+      const t1 = tc + 90 + k * 80, t2 = t1 + 130, tone = R.spread === 'steel' ? 'steel' : undefined;
+      light.push({ kind: 'comet', a: at, b: q.M, lift: 18, t1, t2, R0: 2.4, tone }, { kind: 'flash', x: q.M.x, y: q.M.y, t0: t2, R: 11, dur: 170, tone }, { kind: 'ring', x: q.M.x, y: q.M.y, t0: t2, rx: 12, ry: 8, dur: 220, w: 1, tone });
+      if (R.spread === 'burns') for (const b of R.burst || []) throwIt(b, countOf(b, { lvl, power, crit }), R, { ...P, S: q.S, M: q.M, bar: q.bar, row: q.row, floor: q.name.b + 1 }, t2 * SPEED);
+    });
+  }
+  // breaksAll: it breaks up to that many ◆ on every part (Fork Bomb; brokeOn: how many each part lost, by id): each
+  // part's ◆ take their steel strikes as its copy arrives, a beat apart.
+  if (R.breaksAll && R.motion === 'all') P.parts.slice(0, 6).forEach((q, i) => {
+    const C2 = q.chits, res = resultOn(c, q);
+    if (!C2?.n || res === 'miss') return;
+    const nb = Math.min(brokeOn ? brokeOn[q.id] || 0 : R.breaksAll, C2.n), f0 = Math.max(0, Math.min(C2.i, C2.n - nb)), t0 = RT(i * 40 + Math.max(1, travelOf(P.O, q.M)));
+    for (let k = 0; k < nb; k++) {
+      const x = C2.l + ((f0 + k + 0.5) * (C2.r - C2.l)) / C2.n;
+      light.push({ kind: 'flash', x, y: C2.y, t0: t0 + k * 60, R: 10, dur: 180, tone: 'steel', contact: true }, { kind: 'sparks', list: throwN(rnd, 4, { x, y: C2.y }, t0 + k * 60, { a0: -Math.PI / 2, spread: Math.PI * 0.7, v: [120, 260], g: 1300, drag: 3, life: [150, 250] }), w: 1, tone: 'steel' });
+    }
+  });
+  // cuts: it stops the part's attack: a line of light pulled tight through its attack chip, held a moment.
+  if (R.cuts && P.chip && !miss) { const y = (P.chip.t + P.chip.b) / 2; light.push({ kind: 'tether', from: { x: P.chip.l - 4, y: y + 3 }, to: { x: P.chip.r + 4, y: y - 3 }, t0: tc + 60, dur: 520 }); }
+  // heals: your bar takes it: a light runs along your bar from its left end (a hit that heals, Reclaim: from the part
+  // back to your bar first).
+  const yb = geo.mine?.bar;
+  if (R.heals && yb && !miss) {
+    const back = R.on !== 'you' && at, t1 = back ? tc + 80 : tc + 40, t2 = t1 + (back ? 220 : 0), y = (yb.t + yb.b) / 2;
+    if (back) light.push({ kind: 'comet', a: at, b: { x: yb.l + 20, y }, lift: 30, t1, t2, R0: 3 });
+    light.push({ kind: 'comet', a: { x: yb.l, y }, b: { x: yb.l + (yb.r - yb.l) * 0.7, y }, lift: 0, t1: t2, t2: t2 + 260, R0: 3 }, { kind: 'glint', x: yb.l + (yb.r - yb.l) * 0.7, y, t0: t2 + 240, s: 10, dur: 180 });
   }
   // What it does to the part's attack (Rate Limit throttles it): brackets snap onto its attack chip.
   if (R.onto === 'chip' && P.chip && !miss) light.push({ kind: 'brackets', box: P.chip, t0: tc + 110, dur: 460 });
@@ -1190,13 +1222,13 @@ export function createAbilityFx(board, { canMove = () => true, level = () => 'fu
   // instead), noKey (as if its key weren't on screen: the playtest's preview of the fallback), landIn (ms from now its
   // number shows: it lands then), onImpact, tier (its mastery tier: tierRecipe).
   // Its plan (layout) on the page as it is now, without playing it: when it would land (app.js waits its numbers for it).
-  function plan(key, row, { power = 0.3, crit = false, result = 'hit', kind = 'you', origin = 'key', ability = null, who = null, keyEl: kEl = null, noKey = false, lvl: force, tier = 1, marks = [], left = null, broke = null, results = null } = {}) {
+  function plan(key, row, { power = 0.3, crit = false, result = 'hit', kind = 'you', origin = 'key', ability = null, who = null, keyEl: kEl = null, noKey = false, lvl: force, tier = 1, marks = [], left = null, broke = null, results = null, brokeOn = null } = {}) {
     const R = tierRecipe(key, tier);
     const lvl = force || levelOf({ level: level(), motion: canMove() });
     if (!R || !lvl) return null;
     if (R.on !== 'you' && (!row?.isConnected || !inSight(row))) return null;
     const geo = measure(R.on === 'you' ? null : row, { ability, key: kEl, noKey, who });
-    const out = layout(R, geo, { lvl, power, crit, result, kind, origin, marks, left, broke, results, cadence: cadenceOf(key) });
+    const out = layout(R, geo, { lvl, power, crit, result, kind, origin, marks, left, broke, results, brokeOn, cadence: cadenceOf(key) });
     return out && Object.assign(out, { geo });
   }
   function play(key, row, { landIn = null, onImpact = null, ...opts } = {}) {

@@ -312,11 +312,12 @@ function afxCommands(events) {
     const marks = [...new Set(mine.flatMap((x) => x.marks || []))];
     // On every part (Fork Bomb, Failover…): how it went on each; it missed only if it missed them all.
     const results = R.motion === 'all' ? afxResults(after) : null;
+    const brokeOn = R.motion === 'all' && after.some((x) => x.broke != null) ? after.reduce((m, x) => (x.broke ? { ...m, [x.target]: (m[x.target] || 0) + x.broke } : m), {}) : null; // ◆ each part lost (Fork Bomb)
     const broke = mine.some((x) => x.broke != null) ? mine.reduce((n, x) => n + (x.broke || 0), 0) : null; // ◆ it broke (Crack)
     if (tgt && after.some((x) => x.type === 'damage' && x.via === 'Hook' && x.target === tgt)) marks.push('hooked');
     const pm = (tgt && part(campaign, tgt)?.max) || 50, dealt = mine.reduce((n, x) => n + (x.type === 'damage' ? x.amount || 0 : 0), 0);
     const origin = originOf(e); // its key in the tray, however it was fired (your bar when the key isn't on screen); a crewmate's: their bar
-    out.push({ e, key, R, tgt, mine, result: results && Object.keys(results).length ? allResult(results) : result, results, marks, broke, origin, landEvt: mine[0] || after.find((x) => x.target === tgt) || e, power: dealt ? Math.min(1, dealt / pm) : 0.3 });
+    out.push({ e, key, R, tgt, mine, result: results && Object.keys(results).length ? allResult(results) : result, results, brokeOn, marks, broke, origin, landEvt: mine[0] || after.find((x) => x.target === tgt) || e, power: dealt ? Math.min(1, dealt / pm) : 0.3 });
   }
   return out;
 }
@@ -327,7 +328,7 @@ function afxLead(events) {
   if (module !== 'combat' || fxLevel() === 'minimal' || !afxLevel({ level: fxLevel(), motion: canMove() })) return 0;
   const c = afxCommands(events)[0];
   if (!c) return 0;
-  const plan = abilityfx.plan(c.key, afxRow(c), { origin: c.origin, ability: c.e.ability, who: c.e.who || null, kind: c.e.who ? 'crew' : 'you', tier: afxTier(c.e, c.e.ability), power: c.power, crit: c.result === 'crit', result: c.result, results: c.results, marks: c.marks, broke: c.broke }); // a crit's swing draws back first: its numbers wait for that too
+  const plan = abilityfx.plan(c.key, afxRow(c), { origin: c.origin, ability: c.e.ability, who: c.e.who || null, kind: c.e.who ? 'crew' : 'you', tier: afxTier(c.e, c.e.ability), power: c.power, crit: c.result === 'crit', result: c.result, results: c.results, brokeOn: c.brokeOn, marks: c.marks, broke: c.broke }); // a crit's swing draws back first: its numbers wait for that too
   return plan ? Math.min(600, Math.round(plan.impact)) : 0;
 }
 function strikes(events, delayOf = () => 0) {
@@ -351,7 +352,7 @@ function strikes(events, delayOf = () => 0) {
     if (tgt) taken.set((e.who || 'you') + '>' + tgt, strike);
     pendingStrikes.push(() => {
       const row = afxRow(c);
-      const played = abilityfx.play(key, row, { power: c.power, crit: result === 'crit', result, results: c.results, marks, broke: c.broke, kind: e.who ? 'crew' : 'you', origin: c.origin, ability: e.ability, who: e.who || null, landIn: land, tier: afxTier(e, e.ability), onImpact: row ? () => hitfx.jolt(row, result) : null });
+      const played = abilityfx.play(key, row, { power: c.power, crit: result === 'crit', result, results: c.results, brokeOn: c.brokeOn, marks, broke: c.broke, kind: e.who ? 'crew' : 'you', origin: c.origin, ability: e.ability, who: e.who || null, landIn: land, tier: afxTier(e, e.ability), onImpact: row ? () => hitfx.jolt(row, result) : null });
       if (!played && strike) later(land, strike); // no room for it: the strike, on the number's beat
     });
   }
