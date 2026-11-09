@@ -42,8 +42,9 @@ Operator's comes in three beats.
    glitchier, with today's hit as the compass.
    **1d**: today's hit (`sound.mjs` digitalHit) taken apart and timed to the effect, a boom under it: B5 Machine and
    B6 Glitch (lower, the hit stuttering like a stuck buffer). Glitch is the better; it wants more reverb and echo.
-   **1e** (built, waiting on the pick): Glitch with longer, louder echoes, a far repeat and a hall: B7 Echo and
-   B8 Cavern.
+   **1e**: Glitch with longer, louder echoes, a far repeat and a hall: B7 Echo and B8 Cavern. Echo is very close;
+   slightly less of both.
+   **1f** (built, waiting on the pick): B9 Soft echo, Echo eased a third of the way back to Glitch.
 2. **Every ability**: the generic layers in the picked style, all 110 rows, and overrides for Overload, Detonate,
    Firewall, Purge, Crack, Quarantine, Botnet, Deploy, Inject, Flood, Shatter and Failover.
 3. **Tiers and finishers**: the mastery layers, the 13 tier overrides, the 12 finishers.
