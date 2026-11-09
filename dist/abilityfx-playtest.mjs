@@ -1,12 +1,13 @@
 // The ability effects playtest (?playtest=fx): a paused fight with a few parts, and a panel of buttons that fire every
 // effect in abilityfx.mjs's table on a part, grouped by class and subclass, at each Screen effects level, with Motion on
-// or off, as a plain hit, a crit or a hit on ◆, small or big, from its key in the tray (or, to preview the fallback, as
+// or off, as a plain hit, a crit, a hit on ◆ or a miss, small or big, from its key in the tray (or, to preview the fallback, as
 // if its key weren't on screen: from your bar). For reviewing the look without a real fight. Developer only: nothing here is saved (a playtest never is), and the panel sits beside
 // the board, never on it. &cls= picks the class whose tray shows (its keys are where a key's effect starts; an ability
 // that isn't on this tray starts from its first key instead, and the panel says so). &crew=<class> adds a crewmate, and
 // the panel can fire as them: from their bar in the crew window, in their violet. Mastery picks the tier an effect
 // plays at (1–3, as mastery.mjs unlocks them in play; a crewmate's is always 1), and Break finishers fires each class's
-// finisher (and each subclass's variation) on the part, as the fight-winning break plays it.
+// finisher (and each subclass's variation) on the part, as the fight-winning break plays it. Status puts a status on the
+// part (its mark shows) for the hit to cash in: Exposed on a crit, Quarantined, Hooked, Tagged on a burn's tick.
 
 import { RECIPES, FINISHERS, SUB_FINISHERS, finisherOf } from './abilityfx.mjs';
 import { SPIKE, ABILITIES, ARCHETYPES, SUBS } from './data.mjs';
@@ -29,12 +30,13 @@ export function groupsOf() {
 }
 
 // api: parts() → [{ id, name }]; level() / setLevel(level) (the Screen effects level: off, subtle, medium, bold);
-// motion() / setMotion(on); mates() → crewmates' handles; fire(key, partId, { power, crit, result, hidden, who, tier })
+// motion() / setMotion(on); mates() → crewmates' handles; mark(partId, status) puts a status on the part ('' clears);
+// fire(key, partId, { power, crit, result, hidden, who, tier, marks })
 // → 'fx' | 'stand-in' | 'plain' | 'none'
 // (what played: 'stand-in' when a key's effect started from another key); plain(partId, { result }) the plain strike;
 // finish(cls, sub, partId) → 'fx' | 'plain' | 'none' (a break finisher).
 export function mountFxPlaytest(api) {
-  const ui = { target: null, hit: 'hit', power: 0.3, key: 'shown', who: '', said: '', tier: 1 };
+  const ui = { target: null, hit: 'hit', power: 0.3, key: 'shown', who: '', said: '', tier: 1, mark: '' };
   const panel = document.createElement('aside');
   panel.id = 'fx-playtest';
   panel.setAttribute('aria-label', 'Ability effects playtest');
@@ -50,7 +52,8 @@ export function mountFxPlaytest(api) {
       ${seg('Its key', [['shown', 'on screen'], ['hidden', 'not on screen (from your bar)']], ui.key)}
       ${(api.mates?.() || []).length ? seg('Fired by', [['', 'you'], ...api.mates().map((w) => [w, `${w} (crew)`])], ui.who) : ''}
       ${seg('Mastery', [[1, 'tier 1'], [2, 'tier 2'], [3, 'tier 3']], ui.tier)}
-      ${seg('Hit', [['hit', 'hit'], ['crit', 'crit'], ['chit', 'on ◆']], ui.hit)}
+      ${seg('Hit', [['hit', 'hit'], ['crit', 'crit'], ['chit', 'on ◆'], ['miss', 'miss']], ui.hit)}
+      ${seg('Status', [['', 'none'], ['exposed', 'Exposed'], ['quarantined', 'Quarantined'], ['hooked', 'Hooked'], ['tagged', 'Tagged']], ui.mark)}
       ${seg('Size', [['0.15', 'small'], ['0.4', 'medium'], ['0.9', 'big']], ui.power)}
       ${seg('Part', parts.map((p) => [p.id, p.name]), ui.target)}
       <p class="fxp-said" role="status">${esc(ui.said)}</p>
@@ -61,7 +64,7 @@ export function mountFxPlaytest(api) {
   }
   const say = (t) => { ui.said = t; const p = panel.querySelector('.fxp-said'); if (p) p.textContent = t; };
   function fire(key) {
-    const o = { power: ui.power, crit: ui.hit === 'crit', result: ui.hit, hidden: ui.key === 'hidden', who: ui.who || null, tier: ui.tier };
+    const o = { power: ui.power, crit: ui.hit === 'crit', result: ui.hit, hidden: ui.key === 'hidden', who: ui.who || null, tier: ui.tier, marks: ui.mark ? [ui.mark] : [] };
     if (!key) { api.plain(ui.target, o); return say('No recipe: the plain hit effect (hitfx.mjs).'); }
     const what = api.fire(key, ui.target, o), name = RECIPES[key].label;
     const at = ui.tier > 1 && !ui.who ? ` at tier ${ui.tier}` : '';
@@ -80,6 +83,7 @@ export function mountFxPlaytest(api) {
       else if (k === 'Fired by') ui.who = v;
       else if (k === 'Mastery') ui.tier = Number(v);
       else if (k === 'Hit') ui.hit = v;
+      else if (k === 'Status') { ui.mark = v; api.mark?.(ui.target, v); }
       else if (k === 'Size') ui.power = Number(v);
       else if (k === 'Part') ui.target = v;
       return draw();

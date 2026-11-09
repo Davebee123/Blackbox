@@ -114,12 +114,14 @@ test('every rule holds at every tier: gone by CAP and unseen, never resting over
   assert.ok(checked > 100000 && still > 1000, `${checked} points, ${still} at rest`);
 });
 
+// How much an effect throws: its pieces, and its light (each particle and crack counted).
+const size = (plan) => plan.els.length + plan.light.reduce((n, x) => n + (x.list ? x.list.length : x.net ? x.net.length : 1), 0);
 test('each tier is richer than the one below on bold, still lighter on calm, and lands on the part as tier 1 does', () => {
   for (const [name, board] of [['roomy', roomy()], ['dense', dense()]]) for (let i = 0; i < board.parts.length; i++) {
     const g = geoOf(board, i), part = board.parts[i];
     for (const k of KEYS) {
       const o = { origin: k.endsWith(':tick') ? 'here' : 'key' };
-      const count = (t, lvl) => layout(tierRecipe(k, t), g, { lvl, rnd: seeded(3), ...o }).els.length;
+      const count = (t, lvl) => size(layout(tierRecipe(k, t), g, { lvl, rnd: seeded(3), ...o }));
       assert.ok(count(1, 'full') < count(2, 'full') && count(2, 'full') < count(3, 'full'), `${name} ${k}: ${count(1, 'full')} < ${count(2, 'full')} < ${count(3, 'full')}`);
       for (const t of [2, 3]) assert.ok(count(t, 'calm') <= count(t, 'full'), `${name} ${k} ${t}: calm is lighter`);
       for (const t of [2, 3]) {
@@ -133,14 +135,14 @@ test('each tier is richer than the one below on bold, still lighter on calm, and
 
 test('the hand-made tier 3s: Ban\'s crack, Bash\'s afterimages and quake, Poke\'s three needles, Ping\'s echo off every part, Overload\'s forks', () => {
   const b = dense(), g = geoOf(b, 0), part = b.parts[0], P = (k, t, more = {}) => layout(tierRecipe(k, t), g, { rnd: seeded(4), origin: 'key', ...more });
-  const glint = (plan) => plan.els.filter((el) => /\bglint\b/.test(el.cls));
-  // The lingering mark: under 300 ms, after the impact.
-  for (const k of KEYS) for (const el of glint(P(k, 3, { origin: k.endsWith(':tick') ? 'here' : 'key' }))) assert.ok(el.dur < 300, `${k}: its glint lingers ${el.dur} ms`);
+  const glint = (plan) => plan.light.filter((x) => x.kind === 'glint' && x.t0 > plan.impact);
+  // The lingering mark (in light): under 300 ms, after the impact.
+  for (const k of KEYS) for (const x of glint(P(k, 3, { origin: k.endsWith(':tick') ? 'here' : 'key' }))) assert.ok(x.dur < 300, `${k}: its glint lingers ${x.dur} ms`);
   assert.equal(glint(P('ban', 2)).length, 0, 'tier 2 has none');
   assert.equal(glint(P('ban', 3, { lvl: 'calm' })).length, 0, 'calm: no flourish');
   // Ban: a crack on its bar line, glowing under 300 ms, from its impact; tier 2's heavier hammer slams deeper.
   const ban = P('ban', 3), scar = ban.els.find((el) => /\bscar\b/.test(el.cls));
-  assert.ok(scar && scar.dur < 300 && Math.abs(scar.delay - ban.impact) < 1, 'Ban leaves a crack as it lands');
+  assert.ok(scar && scar.dur < 300 && Math.abs(scar.delay - (ban.impact + ban.stop)) < 1, 'Ban leaves a crack as it lands (after its hit-stop)');
   const sb = boxAt(scar, keyAt(scar, 0.5));
   assert.ok(sb.t < (part.bar.t + part.bar.b) / 2 && sb.b > (part.bar.t + part.bar.b) / 2 && sb.l > part.name.l && sb.r < part.name.r, `on the part's bar line: ${JSON.stringify(sb)}`);
   assert.ok(Math.min(...tierRecipe('ban', 2) && P('ban', 2).els[0].keys.map((k) => k.r)) < Math.min(...P('ban', 1).els[0].keys.map((k) => k.r)), 'a deeper slam');
@@ -149,16 +151,17 @@ test('the hand-made tier 3s: Ban\'s crack, Bash\'s afterimages and quake, Poke\'
   const bash = P('bash', 3), echoes = bash.els.filter((el) => el.text === bash.els[0].text && /\becho\b/.test(el.cls));
   assert.equal(echoes.length, 2, 'two afterimages');
   for (const el of echoes) assert.ok(el.delay + el.dur <= bash.impact + 1, 'gone as it lands');
-  const quake = bash.els.filter((el) => /\bquake\b/.test(el.cls));
-  assert.ok(quake.length >= 4 && quake.every((el) => [...shown(el)].every(({ box }) => box.t < part.bar.b + 6 && box.b > part.bar.t - 6)), 'the quake runs along the bar');
+  const quake = bash.light.filter((x) => x.kind === 'ring' && x.rx > (part.bar.r - part.bar.l) * 0.5);
+  assert.ok(quake.length >= 2 && quake.every((x) => Math.abs(x.y - (part.bar.t + part.bar.b) / 2) < 3), 'the quake runs along the bar');
   // Poke: three needles, a beat apart.
-  const needles = P('poke', 3).els.filter((el) => el.text === RECIPES.poke.art[0]);
+  const needles = P('poke', 3).els.filter((el) => el.text === RECIPES.poke.art[0] && !/\bghost\b|\bhot\b/.test(el.cls));
   const d = needles.map((el) => el.delay);
   assert.ok(needles.length === 3 && d[0] === 0 && d[1] > 0 && Math.abs(d[2] - 2 * d[1]) < 0.01, `three, a beat apart: ${d}`);
   // Ping: rings at every other part on the board, a beat after it lands.
   const ping = P('ping', 3);
-  for (const q of b.parts.slice(1)) assert.ok(ping.els.some((el) => /\bring\b/.test(el.cls) && el.delay > ping.impact + 60 && [...shown(el)].some(({ box }) => overlaps(box, q.name))), `an echo off ${JSON.stringify(q.name)}`);
-  assert.ok(layout(tierRecipe('ping', 3), geoOf(single(), 0), { rnd: seeded(4) }).els.some((el) => /\bring\b/.test(el.cls) && el.delay > 100), 'alone on the board: it echoes off the part itself');
+  const off = (x, q) => Math.abs(x.x - (q.name.l + q.name.r) / 2) < 40 && x.y > q.name.t - 10 && x.y < q.bar.b + 10;
+  for (const q of b.parts.slice(1)) assert.ok(ping.light.some((x) => x.kind === 'ring' && x.t0 > ping.impact + 40 && off(x, q)), `an echo off ${JSON.stringify(q.name)}`);
+  assert.ok(layout(tierRecipe('ping', 3), geoOf(single(), 0), { rnd: seeded(4) }).light.some((x) => x.kind === 'ring' && x.t0 > 100), 'alone on the board: it echoes off the part itself');
   // Overload: forks on to the other parts as the bolt arrives (two short ones with no other part).
   const over = P('overload', 3), forks = over.els.filter((el) => /\bfork\b/.test(el.cls));
   for (const q of b.parts.slice(1)) assert.ok(forks.some((el) => [...shown(el)].some(({ box }) => overlaps(box, { l: q.name.l - 40, t: q.name.t - 20, r: q.name.r + 40, b: q.name.b + 20 }))), 'a fork reaches another part');
@@ -168,7 +171,7 @@ test('the hand-made tier 3s: Ban\'s crack, Bash\'s afterimages and quake, Poke\'
   // Inject: brighter fire (more white-hot flames), and cinders at tier 3; Detonate goes off twice; Botnet's swarm grows.
   const hot = (t) => { const els = P('inject', t).els.filter((el) => /\bflame\b/.test(el.cls)); return els.filter((el) => /\bhot\b/.test(el.cls)).length / els.length; };
   assert.ok(hot(1) < hot(2) && hot(2) < hot(3), `hotter: ${hot(1).toFixed(2)} ${hot(2).toFixed(2)} ${hot(3).toFixed(2)}`);
-  assert.ok(P('inject', 3).els.some((el) => /\bcinder\b/.test(el.cls)));
+  assert.ok(P('inject', 3).light.some((x) => x.kind === 'embers'), 'cinders, in light');
   assert.equal(P('detonate', 3).els.filter((el) => el.frames?.length === 3).length, 2, 'two blasts');
   assert.equal(P('botnet', 3).els.filter((el) => el.frames).length, 5);
   assert.equal(P('deploy', 3).els.filter((el) => el.frames).length, 2);

@@ -172,6 +172,21 @@ test('exploit: +25% crit chance on the part this cycle and next, from anyone', (
   assert.equal(part(s, 'pulse').integrity, 200 - 15 - Math.floor(25 * 1.5), 'Exploit hits for 15, then a sure crit');
 });
 
+test('a hit names the statuses it cashed in, for its effect to show them (abilityfx.mjs): Exposed behind a crit, Quarantined behind any hit', () => {
+  const s = bare(quiet(start()));
+  Object.assign(part(s, 'pulse'), { integrity: 400, max: 400 });
+  act(s, 'exploit pulse');
+  CONFIG.baseCrit = 75;
+  const crit = act(s, 'spike pulse').find((e) => e.type === 'damage' && e.target === 'pulse');
+  CONFIG.baseCrit = 0;
+  assert.ok(crit.crit && crit.marks.includes('exposed'), 'a crit on an Exposed part');
+  part(s, 'pulse').quarantinedUntil = s.encounter.cycle + 1;
+  const held = act(s, 'spike pulse').find((e) => e.type === 'damage' && e.target === 'pulse');
+  assert.ok(!held.crit && held.marks.includes('quarantined') && !held.marks.includes('exposed'), 'no crit: Exposed did nothing');
+  part(s, 'pulse').quarantinedUntil = 0;
+  assert.equal(act(s, 'spike pulse').find((e) => e.type === 'damage' && e.target === 'pulse').marks, undefined, 'none: no marks');
+});
+
 test('veiled parts hide their timers while they still have armor', () => {
   const s = start('ghostroot');
   assert.equal(timersHidden(s, part(s, 'pulse')), true);

@@ -114,15 +114,26 @@ teal, violet or a threat's red.
 - **Hits land on the thing hit** (hitfx.mjs): the part's cell flashes and a burst of 1s and 0s flies out (amber yours,
   violet a crewmate's); a crit bursts gold-white; a hit spent on ◆ floats *◆ ABSORBED* in steel; a miss stamps MISS. A
   status on you shows big, then flies into the Status column. A broken part dissolves into rising 1s and 0s.
-- **Ability effects** (abilityfx.mjs, abilityfx-table.mjs): each ability plays its own short effect, at 1.5× its
-  recipe's speed (none outlasts 0.8 s), in teal (a crit gold-white, a hit on ◆ steel, a crewmate's violet), drawn over
-  the part's name. It starts from its key in the tray however it was fired, or from your bar when the key isn't on
-  screen; a crewmate's from their own bar. A heal or shield travels to your bar (Firewall's bricks play on your bar).
-  The damage numbers wait for it to land. It never stops over a key's label, your bar's numbers or the crew's names,
-  has no background and takes no input. **Mastery tiers** (`tierRecipe`): tier 2 more particles and a spark burst, tier
-  3 a glint and each iconic skill's own flourish; a crewmate's always plays tier 1. **Break finishers**
-  (`FINISHERS`, `SUB_FINISHERS`): the break that wins plays your class's flourish on that row within 0.9 s (shards,
-  a `[ SEALED ]` stamp, a name falling into bits, helpers meeting), varied by subclass. `?playtest=fx` reviews them all.
+- **Ability effects** (abilityfx.mjs, abilityfx-table.mjs, abilitylight.mjs): each ability plays its own short effect,
+  at 1.5× its recipe's speed (none outlasts 0.8 s), in teal (a crit gold-white, a hit on ◆ steel, a crewmate's violet),
+  drawn over the part's name. It starts from its key in the tray however it was fired, or from your bar when the key
+  isn't on screen; a crewmate's from their own bar. A heal or shield travels to your bar (Firewall's bricks play on your
+  bar). The damage numbers wait for it to land. It never stops over a key's label, your bar's numbers or the crew's
+  names, has no background and takes no input.
+  - **The look** (the *Glyph + light*): the ASCII piece is what you throw, with afterimages in flight, white-hot where
+    it hits. What it does there is light, as the telegraphs are: a flash, a shock ring along the bar, cracks, spark
+    streaks, flames, ripples; a comet carries an effect to where it plays. 1s and 0s, ◇ shards and + stay characters.
+  - **What the hit says:** a hit that makes contact holds there a moment, longer the bigger it is (`stopOf`). A crit
+    draws back and glints first, then cracks the bar end to end. A hit on ◆ lands on the ◆, clangs in steel and
+    glances off; the bar is untouched. A miss goes on through and nothing lands (MISS still stamps).
+  - **A status cashing in** (combat.mjs damage `marks`): Exposed's crosshair flies off its mark and closes on a crit;
+    Quarantined's brackets snap onto the name; Hooked's line pulls tight as its +6 lands; Tagged burns taller. The mark
+    glows.
+  - **Mastery tiers** (`tierRecipe`): tier 2 more particles and a spark burst, tier 3 a glint and each iconic skill's own
+    flourish; a crewmate's always plays tier 1. **Break finishers** (`FINISHERS`, `SUB_FINISHERS`): the break that wins
+    plays your class's flourish on that row within 0.9 s, varied by subclass. Subtle and medium drop the afterimages,
+    the swing's fan and the cracks; the result's timing and a status cashing in show on both. `?playtest=fx` reviews
+    them all, by result and status.
 - **Damage numbers** (dmgfx.mjs): every source its own number with an icon (a hit, a crit, a burn, a helper or daemon,
   a reflect, a shield's soak, a heal, encryption, an interrupt, a virus's claw), landing one after another in the
   order they resolved (0.45 s apart for two, faster for more, a batch never over 2.2 s), the bars dropping with each.

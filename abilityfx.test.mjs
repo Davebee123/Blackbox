@@ -9,7 +9,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { RECIPES, MOTIONS, PARTICLES, TRAVELS, CAP, TRAVEL, SPEED, DELIBERATE, keyOf, keyFor, tickKey, recipeOf, idOfName, originOf, levelOf, countOf, layout, travelOf, boxAt, keyAt, overlaps, rect, createAbilityFx } from './dist/abilityfx.mjs';
+import { startOf as lightStart } from './dist/abilitylight.mjs';
+import { RECIPES, MOTIONS, PARTICLES, TRAVELS, CAP, TRAVEL, SPEED, DELIBERATE, HOLD, stopOf, keyOf, keyFor, tickKey, recipeOf, idOfName, originOf, levelOf, countOf, layout, travelOf, boxAt, keyAt, overlaps, rect, createAbilityFx } from './dist/abilityfx.mjs';
 import { groupsOf, abilityOfKey } from './dist/abilityfx-playtest.mjs';
 import { SPIKE, ABILITIES } from './dist/data.mjs';
 
@@ -50,10 +51,11 @@ function* shown(el, steps = 40) {
 const variants = (fn, { seeds = [1, 7] } = {}) => {
   for (const [name, board] of [['roomy', roomy()], ['dense', dense()]]) for (let i = 0; i < board.parts.length; i++) for (const origin of ['key', 'no key', 'crew']) {
     const g = geoOf(board, i, origin === 'key' ? tray[3] : null, origin === 'crew' ? crewWin.bar : null);
-    for (const [k, r] of Object.entries(RECIPES)) for (const lvl of ['full', 'calm']) for (const opt of [{}, { crit: true, power: 1, result: 'crit' }, { result: 'chit', power: 0 }, { kind: 'crew' }]) for (const seed of seeds) {
+    for (const [k, r] of Object.entries(RECIPES)) for (const lvl of ['full', 'calm']) for (const opt of [{}, { crit: true, power: 1, result: 'crit' }, { result: 'chit', power: 0 }, { result: 'miss' }, { kind: 'crew' }]) for (const seed of seeds) {
       if (origin === 'crew' && r.on === 'you') continue; // a crewmate's heal or shield is on their bar, not yours
+      if (opt.result === 'miss' && (k.endsWith(':tick') || r.on === 'you')) continue; // a burn's tick and your own bar's never miss
       const plan = layout(r, g, { lvl, rnd: seeded(seed), origin: k.endsWith(':tick') ? 'here' : origin === 'crew' ? 'crew' : 'key', ...(origin === 'crew' ? { kind: 'crew' } : {}), ...opt });
-      assert.ok(plan?.els.length, `${name} ${k}`);
+      assert.ok(plan && (plan.els.length || plan.light.length), `${name} ${k}`); // a miss on what plays where it lands: only its comet
       fn({ name, board, i, g, k, r, lvl, plan, origin });
     }
   }
@@ -121,8 +123,9 @@ test('it starts at the ability\'s key in the tray however it was fired, and at y
   assert.equal(originOf(ev('damage', { target: 'p', amount: 20, src: 'burn', via: 'Inject' })), 'here', 'a burn\'s tick plays where it burns');
   // Laid out: from the key's middle when it's on screen, else from your bar.
   const g = geoOf(roomy(), 0), keyMid = { x: (g.key.l + g.key.r) / 2, y: g.key.t + (g.key.b - g.key.t) * 0.35 }, barMid = { x: (hud.bar.l + hud.bar.r) / 2, y: (hud.bar.t + hud.bar.b) / 2 };
-  // How far where it starts is from a point (0 when its first box holds it).
-  const startOf = (plan) => { const el = plan.els[0]; return boxAt(el, el.keys[0]); };
+  // How far where it starts is from a point (0 when its first box holds it): its first piece, or the comet that takes
+  // it to where it plays.
+  const startOf = (plan) => { const cm = plan.light.find((x) => x.kind === 'comet'); if (cm) return rect(cm.a.x - 1, cm.a.y - 1, 2, 2); const el = plan.els[0]; return boxAt(el, el.keys[0]); };
   const near = (q, p, d = 6) => Math.hypot(Math.max(q.l - p.x, 0, p.x - q.r), Math.max(q.t - p.y, 0, p.y - q.b)) < d;
   for (const k of ['ban', 'bash', 'poke', 'ping', 'spike', 'sigint', 'crack', 'inject', 'deploy', 'zero-day', 'firewall', 'patch', 'brace']) {
     const fromKey = layout(RECIPES[k], g, { origin: 'key', rnd: seeded(2) }), noKey = layout(RECIPES[k], { ...g, key: null }, { origin: 'key', rnd: seeded(2) });
@@ -144,10 +147,10 @@ test('it starts at the ability\'s key in the tray however it was fired, and at y
     assert.equal(hidden.from, 'bar', `${k}: the crew window out of sight`);
     assert.ok(near(startOf(hidden), barMid, 14), `${k}: from your bar`);
   }
-  // Your bar's own effects come from the key too: a streak to the bar first, then they play there.
+  // Your bar's own effects come from the key too: a comet to the bar first, then they play there.
   for (const k of ['firewall', 'patch', 'brace', 'harden']) {
     const plan = layout(RECIPES[k], g, { origin: 'key', rnd: seeded(2) });
-    assert.ok(plan.travel > 0 && plan.els.some((el) => /\bstreak\b/.test(el.cls)), `${k}: a streak from the key`);
+    assert.ok(plan.travel > 0 && plan.light.some((x) => x.kind === 'comet' && x.t1 === 0 && Math.abs(x.t2 - plan.travel) < 1e-6), `${k}: a comet from the key`);
     // With no key on screen they start on the bar itself: no travel.
     assert.equal(layout(RECIPES[k], { ...g, key: null }, { origin: 'key' }).travel, 0, k);
   }
@@ -178,9 +181,9 @@ test('it starts at the ability\'s key in the tray however it was fired, and at y
   assert.match(app, /const m = matesOf\(campaign\)\.find\(\(x\) => x\.who === who\); return m \? classOf\(m\) : null;/);
 });
 
-test('an ability that misses, or has no effect to play, keeps the plain strike; a hit no effect took still strikes', () => {
+test('an ability that misses plays its effect going on through and keeps the strike\'s MISS; one with no effect keeps the plain strike', () => {
   const app = readFileSync(new URL('./dist/app.js', import.meta.url), 'utf8');
-  assert.match(app, /if \(after\.some\(\(x\) => x\.type === 'miss'\)\) continue; \/\/ a miss: the strike's MISS says it/);
+  assert.match(app, /const result = missed \? 'miss' :/);
   assert.match(app, /if \(result !== 'miss' && taken\.has\(key\)\) continue; \/\/ its ability effect plays there instead\n\s+pendingStrikes\.push\(\(\) => later\(delayOf\(e\), plainStrike\(e, result\)\)\);/);
   assert.match(app, /if \(!played && strike\) later\(land, strike\);/, 'an effect that can\'t play: the strike on the number\'s beat');
   // No part on the board, or no bar of yours on screen: no layout.
@@ -251,6 +254,7 @@ test('whatever crosses a part\'s name, ◆ or Integrity is gone within the effec
       assert.ok(el.delay + el.dur <= plan.dur + 0.01, `${tag}: ends by the effect's end`);
       assert.equal(el.keys[el.keys.length - 1].o, 0, `${tag}: ends unseen`);
       assert.equal(el.keys[el.keys.length - 1].at, 1, tag);
+      assert.ok(el.keys.every((k, j) => k.at >= 0 && (!j || k.at >= el.keys[j - 1].at)), `${tag}: its keys in order (the page refuses them otherwise)`);
       for (const { ms, box } of shown(el)) {
         checked++;
         const hit = board.keep.find((q) => overlaps(box, q));
@@ -326,7 +330,7 @@ test('effects land on time: on the page it starts early (or part-way in) so it l
   const crit = layout(RECIPES.ban, g, { crit: true, result: 'crit', rnd: seeded(5) }), mate = layout(RECIPES.ban, g, { kind: 'crew', rnd: seeded(5) }), chit = layout(RECIPES.ban, g, { result: 'chit', rnd: seeded(5) });
   assert.ok(crit.els.every((e) => /\bcrit\b/.test(e.cls)));
   assert.ok(mate.els.every((e) => /\bcrew\b/.test(e.cls)));
-  assert.ok(chit.els.some((e) => /\bchit\b/.test(e.cls)) && !/\bchit\b/.test(chit.els[0].cls), 'the shock off ◆ is steel, the hammer stays yours');
+  assert.ok(chit.light.some((x) => x.tone === 'steel') && !chit.light.some((x) => x.kind === 'cracks' || x.kind === 'fire') && !chit.els.some((e) => /\bchit\b/.test(e.cls)), 'on ◆ it clangs in steel and leaves the bar alone; the hammer stays yours');
   // The page shifts every piece so the impact falls at landIn (and fires onImpact then).
   const timers = [], was = globalThis.setTimeout;
   globalThis.setTimeout = (f, ms) => { timers.push({ f, ms }); return timers.length; };
@@ -364,6 +368,67 @@ test('on the page: every piece is taken off the layer once its effect is over', 
     for (const t of timers) t.f();
     assert.equal(layer.children.length, 0, 'nothing stays behind');
   } finally { globalThis.setTimeout = was; }
+});
+
+// The board's part 0 with its ◆ (the one a hit on armor lands on) and its status marks, as the page measures them.
+const marked = () => {
+  const g = geoOf(roomy(), 0);
+  return { ...g, part: { ...g.part, chits: { x: 150, y: 393, b: 402 }, marks: { exposed: R('200,386,12,12'), hooked: R('214,386,12,12'), tagged: R('228,386,12,12') } } };
+};
+const playOn = (k, o = {}) => layout(RECIPES[k], marked(), { rnd: seeded(3), origin: k.endsWith(':tick') ? 'here' : 'key', ...o });
+const hammer = (plan) => plan.els.find((el) => !/\bghost\b|\bhot\b/.test(el.cls) && el.text === RECIPES.ban.art.join('\n'));
+const keyAtMs = (el, ms) => keyAt(el, (ms - el.delay) / el.dur);
+
+test('the motion says how the hit went: it holds where it lands by size, a crit gathers and cracks further, ◆ glances it off in steel, a miss goes on through', () => {
+  assert.equal(stopOf('miss', 1), 0);
+  assert.equal(stopOf('hit', 0.1), 0, 'a light hit: no stop');
+  assert.ok(stopOf('hit', 0.3) < stopOf('hit', 0.8) && stopOf('hit', 0.8) < stopOf('crit', 0) && stopOf('chit') > 0 && stopOf('chit') < stopOf('crit'));
+  const bar = marked().part.bar;
+  // A big hit: the hammer holds on contact; what flies goes after the stop (the flash at contact shows through it).
+  const big = playOn('ban', { power: 0.8 }), h = hammer(big), a = keyAtMs(h, big.impact + 1), z = keyAtMs(h, big.impact + big.stop - 1);
+  assert.ok(big.stop > 0 && Math.abs(a.x - z.x) + Math.abs(a.y - z.y) + Math.abs(a.r - z.r) < 0.5, 'it holds on contact');
+  assert.ok(big.light.filter((x) => !x.contact && x.kind !== 'smear' && x.kind !== 'comet' && lightStart(x) >= big.impact - 0.5).every((x) => lightStart(x) >= big.impact + big.stop - 0.5), 'what flies goes after the stop');
+  assert.ok(big.els.some((el) => /\bghost\b/.test(el.cls)) && big.els.some((el) => /\bhot\b/.test(el.cls)), 'afterimages on its way, white-hot where it hits');
+  // A crit draws back first (it lands HOLD later), glints at the top, and cracks the bar end to end.
+  const hit = playOn('ban', { power: 0.5 }), crit = playOn('ban', { crit: true, result: 'crit', power: 0.5 });
+  assert.ok(Math.abs(crit.impact - (hit.impact + HOLD / SPEED)) < 1e-6, 'a crit gathers first');
+  assert.ok(crit.light.some((x) => x.kind === 'glint' && x.tone === 'crit' && x.t0 < crit.impact), 'a glint at the top of the swing');
+  const span = (plan) => { const xs = plan.light.filter((x) => x.kind === 'cracks').flatMap((x) => x.net.flatMap((sg) => sg.line.map((q) => q[0]))); return Math.max(...xs) - Math.min(...xs); };
+  assert.ok(span(crit) > (bar.r - bar.l) * 0.9 && span(hit) < span(crit), `the crit cracks the bar end to end: ${span(crit)} vs ${span(hit)}`);
+  // On ◆: it lands on the ◆, clangs in steel, glances back up; the bar is untouched (no cracks, no rings along it).
+  const chit = playOn('ban', { result: 'chit', power: 0 }), ch = hammer(chit), hot = chit.els.find((el) => /\bhot\b/.test(el.cls) && el.text === ch.text);
+  const box = boxAt(hot, keyAtMs(hot, chit.impact + 1));
+  assert.ok(box.l < 150 && box.r > 150 && box.t < 402 && box.b > 380, `it lands on the ◆: ${JSON.stringify(box)}`);
+  assert.ok(chit.light.some((x) => x.tone === 'steel' && x.kind === 'ring') && !chit.light.some((x) => x.kind === 'cracks' || (x.kind === 'ring' && x.rx > 40)), 'steel at the ◆, the bar untouched');
+  assert.ok(keyAtMs(ch, chit.impact + chit.stop + 60).r > 20, 'it glances back up');
+  // A miss: no contact (nothing white-hot, nothing lands); it swings on past; what plays where it lands never does.
+  const miss = playOn('ban', { result: 'miss' });
+  assert.ok(!miss.els.some((el) => /\bhot\b/.test(el.cls)) && miss.stop === 0, 'no contact');
+  assert.ok(miss.light.every((x) => x.kind === 'smear' || x.kind === 'comet'), 'nothing lands');
+  assert.ok(keyAtMs(hammer(miss), miss.impact + 30).r < -10, 'it swings on past');
+  const missed = playOn('exploit', { result: 'miss' });
+  assert.ok(!missed.els.length && missed.light.every((x) => x.kind === 'comet'), 'a mark that misses: only its comet');
+  const poke = playOn('poke', { result: 'miss' }), needle = poke.els.find((el) => !/\bghost\b|\bhot\b/.test(el.cls)), nm = marked().part.name, O = { x: (tray[3].l + tray[3].r) / 2, y: tray[3].t };
+  const end = boxAt(needle, needle.keys[needle.keys.length - 1]), far = (q) => Math.hypot(q.x - O.x, q.y - O.y);
+  assert.ok(far({ x: end.r, y: end.t }) > far({ x: (nm.l + nm.r) / 2, y: nm.b }) + 30, 'a needle that misses flies on past the part');
+});
+
+test('a status the hit cashed in shows doing it: Exposed\'s crosshair closes on a crit, brackets for Quarantined, Hooked\'s line pulls tight, Tagged burns hotter', () => {
+  const g = marked(), mid = (q) => ({ x: (q.l + q.r) / 2, y: (q.t + q.b) / 2 });
+  const crit = playOn('ban', { crit: true, result: 'crit', marks: ['exposed'] }), cross = crit.light.find((x) => x.kind === 'cross');
+  assert.ok(cross && Math.hypot(cross.from.x - mid(g.part.marks.exposed).x, cross.from.y - mid(g.part.marks.exposed).y) < 1, 'off its mark');
+  assert.ok(Math.abs(cross.t1 - crit.impact) < 1e-6 && cross.t0 < cross.t1, 'it closes as the hammer lands');
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  assert.ok(crit.light.some((x) => x.kind === 'halo' && same(x.box, g.part.marks.exposed)), 'its mark glows');
+  assert.ok(!playOn('ban', { marks: ['exposed'] }).light.some((x) => x.kind === 'cross'), 'Exposed shows behind a crit only');
+  const held = playOn('ban', { marks: ['quarantined'] }).light.find((x) => x.kind === 'brackets');
+  assert.ok(held && same(held.box, g.part.name), 'brackets snap onto its name');
+  const hooked = playOn('poke', { marks: ['hooked'] }).light.find((x) => x.kind === 'tether');
+  assert.ok(hooked && Math.abs(hooked.from.x - mid(g.part.marks.hooked).x) < 1, 'a line from its Hooked mark');
+  const fire = (o) => playOn('inject:tick', o).light.find((x) => x.kind === 'fire');
+  assert.ok(fire({ marks: ['tagged'] }).H > fire({}).H, 'Tagged: the burn stands taller');
+  assert.ok(playOn('inject:tick', { marks: ['tagged'] }).light.some((x) => x.kind === 'halo'), 'and its mark glows');
+  assert.equal(playOn('ban', { result: 'miss', marks: ['exposed', 'quarantined', 'hooked'] }).light.filter((x) => ['cross', 'brackets', 'tether', 'halo'].includes(x.kind)).length, 0, 'a miss cashes nothing in');
 });
 
 // A page just big enough for createAbilityFx: a board, its rows, your bar, the tray, and elements that remember what's

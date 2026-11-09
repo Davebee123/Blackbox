@@ -2912,6 +2912,9 @@ export function hit(s, p, base, opts = {}) {
   if (opts.pierce && p.armor > 0) notes.push('through armor');
   if (p.exposedUntil >= e.cycle) notes.push('exposed');
   if (p.taggedUntil >= e.cycle) notes.push('tagged');
+  // The statuses this hit cashed in (damageMultiplier, critChance), for its effect to show them doing it (abilityfx.mjs):
+  // Exposed behind a crit, Tagged behind a burn's tick, Quarantined behind any hit.
+  const marks = [crit && on(s, p, 'exposed') && 'exposed', opts.dot && !opts.flat && on(s, p, 'tagged') && 'tagged', !opts.flat && on(s, p, 'quarantined') && 'quarantined'].filter(Boolean);
   if (e.virus.weakKnown && e.virus.weakPoint === p.id) notes.push('weak point');
   if (dealt > 0 && holdsPart(e, p)) dealt = Math.min(dealt, Math.max(0, p.integrity - 1)); // Uptime: the virus can't be broken (objectives.mjs)
   if (dealt > 0 && p.core) dealt = Math.min(dealt, actCap(s, p)); // a P4 boss's ♛: one tick a hit, so no act is skipped (acts.mjs)
@@ -2938,7 +2941,7 @@ export function hit(s, p, base, opts = {}) {
   ].filter((x) => x.fx.if) : [];
   // shield: what the Mutex's lock took of it, from lockWas, with the part at hp after the hit (the board's lock segment
   // drains by it: view.mjs, app.js; dmgfx.mjs's number says it was absorbed).
-  emit(s, 'damage', `${opts.by ? opts.by + ': ' : ''}${p.name} −${dealt}${notes.length ? ` (${notes.join(', ')})` : ''}. ${p.integrity}/${p.max}.`, { target: p.id, amount: dealt, crit, ...srcOf(e, opts), ...firedOf(fired), hp: p.integrity, ...(lockLost ? { shield: lockLost, lockWas } : {}) }); // hp: what's left after this hit (the board steps its bar down hit by hit)
+  emit(s, 'damage', `${opts.by ? opts.by + ': ' : ''}${p.name} −${dealt}${notes.length ? ` (${notes.join(', ')})` : ''}. ${p.integrity}/${p.max}.`, { target: p.id, amount: dealt, crit, ...srcOf(e, opts), ...firedOf(fired), hp: p.integrity, ...(lockLost ? { shield: lockLost, lockWas } : {}), ...(marks.length && dealt > 0 ? { marks } : {}) }); // hp: what's left after this hit (the board steps its bar down hit by hit)
   if (unlocked) emit(s, 'armor', `The ${p.name}'s lock breaks. The Mutex locks it again in ${p.relock ?? CONFIG.mutex.every} cycles unless you break the Mutex.`, { target: p.id, left: p.armor, lock: 'broke' });
   // A server room's bodies' own rules on a hit (families.mjs: a Trojan's Package unpacks). 'gone': the part left the
   // board without breaking. Then the interrupt's ticks (interrupt.mjs), in every fight that has them.
