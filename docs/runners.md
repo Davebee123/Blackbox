@@ -73,12 +73,45 @@ Rejected: a pip under each server per runner (*Pips*), and a count tag per serve
 - **On a run:** the hire's Signal carries from fight to fight, like yours. At 0 they disconnect with a line (*Signal's
   going. I'm out.*) and go back to their server to recover; they're hireable again once they're full. If you drop to
   0, you both jack out, the hire at whatever Signal they had.
-- **Traits** (direction, MOO2's leaders): each runner carries a perk or a drawback or two, shown as icons on the
-  runner and crew cards. Needs a pool large enough that new runners keep turning up.
+- **Traits** (MOO2's leaders): each runner carries one to four; see *Traits* below.
 - **Consortium:** runners you're close to, merging with you. A friend joins it as one more member.
 
 Rejected: standing as pips like a faction's rep, or as the steps each tier opens; setting a runner's bar in their own
 Toolkit, or key by key from what they know; paying a fee or a cut as a choice; a nerve that turns down floors above it.
+
+## Traits
+
+From MOO2's leaders. A runner carries one to four traits, each an icon on the runner and crew cards with its rule in
+the tooltip. A trait grows as the runner levels; a starred one (★) is half again as strong. More traits and more stars
+make a dearer fee. No drawbacks for now.
+
+- **Party, never self.** Every trait helps the crew (you included) or the run. A runner's own power is their level and
+  gear.
+- **Once per crew.** Two runners with the same trait don't stack; the crew gets its best version.
+- **The pool:** a few dozen runners per network, new ones arriving and old ones moving on over weeks. Runners with
+  several starred traits are rare.
+
+| Trait | Does (MOO2) |
+|---|---|
+| **Spotter** | Every few cycles, the part they hit takes more damage from everyone for a cycle. ★: two parts (Weaponry) |
+| **Swarm** | Everyone's helpers hit harder (Fighter Pilot) |
+| **Bulwark** | The crew starts each fight shielded (Security, Commando) |
+| **Decoy** | The first attack each fight goes at them (Helmsman) |
+| **Patch** | The crew recovers Signal between fights (Medicine) |
+| **Repair** | Restores your server's Integrity after a run (Engineer) |
+| **Routefinder** | Your steps cost less Signal (Navigator) |
+| **Mapper** | Rooms a step further out show their kind (Galactic Lore) |
+| **Reader** | One tell a fight shows a cycle early (Telepath) |
+| **Archivist** | More research on the parts you fight together (Researcher) |
+| **Mentor** | More XP on runs together (Instructor) |
+| **Coordinator** | The crew's Sync windows last longer (Tactics, Operations) |
+| **Counter-intel** | Rivals' counter-picks read you less often (Assassin, Spy Master) |
+| **Fixer** | Contracts done together pay more faction rep (Diplomat) |
+| **Haggler** | A smaller cut (Trader, Financial Leader) |
+| **Known face** | A smaller fee, and standing rises faster (Famous) |
+| **Moonlighter** | Brings credits to each run in place of a cut (Megawealth) |
+| **Gift** | Brings a codebase, script or blueprint the first time you hire them (a leader's tech) |
+| **Wildcard** | Traits rolled from the seed (Brainiac, Mystic X) |
 
 ## Friends
 
