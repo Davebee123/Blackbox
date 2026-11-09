@@ -26,6 +26,7 @@ session's scratchpad, never in the repo), shown as screenshots, before any of it
 | **Leanings** | **Built** (GAME_RULES.md "Server kinds, specials and quirks", docs/leanings.md): Venting, Wind-up and Brownout, one a traced server, on its card and in its fights. | |
 | **wick's card** | A 3×3 card of different activities (a Cascade win, an Exfil, a lair kill, a trade…). A line pays; a full card is a cosmetic. No timer: a finished line's three squares are replaced, weighted toward what you haven't done lately and what's open at your level. **Picked (prototype):** in Mail, a row above Contracts with a mini 3×3, the card in the reading pane; *Tiles* (a tile a square, lit amber when done, flips to its replacement). A done square's position keeps a corner notch through the swap; the full card is all nine notches. A finished line is a News line, not a page. | What a line pays; how squares are chosen |
 | **Dead runner** | A room where a crashed hacker's session sits: their rig (a real build: class, subclass, loadout), one item from their stash, and their last log, which says what killed them (a hint about this server's Resident or an elite's tells). Sometimes their ghost session starts a thread. With real players, later: a player's disconnect leaves one. **Picked (prototype):** a **rare room** (★ like a rare spawn): one server in 25, at most one a server, never on your first servers; the stash (3 protocols, take 1) rolls like a rare spawn's loot. Chip: a cracked NET ID badge, the runner's handle on the plate, amber until taken. Card: the *session dump* (rig and log in one terminal block, cycle-stamped, their voice, no advice; the stash as rows with Take). | The log's lines per Resident and elite |
+| **Runners** | The people on the net: a stable cast per network with jobs and someone's frozen money to chase, met in the world and hired as crew; a friend takes a runner's slot (docs/runners.md) | Map look picked (the Rail). Next: meeting and hiring |
 | **Off-map servers** | Small handmade servers found only from clues (the scanner, a dead runner's log, a cryptogram, wick), never by tracing. The Museum (retired viruses from old builds), a LOWLIGHT safehouse, a dev box (debug viruses with every number shown), the Graveyard (dead runners' sessions), a pirate station (the scanner's broadcasts). | How many; how a clue puts one on the floor map |
 
 ## Virus roster (prototyped and kept)
@@ -68,6 +69,7 @@ Variety across viruses, one rule each, with an answer in every kit.
 | Ripening cache | Feature creep |
 | Class-flavoured server moods | Push people to switch class |
 | Weaknesses by damage shape (burst, burn, helpers, spread, reactive) | A part weak to one shape favours the class that deals it |
+| A world that moves while you're logged off; factions that gain and lose ground (Starsector's drift) | Hard to design around, and the politics and economy add more than they give (docs/runners.md) |
 | Trace-back after an invasion | Repeats systems already there |
 | Daily seed | Out of scope for now |
 | Home layout as tower defense | The house is a cosmetic, not a defence game |

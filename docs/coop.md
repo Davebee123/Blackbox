@@ -78,8 +78,9 @@ servers), the old host joins as their guest.
 
 Only game state and the character cross the wire. No email, no account, nothing else of the save.
 
-## Later, for a hosted world
+## Later: friends between sessions
 
-Authority moves from the host's browser to a server running the same engine (combat.mjs is pure); the snapshot and
-command messages stay. A server also gives TURN, reconnects, anti-cheat on rewards (today the guest's game rolls its
-own) and persistent shared state (who cleared what on a member's server).
+No hosted world: authority stays in the host's browser. Between sessions, friends reach each other through **records**
+(docs/runners.md *Friends*): each player posts their own, peer to peer or through a small mailbox, and a friend shows
+up in your world as a runner. The same mailbox can hand out room codes and a TURN relay, so invites stop being copy and
+paste. Reconnects come from a host-side checkpoint of the run. Rewards between friends stay trusted.

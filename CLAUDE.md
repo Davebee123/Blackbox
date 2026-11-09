@@ -74,6 +74,8 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
   - player card: the *NET ID badge*;
   - collection log: the *Ledger*;
   - journals: one Ledger entry, a timeline over the writers, a document card on the first find (docs/journals.md);
+  - runners on the map: the *Rail* (a Runners list under Contracts; the map draws only the runner you pick, its route
+    and where it's heading; docs/runners.md);
   - network map servers: the *Glyph* (each server its kind's glyph, a bar of what's cleared, a ring round a new one);
   - network map ground: the *Chart* (faint crosshairs and hairlines that pan and zoom with the map);
   - rooms map: each room kind its own outline and hue (the *Hues*: magenta elite, orange socket, green rest, gold
@@ -81,7 +83,8 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
 - **Rejected looks:**
   - the *View* background behind the monitor; keep the original city, with more detail at the same size;
   - card-first clicks on the rooms map; one click walks;
-  - Roomy, the extra monitor size.
+  - Roomy, the extra monitor size;
+  - runner pips or counts on every server (the Rail instead).
 - **The monitor** takes up most of the screen. UI scale is a setting, 100% by default.
 - **Ability effects:**
   - short, and drawn over the part's name;
@@ -100,4 +103,5 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
 
 ## Backlog
 
-- **Backlog:** Silos, more event cards, parts plan P4, and co-op's rough edges.
+- **Backlog:** Silos, more event cards, parts plan P4, co-op's rough edges, and runners (docs/runners.md: meeting and
+  hiring prototyped next).
