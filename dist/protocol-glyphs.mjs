@@ -4,7 +4,7 @@
 // yellow, gold and orange framed at the corners; a Zero-day swept by a bright scanline; a unique (or an Indemnified
 // protocol) flickers now and then (style.css .pglyph; app.js runs the motion). The same item always looks the same.
 // Every shape is 23 columns wide and mirrors itself about column 11 (protocol-glyphs.test.mjs checks).
-import { groupOf } from './gear.mjs';
+import { groupOf, shownRarity } from './gear.mjs';
 import { glyph } from './glyphs.mjs';
 import { FACTIONS } from './factions.mjs';
 
@@ -234,8 +234,8 @@ const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 // moving glyph keeps it in data-mark, for the motion to put back.
 const markOf = (it) => (it?.implicit && FACTIONS[it.implicit] ? `<i class="pg-fm" style="--fc:${FACTIONS[it.implicit].color}">${glyph('f-' + it.implicit)}</i>` : '');
 export function glyphMarkup(it, size = 'md') {
-  const text = glyphText(it), fx = glyphFx(it), r = it?.rarity || 'stock', mark = markOf(it);
-  return `<span class="pglyph pg-${size} r-${r}${FRAMED.has(r) ? ' pg-framed' : ''}${mark ? ' pg-fac' : ''}" aria-hidden="true"${fx ? ` data-pg-fx="${fx}" data-base="${esc(text)}"${mark ? ` data-mark="${esc(mark)}"` : ''}` : ''}>${mark}${esc(text)}</span>`;
+  const text = glyphText(it), fx = glyphFx(it), r = it?.rarity || 'stock', shown = shownRarity(it) || r, mark = markOf(it);
+  return `<span class="pglyph pg-${size} r-${shown}${FRAMED.has(r) ? ' pg-framed' : ''}${mark ? ' pg-fac' : ''}" aria-hidden="true"${fx ? ` data-pg-fx="${fx}" data-base="${esc(text)}"${mark ? ` data-mark="${esc(mark)}"` : ''}` : ''}>${mark}${esc(text)}</span>`;
 }
 
 // ---------- motion (app.js calls glyphMotion every frame while motion is on) ----------

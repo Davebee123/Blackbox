@@ -6,6 +6,7 @@
 // Your server runs no services any more (R2): the home fight is the firewall's job (filters, tiers) and the daemons',
 // and a server's programs (sockets.mjs) are the building. Code builds them, and the wall.
 import { power, line, lift, lifted, filled, gearFill, runLate } from './data.mjs';
+import SET_TEXT from './content/sets.mjs';
 
 // Slots by class level: 4 to start, 5 at 15, 6 at 30. Each slot takes one kind of item (SLOTS).
 export const PROTOCOL_SLOTS = [{ level: 1, slots: 4 }, { level: 15, slots: 5 }, { level: 30, slots: 6 }];
@@ -287,6 +288,9 @@ export const ZERO_DAYS = {
 // Each faction's name for its chase line (the rarity's name on the item; Halcyon's is Indemnified).
 export const CHASE_LINE = { halcyon: 'Indemnified', kestrel: 'Bonded', glassjaw: 'Off-book', lantern: 'Broadcast', nullchoir: 'Unsigned' };
 export const rarityName = (it) => (it?.rarity === 'indemnified' ? CHASE_LINE[ZERO_DAYS[it.zeroDay]?.faction || 'halcyon'] : RARITIES[it?.rarity]?.name || '');
+// The colour an item shows in: a set piece (one listed in a set) in set green, whatever its rarity; the rest by rarity.
+const SET_PIECES = new Set((SET_TEXT.sets || []).flatMap((x) => x.pieces || []));
+export const shownRarity = (it) => (it?.unique && SET_PIECES.has(it.unique) ? 'set' : it?.rarity);
 export const FOUND_ZERO_DAYS = Object.keys(ZERO_DAYS).filter((z) => !ZERO_DAYS[z].chase);
 
 // Drops: World of Warcraft's model, a kill at a time (WoW green = our blue, WoW blue = our yellow, epic = gold).

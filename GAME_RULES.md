@@ -1707,7 +1707,7 @@ five slot kinds, so a general set's 2-piece can go beside it.
 - **The LOWLIGHT Badge** comes with wick's last letter at level 22 (Mail), with wick's Old Toolkit rebuilt at your level. The Toolkit can't be deconstructed, and a full stash still takes it.
 - **The tooltip** reads in WoW's grammar under the piece's effect: its green line (set green once on, grey until then),
   the set's name and count (*Kestrel Clearance (2/3)*), its pieces (??? until found), and each bonus as *(2) Set: …*.
-  The Loadout lists **Set bonuses**. **Set green** (`--r-set`) sits beside the rarity colours; a piece's name stays gold.
+  The Loadout lists **Set bonuses**. **Set green** (`--r-set`) sits beside the rarity colours; a piece shows in set green too (its name, card, tile and glyph), whatever its rarity.
 
 ### Faction gear
 

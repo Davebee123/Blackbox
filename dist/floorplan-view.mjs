@@ -42,7 +42,7 @@ import { glyph } from './glyphs.mjs';
 import { OBJECTIVES, OBJ, objectiveLine } from './objectives.mjs';
 import { recapMarkup } from './recap.mjs';
 import { GUARDS, BOSSES, CONFIG } from './data.mjs';
-import { itemLabel, statLine } from './gear.mjs';
+import { itemLabel, statLine, shownRarity } from './gear.mjs';
 import { stashItem, active, classOf } from './combat.mjs';
 import { AUTHORS } from './authors.mjs';
 import { SCRIPTS, TIER, scriptsOf, slotsOf, scriptTip } from './scripts.mjs';
@@ -880,7 +880,7 @@ function homeCard(s) {
   const L = R.last;
   const last = L ? `<ul class="fp-lines">${L.result === 'lost' ? `<li class="hot"><span class="lbl">lost</span><span>${esc(`${L.why} ${L.lost?.length ? `${L.lost.length} unbanked ${L.lost.length === 1 ? 'item' : 'items'} lost: ${L.lost.join(', ')}.` : 'Nothing unbanked was lost.'}`)}</span></li>` : `<li><span class="lbl">banked</span><span>${L.banked} ${L.banked === 1 ? 'item' : 'items'}</span></li>`}<li><span class="lbl">xp</span><span>+${(L.xp || 0).toLocaleString('en-US')}</span></li></ul>` : '';
   const items = R.banked.map((id) => stashItem(s, id)).filter(Boolean);
-  const loot = items.length ? `<h3 class="fp-sec">Banked <small>${items.length}</small></h3><ul class="fp-items">${items.slice(-6).map((it) => `<li data-ptip="${esc(it.id)}"><b class="iname r-${it.rarity}">${esc(itemLabel(it))}</b><small class="fp-stats">${Object.keys(it.stats || {}).map((k) => statLine({ [k]: it.stats[k] })).filter(Boolean).map((x) => `<span>${esc(x)}</span>`).join('')}</small></li>`).join('')}</ul>` : '';
+  const loot = items.length ? `<h3 class="fp-sec">Banked <small>${items.length}</small></h3><ul class="fp-items">${items.slice(-6).map((it) => `<li data-ptip="${esc(it.id)}"><b class="iname r-${shownRarity(it)}">${esc(itemLabel(it))}</b><small class="fp-stats">${Object.keys(it.stats || {}).map((k) => statLine({ [k]: it.stats[k] })).filter(Boolean).map((x) => `<span>${esc(x)}</span>`).join('')}</small></li>`).join('')}</ul>` : '';
   const lines = [sig < R.max ? `Full in ${clock(full)}.` : '', wait > 0 ? `Reconnect in ${clock(R.reconnectAt)}. ${deathMark(R.deaths || 0)}` : '', sig < need ? esc(`You need ${need} Signal to connect.`) : ''].filter(Boolean).join(' ');
   return `<section class="card fp-screen fp-home"><h2>${R.visits ? `Home · visit ${R.visits}` : 'Home'}</h2><h1>${R.visits ? (L?.result === 'lost' ? 'Disconnected' : 'Jacked out') : 'Ready to connect'}</h1>
     ${lines ? note(lines) : ''}${L?.result === 'lost' ? recapMarkup(L.recap) : ''}${last}<div class="row acts">${btn('connect', 'Connect', { primary: true, disabled: !can, note: can ? '' : wait > 0 ? 'wait' : `${need} Signal` })}</div>

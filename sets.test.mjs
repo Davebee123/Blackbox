@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { fresh, command, selectEncounter, resolveCycle, finish, addItem, loaded, hackerOf, roomKill, uniqueFrom, guardSetChance, guardSetTable, setDeliver, maxSignal, restore, gearFx, fxHolds, gearStat, damageMultiplier, takeDamage, momentumStacks, setDrop, setDropPool, setChance, bossUniques, hooks, UNIQUES, SAVE_VERSION } from './dist/combat.mjs';
 import { SETS, setOf, isPiece, piecesOf, activeSets, setFx, setCard, greenOf, SET_LOOT, CLASS_SET, SET_HOOKS, setPool, setCredits, BADGE_BEAT } from './dist/sets.mjs';
-import { uniqueItem, seeded, BASES, RARITIES, STATS, baseFor } from './dist/gear.mjs';
+import { uniqueItem, seeded, BASES, RARITIES, STATS, baseFor, shownRarity } from './dist/gear.mjs';
 import { itemTipMarkup, collectionSets, collectionMarkup, protocolSlotsCard, protocolStashCard, protocolDetailMarkup, protocolStatsCard, stashUi, rareLine } from './dist/view.mjs';
 import { CARDS } from './dist/events.mjs';
 import { PUZZLE_KINDS } from './dist/puzzles.mjs';
@@ -802,4 +802,16 @@ test('the pace: about how many events of each source to a piece you lack, as GAM
   // The frequent sources are the slow ones: no source an event of which comes often (a kill, a vault) gives a piece in
   // fewer than 40 of them, bar a Kestrel guard post's own (about 8 kills of that one guard).
   for (const kind of ['rare', 'strain', 'author', 'vault']) assert.ok(mean(SET_LOOT[kind]) >= 40, kind);
+});
+
+test('a set piece shows in set green, whatever its rarity; other uniques by rarity', () => {
+  const s = fresh(seeded(5));
+  const piece = uniqueItem(UNIQUES.crowbar, 50, seeded(1)), other = uniqueItem(UNIQUES['umbrella-policy'], 12, seeded(1));
+  assert.equal(shownRarity(piece), 'set');
+  assert.equal(shownRarity(other), other.rarity);
+  addItem(s, piece);
+  const it = s.stash.find((x) => x.unique === 'crowbar');
+  assert.match(itemTipMarkup(s, it.id), /ptip-card r-set/);
+  assert.match(itemTipMarkup(s, it.id), /pglyph pg-tip r-set/);
+  assert.match(itemTipMarkup(s, it.id), /iname r-set/);
 });

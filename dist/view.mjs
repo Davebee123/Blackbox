@@ -56,7 +56,7 @@ import { unlocked as routinesOpen, LOCKED as ROUTINES_LOCKED } from './routines.
 import { bodyTags, AUTHOR_FAMILIES, familyName } from './families.mjs';
 import { heatOf } from './parts.mjs';
 import { wallRating, wallBands, ratioOf, outcome, chipRate, grindRate, fighting, degradedLeft, fmtLeft, bountyOf, tellOf, quirkLine, labelOf, verdictOf, strength, sendersOf, senderGrade, sendsAt, streakOf, streakMult, STREAK, SCOUT, daemonChance, SCOUTED, KINDS as INV_KINDS, scoutedLine, sendTop, countsAt, wallSafety } from './invasion.mjs';
-import { RULES, LOOT, SLOTS, BASES, STATS, GROUPS, RARITIES, RARITY_ORDER, ZERO_DAYS, STASH_CAP, PROTOCOL_SLOTS, SERVICES, MATERIALS, statLine, itemLabel, fmtStat, sideStats, SLOT_KINDS, groupOf, codeOf, uniqueItem, seeded, IMPLICITS, rarityName, CHASE_LINE } from './gear.mjs';
+import { shownRarity, RULES, LOOT, SLOTS, BASES, STATS, GROUPS, RARITIES, RARITY_ORDER, ZERO_DAYS, STASH_CAP, PROTOCOL_SLOTS, SERVICES, MATERIALS, statLine, itemLabel, fmtStat, sideStats, SLOT_KINDS, groupOf, codeOf, uniqueItem, seeded, IMPLICITS, rarityName, CHASE_LINE } from './gear.mjs';
 import { raidIntents, raidMarks, raidOf, attackTarget } from './raid.mjs';
 import { EMBLEMS } from './class-emblems.mjs';
 import { ARCHETYPES, CANTRIPS, EDGE, SYNC, STATUSES, LOADOUT, TREE, SERVER, SKILLS, xpToNext, unlockLevel, power, SUBS, SUBCLASS, skillOrder, barSlots, isRunSkill } from './data.mjs';
@@ -1127,7 +1127,7 @@ function locationList(s) {
 }
 
 // ---------- protocols (you) ----------
-const rarityClass = (it) => `r-${it.rarity}`;
+const rarityClass = (it) => `r-${shownRarity(it)}`;
 const leadStat = (it) => Object.keys(it?.stats || {})[0] || 'protocol';
 const itemTitle = (it) => [`${rarityName(it)} ${SLOTS[groupOf(it)]?.name || ''}${it.base && BASES[it.base] && !it.unique && it.rarity !== 'custom' ? '' : it.base && BASES[it.base] ? ` (${BASES[it.base].name})` : ''}`.trim(), it.unique && isNative(it.unique) && it.home?.name ? `Native to ${it.home.name}` : '', it.unique ? UNIQUES[it.unique]?.flavour : BASES[it.base]?.flavour].filter(Boolean).join('. ');
 const itemName = (it) => `<b class="iname ${rarityClass(it)}" title="${esc(itemTitle(it))}">${glyph(leadStat(it), 'badge')}${esc(itemLabel(it))}</b>`;
@@ -1155,7 +1155,7 @@ export function itemTipMarkup(s, ref) {
   const flavour = !f && (it.unique ? UNIQUES[it.unique]?.flavour : BASES[it.base]?.flavour);
   const vs = f || loadedOn(s, it.id) === classOf(s) ? '' : swapCompare(s, it);
   const home = !f && it.unique && isNative(it.unique) ? nativeHome(s, it) : null;
-  return `<div class="ptip-card r-${r}">${f ? `<pre class="ptip-art" data-shape="${kind}" aria-hidden="true"></pre>` : `<span class="ptip-glyph">${glyphMarkup(it, 'tip')}</span>`}<div class="ptip-body"><b class="iname r-${r}">${esc(f ? f.name : itemLabel(it))}</b><small>${esc(f ? RARITIES[r]?.name || '' : rarityName(it))} ${esc(f ? 'filter' : SLOTS[kind]?.name || '')} · Lv ${it.level}</small>${where}${home ? `<span class="tag native" title="About ten times as likely on its home network as anywhere else">Native · ${esc(home)}</span>` : ''}<div class="ptip-stats">${stats}</div>${!f ? implicitRow(it) : ''}${!f && (it.zeroDay || it.unique || it.rule) ? itemEffect(it) : ''}${!f && it.unique && setOf(it.unique) ? setLines(s, it.unique) : ''}${flavour ? `<em>${esc(flavour)}</em>` : ''}${keptItem(it) ? '<small class="ptip-ans">Can’t be deconstructed.</small>' : ''}${vs}${shelf ? `<small class="ptip-ans">${esc(shelf.why)}</small>` : ''}</div></div>`;
+  return `<div class="ptip-card r-${f ? r : shownRarity(it)}">${f ? `<pre class="ptip-art" data-shape="${kind}" aria-hidden="true"></pre>` : `<span class="ptip-glyph">${glyphMarkup(it, 'tip')}</span>`}<div class="ptip-body"><b class="iname r-${f ? r : shownRarity(it)}">${esc(f ? f.name : itemLabel(it))}</b><small>${esc(f ? RARITIES[r]?.name || '' : rarityName(it))} ${esc(f ? 'filter' : SLOTS[kind]?.name || '')} · Lv ${it.level}</small>${where}${home ? `<span class="tag native" title="About ten times as likely on its home network as anywhere else">Native · ${esc(home)}</span>` : ''}<div class="ptip-stats">${stats}</div>${!f ? implicitRow(it) : ''}${!f && (it.zeroDay || it.unique || it.rule) ? itemEffect(it) : ''}${!f && it.unique && setOf(it.unique) ? setLines(s, it.unique) : ''}${flavour ? `<em>${esc(flavour)}</em>` : ''}${keptItem(it) ? '<small class="ptip-ans">Can’t be deconstructed.</small>' : ''}${vs}${shelf ? `<small class="ptip-ans">${esc(shelf.why)}</small>` : ''}</div></div>`;
 }
 // A Shop's protocol by its tooltip ref: p:<hub>:<n> on its shelf, p:<hub>:c-<id> a chase protocol as it comes out at
 // your level (its preview: the dice are fixed, so its stats stay put while you look). { it }.
