@@ -2238,6 +2238,7 @@ function render(force = false) {
   $('tray').classList.toggle('net-tray', netTray);
   { const keys = netTray ? V.netTrayMarkup(nextActions(campaign)) : V.trayMarkup(s, selected) + scriptTray(s); put('tray', keys + (combatLike && F.isPhone() ? phMenuKey(keys) : '')); $('tray').querySelectorAll(':scope > .ability').forEach((k, i) => k.classList.toggle('ph-over', i >= PH_KEYS)); } // a phone: past eight keys, under +n
   phStage();
+  phPicked();
   // An ability that just came off cooldown flashes once.
   const cooling = new Set([...document.querySelectorAll('#tray .ability.cooling[data-ability]')].map((b) => b.dataset.ability));
   for (const b of document.querySelectorAll('#tray .ability.ready[data-ability]')) if (wasCooling.has(b.dataset.ability)) b.classList.add('just-ready');
@@ -2975,7 +2976,7 @@ document.addEventListener('click', (e) => {
   if (ability) { // tap a skill to pick it, tap it again to fire it (no keyboard needed)
     const cur = $('command-input').value.trim(), id = ability.dataset.ability;
     if (cur.split(' ')[0] === id && !['command', 'schedule'].includes(ABILITIES[id]?.target)) { $('command-input').value = ''; return run(cur); }
-    return prepare(id);
+    prepare(id); return phPicked();
   }
   const target = e.target.closest('[data-target]');
   if (target && !target.disabled) {
@@ -3191,6 +3192,12 @@ function phMenuMarkup() {
   const unread = (campaign.mail?.list || []).filter((m) => !m.read).length;
   const row = (attrs, icon, label) => `<button type="button" class="ph-row" ${attrs}>${icon}<span>${label}</span></button>`;
   return `<nav class="ph-tabs ph-in-sheet" aria-label="Pages">${PH.tabBarMarkup(campaign, { module, camp: CAMP, active: active(campaign), counts: { mail: unread } })}</nav><nav class="ph-more-list">${row('data-phone="comms"', PGV.lampMarkup(campaign).replace(/^<button[^>]*>|<\/button>$/g, ''), 'Pager')}${row('data-phone="prompt"', '<span class="ph-gt" aria-hidden="true">&gt;_</span>', 'Command line')}</nav>`;
+}
+// The key you've picked (the prompt holds it until a second tap fires it): outlined amber on a phone's tray, which
+// has no You row.
+function phPicked() {
+  const id = F.isPhone() ? $('command-input').value.trim().split(' ')[0] : '';
+  for (const k of $('tray').querySelectorAll(':scope > .ability[data-ability]')) k.classList.toggle('ph-picked', !!id && k.dataset.ability === id);
 }
 // The log's latest line over the tray, its side's edge teal or red; a tap opens the whole log in a sheet.
 function phTicker() {
