@@ -40,7 +40,7 @@ export const TRIM = {
   b9: { bash: { level: -2.6, crit: -3.5, chit: 1.6, miss: 2.9 }, ban: { level: -4.5, crit: -1.7, chit: 5.4, miss: 8.8 }, poke: { level: -1.5, crit: -4, chit: 1.2, miss: 3.7 }, ping: { level: -4.8, crit: -2.1, chit: 4.5, miss: 4.4 } },
   b10: { bash: { level: -8.3, crit: -2.7, chit: 8.4, miss: 8.5 }, ban: { level: -9.3, crit: -1.9, chit: 10.6, miss: 13.6 }, poke: { level: -4.7, crit: -5.2, chit: 5, miss: 6.9 }, ping: { level: -8.5, crit: -2.6, chit: 8.8, miss: 8.1 } },
   b11: { bash: { level: -10.2, crit: -1.9, chit: 8.1, miss: 16.5 }, ban: { level: -9.3, crit: -1.9, chit: 10.6, miss: 13.6 }, poke: { level: -4.6, crit: -5.3, chit: 8.8, miss: 18.8 }, ping: { level: -8.5, crit: -2.6, chit: 8.8, miss: 8.1 } },
-  b12: { bash: { level: -10.1, crit: -1.7, chit: -0.5, miss: -1.6 }, ban: { level: -9.3, crit: -1.9, chit: 10.6, miss: 13.6 }, poke: { level: -5.4, crit: -4.7, chit: -1, miss: -0.7 }, ping: { level: -8.5, crit: -2.6, chit: 8.8, miss: 8.1 } },
+  b12: { bash: { level: -10.1, crit: -1.7, chit: -0.5, miss: -1.6 }, ban: { level: -11.2, crit: -1.4, chit: 1.2, miss: -0.6 }, poke: { level: -5.4, crit: -4.7, chit: -1, miss: -0.7 }, ping: { level: -9.4, crit: -1.9, chit: 1.9, miss: 0.1 } },
   c: { bash: { level: 4.8, crit: -0.4, chit: 2.3, miss: 1 }, ban: { level: 3.3, crit: 0, chit: 4.3, miss: 2 }, poke: { level: 10.2, crit: -2.1, chit: 0.6, miss: -1 }, ping: { level: 10.4, crit: -0.7, chit: -0.9, miss: -2 } },
 };
 // Each key 1's class: the Breaker's sound is cut dead after its hit-stop (GATE s after it).
@@ -877,7 +877,7 @@ SOUNDS.b4 = heavy(1);
 // L: lower and stuttering (Glitch). W: wetter, its echoes longer and louder with a far repeat ringing into the room.
 // B: more bass, and the Breaker's echoes carry (RING lets them past its cut).
 // V: the Breaker's and the Infiltrator's with no square blips or bit-crush: 1 Tear (sample grains, a stuck buffer,
-// driven bass), 2 Trailer (a swell into a metal slam and a driven low brass, glass and shimmer).
+// driven bass), 2 Trailer (a swell into a metal slam and a driven low brass, glass and shimmer; the Bastion's and the Operator's too).
 function core(L, W = 0, B = 0, V = 0) {
   const low = 1 - 0.15 * L;
   const bus = (K, o, e) => {
@@ -974,6 +974,53 @@ function core(L, W = 0, B = 0, V = 0) {
       K.modes(o.room, at + 0.02, [[1568, 1, 0.4], [2349, 0.6, 0.3], [3136, 0.3, 0.2]], { peak: 0.06 });
     }
   };
+  // Trailer for the Bastion: a slow swell, a deeper slam and brass, a low bell and a rumble ringing on.
+  const banV = (K, o, T) => {
+    const { t, arrive, hit, stop, k, result } = T, crit = result === 'crit', miss = result === 'miss';
+    const { fx } = bus(K, o, { time: 0.11, fb: 0.55, wet: 0.5 }), d = K.drive(K.g(0.7, fx), 2.2, 1.2);
+    if (T.flies) {
+      K.S(d, t, 'whoosh', { gain: 0.3, rate: 0.55, lp: 1800 });
+      K.swoosh(o.dry, t, crit ? arrive : hit, { lo: [55, 240], hi: [400, 1500], peak: 0.32, pass: miss, tail: 0.34 });
+      if (!miss && hit - t > 0.06) K.S(fx, 0, 'shimmer', { reverse: true, end: hit, dur: hit - t - 0.01, gain: 0.28, rate: 0.6 });
+    }
+    if (miss) return;
+    if (result === 'chit') return snap(K, o, hit, 0.75, true);
+    const big = crit ? 1 : k;
+    K.crack(d, hit, { peak: 0.36, f: 4200 });
+    K.S(d, hit, 'plate-l', { gain: 0.6, rate: 0.34 * low, lp: 1500, jitter: 0 });
+    K.surge(d, hit, { f0: 95 * low, f1: 28 * low, d: 0.45 + 0.15 * big, peak: 0.4 + 0.2 * big, drive: 6, bright: 2200 });
+    K.rumble(o.dry, hit + 0.03, { f: 110, d: 0.55 + 0.2 * big, peak: 0.28 });
+    K.modes(o.room, hit + 0.01, [[196, 1, 1.1], [294, 0.6, 0.9], [588, 0.3, 0.6], [950, 0.2, 0.7 + 0.3 * big]], { peak: 0.1 }); // the bell
+    K.S(o.room, hit + 0.01, 'metal-l', { gain: 0.25, rate: 0.5, lp: 3000 });
+    weight(K, o, hit, big, crit, { f0: 85, f1: 26, d: 0.45, drop: 0.4 });
+    stuck(K, d, hit + stop + 0.06, 1 + (crit ? 1 : 0), 0.07, 'plate-l', { rate: 0.34 * low, gain: 0.3, lp: 1300 });
+  };
+  // Trailer for the Operator: a sine ping out, three slams stepping down, brass under the third, pings back.
+  const pingV = (K, o, T) => {
+    const { t, arrive, hit, k, result } = T, crit = result === 'crit', miss = result === 'miss';
+    const { fx } = bus(K, o, { time: PULSE, fb: 0.45, wet: 0.45 }), d = K.drive(K.g(0.7, fx), 2.2, 1.2);
+    const blip = (x, f, pan = 0, g = 0.07) => K.modes(pan ? K.pan(fx, pan) : fx, x, [[f, 1, 0.16], [f * 2.01, 0.3, 0.08]], { peak: g });
+    if (T.flies) {
+      blip(t, 1568);
+      K.S(d, t, 'whoosh', { gain: 0.25, rate: 1.2, hp: 400 });
+      K.swoosh(o.dry, t, arrive, { lo: [90, 420], hi: [800, 3000], peak: 0.2, pass: miss, tail: 0.28 });
+    }
+    if (miss) { blip(hit + 0.16, 392); return; }
+    if (result === 'chit') return snap(K, o, hit, 1.1, true);
+    const big = crit ? 1 : k;
+    for (let i = 0; i < 3; i++) {
+      const x = hit + i * PULSE, w = [1, 0.8, 0.65][i], p = [1.15, 0.95, 0.78][i] * low, last = i === 2;
+      K.crack(d, x, { peak: 0.38 * w, f: 5200 });
+      K.S(d, x, 'plate-l', { gain: 0.5 * w, rate: 0.5 * p, lp: 2000, jitter: 0, dur: last ? 0 : PULSE * 0.9 });
+      K.surge(d, x, { f0: 130 * p, f1: 40 * p, d: last ? 0.26 + 0.1 * big : PULSE * 0.8, peak: (0.34 + 0.18 * big) * w, drive: 6, bright: 2600 });
+      weight(K, o, x, big * w, false, { f0: 120 * p, f1: 40 * p, d: last ? 0.24 : 0.12, drop: 2 });
+    }
+    const t0 = hit + 2 * PULSE;
+    if (crit || big > 0.5) K.S(o.dry, t0, 'subdrop', { gain: (crit ? 0.5 : 0.28) * (1 + 0.5 * L) * (1 + 0.8 * B), rate: low, jitter: 0 });
+    K.rumble(o.dry, t0 + 0.02, { f: 120, d: 0.3, peak: 0.2 });
+    if (crit) K.surge(d, t0 + 0.14, { f0: 420, f1: 38, d: 0.2, peak: 0.13, drive: 4, bright: 3200 });
+    [2093, 1568, 1047].forEach((f, i) => blip(t0 + (i + 1) * PULSE, f, (i % 2 ? 1 : -1) * 0.4, 0.06));
+  };
   const pings = (K, fx, t, notes, gap, pan = 0) => notes.forEach((f, i) => {
     const x = t + i * gap, d = pan ? K.pan(fx, (i % 2 ? 1 : -1) * pan) : fx;
     K.tone(K.crush(d, 8), x, { type: 'square', f0: f, a: 0.001, peak: 0.1, d: 0.05 });
@@ -1002,6 +1049,7 @@ function core(L, W = 0, B = 0, V = 0) {
     },
     // A low carrier swinging in, the impact lower, a long slow cascade into a long growl, pings and a tone ringing on.
     ban(K, o, T) {
+      if (V === 2) return banV(K, o, T);
       const { t, arrive, hit, stop, k, result } = T, crit = result === 'crit', miss = result === 'miss';
       const { fx, b } = bus(K, o, { time: 0.11, fb: 0.55, wet: 0.5 });
       if (T.flies) {
@@ -1047,6 +1095,7 @@ function core(L, W = 0, B = 0, V = 0) {
     },
     // A crushed ping out, a carrier climbing, the return as three impacts stepping down, a growl after the third, pings back.
     ping(K, o, T) {
+      if (V === 2) return pingV(K, o, T);
       const { t, arrive, hit, k, result } = T, crit = result === 'crit', miss = result === 'miss';
       const { fx, b } = bus(K, o, { time: PULSE, fb: 0.45, wet: 0.45 });
       if (T.flies) {
