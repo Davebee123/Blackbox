@@ -9,10 +9,13 @@
 // finisher (and each subclass's variation) on the part, as the fight-winning break plays it. Status puts a status on the
 // part (its mark shows) for the hit to cash in: Exposed on a crit, Quarantined, Hooked, Tagged on a burn's tick. Ticks
 // left: how far a burn's tick has run down (last: it gutters). ◆ broken: how many a Crack broke (none: it glances off).
+// Sound (the style round, abilitysound.mjs): today's sound for the result, or an ability's own in style A, B or C
+// (Bash, Ban, Poke and Ping have them; the rest play today's), timed to the effect, whatever the Sound setting.
 
 import { RECIPES, FINISHERS, SUB_FINISHERS, finisherOf } from './abilityfx.mjs';
 import { SPIKE, ABILITIES, ARCHETYPES, SUBS } from './data.mjs';
 import { SFX } from './screenfx.mjs';
+import { STYLES, hasSound } from './abilitysound.mjs';
 
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 // The ability a row's key stands for (key 1's words are Spike; a tick is its burn's).
@@ -32,12 +35,12 @@ export function groupsOf() {
 
 // api: parts() → [{ id, name }]; level() / setLevel(level) (the Screen effects level: off, subtle, medium, bold);
 // motion() / setMotion(on); mates() → crewmates' handles; mark(partId, status) puts a status on the part ('' clears);
-// fire(key, partId, { power, crit, result, hidden, who, tier, marks, left, broke })
+// fire(key, partId, { power, crit, result, hidden, who, tier, marks, left, broke, sound }) (sound: 'off' | 'today' | a style)
 // → 'fx' | 'stand-in' | 'plain' | 'none'
 // (what played: 'stand-in' when a key's effect started from another key); plain(partId, { result }) the plain strike;
 // finish(cls, sub, partId) → 'fx' | 'plain' | 'none' (a break finisher).
 export function mountFxPlaytest(api) {
-  const ui = { target: null, hit: 'hit', power: 0.3, key: 'shown', who: '', said: '', tier: 1, mark: '', left: '', broke: '' };
+  const ui = { target: null, hit: 'hit', power: 0.3, key: 'shown', who: '', said: '', tier: 1, mark: '', left: '', broke: '', sound: 'off' };
   const panel = document.createElement('aside');
   panel.id = 'fx-playtest';
   panel.setAttribute('aria-label', 'Ability effects playtest');
@@ -48,6 +51,7 @@ export function mountFxPlaytest(api) {
     const parts = api.parts();
     if (!parts.some((p) => p.id === ui.target)) ui.target = parts[0]?.id || null;
     panel.innerHTML = `<h2>Ability effects <small>?playtest=fx</small></h2>
+      ${seg('Sound', [['off', 'off'], ['today', 'today'], ...Object.entries(STYLES).map(([k, n]) => [k, `${k.toUpperCase()} ${n}`])], ui.sound)}
       ${seg('Screen effects', SFX.levels.map((l) => [l, l]), api.level())}
       ${seg('Motion', [['on', 'on'], ['off', 'off']], api.motion() ? 'on' : 'off')}
       ${seg('Its key', [['shown', 'on screen'], ['hidden', 'not on screen (from your bar)']], ui.key)}
@@ -67,10 +71,10 @@ export function mountFxPlaytest(api) {
   }
   const say = (t) => { ui.said = t; const p = panel.querySelector('.fxp-said'); if (p) p.textContent = t; };
   function fire(key) {
-    const o = { power: ui.power, crit: ui.hit === 'crit', result: ui.hit, hidden: ui.key === 'hidden', who: ui.who || null, tier: ui.tier, marks: ui.mark ? [ui.mark] : [], left: ui.left === '' ? null : Number(ui.left), broke: ui.broke === '' ? null : Number(ui.broke) };
+    const o = { power: ui.power, crit: ui.hit === 'crit', result: ui.hit, hidden: ui.key === 'hidden', who: ui.who || null, tier: ui.tier, marks: ui.mark ? [ui.mark] : [], left: ui.left === '' ? null : Number(ui.left), broke: ui.broke === '' ? null : Number(ui.broke), sound: ui.sound };
     if (!key) { api.plain(ui.target, o); return say('No recipe: the plain hit effect (hitfx.mjs).'); }
     const what = api.fire(key, ui.target, o), name = RECIPES[key].label;
-    const at = ui.tier > 1 && !ui.who ? ` at tier ${ui.tier}` : '';
+    const at = (ui.tier > 1 && !ui.who ? ` at tier ${ui.tier}` : '') + (STYLES[ui.sound] && !hasSound(ui.sound, key) ? ` (no ${ui.sound.toUpperCase()} sound yet: today's)` : '');
     say(what === 'fx' ? `${name}: played${at}.` : what === 'stand-in' ? `${name}: played, from the tray's first key (it isn't on this class's tray).` : what === 'plain' ? `${name}: no room here, the plain hit effect.` : `${name}: nothing at Screen effects ${api.level()}${api.motion() ? '' : ', Motion off'} (as in a fight).`);
   }
   let queue = 0;
@@ -80,7 +84,8 @@ export function mountFxPlaytest(api) {
     e.stopPropagation();
     if (b.dataset.fxp) {
       const k = b.dataset.fxp, v = b.dataset.v;
-      if (k === 'Screen effects') api.setLevel(v);
+      if (k === 'Sound') { ui.sound = v; if (v !== 'off') api.warm?.(); }
+      else if (k === 'Screen effects') api.setLevel(v);
       else if (k === 'Motion') api.setMotion(v === 'on');
       else if (k === 'Its key') ui.key = v;
       else if (k === 'Fired by') ui.who = v;

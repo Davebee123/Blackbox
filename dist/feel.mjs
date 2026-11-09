@@ -192,8 +192,10 @@ export function createFeel({ settings, reducedMotion }) {
     add(kind, target, label, detail) { queue.push({ kind, target, label, detail, at: beatMs }); },
     // When what is added next lands, in ms after the flush (0: at once). react() sets it per event.
     beat(ms) { beatMs = Math.max(0, Math.round(ms) || 0); },
-    // Play one voice now, whatever the Sound setting (the System page's sound test).
-    preview(name) { sound.play(name, name === 'hit' ? { amount: 12 } : {}); },
+    // Play one voice now (or `delay` s from now), whatever the Sound setting (the System page's sound test).
+    preview(name, opts, delay = 0) { sound.play(name, opts || (name === 'hit' ? { amount: 12 } : {}), delay); },
+    // An ability's sound in a style, whatever the Sound setting (the ability effects playtest; abilitysound.mjs).
+    abilityPreview(style, key, plan, hit) { return sound.ability(style, key, plan, hit); },
     // A key on the prompt or a button press (only with Sound on).
     key(kind) { if (settings().sound) sound.key(kind); },
     // A scene with its own mix (the cold open): { ctx, out } at the effects volume, or null with Sound off.

@@ -7,6 +7,8 @@
 //            digital blips, chimes) and stand in for everything until the samples have loaded.
 // Voices take any AudioContext and a start time, which is how `renderBoard()` bounces them to a
 // WAV for listening offline.
+import { playAbility, timingOf } from './abilitysound.mjs';
+
 const NOTE = (n) => 440 * Math.pow(2, (n - 69) / 12); // MIDI note → Hz
 
 // ---------- building blocks ----------
@@ -681,6 +683,31 @@ function chain(ctx) {
   return { master: g, room };
 }
 
+// An ability's sound (abilitysound.mjs) in a style, timed by T (timingOf): its own level, a dry bus and a send that
+// rings into the room (the Weighty style's into a bigger hall too).
+const halls = new WeakMap();
+function hallOf(ctx, ch) {
+  if (!halls.has(ch)) {
+    const sr = ctx.sampleRate, n = Math.floor(sr * 1.4), b = ctx.createBuffer(2, n, sr);
+    for (let c = 0; c < 2; c++) { const d = b.getChannelData(c); let lp = 0; for (let i = 0; i < n; i++) { lp += 0.5 * ((Math.random() * 2 - 1) - lp); d[i] = (i < sr * 0.012 ? 0 : lp) * Math.pow(1 - i / n, 3); } }
+    const cv = ctx.createConvolver(), w = ctx.createGain(); cv.buffer = b; w.gain.value = 0.35;
+    cv.connect(w).connect(ch.master);
+    halls.set(ch, cv);
+  }
+  return halls.get(ch);
+}
+const ABILITY_ROOM = { a: 0.1, b: 0.16, c: 0.1 };
+function abilityAt(ctx, ch, style, key, T) {
+  if (!banks.get(ctx)?.ready) return false;
+  const dry = ctx.createGain(), send = ctx.createGain(), room = ctx.createGain(), more = ctx.createGain();
+  send.gain.value = ABILITY_ROOM[style] ?? 0.1; more.gain.value = 0.6;
+  dry.connect(ch.master); dry.connect(send).connect(ch.room);
+  room.connect(dry); room.connect(more).connect(ch.room);
+  if (style === 'b') { const h = ctx.createGain(); h.gain.value = 0.5; room.connect(h).connect(hallOf(ctx, ch)); }
+  const list = (name) => { const l = banks.get(ctx)?.buffers.get(name); return l && take(l, name); };
+  return playAbility(ctx, { dry, room }, style, key, T, list);
+}
+
 // Play one recipe (or its synth stand-in) at time t.
 function voiceAt(ctx, ch, name, t, opts = {}) {
   const r = RECIPES[name], ready = banks.get(ctx)?.ready;
@@ -770,9 +797,15 @@ export function createSound() {
     });
   }
   shared = {
-    play(name, opts = {}) {
+    play(name, opts = {}, delay = 0) {
       if (!ready()) return;
-      try { voiceAt(ctx, ch, name, ctx.currentTime + 0.005, opts); } catch { /* no audio */ }
+      try { voiceAt(ctx, ch, name, ctx.currentTime + 0.005 + Math.max(0, delay), opts); } catch { /* no audio */ }
+    },
+    // An ability's sound in a style (abilitysound.mjs), timed by its effect's plan ({ travel, hold, impact, stop } ms
+    // from now; none: contact at once) and its hit ({ result, power }). False if it has none (or the samples aren't in).
+    ability(style, key, plan, hit) {
+      if (!ready()) return false;
+      try { return abilityAt(ctx, ch, style, key, timingOf(ctx.currentTime + 0.005, plan || {}, hit)); } catch { return false; }
     },
     // A decoded one-shot (a virus family's attack or break, places.mjs) through the same chain as every voice.
     clip(buffer, gain = 1) {
@@ -817,6 +850,7 @@ export function createSound() {
 // Pass { synth: true } to hear the synthesized stand-ins instead of the samples.
 export async function renderBoard(names = Object.keys(RECIPES), gap = 1.3, { synth = false, base, hum = false } = {}) {
   // Each entry is a name (played `gap` seconds after the last) or [name, seconds, opts] for a scene.
+  // 'ability:<style>:<key>' plays an ability's sound: opts { plan, result, power } (abilitysound.mjs).
   const cues = names.map((n, i) => (Array.isArray(n) ? n : [n, 0.3 + i * gap, n === 'hit' ? { amount: 12 } : {}]));
   const sr = 44100, ctx = new OfflineAudioContext(1, Math.ceil(sr * (Math.max(...cues.map((c) => c[1])) + 2)), sr);
   if (!synth) await loadBank(ctx, base);
@@ -824,6 +858,7 @@ export async function renderBoard(names = Object.keys(RECIPES), gap = 1.3, { syn
   if (hum) ambience(ctx, ctx.destination, { seeks: false });
   for (const [n, t, o = {}] of cues) {
     if (n.startsWith('key:')) (KEYS[n.slice(4)] || KEYS.char)((s, at, x) => sample(ctx, ch.master, t, s, { ...x, at }));
+    else if (n.startsWith('ability:')) { const [, style, key] = n.split(':'); abilityAt(ctx, ch, style, key, timingOf(t, o.plan || {}, o)); }
     else voiceAt(ctx, ch, n, t, o);
   }
   const buf = await ctx.startRendering();
