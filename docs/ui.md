@@ -134,6 +134,10 @@ teal, violet or a threat's red.
     miss grounds past the bar, ◆ throws a steel arc, and a crit (its cooldown resets) runs back to the key as a gold
     comet. Crack lands on the ◆ row and strikes each ◆ it broke a beat apart (combat.mjs `broke`), glancing off when
     none are left. Rate Limit's brackets snap onto the attack it throttles; on a miss the halves pass each other.
+    What spreads jumps on to every other part as a spark, nearest first (Shatter's shards in steel; Propagate sets each
+    part burning as it lands). What stops an attack (SIGINT, Suspend, Jam, Blackhole) pulls a line tight through its
+    chip. A heal runs a light along your bar (Reclaim's comes back from the part first). Fork Bomb strikes each ◆ it
+    broke on every part (a strip's `broke`).
   - **A status cashing in** (combat.mjs damage `marks`): Exposed's crosshair flies off its mark and closes on a crit;
     Quarantined's brackets snap onto the name; Hooked's line pulls tight as its +6 lands; Tagged burns taller. The mark
     glows.
