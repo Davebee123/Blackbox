@@ -130,7 +130,7 @@ let systemTab = 'settings'; // Settings page (nav id 'system'): 'settings', or '
 let rigTab = 'achievements'; // Rig page: a view.mjs RIG_TABS key
 let achUi = { cat: 'summary', focus: null }; // the Achievements page (achievements-view.mjs): the category shown, an achievement to light
 let caseUi = { slot: 0, pslot: 0 }; // System → Casing (casing-view.mjs): the sticker slot and the desk's spot picked
-const pd = { id: null, anchor: null, el: null, scrim: null, sheet: false, html: '', mine: false, timer: 0 }; // the Loadout's item datasheet popover (pdShow)
+const pd = { id: null, anchor: null, el: null, scrim: null, tap: false, html: '', mine: false, timer: 0 }; // the Loadout's item datasheet popover (pdShow)
 let pdTouch = 0; // when a touch last came down: the click after it is a tap
 
 function load() {
@@ -871,6 +871,7 @@ let fpPopAt = null;
 let fpWas = {}; // where you and the hunter stood at the last redraw, on which visit: a step plays its travel (travelfx.mjs)
 let fpFresh = []; // rooms seen or discovered since the last redraw of the rooms page: they resolve on it
 function placeRoomsPop() {
+  if (F.isPhone()) return; // a phone: the room's card is in the sheet (phPops)
   const pop = $('fp-pop');
   if (!pop) { fpPopAt = null; return; }
   const box = pop.parentElement, id = pop.dataset.pop;
@@ -954,7 +955,7 @@ document.addEventListener('pointermove', (e) => {
   applyFpZoom(); placeRoomsPop();
 });
 document.addEventListener('pointerup', () => { if (fpDrag?.moved) { const stop = (ev) => { ev.stopPropagation(); ev.preventDefault(); }; document.addEventListener('click', stop, { capture: true, once: true }); setTimeout(() => document.removeEventListener('click', stop, { capture: true }), 0); } fpDrag = null; });
-document.addEventListener('dblclick', (e) => { if (e.target.closest?.('.fp-svg') && !e.target.closest('[data-rooms], [data-fp-sel]')) fpZoomReset(); });
+document.addEventListener('dblclick', (e) => { if (!F.isPhone() && e.target.closest?.('.fp-svg') && !e.target.closest('[data-rooms], [data-fp-sel]')) fpZoomReset(); });
 document.addEventListener('click', (e) => { if (e.target.closest?.('[data-fp-zoom]')) fpZoomReset(); });
 // ---------- a breach (breach.mjs) ----------
 // A button on the breach page: a move on the map, or the screen's verb. A fight starts paused on the Fight page.
@@ -1782,6 +1783,7 @@ let popAt = null; // the last spot: a redraw puts the card straight back there, 
 // Anchored to the node's hit circle (its rings and labels change size), and measured again only
 // when the selection, the zoom or the canvas changes.
 function placeMapPop() {
+  if (F.isPhone()) return; // a phone: the card is in the sheet (phPops)
   const pop = $('map-pop'), canvas = pop?.closest('.map-canvas'), node = canvas?.querySelector('.mnode.selected .mhit');
   if (!pop) return;
   if (!node) { pop.style.visibility = 'hidden'; return; }
@@ -1839,7 +1841,7 @@ document.addEventListener('pointermove', (e) => {
   applyMapZoom();
 });
 document.addEventListener('pointerup', () => { if (mapDrag?.moved) { const stop = (ev) => { ev.stopPropagation(); ev.preventDefault(); }; document.addEventListener('click', stop, { capture: true, once: true }); setTimeout(() => document.removeEventListener('click', stop, { capture: true }), 0); } mapDrag = null; });
-document.addEventListener('dblclick', (e) => { if (e.target.closest?.('.map-svg')) { mapZoom.k = 1; applyMapZoom(); } });
+document.addEventListener('dblclick', (e) => { if (!F.isPhone() && e.target.closest?.('.map-svg')) { mapZoom.k = 1; applyMapZoom(); } });
 document.addEventListener('click', (e) => { if (e.target.closest?.('[data-map-zoom]')) { mapZoom.k = 1; applyMapZoom(); } });
 
 // ---------- rendering ----------
@@ -2180,7 +2182,7 @@ function render(force = false) {
   } else if (combatLike && (campaign.breach || CAMP)) {
     return go(campaign.breach ? 'breach' : 'campaign', true); // a breach fight that's over: back to its page, never the old map
   } else if (combatLike) {
-    put('page-view', V.mapMarkup(campaign, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor, runner: mapRunner }));
+    put('page-view', V.mapMarkup(campaign, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor, runner: mapRunner, phone: F.isPhone() }));
     applyMapZoom();
   } else if (module === 'net') {
     const before = cache.get('page-view');
@@ -2191,7 +2193,7 @@ function render(force = false) {
       $('term').scrollTop = $('term').scrollHeight;
     }
   } else {
-    const pages = { rooms: (x) => roomsMarkup(x), campaign: (x) => campaignMarkup(x), room: (x) => roomMarkup(x), archive: (x) => archiveMarkup(x), breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor, runner: mapRunner }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => (hubSel === POST.id ? postTerminalMarkup(x, hubLines, hubWin, Date.now()) : V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now())), server: (x) => V.serverMarkup(x, Date.now(), srvUi), daemons: V.daemonsMarkup, codex: (x) => (codexTab === 'log' ? collectionPageMarkup(x, logSel, codexIdx, codexShut, logFind, logJr) : codexPageMarkup(x, codexSel, codexIdx, codexShut)), system: (x) => V.systemMarkup(x, { coop: !!coop, dev: DEV, tab: systemTab }), rig: (x) => V.rigMarkup(x, { tab: rigTab, ach: achUi, cs: caseUi }) };
+    const pages = { rooms: (x) => roomsMarkup(x), campaign: (x) => campaignMarkup(x), room: (x) => roomMarkup(x), archive: (x) => archiveMarkup(x), breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor, runner: mapRunner, phone: F.isPhone() }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => (hubSel === POST.id ? postTerminalMarkup(x, hubLines, hubWin, Date.now()) : V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now())), server: (x) => V.serverMarkup(x, Date.now(), srvUi), daemons: V.daemonsMarkup, codex: (x) => (codexTab === 'log' ? collectionPageMarkup(x, logSel, codexIdx, codexShut, logFind, logJr) : codexPageMarkup(x, codexSel, codexIdx, codexShut)), system: (x) => V.systemMarkup(x, { coop: !!coop, dev: DEV, tab: systemTab }), rig: (x) => V.rigMarkup(x, { tab: rigTab, ach: achUi, cs: caseUi }) };
     // A page that throws shows what broke (and a way back) instead of stopping every render after it.
     const keep = module === 'breach' ? $('bx-scroll')?.scrollTop : null;
     const focusRoom = module === 'rooms' ? document.activeElement?.closest?.('.fp-room')?.dataset.room : null; // a redraw keeps a focused room focused
@@ -2214,7 +2216,6 @@ function render(force = false) {
       row?.querySelector('.silk-pick')?.focus({ preventScroll: true });
     }
     pdDrawn();
-    if (module === 'server') { const d = document.querySelector('.command-dock'); $('page-view').style.setProperty('--dock-h', `${Math.max(0, innerHeight - (d?.getBoundingClientRect().top ?? innerHeight))}px`); } // the phone's sheet sits just above the prompt
     if (module === 'rooms') { for (const id of fpFresh.splice(0)) for (const g of $('page-view').querySelectorAll(`.fp-room[data-room="${CSS.escape(id)}"]`)) g.classList.add('resolve'); } // a room just seen resolves
     if (module === 'rooms') { applyFpZoom(); fillClocks($('page-view')); placeRoomsPop(); pzFx.mounted(); renderOffer(); } // the countdowns tick in place: the markup only changes with the server
     // The Mail page opens the first unread item by itself: showing it in full counts as reading it.
@@ -2783,6 +2784,7 @@ function frame(now) {
   chipTick();
   scanner?.tick(Date.now());
   lu.tick();
+  phPops();
   feel.flush();
   checkTips(now);
   shell.caret();
@@ -2873,7 +2875,7 @@ document.addEventListener('focusin', (e) => {
   if (pv && srvUi.preview !== pv.dataset.preview) { srvUi = { ...srvUi, preview: pv.dataset.preview }; dirty = true; }
 });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && module === 'server' && (srvUi.open || srvUi.preview)) { srvUi = { ...srvUi, open: false, preview: null, armed: null }; dirty = true; } });
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && V.daemonUi.sel && document.querySelector('.dm-panel.open')) { V.daemonUi.sel = null; dirty = true; } }); // the Daemons tab's sheet
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && V.daemonUi.sel && document.querySelector('.dm-panel.open')) { V.daemonUi.sel = null; dirty = true; } }); // the Daemons tab's panel, where it closes
 document.addEventListener('click', (e) => {
   if (tip && !e.target.closest('#tip') && (e.target.closest(tip.cur.at) || (tip.cur.also && e.target.closest(tip.cur.also)))) advanceTip();
   if (e.target.closest('[data-spoils-go]')) { if (ended) leaveFight(); else hideSpoils(); return; }
@@ -3150,15 +3152,18 @@ const phFight = () => module === 'combat' && !!shown().encounter;
 function phoneUi() {
   const on = F.isPhone();
   document.body.classList.toggle('ph-fight', on && phFight()); // a fight: no top strip (its HUD takes the top)
+  document.body.classList.toggle('ph-rooms', on && module === 'rooms' && !!campaign.rooms && !phFight()); // a server's rooms: its one-line header is the strip
+  document.body.classList.toggle('ph-map', on && module === 'map'); // the map: full bleed
   if (!on) { if (phMore) closeSheet(); return; }
   const unread = (campaign.mail?.list || []).filter((m) => !m.read).length, due = openContracts(campaign).filter((c) => ready(campaign, c)).length;
   const counts = { mail: unread, ready: due, loadout: Number($('new-loadout').textContent) || 0, consortium: !$('tab-consortium').hidden ? Number($('con-count').textContent) || 0 : 0 };
   put('ph-tabs', PH.tabBarMarkup(campaign, { module, camp: CAMP, active: active(campaign), counts, moreOpen: phMore }));
   if (phMore) { const html = phMoreMarkup(); if (html !== phMoreHtml) { phMoreHtml = html; const b = sheetBody(); if (b) b.innerHTML = html; } }
+  phListDraw();
 }
 function phMoreMarkup() {
   const h = hackerOf(campaign);
-  return PH.moreMarkup(campaign, { who: { handle: campaign.profile?.handle || 'rookie', cls: V.className(classOf(campaign)), level: h.level, xp: h.level >= 50 ? 1 : h.xp / V.xpNeeded(h.level) }, consortium: !$('tab-consortium').hidden, count: Number($('con-count').textContent) || 0, people: !$('people').hidden, camp: CAMP });
+  return PH.moreMarkup(campaign, { who: { handle: campaign.profile?.handle || 'rookie', cls: V.className(classOf(campaign)), level: h.level, xp: h.level >= 50 ? 1 : h.xp / V.xpNeeded(h.level) }, consortium: !$('tab-consortium').hidden, count: Number($('con-count').textContent) || 0, people: !$('people').hidden, camp: CAMP, pager: document.body.classList.contains('ph-rooms') ? PGV.lampMarkup(campaign).replace(/^<button[^>]*>|<\/button>$/g, '') : '' });
 }
 function phMoreOpen(open) {
   if (open === phMore) return;
@@ -3280,11 +3285,160 @@ document.addEventListener('click', (e) => {
   if (b.dataset.phone === 'more') phMoreOpen(true);
   if (b.dataset.phone === 'comms') setComms(true);
 }, true);
+// ---------- the phone's pop-ups (docs/phone-plan.md P3) ----------
+// On a phone every pop-up is the one sheet (sheet.mjs). Each is still drawn where the desktop draws it (a card in the
+// page, or its own host on the body); phPops lifts it into the sheet, whole, so its buttons and handlers are the
+// desktop's. It goes home when the sheet lets go of it (another sheet, a close, a desktop). One at a time, the first
+// wanted of the list. `host`: an element that stays (wanted while it isn't hidden, or `want`); `page`: a selector in
+// the page (wanted while the page draws it). `shut`: what closing the sheet by hand does. `through`: the page under it
+// still takes taps (sheet.mjs).
+const PH_POPS = [
+  { id: 'journal', host: () => $('jr-find'), label: 'Journal', shut: () => journalDone() },
+  { id: 'offer', host: () => $('th-offer'), label: 'Pick your reward', shut: () => { thOffer.later = offerKey(); } },
+  { id: 'quest', page: '#th-panel', label: 'Transmission', shut: () => { thUi.closed = campaign.threads?.said?.n ?? null; } },
+  { id: 'comms', host: () => $('comms'), height: 'half', label: 'Pager', shut: () => setComms(false) },
+  { id: 'item', host: () => pd.el, want: () => !!pd.id && pd.tap, label: 'Datasheet', shut: () => pdHide() },
+  { id: 'map', page: '#map-pop', through: true, label: 'Server', shut: () => { mapPop = false; mapSel = null; V.setMemAsk(null); }, drawn: phPeek },
+  { id: 'room', page: '#fp-pop', through: true, label: 'Room', shut: () => closePop(campaign) },
+  { id: 'server', page: '#hsv-panel.open', through: true, height: 'half', label: 'Details', shut: () => { srvUi = { ...srvUi, open: false, preview: null, armed: null }; } },
+  { id: 'daemon', page: '.dm-panel.open', through: true, label: 'Daemon', shut: () => { V.daemonUi.sel = null; } },
+  { id: 'levelup', host: () => $('levelup'), want: () => lu.showing(), through: true, label: 'Firmware update', shut: () => lu.dismiss() },
+];
+let phPop = null; // what the sheet holds: { p, el, home: { parent, next }, html (the page's markup it came from), quiet }
+const phPopKey = (p) => 'pop:' + p.id;
+function phWanted(p) {
+  if (p.host) { const el = p.host(); return el && (p.want ? p.want() : !el.hidden) ? el : null; }
+  const fresh = $('page-view').querySelector(p.page);
+  if (fresh) return fresh;
+  return phPop?.p === p && phPop.el.isConnected && phPop.html === cache.get('page-view') ? phPop.el : null; // still the page's, in the sheet
+}
+function phGoHome() {
+  const c = phPop; phPop = null;
+  if (!c) return;
+  if (c.p.host || (c.home.parent.isConnected && c.html === cache.get('page-view'))) c.home.parent.insertBefore(c.el, c.home.next?.parentNode === c.home.parent ? c.home.next : null); else c.el.remove();
+  document.documentElement.style.removeProperty('--sh-h');
+}
+function phPops() {
+  const k = sheetKey();
+  if (!F.isPhone()) { if (phPop) closeSheet(); return; }
+  if (k && !k.startsWith('pop:')) return; // More, a rule's card, a list: it has the sheet, and the pop-up comes back after it
+  let p = null, el = null;
+  for (const x of PH_POPS) { el = phWanted(x); if (el) { p = x; break; } }
+  if (!p) { if (phPop) { phPop.quiet = true; closeSheet(); } return; }
+  if (phPop?.p === p && phPop.el === el) return;
+  const home = { parent: el.parentNode, next: el.nextSibling }, html = cache.get('page-view');
+  if (phPop?.p === p && k === phPopKey(p)) { // the page drew it again: the new one takes the old one's place
+    const b = sheetBody(), top = b.scrollTop, open = phPop.el.classList.contains('ph-open');
+    phPop.el.remove();
+    phPop = { p, el, home, html };
+    b.replaceChildren(el); b.scrollTop = top;
+    if (open) el.classList.add('ph-open');
+  } else {
+    const b = openSheet('', { height: p.height || 'peek', label: p.label, id: phPopKey(p), through: !!p.through, closed: (why) => {
+      const c = phPop; phGoHome();
+      if (c && !why?.replaced && !c.quiet) c.p.shut();
+      dirty = true;
+    } });
+    phPop = { p, el, home, html };
+    b.append(el);
+  }
+  p.drawn?.(el);
+  if (p.through) document.documentElement.style.setProperty('--sh-h', `${sheetBody().parentElement.offsetHeight}px`); // the page keeps its last rows clear of it
+}
+// A map card's peek: its name, its level and its main button on one line; ▴ opens the whole card under it.
+function phPeek(el) {
+  const card = el.querySelector('.card');
+  if (!card || el.querySelector('.ph-peek')) return;
+  const name = card.querySelector('h1')?.textContent || card.querySelector('h2')?.textContent || '', tag = card.querySelector('.tagline'), go = card.querySelector('.btn.primary:not([disabled])') || card.querySelector('.btn.primary');
+  const peek = document.createElement('div');
+  peek.className = 'ph-peek';
+  peek.innerHTML = `<button type="button" class="ph-peek-id" data-sheet-more aria-label="Details"><b>${V.esc(name)}</b>${tag ? `<small>${tag.innerHTML}</small>` : ''}<i aria-hidden="true">▴</i></button>${go ? go.outerHTML : ''}`;
+  el.prepend(peek);
+}
+document.addEventListener('click', (e) => {
+  const m = e.target.closest?.('#sheet [data-sheet-more]');
+  if (!m) return;
+  const pop = m.closest('.map-pop'); pop?.classList.toggle('ph-open');
+  m.setAttribute('aria-expanded', String(pop?.classList.contains('ph-open')));
+  if (phPop?.p.through) document.documentElement.style.setProperty('--sh-h', `${sheetBody().parentElement.offsetHeight}px`);
+});
+// The map's chips (view.mjs mapChips) open the threat rail, or the contract tracker and the Runners, as a list in
+// the sheet; a row does what it does on the desktop's map, and the list goes. A server's header (its name) opens
+// the rest of its strip: kind, rule, keys, pack, contracts, Scripts.
+let phList = null, phListHtml = '';
+function phListMarkup() {
+  if (phList === 'fpinfo') return module === 'rooms' && $('page-view').querySelector('.fp-hud') ? `<div class="ph-fpinfo">${$('page-view').querySelector('.fp-hud').outerHTML}</div>` : '';
+  return `<div class="ph-list">${V.mapRail(campaign, phList, mapSel, mapRunner)}</div>`;
+}
+function phListOpen(which) {
+  phList = which; phListHtml = phListMarkup();
+  if (!phListHtml) { phList = null; return; }
+  openSheet(phListHtml, { height: 'peek', label: which === 'threats' ? 'Threats and timers' : which === 'jobs' ? 'Contracts' : 'The server', id: 'list', closed: () => { phList = null; dirty = true; } });
+}
+function phListDraw() {
+  if (!phList || sheetKey() !== 'list') return;
+  const html = phListMarkup();
+  if (!html || html === '<div class="ph-list"></div>') return closeSheet();
+  if (html !== phListHtml) { phListHtml = html; const b = sheetBody(), top = b.scrollTop; b.innerHTML = html; b.scrollTop = top; }
+}
+document.addEventListener('click', (e) => {
+  if (!F.isPhone()) return;
+  const chip = e.target.closest?.('#page-view [data-phone="threats"], #page-view [data-phone="jobs"]');
+  if (chip) return phListOpen(chip.dataset.phone);
+  if (e.target.closest?.('#page-view .fp-hud .fp-id')) return phListOpen('fpinfo');
+  if (sheetKey() === 'list' && e.target.closest?.('#sheet :is([data-select], [data-locate], [data-command], [data-go], [data-runner], [data-rooms])')) closeSheet();
+});
+
+// ---------- a phone's maps: pinch to zoom, double-tap to zoom in and back out ----------
+// Both maps (the network's and a server's rooms) zoom around the fingers' midpoint, up to what the wheel allows; one
+// finger pans a zoomed map (the desktop's drag). A double tap on the ground zooms in there, or back out to the fit.
+const phTouch = new Map();
+let phPinch = null, phTap = null;
+const phZoomOf = (svg) => (svg.matches('.map-svg') ? { z: mapZoom, max: 5, apply: applyMapZoom } : { z: fpZoomOf(svg), max: 4, apply: applyFpZoom });
+function phZoomAt(svg, at, k) {
+  const { z, max, apply } = phZoomOf(svg), [x, y, w, h] = baseVb(svg);
+  if (z.k <= 1) { z.cx = x + w / 2; z.cy = y + h / 2; }
+  const p = svgPoint(svg, at), k0 = z.k;
+  k = Math.max(1, Math.min(max, k));
+  z.cx = p.x + (z.cx - p.x) * (k0 / k); z.cy = p.y + (z.cy - p.y) * (k0 / k); z.k = k;
+  apply();
+}
+const phNoClick = () => { const stop = (ev) => { ev.stopPropagation(); ev.preventDefault(); }; document.addEventListener('click', stop, { capture: true, once: true }); setTimeout(() => document.removeEventListener('click', stop, { capture: true }), 60); };
+document.addEventListener('pointerdown', (e) => {
+  const svg = F.isPhone() && e.pointerType === 'touch' && e.target.closest?.('.map-svg, .fp-svg');
+  if (!svg) return;
+  phTouch.set(e.pointerId, { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, t: performance.now(), svg });
+  if (phTouch.size === 2) {
+    const [a, b] = [...phTouch.values()];
+    mapDrag = null; fpDrag = null; phTap = null;
+    phPinch = { svg, d0: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)), k0: phZoomOf(svg).z.k };
+  }
+});
+document.addEventListener('pointermove', (e) => {
+  const t = phTouch.get(e.pointerId);
+  if (!t) return;
+  t.x = e.clientX; t.y = e.clientY;
+  if (!phPinch || phTouch.size < 2 || !phPinch.svg.isConnected) return;
+  const [a, b] = [...phTouch.values()];
+  phZoomAt(phPinch.svg, { clientX: (a.x + b.x) / 2, clientY: (a.y + b.y) / 2 }, phPinch.k0 * Math.hypot(a.x - b.x, a.y - b.y) / phPinch.d0);
+});
+const phTouchEnd = (e) => {
+  const t = phTouch.get(e.pointerId);
+  if (!t) return;
+  phTouch.delete(e.pointerId);
+  if (phPinch) { if (phTouch.size < 2) { phPinch = null; mapDrag = null; fpDrag = null; phNoClick(); } return; }
+  if (e.type !== 'pointerup' || Math.hypot(t.x - t.x0, t.y - t.y0) > 10 || performance.now() - t.t > 350 || !t.svg.isConnected) return;
+  if (e.target.closest?.('.mnode, .fp-room, [data-rooms], [data-fp-sel], [data-select]')) { phTap = null; return; } // a server or a room: its own tap
+  const now = performance.now();
+  if (phTap && now - phTap.t < 320 && Math.hypot(t.x - phTap.x, t.y - phTap.y) < 32) { phTap = null; const z = phZoomOf(t.svg).z; phZoomAt(t.svg, e, z.k > 1 ? 1 : 2.5); } else phTap = { t: now, x: t.x, y: t.y };
+};
+document.addEventListener('pointerup', phTouchEnd);
+document.addEventListener('pointercancel', phTouchEnd);
 // Tap for info: on a phone a tap on anything with a rule (a title or data-tt) that isn't a control shows its card in a
 // peek sheet. A long press on a control shows its card without firing it. The fight's board, HUD and level-up keep
 // their own tap cards (below).
 const PH_CONTROL = 'button, a[href], input, select, textarea, label, summary, [data-command], [data-module], [data-run], [data-select], [data-target], [data-finger], [data-pg-open], [data-pact], [role="button"], [tabindex]';
-const PH_OWN = '#board .bname, #board .intent.tell, #hud .gfx, #levelup .lu-row, #sheet .sh-tt';
+const PH_OWN = '#board .bname, #board .intent.tell, #hud .gfx, #levelup .lu-row, #sheet .sh-tt, #page-view .fp-hud .fp-id';
 function phCard(a) {
   const text = a.dataset.tt || a.getAttribute('title');
   if (!text) return false;
@@ -3481,7 +3635,7 @@ function goTo(target) {
   }
 }
 document.addEventListener('click', (e) => { const g = !e.target.closest('#comms') && e.target.closest('[data-go]'); if (g) { peopleOpen = false; goTo(g.dataset.go); } });
-document.addEventListener('click', (e) => { if (commsOpen && !e.target.closest('#comms, #pager')) setComms(false); });
+document.addEventListener('click', (e) => { if (commsOpen && !e.target.closest('#comms, #pager, #sheet')) setComms(false); });
 document.addEventListener('click', (e) => {
   const o = e.target.closest('[data-hub-opt]'), c = e.target.closest('[data-hub-close]');
   if (o) pickHub(o.dataset.hubOpt);
@@ -3647,10 +3801,10 @@ document.addEventListener('mouseout', (e) => {
 
 // The Loadout's item datasheets (view.mjs protocolDetailMarkup), on a stash row or a filled slot ([data-pdetail]).
 // Hover or keyboard focus: beside it, read only (its buttons are on the row), placed where it fits on screen without
-// covering the stash's list or the row; below or above it when neither side has room. A tap (a phone has no hover): a
-// bottom sheet with the buttons in it, closed by a tap outside. Escape closes either; i opens it again on a focused
+// covering the stash's list or the row; below or above it when neither side has room. A tap (a touch screen has no
+// hover): the same card with its buttons in it, closed by a tap outside; on a phone, in the one sheet (phPops). Escape closes either; i opens it again on a focused
 // row, and ↑ ↓ walk the rows. It follows its row through redraws and goes when the row does.
-function pdShow(anchor, sheet = false) {
+function pdShow(anchor, tap = false) {
   clearTimeout(pd.timer);
   const id = anchor.dataset.pdetail, html = V.protocolDetailMarkup(campaign, id);
   if (!html) return pdHide();
@@ -3660,12 +3814,12 @@ function pdShow(anchor, sheet = false) {
     document.body.append(pd.scrim, pd.el);
   }
   pd.anchor?.classList.remove('pd-on');
-  Object.assign(pd, { id, anchor, sheet, html, mine: /data-command="unload /.test(html) });
+  Object.assign(pd, { id, anchor, tap, html, mine: /data-command="unload /.test(html) });
   anchor.classList.add('pd-on');
   pd.el.innerHTML = html;
-  pd.el.className = `pg-pop${sheet ? ' sheet' : ''}`;
-  pd.el.setAttribute('role', sheet ? 'dialog' : 'tooltip');
-  pd.el.hidden = false; pd.scrim.hidden = !sheet;
+  pd.el.className = `pg-pop${tap ? ' tap' : ''}`;
+  pd.el.setAttribute('role', tap ? 'dialog' : 'tooltip');
+  pd.el.hidden = false; pd.scrim.hidden = !tap;
   pdPlace(); showArmed();
 }
 function pdHide() {
@@ -3673,10 +3827,10 @@ function pdHide() {
   if (!pd.id) return;
   pd.anchor?.classList.remove('pd-on');
   pd.el.hidden = true; pd.scrim.hidden = true;
-  Object.assign(pd, { id: null, anchor: null, sheet: false, html: '' });
+  Object.assign(pd, { id: null, anchor: null, tap: false, html: '' });
 }
 function pdPlace() {
-  if (!pd.id || pd.sheet) return;
+  if (!pd.id || (pd.tap && F.isPhone())) return; // a phone: it is in the sheet (phPops)
   const el = pd.el, a = pd.anchor.getBoundingClientRect(), pad = 8, gap = 12;
   const list = document.querySelector('#page-view .silk-stash .silk-tiles')?.getBoundingClientRect();
   const z = Z(), w = el.offsetWidth * z, h = el.offsetHeight * z, beside = pd.anchor.closest('.silk-tiles') ? list : a; // it zooms with the screen (style.css)
@@ -3696,14 +3850,14 @@ const pdKeyed = (a) => a.contains(document.activeElement) && document.activeElem
 function pdDrawn() {
   if (!pd.id) return;
   const n = document.querySelector(`#page-view [data-pdetail="${CSS.escape(pd.id)}"]`), html = n ? V.protocolDetailMarkup(campaign, pd.id) : '';
-  if (!html || (pd.sheet ? /data-command="unload /.test(html) !== pd.mine : !(n.matches(':hover') || pdKeyed(n)))) return pdHide();
+  if (!html || (pd.tap ? /data-command="unload /.test(html) !== pd.mine : !(n.matches(':hover') || pdKeyed(n)))) return pdHide();
   pd.anchor = n; n.classList.add('pd-on');
   if (html !== pd.html || (!confirmArm && pd.el.querySelector('.armed'))) { pd.html = html; pd.el.innerHTML = html; }
   pdPlace();
 }
 document.addEventListener('pointerdown', (e) => { if (e.pointerType === 'touch') pdTouch = Date.now(); }, true);
 document.addEventListener('pointerover', (e) => {
-  if (e.pointerType === 'touch' || pd.sheet) return;
+  if (e.pointerType === 'touch' || pd.tap) return;
   const a = e.target.closest?.('#page-view [data-pdetail]');
   if (!a) return;
   if (pd.anchor === a) return clearTimeout(pd.timer);
@@ -3711,7 +3865,7 @@ document.addEventListener('pointerover', (e) => {
   if (pd.id) pdShow(a); else pd.timer = setTimeout(() => a.isConnected && a.matches(':hover') && pdShow(a), 90); // scanning down the list: the next row's at once
 });
 document.addEventListener('pointerout', (e) => {
-  if (e.pointerType === 'touch' || pd.sheet) return;
+  if (e.pointerType === 'touch' || pd.tap) return;
   const a = e.target.closest?.('#page-view [data-pdetail]');
   if (!a || a.contains(e.relatedTarget)) return;
   clearTimeout(pd.timer);
@@ -3719,10 +3873,10 @@ document.addEventListener('pointerout', (e) => {
 });
 document.addEventListener('focusin', (e) => {
   const a = e.target.closest?.('#page-view [data-pdetail]');
-  if (a && !pd.sheet && e.target.matches(':focus-visible')) pdShow(a);
+  if (a && !pd.tap && e.target.matches(':focus-visible')) pdShow(a);
 });
 document.addEventListener('focusout', (e) => {
-  if (pd.sheet || !pd.anchor?.contains(e.target) || pd.anchor.contains(e.relatedTarget) || pd.anchor.matches(':hover')) return;
+  if (pd.tap || !pd.anchor?.contains(e.target) || pd.anchor.contains(e.relatedTarget) || pd.anchor.matches(':hover')) return;
   pdHide();
 });
 document.addEventListener('keydown', (e) => {
@@ -3740,14 +3894,14 @@ document.addEventListener('keydown', (e) => {
 // (the list shows what fits it), and a tap on the picked one opens its sheet. A tap on the scrim closes it, and goes
 // no further.
 document.addEventListener('click', (e) => {
-  if (pd.sheet && e.target === pd.scrim) { e.stopPropagation(); e.preventDefault(); pdHide(); return; }
+  if (pd.tap && e.target === pd.scrim) { e.stopPropagation(); e.preventDefault(); pdHide(); return; }
   if (Date.now() - pdTouch > 800 || pd.el?.contains(e.target)) return;
   const a = e.target.closest?.('#page-view [data-pdetail]');
   if (!a || e.target.closest('.inv-acts, .silk-out')) return;
   if (a.matches('.silk-tile') || V.stashUi.sel === a.querySelector('[data-silk-sel]')?.dataset.silkSel) { e.stopPropagation(); e.preventDefault(); pdShow(a, true); feel.key('click'); }
 }, true);
 addEventListener('scroll', () => pdPlace(), true);
-addEventListener('resize', () => (pd.sheet ? null : pdHide()));
+addEventListener('resize', () => (pd.tap ? null : pdHide()));
 
 // ---------- Loadout → Skills and talents, and the Toolkit (skills-view.mjs) ----------
 // The page's tree is spent with clicks (data-command); a right-click on a ranks node takes a rank back
