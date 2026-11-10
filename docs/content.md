@@ -92,8 +92,8 @@ strains or rules that open there), **its own named bosses**, **a faction thread*
 
 **The standard is floor 6** (the designer, November 2026): one new family; four named bosses (two in the lair pool, the
 floor job's, one in a fixed place), each a three-act fight (docs/solo-bosses.md); a board of its own or a deep one; a
-server kind; a thread and a transmission; **five sets and 20 uniques** in its band. Floors 5–8 are written to it; 2–4
-are next.
+server kind; a thread and a transmission; **five sets and 20 uniques** in its band. Floors 5–8 are written to it, and 2–4
+to its bosses, transmissions and items (their families, boards and server kinds are built or planned).
 
 **Lairs by floor** (*built*, `floors.mjs` FLOOR.lairs). Each floor's lair draws a boss from that floor's band, weighted
 by your network. Your native boss takes the lair on the floor whose band fits it. Every lair still rolls your network's
@@ -102,15 +102,16 @@ your native boss until the bosses below are built; a lair found before this keep
 
 | Floor | Built bosses that fit its band | Designed, not built (docs/genome.md 7.4) |
 |---|---|---|
-| 2 (7–14) | DEADBOLT 8, BACK ORIFICE 8, PATCH TUESDAY 9, SLEEPWALKER 10, MIRRORSHADE 12 | SHAKEDOWN 12 |
-| 3 (13–20) | HASHLORD 16, FLOODWALL 16, ECHOLALIA 18 | SHOULDER SURFER 18 |
+| 2 (7–14) | DEADBOLT 8, BACK ORIFICE 8, PATCH TUESDAY 9, SLEEPWALKER 10, MIRRORSHADE 12 | — |
+| 3 (13–20) | HASHLORD 16, FLOODWALL 16, ECHOLALIA 18 | — |
 | 4 (19–26) | TRIPMINE 20 | CAMSWARM 24 |
 | 5 (25–32) | — | GRACE PERIOD 28, PARASITE 32 |
 | 6 (31–38) | — | RING ZERO 34, BRICKWALL 36 |
 | 7 (37–44) | — | PAY RUN 40, BIT BUCKET 42 |
 | 8 (43–50) | — | HALT AND CATCH FIRE 46, THUNDERING HERD 47 |
 
-A floor job's boss (EXIT NODE, BULKHEAD, GOLDEN PARACHUTE, CORE DUMP) is fought in its job's Core, never in the lair.
+A floor job's boss (CENTRIFUGE, SHOULDER SURFER, NIGHT DESK, EXIT NODE, BULKHEAD, GOLDEN PARACHUTE, CORE DUMP) is fought
+in its job's Core, never in the lair.
 
 **Floor holders** (*built*, `floors.mjs` holdersOf). Each floor has a holder, the author that writes most of it, rolled
 from your network's roster. It sets the floor's families (`AUTHOR_FAMILIES`), attack sets, Nest and guard posts, so
@@ -128,8 +129,8 @@ yet, and floor 5 rolls like the rest until ACTUARY writes viruses (priority 12).
 **Floor 2 · Backhaul** (7–14). The carrier's trunk lines: traffic, relays, botnets.
 - *Cast:* **Botnet** (8) and **Logic Bomb** (12), docs/servers.md 4.3. Botnet's *farm it or end it* is the floor's
   area-build farm.
-- *Bosses:* the lair from the pool above; **CENTRIFUGE** (14, GLASSJAW) on the throne of floor 2's Pits; SHAKEDOWN
-  joins the lair pool.
+- *Bosses:* the lair from the five natives above; **CENTRIFUGE** (14, GLASSJAW) for the floor job; **SHAKEDOWN** (12,
+  TOLLGATE) on the throne of floor 2's Pits. LANTERN's broadcast is the floor's transmission.
 - *Faction:* LANTERN and GLASSJAW are rivals with both hubs here. A second side-contract pair (LANTERN against
   GLASSJAW, as Kestrel against NULL CHOIR), from floor 2.
 - *Puzzle:* the **log sweep** comes back as a terminal room (forensics.mjs has its three file kinds and three depths).
@@ -138,7 +139,8 @@ yet, and floor 5 rolls like the rest until ACTUARY writes viruses (priority 12).
 
 **Floor 3 · The Stacks** (13–20). Racks of servers, the call stack.
 - *Cast:* **RAT** (16), docs/servers.md 4.3. Polymorph and Rootkit moved to floors 5 and 6.
-- *Bosses:* the lair from HASHLORD, FLOODWALL and ECHOLALIA; **SHOULDER SURFER** (18, NULL CHOIR) joins the pool.
+- *Bosses:* the lair from HASHLORD, FLOODWALL and ECHOLALIA; **SHOULDER SURFER** (18, NULL CHOIR) for the floor job;
+  **RECURSION** (19, NULL CHOIR, *new*) in the last room of floor 3's Gauntlets. NULL CHOIR's offer is a transmission.
 - *Faction:* NULL CHOIR's floor. A third of its traced servers are NULL CHOIR's (one in eight elsewhere), so the
   Kestrel–NULL CHOIR side choice is played here.
 - *Puzzle:* deeper boards for the two that have none: the **Hunter chase** with a second Tracker in the den, and
@@ -148,14 +150,14 @@ yet, and floor 5 rolls like the rest until ACTUARY writes viruses (priority 12).
 
 **Floor 4 · Coldline** (19–26). Cold storage: backups, archives, cold wallets.
 - *Cast:* **Fileless** (26), docs/servers.md 4.3. The Stealer moved to floor 7.
-- *Bosses:* TRIPMINE and **CAMSWARM** (24, SWARMLINE) in the lair pool; **BYZANTINE** (26, GLASSJAW) on the throne of
-  floor 4's Pits.
+- *Bosses:* TRIPMINE and **CAMSWARM** (24, SWARMLINE) in the lair pool; **NIGHT DESK** (24) for the floor job;
+  **BYZANTINE** (26, GLASSJAW) on the throne of floor 4's Pits. moth's dropped session is the floor's transmission.
 - *Faction:* Kestrel's ground: a third of Coldline's servers are Kestrel's, and its ICE guards every one.
 - *Signature:* **Cold storage**, a server kind. *Cold: every virus sleeps until you hit it or cycle 6, and the vault
   holds two kits.*
 - *Come back:* BYZANTINE's and CAMSWARM's uniques, Kestrel's top tier.
 
-Floors 5–8 were prototyped as applets (floor sheets and boss boards, November 2026). The bosses' acts are in
+Floors 2–8 were prototyped as applets (floor sheets and boss boards, November 2026). The bosses' acts are in
 docs/solo-bosses.md; a boss named *new* is new there.
 
 **Floor 5 · Deep Core** (25–32). Two halves and one bridge: ACTUARY's two books, the insured and the uninsured.
@@ -220,9 +222,9 @@ docs/solo-bosses.md; a boss named *new* is new there.
 | Floor | New cast | Named bosses and lair | Faction thread | Puzzle twist | Signature | Come back for |
 |---:|---|---|---|---|---|---|
 | 1 | ✓ | ✓ add PATIENT ZERO, LOVELETTER | ✓ | ✓ | ✓ | ✓ |
-| 2 | ✓ | *thin* → CENTRIFUGE, SHAKEDOWN | ✓ add the side pair | ✓ | ✓ | *thin* → CENTRIFUGE, Botnet |
-| 3 | ✗ → RAT | ✗ → HASHLORD, FLOODWALL, ECHOLALIA, SHOULDER SURFER | ✓ add its ground | ✓ | ✓ | *thin* → SHOULDER SURFER |
-| 4 | *thin* → Fileless | ✗ → TRIPMINE, CAMSWARM, BYZANTINE | ✗ → Kestrel's ground | ✓ | ✓ | *thin* → BYZANTINE, CAMSWARM |
+| 2 | ✓ | ✗ → CENTRIFUGE, SHAKEDOWN | ✓ add the side pair, a transmission | ✓ | ✓ | *thin* → CENTRIFUGE, SHAKEDOWN |
+| 3 | ✗ → RAT | ✗ → SHOULDER SURFER, RECURSION | ✓ add a transmission | ✓ | ✓ | *thin* → SHOULDER SURFER, RECURSION |
+| 4 | *thin* → Fileless | ✗ → CAMSWARM, NIGHT DESK, BYZANTINE | ✗ → Kestrel's ground, a transmission | ✓ | ✓ | *thin* → NIGHT DESK, CAMSWARM, BYZANTINE |
 | 5 | ✗ → Polymorph, ACTUARY's portfolio | ✗ → GRACE PERIOD, PARASITE, EXIT NODE, ACTUARY | ✗ → Halcyon | ✗ → Defrag | ✗ → the bridge, Underwriting desk | ✗ → ACTUARY |
 | 6 | ✗ → Rootkit | ✗ → RING ZERO, BRICKWALL, BULKHEAD, BLACKOUT | ✗ → NULL CHOIR | ✗ → deep Deadlock | ✗ → Domain Controller | *thin* → RING ZERO |
 | 7 | ✗ → Stealer | ✗ → PAY RUN, BIT BUCKET, GOLDEN PARACHUTE, SUMP | ✗ → GLASSJAW | ✗ → deep boards | ✗ → Sinkhole | ✓ |
@@ -266,7 +268,7 @@ Ordered for the most variety per hour of work, floors 2–4 first. S is a day or
 | 2 | **Floor holders** (3.1). *Built* | S–M | Floors 2–8 |
 | 3 | **Botnet and Logic Bomb**. *Built* | M | Floor 2 |
 | 4 | **The log sweep as a terminal room**. *Built* | S | Floors 2–8 |
-| 5 | **Floor 2–4 bosses**: CENTRIFUGE, SHAKEDOWN, SHOULDER SURFER, CAMSWARM, BYZANTINE, with their uniques; the native bosses' own uniques | M | Floors 2–4 |
+| 5 | **Floor 2–4 bosses** in three acts: CENTRIFUGE, SHAKEDOWN, SHOULDER SURFER, RECURSION, CAMSWARM, NIGHT DESK, BYZANTINE, with their uniques; the native bosses' own uniques | M | Floors 2–4 |
 | 6 | **RAT** | L | Floor 3 |
 | 7 | **Floor 2–4 signatures**: Router, Honeypot, Cold storage. *Built* | S each | Floors 2–4 |
 | 8 | **Deeper chase and Cascade boards**. *Built* | S | Floors 3–8 |
@@ -295,3 +297,6 @@ Ordered for the most variety per hour of work, floors 2–4 first. S is a day or
 2. **A new family a floor from 3**: RAT (3), Fileless (4), Polymorph (5), Rootkit (6), Stealer (7), Bootkit (8).
 3. **Items:** five sets and 20 uniques a floor.
 4. **ACTUARY** is a boss in three acts and retires UNDERWRITER. **INIT** has five acts, its table drawn as squares.
+5. **Floors 2–4** to the same standard: a floor job's boss is never in the lair (SHAKEDOWN takes floor 2's throne),
+   RECURSION is floor 3's fixed-place boss, and a transmission a floor.
+6. **Every act adds a pressure that costs to ignore** (docs/solo-bosses.md): the audit's fixes are in its table.
