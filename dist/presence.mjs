@@ -1,7 +1,7 @@
-// Presence: who's online, where they are, and your friends list. Until there's a server, the
-// people are simulated (`online sim` turns them on, `online off` off): a pool of hackers who log on
-// and off over the day and move around every minute or so, worked out from the clock (nothing to
-// save, and the same answer everywhere). The friends list is real and lives on the save.
+// Presence: who's online, where they are, and your friends list. On a save with a network, the people are its
+// runners (runners.mjs): always on while you are, each where their loop has them, and your consortium's members
+// beside them. A save with no network seed (a bare engine state in tests) keeps the old simulated pool behind
+// `online sim`: hackers who log on and off over the day, worked out from the clock. The friends list lives on the save.
 //
 // SPRAWL-00 is the shared space: anyone online can be in one of its folders, and you see them
 // there. Every other server is private (a run, a rogue server, someone's own box), so all you see
@@ -10,6 +10,7 @@ import { hooks } from './combat.mjs';
 import { ARCHETYPES } from './data.mjs';
 import { zoneRooms } from './zone.mjs';
 import { groundOf, isMember } from './consortium.mjs';
+import { castOf, runnerOf, levelOf, placeOf as runnerPlace, hash as rhash } from './runners.mjs';
 
 export const PRESENCE = {
   pool: ['nyx', 'kilo', 'vanta', 'sable', 'wisp', 'quill', 'rook', 'byte', 'ash', 'lumen', 'cipher_', 'zer0', 'echo9', 'grim', 'static', 'wren', 'halt', 'fen', 'oxide', 'marrow'],
@@ -27,12 +28,20 @@ function hash(text, n) {
 }
 const CLASSES = Object.keys(ARCHETYPES);
 // A simulated hacker's fixed profile.
-export function profileOf(handle) {
+export function profileOf(handle, s = null) {
+  const r = s && runnerOf(s, handle);
+  if (r) return { handle, cls: r.cls, level: levelOf(s, r) };
   return { handle, cls: CLASSES[Math.floor(hash(handle, 1) * CLASSES.length)], level: 1 + Math.floor(hash(handle, 2) * 24) };
 }
 const offset = (h) => Math.floor(hash(h, 3) * PRESENCE.sessionMs);
 
 export const simOn = (s) => !!s.onlineSim;
+// Runners are on the net: a save with a network has its cast.
+export const runnersOn = (s) => castOf(s).length > 0;
+// Anyone about: runners, or the old pool with online sim.
+export const peopleOn = (s, runnersOnly = false) => (runnersOnly ? runnersOn(s) : simOn(s) || runnersOn(s));
+// Anyone you could name: a runner on your net, or one of the old pool (your consortium's members until R4).
+export const isPerson = (s, h) => PRESENCE.pool.includes(h) || !!runnerOf(s, h);
 export const friends = (s) => (s.friends ||= []);
 export const isFriend = (s, h) => friends(s).includes(h);
 
@@ -61,14 +70,20 @@ function groundPlace(s, h, now, place) {
   return { kind: 'consortium', loc: t.id, locName: t.name, folder: folders[Math.floor(hash(h, step * 31 + 3) * folders.length)] || '/', fighting: false };
 }
 
-// Everyone online now: friends and consortium members first, then by handle.
+// Everyone online now: friends and consortium members first, then by handle. On a network, the runners (where their
+// loop has them, on logged-on time) and your consortium's members; else, with online sim, the old pool.
 export function online(s, now = clock()) {
-  if (!simOn(s)) return [];
   const crew = (s.crewSim || []).map((x) => x.name);
+  const cast = castOf(s);
+  if (!cast.length && !simOn(s)) return [];
+  const rooms = cast.length ? zoneRooms() : null;
+  // A runner in SPRAWL-00 is in one of its rooms, a new one each cycle.
+  const runner = (h) => { const r = runnerOf(s, h), p = runnerPlace(s, r); return p.kind === 'sprawl' ? { ...p, folder: rooms[Math.floor(rhash(h, Math.floor((s.runners?.ms || 0) / 60000)) * rooms.length)] } : p; };
   // Your crew is with you (on your run, or waiting for one), wherever they'd otherwise be.
-  const where = (h) => (crew.includes(h) ? { kind: 'crew', folder: s.run?.crew?.[h]?.cwd || null } : groundPlace(s, h, now, placeOf(h, now)));
+  const where = (h) => (crew.includes(h) ? { kind: 'crew', folder: s.run?.crew?.[h]?.cwd || null } : groundPlace(s, h, now, runnerOf(s, h) ? runner(h) : placeOf(h, now)));
   const crewCls = (h) => (s.crewSim || []).find((x) => x.name === h)?.cls;
-  return PRESENCE.pool.map((h) => ({ ...profileOf(h), ...(crewCls(h) ? { cls: crewCls(h) } : {}), place: where(h), friend: isFriend(s, h), member: isMember(s, h) }))
+  const handles = cast.length ? [...new Set([...cast.map((r) => r.handle), ...(s.consortium?.members || []).filter((h) => PRESENCE.pool.includes(h))])] : PRESENCE.pool;
+  return handles.map((h) => ({ ...profileOf(h, s), ...(crewCls(h) ? { cls: crewCls(h) } : {}), runner: !!runnerOf(s, h), place: where(h), friend: isFriend(s, h), member: isMember(s, h) }))
     .filter((x) => x.place)
     .sort((a, b) => b.friend - a.friend || b.member - a.member || a.handle.localeCompare(b.handle));
 }
@@ -82,7 +97,8 @@ export const inSprawl = (s, now = clock()) => online(s, now).filter((x) => x.pla
 // Where someone is, in words: SPRAWL-00's room by its name (netrooms.mjs: rooms are named for what they are, Process 3,
 // never by the folder they stand for); a member's server by its name.
 const roomName = (folder) => hooks.sprawlRoomName?.(folder) ?? folder;
-export const whereText = (p) => (p.kind === 'sprawl' ? `SPRAWL-00 · ${roomName(p.folder)}${p.fighting ? ' · fighting' : ''}` : p.kind === 'consortium' ? `${p.locName}` : p.kind === 'crew' ? 'in your crew' : p.kind === 'run' ? 'on a run' : p.kind === 'rogue' ? 'on a rogue server' : 'at home');
+export const whereText = (p) => (p.kind === 'sprawl' ? `SPRAWL-00 · ${roomName(p.folder)}${p.fighting ? ' · fighting' : ''}` : p.kind === 'consortium' ? `${p.locName}` : p.kind === 'crew' ? 'in your crew'
+  : p.kind === 'travel' ? `→ ${p.toName}` : p.kind === 'server' || p.kind === 'hub' ? `${p.name}${p.fighting ? ' · working' : ''}` : p.kind === 'run' ? 'on a run' : p.kind === 'rogue' ? 'on a rogue server' : 'at home');
 
 // `online sim`, `online off`, `who`, `friends`, `friend add <handle>`, `friend remove <handle>`.
 export function presenceCommand(s, word, rest, emit, warn) {
@@ -93,13 +109,13 @@ export function presenceCommand(s, word, rest, emit, warn) {
   }
   if (word === 'who') {
     const list = online(s);
-    return emit(s, 'info', !simOn(s) ? 'Nobody online. Try online sim.' : list.length ? `Online: ${list.map((x) => `${x.friend ? '★' : ''}${x.handle} (${ARCHETYPES[x.cls].name} ${x.level}, ${whereText(x.place)})`).join(' · ')}.` : 'Nobody else is online.');
+    return emit(s, 'info', !simOn(s) && !runnersOn(s) ? 'Nobody online. Try online sim.' : list.length ? `Online: ${list.map((x) => `${x.friend ? '★' : ''}${x.handle} (${ARCHETYPES[x.cls].name} ${x.level}, ${whereText(x.place)})`).join(' · ')}.` : 'Nobody else is online.');
   }
   if (word === 'friends') return emit(s, 'info', friends(s).length ? `Friends: ${friends(s).join(', ')}.` : 'No friends yet. friend add <handle>');
   const [verb, handle] = rest.split(' ');
   if (!handle || !['add', 'remove'].includes(verb)) return warn(s, 'friend add <handle>, friend remove <handle>');
   if (verb === 'add') {
-    if (!PRESENCE.pool.includes(handle)) return warn(s, `No hacker called ${handle}.`);
+    if (!isPerson(s, handle)) return warn(s, `No hacker called ${handle}.`);
     if (isFriend(s, handle)) return warn(s, `${handle} is already a friend.`);
     friends(s).push(handle);
     return emit(s, 'info', `${handle} added to your friends.`);

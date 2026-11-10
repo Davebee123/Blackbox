@@ -89,8 +89,8 @@ Leaving the fight screen pauses a live fight.
 Every part has two ticks on its bar, at 50% and 25% of its Integrity. Take it across one on the cycle its move is due
 and that move is cancelled (*INTERRUPTED*); its schedule goes on as if it had landed. Each tick works once a fight:
 crossed with nothing due, it's spent for nothing, and one hit across both cancels one move at most. Burns, helpers and
-daemons count. Fragments, Packages, Droppers, the Spam Flood and the Mutex have no ticks. The Now column says what
-crossing takes (*cut ▸ 9*, *cut ▸ ◆1 + 9*), and a queued command says *cuts* or *−tick*. A charge riding the cancelled
+daemons count. Fragments, Packages, Droppers, the Spam Flood and the Mutex have no ticks. A queued command says *cuts*
+or *−tick*. A charge riding the cancelled
 move is called off with it.
 
 ### Tells (tells.mjs)
@@ -99,10 +99,10 @@ move is called off with it.
 wild viruses, guards, elites, strains, champions, solo bosses and invaders. Crew bosses have their own mechanics.
 
 **Nothing lands unannounced.** A tell is said once in the log and sits as a chip on its part's row, in the column it
-lands, until it does. The chip's last line is the answer (*▸ Cut past ◆2*, from 17 *▸ Cut past ◆2 or SIGINT*,
-*▸ SIGINT or cut*, *▸ Strip ◆3*, *▸ Pick a cheap copy*). Its number is its price (`tellPrice`): a charge's hit, a cast's
+lands, until it does. The chip says what it does, never the answer; an amber SIGINT mark sits on it when SIGINT can
+stop it (a cast, from 17 a charge too). Its number is its price (`tellPrice`): a charge's hit, a cast's
 extra damage over its 4 cycles in red (*−15*), a Self-Update's Integrity (*+55 hp*), a seal's ◆ in steel (*+4 ◆*).
-Hover it for what happens and, on its own muted ▸ line, how to stop it. Breaking a tell's part always stops it.
+Hover it for what happens; nothing on the board says how to stop it. Breaking a tell's part always stops it.
 
 | Kind | What it is | What answers it | If you don't |
 |---|---|---|---|
@@ -2381,16 +2381,27 @@ no attaching, detaching or memory pips.
 
 ### People and #net
 
-- **People** (presence.mjs) is simulated until there's a server (`?dev`: `online sim` turns on a pool of 20 hackers who
-  log on and off; `online off`). The people button on the top bar (a dot and how many are online; violet when a friend
-  is on) opens **Friends** and **Online**: handle, class and level, and where they are (SPRAWL-00 and its room; *on a
-  run*, *at home* are private). `friend add|remove <handle>`, `friends`, `who`. SPRAWL-00 is shared: `ls` and arriving
-  in a room say who else is there.
+- **Runners** (runners.mjs, docs/runners.md R1): 32 people per network, drawn from its seed. Each has a handle, a class
+  (and subclass from 10), a level 4 below to 4 above yours, a faction, a temperament (Careful, Steady, Bold), one to
+  four traits (data only for now) and a trade: a payment frozen on a floor one to three below where they work.
+- **Their loop**, on logged-on time only (nothing moves while you're away): a 6–14 minute cycle on the floor of their
+  level: their faction's hub (else the floor's entry), out along the links to a server near their level, work it, and
+  back to be paid. A job's outcome is rolled from their level against the server's (Careful +8%, Bold −8%), never
+  fought; a crash pulls them out until the next cycle. Every cycle climbs them toward their trade's floor (300–900
+  cycles); reaching it, they start on another. They never touch your servers or move a faction. Saved: `s.runners`
+  (the logged-on clock, and who you know).
+- **The Rail**: under Contracts on the map, the runners you know (heard on #net), last heard first, six at most:
+  handle, class and level, where (`→` a server on the road). Click one to draw it on its floor: a paper-white diamond
+  with the handle, a dotted route through the servers passed, a dashed ring where it's heading. Again to drop it.
+- **People**: the people button on the top bar (how many are on; violet when a friend is) opens **Friends** and
+  **Online**: handle, class and level, where. On a network the people are its runners and your consortium's members;
+  a save with no network seed keeps the old simulated pool behind `?dev` `online sim`. `friend add|remove <handle>`,
+  `friends`, `who`. SPRAWL-00 is shared: `ls` and arriving in a room say who else is there.
 - **#net** (channel.mjs), the net talking to itself like WoW's General chat. Its latest line sits over the prompt; click
   it for the drawer. `say <text>` (or `'text`) posts, up to 120 characters; `channel off|on` mutes it. Every line comes
   from real game state: the director's events and how they end, faction contacts speaking for their side after a feud
-  (never at you), your feats (a unique found, a title, every tenth level), and simulated hackers chatting from what
-  they're doing and reacting to you. A line every 20–90 seconds of logged-on time; the last 80 stay on the save. It never
+  (never at you), your feats (a unique found, a title, every tenth level), and runners telling their real turns (a server
+  cleared, a crash, pay, a trade reached), chatting from what they're doing and reacting to you. A line every 20–90 seconds of logged-on time; the last 80 stay on the save. It never
   touches the pager and rolls its own dice.
 
 ### Profile: finger (profile.mjs)
@@ -2522,7 +2533,7 @@ threat, a world event, a contract ready, an offer, a letter, a thread, wick's le
 A page stays while it's true, an hour at most; the same news again replaces the old line.
 
 - **The tray:** one icon per waiting page, most urgent first (threats, then events by time left, then a ready contract,
-  letters, offers), amber, red for a threat; up to four on a desktop, three on a phone, then **+n**. **One tap** does
+  letters, offers), amber, red for a threat; up to four on a desktop, three under 900 px, then **+n** (a phone shows the lamp and the count). **One tap** does
   the page's thing (**Deliver**, **Read**, **Jack in**, **Show**…); mid-fight or on a run, anything that would start a
   fight shows you where it is instead. A page that takes on a task (an offer, a world event's fight) shows its quest
   first, in the quest window's look, with **Take** (or **Intercept**, **Hunt**…) and **Cancel**.
@@ -2545,8 +2556,30 @@ test, the wire, fight reports and the log (`logs` opens it).
   back to the track when the fight is over. It plays a little under the track, on the Music slider.
 - **UI scale** (Settings, `ui scale <auto|80–200>`, 100% by default) draws the whole screen larger or smaller;
   it grows only while the screen stays 1700px wide in its own pixels. **Auto** sizes it to 1800px.
-- **On a phone** (under 480 px) the board shows Now, +1 and +2 and the tray is three wide: tap a skill to pick it, tap
-  again to fire. Only a tap on the prompt itself opens the keyboard.
+- **On a phone** (up to 600 px wide, or 500 px tall on a touch screen) the top bar is one strip (the pager's lamp and
+  its count, Integrity, Signal, credits; none in a fight) and the pages are a tab bar at the bottom: Map (a fight, run
+  or breach in its place while there is one, a red dot while you're away), Mail, Loadout, Server, **More** (your Net
+  ID card, Codex, Rig, Settings, the command line). The prompt shows only from More's **>_**; in a fight it never takes
+  the focus. A tap on anything with a rule shows its card in a sheet; a long press on a button shows its card without
+  firing it. Under 480 px the board shows Now, +1 and +2 and the tray is three wide: tap a skill to pick it, tap again
+  to fire.
+- **The maps on a phone.** The map fills the screen between the strip and the tab bar; pinch to zoom, a double tap
+  on the ground zooms in there or back out, one finger pans. The floors are one row. Under them a row of chips: red for
+  what's coming (its count and the soonest timer), amber for contracts under way, a green ✓ for the ones to turn in. A
+  tap opens the list. A tap on a server brings up its name, level and main button; ▴ opens its whole card. On a server,
+  the header is one line (its name, Signal, rooms cleared, the hunter's countdown; a tap on the name shows the rest),
+  one tap walks, and a room's choice comes up with both buttons by your thumb. Wait and Jack out float at the map's
+  bottom right. With no strip there, the pager is in More.
+- **Pop-ups on a phone** all come up as one sheet from the bottom: a server's card, a room's, the Server page's
+  panel, Comms, a daemon's panel, an item's datasheet, a journal, a quest's dialogue and its reward, the level-up.
+  Drag it down or tap outside it to close.
+- **A fight on a phone** fits one screen: the HUD is one line, your bar and its number on the left (a crewmate as a
+  thin violet line under it), the virus's with its ◆ on the right, its window at the end. A tap on a bar shows its card:
+  the virus's name, level, family, writer, Integrity, ◆ and rules; your Integrity, statuses and gear. Under it the
+  board in the height left (no You row: the key you've picked is outlined amber), the log's latest line over the tray
+  (a tap opens the log), and the tray in two rows of four. The column at the row's end is the menu key (the pager's lamp on it): the pages,
+  the pager and the command line. Past eight keys, **+n** under it opens the rest. In its half the virus's window steps
+  out over the board where no chip sits, and goes home after. On its side the board takes the left with +3.
 
 ### Screen effects
 
@@ -2629,7 +2662,7 @@ Developer commands work only in tests, playtest pages, a test bench and with `?d
   empty (never under yours; a part's at its own, a rival's one over you). A rival's later fights bring its counter, read
   from your win in the one before. **Again** (`developer fight again`) restarts the last pick; ♥ refills first.
 - **Playtest pages:** `?playtest=rooms` (a throwaway server of rooms, its clocks ten times as fast), `?playtest=<strain
-  or fixture>`, `?playtest=part:<id>` (`part:<id>.exe` for its .exe build), `?playtest=fx` (every ability effect, tier and break finisher, fired from its key, by result, status and ticks left).
+  or fixture>`, `?playtest=part:<id>` (`part:<id>.exe` for its .exe build), `?playtest=fx` (every ability effect and tier, fired from its key, by result, status and ticks left).
 - `developer scene <id>` plays a transmission again. `developer levelup preview`, `developer thread preview`, `developer pager fill`, `developer parts`, `developer
   event`, `developer exfil`, and the rest under each section.
 
@@ -2683,9 +2716,10 @@ Checked by `node balance.mjs` (docs/BALANCE.md, `balance.test.mjs`), `farmsim.mj
 
 ## Saves
 
-The save is `SAVE_VERSION` 61 (combat.mjs). An older save is migrated on load, each step keyed on the field it converts,
+The save is `SAVE_VERSION` 62 (combat.mjs). An older save is migrated on load, each step keyed on the field it converts,
 so it is safe to run twice; nothing a save held is lost.
 
+- **v62** runners: `s.runners` (the logged-on clock, who you know), made on first use (`runners.mjs`).
 - **v61** every hub's Shop has one shape: the agency stock, the premium shelves and the hubs' stock counts go
   (`store.mjs shopRestore`, keyed on the fields).
 - **v60** payloads, hub capture and swarms are cut: a held hub pays out once (its bank and a day of its income, each

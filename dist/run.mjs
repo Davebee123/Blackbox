@@ -22,7 +22,7 @@ import { SPRAWL, zoneOf, zoneRooms } from './zone.mjs';
 import { deal, developerChain, CARDS as EVENT_CARDS, dealBlip, BLIPS, RUNCARD_DEAL } from './events.mjs';
 import { RUN_CARDS, dealCard } from './runcards.mjs';
 import { crewCommand } from './crew.mjs';
-import { presenceCommand, at, simOn, PRESENCE, online } from './presence.mjs';
+import { presenceCommand, at, peopleOn, PRESENCE, online } from './presence.mjs';
 import { profileCommand } from './profile.mjs';
 import { achieveCommand, developerAchieve } from './achievements.mjs';
 import { masteryCommand, developerMastery } from './mastery.mjs';
@@ -502,7 +502,7 @@ export function peopleIn(s, loc, folder, deep) {
   const inside = (p) => p === folder || (deep && p.startsWith(folder === '/' ? '/' : folder + '/'));
   const crew = Object.entries(s.run?.crew || {}).filter(([, c]) => inside(c.cwd)).map(([handle, c]) => ({ handle, crew: true, linked: c.link === 'you' }));
   const key = loc.zone ? 'sprawl' : isGround(s, loc) ? loc.id : null;
-  const others = key && simOn(s) ? at(s, key, folder, deep).filter((x) => !s.run?.crew?.[x.handle]).map((x) => ({ handle: x.handle, friend: x.friend, member: x.member, fighting: x.place.fighting })) : [];
+  const others = key && peopleOn(s) ? at(s, key, folder, deep).filter((x) => !s.run?.crew?.[x.handle]).map((x) => ({ handle: x.handle, friend: x.friend, member: x.member, fighting: x.place.fighting })) : [];
   return [...crew, ...others];
 }
 
@@ -898,7 +898,7 @@ export function crewWander(s) {
 // Consortium members in this folder of the consortium's ground join a fight there (crew.mjs).
 hooks.crewGuests = (s, room) => {
   const loc = currentLocation(s);
-  if (!loc || !isGround(s, loc) || !simOn(s)) return [];
+  if (!loc || !isGround(s, loc) || !peopleOn(s)) return [];
   const folder = s.run?.rooms ? roomList(s).find((x) => x.path === room)?.path0 ?? room : room; // a room's folder (its name is what's shown)
   return at(s, loc.id, folder).map((x) => ({ cls: x.cls, name: x.handle, level: x.level }));
 };

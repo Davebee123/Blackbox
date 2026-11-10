@@ -41,6 +41,12 @@ export function trayMarkup(s, max = 4) {
   return `<button type="button" class="pg-lamp" data-pg-open aria-label="Pager: open comms" title="${esc(openTip(s))}">${led(l)}</button>${shown.map(tile).join('')}${more ? `<button type="button" class="pg-more" data-pg-open title="${more} more page${more > 1 ? 's' : ''}">+${more}</button>` : ''}`;
 }
 
+// The phone's strip: the lamp alone, with how many pages wait.
+export function lampMarkup(s) {
+  const n = pages(s).length;
+  return `<button type="button" class="pg-lamp" data-pg-open aria-label="Pager: open comms" title="${esc(openTip(s))}">${led(lampOf(s))}${n ? `<b class="pg-n">${n}</b>` : ''}</button>`;
+}
+
 // Comms: the pages first, each with its button; the news folded under them (a click on a line opens where it happened).
 export function inboxMarkup(s, now = Date.now()) {
   const p = pages(s), h = news(s);

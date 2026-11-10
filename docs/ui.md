@@ -72,7 +72,7 @@ teal, violet or a threat's red.
 - **Hover tips** (`.tt`): every `title` shows in the game's own card (amber top rule, mono title line); never the
   browser's default.
 - **Card and detail panel** (the Server page): a card of picks (names and state only) beside one sticky panel that
-  explains the picked, hovered or focused item, the only place its facts are lit. On a phone the panel is a bottom
+  explains the picked, hovered or focused item, the only place its facts are lit. On a phone the panel is in the one
   sheet. Skills and talents is a card alone (`.cls`, docs/class-page.md): its rules are tooltips.
 - **Tethers** (`.tether`, `view.mjs` `tethers`, `fightread.mjs` `partLinks`): one look for every rule that reaches from
   one part to another. A steel bracket in the board's left gutter from the part the rule sits on (a square) to the part
@@ -135,6 +135,10 @@ teal, violet or a threat's red.
     miss grounds past the bar, ◆ throws a steel arc, and a crit (its cooldown resets) runs back to the key as a gold
     comet. Crack lands on the ◆ row and strikes each ◆ it broke a beat apart (combat.mjs `broke`), glancing off when
     none are left. Rate Limit's brackets snap onto the attack it throttles; on a miss the halves pass each other.
+    What spreads jumps on to every other part as a spark, nearest first (Shatter's shards in steel; Propagate sets each
+    part burning as it lands). What stops an attack (SIGINT, Suspend, Jam, Blackhole) pulls a line tight through its
+    chip. A heal runs a light along your bar (Reclaim's comes back from the part first). Fork Bomb strikes each ◆ it
+    broke on every part (a strip's `broke`).
   - **A status cashing in** (combat.mjs damage `marks`): Exposed's crosshair flies off its mark and closes on a crit;
     Quarantined's brackets snap onto the name; Hooked's line pulls tight as its +6 lands; Tagged burns taller. The mark
     glows.
@@ -145,10 +149,9 @@ teal, violet or a threat's red.
   - **A burn runs down** (combat.mjs tick `left`): each tick's fire stands lower than the last, the last one gutters to
     falling embers, and Keepalive stokes it up.
   - **Mastery tiers** (`tierRecipe`): tier 2 more particles and a spark burst, tier 3 a glint and each iconic skill's own
-    flourish; a crewmate's always plays tier 1. **Break finishers** (`FINISHERS`, `SUB_FINISHERS`): the break that wins
-    plays your class's flourish on that row within 0.9 s, varied by subclass. Subtle and medium drop the afterimages,
-    the swing's fan and the cracks; the result's timing and a status cashing in show on both. `?playtest=fx` reviews
-    them all, by result, status and ticks left.
+    flourish; a crewmate's always plays tier 1. The hit that breaks a part plays its effect like any other; the part
+    then dissolves into 1s and 0s, the fight-winning one in slow motion. Subtle and medium drop the afterimages, the
+    swing's fan and the cracks; the result's timing and a status cashing in show on both. `?playtest=fx` reviews them all, by result, status and ticks left.
 - **Damage numbers** (dmgfx.mjs): every source its own number with an icon (a hit, a crit, a burn, a helper or daemon,
   a reflect, a shield's soak, a heal, encryption, an interrupt, a virus's claw), landing one after another in the
   order they resolved (0.45 s apart for two, faster for more, a batch never over 2.2 s), the bars dropping with each.
@@ -161,8 +164,10 @@ teal, violet or a threat's red.
   would take the hit.
 - **How much moves** follows Screen effects: subtle and medium show the number, the bar and the strike (a crewmate's
   quieter); bold adds impact bursts, sparks and row flashes; off shows numbers and bars only, a soft red edge when you're
-  hit, and a cycle's numbers stacked at once. Nothing on the interface moves: no screen shake, no nudge; flashes keep
-  their light and lose their movement.
+  hit, and a cycle's numbers stacked at once. Two things move the screen: an attack that hurts you shakes it as its
+  number lands (`shakeOf`: harder for a bigger hit, a crit or a charge; half on subtle and medium), and the hit that wins
+  the fight plays in slow motion (`slowAt`: a quarter speed, back to full in about half a second). Nothing else moves;
+  flashes keep their light and lose their movement.
 - **On a phone** the board shows Now, +1 and +2, chips drop their icon, and a part's name sits on its own line.
 
 ## Feedback language
@@ -224,7 +229,7 @@ short vibration on phones that have it.
 - **Puzzle boards** are drawn like the room map (chips and traces): the worm and the Tracker red, firewalls steel, data
   nodes and caches gold, you teal. A board boots in with a line, each action has its own small animation and sound, and
   the end is a card like a reward's. Motion off: the board just changes.
-- **The Server page** (`server-view.mjs`, `server.css`): one card and a detail panel (a bottom sheet on a phone). The
+- **The Server page** (`server-view.mjs`, `server.css`): one card and a detail panel (in the one sheet on a phone). The
   card's header draws your firewall as a ring of sixteen blocks round your server's core (whole blocks solid teal,
   fragmented ones hollow, an amber arc while an invasion is at the wall, a red marker coming down its road), the
   Integrity ring inside. Then quiet rows: Threat, Wall (level, tier pips, the readout), Filters, Code. Pointing at a

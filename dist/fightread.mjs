@@ -2,8 +2,8 @@
 // to stop it, which of your gear's conditional rules are live right now, and what a part you've decoded does. Pure:
 // view.mjs puts these into the board and the HUD, app.js only lights and flashes what they mark.
 //
-//   tellTip(s, i, c, to)   a tell chip's tooltip: its name, what happens if it lands (with the number), and how to
-//                          stop it under the current rule (a burst, SIGINT, a strip, an interrupt tick) with its window
+//   tellTip(s, i, c, to)   a tell chip's tooltip: its name and what happens if it lands (with the number and, for a
+//                          cast, its window); never the answer
 //   gearLive(s)            your equipped rules and unique effects that have a condition, each lit when it holds now
 //   cycleGear(s, cycle)    the cycle-conditioned ones live on a cycle (the timeline's column headers)
 //   partRead(s, v, p)      what a part does, how to answer it, and its one-word cue, from its spec and its flags
@@ -17,8 +17,7 @@
 import { part, livingParts, bendOf, gearFx, fxHolds, blocked, attackAmount, knowsPart, usable, fxOn, alive, wards, belowOf, frontOf, signatureOf, frozenNow, asleep, limitOf, packed, active, attackers, hookHit } from './combat.mjs';
 import { CONFIG, TELL, TELLS, BOSSES, STRAINS, ABILITIES } from './data.mjs';
 import { fxText } from './content.mjs';
-import { tellsOf, tellIntents, partTells, NEW_TELLS, beatOn, beatBlind, copyOf, dearCopy, sigintCharges } from './tells.mjs';
-import { nextTick } from './interrupt.mjs';
+import { tellsOf, tellIntents, partTells, NEW_TELLS, beatOn, beatBlind, copyOf, dearCopy } from './tells.mjs';
 import { BODY, fuseOf, fuseLeft } from './families.mjs';
 import { situationOf } from './situations.mjs';
 import { knows, TIER } from './research.mjs';
@@ -40,12 +39,6 @@ function afterOf(s) {
   if (!T || fxOn(s, 'no-after')) return '';
   const on = [T.burn ? 'Corrupted' : '', T.hang ? 'Hung' : ''].filter(Boolean), off = T.after ? ` Takes your last skill offline for ${cycles(T.after)}.` : '';
   return (on.length ? ` Leaves you ${join(on)}.` : '') + off;
-}
-// The interrupt (interrupt.mjs): its part's next tick, crossed on the cycle it lands, cancels it.
-function cutOf(s, p) {
-  const e = s.encounter, t = e?.ticked && p && !p.core ? nextTick(p) : null;
-  if (!t || (e.cutBudget != null && e.cutBudget <= 0)) return null;
-  return t;
 }
 // The window, in the board's words: this cycle, in 2 cycles, now until it lands, from next cycle until it lands.
 function windowWords(i, c) {
@@ -92,17 +85,6 @@ function landsLine(s, i, p, to, c) {
   const copy = i.copy ? ` Copies your ${i.copy.name}: ${i.copy.text}.` : '';
   return `Beat, ${when(c)}. Copies the command you fire then and turns it on you.${copy}${twice}`;
 }
-// Line 2: how to stop it, under the rule that applies here, and when: one short imperative.
-function stopLine(s, i, p, c) {
-  const name = p?.name || 'part', t = cutOf(s, p), under = t ? `take the ${name} under ${pct(t.at)}` : '';
-  const armor = p?.armor > 0 ? `, past its ${p.armor} ◆` : '';
-  const sig = sigintCharges(s) && usable(s).includes('sigint') ? ` or SIGINT it` : '';
-  if (i.tell === 'charge') return t ? `Take the ${name} under ${pct(t.at)} ${when(c)}${armor}${sig ? `,${sig}` : ''}.` : sig ? `SIGINT it ${when(c)}, or soften it with ◆, a shield or Brace.` : `Soften it with ◆, a shield or Brace. The ${name} has no tick left.`;
-  if (i.tell === 'cast') return `SIGINT it${t ? `, or ${under}` : ''}.`;
-  if (i.tell === 'seal') return p?.armor > 0 ? `Strip its ${p.armor} ◆ before it lands ${when(c)}.` : `Keep the ${name} stripped until it lands ${when(c)}.`;
-  if (i.tell === 'lock') return `Break the ${name} first, or feed it a skill already cooling.`;
-  return `Fire what costs you least to have copied, or hold${t ? `, or ${under}` : ''}.`;
-}
 // The Mimic's beat (tells.mjs copyOf): what the command you have selected (cmd: { ability, target }, none: hold) would
 // copy onto you, for the beat cell's chip, its tooltip and the red ghost on your Signal bar or ◆ (view.mjs). col: how
 // many cycles until the beat. null with no beat on the board, or one that sees nothing of you.
@@ -115,11 +97,11 @@ export function beatCopy(s, cmd) {
   const c = was && (!mine || (was.cost || 0) > (mine.cost || 0)) ? was : mine;
   return c ? { ...c, col: b.t.next - s.encounter.cycle, dear: dearCopy(s, c) } : null;
 }
-// The tooltip: "Name: line 1", then line 2 on its own ▸ line. The chip itself carries the kind, the timing, the number
-// and the answer's verb.
+// The tooltip: "Name: what happens if it lands". No answer: the player reads the board for that. The chip itself
+// carries the kind, the timing, the number and the SIGINT mark.
 export function tellTip(s, i, c = i.col, to = null) {
   const p = part(s, i.source);
-  return `${i.name}: ${landsLine(s, i, p, to, c)}${answerLine(stopLine(s, i, p, c))}`;
+  return `${i.name}: ${landsLine(s, i, p, to, c)}`;
 }
 
 // ---------- your gear, live ----------

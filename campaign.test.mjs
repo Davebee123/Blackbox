@@ -33,7 +33,7 @@ const toLevel = (s, n) => { while (hackerLevel(s) < n) gainXp(s, 100000, 'test')
 test('save: its own key, a round trip through JSON and restore keeps the whole campaign', () => {
   assert.notEqual(CAMPAIGN_KEY, 'blackbox-v6', 'never the old save');
   const app = readFileSync(new URL('./dist/app.js', import.meta.url), 'utf8');
-  assert.match(app, /const \{ key: KEY, bench: BENCH, camp: CAMP \} = BN\.pageSave\(location\.search, CP\.CAMPAIGN_KEY\);/);
+  assert.match(app, /const \{ key: KEY, bench: BENCH, camp: CAMP \} = BK\.pageSave\(location\.search, CP\.CAMPAIGN_KEY\);/);
   assert.equal(pageSave('?campaign=breach', CAMPAIGN_KEY).key, CAMPAIGN_KEY, 'the campaign page saves under its own key (bench.mjs pageSave)');
   assert.equal(pageSave('', CAMPAIGN_KEY).key, 'blackbox-v6');
   assert.ok(!/localStorage\.(get|set)Item\(SAVE_KEY/.test(app), 'every save goes through KEY, so the campaign never writes the old one');
