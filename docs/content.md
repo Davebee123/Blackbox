@@ -206,14 +206,9 @@ docs/solo-bosses.md; a boss named *new* is new there.
 - *Puzzle:* a new board, **Bit flip**: *flipping a bit flips its neighbours. Zero the ROM.*
 - *Signature:* **Firmware**, a server kind, and the endgame ladder (4.2).
 
-**Items, floors 5–8.** Five sets and 20 uniques a floor, by band:
-
-| Floor | Sets today | Uniques today | To do |
-|---:|---|---:|---|
-| 5 | Burst Buffer, Hot Spare | 12 | 3 sets; two uniques a boss |
-| 6 | Mesh | 9 | 4 sets; two a boss, three from the cast and server kind |
-| 7 | Deep Archive | 33 | 4 sets; move the lair's uniques onto its four bosses |
-| 8 | the four tier sets, Bedrock | 43 | move the lair's 18 onto its four bosses |
+**Items, floors 2–8** (designed, docs/floor-items.md): five sets and 20 uniques a floor. Eleven new sets on floors
+5–7; each boss its two uniques; floor 7's and 8's lair uniques on their named bosses, the rest to the Sinkhole and
+the endgame.
 
 ### 3.3 The gaps
 
