@@ -20,7 +20,9 @@ export const CHIP_THEMES = {
   Buffer: 'ledger', Cooler: 'ledger', Damper: 'ledger',
   Turncoat: 'mask', Backtrace: 'mask', 'C&C': 'mask',
 };
-export const chipTheme = (name) => CHIP_THEMES[String(name || '').replace(/\.exe$/i, '').trim()] || null;
+// What a part spawns in the fight (a Replicator's fragments, a nest's hatchlings) is numbered, and its Gnaw wears byte.
+const SPAWNED = /^(Fragment|Hatchling) \d+$/;
+export const chipTheme = (name) => { const n = String(name || '').replace(/\.exe$/i, '').trim(); return CHIP_THEMES[n] || (SPAWNED.test(n) ? 'byte' : null); };
 // How hard a chip plays, by its column (0 is Now) and the ms left in the cycle: [intensity, opacity].
 export function chipLevel(col, left) {
   if (col === 0) return left <= 1500 ? [1.6, 0.7] : [1, 0.55];
@@ -697,6 +699,24 @@ const THEMES = {
     if (S.eye > 0.05 && sx > 0.6) for (const ex of [13, 27]) html += STAR(cx + (ex - 20) * s * sx, cy + (13 - 16) * s, 4 * S.eye + 1, S.eye);
     S.svg.innerHTML = lv ? html : '';
   },
+  // Byte: eight bit cells along the chip's foot, eaten one by one from the right as the cycle runs out, each with a white
+  // nibble; in the last 1.5 s the ones left flicker. At +1 the end cell blinks now and then.
+  byte(el, box, S, dt, lv, p) {
+    const w = el.offsetWidth, h = el.offsetHeight, N = 8, gap = 2, x0 = 5, cw = (w - 2 * x0 - (N - 1) * gap) / N, y = h - 4.5;
+    if (!S.svg) { S.svg = svgIn(box); S.eaten = 0; S.pops = []; S.idle = 0; }
+    const eaten = lv >= 1 ? Math.min(N - 1, Math.floor(p * N)) : 0;
+    for (let i = S.eaten; i < eaten; i++) S.pops.push({ i: N - 1 - i, age: 0 });
+    S.eaten = eaten;
+    S.idle = lv && lv < 1 && Math.random() < dt / 1000 * 1.2 ? 160 : Math.max(0, S.idle - dt);
+    let html = '';
+    for (let i = 0; i < N; i++) {
+      const x = x0 + i * (cw + gap), gone = i >= N - eaten, o = (!gone && lv > 1.2 ? rnd(0.45, 1) : 1) * (S.idle && i === N - 1 ? 0.35 : 1);
+      html += `<rect class="cfx-by-cell${gone ? ' gone' : ''}" x="${f1(x)}" y="${f1(y)}" width="${f1(cw)}" height="2.4"${gone ? '' : ` style="opacity:${f1(o)}"`}/>`;
+    }
+    S.pops = S.pops.filter((q) => (q.age += dt) < 260);
+    for (const q of S.pops) { const x = x0 + q.i * (cw + gap), k = q.age / 260; html += `<rect class="cfx-by-nib" x="${f1(x - 2 * k)}" y="${f1(y - 1 - 3 * k)}" width="${f1(cw + 4 * k)}" height="${f1(3.4 + 2 * k)}" style="opacity:${f1(1 - k)}"/>`; }
+    S.svg.innerHTML = lv || S.pops.length ? html : '';
+  },
 };
 
 export function createChipFx() {
@@ -1107,19 +1127,70 @@ const STRIKE_FX = {
     });
     return true;
   },
+  // Byte: a byte (eight bits) flies to the end of your bar and clamps on with brackets; a chunk of the bar tears out,
+  // lifts and breaks into 1s and 0s that fall away. Fragments that go off together bite one after another, each a
+  // little further back into your bar.
+  byte(r, to, bar, end) {
+    const slot = gnawSlot(), bl = bar?.left ?? to.x - 60, bw = bar?.width ?? 120, bt = bar?.top ?? to.y - 7, bh = bar?.height ?? 14, CW = 12;
+    const bx = clamp((end ?? to.x) - slot * 11, bl + CW, bl + bw);
+    const bits = Array.from({ length: 8 }, (_, i) => (!i || Math.random() < 0.5 ? 1 : 0));
+    const BW = 31, x0 = r.left + r.width * 0.5 - BW / 2, y0 = r.top + r.height / 2 - 2, x1 = bx - BW, y1 = bt - 7, F = 240, CL = 80, OUT = 260;
+    const P = (u) => { const e = u * u * (3 - 2 * u); return [x0 + (x1 - x0) * e, y0 + (y1 - y0) * e - Math.sin(Math.PI * u) * 26]; };
+    const brackets = (o) => { const a = bx - CW - 2, b = bx + 2, top = bt - 2, bot = bt + bh + 2, L = 3; return `<path class="cfx-by-brk" style="opacity:${f1(o)}" d="M${f1(a + L)},${f1(top)} H${f1(a)} V${f1(bot)} H${f1(a + L)} M${f1(b - L)},${f1(top)} H${f1(b)} V${f1(bot)} H${f1(b - L)}"/>`; };
+    after(slot * 80, () => {
+      burst(r.left + r.width * 0.5, r.top + r.height / 2, r.height * 1.4, 0, 240);
+      stage(F + CL + OUT, (g, t) => {
+        let html = '';
+        if (t < F) {
+          const k = t / F;
+          for (const [lag, o] of [[0.14, 0.2], [0.07, 0.4]]) { const [x, y] = P(clamp(k - lag)); html += BITS(x, y, bits, o); }
+          const [x, y] = P(k); html += BITS(x, y, bits);
+        } else if (t < F + CL) { const k = (t - F) / CL; html += BITS(x1, y1 + 4 * k, bits, 1 - k) + brackets(1); }
+        else html += brackets(1 - (t - F - CL) / OUT);
+        g.innerHTML = html;
+      });
+      after(F + CL, () => {
+        burst(bx - CW / 2, bt + bh / 2, 34, 0, 280);
+        hole(bx - CW, bt, CW, bh, 220, 360);
+        const ch = fspan('cfx-by-chunk', bx - CW, bt, CW, bh);
+        ch.animate([{ transform: 'none' }, { transform: 'translate(-2px, -11px) rotate(-14deg)' }], { duration: 150, easing: 'cubic-bezier(.2,.8,.3,1)', fill: 'forwards' }).onfinish = () => {
+          ch.remove();
+          bits.forEach((b, i) => {
+            const m = fspan('cfx-by-glyph', bx - CW + (i % 4) * 3, bt - 11 + (i >> 2) * 6, 6, 8), vx = rnd(-55, 55), vy = -rnd(10, 60), life = rnd(420, 620), fr = [];
+            m.textContent = b;
+            for (let j = 0; j <= 8; j++) { const tt = j / 8 * life / 1000; fr.push({ transform: `translate(${f1(vx * tt)}px, ${f1(vy * tt + 210 * tt * tt)}px)`, opacity: 1 - (j / 8) ** 1.5 }); }
+            m.animate(fr, { duration: life, fill: 'both' }).onfinish = () => m.remove();
+          });
+        };
+      });
+    });
+    return true;
+  },
 };
+// Byte's parts. Strikes that go off together (fire runs every resolved chip at once) take the next slot: a later bite.
+const GNAW = { t: -1e9, n: 0 };
+const gnawSlot = () => { const now = performance.now(); GNAW.n = now - GNAW.t < 200 ? GNAW.n + 1 : 0; GNAW.t = now; return GNAW.n; };
+const after = (ms, f) => (ms > 0 ? setTimeout(f, ms) : f());
+// A byte's eight cells at x, y: a 1 solid white, a 0 an outline.
+const BITS = (x, y, bits, o = 1) => bits.map((b, i) => `<rect class="cfx-by-bit${b}" x="${f1(x + i * 4)}" y="${f1(y)}" width="3" height="4.2" style="opacity:${f1(o)}"/>`).join('');
+// The gap a bite leaves in your bar: dark, held, then faded. Off the screen-blended stage, so it can darken.
+function hole(x, y, w, h, hold, fade) {
+  const m = fspan('cfx-by-hole', x, y, w, h);
+  m.animate([{ opacity: 1 }, { opacity: 1, offset: hold / (hold + fade) }, { opacity: 0 }], { duration: hold + fade, fill: 'both' }).onfinish = () => m.remove();
+}
 
 // The themes with a strike of their own: the lash (lash.mjs) stays out of their hits, so the eye stays on the chip.
-export const STRIKES = new Set(['zap', 'lock', 'frost', 'cipher', 'ring', 'erase', 'heat', 'crumble', 'scramble', 'thorn', 'clock', 'strobe', 'copy', 'scan', 'plate', 'ledger', 'mask']);
+export const STRIKES = new Set(['zap', 'lock', 'frost', 'cipher', 'ring', 'erase', 'heat', 'crumble', 'scramble', 'thorn', 'clock', 'strobe', 'copy', 'scan', 'plate', 'ledger', 'mask', 'byte']);
 // A themed chip going off (app.js fire): its strike, in screen px, from the chip's rect r to your bar at `to`, in the
 // threat's red. Pulse Node: a forked bolt that strobes into your bar, a burst and sparks there. Encryptor: its padlocks
 // arc to your bar with short trails and clamp on. Cold Store: its frost shatters (the chip's ghost still flies).
 // Cipher Block: hex streams fly into your bar, head first, and scatter there. C2 Node: a beam flashes from its icon to
 // your bar, brackets lock on and the bar flashes. Eraser: the chip's pixels fly off in wipe order and a
-// dither sweeps your bar under an edge. `bar` is your bar's rect. True when the strike stands in for the ghost.
-export function chipStrike(th, r, to, bar) {
+// dither sweeps your bar under an edge. `bar` is your bar's rect, `end` the x its fill reaches (where a bite lands).
+// True when the strike stands in for the ghost.
+export function chipStrike(th, r, to, bar, end) {
   if (!document.getElementById('cfx-defs')) document.body.insertAdjacentHTML('beforeend', DEFS);
-  if (STRIKE_FX[th]) return STRIKE_FX[th](r, to, bar);
+  if (STRIKE_FX[th]) return STRIKE_FX[th](r, to, bar, end);
   const fly = (cls, x, y, w, h) => { const d = document.createElement('span'); d.className = `cfx-fly ${cls}`; Object.assign(d.style, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' }); document.body.appendChild(d); return d; };
   if (th === 'zap') {
     const g = document.createElementNS(NS, 'svg'); g.setAttribute('class', 'cfx-fly cfx-bolt'); document.body.appendChild(g);
