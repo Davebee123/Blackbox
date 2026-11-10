@@ -10,10 +10,11 @@ const roomFight = (s) => { const R = s.rooms, g = R.graph, room = FP.neighbours(
 // The vault, its key in hand: opened, its files in your pack.
 const openVault = (s) => { const R = s.rooms, v = R.graph.vaults[0]; R.visit.keys.push(v); R.at = v; R.screen = null; FP.act(s, 'open'); };
 import { CONFIG, power, lifted, filled } from './dist/data.mjs';
-import { STATS, RARITIES, LOOT, BASES, AFFIXES, SLOTS, DECONSTRUCT, uniqueItem, lootOdds, magicFind, STASH_CAP, SERVICES, PROTOCOL_STATS, protocolSlots, RULES, rollItem, seeded, codeOf, codeDrop, vaultCode, affixValue, primaries, scavengeCut, baseFor, SCAVENGE_COST, FILLS } from './dist/gear.mjs';
+import { reqLevel, STATS, RARITIES, LOOT, BASES, AFFIXES, SLOTS, DECONSTRUCT, uniqueItem, lootOdds, magicFind, STASH_CAP, SERVICES, PROTOCOL_STATS, protocolSlots, RULES, rollItem, seeded, codeOf, codeDrop, vaultCode, affixValue, primaries, scavengeCut, baseFor, SCAVENGE_COST, FILLS } from './dist/gear.mjs';
 
 // Exact numbers unless a test turns crits or misses on.
 CONFIG.baseCrit = 0;
+CONFIG.gearReq = 99; // these tests hand out gear of any level (the requirement has its own test in gear.test.mjs)
 CONFIG.enemyCrit = 0;
 CONFIG.partToughness = 1; // mechanics tests use the parts' base numbers
 CONFIG.enemyRamp = 0;
@@ -160,6 +161,26 @@ test('uniques: fixed name and stats, scaled up from their own level; drop odds b
   assert.ok(trash.zeroday < 1 / LOOT.per.zeroday && elite.zeroday < 1 / LOOT.per.zeroday, 'a world gold is very rare');
   assert.equal(lootOdds('nonsense'), trash);
   assert.ok(Math.abs(magicFind(50) - 4 / 3) < 1e-9, '+50% Scavenge is +33%');
+});
+
+test('a level requirement: an item loads from 3 levels under its own; one already loaded stays on', () => {
+  CONFIG.gearReq = 3;
+  try {
+    const s = fresh();
+    s.hackers.breaker.level = 6;
+    assert.equal(reqLevel({ level: 2 }), 1, 'never under level 1');
+    const near = addItem(s, item({ damage: 5 }, { level: 9, group: 'exploit' }));
+    const far = addItem(s, item({ damage: 9 }, { level: 10, group: 'exploit', name: 'Deep protocol' }));
+    assert.match(command(s, 'load ' + far.id).at(-1).message, /needs level 7/);
+    assert.ok(!loaded(s).includes(far), 'gear four levels over you waits');
+    command(s, 'load ' + near.id);
+    assert.ok(loaded(s).includes(near), 'three levels over loads');
+    s.hackers.breaker.level = 7;
+    command(s, 'load ' + far.id);
+    assert.ok(loaded(s).includes(far), 'and it loads once you reach its level');
+    s.hackers.breaker.level = 1;
+    assert.ok(loaded(s).includes(far), 'a loaded item is never taken off');
+  } finally { CONFIG.gearReq = 99; }
 });
 
 test('slots: Exploit, Proxy, Shell, Script, then Implants at 15 and 30; each class loads its own; one place at a time', () => {

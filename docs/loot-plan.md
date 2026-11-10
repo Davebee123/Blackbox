@@ -55,8 +55,7 @@ tooltip already list every piece.
 - **Shown from the start.** A missing earned piece shows its name, stats and count (*Punch Card · Quarantine 4/6*),
   never ???. One can be pinned to the map as a contract is.
 - **Counted from the band.** A count starts when you reach the set's or the unique's level band.
-- **A level requirement.** An earned piece loads only at its own level or above. Items have none today: whether every
-  item gets one is open.
+- **A level requirement:** every item's (GAME_RULES.md *Slots*), so a piece earned on a carry waits for its level.
 - **Outside the one-an-hour rule.** About 41 pieces over the climb.
 - **Bosses keep their rolls:** Boot Disk, Hive Mind, Choirbook, Glass Ceiling, On-Call, Mesh, Bedrock, the tier sets,
   boss uniques.

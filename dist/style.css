@@ -2000,6 +2000,7 @@ body:has(.silk-stash .silk-tile[data-kind="implant"]:hover) .silk-fp[data-kind="
 .silk-title { margin: 0; font: 600 18px/1.25 var(--mono); overflow-wrap: break-word; text-wrap: balance; }
 .silk-sub { margin: 0; font: 12px var(--mono); color: var(--muted); }
 .silk-sub .tag { margin-left: 4px; }
+.silk-req { color: var(--hot); font-weight: normal; }
 .silk-kicker { margin: 6px 0 0; font: var(--kicker); letter-spacing: var(--kicker-track); text-transform: uppercase; color: var(--dim); }
 .silk-stats { display: grid; margin: 0; }
 .silk-stats > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 10px; padding: 3px 2px; border-bottom: 1px dotted rgba(241, 185, 47, 0.12); font-size: 13px; }

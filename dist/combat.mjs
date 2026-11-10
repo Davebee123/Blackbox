@@ -45,7 +45,7 @@ export { daemonSlots, slottedDaemons, daemonLevel, daemonAmount, daemonNext, wat
 import { filterCommand, filterStat, FILTER_STATS, rollFilter, addFilter } from './filters.mjs';
 import { spawnHidden, huntKill, hiddenNode, hiddenLead, HIDDEN, installRelay, useItem, syncFlags, traceNear, leadOf } from './hidden.mjs';
 import { slotNode, pickSlot, hiddenAt, hiddenNear, floorOfSlot, lairAt, floorLairBosses, reached, floorCommand, floorsRestore, floorsLetter } from './floors.mjs';
-import { STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, lootOdds, magicFind, uniqueItem, liftFx, DECONSTRUCT, SLOTS, OLD_SLOT, BASES, AFFIX_FOR, STASH_CAP, CRIT, ECHO, PROTOCOL_NAMES, protocolSlots, rollItem, statLine, itemLabel, MATERIALS, codeOf, codeDrop, EXPLOIT_CHANCE, RULES, IMPLICITS, implicitFx, PROTOCOL_STATS, SLOT_KINDS, GROUPS, groupOf, statValue, seeded, statsRestore, curveRestore } from './gear.mjs';
+import { reqLevel, meetsReq, STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, lootOdds, magicFind, uniqueItem, liftFx, DECONSTRUCT, SLOTS, OLD_SLOT, BASES, AFFIX_FOR, STASH_CAP, CRIT, ECHO, PROTOCOL_NAMES, protocolSlots, rollItem, statLine, itemLabel, MATERIALS, codeOf, codeDrop, EXPLOIT_CHANCE, RULES, IMPLICITS, implicitFx, PROTOCOL_STATS, SLOT_KINDS, GROUPS, groupOf, statValue, seeded, statsRestore, curveRestore } from './gear.mjs';
 
 import ITEMS from './content/items.mjs';
 import { SETS, setFx, activeSets, isPiece, setPool, SET_LOOT, CLASS_SET, setPityKey, SET_EVENT, sourcePool, sourceKey, setOf, setsRestore, SET_HOOKS, setStat, setSignal, setHealMult, sxOf, restFast } from './sets.mjs';
@@ -1950,6 +1950,7 @@ function protocolCommand(s, text) {
     if (!it) return warn(s, arg ? `No protocol ${arg} in your stash.` : 'load <protocol>: see the Loadout page for ids.');
     const rig = rigOf(s);
     if (rig.includes(it.id)) return warn(s, `${itemLabel(it)} is already loaded.`);
+    if (!meetsReq(s, it, hackerLevel(s))) return warn(s, `${itemLabel(it)} needs level ${reqLevel(it)}.`);
     if (it.zeroDay && zeroDay(s, it.zeroDay)) return warn(s, `You're already running ${ZERO_DAYS[it.zeroDay].name}. One of each Zero-day at a time.`);
     if (it.unique && loaded(s).some((x) => x.unique === it.unique)) return warn(s, `You're already running ${it.name}. One of each at a time.`);
     let slot = freeSlot(s, groupOf(it));
