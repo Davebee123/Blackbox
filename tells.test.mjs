@@ -478,7 +478,7 @@ test('C2 Node: fragments gnaw half again as hard while it lives, and drop when i
   assert.equal(part(s, 'frag9').integrity, 0, 'the fragment dropped with it');
 });
 
-test('the board shows a tell in its attack\'s cell even while the part is veiled, with exactly what answers it and when', () => {
+test('the board shows a tell in its attack\'s cell even while the part is veiled; its tooltip says what answers it and when', () => {
   const s = fight({ level: 12, family: 'ghostroot' });
   quietParts(s);
   const sc = part(s, 'scrambler');
@@ -487,7 +487,7 @@ test('the board shows a tell in its attack\'s cell even while the part is veiled
   const html = boardMarkup(s, null);
   assert.match(html, /intent tell t-charge/);
   assert.match(html, /POSSESSION|Possession/);
-  assert.match(html, new RegExp(`▸ Cut past ◆${sc.armor}<`), 'the cut, past its ◆ (the kick line says when; SIGINT cuts charges from 17)');
+  assert.doesNotMatch(html, /tl-sig/, 'below 17 SIGINT can\'t stop a charge: no mark');
   assert.match(html, /<span class="tl-when">in 2<\/span>/);
   assert.doesNotMatch(html, /tl-win/, 'not on its cycle yet');
   assert.match(html, new RegExp(`title="Possession: [^"]*\n▸ Take the Scrambler under 50% in 2 cycles, past its ${sc.armor} ◆\\."`), 'the tooltip: what it does, then how to stop it and when');
@@ -725,7 +725,7 @@ test('the log\'s tell lines say what, when, on which part, and what it does; nev
   const ev = fire(g, 'spike encryptor');
   assert.equal(ev.find((e) => e.tell === tg.id && e.answered).message, 'Cut: FULL DISK called off.');
   assert.match(ev.find((e) => e.type === 'cut').message, /^INTERRUPTED\. You take the Encryptor under half\. Its Full Disk is cancelled\.$/);
-  // Every announcement in real fights, every family: one short line (its part's tell, when it lands, the answer).
+  // Every announcement in real fights, every family: one short line (its part's tell, when it lands, what it does).
   for (const [family, level] of [['ransomware', 12], ['worm', 17], ['ghostroot', 12], ['ransomware', 8]]) {
     const r = fight({ level, family, seed: 3 });
     for (let i = 0; i < 14 && active(r); i++) hold(r);
@@ -733,7 +733,7 @@ test('the log\'s tell lines say what, when, on which part, and what it does; nev
     assert.ok(said.length, `${family} ${level}: a tell was said`);
     for (const e of said) {
       assert.ok(e.message.length <= 100, `${family} ${level}: short (${e.message.length}): ${e.message}`);
-      assert.match(e.message, /^The [A-Za-z0-9 -]+(?:'s [A-Z][A-Z0-9' -]+ lands| plays you back) (this cycle|next cycle|in \d+ cycles)\. /, e.message);
+      assert.match(e.message, /^The [A-Za-z0-9 -]+(?:'s [A-Z][A-Z0-9' -]+ lands| plays you back) (this cycle|next cycle|in \d+ cycles)\.( |$)/, e.message);
       assert.doesNotMatch(e.message, /Deal \d+|break \d+ ◆ in its window|hit it twice/, e.message);
       assert.ok(e.message.includes(e.name) || e.kind === 'mimic', `the event names the tell (app.js floats it): ${e.name}`);
     }

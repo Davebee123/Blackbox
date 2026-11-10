@@ -241,8 +241,9 @@ code { font-family: var(--mono); color: var(--amber); }
 .intent.tell .tl-what.tl-price { color: var(--hot); font-weight: 600; } /* what it costs you (tells.mjs tellPrice): threat */
 .intent.tell .tl-what.tl-armor { color: var(--steel); font-weight: 600; } /* the ◆ a seal would hand out */
 .intent.tell .tl-main { padding-bottom: 5px; }
-.intent.tell .tl-sig { align-self: center; width: 11px; height: 11px; margin-left: auto; background: var(--amber); opacity: 0.85; } /* SIGINT stops it: your key, in amber */
-.intent.tell.win .tl-sig { background: var(--next); opacity: 1; }
+.intent.tell .tl-kick .tl-sig { width: 10px; height: 10px; margin-left: auto; background: var(--amber); } /* SIGINT stops it: your key, in amber, before the timing */
+.intent.tell .tl-sig + .tl-when, .intent.tell .tl-sig + .tl-win { margin-left: 0; }
+.intent.tell.now .tl-kick .tl-sig { background: var(--panel-2); }
 .intent.tell.now { background: var(--tc-soft); }
 .intent.tell.now .tl-kick { background: var(--tc); color: var(--panel-2); }
 /* ---- Tell windows (tells.mjs, view.mjs tellChip and tellSpan) ----
@@ -3660,6 +3661,7 @@ h1 .byline { font-size: 13px; vertical-align: middle; }
 @container (max-width: 132px) {
   .intent.tell .tl-kick { gap: 3px; padding: 2px 5px; letter-spacing: 0.4px; }
   .intent.tell .tl-kick .ico { display: none; }
+  .intent.tell .tl-kick .ico.tl-sig { display: block; } /* the kind is the kick word; the SIGINT mark stays */
   .intent.tell .tl-main { padding: 3px 5px 4px; column-gap: 4px; }
 }
 
