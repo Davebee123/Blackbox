@@ -148,9 +148,9 @@ teal, violet or a threat's red.
   - **A burn runs down** (combat.mjs tick `left`): each tick's fire stands lower than the last, the last one gutters to
     falling embers, and Keepalive stokes it up.
   - **Mastery tiers** (`tierRecipe`): tier 2 more particles and a spark burst, tier 3 a glint and each iconic skill's own
-    flourish; a crewmate's always plays tier 1. Every break dissolves into 1s and 0s, the fight-winning one in slow
-    motion. Subtle and medium drop the afterimages, the swing's fan and the cracks; the result's timing and a status
-    cashing in show on both. `?playtest=fx` reviews them all, by result, status and ticks left.
+    flourish; a crewmate's always plays tier 1. The hit that breaks a part plays its effect like any other; the part
+    then dissolves into 1s and 0s, the fight-winning one in slow motion. Subtle and medium drop the afterimages, the
+    swing's fan and the cracks; the result's timing and a status cashing in show on both. `?playtest=fx` reviews them all, by result, status and ticks left.
 - **Damage numbers** (dmgfx.mjs): every source its own number with an icon (a hit, a crit, a burn, a helper or daemon,
   a reflect, a shield's soak, a heal, encryption, an interrupt, a virus's claw), landing one after another in the
   order they resolved (0.45 s apart for two, faster for more, a batch never over 2.2 s), the bars dropping with each.

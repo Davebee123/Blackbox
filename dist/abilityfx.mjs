@@ -1071,7 +1071,9 @@ export function createAbilityFx(board, { canMove = () => true, level = () => 'fu
     const x = r.left + r.width / 2, y = r.top + r.height / 2;
     if (y < 0 || y > (globalThis.innerHeight ?? Infinity)) return false;
     const top = globalThis.document?.elementFromPoint?.(x, y);
-    return top === undefined || !!top && (row === top || !!row.contains?.(top));
+    // A row that the hit breaks is dying (style.css .dying: it takes no input, so the point finds what holds it): it is
+    // in sight when nothing but its own board is there, so the hit that breaks it plays its effect too.
+    return top === undefined || !!top && (row === top || !!row.contains?.(top) || (!!row.matches?.('.dying') && !!top.contains?.(row)));
   };
   const rowGeo = (f, row) => {
     const p = { id: row.dataset?.target ?? null, row: local(f, row), cell: local(f, row.querySelector('.bname')), name: local(f, row.querySelector('.part-top')), bar: local(f, row.querySelector('.part-bar')) };

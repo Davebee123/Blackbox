@@ -233,6 +233,16 @@ test('a part whose name is out of sight (under the phone\'s dock or a toast, or 
   assert.equal(fx.play('ban', row, { ability: 'spike' }), false, 'nothing there: off the screen');
   globalThis.document.elementFromPoint = () => row;
   assert.ok(fx.play('ban', row, { ability: 'spike' }), 'in sight: it plays');
+  // The hit that breaks it: its row is dying and takes no input, so the point finds the board under it. It still plays.
+  const board = { contains: (x) => x === row };
+  globalThis.document.elementFromPoint = () => board;
+  assert.equal(fx.play('ban', row, { ability: 'spike' }), false, 'a live row: the board there means it is covered');
+  row.matches = (q) => q === '.dying';
+  assert.ok(fx.play('ban', row, { ability: 'spike' }), 'the breaking hit plays its effect');
+  globalThis.document.elementFromPoint = () => dock;
+  assert.equal(fx.play('ban', row, { ability: 'spike' }), false, 'a dying row under the dock: still covered');
+  delete row.matches;
+  globalThis.document.elementFromPoint = () => row;
 });
 
 test('the layer is hidden from screen readers and takes no input; its pieces have no background; nothing on the page moves', () => {
