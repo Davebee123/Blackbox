@@ -9,8 +9,9 @@
 // finisher (and each subclass's variation) on the part, as the fight-winning break plays it. Status puts a status on the
 // part (its mark shows) for the hit to cash in: Exposed on a crit, Quarantined, Hooked, Tagged on a burn's tick. Ticks
 // left: how far a burn's tick has run down (last: it gutters). ◆ broken: how many a Crack broke (none: it glances off).
-// Sound (the style round, abilitysound.mjs): today's sound for the result, or an ability's own in style A, B or C
-// (Bash, Ban, Poke and Ping have them; the rest play today's), timed to the effect, whatever the Sound setting.
+// Sound (abilitysound.mjs): today's sound for the result, or an ability's own in a style, timed to the effect, whatever
+// the Sound setting. Every ability has one in the picked style (B13); the others have Bash, Ban, Poke and Ping only,
+// and the rest play today's.
 
 import { RECIPES, FINISHERS, SUB_FINISHERS, finisherOf } from './abilityfx.mjs';
 import { SPIKE, ABILITIES, ARCHETYPES, SUBS } from './data.mjs';

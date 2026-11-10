@@ -27,8 +27,9 @@ Operator's comes in three beats.
   and rate-limited; a cap on voices.
 - Key 1 fires most: the shortest, driest and most varied.
 - A crewmate's: quieter, tier 1, silent when yours lands on the same beat.
-- Built live from the CC0 bank and synth (lengths follow the travel), in `abilitysound.mjs`, laid out like the effects
-  table: per motion, particle and class, plus overrides for the signature abilities.
+- Built live from the CC0 bank and synth (lengths follow the travel): `abilitysound.mjs` holds the kit and each
+  class's key 1, `abilitysound-all.mjs` builds the rest from the effects table by motion, particle and class, with
+  layers of their own for the signature abilities.
 
 ## Rounds
 
@@ -51,9 +52,11 @@ Operator's comes in three beats.
    hit) and B12 Trailer (a swell, a metal slam, low brass). Trailer sounds pretty good.
    **1i**: Trailer for Ban (a low bell and a rumble ringing on) and Ping (three slams stepping down) too. The
    designer prefers Deep echo, with the blips on Bash and Poke toned down.
-   **1j** (built, waiting on the pick): B13 Deep echo, soft: Bash's and Poke's blips (data, cascade, stutter, pings)
-   about 7 dB down.
-2. **Every ability**: the generic layers in the picked style, all 110 rows, and overrides for Overload, Detonate,
-   Firewall, Purge, Crack, Quarantine, Botnet, Deploy, Inject, Flood, Shatter and Failover.
+   **1j**: B13 Deep echo, soft: Bash's and Poke's blips (data, cascade, stutter, pings) about 7 dB down. Picked.
+2. **Every ability** (built, waiting on the designer's ear): all 108 rows in the pick (`abilitysound.mjs` PICKED),
+   built from each row by `abilitysound-all.mjs`: a launch by class, a travel by motion, a contact by kind (strike,
+   sign, yours, helper, fire) and a tail by particles, each ability at its own pitch. SIGNATURE adds layers for
+   Overload, Detonate, Firewall, Purge, Crack, Quarantine, Botnet, Deploy, Inject, Flood, Shatter and Failover.
+   Levels are measured into `abilitysound-levels.mjs`. `?playtest=fx` plays any of them with Sound on B13.
 3. **Tiers and finishers**: the mastery layers, the 13 tier overrides, the 12 finishers.
 4. **Land**: the mix in real fights (crowded cycles, crewmates, burns), the voice cap, tests, GAME_RULES and README.
