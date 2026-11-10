@@ -109,7 +109,7 @@ Hover it for what happens and, on its own muted ▸ line, how to stop it. Breaki
 | Charge | The part's next scheduled attack, much bigger, 3 cycles ahead. | A cut on that cycle, or a built answer (Suspend, Jam, Spoofed ACK, Hijack, Blackhole, Backfire); soften it with ◆, a shield, Brace, Bulkhead. From level 17 SIGINT cuts a charge too. | ×2.5 to ×3 the plain hit. Charges don't crit. Then the after-effects. |
 | Cast | *Casting*: a buff on the virus for 4 cycles. From level 10. | SIGINT or a cut on its part in its two-cycle window, or a skill built for it (Quarantine, Hijack). SIGINT before the window is refused and keeps its cooldown. | Double Extortion: its attacks hit 35% harder. Persistence and Call Home: its attacks repeat a cycle faster. Self-Update: every part grows by a quarter of the Integrity it has left. Then the after-effects. |
 | Seal | A dial, from level 6: the Sentinel's Blacklist, elites and bosses. | Strip its part first, as far as it pays. Bit Rot and Cache Poison make it fail even with ◆ on. | Each ◆ its part still wears gives one ◆ back to every part, never past a part's max. It takes the same share of your ◆ and shield and leaves you Corrupted at that share. |
-| Mimic | The Mimic (ghostroot, from level 8) records you; on its beat it copies the command you fire and turns it on you, with each helper you sent onto it after the beat was said. | Fire what costs least to have copied (a strip when you wear no ◆, a heal when every part is whole, a small hit), hold, or cut the Mimic on its beat. | What it copied (Third parts: the Mimic). |
+| Mimic | The Mimic (ghostroot, from level 8) records you; on its beat it copies the command you fire and turns it on you, with each helper you sent onto it after the beat was said. | Fire what costs least to have copied (a strip when you wear no ◆, a heal when every part is whole, a small hit), hold, or cut the Mimic on its beat. | What it copied, a hit at 75% (Third parts: the Mimic). |
 
 - **No pile-ups.** A charge never lands on the same cycle as another part's heavy attack, or on the Mimic's beat.
   Below level 17 one tell is live at a time; from 17 two can be, never on the same cycle. **An elite** with a clash has one
@@ -368,7 +368,7 @@ A basic with no attack is its signature's **fallback**: break the signature firs
 | Ransomware, Ghostroot | **Hotspot** (6): 14, bare | A hit from your command on it turns the virus's next attack 2+ cycles away into a *Hot Charge*. Burns and helpers don't set it off. |
 | Ransomware | **Mutex** (8): 18, ◆ | Locks the Encryptor behind a shield of a quarter of its max that takes every hit first; a broken lock comes back 4 cycles later while the Mutex lives. |
 | Worm | **C2 Node** (8): 18, ◆, Beacon 3 every 4 | Fragments gnaw half again as hard while it lives, and all drop when it breaks. |
-| Ghostroot | **Mimic** (8): 18, ◆, veiled | Every 4 cycles (announced two ahead) it copies the command you fire and turns it on you (`copyOf`): a hit for its whole direct hit; a strip strips your ◆ and shield; a burn leaves you Corrupted for its ticks at a quarter each; a debuff Throttles you; a shield or buff re-arms the Mimic with a ◆; a heal heals the virus's most damaged part; SIGINT, a stun or a utility Hangs you (your next command doesn't fire); hold copies nothing. A copy under a tenth of your max is a read. Its chip shows what your selected command would copy. |
+| Ghostroot | **Mimic** (8): 18, ◆, veiled | Every 4 cycles (announced two ahead) it copies the command you fire and turns it on you (`copyOf`): a hit for 75% of its direct hit (`TELL.mimic`); a strip strips your ◆ and shield; a burn leaves you Corrupted for its ticks at a quarter each; a debuff Throttles you; a shield or buff re-arms the Mimic with a ◆; a heal heals the virus's most damaged part; SIGINT, a stun or a utility Hangs you (your next command doesn't fire); hold copies nothing. A copy under a tenth of your max is a read. Its chip shows what your selected command would copy. |
 | Cryptominer | **Twin Rig** (9): 18, ◆, Hash 2 every 2, climbing | A second Rig on the same heat (*twin*); its ticks vent it too. Break one while the other stands and the other takes its climb, and one step more. Bring both down close together. |
 | Ransomware, Cryptominer, Botnet, Logic Bomb | **Idle Timer** (9): 20, ◆ | Hit the signature with a command at least every 4 cycles, or at 5 every part re-arms to full ◆. Pips count down on the signature's row. |
 | Ghostroot, Ransomware, Logic Bomb | **Front End** (10): 22, ◆ | While it wears ◆, your single-target commands at its partner land on it. Burns, helpers, area hits and Sudo go through. |
@@ -388,6 +388,11 @@ A basic with no attack is its signature's **fallback**: break the signature firs
 Volatile, Amplifier, Bodyguard, Vendetta, Thorns, Countdown, Backtrace, Swap, Turncoat) roll in no fight
 (`PARTS.mech` 0) until the designer has played them; `?playtest=part:<id>` shows each, and `developer parts mech 0.5`
 rolls them for a session.
+
+**The Amplifier** (docs/puzzle-fights.md decision 15: an armored part that buffs another unless broken). ◆◆, no attack.
+While it wears ◆ the virus's strongest attacker deals 75% more (`MECH.amplifier`; a tether shows which), and a charge
+on that part carries the boost on its plain hit only. Stripped, it boosts nothing until a ◆ patches back; broken, the
+boost is gone. It comes with Bad Blood and the Amplified Floodgate, and spreads from them.
 
 **The spread.** A strain's mechanics parts roll as a third on wild viruses of its lineage from its level and floor
 (weight `PARTS.spread` 0.5, a server room's fixed third too): a Ghostroot from 12 on floor 2 can be a *LURKING
@@ -437,7 +442,7 @@ its rule on hover.
 | Bloodhound | Ransomware | 13 | Pulse, Encryptor, Predator. While you're Encrypted the Predator's Bite (2) lands every cycle. Charge: Bloodlust, a burst of encryption. |
 | Scythe | Ransomware | 14 | Pulse, Volatile, Harvester. The Volatile Corrupts you (2% of your max for 3 cycles); cleansing it deals the rest at once. The Harvester's Reap consumes it for 4% a cycle it had left (a reap is no cleanse). |
 | Doomsday | Worm | 15 | Pulse, Countdown, Leaker. At 10 commands fired every part attacks at once; the Drip leaks you (3% a command for 3 cycles). Holding is free and doesn't count. |
-| Bad Blood | Worm | 16 | Pulse, Vendetta (Grudge 5 every 3), Amplifier. The Amplifier boosts the Pulse's and the Vendetta's next attack in turn (+50%); while the Vendetta stands each break makes the rest hit 20% harder. |
+| Bad Blood | Worm | 16 | Pulse, Vendetta (Grudge 5 every 3), Amplifier (◆◆). While the Amplifier wears ◆ the strongest attacker deals 75% more; while the Vendetta stands each break makes the rest hit 20% harder. |
 | Bodysnatcher | Ghostroot | 18 | Pulse, Swap, Stunner. The Swap's Pass Throttles you, and your next command hit moves it (or Exposed or Corrupted) onto that part; the Jolt Stuns you. |
 | Thornwall | Worm | 20 | Pulse, Thorns, Bodyguard. A command on the Thorns Corrupts you (1% for 3 cycles); the Bodyguard shields the part your command hit (15%, commands only). |
 | Desync | Ghostroot | 22 | Pulse, Sandbox, Jitter. The Jitter lags you 2 cycles (your command lands after the virus acts); the Contain Sandboxes you a cycle (quiet commands only). |
@@ -459,7 +464,7 @@ does: the Bodyguard onto worms from 13, the Jitter onto ghostroots from 14, the 
 | Leaking Keylogger | 14 | Leaker: its Drip leaks you, 3% a command for 3 cycles. |
 | Lagging Flicker | 14 | Jitter: lags you 2 cycles; your command lands after the virus acts. |
 | Junking Hashrat | 15 | Junker: a dead key on your bar until you fire it. |
-| Amplified Floodgate | 16 | Amplifier: the Pulse's and the Flooder's next attack in turn, +50%. |
+| Amplified Floodgate | 16 | Amplifier: while it wears ◆, the stronger of the Pulse and the Flooder deals 75% more. |
 | Probing Extortion | 16 | Prober: leaves you Exposed; your next incoming hit +50%. |
 | Feeding Leech | 18 | Feeder: heals the most damaged part 2% of its max per debuff you carry. |
 | Volatile Echo | 18 | Volatile: Corrupts you 2% for 3 cycles; cleansing deals the rest. |
@@ -607,12 +612,12 @@ ticks at 50% and 25%. Built: the worm and ransomware Residents and the three sol
 
 | Boss | The beat | Every | What answers it |
 |---|---|---|---|
-| Resident (worm, ransomware) | **Backlash**: a part with an attack that your command hits on the beat lashes back for its attack doubled, and an Encrypt or Replicate does its own thing once on top. A hit that breaks it doesn't lash, nor do burns or helpers sent before. | 4, then 3 | A shield, a buff or hold, a part with no attack (the Lockbox), or a hit that breaks its part |
+| Resident (worm, ransomware) | **Backlash**: a part with an attack that your command hits on the beat lashes back for the boss's biggest plain hit doubled, whichever part it is (the Encryptor too), and an Encrypt or Replicate does its own thing once on top. A hit that breaks it doesn't lash, nor do burns or helpers sent before. | 4, then 3 | A shield, a buff or hold, a part with no attack (the Lockbox), or a hit that breaks its part |
 | RELAY-KING | **Broadcast**: its Relay's attack, bigger for each fragment | 4, 3 from act 3 | Clear the fragments, cut it, or a ◆ on you |
 | REPO MAN | **Collection**: its Ledger's attack, bigger for each Lien; each act calls one 3 cycles out | 5 | Few Liens, a cut, or a ◆ on you |
 | HOLLOW CHOIR | **Copy**: its Mimic copies what you fire and turns it on you (a second voice from act 2) | 4 | What costs least to have copied, hold, or break a voice |
 
-The Backlash's chips (*Lash −N*) sit on every part with an attack, in the columns the beat falls in.
+The Backlash's chips (*Lash −N*, the same N on each) sit on every part with an attack, in the columns the beat falls in.
 
 **Loot.** A boss always drops one item at its level (`bossLoot`): a blue, or a yellow one kill in four. The Resident
 rolls like an elite instead (one is met on every takeover). Each boss has **two uniques of its own**: 15% a kill, +5%

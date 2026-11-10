@@ -175,6 +175,13 @@ The designer, October 2026:
     kill: that makes gear pointless.
 17. **The Mimic:** its copies can be a bit smaller, but countering your big skill stays its job.
 
+### 8.1 Batch 1 (November 10, on `wip/fights-1`, not landed)
+
+- **Twins cut.** Two charges said on one cycle were built as a fight-wide system on `wip/lesser-evils` and cut (the
+  designer, November 10). They may return as one elite's clash or one part's rule.
+- **Kept for play:** the Amplifier reworked (◆◆, +75% on the strongest attacker while it wears ◆); the Mimic copies a
+  hit at 75% (decision 17); the Backlash is the boss's biggest plain hit doubled, on every part.
+
 ### 7.1 P4's first four
 
 One shape for every boss (acts.mjs): three acts on the ♛'s ticks, one tick a hit, a tell an act, a beat that act 2

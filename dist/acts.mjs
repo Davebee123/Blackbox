@@ -3,7 +3,7 @@
 // and 25% (interrupt.mjs rule a). Each act deals one more of its tells and quickens its beat; the last speeds every attack.
 //
 //   the beat     one move on a fixed rhythm, always on the board: the Backlash (on its beat, a part your command hits
-//                that doesn't break lashes back: its own attack lands at once, doubled), the Mimic's copy (HOLLOW CHOIR),
+//                that doesn't break lashes back, for the boss's biggest plain hit doubled, whichever part it is), the Mimic's copy (HOLLOW CHOIR),
 //                the Decoy's bend, or a part's own attack (RELAY-KING's Broadcast, REPO MAN's Collection). What you fire
 //                on the beat, and where, is the puzzle.
 //   the acts     act n deals tell n (charge, cast, then the third); act 2 quickens the beat (every), act 3 speeds every
@@ -15,6 +15,10 @@ import { emit, alive, part, livingParts, strikeWith, attackAmount, landingsOf } 
 import { tellsOf } from './tells.mjs';
 
 export const ACTS = { leave: 1, lash: 2 }; // beats an act plays before its ♛ may go on; the Backlash's multiple
+// The Backlash's size comes from the boss, not the part you hit: the biggest plain hit among its parts as the fight
+// starts (an Encryptor's own would be nothing, and its beat free to ignore).
+const plain = (p) => (p.attack ? (p.attack.effect === 'damage' ? p.attack.amount : p.attack.hit) || 0 : 0);
+const lashBase = (v) => Math.max(0, ...v.parts.filter((p) => p.kind === 'system' || !p.kind).map(plain));
 
 // The boss's acts (its family's, for the Resident), or null: not a P4 boss.
 export function actsOf(v) {
@@ -60,7 +64,7 @@ export function actsStart(s) {
   const e = s.encounter, v = e?.virus, A = actsOf(v);
   if (!A) return;
   e.actFrom = 1;
-  if (A.beat === 'backlash') v.backlash = { every: A.every, first: A.first };
+  if (A.beat === 'backlash') v.backlash = { every: A.every, first: A.first, base: lashBase(v) };
   if (A.beat === 'bend') { const d = v.parts.find((x) => x.reflect); if (d) { d.sings = true; if (A.every) { d.reflect = A.every; d.reflectOff = (A.every - (A.first % A.every)) % A.every; } } } // the Choir's Decoy: every bend bounces
 }
 // The act each tell belongs to (tells.mjs plannedTells): the n-th tell is act n's.
@@ -73,7 +77,7 @@ export function actBegins(s, ph) {
   const every = (ph.every ?? null);
   if (!every) return;
   const first = e.cycle + every;
-  if (v.backlash) v.backlash = { every, first };
+  if (v.backlash) v.backlash = { ...v.backlash, every, first };
   const t = tellsOf(s)?.list.find((x) => x.kind === 'mimic');
   if (t && A.beat === 'copy') { t.every = every; t.first = first; if (t.told && t.next > first) { t.told = false; t.next = null; } }
   const d = A.beat === 'bend' && livingParts(s).find((x) => x.reflect);
@@ -101,10 +105,10 @@ export function lashHit(s, p, sent = null) {
   if (!lashOn(s, p) || p.lashAt === e.cycle || (sent != null && sent < e.cycle)) return;
   p.lashAt = e.cycle;
 }
-// What a lash lands: a hit of the part's attack doubled
-// (an Encrypt, a Replicate or a Scramble counts its hit, and does its own thing once on top: lashLand).
+// What a lash lands: the boss's biggest plain hit doubled, whichever part lashes (the part's own when that is bigger now:
+// a Cipher Block's lift, an enrage). An Encrypt, a Replicate or a Scramble does its own thing once on top (lashLand).
 export function lashAttack(s, p) {
-  const a = p.attack, n = a.effect === 'damage' ? attackAmount(p) : a.hit || 0;
+  const a = p.attack, n = Math.max(s.encounter.virus.backlash?.base || 0, a.effect === 'damage' ? attackAmount(p) : a.hit || 0);
   const amount = Math.max(1, Math.round(n * ACTS.lash));
   return { name: 'Backlash', effect: 'damage', amount, interval: a.interval, noCrit: true };
 }

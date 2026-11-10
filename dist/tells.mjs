@@ -46,6 +46,7 @@ import { cancelAttack, crossBy, interruptMove, nextTick, fronted } from './inter
 import { ignores, CLASHES } from './genes.mjs';
 import { contractDid } from './mail.mjs';
 import { tellAct, actOf } from './acts.mjs';
+import { ampAdds } from './mechanics.mjs';
 
 // What a fight's tells did, on its metrics (the gap test reads them): said, answered, read (answered by a command
 // of yours, not by breaking the part), landed, and the Signal (or Integrity) they cost you, by tell.
@@ -383,7 +384,7 @@ function chargeAttack(s, t, p) {
   const enr = p.enrage && p.integrity < p.max / 2 ? CONFIG.enrage : 1; // attackAmount counts Bricker's rage again: take it out
   const more = (T.tier.mult - 1) * (T.tier.extra ?? 1), big = (n, share = 1) => Math.max(1, Math.round(n + n * more * share * k));
   const base = { ...a, name: t.name, ramp: 0, step: 0, rampBy: 0, bonus: 0, grow: 0, windup: 0, wound: 0, noCrit: true, tell: t.id, spawn: t.spawn || 0 };
-  if (a.effect === 'damage') return { ...base, amount: Math.max(1, Math.round(big(attackAmount(p)) / enr)) };
+  if (a.effect === 'damage') return { ...base, amount: Math.max(1, Math.round((big(attackAmount(p)) + ampAdds(s, p, attackAmount(p))) / enr)) }; // an Amplifier's boost on top, once
   if (a.effect === 'encrypt') return { ...base, burst: Math.round(a.amount * more * k) }; // its Encrypt, and a burst on top (TELL.burst cycles)
   if (a.effect === 'scramble') return { ...base, amount: a.amount + Math.round((t.longer || 0) * k), hit: a.hit ? (t.plain ? a.hit : big(a.hit)) : 0 }; // Possession: the same hit, a longer scramble
   if (a.effect === 'heal') return { ...base, amount: Math.round(a.amount * (1 + (T.tier.mult - 1) * k)) };

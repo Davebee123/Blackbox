@@ -666,10 +666,10 @@ export const STRAINS = {
   },
   badblood: {
     lineage: 'worm', from: 16, depth: 2, name: 'Bad Blood', genes: ['vendetta', 'amplifier'], tell: { name: 'Blood Feud', gene: 'overcharge' },
-    rule: 'Each cycle the Amplifier boosts the next attack of the Pulse Node or the Vendetta, in turn, by 50%. While the Vendetta stands, each other part you break makes the rest hit 20% harder.',
-    answer: 'Break the Vendetta first, then the part the Amplifier boosts.',
+    rule: 'While the Amplifier wears ◆, the virus\'s strongest part deals 75% more damage. While the Vendetta stands, each other part you break makes the rest hit 20% harder.',
+    answer: 'Keep the Amplifier stripped, and break the Vendetta first.',
     parts: [PULSE(12, 4), { id: 'vendetta', name: 'Vendetta', integrity: 26, armor: 1, loot: 'Grudge File', special: true, mech: 'vendetta', attack: { name: 'Grudge', effect: 'damage', amount: 5, interval: 3, first: 3 } },
-      { id: 'amplifier', name: 'Amplifier', integrity: 18, armor: 1, loot: 'Gain Stage', mech: 'amplifier' }],
+      { id: 'amplifier', name: 'Amplifier', integrity: 18, armor: 2, loot: 'Gain Stage', mech: 'amplifier' }],
   },
   bodysnatcher: {
     lineage: 'ghostroot', from: 18, depth: 2, name: 'Bodysnatcher', genes: ['swap', 'stunned'], tell: { name: 'Body Swap', gene: 'overcharge' },
@@ -723,8 +723,8 @@ Object.assign(STRAINS, {
     'The Leaker\'s Drip leaks you for 3 cycles, and each command you fire then costs 3% of your max.', 'Fire inside the Sync Window, and hold while you leak.'),
   junkinghashrat: MUTANT('hashrat', 'junk', { id: 'junker', name: 'Junker', integrity: 20, armor: 1, loot: 'Junk Page', mech: 'junk', attack: { name: 'Junk', effect: 'damage', amount: 3, interval: 4, first: 3 } },
     'The Junker\'s Junk puts a dead key on your bar. Firing that key clears it, and that is your command.', 'Break the Miner first, and clear the junk when the key matters.'),
-  amplifiedfloodgate: MUTANT('floodgate', 'amplifier', { id: 'amplifier', name: 'Amplifier', integrity: 18, armor: 1, loot: 'Gain Stage', mech: 'amplifier' },
-    'Each cycle the Amplifier boosts the next attack of the Pulse Node or the Flooder, in turn, by 50%.', 'Delay the boosted Flood, or break the Amplifier.'),
+  amplifiedfloodgate: MUTANT('floodgate', 'amplifier', { id: 'amplifier', name: 'Amplifier', integrity: 18, armor: 2, loot: 'Gain Stage', mech: 'amplifier' },
+    'While the Amplifier wears ◆, the virus\'s strongest part deals 75% more damage.', 'Keep the Amplifier stripped, or break it.'),
   feedingleech: MUTANT('leech', 'feeder', { id: 'feeder', name: 'Feeder', integrity: 20, armor: 1, loot: 'Feed Tube', mech: 'feeder' },
     'Each cycle the Feeder heals the most damaged part by 2% of its max for each debuff you carry.', 'Stay clean, shield the Siphon, and break the Tap.'),
   lurkingsleeper: MUTANT('sleeper', 'opportunist', { id: 'opportunist', name: 'Opportunist', integrity: 20, armor: 1, loot: 'Lurk Sensor', mech: 'opportunist', attack: { name: 'Pounce', effect: 'damage', amount: 5, interval: 3, first: 999 } },
@@ -1202,7 +1202,7 @@ export const TELL = {
   seal: 1, // a seal that lands gives every part this many ◆ back for each ◆ its own part still wears (never past a part's max)
   sigintCharge: true, // SIGINT cuts a charge on its cycle as well as a cast in its window: one key, two clocks (docs/puzzle-levers.md 3.6)
   sigintChargeFrom: 17, // from the virus level two tells are live at once (a charge and a cast compete for it); below it SIGINT stops casts only, since an idle SIGINT on every lone charge made a fight at 10 to 16 about half as costly (balance.test.mjs)
-  mimic: 1, // the Mimic hits you with your last command's direct damage, all of it
+  mimic: 0.75, // the Mimic hits you with this share of your command's direct damage (decision 17: a bit smaller; a copied big skill is still the dear one)
   // The Mimic copies everything you fire on its beat and turns it on you (docs/puzzle-levers.md 3.1, tells.mjs copyOf). A
   // hit hits you (mimic, above); a hit with no listed damage of its own (a cash-in, a proc, an area hit) copies as your
   // key 1. The rest:

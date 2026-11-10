@@ -4,7 +4,7 @@ import { fresh, command, selectEncounter, resolveCycle, part, attackAmount, defe
 import { STRAINS, strainsFor, createVirus, SERVER, variantFor, gradeFor, defaultSub, spreadOf, spreadFrom } from './dist/data.mjs';
 import { MECH_GENES, compatible } from './dist/genes.mjs';
 import { PARTS } from './dist/parts.mjs';
-import { mechLanded, mechFired, mechValidate, youDebuffs } from './dist/mechanics.mjs';
+import { mechLanded, mechFired, mechValidate, youDebuffs, ampOf } from './dist/mechanics.mjs';
 
 const veteran = (arch = 'breaker', level = 14) => {
   const s = fresh();
@@ -379,12 +379,14 @@ test('Doomsday: fired commands count toward the big turn, the Leak makes each on
   assert.equal(cd.count, 0);
 });
 
-test('Bad Blood: the Amplifier boosts the Pulse Node and the Vendetta in turn, and a break while the Vendetta stands stacks', () => {
+test('Bad Blood: the Amplifier boosts its strongest attacker while it wears ◆, and a break while the Vendetta stands stacks', () => {
   const s = mstart('badblood'), e = s.encounter;
+  assert.equal(ampOf(s, part(s, 'pulse')), null, 'stripped (mstart bares every part): no boost');
+  part(s, 'amplifier').armor = 1;
+  assert.equal(ampOf(s, part(s, 'pulse'))?.id, 'amplifier', 'the Pulse Node, its strongest');
+  assert.equal(ampOf(s, part(s, 'vendetta')), null, 'and no other');
   for (const p of e.virus.parts) if (p.attack) p.attack.due = 999;
   fire(s, 'hold'); fire(s, 'hold');
-  assert.equal(part(s, 'pulse').amped, 'amplifier');
-  assert.equal(part(s, 'vendetta').amped, 'amplifier', 'both its attackers, in turn');
   part(s, 'pulse').integrity = 1;
   fire(s, 'spike pulse');
   assert.equal(e.virus.vendetta, 1, 'the break avenged');
@@ -516,10 +518,9 @@ test('mutated strains: each one\'s part works beside its strain', () => {
   { const s = mstart('leakingkeylogger'), e = s.encounter; for (const p of e.virus.parts) if (p.attack) p.attack.due = 999;
     e.leakUntil = e.cycle + 2; const hp = s.server.integrity; fire(s, 'spike pulse');
     assert.ok(s.server.integrity < hp && e.keylog === 1, 'leaked and logged'); }
-  // The Amplified Floodgate: the Amplifier boosts the Flooder in turn.
-  { const s = mstart('amplifiedfloodgate'); for (const p of s.encounter.virus.parts) if (p.attack) p.attack.due = 999;
-    fire(s, 'hold'); fire(s, 'hold');
-    assert.ok([part(s, 'pulse').amped, part(s, 'flooder').amped].every((x) => x === 'amplifier')); }
+  // The Amplified Floodgate: the Amplifier boosts one attacker, its strongest.
+  { const s = mstart('amplifiedfloodgate'); part(s, 'amplifier').armor = 1;
+    assert.equal([part(s, 'pulse'), part(s, 'flooder')].filter((x) => ampOf(s, x)?.id === 'amplifier').length, 1); }
   // The Feeding Leech: a debuff on you heals its most damaged part.
   { const s = mstart('feedingleech'), e = s.encounter; for (const p of e.virus.parts) if (p.attack) p.attack.due = 999;
     const tap = part(s, 'tap'); tap.integrity -= 10; const was = tap.integrity; e.exposedHit = true; fire(s, 'hold');

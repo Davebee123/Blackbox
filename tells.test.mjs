@@ -4,7 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, selectEncounter, resolveCycle, part, active, intents, livingParts, keyMap, readyIn, previewDamage } from './dist/combat.mjs';
 import { CONFIG, TELL, TELLS, TELL_SETS, ABILITIES, FAMILIES, createVirus } from './dist/data.mjs';
-import { tellsOf, tellIntents, tellLog, sayOf, tellStart } from './dist/tells.mjs';
+import { tellsOf, tellIntents, tellLog, sayOf, tellStart, mimicHit, copyOf } from './dist/tells.mjs';
 import { boardMarkup, partAbout } from './dist/view.mjs';
 import { planner } from './dist/planner.mjs';
 import { raidOf } from './dist/raid.mjs';
@@ -347,6 +347,17 @@ test('the Mimic plays the command you fire on its beat back at you; go quiet and
   const ev = fire(s2, 'exploit pulse');
   assert.equal(hp(s2), b2, 'Exploit has no hit in it');
   assert.ok(ev.some((e) => e.type === 'read' && e.open), 'read: the Mimic is Open');
+});
+
+test('the Mimic\'s copy of a hit is a bit smaller than the hit (TELL.mimic), and a big skill is still the dear one', () => {
+  assert.ok(TELL.mimic > 0.5 && TELL.mimic < 1);
+  const seed = Array.from({ length: 50 }, (_, i) => i + 1).find((x) => createVirus('random', x, { family: 'ghostroot', threat: 9 + 12, classic: true }).parts.some((p) => p.mimic));
+  const s = fight({ level: 12, family: 'ghostroot', seed }), m = part(s, 'mimic');
+  Object.assign(m, { armor: 0, maxArmor: 0, integrity: 999, max: 999 });
+  const flood = mimicHit(s, 'flood', m), key1 = mimicHit(s, 'spike', m), whole = previewDamage(s, 'flood', m);
+  assert.ok(flood < whole && flood >= whole * TELL.mimic * 0.8, `a copied Flood is under the hit itself (${flood} of ${whole})`);
+  assert.ok(flood > key1 * 2, 'countering the big skill stays its job');
+  assert.equal(copyOf(s, 'flood', m).amount, flood, 'what the beat cell shows');
 });
 
 test('MIRRORSHADE\'s Mimic sits on its Scramble: while you\'re Scrambled it plays your hit back twice over', () => {

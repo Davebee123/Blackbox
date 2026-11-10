@@ -30,7 +30,7 @@ and the Mimic.
 - **Leak never takes your last point**, and Junk process holds one key at a time, never key 1 or SIGINT.
 - **Harvester's stacks** are the cycles your Corrupted has left. **Swap** moves Throttled, Exposed, and Corrupted as a
   burn (never a Volatile one).
-- **The Opportunist stays awake** once woken. **The Amplifier** gives each part one boost at most. **The Bodyguard's**
+- **The Opportunist stays awake** once woken. **The Amplifier** (reworked November 10, docs/puzzle-fights.md decision 15) wears ◆◆ and boosts the virus's strongest attacker by 75% while it wears ◆. **The Bodyguard's**
   shield is the Buffer's: it takes your commands only.
 
 ## To do when one rolls
