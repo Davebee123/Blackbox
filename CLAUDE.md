@@ -107,7 +107,8 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
 - **Phones:** combat on a phone never opens the keyboard.
 - **Fights** (docs/puzzle-fights.md): every fight is a little tricky, elites and bosses harder, and the game challenging.
   Puzzles, never walls: hard and rewarding to learn, like Elden Ring. A blind player loses; watching or a correct
-  routine wins. A boss's signature changes the fight and ties to its lore; shutting a skill off is a side rule at
+  routine wins. Hard means several threats at once, each choice a lesser evil (docs/puzzle-fights.md decision 15);
+  about 30% Signal a same-level fight, and gear matters. A boss's signature changes the fight and ties to its lore; shutting a skill off is a side rule at
   most.
 
 ## Backlog
