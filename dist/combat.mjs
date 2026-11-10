@@ -29,7 +29,7 @@ import { raidStart, raidLand, raidCycle, raidShield, raidBroke, raidTaken, raidA
 import { tellStart, tellCycle, tellLand, tellBroke, chargeNow, tellIntents, tellSigint, tellSigintCheck, tellOn, tellsOf, overclockMult, hotCharge } from './tells.mjs';
 import { prepareTicks, onHit as tickHit, blastCut, BOSS_RULES, TICKS } from './interrupt.mjs';
 import { actsStart, lashHit, lashLand, actIntents, actBegins, actCap } from './acts.mjs';
-import { FB, fbStart, fbPower, fbLanded, fbMisses, fbSlowed, fbBroke, fbAim, fbCommand, fbDealt, fbVerb, FB_VERBS, fbCycle, fbIntents, fbLogged, surfShut } from './floorbosses.mjs';
+import { FB, fbBid, fbStart, fbPower, fbLanded, fbMisses, fbSlowed, fbBroke, fbAim, fbCommand, fbDealt, fbVerb, FB_VERBS, fbCycle, fbIntents, fbLogged, surfShut } from './floorbosses.mjs';
 import { runLate, TELL, TELLS, ROOM_FAMILIES, DAMPER_KINDS, floorFor, line, lift, own } from './data.mjs';
 import { holdsPart, objectiveBroke, objectiveCycle, objectiveBonus, bonusXp, bonusRolls, backupHit } from './objectives.mjs';
 import { mechValidate, mechIntercept, mechFired, mechPower, exposedCut, mechLanded, mechCommandHit, mechStart, mechClose, mechBroke, lagged, stunnedNow, missedTurn } from './mechanics.mjs';
@@ -3423,6 +3423,7 @@ function useAbility(s, intent, auto = false) {
   const a = id === 'spike' ? { ...ABILITIES.spike, name: spikeName(s) } : ABILITIES[id];
   intent = fbAim(s, intent, a); // RECURSION: a one-part command reaches only the top frame
   const target = part(s, intent.target);
+  fbBid(s, target, a); // CENTRIFUGE: a command at the Gavel is a bid (floorbosses.mjs)
   // What a set bonus compares after the skill (sets.mjs SET_HOOKS.used): your shield, the parts' jams and timers, the
   // helpers and burns already out, and the crew's Signal and shields. Only with a set piece loaded.
   const before = sxOf(s) ? { shield: e.shield || 0, parts: Object.fromEntries(livingParts(s).map((p) => [p.id, { jam: p.jammedUntil || 0, due: p.attack?.due }])), burns: new Set(e.burns), helpers: new Set(e.helpers), allies: alliesOf(s).map((a) => ({ who: a.who, st: a.st, integrity: defender(a.st)?.integrity || 0, shield: a.st.encounter?.shield || 0 })) } : null;

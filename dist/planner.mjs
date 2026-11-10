@@ -152,6 +152,9 @@ function heedFloor(s, move) {
   if (v.bid) {
     const g = livingParts(s).find((p) => p.gavel && p.attack);
     if (g && g.attack.interval <= 2 && g.attack.due - c <= 1) { const slow = first(s, [...SLOWS.map((k) => `${k} ${g.id}`), ...(g.attack.due === c ? ['sigint'] : [])]); if (slow) return slow; }
+    // A command at the Gavel is a bid while the Rotor stands: work the Rotor and the buyers, the Gavel last.
+    const rotor = livingParts(s).find((p) => p.core), aim = at && part(s, at);
+    if (g && rotor && aim === g && !SLOWS.includes(id)) { const alt = first(s, [`${id} ${rotor.id}`, ...HITS.map((k) => `${k} ${rotor.id}`)]); if (alt) return alt; }
     // No delay at hand: cut the selling Surge, when one command takes the Gavel across its tick on the cycle it lands.
     const n = g && g.attack.interval <= 2 && g.attack.due === c ? toCross(g) : null;
     if (n != null && !(g.armor > 0)) { const cut = first(s, [id, ...HITS].map((k) => `${k} ${g.id}`).filter((m) => previewDamage(s, m.split(' ')[0], g) >= n)); if (cut) return cut; }

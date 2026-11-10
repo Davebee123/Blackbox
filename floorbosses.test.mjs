@@ -215,3 +215,29 @@ test('their uniques: Governor, Cascade Failure, Paper Trail, Escrow, Privacy Scr
   assert.ok(m.integrity < mhp, 'Tail Call ticked the burn on main()');
   assert.equal(sg.encounter.stackGuard, sg.encounter.cycle + 2);
 });
+
+test('a slip costs progress: a command at the Gavel bids, a sale or a leak or a Call heals the ♛, a broken Demand halves the clock, a Dump heals the Logger', () => {
+  const c = boss('centrifuge'), g = of(c, 'gavel'), rotor = of(c, 'rotor');
+  g.armor = 0; g.attack.interval = 3;
+  command(c, 'spike gavel'); resolveCycle(c);
+  assert.equal(g.attack.interval, 2, 'a command at the Gavel is a bid');
+  rotor.integrity = Math.round(rotor.max * 0.5);
+  landNow(c, g);
+  assert.equal(rotor.integrity, Math.round(rotor.max * 0.5) + Math.round(rotor.max * FB.bid.mend), 'a sale heals the Rotor');
+  const k = boss('shakedown'), v = k.encounter.virus, col = of(k, 'collector'), d = of(k, 'demand');
+  v.ransom.left = 8;
+  d.integrity = 1; hit(k, d, 5, { pierce: true, server: true }); // under the Lockbox's ward cap
+  assert.equal(v.ransom.left, 4, 'missed payment: the clock halves');
+  col.integrity = Math.round(col.max * 0.5); v.ransom.left = 1;
+  hold(k);
+  assert.equal(col.integrity, Math.round(col.max * 0.5) + Math.round(col.max * FB.ransom.mend), 'a leak heals the Collector');
+  const r = boss('recursion'), m = of(r, 'main');
+  m.integrity = Math.round(m.max * 0.5);
+  for (let i = 0; i < 6 && r.encounter.cycle <= r.encounter.virus.stack.callAt; i++) hold(r);
+  assert.equal(r.encounter.virus.stack.calls, 1);
+  assert.equal(m.integrity, Math.round(m.max * 0.5) + Math.round(m.max * FB.stack.mend), 'a Call heals main()');
+  const u = boss('shouldersurfer'), lg = of(u, 'logger');
+  lg.integrity = Math.round(lg.max * 0.5);
+  landNow(u, lg);
+  assert.equal(lg.integrity, Math.round(lg.max * 0.5) + Math.round(lg.max * FB.surf.mend), 'a Dump heals the Logger');
+});
