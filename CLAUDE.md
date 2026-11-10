@@ -112,5 +112,6 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
 
 ## Backlog
 
-- **Backlog:** Silos, more event cards, parts plan P4, co-op's rough edges, and runners (docs/runners.md: build R1
-  next).
+- **Enhance, don't add** (the designer, November 2026). In order: the fights (the main loop); then every floor's
+  content, its bosses finished (floors 5–8 have none of their own); then itemization on the deeper floors. Every floor
+  should have content. New systems (runners R2+, the house, off-map servers, co-op, crises) wait.
