@@ -12,7 +12,7 @@ import { interruptMove, saveTick, toCross } from './interrupt.mjs';
 import { loudWins, blastPays, cashIn } from './order.mjs';
 import { actsOf, lashOn, actDone, actCap } from './acts.mjs';
 import { copyKind } from './tells.mjs';
-import { topFrame, canCall } from './floorbosses.mjs';
+import { topFrame, canCall, callingNow } from './floorbosses.mjs';
 
 // Against a crew boss only the tank taunts (a taunt pulls its busters onto you): raid.mjs noTaunt.
 // veto: skills the planner may not pick this call (routines.mjs: a program's rotation never fires a long cooldown).
@@ -152,6 +152,9 @@ function heedFloor(s, move) {
   if (v.bid) {
     const g = livingParts(s).find((p) => p.gavel && p.attack);
     if (g && g.attack.interval <= 2 && g.attack.due - c <= 1) { const slow = first(s, [...SLOWS.map((k) => `${k} ${g.id}`), ...(g.attack.due === c ? ['sigint'] : [])]); if (slow) return slow; }
+    // A command at the Gavel is a bid while the Rotor stands: work the Rotor and the buyers, the Gavel last.
+    const rotor = livingParts(s).find((p) => p.core), aim = at && part(s, at);
+    if (g && rotor && aim === g && !SLOWS.includes(id)) { const alt = first(s, [`${id} ${rotor.id}`, ...HITS.map((k) => `${k} ${rotor.id}`)]); if (alt) return alt; }
     // No delay at hand: cut the selling Surge, when one command takes the Gavel across its tick on the cycle it lands.
     const n = g && g.attack.interval <= 2 && g.attack.due === c ? toCross(g) : null;
     if (n != null && !(g.armor > 0)) { const cut = first(s, [id, ...HITS].map((k) => `${k} ${g.id}`).filter((m) => previewDamage(s, m.split(' ')[0], g) >= n)); if (cut) return cut; }
@@ -170,6 +173,7 @@ function heedFloor(s, move) {
   if (v.stack) {
     // A Call this cycle or next: the top frame broken or brought under a quarter first, with the biggest hit that does it.
     const tf = topFrame(s);
+    if (callingNow(s) && ok(s, 'sigint')) return 'sigint'; // the Call this cycle: SIGINT stops it
     if (tf && canCall(tf) && v.stack.callAt - c <= 1) {
       const need = tf.integrity - Math.floor(tf.max * 0.25) + 1, done = (m) => { const k = m.split(' ')[0]; return !(tf.armor > 0 && !ignoresArmor(s, k)) && previewDamage(s, k, tf) >= need; };
       if (!(at === tf.id && done(move))) { const hit = first(s, [...HITS, ...Object.keys(ABILITIES)].map((k) => `${k} ${tf.id}`).filter(done)); if (hit) return hit; }

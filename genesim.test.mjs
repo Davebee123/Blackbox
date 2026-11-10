@@ -48,22 +48,22 @@ test('HASHLORD and MIRRORSHADE, rebuilt, sit in the boss band at their floors (1
 });
 
 // The floor 2 and 3 bosses (floorbosses.mjs), at their floors, twelve seeds a cell. Played blind (TELL.bots.answer off:
-// no tell and no boss rule answered) each must lose hard (the designer: "a player fighting a boss blind should be
-// punished a lot"), so each rule's answer is one only reading finds: SIGINT, a delay or a Throttle on a selling Gavel
-// (which no tick cuts); the Collector raced while a Demand stands to pay the clock; nothing big outside the window; the
-// top frame broken or held under a quarter before each Call. Measured: CENTRIFUGE read 72% misread 75% blind 45%;
-// SHAKEDOWN 65%, 55%, 43%; SHOULDER SURFER 76%, 63%, 48%; RECURSION 66%, 59%, 40%. Under four of twelve, flagged for
-// the kit, not tuned around: CENTRIFUGE the Overclocker, SHAKEDOWN the Demolitionist and the Sysop, SHOULDER SURFER the
-// Sysop and the Herder, RECURSION the Sysop.
+// no tell and no boss rule answered) each loses hard, and a misreader (blind on a seeded 30% of its cycles) pays for its
+// slips (the designer: "a player fighting a boss blind should be punished a lot", "misreading should also be
+// punished"). Each rule's answer is one only reading finds, and a slip at the wrong cycle makes the rest of the fight
+// harder: a command at the Gavel bids, and each sale hardens its Surge; a broken Demand halves the clock, and each leak is
+// bigger; each Dump that plays you back grows the next; each Call let through hardens the stack and brings the next one
+// sooner (SIGINT stops one). Measured: CENTRIFUGE read 78% misread 50% blind 26%; SHAKEDOWN 79%, 64%, 38%; SHOULDER
+// SURFER 74%, 53%, 27%; RECURSION 74%, 57%, 16%. Under four of twelve, flagged for the kit, not tuned around: SHOULDER
+// SURFER the Sysop and the Herder, RECURSION the Sysop.
 const FLOOR_BOSSES = ['centrifuge', 'shakedown', 'shouldersurfer', 'recursion'];
-const FLOOR_FLAGGED = { centrifuge: ['overclocker'], shakedown: ['demolitionist', 'sysop'], shouldersurfer: ['sysop', 'herder'], recursion: ['sysop'] };
-test('the floor 2 and 3 bosses sit in the reader\'s band at their floors (12 to 19), and a blind player loses 20 points more', () => {
+const FLOOR_FLAGGED = { centrifuge: [], shakedown: [], shouldersurfer: ['sysop', 'herder'], recursion: ['sysop'] };
+test('the floor 2 and 3 bosses sit in the reader\'s band at their floors (12 to 19); misreading costs 10 points, playing blind 20', () => {
   for (const id of FLOOR_BOSSES) {
     const b = band(id), line = `${id} at ${b.level}: read ${b.read.toFixed(2)} misread ${b.misread.toFixed(2)} blind ${b.blind.toFixed(2)} ${JSON.stringify(b.subs)}`;
     assert.ok(b.read >= 0.6 && b.read <= 0.86, line);
-    assert.ok(b.misread >= 0.45, line);
-    assert.ok(b.read - b.blind >= 0.2, line);
-    assert.ok(b.blind <= 0.5, `blind wins half or less: ${line}`);
+    assert.ok(b.misread >= 0.45 && b.read - b.misread >= 0.1, `a misreader pays for its slips: ${line}`);
+    assert.ok(b.read - b.blind >= 0.2 && b.blind <= 0.5, `a blind player loses: ${line}`);
     assert.ok(b.three <= 0.9, `${line} three ${b.three}`);
     for (const [sub, w] of Object.entries(b.subs)) if (!FLOOR_FLAGGED[id].includes(sub)) assert.ok(w >= 4, `${sub}: ${line}`);
   }

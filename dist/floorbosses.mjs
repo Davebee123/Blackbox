@@ -29,8 +29,8 @@ import { mimicHit, copyKind } from './tells.mjs';
 export const FB = {
   bid: { slow: 4, fast: 2, after: 3, sold: 0.5, buyers: ['tollgate', 'swarmline', 'palemask'] }, // sold: each sale makes the Gavel's Surge that much harder, for the fight
   ransom: { clock: 10, restart: 5, pay: 3, leak: 0.35, grow: 0.15, most: 0.65 }, // a leak takes 35% of your max, 15 more each leak after, up to 65%
-  surf: { log: 2, again: 4, echo: 0.4 }, // echo: an Again note's share of its hit (40%: at half, a burst sung back took 95% of a reader's bar in three cycles)
-  stack: { call: 4, push: 0.6, under: 0.25, overflow: 5, ret: 1.5, cap: 7, deeper: 0.35 }, // deeper: each Call let through makes every frame hit that much harder
+  surf: { log: 2, again: 4, echo: 0.4, grow: 0.5 }, // grow: each Dump that lands makes the next one that much bigger, for the fight; // echo: an Again note's share of its hit (40%: at half, a burst sung back took 95% of a reader's bar in three cycles)
+  stack: { call: 4, push: 0.6, under: 0.25, overflow: 5, ret: 1.5, cap: 7, deeper: 0.35, sooner: 1, soonest: 3 }, // sooner: each Call let through brings the next one a cycle sooner, down to every soonest; // deeper: each Call let through makes every frame hit that much harder
 };
 export const BUYER = { tollgate: 'TOLLGATE', swarmline: 'SWARMLINE', palemask: 'PALEMASK' };
 export const FB_VERBS = new Set(['reserve', 'lot2', 'demand2', 'notice', 'again', 'top', 'return', 'overflow']);
@@ -83,6 +83,16 @@ function joinPart(s, spec, near) {
   v.parts.splice(v.parts.indexOf(near) + 1, 0, p);
   return p;
 }
+// Your one-part command at the Gavel while the Rotor stands (combat.mjs useAbility): a bid, its Surge one cycle sooner
+// (a delay or a Throttle withdraws it instead).
+export function fbBid(s, target, a) {
+  const e = s.encounter, v = e?.virus;
+  if (!v?.bid || !alive(target) || !target.gavel || !target.attack || !a || !['part', 'attack'].includes(a.target) || a.delay > 0 || a.status === 'throttled' || !livingParts(s).some((x) => x.core)) return;
+  if (target.attack.interval <= FB.bid.fast) return;
+  target.attack.interval--;
+  target.attack.due = Math.min(target.attack.due, e.cycle + target.attack.interval);
+  emit(s, 'status', `YOU BID. Your ${a.name} on the ${target.name} spins it up: every ${target.attack.interval} cycles${target.attack.interval <= FB.bid.fast ? `. Its next Surge sells to ${BUYER[nextBuyer(v)]}` : ''}.`, { target: target.id, bid: target.attack.interval });
+}
 // A delay or a Throttle on a part (combat.mjs useAbility): the Gavel's bid withdrawn; Cascade Failure.
 export function fbSlowed(s, p, how) {
   const e = s.encounter, v = e?.virus;
@@ -129,6 +139,13 @@ export function screened(s, p, what) {
 // ---------- RECURSION: Call ----------
 export const frames = (s) => livingParts(s).filter((x) => x.frame != null);
 export const topFrame = (s) => frames(s).reduce((a, x) => (!a || x.frame > a.frame ? x : a), null);
+// A Call due this cycle, the top frame able to make it: SIGINT stops it (tells.mjs tellSigint), as it stops a cast.
+export const callingNow = (s) => { const v = s.encounter?.virus, top = v?.stack && topFrame(s); return top && v.stack.callAt === s.encounter.cycle && canCall(top) && frames(s).length < FB.stack.cap ? top : null; };
+export function stopCall(s) {
+  const e = s.encounter, v = e.virus, top = topFrame(s);
+  v.stack.callAt = e.cycle + Math.max(FB.stack.soonest, FB.stack.call - FB.stack.sooner * (v.stack.calls || 0));
+  emit(s, 'interrupt', `SIGINT stops the ${top.name}'s Call. The next one comes in ${v.stack.callAt - e.cycle} cycles.`, { target: top.id, call: true });
+}
 export const canCall = (p) => !!p && p.integrity >= FB.stack.under * p.max;
 // Your one-part command at a frame below the top lands on the top frame (burns, helpers and area hits reach every frame).
 export function fbAim(s, intent, a) {
@@ -159,6 +176,7 @@ export function fbPower(s, p, atk) {
   if (p.returnBoost && atk === p.attack) { m *= p.returnBoost; p.returnBoost = 0; }
   if (p.gavel && atk === p.attack && e.virus.bid?.sold) m *= 1 + FB.bid.sold * e.virus.bid.sold; // each sale, a harder Surge
   if (p.frame != null && e.virus.stack) m *= depthOf(e.virus); // each Call let through, a harder stack
+  if (atk.dump && e.virus.surf?.dumps) m *= 1 + FB.surf.grow * e.virus.surf.dumps; // each Dump before it, a bigger one
   if (atk.dump && e.virus.surf) { const d = dumpOf(s), base = attackAmount(p) || 1; if (d) { m *= d.amount / base; e.dumped = d.id; } else e.dumped = null; }
   const gov = fx(s, 'governor');
   if (gov && p.lastLanded != null && e.cycle - p.lastLanded <= 2) m *= 1 - fxVal(gov) / 100;
@@ -178,6 +196,8 @@ export function fbLanded(s, p, atk) {
     atk.due = e.cycle + atk.interval;
   }
   if (p.deadline && atk === p.attack && v.ransom) { v.ransom.left += FB.ransom.pay; v.ransom.paid++; emit(s, 'status', `RANSOM PAID. The Ransom Clock gains ${FB.ransom.pay}: ${cyc(v.ransom.left)}.`, { source: p.id, ransom: v.ransom.left }); }
+  // Only a Dump that played your command back grows the next one.
+  if (atk.dump && v.surf && e.dumped) { v.surf.dumps = (v.surf.dumps || 0) + 1; emit(s, 'status', `The ${p.name}'s next Dump hits ${Math.round(FB.surf.grow * v.surf.dumps * 100)}% harder.`, { source: p.id, dumps: v.surf.dumps }); }
   if (atk.dump && v.surf && !v.surf.top) e.logged = []; // from the top: the log never clears (combat.mjs keeps its count)
 }
 // A part broke (combat.mjs breakPart): RECURSION's Return; Tail Call, Stack Guard.
@@ -187,6 +207,8 @@ export function fbBroke(s, p) {
     const below = frames(s).filter((x) => x.frame < p.frame).sort((a, b) => b.frame - a.frame)[0];
     if (below?.attack) { below.attack.due = Math.max(e.cycle + 1, below.attack.due - 1); below.returnBoost = FB.stack.ret; emit(s, 'status', `RETURN. ${below.name} attacks a cycle sooner, ${Math.round((FB.stack.ret - 1) * 100)}% harder.`, { target: below.id, ret: true }); }
   }
+  // SHAKEDOWN: a Demand broken while the Collector runs the clock is a missed payment: the time left is halved.
+  if (p.deadline && v.ransom && livingParts(s).some((x) => x.core)) { const was = v.ransom.left; v.ransom.left = Math.max(1, Math.ceil(was / 2)); emit(s, 'warning', `MISSED PAYMENT. The ${p.name} is gone: the Ransom Clock drops from ${was} to ${v.ransom.left}.`, { target: p.id, ransom: v.ransom.left }); }
   const tc = fx(s, 'break-burns');
   if (tc) for (const b of [...(e.burns || [])]) { const t = part(s, b.target); if (t && t !== p && alive(t)) hit(s, t, b.damage, { by: fxName(tc), dot: true, noHook: true }); }
   if (fx(s, 'break-guard')) e.stackGuard = e.cycle + 2;
@@ -249,10 +271,10 @@ export function fbCycle(s) {
     for (const c of notes) if (strikeWith(s, lg, { name: 'Again', effect: 'damage', amount: Math.max(1, Math.round(hitOf(s, c) * FB.surf.echo)), interval: 1, noCrit: true, again: true })) return 'over';
   }
   if (v.stack && e.cycle >= v.stack.callAt) {
-    v.stack.callAt = e.cycle + FB.stack.call;
     const top = topFrame(s);
     if (top && !canCall(top)) emit(s, 'status', `${top.name} is too low to Call.`, { source: top.id });
     else push(s);
+    v.stack.callAt = e.cycle + Math.max(FB.stack.soonest, FB.stack.call - FB.stack.sooner * (v.stack.calls || 0)); // each Call let through, the next one sooner
     if (v.stack.overflow && frames(s).length >= FB.stack.overflow) {
       for (const f of frames(s)) if (f.attack) f.attack.due = e.cycle + 2;
       emit(s, 'warning', `OVERFLOW. ${frames(s).length} frames: every frame attacks next cycle.`, { overflow: true });
