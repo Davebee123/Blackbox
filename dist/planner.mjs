@@ -12,7 +12,7 @@ import { interruptMove, saveTick, toCross } from './interrupt.mjs';
 import { loudWins, blastPays, cashIn } from './order.mjs';
 import { actsOf, lashOn, actDone, actCap } from './acts.mjs';
 import { copyKind } from './tells.mjs';
-import { topFrame, canCall, callingNow } from './floorbosses.mjs';
+import { topFrame, canCall, callingNow, FB, pendingOf, tradeOf, nodesOf, fragsOf, camerasOf, parentOf } from './floorbosses.mjs';
 
 // Against a crew boss only the tank taunts (a taunt pulls its busters onto you): raid.mjs noTaunt.
 // veto: skills the planner may not pick this call (routines.mjs: a program's rotation never fires a long cooldown).
@@ -29,7 +29,10 @@ const landingNow = (s) => seen(s).filter((i) => i.col === 0 && !i.hidden);
 // The part to work on: the one whose (visible) attack lands soonest; hidden ones count as due in 2.
 const dueOf = (s, p) => (seen(s).find((i) => i.source === p.id && !i.hidden)?.col ?? (p.attack ? 2 : 9));
 // A Cold Store still frozen (combat.mjs frozenNow): nothing reaches it, so a player works on the others meanwhile.
-const reachable = (s, p) => ignores('coldstore') || !frozenNow(s, p);
+// Read (answers): NIGHT DESK's traders take no damage while the Desk stands, and CAMSWARM's Hive none under the Lockout
+// while a Camera does (floorbosses.mjs).
+const shut = (s, p) => { const v = s.encounter?.virus; return answers() && ((!!v?.desk && p.role === 'trader') || (!!v?.swarm?.lockout && !!p.core && camerasOf(s).length > 0) || (!!v?.swarm && !!parentOf(s, p))); };
+const reachable = (s, p) => (ignores('coldstore') || !frozenNow(s, p)) && !shut(s, p);
 export const soonest = (s) => attackers(s).sort((a, b) => dueOf(s, a) - dueOf(s, b) || b.max - a.max)[0] || livingParts(s).find((p) => reachable(s, p)) || livingParts(s)[0];
 // How a player who reads the codex picks a target: the most threat per point of Integrity left
 // (attack size over interval; encryption stacks, fragments multiply, a heal undoes work), armor
@@ -184,6 +187,55 @@ function heedFloor(s, move) {
     if (top && aim === top && !canCall(top) && canCall(below) && v.stack.callAt - c <= 1 && killing(s, move, top)) {
       const soft = first(s, [...[...AREA].filter((k) => !killing(s, k + ' ' + top.id, top)), ...['inject', 'deploy', 'botnet', 'spawn', 'thermal-runaway'].map((k) => `${k} ${below.id}`), ...quietOf(s)]);
       if (soft) return soft;
+    }
+  }
+  // one: a one-part command that hits (what a floor boss's rule counts as your command on a part).
+  const hits1 = (k) => ['part', 'attack'].includes(ABILITIES[k]?.target) && (ABILITIES[k].damage || 0) > 0;
+  const one = hits1(id), onto = (p) => first(s, [...(one ? [id] : []), ...HITS, 'spike'].filter(hits1).map((k) => `${k} ${p.id}`));
+  if (v.desk) {
+    // NIGHT DESK: only the Desk takes damage, and a hit on it settles its own trade. A trader's is answered from two
+    // pending (Finality: only when the next one would fill the table), the biggest first.
+    const pend = pendingOf(s), aim = at && part(s, at), desk = livingParts(s).find((p) => p.core), opens = (k) => livingParts(s).filter((p) => p.attack && p.attack.due <= c + k).length;
+    const sum = (p) => p.pending.reduce((n, t) => n + tradeOf(s, t), 0), held = livingParts(s).filter((p) => p.pending?.length).sort((a, b) => (b === desk) - (a === desk) || sum(b) - sum(a));
+    const must = pend.length + opens(1) >= FB.desk.full; // a trade can open before your command lands: a cycle ahead of the fourth
+    if (held.length && must) { const m = one && aim === held[0] ? move : onto(held[0]); if (m) return m; } // the Desk's own first: the hit that settles it also lands
+    if (desk && aim && aim !== desk && aim.role === 'trader') { const m = first(s, [`${id} ${desk.id}`]); if (m) return m; }
+  }
+  if (v.vote) {
+    // BYZANTINE: spread it. Each one-part command goes at the healthiest Node (the traitor while it isn't the most
+    // damaged), and under the Hard fork no Node is broken while another stands at half or more.
+    const ns = nodesOf(s), aim = at && part(s, at), fr = (p) => p.integrity / p.max;
+    if (ns.length > 1 && aim?.role === 'node' && !AREA.has(id)) {
+      const tr = ns.find((p) => p.id === v.vote.traitor), byHealth = [...ns].sort((a, b) => fr(b) - fr(a) || a.armor - b.armor);
+      // A Node that can be broken before the vote is broken (under the Hard fork, only once every other is under half).
+      const left = v.vote.at - c + 1, size = (p) => Math.max(1, Math.min(previewDamage(s, hits1(id) ? id : 'spike', p), (p.limit || 1) * p.max));
+      const fits = (p) => (p.armor || 0) + Math.ceil(p.integrity / size(p)) <= left && !(v.vote.fork && ns.some((x) => x !== p && fr(x) >= 0.5));
+      let want = [...ns].sort((a, b) => a.integrity - b.integrity).find(fits);
+      if (!want) {
+        want = tr && ns.some((p) => p !== tr && fr(p) < fr(tr)) ? tr : byHealth.find((p) => p !== tr) || byHealth[0];
+        if (v.vote.fork && killing(s, `${id} ${want.id}`, want) && ns.some((p) => p !== want && fr(p) >= 0.5)) want = byHealth.find((p) => p !== want) || want;
+      }
+      if (want !== aim) { const m = first(s, [`${id} ${want.id}`]); if (m) return m; }
+    }
+  }
+  if (v.swarm) {
+    // CAMSWARM: the part that shields a fragment, before the fragment turns; a Camera before the Hive under the Lockout,
+    // or before a Beacon on the Botnet; and no part taken under half that can't be broken before the next sweep (the
+    // Hive never hatches: it takes what the others can't).
+    const aim = at && part(s, at), hive = livingParts(s).find((p) => p.core), cams = camerasOf(s).sort((a, b) => a.integrity - b.integrity), tgt = !!ABILITIES[id]?.target && ABILITIES[id].target !== 'none' && !AREA.has(id);
+    const to = (p) => first(s, [...(tgt ? [`${id} ${p.id}`] : []), ...[...HITS, 'spike'].filter(hits1).map((k) => `${k} ${p.id}`)]);
+    const fuse = fragsOf(s).filter((f) => parentOf(s, f)).sort((a, b) => a.hatched - b.hatched)[0], host = fuse && parentOf(s, fuse);
+    if (host && aim !== host) { const m = to(host); if (m) return m; }
+    const loose = fragsOf(s).filter((f) => !parentOf(s, f)).sort((a, b) => a.hatched - b.hatched)[0];
+    if (!host && loose && aim !== loose && loose.hatched + FB.swarm.grows - c <= 1) { const m = to(loose); if (m) return m; }
+    const c2 = livingParts(s).find((p) => p.role === 'c2' && p.attack);
+    const size = (p) => Math.max(1, Math.min(previewDamage(s, hits1(id) ? id : 'spike', p), (p.limit || 1) * p.max)), left = v.swarm.at - c; // commands after this one before the sweep
+    const safe = (p) => p.integrity < p.max / 2 || p.armor > 0 || p.integrity - size(p) >= p.max / 2 || Math.ceil(p.integrity / size(p)) <= left + 1;
+    if (!host && cams.length && tgt && aim?.role !== 'camera' && ((v.swarm.lockout && (aim === hive || !aim)) || (v.swarm.botnet && c2 && c2.attack.due - c <= 2))) { const cam = cams.find(safe); const m = cam && to(cam); if (m) return m; }
+    if (!host && tgt && aim && aim.kind === 'system' && !aim.core && !safe(aim)) {
+      const open = [...livingParts(s).filter((p) => p.kind === 'system' && !p.core && p !== aim && safe(p)), ...(hive && !shut(s, hive) ? [hive] : [])];
+      const m = first(s, open.map((p) => `${id} ${p.id}`)) || first(s, quietOf(s));
+      if (m) return m;
     }
   }
   if (v.surf) {

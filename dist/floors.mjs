@@ -32,7 +32,7 @@ export const FLOOR = {
   hubs: { halcyon: 1, kestrel: 1, lantern: 2, glassjaw: 2, nullchoir: 3 }, // which floor each faction's hub stands on
   lairFrom: 2, // a lair on every floor from this one
   // Each floor's lair pool: the built bosses that fit its band (docs/content.md 3.1). A floor with none keeps the native boss.
-  lairs: { 2: ['nb-deadbolt', 'nb-backorifice', 'nb-patchday', 'nb-sleepwalker', 'nb-mirrorshade'], 3: ['nb-hashlord', 'nb-floodwall', 'nb-echolalia'], 4: ['nb-tripmine'] },
+  lairs: { 2: ['nb-deadbolt', 'nb-backorifice', 'nb-patchday', 'nb-sleepwalker', 'nb-mirrorshade'], 3: ['nb-hashlord', 'nb-floodwall', 'nb-echolalia'], 4: ['nb-tripmine', 'camswarm'] }, // CAMSWARM: not a native, a boss with uniques of its own (combat.mjs lairHeld)
   // Floor holders: from floor 2, rolled from the roster (never the floor above's), weighted to the network's lean. It
   // writes this share of the floor's servers; the rest are their family's crew's. Floor 5 waits for ACTUARY.
   // writes: the server families its slots take (its AUTHOR_FAMILIES among the three; their rooms read the full list).

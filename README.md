@@ -99,7 +99,7 @@ comment saying what it does.
 | `dist/interrupt.mjs` | The interrupt: crossing a part's 50% or 25% tick on its due cycle cancels its move. |
 | `dist/order.mjs` | The order levers: parts whose right moment to break depends on the board. |
 | `dist/acts.mjs` | Boss acts (P4): a boss's three acts, its beat (the Backlash, a Mimic, a Decoy), and the ♛ left until its beat plays. |
-| `dist/floorbosses.mjs` | The floor 2 and 3 bosses' rules (CENTRIFUGE's Bidding, SHAKEDOWN's Ransom Clock, SHOULDER SURFER's Replay, RECURSION's Call), their phase verbs, and their uniques' hooks. |
+| `dist/floorbosses.mjs` | The floor 2, 3 and 4 bosses' rules (CENTRIFUGE's Bidding, SHAKEDOWN's Ransom Clock, SHOULDER SURFER's Replay, RECURSION's Call, NIGHT DESK's No Timeout, BYZANTINE's Vote, CAMSWARM's Telnet Sweep), their phase verbs, and their uniques' hooks. |
 | `dist/mechanics.mjs` | The mechanics list: twenty third parts built lean, each rule's hooks in one place. Eleven strains and the eleven mutated ones are built from them (`STRAINS`). |
 | `dist/situations.mjs` | The moment on the board each situational skill is built for; the tray lights it. |
 | `dist/raid.mjs` | Crew bosses: phases and mechanics for KESSLER-FARM-00's three. |
@@ -140,7 +140,7 @@ comment saying what it does.
 | `dist/hidden.mjs` | Unknown servers along your floors' links, and tracing them. |
 | `dist/address.mjs` | Every room's grid address (C2). |
 | `dist/zone.mjs` | SPRAWL-00, the starting zone. |
-| `dist/rogue.mjs` | Rogue servers, where viruses gather (a floor-2 Pit's and a floor-3 Gauntlet's last room hold SHAKEDOWN and RECURSION), and the KESSLER-FARM-00 crew dungeon. |
+| `dist/rogue.mjs` | Rogue servers, where viruses gather (a floor-2 Pit's, a floor-3 Gauntlet's and a floor-4 Pit's last room hold SHAKEDOWN, RECURSION and BYZANTINE), and the KESSLER-FARM-00 crew dungeon. |
 | `dist/root.mjs` | Root access: perks on a server you hold, by respawned rooms cleared. |
 | `dist/sockets.mjs` | Sockets: build a program in a cleared socket room; it changes its own server. |
 | `dist/specials.mjs` | Server specials: each traced server's rule (an upside and a cost) from its seed, its pull on invasions, and its leaning's id (`leaningOf`). |

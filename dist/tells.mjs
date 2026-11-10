@@ -685,7 +685,7 @@ export function mimicLands(s, t, p) { // (exported for exe.test.mjs)
   const was = prev ? copyOf(host, prev.id, part(host, prev.target)) : null;
   const copy = was && (!mine || (was.cost || 0) > (mine.cost || 0)) ? was : mine;
   // Echo Cancel blinds it to your helpers too (it turns your command on the Mimic, below).
-  const caught = blind || p.echoCancelUntil >= e.cycle ? [] : caughtHelpers(s, t, p), swarm = caught.reduce((n, h) => n + h.damage, 0);
+  const caught = blind || p.echoCancelUntil >= e.cycle || fxOn(s, 'helpers-safe') ? [] : caughtHelpers(s, t, p), swarm = caught.reduce((n, h) => n + h.damage, 0);
   // HOLLOW CHOIR's Round (v.round, docs/solo-bosses.md): the beat sings back the commands of the cycles before it too, three
   // cycles in all. A cycle you held adds nothing.
   const sung = blind ? [] : sungOf(host, p), notes = [...sung, ...(copy ? [copy] : [])], hits = notes.filter((c) => c.kind === 'hit');

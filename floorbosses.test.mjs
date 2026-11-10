@@ -247,3 +247,206 @@ test("SIGINT stops RECURSION's Call on its cycle", () => {
   assert.equal(livingParts(r).length, n, 'no frame pushed');
   assert.ok(!st.calls && st.callAt > e.cycle - 1, 'and the next Call comes later');
 });
+
+// ---------- floor 4: NIGHT DESK, BYZANTINE, CAMSWARM ----------
+import { pendingOf, tradeOf, voteOf, nodesOf, camerasOf, fragsOf, hatchers, parentOf, fbCycle } from './dist/floorbosses.mjs';
+import { bossTable, lairHeld, bossUniques } from './dist/combat.mjs';
+import { namedBoss } from './dist/arcs.mjs';
+import { FLOOR, lairBossFor } from './dist/floors.mjs';
+import { fxText } from './dist/content.mjs';
+
+test('the floor 4 bosses: own parts, a ♛, act ticks at 60% and 30%, two acts each', () => {
+  for (const [id, crown, parts] of [['nightdesk', 'desk', ['desk', 'teller', 'clearing']], ['byzantine', 'nodea', ['nodea', 'nodeb', 'nodec']], ['camswarm', 'hive', ['hive', 'pulse', 'c2']]]) {
+    const s = boss(id), v = s.encounter.virus, c = livingParts(s).find((p) => p.core);
+    assert.deepEqual(v.parts.map((p) => p.id), parts, id);
+    assert.equal(c.id, crown, `${id}'s ♛`);
+    assert.deepEqual(c.ticks.map((t) => t.at), [0.6, 0.3], `${id}'s act ticks`);
+    assert.equal(v.phases.length, 2);
+    assert.equal(tellsOf(s)?.list.length || 0, 0, `${id} deals no tells: its rule is the fight`);
+    assert.ok(BOSSES[id].guide.open.length && BOSSES[id].guide.phases.length === 2, `${id}'s Codex guide`);
+  }
+});
+
+test("NIGHT DESK's No Timeout: its attacks wait as trades, a command settles a part's at half, four settle in full and later ones open bigger", () => {
+  const s = boss('nightdesk'), e = s.encounter, v = e.virus, desk = of(s, 'desk'), teller = of(s, 'teller'), clearing = of(s, 'clearing');
+  assert.equal(pendingOf(s).length, FB.desk.backlog, 'it opens with a backlog');
+  assert.ok(pendingOf(s).every((t) => t.part.role === 'trader'));
+  for (const p of [teller, clearing]) p.pending = [];
+  // An attack that lands deals nothing and waits on its part.
+  const was = defender(s).integrity;
+  landNow(s, teller);
+  assert.equal(defender(s).integrity, was, 'nothing lands');
+  assert.equal(teller.pending.length, 1);
+  assert.match(boardMarkup(s), /No Timeout\nBoss rule/);
+  assert.match(boardMarkup(s), /Pending trade\nBoss rule/);
+  // The traders take no damage; your one-part command on one settles its trades at half.
+  const whole = tradeOf(s, teller.pending[0]), hp = teller.integrity;
+  command(s, 'spike teller'); resolveCycle(s);
+  assert.equal(teller.integrity, hp, 'a trader takes no damage while the Desk stands');
+  assert.equal(teller.pending.length, 0);
+  assert.equal(was - defender(s).integrity, Math.round(whole * FB.desk.half), 'settled at half');
+  // No single hit takes more than its limit off the Desk.
+  desk.armor = 0;
+  const d0 = desk.integrity;
+  hit(s, desk, 99999, { mine: true, pierce: true });
+  assert.ok(d0 - desk.integrity <= Math.round(desk.max * FB.desk.limit), 'the Desk loses 12% of its max a hit at most');
+  // Four pending: all settle in full, and every later trade opens 25% bigger.
+  const at = defender(s).integrity;
+  for (const p of [teller, clearing, desk]) p.pending = [];
+  landNow(s, teller); landNow(s, clearing); landNow(s, desk);
+  assert.equal(pendingOf(s).length, 3);
+  const total = pendingOf(s).reduce((n, t) => n + tradeOf(s, t), 0);
+  teller.attack.due = e.cycle; hold(s);
+  assert.equal(pendingOf(s).length, 0, 'the table clears');
+  assert.ok(at - defender(s).integrity > total, 'all four in full');
+  assert.equal(v.desk.margin, 1);
+  const base = teller.attack.amount;
+  landNow(s, teller);
+  assert.ok(teller.pending[0].amount >= Math.round(base * (1 + FB.desk.margin)), 'a slip makes the rest of the fight harder: later trades open bigger');
+  // Night shift: a pending trade grows 10% a cycle. Finality: each one settled heals the Desk.
+  fbVerb(s, 'nightshift');
+  const t0 = tradeOf(s, teller.pending[0]);
+  hold(s); hold(s);
+  assert.ok(tradeOf(s, teller.pending[0]) > t0, 'it grows on the night shift');
+  fbVerb(s, 'finality');
+  const d1 = desk.integrity;
+  command(s, 'spike teller'); resolveCycle(s);
+  assert.equal(desk.integrity - d1, Math.round(desk.max * FB.desk.heal), 'Finality: the Desk keeps the other half');
+  // The traders go with the Desk.
+  hit(s, desk, 0, {}); desk.limit = 0; desk.ticks = null; desk.core = false;
+  hit(s, desk, desk.integrity, { pierce: true, server: true });
+  assert.ok(!livingParts(s).length, 'the Teller and the Clearing House go with it');
+});
+
+test("BYZANTINE's Vote: the most damaged Node 15% under the average is restored and every Node hits harder; the traitor swings it; a Hard fork brings a Node back", () => {
+  const s = boss('byzantine'), e = s.encounter, v = e.virus, [a, b, c] = ['nodea', 'nodeb', 'nodec'].map((id) => of(s, id));
+  const set = (p, f) => { p.integrity = Math.round(p.max * f); };
+  const voteNow = () => { v.vote.at = e.cycle; hold(s); };
+  assert.ok(nodesOf(s).every((p) => p.limit === FB.vote.limit), 'a hit takes 20% of a Node at most');
+  set(c, 0.9);
+  assert.equal(voteOf(s).passes, false, 'within 15%: the vote fails');
+  voteNow();
+  assert.equal(v.vote.passed, 0);
+  set(c, 0.4);
+  const x = voteOf(s);
+  assert.ok(x.passes && x.low === c);
+  assert.match(boardMarkup(s), /Vote\nBoss rule\n.*It passes/);
+  voteNow();
+  assert.equal(c.integrity, Math.round(c.max * 0.8), 'restored to the average of the three');
+  assert.equal(v.vote.passed, 1);
+  assert.equal(fbPower(s, a, a.attack), 1 + FB.vote.harder, 'each vote that passes, every Node hits harder');
+  // Traitor: the most damaged Node turns; while it isn't the most damaged, the restore goes to the healthiest's level.
+  set(a, 1); set(b, 0.7); set(c, 0.9);
+  fbVerb(s, 'traitor');
+  assert.equal(v.vote.traitor, 'nodeb', 'the most damaged Node turns');
+  assert.equal(voteOf(s).turned, false, 'while the traitor is the most damaged, the vote is the plain one');
+  set(c, 0.5);
+  assert.ok(voteOf(s).turned && voteOf(s).passes);
+  voteNow();
+  assert.equal(c.integrity, c.max, 'restored to the healthiest Node\'s level');
+  // Hard fork: a broken Node returns at the next vote, unless every other Node is under half.
+  fbVerb(s, 'hardfork');
+  set(a, 0.8); set(b, 0.8);
+  hit(s, c, c.max, { pierce: true, server: true }); c.integrity = 0;
+  voteNow();
+  assert.ok(c.integrity > 0, 'it returns at the others\' average');
+  set(a, 0.4); set(b, 0.4); c.integrity = 0;
+  voteNow();
+  assert.equal(c.integrity, 0, 'both others under half: it stays down');
+});
+
+test("CAMSWARM's Telnet Sweep: a part under half hatches a shielded fragment, never the Hive; the fragment becomes a Camera unless its part breaks; each hatch brings the next sweep sooner", () => {
+  const s = boss('camswarm'), e = s.encounter, v = e.virus, hive = of(s, 'hive'), pulse = of(s, 'pulse'), c2 = of(s, 'c2');
+  const sweepNow = () => { v.swarm.at = e.cycle; hold(s); };
+  sweepNow();
+  assert.equal(fragsOf(s).length, 0, 'nothing under half: nothing hatches');
+  assert.equal(v.swarm.every, FB.swarm.sweep);
+  hive.integrity = Math.round(hive.max * 0.4); pulse.integrity = Math.round(pulse.max * 0.4);
+  assert.deepEqual(hatchers(s).map((p) => p.id), ['pulse'], 'the Hive never hatches');
+  assert.match(boardMarkup(s), /Telnet Sweep\nBoss rule/);
+  sweepNow();
+  const f = fragsOf(s)[0];
+  assert.equal(parentOf(s, f), pulse);
+  assert.equal(v.swarm.every, FB.swarm.sweep - 1, 'a slip makes the rest of the fight harder: the next sweep a cycle sooner');
+  for (const p of attackers(s)) p.attack.due = 999;
+  const fhp = f.integrity;
+  hit(s, f, 9999, { mine: true, pierce: true });
+  assert.equal(f.integrity, fhp, 'shielded while its part stands');
+  assert.match(boardMarkup(s), /Fragment\nBoss rule\n.*shields it/);
+  // Left alone 3 cycles it is a Camera, with a Surge of its own.
+  v.swarm.at = 999;
+  for (let k = 0; k < FB.swarm.grows; k++) { for (const p of attackers(s)) p.attack.due = 999; hold(s); }
+  assert.equal(camerasOf(s).length, 1);
+  assert.ok(f.role === 'camera' && f.kind === 'system' && f.attack.name === 'Surge');
+  // Break the part first and its fragment drops.
+  c2.integrity = Math.round(c2.max * 0.3);
+  sweepNow();
+  const g = fragsOf(s).find((x) => x.parent === 'c2');
+  assert.ok(g);
+  c2.limit = 0; hit(s, c2, c2.integrity, { pierce: true, server: true });
+  assert.equal(g.integrity, 0, 'its fragment drops with the C2 Node');
+  // Botnet: a broken C2 Node comes back. Lockout: the Hive boots a Camera and takes nothing while one stands.
+  fbVerb(s, 'botnet');
+  assert.ok(of(s, 'c2')?.role === 'c2', 'the C2 Node is back');
+  const cams = camerasOf(s).length;
+  fbVerb(s, 'lockout');
+  assert.equal(camerasOf(s).length, cams + 1, 'the Hive boots a Camera');
+  hive.armor = 0;
+  const hh = hive.integrity;
+  hit(s, hive, 50, { mine: true, pierce: true });
+  assert.equal(hive.integrity, hh, 'locked while a Camera stands');
+  for (const cam of camerasOf(s)) cam.integrity = 0;
+  hit(s, hive, 50, { mine: true, pierce: true });
+  assert.ok(hive.integrity < hh);
+});
+
+test('where the floor 4 bosses stand: BYZANTINE on a floor-4 Pit\'s last room, NIGHT DESK its floor job\'s, CAMSWARM in the lair pool with the lair\'s loot', () => {
+  const s = fresh();
+  const pit = createLocation('ransomware', 3, 4246);
+  Object.assign(pit, { rogue: { kind: 'pit' }, template: 'rogue', depth: 4, level: 22, spawns: {}, serial: 0, quirk: null, special: null });
+  assert.equal(throneOf(pit).boss, 'byzantine');
+  assert.ok(rogueSpawns(s, pit)[throneOf(pit).room].level >= BOSSES.byzantine.floor);
+  assert.equal(namedBoss('NIGHT DESK'), 'nightdesk');
+  assert.equal(namedBoss('CAMSWARM'), null, 'a lair\'s boss is never a floor job\'s');
+  assert.ok(FLOOR.lairs[4].includes('camswarm') && FLOOR.lairs[4].includes('nb-tripmine'));
+  const seen = new Set(Array.from({ length: 60 }, (_, i) => lairBossFor((i + 1) * 7919, 4)));
+  assert.ok(seen.has('camswarm') && seen.has('nb-tripmine'), 'floor 4\'s lair draws either');
+  assert.ok(lairHeld(BOSSES.camswarm) && !BOSSES.camswarm.native);
+  const t = bossTable(s, 'camswarm');
+  assert.ok(t.native && t.set === null, 'it pays as a lair: the lair\'s roll and its floor\'s set pieces');
+  assert.deepEqual(t.uniques.map((u) => u.id).filter((id) => ['changed-default', 'mass-reboot'].includes(id)).sort(), ['changed-default', 'mass-reboot'], 'its own pair in that roll');
+});
+
+test('the floor 4 uniques and set pieces: Overdraft, Pre-Authorization, Changed Default, Mass Reboot, Majority Attack, Quorum Sensor; the Runbook and Failover', () => {
+  for (const [id, who] of [['overdraft', 'nightdesk'], ['pre-authorization', 'nightdesk'], ['runbook', 'nightdesk'], ['changed-default', 'camswarm'], ['mass-reboot', 'camswarm'], ['majority-attack', 'byzantine'], ['quorum-sensor', 'byzantine'], ['failover', 'byzantine']]) {
+    assert.deepEqual(UNIQUES[id]?.sources, [{ kind: 'boss', id: who }], id);
+    assert.ok(fxText(UNIQUES[id].effect).length > 0, `${id} has its effect text`);
+  }
+  assert.equal(bossUniques('nightdesk').length, 2, 'set pieces roll on their own table');
+  // Overdraft: once a fight, a hit that would take you under 25% leaves you there; the rest lands over 3 cycles.
+  const od = boss('nightdesk', { wear: ['overdraft'] }), d = defender(od);
+  for (const p of livingParts(od)) p.pending = [];
+  d.integrity = Math.round(d.max * 0.3);
+  const t = of(od, 'teller');
+  t.pending = [{ amount: Math.round(d.max * 0.4), at: od.encounter.cycle, name: 'Sell Order' }];
+  command(od, 'spike teller'); resolveCycle(od); // settles at half: 20% of max, from 30%
+  assert.ok(od.encounter.once.overdraft, 'Overdraft held it');
+  assert.ok(d.integrity > 0 && od.encounter.overdraft.each > 0, 'and bills the rest');
+  // Mass Reboot: every fragment takes a hit when a part breaks.
+  const mr = boss('byzantine', { wear: ['mass-reboot'] }), nb = of(mr, 'nodeb');
+  landNow(mr, nb);
+  const fr = fragsOf(mr)[0], fhp = fr.integrity;
+  for (const p of attackers(mr)) p.attack.due = 999;
+  const nc = of(mr, 'nodec'); nc.limit = 0;
+  hit(mr, nc, nc.integrity, { pierce: true, server: true });
+  assert.ok(fr.integrity < fhp, 'Mass Reboot');
+  // Majority Attack: +8% for each part below half. Quorum Sensor: the second landing in a cycle is softer.
+  const ma0 = boss('byzantine'), ma1 = boss('byzantine', { wear: ['majority-attack'] });
+  const dealt = (q) => { const [a, b, c] = ['nodea', 'nodeb', 'nodec'].map((id) => of(q, id)); for (const p of [a, b, c]) { p.armor = 0; p.limit = 0; } a.integrity = Math.round(a.max * 0.4); c.integrity = Math.round(c.max * 0.4); const w = b.integrity; hit(q, b, 20, { mine: true }); return w - b.integrity; };
+  const base = dealt(ma0), more = dealt(ma1);
+  assert.ok(more > base, `Majority Attack: ${more} > ${base}`);
+  const qs = boss('byzantine', { wear: ['quorum-sensor'] }), qa = of(qs, 'nodea'), qc = of(qs, 'nodec');
+  assert.equal(fbPower(qs, qa, qa.attack), 1);
+  qs.encounter.landings = { cycle: qs.encounter.cycle, n: 1 };
+  assert.equal(fbPower(qs, qc, qc.attack), 0.7, 'the second attack to land in a cycle deals 30% less');
+});

@@ -947,6 +947,7 @@ export function makePart(spec, kind, scale, extraArmor = 0) {
     ...(spec.packer ? { packer: true } : {}), ...(spec.badblock ? { badblock: spec.badblock } : {}), ...(spec.damper ? { damper: true } : {}), ...(spec.frozen ? { frozen: spec.frozen } : {}),
     ...(spec.mech ? { mech: spec.mech } : {}), // the mechanics list (mechanics.mjs): its rule, by id
     ...(spec.wardCommands ? { wardCommands: true } : {}), // HASHLORD's Pool Lock: its ward holds back your commands only, not burns or helpers
+    ...(spec.role ? { role: spec.role } : {}), // the floor 4 bosses' parts (floorbosses.mjs)
     ...(spec.gavel ? { gavel: true } : {}), ...(spec.noTicks ? { noTicks: true } : {}), ...(spec.deadline ? { deadline: true } : {}), ...(spec.frame != null ? { frame: spec.frame } : {}), ...(spec.beat ? { beat: true } : {}), // the floor bosses' own parts (floorbosses.mjs)
     ...(spec.lien ? { lien: spec.lien } : {}), ...(spec.broadcast ? { broadcast: true } : {}), // REPO MAN's Ledger (its Collection grows by each Lien), RELAY-KING's Relay
     attack: spec.attack ? { ...spec.attack, due: spec.attack.first, amount: spec.attack.amount } : null,
@@ -1161,6 +1162,53 @@ export const BOSSES = {
     signature: { name: 'Call', rule: 'Frames stack, with main() at the bottom. Your one-part commands reach only the top frame. Burns, helpers and area hits reach every frame. Every 4 cycles the top frame pushes a new one at 60% of its max, unless it is under a quarter of its own. Each Call makes every frame hit 35% harder.' },
     about: 'A stack of frames with its ♛ at the bottom. You dig down while it keeps adding to the top.',
     phases: [{ at: 0.6, do: ['return'], name: 'Return', say: 'RECURSION returns. A frame that breaks makes the one beneath attack a cycle sooner and 50% harder.' }, { at: 0.3, do: ['overflow'], name: 'Overflow', say: 'RECURSION overflows. At 5 frames every frame attacks at once.' }] },
+  // The floor 4 bosses (floorbosses.mjs). role: the part's place in its boss's rule.
+  // NIGHT DESK: floor 4's floor job (arcs.mjs), Kessler's old settlement process (author '': no crew wrote it). Its attacks wait as pending trades.
+  nightdesk: { long: { hp: 1.1, dmg: 0.7, enrageAt: 40 }, name: 'NIGHT DESK', family: 'ransomware', author: '', own: true, crown: 'desk', ticks: [0.6, 0.3], floor: 24, hp: 0.85, dmg: 1, enrageAt: 18, acts: { beat: 'none' },
+    extra: [{ id: 'desk', name: 'Desk', integrity: 66, armor: 1, loot: 'Desk Blotter', special: true, role: 'desk', attack: { name: 'Margin Call', effect: 'damage', amount: 16, interval: 5, first: 4 } },
+      { id: 'teller', name: 'Teller', integrity: 20, armor: 0, role: 'trader', noTicks: true, attack: { name: 'Sell Order', effect: 'damage', amount: 13, interval: 4, first: 2 } },
+      { id: 'clearing', name: 'Clearing House', integrity: 20, armor: 0, role: 'trader', noTicks: true, attack: { name: 'Buy Order', effect: 'damage', amount: 15, interval: 5, first: 3 } }],
+    guide: { open: [['No Timeout', 'Its attacks never land. Each one waits on its part as a pending trade. It opens with 2 already pending.'],
+      ['Settle', 'Your one-part command on a part settles every trade pending there, on you, at half.'],
+      ['Table full', 'At 4 pending, every trade settles on you in full, and each trade after that opens 25% bigger for the fight.'],
+      ['On the books', 'The Teller and the Clearing House take no damage while the Desk ♛ stands, and they go when it breaks.'],
+      ['Limit', 'No single hit takes more than 12% of the Desk\'s max Integrity.'],
+      ['Finality', 'SIGINT, delays and Throttles do nothing to a pending trade.']],
+      phases: [[['Night shift', 'Each pending trade grows 10% a cycle.']], [['Finality', 'Each trade you settle heals the Desk ♛ by 4% of its max Integrity.']]] },
+    signature: { name: 'No Timeout', rule: 'Its attacks wait on their parts as pending trades. Your one-part command on a part settles its trades on you at half. At 4 pending, all of them settle in full, and later trades open 25% bigger.' },
+    about: 'Kessler\'s old settlement process. Its attacks wait as pending trades, and you choose when to take them at half, before four pile up.',
+    phases: [{ at: 0.6, do: ['nightshift'], name: 'Night shift', say: 'NIGHT DESK starts the night shift. Each pending trade grows 10% a cycle.' }, { at: 0.3, do: ['finality'], name: 'Finality', say: 'NIGHT DESK declares finality. Each trade you settle heals the Desk.' }] },
+  // BYZANTINE: the throne of floor 4's Pits (rogue.mjs), GLASSJAW's. Three Nodes that vote the most damaged back up.
+  byzantine: { long: { hp: 0.7, dmg: 0.5, enrageAt: 42 }, name: 'BYZANTINE', family: 'ransomware', author: 'glassjaw', own: true, crown: 'nodea', ticks: [0.6, 0.3], floor: 26, hp: 0.85, dmg: 1, enrageAt: 18, acts: { beat: 'none' }, throne: { kind: 'pit', floor: 4 },
+    extra: [{ id: 'nodea', name: 'Node A', integrity: 44, armor: 1, loot: 'Signed Ballot', role: 'node', attack: { name: 'Surge', effect: 'damage', amount: 14, interval: 4, first: 3 } },
+      { id: 'nodeb', name: 'Node B', integrity: 44, armor: 1, loot: 'Forged Ballot', role: 'node', attack: { name: 'Replicate', effect: 'replicate', amount: 1, interval: 5, first: 4 } },
+      { id: 'nodec', name: 'Node C', integrity: 44, armor: 1, loot: 'Spoiled Ballot', role: 'node', attack: { name: 'Surge', effect: 'damage', amount: 11, interval: 3, first: 2 } }],
+    guide: { open: [['Vote', 'Every 4 cycles the Nodes vote. If the most damaged Node is 15% or more under the average of the Nodes standing, the vote passes and restores it to that average.'],
+      ['Consensus', 'Each vote that passes makes every Node hit 30% harder for the fight.'],
+      ['Limit', 'No single hit takes more than 20% of a Node\'s max Integrity.'],
+      ['Surge', 'Node A ♛ and Node C hit you on their own timers.'],
+      ['Replicate', 'Node B adds a fragment every 5 cycles.']],
+      phases: [[['Traitor', 'The most damaged Node turns traitor. While it is not the most damaged, a vote restores the most damaged Node to the healthiest Node\'s level.']], [['Hard fork', 'A Node that breaks returns at the next vote, at the others\' average, unless every other Node is under half.']]] },
+    signature: { name: 'Vote', rule: 'Every 4 cycles the Nodes vote. If the most damaged is 15% or more under their average, it is restored to the average. Every Node then hits 30% harder for the fight.' },
+    about: 'Three Nodes that vote the most damaged one back up. A Node taken down alone is restored, and each restore hardens all three.',
+    phases: [{ at: 0.6, do: ['traitor'], name: 'Traitor', say: 'BYZANTINE turns a Node. While the traitor is not the most damaged, a vote restores to the healthiest Node\'s level.' }, { at: 0.3, do: ['hardfork'], name: 'Hard fork', say: 'BYZANTINE forks. A Node that breaks returns at the next vote, unless every other Node is under half.' }] },
+  // CAMSWARM: in floor 4's lair pool (floors.mjs FLOOR.lairs; lair: its server's name), SWARMLINE's. Hurt parts hatch
+  // fragments on its Telnet Sweep, and a fragment left alone becomes a Camera.
+  camswarm: { long: { hp: 0.9, dmg: 0.9, enrageAt: 40 }, name: 'CAMSWARM', family: 'worm', author: 'swarmline', own: true, crown: 'hive', ticks: [0.6, 0.3], floor: 24, hp: 0.85, dmg: 1, enrageAt: 18, acts: { beat: 'none' }, lair: 'CAMSWARM-HIVE',
+    extra: [{ id: 'hive', name: 'Hive', integrity: 62, armor: 1, loot: 'Hive Comb', special: true, role: 'hive' },
+      { id: 'pulse', name: 'Pulse Node', integrity: 34, armor: 1, loot: 'Pulse Kernel', attack: { name: 'Surge', effect: 'damage', amount: 14, interval: 4, first: 3 } },
+      { id: 'c2', name: 'C2 Node', integrity: 30, armor: 1, loot: 'Beacon Coil', role: 'c2', attack: { name: 'Beacon', effect: 'damage', amount: 7, interval: 3, first: 4 } }],
+    camera: { id: 'camera', name: 'Camera', integrity: 14, armor: 0, loot: 'Lens', role: 'camera', noTicks: true, attack: { name: 'Surge', effect: 'damage', amount: 8, interval: 3 } },
+    guide: { open: [['Telnet Sweep', 'Every 5 cycles, each part under half its Integrity hatches a fragment. The Hive ♛ never hatches. Each fragment hatched brings the next sweep a cycle sooner, down to every 2.'],
+      ['Shielded', 'A fragment takes no damage while the part that hatched it stands. Its fragments drop when that part breaks.'],
+      ['Recruit', 'A fragment that lives 3 cycles becomes a Camera, a part with a Surge of its own. A Camera under half hatches too.'],
+      ['Limit', 'No single hit takes more than 15% of a part\'s max Integrity.'],
+      ['Gnaw', 'Each fragment hits you every cycle.'],
+      ['Surge and Beacon', 'The Pulse Node hits you every 4 cycles, and the C2 Node every 3.']],
+      phases: [[['Botnet', 'When the Beacon lands, every Camera fires with it. A broken C2 Node comes back.']], [['Lockout', 'The Hive ♛ boots a Camera, and takes no damage while a Camera stands.']]] },
+    signature: { name: 'Telnet Sweep', rule: 'Every 5 cycles, each part under half its Integrity hatches a fragment and shields it. A fragment that lives 3 cycles becomes a Camera with a Surge of its own.' },
+    about: 'Hurt parts hatch fragments, and a fragment left alone grows into a Camera. Each part shields the fragments it hatched.',
+    phases: [{ at: 0.6, do: ['botnet'], name: 'Botnet', say: 'CAMSWARM links its Cameras. Each one fires when the Beacon lands.' }, { at: 0.3, do: ['lockout'], name: 'Lockout', say: 'CAMSWARM locks you out. The Hive boots a Camera, and takes no damage while a Camera stands.' }] },
   // Native bosses (network.mjs): each network rolls one of these for its lair, a rogue server of its own. Solo bosses
   // on the tells framework: every tell open at their level, a signature charge of their own (TELLS, TELL_SETS by id;
   // a strain boss renames its strain's charge), a third part they always bring (third), and phases. Their drops are
@@ -1363,6 +1411,8 @@ export const TELL_SETS = {
   centrifuge: ['fulldisk', 'extortion', 'keyrotation'],
   shakedown: ['overcharge', 'extortion', 'keyrotation'],
   shouldersurfer: ['overcharge', 'persistence', 'keyrotation'],
+  // The floor 4 bosses: none. Their rules are the fight (nothing of NIGHT DESK's can be interrupted).
+  nightdesk: [], byzantine: [], camswarm: [],
 };
 
 // ---------- the genome (genes.mjs, docs/genome.md) ----------

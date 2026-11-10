@@ -5,7 +5,7 @@ import { componentsOf } from './salvage.mjs';
 import { glyph } from './glyphs.mjs';
 import { TELL_ICON } from './recap.mjs';
 import { leaveOf } from './acts.mjs';
-import { FB, BUYER, nextBuyer, dumpOf, topFrame, canCall, frames, leakOf, depthOf } from './floorbosses.mjs';
+import { FB, BUYER, nextBuyer, dumpOf, topFrame, canCall, frames, leakOf, depthOf, pendingOf, tradeOf, voteOf, forkOf, nodesOf, camerasOf, hatchers, parentOf } from './floorbosses.mjs';
 import { glyphMarkup } from './protocol-glyphs.mjs';
 import { isLive, liveCount, memoryCap, memoryCost, joinCost, MEMORY } from './memory.mjs';
 // The server whose Connect is waiting on a yes (app.js): its card shows the memory it takes.
@@ -696,9 +696,9 @@ export function statusSpans(s) {
 
 // The interrupt (interrupt.mjs, every fight but a crew boss's): two ticks on a part's bar at 50% and 25%. A spent one
 // goes hollow; a boss's core part under rule (a) has phase ticks instead.
-// The floor 2 and 3 bosses' marks (floorbosses.mjs), each with its rule in WoW's grammar: CENTRIFUGE's bid on the Gavel
+// The floor 2, 3 and 4 bosses' marks (floorbosses.mjs), each with its rule in WoW's grammar: CENTRIFUGE's bid on the Gavel
 // and the buyer a part came from, SHAKEDOWN's Ransom Clock on its ♛, SHOULDER SURFER's window and log on the Logger,
-// RECURSION's top frame and its Call.
+// RECURSION's top frame and its Call, NIGHT DESK's pending trades and table, BYZANTINE's vote, CAMSWARM's sweep.
 function floorTags(s, p) {
   const e = s.encounter, v = e.virus, out = [], when = (n) => (n <= 0 ? 'this cycle' : n === 1 ? 'next cycle' : `in ${n} cycles`);
   const tag = (cls, tip, body) => out.push(`<span class="tag ${cls}" title="${esc(tip)}">${body}</span>`);
@@ -721,6 +721,29 @@ function floorTags(s, p) {
     if (p === top) tag(canCall(p) ? 'hot call' : 'call', `Top frame\nBoss rule\nYour one-part commands land on it, whichever frame you aim at. ${canCall(p) ? `It Calls ${when(n)}: a new frame on top at 60% of its max.` : 'Under a quarter of its max, it cannot Call.'}${v.stack.ret ? ' A frame that breaks makes the one beneath attack a cycle sooner and 50% harder.' : ''} Each Call brings the next one a cycle sooner (down to every ${FB.stack.soonest}) and makes every frame hit ${Math.round(FB.stack.deeper * 100)}% harder${v.stack.calls ? `: +${Math.round((depthOf(v) - 1) * 100)}% now` : ''}.${answerLine('SIGINT the Call, break the frame before it, or leave it under a quarter.')}`, canCall(p) ? `${glyph('clock')}call ${Math.max(0, n)}` : 'top');
     else tag('dim', `Frame\nBoss rule\nUnder the top frame. Only burns, helpers and area hits reach it.`, 'stacked');
     if (p.core && v.stack.overflow) tag(frames(s).length >= FB.stack.overflow - 1 ? 'hot' : '', `Overflow\nBoss rule\nAt ${FB.stack.overflow} frames every frame attacks at once.${answerLine('Keep the stack at four or fewer.')}`, `${frames(s).length}/${FB.stack.overflow}`);
+  }
+  const pct = (x) => Math.round(x * 100);
+  // NIGHT DESK: the trades waiting on a part, the table on its ♛, its traders.
+  if (v.desk) {
+    const all = pendingOf(s), sum = (xs) => xs.reduce((n, t) => n + tradeOf(s, t), 0);
+    if (p.pending?.length) { const n = sum(p.pending); tag('hot trade', `Pending ${p.pending.length === 1 ? 'trade' : 'trades'}\nBoss rule\n${p.pending.length === 1 ? 'One trade waits' : `${p.pending.length} trades wait`} on the ${p.name}: ${n} in full. Your one-part command on the ${p.name} settles ${p.pending.length === 1 ? 'it' : 'them'} on you at half, for ${Math.round(n * FB.desk.half)}.${v.desk.night != null ? ` Each grows ${pct(FB.desk.grow)}% a cycle.` : ''}${v.desk.final ? ` Each one you settle heals the Desk ${pct(FB.desk.heal)}% of its max.` : ''}${answerLine('Settle before the table fills.')}`, `${glyph('clock')}${p.pending.length} · ${n}`); }
+    if (p.core) tag(all.length >= FB.desk.full - 1 ? 'hot table' : 'table', `No Timeout\nBoss rule\nIts attacks never land. They wait as pending trades: ${all.length} of ${FB.desk.full}. At ${FB.desk.full}, every trade settles on you in full${all.length ? ` (${sum(all)} now)` : ''}, and each trade after that opens ${pct(FB.desk.margin)}% bigger${v.desk.margin ? ` (+${pct(FB.desk.margin * v.desk.margin)}% so far)` : ''}. No single hit takes more than ${pct(FB.desk.limit)}% of the ${p.name}'s max.${answerLine('Hit a part to settle its trades at half.')}`, `${all.length}/${FB.desk.full}`);
+    if (p.role === 'trader') tag('dim', `${p.name}\nOn the books\nIt takes no damage while the Desk stands, and goes when the Desk breaks. Your one-part command on it settles its trades.`, 'books');
+  }
+  // BYZANTINE: the vote on the Node it would restore, the traitor, the Hard fork.
+  if (v.vote && p.role === 'node') {
+    const x = voteOf(s), n = v.vote.at - e.cycle;
+    if (x && p === x.low) tag(x.passes ? 'hot vote' : 'vote', `Vote\nBoss rule\nThe Nodes vote ${when(n)}. ${x.passes ? `It passes: the ${p.name} is ${pct(FB.vote.pass)}% or more under ${x.turned ? 'the healthiest Node' : 'the average'}, and is restored by ${x.gain}.` : `It fails: no Node is ${pct(FB.vote.pass)}% under ${x.turned ? 'the healthiest Node' : 'the average'}.`} Each vote that passes makes every Node hit ${pct(FB.vote.harder)}% harder for the fight${v.vote.passed ? ` (+${pct(FB.vote.harder * v.vote.passed)}% now)` : ''}. No single hit takes more than ${pct(FB.vote.limit)}% of a Node's max.${answerLine(`Keep the Nodes within ${pct(FB.vote.pass)}%, then break one between two votes.`)}`, `${glyph('clock')}vote ${Math.max(0, n)}${x.passes ? ` · +${x.gain}` : ''}`);
+    if (p.id === v.vote.traitor) tag(x?.turned ? 'hot' : '', `Traitor\nBoss rule\nWhile the ${p.name} is not the most damaged Node, a vote restores the most damaged Node to the healthiest Node's level.${answerLine('Keep it the most damaged Node.')}`, 'traitor');
+    if (v.vote.fork && p === nodesOf(s)[0]) tag(forkOf(s) ? 'hot' : '', `Hard fork\nBoss rule\nA Node that breaks returns at the next vote, at the others' average, unless every other Node is under half.${answerLine('Bring every Node under half before you break one.')}`, 'fork');
+  }
+  // CAMSWARM: the sweep and the Lockout on the Hive, a fragment's fuse, a Camera.
+  if (v.swarm) {
+    const n = v.swarm.at - e.cycle, h = hatchers(s), host = parentOf(s, p);
+    if (p.core) tag(h.length ? 'hot sweep' : 'sweep', `Telnet Sweep\nBoss rule\nIt sweeps ${when(n)}. Each part under half its Integrity hatches a fragment and shields it: ${h.length ? h.map((x) => x.name).join(', ') : 'none'} now. The ${p.name} never hatches. Each fragment hatched brings the next sweep a cycle sooner, down to every ${FB.swarm.soonest} (every ${v.swarm.every} now). No single hit takes more than ${pct(FB.swarm.limit)}% of a part's max.${answerLine('Break a part between two sweeps, or leave it above half.')}`, `${glyph('clock')}sweep ${Math.max(0, n)}${h.length ? ` · ${h.length}` : ''}`);
+    if (p.core && v.swarm.lockout) tag(camerasOf(s).length ? 'hot' : '', `Lockout\nBoss rule\nThe ${p.name} takes no damage while a Camera stands.${answerLine('Break every Camera first.')}`, 'locked');
+    if (p.kind === 'fragment' && p.hatched != null) { const k = p.hatched + FB.swarm.grows - e.cycle; tag('hot', `Fragment\nBoss rule\nIt becomes a Camera ${when(k)}.${host ? ` The ${host.name} shields it: it takes no damage, and drops when the ${host.name} breaks.` : ''}${answerLine(host ? `Break the ${host.name}.` : 'Break it first.')}`, `${glyph('clock')}cam ${Math.max(0, k)}${host ? ' · shielded' : ''}`); }
+    if (p.role === 'camera') tag('', `${p.name}\nRecruited\nA part with a Surge of its own. Under half, it hatches on the sweep.${v.swarm.botnet ? ' It fires when the C2 Node\'s Beacon lands.' : ''}`, 'camera');
   }
   return out;
 }

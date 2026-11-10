@@ -40,12 +40,16 @@ Past the bar, so nothing new.
 
 | Unique | Slot · Lv | Source | Effect | |
 |---|---|---|---|---|
-| Overdraft | proxy 24 | NIGHT DESK | Leaves you at 25% when a hit would take you lower, and the rest lands over the next 3 cycles. Works once per fight. | ✚ |
-| Pre-Authorization | script 24 | NIGHT DESK | Increases the damage of your next hit by 10% when you raise a shield. | ✚ |
+| Overdraft | proxy 24 | NIGHT DESK | Leaves you at 25% when a hit would take you lower, and the rest lands over the next 3 cycles. Works once per fight. | ✓ |
+| Pre-Authorization | script 24 | NIGHT DESK | Increases the damage of your next hit by 10% when you raise a shield. | ✓ |
+| Changed Default | proxy 24 | CAMSWARM | Stops a virus from playing your helpers back at you. Nothing recruits, takes or cleanses helpers yet, so this is all it does today. | ✓ (thin) |
+| Mass Reboot | script 24 | CAMSWARM | Deals 30 damage to every fragment when you break a part. | ✓ |
+| Majority Attack | exploit 26 | BYZANTINE | Increases your damage by 8% for each part below half its Integrity, up to 32%. | ✓ |
+| Quorum Sensor | proxy 26 | BYZANTINE | Makes the second attack to land on you in a cycle deal 30% less. | ✓ |
 | Sapper Kit | exploit 20 | TRIPMINE | When you break a part that sets something off as it breaks, it goes off on the virus's next part instead of on you. | ✎ (it named Tripwire, Zip Bomb and Twin) |
-| CAMSWARM, BYZANTINE pairs, TRIPMINE's Quiet Hours | 20–26 | their fights | docs/genome.md 7.4 | ◇ |
+| TRIPMINE's Quiet Hours | 20 | its fight | docs/genome.md 7.4 | ◇ |
 
-**Set sources →** On-Call's **Runbook** (22) → NIGHT DESK, and **Failover** (26) → BYZANTINE. The *on-call desk*
+**Set sources →** *Built.* On-Call's **Runbook** (22) → NIGHT DESK, and **Failover** (26) → BYZANTINE. The *on-call desk*
 and *failover against a faulty node* are the bosses' own stories.
 
 ## Floor 5 · Deep Core (25–32) · 2 → 5 sets · 12 → 20 uniques

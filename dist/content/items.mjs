@@ -1998,12 +1998,8 @@ export default {
       },
       "sources": [
         {
-          "kind": "lair",
-          "floor": 3
-        },
-        {
-          "kind": "lair",
-          "floor": 4
+          "kind": "boss",
+          "id": "nightdesk"
         }
       ]
     },
@@ -2034,8 +2030,8 @@ export default {
       },
       "sources": [
         {
-          "kind": "lair",
-          "floor": 4
+          "kind": "boss",
+          "id": "byzantine"
         }
       ]
     },
@@ -6728,6 +6724,143 @@ export default {
         }
       ],
       "flavour": "A canary on every frame. It sings once, then it is gone."
+    },
+    {
+      "id": "overdraft",
+      "name": "Overdraft",
+      "base": "onion-circuit",
+      "level": 24,
+      "primary": {
+        "signal": 130,
+        "reduction": 4
+      },
+      "effect": {
+        "when": "custom",
+        "do": "overdraft",
+        "value": 25,
+        "limit": "fight"
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "nightdesk"
+        }
+      ],
+      "flavour": "The desk covers it tonight. It bills you in the morning."
+    },
+    {
+      "id": "pre-authorization",
+      "name": "Pre-Authorization",
+      "base": "loader",
+      "level": 24,
+      "primary": {
+        "damage": 12,
+        "signal": 51,
+        "payload": 5
+      },
+      "effect": {
+        "when": "custom",
+        "do": "shield-hit",
+        "value": 10
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "nightdesk"
+        }
+      ],
+      "flavour": "The hold goes on the account before the charge does."
+    },
+    {
+      "id": "changed-default",
+      "name": "Changed Default",
+      "base": "onion-circuit",
+      "level": 24,
+      "primary": {
+        "signal": 130,
+        "reduction": 4
+      },
+      "effect": {
+        "when": "custom",
+        "do": "helpers-safe"
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "camswarm"
+        }
+      ],
+      "flavour": "admin, admin. Somebody finally changed it."
+    },
+    {
+      "id": "mass-reboot",
+      "name": "Mass Reboot",
+      "base": "loader",
+      "level": 24,
+      "primary": {
+        "damage": 12,
+        "signal": 51,
+        "payload": 5
+      },
+      "effect": {
+        "when": "custom",
+        "do": "break-frags",
+        "value": 30
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "camswarm"
+        }
+      ],
+      "flavour": "Forty thousand cameras blink at once."
+    },
+    {
+      "id": "majority-attack",
+      "name": "Majority Attack",
+      "base": "wormable",
+      "level": 26,
+      "primary": {
+        "damage": [
+          32,
+          40
+        ]
+      },
+      "effect": {
+        "when": "custom",
+        "do": "low-parts%",
+        "value": 8,
+        "cap": 32
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "byzantine"
+        }
+      ],
+      "flavour": "Hold more than half and the ledger says what you say."
+    },
+    {
+      "id": "quorum-sensor",
+      "name": "Quorum Sensor",
+      "base": "mixnet",
+      "level": 26,
+      "primary": {
+        "signal": 140,
+        "reduction": 4
+      },
+      "effect": {
+        "when": "custom",
+        "do": "second-less",
+        "value": 30
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "byzantine"
+        }
+      ],
+      "flavour": "It counts the votes as they come in, and it flinches at the second."
     }
   ]
 };

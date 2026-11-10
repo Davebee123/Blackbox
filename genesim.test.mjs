@@ -56,9 +56,14 @@ test('HASHLORD and MIRRORSHADE, rebuilt, sit in the boss band at their floors (1
 // sooner (SIGINT stops one). Measured: CENTRIFUGE read 78% misread 50% blind 26%; SHAKEDOWN 79%, 64%, 38%; SHOULDER
 // SURFER 74%, 53%, 27%; RECURSION 74%, 57%, 16%. Under four of twelve, flagged for the kit, not tuned around: SHOULDER
 // SURFER the Sysop and the Herder, RECURSION the Sysop.
-const FLOOR_BOSSES = ['centrifuge', 'shakedown', 'shouldersurfer', 'recursion'];
-const FLOOR_FLAGGED = { centrifuge: [], shakedown: [], shouldersurfer: ['sysop', 'herder'], recursion: ['sysop'] };
-test('the floor 2 and 3 bosses sit in the reader\'s band at their floors (12 to 19); misreading costs 10 points, playing blind 20', () => {
+// The floor 4 bosses (24 to 26), each gated so a burst can't skip its rule: NIGHT DESK's trades wait and four settle in
+// full (only the Desk takes damage, 12% a hit); BYZANTINE's vote undoes a Node taken down alone (20% a hit) and hardens
+// every Node; CAMSWARM's sweep hatches a shielded fragment from each part under half, a Camera unless its part breaks.
+// Measured: NIGHT DESK read 81% misread 46% blind 0%; BYZANTINE 69%, 53%, 22%; CAMSWARM 66%, 54%, 29%. Flagged: NIGHT
+// DESK the Sysop; BYZANTINE the Warden and the Sysop (too slow for its enrage); CAMSWARM the Warden and the Phantom.
+const FLOOR_BOSSES = ['centrifuge', 'shakedown', 'shouldersurfer', 'recursion', 'nightdesk', 'byzantine', 'camswarm'];
+const FLOOR_FLAGGED = { centrifuge: [], shakedown: [], shouldersurfer: ['sysop', 'herder'], recursion: ['sysop'], nightdesk: ['sysop'], byzantine: ['warden', 'sysop'], camswarm: ['warden', 'phantom'] };
+test('the floor 2, 3 and 4 bosses sit in the reader\'s band at their floors (12 to 26); misreading costs 10 points, playing blind 20', () => {
   for (const id of FLOOR_BOSSES) {
     const b = band(id), line = `${id} at ${b.level}: read ${b.read.toFixed(2)} misread ${b.misread.toFixed(2)} blind ${b.blind.toFixed(2)} ${JSON.stringify(b.subs)}`;
     assert.ok(b.read >= 0.6 && b.read <= 0.86, line);

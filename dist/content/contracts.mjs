@@ -412,7 +412,8 @@ export default {
         },
         {
           "kind": "boss",
-          "at": "lair",
+          "at": "road",
+          "k": 4,
           "subject": "Eviction",
           "boss": "NIGHT DESK",
           "challenge": "night desk. awaiting counterparty.",

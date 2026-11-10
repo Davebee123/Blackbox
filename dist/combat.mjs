@@ -29,7 +29,7 @@ import { raidStart, raidLand, raidCycle, raidShield, raidBroke, raidTaken, raidA
 import { tellStart, tellCycle, tellLand, tellBroke, chargeNow, tellIntents, tellSigint, tellSigintCheck, tellOn, tellsOf, overclockMult, hotCharge } from './tells.mjs';
 import { prepareTicks, onHit as tickHit, blastCut, BOSS_RULES, TICKS } from './interrupt.mjs';
 import { actsStart, lashHit, lashLand, actIntents, actBegins, actCap } from './acts.mjs';
-import { FB, fbBid, fbStart, fbPower, fbLanded, fbMisses, fbSlowed, fbBroke, fbAim, fbCommand, fbDealt, fbVerb, FB_VERBS, fbCycle, fbIntents, fbLogged, surfShut } from './floorbosses.mjs';
+import { FB, fbBid, fbStart, fbPower, fbLanded, fbMisses, fbSlowed, fbBroke, fbAim, fbCommand, fbDealt, fbVerb, FB_VERBS, fbCycle, fbIntents, fbLogged, surfShut, fbCmdHit, fbShrugs, fbTaken } from './floorbosses.mjs';
 import { runLate, TELL, TELLS, ROOM_FAMILIES, DAMPER_KINDS, floorFor, line, lift, own } from './data.mjs';
 import { holdsPart, objectiveBroke, objectiveCycle, objectiveBonus, bonusXp, bonusRolls, backupHit } from './objectives.mjs';
 import { mechValidate, mechIntercept, mechFired, mechPower, exposedCut, mechLanded, mechCommandHit, mechStart, mechClose, mechBroke, lagged, stunnedNow, missedTurn } from './mechanics.mjs';
@@ -672,6 +672,9 @@ export const bossChance = (s, boss) => Math.min(1, (bossOdds(boss).chance + boss
 export const sureDrop = (boss) => !!BOSSES[boss] && (boss !== 'resident' || BOSS_LOOT.resident === 'boss');
 // What a boss kill drops (WoW's dungeon boss): one item at its level from its table (a blue, or a yellow BOSS_LOOT.yellow
 // of the time; a crew boss a yellow, and BOSS_LOOT.raid.gold a world unique on top), then the roll for its uniques.
+// A boss that holds a lair: a native (network.mjs), or one in a floor's pool with uniques of its own (CAMSWARM). Its kill
+// pays as a lair does: the network's natives, its own joining the same roll, and its floor's lair set pieces.
+export const lairHeld = (B) => !!(B?.native || (B?.lair && !B.raid));
 function bossLoot(s, boss, level) {
   const B = BOSSES[boss], name = B?.name || boss;
   if (sureDrop(boss)) {
@@ -684,19 +687,19 @@ function bossLoot(s, boss, level) {
   bossUnique(s, boss, level);
   // Its set pieces (sets.mjs): a crew boss's (Mesh, and the class sets: the level-50 tier sets), a lair boss's (by its
   // floor: the floor 3–8 bosses' pieces until they are built, and on Bedrock the tier sets too), or a named boss's own.
-  const lair = B?.native && s.run && findLocation(s, s.run.loc);
+  const lair = lairHeld(B) && s.run && findLocation(s, s.run.loc);
   const why = `${name} drops: `;
   if (B?.raid) setDrop(s, { kind: 'crew', id: boss }, level, name, { why });
-  else if (B?.native) setDrop(s, { kind: 'lair', floor: lair?.depth || SERVER.floorFor(level) }, level, name, { why });
+  else if (lairHeld(B)) setDrop(s, { kind: 'lair', floor: lair?.depth || SERVER.floorFor(level) }, level, name, { why });
   else if (B) setDrop(s, { kind: 'boss', id: boss }, level, name, { why });
 }
 // A boss's loot table, as its Codex page shows it (WoW's dungeon journal): its sure item, its uniques (??? until you
 // find one; a native boss's once its first fall names them) and the chance the next kill drops one.
 export function bossTable(s, boss) {
-  const B = BOSSES[boss], native = !!B?.native, raid = !!B?.raid, odds = native ? BOSS_LOOT : bossOdds(boss);
-  const ids = native ? (floorLairBosses(s).includes(boss) ? mine(s)?.uniques || [] : []) : bossUniques(boss).map((u) => u.id);
+  const B = BOSSES[boss], native = lairHeld(B), raid = !!B?.raid, odds = native ? BOSS_LOOT : bossOdds(boss);
+  const own = bossUniques(boss).map((u) => u.id), ids = native ? [...own, ...(floorLairBosses(s).includes(boss) ? mine(s)?.uniques || [] : [])] : own;
   return {
-    sure: sureDrop(boss) ? (raid ? 'custom' : 'tuned') : null, yellow: BOSS_LOOT.yellow, raid, native, gold: raid ? BOSS_LOOT.raid.gold : 0,
+    sure: sureDrop(boss) ? (raid ? 'custom' : 'tuned') : null, yellow: BOSS_LOOT.yellow, raid, native, own: own.length, gold: raid ? BOSS_LOOT.raid.gold : 0,
     chance: native ? lairChance(s, 'you') : bossDone(s, boss) ? 0 : bossChance(s, boss), base: odds.chance, pity: odds.pity, done: !native && bossDone(s, boss),
     uniques: ids.map((id) => ({ id, name: named(s, id) ? UNIQUES[id].name : null, level: UNIQUES[id].level, got: !!s.collection?.[id] })).sort((a, b) => a.level - b.level),
     set: bossSetTable(s, boss),
@@ -706,7 +709,7 @@ export function bossTable(s, boss) {
 // pity while you lack one, a flat chance once you hold them all. null: it drops none of its own (a native boss's
 // pieces are its floor's lair table).
 export function bossSetTable(s, boss) {
-  const B = BOSSES[boss], ctx = B?.raid ? { kind: 'crew', id: boss } : B && !B.native ? { kind: 'boss', id: boss } : null, pool = ctx ? setDropPool(ctx) : [], odds = ctx && SET_LOOT[ctx.kind];
+  const B = BOSSES[boss], ctx = B?.raid ? { kind: 'crew', id: boss } : B && !lairHeld(B) ? { kind: 'boss', id: boss } : null, pool = ctx ? setDropPool(ctx) : [], odds = ctx && SET_LOOT[ctx.kind];
   if (!pool.length || !odds) return null;
   return {
     names: [...new Set(pool.map((u) => setOf(u.id)?.name).filter(Boolean))], chance: setChance(s, ctx), base: odds.chance, pity: odds.pity, found: odds.found, lacking: pool.some((u) => !s.collection?.[u.id]),
@@ -729,7 +732,7 @@ export function listenCommand(s, text) {
   return emit(s, 'info', `Listening for ${u.name}. Kills on a server running a Listening Post roll for it twice as often.`);
 }
 function bossUnique(s, boss, level) {
-  if (BOSSES[boss]?.native) return nativeBossUnique(s, boss, level);
+  if (lairHeld(BOSSES[boss])) return nativeBossUnique(s, boss, level);
   const pool = bossUniques(boss);
   if (!pool.length) return;
   const name = BOSSES[boss]?.name || boss;
@@ -754,7 +757,7 @@ export const lairChance = (s, who) => Math.min(1, BOSS_LOOT.chance + BOSS_LOOT.p
 const fightFloor = (s, e = s.encounter) => findLocation(s, e?.wild || e?.process || s.run?.loc)?.depth || null;
 function nativeBossUnique(s, boss, level) {
   const who = fightNet(s), name = BOSSES[boss].name, key = lairKey(s, who), floor = fightFloor(s);
-  const pool = [...lairUniques(s, who, level), ...(floor ? floorUniques('lair', floor, level).map((u) => u.id) : [])];
+  const pool = [...bossUniques(boss).map((u) => u.id), ...lairUniques(s, who, level), ...(floor ? floorUniques('lair', floor, level).map((u) => u.id) : [])]; // its own first (CAMSWARM's pair), in the same roll
   lairFell(s, who, boss);
   if (!pool.length) return;
   const heard = pool.includes(s.listen) && postsOf(s) ? listenBoost(s) : 1;
@@ -2778,6 +2781,8 @@ export function hit(s, p, base, opts = {}) {
   // Hotspot: a command hit on it powers up the virus's next attack 2 or more cycles away (tells.mjs).
   if ((cmd || (p.exe && base > 0 && !opts.server)) && p.hotspot && p.hotAt !== e.cycle) { p.hotAt = e.cycle; hotCharge(s, p); } // a Hotspot.exe: burns and helpers too
   if (cmd || (opts.src === 'helper' && opts.sent != null && base > 0)) lashHit(s, p, cmd ? null : opts.sent); // a P4 boss's Backlash: on its beat a part your command hits lashes back, and one a helper sent after the beat showed (acts.mjs)
+  if (cmd) fbCmdHit(s, p); // NIGHT DESK: your command on a part settles its oldest pending trade (floorbosses.mjs)
+  if (fbShrugs(s, p, opts, base)) return { dealt: 0, overflow: 0, absorbed: true }; // CAMSWARM's Lockout: the Hive, while a Camera stands
   if (cmd) mechCommandHit(s, p); // Thorns, a Swap passing your statuses on, the Bodyguard's target (mechanics.mjs)
   // Adaptive (mutation): count the cycles in a row your commands hit this part (the chit comes at cycle end).
   if (mutated(s, 'adaptive') && opts.mine && !opts.dot && !opts.server && base > 0 && p.adaptAt !== e.cycle) {
@@ -3726,6 +3731,7 @@ export function takeDamage(s, amount, source, label, { dot = false } = {}) {
     if (soaked) fireEvent(s, 'shielded', { absorbed: soaked, part: part(s, source) });
   }
   for (const h of classHooks()) if (h.intake && amount > 0) amount = h.intake(s, d, amount, { dot }); // a chase protocol's cut (chase.mjs)
+  if (amount > 0) amount = fbTaken(s, d, amount); // Overdraft (floorbosses.mjs)
   const dealt = survive(s, d, Math.min(d.integrity, amount));
   d.integrity -= dealt;
   if (e.mode === 'home' && dealt) wear(s, dealt); // your server's Integrity: it wears your firewall
@@ -3895,7 +3901,7 @@ function landAttack(s, p) {
   atk.n = (atk.n || 0) + 1; // its landings: a charge rides one of them (tells.mjs)
   liensPaid(s, p); // the Ledger's Collection: its size is set (power, above), the Liens are paid
   fbLanded(s, p, atk); // a floor boss's rule on a landing: the Gavel's bid, a Deadline paid (floorbosses.mjs)
-  if (fbMisses(s, p, atk)) return; // Privacy Screen: a playback misses
+  if (fbMisses(s, p, atk, hitPower)) return; // Privacy Screen: a playback misses. NIGHT DESK: it waits as a pending trade
   // A volley (a Repeater's Double Tap, a Prism's Spread): its next hit the next cycle, then an interval after the first.
   if (p.taps) {
     if (!atk.tap) atk.volley = e.cycle;

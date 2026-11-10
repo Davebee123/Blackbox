@@ -239,6 +239,13 @@ export const FX_DO = {
   rhythm: { when: ['custom'], label: 'makes a command fired exactly 2 cycles after your last deal X% more', value: true },
   'break-burns': { when: ['custom'], label: 'makes your burns on the other parts tick once right away when you break a part' },
   'break-guard': { when: ['custom'], label: 'makes the next attack on you within 2 cycles of a part breaking deal X% less', value: true },
+  // The floor 4 bosses' uniques (floorbosses.mjs).
+  overdraft: { when: ['custom'], label: 'leaves you at X% of your max Signal when a hit would take you lower, and the rest lands over the next 3 cycles', value: true },
+  'shield-hit': { when: ['custom'], label: 'increases the damage of your next hit by X% when you raise a shield', value: true },
+  'helpers-safe': { when: ['custom'], label: 'stops a virus from playing your helpers back at you' },
+  'break-frags': { when: ['custom'], label: 'deals X damage to every fragment when you break a part', value: true },
+  'low-parts%': { when: ['custom'], label: 'increases your damage by X% for each part below half its Integrity', value: true },
+  'second-less': { when: ['custom'], label: 'makes the second attack to land on you in a cycle deal X% less', value: true },
   'decoy-pass': { when: ['custom'], label: "lets your commands through the Decoy's bend where you aim them, at X% of their damage, and nothing bounces back", value: true },
   // The deep uniques (levels 39-50, docs/loot-plan.md Batch 1). Stats first: what they add, and to what.
   'stat+': { when: ['always'], label: 'adds X to your stat', value: true, stat: true },
@@ -334,7 +341,7 @@ const FX_TRIGGER = { crit: 'when you land a critical strike', break: 'when you b
 // The effect blocks a unique carries: its effect, or each of its effects.
 export const fxList = (u) => (Array.isArray(u?.effect) ? u.effect : u?.effect ? [u.effect] : []);
 const STAT_NAME = (k) => STATS[k]?.name || k;
-const PCT = ['damage%', 'crit%', 'taken%', 'burn-sap', 'stat%', 'heal%'];
+const PCT = ['damage%', 'crit%', 'taken%', 'burn-sap', 'stat%', 'heal%', 'low-parts%'];
 export function fxText(fx, statName = STAT_NAME) {
   if (Array.isArray(fx)) return fx.filter((x) => !x.quiet).map((x) => fxText(x, statName)).filter(Boolean).join(' '); // quiet: the one before it says it too
   if (!fx?.do) return '';
