@@ -1950,7 +1950,7 @@ function protocolCommand(s, text) {
     if (!it) return warn(s, arg ? `No protocol ${arg} in your stash.` : 'load <protocol>: see the Loadout page for ids.');
     const rig = rigOf(s);
     if (rig.includes(it.id)) return warn(s, `${itemLabel(it)} is already loaded.`);
-    if (!meetsReq(s, it, hackerLevel(s))) return warn(s, `${itemLabel(it)} needs level ${reqLevel(it)}.`);
+    if (!meetsReq(s, it, hackerLevel(s))) return warn(s, `${itemLabel(it)} requires level ${reqLevel(it)}.`);
     if (it.zeroDay && zeroDay(s, it.zeroDay)) return warn(s, `You're already running ${ZERO_DAYS[it.zeroDay].name}. One of each Zero-day at a time.`);
     if (it.unique && loaded(s).some((x) => x.unique === it.unique)) return warn(s, `You're already running ${it.name}. One of each at a time.`);
     let slot = freeSlot(s, groupOf(it));

@@ -171,7 +171,7 @@ test('a level requirement: an item loads from 3 levels under its own; one alread
     assert.equal(reqLevel({ level: 2 }), 1, 'never under level 1');
     const near = addItem(s, item({ damage: 5 }, { level: 9, group: 'exploit' }));
     const far = addItem(s, item({ damage: 9 }, { level: 10, group: 'exploit', name: 'Deep protocol' }));
-    assert.match(command(s, 'load ' + far.id).at(-1).message, /needs level 7/);
+    assert.match(command(s, 'load ' + far.id).at(-1).message, /requires level 7/);
     assert.ok(!loaded(s).includes(far), 'gear four levels over you waits');
     command(s, 'load ' + near.id);
     assert.ok(loaded(s).includes(near), 'three levels over loads');
