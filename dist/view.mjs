@@ -5,7 +5,7 @@ import { componentsOf } from './salvage.mjs';
 import { glyph } from './glyphs.mjs';
 import { TELL_ICON } from './recap.mjs';
 import { leaveOf } from './acts.mjs';
-import { FB, BUYER, nextBuyer, dumpOf, topFrame, canCall, frames } from './floorbosses.mjs';
+import { FB, BUYER, nextBuyer, dumpOf, topFrame, canCall, frames, leakOf, depthOf } from './floorbosses.mjs';
 import { glyphMarkup } from './protocol-glyphs.mjs';
 import { isLive, liveCount, memoryCap, memoryCost, joinCost, MEMORY } from './memory.mjs';
 // The server whose Connect is waiting on a yes (app.js): its card shows the memory it takes.
@@ -704,12 +704,12 @@ function floorTags(s, p) {
   const tag = (cls, tip, body) => out.push(`<span class="tag ${cls}" title="${esc(tip)}">${body}</span>`);
   if (p.gavel && p.attack && v.bid) {
     const k = p.attack.interval, who = BUYER[nextBuyer(v)], spec = BOSSES[v.boss].buyers[nextBuyer(v)];
-    tag(k <= FB.bid.fast ? 'hot bid' : 'bid', `Bidding\nBoss rule\nThe ${p.name}'s Surge comes every ${k} cycles, and each one that lands spins it faster. A Surge at every 2 sells to ${who}: its ${spec.name} joins the fight${v.bid.lots > 1 ? ', with a second buyer' : ''}. ${v.bid.reserve ? 'A delay or Throttle steps it back one.' : 'A delay or Throttle takes it back to every 4.'}${answerLine('Delay or Throttle it at every 2, or cut that Surge.')}`, `${glyph('clock')}${k} · ${esc(who)}`);
+    tag(k <= FB.bid.fast ? 'hot bid' : 'bid', `Bidding\nBoss rule\nThe ${p.name}'s Surge comes every ${k} cycles, and each one that lands spins it faster. A Surge at every 2 sells to ${who}: its ${spec.name} joins the fight${v.bid.lots > 1 ? ', with a second buyer' : ''}. ${v.bid.reserve ? 'A delay or Throttle steps it back one.' : 'A delay or Throttle takes it back to every 4.'} Each sale makes its Surge ${Math.round(FB.bid.sold * 100)}% harder for the fight${v.bid.sold ? `: ${v.bid.sold} so far` : ''}.${answerLine('Delay or Throttle it at every 2, or cut that Surge.')}`, `${glyph('clock')}${k} · ${esc(who)}`);
   }
   if (p.buyer) tag('', `${p.name}\nBought by ${BUYER[p.buyer]}\nIt joined when the Gavel sold.`, esc(BUYER[p.buyer]));
   if (p.core && v.ransom) {
-    const L = v.ransom.left, n = Math.round(defender(s).max * FB.ransom.leak);
-    tag(L <= 3 ? 'hot ransom' : 'ransom', `Ransom Clock\nBoss rule\nIt leaks ${n} (30% of your max) ${when(L - 1)}, then restarts at ${FB.ransom.restart}. A Deadline that lands adds ${FB.ransom.pay} cycles. One you call off buys nothing.${v.ransom.notice ? ' Each leak re-arms the Demands and brings the Lockbox back.' : ''}${answerLine('Let a Deadline land when the clock would run out first.')}`, `${glyph('clock')}${L}`);
+    const L = v.ransom.left, k = leakOf(v), n = Math.round(defender(s).max * k);
+    tag(L <= 3 ? 'hot ransom' : 'ransom', `Ransom Clock\nBoss rule\nIt leaks ${n} (${Math.round(k * 100)}% of your max) ${when(L - 1)}, then restarts at ${FB.ransom.restart}. Each leak takes ${Math.round(FB.ransom.grow * 100)}% more than the last, up to ${Math.round(FB.ransom.most * 100)}%. A Deadline that lands adds ${FB.ransom.pay} cycles. One you call off buys nothing.${v.ransom.notice ? ' Each leak re-arms the Demands and brings the Lockbox back.' : ''}${answerLine('Let a Deadline land when the clock would run out first.')}`, `${glyph('clock')}${L}`);
   }
   if (p.syncOnly && v.surf) {
     const shut = e.cycle % 2 === 1, d = dumpOf(s);
@@ -718,7 +718,7 @@ function floorTags(s, p) {
   }
   if (p.frame != null && v.stack) {
     const top = topFrame(s), n = v.stack.callAt - e.cycle;
-    if (p === top) tag(canCall(p) ? 'hot call' : 'call', `Top frame\nBoss rule\nYour one-part commands land on it, whichever frame you aim at. ${canCall(p) ? `It Calls ${when(n)}: a new frame on top at 60% of its max.` : 'Under a quarter of its max, it cannot Call.'}${v.stack.ret ? ' A frame that breaks makes the one beneath attack a cycle sooner and 50% harder.' : ''}${answerLine('Break it before its Call, or leave it under a quarter.')}`, canCall(p) ? `${glyph('clock')}call ${Math.max(0, n)}` : 'top');
+    if (p === top) tag(canCall(p) ? 'hot call' : 'call', `Top frame\nBoss rule\nYour one-part commands land on it, whichever frame you aim at. ${canCall(p) ? `It Calls ${when(n)}: a new frame on top at 60% of its max.` : 'Under a quarter of its max, it cannot Call.'}${v.stack.ret ? ' A frame that breaks makes the one beneath attack a cycle sooner and 50% harder.' : ''} Each Call makes every frame hit ${Math.round(FB.stack.deeper * 100)}% harder${v.stack.calls ? `: +${Math.round((depthOf(v) - 1) * 100)}% now` : ''}.${answerLine('Break it before its Call, or leave it under a quarter.')}`, canCall(p) ? `${glyph('clock')}call ${Math.max(0, n)}` : 'top');
     else tag('dim', `Frame\nBoss rule\nUnder the top frame. Only burns, helpers and area hits reach it.`, 'stacked');
     if (p.core && v.stack.overflow) tag(frames(s).length >= FB.stack.overflow - 1 ? 'hot' : '', `Overflow\nBoss rule\nAt ${FB.stack.overflow} frames every frame attacks at once.${answerLine('Keep the stack at four or fewer.')}`, `${frames(s).length}/${FB.stack.overflow}`);
   }

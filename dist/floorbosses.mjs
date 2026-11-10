@@ -27,10 +27,10 @@ import { BOSSES } from './data.mjs';
 import { mimicHit, copyKind } from './tells.mjs';
 
 export const FB = {
-  bid: { slow: 4, fast: 2, after: 3, buyers: ['tollgate', 'swarmline', 'palemask'] },
-  ransom: { clock: 12, restart: 6, pay: 3, leak: 0.3 },
-  surf: { log: 3, again: 4, echo: 0.4 }, // echo: an Again note's share of its hit (40%: at half, a burst sung back took 95% of a reader's bar in three cycles)
-  stack: { call: 4, push: 0.6, under: 0.25, overflow: 5, ret: 1.5, cap: 7 },
+  bid: { slow: 4, fast: 2, after: 3, sold: 0.5, buyers: ['tollgate', 'swarmline', 'palemask'] }, // sold: each sale makes the Gavel's Surge that much harder, for the fight
+  ransom: { clock: 10, restart: 5, pay: 3, leak: 0.35, grow: 0.15, most: 0.65 }, // a leak takes 35% of your max, 15 more each leak after, up to 65%
+  surf: { log: 2, again: 4, echo: 0.4 }, // echo: an Again note's share of its hit (40%: at half, a burst sung back took 95% of a reader's bar in three cycles)
+  stack: { call: 4, push: 0.6, under: 0.25, overflow: 5, ret: 1.5, cap: 7, deeper: 0.35 }, // deeper: each Call let through makes every frame hit that much harder
 };
 export const BUYER = { tollgate: 'TOLLGATE', swarmline: 'SWARMLINE', palemask: 'PALEMASK' };
 export const FB_VERBS = new Set(['reserve', 'lot2', 'demand2', 'notice', 'again', 'top', 'return', 'overflow']);
@@ -38,6 +38,9 @@ const cyc = (n) => `${n} ${n === 1 ? 'cycle' : 'cycles'}`;
 const fx = (s, what) => (s.encounter ? fxOn(s, what) : null);
 const fxVal = (x) => Number(x?.fx?.value) || 0;
 const fxName = (x) => x?.it?.name || x?.name || '';
+// What the next Ransom leak takes, as a share of your max (each leak takes more), and how much harder the stack hits.
+export const leakOf = (v) => Math.min(FB.ransom.most, FB.ransom.leak + FB.ransom.grow * (v?.ransom?.leaks || 0));
+export const depthOf = (v) => 1 + FB.stack.deeper * (v?.stack?.calls || 0);
 const actNow = (v) => 1 + (v?.phases || []).filter((x) => x.done).length;
 
 // ---------- engage ----------
@@ -92,6 +95,10 @@ export function fbSlowed(s, p, how) {
   if (cf && p.attack) hit(s, p, fxVal(cf), { by: fxName(cf), pierce: true, noHook: true, server: true });
 }
 
+// The Gavel's selling Surge, landing this cycle at every 2: SIGINT cuts it and withdraws the bid (tells.mjs tellSigint),
+// so every class has an answer, not only the ones with a delay or a Throttle.
+export const sellingGavel = (s) => { const g = s.encounter?.virus?.bid && livingParts(s).find((p) => p.gavel && p.attack); return g && g.attack.interval <= FB.bid.fast && g.attack.due === s.encounter.cycle ? g : null; };
+
 // ---------- SHOULDER SURFER: Replay ----------
 // The Sync Window opens on even cycles only (combat.mjs rollSync).
 export const surfShut = (s) => s.encounter?.virus?.boss === 'shouldersurfer' && s.encounter.cycle % 2 === 1;
@@ -139,7 +146,8 @@ function push(s) {
   const p = { id: `frame${n}`, name: `Frame ${top.frame + 1}`, kind: 'system', frame: top.frame + 1, integrity: max, max, armor: 0, maxArmor: 0, patchAt: null, veiled: false, loot: null, special: false, exposedUntil: 0, lastDamaged: 0, boosted: false,
     attack: { ...(top.attack || { name: 'Surge', effect: 'damage', amount: 1, interval: 4 }), due: e.cycle + 2, n: 0 } };
   v.parts.push(p);
-  emit(s, 'spawn', `CALL. ${top.name} pushes ${p.name} on top, at ${max} Integrity.`, { source: top.id, target: p.id, call: true });
+  v.stack.calls = (v.stack.calls || 0) + 1;
+  emit(s, 'spawn', `CALL. ${top.name} pushes ${p.name} on top, at ${max} Integrity. Every frame now hits ${Math.round((depthOf(v) - 1) * 100)}% harder.`, { source: top.id, target: p.id, call: true });
   return p;
 }
 
@@ -149,6 +157,8 @@ export function fbPower(s, p, atk) {
   const e = s.encounter;
   let m = 1;
   if (p.returnBoost && atk === p.attack) { m *= p.returnBoost; p.returnBoost = 0; }
+  if (p.gavel && atk === p.attack && e.virus.bid?.sold) m *= 1 + FB.bid.sold * e.virus.bid.sold; // each sale, a harder Surge
+  if (p.frame != null && e.virus.stack) m *= depthOf(e.virus); // each Call let through, a harder stack
   if (atk.dump && e.virus.surf) { const d = dumpOf(s), base = attackAmount(p) || 1; if (d) { m *= d.amount / base; e.dumped = d.id; } else e.dumped = null; }
   const gov = fx(s, 'governor');
   if (gov && p.lastLanded != null && e.cycle - p.lastLanded <= 2) m *= 1 - fxVal(gov) / 100;
@@ -162,7 +172,8 @@ export const fbMisses = (s, p, atk) => !!((atk.dump && s.encounter.dumped) || at
 export function fbLanded(s, p, atk) {
   const e = s.encounter, v = e.virus;
   if (p.gavel && atk === p.attack && v.bid) {
-    if (atk.interval <= FB.bid.fast) { sell(s, p); atk.interval = FB.bid.after; }
+    if (atk.interval <= FB.bid.fast && livingParts(s).some((x) => x.core)) { sell(s, p); atk.interval = FB.bid.after; } // nothing sells once the Rotor ♛ is down
+    else if (atk.interval <= FB.bid.fast) { /* the Rotor is down: no more sales, the Gavel stays at every 2 */ }
     else { atk.interval = Math.max(FB.bid.fast, atk.interval - 1); emit(s, 'status', `BID. The ${p.name} spins up: every ${atk.interval} cycles${atk.interval <= FB.bid.fast ? `. Its next Surge sells to ${BUYER[nextBuyer(v)]}` : ''}.`, { source: p.id, bid: atk.interval }); }
     atk.due = e.cycle + atk.interval;
   }
@@ -212,11 +223,11 @@ export function fbVerb(s, act) {
 // fight, 'over' if a landing already did.
 export function fbCycle(s) {
   const e = s.encounter, v = e.virus;
-  if (v.ransom && livingParts(s).length) {
+  if (v.ransom && livingParts(s).some((x) => x.core)) { // the Collector ♛ runs the clock: break it and the clock stops
     const R = v.ransom;
     R.left--;
     if (R.left <= 0) {
-      const src = livingParts(s).find((x) => x.core) || livingParts(s)[0], n = Math.max(1, Math.round(defender(s).max * FB.ransom.leak));
+      const src = livingParts(s).find((x) => x.core) || livingParts(s)[0], n = Math.max(1, Math.round(defender(s).max * leakOf(v)));
       const dealt = takeDamage(s, n, src.id, 'Ransom leak');
       R.left = FB.ransom.restart + fxVal(fx(s, 'late'));
       R.leaks++;
@@ -254,7 +265,7 @@ export function fbIntents(s, columns) {
   const e = s.encounter, v = e.virus, out = [];
   if (v.ransom) {
     const col = v.ransom.left - 1, src = livingParts(s).find((x) => x.core);
-    if (src && col >= 0 && col < columns) out.push({ source: src.id, name: 'Ransom leak', effect: 'damage', amount: Math.round(defender(s).max * FB.ransom.leak), col, hidden: false, kind: 'system', leak: true });
+    if (src && col >= 0 && col < columns) out.push({ source: src.id, name: 'Ransom leak', effect: 'damage', amount: Math.round(defender(s).max * leakOf(v)), col, hidden: false, kind: 'system', leak: true });
   }
   return out;
 }

@@ -35,7 +35,7 @@
 //         opened, once logged) }]
 //   tier  the level tier's numbers (count, live, lead, mult, cap, dot, after, burn, hang), with an elite's or a
 //         boss's extra cap
-import { screened } from './floorbosses.mjs';
+import { screened, sellingGavel, fbSlowed } from './floorbosses.mjs';
 import { hit, implanted, emit, alive, part, livingParts, attackers, defender, hackerLevel, skillBase, gearStat, attackAmount, strikeWith, toIntent, usable, readyIn, alliesOf, fxAnswer, fxOn, cooldownOf, armorTakes, ignoresArmor } from './combat.mjs';
 import { CONFIG, TELL, TELLS, TELL_SETS, SEAL_FROM, STRAINS, ABILITIES, BOSSES } from './data.mjs';
 import { previewDamage, delayAttack, blocked, scaled, gearDamage } from './combat.mjs';
@@ -787,7 +787,7 @@ export function tellCast(s) {
 export const sigintTarget = (s) => { const xs = sigintable(s).filter((t) => inWindow(s, t)); return xs.find((t) => t.kind === 'cast') || xs[0] || null; }; // a cast first: a charge open with it can still be cut
 // Why SIGINT can't fire on a solo fight now, or null: nothing compiling or charging, or no window open yet.
 export function tellSigintCheck(s) {
-  if (sigintTarget(s)) return null;
+  if (sigintTarget(s) || sellingGavel(s)) return null; // CENTRIFUGE's selling Surge (floorbosses.mjs)
   const t = sigintable(s)[0];
   const what = sigintCharges(s) ? 'a cast or a charge' : 'a cast';
   if (!t) return `Nothing is compiling${sigintCharges(s) ? ' or charging' : ''}. SIGINT stops ${what}.`;
@@ -795,6 +795,8 @@ export function tellSigintCheck(s) {
 }
 export function tellSigint(s) {
   const t = sigintTarget(s), e = s.encounter;
+  const g = !t && sellingGavel(s);
+  if (g) { e.metrics.interrupts++; emit(s, 'interrupt', `SIGINT cuts the ${g.name}'s selling Surge.`, { target: g.id }); cancelAttack(s, g); fbSlowed(s, g, 'SIGINT'); return true; } // CENTRIFUGE (floorbosses.mjs)
   if (!t) return false;
   const p = sourceOf(s, t);
   t.interrupted = (t.interrupted || 0) + 1;

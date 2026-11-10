@@ -8,7 +8,7 @@ import { CONFIG, BOSSES, ABILITIES } from './dist/data.mjs';
 import { tellsOf } from './dist/tells.mjs';
 import { boardMarkup } from './dist/view.mjs';
 import { uniqueItem, seeded } from './dist/gear.mjs';
-import { FB, topFrame, dumpOf, fbVerb } from './dist/floorbosses.mjs';
+import { FB, topFrame, dumpOf, fbVerb, fbPower } from './dist/floorbosses.mjs';
 import { throneOf, rogueSpawns } from './dist/rogue.mjs';
 import { createLocation } from './dist/data.mjs';
 import * as FP from './dist/floorplan.mjs';
@@ -42,10 +42,9 @@ test('each floor boss: its own parts only, its ♛, act ticks at 60% and 30% on 
   }
 });
 
-test("CENTRIFUGE's Bidding: each Surge that lands spins the Gavel up; at every 2 it sells to the buyer it names; a delay withdraws it", () => {
+test("CENTRIFUGE's Bidding: each Surge that lands spins the Gavel up; at every 2 it sells to the buyer it names, harder each sale; a delay or SIGINT withdraws it", () => {
   const s = boss('centrifuge'), v = s.encounter.virus, g = of(s, 'gavel');
-  assert.equal(g.attack.interval, 4);
-  landNow(s, g);
+  assert.ok(g.noTicks && !g.ticks, 'the Gavel has no ticks: only a delay, a Throttle or SIGINT stops a sale');
   assert.equal(g.attack.interval, 3);
   landNow(s, g);
   assert.equal(g.attack.interval, 2);
@@ -55,6 +54,8 @@ test("CENTRIFUGE's Bidding: each Surge that lands spins the Gavel up; at every 2
   const buyer = FB.bid.buyers[who % 3], spec = BOSSES.centrifuge.buyers[buyer];
   assert.ok(of(s, spec.id)?.buyer === buyer, `the ${spec.name} joined`);
   assert.equal(g.attack.interval, 3, 'back to every 3 after a sale');
+  assert.equal(v.bid.sold, 1);
+  assert.equal(fbPower(s, g, g.attack), 1 + FB.bid.sold, 'each sale, a harder Surge');
   if (buyer === 'tollgate') assert.equal(of(s, 'lockbox').ward, 'rotor');
   landNow(s, g);
   s.encounter.readyAt = {};
@@ -70,21 +71,37 @@ test("CENTRIFUGE's Bidding: each Surge that lands spins the Gavel up; at every 2
   const before = livingParts(s).length;
   landNow(s, g);
   assert.ok(livingParts(s).length >= before + 1, 'a second lot brings more');
+  // SIGINT cuts a selling Surge and withdraws the bid, for every class.
+  const s2 = boss('centrifuge'), g2 = of(s2, 'gavel');
+  g2.attack.interval = 2; g2.attack.due = s2.encounter.cycle;
+  const hp = defender(s2).integrity;
+  command(s2, 'sigint'); resolveCycle(s2);
+  assert.equal(g2.attack.interval, 4, 'SIGINT withdraws it');
+  assert.equal(s2.encounter.virus.bid.sold, 0, 'nothing sold');
+  assert.equal(defender(s2).integrity, hp, 'the Surge is cut');
+  // Once the Rotor breaks, nothing sells.
+  of(s2, 'rotor').integrity = 0; g2.attack.interval = 2;
+  landNow(s2, g2);
+  assert.equal(s2.encounter.virus.bid.sold, 0, 'no sale with the Rotor down');
 });
 
-test("SHAKEDOWN's Ransom Clock: it counts down, leaks 30% of your max at 0 and restarts at 6; a Deadline that lands pays 3; act 2 sends a second Demand on the same cycle; act 3 re-arms on a leak", () => {
+test("SHAKEDOWN's Ransom Clock: it counts down, leaks 35% of your max at 0 (15% more each leak) and restarts at 5; a Deadline that lands pays 3; it stops with the Collector; act 2 sends a second Demand on the same cycle; act 3 re-arms on a leak", () => {
   const s = boss('shakedown'), v = s.encounter.virus, max = defender(s).max;
-  assert.equal(v.ransom.left, 12);
+  assert.equal(v.ransom.left, 10);
   hold(s);
-  assert.equal(v.ransom.left, 11);
+  assert.equal(v.ransom.left, 9);
   const d = of(s, 'demand');
   landNow(s, d);
-  assert.equal(v.ransom.left, 13, 'a Deadline landed: +3');
+  assert.equal(v.ransom.left, 11, 'a Deadline landed: +3');
   v.ransom.left = 1;
   const was = defender(s).integrity;
   hold(s);
-  assert.equal(was - defender(s).integrity, Math.round(max * 0.3), 'the leak');
-  assert.equal(v.ransom.left, 6, 'restarts at 6');
+  assert.equal(was - defender(s).integrity, Math.round(max * 0.35), 'the leak');
+  assert.equal(v.ransom.left, 5, 'restarts at 5');
+  v.ransom.left = 1;
+  const was2 = defender(s).integrity;
+  hold(s);
+  assert.equal(was2 - defender(s).integrity, Math.round(max * 0.5), 'the next leak takes 15% more');
   assert.match(boardMarkup(s), /Ransom Clock\nBoss rule\nIt leaks/);
   d.attack.due = s.encounter.cycle + 3;
   command(s, 'hold');
@@ -99,6 +116,10 @@ test("SHAKEDOWN's Ransom Clock: it counts down, leaks 30% of your max at 0 and r
   v.ransom.left = 1;
   resolveCycle(s);
   assert.ok(box.integrity === box.max && d.armor > 0, 'final notice: the Lockbox is back and the Demand re-armed');
+  const left = v.ransom.left;
+  of(s, 'collector').integrity = 0;
+  hold(s);
+  assert.equal(v.ransom.left, left, 'the Collector is down: the clock stops');
 });
 
 test("SHOULDER SURFER's Replay: the window opens every other cycle; a command outside it is logged, and the Dump plays it back at its full hit", () => {
@@ -167,7 +188,7 @@ test('their uniques: Governor, Cascade Failure, Paper Trail, Escrow, Privacy Scr
   for (const id of ['governor', 'cascade-failure', 'paper-trail', 'shakedown-escrow', 'privacy-screen', 'muscle-memory', 'tail-call', 'stack-guard']) assert.ok(UNIQUES[id]?.sources.some((x) => x.kind === 'boss'), id);
   // Escrow: the Ransom Clock and the enrage 2 cycles later.
   const es = boss('shakedown', { wear: ['shakedown-escrow'] });
-  assert.equal(es.encounter.virus.ransom.left, 14);
+  assert.equal(es.encounter.virus.ransom.left, FB.ransom.clock + 2);
   // Governor: a part's attack within 2 cycles of its last lands for 25% less.
   const g0 = boss('centrifuge'), g1 = boss('centrifuge', { wear: ['governor'] });
   const twice = (s) => { const p = of(s, 'gavel'); landNow(s, p); const was = defender(s).integrity; p.attack.due = s.encounter.cycle; hold(s); return was - defender(s).integrity; };

@@ -29,7 +29,7 @@ import { raidStart, raidLand, raidCycle, raidShield, raidBroke, raidTaken, raidA
 import { tellStart, tellCycle, tellLand, tellBroke, chargeNow, tellIntents, tellSigint, tellSigintCheck, tellOn, tellsOf, overclockMult, hotCharge } from './tells.mjs';
 import { prepareTicks, onHit as tickHit, blastCut, BOSS_RULES, TICKS } from './interrupt.mjs';
 import { actsStart, lashHit, lashLand, actIntents, actBegins, actCap } from './acts.mjs';
-import { fbStart, fbPower, fbLanded, fbMisses, fbSlowed, fbBroke, fbAim, fbCommand, fbDealt, fbVerb, FB_VERBS, fbCycle, fbIntents, fbLogged, surfShut } from './floorbosses.mjs';
+import { FB, fbStart, fbPower, fbLanded, fbMisses, fbSlowed, fbBroke, fbAim, fbCommand, fbDealt, fbVerb, FB_VERBS, fbCycle, fbIntents, fbLogged, surfShut } from './floorbosses.mjs';
 import { runLate, TELL, TELLS, ROOM_FAMILIES, DAMPER_KINDS, floorFor, line, lift, own } from './data.mjs';
 import { holdsPart, objectiveBroke, objectiveCycle, objectiveBonus, bonusXp, bonusRolls, backupHit } from './objectives.mjs';
 import { mechValidate, mechIntercept, mechFired, mechPower, exposedCut, mechLanded, mechCommandHit, mechStart, mechClose, mechBroke, lagged, stunnedNow, missedTurn } from './mechanics.mjs';
@@ -4145,8 +4145,9 @@ export function playerPhase(s, phase = 'all') {
   if (logger && (e.queue || e.lastAttack || (prog && !prog.hold)) && !e.synced && !(e.queue && e.queue.ability === 'hold') && logger.attack) {
     e.keylog = (e.keylog || 0) + 1;
     fbLogged(s); // SHOULDER SURFER's Dump plays it back (floorbosses.mjs)
-    if (e.keylog >= 3 && logger.attack.due > e.cycle + 1) { logger.attack.due = e.cycle + 1; emit(s, 'status', `The ${logger.name} has logged 3 keystrokes. It Dumps next cycle.`, { target: logger.id }); }
-    else if (e.keylog < 3) emit(s, 'status', `The ${logger.name} logs a keystroke (${e.keylog}/3).`, { target: logger.id });
+    const full = e.virus.surf ? FB.surf.log : 3; // SHOULDER SURFER's log is shorter (floorbosses.mjs)
+    if (e.keylog >= full && logger.attack.due > e.cycle + 1) { logger.attack.due = e.cycle + 1; emit(s, 'status', `The ${logger.name} has logged ${full} keystrokes. It Dumps next cycle.`, { target: logger.id }); }
+    else if (e.keylog < full) emit(s, 'status', `The ${logger.name} logs a keystroke (${e.keylog}/${full}).`, { target: logger.id });
   }
   mechFired(s); // Leak's price, the Countdown's count, a Volatile Corrupted cleansed (mechanics.mjs)
   e.synced = false;

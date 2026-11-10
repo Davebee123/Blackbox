@@ -151,20 +151,29 @@ function heedFloor(s, move) {
   const [id, at] = String(move).split(' '), c = e.cycle;
   if (v.bid) {
     const g = livingParts(s).find((p) => p.gavel && p.attack);
-    if (g && g.attack.interval <= 2 && g.attack.due - c <= 1) { const slow = first(s, SLOWS.map((k) => `${k} ${g.id}`)); if (slow) return slow; }
+    if (g && g.attack.interval <= 2 && g.attack.due - c <= 1) { const slow = first(s, [...SLOWS.map((k) => `${k} ${g.id}`), ...(g.attack.due === c ? ['sigint'] : [])]); if (slow) return slow; }
     // No delay at hand: cut the selling Surge, when one command takes the Gavel across its tick on the cycle it lands.
     const n = g && g.attack.interval <= 2 && g.attack.due === c ? toCross(g) : null;
     if (n != null && !(g.armor > 0)) { const cut = first(s, [id, ...HITS].map((k) => `${k} ${g.id}`).filter((m) => previewDamage(s, m.split(' ')[0], g) >= n)); if (cut) return cut; }
   }
   if (v.ransom && at) {
     const d = part(s, at);
-    if (d?.deadline && d.attack && d.attack.due - c <= 2 && v.ransom.left >= d.attack.due - c + 1 && v.ransom.left <= d.attack.due - c + 3 && !killing(s, move, d)) { // it lands before the leak, and the leak is near
+    // The Collector runs the clock and the Demand's Deadlines pay it: never break the last Demand while the Collector stands.
+    const col = livingParts(s).find((p) => p.core);
+    if (d?.deadline && col && killing(s, move, d) && livingParts(s).filter((p) => p.deadline).length === 1) { const alt = first(s, [`${id} ${col.id}`, ...HITS.map((k) => `${k} ${col.id}`)]); if (alt) return alt; }
+    if (d?.deadline && d.attack && !chargeNow(s, d) && d.attack.due - c <= 2 && v.ransom.left >= d.attack.due - c + 1 && v.ransom.left <= d.attack.due - c + d.attack.interval && !killing(s, move, d)) { // it lands before the leak, and the clock would leak before the next one
       const to = livingParts(s).find((p) => p.core) || livingParts(s).find((p) => !p.deadline);
       const alt = to && first(s, [`${id} ${to.id}`, ...HITS.map((k) => `${k} ${to.id}`)]);
       if (alt) return alt;
     }
   }
   if (v.stack) {
+    // A Call this cycle or next: the top frame broken or brought under a quarter first, with the biggest hit that does it.
+    const tf = topFrame(s);
+    if (tf && canCall(tf) && v.stack.callAt - c <= 1) {
+      const need = tf.integrity - Math.floor(tf.max * 0.25) + 1, done = (m) => { const k = m.split(' ')[0]; return !(tf.armor > 0 && !ignoresArmor(s, k)) && previewDamage(s, k, tf) >= need; };
+      if (!(at === tf.id && done(move))) { const hit = first(s, [...HITS, ...Object.keys(ABILITIES)].map((k) => `${k} ${tf.id}`).filter(done)); if (hit) return hit; }
+    }
     // A top frame too low to Call holds the stack: break it just after a Call, never the cycle before one while the
     // frame beneath could Call. Meanwhile area hits, burns and helpers work the frames below.
     const top = topFrame(s), aim = at ? part(s, at) : null, below = top && livingParts(s).filter((p) => p.frame != null && p.frame < top.frame).sort((a, b) => b.frame - a.frame)[0];
