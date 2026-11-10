@@ -142,17 +142,25 @@ const dropLine = () => `Drops components ${dropPct(SOCKET.drop.room)} of the tim
 const lootList = (parts) => `<ul class="cx-loot">${parts.filter((x) => x.spec.loot).map((x) => { const open = x.research >= RESEARCH.max; return `<li class="${open ? '' : 'unknown'}" title="${esc(open ? dropLine() : `Research ${RESEARCH.max} to learn its drop chance.`)}">${glyph('salvage')}<b>${esc(x.named ? x.spec.name : UNKNOWN)}</b><small>${open ? `${dropPct(SOCKET.drop.room)} in a room fight` : UNKNOWN}</small></li>`; }).join('')}</ul>`;
 const pctOf = (parts) => (parts.length ? Math.round((parts.reduce((n, x) => n + Math.min(x.research, RESEARCH.max) / RESEARCH.max, 0) / parts.length) * 100) : 0);
 
-// A boss's loot table (the dungeon journal): what every kill drops, its uniques (??? until found, a native boss's until
-// its first fall names them), and their odds with the bad-luck protection: the next kill's chance, in amber.
+// A boss's loot table (the dungeon journal), in the Grouped look (docs/floor-items.md): every kill, its uniques, its set
+// pieces, each group with the next kill's odds as a bar (amber, loot; a set's name in set green). Uniques and pieces are
+// ??? until found (a native boss's until its first fall names them); a bar's tooltip says the odds and the pity.
 const pc = (x) => `${Math.round(x * 100)}%`;
+const oddsBar = (x, tip) => `<span class="cxg-odds" title="${esc(tip)}"><i class="cxg-bar" aria-hidden="true"><b style="width:${Math.max(2, Math.round(Math.min(1, x) * 100))}%"></b></i><em>${pc(x)}</em></span>`;
+const group = (cls, label, sub, odds, rows) => `<div class="cxg-grp ${cls}"><div class="cxg-head"><span class="cx-label">${label}</span>${sub ? `<small>${sub}</small>` : ''}${odds}</div><ul class="cx-loot">${rows}</ul></div>`;
+const lootRow = (u, cls, tail) => `<li class="${u.name ? '' : 'unknown'}">${glyph('item')}<b${u.name ? ` class="iname ${cls}"` : ''}>${esc(u.name || UNKNOWN)}</b><small>Lv ${u.level}${u.got ? ' · found' : ''}${tail || ''}</small></li>`;
 function lootTable(t) {
-  const sure = t.sure === 'custom' ? `<li>${glyph('item')}<b class="iname r-custom">Custom</b><small>every kill, at its level</small></li>`
-    : t.sure ? `<li>${glyph('item')}<b class="iname r-tuned">Tuned</b><small>every kill, at its level · Custom ${pc(t.yellow)}</small></li>`
+  const sure = t.sure === 'custom' ? `<li>${glyph('item')}<b class="iname r-custom">Custom</b><small>at its level</small></li>`
+    : t.sure ? `<li>${glyph('item')}<b class="iname r-tuned">Tuned</b><small>at its level · Custom ${pc(t.yellow)}</small></li>`
     : `<li>${glyph('item')}<b>Like an elite</b><small>no sure drop</small></li>`;
   const gold = t.gold ? `<li>${glyph('item')}<b class="iname r-zeroday">A world unique</b><small>${pc(t.gold)} a kill</small></li>` : '';
-  const own = t.uniques.map((u) => `<li class="${u.name ? '' : 'unknown'}">${glyph('item')}<b${u.name ? ' class="iname r-zeroday"' : ''}>${esc(u.name || UNKNOWN)}</b><small>Lv ${u.level}${u.got ? ' · found' : ''}</small></li>`).join('');
-  const odds = t.done ? `<p class="cx-foot">Uniques: both found. It drops each only once, so it drops only as an elite now.</p>` : t.uniques.length || t.native ? `<p class="cx-foot" title="${esc(`${pc(t.base)} a kill, +${pc(t.pity)} for each kill without one, back to ${pc(t.base)} when one drops.`)}">${t.native ? 'Native uniques' : 'Uniques'}: ${pc(t.base)} a kill, +${pc(t.pity)} a miss. Next kill <b class="you">${pc(t.chance)}</b>.</p>` : '';
-  return `<ul class="cx-loot">${sure}${gold}${own}</ul>${odds}`;
+  const every = group('every', 'Every kill', '', t.sure ? oddsBar(1, 'Every kill drops an item at its level.') : '', sure + gold);
+  const pity = (base, step) => `${pc(base)} a kill, +${pc(step)} for each kill without one, back to ${pc(base)} when one drops.`;
+  const uniq = t.done ? group('uniq', 'Uniques', 'both found: it drops only as an elite now', '', t.uniques.map((u) => lootRow(u, 'r-zeroday')).join(''))
+    : t.uniques.length || t.native ? group('uniq', t.native ? 'Native uniques' : 'Uniques', 'one you lack first', oddsBar(t.chance, `Next kill: ${pc(t.chance)}. ${pity(t.base, t.pity)}`), t.uniques.map((u) => lootRow(u, 'r-zeroday')).join('') || `<li class="unknown">${glyph('item')}<b>${UNKNOWN}</b><small>named on its first fall</small></li>`) : '';
+  const st = t.set, set = st ? group('set', st.pieces.length > 1 ? 'Set pieces' : 'Set piece', `<span class="lg-setname">${esc(st.names.join(' · '))}</span>`,
+    oddsBar(st.chance, st.lacking ? `Next kill: ${pc(st.chance)}. ${pity(st.base, st.pity)}` : `All found. It still drops one ${pc(st.found)} of kills.`), st.pieces.map((u) => lootRow(u, 'r-set', st.names.length > 1 ? ` · ${esc(u.set)}` : '')).join('')) : '';
+  return `<div class="cx-lg">${every}${uniq}${set}</div>`;
 }
 
 // ---------- the other pages ----------

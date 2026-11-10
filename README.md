@@ -99,6 +99,7 @@ comment saying what it does.
 | `dist/interrupt.mjs` | The interrupt: crossing a part's 50% or 25% tick on its due cycle cancels its move. |
 | `dist/order.mjs` | The order levers: parts whose right moment to break depends on the board. |
 | `dist/acts.mjs` | Boss acts (P4): a boss's three acts, its beat (the Backlash, a Mimic, a Decoy), and the ♛ left until its beat plays. |
+| `dist/floorbosses.mjs` | The floor 2 and 3 bosses' rules (CENTRIFUGE's Bidding, SHAKEDOWN's Ransom Clock, SHOULDER SURFER's Replay, RECURSION's Call), their phase verbs, and their uniques' hooks. |
 | `dist/mechanics.mjs` | The mechanics list: twenty third parts built lean, each rule's hooks in one place. Eleven strains and the eleven mutated ones are built from them (`STRAINS`). |
 | `dist/situations.mjs` | The moment on the board each situational skill is built for; the tray lights it. |
 | `dist/raid.mjs` | Crew bosses: phases and mechanics for KESSLER-FARM-00's three. |
@@ -139,7 +140,7 @@ comment saying what it does.
 | `dist/hidden.mjs` | Unknown servers along your floors' links, and tracing them. |
 | `dist/address.mjs` | Every room's grid address (C2). |
 | `dist/zone.mjs` | SPRAWL-00, the starting zone. |
-| `dist/rogue.mjs` | Rogue servers, where viruses gather, and the KESSLER-FARM-00 crew dungeon. |
+| `dist/rogue.mjs` | Rogue servers, where viruses gather (a floor-2 Pit's and a floor-3 Gauntlet's last room hold SHAKEDOWN and RECURSION), and the KESSLER-FARM-00 crew dungeon. |
 | `dist/root.mjs` | Root access: perks on a server you hold, by respawned rooms cleared. |
 | `dist/sockets.mjs` | Sockets: build a program in a cleared socket room; it changes its own server. |
 | `dist/specials.mjs` | Server specials: each traced server's rule (an upside and a cost) from its seed, its pull on invasions, and its leaning's id (`leaningOf`). |
@@ -172,7 +173,7 @@ comment saying what it does.
 | `dist/mail.mjs` | Letters, contracts (one engine, five givers) and your commission's retainer. |
 | `dist/content.mjs` | Fills and checks the written content's blanks. |
 | `dist/content/story.mjs`, `dist/content/contracts.mjs` | The story beats and contract templates (a letter set per giver), written in the editor. |
-| `dist/arcs.mjs`, `dist/arcs-view.mjs` | Floor jobs: each floor's fixed chain of contracts (its Boss step and extra letters), and its page in Mail. |
+| `dist/arcs.mjs`, `dist/arcs-view.mjs` | Floor jobs: each floor's fixed chain of contracts (its Boss step, its built boss in a road server's Core, and extra letters), and its page in Mail. |
 | `dist/threads.mjs`, `dist/threads-view.mjs`, `dist/content/threads.mjs` | Threads: quests found in rooms, their marks and dialogue, and their data. |
 | `dist/scanner.mjs`, `dist/scanner-view.mjs`, `dist/scanner.css` | The scanner: the Listening Post (its map node, card and hub terminal), its radio, the stations, the reel, the tape and what each pays. |
 | `dist/quest-view.mjs`, `dist/quest.css` | The quest window: a thread as an intercepted transmission. |

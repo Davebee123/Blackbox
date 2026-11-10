@@ -128,6 +128,19 @@
 .cx-loot small { font: 11px var(--mono); color: var(--dim); }
 .cx-loot li.unknown b { font-family: var(--mono); color: var(--gray); }
 .cx-loot li.unknown .glyph { color: var(--dim); }
+/* A boss's loot, Grouped (docs/floor-items.md): a group a source, its odds for the next kill as an amber bar. */
+.cx-lg { display: grid; gap: var(--s5); }
+.cxg-head { display: flex; align-items: baseline; gap: var(--s4); padding-bottom: var(--s2); border-bottom: 1px solid var(--line-strong); }
+.cxg-head .cx-label, .cxg-head small { white-space: nowrap; }
+.cxg-head small { font: 11px var(--mono); color: var(--dim); overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.cxg-odds { margin-left: auto; display: inline-flex; align-items: center; gap: var(--s3); }
+.cxg-bar { width: 96px; height: 6px; background: var(--inset); border: 1px solid var(--line); border-radius: var(--r-tag); overflow: hidden; }
+.cxg-bar b { display: block; height: 100%; background: var(--amber); }
+.cxg-odds em { font: 600 12px var(--mono); font-style: normal; color: var(--amber); min-width: 4ch; text-align: right; }
+.cxg-grp.set .cxg-bar b { background: var(--r-set); }
+.cxg-grp.set .cxg-odds em { color: var(--r-set); }
+.cxg-grp.set .cx-loot .glyph { color: var(--r-set); }
+@media (max-width: 520px) { .cxg-head { flex-wrap: wrap; } .cxg-bar { width: 64px; } }
 
 /* A boss's phases. */
 .cx-phases { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s3); }

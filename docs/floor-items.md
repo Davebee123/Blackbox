@@ -4,7 +4,7 @@
 under docs/loot-plan.md's principles. Prototyped as applets (tooltips, a boss's loot page).
 
 **Picked:** the boss loot page is *Grouped* (C): every kill, its uniques, its set piece, each with the next kill's odds
-as a bar. Item tooltips stay as built. The drop cap stays at under one unique or set piece an hour, set pieces
+as a bar. *Built* (codex-view.mjs lootTable). Item tooltips stay as built. The drop cap stays at under one unique or set piece an hour, set pieces
 included, so a player finishes about one set a floor: the one for the activity they favour.
 
 Marks: **✓** built · **◇** designed in the docs, kept · **✎** designed, rewritten here · **✚** new · **→** built, re-homed.
@@ -18,8 +18,8 @@ Past the bar, so nothing new.
 - **Sets ✓:** Hive Mind (floor 2 lair), Kestrel Clearance, Night Shift, Choirbook, Patchwork, Lantern Route, Glass Ceiling (from 14).
 - **◇ Tollbooth** (docs/genome.md 9.2), designed, not built: rename *Crowbar* (Wrecking Crew's) and *Ledger* (Glass
   Ceiling's) before it's built.
-- **Glass Ceiling's Rotor** (exploit 14) → CENTRIFUGE, which has a Rotor part. Its other pieces stay with GLASSJAW's bosses.
-- **Boss uniques ◇:** CENTRIFUGE: Governor, Cascade Failure. SHAKEDOWN: Paper Trail, Escrow. Both pairs still fit the
+- **Glass Ceiling's Rotor** (exploit 14) → CENTRIFUGE, which has a Rotor part. Its other pieces stay with GLASSJAW's bosses. *Built.*
+- **Boss uniques ✓:** CENTRIFUGE: Governor, Cascade Failure. SHAKEDOWN: Paper Trail, Escrow (*shakedown-escrow*: the Kestrel zero-day has the name too). Both pairs still fit the
   reworked fights (Bidding rewards a delay, and the Ransom Clock is a countdown).
 - **Native pairs ◇:** DEADBOLT, BACK ORIFICE, PATCH TUESDAY, MIRRORSHADE, and SLEEPWALKER, whose *Night Light* is renamed
   **Lucid**.
@@ -28,13 +28,13 @@ Past the bar, so nothing new.
 
 | Unique | Slot · Lv | Source | Effect | |
 |---|---|---|---|---|
-| Privacy Screen | shell 18 | SHOULDER SURFER | The first part each fight that plays back or copies your command misses with it. | ✎ (old text named the Logger's log) |
-| Muscle Memory | script 18 | SHOULDER SURFER | A command fired exactly 2 cycles after your last deals 10% more. | ✎ (old text named Sync Windows) |
-| Tail Call | exploit 19 | RECURSION | When you break a part, your burns on the other parts tick once at once. | ✚ |
-| Stack Guard | proxy 19 | RECURSION | The next attack on you within 2 cycles of a part breaking deals 20% less. | ✚ |
+| Privacy Screen | shell 18 | SHOULDER SURFER | The first part each fight that plays back or copies your command misses with it. | ✓ |
+| Muscle Memory | script 18 | SHOULDER SURFER | A command fired exactly 2 cycles after your last deals 10% more. | ✓ |
+| Tail Call | exploit 19 | RECURSION | When you break a part, your burns on the other parts tick once right away. | ✓ |
+| Stack Guard | proxy 19 | RECURSION | The next attack on you within 2 cycles of a part breaking deals 20% less. | ✓ |
 | HASHLORD, FLOODWALL, ECHOLALIA pairs | 16–18 | their lairs | docs/genome.md 7.4 | ◇ |
 
-**Set source →** On-Call's **Pager** (proxy 18) moves from the floor 3 lair boss to SHOULDER SURFER.
+**Set source →** On-Call's **Pager** (proxy 18) moves from the floor 3 lair boss to SHOULDER SURFER. *Built* (floor 4's lair boss still drops it).
 
 ## Floor 4 · Coldline (19–26) · sets ✓ · 17 → 25 uniques
 

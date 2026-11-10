@@ -29,6 +29,7 @@ import { raidStart, raidLand, raidCycle, raidShield, raidBroke, raidTaken, raidA
 import { tellStart, tellCycle, tellLand, tellBroke, chargeNow, tellIntents, tellSigint, tellSigintCheck, tellOn, tellsOf, overclockMult, hotCharge } from './tells.mjs';
 import { prepareTicks, onHit as tickHit, blastCut, BOSS_RULES, TICKS } from './interrupt.mjs';
 import { actsStart, lashHit, lashLand, actIntents, actBegins, actCap } from './acts.mjs';
+import { fbStart, fbPower, fbLanded, fbMisses, fbSlowed, fbBroke, fbAim, fbCommand, fbDealt, fbVerb, FB_VERBS, fbCycle, fbIntents, fbLogged, surfShut } from './floorbosses.mjs';
 import { runLate, TELL, TELLS, ROOM_FAMILIES, DAMPER_KINDS, floorFor, line, lift, own } from './data.mjs';
 import { holdsPart, objectiveBroke, objectiveCycle, objectiveBonus, bonusXp, bonusRolls, backupHit } from './objectives.mjs';
 import { mechValidate, mechIntercept, mechFired, mechPower, exposedCut, mechLanded, mechCommandHit, mechStart, mechClose, mechBroke, lagged, stunnedNow, missedTurn } from './mechanics.mjs';
@@ -328,6 +329,7 @@ export function damageMultiplier(s, p, opts = {}) {
     if (e.synced) m *= 1 + CONFIG.sync.bonus;
     for (const x of fxFire(s, 'hit', { target: p, do: 'damage%', cmd: !opts.dot && !opts.by ? e.commanding?.id : null })) m *= 1 + x.value / 100;
     m *= buffMult(s); // a timed buff from a break (Floodgate, Fuse Map)
+    m *= fbDealt(s, opts); // Muscle Memory (floorbosses.mjs)
     if (!opts.dot && e.throttledUntil >= e.cycle) m *= TELL.copy.throttled; // a debuff the Mimic copied onto you (tells.mjs): your hits deal half
   }
   if (opts.dot) for (const x of fxFire(s, 'custom', { do: 'dot%' })) m *= 1 + x.value / 100;
@@ -697,6 +699,18 @@ export function bossTable(s, boss) {
     sure: sureDrop(boss) ? (raid ? 'custom' : 'tuned') : null, yellow: BOSS_LOOT.yellow, raid, native, gold: raid ? BOSS_LOOT.raid.gold : 0,
     chance: native ? lairChance(s, 'you') : bossDone(s, boss) ? 0 : bossChance(s, boss), base: odds.chance, pity: odds.pity, done: !native && bossDone(s, boss),
     uniques: ids.map((id) => ({ id, name: named(s, id) ? UNIQUES[id].name : null, level: UNIQUES[id].level, got: !!s.collection?.[id] })).sort((a, b) => a.level - b.level),
+    set: bossSetTable(s, boss),
+  };
+}
+// A boss's set pieces (sets.mjs SET_LOOT boss, a crew boss's crew): ??? until found, with the next kill's chance and its
+// pity while you lack one, a flat chance once you hold them all. null: it drops none of its own (a native boss's
+// pieces are its floor's lair table).
+export function bossSetTable(s, boss) {
+  const B = BOSSES[boss], ctx = B?.raid ? { kind: 'crew', id: boss } : B && !B.native ? { kind: 'boss', id: boss } : null, pool = ctx ? setDropPool(ctx) : [], odds = ctx && SET_LOOT[ctx.kind];
+  if (!pool.length || !odds) return null;
+  return {
+    names: [...new Set(pool.map((u) => setOf(u.id)?.name).filter(Boolean))], chance: setChance(s, ctx), base: odds.chance, pity: odds.pity, found: odds.found, lacking: pool.some((u) => !s.collection?.[u.id]),
+    pieces: pool.map((u) => ({ id: u.id, name: s.collection?.[u.id] ? u.name : null, set: setOf(u.id)?.name || '', level: u.level, got: !!s.collection?.[u.id] })).sort((a, b) => a.level - b.level),
   };
 }
 // The Listening Post (a program, sockets.mjs): kills on a server running one roll for the unique you name twice as often.
@@ -2061,6 +2075,7 @@ function engage(s) {
   logFight(s, e.virus); // the Codex tab: a boss fought, a mutation and what it rode on (genome.mjs)
   prepareTicks(s); // the interrupt's ticks on every part, and a boss's rule (interrupt.mjs; not a crew boss or a breach)
   actsStart(s); // a P4 boss's beat on its part (acts.mjs)
+  fbStart(s); // the floor 2 and 3 bosses' rules (floorbosses.mjs)
   tellStart(s); // a solo fight's tells (tells.mjs)
 }
 
@@ -2950,7 +2965,7 @@ export function hit(s, p, base, opts = {}) {
   // Extortion: damage dealt to a winding-up Demand in the 2 cycles before it lands calls it off.
   const w = p.attack?.windup;
   if (w && dealt > 0 && p.integrity > 0 && p.attack.due - e.cycle <= 2) {
-    p.attack.wound = (p.attack.wound || 0) + dealt;
+    p.attack.wound = (p.attack.wound || 0) + Math.round(dealt * (1 + (fxHas(s, 'windup%') ? Number(fxHas(s, 'windup%').fx.value) || 0 : 0) / 100)); // Paper Trail
     if (p.attack.wound >= w) {
       p.attack.due = e.cycle + p.attack.interval;
       p.attack.wound = 0;
@@ -3017,6 +3032,7 @@ function bossPhases(s) {
       if (act === 'voice') say = secondVoice(s) || say; // HOLLOW CHOIR
       if (act === 'round') { v.round = 3; v.roundFrom = e.cycle; } // it records only what you fire after it starts
       if (act === 'doppelganger') say = doppelganger(s);
+      if (FB_VERBS.has(act)) say = fbVerb(s, act) || say; // the floor 2 and 3 bosses (floorbosses.mjs)
     }
     emit(s, 'phase', `PHASE ${v.phases.filter((x) => x.done).length + 1}. ${say}`, { boss: v.boss });
   }
@@ -3068,7 +3084,7 @@ function lien(s, p) {
 // the Ledger's Collection pays every Lien off.
 export function liensPaid(s, p) {
   if (!p || !s.encounter?.virus) return;
-  if (p.lien || p.broadcast) (p.played ||= []).push(s.encounter.cycle);
+  if (p.lien || p.broadcast || p.beat) (p.played ||= []).push(s.encounter.cycle); // beat: a floor boss's own (acts.mjs beat 'part')
   if (p.lien) { s.encounter.virus.liens = 0; liftOf(s); }
 }
 
@@ -3185,6 +3201,7 @@ function breakPart(s, p) {
   e.metrics.breakOrder.push(p.id);
   if (p.kind !== 'fragment') e.breaks = (e.breaks || 0) + 1;
   mechBroke(s, p); // Vendetta (mechanics.mjs)
+  fbBroke(s, p); // RECURSION's Return, Tail Call, Stack Guard (floorbosses.mjs)
   objectiveBroke(s, p); // a Priority's part (objectives.mjs)
   // Mirror: break one twin while the other lives, and it reboots a few cycles later (at most twice).
   const tw = twinOf(s, p);
@@ -3404,6 +3421,7 @@ function useAbility(s, intent, auto = false) {
   if (auto !== 'daemon') intent = bendCommand(s, intent);
   const id = intent.ability;
   const a = id === 'spike' ? { ...ABILITIES.spike, name: spikeName(s) } : ABILITIES[id];
+  intent = fbAim(s, intent, a); // RECURSION: a one-part command reaches only the top frame
   const target = part(s, intent.target);
   // What a set bonus compares after the skill (sets.mjs SET_HOOKS.used): your shield, the parts' jams and timers, the
   // helpers and burns already out, and the crew's Signal and shields. Only with a set piece loaded.
@@ -3418,6 +3436,7 @@ function useAbility(s, intent, auto = false) {
   const base = target ? skillBase(s, id, target) : 0;
   e.lastSkill = id;
   e.lastCmd = { id, cycle: e.cycle, target: intent.target || null }; // what the Mimic plays back (tells.mjs)
+  fbCommand(s); // Muscle Memory's rhythm
   e.cmdLog = [...(e.cmdLog || []).slice(-2), e.lastCmd]; // a Mimic.exe plays back the dearer of your last two
   // An empty cycle Spikes the last part you hit.
   if (base && auto !== 'daemon') e.lastAttack = `spike ${intent.target}`;
@@ -3485,6 +3504,7 @@ function useAbility(s, intent, auto = false) {
     }
     target[a.status + 'Until'] = id === 'rate-limit' ? Math.max(target[a.status + 'Until'] || 0, e.cycle + n) : e.cycle + n;
     emit(s, 'status', id === 'rate-limit' ? `${target.name} ${STATUS_WORD[a.status]} for its next attack.` : `${target.name} ${id === 'tag' && target.tagBoost ? `Tagged (burns +${Math.round((CONFIG.surprise.tagged - 1) * 100)}%, timer visible)` : STATUS_WORD[a.status]} for ${n} ${n === 1 ? 'cycle' : 'cycles'}.`, { target: target.id, mark: a.status, ability: id });
+    if (a.status === 'throttled') fbSlowed(s, target, a.name); // the Gavel's bid withdrawn, Cascade Failure (floorbosses.mjs)
   }
   if (a.tick && a.verb === 'burn' && target) {
     // Inject: Long Fuse makes it longer. Reapplied, it refreshes the one already on the part (the longer
@@ -3524,6 +3544,7 @@ function useAbility(s, intent, auto = false) {
   }
   const moved = a.delay && target ? delayAttack(s, target, a.delay) : 0; // a class hook answering a tell needs it (Suspend, Spoofed ACK)
   if (moved) {
+    fbSlowed(s, target, 'delay'); // the Gavel's bid withdrawn, Cascade Failure (floorbosses.mjs)
     if (target.attack.ramp && target.attack.step) { target.attack.step = 0; emit(s, 'status', `${target.attack.name} resets, and its ramp starts over.`, { target: target.id }); }
     e.metrics.interrupts++;
     emit(s, 'interrupt', `${target.attack.name} delayed ${moved} ${moved === 1 ? 'cycle' : 'cycles'}.`, { target: target.id });
@@ -3845,7 +3866,7 @@ function landAttack(s, p) {
   const e = s.encounter;
   const atk = p.attack;
   liftOf(s);
-  const power = attackAmount(p) * (roundOf(e.virus, e.cycle)?.mult ?? 1) * (turboOn(e)?.taken ?? 1) * c2Gnaw(s, p) * (e.soft || 1) * gapTaken(levelGap(s)) * (p.boosted ? CONFIG.reactiveBonus : 1) * (on(s, p, 'throttled') ? (hasTalent(s, 'backpressure') ? 0.25 : SKILLS.throttled) : 1) * mechPower(s, p, true);
+  const power = attackAmount(p) * (roundOf(e.virus, e.cycle)?.mult ?? 1) * (turboOn(e)?.taken ?? 1) * c2Gnaw(s, p) * (e.soft || 1) * gapTaken(levelGap(s)) * (p.boosted ? CONFIG.reactiveBonus : 1) * (on(s, p, 'throttled') ? (hasTalent(s, 'backpressure') ? 0.25 : SKILLS.throttled) : 1) * mechPower(s, p, true) * fbPower(s, p, atk);
   // A hit: a damage attack, or a special that also hits (the Scrambler's Scramble). Its size is `hit`, scaled like the rest.
   const hits = atk.effect === 'damage' || !!atk.hit, hitPower = atk.hit ? (power * atk.hit) / Math.max(1, atk.amount) : power;
   p.boosted = false;
@@ -3872,6 +3893,8 @@ function landAttack(s, p) {
   atk.due = e.cycle + atk.interval; // it lands: the next attack can be delayed again
   atk.n = (atk.n || 0) + 1; // its landings: a charge rides one of them (tells.mjs)
   liensPaid(s, p); // the Ledger's Collection: its size is set (power, above), the Liens are paid
+  fbLanded(s, p, atk); // a floor boss's rule on a landing: the Gavel's bid, a Deadline paid (floorbosses.mjs)
+  if (fbMisses(s, p, atk)) return; // Privacy Screen: a playback misses
   // A volley (a Repeater's Double Tap, a Prism's Spread): its next hit the next cycle, then an interval after the first.
   if (p.taps) {
     if (!atk.tap) atk.volley = e.cycle;
@@ -3879,7 +3902,7 @@ function landAttack(s, p) {
     if (atk.tap < p.taps) atk.due = e.cycle + 1; else { atk.due = Math.max(e.cycle + 1, atk.volley + atk.interval); atk.tap = 0; atk.volley = null; }
   }
   if (atk.ramp) atk.step = (atk.step || 0) + 1; // Floodgate: one harder each time
-  if (atk.dump) e.keylog = 0; // Keylogger: the log empties into the Dump
+  if (atk.dump && !e.virus.surf?.top) e.keylog = 0; // Keylogger: the log empties into the Dump (SHOULDER SURFER's from the top: never)
   if (atk.effect === 'damage' && backupHit(s, p, hitPower)) return; // a Backup's even cycle: it takes the hit, not you (objectives.mjs)
   // Null Route: this cycle's attacks miss (and Opening lights up).
   if (e.nullRoute > 0 || e.buffs['null-route'] >= e.cycle) { dodged(e); emit(s, 'blocked', `${atk.name} misses. You null-routed it.`, { source: p.id }); openProc(s, 'slipped'); return slipLonger(s); }
@@ -4121,6 +4144,7 @@ export function playerPhase(s, phase = 'all') {
   const logger = livingParts(s).find((x) => x.syncOnly);
   if (logger && (e.queue || e.lastAttack || (prog && !prog.hold)) && !e.synced && !(e.queue && e.queue.ability === 'hold') && logger.attack) {
     e.keylog = (e.keylog || 0) + 1;
+    fbLogged(s); // SHOULDER SURFER's Dump plays it back (floorbosses.mjs)
     if (e.keylog >= 3 && logger.attack.due > e.cycle + 1) { logger.attack.due = e.cycle + 1; emit(s, 'status', `The ${logger.name} has logged 3 keystrokes. It Dumps next cycle.`, { target: logger.id }); }
     else if (e.keylog < 3) emit(s, 'status', `The ${logger.name} logs a keystroke (${e.keylog}/3).`, { target: logger.id });
   }
@@ -4543,6 +4567,7 @@ function cycleClose(s, landed) {
   }
   // An objective's clock (objectives.mjs): the Exfil's upload completes and it gets away, Uptime held wins, a Priority missed.
   { const end = objectiveCycle(s); if (end) return finish(s, end); }
+  { const end = fbCycle(s); if (end === 'over') return; if (end) return finish(s, end); } // a floor boss's clock (floorbosses.mjs)
 
   e.cycle++;
   e.elapsedMs = 0;
@@ -4592,6 +4617,7 @@ export function rollSync(s) {
   const surprise = classOf(s) === 'infiltrator' && e.cycle === 1;
   const width = (surprise ? CONFIG.surprise.width : keylogger ? 0.14 : c.width) * (fxHas(s, 'sync-wide') ? 1.5 : 1);
   if (!keylogger && !surprise && hash(311.7) >= syncChance(s)) { e.sync = null; return; }
+  if (surfShut(s) && !surprise) { e.sync = null; return; } // SHOULDER SURFER: a window every other cycle
   e.sync = { at: c.from + hash(0) * (c.to - width - c.from), width, ...(surprise ? { surprise: true } : {}) };
 }
 // Chance a cycle opens a window: 25%, plus the Sync stat on your protocols.
@@ -4697,6 +4723,7 @@ export function intents(s, columns = 4) {
   for (const p of livingParts(s)) if (p.frozen && !p.thawed && p.thawAt - e.cycle >= 0 && p.thawAt - e.cycle < columns) out.push({ source: p.id, name: 'Thaw', effect: 'thaw', amount: p.chill ? attackAmount({ ...p, attack: p.chill }) : 0, col: p.thawAt - e.cycle, hidden: false, kind: p.kind });
   for (const p of livingParts(s)) if (asleep(p) && p.bootAt && p.bootAt - e.cycle >= 0 && p.bootAt - e.cycle < columns) out.push({ source: p.id, name: 'Boot', effect: 'boot', amount: Math.round((p.bootFrom?.max || 0) * p.spare.at), col: p.bootAt - e.cycle, hidden: false, kind: p.kind });
   out.push(...actIntents(s, columns)); // a P4 boss's Backlash (acts.mjs)
+  out.push(...fbIntents(s, columns)); // SHAKEDOWN's leak (floorbosses.mjs)
   out.push(...told);
   if (bodyRules(e) && hooks.roomIntents) out.push(...hooks.roomIntents(s, columns)); // a room body's other moves (families.mjs: a Courier's deliveries)
   // A packed part's chips (packParts): their timing and amount, named ???, marks off (view.mjs). Tells keep their own.

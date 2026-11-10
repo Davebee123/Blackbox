@@ -230,6 +230,15 @@ export const FX_DO = {
   'quiet-trip': { when: ['custom'], label: 'keeps a Tripwire you break quiet' },
   'cast-short': { when: ['custom'], label: "shortens a compiled cast's effect by X cycles", value: true },
   'no-after': { when: ['custom'], label: 'stops a tell that lands from taking a skill offline, Corrupting you or leaving you Hung' },
+  // The floor 2 and 3 bosses' uniques (floorbosses.mjs).
+  governor: { when: ['custom'], label: "makes an attack that lands within 2 cycles of its part's last one deal X% less", value: true },
+  'slow-hit': { when: ['custom'], label: 'deals X damage to a part when you delay or Throttle its attack', value: true },
+  'windup%': { when: ['custom'], label: 'makes your hits count X% more toward calling off a wind-up, such as a Deadline', value: true },
+  late: { when: ['custom'], label: "makes a boss's enrage and the Ransom Clock come X cycles later", value: true },
+  screen: { when: ['custom'], label: 'makes the first part each fight that plays back or copies your command miss with it' },
+  rhythm: { when: ['custom'], label: 'makes a command fired exactly 2 cycles after your last deal X% more', value: true },
+  'break-burns': { when: ['custom'], label: 'makes your burns on the other parts tick once right away when you break a part' },
+  'break-guard': { when: ['custom'], label: 'makes the next attack on you within 2 cycles of a part breaking deal X% less', value: true },
   'decoy-pass': { when: ['custom'], label: "lets your commands through the Decoy's bend where you aim them, at X% of their damage, and nothing bounces back", value: true },
   // The deep uniques (levels 39-50, docs/loot-plan.md Batch 1). Stats first: what they add, and to what.
   'stat+': { when: ['always'], label: 'adds X to your stat', value: true, stat: true },

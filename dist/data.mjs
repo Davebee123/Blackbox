@@ -947,6 +947,7 @@ export function makePart(spec, kind, scale, extraArmor = 0) {
     ...(spec.packer ? { packer: true } : {}), ...(spec.badblock ? { badblock: spec.badblock } : {}), ...(spec.damper ? { damper: true } : {}), ...(spec.frozen ? { frozen: spec.frozen } : {}),
     ...(spec.mech ? { mech: spec.mech } : {}), // the mechanics list (mechanics.mjs): its rule, by id
     ...(spec.wardCommands ? { wardCommands: true } : {}), // HASHLORD's Pool Lock: its ward holds back your commands only, not burns or helpers
+    ...(spec.gavel ? { gavel: true } : {}), ...(spec.deadline ? { deadline: true } : {}), ...(spec.frame != null ? { frame: spec.frame } : {}), ...(spec.beat ? { beat: true } : {}), // the floor bosses' own parts (floorbosses.mjs)
     ...(spec.lien ? { lien: spec.lien } : {}), ...(spec.broadcast ? { broadcast: true } : {}), // REPO MAN's Ledger (its Collection grows by each Lien), RELAY-KING's Relay
     attack: spec.attack ? { ...spec.attack, due: spec.attack.first, amount: spec.attack.amount } : null,
     exposedUntil: 0,
@@ -1100,6 +1101,41 @@ export const BOSSES = {
   // second voice, beating two cycles behind the first; at 25% the Round: each beat plays back your last three commands.
   choir: { long: { hp: 0.95, dmg: 1.6, enrageAt: 40 }, name: 'HOLLOW CHOIR', family: 'ghostroot', third: 'mimic', hp: 1.4, dmg: 1, enrageAt: 16, acts: { beat: 'copy' }, signature: { name: 'Canon', rule: 'Its Mimic copies your command on its beat. At 50% a second voice beats 2 cycles behind the first, and at 25% each beat plays back your last three commands.' },
     phases: [{ at: 0.5, do: ['fork:mimic', 'voice'], say: 'A second voice joins the Hollow Choir, two beats behind the first.' }, { at: 0.25, do: ['round'], say: 'The Hollow Choir sings the round. Each beat plays back your last three commands.' }] },
+  // The floor 2 and 3 bosses (docs/solo-bosses.md "Proposed: floors 2–8", floorbosses.mjs): own parts only (own), a
+  // crown (♛) and its act ticks at 60% and 30% (ticks), their beat on a part of their own (acts 'part'), and a verb an act.
+  // throne: the rogue server kind and floor whose last room it holds (rogue.mjs); the others, a floor job's Core (arcs.mjs).
+  // CENTRIFUGE: floor 2's floor job (arcs.mjs), GLASSJAW's. Bidding on the Gavel; its buyers join from its sales.
+  centrifuge: { long: { hp: 1, dmg: 0.55, enrageAt: 36 }, name: 'CENTRIFUGE', family: 'ransomware', author: 'glassjaw', own: true, crown: 'rotor', ticks: [0.6, 0.3], floor: 14, hp: 1.15, dmg: 1, enrageAt: 18, acts: { beat: 'part', part: 'gavel' },
+    extra: [{ id: 'rotor', name: 'Rotor', integrity: 44, armor: 1, loot: 'Rotor Bearing', special: true, attack: { name: 'Encrypt', effect: 'encrypt', amount: 4, interval: 4, first: 4 } },
+      { id: 'gavel', name: 'Gavel', integrity: 40, armor: 2, loot: 'Gavel Head', gavel: true, beat: true, attack: { name: 'Surge', effect: 'damage', amount: 14, interval: 4, first: 3 } }],
+    buyers: { tollgate: { id: 'lockbox', name: 'Lockbox', integrity: 16, armor: 0, loot: 'Lock Pin', ward: 'rotor' }, swarmline: { id: 'mirror', name: 'Mirror', integrity: 18, armor: 1, loot: 'Mirror Shard', twin: 'gavel', attack: { name: 'Splice', effect: 'damage', amount: 10, interval: 3 } }, palemask: { id: 'veil', name: 'Veil', integrity: 20, armor: 1, loot: 'Veil Thread', veiled: true, attack: { name: 'Sting', effect: 'damage', amount: 12, interval: 3 } } },
+    signature: { name: 'Bidding', rule: 'Each Surge the Gavel lands spins it faster, from every 4 cycles to 3, then 2. A delay or Throttle on the Gavel withdraws it to every 4. A Surge at every 2 sells, and the buyer named on the Gavel joins the fight as a part. The Gavel then drops back to every 3.' },
+    about: 'A two-part fight that grows parts if its Gavel runs fast. TOLLGATE\'s Lockbox wards the Rotor, SWARMLINE\'s Mirror twins the Gavel, and PALEMASK\'s Veil hides its timers.',
+    phases: [{ at: 0.6, do: ['reserve'], name: 'Reserve price', say: 'CENTRIFUGE sets a reserve price. A delay or Throttle steps the Gavel back only one.' }, { at: 0.3, do: ['lot2'], name: 'Second lot', say: 'CENTRIFUGE opens a second lot. Each sale brings two buyers.' }] },
+  // SHAKEDOWN: the throne of floor 2's Pits (rogue.mjs), TOLLGATE's. The Ransom Clock on its bar; its Demand's Deadline pays it.
+  shakedown: { long: { hp: 1, dmg: 0.55, enrageAt: 36 }, name: 'SHAKEDOWN', family: 'ransomware', author: 'tollgate', own: true, crown: 'collector', ticks: [0.6, 0.3], floor: 12, hp: 0.75, dmg: 1, enrageAt: 18, acts: { beat: 'part', part: 'demand' }, throne: { kind: 'pit', floor: 2 },
+    extra: [{ id: 'collector', name: 'Collector', integrity: 44, armor: 1, loot: 'Collection Plate', special: true, attack: { name: 'Surge', effect: 'damage', amount: 12, interval: 4, first: 3 } },
+      { id: 'demand', name: 'Demand', integrity: 34, armor: 1, loot: 'Ransom Note', deadline: true, beat: true, attack: { name: 'Deadline', effect: 'damage', amount: 15, interval: 5, first: 4, windup: 14 } },
+      { id: 'lockbox', name: 'Lockbox', integrity: 16, armor: 0, loot: 'Lock Pin', ward: 'demand' }],
+    signature: { name: 'Ransom Clock', rule: 'A 12-cycle clock. At 0 it leaks 30% of your max and restarts at 6. A Deadline you let land pays the ransom, and the clock gains 3. One you call off buys nothing.' },
+    about: 'A race against its clock, where taking a Deadline buys time. While its Lockbox stands, the Demand loses at most a quarter of its max a cycle.',
+    phases: [{ at: 0.6, do: ['demand2'], name: 'Second demand', say: 'SHAKEDOWN sends a second Demand. Its Deadline lands on the same cycle as the first.' }, { at: 0.3, do: ['notice'], name: 'Final notice', say: 'SHAKEDOWN sends a final notice. Each leak now re-arms the Demands and brings the Lockbox back.' }] },
+  // SHOULDER SURFER: floor 3's floor job (arcs.mjs), NULL CHOIR's. A Logger that only windows hurt, every other cycle.
+  shouldersurfer: { long: { hp: 1, dmg: 0.55, enrageAt: 44 }, name: 'SHOULDER SURFER', family: 'ghostroot', author: 'nullchoir', own: true, crown: 'logger', ticks: [0.6, 0.3], floor: 18, hp: 0.9, dmg: 1, enrageAt: 18, acts: { beat: 'part', part: 'logger' },
+    extra: [{ id: 'logger', name: 'Logger', integrity: 36, armor: 1, loot: 'Logger Spool', special: true, syncOnly: true, beat: true, attack: { name: 'Dump', effect: 'damage', amount: 14, interval: 6, first: 6, dump: true, noCrit: true } },
+      { id: 'pulse', name: 'Pulse Node', integrity: 30, armor: 1, veiled: true, loot: 'Pulse Kernel', attack: { name: 'Surge', effect: 'damage', amount: 11, interval: 4, first: 3 } },
+      { id: 'scrambler', name: 'Scrambler', integrity: 28, armor: 1, veiled: true, loot: 'Signal Key', attack: { name: 'Scramble', effect: 'scramble', amount: 2, hit: 8, interval: 4, first: 4 } }],
+    signature: { name: 'Replay', rule: 'A Sync Window opens every other cycle. The Logger takes damage only from commands fired in it. Each command fired outside it is logged, and at 3 the Dump plays your last logged command back at you at its full hit.' },
+    about: 'A timing fight. Its Logger only takes damage inside a window, and what you fire outside it comes back at you. The Pulse Node lands on the closed cycles.',
+    phases: [{ at: 0.6, do: ['again'], name: 'Again', say: 'SHOULDER SURFER plays it again. Every 4 cycles it plays your last three commands back at you.' }, { at: 0.3, do: ['top'], name: 'From the top', say: 'SHOULDER SURFER starts from the top. The log never clears, and the Dump plays the biggest command logged.' }] },
+  // RECURSION: the last room of floor 3's Gauntlets (rogue.mjs), NULL CHOIR's. A call stack: main() under its frames.
+  recursion: { long: { hp: 1, dmg: 0.55, enrageAt: 38 }, name: 'RECURSION', family: 'ghostroot', author: 'nullchoir', own: true, crown: 'main', ticks: [0.6, 0.3], floor: 19, hp: 1.1, dmg: 1, enrageAt: 18, acts: { beat: 'part', part: 'main' }, throne: { kind: 'gauntlet', floor: 3 },
+    extra: [{ id: 'main', name: 'main()', integrity: 50, armor: 1, loot: 'Stack Base', special: true, frame: 0, beat: true, attack: { name: 'Surge', effect: 'damage', amount: 12, interval: 4, first: 4 } },
+      { id: 'frame1', name: 'Frame 1', integrity: 30, armor: 1, loot: 'Frame Pointer', frame: 1, attack: { name: 'Surge', effect: 'damage', amount: 9, interval: 4, first: 3 } },
+      { id: 'frame2', name: 'Frame 2', integrity: 22, armor: 0, loot: 'Return Address', frame: 2, attack: { name: 'Surge', effect: 'damage', amount: 8, interval: 4, first: 2 } }],
+    signature: { name: 'Call', rule: 'Frames stack, with main() at the bottom. Your one-part commands reach only the top frame. Burns, helpers and area hits reach every frame. Every 4 cycles the top frame pushes a new one at 60% of its max, unless it is under a quarter of its own.' },
+    about: 'A stack of frames with its ♛ at the bottom. You dig down while it keeps adding to the top.',
+    phases: [{ at: 0.6, do: ['return'], name: 'Return', say: 'RECURSION returns. A frame that breaks makes the one beneath attack a cycle sooner and 50% harder.' }, { at: 0.3, do: ['overflow'], name: 'Overflow', say: 'RECURSION overflows. At 5 frames every frame attacks at once.' }] },
   // Native bosses (network.mjs): each network rolls one of these for its lair, a rogue server of its own. Solo bosses
   // on the tells framework: every tell open at their level, a signature charge of their own (TELLS, TELL_SETS by id;
   // a strain boss renames its strain's charge), a third part they always bring (third), and phases. Their drops are
@@ -1298,6 +1334,10 @@ export const TELL_SETS = {
   'nb-backorifice': ['spamrun', 'selfupdate', 'overcharge', 'resync'],
   'nb-mirrorshade': ['glasscut', 'persistence', 'godark'], // its charge is a plain one now: the Mimic is its one feedback amplifier
   'nb-hashlord': ['difficultybomb', 'blockreward', 'keyrotation'],
+  // The floor 2 and 3 bosses (docs/genome.md 7.4): a charge, a cast and a third, an act each.
+  centrifuge: ['fulldisk', 'extortion', 'keyrotation'],
+  shakedown: ['overcharge', 'extortion', 'keyrotation'],
+  shouldersurfer: ['overcharge', 'persistence', 'keyrotation'],
 };
 
 // ---------- the genome (genes.mjs, docs/genome.md) ----------
@@ -1450,7 +1490,8 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   const own = overrides.boss && pool.find((spec) => spec.id === BOSSES[overrides.boss]?.third); // a native boss brings its own (data BOSSES nb-*)
   const third = genes ? pool.find((spec) => genes.includes(spec.gene)) || null : pool.length ? own || pool[overrides.boss ? 0 : (Math.imul((seed >>> 0) ^ 0x7f4a7c15, 2246822519) >>> 0) % pool.length] : null;
   // A forced basic (overrides.basic: the Codex's sample, a probe) takes the Pulse Node's place.
-  let specs = [...open.filter((spec) => spec.pool !== 'third' || spec === third || (GUARDS[familyId] && genes?.includes(spec.gene))), ...(BOSSES[overrides.boss]?.extra || [])]; // a boss's own parts (HASHLORD's Pool Lock)
+  let specs = BOSSES[overrides.boss]?.own ? [...BOSSES[overrides.boss].extra] // a boss of its own parts only (the floor bosses, floorbosses.mjs)
+    : [...open.filter((spec) => spec.pool !== 'third' || spec === third || (GUARDS[familyId] && genes?.includes(spec.gene))), ...(BOSSES[overrides.boss]?.extra || [])]; // a boss's own parts (HASHLORD's Pool Lock)
   let share = (spec) => (spec.pool === 'third' ? 1 : specs.some((x) => x.pool === 'third') ? CONFIG.thirdTrim : 1);
   if (rolled2) {
     const r = rolled2, sig = family.parts.find((x) => x.special), copy = { ...r.basic, id: r.basic.id + '2', name: r.basic.name + ' 2', copy: true };

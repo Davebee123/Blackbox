@@ -593,10 +593,29 @@ Each plays in acts (below) with a part and a rule of its own, and a mechanic an 
 
 On the board: ♛ on the crown part, ×*n* fragments on the Relay, §*n* Liens on the Ledger, *round* on a Mimic.
 
+**Floor bosses** (floorbosses.mjs, docs/boss-guide.md). Floors 2 and 3 have bosses of their own: parts of their own
+only, the ♛'s act ticks at **60% and 30%** (every other part's ticks stay at 50% and 25%), the beat on a part of their
+own, a tell an act from their set, and a verb an act. 1× to 1.15× Integrity; they enrage at cycle 36 to 44.
+
+| Boss | Where | Lv | Its rule (on its row) | Act 2 (♛ at 60%) | Act 3 (♛ at 30%) |
+|---|---|---|---|---|---|
+| CENTRIFUGE (GLASSJAW) | Floor 2's floor job: its Boss step's server's Core | 14 | **Bidding**, on the Gavel: each Surge it lands takes it from every 4 cycles to 3, then 2. A delay or Throttle on it withdraws it to 4. A Surge at every 2 sells to the buyer it names, whose part joins (TOLLGATE's Lockbox wards the Rotor ♛, SWARMLINE's Mirror twins the Gavel, PALEMASK's Veil hides its timers); the Gavel drops to every 3 | **Reserve price**: a withdraw steps it back one | **Second lot**: two buyers a sale |
+| SHAKEDOWN (TOLLGATE) | The last room of every floor-2 Pit; back an hour after it falls | 12 | **Ransom Clock**, on the Collector ♛: 12 cycles; at 0 it leaks 30% of your max and restarts at 6. A Deadline (the Demand's, a wind-up) that lands adds 3; one called off buys nothing. Its Lockbox wards the Demand | **Second demand**, its Deadline on the same cycle; the Lockbox wards it too | **Final notice**: a leak re-arms the Demands and brings the Lockbox back |
+| SHOULDER SURFER (NULL CHOIR) | Floor 3's floor job: its Boss step's server's Core | 18 | **Replay**, on the Logger ♛: a Sync Window on even cycles only. The Logger takes damage only from commands fired in it; each one outside is logged, and at 3 (or every 6 cycles) its Dump plays your last logged command back at its full hit (a flat Dump if it wasn't a hit). The Pulse Node lands on the shut cycles | **Again**: every 4 cycles it plays your last three commands back, each at 40% | **From the top**: the log never clears, and the Dump plays the biggest command logged |
+| RECURSION (NULL CHOIR) | The last room of every floor-3 Gauntlet; back an hour after it falls | 19 | **Call**: frames stack over main() ♛. A one-part command at a lower frame lands on the top one; burns, helpers and area hits reach every frame. Every 4 cycles the top frame pushes a new one at 60% of its max, unless it is under a quarter of its own | **Return**: a frame that breaks makes the one beneath attack a cycle sooner, 50% harder | **Overflow**: at 5 frames every frame attacks at once, the cycle after the Call |
+
+A floor job's Boss step points at a server on its floor's main road (never the lair); once the chain reaches the step,
+that server's Core holds the boss in the Resident's place for good, and beating it takes nothing over. A step posted at
+the lair before its boss was built moves to that server. On the board: the Gavel's interval and next buyer (red at 2),
+the buyer on a bought part, the clock on the Collector (red at 3 or less) and the leak's chip in its column, *open* or
+*shut* and the log on the Logger with *again n*, *call n* (or *top*) on the top frame, *stacked* on the frames under it,
+and *n/5* on main() from act 3. Each tooltip gives the rule and its answer.
+
 ### Boss acts (acts.mjs)
 
 A P4 boss (docs/puzzle-fights.md 7) plays in **three acts**: the first from the start, the next two from its ♛ part's
-ticks at 50% and 25%. Built: the worm and ransomware Residents and the three solo bosses.
+ticks at 50% and 25% (the floor bosses' at 60% and 30%). Built: the worm and ransomware Residents, the three solo
+bosses and the four floor bosses.
 
 - **One tick a hit.** A hit takes the ♛ under its next tick and no further, so no act is skipped.
 - **A tell an act.** Act 1 deals the boss's first tell (its charge), act 2 its cast as well, act 3 its third.
@@ -611,6 +630,7 @@ ticks at 50% and 25%. Built: the worm and ransomware Residents and the three sol
 | RELAY-KING | **Broadcast**: its Relay's attack, bigger for each fragment | 4, 3 from act 3 | Clear the fragments, cut it, or a ◆ on you |
 | REPO MAN | **Collection**: its Ledger's attack, bigger for each Lien; each act calls one 3 cycles out | 5 | Few Liens, a cut, or a ◆ on you |
 | HOLLOW CHOIR | **Copy**: its Mimic copies what you fire and turns it on you (a second voice from act 2) | 4 | What costs least to have copied, hold, or break a voice |
+| The floor bosses | Its own part's attack: the Gavel's Surge, the Demand's Deadline, the Logger's Dump, main()'s Surge | its own | Their rules (above) |
 
 The Backlash's chips (*Lash −N*) sit on every part with an attack, in the columns the beat falls in.
 
@@ -629,6 +649,19 @@ Resident drops each of its two once, then makes no unique roll. After a miss the
 | REPO MAN | Repossessed Key (shell, 8) | Encryption on you stacks half as fast |
 | HOLLOW CHOIR | Choirboy (proxy, 10) | Scrambles on you last one cycle less |
 | HOLLOW CHOIR | Hollow Note (exploit, 10) | +30% damage on odd cycles |
+| SHAKEDOWN | Paper Trail (exploit, 12) | Your hits count 50% more toward calling off a wind-up, such as a Deadline |
+| SHAKEDOWN | Escrow (shell, 12) | A boss's enrage and the Ransom Clock come 2 cycles later |
+| CENTRIFUGE | Governor (proxy, 14) | An attack that lands within 2 cycles of its part's last one deals 25% less |
+| CENTRIFUGE | Cascade Failure (exploit, 14) | When you delay or Throttle an attack, its part takes 20 (grown with its level) |
+| SHOULDER SURFER | Privacy Screen (shell, 18) | The first part each fight that plays back or copies your command misses with it |
+| SHOULDER SURFER | Muscle Memory (script, 18) | A command fired exactly 2 cycles after your last deals 10% more |
+| RECURSION | Tail Call (exploit, 19) | When you break a part, your burns on the other parts tick once right away |
+| RECURSION | Stack Guard (proxy, 19) | The next attack on you within 2 cycles of a part breaking deals 20% less |
+
+Their set pieces: CENTRIFUGE drops Glass Ceiling's **Rotor** (as GLASSJAW's bosses and elites still do), SHOULDER SURFER
+On-Call's **Pager** (no longer floor 3's lair boss; floor 4's still drops it), at a boss's set odds (8% a kill, +3% a miss).
+The Codex boss page groups its loot (*Grouped*): every kill, its uniques, its set pieces, each with the next kill's odds
+as a bar and the odds and pity in the bar's tooltip.
 
 ### Lairs and native bosses
 
@@ -994,6 +1027,10 @@ as you walk in, 1 code one time in five). No vault, nothing to take over, no puz
 | Nest | One family only, and strains twice as often |
 | Pit | Mixed families, 2 levels above the server, a second roll for drops. A third of its rooms hold a **◆ CREW elite** (Co-op); one that beats you, or that you run from, moves on and the room fills again in 30 minutes |
 | Gauntlet | Mixed families; clear every fight room in one visit for a bonus cache (60 + 12×level credits, code, XP) |
+
+On floor 2 a Pit's last room (its deepest fight room) is SHAKEDOWN's throne, and on floor 3 a Gauntlet's is RECURSION's:
+the boss holds it at its level or the room's, whichever is higher, back an hour after it falls (a Gauntlet's full clear
+counts it).
 
 Each fight room fills again 3–5 minutes after it falls, a Stash 30 minutes after you take it. Clearing every fight
 room in one visit is a **full clear**.

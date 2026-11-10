@@ -66,7 +66,11 @@ pick from before they're built.
 | SLEEPWALKER | **REM**: one part dozes at a time, taking ×2; hitting it sounds the Alarm for 3 cycles | **Night Terror** every 3 cycles while any part dozes |
 | ECHOLALIA | **Reverb**: your commands echo a cycle later at half, onto the part beside it | **Last Word**: the last part standing repeats every hit it took in its final 3 cycles |
 
-## Proposed: floors 2–8 (picked November 2026, not built)
+## Proposed: floors 2–8 (picked November 2026)
+
+**Built:** CENTRIFUGE, SHAKEDOWN, SHOULDER SURFER and RECURSION (floorbosses.mjs, GAME_RULES.md "Floor bosses"), their
+act ticks at 60% and 30%; the built bosses above still use 50% and 25% (the fights session moves them). The rest are
+not built.
 
 Prototyped as applets (a board an act), with docs/content.md 3.2. How each one plays, phase by phase: docs/boss-guide.md. Each plays in the shape above: three acts, a
 signature that changes the fight, a beat, the default move wrong at least once. *Sketched* has no board yet.

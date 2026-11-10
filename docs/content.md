@@ -263,7 +263,7 @@ Ordered for the most variety per hour of work, floors 2–4 first. S is a day or
 | 2 | **Floor holders** (3.1). *Built* | S–M | Floors 2–8 |
 | 3 | **Botnet and Logic Bomb**. *Built* | M | Floor 2 |
 | 4 | **The log sweep as a terminal room**. *Built* | S | Floors 2–8 |
-| 5 | **Floor 2–4 bosses** in three acts: CENTRIFUGE, SHAKEDOWN, SHOULDER SURFER, RECURSION, CAMSWARM, NIGHT DESK, BYZANTINE, with their uniques; the native bosses' own uniques | M | Floors 2–4 |
+| 5 | **Floor 2–4 bosses** in three acts: CENTRIFUGE, SHAKEDOWN, SHOULDER SURFER, RECURSION (*built*, with their uniques and set pieces), CAMSWARM, NIGHT DESK, BYZANTINE, with their uniques; the native bosses' own uniques | M | Floors 2–4 |
 | 6 | **RAT** | L | Floor 3 |
 | 7 | **Floor 2–4 signatures**: Router, Honeypot, Cold storage. *Built* | S each | Floors 2–4 |
 | 8 | **Deeper chase and Cascade boards**. *Built* | S | Floors 3–8 |

@@ -5,6 +5,7 @@ import { componentsOf } from './salvage.mjs';
 import { glyph } from './glyphs.mjs';
 import { TELL_ICON } from './recap.mjs';
 import { leaveOf } from './acts.mjs';
+import { FB, BUYER, nextBuyer, dumpOf, topFrame, canCall, frames } from './floorbosses.mjs';
 import { glyphMarkup } from './protocol-glyphs.mjs';
 import { isLive, liveCount, memoryCap, memoryCost, joinCost, MEMORY } from './memory.mjs';
 // The server whose Connect is waiting on a yes (app.js): its card shows the memory it takes.
@@ -635,6 +636,7 @@ function partTags(s, p) {
   if (p.core && p.integrity > 0) tags.push(`<span class="tag hot crown" title="${esc(`${p.name}\nBoss part\nIts ticks start the boss's next phase instead of cutting a move.${v.boss === 'relayking' && !v.phases?.[0]?.done ? ' At its 50% tick, the ♛ hops to the healthiest other part.' : ''}${answerLine('Cross a tick when you are ready for the next phase.')}`)}">♛</span>`);
   if (p.broadcast && p.attack && p.integrity > 0) { const n = livingParts(s).filter((x) => x.kind === 'fragment').length, each = Math.round(p.attack.amount * (p.fanin || 0)); tags.push(`<span class="tag hot" title="${esc(`Broadcast\nBoss rule\nThe ${p.name}'s ${p.attack.name} deals ${each} more damage for each fragment on the board.${answerLine('Clear the fragments before it lands, or cut it.')}`)}">${glyph('relay')}×${n}</span>`); }
   if (p.lien && p.integrity > 0) { const n = v.liens || 0, each = Math.round(p.attack ? p.attack.amount * p.lien * (v.interest || 1) : 0); tags.push(`<span class="tag hot liens" title="${esc(`Lien\nBoss rule\nEach of your commands that a ◆ absorbs puts a Lien on the ${p.name}. Each Lien adds ${each} damage to its ${p.attack?.name || 'Collection'}. A Collection that lands or is cut clears them.${answerLine('Take ◆ off with strips, burns or helpers, and cut the Collection.')}`)}">§${n}</span>`); }
+  for (const x of p.integrity > 0 ? floorTags(s, p) : []) tags.push(x); // the floor 2 and 3 bosses (floorbosses.mjs)
   if (p.mimic && v.round && p.integrity > 0) tags.push(`<span class="tag hot" title="${esc(`Round\nBoss rule\nOn its beat the ${p.name} plays back your last three commands: the one you fire on the beat and the two before it. A cycle you hold adds nothing.${answerLine('Hold or fire small in the two cycles before a beat.')}`)}">round</span>`);
   if (p.command && p.integrity > 0) tags.push(`<span class="tag hot" title="${esc(`${p.name}: fragments deal ${Math.round((p.gnaw ?? CONFIG.c2.gnaw) * 100)}% more damage while it stands. When it breaks, every fragment drops.`)}">commands fragments</span>`);
   const burn = (e.burns || []).filter((b) => b.target === p.id);
@@ -694,6 +696,34 @@ export function statusSpans(s) {
 
 // The interrupt (interrupt.mjs, every fight but a crew boss's): two ticks on a part's bar at 50% and 25%. A spent one
 // goes hollow; a boss's core part under rule (a) has phase ticks instead.
+// The floor 2 and 3 bosses' marks (floorbosses.mjs), each with its rule in WoW's grammar: CENTRIFUGE's bid on the Gavel
+// and the buyer a part came from, SHAKEDOWN's Ransom Clock on its ♛, SHOULDER SURFER's window and log on the Logger,
+// RECURSION's top frame and its Call.
+function floorTags(s, p) {
+  const e = s.encounter, v = e.virus, out = [], when = (n) => (n <= 0 ? 'this cycle' : n === 1 ? 'next cycle' : `in ${n} cycles`);
+  const tag = (cls, tip, body) => out.push(`<span class="tag ${cls}" title="${esc(tip)}">${body}</span>`);
+  if (p.gavel && p.attack && v.bid) {
+    const k = p.attack.interval, who = BUYER[nextBuyer(v)], spec = BOSSES[v.boss].buyers[nextBuyer(v)];
+    tag(k <= FB.bid.fast ? 'hot bid' : 'bid', `Bidding\nBoss rule\nThe ${p.name}'s Surge comes every ${k} cycles, and each one that lands spins it faster. A Surge at every 2 sells to ${who}: its ${spec.name} joins the fight${v.bid.lots > 1 ? ', with a second buyer' : ''}. ${v.bid.reserve ? 'A delay or Throttle steps it back one.' : 'A delay or Throttle takes it back to every 4.'}${answerLine('Delay or Throttle it at every 2, or cut that Surge.')}`, `${glyph('clock')}${k} · ${esc(who)}`);
+  }
+  if (p.buyer) tag('', `${p.name}\nBought by ${BUYER[p.buyer]}\nIt joined when the Gavel sold.`, esc(BUYER[p.buyer]));
+  if (p.core && v.ransom) {
+    const L = v.ransom.left, n = Math.round(defender(s).max * FB.ransom.leak);
+    tag(L <= 3 ? 'hot ransom' : 'ransom', `Ransom Clock\nBoss rule\nIt leaks ${n} (30% of your max) ${when(L - 1)}, then restarts at ${FB.ransom.restart}. A Deadline that lands adds ${FB.ransom.pay} cycles. One you call off buys nothing.${v.ransom.notice ? ' Each leak re-arms the Demands and brings the Lockbox back.' : ''}${answerLine('Let a Deadline land when the clock would run out first.')}`, `${glyph('clock')}${L}`);
+  }
+  if (p.syncOnly && v.surf) {
+    const shut = e.cycle % 2 === 1, d = dumpOf(s);
+    tag(shut ? 'hot window' : 'window', `Replay\nBoss rule\nThe Sync Window ${shut ? 'is shut this cycle and opens next cycle' : 'is open this cycle'}. The ${p.name} takes damage only from commands fired in it, and logs each one fired outside it: ${e.keylog || 0} of ${FB.surf.log}. At ${FB.surf.log} its Dump plays back ${d ? `your ${ABILITIES[d.id]?.name || d.id} for ${d.amount}` : 'your last logged command'}.${v.surf.top ? ' The log never clears now.' : ''}${answerLine('Fire at it in the window. On a shut cycle, hold or fire small.')}`, `${shut ? 'shut' : 'open'} · ${e.keylog || 0}/${FB.surf.log}`);
+    if (v.surf.again) { const n = v.surf.again - e.cycle; tag('hot', `Again\nBoss rule\nOn its beat, ${when(n)}, the ${p.name} plays your last three commands back at you, each at ${Math.round(FB.surf.echo * 100)}%.${answerLine('Hold or fire small in the two cycles before the beat.')}`, `again ${Math.max(0, n)}`); }
+  }
+  if (p.frame != null && v.stack) {
+    const top = topFrame(s), n = v.stack.callAt - e.cycle;
+    if (p === top) tag(canCall(p) ? 'hot call' : 'call', `Top frame\nBoss rule\nYour one-part commands land on it, whichever frame you aim at. ${canCall(p) ? `It Calls ${when(n)}: a new frame on top at 60% of its max.` : 'Under a quarter of its max, it cannot Call.'}${v.stack.ret ? ' A frame that breaks makes the one beneath attack a cycle sooner and 50% harder.' : ''}${answerLine('Break it before its Call, or leave it under a quarter.')}`, canCall(p) ? `${glyph('clock')}call ${Math.max(0, n)}` : 'top');
+    else tag('dim', `Frame\nBoss rule\nUnder the top frame. Only burns, helpers and area hits reach it.`, 'stacked');
+    if (p.core && v.stack.overflow) tag(frames(s).length >= FB.stack.overflow - 1 ? 'hot' : '', `Overflow\nBoss rule\nAt ${FB.stack.overflow} frames every frame attacks at once.${answerLine('Keep the stack at four or fewer.')}`, `${frames(s).length}/${FB.stack.overflow}`);
+  }
+  return out;
+}
 // A P4 boss's ♛ (acts.mjs leaveOf): its next phase tick is held (amber) until this act's beat has played.
 function ticksMarkup(s, p) {
   if (!s.encounter?.ticked || !p.ticks) return '';

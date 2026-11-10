@@ -41,7 +41,7 @@ import { owned, rootOf, ROOT, ROOT_PERKS } from './root.mjs';
 import { journalFor, findJournal } from './journals.mjs';
 import { contractTakeover, contractRooms, contractMapped, contractConnect, contractInstall, contractStood, contractExfil, payloadFor, roomMarks, jobsOn } from './mail.mjs';
 import { giveScript, rollScript } from './scripts.mjs';
-import { arcChallenge } from './arcs.mjs';
+import { arcChallenge, jobBossAt } from './arcs.mjs';
 import { itemLabel, uniqueItem } from './gear.mjs';
 import { strikeServer, clearedFor } from './factions.mjs';
 import { traceNear, hiddenLead, HIDDEN } from './hidden.mjs';
@@ -302,6 +302,9 @@ WORLD_hook('fight', (s, room, as) => {
     const level = residentLevel(loc, now()), seed = (((loc.seed || 1) * 7 + 31) >>> 0) + (R.spawns[room.id] || 0) * 7919;
     // Guarded (specials.mjs): a crew elite holds the Core in the Resident's place, as a Pit's (rogue.mjs).
     if (hasSpecial(loc, 'guarded') && !loc.temp) { const name = `ELITE · ${loc.name}`; return { key: 'random', seed, opts: { mode: 'run', room: room.path, level, family: loc.family, elite: true, mutation: armoredAt(loc) ? 'armored' : null, name, author: R.author }, size: 'elite', name, level, family: loc.family, elite: true, author: R.author }; }
+    // A floor job's boss (arcs.mjs jobBossAt): it holds this Core in the Resident's place.
+    const job = !loc.temp && jobBossAt(s, loc);
+    if (job) { const B = BOSSES[job], lv = Math.max(level, B.floor || 1); return { key: 'random', seed, opts: { mode: 'run', room: room.path, level: lv, family: B.family, boss: job, mutation: null, name: B.name }, size: 'boss', name: B.name, level: lv, family: B.family, boss: job, author: B.author || R.author }; }
     const name = `${loc.temp ? 'KILL SWITCH' : 'RESIDENT'} · ${loc.name}`;
     return { key: 'random', seed, opts: { mode: 'run', room: room.path, level, family: loc.family, boss: 'resident', ...(loc.starter ? { bossHp: RESIDENT.starterHp } : {}), mutation: armoredAt(loc) ? 'armored' : null, name, author: R.author }, size: 'boss', name, level, family: loc.family, author: R.author };
   }
@@ -324,7 +327,8 @@ WORLD_hook('won', (s, room, e, { first = false, mirror = false, rare = false } =
   roomKill(s, e, { pack: true, guard, family: lineageOf(e.virus.family), loc, rare });
   if (room.kind === 'guard') clearedFor(s, loc); // a faction's server: they notice (factions.mjs)
   if (e.virus.elite && seeded((e.seed * 31 + R.stats.fights) >>> 0)() < 0.25) giveScript(s, rollScript(seeded((e.seed * 17 + 3) >>> 0)), 'The elite carried: ');
-  if (room.kind === 'core') { if (loc.temp) tempKilled(s, loc); else takeover(s, loc, room); } // a temporary server's kill switch: dark for good (threads.mjs)
+  if (room.kind === 'core' && e.virus.boss && e.virus.boss === jobBossAt(s, loc)) loc.jobFell = now(); // a floor job's boss: no takeover (arcs.mjs)
+  else if (room.kind === 'core') { if (loc.temp) tempKilled(s, loc); else takeover(s, loc, room); } // a temporary server's kill switch: dark for good (threads.mjs)
   // Root (2.8): a respawned fight room cleared on a server you hold.
   if (!first && owned(loc) && FP.FIGHTS.includes(room.kind) && room.kind !== 'core') rootClear(s, loc, hasSpecial(loc, 'hardened') ? SPECIAL.root : 1); // Hardened: twice as fast
 });

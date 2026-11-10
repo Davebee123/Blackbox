@@ -35,6 +35,8 @@ export function beatOf(s) {
   if (A.beat === 'copy') { const t = tellsOf(s)?.list.find((x) => x.kind === 'mimic'), p = t && part(s, t.part); return alive(p) && p.mimic ? { part: p, kind: 'copy', at: (c) => c >= t.first && (c - t.first) % t.every === 0 } : null; }
   // A part's own attack (RELAY-KING's Broadcast, REPO MAN's Collection): the cycles it played, then the ones it lands on.
   if (A.beat === 'broadcast' || A.beat === 'collect') { const p = livingParts(s).find((x) => (A.beat === 'broadcast' ? x.broadcast : x.lien) && x.attack); return p ? { part: p, kind: A.beat, at: (c) => (c < s.encounter.cycle ? (p.played || []).includes(c) : landingsOf(p, c + 1).includes(c)) } : null; }
+  // Its own part's attack (the floor bosses, floorbosses.mjs: the Gavel's Surge, the Demand's Deadline, the Logger's Dump, main()'s Surge).
+  if (A.beat === 'part') { const p = livingParts(s).find((x) => x.id === A.part && x.attack); return p ? { part: p, kind: 'part', at: (c) => (c < s.encounter.cycle ? (p.played || []).includes(c) : landingsOf(p, c + 1).includes(c)) } : null; }
   if (A.beat === 'bend') { const d = livingParts(s).find((x) => x.reflect); return d ? { part: d, kind: 'bend', at: (c) => (c + (d.reflectOff || 0)) % d.reflect === 0 } : null; }
   return null;
 }

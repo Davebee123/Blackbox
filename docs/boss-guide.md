@@ -1,6 +1,6 @@
 # Boss guide: floors 2 to 8
 
-**Status.** Designed, not built: how each boss in docs/solo-bosses.md plays, written as a raid guide (what it is, its
+**Status.** Floors 2 and 3 built (floorbosses.mjs; the numbers below are the prototypes', GAME_RULES.md has the built ones); the rest designed, not built: how each boss in docs/solo-bosses.md plays, written as a raid guide (what it is, its
 abilities, each phase, how you die). docs/solo-bosses.md holds the rules; where the two differ, it wins. Prototyped as
 applets with a board a phase (November 2026). Phases start as the ♛ part crosses 60% and 30%; INIT's as its table
 crosses 90, 83, 76 and 68. The numbers are the prototypes' placeholders; the boss sessions set the real ones.

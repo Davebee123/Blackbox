@@ -35,6 +35,7 @@
 //         opened, once logged) }]
 //   tier  the level tier's numbers (count, live, lead, mult, cap, dot, after, burn, hang), with an elite's or a
 //         boss's extra cap
+import { screened } from './floorbosses.mjs';
 import { hit, implanted, emit, alive, part, livingParts, attackers, defender, hackerLevel, skillBase, gearStat, attackAmount, strikeWith, toIntent, usable, readyIn, alliesOf, fxAnswer, fxOn, cooldownOf, armorTakes, ignoresArmor } from './combat.mjs';
 import { CONFIG, TELL, TELLS, TELL_SETS, SEAL_FROM, STRAINS, ABILITIES, BOSSES } from './data.mjs';
 import { previewDamage, delayAttack, blocked, scaled, gearDamage } from './combat.mjs';
@@ -690,6 +691,7 @@ export function mimicLands(s, t, p) { // (exported for exe.test.mjs)
   const sung = blind ? [] : sungOf(host, p), notes = [...sung, ...(copy ? [copy] : [])], hits = notes.filter((c) => c.kind === 'hit');
   const direct = hits.reduce((n, c) => n + (sung.includes(c) ? Math.round(c.amount * ROUND.echo) : c.amount), 0); // a sung hit lands at half
   if (!notes.length && !swarm) { emit(s, 'blocked', `The ${p.name} has nothing to copy.`, { source: p.id, tell: t.id }); return false; }
+  if (screened(host, p, 'copy')) return false; // Privacy Screen (floorbosses.mjs): the first playback each fight misses
   const names = notes.map((c) => c.name).join(notes.length > 2 ? ', ' : ' and ').replace(/, ([^,]*)$/, ' and $1');
   const what = !swarm ? `your ${names}` : `${notes.length ? `your ${names} and ` : 'your '}${caught.length === 1 ? 'helper' : `${caught.length} helpers`}`;
   // Reflector (a native unique): a played-back hit lands on the Mimic instead, at a share of it. Echo Cancel: all of it,
