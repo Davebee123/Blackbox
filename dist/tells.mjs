@@ -973,24 +973,24 @@ export function tellIntents(s, columns = 4) {
     out.push(x);
   }
   // Two tells priced in your Signal on one cycle (twins, an elite's pile-up): each names the other (pair), and the
-  // cheaper one to take is the lesser.
+  // cheaper one to take is marked.
   // Only a price that is all of what it costs counts (a hit, a cast's extra damage). An Encrypt's stack runs until its
-  // part breaks, fragments gnaw until they do, a Scramble and Integrity are no Signal: those pairs have no Lesser, and
+  // part breaks, fragments gnaw until they do, a Scramble and Integrity are no Signal: those pairs have no Cheaper mark, and
   // which is cheaper is the player's read of the board.
   const red = (y) => (y.tell === 'charge' && y.effect === 'damage') || (y.tell === 'cast' && ['loud', 'haste'].includes(y.does));
   for (const x of out) {
     const o = ['charge', 'cast'].includes(x.tell) && out.find((y) => y !== x && y.col === x.col && ['charge', 'cast'].includes(y.tell) && y.source !== x.source);
     if (!o) continue;
     x.pair = { id: o.id, name: o.name, part: o.source, price: o.price ?? null };
-    x.lesser = red(x) && red(o) && x.price < o.price;
+    x.cheaper = red(x) && red(o) && x.price < o.price;
   }
   return out;
 }
 
 // ---------- the bots (planner.mjs) ----------
-// The lesser of two twins on the board (the cheaper to take): a bot that reads tells cuts the other and lets this one
+// The cheaper of two twins on the board: a bot that reads tells cuts the other and lets this one
 // land, so it strips, saves no tick and spends no cut for it.
-export function lesserTwin(s, t) {
+export function cheaperTwin(s, t) {
   const o = t?.paired && t.told ? twinOf(s, t) : null;
   if (!o?.told || !alive(sourceOf(s, o)) || tellNext(s, o) !== tellNext(s, t)) return false;
   // A charge that leaves something on you (a stack, fragments, a Scramble) costs more than its price says: twice, here.
@@ -1005,7 +1005,7 @@ export function lesserTwin(s, t) {
 export const answers = () => TELL.bots.answer !== false;
 const ok = (s, text) => !!text && !toIntent(s, text).error;
 const first = (s, list) => list.find((c) => ok(s, c)) || null;
-const soon = (s, lag) => (tellsOf(s)?.list || []).filter((t) => t.told && !ignores(t.gene) && !lesserTwin(s, t) && tellNext(s, t) - s.encounter.cycle <= lag); // a gene the sim ignores (genes.mjs GENE_BOTS) goes unanswered
+const soon = (s, lag) => (tellsOf(s)?.list || []).filter((t) => t.told && !ignores(t.gene) && !cheaperTwin(s, t) && tellNext(s, t) - s.encounter.cycle <= lag); // a gene the sim ignores (genes.mjs GENE_BOTS) goes unanswered
 // Commands that deal no direct damage, aimed at no part: the quiet moves (a Scramble's, the Decoy's beat: planner.mjs quietOf; the Mimic's beat weighs them too, beatMove).
 export const QUIET = ['harden', 'firewall', 'bulkhead', 'dmz', 'heartbeat', 'shadow-copy', 'log-wipe', 'turbo-boost', 'malloc', 'brace', 'patch', 'null-route', 'sudo', 'fork', 'debris-field', 'rm-rf', 'vent', 'circuit-breaker', 'honeypot', 'maintenance-window', 'logic-trap', 'rotate-keys', 'vanish', 'load-shed', 'multicast', 'mesh'];
 // A planned command that breaks a part: nothing a tell asks for is worth more.

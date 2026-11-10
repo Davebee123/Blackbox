@@ -100,7 +100,7 @@ wild viruses, guards, elites, strains, champions, solo bosses and invaders. Crew
 
 **Nothing lands unannounced.** A tell is said once in the log and sits as a chip on its part's row, in the column it
 lands, until it does. The chip's last line is the answer (*▸ Cut past ◆2*, from 17 *▸ Cut past ◆2 or SIGINT*,
-*▸ SIGINT or cut*, *▸ Strip ◆3*, *▸ Pick a cheap copy*, *▸ Lesser* on the cheaper of two). Its number is its price (`tellPrice`): a charge's hit, a cast's
+*▸ SIGINT or cut*, *▸ Strip ◆3*, *▸ Pick a cheap copy*, *▸ Cheaper* on the cheaper of two). Its number is its price (`tellPrice`): a charge's hit, a cast's
 extra damage over its 4 cycles in red (*−15*), a Self-Update's Integrity (*+55 hp*), a seal's ◆ in steel (*+4 ◆*).
 Hover it for what happens and, on its own muted ▸ line, how to stop it. Breaking a tell's part always stops it.
 
@@ -116,7 +116,7 @@ Hover it for what happens and, on its own muted ▸ line, how to stop it. Breaki
   the same cycle. One command cuts one. Each twin's extra is half a lone charge's (×1.75 at 10–16, ×2 from 17), so
   taking both costs what a lone charge and a plain hit did, and the one you take after cutting the other leaves no
   after-effect. Both chips wear ⇄, and the cheaper of two plain hits
-  reads *▸ Lesser* (an Encrypt's stack and fragments have no one price: that read is yours). Suspend, Jam and the like part them; a hit across both ticks cuts both. Wild viruses,
+  reads *▸ Cheaper* (an Encrypt's stack and fragments have no one price: that read is yours). Suspend, Jam and the like part them; a hit across both ticks cuts both. Wild viruses,
   guards, strains and elites (about four fights in ten have the two parts); never a boss. Once one of the two parts
   breaks, the other charges alone only if its tier deals it (the Overcharge of levels 10–16 stops).
 - **No other pile-ups.** A charge never lands on the same cycle as a third part's heavy attack, or on the Mimic's beat.

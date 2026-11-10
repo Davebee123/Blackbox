@@ -121,7 +121,7 @@ export function tellTip(s, i, c = i.col, to = null) {
   const p = part(s, i.source);
   // Two on one cycle (tells.mjs tellIntents): what it lands with, and on the cheaper one, which to cut.
   const o = i.pair && part(s, i.pair.part), pair = o ? ` Lands with the ${o.name}'s ${i.pair.name}. When one of the two is cut, the other leaves no after-effect.` : '';
-  const stop = i.lesser && o ? `This is the lesser of the two. Cut the ${o.name}'s ${i.pair.name}, and take this one.` : stopLine(s, i, p, c);
+  const stop = i.cheaper && o ? `This one costs less. Cut the ${o.name}'s ${i.pair.name}, and take this one.` : stopLine(s, i, p, c);
   return `${i.name}: ${landsLine(s, i, p, to, c)}${pair}${answerLine(stop)}`;
 }
 

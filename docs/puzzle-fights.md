@@ -175,13 +175,13 @@ The designer, October 2026:
     kill: that makes gear pointless.
 17. **The Mimic:** its copies can be a bit smaller, but countering your big skill stays its job.
 
-### 8.1 Batch 1: lesser evils (November 10, on `wip/lesser-evils`, not landed)
+### 8.1 Batch 1: two threats at once (November 10, on `wip/lesser-evils`, not landed)
 
 Built lean for the designer's play; nothing here is kept yet.
 
 | Shape (decision 15) | Built as | Where | The cheaper side changes with |
 |---|---|---|---|
-| Two tells on one cycle | **Twins**: a virus's charge and an Overcharge on its plain attacker, said together (`TELL.twin`). ⇄ on both chips, *▸ Lesser* on the cheaper of two plain hits | Wild viruses, guards, strains and elites from 10 with two parts that can charge: about 40% of fights | The two prices (your Block, a Cipher Block's or Fan-in's lift), which part is near a tick and bare, a ◆ or shield on you |
+| Two tells on one cycle | **Twins**: a virus's charge and an Overcharge on its plain attacker, said together (`TELL.twin`). ⇄ on both chips, *▸ Cheaper* on the cheaper of two plain hits | Wild viruses, guards, strains and elites from 10 with two parts that can charge: about 40% of fights | The two prices (your Block, a Cipher Block's or Fan-in's lift), which part is near a tick and bare, a ◆ or shield on you |
 | A growing threat with a tell | Ransomware's twins: Full Disk (the stack) beside the Pulse Node's Overcharge; a worm's Mass Mailer beside a Fan-in's | The same fights | How long the Encryptor will stand, the fragments on the board |
 | An armored part that buffs another | **The Amplifier**, reworked: ◆◆, +75% on the strongest attacker while it wears ◆ | Bad Blood, the Amplified Floodgate and their spread; `PARTS.mech` still 0 | Strip it (tempo), break it, or race the boosted part |
 
@@ -191,7 +191,7 @@ Built lean for the designer's play; nothing here is kept yet.
 - **The Mimic** copies a hit at 75% (decision 17). **The Backlash** is the boss's biggest plain hit doubled on every part.
 - **Not covered:** the 60% of fights with one part that can charge still bring a lone tell. Next: the charge on the
   Mimic's beat, a seal beside a charge.
-- **The planner** cuts the dearer twin and lets the lesser land (`lesserTwin`); nothing else was taught.
+- **The planner** cuts the dearer twin and lets the cheaper land (`cheaperTwin`); nothing else was taught.
 
 ### 7.1 P4's first four
 

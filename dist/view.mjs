@@ -423,14 +423,14 @@ function tellChip(s, i, c, k = '', to = null) {
     : i.tell === 'seal' ? `+${i.armorOut ?? 0} ◆` : i.tell === 'lock' ? 'locks a key' : i.copy ? i.copy.short : 'copies you'; // the Mimic: what your selected command would copy
   // The answer as an order, without its timing: the kick line has that (NOW, or when it lands).
   const sig = sigintCharges(s) && usable(s).includes('sigint');
-  // Two on one cycle (tells.mjs tellIntents: twins, an elite's pile-up): ⇄ on both, and the cheaper one to take is the Lesser.
-  const answer = i.lesser ? 'Lesser' : i.tell === 'charge' ? `Cut${i.armored ? ` past ◆${p?.armor || 0}` : ''}${sig ? ' or SIGINT' : ''}`
+  // Two on one cycle (tells.mjs tellIntents: twins, an elite's pile-up): ⇄ on both, and the cheaper one to take reads Cheaper.
+  const answer = i.cheaper ? 'Cheaper' : i.tell === 'charge' ? `Cut${i.armored ? ` past ◆${p?.armor || 0}` : ''}${sig ? ' or SIGINT' : ''}`
     : i.tell === 'cast' ? 'SIGINT or cut'
     : i.tell === 'seal' ? (p?.armor > 0 ? `Strip ◆${p.armor}` : 'Keep it bare') : i.tell === 'lock' ? 'Feed it a cooldown' : 'Pick a cheap copy';
   const progress = '';
   // A price in your Signal reads in threat red, a seal's ◆ in steel.
   const kindOf = i.tell === 'seal' ? ' tl-armor' : (i.tell === 'charge' && ['damage', 'encrypt'].includes(i.effect)) || (i.tell === 'cast' && ['loud', 'haste'].includes(i.does)) ? ' tl-price' : '';
-  return `<div class="intent tell t-${esc(i.tell)} ${c === 0 ? 'now' : ''} ${open ? 'win' : ''}${i.pair ? ' pair' : ''}${i.lesser ? ' lesser' : ''}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(tellTip(s, i, c, to))}">`
+  return `<div class="intent tell t-${esc(i.tell)} ${c === 0 ? 'now' : ''} ${open ? 'win' : ''}${i.pair ? ' pair' : ''}${i.cheaper ? ' cheaper' : ''}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(tellTip(s, i, c, to))}">`
     + `<div class="tl-kick"><span class="ico" ${icon(TELL_ICON[i.tell])}></span><span class="tl-kind">${TELL_KICK[i.tell] || ''}</span>${i.pair ? '<span class="tl-or">⇄</span>' : ''}${open ? '<b class="tl-win">NOW</b>' : `<span class="tl-when">${c ? `in ${c}` : 'now'}</span>`}</div>`
     + `<div class="tl-main"><b>${esc(i.name)}</b><small class="tl-what${kindOf}${i.copy ? ` copy${i.copy.dear ? ' dear' : ''}` : ''}">${esc(what)}</small></div>`
     + `<div class="tl-ans">▸ ${esc(answer)}${progress ? `<span class="tl-prog">${esc(progress)}</span>` : ''}</div>`

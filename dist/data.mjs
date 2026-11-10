@@ -1188,12 +1188,12 @@ export const TELL = {
   elite: { count: 1, extra: 1.15, live: 1 }, // live: an elite with a clash has one more at once, and its pile-ups are lifted where a cast is in them (tells.mjs announce)
   boss: { count: 3, extra: 1, mult: 2, delay: 0 }, // a solo boss's charge is its hit × 2: its plain hits carry the pressure, its big move about twice one
   champion: { extra: 1.1 }, // a champion invasion (elite-grade, but sized for one): the usual tells, its charges a little bigger
-  // Lesser evils (docs/puzzle-fights.md decision 15). Twins: from `from`, a virus with two parts that can charge (and no
+  // Two threats at once (docs/puzzle-fights.md decision 15). Twins: from `from`, a virus with two parts that can charge (and no
   // boss) says both charges together, on one cycle: its own and an Overcharge on its plain attacker, which holds its attack
   // to land with it. One command cuts one. A twin's extra is `share` of a lone charge's: at a half, taking both costs what
   // a lone charge and the other part's plain hit did, so a player who cuts neither pays what they paid before, and one
-  // who cuts the dearer pays the lesser (about a plain hit more than nothing).
-  twin: { from: 10, share: 0.5, lasting: 2 }, // lasting: how the reading bot weighs a twin that leaves a stack, fragments or a Scramble (tells.mjs lesserTwin)
+  // who cuts the dearer pays the cheaper (about a plain hit more than nothing).
+  twin: { from: 10, share: 0.5, lasting: 2 }, // lasting: how the reading bot weighs a twin that leaves a stack, fragments or a Scramble (tells.mjs cheaperTwin)
 
   castFrom: 10, // casts come with SIGINT
   first: 3, // the first tell lands no sooner than this cycle (a cast and a second charge one later, a seal sealAfter later)

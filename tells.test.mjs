@@ -4,7 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, selectEncounter, resolveCycle, part, active, intents, livingParts, keyMap, readyIn, previewDamage } from './dist/combat.mjs';
 import { CONFIG, TELL, TELLS, TELL_SETS, ABILITIES, FAMILIES, createVirus } from './dist/data.mjs';
-import { tellsOf, tellIntents, tellLog, sayOf, tellStart, lesserTwin, mimicHit, copyOf } from './dist/tells.mjs';
+import { tellsOf, tellIntents, tellLog, sayOf, tellStart, cheaperTwin, mimicHit, copyOf } from './dist/tells.mjs';
 import { interruptMove } from './dist/interrupt.mjs';
 import { boardMarkup, partAbout } from './dist/view.mjs';
 import { planner } from './dist/planner.mjs';
@@ -160,7 +160,7 @@ test('no pile-ups but twins: a charge never lands with a third part\'s heavy att
 
 // Twins (TELL.twin, docs/puzzle-fights.md decision 15): from level 10 a virus with two parts that can charge says both
 // charges together, on one cycle. One command cuts one, and the board marks the cheaper one to take.
-test('twins: from 10 its charge and an Overcharge land on one cycle, the second attack held; each is smaller; one cut answers one, and the cheaper is the Lesser', () => {
+test('twins: from 10 its charge and an Overcharge land on one cycle, the second attack held; each is smaller; one cut answers one, and the cheaper one is marked', () => {
   assert.ok(!tellsOf(fight({ level: 8 })).list.some((t) => t.twin), 'none below 10');
   assert.ok(!createVirus('random', 3, { family: 'worm', threat: 30, boss: 'resident' }).tells?.list.some((t) => t.twin), 'never a boss');
   let seen = 0;
@@ -172,12 +172,12 @@ test('twins: from 10 its charge and an Overcharge land on one cycle, the second 
         seen++;
         assert.equal(xs[0].col, xs[1].col, `${family}: one cycle`);
         assert.ok(xs[0].pair?.id === xs[1].id && xs[1].pair?.id === xs[0].id, 'each names the other');
-        const red = xs.every((x) => x.effect === 'damage'); // an Encrypt's stack, fragments and a Scramble have no one price: no Lesser
-        assert.equal(xs.filter((x) => x.lesser).length, red && xs[0].price !== xs[1].price ? 1 : 0, 'the Lesser: the cheaper of two red prices');
-        if (red && xs[0].price !== xs[1].price) assert.ok(xs.find((x) => x.lesser).price < xs.find((x) => !x.lesser).price);
+        const red = xs.every((x) => x.effect === 'damage'); // an Encrypt's stack, fragments and a Scramble have no one price: no mark
+        assert.equal(xs.filter((x) => x.cheaper).length, red && xs[0].price !== xs[1].price ? 1 : 0, 'the cheaper of two plain hits is marked');
+        if (red && xs[0].price !== xs[1].price) assert.ok(xs.find((x) => x.cheaper).price < xs.find((x) => !x.cheaper).price);
         const html = boardMarkup(s);
         assert.equal((html.match(/class="tl-or">⇄/g) || []).length, 2, '⇄ on both chips');
-        if (xs.some((x) => x.lesser)) { assert.match(html, /intent tell t-charge[^"]* pair lesser"[^>]*title="[^"]*This is the lesser of the two\. Cut the [^"]*, and take this one\./); assert.match(html, /▸ Lesser</); }
+        if (xs.some((x) => x.cheaper)) { assert.match(html, /intent tell t-charge[^"]* pair cheaper"[^>]*title="[^"]*This one costs less\. Cut the [^"]*, and take this one\./); assert.match(html, /▸ Cheaper</); }
         assert.match(html, /Lands with the [^"]*\. When one of the two is cut, the other leaves no after-effect\./);
         break;
       }
@@ -214,7 +214,7 @@ test('twins: from 10 its charge and an Overcharge land on one cycle, the second 
   assert.ok(b2.encounter.corrupt || b2.logs.some((e) => /Corrupted/.test(e.message)), 'ignored, they leave you Corrupted');
 });
 
-test('twins and the bots: the reading bot cuts the dearer twin and lets the lesser land', () => {
+test('twins and the bots: the reading bot cuts the dearer twin and lets the cheaper land', () => {
   const s = fight({ level: 12, cls: 'bastion' }); quietParts(s);
   edge(s, 'encryptor'); edge(s, 'pulse');
   const enc = part(s, 'encryptor'), pulse = part(s, 'pulse');
@@ -222,10 +222,10 @@ test('twins and the bots: the reading bot cuts the dearer twin and lets the less
   pulse.attack = { ...pulse.attack, effect: 'damage', amount: 10, due: s.encounter.cycle };
   const a = tell(s, 'fulldisk', 'encryptor', 0), b = tellsOf(s).list.find((x) => x.id === 'overcharge');
   Object.assign(b, { told: true, said: s.encounter.cycle, next: s.encounter.cycle, n: pulse.attack.n || 0, paired: true }); a.paired = true;
-  assert.ok(lesserTwin(s, b) && !lesserTwin(s, a), 'the Pulse Node\'s is the lesser');
+  assert.ok(cheaperTwin(s, b) && !cheaperTwin(s, a), 'the Pulse Node\'s is the cheaper');
   assert.match(interruptMove(s), / encryptor$/, 'the cut goes on the dearer');
   pulse.attack.amount = 60;
-  assert.ok(lesserTwin(s, a) && !lesserTwin(s, b), 'the board changed: the other is the lesser now');
+  assert.ok(cheaperTwin(s, a) && !cheaperTwin(s, b), 'the board changed: the other is the cheaper now');
   assert.match(interruptMove(s), / pulse$/);
 });
 

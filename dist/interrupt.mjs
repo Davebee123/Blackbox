@@ -22,7 +22,7 @@
 //   c  phases at 50% and 25% of total; ticks interrupt, but the fight has a budget of TICKS.budget cancels.
 import { emit, alive, part, livingParts, hooks, previewDamage, ignoresArmor, toIntent, usable, readyIn, fxOn, frontOf, liensPaid, fireEvent } from './combat.mjs';
 import { FAMILIES, GUARDS, STRAINS, BOSSES, ROOM_FAMILIES, ABILITIES, TELL } from './data.mjs';
-import { tellsOf, tellAnswer, tellNext, tierOf, inWindow, answers, tellPrice, lesserTwin } from './tells.mjs';
+import { tellsOf, tellAnswer, tellNext, tierOf, inWindow, answers, tellPrice, cheaperTwin } from './tells.mjs';
 import { raidDef } from './raid.mjs';
 import { ignores } from './genes.mjs';
 import { gainResearch } from './research.mjs';
@@ -220,14 +220,14 @@ const CUTTERS = ['spike', 'zero-day', 'retaliate', 'opening', 'segfault', 'overl
 const ok = (s, text) => !toIntent(s, text).error;
 // A part whose cut answers a tell now (a charge riding the attack due, a cast in its window, a beat or a seal landing)
 // goes first, for a bot that reads tells; then the biggest attack due.
-const telling = (s, p) => answers() && (dueOf(s, p).some((d) => d.kind === 'tell') || (tellsOf(s)?.list || []).some((t) => t.told && t.kind === 'charge' && t.part === p.id && p.attack && t.n === (p.attack.n || 0) && p.attack.due <= s.encounter.cycle && !lesserTwin(s, t)));
+const telling = (s, p) => answers() && (dueOf(s, p).some((d) => d.kind === 'tell') || (tellsOf(s)?.list || []).some((t) => t.told && t.kind === 'charge' && t.part === p.id && p.attack && t.n === (p.attack.n || 0) && p.attack.due <= s.encounter.cycle && !cheaperTwin(s, t)));
 // A part a Front End fronts (it wears ◆): a strip at it bends onto the Front End (tells.mjs tellMove reads it).
 export const fronted = (s, p) => !ignores('frontend') && livingParts(s).some((x) => x.front && (x.armor > 0 || x.exe) && frontOf(s, x) === p);
 export function interruptMove(s, plan = null) {
   const e = s.encounter;
   if (!ticked(e)) return null;
   const targets = livingParts(s).filter((p) => p.ticks && !p.core && nextTick(p) && dueOf(s, p).length);
-  // Two tells due on one cycle (twins): the dearer one is cut, the lesser taken.
+  // Two tells due on one cycle (twins): the dearer one is cut, the cheaper taken.
   const dear = (p) => Math.max(0, ...(tellsOf(s)?.list || []).filter((t) => t.told && t.part === p.id).map((t) => tellPrice(s, t)?.signal || 0));
   const rank = (p) => (telling(s, p) ? 1e6 + dear(p) * 1e3 : 0) + (p.attack?.amount || 0);
   for (const p of targets.sort((a, b) => rank(b) - rank(a))) {
@@ -251,7 +251,7 @@ export function saveTick(s, plan) {
   if (!ticked(e) || !plan || !answers()) return null;
   const [id, target] = plan.split(' '), p = target && part(s, target);
   if (!p?.ticks || !ABILITIES[id] || crossBy(s, id, p) !== 'waste' || previewDamage(s, id, p) >= p.integrity) return null;
-  const coming = (tellsOf(s)?.list || []).find((t) => t.told && ['charge', 'cast'].includes(t.kind) && !lesserTwin(s, t) && t.part === p.id && tellNext(s, t) - e.cycle >= 1 && tellNext(s, t) - e.cycle <= 3);
+  const coming = (tellsOf(s)?.list || []).find((t) => t.told && ['charge', 'cast'].includes(t.kind) && !cheaperTwin(s, t) && t.part === p.id && tellNext(s, t) - e.cycle >= 1 && tellNext(s, t) - e.cycle <= 3);
   if (!coming) return null;
   // Never onto a part that is best broken last (a Tripwire, a Zip Bomb) or set off by a hit (a Hotspot).
   const other = livingParts(s).find((q) => q !== p && !q.deadman && !q.fuse && !q.hotspot && ok(s, `${id} ${q.id}`) && crossBy(s, id, q) !== 'waste');
