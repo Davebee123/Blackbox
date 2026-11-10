@@ -1013,7 +1013,7 @@ export function layout(R, geo, { lvl = 'full', power = 0.3, crit = false, result
   // ms already).
   for (const el of els) { el.delay /= SPEED; el.dur /= SPEED; if (el.fms) el.fms /= SPEED; }
   if (!els.length && !lights.length) return null;
-  return { els, light: lights, tone, impact: tc, stop: RT(stop), travel: RT(T), from: P.from, dur: Math.max(0, ...els.map((e) => e.delay + e.dur), ...lights.map(endOf)) };
+  return { els, light: lights, tone, impact: tc, stop: RT(stop), travel: RT(T), hold: RT(hold), from: P.from, dur: Math.max(0, ...els.map((e) => e.delay + e.dur), ...lights.map(endOf)) };
 }
 
 // ---------- the winning break ----------
