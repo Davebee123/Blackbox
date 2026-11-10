@@ -61,9 +61,15 @@ Only two change.
 
 *Reason:* LANTERN hears a count on the Backhaul, and sells it to you a page at a time.
 
+**On arrival: a transmission · LANTERN** (*new*)
+> Four. Nine. Nine. This is LANTERN. The strays on the Backhaul come up from below. Something down there is counting them, and so are we.
+
 1. **Install** · *Tune in* · `ear.so`
    > Four. Nine. Nine. This is LANTERN.
    > wick says you want the schedule. We hear it on the Backhaul. Put our listener on {server}. What crosses it, we hear. Then you hear.
+
+   **Extra letter · wick** (*new*)
+   > lantern sells by the page. the count is on the last one.
 2. **Rooms** · *A clear line*
    > The strays on {server} come up from below, looking for someone who owes them an answer.
    > Clear {count} rooms you haven't cleared before. The listener needs a clear line.
@@ -71,6 +77,9 @@ Only two change.
    > One page of the schedule sits in the vault on {server}, as {file}. Its Tracker guards it. Bring it out unseen, or it is worth nothing to us.
 
    *File:* text: twelve dates, twelve trades, each marked cancel. none of them insured. at the foot: process table at 81%.
+
+   **Extra letter · Halcyon Claims** (*new*)
+   > LANTERN's broadcasts are not covered by your retainer.
 4. **Map without resting** · *Who's counting*
    > Something sends a count down this line every night, the way an old machine once did. Some of us read that count for a living, once.
    > Walk {server} end to end in one visit, and don't rest. We want to hear who else is listening.
@@ -96,11 +105,14 @@ Only two change.
 
    *File:* text: actuary v7. a weight on every waiting trade, insured or not, and a field called next_cancel.
 
-   **Extra letter · NULL CHOIR · *an offer***
+   **Transmission · NULL CHOIR · *an offer*** (a transmission, not a letter: picked November 2026)
    > You carried Halcyon's homework home and didn't peek. Good dog.
    > That file decides whose money dies next. Everyone it picks has been dead for thirty years. Funny, isn't it?
    > We'd let it all roll back. Every debt, every saving, every promise. Come and sing with us, NULLCHOIR-SQUAT-13.
    > Or don't. We'll be watching you type either way.
+
+   **Extra letter · wick** (*new*)
+   > the choir sings to everyone. you're on the list now.
 3. **Takeover** · *Archive custody* (*kept*)
 4. **Puzzle board** · *Sealed records* (*kept*)
 5. **Boss** · *Final custody* · **SHOULDER SURFER** (18, NULL CHOIR; *Fight:* the bosses table)
@@ -118,7 +130,13 @@ Only two change.
 
 *Reason:* Kestrel owns the racks on Coldline. Someone runs jobs on them without paying.
 
+**On arrival: a transmission · moth** (*new*), a session that never timed out
+> still here. mostly. don't tell wick i said mostly.
+
 1. **Rooms** · *Unbilled load* (*kept*)
+
+   **Extra letter · Halcyon Claims** (*new*)
+   > Coldline is Kestrel's. Send them the invoice.
 2. **Install** · *Metering* · `meter.ko`
    > Put a meter on {server}. It counts what we are not paid for. On Coldline, that has been most things for thirty years.
 
@@ -317,14 +335,15 @@ signature changes the fight, never just your bar: shutting a skill off is a side
 | **CENTRIFUGE** · 14 · *reworks* | GLASSJAW's auction of what LANTERN's listener heard | **Going, going.** Spin-up kept, as bids: each Surge that lands raises the bid (the Gavel's interval 4, 3, 2); a delay or Throttle withdraws it (back to 4). The bidders show on a strip: TOLLGATE, SWARMLINE, PALEMASK. **Sold:** a Surge that lands at 2 sells to the top bidder, and the buyer joins the fight as a new part with its crew's signature (a Ward, a Twin, a Veil). | Keep the auction slow and the fight stays small. Let it run and three crews are in the room. |
 | **SHOULDER SURFER** · 18 | NULL CHOIR, reading over your shoulder | **Credential Replay** as designed: its Dump replays the last command you fired in a window. **Again:** it plays your last three commands back, in order, on its beat. | Lead small in its windows: what you type is what you'll take. |
 | **NIGHT DESK** · 24 · *new* | Kessler's settlement process, still working a shift for a dead company, its timeout switched off | **No Timeout.** Its attacks never land on their own: each opens a Pending trade on its part and waits. Hit that part to answer it, and it settles at half on you. **Finality:** interrupts don't stop it. **Table full:** at four Pending, every one settles at once, in full. | Answer as they come, and take the small hits. Interrupts are the wrong default here. |
-| **EXIT NODE** · 30 · *reworks* | PALEMASK hiding ACTUARY's backups three deep | **Rollback.** Its three layers are backups, v5, v6, v7. Every 6 cycles it snapshots the board (a ghost of every bar, shown two ahead), then restores it: every part, yours and its, rolls back to the snapshot. Each layer you peel deletes a backup; with all three gone it can't restore. | Damage before a peel is undone. Peel the backups first, then burn, or burst right after a restore. |
+| **EXIT NODE** · 30 · *reworks* | PALEMASK hiding ACTUARY's backups three deep | **Rollback.** Its three layers are backups, v5, v6, v7. Every 6 cycles it snapshots the board (a ghost of every bar, shown two ahead), then restores it: every part of its rolls back to the snapshot (yours never does). Each layer you peel deletes a backup; with all three gone it can't restore. | Damage before a peel is undone. Peel the backups first, then burn, or burst right after a restore. |
 | **BULKHEAD** · 36 · *new* | Kestrel's lock, sealing the floors below with you inside | **Closure.** Its parts are the floors under the seal (KERNEL, SINK, BEDROCK) and the Lock. Every 3 cycles, after a cycle's notice (*Please collect your belongings*), the Lock seals the deepest open floor: that part goes dark, can't be hit, and its Integrity becomes armor on the Lock. **Pressure:** a sealed floor's attack keeps counting behind the wall. Break the Lock and every bulkhead lifts at once, and everything held back lands. | Break the floors deepest first, before they seal, or choose one to let seal and be ready for the flood. |
 | **GOLDEN PARACHUTE** · 38 | A board member leaving with his payout and the renewal's only copy | **Severance** as designed: a part breaking gives the others a ◆ and a charge. **The Parachute:** at its last part it starts jacking out, a 4-cycle countdown on the board. If it gets out, the fight ends: no loss, no loot, and it's back in its Core next visit. | Break the others in an order that leaves the weakest last, and save a burst for the countdown. |
 | **INIT** · 50 | PID 1: it can't be killed, it adopts every orphan, and its Integrity is the process table | **Adoption.** Its bar is the process table, from 97%. Each cycle it adopts an orphan (a fragment). An orphan broken cleanly, in one hit or while Open, frees table (−2%); one left to the end of its third cycle is re-parented (+1%). **Older strata:** at 85% and 70% the orphans come older and tougher, Bedrock's oldest last. It falls at 61%. | End processes cleanly, not just quickly. Final Settlement, its reward, is the lesson as an item. |
 | **CORE DUMP** · 48 · *new* | The image the Actuary left when it was switched off | **Ghosts.** Its parts are the Actuary's. A part broken stays as a ghost that repeats its last attack at half; acts in docs/solo-bosses.md | Choose when to break a part, and so which attack you live with. |
 
 INIT now has five acts (docs/solo-bosses.md); its row above is act 1. Bedrock's lair bosses are HALT AND CATCH FIRE and
-THUNDERING HERD (docs/content.md 3.2).
+THUNDERING HERD (docs/content.md 3.2). Every boss in this table plays in three acts; they are in
+docs/solo-bosses.md, which wins where the two differ.
 
 ## What the script needs that isn't built
 

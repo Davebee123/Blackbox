@@ -97,7 +97,7 @@ that does is flagged for its kit, not tuned around by the boss.
 
 | Place | Bosses |
 |---|---|
-| World bosses, fixed places everyone shares | SPRAWL-00, the last room of floor 1's Gauntlets, events, the throne of Pits on floors 2, 4 and 6 |
+| World bosses, fixed places everyone shares | SPRAWL-00, the last room of floor 1's and floor 3's Gauntlets, events, the throne of Pits on floors 2, 4 and 6 |
 | Lairs | One a floor, its boss from that floor's band, weighted by your roster (docs/content.md 3.1) |
 | Residents | Every server's Core (built) |
 | Crew bosses | KESSLER-FARM-00's three, on raid.mjs (built) |
@@ -112,7 +112,7 @@ boss exists.
 
 | Boss | Floor | Where | Rules | Signature | Phases | Loot |
 |---|---:|---|---|---|---|---|
-| SHAKEDOWN | 12 | Lair, floor 2 | Surge, Deadline (the Demand), Exfiltrate, Ward on the Demand, Overcharge, Double Extortion, Re-key | **Ransom Clock.** A 12-cycle countdown on its bar. Each Deadline you call off adds 3 cycles. At 0 it leaks for 30% of your max and restarts at 6. | 50% the Demand re-arms | Paper Trail (exploit): damage you deal counts 50% more toward wind-up thresholds and strips that call off charges. Escrow (shell): countdowns, enrages and re-arm timers fire 2 cycles later. |
+| SHAKEDOWN | 12 | Throne of floor 2's Pits | Surge, Deadline (the Demand), Exfiltrate, Ward on the Demand, Overcharge, Double Extortion, Re-key | **Ransom Clock.** A 12-cycle countdown on its bar. Each Deadline you call off adds 3 cycles. At 0 it leaks for 30% of your max and restarts at 6. | 50% the Demand re-arms | Paper Trail (exploit): damage you deal counts 50% more toward wind-up thresholds and strips that call off charges. Escrow (shell): countdowns, enrages and re-arm timers fire 2 cycles later. |
 | BRICKWALL | 36 | Lair, floor 6 | Surge, Encrypt, Rage, Rate cap, Full Disk, Overcharge, Double Extortion, Re-key | **Hard Brick.** Below half, when a part's rage starts it bricks the last skill you used on it (Offline until that part breaks, shown on the key). | 60% re-arm | Firmware Flash (shell): a skill knocked offline comes back the next time you land Spike. Recovery Mode (script): below half, every 6 cycles the next hit on you is capped at 15% of your max. |
 
 **SWARMLINE (worm, numbers and spares)**
@@ -135,14 +135,14 @@ boss exists.
 
 | Boss | Floor | Where | Rules | Signature | Phases | Loot |
 |---|---:|---|---|---|---|---|
-| SHOULDER SURFER | 18 | Lair, floor 3 | Surge, Sync lock (the Logger), Keystroke dump, Veil, Overcharge (as Keystorm), Persistence, Re-key | **Credential Replay.** Its Dump replays the last command you fired in a window, at its full direct hit, in place of a flat 18. | 50% re-arm | Privacy Screen (shell): out-of-sync commands log only every other time. Muscle Memory (script): after you fire in two Sync Windows in a row, the next cycle opens one for sure. |
+| SHOULDER SURFER | 18 | Floor 3's floor job | Surge, Sync lock (the Logger), Keystroke dump, Veil, Overcharge (as Keystorm), Persistence, Re-key | **Credential Replay.** Its Dump replays the last command you fired in a window, at its full direct hit, in place of a flat 18. | 50% re-arm | Privacy Screen (shell): out-of-sync commands log only every other time. Muscle Memory (script): after you fire in two Sync Windows in a row, the next cycle opens one for sure. |
 | RING ZERO | 34 | Lair, floor 6 | Surge, Scramble, Mimic, Adaptive, Overcharge, Persistence, Re-key | **Kernel Hook.** At the start it hooks your key-2 skill. Fired at any part but the Hook, that skill feeds the Hook a ◆ instead of damage. The Hook is a bare part worth about two hits. | 50% re-arm | Ring Minus One (implant): your skills can't be hooked, taxed or knocked offline. Syscall Table (script): each different skill you land in a row adds +5% damage, up to +25%; repeating one resets it. |
 
 **GLASSJAW (professional denial)**
 
 | Boss | Floor | Where | Rules | Signature | Phases | Loot |
 |---|---:|---|---|---|---|---|
-| CENTRIFUGE | 14 | Throne of floor 2's Pits | Surge, Encrypt, SYN Flood on the Pulse Node, Full Disk, Double Extortion, Re-key | **Spin-up.** The Pulse Node's interval drops by one each time its Surge lands (4, 3, 2). Any delay or Throttle spins it back to 4. | 50% re-arm | Governor (proxy): an attack that lands within 2 cycles of its part's last one deals 25% less. Cascade Failure (exploit): when you delay or Throttle an attack, its part takes 20. |
+| CENTRIFUGE | 14 | Floor 2's floor job | Surge, Encrypt, SYN Flood on the Pulse Node, Full Disk, Double Extortion, Re-key | **Spin-up.** The Pulse Node's interval drops by one each time its Surge lands (4, 3, 2). Any delay or Throttle spins it back to 4. | 50% re-arm | Governor (proxy): an attack that lands within 2 cycles of its part's last one deals 25% less. Cascade Failure (exploit): when you delay or Throttle an attack, its part takes 20. |
 | BYZANTINE | 26 | Throne of floor 4's Pits | Surge, Replicate, Stateless, Mass Mailer, Self-Update, Re-key (three Nodes) | **Byzantine Fault.** Every 4 cycles (two ahead) the three Nodes vote and the most damaged is restored to the average of the three. Spread your damage, then burst. | 50% re-arm | Majority Attack (exploit): +8% damage for each part below half, up to +32%. Quorum Sensor (proxy): when two attacks land on the same cycle, the second deals 30% less. |
 | GOLDEN PARACHUTE | 38 | Lair, floor 7 | Surge, Encrypt, Exfiltrate, ACL, Cycle tax, Full Disk, Double Extortion, Re-key | **Severance.** When a part breaks, every surviving part gains a ◆ and its next attack (two or more cycles away) becomes a charge. | 60% re-arm | Its three are built and drop from the Sink's lair boss until it exists (GAME_RULES *Items*). |
 
@@ -152,9 +152,9 @@ boss exists.
 |---|---:|---|---|---|---|---|
 | ACTUARY | 40 | The Core of its hub server on floor 5, sealed until 40 | Model, Claims, Pricing, Cancel Job | **The Book** and **the premium**: three acts in docs/solo-bosses.md. It retired UNDERWRITER (a Risk Model construct) | Acts | Moral Hazard (exploit): +3% damage for each tell that landed on you this fight, up to +30%. Reinsurance (proxy): the first time each fight a hit takes more than 30% of your max, the excess comes back as a shield over 2 cycles. |
 
-**Floors 5–8** (November 2026): every boss there plays in three acts (docs/solo-bosses.md), which replace the Phases
-column. RING ZERO's hook still fires your key, onto the Hook that replays it; BRICKWALL lays ◆ on the part you hit
-last. Neither shuts a skill off. The new bosses (GRACE PERIOD, PAY RUN, SUMP, THUNDERING HERD, CORE DUMP) are there too.
+**Floors 2–8** (November 2026): every boss there plays in three acts (docs/solo-bosses.md), which replace the Phases
+column. A floor job's boss is fought in its job's Core only. RING ZERO's hook still fires your key, onto the Hook that replays it; BRICKWALL lays ◆ on the part you hit
+last. Neither shuts a skill off. The new bosses (RECURSION, GRACE PERIOD, PAY RUN, SUMP, THUNDERING HERD, CORE DUMP) are there too.
 
 **The native bosses' own loot**, once lairs move by floor. Each of the nine built native bosses gets two uniques of
 its own; a lair boss still rolls the network's natives at the elite rate.
