@@ -79,6 +79,7 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
   - meeting and hiring runners: a paper-white tab on the room, Help / Step back on its card; cards with rows split by
     hairlines; traits as named chips, temperament first; standing as the *Tier bar* (the tier, a bar to the next); a
     hired runner's bar picked from their *Presets* (a tile each: name and how it plays, keys in its tooltip);
+  - a boss's loot page: *Grouped* (every kill, its uniques, its set piece, each with the next kill's odds as a bar);
   - network map servers: the *Glyph* (each server its kind's glyph, a bar of what's cleared, a ring round a new one);
   - network map ground: the *Chart* (faint crosshairs and hairlines that pan and zoom with the map);
   - rooms map: each room kind its own outline and hue (the *Hues*: magenta elite, orange socket, green rest, gold

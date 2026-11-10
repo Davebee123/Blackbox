@@ -1,7 +1,8 @@
 # Loot plan: sets and uniques
 
 What's still to add to the item pool. Built: the 21 sets, Batch 1 (the 60 uniques for levels 39–50) and faction gear,
-all in GAME_RULES.md "Items". Left: the thin middle, and the pool from 158 uniques toward about 240.
+all in GAME_RULES.md "Items". Left: the thin middle, and the pool from 158 uniques toward about 240. Floors 2–8 to
+five sets and 20 uniques each: docs/floor-items.md (designed).
 
 ## Principles
 
@@ -32,6 +33,9 @@ Batch 1 leans thin on the Breaker, Infiltrator and Operator at 45–50 (3 each);
 
 ## Decisions
 
+- **Five sets a floor, under the same cap** (November 2026). Set pieces count toward the hour; each set drops from
+  one activity, so a player finishes about one a floor. Each source aims at 3–5 hours of its activity a piece
+  (docs/floor-items.md).
 - **Sources before the bosses exist.** Until a floor 3–8 boss is built, its pieces and uniques drop from that floor's
   lair boss.
 - **Build order.** Batch 1 first (done), then the thin middle (15–20 and 33–38), then the rest toward 240.
