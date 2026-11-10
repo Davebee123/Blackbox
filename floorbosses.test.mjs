@@ -9,6 +9,7 @@ import { tellsOf } from './dist/tells.mjs';
 import { boardMarkup } from './dist/view.mjs';
 import { uniqueItem, seeded } from './dist/gear.mjs';
 import { FB, topFrame, dumpOf, fbVerb, fbPower } from './dist/floorbosses.mjs';
+const fbPowerOf = fbPower;
 import { throneOf, rogueSpawns } from './dist/rogue.mjs';
 import { createLocation } from './dist/data.mjs';
 import * as FP from './dist/floorplan.mjs';
@@ -155,13 +156,13 @@ test("RECURSION's Call: one-part commands reach only the top frame; every 4 cycl
   command(s, 'spike main'); resolveCycle(s);
   assert.equal(main.integrity, mainHp, 'main() untouched');
   assert.ok(top.integrity < topHp, 'the top frame took it');
-  for (let k = 0; k < 6 && e.cycle <= v.stack.callAt; k++) hold(s);
+  { const n0 = v.stack.calls || 0; for (let k = 0; k < 6 && (v.stack.calls || 0) === n0; k++) hold(s); }
   const pushed = topFrame(s);
   assert.notEqual(pushed, top, 'a Call pushed a frame');
   assert.equal(pushed.max, Math.round(top.max * FB.stack.push));
   pushed.integrity = Math.floor(pushed.max * 0.2);
   const n = livingParts(s).length;
-  for (let k = 0; k < 6 && e.cycle <= v.stack.callAt; k++) hold(s);
+  { const at = v.stack.callAt; for (let k = 0; k < 6 && e.cycle <= at; k++) hold(s); }
   assert.equal(livingParts(s).length, n, 'under a quarter it cannot Call');
   fbVerb(s, 'return');
   for (const p of attackers(s)) p.attack.due = 999;
@@ -216,28 +217,33 @@ test('their uniques: Governor, Cascade Failure, Paper Trail, Escrow, Privacy Scr
   assert.equal(sg.encounter.stackGuard, sg.encounter.cycle + 2);
 });
 
-test('a slip costs progress: a command at the Gavel bids, a sale or a leak or a Call heals the ♛, a broken Demand halves the clock, a Dump heals the Logger', () => {
-  const c = boss('centrifuge'), g = of(c, 'gavel'), rotor = of(c, 'rotor');
+test('a slip makes the rest of the fight harder: a command at the Gavel bids, a broken Demand halves the clock, a Dump that plays you back grows the next, a Call brings the next one sooner', () => {
+  const c = boss('centrifuge'), g = of(c, 'gavel');
   g.armor = 0; g.attack.interval = 3;
   command(c, 'spike gavel'); resolveCycle(c);
   assert.equal(g.attack.interval, 2, 'a command at the Gavel is a bid');
-  rotor.integrity = Math.round(rotor.max * 0.5);
-  landNow(c, g);
-  assert.equal(rotor.integrity, Math.round(rotor.max * 0.5) + Math.round(rotor.max * FB.bid.mend), 'a sale heals the Rotor');
-  const k = boss('shakedown'), v = k.encounter.virus, col = of(k, 'collector'), d = of(k, 'demand');
+  const k = boss('shakedown'), v = k.encounter.virus, d = of(k, 'demand');
   v.ransom.left = 8;
   d.integrity = 1; hit(k, d, 5, { pierce: true, server: true }); // under the Lockbox's ward cap
   assert.equal(v.ransom.left, 4, 'missed payment: the clock halves');
-  col.integrity = Math.round(col.max * 0.5); v.ransom.left = 1;
-  hold(k);
-  assert.equal(col.integrity, Math.round(col.max * 0.5) + Math.round(col.max * FB.ransom.mend), 'a leak heals the Collector');
-  const r = boss('recursion'), m = of(r, 'main');
-  m.integrity = Math.round(m.max * 0.5);
-  for (let i = 0; i < 6 && r.encounter.cycle <= r.encounter.virus.stack.callAt; i++) hold(r);
-  assert.equal(r.encounter.virus.stack.calls, 1);
-  assert.equal(m.integrity, Math.round(m.max * 0.5) + Math.round(m.max * FB.stack.mend), 'a Call heals main()');
   const u = boss('shouldersurfer'), lg = of(u, 'logger');
-  lg.integrity = Math.round(lg.max * 0.5);
+  command(u, 'overload pulse'); resolveCycle(u);
   landNow(u, lg);
-  assert.equal(lg.integrity, Math.round(lg.max * 0.5) + Math.round(lg.max * FB.surf.mend), 'a Dump heals the Logger');
+  assert.equal(u.encounter.virus.surf.dumps, 1, 'a Dump that played a command back');
+  const { fbPower } = { fbPower: fbPowerOf };
+  u.encounter.logged = [];
+  assert.equal(fbPower(u, lg, lg.attack), 1 + FB.surf.grow, 'the next Dump is bigger');
+  const r = boss('recursion'), st = r.encounter.virus.stack;
+  for (let i = 0; i < 6 && !st.calls; i++) hold(r);
+  assert.equal(st.calls, 1);
+  assert.equal(st.callAt - (r.encounter.cycle - 1), FB.stack.call - FB.stack.sooner, 'the next Call a cycle sooner');
+});
+
+test("SIGINT stops RECURSION's Call on its cycle", () => {
+  const r = boss('recursion'), e = r.encounter, st = e.virus.stack;
+  while (e.cycle < st.callAt) hold(r);
+  const n = livingParts(r).length;
+  command(r, 'sigint'); resolveCycle(r);
+  assert.equal(livingParts(r).length, n, 'no frame pushed');
+  assert.ok(!st.calls && st.callAt > e.cycle - 1, 'and the next Call comes later');
 });

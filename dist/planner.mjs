@@ -12,7 +12,7 @@ import { interruptMove, saveTick, toCross } from './interrupt.mjs';
 import { loudWins, blastPays, cashIn } from './order.mjs';
 import { actsOf, lashOn, actDone, actCap } from './acts.mjs';
 import { copyKind } from './tells.mjs';
-import { topFrame, canCall } from './floorbosses.mjs';
+import { topFrame, canCall, callingNow } from './floorbosses.mjs';
 
 // Against a crew boss only the tank taunts (a taunt pulls its busters onto you): raid.mjs noTaunt.
 // veto: skills the planner may not pick this call (routines.mjs: a program's rotation never fires a long cooldown).
@@ -173,6 +173,7 @@ function heedFloor(s, move) {
   if (v.stack) {
     // A Call this cycle or next: the top frame broken or brought under a quarter first, with the biggest hit that does it.
     const tf = topFrame(s);
+    if (callingNow(s) && ok(s, 'sigint')) return 'sigint'; // the Call this cycle: SIGINT stops it
     if (tf && canCall(tf) && v.stack.callAt - c <= 1) {
       const need = tf.integrity - Math.floor(tf.max * 0.25) + 1, done = (m) => { const k = m.split(' ')[0]; return !(tf.armor > 0 && !ignoresArmor(s, k)) && previewDamage(s, k, tf) >= need; };
       if (!(at === tf.id && done(move))) { const hit = first(s, [...HITS, ...Object.keys(ABILITIES)].map((k) => `${k} ${tf.id}`).filter(done)); if (hit) return hit; }

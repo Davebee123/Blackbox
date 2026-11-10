@@ -50,11 +50,12 @@ test('HASHLORD and MIRRORSHADE, rebuilt, sit in the boss band at their floors (1
 // The floor 2 and 3 bosses (floorbosses.mjs), at their floors, twelve seeds a cell. Played blind (TELL.bots.answer off:
 // no tell and no boss rule answered) each loses hard, and a misreader (blind on a seeded 30% of its cycles) pays for its
 // slips (the designer: "a player fighting a boss blind should be punished a lot", "misreading should also be
-// punished"). Each rule's answer is one only reading finds, and a slip at the wrong cycle costs progress: a command at
-// the Gavel bids and a sale heals the Rotor; a broken Demand halves the clock and a leak heals the Collector; a Dump heals
-// the Logger; a Call heals main(). Measured: CENTRIFUGE read 77% misread 45% blind 26%; SHAKEDOWN 66%, 52%, 33%;
-// SHOULDER SURFER 72%, 50%, 46%; RECURSION 65%, 53%, 32%. Under four of twelve, flagged for the kit, not tuned around:
-// SHOULDER SURFER the Sysop and the Herder, RECURSION the Sysop.
+// punished"). Each rule's answer is one only reading finds, and a slip at the wrong cycle makes the rest of the fight
+// harder: a command at the Gavel bids, and each sale hardens its Surge; a broken Demand halves the clock, and each leak is
+// bigger; each Dump that plays you back grows the next; each Call let through hardens the stack and brings the next one
+// sooner (SIGINT stops one). Measured: CENTRIFUGE read 78% misread 50% blind 26%; SHAKEDOWN 79%, 64%, 38%; SHOULDER
+// SURFER 74%, 53%, 27%; RECURSION 74%, 57%, 16%. Under four of twelve, flagged for the kit, not tuned around: SHOULDER
+// SURFER the Sysop and the Herder, RECURSION the Sysop.
 const FLOOR_BOSSES = ['centrifuge', 'shakedown', 'shouldersurfer', 'recursion'];
 const FLOOR_FLAGGED = { centrifuge: [], shakedown: [], shouldersurfer: ['sysop', 'herder'], recursion: ['sysop'] };
 test('the floor 2 and 3 bosses sit in the reader\'s band at their floors (12 to 19); misreading costs 10 points, playing blind 20', () => {
