@@ -501,7 +501,8 @@ test('the board shows a tell in its attack\'s cell even while the part is veiled
   quietParts(cast);
   tell(cast, 'extortion', 'encryptor', 1);
   const ch = boardMarkup(cast, null);
-  assert.match(ch, /Casting[\s\S]*SIGINT or cut</);
+  assert.match(ch, /Casting[\s\S]*class="ico tl-sig"/, 'SIGINT stops it: the mark, no words');
+  assert.doesNotMatch(ch, /tl-ans/, 'the chip says what it does, not the answer');
   assert.match(ch, /title="Double Extortion: Every attack deals 35% more damage for 4 cycles\.[^"]* Can be interrupted now until it lands next cycle\.\n▸ SIGINT it, or take the Encryptor under 50%\."/);
   assert.match(ch, /tl-window live[^>]*><span class="tw-word">Window · <\/span>now/, 'the window marked on the timeline');
 });
@@ -697,27 +698,27 @@ test('a fight\'s metrics count what its tells did (the gap test reads them)', ()
   assert.ok(tellLog(s).length > 0);
 });
 
-test('the log\'s tell lines are as short as the chip\'s tooltip: what, when, on which part, and the answer', () => {
-  // A charge, said 3 ahead: cut it on that cycle (past its ◆ when it wears them).
+test('the log\'s tell lines say what, when, on which part, and what it does; never the answer', () => {
+  // A charge, said 3 ahead.
   const s = fight({ level: 12 });
   quietParts(s);
   const enc = part(s, 'encryptor');
   Object.assign(enc, { armor: 2, maxArmor: 2 });
   const t = tell(s, 'fulldisk', 'encryptor', 3);
-  assert.equal(sayOf(s, t), 'The Encryptor\'s FULL DISK lands in 3 cycles. Cut it on that cycle, past its 2 ◆.');
+  assert.equal(sayOf(s, t), 'The Encryptor\'s FULL DISK lands in 3 cycles.');
   enc.armor = 0;
-  assert.equal(sayOf(s, t), 'The Encryptor\'s FULL DISK lands in 3 cycles. Cut it on that cycle.');
+  assert.equal(sayOf(s, t), 'The Encryptor\'s FULL DISK lands in 3 cycles.');
   // A cast, a seal, the breach's Lock, and the Mimic's beat.
   const c = fight({ level: 12, opts: { elite: true } }); quietParts(c);
-  assert.equal(sayOf(c, tell(c, 'extortion', 'encryptor', 2)), 'The Encryptor\'s DOUBLE EXTORTION lands in 2 cycles. SIGINT or cut it in its window.');
-  assert.equal(sayOf(c, tell(c, 'extortion', 'encryptor', 1)), 'The Encryptor\'s DOUBLE EXTORTION lands next cycle. SIGINT or cut it in its window, open now.');
+  assert.equal(sayOf(c, tell(c, 'extortion', 'encryptor', 2)), 'The Encryptor\'s DOUBLE EXTORTION lands in 2 cycles.');
+  assert.equal(sayOf(c, tell(c, 'extortion', 'encryptor', 1)), 'The Encryptor\'s DOUBLE EXTORTION lands next cycle.');
   retell(c, 4, ['fulldisk', 'extortion', 'keyrotation', 'lock']); quietParts(c);
-  const armor = Object.assign(part(c, 'encryptor'), { armor: 3, maxArmor: 3 }).armor;
-  assert.equal(sayOf(c, tell(c, 'keyrotation', 'encryptor', 2)), `The Encryptor's KEY ROTATION lands in 2 cycles. Each ◆ it still wears then comes back on every part: strip its ${armor} ◆ first.`);
-  assert.equal(sayOf(c, tell(c, 'lock', 'encryptor', 2)), 'The Encryptor\'s LOCK lands in 2 cycles. It locks your next command for 3 cycles. Break it, or feed it a cooling skill.');
+  Object.assign(part(c, 'encryptor'), { armor: 3, maxArmor: 3 });
+  assert.equal(sayOf(c, tell(c, 'keyrotation', 'encryptor', 2)), `The Encryptor's KEY ROTATION lands in 2 cycles. Each ◆ it still wears then comes back on every part.`);
+  assert.equal(sayOf(c, tell(c, 'lock', 'encryptor', 2)), 'The Encryptor\'s LOCK lands in 2 cycles. It locks your next command for 3 cycles.');
   const seed = Array.from({ length: 50 }, (_, i) => i + 1).find((x) => createVirus('random', x, { family: 'ghostroot', threat: 9 + 12, classic: true }).parts.some((p) => p.mimic));
   const m = fight({ level: 12, family: 'ghostroot', seed }); quietParts(m);
-  assert.equal(sayOf(m, tell(m, 'mimic', 'mimic', 2)), 'The Mimic plays you back in 2 cycles. It copies what you fire then and turns it on you. Fire what costs least to have copied, or cut it.');
+  assert.equal(sayOf(m, tell(m, 'mimic', 'mimic', 2)), 'The Mimic plays you back in 2 cycles. It copies what you fire then and turns it on you.');
   // The cut, in a fight: the interrupt's line and the call-off.
   const g = fight({ level: 12, cls: 'bastion' }); quietParts(g); edge(g, 'encryptor');
   const tg = tell(g, 'fulldisk', 'encryptor', 0);

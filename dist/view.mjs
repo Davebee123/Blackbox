@@ -50,7 +50,7 @@ import { filtersOf, equipped as filtersOn, slotsOf as filterSlots, filterLine, F
 import { situationOf } from './situations.mjs';
 import { SETS, setOf, setCard, activeSets, piecesOf, greenOf, sourceText, seesRare, tierLine } from './sets.mjs';
 import { tellTip, gearLive, cycleGear, gearOnParts, partTip, partCue, partRead, partLinks, lockOf, wardOf, GEAR_ICON, DAMPED, answerLine, helperPlan, beatCopy } from './fightread.mjs';
-import { cutsNow, crossBy, BOSS_RULES, TICKS } from './interrupt.mjs';
+import { crossBy, BOSS_RULES, TICKS } from './interrupt.mjs';
 import { programMarkup, progNow, progTarget, progText, progMove, progOnPart, progExc, progFight, progTag } from './routines-view.mjs';
 import { unlocked as routinesOpen, LOCKED as ROUTINES_LOCKED } from './routines.mjs';
 import { bodyTags, AUTHOR_FAMILIES, familyName } from './families.mjs';
@@ -408,30 +408,24 @@ function gearRow(s) {
 
 
 // A tell (tells.mjs): on its part's row, in the column it lands, never hidden. The chip is the glance: its kind and
-// when it lands (NOW while its window is open), its name and number, and the answer's verb. The tooltip says the rest
+// when it lands (NOW while its window is open), its name and number, and a SIGINT mark when SIGINT can stop it. The tooltip says the rest
 // once each (fightread.mjs tellTip): what happens if it lands, and how to stop it and when. A longer window marks the
 // cells before it (tellSpan).
 const TELL_KICK = { charge: 'Charged', cast: 'Casting', seal: 'Sealing', mimic: 'Recording', lock: 'Locking' };
 function tellChip(s, i, c, k = '', to = null) {
-  const p = part(s, i.source);
   const open = i.open ?? c === 0;
   // What it does, as short as an attack chip's number: a charge's hit, a cast's price (the Signal its attacks would add,
   // a Self-Update's Integrity), the ◆ a seal would hand out in all (tells.mjs tellPrice).
   const what = i.tell === 'charge' ? (i.effect === 'damage' ? `−${i.amount}` : i.effect === 'encrypt' ? `−${i.price ?? i.amount}` : i.effect === 'replicate' ? `+${i.spawn || 2} frags` : i.effect === 'scramble' ? `−${i.hit || 0} · scramble` : `+${i.amount} hp`)
     : i.tell === 'cast' ? (i.does === 'grow' ? `+${i.grow ?? 0} hp` : i.does === 'overclock' ? '×2 both ways' : `−${i.price ?? 0}`)
     : i.tell === 'seal' ? `+${i.armorOut ?? 0} ◆` : i.tell === 'lock' ? 'locks a key' : i.copy ? i.copy.short : 'copies you'; // the Mimic: what your selected command would copy
-  // The answer as an order, without its timing: the kick line has that (NOW, or when it lands).
-  const sig = sigintCharges(s) && usable(s).includes('sigint');
-  const answer = i.tell === 'charge' ? `Cut${i.armored ? ` past ◆${p?.armor || 0}` : ''}${sig ? ' or SIGINT' : ''}`
-    : i.tell === 'cast' ? 'SIGINT or cut'
-    : i.tell === 'seal' ? (p?.armor > 0 ? `Strip ◆${p.armor}` : 'Keep it bare') : i.tell === 'lock' ? 'Feed it a cooldown' : 'Pick a cheap copy';
-  const progress = '';
+  // SIGINT stops it (a cast, or from level 17 a charge too): a small mark, no words. The answer itself is the tooltip's.
+  const sig = usable(s).includes('sigint') && (i.tell === 'cast' || (i.tell === 'charge' && sigintCharges(s)));
   // A price in your Signal reads in threat red, a seal's ◆ in steel.
   const kindOf = i.tell === 'seal' ? ' tl-armor' : (i.tell === 'charge' && ['damage', 'encrypt'].includes(i.effect)) || (i.tell === 'cast' && ['loud', 'haste'].includes(i.does)) ? ' tl-price' : '';
   return `<div class="intent tell t-${esc(i.tell)} ${c === 0 ? 'now' : ''} ${open ? 'win' : ''}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(tellTip(s, i, c, to))}">`
     + `<div class="tl-kick"><span class="ico" ${icon(TELL_ICON[i.tell])}></span><span class="tl-kind">${TELL_KICK[i.tell] || ''}</span>${open ? '<b class="tl-win">NOW</b>' : `<span class="tl-when">${c ? `in ${c}` : 'now'}</span>`}</div>`
-    + `<div class="tl-main"><b>${esc(i.name)}</b><small class="tl-what${kindOf}${i.copy ? ` copy${i.copy.dear ? ' dear' : ''}` : ''}">${esc(what)}</small></div>`
-    + `<div class="tl-ans">▸ ${esc(answer)}${progress ? `<span class="tl-prog">${esc(progress)}</span>` : ''}</div>`
+    + `<div class="tl-main"><b>${esc(i.name)}</b><small class="tl-what${kindOf}${i.copy ? ` copy${i.copy.dear ? ' dear' : ''}` : ''}">${esc(what)}</small>${sig ? `<span class="ico tl-sig" ${icon('interrupt')} aria-label="SIGINT stops it"></span>` : ''}</div>`
     + `${to ? `<small class="at">→ ${esc(to)}</small>` : ''}</div>`;
 }
 // A tell's window over more than one cycle (levels 1 to 5, an elite's or a boss's charge, a cast): a strip in each
@@ -707,16 +701,6 @@ function ticksMarkup(s, p) {
   const leaveTip = (t) => (held(t) ? `\nLeave it above this tick until the beat plays${lv.beat != null ? ` (${bendWhen(lv.beat)})` : ''}. Taken under it sooner, every part re-arms.` : '');
   return p.ticks.map((t) => `<i class="ptick${t.spent ? ' spent' : ''}${t.phase != null ? ' phase' : ''}${held(t) ? ' held' : ''}" style="left:${t.at * 100}%" title="${esc(t.phase != null ? `Phase tick at ${Math.round(t.at * 100)}%: take the ${p.name} across it and the boss starts its next phase.${t.spent ? ' Spent.' : ''}${leaveTip(t)}` : `Tick at ${Math.round(t.at * 100)}%: take the ${p.name} across it on a cycle its move is due and that move is cancelled. Each tick works once a fight.${t.spent ? ' Spent.' : ''}`)}"></i>`).join('');
 }
-// What crossing takes this cycle, in the Now column: cut ▸ 9 (deal 9), cut ▸ ◆1 + 9 when it still wears armor,
-// cut ▸ — when no tick is left.
-function cutChip(s, p) {
-  const c = cutsNow(s).find((x) => x.part === p.id);
-  if (!c) return '';
-  const spent = c.budget != null && c.budget <= 0;
-  const what = c.need == null || spent ? '—' : `${c.armor ? `◆${c.armor} + ` : ''}${c.need}`;
-  const tip = c.need == null ? `The ${p.name} has no tick left to cross.` : spent ? 'The interrupt budget for this fight is spent.' : `Deal ${c.need} to the ${p.name} this cycle${c.armor ? `, after breaking its ${c.armor} ◆,` : ''} to take it across its next tick and cancel its move.`;
-  return `<div class="intent cut${c.need == null || spent ? ' none' : ''}" title="${esc(tip)}"><b>cut ▸ ${esc(what)}</b></div>`;
-}
 
 // ---------- what protects what (fightread.mjs partLinks) ----------
 // A Mutex's lock on its partner's own bar, WoW absorb style: a hatched steel segment over the end of the fill, as wide as
@@ -908,13 +892,13 @@ export function boardMarkup(s, selected, preview = null) {
       const told = mine.filter((i) => i.tell && i.col === c).map((i) => tellChip(s, i.tell === 'mimic' ? { ...i, copy: cp } : i, c, `tell:${p.id}:${i.id}@${e.cycle + c}`, crew.length && i.effect === 'damage' ? sink || 'all' : null)).join('')
         + mine.filter((i) => i.tell && i.winFrom != null && c >= i.winFrom && c < i.col).map((i) => tellSpan(s, i, c)).join(''); // a window longer than a cycle (tells.mjs)
       const lash = mine.filter((i) => i.col === c && i.effect === 'backlash').map((i) => lashChip(i, c, `lash:${p.id}@${e.cycle + c}`)).join(''); // a P4 boss's beat (acts.mjs), beside what lands
-      if (timersHidden(s, p) && p.attack) return `<div class="bcell">${cryptChip}${escChip}${told || '<div class="intent hidden">?</div>'}${lash}${c === 0 ? cutChip(s, p) + progOnPart(s, p) : ''}${patchChip}${pipCell(p, c)}</div>`;
+      if (timersHidden(s, p) && p.attack) return `<div class="bcell">${cryptChip}${escChip}${told || '<div class="intent hidden">?</div>'}${lash}${c === 0 ? progOnPart(s, p) : ''}${patchChip}${pipCell(p, c)}</div>`;
       const hit = mine.find((i) => i.col === c && !i.tell && i.effect !== 'backlash');
       // With a crew, a damage attack lands on everyone, or on whoever is drawing fire; a crew boss's part with a
       // target rule (raid.mjs) on the one player it's aiming at.
       const aimed = crew.length && hit?.effect === 'damage' && !sink && p.attack.target ? attackTarget(s, p) : null;
       const to = crew.length && hit?.effect === 'damage' ? sink || (aimed ? aimed.who || 'you' : 'all') : null;
-      return `<div class="bcell">${cryptChip}${escChip}${told}${hit && !(p.attack ? false : hit.hidden) ? attackChip(hit.effect === 'damage' && backupAims(e, e.cycle + c) ? { ...hit, bk: true } : hit, c, `${p.id}@${e.cycle + c}`, to) : ''}${lash}${c === 0 ? cutChip(s, p) + progOnPart(s, p) : ''}${patchChip}${pipCell(p, c)}</div>`;
+      return `<div class="bcell">${cryptChip}${escChip}${told}${hit && !(p.attack ? false : hit.hidden) ? attackChip(hit.effect === 'damage' && backupAims(e, e.cycle + c) ? { ...hit, bk: true } : hit, c, `${p.id}@${e.cycle + c}`, to) : ''}${lash}${c === 0 ? progOnPart(s, p) : ''}${patchChip}${pipCell(p, c)}</div>`;
     }).join('');
     // A part with no attack of its own (a Mutex, a Mimic) still shows its row's cells when a tell or a beat sits there.
     const showCells = p.attack || p.ratchet || hrows[p.id] || mine.some((i) => i.tell || !i.hidden || i.effect === 'fuse');

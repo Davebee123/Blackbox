@@ -89,8 +89,8 @@ Leaving the fight screen pauses a live fight.
 Every part has two ticks on its bar, at 50% and 25% of its Integrity. Take it across one on the cycle its move is due
 and that move is cancelled (*INTERRUPTED*); its schedule goes on as if it had landed. Each tick works once a fight:
 crossed with nothing due, it's spent for nothing, and one hit across both cancels one move at most. Burns, helpers and
-daemons count. Fragments, Packages, Droppers, the Spam Flood and the Mutex have no ticks. The Now column says what
-crossing takes (*cut ▸ 9*, *cut ▸ ◆1 + 9*), and a queued command says *cuts* or *−tick*. A charge riding the cancelled
+daemons count. Fragments, Packages, Droppers, the Spam Flood and the Mutex have no ticks. A queued command says *cuts*
+or *−tick*. A charge riding the cancelled
 move is called off with it.
 
 ### Tells (tells.mjs)
@@ -99,8 +99,8 @@ move is called off with it.
 wild viruses, guards, elites, strains, champions, solo bosses and invaders. Crew bosses have their own mechanics.
 
 **Nothing lands unannounced.** A tell is said once in the log and sits as a chip on its part's row, in the column it
-lands, until it does. The chip's last line is the answer (*▸ Cut past ◆2*, from 17 *▸ Cut past ◆2 or SIGINT*,
-*▸ SIGINT or cut*, *▸ Strip ◆3*, *▸ Pick a cheap copy*). Its number is its price (`tellPrice`): a charge's hit, a cast's
+lands, until it does. The chip says what it does, never the answer; an amber SIGINT mark sits on it when SIGINT can
+stop it (a cast, from 17 a charge too). Its number is its price (`tellPrice`): a charge's hit, a cast's
 extra damage over its 4 cycles in red (*−15*), a Self-Update's Integrity (*+55 hp*), a seal's ◆ in steel (*+4 ◆*).
 Hover it for what happens and, on its own muted ▸ line, how to stop it. Breaking a tell's part always stops it.
 

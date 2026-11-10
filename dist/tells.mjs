@@ -243,15 +243,14 @@ export function answerOf(t, p, sig = false) {
 }
 // When its window opens, as the log says it: 'now', or 'next cycle', 'in 2 cycles'.
 function windowWhen(s, t) { const w = windowOf(s, t); return w ? Math.max(0, w.from - s.encounter.cycle) : 0; }
-// What the log says when a tell is announced, as short as its chip's tooltip (fightread.mjs tellTip): what, when, on
-// which part, and the answer. The Encryptor's FULL DISK lands in 3 cycles. Cut it on that cycle.
+// What the log says when a tell is announced: what, when, on which part, and what it does. The answer is the chip's
+// tooltip's (fightread.mjs tellTip). The Encryptor's FULL DISK lands in 3 cycles.
 export function sayOf(s, t, p = sourceOf(s, t)) {
   const n = tellNext(s, t) - s.encounter.cycle, L = label(t), head = t.kind === 'mimic' ? `The ${p.name} plays you back ${when(n)}.` : `The ${p.name}'s ${L} lands ${when(n)}.`;
-  if (t.kind === 'charge') return `${head} Cut it on that cycle${p.armor > 0 ? `, past its ${p.armor} ◆` : ''}.`;
-  if (t.kind === 'cast') return `${head} SIGINT or cut it in its window${n > 0 && windowWhen(s, t) <= 0 ? ', open now' : ''}.`;
-  if (t.kind === 'seal') return `${head} Each ◆ it still wears then comes back on every part: strip its ${p.armor} ◆ first.`;
-  if (t.kind === 'lock') return `${head} It locks your next command for ${cycles(t.cycles || 3)}. Break it, or feed it a cooling skill.`;
-  return `${head} It copies what you fire then and turns it on you. Fire what costs least to have copied, or cut it.`;
+  if (t.kind === 'seal') return `${head} Each ◆ it still wears then comes back on every part.`;
+  if (t.kind === 'lock') return `${head} It locks your next command for ${cycles(t.cycles || 3)}.`;
+  if (t.kind === 'mimic') return `${head} It copies what you fire then and turns it on you.`;
+  return head;
 }
 // A tell's window opens (a new cycle): the log says so, once.
 function windowOpens(s, t, p) {

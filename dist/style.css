@@ -227,8 +227,8 @@ code { font-family: var(--mono); color: var(--amber); }
 .intent.raid.fuse { border-color: var(--amber); color: var(--amber); }
 .bescape .esc-left { color: var(--next); font-weight: 600; }
 .intent.raid.fuse.escape.now { background: rgba(255, 216, 92, 0.12); border-color: var(--next); color: var(--next); }
-/* A solo tell (tells.mjs): an attack chip, charged. A kicker strip (what kind, when), the name and what it does,
-   then the answer as an order on its own line. Charges and casts are hot; seals and the Mimic are amber. */
+/* A solo tell (tells.mjs): an attack chip, charged. A kicker strip (what kind, when), then the name and what it does,
+   with a small SIGINT mark when SIGINT stops it. Charges and casts are hot; seals and the Mimic are amber. */
 .intent.tell { --tc: var(--hot); --tc-soft: var(--hot-soft); display: grid; gap: 0; padding: 0; border: 1px solid var(--tc); color: var(--text); overflow: hidden; }
 .intent.tell.t-seal, .intent.tell.t-mimic { --tc: var(--amber); --tc-soft: rgba(241, 185, 47, 0.12); }
 .intent.tell.t-cast { border-style: dashed; }
@@ -240,23 +240,21 @@ code { font-family: var(--mono); color: var(--amber); }
 .intent.tell .tl-what { margin-left: 0; color: var(--muted); }
 .intent.tell .tl-what.tl-price { color: var(--hot); font-weight: 600; } /* what it costs you (tells.mjs tellPrice): threat */
 .intent.tell .tl-what.tl-armor { color: var(--steel); font-weight: 600; } /* the ◆ a seal would hand out */
-.intent.tell .tl-ans { display: flex; align-items: baseline; gap: 6px; padding: 1px 7px 5px; color: var(--amber); font: 600 11px var(--mono); white-space: nowrap; }
-.intent.tell .tl-prog { margin-left: auto; color: var(--muted); font-weight: 400; }
+.intent.tell .tl-main { padding-bottom: 5px; }
+.intent.tell .tl-sig { align-self: center; width: 11px; height: 11px; margin-left: auto; background: var(--amber); opacity: 0.85; } /* SIGINT stops it: your key, in amber */
+.intent.tell.win .tl-sig { background: var(--next); opacity: 1; }
 .intent.tell.now { background: var(--tc-soft); }
 .intent.tell.now .tl-kick { background: var(--tc); color: var(--panel-2); }
 /* ---- Tell windows (tells.mjs, view.mjs tellChip and tellSpan) ----
    A tell can only be answered in its window: the cycle it lands, or its last few. While the window is open the chip
-   wears the Sync Window's yellow (a NOW badge, a glow, the order in yellow). A window longer than a cycle marks the
+   wears the Sync Window's yellow (a NOW badge, a glow, the SIGINT mark in yellow). A window longer than a cycle marks the
    cells before the chip with a slim WINDOW strip, lit in the cycle you're in. */
 .intent.tell { grid-template-columns: minmax(0, 1fr); }
-.intent.tell .tl-ans { white-space: normal; }
 .intent.tell .tl-win { margin-left: auto; padding: 0 3px; border-radius: 2px; background: var(--next); color: var(--panel-2); font: 700 9px var(--mono); letter-spacing: 0.5px; }
 .intent.tell.win { border-color: var(--next); box-shadow: 0 0 0 1px var(--next), 0 0 10px rgba(255, 216, 92, 0.45); }
-.intent.tell.win .tl-ans { color: var(--next); }
 .tl-window { margin: 0 0 4px; padding: 1px 6px; border: 1px dashed rgba(255, 216, 92, 0.55); border-radius: 2px; background: rgba(255, 216, 92, 0.1); color: var(--next); font: 600 9px var(--mono); letter-spacing: 1px; text-transform: uppercase; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: help; }
 .tl-window.live { border-style: solid; border-color: var(--next); background: rgba(255, 216, 92, 0.42); color: var(--panel-2); box-shadow: 0 0 10px rgba(255, 216, 92, 0.6); }
 @media (max-width: 900px) {
-  .intent.tell .tl-ans { white-space: normal; font-size: 10px; padding: 1px 5px 4px; }
   .intent.tell .tl-win { padding: 0 3px; font-size: 9px; }
   .intent.tell.win .tl-kind { display: none; } /* a narrow cell: the icon says the kind, NOW says the window */
   .tl-window { padding: 1px 2px; letter-spacing: 0; }
@@ -3662,8 +3660,7 @@ h1 .byline { font-size: 13px; vertical-align: middle; }
 @container (max-width: 132px) {
   .intent.tell .tl-kick { gap: 3px; padding: 2px 5px; letter-spacing: 0.4px; }
   .intent.tell .tl-kick .ico { display: none; }
-  .intent.tell .tl-main { padding: 3px 5px 1px; column-gap: 4px; }
-  .intent.tell .tl-ans { padding: 1px 5px 4px; white-space: normal; }
+  .intent.tell .tl-main { padding: 3px 5px 4px; column-gap: 4px; }
 }
 
 
@@ -3772,7 +3769,7 @@ body.no-motion .recap { animation: none; }
 .combat .board.dense .intent { padding: 3px 7px; font-size: 12px; }
 .combat .board.dense .intent small:not(.at), .combat .board.dense .bname small, .combat .board.dense .bcell > .quiet, .combat .board.dense .bcell > small.quiet { display: none; }
 .combat .board.dense .intent.tell .tl-main { padding-top: 2px; }
-.combat .board.dense .intent.tell .tl-ans { padding-bottom: 3px; }
+.combat .board.dense .intent.tell .tl-main { padding-bottom: 3px; }
 .combat .board.dense .bhead .cyclebar { display: none; }
 .combat .board.dense .part-top { flex-wrap: nowrap; }
 .combat .board.dense .part-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
