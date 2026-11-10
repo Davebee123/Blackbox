@@ -839,3 +839,21 @@ test('elites: two tells land on one cycle only with a cast among them; an ordina
   }
   assert.ok(piled >= 1, 'an elite piles a cast up now and then');
 });
+
+// Parts 1's mixes (genes.mjs PARTS1). The playtest's parts:<id>,<id> link: those parts in one fight, on the first one's
+// family's Pulse Node and signature, a part from another family as its own.
+test('the parts: link puts the chosen Parts 1 parts in one fight, across families', () => {
+  const s = fresh();
+  selectEncounter(s, 'random', 1, { level: 12, family: 'worm', mutation: null, genes: ['pacer', 'condenser'], basic: 'pulse', foreign: true, quiet: true });
+  const ids = s.encounter.virus.parts.map((p) => p.id);
+  assert.ok(ids.includes('pacer') && ids.includes('condenser') && ids.includes('pulse'), ids.join(' '));
+});
+// PARTS.mix, the bench switch: off, none of the fifteen ever rolls wild; on, they come two or three together.
+test('PARTS.mix: Parts 1 rolls in wild fights only under the switch, two or more together', async () => {
+  const { PARTS1 } = await import('./dist/genes.mjs');
+  const count = (level) => { const out = []; for (let seed = 1; seed <= 120; seed++) { const s = fresh(); s.metAll = true; selectEncounter(s, 'random', seed, { level, family: ['worm', 'ransomware', 'ghostroot'][seed % 3], quiet: true }); out.push(s.encounter.virus.parts.filter((p) => PARTS1.includes(p.id)).length); } return out; };
+  assert.equal(PARTS.mix, 0);
+  assert.ok(count(30).every((n) => n === 0));
+  PARTS.mix = 0.5;
+  try { const on = count(30); assert.ok(on.every((n) => n >= 2 && n <= 3), on.join(' ')); assert.ok(on.includes(3)); } finally { PARTS.mix = 0; }
+});

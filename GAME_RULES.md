@@ -2685,8 +2685,8 @@ Developer commands work only in tests, playtest pages, a test bench and with `?d
   empty (never under yours; a part's at its own, a rival's one over you). A rival's later fights bring its counter, read
   from your win in the one before. **Again** (`developer fight again`) restarts the last pick; ♥ refills first.
 - **Playtest pages:** `?playtest=rooms` (a throwaway server of rooms, its clocks ten times as fast), `?playtest=<strain
-  or fixture>`, `?playtest=part:<id>` (`part:<id>.exe` for its .exe build; `&gear=stock|tuned|custom` fights it geared, on your Signal, as `?playtest=random` with `&level=` and `&family=` does, and `&elite` makes that one an elite), `?playtest=fx` (every ability effect and tier, fired from its key, by result, status and ticks left).
-- `developer scene <id>` plays a transmission again. `developer levelup preview`, `developer thread preview`, `developer pager fill`, `developer parts`, `developer
+  or fixture>`, `?playtest=parts:<id>,<id>[,<id>]` (those third parts in one fight, from any family), `?playtest=part:<id>` (`part:<id>.exe` for its .exe build; `&gear=stock|tuned|custom` fights it geared, on your Signal, as `?playtest=random` with `&level=` and `&family=` does, and `&elite` makes that one an elite), `?playtest=fx` (every ability effect and tier, fired from its key, by result, status and ticks left).
+- `developer scene <id>` plays a transmission again. `developer levelup preview`, `developer thread preview`, `developer pager fill`, `developer parts` (`developer parts mix 0.5`, bench only: wild fights bring 2 or 3 of Parts 1's fifteen together), `developer
   event`, `developer exfil`, and the rest under each section.
 
 ## Side modes

@@ -1237,6 +1237,7 @@ export function encounterVirus(s, key, seed, opts = {}) {
   if (opts.elite) { over.elite = true; if (opts.eliteHp) over.eliteHp = opts.eliteHp; }
   if (opts.boss) { over.boss = opts.boss; if (opts.bossHp) over.bossHp = opts.bossHp; }
   if (opts.genes) over.genes = opts.genes; // forced rolled genes (genesim.mjs probes)
+  if (opts.foreign) over.foreign = true; // forced genes from other families (data.mjs: the playtest's parts: link)
   if (opts.basic) over.basic = opts.basic; // a forced basic (parts.mjs: genesim.mjs probes, the playtest page)
   if (Array.isArray(opts.exe)) over.exe = opts.exe; // forced .exe builds (exe.mjs: the playtest page, the tests)
   if (opts.classic) over.classic = true; // the shape from before the parts roll (a Pulse Node, the signature, one third): balance.mjs's designed fight sets

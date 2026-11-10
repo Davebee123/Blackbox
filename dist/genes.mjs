@@ -421,6 +421,8 @@ delete GENES.damper.parts.worm;
 export const GENE_IDS = Object.keys(GENES);
 // The mechanics list's genes (a third-part spec with `mech`): they roll only while PARTS.mech is above 0 (parts.mjs).
 export const MECH_GENES = new Set(GENE_IDS.filter((id) => Object.values(GENES[id].parts || {}).some((x) => x.mech)));
+// Parts 1's fifteen (docs/mechanics-list.md "Parts 1"): the playtest's parts: link and PARTS.mix (parts.mjs) roll them together.
+export const PARTS1 = ['overreacher', 'livewire', 'condenser', 'pacer', 'cutout', 'magnet', 'deadhand', 'reservoir', 'flyback', 'shutter', 'cistern', 'welder', 'matcher', 'splitter', 'auditor'];
 
 // The genes a part carries: what its spec or its flags say, and Surge for a plain damage attacker that carries
 // nothing else. Genes that sit on a part beside its attack (Veil, Rage) come with it.

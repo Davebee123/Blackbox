@@ -1441,7 +1441,9 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   // A forced basic (overrides.basic: the Codex's sample, a probe, the playtest page) builds the same way, with the
   // signature and the forced genes' third (if any): { basic, signature, thirds } as the roll would have it.
   const forced2 = overrides.basic && random && !strain && !overrides.boss && FAMILIES[familyId] ? family.parts.find((x) => (x.pool === 'basic' || x.id === 'pulse') && x.id === overrides.basic) : null;
-  const rolled2 = forced2 ? { basic: forced2, dup: false, signature: true, thirds: family.parts.filter((x) => x.pool === 'third' && genes?.includes(x.gene)), strangers: 0 }
+  // overrides.foreign (the playtest's parts: link): a forced gene its family hasn't comes as its own family's third.
+  const foreign = overrides.foreign && genes ? genes.filter((g) => !family.parts.some((x) => x.gene === g)).map((g) => Object.entries(GENES[g]?.parts || {}).map(([, x]) => ({ ...x, gene: g }))[0]).filter((x) => x?.pool === 'third') : [];
+  const rolled2 = forced2 ? { basic: forced2, dup: false, signature: true, thirds: [...family.parts.filter((x) => x.pool === 'third' && genes?.includes(x.gene)), ...foreign], strangers: 0 }
     : PARTS.on && !overrides.classic && random && !strain && !overrides.boss && !genes && FAMILIES[familyId] ? rollParts({ family: familyId, body: family, level, rand: rng((seed ^ 0x2545f491) >>> 0), elite: !!overrides.elite, puzzle: !!overrides.elite && overrides.eliteHp == null, rare: !!overrides.rare, floor: overrides.floor || floorFor(level), spread: spreadOf(familyId, level, overrides.floor || floorFor(level)), seen: overrides.seen || null, extra: [...(mutation && MUTATIONS[mutation] ? [MUTATIONS[mutation].gene] : []), ...(grade >= 2 ? ['linked'] : [])] }) : null;
   const open = (strain ? strain.parts : family.parts).filter((spec) => spec.pool !== 'basic' && (!spec.from || ((random || overrides.family || spec.kestrel) && level >= spec.from)));
   // The third part: a gene's part (genes.mjs), one of those open at its level (the family's pool, in order), picked by its own hash of the

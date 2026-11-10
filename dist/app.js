@@ -208,8 +208,12 @@ function load() {
       s.run = { loc: s.locations?.at(-1)?.id || 'sim', cwd: '/', integrity: maxSignal(s), max: maxSignal(s), pack: [], visited: ['/'] };
       return { mode: 'run', room: '/sim', zone: true };
     };
+    const mix = playtest.startsWith('parts:') ? playtest.slice(6).split(',').map((id) => Object.entries(FAMILIES).map(([f, x]) => [f, x.parts.find((y) => y.id === id && y.pool === 'third')]).find(([, y]) => y)).filter(Boolean) : []; // [[family, spec], …]
     const exeOn = /\.exe$/.test(playtest), pid = playtest.startsWith('part:') ? playtest.slice(5).replace(/\.exe$/, '') : null, home = pid && Object.entries(FAMILIES).find(([, f]) => f.parts.some((x) => x.id === pid));
     if (home) { const spec = home[1].parts.find((x) => x.id === pid), L = lv >= 1 && lv <= 50 ? lv : Math.max(spec.from || 1, 3); s.hackers = { [s.loadout.archetype]: { level: L, xp: 0 } }; selectEncounter(s, 'random', seed || 1, { ...geared(L, home[0]), level: L, family: home[0], mutation: null, ...(exeOn ? { exe: [pid] } : {}), ...(spec.pool === 'third' ? { genes: partGenesFor(home[0], spec, L), basic: 'pulse' } : { basic: pid }) }); }
+    // ?playtest=parts:<id>,<id>[,<id>] (Parts 1's mixes): those third parts in one fight, on the first one's family's
+    // Pulse Node and signature, at the level the last of them opens (or &level=). A part from another family comes as its own.
+    else if (playtest.startsWith('parts:') && mix.length) { const [f] = mix[0], L = lv >= 1 && lv <= 50 ? lv : Math.max(3, ...mix.map(([, x]) => x.from || 1)); s.hackers = { [s.loadout.archetype]: { level: L, xp: 0 } }; selectEncounter(s, 'random', seed || 1, { ...geared(L, f), level: L, family: f, mutation: null, genes: mix.map(([, x]) => x.gene), basic: 'pulse', foreign: true }); }
     // ?playtest=fx (abilityfx-playtest.mjs): the ability effects playtest, on a three-part fight (&family=, &seed=, &level=).
     else if (playtest === 'fx') { const L = lv >= 1 && lv <= 50 ? lv : 12; s.hackers = { [s.loadout.archetype]: { level: L, xp: 0 } }; if (/^[a-z ]+$/.test(params.get('crew') || '')) play(s, `crew sim ${params.get('crew')}`); selectEncounter(s, 'random', seed || 8, { level: L, family: /^[a-z]+$/.test(fam || '') ? fam : 'ransomware', mutation: null }); } // &crew=<class>: a crewmate in the crew window, to fire theirs
     // ?playtest=boss:<id> (BOSSES: resident, repoman, choir…): that boss at &level= (10 by default), &family= for the Resident,
@@ -1471,6 +1475,7 @@ function run(raw) {
   }
   // Developer commands are for tests and ?dev / playtest pages, not the real game (a crashed
   // server's reboot excepted: the engine points you to it).
+  if (/^developer parts mix /.test(text) && !BENCH && !playtest) return notice('Parts mixes roll on a bench only (?bench=<name>), never on the real save.', true); // parts.mjs PARTS.mix
   if (/^(developer( |$)|online sim$|crew sim( |$))/.test(text) && !DEV && !playtest && !(text === 'developer reboot' && shown().server.integrity <= 0)) text = 'developer-off'; // dev only (the co-op sims too, until real multiplayer): the engine answers it as an unknown command
 
   // Ability names win over page names during a fight ("trace" is both).

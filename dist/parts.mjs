@@ -15,7 +15,7 @@
 //   clash      an elite, from PARTS.lever: two levers whose answers pull against each other (genes.mjs CLASHES)
 //
 // Every number a playtest might move is one named entry in PARTS (`developer parts` shows and sets them at runtime).
-import { rollGenome, compatible, GENES, MECH_GENES, CLASHES } from './genes.mjs';
+import { rollGenome, compatible, GENES, MECH_GENES, CLASHES, PARTS1 } from './genes.mjs';
 
 export const PARTS = {
   on: true, // the roll (off: every wild virus is built as before the parts plan; golden.test.mjs compares that builder)
@@ -43,6 +43,10 @@ export const PARTS = {
   // pace and sets balance tests moved with them. `developer parts mech 0.5` rolls them all for a session.
   weight: { mimic: 4, coldstore: 0.5, tripwire: 1.5, zipbomb: 0.5, damper: 1 },
   mech: 0,
+  // Parts 1's mixes (genes.mjs PARTS1), a bench switch: above 0, a wild fight whose family has two or more of them open
+  // brings 2 or 3 together (3 this share of the time), past the one-stranger and part-count limits, with no lever or
+  // clash. 0 everywhere but a bench or a playtest (`developer parts mix 0.5`; app.js refuses it on the real save).
+  mix: 0,
   // The spread (docs/variety-plan.md 1.2): a strain's mechanics parts roll as a third on wild viruses of its lineage,
   // from its level and depth (data.mjs spreadOf), at this weight (the others' 1). Nowhere else: PARTS.mech holds there.
   spread: 0.5,
@@ -133,6 +137,7 @@ export function rollParts({ family, body, level, rand, elite = false, puzzle = e
     const basic = !others.length || rand() < PARTS.pulse ? pulse : pick(rand, others);
     return { basic, dup: false, signature: true, thirds: [], strangers: met(basic) ? 0 : 1 };
   }
+  if (PARTS.mix > 0) { const m = mixOf({ body, level, rand, extra, seen: met }); if (m) return m; }
   let n = 2 + pickShare(rand, along(PARTS.count, level));
   if (elite) n = Math.max(n, PARTS.elite);
   if (rare) n = Math.max(n, PARTS.rare.min);
@@ -250,4 +255,18 @@ export function rollParts({ family, body, level, rand, elite = false, puzzle = e
   let total = 1 + (dup ? 1 : 0) + (signature ? 1 : 0) + thirds.length;
   if (strangers && total > 3) { const i = thirds.findLastIndex((t) => !stranger(t) && t !== forced && t !== lever && !clashParts.includes(t)); if (i >= 0) thirds.splice(i, 1); else dup = false; total--; }
   return { basic, dup, signature, thirds, strangers, native: forced || null, lever, clash: clash?.id || null };
+}
+// PARTS.mix's roll: the family's basic, its signature by the usual share, and 2 or 3 of Parts 1's open thirds that fit
+// beside each other (null: fewer than two open).
+function mixOf({ body, level, rand, extra, seen }) {
+  const core = [...(body.core || []), ...extra], left = thirdsOf(body, level).filter((spec) => PARTS1.includes(spec.gene)), thirds = [];
+  const k = left.length > 2 && rand() < PARTS.mix ? 3 : 2;
+  while (thirds.length < k && left.length) {
+    const t = left.splice(Math.min(left.length - 1, Math.floor(rand() * left.length)), 1)[0];
+    if (!compatible([...core, ...thirds.map((x) => x.gene), t.gene]).length) thirds.push(t);
+  }
+  if (thirds.length < 2) return null;
+  const signature = rand() < signatureShare(level), basics = basicsOf(body, level), basic = pick(rand, signature ? basics : basics.filter((p) => p.attack));
+  const strangers = [basic, ...thirds].filter((x) => !seen(x)).length;
+  return { basic, dup: false, signature, thirds, strangers, native: null, lever: null, clash: null, mix: true };
 }

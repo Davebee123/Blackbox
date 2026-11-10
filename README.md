@@ -43,6 +43,7 @@ Every playtest URL runs on a fresh state that is never saved. The real save is n
 | `/?playtest=cryptjack` | A paused fight against a fixture or strain (`splinter`, `ghostroot`…); `random` for a wild one. `&level=`, `&cls=`, `&sub=`, `&family=`, `&seed=`, `&elite`. `&gear=stock\|tuned\|custom` (with `&level=` and `&family=`) gears you in whites, blues or yellows and fights on your Signal, with its parts' rules known so their tooltips read. Type `resume`. |
 | `/?playtest=boss:<id>` | A paused boss fight (`resident`, `repoman`, `choir`…), geared for `&level=` (10 by default). `&family=worm\|ransomware` for the Resident, `&cls=`, `&sub=`, `&seed=`. |
 | `/?playtest=part:<id>` | A fight with that part, at the level it opens (or `&level=`); `part:<id>.exe` its .exe build. `&gear=` as above. |
+| `/?playtest=parts:<id>,<id>[,<id>]` | Those third parts in one fight (Parts 1's mixes), on the first one's family's Pulse Node, at the level the last opens. `&gear=` as above. |
 | `/?playtest=fx` | The ability effects playtest: a panel that fires every ability's effect, at each Screen effects level and mastery tier, as a hit, crit, hit on ◆ or miss, with a status for it to cash in, and a burn's tick by how far it has run down. `&cls=`, `&crew=<class>`. |
 | `/?playtest=run` | Connected to a fresh server. `&family=worm\|ghostroot`, `&template=mailhub\|mirror\|archive\|lab` (its rooms' kind), `&depth=<floor>`. |
 | `/?playtest=rooms` | One server as rooms, clocks ten times as fast. `&class=`, `&level=`, `&kind=`, `&size=small\|medium\|large`, `&floor=`, `&boss=a\|b\|c`, `&hunter=patrol\|track`, `&card=surge\|escort\|pack` (a run card), `&seed=`, `&puzzle=<board>` (its room, and you in it), `&seen` (every room discovered). |
@@ -60,6 +61,7 @@ Common developer commands (with `?dev` or on a bench; the **Dev** drawer above t
 | `developer location <family>` | Traces a new server of that family on the map. |
 | `developer fight <kind>:<id> [level] [seed] [leaning=…] [objective=…]` | Starts a fight at home: kinds `family`, `strain`, `ice`, `part` (`part:<id>.exe`), `elite`, `boss`, `holder`, `rival` (`rival:kudzu.2`), `invader`. `developer fight again [refill]` the last one again. |
 | `developer parts` | The parts roll's numbers and mix. |
+| `developer parts mix 0.5` | Bench only: wild fights bring 2 or 3 of Parts 1's fifteen together (3 at that share). |
 | `developer event [card]`, `developer runcard [kind]`, `developer invade [kind]` | Deals an event card; a run card (this run, or the next connect); sends an invasion. |
 | `developer levelup preview`, `developer thread preview`, `developer scene <id>`, `terminal preview` | Plays the level-up, a thread's windows, a transmission, a boot look. |
 | `crew sim <class…>`, `online sim` | Bot crewmates in your fights; the old simulated pool on a save with no network. |
