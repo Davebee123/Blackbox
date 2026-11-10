@@ -190,7 +190,7 @@ comment saying what it does.
 | File | What it does |
 |---|---|
 | `dist/view.mjs` | Markup builders for every page and the fight board. Pure functions of state. |
-| `dist/fightread.mjs` | Reading a fight: what a tell does and how to stop it, live gear rules, decoded parts. |
+| `dist/fightread.mjs` | Reading a fight: what a tell does, live gear rules, decoded parts. |
 | `dist/ruletext.mjs` | Picks out a rule's key facts (numbers, ◆, statuses) for highlighting. |
 | `dist/skills-view.mjs` | Loadout → Skills and talents (the class page, where you choose your subclass) and the Toolkit (key T). |
 | `dist/routines.mjs` | Routines: a program per virus that plays your moves when you don't; its RAM, benchmark and cues. |

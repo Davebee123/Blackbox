@@ -410,7 +410,7 @@ function gearRow(s) {
 
 // A tell (tells.mjs): on its part's row, in the column it lands, never hidden. The chip is the glance: its kind and
 // when it lands (NOW while its window is open), its name and number, and a SIGINT mark when SIGINT can stop it. The tooltip says the rest
-// once each (fightread.mjs tellTip): what happens if it lands, and how to stop it and when. A longer window marks the
+// once each (fightread.mjs tellTip): what happens if it lands. A longer window marks the
 // cells before it (tellSpan).
 const TELL_KICK = { charge: 'Charged', cast: 'Casting', seal: 'Sealing', mimic: 'Recording', lock: 'Locking' };
 function tellChip(s, i, c, k = '', to = null) {

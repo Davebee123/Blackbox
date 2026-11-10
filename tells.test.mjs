@@ -478,7 +478,7 @@ test('C2 Node: fragments gnaw half again as hard while it lives, and drop when i
   assert.equal(part(s, 'frag9').integrity, 0, 'the fragment dropped with it');
 });
 
-test('the board shows a tell in its attack\'s cell even while the part is veiled; its tooltip says what answers it and when', () => {
+test('the board shows a tell in its attack\'s cell even while the part is veiled; its tooltip says what it does', () => {
   const s = fight({ level: 12, family: 'ghostroot' });
   quietParts(s);
   const sc = part(s, 'scrambler');
@@ -490,12 +490,11 @@ test('the board shows a tell in its attack\'s cell even while the part is veiled
   assert.doesNotMatch(html, /tl-sig/, 'below 17 SIGINT can\'t stop a charge: no mark');
   assert.match(html, /<span class="tl-when">in 2<\/span>/);
   assert.doesNotMatch(html, /tl-win/, 'not on its cycle yet');
-  assert.match(html, new RegExp(`title="Possession: [^"]*\n▸ Take the Scrambler under 50% in 2 cycles, past its ${sc.armor} ◆\\."`), 'the tooltip: what it does, then how to stop it and when');
+  assert.match(html, /title="Possession: [^"▸]*"/, 'the tooltip: what it does, no answer');
   hold(s, 2);
   const now = boardMarkup(s, null);
   assert.match(now, /intent tell t-charge now win/, 'its cycle: the chip is lit');
   assert.match(now, /<b class="tl-win">NOW<\/b>/);
-  assert.match(now, /under 50% this cycle/);
   // A cast's window is two cycles: the cell before it lands is marked, lit while you're in it.
   const cast = fight({ level: 12, opts: { elite: true } });
   quietParts(cast);
@@ -503,7 +502,7 @@ test('the board shows a tell in its attack\'s cell even while the part is veiled
   const ch = boardMarkup(cast, null);
   assert.match(ch, /Casting[\s\S]*class="ico tl-sig"/, 'SIGINT stops it: the mark, no words');
   assert.doesNotMatch(ch, /tl-ans/, 'the chip says what it does, not the answer');
-  assert.match(ch, /title="Double Extortion: Every attack deals 35% more damage for 4 cycles\.[^"]* Can be interrupted now until it lands next cycle\.\n▸ SIGINT it, or take the Encryptor under 50%\."/);
+  assert.match(ch, /title="Double Extortion: Every attack deals 35% more damage for 4 cycles\.[^"]* Can be interrupted now until it lands next cycle\."/);
   assert.match(ch, /tl-window live[^>]*><span class="tw-word">Window · <\/span>now/, 'the window marked on the timeline');
 });
 

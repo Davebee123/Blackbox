@@ -103,7 +103,7 @@ test('every fight board tooltip of a basic or a third part: its name as the titl
   }
 });
 
-test('the tell tooltips: what it does, then its answer on its own ▸ line, in the same grammar', () => {
+test('the tell tooltips: what it does, in the same grammar; never the answer', () => {
   const s = fresh(); s.hackers = { breaker: { level: 17, xp: 0 } };
   selectEncounter(s, 'random', 7, { level: 17, family: 'ransomware', mutation: null, basic: 'pulse' });
   command(s, 'engage');
@@ -116,9 +116,8 @@ test('the tell tooltips: what it does, then its answer on its own ▸ line, in t
   assert.ok(tips.length >= 2, tips.join('\n'));
   for (const tip of tips) {
     const name = tip.split(':')[0], lines = tip.split('\n');
-    assert.equal(lines.length, 2, tip);
-    assert.ok(lines[1].startsWith(ANSWER), tip);
-    assert.deepEqual(faults({ name, does: mechanicsOf(tip), answer: answerOf(tip) }), [], tip);
+    assert.equal(lines.length, 1, tip);
+    assert.deepEqual(faults({ name, does: mechanicsOf(tip) }), [], tip);
   }
 });
 

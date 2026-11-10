@@ -102,7 +102,7 @@ wild viruses, guards, elites, strains, champions, solo bosses and invaders. Crew
 lands, until it does. The chip says what it does, never the answer; an amber SIGINT mark sits on it when SIGINT can
 stop it (a cast, from 17 a charge too). Its number is its price (`tellPrice`): a charge's hit, a cast's
 extra damage over its 4 cycles in red (*−15*), a Self-Update's Integrity (*+55 hp*), a seal's ◆ in steel (*+4 ◆*).
-Hover it for what happens and, on its own muted ▸ line, how to stop it. Breaking a tell's part always stops it.
+Hover it for what happens; nothing on the board says how to stop it. Breaking a tell's part always stops it.
 
 | Kind | What it is | What answers it | If you don't |
 |---|---|---|---|
