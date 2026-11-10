@@ -68,7 +68,7 @@ pick from before they're built.
 
 ## Proposed: floors 2–8 (picked November 2026, not built)
 
-Prototyped as applets (a board an act), with docs/content.md 3.2. Each plays in the shape above: three acts, a
+Prototyped as applets (a board an act), with docs/content.md 3.2. How each one plays, phase by phase: docs/boss-guide.md. Each plays in the shape above: three acts, a
 signature that changes the fight, a beat, the default move wrong at least once. *Sketched* has no board yet.
 
 **Every act adds a pressure that costs to ignore** (the November audit): the opening carries two at least, so that
