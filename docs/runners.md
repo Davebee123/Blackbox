@@ -1,6 +1,6 @@
 # Runners: the people on the net
 
-**Status.** Decided direction, not built. The looks are picked: the map (the *Rail*), and meeting and hiring (below).
+**Status.** R1 built (the cast, the loop, the Rail, #net lines); R2–R4 to come. The looks are picked: the map (the *Rail*), and meeting and hiring (below).
 Talked through with the designer, November 2026.
 
 ## Why

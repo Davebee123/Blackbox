@@ -62,7 +62,7 @@ Common developer commands (with `?dev` or on a bench; the **Dev** drawer above t
 | `developer parts` | The parts roll's numbers and mix. |
 | `developer event [card]`, `developer runcard [kind]`, `developer invade [kind]` | Deals an event card; a run card (this run, or the next connect); sends an invasion. |
 | `developer levelup preview`, `developer thread preview`, `developer scene <id>`, `terminal preview` | Plays the level-up, a thread's windows, a transmission, a boot look. |
-| `crew sim <class…>`, `online sim` | Bot crewmates in your fights; simulated hackers online. |
+| `crew sim <class…>`, `online sim` | Bot crewmates in your fights; the old simulated pool on a save with no network. |
 | `reset game` (twice) | Starts over from level 1. Settings stay. |
 
 ## Tests and landing
@@ -202,11 +202,13 @@ comment saying what it does.
 | `dist/achievements.mjs`, `dist/achievements-view.mjs`, `dist/achievements.css` | Achievements and their cosmetic rewards; the **Rig** page (Achievements, Casing, Terminal; `rigMarkup` in view.mjs). |
 | `dist/profile.mjs`, `dist/profile-view.mjs` | Your profile card (`finger`), and #net's markup. |
 | `dist/channel.mjs`, `dist/presence.mjs` | #net, the public channel; who's online and your friends. |
+| `dist/runners.mjs`, `dist/runners-view.mjs` | Runners: the cast from the network seed, their loop on logged-on time; the Rail. |
 | `dist/comms.mjs`, `dist/pager.mjs`, `dist/pager-view.mjs`, `dist/pager.css` | The pager: world events as entries, which ones ask something of you, and the tray. |
 | `dist/casing.mjs`, `dist/casing-view.mjs`, `dist/casing.css` | Casing cosmetics: the monitor's colourway, plate, stickers and desk. |
 | `dist/terminal.mjs`, `dist/terminal-view.mjs`, `dist/terminal.css`, `dist/boots.mjs` | Terminal cosmetics on Rig → **Terminal**: boot looks (POST, Corrupted…), prompts, cursors. |
 | `dist/recap.mjs` | The death recap on the Disconnected card. |
 | `dist/uiscale.mjs` | UI scale: the whole screen drawn larger or smaller. |
+| `dist/form.mjs`, `dist/phone-shell.mjs`, `dist/sheet.mjs`, `dist/phone.css` | The phone: the one "is this a phone" answer (`<html data-form>`), its tab bar and More, the one bottom sheet (every pop-up on a phone: app.js `phPops` lifts each into it), every phone rule, the fight on one screen, the maps full bleed (docs/phone-plan.md). |
 
 ### Co-op
 
@@ -227,10 +229,10 @@ comment saying what it does.
 | `dist/shell.mjs`, `dist/poweron.mjs` | The CRT shell, boot lines and status line; the power-up. |
 | `dist/screenfx.mjs`, `dist/screenfx.css` | Screen effects: light on the glass around the game, never on it. |
 | `dist/bootfx.mjs`, `dist/bootfx.css` | A new fight: the screen boots into it, the virus first; leaving a won one, a channel cut; connecting to a server, the dial-up; jacking out, the hang-up. |
-| `dist/window.mjs` | The slum outside the window behind the monitor, and its weather. |
+| `dist/window.mjs`, `dist/districts.mjs` | The slum outside the window behind the monitor, and its weather (loaded only on a desktop); its districts as data. |
 | `dist/abilityfx.mjs`, `dist/abilityfx-table.mjs`, `dist/abilityfx-playtest.mjs` | Ability effects on the board, the table of every ability's effect, and its playtest. |
 | `dist/abilitylight.mjs` | What an ability effect does where it lands, drawn in light: flashes, shock rings, cracks, sparks, flames, the comet, a status cashing in. |
-| `dist/hitfx.mjs`, `dist/dmgfx.mjs`, `dist/lash.mjs` | Hits landing on a part (a MISS or RESISTED stamped on it; a broken one's row and name breaking into 1s and 0s), damage numbers one per source, a virus lashing at the screen. |
+| `dist/hitfx.mjs`, `dist/dmgfx.mjs`, `dist/lash.mjs` | Hits landing on a part (a MISS or RESISTED stamped on it; a broken one's row and name breaking into 1s and 0s), damage numbers one per source, a virus lashing at the screen (and its shake). |
 | `dist/chipfx.mjs` | Themed timeline chips: a part's theme (docs/chip-themes.md) played faint inside its chips at +1 and in Now, and its strike into your bar when it goes off. |
 | `dist/virus-art.mjs` | Each virus as animated 3D ASCII art: each body's core and limbs attack their own ways out of its window (`STRIKE_OF`, `STRIKES`), a broken part dissolves into 1s and 0s. |
 | `dist/nocarrier.mjs`, `dist/nocarrier.css` | Losing a fight: static and NO CARRIER, then the Disconnected card. |
@@ -250,7 +252,7 @@ comment saying what it does.
 | `dist/campaign.mjs`, `dist/campaign-view.mjs`, `dist/campaign.css` | The breach campaign: servers by layer, its own save. |
 | `dist/heat.mjs`, `dist/scripts.mjs`, `dist/rewrites.mjs`, `dist/skillrules.mjs` | The breach's heat ranks, one-shot scripts, rewrites and skill rules. |
 | `dist/world.mjs`, `dist/room.mjs`, `dist/room-view.mjs`, `dist/room.css`, `dist/content/room.mjs` | LOWLIGHT's back room and the world turn between breaches. |
-| `dist/bench.mjs` | The test bench and the Dev drawer; `build()` is shared with the simulations. |
+| `dist/bench.mjs`, `dist/bench-key.mjs` | The test bench and the Dev drawer (loaded only on a bench or with `?dev`); `build()` is shared with the simulations. The save keys. |
 | `dist/arena.mjs` | The Arena: every fightable thing from the data tables, and `developer fight`. |
 
 ### Root: server, scripts and simulations
@@ -288,7 +290,7 @@ and `style.test.mjs` the tooltip grammar.
 |---|---|
 | [`GAME_RULES.md`](GAME_RULES.md) | The rules as built. |
 | [`docs/ui.md`](docs/ui.md), [`docs/style-guide.md`](docs/style-guide.md) | The look (colours, tokens, components); how every line is written. |
-| [`docs/phone-plan.md`](docs/phone-plan.md) | Plan: a phone UI of its own, prototypes first (not built). |
+| [`docs/phone-plan.md`](docs/phone-plan.md) | Plan: a phone UI of its own. P1 (shell), P2 (fight) and P3 (maps and sheets) built; P4 (pages) next. |
 | [`docs/lore.md`](docs/lore.md) | The world and the story: the machine, the factions' answers, wick (decided, not built). [`docs/story-script.md`](docs/story-script.md): its letters and dialogue, drafted. [`docs/receipts.md`](docs/receipts.md): the vault receipt stamped for a faction at each takeover (built lean; its payoffs wait). [`docs/factions-plan.md`](docs/factions-plan.md): commissions, every hub's board, rep from contracts, receipts, feuds and defence calls, faction sets, the payload cut (1–4 built lean; 5 and 7–10 wait). |
 | [`docs/journals.md`](docs/journals.md) | Journals: dated entries from people across the city, either side of the Cascade, found in vaults. |
 | [`docs/servers.md`](docs/servers.md) | Servers as rooms, floors, sockets and puzzle rooms. |

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#090603">
   <meta name="description" content="BLACKBOX: a command-driven hacker MUD prototype. Defend your server from hostile software.">
   <title>BLACKBOX</title>
@@ -28,6 +28,7 @@
   <link rel="stylesheet" href="nocarrier.css">
   <link rel="stylesheet" href="bootfx.css">
   <link rel="stylesheet" href="scanner.css">
+  <link rel="stylesheet" href="phone.css">
 </head>
 <body>
 <div class="app" id="app">
@@ -135,12 +136,17 @@
         <label for="command-input" class="prompt"><span>rookie@blackbox:~$</span></label>
         <span class="input-wrap"><input id="command-input" aria-label="Command" autocapitalize="off" spellcheck="false" maxlength="160"><span class="caret" id="caret" aria-hidden="true"><span id="caret-pad"></span><i></i></span></span>
       </form>
+      <button type="button" class="ph-prompt-x" id="ph-prompt-x" aria-label="Close the command line">×</button>
       <p id="notice" class="notice" role="status" hidden></p>
     </div>
+    <!-- The phone's fight: the log's latest line over the tray; a tap opens the log (phone.css). -->
+    <button type="button" class="ph-ticker" id="ph-ticker" aria-label="Combat log" hidden></button>
     <div class="tray" id="tray" aria-label="Abilities"></div>
   </footer>
   <div class="statusline" id="statusline" aria-hidden="true" hidden></div>
 </div>
+<!-- The phone's tab bar (phone-shell.mjs, phone.css): Map or the live context, Mail, Loadout, Server, More. -->
+<nav class="ph-tabs" id="ph-tabs" aria-label="Pages"></nav>
 <!-- Immersive shell: the CRT and the boot screen (see shell.mjs). -->
 <div id="crt" aria-hidden="true"><div id="crt-sweep"></div><div id="crt-bezel"></div></div>
 <div id="boot" class="boot" aria-hidden="true" hidden></div>
