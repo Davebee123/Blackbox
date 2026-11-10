@@ -224,6 +224,7 @@ function load() {
     else command(s, `encounter ${/^[a-z]+$/.test(playtest) ? playtest : 'cryptjack'}`); // any fixture or strain
     if (!s.encounter) command(s, 'encounter cryptjack');
     if (gear && s.encounter) s.encounter.soft = 1; // a geared playtest is no new player's first kill (CONFIG.zone.starterHit): its tells are on
+    if (gear && s.encounter) { const v = s.encounter.virus; s.research ||= {}; for (const p of v.parts) s.research[`${v.strain || v.family}:${p.id}`] = Math.max(s.research[`${v.strain || v.family}:${p.id}`] || 0, 15); } // and it knows its parts' rules (research.mjs TIER.rule), so their tooltips read
     command(s, 'engage');
     s.encounter.paused = true;
     return s;
