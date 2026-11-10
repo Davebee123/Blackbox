@@ -423,8 +423,8 @@ function tellChip(s, i, c, k = '', to = null) {
     : i.tell === 'seal' ? `+${i.armorOut ?? 0} ◆` : i.tell === 'lock' ? 'locks a key' : i.copy ? i.copy.short : 'copies you'; // the Mimic: what your selected command would copy
   // The answer as an order, without its timing: the kick line has that (NOW, or when it lands).
   const sig = sigintCharges(s) && usable(s).includes('sigint');
-  // Two on one cycle (tells.mjs tellIntents: twins, an elite's pile-up): ⇄ on both, and the cheaper one to take reads Cheaper.
-  const answer = i.cheaper ? 'Cheaper' : i.tell === 'charge' ? `Cut${i.armored ? ` past ◆${p?.armor || 0}` : ''}${sig ? ' or SIGINT' : ''}`
+  // Two on one cycle (tells.mjs tellIntents: twins, an elite's pile-up): ⇄ on both, and the cheaper one steps back (dimmed), its answer as any chip's.
+  const answer = i.tell === 'charge' ? `Cut${i.armored ? ` past ◆${p?.armor || 0}` : ''}${sig ? ' or SIGINT' : ''}`
     : i.tell === 'cast' ? 'SIGINT or cut'
     : i.tell === 'seal' ? (p?.armor > 0 ? `Strip ◆${p.armor}` : 'Keep it bare') : i.tell === 'lock' ? 'Feed it a cooldown' : 'Pick a cheap copy';
   const progress = '';

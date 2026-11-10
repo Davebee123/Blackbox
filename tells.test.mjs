@@ -177,7 +177,7 @@ test('twins: from 10 its charge and an Overcharge land on one cycle, the second 
         if (red && xs[0].price !== xs[1].price) assert.ok(xs.find((x) => x.cheaper).price < xs.find((x) => !x.cheaper).price);
         const html = boardMarkup(s);
         assert.equal((html.match(/class="tl-or">⇄/g) || []).length, 2, '⇄ on both chips');
-        if (xs.some((x) => x.cheaper)) { assert.match(html, /intent tell t-charge[^"]* pair cheaper"[^>]*title="[^"]*This one costs less\. Cut the [^"]*, and take this one\./); assert.match(html, /▸ Cheaper</); }
+        if (xs.some((x) => x.cheaper)) { assert.match(html, /intent tell t-charge[^"]* pair cheaper"/, 'the cheaper one is dimmed'); assert.doesNotMatch(html, /▸ Cheaper|costs less/, 'and has no name of its own'); }
         assert.match(html, /Lands with the [^"]*\. When one of the two is cut, the other leaves no after-effect\./);
         break;
       }

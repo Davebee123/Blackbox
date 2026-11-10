@@ -975,7 +975,7 @@ export function tellIntents(s, columns = 4) {
   // Two tells priced in your Signal on one cycle (twins, an elite's pile-up): each names the other (pair), and the
   // cheaper one to take is marked.
   // Only a price that is all of what it costs counts (a hit, a cast's extra damage). An Encrypt's stack runs until its
-  // part breaks, fragments gnaw until they do, a Scramble and Integrity are no Signal: those pairs have no Cheaper mark, and
+  // part breaks, fragments gnaw until they do, a Scramble and Integrity are no Signal: those pairs have no dimmed chip, and
   // which is cheaper is the player's read of the board.
   const red = (y) => (y.tell === 'charge' && y.effect === 'damage') || (y.tell === 'cast' && ['loud', 'haste'].includes(y.does));
   for (const x of out) {
