@@ -13,7 +13,8 @@
 // the plan's twelve and the long-cooldown ones.
 // abilitysound.mjs core() hands in the style's own voices (H) and keeps each class's key 1 as it was made by hand.
 import { ABILITIES } from './data.mjs';
-import { RECIPES } from './abilityfx-table.mjs';
+import { RECIPES, TIERS, FINISHERS, SUB_FINISHERS } from './abilityfx-table.mjs';
+import { SUBS } from './data.mjs';
 
 const PULSE = 0.09; // s between the Operator's beats (abilityfx.mjs PULSE)
 const NOTE = { breaker: 1, bastion: 0.84, infiltrator: 1.26, operator: 1.12 };
@@ -43,6 +44,11 @@ const RANKS = new Map();
 function rankOf(key) {
   if (!RANKS.size) { const seen = {}; for (const k of Object.keys(RECIPES)) { if (k.includes(':')) continue; const g = `${ABILITIES[k]?.cls}:${kindOf(k)}`; RANKS.set(k, [seen[g] = (seen[g] ?? -1) + 1, g]); } for (const [k, [i, g]] of RANKS) RANKS.set(k, [i, seen[g] + 1]); }
   return RANKS.get(key) || [0, 1];
+}
+// Its pitch: its class's register, then spread evenly over its class's of this kind (a fifth, low to high, shuffled).
+export function pitchOf(key) {
+  const [rank, of] = rankOf(key);
+  return (NOTE[ABILITIES[key]?.cls] || 1) * Math.pow(1.5, (((rank * 7) % Math.max(1, of)) / Math.max(1, of - 1 || 1)) - 0.5) * (0.97 + 0.06 * hashOf(key));
 }
 // The rows that get a sound: every ability's (a burn's later ticks keep today's small voice).
 export const SOUND_KEYS = Object.keys(RECIPES).filter((k) => !k.includes(':'));
@@ -251,9 +257,7 @@ export function generic(H) {
   const soft = (dest, x = 1.5) => (K) => K.g(Math.min(1, Q * x), dest); // the blips' own level
   const make = (key) => {
     const R = RECIPES[key], A = ABILITIES[key] || {}, cls = A.cls || null, kind = kindOf(key);
-    const [rank, of] = rankOf(key), V = rank % 3; // V: which body it lands with
-    // Its pitch: its class's register, then spread evenly over its class's of this kind (a fifth, low to high, shuffled).
-    const p = (NOTE[cls] || 1) * Math.pow(1.5, (((rank * 7) % Math.max(1, of)) / Math.max(1, of - 1 || 1)) - 0.5) * (0.97 + 0.06 * hashOf(key));
+    const V = rankOf(key)[0] % 3, p = pitchOf(key); // V: which body it lands with
     const n = (s) => (R.burst || []).find((x) => x.style === s)?.n || 0;
     const steel = R.tone === 'steel' || (R.burst || []).some((x) => x.steel);
     const mass = massOf(key);
@@ -398,4 +402,145 @@ export function generic(H) {
     };
   };
   return Object.fromEntries(SOUND_KEYS.map((key) => [key, make(key)]));
+}
+
+// ---------- round 3: mastery tiers ----------
+// A mastered ability (T.tier 2 or 3; mastery.mjs counts the uses, abilityfx-table.mjs TIER_UP and TIERS draw it) plays
+// its sound with a layer on top: tier 2 throws more (a few more sparks of sound), tier 3 leaves a glint (two high notes
+// twinkling). TIER_SOUND is what a hand-made tier adds, as its effect does. X: { fx, b, p, tier, cls, late }.
+const TIER_SOUND = {
+  // A heavier hammer: a deeper slam and its dust. Then the crack it leaves, glowing.
+  ban(K, o, T, X) {
+    K.boom(K.g(0.8, o.dry), T.hit, { f0: 62, f1: 22, glide: 0.2, d: 0.5, peak: 0.6 });
+    K.hiss(X.fx, T.hit + 0.03, { type: 'bandpass', f0: 1800, f1: 600, glide: 0.3, q: 0.7, a: 0.01, d: 0.3, peak: 0.12, color: 'pink' });
+    if (X.tier >= 3) { K.crackle(X.fx, T.hit + 0.05, T.hit + 0.3, { f: 2600, peak: 0.2, rise: false }); K.fm(X.fx, T.hit + 0.05, { fc: 70, f1: 52, ratio: 1.41, i0: 4, i1: 1, dur: 0.28, peak: 0.12 }); }
+  },
+  // The ram's afterimages: its air again, a beat behind (twice at tier 3). Then a quake running down the bar.
+  bash(K, o, T, X) {
+    for (let i = 1; i < X.tier; i++) if (T.flies) K.flight(K.pan(o.dry, i % 2 ? 0.3 : -0.3), T.t + 0.035 * i, T.arrive + 0.035 * i, { f0: 90, f1: 380, q: 0.8, peak: 0.16, color: 'brown', tail: 0.1 });
+    K.boom(K.g(0.6, o.dry), T.hit + 0.03, { f0: 70, f1: 30, d: 0.2, peak: 0.5 });
+    if (X.tier >= 3) for (let i = 0; i < 4; i++) K.rumble(K.pan(o.dry, -0.6 + 0.4 * i), T.hit + 0.04 + i * 0.04, { f: 150 - 20 * i, d: 0.16, peak: 0.22 });
+  },
+  // A longer needle. Then three in quick succession.
+  poke(K, o, T, X) {
+    if (T.flies) K.whine(X.fx, T.t, T.arrive, { f0: 900, f1: 2400, peak: 0.03, lp: 5000 });
+    if (X.tier >= 3) for (let i = 1; i < 3; i++) { const x = T.hit + i * 0.047; K.hiss(X.b, x, { type: 'highpass', f0: 4500, a: 0.0005, d: 0.01, peak: 0.36 }); K.buzz(X.b, x, { d: 0.025, peak: 0.26, f0: 7000, f1: 1500 }); K.boom(K.g(0.45, o.dry), x, { f0: 130 + 20 * i, f1: 50, d: 0.08, peak: 0.45 }); }
+  },
+  // A fourth wave. Then the echo coming back off every part.
+  ping(K, o, T, X) {
+    const x = T.hit + 3 * 0.09;
+    K.impact(K.g(0.5, X.b), x, 0.4, false, 0.66); K.boom(K.g(0.45, o.dry), x, { f0: 80, f1: 34, d: 0.14, peak: 0.45 });
+    if (X.tier >= 3) [-0.7, 0, 0.7].forEach((pan, i) => K.modes(K.pan(X.fx, pan), x + 0.12 + i * 0.07, [[(1047 - 130 * i), 1, 0.2], [(2094 - 260 * i), 0.3, 0.1]], { peak: 0.05 }));
+  },
+  // A second bolt a beat behind. Then it forks to the parts either side.
+  overload(K, o, T, X) {
+    const x = T.hit + 0.1;
+    K.crack(X.b, x, { peak: 0.36, f: 6000 }); K.zap(X.b, x, { f0: 6000, f1: 900, d: 0.05, peak: 0.3 }); K.boom(K.g(0.6, o.dry), x, { f0: 100, f1: 36, d: 0.16, peak: 0.5 });
+    if (X.tier >= 3) { [-0.8, 0.8].forEach((pan, i) => { K.zap(K.pan(X.b, pan), T.hit + 0.03 + i * 0.03, { f0: 7000, f1: 1500, d: 0.06, peak: 0.26 }); K.crackle(K.pan(X.fx, pan), T.hit + 0.05, T.hit + 0.3, { f: 4200, peak: 0.14, rise: false }); }); K.hiss(X.fx, T.hit, { type: 'highpass', f0: 3000, a: 0.001, d: 0.1, peak: 0.25 }); }
+  },
+  // The buffer tears. Then its mark burnt in, sizzling.
+  'zero-day'(K, o, T, X) {
+    for (let i = 0; i < 5; i++) K.S(K.pan(X.fx, i % 2 ? 0.5 : -0.5), T.hit + 0.03 + i * 0.03, 'glitch', { gain: 0.4, rate: 0.6 + 0.25 * i });
+    if (X.tier >= 3) { K.crackle(X.fx, T.hit + 0.05, T.hit + 0.3, { f: 5200, peak: 0.18, rise: false }); K.ring(X.fx, T.hit + 0.04, { fc: 880, fmod: 110, d: 0.26, peak: 0.07, type: 'sine' }); }
+  },
+  // It burns hotter. Then a spark running along its top.
+  firewall(K, o, T, X) {
+    K.crackle(X.fx, T.hit, T.hit + 0.5, { f: 5600, peak: 0.16, rise: false });
+    if (X.tier >= 3) for (let i = 0; i < 6; i++) K.zap(K.pan(X.b, -0.75 + 0.3 * i), T.hit + 0.07 + i * 0.055, { f0: 8000, f1: 3000, d: 0.03, peak: 0.2 });
+  },
+  // It shuts harder. Then a padlock closing on it.
+  quarantine(K, o, T, X) {
+    K.boom(K.g(0.7, o.dry), T.hit, { f0: 70, f1: 24, glide: 0.18, d: 0.4, peak: 0.55 });
+    if (X.tier >= 3) { K.S(X.fx, T.hit + 0.04, 'relay', { gain: 0.5, rate: 1, jitter: 0 }); K.S(X.fx, T.hit + 0.1, 'click', { gain: 0.4, rate: 0.7 }); K.modes(X.fx, T.hit + 0.1, [[1319, 1, 0.12]], { peak: 0.05 }); }
+  },
+  // A brighter fire. Then white-hot, cinders flying off.
+  inject(K, o, T, X) {
+    K.crackle(X.fx, T.hit, T.hit + 0.6, { f: 5400, peak: 0.16, rise: false });
+    if (X.tier >= 3) { K.hiss(X.fx, T.hit, { type: 'highpass', f0: 5000, f1: 9000, glide: 0.3, a: 0.02, d: 0.3, peak: 0.1 }); [-0.7, 0.7, -0.3].forEach((pan, i) => K.crackle(K.pan(X.fx, pan), T.hit + 0.1 + i * 0.08, T.hit + 0.3 + i * 0.08, { f: 7000, peak: 0.14, rise: false })); }
+  },
+  // Bigger, with glass in it. Then it goes off a second time.
+  detonate(K, o, T, X) {
+    K.S(K.pan(X.fx, -0.4), T.hit + 0.02, 'glass-h', { gain: 0.35, rate: 0.9 }); K.S(K.pan(X.fx, 0.4), T.hit + 0.05, 'glass-l', { gain: 0.3, rate: 0.8 });
+    if (X.tier >= 3) { const x = T.hit + 0.1; K.boom(K.g(0.8, K.pan(o.dry, 0.4)), x, { f0: 95, f1: 30, glide: 0.14, d: 0.3, peak: 0.6 }); K.buzz(K.pan(X.b, 0.4), x, { d: 0.09, peak: 0.3, f0: 5000, f1: 700 }); K.crack(X.b, x, { peak: 0.3, f: 5000 }); }
+  },
+  // It hops as it arrives. Then it brings a second.
+  deploy(K, o, T, X) {
+    K.whine(X.fx, T.hit + 0.045, T.hit + 0.1, { f0: 500 * X.p, f1: 1000 * X.p, peak: 0.05, lp: 3600 });
+    if (X.tier >= 3) { const x = T.hit + 0.09; K.boom(K.g(0.4, K.pan(o.dry, 0.4)), x, { f0: 130 * X.p, f1: 55, d: 0.1, peak: 0.4 }); [1480, 1976].forEach((f, i) => K.modes(K.pan(X.fx, 0.5), x + 0.03 + i * 0.06, [[f * X.p, 1, 0.14]], { peak: 0.05 })); }
+  },
+  // A fourth helper. Then a fifth, and they hop.
+  botnet(K, o, T, X) {
+    for (let i = 3; i < 2 + X.tier; i++) K.modes(K.pan(X.fx, i % 2 ? 0.7 : -0.7), T.hit + 0.12 + i * 0.09, [[(880 + 220 * i) * X.p, 1, 0.16]], { peak: 0.06 });
+    if (X.tier >= 3) K.whine(X.fx, T.hit + 0.045, T.hit + 0.1, { f0: 500 * X.p, f1: 1000 * X.p, peak: 0.05, lp: 3600 });
+  },
+};
+export const TIER_SOUNDS = Object.keys(TIER_SOUND);
+// fn with its tier's layer on top (nothing at tier 1, on a miss or on ◆).
+export function tiered(fn, key, H) {
+  const cls = ABILITIES[key]?.cls || { bash: 'breaker', ban: 'bastion', poke: 'infiltrator', ping: 'operator' }[key] || null, p = pitchOf(key);
+  return (K, o, T) => {
+    fn(K, o, T);
+    const tier = Math.min(3, T.tier || 1);
+    if (tier < 2 || T.result === 'miss' || T.result === 'chit') return;
+    const { fx, b } = H.bus(K, o, ECHO[cls] || ECHO.operator), late = cls === 'infiltrator' ? T.hit + T.stop + 0.05 : T.hit + T.stop;
+    K.shards(K.g(Math.min(1, H.Q * 1.5), fx), late + 0.03, { n: 2 + 2 * (tier - 1), span: 0.14, peak: 0.06 }); // it throws more
+    if (tier >= 3) [0, 0.085].forEach((d, i) => K.modes(K.pan(o.room, i ? 0.3 : -0.3), late + 0.1 + d, [[3136 * p / (NOTE[cls] || 1), 1, 0.12], [4699 * p / (NOTE[cls] || 1), 0.4, 0.08]], { peak: 0.07 })); // the glint
+    TIER_SOUND[key]?.(K, o, T, { fx, b, p, tier, cls, late });
+  };
+}
+
+// ---------- round 3: break finishers ----------
+// The flourish on the break that wins a fight (abilityfx-table.mjs FINISHERS; its subclass's variation on top), over the
+// break's own voice, done within the finisher's 900 ms. T.hit: when it lands (the seal coming down, the helpers meeting).
+export const finisherKey = (cls, sub = null) => (sub && SUB_FINISHERS[sub] && SUBS[sub]?.cls === cls ? `fin~${cls}~${sub}` : `fin~${cls}`);
+export const FINISHER_KEYS = Object.keys(FINISHERS).flatMap((cls) => [finisherKey(cls), ...Object.keys(SUB_FINISHERS).filter((sub) => SUBS[sub]?.cls === cls).map((sub) => finisherKey(cls, sub))]);
+const FINISH = {
+  // Shards scattering both ways along the row: a crack, glass and steel flying apart, wider as they go.
+  breaker(K, o, T, X) {
+    K.crack(X.b, T.t, { peak: 0.45, f: 6000 });
+    K.boom(K.g(0.9, o.dry), T.t, { f0: 100, f1: 30, glide: 0.16, d: 0.4, peak: 0.6 });
+    K.S(X.fx, T.t, 'metal-h', { gain: 0.5, rate: 0.9 });
+    for (let i = 0; i < 9; i++) { const u = i / 9, pan = (i % 2 ? 1 : -1) * (0.15 + 0.75 * u); K.S(K.pan(X.fx, pan), T.t + 0.02 + 0.42 * u * u + 0.01 * i, i % 3 ? 'glass-h' : 'glass-l', { gain: 0.42 * (1 - 0.6 * u), rate: 1.3 - 0.5 * u }); }
+    if (X.sub === 'demolitionist') { const x = T.t + 0.03; K.boom(K.g(0.9, o.dry), x + 0.08, { f0: 80, f1: 24, glide: 0.2, d: 0.5, peak: 0.6 }); K.buzz(X.b, x, { d: 0.14, peak: 0.3, f0: 5000, f1: 500 }); K.S(o.dry, x, 'subdrop', { gain: 0.45, rate: 0.85, jitter: 0 }); }
+    if (X.sub === 'overclocker') { K.crackle(X.fx, T.t + 0.02, T.t + 0.6, { f: 5200, peak: 0.2, rise: false }); [-0.6, 0.6, 0].forEach((pan, i) => K.zap(K.pan(X.b, pan), T.t + 0.08 + i * 0.09, { f0: 7000, f1: 1800, d: 0.05, peak: 0.24 })); }
+  },
+  // A stamp coming down: air, a slam, dust, the room ringing.
+  bastion(K, o, T, X) {
+    K.flight(o.dry, T.t, T.hit, { f0: 240, f1: 70, q: 0.7, peak: 0.3, color: 'brown', tail: 0.02 });
+    K.crack(X.b, T.hit, { peak: 0.4, f: 4200 });
+    K.S(X.fx, T.hit, 'plate-l', { gain: 0.65, rate: 0.36, lp: 1600, jitter: 0 });
+    K.boom(K.g(1, o.dry), T.hit, { f0: 85, f1: 24, glide: 0.2, d: 0.5, peak: 0.65 });
+    K.S(o.dry, T.hit, 'subdrop', { gain: 0.4, rate: 0.8, jitter: 0 });
+    K.hiss(X.fx, T.hit + 0.03, { type: 'bandpass', f0: 2000, f1: 600, glide: 0.3, q: 0.7, a: 0.01, d: 0.3, peak: 0.12, color: 'pink' });
+    for (const [f, g] of [[196, 0.07], [294, 0.045]]) K.tone(o.room, T.hit + 0.02, { f0: f, f1: f * 0.98, glide: 0.6, a: 0.004, peak: g, d: 0.6 });
+    if (X.sub === 'warden') [0.09, 0.2].forEach((d) => K.surge(X.fx, T.hit + d, { f0: 150, f1: 140, d: 0.08, peak: 0.2, drive: 6, bright: 2200 })); // DENIED: two flat buzzes
+    if (X.sub === 'sysop') { K.hiss(X.fx, T.hit + 0.06, { type: 'highpass', f0: 1500, f1: 8000, glide: 0.35, a: 0.05, d: 0.3, peak: 0.1, color: 'pink' }); [784, 988, 1319].forEach((f, i) => K.modes(X.fx, T.hit + 0.12 + i * 0.07, [[f, 1, 0.16]], { peak: 0.06 })); } // CLEAN
+  },
+  // Its name falling apart into 1s and 0s, left to right.
+  infiltrator(K, o, T, X) {
+    K.buzz(X.b, T.t, { d: 0.04, peak: 0.3, f0: 7000, f1: 2000 });
+    K.boom(K.g(0.7, o.dry), T.t, { f0: 110, f1: 36, d: 0.3, peak: 0.55 });
+    const thin = X.sub === 'phantom';
+    for (let i = 0; i < 14; i++) { const u = i / 13, x = T.t + 0.02 + 0.2 * u; K.tone(K.g(Math.min(1, X.Q * (thin ? 0.9 : 1.8)), K.pan(X.b, -0.8 + 1.6 * u)), x, { type: i % 2 ? 'square' : 'sawtooth', f0: (thin ? 5200 : 3400) * Math.pow(0.35, u) * (0.9 + Math.random() * 0.2), a: 0.001, peak: 0.1, d: 0.02 }); K.S(K.pan(X.fx, -0.8 + 1.6 * u), x + 0.25, 'tick', { gain: 0.14, rate: 1.6 - 0.8 * u }); }
+    K.stat(X.b, T.t, { d: 0.3, peak: 0.12, hp: 1500 });
+    if (X.sub === 'payload') { K.crackle(X.fx, T.t + 0.05, T.t + 0.6, { f: 3800, peak: 0.22, rise: false }); K.hiss(o.dry, T.t + 0.03, { type: 'lowpass', f0: 1200, f1: 300, glide: 0.4, a: 0.02, d: 0.45, peak: 0.22, color: 'brown' }); }
+    if (thin) { K.S(X.fx, T.t + 0.05, 'whoosh', { gain: 0.3, rate: 1.6, hp: 900 }); K.whine(X.fx, T.t + 0.1, T.t + 0.6, { f0: 2400, f1: 2700, peak: 0.025, lp: 6000 }); }
+  },
+  // Helpers walking in from both sides, meeting on it, and the pop.
+  operator(K, o, T, X) {
+    const n = X.sub === 'herder' ? 6 : 4, span = Math.max(0.08, T.hit - T.t);
+    K.modes(X.fx, T.t, [[988, 1, 0.12], [1976, 0.3, 0.08]], { peak: 0.06 }); K.S(X.fx, T.t, 'tick', { gain: 0.25, rate: 0.9 }); // the call
+    for (let h = 0; h < n; h++) for (let i = 0; i < 6; i++) { const u = (i + 1) / 6, side = h % 2 ? 1 : -1; K.S(K.pan(X.fx, side * 0.85 * (1 - u)), T.t + 0.02 * h + span * u * 0.95, 'tick', { gain: 0.2, rate: (i % 2 ? 1.25 : 1) * (1 + 0.06 * h), jitter: 0.04 }); }
+    K.hiss(X.b, T.hit + 0.1, { type: 'highpass', f0: 4000, a: 0.0005, d: 0.012, peak: 0.4 });
+    K.boom(K.g(0.9, o.dry), T.hit + 0.1, { f0: 110, f1: 34, glide: 0.14, d: 0.35, peak: 0.6 });
+    if (X.sub === 'hijacker') { K.whine(X.fx, Math.max(T.t, T.hit - 0.06), T.hit + 0.1, { f0: 220, f1: 880, peak: 0.05, lp: 3200 }); K.S(X.fx, T.hit + 0.1, 'relay', { gain: 0.55, rate: 0.6, jitter: 0 }); K.hum(o.room, T.hit + 0.14, { f: 73, d: 0.5, peak: 0.1 }); }
+    else [1319, 1760, 2093, 2637].slice(0, n === 6 ? 4 : 3).forEach((f, i) => K.modes(K.pan(X.fx, (i - 1) * 0.4), T.hit + 0.1 + i * 0.045, [[f, 1, 0.2], [f * 2.01, 0.3, 0.1]], { peak: 0.06 }));
+  },
+};
+// Every finisher's sound, by finisherKey.
+export function finishers(H) {
+  return Object.fromEntries(FINISHER_KEYS.map((key) => {
+    const [, cls, sub = null] = key.split('~');
+    return [key, (K, o, T) => { const { fx, b } = H.bus(K, o, ECHO[cls]); FINISH[cls](K, o, T, { fx, b, sub, Q: H.Q }); }];
+  }));
 }

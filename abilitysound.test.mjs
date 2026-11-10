@@ -5,10 +5,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { STYLES, KEYS, TRIM, PICKED, timingOf, playAbility, hasSound } from './dist/abilitysound.mjs';
-import { SOUND_KEYS, SIGNATURES, TRAITS, TRAIT_NAMES, kindOf, massOf } from './dist/abilitysound-all.mjs';
+import { SOUND_KEYS, SIGNATURES, TRAITS, TRAIT_NAMES, TIER_SOUNDS, FINISHER_KEYS, finisherKey, kindOf, massOf } from './dist/abilitysound-all.mjs';
 import { LEVELS } from './dist/abilitysound-levels.mjs';
 import { SPIKE, ABILITIES } from './dist/data.mjs';
-import { RECIPES } from './dist/abilityfx-table.mjs';
+import { RECIPES, TIERS, FINISHERS, SUB_FINISHERS } from './dist/abilityfx-table.mjs';
 
 function fakeContext() {
   const starts = [];
@@ -128,4 +128,48 @@ test('a miss with nothing flying leaves the result its own voice', () => {
     const { ctx, sample } = fakeContext();
     assert.equal(playAbility(ctx, { dry: ctx.createGain(), room: ctx.createGain() }, PICKED, key, timingOf(1, null, { result: 'miss' }), sample), false, key);
   }
+});
+
+// ---------- round 3: mastery tiers and break finishers ----------
+test('a mastered ability plays its sound with more on top, and every hand-made tier has a layer of its own', () => {
+  assert.deepEqual([...TIER_SOUNDS].sort(), Object.keys(TIERS).filter((k) => !k.includes(':')).sort());
+  assert.equal(timingOf(0, null, {}).tier, 1);
+  for (const key of SOUND_KEYS) {
+    const n = [1, 2, 3].map((tier) => {
+      const { ctx, sample } = fakeContext(), T = timingOf(1, PLAN, { result: 'hit', power: 0.4, tier });
+      assert.ok(playAbility(ctx, { dry: ctx.createGain(), room: ctx.createGain() }, PICKED, key, T, sample), `${key} tier ${tier}`);
+      const at = ctx.starts.map((s) => s.t);
+      assert.ok(Math.min(...at) >= T.t - 1e-6 && Math.max(...at) < T.hit + 1.5, `${key} tier ${tier}: in time`);
+      return at.length;
+    });
+    assert.ok(n[0] < n[1] && n[1] < n[2], `${key}: ${n}`);
+  }
+  // On a miss or on ◆ the tier adds nothing.
+  for (const result of ['miss', 'chit']) {
+    const n = [1, 3].map((tier) => { const { ctx, sample } = fakeContext(); playAbility(ctx, { dry: ctx.createGain(), room: ctx.createGain() }, PICKED, 'overload', timingOf(1, PLAN, { result, tier }), sample); return ctx.starts.length; });
+    assert.equal(n[0], n[1], result);
+  }
+});
+
+test('every break finisher has a sound and a level, starts with the break and is done within its 900 ms', () => {
+  assert.equal(FINISHER_KEYS.length, Object.keys(FINISHERS).length + Object.keys(SUB_FINISHERS).length);
+  assert.equal(finisherKey('bastion', 'warden'), 'fin~bastion~warden');
+  assert.equal(finisherKey('bastion', 'phantom'), 'fin~bastion'); // another class's subclass changes nothing
+  assert.equal(finisherKey('operator'), 'fin~operator');
+  for (const key of FINISHER_KEYS) {
+    const cls = key.split('~')[1];
+    assert.ok(hasSound(PICKED, key), key);
+    assert.equal(typeof LEVELS[key]?.level, 'number', key);
+    const { ctx, sample } = fakeContext(), T = timingOf(1, { travel: 0, impact: FINISHERS[cls].land }, {});
+    assert.ok(playAbility(ctx, { dry: ctx.createGain(), room: ctx.createGain() }, PICKED, key, T, sample), key);
+    const at = ctx.starts.map((s) => s.t);
+    assert.ok(Math.min(...at) >= T.t - 1e-6 && Math.min(...at) < T.t + 0.03, `${key}: it starts with the break`);
+    assert.ok(Math.max(...at) < T.t + 0.9, `${key}: its last voice starts within the finisher (${Math.max(...at) - T.t})`);
+  }
+});
+
+test('the playtest plays a finisher\'s sound over the break\'s, and a tier\'s with its effect', () => {
+  const app = fs.readFileSync('dist/app.js', 'utf8');
+  assert.match(app, /feel\.preview\('break'\); if \(sound !== 'today'\) feel\.abilityPreview\(sound, finisherKey\(cls, sub \|\| null\)/);
+  assert.match(app, /feel\.abilityPreview\(sound, key, t, \{ result, power, tier: who \? 1 : tier \}\)/);
 });

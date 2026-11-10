@@ -20,7 +20,7 @@
 //           in three small beats.
 // Nothing here is in a fight yet: the ability effects playtest (?playtest=fx) plays it, and renderBoard() bounces it.
 
-import { generic } from './abilitysound-all.mjs';
+import { generic, tiered, finishers } from './abilitysound-all.mjs';
 import { LEVELS } from './abilitysound-levels.mjs';
 
 export const STYLES = { a: 'Hardware', b: 'Weighty', c: 'Digital', b1: 'Cinematic', b2: 'Electric', b3: 'Heavy', b4: 'Seismic', b5: 'Machine', b6: 'Glitch', b7: 'Echo', b8: 'Cavern', b9: 'Soft echo', b10: 'Deep echo', b11: 'Tear', b12: 'Trailer', b13: 'Deep echo, soft' };
@@ -1127,7 +1127,10 @@ function core(L, W = 0, B = 0, V = 0, Q = 1, G = false) {
       if (L) stutter(K, b, hit + 2 * PULSE, 2 + (crit ? 1 : 0), PULSE / 3, low);
     },
   };
-  return G ? { ...generic({ bus, weight, stutter, snap, pings, low, Q }), ...four } : four;
+  if (!G) return four;
+  const H = { bus, weight, stutter, snap, pings, low, Q }, all = { ...generic(H), ...four };
+  for (const key of Object.keys(all)) all[key] = tiered(all[key], key, H); // a mastered one's layer
+  return { ...all, ...finishers(H) };
 }
 SOUNDS.b5 = core(0);
 SOUNDS.b6 = core(1);
@@ -1140,11 +1143,11 @@ SOUNDS.b12 = core(1, 1.05, 1, 2);
 SOUNDS.b13 = core(1, 1.05, 1, 0, 0.45, true);
 
 // How the hit's size and result read (plan: the effect's timing in ms, from abilityfx.mjs play()).
-export function timingOf(t, plan, { result = 'hit', power = 0.3 } = {}) {
+export function timingOf(t, plan, { result = 'hit', power = 0.3, tier = 1 } = {}) {
   const { travel = 0, hold = 0, impact = 0, stop = 0 } = plan || {}, s = (ms) => Math.max(0, ms || 0) / 1000;
   const arrive = t + s(travel), hit = Math.max(arrive, t + s(impact));
   // strike: when the last move into contact starts (after the draw-back: the ram's thrust, the hammer coming down).
-  return { t, arrive, hold: s(hold), strike: Math.min(hit, arrive + s(hold)), hit, stop: s(stop), result, k: Math.max(0, Math.min(1, power)), flies: s(travel) > 0.02 };
+  return { t, arrive, hold: s(hold), strike: Math.min(hit, arrive + s(hold)), hit, stop: s(stop), result, k: Math.max(0, Math.min(1, power)), flies: s(travel) > 0.02, tier };
 }
 
 // Play key's sound in `style` into out ({ dry, room }: a dry bus and a send to the room) with T (timingOf). buf(name):

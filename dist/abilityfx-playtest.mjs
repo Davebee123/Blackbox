@@ -10,8 +10,9 @@
 // part (its mark shows) for the hit to cash in: Exposed on a crit, Quarantined, Hooked, Tagged on a burn's tick. Ticks
 // left: how far a burn's tick has run down (last: it gutters). ◆ broken: how many a Crack broke (none: it glances off).
 // Sound (abilitysound.mjs): today's sound for the result, or an ability's own in a style, timed to the effect, whatever
-// the Sound setting. Every ability has one in the picked style (B13); the others have Bash, Ban, Poke and Ping only,
-// and the rest play today's.
+// the Sound setting. Every ability has one in the picked style (B13), with its mastery tier's layer and each break
+// finisher's flourish over the break's voice; the other styles have Bash, Ban, Poke and Ping only, and the rest play
+// today's.
 
 import { RECIPES, FINISHERS, SUB_FINISHERS, finisherOf } from './abilityfx.mjs';
 import { SPIKE, ABILITIES, ARCHETYPES, SUBS } from './data.mjs';
@@ -106,7 +107,7 @@ export function mountFxPlaytest(api) {
       return next(0);
     }
     if (b.dataset.fin) {
-      const [cls, sub] = b.dataset.fin.split(':'), F = finisherOf(cls, sub || null), what = api.finish?.(cls, sub || null, ui.target);
+      const [cls, sub] = b.dataset.fin.split(':'), F = finisherOf(cls, sub || null), what = api.finish?.(cls, sub || null, ui.target, { sound: ui.sound });
       return say(what === 'fx' ? `${F.label}: played (the winning break).` : what === 'plain' ? `${F.label}: no room here.` : `${F.label}: nothing at Screen effects ${api.level()}${api.motion() ? '' : ', Motion off'} (as in a fight).`);
     }
     if (b.dataset.fire !== undefined) fire(b.dataset.fire);

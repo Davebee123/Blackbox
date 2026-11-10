@@ -32,6 +32,7 @@ import { JOURNAL_BY } from './journals.mjs';
 import { powerOn } from './poweron.mjs';
 import { relockLeft } from './rogue.mjs';
 import { createHitFx } from './hitfx.mjs';
+import { finisherKey } from './abilitysound-all.mjs';
 import { createAbilityFx, keyFor, tickKey, recipeOf, originOf, idOfName, finisherBreak, levelOf as afxLevel } from './abilityfx.mjs';
 import { tierOf as masteryTier } from './mastery.mjs';
 import { plan as dmgPlan, queueAfter, absorbOf, armorFloat, missFloat } from './dmgfx.mjs';
@@ -3921,7 +3922,7 @@ if (playtest === 'fx') import('./abilityfx-playtest.mjs').then(({ mountFxPlaytes
       const voice = (plan) => {
         if (sound === 'off' || key.endsWith(':tick')) return;
         const t = plan ? { travel: plan.travel, hold: plan.hold, impact: plan.impact, stop: plan.stop } : null;
-        if (sound !== 'today' && feel.abilityPreview(sound, key, t, { result, power })) return;
+        if (sound !== 'today' && feel.abilityPreview(sound, key, t, { result, power, tier: who ? 1 : tier })) return;
         feel.preview(result === 'miss' ? 'miss' : result === 'chit' ? 'chit' : crit ? 'crit' : 'hit', { amount: Math.round(power * 60) }, (t?.impact || 0) / 1000);
       };
       if (fxLevel() === 'minimal' || !canMove()) { voice(null); return 'none'; }
@@ -3935,9 +3936,11 @@ if (playtest === 'fx') import('./abilityfx-playtest.mjs').then(({ mountFxPlaytes
       return 'plain';
     },
     // A break finisher on a part (its class's, or a subclass's), as the winning break plays it.
-    finish: (cls, sub, id) => {
+    finish: (cls, sub, id, { sound = 'off' } = {}) => {
       if (fxLevel() === 'minimal' || !canMove()) return 'none';
       const plan = abilityfx.finish(cls, sub || null, fxRow(id));
+      // Its sound: the break's own voice, and in a style the finisher's flourish over it (abilitysound-all.mjs).
+      if (plan && sound !== 'off') { feel.preview('break'); if (sound !== 'today') feel.abilityPreview(sound, finisherKey(cls, sub || null), { travel: 0, impact: plan.impact }, {}); }
       if (plan) { window.__fxPlan = { travel: 0, impact: plan.impact, dur: plan.dur, from: 'here' }; return 'fx'; }
       return 'plain';
     },

@@ -64,5 +64,9 @@ Operator's comes in three beats.
    bodies and an evenly spread pitch by its place among its class's of that kind, and layers of their own for the
    long-cooldown ones (Zero-day, Logic Bomb, Kill Switch, Takeover, Outbreak, Turbo Boost, Vanish, Circuit Breaker,
    Opening, Hot Standby).
-3. **Tiers and finishers**: the mastery layers, the 13 tier overrides, the 12 finishers.
+3. **Tiers and finishers** (built, waiting on the designer's ear): a mastered ability's sound with a layer on top
+   (`tiered`: tier 2 throws more, tier 3 leaves a glint), a layer of its own for each hand-made tier as its effect
+   draws it (TIER_SOUND: Ban's deeper slam and glowing crack, Poke's three needles, Ping's echo coming back…; a
+   burn's ticks keep today's voice), and the 12 finishers (`finishers`, by `finisherKey`) over the break's own voice.
+   `?playtest=fx` plays them: Mastery picks the tier, Break finishers fires each.
 4. **Land**: the mix in real fights (crowded cycles, crewmates, burns), the voice cap, tests, GAME_RULES and README.
