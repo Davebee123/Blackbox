@@ -137,7 +137,7 @@ test('the Cold Store: frozen, then its Chill, all mechanics with no advice, and 
 test('the Encryptor, the Packer, the Mimic and the Pulse Node read in the same grammar', () => {
   const enc = liveFight('coldstore');
   assert.match(tipOf(enc, 'encryptor'), /^Encryptor: Encrypts you every 5 cycles\. Each Encrypt deals \d+ damage to you every cycle until the Encryptor breaks\. A ◆ on you blocks one Encrypt\.( Charges [A-Za-z -]+\.)?( Casts [A-Za-z -]+\.)?\n▸ Break it to end the encryption\.$/);
-  assert.match(tipOf(enc, 'pulse'), /^Pulse Node: Deals \d+ damage to you every 4 cycles\.\n▸ Delay it, or soften the hit with ◆ and shields\.$/);
+  assert.match(tipOf(enc, 'pulse'), /^Pulse Node: Deals \d+ damage to you every 4 cycles\.( Charges [A-Za-z -]+\.)?\n▸ Delay it, or soften the hit with ◆ and shields\.$/); // its twin's Overcharge (TELL.twin)
   const pk = liveFight('packer');
   assert.match(tipOf(pk, 'packer'), /^Packer: While it stands, each rolled part shows as a Packed part, its attack as \?\?\?\. The virus's rolled rules show as \?\?\?, even ones your Codex knows\. Hides its timers while it wears ◆\.\n▸ Scan before you engage, or break it\.$/);
   const packed = pk.encounter.virus.parts.find((p) => p.packedAs);

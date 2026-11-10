@@ -4,7 +4,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, selectEncounter, resolveCycle, part, active, intents, livingParts, keyMap, readyIn, previewDamage } from './dist/combat.mjs';
 import { CONFIG, TELL, TELLS, TELL_SETS, ABILITIES, FAMILIES, createVirus } from './dist/data.mjs';
-import { tellsOf, tellIntents, tellLog, sayOf, tellStart } from './dist/tells.mjs';
+import { tellsOf, tellIntents, tellLog, sayOf, tellStart, lesserTwin, mimicHit, copyOf } from './dist/tells.mjs';
+import { interruptMove } from './dist/interrupt.mjs';
 import { boardMarkup, partAbout } from './dist/view.mjs';
 import { planner } from './dist/planner.mjs';
 import { raidOf } from './dist/raid.mjs';
@@ -27,7 +28,7 @@ function fight({ level = 12, family = 'ransomware', cls = 'breaker', seed = 7, k
 // next attack: its timer is set to land then.
 function tell(s, id, partId, n = 2) {
   const T = tellsOf(s), e = s.encounter;
-  for (const t of T.list) { t.told = false; t.after = 999; }
+  for (const t of T.list) { t.told = false; t.after = 999; t.paired = false; }
   const t = T.list.find((x) => x.id === id);
   assert.ok(t, `${id} is one of this virus's tells (${T.list.map((x) => x.id).join(', ')})`);
   const p = part(s, partId);
@@ -47,6 +48,7 @@ const quietParts = (s) => { for (const p of s.encounter.virus.parts) if (p.attac
 const hold = (s, n = 1) => { for (let i = 0; i < n && active(s); i++) { command(s, 'hold'); resolveCycle(s); } };
 const fire = (s, text) => { const ev = command(s, text); assert.ok(!ev.some((e) => e.type === 'warning'), ev.at(-1)?.message); return resolveCycle(s); };
 const hp = (s) => s.server.integrity;
+const attackersOf = (s) => s.encounter.virus.parts.filter((p) => p.attack);
 // A part a test hits without breaking it, and no armor in the way.
 const bare = (s, id) => Object.assign(part(s, id), { armor: 0, maxArmor: 0, integrity: 999, max: 999 });
 
@@ -59,21 +61,23 @@ test('Flood cools down in 6 cycles, Crack in 2 (the Breaker retune)', () => {
   assert.equal(readyIn(s, 'flood'), 5, 'ready again 6 cycles after it fired');
 });
 
-test('tells scale with the level (docs/servers.md 3.5): none to 5 (the ticks are the lesson), one from 6, two from 17, an elite one more from 6; none in SPRAWL-00\'s first fights or at a crew boss', () => {
+test('tells scale with the level (docs/servers.md 3.5): none to 5 (the ticks are the lesson), one from 6, its twin from 10, two from 17, an elite one more from 6; none in SPRAWL-00\'s first fights or at a crew boss', () => {
   const at = (level, opts = {}) => tellsOf(fight({ level, ...opts }));
   const kinds = (T) => T.list.filter((t) => t.kind !== 'mimic').map((t) => t.kind);
   assert.deepEqual(kinds(at(3)), [], 'levels 1 to 5: none');
   assert.deepEqual(kinds(at(3, { opts: { elite: true } })), [], 'not even on an elite');
+  assert.deepEqual(kinds(at(8)), ['charge'], 'from 6, one');
   const mid = at(12);
-  assert.deepEqual(kinds(mid), ['charge'], 'from 6, one');
+  assert.deepEqual(mid.list.map((t) => t.id), ['fulldisk', 'overcharge'], 'from 10, its twin: an Overcharge on the plain attacker');
+  assert.ok(mid.list[0].twin === 'overcharge' && mid.list[1].twin === 'fulldisk' && mid.list[1].second);
   assert.equal(mid.tier.lead, 3, 'said three cycles ahead');
   assert.equal(mid.tier.live, 1, 'below 17, one live at a time');
   assert.equal(mid.tier.window, undefined, 'no windows by tier: a charge is answered on its cycle');
   assert.equal(mid.tier.share, undefined, 'and no burst');
-  assert.deepEqual(kinds(at(12, { opts: { elite: true } })), ['charge', 'cast'], 'an elite one more');
+  assert.deepEqual(kinds(at(12, { opts: { elite: true } })), ['charge', 'cast', 'charge'], 'an elite one more, and the twin');
   assert.ok(!at(8, { opts: { elite: true } }).list.some((t) => t.kind === 'cast'), 'no casts before SIGINT (level 10)');
   const top = at(18);
-  assert.deepEqual(top.list.filter((t) => t.kind !== 'mimic').map((t) => t.id), ['fulldisk', 'extortion']);
+  assert.deepEqual(top.list.filter((t) => t.kind !== 'mimic').map((t) => t.id), ['fulldisk', 'extortion', 'overcharge']);
   assert.equal(top.tier.live, 2, 'from 17, two at most');
   assert.equal(at(18, { opts: { elite: true } }).list.filter((t) => t.kind !== 'mimic').length, 3, 'an elite brings one more');
   // SPRAWL-00's first two kills (soft) bring none.
@@ -128,12 +132,14 @@ test('each tell sits on a fixed part, shown on the chip and in the codex: the En
   assert.match(partAbout(part(s, 'encryptor'), s.encounter.virus, s), /Charges Full Disk\./);
 });
 
-test('no pile-ups: a charge never lands with another part\'s heavy attack, and below 17 one tell is live at a time', () => {
+test('no pile-ups but twins: a charge never lands with a third part\'s heavy attack; below 17 one tell is live at a time, twins counted once', () => {
+  const lands = (s, x) => (x.kind === 'charge' ? part(s, x.part).attack.due + (x.n - (part(s, x.part).attack.n || 0)) * part(s, x.part).attack.interval : x.next);
   for (let seed = 1; seed <= 12; seed++) {
     const s = fight({ level: 12, seed });
     for (let i = 0; i < 25 && active(s); i++) {
       const told = tellsOf(s).list.filter((x) => x.told && x.kind !== 'mimic');
-      assert.ok(told.length <= 1, `seed ${seed}: one live at a time (${told.map((x) => x.id)})`);
+      assert.ok(told.filter((x) => !(x.paired && x.second)).length <= 1, `seed ${seed}: one live at a time (${told.map((x) => x.id)})`);
+      if (told.length === 2) assert.ok(told.every((x) => x.paired) && lands(s, told[0]) === lands(s, told[1]), `seed ${seed}: two at once are twins, on one cycle`);
       for (const x of tellIntents(s).filter((y) => y.tell === 'charge')) {
         const heavy = intents(s).filter((y) => y.col === x.col && !y.tell && y.source !== x.source && (y.amount || y.hit || 0) >= s.server.max * TELL.heavy);
         assert.equal(heavy.length, 0, `seed ${seed}: nothing heavy lands with ${x.name}`);
@@ -144,13 +150,83 @@ test('no pile-ups: a charge never lands with another part\'s heavy attack, and b
   for (let seed = 1; seed <= 8; seed++) {
     const s = fight({ level: 20, seed });
     for (let i = 0; i < 25 && active(s); i++) {
-      const told = tellsOf(s).list.filter((x) => x.told && x.kind !== 'mimic');
-      assert.ok(told.length <= 2, 'from 17, two at most');
-      const at = told.map((x) => (x.kind === 'charge' ? part(s, x.part).attack.due + (x.n - (part(s, x.part).attack.n || 0)) * part(s, x.part).attack.interval : x.next));
-      assert.equal(new Set(at).size, at.length, 'never on the same cycle');
+      const told = tellsOf(s).list.filter((x) => x.told && x.kind !== 'mimic'), solo = told.filter((x) => !(x.paired && x.second));
+      assert.ok(solo.length <= 2, 'from 17, two at most');
+      assert.equal(new Set(solo.map((x) => lands(s, x))).size, solo.length, 'never on the same cycle, twins aside');
       command(s, 'hold'); resolveCycle(s);
     }
   }
+});
+
+// Twins (TELL.twin, docs/puzzle-fights.md decision 15): from level 10 a virus with two parts that can charge says both
+// charges together, on one cycle. One command cuts one, and the board marks the cheaper one to take.
+test('twins: from 10 its charge and an Overcharge land on one cycle, the second attack held; each is smaller; one cut answers one, and the cheaper is the Lesser', () => {
+  assert.ok(!tellsOf(fight({ level: 8 })).list.some((t) => t.twin), 'none below 10');
+  assert.ok(!createVirus('random', 3, { family: 'worm', threat: 30, boss: 'resident' }).tells?.list.some((t) => t.twin), 'never a boss');
+  let seen = 0;
+  for (const [family, seed] of [['ransomware', 7], ['worm', 3], ['ghostroot', 5], ['worm', 11]]) {
+    const s = fight({ level: 12, family, seed }), due0 = Object.fromEntries(attackersOf(s).map((p) => [p.id, p.attack.due]));
+    for (let i = 0; i < 12 && active(s); i++) {
+      const xs = tellIntents(s).filter((x) => x.tell === 'charge');
+      if (xs.length === 2) {
+        seen++;
+        assert.equal(xs[0].col, xs[1].col, `${family}: one cycle`);
+        assert.ok(xs[0].pair?.id === xs[1].id && xs[1].pair?.id === xs[0].id, 'each names the other');
+        const red = xs.every((x) => x.effect === 'damage'); // an Encrypt's stack, fragments and a Scramble have no one price: no Lesser
+        assert.equal(xs.filter((x) => x.lesser).length, red && xs[0].price !== xs[1].price ? 1 : 0, 'the Lesser: the cheaper of two red prices');
+        if (red && xs[0].price !== xs[1].price) assert.ok(xs.find((x) => x.lesser).price < xs.find((x) => !x.lesser).price);
+        const html = boardMarkup(s);
+        assert.equal((html.match(/class="tl-or">⇄/g) || []).length, 2, '⇄ on both chips');
+        if (xs.some((x) => x.lesser)) { assert.match(html, /intent tell t-charge[^"]* pair lesser"[^>]*title="[^"]*This is the lesser of the two\. Cut the [^"]*, and take this one\./); assert.match(html, /▸ Lesser</); }
+        assert.match(html, /Lands with the [^"]*\. When one of the two is cut, the other leaves no after-effect\./);
+        break;
+      }
+      hold(s);
+    }
+    // The hold: a twin's attack is never sooner than it was due.
+    for (const t of tellsOf(s).list.filter((x) => x.told && x.paired)) assert.ok(part(s, t.part).attack.due >= Math.min(due0[t.part], part(s, t.part).attack.due), 'held, never hurried');
+  }
+  assert.ok(seen >= 3, `twins were said (${seen}/4)`);
+  // Each twin's extra is TELL.twin.share of a lone charge's.
+  const s = fight({ level: 12, cls: 'bastion' }); quietParts(s);
+  const pulse = bare(s, 'pulse'); pulse.attack = { name: 'Surge', effect: 'damage', amount: 20, interval: 4, due: 999 };
+  const t = tell(s, 'overcharge', 'pulse', 1), lone = tellIntents(s).find((x) => x.id === t.id).amount;
+  t.paired = true;
+  const twin = tellIntents(s).find((x) => x.id === t.id).amount, mult = tellsOf(s).tier.mult;
+  assert.equal(lone, Math.round(20 * mult)); assert.equal(twin, Math.round(20 * (1 + (mult - 1) * TELL.twin.share)));
+  // One command, one cut: the Encryptor's is called off, the Pulse Node's lands.
+  const a = fight({ level: 12, cls: 'bastion' }); quietParts(a);
+  edge(a, 'encryptor'); edge(a, 'pulse');
+  const ta = tell(a, 'fulldisk', 'encryptor', 0), tb = tellsOf(a).list.find((x) => x.id === 'overcharge'), pp = part(a, 'pulse');
+  pp.attack.due = a.encounter.cycle;
+  Object.assign(tb, { told: true, said: a.encounter.cycle, next: a.encounter.cycle, n: pp.attack.n || 0, paired: true }); ta.paired = true;
+  const was = hp(a), ev = fire(a, 'spike encryptor');
+  assert.ok(ev.some((e) => e.tell === ta.id && e.answered), 'the one you cut is called off');
+  assert.ok(was > hp(a) && ev.some((e) => e.type === 'server-hit' && /Overcharge/.test(e.message)), 'the other lands');
+  assert.ok(!a.encounter.corrupt && !ev.some((e) => e.type === 'locked'), 'and leaves no after-effect: it is the evil you chose');
+  // Neither cut: both land, and the after-effects with them.
+  const b2 = fight({ level: 12, cls: 'bastion' }); quietParts(b2);
+  bare(b2, 'encryptor'); bare(b2, 'pulse');
+  const tc = tell(b2, 'fulldisk', 'encryptor', 0), td = tellsOf(b2).list.find((x) => x.id === 'overcharge'), pq = part(b2, 'pulse');
+  pq.attack.due = b2.encounter.cycle;
+  Object.assign(td, { told: true, said: b2.encounter.cycle, next: b2.encounter.cycle, n: pq.attack.n || 0, paired: true }); tc.paired = true;
+  hold(b2);
+  assert.ok(b2.encounter.corrupt || b2.logs.some((e) => /Corrupted/.test(e.message)), 'ignored, they leave you Corrupted');
+});
+
+test('twins and the bots: the reading bot cuts the dearer twin and lets the lesser land', () => {
+  const s = fight({ level: 12, cls: 'bastion' }); quietParts(s);
+  edge(s, 'encryptor'); edge(s, 'pulse');
+  const enc = part(s, 'encryptor'), pulse = part(s, 'pulse');
+  enc.attack = { name: 'Encrypt', effect: 'damage', amount: 30, interval: 5, due: s.encounter.cycle };
+  pulse.attack = { ...pulse.attack, effect: 'damage', amount: 10, due: s.encounter.cycle };
+  const a = tell(s, 'fulldisk', 'encryptor', 0), b = tellsOf(s).list.find((x) => x.id === 'overcharge');
+  Object.assign(b, { told: true, said: s.encounter.cycle, next: s.encounter.cycle, n: pulse.attack.n || 0, paired: true }); a.paired = true;
+  assert.ok(lesserTwin(s, b) && !lesserTwin(s, a), 'the Pulse Node\'s is the lesser');
+  assert.match(interruptMove(s), / encryptor$/, 'the cut goes on the dearer');
+  pulse.attack.amount = 60;
+  assert.ok(lesserTwin(s, a) && !lesserTwin(s, b), 'the board changed: the other is the lesser now');
+  assert.match(interruptMove(s), / pulse$/);
 });
 
 test('a charge: its attack, much bigger; a cut on its part on its cycle calls it off (the interrupt), and the part is Open', () => {
@@ -347,6 +423,17 @@ test('the Mimic plays the command you fire on its beat back at you; go quiet and
   const ev = fire(s2, 'exploit pulse');
   assert.equal(hp(s2), b2, 'Exploit has no hit in it');
   assert.ok(ev.some((e) => e.type === 'read' && e.open), 'read: the Mimic is Open');
+});
+
+test('the Mimic\'s copy of a hit is a bit smaller than the hit (TELL.mimic), and a big skill is still the dear one', () => {
+  assert.ok(TELL.mimic > 0.5 && TELL.mimic < 1);
+  const seed = Array.from({ length: 50 }, (_, i) => i + 1).find((x) => createVirus('random', x, { family: 'ghostroot', threat: 9 + 12, classic: true }).parts.some((p) => p.mimic));
+  const s = fight({ level: 12, family: 'ghostroot', seed }), m = part(s, 'mimic');
+  Object.assign(m, { armor: 0, maxArmor: 0, integrity: 999, max: 999 });
+  const flood = mimicHit(s, 'flood', m), key1 = mimicHit(s, 'spike', m), whole = previewDamage(s, 'flood', m);
+  assert.ok(flood < whole && flood >= whole * TELL.mimic * 0.8, `a copied Flood is under the hit itself (${flood} of ${whole})`);
+  assert.ok(flood > key1 * 2, 'countering the big skill stays its job');
+  assert.equal(copyOf(s, 'flood', m).amount, flood, 'what the beat cell shows');
 });
 
 test('MIRRORSHADE\'s Mimic sits on its Scramble: while you\'re Scrambled it plays your hit back twice over', () => {
@@ -732,6 +819,7 @@ test('the log\'s tell lines are as short as the chip\'s tooltip: what, when, on 
     assert.ok(said.length, `${family} ${level}: a tell was said`);
     for (const e of said) {
       assert.ok(e.message.length <= 100, `${family} ${level}: short (${e.message.length}): ${e.message}`);
+      if (/ lands with it/.test(e.message)) { assert.match(e.message, /^The [A-Za-z0-9 -]+'s [A-Z][A-Z0-9' -]+ lands with it(?:, its [A-Za-z -]+ held \d cycles?)?\. One command cuts one\.$/, e.message); continue; } // a twin's second line
       assert.match(e.message, /^The [A-Za-z0-9 -]+(?:'s [A-Z][A-Z0-9' -]+ lands| plays you back) (this cycle|next cycle|in \d+ cycles)\. /, e.message);
       assert.doesNotMatch(e.message, /Deal \d+|break \d+ ◆ in its window|hit it twice/, e.message);
       assert.ok(e.message.includes(e.name) || e.kind === 'mimic', `the event names the tell (app.js floats it): ${e.name}`);

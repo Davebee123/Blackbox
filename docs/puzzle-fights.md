@@ -38,7 +38,7 @@ The designer: *"The mechanics should be difficult and rewarding to learn. Think 
 | **The order** | The wrong part first sets something off. | The Tripwire, the Spare, the Mirror's twin, the Mutex, the Lockbox. |
 | **Strip before** | A seal re-arms by the ◆ left on its part. | Seals. |
 | **Save the key** | A cast and a charge compete for one SIGINT. | Casts, charges and SIGINT. |
-| **Two clocks** | Two tells due on one cycle, on different parts: answer one early. | Elites and bosses only (*no pile-ups* lifted, checked fight by fight). |
+| **Two clocks** | Two tells due on one cycle, on different parts: answer one early, or cut one and take the other. | Twins from level 10 (8.1); an elite's and a boss's pile-ups, checked fight by fight. |
 | **The one to leave** | A part that must stand until a phase is done. | A boss's ♛ part. |
 | **Phases** | Three or four short phases, so three or four tells get their turn. | Boss phases, in place of more Integrity. |
 
@@ -174,6 +174,24 @@ The designer, October 2026:
     pushes toward crews and better gear. Gear makes a significant difference. Never mechanically hard but easy to
     kill: that makes gear pointless.
 17. **The Mimic:** its copies can be a bit smaller, but countering your big skill stays its job.
+
+### 8.1 Batch 1: lesser evils (November 10, on `wip/lesser-evils`, not landed)
+
+Built lean for the designer's play; nothing here is kept yet.
+
+| Shape (decision 15) | Built as | Where | The cheaper side changes with |
+|---|---|---|---|
+| Two tells on one cycle | **Twins**: a virus's charge and an Overcharge on its plain attacker, said together (`TELL.twin`). ⇄ on both chips, *▸ Lesser* on the cheaper of two plain hits | Wild viruses, guards, strains and elites from 10 with two parts that can charge: about 40% of fights | The two prices (your Block, a Cipher Block's or Fan-in's lift), which part is near a tick and bare, a ◆ or shield on you |
+| A growing threat with a tell | Ransomware's twins: Full Disk (the stack) beside the Pulse Node's Overcharge; a worm's Mass Mailer beside a Fan-in's | The same fights | How long the Encryptor will stand, the fragments on the board |
+| An armored part that buffs another | **The Amplifier**, reworked: ◆◆, +75% on the strongest attacker while it wears ◆ | Bad Blood, the Amplified Floodgate and their spread; `PARTS.mech` still 0 | Strip it (tempo), break it, or race the boosted part |
+
+- **A twin costs** ×1.75 its plain hit at 10–16 (×2 from 17) and leaves no after-effect once its pair is cut. Taking
+  both costs what a lone charge and a plain hit did, so a player who cuts nothing pays what they paid; one who cut every
+  lone charge now pays about a plain hit a pair. The reading bot's fight costs what it did (40 seeds a class).
+- **The Mimic** copies a hit at 75% (decision 17). **The Backlash** is the boss's biggest plain hit doubled on every part.
+- **Not covered:** the 60% of fights with one part that can charge still bring a lone tell. Next: the charge on the
+  Mimic's beat, a seal beside a charge.
+- **The planner** cuts the dearer twin and lets the lesser land (`lesserTwin`); nothing else was taught.
 
 ### 7.1 P4's first four
 

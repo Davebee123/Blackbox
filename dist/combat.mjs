@@ -3845,7 +3845,7 @@ function landAttack(s, p) {
   const e = s.encounter;
   const atk = p.attack;
   liftOf(s);
-  const power = attackAmount(p) * (roundOf(e.virus, e.cycle)?.mult ?? 1) * (turboOn(e)?.taken ?? 1) * c2Gnaw(s, p) * (e.soft || 1) * gapTaken(levelGap(s)) * (p.boosted ? CONFIG.reactiveBonus : 1) * (on(s, p, 'throttled') ? (hasTalent(s, 'backpressure') ? 0.25 : SKILLS.throttled) : 1) * mechPower(s, p, true);
+  const power = attackAmount(p) * (roundOf(e.virus, e.cycle)?.mult ?? 1) * (turboOn(e)?.taken ?? 1) * c2Gnaw(s, p) * (e.soft || 1) * gapTaken(levelGap(s)) * (p.boosted ? CONFIG.reactiveBonus : 1) * (on(s, p, 'throttled') ? (hasTalent(s, 'backpressure') ? 0.25 : SKILLS.throttled) : 1) * mechPower(s, p);
   // A hit: a damage attack, or a special that also hits (the Scrambler's Scramble). Its size is `hit`, scaled like the rest.
   const hits = atk.effect === 'damage' || !!atk.hit, hitPower = atk.hit ? (power * atk.hit) / Math.max(1, atk.amount) : power;
   p.boosted = false;
@@ -4675,7 +4675,7 @@ export function intents(s, columns = 4) {
       const col = due - e.cycle;
       if (a.grow) a.bonus = (bonus0 || 0) + a.grow * Math.max(0, col);
       const tap = p.taps ? { tap: ((a.tap || 0) + k) % p.taps + 1, taps: p.taps } : {}; // which hit of its volley
-      if (col >= 0 && !charged.has(`${p.id}@${col}`)) out.push({ source: p.id, name: a.name, effect: a.effect, amount: Math.round(attackAmount(p) * c2Gnaw(s, p) * (boosted ? CONFIG.reactiveBonus : 1) * mechPower(s, p, false, k > 0)), ...(a.hit ? { hit: Math.round(a.hit * (boosted ? CONFIG.reactiveBonus : 1)) } : {}), col, hidden, kind: p.kind, ...tap, ...(p.backlog ? { syn: true } : {}), ...(p.scrape ? { scrape: true } : {}), ...(p.badblock ? { bad: true } : {}), ...(due === a.due && delayHeld(p) ? { held: true } : {}) }); // held: already delayed, it lands there
+      if (col >= 0 && !charged.has(`${p.id}@${col}`)) out.push({ source: p.id, name: a.name, effect: a.effect, amount: Math.round(attackAmount(p) * c2Gnaw(s, p) * (boosted ? CONFIG.reactiveBonus : 1) * mechPower(s, p)), ...(a.hit ? { hit: Math.round(a.hit * (boosted ? CONFIG.reactiveBonus : 1)) } : {}), col, hidden, kind: p.kind, ...tap, ...(p.backlog ? { syn: true } : {}), ...(p.scrape ? { scrape: true } : {}), ...(p.badblock ? { bad: true } : {}), ...(due === a.due && delayHeld(p) ? { held: true } : {}) }); // held: already delayed, it lands there
       if (a.ramp) a.step = (a.step || 0) + 1;
       boosted = false;
     });

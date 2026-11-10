@@ -666,10 +666,10 @@ export const STRAINS = {
   },
   badblood: {
     lineage: 'worm', from: 16, depth: 2, name: 'Bad Blood', genes: ['vendetta', 'amplifier'], tell: { name: 'Blood Feud', gene: 'overcharge' },
-    rule: 'Each cycle the Amplifier boosts the next attack of the Pulse Node or the Vendetta, in turn, by 50%. While the Vendetta stands, each other part you break makes the rest hit 20% harder.',
-    answer: 'Break the Vendetta first, then the part the Amplifier boosts.',
+    rule: 'While the Amplifier wears ◆, the virus\'s strongest part deals 75% more damage. While the Vendetta stands, each other part you break makes the rest hit 20% harder.',
+    answer: 'Keep the Amplifier stripped, and break the Vendetta first.',
     parts: [PULSE(12, 4), { id: 'vendetta', name: 'Vendetta', integrity: 26, armor: 1, loot: 'Grudge File', special: true, mech: 'vendetta', attack: { name: 'Grudge', effect: 'damage', amount: 5, interval: 3, first: 3 } },
-      { id: 'amplifier', name: 'Amplifier', integrity: 18, armor: 1, loot: 'Gain Stage', mech: 'amplifier' }],
+      { id: 'amplifier', name: 'Amplifier', integrity: 18, armor: 2, loot: 'Gain Stage', mech: 'amplifier' }],
   },
   bodysnatcher: {
     lineage: 'ghostroot', from: 18, depth: 2, name: 'Bodysnatcher', genes: ['swap', 'stunned'], tell: { name: 'Body Swap', gene: 'overcharge' },
@@ -723,7 +723,7 @@ Object.assign(STRAINS, {
     'The Leaker\'s Drip leaks you for 3 cycles, and each command you fire then costs 3% of your max.', 'Fire inside the Sync Window, and hold while you leak.'),
   junkinghashrat: MUTANT('hashrat', 'junk', { id: 'junker', name: 'Junker', integrity: 20, armor: 1, loot: 'Junk Page', mech: 'junk', attack: { name: 'Junk', effect: 'damage', amount: 3, interval: 4, first: 3 } },
     'The Junker\'s Junk puts a dead key on your bar. Firing that key clears it, and that is your command.', 'Break the Miner first, and clear the junk when the key matters.'),
-  amplifiedfloodgate: MUTANT('floodgate', 'amplifier', { id: 'amplifier', name: 'Amplifier', integrity: 18, armor: 1, loot: 'Gain Stage', mech: 'amplifier' },
+  amplifiedfloodgate: MUTANT('floodgate', 'amplifier', { id: 'amplifier', name: 'Amplifier', integrity: 18, armor: 2, loot: 'Gain Stage', mech: 'amplifier' },
     'Each cycle the Amplifier boosts the next attack of the Pulse Node or the Flooder, in turn, by 50%.', 'Delay the boosted Flood, or break the Amplifier.'),
   feedingleech: MUTANT('leech', 'feeder', { id: 'feeder', name: 'Feeder', integrity: 20, armor: 1, loot: 'Feed Tube', mech: 'feeder' },
     'Each cycle the Feeder heals the most damaged part by 2% of its max for each debuff you carry.', 'Stay clean, shield the Siphon, and break the Tap.'),
@@ -1188,6 +1188,12 @@ export const TELL = {
   elite: { count: 1, extra: 1.15, live: 1 }, // live: an elite with a clash has one more at once, and its pile-ups are lifted where a cast is in them (tells.mjs announce)
   boss: { count: 3, extra: 1, mult: 2, delay: 0 }, // a solo boss's charge is its hit × 2: its plain hits carry the pressure, its big move about twice one
   champion: { extra: 1.1 }, // a champion invasion (elite-grade, but sized for one): the usual tells, its charges a little bigger
+  // Lesser evils (docs/puzzle-fights.md decision 15). Twins: from `from`, a virus with two parts that can charge (and no
+  // boss) says both charges together, on one cycle: its own and an Overcharge on its plain attacker, which holds its attack
+  // to land with it. One command cuts one. A twin's extra is `share` of a lone charge's: at a half, taking both costs what
+  // a lone charge and the other part's plain hit did, so a player who cuts neither pays what they paid before, and one
+  // who cuts the dearer pays the lesser (about a plain hit more than nothing).
+  twin: { from: 10, share: 0.5, lasting: 2 }, // lasting: how the reading bot weighs a twin that leaves a stack, fragments or a Scramble (tells.mjs lesserTwin)
 
   castFrom: 10, // casts come with SIGINT
   first: 3, // the first tell lands no sooner than this cycle (a cast and a second charge one later, a seal sealAfter later)
@@ -1202,7 +1208,7 @@ export const TELL = {
   seal: 1, // a seal that lands gives every part this many ◆ back for each ◆ its own part still wears (never past a part's max)
   sigintCharge: true, // SIGINT cuts a charge on its cycle as well as a cast in its window: one key, two clocks (docs/puzzle-levers.md 3.6)
   sigintChargeFrom: 17, // from the virus level two tells are live at once (a charge and a cast compete for it); below it SIGINT stops casts only, since an idle SIGINT on every lone charge made a fight at 10 to 16 about half as costly (balance.test.mjs)
-  mimic: 1, // the Mimic hits you with your last command's direct damage, all of it
+  mimic: 0.75, // the Mimic hits you with this share of your command's direct damage (decision 17: a bit smaller; a copied big skill is still the dear one)
   // The Mimic copies everything you fire on its beat and turns it on you (docs/puzzle-levers.md 3.1, tells.mjs copyOf). A
   // hit hits you (mimic, above); a hit with no listed damage of its own (a cash-in, a proc, an area hit) copies as your
   // key 1. The rest:

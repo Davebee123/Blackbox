@@ -243,6 +243,11 @@ code { font-family: var(--mono); color: var(--amber); }
 .intent.tell .tl-ans { display: flex; align-items: baseline; gap: 6px; padding: 1px 7px 5px; color: var(--amber); font: 600 11px var(--mono); white-space: nowrap; }
 .intent.tell .tl-prog { margin-left: auto; color: var(--muted); font-weight: 400; }
 .intent.tell.now { background: var(--tc-soft); }
+/* Two tells on one cycle (tells.mjs tellIntents): ⇄ on both chips, and the cheaper one to take steps back. */
+.intent.tell .tl-or { font-weight: 700; }
+.intent.tell.lesser { opacity: 0.7; }
+.intent.tell.lesser .tl-ans { color: var(--muted); }
+.combat .board.dense .intent.tell.pair small.tl-what { display: inline; } /* a pair keeps its prices on a dense board: they are the choice */
 .intent.tell.now .tl-kick { background: var(--tc); color: var(--panel-2); }
 /* ---- Tell windows (tells.mjs, view.mjs tellChip and tellSpan) ----
    A tell can only be answered in its window: the cycle it lands, or its last few. While the window is open the chip

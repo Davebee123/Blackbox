@@ -198,8 +198,18 @@ function load() {
     s.metAll = true; // a playtest plays a veteran: the parts roll (parts.mjs) brings its whole mix, as the measurement does
     // ?playtest=part:<id> (docs/parts-plan.md): a fight with that basic or third part, at the level it opens (or &level=).
     // part:<id>.exe: its .exe build (exe.mjs).
+    // &gear=stock|tuned|custom (with ?playtest=random or part:<id>): geared for the level in whites, blues or yellows, and
+    // fought on your Signal as a wild fight is (what a fight costs reads true).
+    const gear = ['stock', 'tuned', 'custom'].includes(params.get('gear')) ? params.get('gear') : null;
+    const geared = (L, family) => {
+      if (!gear) return {};
+      FP.outfit(s, { cls: s.loadout.archetype, level: L, sub: params.get('sub'), rarity: gear, gearSeed: 1 });
+      command(s, `developer location ${['ransomware', 'worm', 'ghostroot'].includes(family) ? family : 'worm'}`); // a server to stand on (a deeper family's fight on a worm's)
+      s.run = { loc: s.locations?.at(-1)?.id || 'sim', cwd: '/', integrity: maxSignal(s), max: maxSignal(s), pack: [], visited: ['/'] };
+      return { mode: 'run', room: '/sim', zone: true };
+    };
     const exeOn = /\.exe$/.test(playtest), pid = playtest.startsWith('part:') ? playtest.slice(5).replace(/\.exe$/, '') : null, home = pid && Object.entries(FAMILIES).find(([, f]) => f.parts.some((x) => x.id === pid));
-    if (home) { const spec = home[1].parts.find((x) => x.id === pid), L = lv >= 1 && lv <= 50 ? lv : Math.max(spec.from || 1, 3); s.hackers = { [s.loadout.archetype]: { level: L, xp: 0 } }; selectEncounter(s, 'random', seed || 1, { level: L, family: home[0], mutation: null, ...(exeOn ? { exe: [pid] } : {}), ...(spec.pool === 'third' ? { genes: partGenesFor(home[0], spec, L), basic: 'pulse' } : { basic: pid }) }); }
+    if (home) { const spec = home[1].parts.find((x) => x.id === pid), L = lv >= 1 && lv <= 50 ? lv : Math.max(spec.from || 1, 3); s.hackers = { [s.loadout.archetype]: { level: L, xp: 0 } }; selectEncounter(s, 'random', seed || 1, { ...geared(L, home[0]), level: L, family: home[0], mutation: null, ...(exeOn ? { exe: [pid] } : {}), ...(spec.pool === 'third' ? { genes: partGenesFor(home[0], spec, L), basic: 'pulse' } : { basic: pid }) }); }
     // ?playtest=fx (abilityfx-playtest.mjs): the ability effects playtest, on a three-part fight (&family=, &seed=, &level=).
     else if (playtest === 'fx') { const L = lv >= 1 && lv <= 50 ? lv : 12; s.hackers = { [s.loadout.archetype]: { level: L, xp: 0 } }; if (/^[a-z ]+$/.test(params.get('crew') || '')) play(s, `crew sim ${params.get('crew')}`); selectEncounter(s, 'random', seed || 8, { level: L, family: /^[a-z]+$/.test(fam || '') ? fam : 'ransomware', mutation: null }); } // &crew=<class>: a crewmate in the crew window, to fire theirs
     // ?playtest=boss:<id> (BOSSES: resident, repoman, choir…): that boss at &level= (10 by default), &family= for the Resident,
@@ -210,9 +220,10 @@ function load() {
       if (['repoman', 'choir'].includes(id)) selectEncounter(s, 'random', seed || 1, { level: L, family, name: B.name, boss: id, mutation: null, quiet: true });
       else { command(s, `developer location ${family}`); s.run = { loc: s.locations?.at(-1)?.id || 'sim', cwd: '/core', integrity: maxSignal(s), max: maxSignal(s), pack: [], visited: ['/'] }; selectEncounter(s, 'random', seed || 1, { mode: 'run', room: '/core', level: L, zone: true, wild: 'lair', family, boss: id, strain: B.strain || null, mutation: null, name: B.name }); }
     }
-    else if (playtest === 'random' && (fam || seed)) selectEncounter(s, 'random', seed || 1, { ...(lv >= 1 && lv <= 50 ? { level: lv } : {}), ...(/^[a-z]+$/.test(fam || '') ? { family: fam } : {}), mutation: null });
+    else if (playtest === 'random' && (fam || seed)) selectEncounter(s, 'random', seed || 1, { ...(lv >= 1 && lv <= 50 && /^[a-z]+$/.test(fam || '') ? geared(lv, fam) : {}), ...(lv >= 1 && lv <= 50 ? { level: lv } : {}), ...(/^[a-z]+$/.test(fam || '') ? { family: fam } : {}), ...(params.has('elite') ? { elite: true } : {}), mutation: null }); // &elite: an elite
     else command(s, `encounter ${/^[a-z]+$/.test(playtest) ? playtest : 'cryptjack'}`); // any fixture or strain
     if (!s.encounter) command(s, 'encounter cryptjack');
+    if (gear && s.encounter) s.encounter.soft = 1; // a geared playtest is no new player's first kill (CONFIG.zone.starterHit): its tells are on
     command(s, 'engage');
     s.encounter.paused = true;
     return s;

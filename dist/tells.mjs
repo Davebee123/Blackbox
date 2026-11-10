@@ -37,7 +37,7 @@
 //         boss's extra cap
 import { hit, implanted, emit, alive, part, livingParts, attackers, defender, hackerLevel, skillBase, gearStat, attackAmount, strikeWith, toIntent, usable, readyIn, alliesOf, fxAnswer, fxOn, cooldownOf, armorTakes, ignoresArmor } from './combat.mjs';
 import { CONFIG, TELL, TELLS, TELL_SETS, SEAL_FROM, STRAINS, ABILITIES, BOSSES } from './data.mjs';
-import { previewDamage, delayAttack, blocked, scaled, gearDamage } from './combat.mjs';
+import { previewDamage, delayAttack, delayHeld, blocked, scaled, gearDamage } from './combat.mjs';
 import { raidDef } from './raid.mjs';
 import { readGene, seeGene, logTell } from './genome.mjs';
 import { gainResearch } from './research.mjs';
@@ -46,6 +46,7 @@ import { cancelAttack, crossBy, interruptMove, nextTick, fronted } from './inter
 import { ignores, CLASHES } from './genes.mjs';
 import { contractDid } from './mail.mjs';
 import { tellAct, actOf } from './acts.mjs';
+import { ampAdds } from './mechanics.mjs';
 
 // What a fight's tells did, on its metrics (the gap test reads them): said, answered, read (answered by a command
 // of yours, not by breaking the part), landed, and the Signal (or Integrity) they cost you, by tell.
@@ -86,6 +87,8 @@ export const NEW_TELLS = {
   lock: { kind: 'lock', name: 'Lock', part: 'special', cycles: 3 },
 };
 const tellDef = (id) => TELLS[id] || NEW_TELLS[id];
+// Twins (TELL.twin): a wild virus, guard or elite from its level; never a boss, a breach virus or a crew fight.
+const twins = (v) => !!TELL.twin && v.level >= TELL.twin.from && !v.boss && !v.tellSet;
 // Parts take this much more while their virus is Overclocked (combat.mjs damageMultiplier).
 export const overclockMult = (s) => { const e = s.encounter; return e?.virus?.buffs?.overclock >= e?.cycle ? NEW_TELLS.overclock.mult : 1; };
 // The tells a virus could bring, in order: a strain's own charge and its lineage's cast and seal, else its family's (or guard's).
@@ -132,6 +135,14 @@ export function plannedTells(v) {
     if (!p) continue;
     list.push({ ...def, part: p.id, ...(tellAct(v, list.length) ? { act: tellAct(v, list.length) } : {}) }); // a P4 boss: the n-th tell is act n's (acts.mjs)
   }
+  // Twins (TELL.twin, decision 15): its first charge and an Overcharge on its plain attacker are said together, on one
+  // cycle. The Overcharge is its own when the tier already deals one, else it comes on top of the count.
+  const main = twins(v) && list.find((t) => t.kind === 'charge');
+  if (main) {
+    let o = list.find((t) => t !== main && t.kind === 'charge' && t.part !== main.part);
+    if (!o) { const p = findSource(v, TELLS.overcharge); if (p && p.id !== main.part && !list.some((t) => t.id === 'overcharge')) list.push(o = { ...TELLS.overcharge, id: 'overcharge', part: p.id, twinOnly: true }); } // past the tier's count: said as a twin, never alone
+    if (o) { main.twin = o.id; o.twin = main.id; o.second = true; }
+  }
   // The Mimic's beat comes with the part, not the tier.
   const mim = v.parts.find((p) => p.mimic);
   if (mim && TELLS.mimic) list.push({ ...TELLS.mimic, id: 'mimic', part: mim.id });
@@ -152,9 +163,16 @@ export function tellStart(s) {
   const two = elite && !!v.clash;
   v.tells = { list: list.map((t, i) => ({ ...t, told: false, next: null, n: null, said: null, count: 0, after: t.kind === 'mimic' ? t.first : TELL.first + (t.kind === 'seal' ? TELL.sealAfter : i ? 1 : 0) })), tier: { ...tier, extra, ...(v.boss && !elite ? { mult: TELL.boss.mult } : {}), live: tier.live + (two ? TELL.elite.live : 0) }, piles: two };
   for (const t of v.tells.list) if (t.kind !== 'mimic') t.after += jitter(v, t);
+  for (const t of v.tells.list) if (t.second) t.after = twinOf(s, t)?.after ?? t.after;
   announce(s);
 }
 const live = (s, t = null) => tellsOf(s).list.filter((x) => x !== t && x.told && x.kind !== 'mimic');
+// A twin's other half (TELL.twin), and whether the two can still charge together: both parts stand with an attack.
+const twinOf = (s, t) => (t?.twin && tellsOf(s)?.list.find((x) => x.id === t.twin && x.twin === t.id)) || null;
+const charges = (p) => alive(p) && !!p.attack && p.attack.due < 900;
+const twinned = (s, t) => { const o = twinOf(s, t); return !!o && !o.gone && charges(sourceOf(s, t)) && charges(sourceOf(s, o)); };
+// The tells live at once, a pair of twins counted once.
+const liveCount = (s, t = null) => live(s, t).filter((x) => !(x.paired && x.second)).length;
 // The cycle a part's attack lands for the n-th time (attack.n counts its landings): its timer, then its interval.
 export const landsAt = (p, n) => p.attack.due + (n - (p.attack.n || 0)) * p.attack.interval;
 // The cycle a told tell lands: a charge rides its attack, the rest sit on their own cell.
@@ -175,9 +193,9 @@ export const tellOpen = (s, p, kind = null) => { const t = tellOn(s, p, kind); r
 // The Mimic's beat: every `every` cycles from `first`.
 const beatAt = (t, c) => c >= t.first && (c - t.first) % t.every === 0;
 // Another part's heavy attack lands on cycle c: a charge never piles up on it.
-function heavyAt(s, p, c) {
+function heavyAt(s, p, c, also = null) {
   const max = defender(s).max;
-  return attackers(s).some((x) => x !== p && x.kind === 'system' && x.attack.due < 900 && c >= x.attack.due && (c - x.attack.due) % Math.max(1, x.attack.interval) === 0
+  return attackers(s).some((x) => x !== p && x !== also && x.kind === 'system' && x.attack.due < 900 && c >= x.attack.due && (c - x.attack.due) % Math.max(1, x.attack.interval) === 0
     && ((x.attack.effect === 'damage' ? attackAmount(x) : x.attack.hit || 0) >= max * TELL.heavy || ['encrypt', 'scramble'].includes(x.attack.effect)));
 }
 // Announce what can be announced now: the live limit has room, its part stands, and the cycle it would land on is
@@ -201,7 +219,25 @@ function announce(s) {
       for (let x = c; x <= c + 3; x++) if (beatAt(t, x)) { say(s, t, p, x, null); break; }
       continue;
     }
-    if (live(s, t).length >= T.tier.live) continue;
+    if (liveCount(s, t) >= T.tier.live) continue;
+    if (t.twinOnly && !twinned(s, t)) continue; // its twin's part is gone: it has no charge of its own
+    // Twins are said together or not at all, while both can charge: the one whose attack lands `lead` out carries the
+    // cycle, and the other holds its next attack to land with it (never sooner than it was due).
+    if (t.kind === 'charge' && twinned(s, t)) {
+      const o = twinOf(s, t), q = sourceOf(s, o), x = c + lead;
+      if (o.told || x < Math.max(t.after, o.after)) continue;
+      const hold = (a, b) => { // a's attack lands on x as it is, and b's next one is due before it
+        const n = (a.attack.n || 0) + (x - a.attack.due) / a.attack.interval;
+        return a.attack.due <= x && Number.isInteger(n) && b.attack.due > c && b.attack.due <= x && !delayHeld(b) ? { n, held: b, by: x - b.attack.due } : null;
+      };
+      const h = hold(p, q) || hold(q, p);
+      if (!h || !clear(t, x) || !clear(o, x) || heavyAt(s, p, x, q)) continue;
+      h.held.attack.due = x; // the hold
+      t.paired = o.paired = true;
+      const nOf = (a) => (h.held === a ? a.attack.n || 0 : h.n);
+      for (const [a, b] of t.second ? [[o, q], [t, p]] : [[t, p], [o, q]]) say(s, a, b, x, nOf(b), h.held === b ? h.by : 0); // its own charge first
+      continue;
+    }
     if (t.kind === 'charge') {
       if (!p.attack || p.attack.due >= 900) continue;
       const n0 = p.attack.n || 0;
@@ -219,9 +255,9 @@ function announce(s) {
     }
   }
 }
-function say(s, t, p, next, n) {
+function say(s, t, p, next, n, held = 0) {
   const e = s.encounter;
-  Object.assign(t, { told: true, said: e.cycle, next, n, opened: null });
+  Object.assign(t, { told: true, said: e.cycle, next, n, opened: null, held, spared: false });
   if (t.kind !== 'mimic') tally(s, t, 'said');
   seeGene(s.host || s, t.gene, e.virus.author); // its chip: a tell you've met is seen (genome.mjs)
   logTell(s.host || s, t); // the Codex tab: this tell, by name
@@ -247,6 +283,7 @@ function windowWhen(s, t) { const w = windowOf(s, t); return w ? Math.max(0, w.f
 // which part, and the answer. The Encryptor's FULL DISK lands in 3 cycles. Cut it on that cycle.
 export function sayOf(s, t, p = sourceOf(s, t)) {
   const n = tellNext(s, t) - s.encounter.cycle, L = label(t), head = t.kind === 'mimic' ? `The ${p.name} plays you back ${when(n)}.` : `The ${p.name}'s ${L} lands ${when(n)}.`;
+  if (t.kind === 'charge' && t.paired && t.second) return `The ${p.name}'s ${L} lands with it${t.held ? `, its ${p.attack.name} held ${cycles(t.held)}` : ''}. One command cuts one.`;
   if (t.kind === 'charge') return `${head} Cut it on that cycle${p.armor > 0 ? `, past its ${p.armor} ◆` : ''}.`;
   if (t.kind === 'cast') return `${head} SIGINT or cut it in its window${n > 0 && windowWhen(s, t) <= 0 ? ', open now' : ''}.`;
   if (t.kind === 'seal') return `${head} Each ◆ it still wears then comes back on every part: strip its ${p.armor} ◆ first.`;
@@ -322,12 +359,18 @@ function rest(s, t, from, answered = false) {
   // A charge answered early: the attack it rode still lands (plain), so the next charge rides a later one.
   const p = t.kind === 'charge' && t.n != null ? sourceOf(s, t) : null;
   if (p?.attack && alive(p)) from = Math.max(from, landsAt(p, t.n));
-  t.told = false; t.count++; t.n = null;
+  // A twin answered while the other is still to land: that one is the evil you chose, and leaves no after-effect.
+  const pair = t.paired && answered ? twinOf(s, t) : null;
+  if (pair?.told && pair.paired) pair.spared = true;
+  t.told = false; t.count++; t.n = null; t.paired = false; t.held = 0;
   if (answered) { t.answered = (t.answered || 0) + 1; tally(s, t, 'answered'); }
   if (t.once) { t.gone = true; const T = tellsOf(s); T.list = T.list.filter((x) => x !== t); return; }
   if (t.kind === 'mimic') { t.next = null; return; }
   t.after = from + (TELL.rest[t.kind] ?? 3) + jitter(s.encounter.virus, t);
   t.next = null;
+  // Twins come back together: each waits for the later of the two.
+  const o = twinOf(s, t);
+  if (o && !o.told) t.after = o.after = Math.max(t.after, o.after);
 }
 // Every tell that's been said and hasn't landed is called off, as if answered, with no stagger (a breach's Ripple20
 // script, scripts.mjs). The Mimic's beat isn't a tell you can call off. Returns how many.
@@ -381,9 +424,9 @@ export const chargeNow = (s, p) => !!tellsOf(s)?.list.some((t) => t.kind === 'ch
 function chargeAttack(s, t, p) {
   const T = tellsOf(s), a = p.attack, k = 1;
   const enr = p.enrage && p.integrity < p.max / 2 ? CONFIG.enrage : 1; // attackAmount counts Bricker's rage again: take it out
-  const more = (T.tier.mult - 1) * (T.tier.extra ?? 1), big = (n, share = 1) => Math.max(1, Math.round(n + n * more * share * k));
+  const more = (T.tier.mult - 1) * (T.tier.extra ?? 1) * (t.paired ? TELL.twin.share : 1), big = (n, share = 1) => Math.max(1, Math.round(n + n * more * share * k));
   const base = { ...a, name: t.name, ramp: 0, step: 0, rampBy: 0, bonus: 0, grow: 0, windup: 0, wound: 0, noCrit: true, tell: t.id, spawn: t.spawn || 0 };
-  if (a.effect === 'damage') return { ...base, amount: Math.max(1, Math.round(big(attackAmount(p)) / enr)) };
+  if (a.effect === 'damage') return { ...base, amount: Math.max(1, Math.round((big(attackAmount(p)) + ampAdds(s, p, attackAmount(p))) / enr)) }; // an Amplifier's boost on top, once
   if (a.effect === 'encrypt') return { ...base, burst: Math.round(a.amount * more * k) }; // its Encrypt, and a burst on top (TELL.burst cycles)
   if (a.effect === 'scramble') return { ...base, amount: a.amount + Math.round((t.longer || 0) * k), hit: a.hit ? (t.plain ? a.hit : big(a.hit)) : 0 }; // Possession: the same hit, a longer scramble
   if (a.effect === 'heal') return { ...base, amount: Math.round(a.amount * (1 + (T.tier.mult - 1) * k)) };
@@ -455,7 +498,7 @@ export function tellLand(s) {
       if (atk.spawn && atk.effect === 'replicate' && alive(p)) for (let k = 0; k < atk.spawn; k++) strikeWith(s, p, { ...atk, hit: 0 });
       if (t.shred) shred(s, p, t);
       // It got through (it hurt, or it took your shield): the after-effect.
-      if ((was > defender(s).integrity || (e.shield || 0) < shield || (s.encounter.encrypt || 0) > locked)) { lockLast(s, t, label(t)); corrupt(s, t, p); hang(s, t); }
+      if (!t.spared && (was > defender(s).integrity || (e.shield || 0) < shield || (s.encounter.encrypt || 0) > locked)) { lockLast(s, t, label(t)); corrupt(s, t, p); hang(s, t); } // spared: its twin was answered
       done();
     } else if (t.kind === 'seal') {
       if (p.armor > 0 && p.bkRot?.until >= e.cycle) { // Bit Rot (Demolitionist): a rotting part can't seal
@@ -926,12 +969,35 @@ export function tellIntents(s, columns = 4) {
     if (price?.signal != null) x.price = price.signal;
     if (price?.hp != null) x.grow = price.hp;
     if (t.kind === 'seal') { x.give = p.armor * TELL.seal; x.armorOut = price?.armor || 0; }
+    if (t.held) x.held = t.held;
     out.push(x);
+  }
+  // Two tells priced in your Signal on one cycle (twins, an elite's pile-up): each names the other (pair), and the
+  // cheaper one to take is the lesser.
+  // Only a price that is all of what it costs counts (a hit, a cast's extra damage). An Encrypt's stack runs until its
+  // part breaks, fragments gnaw until they do, a Scramble and Integrity are no Signal: those pairs have no Lesser, and
+  // which is cheaper is the player's read of the board.
+  const red = (y) => (y.tell === 'charge' && y.effect === 'damage') || (y.tell === 'cast' && ['loud', 'haste'].includes(y.does));
+  for (const x of out) {
+    const o = ['charge', 'cast'].includes(x.tell) && out.find((y) => y !== x && y.col === x.col && ['charge', 'cast'].includes(y.tell) && y.source !== x.source);
+    if (!o) continue;
+    x.pair = { id: o.id, name: o.name, part: o.source, price: o.price ?? null };
+    x.lesser = red(x) && red(o) && x.price < o.price;
   }
   return out;
 }
 
 // ---------- the bots (planner.mjs) ----------
+// The lesser of two twins on the board (the cheaper to take): a bot that reads tells cuts the other and lets this one
+// land, so it strips, saves no tick and spends no cut for it.
+export function lesserTwin(s, t) {
+  const o = t?.paired && t.told ? twinOf(s, t) : null;
+  if (!o?.told || !alive(sourceOf(s, o)) || tellNext(s, o) !== tellNext(s, t)) return false;
+  // A charge that leaves something on you (a stack, fragments, a Scramble) costs more than its price says: twice, here.
+  const evil = (x) => (tellPrice(s, x)?.signal ?? 0) * (sourceOf(s, x)?.attack?.effect === 'damage' ? 1 : TELL.twin?.lasting ?? 2);
+  const a = evil(t), b = evil(o);
+  return a < b || (a === b && !!t.second);
+}
 // How a player who reads tells answers them: SIGINT a cast in its window, go quiet on the Mimic's beat, strip a part
 // that's about to seal. A charge (and a cast when SIGINT is cooling) is cut: the planner's interruptMove (interrupt.mjs)
 // takes the part across a tick on its cycle, ahead of any other cut, and saveTick keeps the tick for it.
@@ -939,7 +1005,7 @@ export function tellIntents(s, columns = 4) {
 export const answers = () => TELL.bots.answer !== false;
 const ok = (s, text) => !!text && !toIntent(s, text).error;
 const first = (s, list) => list.find((c) => ok(s, c)) || null;
-const soon = (s, lag) => (tellsOf(s)?.list || []).filter((t) => t.told && !ignores(t.gene) && tellNext(s, t) - s.encounter.cycle <= lag); // a gene the sim ignores (genes.mjs GENE_BOTS) goes unanswered
+const soon = (s, lag) => (tellsOf(s)?.list || []).filter((t) => t.told && !ignores(t.gene) && !lesserTwin(s, t) && tellNext(s, t) - s.encounter.cycle <= lag); // a gene the sim ignores (genes.mjs GENE_BOTS) goes unanswered
 // Commands that deal no direct damage, aimed at no part: the quiet moves (a Scramble's, the Decoy's beat: planner.mjs quietOf; the Mimic's beat weighs them too, beatMove).
 export const QUIET = ['harden', 'firewall', 'bulkhead', 'dmz', 'heartbeat', 'shadow-copy', 'log-wipe', 'turbo-boost', 'malloc', 'brace', 'patch', 'null-route', 'sudo', 'fork', 'debris-field', 'rm-rf', 'vent', 'circuit-breaker', 'honeypot', 'maintenance-window', 'logic-trap', 'rotate-keys', 'vanish', 'load-shed', 'multicast', 'mesh'];
 // A planned command that breaks a part: nothing a tell asks for is worth more.

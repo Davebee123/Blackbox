@@ -17,7 +17,7 @@
 //   harvester    its attack consumes your Corrupted for a hit of a share of your max a cycle it had left
 //   volatile     its attack leaves you Corrupted; cleansing that deals the rest of it at once
 // Buffs and support on the virus:
-//   amplifier    each cycle it boosts the next attack of one other part, in turn
+//   amplifier    while it wears ◆, the virus's strongest attacker deals much more (a charge there: the boost on its plain hit only)
 //   bodyguard    at the end of each cycle it shields the part your command hit (the shield takes only commands)
 //   vendetta     while it stands, each other part you break makes the rest hit harder for the fight
 //   thorns       your command hits on it leave you Corrupted, a stack each
@@ -41,7 +41,7 @@ export const MECH = {
   feeder: { share: 0.02 },
   harvester: { share: 0.04 },
   volatile: { share: 0.02, cycles: 3 },
-  amplifier: { mult: 1.5 },
+  amplifier: { mult: 1.75 }, // by a lot (docs/puzzle-fights.md decision 15): an armored part that buffs another while its ◆ holds
   bodyguard: { share: 0.15 },
   vendetta: { more: 0.2 },
   thorns: { share: 0.01, cycles: 3 },
@@ -126,12 +126,21 @@ export function mechFired(s) {
 }
 
 // ---------- the virus's attacks ----------
-// What a part's attack deals over its own: an Amplifier's boost on its next one (spent as it lands: `spend`; not on a
-// `later` one, for the board's cells past the first), and Vendetta's stacks.
-export function mechPower(s, p, spend = false, later = false) {
+// The part an Amplifier boosts: the virus's strongest attacker (its plain hit as dealt out, so it holds still), never a
+// fragment or itself. ampOf: the standing Amplifier that boosts p, or null.
+const plainOf = (x) => (x.attack.effect === 'damage' ? x.attack.amount : x.attack.hit) || 0;
+export const ampBoosts = (s, a) => (alive(a) ? attackers(s).filter((x) => x !== a && x.kind !== 'fragment').sort((x, y) => plainOf(y) - plainOf(x))[0] || null : null);
+export const ampTarget = (s, a) => (a?.armor > 0 ? ampBoosts(s, a) : null); // stripped, it boosts nothing until a ◆ patches back
+export const ampOf = (s, p) => (p?.attack ? mechs(s, 'amplifier').find((a) => ampTarget(s, a) === p) || null : null);
+// What an Amplifier adds to a charge on the part it boosts (tells.mjs chargeAttack): the plain hit once more for each
+// multiple, so the boost is never multiplied by the charge.
+export const ampAdds = (s, p, n) => (ampOf(s, p) ? Math.round(n * (MECH.amplifier.mult - 1)) : 0);
+// What a part's attack deals over its own: an Amplifier's boost while it wears ◆ (a charge carries its own: ampAdds), and
+// Vendetta's stacks.
+export function mechPower(s, p) {
   const e = s.encounter;
   let m = 1 + MECH.vendetta.more * (e.virus.vendetta || 0);
-  if (p.amped && !later && alive(part(s, p.amped))) { m *= MECH.amplifier.mult; if (spend) p.amped = null; }
+  if (!p.attack?.tell && ampOf(s, p)) m *= MECH.amplifier.mult;
   return m;
 }
 // Exposed: the hit about to land on you deals more, and the status clears.
@@ -237,13 +246,12 @@ export function mechClose(s) {
     hurt.integrity += got;
     emit(s, 'heal', `The ${p.name} feeds on your ${debuffs.length} ${debuffs.length === 1 ? 'debuff' : 'debuffs'}: the ${hurt.name} +${got}.`, { target: hurt.id, amount: got, mech: 'feeder' });
   }
+  // The Amplifier's boost moves when its part breaks: the log says where it went, once.
   for (const p of mechs(s, 'amplifier')) {
-    const others = attackers(s).filter((x) => x !== p && x.kind !== 'fragment');
-    if (!others.length) continue;
-    const t = others[(p.ampTurn = ((p.ampTurn ?? -1) + 1) % others.length)];
-    if (t.amped) continue;
-    t.amped = p.id;
-    emit(s, 'status', `The ${p.name} boosts the ${t.name}'s next attack: +${pct(MECH.amplifier.mult - 1)}.`, { target: t.id, mech: 'amplifier' });
+    const t = ampBoosts(s, p);
+    if (!t || p.ampTo === t.id) continue;
+    if (p.ampTo) emit(s, 'status', `The ${p.name} turns to the ${t.name}: its attacks deal ${pct(MECH.amplifier.mult - 1)} more.`, { target: t.id, mech: 'amplifier' });
+    p.ampTo = t.id;
   }
   for (const p of mechs(s, 'bodyguard')) {
     const t = e.guardHit?.cycle === c ? part(s, e.guardHit.id) : null;
@@ -297,7 +305,7 @@ export function mechRead(s, p, atk = '') {
     case 'punisher': return [`${a}When you're Hung or Stunned and lose a command, it gets a free extra attack that cycle.`, 'Answer the tells and stuns that would hang you.', cue('punishes a lost turn', 'damage')];
     case 'harvester': return [`${a}Its attack consumes all your Corrupted for an extra hit of ${pct(MECH.harvester.share)} of your max for each cycle it had left.`, 'Cleanse Corrupted before it lands.', cue('reaps your Corrupted', 'burn')];
     case 'volatile': return [`${a}When it lands, you are Corrupted for ${pct(MECH.volatile.share)} of your max every cycle for ${cyc(MECH.volatile.cycles)}. Cleansing it deals what it had left at once.`, 'Let it run out, or cleanse with a shield up.', cue('volatile corruption', 'burn')];
-    case 'amplifier': { const t = live ? e.virus.parts.find((x) => alive(x) && x.amped === p.id) : null; return [`Has no attack of its own. Each cycle it boosts the next attack of another part, in turn. That attack deals ${pct(MECH.amplifier.mult - 1)} more.`, 'Break the boosted part first, or the Amplifier.', cue(t ? `boosts ${t.name}` : 'boosts the others', 'sync')]; }
+    case 'amplifier': { const t = live ? ampBoosts(s, p) : null, on = !live || p.armor > 0; return [`Has no attack of its own. While it wears ◆, ${t ? `the ${t.name}'s attacks` : 'the attacks of the virus\'s strongest part'} deal ${pct(MECH.amplifier.mult - 1)} more.${on ? '' : ' Stripped: no boost until a ◆ patches back.'}`, `Strip its ◆ before ${t ? `the ${t.name}` : 'that part'} attacks, or break it.`, cue(on ? `+${pct(MECH.amplifier.mult - 1)} ${t ? t.name : 'the strongest'}` : 'stripped', 'sync')]; }
     case 'bodyguard': return [`Has no attack of its own. At the end of each cycle, it shields the part your command hit for ${pct(MECH.bodyguard.share)} of that part's max. The shield takes only your commands.`, 'Switch targets, or break the Bodyguard first.', cue('shields your target', 'shield')];
     case 'vendetta': { const n = live ? e.virus.vendetta || 0 : 0; return [`${a || 'Has no attack of its own. '}While it stands, each other part you break makes the rest hit ${pct(MECH.vendetta.more)} harder for the rest of the fight.`, 'Break the Vendetta first.', cue(n ? `+${pct(MECH.vendetta.more * n)} damage` : 'avenges each break', 'damage')]; }
     case 'thorns': return [`${a}Each command that hits it leaves you Corrupted, a stack of ${pct(MECH.thorns.share)} of your max a cycle for ${cyc(MECH.thorns.cycles)}. Burns and helpers don't.`, 'Use burns and helpers on it.', cue('thorns', 'spike')];

@@ -45,6 +45,25 @@ test('Backlash: on the beat, a part your command hits lashes back unless the hit
   assert.ok(!resolveCycle(s).some((x) => x.tell === 'backlash'));
 });
 
+test('the Backlash is sized from the boss: every part lashes for its biggest plain hit doubled, the Encryptor too', () => {
+  const s = boss('resident', 'ransomware'), v = s.encounter.virus, enc = part(s, 'encryptor');
+  const plain = (p) => (p.attack ? (p.attack.effect === 'damage' ? p.attack.amount : p.attack.hit) || 0 : 0);
+  const base = Math.max(...v.parts.map(plain));
+  assert.ok(base > 0 && v.backlash.base === base, 'its biggest plain hit, set as the fight starts');
+  assert.ok(plain(enc) < base, 'the Encryptor\'s own hit is smaller');
+  const chips = intents(s).filter((i) => i.effect === 'backlash');
+  assert.ok(chips.length >= 2 && chips.every((i) => i.amount >= Math.round(base * ACTS.lash)), `every Lash chip shows it (${chips.map((i) => i.amount)})`);
+  to(s, v.backlash.first);
+  Object.assign(enc, { armor: 0, integrity: 900, max: 900 });
+  for (const p of v.parts) if (p.attack) p.attack.due = s.encounter.cycle + 3;
+  s.encounter.chits = 0; s.encounter.shield = 0;
+  command(s, 'spike encryptor');
+  const lash = resolveCycle(s).find((x) => x.type === 'server-hit' && /Backlash/.test(x.message));
+  assert.ok(lash && lash.amount > base, `hitting the Encryptor on the beat costs a real hit (${lash?.amount})`);
+  // The beat quickens in act 2: the size stays the boss's.
+  assert.equal(v.backlash.base, base);
+});
+
 test('a hit that breaks the part on the beat is safe', () => {
   const s = boss('resident', 'ransomware'), v = s.encounter.virus, pulse = part(s, 'pulse');
   to(s, v.backlash.first);

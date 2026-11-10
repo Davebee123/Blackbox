@@ -45,8 +45,11 @@ test('the rotation preset presses a spread of keys: at least 4.4 effective keys 
 // 12 and 15 of 19 at 30, the Overclocker's 16 of 20 at 30: held there until the designer has played the arc.
 // The talent tiers (docs/builds.md: six picks, no ranked rows) widen the Phantom's to 15 at 18: held there until the
 // designer has played them.
-const CORE_DRIFT = { overclocker: 18, payload: 27, hijacker: 22, warden: 32, demolitionist: 36, sysop: 54, phantom: 15, herder: 13 };
-const CORE_WINS = { sysop: 0.5, overclocker: 0.8, herder: 0.78 }; // hijacker 17 → 22: since step 2 (docs/scaling.md) its core measures 21 under its full build at 30 // payload 25 → 27: Backdoor's flat +12 on a burning part made its full build ~1.5 points better; its core (no Backdoor) is unchanged
+// Since twins (wip/lesser-evils, docs/puzzle-fights.md 8.1: a build that cuts neither takes both) the Sysop's core loses
+// 71% at 30 to its full build's 9% (the full build 7 points better than before) and wins 9 to 20, and the Herder's core
+// is 16 points over at 30: held at 63 points and 45% of the wins, and 17, until the designer has played them.
+const CORE_DRIFT = { overclocker: 18, payload: 27, hijacker: 22, warden: 32, demolitionist: 36, sysop: 63, phantom: 15, herder: 17 };
+const CORE_WINS = { sysop: 0.45, overclocker: 0.8, herder: 0.78 }; // hijacker 17 → 22: since step 2 (docs/scaling.md) its core measures 21 under its full build at 30 // payload 25 → 27: Backdoor's flat +12 on a burning part made its full build ~1.5 points better; its core (no Backdoor) is unchanged
 test('the core rotation alone is viable: within 12 points of the full rotation build (the Bastions 20) at Lv 18 and 30, with at least 90% of its wins', () => {
   const off = [];
   for (const sub of ALL) for (const L of [18, 30]) {
@@ -106,7 +109,10 @@ const second = (sub) => {
 // its rotation on the generic fights: held at 10.5.
 // With the talent tiers the Demolitionist's area preset is 0.1 better on its fights, the Phantom's evasion 14.0 off
 // on the generic ones, the Herder's swarm 7.3: held at 0, 14.5 and 7.5 until the designer has played them.
-const DRIFT = { demolitionist: { generic: 7.5, suits: 0 }, sysop: { generic: 10, suits: -15 }, hijacker: { generic: 8, suits: -15 }, herder: { generic: 7.5, suits: -1 }, payload: { generic: 18.5, suits: -14.5 }, overclocker: { generic: 10.5, suits: 4 }, phantom: { generic: 14.5, suits: 5 }, warden: { generic: 5.5, suits: 5 } };
+// Since twins (wip/lesser-evils, docs/puzzle-fights.md 8.1) the Demolitionist's area preset is 9.5 off on the generic
+// fights and 5.0 worse on its own, the Overclocker's rules 11.9 off and the Phantom's evasion 15.5: held at 10 and −5.5,
+// 12 and 16 until the designer has played them.
+const DRIFT = { demolitionist: { generic: 10, suits: -5.5 }, sysop: { generic: 10, suits: -15 }, hijacker: { generic: 8, suits: -15 }, herder: { generic: 7.5, suits: -1 }, payload: { generic: 18.5, suits: -14.5 }, overclocker: { generic: 12, suits: 4 }, phantom: { generic: 16, suits: 5 }, warden: { generic: 5.5, suits: 5 } };
 test('each second preset is a real alternative: within 5 points of the rotation on the generic fights, and at least 5 points better on the fights it suits', () => {
   const off = [], line = [];
   for (const sub of ALL) {

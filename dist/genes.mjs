@@ -241,7 +241,7 @@ export const GENES = {
   amplifier: { name: 'Amplifier', adj: 'Amplified', cat: 'part', axis: 'burst', role: 'amplifier', cost: 2, opens: 5, decode: 'part', suits: 'Worm',
     does: 'Each cycle it boosts the next attack of another part, in turn. That attack deals 50% more.', telegraph: 'A boosts mark naming the part, and the boosted number on its cell.', answer: 'Break the boosted part first, or the Amplifier.',
     implicit: 'Boosted attacks deal less.', carried: (p) => p.mech === 'amplifier',
-    parts: { worm: { id: 'amplifier', plan: 3, name: 'Amplifier', integrity: 18, armor: 1, loot: 'Gain Stage', mech: 'amplifier', from: 5, pool: 'third' } } },
+    parts: { worm: { id: 'amplifier', plan: 3, name: 'Amplifier', integrity: 18, armor: 2, loot: 'Gain Stage', mech: 'amplifier', from: 5, pool: 'third' } } },
   bodyguard: { name: 'Bodyguard', adj: 'Guarded', cat: 'part', axis: 'shell', role: 'primary', cost: 2, opens: 9, decode: 'part', suits: 'Worm',
     does: 'At the end of each cycle, shields the part your command hit for 15% of that part\'s max. The shield takes only your commands.', telegraph: 'A shield on the part you hit.', answer: 'Switch targets, or break the Bodyguard first.',
     implicit: 'Guard shields are smaller.', carried: (p) => p.mech === 'bodyguard', bot: { switch: true },

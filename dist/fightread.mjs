@@ -22,7 +22,7 @@ import { nextTick } from './interrupt.mjs';
 import { BODY, fuseOf, fuseLeft } from './families.mjs';
 import { situationOf } from './situations.mjs';
 import { knows, TIER } from './research.mjs';
-import { mechRead } from './mechanics.mjs';
+import { mechRead, ampBoosts } from './mechanics.mjs';
 
 const when = (n) => (n <= 0 ? 'this cycle' : n === 1 ? 'next cycle' : `in ${n} cycles`);
 const cycles = (n) => `${n} ${n === 1 ? 'cycle' : 'cycles'}`;
@@ -119,7 +119,10 @@ export function beatCopy(s, cmd) {
 // and the answer's verb.
 export function tellTip(s, i, c = i.col, to = null) {
   const p = part(s, i.source);
-  return `${i.name}: ${landsLine(s, i, p, to, c)}${answerLine(stopLine(s, i, p, c))}`;
+  // Two on one cycle (tells.mjs tellIntents): what it lands with, and on the cheaper one, which to cut.
+  const o = i.pair && part(s, i.pair.part), pair = o ? ` Lands with the ${o.name}'s ${i.pair.name}. When one of the two is cut, the other leaves no after-effect.` : '';
+  const stop = i.lesser && o ? `This is the lesser of the two. Cut the ${o.name}'s ${i.pair.name}, and take this one.` : stopLine(s, i, p, c);
+  return `${i.name}: ${landsLine(s, i, p, to, c)}${pair}${answerLine(stop)}`;
 }
 
 // ---------- your gear, live ----------
@@ -306,7 +309,7 @@ export function gearOnParts(live) {
 //   up     the rule holds now (a lock standing, a ward, both twins up, re-arms left): the tether glows
 //   count  cycles until it comes back or fires (a broken lock relocking, the next re-arm, a broken twin's reboot), or null
 //   snap   the part it sits on just broke (a dissolving row: view.mjs passes stands): the tether snaps and goes
-export const LINK_ICON = { lock: 'lock', ward: 'shield', twin: 'mirror', rearm: 'repair', cool: 'scheduler', command: 'router', redeploy: 'upload', fallback: 'relay', buffer: 'shield', front: 'firewall', idle: 'clock', bend: 'mirror' };
+export const LINK_ICON = { lock: 'lock', ward: 'shield', twin: 'mirror', rearm: 'repair', cool: 'scheduler', command: 'router', redeploy: 'upload', fallback: 'relay', buffer: 'shield', front: 'firewall', idle: 'clock', bend: 'mirror', amp: 'booster' };
 // The lock shield on p now: { cur, max, by } (the Mutex holding it), or null.
 export function lockOf(s, v, p) {
   if (!alive(p) || !(p.lockHp > 0)) return null;
@@ -374,6 +377,7 @@ export function partLinks(s, v = s.encounter?.virus, { stands = alive } = {}) {
       const t = v.parts.find((x) => x.id === p.lock);
       if (alive(t)) add('lock', p, [t], { up: alive(p) && t.lockHp > 0, count: alive(p) && !(t.lockHp > 0) && t.lockAt != null ? Math.max(0, t.lockAt - cycle) : null });
     }
+    if (p.mech === 'amplifier') { const t = ampBoosts(s, p); if (t) add('amp', p, [t], { up: alive(p) && p.armor > 0 }); } // the part it boosts while it wears ◆ (mechanics.mjs)
     if (p.ward || p.wardsToo?.length) { const to = v.parts.filter((x) => alive(x) && x !== p && wards(p, x)); if (to.length) add('ward', p, to, { up: alive(p) }); }
     if (p.rearm) {
       const to = v.parts.filter((x) => alive(x) && x !== p && x.kind !== 'fragment' && x.maxArmor > 0);

@@ -6,7 +6,7 @@ import { fresh, command, resolveCycle, selectEncounter, part, livingParts, codex
 import { CONFIG, FAMILIES, partGenesFor } from './dist/data.mjs';
 import { GENES } from './dist/genes.mjs';
 import * as FP from './dist/floorplan.mjs';
-import { MECH, mechPower, youDebuffs, directHit, junkKey } from './dist/mechanics.mjs';
+import { MECH, mechPower, youDebuffs, directHit, junkKey, ampTarget, ampOf, ampAdds } from './dist/mechanics.mjs';
 import { partTip } from './dist/fightread.mjs';
 import { statusSpans } from './dist/view.mjs';
 import { TIER } from './dist/research.mjs';
@@ -169,17 +169,33 @@ test('Volatile: cleansing its Corrupted deals what it had left at once; letting 
 });
 
 // ---------- buffs and support on the virus ----------
-test('Amplifier: each cycle it boosts the next attack of another part, in turn, and the boost is spent as it lands', () => {
+test('Amplifier: while it wears ◆ the virus\'s strongest attacker deals much more; stripped it boosts nothing, and a ◆ patched back turns it on again', () => {
   const s = fight('amplifier'), e = s.encounter, a = mech(s, 'amplifier');
-  step(s);
-  const t = livingParts(s).find((x) => x.amped === a.id);
-  assert.ok(t && t !== a);
+  assert.ok(a.armor >= 2 && !a.attack, 'armored, no attack of its own');
+  const t = ampTarget(s, a), others = livingParts(s).filter((x) => x.attack && x !== t && x !== a);
+  const plain = (x) => (x.attack.effect === 'damage' ? x.attack.amount : x.attack.hit) || 0;
+  assert.ok(t && others.every((x) => plain(x) <= plain(t)), 'its strongest attacker');
+  assert.ok(Math.abs(mechPower(s, t) - MECH.amplifier.mult) < 1e-9, 'boosted');
+  for (const x of others) assert.equal(mechPower(s, x), 1, 'and only that one');
   t.attack.due = e.cycle + 1;
-  const i = intents(s).find((x) => x.source === t.id);
-  assert.ok(Math.abs(mechPower(s, t) - MECH.amplifier.mult) < 1e-9 && i.amount > 0);
-  strikeWith(s, t, t.attack);
-  assert.equal(t.amped, null);
-  assert.match(partTip(s, e.virus, a), /boosts the next attack/);
+  const was = intents(s).find((x) => x.source === t.id && !x.tell).amount;
+  // Stripped: no boost, on the board and when it lands.
+  const worn = a.armor; a.armor = 0;
+  assert.equal(mechPower(s, t), 1);
+  assert.ok(intents(s).find((x) => x.source === t.id && !x.tell).amount < was, 'the board shows the plain hit again');
+  assert.equal(ampOf(s, t), null);
+  a.armor = 1;
+  assert.equal(ampOf(s, t), a, 'a ◆ back, and it boosts again');
+  a.armor = worn;
+  // A charge on the boosted part carries the boost on its plain hit only, once.
+  assert.equal(ampAdds(s, t, 40), Math.round(40 * (MECH.amplifier.mult - 1)));
+  assert.equal(mechPower(s, { ...t, attack: { ...t.attack, tell: 'overcharge' } }), 1, 'never multiplied by the charge');
+  // Broken, the boost ends.
+  a.integrity = 0;
+  assert.equal(mechPower(s, t), 1);
+  const tip = partTip(s, e.virus, a);
+  assert.match(tip, /While it wears ◆, .* deal 75% more\./);
+  assert.match(tip, /▸ Strip its ◆ before .* attacks, or break it\./);
 });
 
 test('Bodyguard: at the cycle\'s end it shields the part your command hit, and the shield takes your next command', () => {

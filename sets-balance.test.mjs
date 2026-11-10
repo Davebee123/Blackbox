@@ -19,7 +19,11 @@ const base = {};
 const baseOf = (L) => (base[L] ||= Object.fromEntries(SUBS.map(([c, sub]) => [sub, score(c, AT[L], { sub })])));
 // Floors as tiers (docs/scaling.md "After step 4"): Lv 18 and 30 are floor 3's and 5's tops, where a fight costs most. The
 // Sysop alone wins 15–19 of 24 at 30 with a piece in, the Overclocker 19 at 18 and 30: the wins floor held at 0.6 there.
-const TOP = (L, floor) => (L === 18 || L === 30 ? Math.min(floor, 0.6) : floor);
+// Since twins (wip/lesser-evils, docs/puzzle-fights.md 8.1) the Sysop wins 14 of 24 at 30 with the Lowlight Badge in:
+// held at 0.58 there. The Kestrel two-piece moves the Lv 18 average 7.6 easier and the Clearance 7.9: held at 8. The
+// Overclocker in the whole Mesh wins 18 of 24 at 50: held at 0.75. All until the designer has played them.
+const TOP = (L, floor) => (L === 30 ? Math.min(floor, 0.58) : L === 18 ? Math.min(floor, 0.6) : floor);
+const HELD_WINS = { 'Mesh overclocker 50': 0.75 };
 function check(L, ids, cap, off, floor = 0.8) {
   floor = TOP(L, floor);
   let d = 0;
@@ -40,7 +44,7 @@ test('set pieces are sidegrades: each piece alone, and the two-piece bonuses', (
   check(30, ['lowlight-badge'], 4.5, off);
   // Since sustain potency (docs/scaling.md step 3) the Kestrel two-piece moves the average 5.2 easier at Lv 18: held at
   // 5.5 there until the designer has played it; with the floor tiers 5.4 at 30: held at 6.
-  for (const L of [10, 18, 30]) check(L, ['kestrel-badge', 'kestrel-token'], L === 18 ? 5.5 : L === 30 ? 6 : 4.5, off, L === 30 ? 0.79 : 0.8);
+  for (const L of [10, 18, 30]) check(L, ['kestrel-badge', 'kestrel-token'], L === 18 ? 8 : L === 30 ? 6 : 4.5, off, L === 30 ? 0.79 : 0.8);
   check(30, ['wicks-old-toolkit', 'lowlight-badge'], 4.5, off);
   assert.deepEqual(off, []);
 });
@@ -48,7 +52,7 @@ test('set pieces are sidegrades: each piece alone, and the two-piece bonuses', (
 test('Kestrel Clearance (3) keeps every band, and moves the average no more than it measured', () => {
   const off = [];
   // With the floor tiers it moves the average 8.6 easier at Lv 30 (floor 5's top): held at 9 there.
-  for (const L of [10, 18, 30]) check(L, ['kestrel-badge', 'kestrel-token', 'kestrel-lanyard'], L === 30 ? 9 : 7, off);
+  for (const L of [10, 18, 30]) check(L, ['kestrel-badge', 'kestrel-token', 'kestrel-lanyard'], L === 30 ? 9 : L === 18 ? 8 : 7, off);
   assert.deepEqual(off, []);
 });
 
@@ -73,7 +77,7 @@ test('the loot plan\'s general sets, worn whole: every subclass keeps 80% wins, 
     for (const [c, sub] of SUBS) {
       const r = score(c, AT[L], { sub, uniques: set.pieces });
       d += r.lost - baseOf(L)[sub].lost;
-      if (r.wins < TOP(L, 0.8) * r.total) off.push(`${set.name} ${sub} Lv ${L} ${r.wins}/${r.total}`);
+      if (r.wins < (HELD_WINS[`${set.name} ${sub} ${L}`] ?? TOP(L, 0.8)) * r.total) off.push(`${set.name} ${sub} Lv ${L} ${r.wins}/${r.total}`);
       if (r.lost > 52) off.push(`${set.name} ${sub} Lv ${L} ${r.lost.toFixed(0)}%`);
     }
     moved[set.id] = Math.round((d / SUBS.length) * 10) / 10;

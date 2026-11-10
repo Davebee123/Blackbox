@@ -140,6 +140,7 @@ test('a handler fires on what the board shows: the first that fits, top to botto
   const s = fight();
   const pulse = part(s, 'pulse');
   for (const p of attackers(s)) p.attack.due = 999;
+  for (const t of s.encounter.virus.tells?.list || []) { t.told = false; t.after = 999; } // no charge on the Pulse Node: its plain attack is what is due
   command(s, 'program ransomware armor off'); // the handlers as written (Break ◆ first has its own tests)
   command(s, 'program ransomware add ransomware:pulse:due overload that');
   command(s, 'program ransomware add ransomware:encryptor:present crack that');

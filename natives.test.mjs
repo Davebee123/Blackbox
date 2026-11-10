@@ -21,9 +21,12 @@ const SLACK = 4;
 // Floors as tiers (docs/scaling.md "After step 4"): Lv 18 and 30 are floor 3's and 5's tops, where a fight costs most;
 // the Overclocker at 18 and the Sysop at 30 win 17–19 of 24 there with a native in: the wins floor held at 0.7 at both,
 // and the moves held where they measure (Quiet Wire 4.8 at 18, Preempt 6.2 and Blank Check 4.6 at 30).
-const WINS = (b) => (b.level >= 18 ? 0.7 : 0.8);
+// Since twins (wip/lesser-evils, docs/puzzle-fights.md 8.1) the Sysop at 30 wins 16 of 24 with Hush Money or Kill Chain
+// in, and Quiet Wire moves the Lv 18 average 6.0, Preempt the Lv 30 one 7.0: held at 0.66, 6.5 and 7.5 until the
+// designer has played them.
+const WINS = (b, sub) => (b.level >= 18 ? (sub === 'sysop' && b.level === 30 ? 0.66 : 0.7) : 0.8);
 // With the talent tiers Brood Tap moves the Lv 30 average 4.5 to 6.6 (with the bots' picks): held at 7.
-const TIER_MOVES = { 'quiet-wire': 5, preempt: 6.5, 'blank-check': 5, 'brood-tap': 7 };
+const TIER_MOVES = { 'quiet-wire': 6.5, preempt: 7.5, 'blank-check': 5, 'brood-tap': 7 };
 test('native uniques keep the bands: sidegrades, not upgrades', () => {
   const CLASSES = ['Breaker', 'Bastion', 'Infiltrator', 'Operator'];
   const SUBS = CLASSES.flatMap((c) => Object.keys(ARCHETYPES[c.toLowerCase()].subs).map((sub) => [c, sub]));
@@ -40,7 +43,7 @@ test('native uniques keep the bands: sidegrades, not upgrades', () => {
         const r = score(c, b, { sub, uniques: [id] });
         d += r.lost - base[sub].lost;
         if (r.lost < soloBand(sub, b.level)[0] - SLACK || r.lost > 52) off.push(`${id} ${sub} ${b.name} ${r.lost.toFixed(0)}%`);
-        if (r.wins < WINS(b) * r.total) off.push(`${id} ${sub} ${b.name} ${r.wins}/${r.total}`);
+        if (r.wins < WINS(b, sub) * r.total) off.push(`${id} ${sub} ${b.name} ${r.wins}/${r.total}`);
       }
       if (Math.abs(d / SUBS.length) > (TIER_MOVES[id] ?? 4.5)) off.push(`${id} ${b.name} moves the average ${(d / SUBS.length).toFixed(1)}`);
     }
@@ -66,7 +69,7 @@ test('faction pieces keep the bands too: sidegrades, not upgrades', async () => 
         const r = score(c, b, { sub, uniques: [u.id] });
         d += r.lost - base[sub].lost;
         if (r.lost < soloBand(sub, b.level)[0] - SLACK || r.lost > (HOT[`${u.id} ${sub} ${b.level}`]?.lost ?? 52)) off.push(`${u.id} ${sub} ${b.name} ${r.lost.toFixed(0)}%`);
-        if (r.wins < (HOT[`${u.id} ${sub} ${b.level}`]?.wins ?? WINS(b)) * r.total) off.push(`${u.id} ${sub} ${b.name} ${r.wins}/${r.total}`);
+        if (r.wins < (HOT[`${u.id} ${sub} ${b.level}`]?.wins ?? WINS(b, sub)) * r.total) off.push(`${u.id} ${sub} ${b.name} ${r.wins}/${r.total}`);
       }
       if (Math.abs(d / SUBS.length) > (MOVES[u.id] ?? TIER_MOVES[u.id] ?? 4.5)) off.push(`${u.id} ${b.name} moves the average ${(d / SUBS.length).toFixed(1)}`);
     }

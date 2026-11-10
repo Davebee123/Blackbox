@@ -818,8 +818,9 @@ test('elites: the clash tag names its two levers, and its tooltip says the pull 
   }
 });
 // No pile-ups, lifted for elites (docs/puzzle-fights.md 3, Two clocks): an elite's two tells may land on one cycle only
-// with a cast among them (its window opens a cycle early); any other pile-up is rolled again. An ordinary fight never.
-test('elites: two tells land on one cycle only with a cast among them; an ordinary fight never piles up', () => {
+// with a cast among them (its window opens a cycle early); any other pile-up is rolled again. An ordinary fight piles
+// up only its twins (TELL.twin: tells.test.mjs), counted once here.
+test('elites: two tells land on one cycle only with a cast among them; an ordinary fight piles up only its twins', () => {
   let piled = 0;
   for (const elite of [true, false]) for (let seed = 1; seed <= 30; seed++) {
     const s = fresh(); s.metAll = true; s.run = { loc: 'sim', cwd: '/', integrity: 99999, max: 99999, pack: [], visited: ['/'] };
@@ -827,7 +828,7 @@ test('elites: two tells land on one cycle only with a cast among them; an ordina
     s.encounter.soft = 1; command(s, 'engage');
     const lands = {};
     for (let i = 0; i < 16 && s.encounter?.phase === 'active'; i++) {
-      for (const t of tellsOf(s)?.list || []) if (t.told && t.kind !== 'mimic' && t.next != null) (lands[t.next] ||= new Map()).set(t.id, t.kind);
+      for (const t of tellsOf(s)?.list || []) if (t.told && t.kind !== 'mimic' && t.next != null && !(t.paired && t.second)) (lands[t.next] ||= new Map()).set(t.id, t.kind);
       step(s);
     }
     for (const [c, m] of Object.entries(lands)) if (m.size > 1) {
