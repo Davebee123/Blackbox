@@ -20,6 +20,9 @@
 //           in three small beats.
 // Nothing here is in a fight yet: the ability effects playtest (?playtest=fx) plays it, and renderBoard() bounces it.
 
+import { generic } from './abilitysound-all.mjs';
+import { LEVELS } from './abilitysound-levels.mjs';
+
 export const STYLES = { a: 'Hardware', b: 'Weighty', c: 'Digital', b1: 'Cinematic', b2: 'Electric', b3: 'Heavy', b4: 'Seismic', b5: 'Machine', b6: 'Glitch', b7: 'Echo', b8: 'Cavern', b9: 'Soft echo', b10: 'Deep echo', b11: 'Tear', b12: 'Trailer', b13: 'Deep echo, soft' };
 export const KEYS = ['bash', 'ban', 'poke', 'ping'];
 // Levels (dB), so every style is heard at today's loudness: a medium hit at about −24 LUFS (momentary max), a crit
@@ -49,6 +52,7 @@ const CLASS = { bash: 'breaker', ban: 'bastion', poke: 'infiltrator', ping: 'ope
 const GATE = 0.24;
 // Styles whose Breaker echoes carry past the cut: it drops to this much there and fades over this long (s).
 const RING = { b10: [0.8, 0.7], b11: [0.8, 0.7], b12: [0.8, 0.7], b13: [0.8, 0.7] };
+export const PICKED = 'b13'; // the style round's pick: every ability has a sound in it
 const PULSE = 0.09; // s between the Operator's beats (abilityfx.mjs PULSE)
 
 // ---------- building blocks (any AudioContext; mono) ----------
@@ -880,7 +884,8 @@ SOUNDS.b4 = heavy(1);
 // V: the Breaker's and the Infiltrator's with no square blips or bit-crush: 1 Tear (sample grains, a stuck buffer,
 // driven bass), 2 Trailer (a swell into a metal slam and a driven low brass, glass and shimmer; the Bastion's and the Operator's too).
 // Q: the Breaker's and the Infiltrator's blips (data, cascade, stutter, pings) at this level.
-function core(L, W = 0, B = 0, V = 0, Q = 1) {
+// G: every other ability too, built from its row (abilitysound-all.mjs).
+function core(L, W = 0, B = 0, V = 0, Q = 1, G = false) {
   const low = 1 - 0.15 * L;
   const bus = (K, o, e) => {
     const { time = 0.09, fb = 0.4, wet = 0.4, lp = 2600 } = e;
@@ -1028,7 +1033,7 @@ function core(L, W = 0, B = 0, V = 0, Q = 1) {
     K.tone(K.crush(d, 8), x, { type: 'square', f0: f, a: 0.001, peak: 0.1, d: 0.05 });
     K.ring(d, x, { fc: f * 1.5, fmod: 150, d: 0.06, peak: 0.05 });
   });
-  return {
+  const four = {
     // Data running up the line with low air under it, an FM charge in the draw-back, the impact, a short cascade and growl. Cut dead.
     bash(K, o, T) {
       if (V) return bashV(K, o, T);
@@ -1122,6 +1127,7 @@ function core(L, W = 0, B = 0, V = 0, Q = 1) {
       if (L) stutter(K, b, hit + 2 * PULSE, 2 + (crit ? 1 : 0), PULSE / 3, low);
     },
   };
+  return G ? { ...generic({ bus, weight, stutter, snap, pings, low, Q }), ...four } : four;
 }
 SOUNDS.b5 = core(0);
 SOUNDS.b6 = core(1);
@@ -1131,7 +1137,7 @@ SOUNDS.b9 = core(1, 1.05);
 SOUNDS.b10 = core(1, 1.05, 1);
 SOUNDS.b11 = core(1, 1.05, 1, 1);
 SOUNDS.b12 = core(1, 1.05, 1, 2);
-SOUNDS.b13 = core(1, 1.05, 1, 0, 0.45);
+SOUNDS.b13 = core(1, 1.05, 1, 0, 0.45, true);
 
 // How the hit's size and result read (plan: the effect's timing in ms, from abilityfx.mjs play()).
 export function timingOf(t, plan, { result = 'hit', power = 0.3 } = {}) {
@@ -1146,7 +1152,8 @@ export function timingOf(t, plan, { result = 'hit', power = 0.3 } = {}) {
 export function playAbility(ctx, out, style, key, T, buf) {
   const fn = SOUNDS[style]?.[key];
   if (!fn) return false;
-  const tr = TRIM[style]?.[key] || {}, db = (x) => Math.pow(10, (x || 0) / 20), r = T.result;
+  if (T.result === 'miss' && !T.flies) return false; // nothing flew to pass on: the result's own voice
+  const tr = TRIM[style]?.[key] || (style === PICKED && LEVELS[key]) || {}, db = (x) => Math.pow(10, (x || 0) / 20), r = T.result;
   const base = db(tr.level), hit = base * (r === 'crit' ? db(tr.crit) * 1.06 : r === 'chit' ? db(tr.chit) : r === 'miss' ? db(tr.miss) : 0.78 + 0.1 * T.k);
   // Its level steps to the contact's at the hit (a miss is at its own all along); the Breaker's is cut after its stop.
   const bus = (dest) => {
