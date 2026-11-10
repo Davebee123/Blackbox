@@ -2299,16 +2299,20 @@ function cycleChanged(s) {
 // ---------- the timeline turning over ----------
 // When a cycle resolves, the board shows the move instead of jumping: every chip slides one column
 // left (FLIP: it starts where it was and eases to where it is now), what resolved this cycle fires
-// (an attack flies at your bar, your command at its target, a patch clamps shut) and fades, and
-// anything new drifts in from the right. Motion off skips all of it.
+// (an attack flies at your bar, a replicate at the fragment it spawns, your command at its target, a patch clamps
+// shut) and fades, and anything new drifts in from the right. Motion off skips all of it.
+const rowIds = () => [...$('board').querySelectorAll('.bpart[data-target]')].map((el) => el.dataset.target);
 function chipSnapshot() {
   const plain = (el) => { const c = el.cloneNode(true); c.querySelector('.fxin')?.remove(); return c.outerHTML; }; // a resolved chip's ghost leaves its theme behind
-  return [...$('board').querySelectorAll('[data-k]')].map((el) => ({ k: el.dataset.k, at: el.dataset.at || '', rect: el.getBoundingClientRect(), html: plain(el), cls: el.className, th: el.closest('.brow')?.dataset.th || '' }));
+  const snap = [...$('board').querySelectorAll('[data-k]')].map((el) => ({ k: el.dataset.k, at: el.dataset.at || '', rect: el.getBoundingClientRect(), html: plain(el), cls: el.className, th: el.closest('.brow')?.dataset.th || '' }));
+  snap.rows = new Set(rowIds());
+  return snap;
 }
 function turnTimeline(before) {
   const board = $('board');
   const now = new Map([...board.querySelectorAll('[data-k]')].map((el) => [el.dataset.k, el]));
   const ease = 'cubic-bezier(.2,.75,.25,1)';
+  const spawned = rowIds().filter((id) => !before.rows?.has(id)); // the rows this cycle added: where a replicate aims
   for (const b of before) {
     const el = now.get(b.k);
     if (el) {
@@ -2316,7 +2320,7 @@ function turnTimeline(before) {
       const dx = b.rect.left - r.left, dy = b.rect.top - r.top;
       if (Math.abs(dx) + Math.abs(dy) > 1) el.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }], { duration: 440, easing: ease });
       if (el.classList.contains('now') && !/\bnow\b/.test(b.cls)) el.animate([{ boxShadow: '0 0 0 0 rgba(255, 91, 61, 0.7)' }, { boxShadow: '0 0 0 6px rgba(255, 91, 61, 0)' }], { duration: 700, delay: 380, easing: 'ease-out' });
-    } else fire(b);
+    } else fire(b, spawned);
   }
   const was = new Set(before.map((b) => b.k));
   for (const [k, el] of now) if (!was.has(k)) el.animate([{ opacity: 0, transform: 'translateX(28px)' }, { opacity: 1, transform: 'none' }], { duration: 420, delay: 160, easing: 'ease-out', fill: 'backwards' });
@@ -2324,10 +2328,15 @@ function turnTimeline(before) {
   if (cyc) cyc.animate([{ opacity: 0, transform: 'translateY(-6px)' }, { opacity: 1, transform: 'none' }], { duration: 300, easing: 'ease-out' });
 }
 // What resolved this cycle: a ghost of the chip plays out where it was.
-function fire(b) {
-  // A themed part's attack going off (chipfx.mjs): its own strike into your bar, in place of the ghost or beside it.
-  if (b.th && /\bnow\b/.test(b.cls) && !/mine|daemon|patch/.test(b.cls)) {
-    const bar = document.querySelector('.hud-bar.mine .bigbar')?.getBoundingClientRect();
+function fire(b, spawned = []) {
+  const theirs = /\bnow\b/.test(b.cls) && !/mine|daemon|patch/.test(b.cls);
+  // A replicate aims at the fragment it spawned (one each), not your bar; one that fizzled plays out in place.
+  const replicate = theirs && /\breplicate\b/.test(b.cls);
+  const spawn = replicate ? spawned.shift() : null;
+  const aim = theirs && (replicate ? (spawn ? document.querySelector(`.board [data-target="${CSS.escape(spawn)}"] .part-bar`) : null) : document.querySelector('.hud-bar.mine .bigbar'));
+  // A themed part's attack going off (chipfx.mjs): its own strike into its target, in place of the ghost or beside it.
+  if (b.th && aim) {
+    const bar = aim.getBoundingClientRect();
     if (bar?.width && chipStrike(b.th, b.rect, { x: bar.left + bar.width / 2, y: bar.top + bar.height / 2 }, bar)) return;
   }
   const g = document.createElement('div');
@@ -2338,7 +2347,7 @@ function fire(b) {
   const center = (el) => { const r = el?.getBoundingClientRect(); return r && r.width ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : null; };
   const from = { x: b.rect.left + b.rect.width / 2, y: b.rect.top + b.rect.height / 2 };
   let to = null, frames;
-  if (/\bnow\b/.test(b.cls) && !/mine|daemon|patch/.test(b.cls)) to = center(document.querySelector('.hud-bar.mine .bigbar')); // an attack lands on you
+  if (theirs) to = center(aim); // an attack lands on you; a replicate, on its new fragment
   else if (/mine|daemon/.test(b.cls) && b.at) to = center(document.querySelector(`.board [data-target="${CSS.escape(b.at)}"] .part-bar`)); // your command hits its target
   if (to) {
     const dx = to.x - from.x, dy = to.y - from.y;
