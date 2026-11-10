@@ -147,6 +147,13 @@
 .cx-phases li { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: var(--s4); align-items: start; padding: var(--s3) 0; border-bottom: 1px solid var(--line); }
 .cx-phases p { margin: 0; color: var(--text); font-size: 13px; }
 .cxph-at { font: 600 13px var(--mono); color: var(--amber); }
+.cxph-guide { list-style: none; margin: var(--s2) 0 0; padding: 0; display: grid; gap: var(--s2); }
+.cx-phases .cxph-guide li { border: 0; padding: 0; }
+.cxph-guide li > span:only-child { grid-column: 1 / -1; }
+.cxph-guide li { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: var(--s4); font-size: 13px; color: var(--text); }
+.cxph-guide li b { font: 600 12px var(--mono); color: var(--amber); }
+.cx-phases .cxp-hint { margin-top: var(--s2); color: var(--dim); }
+@media (max-width: 520px) { .cxph-guide li { grid-template-columns: minmax(0, 1fr); gap: 0; } }
 .cxph-mechs { display: flex; flex-wrap: wrap; gap: var(--s2); margin-top: var(--s2) !important; }
 .cx-chips { display: flex; flex-wrap: wrap; gap: var(--s2); }
 .cx-head .tag[style*='--ax'] { color: var(--ax); border-color: var(--ax); display: inline-flex; align-items: center; gap: var(--s2); }

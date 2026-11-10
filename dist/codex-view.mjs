@@ -164,19 +164,25 @@ function lootTable(t) {
 }
 
 // ---------- the other pages ----------
+// The research (its parts' average) at which a boss's phases read in full.
+export const BOSS_READ = 50;
 function bossPage(s, e) {
   const fam = e.strain ? link(`strain:${e.strain}`, STRAINS[e.strain].name) : e.family ? link(`family:${e.family}`, famName(e.family)) : '<span class="tag dim">the server\'s family</span>';
   const head = `<header class="cx-head solo"><div class="cx-title"><h2>${e.raid ? 'Crew boss' : 'Boss'}</h2><h1>${esc(e.name)}</h1><p class="tagline">${fam}${e.floor ? `<span class="tag dim">Lv ${e.floor}+</span>` : ''}${e.lair ? `<span class="tag" title="Its lair">${esc(e.lair)}</span>` : ''}</p>
-    <div class="stats">${stat('Your fights', e.fought, 'you')}${stat('Your wins', e.won, 'you')}${e.parts.length ? stat('Research', `${pctOf(e.parts)}%`, pctOf(e.parts) >= 100 ? 'full' : '', 'The average of its parts\' research. They share it with its family or strain') : ''}${stat('Integrity', `×${e.hp}`, '', 'Its Integrity, against a plain virus of its level')}${stat('Enrages', `cycle ${e.enrageAt}`, '', 'From this cycle every attack lands every cycle, a quarter harder')}</div>
+    <div class="stats">${stat('Your fights', e.fought, 'you')}${stat('Your wins', e.won, 'you')}${e.parts.length ? stat('Research', `${pctOf(e.parts)}%`, pctOf(e.parts) >= 100 ? 'full' : '', `The average of its parts' research. They share it with its family or strain. At ${BOSS_READ}% its phases read in full`) : ''}</div>
     ${e.authors.length ? `<p class="cx-by"><span class="cx-label">Written by</span>${e.authors.map(byline).join('')}</p>` : ''}</div></header>`;
-  const about = e.about ? `<p class="cx-rule">${esc(e.about)}</p>` : '';
-  const sig = e.signature ? section('Signature', `<div class="cx-part"><div class="cxp-head"><b>${esc(e.signature.name)}</b></div><p class="cxp-does">${ruleHtml(e.signature.rule)}</p></div>`) : '';
-  const phases = e.phases.length ? section('Phases', `<ol class="cx-phases">${e.phases.map((ph) => `<li><b class="cxph-at">${Math.round(ph.at * 100)}%</b><div>${ph.name ? `<b>${esc(ph.name)}</b>` : ''}${ph.say ? `<p>${esc(ph.say)}</p>` : ''}${ph.mechs ? `<p class="cxph-mechs">${ph.mechs.map((m) => `<span class="tag">${esc(m)}</span>`).join('')}</p>` : ''}</div></li>`).join('')}</ol>${e.enrage ? `<p class="cx-foot">Past its timer: ${esc(e.enrage)}.</p>` : ''}`) : '';
+  // Its phases, as a boss guide (WoW's dungeon journal): Phase 1 from the start, then one a ♛ tick, each its abilities
+  // in turn. What each does reads only once its parts are researched to BOSS_READ% (a crew boss, with no parts, at once).
+  const read = !e.parts.length || pctOf(e.parts) >= BOSS_READ, need = `Research ${BOSS_READ}% to read it.`;
+  const lines = (xs) => (read ? `<ul class="cxph-guide">${xs.map(([k, v]) => `<li>${k ? `<b>${esc(k)}</b>` : ''}<span>${ruleHtml(v)}</span></li>`).join('')}</ul>` : `<p class="cxp-hint">${glyph('lock')}${need}</p>`);
+  const rows = [...(e.open ? [{ at: 1, title: 'Phase 1', body: lines(e.open) }] : []),
+    ...e.phases.map((ph, i) => ({ at: ph.at, title: `Phase ${i + (e.open ? 2 : 1)}${ph.name ? ` · ${ph.name}` : ''}`, body: (ph.lines || ph.say ? lines((ph.lines || [[null, ph.say]]).map(([k, v]) => [k === ph.name ? null : k, v])) : '') + (ph.mechs && read ? `<p class="cxph-mechs">${ph.mechs.map((m) => `<span class="tag">${esc(m)}</span>`).join('')}</p>` : '') }))];
+  const phases = rows.length ? section('Phases', `<ol class="cx-phases">${rows.map((r) => `<li><b class="cxph-at" title="${r.at >= 1 ? 'From the start' : `As its ♛ crosses ${Math.round(r.at * 100)}%`}">${Math.round(r.at * 100)}%</b><div><b>${esc(r.title)}</b>${r.body}</div></li>`).join('')}</ol>`) : '';
   const tells = e.raid ? '' : section('Tells', e.tells.length ? `<ul class="cx-tells">${e.tells.map(tellMarkup).join('')}</ul>` : '<p class="cx-foot">Brings no tells.</p>', ` <small>at <b class="you">Lv ${e.level}</b></small>`);
   const lv = e.parts[0]?.level || e.level, rides = (x) => e.tells.filter((t) => t.part === x.part.name).map((t) => ({ name: t.name, kind: t.kind }));
   const parts = e.parts.length ? section('Parts', `<div class="cx-parts">${e.parts.map((x) => partCard(lv, x, rides(x), false, s.exeSeen)).join('')}</div><p class="cx-foot">Its parts share their research with its ${e.strain ? 'strain' : 'family'}.</p>`, ` <small>at <b class="you">Lv ${lv}</b></small>`) : '';
   const loot = section('Loot', lootTable(e.loot));
-  return head + about + sig + phases + parts + tells + loot;
+  return head + phases + parts + tells + loot;
 }
 function mutationPage(s, e) {
   const head = `<header class="cx-head solo"><div class="cx-title"><h2>Mutation</h2><h1>${esc(e.name)}</h1><p class="tagline"><span class="tag" style="--ax:${e.axis.colour}" title="${esc(`${e.axis.name}: it punishes ${e.axis.punishes}.`)}">${glyph(e.axis.icon)}${esc(e.axis.name)}</span><span class="tag dim">Lv ${e.opens}+</span></p>

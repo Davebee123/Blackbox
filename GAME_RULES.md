@@ -663,6 +663,11 @@ On-Call's **Pager** (no longer floor 3's lair boss; floor 4's still drops it), a
 The Codex boss page groups its loot (*Grouped*): every kill, its uniques, its set pieces, each with the next kill's odds
 as a bar and the odds and pity in the bar's tooltip.
 
+**The Codex boss page** is a boss guide (WoW's dungeon journal): your fights, wins and research, its phases, parts, tells
+and loot. Each phase is listed by its tick (Phase 1 from the start, then one a ♛ tick) with its name; what its abilities
+do, line by line, reads only once its parts are researched to 50% on average (`BOSS_READ`; a crew boss at once). The
+floor bosses' lines are their `guide`, the rest their phase lines. It shows no signature, Integrity, enrage or blurb.
+
 ### Lairs and native bosses
 
 Every floor from 2 has a **lair** slot, found by tracing. Its two outer rooms hold its boss's family (your native

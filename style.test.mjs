@@ -52,6 +52,7 @@ function everything() {
     for (const t of codexTells(s, 'boss', id)) out.push({ kind: 'tell', where: `boss:${id}`, name: t.name, does: t.does, answer: t.answer });
     if (BOSSES[id].about) out.push({ kind: 'boss', where: id, name: BOSSES[id].name, does: BOSSES[id].about });
     if (BOSSES[id].signature) out.push({ kind: 'boss', where: id, name: BOSSES[id].signature.name, does: BOSSES[id].signature.rule });
+    for (const [name, does] of [...(BOSSES[id].guide?.open || []), ...(BOSSES[id].guide?.phases || []).flat()]) out.push({ kind: 'boss', where: id, name, does }); // its Codex guide
   }
   for (const [id, g] of Object.entries(GENES)) out.push({ kind: 'gene', where: id, name: g.name, does: g.does, answer: g.answer });
   for (const [id, m] of Object.entries(MUTATIONS)) out.push({ kind: 'mutation', where: id, name: m.name, does: m.rule });
