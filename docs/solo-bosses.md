@@ -8,7 +8,7 @@ family virus at 1.6× Integrity with one stock phase: the kit player (blind to t
 
 ## The shape
 
-- **Three acts**: the opening, then one at each of the ♛ part's ticks (50%, 25%). Each act adds a mechanic. A stock
+- **Three acts**: the opening, then one at each of the ♛ part's act ticks (60%, 30%: Act length below). Each act adds a mechanic. A stock
   phase (re-arm, a cycle sooner) is never an act on its own.
 - **A part of its own**, with a rule, on top of its family's: the boss's signature, shown on its row.
 - **You choose when**: the ♛ ticks are yours to cross, so each phase starts when you are ready for it.
@@ -74,7 +74,7 @@ signature that changes the fight, a beat, the default move wrong at least once. 
 **Every act adds a pressure that costs to ignore** (the November audit): the opening carries two at least, so that
 answering one costs you on the other, and an act that only tightens a number (sooner, fewer, smaller) is not an act.
 
-| Boss | Floor · where | Act 1 | Act 2 (50%) | Act 3 (25%) |
+| Boss | Floor · where | Act 1 | Act 2 (60%) | Act 3 (30%) |
 |---|---|---|---|---|
 | SHAKEDOWN 12 | 2 · throne of the Pits | **Ransom Clock**: a 12-cycle clock; at 0 it leaks 30% of your max and restarts at 6. A Deadline you let land pays the ransom (+3); one you call off buys nothing. The Lockbox wards the Demand | **Second demand**: a second Demand, its Deadline on the same cycle | **Final notice**: each leak re-arms the Demand's ◆ and brings the Lockbox back |
 | CENTRIFUGE 14 | 2 · floor job | **Bidding**: each Surge the Gavel lands spins it faster (every 4, 3, 2); a delay or Throttle withdraws it to 4. A Surge at every 2 sells: the buyer the Gavel names joins as a part with its crew's rule (TOLLGATE wards the Rotor, SWARMLINE twins the Gavel, PALEMASK veils a part) | **Reserve price**: a delay or Throttle only steps the Gavel back one | **Second lot**: each sale brings two buyers |
