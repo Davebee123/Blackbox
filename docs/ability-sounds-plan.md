@@ -58,5 +58,11 @@ Operator's comes in three beats.
    sign, yours, helper, fire) and a tail by particles, each ability at its own pitch. SIGNATURE adds layers for
    Overload, Detonate, Firewall, Purge, Crack, Quarantine, Botnet, Deploy, Inject, Flood, Shatter and Failover.
    Levels are measured into `abilitysound-levels.mjs`. `?playtest=fx` plays any of them with Sound on B13.
+   **2b** (built, waiting on the designer's ear): the designer heard many as the same, and is fine with that
+   where it means the same mechanic. Kept the five kinds; inside each, a class's abilities now differ: a trait voice
+   for what each does (TRAITS: breaks ◆, wards, dodges, undoes, slows, spreads, commands helpers…), one of three
+   bodies and an evenly spread pitch by its place among its class's of that kind, and layers of their own for the
+   long-cooldown ones (Zero-day, Logic Bomb, Kill Switch, Takeover, Outbreak, Turbo Boost, Vanish, Circuit Breaker,
+   Opening, Hot Standby).
 3. **Tiers and finishers**: the mastery layers, the 13 tier overrides, the 12 finishers.
 4. **Land**: the mix in real fights (crowded cycles, crewmates, burns), the voice cap, tests, GAME_RULES and README.

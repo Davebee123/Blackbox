@@ -5,7 +5,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { STYLES, KEYS, TRIM, PICKED, timingOf, playAbility, hasSound } from './dist/abilitysound.mjs';
-import { SOUND_KEYS, SIGNATURES, kindOf, massOf } from './dist/abilitysound-all.mjs';
+import { SOUND_KEYS, SIGNATURES, TRAITS, TRAIT_NAMES, kindOf, massOf } from './dist/abilitysound-all.mjs';
 import { LEVELS } from './dist/abilitysound-levels.mjs';
 import { SPIKE, ABILITIES } from './dist/data.mjs';
 import { RECIPES } from './dist/abilityfx-table.mjs';
@@ -97,9 +97,17 @@ test('every ability in the effects table has a sound in the picked style, a kind
   assert.ok(massOf('zero-day') > massOf('spike'));
 });
 
-test('the signature abilities are the plan\'s twelve, each a real one', () => {
-  assert.deepEqual([...SIGNATURES].sort(), ['botnet', 'crack', 'deploy', 'detonate', 'failover', 'firewall', 'flood', 'inject', 'overload', 'purge', 'quarantine', 'shatter']);
+test('the signature abilities are the plan\'s twelve and the long-cooldown ones, each a real one', () => {
+  for (const key of ['botnet', 'crack', 'deploy', 'detonate', 'failover', 'firewall', 'flood', 'inject', 'overload', 'purge', 'quarantine', 'shatter']) assert.ok(SIGNATURES.includes(key), key);
   for (const key of SIGNATURES) assert.ok(ABILITIES[key] && RECIPES[key], key);
+  for (const key of ['zero-day', 'logic-bomb', 'kill-switch', 'takeover', 'outbreak', 'turbo-boost', 'vanish', 'circuit-breaker', 'opening', 'hot-standby']) assert.ok(SIGNATURES.includes(key), key);
+});
+
+test('a trait is a voice that exists, on an ability that exists', () => {
+  for (const [key, list] of Object.entries(TRAITS)) {
+    assert.ok(RECIPES[key] && (ABILITIES[key] || key === 'sigint'), key);
+    assert.ok(list.length && list.every((t) => TRAIT_NAMES.includes(t)), `${key}: ${list}`);
+  }
 });
 
 test('every ability\'s sound starts as it leaves the key, lands on the hit and is done in time', () => {
