@@ -3,7 +3,7 @@
 **Status.** The design for viruses as bodies plus rules, written by crews. Built: the rule library (`genes.mjs`), the
 authors (`authors.mjs`), the compatibility rules, HASHLORD and MIRRORSHADE rebuilt, sets (the loot plan's), rolled
 builds on breaches (GAME_RULES.md *Rules and authors*, *Part research*, *Sets*, *The Resident and bosses*). Left: the
-14 new bosses, ACTUARY and UNDERWRITER, the Tollbooth set, handovers and the reflash.
+14 new bosses, ACTUARY's portfolio and its boss, the Tollbooth set, handovers and the reflash.
 
 **Genes are cut from the player's view.** The designer: *"Genes are not computer virus properties though."* The
 player reads parts and their research, never genes; the gene library stays in the code as the shape content is built
@@ -21,7 +21,7 @@ true. The only author that changes its work by watching you (`authors.mjs` has i
 | Repricing | Every 300 kills on its floor (never on a calendar), it drops the rule you beat most there (by kills, reads and parts broken first) and adds that rule's counter (below). No kills, no repricing. |
 | Warning | A *Repricing notice* mail and a Network card line say what is under review first: *Twin claims are down 40%. Under review: Twin. Proposed: Hot Spare.* |
 | Bounds | One rule out and one in at a time, inside the compatibility rules. It never drops below one rule per axis it started with. |
-| Its boss | UNDERWRITER (7.4), the same fight every time: the adaptation is in its wild viruses and elites only. |
+| Its boss | ACTUARY itself (docs/solo-bosses.md), the same fight every time: the adaptation is in its wild viruses and elites only. |
 | Steering | You see what it will counter, so farming one rule on its floor tells it what to bring next. |
 
 | Beaten often | Counter it brings | Why |
@@ -150,7 +150,11 @@ boss exists.
 
 | Boss | Floor | Where | Rules | Signature | Phases | Loot |
 |---|---:|---|---|---|---|---|
-| UNDERWRITER | 40 | The Core of ACTUARY's hub server on floor 5, sealed until 40 | A three-part construct: Surge, Encrypt, Replicate, Scramble, Veil, Rate cap, Full Disk, Self-Update, Re-key | **Risk Model.** A premium meter on its bar: each tell that lands on you raises it, each read lowers it. At 60% and 30% it buys a phase sized by the premium: a re-arm when low, a re-arm and faster when high. | 60% and 30% Risk Model | Moral Hazard (exploit): +3% damage for each tell that landed on you this fight, up to +30%. Reinsurance (proxy): the first time each fight a hit takes more than 30% of your max, the excess comes back as a shield over 2 cycles. |
+| ACTUARY | 40 | The Core of its hub server on floor 5, sealed until 40 | Model, Claims, Pricing, Cancel Job | **The Book** and **the premium**: three acts in docs/solo-bosses.md. It retired UNDERWRITER (a Risk Model construct) | Acts | Moral Hazard (exploit): +3% damage for each tell that landed on you this fight, up to +30%. Reinsurance (proxy): the first time each fight a hit takes more than 30% of your max, the excess comes back as a shield over 2 cycles. |
+
+**Floors 5–8** (November 2026): every boss there plays in three acts (docs/solo-bosses.md), which replace the Phases
+column. RING ZERO's hook still fires your key, onto the Hook that replays it; BRICKWALL lays ◆ on the part you hit
+last. Neither shuts a skill off. The new bosses (GRACE PERIOD, PAY RUN, SUMP, THUNDERING HERD, CORE DUMP) are there too.
 
 **The native bosses' own loot**, once lairs move by floor. Each of the nine built native bosses gets two uniques of
 its own; a lair boss still rolls the network's natives at the elite rate.

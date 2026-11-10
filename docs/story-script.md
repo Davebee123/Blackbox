@@ -196,8 +196,11 @@ Only two change.
 3. **Takeover** · *our shelf*
    > take {server} over, or don't. it's your shelf.
 
-   **Extra letter · Kestrel · *Notice of closure***
+   **Transmission · Kestrel · *Notice of closure*** (a transmission, not a letter: picked November 2026)
    > Kernel Space and every floor beneath it will be sealed at the end of this cycle. Please collect your belongings.
+
+   **Extra letter · Halcyon Claims · *your retainer*** (*new*)
+   > Kestrel's notice does not alter your retainer. Work under the seal will be honoured in due course.
 4. **Boss** · *the seal* · **BULKHEAD** (36, Kestrel ICE; *Fight:* the bosses table)
    > they're sealing it with you under. the lock sits in the Core of {server}.
    > break it and the floors stay open. or walk out and let it close. you pick. i picked twice.
@@ -221,6 +224,9 @@ Only two change.
    > Every report INIT ever filed, thirty-five years of them. Halcyon bought them retail. I bought the archive.
    > The last one reads *process table at 99%*. It was filed from Kessler's night desk. Ask your handler who was on shift.
    > For sale, naturally.
+
+   It arrives as a transmission (*new*), GLASSJAW playing the last report. **Extra letter · wick** (*new*), after it:
+   > i was on shift.
 3. **Recover a file** · *The minutes* (*kept*) · `minutes.pdf`
    > The board's minutes went to a vault on {server}, as {file}. Bring them out. I will read them first.
 
@@ -249,8 +255,10 @@ Only two change.
    > its image sits in the vault on {server}, as {file}. bring it out past the tracker. then i'll know where every copy is.
 4. **Install** · *a watchdog* (*kept*)
 5. **Takeover** · *its host* (*kept*)
-6. **Lair boss** · *last one* (Bedrock's own lair boss, to write at 46)
-   > {boss} guards what is left of it, in the Core of {server}. beat it.
+   **Extra letter · Halcyon Claims** (*new*)
+   > Bedrock is outside your retainer. We cannot advise you to proceed.
+6. **Boss** · *last one* · **CORE DUMP** (48, what is left of the Actuary; *Fight:* docs/solo-bosses.md)
+   > what is left of it is in the Core of {server}. beat it.
    > after that there's only init. i won't ask you to go. you'll go anyway.
 7. **INIT** · Bedrock's deepest server, level 50. No letter sends you; the chain's closing line points the way.
 
@@ -313,13 +321,15 @@ signature changes the fight, never just your bar: shutting a skill off is a side
 | **BULKHEAD** · 36 · *new* | Kestrel's lock, sealing the floors below with you inside | **Closure.** Its parts are the floors under the seal (KERNEL, SINK, BEDROCK) and the Lock. Every 3 cycles, after a cycle's notice (*Please collect your belongings*), the Lock seals the deepest open floor: that part goes dark, can't be hit, and its Integrity becomes armor on the Lock. **Pressure:** a sealed floor's attack keeps counting behind the wall. Break the Lock and every bulkhead lifts at once, and everything held back lands. | Break the floors deepest first, before they seal, or choose one to let seal and be ready for the flood. |
 | **GOLDEN PARACHUTE** · 38 | A board member leaving with his payout and the renewal's only copy | **Severance** as designed: a part breaking gives the others a ◆ and a charge. **The Parachute:** at its last part it starts jacking out, a 4-cycle countdown on the board. If it gets out, the fight ends: no loss, no loot, and it's back in its Core next visit. | Break the others in an order that leaves the weakest last, and save a burst for the countdown. |
 | **INIT** · 50 | PID 1: it can't be killed, it adopts every orphan, and its Integrity is the process table | **Adoption.** Its bar is the process table, from 97%. Each cycle it adopts an orphan (a fragment). An orphan broken cleanly, in one hit or while Open, frees table (−2%); one left to the end of its third cycle is re-parented (+1%). **Older strata:** at 85% and 70% the orphans come older and tougher, Bedrock's oldest last. It falls at 61%. | End processes cleanly, not just quickly. Final Settlement, its reward, is the lesson as an item. |
+| **CORE DUMP** · 48 · *new* | The image the Actuary left when it was switched off | **Ghosts.** Its parts are the Actuary's. A part broken stays as a ghost that repeats its last attack at half; acts in docs/solo-bosses.md | Choose when to break a part, and so which attack you live with. |
 
-Bedrock's own lair boss (46) is still to write; it stands between the actuary and INIT.
+INIT now has five acts (docs/solo-bosses.md); its row above is act 1. Bedrock's lair bosses are HALT AND CATCH FIRE and
+THUNDERING HERD (docs/content.md 3.2).
 
 ## What the script needs that isn't built
 
 - **The named bosses** (the Boss step and its stand-ins are built). To build: PAGE NINE (an elite, no new rules), CENTRIFUGE, SHOULDER SURFER, NIGHT DESK (new),
-  EXIT NODE, BULKHEAD (new), GOLDEN PARACHUTE, INIT.
+  EXIT NODE, BULKHEAD (new), GOLDEN PARACHUTE, CORE DUMP (new), INIT.
 - **Five transmissions** on reaching floor 5 (`scenes.mjs` has the format; the trigger is new).
 - **The seal** on floor 6: a set piece, designed and prototyped first.
 - **The stance** (the badge line) and **wick's letter** by stance, at INIT's first fall.

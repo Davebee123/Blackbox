@@ -60,3 +60,37 @@ pick from before they're built.
 | MIRRORSHADE | Doppelganger (as now) | **Shatter**: breaking the Doppelganger leaves three shards; each copies your next command |
 | SLEEPWALKER | **REM**: one part dozes at a time, taking ×2; hitting it sounds the Alarm for 3 cycles | **Night Terror** every 3 cycles while any part dozes |
 | ECHOLALIA | **Reverb**: your commands echo a cycle later at half, onto the part beside it | **Last Word**: the last part standing repeats every hit it took in its final 3 cycles |
+
+## Proposed: floors 5–8 (picked November 2026, not built)
+
+Prototyped as applets (a board an act), with docs/content.md 3.2. Each plays in the shape above: three acts, a
+signature that changes the fight, a beat, the default move wrong at least once. *Sketched* has no board yet.
+
+| Boss | Floor · where | Act 1 | Act 2 (50%) | Act 3 (25%) |
+|---|---|---|---|---|
+| GRACE PERIOD 28 · *new* | 5 · lair | **Grace**: each part has 3 cycles' grace; your command on it pays it up. Left alone it lapses: full ◆, and its next attack is a charge | **Reinstatement**: a lapsed part hits 25% harder until its ◆ are stripped again | **Acceleration**: grace is 2 cycles, and a lapse takes a cycle off every other part |
+| PARASITE 32 · *sketched* | 5 · lair | **Host Takeover** (docs/genome.md 7.4) | **Spare Tap**: a broken Tap boots back 2 cycles later at 60% | **Gorge**: every 4 cycles it eats its fragments to heal the ♛ by what they had left |
+| EXIT NODE 30 | 5 · floor job | **Rollback**: every 6 cycles it restores every bar, its and yours, to an image taken 2 cycles before. Its acts ride its three backups, v7, v6, v5: a broken one stays broken | **Older image**: taken 4 cycles before | **Cold image**: one image, taken as v6 broke, for every restore |
+| ACTUARY 40 | 5 · its hub's Core, sealed until 40 | **Premium paid**: one part is insured, the tag moving in a fixed order a cycle ahead; damage on it is refunded. A landed tell raises the premium 15, an answered one lowers it 15; its hits grow 1% a point | **Write-off**: the Cancel Job wakes; every 5 cycles it breaks the most damaged uninsured part and what it had left lands on you | **Finality**: the premium is set to 60. Insured parts take nothing, and the Model is insured at 50 or more. Each cycle the part just uncovered charges, landing in 2. The last part beside the Model is never written off |
+| RING ZERO 34 | 6 · lair | **Hook**: one key is hooked, moving every 3 cycles (shown a cycle ahead). It still fires, but onto the Hook, which replays what it holds every 4 cycles. Breaking the Hook frees the key for 3. Never key 1 or SIGINT | **Second hook**: two keys at once | **Ring 0**: the key you fired last is hooked next |
+| BRICKWALL 36 · *sketched* | 6 · lair | **Bricklaying**: every 3 cycles a ◆ on the part you hit last | **Rage**: a part at 5 ◆ hits ×1.5 until stripped below 3 | **Two at once**: a ◆ on each of the two parts you hit last |
+| BULKHEAD 36 | 6 · floor job | **Closure** (docs/story-script.md): every 3 cycles, after a cycle's notice, the Lock seals the deepest open floor; its Integrity becomes ◆ on the Lock | **Pressure**: a sealed floor's attacks keep counting; break the Lock and all of it lands | **Final notice**: one notice for every floor still open, 2 cycles, then all seal |
+| BLACKOUT 34 | 6 · throne of the Pits | **Rolling Blackout** (docs/genome.md 7.4) | acts to write | acts to write |
+| PAY RUN 40 · *new* | 7 · lair | **Payday**: its parts never attack alone. Every 4 cycles the Batch lands one hit for each part standing; a part's share grows 10% a cycle since your command last hit it | **Back pay**: a part broken between paydays hands its share, and half again, to the next | **Settlement**: a payday heals the ♛ by what lands on you |
+| BIT BUCKET 42 · *sketched* | 7 · lair | **/dev/null**: the first 30% of your damage each cycle is discarded, 5% more a ◆ it wears | **Flush**: every 4 cycles what it discarded returns as one hit | **Pipe**: it discards your largest hit instead |
+| GOLDEN PARACHUTE 38 | 7 · floor job | **Severance** (docs/genome.md 7.4) | **Vesting**: every part hits 4% harder a cycle it has stood this act | **The Parachute**: it jacks out in 4 cycles; gone, it's back next visit, no loot |
+| SUMP 44 · *new* | 7 · the funnel's point | **Runoff**: a fifth of your damage collects in the Sump. Every 5 cycles the Pump heals the ♛ by half of it; breaking the Sump flushes it onto you and every part alike, and it re-forms empty in 3 | **Overflow**: at 300 it flushes on its own, onto you only | **Drain open**: all your damage to the ♛ runs down |
+| HALT AND CATCH FIRE 46 | 8 · lair | **Heat** rises 8 a cycle, its hits grow 1% a point. A tick crossed on a Rig vents 25. At 100 it blows: 20% of max off you and every part, back to 40 | **Runaway**: a vent leaves you Overheated (cooldowns 1 longer for 2 cycles) | **Halt**: at 100 it halts 2 cycles, nothing hittable, then every skipped attack lands |
+| THUNDERING HERD 47 · *new* | 8 · lair | **Herd**: workers sleep; the Listener adds one every 4. A hit that doesn't break a sleeping worker wakes them all to bite once | **Accept**: every 5 cycles the Listener wakes them itself; a worker hit while awake wakes nobody | **Stampede**: after each wake one more stays awake for good |
+| CORE DUMP 48 · *new* | 8 · floor job | **Ghosts**: its parts are ACTUARY's. A broken part stays as a ghost repeating its last attack at half every 3 cycles; each part alternates a small and a big one | **Reload**: every 6 cycles the hardest-hitting ghost returns as a part at 30% | **Full dump**: every attack the ♛ lands stays as an echo |
+
+**INIT** (50, Bedrock's deepest Core) has five acts. Its health is the process table, drawn as squares, one a percent:
+97% at the start, won at 61%. Each act starts as the table crosses its mark, and keeps every rule before it.
+
+| Act | Rule |
+|---|---|
+| 1 · Adoption (97%) | It adopts an orphan each cycle. One broken in one hit or while Open frees 2%; one left three cycles is re-parented, +1% |
+| 2 · Zombies (90%) | An orphan broken over more than one hit is a zombie: it frees nothing and holds its slot. Every 4 cycles INIT reaps them, a hit each |
+| 3 · Fork (83%) | Orphans wear ◆; one that survives a hit forks a copy with what it has left |
+| 4 · Table full (76%) | With five standing INIT can't adopt, and nothing new of yours starts (helper, burn, shield, buff). Hits still land |
+| 5 · Still filling (68%) | Brandt & Vey's orphans. The table rises 1% every cycle on its own |
