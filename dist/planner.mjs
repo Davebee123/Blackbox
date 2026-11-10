@@ -11,6 +11,8 @@ import { heatOf } from './parts.mjs';
 import { interruptMove, saveTick, toCross } from './interrupt.mjs';
 import { loudWins, blastPays, cashIn } from './order.mjs';
 import { actsOf, lashOn, actDone, actCap } from './acts.mjs';
+import { copyKind } from './tells.mjs';
+import { topFrame, canCall } from './floorbosses.mjs';
 
 // Against a crew boss only the tank taunts (a taunt pulls its busters onto you): raid.mjs noTaunt.
 // veto: skills the planner may not pick this call (routines.mjs: a program's rotation never fires a long cooldown).
@@ -133,10 +135,62 @@ export function kitPlannerAt(s, p, no = null, read = null) {
 const BUFFING = new Set(['harden', 'brace', 'sudo', 'fork', 'debris-field', 'rm-rf', 'circuit-breaker', 'honeypot', 'maintenance-window', 'bulkhead', 'dmz', 'mesh']);
 const scrapeNow = (s) => !ignores('scraper') && landingNow(s).some((i) => part(s, i.source)?.scrape);
 export function planner(s) {
-  if (!scrapeNow(s)) return heedActs(s, heedBend(s, heedHelpers(s, spareLast(s, planner1(s)))));
+  if (!scrapeNow(s)) return heedFloor(s, heedActs(s, heedBend(s, heedHelpers(s, spareLast(s, planner1(s))))));
   const was = veto;
   veto = (id) => BUFFING.has(id) || !!(was && was(id));
-  try { return heedActs(s, heedBend(s, heedHelpers(s, spareLast(s, planner1(s))))); } finally { veto = was; }
+  try { return heedFloor(s, heedActs(s, heedBend(s, heedHelpers(s, spareLast(s, planner1(s)))))); } finally { veto = was; }
+}
+// The floor 2 and 3 bosses' rules (floorbosses.mjs), read only (answers): withdraw the Gavel's bid at every 2; let a
+// Deadline land when the Ransom Clock would leak first; on a closed cycle (or the two before an Again beat) fire nothing
+// the Logger would play back; work on the top frame.
+const SLOWS = Object.keys(ABILITIES).filter((id) => ABILITIES[id].delay > 0 || ABILITIES[id].status === 'throttled');
+const hitsBack = (s, move) => { const [id] = String(move || '').split(' '); return copyKind(id) === 'hit' && (ABILITIES[id]?.damage || 0) > 12; };
+function heedFloor(s, move) {
+  const e = s.encounter, v = e?.virus;
+  if (!v || !answers() || !move) return move;
+  const [id, at] = String(move).split(' '), c = e.cycle;
+  if (v.bid) {
+    const g = livingParts(s).find((p) => p.gavel && p.attack);
+    if (g && g.attack.interval <= 2 && g.attack.due - c <= 1) { const slow = first(s, [...SLOWS.map((k) => `${k} ${g.id}`), ...(g.attack.due === c ? ['sigint'] : [])]); if (slow) return slow; }
+    // No delay at hand: cut the selling Surge, when one command takes the Gavel across its tick on the cycle it lands.
+    const n = g && g.attack.interval <= 2 && g.attack.due === c ? toCross(g) : null;
+    if (n != null && !(g.armor > 0)) { const cut = first(s, [id, ...HITS].map((k) => `${k} ${g.id}`).filter((m) => previewDamage(s, m.split(' ')[0], g) >= n)); if (cut) return cut; }
+  }
+  if (v.ransom && at) {
+    const d = part(s, at);
+    // The Collector runs the clock and the Demand's Deadlines pay it: never break the last Demand while the Collector stands.
+    const col = livingParts(s).find((p) => p.core);
+    if (d?.deadline && col && killing(s, move, d) && livingParts(s).filter((p) => p.deadline).length === 1) { const alt = first(s, [`${id} ${col.id}`, ...HITS.map((k) => `${k} ${col.id}`)]); if (alt) return alt; }
+    if (d?.deadline && d.attack && !chargeNow(s, d) && d.attack.due - c <= 2 && v.ransom.left >= d.attack.due - c + 1 && v.ransom.left <= d.attack.due - c + d.attack.interval && !killing(s, move, d)) { // it lands before the leak, and the clock would leak before the next one
+      const to = livingParts(s).find((p) => p.core) || livingParts(s).find((p) => !p.deadline);
+      const alt = to && first(s, [`${id} ${to.id}`, ...HITS.map((k) => `${k} ${to.id}`)]);
+      if (alt) return alt;
+    }
+  }
+  if (v.stack) {
+    // A Call this cycle or next: the top frame broken or brought under a quarter first, with the biggest hit that does it.
+    const tf = topFrame(s);
+    if (tf && canCall(tf) && v.stack.callAt - c <= 1) {
+      const need = tf.integrity - Math.floor(tf.max * 0.25) + 1, done = (m) => { const k = m.split(' ')[0]; return !(tf.armor > 0 && !ignoresArmor(s, k)) && previewDamage(s, k, tf) >= need; };
+      if (!(at === tf.id && done(move))) { const hit = first(s, [...HITS, ...Object.keys(ABILITIES)].map((k) => `${k} ${tf.id}`).filter(done)); if (hit) return hit; }
+    }
+    // A top frame too low to Call holds the stack: break it just after a Call, never the cycle before one while the
+    // frame beneath could Call. Meanwhile area hits, burns and helpers work the frames below.
+    const top = topFrame(s), aim = at ? part(s, at) : null, below = top && livingParts(s).filter((p) => p.frame != null && p.frame < top.frame).sort((a, b) => b.frame - a.frame)[0];
+    if (top && aim === top && !canCall(top) && canCall(below) && v.stack.callAt - c <= 1 && killing(s, move, top)) {
+      const soft = first(s, [...[...AREA].filter((k) => !killing(s, k + ' ' + top.id, top)), ...['inject', 'deploy', 'botnet', 'spawn', 'thermal-runaway'].map((k) => `${k} ${below.id}`), ...quietOf(s)]);
+      if (soft) return soft;
+    }
+  }
+  if (v.surf) {
+    // A closed cycle: nothing at the Logger (it shrugs it off and logs it), and nothing big once the log has started.
+    const shut = c % 2 === 1, beat = v.surf.again && v.surf.again - c <= 1, aim = at && part(s, at);
+    const others = livingParts(s).filter((p) => !p.syncOnly && !frozenNow(s, p)).sort((a, b) => dueOf(s, a) - dueOf(s, b));
+    if (shut && aim?.syncOnly) { const to = others[0], alt = to && !(hitsBack(s, move) && (e.keylog || 0) >= 1) && first(s, [`${id} ${to.id}`]); if (alt) return alt; }
+    if ((shut && (e.keylog || 0) >= 1 && (hitsBack(s, move) || aim?.syncOnly)) || (beat && hitsBack(s, move))) return first(s, [...quietOf(s), ...(others[0] ? ['spike ' + others[0].id] : [])]) || 'hold';
+    if (shut && aim?.syncOnly) return first(s, quietOf(s)) || 'hold';
+  }
+  return move;
 }
 // A P4 boss (acts.mjs): no command hit on the ♛ on its Backlash's beat, unless it breaks it, and the ♛ left above its
 // next tick until this act's beat has played. The same command goes at another part, or a quiet move, or it waits.

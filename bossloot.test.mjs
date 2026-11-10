@@ -105,18 +105,20 @@ test('the Codex: a boss\'s page lists its loot table, the odds and the next kill
   assert.equal(e.loot.sure, 'tuned');
   assert.ok(e.loot.uniques.length === 2 && e.loot.uniques.every((u) => u.name === null));
   const html = codexPageMarkup(s, 'boss:relayking');
-  assert.match(html, /every kill, at its level · Custom 25%/);
-  assert.match(html, /Uniques: 15% a kill, \+5% a miss\. Next kill <b class="you">25%<\/b>/);
+  // Grouped (docs/floor-items.md): every kill, its uniques, its set pieces, each with the next kill's odds as a bar.
+  assert.match(html, /Every kill<\/span>.*at its level · Custom 25%/s);
+  assert.match(html, /title="Next kill: 25%\. 15% a kill, \+5% for each kill without one[^"]*"><i class="cxg-bar"[^>]*><b style="width:25%"><\/b><\/i><em>25%<\/em>/);
+  assert.match(html, /Set pieces<\/span><small><span class="lg-setname">Boot Disk<\/span>/, 'its set pieces, the set named in green');
   assert.match(html, /\?\?\?/);
   s.collection = { 'crown-packet': 1 };
   assert.match(codexPageMarkup(s, 'boss:relayking'), /Crown Packet/);
-  assert.match(codexPageMarkup(s, 'boss:foreman'), /Custom<\/b><small>every kill/);
+  assert.match(codexPageMarkup(s, 'boss:foreman'), /Every kill<\/span>.*Custom<\/b><small>at its level/s);
   assert.equal(bossTable(s, 'resident').sure, BOSS_LOOT.resident === 'boss' ? 'tuned' : null);
   // The Resident drops each of its own once: with both found, no odds and no next kill's chance.
   s.dex.fought.resident = 1;
   assert.match(codexPageMarkup(s, 'boss:resident'), /Next kill/);
   for (const u of Object.values(UNIQUES).filter((x) => x.sources?.some((src) => src.kind === 'boss' && src.id === 'resident'))) s.collection[u.id] = 1;
   const done = codexPageMarkup(s, 'boss:resident');
-  assert.match(done, /Uniques: both found/);
+  assert.match(done, /both found: it drops only as an elite now/);
   assert.doesNotMatch(done, /Next kill/);
 });

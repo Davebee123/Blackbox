@@ -89,8 +89,8 @@ Leaving the fight screen pauses a live fight.
 Every part has two ticks on its bar, at 50% and 25% of its Integrity. Take it across one on the cycle its move is due
 and that move is cancelled (*INTERRUPTED*); its schedule goes on as if it had landed. Each tick works once a fight:
 crossed with nothing due, it's spent for nothing, and one hit across both cancels one move at most. Burns, helpers and
-daemons count. Fragments, Packages, Droppers, the Spam Flood and the Mutex have no ticks. The Now column says what
-crossing takes (*cut ▸ 9*, *cut ▸ ◆1 + 9*), and a queued command says *cuts* or *−tick*. A charge riding the cancelled
+daemons count. Fragments, Packages, Droppers, the Spam Flood and the Mutex have no ticks. A queued command says *cuts*
+or *−tick*. A charge riding the cancelled
 move is called off with it.
 
 ### Tells (tells.mjs)
@@ -99,10 +99,10 @@ move is called off with it.
 wild viruses, guards, elites, strains, champions, solo bosses and invaders. Crew bosses have their own mechanics.
 
 **Nothing lands unannounced.** A tell is said once in the log and sits as a chip on its part's row, in the column it
-lands, until it does. The chip's last line is the answer (*▸ Cut past ◆2*, from 17 *▸ Cut past ◆2 or SIGINT*,
-*▸ SIGINT or cut*, *▸ Strip ◆3*, *▸ Pick a cheap copy*). Its number is its price (`tellPrice`): a charge's hit, a cast's
+lands, until it does. The chip says what it does, never the answer; an amber SIGINT mark sits on it when SIGINT can
+stop it (a cast, from 17 a charge too). Its number is its price (`tellPrice`): a charge's hit, a cast's
 extra damage over its 4 cycles in red (*−15*), a Self-Update's Integrity (*+55 hp*), a seal's ◆ in steel (*+4 ◆*).
-Hover it for what happens and, on its own muted ▸ line, how to stop it. Breaking a tell's part always stops it.
+Hover it for what happens; nothing on the board says how to stop it. Breaking a tell's part always stops it.
 
 | Kind | What it is | What answers it | If you don't |
 |---|---|---|---|
@@ -593,10 +593,29 @@ Each plays in acts (below) with a part and a rule of its own, and a mechanic an 
 
 On the board: ♛ on the crown part, ×*n* fragments on the Relay, §*n* Liens on the Ledger, *round* on a Mimic.
 
+**Floor bosses** (floorbosses.mjs, docs/boss-guide.md). Floors 2 and 3 have bosses of their own: parts of their own
+only, the ♛'s act ticks at **60% and 30%** (every other part's ticks stay at 50% and 25%), the beat on a part of their
+own, a tell an act from their set, and a verb an act. 0.58× to 0.95× Integrity, with more of it on the ♛; they enrage at cycle 36 to 44. Played blind (no rule answered), each loses about half its fights or more.
+
+| Boss | Where | Lv | Its rule (on its row) | Act 2 (♛ at 60%) | Act 3 (♛ at 30%) |
+|---|---|---|---|---|---|
+| CENTRIFUGE (GLASSJAW) | Floor 2's floor job: its Boss step's server's Core | 14 | **Bidding**, on the Gavel (no ticks, so never cut): from every 3 cycles, each Surge it lands takes it one sooner, down to 2. A delay or Throttle on it withdraws it to 4, and SIGINT cuts a selling Surge. A Surge at every 2 sells to the buyer it names, whose part joins (TOLLGATE's Lockbox wards the Rotor ♛, SWARMLINE's Mirror twins the Gavel, PALEMASK's Veil hides its timers); the Gavel drops to every 3, and each sale makes its Surge 50% harder for the fight. Nothing sells once the Rotor breaks. The Rotor's Encrypt comes every 7 cycles; no beat holds its ticks | **Reserve price**: a withdraw steps it back one | **Second lot**: two buyers a sale |
+| SHAKEDOWN (TOLLGATE) | The last room of every floor-2 Pit; back an hour after it falls | 12 | **Ransom Clock**, run by the Collector ♛ (it stops when the Collector breaks): 10 cycles; at 0 it leaks 35% of your max, 15% more each leak after (up to 65%), and restarts at 5. A Deadline (the Demand's, a wind-up) that lands adds 3; one called off buys nothing. Its Lockbox wards the Demand | **Second demand**, its Deadline on the same cycle; the Lockbox wards it too | **Final notice**: a leak re-arms the Demands and brings the Lockbox back |
+| SHOULDER SURFER (NULL CHOIR) | Floor 3's floor job: its Boss step's server's Core | 18 | **Replay**, on the Logger ♛: a Sync Window on even cycles only. The Logger takes damage only from commands fired in it; each one outside is logged, and at 2 (or every 6 cycles) its Dump plays your last logged command back at its full hit (a flat Dump if it wasn't a hit). The Pulse Node lands on the shut cycles | **Again**: every 4 cycles it plays your last three commands back, each at 40% | **From the top**: the log never clears, and the Dump plays the biggest command logged |
+| RECURSION (NULL CHOIR) | The last room of every floor-3 Gauntlet; back an hour after it falls | 19 | **Call**: frames stack over main() ♛. A one-part command at a lower frame lands on the top one; burns, helpers and area hits reach every frame. Every 4 cycles the top frame pushes a new one at 60% of its max, unless it is under a quarter of its own; each Call makes every frame hit 35% harder | **Return**: a frame that breaks makes the one beneath attack a cycle sooner, 50% harder | **Overflow**: at 5 frames every frame attacks at once, the cycle after the Call |
+
+A floor job's Boss step points at a server on its floor's main road (never the lair); once the chain reaches the step,
+that server's Core holds the boss in the Resident's place for good, and beating it takes nothing over. A step posted at
+the lair before its boss was built moves to that server. On the board: the Gavel's interval and next buyer (red at 2),
+the buyer on a bought part, the clock on the Collector (red at 3 or less) and the leak's chip in its column, *open* or
+*shut* and the log on the Logger with *again n*, *call n* (or *top*) on the top frame, *stacked* on the frames under it,
+and *n/5* on main() from act 3. Each tooltip gives the rule and its answer.
+
 ### Boss acts (acts.mjs)
 
 A P4 boss (docs/puzzle-fights.md 7) plays in **three acts**: the first from the start, the next two from its ♛ part's
-ticks at 50% and 25%. Built: the worm and ransomware Residents and the three solo bosses.
+ticks at 50% and 25% (the floor bosses' at 60% and 30%). Built: the worm and ransomware Residents, the three solo
+bosses and the four floor bosses.
 
 - **One tick a hit.** A hit takes the ♛ under its next tick and no further, so no act is skipped.
 - **A tell an act.** Act 1 deals the boss's first tell (its charge), act 2 its cast as well, act 3 its third.
@@ -611,6 +630,7 @@ ticks at 50% and 25%. Built: the worm and ransomware Residents and the three sol
 | RELAY-KING | **Broadcast**: its Relay's attack, bigger for each fragment | 4, 3 from act 3 | Clear the fragments, cut it, or a ◆ on you |
 | REPO MAN | **Collection**: its Ledger's attack, bigger for each Lien; each act calls one 3 cycles out | 5 | Few Liens, a cut, or a ◆ on you |
 | HOLLOW CHOIR | **Copy**: its Mimic copies what you fire and turns it on you (a second voice from act 2) | 4 | What costs least to have copied, hold, or break a voice |
+| The floor bosses | Its own part's attack: the Gavel's Surge, the Demand's Deadline, the Logger's Dump, main()'s Surge | its own | Their rules (above) |
 
 The Backlash's chips (*Lash −N*) sit on every part with an attack, in the columns the beat falls in.
 
@@ -629,6 +649,24 @@ Resident drops each of its two once, then makes no unique roll. After a miss the
 | REPO MAN | Repossessed Key (shell, 8) | Encryption on you stacks half as fast |
 | HOLLOW CHOIR | Choirboy (proxy, 10) | Scrambles on you last one cycle less |
 | HOLLOW CHOIR | Hollow Note (exploit, 10) | +30% damage on odd cycles |
+| SHAKEDOWN | Paper Trail (exploit, 12) | Your hits count 50% more toward calling off a wind-up, such as a Deadline |
+| SHAKEDOWN | Escrow (shell, 12) | A boss's enrage and the Ransom Clock come 2 cycles later |
+| CENTRIFUGE | Governor (proxy, 14) | An attack that lands within 2 cycles of its part's last one deals 25% less |
+| CENTRIFUGE | Cascade Failure (exploit, 14) | When you delay or Throttle an attack, its part takes 20 (grown with its level) |
+| SHOULDER SURFER | Privacy Screen (shell, 18) | The first part each fight that plays back or copies your command misses with it |
+| SHOULDER SURFER | Muscle Memory (script, 18) | A command fired exactly 2 cycles after your last deals 10% more |
+| RECURSION | Tail Call (exploit, 19) | When you break a part, your burns on the other parts tick once right away |
+| RECURSION | Stack Guard (proxy, 19) | The next attack on you within 2 cycles of a part breaking deals 20% less |
+
+Their set pieces: CENTRIFUGE drops Glass Ceiling's **Rotor** (as GLASSJAW's bosses and elites still do), SHOULDER SURFER
+On-Call's **Pager** (no longer floor 3's lair boss; floor 4's still drops it), at a boss's set odds (8% a kill, +3% a miss).
+The Codex boss page groups its loot (*Grouped*): every kill, its uniques, its set pieces, each with the next kill's odds
+as a bar and the odds and pity in the bar's tooltip.
+
+**The Codex boss page** is a boss guide (WoW's dungeon journal): your fights, wins and research, its phases, parts, tells
+and loot. Each phase is listed by its tick (Phase 1 from the start, then one a ♛ tick) with its name; what its abilities
+do, line by line, reads only once its parts are researched to 50% on average (`BOSS_READ`; a crew boss at once). The
+floor bosses' lines are their `guide`, the rest their phase lines. It shows no signature, Integrity, enrage or blurb.
 
 ### Lairs and native bosses
 
@@ -994,6 +1032,10 @@ as you walk in, 1 code one time in five). No vault, nothing to take over, no puz
 | Nest | One family only, and strains twice as often |
 | Pit | Mixed families, 2 levels above the server, a second roll for drops. A third of its rooms hold a **◆ CREW elite** (Co-op); one that beats you, or that you run from, moves on and the room fills again in 30 minutes |
 | Gauntlet | Mixed families; clear every fight room in one visit for a bonus cache (60 + 12×level credits, code, XP) |
+
+On floor 2 a Pit's last room (its deepest fight room) is SHAKEDOWN's throne, and on floor 3 a Gauntlet's is RECURSION's:
+the boss holds it at its level or the room's, whichever is higher, back an hour after it falls (a Gauntlet's full clear
+counts it).
 
 Each fight room fills again 3–5 minutes after it falls, a Stash 30 minutes after you take it. Clearing every fight
 room in one visit is a **full clear**.
@@ -2552,7 +2594,7 @@ test, the wire, fight reports and the log (`logs` opens it).
   quiet room tone under it. **Abilities:** each ability has a sound of its own, timed to its effect: it starts as it
   leaves the key and lands with the number, in place of the hit's shared voice (the flash and the buzz stay). With
   Screen effects off or Motion off it plays on the number's beat. A mastered ability adds a layer a tier; the break
-  that wins a fight adds your class's finisher over the break's sound. Burn ticks, breaks and the virus's own sounds
+  that wins a fight adds your class's flourish over the break's sound. Burn ticks, breaks and the virus's own sounds
   are as they were. **Places:** each floor and hub has its own quiet loop, and each virus family a sound under
   its fights, adding its attack and break sounds.
 - **Music:** a track on your server and another on a run. Each virus family's fights have their own theme (dark,
@@ -2567,9 +2609,21 @@ test, the wire, fight reports and the log (`logs` opens it).
   the focus. A tap on anything with a rule shows its card in a sheet; a long press on a button shows its card without
   firing it. Under 480 px the board shows Now, +1 and +2 and the tray is three wide: tap a skill to pick it, tap again
   to fire.
-- **A fight on a phone** fits one screen: the virus's bar over yours (a crewmate as a thin violet line under it), the
-  virus's window top right, the board in the height left, the log's latest line over the tray (a tap opens the log),
-  and the tray in two rows of four. The column at the row's end is the menu key (the pager's lamp on it): the pages,
+- **The maps on a phone.** The map fills the screen between the strip and the tab bar; pinch to zoom, a double tap
+  on the ground zooms in there or back out, one finger pans. The floors are one row. Under them a row of chips: red for
+  what's coming (its count and the soonest timer), amber for contracts under way, a green ✓ for the ones to turn in. A
+  tap opens the list. A tap on a server brings up its name, level and main button; ▴ opens its whole card. On a server,
+  the header is one line (its name, Signal, rooms cleared, the hunter's countdown; a tap on the name shows the rest),
+  one tap walks, and a room's choice comes up with both buttons by your thumb. Wait and Jack out float at the map's
+  bottom right. With no strip there, the pager is in More.
+- **Pop-ups on a phone** all come up as one sheet from the bottom: a server's card, a room's, the Server page's
+  panel, Comms, a daemon's panel, an item's datasheet, a journal, a quest's dialogue and its reward, the level-up.
+  Drag it down or tap outside it to close.
+- **A fight on a phone** fits one screen: the HUD is one line, your bar and its number on the left (a crewmate as a
+  thin violet line under it), the virus's with its ◆ on the right, its window at the end. A tap on a bar shows its card:
+  the virus's name, level, family, writer, Integrity, ◆ and rules; your Integrity, statuses and gear. Under it the
+  board in the height left (no You row: the key you've picked is outlined amber), the log's latest line over the tray
+  (a tap opens the log), and the tray in two rows of four. The column at the row's end is the menu key (the pager's lamp on it): the pages,
   the pager and the command line. Past eight keys, **+n** under it opens the rest. In its half the virus's window steps
   out over the board where no chip sits, and goes home after. On its side the board takes the left with +3.
 
@@ -2654,7 +2708,7 @@ Developer commands work only in tests, playtest pages, a test bench and with `?d
   empty (never under yours; a part's at its own, a rival's one over you). A rival's later fights bring its counter, read
   from your win in the one before. **Again** (`developer fight again`) restarts the last pick; ♥ refills first.
 - **Playtest pages:** `?playtest=rooms` (a throwaway server of rooms, its clocks ten times as fast), `?playtest=<strain
-  or fixture>`, `?playtest=part:<id>` (`part:<id>.exe` for its .exe build), `?playtest=fx` (every ability effect, tier and break finisher, fired from its key, by result, status and ticks left).
+  or fixture>`, `?playtest=part:<id>` (`part:<id>.exe` for its .exe build), `?playtest=fx` (every ability effect and tier, fired from its key, by result, status and ticks left).
 - `developer scene <id>` plays a transmission again. `developer levelup preview`, `developer thread preview`, `developer pager fill`, `developer parts`, `developer
   event`, `developer exfil`, and the rest under each section.
 

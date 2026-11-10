@@ -1,14 +1,12 @@
-// Mastery tiers and break finishers (dist/abilityfx.mjs, its table dist/abilityfx-table.mjs TIER_UP, TIERS, FINISHERS):
+// Mastery tiers (dist/abilityfx.mjs, its table dist/abilityfx-table.mjs TIER_UP, TIERS):
 // every row resolves at tiers 1 to 3 (1 is the row itself), richer at each, the hand-made tier 3s do what they say, and
 // every effect rule holds at every tier: gone by CAP and ending unseen, never resting over a key's label, your bar's
 // numbers or the crew window, your bar's effects off the parts' names, coloured by who and how it hit, lighter on
-// calm, nothing at all with Motion or Screen effects off. A finisher plays on the winning break only, on that part's
-// row only, within FIN_CAP. The same measured page as abilityfx.test.mjs.
+// calm, nothing at all with Motion or Screen effects off. The same measured page as abilityfx.test.mjs.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { cadenceOf, RECIPES, TIERS, TIER_UP, FINISHERS, SUB_FINISHERS, MOTIONS, PARTICLES, FIN_MOTIONS, CAP, FIN_CAP, TIER_MAX, tierRecipe, recipeOf, layout, finisherLayout, finisherOf, finisherBreak, boxAt, keyAt, overlaps, rect, createAbilityFx } from './dist/abilityfx.mjs';
-import { finishersOf } from './dist/abilityfx-playtest.mjs';
+import { cadenceOf, RECIPES, TIERS, TIER_UP, MOTIONS, PARTICLES, CAP, TIER_MAX, tierRecipe, winningBreak, slowAt, SLOW, recipeOf, layout, boxAt, keyAt, overlaps, rect, createAbilityFx } from './dist/abilityfx.mjs';
 import { ARCHETYPES, SUBS, SPIKE } from './dist/data.mjs';
 import { fresh, command, resolveCycle, active, selectEncounter, livingParts } from './dist/combat.mjs';
 
@@ -182,81 +180,37 @@ test('the hand-made tier 3s: Ban\'s crack, Bash\'s afterimages and quake, Poke\'
   for (const rule of css.match(/\.afx[^{]*\{[^}]*\}/g)) assert.doesNotMatch(rule, /background|backdrop|filter|mix-blend/, rule);
 });
 
-test('break finishers: one a class, varied by its subclasses; on the part\'s row only, within 900 ms, ending unseen', () => {
-  assert.deepEqual(Object.keys(FINISHERS), Object.keys(ARCHETYPES));
-  assert.equal(FIN_CAP, 900);
-  for (const [cls] of Object.entries(FINISHERS)) {
-    assert.equal(finisherOf(cls), FINISHERS[cls]);
-    assert.ok(FIN_MOTIONS[FINISHERS[cls].motion], cls);
-    for (const sub of Object.keys(ARCHETYPES[cls].subs)) assert.equal(finisherOf(cls, sub).sub, sub, `${cls} ${sub}`);
-  }
-  assert.equal(finisherOf('breaker', 'warden'), FINISHERS.breaker, 'another class\'s subclass changes nothing');
-  assert.equal(finisherOf('nobody'), null);
-  assert.deepEqual(Object.keys(SUB_FINISHERS).sort(), Object.keys(SUBS).sort(), 'every subclass varies its class\'s');
-  assert.equal(finishersOf().length, 4 + Object.keys(SUBS).length, 'the playtest fires every one');
-  const kinds = { breaker: /\bshard\b/, bastion: /\bseal\b/, infiltrator: /^p bit/, operator: /\bart\b/ };
-  for (const [name, board] of [['roomy', roomy()], ['dense', dense()], ['single', single()]]) for (let i = 0; i < board.parts.length; i++) {
-    const g = geoOf(board, i), row = board.parts[i].row, others = board.parts.filter((_, j) => j !== i).map((p) => p.row);
-    for (const [cls, sub] of finishersOf()) for (const lvl of ['full', 'calm']) for (const kind of ['you', 'crew']) {
-      const F = finisherOf(cls, sub), plan = finisherLayout(F, g, { lvl, rnd: seeded(2), kind }), tag = `${name} ${i} ${cls} ${sub} ${lvl} ${kind}`;
-      assert.ok(plan?.els.length > 3, tag);
-      assert.ok(plan.dur <= FIN_CAP, `${tag}: ${plan.dur} ms`);
-      assert.ok(plan.els.some((el) => kinds[cls].test(el.cls)), `${tag}: its own kind of piece`);
-      if (kind === 'crew') assert.ok(plan.els.every((el) => /\bcrew\b/.test(el.cls)), tag);
-      for (const el of plan.els) {
-        assert.equal(el.keys[el.keys.length - 1].o, 0, `${tag}: ends unseen`);
-        for (const { box, ms } of shown(el, 30)) {
-          assert.ok(box.l >= row.l - 0.5 && box.r <= row.r + 0.5 && box.t >= row.t - 0.5 && box.b <= row.b + 0.5, `${tag} ${el.cls} "${el.text}" at ${Math.round(ms)} ms: off its row ${JSON.stringify(box)}`);
-          assert.ok(!others.some((q) => overlaps({ l: box.l + 0.6, t: box.t + 0.6, r: box.r - 0.6, b: box.b - 0.6 }, q)), `${tag}: on another part's row`);
-        }
-      }
-      if (lvl === 'calm') assert.ok(plan.els.length <= finisherLayout(F, g, { lvl: 'full', rnd: seeded(2) }).els.length, `${tag}: lighter on calm`);
-    }
-  }
-  assert.equal(finisherLayout(FINISHERS.breaker, { ...geoOf(roomy(), 0), part: null }), null, 'no part row: none');
-  assert.equal(finisherLayout(FINISHERS.breaker, geoOf(roomy(), 0), { lvl: null }), null);
-  // The subclass variations show: the Demolitionist's blast, the Warden's word, the Herder's herd, the Hijacker's <@>.
-  const g = geoOf(roomy(), 0), els = (cls, sub) => finisherLayout(finisherOf(cls, sub), g, { rnd: seeded(1) }).els;
-  assert.ok(els('breaker', 'demolitionist').some((el) => el.frames?.length === 3) && !els('breaker').some((el) => el.frames));
-  assert.ok(els('bastion', 'warden').some((el) => el.text === '[ DENIED ]') && els('bastion').some((el) => el.text === '[ SEALED ]'));
-  assert.equal(els('operator', 'herder').filter((el) => el.frames).length, 6);
-  assert.ok(els('operator', 'hijacker').some((el) => el.text === '<@>'));
-});
-
-test('a finisher fires on the fight-winning break only: the last part broken before the victory, and only yours', () => {
+test('the hit that wins the fight plays in slow motion: the last part broken before the victory, and only yours', () => {
   const ev = (type, x = {}) => ({ id: Math.random(), type, message: '', ...x });
   const a = ev('broken', { target: 'a' }), b = ev('broken', { target: 'b' }), win = ev('victory');
-  assert.equal(finisherBreak([a, ev('damage', { target: 'b' }), b, win]), b, 'the last break before the win');
-  assert.equal(finisherBreak([a, b]), null, 'a break that doesn\'t win the fight: none');
-  assert.equal(finisherBreak([a, win, b]), a);
-  assert.equal(finisherBreak([a, ev('broken', { target: 'f', c2: true }), win]), a, 'fragments dropping with a C2 node aside');
-  assert.equal(finisherBreak([ev('broken', { target: 'a', who: 'nyx' }), win]), null, 'a crewmate\'s winning break keeps the plain dissolve');
-  assert.equal(finisherBreak([win]), null); assert.equal(finisherBreak(null), null);
-  // In a real fight: every break but the last plays no finisher, and the batch that wins holds the last break.
+  assert.equal(winningBreak([a, ev('damage', { target: 'b' }), b, win]), b, 'the last break before the win');
+  assert.equal(winningBreak([a, b]), null, 'a break that doesn\'t win the fight: none');
+  assert.equal(winningBreak([a, ev('broken', { target: 'f', c2: true }), win]), a, 'fragments dropping with a C2 node aside');
+  assert.equal(winningBreak([ev('broken', { target: 'a', who: 'nyx' }), win]), null, 'a crewmate\'s: full speed');
+  assert.equal(winningBreak(null), null);
+  // A quarter speed, held, then easing back to full by SLOW.dur.
+  assert.equal(slowAt(0), 0.25); assert.equal(slowAt(SLOW.hold - 1), 0.25); assert.equal(slowAt(SLOW.dur), 1);
+  for (let t = 0; t < SLOW.dur; t += 20) assert.ok(slowAt(t + 20) >= slowAt(t), `never speeds down at ${t} ms`);
+  assert.ok(SLOW.dur <= 600, 'back to full within about half a second');
+  // In a real fight: one winning break, on its last break.
   const s = fresh();
   selectEncounter(s, 'cryptjack', 3, { level: 4 });
   command(s, 'engage');
-  const fins = [];
-  let breaks = 0;
-  for (let n = 0; n < 80 && active(s); n++) {
-    const p = livingParts(s)[0];
-    const batch = [...command(s, `spike ${p.id}`), ...resolveCycle(s)];
-    breaks += batch.filter((e) => e.type === 'broken' && !e.c2).length;
-    const f = finisherBreak(batch);
-    if (f) fins.push(f);
-  }
+  const wins = [];
+  for (let n = 0; n < 80 && active(s); n++) { const f = winningBreak([...command(s, `spike ${livingParts(s)[0].id}`), ...resolveCycle(s)]); if (f) wins.push(f); }
   assert.equal(s.reports.at(-1).result, 'victory');
-  assert.ok(breaks >= 2, `${breaks} parts broken`);
-  assert.equal(fins.length, 1, 'one finisher in the fight');
-  assert.equal(fins[0].id, s.logs.filter((e) => e.type === 'broken' && !e.c2).at(-1).id, 'on its last break');
-  // app.js: on that break the finisher plays in place of the dissolve's bits; any other break dissolves as before.
+  assert.equal(wins.length, 1);
+  assert.equal(wins[0].id, s.logs.filter((e) => e.type === 'broken' && !e.c2).at(-1).id);
+  // app.js: every break dissolves into 1s and 0s; the winning one slows everything animating, the effects' light too.
   const app = readFileSync(new URL('./dist/app.js', import.meta.url), 'utf8');
-  assert.match(app, /const fin = module === 'combat' \? finisherBreak\(events\) : null;/);
-  assert.match(app, /if \(!\(e === fin && finisher\(e\)\)\) hitfx\.dissolve\(partRow\(e\.target\)\);/);
-  assert.match(app, /sub = heroLevel\(campaign, cls\) >= SUBCLASS\.from \? campaign\.loadout\?\.sub\?\.\[cls\] : null, plan = abilityfx\.finish\(cls, sub, partRow\(e\.target\)\)/, 'your class, your subclass once you have one');
+  assert.match(app, /const last = module === 'combat' \? winningBreak\(events\) : null;/);
+  assert.match(app, /hitfx\.dissolve\(partRow\(e\.target\)\); if \(e === last\) slowmo\(\);/);
+  assert.match(app, /for \(const an of document\.getAnimations\(\)\) an\.playbackRate = r; abilityfx\.timeScale\(r\);/);
+  assert.match(app, /function slowmo\(\) \{\n  if \(!canMove\(\) \|\| fxLevel\(\) === 'minimal'\) return;/);
+  assert.doesNotMatch(app, /finisher/i);
 });
 
-test('on the page: a tier plays as asked, a finisher on the row; both on the hidden layer, gone on time, nothing with Motion or Screen effects off', () => {
+test('on the page: a tier plays as asked, on the hidden layer, gone on time, nothing with Motion or Screen effects off', () => {
   const timers = [], was = globalThis.setTimeout;
   globalThis.setTimeout = (f, ms) => { timers.push({ f, ms }); return timers.length; };
   try {
@@ -264,8 +218,6 @@ test('on the page: a tier plays as asked, a finisher on the row; both on the hid
     for (const k of KEYS) for (const tier of [2, 3]) assert.ok(fx.play(k, RECIPES[k].on === 'you' ? null : row, { origin: k.endsWith(':tick') ? 'here' : 'key', tier }), `${k} ${tier}`);
     const p3 = fx.plan('ban', row, { ability: 'spike', tier: 3 }), p1 = fx.plan('ban', row, { ability: 'spike' });
     assert.ok(p3.els.length > p1.els.length && p3.els.some((el) => /\bscar\b/.test(el.cls)), 'tier 3 Ban on the page');
-    for (const cls of Object.keys(FINISHERS)) assert.ok(fx.finish(cls, null, row), cls);
-    assert.equal(fx.finish('breaker', null, null), false, 'no row: none');
     assert.equal(fx.layer().attrs['aria-hidden'], 'true');
     assert.ok(timers.every((t) => t.ms <= CAP + 60), `every removal by ${CAP + 60} ms`);
     for (const t of timers) t.f();
@@ -273,7 +225,6 @@ test('on the page: a tier plays as asked, a finisher on the row; both on the hid
     for (const [motion, level] of [[false, 'full'], [true, 'minimal']]) {
       const off = fakePage({ motion, level });
       assert.equal(off.fx.play('ban', off.row, { tier: 3 }), false);
-      assert.equal(off.fx.finish('bastion', 'warden', off.row), false);
       assert.equal(off.fx.layer(), null);
     }
   } finally { globalThis.setTimeout = was; }
@@ -284,7 +235,6 @@ test('on the page: a tier plays as asked, a finisher on the row; both on the hid
   assert.match(app, /tier: who \? 1 : tier,/);
   const pt = readFileSync(new URL('./dist/abilityfx-playtest.mjs', import.meta.url), 'utf8');
   assert.match(pt, /seg\('Mastery', \[\[1, 'tier 1'\], \[2, 'tier 2'\], \[3, 'tier 3'\]\], ui\.tier\)/);
-  assert.match(pt, /<h3>Break finishers<\/h3>/);
 });
 
 function fakePage({ motion = true, level = 'full' }) {

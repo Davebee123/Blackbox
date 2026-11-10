@@ -164,6 +164,16 @@ The designer, October 2026:
     level a first try usually loses and a learned one wins. Only being overleveled for it (gear and level well past the
     boss's) carries a first try. Elites lean the same way, less. P4 builds to it; the bar's first-try ceiling (under
     50%) stays the measure.
+15. **Lesser evils** (November 10): *"A player needs to balance multiple challenges in one fight. That's what makes it
+    hard."* Answering a tell when nothing else threatens you is too easy. A hard choice is two costly options, the
+    cheaper one changing with the board. Kinds: two tells on one cycle; a constant threat that grows (the Encrypt
+    stack); an armored part that, left standing, buffs another by a lot; anything that grows unattended while something
+    else threatens you; committing tempo to pre-pay one threat. Fights are "somewhat solved": the answer is findable,
+    the cost isn't avoidable.
+16. **Cost and gear:** about 30% of your Signal a same-level fight is already a lot (three fights, then jack out); that
+    pushes toward crews and better gear. Gear makes a significant difference. Never mechanically hard but easy to
+    kill: that makes gear pointless.
+17. **The Mimic:** its copies can be a bit smaller, but countering your big skill stays its job.
 
 ### 7.1 P4's first four
 

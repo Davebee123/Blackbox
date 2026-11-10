@@ -21,7 +21,7 @@
 // A fight plays the picked style (PICKED; app.js strikes()): an ability's own sound in place of its result's voice.
 // The ability effects playtest (?playtest=fx) plays any style, and renderBoard() bounces them.
 
-import { generic, tiered, finishers } from './abilitysound-all.mjs';
+import { generic, tiered, flourishes } from './abilitysound-all.mjs';
 import { LEVELS } from './abilitysound-levels.mjs';
 
 export const STYLES = { a: 'Hardware', b: 'Weighty', c: 'Digital', b1: 'Cinematic', b2: 'Electric', b3: 'Heavy', b4: 'Seismic', b5: 'Machine', b6: 'Glitch', b7: 'Echo', b8: 'Cavern', b9: 'Soft echo', b10: 'Deep echo', b11: 'Tear', b12: 'Trailer', b13: 'Deep echo, soft' };
@@ -1131,7 +1131,7 @@ function core(L, W = 0, B = 0, V = 0, Q = 1, G = false) {
   if (!G) return four;
   const H = { bus, weight, stutter, snap, pings, low, Q }, all = { ...generic(H), ...four };
   for (const key of Object.keys(all)) all[key] = tiered(all[key], key, H); // a mastered one's layer
-  return { ...all, ...finishers(H) };
+  return { ...all, ...flourishes(H) };
 }
 SOUNDS.b5 = core(0);
 SOUNDS.b6 = core(1);

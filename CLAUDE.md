@@ -79,12 +79,14 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
   - meeting and hiring runners: a paper-white tab on the room, Help / Step back on its card; cards with rows split by
     hairlines; traits as named chips, temperament first; standing as the *Tier bar* (the tier, a bar to the next); a
     hired runner's bar picked from their *Presets* (a tile each: name and how it plays, keys in its tooltip);
+  - a boss's loot page: *Grouped* (every kill, its uniques, its set piece, each with the next kill's odds as a bar);
   - network map servers: the *Glyph* (each server its kind's glyph, a bar of what's cleared, a ring round a new one);
   - network map ground: the *Chart* (faint crosshairs and hairlines that pan and zoom with the map);
   - rooms map: each room kind its own outline and hue (the *Hues*: magenta elite, orange socket, green rest, gold
     vault, white entry and den), thick borders. The one place a colour means a kind.
   - phone shell (docs/phone-plan.md): five tabs at the bottom (Map, Mail, Loadout, Server, More); in a fight no top
-    strip, the HUD with the virus's window top right (it slides out beside the board in its half, covering no chip),
+    strip, the HUD as one line (*C*: your bar left, the virus's right with its ◆, its window at the end; the rest in
+    the bars' cards; it slides out beside the board in its half, covering no chip),
     two rows of four keys with the menu key at the row's end; on its side, the same shell with a wider board.
 - **Rejected looks:**
   - the *View* background behind the monitor; keep the original city, with more detail at the same size;
@@ -106,10 +108,12 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
 - **Phones:** combat on a phone never opens the keyboard.
 - **Fights** (docs/puzzle-fights.md): every fight is a little tricky, elites and bosses harder, and the game challenging.
   Puzzles, never walls: hard and rewarding to learn, like Elden Ring. A blind player loses; watching or a correct
-  routine wins. A boss's signature changes the fight and ties to its lore; shutting a skill off is a side rule at
+  routine wins. Hard means several threats at once, each choice a lesser evil (docs/puzzle-fights.md decision 15);
+  about 30% Signal a same-level fight, and gear matters. A boss's signature changes the fight and ties to its lore; shutting a skill off is a side rule at
   most.
 
 ## Backlog
 
-- **Backlog:** Silos, more event cards, parts plan P4, co-op's rough edges, and runners (docs/runners.md: build R1
-  next).
+- **Enhance, don't add** (the designer, November 2026). In order: the fights (the main loop); then every floor's
+  content, its bosses finished (floors 5–8 have none of their own); then itemization on the deeper floors. Every floor
+  should have content. New systems (runners R2+, the house, off-map servers, co-op, crises) wait.

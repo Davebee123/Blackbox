@@ -5,10 +5,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { STYLES, KEYS, TRIM, PICKED, timingOf, playAbility, hasSound } from './dist/abilitysound.mjs';
-import { SOUND_KEYS, SIGNATURES, TRAITS, TRAIT_NAMES, TIER_SOUNDS, FINISHER_KEYS, finisherKey, kindOf, massOf } from './dist/abilitysound-all.mjs';
+import { SOUND_KEYS, SIGNATURES, TRAITS, TRAIT_NAMES, TIER_SOUNDS, FLOURISH_KEYS, FIN_LAND, flourishKey, kindOf, massOf } from './dist/abilitysound-all.mjs';
 import { LEVELS } from './dist/abilitysound-levels.mjs';
 import { SPIKE, ABILITIES } from './dist/data.mjs';
-import { RECIPES, TIERS, FINISHERS, SUB_FINISHERS } from './dist/abilityfx-table.mjs';
+import { RECIPES, TIERS } from './dist/abilityfx-table.mjs';
 
 function fakeContext() {
   const starts = [];
@@ -151,26 +151,25 @@ test('a mastered ability plays its sound with more on top, and every hand-made t
   }
 });
 
-test('every break finisher has a sound and a level, starts with the break and is done within its 900 ms', () => {
-  assert.equal(FINISHER_KEYS.length, Object.keys(FINISHERS).length + Object.keys(SUB_FINISHERS).length);
-  assert.equal(finisherKey('bastion', 'warden'), 'fin~bastion~warden');
-  assert.equal(finisherKey('bastion', 'phantom'), 'fin~bastion'); // another class's subclass changes nothing
-  assert.equal(finisherKey('operator'), 'fin~operator');
-  for (const key of FINISHER_KEYS) {
+test('the winning break has a flourish for each class and each subclass, with a level, starting with the break and done in 900 ms', () => {
+  assert.equal(FLOURISH_KEYS.length, 12);
+  assert.equal(flourishKey('bastion', 'warden'), 'win~bastion~warden');
+  assert.equal(flourishKey('bastion', 'phantom'), 'win~bastion'); // another class's subclass changes nothing
+  assert.equal(flourishKey('operator'), 'win~operator');
+  for (const key of FLOURISH_KEYS) {
     const cls = key.split('~')[1];
     assert.ok(hasSound(PICKED, key), key);
     assert.equal(typeof LEVELS[key]?.level, 'number', key);
-    const { ctx, sample } = fakeContext(), T = timingOf(1, { travel: 0, impact: FINISHERS[cls].land }, {});
+    const { ctx, sample } = fakeContext(), T = timingOf(1, { travel: 0, impact: FIN_LAND[cls] }, {});
     assert.ok(playAbility(ctx, { dry: ctx.createGain(), room: ctx.createGain() }, PICKED, key, T, sample), key);
     const at = ctx.starts.map((s) => s.t);
     assert.ok(Math.min(...at) >= T.t - 1e-6 && Math.min(...at) < T.t + 0.03, `${key}: it starts with the break`);
-    assert.ok(Math.max(...at) < T.t + 0.9, `${key}: its last voice starts within the finisher (${Math.max(...at) - T.t})`);
+    assert.ok(Math.max(...at) < T.t + 0.9, `${key}: its last voice starts within 900 ms (${Math.max(...at) - T.t})`);
   }
 });
 
-test('the playtest plays a finisher\'s sound over the break\'s, and a tier\'s with its effect', () => {
+test('the playtest plays a tier\'s sound with its effect', () => {
   const app = fs.readFileSync('dist/app.js', 'utf8');
-  assert.match(app, /feel\.preview\('break'\); if \(sound !== 'today'\) feel\.abilityPreview\(sound, finisherKey\(cls, sub \|\| null\)/);
   assert.match(app, /feel\.abilityPreview\(sound, key, t, \{ result, power, tier: who \? 1 : tier \}\)/);
 });
 
@@ -185,7 +184,8 @@ test('a fight plays each command\'s own sound in place of its result\'s voice, c
   assert.match(app, /const voiced = strikes\(events, split\.delay\)/);
   assert.match(app, /feel\.mute\(voiced\.has\(e\)\)/);
   assert.match(app, /if \(c\.sounds\) abilitySound\(c, played \|\| null, land\)/);
-  assert.match(app, /if \(plan\) feel\.ability\(finisherKey\(cls, sub\)/); // the winning break's finisher
+  assert.match(app, /if \(e === last\) pendingStrikes\.push\(\(\) => later\(wait, winSound\)\);/); // the winning break's flourish
+  assert.match(app, /feel\.ability\(flourishKey\(cls, sub\), \{ travel: 0, impact: FIN_LAND\[cls\] \|\| 0 \}, \{\}\)/);
   assert.match(app, /const CREW_GAIN = 0\.5, CREW_VOICES = 2, SAME_BEAT = 120/);
   assert.match(feel, /if \(!detail\?\.silent\) \{ if \(!mute\) voice\(sign\.voice, detail\); buzz\(sign\.buzz\); \}/); // the buzz stays
   assert.match(feel, /sound\.ability\(PICKED, key, plan, hit, delayMs \/ 1000\)/);

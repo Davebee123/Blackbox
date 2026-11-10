@@ -13,7 +13,7 @@
 // the plan's twelve and the long-cooldown ones.
 // abilitysound.mjs core() hands in the style's own voices (H) and keeps each class's key 1 as it was made by hand.
 import { ABILITIES } from './data.mjs';
-import { RECIPES, TIERS, FINISHERS, SUB_FINISHERS } from './abilityfx-table.mjs';
+import { RECIPES } from './abilityfx-table.mjs';
 import { SUBS } from './data.mjs';
 
 const PULSE = 0.09; // s between the Operator's beats (abilityfx.mjs PULSE)
@@ -489,11 +489,14 @@ export function tiered(fn, key, H) {
   };
 }
 
-// ---------- round 3: break finishers ----------
-// The flourish on the break that wins a fight (abilityfx-table.mjs FINISHERS; its subclass's variation on top), over the
-// break's own voice, done within the finisher's 900 ms. T.hit: when it lands (the seal coming down, the helpers meeting).
-export const finisherKey = (cls, sub = null) => (sub && SUB_FINISHERS[sub] && SUBS[sub]?.cls === cls ? `fin~${cls}~${sub}` : `fin~${cls}`);
-export const FINISHER_KEYS = Object.keys(FINISHERS).flatMap((cls) => [finisherKey(cls), ...Object.keys(SUB_FINISHERS).filter((sub) => SUBS[sub]?.cls === cls).map((sub) => finisherKey(cls, sub))]);
+// ---------- round 3: the winning break's flourish ----------
+// The break that wins a fight sounds your class's flourish (its subclass's variation on top) over the break's own voice,
+// as it slows (app.js winSound), done within 900 ms. T.hit: when it lands (the Bastion's seal coming down, the
+// Operator's helpers meeting: FIN_LAND ms in). They were made for the break finishers' effects, since removed.
+export const FIN_LAND = { breaker: 0, bastion: 140, infiltrator: 0, operator: 380 };
+const VARIED = ['demolitionist', 'overclocker', 'warden', 'sysop', 'payload', 'phantom', 'herder', 'hijacker']; // the subclasses with a variation
+export const flourishKey = (cls, sub = null) => (sub && VARIED.includes(sub) && SUBS[sub]?.cls === cls ? `win~${cls}~${sub}` : `win~${cls}`);
+export const FLOURISH_KEYS = Object.keys(FIN_LAND).flatMap((cls) => [flourishKey(cls), ...VARIED.filter((sub) => SUBS[sub]?.cls === cls).map((sub) => flourishKey(cls, sub))]);
 const FINISH = {
   // Shards scattering both ways along the row: a crack, glass and steel flying apart, wider as they go.
   breaker(K, o, T, X) {
@@ -537,9 +540,9 @@ const FINISH = {
     else [1319, 1760, 2093, 2637].slice(0, n === 6 ? 4 : 3).forEach((f, i) => K.modes(K.pan(X.fx, (i - 1) * 0.4), T.hit + 0.1 + i * 0.045, [[f, 1, 0.2], [f * 2.01, 0.3, 0.1]], { peak: 0.06 }));
   },
 };
-// Every finisher's sound, by finisherKey.
-export function finishers(H) {
-  return Object.fromEntries(FINISHER_KEYS.map((key) => {
+// Every flourish, by flourishKey.
+export function flourishes(H) {
+  return Object.fromEntries(FLOURISH_KEYS.map((key) => {
     const [, cls, sub = null] = key.split('~');
     return [key, (K, o, T) => { const { fx, b } = H.bus(K, o, ECHO[cls]); FINISH[cls](K, o, T, { fx, b, sub, Q: H.Q }); }];
   }));

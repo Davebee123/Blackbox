@@ -72,7 +72,7 @@ teal, violet or a threat's red.
 - **Hover tips** (`.tt`): every `title` shows in the game's own card (amber top rule, mono title line); never the
   browser's default.
 - **Card and detail panel** (the Server page): a card of picks (names and state only) beside one sticky panel that
-  explains the picked, hovered or focused item, the only place its facts are lit. On a phone the panel is a bottom
+  explains the picked, hovered or focused item, the only place its facts are lit. On a phone the panel is in the one
   sheet. Skills and talents is a card alone (`.cls`, docs/class-page.md): its rules are tooltips.
 - **Tethers** (`.tether`, `view.mjs` `tethers`, `fightread.mjs` `partLinks`): one look for every rule that reaches from
   one part to another. A steel bracket in the board's left gutter from the part the rule sits on (a square) to the part
@@ -109,7 +109,8 @@ teal, violet or a threat's red.
 - **Themed chips** (chipfx.mjs `CHIP_THEMES`; each theme in docs/chip-themes.md): a part with a theme plays it faint
   inside its own chips, under the text, in the chip's colour and white: nothing at +2 and +3, faint at +1, stronger in
   Now and its last 1.5 s. When it goes off (`chipStrike`), its strike flies from the chip into your bar in the threat's
-  red, in place of the chip's ghost (beside it for the frost), and its hit throws no lash. A packed part shows none.
+  red (a replicate's into the new fragment's bar), in place of the chip's ghost (beside it for the frost), and its hit
+  throws no lash. A replicate that fizzles plays out in place. A packed part shows none.
   Screen effects off, Motion off or reduced motion: none; subtle: fainter.
 - **Hits land on the thing hit** (hitfx.mjs): the part's cell flashes and a burst of 1s and 0s flies out (amber yours,
   violet a crewmate's); a crit bursts gold-white; a hit spent on ◆ floats *◆ ABSORBED* in steel; a miss stamps MISS. A
@@ -148,10 +149,9 @@ teal, violet or a threat's red.
   - **A burn runs down** (combat.mjs tick `left`): each tick's fire stands lower than the last, the last one gutters to
     falling embers, and Keepalive stokes it up.
   - **Mastery tiers** (`tierRecipe`): tier 2 more particles and a spark burst, tier 3 a glint and each iconic skill's own
-    flourish; a crewmate's always plays tier 1. **Break finishers** (`FINISHERS`, `SUB_FINISHERS`): the break that wins
-    plays your class's flourish on that row within 0.9 s, varied by subclass. Subtle and medium drop the afterimages,
-    the swing's fan and the cracks; the result's timing and a status cashing in show on both. `?playtest=fx` reviews
-    them all, by result, status and ticks left.
+    flourish; a crewmate's always plays tier 1. The hit that breaks a part plays its effect like any other; the part
+    then dissolves into 1s and 0s, the fight-winning one in slow motion. Subtle and medium drop the afterimages, the
+    swing's fan and the cracks; the result's timing and a status cashing in show on both. `?playtest=fx` reviews them all, by result, status and ticks left.
 - **Damage numbers** (dmgfx.mjs): every source its own number with an icon (a hit, a crit, a burn, a helper or daemon,
   a reflect, a shield's soak, a heal, encryption, an interrupt, a virus's claw), landing one after another in the
   order they resolved (0.45 s apart for two, faster for more, a batch never over 2.2 s), the bars dropping with each.
@@ -164,8 +164,10 @@ teal, violet or a threat's red.
   would take the hit.
 - **How much moves** follows Screen effects: subtle and medium show the number, the bar and the strike (a crewmate's
   quieter); bold adds impact bursts, sparks and row flashes; off shows numbers and bars only, a soft red edge when you're
-  hit, and a cycle's numbers stacked at once. Nothing on the interface moves: no screen shake, no nudge; flashes keep
-  their light and lose their movement.
+  hit, and a cycle's numbers stacked at once. Two things move the screen: an attack that hurts you shakes it as its
+  number lands (`shakeOf`: harder for a bigger hit, a crit or a charge; half on subtle and medium), and the hit that wins
+  the fight plays in slow motion (`slowAt`: a quarter speed, back to full in about half a second). Nothing else moves;
+  flashes keep their light and lose their movement.
 - **On a phone** the board shows Now, +1 and +2, chips drop their icon, and a part's name sits on its own line.
 
 ## Feedback language
@@ -227,7 +229,7 @@ short vibration on phones that have it.
 - **Puzzle boards** are drawn like the room map (chips and traces): the worm and the Tracker red, firewalls steel, data
   nodes and caches gold, you teal. A board boots in with a line, each action has its own small animation and sound, and
   the end is a card like a reward's. Motion off: the board just changes.
-- **The Server page** (`server-view.mjs`, `server.css`): one card and a detail panel (a bottom sheet on a phone). The
+- **The Server page** (`server-view.mjs`, `server.css`): one card and a detail panel (in the one sheet on a phone). The
   card's header draws your firewall as a ring of sixteen blocks round your server's core (whole blocks solid teal,
   fragmented ones hollow, an amber arc while an invasion is at the wall, a red marker coming down its road), the
   Integrity ring inside. Then quiet rows: Threat, Wall (level, tier pips, the readout), Filters, Code. Pointing at a

@@ -1839,6 +1839,10 @@ export default {
         {
           "kind": "author",
           "id": "glassjaw"
+        },
+        {
+          "kind": "boss",
+          "id": "centrifuge"
         }
       ]
     },
@@ -1960,8 +1964,8 @@ export default {
       },
       "sources": [
         {
-          "kind": "lair",
-          "floor": 3
+          "kind": "boss",
+          "id": "shouldersurfer"
         },
         {
           "kind": "lair",
@@ -6543,6 +6547,187 @@ export default {
         }
       ],
       "flavour": "A second voice above the tune, never quite on it."
+    },
+    {
+      "id": "governor",
+      "name": "Governor",
+      "base": "vpn-cascade",
+      "level": 14,
+      "primary": {
+        "signal": 88,
+        "reduction": 3
+      },
+      "effect": {
+        "when": "custom",
+        "do": "governor",
+        "value": 25
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "centrifuge"
+        }
+      ],
+      "flavour": "Spin it down, and everything after spins down with it."
+    },
+    {
+      "id": "cascade-failure",
+      "name": "Cascade Failure",
+      "base": "exploit-chain",
+      "level": 14,
+      "primary": {
+        "damage": [
+          17,
+          21
+        ]
+      },
+      "effect": {
+        "when": "custom",
+        "do": "slow-hit",
+        "value": 20
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "centrifuge"
+        }
+      ],
+      "flavour": "Stop one wheel and the next one tears loose."
+    },
+    {
+      "id": "paper-trail",
+      "name": "Paper Trail",
+      "base": "exploit-chain",
+      "level": 12,
+      "primary": {
+        "damage": [
+          16,
+          20
+        ]
+      },
+      "effect": {
+        "when": "custom",
+        "do": "windup%",
+        "value": 50
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "shakedown"
+        }
+      ],
+      "flavour": "Every demand leaves a receipt somewhere."
+    },
+    {
+      "id": "shakedown-escrow",
+      "name": "Escrow",
+      "base": "root-shell",
+      "level": 12,
+      "primary": {
+        "signal": 38,
+        "regen": 8
+      },
+      "effect": {
+        "when": "custom",
+        "do": "late",
+        "value": 2
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "shakedown"
+        }
+      ],
+      "flavour": "Held by a third party until the deadline. The third party is late."
+    },
+    {
+      "id": "privacy-screen",
+      "name": "Privacy Screen",
+      "base": "restricted-shell-escape",
+      "level": 18,
+      "primary": {
+        "signal": 50,
+        "regen": 10
+      },
+      "effect": {
+        "when": "custom",
+        "do": "screen"
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "shouldersurfer"
+        }
+      ],
+      "flavour": "Polarised. From the side it is a black rectangle."
+    },
+    {
+      "id": "muscle-memory",
+      "name": "Muscle Memory",
+      "base": "loader",
+      "level": 18,
+      "primary": {
+        "damage": 9,
+        "signal": 40,
+        "payload": 3.8
+      },
+      "effect": {
+        "when": "custom",
+        "do": "rhythm",
+        "value": 10
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "shouldersurfer"
+        }
+      ],
+      "flavour": "Two beats, then the key. Your hands knew before you did."
+    },
+    {
+      "id": "tail-call",
+      "name": "Tail Call",
+      "base": "zero-click",
+      "level": 19,
+      "primary": {
+        "damage": [
+          23,
+          29
+        ]
+      },
+      "effect": {
+        "when": "custom",
+        "do": "break-burns"
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "recursion"
+        }
+      ],
+      "flavour": "The last thing a frame does is hand its work on."
+    },
+    {
+      "id": "stack-guard",
+      "name": "Stack Guard",
+      "base": "onion-circuit",
+      "level": 19,
+      "primary": {
+        "signal": 104,
+        "reduction": 3
+      },
+      "effect": {
+        "when": "custom",
+        "do": "break-guard",
+        "value": 20
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "recursion"
+        }
+      ],
+      "flavour": "A canary on every frame. It sings once, then it is gone."
     }
   ]
 };

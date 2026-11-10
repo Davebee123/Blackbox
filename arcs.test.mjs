@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, hooks, addLocation, hackerLevel } from './dist/combat.mjs';
 import { storyAt, tickMail, openContracts, doneContracts, heldCount, title, progress, ready, MAIL } from './dist/mail.mjs';
-import { ARC, CHAINS, chainOf, slotFor, arcOffer, arcsOf } from './dist/arcs.mjs';
+import { ARC, CHAINS, chainOf, slotFor, arcOffer, arcsOf, namedBoss, jobBossAt } from './dist/arcs.mjs';
 import { graphOf, locAt, slotNode } from './dist/floors.mjs';
 import { FLOORS, CONFIG } from './dist/data.mjs';
 import { mailMarkup } from './dist/view.mjs';
@@ -29,7 +29,8 @@ function finish(s, n) {
   if (c.type === 'item' || c.type === 'heist') s.cargo.push({ contract: c.id, name: c.file, label: c.label });
   if (c.type === 'puzzle') { const l = s.locations.find((x) => x.id === c.loc); (l.floorplan ||= {}).puzzles = { p1: { won: true, at: T } }; }
   if (c.type === 'boss' && !c.slot) s.zone.spawns['/net/relay'] = { alive: false, respawnAt: T + CONFIG.zone.bossRespawnMs };
-  if (c.type === 'lair' || (c.type === 'boss' && c.slot)) { const l = s.locations.find((x) => x.id === c.loc); (l.spawns ||= {})['/core'] = { alive: false, respawnAt: T + NETWORK.lairMs }; }
+  if (c.type === 'boss' && c.slot && namedBoss(c.named)) s.locations.find((x) => x.id === c.loc).jobFell = T; // a built floor-job boss (netrooms.mjs won)
+  else if (c.type === 'lair' || (c.type === 'boss' && c.slot)) { const l = s.locations.find((x) => x.id === c.loc); (l.spawns ||= {})['/core'] = { alive: false, respawnAt: T + NETWORK.lairMs }; }
   T += 1000; tickMail(s, T);
   assert.ok(ready(s, c), `${title(s, c)} is ready`);
   return c;
@@ -48,7 +49,7 @@ test('content: a chain for every floor, 4 to 6 steps, the last one a pick, the w
       assert.ok(['bounty', 'map', 'rooms', 'takeover', 'item', 'install', 'sweep', 'heist', ...ARC.own].includes(st.kind), st.kind);
       assert.ok(st.kind !== 'bounty' || n === 1, 'a named process lives in SPRAWL-00, on floor 1');
       assert.ok(st.kind !== 'lair' || n >= 2, 'lairs start on floor 2');
-      if (st.kind === 'boss') assert.ok(st.boss && st.challenge && st.fall && (st.at === 'lair' || (n === 1 && st.at === 'sprawl')), `${c.title}: a Boss step names its boss, its lines, and a lair (SPRAWL-00 on floor 1)`);
+      if (st.kind === 'boss') assert.ok(st.boss && st.challenge && st.fall && (st.at === 'lair' || (n === 1 && st.at === 'sprawl') || (namedBoss(st.boss) && st.at === 'road')), `${c.title}: a Boss step names its boss, its lines, and a lair (SPRAWL-00 on floor 1; its own road server once built)`);
       if (st.letter) assert.ok(st.letter.from !== c.from && st.letter.from !== c.faction && st.letter.subject && st.letter.body.length, `${c.title}: an extra letter is from someone else`);
       const words = [st.subject, ...st.body, c.reason, c.lore, st.line || ''].join(' ');
       assert.doesNotMatch(words, /keyhole|backdoor|back door|way in\b/i, 'no intrusion metaphors');
@@ -225,4 +226,28 @@ test('a save whose chain finished before it gained a step opens again at the new
   assert.equal(arcsOf(s)[1].done, undefined);
   T += 1000; tickMail(s, T);
   assert.equal(openContracts(s).filter((x) => x.chain === 1).length, 1, 'just once');
+});
+
+test("a built floor-job boss holds its step's server's Core for good, never the lair's, and an old lair-bound step moves to it", () => {
+  const s = boarded();
+  s.floors.reached = 2;
+  locate(s, slotFor(s, 2, { at: 'land' }));
+  T += 1000; tickMail(s, T);
+  const k = CHAINS[2].steps.findIndex((x) => x.kind === 'boss'), step = CHAINS[2].steps[k];
+  assert.equal(namedBoss(step.boss), 'centrifuge');
+  const at = slotFor(s, 2, step), g = graphOf(s, 2);
+  assert.notEqual(at, g.lair, 'never the lair');
+  const loc = locate(s, at);
+  assert.equal(jobBossAt(s, loc), null, 'the Resident holds it until the chain reaches the step');
+  for (let i = 0; i < k; i++) command(s, `mail deliver ${finish(s, 2).id}`);
+  const c = chainJob(s, 2);
+  assert.equal(c.type, 'boss');
+  assert.equal(jobBossAt(s, loc), 'centrifuge', 'its Core now holds CENTRIFUGE');
+  assert.match(title(s, c), /Beat CENTRIFUGE/);
+  // An old save's step, posted at the lair before the boss was built: it moves to its own server.
+  c.slot = g.lair; c.ok = true; c.loc = 'elsewhere';
+  T += 1000; tickMail(s, T);
+  assert.equal(c.slot, at, 're-slotted');
+  loc.jobFell = T; T += 1000; tickMail(s, T);
+  assert.ok(ready(s, c), 'beating it in that Core readies the step');
 });

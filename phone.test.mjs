@@ -109,4 +109,62 @@ test('the fight tray: the menu key and +n are tap paths; no prompt key, no #net 
   assert.match(css, /grid-template-columns: repeat\(4, minmax\(0, 1fr\)\) 44px/); // two rows of four, the menu column
   assert.match(css, /body\.ph-fight \.ph-tabs:not\(\.ph-in-sheet\) \{ display: none; \}/); // the tab bar behind the menu key
   assert.match(css, /\.command-dock :is\(\.net-line, \.channel\) \{ display: none; \}/);
+  assert.match(css, /body\.ph-fight #board \.brow\.byou \{ display: none; \}/); // no You row on a phone
+  assert.match(app, /function phPicked\(\)/); // the picked key outlined instead
+  assert.match(css, /body\.ph-fight \.hud :is\(\.vname, \.gene-line, \.hud-status\) \{ display: none; \}/); // the one-line HUD (pick C)
+  const cards = app.slice(app.indexOf('function phHudCards('), app.indexOf('function phPicked('));
+  assert.match(cards, /if \(!F\.isPhone\(\)\) \{ for \(const b of \[en, me\]\) \{ delete b\.dataset\.tt;/); // never a card on a desktop
+  assert.match(cards, /Rules: /);
+});
+
+// P3: maps and sheets.
+import { mapChips, mapRail, mapMarkup } from './dist/view.mjs';
+import { play as playRun } from './dist/run.mjs';
+
+test('the map on a phone: chips for the rail and the tracker, each a tap path; no rail, no hover names key needed', () => {
+  const s = fresh();
+  assert.match(mapChips(s), /class="ph-chip job" data-phone="jobs"/); // a fresh save holds its first contract
+  assert.ok(!mapChips(s).includes('ph-chip hot') && !mapChips(s).includes('ph-chip ok')); // a chip at zero is left out
+  s.degraded = { until: Date.now() + 60000, ms: 600000 };
+  const chips = mapChips(s);
+  assert.match(chips, /class="ph-chip hot" data-phone="threats"/);
+  for (const b of controls(chips)) assert.match(b, /data-phone="(threats|jobs)"/, b);
+  assert.match(mapRail(s, 'threats'), /class="tr-row [^"]*" data-select="server"/); // the list a chip opens: the desktop's rows
+  const phone = mapMarkup(s, null, 'mine', { side: false, phone: true }), desk = mapMarkup(s, null, 'mine', { side: false });
+  assert.ok(phone.includes('ph-chips') && !phone.includes('map-lcol'));
+  assert.ok(desk.includes('map-lcol') && !desk.includes('ph-chip')); // the desktop keeps its rail
+  assert.ok(phone.indexOf('floor-lift') < phone.indexOf('ph-chips')); // the floors, then the chips
+  for (const c of CUT) assert.ok(!chips.includes(c), c);
+  assert.ok(!mapMarkup(s, 'server', 'mine', { side: false, pop: true, list: true, phone: true }).includes('map-side')); // List mode: the card is the sheet's too
+});
+
+test('the sheet: a see-through one has no scrim; closed() says when another took its place', () => {
+  assert.ok(!sheetMarkup('x', { through: true }).includes('sh-scrim'));
+  assert.match(sheetMarkup('x', { through: true }), /aria-modal="false"/);
+  const src = readFileSync(new URL('./dist/sheet.mjs', import.meta.url), 'utf8');
+  assert.match(src, /f\(\{ replaced: true, by: id \}\)/);
+});
+
+test('every pop-up is the one sheet, and the four old sheets are gone', () => {
+  const app = readFileSync(new URL('./dist/app.js', import.meta.url), 'utf8'), css = readFileSync(new URL('./dist/phone.css', import.meta.url), 'utf8');
+  const pops = app.slice(app.indexOf('const PH_POPS = ['), app.indexOf('let phPop = null'));
+  for (const id of ['journal', 'offer', 'quest', 'comms', 'item', 'map', 'room', 'server', 'daemon', 'levelup']) assert.match(pops, new RegExp(`\\{ id: '${id}', (host|page): `), id);
+  for (const row of pops.split('\n').filter((l) => /\{ id: /.test(l))) assert.match(row, /shut: \(\) =>/, row); // each closes by hand
+  assert.match(css, /#page-view :is\(#map-pop, #fp-pop, #hsv-panel, \.dm-panel, #th-panel\)/); // at home none shows on a phone
+  const read = (f) => readFileSync(new URL(`./dist/${f}`, import.meta.url), 'utf8');
+  assert.ok(!/\.pg-pop\.sheet/.test(read('style.css')));
+  assert.ok(!/\.hsv-panel \{[^}]*position: sticky; top: auto; bottom/.test(read('server.css')));
+  assert.ok(!/\.dm-panel \{[^}]*position: fixed/.test(read('daemons.css')));
+  assert.ok(!/\.gain\.jr-wrap \{[^}]*place-items: end/.test(read('codex.css')));
+  assert.ok(!/pd\.sheet/.test(app));
+});
+
+test('the maps on a phone: pinch and double-tap, the rooms header one line, Wait and Jack out afloat', () => {
+  const app = readFileSync(new URL('./dist/app.js', import.meta.url), 'utf8'), css = readFileSync(new URL('./dist/phone.css', import.meta.url), 'utf8');
+  assert.match(app, /function phZoomAt\(svg, at, k\)/);
+  assert.match(css, /:is\(\.map-svg, \.fp-svg\) \{ touch-action: none; \}/);
+  assert.match(css, /body\.ph-rooms \.topbar \{ display: none; \}/);
+  assert.match(css, /body\.ph-rooms #page-view \.fp-acts \{ position: fixed;/);
+  assert.match(moreMarkup(home, { who, pager: '<i></i>' }), /data-phone="comms"/); // no strip on a server: the pager is in More
+  assert.ok(!/data-phone="comms"/.test(moreMarkup(home, { who })));
 });

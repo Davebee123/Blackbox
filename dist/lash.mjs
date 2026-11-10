@@ -27,6 +27,15 @@ export function sizeOf({ power = 0.3, heavy = false, mode = 'hit', full = false 
   return { strands, bits, rain, glitch, locks: 0, travel, life };
 }
 
+// The screen's shake as an attack lands on you (app.js shake): power 0–1 (as sizeOf), heavy (a crit or a charge), full
+// (Screen effects bold; subtle and medium: half) → { px (how far it first jolts), ms (how long until it settles) }.
+export function shakeOf({ power = 0.3, heavy = false, full = false } = {}) {
+  const p = Math.max(0, Math.min(1, power));
+  return { px: Math.round(Math.min(9, (2.5 + 5 * p) * (heavy ? 1.5 : 1)) * (full ? 1 : 0.5) * 10) / 10, ms: Math.round(300 + 80 * p) };
+}
+// Its path: a jolt that swings back and forth, each swing smaller.
+export const SHAKE = [1, -0.8, 0.55, -0.35, 0.18, -0.08];
+
 const HEX = '0123456789ABCDEF';
 const pick = (s) => s[Math.floor(Math.random() * s.length)];
 const bit = () => (Math.random() < 0.5 ? '0' : '1');

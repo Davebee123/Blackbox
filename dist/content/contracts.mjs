@@ -188,7 +188,8 @@ export default {
         },
         {
           "kind": "boss",
-          "at": "lair",
+          "at": "road",
+          "k": 4,
           "subject": "It heard us",
           "boss": "CENTRIFUGE",
           "challenge": "bid received. bid received. bid received.",
@@ -299,7 +300,8 @@ export default {
         },
         {
           "kind": "boss",
-          "at": "lair",
+          "at": "road",
+          "k": 4,
           "subject": "Final custody",
           "boss": "SHOULDER SURFER",
           "challenge": "again. from the top.",

@@ -70,9 +70,9 @@ export function bossRule(s, rule = 'a') {
   e.bossRule = BOSS_RULES[rule] ? rule : 'a';
   armTicks(s);
   if (e.bossRule === 'a') {
-    const core = v.parts.find((p) => p.special) || v.parts[0];
+    const B = BOSSES[v.boss], core = (B?.crown && v.parts.find((p) => p.id === B.crown)) || v.parts.find((p) => p.special) || v.parts[0];
     core.core = true;
-    core.ticks = TICKS.at.map((at, i) => ({ at, spent: false, phase: i }));
+    core.ticks = (B?.ticks || TICKS.at).map((at, i) => ({ at, spent: false, phase: i })); // the floor bosses' act ticks at 60% and 30% (docs/solo-bosses.md)
     for (const ph of v.phases || []) ph.at = -1; // never by its total: the ticks start them
   } else if (e.bossRule === 'b') {
     if (v.boss === 'nb-deadbolt') v.tellSet = [...new Set([...(v.tellSet || []), 'deadbolt', 'extortion', 'overcharge', 'fulldisk'])];

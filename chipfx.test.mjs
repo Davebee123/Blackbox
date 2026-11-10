@@ -66,3 +66,17 @@ test('a shared theme marks every part that wears it', () => {
   assert.equal(chipTheme('Damper'), 'ledger');
   assert.equal(chipTheme('C&C'), 'mask');
 });
+
+test('what a fight spawns (fragments, hatchlings) wears byte, and its Gnaw strikes instead of lashing', () => {
+  assert.equal(chipTheme('Fragment 1'), 'byte');
+  assert.equal(chipTheme('Fragment 12'), 'byte');
+  assert.equal(chipTheme('Hatchling 3'), 'byte');
+  assert.equal(chipTheme('Fragment'), null, 'only a numbered spawn');
+  assert.ok(STRIKES.has('byte'));
+  const s = fresh(); s.hackers = { breaker: { level: 50, xp: 0 } };
+  selectEncounter(s, 'cryptjack', 7, { level: 6 }); command(s, 'engage');
+  const e = s.encounter;
+  e.virus.parts.push({ id: 'frag9', name: 'Fragment 9', kind: 'fragment', integrity: 18, max: 18, armor: 0, maxArmor: 0, patchAt: null, veiled: false, loot: null, special: false, attack: { name: 'Gnaw', effect: 'damage', amount: 3, interval: 1, due: e.cycle + 1 }, exposedUntil: 0, lastDamaged: 0, boosted: false });
+  const row = boardMarkup(s).split('data-target="').find((r) => r.startsWith('frag9"')).split('>')[0];
+  assert.match(row, /data-th="byte"/);
+});

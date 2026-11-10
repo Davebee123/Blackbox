@@ -664,7 +664,9 @@ test('every piece has a source that rolls; a source rolls the pieces you lack fi
   for (const id of Object.values(SETS).flatMap((x) => x.pieces).filter((p) => !UNIQUES[p].sources.every((x) => x.kind === 'story'))) assert.ok(reach.has(id), `${id} drops from somewhere`);
   for (const [kind, o] of Object.entries(SET_LOOT)) assert.ok(o.chance > 0 && o.pity > 0 && o.found > 0 && o.found <= o.chance, kind);
   // The floor 3 lair boss: On-Call's alone (the class sets are the level-50 tier sets now).
-  assert.deepEqual(setDropPool({ kind: 'lair', floor: 3 }, 20).map((u) => u.id).sort(), ['pager', 'runbook']);
+  assert.deepEqual(setDropPool({ kind: 'lair', floor: 3 }, 20).map((u) => u.id).sort(), ['runbook']); // the Pager moved to SHOULDER SURFER (docs/floor-items.md)
+  assert.deepEqual(setDropPool({ kind: 'boss', id: 'shouldersurfer' }).map((u) => u.id), ['pager']);
+  assert.deepEqual(setDropPool({ kind: 'boss', id: 'centrifuge' }).map((u) => u.id), ['rotor']);
   const was = structuredClone(SET_LOOT);
   try {
     const s = at(20);
@@ -735,7 +737,7 @@ test('the class sets are the end-game tier sets: every piece level 50, the best 
   assert.deepEqual(setDropPool({ kind: 'lair', floor: 8 }, 50).filter((u) => setOf(u.id).tier).map((u) => u.id).sort(), tierIds);
   // Floors 3 to 6 no longer drop them: their lair bosses keep their other pieces (On-Call on 3 and 4), and 5 and 6 none.
   for (const floor of [3, 4, 5, 6]) assert.ok(setDropPool({ kind: 'lair', floor }, 50).every((u) => !setOf(u.id).tier), `floor ${floor}`);
-  assert.deepEqual([3, 4, 5, 6].map((floor) => setDropPool({ kind: 'lair', floor }, 50).map((u) => u.id).sort()), [['pager', 'runbook'], ['failover', 'pager', 'runbook'], [], []]);
+  assert.deepEqual([3, 4, 5, 6].map((floor) => setDropPool({ kind: 'lair', floor }, 50).map((u) => u.id).sort()), [['runbook'], ['failover', 'pager', 'runbook'], [], []]);
   // No other source reaches them.
   for (const [kind, ctx] of [['vault', { floor: 8 }], ['rare', { floor: 8 }], ['thread', { floor: 8 }], ['boss', { id: 'relayking' }], ['strain', {}], ['takeover', {}], ['courier', {}]]) assert.ok(setDropPool({ kind, ...ctx }, 50).every((u) => !setOf(u.id).tier), kind);
 });

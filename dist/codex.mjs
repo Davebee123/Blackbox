@@ -280,11 +280,11 @@ export function entryOf(s, key) {
   }
   if (group === 'boss') {
     const B = BOSSES[id];
-    const phases = B.raid ? B.raid.phases.map((ph) => ({ at: ph.from, name: ph.name, say: ph.say || null, mechs: ph.mechs.map((m) => m.name) })) : B.phases.map((ph) => ({ at: ph.at, say: ph.say }));
+    const phases = B.raid ? B.raid.phases.map((ph) => ({ at: ph.from, name: ph.name, say: ph.say || null, mechs: ph.mechs.map((m) => m.name) })) : B.phases.map((ph, i) => ({ at: ph.at, name: ph.name || null, say: ph.say, lines: B.guide?.phases?.[i] || null }));
     const loot = bossTable(s, id), uniques = loot.uniques; // its loot table (combat.mjs bossTable): the sure item, its uniques, the chance and pity
     return {
       ...base, name: B.name, family: B.family || null, strain: B.strain || null, raid: !!B.raid, about: B.about || null, signature: B.signature || null, hp: B.raid ? B.hp : +(B.hp * (B.long?.hp ?? 1)).toFixed(2), enrageAt: B.long?.enrageAt ?? B.enrageAt, floor: B.floor || null, // hp and enrageAt: on your Signal (data.mjs BOSSES long)
-      lair: B.lair || null, fought: dex(s).fought?.[id] || 0, won: dex(s).won?.[id] || 0, authors: authorsOf('boss', id), phases, tells: tellsOf(s, 'boss', id), uniques, loot,
+      lair: B.lair || null, fought: dex(s).fought?.[id] || 0, won: dex(s).won?.[id] || 0, authors: authorsOf('boss', id), phases, open: B.guide?.open || null, tells: tellsOf(s, 'boss', id), uniques, loot,
       parts: bossParts(s, id),
       enrage: B.raid ? B.raid.enrage?.name || null : null,
     };
