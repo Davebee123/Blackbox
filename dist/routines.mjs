@@ -159,7 +159,7 @@ export const metBodies = (s) => allBodies().filter((b) => metBody(s, b));
 // A strain's third parts (genes.mjs: a part a gene brings, rolled on the virus) are its lineage's (a family lists its own).
 const thirdSpecs = (body) => Object.values(GENES).map((g) => g.parts?.[body] || g.parts?.[STRAINS[body]?.lineage]).filter(Boolean);
 const bodySpecs = (body) => [...(bodyDef(body)?.parts || []), ...Object.values(BOSSES).filter((b) => (b.strain || b.family) === body).flatMap((b) => b.extra || []), ...thirdSpecs(body)];
-export const bodyRefs = (body) => [...new Set(bodySpecs(body).map((x) => `${body}:${x.id}`))];
+export const bodyRefs = (body) => [...new Set(bodySpecs(body).filter((x) => !x.unlisted).map((x) => `${body}:${x.id}`))]; // unlisted: built, rolling nowhere yet (genes.mjs Parts 1)
 // Decoded: any of its parts researched to its name and health.
 export const bodyDecoded = (s, body) => bodyRefs(body).some((ref) => researchAt(s, ref) >= TIER.decoded);
 

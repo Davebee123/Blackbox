@@ -81,7 +81,9 @@ const BODY = ['surge', 'encrypt', 'replicate', 'scramble', 'veil']; // the body 
 const BUILT = Object.keys(PROBES).filter((id) => PROBES[id].build); // a named build, measured against its family's body
 
 test('every gene in play has its cost measured: a probe for each one a virus rolls or carries, at every level it opens by', () => {
-  const covered = new Set([...Object.keys(PROBES), ...BODY, ...Object.values(PROBES).flatMap((p) => p.also || [])]);
+  const shelved = GENE_IDS.filter((id) => Object.values(GENES[id].parts || {}).some((x) => x.unlisted)); // Parts 1: built, in no fight (genesim.mjs)
+  assert.equal(shelved.length, 15);
+  const covered = new Set([...Object.keys(PROBES), ...BODY, ...shelved, ...Object.values(PROBES).flatMap((p) => p.also || [])]);
   assert.deepEqual(GENE_IDS.filter((id) => !covered.has(id)), []);
   for (const [id, c] of Object.entries(checks)) {
     assert.ok(Object.keys(c.levels).length >= 1, `${id} is measured somewhere`);

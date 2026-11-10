@@ -171,6 +171,7 @@ test('every basic: a level it opens at, a loot component, a Codex card with its 
     for (const spec of body.parts.filter((x) => x.pool === 'basic' || x.pool === 'third')) {
       assert.ok(spec.loot, `${spec.id} drops a component`);
       const card = e.parts.find((x) => x.spec.id === spec.id);
+      if (spec.unlisted) { assert.ok(!card, `${f} ${spec.id}: built, rolling nowhere, so not in the Codex yet (genes.mjs Parts 1)`); continue; }
       assert.ok(card?.part, `${f} ${spec.id} has a Codex card`);
       assert.ok(card.from >= 1);
     }

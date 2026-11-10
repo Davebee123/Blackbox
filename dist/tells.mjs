@@ -43,6 +43,7 @@ import { readGene, seeGene, logTell } from './genome.mjs';
 import { gainResearch } from './research.mjs';
 import { daemonsOn } from './daemons.mjs';
 import { cancelAttack, crossBy, interruptMove, nextTick, fronted } from './interrupt.mjs';
+import { mechCut } from './mechanics.mjs';
 import { ignores, CLASHES } from './genes.mjs';
 import { contractDid } from './mail.mjs';
 import { tellAct, actOf } from './acts.mjs';
@@ -801,6 +802,7 @@ export function tellSigint(s) {
   // A charge: SIGINT cuts it as a cut on its part does (interrupt.mjs cancelAttack): the attack it rides is cancelled,
   // charge and all, and its schedule goes on as if it had landed.
   if (t.kind === 'charge') {
+    mechCut(s, p); // a Cistern holds it (mechanics.mjs)
     tellAnswer(s, t, p, `SIGINT cuts ${label(t)}: the ${p.name}'s ${p.attack?.name || 'attack'} is cancelled.`, { stagger: false });
     if (p.attack) cancelAttack(s, p);
     return true;

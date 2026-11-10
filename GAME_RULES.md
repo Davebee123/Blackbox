@@ -389,6 +389,29 @@ Volatile, Amplifier, Bodyguard, Vendetta, Thorns, Countdown, Backtrace, Swap, Tu
 (`PARTS.mech` 0) until the designer has played them; `?playtest=part:<id>` shows each, and `developer parts mech 0.5`
 rolls them for a session.
 
+**Parts 1, built the same way** (docs/mechanics-list.md "Parts 1"): fifteen more that roll in no fight, strain or boss,
+and stay out of the Codex and a program's mastery count until they do (`unlisted`).
+Numbers are level 6's. Their ◆ are as written at every level. A rule's own hit (a Discharge, a Drain, a repeat) lands
+like any attack: your ◆, a shield and Block all count.
+
+| Family | Part (level): Integrity, ◆, attack | Rule, and its mark on the board |
+|---|---|---|
+| Ghostroot | **Overreacher** (10): 30, ◆, Lunge 18 every 4 | The cycle after its Lunge lands on you it takes 50% more from everyone. A cut Lunge leaves no soft cycle. A dashed amber *Soft +50%* chip in the column after each Lunge. |
+| Worm | **Live Wire** (10): 28, bare, Snap 12 every 5 | Each command that hits it brings its next Snap a cycle sooner, up to 3 a wind-up, never onto this cycle. Burns and helpers don't. *▲▲△ sooner*. |
+| Ransomware | **Condenser** (11): 24, ◆◆, no attack | Each attack from another part that lands on you stores a charge (never a fragment's gnaw). At 3 it Discharges for 16 at once and empties. *●●○ charge*; at 2, a red *Discharge* chip under the next attack due. |
+| Worm | **Pacer** (12): 26, ◆◆, no attack | Every 3 cycles it Steps: every other attack repeats a cycle faster (never under every 2), twice at most. Your command hitting it starts the count over; broken, the intervals return. *tempo ▲1*, its count as pips, a red *Step · all ▲1* chip. |
+| Ghostroot | **Cutout** (12): 28, bare, no attack | Taking it across a tick pushes every attack on the virus back a cycle. No delay is used up. Amber ticks, *2 trips*, and *trip ▸ all +1* in Now when your queued command would cross. |
+| Worm | **Magnet** (13): 26, ◆◆ (holds 6), Pull every 4 | Its Pull deals 3 for each ◆ it wears. Each ◆ you strip from another part lands on it. *−3 a ◆*; its chip shows the total. |
+| Ransomware | **Dead Man's Hand** (14): 26, ◆, Payout 14 every 4 | Broken, the Payout it is winding up lands at once (first in the virus's half; never when it was the last part), unless one landed this cycle or the last. *on break −14* while it would. |
+| Ransomware | **Reservoir** (15): 34, ◆, Flush up to 18 every 4 | Its Flush is scaled by the Integrity it has left: full at 100%, half at 50%. Its chip shows the live number. |
+| Ransomware | **Flyback** (16): 24, ◆, no attack | The cycle after an attack lands on you it repeats the biggest at half (never its own repeat, a Discharge or a Drain). A dashed red chip one column after each attack. |
+| Ransomware | **Shutter** (17): 30, ◆◆◆, Slam 14 every 4 | Shut for 2 cycles, then open for 2, from cycle 1. Shut, it wears its ◆ and nothing strips them (a hit is absorbed; one that goes through armor still lands). Open, it wears none. A steel *Shut ◆◆◆* or a dashed amber *Open 0 ◆* chip in every column. |
+| Ransomware | **Cistern** (18): 26, ◆◆, no attack | Each attack you cut (at a tick, or SIGINT on its charge) is held at the size it would have landed. Every 6 cycles it Drains all it holds onto you. *holds 14*, its count as pips, a red *Drain* chip in the column it is due. |
+| Worm | **Welder** (19): 26, ◆◆, Weld 6 every 4 | Its Weld also puts 1 ◆ back on the other part that wears the least, never past its max. A steel *Weld −6 · +1 ◆* chip. |
+| Ghostroot | **Matcher** (20): 28, ◆, no timed attack | The same key fired two cycles running sets it off for 12 that cycle. A hold never counts. *last key: Bash*, and a dashed red *Bash ▸ −12* chip in Now. |
+| Worm | **Splitter** (22): 36, bare, Rend 16 every 4 | Taken under 50% it splits into a Splitter and a Splitter 2, each with half the Integrity left, half the max (so its 25% tick is still ahead) and half the Rend, on alternate cycles. A red 50% tick (never wasted: with nothing due it only splits), *splits at 50%*, and *split ▸ 2 × −8* in Now when your queued command would do it. |
+| Ransomware | **Auditor** (24): 30, ◆, Audit 6 every 5 | Its Audit deals 5 more for each of your keys on cooldown as it lands, key 1 and SIGINT included, five at most. *2 keys cooling*; its chip shows the total. |
+
 **The spread.** A strain's mechanics parts roll as a third on wild viruses of its lineage from its level and floor
 (weight `PARTS.spread` 0.5, a server room's fixed third too): a Ghostroot from 12 on floor 2 can be a *LURKING
 GHOSTROOT*. A part that reads the signature (the Predator, the Opportunist) comes only beside it. The Codex card names
@@ -2662,7 +2685,7 @@ Developer commands work only in tests, playtest pages, a test bench and with `?d
   empty (never under yours; a part's at its own, a rival's one over you). A rival's later fights bring its counter, read
   from your win in the one before. **Again** (`developer fight again`) restarts the last pick; ♥ refills first.
 - **Playtest pages:** `?playtest=rooms` (a throwaway server of rooms, its clocks ten times as fast), `?playtest=<strain
-  or fixture>`, `?playtest=part:<id>` (`part:<id>.exe` for its .exe build), `?playtest=fx` (every ability effect and tier, fired from its key, by result, status and ticks left).
+  or fixture>`, `?playtest=part:<id>` (`part:<id>.exe` for its .exe build; `&gear=stock|tuned|custom` fights it geared, on your Signal, as `?playtest=random` with `&level=` and `&family=` does, and `&elite` makes that one an elite), `?playtest=fx` (every ability effect and tier, fired from its key, by result, status and ticks left).
 - `developer scene <id>` plays a transmission again. `developer levelup preview`, `developer thread preview`, `developer pager fill`, `developer parts`, `developer
   event`, `developer exfil`, and the rest under each section.
 

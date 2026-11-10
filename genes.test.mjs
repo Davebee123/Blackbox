@@ -10,8 +10,8 @@ import { CREWS } from './dist/mail.mjs';
 
 const ids = (v) => v.genes.map((g) => g.id);
 
-test('the library: 79 genes that carry today\'s content, each with a category, an axis, a role, a cost and an answer', () => {
-  assert.equal(GENE_IDS.length, 79); // 54 until the Shunt was cut, then the mechanics list's 20 (docs/mechanics-list.md), then the P3 families' Hash and Wipe, and their levers (the Twin Rig, the Recycle Bin), then the Botnet's Volley and the Logic Bomb's Payload
+test('the library: 94 genes that carry today\'s content, each with a category, an axis, a role, a cost and an answer', () => {
+  assert.equal(GENE_IDS.length, 94); // Parts 1's fifteen (docs/mechanics-list.md), after: 54 until the Shunt was cut, then the mechanics list's 20 (docs/mechanics-list.md), then the P3 families' Hash and Wipe, and their levers (the Twin Rig, the Recycle Bin), then the Botnet's Volley and the Logic Bomb's Payload
   for (const [id, g] of Object.entries(GENES)) {
     assert.ok(CATS[g.cat] && AXES[g.axis], id);
     assert.ok(['primary', 'amplifier'].includes(g.role), id);
@@ -20,7 +20,7 @@ test('the library: 79 genes that carry today\'s content, each with a category, a
     assert.ok(['part', 'tell', 'kills'].includes(g.decode), id);
   }
   const by = Object.fromEntries(Object.keys(CATS).map((c) => [c, GENE_IDS.filter((id) => GENES[id].cat === c).length]));
-  assert.deepEqual(by, { attack: 23, part: 31, defence: 5, rule: 10, tell: 10 }); // the parts plan's P1 brought five part genes, P2 eight (two attacks, three parts, two defences, a rule), then the Shunt (a part) was cut; priority 3 an attack (the Volley) and a part (the Payload); the mechanics list eight attacks and twelve parts; P3 two attacks (the Hash, the Wipe) and two parts (the Twin Rig, the Recycle Bin)
+  assert.deepEqual(by, { attack: 27, part: 41, defence: 6, rule: 10, tell: 10 }); // Parts 1 four attacks (the Overreacher, the Reservoir, the Welder, the Auditor), ten parts and a defence (the Shutter); the parts plan's P1 brought five part genes, P2 eight (two attacks, three parts, two defences, a rule), then the Shunt (a part) was cut; priority 3 an attack (the Volley) and a part (the Payload); the mechanics list eight attacks and twelve parts; P3 two attacks (the Hash, the Wipe) and two parts (the Twin Rig, the Recycle Bin)
 });
 
 test('today\'s content, mapped: the bodies, the third parts, the mutations, the strains and the guards are genes', () => {
@@ -30,7 +30,8 @@ test('today\'s content, mapped: the bodies, the third parts, the mutations, the 
   assert.deepEqual(body('ghostroot'), ['surge', 'veil', 'scramble']);
   for (const f of Object.keys(FAMILIES)) assert.deepEqual([...body(f)].sort(), [...FAMILIES[f].core].sort(), f);
   // Each third part is its gene's part, in its family's pool.
-  const third = { twinrig: 'twinrig', recyclebin: 'recyclebin', lockbox: 'ward', mutex: 'mutexlock', tripwire: 'tripwire', mirror: 'twin', c2: 'c2', decoy: 'decoymirror', mimic: 'mimic', zipbomb: 'zipbomb', hotspot: 'hotspot', idletimer: 'idletimer', frontend: 'frontend', backlog: 'backlog', limiter: 'limiter', spare: 'spare', scraper: 'scraper', packer: 'packer', badblock: 'badblock', damper: 'damper', coldstore: 'coldstore', prober: 'exposed', jitter: 'lag', leaker: 'leak', sandbox: 'sandboxed', stunner: 'stunned', junker: 'junk', predator: 'predator', opportunist: 'opportunist', feeder: 'feeder', punisher: 'punisher', harvester: 'harvester', volatile: 'volatile', amplifier: 'amplifier', bodyguard: 'bodyguard', vendetta: 'vendetta', thorns: 'thorns', countdown: 'countdown', backtrace: 'backtrace', swap: 'swap', turncoat: 'turncoat' };
+  const third = { twinrig: 'twinrig', recyclebin: 'recyclebin', lockbox: 'ward', mutex: 'mutexlock', tripwire: 'tripwire', mirror: 'twin', c2: 'c2', decoy: 'decoymirror', mimic: 'mimic', zipbomb: 'zipbomb', hotspot: 'hotspot', idletimer: 'idletimer', frontend: 'frontend', backlog: 'backlog', limiter: 'limiter', spare: 'spare', scraper: 'scraper', packer: 'packer', badblock: 'badblock', damper: 'damper', coldstore: 'coldstore', prober: 'exposed', jitter: 'lag', leaker: 'leak', sandbox: 'sandboxed', stunner: 'stunned', junker: 'junk', predator: 'predator', opportunist: 'opportunist', feeder: 'feeder', punisher: 'punisher', harvester: 'harvester', volatile: 'volatile', amplifier: 'amplifier', bodyguard: 'bodyguard', vendetta: 'vendetta', thorns: 'thorns', countdown: 'countdown', backtrace: 'backtrace', swap: 'swap', turncoat: 'turncoat',
+    overreacher: 'overreacher', livewire: 'livewire', condenser: 'condenser', pacer: 'pacer', cutout: 'cutout', magnet: 'magnet', deadhand: 'deadhand', reservoir: 'reservoir', flyback: 'flyback', shutter: 'shutter', cistern: 'cistern', welder: 'welder', matcher: 'matcher', splitter: 'splitter', auditor: 'auditor' }; // Parts 1: a part and its gene share an id
   for (const f of Object.values(FAMILIES)) for (const p of f.parts.filter((x) => x.pool === 'third')) assert.equal(p.gene, third[p.id], p.id);
   for (const [part, gene] of Object.entries(third)) {
     const fam = Object.keys(FAMILIES).find((f) => FAMILIES[f].parts.some((p) => p.id === part));

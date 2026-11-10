@@ -26,6 +26,7 @@ import { sustained, subOf, subEdge, hasTalent, rank, capValue, emit, hit, rand, 
 import { ABILITIES, SKILLS, EDGE } from '../data.mjs';
 import { alliesOf } from '../combat.mjs';
 import { tellOn, tellOpen, tellAnswer, chargeSize } from '../tells.mjs';
+import { mechShut } from '../mechanics.mjs';
 import { subs } from './breaker.data.mjs';
 
 const A = (id) => ABILITIES[id];
@@ -83,7 +84,7 @@ const afford = (s, id) => (costOf(s, id) && defender(s).integrity <= costOf(s, i
 // Break chits off a part outside a hit (Shaped Charge, Cluster Charge, Bit Rot). Lights Shatter when it's bare.
 function strip(s, p, n, label) {
   const e = s.encounter;
-  const k = Math.min(n, p.armor || 0);
+  const k = mechShut(s, p) ? 0 : Math.min(n, p.armor || 0); // a Shutter, shut: nothing strips its ◆ (mechanics.mjs)
   if (!k) return 0;
   p.armor -= k;
   p.lastDamaged = e.cycle;

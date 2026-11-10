@@ -1,4 +1,4 @@
-# Mechanics list: 20 parts for the designer to play
+# Mechanics list: 20 parts for the designer to play, and Parts 1's 15
 
 **Status.** Twenty new part mechanics for the designer to test. Built, all twenty, lean: `dist/mechanics.mjs` (rules
 and `MECH` start numbers), a gene each, playtest pages `?playtest=part:<id>`; GAME_RULES.md *Families*
@@ -53,6 +53,51 @@ under the 25-point bound and the planner still wins. Not tuning targets.
 | Sandboxed | +9.0 | Punisher | −1.4 | Thorns | +18.5 | Turncoat | +3.1 |
 | Stunned | +8.4 | Harvester | +9.5 | | | | |
 | Junk process | +19.9 | Volatile | +14.8 | | | | |
+
+## Parts 1: fifteen more
+
+November 2026. Built from the designer's approved mocks, the same way: a gene each, its rule in `dist/mechanics.mjs`,
+a test each, `?playtest=part:<id>` (add `&gear=tuned` to fight geared, on your Signal). None rolls anywhere. GAME_RULES.md
+*Families* has the table.
+
+- **They reward a read:** Overreacher, Reservoir, Shutter, Cutout, Dead Man's Hand.
+- **They punish a habit:** Live Wire (hitting it), Matcher (one key), Auditor (cooldowns), Cistern (cutting), Magnet
+  (stripping), Welder (stripping first).
+- **They stack up the others:** Condenser, Pacer, Flyback, Splitter.
+
+**As built, where it reads the mocks its own way:**
+
+- **Tooltips keep the game's grammar** (style.test.mjs): no colon, an answer of 10 words at most. So *36 now* follows a
+  comma, and six answers are shorter than the mocks'.
+- **◆ are as written** at every level (`flatArmor`), where every other part's scale up (2 becomes 3).
+- **Sizes.** A part with an attack sizes its rule by that attack. The Condenser's Discharge (16) and the Matcher's hit
+  (12) are level-6 numbers scaled with the virus's damage.
+- **A rule's own hit lands like an attack:** a ◆ on you stops it whole, and a shield and Block soften it.
+- **Dead Man's Hand:** the Payout lands first in the virus's half of that cycle. Broken as the last part, the fight is
+  over and nothing lands.
+- **Cutout:** a hit across both ticks pushes 2 cycles, and the hit that breaks it still trips.
+- **Cistern:** it holds hits only (a cut Encrypt holds nothing); a cut charge is held at the charge's size.
+- **Flyback:** it repeats the hit's size on the board, so a shield that soaked the first still meets the second.
+- **Splitter:** each half keeps half the max and the 25% tick, and the second gives no loot. Its 50% tick cuts a Rend due then; with nothing
+  due it only splits (no wasted tick).
+- **Not in the Codex.** A part that rolls nowhere would sit there as ??? and hold a body under 100% research, so these
+  are `unlisted` (the Codex and a program's mastery count) until one rolls. On the board an undecoded one still shows
+  its tags and chips, as an attack's chip shows; its rule tooltip stays ??? until it's researched.
+- **Reservoir:** the mock's *30% ▸ −42* tag is gone with its rule (a share of Integrity); the chip carries the number.
+- **Not on the board yet:** the bots don't know these parts, and the forecast doesn't count a Discharge, a Drain or a
+  repeat.
+
+**The bots' check** (one seed, every subclass, level 18, or 26 for the four that open later): Signal lost a fight with
+the part over the body alone. Five go over the 25-point bound the twenty are held to (genesim.test.mjs), so Parts 1
+have no probe there until one rolls. The numbers are the mocks'; the bots play these parts blind. Not tuning targets.
+
+| Part | Points | Part | Points | Part | Points |
+|---|---|---|---|---|---|
+| Overreacher | +26.5 | Magnet | +29.9 | Cistern | +0.3 |
+| Live Wire | −1.9 | Dead Man's Hand | +24.9 | Welder | +27.9 |
+| Condenser | −8.3 | Reservoir | +20.5 | Matcher | +1.9 |
+| Pacer | −3.3 | Flyback | +2.3 | Splitter | +13.6 |
+| Cutout | −9.3 | Shutter | +33.8 | Auditor | +25.4 |
 
 ## Open: do combinations need to spawn together?
 

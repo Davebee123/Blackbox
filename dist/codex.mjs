@@ -90,7 +90,7 @@ const levelOf = (s) => Math.max(1, Math.min(CONFIG.maxMobLevel, hackerLevel(s)))
 function specsOf(group, id) {
   if (group === 'strain') return STRAINS[id].parts.map((spec) => ({ spec, gene: null, from: STRAINS[id].from }));
   const body = bodyOf(id);
-  return body.parts.map((spec) => {
+  return body.parts.filter((spec) => !spec.unlisted).map((spec) => { // unlisted: built, rolling nowhere yet (genes.mjs Parts 1)
     const strain = group === 'family' && spec.pool === 'third' ? spreadFrom(id, spec.gene) : null, from = spec.from || OPENS[id] || 1;
     return { spec, gene: spec.pool === 'third' ? spec.gene : null, basic: spec.pool === 'basic' ? spec.id : null, from: strain ? Math.max(from, STRAINS[strain].from) : from, strain };
   });

@@ -202,6 +202,21 @@ code { font-family: var(--mono); color: var(--amber); }
 .intent .held { display: inline-grid; flex: none; color: var(--you); }
 .intent .held .glyph { width: 11px; height: 11px; margin: 0; }
 .intent.daemon { border-color: var(--daemon); color: var(--daemon); }
+/* Parts 1 (mechanics.mjs mechChips): soft, yours to use (amber); cond, a hit that comes if (red); hotchip, a threat on its
+   count; steelchip, armor; trip, what your queued command would do (teal); ghost, where a pulled attack stood. */
+.intent.soft, .intent.soft.now { border: 1px dashed var(--amber); color: var(--amber); background: transparent; }
+.intent.soft small { color: var(--amber); }
+.intent.cond, .intent.cond.now { border: 1px dashed var(--hot); background: transparent; }
+.intent.cond, .intent.cond b, .intent.cond small { color: var(--hot); }
+.intent.hotchip { border-color: var(--hot); }
+.intent.hotchip, .intent.hotchip b, .intent.hotchip small { color: var(--hot); }
+.intent.steelchip, .intent.steelchip.now, .intent.steelchip.next { border-color: var(--steel); color: var(--steel); background: var(--panel-2); }
+.intent.steelchip b, .intent.steelchip small { color: var(--steel); }
+.intent.trip { border: 1px dashed var(--you); color: var(--you); background: transparent; }
+.intent.trip small { color: var(--you); }
+.intent.ghost { border: 1px dashed var(--line-strong); background: transparent; opacity: 0.45; }
+.bcell .intent + .intent.soft, .bcell .intent + .intent.cond, .bcell .intent + .intent.hotchip, .bcell .intent + .intent.steelchip, .bcell .intent + .intent.trip, .bcell .intent.steelchip + .intent, .bcell .intent.soft + .intent { margin-top: 5px; }
+.tag.mtag i { font-style: normal; opacity: 0.45; }
 .intent.patch { margin-top: 4px; padding: 2px 7px; font: 600 11px var(--mono); letter-spacing: 1px; border-style: dashed; border-color: var(--line-strong); color: var(--amber-soft); background: transparent; }
 /* Encryption: the damage you take every cycle until the Encryptor breaks. On the Encryptor's row, in every column. */
 .intent.crypt { margin-bottom: 4px; padding: 2px 7px; font: 600 11px var(--mono); letter-spacing: 1px; border-color: var(--hot); color: var(--hot); background: repeating-linear-gradient(135deg, var(--hot-soft) 0 6px, transparent 6px 12px); }

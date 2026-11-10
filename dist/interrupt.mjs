@@ -28,6 +28,7 @@ import { ignores } from './genes.mjs';
 import { gainResearch } from './research.mjs';
 import { daemonsOn } from './daemons.mjs';
 import { crossed as actCrossed } from './acts.mjs';
+import { mechTicked, mechCut } from './mechanics.mjs';
 
 export const TICKS = { at: [0.5, 0.25], small: 20, budget: 3 };
 export const BOSS_RULES = {
@@ -108,6 +109,7 @@ export function onHit(s, p, was, dealt, opts = {}) {
   if (!crossed.length) return;
   for (const t of crossed) t.spent = true;
   e.metrics.ticks = (e.metrics.ticks || 0) + crossed.length;
+  if (p.mech && mechTicked(s, p, crossed)) return; // a Cutout trips (mechanics.mjs), on the hit that breaks it too
   if (p.integrity <= 0) return; // it broke: everything it did stops with it
   const verb = hooks.tickVerb?.(s, p) || 'cancel';
   // (a) a boss's core part: each tick starts a phase, at the end of this cycle.
@@ -153,6 +155,7 @@ function cancel(s, p, due, t) {
   for (const d of due) {
     if (d.kind === 'attack') {
       const a = p.attack;
+      mechCut(s, p); // a Cistern holds it (mechanics.mjs)
       // A charge riding this attack is answered by the cancel (tells.mjs): it rests as if called off.
       const charge = (tellsOf(s)?.list || []).find((x) => x.told && x.kind === 'charge' && x.part === p.id && x.n === (a.n || 0));
       if (charge) { tellAnswer(s, charge, p, `Cut: ${charge.name.toUpperCase()} called off.`, { stagger: false }); names.push(charge.name); }
@@ -181,6 +184,7 @@ export function blastCut(s, p, by) {
   const names = [];
   for (const d of due) {
     if (d.kind === 'attack') {
+      mechCut(s, p);
       const a = p.attack, charge = (tellsOf(s)?.list || []).find((x) => x.told && x.kind === 'charge' && x.part === p.id && x.n === (a.n || 0));
       if (charge) { tellAnswer(s, charge, p, `The ${by} blast cuts the ${p.name}: ${charge.name.toUpperCase()} called off.`, { stagger: false }); names.push(charge.name); } else names.push(a.name);
       cancelAttack(s, p);

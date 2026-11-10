@@ -27,9 +27,29 @@
 //   swap         its attack Throttles you; while it stands, your next command hit moves Throttled, Exposed or Corrupted
 //                off you onto that part
 //   turncoat     below half your Signal its attack Scrambles you too
+//
+// Parts 1 (docs/mechanics-list.md "Parts 1"): fifteen more, built the same way. Each size is a multiple of the part's
+// own attack; a part with no attack sizes its hit at level 6 and scales it with the virus (sized). A rule's own hit
+// (a Discharge, a Drain, a repeat) lands like any attack, marked `rule` so no other rule counts it.
+//   overreacher  the cycle after its Lunge lands it takes more damage from everyone
+//   livewire     each command that hits it brings its next Snap a cycle sooner, up to a count a wind-up
+//   condenser    each attack from another part that lands on you stores a charge; at the count it Discharges
+//   pacer        every few cycles every other attack repeats a cycle faster; your command hit starts its count over
+//   cutout       taking it across a tick pushes every attack back a cycle (the timers move: no delay is used up)
+//   magnet       its Pull deals its amount for each ◆ it wears, and each ◆ you strip from another part lands on it
+//   deadhand     broken mid wind-up, its Payout lands at once (the start of the virus's half, if the fight goes on)
+//   reservoir    its Flush is scaled by the share of Integrity it has left
+//   flyback      the cycle after an attack lands on you it repeats the biggest at half
+//   shutter      its ◆ are shut for a few cycles (worn, and nothing strips them), then open (none), in turn
+//   cistern      each attack you cut is held at its size; every few cycles it Drains all it holds onto you
+//   welder       its Weld also puts a ◆ back on the other part that wears the least
+//   matcher      the same key fired two cycles running sets off its hit
+//   splitter     taken under half it splits into two parts, each with half its Integrity, its max and its Rend
+//   auditor      its Audit deals more for each key of yours on cooldown as it lands
 import { ABILITIES, CONFIG, TELL } from './data.mjs';
-import { emit, alive, part, livingParts, attackers, defender, takeDamage, usable, rand, strikeWith, implanted, addBurn } from './combat.mjs';
-import { copyKind } from './tells.mjs';
+import { emit, alive, part, livingParts, attackers, defender, takeDamage, usable, rand, strikeWith, implanted, addBurn, attackAmount, readyIn, spikeName, blocked, delayHeld, previewDamage, codexKey } from './combat.mjs';
+import { copyKind, tellsOf, chargeSize } from './tells.mjs';
+import { TICKS, crossBy, dueOf } from './interrupt.mjs';
 
 // The numbers, every one a *start* (docs/mechanics-list.md): the designer's play tunes them.
 export const MECH = {
@@ -49,12 +69,45 @@ export const MECH = {
   backtrace: { at: 5 },
   swap: { cycles: 2 },
   turncoat: { below: 0.5, cycles: 2 },
+  // Parts 1. amount: a hit at level 6, scaled with the virus. per: a multiple of the part's own attack.
+  overreacher: { more: 0.5 },
+  livewire: { max: 3 },
+  condenser: { at: 3, amount: 16 },
+  pacer: { every: 3, max: 2, floor: 2 },
+  cutout: { back: 1 },
+  magnet: { max: 6 },
+  flyback: { share: 0.5 },
+  shutter: { shut: 2, open: 2 },
+  cistern: { every: 6 },
+  matcher: { amount: 12 },
+  splitter: { at: 0.5 },
+  auditor: { per: 5 / 6, max: 5 },
 };
 const cyc = (n) => `${n} ${n === 1 ? 'cycle' : 'cycles'}`;
 const pct = (x) => `${Math.round(x * 100)}%`;
 const shareOf = (s, x) => Math.max(1, Math.round(defender(s).max * x));
 const mechs = (s, id) => livingParts(s).filter((p) => p.mech === id);
 const has = (s, id) => mechs(s, id).length > 0;
+const sized = (v, n) => Math.max(1, Math.round(n * (v?.power || 1)));
+const pips = (n, of, on = '●', off = '○') => ({ text: on.repeat(Math.max(0, Math.min(n, of))), dim: off.repeat(Math.max(0, of - n)) });
+// A rule's own hit, outside the part's timer: it lands like any attack (your ◆, a shield and Block all count).
+const ruleHit = (s, p, name, amount, o) => strikeWith(s, p, { name, effect: 'damage', amount, interval: 0, noCrit: true, rule: p.mech }, o);
+// What an attack hits for, as its chip says it: its damage, or the hit a special carries.
+const sizeOf = (p, atk = p.attack) => (atk.effect === 'damage' ? attackAmount(p) : atk.hit || 0);
+// A Shutter's armor by the cycle: shut for a few, then open for a few, from cycle 1.
+export const shutAt = (c) => (c - 1) % (MECH.shutter.shut + MECH.shutter.open) < MECH.shutter.shut;
+export const mechShut = (s, p) => p?.mech === 'shutter' && p.armor > 0 && shutAt(s.encounter.cycle);
+// Your keys on cooldown now (key 1 and SIGINT included), as an Auditor counts them.
+const cooling = (s) => Math.min(MECH.auditor.max, usable(s).filter((id) => id !== 'hold' && readyIn(s, id) > 0).length);
+const perKey = (p) => Math.max(1, Math.round(p.attack.amount * MECH.auditor.per));
+const keyName = (s, id) => (id === 'spike' ? spikeName(s) : ABILITIES[id]?.name || id);
+// The cycle a Pacer's next Step comes at the end of, and a Cistern's next Drain lands on.
+const stepAt = (s, p) => (p.stepAt ??= s.encounter.cycle + MECH.pacer.every - 1);
+const drainAt = (s, p) => (p.drainAt ??= s.encounter.cycle + MECH.cistern.every - 1);
+// A Live Wire's pulls on the Snap it is winding up now (they go when that one lands or is cut).
+const pulls = (p) => (p.pullFor === (p.attack?.n || 0) ? p.pulls || 0 : 0);
+// A Dead Man's Hand whose break would land its Payout now: not the last part standing, and no Payout this cycle or last.
+const staked = (s, p) => !!p.attack && !(p.lastLanded >= s.encounter.cycle - 1) && livingParts(s).some((x) => x !== p);
 
 // ---------- the debuffs you carry ----------
 // Every status the virus has on you now, by name: the body's (Encrypted, Scrambled), a landed tell's (Corrupted, Hung,
@@ -117,6 +170,12 @@ export function mechFired(s) {
     if (n) { d.integrity -= n; emit(s, 'server-hit', `Leak: your command costs ${n}.`, { amount: n, atk: 'Leak', leak: true }); }
   }
   if (fired) for (const p of mechs(s, 'countdown')) p.count = (p.count || 0) + 1;
+  // A Matcher: the same key as last cycle sets it off (it lands with the virus's half, mechStart).
+  for (const p of fired ? mechs(s, 'matcher') : []) {
+    if (p.key?.id === e.lastCmd.id && p.key.cycle === e.cycle - 1) { p.matchAt = e.cycle; emit(s, 'status', `The ${p.name} matches ${keyName(s, e.lastCmd.id)}, two cycles running.`, { target: p.id, mech: 'matcher' }); }
+    p.key = { id: e.lastCmd.id, cycle: e.cycle };
+  }
+  pulled(s); // a Magnet takes the ◆ your command stripped
   const v = e.volatile;
   if (v && e.corrupt !== v.ref) {
     e.volatile = null;
@@ -145,7 +204,17 @@ export function exposedCut(s) {
 // A part's attack got through to you (past your ◆, a miss and Null Route): the status it leaves, or what it cashes in.
 export function mechLanded(s, p, atk) {
   const e = s.encounter, c = e.cycle, say = (text) => emit(s, 'blind', `${atk.name} ${text}`, { source: p.id, mech: p.mech });
+  if (atk.rule) return; // a rule's own hit (a Discharge, a Drain, a repeat): no status rides it, and nothing repeats it
+  // A Flyback repeats the biggest hit of the cycle, at its size on the board.
+  for (const f of mechs(s, 'flyback')) if (f !== p && sizeOf(p, atk) > (f.fly?.cycle === c ? f.fly.amount : 0)) f.fly = { cycle: c, amount: sizeOf(p, atk), name: atk.name };
   switch (p.mech) {
+    case 'overreacher': p.softAt = c + 1; return emit(s, 'status', `${atk.name} overreaches. The ${p.name} takes ${pct(MECH.overreacher.more)} more damage next cycle.`, { target: p.id, mech: 'overreacher' });
+    case 'welder': {
+      const t = livingParts(s).filter((x) => x !== p && x.kind !== 'fragment' && x.mech !== 'shutter' && x.armor < (x.maxArmor || 0)).sort((a, b) => a.armor - b.armor)[0];
+      if (!t) return;
+      t.armor += 1; t.patchAt = null;
+      return emit(s, 'patch', `${atk.name} puts 1 ◆ back on the ${t.name} (${t.armor}).`, { target: t.id, from: p.id, mech: 'welder' });
+    }
     case 'exposed': e.exposedHit = true; return say(`leaves you Exposed. Your next incoming hit deals ${pct(MECH.exposed.mult - 1)} more.`);
     case 'lag': e.lagUntil = c + MECH.lag.cycles; return say(`lags you for ${cyc(MECH.lag.cycles)}. Your command lands after the virus acts.`);
     case 'leak': e.leakUntil = c + MECH.leak.cycles; return say(`leaks you for ${cyc(MECH.leak.cycles)}. Each command you fire costs ${shareOf(s, MECH.leak.share)}. Holding is free.`);
@@ -180,12 +249,109 @@ export function mechLanded(s, p, atk) {
     }
   }
 }
+// An attack got through to you, whatever it does (combat.mjs landAttack, its end): a Condenser's charge, for one from
+// another part. Not a fragment's gnaw, nor a rule's own hit.
+export function mechThrough(s, p, atk) {
+  if (atk.rule || p.kind === 'fragment') return;
+  for (const x of mechs(s, 'condenser')) {
+    if (x === p || (x.charge || 0) >= MECH.condenser.at) continue;
+    x.charge = (x.charge || 0) + 1;
+    emit(s, 'status', `The ${x.name} stores a charge from ${atk.name} (${x.charge}/${MECH.condenser.at}).`, { target: x.id, mech: 'condenser' });
+  }
+}
+// After an attack has landed (combat.mjs strike): a full Condenser Discharges at once, and empties. True if the fight ended.
+export function mechStruck(s) {
+  const e = s.encounter;
+  for (const x of e?.virus ? mechs(s, 'condenser').filter((y) => (y.charge || 0) >= MECH.condenser.at) : []) {
+    x.charge = 0;
+    emit(s, 'status', `The ${x.name} is full. It discharges.`, { source: x.id, mech: 'condenser' });
+    if (ruleHit(s, x, 'Discharge', sized(e.virus, MECH.condenser.amount))) return true;
+  }
+  return false;
+}
+// What a part takes from every hit, over its own (combat.mjs damageMultiplier): an Overreacher, the cycle after its Lunge landed.
+export const mechTaken = (s, p) => (p.mech === 'overreacher' && p.softAt === s.encounter.cycle ? 1 + MECH.overreacher.more : 1);
+// An attack's lift now (combat.mjs liftOf, attackAmount): a Magnet's Pull by the ◆ it wears, a Reservoir's Flush by the
+// Integrity it has left, an Auditor's Audit by your keys on cooldown.
+export function mechLift(s) {
+  for (const p of s.encounter.virus.parts) {
+    const a = p.attack;
+    if (!p.mech || !a || a.rule) continue;
+    if (p.mech === 'magnet') a.lift = a.amount * (p.armor - 1);
+    else if (p.mech === 'reservoir') a.lift = Math.round(a.amount * (Math.max(0, p.integrity) / p.max - 1));
+    else if (p.mech === 'auditor') a.lift = perKey(p) * cooling(s);
+  }
+}
+// An attack about to be cut (interrupt.mjs cancel and blastCut, tells.mjs tellSigint): a Cistern holds it, at the size
+// it would have landed (a charge riding it: the charge's).
+export function mechCut(s, p) {
+  const a = p?.attack, pools = a && !a.rule ? mechs(s, 'cistern').filter((x) => x !== p) : [];
+  if (!pools.length) return;
+  const t = (tellsOf(s)?.list || []).find((x) => x.told && x.kind === 'charge' && x.part === p.id && x.n === (a.n || 0));
+  const n = Math.round((t && chargeSize(s, p)?.amount) || sizeOf(p) * mechPower(s, p));
+  if (!(n > 0)) return;
+  for (const x of pools) { x.pool = (x.pool || 0) + n; emit(s, 'status', `The ${x.name} holds the ${a.name} you cut: ${x.pool}.`, { target: x.id, mech: 'cistern' }); }
+}
+// A tick crossed (interrupt.mjs onHit): true when the part's rule takes it (no cut, and no tick wasted). A Cutout trips:
+// every attack on the virus lands later. The timers move as they are, so a delay one already carries stays its one
+// delay (combat.mjs delayAttack).
+export function mechTicked(s, p, crossed) {
+  // A Splitter's 50% tick with nothing due isn't wasted: it splits there (mechHurt).
+  if (p.mech === 'splitter' && !p.split && alive(p) && crossed.length === 1 && crossed[0].at === MECH.splitter.at && !dueOf(s, p).length) return true;
+  if (p.mech !== 'cutout') return false;
+  const n = crossed.length * MECH.cutout.back;
+  for (const x of attackers(s).filter((y) => y.attack.due < 900)) { const a = x.attack, held = delayHeld(x); a.due += n; if (held) a.late.due = a.due; }
+  emit(s, 'cut', `TRIPPED. The ${p.name} crosses ${Math.round(crossed[0].at * 100)}%, and every attack lands ${cyc(n)} later.`, { target: p.id, tick: crossed[0].at, delay: true, mech: 'cutout' });
+  return true;
+}
+// Damage landed on a part (combat.mjs hit, after its ticks): a Splitter taken under half splits in two. Each half has
+// half the Integrity left and half the max (so its bar and the tick it has left stand where they stood), and half the
+// Rend, the second's between the first's.
+export function mechHurt(s, p) {
+  if (p.mech !== 'splitter' || p.split || !alive(p) || p.integrity > p.max * MECH.splitter.at) return;
+  const v = s.encounter.virus, a = p.attack, hp = Math.max(1, Math.ceil(p.integrity / 2));
+  p.split = true; p.max = Math.max(hp, Math.ceil(p.max / 2)); p.integrity = hp;
+  if (a) a.amount = Math.max(1, Math.round(a.amount / 2));
+  const q = { ...p, id: p.id + '2', name: p.name + ' 2', loot: null, ticks: p.ticks?.map((x) => ({ ...x })), brokeOnce: false, strippedBy: null, attack: a ? { ...a, due: a.due >= 900 ? a.due : a.due + Math.max(1, Math.round(a.interval / 2)), n: 0, late: null } : null };
+  v.parts.splice(v.parts.indexOf(p) + 1, 0, q);
+  if (s.research?.[codexKey(v, p)] != null && s.research[codexKey(v, q)] == null) s.research[codexKey(v, q)] = s.research[codexKey(v, p)]; // the same part, known the same
+  emit(s, 'spawn', `The ${p.name} SPLITS under ${pct(MECH.splitter.at)}: two parts at ${hp}/${p.max} Integrity${a ? `, each with a ${a.name} of ${a.amount}` : ''}.`, { source: p.id, target: q.id, mech: 'splitter' });
+}
+// A Magnet: each ◆ stripped from another part since the last look lands on it (the armor every part wore then: seen).
+function pulled(s) {
+  if (!has(s, 'magnet')) return;
+  const live = livingParts(s).filter((x) => x.kind !== 'fragment');
+  const lost = live.filter((x) => x.mech !== 'magnet' && x.mech !== 'shutter' && x.armorSeen > x.armor).reduce((n, x) => n + x.armorSeen - x.armor, 0);
+  for (const x of live) x.armorSeen = x.armor;
+  for (const m of lost ? mechs(s, 'magnet') : []) {
+    const got = Math.min(lost, MECH.magnet.max - m.armor);
+    if (got <= 0) continue;
+    m.armor += got; m.maxArmor = Math.max(m.maxArmor || 0, m.armor); m.patchAt = null; m.armorSeen = m.armor;
+    emit(s, 'patch', `The ${m.name} pulls ${got} ◆ onto itself (${m.armor}).`, { target: m.id, mech: 'magnet' });
+  }
+}
 
 // ---------- your command's hit on a part (combat.mjs hit) ----------
 // Thorns, a Swap passing your statuses on, and the part a Bodyguard shields at the cycle's end.
 export function mechCommandHit(s, p) {
   const e = s.encounter, c = e.cycle;
   e.guardHit = { id: p.id, cycle: c };
+  // A Live Wire: one pull a command, up to its count a wind-up, never onto this cycle.
+  if (p.mech === 'livewire' && p.pullAt !== c && p.attack && p.attack.due < 900) {
+    p.pullAt = c;
+    const a = p.attack, n = pulls(p);
+    if (n < MECH.livewire.max && a.due > c + 1) {
+      const held = delayHeld(p);
+      a.due -= 1; if (held) a.late.due = a.due;
+      p.pullFor = a.n || 0; p.pulls = n + 1;
+      emit(s, 'status', `The ${p.name} twitches: its ${a.name} comes 1 cycle sooner (${p.pulls}/${MECH.livewire.max}).`, { target: p.id, mech: 'livewire' });
+    }
+  }
+  // A Pacer: its count starts over.
+  if (p.mech === 'pacer' && (p.steps || 0) < MECH.pacer.max && stepAt(s, p) !== c + MECH.pacer.every - 1) {
+    p.stepAt = c + MECH.pacer.every - 1;
+    emit(s, 'status', `The ${p.name} loses its count. Its next step is ${cyc(MECH.pacer.every)} away.`, { target: p.id, mech: 'pacer' });
+  }
   if (p.mech === 'thorns' && p.thornAt !== c) {
     p.thornAt = c;
     const n = shareOf(s, MECH.thorns.share), was = e.corrupt?.left > 0 ? e.corrupt : null;
@@ -204,7 +370,25 @@ export function mechCommandHit(s, p) {
 // The start of the virus's half (combat.mjs cycleStart): the Punisher's free attack, the Countdown's big turn. True if
 // the fight ended.
 export function mechStart(s) {
-  const e = s.encounter, over = () => defender(s).integrity <= 0 || !livingParts(s).length;
+  const e = s.encounter, c = e.cycle, over = () => defender(s).integrity <= 0 || !livingParts(s).length;
+  pulled(s); // a Magnet takes the ◆ your burns, helpers and daemons stripped
+  // A Dead Man's Hand broken mid wind-up: its Payout lands first.
+  for (const id of e.payouts?.splice(0) || []) {
+    const p = part(s, id);
+    if (p?.attack && (strikeWith(s, p, { ...p.attack, rule: 'deadhand' }, { dead: true }) || over())) return true;
+  }
+  // A Flyback's repeat of last cycle's biggest hit, a Matcher's hit, a Cistern's Drain.
+  for (const p of mechs(s, 'flyback').filter((x) => x.fly?.cycle === c - 1)) {
+    const f = p.fly; p.fly = null;
+    emit(s, 'status', `The ${p.name} repeats ${f.name} at half.`, { source: p.id, mech: 'flyback' });
+    if (ruleHit(s, p, f.name, Math.max(1, Math.round(f.amount * MECH.flyback.share))) || over()) return true;
+  }
+  for (const p of mechs(s, 'matcher').filter((x) => x.matchAt === c)) if (ruleHit(s, p, 'Match', sized(e.virus, MECH.matcher.amount)) || over()) return true;
+  for (const p of mechs(s, 'cistern').filter((x) => c >= drainAt(s, x))) {
+    const n = p.pool || 0;
+    p.pool = 0; p.drainAt = c + MECH.cistern.every;
+    if (n && (ruleHit(s, p, 'Drain', n) || over())) return true;
+  }
   if (e.missedAt === e.cycle) for (const p of mechs(s, 'punisher').filter((x) => x.attack)) {
     emit(s, 'status', `The ${p.name} punishes the command you lost: a free ${p.attack.name}.`, { source: p.id, mech: 'punisher' });
     if (strikeWith(s, p, { ...p.attack, free: true }) || over()) return true;
@@ -220,6 +404,15 @@ export function mechStart(s) {
 // The end of the cycle (combat.mjs cycleClose): what each part does with what you carry, and its turn.
 export function mechClose(s) {
   const e = s.encounter, c = e.cycle, debuffs = youDebuffs(s);
+  // A Pacer's Step: every other attack repeats a cycle faster (what's on the timeline stays where it is).
+  for (const p of mechs(s, 'pacer').filter((x) => (x.steps || 0) < MECH.pacer.max && c >= stepAt(s, x))) {
+    p.steps = (p.steps || 0) + 1; p.stepAt = c + MECH.pacer.every;
+    for (const x of attackers(s)) if (x !== p && x.attack.interval > MECH.pacer.floor) { x.attack.interval -= 1; x.attack.paced = (x.attack.paced || 0) + 1; }
+    emit(s, 'phase', `STEP. The ${p.name} sets the pace: every attack repeats 1 cycle faster (tempo ▲${p.steps}).`, { source: p.id, mech: 'pacer' });
+  }
+  // A Shutter's armor for the next cycle, and the armor a Magnet reads strips against.
+  for (const p of mechs(s, 'shutter')) { p.armor = shutAt(c + 1) ? p.maxArmor : 0; p.patchAt = null; }
+  if (has(s, 'magnet')) for (const p of livingParts(s)) p.armorSeen = p.armor;
   for (const p of mechs(s, 'predator')) {
     const was = p.hunting;
     p.hunting = e.encrypt > 0 || e.corrupt?.left > 0;
@@ -263,6 +456,17 @@ export function mechClose(s) {
 // A part you broke (combat.mjs breakPart): Vendetta's stack while a Vendetta stands.
 export function mechBroke(s, p) {
   const e = s.encounter;
+  // A Dead Man's Hand: the Payout it was winding up lands at once (mechStart, with the virus's half).
+  if (p.mech === 'deadhand' && staked(s, p)) {
+    (e.payouts ||= []).push(p.id);
+    emit(s, 'status', `The ${p.name} breaks mid wind-up. Its ${p.attack.name} lands at once.`, { source: p.id, mech: 'deadhand' });
+  }
+  // A Pacer: the tempo goes with it.
+  if (p.mech === 'pacer' && !has(s, 'pacer')) {
+    const back = attackers(s).filter((x) => x.attack.paced);
+    for (const x of back) { x.attack.interval += x.attack.paced; x.attack.paced = 0; }
+    if (back.length) emit(s, 'status', `The ${p.name} breaks, and every attack returns to its own pace.`, { target: p.id, mech: 'pacer' });
+  }
   if (p.kind === 'fragment' || p.mech === 'vendetta' || !has(s, 'vendetta')) return;
   e.virus.vendetta = (e.virus.vendetta || 0) + 1;
   emit(s, 'status', `Vendetta: the rest of the virus hits ${pct(MECH.vendetta.more * e.virus.vendetta)} harder for the fight.`, { mech: 'vendetta' });
@@ -281,10 +485,29 @@ function spawnFragment(s, p) {
 // ---------- the board ----------
 // What a part does, its answer and its cue under its name (fightread.mjs readOf): [does, answer, cue]. `atk` is its
 // attack's own line ("Deals 4 damage to you every 3 cycles.").
-export function mechRead(s, p, atk = '') {
+export function mechRead(s, p, atk = '', v = null) {
   const e = s?.encounter, live = !!e?.virus?.parts?.includes(p), a = atk ? `${atk} ` : '';
   const cue = (text, icon) => ({ text, icon, link: null });
+  const hit = (n) => (s ? blocked(s, n) : n), at = p.attack, name = at?.name || 'attack', each = at ? `every ${cyc(at.interval)}` : '', pw = live ? e.virus : v;
+  if (live) mechLift(s);
   switch (p.mech) {
+    // Parts 1: their marks are tags and chips (mechTags, mechChips), so they carry no cue.
+    case 'overreacher': return [`${a}For 1 cycle after its ${name} lands, it takes ${pct(MECH.overreacher.more)} more damage.`, `Cut the ${name}, or hit it the cycle after.`, null];
+    case 'livewire': return [`${a}Each command that hits it brings its next ${name} 1 cycle sooner, up to ${MECH.livewire.max}.`, 'Leave it until a few hits can finish it.', null];
+    case 'condenser': return [`Has no attack of its own. Each attack that lands on you stores a charge. At ${MECH.condenser.at} it deals ${hit(sized(pw, MECH.condenser.amount))} damage to you and empties.`, 'Cut the attack that would fill it, or break it.', null];
+    case 'pacer': return [`Has no attack of its own. Every ${cyc(MECH.pacer.every)}, every attack repeats 1 cycle faster, up to ${MECH.pacer.max}. A command that hits the ${p.name} starts its count over.`, 'Hit it before each step, or break it.', null];
+    case 'cutout': { const n = live && p.ticks ? p.ticks.filter((x) => !x.spent).length : TICKS.at.length; return [`Has no attack of its own. Taking it across a tick pushes every attack back ${cyc(MECH.cutout.back)}. It has ${n} ${n === 1 ? 'tick' : 'ticks'}${n < TICKS.at.length ? ' left' : ''}.`, 'Cross a tick when a big attack is due.', null]; }
+    case 'magnet': return [`Deals ${hit(at.amount)} damage to you for each ◆ it wears, ${each}${live ? `, ${hit(attackAmount(p))} now` : ''}. Each ◆ you strip from another part lands on the ${p.name}, up to ${MECH.magnet.max}.`, `Strip the ${p.name} before its ${name} lands.`, null];
+    case 'deadhand': return [`${a}When it breaks, the ${name} it is winding up lands at once, unless one landed this cycle or the last.`, `Break it the cycle after its ${name} lands.`, null];
+    case 'reservoir': return [`Deals up to ${hit(at.amount)} damage to you ${each}, less by the share of Integrity it has lost${live ? `, ${hit(attackAmount(p))} now` : ''}.`, `Damage it before each ${name}.`, null];
+    case 'flyback': return [`Has no attack of its own. The cycle after an attack lands on you, the ${p.name} repeats it at half.`, `Cut the attack it would repeat, or break the ${p.name}.`, null];
+    case 'shutter': return [`${a}Its armor shuts for ${cyc(MECH.shutter.shut)}, then opens for ${MECH.shutter.open}, in turn. Shut, its ◆ cannot be stripped.`, 'Save your big hits for the cycles it is open.', null];
+    case 'cistern': return [`Has no attack of its own. Each attack you cut is held in the ${p.name}. Every ${cyc(MECH.cistern.every)} it deals all it holds to you, and empties.`, 'Break it before it drains, or let small attacks land.', null];
+    case 'welder': return [`${atk.replace(/\.$/, '')}, and puts 1 ◆ back on the part that wears the least.`, `Cut the ${name}, or break the ${p.name} before you strip.`, null];
+    case 'matcher': return [`Has no timed attack. When you fire the same key two cycles running, it deals ${hit(sized(pw, MECH.matcher.amount))} damage to you at once.`, 'Change keys every cycle while it stands.', null];
+    case 'splitter': return p.split ? [`${a}It has split, and its other half attacks on alternate cycles.`, 'Break one half, then the other.', null]
+      : [`${a}Taken under ${pct(MECH.splitter.at)}, it splits into two parts that each deal ${hit(Math.max(1, Math.round(attackAmount(p) / 2)))}, on alternate cycles.`, 'Split it when two small hits suit you better.', null];
+    case 'auditor': return [`Deals ${hit(at.amount)} damage to you ${each}, and ${hit(perKey(p))} more for each of your keys on cooldown when it lands${live ? `, ${hit(attackAmount(p))} now` : ''}.`, `Fire your long cooldowns just after its ${name} lands.`, null];
     case 'exposed': return [`${a}When its ${p.attack?.name || 'attack'} lands, you are Exposed. Your next incoming hit deals ${pct(MECH.exposed.mult - 1)} more.`, 'Take the next hit on a ◆ or a shield.', cue('exposes you', 'spike')];
     case 'lag': return [`${a}When it lands, you lag for ${cyc(MECH.lag.cycles)}. Your command lands after the virus acts, so it can't cut an attack due then.`, 'Cut and race before it lands.', cue('lags you', 'clock')];
     case 'leak': return [`${a}When it lands, you leak for ${cyc(MECH.leak.cycles)}. Every command you fire costs ${pct(MECH.leak.share)} of your max health. Holding is free.`, 'Hold, or fire only what counts.', cue('leaks you', 'burn')];
@@ -308,6 +531,90 @@ export function mechRead(s, p, atk = '') {
   }
   return [atk || 'Has no attack of its own.', '', null];
 }
+// Parts 1 on the board (view.mjs). A part's tags under its name: { text, dim (dimmed pips), tail, hot (red: a threat), tip }.
+export function mechTags(s, p) {
+  const e = s.encounter, c = e.cycle, out = [], hit = (n) => blocked(s, n);
+  const tag = (text, tip, o = {}) => out.push({ text, dim: '', tail: '', hot: false, tip, ...o });
+  if (!alive(p)) return out;
+  mechLift(s);
+  switch (p.mech) {
+    case 'overreacher': if (p.softAt === c) tag(`soft +${pct(MECH.overreacher.more)}`, `Soft: its ${p.attack?.name || 'attack'} landed last cycle. It takes ${pct(MECH.overreacher.more)} more damage this cycle.`); break;
+    case 'livewire': tag('', `Pulled ${pulls(p)} of ${MECH.livewire.max}. Each command that hits it brings its next ${p.attack?.name || 'attack'} 1 cycle sooner. The count clears when it lands.`, { ...pips(pulls(p), MECH.livewire.max, '▲', '△'), tail: ' sooner', hot: true }); break;
+    case 'condenser': tag('', `Charge ${p.charge || 0} of ${MECH.condenser.at}. Each attack that lands on you stores one. Full, it deals ${hit(sized(e.virus, MECH.condenser.amount))} damage to you at once.`, { ...pips(p.charge || 0, MECH.condenser.at), tail: ' charge' }); break;
+    case 'pacer': {
+      if (p.steps) tag(`tempo ▲${p.steps}`, `Tempo: every other attack repeats ${cyc(p.steps)} faster while the ${p.name} stands.`, { hot: true });
+      if ((p.steps || 0) < MECH.pacer.max) { const left = Math.max(0, stepAt(s, p) - c); tag('', `Its next step comes ${left ? `in ${cyc(left)}` : 'at the end of this cycle'}. A command that hits it starts the count over.`, pips(MECH.pacer.every - left, MECH.pacer.every)); }
+      break;
+    }
+    case 'cutout': { const n = p.ticks ? p.ticks.filter((x) => !x.spent).length : TICKS.at.length; if (n) tag(`${n} ${n === 1 ? 'trip' : 'trips'}`, `Trips left: each tick it crosses pushes every attack back ${cyc(MECH.cutout.back)}.`); break; }
+    case 'magnet': if (p.attack) tag(`−${hit(p.attack.amount)} a ◆`, `Its ${p.attack.name} deals ${hit(p.attack.amount)} damage for each ◆ it wears, ${hit(attackAmount(p))} now. It holds up to ${MECH.magnet.max}.`, { hot: true }); break;
+    case 'deadhand': if (staked(s, p)) tag(`on break −${hit(attackAmount(p))}`, `Broken now, its ${p.attack.name} lands at once for ${hit(attackAmount(p))}.`, { hot: true }); break;
+    case 'cistern': {
+      if (p.pool) tag(`holds ${hit(p.pool)}`, `Holds ${hit(p.pool)} damage from the attacks you cut. Its Drain deals all of it to you.`, { hot: true });
+      const left = Math.max(0, drainAt(s, p) - c);
+      tag('', `Its Drain comes ${left ? `in ${cyc(left)}` : 'this cycle'}.`, pips(MECH.cistern.every - left, MECH.cistern.every));
+      break;
+    }
+    case 'matcher': if (p.key?.cycle === c - 1 || p.key?.cycle === c) tag(`last key: ${keyName(s, p.key.id)}`, `Your last key. Fired again ${p.key.cycle === c ? 'next' : 'this'} cycle, it sets the ${p.name} off.`); break;
+    case 'splitter': if (!p.split) tag(`splits at ${pct(MECH.splitter.at)}`, `Taken under ${pct(MECH.splitter.at)}, it splits into two parts.`); break;
+    case 'auditor': { const n = cooling(s); if (n) tag(`${n} ${n === 1 ? 'key' : 'keys'} cooling`, `${n} of your keys ${n === 1 ? 'is' : 'are'} on cooldown. Each adds ${hit(perKey(p))} to its ${p.attack?.name || 'attack'}.`, { hot: true }); break; }
+  }
+  return out;
+}
+// Their chips on the timeline, beside what intents() lists (`list`: the board's attack chips, sizes after your Block):
+// { source, col, cls, name, text, icon, tip }. cls: soft (dashed amber, yours to use), cond (dashed red, a hit that
+// comes if), hotchip (red), steelchip (armor), trip (dashed teal, what your queued command would do), ghost.
+export function mechChips(s, columns = 4, list = []) {
+  const e = s.encounter, c = e.cycle, out = [], hit = (n) => blocked(s, n);
+  const add = (p, col, cls, name, text, tip, icon = null) => { if (col >= 0 && col < columns) out.push({ source: p.id, col, cls, name, text, icon, tip }); };
+  const lands = list.filter((i) => !i.hidden && (!i.tell || i.tell === 'charge'));
+  const hurts = (i) => i.effect === 'damage' || i.hit, num = (i) => (i.effect === 'damage' ? i.amount : i.hit);
+  const when = (col) => (col === 0 ? 'this cycle' : col === 1 ? 'next cycle' : `in ${col} cycles`);
+  for (const p of livingParts(s)) {
+    switch (p.mech) {
+      case 'overreacher': {
+        const tip = `Soft: the cycle after its ${p.attack?.name || 'attack'} lands, it takes ${pct(MECH.overreacher.more)} more damage from everyone. A cut one leaves no soft cycle.`;
+        if (p.softAt === c) add(p, 0, 'soft', 'Soft', `+${pct(MECH.overreacher.more)}`, tip);
+        for (const i of lands.filter((x) => x.source === p.id && hurts(x))) add(p, i.col + 1, 'soft', 'Soft', `+${pct(MECH.overreacher.more)}`, tip);
+        break;
+      }
+      case 'livewire': if (pulls(p) && p.attack) add(p, p.attack.due + pulls(p) - c, 'ghost', p.attack.name, '', `Where its ${p.attack.name} stood before you pulled it ${cyc(pulls(p))} sooner.`); break;
+      case 'condenser': {
+        const next = lands.find((i) => i.source !== p.id && i.kind !== 'fragment' && ['damage', 'encrypt', 'scramble', 'replicate'].includes(i.effect));
+        const n = hit(sized(e.virus, MECH.condenser.amount));
+        if ((p.charge || 0) === MECH.condenser.at - 1 && next) add(p, next.col, 'hotchip', 'Discharge', `−${n}`, `Discharge: if ${next.name} lands ${when(next.col)}, the ${p.name} is full and deals ${n} damage to you at once.`, 'event-warning');
+        break;
+      }
+      case 'pacer': if ((p.steps || 0) < MECH.pacer.max) { const col = Math.max(0, stepAt(s, p) - c); add(p, col, 'hotchip', 'Step', 'all ▲1', `Step: at the end of ${col === 0 ? 'this cycle' : `cycle ${c + col}`}, every other attack repeats 1 cycle faster. A command that hits the ${p.name} starts its count over.`, 'server'); } break;
+      case 'cutout': if (e.queue?.target === p.id && crossBy(s, e.queue.ability, p)) add(p, 0, 'trip', 'trip', `▸ all +${MECH.cutout.back}`, `Your command takes the ${p.name} across a tick: every attack lands ${cyc(MECH.cutout.back)} later.`); break;
+      case 'flyback': {
+        const tip = (name, n, col) => `${name}: if it lands, the ${p.name} repeats it ${when(col)} for ${n}.`;
+        if (p.fly?.cycle === c - 1) { const n = hit(Math.max(1, Math.round(p.fly.amount * MECH.flyback.share))); add(p, 0, 'cond', p.fly.name, `−${n}`, `${p.fly.name}: the ${p.name} repeats last cycle's hit this cycle for ${n}.`, 'server'); }
+        for (let col = 0; col + 1 < columns; col++) {
+          const big = lands.filter((i) => i.col === col && i.source !== p.id && hurts(i) && num(i) > 0).sort((x, y) => num(y) - num(x))[0];
+          if (big) { const n = Math.max(1, Math.round(num(big) * MECH.flyback.share)); add(p, col + 1, 'cond', big.plain || big.name, `−${n}`, tip(big.plain || big.name, n, col + 1), 'server'); }
+        }
+        break;
+      }
+      case 'shutter': for (let col = 0; col < columns; col++) {
+        if (shutAt(c + col)) add(p, col, 'steelchip', 'Shut', '◆'.repeat(p.maxArmor || 0), `Shut: it wears its ◆, and nothing strips them. Hits that go through armor still land.`);
+        else add(p, col, 'soft', 'Open', '0 ◆', 'Open: it wears no ◆.');
+      } break;
+      case 'cistern': if (p.pool) { const col = Math.max(0, drainAt(s, p) - c), n = hit(p.pool); add(p, col, 'hotchip', 'Drain', `−${n}`, `Drain: deals the ${n} it holds to you ${when(col)}, and empties.`, 'event-warning'); } break;
+      case 'matcher': if (p.key?.cycle === c - 1) { const n = hit(sized(e.virus, MECH.matcher.amount)), k = keyName(s, p.key.id); add(p, 0, 'cond', k, `▸ −${n}`, `${k}: fired again this cycle, the ${p.name} deals ${n} damage to you.`, 'event-warning'); } break;
+      case 'splitter': {
+        const q = e.queue?.target === p.id && !p.split && !(p.armor > 0) ? previewDamage(s, e.queue.ability, p) : 0;
+        if (q > 0 && q < p.integrity && p.integrity - q <= p.max * MECH.splitter.at) { const n = hit(Math.max(1, Math.round(attackAmount(p) / 2))); add(p, 0, 'trip', 'split', `▸ 2 × −${n}`, `Your command takes the ${p.name} under ${pct(MECH.splitter.at)}: it splits into two parts that each deal ${n}.`); }
+        break;
+      }
+    }
+  }
+  return out;
+}
+// A mark on a part's own attack chip (combat.mjs intents): a Welder's Weld is steel, and says the ◆ it puts back.
+export const mechMark = (p) => (p.mech === 'welder' ? { cls: 'steelchip', tail: ' · +1 ◆' } : {});
+// A class on one of its bar's ticks (view.mjs ticksMarkup): a Cutout's are amber (yours to use), a Splitter's 50% red until it splits.
+export const mechTick = (p, t) => (p.mech === 'cutout' ? ' sw' : p.mech === 'splitter' && !p.split && t.at === MECH.splitter.at ? ' split' : '');
 // The statuses on you, for the board's strip (view.mjs statusSpans): { name, until, title, value }.
 export function youMarks(s) {
   const e = s.encounter, c = e.cycle, out = [];

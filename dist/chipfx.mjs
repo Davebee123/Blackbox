@@ -19,6 +19,10 @@ export const CHIP_THEMES = {
   'Front End': 'plate', Bodyguard: 'plate', Mutex: 'plate', Lockbox: 'plate', Limiter: 'plate',
   Buffer: 'ledger', Cooler: 'ledger', Damper: 'ledger',
   Turncoat: 'mask', Backtrace: 'mask', 'C&C': 'mask',
+  // Parts 1 (mechanics.mjs)
+  Overreacher: 'zap', 'Live Wire': 'zap', Condenser: 'zap', Welder: 'heat', Pacer: 'clock', Cutout: 'crumble',
+  Magnet: 'plate', Shutter: 'plate', "Dead Man's Hand": 'ledger', Reservoir: 'ledger', Cistern: 'ledger', Auditor: 'scan',
+  Flyback: 'copy', Matcher: 'copy', Splitter: 'copy',
 };
 export const chipTheme = (name) => CHIP_THEMES[String(name || '').replace(/\.exe$/i, '').trim()] || null;
 // How hard a chip plays, by its column (0 is Now) and the ms left in the cycle: [intensity, opacity].

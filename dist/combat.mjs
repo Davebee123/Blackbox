@@ -31,7 +31,7 @@ import { prepareTicks, onHit as tickHit, blastCut, BOSS_RULES, TICKS } from './i
 import { actsStart, lashHit, lashLand, actIntents, actBegins, actCap } from './acts.mjs';
 import { runLate, TELL, TELLS, ROOM_FAMILIES, DAMPER_KINDS, floorFor, line, lift, own } from './data.mjs';
 import { holdsPart, objectiveBroke, objectiveCycle, objectiveBonus, bonusXp, bonusRolls, backupHit } from './objectives.mjs';
-import { mechValidate, mechIntercept, mechFired, mechPower, exposedCut, mechLanded, mechCommandHit, mechStart, mechClose, mechBroke, lagged, stunnedNow, missedTurn } from './mechanics.mjs';
+import { mechValidate, mechIntercept, mechFired, mechPower, exposedCut, mechLanded, mechCommandHit, mechStart, mechClose, mechBroke, lagged, stunnedNow, missedTurn, mechThrough, mechStruck, mechTaken, mechLift, mechHurt, mechShut, mechMark } from './mechanics.mjs';
 import { tickRoot, processWon } from './root.mjs';
 import { firewallCommand, wear, raidShare, hardenRestore } from './firewall.mjs';
 import { tiersRestore, LEGACY_TREES } from './talents.mjs';
@@ -319,6 +319,7 @@ export function damageMultiplier(s, p, opts = {}) {
   if (on(s, p, 'open')) m *= TELL.open.mult; // a tell read: the part is open (tells.mjs)
   m *= overclockMult(s); // an Overclock that landed: every part takes double (tells.mjs, breaches only)
   if (p.loud) m *= CONFIG.tripwire.taken; // a Tripwire tripped: the loud parts take more from everything (loud both ways)
+  if (p.mech) m *= mechTaken(s, p); // an Overreacher, the cycle after its Lunge landed (mechanics.mjs)
   if (e.virus.weakKnown && e.virus.weakPoint === p.id) m *= CONFIG.weakMultiplier;
   m *= leanDealt(e, p); // the server's leaning: Venting, Wind-up (leanings.mjs)
   if (opts.mine) {
@@ -2809,6 +2810,12 @@ export function hit(s, p, base, opts = {}) {
     const seen = (fxState(e).touched ||= {});
     if (!seen[p.id]) { seen[p.id] = true; if (p.armor > 0 && !opts.pierce) opts = { ...opts, pierce: true }; }
   }
+  // A Shutter, shut (mechanics.mjs): nothing strips its ◆. A hit that doesn't go through armor is absorbed and breaks
+  // none; Sudo's still goes through.
+  if (p.armor > 0 && !opts.pierce && mechShut(s, p)) {
+    if (opts.mine && !opts.server && !opts.dot && buffed(e, 'sudo') && classOf(s) === 'breaker') opts = { ...opts, pierce: true };
+    else { emit(s, 'armor', `${opts.by ? opts.by + ': ' : ''}absorbed by the ${p.name}. It is shut, and its ◆ hold.`, { target: p.id, left: p.armor, absorbed: true, broke: 0 }); return { dealt: 0, overflow: 0, absorbed: true }; }
+  }
   // Armor chits: a hit on an armored part does no damage and breaks one chit.
   // Burn ticks, helpers and every target of a spread hit count, one chit each.
   // Sudo (Overclocker): your hits go through ◆, and each still breaks one on the way.
@@ -2947,6 +2954,7 @@ export function hit(s, p, base, opts = {}) {
   // board without breaking. Then the interrupt's ticks (interrupt.mjs), in every fight that has them.
   if (bodyRules(e) && dealt > 0 && hooks.roomHit && hooks.roomHit(s, p, p.integrity + dealt, dealt, opts) === 'gone') return { dealt, overflow: 0, crit, broke: false };
   if (e.ticked && dealt > 0) tickHit(s, p, p.integrity + dealt, dealt, opts);
+  if (p.mech && dealt > 0) mechHurt(s, p); // a Splitter taken under half splits (mechanics.mjs)
   // Extortion: damage dealt to a winding-up Demand in the 2 cycles before it lands calls it off.
   const w = p.attack?.windup;
   if (w && dealt > 0 && p.integrity > 0 && p.attack.due - e.cycle <= 2) {
@@ -3552,7 +3560,7 @@ function useAbility(s, intent, auto = false) {
   }
   if (id === 'null-route') { e.nullRoute = 1; e.nextCrit = true; emit(s, 'status', 'Null-routed. The next attack misses you, and your next skill is a critical strike.', { mark: 'buff', ability: id }); }
   if (id === 'crack') {
-    const n = Math.min(a.strip + (hasTalent(s, 'pressure-test') ? 1 : 0), target.armor); // Pressure Test: 4
+    const n = mechShut(s, target) ? 0 : Math.min(a.strip + (hasTalent(s, 'pressure-test') ? 1 : 0), target.armor); // Pressure Test: 4 (a Shutter, shut: none)
     target.armor -= n;
     if (n) classEach('chipped', s, target, n, { mine: true });
     if (!target.armor) stripMark(s, target);
@@ -3780,6 +3788,7 @@ export function liftOf(s) {
   const frags = livingParts(s).filter((x) => x.kind === 'fragment').length;
   const liens = (e.virus.liens || 0) * (e.virus.interest || 1); // REPO MAN's Ledger: its Collection grows by each Lien
   for (const p of livingParts(s)) if (p.attack && (p.cipher || p.fanin || p.lien)) p.attack.lift = Math.round(p.attack.amount * ((p.cipher || 0) * stacks + (p.fanin || 0) * frags + (p.lien || 0) * liens));
+  mechLift(s); // a Magnet's Pull, a Reservoir's Flush, an Auditor's Audit (mechanics.mjs)
 }
 // The cycles a part's attack lands on, from now until `until` (exclusive): its timer, then its interval; a volley
 // (taps: a Repeater, a Prism) on back to back cycles, its next volley an interval after the first.
@@ -3936,7 +3945,7 @@ function landAttack(s, p) {
     const dealt = takeDamage(s, absorbed(s, hitCapped(s, Math.round(hitPower * sap * (crit ? CRIT.multiplier : 1) * cut * took * (e.virus.raid ? raidTaken(s) : 1))), atk, p), p.id, atk.name);
     struckFx(s, atk);
     if (dealt) { classEach('struck', s, atk, dealt, p); fireEvent(s, 'struck', { atk, dealt, part: p }); }
-    if (p.mech) mechLanded(s, p, atk); // the status it leaves on you, or what it cashes in (mechanics.mjs)
+    mechLanded(s, p, atk); // the status it leaves on you, or what it cashes in; a Flyback's repeat of it (mechanics.mjs)
     if (p.scrape && (e.shield > 0 || timedBuffs(s).length)) scrapeYou(s, p, atk, { shield: e.shield, buffs: timedBuffs(s) });
     // Bad Block: your next heals lose up to its share of your max (a fresh pool each time it lands, not a bigger one).
     if (p.badblock) {
@@ -4010,6 +4019,7 @@ function landAttack(s, p) {
       emit(s, 'spawn', `Fragment ${n} spawns with ${hp} Integrity. It gnaws ${amount} every cycle.`, { source: p.id, target: 'frag' + n });
     }
   }
+  mechThrough(s, p, atk); // an attack that got through, whatever it does: a Condenser's charge (mechanics.mjs)
   if (bodyRules(e)) hooks.roomLanded?.(s, p, atk); // a room body's attack that got through (families.mjs: a Wiper's Wipe)
 }
 
@@ -4370,10 +4380,10 @@ const dueNow = (s) => {
   for (const p of attackers(s)) if (p.attack.alone && live > 1 && p.attack.due <= s.encounter.cycle) p.attack.due = s.encounter.cycle + 1;
   return attackers(s).sort((a, b) => a.attack.due - b.attack.due).filter((p) => p.attack.due <= s.encounter.cycle && !chargeNow(s, p)); // a charge takes the place of its part's attack (tells.mjs)
 };
-// One part's attack lands. True if the fight ended.
-function strike(s, p) {
+// One part's attack lands. True if the fight ended. dead: a broken part's last one (a Dead Man's Hand, mechanics.mjs).
+function strike(s, p, dead = false) {
   const e = s.encounter;
-  if (!alive(p) || !p.attack || p.attack.due > e.cycle) return false;
+  if ((!alive(p) && !dead) || !p.attack || p.attack.due > e.cycle) return false;
   // Co-op: a damage attack lands on everyone in the fight, each taking it in full (crew.mjs),
   // unless someone is drawing fire (Bastion Firewall): then it all goes at them.
   const crew = p.attack.effect === 'damage' ? hooks.crewAll?.(s) || [] : [];
@@ -4390,14 +4400,14 @@ function strike(s, p) {
   hooks.crewHurt?.(s);
   if (defender(s).integrity <= 0) { finish(s, 'crashed'); return true; }
   if (virusIntegrity(s).current === 0) { finish(s, 'victory'); return true; }
-  return false;
+  return mechStruck(s); // a Condenser it filled Discharges at once (mechanics.mjs)
 }
 // A part strikes with an attack that isn't its own (a tell, tells.mjs): the same landing, to the same players,
 // its own timer untouched. True if the fight ended.
-export function strikeWith(s, p, atk) {
+export function strikeWith(s, p, atk, { dead = false } = {}) {
   const real = p.attack;
   p.attack = { ...atk, due: s.encounter.cycle };
-  try { return strike(s, p); } finally { p.attack = real; }
+  try { return strike(s, p, dead); } finally { p.attack = real; }
 }
 // A ◆ that fades after its cycles if you still hold it (Bitrot Ward: when a break leaves one part). cycleFx takes it away.
 function fadingChit(s, x) {
@@ -4603,7 +4613,7 @@ function syncBonus(s, intent) {
   if (!b) return;
   const t = intent?.target && part(s, intent.target);
   let what = '';
-  if (cls === 'breaker' && alive(t) && t.armor > 0) {
+  if (cls === 'breaker' && alive(t) && t.armor > 0 && !mechShut(s, t)) {
     t.armor--; t.lastDamaged = e.cycle;
     if (!t.armor) t.patchAt = e.cycle + patchDelay(s);
     emit(s, 'armor', `Sync breaks 1 ◆ on the ${t.name}${t.armor ? ` (${t.armor} left)` : '. Its armor is broken'}.`, { target: t.id, left: t.armor });
@@ -4675,7 +4685,7 @@ export function intents(s, columns = 4) {
       const col = due - e.cycle;
       if (a.grow) a.bonus = (bonus0 || 0) + a.grow * Math.max(0, col);
       const tap = p.taps ? { tap: ((a.tap || 0) + k) % p.taps + 1, taps: p.taps } : {}; // which hit of its volley
-      if (col >= 0 && !charged.has(`${p.id}@${col}`)) out.push({ source: p.id, name: a.name, effect: a.effect, amount: Math.round(attackAmount(p) * c2Gnaw(s, p) * (boosted ? CONFIG.reactiveBonus : 1) * mechPower(s, p, false, k > 0)), ...(a.hit ? { hit: Math.round(a.hit * (boosted ? CONFIG.reactiveBonus : 1)) } : {}), col, hidden, kind: p.kind, ...tap, ...(p.backlog ? { syn: true } : {}), ...(p.scrape ? { scrape: true } : {}), ...(p.badblock ? { bad: true } : {}), ...(due === a.due && delayHeld(p) ? { held: true } : {}) }); // held: already delayed, it lands there
+      if (col >= 0 && !charged.has(`${p.id}@${col}`)) out.push({ source: p.id, name: a.name, effect: a.effect, amount: Math.round(attackAmount(p) * c2Gnaw(s, p) * (boosted ? CONFIG.reactiveBonus : 1) * mechPower(s, p, false, k > 0)), ...(a.hit ? { hit: Math.round(a.hit * (boosted ? CONFIG.reactiveBonus : 1)) } : {}), col, hidden, kind: p.kind, ...tap, ...(p.backlog ? { syn: true } : {}), ...(p.scrape ? { scrape: true } : {}), ...(p.badblock ? { bad: true } : {}), ...(due === a.due && delayHeld(p) ? { held: true } : {}), ...(p.mech ? mechMark(p) : {}) }); // held: already delayed, it lands there
       if (a.ramp) a.step = (a.step || 0) + 1;
       boosted = false;
     });

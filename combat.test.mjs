@@ -317,7 +317,7 @@ test('every enemy is a basic attacker and a signature part (a family adds a thir
     assert.ok(basics.every((p) => p.from >= 1 && !p.special), f.name);
     assert.ok(!FAMILIES[f.name.toLowerCase()] || third.length >= 2, f.name + ' has a pool of third parts');
     assert.equal(f.parts.filter((p) => p.special).length, 1, f.name);
-    assert.ok(f.parts.every((p) => p.armor >= 0 && p.armor <= (f.ice ? 3 : 2) && (p.attack || p.rearm || changes(p))), f.name); // ICE may wear more, and a part may work passively
+    assert.ok(f.parts.every((p) => p.armor >= 0 && p.armor <= (f.ice || p.flatArmor ? 3 : 2) && (p.attack || p.rearm || changes(p))), f.name); // ICE may wear more, and a part may work passively (flatArmor: Parts 1's ◆ are as written, where a 2 scales to 3)
     assert.ok(!f.armor, f.name + ' has no separate armor part');
   }
 });

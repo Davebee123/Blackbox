@@ -268,6 +268,9 @@
 .part-bar .ptick.spent { background: var(--bg); box-shadow: inset 0 0 0 1px var(--gray), 0 0 0 1px var(--bg); }
 .part-bar .ptick.phase { background: var(--hot); }
 .part-bar .ptick.phase.spent { background: var(--bg); box-shadow: inset 0 0 0 1px var(--hot), 0 0 0 1px var(--bg); }
+/* Parts 1 (mechanics.mjs mechTick): a Cutout's ticks are yours to use (amber), a Splitter's 50% tick splits it (red). */
+.part-bar .ptick.sw:not(.spent) { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+.part-bar .ptick.split:not(.spent) { background: var(--hot); box-shadow: 0 0 6px var(--hot); }
 .intent.cut { border-color: var(--you); color: var(--you); background: rgba(127, 209, 199, 0.08); }
 .intent.cut b { font: 600 11px var(--mono); color: var(--you); }
 .intent.cut.none, .intent.cut.none b { color: var(--gray); border-color: var(--line); background: transparent; }

@@ -142,10 +142,12 @@ export const PROBES = {
   recyclebin: probe(19, fam('wiper'), 'recyclebin', { genes: ['recyclebin'] }),
 };
 // The mechanics list (docs/mechanics-list.md): one level and one seed each (CLAUDE.md "Lean first"), the check that a
-// component works and isn't absurd, not its tuning. The designer's play tunes them.
+// component works and isn't absurd, not its tuning. The designer's play tunes them. Parts 1 (unlisted: built, rolling
+// nowhere) have no probe until one rolls: their numbers are the designer's mocks', and the bots don't know them
+// (docs/mechanics-list.md "Parts 1" has their one-seed check).
 for (const [id, g] of Object.entries(GENES)) {
   const [family, spec] = Object.entries(g.parts || {})[0] || [];
-  if (spec?.mech) PROBES[id] = { ...probe(g.opens, fam(family), id, { genes: [id] }), levels: [18], seeds: [1] };
+  if (spec?.mech && !spec.unlisted) PROBES[id] = { ...probe(g.opens, fam(family), id, { genes: [id] }), levels: [18], seeds: [1] };
 }
 // The named builds: each strain against its family's body. Keylogger's two genes share one probe. A mechanics strain's
 // genes have their own probes as parts, so it goes under its own name (lurker), measuring its build's first gene.
