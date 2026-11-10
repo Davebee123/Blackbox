@@ -438,6 +438,16 @@ rect.cfx-cp-wake { fill: currentColor; filter: url(#cfx-soft); }
 .hot .cfx-mk-halo { opacity: 0.9; }
 .cfx-mk-edge { stroke: var(--bright); stroke-width: 1.4; filter: drop-shadow(0 0 3px currentColor); }
 .cfx-mk-star { fill: var(--bright); filter: drop-shadow(0 0 2px currentColor); }
+/* byte (a fragment's Gnaw): the torn chunk and its 1s and 0s are your bar's, so teal */
+.cfx-by-cell { fill: currentColor; }
+.cfx-by-cell.gone { fill: none; stroke: currentColor; stroke-width: 0.6; stroke-opacity: 0.5; }
+.cfx-by-nib { fill: var(--bright); }
+.cfx-by-bit1 { fill: var(--bright); stroke: currentColor; stroke-width: 0.8; }
+.cfx-by-bit0 { fill: none; stroke: currentColor; stroke-width: 1; }
+.cfx-by-brk { fill: none; stroke: var(--bright); stroke-width: 1.4; filter: drop-shadow(0 0 3px currentColor); }
+.cfx-by-hole { background: var(--inset); }
+.cfx-by-chunk { background: var(--you); box-shadow: 0 0 6px var(--you); }
+.cfx-by-glyph { font: 700 9px/8px var(--mono); color: var(--you); text-shadow: 0 0 4px var(--you); text-align: center; }
 @media (prefers-reduced-motion: reduce) { .fxin { display: none; } }
 .crypt-line { position: relative; height: 4px; margin: 0 0 6px; border-radius: 2px; background: repeating-linear-gradient(135deg, var(--hot) 0 4px, transparent 4px 8px); opacity: 0.7; cursor: help; }
 /* Hover: it opens up into the full chip for a moment (over the cell, nothing moves). */

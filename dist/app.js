@@ -2376,8 +2376,8 @@ function fire(b, spawned = []) {
   const aim = theirs && (replicate ? (spawn ? document.querySelector(`.board [data-target="${CSS.escape(spawn)}"] .part-bar`) : null) : document.querySelector('.hud-bar.mine .bigbar'));
   // A themed part's attack going off (chipfx.mjs): its own strike into its target, in place of the ghost or beside it.
   if (b.th && aim) {
-    const bar = aim.getBoundingClientRect();
-    if (bar?.width && chipStrike(b.th, b.rect, { x: bar.left + bar.width / 2, y: bar.top + bar.height / 2 }, bar)) return;
+    const bar = aim.getBoundingClientRect(), fill = aim.firstElementChild?.getBoundingClientRect(); // where its fill ends: a bite lands there
+    if (bar?.width && chipStrike(b.th, b.rect, { x: bar.left + bar.width / 2, y: bar.top + bar.height / 2 }, bar, fill ? fill.right : null)) return;
   }
   const g = document.createElement('div');
   g.className = 'fx-ghost';
