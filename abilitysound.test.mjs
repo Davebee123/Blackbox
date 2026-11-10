@@ -173,3 +173,21 @@ test('the playtest plays a finisher\'s sound over the break\'s, and a tier\'s wi
   assert.match(app, /feel\.preview\('break'\); if \(sound !== 'today'\) feel\.abilityPreview\(sound, finisherKey\(cls, sub \|\| null\)/);
   assert.match(app, /feel\.abilityPreview\(sound, key, t, \{ result, power, tier: who \? 1 : tier \}\)/);
 });
+
+// ---------- round 4: in a fight ----------
+test('a crewmate\'s sound is the same sound, quieter', () => {
+  assert.equal(timingOf(0, null, {}).gain, 1);
+  assert.equal(timingOf(0, null, { gain: 0.5 }).gain, 0.5);
+});
+
+test('a fight plays each command\'s own sound in place of its result\'s voice, capped', () => {
+  const app = fs.readFileSync('dist/app.js', 'utf8'), feel = fs.readFileSync('dist/feel.mjs', 'utf8'), snd = fs.readFileSync('dist/sound.mjs', 'utf8');
+  assert.match(app, /const voiced = strikes\(events, split\.delay\)/);
+  assert.match(app, /feel\.mute\(voiced\.has\(e\)\)/);
+  assert.match(app, /if \(c\.sounds\) abilitySound\(c, played \|\| null, land\)/);
+  assert.match(app, /if \(plan\) feel\.ability\(finisherKey\(cls, sub\)/); // the winning break's finisher
+  assert.match(app, /const CREW_GAIN = 0\.5, CREW_VOICES = 2, SAME_BEAT = 120/);
+  assert.match(feel, /if \(!detail\?\.silent\) \{ if \(!mute\) voice\(sign\.voice, detail\); buzz\(sign\.buzz\); \}/); // the buzz stays
+  assert.match(feel, /sound\.ability\(PICKED, key, plan, hit, delayMs \/ 1000\)/);
+  assert.match(snd, /const ABILITY_CAP = 4, ABILITY_SPAN = 0\.25/);
+});

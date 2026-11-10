@@ -239,8 +239,8 @@ comment saying what it does.
 | `dist/class-emblems.mjs` | The class picker's ASCII emblems. |
 | `dist/feel.mjs` | The feedback language: each kind of event's one signature in motion and sound. |
 | `dist/sound.mjs`, `dist/sfx/` | Sound effects from recorded CC0 samples (CREDITS.md). |
-| `dist/abilitysound.mjs` | Ability sounds timed to their effects (docs/ability-sounds-plan.md): the kit, the style round and each class's key 1. Heard in `?playtest=fx` only. |
-| `dist/abilitysound-all.mjs` | Every other ability's sound in the picked style, built from its row in the effects table; `abilitysound-levels.mjs` holds their measured levels. |
+| `dist/abilitysound.mjs` | Ability sounds timed to their effects (docs/ability-sounds-plan.md): the kit, the style round and each class's key 1. `app.js` strikes() plays the picked style in a fight (abilitySound, abilityVoices); `?playtest=fx` plays any. |
+| `dist/abilitysound-all.mjs` | Every other ability's sound in the picked style, built from its row in the effects table, with the mastery tiers' layers and the break finishers'; `abilitysound-levels.mjs` holds their measured levels. |
 | `dist/soundtrack.mjs`, `dist/music/` | Music and radio chatter (CC0 tracks, CREDITS.md). |
 | `dist/fightmusic.mjs` | Each virus family's fight theme, synthesized live; heat brings its layers in. |
 | `dist/places.mjs` | A sound bed for each floor, and the virus you're fighting. |

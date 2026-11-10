@@ -18,7 +18,8 @@
 //   tail    what it throws, after the hit-stop (shock: a thump, bits: chatter, dust: hiss, ring: a ring), in its class's
 //           rhythm: the Breaker cuts dead, the Bastion rings on, the Infiltrator's spreads out late, the Operator's comes
 //           in three small beats.
-// Nothing here is in a fight yet: the ability effects playtest (?playtest=fx) plays it, and renderBoard() bounces it.
+// A fight plays the picked style (PICKED; app.js strikes()): an ability's own sound in place of its result's voice.
+// The ability effects playtest (?playtest=fx) plays any style, and renderBoard() bounces them.
 
 import { generic, tiered, finishers } from './abilitysound-all.mjs';
 import { LEVELS } from './abilitysound-levels.mjs';
@@ -1143,11 +1144,12 @@ SOUNDS.b12 = core(1, 1.05, 1, 2);
 SOUNDS.b13 = core(1, 1.05, 1, 0, 0.45, true);
 
 // How the hit's size and result read (plan: the effect's timing in ms, from abilityfx.mjs play()).
-export function timingOf(t, plan, { result = 'hit', power = 0.3, tier = 1 } = {}) {
+// gain: its level over its own (a crewmate's is quieter).
+export function timingOf(t, plan, { result = 'hit', power = 0.3, tier = 1, gain = 1 } = {}) {
   const { travel = 0, hold = 0, impact = 0, stop = 0 } = plan || {}, s = (ms) => Math.max(0, ms || 0) / 1000;
   const arrive = t + s(travel), hit = Math.max(arrive, t + s(impact));
   // strike: when the last move into contact starts (after the draw-back: the ram's thrust, the hammer coming down).
-  return { t, arrive, hold: s(hold), strike: Math.min(hit, arrive + s(hold)), hit, stop: s(stop), result, k: Math.max(0, Math.min(1, power)), flies: s(travel) > 0.02, tier };
+  return { t, arrive, hold: s(hold), strike: Math.min(hit, arrive + s(hold)), hit, stop: s(stop), result, k: Math.max(0, Math.min(1, power)), flies: s(travel) > 0.02, tier, gain };
 }
 
 // Play key's sound in `style` into out ({ dry, room }: a dry bus and a send to the room) with T (timingOf). buf(name):
@@ -1157,7 +1159,7 @@ export function playAbility(ctx, out, style, key, T, buf) {
   if (!fn) return false;
   if (T.result === 'miss' && !T.flies) return false; // nothing flew to pass on: the result's own voice
   const tr = TRIM[style]?.[key] || (style === PICKED && LEVELS[key]) || {}, db = (x) => Math.pow(10, (x || 0) / 20), r = T.result;
-  const base = db(tr.level), hit = base * (r === 'crit' ? db(tr.crit) * 1.06 : r === 'chit' ? db(tr.chit) : r === 'miss' ? db(tr.miss) : 0.78 + 0.1 * T.k);
+  const base = db(tr.level) * (T.gain ?? 1), hit = base * (r === 'crit' ? db(tr.crit) * 1.06 : r === 'chit' ? db(tr.chit) : r === 'miss' ? db(tr.miss) : 0.78 + 0.1 * T.k);
   // Its level steps to the contact's at the hit (a miss is at its own all along); the Breaker's is cut after its stop.
   const bus = (dest) => {
     const g = ctx.createGain(), p = g.gain;

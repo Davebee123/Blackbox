@@ -69,4 +69,9 @@ Operator's comes in three beats.
    draws it (TIER_SOUND: Ban's deeper slam and glowing crack, Poke's three needles, Ping's echo coming back…; a
    burn's ticks keep today's voice), and the 12 finishers (`finishers`, by `finisherKey`) over the break's own voice.
    `?playtest=fx` plays them: Mastery picks the tier, Break finishers fires each.
-4. **Land**: the mix in real fights (crowded cycles, crewmates, burns), the voice cap, tests, GAME_RULES and README.
+4. **Land** (built, waiting on the designer's play): a fight plays the pick. `app.js` strikes(): each command's own
+   sound (abilitySound) timed to its effect's plan, or on the number's beat with no effect; the events it speaks for
+   (abilityVoices: its hits, miss, marks, cuts, heals) keep their flash and buzz and lose their voice (`feel.mute`). A
+   crewmate's at half level, two a batch, none on your beat. At most four ability sounds start within a quarter
+   second (`sound.mjs` ABILITY_CAP); one more falls back to its result's voice. The winning break's finisher sounds
+   over the break. Burn ticks keep today's voice.

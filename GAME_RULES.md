@@ -2494,7 +2494,7 @@ developer mode, `crew sim <classes>` adds bot crewmates from level 5 (`crew`, `c
   damage, one more ◆ and a clash (`ELITE`; Fights), only +5% a player. A champion, a feud and the farm's packs size
   their own Integrity, keep ×1.3 damage and roll no clash. Three times the XP, three drop rolls, never less than a blue, 8% a
   unique. Never in the way of anything you need.
-- A crewmate at 0 Signal is down for the fight; you going down ends it. Their hits stay quiet: the sounds are yours.
+- A crewmate at 0 Signal is down for the fight; you going down ends it. Their abilities sound at half your level, two a batch at most, and never on your beat.
 
 ### Co-op, peer to peer (coop.mjs)
 
@@ -2549,7 +2549,11 @@ casing's options. Nothing plays before your first click or key. With `?dev` a **
 test, the wire, fight reports and the log (`logs` opens it).
 
 - **Sound** is recorded CC0 samples and a little synthesis in an old-hardware palette (`dist/sfx/CREDITS.md`), with a
-  quiet room tone under it. **Places:** each floor and hub has its own quiet loop, and each virus family a sound under
+  quiet room tone under it. **Abilities:** each ability has a sound of its own, timed to its effect: it starts as it
+  leaves the key and lands with the number, in place of the hit's shared voice (the flash and the buzz stay). With
+  Screen effects off or Motion off it plays on the number's beat. A mastered ability adds a layer a tier; the break
+  that wins a fight adds your class's finisher over the break's sound. Burn ticks, breaks and the virus's own sounds
+  are as they were. **Places:** each floor and hub has its own quiet loop, and each virus family a sound under
   its fights, adding its attack and break sounds.
 - **Music:** a track on your server and another on a run. Each virus family's fights have their own theme (dark,
   gritty industrial synthwave, synthesized live): it fades in as the fight starts, builds as the virus breaks, and fades

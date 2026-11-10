@@ -698,8 +698,14 @@ function hallOf(ctx, ch) {
 }
 const ABILITY_ROOM = { a: 0.1, b: 0.16, c: 0.1, b1: 0.12, b2: 0.1, b3: 0.14, b4: 0.2, b7: 0.3, b8: 0.45, b9: 0.24, b10: 0.24, b11: 0.24, b12: 0.24, b13: 0.24 };
 const ABILITY_HALL = { b7: 1.2, b8: 2.2, b9: 0.85, b10: 0.85, b11: 0.85, b12: 0.85, b13: 0.85 }; // how much of the whole sound rings into the hall
+// The voice cap: at most ABILITY_CAP ability sounds starting within ABILITY_SPAN s of each other; one more plays nothing
+// (its caller falls back to its result's voice, one short sample).
+const ABILITY_CAP = 4, ABILITY_SPAN = 0.25, recent = new WeakMap();
 function abilityAt(ctx, ch, style, key, T) {
   if (!banks.get(ctx)?.ready) return false;
+  const live = (recent.get(ctx) || []).filter((t) => Math.abs(t - T.t) < ABILITY_SPAN);
+  if (live.length >= ABILITY_CAP) return false;
+  recent.set(ctx, [...live, T.t]);
   const dry = ctx.createGain(), send = ctx.createGain(), room = ctx.createGain(), more = ctx.createGain();
   send.gain.value = ABILITY_ROOM[style] ?? 0.1; more.gain.value = 0.6;
   dry.connect(ch.master); dry.connect(send).connect(ch.room);
@@ -804,10 +810,11 @@ export function createSound() {
       try { voiceAt(ctx, ch, name, ctx.currentTime + 0.005 + Math.max(0, delay), opts); } catch { /* no audio */ }
     },
     // An ability's sound in a style (abilitysound.mjs), timed by its effect's plan ({ travel, hold, impact, stop } ms
-    // from now; none: contact at once) and its hit ({ result, power }). False if it has none (or the samples aren't in).
-    ability(style, key, plan, hit) {
+    // from now; none: contact at once), its hit ({ result, power, tier, gain }) and a delay (s). False if it has none
+    // to play (or the samples aren't in).
+    ability(style, key, plan, hit, delay = 0) {
       if (!ready()) return false;
-      try { return abilityAt(ctx, ch, style, key, timingOf(ctx.currentTime + 0.005, plan || {}, hit)); } catch { return false; }
+      try { return abilityAt(ctx, ch, style, key, timingOf(ctx.currentTime + 0.005 + Math.max(0, delay), plan || {}, hit)); } catch { return false; }
     },
     // A decoded one-shot (a virus family's attack or break, places.mjs) through the same chain as every voice.
     clip(buffer, gain = 1) {
