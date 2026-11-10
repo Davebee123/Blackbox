@@ -12,6 +12,11 @@ family virus at 1.6× Integrity with one stock phase: the kit player (blind to t
   phase (re-arm, a cycle sooner) is never an act on its own.
 - **A part of its own**, with a rule, on top of its family's: the boss's signature, shown on its row.
 - **You choose when**: the ♛ ticks are yours to cross, so each phase starts when you are ready for it.
+- **Act length** (decided November 2026, for the fights session): the ♛'s act ticks move to **60% and 30%**, so act 1
+  is 40% of its Integrity and acts 2 and 3 30% each. The aim is equal time, not equal Integrity: later acts slow your
+  damage, so they get less of it. Measure cycles per act with the planner (`solved.mjs`) and tune each boss's ticks
+  until acts 2 and 3 last at least as long as act 1. Only the ♛'s act ticks move; every other part's cut ticks stay at
+  50% and 25%. Built bosses (acts.mjs) change too.
 
 ## Built: the three solo bosses
 
