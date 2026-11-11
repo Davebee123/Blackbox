@@ -752,15 +752,37 @@ export function createChipFx() {
   };
 }
 
-// When a strike does what, in ms from the chip going off, for the strikes with a sound of their own (virussound.mjs, timed
-// by this; the strikes below read it too). impact: it lands on your bar. zap: the bolt strobes again. lock: n padlocks
-// clamp shut a step apart. heat: it catches (lift), and its flames run along your bar (tail). clock: its hand winds a
-// turn, and it stops after the hit.
+// When a strike does what, in ms from the chip going off, for its sound (virussound.mjs, timed by this; the strikes read
+// it too). impact: it lands on your bar, the number's beat. step, n: n of them a step apart. pre: what it does before
+// that (ms from the chip going off); post: what it leaves on your bar (ms after the impact).
+//   zap: the bolt strobes again. lock: n padlocks clamp shut. heat: it catches (lift), and its flames run along your
+//   bar (tail). clock: its hand winds a turn, and it stops after the hit. cipher: n streams leave a step apart, the last
+//   still landing (rain). ring: its brackets fly in (lock). frost: it shatters at once, and the chip's ghost flies over
+//   (app.js fire). erase: the dither sweeps your bar. crumble: the chip shatters (crack), its shards still landing
+//   (land). scramble: its glyphs settle (land), the wave decodes them, the band tears and falls apart. thorn: n thorns
+//   drive in and hold. strobe: two pulses before the big one, and your bar flickers. copy: the lamp sweeps, each copy
+//   snaps onto the stack (snaps), and the stack collapses. scan: the laser rakes your bar and brackets snap on. plate:
+//   the plates clang shut, lift and slam. ledger: the reels lock, the digits fly, count down (roll), and a line strikes
+//   through. mask: it lifts out, lands, its eyes streak and it splits. byte: it clamps on, and tears a chunk out.
 export const STRIKE_PLAN = {
   zap: { impact: 40, again: [90, 150, 210] },
   lock: { impact: 640, step: 35, n: 7 },
   heat: { lift: 110, impact: 500, tail: 820 },
   clock: { wind: [70, 330], impact: 450, stop: 250 },
+  cipher: { impact: 440, step: 24, n: 16, post: { rain: 420 } },
+  ring: { pre: { lock: 200 }, impact: 640 },
+  frost: { impact: 480 },
+  erase: { impact: 300, post: { sweep: 420 } },
+  crumble: { pre: { crack: 130 }, impact: 530, post: { land: 120 } },
+  scramble: { pre: { land: [440, 580] }, impact: 660, post: { wave: 230, tear: [300, 440], fall: 660 } },
+  thorn: { impact: 210, step: 34, n: 9, post: { hold: 320 } },
+  strobe: { pre: { pulses: [0, 130] }, impact: 270, post: { flicker: [150, 430] } },
+  copy: { pre: { sweep: 150, snaps: [530, 625, 720, 815] }, impact: 965 },
+  scan: { pre: { rake: 70 }, impact: 560 },
+  plate: { pre: { shut: 120, lift: [140, 470] }, impact: 560 },
+  ledger: { pre: { locks: [130, 200, 270, 340], fly: 260 }, impact: 560, post: { roll: [40, 300], line: [260, 420] } },
+  mask: { pre: { lift: 140 }, impact: 600, post: { split: [120, 420] } },
+  byte: { pre: { clamp: 240 }, impact: 320 },
 };
 // The shared themes' strikes, each (r, to, bar): true, as each stands in for the ghost.
 const STRIKE_FX = {
@@ -807,7 +829,7 @@ const STRIKE_FX = {
   // Crumble: cracks race through the chip and flash, it shatters into glowing shards that tumble onto your bar, bounce
   // and break into dust and grit; the bar cracks where they land, the fissures glowing and fading.
   crumble(r, to, bar) {
-    const bw = bar?.width ?? 120, bl = bar?.left ?? to.x - bw / 2, by = to.y, CR = 130;
+    const bw = bar?.width ?? 120, bl = bar?.left ?? to.x - bw / 2, by = to.y, PL = STRIKE_PLAN.crumble, CR = PL.pre.crack, FALL = (PL.impact - CR) / 1000;
     const net = cracks(crackOrigins(r.left, r.top, r.width, r.height));
     const cols = Math.max(6, Math.round(r.width / 20)), xt = [], xb = [], shards = [];
     for (let i = 0; i <= cols; i++) { const x = r.left + i * r.width / cols, j = i && i < cols ? 1 : 0; xt.push(x + j * rnd(-7, 7)); xb.push(x + j * rnd(-7, 7)); }
@@ -820,7 +842,7 @@ const STRIKE_FX = {
       for (const q of polys) if (q.length === 4 && Math.random() < 0.5) { const d = Math.random() < 0.5; cut.push(d ? [q[0], q[1], q[2]] : [q[0], q[1], q[3]], d ? [q[0], q[2], q[3]] : [q[1], q[2], q[3]]); } else cut.push(q);
       for (const poly of cut) {
         const cx = poly.reduce((a, q) => a + q[0], 0) / poly.length, cy = poly.reduce((a, q) => a + q[1], 0) / poly.length;
-        const x1 = bl + bw * (0.1 + 0.8 * (cx - r.left) / r.width) + rnd(-6, 6), T = rnd(0.4, 0.52), G = 1500;
+        const x1 = bl + bw * (0.1 + 0.8 * (cx - r.left) / r.width) + rnd(-6, 6), T = FALL + rnd(0, PL.post.land / 1000), G = 1500;
         shards.push({ P: pts(poly.map(([x, y]) => [x - cx, y - cy])), x: cx, y: cy, x0: cx, y0: cy, vx: (x1 - cx) / T, vy: (by - cy - 0.5 * G * T * T) / T, G, T, x1, rot: 0, vr: rnd(-480, 480), phi: rnd(0, 6.3), vphi: rnd(8, 18) * (Math.random() < 0.5 ? -1 : 1), land: 0 });
       }
     }
@@ -859,11 +881,11 @@ const STRIKE_FX = {
       return { p: [[x0, y0], [x0 + rnd(-50, 50), y0 - rnd(10, 40)], [sx + rnd(-40, 40), by - rnd(30, 60)], [sx, by]], d: 60 + rnd(0, 140), ch: glyph(), next: 0, sx };
     });
     const B = (q, u) => { const [a, b, c, d] = q.p, v = 1 - u; return [v ** 3 * a[0] + 3 * v * v * u * b[0] + 3 * v * u * u * c[0] + u ** 3 * d[0], v ** 3 * a[1] + 3 * v * v * u * b[1] + 3 * v * u * u * c[1] + u ** 3 * d[1]]; };
-    const F = 380, TW = 660, ease = (k) => (k < 0.5 ? 2 * k * k : 1 - 2 * (1 - k) ** 2), runs = [[0, N / 3 | 0, rnd(-6, -3)], [N / 3 | 0, 2 * N / 3 | 0, rnd(3, 6)], [2 * N / 3 | 0, N, rnd(-5, -2)]];
-    stage(TW + 700, (g, t) => {
+    const F = 380, TW = STRIKE_PLAN.scramble.impact, { tear: TEAR, fall: FALLS } = STRIKE_PLAN.scramble.post, ease = (k) => (k < 0.5 ? 2 * k * k : 1 - 2 * (1 - k) ** 2), runs = [[0, N / 3 | 0, rnd(-6, -3)], [N / 3 | 0, 2 * N / 3 | 0, rnd(3, 6)], [2 * N / 3 | 0, N, rnd(-5, -2)]];
+    stage(TW + FALLS + 40, (g, t) => {
       let html = '';
       if (t < 160) { const x = r.left + r.width * (t / 160); html += `<rect class="cfx-sc-flash" x="${f1(x - 10)}" y="${f1(r.top)}" width="14" height="${f1(r.height)}"/>`; }
-      const front = bl + (t - TW) / 230 * bw, tear = t > TW + 300 && t < TW + 440 && (t / 35 | 0) % 2 === 0;
+      const front = bl + (t - TW) / STRIKE_PLAN.scramble.post.wave * bw, tear = t > TW + TEAR[0] && t < TW + TEAR[1] && (t / 35 | 0) % 2 === 0;
       for (const [i, q] of ag.entries()) {
         const k = (t - q.d) / F;
         if (k < 0) continue;
@@ -873,7 +895,7 @@ const STRIKE_FX = {
           const [x, y] = B(q, ease(k));
           html += `<text class="cfx-sc-halo" x="${f1(x)}" y="${f1(y)}">${q.ch}</text><text class="cfx-sc-core" x="${f1(x)}" y="${f1(y)}">${q.ch}</text>`;
         } else {
-          const done = q.sx + 4 <= front, run = runs.find(([a, b]) => i >= a && i < b), dx = tear ? run[2] : 0, fall = clamp((t - TW - 440) / 220), y = by + fall * 5;
+          const done = q.sx + 4 <= front, run = runs.find(([a, b]) => i >= a && i < b), dx = tear ? run[2] : 0, fall = clamp((t - TW - TEAR[1]) / (FALLS - TEAR[1])), y = by + fall * 5;
           if (fall >= 1) continue;
           const lit = done && q.sx + 4 > front - 18, ch = done ? '▓' : q.ch, o = f1(1 - fall);
           html += `<text class="cfx-sc-halo" x="${f1(q.sx + dx)}" y="${f1(y)}" style="opacity:${o}">${ch}</text><text class="${lit || !done ? 'cfx-sc-core' : 'cfx-sc-set'}" x="${f1(q.sx + dx)}" y="${f1(y)}" style="opacity:${o}">${ch}</text>`;
@@ -889,16 +911,16 @@ const STRIKE_FX = {
   // Thorns: a volley of hooked thorns leaves the chip's edges with motion streaks, drives into your bar tip first and
   // sticks, quivering, a spray of sparks at each hit; then they fade where they stand.
   thorn(r, to, bar) {
-    const bw = bar?.width ?? 120, bl = bar?.left ?? to.x - bw / 2, by = to.y, n = 9, FL = 210, HOLD = 320;
+    const bw = bar?.width ?? 120, bl = bar?.left ?? to.x - bw / 2, by = to.y, { n, impact: FL, step: STEP } = STRIKE_PLAN.thorn, HOLD = STRIKE_PLAN.thorn.post.hold;
     const order = Array.from({ length: n }, (_, i) => i).sort(() => Math.random() - 0.5);
     const th = order.map((j, i) => {
       const top = Math.random() < 0.5, x0 = r.left + rnd(8, r.width - 8), y0 = top ? r.top : r.top + r.height, x1 = bl + bw * (0.1 + 0.8 * j / (n - 1)) + rnd(-5, 5);
       const mx = (x0 + x1) / 2, my = (y0 + by) / 2, dx = x1 - x0, dy = by - y0, L = Math.hypot(dx, dy) || 1, bend = rnd(-40, 40);
-      return { d: i * 34, a: [x0, y0], c: [mx - dy / L * bend, my + dx / L * bend], b: [x1, by], h: [], b0: rnd(8, 10), L: rnd(24, 30), cu: rnd(-5, 5), hit: 0 };
+      return { d: i * STEP, a: [x0, y0], c: [mx - dy / L * bend, my + dx / L * bend], b: [x1, by], h: [], b0: rnd(8, 10), L: rnd(24, 30), cu: rnd(-5, 5), hit: 0 };
     });
     const Q = (q, u) => { const v = 1 - u; return [v * v * q.a[0] + 2 * v * u * q.c[0] + u * u * q.b[0], v * v * q.a[1] + 2 * v * u * q.c[1] + u * u * q.b[1]]; };
     th.forEach((q) => setTimeout(() => { burst(q.a[0], q.a[1], 24, 0, 240); sparks(q.a[0], q.a[1], 3, 8); }, q.d));
-    stage(n * 34 + FL + HOLD + 280, (g, t) => {
+    stage(n * STEP + FL + HOLD + 280, (g, t) => {
       let html = '';
       for (const q of th) {
         const k = (t - q.d) / FL;
@@ -967,7 +989,7 @@ const STRIKE_FX = {
   // flares there with a streak across it; the last is the biggest, and your bar flickers after it.
   strobe(r, to, bar) {
     const bw = bar?.width ?? 120, bl = bar?.left ?? to.x - bw / 2, bt = bar?.top ?? to.y - 4, bh = bar?.height ?? 8, down = to.y > r.top + r.height / 2;
-    const ey = down ? r.top + r.height : r.top, P = [[0, 0.22, 0.8], [130, 0.78, 0.85], [270, 0.5, 1.25]];
+    const ey = down ? r.top + r.height : r.top, SP = STRIKE_PLAN.strobe, FLK = SP.post.flicker.map((x) => x + SP.impact), P = [[SP.pre.pulses[0], 0.22, 0.8], [SP.pre.pulses[1], 0.78, 0.85], [SP.impact, 0.5, 1.25]];
     P.forEach(([d, , s]) => setTimeout(() => burst(r.left + r.width / 2, r.top + r.height / 2, r.width * 0.5 * s, 0, 200), d));
     stage(820, (g, t) => {
       let html = '';
@@ -980,7 +1002,7 @@ const STRIKE_FX = {
         html += `<g style="opacity:${f1(f)}"><rect class="cfx-sb-chip" x="${f1(r.left)}" y="${f1(r.top)}" width="${f1(r.width)}" height="${f1(r.height)}"/><polygon class="cfx-sb-cone" points="${pts([[ex - w0, ey], [ex + w0, ey], [x + w1, to.y], [x - w1, to.y]])}"/><line class="cfx-sb-core" x1="${f1(ex)}" y1="${f1(ey)}" x2="${f1(x)}" y2="${f1(to.y)}" style="stroke-width:${f1(1.4 * s)}"/>`
           + `<rect class="cfx-sb-hit" x="${f1(bl)}" y="${f1(bt)}" width="${f1(bw)}" height="${f1(bh)}"/><rect class="cfx-sb-flare" x="${f1(bl - 40 * s)}" y="${f1(to.y - 0.6 * s)}" width="${f1(bw + 80 * s)}" height="${f1(1.2 * s)}"/><ellipse class="cfx-sb-glow" cx="${f1(x)}" cy="${f1(to.y)}" rx="${f1(26 * s)}" ry="${f1(9 * s)}"/></g>`;
       }
-      if (t > 420 && t < 700) { const on = ((t - 420) / 45 | 0) % 2 === 0; if (on) html += `<rect class="cfx-sb-hit" x="${f1(bl)}" y="${f1(bt)}" width="${f1(bw)}" height="${f1(bh)}" style="opacity:${f1(0.7 * (1 - (t - 420) / 280))}"/>`; }
+      if (t > FLK[0] && t < FLK[1]) { const on = ((t - FLK[0]) / 45 | 0) % 2 === 0; if (on) html += `<rect class="cfx-sb-hit" x="${f1(bl)}" y="${f1(bt)}" width="${f1(bw)}" height="${f1(bh)}" style="opacity:${f1(0.7 * (1 - (t - FLK[0]) / (FLK[1] - FLK[0])))}"/>`; }
       g.innerHTML = html;
     });
     return true;
@@ -989,16 +1011,16 @@ const STRIKE_FX = {
   // trails, reshaping to it, and stack there with a snap; the stack collapses into the bar with a flash and a copy of the
   // bar slides off and fades.
   copy(r, to, bar) {
-    const bw = bar?.width ?? 120, bl = bar?.left ?? to.x - bw / 2, bt = bar?.top ?? to.y - 4, bh = bar?.height ?? 8, N = 4, F = 380, SW = 150, GAP = 95;
+    const bw = bar?.width ?? 120, bl = bar?.left ?? to.x - bw / 2, bt = bar?.top ?? to.y - 4, bh = bar?.height ?? 8, CP = STRIKE_PLAN.copy, SNAPS = CP.pre.snaps, N = SNAPS.length, F = 380, SW = CP.pre.sweep;
     const A = { x: r.left, y: r.top, w: r.width, h: r.height }, B = (i) => ({ x: bl - 3, y: bt - 3 - i * 3.5, w: bw + 6, h: bh + 6 });
     const lerp = (a, b, k) => a + (b - a) * k, rectAt = (i, k) => { const b = B(i), e = easeInOut(k), lift = Math.sin(Math.PI * k) * 26; return { x: lerp(A.x, b.x, e), y: lerp(A.y, b.y, e) - lift, w: lerp(A.w, b.w, e), h: lerp(A.h, b.h, e) }; };
     const R = (q, cls, o = 1) => `<rect class="${cls}" x="${f1(q.x)}" y="${f1(q.y)}" width="${f1(q.w)}" height="${f1(q.h)}" rx="3" style="opacity:${f1(o)}"/>`;
-    const COL = SW + (N - 1) * GAP + F + 60;
+    const COL = CP.impact - 90;
     stage(COL + 520, (g, t) => {
       let html = '';
       if (t < SW + 60) { const x = r.left + r.width * clamp(t / SW); html += `<rect class="cfx-cp-wake" x="${f1(r.left)}" y="${f1(r.top)}" width="${f1(x - r.left)}" height="${f1(r.height)}" style="opacity:${f1(t < SW ? 0.28 : 0.28 * (1 - (t - SW) / 60))}"/><rect class="cfx-cp-lampr" x="${f1(x - 5)}" y="${f1(r.top - 2)}" width="10" height="${f1(r.height + 4)}"/>`; }
       for (let i = 0; i < N; i++) {
-        const a = t - SW - i * GAP;
+        const a = t - (SNAPS[i] - F);
         if (a < 0) continue;
         const k = clamp(a / F);
         if (t < COL) {
@@ -1012,7 +1034,7 @@ const STRIKE_FX = {
       if (t >= COL + 90) { const a = t - COL - 90; html += `<rect class="cfx-ck-stop" x="${f1(bl)}" y="${f1(bt)}" width="${f1(bw)}" height="${f1(bh)}" style="opacity:${f1(0.85 * Math.exp(-a / 100))}"/>` + R({ x: bl - 3 + a * 0.08, y: bt - 3, w: bw + 6, h: bh + 6 }, 'cfx-cp-edge', clamp(1 - a / 420)); }
       g.innerHTML = html;
     });
-    for (let i = 0; i < N; i++) setTimeout(() => { const b = B(i); for (const [x, y] of [[b.x, b.y], [b.x + b.w, b.y]]) sparks(x, y, 2, 7); }, SW + i * GAP + F);
+    for (let i = 0; i < N; i++) setTimeout(() => { const b = B(i); for (const [x, y] of [[b.x, b.y], [b.x + b.w, b.y]]) sparks(x, y, 2, 7); }, SNAPS[i]);
     setTimeout(() => burst(to.x, to.y, 60, 0, 360), COL + 90);
     return true;
   },
@@ -1020,7 +1042,7 @@ const STRIKE_FX = {
   // part glows and gives up bits of data that rise and fade; at the end, brackets snap round the last point and flash.
   scan(r, to, bar) {
     const bw = bar?.width ?? 120, bl = bar?.left ?? to.x - bw / 2, bt = bar?.top ?? to.y - 4, bh = bar?.height ?? 8, down = to.y > r.top + r.height / 2;
-    const ex = r.left + r.width / 2, ey = down ? r.top + r.height : r.top, T0 = 70, T1 = 560, id = `cfx-sn-${++gid}`;
+    const ex = r.left + r.width / 2, ey = down ? r.top + r.height : r.top, T0 = STRIKE_PLAN.scan.pre.rake, T1 = STRIKE_PLAN.scan.impact, id = `cfx-sn-${++gid}`;
     burst(ex, ey, 26, 0, 260);
     let last = bl;
     stage(T1 + 380, (g, t) => {
@@ -1047,7 +1069,7 @@ const STRIKE_FX = {
   // shield over it.
   plate(r, to, bar) {
     const bw = bar?.width ?? 120, bl = bar?.left ?? to.x - bw / 2, bt = bar?.top ?? to.y - 4, bh = bar?.height ?? 8;
-    const SH = 120, LIFT = [140, 470], SLAM = 560, mid = r.left + r.width / 2;
+    const { shut: SH, lift: LIFT } = STRIKE_PLAN.plate.pre, SLAM = STRIKE_PLAN.plate.impact, mid = r.left + r.width / 2;
     const A = { x: r.left, y: r.top, w: r.width, h: r.height }, D = { x: bl - 5, y: bt + bh / 2 - 7, w: bw + 10, h: 14 }, H = { ...D, y: D.y + (to.y > r.top ? -36 : 36) };
     const lerp = (a, b, k) => a + (b - a) * k, at = (a, b, k) => ({ x: lerp(a.x, b.x, k), y: lerp(a.y, b.y, k), w: lerp(a.w, b.w, k), h: lerp(a.h, b.h, k) });
     const PL = (q, o = 1, cls = '') => `<g class="${cls}" style="opacity:${f1(o)}"><polygon class="cfx-pl-halo" points="${chamfer(q.x, q.y, q.w, q.h)}"/><polygon class="cfx-pl-body" points="${chamfer(q.x, q.y, q.w, q.h)}"/><line class="cfx-pl-rim" x1="${f1(q.x + 3)}" y1="${f1(q.y + 0.6)}" x2="${f1(q.x + q.w - 3)}" y2="${f1(q.y + 0.6)}"/>${[0.08, 0.92].map((u) => `<circle class="cfx-pl-rivet" cx="${f1(q.x + q.w * u)}" cy="${f1(q.y + q.h / 2)}" r="1.1"/>`).join('')}</g>`;
@@ -1083,8 +1105,8 @@ const STRIKE_FX = {
     const bw = bar?.width ?? 120, bl = bar?.left ?? to.x - bw / 2, bt = bar?.top ?? to.y - 4, bh = bar?.height ?? 8;
     const N = 4, val = String(Math.floor(rnd(1000, 9999))), cx = r.left + r.width / 2, cy = r.top + r.height / 2 + 4.5;
     const src = Array.from({ length: N + 1 }, (_, i) => [cx + (i - N / 2) * 10, cy]), dst = Array.from({ length: N + 1 }, (_, i) => [to.x + (i - N / 2) * 12, to.y + 4.5]);
-    const LOCK = 70, FLY = [260, 560], ROLL = [600, 860], LINE = [820, 980];
-    const D = Array.from({ length: N + 1 }, (_, i) => ({ ch: i ? val[i - 1] : '−', v: i ? +val[i - 1] : 0, next: 0, lock: 60 + i * LOCK }));
+    const LP = STRIKE_PLAN.ledger, FLY = [LP.pre.fly, LP.impact], ROLL = LP.post.roll.map((x) => x + LP.impact), LINE = LP.post.line.map((x) => x + LP.impact);
+    const D = Array.from({ length: N + 1 }, (_, i) => ({ ch: i ? val[i - 1] : '−', v: i ? +val[i - 1] : 0, next: 0, lock: i ? LP.pre.locks[i - 1] : 0 }));
     const T = (x, y, ch, o = 1, cls = 'cfx-sc-core') => `<text class="cfx-sc-halo" x="${f1(x - 3.5)}" y="${f1(y)}" style="opacity:${f1(o)}">${ch}</text><text class="${cls}" x="${f1(x - 3.5)}" y="${f1(y)}" style="opacity:${f1(o)}">${ch}</text>`;
     const Q = (i, k) => { const [x0, y0] = src[i], [x1, y1] = dst[i], mx = (x0 + x1) / 2 + (i - N / 2) * 14, my = Math.min(y0, y1) - 30, v = 1 - k; return [v * v * x0 + 2 * v * k * mx + k * k * x1, v * v * y0 + 2 * v * k * my + k * k * y1]; };
     stage(LINE[1] + 300, (g, t) => {
@@ -1116,7 +1138,7 @@ const STRIKE_FX = {
   // frowning face; its eyes ignite and streak across the bar, and it splits in two halves that slide apart and fade.
   mask(r, to, bar) {
     const bw = bar?.width ?? 120, bl = bar?.left ?? to.x - bw / 2, bt = bar?.top ?? to.y - 4, bh = bar?.height ?? 8;
-    const s0 = r.height * 0.84 / 32, s1 = s0 * 1.9, x0 = r.left + r.width * 0.6, y0 = r.top + r.height / 2, UP = 140, LAND = 600, id = `cfx-mk-${++gid}`;
+    const s0 = r.height * 0.84 / 32, s1 = s0 * 1.9, x0 = r.left + r.width * 0.6, y0 = r.top + r.height / 2, UP = STRIKE_PLAN.mask.pre.lift, LAND = STRIKE_PLAN.mask.impact, SPLIT = STRIKE_PLAN.mask.post.split, id = `cfx-mk-${++gid}`;
     const P = (k) => { const mx = (x0 + to.x) / 2 + (to.x > x0 ? -40 : 40), my = Math.min(y0, to.y) - 40, v = 1 - k; return [v * v * x0 + 2 * v * k * mx + k * k * to.x, v * v * y0 + 2 * v * k * my + k * k * to.y]; };
     const T = (x, y, sx, s) => `translate(${f1(x)} ${f1(y)}) scale(${(sx * s).toFixed(3)} ${s.toFixed(3)}) translate(-20 -16)`;
     setTimeout(() => { burst(to.x, to.y, 70, 0, 380); sparks(to.x, to.y, 6, 14); }, LAND);
@@ -1128,7 +1150,7 @@ const STRIKE_FX = {
         for (const [lag, o] of [[0.12, 0.18], [0.06, 0.35]]) { const kk = Math.max(0, k - lag), [x, y] = P(kk); html += `<g style="opacity:${o}" transform="${T(x, y, Math.max(0.05, Math.abs(Math.cos(Math.PI * 2.5 * kk))), s)}">${MASK(Math.floor(2.5 * kk + 0.5) % 2)}</g>`; }
         const [x, y] = P(k); html += `<g transform="${T(x, y, Math.max(0.05, Math.abs(turn)), s)}">${MASK(face)}</g>`;
       } else {
-        const a = t - LAND, split = easeInOut(clamp((a - 120) / 300)) * 34, o = clamp(1 - (a - 160) / 320), eyes = Math.exp(-a / 180);
+        const a = t - LAND, split = easeInOut(clamp((a - SPLIT[0]) / (SPLIT[1] - SPLIT[0]))) * 34, o = clamp(1 - (a - 160) / 320), eyes = Math.exp(-a / 180);
         html += `<rect class="cfx-ck-stop" x="${f1(bl)}" y="${f1(bt)}" width="${f1(bw)}" height="${f1(bh)}" style="opacity:${f1(0.8 * Math.exp(-a / 90))}"/>`;
         html += `<g style="opacity:${f1(o)}"><g transform="translate(${f1(-split)} 0)"><g transform="${T(to.x, to.y, 1, s1)}"><g clip-path="url(#${id}-l)">${MASK(1)}</g></g></g><g transform="translate(${f1(split)} 0)"><g transform="${T(to.x, to.y, 1, s1)}"><g clip-path="url(#${id}-r)">${MASK(1)}</g></g></g></g>`;
         for (const ex of [13, 27]) { const x = to.x + (ex - 20) * s1 + (ex < 20 ? -split : split), y = to.y + (13.4 - 16) * s1, L = bw * 0.45 * clamp(a / 120); html += `<rect class="cfx-sb-flare" x="${f1(ex < 20 ? x - L : x)}" y="${f1(y - 0.6)}" width="${f1(L)}" height="1.2" style="opacity:${f1(eyes)}"/>` + STAR(x, y, 6 * eyes + 1, eyes); }
@@ -1144,7 +1166,7 @@ const STRIKE_FX = {
     const slot = gnawSlot(), bl = bar?.left ?? to.x - 60, bw = bar?.width ?? 120, bt = bar?.top ?? to.y - 7, bh = bar?.height ?? 14, CW = 12;
     const bx = clamp((end ?? to.x) - slot * 11, bl + CW, bl + bw);
     const bits = Array.from({ length: 8 }, (_, i) => (!i || Math.random() < 0.5 ? 1 : 0));
-    const BW = 31, x0 = r.left + r.width * 0.5 - BW / 2, y0 = r.top + r.height / 2 - 2, x1 = bx - BW, y1 = bt - 7, F = 240, CL = 80, OUT = 260;
+    const BW = 31, x0 = r.left + r.width * 0.5 - BW / 2, y0 = r.top + r.height / 2 - 2, x1 = bx - BW, y1 = bt - 7, F = STRIKE_PLAN.byte.pre.clamp, CL = STRIKE_PLAN.byte.impact - F, OUT = 260;
     const P = (u) => { const e = u * u * (3 - 2 * u); return [x0 + (x1 - x0) * e, y0 + (y1 - y0) * e - Math.sin(Math.PI * u) * 26]; };
     const brackets = (o) => { const a = bx - CW - 2, b = bx + 2, top = bt - 2, bot = bt + bh + 2, L = 3; return `<path class="cfx-by-brk" style="opacity:${f1(o)}" d="M${f1(a + L)},${f1(top)} H${f1(a)} V${f1(bot)} H${f1(a + L)} M${f1(b - L)},${f1(top)} H${f1(b)} V${f1(bot)} H${f1(b - L)}"/>`; };
     after(slot * 80, () => {
@@ -1261,10 +1283,10 @@ export function chipStrike(th, r, to, bar, end) {
   }
   if (th === 'cipher') {
     const bw = bar?.width || 120;
-    for (let i = 0; i < 16; i++) {
+    for (let i = 0; i < STRIKE_PLAN.cipher.n; i++) {
       const near = i % 3 === 0, n = near ? 4 : 3, fs = near ? 11 : 9;
       const x0 = r.left + rnd(6, r.width - 10), y0 = r.top + rnd(0, r.height - 8), x1 = to.x + rnd(-bw * 0.4, bw * 0.4), y1 = to.y + rnd(-3, 3);
-      const rot = Math.atan2(y1 - y0, x1 - x0) * 180 / Math.PI - 90, d = span(document.body, `cfx-fly cfx-stream${near ? '' : ' far'}`), dur = rnd(380, 560), delay = i * 24;
+      const rot = Math.atan2(y1 - y0, x1 - x0) * 180 / Math.PI - 90, d = span(document.body, `cfx-fly cfx-stream${near ? '' : ' far'}`), dur = rnd(380, 560), delay = i * STRIKE_PLAN.cipher.step;
       d.style.fontSize = fs + 'px';
       d.innerHTML = Array.from({ length: n }, (_, j) => `<i style="opacity:${[0.15, 0.35, 0.6, 1].slice(-n)[j]}">${HEXCH[(Math.random() * 16) | 0]}</i>`).join('');
       d.lastChild.classList.add('head');
@@ -1282,7 +1304,7 @@ export function chipStrike(th, r, to, bar, end) {
     setTimeout(() => {
       const b = fly('cfx-burst', to.x - 26, to.y - 26, 52, 52);
       b.animate([{ transform: 'scale(.3)', opacity: 1 }, { transform: 'scale(1.5)', opacity: 0 }], { duration: 380, easing: 'cubic-bezier(.2,.8,.3,1)' }).onfinish = () => b.remove();
-    }, 440);
+    }, STRIKE_PLAN.cipher.impact);
     return true;
   }
   if (th === 'ring') {
@@ -1298,12 +1320,12 @@ export function chipStrike(th, r, to, bar, end) {
       const m = fly('cfx-bracket', 0, 0, 12, 12);
       m.style[sx < 0 ? 'borderLeftWidth' : 'borderRightWidth'] = '2.5px'; m.style[sy < 0 ? 'borderTopWidth' : 'borderBottomWidth'] = '2.5px';
       const P = (ax, ay) => `translate(${to.x + sx * ax - (sx < 0 ? 0 : 12)}px, ${to.y + sy * ay - (sy < 0 ? 0 : 12)}px)`;
-      m.animate([{ transform: P(hx + 70, hy + 26), opacity: 0 }, { opacity: 1, offset: 0.3 }, { transform: P(hx, hy), opacity: 1, offset: 0.8 }, { transform: P(hx, hy), opacity: 0 }], { duration: 520, delay: 200, easing: 'cubic-bezier(.3,0,.2,1)', fill: 'both' }).onfinish = () => m.remove();
+      m.animate([{ transform: P(hx + 70, hy + 26), opacity: 0 }, { opacity: 1, offset: 0.3 }, { transform: P(hx, hy), opacity: 1, offset: 0.8 }, { transform: P(hx, hy), opacity: 0 }], { duration: 520, delay: STRIKE_PLAN.ring.pre.lock, easing: 'cubic-bezier(.3,0,.2,1)', fill: 'both' }).onfinish = () => m.remove();
     }
     const f = fly('cfx-flash', bx, by, bw, bh);
-    f.animate([{ opacity: 0 }, { opacity: 0.85, offset: 0.2 }, { opacity: 0 }], { duration: 320, delay: 640, fill: 'both' }).onfinish = () => f.remove();
+    f.animate([{ opacity: 0 }, { opacity: 0.85, offset: 0.2 }, { opacity: 0 }], { duration: 320, delay: STRIKE_PLAN.ring.impact, fill: 'both' }).onfinish = () => f.remove();
     const b = fly('cfx-burst', to.x - 28, to.y - 28, 56, 56);
-    b.animate([{ transform: 'scale(.3)', opacity: 1 }, { transform: 'scale(1.5)', opacity: 0 }], { duration: 380, delay: 640, easing: 'cubic-bezier(.2,.8,.3,1)', fill: 'both' }).onfinish = () => b.remove();
+    b.animate([{ transform: 'scale(.3)', opacity: 1 }, { transform: 'scale(1.5)', opacity: 0 }], { duration: 380, delay: STRIKE_PLAN.ring.impact, easing: 'cubic-bezier(.2,.8,.3,1)', fill: 'both' }).onfinish = () => b.remove();
     return true;
   }
   if (th === 'erase') {
@@ -1316,7 +1338,7 @@ export function chipStrike(th, r, to, bar, end) {
     }
     const f = fly('cfx-dith', bx, by, bw, bh), e = fly('cfx-edge', bx, by - 3, 2, bh + 6);
     f.style.clipPath = 'inset(0 100% 0 0)'; e.style.opacity = 0; e.style.height = bh + 6 + 'px';
-    const T = { duration: 420, delay: 300, easing: 'cubic-bezier(.4,0,.6,1)', fill: 'both' };
+    const T = { duration: STRIKE_PLAN.erase.post.sweep, delay: STRIKE_PLAN.erase.impact, easing: 'cubic-bezier(.4,0,.6,1)', fill: 'both' };
     f.animate([{ clipPath: 'inset(0 100% 0 0)', opacity: 1 }, { clipPath: 'inset(0 0% 0 0)', opacity: 1, offset: 0.85 }, { clipPath: 'inset(0 0% 0 0)', opacity: 0 }], { ...T, duration: 700 }).onfinish = () => f.remove();
     e.animate([{ left: bx + 'px', opacity: 1 }, { left: bx + bw + 'px', opacity: 1, offset: 0.99 }, { left: bx + bw + 'px', opacity: 0 }], T).onfinish = () => e.remove();
     return true;

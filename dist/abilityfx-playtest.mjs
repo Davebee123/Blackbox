@@ -11,14 +11,16 @@
 // Sound (abilitysound.mjs): today's sound for the result, or an ability's own in a style, timed to the effect, whatever
 // the Sound setting. Every ability has one in the picked style (B13), with its mastery tier's layer; the other styles
 // have Bash, Ban, Poke and Ping only, and the rest play today's.
-// Virus attacks (virussound.mjs, its style round): four attacks strike your bar from the part's chip, as a hit, a crit,
-// blocked or evaded, at the Size above, with today's sound or their own in a style (Their sound).
+// Virus attacks (virussound.mjs): every chip theme's strike into your bar from the part's chip, and the lash, as a hit, a
+// crit, blocked or evaded, at the Size above, with today's sound or their own in a style (Their sound); then Scramble,
+// Replicate (onto the part's own bar, standing in for its fragment) and Patch (on the part), which land one way. Every
+// attack has a sound in the picked style (B1); the other styles have the style round's four, and the rest play today's.
 
 import { RECIPES } from './abilityfx.mjs';
 import { SPIKE, ABILITIES, ARCHETYPES, SUBS } from './data.mjs';
 import { SFX } from './screenfx.mjs';
 import { STYLES, hasSound } from './abilitysound.mjs';
-import { STYLES as THEIRS, ATTACKS, RESULTS } from './virussound.mjs';
+import { STYLES as THEIRS, ATTACKS, RESULTS, hasAttack } from './virussound.mjs';
 
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 // The ability a row's key stands for (key 1's words are Spike; a tick is its burn's).
@@ -72,7 +74,8 @@ export function mountFxPlaytest(api) {
       <h3>Virus attacks</h3>
       ${seg('Their sound', [['off', 'off'], ['today', 'today'], ...Object.entries(THEIRS).map(([k, n]) => [k, `${k.toUpperCase()} ${n}`])], ui.theirs)}
       ${seg('Lands', RESULTS.map((r) => [r, r]), ui.lands)}
-      <div class="fxp-fx">${Object.entries(ATTACKS).map(([k, a]) => `<button type="button" data-attack="${esc(k)}"><b>${esc(a.name)}</b><small>${esc(a.part)}</small></button>`).join('')}</div>`;
+      <button type="button" data-attack="*" class="all"><b>Play all</b><small>one after another</small></button>
+      ${[['', (a) => !a.does], ['Not a hit on you', (a) => a.does]].map(([title, is]) => `${title ? `<h3>${title}</h3>` : ''}<div class="fxp-fx">${Object.entries(ATTACKS).filter(([, a]) => is(a)).map(([k, a]) => `<button type="button" data-attack="${esc(k)}"><b>${esc(a.name)}</b><small>${esc(a.does || a.part)}</small></button>`).join('')}</div>`).join('')}`;
   }
   const say = (t) => { ui.said = t; const p = panel.querySelector('.fxp-said'); if (p) p.textContent = t; };
   function fire(key) {
@@ -112,8 +115,15 @@ export function mountFxPlaytest(api) {
       return next(0);
     }
     if (b.dataset.attack) {
-      const a = ATTACKS[b.dataset.attack], what = api.attack(b.dataset.attack, ui.target, { result: ui.lands, power: ui.power, sound: ui.theirs });
-      return say(what === 'fx' ? `${a.name}: ${ui.lands}.` : `${a.name}: no strike at Screen effects ${api.level()}${api.motion() ? '' : ', Motion off'} (as in a fight); its number on the beat.`);
+      const attack = (k) => {
+        const a = ATTACKS[k], what = api.attack(k, ui.target, { result: ui.lands, power: ui.power, sound: ui.theirs });
+        const own = ui.theirs === 'off' || ui.theirs === 'today' || hasAttack(ui.theirs, k) ? '' : ` Today's sound: ${THEIRS[ui.theirs]} has the style round's four only.`;
+        say((what === 'fx' ? `${a.name}: ${a.does || ui.lands}.` : `${a.name}: no strike at Screen effects ${api.level()}${api.motion() ? '' : ', Motion off'} (as in a fight); its number on the beat.`) + own);
+      };
+      if (b.dataset.attack !== '*') return attack(b.dataset.attack);
+      clearTimeout(queue);
+      const keys = Object.keys(ATTACKS), next = (i) => { if (i >= keys.length) return; attack(keys[i]); queue = setTimeout(() => next(i + 1), 2400); };
+      return next(0);
     }
     if (b.dataset.fire !== undefined) fire(b.dataset.fire);
   });

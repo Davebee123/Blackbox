@@ -14,21 +14,54 @@
 //   contact on your bar, the number's beat: by result (a hit by its size, a crit, blocked: a glance off your wall with
 //           no weight, evaded: nothing, the travel passes on)
 //   tail    what the strike leaves on your bar (sparks, the last hasps, flames dying down, ticks ratcheting out)
+// Round 2, every attack in the pick (virussound-all.mjs builds them from the pick's voices here; their levels are
+// measured into virussound-levels.mjs): each other chip theme's strike, the lash, and Scramble, Replicate and Patch.
 // Heard only in the ability effects playtest (?playtest=fx) and through renderBoard(); a fight plays today's hurt.
 
 import { kit } from './abilitysound.mjs';
+import { every } from './virussound-all.mjs';
+import { LEVELS } from './virussound-levels.mjs';
 
 export const STYLES = { a: 'Body', b: 'Corrupt', c: 'Chassis', b1: 'Corrupt, latch', b2: 'Corrupt, choke' };
-// The round's four: the attack, the part that makes it and its chip theme (chipfx.mjs), picked for four shapes: at
-// once, one after another, a lob and a wind-up.
+// Every attack with a sound: its name, a part that makes it and its chip theme (chipfx.mjs).
 export const ATTACKS = {
+  // The style round's four (STYLE_KEYS: every style has them), picked for four shapes: at once, one after another, a
+  // lob and a wind-up.
   surge: { name: 'Surge', part: 'Pulse Node', theme: 'zap' },
   encrypt: { name: 'Encrypt', part: 'Encryptor', theme: 'lock' },
   hash: { name: 'Hash', part: 'Rig', theme: 'heat' },
   discharge: { name: 'Discharge', part: 'Accumulator', theme: 'clock' },
+  // Round 2, in the pick only: every other theme's strike, under its theme's name.
+  cipher: { name: 'Cipher', part: 'Cipher Block', theme: 'cipher' },
+  ring: { name: 'Beacon', part: 'C2 Node', theme: 'ring' },
+  frost: { name: 'Chill', part: 'Cold Store', theme: 'frost' },
+  erase: { name: 'Zero', part: 'Eraser', theme: 'erase' },
+  crumble: { name: 'Bad Write', part: 'Bad Block', theme: 'crumble' },
+  scramble: { name: 'Spread', part: 'Prism', theme: 'scramble' },
+  thorn: { name: 'Prick', part: 'Thorns', theme: 'thorn' },
+  strobe: { name: 'Tick', part: 'Strobe', theme: 'strobe' },
+  copy: { name: 'Splice', part: 'Mirror', theme: 'copy' },
+  scan: { name: 'Scrape', part: 'Scraper', theme: 'scan' },
+  plate: { name: 'Ping', part: 'Limiter', theme: 'plate' },
+  ledger: { name: 'Ledger', part: 'Buffer', theme: 'ledger' },
+  mask: { name: 'Turn', part: 'Turncoat', theme: 'mask' },
+  byte: { name: 'Gnaw', part: 'Fragment', theme: 'byte' },
+  // A part with no theme lashes at you (lash.mjs).
+  lash: { name: 'Lash', part: 'no theme', theme: null },
+  // What isn't a hit on you (does: its one form, whatever Lands says). Scramble: the Scrambler's strike, and your
+  // timers go dark. Replicate: the copies land on the fragment they make. Patch: a part seals itself, on its own row.
+  blind: { name: 'Scramble', part: 'Scrambler', theme: 'scramble', does: 'scrambles you' },
+  replicate: { name: 'Replicate', part: 'Replicator', theme: 'copy', does: 'spawns a fragment' },
+  patch: { name: 'Patch', part: 'its own row', theme: null, does: 'patches itself' },
 };
+export const STYLE_KEYS = ['surge', 'encrypt', 'hash', 'discharge'];
 export const PICKED = 'b1'; // the style round's pick: Corrupt, with Latch for its Encrypt
 export const RESULTS = ['hit', 'crit', 'blocked', 'evaded'];
+// What has no chip strike to time it: the lash's tip reaches you (lash.mjs; app.js LASH_TRAVEL) and its 1s and 0s fall;
+// a patch chip swells and clamps shut where it is (app.js fire).
+export const OWN_PLAN = { lash: { impact: 140, post: { fall: 500 } }, patch: { impact: 140 } };
+// The sound of a theme's strike ('lash' for a part with none).
+export const attackOf = (theme) => Object.keys(ATTACKS).find((k) => ATTACKS[k].theme === theme && !ATTACKS[k].does) || 'lash';
 // Levels (dB), so every style is heard at today's loudness, measured through renderBoard(): a medium hit at today's
 // hurt (−17 LUFS, momentary max), a crit a little under today's (−13: today's clips), blocked near −25 and evaded
 // near −26. level: the whole sound; crit, blocked, evaded: its contact on top (evaded: all of it, the travel passing
@@ -73,7 +106,8 @@ const wound = (t0, t1, n, fn) => { for (let i = 0; i < n; i++) { const u = i / (
 //   t the chip goes off · hit it lands on your bar (the number's beat) · lift (heat) it catches · wind (clock) [from, to]
 //   its hand winds · again (zap) the bolt's later strobes · step, n (lock) the padlocks, a step apart · stop (clock) it
 //   stops · tail (heat) how long its flames run (s) · result · k (how big: 0–1) · flies (the strike is drawn: false when
-//   there's none to time it, so it's contact and tail on the beat).
+//   there's none to time it, so it's contact and tail on the beat) · pre, post (round 2: the strike's other marks, before
+//   the hit and after it).
 
 // ===== a  Body =====
 function body() {
@@ -152,32 +186,32 @@ function body() {
 }
 
 // ===== b  Corrupt =====
+// Everything crushed, then dulled: static with the top taken off (yours keeps its top).
+const crushed = (K, o, e) => { const fx = bus(K, o, e); return { fx, b: K.crush(K.f('lowpass', 2600, 0.7, fx), 10, 2.8, 0.5) }; };
+// A stuck buffer: one slice of a sample again and again, slower and lower each time.
+const stuck = (K, dest, t, n, gap, name, { rate = 0.6, gain = 0.45, lp = 2200 } = {}) => { for (let i = 0; i <= n; i++) K.S(dest, t + i * gap * (1 + 0.12 * i), name, { gain: gain * (1 - i / (n + 2)), rate: rate * Math.pow(0.88, i), jitter: 0, off: 0.02, dur: gap * 0.8, fade: 0.002, lp }); };
+// Your carrier cutting out: a hum sagging, chopped into pieces.
+const dropout = (K, dest, t, d, { f = 110, peak = 0.12 } = {}) => {
+  const g = K.g(0, dest);
+  let on = true;
+  for (let x = t; x < t + d; x += 0.012 + Math.random() * 0.035) { g.gain.setValueAtTime(on ? 1 : 0, x); on = !on; }
+  g.gain.setValueAtTime(0, t + d);
+  K.hum(g, t, { f, f1: f * 0.6, d, peak, bright: 1100, a: 0.002 });
+};
+// The hit: it draws in, a dull crushed thump, a growl falling, the buffer sticking, blips draining away low.
+const rot = (K, o, fx, b, t, k, crit, from) => {
+  const big = crit ? 1 : k;
+  if (from < t - 0.05) K.S(fx, 0, 'scratch', { reverse: true, end: t, dur: Math.min(0.14, t - from), gain: 0.3, rate: 0.55 });
+  K.hiss(b, t, { type: 'lowpass', f0: 1800, a: 0.0005, d: 0.02, peak: 0.4 });
+  K.tone(b, t, { type: 'square', f0: 96, f1: 30, glide: 0.09, a: 0.001, d: 0.12 + 0.06 * big, peak: 0.3 + 0.16 * big });
+  K.fm(b, t + 0.012, { fc: 150, f1: 32, ratio: 1.41, i0: 9, i1: 0.4, dur: 0.22 + 0.14 * big, peak: 0.36 });
+  stuck(K, b, t + 0.04, 2 + Math.round(2 * big) + (crit ? 2 : 0), 0.042, 'glitch');
+  K.cascade(K.g(0.45, b), t + 0.03, 5 + Math.round(7 * big), { top: 1900, step: 0.013, peak: 0.08 });
+  dropout(K, fx, t + 0.05, 0.18 + 0.2 * big);
+  weight(K, o, t, big, crit);
+};
 // E: its Encrypt (0 the round's, 1 Latch, 2 Choke).
 function corrupt(E = 0) {
-  // Everything crushed, then dulled: static with the top taken off (yours keeps its top).
-  const crushed = (K, o, e) => { const fx = bus(K, o, e); return { fx, b: K.crush(K.f('lowpass', 2600, 0.7, fx), 10, 2.8, 0.5) }; };
-  // A stuck buffer: one slice of a sample again and again, slower and lower each time.
-  const stuck = (K, dest, t, n, gap, name, { rate = 0.6, gain = 0.45, lp = 2200 } = {}) => { for (let i = 0; i <= n; i++) K.S(dest, t + i * gap * (1 + 0.12 * i), name, { gain: gain * (1 - i / (n + 2)), rate: rate * Math.pow(0.88, i), jitter: 0, off: 0.02, dur: gap * 0.8, fade: 0.002, lp }); };
-  // Your carrier cutting out: a hum sagging, chopped into pieces.
-  const dropout = (K, dest, t, d, { f = 110, peak = 0.12 } = {}) => {
-    const g = K.g(0, dest);
-    let on = true;
-    for (let x = t; x < t + d; x += 0.012 + Math.random() * 0.035) { g.gain.setValueAtTime(on ? 1 : 0, x); on = !on; }
-    g.gain.setValueAtTime(0, t + d);
-    K.hum(g, t, { f, f1: f * 0.6, d, peak, bright: 1100, a: 0.002 });
-  };
-  // The hit: it draws in, a dull crushed thump, a growl falling, the buffer sticking, blips draining away low.
-  const rot = (K, o, fx, b, t, k, crit, from) => {
-    const big = crit ? 1 : k;
-    if (from < t - 0.05) K.S(fx, 0, 'scratch', { reverse: true, end: t, dur: Math.min(0.14, t - from), gain: 0.3, rate: 0.55 });
-    K.hiss(b, t, { type: 'lowpass', f0: 1800, a: 0.0005, d: 0.02, peak: 0.4 });
-    K.tone(b, t, { type: 'square', f0: 96, f1: 30, glide: 0.09, a: 0.001, d: 0.12 + 0.06 * big, peak: 0.3 + 0.16 * big });
-    K.fm(b, t + 0.012, { fc: 150, f1: 32, ratio: 1.41, i0: 9, i1: 0.4, dur: 0.22 + 0.14 * big, peak: 0.36 });
-    stuck(K, b, t + 0.04, 2 + Math.round(2 * big) + (crit ? 2 : 0), 0.042, 'glitch');
-    K.cascade(K.g(0.45, b), t + 0.03, 5 + Math.round(7 * big), { top: 1900, step: 0.013, peak: 0.08 });
-    dropout(K, fx, t + 0.05, 0.18 + 0.2 * big);
-    weight(K, o, t, big, crit);
-  };
   // Encrypt with no tones (round 1b). Latch: seven crushed latches, a stuck slice sagging lower under each. Choke: the
   // carrier's hum let through a notch at a time, lower and duller each notch.
   const encrypt = (K, o, T) => {
@@ -352,12 +386,18 @@ function chassis() {
 }
 
 const SOUNDS = { a: body(), b: corrupt(), c: chassis(), b1: corrupt(1), b2: corrupt(2) };
+// Round 2: every other attack, in the pick, from the pick's own voices.
+Object.assign(SOUNDS[PICKED], every({ bus, weight, glance, aside, read, wound, side, crushed, stuck, dropout, rot }));
+Object.assign(TRIM[PICKED], LEVELS);
 
 // How the hit's size and result read. plan: the strike's timing in ms (chipfx.mjs STRIKE_PLAN); drawn: false when no
 // strike is drawn to time it (Screen effects off, Motion off), so it lands at once: contact and tail on the beat.
+// pre: what the strike does before it lands, post: what it leaves after, each mark a time or a list of them.
 export function attackTiming(t, plan, { result = 'hit', power = 0.3, gain = 1 } = {}, drawn = true) {
   const p = plan || {}, s = (ms) => (drawn ? Math.max(0, ms || 0) / 1000 : 0), hit = t + s(p.impact);
+  const marks = (o, at) => Object.fromEntries(Object.entries(o || {}).map(([k, v]) => [k, Array.isArray(v) ? v.map(at) : at(v)]));
   return {
+    pre: marks(p.pre, (ms) => t + s(ms)), post: marks(p.post, (ms) => hit + Math.max(0, ms) / 1000),
     t, hit, lift: t + s(p.lift), wind: (p.wind || [0, 0]).map((x) => t + s(x)), again: drawn ? (p.again || []).map((x) => t + s(x)) : [],
     step: Math.max(0, p.step || 0) / 1000, n: p.n || 1, stop: hit + Math.max(0, p.stop || 0) / 1000, tail: Math.max(0, p.tail || 0) / 1000,
     result, k: Math.max(0, Math.min(1, power)), flies: s(p.impact) > 0.02, gain,
