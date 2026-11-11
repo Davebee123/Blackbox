@@ -12,6 +12,7 @@ import { createArt } from './virus-art.mjs';
 import { codexPageMarkup, codexEntry } from './codex-view.mjs';
 import { collectionPageMarkup, finds as findsLog } from './collection-view.mjs';
 import { createFeel } from './feel.mjs';
+import { createActBreak, actBreakMs } from './actbreak.mjs';
 import { placeOf, familyCues } from './places.mjs';
 import { createShell } from './shell.mjs';
 import { createScreenFx, screenState, screenFxCommand, SFX, boardFxOf, migrateEffects, levelOf } from './screenfx.mjs';
@@ -39,7 +40,8 @@ import { tierOf as masteryTier } from './mastery.mjs';
 import { plan as dmgPlan, queueAfter, absorbOf, armorFloat, missFloat } from './dmgfx.mjs';
 import { recapMarkup } from './recap.mjs';
 import { createLash, shakeOf, SHAKE } from './lash.mjs';
-import { createChipFx, chipStrike, chipTheme, STRIKES } from './chipfx.mjs';
+import { createChipFx, chipStrike, chipTheme, STRIKES, STRIKE_PLAN } from './chipfx.mjs';
+import { ATTACKS } from './virussound.mjs';
 import { online, peopleOn } from './presence.mjs';
 import { runnerFloor } from './runners-view.mjs';
 import { matesOf } from './crew.mjs';
@@ -488,6 +490,9 @@ function flash(text) {
   flash.t = setTimeout(() => (el.textContent = ''), 1600);
 }
 const feel = createFeel({ settings: () => campaign.settings, reducedMotion: () => !campaign.settings.motion || reducedMotion.matches });
+// A boss's act break (actbreak.mjs): the fight's clock holds while it plays (frame: actHold).
+let actHold = 0;
+const actBreak = createActBreak({ motion: () => canMove() });
 // A puzzle room's board: what a move did, played over it once it renders (puzzle-view.mjs), its sounds on their beats.
 // The level-up (levelup-ui.mjs): a firmware update under the top bar. It waits for a calm moment: no fight, no card
 // that waits for you, no Toolkit over the screen; after a won fight, once you have left it.
@@ -1295,7 +1300,9 @@ function react(events) {
       case 'interrupt': feel.add('interrupt', row(e.target), f?.text || (e.tell ? 'STOPPED' : 'DELAYED'), { src }); break;
       case 'telegraph': if (e.source) feel.add('prewarn', row(e.source), e.name || (e.message.match(/ ([A-Z][A-Z' -]{2,})[. ]/) || [])[1] || null); break; // a tell (tells.mjs) or a crew boss's mechanic, announced
       case 'warning': feel.add('nope', '#command-form'); break;
-      case 'phase': flash(e.enrage ? 'ENRAGED' : e.message.split('.')[0]); feel.add('hurt', null); break; // a boss changes phase (combat.mjs bossPhases)
+      // A boss changes phase (combat.mjs bossPhases): across its ♛'s act tick, the act break (actbreak.mjs), once the hit
+      // has played; the clock holds for it. Its enrage, or a phase of a boss with no act ticks: the flash.
+      case 'phase': if (e.act && !e.enrage) { feel.add(() => { actHold = Date.now() + actBreakMs(); actBreak.play(e.act, campaign.encounter?.virus?.name); }); feel.add('act', null); } else { flash(e.enrage ? 'ENRAGED' : e.message.split('.')[0]); feel.add('hurt', null); } break;
       case 'scan': art.hit(e.target); flash(e.message.split('.')[0].toUpperCase()); feel.add('good', row(e.target), 'WEAK'); break;
       case 'proc': feel.add('good', null); break;
       // Tells (tells.mjs): a read pays (the part Open, or a skill ready again); one that lands bites back.
@@ -2828,7 +2835,7 @@ function frame(now) {
     if (active(campaign) && !e.paused && !e.steps) e.elapsedMs = Math.min(cycleLength(campaign) - 1, (e.elapsedMs || 0) + delta);
   } else if (active(campaign)) {
     campaign.restAt = wall;
-    const events = advance(campaign, delta);
+    const events = advance(campaign, wall < actHold ? 0 : delta); // a boss's act break holds the clock
     if (events.length) { react(events); save(); }
   } else {
     // Resting between fights, plus any Self-healing filter, by the wall clock: a hidden tab or a closed
@@ -4179,6 +4186,22 @@ if (playtest === 'fx') import('./abilityfx-playtest.mjs').then(({ mountFxPlaytes
       if (plan) { window.__fxPlan = { travel: plan.travel, hold: plan.hold, impact: plan.impact, stop: plan.stop, dur: plan.dur, from: plan.from }; return stand && keyEl ? 'stand-in' : 'fx'; } // the playtest's last plan, for review captures
       if (row) hitfx.strike(row, { kind: 'you', result });
       return 'plain';
+    },
+    // A virus attack on you (virussound.mjs: the style round's four): its chip's strike (chipfx.mjs) from the part's chip
+    // to your bar, its number on the strike's impact, and its sound: today's voice for the result, or its own in a style.
+    attack: (key, id, { result, power, sound = 'off' }) => {
+      const A = ATTACKS[key], plan = STRIKE_PLAN[A.theme], drawn = fxLevel() !== 'minimal' && canMove(), land = drawn ? plan.impact : 0, frac = power / 5;
+      const chip = (fxRow(id)?.querySelector('[data-k]') || document.querySelector('#board [data-k]') || fxRow(id))?.getBoundingClientRect(), barEl = document.querySelector(BAR), bar = barEl?.getBoundingClientRect();
+      if (drawn && chip?.width && bar?.width) chipStrike(A.theme, chip, { x: bar.left + bar.width / 2, y: bar.top + bar.height / 2 }, bar, barEl.firstElementChild?.getBoundingClientRect().right ?? null);
+      if (sound !== 'off' && !(sound !== 'today' && feel.attackPreview(sound, key, plan, { result, power }, drawn))) feel.preview({ crit: 'hurtcrit', blocked: 'interrupt', evaded: 'evade' }[result] || 'hurt', { frac }, land / 1000);
+      feel.beat(land);
+      if (result === 'evaded' || result === 'blocked') feel.add(result === 'evaded' ? 'evade' : 'interrupt', MINE, result.toUpperCase(), { silent: true });
+      else {
+        feel.add(() => shake(power, result === 'crit'));
+        feel.add(result === 'crit' ? 'hurtcrit' : 'hurt', MINE, `−${Math.max(1, Math.round(frac * (defender(campaign).max || 100)))}`, { frac, size: 1 + power * 0.8 + (result === 'crit' ? 0.3 : 0), silent: true, noEdge: drawn, softEdge: !drawn, noFlash: drawn, floatAt: BAR, x: 0.5 });
+      }
+      feel.beat(0); feel.flush();
+      return drawn ? 'fx' : 'none';
     },
   });
 });

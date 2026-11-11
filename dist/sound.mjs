@@ -8,6 +8,7 @@
 // Voices take any AudioContext and a start time, which is how `renderBoard()` bounces them to a
 // WAV for listening offline.
 import { playAbility, timingOf } from './abilitysound.mjs';
+import { playAttack, attackTiming } from './virussound.mjs';
 
 const NOTE = (n) => 440 * Math.pow(2, (n - 69) / 12); // MIDI note → Hz
 
@@ -715,6 +716,20 @@ function abilityAt(ctx, ch, style, key, T) {
   const list = (name) => { const l = banks.get(ctx)?.buffers.get(name); return l && take(l, name); };
   return playAbility(ctx, { dry, room }, style, key, T, list);
 }
+// A virus attack's sound (virussound.mjs) in a style, timed by T (attackTiming): the same room and hall as yours, a
+// little less of each (a dull sound muddies sooner). It shares the abilities' voice cap.
+function attackAt(ctx, ch, style, key, T) {
+  if (!banks.get(ctx)?.ready) return false;
+  const live = (recent.get(ctx) || []).filter((t) => Math.abs(t - T.t) < ABILITY_SPAN);
+  if (live.length >= ABILITY_CAP) return false;
+  recent.set(ctx, [...live, T.t]);
+  const dry = ctx.createGain(), send = ctx.createGain(), room = ctx.createGain(), more = ctx.createGain(), hall = ctx.createGain(), far = ctx.createGain();
+  send.gain.value = 0.2; more.gain.value = 0.6; hall.gain.value = 0.6; far.gain.value = 0.5;
+  dry.connect(ch.master); dry.connect(send).connect(ch.room); dry.connect(hall).connect(hallOf(ctx, ch));
+  room.connect(dry); room.connect(more).connect(ch.room); room.connect(far).connect(hallOf(ctx, ch));
+  const list = (name) => { const l = banks.get(ctx)?.buffers.get(name); return l && take(l, name); };
+  return playAttack(ctx, { dry, room }, style, key, T, list);
+}
 
 // Play one recipe (or its synth stand-in) at time t.
 function voiceAt(ctx, ch, name, t, opts = {}) {
@@ -816,6 +831,13 @@ export function createSound() {
       if (!ready()) return false;
       try { return abilityAt(ctx, ch, style, key, timingOf(ctx.currentTime + 0.005 + Math.max(0, delay), plan || {}, hit)); } catch { return false; }
     },
+    // A virus attack's sound in a style (virussound.mjs), timed by its chip's strike (plan: chipfx.mjs STRIKE_PLAN, ms
+    // from now; drawn: false when no strike is drawn, so it lands at once), its hit ({ result, power, gain }) and a
+    // delay (s). False if it has none to play (or the samples aren't in).
+    attack(style, key, plan, hit, drawn = true, delay = 0) {
+      if (!ready()) return false;
+      try { return attackAt(ctx, ch, style, key, attackTiming(ctx.currentTime + 0.005 + Math.max(0, delay), plan, hit, drawn)); } catch { return false; }
+    },
     // A decoded one-shot (a virus family's attack or break, places.mjs) through the same chain as every voice.
     clip(buffer, gain = 1) {
       if (!buffer || !ready()) return;
@@ -860,6 +882,7 @@ export function createSound() {
 export async function renderBoard(names = Object.keys(RECIPES), gap = 1.3, { synth = false, base, hum = false, channels = 1 } = {}) {
   // Each entry is a name (played `gap` seconds after the last) or [name, seconds, opts] for a scene.
   // 'ability:<style>:<key>' plays an ability's sound: opts { plan, result, power } (abilitysound.mjs).
+  // 'attack:<style>:<key>' plays a virus attack's: opts { plan, result, power, drawn } (virussound.mjs).
   const cues = names.map((n, i) => (Array.isArray(n) ? n : [n, 0.3 + i * gap, n === 'hit' ? { amount: 12 } : {}]));
   const sr = 44100, nc = channels === 2 ? 2 : 1, ctx = new OfflineAudioContext(nc, Math.ceil(sr * (Math.max(...cues.map((c) => c[1])) + 2)), sr);
   if (!synth) await loadBank(ctx, base);
@@ -868,6 +891,7 @@ export async function renderBoard(names = Object.keys(RECIPES), gap = 1.3, { syn
   for (const [n, t, o = {}] of cues) {
     if (n.startsWith('key:')) (KEYS[n.slice(4)] || KEYS.char)((s, at, x) => sample(ctx, ch.master, t, s, { ...x, at }));
     else if (n.startsWith('ability:')) { const [, style, key] = n.split(':'); abilityAt(ctx, ch, style, key, timingOf(t, o.plan || {}, o)); }
+    else if (n.startsWith('attack:')) { const [, style, key] = n.split(':'); attackAt(ctx, ch, style, key, attackTiming(t, o.plan, o, o.drawn !== false)); }
     else voiceAt(ctx, ch, n, t, o);
   }
   const buf = await ctx.startRendering();

@@ -43,7 +43,7 @@ Every playtest URL runs on a fresh state that is never saved. The real save is n
 | `/?playtest=cryptjack` | A paused fight against a fixture or strain (`splinter`, `ghostroot`…); `random` for a wild one. `&level=`, `&cls=`, `&sub=`, `&family=`, `&seed=`. Type `resume`. |
 | `/?playtest=boss:<id>` | A paused boss fight (`resident`, `repoman`, `choir`…), geared for `&level=` (10 by default). `&family=worm\|ransomware` for the Resident, `&cls=`, `&sub=`, `&seed=`. |
 | `/?playtest=part:<id>` | A fight with that part, at the level it opens (or `&level=`); `part:<id>.exe` its .exe build. |
-| `/?playtest=fx` | The ability effects playtest: a panel that fires every ability's effect, at each Screen effects level and mastery tier, as a hit, crit, hit on ◆ or miss, with a status for it to cash in, and a burn's tick by how far it has run down. `&cls=`, `&crew=<class>`. |
+| `/?playtest=fx` | The ability effects playtest: a panel that fires every ability's effect, at each Screen effects level and mastery tier, as a hit, crit, hit on ◆ or miss, with a status for it to cash in, and a burn's tick by how far it has run down. `&cls=`, `&crew=<class>`. Virus attacks: four strikes on your bar, with today's sound or their own in a style. |
 | `/?playtest=run` | Connected to a fresh server. `&family=worm\|ghostroot`, `&template=mailhub\|mirror\|archive\|lab` (its rooms' kind), `&depth=<floor>`. |
 | `/?playtest=rooms` | One server as rooms, clocks ten times as fast. `&class=`, `&level=`, `&kind=`, `&size=small\|medium\|large`, `&floor=`, `&boss=a\|b\|c`, `&hunter=patrol\|track`, `&card=surge\|escort\|pack` (a run card), `&seed=`, `&puzzle=<board>` (its room, and you in it), `&seen` (every room discovered). |
 | `/?playtest=story&beat=<id>` | A test save at a story beat (the editor's *Play from here*). |
@@ -99,6 +99,7 @@ comment saying what it does.
 | `dist/interrupt.mjs` | The interrupt: crossing a part's 50% or 25% tick on its due cycle cancels its move. |
 | `dist/order.mjs` | The order levers: parts whose right moment to break depends on the board. |
 | `dist/acts.mjs` | Boss acts (P4): a boss's three acts, its beat (the Backlash, a Mimic, a Decoy), and the ♛ left until its beat plays. |
+| `dist/actbreak.mjs` | Presentation only: the act break as a boss crosses into its next act (the tick's burst, the strip, the emote). |
 | `dist/floorbosses.mjs` | The floor 2, 3 and 4 bosses' rules (CENTRIFUGE's Bidding, SHAKEDOWN's Ransom Clock, SHOULDER SURFER's Replay, RECURSION's Call, NIGHT DESK's No Timeout, BYZANTINE's Vote, CAMSWARM's Telnet Sweep), their phase verbs, and their uniques' hooks. |
 | `dist/mechanics.mjs` | The mechanics list: twenty third parts built lean, each rule's hooks in one place. Eleven strains and the eleven mutated ones are built from them (`STRAINS`). |
 | `dist/situations.mjs` | The moment on the board each situational skill is built for; the tray lights it. |
@@ -235,7 +236,7 @@ comment saying what it does.
 | `dist/abilityfx.mjs`, `dist/abilityfx-table.mjs`, `dist/abilityfx-playtest.mjs` | Ability effects on the board, the table of every ability's effect, and its playtest. |
 | `dist/abilitylight.mjs` | What an ability effect does where it lands, drawn in light: flashes, shock rings, cracks, sparks, flames, the comet, a status cashing in. |
 | `dist/hitfx.mjs`, `dist/dmgfx.mjs`, `dist/lash.mjs` | Hits landing on a part (a MISS or RESISTED stamped on it; a broken one's row and name breaking into 1s and 0s), damage numbers one per source, a virus lashing at the screen (and its shake). |
-| `dist/chipfx.mjs` | Themed timeline chips: a part's theme (docs/chip-themes.md) played faint inside its chips at +1 and in Now, and its strike into your bar when it goes off. |
+| `dist/chipfx.mjs` | Themed timeline chips: a part's theme (docs/chip-themes.md) played faint inside its chips at +1 and in Now, and its strike into your bar when it goes off (STRIKE_PLAN: when a strike does what, for its sound). |
 | `dist/virus-art.mjs` | Each virus as animated 3D ASCII art: each body's core and limbs attack their own ways out of its window (`STRIKE_OF`, `STRIKES`), a broken part dissolves into 1s and 0s. |
 | `dist/boss-art.mjs` | Each boss's own body for it (`BOSS_SHAPE`, the Resident's by family): its parts are the model's regions, the ones that join mid-fight modelled from the start. A boss faces you (`BOSS_SWING`) and is fitted to the window. |
 | `dist/nocarrier.mjs`, `dist/nocarrier.css` | Losing a fight: static and NO CARRIER, then the Disconnected card. |
@@ -244,6 +245,7 @@ comment saying what it does.
 | `dist/sound.mjs`, `dist/sfx/` | Sound effects from recorded CC0 samples (CREDITS.md). |
 | `dist/abilitysound.mjs` | Ability sounds timed to their effects (docs/ability-sounds-plan.md): the kit, the style round and each class's key 1. `app.js` strikes() plays the picked style in a fight (abilitySound, abilityVoices); `?playtest=fx` plays any. |
 | `dist/abilitysound-all.mjs` | Every other ability's sound in the picked style, built from its row in the effects table, with the mastery tiers' layers and the winning break's flourishes; `abilitysound-levels.mjs` holds their measured levels. |
+| `dist/virussound.mjs` | Virus attack sounds, the style round (docs/ability-sounds-plan.md, "Virus attacks"): Surge, Encrypt, Hash and Discharge in three styles, timed to their chips' strikes. Heard in `?playtest=fx` only; a fight plays today's hurt. |
 | `dist/soundtrack.mjs`, `dist/music/` | Music and radio chatter (CC0 tracks, CREDITS.md). |
 | `dist/fightmusic.mjs` | Each virus family's fight theme, synthesized live; heat brings its layers in. |
 | `dist/places.mjs` | A sound bed for each floor, and the virus you're fighting. |

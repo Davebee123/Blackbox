@@ -60,6 +60,8 @@ export const SIGNS = {
   interrupt: { flash: 'fx-shove', float: 'you', voice: 'interrupt', buzz: 15 },
   // The virus adapted after a break.
   escalate: { flash: 'fx-enrage', voice: 'escalate', buzz: [10, 30, 10] },
+  // A boss crosses into its next act (actbreak.mjs): two knocks and a long one. No sound until the designer picks one.
+  act: { buzz: [40, 60, 40, 60, 160] },
   // Your command was refused.
   nope: { flash: 'fx-nope', voice: 'nope', buzz: [8, 40, 8] },
   // Something lands at the end of this cycle and time is almost up.
@@ -207,6 +209,8 @@ export function createFeel({ settings, reducedMotion }) {
     preview(name, opts, delay = 0) { sound.play(name, opts || (name === 'hit' ? { amount: 12 } : {}), delay); },
     // An ability's sound in a style, whatever the Sound setting (the ability effects playtest; abilitysound.mjs).
     abilityPreview(style, key, plan, hit) { return sound.ability(style, key, plan, hit); },
+    // A virus attack's sound in a style, whatever the Sound setting (the same playtest; virussound.mjs).
+    attackPreview(style, key, plan, hit, drawn) { return sound.attack(style, key, plan, hit, drawn); },
     // A key on the prompt or a button press (only with Sound on).
     key(kind) { if (settings().sound) sound.key(kind); },
     // A scene with its own mix (the cold open): { ctx, out } at the effects volume, or null with Sound off.
