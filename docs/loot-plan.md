@@ -105,8 +105,17 @@ Each leans on what its floor is known for; no two ask for the same kind of play.
 
 Floors 3 and 6 fall in the thin bands (15–20, 33–38).
 
+### How it reads (picked, November 2026)
+
+- **Ledger** (collection log): an earned piece's line shows its name from the start, muted until earned; in the hint
+  column, a cell a count (past 8, a cell is two), then the goal and n/N (*Cascade boards 4/6*). Earned, it reads as any
+  find: its slot and the date. Set green cells for a set piece, amber for a unique. The *Segments* look.
+- **Datasheet:** the set's missing pieces keep one line each, the goal and count right-aligned (*Cascade 4/6*), muted.
+- **Pins:** up to 3, pinned from the piece's Ledger line. The map shows them in a *Pinned* section under Contracts
+  (n/3), each row as a tracker row: set-green edge, the set's name over the piece's, the cells and the count. A click
+  opens its Ledger entry.
+
 ### Open
 
 - **Counters to add:** bait caches taken, elite rooms cleared a floor, servers held a floor.
 - **The Sink's and Bedrock's activity uniques** (threads, vaults, boards) stay on their rolls until this has been played.
-- **Prototype first:** how a piece's goal reads in the collection log and the set tooltip.
