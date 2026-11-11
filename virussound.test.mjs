@@ -3,7 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { STYLES, ATTACKS, RESULTS, TRIM, attackTiming, playAttack, hasAttack } from './dist/virussound.mjs';
+import { STYLES, ATTACKS, RESULTS, TRIM, PICKED, attackTiming, playAttack, hasAttack } from './dist/virussound.mjs';
 import { STRIKE_PLAN, STRIKES, CHIP_THEMES } from './dist/chipfx.mjs';
 import { BANK } from './dist/sound.mjs';
 
@@ -43,6 +43,8 @@ test('every style has a sound and levels for each of the round\'s attacks, on a 
     }
   }
 });
+
+test('the pick is one of the styles', () => { assert.equal(STYLES[PICKED], 'Corrupt, latch'); });
 
 test('the timing follows the strike: the chip goes off, and it lands on your bar on the plan\'s impact', () => {
   const T = attackTiming(10, STRIKE_PLAN.clock, { result: 'crit', power: 0.4 });
