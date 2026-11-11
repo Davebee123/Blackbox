@@ -51,7 +51,6 @@
 import { hooks, emit, warn, active, selectEncounter, encounterVirus, command, maxSignal, hackerOf, hackerLevel, classOf, addItem, stashItem, gainXp, gainCode, xpFor, deedXpFor, rollDrop, fxPct, puzzleUnique } from './combat.mjs';
 import { GUARDS, SUBS, LOADOUT, SUBCLASS, defaultSub, ARCHETYPES, BOSSES, FAMILIES, CONFIG, ELITE, ROLLED_MUTATIONS, SERVER, xpToNext, spreadOf } from './data.mjs';
 import { botTiers } from './talents.mjs';
-import { clearXp } from './sets.mjs';
 import { LOOT, vaultRarity, seeded, rollItem, itemLabel, protocolSlots, SLOT_KINDS, chaseStat, MATERIALS } from './gear.mjs';
 import { AUTHORS } from './authors.mjs';
 import { giveScript, rollScript } from './scripts.mjs';
@@ -755,8 +754,6 @@ function clear(s, room, quiet = false) {
   const R = s.rooms;
   if (R.cleared[room.id]) return false;
   R.cleared[room.id] = nowOf();
-  const xs = R.world && FIGHTS.includes(room.kind) ? clearXp(s) : 0; // Full Coverage (3): a share of a kill's XP (sets.mjs)
-  if (xs > 0) gainXp(s, Math.max(1, Math.round((xpFor(s, R.level) * xs) / 100)), 'First clear', 'breakin');
   const p = progressOf(s);
   if (!quiet) say(s, `${room.path} cleared.`, 'rooms-good');
   if (p.done * 2 >= p.total && !R.drawn) { R.drawn = true; for (const x of roomList(s)) R.seen[x.id] ||= 'shape'; say(s, 'Half cleared: the whole map is drawn.', 'rooms-good'); }

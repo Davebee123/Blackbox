@@ -1,43 +1,8 @@
 // Earned pieces' counts (earned.mjs, GAME_RULES.md *Earned pieces*): one entry a piece, the one place to tune them.
-//   { n }                      events of the piece's own sources (content/items.mjs), counted from its band
-//   { n, on: [src] }           events of these sources instead (a floor feat's)
-//   { n, distinct: 'field' }   different ones, by that field of the event (a strain's id, a server's specials)
+//   { n, on: [src] }           events of these sources, counted from its band
+//   { n, distinct: 'field' }   different ones, by that field of the event (a server's specials)
 //   { state, floor, n? }       what the floor shows: mapped, held, root (at root), elites, located; no n: all of it
-// First guesses, their activity rates not measured yet: Kestrel Clearance, Patchwork, Lantern Route, Burst Buffer.
 export default {
-  "timecard": { n: 4 },
-  "night-light": { n: 8 },
-  "thermos": { n: 12 },
-  "stitch": { n: 50 },
-  "darn": { n: 50 },
-  "hem": { n: 50 },
-  "seam": { n: 15, distinct: "strain" },
-  "shortwave": { n: 8 },
-  "logbook": { n: 16 },
-  "antenna": { n: 24 },
-  "freezer": { n: 12 },
-  "cold-cache": { n: 24 },
-  "frost-line": { n: 36 },
-  "punch-card": { n: 15 },
-  "time-clock": { n: 15 },
-  "late-pass": { n: 15 },
-  "coffee-run": { n: 15 },
-  "cache-line": { n: 10 },
-  "prefetch": { n: 20 },
-  "flush": { n: 30 },
-  "standby": { n: 8 },
-  "failback": { n: 16 },
-  "index": { n: 15 },
-  "spine": { n: 30 },
-  "folio": { n: 45 },
-  "vellum": { n: 60 },
-  "kestrel-badge": { n: 15 },
-  "kestrel-token": { n: 15 },
-  "kestrel-lanyard": { n: 15 },
-  "plumb-line": { state: "mapped", floor: 5, n: 8 },
-  "field-book": { state: "mapped", floor: 5 },
-  "hi-vis": { state: "mapped", floor: 6, n: 8 },
-  "datum": { state: "mapped", floor: 6 },
   "street-atlas": { floor: 1, state: "mapped" },
   "quiet-hours": { floor: 2, n: 3, on: [{ kind: "router-vault", floor: 2 }] },
   "sweetener": { floor: 3, n: 12, on: [{ kind: "bait", floor: 3 }] },

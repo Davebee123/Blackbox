@@ -1,10 +1,10 @@
-// Earned pieces (docs/loot-plan.md *Earned pieces*, GAME_RULES.md *Earned pieces*): set pieces and floor uniques that
-// come from finishing an activity, never a roll. A piece carrying `earn` (content/items.mjs) has a count; the count
-// starts when you reach its band (its set's first level, a floor feat's floor's), and when it fills the piece arrives
-// once, at your level, through addItem (the reward card's *New in collection*). They sit outside the one-an-hour rate.
-//   earn: { n }                       events matching the piece's sources (sets.mjs fromHere), counted in setDrop
-//   earn: { n, on: [src] }            events matching `on` instead (a floor feat's: bait, a Router vault, a takeover)
-//   earn: { n, distinct: 'strain' }   different ones, by that field of the event (Seam's strains, Mixed Bag's specials)
+// Earned pieces (docs/loot-plan.md *Earned pieces*, GAME_RULES.md *Earned pieces*): one unique a floor, its floor's
+// feat, that comes from finishing an activity, never a roll. Its count (content/earned.mjs, the one table) starts when
+// you reach its floor's band; when it fills the piece arrives once, at your level, through addItem (the reward card's
+// *New in collection*). Outside the one-an-hour rate.
+//   earn: { n, on: [src] }            events matching `on` (bait, a Router vault, a takeover), counted in setDrop or
+//                                     by their own hook (sets.mjs fromHere matches them)
+//   earn: { n, distinct: 'special' }  different ones, by that field of the event (Mixed Bag's specials)
 //   earn: { state, floor, n? }        what a floor shows now: mapped, held, root (Root 3), elites, located; no n: all
 // The engine reaches this module through hooks (combat.mjs setDrop, floorplan.mjs takeCache, profile.mjs tickProfile),
 // so it adds no import cycle; netrooms.mjs and view.mjs load it.
@@ -13,10 +13,9 @@
 //   earnTick(s)        every second: the floor goals, paid once full
 //   pinsOf, pinCommand up to three pins (s.pins), shown on the map under Contracts
 import { hooks, emit, warn, addItem, hackerLevel, rand, UNIQUES } from './combat.mjs';
-import { FLOORS, GUARDS, FAMILIES } from './data.mjs';
+import { FLOORS } from './data.mjs';
 import { uniqueItem } from './gear.mjs';
-import { SETS, setOf, fromHere } from './sets.mjs';
-import { PUZZLES } from './puzzles.mjs';
+import { setOf, fromHere } from './sets.mjs';
 import { floorGraph, floorSeed, locAt, serverSlot, floorName } from './floors.mjs';
 import { owned, rootOf } from './root.mjs';
 import { sizeOf } from './sockets.mjs';
@@ -29,10 +28,9 @@ export const PIN_MAX = 3;
 export const CELLS = 8;
 
 const plural = (k, one, many = one + 's') => `${k} ${k === 1 ? one : many}`;
-const floors = (f) => (Array.isArray(f) ? (f[0] === f[1] ? `floor ${f[0]}` : `floors ${f[0]}–${f[1]}`) : `floor ${f}`);
-// Its band: a set piece's set's first level, a floor feat's floor's first.
-export const bandOf = (u) => (u.set ? SETS[u.set]?.levels?.[0] || u.level : FLOORS[(u.earn.floor || 1) - 1]?.band[0] || u.level);
-const onOf = (u) => u.earn.on || u.sources || [];
+// Its band: its floor's first level.
+export const bandOf = (u) => FLOORS[(u.earn.floor || 1) - 1]?.band[0] || u.level;
+const onOf = (u) => u.earn.on || [];
 
 // What it asks, as the Ledger, the datasheet and the map say it: text (Cascade boards), short (Cascade), and todo(k),
 // the tooltip's answer (Win 2 more Cascade boards).
@@ -44,20 +42,7 @@ function goalOf(u) {
   if (E.state === 'elites') return { text: `Elite rooms on ${F}`, short: 'Elites', todo: (k) => `Clear ${plural(k, 'more elite room')} on ${F}, on every server there` };
   if (E.state === 'located') return { text: `Servers located on ${F}`, short: 'Located', todo: (k) => `Locate ${plural(k, 'more server')} on ${F}` };
   switch (src.kind) {
-    case 'thread': return { text: `Threads on ${floors(src.floor)}`, short: 'Threads', todo: (k) => `Finish ${plural(k, 'more thread')} on ${floors(src.floor)}` };
-    case 'guard': { const g = GUARDS[src.id]?.name || src.id; return { text: `${g} kills`, short: g, todo: (k) => `Beat the ${g} ${plural(k, 'more time')}` }; }
-    case 'strain': {
-      if (E.distinct) return { text: 'Strains', short: 'Strains', todo: (k) => `Kill ${plural(k, 'more strain')} you haven't killed since` };
-      const f = FAMILIES[src.lineage]?.name || src.lineage;
-      return { text: `${f} strains`, short: f, todo: (k) => `Kill ${plural(k, `more ${f.toLowerCase()} strain`)}` };
-    }
-    case 'courier': return { text: 'Couriers', short: 'Couriers', todo: (k) => `Intercept ${plural(k, 'more courier')}` };
-    case 'vault': { const w = !Array.isArray(src.floor) ? floorName(src.floor) : null; return { text: `Vaults on ${w || floors(src.floor)}`, short: 'Vaults', todo: (k) => `Open ${plural(k, 'more vault')} on ${w || floors(src.floor)}` }; }
-    case 'puzzle': { const p = PUZZLES[src.id]?.name || src.id; return { text: `${p} boards`, short: p, todo: (k) => `Win ${plural(k, `more ${p} board`)}` }; }
-    case 'rare': return { text: `★ rare spawns, floor ${Array.isArray(src.floor) ? src.floor[0] : src.floor} down`, short: '★ rares', todo: (k) => `Kill ${plural(k, 'more ★ rare spawn')} on floor ${Array.isArray(src.floor) ? src.floor[0] : src.floor} or deeper` };
-    case 'takeover': return E.distinct
-      ? { text: `Specials taken on ${floorName(src.floor)}`, short: 'Specials', todo: (k) => `Take over servers on ${floorName(src.floor)} with ${plural(k, 'more special')}` }
-      : { text: `Takeovers on ${floors(src.floor)}`, short: 'Takeovers', todo: (k) => `Take over ${plural(k, 'more server')} on ${floors(src.floor)}` };
+    case 'takeover': return { text: `Specials taken on ${floorName(src.floor)}`, short: 'Specials', todo: (k) => `Take over servers on ${floorName(src.floor)} with ${plural(k, 'more special')}` };
     case 'router-vault': return { text: 'Router vaults banked unseen', short: 'Routers', todo: (k) => `Bank ${plural(k, 'more Router vault')}, the Tracker never reaching you` };
     case 'bait': return { text: 'Bait caches on Honeypots', short: 'Bait', todo: (k) => `Take ${plural(k, 'more bait cache')} on Honeypots` };
     default: return { text: '', short: '', todo: () => '' };
