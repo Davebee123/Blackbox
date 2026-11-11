@@ -3,6 +3,10 @@
 //   a  Body     a blow to the body: today's hurt in pieces (the soft blow, the punch, the crushed growl), air and thuds.
 //   b  Corrupt  your signal breaking up: a crushed drop, a stuck buffer sagging, the carrier cutting out, static.
 //   c  Chassis  your machine taking it: the rack struck, the power sagging, relays tripping, the case rattling on.
+// The designer picked Corrupt, and heard its Encrypt (a modem's tones, seven square steps down) as too on the nose.
+// Round 1b, Corrupt with two takes on Encrypt that have no tones:
+//   b1 Latch    static drawing in, seven crushed latches, each a stuck slice sagging lower.
+//   b2 Choke    your carrier's hum pinched shut a notch at a time, duller each notch, then cut.
 // Yours is bright and rings out (abilitysound.mjs); theirs is dull and falls: no crack on top, the echoes dark.
 // Each sound is timed to its chip's strike (chipfx.mjs STRIKE_PLAN) in four layers:
 //   launch  as the chip goes off (the bolt's snap, the padlocks lifting, the fire catching, the hand winding)
@@ -14,7 +18,7 @@
 
 import { kit } from './abilitysound.mjs';
 
-export const STYLES = { a: 'Body', b: 'Corrupt', c: 'Chassis' };
+export const STYLES = { a: 'Body', b: 'Corrupt', c: 'Chassis', b1: 'Corrupt, latch', b2: 'Corrupt, choke' };
 // The round's four: the attack, the part that makes it and its chip theme (chipfx.mjs), picked for four shapes: at
 // once, one after another, a lob and a wind-up.
 export const ATTACKS = {
@@ -29,9 +33,11 @@ export const RESULTS = ['hit', 'crit', 'blocked', 'evaded'];
 // near −26. level: the whole sound; crit, blocked, evaded: its contact on top (evaded: all of it, the travel passing
 // on is the sound).
 export const TRIM = {
-  a: { surge: { level: 3.1, crit: -4.4, blocked: -0.7, evaded: 11.5 }, encrypt: { level: -0.9, crit: -1.9, blocked: 3.2, evaded: 8.2 }, hash: { level: 1.4, crit: -3.8, blocked: 2.6, evaded: 8.3 }, discharge: { level: 1.2, crit: -3.1, blocked: -1.8, evaded: 1.1 } },
-  b: { surge: { level: -0.3, crit: -2, blocked: 2.4, evaded: 7.7 }, encrypt: { level: 0.6, crit: -1.4, blocked: -7.6, evaded: -2.6 }, hash: { level: -1.1, crit: -1.2, blocked: -1.2, evaded: 0.7 }, discharge: { level: -1.2, crit: -0.8, blocked: 3.8, evaded: 3.4 } },
-  c: { surge: { level: 1.5, crit: -2.9, blocked: 0, evaded: 5.1 }, encrypt: { level: 0.1, crit: -2, blocked: 2.7, evaded: 4.1 }, hash: { level: 1.1, crit: -2.4, blocked: -6, evaded: -1.2 }, discharge: { level: 0, crit: -1.2, blocked: -2.3, evaded: -1 } },
+  a: { surge: { level: 3.1, crit: -4.4, blocked: -0.7, evaded: 11.5 }, encrypt: { level: -0.9, crit: -1.9, blocked: 3.2, evaded: 8.2 }, hash: { level: 1.4, crit: -3.8, blocked: 2.6, evaded: 8.3 }, discharge: { level: 1.2, crit: -3.1, blocked: -2, evaded: 1.1 } },
+  b: { surge: { level: -0.3, crit: -2, blocked: 2.4, evaded: 7.7 }, encrypt: { level: 0.6, crit: -1.4, blocked: -10.9, evaded: -2.6 }, hash: { level: -1.1, crit: -1.2, blocked: -1.2, evaded: 0.7 }, discharge: { level: -1.2, crit: -0.8, blocked: 3.8, evaded: 3.4 } },
+  b1: { surge: { level: -0.3, crit: -2, blocked: 1.6, evaded: 12 }, encrypt: { level: -0.3, crit: -0.6, blocked: -5.8, evaded: 3.7 }, hash: { level: -0.8, crit: -1.6, blocked: -1.7, evaded: 0.4 }, discharge: { level: -1.1, crit: -1, blocked: 3.1, evaded: 3.3 } },
+  b2: { surge: { level: -0.3, crit: -2, blocked: 2.4, evaded: 12 }, encrypt: { level: 1.1, crit: -1.7, blocked: -4, evaded: 2.3 }, hash: { level: -1.1, crit: -1.2, blocked: -1.2, evaded: 0.7 }, discharge: { level: -1.2, crit: -0.8, blocked: 3.2, evaded: 3.4 } },
+  c: { surge: { level: 1.5, crit: -2.9, blocked: 0.2, evaded: 5.1 }, encrypt: { level: 0, crit: -1.9, blocked: 2.8, evaded: 4.2 }, hash: { level: 1.1, crit: -2.4, blocked: -6.4, evaded: -1.2 }, discharge: { level: 0, crit: -1.2, blocked: -2.3, evaded: -1 } },
 };
 
 const side = () => Math.random() * 1.4 - 0.7;
@@ -145,7 +151,8 @@ function body() {
 }
 
 // ===== b  Corrupt =====
-function corrupt() {
+// E: its Encrypt (0 the round's, 1 Latch, 2 Choke).
+function corrupt(E = 0) {
   // Everything crushed, then dulled: static with the top taken off (yours keeps its top).
   const crushed = (K, o, e) => { const fx = bus(K, o, e); return { fx, b: K.crush(K.f('lowpass', 2600, 0.7, fx), 10, 2.8, 0.5) }; };
   // A stuck buffer: one slice of a sample again and again, slower and lower each time.
@@ -170,6 +177,34 @@ function corrupt() {
     dropout(K, fx, t + 0.05, 0.18 + 0.2 * big);
     weight(K, o, t, big, crit);
   };
+  // Encrypt with no tones (round 1b). Latch: seven crushed latches, a stuck slice sagging lower under each. Choke: the
+  // carrier's hum let through a notch at a time, lower and duller each notch.
+  const encrypt = (K, o, T) => {
+    const { t, hit, k, crit, gone, wall } = read(T), { fx, b } = crushed(K, o, { time: 0.12, fb: 0.45, wet: 0.45 }), end = hit + (T.n - 1) * T.step;
+    if (T.flies) {
+      K.stat(b, t, { d: 0.03, peak: 0.18 });
+      K.flight(b, t + 0.05, hit, { f0: 180, f1: 700, q: 0.8, peak: 0.07, color: 'sah', pass: gone, tail: 0.25 });
+      if (E === 2) K.hum(fx, t + 0.05, { f: 104, f1: 116, d: Math.max(0.05, hit - t - 0.1), peak: 0.05, bright: 900, a: 0.08 });
+      if (!gone && hit - t > 0.2) K.S(fx, 0, 'scratch', { reverse: true, end: hit, dur: 0.16, gain: 0.25, rate: 0.5 });
+    }
+    if (gone) return aside(K, o, hit);
+    if (wall) { glance(K, o, hit); for (let i = 1; i < T.n; i++) K.S(K.pan(b, side()), hit + i * T.step, 'glitch', { gain: 0.2 * (1 - i / (T.n + 2)), rate: 1.4, off: 0.02, dur: 0.015, fade: 0.002 }); return; }
+    for (let i = 0; i < T.n; i++) {
+      const x = hit + i * T.step, gap = Math.max(0.02, T.step);
+      if (E === 2) {
+        K.hum(fx, x, { f: 110 * Math.pow(0.97, i), d: gap * 0.6, peak: 0.16, bright: 1500 * Math.pow(0.78, i), a: 0.002 });
+        K.S(b, x, 'click', { gain: 0.22, rate: 0.7 - 0.03 * i, lp: 2000 });
+      } else {
+        K.S(b, x, 'relay', { gain: 0.34, rate: 0.75 - 0.03 * i });
+        K.S(b, x + 0.004, 'glitch', { gain: 0.3, rate: 0.7 * Math.pow(0.92, i), jitter: 0, off: 0.02, dur: gap * 0.75, fade: 0.002, lp: 2200 });
+        K.tone(b, x, { f0: 120 - 8 * i, f1: 60, glide: 0.03, a: 0.001, d: 0.03, peak: 0.12 });
+      }
+    }
+    K.S(b, end, 'plate-h', { gain: 0.5, rate: 0.6 });
+    K.fm(b, end, { fc: 150, f1: 38, ratio: 1.41, i0: 7, i1: 0.4, dur: 0.3, peak: 0.3 });
+    dropout(K, fx, end + 0.04, (E === 2 ? 0.32 : 0.2) + 0.2 * k, { f: 98 });
+    weight(K, o, end, 0.25 + 0.5 * k, crit);
+  };
   return {
     // The bolt: a chopped zap off the chip, the drop at once, the strobes as bursts of static.
     surge(K, o, T) {
@@ -183,6 +218,7 @@ function corrupt() {
     },
     // The padlocks: a modem's two tones sagging as they come over, seven steps down as they shut, a crushed latch and a drop.
     encrypt(K, o, T) {
+      if (E) return encrypt(K, o, T);
       const { t, hit, k, crit, gone, wall } = read(T), { fx, b } = crushed(K, o, { time: 0.12, fb: 0.45, wet: 0.45 }), end = hit + (T.n - 1) * T.step;
       if (T.flies) {
         K.stat(b, t, { d: 0.03, peak: 0.18 });
@@ -314,7 +350,7 @@ function chassis() {
   };
 }
 
-const SOUNDS = { a: body(), b: corrupt(), c: chassis() };
+const SOUNDS = { a: body(), b: corrupt(), c: chassis(), b1: corrupt(1), b2: corrupt(2) };
 
 // How the hit's size and result read. plan: the strike's timing in ms (chipfx.mjs STRIKE_PLAN); drawn: false when no
 // strike is drawn to time it (Screen effects off, Motion off), so it lands at once: contact and tail on the beat.

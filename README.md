@@ -245,7 +245,7 @@ comment saying what it does.
 | `dist/sound.mjs`, `dist/sfx/` | Sound effects from recorded CC0 samples (CREDITS.md). |
 | `dist/abilitysound.mjs` | Ability sounds timed to their effects (docs/ability-sounds-plan.md): the kit, the style round and each class's key 1. `app.js` strikes() plays the picked style in a fight (abilitySound, abilityVoices); `?playtest=fx` plays any. |
 | `dist/abilitysound-all.mjs` | Every other ability's sound in the picked style, built from its row in the effects table, with the mastery tiers' layers and the winning break's flourishes; `abilitysound-levels.mjs` holds their measured levels. |
-| `dist/virussound.mjs` | Virus attack sounds, the style round (docs/ability-sounds-plan.md, "Virus attacks"): Surge, Encrypt, Hash and Discharge in three styles, timed to their chips' strikes. Heard in `?playtest=fx` only; a fight plays today's hurt. |
+| `dist/virussound.mjs` | Virus attack sounds, the style round (docs/ability-sounds-plan.md, "Virus attacks"): Surge, Encrypt, Hash and Discharge in three styles (Corrupt picked, with two more takes on its Encrypt), timed to their chips' strikes. Heard in `?playtest=fx` only; a fight plays today's hurt. |
 | `dist/soundtrack.mjs`, `dist/music/` | Music and radio chatter (CC0 tracks, CREDITS.md). |
 | `dist/fightmusic.mjs` | Each virus family's fight theme, synthesized live; heat brings its layers in. |
 | `dist/places.mjs` | A sound bed for each floor, and the virus you're fighting. |
