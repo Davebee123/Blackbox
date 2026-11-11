@@ -181,8 +181,8 @@ test('a crewmate\'s sound is the same sound, quieter', () => {
 
 test('a fight plays each command\'s own sound in place of its result\'s voice, capped', () => {
   const app = fs.readFileSync('dist/app.js', 'utf8'), feel = fs.readFileSync('dist/feel.mjs', 'utf8'), snd = fs.readFileSync('dist/sound.mjs', 'utf8');
-  assert.match(app, /const voiced = strikes\(events, split\.delay\)/);
-  assert.match(app, /feel\.mute\(voiced\.has\(e\)\)/);
+  assert.match(app, /const voiced = strikes\(events, delay\)/);
+  assert.match(app, /feel\.mute\(voiced\.has\(e\) \|\| incoming\.voiced\.has\(e\)\)/);
   assert.match(app, /if \(c\.sounds\) abilitySound\(c, played \|\| null, land\)/);
   assert.match(app, /if \(e === last\) pendingStrikes\.push\(\(\) => later\(wait, winSound\)\);/); // the winning break's flourish
   assert.match(app, /feel\.ability\(flourishKey\(cls, sub\), \{ travel: 0, impact: FIN_LAND\[cls\] \|\| 0 \}, \{\}\)/);

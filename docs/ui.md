@@ -108,7 +108,8 @@ teal, violet or a threat's red.
   the name won't fit (Surge → SRG), never an ellipsis.
 - **Themed chips** (chipfx.mjs `CHIP_THEMES`; each theme in docs/chip-themes.md): a part with a theme plays it faint
   inside its own chips, under the text, in the chip's colour and white: nothing at +2 and +3, faint at +1, stronger in
-  Now and its last 1.5 s. When it goes off (`chipStrike`), its strike flies from the chip into your bar in the threat's
+  Now and its last 1.5 s. When it goes off (`chipStrike`: at its own hit, a step before the board turns for all but
+  the last; its number waits for the impact), its strike flies from the chip into your bar in the threat's
   red (a replicate's into the new fragment's bar), in place of the chip's ghost (beside it for the frost), and its hit
   throws no lash. A replicate that fizzles plays out in place. A packed part shows none.
   Screen effects off, Motion off or reduced motion: none; subtle: fainter.

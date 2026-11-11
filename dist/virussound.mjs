@@ -18,7 +18,8 @@
 // measured into virussound-levels.mjs): each other chip theme's strike, the lash, and Scramble, Replicate and Patch.
 // Round 3, charges and bosses, in the pick: a charge landing and a boss's beat are layers over the attack's own sound
 // (HEAVY; virussound-all.mjs layers), and a cast compiling and a seal landing have a sound each.
-// Heard only in the ability effects playtest (?playtest=fx) and through renderBoard(); a fight plays today's hurt.
+// Round 4: a fight plays the pick (virusvoice.mjs picks each batch's voices; app.js attackVoices plays them). The
+// ability effects playtest (?playtest=fx) and renderBoard() play any.
 
 import { kit } from './abilitysound.mjs';
 import { every, layers } from './virussound-all.mjs';

@@ -248,8 +248,9 @@ comment saying what it does.
 | `dist/sound.mjs`, `dist/sfx/` | Sound effects from recorded CC0 samples (CREDITS.md). |
 | `dist/abilitysound.mjs` | Ability sounds timed to their effects (docs/ability-sounds-plan.md): the kit, the style round and each class's key 1. `app.js` strikes() plays the picked style in a fight (abilitySound, abilityVoices); `?playtest=fx` plays any. |
 | `dist/abilitysound-all.mjs` | Every other ability's sound in the picked style, built from its row in the effects table, with the mastery tiers' layers and the winning break's flourishes; `abilitysound-levels.mjs` holds their measured levels. |
-| `dist/virussound.mjs` | Virus attack sounds (docs/ability-sounds-plan.md, "Virus attacks"): the list of attacks (ATTACKS), the style round's four in three styles (Corrupt picked, Latch for its Encrypt), timed to their chips' strikes. Heard in `?playtest=fx` only; a fight plays today's hurt. |
+| `dist/virussound.mjs` | Virus attack sounds (docs/ability-sounds-plan.md, "Virus attacks"): the list of attacks (ATTACKS), the style round's four in three styles (Corrupt picked, Latch for its Encrypt), timed to their chips' strikes. A fight plays the pick (`virusvoice.mjs`); `?playtest=fx` plays any. |
 | `dist/virussound-all.mjs` | Every other attack's sound in the picked style: each other chip theme's strike, the lash, Scramble, Replicate, Patch, a cast and a seal, and the layers over a hit for a charge and a boss's beat; `virussound-levels.mjs` holds their measured levels. |
+| `dist/virusvoice.mjs` | Virus attack sounds in a fight: which of a batch's events play which attack's sound (one an attack a batch, the biggest hit leading), and how long the numbers wait for a strike's impact. `app.js` attackVoices() plays them and holds each chip's strike for its number. |
 | `dist/soundtrack.mjs`, `dist/music/` | Music and radio chatter (CC0 tracks, CREDITS.md). |
 | `dist/fightmusic.mjs` | Each virus family's fight theme, synthesized live; heat brings its layers in. |
 | `dist/places.mjs` | A sound bed for each floor, and the virus you're fighting. |

@@ -42,6 +42,7 @@ import { recapMarkup } from './recap.mjs';
 import { createLash, shakeOf, SHAKE } from './lash.mjs';
 import { createChipFx, chipStrike, chipTheme, STRIKES, STRIKE_PLAN } from './chipfx.mjs';
 import { ATTACKS, OWN_PLAN } from './virussound.mjs';
+import { voices as voicesOf, todayOf } from './virusvoice.mjs';
 import { online, peopleOn } from './presence.mjs';
 import { runnerFloor } from './runners-view.mjs';
 import { matesOf } from './crew.mjs';
@@ -758,6 +759,56 @@ function slowmo() {
   tick();
 }
 const LASH_TRAVEL = OWN_PLAN.lash.impact; // ms: a hit's number shows as the lash lands, not as it leaves the part
+// ---------- virus attack sounds in a fight (virusvoice.mjs; docs/ability-sounds-plan.md "Virus attacks", round 4) ----------
+// A batch's voices wait here for the frame's numbers to be let go (attackGo, after feel.flush): a number's beat counts
+// from there, so theirs do too. A chip going off takes its own: its strike is held so it lands with its number, and its
+// sound flies with it. The virus's attacks land a step apart (stepCycle) and the board turns only after the last, so a
+// part's chip strikes at its own step, from where it stands (spentChips: it has gone off, and doesn't again as the
+// board turns); the last one's goes as the board turns (fire). What no chip takes plays on its beat.
+const attackQueue = [], attackHeld = [], spentChips = new Set();
+const ATTACK_CHIP = '.intent.now[data-k]:not(.patch):not(.t-cast):not(.t-seal):not(.t-lock):not(.spent)';
+const chipOf = (el) => { const c = el.cloneNode(true); c.querySelector('.fxin')?.remove(); return { k: el.dataset.k, at: el.dataset.at || '', rect: el.getBoundingClientRect(), html: c.outerHTML, cls: el.className, th: el.closest('.brow')?.dataset.th || '', src: el.closest('.bpart')?.dataset.target || '' }; }; // a chip as it stands (a resolved chip's ghost leaves its theme behind)
+const spend = (k) => { spentChips.add(k); $('board')?.querySelector(`[data-k="${CSS.escape(k)}"]`)?.classList.add('spent'); };
+function attackVoices(events, delayOf, lashing) {
+  const board = $('board'), live = (id) => board?.querySelector(`.bpart[data-target="${CSS.escape(id)}"] ${ATTACK_CHIP}`);
+  const V = voicesOf(events, {
+    delay: delayOf, lashing, lashTravel: LASH_TRAVEL, sound: feel.abilityOn(), max: defender(campaign).max || 100,
+    partOf: (id) => part(campaign, id), packed: (p) => packed(campaign, campaign.encounter?.virus, p),
+    chipNow: (id) => !!live(id),
+  });
+  for (const x of V.list) { const el = x.mode === 'chip' ? live(x.src) : null; attackQueue.push({ ...x, chip: el ? chipOf(el) : null, sounds: V.voiced.has(x.e) && x.gain > 0 }); }
+  if (V.list.length) setTimeout(attackGo, 250); // (no frame let them go: now)
+  return V;
+}
+// The strike a chip of that part's throws this batch, once.
+function takeStrike(src) {
+  const x = src ? attackQueue.find((q) => q.mode === 'chip' && q.src === src && !q.taken) : null;
+  if (x) x.taken = true;
+  return x || null;
+}
+// Its sound, starting in startIn ms (drawn: its strike or the lash flies; else contact and tail). With none to play
+// (the samples aren't in, the voices are capped): today's voice, on its number.
+function attackSound(x, drawn, startIn) {
+  x.played = true;
+  if (!x.sounds || feel.attack(x.key, x.plan, { result: x.result, power: x.power, gain: x.gain }, drawn, Math.max(0, startIn))) return;
+  feel.say(todayOf(x.e, x), { frac: (x.e.amount || 0) / (defender(campaign).max || 100) }, x.land);
+}
+// The frame's numbers are let go: the strikes held for theirs start counting, and what no chip took plays on its beat.
+function attackGo() {
+  for (const go of attackHeld.splice(0)) go();
+  for (const x of attackQueue.splice(0)) {
+    if (x.played) continue;
+    if (x.mode === 'chip' && x.chip && !x.taken) { // the board hasn't turned: its chip strikes from where it stands
+      const b = x.chip, wait = Math.max(0, x.land - x.plan.impact), replicate = /\breplicate\b/.test(b.cls), stays = !!$('board')?.querySelector(`[data-k="${CSS.escape(b.k)}"]`);
+      const hold = stays ? null : ghostOf(b); // (the board dropped it already: it holds as a ghost)
+      attackSound(x, true, wait);
+      later(wait, () => { hold?.remove(); spend(b.k); fireNow(b, true, replicate, replicate ? x.e.target : null); });
+      continue;
+    }
+    const flies = x.mode === 'lash' || (x.mode === 'beat' && x.kind === 'other' && !!OWN_PLAN[x.key] && x.land >= x.plan.impact); // the lash; a patch, a seal or a cast with room for its wind-up
+    attackSound(x, flies, flies ? x.land - x.plan.impact : x.land);
+  }
+}
 let cueAt = 0; // when the last damage number queued lands (performance.now() ms)
 // A part's bar steps down hit by hit (the designer: "each instance of damage tick separately on the enemy component bar"):
 // while a batch's numbers play out, each damaged part's bar and HP read what it had before that hit, and drop as its
@@ -1161,12 +1212,15 @@ function react(events) {
     attackName: (id) => part(campaign, id)?.attack?.name,
     skillName: (id) => (id === 'spike' ? spikeOf(classOf(campaign)).name : ABILITIES[id]?.name),
   }, { stagger: !stack, start: Math.max(queueAfter(cueAt - performance.now()), stack ? 0 : afxLead(events)) }); // an ability's effect travels from its key first (afxLead)
-  if (split.count && !stack) cueAt = performance.now() + split.total;
-  if (!stack) stepBars(events, split.delay); // the bars drop with the numbers, one hit at a time
+  // The virus's attacks in this batch (virusvoice.mjs): which play their own sound, and how long the numbers wait so
+  // each lands on its strike's impact. Every beat below reads delay().
+  const incoming = module === 'combat' && active(campaign) ? attackVoices(events, split.delay, lashing) : { voiced: new Set(), shift: 0, delay: split.delay }, delay = incoming.delay;
+  if (split.count && !stack) cueAt = performance.now() + split.total + incoming.shift;
+  if (!stack) stepBars(events, delay); // the bars drop with the numbers, one hit at a time
   const artHit = (id, kind) => feel.add(() => art.hit(id, kind)); // the render reacts on the event's beat
   // Crewmates' events (crew.mjs). Their turns play a beat apart, so their hits sound like yours.
   // When the virus hits everyone at once, the hits show on each row, and only one of them sounds.
-  const voiced = strikes(events, split.delay); // the events an ability's own sound speaks for
+  const voiced = strikes(events, delay); // the events an ability's own sound speaks for
   let hurtVoiced = events.some((e) => e.type === 'server-hit' && !e.who);
   // A part's attack: its row lunges and the attack's name comes off it, once per part per batch.
   const lunged = new Set();
@@ -1174,14 +1228,14 @@ function react(events) {
     if (!e.source || lunged.has(e.source) || !['server-hit', 'evaded', 'blocked', 'encrypt', 'blind'].includes(e.type) || !active(campaign)) continue;
     lunged.add(e.source);
     const p = part(campaign, e.source);
-    feel.beat(split.delay(e));
+    feel.beat(delay(e));
     if (p && fxLevel() !== 'minimal') feel.add('strike', row(e.source), p.attack?.name ? p.attack.name.toUpperCase() : null, { floatAt: `${row(e.source)} > .bcell:nth-child(2)` });
   }
   for (const c of cuesOf(campaign, events)) feel.add('cue' + c, null); // routines.mjs: while your program plays, when to look back
   const famCue = familyCues(campaign, events); // a virus family's attack and break one-shots, layered on the hurt and the break
   for (const e of events) {
-    feel.beat(split.delay(e));
-    feel.mute(voiced.has(e));
+    feel.beat(delay(e));
+    feel.mute(voiced.has(e) || incoming.voiced.has(e));
     const fc = famCue.get(e);
     if (fc) feel.add(() => feel.familyShot(fc.family, fc.kind));
     const f = split.of(e), src = f ? { kind: f.kind + (f.at === 'you' ? ' at-you' : '') + (f.hostile ? ' hostile' : ''), icon: f.icon, label: f.label } : null;
@@ -1226,7 +1280,7 @@ function react(events) {
         // It stays on the board a moment and dissolves into bits before it joins the broken list.
         const bp = part(campaign, e.target);
         // (It waits for the number of the hit that broke it.)
-        const wait = split.delay(e);
+        const wait = delay(e);
         if (bp && canMove()) { Object.defineProperty(bp, '_dyingUntil', { value: Date.now() + wait + DISSOLVE_MS, writable: true, configurable: true, enumerable: false }); setTimeout(() => { dirty = true; }, wait + DISSOLVE_MS + 50); pendingStrikes.push(() => later(wait, () => { hitfx.dissolve(partRow(e.target)); if (e === last) slowmo(); })); }
         if (e === last) pendingStrikes.push(() => later(wait, winSound)); // your class's flourish over the break's voice
       }
@@ -1236,7 +1290,7 @@ function react(events) {
         const dm = defender(campaign).max || 100, frac = e.amount / dm, size = 1 + Math.min(1, frac * 5) * 0.8;
         const heavy = !!(e.crit || e.tell); // a crit or a charge whips harder and shakes the screen harder
         // Effects full or calm: the part lashes at your screen, and the number shows as it lands. Else a soft edge.
-        if (lashing) { feel.add(() => lashAt(e, 'hit', frac, heavy)); feel.beat(split.delay(e) + LASH_TRAVEL); }
+        if (lashing) { feel.add(() => lashAt(e, 'hit', frac, heavy)); feel.beat(delay(e) + LASH_TRAVEL); }
         if (e.crit) feel.add(() => flash('CRITICAL HIT'));
         feel.add(() => sfx.hit(frac, !!e.crit)); // a big one tears the backdrop (screenfx.mjs)
         feel.add(() => shake(Math.min(1, frac * 5), heavy)); // and shakes the screen, with its number
@@ -1275,11 +1329,11 @@ function react(events) {
       case 'degraded': flash('REBOOTED · DEGRADED'); notice(e.message, true); if (module === 'combat') setTimeout(() => { if (!active(campaign)) go('map'); }, 1800); break;
       case 'rebooted': feel.add('unlock', MINE); notice(e.message); break;
       // The Encryptor's attack: a tendril of hex, and locks over your bar; each tick of it after: the locks only.
-      case 'encrypt': artHit(e.source, 'attack'); flash('ENCRYPTED'); if (lashing) { feel.add(() => lashAt(e, 'encrypt')); feel.beat(split.delay(e) + LASH_TRAVEL); } feel.add('encrypt', MINE, f?.text || `+${e.amount}/cycle`, { src, stack, noEdge: lashing, softEdge: !lashing, noFlash: lashing, floatAt: BAR, x: 0.5 }); break;
+      case 'encrypt': artHit(e.source, 'attack'); flash('ENCRYPTED'); if (lashing) { feel.add(() => lashAt(e, 'encrypt')); feel.beat(delay(e) + LASH_TRAVEL); } feel.add('encrypt', MINE, f?.text || `+${e.amount}/cycle`, { src, stack, noEdge: lashing, softEdge: !lashing, noFlash: lashing, floatAt: BAR, x: 0.5 }); break;
       case 'encrypted': if (lashing) feel.add(() => lashAt(e, 'tick')); feel.add('drain', MINE, f?.text || `−${e.amount}`, { src, stack, noFlash: lashing, floatAt: BAR, x: 0.5 }); break;
       case 'decrypted': flash('DECRYPTED'); feel.add('unlock', MINE, 'KEY'); break;
       case 'blind': flash('SCRAMBLED'); feel.add('blind', '.board', null); break;
-      case 'scrambled': { const frac = e.amount / (defender(campaign).max || 100); flash('SCRAMBLED'); if (lashing) { feel.add(() => lashAt(e, 'hit', frac)); feel.beat(split.delay(e) + LASH_TRAVEL); } feel.add('hurt', MINE, f?.text || `−${e.amount}`, { amount: e.amount, frac, size: 1.3, src, stack, noEdge: lashing, softEdge: !lashing, noFlash: lashing, floatAt: BAR, x: 0.5 }); break; }
+      case 'scrambled': { const frac = e.amount / (defender(campaign).max || 100); flash('SCRAMBLED'); if (lashing) { feel.add(() => lashAt(e, 'hit', frac)); feel.beat(delay(e) + LASH_TRAVEL); } feel.add('hurt', MINE, f?.text || `−${e.amount}`, { amount: e.amount, frac, size: 1.3, src, stack, noEdge: lashing, softEdge: !lashing, noFlash: lashing, floatAt: BAR, x: 0.5 }); break; }
       case 'armor': { const lvl = fxLevel(), af = armorFloat(e); if (!af) break; artHit(e.target, 'chit'); if (e.lock === 'broke') { feel.add(af.sign, `${row(e.target)} .part-top`, af.text, { size: 1.1, floatAt: `${row(e.target)} > .bcell:first-child` }); break; } /* a Mutex's lock: its segment shatters (lockDrain, with the hit) */ feel.add(af.sign, `${row(e.target)} .part-top`, af.text, { size: 1.1, noFlash: lvl === 'minimal', floatAt: `${row(e.target)} > .bcell:first-child` }); if (fx && lvl !== 'minimal') feel.add(() => { juice.shatter(e.target); if (lvl === 'full') juice.punch(0.35); }); break; } // ◆ ABSORBED: your command's whole hit went into the ◆ (dmgfx.mjs armorFloat), never a MISS
       case 'patch': feel.add('patch', row(e.target), e.adapt ? 'ADAPTS +◆' : '+◆'); break;
       case 'reroute': feel.add('patch', row(e.target), `+${e.amount} REROUTED`, { src }); if (e.from) artHit(e.target, 'attack'); break;
@@ -2217,6 +2271,7 @@ function render(force = false) {
     const before = turned ? chipSnapshot() : null;
     put('board', (active(s) && s.encounter.paused ? '<div class="pause-strip" role="status">PAUSED · ANY ORDER RESUMES</div>' : '') + V.boardMarkup(s, selected, aimPreview));
     chipfx.place($('board')); // themed chips get their effect back after the rebuild
+    for (const k of spentChips) $('board').querySelector(`[data-k="${CSS.escape(k)}"]`)?.classList.add('spent'); // and one that has gone off stays gone
     if (held.size) applyHeld(); // a batch still playing: its bars hold until each hit lands
     $('board').classList.toggle('is-paused', !!(active(s) && s.encounter.paused));
     // Every part on screen: if the rows overflow the board, tighten them (style.css .dense) for the rest of the fight.
@@ -2385,8 +2440,7 @@ function cycleChanged(s) {
 // shut) and fades, and anything new drifts in from the right. Motion off skips all of it.
 const rowIds = () => [...$('board').querySelectorAll('.bpart[data-target]')].map((el) => el.dataset.target);
 function chipSnapshot() {
-  const plain = (el) => { const c = el.cloneNode(true); c.querySelector('.fxin')?.remove(); return c.outerHTML; }; // a resolved chip's ghost leaves its theme behind
-  const snap = [...$('board').querySelectorAll('[data-k]')].map((el) => ({ k: el.dataset.k, at: el.dataset.at || '', rect: el.getBoundingClientRect(), html: plain(el), cls: el.className, th: el.closest('.brow')?.dataset.th || '' }));
+  const snap = [...$('board').querySelectorAll('[data-k]')].map(chipOf);
   snap.rows = new Set(rowIds());
   return snap;
 }
@@ -2402,30 +2456,36 @@ function turnTimeline(before) {
       const dx = b.rect.left - r.left, dy = b.rect.top - r.top;
       if (Math.abs(dx) + Math.abs(dy) > 1) el.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }], { duration: 440, easing: ease });
       if (el.classList.contains('now') && !/\bnow\b/.test(b.cls)) el.animate([{ boxShadow: '0 0 0 0 rgba(255, 91, 61, 0.7)' }, { boxShadow: '0 0 0 6px rgba(255, 91, 61, 0)' }], { duration: 700, delay: 380, easing: 'ease-out' });
-    } else fire(b, spawned);
+    } else if (!spentChips.delete(b.k)) fire(b, spawned); // (one that struck at its own step has gone off)
   }
+  spentChips.clear();
   const was = new Set(before.map((b) => b.k));
   for (const [k, el] of now) if (!was.has(k)) el.animate([{ opacity: 0, transform: 'translateX(28px)' }, { opacity: 1, transform: 'none' }], { duration: 420, delay: 160, easing: 'ease-out', fill: 'backwards' });
   const cyc = board.querySelector('.bnow .cyc');
   if (cyc) cyc.animate([{ opacity: 0, transform: 'translateY(-6px)' }, { opacity: 1, transform: 'none' }], { duration: 300, easing: 'ease-out' });
 }
 // What resolved this cycle: a ghost of the chip plays out where it was.
+const ghostOf = (b) => { const g = document.createElement('div'); g.className = 'fx-ghost'; g.innerHTML = b.html; Object.assign(g.style, { left: b.rect.left + 'px', top: b.rect.top + 'px', width: b.rect.width + 'px', height: b.rect.height + 'px' }); document.body.appendChild(g); return g; };
 function fire(b, spawned = []) {
   const theirs = /\bnow\b/.test(b.cls) && !/mine|daemon|patch/.test(b.cls);
   // A replicate aims at the fragment it spawned (one each), not your bar; one that fizzled plays out in place.
   const replicate = theirs && /\breplicate\b/.test(b.cls);
   const spawn = replicate ? spawned.shift() : null;
+  // Its attack's strike this batch (virusvoice.mjs): held so it lands with its number, its sound flying with it. The
+  // chip stays where it was until it goes. (A cast's, a seal's or a lock's tell chip is no attack.)
+  const hit = theirs && b.th && !/\bt-(cast|seal|lock)\b/.test(b.cls) ? takeStrike(b.src) : null;
+  if (!hit) return fireNow(b, theirs, replicate, spawn);
+  const hold = ghostOf(b), wait = Math.max(0, hit.land - hit.plan.impact);
+  attackHeld.push(() => { attackSound(hit, true, wait); later(wait, () => { hold.remove(); fireNow(b, theirs, replicate, spawn); }); });
+}
+function fireNow(b, theirs, replicate, spawn) {
   const aim = theirs && (replicate ? (spawn ? document.querySelector(`.board [data-target="${CSS.escape(spawn)}"] .part-bar`) : null) : document.querySelector('.hud-bar.mine .bigbar'));
   // A themed part's attack going off (chipfx.mjs): its own strike into its target, in place of the ghost or beside it.
   if (b.th && aim) {
     const bar = aim.getBoundingClientRect(), fill = aim.firstElementChild?.getBoundingClientRect(); // where its fill ends: a bite lands there
     if (bar?.width && chipStrike(b.th, b.rect, { x: bar.left + bar.width / 2, y: bar.top + bar.height / 2 }, bar, fill ? fill.right : null)) return;
   }
-  const g = document.createElement('div');
-  g.className = 'fx-ghost';
-  g.innerHTML = b.html;
-  Object.assign(g.style, { left: b.rect.left + 'px', top: b.rect.top + 'px', width: b.rect.width + 'px', height: b.rect.height + 'px' });
-  document.body.appendChild(g);
+  const g = ghostOf(b);
   const center = (el) => { const r = el?.getBoundingClientRect(); return r && r.width ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : null; };
   const from = { x: b.rect.left + b.rect.width / 2, y: b.rect.top + b.rect.height / 2 };
   let to = null, frames;
@@ -2851,6 +2911,7 @@ function frame(now) {
   lu.tick();
   phPops();
   feel.flush();
+  attackGo(); // the virus's strikes and sounds count from the same moment as its numbers
   checkTips(now);
   shell.caret();
   if (now - lastSecond >= 1000) {

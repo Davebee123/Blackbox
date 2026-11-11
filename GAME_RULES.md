@@ -2652,8 +2652,12 @@ test, the wire, fight reports and the log (`logs` opens it).
   quiet room tone under it. **Abilities:** each ability has a sound of its own, timed to its effect: it starts as it
   leaves the key and lands with the number, in place of the hit's shared voice (the flash and the buzz stay). With
   Screen effects off or Motion off it plays on the number's beat. A mastered ability adds a layer a tier; the break
-  that wins a fight adds your class's flourish over the break's sound. Burn ticks, breaks and the virus's own sounds
-  are as they were. **Places:** each floor and hub has its own quiet loop, and each virus family a sound under
+  that wins a fight adds your class's flourish over the break's sound. Burn ticks and breaks are as they were.
+  **The virus's attacks:** each has a sound of its own too, from its chip's strike (a part with no theme: the lash):
+  it starts as the chip goes off and lands with the strike and the number, which waits for it. A charge and a boss's
+  beat add a layer; a blocked or evaded one glances or passes; Encrypt, Scramble, Replicate, Patch, a seal and a cast
+  have theirs. One sound an attack a batch, the biggest hit loudest. Each chip strikes at its own hit, a step before
+  the board turns for all but the last. **Places:** each floor and hub has its own quiet loop, and each virus family a sound under
   its fights, adding its attack and break sounds.
 - **Music:** a track on your server and another on a run. Each virus family's fights have their own theme (dark,
   gritty industrial synthwave, synthesized live): it fades in as the fight starts, builds as the virus breaks, and fades

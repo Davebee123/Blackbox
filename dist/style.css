@@ -192,6 +192,7 @@ code { font-family: var(--mono); color: var(--amber); }
 .intent small { margin-left: auto; font-family: var(--mono); color: var(--muted); white-space: nowrap; }
 .intent.now { border-color: var(--hot); color: var(--hot); background: var(--hot-soft); }
 .intent.now small { color: var(--hot); }
+.intent.spent { visibility: hidden; } /* a virus's chip that has gone off at its own step, until the board turns (app.js spentChips) */
 .intent.next { border-color: var(--next); color: var(--next); }
 .intent.hidden { border-style: dashed; color: var(--muted); }
 .intent.mine { border-color: var(--you); color: var(--you); }

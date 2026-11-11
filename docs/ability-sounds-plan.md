@@ -79,8 +79,8 @@ Operator's comes in three beats.
 
 ## Virus attacks
 
-The same workflow for what the virus does to you. Today every attack that lands plays one `hurt` (a crit `hurtcrit`),
-whatever it is; Encrypt and Scramble have a voice each. A fight plays today's until the designer picks.
+The same workflow for what the virus does to you. Before, every attack that landed played one `hurt` (a crit
+`hurtcrit`), whatever it was; Encrypt and Scramble had a voice each. A fight plays the pick (round 4).
 
 Yours is bright and rings out; theirs is dull and falls: no crack on top, a lower boom, dark echoes.
 
@@ -130,7 +130,7 @@ through `renderBoard`).
    What isn't a hit on you has one form and no weight: **Scramble** (the scramble strike, then your carrier chopped up
    and slices out of order; today's `blind`), **Replicate** (the copy strike onto its fragment, which boots: the growl
    rising where a hit's falls; silent today), **Patch** (static draws in, a latch, steel closing; today's `patch`).
-3. **Charges and bosses** (built, waiting on the designer's ear), in the pick. Two layers over any attack's own hit
+3. **Charges and bosses** (kept), in the pick. Two layers over any attack's own hit
    (`virussound-all.mjs` layers; Lands in `?playtest=fx`), and two tells that land on the virus:
    - **A charge** (a hit with `tell`; today the hurt): the wind-up let go as it flies (a long draw-in, a low riser),
      metal groaning as it lands and the floor going a beat after, then what it knocks out: a power-down, your carrier
@@ -143,5 +143,18 @@ through `renderBoard`).
      your carrier dipping. −22 LUFS.
 
    Left as they are: the after-effects (Offline, Corrupted), the Mimic's playback (its copy strike), the act break.
-4. **Land**: a fight plays the pick in place of `hurt`: one contact a batch, the number on the strike's impact (today
-   the two are timed apart), a cap shared with yours.
+4. **Land** (built, waiting on the designer's play): a fight plays the pick (`virusvoice.mjs` picks, `app.js`
+   attackVoices plays).
+   - **Each chip strikes at its own step.** The virus's attacks land a step apart and the board turns after the last;
+     before, every chip's strike flew as the board turned, whenever its number had shown. Now a part's chip goes off
+     with its own hit, and stays gone until the board turns.
+   - **The number on the impact.** A strike starts so its impact, its number and its sound's contact fall together;
+     the step's numbers wait for the strike to get there (up to 965 ms, the copies).
+   - **Who sounds.** A hit, crit, charge or boss's beat (its signature part's attack), blocked or evaded as its chip
+     goes off; Encrypt, Scramble, Replicate, Patch (a part healed too), a seal, a cast. Their old voices stay quiet;
+     the flash and buzz stay. A part with no theme: the lash's sound with the lash.
+   - **One sound an attack a batch**: the biggest hit at full level, each other attack's first at 40%, four in all,
+     under the cap shared with yours; one over falls back to its old voice.
+   - Left on the old voices: a crewmate's hits, a shield's soak, notes beside a hit that landed (halved, hardened), a
+     tick with no part, your own scrambled attack, the killing blow.
+   - Screen effects off or Motion off: no strike, so contact and tail on the number's beat, and no wait.
