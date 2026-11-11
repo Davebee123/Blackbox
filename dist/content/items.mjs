@@ -2061,8 +2061,7 @@ export default {
       },
       "sources": [
         {
-          "kind": "vault",
-          "floor": 4
+          "kind": "vault"
         }
       ]
     },
@@ -2090,8 +2089,7 @@ export default {
       },
       "sources": [
         {
-          "kind": "vault",
-          "floor": 4
+          "kind": "vault"
         }
       ]
     },
@@ -2122,8 +2120,7 @@ export default {
       },
       "sources": [
         {
-          "kind": "vault",
-          "floor": 4
+          "kind": "vault"
         }
       ]
     },
@@ -2277,11 +2274,7 @@ export default {
       },
       "sources": [
         {
-          "kind": "rare",
-          "floor": [
-            5,
-            8
-          ]
+          "kind": "rare"
         }
       ]
     },
@@ -2312,11 +2305,7 @@ export default {
       },
       "sources": [
         {
-          "kind": "rare",
-          "floor": [
-            5,
-            8
-          ]
+          "kind": "rare"
         }
       ]
     },
@@ -2345,11 +2334,7 @@ export default {
       },
       "sources": [
         {
-          "kind": "rare",
-          "floor": [
-            5,
-            8
-          ]
+          "kind": "rare"
         }
       ]
     },
@@ -2379,11 +2364,7 @@ export default {
       },
       "sources": [
         {
-          "kind": "takeover",
-          "floor": [
-            5,
-            6
-          ]
+          "kind": "takeover"
         }
       ]
     },
@@ -2412,11 +2393,7 @@ export default {
       },
       "sources": [
         {
-          "kind": "takeover",
-          "floor": [
-            5,
-            6
-          ]
+          "kind": "takeover"
         }
       ]
     },
@@ -6891,130 +6868,6 @@ export default {
         }
       ],
       "flavour": "It counts the votes as they come in, and it flinches at the second."
-    },
-    {
-      "id": "plumb-line",
-      "name": "Plumb Line",
-      "set": "fullcoverage",
-      "base": "wormable",
-      "level": 26,
-      "primary": {
-        "damage": [
-          32,
-          40
-        ]
-      },
-      "effect": {
-        "when": "hit",
-        "do": "dmg%",
-        "value": 4,
-        "text": "+4% damage"
-      },
-      "green": {
-        "when": "always",
-        "do": "stat",
-        "stat": "crit",
-        "value": 5,
-        "text": "+5% crit"
-      },
-      "sources": [
-        {
-          "kind": "feat",
-          "floor": 5
-        }
-      ]
-    },
-    {
-      "id": "field-book",
-      "name": "Field Book",
-      "set": "fullcoverage",
-      "base": "polymorphic-engine",
-      "level": 29,
-      "primary": {
-        "damage": 14,
-        "signal": 58,
-        "payload": 5.7
-      },
-      "effect": {
-        "when": "always",
-        "do": "stat",
-        "stat": "clock",
-        "value": 4,
-        "text": "+4% Clock Speed"
-      },
-      "green": {
-        "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Signal"
-      },
-      "sources": [
-        {
-          "kind": "feat",
-          "floor": 5
-        }
-      ]
-    },
-    {
-      "id": "hi-vis",
-      "name": "Hi-Vis",
-      "set": "fullcoverage",
-      "base": "ghost-shell",
-      "level": 33,
-      "primary": {
-        "signal": 80,
-        "regen": 17,
-        "restore": 34
-      },
-      "effect": {
-        "when": "always",
-        "do": "stat",
-        "stat": "reduction",
-        "value": 2,
-        "text": "+2 Block"
-      },
-      "green": {
-        "when": "hit",
-        "do": "dmg%",
-        "value": 5,
-        "text": "+5% damage"
-      },
-      "sources": [
-        {
-          "kind": "feat",
-          "floor": 6
-        }
-      ]
-    },
-    {
-      "id": "datum",
-      "name": "Datum",
-      "set": "fullcoverage",
-      "base": "bootkit",
-      "level": 37,
-      "primary": {
-        "damage": 13.1,
-        "signal": 65
-      },
-      "effect": {
-        "when": "always",
-        "do": "signal%",
-        "value": 6,
-        "text": "+6% max Signal"
-      },
-      "green": {
-        "when": "always",
-        "do": "stat",
-        "stat": "reduction",
-        "value": 2,
-        "text": "+2 Block"
-      },
-      "sources": [
-        {
-          "kind": "feat",
-          "floor": 6
-        }
-      ]
     },
     {
       "id": "street-atlas",
