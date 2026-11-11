@@ -209,6 +209,8 @@ export function createFeel({ settings, reducedMotion }) {
     preview(name, opts, delay = 0) { sound.play(name, opts || (name === 'hit' ? { amount: 12 } : {}), delay); },
     // An ability's sound in a style, whatever the Sound setting (the ability effects playtest; abilitysound.mjs).
     abilityPreview(style, key, plan, hit) { return sound.ability(style, key, plan, hit); },
+    // A virus attack's sound in a style, whatever the Sound setting (the same playtest; virussound.mjs).
+    attackPreview(style, key, plan, hit, drawn) { return sound.attack(style, key, plan, hit, drawn); },
     // A key on the prompt or a button press (only with Sound on).
     key(kind) { if (settings().sound) sound.key(kind); },
     // A scene with its own mix (the cold open): { ctx, out } at the effects volume, or null with Sound off.
