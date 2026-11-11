@@ -1,7 +1,0 @@
-// Cloudflare Workers: serves the website (site/) as static files. Deployed by Workers Builds on every push to main.
-// "name" must match the Worker's name in the Cloudflare dashboard.
-{
-  "name": "blackbox",
-  "compatibility_date": "2026-11-01",
-  "assets": { "directory": "./site" }
-}
