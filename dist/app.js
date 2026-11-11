@@ -4195,18 +4195,20 @@ if (playtest === 'fx') import('./abilityfx-playtest.mjs').then(({ mountFxPlaytes
       const chipEl = fxRow(id)?.querySelector('[data-k]') || document.querySelector('#board [data-k]') || fxRow(id), chip = chipEl?.getBoundingClientRect();
       if (drawn && chip?.width) {
         const ghost = chipEl.cloneNode(true); ghost.querySelector('.fxin')?.remove();
-        fire({ rect: chip, html: ghost.outerHTML, cls: `now${key === 'patch' ? ' patch' : key === 'replicate' ? ' replicate' : ''}`, th: A.theme || '' }, [fxRow(id)?.dataset.target]);
-        if (key === 'lash') lash.lash({ from: lashFrom(fxRow(id)?.dataset.target), bar: document.querySelector(BAR), power, heavy: result === 'crit', mode: 'hit', full: fxLevel() === 'full' });
+        fire({ rect: chip, html: ghost.outerHTML, cls: `now${A.does && !A.theme ? ' patch' : key === 'replicate' ? ' replicate' : ''}`, th: A.theme || '' }, [fxRow(id)?.dataset.target]);
+        if (key === 'lash') lash.lash({ from: lashFrom(fxRow(id)?.dataset.target), bar: document.querySelector(BAR), power, heavy: result === 'crit' || result === 'charge', mode: 'hit', full: fxLevel() === 'full' });
       }
-      const today = A.does ? { blind: 'blind', patch: 'patch' }[key] : { crit: 'hurtcrit', blocked: 'interrupt', evaded: 'evade' }[result] || 'hurt'; // (a replicate has no voice today)
+      const today = A.does ? { blind: 'blind', patch: 'patch', cast: 'hurt', seal: 'patch' }[key] : { crit: 'hurtcrit', blocked: 'interrupt', evaded: 'evade' }[result] || 'hurt'; // (a replicate has no voice today; a charge and a boss's beat play the hurt)
       if (sound !== 'off' && !(sound !== 'today' && feel.attackPreview(sound, key, plan, { result, power }, drawn)) && today) feel.preview(today, { frac }, land / 1000);
       feel.beat(land);
       if (key === 'blind') { feel.add(() => flash('SCRAMBLED')); feel.add('blind', '.board', null, { silent: true }); }
       else if (key === 'patch') feel.add('patch', row(fxRow(id)?.dataset.target), '+◆', { silent: true });
+      else if (key === 'cast') feel.add(() => flash('DOUBLE EXTORTION compiles'));
+      else if (key === 'seal') for (const p of campaign.encounter?.virus?.parts || []) { if (alive(p)) feel.add('patch', row(p.id), '+◆', { silent: true }); }
       else if (key === 'replicate') { /* the fragment's row is its mark in a fight */ }
       else if (result === 'evaded' || result === 'blocked') feel.add(result === 'evaded' ? 'evade' : 'interrupt', MINE, result.toUpperCase(), { silent: true });
       else {
-        feel.add(() => shake(power, result === 'crit'));
+        feel.add(() => shake(power, result === 'crit' || result === 'charge'));
         feel.add(result === 'crit' ? 'hurtcrit' : 'hurt', MINE, `−${Math.max(1, Math.round(frac * (defender(campaign).max || 100)))}`, { frac, size: 1 + power * 0.8 + (result === 'crit' ? 0.3 : 0), silent: true, noEdge: drawn, softEdge: !drawn, noFlash: drawn, floatAt: BAR, x: 0.5 });
       }
       feel.beat(0); feel.flush();

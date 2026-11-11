@@ -105,9 +105,9 @@ through `renderBoard`).
    crushed latches, a stuck slice sagging under each) and B2 Choke (your carrier's hum pinched shut a notch at a
    time, duller each notch, then cut). Latch is picked (`virussound.mjs` PICKED). Surge, Hash and
    Discharge are kept as they are.
-2. **Every attack** (built, waiting on the designer's ear): the other 14 themes' strikes and the lash in the pick,
+2. **Every attack** (kept): the other 14 themes' strikes and the lash in the pick,
    each from its strike's own timing (`chipfx.mjs` STRIKE_PLAN: every strike reads its plan), with the pick's hit as
-   the contact (`virussound-all.mjs`). `?playtest=fx` plays all 22 under Virus attacks.
+   the contact (`virussound-all.mjs`). `?playtest=fx` plays them all under Virus attacks.
 
    | Attack | Launch and travel | Tail |
    |---|---|---|
@@ -130,6 +130,18 @@ through `renderBoard`).
    What isn't a hit on you has one form and no weight: **Scramble** (the scramble strike, then your carrier chopped up
    and slices out of order; today's `blind`), **Replicate** (the copy strike onto its fragment, which boots: the growl
    rising where a hit's falls; silent today), **Patch** (static draws in, a latch, steel closing; today's `patch`).
-3. **Charges and bosses**: a tell landing, a boss's signature.
+3. **Charges and bosses** (built, waiting on the designer's ear), in the pick. Two layers over any attack's own hit
+   (`virussound-all.mjs` layers; Lands in `?playtest=fx`), and two tells that land on the virus:
+   - **A charge** (a hit with `tell`; today the hurt): the wind-up let go as it flies (a long draw-in, a low riser),
+     metal groaning as it lands and the floor going a beat after, then what it knocks out: a power-down, your carrier
+     gone for a long moment, a breaker dropping. A big one comes to a crit's −13 LUFS.
+   - **A boss's beat** (its signature part's attack: Broadcast, Collection, the Backlash…; today the hurt): the act
+     break's low G against its tritone, tolling once under the hit, a second toll far off. One layer for every boss.
+   - **A cast compiles** (today the hurt): slices chattering faster, a latch, the virus's hum climbing and holding,
+     two dull latches. −19 LUFS.
+   - **A seal lands** (today `patch`): Patch down the board, a latch a part, then steel pulled off you backwards and
+     your carrier dipping. −22 LUFS.
+
+   Left as they are: the after-effects (Offline, Corrupted), the Mimic's playback (its copy strike), the act break.
 4. **Land**: a fight plays the pick in place of `hurt`: one contact a batch, the number on the strike's impact (today
    the two are timed apart), a cap shared with yours.
