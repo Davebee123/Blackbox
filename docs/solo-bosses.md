@@ -12,9 +12,10 @@ family virus at 1.6× Integrity with one stock phase: the kit player (blind to t
   phase (re-arm, a cycle sooner) is never an act on its own.
 - **A part of its own**, with a rule, on top of its family's: the boss's signature, shown on its row.
 - **You choose when**: the ♛ ticks are yours to cross, so each phase starts when you are ready for it.
-- **Act length** (November 2026): the ♛'s act ticks are at **60% and 30%** (`TICKS.act`, interrupt.mjs), or the boss's
-  own where its acts measured more even there (`BOSSES[id].ticks`: BYZANTINE's 78% and 42%). Every other part's cut
-  ticks stay at 50% and 25%. The aim is equal time, not equal Integrity. Measured below.
+- **Act length** (November 2026): the ♛'s act ticks are at **60% and 30%** on every boss (`TICKS.act`, interrupt.mjs);
+  every other part's cut ticks stay at 50% and 25%. The aim is acts 2 and 3 lasting at least as long as act 1. The
+  ticks and a boss's Integrity stay consistent: a boss whose acts run uneven gets its behaviour or mechanics changed
+  (the designer, November 2026), never its ticks.
 
 ### Act length, measured
 
@@ -32,7 +33,7 @@ Cycles an act, the planner on every subclass, 12 seeds, each boss at its floor (
 | SHOULDER SURFER | 60 / 30 | 16.5 | 4.5 | 3.9 |
 | RECURSION | 60 / 30 | 13.7 | 4.1 | 3.1 |
 | NIGHT DESK | 60 / 30 | 12.3 | 5.5 | 8.6 |
-| BYZANTINE | **78 / 42** | 7.6 | 8.3 | 8.8 |
+| BYZANTINE | 60 / 30 | 10.4 | 8.3 | 6.2 |
 | CAMSWARM | 60 / 30 | 20.0 | 5.2 | 8.6 |
 | DEADBOLT | 60 / 30 | 19.2 | 5.5 | 8.7 |
 | TRIPMINE (one phase) | 60 / 30 | 24.8 | 9.0 | |
@@ -44,13 +45,42 @@ Cycles an act, the planner on every subclass, 12 seeds, each boss at its floor (
 | SLEEPWALKER (one phase) | 60 / 30 | 24.1 | 8.9 | |
 | ECHOLALIA | 60 / 30 | 23.6 | 5.1 | 3.8 |
 
-- **Only BYZANTINE meets the aim.** Its three Nodes are worked together, so its ♛'s ticks split the whole fight.
-- **NIGHT DESK and CENTRIFUGE** even out at 90 / 45 (6.6, 8.4, 12.8) and 75 / 35 (5.8, 5.8, 12.1), but a misreader then
-  wins 33% and 38%, under the band's 45% (genesim.test.mjs): longer late acts punish slips more. Left at 60 / 30.
-- **Everywhere else the ticks can't do it.** The ♛ is left for last (its ticks are yours to cross, and each act makes
-  the fight harder), so act 1 holds every other part and the ticks split only the ♛'s own Integrity. At 90 / 45:
-  SHOULDER SURFER 14.8, 5.1, 4.2; HASHLORD 15.1, 10.4, 8.8; REPO MAN 7.6, 3.9, 3.6. Even acts there need another
-  lever (acts on the virus's total Integrity, or a ♛ that has to be worked early): the designer's call.
+- **No boss meets the aim yet.** The ♛ is left for last (its ticks are yours to cross, and each act makes the fight
+  harder), so act 1 holds every other part and the later acts only the ♛'s own Integrity. The fix is per boss, in its
+  mechanics: give act 1's parts a reason to go late, or the ♛ a reason to be worked early. Not built yet.
+- BYZANTINE comes closest: its vote makes you spread damage over the three Nodes, the ♛ among them.
+
+### Act length: the fixes (picked, not built)
+
+The designer, November 2026: each act brings back work, or act 1 sharpens the longer it runs, whichever is more fun for
+that boss. *Back* is the first (a part returns or joins as the act starts, so the later acts hold more than the ♛);
+*sharpen* the second (act 1's own mechanic grows each cycle the ♛ stays above 60%, so you work the ♛ early). The
+numbers are starting points, tuned until acts 2 and 3 last at least as long as act 1 with each band green.
+
+| Boss | Act 1 · 2 · 3 now | Fix | The change |
+|---|---|---|---|
+| Resident | 20.8 · 5.6 · 4.4 | back | **Restart**: as each act starts, the owner's process restarts the first part you broke, at half |
+| RELAY-KING | 15.1 · 6.4 · 4.3 | back | **Crown Hop** reboots a broken part at half and hops onto it, if one is broken |
+| REPO MAN | 8.9 · 3.1 · 3.6 | back | **Repossess**: each phase takes back a broken part at half, re-armed |
+| HOLLOW CHOIR | 6.9 · 2.5 · 6.9 | back | **Second voice**: a broken first voice rejoins with it, at half |
+| CENTRIFUGE | 7.5 · 5.3 · 9.7 | back | **Reserve price** relists: a broken Gavel comes back at half, at every 3 |
+| SHAKEDOWN | 10.6 · 3.1 · 3.7 | back | **Second demand** brings its own Lockbox; **Final notice** brings back every broken Demand at half |
+| SHOULDER SURFER | 16.5 · 4.5 · 3.9 | back | **Again** replays the session: the Pulse Node and the Scrambler reboot at half if broken |
+| RECURSION | 13.7 · 4.1 · 3.1 | back | **Return** pushes two frames as it starts; **Overflow** one more |
+| NIGHT DESK | 12.3 · 5.5 · 8.6 | back | **Night shift**: a third trader clocks in, the Night Clerk, with one trade pending |
+| BYZANTINE | 10.4 · 8.3 · 6.2 | back | **Hard fork** forks at once: as act 3 starts, every broken Node returns at the others' average |
+| CAMSWARM | 20.0 · 5.2 · 8.6 | back | **Botnet** re-infects: each part you broke boots back as a Camera |
+| DEADBOLT | 19.2 · 5.5 · 8.7 | back | **Tumblers**: the re-arm also re-forms a broken Mutex, locking the Encryptor again |
+| TRIPMINE | 24.8 · 9.0 | back | **Daisy chain**: its phase lays a second Tripwire |
+| HASHLORD | 23.0 · 4.2 · 6.7 | sharpen | **Difficulty**: every 4 cycles of act 1, the Miner's cycle tax takes one more cycle |
+| BACK ORIFICE | 20.4 · 2.8 · 6.2 | back | **Call home**: a broken C2 Node reconnects at half as act 2 starts (act 2 is a stock phase today) |
+| PATCH TUESDAY | 23.4 · 4.5 · 2.5 | back | **Rollup**: each phase the Patcher restores the last part you broke at half, unless the Patcher went first |
+| FLOODWALL | 9.6 · 18.2 | none | its act 2 already outlasts act 1 |
+| MIRRORSHADE | 16.5 · 3.9 · 6.5 | back | **Reflection**: the re-arm also restores a broken Scrambler at half |
+| SLEEPWALKER | 24.1 · 8.9 | sharpen | **Restless**: each cycle of act 1, the Cell's Alarm hits 5% harder |
+| ECHOLALIA | 23.6 · 5.1 · 3.8 | sharpen | **Reverb**: each cycle of act 1, the echo grows 5% of the hit, from half |
+
+A part that returns comes back where it was on the board, with its ticks fresh; its return is a phase line and a chip.
 - Moving the built bosses from 50 / 25 to 60 / 30 took about a cycle off act 1 and added it to acts 2 and 3; their win
   rates moved inside the noise (HASHLORD's reader 59% → 68%).
 
@@ -105,7 +135,7 @@ pick from before they're built.
 ## Proposed: floors 2–8 (picked November 2026)
 
 **Built:** CENTRIFUGE, SHAKEDOWN, SHOULDER SURFER, RECURSION, CAMSWARM, NIGHT DESK and BYZANTINE (floorbosses.mjs,
-GAME_RULES.md "Floor bosses"; the three floor 4 rows below are as built), their act ticks at 60% and 30% like every boss's (BYZANTINE's at 78% and 42%). The rest are
+GAME_RULES.md "Floor bosses"; the three floor 4 rows below are as built), their act ticks at 60% and 30% like every boss's. The rest are
 not built.
 
 Prototyped as applets (a board an act), with docs/content.md 3.2. How each one plays, phase by phase: docs/boss-guide.md. Each plays in the shape above: three acts, a

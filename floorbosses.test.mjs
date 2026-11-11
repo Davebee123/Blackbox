@@ -255,12 +255,12 @@ import { namedBoss } from './dist/arcs.mjs';
 import { FLOOR, lairBossFor } from './dist/floors.mjs';
 import { fxText } from './dist/content.mjs';
 
-test('the floor 4 bosses: own parts, a ♛, act ticks at 60% and 30% (BYZANTINE 78% and 42%), two acts each', () => {
+test('the floor 4 bosses: own parts, a ♛, act ticks at 60% and 30%, two acts each', () => {
   for (const [id, crown, parts] of [['nightdesk', 'desk', ['desk', 'teller', 'clearing']], ['byzantine', 'nodea', ['nodea', 'nodeb', 'nodec']], ['camswarm', 'hive', ['hive', 'pulse', 'c2']]]) {
     const s = boss(id), v = s.encounter.virus, c = livingParts(s).find((p) => p.core);
     assert.deepEqual(v.parts.map((p) => p.id), parts, id);
     assert.equal(c.id, crown, `${id}'s ♛`);
-    assert.deepEqual(c.ticks.map((t) => t.at), id === 'byzantine' ? [0.78, 0.42] : [0.6, 0.3], `${id}'s act ticks`); // BYZANTINE's are its own: its acts measured even there (docs/solo-bosses.md "Act length")
+    assert.deepEqual(c.ticks.map((t) => t.at), [0.6, 0.3], `${id}'s act ticks`);
     assert.equal(v.phases.length, 2);
     assert.equal(tellsOf(s)?.list.length || 0, 0, `${id} deals no tells: its rule is the fight`);
     assert.ok(BOSSES[id].guide.open.length && BOSSES[id].guide.phases.length === 2, `${id}'s Codex guide`);
@@ -452,8 +452,8 @@ test('the floor 4 uniques and set pieces: Overdraft, Pre-Authorization, Changed 
 });
 
 // ---------- the fights session: act length, floor 4 polish, CAMSWARM's pair ----------
-test('act ticks: every boss\'s ♛ at 60% and 30% (BYZANTINE its own); a part beside it keeps 50% and 25%', () => {
-  for (const id of ['relayking', 'repoman', 'choir', 'resident', 'nb-deadbolt', 'nb-hashlord', 'nb-mirrorshade', 'nb-echolalia']) {
+test('act ticks: every boss\'s ♛ at 60% and 30%, the same for all; a part beside it keeps 50% and 25%', () => {
+  for (const id of ['byzantine', 'nightdesk', 'centrifuge', 'relayking', 'repoman', 'choir', 'resident', 'nb-deadbolt', 'nb-hashlord', 'nb-mirrorshade', 'nb-echolalia']) {
     const s = boss(id, { level: Math.max(12, BOSSES[id].floor || 0) }), c = s.encounter.virus.parts.find((p) => p.core);
     assert.deepEqual(c.ticks.map((t) => t.at), [0.6, 0.3], id);
     assert.ok(s.encounter.virus.parts.filter((p) => p !== c && p.ticks).every((p) => p.ticks.map((t) => t.at).join() === '0.5,0.25'), `${id}'s other parts`);
