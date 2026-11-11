@@ -172,3 +172,19 @@ test('the P3 families\' board elements each have a tip, and each shows in a figh
     assert.ok(!onPage(hudMarkup(off) + boardMarkup(off))(t.at), `${id}: not on a Ransomware's`);
   }
 });
+
+// A tip whose selector names a class or id no markup ever writes can never show (the old file-system runs' tips, the
+// store page's). Every class and id a tip points at must be written by some module's markup: literally, or as a
+// prefix built with a template (`k-${room.kind}`).
+test('every tip points at something the game draws', async () => {
+  const { readdirSync, readFileSync } = await import('node:fs');
+  const dir = new URL('./dist/', import.meta.url);
+  const src = readdirSync(dir).filter((f) => /\.(mjs|js|html)$/.test(f) && f !== 'tips.mjs').map((f) => readFileSync(new URL(f, dir), 'utf8')).join('\n');
+  const drawn = (name) => new RegExp(`(^|[^\\w-])${name}([^\\w-]|$)`).test(src)
+    || [...name.matchAll(/-/g)].some((m) => src.includes(`${name.slice(0, m.index + 1)}\${`));
+  const missing = [];
+  for (const t of TIPS) for (const sel of [t.at, t.also, t.under].filter(Boolean)) {
+    for (const [, name] of sel.matchAll(/[.#]([a-zA-Z][\w-]*)/g)) if (!drawn(name)) missing.push(`${t.id}: ${name}`);
+  }
+  assert.deepEqual(missing, []);
+});

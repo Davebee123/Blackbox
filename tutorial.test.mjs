@@ -185,3 +185,27 @@ test('the rooms tour shows once a save: done steps stay done through a save, a n
   closePop(u);
   assert.equal(nextTip(u, 'rooms', shows(u)), null);
 });
+
+// A server's takeover path and its run threats, each taught the first time it's on the map (tips.mjs room-*, run-*).
+test('a server map teaches its vault, Core, elite, a rival and low Signal, once each', async () => {
+  const RV = await import('./dist/rivals.mjs');
+  const s = newPlayer();
+  s.hackers = { [s.loadout.archetype]: { level: 12, xp: 0 } };
+  FP.startRooms(s, { seed: 7, size: 'medium', floor: 3, level: 12 });
+  FP.connect(s);
+  skipTour(s);
+  const g = s.rooms.graph;
+  for (const r of Object.values(g.rooms)) s.rooms.seen[r.id] = 'kind'; // the whole map drawn
+  RV.spawnRival(s, 99, 'kudzu');
+  const tipsHere = () => { const ids = []; for (let t; (t = nextTip(s, 'rooms', shows(s))) && ids.length < 12;) { ids.push(t.id); markSeen(s, t.id); } return ids; };
+  const kinds = new Set(Object.values(g.rooms).map((r) => r.kind));
+  const ids = tipsHere();
+  if (kinds.has('vault')) assert.ok(ids.includes('room-vault'), ids.join());
+  if (kinds.has('core')) assert.ok(ids.includes('room-core'), ids.join());
+  if (kinds.has('elite')) assert.ok(ids.includes('room-elite'), ids.join());
+  assert.ok(ids.includes('run-rival'), ids.join());
+  assert.ok(!ids.includes('run-signal'), 'full Signal: no warning yet');
+  s.rooms.signal = Math.floor(s.rooms.max * 0.2);
+  assert.deepEqual(tipsHere(), ['run-signal'], 'low Signal: the warning, once');
+  assert.deepEqual(tipsHere(), []);
+});

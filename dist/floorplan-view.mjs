@@ -47,7 +47,7 @@ import { stashItem, active, classOf } from './combat.mjs';
 import { AUTHORS } from './authors.mjs';
 import { SCRIPTS, TIER, scriptsOf, slotsOf, scriptTip } from './scripts.mjs';
 import { BOSS_RULES } from './interrupt.mjs';
-import { familyName } from './families.mjs';
+import { familyName, ROOM_RULES } from './families.mjs';
 import { RUNCARD, RUN_CARDS, cardOf as runCardOf, surgeAt, surgeFill, escortOf, escortRoute, packOf, packRoute, packRooms } from './runcards.mjs';
 import { RIVALS, COUNTERS, READS, rivalOf, routeOf, raceOf, lineupOf, memoryOf, wickLine, crewName, crewColour, rivalSays, rivalLine } from './rivals.mjs';
 import { GENES } from './genes.mjs';
@@ -280,7 +280,7 @@ function aboutOf(s, room) {
           : room.kind === 'nest' ? `Optional. A kill pays ${ROOMS.nest.parts} components.`
           : room.kind === 'secret' ? 'Optional. It fills again two hours after you take it.'
           : room.queue && R.kind === 'Mailhub' && fightKind(room) ? 'A Spam Flood joins its fights.'
-            : room.kind === 'elite' ? 'Enrages from cycle 9. Drops a blue or better.'
+            : room.kind === 'elite' ? `Enrages from cycle ${ROOM_RULES.enrage.elite}. Drops a blue or better.`
               : room.kind === 'core' && !coreOpen(s) ? sealedLine(s)
                 : room.kind === 'cache' && !room.mirror ? 'One in four is bait: you see which when you walk in.'
                   : room.kind === 'vault' && room.id === g.vaults[0] && !opened(s, room) ? 'Opening it unseals the Core.'
@@ -756,7 +756,7 @@ function hereCard(s) {
     const ob = objOf(s, room); // its objective (objectives.mjs), and what it pays met
     if (ob) notes.push(`<span class="fp-tag-inline next fp-obj">${ic(OBJ_ICON[ob])}${OBJECTIVES[ob].name}</span> ${esc(objectiveLine(ob))}<span class="fp-obj-pay">${objBonus()}</span>`);
     if (room.kind === 'guard' && room.key && !R.opened[room.key]) notes.push(esc(`Carries the ${g.rooms[room.key].path} key.`));
-    if (room.kind === 'elite') notes.push('Enrages from cycle 9. Drops a blue or better.');
+    if (room.kind === 'elite') notes.push(`Enrages from cycle ${ROOM_RULES.enrage.elite}. Drops a blue or better.`);
     if (room.kind === 'nest') notes.push(esc(`Optional. A kill pays ${ROOMS.nest.parts} components.`));
     if (room.kind === 'core' && !R.world) notes.push(esc(`Boss rule ${R.bossRule}: ${BOSS_RULES[R.bossRule].name}.`));
     if (R.world) { const extra = net(s, 'fightNote', room); if (extra) notes.push(esc(extra)); }
