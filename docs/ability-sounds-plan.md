@@ -102,7 +102,8 @@ Screen effects off or Motion off: contact and tail on the beat. The family's one
    The designer picked Corrupt; its Encrypt (a modem's tones, seven square steps down) is too on the nose.
    **1b**: Corrupt's Encrypt with no tones: B1 Latch (static drawing in, seven
    crushed latches, a stuck slice sagging under each) and B2 Choke (your carrier's hum pinched shut a notch at a
-   time, duller each notch, then cut). Latch is picked (`virussound.mjs` PICKED).
+   time, duller each notch, then cut). Latch is picked (`virussound.mjs` PICKED). Surge, Hash and
+   Discharge are kept as they are.
 2. **Every attack**: each chip theme's strike (18) and the lash, built from its theme; Scramble, Replicate and Patch.
 3. **Charges and bosses**: a tell landing, a boss's signature.
 4. **Land**: a fight plays the pick in place of `hurt`: one contact a batch, the number on the strike's impact (today
