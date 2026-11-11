@@ -112,7 +112,9 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
   about 30% Signal a same-level fight, and gear matters. A boss's signature changes the fight and ties to its lore; shutting a skill off is a side rule at
   most.
 - **Act ticks:** every boss's ♛ crosses into its acts at 60% and 30%. Ticks and Integrity stay consistent across
-  bosses; a boss whose acts run uneven gets its behaviour or mechanics changed, never its own ticks.
+  bosses; a boss whose acts run uneven gets its behaviour or mechanics changed, never its own ticks. The ♛ is attacked
+  as part of the normal flow, and attacking only the ♛ is punished. An uneven boss gets more health on its ♛ or a change
+  in its own system; bringing parts back only where a boss's system fits it, never on every boss.
 
 ## Backlog
 
