@@ -38,17 +38,17 @@ test("RELAY-KING's Relay broadcasts harder for each fragment on the board", () =
   assert.match(boardMarkup(s), /×1<\/span>/, 'the Relay shows the fragments it counts');
 });
 
-test("RELAY-KING's Crown Hop: at 50% the ♛ moves to its healthiest part with the 25% tick; the part it leaves heals", () => {
+test("RELAY-KING's Crown Hop: at 60% the ♛ moves to its healthiest part with the 30% tick; the part it leaves heals", () => {
   const s = boss('relayking'), was = crown(s);
   assert.equal(was.id, 'replicator');
-  under(s, 0.5);
+  under(s, 0.6);
   resolveCycle(s);
   const now = crown(s);
   assert.notEqual(now, was, 'the ♛ moved');
-  assert.ok(!was.core && was.integrity > 0.5 * was.max, 'the old crown healed a quarter');
-  assert.deepEqual(now.ticks.map((t) => [t.at, t.phase]), [[0.25, 1]], 'the 25% phase tick went with it');
+  assert.ok(!was.core && was.integrity > 0.6 * was.max, 'the old crown healed a quarter');
+  assert.deepEqual(now.ticks.map((t) => [t.at, t.phase]), [[0.3, 1]], 'the 30% phase tick went with it');
   assert.ok(was.ticks.every((t) => t.phase == null), 'the old crown takes plain ticks');
-  under(s, 0.25);
+  under(s, 0.3);
   resolveCycle(s);
   assert.equal(of(s, 'replicator').attack.interval, 2, 'the Flood');
   assert.equal(of(s, 'relay').attack.interval, 3);
@@ -70,32 +70,32 @@ test("REPO MAN's Liens: a command a ◆ absorbs adds one and grows the Collectio
   assert.equal(v.liens, 0, 'the Collection paid them off');
 });
 
-test("REPO MAN's phases call a Collection 3 cycles out, and at 25% each Lien counts twice", () => {
+test("REPO MAN's phases call a Collection 3 cycles out, and at 30% each Lien counts twice", () => {
   const s = boss('repoman'), v = s.encounter.virus, l = of(s, 'ledger');
-  under(s, 0.5);
+  under(s, 0.6);
   resolveCycle(s);
   assert.ok(l.attack.due <= s.encounter.cycle + 3, 'a Collection is coming');
   v.liens = 2; liftOf(s);
   const one = l.attack.lift;
   l.attack.due = 999;
-  under(s, 0.25);
+  under(s, 0.3);
   resolveCycle(s);
   liftOf(s);
   assert.equal(v.interest, 2);
   assert.equal(l.attack.lift, one * 2);
 });
 
-test('HOLLOW CHOIR: one voice, a second at 50% beating two behind, and at 25% the Round sings back the cycles before the beat', () => {
+test('HOLLOW CHOIR: one voice, a second at 60% beating two behind, and at 30% the Round sings back the cycles before the beat', () => {
   const s = boss('choir', { level: 14 }), v = s.encounter.virus;
   assert.equal(livingParts(s).filter((p) => p.mimic).length, 1);
   assert.ok(!livingParts(s).some((p) => p.reflect), 'no Decoy');
-  under(s, 0.5);
+  under(s, 0.6);
   resolveCycle(s);
   const ms = livingParts(s).filter((p) => p.mimic), beats = tellsOf(s).list.filter((t) => t.kind === 'mimic');
   assert.equal(ms.length, 2, 'a second voice');
   assert.equal(beats.length, 2);
   assert.equal(((beats[1].first - beats[0].first) % 4 + 4) % 4, 2, 'two cycles behind');
-  under(s, 0.25);
+  under(s, 0.3);
   resolveCycle(s);
   assert.equal(v.round, 3);
   // Fire two hits, then hold on the beat: the beat sings the two back.

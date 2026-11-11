@@ -8,23 +8,59 @@ family virus at 1.6× Integrity with one stock phase: the kit player (blind to t
 
 ## The shape
 
-- **Three acts**: the opening, then one at each of the ♛ part's act ticks (60%, 30%: Act length below). Each act adds a mechanic. A stock
+- **Three acts**: the opening, then one at each of the ♛ part's act ticks (60%, 30%). Each act adds a mechanic. A stock
   phase (re-arm, a cycle sooner) is never an act on its own.
 - **A part of its own**, with a rule, on top of its family's: the boss's signature, shown on its row.
 - **You choose when**: the ♛ ticks are yours to cross, so each phase starts when you are ready for it.
-- **Act length** (decided November 2026, for the fights session): the ♛'s act ticks move to **60% and 30%**, so act 1
-  is 40% of its Integrity and acts 2 and 3 30% each. The aim is equal time, not equal Integrity: later acts slow your
-  damage, so they get less of it. Measure cycles per act with the planner (`solved.mjs`) and tune each boss's ticks
-  until acts 2 and 3 last at least as long as act 1. Only the ♛'s act ticks move; every other part's cut ticks stay at
-  50% and 25%. Built bosses (acts.mjs) change too.
+- **Act length** (November 2026): the ♛'s act ticks are at **60% and 30%** (`TICKS.act`, interrupt.mjs), or the boss's
+  own where its acts measured more even there (`BOSSES[id].ticks`: BYZANTINE's 78% and 42%). Every other part's cut
+  ticks stay at 50% and 25%. The aim is equal time, not equal Integrity. Measured below.
+
+### Act length, measured
+
+Cycles an act, the planner on every subclass, 12 seeds, each boss at its floor (10 where it has none): genesim.mjs
+`bossFight`'s loop, noting the cycle each phase starts. Acts 2 and 3 over won fights only.
+
+| Boss | ♛ ticks | Act 1 | Act 2 | Act 3 |
+|---|---|---|---|---|
+| Resident (worm, ransomware) | 60 / 30 | 20.8 | 5.6 | 4.4 |
+| RELAY-KING | 60 / 30 | 15.1 | 6.4 | 4.3 |
+| REPO MAN | 60 / 30 | 8.9 | 3.1 | 3.6 |
+| HOLLOW CHOIR | 60 / 30 | 6.9 | 2.5 | 6.9 |
+| CENTRIFUGE | 60 / 30 | 7.5 | 5.3 | 9.7 |
+| SHAKEDOWN | 60 / 30 | 10.6 | 3.1 | 3.7 |
+| SHOULDER SURFER | 60 / 30 | 16.5 | 4.5 | 3.9 |
+| RECURSION | 60 / 30 | 13.7 | 4.1 | 3.1 |
+| NIGHT DESK | 60 / 30 | 12.3 | 5.5 | 8.6 |
+| BYZANTINE | **78 / 42** | 7.6 | 8.3 | 8.8 |
+| CAMSWARM | 60 / 30 | 20.0 | 5.2 | 8.6 |
+| DEADBOLT | 60 / 30 | 19.2 | 5.5 | 8.7 |
+| TRIPMINE (one phase) | 60 / 30 | 24.8 | 9.0 | |
+| HASHLORD | 60 / 30 | 23.0 | 4.2 | 6.7 |
+| BACK ORIFICE | 60 / 30 | 20.4 | 2.8 | 6.2 |
+| PATCH TUESDAY | 60 / 30 | 23.4 | 4.5 | 2.5 |
+| FLOODWALL (one phase) | 60 / 30 | 9.6 | 18.2 | |
+| MIRRORSHADE | 60 / 30 | 16.5 | 3.9 | 6.5 |
+| SLEEPWALKER (one phase) | 60 / 30 | 24.1 | 8.9 | |
+| ECHOLALIA | 60 / 30 | 23.6 | 5.1 | 3.8 |
+
+- **Only BYZANTINE meets the aim.** Its three Nodes are worked together, so its ♛'s ticks split the whole fight.
+- **NIGHT DESK and CENTRIFUGE** even out at 90 / 45 (6.6, 8.4, 12.8) and 75 / 35 (5.8, 5.8, 12.1), but a misreader then
+  wins 33% and 38%, under the band's 45% (genesim.test.mjs): longer late acts punish slips more. Left at 60 / 30.
+- **Everywhere else the ticks can't do it.** The ♛ is left for last (its ticks are yours to cross, and each act makes
+  the fight harder), so act 1 holds every other part and the ticks split only the ♛'s own Integrity. At 90 / 45:
+  SHOULDER SURFER 14.8, 5.1, 4.2; HASHLORD 15.1, 10.4, 8.8; REPO MAN 7.6, 3.9, 3.6. Even acts there need another
+  lever (acts on the virus's total Integrity, or a ♛ that has to be worked early): the designer's call.
+- Moving the built bosses from 50 / 25 to 60 / 30 took about a cycle off act 1 and added it to acts 2 and 3; their win
+  rates moved inside the noise (HASHLORD's reader 59% → 68%).
 
 ## Built: the three solo bosses
 
-| Boss | Its part | Act 1 | Act 2 (50%) | Act 3 (25%) | The read |
+| Boss | Its part | Act 1 | Act 2 (60%) | Act 3 (30%) | The read |
 |---|---|---|---|---|---|
 | RELAY-KING | Relay: Broadcast every 4, +its hit per fragment | Broadcast | **Crown Hop**: the ♛ moves to the healthiest part; the old one heals 25% | **Flood**: Replicate every 2, Broadcast every 3 | Clear fragments before a Broadcast; pace the parts so the ♛ hops where you want it |
 | REPO MAN | Ledger: Collection every 5, +its hit per Lien | **Liens**: each command a ◆ absorbs adds one; a Collection, landed or cut, clears them | Re-arms every part; a Collection in 3 | **Interest**: each Lien counts twice; a Collection in 3 | Strip with strips, burns or helpers; cut the Collection; cross a tick with the ledger clear |
-| HOLLOW CHOIR | A Mimic (its third) | One voice: a beat every 4 | **Second voice**: a second Mimic, beating 2 behind | **Round**: each beat plays back your last three commands | Cut a voice before 25%; hold or fire small in the two cycles before a beat |
+| HOLLOW CHOIR | A Mimic (its third) | One voice: a beat every 4 | **Second voice**: a second Mimic, beating 2 behind | **Round**: each beat plays back your last three commands | Cut a voice before 30%; hold or fire small in the two cycles before a beat |
 
 Integrity (`BOSSES` in data.mjs): RELAY-KING 1.25× (its Relay is a fourth part), REPO MAN 1.6×, HOLLOW CHOIR 1.4× (its second
 voice is a boss-sized part).
@@ -69,7 +105,7 @@ pick from before they're built.
 ## Proposed: floors 2–8 (picked November 2026)
 
 **Built:** CENTRIFUGE, SHAKEDOWN, SHOULDER SURFER, RECURSION, CAMSWARM, NIGHT DESK and BYZANTINE (floorbosses.mjs,
-GAME_RULES.md "Floor bosses"; the three floor 4 rows below are as built), their act ticks at 60% and 30%; the built bosses above still use 50% and 25% (the fights session moves them). The rest are
+GAME_RULES.md "Floor bosses"; the three floor 4 rows below are as built), their act ticks at 60% and 30% like every boss's (BYZANTINE's at 78% and 42%). The rest are
 not built.
 
 Prototyped as applets (a board an act), with docs/content.md 3.2. How each one plays, phase by phase: docs/boss-guide.md. Each plays in the shape above: three acts, a

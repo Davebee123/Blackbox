@@ -4320,6 +4320,11 @@ p.impl { margin: 6px 0 0; padding: 4px 2px; border-bottom: 1px dotted color-mix(
 .intent.bend.harm b.bend-to { color: var(--hot); }
 .intent.bend.veiled b.bend-to { color: var(--muted); }
 .intent.bend.now { background: var(--hot-soft); }
+/* NIGHT DESK's attacks open trades (view.mjs tradeChip): dashed, like every chip that lands only if you let it. */
+.intent.trade { border: 1px dashed var(--hot); background: transparent; }
+.intent.trade .tr-ico { width: 14px; height: 14px; flex: none; color: var(--hot); }
+.intent.trade.full { border-style: solid; background: var(--hot-soft); }
+.intent.trade.full small { color: var(--hot); }
 .tether.k-bend { --tt: var(--hot); color: var(--hot); transform: translateY(-5px); } /* a little over the steel ones, so their arms never overlap */
 .tether.k-bend .tt-line { background: repeating-linear-gradient(180deg, var(--tt) 0 4px, transparent 4px 7px); }
 .tether.k-bend .tt-arm { background: repeating-linear-gradient(90deg, var(--tt) 0 4px, transparent 4px 7px); }

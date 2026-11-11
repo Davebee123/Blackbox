@@ -203,7 +203,8 @@ function heedFloor(s, move) {
   }
   if (v.vote) {
     // BYZANTINE: spread it. Each one-part command goes at the healthiest Node (the traitor while it isn't the most
-    // damaged), and under the Hard fork no Node is broken while another stands at half or more.
+    // damaged, and never onto a Node the hit would leave under the traitor), and under the Hard fork no Node is broken
+    // while another stands at half or more.
     const ns = nodesOf(s), aim = at && part(s, at), fr = (p) => p.integrity / p.max;
     if (ns.length > 1 && aim?.role === 'node' && !AREA.has(id)) {
       const tr = ns.find((p) => p.id === v.vote.traitor), byHealth = [...ns].sort((a, b) => fr(b) - fr(a) || a.armor - b.armor);
@@ -214,6 +215,19 @@ function heedFloor(s, move) {
       if (!want) {
         want = tr && ns.some((p) => p !== tr && fr(p) < fr(tr)) ? tr : byHealth.find((p) => p !== tr) || byHealth[0];
         if (v.vote.fork && killing(s, `${id} ${want.id}`, want) && ns.some((p) => p !== want && fr(p) >= 0.5)) want = byHealth.find((p) => p !== want) || want;
+        // The Traitor: a hit that leaves another Node the most damaged swings the vote to the healthiest Node's level.
+        // Of the Nodes it could hit, the one whose hit would have a vote restore the least (none, when one is safe).
+        if (tr) {
+          const swing = (t) => {
+            const f = ns.map((p) => ({ p, f: p === t && !(p.armor > 0) ? Math.max(0, p.integrity - size(p)) / p.max : fr(p) })).filter((x) => x.f > 0);
+            if (f.length < 2) return 0;
+            const low = f.reduce((m, x) => (x.f < m.f ? x : m)), top = Math.max(...f.map((x) => x.f));
+            const to = low.p !== tr && f.some((x) => x.p === tr) ? top : f.reduce((n, x) => n + x.f, 0) / f.length;
+            return to - low.f >= FB.vote.pass - 1e-9 ? to - low.f : 0;
+          };
+          const safe = [want, ...byHealth.filter((p) => p !== want)].filter((p) => !(v.vote.fork && killing(s, `${id} ${p.id}`, p) && ns.some((x) => x !== p && fr(x) >= 0.5)));
+          want = safe.reduce((m, p) => (swing(p) < swing(m) - 1e-9 ? p : m), safe[0] || want);
+        }
       }
       if (want !== aim) { const m = first(s, [`${id} ${want.id}`]); if (m) return m; }
     }

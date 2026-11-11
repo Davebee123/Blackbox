@@ -558,7 +558,7 @@ It remembers `s.dex` (genome.mjs) and `s.research`; crewmates' fights don't writ
 
 ### Solo bosses
 
-Bosses have phases and an enrage. A solo boss's **♛ part** (its signature) has phase ticks at 50% and 25% instead of
+Bosses have phases and an enrage. A solo boss's **♛ part** (its signature) has phase ticks at 60% and 30% (BYZANTINE's at 78% and 42%: docs/solo-bosses.md "Act length") instead of
 interrupts: taking it across one starts its next phase; its other parts interrupt as usual (interrupt.mjs rule a;
 `developer bossrule b|c` tries the alternatives). A boss brings three tells, every one open at its level. From its
 enrage cycle every attack lands every cycle, a quarter harder, with a warning three cycles before. A phase change
@@ -587,17 +587,17 @@ Each plays in acts (below) with a part and a rule of its own, and a mechanic an 
 
 | Boss | Its part | Act 1 | Act 2 (♛ at 50%) | Act 3 (♛ at 25%) |
 |---|---|---|---|---|
-| RELAY-KING | **Relay**: Broadcast every 4 cycles, its hit bigger by its base for each fragment on the board | Broadcast | **Crown Hop**: the ♛ (and its 25% tick) moves to the healthiest other part; the part it leaves heals 25% of its max and takes plain ticks | **Flood**: the Replicator hatches every 2 cycles, the Relay broadcasts every 3 |
+| RELAY-KING | **Relay**: Broadcast every 4 cycles, its hit bigger by its base for each fragment on the board | Broadcast | **Crown Hop**: the ♛ (and its 30% tick) moves to the healthiest other part; the part it leaves heals 25% of its max and takes plain ticks | **Flood**: the Replicator hatches every 2 cycles, the Relay broadcasts every 3 |
 | REPO MAN | **Ledger**: Collection every 5 cycles, its hit bigger by its base for each Lien | **Liens**: each of your commands a ◆ absorbs puts one on the Ledger (strips, piercing hits, burns and helpers don't); a Collection that lands or is cut clears them | Re-arms every part; a Collection 3 cycles out | **Interest**: each Lien counts twice; a Collection 3 cycles out |
 | HOLLOW CHOIR | A **Mimic**, its third part | One voice: the Mimic's beat every 4 cycles | **Second voice**: a second Mimic at the boss's size, beating 2 cycles behind the first | **Round**: each beat also plays back the two commands before it, at half (only those fired since the Round began); a cycle you hold adds nothing |
 
 On the board: ♛ on the crown part, ×*n* fragments on the Relay, §*n* Liens on the Ledger, *round* on a Mimic.
 
 **Floor bosses** (floorbosses.mjs, docs/boss-guide.md). Floors 2, 3 and 4 have bosses of their own: parts of their own
-only, the ♛'s act ticks at **60% and 30%** (every other part's ticks stay at 50% and 25%), the beat on a part of their
+only, the ♛'s act ticks at **60% and 30%** (BYZANTINE's at 78% and 42%; every other part's ticks stay at 50% and 25%), the beat on a part of their
 own, a tell an act from their set (floor 4's deal none: their rule is the fight), and a verb an act. 0.4× to 0.91× Integrity, with more of it on the ♛; they enrage at cycle 36 to 44. Played blind (no rule answered) each loses most of its fights, and one misread at the wrong cycle makes the rest of the fight harder (a sale, a leak, a Dump or a Call grows the next).
 
-| Boss | Where | Lv | Its rule (on its row) | Act 2 (♛ at 60%) | Act 3 (♛ at 30%) |
+| Boss | Where | Lv | Its rule (on its row) | Act 2 (♛'s first tick) | Act 3 (♛'s second tick) |
 |---|---|---|---|---|---|
 | CENTRIFUGE (GLASSJAW) | Floor 2's floor job: its Boss step's server's Core | 14 | **Bidding**, on the Gavel (no ticks, so never cut): from every 3 cycles, each Surge it lands takes it one sooner, down to 2. Each one-part command you aim at it while the Rotor stands is a bid, one faster too (a delay or a Throttle isn't). A delay or Throttle on it withdraws it to 4, and SIGINT cuts a selling Surge. A Surge at every 2 sells to the buyer it names, whose part joins (TOLLGATE's Lockbox wards the Rotor ♛, SWARMLINE's Mirror twins the Gavel, PALEMASK's Veil hides its timers); the Gavel drops to every 3, and each sale makes its Surge 50% harder for the fight. Nothing sells once the Rotor breaks. The Rotor's Encrypt comes every 7 cycles; no beat holds its ticks | **Reserve price**: a withdraw steps it back one | **Second lot**: two buyers a sale |
 | SHAKEDOWN (TOLLGATE) | The last room of every floor-2 Pit; back an hour after it falls | 12 | **Ransom Clock**, run by the Collector ♛ (it stops when the Collector breaks): 10 cycles; at 0 it leaks 35% of your max, 15% more each leak after (up to 65%), and restarts at 5. A Demand broken while the Collector stands halves the time left (*missed payment*). A Deadline (the Demand's, a wind-up) that lands adds 3; one called off buys nothing. Its Lockbox wards the Demand | **Second demand**, its Deadline on the same cycle; the Lockbox wards it too | **Final notice**: a leak re-arms the Demands and brings the Lockbox back |
@@ -612,15 +612,17 @@ that server's Core holds the boss in the Resident's place for good, and beating 
 the lair before its boss was built moves to that server. On the board: the Gavel's interval and next buyer (red at 2),
 the buyer on a bought part, the clock on the Collector (red at 3 or less) and the leak's chip in its column, *open* or
 *shut* and the log on the Logger with *again n*, *call n* (or *top*) on the top frame, *stacked* on the frames under it,
-and *n/5* on main() from act 3; a part's pending trades and their total, *n/4* on the Desk and *books* on its traders;
+and *n/5* on main() from act 3; a part's pending trades and their total, *n/4* on the Desk and *books* on its traders, and
+NIGHT DESK's attack chips as trades (dashed, a clock and the trade's size; solid red with all that settles on the one
+that fills the table);
 *vote n* on the Node a vote would restore (red, with what it restores, when it passes), *traitor*, *fork*; *sweep n* on
 the Hive (red, with how many would hatch), *cam n* on a fragment (*shielded* behind its part), *camera*, *locked*. The
-vote and the sweep are chips in their columns. Each tooltip gives the rule and its answer.
+vote, the sweep and the leak are chips in their columns, beside their part's own attack. Each tooltip gives the rule and its answer.
 
 ### Boss acts (acts.mjs)
 
 A P4 boss (docs/puzzle-fights.md 7) plays in **three acts**: the first from the start, the next two from its ♛ part's
-ticks at 50% and 25% (the floor bosses' at 60% and 30%). Built: the worm and ransomware Residents, the three solo
+ticks at 60% and 30%. Built: the worm and ransomware Residents, the three solo
 bosses and the four floor bosses.
 
 - **One tick a hit.** A hit takes the ♛ under its next tick and no further, so no act is skipped.
@@ -665,15 +667,16 @@ Resident drops each of its two once, then makes no unique roll. After a miss the
 | RECURSION | Stack Guard (proxy, 19) | The next attack on you within 2 cycles of a part breaking deals 20% less |
 | NIGHT DESK | Overdraft (proxy, 24) | Once a fight, a hit that would take you under 25% of your max leaves you there, and the rest lands over the next 3 cycles |
 | NIGHT DESK | Pre-Authorization (script, 24) | When you raise a shield, your next command's hits deal 10% more |
-| CAMSWARM | Changed Default (proxy, 24) | A virus can't play your helpers back at you |
+| CAMSWARM | Changed Default (proxy, 24) | A virus can't play your helpers back at you. Your helpers deal 50% more to fragments |
 | CAMSWARM | Mass Reboot (script, 24) | When you break a part, every fragment takes 30 (grown with its level) |
 | BYZANTINE | Majority Attack (exploit, 26) | +8% damage for each part below half, up to +32% |
 | BYZANTINE | Quorum Sensor (proxy, 26) | The second attack to land on you in a cycle deals 30% less |
 
 Their set pieces: CENTRIFUGE drops Glass Ceiling's **Rotor** (as GLASSJAW's bosses and elites still do), SHOULDER SURFER
 On-Call's **Pager** (floor 4's lair boss still drops it too), NIGHT DESK its **Runbook** and BYZANTINE its **Failover** (no
-longer the lair bosses'), at a boss's set odds (8% a kill, +3% a miss). CAMSWARM holds a lair, so it pays as one: its
-pair joins the lair's roll for your network's natives (one table, the same odds), with floor 4's lair set pieces.
+longer the lair bosses'), at a boss's set odds (8% a kill, +3% a miss). CAMSWARM holds a lair, so it pays as one: the
+lair's single roll (the same odds and pity), with floor 4's lair set pieces. Its pair comes first: while you lack
+either, a roll that hits gives one of them; once both are found, your network's natives as before.
 The Codex boss page groups its loot (*Grouped*): every kill, its uniques, its set pieces, each with the next kill's odds
 as a bar and the odds and pity in the bar's tooltip.
 
@@ -695,7 +698,7 @@ after it falls. The map labels a found lair with its boss, and its card's boss t
 |---:|---|
 | 2 | DEADBOLT, BACK ORIFICE, PATCH TUESDAY, SLEEPWALKER, MIRRORSHADE |
 | 3 | HASHLORD, FLOODWALL, ECHOLALIA |
-| 4 | TRIPMINE, CAMSWARM (a floor boss, not a native: its pair of uniques joins the lair's roll) |
+| 4 | TRIPMINE, CAMSWARM (a floor boss, not a native: its pair of uniques comes first in the lair's roll) |
 | 5–8 | none built yet: your native boss |
  A boss with a floor
 (HASHLORD 16, MIRRORSHADE 12) moves in only once you reach that level; until then the Core stays sealed and says from

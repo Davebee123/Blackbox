@@ -282,7 +282,7 @@ export function forecast(s, preview = null) {
   for (const m of crew) shoot(m, m.encounter.queue);
   out.total = Object.values(out.parts).reduce((a, b) => a + b, 0);
   // Incoming: this cycle's visible damage attacks, plus encryption on you.
-  const hits = intents(s, 1).filter((i) => i.col === 0 && !i.hidden && (i.effect === 'damage' || i.hit)).map((i) => (i.effect === 'damage' ? i.amount : i.hit));
+  const hits = asTrades(s, intents(s, 1).filter((i) => i.col === 0 && !i.hidden && (i.effect === 'damage' || i.hit))).filter((i) => !i.trade || i.full).map((i) => i.full || (i.effect === 'damage' ? i.amount : i.hit)); // NIGHT DESK: a trade lands nothing until the table fills
   const take = (st, raw) => {
     let chits = st.encounter.chits || 0, shield = st.encounter.shield || 0, lost = 0;
     for (const a of raw) {
@@ -470,7 +470,31 @@ function lashChip(i, c, k = '') {
   const tip = `Backlash, ${bendWhen(c)}. A beat: hit this part with a command then and it lashes back for ${i.amount}${i.also ? `, with its ${i.also}` : ''}. A hit that breaks it doesn't.${answerLine('Hit a part with no attack, break one, or fire a shield or buff then.')}`;
   return `<div class="intent bend lash${c === 0 ? ' now' : c === 1 ? ' next' : ''}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(tip)}"><span class="ico" ${icon(ICON.mirror)}></span><b class="bend-to">Lash −${i.amount}</b></div>`;
 }
+// NIGHT DESK's attacks (floorbosses.mjs holdTrade): none lands, each opens a pending trade. Marked here (trade), and the
+// one that fills the table carries what settles (full).
+function asTrades(s, list) {
+  if (!s.encounter.virus.desk) return list;
+  const all = pendingOf(s);
+  let n = all.length, sum = all.reduce((t, x) => t + tradeOf(s, x), 0);
+  return list.map((i) => {
+    if (i.tell || i.hidden || !(i.effect === 'damage' || i.hit)) return i;
+    const size = i.effect === 'damage' ? i.amount : i.hit;
+    n++; sum += size;
+    const out = { ...i, trade: size, ...(n >= FB.desk.full ? { full: sum } : {}) };
+    if (n >= FB.desk.full) { n = 0; sum = 0; }
+    return out;
+  });
+}
+// A trade's chip: dashed, a clock and the trade's size. The one that fills the table is solid red, with all that settles.
+function tradeChip(i, c, k = '') {
+  const tip = i.full ? `${i.name}\nTrade\nThe table fills at ${FB.desk.full} pending. Every trade settles on you in full, for ${i.full}.${answerLine('Settle a part\'s trades at half before then.')}`
+    : `${i.name}\nTrade\nOpens a pending trade of ${i.trade} on this part. It deals nothing until it settles.${answerLine('Hit the part to settle its trades at half.')}`;
+  return `<div class="intent trade${i.full ? ' full' : ''}${c === 0 ? ' now' : c === 1 ? ' next' : ''}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(tip)}">${glyph('clock', 'tr-ico')}<b${longChip(i) ? ' class="long"' : ''}>${esc(i.name)}</b><i class="code${longChip(i) ? ' long' : ''}">${esc(attackCode(i.name))}</i><small>${i.full ? `−${i.full}` : i.trade}</small></div>`;
+}
+// A boss rule's own chip (floorbosses.mjs fbIntents: a vote, a sweep, a leak): drawn beside its part's attack, never in its place.
+const ruleChip = (i) => !!(i.vote || i.sweep || i.leak);
 function attackChip(i, c, k = '', to = null) {
+  if (i.trade) return tradeChip(i, c, k);
   if (i.effect === 'mirror') return bendChip(i, c, k);
   if (i.effect === 'backlash') return lashChip(i, c, k);
   if (i.packed) i = { ...i, syn: false, scrape: false, bad: false, taps: 0 };
@@ -854,7 +878,7 @@ export function boardMarkup(s, selected, preview = null) {
     return rows.length ? `<span class="hpips">${rows.map((k) => { const x = hplan.pips.find((y) => y.part === p.id && y.col === c && y.helper === k); return x ? `<i class="hpip${x.trips ? ' trip' : ''}" title="${esc(x.tip)}"></i>` : '<i class="hpip none"></i>'; }).join('')}</span>` : '';
   };
   // Damage on the timeline is what you'll actually take after your Reduction.
-  const list0 = fighting ? intents(s, 4).map((i) => (i.effect === 'damage' ? { ...i, amount: blocked(s, i.amount) } : i.hit ? { ...i, hit: blocked(s, i.hit) } : i)) : [];
+  const list0 = fighting ? asTrades(s, intents(s, 4).map((i) => (i.effect === 'damage' ? { ...i, amount: blocked(s, i.amount) } : i.hit ? { ...i, hit: blocked(s, i.hit) } : i))) : [];
   // The order levers on the board (order.mjs, docs/puzzle-levers.md 3.2 to 3.4). A Tripwire your move breaks this cycle
   // (the forecast): the other parts' attacks show their loud numbers, a cycle sooner, and their ◆ blink as falling.
   const trip = fighting ? tripwireOf(s) : null;
@@ -946,13 +970,14 @@ export function boardMarkup(s, selected, preview = null) {
       const told = mine.filter((i) => i.tell && i.col === c).map((i) => tellChip(s, i.tell === 'mimic' ? { ...i, copy: cp } : i, c, `tell:${p.id}:${i.id}@${e.cycle + c}`, crew.length && i.effect === 'damage' ? sink || 'all' : null)).join('')
         + mine.filter((i) => i.tell && i.winFrom != null && c >= i.winFrom && c < i.col).map((i) => tellSpan(s, i, c)).join(''); // a window longer than a cycle (tells.mjs)
       const lash = mine.filter((i) => i.col === c && i.effect === 'backlash').map((i) => lashChip(i, c, `lash:${p.id}@${e.cycle + c}`)).join(''); // a P4 boss's beat (acts.mjs), beside what lands
-      if (timersHidden(s, p) && p.attack) return `<div class="bcell">${cryptChip}${escChip}${told || '<div class="intent hidden">?</div>'}${lash}${c === 0 ? progOnPart(s, p) : ''}${patchChip}${pipCell(p, c)}</div>`;
-      const hit = mine.find((i) => i.col === c && !i.tell && i.effect !== 'backlash');
+      const rule = mine.filter((i) => i.col === c && ruleChip(i)).map((i) => attackChip(i, c, `rule:${p.id}@${e.cycle + c}`)).join(''); // a vote, a sweep or a leak: beside the part's own attack
+      if (timersHidden(s, p) && p.attack) return `<div class="bcell">${cryptChip}${escChip}${told || '<div class="intent hidden">?</div>'}${rule}${lash}${c === 0 ? progOnPart(s, p) : ''}${patchChip}${pipCell(p, c)}</div>`;
+      const hit = mine.find((i) => i.col === c && !i.tell && i.effect !== 'backlash' && !ruleChip(i));
       // With a crew, a damage attack lands on everyone, or on whoever is drawing fire; a crew boss's part with a
       // target rule (raid.mjs) on the one player it's aiming at.
       const aimed = crew.length && hit?.effect === 'damage' && !sink && p.attack.target ? attackTarget(s, p) : null;
       const to = crew.length && hit?.effect === 'damage' ? sink || (aimed ? aimed.who || 'you' : 'all') : null;
-      return `<div class="bcell">${cryptChip}${escChip}${told}${hit && !(p.attack ? false : hit.hidden) ? attackChip(hit.effect === 'damage' && backupAims(e, e.cycle + c) ? { ...hit, bk: true } : hit, c, `${p.id}@${e.cycle + c}`, to) : ''}${lash}${c === 0 ? progOnPart(s, p) : ''}${patchChip}${pipCell(p, c)}</div>`;
+      return `<div class="bcell">${cryptChip}${escChip}${told}${hit && !(p.attack ? false : hit.hidden) ? attackChip(hit.effect === 'damage' && backupAims(e, e.cycle + c) ? { ...hit, bk: true } : hit, c, `${p.id}@${e.cycle + c}`, to) : ''}${rule}${lash}${c === 0 ? progOnPart(s, p) : ''}${patchChip}${pipCell(p, c)}</div>`;
     }).join('');
     // A part with no attack of its own (a Mutex, a Mimic) still shows its row's cells when a tell or a beat sits there.
     const showCells = p.attack || p.ratchet || hrows[p.id] || mine.some((i) => i.tell || !i.hidden || i.effect === 'fuse');

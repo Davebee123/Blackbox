@@ -3,7 +3,7 @@
 // stand (a floor-2 Pit's and a floor-3 Gauntlet's last room), their uniques, and their marks on the board.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fresh, command, selectEncounter, resolveCycle, livingParts, attackers, hit, addItem, loaded, UNIQUES, defender } from './dist/combat.mjs';
+import { fresh, command, selectEncounter, resolveCycle, livingParts, attackers, hit, addItem, loaded, UNIQUES, defender, lairPick, bossTable as lootTable } from './dist/combat.mjs';
 import { CONFIG, BOSSES, ABILITIES } from './dist/data.mjs';
 import { tellsOf } from './dist/tells.mjs';
 import { boardMarkup } from './dist/view.mjs';
@@ -255,12 +255,12 @@ import { namedBoss } from './dist/arcs.mjs';
 import { FLOOR, lairBossFor } from './dist/floors.mjs';
 import { fxText } from './dist/content.mjs';
 
-test('the floor 4 bosses: own parts, a ♛, act ticks at 60% and 30%, two acts each', () => {
+test('the floor 4 bosses: own parts, a ♛, act ticks at 60% and 30% (BYZANTINE 78% and 42%), two acts each', () => {
   for (const [id, crown, parts] of [['nightdesk', 'desk', ['desk', 'teller', 'clearing']], ['byzantine', 'nodea', ['nodea', 'nodeb', 'nodec']], ['camswarm', 'hive', ['hive', 'pulse', 'c2']]]) {
     const s = boss(id), v = s.encounter.virus, c = livingParts(s).find((p) => p.core);
     assert.deepEqual(v.parts.map((p) => p.id), parts, id);
     assert.equal(c.id, crown, `${id}'s ♛`);
-    assert.deepEqual(c.ticks.map((t) => t.at), [0.6, 0.3], `${id}'s act ticks`);
+    assert.deepEqual(c.ticks.map((t) => t.at), id === 'byzantine' ? [0.78, 0.42] : [0.6, 0.3], `${id}'s act ticks`); // BYZANTINE's are its own: its acts measured even there (docs/solo-bosses.md "Act length")
     assert.equal(v.phases.length, 2);
     assert.equal(tellsOf(s)?.list.length || 0, 0, `${id} deals no tells: its rule is the fight`);
     assert.ok(BOSSES[id].guide.open.length && BOSSES[id].guide.phases.length === 2, `${id}'s Codex guide`);
@@ -449,4 +449,66 @@ test('the floor 4 uniques and set pieces: Overdraft, Pre-Authorization, Changed 
   assert.equal(fbPower(qs, qa, qa.attack), 1);
   qs.encounter.landings = { cycle: qs.encounter.cycle, n: 1 };
   assert.equal(fbPower(qs, qc, qc.attack), 0.7, 'the second attack to land in a cycle deals 30% less');
+});
+
+// ---------- the fights session: act length, floor 4 polish, CAMSWARM's pair ----------
+test('act ticks: every boss\'s ♛ at 60% and 30% (BYZANTINE its own); a part beside it keeps 50% and 25%', () => {
+  for (const id of ['relayking', 'repoman', 'choir', 'resident', 'nb-deadbolt', 'nb-hashlord', 'nb-mirrorshade', 'nb-echolalia']) {
+    const s = boss(id, { level: Math.max(12, BOSSES[id].floor || 0) }), c = s.encounter.virus.parts.find((p) => p.core);
+    assert.deepEqual(c.ticks.map((t) => t.at), [0.6, 0.3], id);
+    assert.ok(s.encounter.virus.parts.filter((p) => p !== c && p.ticks).every((p) => p.ticks.map((t) => t.at).join() === '0.5,0.25'), `${id}'s other parts`);
+  }
+});
+
+test("NIGHT DESK's attack chips read as trades, and its guide names each line once", () => {
+  const s = boss('nightdesk'), teller = of(s, 'teller'), clearing = of(s, 'clearing');
+  for (const p of [teller, clearing]) p.pending = [];
+  teller.attack.due = s.encounter.cycle + 1;
+  let m = boardMarkup(s);
+  assert.match(m, /class="intent trade next"[^>]*title="Sell Order\nTrade\nOpens a pending trade of \d+/, 'a trade, with its size');
+  assert.doesNotMatch(m, /Sell Order: −/, 'never a hit');
+  // The trade that fills the table carries what settles in full.
+  clearing.pending = [1, 2, 3].map(() => ({ amount: 10, at: s.encounter.cycle, name: 'Buy Order' }));
+  m = boardMarkup(s);
+  assert.match(m, /class="intent trade full next"[^>]*Every trade settles on you in full, for \d+/);
+  const G = BOSSES.nightdesk.guide, names = [...G.open, ...G.phases.flat()].map((x) => x[0]);
+  assert.equal(new Set(names).size, names.length, 'no two guide lines share a name');
+});
+
+test("BYZANTINE's vote chip shows beside its Node's own attack on the same cycle", () => {
+  const s = boss('byzantine'), e = s.encounter, c = of(s, 'nodec');
+  c.integrity = Math.round(c.max * 0.4);
+  e.virus.vote.at = e.cycle + 1; c.attack.due = e.cycle + 1;
+  const cell = boardMarkup(s).split('data-target="').find((r) => r.startsWith('nodec"'));
+  assert.match(cell, /title="Vote: /, 'the vote');
+  assert.match(cell, /title="Surge: /, 'and the Surge');
+});
+
+test("CAMSWARM's pair comes first in the lair's roll; Changed Default's helpers deal 50% more to fragments", () => {
+  const s = fresh(), own = ['changed-default', 'mass-reboot'], pool = [...own, 'native-a', 'native-b'];
+  assert.deepEqual(lairPick(s, own, pool), own, 'lacking both: one of the pair');
+  s.listen = 'native-a';
+  assert.deepEqual(lairPick(s, own, pool), own, 'whatever you listen for');
+  s.collection = { 'changed-default': 1 };
+  assert.deepEqual(lairPick(s, own, pool), ['mass-reboot'], 'lacking one: that one');
+  s.collection['mass-reboot'] = 1;
+  assert.deepEqual(lairPick(s, own, pool), ['native-a'], 'both found: the natives as before (the one you listen for)');
+  s.listen = null;
+  assert.deepEqual(lairPick(s, own, pool), ['native-a', 'native-b']);
+  s.collection['native-a'] = s.collection['native-b'] = 1;
+  assert.deepEqual(lairPick(s, own, pool), pool, 'all found: any of them');
+  assert.deepEqual(lootTable(fresh(), 'camswarm').uniques.slice(0, 2).map((u) => u.id).sort(), own, 'its pair heads its loot page');
+  // Changed Default: a helper's hit on a fragment deals half again; on a part, the same.
+  assert.match(fxText(UNIQUES['changed-default'].effect), /playing your helpers back at you.*helpers deal 50% more to fragments/i);
+  const dealt = (wear) => {
+    const q = boss('byzantine', { wear }), nb = of(q, 'nodeb');
+    landNow(q, nb);
+    const f = fragsOf(q)[0], n = of(q, 'nodea'); n.armor = 0; f.armor = 0; f.max = f.integrity = 1000;
+    const f0 = f.integrity, n0 = n.integrity;
+    hit(q, f, 20, { by: 'Helper', dot: true, src: 'helper' }); hit(q, n, 20, { by: 'Helper', dot: true, src: 'helper' });
+    return [f0 - f.integrity, n0 - n.integrity];
+  };
+  const [f0, n0] = dealt([]), [f1, n1] = dealt(['changed-default']);
+  assert.equal(f1, Math.round(f0 * 1.5), 'half again to a fragment');
+  assert.equal(n1, n0, 'a part takes the same');
 });

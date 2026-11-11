@@ -16,7 +16,7 @@
 //                     the next delivery. Those work whenever they're crossed.
 //
 // Bosses (3.4) ship under three rules, switchable for the playtest (BOSS_RULES):
-//   a  the boss's core part (its signature part, ♛) has phase ticks instead: crossing one starts its next phase. Its
+//   a  the boss's core part (its signature part, ♛) has phase ticks instead, at 60% and 30% (TICKS.act): crossing one starts its next phase. Its
 //      other parts interrupt as usual, and its phases no longer follow its total Integrity.
 //   b  every part interrupts; phases stay on total Integrity; it brings one more charge.
 //   c  phases at 50% and 25% of total; ticks interrupt, but the fight has a budget of TICKS.budget cancels.
@@ -29,9 +29,9 @@ import { gainResearch } from './research.mjs';
 import { daemonsOn } from './daemons.mjs';
 import { crossed as actCrossed } from './acts.mjs';
 
-export const TICKS = { at: [0.5, 0.25], small: 20, budget: 3 };
+export const TICKS = { at: [0.5, 0.25], act: [0.6, 0.3], small: 20, budget: 3 }; // act: a boss's ♛ ticks (BOSSES[id].ticks where its acts measured uneven, docs/solo-bosses.md "Act length")
 export const BOSS_RULES = {
-  a: { name: 'Core ticks are phases', short: 'phases on its ♛ part', text: "The boss's core part (♛) has phase ticks at 50% and 25% instead of interrupts. Taking it across one starts the next phase. Its other parts interrupt as usual." },
+  a: { name: 'Core ticks are phases', short: 'phases on its ♛ part', text: "The boss's core part (♛) has phase ticks at 60% and 30% instead of interrupts. Taking it across one starts the next phase. Its other parts interrupt as usual." },
   b: { name: 'Every part interrupts', short: 'every part interrupts', text: 'Every part has normal ticks. Phases stay on total Integrity, and the boss brings one more charge.' },
   c: { name: 'Phases plus a budget', short: `${TICKS.budget} interrupts a fight`, text: `Phases come at 50% and 25% of total Integrity. Ticks interrupt, but only ${TICKS.budget} times a fight, shown as pips on its bar.` },
 };
@@ -72,7 +72,7 @@ export function bossRule(s, rule = 'a') {
   if (e.bossRule === 'a') {
     const B = BOSSES[v.boss], core = (B?.crown && v.parts.find((p) => p.id === B.crown)) || v.parts.find((p) => p.special) || v.parts[0];
     core.core = true;
-    core.ticks = (B?.ticks || TICKS.at).map((at, i) => ({ at, spent: false, phase: i })); // the floor bosses' act ticks at 60% and 30% (docs/solo-bosses.md)
+    core.ticks = (B?.ticks || TICKS.act).map((at, i) => ({ at, spent: false, phase: i })); // act ticks at 60% and 30%, or the boss's own (docs/solo-bosses.md)
     for (const ph of v.phases || []) ph.at = -1; // never by its total: the ticks start them
   } else if (e.bossRule === 'b') {
     if (v.boss === 'nb-deadbolt') v.tellSet = [...new Set([...(v.tellSet || []), 'deadbolt', 'extortion', 'overcharge', 'fulldisk'])];

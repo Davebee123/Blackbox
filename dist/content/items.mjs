@@ -6780,10 +6780,17 @@ export default {
         "signal": 130,
         "reduction": 4
       },
-      "effect": {
-        "when": "custom",
-        "do": "helpers-safe"
-      },
+      "effect": [
+        {
+          "when": "custom",
+          "do": "helpers-safe"
+        },
+        {
+          "when": "custom",
+          "do": "helper-frags%",
+          "value": 50
+        }
+      ],
       "sources": [
         {
           "kind": "boss",

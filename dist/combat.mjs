@@ -335,6 +335,7 @@ export function damageMultiplier(s, p, opts = {}) {
   if (opts.dot) for (const x of fxFire(s, 'custom', { do: 'dot%' })) m *= 1 + x.value / 100;
   // Burns or helpers alone, on a part that meets the condition (Brackish, Riptide). A helper's hit carries src 'helper'.
   if (opts.dot && !opts.server) for (const x of fxFire(s, 'hit', { target: p, do: opts.src === 'helper' ? 'helper%' : 'burn%' })) m *= 1 + x.value / 100;
+  if (opts.src === 'helper' && p.kind === 'fragment') { const x = fxHas(s, 'helper-frags%'); if (x) m *= 1 + (Number(x.fx.value) || 0) / 100; } // Changed Default: your helpers deal more to fragments
   if (!opts.server) m *= classMult('dealt', s, p, opts) * (1 - rebootSick(s)); // reboot sickness: your server is rebooting
   m *= masteryDmg(s, e.virus, p); // a part you've mastered takes 3% more from all of yours (research.mjs; never a crewmate's)
   return m;
@@ -701,7 +702,7 @@ export function bossTable(s, boss) {
   return {
     sure: sureDrop(boss) ? (raid ? 'custom' : 'tuned') : null, yellow: BOSS_LOOT.yellow, raid, native, own: own.length, gold: raid ? BOSS_LOOT.raid.gold : 0,
     chance: native ? lairChance(s, 'you') : bossDone(s, boss) ? 0 : bossChance(s, boss), base: odds.chance, pity: odds.pity, done: !native && bossDone(s, boss),
-    uniques: ids.map((id) => ({ id, name: named(s, id) ? UNIQUES[id].name : null, level: UNIQUES[id].level, got: !!s.collection?.[id] })).sort((a, b) => a.level - b.level),
+    uniques: ids.map((id) => ({ id, name: named(s, id) ? UNIQUES[id].name : null, level: UNIQUES[id].level, got: !!s.collection?.[id] })).sort((a, b) => (native ? own.includes(b.id) - own.includes(a.id) : 0) || a.level - b.level), // a lair boss's own come first, in the roll too (nativeBossUnique)
     set: bossSetTable(s, boss),
   };
 }
@@ -755,15 +756,22 @@ export const lairChance = (s, who) => Math.min(1, BOSS_LOOT.chance + BOSS_LOOT.p
 // On a floor whose lair has uniques of its own (source kind 'lair': The Sink's, Bedrock's), they join the natives in
 // the same roll, at the same odds: a bigger table, not more drops. They carry no network.
 const fightFloor = (s, e = s.encounter) => findLocation(s, e?.wild || e?.process || s.run?.loc)?.depth || null;
+// Which uniques a lair roll that hit picks among: the boss's own you lack (CAMSWARM's pair) come first; then, as
+// before, the ones in its pool you lack (the one you're listening for alone), or the whole pool once all are found.
+export function lairPick(s, own, pool) {
+  const lack = (ids) => ids.filter((id) => !s.collection?.[id]), fresh = lack(own).length ? lack(own) : lack(pool);
+  return fresh.includes(s.listen) ? [s.listen] : fresh.length ? fresh : pool;
+}
 function nativeBossUnique(s, boss, level) {
   const who = fightNet(s), name = BOSSES[boss].name, key = lairKey(s, who), floor = fightFloor(s);
-  const pool = [...bossUniques(boss).map((u) => u.id), ...lairUniques(s, who, level), ...(floor ? floorUniques('lair', floor, level).map((u) => u.id) : [])]; // its own first (CAMSWARM's pair), in the same roll
+  const own = bossUniques(boss).map((u) => u.id); // its own (CAMSWARM's pair) come first (lairPick)
+  const pool = [...own, ...lairUniques(s, who, level), ...(floor ? floorUniques('lair', floor, level).map((u) => u.id) : [])]; // one roll, the same odds and pity
   lairFell(s, who, boss);
   if (!pool.length) return;
   const heard = pool.includes(s.listen) && postsOf(s) ? listenBoost(s) : 1;
   if (rand(s) < Math.min(1, lairChance(s, who) * heard + (s.breach?.fx?.unique || 0))) { // a dig in's +10% (world.mjs)
     (s.pity ||= {})[key] = 0;
-    const fresh = pool.filter((id) => !s.collection?.[id]), from = fresh.includes(s.listen) ? [s.listen] : fresh.length ? fresh : pool;
+    const from = lairPick(s, own, pool);
     const it = uniqueItem(UNIQUES[from[Math.floor(rand(s) * from.length)]], level, () => rand(s));
     if (isNative(it.unique)) it.home = { name: nameOf(s, who), who };
     addItem(s, it, `${name} drops: `);

@@ -157,7 +157,7 @@ function lootTable(t) {
   const every = group('every', 'Every kill', '', t.sure ? oddsBar(1, 'Every kill drops an item at its level.') : '', sure + gold);
   const pity = (base, step) => `${pc(base)} a kill, +${pc(step)} for each kill without one, back to ${pc(base)} when one drops.`;
   const uniq = t.done ? group('uniq', 'Uniques', 'both found: it drops only as an elite now', '', t.uniques.map((u) => lootRow(u, 'r-zeroday')).join(''))
-    : t.uniques.length || t.native ? group('uniq', t.native && !t.own ? 'Native uniques' : 'Uniques', 'one you lack first', oddsBar(t.chance, `Next kill: ${pc(t.chance)}. ${pity(t.base, t.pity)}`), t.uniques.map((u) => lootRow(u, 'r-zeroday')).join('') || `<li class="unknown">${glyph('item')}<b>${UNKNOWN}</b><small>named on its first fall</small></li>`) : '';
+    : t.uniques.length || t.native ? group('uniq', t.native && !t.own ? 'Native uniques' : 'Uniques', t.native && t.own ? 'its own first, then one you lack' : 'one you lack first', oddsBar(t.chance, `Next kill: ${pc(t.chance)}. ${pity(t.base, t.pity)}`), t.uniques.map((u) => lootRow(u, 'r-zeroday')).join('') || `<li class="unknown">${glyph('item')}<b>${UNKNOWN}</b><small>named on its first fall</small></li>`) : '';
   const st = t.set, set = st ? group('set', st.pieces.length > 1 ? 'Set pieces' : 'Set piece', `<span class="lg-setname">${esc(st.names.join(' · '))}</span>`,
     oddsBar(st.chance, st.lacking ? `Next kill: ${pc(st.chance)}. ${pity(st.base, st.pity)}` : `All found. It still drops one ${pc(st.found)} of kills.`), st.pieces.map((u) => lootRow(u, 'r-set', st.names.length > 1 ? ` · ${esc(u.set)}` : '')).join('')) : '';
   return `<div class="cx-lg">${every}${uniq}${set}</div>`;

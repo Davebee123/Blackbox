@@ -42,7 +42,7 @@ Past the bar, so nothing new.
 |---|---|---|---|---|
 | Overdraft | proxy 24 | NIGHT DESK | Leaves you at 25% when a hit would take you lower, and the rest lands over the next 3 cycles. Works once per fight. | ✓ |
 | Pre-Authorization | script 24 | NIGHT DESK | Increases the damage of your next hit by 10% when you raise a shield. | ✓ |
-| Changed Default | proxy 24 | CAMSWARM | Stops a virus from playing your helpers back at you. Nothing recruits, takes or cleanses helpers yet, so this is all it does today. | ✓ (thin) |
+| Changed Default | proxy 24 | CAMSWARM | Stops a virus from playing your helpers back at you. Makes your helpers deal 50% more to fragments. | ✓ |
 | Mass Reboot | script 24 | CAMSWARM | Deals 30 damage to every fragment when you break a part. | ✓ |
 | Majority Attack | exploit 26 | BYZANTINE | Increases your damage by 8% for each part below half its Integrity, up to 32%. | ✓ |
 | Quorum Sensor | proxy 26 | BYZANTINE | Makes the second attack to land on you in a cycle deal 30% less. | ✓ |

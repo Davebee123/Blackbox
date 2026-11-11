@@ -243,6 +243,7 @@ export const FX_DO = {
   overdraft: { when: ['custom'], label: 'leaves you at X% of your max Signal when a hit would take you lower, and the rest lands over the next 3 cycles', value: true },
   'shield-hit': { when: ['custom'], label: 'increases the damage of your next hit by X% when you raise a shield', value: true },
   'helpers-safe': { when: ['custom'], label: 'stops a virus from playing your helpers back at you' },
+  'helper-frags%': { when: ['custom'], label: 'makes your helpers deal X% more to fragments', value: true },
   'break-frags': { when: ['custom'], label: 'deals X damage to every fragment when you break a part', value: true },
   'low-parts%': { when: ['custom'], label: 'increases your damage by X% for each part below half its Integrity', value: true },
   'second-less': { when: ['custom'], label: 'makes the second attack to land on you in a cycle deal X% less', value: true },

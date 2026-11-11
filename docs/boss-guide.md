@@ -2,7 +2,7 @@
 
 **Status.** Floors 2, 3 and 4 built (floorbosses.mjs; the numbers below are the prototypes', GAME_RULES.md has the built ones); the rest designed, not built: how each boss in docs/solo-bosses.md plays, written as a raid guide (what it is, its
 abilities, each phase, how you die). docs/solo-bosses.md holds the rules; where the two differ, it wins. Prototyped as
-applets with a board a phase (November 2026). Phases start as the ♛ part crosses 60% and 30%; INIT's as its table
+applets with a board a phase (November 2026). Phases start as the ♛ part crosses 60% and 30% (BYZANTINE's 78% and 42%); INIT's as its table
 crosses 90, 83, 76 and 68. The numbers are the prototypes' placeholders; the boss sessions set the real ones.
 
 Terms: a **charge** is a big attack shown ahead that you can call off. A **cast** builds something on the virus, and
@@ -232,17 +232,17 @@ every Node hit 30% harder; a hit takes 20% of a Node at most; the traitor is the
   its bar shows how much.
 - **Surge** (78), **Replicate** (adds a fragment).
 
-**Phase 1 (100–60%)**
+**Phase 1 (100–78%)**
 - *What happens:* every 4 cycles the lowest Node is pulled back up to the average.
 - *Strategy:* keep the Nodes even. Right after a vote you have 4 cycles; burst one Node then.
 - *How you die:* focusing one Node and watching the vote undo it.
 
-**Phase 2 (60–30%) · Traitor**
+**Phase 2 (78–42%) · Traitor**
 - *What happens:* one Node is tagged traitor. Its vote sends the restore to the healthiest Node's Integrity, a full
   heal, unless the traitor itself is the most damaged.
 - *Strategy:* keep the traitor the lowest Node.
 
-**Phase 3 (30–0%) · Hard fork**
+**Phase 3 (42–0%) · Hard fork**
 - *What happens:* a Node you break comes back at the next vote, at the average of the other two, unless both of them
   are under half.
 - *Strategy:* bring all three under half, then break them close together.
