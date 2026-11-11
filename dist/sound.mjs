@@ -266,11 +266,11 @@ export const VOICES = {
   },
   // A boss down: the same, longer and lower.
   bosswin(ctx, out, t) { VOICES.win(ctx, out, t); osc(ctx, out, t + 0.3, { type: 'sine', f0: 80, f1: 25, glide: 0.9, a: 0.005, peak: 0.5, d: 1.2 }); },
-  // A level gained: a major arpeggio with a shimmer.
+  // A level gained, until its clip has loaded: a breaker's click and the hum climbing.
   levelup(ctx, out, t) {
-    const e = echo(ctx, out, { feedback: 0.35, wet: 0.4 });
-    [72, 76, 79, 84].forEach((m, i) => chime(ctx, e, t + i * 0.09, m, { d: i === 3 ? 1.0 : 0.4, peak: 0.5 }));
-    noise(ctx, e, t + 0.27, { type: 'highpass', f0: 7000, a: 0.08, peak: 0.05, d: 0.6 });
+    noise(ctx, out, t, { type: 'highpass', f0: 2200, a: 0.0005, peak: 0.3, d: 0.015 });
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900; lp.connect(out);
+    for (const [f, p] of [[49, 0.3], [98, 0.15]]) osc(ctx, lp, t, { type: 'sawtooth', f0: f, f1: f * 2, glide: 0.7, a: 0.45, peak: p, d: 0.9 });
   },
   // Crash or disconnect: the screen powering down.
   lose(ctx, out, t) {
@@ -325,7 +325,7 @@ export const BANK = {
   error: 2, tick: 3, confirm: 2, drop: 2, pluck: 2, glassui: 3, bong: 1, relay: 6, click: 4, key: 12, 'key-enter': 1, 'key-back': 1,
 };
 // Whole sounds rendered ahead (tools/sound-preview/clips4.js, Ogg Vorbis in dist/sfx/wins; see CREDITS.md).
-export const CLIPS = { 'win-power-cut': 'wins/win-power-cut.ogg', 'win-blackout': 'wins/win-blackout.ogg' };
+export const CLIPS = { 'win-power-cut': 'wins/win-power-cut.ogg', 'win-blackout': 'wins/win-blackout.ogg', 'levelup-lift': 'wins/levelup-lift.ogg' };
 const CLIP_GAIN = 0.5; // the level a family's one-shot plays at (places.mjs LEVEL.shot)
 const banks = new WeakMap(); // AudioContext → { ready, buffers: Map(name → AudioBuffer[]), clips: Map(name → AudioBuffer) }
 function loadBank(ctx, base = new URL('./sfx/', import.meta.url)) {
@@ -535,13 +535,9 @@ export const RECIPES = {
   // server taken over: the blackout (four breakers, each taking a hum with it). Both carry their own room.
   win: { room: 0, play(ctx, out, t, o, S, C) { if (!C('win-power-cut')) VOICES.win(ctx, out, t); } },
   bosswin: { room: 0, play(ctx, out, t, o, S, C) { if (!C('win-blackout')) VOICES.bosswin(ctx, out, t); } },
-  // A level gained: a major arpeggio, a shimmer, a bell far off.
-  levelup: { room: 0.3, play(ctx, out, t, o, S) {
-    [72, 76, 79, 84].forEach((m, i) => chime(ctx, out, t + i * 0.09, m, { d: i === 3 ? 1.0 : 0.4, peak: 0.36 }));
-    S('confirm', 0, { gain: 0.35 });
-    S('shimmer', 0.2, { gain: 0.3 });
-    S('bell', 0.27, { gain: 0.16, rate: 2, jitter: 0 });
-  } },
+  // A level gained: the lift (the power cut backwards: a breaker, the hum climbing to one held note, the fan spinning
+  // up). The level-up card moves to it (levelup.css).
+  levelup: { room: 0, play(ctx, out, t, o, S, C) { if (!C('levelup-lift')) VOICES.levelup(ctx, out, t); } },
   // Crash or disconnect: the set powering down hard.
   lose: { room: 0.3, play(ctx, out, t, o, S) {
     VOICES.lose(ctx, out, t);

@@ -1,5 +1,6 @@
 // The level-up on the page (levelup-view.mjs has the markup): when it comes up, where it sits, how long it stays and
-// its sounds (existing ones only: the level's win, a cycle tick per [ OK ] line). app.js makes one, pushes each
+// its sounds (the level's own, the lift, which the card's flash is timed to in levelup.css, and a cycle tick per
+// [ OK ] line). app.js makes one, pushes each
 // level-up event to it, calls tick() every frame and dismiss() on Enter or Esc.
 //   A level-up never comes up during a fight or over a card that waits for you (calm()): it waits, and comes up at the
 //   next calm moment (after a won fight, once you have left it). A fight that starts while it is up sends it away.

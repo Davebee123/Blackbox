@@ -245,7 +245,7 @@ comment saying what it does.
 | `dist/nocarrier.mjs`, `dist/nocarrier.css` | Losing a fight: static and NO CARRIER, then the Disconnected card. |
 | `dist/class-emblems.mjs` | The class picker's ASCII emblems. |
 | `dist/feel.mjs` | The feedback language: each kind of event's one signature in motion and sound. |
-| `dist/sound.mjs`, `dist/sfx/` | Sound effects from recorded CC0 samples (CREDITS.md). A fight won and a boss down are whole clips (`sfx/wins`, rendered by `tools/sound-preview/clips4.js`). |
+| `dist/sound.mjs`, `dist/sfx/` | Sound effects from recorded CC0 samples (CREDITS.md). A fight won, a boss down and a level gained are whole clips (`sfx/wins`, rendered by `tools/sound-preview/clips4.js`). |
 | `dist/abilitysound.mjs` | Ability sounds timed to their effects (docs/ability-sounds-plan.md): the kit, the style round and each class's key 1. `app.js` strikes() plays the picked style in a fight (abilitySound, abilityVoices); `?playtest=fx` plays any. |
 | `dist/abilitysound-all.mjs` | Every other ability's sound in the picked style, built from its row in the effects table, with the mastery tiers' layers and the winning break's flourishes; `abilitysound-levels.mjs` holds their measured levels. |
 | `dist/virussound.mjs` | Virus attack sounds (docs/ability-sounds-plan.md, "Virus attacks"): the list of attacks (ATTACKS), the style round's four in three styles (Corrupt picked, Latch for its Encrypt), timed to their chips' strikes. Heard in `?playtest=fx` only; a fight plays today's hurt. |

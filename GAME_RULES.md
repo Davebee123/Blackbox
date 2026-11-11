@@ -1308,7 +1308,8 @@ It lists what the level brings: skills (with the key each went on), your subclas
 a protocol slot, new protocol bases, a floor's band, and a daemon slot when your server rises; then the power line (to
 level 6), the server's Integrity and the next level that brings something. Several levels at once are one level-up. It is a **firmware update**: a compact
 panel under the top bar, an amber *Firmware update · <class>.rom* strip, the level in big teal dot-font digits beside
-*v9 → v10*, then `[ OK ]` per unlock as the flash finishes, **Loadout** (when there's something to set) and
+*v9 → v10*, then `[ OK ]` per unlock as the flash finishes. It powers on to its sound, the lift: the strip flickers on
+with the breaker, the bar climbs with the hum while the old level waits dim, and the new level snaps in bright. Then **Loadout** (when there's something to set) and
 **Continue**. It closes by itself 12 seconds after the flash, never comes up during a fight or over a card that waits,
 and waits for the next calm moment. `developer levelup preview` plays your next one (`preview <level>`, `preview all`),
 changing nothing.

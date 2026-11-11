@@ -24,11 +24,12 @@ test('the samples are credited', () => {
   for (const n of Object.keys(BANK)) assert.match(credits, new RegExp(`\\b${n}\\b`), n);
 });
 
-test('the victory clips ship, are credited, and play for a fight, a boss and a takeover; a level keeps its own sound', () => {
+test('the victory clips ship, are credited, and play for a fight, a boss, a takeover and a level', () => {
   for (const [name, file] of Object.entries(CLIPS)) { assert.ok(fs.existsSync(`dist/sfx/${file}`), file); assert.match(fs.readFileSync('dist/sfx/CREDITS.md', 'utf8'), new RegExp(name), name); }
   const src = fs.readFileSync('dist/sound.mjs', 'utf8');
   assert.match(src, /win: \{ room: 0, play\(ctx, out, t, o, S, C\) \{ if \(!C\('win-power-cut'\)\)/);
   assert.match(src, /bosswin: \{ room: 0, play\(ctx, out, t, o, S, C\) \{ if \(!C\('win-blackout'\)\)/);
+  assert.match(src, /levelup: \{ room: 0, play\(ctx, out, t, o, S, C\) \{ if \(!C\('levelup-lift'\)\)/);
   const app = fs.readFileSync('dist/app.js', 'utf8');
   assert.match(app, /feel\.add\(campaign\.encounter\?\.virus\?\.boss \? 'bosswin' : 'win', '\.hud'\)/);
   assert.match(app, /case 'takeover': flash\('TAKEN OVER'\); feel\.add\('bosswin', null\)/);

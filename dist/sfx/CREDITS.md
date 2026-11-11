@@ -80,3 +80,4 @@ Synthesized like the bodies above (`FORMAT=ogg SET=4 node tools/sound-preview/re
 |---|---|---|
 | wins/win-power-cut | A fight won: a breaker drops, the hum sinks, a fan winds down, the metal ticks as it cools | relay, punch-m, tin |
 | wins/win-blackout | A boss down or a server taken over: four breakers left to right, each taking a hum with it, the fans winding down | relay, punch-m, subdrop, tin |
+| wins/levelup-lift | A level gained: a breaker, the hum climbing to one held note, a relay as it locks, the fan spinning up | relay, punch-m |

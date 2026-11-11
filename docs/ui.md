@@ -240,7 +240,8 @@ short vibration on phones that have it.
   the speaker's backlit ASCII portrait beside their lines (portraits.mjs, scanning in a row at a time, once), its opening line resolving out of noise once, its steps as a job (`job 0003`, ✓, ▸, the rest dim hex). The reward
   card is a signed receipt. Calm: lines arrive once, Mail's page never animates.
 - **The level-up** (the *Firmware update*, levelup-view.mjs): an amber *Firmware update · <class>.rom* strip, the
-  level in teal dot-font digits, `[ OK ]` a row at a time with a tick each; it waits for a calm moment.
+  level in teal dot-font digits, `[ OK ]` a row at a time with a tick each; it waits for a calm moment. It powers on
+  to its sound (the lift): the strip flickers on, the bar climbs with the hum, the new level snaps in at the lock.
 - **The pager** (the *Tray*): a lamp and one icon per page (up to four on a desktop, three on a phone, then **+n**),
   amber, red for a threat, a soft glow on one you haven't seen; its tooltip is the line and, muted, ▸ what the tap does.
 - **The player card** (the *NET ID badge*, profile-view.mjs): an amber NET ID strip, the banner framed as a photo
