@@ -512,3 +512,21 @@ test("CAMSWARM's pair comes first in the lair's roll; Changed Default's helpers 
   assert.equal(f1, Math.round(f0 * 1.5), 'half again to a fragment');
   assert.equal(n1, n0, 'a part takes the same');
 });
+
+// ---------- the act break (actbreak.mjs) ----------
+import { hudMarkup } from './dist/view.mjs';
+import { entryOf } from './dist/codex.mjs';
+test("crossing the ♛'s act tick: the phase event names the act and the tick; the HUD tags ACT n/m; the Codex shows 60% and 30%", () => {
+  const s = boss('byzantine'), c = livingParts(s).find((p) => p.core);
+  assert.match(hudMarkup(s), /class="tag hot act-tag" title="Act 1\nAct 1 of 3\nIts next act starts when you take its ♛ under 60%\.">ACT 1\/3</);
+  c.armor = 0; c.limit = 0; c.integrity = Math.floor(0.6 * c.max) + 2;
+  hit(s, c, 5, { pierce: true, server: true });
+  const ev = hold(s).find((x) => x.type === 'phase');
+  assert.deepEqual(ev.act, { n: 2, of: 3, name: 'Traitor', emote: BOSSES.byzantine.phases[0].emote, part: c.id, at: 0.6 });
+  assert.match(hudMarkup(s), /title="Traitor\nAct 2 of 3\nThe most damaged Node turns traitor\.[^"]*under 30%\.">ACT 2\/3</);
+  // Every boss with acts of its own names each act and gives it an emote; the Codex puts them at the ♛'s act ticks.
+  for (const id of ['relayking', 'repoman', 'choir', 'centrifuge', 'shakedown', 'shouldersurfer', 'recursion', 'nightdesk', 'byzantine', 'camswarm']) for (const ph of BOSSES[id].phases) assert.ok(ph.name && ph.emote, `${id}: ${ph.say}`);
+  for (const ph of BOSSES.resident.actPhases) assert.ok(ph.name && ph.emote);
+  const met = Object.assign(fresh(), { dex: { fought: { relayking: 1 }, won: {} } });
+  assert.deepEqual(entryOf(met, 'boss:relayking').phases.map((ph) => ph.at), [0.6, 0.3]);
+});

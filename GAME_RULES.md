@@ -626,6 +626,11 @@ ticks at 60% and 30%. Built: the worm and ransomware Residents, the three solo
 bosses and the four floor bosses.
 
 - **One tick a hit.** A hit takes the ♛ under its next tick and no further, so no act is skipped.
+- **The act break** (actbreak.mjs). As the hit crosses the ♛'s tick, the tick bursts into red 1s and 0s. A breath
+  later the board's strip flares red with the act, *ACT 2 / 3 · TRAITOR*, for about 4 seconds, and the boss's emote
+  (its phase's `emote`) types out under its bar. The fight's clock holds meanwhile. Phones buzz twice short, once long;
+  on a desktop the boss's bar thumps. No sound yet. *ACT n/m* stays by the boss's bar, its rule and next tick in its
+  tooltip.
 - **A tell an act.** Act 1 deals the boss's first tell (its charge), act 2 its cast as well, act 3 its third.
 - **The beat** repeats, always on the board. Acts 2 and 3 bring the boss's mechanics (a Resident's: act 2 quickens its
   beat, act 3 makes every attack a cycle sooner).

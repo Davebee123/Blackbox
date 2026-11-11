@@ -12,6 +12,7 @@ import { createArt } from './virus-art.mjs';
 import { codexPageMarkup, codexEntry } from './codex-view.mjs';
 import { collectionPageMarkup, finds as findsLog } from './collection-view.mjs';
 import { createFeel } from './feel.mjs';
+import { createActBreak, actBreakMs } from './actbreak.mjs';
 import { placeOf, familyCues } from './places.mjs';
 import { createShell } from './shell.mjs';
 import { createScreenFx, screenState, screenFxCommand, SFX, boardFxOf, migrateEffects, levelOf } from './screenfx.mjs';
@@ -488,6 +489,9 @@ function flash(text) {
   flash.t = setTimeout(() => (el.textContent = ''), 1600);
 }
 const feel = createFeel({ settings: () => campaign.settings, reducedMotion: () => !campaign.settings.motion || reducedMotion.matches });
+// A boss's act break (actbreak.mjs): the fight's clock holds while it plays (frame: actHold).
+let actHold = 0;
+const actBreak = createActBreak({ motion: () => canMove() });
 // A puzzle room's board: what a move did, played over it once it renders (puzzle-view.mjs), its sounds on their beats.
 // The level-up (levelup-ui.mjs): a firmware update under the top bar. It waits for a calm moment: no fight, no card
 // that waits for you, no Toolkit over the screen; after a won fight, once you have left it.
@@ -1295,7 +1299,9 @@ function react(events) {
       case 'interrupt': feel.add('interrupt', row(e.target), f?.text || (e.tell ? 'STOPPED' : 'DELAYED'), { src }); break;
       case 'telegraph': if (e.source) feel.add('prewarn', row(e.source), e.name || (e.message.match(/ ([A-Z][A-Z' -]{2,})[. ]/) || [])[1] || null); break; // a tell (tells.mjs) or a crew boss's mechanic, announced
       case 'warning': feel.add('nope', '#command-form'); break;
-      case 'phase': flash(e.enrage ? 'ENRAGED' : e.message.split('.')[0]); feel.add('hurt', null); break; // a boss changes phase (combat.mjs bossPhases)
+      // A boss changes phase (combat.mjs bossPhases): across its ♛'s act tick, the act break (actbreak.mjs), once the hit
+      // has played; the clock holds for it. Its enrage, or a phase of a boss with no act ticks: the flash.
+      case 'phase': if (e.act && !e.enrage) { feel.add(() => { actHold = Date.now() + actBreakMs(); actBreak.play(e.act, campaign.encounter?.virus?.name); }); feel.add('act', null); } else { flash(e.enrage ? 'ENRAGED' : e.message.split('.')[0]); feel.add('hurt', null); } break;
       case 'scan': art.hit(e.target); flash(e.message.split('.')[0].toUpperCase()); feel.add('good', row(e.target), 'WEAK'); break;
       case 'proc': feel.add('good', null); break;
       // Tells (tells.mjs): a read pays (the part Open, or a skill ready again); one that lands bites back.
@@ -2828,7 +2834,7 @@ function frame(now) {
     if (active(campaign) && !e.paused && !e.steps) e.elapsedMs = Math.min(cycleLength(campaign) - 1, (e.elapsedMs || 0) + delta);
   } else if (active(campaign)) {
     campaign.restAt = wall;
-    const events = advance(campaign, delta);
+    const events = advance(campaign, wall < actHold ? 0 : delta); // a boss's act break holds the clock
     if (events.length) { react(events); save(); }
   } else {
     // Resting between fights, plus any Self-healing filter, by the wall clock: a hidden tab or a closed
