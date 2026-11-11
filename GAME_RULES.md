@@ -2417,7 +2417,7 @@ props, boots, prompts and cursors. None changes a number.
 - **Earning one** is a quiet pager line and a #net line naming it (and the title it brings). No new sound.
 - **The page:** Rig → **Achievements** (`achievements`): the categories down the left with their bars, *Summary*
   first; each achievement's points on a medal, its bar while under way, what it brings shown as itself, and once earned
-  the date and **Pin** (up to three on your card; `achieve pin|unpin <name>`). Its rule is its tooltip. Three are
+  the date and **Pin** (up to three on your card; `achieve pin|unpin <name>`). Its rule shows under its name. Three are
   **hidden** (*???* and a hint).
 - An older save gets what it has already done on load, quietly, in one pager line.
 

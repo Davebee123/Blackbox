@@ -266,7 +266,7 @@ test('an old save keeps every title and sticker it has, and gets their achieveme
   assert.ok(earned(again, 'f-hunts'));
 });
 
-test('the page: categories with totals, earned with a date, progress in amber, hidden ones as ??? with a hint, rules in tooltips', () => {
+test('the page: categories with totals, earned with a date, progress in amber, hidden ones as ??? with a hint, rules on the row', () => {
   const s = me();
   s.dex.won = { relayking: 1 };
   s.dex.kills = { worm: 12 };
@@ -277,6 +277,8 @@ test('the page: categories with totals, earned with a date, progress in amber, h
   assert.match(html, /class="ach-row got"/);
   assert.match(html, /class="ach-row part"[^>]*data-ach="c-win-100"/);
   assert.match(html, /<small>12\/100<\/small>/);
+  assert.match(html, /<b class="ach-name">Uncrowned<\/b><small class="ach-rule">Beat RELAY-KING\.<\/small>/, 'the rule shows on the row');
+  assert.doesNotMatch(html.split('data-ach="c-choir"')[1].split('</li>')[0], /ach-rule/, 'a hidden one keeps its rule hidden');
   assert.match(html, /data-ach="c-choir" title="\?\?\?: Something on the net is singing\."/);
   assert.ok(!html.includes('Dead Air'), 'a hidden name stays hidden');
   assert.match(html, /<h3 class="ach-group">Lairs<\/h3>/);
