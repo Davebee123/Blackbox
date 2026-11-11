@@ -2647,12 +2647,20 @@ How it looks is docs/ui.md; these are the rules the player meets.
 
 Screens carry names, numbers and state, never how-to text. Rules live in **hovers** (every stat, tag, skill, talent,
 mutation and wall band shows its rule, in WoW's tooltip grammar) and in **first-time tips**: the first time something
-is on screen, a small tip points at it and says how it works, once, one at a time. Your first fight is one tip you step
-through (the timeline, your skills, the interrupt's ticks, armor, the Sync Window). Tips in a fight pause it. **Turn
-tips off** on any tip or the Settings page; **Replay tips** shows them again. Your first server's room map gets a short
-**rooms tour**, a step at a time (walk, engage, jack out; a cache, the hunter, the rest room and SCAN as you meet them).
-Later tips meet the vault, the Core, an elite room, a thread, a rival, your Signal running low, a boss's ♛, an elite's
-clash, a fight's lever (from level 6), an objective, the Lock tell, your program (level 5) and every strain and ICE.
+is on screen, a small tip points at it and says how it works, once, one at a time. The opening map has one: click
+SPRAWL-00, then Connect. Your server's tip waits for the first intrusion, a ?'s for the first trace on one.
+
+**Pacing** (tips.mjs `paceOf`). A map, room or menu tip shows at most once a screen visit, and 2 minutes after the last
+one closed. A fight tip about what the fight opened with shows only while it's paused (a room fight opens paused until
+your first order), one a fight; your first fight's is one tip you step through (the timeline, your skills, the
+interrupt's ticks, armor, the Sync Window). What lands mid-fight (a tell, a spent tick, a patch, a miss) pauses it.
+The rooms tour and a crash skip the pacing. **Turn tips off** on any tip or the Settings page; **Replay tips** shows
+them again.
+
+Your first server's room map gets a short **rooms tour**, a step at a time (walk, engage, jack out; a cache, the
+hunter, the rest room and SCAN as you meet them). Later tips meet the vault, the Core, an elite room, a thread, a
+rival, your Signal running low, a boss's ♛, an elite's clash, a fight's lever (from level 6), an objective, the Lock
+tell and your program (level 5).
 The log and terminal still say what happened, in a line; they don't teach.
 
 ### The pager
