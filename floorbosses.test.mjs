@@ -530,3 +530,11 @@ test("crossing the ♛'s act tick: the phase event names the act and the tick; t
   const met = Object.assign(fresh(), { dex: { fought: { relayking: 1 }, won: {} } });
   assert.deepEqual(entryOf(met, 'boss:relayking').phases.map((ph) => ph.at), [0.6, 0.3]);
 });
+
+test('the act break\'s sound, the Tritone: the break on the act sign as the tick bursts, the drone a voice of its own', async () => {
+  const { SIGNS } = await import('./dist/feel.mjs');
+  const { VOICES } = await import('./dist/sound.mjs');
+  assert.equal(SIGNS.act.voice, 'actbreak');
+  assert.equal(typeof VOICES.actbreak, 'function');
+  assert.equal(typeof VOICES.actdrone, 'function');
+});

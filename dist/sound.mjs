@@ -186,6 +186,34 @@ export const VOICES = {
     osc(ctx, lp, t, { type: 'sawtooth', f0: 55, a: 0.12, peak: 0.5, d: 0.35 });
     osc(ctx, lp, t, { type: 'sawtooth', f0: 55, a: 0.12, peak: 0.5, d: 0.35, detune: 18 });
   },
+  // A boss crosses into its next act (actbreak.mjs), the Tritone (picked November 2026). The break, as its ♛'s tick
+  // bursts: a low thump, a crushed saw and crack, glass shards ringing out, and the 1-bit bits falling out of it.
+  actbreak(ctx, out0, t) {
+    const out = ctx.createGain(); out.gain.value = 0.6; out.connect(out0); // its peak at the loudest hits'
+    const e = echo(ctx, out, { time: 0.18, feedback: 0.35, wet: 0.25 }), dirt = crusher(ctx, 5); dirt.connect(e);
+    osc(ctx, e, t, { type: 'sine', f0: 80, f1: 36, glide: 0.25, a: 0.002, peak: 1, d: 0.55 });
+    osc(ctx, dirt, t, { type: 'sawtooth', f0: 120, f1: 48, glide: 0.18, a: 0.002, peak: 0.35, d: 0.25 });
+    noise(ctx, dirt, t, { type: 'bandpass', f0: 1400, f1: 380, q: 0.7, glide: 0.2, a: 0.001, peak: 0.9, d: 0.22 });
+    noise(ctx, e, t, { type: 'highpass', f0: 4000, a: 0.001, peak: 0.35, d: 0.09 });
+    for (const f of [1480, 2093, 2960]) osc(ctx, e, t + 0.004, { type: 'sine', f0: f, f1: f * 0.97, glide: 0.6, a: 0.001, peak: 0.07, d: 0.7 + Math.random() * 0.4 });
+    const bits = crusher(ctx, 2), set = [1568, 1760, 2093, 2349, 2637, 3136]; bits.connect(e);
+    for (let i = 0; i < 22; i++) { const k = i / 22; osc(ctx, bits, t + 0.02 + 0.5 * k * k + Math.random() * 0.02, { type: 'square', f0: set[Math.floor(Math.random() * set.length)] * (1 - 0.35 * k), a: 0.001, peak: 0.07 * (1 - k * 0.7), d: 0.018 + Math.random() * 0.02 }); }
+  },
+  // The drone, as the act's strip flares in: a low G against its tritone, in squares, swelling in, held for the strip's
+  // hold and fading with it.
+  actdrone(ctx, out0, t, { len = 4.2, fade = 0.9 } = {}) {
+    const out = ctx.createGain(); out.gain.value = 0.4; out.connect(out0); // under the fight's own sounds
+    const lp = ctx.createBiquadFilter(), g = ctx.createGain(), mod = ctx.createOscillator(), mg = ctx.createGain(), end = t + len + fade + 0.1, root = 49;
+    lp.type = 'lowpass'; lp.Q.value = 3;
+    lp.frequency.setValueAtTime(120, t); lp.frequency.exponentialRampToValueAtTime(1100, t + 0.7); lp.frequency.exponentialRampToValueAtTime(605, t + len);
+    mod.frequency.value = 0.22; mg.gain.value = 275; mod.connect(mg).connect(lp.frequency); mod.start(t); mod.stop(end);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.5, t + 0.6); g.gain.setValueAtTime(0.5, t + len); g.gain.exponentialRampToValueAtTime(0.0001, t + len + fade);
+    lp.connect(g).connect(out);
+    for (const r of [1, 1.414, 2.003]) for (const dt of [-7, 7]) { const o = ctx.createOscillator(), og = ctx.createGain(); o.type = 'square'; o.frequency.value = root * r; o.detune.value = dt; og.gain.value = 0.16; o.connect(og).connect(lp); o.start(t); o.stop(end); }
+    const sub = ctx.createOscillator(), sg = ctx.createGain(); sub.frequency.value = root / 2;
+    sg.gain.setValueAtTime(0.0001, t); sg.gain.exponentialRampToValueAtTime(0.55, t + 0.5); sg.gain.setValueAtTime(0.55, t + len); sg.gain.exponentialRampToValueAtTime(0.0001, t + len + fade);
+    sub.connect(sg).connect(out); sub.start(t); sub.stop(end);
+  },
   // Your command was refused: two soft low blips.
   nope(ctx, out, t) {
     const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1200; lp.connect(out);
@@ -376,6 +404,9 @@ export const RECIPES = {
   chit: { room: 0.12, play(ctx, out, t) { chitShatter(ctx, lifted(ctx, out, 2.4), t); } },
   // A part broke: the digital hit at full size, a long cascade into a falling FM drop, shards flying, a crushed sub.
   break: { room: 0.12, play(ctx, out, t) { partBreak(ctx, lifted(ctx, out, 1.2), t); } },
+  // A boss's act break (actbreak.mjs): synth only, the Tritone (VOICES actbreak, actdrone).
+  actbreak: { room: 0.1, play(ctx, out, t) { VOICES.actbreak(ctx, out, t); } },
+  actdrone: { room: 0.05, play(ctx, out, t, opts) { VOICES.actdrone(ctx, out, t, opts); } },
   // Something hit YOU: a heavy, dull body blow. It should feel bad, and worse the bigger it is.
   hurt: { room: 0.1, play(ctx, out, t, { frac = 0.08 } = {}, S) {
     const k = clamp01(frac * 5);

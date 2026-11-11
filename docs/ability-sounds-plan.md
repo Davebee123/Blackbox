@@ -94,11 +94,15 @@ Yours is bright and rings out; theirs is dull and falls: no crack on top, a lowe
 Screen effects off or Motion off: contact and tail on the beat. The family's one-shots stay. Levels match today's hurt
 (`virussound.mjs` TRIM, measured through `renderBoard`).
 
-1. **Style** (built, waiting on the designer's ear): Surge (Pulse Node, at once), Encrypt (Encryptor, seven clamps
+1. **Style**: Surge (Pulse Node, at once), Encrypt (Encryptor, seven clamps
    one after another), Hash (Rig, a lob) and Discharge (Accumulator, a wind-up), as a hit small, medium and big, a
    crit, blocked and evaded, in A Body (today's hurt in pieces, air and thuds), B Corrupt (your signal breaking up: a
    crushed drop, a stuck buffer, the carrier cutting out) and C Chassis (your machine taking it: the rack struck, the
    power sagging, relays tripping) beside today's. `?playtest=fx` has them under Virus attacks.
+   The designer picked Corrupt; its Encrypt (a modem's tones, seven square steps down) is too on the nose.
+   **1b** (built, waiting on the designer's ear): Corrupt's Encrypt with no tones: B1 Latch (static drawing in, seven
+   crushed latches, a stuck slice sagging under each) and B2 Choke (your carrier's hum pinched shut a notch at a
+   time, duller each notch, then cut).
 2. **Every attack**: each chip theme's strike (18) and the lash, built from its theme; Scramble, Replicate and Patch.
 3. **Charges and bosses**: a tell landing, a boss's signature.
 4. **Land**: a fight plays the pick in place of `hurt`: one contact a batch, the number on the strike's impact (today

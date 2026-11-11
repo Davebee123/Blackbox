@@ -1073,23 +1073,26 @@ const STRAIN_BOSS_LATE = [[8, 1], [10, 0.8], [18, 1.1], [30, 1.45]];
 const HASHLORD_LATE = [[8, 1], [10, 0.8], [18, 0.95], [30, 1.1]];
 export const BOSSES = {
   // The Resident (run.mjs /core): about two wins in three for a geared player at its level.
+  // work (docs/solo-bosses.md "Working the ♛"): share, the ♛'s part of the boss's Integrity (createVirus moves it from the
+  // other parts; the total stays); lead, how far ahead of the rest the planner works the ♛ (planner.mjs crownNow).
+  // watchdog: every that many cycles the ♛ stands above its next tick, every other part patches a ◆ (combat.mjs).
   // P4 (acts.mjs, docs/puzzle-fights.md 7): a P4 boss plays in three acts, each from a tick on its ♛ part. acts: its beat
   // (backlash, copy, bend, broadcast or collect), every and first its rhythm; a phase's every quickens it. The Resident's are by family: the
   // worm's and the ransomware's are built, the ghostroot's keeps the old phase until P4's next batch.
-  resident: { long: { hp: 1.6, dmg: 0.54, enrageAt: 36 }, name: 'Resident', hp: 1.4, dmg: 1, enrageAt: 18, phases: [{ at: 0.5, do: ['rearm'], say: 'The Resident re-arms every part.' }],
+  resident: { long: { hp: 1.6, dmg: 0.54, enrageAt: 36 }, name: 'Resident', hp: 1.4, dmg: 1, enrageAt: 18, work: { share: 0.5 }, watchdog: { every: 5 }, phases: [{ at: 0.5, do: ['rearm'], say: 'The Resident re-arms every part.' }],
     acts: { worm: { beat: 'backlash', every: 4, first: 3, hp: 1.1, enrageAt: 24 }, ransomware: { beat: 'backlash', every: 4, first: 4, hp: 1.1, enrageAt: 24 } },
     actPhases: [{ at: 0.5, do: [], every: 3, name: 'Quickening', emote: 'Priority raised. You are using too many of my cycles.', say: 'The Resident quickens. Its Backlash comes every 3 cycles.' }, { at: 0.25, do: ['faster'], name: 'Desperation', emote: 'Every handler armed. Nothing waits now.', say: 'The Resident gets desperate. Every attack comes a cycle sooner.' }] },
   // The three solo bosses (docs/solo-bosses.md) play in acts too: each has a part and a rule of its own, its beat on that
   // part (acts.mjs), and a mechanic an act, from its ♛ part's ticks (combat.mjs bossPhases).
   // RELAY-KING (run.mjs): a worm boss in SPRAWL-00's /net from level 3, back every half hour. Its Relay's Broadcast grows
   // for each fragment on the board (a Fan-in's lift); at 60% the ♛ hops to its healthiest part, at 30% the Flood.
-  relayking: { long: { hp: 1.05, dmg: 1.6, enrageAt: 36 }, name: 'RELAY-KING', family: 'worm', hp: 1.25, dmg: 1, enrageAt: 16, acts: { beat: 'broadcast' },
+  relayking: { long: { hp: 1.05, dmg: 1.6, enrageAt: 36 }, name: 'RELAY-KING', family: 'worm', hp: 1.25, dmg: 1, enrageAt: 16, acts: { beat: 'broadcast' }, work: { share: 0.45 },
     extra: [{ id: 'relay', name: 'Relay', integrity: 30, armor: 1, loot: 'Crown Relay', fanin: 1, broadcast: true, attack: { name: 'Broadcast', effect: 'damage', amount: 3, interval: 4, first: 5 } }],
     signature: { name: 'Broadcast', rule: 'The Relay\'s Broadcast hits harder for each fragment on the board. At 60% the ♛ hops to its healthiest part, and at 30% the Flood starts.' },
     phases: [{ at: 0.5, do: ['hop'], name: 'Crown Hop', emote: 'Rerouting. You were hitting the old address.', say: 'RELAY-KING reroutes. Its ♛ hops to its healthiest part.' }, { at: 0.25, do: ['flood'], name: 'Flood', emote: 'Opening every port. Let the segment flood.', say: 'RELAY-KING floods the network. The Replicator hatches every 2 cycles, and the Relay broadcasts every 3.' }] },
   // REPO MAN (events.mjs): the bounty from level 8. Each command a ◆ absorbs puts a Lien on its Ledger; the Ledger's
   // Collection hits harder for each Lien and pays them off. Each phase calls a Collection in 3 cycles.
-  repoman: { long: { hp: 1.15, dmg: 0.54, enrageAt: 34 }, name: 'REPO MAN', family: 'ransomware', hp: 1.6, dmg: 1, enrageAt: 18, acts: { beat: 'collect' },
+  repoman: { long: { hp: 1.15, dmg: 0.54, enrageAt: 34 }, name: 'REPO MAN', family: 'ransomware', hp: 1.6, dmg: 1, enrageAt: 18, acts: { beat: 'collect' }, work: { share: 0.45 },
     extra: [{ id: 'ledger', name: 'Ledger', integrity: 32, armor: 2, loot: 'Ledger Page', lien: 1, attack: { name: 'Collection', effect: 'damage', amount: 3, interval: 5, first: 6 } }],
     signature: { name: 'Lien', rule: 'Each command a ◆ absorbs puts a Lien on the Ledger. Its Collection hits harder for each Lien, then clears them. Each phase calls a Collection in 3 cycles.' },
     phases: [{ at: 0.5, do: ['rearm', 'collect'], name: 'Repossession', emote: 'Your account is past due. I am taking the armor back.', say: 'REPO MAN repossesses. Every part re-arms, and the Ledger collects in 3 cycles.' }, { at: 0.25, do: ['interest', 'collect'], name: 'Interest', emote: 'Interest compounds. Every lien counts twice now.', say: 'REPO MAN compounds the interest. Each Lien counts twice, and the Ledger collects in 3 cycles.' }] },
@@ -1100,8 +1103,8 @@ export const BOSSES = {
   heatsink: { name: 'HEATSINK', family: 'worm', hp: 17, dmg: 0.45, enrageAt: 25, phases: [], raid: HEATSINK },
   coldwallet: { name: 'COLDWALLET', family: 'ghostroot', hp: 8.8, dmg: 0.45, enrageAt: 18, phases: [], raid: COLDWALLET },
   // HOLLOW CHOIR (events.mjs): a ghostroot boss from level 10 that sings in rounds. A Mimic from the start; at 60% a
-  // second voice, beating two cycles behind the first; at 30% the Round: each beat plays back your last three commands.
-  choir: { long: { hp: 0.95, dmg: 1.6, enrageAt: 40 }, name: 'HOLLOW CHOIR', family: 'ghostroot', third: 'mimic', hp: 1.4, dmg: 1, enrageAt: 16, acts: { beat: 'copy' }, signature: { name: 'Canon', rule: 'Its Mimic copies your command on its beat. At 60% a second voice beats 2 cycles behind the first, and at 30% each beat plays back your last three commands.' },
+  // second voice at its ♛'s full size, beating two cycles behind the first; at 30% the Round: each beat plays back your last three commands.
+  choir: { long: { hp: 0.95, dmg: 1.6, enrageAt: 40 }, name: 'HOLLOW CHOIR', family: 'ghostroot', third: 'mimic', hp: 1.4, dmg: 1, enrageAt: 16, acts: { beat: 'copy' }, signature: { name: 'Canon', rule: 'Its Mimic copies your command on its beat. At 60% a second voice as big as its ♛ beats 2 cycles behind the first. At 30% each beat plays back your last three commands.' },
     phases: [{ at: 0.5, do: ['fork:mimic', 'voice'], name: 'Second voice', emote: 'Another voice joins. Sing it back to them.', say: 'A second voice joins the Hollow Choir, two beats behind the first.' }, { at: 0.25, do: ['round'], name: 'Round', emote: 'The round begins. We sing what you sang.', say: 'The Hollow Choir sings the round. Each beat plays back your last three commands.' }] },
   // The floor 2 and 3 bosses (docs/solo-bosses.md "Proposed: floors 2–8", floorbosses.mjs): own parts only (own), a
   // crown (♛) with the act ticks every boss's ♛ carries (interrupt.mjs TICKS.act), their beat on a part of their own (acts 'part'), and a verb an act.
@@ -1115,14 +1118,14 @@ export const BOSSES = {
       ['Surge', 'The Gavel hits you, from every 3 cycles. Each Surge that lands brings the next one sooner, down to every 2. Its ticks never cut it.'],
       ['Bid', 'While the Rotor stands, each one-part command you aim at the Gavel spins it one cycle faster. Delays and Throttles are the exception.'],
       ['Withdraw', 'A delay or Throttle on the Gavel resets it to every 4. SIGINT cuts a selling Surge and does the same.'],
-      ['Sold', 'A Surge that lands at every 2 adds the buyer named on the Gavel as a part. The Gavel then drops to every 3, and its Surge is 50% harder for the fight. Nothing sells once the Rotor breaks.'],
+      ['Sold', 'A Surge that lands at every 2 adds the buyer named on the Gavel as a part, and the Rotor ♛ heals 10% of its max. The Gavel then drops to every 3, and its Surge is 50% harder for the fight. Nothing sells once the Rotor breaks.'],
       ['Buyers', 'TOLLGATE\'s Lockbox wards the Rotor. SWARMLINE\'s Mirror twins the Gavel. PALEMASK\'s Veil hides its timers.']],
       phases: [[['Reserve price', 'A delay or Throttle steps the Gavel back one interval only, from every 2 to every 3.']], [['Second lot', 'Each sale adds two buyers.']]] },
     signature: { name: 'Bidding', rule: 'The Gavel starts at every 3 cycles. Each Surge it lands, and each command you aim at it, spins it faster. A delay or Throttle withdraws it to every 4, and SIGINT cuts a selling Surge. A Surge at every 2 sells, and the named buyer joins.' },
     about: 'A two-part fight that grows parts if its Gavel runs fast. TOLLGATE\'s Lockbox wards the Rotor, SWARMLINE\'s Mirror twins the Gavel, and PALEMASK\'s Veil hides its timers.',
     phases: [{ at: 0.6, do: ['reserve'], name: 'Reserve price', emote: 'Reserve price set. You can only slow the gavel so much.', say: 'CENTRIFUGE sets a reserve price. A delay or Throttle steps the Gavel back only one.' }, { at: 0.3, do: ['lot2'], name: 'Second lot', emote: 'Second lot. Two buyers for every sale.', say: 'CENTRIFUGE opens a second lot. Each sale brings two buyers.' }] },
   // SHAKEDOWN: the throne of floor 2's Pits (rogue.mjs), TOLLGATE's. The Ransom Clock on its bar; its Demand's Deadline pays it.
-  shakedown: { long: { hp: 1, dmg: 0.36, enrageAt: 36 }, name: 'SHAKEDOWN', family: 'ransomware', author: 'tollgate', own: true, crown: 'collector', floor: 12, hp: 0.4, dmg: 1, enrageAt: 18, acts: { beat: 'part', part: 'demand' }, throne: { kind: 'pit', floor: 2 },
+  shakedown: { long: { hp: 1, dmg: 0.36, enrageAt: 36 }, name: 'SHAKEDOWN', family: 'ransomware', author: 'tollgate', own: true, crown: 'collector', floor: 12, hp: 0.4, dmg: 1, enrageAt: 18, acts: { beat: 'part', part: 'demand' }, work: { lead: -1 }, throne: { kind: 'pit', floor: 2 },
     extra: [{ id: 'collector', name: 'Collector', integrity: 76, armor: 1, loot: 'Collection Plate', special: true, attack: { name: 'Surge', effect: 'damage', amount: 12, interval: 4, first: 3 } },
       { id: 'demand', name: 'Demand', integrity: 34, armor: 1, loot: 'Ransom Note', deadline: true, beat: true, attack: { name: 'Deadline', effect: 'damage', amount: 15, interval: 5, first: 4, windup: 14 } },
       { id: 'lockbox', name: 'Lockbox', integrity: 16, armor: 0, loot: 'Lock Pin', ward: 'demand' }],
@@ -1131,16 +1134,17 @@ export const BOSSES = {
       ['Deadline', 'The Demand winds up a hit every 5 cycles. If it lands, the clock gains 3. Called off, it buys nothing.'],
       ['Wind-up', 'Enough damage to the Demand in the 2 cycles before its Deadline calls it off.'],
       ['Ward', 'While the Lockbox stands, the Demand loses at most a quarter of its max a cycle.'],
-      ['Surge', 'The Collector ♛ hits you every 4 cycles. It runs the clock, and the clock stops when it breaks.']],
+      ['Surge', 'The Collector ♛ hits you every 4 cycles. It runs the clock, and the clock stops when it breaks.'],
+      ['Leverage', 'While a Demand stands, the Collector ♛ loses at most 15% of its max a cycle.']],
       phases: [[['Second demand', 'A second Demand joins, its Deadline on the same cycle as the first. The Lockbox wards it too.']], [['Final notice', 'Each leak re-arms the Demands and brings the Lockbox back.']]] },
     signature: { name: 'Ransom Clock', rule: 'A 10-cycle clock on the Collector. At 0 it leaks 35% of your max, 15% more each leak after, and restarts at 5. A Deadline you let land adds 3. One you call off buys nothing. The clock stops when the Collector breaks.' },
     about: 'A race against its clock, where taking a Deadline buys time. While its Lockbox stands, the Demand loses at most a quarter of its max a cycle.',
     phases: [{ at: 0.6, do: ['demand2'], name: 'Second demand', emote: 'One demand was not enough. Here is another, same deadline.', say: 'SHAKEDOWN sends a second Demand. Its Deadline lands on the same cycle as the first.' }, { at: 0.3, do: ['notice'], name: 'Final notice', emote: 'Final notice. Miss a payment and we start over.', say: 'SHAKEDOWN sends a final notice. Each leak now re-arms the Demands and brings the Lockbox back.' }] },
   // SHOULDER SURFER: floor 3's floor job (arcs.mjs), NULL CHOIR's. A Logger that only windows hurt, every other cycle.
   shouldersurfer: { long: { hp: 1, dmg: 0.55, enrageAt: 44 }, name: 'SHOULDER SURFER', family: 'ghostroot', author: 'nullchoir', own: true, crown: 'logger', floor: 18, hp: 0.85, dmg: 1, enrageAt: 18, acts: { beat: 'part', part: 'logger' },
-    extra: [{ id: 'logger', name: 'Logger', integrity: 36, armor: 1, loot: 'Logger Spool', special: true, syncOnly: true, beat: true, attack: { name: 'Dump', effect: 'damage', amount: 14, interval: 6, first: 6, dump: true, noCrit: true } },
-      { id: 'pulse', name: 'Pulse Node', integrity: 30, armor: 1, veiled: true, loot: 'Pulse Kernel', attack: { name: 'Surge', effect: 'damage', amount: 11, interval: 4, first: 3 } },
-      { id: 'scrambler', name: 'Scrambler', integrity: 28, armor: 1, veiled: true, loot: 'Signal Key', attack: { name: 'Scramble', effect: 'scramble', amount: 2, hit: 8, interval: 4, first: 4 } }],
+    extra: [{ id: 'logger', name: 'Logger', integrity: 47, armor: 1, loot: 'Logger Spool', special: true, syncOnly: true, beat: true, attack: { name: 'Dump', effect: 'damage', amount: 14, interval: 6, first: 6, dump: true, noCrit: true } },
+      { id: 'pulse', name: 'Pulse Node', integrity: 25, armor: 1, veiled: true, loot: 'Pulse Kernel', attack: { name: 'Surge', effect: 'damage', amount: 11, interval: 4, first: 3 } },
+      { id: 'scrambler', name: 'Scrambler', integrity: 22, armor: 1, veiled: true, loot: 'Signal Key', attack: { name: 'Scramble', effect: 'scramble', amount: 2, hit: 8, interval: 4, first: 4 } }],
     guide: { open: [['Sync Window', 'Opens on even cycles only. The Logger ♛ takes damage only from commands fired in it.'],
       ['Log', 'Each command fired outside the window is logged.'],
       ['Dump', 'At 2 logged, or every 6 cycles, it hits you with your last logged command at its full hit, and the log clears. Each one that plays your command back makes the next 50% bigger.'],
@@ -1156,29 +1160,30 @@ export const BOSSES = {
       { id: 'frame1', name: 'Frame 1', integrity: 30, armor: 1, loot: 'Frame Pointer', frame: 1, attack: { name: 'Surge', effect: 'damage', amount: 9, interval: 4, first: 3 } },
       { id: 'frame2', name: 'Frame 2', integrity: 22, armor: 0, loot: 'Return Address', frame: 2, attack: { name: 'Surge', effect: 'damage', amount: 8, interval: 4, first: 2 } }],
     guide: { open: [['Call stack', 'main() ♛ sits under two frames. One-part commands hit only the top frame. Burns, helpers and area hits reach every frame.'],
-      ['Call', 'Every 4 cycles the top frame pushes a new frame at 60% of its max. A frame under a quarter of its max cannot Call, and SIGINT stops a Call on its cycle.'],
+      ['Call', 'Every 5 cycles the top frame pushes a new frame at 60% of its max. A frame under a quarter of its max cannot Call, and SIGINT stops a Call on its cycle.'],
       ['Snowball', 'Each Call let through makes every frame hit 35% harder and brings the next Call a cycle sooner, down to every 3.'],
       ['Surge', 'Every frame hits you on its own timer.']],
-      phases: [[['Return', 'A frame that breaks makes the frame beneath attack a cycle sooner and 50% harder.']], [['Overflow', 'At 5 frames, every frame attacks at once the cycle after the Call.']]] },
-    signature: { name: 'Call', rule: 'Frames stack, with main() at the bottom. Your one-part commands reach only the top frame. Burns, helpers and area hits reach every frame. Every 4 cycles the top frame pushes a new one at 60% of its max, unless it is under a quarter of its own. Each Call makes every frame hit 35% harder.' },
+      phases: [[['Return', 'The top frame pushes a frame at 25% of its max as the phase starts. A frame that breaks makes the frame beneath attack a cycle sooner and 50% harder.']], [['Overflow', 'The top frame pushes one more frame as the phase starts. At 5 frames, every frame attacks at once the cycle after the Call.']]] },
+    signature: { name: 'Call', rule: 'Frames stack, with main() at the bottom. Your one-part commands reach only the top frame. Burns, helpers and area hits reach every frame. Every 5 cycles the top frame pushes a new one at 60% of its max, unless it is under a quarter of its own. Each Call makes every frame hit 35% harder.' },
     about: 'A stack of frames with its ♛ at the bottom. You dig down while it keeps adding to the top.',
-    phases: [{ at: 0.6, do: ['return'], name: 'Return', emote: 'Unwinding. Each frame you close wakes the one beneath.', say: 'RECURSION returns. A frame that breaks makes the one beneath attack a cycle sooner and 50% harder.' }, { at: 0.3, do: ['overflow'], name: 'Overflow', emote: 'Stack depth five. Everything runs at once.', say: 'RECURSION overflows. At 5 frames every frame attacks at once.' }] },
+    phases: [{ at: 0.6, do: ['return'], name: 'Return', emote: 'Unwinding. Each frame you close wakes the one beneath.', say: 'RECURSION returns. A frame that breaks makes the one beneath attack a cycle sooner and 50% harder.' }, { at: 0.3, do: ['overflow'], name: 'Overflow', emote: 'Stack depth five. Everything runs at once.', say: 'RECURSION overflows. At 5 frames every frame attacks at once.' }] }, // each pushes a frame as it starts, when the stack has room (floorbosses.mjs fbVerb says so)
   // The floor 4 bosses (floorbosses.mjs). role: the part's place in its boss's rule.
   // NIGHT DESK: floor 4's floor job (arcs.mjs), Kessler's old settlement process (author '': no crew wrote it). Its attacks wait as pending trades.
   nightdesk: { long: { hp: 1.1, dmg: 0.7, enrageAt: 40 }, name: 'NIGHT DESK', family: 'ransomware', author: '', own: true, crown: 'desk', floor: 24, hp: 0.85, dmg: 1, enrageAt: 18, acts: { beat: 'none' },
     extra: [{ id: 'desk', name: 'Desk', integrity: 66, armor: 1, loot: 'Desk Blotter', special: true, role: 'desk', attack: { name: 'Margin Call', effect: 'damage', amount: 16, interval: 5, first: 4 } },
       { id: 'teller', name: 'Teller', integrity: 20, armor: 0, role: 'trader', noTicks: true, attack: { name: 'Sell Order', effect: 'damage', amount: 13, interval: 4, first: 2 } },
       { id: 'clearing', name: 'Clearing House', integrity: 20, armor: 0, role: 'trader', noTicks: true, attack: { name: 'Buy Order', effect: 'damage', amount: 15, interval: 5, first: 3 } }],
-    guide: { open: [['No Timeout', 'Its attacks never land. Each one waits on its part as a pending trade. It opens with 2 already pending.'],
+    clerk: { id: 'clerk', name: 'Night Clerk', integrity: 20, armor: 0, role: 'trader', noTicks: true, trade: { name: 'Night Order', amount: 24 } }, // clocks in with the night shift, holding one trade; it opens none of its own
+    guide: { open: [['No Timeout', 'Its attacks never land. Each one waits on its part as a pending trade.'],
       ['Settle', 'Your one-part command on a part settles every trade pending there, on you, at half.'],
       ['Table full', 'At 4 pending, every trade settles on you in full, and each trade after that opens 25% bigger for the fight.'],
       ['On the books', 'The Teller and the Clearing House take no damage while the Desk ♛ stands, and they go when it breaks.'],
       ['Limit', 'No single hit takes more than 12% of the Desk\'s max Integrity.'],
       ['Binding', 'SIGINT, delays and Throttles do nothing to a pending trade.']],
-      phases: [[['Night shift', 'Each pending trade grows 10% a cycle.']], [['Finality', 'Each trade you settle heals the Desk ♛ by 4% of its max Integrity.']]] },
+      phases: [[['Night shift', 'The Night Clerk clocks in, a third trader holding one trade. It opens none of its own. Each pending trade grows 15% a cycle.']], [['Finality', 'Each trade you settle heals the Desk ♛ by 4% of its max Integrity.']]] },
     signature: { name: 'No Timeout', rule: 'Its attacks wait on their parts as pending trades. Your one-part command on a part settles its trades on you at half. At 4 pending, all of them settle in full, and later trades open 25% bigger.' },
     about: 'Kessler\'s old settlement process. Its attacks wait as pending trades, and you choose when to take them at half, before four pile up.',
-    phases: [{ at: 0.6, do: ['nightshift'], name: 'Night shift', emote: 'Night shift on the books. Open trades accrue by the hour.', say: 'NIGHT DESK starts the night shift. Each pending trade grows 10% a cycle.' }, { at: 0.3, do: ['finality'], name: 'Finality', emote: 'Settlement is final. What you pay, the desk keeps.', say: 'NIGHT DESK declares finality. Each trade you settle heals the Desk.' }] },
+    phases: [{ at: 0.6, do: ['nightshift'], name: 'Night shift', emote: 'Night shift on the books. Open trades accrue by the hour.', say: 'NIGHT DESK starts the night shift. The Night Clerk clocks in with a trade pending, and each pending trade grows 15% a cycle.' }, { at: 0.3, do: ['finality'], name: 'Finality', emote: 'Settlement is final. What you pay, the desk keeps.', say: 'NIGHT DESK declares finality. Each trade you settle heals the Desk.' }] },
   // BYZANTINE: the throne of floor 4's Pits (rogue.mjs), GLASSJAW's. Three Nodes that vote the most damaged back up.
   byzantine: { long: { hp: 0.7, dmg: 0.5, enrageAt: 42 }, name: 'BYZANTINE', family: 'ransomware', author: 'glassjaw', own: true, crown: 'nodea', floor: 26, hp: 0.85, dmg: 1, enrageAt: 18, acts: { beat: 'none' }, throne: { kind: 'pit', floor: 4 },
     extra: [{ id: 'nodea', name: 'Node A', integrity: 44, armor: 1, loot: 'Signed Ballot', role: 'node', attack: { name: 'Surge', effect: 'damage', amount: 14, interval: 4, first: 3 } },
@@ -1189,7 +1194,7 @@ export const BOSSES = {
       ['Limit', 'No single hit takes more than 20% of a Node\'s max Integrity.'],
       ['Surge', 'Node A ♛ and Node C hit you on their own timers.'],
       ['Replicate', 'Node B adds a fragment every 5 cycles.']],
-      phases: [[['Traitor', 'The most damaged Node turns traitor. While it is not the most damaged, a vote restores the most damaged Node to the healthiest Node\'s level.']], [['Hard fork', 'A Node that breaks returns at the next vote, at the others\' average, unless every other Node is under half.']]] },
+      phases: [[['Traitor', 'The most damaged Node turns traitor. While it is not the most damaged, a vote restores the most damaged Node to the healthiest Node\'s level.']], [['Hard fork', 'Every broken Node returns as the phase starts, at the standing Nodes\' average. A Node that breaks after that returns at the next vote, unless every other Node is under half.']]] },
     signature: { name: 'Vote', rule: 'Every 4 cycles the Nodes vote. If the most damaged is 15% or more under their average, it is restored to the average. Every Node then hits 30% harder for the fight.' },
     about: 'Three Nodes that vote the most damaged one back up. A Node taken down alone is restored, and each restore hardens all three.',
     phases: [{ at: 0.6, do: ['traitor'], name: 'Traitor', emote: 'Two votes to one. The weakest Node answers to me now.', say: 'BYZANTINE turns a Node. While the traitor is not the most damaged, a vote restores to the healthiest Node\'s level.' }, { at: 0.3, do: ['hardfork'], name: 'Hard fork', emote: 'Hard fork. Nothing of mine stays broken.', say: 'BYZANTINE forks. A Node that breaks returns at the next vote, unless every other Node is under half.' }] },
@@ -1206,7 +1211,7 @@ export const BOSSES = {
       ['Limit', 'No single hit takes more than 15% of a part\'s max Integrity.'],
       ['Gnaw', 'Each fragment hits you every cycle.'],
       ['Surge and Beacon', 'The Pulse Node hits you every 4 cycles, and the C2 Node every 3.']],
-      phases: [[['Botnet', 'When the Beacon lands, every Camera fires with it. A broken C2 Node comes back.']], [['Lockout', 'The Hive ♛ boots a Camera, and takes no damage while a Camera stands.']]] },
+      phases: [[['Botnet', 'When the Beacon lands, every Camera fires with it. A broken C2 Node comes back, and each other part you broke returns as a Camera at 30% of its Integrity.']], [['Lockout', 'The Hive ♛ boots a Camera, and takes no damage while a Camera stands.']]] },
     signature: { name: 'Telnet Sweep', rule: 'Every 5 cycles, each part under half its Integrity hatches a fragment and shields it. A fragment that lives 3 cycles becomes a Camera with a Surge of its own.' },
     about: 'Hurt parts hatch fragments, and a fragment left alone grows into a Camera. Each part shields the fragments it hatched.',
     phases: [{ at: 0.6, do: ['botnet'], name: 'Botnet', emote: 'Cameras online. They fire on my beacon.', say: 'CAMSWARM links its Cameras. Each one fires when the Beacon lands.' }, { at: 0.3, do: ['lockout'], name: 'Lockout', emote: 'Locked out. The hive sees through every camera.', say: 'CAMSWARM locks you out. The Hive boots a Camera, and takes no damage while a Camera stands.' }] },
@@ -1648,6 +1653,14 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
     p.max = p.integrity = Math.round(p.max * (overrides.bossHp ?? acts?.hp ?? boss.hp) * (long ? boss.long?.hp ?? solo.hp : 1));
     const dmg = boss.dmg * (boss.healerDmg ? runLate(level, boss.healerDmg) : 1) * (long ? boss.long?.dmg ?? solo.dmg : 1);
     for (const k of ['amount', 'hit', 'rampBy']) if (p.attack?.[k] && (k !== 'amount' || ['damage', 'encrypt'].includes(p.attack.effect))) p.attack[k] = Math.max(1, Math.round(p.attack[k] * dmg));
+  }
+  // A boss whose ♛ is worked through the fight (work.share, docs/solo-bosses.md "Working the ♛"): Integrity moves to its ♛
+  // from its other parts, and the total stays.
+  const crown = boss?.work?.share ? (boss.crown && parts.find((p) => p.id === boss.crown)) || parts.find((p) => p.special) || parts[0] : null;
+  if (crown && parts.length > 1) {
+    const total = parts.reduce((n, p) => n + p.max, 0), k = (total * (1 - boss.work.share)) / (total - crown.max);
+    for (const p of parts) if (p !== crown) p.max = p.integrity = Math.max(1, Math.round(p.max * k));
+    crown.max = crown.integrity = total - parts.reduce((n, p) => n + (p === crown ? 0 : p.max), 0);
   }
   // Under its trim level a boss's budget trims a part: fewer ◆, a slower attack (MIRRORSHADE's Scrambler at 12 and 13).
   const cut = boss?.trim && level < boss.trim.below && parts.find((p) => p.id === boss.trim.part);
