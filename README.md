@@ -236,6 +236,7 @@ comment saying what it does.
 | `dist/hitfx.mjs`, `dist/dmgfx.mjs`, `dist/lash.mjs` | Hits landing on a part (a MISS or RESISTED stamped on it; a broken one's row and name breaking into 1s and 0s), damage numbers one per source, a virus lashing at the screen (and its shake). |
 | `dist/chipfx.mjs` | Themed timeline chips: a part's theme (docs/chip-themes.md) played faint inside its chips at +1 and in Now, and its strike into your bar when it goes off. |
 | `dist/virus-art.mjs` | Each virus as animated 3D ASCII art: each body's core and limbs attack their own ways out of its window (`STRIKE_OF`, `STRIKES`), a broken part dissolves into 1s and 0s. |
+| `dist/boss-art.mjs` | Each boss's own body for it (`BOSS_SHAPE`, the Resident's by family): its parts are the model's regions, the ones that join mid-fight modelled from the start. A boss faces you (`BOSS_SWING`) and is fitted to the window. |
 | `dist/nocarrier.mjs`, `dist/nocarrier.css` | Losing a fight: static and NO CARRIER, then the Disconnected card. |
 | `dist/class-emblems.mjs` | The class picker's ASCII emblems. |
 | `dist/feel.mjs` | The feedback language: each kind of event's one signature in motion and sound. |

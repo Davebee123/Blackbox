@@ -291,6 +291,9 @@ interface**. CSS, the DOM and text only (no canvas, WebGL or PixiJS on the scree
   roots and legs stab or rake, nodes and cells blink to the glass, cores throb at you, cells swarm; and some stay put
   and throw something instead: rings, sparks, a spill of packets, clumps of characters, a sweeping beam. The body
   never leaves its window. No input; Screen effects off or Motion off: none.
+- **Boss bodies** (boss-art.mjs): every boss wears a model of its own, built from what its fight is about (a rotor
+  and a Gavel, a tunnel of frames, three domed towers). Wide and bold, to fill the window; a boss faces you, swinging
+  side to side, and a part that strikes swells out from where it stands.
 - **A broken part** dissolves into drifting 1s and 0s inside the render; on the board its row flickers out into a block
   of 1s and 0s, its name and health breaking up letter by letter, which drift up and fade (hitfx.mjs).
 - **The fight boot** (bootfx.mjs, bootfx.css) is another effect on the panels, approved by the designer (*Centre stage*).
