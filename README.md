@@ -6,6 +6,9 @@ eight floors of a network, and climb one of four hacker classes to level 50.
 **Play:** [davebee123.github.io/Blackbox](https://davebee123.github.io/Blackbox/) (GitHub Pages deploys `dist/` on
 every push to main). The game saves in your browser.
 
+**Website:** [`site/`](site/) is the game's website (static, no build step), deployed by Cloudflare Pages on every push
+to main (build command: none; build output directory: `site`).
+
 ## Run locally
 
 Needs Node.js. No packages, no build step.
