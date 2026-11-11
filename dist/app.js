@@ -23,7 +23,7 @@ import { nextPayIn, boardOpen, storyAt, openContracts, ready } from './mail.mjs'
 import { hubsOf, hubFound, hubTraceOf, FACTIONS } from './factions.mjs';
 import { WARES } from './market.mjs';
 import { logComms, commsOf, unseenAlert, seeAll, markDone, pruneComms } from './comms.mjs';
-import { nextTip, markSeen, TOUR, tourDone, skipTour } from './tips.mjs';
+import { nextTip, markSeen, TOUR, tourDone, skipTour, paceOf, CALM_MS } from './tips.mjs';
 import { createIntro } from './intro.mjs';
 import { coldOpen } from './coldopen.mjs';
 import * as SC from './scenes.mjs';
@@ -2717,12 +2717,20 @@ const shownRect = (el) => { const r = el.getBoundingClientRect(); return r.width
 // The first match that's on screen: the room map draws twice (wide, and tall for a phone) and shows one.
 const shownEl = (sel) => [...document.querySelectorAll(sel)].find(shownRect) || null;
 function onScreen(sel) { return !!shownEl(sel); }
+// Pacing (tips.mjs paceOf): a calm tip once a screen visit and CALM_MS after the last closed; an opening tip once a fight.
+const calm = { module: null, shown: false, until: 0 };
+let toldFight = null;
 function checkTips(now) {
   if (tip || ending || introOn || lu.showing() || shell.booting || connecting() || playtest || now < tipWait) return;
   tipWait = now + 400;
-  const t = nextTip(campaign, module, onScreen);
+  if (calm.module !== module) { calm.module = module; calm.shown = false; }
+  const fight = campaign.encounter?.virus || null;
+  const t = nextTip(campaign, module, onScreen, { quiet: calm.shown || now < calm.until, told: !!fight && toldFight === fight });
   if (!t) return;
-  tip = { t, cur: t, step: 0, paused: false, base: t.mark?.(campaign) };
+  const kind = paceOf(t, module);
+  if (kind === 'calm') calm.shown = true;
+  if (kind === 'opening') toldFight = fight;
+  tip = { t, cur: t, step: 0, paused: false, base: t.mark?.(campaign), kind };
   showStep();
   $('tip').hidden = false;
   if (t.pause && active(campaign) && !campaign.encounter.paused) { campaign.encounter.paused = true; tip.paused = true; dirty = true; }
@@ -2775,20 +2783,21 @@ function placeTip() {
 }
 function hideTip(seen) {
   if (!tip) return;
+  const kind = tip.kind;
   if (seen) { for (const id of [tip.t.id, ...(tip.t.covers || [])]) markSeen(campaign, id); save(); }
   else if (tip.t.steps && tip.step > 0) { for (const x of tip.t.steps.slice(0, tip.step)) markSeen(campaign, x.id); save(); } // steps you read stay read
   if (tip.paused && active(campaign) && campaign.encounter.paused) { campaign.encounter.paused = false; dirty = true; }
   document.querySelectorAll('.tip-target').forEach((x) => x.classList.remove('tip-target'));
   $('tip').hidden = true;
   tip = null;
-  tipWait = Math.max(tipWait, performance.now() + (seen ? 6000 : 400)); // one at a time, with room to play between
+  if (seen && kind === 'calm') calm.until = performance.now() + CALM_MS;
   tipWait = performance.now() + 700; // a breath before the next one
 }
 $('tip-ok').addEventListener('click', () => { advanceTip(); focusPrompt(); });
 $('tip-off').addEventListener('click', () => { campaign.settings.tips = false; hideTip(true); notice('Tips off. Turn them back on on the System page.'); dirty = true; });
 $('tip-skip').addEventListener('click', () => { skipTour(campaign); hideTip(false); save(); focusPrompt(); });
 // A tour step you did (by a click or the prompt): it closes, and the next waits for its own thing.
-function tourCheck() { if (tip?.t.tour && tip.t.done?.(campaign, tip.base)) hideTip(true); }
+function tourCheck() { if (tip?.t.done?.(campaign, tip.base)) hideTip(true); } // a tour step, or a tip that waits for you (map-start)
 addEventListener('resize', () => placeTip());
 
 // A status lands: its chip shows big over the board, then flies into its place in the Status

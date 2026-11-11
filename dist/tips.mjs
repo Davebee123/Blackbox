@@ -14,13 +14,8 @@ import { hackerLevel, loadedOn, classOf } from './combat.mjs';
 const spare = (s) => (s.stash || []).some((it) => !loadedOn(s, it.id)); // something you could load
 
 const home = (s) => s.encounter?.mode !== 'run';
-// A strain's tip where none is written by hand: its name, then the rule's sentences while they fit a tip.
-let STRAIN_TEXT;
-function openingOf(x) {
-  let out = `This is ${/^[AEIOU]/.test(x.name) ? 'an' : 'a'} ${x.name}.`;
-  for (const sentence of x.rule.split(/(?<=\.)\s+/)) { if ((out + ' ' + sentence).length > 160) return out + ' Hover its tag for the rest.'; out += ' ' + sentence; }
-  return out;
-}
+// Your home server has an intrusion at its gate (view.mjs gateOf).
+const atGate = (s) => { const e = s.encounter; return !!((e && e.mode !== 'run' && !e.invader && (e.phase === 'alert' || e.phase === 'active')) || s.gate); };
 
 // ---------- the rooms tour: your first server ----------
 // A short guided tour of a server's room map (the Run tab), a step at a time, each pointing at the thing to do and
@@ -64,7 +59,7 @@ export function skipTour(s) { s.tour ||= {}; for (const id of tourIds) s.tour[id
 export const TIPS = [
   ...TOUR, // first, on the rooms page: the tour of your first server (above)
   // ---------- anywhere ----------
-  { id: 'degraded', page: '*', at: '#integrity-note.degraded', text: 'Your server crashed and rebooted at half Integrity. For the next 10 minutes your wall is down, your max Signal and damage are lower, and any swarm at a hub you hold is paused.' },
+  { id: 'degraded', page: '*', at: '#integrity-note.degraded', urgent: true, text: 'Your server crashed and rebooted at half Integrity. For the next 10 minutes your wall is down, your max Signal and damage are lower, and any swarm at a hub you hold is paused.' },
   { id: 'code', page: '*', at: '.modules [data-module="server"]', when: (s, m) => m !== 'server' && Object.values(s.materials || {}).some((n) => n > 0), text: 'Kills drop code. You spend it on programs in a server\'s sockets and on your firewall\'s tiers.' },
   // Your first protocol: Loadout → the Protocols tab → Load. Three short steps, each pointing at the next click.
   { id: 'protocol', page: '*', at: '.modules [data-module="loadout"]', when: (s, m) => m !== 'loadout' && spare(s), text: 'You have a protocol to equip. Open Loadout to equip it. You can only equip at home, not on a run or in a fight.' },
@@ -77,8 +72,10 @@ export const TIPS = [
   { id: 'level', page: '*', at: '#whoami', when: (s) => hackerLevel(s) >= 2, text: 'This is you: your handle, your class and its level. Each level makes you 4% stronger, and some levels unlock new skills.' },
 
   // ---------- map ----------
-  { id: 'map-server', page: 'map', at: '.mnode.server', text: 'This is your server. It sits above the net, and viruses attacking it appear next to it.' },
-  { id: 'map-zone', page: 'map', at: '.mnode.zone', text: 'This is SPRAWL-00, the rogue server where your work starts. Viruses hold its rooms. Each one you kill helps trace a hidden server linked to it.' },
+  // Your first move: the one tip on the opening map. It stays until you connect.
+  { id: 'map-start', page: 'map', at: '.mnode.zone', when: (s) => !s.rooms, done: (s) => !!s.rooms, text: 'Your work starts here. Click SPRAWL-00, then Connect.' },
+  // Your server and its gate wait for the first intrusion; the ? servers, for the first trace on one.
+  { id: 'map-server', page: 'map', at: '.mnode.server', when: atGate, joins: ['map-intrusion'], text: 'This is your server. It sits above the net, and viruses attacking it appear next to it.' },
   // ---------- the rooms (the Run tab) ----------
   { id: 'socket', page: 'rooms', at: '.fp-room.k-socket', text: 'This is a socket room. Clear its guard once and you can build here. A program in a socket changes this server\'s rules, and only this server\'s.' },
   // A server's takeover path, the first time you see each step: the vault, its key, the sealed Core.
@@ -126,7 +123,7 @@ export const TIPS = [
   { id: 'map-rogue', page: 'map', at: '.mnode.rogue', text: 'This is a rogue server: nobody has ever taken it over. Viruses hold its rooms and come back a few minutes after you kill them.' },
   { id: 'map-build', page: 'map', at: '.prog-row', text: 'These are its sockets and the programs in them. Clear a socket room on a run, then build in it from its pop-up. A program only works on its own server.' },
   { id: 'map-owned', page: 'map', at: '.mnode.loc.owned', text: 'This server is yours now. Put a relay on it from its card to ping the unknown servers next to it.' },
-  { id: 'map-hidden', page: 'map', at: '.mnode.hidden', text: 'This is an unknown server. Clear the servers linked to it to trace it: first clears, Mapped servers and vault trace records all count. Once a relay flags it, kills count too.' },
+  { id: 'map-hidden', page: 'map', at: '.mnode.hidden', when: (s) => (s.hidden || []).some((n) => n.lead > 0), text: 'This is an unknown server. Clear the servers linked to it to trace it: first clears, Mapped servers and vault trace records all count. Once a relay flags it, kills count too.' },
 
   // ---------- fight ----------
   // Your first fight: one pause, not four. The board, the keys, armor and the Sync Window are
@@ -182,7 +179,7 @@ export const TIPS = [
   { id: 'fight-miss', page: 'combat', at: '#board', when: (s) => (s.encounter?.metrics?.misses || 0) > 0, text: 'You missed. A miss deals no damage but still uses the cooldown. Enemies above your level make you miss more often.' },
   { id: 'fight-daemon', page: 'combat', at: '.board .intent.daemon:not(.cron)', under: '#board', text: 'That\'s your daemon. It acts on its own cooldown, in the cycle where its chip sits, on top of your own move.' },
   { id: 'fight-proc', page: 'combat', pause: true, at: '#tray .lit', text: 'A skill lit up. It only works for a cycle or two after something happens, so use it while it glows.' },
-  ...Object.entries(STRAIN_TEXT = {
+  ...Object.entries({
     keylogger: 'This is a Keylogger. Only moves made inside the Sync Window hurt the Logger. Three moves outside it come back at you as a Dump.',
     hashrat: 'This is a Hashrat. While its Miner lives, your cooldowns run at half speed. The Miner attacks only once it is the last part left, so break it first.',
     floodgate: 'This is a Floodgate. Its Flooder hits every cycle, a little harder each time. Any delay resets it.',
@@ -197,8 +194,6 @@ export const TIPS = [
     bouncer: 'Bouncer ICE: its Keyring re-arms the Gate every 4 cycles, and takes over the Gate\'s Ram if the Gate breaks first. Break the Gate between re-arms, then the Keyring.',
     tracer: 'This is Tracer ICE. Its Trace-back deals more damage every cycle the fight lasts, so finish it fast.',
   }).filter(([id]) => STRAINS[id] || GUARDS[id]).map(([id, text]) => ({ id: 'strain-' + id, page: 'combat', pause: true, at: `.tag-strain[data-strain="${id}"]`, text })),
-  // Every other strain or ICE with a rule: its name and the rule's opening, the rest in its tag's tooltip.
-  ...Object.entries({ ...STRAINS, ...GUARDS }).filter(([id, x]) => x.rule && !STRAIN_TEXT[id]).map(([id, x]) => ({ id: 'strain-' + id, page: 'combat', pause: true, at: `.tag-strain[data-strain="${id}"]`, text: openingOf(x) })),
   ...Object.entries(MUTATIONS).map(([id, m]) => ({ id: 'mut-' + id, page: '*', pause: true, at: `.tag-mut[data-mut="${id}"]`, text: `This virus is ${m.name}. ${m.rule}` })),
   ...Object.entries(QUIRKS).map(([id, q]) => ({ id: 'quirk-' + id, page: '*', at: `.tag-quirk[data-quirk="${id}"]`, text: `This location has the ${q.name} quirk. ${q.rule}` })),
 
@@ -222,15 +217,33 @@ export const TIPS = [
   { id: 'codex', page: '*', at: '.modules [data-module="codex"]', when: (s, m) => m !== 'codex' && s.encounter?.phase !== 'active' && Object.values(s.research || {}).some((n) => n > 0), text: 'You decoded your first part. The Codex keeps each part\'s research: break it, cut it and answer its tells to learn its rule.' },
 ];
 
+// ---------- pacing ----------
+// Tips never pile up. A map, room or menu tip (calm) shows at most once a screen visit, and CALM_MS after the last one
+// closed (pace.quiet). A fight tip about what the fight opened with (opening) shows only while the fight is paused
+// (room and breach fights open paused until your first order), once a fight (pace.told); it waits for a later fight
+// otherwise. A fight tip about what arrives mid-fight (MID) pauses the fight as it lands. Tour steps and urgent tips
+// skip the pacing.
+export const CALM_MS = 120_000;
+const MID = new Set(['fight-wasted', 'fight-patch', 'fight-tell', 'fight-cast', 'fight-seal', 'fight-mimic', 'fight-lock', 'fight-fuse',
+  'fight-bin', 'fight-cracked', 'fight-status', 'fight-miss', 'fight-proc', 'fight-scrape']);
+export function paceOf(t, page) {
+  if (t.tour || t.urgent) return 'free';
+  if (page === 'combat' && (t.page === 'combat' || t.pause)) return MID.has(t.id) ? 'mid' : 'opening';
+  return 'calm';
+}
+
 // The next tip to show on this page, or null. `visible(selector)` says whether an element is on
-// screen (the browser passes a DOM check; tests pass their own).
-export function nextTip(s, page, visible) {
+// screen (the browser passes a DOM check; tests pass their own). pace: { quiet, told } from the app (above).
+export function nextTip(s, page, visible, pace = {}) {
   if (s.settings?.tips === false) return null;
   const seen = s.settings?.seen || {};
   for (const t of TIPS) {
     if (seenOf(s, t.id)) continue;
     if (t.after?.some((id) => !seenOf(s, id))) continue; // a tour step waits for the one before it
     if (t.page !== '*' && t.page !== page) continue;
+    const kind = paceOf(t, page);
+    if (kind === 'calm' && pace.quiet) continue;
+    if (kind === 'opening' && (!s.encounter?.paused || pace.told)) continue;
     if (t.when && !t.when(s, page)) continue;
     if (!visible(t.at)) continue;
     const own = (x) => x.more ? { ...x, text: `${x.text} ${x.more(s)}` } : x; // more: a sentence that depends on you (your class)

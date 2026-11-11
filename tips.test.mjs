@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, restore } from './dist/combat.mjs';
-import { TIPS, nextTip, markSeen } from './dist/tips.mjs';
+import { TIPS, nextTip, markSeen, paceOf } from './dist/tips.mjs';
 import { mapMarkup, serverMarkup, protocolsMarkup, loadoutMarkup, daemonsMarkup, systemMarkup, boardMarkup, hudMarkup } from './dist/view.mjs';
 
 // A stand-in for "is it on screen": the selector's last class/attribute appears in the markup.
@@ -24,16 +24,21 @@ test('every tip has an id, a page, a selector and one or two short sentences', (
 
 test('one tip at a time, in order, only on its page and only once', () => {
   const s = fresh();
-  command(s, 'encounter cryptjack');
-  const map = mapMarkup(s, 'server');
+  let map = mapMarkup(s, 'server');
   const first = nextTip(s, 'map', onPage(map));
-  assert.equal(first.id, 'map-server');
+  assert.equal(first.id, 'map-start', 'the opening map has one tip: where to start');
+  assert.equal(first.done(s), false);
   markSeen(s, first.id);
-  assert.equal(nextTip(s, 'map', onPage(map)).id, 'map-zone');
-  markSeen(s, 'map-zone');
-  assert.equal(nextTip(s, 'map', onPage(map)).id, 'map-intrusion');
-  markSeen(s, 'map-intrusion');
-  assert.equal(nextTip(s, 'map', onPage(map)).id, 'map-hidden', 'the ? servers around SPRAWL-00 (floor 1\'s way down stays hidden until a server beside it is found)');
+  assert.equal(nextTip(s, 'map', onPage(map)), null, 'your server and the ? servers wait until they matter');
+  command(s, 'encounter cryptjack');
+  map = mapMarkup(s, 'server');
+  const gate = nextTip(s, 'map', onPage(map));
+  assert.equal(gate.id, 'map-server', 'an intrusion at your gate brings your server\'s tip');
+  assert.deepEqual(gate.covers, ['map-intrusion'], 'and the intrusion\'s, as one tip');
+  for (const id of [gate.id, ...gate.covers]) markSeen(s, id);
+  assert.equal(nextTip(s, 'map', onPage(map)), null, 'no ? tip before anything traces one');
+  s.hidden[0].lead = 5;
+  assert.equal(nextTip(s, 'map', onPage(map)).id, 'map-hidden', 'a ? with a trace on it brings its tip');
   markSeen(s, 'map-hidden');
   assert.equal(nextTip(s, 'map', onPage(map)), null, 'nothing else on this map yet');
   assert.equal(nextTip(s, 'server', onPage(map)), null, 'map tips stay on the map');
@@ -41,10 +46,31 @@ test('one tip at a time, in order, only on its page and only once', () => {
   assert.equal(nextTip(s, 'map', onPage(mapMarkup(s, 'server'))).id, 'map-origin', 'a new thing brings its tip');
 });
 
+test('tips are paced: a calm tip once a screen visit and a while apart, an opening tip once a fight and only while it is paused', () => {
+  const s = fresh();
+  const map = mapMarkup(s, 'server');
+  assert.equal(nextTip(s, 'map', onPage(map), { quiet: true }), null, 'a calm tip waits while the screen is quiet');
+  assert.equal(paceOf(nextTip(s, 'map', onPage(map)), 'map'), 'calm');
+  command(s, 'encounter cryptjack');
+  command(s, 'engage');
+  const html = hudMarkup(s) + boardMarkup(s) + '<div id="tray"></div>';
+  assert.notEqual(nextTip(s, 'combat', onPage(html))?.id, 'fight-timeline', 'a running fight never stops for what it opened with');
+  s.encounter.paused = true;
+  assert.equal(nextTip(s, 'combat', onPage(html)).id, 'fight-timeline', 'paused, it shows');
+  assert.notEqual(nextTip(s, 'combat', onPage(html), { told: true })?.id, 'fight-timeline', 'one opening tip a fight');
+  s.encounter.paused = false;
+  s.encounter.metrics.wasted = 1;
+  assert.equal(nextTip(s, 'combat', (sel) => sel === '.board .ptick.spent', { told: true, quiet: true })?.id, 'fight-wasted', 'what lands mid-fight still pauses it');
+  assert.equal(paceOf(TIPS.find((t) => t.id === 'fight-wasted'), 'combat'), 'mid');
+  assert.equal(paceOf(TIPS.find((t) => t.id === 'tour-walk'), 'rooms'), 'free', 'the rooms tour is never held back');
+  assert.equal(paceOf(TIPS.find((t) => t.id === 'degraded'), 'map'), 'free', 'nor is a crash');
+});
+
 test('fight tips pause the fight and wait for what they explain', () => {
   const s = fresh();
   command(s, 'encounter cryptjack');
   command(s, 'engage');
+  s.encounter.paused = true; // a room fight opens paused until your first order
   const html = hudMarkup(s) + boardMarkup(s) + '<div id="tray"></div>';
   const t = nextTip(s, 'combat', onPage(html));
   assert.equal(t.id, 'fight-timeline');
@@ -90,7 +116,7 @@ test('the newer systems have their tips: a found server’s memory, plans on Cra
   const s = fresh();
   s.tutorialCompleted = true;
   const loc = addLocation(s, 'worm', 1); // found: not on your network yet
-  for (const id of ['map-server', 'map-zone', 'map-exit']) markSeen(s, id);
+  for (const id of ['map-start', 'map-server', 'map-exit']) markSeen(s, id);
   assert.equal(nextTip(s, 'map', onPage(mapMarkup(s, loc.id))).id, 'map-origin');
   markSeen(s, 'map-origin');
   assert.equal(nextTip(s, 'map', onPage(mapMarkup(s, loc.id, undefined, { side: true }))).id, 'map-memory', 'its card: what joining costs');
