@@ -29,7 +29,7 @@ import { raidStart, raidLand, raidCycle, raidShield, raidBroke, raidTaken, raidA
 import { tellStart, tellCycle, tellLand, tellBroke, chargeNow, tellIntents, tellSigint, tellSigintCheck, tellOn, tellsOf, overclockMult, hotCharge } from './tells.mjs';
 import { prepareTicks, onHit as tickHit, blastCut, BOSS_RULES, TICKS } from './interrupt.mjs';
 import { actsStart, lashHit, lashLand, actIntents, actBegins, actCap } from './acts.mjs';
-import { FB, fbBid, fbStart, fbPower, fbLanded, fbMisses, fbSlowed, fbBroke, fbAim, fbCommand, fbDealt, fbVerb, FB_VERBS, fbCycle, fbIntents, fbLogged, surfShut, fbCmdHit, fbShrugs, fbTaken } from './floorbosses.mjs';
+import { FB, fbBid, fbStart, fbPower, fbLanded, fbMisses, fbSlowed, fbBroke, fbAim, fbCommand, fbDealt, fbVerb, FB_VERBS, fbCycle, fbIntents, fbLogged, surfShut, fbCmdHit, fbShrugs, fbTaken, fbCap } from './floorbosses.mjs';
 import { runLate, TELL, TELLS, ROOM_FAMILIES, DAMPER_KINDS, floorFor, line, lift, own } from './data.mjs';
 import { holdsPart, objectiveBroke, objectiveCycle, objectiveBonus, bonusXp, bonusRolls, backupHit } from './objectives.mjs';
 import { mechValidate, mechIntercept, mechFired, mechPower, exposedCut, mechLanded, mechCommandHit, mechStart, mechClose, mechBroke, lagged, stunnedNow, missedTurn } from './mechanics.mjs';
@@ -2099,6 +2099,7 @@ function engage(s) {
   logFight(s, e.virus); // the Codex tab: a boss fought, a mutation and what it rode on (genome.mjs)
   prepareTicks(s); // the interrupt's ticks on every part, and a boss's rule (interrupt.mjs; not a crew boss or a breach)
   actsStart(s); // a P4 boss's beat on its part (acts.mjs)
+  { const v = s.encounter.virus, W = BOSSES[v?.boss]?.watchdog; if (W) v.watchdog = { at: s.encounter.cycle + W.every - 1, act: 0 }; } // the Resident's Watchdog counts from the first cycle
   fbStart(s); // the floor 2 and 3 bosses' rules (floorbosses.mjs)
   tellStart(s); // a solo fight's tells (tells.mjs)
 }
@@ -2921,6 +2922,7 @@ export function hit(s, p, base, opts = {}) {
   const notes = [];
   // Limiter: no single hit takes more than its share of its max. The rest is lost.
   if (dealt > 0 && !root && capOf(s, p)) { const cap = capOf(s, p); if (dealt > cap) { notes.push(`capped: ${dealt - cap} lost`); dealt = cap; } }
+  if (dealt > 0 && !root) dealt = fbCap(s, p, dealt, notes); // SHAKEDOWN's Leverage (floorbosses.mjs)
   // Lockbox: while it lives, the part it wards loses at most a quarter of its max a cycle, from everything. HASHLORD's Pool
   // Lock (wardCommands) holds back your commands only: burns and helpers go through at full.
   const crush = opts.mine && !opts.server ? 1 + (fxHas(s, 'lock-crush')?.fx.value || 0) / 100 : 1; // Lockpick (a native unique): locks and wards give way faster
@@ -3064,12 +3066,29 @@ function bossPhases(s) {
     }
     emit(s, 'phase', `PHASE ${v.phases.filter((x) => x.done).length + 1}. ${say}`, { boss: v.boss });
   }
+  watchdog(s);
   if (v.enrageAt && e.cycle === v.enrageAt - ENRAGE.warn) emit(s, 'warning', `${v.name} enrages in ${ENRAGE.warn} cycles. Then every attack lands every cycle.`);
   if (v.enrageAt && e.cycle === v.enrageAt && !v.enraged) {
     v.enraged = true;
     for (const p of attackers(s)) { p.attack.interval = 1; p.attack.due = Math.min(p.attack.due, e.cycle + 1); if (['damage', 'encrypt'].includes(p.attack.effect)) p.attack.amount = Math.round(p.attack.amount * ENRAGE.dmg); }
     emit(s, 'phase', `${v.name} ENRAGES. Every attack lands every cycle.`, { boss: v.boss, enrage: true });
   }
+}
+
+// The Resident's Watchdog (BOSSES watchdog, docs/solo-bosses.md "Working the ♛"): every `every` cycles its ♛ stands
+// above its next tick, every other part patches a ◆ (up to its full). Crossing a tick restarts the count; past its last
+// tick there is none.
+export const watchdogIn = (s) => { const v = s.encounter?.virus, c = v?.watchdog && livingParts(s).find((x) => x.core); return c?.ticks?.some((t) => t.phase != null && !t.spent) ? Math.max(0, v.watchdog.at - s.encounter.cycle) : null; };
+function watchdog(s) {
+  const e = s.encounter, v = e.virus, W = BOSSES[v.boss]?.watchdog;
+  if (!W) return;
+  const done = (v.phases || []).filter((x) => x.done).length;
+  if (!v.watchdog || v.watchdog.act !== done) v.watchdog = { at: e.cycle + W.every, act: done };
+  if (watchdogIn(s) !== 0) return;
+  v.watchdog.at = e.cycle + W.every;
+  const got = livingParts(s).filter((p) => !p.core && p.kind === 'system' && p.armor < p.maxArmor);
+  for (const p of got) { p.armor++; p.patchAt = null; }
+  emit(s, got.length ? 'patch' : 'blocked', got.length ? `WATCHDOG. The ♛ still stands above its tick: ${got.map((p) => `the ${p.name}`).join(', ')} ${got.length === 1 ? 'patches' : 'patch'} a ◆.` : 'WATCHDOG. No part has a ◆ to patch.', { boss: v.boss, watchdog: true, ...(got[0] ? { target: got[0].id } : {}) });
 }
 
 // RELAY-KING's Crown Hop: its ♛ (and the phase ticks still to come) moves to its healthiest other part, and the part it
@@ -3089,11 +3108,13 @@ function crownHop(s) {
   for (const t of to.ticks) if (t.spent && v.phases?.[t.phase] && !v.phases[t.phase].done) v.phases[t.phase].at = 2;
   return `${v.name} reroutes. Its ♛ hops to the ${to.name}, and the ${old.name} heals ${old.integrity - was}.`;
 }
-// HOLLOW CHOIR's second voice: a Mimic at the boss's size (fork:mimic before it), beating 2 cycles behind the first.
+// HOLLOW CHOIR's second voice: a Mimic at the ♛'s full size (fork:mimic before it), beating 2 cycles behind the first.
 function secondVoice(s) {
   const e = s.encounter, v = e.virus, T = v.tells, ms = livingParts(s).filter((x) => x.mimic), m2 = ms.length > 1 ? ms.at(-1) : null;
   if (!m2) return 'The Hollow Choir has no voice left to double.';
   if (!T || T.list.some((t) => t.part === m2.id)) return null;
+  const crown = v.parts.find((x) => x.core);
+  if (crown) m2.max = m2.integrity = crown.max; // it joins at the ♛'s full size (docs/solo-bosses.md "Working the ♛")
   const t1 = T.list.find((t) => t.kind === 'mimic'), every = t1?.every || TELLS.mimic.every;
   let first = (t1 ? t1.first : e.cycle + 1) + Math.floor(every / 2);
   while (first < e.cycle + 3) first += every;
