@@ -43,7 +43,7 @@ Every playtest URL runs on a fresh state that is never saved. The real save is n
 | `/?playtest=cryptjack` | A paused fight against a fixture or strain (`splinter`, `ghostroot`…); `random` for a wild one. `&level=`, `&cls=`, `&sub=`, `&family=`, `&seed=`. Type `resume`. |
 | `/?playtest=boss:<id>` | A paused boss fight (`resident`, `repoman`, `choir`…), geared for `&level=` (10 by default). `&family=worm\|ransomware` for the Resident, `&cls=`, `&sub=`, `&seed=`. |
 | `/?playtest=part:<id>` | A fight with that part, at the level it opens (or `&level=`); `part:<id>.exe` its .exe build. |
-| `/?playtest=fx` | The ability effects playtest: a panel that fires every ability's effect, at each Screen effects level and mastery tier, as a hit, crit, hit on ◆ or miss, with a status for it to cash in, and a burn's tick by how far it has run down. `&cls=`, `&crew=<class>`. Virus attacks: four strikes on your bar, with today's sound or their own in a style. |
+| `/?playtest=fx` | The ability effects playtest: a panel that fires every ability's effect, at each Screen effects level and mastery tier, as a hit, crit, hit on ◆ or miss, with a status for it to cash in, and a burn's tick by how far it has run down. `&cls=`, `&crew=<class>`. Virus attacks: every chip theme's strike on your bar, the lash, Scramble, Replicate and Patch, with today's sound or their own in a style. |
 | `/?playtest=run` | Connected to a fresh server. `&family=worm\|ghostroot`, `&template=mailhub\|mirror\|archive\|lab` (its rooms' kind), `&depth=<floor>`. |
 | `/?playtest=rooms` | One server as rooms, clocks ten times as fast. `&class=`, `&level=`, `&kind=`, `&size=small\|medium\|large`, `&floor=`, `&boss=a\|b\|c`, `&hunter=patrol\|track`, `&card=surge\|escort\|pack` (a run card), `&seed=`, `&puzzle=<board>` (its room, and you in it), `&seen` (every room discovered). |
 | `/?playtest=story&beat=<id>` | A test save at a story beat (the editor's *Play from here*). |
@@ -245,7 +245,8 @@ comment saying what it does.
 | `dist/sound.mjs`, `dist/sfx/` | Sound effects from recorded CC0 samples (CREDITS.md). |
 | `dist/abilitysound.mjs` | Ability sounds timed to their effects (docs/ability-sounds-plan.md): the kit, the style round and each class's key 1. `app.js` strikes() plays the picked style in a fight (abilitySound, abilityVoices); `?playtest=fx` plays any. |
 | `dist/abilitysound-all.mjs` | Every other ability's sound in the picked style, built from its row in the effects table, with the mastery tiers' layers and the winning break's flourishes; `abilitysound-levels.mjs` holds their measured levels. |
-| `dist/virussound.mjs` | Virus attack sounds, the style round (docs/ability-sounds-plan.md, "Virus attacks"): Surge, Encrypt, Hash and Discharge in three styles (Corrupt picked, with two more takes on its Encrypt), timed to their chips' strikes. Heard in `?playtest=fx` only; a fight plays today's hurt. |
+| `dist/virussound.mjs` | Virus attack sounds (docs/ability-sounds-plan.md, "Virus attacks"): the list of attacks (ATTACKS), the style round's four in three styles (Corrupt picked, Latch for its Encrypt), timed to their chips' strikes. Heard in `?playtest=fx` only; a fight plays today's hurt. |
+| `dist/virussound-all.mjs` | Every other attack's sound in the picked style: each other chip theme's strike, the lash, Scramble, Replicate and Patch; `virussound-levels.mjs` holds their measured levels. |
 | `dist/soundtrack.mjs`, `dist/music/` | Music and radio chatter (CC0 tracks, CREDITS.md). |
 | `dist/fightmusic.mjs` | Each virus family's fight theme, synthesized live; heat brings its layers in. |
 | `dist/places.mjs` | A sound bed for each floor, and the virus you're fighting. |

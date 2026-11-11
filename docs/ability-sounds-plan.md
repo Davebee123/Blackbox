@@ -91,8 +91,9 @@ Yours is bright and rings out; theirs is dull and falls: no crack on top, a lowe
 | Contact | it lands on your bar, the number's beat | the result: a hit by its size, a crit, blocked (a glance off your wall, no weight), evaded (nothing: the travel passes on) |
 | Tail | what the strike leaves on your bar | its theme (sparks, the last hasps, flames dying down, ticks running out) |
 
-Screen effects off or Motion off: contact and tail on the beat. The family's one-shots stay. Levels match today's hurt
-(`virussound.mjs` TRIM, measured through `renderBoard`).
+Screen effects off or Motion off: contact and tail on the beat. The family's one-shots stay. Levels match today's:
+a medium hit −17 LUFS, a crit −13, blocked −25, evaded −26 (`virussound.mjs` TRIM, `virussound-levels.mjs`, measured
+through `renderBoard`).
 
 1. **Style**: Surge (Pulse Node, at once), Encrypt (Encryptor, seven clamps
    one after another), Hash (Rig, a lob) and Discharge (Accumulator, a wind-up), as a hit small, medium and big, a
@@ -104,7 +105,31 @@ Screen effects off or Motion off: contact and tail on the beat. The family's one
    crushed latches, a stuck slice sagging under each) and B2 Choke (your carrier's hum pinched shut a notch at a
    time, duller each notch, then cut). Latch is picked (`virussound.mjs` PICKED). Surge, Hash and
    Discharge are kept as they are.
-2. **Every attack**: each chip theme's strike (18) and the lash, built from its theme; Scramble, Replicate and Patch.
+2. **Every attack** (built, waiting on the designer's ear): the other 14 themes' strikes and the lash in the pick,
+   each from its strike's own timing (`chipfx.mjs` STRIKE_PLAN: every strike reads its plan), with the pick's hit as
+   the contact (`virussound-all.mjs`). `?playtest=fx` plays all 22 under Virus attacks.
+
+   | Attack | Launch and travel | Tail |
+   |---|---|---|
+   | Cipher | a data burst in two pitches, static rushing over | the last streams landing |
+   | Beacon (ring) | a dull ping, the beam humming, brackets whining in and locking | the ping back, lower |
+   | Chill (frost) | ice breaking on its chip, thin cold air | your signal frozen: one slice held, ice settling |
+   | Zero (erase) | pixels flaking off, more and more | static thinning as the wipe crosses, cut dead |
+   | Bad Write (crumble) | cracks racing, a shatter, shards falling | the rest landing, grit |
+   | Spread (scramble) | a decoding wave, glyphs churning | the wave, rows tearing left and right, falling apart |
+   | Prick (thorn) | nine thwips | eight punctures after the first, a quiver |
+   | Tick (strobe) | a flash tube left, then right, charging between | your signal flickering evenly |
+   | Splice (copy) | the copier's lamp, four copies snapping on, each a generation worse | the thump copied twice, duller |
+   | Scrape (scan) | the emitter, a laser buzz climbing, data ticking off | brackets snap on, static |
+   | Ping (plate) | halves clang shut, lift, come down | steel, the shield ringing low, a rumble |
+   | Ledger | reels ticking, four clunks, the number flying | a countdown, a line struck through |
+   | Turn (mask) | a hum lifting, two voices in turn | a hollow knock, eyes left and right, a tear, halves out of tune |
+   | Gnaw (byte) | a flit, brackets clamp | the shortest: a tear, one stuck slice, a few blips |
+   | Lash (no theme) | static tearing across, a second strand on a crit | 1s and 0s ticking away |
+
+   What isn't a hit on you has one form and no weight: **Scramble** (the scramble strike, then your carrier chopped up
+   and slices out of order; today's `blind`), **Replicate** (the copy strike onto its fragment, which boots: the growl
+   rising where a hit's falls; silent today), **Patch** (static draws in, a latch, steel closing; today's `patch`).
 3. **Charges and bosses**: a tell landing, a boss's signature.
 4. **Land**: a fight plays the pick in place of `hurt`: one contact a batch, the number on the strike's impact (today
    the two are timed apart), a cap shared with yours.

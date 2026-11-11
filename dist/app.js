@@ -41,7 +41,7 @@ import { plan as dmgPlan, queueAfter, absorbOf, armorFloat, missFloat } from './
 import { recapMarkup } from './recap.mjs';
 import { createLash, shakeOf, SHAKE } from './lash.mjs';
 import { createChipFx, chipStrike, chipTheme, STRIKES, STRIKE_PLAN } from './chipfx.mjs';
-import { ATTACKS } from './virussound.mjs';
+import { ATTACKS, OWN_PLAN } from './virussound.mjs';
 import { online, peopleOn } from './presence.mjs';
 import { runnerFloor } from './runners-view.mjs';
 import { matesOf } from './crew.mjs';
@@ -757,7 +757,7 @@ function slowmo() {
   const tick = () => { const t = performance.now() - t0, r = slowAt(t); for (const an of document.getAnimations()) an.playbackRate = r; abilityfx.timeScale(r); if (t < SLOW.dur) requestAnimationFrame(tick); };
   tick();
 }
-const LASH_TRAVEL = 140; // ms: a hit's number shows as the lash lands, not as it leaves the part
+const LASH_TRAVEL = OWN_PLAN.lash.impact; // ms: a hit's number shows as the lash lands, not as it leaves the part
 let cueAt = 0; // when the last damage number queued lands (performance.now() ms)
 // A part's bar steps down hit by hit (the designer: "each instance of damage tick separately on the enemy component bar"):
 // while a batch's numbers play out, each damaged part's bar and HP read what it had before that hit, and drop as its
@@ -4187,15 +4187,26 @@ if (playtest === 'fx') import('./abilityfx-playtest.mjs').then(({ mountFxPlaytes
       if (row) hitfx.strike(row, { kind: 'you', result });
       return 'plain';
     },
-    // A virus attack on you (virussound.mjs: the style round's four): its chip's strike (chipfx.mjs) from the part's chip
-    // to your bar, its number on the strike's impact, and its sound: today's voice for the result, or its own in a style.
+    // A virus attack (virussound.mjs ATTACKS) as a fight draws it (fire): its chip's strike (chipfx.mjs) from the part's
+    // chip to your bar, or the chip's ghost flying there where its theme has none to fly; with no theme, the ghost and
+    // the lash; a replicate's copies land on the part's own bar, standing in for the fragment; a patch swells and clamps
+    // shut where it is. Its number shows on the impact, and its sound plays: today's voice, or its own in a style.
     attack: (key, id, { result, power, sound = 'off' }) => {
-      const A = ATTACKS[key], plan = STRIKE_PLAN[A.theme], drawn = fxLevel() !== 'minimal' && canMove(), land = drawn ? plan.impact : 0, frac = power / 5;
-      const chip = (fxRow(id)?.querySelector('[data-k]') || document.querySelector('#board [data-k]') || fxRow(id))?.getBoundingClientRect(), barEl = document.querySelector(BAR), bar = barEl?.getBoundingClientRect();
-      if (drawn && chip?.width && bar?.width) chipStrike(A.theme, chip, { x: bar.left + bar.width / 2, y: bar.top + bar.height / 2 }, bar, barEl.firstElementChild?.getBoundingClientRect().right ?? null);
-      if (sound !== 'off' && !(sound !== 'today' && feel.attackPreview(sound, key, plan, { result, power }, drawn))) feel.preview({ crit: 'hurtcrit', blocked: 'interrupt', evaded: 'evade' }[result] || 'hurt', { frac }, land / 1000);
+      const A = ATTACKS[key], plan = OWN_PLAN[key] || STRIKE_PLAN[A.theme], drawn = fxLevel() !== 'minimal' && canMove(), land = drawn ? plan.impact : 0, frac = power / 5;
+      if (A.does) result = 'hit';
+      const chipEl = fxRow(id)?.querySelector('[data-k]') || document.querySelector('#board [data-k]') || fxRow(id), chip = chipEl?.getBoundingClientRect();
+      if (drawn && chip?.width) {
+        const ghost = chipEl.cloneNode(true); ghost.querySelector('.fxin')?.remove();
+        fire({ rect: chip, html: ghost.outerHTML, cls: `now${key === 'patch' ? ' patch' : key === 'replicate' ? ' replicate' : ''}`, th: A.theme || '' }, [fxRow(id)?.dataset.target]);
+        if (key === 'lash') lash.lash({ from: lashFrom(fxRow(id)?.dataset.target), bar: document.querySelector(BAR), power, heavy: result === 'crit', mode: 'hit', full: fxLevel() === 'full' });
+      }
+      const today = A.does ? { blind: 'blind', patch: 'patch' }[key] : { crit: 'hurtcrit', blocked: 'interrupt', evaded: 'evade' }[result] || 'hurt'; // (a replicate has no voice today)
+      if (sound !== 'off' && !(sound !== 'today' && feel.attackPreview(sound, key, plan, { result, power }, drawn)) && today) feel.preview(today, { frac }, land / 1000);
       feel.beat(land);
-      if (result === 'evaded' || result === 'blocked') feel.add(result === 'evaded' ? 'evade' : 'interrupt', MINE, result.toUpperCase(), { silent: true });
+      if (key === 'blind') { feel.add(() => flash('SCRAMBLED')); feel.add('blind', '.board', null, { silent: true }); }
+      else if (key === 'patch') feel.add('patch', row(fxRow(id)?.dataset.target), '+◆', { silent: true });
+      else if (key === 'replicate') { /* the fragment's row is its mark in a fight */ }
+      else if (result === 'evaded' || result === 'blocked') feel.add(result === 'evaded' ? 'evade' : 'interrupt', MINE, result.toUpperCase(), { silent: true });
       else {
         feel.add(() => shake(power, result === 'crit'));
         feel.add(result === 'crit' ? 'hurtcrit' : 'hurt', MINE, `−${Math.max(1, Math.round(frac * (defender(campaign).max || 100)))}`, { frac, size: 1 + power * 0.8 + (result === 'crit' ? 0.3 : 0), silent: true, noEdge: drawn, softEdge: !drawn, noFlash: drawn, floatAt: BAR, x: 0.5 });
