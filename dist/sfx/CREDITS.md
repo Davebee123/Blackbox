@@ -71,3 +71,12 @@ Credits for the samples these layer in (all CC0 1.0, public domain; credited any
 | relay, click (UI Audio) | https://kenney.nl/assets/ui-audio | Kenney | CC0 1.0 |
 | subdrop, shimmer (StrongerFX procedural transitions) | https://github.com/smartpage/strongerfx-mcp | StrongerFX | CC0 1.0 |
 | key (Keyboard Soundpack 1, Cherry KC 1000) | https://opengameart.org/content/keyboard-soundpack-1-typing-and-single-keystrokes | unicaegames | CC0 1.0 |
+
+## Victories (`wins/`, Ogg Vorbis)
+
+Synthesized like the bodies above (`FORMAT=ogg SET=4 node tools/sound-preview/render.mjs dist/sfx`), one-shots at −16 LUFS.
+
+| File | What it is | CC0 samples layered in |
+|---|---|---|
+| wins/win-power-cut | A fight won: a breaker drops, the hum sinks, a fan winds down, the metal ticks as it cools | relay, punch-m, tin |
+| wins/win-blackout | A boss down or a server taken over: four breakers left to right, each taking a hum with it, the fans winding down | relay, punch-m, subdrop, tin |

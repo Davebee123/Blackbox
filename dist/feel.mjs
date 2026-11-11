@@ -85,6 +85,10 @@ export const SIGNS = {
   pickup: { flash: 'fx-good', float: 'you', voice: 'pickup', buzz: 12 },
   // The fight is won.
   win: { flash: 'fx-win', voice: 'win', buzz: [30, 60, 90] },
+  // A boss is down, or a server is yours.
+  bosswin: { flash: 'fx-win', voice: 'bosswin', buzz: [30, 60, 90, 60, 140] },
+  // A level gained (levelup-ui.mjs).
+  levelup: { flash: 'fx-win', voice: 'levelup', buzz: [30, 60, 90] },
   // Crash or disconnect.
   lose: { flash: 'fx-hurt', edge: true, voice: 'lose', buzz: [250] },
   // A puzzle room's board (puzzle-view.mjs): a firewall going up, the worm copying into a node, a node discharging, a

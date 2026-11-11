@@ -1270,13 +1270,13 @@ function react(events) {
       case 'harvest': feel.add('pickup', null); break;
       case 'consortium-siege': case 'consortium-raid': case 'consortium-roam': feel.add('prewarn', null); break;
       case 'outpost-held': feel.add('good', null); notice(e.message); break;
-      case 'takeover': flash('TAKEN OVER'); feel.add('win', null); if (e.receipt) receiptCard(e, events); else rewardCard('Taken over', e, events); break;
+      case 'takeover': flash('TAKEN OVER'); feel.add('bosswin', null); if (e.receipt) receiptCard(e, events); else rewardCard('Taken over', e, events); break;
       case 'root': feel.add('unlock', null); rewardCard(`Root ${e.root}`, e, events); break;
       case 'streak': feel.add('win', null); rewardCard('Streak', e, events); break;
       case 'rotation': feel.add(e.rare ? 'prewarn' : 'good', null); break;
       case 'victory':
         flash(campaign.encounter?.rooms?.as === 'exfil' ? 'ARCHIVE RECOVERED' : 'NEUTRALIZED');
-        feel.add('win', '.hud');
+        feel.add(campaign.encounter?.virus?.boss ? 'bosswin' : 'win', '.hud');
         // Let the last break land, then show what the fight gave you.
         ending = true; hideTip(false); ended = e.mode || 'home'; endedAt = performance.now();
         setTimeout(() => { ending = false; }, 900);

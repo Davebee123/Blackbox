@@ -236,7 +236,7 @@ comment saying what it does.
 | `dist/nocarrier.mjs`, `dist/nocarrier.css` | Losing a fight: static and NO CARRIER, then the Disconnected card. |
 | `dist/class-emblems.mjs` | The class picker's ASCII emblems. |
 | `dist/feel.mjs` | The feedback language: each kind of event's one signature in motion and sound. |
-| `dist/sound.mjs`, `dist/sfx/` | Sound effects from recorded CC0 samples (CREDITS.md). |
+| `dist/sound.mjs`, `dist/sfx/` | Sound effects from recorded CC0 samples (CREDITS.md). A fight won and a boss down are whole clips (`sfx/wins`, rendered by `tools/sound-preview/clips4.js`). |
 | `dist/soundtrack.mjs`, `dist/music/` | Music and radio chatter (CC0 tracks, CREDITS.md). |
 | `dist/fightmusic.mjs` | Each virus family's fight theme, synthesized live; heat brings its layers in. |
 | `dist/places.mjs` | A sound bed for each floor, and the virus you're fighting. |

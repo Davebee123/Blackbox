@@ -42,7 +42,7 @@ export function createLevelUpUi({ calm, fighting, feel, keys = () => [], motion 
     host.hidden = false;
     void host.offsetWidth; host.classList.add('show');
     up = { sum };
-    feel.add('win', null);
+    feel.add('levelup', null);
     const n = sum.items.length;
     if (motion()) for (let i = 0; i < n; i++) sounds.push(setTimeout(() => up && feel.add('cycle', null), FLASH + (i + 1) * STEP));
     stay(STAY + (motion() ? FLASH + n * STEP : 0));

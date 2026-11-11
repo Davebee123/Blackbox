@@ -112,8 +112,8 @@ test('it waits for the fight\'s end and the spoils, goes when a fight comes up, 
   cards = false; ui.tick();
   assert.ok(!host.hidden && ui.showing() && host.className.startsWith('levelup lu-b'), 'up once it is calm');
   assert.ok(host.innerHTML.includes('Subclass') && host.innerHTML.includes('SIGINT') && host.innerHTML.includes('[ OK ]'));
-  assert.equal(sounds[0], 'win', 'the level\'s own sound, nothing new');
-  assert.ok(sounds.every((k) => ['win', 'cycle'].includes(k)));
+  assert.equal(sounds[0], 'levelup', 'the level\'s own sound');
+  assert.ok(sounds.every((k) => ['levelup', 'cycle'].includes(k)));
   assert.ok(host.style['--lu-bottom'] && host.style['--lu-top'], 'under the top bar, or over the prompt on a phone');
   fighting = true; ui.tick();
   assert.ok(host.hidden && !ui.showing(), 'a fight sends it away');
@@ -150,7 +150,7 @@ test('nothing over the fight board: the host is outside the fight view, docked u
   assert.doesNotMatch(style, /\.levelup|lu-head|lu-timer|levelup-in/, 'the old banner\'s rules are gone');
   const js = read('./dist/levelup-ui.mjs') + read('./dist/levelup-view.mjs');
   assert.doesNotMatch(js, /canvas|Pixi|new Audio|createSound|\.play\(/);
-  for (const m of js.matchAll(/feel\.add\('(\w+)'/g)) assert.ok(['win', 'cycle'].includes(m[1]), m[1]);
+  for (const m of js.matchAll(/feel\.add\('(\w+)'/g)) assert.ok(['levelup', 'cycle'].includes(m[1]), m[1]);
 });
 
 test('app.js: every level-up goes to the firmware update and waits; the old banner and the switch are gone; preview stays', () => {
