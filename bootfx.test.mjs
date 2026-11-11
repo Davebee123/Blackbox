@@ -1,10 +1,10 @@
 // A fight coming up (dist/bootfx.mjs): the screen boots into it, the virus first (the designer's pick, Centre stage).
 // Leaving a won one: Channel cut, the page folding to a teal line and the next opening out of it. Connecting to a
-// server: Handshake, the dial-up.
+// server: Carrier.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { BOOT, TUBE_ON, VIRUS_ON, CHROME_LOW, HANGUP, hangupLines, bootLines, CUT, CONNECT, DIM, decoded, connectLines } from './dist/bootfx.mjs';
+import { BOOT, TUBE_ON, VIRUS_ON, CHROME_LOW, HANGUP, hangupLines, bootLines, CUT, CONNECT, carrierLine, carrierReach } from './dist/bootfx.mjs';
 
 test('the virus comes on before anything of yours, and it is all over in a little over two seconds', () => {
   for (const k of ['console', 'chrome', 'you', 'youBar', 'board', 'log', 'prompt', 'tray']) assert.ok(BOOT.virus < BOOT[k] && BOOT.enemy < BOOT[k], k);
@@ -14,14 +14,13 @@ test('the virus comes on before anything of yours, and it is all over in a littl
   assert.ok(BOOT.done <= 2200);
 });
 
-test('nothing blinks (the designer: less flashing): a panel only brightens, the map only dims, your chrome never goes out', () => {
+test('nothing blinks (the designer: less flashing): a panel only brightens, your chrome never goes out', () => {
   const rising = (pts) => pts.every(([, v], i) => !i || v >= pts[i - 1][1]);
   for (const [name, pts] of [['TUBE_ON', TUBE_ON], ['VIRUS_ON', VIRUS_ON]]) {
     assert.equal(pts[0][1], 0, name);
     assert.equal(pts.at(-1)[1], 1, name);
     assert.ok(rising(pts), `${name} only brightens`);
   }
-  assert.ok(DIM.every(([, v], i) => !i || v <= DIM[i - 1][1]), 'DIM only dims');
   assert.ok(CHROME_LOW > 0 && CHROME_LOW < 0.5);
   const src = readFileSync('./dist/bootfx.mjs', 'utf8');
   assert.ok(!/bootfx-flash/.test(src), 'no white flash');
@@ -50,32 +49,25 @@ test('leaving a won fight is quick: the page folds, the next one opens out of th
   assert.ok(CUT.done <= 900);
 });
 
-test('connecting dials in order: the lock, the dim with no flash, the name, then the rooms outward, then your chrome', () => {
+test('connecting is one eased move: the line lands, the circle opens, the entry rings as it settles', () => {
   const C = CONNECT;
-  assert.ok(C.lock < C.ping && C.ping < C.dim && C.dim < C.black && C.black < C.name && C.name < C.lines && C.lines < C.fly);
-  assert.ok(C.fly < C.strip && C.strip < C.rooms && C.rooms < C.chrome && C.chrome + TUBE_ON.at(-1)[0] <= C.done);
-  assert.ok(C.dim + DIM.at(-1)[0] <= C.black, 'the dim is over by the black');
-  assert.ok(DIM.every(([, v]) => v <= 1) && DIM.at(-1)[1] < 0.3, 'it only ever dims');
-  assert.ok(C.done <= 2400);
+  assert.ok(C.wire < C.land && C.dimFor <= C.openFor);
+  assert.ok(C.land + C.openFor * 0.8 <= C.ring && C.ring <= C.land + C.openFor, 'the ring comes as the circle closes on the edge');
+  assert.ok(C.ring + C.ringFor <= C.done && C.done <= 1800);
 });
 
-test('the name decodes from noise to itself', () => {
-  assert.equal(decoded('KESSLER-MIRROR-50', 17), 'KESSLER-MIRROR-50');
-  assert.notEqual(decoded('KESSLER-MIRROR-50', 0), 'KESSLER-MIRROR-50');
-  assert.equal(decoded('KESSLER-MIRROR-50', 8).slice(0, 8), 'KESSLER-');
+test('the line runs from the edge of HOME to just short of the node; none when they touch', () => {
+  const l = carrierLine({ x: 100, y: 100 }, { x: 100, y: 400 }, 26, 6);
+  assert.deepEqual([l.x, l.y, l.len], [100, 126, 268]);
+  assert.ok(Math.abs(l.angle - Math.PI / 2) < 1e-9);
+  assert.equal(carrierLine({ x: 0, y: 0 }, { x: 300, y: 0 }).angle, 0);
+  assert.equal(carrierLine({ x: 0, y: 0 }, { x: 30, y: 0 }, 26, 6), null);
 });
 
-test('the dial readout names the server, its level and rooms, and ends on your CONNECT', () => {
-  const lines = connectLines({ name: 'KESSLER-MIRROR-50', level: '10', rooms: 8 });
-  assert.deepEqual(lines.map((l) => l.text), [
-    'dial kessler-mirror-50 ... ring',
-    'carrier ................. 33.6k',
-    'handshake ............... ok',
-    'lv 10 ................... 8 rooms',
-    'CONNECT_',
-  ]);
-  assert.deepEqual(lines.filter((l) => l.you).map((l) => l.text), ['CONNECT_']);
-  assert.equal(connectLines({ name: 'X' })[3].text, 'server .................. up');
+test('the circle opens as far as the page\'s farthest corner', () => {
+  assert.equal(carrierReach({ x: 0, y: 0 }, 300, 400), 500);
+  assert.equal(carrierReach({ x: 300, y: 400 }, 300, 400), 500);
+  assert.equal(carrierReach({ x: 150, y: 200 }, 300, 400), 250);
 });
 
 test('jacking out is the dial-up backwards: the rooms go dark toward yours, the readout, then the map and your server ringed', () => {
