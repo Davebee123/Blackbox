@@ -373,7 +373,7 @@ export const grows = (k) => !!STATS[k]?.flat && k !== 'ram' && k !== 'lead';
 export const FILLS = new Set(['damage', 'critDamage', 'payload', 'signal', 'regen', 'leech']);
 const up = (k, n, L) => (FILLS.has(k) ? filled(n, L) : lifted(n, L));
 // Effect kinds whose value is a flat number (damage, healing, shield, burn growth), and those that add a stat.
-const FLAT_FX = new Set(['damage+', 'heal', 'shield', 'break-hit', 'read-hit', 'burn-grow', 'slow-hit']), STAT_FX = new Set(['stat+', 'stack', 'stat', 'buff']);
+const FLAT_FX = new Set(['damage+', 'heal', 'shield', 'break-hit', 'read-hit', 'burn-grow', 'slow-hit', 'break-frags']), STAT_FX = new Set(['stat+', 'stack', 'stat', 'buff']);
 export const liftsFx = (fx) => !!fx && Number.isFinite(Number(fx.value)) && (FLAT_FX.has(fx.do) || (STAT_FX.has(fx.do) && grows(fx.stat)));
 // An effect block at an item level: its flat value (and cap) lifted, and its written text with it. Others as they are.
 export function liftFx(fx, level) {

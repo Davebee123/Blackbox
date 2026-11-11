@@ -32,6 +32,8 @@ import { JOURNAL_BY } from './journals.mjs';
 import { powerOn } from './poweron.mjs';
 import { relockLeft } from './rogue.mjs';
 import { createHitFx } from './hitfx.mjs';
+import { flourishKey, FIN_LAND } from './abilitysound-all.mjs';
+import { PICKED as SOUND_STYLE, hasSound } from './abilitysound.mjs';
 import { createAbilityFx, keyFor, tickKey, recipeOf, originOf, idOfName, winningBreak, slowAt, SLOW, levelOf as afxLevel } from './abilityfx.mjs';
 import { tierOf as masteryTier } from './mastery.mjs';
 import { plan as dmgPlan, queueAfter, absorbOf, armorFloat, missFloat } from './dmgfx.mjs';
@@ -319,7 +321,9 @@ function afxCommands(events) {
     if (tgt && after.some((x) => x.type === 'damage' && x.via === 'Hook' && x.target === tgt)) marks.push('hooked');
     const pm = (tgt && part(campaign, tgt)?.max) || 50, dealt = mine.reduce((n, x) => n + (x.type === 'damage' ? x.amount || 0 : 0), 0);
     const origin = originOf(e); // its key in the tray, however it was fired (your bar when the key isn't on screen); a crewmate's: their bar
-    out.push({ e, key, R, tgt, mine, result: results && Object.keys(results).length ? allResult(results) : result, results, brokeOn, marks, broke, origin, landEvt: mine[0] || after.find((x) => x.target === tgt) || e, power: dealt ? Math.min(1, dealt / pm) : 0.3 });
+    // What its own sound speaks for (abilitysound.mjs): its hits, its miss, what it puts on, cuts or heals. Never a tick's.
+    const covers = after.filter((x) => !ticked(x) && (mine.includes(x) || x.type === 'miss' || (x.type === 'status' && x.mark) || ((x.type === 'interrupt' || x.type === 'cut') && x.target === tgt) || (x.type === 'heal' && !x.target && R.on === 'you') || (R.motion === 'all' && (x.type === 'damage' || x.type === 'armor'))));
+    out.push({ e, key, R, tgt, mine, covers, result: results && Object.keys(results).length ? allResult(results) : result, results, brokeOn, marks, broke, origin, landEvt: mine[0] || after.find((x) => x.target === tgt) || e, power: dealt ? Math.min(1, dealt / pm) : 0.3 });
   }
   return out;
 }
@@ -333,8 +337,33 @@ function afxLead(events) {
   const plan = abilityfx.plan(c.key, afxRow(c), { origin: c.origin, ability: c.e.ability, who: c.e.who || null, kind: c.e.who ? 'crew' : 'you', tier: afxTier(c.e, c.e.ability), power: c.power, crit: c.result === 'crit', result: c.result, results: c.results, brokeOn: c.brokeOn, marks: c.marks, broke: c.broke }); // a crit's swing draws back first: its numbers wait for that too
   return plan ? Math.min(600, Math.round(plan.impact)) : 0;
 }
+// An ability's own sound (abilitysound.mjs), timed to its effect (p: its plan as played, else none: contact on the
+// number's beat, in `land` ms). A crewmate's is quieter and at tier 1. With none to play, its result's voice.
+function abilitySound(c, p, land) {
+  const shift = p ? land - p.impact : land, cut = Math.min(0, shift); // when its effect starts; cut: already under way
+  const plan = p ? { travel: Math.max(0, p.travel + cut), hold: p.hold, impact: Math.max(0, p.impact + cut), stop: p.stop } : null;
+  if (feel.ability(c.key, plan, { result: c.result, power: c.power, tier: afxTier(c.e, c.e.ability), gain: c.e.who ? CREW_GAIN : 1 }, Math.max(0, shift))) return;
+  feel.say(c.result === 'miss' ? 'miss' : c.result === 'chit' ? 'chit' : c.result === 'crit' ? 'crit' : c.mine.length ? 'hit' : c.R.on === 'you' ? 'buff' : 'mark', { amount: c.mine.reduce((n, x) => n + (x.amount || 0), 0) || 12 }, land);
+}
+const CREW_GAIN = 0.5, CREW_VOICES = 2, SAME_BEAT = 120; // a crewmate's: half as loud, two a batch, none on your beat (ms)
+// The commands in a batch that play their own sound, and the events those speak for (their voices stay quiet). Yours
+// always; a crewmate's unless it lands on your beat or two of theirs already sound.
+function abilityVoices(cmds, delayOf) {
+  const voiced = new Set();
+  if (module !== 'combat' || !feel.abilityOn()) return voiced;
+  const yours = cmds.filter((c) => !c.e.who).map((c) => delayOf(c.landEvt));
+  let crew = 0;
+  for (const c of cmds) {
+    const land = delayOf(c.landEvt);
+    c.sounds = hasSound(SOUND_STYLE, c.key) && (!c.e.who || (crew < CREW_VOICES && !yours.some((t) => Math.abs(t - land) < SAME_BEAT) && !!++crew));
+    if (c.sounds) for (const x of c.covers) voiced.add(x);
+  }
+  return voiced;
+}
 function strikes(events, delayOf = () => 0) {
-  if (module !== 'combat' || fxLevel() === 'minimal') return;
+  const cmds = module === 'combat' ? afxCommands(events) : [], voiced = abilityVoices(cmds, delayOf);
+  if (module !== 'combat') return voiced;
+  if (fxLevel() === 'minimal') { for (const c of cmds) if (c.sounds) pendingStrikes.push(() => abilitySound(c, null, delayOf(c.landEvt))); return voiced; } // no effect to time it: on the number's beat
   const hits = new Map(); // who>part → the strongest result this batch
   const rank = { miss: 0, hit: 1, crit: 2, chit: 3 };
   const afxOn = !!afxLevel({ level: fxLevel(), motion: canMove() });
@@ -348,14 +377,16 @@ function strikes(events, delayOf = () => 0) {
     const land = delayOf(e);
     pendingStrikes.push(() => abilityfx.play(tk, partRow(e.target), { origin: 'here', kind: e.who ? 'crew' : 'you', landIn: land, tier: afxTier(e, idOfName(e.via)), marks: e.marks || [], left: e.left ?? null }));
   }
-  for (const c of afxOn ? afxCommands(events) : []) {
+  for (const c of cmds) {
     const { e, key, tgt, mine, result, marks } = c, land = delayOf(c.landEvt);
+    if (!afxOn) { if (c.sounds) pendingStrikes.push(() => abilitySound(c, null, land)); continue; }
     const strike = mine.length && tgt ? plainStrike(mine[0], result) : null;
     if (tgt) taken.set((e.who || 'you') + '>' + tgt, strike);
     pendingStrikes.push(() => {
       const row = afxRow(c);
       const played = abilityfx.play(key, row, { power: c.power, crit: result === 'crit', result, results: c.results, brokeOn: c.brokeOn, marks, broke: c.broke, kind: e.who ? 'crew' : 'you', origin: c.origin, ability: e.ability, who: e.who || null, landIn: land, tier: afxTier(e, e.ability), onImpact: row ? () => hitfx.jolt(row, result) : null });
       if (!played && strike) later(land, strike); // no room for it: the strike, on the number's beat
+      if (c.sounds) abilitySound(c, played || null, land);
     });
   }
   for (const e of events) {
@@ -370,8 +401,12 @@ function strikes(events, delayOf = () => 0) {
     if (result !== 'miss' && taken.has(key)) continue; // its ability effect plays there instead
     pendingStrikes.push(() => later(delayOf(e), plainStrike(e, result)));
   }
+  return voiced;
 }
 const later = (ms, f) => (ms > 0 ? setTimeout(f, ms) : f());
+// The break that wins the fight sounds your class's flourish (its subclass's, once you've picked one) over the break's own
+// voice, as it slows (abilitysound-all.mjs flourishes).
+const winSound = () => { const cls = classOf(campaign), sub = heroLevel(campaign, cls) >= SUBCLASS.from ? campaign.loadout?.sub?.[cls] : null; feel.ability(flourishKey(cls, sub), { travel: 0, impact: FIN_LAND[cls] || 0 }, {}); };
 let pendingStrikes = [];
 const DISSOLVE_MS = 1000; // a broken part's last moment on the board
 
@@ -1126,7 +1161,7 @@ function react(events) {
   const artHit = (id, kind) => feel.add(() => art.hit(id, kind)); // the render reacts on the event's beat
   // Crewmates' events (crew.mjs). Their turns play a beat apart, so their hits sound like yours.
   // When the virus hits everyone at once, the hits show on each row, and only one of them sounds.
-  strikes(events, split.delay);
+  const voiced = strikes(events, split.delay); // the events an ability's own sound speaks for
   let hurtVoiced = events.some((e) => e.type === 'server-hit' && !e.who);
   // A part's attack: its row lunges and the attack's name comes off it, once per part per batch.
   const lunged = new Set();
@@ -1141,6 +1176,7 @@ function react(events) {
   const famCue = familyCues(campaign, events); // a virus family's attack and break one-shots, layered on the hurt and the break
   for (const e of events) {
     feel.beat(split.delay(e));
+    feel.mute(voiced.has(e));
     const fc = famCue.get(e);
     if (fc) feel.add(() => feel.familyShot(fc.family, fc.kind));
     const f = split.of(e), src = f ? { kind: f.kind + (f.at === 'you' ? ' at-you' : '') + (f.hostile ? ' hostile' : ''), icon: f.icon, label: f.label } : null;
@@ -1187,6 +1223,7 @@ function react(events) {
         // (It waits for the number of the hit that broke it.)
         const wait = split.delay(e);
         if (bp && canMove()) { Object.defineProperty(bp, '_dyingUntil', { value: Date.now() + wait + DISSOLVE_MS, writable: true, configurable: true, enumerable: false }); setTimeout(() => { dirty = true; }, wait + DISSOLVE_MS + 50); pendingStrikes.push(() => later(wait, () => { hitfx.dissolve(partRow(e.target)); if (e === last) slowmo(); })); }
+        if (e === last) pendingStrikes.push(() => later(wait, winSound)); // your class's flourish over the break's voice
       }
         artHit(e.target, 'break'); feel.add(() => flash(e.message)); feel.add('break', '.hud-bar.enemy', 'BROKEN'); if (selected === e.target) selected = null; break;
       case 'server-hit': {
@@ -4124,13 +4161,22 @@ if (playtest === 'fx') import('./abilityfx-playtest.mjs').then(({ mountFxPlaytes
     // A status on the part (its mark shows on the board) for a hit to cash in: Exposed (on a crit), Quarantined, Hooked,
     // Tagged (a burn's tick); '' clears them.
     mark: (id, k) => { const p = part(campaign, id), e = campaign.encounter; if (!p || !e) return; for (const m of ['exposed', 'quarantined', 'hooked', 'tagged']) p[m + 'Until'] = 0; if (k) p[k + 'Until'] = e.cycle + 2; dirty = true; },
-    fire: (key, id, { power, crit, result, hidden, who, tier = 1, marks = [], left = null, broke = null }) => {
-      if (fxLevel() === 'minimal' || !canMove()) return 'none';
+    warm: () => feel.abilityPreview('a', '', null), // wakes the audio and loads the samples
+    fire: (key, id, { power, crit, result, hidden, who, tier = 1, marks = [], left = null, broke = null, sound = 'off' }) => {
+      // Its sound (abilitysound.mjs): today's voice for the result on the number's beat, or the ability's own in a style.
+      const voice = (plan) => {
+        if (sound === 'off' || key.endsWith(':tick')) return;
+        const t = plan ? { travel: plan.travel, hold: plan.hold, impact: plan.impact, stop: plan.stop } : null;
+        if (sound !== 'today' && feel.abilityPreview(sound, key, t, { result, power, tier: who ? 1 : tier })) return;
+        feel.preview(result === 'miss' ? 'miss' : result === 'chit' ? 'chit' : crit ? 'crit' : 'hit', { amount: Math.round(power * 60) }, (t?.impact || 0) / 1000);
+      };
+      if (fxLevel() === 'minimal' || !canMove()) { voice(null); return 'none'; }
       const R = recipeOf(key), row = R?.on === 'you' ? null : fxRow(id), ability = abilityOfKey(key), tick = key.endsWith(':tick');
       const own = ability && document.querySelector(`#tray .ability[data-ability="${CSS.escape(ability)}"]`), stand = !tick && !hidden && !own;
       const keyEl = stand ? document.querySelector('#tray .ability') : null;
       const plan = abilityfx.play(key, row, { power, crit, result, marks, broke, left: tick ? left : null, ability, keyEl, noKey: !!hidden, who: who || null, kind: who ? 'crew' : 'you', origin: tick ? 'here' : who ? 'crew' : 'key', tier: who ? 1 : tier, onImpact: row ? () => hitfx.jolt(row, result) : null });
-      if (plan) { window.__fxPlan = { travel: plan.travel, impact: plan.impact, dur: plan.dur, from: plan.from }; return stand && keyEl ? 'stand-in' : 'fx'; } // the playtest's last plan, for review captures
+      voice(plan || null);
+      if (plan) { window.__fxPlan = { travel: plan.travel, hold: plan.hold, impact: plan.impact, stop: plan.stop, dur: plan.dur, from: plan.from }; return stand && keyEl ? 'stand-in' : 'fx'; } // the playtest's last plan, for review captures
       if (row) hitfx.strike(row, { kind: 'you', result });
       return 'plain';
     },

@@ -231,7 +231,7 @@ test('on the page: a tier plays as asked, on the hidden layer, gone on time, not
   // app.js: yours plays at your tier (a crewmate's at 1), its burn's ticks too, and the playtest previews any tier.
   const app = readFileSync(new URL('./dist/app.js', import.meta.url), 'utf8');
   assert.match(app, /const afxTier = \(e, id\) => \(e\.who \|\| !id \? 1 : masteryTier\(campaign, classOf\(campaign\), id\)\);/);
-  assert.equal((app.match(/tier: afxTier\(/g) || []).length, 3, 'the effect, its plan and its burn\'s ticks');
+  assert.equal((app.match(/tier: afxTier\(/g) || []).length, 4, 'the effect, its plan, its sound and its burn\'s ticks');
   assert.match(app, /tier: who \? 1 : tier,/);
   const pt = readFileSync(new URL('./dist/abilityfx-playtest.mjs', import.meta.url), 'utf8');
   assert.match(pt, /seg\('Mastery', \[\[1, 'tier 1'\], \[2, 'tier 2'\], \[3, 'tier 3'\]\], ui\.tier\)/);

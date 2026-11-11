@@ -39,7 +39,7 @@ function clashOpens(c, fams) {
   const side = (k) => (k in PARTS.tells ? PARTS.tells[k] : Math.min(...fams.map((f) => FAMILIES[f].parts.find((p) => p.gene === k)?.from || 1)));
   return Math.max(PARTS.lever, side(c.a), side(c.b));
 }
-const bossGroup = (id, B) => (B.raid ? 'crew' : B.native ? 'lair' : B.holder ? 'holder' : id === 'resident' || B.resident ? 'resident' : 'solo');
+const bossGroup = (id, B) => (B.raid ? 'crew' : B.native || B.lair ? 'lair' : B.holder ? 'holder' : id === 'resident' || B.resident ? 'resident' : 'solo');
 function bossOpens(id, B) {
   if (B.floor || B.from) return B.floor || B.from;
   const lair = Object.entries(FLOOR.lairs || {}).find(([, xs]) => xs.includes(id));

@@ -35,7 +35,7 @@
 //         opened, once logged) }]
 //   tier  the level tier's numbers (count, live, lead, mult, cap, dot, after, burn, hang), with an elite's or a
 //         boss's extra cap
-import { screened } from './floorbosses.mjs';
+import { screened, sellingGavel, fbSlowed, callingNow, stopCall } from './floorbosses.mjs';
 import { hit, implanted, emit, alive, part, livingParts, attackers, defender, hackerLevel, skillBase, gearStat, attackAmount, strikeWith, toIntent, usable, readyIn, alliesOf, fxAnswer, fxOn, cooldownOf, armorTakes, ignoresArmor } from './combat.mjs';
 import { CONFIG, TELL, TELLS, TELL_SETS, SEAL_FROM, STRAINS, ABILITIES, BOSSES } from './data.mjs';
 import { previewDamage, delayAttack, blocked, scaled, gearDamage } from './combat.mjs';
@@ -685,7 +685,7 @@ export function mimicLands(s, t, p) { // (exported for exe.test.mjs)
   const was = prev ? copyOf(host, prev.id, part(host, prev.target)) : null;
   const copy = was && (!mine || (was.cost || 0) > (mine.cost || 0)) ? was : mine;
   // Echo Cancel blinds it to your helpers too (it turns your command on the Mimic, below).
-  const caught = blind || p.echoCancelUntil >= e.cycle ? [] : caughtHelpers(s, t, p), swarm = caught.reduce((n, h) => n + h.damage, 0);
+  const caught = blind || p.echoCancelUntil >= e.cycle || fxOn(s, 'helpers-safe') ? [] : caughtHelpers(s, t, p), swarm = caught.reduce((n, h) => n + h.damage, 0);
   // HOLLOW CHOIR's Round (v.round, docs/solo-bosses.md): the beat sings back the commands of the cycles before it too, three
   // cycles in all. A cycle you held adds nothing.
   const sung = blind ? [] : sungOf(host, p), notes = [...sung, ...(copy ? [copy] : [])], hits = notes.filter((c) => c.kind === 'hit');
@@ -787,7 +787,7 @@ export function tellCast(s) {
 export const sigintTarget = (s) => { const xs = sigintable(s).filter((t) => inWindow(s, t)); return xs.find((t) => t.kind === 'cast') || xs[0] || null; }; // a cast first: a charge open with it can still be cut
 // Why SIGINT can't fire on a solo fight now, or null: nothing compiling or charging, or no window open yet.
 export function tellSigintCheck(s) {
-  if (sigintTarget(s)) return null;
+  if (sigintTarget(s) || sellingGavel(s) || callingNow(s)) return null; // CENTRIFUGE's selling Surge, RECURSION's Call (floorbosses.mjs)
   const t = sigintable(s)[0];
   const what = sigintCharges(s) ? 'a cast or a charge' : 'a cast';
   if (!t) return `Nothing is compiling${sigintCharges(s) ? ' or charging' : ''}. SIGINT stops ${what}.`;
@@ -795,6 +795,9 @@ export function tellSigintCheck(s) {
 }
 export function tellSigint(s) {
   const t = sigintTarget(s), e = s.encounter;
+  const g = !t && sellingGavel(s);
+  if (!t && !g && callingNow(s)) { e.metrics.interrupts++; stopCall(s); return true; } // RECURSION's Call (floorbosses.mjs)
+  if (g) { e.metrics.interrupts++; emit(s, 'interrupt', `SIGINT cuts the ${g.name}'s selling Surge.`, { target: g.id }); cancelAttack(s, g); fbSlowed(s, g, 'SIGINT'); return true; } // CENTRIFUGE (floorbosses.mjs)
   if (!t) return false;
   const p = sourceOf(s, t);
   t.interrupted = (t.interrupted || 0) + 1;

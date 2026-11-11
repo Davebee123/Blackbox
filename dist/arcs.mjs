@@ -92,7 +92,7 @@ const bossOf = (s, n) => BOSSES[(n && graphOf(s, n).lairBoss) || lairBoss(s, 'yo
 const KING_ROOM = '/net/relay'; // SPRAWL-00's Core (run.mjs KING_ROOM): RELAY-KING, floor 1's stand-in
 const standIn = (s, c) => (c.type === 'boss' && namedBoss(c.named) ? BOSSES[namedBoss(c.named)].name : c.type === 'boss' && !c.slot ? BOSSES.relayking.name : bossOf(s, c.chain)); // who a Boss step's fight is, until its boss is built
 // A Boss step's named boss once it is built (BOSSES by name: a floor job's own, never a lair's or a throne's), or null.
-export const namedBoss = (name) => (name && Object.keys(BOSSES).find((k) => BOSSES[k].name === name && !BOSSES[k].native && !BOSSES[k].throne && !BOSSES[k].raid)) || null;
+export const namedBoss = (name) => (name && Object.keys(BOSSES).find((k) => BOSSES[k].name === name && !BOSSES[k].native && !BOSSES[k].lair && !BOSSES[k].throne && !BOSSES[k].raid)) || null;
 const bossStep = (n) => { const ch = chainOf(n), k = ch ? ch.steps.findIndex((x) => x.kind === 'boss') : -1; return k >= 0 ? { k, step: ch.steps[k] } : null; };
 // The floor job's boss in a server's Core (netrooms.mjs): the server its chain's Boss step points at, once the chain has
 // reached that step, for good (come back for its uniques). Its id, or null (the Resident holds the Core).

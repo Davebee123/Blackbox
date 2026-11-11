@@ -1,6 +1,6 @@
 # Boss guide: floors 2 to 8
 
-**Status.** Floors 2 and 3 built (floorbosses.mjs; the numbers below are the prototypes', GAME_RULES.md has the built ones); the rest designed, not built: how each boss in docs/solo-bosses.md plays, written as a raid guide (what it is, its
+**Status.** Floors 2, 3 and 4 built (floorbosses.mjs; the numbers below are the prototypes', GAME_RULES.md has the built ones); the rest designed, not built: how each boss in docs/solo-bosses.md plays, written as a raid guide (what it is, its
 abilities, each phase, how you die). docs/solo-bosses.md holds the rules; where the two differ, it wins. Prototyped as
 applets with a board a phase (November 2026). Phases start as the ♛ part crosses 60% and 30%; INIT's as its table
 crosses 90, 83, 76 and 68. The numbers are the prototypes' placeholders; the boss sessions set the real ones.
@@ -157,6 +157,10 @@ against you.
 
 **Overview.** Hurt parts spawn fragments, and fragments that live grow into Cameras. Finish what you start.
 
+**As built:** the Hive never hatches; a fragment is shielded until the part that hatched it breaks (then it drops); each
+fragment hatched brings the next sweep a cycle sooner; a hit takes 15% of a part at most; Botnet brings a broken C2 Node
+back, and the Lockout boots a Camera.
+
 **Abilities**
 - **Telnet Sweep** (Hive ♛, every 5, shown 2 ahead): each part under half Integrity spawns a fragment.
 - **Gnaw** (fragment): 6 damage a cycle.
@@ -187,6 +191,10 @@ against you.
 
 **Overview.** Its attacks don't land; they wait. You decide when to take them, at half, before four pile up.
 
+**As built:** it opens with two trades held; one hit on a part clears every hit held there; only the Desk takes damage
+(12% a hit at most), and its two traders go when it breaks; a full table makes later trades 25% bigger; Finality heals
+the Desk 4% for each hit cleared.
+
 **Abilities**
 - **Held hit**: every attack it makes is held on the part that made it (a red tag on that row). Nothing hits you yet.
 - **Clear**: hit a part with a held hit and that hit lands on you at half.
@@ -215,6 +223,9 @@ against you.
 ### BYZANTINE · floor 4's Pits throne · level 26
 
 **Overview.** Three Nodes that heal whichever is hurt most. Spread your damage, then strike between votes.
+
+**As built:** a vote passes only when the lowest Node is 15% or more under the average; each one that passes makes
+every Node hit 30% harder; a hit takes 20% of a Node at most; the traitor is the lowest Node as act 2 starts.
 
 **Abilities**
 - **Vote** (every 4, shown 2 ahead): the most damaged Node is restored to the average of the three. Steel hatching on

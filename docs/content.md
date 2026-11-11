@@ -104,7 +104,7 @@ your native boss until the bosses below are built; a lair found before this keep
 |---|---|---|
 | 2 (7–14) | DEADBOLT 8, BACK ORIFICE 8, PATCH TUESDAY 9, SLEEPWALKER 10, MIRRORSHADE 12 | — |
 | 3 (13–20) | HASHLORD 16, FLOODWALL 16, ECHOLALIA 18 | — |
-| 4 (19–26) | TRIPMINE 20 | CAMSWARM 24 |
+| 4 (19–26) | TRIPMINE 20, CAMSWARM 24 (not a native: a boss with a pair of its own, in the lair's roll) | — |
 | 5 (25–32) | — | GRACE PERIOD 28, PARASITE 32 |
 | 6 (31–38) | — | RING ZERO 34, BRICKWALL 36 |
 | 7 (37–44) | — | PAY RUN 40, BIT BUCKET 42 |
@@ -219,7 +219,7 @@ the endgame.
 | 1 | ✓ | ✓ add PATIENT ZERO, LOVELETTER | ✓ | ✓ | ✓ | ✓ |
 | 2 | ✓ | ✗ → CENTRIFUGE, SHAKEDOWN | ✓ add the side pair, a transmission | ✓ | ✓ | *thin* → CENTRIFUGE, SHAKEDOWN |
 | 3 | ✗ → RAT | ✗ → SHOULDER SURFER, RECURSION | ✓ add a transmission | ✓ | ✓ | *thin* → SHOULDER SURFER, RECURSION |
-| 4 | *thin* → Fileless | ✗ → CAMSWARM, NIGHT DESK, BYZANTINE | ✗ → Kestrel's ground, a transmission | ✓ | ✓ | *thin* → NIGHT DESK, CAMSWARM, BYZANTINE |
+| 4 | *thin* → Fileless | ✓ CAMSWARM, NIGHT DESK, BYZANTINE | ✗ → Kestrel's ground, a transmission | ✓ | ✓ | *thin* → NIGHT DESK, CAMSWARM, BYZANTINE |
 | 5 | ✗ → Polymorph, ACTUARY's portfolio | ✗ → GRACE PERIOD, PARASITE, EXIT NODE, ACTUARY | ✗ → Halcyon | ✗ → Defrag | ✗ → the bridge, Underwriting desk | ✗ → ACTUARY |
 | 6 | ✗ → Rootkit | ✗ → RING ZERO, BRICKWALL, BULKHEAD, BLACKOUT | ✗ → NULL CHOIR | ✗ → deep Deadlock | ✗ → Domain Controller | *thin* → RING ZERO |
 | 7 | ✗ → Stealer | ✗ → PAY RUN, BIT BUCKET, GOLDEN PARACHUTE, SUMP | ✗ → GLASSJAW | ✗ → deep boards | ✗ → Sinkhole | ✓ |
@@ -263,7 +263,7 @@ Ordered for the most variety per hour of work, floors 2–4 first. S is a day or
 | 2 | **Floor holders** (3.1). *Built* | S–M | Floors 2–8 |
 | 3 | **Botnet and Logic Bomb**. *Built* | M | Floor 2 |
 | 4 | **The log sweep as a terminal room**. *Built* | S | Floors 2–8 |
-| 5 | **Floor 2–4 bosses** in three acts: CENTRIFUGE, SHAKEDOWN, SHOULDER SURFER, RECURSION (*built*, with their uniques and set pieces), CAMSWARM, NIGHT DESK, BYZANTINE, with their uniques; the native bosses' own uniques | M | Floors 2–4 |
+| 5 | **Floor 2–4 bosses** in three acts: CENTRIFUGE, SHAKEDOWN, SHOULDER SURFER, RECURSION, CAMSWARM, NIGHT DESK, BYZANTINE (*built*, with their uniques and set pieces); the native bosses' own uniques (not built) | M | Floors 2–4 |
 | 6 | **RAT** | L | Floor 3 |
 | 7 | **Floor 2–4 signatures**: Router, Honeypot, Cold storage. *Built* | S each | Floors 2–4 |
 | 8 | **Deeper chase and Cascade boards**. *Built* | S | Floors 3–8 |
