@@ -16,11 +16,13 @@
 //   tail    what the strike leaves on your bar (sparks, the last hasps, flames dying down, ticks ratcheting out)
 // Round 2, every attack in the pick (virussound-all.mjs builds them from the pick's voices here; their levels are
 // measured into virussound-levels.mjs): each other chip theme's strike, the lash, and Scramble, Replicate and Patch.
+// Round 3, charges and bosses, in the pick: a charge landing and a boss's beat are layers over the attack's own sound
+// (HEAVY; virussound-all.mjs layers), and a cast compiling and a seal landing have a sound each.
 // Heard only in the ability effects playtest (?playtest=fx) and through renderBoard(); a fight plays today's hurt.
 
 import { kit } from './abilitysound.mjs';
-import { every } from './virussound-all.mjs';
-import { LEVELS } from './virussound-levels.mjs';
+import { every, layers } from './virussound-all.mjs';
+import { LEVELS, LAYERS } from './virussound-levels.mjs';
 
 export const STYLES = { a: 'Body', b: 'Corrupt', c: 'Chassis', b1: 'Corrupt, latch', b2: 'Corrupt, choke' };
 // Every attack with a sound: its name, a part that makes it and its chip theme (chipfx.mjs).
@@ -53,13 +55,20 @@ export const ATTACKS = {
   blind: { name: 'Scramble', part: 'Scrambler', theme: 'scramble', does: 'scrambles you' },
   replicate: { name: 'Replicate', part: 'Replicator', theme: 'copy', does: 'spawns a fragment' },
   patch: { name: 'Patch', part: 'its own row', theme: null, does: 'patches itself' },
+  // Round 3, the tells that land on the virus (tells.mjs): a cast compiles its buff; a seal gives every part ◆ back.
+  cast: { name: 'Cast', part: 'its own row', theme: null, does: 'compiles a buff' },
+  seal: { name: 'Seal', part: 'every part', theme: null, does: 'seals ◆ on every part' },
 };
 export const STYLE_KEYS = ['surge', 'encrypt', 'hash', 'discharge'];
 export const PICKED = 'b1'; // the style round's pick: Corrupt, with Latch for its Encrypt
 export const RESULTS = ['hit', 'crit', 'blocked', 'evaded'];
+// Round 3: two more ways a hit lands, each the attack's own sound with a layer over it (the pick only). A charge (a
+// tell landing: the wind-up let go, the floor going under the hit, and what it knocks out after) and a boss's beat (its
+// signature part's attack: the act break's tritone tolling under the hit).
+export const HEAVY = { charge: 'a charge', beat: "a boss's beat" };
 // What has no chip strike to time it: the lash's tip reaches you (lash.mjs; app.js LASH_TRAVEL) and its 1s and 0s fall;
 // a patch chip swells and clamps shut where it is (app.js fire).
-export const OWN_PLAN = { lash: { impact: 140, post: { fall: 500 } }, patch: { impact: 140 } };
+export const OWN_PLAN = { lash: { impact: 140, post: { fall: 500 } }, patch: { impact: 140 }, cast: { impact: 140 }, seal: { impact: 140, step: 70, n: 4 } };
 // The sound of a theme's strike ('lash' for a part with none).
 export const attackOf = (theme) => Object.keys(ATTACKS).find((k) => ATTACKS[k].theme === theme && !ATTACKS[k].does) || 'lash';
 // Levels (dB), so every style is heard at today's loudness, measured through renderBoard(): a medium hit at today's
@@ -389,6 +398,7 @@ const SOUNDS = { a: body(), b: corrupt(), c: chassis(), b1: corrupt(1), b2: corr
 // Round 2: every other attack, in the pick, from the pick's own voices.
 Object.assign(SOUNDS[PICKED], every({ bus, weight, glance, aside, read, wound, side, crushed, stuck, dropout, rot }));
 Object.assign(TRIM[PICKED], LEVELS);
+const LAYER = layers({ bus, weight, glance, aside, read, wound, side, crushed, stuck, dropout, rot });
 
 // How the hit's size and result read. plan: the strike's timing in ms (chipfx.mjs STRIKE_PLAN); drawn: false when no
 // strike is drawn to time it (Screen effects off, Motion off), so it lands at once: contact and tail on the beat.
@@ -400,7 +410,9 @@ export function attackTiming(t, plan, { result = 'hit', power = 0.3, gain = 1 } 
     pre: marks(p.pre, (ms) => t + s(ms)), post: marks(p.post, (ms) => hit + Math.max(0, ms) / 1000),
     t, hit, lift: t + s(p.lift), wind: (p.wind || [0, 0]).map((x) => t + s(x)), again: drawn ? (p.again || []).map((x) => t + s(x)) : [],
     step: Math.max(0, p.step || 0) / 1000, n: p.n || 1, stop: hit + Math.max(0, p.stop || 0) / 1000, tail: Math.max(0, p.tail || 0) / 1000,
-    result, k: Math.max(0, Math.min(1, power)), flies: s(p.impact) > 0.02, gain,
+    // A charge and a boss's beat land as the attack's hit at its size; heavy: which layer goes over it.
+    result: HEAVY[result] ? 'hit' : result, heavy: HEAVY[result] ? result : null,
+    k: Math.max(0, Math.min(1, power)), flies: s(p.impact) > 0.02, gain,
   };
 }
 
@@ -421,7 +433,12 @@ export function playAttack(ctx, out, style, key, T, buf) {
     if (first !== hit) { p.setValueAtTime(base, Math.max(T.t, T.hit - 0.004)); p.linearRampToValueAtTime(hit, Math.max(T.t + 0.001, T.hit - 0.0005)); }
     return g;
   };
-  fn(kit(ctx, buf), { dry: bus(out.dry), room: bus(out.room) }, T);
+  const K = kit(ctx, buf);
+  fn(K, { dry: bus(out.dry), room: bus(out.room) }, T);
+  if (T.heavy && style === PICKED && !ATTACKS[key]?.does) { // its layer, at a level of its own
+    const g = base * db(LAYERS[T.heavy]), on = (dest) => { const n = ctx.createGain(); n.gain.value = g; n.connect(dest); return n; };
+    LAYER[T.heavy](K, { dry: on(out.dry), room: on(out.room) }, T);
+  }
   return true;
 }
 export const hasAttack = (style, key) => !!SOUNDS[style]?.[key];

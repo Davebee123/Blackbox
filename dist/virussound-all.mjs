@@ -8,6 +8,8 @@
 //   tail     what the strike leaves on your bar (streams still landing, the wipe running out, thorns quivering)
 // Then the lash (a part with no theme), and three that aren't a hit on you: Scramble (your timers go dark), Replicate
 // (the copies land on a new fragment, and it boots) and Patch (a part seals itself).
+// Round 3 (layers): a charge landing and a boss's beat, each a layer over any attack's own sound; and two tells that land
+// on the virus: a cast compiling and a seal.
 // virussound.mjs hands in the pick's own voices (H) and plays these with the round's four.
 
 // Each sound: (K, out, T) as virussound.mjs describes; T.pre and T.post are the strike's other marks (s).
@@ -332,6 +334,42 @@ export function every(H) {
       K.kick(o.dry, hit, { f0: 90, f1: 50, d: 0.12, peak: 0.6, click: 0 });
       for (let i = 0; i < 6; i++) grain(K, b, hit + 0.12 + 0.3 * (1 - Math.pow(1 - i / 5, 1.6)), 'glitch', { rate: 0.7 * Math.pow(1.1, i), gain: 0.14 + 0.02 * i, dur: 0.02, pan: side() });
     },
+    // A cast compiles: slices chattering faster as it builds, a latch, and the virus's hum climbing and holding where
+    // yours cuts out; two dull latches as it's done.
+    cast(K, o, T) {
+      const { t, hit } = T, { fx, b } = crushed(K, o, { time: 0.12, fb: 0.45, wet: 0.4 });
+      if (T.flies) {
+        K.stat(b, t, { d: 0.02, peak: 0.1 });
+        K.S(fx, 0, 'scratch', { reverse: true, end: hit, dur: Math.min(0.14, hit - t), gain: 0.28, rate: 0.5 });
+        for (let i = 1; i < 7; i++) grain(K, b, t + (hit - t) * (1 - Math.pow(1 - i / 7, 1.6)), 'glitch', { rate: 0.6 * Math.pow(1.12, i), gain: 0.1 + 0.02 * i, dur: 0.016, pan: side() });
+      }
+      K.S(b, hit, 'relay', { gain: 0.45, rate: 0.6 });
+      K.hiss(b, hit, { type: 'lowpass', f0: 1600, a: 0.0005, d: 0.02, peak: 0.35 });
+      K.tone(b, hit, { type: 'square', f0: 55, f1: 82, glide: 0.1, a: 0.001, d: 0.14, peak: 0.3 });
+      K.fm(b, hit + 0.01, { fc: 55, f1: 110, ratio: 1.5, i0: 1, i1: 6, dur: 0.5, peak: 0.34 });
+      K.hum(fx, hit + 0.04, { f: 55, f1: 82, d: 0.6, peak: 0.16, bright: 1300, a: 0.08 });
+      K.kick(o.dry, hit, { f0: 80, f1: 44, d: 0.14, peak: 0.4, click: 0 });
+      for (const [i, x] of [hit + 0.5, hit + 0.58].entries()) { K.S(b, x, 'relay', { gain: 0.3, rate: 0.8 - 0.1 * i }); K.tone(b, x, { f0: 110, f1: 60, glide: 0.03, a: 0.001, d: 0.03, peak: 0.12 }); }
+    },
+    // A seal lands: Patch on every part, one after another down the board, each latch lower; then the same torn off
+    // you: steel pulled away backwards, and your carrier dipping.
+    seal(K, o, T) {
+      const { t, hit } = T, { fx, b } = crushed(K, o, { time: 0.1, fb: 0.4, wet: 0.4 }), n = Math.max(2, T.n), step = T.step || 0.07, end = hit + (n - 1) * step;
+      if (T.flies) {
+        K.stat(b, t, { d: 0.02, peak: 0.1 });
+        K.S(fx, 0, 'scratch', { reverse: true, end: hit, dur: Math.min(0.14, hit - t), gain: 0.28, rate: 0.6 });
+        K.flight(b, t, hit, { f0: 300, f1: 1400, q: 1, peak: 0.1, color: 'sah' });
+      }
+      for (let i = 0; i < n; i++) {
+        const x = hit + i * step;
+        K.S(K.pan(b, side()), x, 'relay', { gain: 0.36, rate: 0.75 - 0.04 * i });
+        K.S(b, x + 0.004, 'plate-h', { gain: 0.34, rate: 0.7 - 0.05 * i, lp: 2400 });
+        K.tone(b, x, { type: 'square', f0: 70, f1: 110 - 6 * i, glide: 0.05, a: 0.001, d: 0.06, peak: 0.16 });
+      }
+      K.modes(o.room, end, [[196, 1, 0.4], [466, 0.4, 0.25]], { peak: 0.06 });
+      K.S(b, 0, 'plate-h', { reverse: true, end: end + 0.3, dur: 0.2, gain: 0.3, rate: 0.6, lp: 2200 });
+      dropout(K, fx, end + 0.3, 0.25, { f: 98, peak: 0.12 });
+    },
     // Patch: static draws in to the part, a latch is thrown, steel closes over it, and its hum comes back a notch up.
     patch(K, o, T) {
       const { t, hit } = T, { fx, b } = crushed(K, o, { time: 0.09, fb: 0.35, wet: 0.35 });
@@ -346,6 +384,38 @@ export function every(H) {
       K.fm(b, hit + 0.01, { fc: 62, f1: 92, ratio: 2, i0: 1.5, i1: 5, dur: 0.22, peak: 0.2 });
       K.modes(o.room, hit, [[196, 1, 0.3], [466, 0.4, 0.2]], { peak: 0.05 });
       K.hum(fx, hit + 0.05, { f: 92, f1: 98, d: 0.25, peak: 0.06, bright: 900, a: 0.02 });
+    },
+  };
+}
+
+// Round 3: what goes over an attack's own sound when it lands as more than a hit. Each: (K, out, T).
+export function layers(H) {
+  const { crushed, dropout } = H;
+  return {
+    // A charge (a tell landing): three cycles of wind-up let go as it flies, a
+    // long draw-in and a low riser; metal groaning as it lands and the floor going a beat after; then what it knocks out: a
+    // power-down, your carrier gone for a long moment, a breaker dropping.
+    charge(K, o, T) {
+      const { t, hit } = T, { fx, b } = crushed(K, o, { time: 0.14, fb: 0.5, wet: 0.45 });
+      if (T.flies && hit - t > 0.1) {
+        K.S(fx, 0, 'scratch', { reverse: true, end: hit, dur: Math.min(0.32, hit - t), gain: 0.4, rate: 0.4 });
+        K.whine(fx, t, hit, { f0: 55, f1: 165, peak: 0.1, lp: 700 });
+        K.crackle(b, t, hit, { f: 1400, peak: 0.16 });
+      }
+      K.boom(K.g(0.9, o.dry), hit + 0.09, { f0: 58, f1: 22, glide: 0.3, d: 0.7, peak: 0.3, body: 0.5 });
+      K.S(b, hit + 0.01, 'metal-l', { gain: 0.6, rate: 0.4, lp: 1400 });
+      K.surge(b, hit + 0.2, { f0: 240, f1: 30, d: 0.4, peak: 0.34, drive: 4, bright: 2000 });
+      dropout(K, fx, hit + 0.25, 0.55, { f: 70, peak: 0.2 });
+      K.S(b, hit + 0.62, 'relay', { gain: 0.35, rate: 0.5 });
+    },
+    // A boss's beat (its signature part's attack): the act break's low G against its tritone, in squares, tolling once
+    // under the hit and closing down, a second toll far off in the room.
+    beat(K, o, T) {
+      const { hit } = T, lp = K.f('lowpass', 140, 3, o.dry), far = K.f('lowpass', 420, 1, o.room), G = 49;
+      lp.frequency.setValueAtTime(140, hit); lp.frequency.exponentialRampToValueAtTime(900, hit + 0.12); lp.frequency.exponentialRampToValueAtTime(240, hit + 0.85);
+      for (const r of [1, 1.414, 2.003]) for (const det of [-7, 7]) K.tone(lp, hit, { type: 'square', f0: G * r, a: 0.02, hold: 0.22, d: 0.62, peak: 0.1, detune: det });
+      K.tone(o.dry, hit, { f0: G, f1: G / 2, glide: 0.5, a: 0.05, hold: 0.15, d: 0.6, peak: 0.25 });
+      for (const r of [2.003, 2.828]) K.tone(far, hit + 0.28, { type: 'square', f0: G * r, a: 0.03, hold: 0.1, d: 0.6, peak: 0.05 });
     },
   };
 }

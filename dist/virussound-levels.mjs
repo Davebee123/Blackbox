@@ -1,6 +1,7 @@
 // Levels (dB) for round 2's attacks in the pick (virussound.mjs TRIM has the style round's four), measured through
 // renderBoard() to the same marks: a medium hit −17 LUFS (momentary max), a crit −13, blocked −25, evaded −26.
-// Scramble at today's blind (−22), Patch at today's patch (−25), Replicate between them (−23).
+// Scramble at today's blind (−22), Patch at today's patch (−25), Replicate between them (−23); a cast −19 (today it
+// plays the hurt), a seal −22.
 export const LEVELS = {
   cipher: { level: -1.2, crit: -1.3, blocked: -0.2, evaded: 1.2 },
   ring: { level: -1.3, crit: -1.4, blocked: 1.1, evaded: 2.9 },
@@ -20,4 +21,9 @@ export const LEVELS = {
   blind: { level: -5.2 },
   replicate: { level: -4.5 },
   patch: { level: -3.3 },
+  cast: { level: -0.3 },
+  seal: { level: -1.9 },
 };
+// Round 3's layers (dB over the attack's own level): with one on, a big hit comes to about a crit's −13 (a charge) or
+// −13.8 (a boss's beat); a medium one about 1.5 under that.
+export const LAYERS = { charge: -4, beat: -3.6 };

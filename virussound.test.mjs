@@ -4,8 +4,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { STYLES, ATTACKS, STYLE_KEYS, OWN_PLAN, RESULTS, TRIM, PICKED, attackTiming, attackOf, playAttack, hasAttack } from './dist/virussound.mjs';
-import { LEVELS } from './dist/virussound-levels.mjs';
+import { STYLES, ATTACKS, STYLE_KEYS, OWN_PLAN, RESULTS, HEAVY, TRIM, PICKED, attackTiming, attackOf, playAttack, hasAttack } from './dist/virussound.mjs';
+import { LEVELS, LAYERS } from './dist/virussound-levels.mjs';
 import { STRIKE_PLAN, STRIKES, CHIP_THEMES } from './dist/chipfx.mjs';
 import { BANK } from './dist/sound.mjs';
 
@@ -50,7 +50,7 @@ test('every style has a sound and levels for each of the round\'s attacks, on a 
   }
 });
 
-test('the pick has a sound and measured levels for every attack: each theme\'s strike, the lash, Scramble, Replicate and Patch', () => {
+test('the pick has a sound and measured levels for every attack: each theme\'s strike, the lash, and what isn\'t a hit on you', () => {
   for (const th of STRIKES) {
     const key = attackOf(th), a = ATTACKS[key];
     assert.ok(a && a.theme === th && !a.does, `${th} has an attack of its own`);
@@ -58,8 +58,8 @@ test('the pick has a sound and measured levels for every attack: each theme\'s s
     if (a.part !== 'Fragment') assert.equal(CHIP_THEMES[a.part], th, `${a.part} wears ${th}`);
   }
   assert.equal(attackOf(null), 'lash');
-  assert.equal(Object.keys(ATTACKS).length, STRIKES.size + 1 + 3);
-  assert.deepEqual(Object.keys(ATTACKS).filter((k) => ATTACKS[k].does), ['blind', 'replicate', 'patch']);
+  assert.equal(Object.keys(ATTACKS).length, STRIKES.size + 1 + 5);
+  assert.deepEqual(Object.keys(ATTACKS).filter((k) => ATTACKS[k].does), ['blind', 'replicate', 'patch', 'cast', 'seal']);
   assert.deepEqual([ATTACKS.blind.theme, ATTACKS.replicate.theme], ['scramble', 'copy'], 'a Scramble and a Replicate ride their themes\' strikes');
   for (const [key, a] of Object.entries(ATTACKS)) {
     assert.ok(hasAttack(PICKED, key), key);
@@ -123,6 +123,24 @@ test('a crit plays more than a small hit, an evaded one less; a blocked one carr
     assert.ok(n({ result: 'evaded' }) < n({ result: 'hit', power: 0.4 }), `${id}: less when it misses`);
     for (const name of ['subdrop', 'soft-h', 'punch-h', 'punch-m', 'plate-l']) assert.ok(!play(style, key, { result: 'blocked', power: 0.9 }).asked.has(name), `${id}: blocked, no ${name}`);
   }
+});
+
+test('a charge and a boss\'s beat are the attack\'s own hit with a layer over it, in the pick only', () => {
+  assert.deepEqual(Object.keys(HEAVY), ['charge', 'beat']);
+  for (const h of Object.keys(HEAVY)) {
+    assert.equal(typeof LAYERS[h], 'number', `${h} is measured`);
+    const T = attackTiming(1, STRIKE_PLAN.heat, { result: h, power: 0.9 });
+    assert.deepEqual([T.result, T.heavy], ['hit', h]);
+    for (const key of Object.keys(ATTACKS).filter((k) => !ATTACKS[k].does)) for (const drawn of [true, false]) {
+      const plain = play(PICKED, key, { result: 'hit', power: 0.9 }, drawn), heavy = play(PICKED, key, { result: h, power: 0.9 }, drawn), id = `${key} ${h}${drawn ? '' : ', not drawn'}`;
+      assert.ok(heavy.ok && heavy.at.length >= plain.at.length + 4 - 2, `${id}: more than the hit`); // (a hit's own count wobbles by a slice or two)
+      assert.ok(Math.min(...heavy.at) >= heavy.T.t - 1e-6 && Math.max(...heavy.at) < heavy.T.hit + 1.5, `${id}: in time`);
+      for (const name of heavy.asked) assert.ok(BANK[name], `${id}: ${name} is in the bank`);
+    }
+  }
+  assert.equal(attackTiming(1, STRIKE_PLAN.heat, { result: 'crit' }).heavy, null);
+  // What isn't a hit on you has one form: no layer.
+  assert.equal(play(PICKED, 'patch', { result: 'charge' }).at.length, play(PICKED, 'patch', { result: 'hit' }).at.length);
 });
 
 test('what isn\'t a hit on you carries no weight: no boom\'s sub-drop, no punch', () => {
