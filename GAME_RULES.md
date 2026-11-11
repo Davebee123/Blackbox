@@ -558,7 +558,7 @@ It remembers `s.dex` (genome.mjs) and `s.research`; crewmates' fights don't writ
 
 ### Solo bosses
 
-Bosses have phases and an enrage. A solo boss's **♛ part** (its signature) has phase ticks at 60% and 30% (BYZANTINE's at 78% and 42%: docs/solo-bosses.md "Act length") instead of
+Bosses have phases and an enrage. A solo boss's **♛ part** (its signature) has phase ticks at 60% and 30% instead of
 interrupts: taking it across one starts its next phase; its other parts interrupt as usual (interrupt.mjs rule a;
 `developer bossrule b|c` tries the alternatives). A boss brings three tells, every one open at its level. From its
 enrage cycle every attack lands every cycle, a quarter harder, with a warning three cycles before. A phase change
@@ -594,10 +594,10 @@ Each plays in acts (below) with a part and a rule of its own, and a mechanic an 
 On the board: ♛ on the crown part, ×*n* fragments on the Relay, §*n* Liens on the Ledger, *round* on a Mimic.
 
 **Floor bosses** (floorbosses.mjs, docs/boss-guide.md). Floors 2, 3 and 4 have bosses of their own: parts of their own
-only, the ♛'s act ticks at **60% and 30%** (BYZANTINE's at 78% and 42%; every other part's ticks stay at 50% and 25%), the beat on a part of their
+only, the ♛'s act ticks at **60% and 30%** (every other part's ticks stay at 50% and 25%), the beat on a part of their
 own, a tell an act from their set (floor 4's deal none: their rule is the fight), and a verb an act. 0.4× to 0.91× Integrity, with more of it on the ♛; they enrage at cycle 36 to 44. Played blind (no rule answered) each loses most of its fights, and one misread at the wrong cycle makes the rest of the fight harder (a sale, a leak, a Dump or a Call grows the next).
 
-| Boss | Where | Lv | Its rule (on its row) | Act 2 (♛'s first tick) | Act 3 (♛'s second tick) |
+| Boss | Where | Lv | Its rule (on its row) | Act 2 (♛ at 60%) | Act 3 (♛ at 30%) |
 |---|---|---|---|---|---|
 | CENTRIFUGE (GLASSJAW) | Floor 2's floor job: its Boss step's server's Core | 14 | **Bidding**, on the Gavel (no ticks, so never cut): from every 3 cycles, each Surge it lands takes it one sooner, down to 2. Each one-part command you aim at it while the Rotor stands is a bid, one faster too (a delay or a Throttle isn't). A delay or Throttle on it withdraws it to 4, and SIGINT cuts a selling Surge. A Surge at every 2 sells to the buyer it names, whose part joins (TOLLGATE's Lockbox wards the Rotor ♛, SWARMLINE's Mirror twins the Gavel, PALEMASK's Veil hides its timers); the Gavel drops to every 3, and each sale makes its Surge 50% harder for the fight. Nothing sells once the Rotor breaks. The Rotor's Encrypt comes every 7 cycles; no beat holds its ticks | **Reserve price**: a withdraw steps it back one | **Second lot**: two buyers a sale |
 | SHAKEDOWN (TOLLGATE) | The last room of every floor-2 Pit; back an hour after it falls | 12 | **Ransom Clock**, run by the Collector ♛ (it stops when the Collector breaks): 10 cycles; at 0 it leaks 35% of your max, 15% more each leak after (up to 65%), and restarts at 5. A Demand broken while the Collector stands halves the time left (*missed payment*). A Deadline (the Demand's, a wind-up) that lands adds 3; one called off buys nothing. Its Lockbox wards the Demand | **Second demand**, its Deadline on the same cycle; the Lockbox wards it too | **Final notice**: a leak re-arms the Demands and brings the Lockbox back |

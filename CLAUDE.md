@@ -111,6 +111,8 @@ rules as built, README.md the code map, `docs/` the design docs (docs/style-guid
   routine wins. Hard means several threats at once, each choice a lesser evil (docs/puzzle-fights.md decision 15);
   about 30% Signal a same-level fight, and gear matters. A boss's signature changes the fight and ties to its lore; shutting a skill off is a side rule at
   most.
+- **Act ticks:** every boss's ♛ crosses into its acts at 60% and 30%. Ticks and Integrity stay consistent across
+  bosses; a boss whose acts run uneven gets its behaviour or mechanics changed, never its own ticks.
 
 ## Backlog
 

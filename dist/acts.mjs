@@ -1,6 +1,6 @@
 // Boss acts (docs/puzzle-fights.md P4): a beat that repeats, three acts, and the one to leave. A P4 boss (BOSSES[id].acts,
 // by family for the Resident) plays in three acts: the first from the start, the next two from its ♛ part's ticks at 60%
-// and 30% (interrupt.mjs rule a; BOSSES[id].ticks where a boss has its own). Each act deals one more of its tells and quickens its beat; the last speeds every attack.
+// and 30% (interrupt.mjs rule a, TICKS.act: the same for every boss). Each act deals one more of its tells and quickens its beat; the last speeds every attack.
 //
 //   the beat     one move on a fixed rhythm, always on the board: the Backlash (on its beat, a part your command hits
 //                that doesn't break lashes back: its own attack lands at once, doubled), the Mimic's copy (HOLLOW CHOIR),

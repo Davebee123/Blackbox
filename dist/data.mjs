@@ -1104,10 +1104,10 @@ export const BOSSES = {
   choir: { long: { hp: 0.95, dmg: 1.6, enrageAt: 40 }, name: 'HOLLOW CHOIR', family: 'ghostroot', third: 'mimic', hp: 1.4, dmg: 1, enrageAt: 16, acts: { beat: 'copy' }, signature: { name: 'Canon', rule: 'Its Mimic copies your command on its beat. At 60% a second voice beats 2 cycles behind the first, and at 30% each beat plays back your last three commands.' },
     phases: [{ at: 0.5, do: ['fork:mimic', 'voice'], say: 'A second voice joins the Hollow Choir, two beats behind the first.' }, { at: 0.25, do: ['round'], say: 'The Hollow Choir sings the round. Each beat plays back your last three commands.' }] },
   // The floor 2 and 3 bosses (docs/solo-bosses.md "Proposed: floors 2–8", floorbosses.mjs): own parts only (own), a
-  // crown (♛) and its act ticks at 60% and 30% (ticks), their beat on a part of their own (acts 'part'), and a verb an act.
+  // crown (♛) with the act ticks every boss's ♛ carries (interrupt.mjs TICKS.act), their beat on a part of their own (acts 'part'), and a verb an act.
   // throne: the rogue server kind and floor whose last room it holds (rogue.mjs); the others, a floor job's Core (arcs.mjs).
   // CENTRIFUGE: floor 2's floor job (arcs.mjs), GLASSJAW's. Bidding on the Gavel; its buyers join from its sales.
-  centrifuge: { long: { hp: 1, dmg: 0.36, enrageAt: 36 }, name: 'CENTRIFUGE', family: 'ransomware', author: 'glassjaw', own: true, crown: 'rotor', ticks: [0.6, 0.3], floor: 14, hp: 0.91, dmg: 1, enrageAt: 18, acts: { beat: 'none' }, // no beat: withdrawing the Gavel is the answer, so nothing holds its ♛ ticks
+  centrifuge: { long: { hp: 1, dmg: 0.36, enrageAt: 36 }, name: 'CENTRIFUGE', family: 'ransomware', author: 'glassjaw', own: true, crown: 'rotor', floor: 14, hp: 0.91, dmg: 1, enrageAt: 18, acts: { beat: 'none' }, // no beat: withdrawing the Gavel is the answer, so nothing holds its ♛ ticks
     extra: [{ id: 'rotor', name: 'Rotor', integrity: 62, armor: 1, loot: 'Rotor Bearing', special: true, attack: { name: 'Encrypt', effect: 'encrypt', amount: 4, interval: 7, first: 5 } },
       { id: 'gavel', name: 'Gavel', integrity: 50, armor: 2, loot: 'Gavel Head', gavel: true, noTicks: true, beat: true, attack: { name: 'Surge', effect: 'damage', amount: 14, interval: 3, first: 3 } }],
     buyers: { tollgate: { id: 'lockbox', name: 'Lockbox', integrity: 24, armor: 1, loot: 'Lock Pin', ward: 'rotor' }, swarmline: { id: 'mirror', name: 'Mirror', integrity: 18, armor: 1, loot: 'Mirror Shard', twin: 'gavel', attack: { name: 'Splice', effect: 'damage', amount: 18, interval: 3 } }, palemask: { id: 'veil', name: 'Veil', integrity: 20, armor: 1, loot: 'Veil Thread', veiled: true, attack: { name: 'Sting', effect: 'damage', amount: 20, interval: 3 } } },
@@ -1122,7 +1122,7 @@ export const BOSSES = {
     about: 'A two-part fight that grows parts if its Gavel runs fast. TOLLGATE\'s Lockbox wards the Rotor, SWARMLINE\'s Mirror twins the Gavel, and PALEMASK\'s Veil hides its timers.',
     phases: [{ at: 0.6, do: ['reserve'], name: 'Reserve price', say: 'CENTRIFUGE sets a reserve price. A delay or Throttle steps the Gavel back only one.' }, { at: 0.3, do: ['lot2'], name: 'Second lot', say: 'CENTRIFUGE opens a second lot. Each sale brings two buyers.' }] },
   // SHAKEDOWN: the throne of floor 2's Pits (rogue.mjs), TOLLGATE's. The Ransom Clock on its bar; its Demand's Deadline pays it.
-  shakedown: { long: { hp: 1, dmg: 0.36, enrageAt: 36 }, name: 'SHAKEDOWN', family: 'ransomware', author: 'tollgate', own: true, crown: 'collector', ticks: [0.6, 0.3], floor: 12, hp: 0.4, dmg: 1, enrageAt: 18, acts: { beat: 'part', part: 'demand' }, throne: { kind: 'pit', floor: 2 },
+  shakedown: { long: { hp: 1, dmg: 0.36, enrageAt: 36 }, name: 'SHAKEDOWN', family: 'ransomware', author: 'tollgate', own: true, crown: 'collector', floor: 12, hp: 0.4, dmg: 1, enrageAt: 18, acts: { beat: 'part', part: 'demand' }, throne: { kind: 'pit', floor: 2 },
     extra: [{ id: 'collector', name: 'Collector', integrity: 76, armor: 1, loot: 'Collection Plate', special: true, attack: { name: 'Surge', effect: 'damage', amount: 12, interval: 4, first: 3 } },
       { id: 'demand', name: 'Demand', integrity: 34, armor: 1, loot: 'Ransom Note', deadline: true, beat: true, attack: { name: 'Deadline', effect: 'damage', amount: 15, interval: 5, first: 4, windup: 14 } },
       { id: 'lockbox', name: 'Lockbox', integrity: 16, armor: 0, loot: 'Lock Pin', ward: 'demand' }],
@@ -1137,7 +1137,7 @@ export const BOSSES = {
     about: 'A race against its clock, where taking a Deadline buys time. While its Lockbox stands, the Demand loses at most a quarter of its max a cycle.',
     phases: [{ at: 0.6, do: ['demand2'], name: 'Second demand', say: 'SHAKEDOWN sends a second Demand. Its Deadline lands on the same cycle as the first.' }, { at: 0.3, do: ['notice'], name: 'Final notice', say: 'SHAKEDOWN sends a final notice. Each leak now re-arms the Demands and brings the Lockbox back.' }] },
   // SHOULDER SURFER: floor 3's floor job (arcs.mjs), NULL CHOIR's. A Logger that only windows hurt, every other cycle.
-  shouldersurfer: { long: { hp: 1, dmg: 0.55, enrageAt: 44 }, name: 'SHOULDER SURFER', family: 'ghostroot', author: 'nullchoir', own: true, crown: 'logger', ticks: [0.6, 0.3], floor: 18, hp: 0.85, dmg: 1, enrageAt: 18, acts: { beat: 'part', part: 'logger' },
+  shouldersurfer: { long: { hp: 1, dmg: 0.55, enrageAt: 44 }, name: 'SHOULDER SURFER', family: 'ghostroot', author: 'nullchoir', own: true, crown: 'logger', floor: 18, hp: 0.85, dmg: 1, enrageAt: 18, acts: { beat: 'part', part: 'logger' },
     extra: [{ id: 'logger', name: 'Logger', integrity: 36, armor: 1, loot: 'Logger Spool', special: true, syncOnly: true, beat: true, attack: { name: 'Dump', effect: 'damage', amount: 14, interval: 6, first: 6, dump: true, noCrit: true } },
       { id: 'pulse', name: 'Pulse Node', integrity: 30, armor: 1, veiled: true, loot: 'Pulse Kernel', attack: { name: 'Surge', effect: 'damage', amount: 11, interval: 4, first: 3 } },
       { id: 'scrambler', name: 'Scrambler', integrity: 28, armor: 1, veiled: true, loot: 'Signal Key', attack: { name: 'Scramble', effect: 'scramble', amount: 2, hit: 8, interval: 4, first: 4 } }],
@@ -1151,7 +1151,7 @@ export const BOSSES = {
     about: 'A timing fight. Its Logger only takes damage inside a window, and what you fire outside it comes back at you. The Pulse Node lands on the closed cycles.',
     phases: [{ at: 0.6, do: ['again'], name: 'Again', say: 'SHOULDER SURFER plays it again. Every 4 cycles it plays your last three commands back at you.' }, { at: 0.3, do: ['top'], name: 'From the top', say: 'SHOULDER SURFER starts from the top. The log never clears, and the Dump plays the biggest command logged.' }] },
   // RECURSION: the last room of floor 3's Gauntlets (rogue.mjs), NULL CHOIR's. A call stack: main() under its frames.
-  recursion: { long: { hp: 1, dmg: 0.55, enrageAt: 38 }, name: 'RECURSION', family: 'ghostroot', author: 'nullchoir', own: true, crown: 'main', ticks: [0.6, 0.3], floor: 19, hp: 0.85, dmg: 1, enrageAt: 18, acts: { beat: 'part', part: 'main' }, throne: { kind: 'gauntlet', floor: 3 },
+  recursion: { long: { hp: 1, dmg: 0.55, enrageAt: 38 }, name: 'RECURSION', family: 'ghostroot', author: 'nullchoir', own: true, crown: 'main', floor: 19, hp: 0.85, dmg: 1, enrageAt: 18, acts: { beat: 'part', part: 'main' }, throne: { kind: 'gauntlet', floor: 3 },
     extra: [{ id: 'main', name: 'main()', integrity: 66, armor: 1, loot: 'Stack Base', special: true, frame: 0, beat: true, attack: { name: 'Surge', effect: 'damage', amount: 12, interval: 4, first: 4 } },
       { id: 'frame1', name: 'Frame 1', integrity: 30, armor: 1, loot: 'Frame Pointer', frame: 1, attack: { name: 'Surge', effect: 'damage', amount: 9, interval: 4, first: 3 } },
       { id: 'frame2', name: 'Frame 2', integrity: 22, armor: 0, loot: 'Return Address', frame: 2, attack: { name: 'Surge', effect: 'damage', amount: 8, interval: 4, first: 2 } }],
@@ -1165,7 +1165,7 @@ export const BOSSES = {
     phases: [{ at: 0.6, do: ['return'], name: 'Return', say: 'RECURSION returns. A frame that breaks makes the one beneath attack a cycle sooner and 50% harder.' }, { at: 0.3, do: ['overflow'], name: 'Overflow', say: 'RECURSION overflows. At 5 frames every frame attacks at once.' }] },
   // The floor 4 bosses (floorbosses.mjs). role: the part's place in its boss's rule.
   // NIGHT DESK: floor 4's floor job (arcs.mjs), Kessler's old settlement process (author '': no crew wrote it). Its attacks wait as pending trades.
-  nightdesk: { long: { hp: 1.1, dmg: 0.7, enrageAt: 40 }, name: 'NIGHT DESK', family: 'ransomware', author: '', own: true, crown: 'desk', ticks: [0.6, 0.3], floor: 24, hp: 0.85, dmg: 1, enrageAt: 18, acts: { beat: 'none' },
+  nightdesk: { long: { hp: 1.1, dmg: 0.7, enrageAt: 40 }, name: 'NIGHT DESK', family: 'ransomware', author: '', own: true, crown: 'desk', floor: 24, hp: 0.85, dmg: 1, enrageAt: 18, acts: { beat: 'none' },
     extra: [{ id: 'desk', name: 'Desk', integrity: 66, armor: 1, loot: 'Desk Blotter', special: true, role: 'desk', attack: { name: 'Margin Call', effect: 'damage', amount: 16, interval: 5, first: 4 } },
       { id: 'teller', name: 'Teller', integrity: 20, armor: 0, role: 'trader', noTicks: true, attack: { name: 'Sell Order', effect: 'damage', amount: 13, interval: 4, first: 2 } },
       { id: 'clearing', name: 'Clearing House', integrity: 20, armor: 0, role: 'trader', noTicks: true, attack: { name: 'Buy Order', effect: 'damage', amount: 15, interval: 5, first: 3 } }],
@@ -1180,7 +1180,7 @@ export const BOSSES = {
     about: 'Kessler\'s old settlement process. Its attacks wait as pending trades, and you choose when to take them at half, before four pile up.',
     phases: [{ at: 0.6, do: ['nightshift'], name: 'Night shift', say: 'NIGHT DESK starts the night shift. Each pending trade grows 10% a cycle.' }, { at: 0.3, do: ['finality'], name: 'Finality', say: 'NIGHT DESK declares finality. Each trade you settle heals the Desk.' }] },
   // BYZANTINE: the throne of floor 4's Pits (rogue.mjs), GLASSJAW's. Three Nodes that vote the most damaged back up.
-  byzantine: { long: { hp: 0.7, dmg: 0.5, enrageAt: 42 }, name: 'BYZANTINE', family: 'ransomware', author: 'glassjaw', own: true, crown: 'nodea', ticks: [0.78, 0.42], floor: 26, hp: 0.85, dmg: 1, enrageAt: 18, acts: { beat: 'none' }, throne: { kind: 'pit', floor: 4 },
+  byzantine: { long: { hp: 0.7, dmg: 0.5, enrageAt: 42 }, name: 'BYZANTINE', family: 'ransomware', author: 'glassjaw', own: true, crown: 'nodea', floor: 26, hp: 0.85, dmg: 1, enrageAt: 18, acts: { beat: 'none' }, throne: { kind: 'pit', floor: 4 },
     extra: [{ id: 'nodea', name: 'Node A', integrity: 44, armor: 1, loot: 'Signed Ballot', role: 'node', attack: { name: 'Surge', effect: 'damage', amount: 14, interval: 4, first: 3 } },
       { id: 'nodeb', name: 'Node B', integrity: 44, armor: 1, loot: 'Forged Ballot', role: 'node', attack: { name: 'Replicate', effect: 'replicate', amount: 1, interval: 5, first: 4 } },
       { id: 'nodec', name: 'Node C', integrity: 44, armor: 1, loot: 'Spoiled Ballot', role: 'node', attack: { name: 'Surge', effect: 'damage', amount: 11, interval: 3, first: 2 } }],
@@ -1195,7 +1195,7 @@ export const BOSSES = {
     phases: [{ at: 0.6, do: ['traitor'], name: 'Traitor', say: 'BYZANTINE turns a Node. While the traitor is not the most damaged, a vote restores to the healthiest Node\'s level.' }, { at: 0.3, do: ['hardfork'], name: 'Hard fork', say: 'BYZANTINE forks. A Node that breaks returns at the next vote, unless every other Node is under half.' }] },
   // CAMSWARM: in floor 4's lair pool (floors.mjs FLOOR.lairs; lair: its server's name), SWARMLINE's. Hurt parts hatch
   // fragments on its Telnet Sweep, and a fragment left alone becomes a Camera.
-  camswarm: { long: { hp: 0.9, dmg: 0.9, enrageAt: 40 }, name: 'CAMSWARM', family: 'worm', author: 'swarmline', own: true, crown: 'hive', ticks: [0.6, 0.3], floor: 24, hp: 0.85, dmg: 1, enrageAt: 18, acts: { beat: 'none' }, lair: 'CAMSWARM-HIVE',
+  camswarm: { long: { hp: 0.9, dmg: 0.9, enrageAt: 40 }, name: 'CAMSWARM', family: 'worm', author: 'swarmline', own: true, crown: 'hive', floor: 24, hp: 0.85, dmg: 1, enrageAt: 18, acts: { beat: 'none' }, lair: 'CAMSWARM-HIVE',
     extra: [{ id: 'hive', name: 'Hive', integrity: 62, armor: 1, loot: 'Hive Comb', special: true, role: 'hive' },
       { id: 'pulse', name: 'Pulse Node', integrity: 34, armor: 1, loot: 'Pulse Kernel', attack: { name: 'Surge', effect: 'damage', amount: 14, interval: 4, first: 3 } },
       { id: 'c2', name: 'C2 Node', integrity: 30, armor: 1, loot: 'Beacon Coil', role: 'c2', attack: { name: 'Beacon', effect: 'damage', amount: 7, interval: 3, first: 4 } }],

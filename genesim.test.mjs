@@ -62,8 +62,8 @@ test('HASHLORD and MIRRORSHADE, rebuilt, sit in the boss band at their floors (1
 // full (only the Desk takes damage, 12% a hit); BYZANTINE's vote undoes a Node taken down alone (20% a hit) and hardens
 // every Node; CAMSWARM's sweep hatches a shielded fragment from each part under half, a Camera unless its part breaks.
 // Measured: NIGHT DESK read 81% misread 46% blind 0%; BYZANTINE 69%, 53%, 22%; CAMSWARM 66%, 54%, 29%.
-// With its act ticks at 78% and 42% (docs/solo-bosses.md "Act length") and the planner reading the Traitor (never a hit
-// that leaves another Node under it): BYZANTINE 72%, 49%, 24%. Flagged: NIGHT
+// With its ♛'s act ticks at 60% and 30% and the planner reading the Traitor (never a hit that leaves another Node under
+// it): BYZANTINE 68%, 56%, 22%. Flagged: NIGHT
 // DESK the Sysop; BYZANTINE the Warden and the Sysop (too slow for its enrage); CAMSWARM the Warden and the Phantom.
 const FLOOR_BOSSES = ['centrifuge', 'shakedown', 'shouldersurfer', 'recursion', 'nightdesk', 'byzantine', 'camswarm'];
 const FLOOR_FLAGGED = { centrifuge: [], shakedown: [], shouldersurfer: ['sysop', 'herder'], recursion: ['sysop'], nightdesk: ['sysop'], byzantine: ['warden', 'sysop'], camswarm: ['warden', 'phantom'] };

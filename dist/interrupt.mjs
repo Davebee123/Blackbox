@@ -29,7 +29,7 @@ import { gainResearch } from './research.mjs';
 import { daemonsOn } from './daemons.mjs';
 import { crossed as actCrossed } from './acts.mjs';
 
-export const TICKS = { at: [0.5, 0.25], act: [0.6, 0.3], small: 20, budget: 3 }; // act: a boss's ♛ ticks (BOSSES[id].ticks where its acts measured uneven, docs/solo-bosses.md "Act length")
+export const TICKS = { at: [0.5, 0.25], act: [0.6, 0.3], small: 20, budget: 3 }; // act: every boss's ♛ ticks, the same for all (docs/solo-bosses.md "Act length": a boss whose acts run uneven gets its mechanics changed, never its ticks)
 export const BOSS_RULES = {
   a: { name: 'Core ticks are phases', short: 'phases on its ♛ part', text: "The boss's core part (♛) has phase ticks at 60% and 30% instead of interrupts. Taking it across one starts the next phase. Its other parts interrupt as usual." },
   b: { name: 'Every part interrupts', short: 'every part interrupts', text: 'Every part has normal ticks. Phases stay on total Integrity, and the boss brings one more charge.' },
@@ -72,7 +72,7 @@ export function bossRule(s, rule = 'a') {
   if (e.bossRule === 'a') {
     const B = BOSSES[v.boss], core = (B?.crown && v.parts.find((p) => p.id === B.crown)) || v.parts.find((p) => p.special) || v.parts[0];
     core.core = true;
-    core.ticks = (B?.ticks || TICKS.act).map((at, i) => ({ at, spent: false, phase: i })); // act ticks at 60% and 30%, or the boss's own (docs/solo-bosses.md)
+    core.ticks = TICKS.act.map((at, i) => ({ at, spent: false, phase: i })); // act ticks at 60% and 30%, every boss alike
     for (const ph of v.phases || []) ph.at = -1; // never by its total: the ticks start them
   } else if (e.bossRule === 'b') {
     if (v.boss === 'nb-deadbolt') v.tellSet = [...new Set([...(v.tellSet || []), 'deadbolt', 'extortion', 'overcharge', 'fulldisk'])];
