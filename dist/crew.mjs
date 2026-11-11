@@ -14,14 +14,13 @@
 //   One that went down reboots at CREW.reboot of its Signal for the next fight. A new run starts them full.
 // - The sim crew is there from CREW.from: early levels are solo.
 // Crewmates live beside the save (not in it): s.crewSim holds who's in the crew.
-import { hooks, fresh, command, playerPhase, active, addItem, maxSignal, hackerLevel, classOf, emit, warn, livingParts, alive, part, classEach } from './combat.mjs';
+import { hooks, fresh, command, playerPhase, active, addItem, maxSignal, hackerLevel, classOf, emit, warn, livingParts, alive, part, classEach, presetKeys } from './combat.mjs';
 import { rollItem, seeded, protocolSlots, SLOT_KINDS, chaseStat } from './gear.mjs';
 import { ARCHETYPES, SKILLS, SUBS, SUBCLASS, defaultSub } from './data.mjs';
 import { planner } from './planner.mjs';
 import { raidDef, crewHp } from './raid.mjs';
-import { online, isFriend } from './presence.mjs';
-import { isMember } from './consortium.mjs';
 import { playerFrom } from './coop-char.mjs';
+import { runnerOf, levelOf as runnerLevel, sigOf as runnerSig, setSig as setRunnerSig, helped as runnerHelped, cantHire, feeOf, feePaid, cutOf, runnersOf } from './runners.mjs';
 
 export const CREW = {
   max: 3, // crewmates besides you
@@ -42,10 +41,11 @@ const seatsOf = (s) => (s._coop?.seats || []).map((x) => ({ name: x.name, cls: x
 export function matesOf(s) {
   if (s._coopMates) return s._coopMates;
   // A crewmate's level is its own, fixed when it joined (an old save's crew keeps the level it has now).
-  for (const x of s.crewSim || []) x.level ??= hackerLevel(s);
+  // A hired runner (runners.mjs) levels with you: their level around yours.
+  for (const x of s.crewSim || []) { const r = x.runner && runnerOf(s, x.name); if (r) x.level = runnerLevel(s, r); else x.level ??= hackerLevel(s); }
   const want = [...(s.crewSim || []), ...seatsOf(s), ...(s.guests || [])]; // guests: consortium members who joined a fight on the consortium's ground
   let m = s._mates;
-  const key = want.map((x) => `${x.cls}:${x.sub || ''}:${x.name}:${x.level ?? hackerLevel(s)}:${x.rarity || ''}:${x.rev ?? ''}`).join(',');
+  const key = want.map((x) => `${x.cls}:${x.sub || ''}:${x.name}:${x.level ?? hackerLevel(s)}:${x.rarity || ''}:${x.rev ?? ''}:${x.preset || ''}`).join(',');
   if (!m || m.key !== key) {
     m = want.map((x, i) => makeMate(s, x, i));
     m.key = key;
@@ -55,8 +55,12 @@ export function matesOf(s) {
 }
 const inFight = (s) => matesOf(s).filter((m) => m.encounter && active(m));
 // A crewmate's Signal between fights: what it carried out of the last one on this run, else full.
+// A hired runner comes in with what they carried out of their last fight with you, refilled on logged-on time; a runner
+// you're helping, at the Signal they have in that room.
 export const mateSignal = (s, m) => {
   const c = m.seat || (!m.guest && s.run?.crew?.[m.who]);
+  if (m.helpSig) return Math.max(1, Math.round(maxSignal(m) * m.helpSig));
+  if (m.runner && c?.signal == null) return Math.max(1, Math.round(maxSignal(m) * runnerSig(s, m.who)));
   return c && c.signal != null ? (c.signal > 0 ? Math.min(c.signal, maxSignal(m)) : Math.max(1, Math.round(maxSignal(m) * CREW.reboot))) : maxSignal(m);
 };
 export const mateUp = (m) => m.encounter && active(m) && m.run.integrity > 0;
@@ -75,10 +79,12 @@ function seatMate(host, { name, char, seat }, i) {
   m.run = { loc: 'crew', cwd: '/', integrity: maxSignal(m), max: maxSignal(m), pack: [], visited: [] };
   return m;
 }
-function makeMate(host, { cls, sub, name, guest, level: own, rarity = 'stock', char, seat }, i) {
+function makeMate(host, { cls, sub, name, guest, level: own, rarity = 'stock', char, seat, runner, helper, helpSig, preset }, i) {
   if (char) return seatMate(host, { name, char, seat }, i);
   const m = fresh();
   if (guest) m.guest = true;
+  if (runner) m.runner = true; // a hired runner (runners.mjs)
+  if (helper) { m.helper = true; m.helpSig = helpSig; } // a runner you walked in on and helped: takes no XP
   m.who = name;
   Object.defineProperty(m, 'host', { value: host, enumerable: false, configurable: true });
   m.loadout.archetype = cls;
@@ -94,6 +100,8 @@ function makeMate(host, { cls, sub, name, guest, level: own, rarity = 'stock', c
     const it = addItem(m, rollItem(seeded(level * 100 + k + i * 17), { level, rarity, group: SLOT_KINDS[k], stat: chaseStat(chase, k, rarity) }));
     command(m, 'load ' + it.id);
   }
+  // A hired runner's bar: the preset you picked (their subclass's shipped one), at their level.
+  if (preset && pick && preset !== 'rotation') { const keys = presetKeys(m, cls, preset); if (keys?.length) { m.loadout.equipped[pick] = keys; (m.loadout.follow ||= {})[pick] = preset; } }
   // One log and one event counter for the whole fight, so the log reads in order.
   m.logs = host.logs;
   Object.defineProperty(m, 'serial', { get: () => host.serial, set: (v) => { host.serial = v; }, enumerable: false, configurable: true });
@@ -117,14 +125,18 @@ hooks.crewEngage = (s) => {
   // Consortium members in this folder of its ground join as guests (run.mjs: hooks.crewGuests).
   const guests = (hooks.crewGuests?.(s, e.room) || []).filter((g) => !(s.crewSim || []).some((x) => x.name === g.name));
   s.guests = guests.slice(0, Math.max(0, CREW.max - (s.crewSim || []).length)).map((g) => ({ ...g, guest: true }));
+  // A runner you chose to Help in their room (floorplan.mjs assist): they fight beside you, as they are.
+  const h = s.rooms?.visit?.helping, r = h && e.rooms?.room === h.room && runnerOf(s, h.h);
+  if (r && !s.guests.some((g) => g.name === r.handle)) s.guests.push({ cls: r.cls, sub: runnerLevel(s, r) >= SUBCLASS.from ? r.sub : null, name: r.handle, level: runnerLevel(s, r), guest: true, helper: true, helpSig: h.sig });
   // Only the crew in the fight's folder fights it; the rest are elsewhere on the server.
   const all = matesOf(s);
   for (const m of all) m.encounter = null;
   const mates = all.filter((m) => m.guest || !s.run?.crew || crewAt(s, m.who) === e.room);
   if (!mates.length) return;
   // A bigger party: tougher parts.
-  e.party = 1 + mates.length; // for the XP split (combat.mjs payKill)
-  e.guests = mates.filter((m) => m.guest).map((m) => m.who); // drop-ins earn by their damage (payKill)
+  e.party = 1 + mates.filter((m) => !m.helper).length; // for the XP split (combat.mjs payKill); a runner you help takes none
+  e.guests = mates.filter((m) => m.guest && !m.helper).map((m) => m.who); // drop-ins earn by their damage (payKill)
+  e.runners = mates.filter((m) => m.helper).length; // runners you helped (never a solo win: achievements.mjs)
   // An elite is already sized for a crew, so it doesn't grow with it.
   // A crew boss (raid.mjs) is sized for four: a smaller crew gets a smaller one.
   const k = raidDef(e.virus) ? crewHp(1 + mates.length) : 1 + (e.virus.elite ? CREW.elitePer : e.virus.boss ? CREW.bossPer : CREW.hpPer) * mates.length;
@@ -143,7 +155,7 @@ hooks.crewEngage = (s) => {
     classEach('start', m); // subclass modules (dist/classes)
     decide(m);
   }
-  emit(s, 'status', `${mates.some((m) => m.guest) ? 'Crew and consortium in' : 'Crew in'}: ${mates.map((m) => `${m.who} (${ARCHETYPES[classOf(m)].name}${m.guest ? ', consortium' : ''})`).join(', ')}. ${raidDef(e.virus) ? `${e.virus.name} is a crew boss, sized for a crew of ${1 + mates.length}.` : `The virus is ${Math.round((k - 1) * 100)}% tougher.`}`);
+  emit(s, 'status', `${mates.some((m) => m.guest && !m.helper) ? 'Crew and consortium in' : 'Crew in'}: ${mates.map((m) => `${m.who} (${ARCHETYPES[classOf(m)].name}${m.helper ? ', runner' : m.guest ? ', consortium' : ''})`).join(', ')}. ${raidDef(e.virus) ? `${e.virus.name} is a crew boss, sized for a crew of ${1 + mates.length}.` : `The virus is ${Math.round((k - 1) * 100)}% tougher.`}`);
 };
 
 // One crewmate's turn (the i-th still standing).
@@ -181,14 +193,41 @@ export function checkDown(s) {
 hooks.crewHurt = checkDown;
 
 hooks.crewEnd = (s, result) => {
+  const out = [];
   for (const m of matesOf(s)) {
     const c = !m.guest && m.encounter && (m.seat || s.run?.crew?.[m.who]);
     if (c) c.signal = Math.max(0, m.run.integrity);
     if (m.seat && m.encounter) { m.ended = m.encounter; hooks.coopEnd?.(s, m, result); } // a co-op player's share of the fight (coop.mjs)
+    // A hired runner keeps what they carried out (and at 0 they disconnect, to recover); a runner you helped win: standing.
+    if (m.runner && m.encounter) { setRunnerSig(s, m.who, m.run.integrity / Math.max(1, maxSignal(m))); if (m.run.integrity <= 0) out.push(m.who); }
+    if (m.helper && m.encounter && result === 'victory') { const h = runnerHelped(s, m.who); if (h && s.rooms?.visit) s.rooms.visit.metWon = { h: m.who, room: s.encounter?.rooms?.room }; if (h) emit(s, 'rooms-good', `${m.who}: standing ${h.standing}${h.tier ? `, now ${h.tier.name}` : ''}.`, { runner: m.who, standing: h.standing, tier: h.tier?.name || null }); }
     m.encounter = null;
   }
+  for (const h of out) { emit(s, 'status', `${h}: Signal's going. I'm out.`, { runner: h }); dropCrew(s, h); }
+  if (s.rooms?.visit) s.rooms.visit.helping = null;
   s.guests = []; // guests go back to what they were doing
 };
+// Off the crew, and off the run.
+function dropCrew(s, h) {
+  s.crewSim = (s.crewSim || []).filter((x) => x.name !== h);
+  if (s.run?.crew) delete s.run.crew[h];
+  if (s.run?.linkedTo === h) s.run.linkedTo = null;
+}
+// Hire a runner you know (runners.mjs): the fee the first time, their bar from a preset of theirs.
+export function hireRunner(s, h, preset = 'rotation') {
+  const r = runnerOf(s, h);
+  if (!r || !runnersOf(s).known[h]) return warn(s, `You don't know a runner called ${h}.`);
+  if (active(s)) return warn(s, 'Finish the fight first.');
+  const no = cantHire(s, r);
+  if (no) return warn(s, `You can't hire ${h}: ${no}.`);
+  const sub = runnerLevel(s, r) >= SUBCLASS.from ? r.sub : null, presets = Object.keys(SUBS[sub]?.presets || { rotation: 1 });
+  if (!presets.includes(preset)) return warn(s, `${h} has no ${preset} preset. Theirs: ${presets.join(', ')}.`);
+  const fee = feePaid(s, h) ? 0 : feeOf(s, r);
+  if (fee) { s.server.credits -= fee; runnersOf(s).known[h].paid = true; }
+  (s.crewSim ||= []).push({ cls: r.cls, ...(sub ? { sub } : {}), name: h, level: runnerLevel(s, r), runner: true, preset });
+  if (s.run) (s.run.crew ||= {})[h] = { cwd: s.run.cwd, link: 'you' };
+  emit(s, 'info', `${h} joins your crew${fee ? ` for ${fee} credits` : ''}, on a ${Math.round(cutOf(r) * 100)}% cut.`, { runner: h, fee });
+}
 
 // `crew`, `crew sim <class> [<class>…]`, `crew invite <friend>`, `crew kick <name>`, `crew off`.
 export function crewCommand(s, rest) {
@@ -213,24 +252,15 @@ export function crewCommand(s, rest) {
       s.crewSim = want.map((c, i) => ({ cls: SUBS[c]?.cls || c, ...(SUBS[c] ? { sub: c } : {}), name: CREW.names[i], level: hackerLevel(s) }));
       emit(s, 'info', `Crew (simulated): ${s.crewSim.map((x) => `${x.name}, ${x.sub ? SUBS[x.sub].name : ARCHETYPES[x.cls].name}`).join(' · ')}. They join your run fights.`);
     }
-  } else if (words[0] === 'invite' && words[1]) {
-    // A friend who's online joins as a crewmate (still a bot until there's a server), in their class.
-    const h = words[1], who = online(s).find((x) => x.handle === h);
-    if (active(s)) warn(s, 'Finish the fight first.');
-    else if (!isFriend(s, h) && !isMember(s, h)) warn(s, `${h} isn't a friend or in your consortium.`);
-    else if (!who) warn(s, `${h} isn't online.`);
-    else if ((s.crewSim || []).some((x) => x.name === h)) warn(s, `${h} is already in your crew.`);
-    else if ((s.crewSim || []).length >= CREW.max) warn(s, `Your crew is full (${CREW.max}). crew kick <name> first.`);
-    else { (s.crewSim ||= []).push({ cls: who.cls, name: h, level: who.level }); if (s.run) (s.run.crew ||= {})[h] = { cwd: s.run.cwd, link: 'you' }; emit(s, 'info', `${h} (${ARCHETYPES[who.cls].name}) joins your crew.`); }
+  } else if (words[0] === 'hire' && words[1]) {
+    hireRunner(s, words[1], words[2] || 'rotation');
   } else if (words[0] === 'kick' && words[1]) {
     if (active(s)) warn(s, 'Finish the fight first.');
     else if (!(s.crewSim || []).some((x) => x.name === words[1])) warn(s, `${words[1]} isn't in your crew.`);
     else {
-      s.crewSim = s.crewSim.filter((x) => x.name !== words[1]);
-      if (s.run?.crew) delete s.run.crew[words[1]]; // off the run too
-      if (s.run?.linkedTo === words[1]) s.run.linkedTo = null;
+      dropCrew(s, words[1]); // off the run too
       emit(s, 'info', `${words[1]} leaves your crew.`);
     }
-  } else warn(s, 'crew, crew sim <class> [<class>…], crew invite <friend>, crew kick <name>, crew off');
+  } else warn(s, 'crew, hire <runner> [preset], crew kick <name>, crew off');
   return s.logs.filter((e) => e.id > first);
 }

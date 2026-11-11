@@ -30,9 +30,7 @@ test('friends: add, list first in the panel, remove; only real handles', () => {
     play(s, 'friend add ' + someone);
     assert.ok(isFriend(s, someone));
     assert.equal(online(s)[0].handle, someone, 'friends first');
-    assert.match(peopleMarkup(s, 'friends', t), new RegExp(`data-run="crew invite ${someone}"`));
-    play(s, 'crew invite ' + someone);
-    assert.equal(s.crewSim.at(-1).name, someone, 'a friend online joins the crew in their class');
+    assert.doesNotMatch(peopleMarkup(s, 'friends', t), /crew invite/, 'crews come from hiring runners now (runners.mjs R2)');
     play(s, 'friend remove ' + someone);
     assert.ok(!isFriend(s, someone));
   } finally { hooks.now = null; }

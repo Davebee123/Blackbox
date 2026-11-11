@@ -51,6 +51,8 @@ import { familyName } from './families.mjs';
 import { RUNCARD, RUN_CARDS, cardOf as runCardOf, surgeAt, surgeFill, escortOf, escortRoute, packOf, packRoute, packRooms } from './runcards.mjs';
 import { RIVALS, COUNTERS, READS, rivalOf, routeOf, raceOf, lineupOf, memoryOf, wickLine, crewName, crewColour, rivalSays, rivalLine } from './rivals.mjs';
 import { GENES } from './genes.mjs';
+import { meetingOf, runnerOf } from './runners.mjs';
+import { roomRunner, runnerRow, tierBar } from './runners-view.mjs';
 import { ROOMS, KINDS, kindName, HUNTERS, RESIDENT, WORLD, STOCKED, farmed, respawnMs, roomList, hereOf, neighbours, linksOf, seenOf, isUp, backAt, downAt, cacheFull, refillAt, isBait, coreOpen, opened, signalNow, sigOf, progressOf, fmtLeft, hunterOf, hunterNext, paceOf, moveCost, fightOf, exits, hunterLine, xpEarned, virusName, exfilOf, exfilNext, exfilSeen, exfilLine, known, nameOf, hunterSeen, isSocket, socketOpen, socketOff, programIn, roomRuns, tunnelOf, restUsed, lureFamilies, addrOf, PUZZLES, isPuzzle, puzzleState } from './floorplan.mjs';
 import { puzzlePanel } from './puzzle-view.mjs';
 import { PROGRAMS, SOCKET, programCost, buildBlock, codebasesOf, costLine as programCostLine } from './sockets.mjs';
@@ -424,7 +426,7 @@ function mapSvg(s, tall, pop = null) {
   // A run card's way (runcards.mjs): the courier's route to its drop, violet dots; the pack's way to you, red dashes.
   const line = (ids, cls) => (ids.length > 1 ? `<polyline class="${cls}" points="${ids.map((id) => { const p = at(g.rooms[id]); return `${p.x},${p.y}`; }).join(' ')}"/>` : '');
   const cardWay = line(escortRoute(s), 'fp-cr-route') + line(packRoute(s), 'fp-pk-route');
-  const ctx = { reach, next, pop, near, G, marks: net(s, 'marks') || {}, th: R_th(s), bl: net(s, 'blips') || {}, files, rv };
+  const ctx = { reach, next, pop, near, G, marks: net(s, 'marks') || {}, th: R_th(s), bl: net(s, 'blips') || {}, files, rv, mt: meetingOf(s, isUp) };
   const rooms = roomList(s).filter((r) => shown(r.id)).map((room) => roomSvg(s, room, at(room), ctx)).join('');
   const bits = here ? bitsSvg(at(g.rooms[here]), G, here) : '';
   const vw = width + 2 * PAD, vh = height + 2 * PAD, vb = `${-PAD} ${-PAD} ${vw} ${vh}`;
@@ -497,7 +499,9 @@ function revealing(s, id) {
   if (!REVEALED.has(k)) REVEALED.set(k, t);
   return t - REVEALED.get(k) < 1600;
 }
-function roomSvg(s, room, p, { reach, next, pop, near, G, marks, th = {}, bl = {}, files = [], rv = null }) {
+// A runner fighting in a room (runners.mjs meetingOf): the tooltip's lines.
+const runnerRoomTip = (s, m) => `The runner ${m.r.handle} is fighting it, at ${Math.round(m.sig * 100)}% Signal.${s.rooms.at === m.room.id ? '' : '\n▸ Walk in to help.'}`;
+function roomSvg(s, room, p, { reach, next, pop, near, G, marks, th = {}, bl = {}, files = [], rv = null, mt = null }) {
   const R = s.rooms, g = R.graph, kind = known(s, room.id), h = hunterOf(s);
   const look = lookOf(s, room);
   const sock = kind && isSocket(s, room) && socketOpen(s, room), prog = sock ? programIn(s, room.id) : null; // an open socket (a held server's Core too) and what runs in it
@@ -516,7 +520,8 @@ function roomSvg(s, room, p, { reach, next, pop, near, G, marks, th = {}, bl = {
   // A room you can walk into walks on one click (Enter too); any other room on the map opens its pop-up.
   const attrs = can ? ` data-rooms="go" data-arg="${esc(room.id)}" tabindex="0" role="button"` : ` data-fp-sel="${esc(room.id)}" tabindex="0" role="button" aria-haspopup="dialog"`;
   const hw = G.nw / 2, hh = G.nh / 2, x0 = n1(p.x - hw), y0 = n1(p.y - hh), d = chipD(look, p.x, p.y, hw, hh, G.ch), ring = chipD(look, p.x, p.y, hw + 5, hh + 5, G.ch + 2);
-  let out = `<g class="${cls}" data-room="${esc(room.id)}"${attrs}${pop === room.id ? '' : ` title="${esc(tileTip(s, room, marks))}"`} aria-label="${esc(kind ? labelOf(s, room) : 'Unknown room')}">`;
+  const meet = mt?.room.id === room.id ? mt : null;
+  let out = `<g class="${cls}" data-room="${esc(room.id)}"${attrs}${pop === room.id ? '' : ` title="${esc(tileTip(s, room, marks) + (meet ? '\n' + runnerRoomTip(s, meet) : ''))}"`} aria-label="${esc(kind ? labelOf(s, room) : 'Unknown room')}">`;
   // You: a soft teal glow and a pulsing outline. The hunter just out of sight next door: a red pulse.
   if (here) out += `<path class="fp-you-glow" d="${d}" filter="url(#fp-glow)"/><path class="fp-you-ring" d="${d}"/>`;
   const rival = rv?.at === room.id;
@@ -567,6 +572,8 @@ function roomSvg(s, room, p, { reach, next, pop, near, G, marks, th = {}, bl = {
   if (drop) out += cardTab('DROP', 'surge', cardTip(s, cr));
   if (crHere) { const k = 18, bx = n1(x0 - 4), by = n1(y0 + G.nh - k + 4); out += `<g class="fp-courier" title="${esc(cardTip(s, cr))}"><rect x="${bx}" y="${by}" width="${k}" height="${k}" rx="2"/><use href="#fp-i-archive" x="${n1(bx + 2)}" y="${n1(by + 2)}" width="${k - 4}" height="${k - 4}"/></g>` + cardBar(cr.hp / cr.max, 'surge', `Courier: ${cr.hp}/${cr.max} Integrity.`); }
   if (rival) { const nm = RIVALS[rv.id].name, w = tagW(nm) + 4, rx = n1(Math.max(p.x - w / 2, tx + 2)); out += `<g class="fp-rv-tab"><rect x="${rx}" y="${n1(y0 - 9)}" width="${w}" height="16" rx="2"/><text x="${n1(rx + w / 2)}" y="${n1(y0 + 3)}" text-anchor="middle">${esc(nm)}</text></g>`; tx = rx + w + 4; out += lineupSvg(s, rv, p.x, y0 + G.nh + 6); }
+  // A runner fighting in it: a paper-white tab with their handle (beside YOU once you're in), their Signal under it.
+  if (meet) { const nm = meet.r.handle, w = tagW(nm) + 4, rx = n1(Math.max(p.x - w / 2, tx + 2)); out += `<g class="fp-rn-tab"><rect x="${rx}" y="${n1(y0 - 9)}" width="${w}" height="16" rx="2"/><text x="${n1(rx + w / 2)}" y="${n1(y0 + 3)}" text-anchor="middle">${esc(nm)}</text><rect class="sig" x="${rx}" y="${n1(y0 + 9)}" width="${w}" height="3"/><rect class="sig fill" x="${rx}" y="${n1(y0 + 9)}" width="${n1(w * meet.sig)}" height="3"/></g>`; tx = rx + w + 4; }
   if (hunted) { const half = 5.5 * G.px + 4; out += skullSvg(n1(Math.max(p.x, tx + half)), n1(y0 - 2), G.px, h.kind === 'track' && !h.awake && !h.returning); }
   if (exfil) { const k = G.px / 2.2, half = 10 * k; out += exfilSvg(n1(Math.max(p.x, tx + half + 2)), n1(y0 + 1), k, !exfilNext(s)); tx += 2 * half + 6; }
   // A thread's mark (threads.mjs): an amber ! where one starts, ? where the step you're on sends you.
@@ -664,7 +671,7 @@ function needOf(s) {
   if (!R.at) return `home:${R.visits}`;
   if (active(s)) return null;
   const room = hereOf(s), v = R.visit;
-  const ask = !!R.screen || (isSocket(s, room) && socketOpen(s, room) && !programIn(s, room.id) && !socketOff(s, room)) || (roomRuns(s, room, 'defrag') && !v.bays?.[room.id] && sigOf(s) < R.max) || ((room.kind === 'cache' || room.kind === 'stash' || room.kind === 'secret' || isPuzzle(room.kind)) && cacheFull(s, room)) || (room.kind === 'vault' && (!opened(s, room) || (net(s, 'vaultLeft', room) || 0) > 0)) || (room.kind === 'rest' && !restUsed(R, room) && restGain(s) > 0) || (room.kind === 'entry' && (net(s, 'entryFiles') || 0) > 0) || !!net(s, 'plantHere', room) || (R.world && !!s.threads && threadAsks(s, room));
+  const ask = !!R.screen || (isSocket(s, room) && socketOpen(s, room) && !programIn(s, room.id) && !socketOff(s, room)) || (roomRuns(s, room, 'defrag') && !v.bays?.[room.id] && sigOf(s) < R.max) || ((room.kind === 'cache' || room.kind === 'stash' || room.kind === 'secret' || isPuzzle(room.kind)) && cacheFull(s, room)) || (room.kind === 'vault' && (!opened(s, room) || (net(s, 'vaultLeft', room) || 0) > 0)) || (room.kind === 'rest' && !restUsed(R, room) && restGain(s) > 0) || (room.kind === 'entry' && (net(s, 'entryFiles') || 0) > 0) || !!net(s, 'plantHere', room) || (R.world && !!s.threads && threadAsks(s, room)) || v.metWon?.room === room.id; // a room won beside a runner: their standing, up
   return ask ? `${stampOf(s)}:${R.screen?.kind || room.kind}` : null;
 }
 // The room the pop-up is on: the one you clicked, or the one you're in when it wants a decision you haven't closed.
@@ -754,12 +761,16 @@ function hereCard(s) {
     if (room.kind === 'core' && !R.world) notes.push(esc(`Boss rule ${R.bossRule}: ${BOSS_RULES[R.bossRule].name}.`));
     if (R.world) { const extra = net(s, 'fightNote', room); if (extra) notes.push(esc(extra)); }
     body += notes.map((n) => note(n)).join('');
-    acts = btn('engage', 'Engage', { primary: true }) + (R.visit.back ? btn('back', 'Step back', { tip: `Step back: to ${g.rooms[R.visit.back].path}. The move in stays spent.` }) : '');
+    const meet = R.world ? meetingOf(s, isUp) : null, helping = meet?.room.id === room.id; // a runner fighting it (runners.mjs)
+    if (helping) body += roomRunner(s, meet);
+    acts = (helping ? btn('assist', 'Help', { primary: true, tip: `Help ${meet.r.handle}: they fight beside you, and take no XP.` }) : btn('engage', 'Engage', { primary: true })) + (R.visit.back ? btn('back', 'Step back', { tip: `Step back: to ${g.rooms[R.visit.back].path}. The move in stays spent.` }) : '');
   } else if (isSocket(s, room) && socketOpen(s, room)) {
     ({ body, acts } = socketCard(s, room));
   } else if (fightKind(room)) {
     const k = whoOf(s, room);
     body = holder(iconOf(s, room), k.short, k.sub, '', 'down') + (R.down[room.id] != null ? note(esc(net(s, 'downNote', room) || `Back ${fmtLeft(respawnMs(s, room))} after it falls${farmed(s) ? ' (fast: this server is Mapped or yours)' : ', faster once the server is Mapped'}. Never while you stand in it.`), 'dim') : '');
+    const won = R.visit?.metWon; // a room you won beside a runner: their standing, up
+    if (won?.room === room.id && runnerOf(s, won.h)) body += `<div class="rc-room">${runnerRow(s, runnerOf(s, won.h))}<p class="rc-line">${tierBar(s, won.h)}</p></div>`;
   } else if (room.kind === 'cache') {
     // Standing in it, you see what it is: take it or leave it.
     const full = cacheFull(s, room), bait = !room.mirror && isBait(s, room), lose = pctOf(s, ROOMS.bait);

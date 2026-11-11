@@ -19,7 +19,7 @@ const win = (s) => {
   for (let i = 0; i < 6 && active(s); i++) { const p = s.encounter.virus.parts.find((x) => x.integrity > 0); command(s, 'spike ' + p.id); resolveCycle(s); }
 };
 
-test('a consortium: create, invite merges their server in, only the founder kicks, members can join the crew', () => {
+test('a consortium: create, invite merges their server in, only the founder kicks', () => {
   const s = world();
   play(s, 'consortium invite nyx');
   assert.ok(!consortiumOf(s), 'none yet');
@@ -33,13 +33,6 @@ test('a consortium: create, invite merges their server in, only the founder kick
   play(s, 'consortium kick rook');
   assert.deepEqual(s.consortium.members, ['nyx']);
   assert.equal(serversOf(s, 'rook').length, 0, "rook's servers are gone with them");
-  let t = 1_800_000_000_000;
-  while (!online(s, t).some((x) => x.handle === 'nyx')) t += PRESENCE.moveMs;
-  hooks.now = () => t;
-  try {
-    play(s, 'crew invite nyx');
-    assert.equal(s.crewSim.at(-1).name, 'nyx', 'a member (not a friend) can join the crew');
-  } finally { hooks.now = null; }
   play(s, 'consortium leave');
   assert.equal(consortiumOf(s), null);
   assert.equal(memberServers(s).length, 0, 'the trunk line is cut');

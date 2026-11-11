@@ -271,7 +271,7 @@ function noteFight(s, e, result) {
   if ((m.cuts || 0) >= 3) F['t-cuts'] = 1;
   const said = Object.values(m.tells || {}).reduce((n, x) => n + (x.said || 0), 0);
   if (e.cleanRead && said >= 4) F['t-read'] = 1;
-  if (e.virus.elite && party === 1) F['t-solo'] = 1;
+  if (e.virus.elite && party === 1 && !e.runners) F['t-solo'] = 1; // a runner you helped was beside you
   const d = defender(s);
   if (d?.max && d.integrity > 0 && d.integrity / d.max < 0.05) F['t-thread'] = 1;
   // A routine you made or confirmed for this virus (routines.mjs confirmed), that fired and never threw.

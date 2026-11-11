@@ -324,3 +324,4 @@
 [data-form='phone'] #sheet .pg-detail { padding: 0 0 0 12px; background: none; border-width: 0 0 0 3px; border-radius: 0; box-shadow: none; }
 [data-form='phone'] #sheet .pg-acts { display: flex; gap: 8px; margin-top: 4px; }
 [data-form='phone'] #sheet .pg-acts .btn { flex: 1; }
+[data-form='phone'] .rcard { position: absolute; left: 8px; right: 8px; bottom: 8px; width: auto; visibility: visible; max-height: 70%; overflow: auto; }

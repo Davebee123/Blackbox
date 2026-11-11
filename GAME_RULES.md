@@ -753,8 +753,8 @@ the boss's parts (*Compiling…* for a cast) and in the log (`PINK SLIP → kilo
 
 ### KESSLER-FARM-00 (the crew dungeon)
 
-At level 7 a mining farm somebody stopped paying for turns up on floor 1. It lets you in only with a crew (`crew sim
-<class>` from level 5, or `crew invite <friend>`), and keeps up with your level. Its rooms: an elite worm pack at the
+At level 7 a mining farm somebody stopped paying for turns up on floor 1. It lets you in only with a crew (a hired
+runner, or `crew sim <class>` in developer mode), and keeps up with your level. Its rooms: an elite worm pack at the
 intake (blocking THE FOREMAN), an elite ghostroot pack in cooling (blocking HEATSINK and an optional elite ransomware
 pack), the ledger vault (`open` once the Foreman and the Heatsink are down) and COLDWALLET behind it.
 
@@ -2511,13 +2511,31 @@ no attaching, detaching or memory pips.
 
 - **Runners** (runners.mjs, docs/runners.md R1): 32 people per network, drawn from its seed. Each has a handle, a class
   (and subclass from 10), a level 4 below to 4 above yours, a faction, a temperament (Careful, Steady, Bold), one to
-  four traits (data only for now) and a trade: a payment frozen on a floor one to three below where they work.
+  four traits (shown on their cards; only Known face and Haggler in play yet) and a trade: a payment frozen on a floor
+  one to three below where they work.
 - **Their loop**, on logged-on time only (nothing moves while you're away): a 6–14 minute cycle on the floor of their
   level: their faction's hub (else the floor's entry), out along the links to a server near their level, work it, and
   back to be paid. A job's outcome is rolled from their level against the server's (Careful +8%, Bold −8%), never
   fought; a crash pulls them out until the next cycle. Every cycle climbs them toward their trade's floor (300–900
   cycles); reaching it, they start on another. They never touch your servers or move a faction. Saved: `s.runners`
-  (the logged-on clock, and who you know).
+  (the logged-on clock, who you know, standing, fee paid, a hire's Signal).
+- **Meeting**: a runner at work on the server you're on fights in one of its live process or elite rooms: a paper-white
+  tab with their handle and their Signal on its chip. Walk in and the card shows their row and line, the standing a win
+  pays (+25), and **Help** (`assist`) in place of Engage. They fight beside you at the Signal they had, take none of the
+  XP, and a win raises their standing; the room's card then shows it. Once a job; they never clear your rooms or take
+  anything. Helping isn't a solo win.
+- **Standing**: 0–100 in four tiers: Stranger, Known (25), Friend (50: hire), Close (75). Drawn as the Tier bar, its
+  number and how you met in the tooltip. Known face: half again a raise, and three quarters of the fee.
+- **The runner card**: a Rail row opens it beside their diamond (beside the row when their floor isn't drawn): faction,
+  handle, class and level; Traits (temperament first), Standing, Now (→ a server and its time, or Busy with when they're
+  free), After (their trade); their latest #net line; **Hire**, off with the reason (or the clock) until you can.
+- **Hiring** (`hire <runner> [preset]`, from level 5, at Friend, three at most): the crew card shows Pay as two icons, a
+  fee once (20 credits a level, a quarter more a trait and a ★) and a cut of the credits each run banks (10%; Haggler
+  half, ★ a quarter), and their bar as preset tiles (their subclass's shipped presets). Hired, they're crew (violet),
+  level with you, and come on every run; `crew kick <name>` lets them go, and hiring again costs no fee.
+- **A hire's Signal** carries from fight to fight and run to run (a share of their max, refilling over 10 minutes of
+  logged-on time). At 0 they disconnect (*Signal's going. I'm out.*) and are Busy until full. If you drop to 0 you both
+  jack out, the hire at whatever Signal they had.
 - **The Rail**: under Contracts on the map, the runners you know (heard on #net), last heard first, six at most:
   handle, class and level, where (`→` a server on the road). Click one to draw it on its floor: a paper-white diamond
   with the handle, a dotted route through the servers passed, a dashed ring where it's heading. Again to drop it.
@@ -2601,8 +2619,8 @@ Hackers who merged their servers (simulated members for now). Everyone keeps the
 
 ### Co-op, simulated (crew.mjs)
 
-Crews of up to three come from friends and consortium members (`crew invite <name>`; `crew kick <name>`), or, in
-developer mode, `crew sim <classes>` adds bot crewmates from level 5 (`crew`, `crew off`). Home fights stay solo.
+Crews of up to three are hired runners (Social, above; `crew kick <name>`), or, in developer mode, `crew sim
+<classes>` adds bot crewmates from level 5 (`crew`, `crew off`). Home fights stay solo.
 
 - **A crewmate** plays its class at its own level with its own Signal, carried fight to fight through a run; one that
   went down comes back at 25% for the next fight. The same planner the balance scripts use plays it.
@@ -2622,7 +2640,7 @@ developer mode, `crew sim <classes>` adds bot crewmates from level 5 (`crew`, `c
   damage, one more ◆ and a clash (`ELITE`; Fights), only +5% a player. A champion, a feud and the farm's packs size
   their own Integrity, keep ×1.3 damage and roll no clash. Three times the XP, three drop rolls, never less than a blue, 8% a
   unique. Never in the way of anything you need.
-- A crewmate at 0 Signal is down for the fight; you going down ends it. Their abilities sound at half your level, two a batch at most, and never on your beat.
+- A crewmate at 0 Signal is down for the fight (a hired runner disconnects after it); you going down ends it. Their abilities sound at half your level, two a batch at most, and never on your beat.
 
 ### Co-op, peer to peer (coop.mjs)
 

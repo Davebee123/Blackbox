@@ -22,6 +22,7 @@ import { SPRAWL, zoneOf, zoneRooms } from './zone.mjs';
 import { deal, developerChain, CARDS as EVENT_CARDS, dealBlip, BLIPS, RUNCARD_DEAL } from './events.mjs';
 import { RUN_CARDS, dealCard } from './runcards.mjs';
 import { crewCommand } from './crew.mjs';
+import { runnerOf, cutOf } from './runners.mjs';
 import { presenceCommand, at, peopleOn, PRESENCE, online } from './presence.mjs';
 import { profileCommand } from './profile.mjs';
 import { achieveCommand, developerAchieve } from './achievements.mjs';
@@ -411,7 +412,7 @@ export function connect(s, id) {
   else if (loc.fresh && loc.detached && !joinCost(s, loc).fits) warn(s, `${loc.name} needs ${joinCost(s, loc).add} memory; ${memoryCap(s) - liveCount(s)} free (${liveCount(s)}/${memoryCap(s)}). Detach something first.`);
   else if (!loc.fresh && (loc.detached || (s.locations.includes(loc) && !isLive(s, loc)))) warn(s, `${loc.name} is detached from your network. Attach it first (its map card).`);
   else if (relocks(loc) && relockLeft(loc)) warn(s, `${loc.name} is still tracing your last connection. Reconnect in ${relockLeft(loc)}s.`);
-  else if (loc.farm && !(s.crewSim || []).length) warn(s, `${loc.name} is built for a crew. Bring one first with crew sim <class> or crew invite <friend>.`);
+  else if (loc.farm && !(s.crewSim || []).length) warn(s, `${loc.name} is built for a crew. Hire a runner first.`);
   else if (loc.member && (loc.depth || 1) > floorsReached(s)) warn(s, `${loc.name} is on floor ${loc.depth}. Reach that floor yourself first.`); // a member's servers: on floors you've opened (GAME_RULES.md "Consortium")
   else {
     // A found server joins your network as you connect (the game asks first: app.js).
@@ -701,6 +702,9 @@ export function bank(s, loc, why = '') {
   // A clean job: the vault opened and the trace still low.
   const clean = !!s.run.cracked && !s.run.hunter && (s.run.trace || 0) < TRACE.clean;
   if (clean) credits += Math.round(credits * TRACE.cleanCredits);
+  // Hired runners take their cut (runners.mjs cutOf), each of what the run banks.
+  const cuts = (s.crewSim || []).filter((x) => x.runner && runnerOf(s, x.name)).map((x) => [x.name, Math.round(credits * cutOf(runnerOf(s, x.name)))]).filter(([, n]) => n > 0);
+  for (const [h, n] of cuts) { credits -= n; emit(s, 'info', `${h}'s cut: ${n} credits.`, { runner: h, cut: n }); }
   s.server.credits += credits;
   const items = pack.filter((f) => f.kind === 'item').map((f) => f.item);
   s.signal = s.run.integrity;
@@ -745,7 +749,8 @@ export function play(s, input) {
   const [word, ...restWords] = text.split(' ');
   const rest = restWords.join(' ');
   if (word === 'connect') return connect(s, rest);
-  if (word === 'crew') return crewCommand(s, rest); // simulated co-op (crew.mjs)
+  if (word === 'crew') return crewCommand(s, rest); // your crew (crew.mjs)
+  if (word === 'hire') return crewCommand(s, text); // a runner you're Friends with (runners.mjs)
   if (word === 'program') return command(s, input); // routines.mjs: your program, anywhere
   if (word === 'consortium' || word === 'guild') return consortiumCommand(s, input.trim().replace(/^\S+\s*/, '')); // consortium.mjs (as typed: a name keeps its capitals)
   if (['online', 'who', 'friends', 'friend'].includes(word)) { const first = s.serial; presenceCommand(s, word, rest, emit, warn); return since(s, first); } // presence.mjs

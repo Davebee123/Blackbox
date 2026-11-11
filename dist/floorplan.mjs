@@ -68,6 +68,7 @@ import { GENES } from './genes.mjs';
 import { PROGRAMS, SOCKET, buildProgram, uninstallProgram, programCost, buildBlock as programBlock, costLine as programCostLine, codebasesOf } from './sockets.mjs';
 import { PUZZLES, PUZZLE_KINDS, isPuzzle, cipherOf, cgOpen, newPuzzle, puzzleMove, puzzleScore, puzzleStarted, cellOf, boardLines, moveLine } from './puzzles.mjs';
 import { RIVALS, spawnRival, rivalOf, rivalAt, rivalMove, rivalMeet, rivalLeave, rivalFight, rivalArm, rivalWon, rivalLost, rivalLine } from './rivals.mjs';
+import { meetingOf } from './runners.mjs';
 import { dealCard, cardLeave, surgeAt, surgeScreen, surgeFight, surgeWon, escortMove, escortArm, escortAfter, packAt, packMove, packFight, packWon } from './runcards.mjs';
 
 // ---------- tuning ----------
@@ -1137,6 +1138,8 @@ function arrive(s, room, opts = {}) {
     const f = fightOf(s, room), v = encounterVirus(s, f.key, f.seed, f.opts), name = f.name || v.name;
     R.screen = { kind: 'virus', room: room.id, name, pause: !!opts.pause };
     say(s, `${name} holds ${room.path}.${R.rare[room.id] ? ' A rare spawn.' : ''}`, 'intrusion');
+    const m = R.world ? meetingOf(s, isUp) : null; // a runner fighting it (runners.mjs): Help, or step back
+    if (m?.room.id === room.id) say(s, `The runner ${m.r.handle} is fighting it, at ${Math.round(m.sig * 100)}% Signal.`, 'rooms');
   } else stood(s, room);
 }
 // You stand in a room with nothing live in it (walked in, or what held it beaten): this visit's tally (a no-rest map
@@ -1190,6 +1193,14 @@ export function act(s, verb, arg = null, opts = {}) {
   if (sc?.kind === 'rival') {
     if (verb === 'engage' || verb === 'fight') { R.screen = null; fight(s, here, { as: 'rival', pause: !!opts.pause || !!sc.pause }); }
     else deny(s, `${RIVALS[rivalOf(s).id].name} has you. Engage.`);
+    return out(s, first);
+  }
+  // Help a runner fighting in this room (runners.mjs meetingOf): they fight beside you (crew.mjs), and a win raises
+  // their standing.
+  if (verb === 'assist') {
+    const m = R.world && sc?.kind === 'virus' ? meetingOf(s, isUp) : null;
+    if (m?.room.id !== here.id) deny(s, 'No runner here to help.');
+    else { R.visit.helping = { h: m.r.handle, room: here.id, sig: m.sig }; R.screen = null; fight(s, here, { pause: !!opts.pause || !!sc.pause, as: sc.as || null }); }
     return out(s, first);
   }
   if (verb === 'engage') {

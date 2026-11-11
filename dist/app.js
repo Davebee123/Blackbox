@@ -1909,11 +1909,28 @@ function placeMapPop() {
   pop.style.left = Math.round(left) + 'px'; pop.style.top = Math.round(top) + 'px'; pop.style.visibility = 'visible';
   popAt = { key, left: pop.style.left, top: pop.style.top };
 }
+// The runner card (runners-view.mjs) beside the picked runner's diamond: to its right, or its left when there's no room;
+// beside their Rail row when they're on a floor the map isn't drawing.
+function placeRunnerPop() {
+  if (F.isPhone()) return;
+  const pop = $('runner-pop'), canvas = pop?.closest('.map-canvas');
+  if (!pop || !canvas) return;
+  const c = zr(canvas.getBoundingClientRect()), d = canvas.querySelector('.mrunner .mr-dia'), w = pop.offsetWidth, h = pop.offsetHeight, gap = 16;
+  const row = canvas.querySelector('.rr-row.on'); // on a floor not drawn: beside their row on the Rail
+  let left = 8, top = 8;
+  if (!d && row) { const n = zr(row.getBoundingClientRect()); left = n.right - c.left + 8; top = n.top - c.top - 8; }
+  if (d) {
+    const n = zr(d.getBoundingClientRect()), cx = n.left + n.width / 2 - c.left, cy = n.top + n.height / 2 - c.top;
+    left = cx + gap; if (left + w > c.width - 8) left = cx - gap - w;
+    top = cy - 40;
+  }
+  pop.style.left = Math.round(Math.max(8, Math.min(c.width - w - 8, left))) + 'px'; pop.style.top = Math.round(Math.max(8, Math.min(c.height - h - 8, top))) + 'px'; pop.style.visibility = 'visible';
+}
 function applyMapZoom() {
   const svg = mapSvg();
   if (!svg) return;
   const [x, y, w, h] = baseVb(svg);
-  const fix = () => { const a = svg.getScreenCTM()?.a; if (a) { svg.style.setProperty('--z', a); if (V.setMapScale(a)) dirty = true; } placeMapPop(); }; // a new scale: labels re-sort who fits // text keeps its size on screen, at any width or zoom
+  const fix = () => { const a = svg.getScreenCTM()?.a; if (a) { svg.style.setProperty('--z', a); if (V.setMapScale(a)) dirty = true; } placeMapPop(); placeRunnerPop(); }; // a new scale: labels re-sort who fits // text keeps its size on screen, at any width or zoom
   if (mapZoom.k <= 1) { mapZoom.k = 1; svg.setAttribute('viewBox', `${x} ${y} ${w} ${h}`); svg.classList.remove('zoomed'); return fix(); }
   const zw = w / mapZoom.k, zh = h / mapZoom.k;
   mapZoom.cx = Math.max(x + zw / 2, Math.min(x + w - zw / 2, mapZoom.cx));
@@ -2121,7 +2138,8 @@ addEventListener('resize', () => placeCrewWin());
 let mapPop = false;
 let mapList = false, mapSort = 'status', pendingLocate = null; // the map's List mode (MOO2's planets list), its sort column, and a Locate waiting for the map to draw
 let mapFilter = []; // the map's Show picker: any of mine · targets · threats (none = all; the rest dims)
-let mapRunner = null; // the runner picked on the Rail (runners-view.mjs): the map draws them
+let mapRunner = null; // the runner picked on the Rail (runners-view.mjs): the map draws them, their card beside them
+let runnerMode = 'runner', runnerPreset = 'rotation'; // their card: the runner card, or the crew card Hire turns it into
 let mapFloor = null; // the floor the map shows (floors.mjs): the floor panel's pick; a selection on another floor shows that one
 let mapPickOpen = false; // whether the picker's menu is open (it survives redraws)
 let leadsOpen = false; // a run's Leads panel (the run header's toggle)
@@ -2292,7 +2310,7 @@ function render(force = false) {
   } else if (combatLike && (campaign.breach || CAMP)) {
     return go(campaign.breach ? 'breach' : 'campaign', true); // a breach fight that's over: back to its page, never the old map
   } else if (combatLike) {
-    put('page-view', V.mapMarkup(campaign, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor, runner: mapRunner, phone: F.isPhone() }));
+    put('page-view', V.mapMarkup(campaign, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor, runner: mapRunner, runnerMode, runnerPreset, phone: F.isPhone() }));
     applyMapZoom();
   } else if (module === 'net') {
     const before = cache.get('page-view');
@@ -2303,7 +2321,7 @@ function render(force = false) {
       $('term').scrollTop = $('term').scrollHeight;
     }
   } else {
-    const pages = { rooms: (x) => roomsMarkup(x), campaign: (x) => campaignMarkup(x), room: (x) => roomMarkup(x), archive: (x) => archiveMarkup(x), breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor, runner: mapRunner, phone: F.isPhone() }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => (hubSel === POST.id ? postTerminalMarkup(x, hubLines, hubWin, Date.now()) : V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now())), server: (x) => V.serverMarkup(x, Date.now(), srvUi), daemons: V.daemonsMarkup, codex: (x) => (codexTab === 'log' ? collectionPageMarkup(x, logSel, codexIdx, codexShut, logFind, logJr) : codexPageMarkup(x, codexSel, codexIdx, codexShut)), system: (x) => V.systemMarkup(x, { coop: !!coop, dev: DEV, tab: systemTab }), rig: (x) => V.rigMarkup(x, { tab: rigTab, ach: achUi }) };
+    const pages = { rooms: (x) => roomsMarkup(x), campaign: (x) => campaignMarkup(x), room: (x) => roomMarkup(x), archive: (x) => archiveMarkup(x), breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor, runner: mapRunner, runnerMode, runnerPreset, phone: F.isPhone() }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => (hubSel === POST.id ? postTerminalMarkup(x, hubLines, hubWin, Date.now()) : V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now())), server: (x) => V.serverMarkup(x, Date.now(), srvUi), daemons: V.daemonsMarkup, codex: (x) => (codexTab === 'log' ? collectionPageMarkup(x, logSel, codexIdx, codexShut, logFind, logJr) : codexPageMarkup(x, codexSel, codexIdx, codexShut)), system: (x) => V.systemMarkup(x, { coop: !!coop, dev: DEV, tab: systemTab }), rig: (x) => V.rigMarkup(x, { tab: rigTab, ach: achUi }) };
     // A page that throws shows what broke (and a way back) instead of stopping every render after it.
     const keep = module === 'breach' ? $('bx-scroll')?.scrollTop : null;
     const focusRoom = module === 'rooms' ? document.activeElement?.closest?.('.fp-room')?.dataset.room : null; // a redraw keeps a focused room focused
@@ -3054,8 +3072,13 @@ document.addEventListener('click', (e) => {
     if (cmd.classList.contains('ability') && !cmd.classList.contains('script')) { $('command-input').value = cmd.dataset.command; focusPrompt(); return; } // a script runs at once: it takes no cycle
     return run(cmd.dataset.command);
   }
+  if (e.target.closest('[data-runner-close]')) { mapRunner = null; runnerMode = 'runner'; dirty = true; return; }
+  const rh = e.target.closest('[data-runner-hire]');
+  if (rh) { runnerMode = rh.dataset.runnerHire === '1' ? 'crew' : 'runner'; runnerPreset = 'rotation'; dirty = true; return; }
+  const rp = e.target.closest('[data-runner-preset]');
+  if (rp) { runnerPreset = rp.dataset.runnerPreset; dirty = true; return; }
   const rr = e.target.closest('[data-runner]');
-  if (rr) { const h = rr.dataset.runner; mapRunner = mapRunner === h ? null : h; const fl = mapRunner && runnerFloor(campaign, h); if (fl && fl <= (campaign.floors?.reached || 1)) mapFloor = fl; dirty = true; return; } // the Rail: pick a runner, again to drop them
+  if (rr) { const h = rr.dataset.runner; mapRunner = mapRunner === h ? null : h; runnerMode = 'runner'; const fl = mapRunner && runnerFloor(campaign, h); if (fl && fl <= (campaign.floors?.reached || 1)) mapFloor = fl; dirty = true; return; } // the Rail: pick a runner, again to drop them
   const loc = e.target.closest('[data-locate]');
   if (loc) { pendingLocate = loc.dataset.locate === '__sel' ? mapSel : loc.dataset.locate; mapList = false; mapSel = pendingLocate; mapPop = true; if (module !== 'map') go('map'); dirty = true; return; }
   const ml = e.target.closest('[data-maplist]');
