@@ -2793,7 +2793,7 @@ Developer commands work only in tests, playtest pages, a test bench and with `?d
   empty (never under yours; a part's at its own, a rival's one over you). A rival's later fights bring its counter, read
   from your win in the one before. **Again** (`developer fight again`) restarts the last pick; ♥ refills first.
 - **Playtest pages:** `?playtest=rooms` (a throwaway server of rooms, its clocks ten times as fast), `?playtest=<strain
-  or fixture>`, `?playtest=part:<id>` (`part:<id>.exe` for its .exe build), `?playtest=fx` (every ability effect and tier, fired from its key, by result, status and ticks left; four virus attacks on your bar, by result, in each sound style).
+  or fixture>`, `?playtest=part:<id>` (`part:<id>.exe` for its .exe build), `?playtest=fx` (every ability effect and tier, fired from its key, by result, status and ticks left; every virus attack on your bar, by result, with its sound).
 - `developer scene <id>` plays a transmission again. `developer levelup preview`, `developer thread preview`, `developer pager fill`, `developer parts`, `developer
   event`, `developer exfil`, and the rest under each section.
 
