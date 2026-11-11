@@ -27,6 +27,7 @@ export const ATTACKS = {
   hash: { name: 'Hash', part: 'Rig', theme: 'heat' },
   discharge: { name: 'Discharge', part: 'Accumulator', theme: 'clock' },
 };
+export const PICKED = 'b1'; // the style round's pick: Corrupt, with Latch for its Encrypt
 export const RESULTS = ['hit', 'crit', 'blocked', 'evaded'];
 // Levels (dB), so every style is heard at today's loudness, measured through renderBoard(): a medium hit at today's
 // hurt (−17 LUFS, momentary max), a crit a little under today's (−13: today's clips), blocked near −25 and evaded
