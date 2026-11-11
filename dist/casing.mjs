@@ -6,16 +6,18 @@
 //              each other one comes with an achievement.
 //   plate      the badge on the chin: BLACKBOX · MODEL 7 (stock), MODEL 7 · <a title you've earned>, or your own text
 //              (16 plain characters at most, shown in capitals).
-//   stickers   4 slots on the chin, two either side of the plate, each holding a sticker you've earned (profile.mjs
-//              stickers, an achievement's reward) as a small decal in its colour.
-// Saved on s.cosmetics = { case, plate: null | { title } | { text }, decals: [id|null ×4], district?, props? [id|null ×2] }; an older save has none and
-// shows the stock casing. System → Casing turns it all off with the casing (app.js casing()); phones never show it.
+//   stickers   every sticker you've earned (profile.mjs stickers, an achievement's reward), a small decal in its
+//              colour, anywhere on the plastic: the top, either side or the chin. They may overlap each other, never
+//              the glass, the knobs, the plate or the lamps. Dragged into place on Rig → Casing.
+// Saved on s.cosmetics = { case, plate: null | { title } | { text }, stickers: [{ id, side, u, v }], district?,
+// props?: [{ id, on, u }] }; an older save has none and shows the stock casing (its four chin slots and two desk spots
+// are read as places: stuck() and stood()). System → Casing turns it all off with the casing (app.js casing()); phones never show it.
 import { emit, warn } from './combat.mjs';
 import { earned, achievements } from './achievements.mjs';
 import { titleById, myProfile, stickerById } from './profile.mjs';
 import { DISTRICTS, DISTRICT_IDS } from './districts.mjs';
 
-export const CASING = { slots: 4, plate: 16, stock: 'BLACKBOX · MODEL 7' };
+export const CASING = { plate: 16, stock: 'BLACKBOX · MODEL 7' };
 // The colourways: their name and the achievement that brings each (its id). Their colours live in casing.css.
 export const COLORWAYS = {
   stock: { name: 'Stock', tip: 'Dark grey plastic, as it shipped.' },
@@ -37,9 +39,37 @@ export function cosmeticsOf(s) {
   const C = (s.cosmetics ||= {});
   if (!COLORWAYS[C.case]) C.case = 'stock';
   if (C.plate === undefined) C.plate = null;
-  if (!Array.isArray(C.decals)) C.decals = [];
-  C.decals = Array.from({ length: CASING.slots }, (_, i) => C.decals[i] || null);
+  C.stickers = stuck(C); delete C.decals; // an older save's four slots, converted once
+  if (C.props) C.props = stood(C);
   return C;
+}
+// Where a sticker is: a side of the casing, how far along it (u, 0–1) and, on the chin, how far down (v, 0–1).
+export const SIDES = ['top', 'left', 'right', 'chin'];
+const unit = (v, d = 0.5) => (v != null && v !== '' && Number.isFinite(Number(v)) ? Math.max(0, Math.min(1, Number(v))) : d);
+const once = (list) => list.filter((x, i) => list.findIndex((y) => y.id === x.id) === i); // one place each
+const SLOT_U = [0.2, 0.32, 0.68, 0.8]; // where an older save's four chin slots were
+// The stickers as saved, whatever the save's age (pure, so a view can read it): [{ id, side, u, v }], the last on top.
+function stuck(C) {
+  if (Array.isArray(C?.stickers)) return once(C.stickers.filter((x) => x && typeof x.id === 'string').map((x) => ({ id: x.id, side: SIDES.includes(x.side) ? x.side : 'chin', u: unit(x.u), v: unit(x.v) })));
+  return once((Array.isArray(C?.decals) ? C.decals : []).map((id, i) => (typeof id === 'string' ? { id, side: 'chin', u: SLOT_U[i] ?? 0.5, v: 0.5 } : null)).filter(Boolean));
+}
+// The props as saved: [{ id, on: 'desk' | 'top', u }]. An older save's two spots were the desk's left and right.
+function stood(C) {
+  return once((Array.isArray(C?.props) ? C.props : []).map((p, i) => (typeof p === 'string' ? { id: p, on: 'desk', u: i ? 0.79 : 0.11 } : p && typeof p.id === 'string' ? { id: p.id, on: p.on === 'top' ? 'top' : 'desk', u: unit(p.u) } : null)).filter(Boolean));
+}
+const r4 = (v) => Math.round(unit(v) * 1e4) / 1e4;
+// Put a sticker of yours somewhere (or move it): it goes on top of the others. False when it isn't yours.
+export function placeSticker(s, id, pos = {}) {
+  if (!decalsOwned(s).some((x) => x.id === id)) return false;
+  const C = cosmeticsOf(s);
+  C.stickers = [...C.stickers.filter((x) => x.id !== id), { id, side: SIDES.includes(pos.side) ? pos.side : 'chin', u: r4(pos.u), v: r4(pos.v) }];
+  return true;
+}
+export function placeProp(s, id, pos = {}) {
+  if (!propOpen(s, id)) return false;
+  const C = cosmeticsOf(s);
+  C.props = [...stood(C).filter((x) => x.id !== id), { id, on: pos.on === 'top' ? 'top' : 'desk', u: r4(pos.u) }];
+  return true;
 }
 // The stickers you can put on the casing: every one an achievement you've earned brings (kept for good), and any the
 // profile shows now (profile.mjs stickersOf is the card's; this never loses one).
@@ -53,27 +83,25 @@ export function casingLook(s) {
   const color = COLORWAYS[C.case] && colorwayOpen(s, C.case) && C.case !== 'stock' ? C.case : null;
   const t = C.plate?.title && (s.profile?.titles || []).includes(C.plate.title) ? titleById(C.plate.title) : null;
   const plate = t ? `MODEL 7 · ${t.name.toUpperCase()}` : C.plate?.text ? C.plate.text.toUpperCase() : CASING.stock;
-  const decals = Array.from({ length: CASING.slots }, (_, i) => { const id = (C.decals || [])[i]; return id && owned.has(id) ? stickerById(id) : null; });
+  const decals = stuck(C).filter((x) => owned.has(x.id) && stickerById(x.id)).map((x) => ({ ...stickerById(x.id), side: x.side, u: x.u, v: x.v }));
   return { color, plate, decals };
 }
 const escHtml = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-// A decal: a small label in the sticker's colour, its mark in ASCII, a slight tilt (still: it never moves).
+// A decal: a small label in the sticker's colour, its mark in ASCII (still: it never moves).
 const DECAL_MARK = { faction: '##', set: '[]', floor: '\\/', lair: 'x_x', deed: '*' };
-export const decalMarkup = (x, i) => `<span class="decal k-${x.kind}" style="--sc:${x.color}" data-slot="${i}" title="${escHtml(x.tip)}"><i aria-hidden="true">${DECAL_MARK[x.kind] || '*'}</i>${escHtml(x.label)}</span>`;
-// The chin's two strips of stickers (slots 1–2 left of the plate, 3–4 right of it). Empty when none are placed.
-export function decalStrips(s) {
-  const L = casingLook(s).decals, side = (a, b) => L.slice(a, b).map((x, k) => (x ? decalMarkup(x, a + k) : '')).join('');
-  return { left: side(0, 2), right: side(2, 4) };
-}
+export const decalMarkup = (x) => `<span class="decal k-${x.kind}" style="--sc:${x.color}" data-sticker="${escHtml(x.id)}" title="${escHtml(x.tip)}"><i aria-hidden="true">${DECAL_MARK[x.kind] || '*'}</i>${escHtml(x.label)}</span>`;
 
 // ---------- commands ----------
-// casing color <name>, casing plate <text>|title <title>|stock, casing sticker <1-4> <sticker>|off, casing prop
-// <1-2> <prop>|off. (casing on|off is app.js's: the casing itself.)
+// casing color <name>, casing plate <text>|title <title>|stock, casing sticker <sticker> [top|left|right|chin [0-100
+// [0-100]]]|off, casing prop <prop> [desk|top [0-100]]|off. (casing on|off is app.js's: the casing itself.)
+const USAGE = 'casing color <name>, casing plate <text>|title <title>|stock, casing sticker <sticker> [top|left|right|chin]|off, casing prop <prop> [desk|top]|off';
+const NEW_U = [0.22, 0.74, 0.3, 0.66, 0.16, 0.8, 0.36, 0.6], NEW_PROP_U = [0.11, 0.79, 0.05, 0.9, 0.6, 0.7]; // where a new one lands
+const pct = (w, d) => (w != null && /^\d+(\.\d+)?$/.test(w) ? Number(w) / 100 : d);
 const plain = (t) => /^[\x20-\x7e]*$/.test(t);
 export function casingCommand(s, raw) {
   const words = String(raw).trim().split(/\s+/), verb = (words[1] || '').toLowerCase(), rest = words.slice(2).join(' ');
   const C = cosmeticsOf(s);
-  if (!verb) return emit(s, 'info', `Casing: ${COLORWAYS[C.case].name}, plate ${casingLook(s).plate}, ${C.decals.filter(Boolean).length} of ${CASING.slots} stickers, ${propsLook(s).filter(Boolean).length} of ${PROP_SLOTS} props. casing color|plate|sticker|prop`);
+  if (!verb) return emit(s, 'info', `Casing: ${COLORWAYS[C.case].name}, plate ${casingLook(s).plate}, ${casingLook(s).decals.length} stickers, ${propsLook(s).length} props. casing color|plate|sticker|prop`);
   if (verb === 'color' || verb === 'colour') {
     const want = rest.toLowerCase(), id = COLORWAY_IDS.find((k) => k === want || COLORWAYS[k].name.toLowerCase() === want);
     if (!id) return warn(s, `No colourway called ${rest || 'that'}. ${COLORWAY_IDS.join(', ')}.`);
@@ -96,29 +124,34 @@ export function casingCommand(s, raw) {
     C.plate = { text };
     return emit(s, 'info', `Plate: ${text.toUpperCase()}.`);
   }
-  if (verb === 'prop') {
-    const n = Number(words[2]), what = words.slice(3).join(' ').toLowerCase();
-    if (!(n >= 1 && n <= PROP_SLOTS)) return warn(s, `casing prop <1-${PROP_SLOTS}> <prop>|off`);
-    C.props = Array.from({ length: PROP_SLOTS }, (_, i) => (Array.isArray(C.props) && C.props[i]) || null);
-    if (!what || what === 'off' || what === 'none') { C.props[n - 1] = null; return emit(s, 'info', `The ${n === 1 ? 'left' : 'right'} of the desk is bare.`); }
+  const w = words.slice(2).map((x) => x.toLowerCase()), off = ['off', 'none'].includes(w.at(-1));
+  if (off) w.pop();
+  if (verb === 'prop' || verb === 'props') {
+    if (off && !w.length) { C.props = []; return emit(s, 'info', 'The desk is bare.'); }
+    const at = w.findIndex((x) => x === 'top' || x === 'desk'), what = (at < 0 ? w : w.slice(0, at)).join(' ');
+    if (!what) return warn(s, 'casing prop <prop> [desk|top]|off');
     const id = PROP_IDS.find((k) => k === what || PROPS[k].name.toLowerCase() === what || PROPS[k].name.toLowerCase().split(' ').includes(what));
     if (!id) return warn(s, `No prop called ${what}. ${PROP_IDS.map((k) => PROPS[k].name).join(', ')}.`);
     if (!propOpen(s, id)) return warn(s, `The ${PROPS[id].name.toLowerCase()} comes with ${comesWith(propFrom(id), false)}.`);
-    C.props = C.props.map((x) => (x === id ? null : x)); // one place each
-    C.props[n - 1] = id;
-    return emit(s, 'info', `${PROPS[id].name} on the ${n === 1 ? 'left' : 'right'} of the desk.`);
+    const now = stood(C), was = now.find((x) => x.id === id);
+    if (off) { C.props = now.filter((x) => x.id !== id); return emit(s, 'info', `The ${PROPS[id].name.toLowerCase()} comes off.`); }
+    const on = at < 0 ? was?.on || 'desk' : w[at];
+    placeProp(s, id, { on, u: pct(w[at + 1], at < 0 && was ? was.u : NEW_PROP_U[now.length % NEW_PROP_U.length]) });
+    return emit(s, 'info', `${PROPS[id].name} on ${on === 'top' ? 'top of the monitor' : 'the desk'}.`);
   }
-  if (verb === 'sticker') {
-    const n = Number(words[2]), what = words.slice(3).join(' ').toLowerCase();
-    if (!(n >= 1 && n <= CASING.slots)) return warn(s, `casing sticker <1-${CASING.slots}> <sticker>|off`);
-    if (!what || what === 'off' || what === 'none') { C.decals[n - 1] = null; return emit(s, 'info', `Slot ${n} is bare.`); }
+  if (verb === 'sticker' || verb === 'stickers') {
+    if (off && !w.length) { C.stickers = []; return emit(s, 'info', 'The casing is bare.'); }
+    const at = w.findIndex((x) => SIDES.includes(x)), what = (at < 0 ? w : w.slice(0, at)).join(' ');
+    if (!what) return warn(s, 'casing sticker <sticker> [top|left|right|chin]|off');
     const x = decalsOwned(s).find((d) => d.id === what || d.label.toLowerCase() === what);
     if (!x) return warn(s, `No sticker of yours called ${what}.`);
-    C.decals = C.decals.map((id) => (id === x.id ? null : id)); // one place each
-    C.decals[n - 1] = x.id;
-    return emit(s, 'info', `${x.label} goes on slot ${n}.`);
+    const was = C.stickers.find((d) => d.id === x.id);
+    if (off) { C.stickers = C.stickers.filter((d) => d.id !== x.id); return emit(s, 'info', `${x.label} comes off.`); }
+    const side = at < 0 ? was?.side || 'chin' : w[at];
+    placeSticker(s, x.id, { side, u: pct(w[at + 1], at < 0 && was ? was.u : NEW_U[C.stickers.length % NEW_U.length]), v: pct(w[at + 2], at < 0 && was ? was.v : 0.5) });
+    return emit(s, 'info', `${x.label} goes on the ${side === 'left' || side === 'right' ? `${side} side` : side}.`);
   }
-  return warn(s, 'casing color <name>, casing plate <text>|title <title>|stock, casing sticker <1-4> <sticker>|off, casing prop <1-2> <prop>|off');
+  return warn(s, USAGE);
 }
 export const unlockedColorways = (s) => COLORWAY_IDS.filter((id) => colorwayOpen(s, id));
 
@@ -142,9 +175,9 @@ export function districtCommand(s, raw) {
   return emit(s, 'info', `Window: ${DISTRICTS[id].name}.`);
 }
 
-// The props on the desk: small things that stand in two fixed spots, each from an achievement (reward.prop). Drawn as
-// small inline pictures (no canvas), still, but for the mug's steam while Motion is on. Saved as s.cosmetics.props
-// [left, right]; none is the bare desk, as it always was.
+// The props: small things that stand on the desk or on top of the monitor, anywhere along either, each from an
+// achievement (reward.prop). Drawn as small inline pictures (no canvas), still, but for the mug's steam while Motion is
+// on. Saved as s.cosmetics.props [{ id, on, u }]; none is the bare desk, as it always was.
 export const PROPS = {
   mug: { name: 'Coffee mug', tip: 'A chipped mug, still warm. It steams while Motion is on.' },
   duck: { name: 'Rubber duck', tip: 'Explain your code to it, line by line.' },
@@ -154,15 +187,11 @@ export const PROPS = {
   die: { name: 'Lucky die', tip: 'It comes up six when it matters.' },
 };
 export const PROP_IDS = Object.keys(PROPS);
-export const PROP_SLOTS = 2;
 export const propFrom = (id) => achievements().find((a) => a.reward?.prop === id) || null;
 export const propOpen = (s, id) => !!PROPS[id] && !!propFrom(id) && earned(s, propFrom(id).id);
 export const propsOwned = (s) => PROP_IDS.filter((id) => propOpen(s, id));
-// What the desk shows (read only): [left, right], each { id, name, tip } or null.
-export function propsLook(s) {
-  const P = Array.isArray(s?.cosmetics?.props) ? s.cosmetics.props : [];
-  return Array.from({ length: PROP_SLOTS }, (_, i) => (P[i] && propOpen(s, P[i]) ? { id: P[i], ...PROPS[P[i]] } : null));
-}
+// What stands where (read only): [{ id, name, tip, on, u }].
+export const propsLook = (s) => stood(s?.cosmetics).filter((p) => propOpen(s, p.id)).map((p) => ({ ...p, ...PROPS[p.id] }));
 // The pictures, 30 × 26, in the casing's warm, dim light. The mug's steam is the only thing that moves (casing.css).
 const PROP_SVG = {
   mug: '<path class="steam" d="M11.5 7c-2-2 2-3 0-5"/><path class="steam" d="M15.5 7c-2-2 2-3 0-5"/><path d="M7 9h13v12a3 3 0 0 1-3 3h-7a3 3 0 0 1-3-3z" fill="#5d4232"/><path d="M20 12h2a3 3 0 0 1 0 7h-2" fill="none" stroke="#5d4232" stroke-width="2"/><ellipse cx="13.5" cy="9.5" rx="6.5" ry="1.6" fill="#1c120c"/><path d="M8 11v9" stroke="#8a6a52" stroke-width="1" opacity=".6"/><rect x="5" y="24" width="18" height="1.4" rx=".7" fill="#000" opacity=".5"/>',
@@ -174,28 +203,65 @@ const PROP_SVG = {
 };
 export const PROP_BOX = { w: 30, h: 26 };
 export const propSvg = (id) => `<svg viewBox="0 0 30 26" width="30" height="26" aria-hidden="true">${PROP_SVG[id] || ''}</svg>`;
-export const propMarkup = (p, i) => `<span class="prop p-${p.id}" data-prop-slot="${i}" title="${escHtml(`${p.name}. ${p.tip}`)}">${propSvg(p.id)}</span>`;
+export const propMarkup = (p) => `<span class="prop p-${p.id}" data-prop="${p.id}" title="${escHtml(`${p.name}. ${p.tip}`)}">${propSvg(p.id)}</span>`;
 
-// Where they stand (pure, so a test can hold it to the rule: never over the knobs, the lamps, the plate, a sticker or
-// the screen). m: the viewport { W, H, desk (the desk strip's height, 0 without the window) } and the chin's rects
-// { box, knobs, plate, lamps } as getBoundingClientRect gives them; used: which spots hold a prop. With the desk, the
-// spots are on it, under the monitor (in the strip below the chin): the left one clear of the keyboard, the right one
-// past the cable, where the window's canvas draws nothing on the desk. Without it, they stand on the chin itself, one
-// just past the knobs and one just short of the lamps, and the sticker strips then start or end past them (a spot
-// with no room before the plate is left empty). Returns the spots ({ x, y, w, h } or null) and the stickers' strip
-// ends (--dz-*, from the chin's edges).
-export function propLayout(m, used = [false, false]) {
-  const { w, h } = PROP_BOX, gap = 18, near = 14, box = m.box;
-  const dz = { l0: m.knobs.right - box.left + gap, l1: box.right - m.plate.left + gap, r0: m.plate.right - box.left + gap, r1: box.right - m.lamps.left + gap };
-  const spots = [null, null];
-  if (m.desk >= h + 2) {
-    const y = m.H - m.desk + (m.desk - h) / 2;
-    spots[0] = used[0] ? { x: Math.round(m.W * 0.11 - w / 2), y, w, h } : null;
-    spots[1] = used[1] ? { x: Math.round(m.W * 0.79 - w / 2), y, w, h } : null;
-    return { spots, dz };
+// ---------- where things sit (pure, so a test can hold them to the rule) ----------
+// m: the page { W, H } and the screen's margins on it { top, side, chin, desk } (the body's padding: the glass is the
+// box inside them), win: the window is showing. keep: the rects of the knobs, the plate and the lamps.
+// The plastic a sticker can sit on round the glass: the bezel (14px over it, 18px either side) and a little of its rim.
+export const FRAME = { t: 20, s: 24, corner: 22, rim: 22 };
+const glassOf = (m) => ({ left: m.side, top: m.top, right: m.W - m.side, bottom: m.H - m.chin - m.desk });
+const clamp = (v, a, b) => (a > b ? (a + b) / 2 : Math.max(a, Math.min(b, v)));
+const runOf = (g) => [g.left - FRAME.s + FRAME.corner, g.right + FRAME.s - FRAME.corner]; // the top's and the chin's length, short of the corners
+// A centre moved off every kept span, inside lo–hi: the nearest place in a gap wide enough to hold it.
+function clearOf(cx, half, spans, lo, hi) {
+  let best = null, from = lo + half;
+  const offer = (a, b) => { if (b < a) return; const c = clamp(cx, a, b); if (best == null || Math.abs(c - cx) < Math.abs(best - cx)) best = c; };
+  for (const [a, b] of [...spans].sort((p, q) => p[0] - q[0])) { offer(from, Math.min(a - half, hi - half)); from = Math.max(from, b + half); }
+  offer(from, hi - half);
+  return best ?? clamp(cx, lo + half, hi - half);
+}
+const spansOf = (keep, pad) => keep.map((r) => [r.left - pad, r.right + pad]);
+// A chin sticker's slight tilt, its own for good. The thin top and sides have no room for one.
+export const stickerTilt = (id) => (([...String(id)].reduce((a, c) => a + c.charCodeAt(0), 0) % 7) - 3) * 0.9;
+// Where a sticker { id, side, u, v } of size { w, h } is drawn: its box's top left (x, y) before it turns, its centre,
+// the room it takes once turned (bw × bh) and its turn in degrees. Always wholly on the plastic.
+export function stickerSpot(m, keep, st, size) {
+  const g = glassOf(m), up = st.side === 'left' || st.side === 'right', bw = up ? size.h : size.w, bh = up ? size.w : size.h, [x0, x1] = runOf(g);
+  let cx, cy, rot = 0;
+  if (st.side === 'top') { cx = clamp(x0 + st.u * (x1 - x0), x0 + bw / 2, x1 - bw / 2); cy = g.top - FRAME.t / 2; }
+  else if (up) { cx = st.side === 'left' ? g.left - FRAME.s / 2 : g.right + FRAME.s / 2; cy = clamp(g.top + st.u * (g.bottom - g.top), g.top + 6 + bh / 2, g.bottom - 6 - bh / 2); rot = st.side === 'left' ? -90 : 90; }
+  else { const y0 = g.bottom + 4 + bh / 2, y1 = g.bottom + m.chin - 12 - bh / 2; cy = clamp(y0 + st.v * (y1 - y0), y0, y1); cx = clearOf(x0 + st.u * (x1 - x0), bw / 2, spansOf(keep, 6), x0, x1); rot = stickerTilt(st.id); }
+  return { x: cx - size.w / 2, y: cy - size.h / 2, cx, cy, bw, bh, rot };
+}
+// The place a sticker dragged to (px, py) takes: the side under the pointer, or the nearest one from over the glass.
+export function stickerAt(m, px, py, size) {
+  const g = glassOf(m), [x0, x1] = runOf(g);
+  let side;
+  if (py >= g.bottom) side = 'chin'; else if (py <= g.top) side = 'top'; else if (px <= g.left) side = 'left'; else if (px >= g.right) side = 'right';
+  else { const d = { top: py - g.top, chin: g.bottom - py, left: px - g.left, right: g.right - px }; side = SIDES.reduce((a, b) => (d[b] < d[a] ? b : a)); }
+  if (side === 'left' || side === 'right') return { side, u: unit((py - g.top) / (g.bottom - g.top)), v: 0.5 };
+  const y0 = g.bottom + 4 + size.h / 2, y1 = g.bottom + m.chin - 12 - size.h / 2;
+  return { side, u: unit((px - x0) / (x1 - x0)), v: side === 'chin' ? unit((py - y0) / Math.max(1, y1 - y0)) : 0.5 };
+}
+// Whether a prop can stand on top of the monitor: only with the window, and room over the frame for it.
+const roofOf = (m) => (m.win && m.top - FRAME.rim >= PROP_BOX.h - 4 ? m.top - FRAME.rim : 0);
+const deskOf = (m) => m.desk >= PROP_BOX.h + 2;
+// Where a prop { on, u } stands ({ x, y, w, h, on }): on top of the monitor when there's room over it; else on the desk
+// under the monitor (clear of the keyboard, the monitor's foot and its cable, as window.mjs draws them); else, with no
+// desk, on the chin, clear of the knobs, the plate and the lamps.
+export function propSpot(m, keep, p) {
+  const { w, h } = PROP_BOX, g = glassOf(m), [x0, x1] = runOf(g), roof = roofOf(m);
+  if (p.on === 'top' && roof) return { x: Math.round(clamp(x0 + p.u * (x1 - x0), x0 + w / 2, x1 - w / 2) - w / 2), y: roof - h + 2, w, h, on: 'top' };
+  if (deskOf(m)) {
+    const fw = Math.min(260, m.W * 0.14), cx = clearOf(p.u * m.W, w / 2, [[m.W * 0.2 - 6, m.W * 0.4 + 6], [m.W / 2 - fw / 2 - 6, m.W / 2 + fw * 1.2 + 6]], 8, m.W - 8);
+    return { x: Math.round(cx - w / 2), y: m.H - m.desk + (m.desk - h) / 2, w, h, on: 'desk' };
   }
-  const y = box.top + (box.height - h) / 2;
-  if (used[0]) { const x = m.knobs.right + near; if (x + w + near <= m.plate.left) { spots[0] = { x, y, w, h }; dz.l0 = x + w - box.left + gap; } }
-  if (used[1]) { const x = m.lamps.left - near - w; if (x - near >= m.plate.right) { spots[1] = { x, y, w, h }; dz.r1 = box.right - x + gap; } }
-  return { spots, dz };
+  return { x: Math.round(clearOf(x0 + p.u * (x1 - x0), w / 2, spansOf(keep, 14), x0, x1) - w / 2), y: g.bottom + (m.chin - h) / 2, w, h, on: 'desk' };
+}
+// The place a prop dragged to (px, py) takes: the top from the screen's upper half (when it can stand there), else the desk.
+export function propAt(m, px, py) {
+  const g = glassOf(m), [x0, x1] = runOf(g);
+  if (roofOf(m) && py < (g.top + g.bottom) / 2) return { on: 'top', u: unit((px - x0) / (x1 - x0)) };
+  return { on: 'desk', u: deskOf(m) ? unit(px / m.W) : unit((px - x0) / (x1 - x0)) };
 }

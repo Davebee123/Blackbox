@@ -241,7 +241,8 @@ short vibration on phones that have it.
   the speaker's backlit ASCII portrait beside their lines (portraits.mjs, scanning in a row at a time, once), its opening line resolving out of noise once, its steps as a job (`job 0003`, ✓, ▸, the rest dim hex). The reward
   card is a signed receipt. Calm: lines arrive once, Mail's page never animates.
 - **The level-up** (the *Firmware update*, levelup-view.mjs): an amber *Firmware update · <class>.rom* strip, the
-  level in teal dot-font digits, `[ OK ]` a row at a time with a tick each; it waits for a calm moment.
+  level in teal dot-font digits, `[ OK ]` a row at a time with a tick each; it waits for a calm moment. It powers on
+  to its sound (the lift): the strip flickers on, the bar climbs with the hum, the new level snaps in at the lock.
 - **The pager** (the *Tray*): a lamp and one icon per page (up to four on a desktop, three on a phone, then **+n**),
   amber, red for a threat, a soft glow on one you haven't seen; its tooltip is the line and, muted, ▸ what the tap does.
 - **The player card** (the *NET ID badge*, profile-view.mjs): an amber NET ID strip, the banner framed as a photo
@@ -331,9 +332,11 @@ interface**. CSS, the DOM and text only (no canvas, WebGL or PixiJS on the scree
   (PWR, GATE, WALL, NET, INST, DMN) that glow with real state and blink at medium and bold.
 - **Casing cosmetics** (`casing.mjs`, `casing.css`): only the casing changes, never the screen. A colourway sets only
   `--case-*` variables, each read in style.css with the stock colour as its fallback, and fills the bezel's frame with
-  the glass cut out exactly. Stickers sit in two strips on the chin that end short of the knobs, the plate and the lamps,
-  still, a little crooked; one that doesn't fit is left off. Desk props sit on the desk under the monitor (or on the
-  chin without the window), still but for the mug's steam. `casing.test.mjs` holds them to the bezel.
+  the glass cut out exactly. Stickers sit anywhere on the plastic (the top, a side, where they read upward, or the
+  chin, a little crooked), over each other but never over the glass, the knobs, the plate or the lamps; they drag only
+  while Rig → Casing is open. Props stand on top of the monitor (with the window, when there is room over it), on the
+  desk under it, or on the chin without the window, still but for the mug's steam. `casing.test.mjs` holds them to the
+  plastic.
 - **The window behind the monitor** (`window.mjs`): a canvas of the original city behind the page (`.window-out`,
   z-index −2, no pointer events), with the casing and the Window on at 1700px and wider, painted only in the strips
   beside and above the monitor and the desk. Four depths with atmospheric perspective, the near tower's face in detail,

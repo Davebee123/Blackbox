@@ -258,11 +258,19 @@ export const VOICES = {
     chime(ctx, e, t, 84, { d: 0.18, peak: 0.38 });
     chime(ctx, e, t + 0.06, 88, { d: 0.3, peak: 0.38 });
   },
-  // A fight won or a level gained: a major arpeggio with a shimmer.
+  // A fight won, until its clip has loaded: a breaker's click and the hum sinking.
   win(ctx, out, t) {
-    const e = echo(ctx, out, { feedback: 0.35, wet: 0.4 });
-    [72, 76, 79, 84].forEach((m, i) => chime(ctx, e, t + i * 0.09, m, { d: i === 3 ? 1.0 : 0.4, peak: 0.5 }));
-    noise(ctx, e, t + 0.27, { type: 'highpass', f0: 7000, a: 0.08, peak: 0.05, d: 0.6 });
+    noise(ctx, out, t, { type: 'highpass', f0: 2200, a: 0.0005, peak: 0.3, d: 0.015 });
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 700; lp.connect(out);
+    for (const [f, p] of [[100, 0.3], [200, 0.15]]) osc(ctx, lp, t, { type: 'sawtooth', f0: f, f1: f * 0.3, glide: 0.9, a: 0.01, peak: p, d: 0.9 });
+  },
+  // A boss down: the same, longer and lower.
+  bosswin(ctx, out, t) { VOICES.win(ctx, out, t); osc(ctx, out, t + 0.3, { type: 'sine', f0: 80, f1: 25, glide: 0.9, a: 0.005, peak: 0.5, d: 1.2 }); },
+  // A level gained, until its clip has loaded: a breaker's click and the hum climbing.
+  levelup(ctx, out, t) {
+    noise(ctx, out, t, { type: 'highpass', f0: 2200, a: 0.0005, peak: 0.3, d: 0.015 });
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900; lp.connect(out);
+    for (const [f, p] of [[49, 0.3], [98, 0.15]]) osc(ctx, lp, t, { type: 'sawtooth', f0: f, f1: f * 2, glide: 0.7, a: 0.45, peak: p, d: 0.9 });
   },
   // Crash or disconnect: the screen powering down.
   lose(ctx, out, t) {
@@ -316,10 +324,14 @@ export const BANK = {
   'glass-l': 4, 'glass-h': 3, mining: 3, tin: 3, bell: 1, whoosh: 3, subdrop: 1, shimmer: 1, glitch: 4, scratch: 3,
   error: 2, tick: 3, confirm: 2, drop: 2, pluck: 2, glassui: 3, bong: 1, relay: 6, click: 4, key: 12, 'key-enter': 1, 'key-back': 1,
 };
-const banks = new WeakMap(); // AudioContext → { ready, buffers: Map(name → AudioBuffer[]) }
+// Whole sounds rendered ahead (tools/sound-preview/clips4.js, Ogg Vorbis in dist/sfx/wins; see CREDITS.md).
+export const CLIPS = { 'win-power-cut': 'wins/win-power-cut.ogg', 'win-blackout': 'wins/win-blackout.ogg', 'levelup-lift': 'wins/levelup-lift.ogg' };
+const CLIP_GAIN = 0.5; // the level a family's one-shot plays at (places.mjs LEVEL.shot)
+const banks = new WeakMap(); // AudioContext → { ready, buffers: Map(name → AudioBuffer[]), clips: Map(name → AudioBuffer) }
 function loadBank(ctx, base = new URL('./sfx/', import.meta.url)) {
   if (banks.has(ctx)) return banks.get(ctx).loading;
-  const bank = { ready: false, buffers: new Map() };
+  const bank = { ready: false, buffers: new Map(), clips: new Map() };
+  for (const [name, file] of Object.entries(CLIPS)) fetch(new URL(file, base)).then((r) => (r.ok ? r.arrayBuffer() : null)).then((b) => b && ctx.decodeAudioData(b)).then((buf) => buf && bank.clips.set(name, buf)).catch(() => { /* its synth stand-in plays */ });
   bank.loading = Promise.all(Object.entries(BANK).flatMap(([name, n]) => Array.from({ length: n }, async (_, i) => {
     try {
       const res = await fetch(new URL(`${name}-${i}.wav`, base));
@@ -519,13 +531,13 @@ export const RECIPES = {
     S('drop', 0, { gain: 0.6 });
     S('glassui', 0.05, { gain: 0.3, rate: 1.2 });
   } },
-  // A fight won or a level gained: a major arpeggio, a shimmer, a bell far off.
-  win: { room: 0.3, play(ctx, out, t, o, S) {
-    [72, 76, 79, 84].forEach((m, i) => chime(ctx, out, t + i * 0.09, m, { d: i === 3 ? 1.0 : 0.4, peak: 0.36 }));
-    S('confirm', 0, { gain: 0.35 });
-    S('shimmer', 0.2, { gain: 0.3 });
-    S('bell', 0.27, { gain: 0.16, rate: 2, jitter: 0 });
-  } },
+  // A fight won: the power cut (a clip, sfx/wins: a breaker, the hum sinking, a fan winding down). A boss down or a
+  // server taken over: the blackout (four breakers, each taking a hum with it). Both carry their own room.
+  win: { room: 0, play(ctx, out, t, o, S, C) { if (!C('win-power-cut')) VOICES.win(ctx, out, t); } },
+  bosswin: { room: 0, play(ctx, out, t, o, S, C) { if (!C('win-blackout')) VOICES.bosswin(ctx, out, t); } },
+  // A level gained: the lift (the power cut backwards: a breaker, the hum climbing to one held note, the fan spinning
+  // up). The level-up card moves to it (levelup.css).
+  levelup: { room: 0, play(ctx, out, t, o, S, C) { if (!C('levelup-lift')) VOICES.levelup(ctx, out, t); } },
   // Crash or disconnect: the set powering down hard.
   lose: { room: 0.3, play(ctx, out, t, o, S) {
     VOICES.lose(ctx, out, t);
@@ -703,6 +715,16 @@ function deflect(ctx, out, t) {
   noise(ctx, b, t + 0.05, { type: 'highpass', f0: 5000, a: 0.0005, peak: 0.3, d: 0.01 });
 }
 
+// A clip, whole, into `out`. False when it hasn't loaded (the caller plays the synth stand-in).
+function clipAt(ctx, out, t, name) {
+  const buf = banks.get(ctx)?.clips.get(name);
+  if (!buf) return false;
+  const src = ctx.createBufferSource(), g = ctx.createGain();
+  src.buffer = buf; g.gain.value = CLIP_GAIN;
+  src.connect(g).connect(out); src.start(t);
+  return true;
+}
+
 // The chain everything plays into: a little headroom and a gentle compressor, with the room beside it.
 function chain(ctx) {
   const g = ctx.createGain(), c = ctx.createDynamicsCompressor();
@@ -769,7 +791,7 @@ function voiceAt(ctx, ch, name, t, opts = {}) {
   v.connect(ch.master);
   if (r && ready) {
     const send = ctx.createGain(); send.gain.value = r.room; v.connect(send).connect(ch.room);
-    r.play(ctx, v, t, opts, (n, at, o) => sample(ctx, v, t, n, { ...o, at }));
+    r.play(ctx, v, t, opts, (n, at, o) => sample(ctx, v, t, n, { ...o, at }), (n) => clipAt(ctx, v, t, n));
   } else if (VOICES[name]) VOICES[name](ctx, v, t, opts);
   else if (name === 'jackin') VOICES.unlock(ctx, v, t, opts);
 }

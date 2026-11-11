@@ -4,7 +4,9 @@
    over the fight board. An amber kicker strip, the level in a dot font (teal: yours) beside the flash's progress line,
    then [ OK ] per unlock once the flash is done. Each row takes no room until it lands, so the panel grows a row at a
    time and never shows an empty block. Amber for what you get, teal only for your level, violet for a daemon slot.
-   Continue (Enter), Esc or × close it. Motion off or reduced motion: everything is there at once. */
+   Continue (Enter), Esc or × close it. Motion off or reduced motion: everything is there at once.
+   It powers on to its sound (sound.mjs levelup, the lift): the strip flickers on with the breaker, the bar climbs with
+   the hum while the old level waits dim, and at the lock (0.72 s) the new level snaps in bright. */
 .levelup { position: fixed; z-index: 50; zoom: var(--ui, 1); top: var(--lu-top, 72px); left: calc(50vw / var(--ui, 1)); transform: translateX(-50%); width: min(440px, calc((100vw - 32px) / var(--ui, 1))); display: grid; color: var(--text); font: 12.5px/1.45 var(--mono); background: var(--inset); border: 1px solid var(--line-strong); border-radius: var(--r-card); box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6), 0 14px 40px rgba(0, 0, 0, 0.65); overflow: hidden; transition: opacity 0.4s; }
 .levelup[hidden] { display: none; }
 .levelup.out { opacity: 0; }
@@ -16,6 +18,9 @@
 .levelup .lu-b-top { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 16px; align-items: center; padding: 14px 16px 10px; border-bottom: 1px dashed var(--line); }
 .levelup .lu-b-big { margin: 0; max-height: none; overflow: visible; font: 700 9px/9px var(--mono); letter-spacing: 0; color: var(--you); text-shadow: 0 0 6px rgba(127, 209, 199, 0.55); }
 .levelup .lu-b-big i { font-style: normal; color: rgba(127, 209, 199, 0.07); text-shadow: none; }
+.levelup .lu-b-digits { display: grid; }
+.levelup .lu-b-digits pre { grid-area: 1 / 1; }
+.levelup .lu-old { opacity: 0; }
 .levelup .lu-b-flash { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 10px; align-items: center; min-width: 0; }
 .levelup .lu-b-ver { grid-column: 1 / -1; font: 600 12px var(--mono); color: var(--muted); }
 .levelup .lu-b-ver b { color: var(--you); }
@@ -33,15 +38,19 @@
 .levelup .lu-b-next { margin: 0; padding: 2px 16px 8px; font: 11.5px var(--mono); color: var(--dim); cursor: help; }
 .levelup .lu-b-next span { margin-right: 6px; }
 .levelup .lu-b-acts { display: flex; justify-content: flex-end; gap: 6px; padding: 0 12px 12px; }
-.levelup.show .lu-b-bar i { animation: lu-b-flash 0.85s steps(24, end) both; }
-.levelup.show .lu-b-pct { animation: lu-pop 0.01s 0.85s both; }
-.levelup.show .lu-b-big { animation: lu-b-glow 0.6s 0.85s ease-out both; }
+.levelup.show .lu-b-head { animation: lu-b-on 0.22s steps(1, end) both; }
+.levelup.show .lu-b-bar i { animation: lu-b-flash 0.72s cubic-bezier(0.55, 0, 0.9, 0.55) both; }
+.levelup.show .lu-b-pct { animation: lu-pop 0.01s 0.72s both; }
+.levelup.show .lu-old { animation: lu-b-old 0.72s steps(1, end) both; }
+.levelup.show .lu-b-big:not(.lu-old) { animation: lu-b-glow 0.6s 0.72s ease-out both; }
 /* A row (and the next line) lands after the flash, one every 120 ms: until then it has no height, so the list grows as
    it fills. */
 .levelup.show .lu-b-list li, .levelup.show .lu-b-next { animation: lu-b-row 0.12s ease-out both; animation-delay: calc(0.9s + (var(--i, 0) + 1) * 120ms); }
 .levelup.show .lu-b-list { animation: lu-b-pad 0.01s 0.9s both; }
 @keyframes lu-b-flash { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
-@keyframes lu-b-glow { from { opacity: 0.25; text-shadow: none; } to { opacity: 1; } }
+@keyframes lu-b-on { 0% { opacity: 0; } 25% { opacity: 1; } 50% { opacity: 0.3; } 75%, 100% { opacity: 1; } }
+@keyframes lu-b-old { 0% { opacity: 0.3; } 100% { opacity: 0; } }
+@keyframes lu-b-glow { 0% { opacity: 0; } 1% { opacity: 1; text-shadow: 0 0 18px rgba(127, 209, 199, 1), 0 0 4px #fff; } 100% { opacity: 1; } }
 @keyframes lu-b-row { from { max-height: 0; padding-top: 0; padding-bottom: 0; opacity: 0; overflow: hidden; } to { max-height: 3em; opacity: 1; overflow: hidden; } }
 @keyframes lu-b-pad { from { padding-top: 0; padding-bottom: 0; } to { padding-top: 8px; padding-bottom: 4px; } }
 @keyframes lu-pop { from { opacity: 0; } to { opacity: 1; } }
