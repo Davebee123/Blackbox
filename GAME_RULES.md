@@ -2651,6 +2651,8 @@ is on screen, a small tip points at it and says how it works, once, one at a tim
 through (the timeline, your skills, the interrupt's ticks, armor, the Sync Window). Tips in a fight pause it. **Turn
 tips off** on any tip or the Settings page; **Replay tips** shows them again. Your first server's room map gets a short
 **rooms tour**, a step at a time (walk, engage, jack out; a cache, the hunter, the rest room and SCAN as you meet them).
+Later tips meet the vault, the Core, an elite room, a thread, a rival, your Signal running low, a boss's ♛, an elite's
+clash, a fight's lever (from level 6), an objective, the Lock tell, your program (level 5) and every strain and ICE.
 The log and terminal still say what happened, in a line; they don't teach.
 
 ### The pager
