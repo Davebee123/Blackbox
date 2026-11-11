@@ -115,7 +115,7 @@ comment saying what it does.
 |---|---|
 | `dist/gear.mjs` | Protocols: slots, rarities, item levels, stats and rule affixes; flat numbers lifted at their level, and the ones that carry your power filled (`liftItem`, `liftFx`, `FILLS`, `curveRestore`). Pure data and functions. |
 | `dist/sets.mjs` | Sets: piece counts and their bonuses in a fight. |
-| `dist/earned.mjs` | Earned pieces: each one's count from its band, the piece once it fills, and the map's pins. |
+| `dist/earned.mjs`, `dist/content/earned.mjs` | Earned pieces (a floor feat's unique): their counts in one table, each from its band, the piece once it fills, and the map's pins. |
 | `dist/faction-gear.mjs` | Faction gear: implicit lines on a faction's items, and the five faction uniques assembled from parts (feuds, receipts). |
 | `dist/filters.mjs` | Filters: rolled gear for your firewall's slots. |
 | `dist/salvage.mjs` | Components, one currency every broken part drops. |

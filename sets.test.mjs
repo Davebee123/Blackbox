@@ -15,7 +15,6 @@ import { PUZZLE_KINDS } from './dist/puzzles.mjs';
 import { STORY_LENGTH, openContracts, tickMail, ready } from './dist/mail.mjs';
 import { entryOf } from './dist/codex.mjs';
 import { codexPageMarkup } from './dist/codex-view.mjs';
-import './dist/earned.mjs'; // earned pieces count through combat.mjs hooks
 import { CONFIG, GUARDS, BOSSES, power, line, lifted } from './dist/data.mjs';
 import STORY from './dist/content/story.mjs';
 import ITEMS from './dist/content/items.mjs';
@@ -57,7 +56,6 @@ const PLAN = {
   hotspare: ['Hot Spare', { Standby: 'shell', Failback: 'implant' }, [2]],
   mesh: ['Mesh', { Node: 'proxy', Link: 'script', Hub: 'implant' }, [2, 3]],
   deeparchive: ['Deep Archive', { Index: 'script', Spine: 'shell', Folio: 'exploit', Vellum: 'implant' }, [2, 3, 4]],
-  fullcoverage: ['Full Coverage', { 'Plumb Line': 'exploit', 'Field Book': 'script', 'Hi-Vis': 'shell', Datum: 'implant' }, [2, 3, 4]],
   bedrock: ['Bedrock', { 'Bedrock Plate': 'shell', 'Core Sample': 'implant', Pick: 'exploit', Survey: 'proxy' }, [2, 3, 4]],
 };
 const SUBS_OF = { breaker: ['demolitionist', 'overclocker'], bastion: ['warden', 'sysop'], infiltrator: ['phantom', 'payload'], operator: ['herder', 'hijacker'] };
@@ -239,33 +237,69 @@ test('LOWLIGHT Kit (2): delivering a contract fills your Signal, and your next k
 });
 
 
-test('the Kestrel guards give their own piece on a count: 15 kills of that guard, floor 2 and below, never a roll', () => {
+test('the Kestrel guards drop their own piece: low odds, visible pity, the piece you lack first, floor 2 and below', () => {
   assert.deepEqual(setPool('bouncer').map((u) => u.id), ['kestrel-badge']);
-  assert.deepEqual(setDropPool({ kind: 'guard', id: 'bouncer', layer: 2 }), [], 'earned: no roll');
-  assert.equal(guardSetTable(at(12), 'bouncer'), null, 'no odds on its Codex page');
-  const s = at(12);
-  for (let i = 0; i < 3; i++) guardKill(s, 'bouncer', 1); // floor 1: no count
-  assert.equal(s.earned?.['kestrel-badge'] || 0, 0);
-  for (let i = 0; i < 14; i++) guardKill(s, 'bouncer');
-  assert.equal(s.earned['kestrel-badge'], 14);
-  assert.ok(!s.collection?.['kestrel-badge'] && !packPieces(s).length);
-  guardKill(s, 'bouncer', 2, 14);
-  const it = s.stash.find((x) => x.unique === 'kestrel-badge');
-  assert.ok(it && s.collection['kestrel-badge'], 'the fifteenth kill: the piece, once');
-  assert.ok(s.logs.some((l) => l.type === 'collected' && l.unique === 'kestrel-badge'));
-  guardKill(s, 'bouncer');
-  assert.equal(s.stash.filter((x) => x.unique === 'kestrel-badge').length, 1, 'once');
-  // The random golds never give one.
-  const t = at(20);
-  for (let i = 0; i < 4000; i++) { const u = uniqueFrom(t, { kind: 'guard', id: 'bouncer', layer: 3 }, 20); assert.ok(!u || !isPiece(u.id)); }
+  assert.deepEqual(setPool('watchdog'), []);
+  const G = SET_LOOT.guard;
+  assert.ok(G.chance <= 0.05 && G.pity > 0 && G.pity < G.chance && G.found < G.chance);
+  const was = { ...G };
+  try {
+    // A miss: pity grows and the next chance is said.
+    const s = at(12);
+    G.chance = 0; G.pity = 0.02;
+    guardKill(s, 'bouncer');
+    assert.equal(s.pity['set:bouncer'], 1);
+    assert.ok(s.logs.some((l) => /No Kestrel Clearance piece from BOUNCER this time\. The next kill has a 2% chance\./.test(l.message)), 'the next chance, said');
+    Object.assign(G, was);
+    assert.ok(Math.abs(guardSetChance(s, 'bouncer') - (G.chance + G.pity)) < 1e-9);
+    // Floor 1: no roll at all (its pity doesn't move).
+    guardKill(s, 'bouncer', 1);
+    assert.equal(s.pity['set:bouncer'], 1);
+    // A hit: the piece into your pack at the kill's level, pity back to nothing.
+    G.chance = 2;
+    guardKill(s, 'bouncer', 2, 14);
+    const [f] = packPieces(s);
+    assert.equal(f.item.unique, 'kestrel-badge');
+    assert.equal(f.item.level, 14);
+    assert.equal(s.pity['set:bouncer'], 0);
+    assert.ok(s.logs.some((l) => l.type === 'drop' && l.set === 'kestrel' && /a Kestrel Clearance piece/.test(l.message)));
+    Object.assign(G, was);
+    // Found (banked): a flat chance and no pity.
+    (s.collection ||= {})['kestrel-badge'] = 1;
+    assert.equal(guardSetChance(s, 'bouncer'), G.found);
+    G.found = -1;
+    const before = s.pity['set:bouncer'];
+    guardKill(s, 'bouncer');
+    assert.equal(s.pity['set:bouncer'], before, 'no pity once found');
+  } finally { Object.assign(G, was); }
+  // The pace: about 8 kills of a guard for its piece, and the random golds never give one.
+  let alive = 1, mean = 0;
+  for (let k = 0; k < 200 && alive > 1e-9; k++) { mean += alive; alive *= 1 - Math.min(1, G.chance + G.pity * k); }
+  assert.ok(mean > 6 && mean < 10, `kills to a piece ${mean.toFixed(1)}`);
+  const s = at(20);
+  for (let i = 0; i < 4000; i++) { const u = uniqueFrom(s, { kind: 'guard', id: 'bouncer', layer: 3 }, 20); assert.ok(!u || !isPiece(u.id)); }
+  // Sampled: a fresh save's Tracer kills drop the Token about once every 8.
+  const t = at(12); let kills = 0, got = 0;
+  for (let i = 0; i < 1200; i++) { guardKill(t, 'tracer'); kills++; if (packPieces(t).length) { got++; t.run.pack = []; t.collection = {}; } }
+  assert.ok(kills / got > 5 && kills / got < 11, `a Token every ${(kills / got).toFixed(1)} Tracer kills`);
 });
 
 
-test('the Codex shows no odds for a Kestrel guard: its piece is earned', () => {
+test('the Codex shows a Kestrel guard\'s set piece, ??? until found, with the next kill\'s chance', () => {
   const s = at(12);
   s.met = { bouncer: true };
-  assert.equal(guardSetTable(s, 'bouncer'), null);
-  assert.doesNotMatch(codexPageMarkup(s, 'guard:bouncer'), /Kestrel Clearance: \d+% a kill/);
+  const t = guardSetTable(s, 'bouncer');
+  assert.deepEqual([t.name, t.floor, t.pieces[0].name, t.lacking], ['Kestrel Clearance', 2, null, true]);
+  assert.equal(entryOf(s, 'guard:bouncer').setLoot.name, 'Kestrel Clearance');
+  let html = codexPageMarkup(s, 'guard:bouncer');
+  assert.match(html, /<b>\?\?\?<\/b><small>floor 2\+<\/small>/);
+  assert.match(html, /Kestrel Clearance: 4% a kill, \+2% a miss\. Next kill <b class="you">4%<\/b>/);
+  (s.pity ||= {})['set:bouncer'] = 3;
+  assert.match(codexPageMarkup(s, 'guard:bouncer'), /Next kill <b class="you">10%<\/b>/);
+  (s.collection ||= {})['kestrel-badge'] = 1;
+  html = codexPageMarkup(s, 'guard:bouncer');
+  assert.match(html, /Kestrel Badge/);
+  assert.match(html, /Kestrel Clearance: found\. 1% a kill/);
   assert.equal(guardSetTable(s, 'watchdog'), null);
 });
 
@@ -289,7 +323,7 @@ test('the Collection: a Sets section, a row a set, its pieces found (with where 
   assert.match(html, /Exploit · Storyline · Lv 1/);
   s.collection['kestrel-badge'] = 1;
   html = collectionSets(s);
-  assert.match(html, /Kestrel Badge<\/b><small>Proxy · Bouncer guard · floor 2\+<\/small>/, 'earned: no odds');
+  assert.match(html, /Kestrel Badge<\/b><small>Proxy · Bouncer guard · floor 2\+ · <span class="coll-odds"[^>]*>1% a kill<\/span>/);
   // A piece of the plan's sets says where it drops once found.
   s.collection.crowbar = 1; s.collection.floppy = 1;
   html = collectionSets(s);
@@ -318,7 +352,7 @@ test('the tooltip and the stash and slot rows: the set, its pieces and each bonu
   assert.match(tip, /<span class="sb"[^>]*>\(3\) Set: Once a fight, a hit that would take more than 30% of your max Signal deals 30% instead\.<\/span>/);
   assert.match(tip, /<span class="sg"[^>]*>With 2 pieces: \+5% Clock Speed<\/span>/, 'its green line, grey');
   delete s.collection['kestrel-lanyard'];
-  assert.match(itemTipMarkup(s, badge.id), /<span class="sp unknown earned"[^>]*><span>Kestrel Lanyard<\/span><small class="sp-goal">Sentinel 0\/15<\/small><\/span>/, 'never found, earned: named, its count');
+  assert.match(itemTipMarkup(s, badge.id), /<span class="sp unknown"[^>]*>\?\?\?<\/span>/, 'never found: ???');
   command(s, 'load ' + token.id);
   tip = itemTipMarkup(s, badge.id);
   assert.match(tip, /Kestrel Clearance \(2\/3\)/);
@@ -604,13 +638,17 @@ test('Kestrel pieces held from save v45 keep working, as the retuned set', () =>
   assert.equal(SAVE_VERSION, 62, 'no save bump since v45 for sets (v62 runners, v61 one shop shape, v60 payloads cut, v59 journals, v58 one rep scale, v46 is the subclass pick, v47 components, v48 Indemnity, v49 crafting, v50 specials, v51 the scanner, v52 rivals, v54 the curve lifts every item alike, v55 fills them, v56 refills them on the tiers, v57 the talent tiers): a piece reads its bonuses from its unique, and its id and stats are unchanged');
   const s = at(12);
   const items = wear(s, KESTREL);
+  (s.pity ||= {})['set:bouncer'] = 3;
   const r = restore(structuredClone(s));
   assert.deepEqual(r.stash.filter((x) => isPiece(x.unique)).map((x) => [x.unique, x.stats]), items.map((x) => [x.unique, x.stats]));
   assert.deepEqual(activeSets(loaded(r))[0].open, [2, 3]);
   assert.ok(gearFx(r).some((x) => x.fx.do === 'big-hit-cap') && gearFx(r).some((x) => x.fx.do === 'signal%' && x.fx.value === 8));
   assert.ok(!gearFx(r).some((x) => ['trace-slow', 'guard-late', 'chit-every'].includes(x.fx.do)), 'the old bonuses are gone');
   assert.equal(maxSignal(r), maxSignal(s));
-  assert.equal(guardSetChance(r, 'bouncer'), 0, 'earned now: no roll');
+  assert.equal(r.pity['set:bouncer'], 3, 'a guard\'s pity keeps its key');
+  assert.equal(guardSetChance(r, 'bouncer'), Math.min(1, SET_LOOT.guard.found));
+  delete r.collection['kestrel-badge'];
+  assert.equal(guardSetChance(r, 'bouncer'), SET_LOOT.guard.chance + 3 * SET_LOOT.guard.pity);
   // An old v44 save holding a Kestrel piece (from before sets) comes through v45 to the same.
   const raw = structuredClone(s); raw.version = 44; raw.collection = {};
   const o = restore(raw);
@@ -618,12 +656,15 @@ test('Kestrel pieces held from save v45 keep working, as the retuned set', () =>
 });
 
 // ---------- sources ----------
-test('every piece rolls or is earned; a source rolls the pieces you lack first, with pity, then a flat chance', () => {
-  const ROLLS = [['boss', { id: 'relayking' }], ['boss', { id: 'choir' }], ['boss', { id: 'repoman' }], ['boss', { id: 'shouldersurfer' }], ['boss', { id: 'nightdesk' }], ['boss', { id: 'byzantine' }], ['boss', { id: 'centrifuge' }], ['crew', { id: 'foreman' }],
-    ...[1, 2, 3, 4, 5, 6, 7, 8].flatMap((f) => [['lair', { floor: f }], ['rare', { floor: f }]]), ['author', { id: 'glassjaw' }]];
+test('every piece has a source that rolls; a source rolls the pieces you lack first, with pity, then a flat chance', () => {
+  const ROLLS = [['guard', { id: 'bouncer' }], ['guard', { id: 'tracer' }], ['guard', { id: 'sentinel' }], ['boss', { id: 'relayking' }], ['boss', { id: 'choir' }], ['boss', { id: 'repoman' }], ['boss', { id: 'shouldersurfer' }], ['boss', { id: 'nightdesk' }], ['boss', { id: 'byzantine' }], ['crew', { id: 'foreman' }],
+    ...[1, 2, 3, 4, 5, 6, 7, 8].flatMap((f) => [['lair', { floor: f }], ['rare', { floor: f }], ['vault', { floor: f }], ['thread', { floor: f }]]),
+    ['strain', { lineage: 'ransomware' }], ['strain', { lineage: 'worm' }], ['strain', { lineage: 'ghostroot' }], ['author', { id: 'glassjaw' }], ['courier', {}], ['takeover', {}],
+    ...PUZZLE_KINDS.map((id) => ['puzzle', { id }])];
   const reach = new Set(ROLLS.flatMap(([kind, x]) => setDropPool({ kind, layer: 9, ...x }).map((u) => u.id)));
-  for (const id of Object.values(SETS).flatMap((x) => x.pieces).filter((p) => !UNIQUES[p].sources.every((x) => x.kind === 'story'))) assert.ok(reach.has(id) !== !!UNIQUES[id].earn, `${id} rolls or is earned, not both`);
+  for (const id of Object.values(SETS).flatMap((x) => x.pieces).filter((p) => !UNIQUES[p].sources.every((x) => x.kind === 'story'))) assert.ok(reach.has(id), `${id} drops from somewhere`);
   for (const [kind, o] of Object.entries(SET_LOOT)) assert.ok(o.chance > 0 && o.pity > 0 && o.found > 0 && o.found <= o.chance, kind);
+  // The floor 3 lair boss: On-Call's alone (the class sets are the level-50 tier sets now).
   assert.deepEqual(setDropPool({ kind: 'lair', floor: 3 }, 20).map((u) => u.id).sort(), []); // the Pager moved to SHOULDER SURFER, the Runbook to NIGHT DESK, Failover to BYZANTINE (docs/floor-items.md)
   assert.deepEqual(setDropPool({ kind: 'boss', id: 'nightdesk' }).map((u) => u.id), ['runbook']);
   assert.deepEqual(setDropPool({ kind: 'boss', id: 'byzantine' }).map((u) => u.id), ['failover']);
@@ -648,11 +689,23 @@ test('every piece rolls or is earned; a source rolls the pieces you lack first, 
     assert.equal(new Set(got).size, 19, 'the pieces you lack first');
     assert.equal(t.pity['set:crew:foreman'], 0);
     assert.equal(setChance(t, { kind: 'crew', id: 'foreman' }, 50), Math.min(1, SET_LOOT.crew.found), 'all found: the flat chance');
-    // Vaults, boards, threads, couriers, takeovers and strains roll no set piece now: theirs are earned.
-    for (const ctx of [{ kind: 'vault', floor: 7 }, { kind: 'vault', floor: 4 }, { kind: 'puzzle', id: 'cascade' }, { kind: 'thread', floor: 2 }, { kind: 'courier' }, { kind: 'takeover', floor: 5 }, { kind: 'strain', lineage: 'worm' }]) assert.equal(setDrop(at(30), ctx, 30, 'X'), null, ctx.kind);
-    // A ★ rare spawn on floor 1: Boot Disk, on its roll; deeper, Burst Buffer's are earned.
+    // The deepest vaults: Deep Archive's, beside Cold Storage's (any vault); floor 4's, Cold Storage's alone.
+    assert.deepEqual(setDropPool({ kind: 'vault', floor: 7 }, 44).map((u) => setOf(u.id).id).sort(), ['coldstorage', 'coldstorage', 'coldstorage', 'deeparchive', 'deeparchive', 'deeparchive', 'deeparchive']);
+    assert.ok(setDropPool({ kind: 'vault', floor: 4 }, 44).every((u) => setOf(u.id).id === 'coldstorage'));
+    // A vault's next chance names the vault; on a run the piece goes in your pack.
+    const v = onRun(at(26)); SET_LOOT.vault.chance = 0;
+    setDrop(v, { kind: 'vault', floor: 4 }, 26, "SRV's vault", { pack: true });
+    assert.ok(v.logs.some((l) => /No Cold Storage piece from SRV's vault this time\. The next vault has a \d+% chance\./.test(l.message)));
+    SET_LOOT.vault.chance = 2;
+    setDrop(v, { kind: 'vault', floor: 4 }, 26, "SRV's vault", { pack: true });
+    assert.equal(packPieces(v).length, 1);
+    // A courier intercepted rolls for Lantern Route, into your stash.
+    const c = at(16); SET_LOOT.courier.chance = 2;
+    CARDS.courier.won(c, { level: 16, name: 'COURIER-1234', seed: 5 });
+    assert.ok(c.stash.some((x) => setOf(x.unique)?.id === 'lantern'));
+    // A ★ rare spawn on floor 1: Boot Disk; deeper, Burst Buffer's at its levels.
     assert.deepEqual(setDropPool({ kind: 'rare', floor: 1 }, 8).map((u) => u.id), ['floppy', 'boot-sector']);
-    assert.deepEqual(setDropPool({ kind: 'rare', floor: 5 }, 26).map((u) => u.id), []);
+    assert.deepEqual(setDropPool({ kind: 'rare', floor: 5 }, 26).map((u) => u.id), ['cache-line', 'prefetch']);
     // A boss's own uniques never include its set pieces (those roll on their own table).
     assert.ok(!bossUniques('relayking').some((u) => isPiece(u.id)));
     assert.ok(!bossUniques('choir').some((u) => isPiece(u.id)));
@@ -748,12 +801,12 @@ test('the Antenna shows a server\'s rare spawn on its map card; Lantern Route (3
 
 test('the pace: about how many events of each source to a piece you lack, as GAME_RULES.md Sets lists them', () => {
   const mean = ({ chance, pity }) => { let alive = 1, m = 0; for (let k = 0; k < 1e5 && alive > 1e-9; k++) { m += alive; alive *= 1 - Math.min(1, chance + pity * k); } return m; };
-  const RULES = { boss: 6, lair: 6, crew: 6, author: 48, rare: 205 };
+  const RULES = { guard: 8, boss: 6, lair: 6, crew: 6, thread: 3.5, puzzle: 24, takeover: 15, vault: 44, courier: 35, author: 48, rare: 205, strain: 53 };
   assert.deepEqual(Object.keys(SET_LOOT).sort(), Object.keys(RULES).sort());
   for (const [kind, n] of Object.entries(RULES)) assert.ok(Math.abs(mean(SET_LOOT[kind]) / n - 1) < 0.15, `${kind}: ${mean(SET_LOOT[kind]).toFixed(1)} events, the rules say ${n}`);
   // The frequent sources are the slow ones: no source an event of which comes often (a kill, a vault) gives a piece in
   // fewer than 40 of them, bar a Kestrel guard post's own (about 8 kills of that one guard).
-  for (const kind of ['rare', 'author']) assert.ok(mean(SET_LOOT[kind]) >= 40, kind);
+  for (const kind of ['rare', 'strain', 'author', 'vault']) assert.ok(mean(SET_LOOT[kind]) >= 40, kind);
 });
 
 test('a set piece shows in set green, whatever its rarity; other uniques by rarity', () => {

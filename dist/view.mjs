@@ -594,7 +594,6 @@ export function collectionPieces(s) {
 // Where a set piece drops, once you've found it: its source, and a guard's floor and next-kill chance (its pity).
 const pieceSource = (s, u) => {
   const src = (u.sources || [])[0];
-  if (src?.kind === 'guard' && u.earn) return `${collSource(s, src)} · floor ${floorOfLayer(src.layer || 1)}+`; // earned (earned.mjs): no odds
   if (src?.kind === 'guard') return `${collSource(s, src)} · floor ${floorOfLayer(src.layer || 1)}+ · <span class="coll-odds" title="${esc('The chance its next kill drops it. Each kill without one adds to it while you lack its piece.')}">${Math.round(guardSetChance(s, src.id) * 100)}% a kill</span>`;
   if (src?.kind === 'story') return `${esc(collSource(s, src))} · Lv ${u.level}`;
   return `${esc((u.sources || []).map((x) => sourceText(x, SOURCE_NAMES)).join(', '))} · Lv ${u.level}+`; // the loot plan's sources (sets.mjs)
