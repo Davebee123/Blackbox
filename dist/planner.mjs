@@ -2,7 +2,7 @@
 // now, strip, then finish), playing that class's own kit. Used by the balance scripts and by
 // simulated crewmates (crew.mjs). It reads the fight through the engine's own functions.
 import { gearDamage, classPlan, classFill, hooks, classOf, subOf, toIntent, intents, attackers, livingParts, alive, part, defender, previewDamage, ignoresArmor, readyIn, skillBase, mirrorOn, bendOf, bendBad, timersHidden, usable, hookHit, wards, attackAmount, delayHeld, frontOf, bufferOn, signatureOf, cooldownOf, frozenNow, asleep, scaled } from './combat.mjs';
-import { ABILITIES, TELL, CONFIG } from './data.mjs';
+import { ABILITIES, TELL, CONFIG, BOSSES } from './data.mjs';
 import { raidMove, raidFocus, noTaunt } from './raid.mjs';
 import { tellMove, tellFocus, answers, QUIET, chargeNow, echoesNow, beatOn, beatBlind, copyCost, paceOf, tellsOf } from './tells.mjs';
 // genesim.mjs: a gene the sim ignores (genes.mjs GENE_BOTS) is played as if it weren't there, one gene at a time.
@@ -12,7 +12,7 @@ import { interruptMove, saveTick, toCross } from './interrupt.mjs';
 import { loudWins, blastPays, cashIn } from './order.mjs';
 import { actsOf, lashOn, actDone, actCap } from './acts.mjs';
 import { copyKind } from './tells.mjs';
-import { topFrame, canCall, callingNow, FB, pendingOf, tradeOf, nodesOf, fragsOf, camerasOf, parentOf } from './floorbosses.mjs';
+import { topFrame, canCall, callingNow, FB, pendingOf, tradeOf, nodesOf, fragsOf, camerasOf, parentOf, leverLeft } from './floorbosses.mjs';
 
 // Against a crew boss only the tank taunts (a taunt pulls its busters onto you): raid.mjs noTaunt.
 // veto: skills the planner may not pick this call (routines.mjs: a program's rotation never fires a long cooldown).
@@ -50,6 +50,11 @@ const others = (s, p) => livingParts(s).some((x) => x !== p && x.kind === 'syste
 // A part an order lever keeps for last right now (its lever doesn't say now).
 const keptLast = (s, p) => ((p.fuse && !p.fuseAt && !ignores('zipbomb')) || (p.deadman && !p.quiet && !ignores('tripwire'))) && others(s, p) && leverNow(s) !== p && p !== prefer;
 const leverNow = (s) => (!ignores('ward') && cashIn(s)?.part) || (!ignores('tripwire') && loudWins(s)?.part) || (!ignores('zipbomb') && blastPays(s)?.part) || null;
+// A boss whose ♛ is worked through the fight (BOSSES work, docs/solo-bosses.md "Working the ♛"), read only (answers):
+// the ♛ is the part to work on while it stands further up its bar than the rest of the boss does, by work.lead (none:
+// the ♛ waits for the others, as on any boss).
+const restOf = (v) => { const r = v.parts.filter((p) => p.kind === 'system' && !p.core && !p.noTicks); return r.reduce((n, p) => n + p.integrity, 0) / Math.max(1, r.reduce((n, p) => n + p.max, 0)); };
+const crownNow = (s) => { const v = s.encounter.virus, W = BOSSES[v.boss]?.work, c = W?.lead != null && answers() && livingParts(s).find((p) => p.core); return c && c.ticks?.some((t) => !t.spent) && others(s, c) && reachable(s, c) && c.integrity / c.max > restOf(v) + W.lead ? c : null; };
 const order = (s, p) => (p.core && p.ticks?.some((t) => !t.spent) && livingParts(s).some((x) => x !== p && x.attack) && !(actsOf(s.encounter.virus) && ignores('leave')) ? 0.4 : p.deadman && !ignores('tripwire') && others(s, p) ? 0.05 : p.fuse && !ignores('zipbomb') && others(s, p) ? 0.05 : p.hotspot && !ignores('hotspot') && others(s, p) ? 0.3 : p.command && !ignores('c2') && livingParts(s).filter((x) => x.kind === 'fragment').length >= 2 ? 4 : 1);
 export const mostThreat = (s) => livingParts(s).filter((p) => reachable(s, p)).map((p) => ({ p, k: (threatOf(p) * invested(s, p) * order(s, p)) / (p.integrity + 10 * (p.armor || 0)) })).sort((a, b) => b.k - a.k || dueOf(s, a.p) - dueOf(s, b.p))[0]?.p || soonest(s);
 const bare = (p) => alive(p) && !p.armor;
@@ -152,6 +157,8 @@ function heedFloor(s, move) {
   const e = s.encounter, v = e?.virus;
   if (!v || !answers() || !move) return move;
   const [id, at] = String(move).split(' '), c = e.cycle;
+  // one: a one-part command that hits (what a floor boss's rule counts as your command on a part).
+  const hits1 = (k) => ['part', 'attack'].includes(ABILITIES[k]?.target) && (ABILITIES[k].damage || 0) > 0;
   if (v.bid) {
     const g = livingParts(s).find((p) => p.gavel && p.attack);
     if (g && g.attack.interval <= 2 && g.attack.due - c <= 1) { const slow = first(s, [...SLOWS.map((k) => `${k} ${g.id}`), ...(g.attack.due === c ? ['sigint'] : [])]); if (slow) return slow; }
@@ -166,6 +173,17 @@ function heedFloor(s, move) {
     const d = part(s, at);
     // The Collector runs the clock and the Demand's Deadlines pay it: never break the last Demand while the Collector stands.
     const col = livingParts(s).find((p) => p.core);
+    // Leverage: while a Demand stands the Collector loses only so much a cycle. A hit that would waste a third of itself
+    // on that cap goes at a Demand winding up a Deadline the clock doesn't need (never breaking the last one); else the
+    // biggest hit that fits the cap goes at the Collector.
+    const left = col ? leverLeft(s, col) : null;
+    if (left != null && d === col && hits1(id) && !(col.armor > 0) && previewDamage(s, id, col) > 1.5 * left) {
+      const dem = livingParts(s).filter((p) => p.deadline && p.attack && p.attack.due - c <= 2 && v.ransom.left > p.attack.due - c + p.attack.interval).sort((a, b) => a.attack.due - b.attack.due)[0];
+      const off = dem && !(killing(s, `${id} ${dem.id}`, dem) && livingParts(s).filter((p) => p.deadline).length === 1) && first(s, [`${id} ${dem.id}`]);
+      if (off) return off;
+      const fit = [...HITS, 'spike'].filter((k) => hits1(k) && ok(s, `${k} ${col.id}`) && previewDamage(s, k, col) <= 1.5 * left).sort((a, b) => previewDamage(s, b, col) - previewDamage(s, a, col))[0];
+      if (fit) return `${fit} ${col.id}`;
+    }
     if (d?.deadline && col && killing(s, move, d) && livingParts(s).filter((p) => p.deadline).length === 1) { const alt = first(s, [`${id} ${col.id}`, ...HITS.map((k) => `${k} ${col.id}`)]); if (alt) return alt; }
     if (d?.deadline && d.attack && !chargeNow(s, d) && d.attack.due - c <= 2 && v.ransom.left >= d.attack.due - c + 1 && v.ransom.left <= d.attack.due - c + d.attack.interval && !killing(s, move, d)) { // it lands before the leak, and the clock would leak before the next one
       const to = livingParts(s).find((p) => p.core) || livingParts(s).find((p) => !p.deadline);
@@ -189,8 +207,6 @@ function heedFloor(s, move) {
       if (soft) return soft;
     }
   }
-  // one: a one-part command that hits (what a floor boss's rule counts as your command on a part).
-  const hits1 = (k) => ['part', 'attack'].includes(ABILITIES[k]?.target) && (ABILITIES[k].damage || 0) > 0;
   const one = hits1(id), onto = (p) => first(s, [...(one ? [id] : []), ...HITS, 'spike'].filter(hits1).map((k) => `${k} ${p.id}`));
   if (v.desk) {
     // NIGHT DESK: only the Desk takes damage, and a hit on it settles its own trade. A trader's is answered from two
@@ -396,7 +412,7 @@ function play(s) {
   const frag = answers() && livingParts(s).some((p) => p.broadcast && p.attack && p.attack.due - s.encounter.cycle <= 1) ? livingParts(s).filter((p) => p.kind === 'fragment').sort((a, b) => a.integrity - b.integrity)[0] : null;
   // HOLLOW CHOIR's second voice: break the weaker Mimic, so the Round sings with one voice.
   const voices = answers() ? livingParts(s).filter((p) => p.mimic) : [], voice = voices.length > 1 ? voices.sort((a, b) => a.integrity - b.integrity)[0] : null;
-  let t0 = (alive(focus) && focus) || raidFocus(s) || tellFocus(s) || frag || voice || pick || open || key || (classOf(s) === 'infiltrator' ? soonest(s) : mostThreat(s));
+  let t0 = (alive(focus) && focus) || raidFocus(s) || tellFocus(s) || frag || voice || pick || open || crownNow(s) || key || (classOf(s) === 'infiltrator' ? soonest(s) : mostThreat(s));
   if (shunned(s, t0)) t0 = livingParts(s).filter((p) => !shunned(s, p)).sort((a, b) => dueOf(s, a) - dueOf(s, b))[0] || t0;
   // A Trojan's Loader (families.mjs): the part to break, its family's answer (the Courier only ever redeploys while it
   // stands, and every Package it delivers unpacks on a hit). Since fight length (data.mjs CONFIG.length) the Courier

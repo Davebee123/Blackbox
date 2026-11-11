@@ -4,10 +4,12 @@
 //   CENTRIFUGE      Bidding: each Surge the Gavel lands spins it faster (every 4, 3, 2); a delay or Throttle on it
 //                   withdraws it to every 4. A Surge at every 2 sells: the buyer named on the Gavel joins as a part with
 //                   its crew's rule (TOLLGATE a Lockbox warding the Rotor, SWARMLINE a Mirror twinned with the Gavel,
-//                   PALEMASK a Veil whose timers hide), and the Gavel drops back to every 3. Act 2 (Reserve price): a
-//                   withdraw steps it back one. Act 3 (Second lot): each sale brings two buyers.
+//                   PALEMASK a Veil whose timers hide), the Rotor heals 10% of its max, and the Gavel drops back to
+//                   every 3. Act 2 (Reserve price): a withdraw steps it back one. Act 3 (Second lot): each sale brings
+//                   two buyers.
 //   SHAKEDOWN       Ransom Clock: 12 cycles; at 0 it leaks 30% of your max and restarts at 6. A Deadline that lands pays
-//                   the ransom (+3); one called off (its wind-up, a cut, SIGINT) buys nothing. Act 2: a second Demand,
+//                   the ransom (+3); one called off (its wind-up, a cut, SIGINT) buys nothing. Leverage: while a Demand
+//                   stands, the Collector loses at most 15% of its max a cycle. Act 2: a second Demand,
 //                   its Deadline on the same cycle. Act 3 (Final notice): a leak re-arms the Demands and brings the
 //                   Lockbox back.
 //   SHOULDER SURFER Replay: a Sync Window every other cycle. The Logger takes damage only from commands fired in it;
@@ -15,23 +17,27 @@
 //                   Act 2 (Again): on its beat, every 4, it plays your last three commands back in order. Act 3 (From the
 //                   top): the log never clears, and the Dump plays the biggest command logged.
 //   RECURSION       Call: frames stack, main() (♛) at the bottom. Your one-part commands reach only the top frame; burns,
-//                   helpers and area hits reach every frame. Every 4 cycles the top frame pushes a new one at 60% of its
-//                   max, unless it is under a quarter of its own. Act 2 (Return): a frame that breaks makes the one
-//                   beneath attack a cycle sooner, 50% harder. Act 3 (Overflow): at 5 frames every frame attacks at once.
-//   NIGHT DESK      No Timeout: its attacks never land. Each waits on its part as a pending trade (2 as it opens);
+//                   helpers and area hits reach every frame. Every 5 cycles the top frame pushes a new one at 60% of its
+//                   max, unless it is under a quarter of its own. Act 2 (Return): it pushes a frame as the act starts,
+//                   and a frame that breaks makes the one beneath attack a cycle sooner, 50% harder. Act 3 (Overflow):
+//                   one more frame, and at 5 frames every frame attacks at once.
+//   NIGHT DESK      No Timeout: its attacks never land. Each waits on its part as a pending trade;
 //                   your one-part command on a part settles its trades on you at half. At 4 pending all settle in full,
 //                   and every later trade opens 25% bigger. Only the Desk takes damage (12% of its max a hit at most);
-//                   its traders go with it. Act 2 (Night shift): a pending trade grows 10% a cycle. Act 3 (Finality):
+//                   its traders go with it. Act 2 (Night shift): the Night Clerk clocks in, a third trader with one
+//                   trade pending, and a pending trade grows 10% a cycle. Act 3 (Finality):
 //                   each trade you settle heals the Desk 4% of its max.
 //   BYZANTINE       Vote: every 4 cycles, if the most damaged Node is 15% or more under the Nodes' average, it is restored
 //                   to the average and every Node hits 30% harder for the fight. A hit takes 20% of a Node's max at most.
 //                   Act 2 (Traitor): the most damaged Node turns; while it isn't the most damaged, the restore goes to
-//                   the healthiest Node's level. Act 3 (Hard fork): a Node that breaks returns at the next vote at the
-//                   others' average, unless every other Node is under half.
+//                   the healthiest Node's level. Act 3 (Hard fork): every broken Node returns as the act starts, and a
+//                   Node that breaks returns at the next vote, at the others' average, unless every other Node is
+//                   under half.
 //   CAMSWARM        Telnet Sweep: every 5 cycles each part under half (never the Hive) hatches a fragment and shields it;
 //                   each one hatched brings the next sweep a cycle sooner. A fragment that lives 3 cycles becomes a
 //                   Camera with a Surge of its own; break its part and it drops. A hit takes 15% of a part's max at most.
-//                   Act 2 (Botnet): every Camera fires with the C2 Node's Beacon, and a broken C2 Node comes back. Act 3
+//                   Act 2 (Botnet): every Camera fires with the C2 Node's Beacon, a broken C2 Node comes back, and each
+//                   other part you broke boots back as a Camera. Act 3
 //                   (Lockout): the Hive boots a Camera, and takes no damage while a Camera stands.
 //
 // The rules' state rides on the virus (v.bid, v.ransom, v.surf, v.stack, v.desk, v.vote, v.swarm); combat.mjs calls in at engage (fbStart), at a
@@ -42,14 +48,14 @@ import { BOSSES, CONFIG } from './data.mjs';
 import { mimicHit, copyKind } from './tells.mjs';
 
 export const FB = {
-  bid: { slow: 4, fast: 2, after: 3, sold: 0.5, buyers: ['tollgate', 'swarmline', 'palemask'] }, // sold: each sale makes the Gavel's Surge that much harder, for the fight
-  ransom: { clock: 10, restart: 5, pay: 3, leak: 0.35, grow: 0.15, most: 0.65 }, // a leak takes 35% of your max, 15 more each leak after, up to 65%
+  bid: { slow: 4, fast: 2, after: 3, sold: 0.5, heal: 0.1, buyers: ['tollgate', 'swarmline', 'palemask'] }, // sold: each sale makes the Gavel's Surge that much harder, for the fight; heal: what each sale gives the Rotor ♛ back, of its max
+  ransom: { clock: 10, restart: 5, pay: 3, leak: 0.35, grow: 0.15, most: 0.65, lever: 0.15 }, // lever: the most the Collector ♛ loses a cycle while a Demand stands, of its max; a leak takes 35% of your max, 15 more each leak after, up to 65%
   surf: { log: 2, again: 4, echo: 0.4, grow: 0.5 }, // grow: each Dump that lands makes the next one that much bigger, for the fight; // echo: an Again note's share of its hit (40%: at half, a burst sung back took 95% of a reader's bar in three cycles)
-  stack: { call: 4, push: 0.6, under: 0.25, overflow: 5, ret: 1.5, cap: 7, deeper: 0.35, sooner: 1, soonest: 3 }, // sooner: each Call let through brings the next one a cycle sooner, down to every soonest; // deeper: each Call let through makes every frame hit that much harder
-  desk: { full: 4, half: 0.5, grow: 0.1, margin: 0.25, limit: 0.12, backlog: 2, heal: 0.04 }, // heal: what each trade settled under Finality gives the Desk back, of its max; limit: the most one hit takes off the Desk, of its max; backlog: trades pending as the fight opens, on its traders // margin: each Table full opens every later trade that much bigger, for the fight
+  stack: { call: 5, push: 0.6, act: 0.25, under: 0.25, overflow: 5, ret: 1.5, cap: 7, deeper: 0.35, sooner: 1, soonest: 3 }, // sooner: each Call let through brings the next one a cycle sooner, down to every soonest; // deeper: each Call let through makes every frame hit that much harder
+  desk: { full: 4, half: 0.5, grow: 0.15, margin: 0.25, limit: 0.12, backlog: 0, heal: 0.04 }, // heal: what each trade settled under Finality gives the Desk back, of its max; limit: the most one hit takes off the Desk, of its max; backlog: trades pending as the fight opens, on its traders (none since the Night Clerk brings one with the night shift) // margin: each Table full opens every later trade that much bigger, for the fight
   vote: { every: 4, pass: 0.15, harder: 0.3, limit: 0.2 }, // limit: the most one hit takes off a Node while another stands, of its max // pass: how far under the level it is restored to the most damaged Node must be; harder: each vote that passes, every Node's hits
   overdraft: 3, // Overdraft: cycles the rest of the hit lands over
-  swarm: { sweep: 5, soonest: 2, grows: 3, cams: 4, limit: 0.15, gnaw: 2 }, // soonest: each fragment a sweep hatches brings the next sweep a cycle sooner, down to this; limit: the most one hit takes off a part, of its max // grows: cycles a fragment lives before it is a Camera; cams: Cameras at once
+  swarm: { sweep: 5, soonest: 2, grows: 3, cams: 4, limit: 0.15, gnaw: 2, back: 0.3 }, // back: what a part the Botnet re-infects returns with, of a Camera's max; // soonest: each fragment a sweep hatches brings the next sweep a cycle sooner, down to this; limit: the most one hit takes off a part, of its max // grows: cycles a fragment lives before it is a Camera; cams: Cameras at once
 };
 export const BUYER = { tollgate: 'TOLLGATE', swarmline: 'SWARMLINE', palemask: 'PALEMASK' };
 export const FB_VERBS = new Set(['reserve', 'lot2', 'demand2', 'notice', 'again', 'top', 'return', 'overflow', 'nightshift', 'finality', 'traitor', 'hardfork', 'botnet', 'lockout']);
@@ -96,6 +102,8 @@ function sell(s, gavel) {
     joined.push(`${BUYER[who]}'s ${p.name}`);
   }
   v.bid.sold++;
+  const rotor = livingParts(s).find((x) => x.core), got = rotor ? Math.min(Math.round(rotor.max * FB.bid.heal), rotor.max - rotor.integrity) : 0;
+  if (got > 0) { rotor.integrity += got; emit(s, 'heal', `SOLD. The ${rotor.name} takes its cut: +${got}. ${rotor.integrity}/${rotor.max}.`, { target: rotor.id, amount: got, sold: true }); }
   emit(s, 'spawn', joined.length ? `SOLD. ${joined.join(' and ')} ${joined.length === 1 ? 'joins' : 'join'} the fight.` : 'SOLD. The buyer is already here.', { source: gavel.id, sold: true });
 }
 // A part joins the fight from a spec: the boss's size, its hits the virus's (combat.mjs bossPhases spawn's way).
@@ -135,6 +143,23 @@ export function fbSlowed(s, p, how) {
 // The Gavel's selling Surge, landing this cycle at every 2: SIGINT cuts it and withdraws the bid (tells.mjs tellSigint),
 // so every class has an answer, not only the ones with a delay or a Throttle.
 export const sellingGavel = (s) => { const g = s.encounter?.virus?.bid && livingParts(s).find((p) => p.gavel && p.attack); return g && g.attack.interval <= FB.bid.fast && g.attack.due === s.encounter.cycle ? g : null; };
+
+// ---------- SHAKEDOWN: Leverage ----------
+// What the Collector ♛ can still lose this cycle while a Demand stands (null: no Demand, no cap).
+export function leverLeft(s, p) {
+  const e = s.encounter, v = e?.virus;
+  if (!v?.ransom || !p?.core || !livingParts(s).some((x) => x.deadline)) return null;
+  return Math.max(0, Math.max(1, Math.round(p.max * FB.ransom.lever)) - (p.leverAt === e.cycle ? p.leverUsed : 0));
+}
+// A hit on it (combat.mjs hit, with the Limiter's cap): what gets through. The rest is lost.
+export function fbCap(s, p, dealt, notes) {
+  const left = dealt > 0 ? leverLeft(s, p) : null;
+  if (left == null) return dealt;
+  const got = Math.min(dealt, left);
+  p.leverUsed = (p.leverAt === s.encounter.cycle ? p.leverUsed : 0) + got; p.leverAt = s.encounter.cycle;
+  if (got < dealt) notes.push(`leverage: ${dealt - got} lost`);
+  return got;
+}
 
 // ---------- SHOULDER SURFER: Replay ----------
 // The Sync Window opens on even cycles only (combat.mjs rollSync).
@@ -183,13 +208,15 @@ export function fbAim(s, intent, a) {
   emit(s, 'status', `CALL STACK. Your ${a.name} at ${t.name} reaches only the top frame: ${top.name}.`, { target: top.id, stack: true });
   return { ...intent, target: top.id };
 }
-function push(s) {
+// act: a frame an act pushes as it starts (Return, Overflow), whatever the top frame has left; it hardens nothing.
+function push(s, act = false) {
   const e = s.encounter, v = e.virus, top = topFrame(s);
-  if (!top || !canCall(top) || frames(s).length >= FB.stack.cap) return null;
-  const n = ++v.stack.n, max = Math.max(1, Math.round(top.max * FB.stack.push));
+  if (!top || (!act && !canCall(top)) || frames(s).length >= FB.stack.cap) return null;
+  const n = ++v.stack.n, max = Math.max(1, Math.round(top.max * (act ? FB.stack.act : FB.stack.push)));
   const p = { id: `frame${n}`, name: `Frame ${top.frame + 1}`, kind: 'system', frame: top.frame + 1, integrity: max, max, armor: 0, maxArmor: 0, patchAt: null, veiled: false, loot: null, special: false, exposedUntil: 0, lastDamaged: 0, boosted: false,
     attack: { ...(top.attack || { name: 'Surge', effect: 'damage', amount: 1, interval: 4 }), due: e.cycle + 2, n: 0 } };
   v.parts.push(p);
+  if (act) return p;
   v.stack.calls = (v.stack.calls || 0) + 1;
   emit(s, 'spawn', `CALL. ${top.name} pushes ${p.name} on top, at ${max} Integrity. Every frame now hits ${Math.round((depthOf(v) - 1) * 100)}% harder.`, { source: top.id, target: p.id, call: true });
   return p;
@@ -280,10 +307,10 @@ function hatch(s, from) {
   return f;
 }
 // A fragment that lived its cycles (or the Hive's own, at the Lockout) is a Camera: a part with a Surge of its own.
-function camera(s, f) {
+function camera(s, f, quiet = false) {
   const e = s.encounter, v = e.virus, spec = BOSSES[v.boss].camera, n = ++v.swarm.n, max = sized(v, spec.integrity), was = f.name;
   Object.assign(f, { name: `Camera ${n}`, kind: 'system', role: 'camera', noTicks: true, loot: spec.loot, integrity: max, max, hatched: null, parent: null, limit: FB.swarm.limit, attack: { ...spec.attack, amount: sized(v, spec.attack.amount, 'dmg'), due: e.cycle + 2, n: 0 } });
-  emit(s, 'spawn', `RECRUITED. ${was} is now ${f.name}: ${max} Integrity, a Surge every ${spec.attack.interval} cycles.`, { target: f.id, camera: true });
+  if (!quiet) emit(s, 'spawn', `RECRUITED. ${was} is now ${f.name}: ${max} Integrity, a Surge every ${spec.attack.interval} cycles.`, { target: f.id, camera: true });
   return f;
 }
 // The Hive under the Lockout: nothing reaches it while a Camera stands (combat.mjs hit).
@@ -405,20 +432,34 @@ export function fbVerb(s, act) {
   if (act === 'notice' && v.ransom) v.ransom.notice = true;
   if (act === 'again' && v.surf) v.surf.again = e.cycle + FB.surf.again;
   if (act === 'top' && v.surf) v.surf.top = true;
-  if (act === 'return' && v.stack) v.stack.ret = true;
-  if (act === 'overflow' && v.stack) v.stack.overflow = true;
-  if (act === 'nightshift' && v.desk) v.desk.night = e.cycle;
+  if (act === 'return' && v.stack) { v.stack.ret = true; const p = push(s, true); if (p) return `RECURSION returns, and pushes ${p.name} on top. A frame that breaks makes the one beneath attack a cycle sooner and 50% harder.`; }
+  if (act === 'overflow' && v.stack) { v.stack.overflow = true; const p = push(s, true); if (p) return `RECURSION overflows, and pushes ${p.name} on top. At ${FB.stack.overflow} frames every frame attacks at once.`; }
+  if (act === 'nightshift' && v.desk) {
+    v.desk.night = e.cycle;
+    const spec = BOSSES[v.boss].clerk, desk = livingParts(s).find((x) => x.core);
+    if (spec && desk) { const p = joinPart(s, spec, v.parts.filter((x) => x.role === 'trader').at(-1) || desk); (p.pending ||= []).push({ amount: sized(v, spec.trade.amount, 'dmg'), at: e.cycle, name: spec.trade.name }); }
+  }
   if (act === 'finality' && v.desk) v.desk.final = true;
   if (act === 'traitor' && v.vote) {
     // The traitor: the most damaged Node as the act starts, so the rule holds until you break it.
     const ns = nodesOf(s), t = ns.length ? ns.reduce((a, p) => (frac(p) < frac(a) ? p : a)) : null;
     if (t) { v.vote.traitor = t.id; return `BYZANTINE turns ${t.name}. While the traitor is not the most damaged, a vote restores to the healthiest Node's level.`; }
   }
-  if (act === 'hardfork' && v.vote) v.vote.fork = true;
+  if (act === 'hardfork' && v.vote) {
+    // It forks at once: every broken Node is back, at the standing Nodes' average, with fresh ticks.
+    v.vote.fork = true;
+    const ns = nodesOf(s), gone = v.parts.filter((p) => p.role === 'node' && p.integrity === 0), to = ns.length ? ns.reduce((n, p) => n + frac(p), 0) / ns.length : 0;
+    for (const p of ns.length ? gone : []) { Object.assign(p, { integrity: Math.max(1, Math.round(p.max * to)), armor: p.maxArmor, patchAt: null, ticks: null }); if (p.attack) p.attack.due = e.cycle + 2; }
+    if (ns.length && gone.length) return `BYZANTINE forks. ${gone.map((p) => p.name).join(' and ')} ${gone.length === 1 ? 'returns' : 'return'} at ${Math.round(to * 100)}%. A Node that breaks returns at the next vote, unless every other Node is under half.`;
+  }
   if (act === 'botnet' && v.swarm) {
     v.swarm.botnet = true;
     const spec = BOSSES[v.boss].extra.find((x) => x.role === 'c2');
-    if (!livingParts(s).some((x) => x.role === 'c2')) { const p = joinPart(s, spec, livingParts(s).find((x) => x.core) || v.parts[0]); return `CAMSWARM links its Cameras, and the ${p.name} is back. Each Camera fires when the Beacon lands.`; }
+    // It re-infects: each part you broke boots back as a Camera (the C2 Node as itself: the Beacon is its own).
+    const back = [];
+    if (!livingParts(s).some((x) => x.role === 'c2')) back.push(joinPart(s, spec, livingParts(s).find((x) => x.core) || v.parts[0]).name);
+    for (const p of v.parts.filter((x) => x.kind === 'system' && x.integrity === 0 && !x.core && x.role !== 'c2' && x.role !== 'camera')) if (camerasOf(s).length < FB.swarm.cams) { const was = p.name; Object.assign(p, { armor: 0, maxArmor: 0, patchAt: null, ticks: null }); camera(s, p, true); p.integrity = Math.max(1, Math.round(p.max * FB.swarm.back)); back.push(`${was} as ${p.name}`); }
+    if (back.length) return `CAMSWARM links its Cameras and re-infects: ${back.join(', ')}. Each Camera fires when the Beacon lands.`;
   }
   if (act === 'lockout' && v.swarm) {
     v.swarm.lockout = true;

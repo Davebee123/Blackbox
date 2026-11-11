@@ -23,7 +23,7 @@ you spend keeping it slow.
 - **Surge** (Gavel): 34 damage. Each one that lands makes the next come sooner: every 4 cycles, then 3, then 2.
 - **Withdraw** (your move): a delay or Throttle on the Gavel's Surge resets it to every 4.
 - **Sold** (Gavel, at every 2): if its Surge lands while it is at every 2, the buyer named on the Gavel joins as a new
-  part, and the Gavel drops back to every 3.
+  part, the Rotor ♛ heals 10% of its max, and the Gavel drops back to every 3.
   - TOLLGATE: a Ward. The Rotor loses at most 25% of its max a cycle while it stands.
   - SWARMLINE: a Twin of the Gavel. Break one and the other reboots unless both go down within 3 cycles.
   - PALEMASK: a Veil. One part's timers are hidden.
@@ -33,7 +33,8 @@ you spend keeping it slow.
   sells.
 - *Strategy:* hit the Rotor. When the Gavel shows *every 2*, delay its next Surge. If your delay is on cooldown, read
   the next buyer: SWARMLINE and PALEMASK are cheap to take, TOLLGATE's Ward is not.
-- *How you die:* you never delay, a Ward joins early, and the Rotor fight stretches while Encrypt stacks.
+- *How you die:* you never delay, a Ward joins early, each sale heals the Rotor, and the fight stretches while Encrypt
+  stacks.
 
 **Phase 2 (60–30%) · Reserve price**
 - *What happens:* a delay now only steps the Gavel back one, from every 2 to every 3. It returns to every 2 after one
@@ -63,12 +64,14 @@ phase 3.
   SIGINT), it does nothing, and the clock gains nothing.
 - **Ward** (Lockbox): while the Lockbox stands, the Demand loses at most 25% of its max a cycle.
 - **Surge** (Collector ♛, every 4): 30 damage.
+- **Leverage**: while a Demand stands, the Collector loses at most 15% of its max a cycle. The rest of a hit is lost.
 
 **Phase 1 (100–60%)**
-- *What happens:* the clock ticks down while you work on the Collector. Each Deadline asks whether to pay 36 Signal
+- *What happens:* the clock ticks down while you work on the Collector, 15% a cycle at most. Each Deadline asks whether to pay 36 Signal
   for 3 more cycles.
-- *Strategy:* estimate how many cycles you need to kill the Collector. If the clock will reach 0 first, let Deadlines
-  land; if not, call them off. Killing the Demand ends the Deadlines, and with them your way to buy time.
+- *Strategy:* work the Collector every cycle with a hit that fits the cap, and spend the big ones on a Deadline you
+  don't need. If the clock will reach 0 before the Collector breaks, let Deadlines land; if not, call them off. Killing
+  the Demand lifts the cap, ends the Deadlines, and halves the clock.
 - *How you die:* calling off every Deadline out of habit, then eating a 30% leak at a bad moment.
 
 **Phase 2 (60–30%) · Second demand**
@@ -127,24 +130,27 @@ against you.
 
 **Abilities**
 - **Call stack**: single-target commands only hit the top frame. Burns and area hits reach every frame.
-- **Call** (top frame, cast, every 4): pushes a new frame on top at 60% of its own max. A frame under 25 Integrity
+- **Call** (top frame, cast, every 5): pushes a new frame on top at 60% of its own max. A frame under 25 Integrity
   can't call.
 - **Surge** (every frame, own timer): about 24 to 38 damage each.
 
 **Phase 1 (100–60%)**
-- *What happens:* main() starts under two frames. Every 4 cycles the top frame pushes another one unless you stop it.
+- *What happens:* main() starts under two frames. Every 5 cycles the top frame pushes another one unless you stop it.
 - *Strategy:* break the top frame before its Call. If you can't, bring it under 25 so it can't call, and leave it as
   the top. Use burns and area hits to wear down main() through the stack.
 - *How you die:* letting Calls through until five frames are attacking.
 
 **Phase 2 (60–30%) · Return**
-- *What happens:* breaking a frame makes the frame below attack a cycle sooner and 50% harder.
+- *What happens:* the top frame pushes a small frame (25% of its max) as the phase starts. Breaking a frame makes the
+  frame below attack a cycle sooner and 50% harder.
 - *Strategy:* after each break, shield or delay the next frame's attack. Don't break two frames back to back.
 - *How you die:* a fast double pop, then two boosted hits in a row.
 
 **Phase 3 (30–0%) · Overflow**
-- *What happens:* at five frames, every frame attacks at once (shown a cycle ahead).
-- *Strategy:* keep the stack at four or fewer by breaking the top on the cycle before a Call.
+- *What happens:* one more small frame is pushed as the phase starts. At five frames, every frame attacks at once
+  (shown a cycle ahead).
+- *Strategy:* cross 30% with the stack at three or fewer, then keep it at four or fewer by breaking the top on the
+  cycle before a Call.
 - *How you die:* missing one Call while the stack is at four.
 
 **Tips.** Area-hit classes (Breaker, Operator helpers) do well here. Infiltrators should set burns early.
@@ -159,7 +165,7 @@ against you.
 
 **As built:** the Hive never hatches; a fragment is shielded until the part that hatched it breaks (then it drops); each
 fragment hatched brings the next sweep a cycle sooner; a hit takes 15% of a part at most; Botnet brings a broken C2 Node
-back, and the Lockout boots a Camera.
+back and each other part you broke returns as a Camera at 30%; the Lockout boots a Camera.
 
 **Abilities**
 - **Telnet Sweep** (Hive ♛, every 5, shown 2 ahead): each part under half Integrity spawns a fragment.
@@ -174,8 +180,10 @@ back, and the Lockout boots a Camera.
 - *How you die:* chipping every part to under half, then four fragments a sweep and Cameras everywhere.
 
 **Phase 2 (60–30%) · Botnet**
-- *What happens:* when the C2 Node's Beacon lands, every Camera fires with it.
-- *Strategy:* break the C2 Node now, or kill Cameras before each Beacon.
+- *What happens:* it re-infects: a broken C2 Node is back, and each other part you broke returns as a Camera at 30%.
+  When the C2 Node's Beacon lands, every Camera fires with it.
+- *Strategy:* cross 60% with as few parts broken as you can: the Hive never hatches, so it can go first. Then break
+  the C2 Node, or kill Cameras before each Beacon.
 - *How you die:* three Cameras and a Beacon on the same cycle.
 
 **Phase 3 (30–0%) · Lockout**
@@ -191,7 +199,7 @@ back, and the Lockout boots a Camera.
 
 **Overview.** Its attacks don't land; they wait. You decide when to take them, at half, before four pile up.
 
-**As built:** it opens with two trades held; one hit on a part clears every hit held there; only the Desk takes damage
+**As built:** one hit on a part clears every hit held there; only the Desk takes damage
 (12% a hit at most), and its two traders go when it breaks; a full table makes later trades 25% bigger; Finality heals
 the Desk 4% for each hit cleared.
 
@@ -208,7 +216,8 @@ the Desk 4% for each hit cleared.
 - *How you die:* tunnelling the Desk until four land at once (about −250).
 
 **Phase 2 (60–30%) · Night shift**
-- *What happens:* a held hit grows 10% each cycle it waits.
+- *What happens:* the Night Clerk clocks in, a third trader holding one hit (it makes none of its own). A held hit
+  grows 15% each cycle it waits.
 - *Strategy:* clear the oldest first, even on a part you didn't want to hit.
 
 **Phase 3 (30–0%) · Finality**
@@ -243,10 +252,10 @@ every Node hit 30% harder; a hit takes 20% of a Node at most; the traitor is the
 - *Strategy:* keep the traitor the lowest Node.
 
 **Phase 3 (30–0%) · Hard fork**
-- *What happens:* a Node you break comes back at the next vote, at the average of the other two, unless both of them
-  are under half.
+- *What happens:* every Node you broke comes back as the phase starts, at the average of the Nodes standing. After
+  that a Node you break comes back at the next vote, unless both others are under half.
 - *Strategy:* bring all three under half, then break them close together.
-- *How you die:* breaking one early and fighting it again.
+- *How you die:* breaking one before 30% and fighting it again.
 
 **Tips.** Area hits and burns spread damage evenly for free.
 
