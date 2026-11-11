@@ -492,7 +492,7 @@ function flash(text) {
 const feel = createFeel({ settings: () => campaign.settings, reducedMotion: () => !campaign.settings.motion || reducedMotion.matches });
 // A boss's act break (actbreak.mjs): the fight's clock holds while it plays (frame: actHold).
 let actHold = 0;
-const actBreak = createActBreak({ motion: () => canMove() });
+const actBreak = createActBreak({ motion: () => canMove(), say: (name, detail) => feel.say(name, detail) });
 // A puzzle room's board: what a move did, played over it once it renders (puzzle-view.mjs), its sounds on their beats.
 // The level-up (levelup-ui.mjs): a firmware update under the top bar. It waits for a calm moment: no fight, no card
 // that waits for you, no Toolkit over the screen; after a won fight, once you have left it.

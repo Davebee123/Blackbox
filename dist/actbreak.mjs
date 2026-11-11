@@ -1,7 +1,7 @@
 // Presentation only: the act break (docs/solo-bosses.md "The shape"), played when a boss's ♛ crosses into its next act
 // (combat.mjs bossPhases' phase event, its act). The ♛'s tick bursts into red bits as the hit crosses it; after a
 // breath the board's strip flares red and names the act, its letters pulling in from a blur, and fades out the same
-// way; the boss's emote types out under its bar. The fight's clock holds for all of it (app.js). Each frame re-applies
+// way, over a drone (sound.mjs actdrone); the boss's emote types out under its bar. The fight's clock holds for all of it (app.js). Each frame re-applies
 // it, so the board's own redraws never wipe it.
 export const ACT_BREAK = { gap: 1700, hold: 4200, fade: 700, emote: 1800, type: 30, bits: 34 };
 export const actBreakMs = () => ACT_BREAK.gap + ACT_BREAK.hold + ACT_BREAK.fade;
@@ -10,7 +10,7 @@ const ease = (x) => 1 - Math.pow(1 - Math.min(1, Math.max(0, x)), 3);
 const bump = (t, len) => (t < 0 || t > len ? 0 : Math.sin((t / len) * Math.PI));
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
-export function createActBreak({ motion }) {
+export function createActBreak({ motion, say = () => {} }) {
   let run = 0;
   // The ♛'s tick, as it stands on the board now.
   const tickEl = (act) => [...document.querySelectorAll(`#board [data-target="${CSS.escape(act.part)}"] .ptick.phase`)].find((el) => Math.abs(parseFloat(el.style.left) - act.at * 100) < 0.5) || null;
@@ -88,9 +88,11 @@ export function createActBreak({ motion }) {
     document.querySelectorAll('.act-on, .act-emoting').forEach((el) => el.classList.remove('act-on', 'act-emoting'));
     if (moving && act.part && act.at != null) burst(act);
     const t0 = performance.now() + ACT_BREAK.gap;
+    let droning = false;
     const step = () => {
       if (id !== run) return;
       const t = performance.now() - t0;
+      if (t >= 0 && !droning) { droning = true; say('actdrone', { len: ACT_BREAK.hold / 1000, fade: (ACT_BREAK.fade + 200) / 1000 }); } // the drone (sound.mjs) under the strip
       if (t < 0 || frame(a, t, moving)) requestAnimationFrame(step);
       else frame(a, Infinity, moving);
     };
