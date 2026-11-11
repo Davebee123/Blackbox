@@ -49,7 +49,7 @@ export function logOf(s) {
     for (const src of u.sources || []) for (const [key, where] of homes(src)) {
       const [group, id] = key.split(/:(.*)/);
       const e = E.get(key) || add(group, id, OTHER[id] || id, true, u.level);
-      const slot = { key: u.id, kind: set ? 'set' : 'unique', name: u.name, level: u.level, slot: slotName(u), where, set: set?.id || null };
+      const slot = { key: u.id, kind: set ? 'set' : 'unique', name: u.name, level: u.level, slot: slotName(u), where, set: set?.id || null, earn: !!u.earn }; // earn: an earned piece (earned.mjs), named from the start
       if (set) { if (!e.sets.has(set.id)) e.sets.set(set.id, []); if (!e.sets.get(set.id).some((x) => x.key === u.id)) e.sets.get(set.id).push(slot); }
       else if (!e.uniques.some((x) => x.key === u.id)) e.uniques.push(slot);
     }

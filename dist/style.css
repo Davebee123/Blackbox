@@ -2912,6 +2912,10 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .ct-row { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 4px 8px; align-items: center; padding: 6px 8px; background: rgba(12, 10, 6, 0.88); border: 1px solid var(--line); border-left: 3px solid var(--amber-deep); border-radius: var(--r-btn); color: var(--text); font: inherit; text-align: left; cursor: pointer; backdrop-filter: blur(2px); }
 .ct-row:hover, .ct-row:focus-visible { border-color: var(--line-strong); border-left-color: var(--amber); }
 .ct-row.on { border-color: var(--amber); background: rgba(40, 30, 10, 0.92); }
+/* Pinned (earned.mjs): an earned piece's row, set green's edge for a set piece, amber's for a unique; its cells and n/N. */
+.ct-row.pin-row.set { border-left-color: var(--r-set); }
+.ct-row.pin-row.set > .glyph { color: var(--r-set); }
+.ct-row.pin-row .ct-prog .ecells { flex: 0 1 auto; overflow: hidden; }
 .ct-row > .glyph { width: 14px; height: 14px; color: var(--amber-soft); align-self: start; margin-top: 2px; }
 .ct-txt { display: grid; min-width: 0; }
 .ct-txt b { font-size: 12px; font-weight: 600; color: var(--bright); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -3124,6 +3128,8 @@ details.map-pick { pointer-events: auto; }
 .set-pieces .sp.held { color: var(--text); }
 .set-pieces .sp.missing { color: var(--dim); }
 .set-pieces .sp.unknown { color: var(--gray); letter-spacing: 2px; }
+.set-pieces .sp.earned { display: flex; justify-content: space-between; gap: 10px; letter-spacing: 0; } /* earned (earned.mjs): named, its goal and count right */
+.sp-goal { font: 10px var(--mono); color: var(--dim); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .set-bonuses { display: grid; gap: 1px; margin-top: 3px; }
 .sb { color: var(--gray); }
 .sb.on { color: var(--r-set); }

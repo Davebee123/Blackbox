@@ -220,6 +220,7 @@ export function tickProfile(s) {
     if (e.card === 'hunt' || e.card === 'returning') p.deeds.hunts++;
   }
   p.seen = s.serial || 0;
+  hooks.earnTick?.(s); // the earned pieces' floor goals (earned.mjs), paid before the log stamps them
   (hooks.syncCollection || syncSlots)(s); // the collection log's new slots and full entries (collection-log.mjs), before the achievements that read them
   tickAchievements(s);
   p.seen = s.serial || 0;

@@ -281,6 +281,7 @@
 [data-form='phone'] .ph-chip.hot { color: var(--hot); }
 [data-form='phone'] .ph-chip.job { color: var(--amber); }
 [data-form='phone'] .ph-chip.ok { color: var(--ready, #7fd48a); }
+[data-form='phone'] .ph-chip.pin { color: var(--r-set); } /* the pinned earned pieces (earned.mjs) */
 [data-form='phone'] body.ph-map .map-svg { flex: 1; height: auto; min-height: 0; }
 [data-form='phone'] :is(.map-svg, .fp-svg) { touch-action: none; } /* pinch and double-tap are the map's (app.js) */
 [data-form='phone'] body.ph-map .map-list .mlist, [data-form='phone'] body.ph-map .map-list > :not(.map-tools) { min-height: 0; overflow: auto; }

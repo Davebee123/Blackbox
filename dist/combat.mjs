@@ -48,6 +48,7 @@ import { slotNode, pickSlot, hiddenAt, hiddenNear, floorOfSlot, lairAt, floorLai
 import { reqLevel, meetsReq, STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, lootOdds, magicFind, uniqueItem, liftFx, DECONSTRUCT, SLOTS, OLD_SLOT, BASES, AFFIX_FOR, STASH_CAP, CRIT, ECHO, PROTOCOL_NAMES, protocolSlots, rollItem, statLine, itemLabel, MATERIALS, codeOf, codeDrop, EXPLOIT_CHANCE, RULES, IMPLICITS, implicitFx, PROTOCOL_STATS, SLOT_KINDS, GROUPS, groupOf, statValue, seeded, statsRestore, curveRestore } from './gear.mjs';
 
 import ITEMS from './content/items.mjs';
+import EARN from './content/earned.mjs';
 import { SETS, setFx, activeSets, isPiece, setPool, SET_LOOT, CLASS_SET, setPityKey, SET_EVENT, sourcePool, sourceKey, setOf, setsRestore, SET_HOOKS, setStat, setSignal, setHealMult, sxOf, restFast } from './sets.mjs';
 import { fxText, fxList } from './content.mjs';
 import { deathRecap } from './recap.mjs';
@@ -617,6 +618,7 @@ export function deconstruct(s, item, out = null) {
 }
 // ---------- drops ----------
 // Uniques written in content/items.mjs (the editor's Uniques page).
+for (const u of ITEMS.uniques || []) if (EARN[u.id]) u.earn = EARN[u.id]; // an earned piece's count (content/earned.mjs, the one table to tune)
 export const UNIQUES = Object.fromEntries((ITEMS.uniques || []).map((u) => [u.id, u]));
 // A unique you can't deconstruct (keep: wick's Old Toolkit, his cancel code: docs/lore.md). A full stash takes it anyway.
 export const keptItem = (it) => !!(it?.unique && UNIQUES[it.unique]?.keep);
@@ -644,7 +646,7 @@ export function uniqueFrom(s, ctx, level) {
 // A Guarded server's vault (specials.mjs): one of its floor's uniques (any source's there), else its layer's vault
 // table's, open at its level.
 export function guardedUnique(s, floor, level) {
-  const open = Object.values(UNIQUES).filter((u) => u.level <= level + 2 && !isPiece(u.id)), on = (f) => f === floor || (Array.isArray(f) && f.includes(floor));
+  const open = Object.values(UNIQUES).filter((u) => u.level <= level + 2 && !isPiece(u.id) && !u.earn), on = (f) => f === floor || (Array.isArray(f) && f.includes(floor));
   const here = open.filter((u) => (u.sources || []).some((src) => on(src.floor)));
   return pickUnique(s, here.length ? here : open.filter((u) => dropsHere(u, { kind: 'vault', layer: layerOf(floor), floor })));
 }
@@ -786,7 +788,7 @@ function nativeBossUnique(s, boss, level) {
 // lack comes first, a class set's comes up CLASS_SET times as often for its class (setWeight), and a Listening Post
 // listening for one lifts it like a boss's. ctx: { kind, id, floor, layer, lineage } (sets.mjs fromHere); level: the
 // piece's item level.
-export const setDropPool = (ctx, level = 99) => sourcePool(ctx).filter((u) => u.level <= level + 2);
+export const setDropPool = (ctx, level = 99) => sourcePool(ctx).filter((u) => u.level <= level + 2 && !u.earn); // an earned piece (earned.mjs) is counted, never rolled
 export function setChance(s, ctx, level = 99) {
   const pool = setDropPool(ctx, level), odds = SET_LOOT[ctx.kind];
   if (!pool.length || !odds) return 0;
@@ -797,6 +799,7 @@ export function setChance(s, ctx, level = 99) {
 // The roll: a piece or null. pack: on a traced server it goes in your run's pack (banked when you jack out), else
 // straight into your stash. A miss while you lack one says the next chance.
 export function setDrop(s, ctx, level, who, { pack = false, path = null, why = `${who}: ` } = {}) {
+  hooks.earnEvent?.(s, ctx); // the earned pieces this event counts for (earned.mjs), paid once their count fills
   const pool = setDropPool(ctx, level);
   if (!pool.length || !SET_LOOT[ctx.kind]) return null;
   const key = sourceKey(ctx), lacking = pool.some((u) => !s.collection?.[u.id]), sets = [...new Set(pool.map((u) => setOf(u.id)?.name))];
@@ -822,7 +825,7 @@ export function setDrop(s, ctx, level, who, { pack = false, path = null, why = `
 // with its pity. null for a guard with no set piece.
 export const guardSetChance = (s, guard) => setChance(s, { kind: 'guard', id: guard });
 export function guardSetTable(s, guard) {
-  const pool = sourcePool({ kind: 'guard', id: guard });
+  const pool = sourcePool({ kind: 'guard', id: guard }).filter((u) => !u.earn); // an earned piece has its count in the Ledger instead
   if (!pool.length) return null;
   const set = setOf(pool[0].id), layer = Math.max(...pool.map((u) => u.sources.find((x) => x.kind === 'guard' && x.id === guard).layer || 1)), odds = SET_LOOT.guard;
   return {
@@ -836,7 +839,7 @@ function killSets(s, { v, key, guard, rare, floor, layer, pack, path }) {
   const lvl = v.level;
   if (guard) setDrop(s, { kind: 'guard', id: key, layer }, lvl, v.name, { pack, path: path + '/set' });
   if (rare) setDrop(s, { kind: 'rare', floor }, lvl, v.name, { pack, path: path + '/set-rare' });
-  if (v.strain) setDrop(s, { kind: 'strain', lineage: STRAINS[v.strain]?.lineage }, lvl, v.name, { pack, path: path + '/set-strain' });
+  if (v.strain) setDrop(s, { kind: 'strain', lineage: STRAINS[v.strain]?.lineage, strain: v.strain }, lvl, v.name, { pack, path: path + '/set-strain' });
   if (v.author && (v.elite || v.boss)) setDrop(s, { kind: 'author', id: v.author }, lvl, v.name, { pack, path: path + '/set-author' });
 }
 // After a kill on a network: maybe one of its native uniques (network.mjs, on its own dice). A guard's goes in your pack.
@@ -1003,16 +1006,25 @@ function fxCond(s, fx, ctx = {}) {
     case 'first-use': return !!ctx.cmd && !!e && (e.metrics?.actions?.[ctx.cmd] || 0) <= 1;
     case 'above-75': return d().integrity > d().max * 0.75;
     case 'late': return !!e && e.cycle >= 6;
+    // The floor feats' uniques (earned.mjs): a room you haven't cleared (Street Atlas), a server you hold (Superuser).
+    case 'room-new': return !!e?.rooms && !!s.rooms?.cleared && !s.rooms.cleared[e.rooms.room];
+    case 'server-held': return heldRun(s);
     default: return false;
   }
 }
 // The set bonuses open on what you wear (sets.mjs activeSets: each piece count's bonus counts once).
 export const setBonusCount = (s) => activeSets(loaded(s)).reduce((n, r) => n + r.open.length, 0);
+// A server you hold (root.mjs owned, without its import), the one your run is on, and its specials (specials.mjs).
+const heldLoc = (loc) => !!loc?.takenOver && !loc.rogue && !loc.member && !loc.zone && !loc.trunk;
+const runLoc = (s) => (s.run ? findLocation(s, s.run.loc) : null);
+const heldRun = (s) => heldLoc(runLoc(s));
+const specialsHere = (s) => { const x = runLoc(s)?.special; return Array.isArray(x) ? x.length : x ? 1 : 0; };
 const fxScale = (s, fx) => {
   const e = s.encounter;
   const d = () => defender(s) || { integrity: 1, max: 1 };
   const k = fx.scale === 'cycles' ? Math.max(0, (e?.cycle || 1) - 1) : fx.scale === 'contracts' ? (s.mail?.jobs || []).filter((j) => !j.done).length : fx.scale === 'broken' ? e?.breaks || 0 : fx.scale === 'reads' ? e?.metrics?.reads || 0
-    : fx.scale === 'chits' ? e?.chits || 0 : fx.scale === 'crew' ? (e ? alliesOf(s).length : 0) : fx.scale === 'missing' ? Math.max(0, Math.floor((1 - d().integrity / Math.max(1, d().max)) * 10 + 1e-9)) : fx.scale === 'sets' ? setBonusCount(s) : 1;
+    : fx.scale === 'chits' ? e?.chits || 0 : fx.scale === 'crew' ? (e ? alliesOf(s).length : 0) : fx.scale === 'missing' ? Math.max(0, Math.floor((1 - d().integrity / Math.max(1, d().max)) * 10 + 1e-9)) : fx.scale === 'sets' ? setBonusCount(s)
+    : fx.scale === 'specials' ? specialsHere(s) : fx.scale === 'parts' ? (e ? Math.max(0, parts(s).length - 2) : 0) : fx.scale === 'held' ? Math.floor((s.locations || []).filter(heldLoc).length / 5) : 1; // the floor feats' (earned.mjs)
   const v = (Number(fx.value) || 0) * k;
   return fx.cap ? Math.min(fx.cap, v) : v;
 };
@@ -1060,7 +1072,7 @@ function fxSpend(s, fx, id) {
 // The deep uniques' effect kinds (content.mjs FX_DO, levels 39-50): their hooks run on every hit, heal and cycle, and
 // nearly every fight carries none of them, so a kind you don't wear answers at once (fxKinds: the kinds on your rig,
 // kept while the rig is the same).
-const DEEP = new Set(['stat+', 'stat%', 'max-signal%', 'heal%', 'stack', 'buff', 'taken%', 'hit-cap', 'helper-soak', 'next-boost', 'shield%', 'shield-absorb', 'block-dot', 'burn%', 'helper%', 'crit-damage%', 'crit-double', 'first-skill-crit', 'first-pierce', 'spill', 'repeat', 'burn-now', 'burn-sap', 'helper-long', 'helper-now', 'helper-cd', 'free-helper', 'jam-delay', 'first-cd', 'shortest-cd', 'chit-fade', 'clock-start', 'momentum', 'spend%', 'momentum-cleave', 'momentum-safe', 'unveil', 'explore-xp%', 'cache%', 'rewind']);
+const DEEP = new Set(['stat+', 'stat%', 'max-signal%', 'heal%', 'stack', 'buff', 'taken%', 'hit-cap', 'helper-soak', 'next-boost', 'shield%', 'shield-absorb', 'block-dot', 'burn%', 'helper%', 'crit-damage%', 'crit-double', 'first-skill-crit', 'first-pierce', 'spill', 'repeat', 'burn-now', 'burn-sap', 'helper-long', 'helper-now', 'helper-cd', 'free-helper', 'jam-delay', 'first-cd', 'shortest-cd', 'chit-fade', 'clock-start', 'momentum', 'spend%', 'momentum-cleave', 'momentum-safe', 'unveil', 'explore-xp%', 'cache%', 'cache-heal%', 'rewind']);
 const KINDS = new WeakMap();
 function fxKinds(s) {
   const key = hooks.extraFx ? null : `${classOf(s)}|${hackerLevel(s)}|${rigOf(s).join(',')}|${(s.stash || []).length}|${s.equipN || 0}|${Object.keys(SETS).length}`; // what is loaded, and the sets
@@ -2060,7 +2072,7 @@ function engage(s) {
   coolSwapped(s); // keys a preset or an equip put on the bar since your last fight start it cooling
   // Uniques that fire as a fight starts (Gate Bypass, Cell Key).
   for (const x of fxFire(s, 'start')) {
-    if (x.fx.do === 'chit') { e.chits++; emit(s, 'status', `${x.it.name}: you start with a ◆.`); }
+    if (x.fx.do === 'chit') { e.chits++; emit(s, 'status', `${x.name || x.it.name}: you start with a ◆.`); } // a unique's, or a set bonus's (Full Coverage)
     if (x.fx.do === 'chit-fade') fadingChit(s, x);
     if (x.fx.do === 'clock-start' && gearStat(s, 'clock')) e.clock = Math.max(e.clock || 0, Number(x.fx.value) || 0); // Clock Tree: the meter starts part full
     if (x.fx.do === 'force-crit') e.forceCrit = true;
@@ -2574,6 +2586,8 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     subclassCommand(s, text);
   } else if (/^listen( |$)/.test(text)) {
     listenCommand(s, text);
+  } else if (/^(un)?pin( |$)/.test(text) && hooks.pinCommand) {
+    hooks.pinCommand(s, text); // an earned piece pinned to the map (earned.mjs)
   } else if (/^archetype( \w+)?$/.test(text) || /^talent( |$)/.test(text) || /^(equip|unequip)( |$)/.test(text) || /^specialty( |$)/.test(text) || /^loadout( |$)/.test(text)) {
     loadoutCommand(s, text);
   } else if (/^developer level \d+$/.test(text)) {

@@ -834,6 +834,54 @@ export default {
       }
     },
     {
+      "id": "fullcoverage",
+      "name": "Full Coverage",
+      "levels": [
+        25,
+        38
+      ],
+      "pieces": [
+        "plumb-line",
+        "field-book",
+        "hi-vis",
+        "datum"
+      ],
+      "bonuses": {
+        "2": {
+          "text": "+2 Regen.",
+          "fx": [
+            {
+              "when": "always",
+              "do": "stat",
+              "stat": "regen",
+              "value": 2
+            }
+          ]
+        },
+        "3": {
+          "text": "A room's first clear pays 25% of a kill's XP.",
+          "fx": [
+            {
+              "when": "custom",
+              "do": "clear-xp",
+              "value": 25
+            }
+          ]
+        },
+        "4": {
+          "text": "Your first fight in each room starts with a ◆.",
+          "fx": [
+            {
+              "when": "start",
+              "do": "chit",
+              "value": 1,
+              "if": "room-new"
+            }
+          ]
+        }
+      }
+    },
+    {
       "id": "mesh",
       "name": "Mesh",
       "levels": [

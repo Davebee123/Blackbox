@@ -51,6 +51,8 @@ import { FIREWALL, fwOf, fwAt, ratingAt, effLevel, wallBonus, fragLevels, defrag
 import { filtersOf, equipped as filtersOn, slotsOf as filterSlots, filterLine, FILTER_STATS, FILTER_CAP, baseName as filterBase } from './filters.mjs';
 import { situationOf } from './situations.mjs';
 import { SETS, setOf, setCard, activeSets, piecesOf, greenOf, sourceText, seesRare, tierLine } from './sets.mjs';
+import { earnedOf, cellsOf, pinsOf, PIN_MAX } from './earned.mjs';
+import { logGo, homeOfUnique } from './collection.mjs';
 import { tellTip, gearLive, cycleGear, gearOnParts, partTip, partCue, partRead, partLinks, lockOf, wardOf, GEAR_ICON, DAMPED, answerLine, helperPlan, beatCopy } from './fightread.mjs';
 import { crossBy, BOSS_RULES, TICKS } from './interrupt.mjs';
 import { programMarkup, progNow, progTarget, progText, progMove, progOnPart, progExc, progFight, progTag } from './routines-view.mjs';
@@ -582,6 +584,7 @@ export function collectionPieces(s) {
 // Where a set piece drops, once you've found it: its source, and a guard's floor and next-kill chance (its pity).
 const pieceSource = (s, u) => {
   const src = (u.sources || [])[0];
+  if (src?.kind === 'guard' && u.earn) return `${collSource(s, src)} · floor ${floorOfLayer(src.layer || 1)}+`; // earned (earned.mjs): no odds
   if (src?.kind === 'guard') return `${collSource(s, src)} · floor ${floorOfLayer(src.layer || 1)}+ · <span class="coll-odds" title="${esc('The chance its next kill drops it. Each kill without one adds to it while you lack its piece.')}">${Math.round(guardSetChance(s, src.id) * 100)}% a kill</span>`;
   if (src?.kind === 'story') return `${esc(collSource(s, src))} · Lv ${u.level}`;
   return `${esc((u.sources || []).map((x) => sourceText(x, SOURCE_NAMES)).join(', '))} · Lv ${u.level}+`; // the loot plan's sources (sets.mjs)
@@ -1268,7 +1271,9 @@ export function setLines(s, uniqueId, compact = false) {
   const have = setHave(s), c = setCard(set.id, have), g = greenOf(uniqueId, have.worn);
   // The piece's green line (Diablo 2's): a second small stat, grey until this piece and another of its set are loaded.
   const green = g ? `<span class="sg${g.on ? ' on' : ''}" title="${esc(g.on ? 'On' : `Load it with another ${c.name} piece`)}">With ${g.at} pieces: ${esc(g.text)}</span>` : '';
-  const pieces = c.pieces.map((p) => `<span class="sp ${p.state}" title="${esc(SET_PIECE_TIP[p.state])}">${esc(p.name || '???')}</span>`).join('');
+  // An earned piece you lack (earned.mjs) keeps its name and line, its goal and count right-aligned (Cascade 4/6).
+  const earned = (p) => p.state === 'unknown' && earnedOf(s, p.id);
+  const pieces = c.pieces.map((p) => { const e = earned(p); return e ? `<span class="sp unknown earned" title="${esc(earnTip(s, p.id))}"><span>${esc(UNIQUES[p.id].name)}</span>${compact ? '' : `<small class="sp-goal">${esc(e.short)} ${e.n}/${e.of}</small>`}</span>` : `<span class="sp ${p.state}" title="${esc(SET_PIECE_TIP[p.state])}">${esc(p.name || '???')}</span>`; }).join('');
   const bonuses = c.bonuses.map((b) => `<span class="sb${b.on ? ' on' : ''}${b.blocked ? ' blocked' : ''}" title="${esc(b.blocked ? `Only one 4-piece bonus at a time: ${b.blocked} reached four first and keeps it.` : b.on ? 'On' : `Wear ${b.at} pieces`)}">(${b.at}) Set: ${esc(b.text)}${b.blocked ? ` <em>${esc(b.blocked)} holds it</em>` : ''}</span>${compact ? '' : subLines(b)}`).join('');
   const tier = tierLine(set.id);
   return `<span class="set-lines${compact ? ' compact' : ''}">${green}<b class="set-name">${esc(c.name)} (${c.n}/${c.total})</b>${tier && !compact ? `<small class="set-tier">${esc(tier)}</small>` : ''}<span class="set-pieces">${pieces}</span><span class="set-bonuses">${bonuses}</span></span>`;
@@ -2257,9 +2262,32 @@ function railOf(s, ev, l) {
   if (ev.card === 'call') return { name: `${FX[ev.owner].short} · Defend`, tag: lv, where };
   return { name: ev.name, tag: lv, where };
 }
-// The map's left column: the threat rail, then the contract tracker under it (the selected server's contract lit).
+// An earned piece's count as cells (earned.mjs): one a count, past eight one for two; set green for a set piece, amber
+// for a unique. The Ledger's hint and a pinned row draw it.
+export const earnCells = (p) => { const [lit, all] = cellsOf(p.n, p.of); return `<span class="ecells ${p.set ? 'set' : 'uniq'}" aria-hidden="true">${'<i class="on"></i>'.repeat(lit)}${'<i></i>'.repeat(Math.max(0, all - lit))}</span>`; };
+// An earned piece's tooltip, WoW's grammar: its name, its kind, then the answer (the count left), muted.
+export function earnTip(s, id) {
+  const u = UNIQUES[id], p = earnedOf(s, id), set = setOf(id), slot = SLOTS[BASES[u.base]?.slot]?.name || '';
+  const kind = set ? `${slot} from the ${set.name} set` : `Unique ${slot.toLowerCase()}`;
+  return `${u.name}: ${kind}, level ${u.level}.${p.got ? '' : `\n▸ ${p.open ? '' : `From level ${p.from}: `}${p.todo}.`}`;
+}
+// The map's Pinned section (earned.mjs pins, up to three): a tracker row a piece, set green's edge for a set piece and
+// amber's for a unique, its set's name (or its floor's feat) over its name, then its cells and n/N. A click opens its
+// Ledger entry.
+function pinnedTracker(s) {
+  const ids = pinsOf(s);
+  if (!ids.length) return '';
+  const rows = ids.map((id) => {
+    const u = UNIQUES[id], p = earnedOf(s, id), over = setOf(id)?.name || sourceText(u.sources?.[0]);
+    return `<button type="button" class="ct-row pin-row${p.set ? ' set' : ''}" data-go="${esc(logGo(homeOfUnique(id)))}" title="${esc(earnTip(s, id))}">${glyph(SLOT_GLYPH[BASES[u.base]?.slot] || 'item')}<span class="ct-txt"><small class="ct-for">${esc(over)}</small><b>${esc(u.name)}</b></span><span class="ct-prog">${earnCells(p)}<small class="ct-n">${p.n}/${p.of}</small></span></button>`;
+  }).join('');
+  return `<section class="ctrack pins" aria-label="Pinned"><h3 class="ct-head">${glyph('pin')}Pinned<small>${ids.length}/${PIN_MAX}</small></h3>${rows}</section>`;
+}
+const SLOT_GLYPH = { exploit: 'exploit', proxy: 'relay', shell: 'module', script: 'cipher', implant: 'injector' };
+// The map's left column: the threat rail, then the contract tracker under it (the selected server's contract lit), then
+// the pinned earned pieces.
 function mapLeft(s, sel, runner = null) {
-  const col = threatRail(s) + contractTracker(s, sel) + runnerRail(s, runner);
+  const col = threatRail(s) + contractTracker(s, sel) + pinnedTracker(s) + runnerRail(s, runner);
   return col ? `<div class="map-lcol">${col}</div>` : '';
 }
 // A phone's map (docs/phone-plan.md P3): the rail and the tracker fold into a row of chips under the floors, a red
@@ -2272,11 +2300,12 @@ export function mapChips(s, pick = null) {
     th.length ? `<button type="button" class="ph-chip hot" data-phone="threats" aria-label="${th.length} threat${th.length > 1 ? 's' : ''} and timers">${glyph('kill')}<b>${th.length}</b>${soon ? `<small data-chip-t>${fmtTime(soon.left)}</small>` : ''}</button>` : '',
     open || (rr && !ready) ? `<button type="button" class="ph-chip job" data-phone="jobs" aria-label="${open} contract${open === 1 ? '' : 's'} under way">${glyph('contract')}${open ? `<b>${open}</b><small>contract${open === 1 ? '' : 's'}</small>` : '<small>Runners</small>'}</button>` : '',
     ready ? `<button type="button" class="ph-chip ok" data-phone="jobs" aria-label="${ready} contract${ready === 1 ? '' : 's'} ready to turn in"><b>✓ ${ready}</b><small>ready</small></button>` : '',
+    pinsOf(s).length ? `<button type="button" class="ph-chip pin" data-phone="pins" aria-label="${pinsOf(s).length} pinned">${glyph('pin')}<b>${pinsOf(s).length}</b><small>pinned</small></button>` : '',
   ].join('');
   return chips ? `<div class="ph-chips" role="group" aria-label="Threats and contracts">${chips}</div>` : '';
 }
 // A chip's list, for the sheet: the threat rail, or the contract tracker with the Runners under it.
-export const mapRail = (s, which, sel = null, runner = null) => (which === 'threats' ? threatRail(s) : contractTracker(s, sel) + runnerRail(s, runner));
+export const mapRail = (s, which, sel = null, runner = null) => (which === 'threats' ? threatRail(s) : which === 'pins' ? pinnedTracker(s) : contractTracker(s, sel) + runnerRail(s, runner));
 function threatRail(s) {
   const list = threatsOf(s);
   if (!list.length) return '';

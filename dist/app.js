@@ -3433,7 +3433,7 @@ function phListMarkup() {
 function phListOpen(which) {
   phList = which; phListHtml = phListMarkup();
   if (!phListHtml) { phList = null; return; }
-  openSheet(phListHtml, { height: 'peek', label: which === 'threats' ? 'Threats and timers' : which === 'jobs' ? 'Contracts' : 'The server', id: 'list', closed: () => { phList = null; dirty = true; } });
+  openSheet(phListHtml, { height: 'peek', label: which === 'threats' ? 'Threats and timers' : which === 'jobs' ? 'Contracts' : which === 'pins' ? 'Pinned' : 'The server', id: 'list', closed: () => { phList = null; dirty = true; } });
 }
 function phListDraw() {
   if (!phList || sheetKey() !== 'list') return;
@@ -3443,7 +3443,7 @@ function phListDraw() {
 }
 document.addEventListener('click', (e) => {
   if (!F.isPhone()) return;
-  const chip = e.target.closest?.('#page-view [data-phone="threats"], #page-view [data-phone="jobs"]');
+  const chip = e.target.closest?.('#page-view [data-phone="threats"], #page-view [data-phone="jobs"], #page-view [data-phone="pins"]');
   if (chip) return phListOpen(chip.dataset.phone);
   if (e.target.closest?.('#page-view .fp-hud .fp-id')) return phListOpen('fpinfo');
   if (sheetKey() === 'list' && e.target.closest?.('#sheet :is([data-select], [data-locate], [data-command], [data-go], [data-runner], [data-rooms])')) closeSheet();

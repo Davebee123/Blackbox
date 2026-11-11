@@ -1726,19 +1726,20 @@ five slot kinds, so a general set's 2-piece can go beside it.
 | **LOWLIGHT Kit** | 1, 22: wick's storyline | wick's Old Toolkit (exploit, 1): none [+5% crit] · LOWLIGHT Badge (implant, 22): +5% damage for each contract you hold [+6% max Signal] | Delivering a contract fills your Signal; your next kill pays 25% more XP | | |
 | **Boot Disk** | 1–8: RELAY-KING, ★ rare spawns on floor 1 | Floppy (shell, 1): +6% max Signal [+5% crit] · Boot Sector (script, 3): +1 Regen [+5% damage] | +10% max Signal. Regen heals 1 more every 5 cycles | | |
 | **Hive Mind** | 5–16: the floor 2 lair boss | Seed (exploit, 6): your burns deal 5% more [+5% crit] · Swarm (script, 9): your helpers deal 5% more [+5% Clock Speed] · Carapace (shell, 12): +2 Block [+6% max Signal] · Queen (implant, 15): +6% max Signal [+5% damage] | Burns and helpers deal 8% more | Burns and helpers last 1 cycle longer | Parts under your burns or helpers take 8% more from all your damage |
-| **Kestrel Clearance** | 7+: the Kestrel guard posts, floor 2 and below | Kestrel Badge (proxy, 7, the Bouncer): answering a tell shields you for 10 [+5% Clock Speed] · Kestrel Token (script, 7, the Tracer): +10% damage on the signature part [+5% crit] · Kestrel Lanyard (shell, 7, the Sentinel): +10% crit on a part with no ◆ [+5% damage] | +8% max Signal | Once a fight, a hit that would take more than 30% of your max Signal deals 30% instead | |
-| **Night Shift** | 7–14: threads on floors 1–2 | Timecard (script, 8): +5% Restore [+6% max Signal] · Night Light (proxy, 11): +6% max Signal [+5% damage] · Thermos (implant, 15): +1 Regen [+2 Block] | +2 Regen | Resting at home refills Signal 50% faster | |
+| **Kestrel Clearance** | 7+: earned, 15 kills of each piece's guard, floor 2 and below | Kestrel Badge (proxy, 7, the Bouncer): answering a tell shields you for 10 [+5% Clock Speed] · Kestrel Token (script, 7, the Tracer): +10% damage on the signature part [+5% crit] · Kestrel Lanyard (shell, 7, the Sentinel): +10% crit on a part with no ◆ [+5% damage] | +8% max Signal | Once a fight, a hit that would take more than 30% of your max Signal deals 30% instead | |
+| **Night Shift** | 7–14: earned, threads on floors 1–2 (4 · 8 · 12) | Timecard (script, 8): +5% Restore [+6% max Signal] · Night Light (proxy, 11): +6% max Signal [+5% damage] · Thermos (implant, 15): +1 Regen [+2 Block] | +2 Regen | Resting at home refills Signal 50% faster | |
 | **Choirbook** | 10–20: the Hollow Choir, REPO MAN | Psalter (script, 10): +5% Clock Speed [+6% max Signal] · Mirror (shell, 13): +2 Block [+5% Clock Speed] · Keys (exploit, 16): +5% damage to jammed parts [+5% crit] | Answering a tell shields you for 5% of max Signal | Jams and delays you apply last 1 cycle longer | |
-| **Patchwork** | 10–18: strain kills | Stitch (exploit, 10, ransomware strains): +4% damage [+5% crit] · Darn (proxy, 12, worm strains): +6% max Signal [+2 Block] · Hem (shell, 14, ghostroot strains): +2 Block [+5% damage] · Seam (implant, 15, any strain): +4% Clock Speed [+6% max Signal] | +5% damage, +5% max Signal | +5% Clock Speed | Each different skill you use in a fight adds +2% damage, up to +12% |
-| **Lantern Route** | 12+: LANTERN's couriers | Shortwave (proxy, 12): +5% Scavenge [+6% max Signal] · Logbook (script, 14): caches you take pay 10% more credits [+5% damage] · Antenna (implant, 15): you see a server's rare spawn on its map card [+5% Scavenge] | +10% Scavenge | Caches and vaults pay 25% more credits | |
+| **Patchwork** | 10–18: earned, 50 strain kills of each piece's lineage; Seam 15 different strains | Stitch (exploit, 10, ransomware strains): +4% damage [+5% crit] · Darn (proxy, 12, worm strains): +6% max Signal [+2 Block] · Hem (shell, 14, ghostroot strains): +2 Block [+5% damage] · Seam (implant, 15, any strain): +4% Clock Speed [+6% max Signal] | +5% damage, +5% max Signal | +5% Clock Speed | Each different skill you use in a fight adds +2% damage, up to +12% |
+| **Lantern Route** | 12+: earned, LANTERN's couriers intercepted (8 · 16 · 24) | Shortwave (proxy, 12): +5% Scavenge [+6% max Signal] · Logbook (script, 14): caches you take pay 10% more credits [+5% damage] · Antenna (implant, 15): you see a server's rare spawn on its map card [+5% Scavenge] | +10% Scavenge | Caches and vaults pay 25% more credits | |
 | **Glass Ceiling** | 14–26: GLASSJAW's bosses and elites | Rotor (exploit, 14): +5% damage [+5% crit] · Quorum (proxy, 17): +6% max Signal [+5% Clock Speed] · Ledger (script, 20): +5% crit [+5% damage] · Parachute (implant, 23): once a fight, below 25% Signal, heal 5% of max [+2 Block] | +6% damage | +10% damage while below half Signal | +10% Clock Speed while below half. Once a fight, dropping below 25% heals 10% of max |
 | **On-Call** | 18–30: SHOULDER SURFER and floor 4's lair boss (the Pager), NIGHT DESK (the Runbook), BYZANTINE (Failover) | Pager (proxy, 18): +5% Restore [+2 Block] · Runbook (script, 22): your first heal each fight is 15% larger [+6% max Signal] · Failover (shell, 26, floor 4): +2 Block [+5% Clock Speed] | +10% Restore | Healing past full becomes a shield, up to 10% of max Signal | |
-| **Cold Storage** | 19–26: vaults | Freezer (shell, 19): +2 Block [+6% max Signal] · Cold Cache (implant, 22): +6% max Signal [+5% damage] · Frost Line (proxy, 25): +1 Block while above 75% Signal [+5% crit] | +2 Block | Above 75% Signal, you take 8% less damage | |
-| **Overtime** | 22–30: puzzle boards won, a piece a kind | Punch Card (script, 22, Quarantine): +4% Clock Speed [+5% damage] · Time Clock (implant, 24, Cascade): +6% max Signal [+5% Clock Speed] · Late Pass (proxy, 26, Ping sweep): +2 Block [+5% crit] · Coffee Run (exploit, 28, Hunter chase): +4% damage [+6% max Signal] | +5% Clock Speed | From a fight's 6th cycle, +8% damage | From the 6th cycle, cooldowns tick an extra cycle every other cycle |
-| **Burst Buffer** | 25–32: ★ rare spawns | Cache Line (exploit, 25): +5% crit [+5% damage] · Prefetch (script, 28): your first skill each fight deals 8% more [+5% crit] · Flush (implant, 31): +4% Clock Speed [+6% max Signal] | Critical strikes deal 8% more | Your first two skills each fight deal 20% more | |
-| **Hot Spare** | 28–36: Resident takeovers | Standby (shell, 28): +6% max Signal [+2 Block] · Failback (implant, 32): +2 Block [+5% damage] | The first time a fight drops you below 30% Signal, heal 20% of max and deal 10% more for 3 cycles | | |
+| **Cold Storage** | 19–26: earned, vaults on Coldline (12 · 24 · 36) | Freezer (shell, 19): +2 Block [+6% max Signal] · Cold Cache (implant, 22): +6% max Signal [+5% damage] · Frost Line (proxy, 25): +1 Block while above 75% Signal [+5% crit] | +2 Block | Above 75% Signal, you take 8% less damage | |
+| **Overtime** | 22–30: earned, 15 boards won of each piece's kind | Punch Card (script, 22, Quarantine): +4% Clock Speed [+5% damage] · Time Clock (implant, 24, Cascade): +6% max Signal [+5% Clock Speed] · Late Pass (proxy, 26, Ping sweep): +2 Block [+5% crit] · Coffee Run (exploit, 28, Hunter chase): +4% damage [+6% max Signal] | +5% Clock Speed | From a fight's 6th cycle, +8% damage | From the 6th cycle, cooldowns tick an extra cycle every other cycle |
+| **Burst Buffer** | 25–32: earned, ★ rare spawns on floor 5 and down (10 · 20 · 30) | Cache Line (exploit, 25): +5% crit [+5% damage] · Prefetch (script, 28): your first skill each fight deals 8% more [+5% crit] · Flush (implant, 31): +4% Clock Speed [+6% max Signal] | Critical strikes deal 8% more | Your first two skills each fight deal 20% more | |
+| **Hot Spare** | 28–36: earned, takeovers on floors 5–6 (8 · 16) | Standby (shell, 28): +6% max Signal [+2 Block] · Failback (implant, 32): +2 Block [+5% damage] | The first time a fight drops you below 30% Signal, heal 20% of max and deal 10% more for 3 cycles | | |
+| **Full Coverage** | 25–38: earned, mapping (Plumb Line 8 on Deep Core, Field Book all of it; Hi-Vis 8 on Kernel Space, Datum all of it) | Plumb Line (exploit, 26): +4% damage [+5% crit] · Field Book (script, 29): +4% Clock Speed [+6% max Signal] · Hi-Vis (shell, 33): +2 Block [+5% damage] · Datum (implant, 37): +6% max Signal [+2 Block] | +2 Regen | A room's first clear pays 25% of a kill's XP | Your first fight in each room starts with a ◆ |
 | **Mesh** | 31–38: crew bosses | Node (proxy, 31): +6% max Signal [+2 Block] · Link (script, 34): heals you cast are 5% larger [+6% max Signal] · Hub (implant, 37): +4% damage [+5% Clock Speed] | +5% damage and healing per crewmate in the fight, up to 3 | Heals and shields you put on a crewmate also land on you at 25% | |
-| **Deep Archive** | 37–44: vaults on floors 7 and 8 | Index (script, 37): +4% Clock Speed [+5% damage] · Spine (shell, 39): +2 Block [+6% max Signal] · Folio (exploit, 41): +5% damage [+5% crit] · Vellum (implant, 43): +6% max Signal [+2 Block] | +8% max Signal | +8% damage | Every 4th cycle, your next skill repeats at 40% |
+| **Deep Archive** | 37–44: earned, vaults on floors 7 and 8 (15 · 30 · 45 · 60) | Index (script, 37): +4% Clock Speed [+5% damage] · Spine (shell, 39): +2 Block [+6% max Signal] · Folio (exploit, 41): +5% damage [+5% crit] · Vellum (implant, 43): +6% max Signal [+2 Block] | +8% max Signal | +8% damage | Every 4th cycle, your next skill repeats at 40% |
 | **Bedrock** | 43–50: the floor 8 lair boss | Bedrock Plate (shell, 43): +2 Block [+6% max Signal] · Core Sample (implant, 45): +6% max Signal [+5% Clock Speed] · Pick (exploit, 47): +5% damage [+5% crit] · Survey (proxy, 49): +5% crit [+5% damage] | +5% damage, +5% max Signal | +10% Clock Speed. Cooldowns start each fight 1 cycle shorter | Once a fight, a hit that would drop you to 0 leaves you at 1 and shields you for 20% of max |
 
 - **What the words mean** (`SET_HOOKS`): a set's *damage* is all your damage (skill hits, burns, helpers); *+X% max
@@ -1746,30 +1747,56 @@ five slot kinds, so a general set's 2-piece can go beside it.
   count your commands; *the part beside it* is the next living part; *healing past full* counts any heal landing at
   full, Leech included; a cap like *a hit that would take more than 30%* applies before Block and shield; *a hit for
   more than 15%* is what reached your Signal.
-- **Where the pieces drop** (`SET_LOOT`, `setDrop`): one roll an event of a source, at its chance plus its pity for each
+- **Earned pieces** (marked *earned* above) come on a count, never a roll (*Earned pieces* below). Full Coverage's own
+  bonuses and green lines are first guesses.
+- **Where the other pieces drop** (`SET_LOOT`, `setDrop`): one roll an event of a source, at its chance plus its pity for each
   event without one while you lack a piece it drops; once you've found them all, a small flat chance. A piece you lack
   comes first, and a Listening Post listening for one lifts it. After a miss the log gives the next chance. The random
   golds (an elite's world unique, a courier's unique, a boss's own two) never give a set piece.
 
 | Source | Chance · pity a miss · once all found | About how many events to a piece |
 | --- | --- | --- |
-| A Kestrel guard post's Bouncer, Tracer or Sentinel (floor 2+), its own piece | 4% · +2% · 1% | 8 kills |
 | A named boss, a lair boss (by floor), a crew boss | 8% · +3% · 1.5% | 6 kills |
-| A thread done (by its deepest floor) | 15% · +8% · 3% | 3 or 4 threads |
-| A puzzle board won (by its kind) | 1% · +0.2% · 0.3% | 24 boards |
-| A Resident takeover | 2% · +0.5% · 0.4% | 15 takeovers |
-| A vault opened (by floor) | 0.5% · +0.06% · 0.1% | 44 vaults |
-| A LANTERN courier intercepted | 0.6% · +0.1% · 0.2% | 35 couriers |
 | A GLASSJAW boss or elite | 0.5% · +0.05% · 0.1% | 48 kills |
-| A ★ rare spawn (by floor) | 0.08% · +0.003% · 0.03% | 205 kills |
-| A strain kill (by its lineage) | 0.2% · +0.05% · 0.05% | 53 kills |
+| A ★ rare spawn on floor 1 (Boot Disk) | 0.08% · +0.003% · 0.03% | 205 kills |
 
 - **Sources not built yet** drop from their floor's lair boss (Bedrock and the tier sets
-  from floor 8's). Floors 5 and 6 have no set of their own yet.
+  from floor 8's). Full Coverage is floors 5 and 6's.
 - **The LOWLIGHT Badge** comes with wick's last letter at level 22 (Mail), with wick's Old Toolkit rebuilt at your level. The Toolkit can't be deconstructed, and a full stash still takes it.
 - **The tooltip** reads in WoW's grammar under the piece's effect: its green line (set green once on, grey until then),
   the set's name and count (*Kestrel Clearance (2/3)*), its pieces (??? until found), and each bonus as *(2) Set: …*.
   The Loadout lists **Set bonuses**. **Set green** (`--r-set`) sits beside the rarity colours; a piece shows in set green too (its name, card, tile and glyph), whatever its rarity.
+
+### Earned pieces
+
+The nine sets marked *earned*, Full Coverage and one unique a floor come from finishing an activity (`earned.mjs`;
+every count in one table, `content/earned.mjs`, to tune after play). About 3–5 hours of the activity a piece; Kestrel
+Clearance's, Patchwork's, Lantern Route's and Burst Buffer's counts are first guesses. Each piece has a **count**. It starts when you reach the piece's band (its set's
+first level, a floor unique's floor's first level); when it fills, the piece arrives once, at your level, through the
+usual *New in collection* row. They sit outside the one-an-hour rate. A piece already found stays found.
+
+| Floor unique (floor feat) | Count | Effect |
+|---|---|---|
+| **Street Atlas** (script, 8) | Map every server on The Sprawl | +10% damage in a room you haven't cleared |
+| **Quiet Hours** (shell, 13) | Bank 3 Router vaults on Backhaul, the Tracker never reaching you that visit | +6% Stealth |
+| **Sweetener** (implant, 18) | Take 12 bait caches on Honeypots | Taking a cache heals 5% of your max Signal |
+| **Ring Main** (proxy, 24) | Hold 8 servers on Coldline | +1 Block for every 5 servers you hold, up to 4 |
+| **Mixed Bag** (script, 30) | Take over Deep Core servers with 6 different specials (Guarded aside) | +3% damage for each of the server's specials |
+| **Superuser** (implant, 36) | Root 3 on three servers on Kernel Space | +6% damage and max Signal on a server you hold |
+| **Bottleneck** (exploit, 42) | Clear every elite room on The Sink, every server located | +4% damage for each tell you answered this fight, up to 12% |
+| **Last Mile** (proxy, 48) | Locate every server on Bedrock | +5% damage for each part in the fight past two |
+
+- **Counted:** an event count (a kill, a board, a vault, a thread, a courier, a takeover, a bait cache, a Router vault)
+  from the band on, kept in `s.earned`; Seam's and Mixed Bag's count different strains or specials. A floor's goals
+  (mapped, held, Root 3, elite rooms, located) read the floor as it is, checked every second. *Map all* is every server
+  and the lair. An elite room counts once, for good; a server you haven't located counts as one until you do.
+- **Shown from the start:** the Ledger names the piece, muted, with a cell a count and its goal (*Cascade boards 4/15*);
+  the datasheet's set lines keep its line with the count (*Cascade 4/15*). The tooltip: *Time Clock: Implant from the
+  Overtime set, level 24. ▸ Win 11 more Cascade boards.*
+- **Pins:** up to 3 (`pin <piece>`, `unpin`; the pin on its Ledger line), kept in `s.pins`. The map lists them under
+  Contracts, **Pinned n/3**: a tracker row each (set green's edge for a set piece, amber's for a unique), its set or floor
+  over its name, its cells and n/N; a click opens its Ledger entry. On a phone, one chip. An earned piece drops off.
+- **The Sink's and Bedrock's** activity uniques (threads, vaults, boards) stay on their rolls.
 
 ### Faction gear
 
@@ -1826,7 +1853,8 @@ as you left it. An entry lists its slots, one line each, in sections; daemons ha
 | Feats | its achievements (a boss's, a floor's, each set's) | you earn it |
 
 A line shows the slot's icon, its name (**???** until it fills) and a muted hint (its level and where it drops, or its
-research toward 60), and the date it first came. The rest is its tooltip. The first time a slot fills, one quiet pager
+research toward 60), and the date it first came. An earned piece is named from the start: its cells, goal and count, and
+its pin (*Earned pieces*). The rest is its tooltip. The first time a slot fills, one quiet pager
 line says so and opens its entry. A save keeps `s.collection = { slot: when }`: a unique by its id, `m:` a part
 mastered, `b:` a strain beaten, `w:` a boss won, `full:` an entry filled. An older save stamps what it has already
 done on load (as *before the log*), with one pager line.
@@ -2076,7 +2104,8 @@ minutes after you take it.
 
 A contract that points at a room marks it on that server's map (its address amber, the contract's mark), and so does any
 job a room's live virus would count for. The strip shows **Contract** and its progress (its tip has each one, a row each as
-the map's tracker draws it), the map's card each contract on that server. A takeover or recovery points at a server you've found, or at an **unknown server** one hop past one: you
+the map's tracker draws it), the map's card each contract on that server. Pinned earned pieces sit under the tracker
+(*Earned pieces*). A takeover or recovery points at a server you've found, or at an **unknown server** one hop past one: you
 trace it to find it.
 
 **The board** opens with the turf letter (the storyline's fourth), or once you've held the claimjack or turf job for an
@@ -2785,6 +2814,8 @@ Checked by `node balance.mjs` (docs/BALANCE.md, `balance.test.mjs`), `farmsim.mj
 The save is `SAVE_VERSION` 62 (combat.mjs). An older save is migrated on load, each step keyed on the field it converts,
 so it is safe to run twice; nothing a save held is lost.
 
+- **Earned pieces** (no version of their own): `s.earned` (each count) and `s.pins`, made on first use (`earned.mjs`). A
+  piece you had found stays found.
 - **v62** runners: `s.runners` (the logged-on clock, who you know), made on first use (`runners.mjs`).
 - **v61** every hub's Shop has one shape: the agency stock, the premium shelves and the hubs' stock counts go
   (`store.mjs shopRestore`, keyed on the fields).

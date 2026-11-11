@@ -42,7 +42,9 @@ export const tierLine = (id) => (SETS[id]?.tier ? `${ARCHETYPES[SETS[id].cls]?.n
 
 // ---------- drops ----------
 // Each source's set pieces (a piece's sources, each { kind, ... }): BOSS_LOOT's pattern, one roll an event (a kill, a
-// vault, a board, a thread done) at its kind's odds. chance + pity for every event of that source without one, while
+// vault, a board, a thread done) at its kind's odds. An earned piece (earned.mjs) never rolls: its source's event counts
+// toward it instead, so the kinds whose pieces are all earned (guard, strain, vault, puzzle, thread, courier, takeover)
+// have no odds here. chance + pity for every event of that source without one, while
 // you lack a piece it drops (pieces you lack first); once you've found them all, a flat `found` and no pity, so a
 // piece at a higher level still turns up now and then. The odds are set an event at a time, low enough that uniques
 // and set pieces together stay under one an hour of play (lootsim.mjs measures it).
@@ -60,18 +62,11 @@ export const tierLine = (id) => (SETS[id]?.tier ? `${ARCHETYPES[SETS[id].cls]?.n
 //   courier   a LANTERN courier intercepted
 //   takeover  a Resident beaten and its server taken
 export const SET_LOOT = {
-  guard: { chance: 0.04, pity: 0.02, found: 0.01 },
   boss: { chance: 0.08, pity: 0.03, found: 0.015 },
   lair: { chance: 0.08, pity: 0.03, found: 0.015 },
   crew: { chance: 0.08, pity: 0.03, found: 0.015 },
   rare: { chance: 0.0008, pity: 0.00003, found: 0.0003 },
-  strain: { chance: 0.002, pity: 0.0005, found: 0.0005 },
   author: { chance: 0.005, pity: 0.0005, found: 0.001 },
-  vault: { chance: 0.005, pity: 0.0006, found: 0.001 },
-  puzzle: { chance: 0.01, pity: 0.002, found: 0.003 },
-  thread: { chance: 0.15, pity: 0.08, found: 0.03 },
-  courier: { chance: 0.006, pity: 0.001, found: 0.002 },
-  takeover: { chance: 0.02, pity: 0.005, found: 0.004 },
 };
 // A tier set's piece (a class set's) comes up this many times as often for its own class as another class's piece
 // (combat.mjs setWeight); pieces you lack still come first.
@@ -104,7 +99,8 @@ export function sourceText(src, names = {}) {
     case 'puzzle': return `${names.puzzle?.(src.id) || src.id} boards`;
     case 'thread': return `Threads${where}`;
     case 'courier': return "LANTERN's couriers";
-    case 'takeover': return 'Resident takeovers';
+    case 'takeover': return `Resident takeovers${where}`;
+    case 'feat': return `${floors(src.floor)[0].toUpperCase()}${floors(src.floor).slice(1)} feat`;
     default: return '';
   }
 }
@@ -256,6 +252,8 @@ export const setSignal = (s) => total(custom(s, 'signal%', {}, active(s) && sxOf
 // What the outside-a-fight bonuses give: credits from caches or vaults (Lantern Route), how much faster Signal rests
 // back (Night Shift), and whether a server's map card shows its rare spawn (the Antenna).
 export const setCredits = (s, of) => pct(total(custom(s, 'credits%', {}, gearFx(s)).filter((x) => (x.fx.of || []).includes(of))));
+// Full Coverage (3): a room's first clear pays this share of a kill's XP (floorplan.mjs clear).
+export const clearXp = (s) => total(custom(s, 'clear-xp', {}, gearFx(s)));
 export const restFast = (s) => pct(total(custom(s, 'rest-fast', {}, gearFx(s))));
 export const seesRare = (s) => custom(s, 'see-rare', {}, gearFx(s)).length > 0;
 // Heals you cast (combat.mjs healScaled): larger with Link, and with Mesh for each crewmate in the fight.

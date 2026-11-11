@@ -38,6 +38,7 @@ import { SPECIAL, SPECIALS, specialsOf, hasSpecial, armoredAt } from './specials
 import { gainComponents } from './salvage.mjs';
 import { consortiumSockets } from './consortium.mjs';
 import { owned, rootOf, ROOT, ROOT_PERKS } from './root.mjs';
+import { earnEvent } from './earned.mjs';
 import { journalFor, findJournal } from './journals.mjs';
 import { contractTakeover, contractRooms, contractMapped, contractConnect, contractInstall, contractStood, contractExfil, payloadFor, roomMarks, jobsOn } from './mail.mjs';
 import { giveScript, rollScript } from './scripts.mjs';
@@ -238,6 +239,8 @@ WORLD_hook('leave', (s, how, why) => {
   const at = locOf(s, roomsOfRun(s));
   if (how === 'lost') return disconnect(s, 'Signal lost');
   const loc = at;
+  const R = loc?.floorplan; // a Router's vault banked from a visit its Tracker never reached you: Quiet Hours' count (earned.mjs)
+  if (R?.kind === 'Router' && R.visit?.vault && !R.visit.caught) earnEvent(s, { kind: 'router-vault', floor: loc.depth || 1 });
   bank(s, loc, why);
 });
 function roomsOfRun(s) { const loc = s.run && (s.run.loc === CONFIG.zone.id ? zoneOf(s) : findLocation(s, s.run.loc)); return loc?.floorplan || null; }
@@ -350,7 +353,7 @@ function takeover(s, loc, room) {
   loc.resident = null; loc.regrow = null;
   strikeServer(s, loc, 'takeover');
   contractTakeover(s, loc); // takenOver, its XP and the event (mail.mjs)
-  setDrop(s, { kind: 'takeover' }, levelOf(loc), loc.name, { pack: true, path: `${room.path}/#set-${s.serial}` }); // Hot Spare's pieces (sets.mjs)
+  setDrop(s, { kind: 'takeover', floor: loc.depth || 1, special: specialsOf(loc).filter((x) => x !== 'guarded') }, levelOf(loc), loc.name, { pack: true, path: `${room.path}/#set-${s.serial}` }); // Hot Spare's pieces (sets.mjs)
   loc.root ||= { level: 1, cleared: 0, n: 0, nextAt: null, proc: null };
   R.held = now();
   // Its Resident's first fall: a protocol, Tuned or better, at the server's level.
@@ -497,6 +500,7 @@ WORLD_hook('cache', (s, room, { credits, code, material }) => {
   const n = s.serial;
   packFile(s, { path: `${room.path}/#cache-${n}`, name: 'cache.dat', kind: 'credits', amount: credits });
   packFile(s, { path: `${room.path}/#code-${n}`, name: `${material}.code`, kind: 'code', material, amount: code });
+  if (s.rooms.kind === 'Honeypot' && FP.isBait(s, room)) earnEvent(s, { kind: 'bait', floor: locOf(s)?.depth || 1 }); // Sweetener's count (earned.mjs)
 });
 WORLD_hook('cacheMult', (s) => { const loc = locOf(s); return (loc?.quirk === 'hoard' ? NET.hoard : 1) * setCredits(s, 'cache') * (1 + fxPct(s, 'cache%') / 100); }); // setCredits: Lantern Route, the Logbook (sets.mjs); cache%: Golden Image
 WORLD_hook('packItem', (s, it) => {
@@ -539,6 +543,7 @@ WORLD_hook('vault', (s, room) => {
   const loc = locOf(s), R = s.rooms;
   if (!loc || R.type !== 'server' || room.id !== R.graph.vaults[0]) return false;
   const got = takeVault(s, loc), n = got.length;
+  if (R.visit) R.visit.vault = true; // opened this visit: a Router's, banked unseen, counts for Quiet Hours (leave)
   emit(s, 'rooms-good', n ? `The vault: ${n} ${n === 1 ? 'file' : 'files'} into your pack.` : 'The vault is bare.', { gains: gainsOf(got) });
   setDrop(s, { kind: 'vault', floor: loc.depth || 1 }, levelOf(loc), `${loc.name}'s vault`, { pack: true, path: `vault/#set-${s.serial}` }); // Cold Storage's and Deep Archive's pieces (sets.mjs)
   if (loc.member) { R.cleared[R.graph.core] ||= now(); }

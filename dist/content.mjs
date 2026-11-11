@@ -186,6 +186,9 @@ export const FX_IF = {
   // Set pieces (sets.mjs): their own bonuses and green lines.
   'above-75': 'you are above 75% health',
   late: "the fight has reached its 6th cycle",
+  // The floor feats' uniques (earned.mjs).
+  'room-new': "you fight in a room you haven't cleared",
+  'server-held': 'you fight on a server you hold',
 };
 // What each block does, which "when" it fits, and what it needs (value, stat). label: the effect, a verb phrase in the
 // tooltip style ("heals you for X"); fxText adds its trigger and condition after it. own: the label already says when.
@@ -295,6 +298,7 @@ export const FX_DO = {
   unveil: { when: ['custom'], label: "shows a Veiled part's next attack once it is X cycles away", value: true },
   'explore-xp%': { when: ['custom'], label: 'increases the XP from Mapped servers by X%', value: true },
   'cache%': { when: ['custom'], label: 'increases the credits caches pay by X%', value: true },
+  'cache-heal%': { when: ['custom'], label: 'heals X% of your max Signal when you take a cache', value: true, own: true },
   // Set pieces (sets.mjs runs them): a piece's own bonus and its green line, the line that counts with two or more of
   // its set worn. Each piece writes its own text, in the plan's words.
   stat: { when: ['always'], label: 'adds X to one of your stats', value: true, stat: true },
@@ -319,7 +323,8 @@ export const FX_DO = {
   chorus: { when: ['custom'], label: 'makes a damaging skill used twice in a row hit again for X% of its damage', value: true },
 };
 export const FX_SCALE = { '': 'flat', cycles: 'for each cycle the fight has lasted', contracts: 'for each contract you hold', broken: 'for each part broken this fight', reads: 'for each tell you answered this fight',
-  chits: 'for each ◆ you hold', crew: 'for each crewmate in the fight', missing: 'for each 10% of your health you are missing', sets: 'for each set bonus you have active' };
+  chits: 'for each ◆ you hold', crew: 'for each crewmate in the fight', missing: 'for each 10% of your health you are missing', sets: 'for each set bonus you have active',
+  specials: "for each of the server's specials", parts: 'for each part in the fight past two', held: 'for every 5 servers you hold' };
 export const FX_LIMIT = { '': 'every time', fight: 'once per fight', run: 'once per run', cooldown: 'then a real-time cooldown' };
 // A unique can lean toward a class: it drops three times as often for that class (combat.mjs uniqueFrom).
 export const CLASSES = { '': 'Any class', breaker: 'Breaker', bastion: 'Bastion', infiltrator: 'Infiltrator', operator: 'Operator',
@@ -330,7 +335,9 @@ export const SOURCE_KINDS = { sprawl: 'SPRAWL-00 kills', strain: 'Kills of a str
   // Set pieces only (sets.mjs SET_LOOT: each its own table, its pieces you lack first, with pity).
   courier: "LANTERN's couriers", author: "A crew's bosses and elites", takeover: 'Resident takeovers', crew: 'Crew bosses (KESSLER-FARM-00)',
   // Faction pieces only (faction-gear.mjs): assembled at the faction's hub from three parts, a part a feud won for it.
-  feud: 'Feuds won for its faction (its parts, assembled at its hub)' };
+  feud: 'Feuds won for its faction (its parts, assembled at its hub)',
+  // Earned pieces only (earned.mjs): a floor's goal, its count in the Ledger.
+  feat: "A floor's feat (floor: the floor; its goal is the piece's earn)" };
 // A source can name the floor it drops on (floor: 7 is The Sink): a vault, a lair, a rare spawn, a thread or a puzzle
 // board there and nowhere else. planned: the source it moves to once that is built (docs/loot-plan.md Decisions).
 

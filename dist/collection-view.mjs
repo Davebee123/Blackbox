@@ -2,7 +2,8 @@
 // N and a thin bar; the entry on the right, one line a slot under its section (Uniques, each set, Mastered, Beaten,
 // Feats): its icon, its name or ???, a muted hint, and the date it first came. The rule behind a line is its tooltip.
 // Amber is what you've collected, a set piece in the set's green; ??? is gray. On a phone the index folds as the Codex's.
-import { esc } from './view.mjs';
+import { esc, earnCells, earnTip } from './view.mjs';
+import { earnedOf, pinsOf, PIN_MAX } from './earned.mjs';
 import { glyph } from './glyphs.mjs';
 import { UNIQUES } from './combat.mjs';
 import { RESEARCH } from './research.mjs';
@@ -19,11 +20,19 @@ const KIND = { family: 'Family', strain: 'Strain', guard: 'Guard', boss: 'Boss',
 const LABEL = { unique: 'Uniques', mastered: 'Mastered', beaten: 'Beaten', feat: 'Feats' };
 const bar = (n, N, cls = '') => `<i class="lg-bar${cls ? ' ' + cls : ''}" aria-hidden="true"><b style="width:${Math.round((n / Math.max(1, N)) * 100)}%"></b></i>`;
 const count = (n, N, tip) => `<small class="lg-n${N && n >= N ? ' full' : ''}"${tip ? ` title="${esc(tip)}"` : ''}>${n}/${N}</small>`;
-const cap = (t) => t.replace(/[a-z]/, (c) => c.toUpperCase());
+const cap = (t) => t.replace(/^[a-z]/, (c) => c.toUpperCase());
 const since = (t) => (t > 1 ? ` First on ${day(t)}.` : t === 1 ? ' From before the log.' : '');
 
+// An earned piece you lack (earned.mjs, the Segments look): its name muted from the start; in the hint column a cell a
+// count and the goal with n/N; where the date goes, its pin (up to three, on the map under Contracts).
+function earnLine(s, x) {
+  const p = earnedOf(s, x.key), pinned = pinsOf(s).includes(x.key), full = !pinned && pinsOf(s).length >= PIN_MAX;
+  const pin = `<button type="button" class="lg-pin${pinned ? ' on' : ''}" data-command="${pinned ? 'unpin' : 'pin'} ${esc(x.key)}" aria-pressed="${pinned}"${full ? ' disabled' : ''} title="${esc(pinned ? 'Unpin it from the map.' : full ? `Pins are full (${PIN_MAX}).` : 'Pin it to the map.')}" aria-label="${pinned ? 'Unpin' : 'Pin'} ${esc(x.name)}">${glyph('pin')}</button>`;
+  return `<li class="lg-line earn${x.kind === 'set' ? ' set' : ''}" title="${esc(earnTip(s, x.key))}"><span class="lg-ico" aria-hidden="true">${glyph(SLOT_ICON[x.slot] || 'item')}</span><b class="lg-earn">${esc(x.name)}</b><span class="lg-goal">${earnCells(p)}<small>${esc(p.text)} ${p.n}/${p.of}</small></span>${pin}</li>`;
+}
 // One line: { icon, name (null: ???), hint, tip, cls }.
-function line(e, x) {
+function line(e, x, s) {
+  if (x.earn && !x.got && s) return earnLine(s, x);
   const where = (e.group === 'floor' ? `${e.name}'s ${x.where?.toLowerCase()}` : e.name) || 'its source';
   let icon = 'item', name = null, hint = '', tip = '', cls = '';
   if (x.kind === 'unique' || x.kind === 'set') {
@@ -50,7 +59,7 @@ function entryMarkup(e, s, jr) {
   const head = `<header class="lg-head"><div class="cx-title"><h2>${KIND[e.group]}${(e.group === 'floor' || e.group === 'boss') && e.lv ? ` <span class="tag dim">Lv ${e.lv}+</span>` : ''}</h2><h1${e.name ? '' : ' class="unknown"'}>${esc(e.name || UNKNOWN)}</h1></div><div class="lg-total"><b>${e.have}<small>/${e.total}</small></b>${bar(e.have, e.total)}</div></header>`;
   if (e.group === 'journal') return head + journalLedgerMarkup(s, jr); // the timeline, the writers, the reading view
   const secs = e.sections.map((sec) => {
-    const lines = sec.slots.map((x) => line(e, sec.kind === 'set' ? { ...x, setName: sec.name } : x)).join('');
+    const lines = sec.slots.map((x) => line(e, sec.kind === 'set' ? { ...x, setName: sec.name } : x, s)).join('');
     const kick = sec.kind === 'set'
       ? `<span class="lg-setname">${esc(sec.name)}</span>${count(sec.have, sec.of, `${sec.name}: Set. ${sec.have} of ${sec.of} pieces found, here and elsewhere.`)}`
       : `${LABEL[sec.kind]}${count(sec.slots.filter((x) => x.got).length, sec.slots.length)}`;
@@ -69,7 +78,7 @@ function findText(e) {
     if (sec.kind === 'set') out.push(sec.name);
     for (const x of sec.slots) {
       if (x.kind === 'feat') { const a = achById(x.ach); if (a && (!a.hidden || x.got)) out.push(a.name); }
-      else if ((x.kind === 'unique' || x.kind === 'set') ? x.got : x.kind === 'mastered' && x.name) out.push(x.name);
+      else if ((x.kind === 'unique' || x.kind === 'set') ? x.got || x.earn : x.kind === 'mastered' && x.name) out.push(x.name); // an earned piece is named from the start
     }
   }
   return out.join(' ').toLowerCase();

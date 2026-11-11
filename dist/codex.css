@@ -230,12 +230,27 @@
 .lg-line.got b { color: var(--bright); }
 .lg-line.got b.r-zeroday { color: var(--r-zeroday); }
 .lg-line.got b.r-set { color: var(--r-set); }
+/* An earned piece you lack (earned.mjs, the Segments look): named and muted, a cell a count (set green for a set piece,
+   amber for a unique) and its goal with n/N, its pin where the date goes. */
+.lg-line b.lg-earn { color: var(--muted); }
+.lg-goal { display: flex; align-items: center; gap: var(--s3); min-width: 0; }
+.lg-goal small { font: 11px var(--mono); color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.ecells { display: inline-flex; flex: none; gap: 2px; }
+.ecells i { width: 6px; height: 8px; border: 1px solid var(--line-strong); border-radius: 1px; }
+.ecells.set i.on { background: var(--r-set); border-color: var(--r-set); }
+.ecells.uniq i.on { background: var(--amber); border-color: var(--amber); }
+.lg-pin { justify-self: end; display: inline-flex; padding: 2px; background: none; border: 0; color: var(--gray); cursor: pointer; }
+.lg-pin .glyph { width: 13px; height: 13px; margin: 0; }
+.lg-pin:hover, .lg-pin:focus-visible { color: var(--text); }
+.lg-pin.on { color: var(--r-set); }
+.lg-line:not(.set) .lg-pin.on { color: var(--amber); }
+.lg-pin:disabled { opacity: 0.35; cursor: default; }
 .lg-rs { display: grid; grid-template-columns: 120px auto; gap: var(--s4); align-items: center; }
 .lg-rs small { font: 11px var(--mono); color: var(--dim); }
 @media (max-width: 900px) {
   .lg-head { grid-template-columns: minmax(0, 1fr) 120px; gap: var(--s4); }
   .lg-line { grid-template-columns: 16px minmax(0, 1fr) 48px; }
-  .lg-line .lg-hint, .lg-line .lg-rs { grid-column: 2 / 4; grid-row: 2; padding-bottom: var(--s2); }
+  .lg-line .lg-hint, .lg-line .lg-rs, .lg-line .lg-goal { grid-column: 2 / 4; grid-row: 2; padding-bottom: var(--s2); }
 }
 
 /* ---------- Journals (journals-view.mjs): the Ledger's entry and the first find's card. Amber is found, the Cascade

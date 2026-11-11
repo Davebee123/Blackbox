@@ -2061,7 +2061,8 @@ export default {
       },
       "sources": [
         {
-          "kind": "vault"
+          "kind": "vault",
+          "floor": 4
         }
       ]
     },
@@ -2089,7 +2090,8 @@ export default {
       },
       "sources": [
         {
-          "kind": "vault"
+          "kind": "vault",
+          "floor": 4
         }
       ]
     },
@@ -2120,7 +2122,8 @@ export default {
       },
       "sources": [
         {
-          "kind": "vault"
+          "kind": "vault",
+          "floor": 4
         }
       ]
     },
@@ -2274,7 +2277,11 @@ export default {
       },
       "sources": [
         {
-          "kind": "rare"
+          "kind": "rare",
+          "floor": [
+            5,
+            8
+          ]
         }
       ]
     },
@@ -2305,7 +2312,11 @@ export default {
       },
       "sources": [
         {
-          "kind": "rare"
+          "kind": "rare",
+          "floor": [
+            5,
+            8
+          ]
         }
       ]
     },
@@ -2334,7 +2345,11 @@ export default {
       },
       "sources": [
         {
-          "kind": "rare"
+          "kind": "rare",
+          "floor": [
+            5,
+            8
+          ]
         }
       ]
     },
@@ -2364,7 +2379,11 @@ export default {
       },
       "sources": [
         {
-          "kind": "takeover"
+          "kind": "takeover",
+          "floor": [
+            5,
+            6
+          ]
         }
       ]
     },
@@ -2393,7 +2412,11 @@ export default {
       },
       "sources": [
         {
-          "kind": "takeover"
+          "kind": "takeover",
+          "floor": [
+            5,
+            6
+          ]
         }
       ]
     },
@@ -6868,6 +6891,329 @@ export default {
         }
       ],
       "flavour": "It counts the votes as they come in, and it flinches at the second."
+    },
+    {
+      "id": "plumb-line",
+      "name": "Plumb Line",
+      "set": "fullcoverage",
+      "base": "wormable",
+      "level": 26,
+      "primary": {
+        "damage": [
+          32,
+          40
+        ]
+      },
+      "effect": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 4,
+        "text": "+4% damage"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 5,
+        "text": "+5% crit"
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 5
+        }
+      ]
+    },
+    {
+      "id": "field-book",
+      "name": "Field Book",
+      "set": "fullcoverage",
+      "base": "polymorphic-engine",
+      "level": 29,
+      "primary": {
+        "damage": 14,
+        "signal": 58,
+        "payload": 5.7
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "clock",
+        "value": 4,
+        "text": "+4% Clock Speed"
+      },
+      "green": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 5
+        }
+      ]
+    },
+    {
+      "id": "hi-vis",
+      "name": "Hi-Vis",
+      "set": "fullcoverage",
+      "base": "ghost-shell",
+      "level": 33,
+      "primary": {
+        "signal": 80,
+        "regen": 17,
+        "restore": 34
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "green": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 5,
+        "text": "+5% damage"
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 6
+        }
+      ]
+    },
+    {
+      "id": "datum",
+      "name": "Datum",
+      "set": "fullcoverage",
+      "base": "bootkit",
+      "level": 37,
+      "primary": {
+        "damage": 13.1,
+        "signal": 65
+      },
+      "effect": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 6
+        }
+      ]
+    },
+    {
+      "id": "street-atlas",
+      "name": "Street Atlas",
+      "base": "cron-job",
+      "level": 8,
+      "primary": {
+        "damage": 4,
+        "signal": 20,
+        "payload": 2
+      },
+      "effect": {
+        "when": "hit",
+        "if": "room-new",
+        "do": "damage%",
+        "value": 10
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 1
+        }
+      ],
+      "flavour": "Every alley on the Sprawl, inked in by hand, with the dead ends crossed out."
+    },
+    {
+      "id": "quiet-hours",
+      "name": "Quiet Hours",
+      "base": "root-shell",
+      "level": 13,
+      "primary": {
+        "signal": 37,
+        "regen": 7.9,
+        "restore": 21
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat+",
+        "stat": "stealth",
+        "value": 6
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 2
+        }
+      ],
+      "flavour": "The routers on Backhaul log less between two and five."
+    },
+    {
+      "id": "sweetener",
+      "name": "Sweetener",
+      "base": "implant",
+      "level": 18,
+      "primary": {
+        "damage": 6,
+        "signal": 32
+      },
+      "effect": {
+        "when": "custom",
+        "do": "cache-heal%",
+        "value": 5
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 3
+        }
+      ],
+      "flavour": "A canary in every block, and a little sugar under each one."
+    },
+    {
+      "id": "ring-main",
+      "name": "Ring Main",
+      "base": "onion-circuit",
+      "level": 24,
+      "primary": {
+        "signal": 114,
+        "reduction": 3
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat+",
+        "stat": "reduction",
+        "value": 1,
+        "scale": "held",
+        "cap": 4
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 4
+        }
+      ],
+      "flavour": "One cable round Coldline, fed from both ends."
+    },
+    {
+      "id": "mixed-bag",
+      "name": "Mixed Bag",
+      "base": "polymorphic-engine",
+      "level": 30,
+      "primary": {
+        "damage": 14,
+        "signal": 59,
+        "payload": 5.8
+      },
+      "effect": {
+        "when": "hit",
+        "do": "damage%",
+        "value": 3,
+        "scale": "specials"
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 5
+        }
+      ],
+      "flavour": "Seven kinds of trouble on Deep Core. It kept a sample of each."
+    },
+    {
+      "id": "superuser",
+      "name": "Superuser",
+      "base": "bootkit",
+      "level": 36,
+      "primary": {
+        "damage": 12.9,
+        "signal": 64
+      },
+      "effect": [
+        {
+          "when": "hit",
+          "if": "server-held",
+          "do": "damage%",
+          "value": 6
+        },
+        {
+          "when": "always",
+          "if": "server-held",
+          "do": "max-signal%",
+          "value": 6
+        }
+      ],
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 6
+        }
+      ],
+      "flavour": "Ring zero answers to whoever holds it longest."
+    },
+    {
+      "id": "bottleneck",
+      "name": "Bottleneck",
+      "base": "hypervisor-escape",
+      "level": 42,
+      "primary": {
+        "damage": [
+          83,
+          104
+        ]
+      },
+      "effect": {
+        "when": "hit",
+        "do": "damage%",
+        "value": 4,
+        "scale": "reads",
+        "cap": 12
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 7
+        }
+      ],
+      "flavour": "Everything on the Sink drains toward one narrow pipe."
+    },
+    {
+      "id": "last-mile",
+      "name": "Last Mile",
+      "base": "covert-channel",
+      "level": 48,
+      "primary": {
+        "signal": 395,
+        "reduction": 11
+      },
+      "effect": {
+        "when": "hit",
+        "do": "damage%",
+        "value": 5,
+        "scale": "parts"
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 8
+        }
+      ],
+      "flavour": "The last stretch of cable before the bedrock, and the slowest."
     }
   ]
 };
