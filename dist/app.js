@@ -63,7 +63,7 @@ import * as PV from './profile-view.mjs';
 import { channelOf, muted as chanMuted, say as chanSay } from './channel.mjs';
 import { setBanner, setPlan, handleOf } from './profile.mjs';
 import { achById } from './achievements.mjs';
-import { casingLook, decalStrips, districtOf, propsLook, propMarkup, propLayout } from './casing.mjs';
+import { casingLook, decalMarkup, districtOf, propsLook, propMarkup, stickerSpot, stickerAt, propSpot, propAt, placeSticker, placeProp } from './casing.mjs';
 import { promptLabel, cursorOf, bootOf, bootIds, BOOT_LOOKS, lookOpen } from './terminal.mjs';
 import * as BN from './bench.mjs';
 import { PARTS } from './parts.mjs';
@@ -127,7 +127,6 @@ let loadoutTab = 'protocols'; // Loadout page: 'protocols' or 'skills' (skills a
 let systemTab = 'settings'; // Settings page (nav id 'system'): 'settings', or 'dev' with ?dev
 let rigTab = 'achievements'; // Rig page: a view.mjs RIG_TABS key
 let achUi = { cat: 'summary', focus: null }; // the Achievements page (achievements-view.mjs): the category shown, an achievement to light
-let caseUi = { slot: 0, pslot: 0 }; // System → Casing (casing-view.mjs): the sticker slot and the desk's spot picked
 const pd = { id: null, anchor: null, el: null, scrim: null, sheet: false, html: '', mine: false, timer: 0 }; // the Loadout's item datasheet popover (pdShow)
 let pdTouch = 0; // when a touch last came down: the click after it is a tap
 
@@ -2168,7 +2167,7 @@ function render(force = false) {
       $('term').scrollTop = $('term').scrollHeight;
     }
   } else {
-    const pages = { rooms: (x) => roomsMarkup(x), campaign: (x) => campaignMarkup(x), room: (x) => roomMarkup(x), archive: (x) => archiveMarkup(x), breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => (hubSel === POST.id ? postTerminalMarkup(x, hubLines, hubWin, Date.now()) : V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now())), server: (x) => V.serverMarkup(x, Date.now(), srvUi), daemons: V.daemonsMarkup, codex: (x) => (codexTab === 'log' ? collectionPageMarkup(x, logSel, codexIdx, codexShut, logFind, logJr) : codexPageMarkup(x, codexSel, codexIdx, codexShut)), system: (x) => V.systemMarkup(x, { coop: !!coop, dev: DEV, tab: systemTab }), rig: (x) => V.rigMarkup(x, { tab: rigTab, ach: achUi, cs: caseUi }) };
+    const pages = { rooms: (x) => roomsMarkup(x), campaign: (x) => campaignMarkup(x), room: (x) => roomMarkup(x), archive: (x) => archiveMarkup(x), breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => (hubSel === POST.id ? postTerminalMarkup(x, hubLines, hubWin, Date.now()) : V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now())), server: (x) => V.serverMarkup(x, Date.now(), srvUi), daemons: V.daemonsMarkup, codex: (x) => (codexTab === 'log' ? collectionPageMarkup(x, logSel, codexIdx, codexShut, logFind, logJr) : codexPageMarkup(x, codexSel, codexIdx, codexShut)), system: (x) => V.systemMarkup(x, { coop: !!coop, dev: DEV, tab: systemTab }), rig: (x) => V.rigMarkup(x, { tab: rigTab, ach: achUi }) };
     // A page that throws shows what broke (and a way back) instead of stopping every render after it.
     const keep = module === 'breach' ? $('bx-scroll')?.scrollTop : null;
     const focusRoom = module === 'rooms' ? document.activeElement?.closest?.('.fp-room')?.dataset.room : null; // a redraw keeps a focused room focused
@@ -2388,33 +2387,60 @@ function casing() {
   $('knob-speed').title = `Speed: ${s.settings.speed || 'normal'}`;
   casingLookUi(cased);
 }
-// The casing's cosmetics (casing.mjs): its colourway on <body> (casing.css: the plastic only), the plate's words,
-// the stickers in the chin's two strips and the desk's props. The strips' ends and the props' spots are measured from
-// the knobs, the plate and the lamps (casing.mjs propLayout), so neither sits on any of them, nor on each other, nor
-// on the screen (re-measured when the plate, the props or the window changes).
-let caseKey = '';
+// The casing's cosmetics (casing.mjs): its colourway on <body> (casing.css: the plastic only), the plate's words, the
+// stickers anywhere on the plastic and the props on the desk or the monitor's top. Each is placed from the screen's
+// margins and the knobs, the plate and the lamps as measured (casing.mjs stickerSpot, propSpot), so none sits on the
+// screen or on any of them (placed again when the plate, the page's size, the window or a place changes). While Rig →
+// Casing is open they drag (#casing.edit); a drop saves the place.
+let caseKey = '', caseM = null, caseKeep = [], caseDrag = null;
+const casePut = (el, p) => { el.style.transform = `translate(${Math.round(p.x - caseM.box.left)}px, ${Math.round(p.y - caseM.box.top)}px)${p.rot ? ` rotate(${p.rot}deg)` : ''}`; };
+const caseSize = (el) => ({ w: el.offsetWidth, h: el.offsetHeight });
 function casingLookUi(cased) {
-  const look = casingLook(campaign), body = document.body;
+  const look = casingLook(campaign), body = document.body, host = $('casing');
   if (look.color) { if (body.dataset.case !== look.color) body.dataset.case = look.color; } else if (body.dataset.case) delete body.dataset.case;
-  const badge = document.querySelector('#casing .badge');
+  const badge = host.querySelector('.badge');
   if (badge.textContent !== look.plate) badge.textContent = look.plate;
-  const strips = decalStrips(campaign), L = document.querySelector('#casing .decals.l'), R = document.querySelector('#casing .decals.r');
-  if (L.innerHTML !== strips.left) L.innerHTML = strips.left;
-  if (R.innerHTML !== strips.right) R.innerHTML = strips.right;
-  const props = propsLook(campaign), PR = document.querySelector('#casing .props'), pk = props.map((p) => p?.id || '').join(',');
-  if (PR.dataset.k !== pk) { PR.innerHTML = props.map((p, i) => (p ? propMarkup(p, i) : '')).join(''); PR.dataset.k = pk; } // only on a change, so the mug's steam runs on
-  const desk = document.body.classList.contains('window-on') ? parseFloat(getComputedStyle(document.body).getPropertyValue('--desk')) || 0 : 0;
-  const key = `${cased}:${look.plate}:${innerWidth}:${innerHeight}:${desk}:${pk}`;
-  if (!cased || key === caseKey || !(strips.left || strips.right || pk !== ',')) return;
-  const box = $('casing').getBoundingClientRect();
+  host.classList.toggle('edit', cased && module === 'rig' && rigTab === 'casing');
+  if (caseDrag) return; // a sticker in the hand: nothing moves under it
+  const DC = host.querySelector('.decals'), sk = look.decals.map((x) => x.id).join(',');
+  if (DC.dataset.k !== sk) { DC.innerHTML = look.decals.map((x) => decalMarkup(x)).join(''); DC.dataset.k = sk; caseKey = ''; }
+  const props = propsLook(campaign), PR = host.querySelector('.props'), pk = props.map((p) => p.id).join(',');
+  if (PR.dataset.k !== pk) { PR.innerHTML = props.map((p) => propMarkup(p)).join(''); PR.dataset.k = pk; caseKey = ''; } // only on a change, so the mug's steam runs on
+  const win = body.classList.contains('window-on');
+  const key = `${cased}:${look.plate}:${innerWidth}:${innerHeight}:${win}:${look.decals.map((x) => `${x.id} ${x.side} ${x.u} ${x.v}`)}:${props.map((p) => `${p.id} ${p.on} ${p.u}`)}`;
+  if (!cased || key === caseKey) return;
+  const box = host.getBoundingClientRect();
   if (!box.width) return;
   caseKey = key;
-  const knobs = document.querySelector('#casing .knobs').getBoundingClientRect(), plate = badge.getBoundingClientRect(), lamps = document.querySelector('#casing .lamps').getBoundingClientRect();
-  const { spots, dz } = propLayout({ W: innerWidth, H: innerHeight, desk, box, knobs, plate, lamps }, props.map(Boolean));
-  const set = (k, v) => $('casing').style.setProperty(k, `${Math.max(0, Math.round(v))}px`);
-  set('--dz-l0', dz.l0); set('--dz-l1', dz.l1); set('--dz-r0', dz.r0); set('--dz-r1', dz.r1);
-  PR.querySelectorAll('.prop').forEach((el) => { const p = spots[Number(el.dataset.propSlot)]; el.hidden = !p; if (p) { el.style.left = `${Math.round(p.x - box.left)}px`; el.style.top = `${Math.round(p.y - box.top)}px`; } });
+  const cs = getComputedStyle(body), desk = win ? parseFloat(cs.getPropertyValue('--desk')) || 0 : 0;
+  caseM = { W: innerWidth, H: innerHeight, top: parseFloat(cs.paddingTop) || 0, side: parseFloat(cs.paddingLeft) || 0, chin: (parseFloat(cs.paddingBottom) || 0) - desk, desk, win, box };
+  caseKeep = [host.querySelector('.knobs'), badge, host.querySelector('.lamps')].map((el) => el.getBoundingClientRect());
+  DC.querySelectorAll('.decal').forEach((el, i) => casePut(el, stickerSpot(caseM, caseKeep, look.decals[i], caseSize(el))));
+  PR.querySelectorAll('.prop').forEach((el, i) => casePut(el, propSpot(caseM, caseKeep, props[i])));
 }
+$('casing').addEventListener('pointerdown', (e) => {
+  const el = e.target.closest('[data-sticker], [data-prop]');
+  if (!el || !caseM || !$('casing').classList.contains('edit')) return;
+  e.preventDefault();
+  hideTip(false);
+  try { el.setPointerCapture(e.pointerId); } catch { /* the pointer is gone */ }
+  const prop = el.dataset.prop, id = prop || el.dataset.sticker, size = caseSize(el);
+  caseDrag = { pos: null };
+  el.classList.add('drag');
+  const move = (ev) => {
+    const pos = prop ? propAt(caseM, ev.clientX, ev.clientY) : stickerAt(caseM, ev.clientX, ev.clientY, size);
+    caseDrag.pos = pos;
+    casePut(el, prop ? propSpot(caseM, caseKeep, pos) : stickerSpot(caseM, caseKeep, { id, ...pos }, size));
+  };
+  const up = () => {
+    el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up);
+    el.classList.remove('drag');
+    const pos = caseDrag?.pos;
+    caseDrag = null;
+    if (pos && (prop ? placeProp : placeSticker)(campaign, id, pos)) { save(); caseKey = ''; dirty = true; }
+  };
+  el.addEventListener('pointermove', move); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+});
 // The screen's effects and the casing's lamps, from real state (screenfx.mjs). The floor whose palette is up: the map's
 // floor on the map, the server's on a run and in a fight there; home keeps the default amber.
 function screenFx() {
@@ -2896,10 +2922,6 @@ document.addEventListener('click', (e) => {
   if (rt) { rigTab = rt.dataset.rtab; achUi.focus = null; feel.add('channel', null); dirty = true; return; }
   const ac = e.target.closest('[data-ach-cat]'); // a category on the Achievements page
   if (ac) { achUi = { cat: ac.dataset.achCat, focus: null }; dirty = true; return; }
-  const csl = e.target.closest('[data-cs-slot]'); // a sticker slot on System → Casing
-  if (csl) { caseUi = { ...caseUi, slot: Number(csl.dataset.csSlot) || 0 }; dirty = true; return; }
-  const cps = e.target.closest('[data-cs-pslot]'); // a spot on the desk, System → Casing
-  if (cps) { caseUi = { ...caseUi, pslot: Number(cps.dataset.csPslot) || 0 }; dirty = true; return; }
   // The Daemons tab (daemons-view.mjs): the party or the roster, a daemon for the panel (× clears it), a cycle's order.
   const dmn = e.target.closest('[data-dmn-view], [data-dmn-sel], [data-dmn-cycle]');
   if (dmn) {

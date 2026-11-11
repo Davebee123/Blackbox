@@ -2820,8 +2820,8 @@ const systemTabs = (tab, dev) => dev ? `<nav class="ltabs sys-tabs" role="tablis
 // the monitor's colourway, plate and stickers) and Terminal (terminal-view.mjs: the boot, the prompt and the cursor).
 export const RIG_TABS = [['achievements', 'Achievements'], ['casing', 'Casing'], ['terminal', 'Terminal']];
 const rigTabs = (s, tab) => `<nav class="ltabs sys-tabs" role="tablist" aria-label="Rig">${RIG_TABS.map(([k, l]) => `<button type="button" role="tab" data-rtab="${k}" aria-selected="${tab === k}">${esc(l)}${k === 'achievements' ? `<small class="sys-pts">${glyph('medal')}${pointsOf(s)}</small>` : ''}</button>`).join('')}</nav>`;
-export function rigMarkup(s, { tab = 'achievements', ach = {}, cs = {} } = {}) {
-  if (tab === 'casing') return rigTabs(s, tab) + casingPageMarkup(s, cs);
+export function rigMarkup(s, { tab = 'achievements', ach = {} } = {}) {
+  if (tab === 'casing') return rigTabs(s, tab) + casingPageMarkup(s);
   if (tab === 'terminal') return rigTabs(s, tab) + terminalPageMarkup(s);
   return rigTabs(s, 'achievements') + achievementsMarkup(s, ach);
 }

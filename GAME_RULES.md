@@ -2595,8 +2595,12 @@ Stacks (*Mapper*), Coldline (*On the Signal*) and Tar Beach (*Every Crown*), pic
 
 **Casing cosmetics** (Rig → **Casing**), each an achievement's reward, only ever the casing: a **colourway** (Stock
 and eight more; `casing color <name>`), the **nameplate** (stock, a title you hold, or 16 characters of your own;
-`casing plate …`), four **stickers** on the chin (`casing sticker <1-4> <sticker>|off`) and two **desk props** (`casing
-prop <1-2> <prop>|off`).
+`casing plate …`), **stickers** and **props**. Every sticker you own can go on, anywhere on the plastic: the top, either
+side or the chin. They may overlap each other, never the screen, the knobs, the plate or the lamps. Props stand on the
+desk or, when the window leaves room over it, on top of the monitor. A click on Rig → Casing puts one on or takes it
+off, and while that page is open you drag them into place on the casing itself (`casing sticker <sticker>
+[top|left|right|chin]|off`, `casing prop <prop> [desk|top]|off`). An older save's four chin slots and two desk spots
+keep their places.
 
 ### The terminal
 

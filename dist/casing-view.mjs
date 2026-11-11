@@ -1,15 +1,15 @@
-// Rig → Casing (casing.mjs): the colourway, the plate, the stickers on the chin, the props on the desk and the
-// district out the window. Pure functions of state.
-//   ui: { slot: the sticker slot picked, 0–3; pslot: the desk's spot picked, 0–1 }
+// Rig → Casing (casing.mjs): the colourway, the plate, the stickers, the props and the district out the window. Pure
+// functions of state. A sticker or a prop goes on with a click here and is dragged into place on the casing itself
+// (app.js, while this page is open).
 import { glyph } from './glyphs.mjs';
-import { COLORWAYS, COLORWAY_IDS, CASING, colorwayOpen, colorwayFrom, casingLook, decalsOwned, decalMarkup, districtOf, districtOpen, districtFrom, PROPS, PROP_IDS, PROP_SLOTS, propOpen, propFrom, propsLook, propsOwned, propSvg } from './casing.mjs';
+import { COLORWAYS, COLORWAY_IDS, CASING, colorwayOpen, colorwayFrom, casingLook, decalsOwned, decalMarkup, districtOf, districtOpen, districtFrom, PROPS, PROP_IDS, propOpen, propFrom, propsLook, propsOwned, propSvg } from './casing.mjs';
 import { DISTRICTS, DISTRICT_IDS } from './window.mjs';
 import { titleById } from './profile.mjs';
 
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
-export function casingPageMarkup(s, ui = {}) {
-  const C = s.cosmetics || {}, look = casingLook(s), cur = look.color || 'stock', slot = Math.max(0, Math.min(CASING.slots - 1, ui.slot || 0));
+export function casingPageMarkup(s) {
+  const C = s.cosmetics || {}, look = casingLook(s), cur = look.color || 'stock';
   const off = s.settings?.casing === false || s.settings?.shell === 'plain';
   // The colourways: yours to pick, the rest locked with the achievement that brings each on hover.
   const sw = COLORWAY_IDS.map((id) => {
@@ -23,20 +23,18 @@ export function casingPageMarkup(s, ui = {}) {
   const titles = (s.profile?.titles || []).map(titleById).filter(Boolean);
   const plates = [`<button type="button" class="cs-pl" data-run="casing plate stock" aria-pressed="${!C.plate}" title="As it shipped">${esc(CASING.stock)}</button>`,
     ...titles.map((t) => `<button type="button" class="cs-pl" data-run="casing plate title ${esc(t.id)}" aria-pressed="${C.plate?.title === t.id}" title="${esc(`Your title ${t.name}`)}">MODEL 7 · ${esc(t.name.toUpperCase())}</button>`)].join('');
-  // The stickers: the chin's four slots (the picked one lit), then yours to put on it.
-  const slots = (i) => `<button type="button" class="cs-slot" data-cs-slot="${i}" aria-pressed="${slot === i}" title="${esc(`Slot ${i + 1}`)}">${look.decals[i] ? decalMarkup(look.decals[i], i) : '+'}</button>`;
-  const owned = decalsOwned(s);
-  const chips = owned.map((x) => `<button type="button" class="cs-decal" data-run="casing sticker ${slot + 1} ${esc(x.id)}" aria-pressed="${look.decals[slot]?.id === x.id}" title="${esc(`${x.tip}. On slot ${slot + 1}.`)}">${decalMarkup(x, slot)}</button>`).join('');
+  // The stickers: yours, the ones on the casing lit. A click puts one on or takes it off.
+  const owned = decalsOwned(s), on = new Set(look.decals.map((x) => x.id));
+  const chips = owned.map((x) => `<button type="button" class="cs-decal" data-run="casing sticker ${esc(x.id)}${on.has(x.id) ? ' off' : ''}" aria-pressed="${on.has(x.id)}" title="${esc(`${x.tip}.${on.has(x.id) ? ' Drag it anywhere on the casing.' : ''}`)}">${decalMarkup(x)}</button>`).join('');
   return `<div class="cs-page">
     <section class="card cs-card"><h2>Colourway</h2>${off ? `<p class="cs-note">${esc('Casing off. Settings turns it on.')}</p>` : ''}<div class="cs-swatches">${sw}</div></section>
     <div class="cs-stack"><section class="card cs-card" data-case="${cur}"><h2>Nameplate</h2><span class="cs-plate" title="The plate on the chin">${esc(look.plate)}</span>
       <div class="cs-plates">${plates}</div>
       <form class="cs-own" data-cs-plate><input id="cs-plate-in" maxlength="${CASING.plate}" value="${esc(C.plate?.text || '')}" placeholder="Your own, ${CASING.plate} characters" spellcheck="false" autocomplete="off" aria-label="Your own plate"><button type="submit" class="btn small primary">Use</button></form></section>
     <section class="card cs-card" data-case="${cur}"><h2>Stickers</h2>
-      <div class="cs-bezel" aria-label="The chin">${slots(0)}${slots(1)}<span class="cs-mini" aria-hidden="true">${esc(look.plate)}</span>${slots(2)}${slots(3)}</div>
-      <div class="cs-row"><span>Yours · ${owned.length}</span>${look.decals[slot] ? `<button type="button" class="act dim ach-pin" data-run="casing sticker ${slot + 1} off">Remove</button>` : ''}</div>
+      <div class="cs-row"><span>On · ${on.size} / ${owned.length}</span>${on.size ? '<button type="button" class="act dim ach-pin" data-run="casing sticker off">Clear</button>' : ''}</div>
       ${owned.length ? `<div class="cs-decals">${chips}</div>` : `<p class="cs-note">${esc('None yet. Achievements bring them.')}</p>`}</section></div>
-    ${deskCardMarkup(s, ui)}
+    ${deskCardMarkup(s)}
     ${districtCardMarkup(s)}
   </div>`;
 }
@@ -76,18 +74,16 @@ export function districtCardMarkup(s) {
   return `<section class="card cs-card cs-dists-card"><h2>Window</h2><p class="cs-note">${esc(off ? 'The window is off. Casing and Window on show it, beside the monitor on screens 1700px wide and more.' : 'Out the window beside the monitor, on screens 1700px wide and more.')}</p><div class="cs-dists">${items}</div></section>`;
 }
 
-// Rig → Casing → Desk: the two spots (the picked one lit), then the props, yours to put there, the rest dim.
-export function deskCardMarkup(s, ui = {}) {
-  const look = propsLook(s), slot = Math.max(0, Math.min(PROP_SLOTS - 1, ui.pslot || 0));
-  const spot = (i) => `<button type="button" class="cs-pslot" data-cs-pslot="${i}" aria-pressed="${slot === i}" title="${esc(i ? 'The right of the desk' : 'The left of the desk')}"><small>${i ? 'Right' : 'Left'}</small>${look[i] ? propSvg(look[i].id) : '<b>+</b>'}</button>`;
+// Rig → Casing → Props: yours, the ones standing lit, the rest dim. A click stands one on the desk or takes it off.
+export function deskCardMarkup(s) {
+  const look = propsLook(s), on = new Set(look.map((p) => p.id));
   const items = PROP_IDS.map((id) => {
-    const a = propFrom(id), open = propOpen(s, id), tip = `${PROPS[id].name}: ${PROPS[id].tip}${comes(a, open)}`;
+    const a = propFrom(id), open = propOpen(s, id), tip = `${PROPS[id].name}: ${PROPS[id].tip}${comes(a, open)}${on.has(id) ? ' Drag it along the desk or onto the monitor.' : ''}`;
     return open
-      ? `<button type="button" class="cs-prop" data-run="casing prop ${slot + 1} ${id}" aria-pressed="${look[slot]?.id === id}" title="${esc(tip)}">${propSvg(id)}<span>${esc(PROPS[id].name)}</span></button>`
+      ? `<button type="button" class="cs-prop" data-run="casing prop ${id}${on.has(id) ? ' off' : ''}" aria-pressed="${on.has(id)}" title="${esc(tip)}">${propSvg(id)}<span>${esc(PROPS[id].name)}</span></button>`
       : `<span class="cs-prop locked" title="${esc(tip)}">${propSvg(id)}<span>${esc(PROPS[id].name)}</span>${glyph('lock')}</span>`;
   }).join('');
-  return `<section class="card cs-card"><h2>Desk</h2><p class="cs-note">${esc('On the desk under the monitor when the window shows it, else on the chin by the knobs and the lamps.')}</p>
-      <div class="cs-desk">${spot(0)}${spot(1)}</div>
-      <div class="cs-row"><span>Yours · ${propsOwned(s).length}</span>${look[slot] ? `<button type="button" class="act dim ach-pin" data-run="casing prop ${slot + 1} off">Remove</button>` : ''}</div>
+  return `<section class="card cs-card"><h2>Props</h2>
+      <div class="cs-row"><span>Out · ${on.size} / ${propsOwned(s).length}</span>${on.size ? '<button type="button" class="act dim ach-pin" data-run="casing prop off">Clear</button>' : ''}</div>
       <div class="cs-props">${items}</div></section>`;
 }
