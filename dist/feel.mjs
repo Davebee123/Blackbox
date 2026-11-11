@@ -60,6 +60,8 @@ export const SIGNS = {
   interrupt: { flash: 'fx-shove', float: 'you', voice: 'interrupt', buzz: 15 },
   // The virus adapted after a break.
   escalate: { flash: 'fx-enrage', voice: 'escalate', buzz: [10, 30, 10] },
+  // A boss crosses into its next act (actbreak.mjs): two knocks and a long one. No sound until the designer picks one.
+  act: { buzz: [40, 60, 40, 60, 160] },
   // Your command was refused.
   nope: { flash: 'fx-nope', voice: 'nope', buzz: [8, 40, 8] },
   // Something lands at the end of this cycle and time is almost up.

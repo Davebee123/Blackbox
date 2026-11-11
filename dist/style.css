@@ -4328,6 +4328,18 @@ p.impl { margin: 6px 0 0; padding: 4px 2px; border-bottom: 1px dotted color-mix(
 .intent.bend.harm b.bend-to { color: var(--hot); }
 .intent.bend.veiled b.bend-to { color: var(--muted); }
 .intent.bend.now { background: var(--hot-soft); }
+/* A boss's act break (actbreak.mjs): its card over the board's strip, the emote under its bar, the bits off its ♛'s tick. */
+.phase-strip.act-on { position: relative; }
+.phase-strip.act-on > :not(.act-card) { visibility: hidden; }
+.act-card { position: absolute; inset: 0; display: flex; align-items: center; gap: 14px; padding: 0 14px; overflow: hidden; white-space: nowrap; color: var(--hot); border-top: 1px solid var(--hot); pointer-events: none; }
+.act-card .ac-n, .act-card .ac-name { font: 800 15px var(--mono); letter-spacing: 0.22em; }
+.act-card .ac-of { opacity: 0.75; letter-spacing: 0.12em; }
+.act-card .ac-name { color: var(--text); }
+.hud-bar.enemy.act-emoting .gene-line { display: none; }
+.act-emote { margin: 8px 0 0; padding: 5px 10px; width: max-content; max-width: 100%; border: 1px solid color-mix(in srgb, var(--hot) 55%, transparent); border-radius: 2px; background: color-mix(in srgb, var(--hot) 8%, transparent); font: 13px var(--mono); color: var(--text); }
+.act-emote b { margin-right: 8px; color: var(--hot); letter-spacing: 0.12em; }
+.act-bit { position: fixed; z-index: 60; pointer-events: none; font: 700 13px var(--mono); color: var(--hot); text-shadow: 0 0 6px var(--hot); }
+.ptick.act-flare { box-shadow: 0 0 12px 3px var(--hot); }
 /* NIGHT DESK's attacks open trades (view.mjs tradeChip): dashed, like every chip that lands only if you let it. */
 .intent.trade { border: 1px dashed var(--hot); background: transparent; }
 .intent.trade .tr-ico { width: 14px; height: 14px; flex: none; color: var(--hot); }

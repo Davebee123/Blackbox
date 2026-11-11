@@ -24,6 +24,13 @@ export function actsOf(v) {
 }
 // The act now: 1 from the start, one more for each phase done.
 export const actOf = (v) => 1 + (v?.phases || []).filter((x) => x.done).length;
+// The act a boss is in, for the board (view.mjs actTag, the act break in actbreak.mjs): its number, of how many, and
+// the name and emote of the phase that started it (BOSSES phases). null: not a boss with phases.
+export function actInfo(v) {
+  if (!v?.boss || !v.phases?.length || BOSSES[v.boss]?.raid) return null;
+  const last = v.phases.filter((x) => x.done).at(-1);
+  return { n: actOf(v), of: v.phases.length + 1, name: last?.name || null, emote: last?.emote || null };
+}
 const core = (s) => livingParts(s).find((x) => x.core) || null;
 
 // ---------- the beat ----------
