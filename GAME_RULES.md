@@ -1308,7 +1308,8 @@ It lists what the level brings: skills (with the key each went on), your subclas
 a protocol slot, new protocol bases, a floor's band, and a daemon slot when your server rises; then the power line (to
 level 6), the server's Integrity and the next level that brings something. Several levels at once are one level-up. It is a **firmware update**: a compact
 panel under the top bar, an amber *Firmware update · <class>.rom* strip, the level in big teal dot-font digits beside
-*v9 → v10*, then `[ OK ]` per unlock as the flash finishes, **Loadout** (when there's something to set) and
+*v9 → v10*, then `[ OK ]` per unlock as the flash finishes. It powers on to its sound, the lift: the strip flickers on
+with the breaker, the bar climbs with the hum while the old level waits dim, and the new level snaps in bright. Then **Loadout** (when there's something to set) and
 **Continue**. It closes by itself 12 seconds after the flash, never comes up during a fight or over a card that waits,
 and waits for the next calm moment. `developer levelup preview` plays your next one (`preview <level>`, `preview all`),
 changing nothing.
@@ -2679,8 +2680,12 @@ test, the wire, fight reports and the log (`logs` opens it).
   quiet room tone under it. **Abilities:** each ability has a sound of its own, timed to its effect: it starts as it
   leaves the key and lands with the number, in place of the hit's shared voice (the flash and the buzz stay). With
   Screen effects off or Motion off it plays on the number's beat. A mastered ability adds a layer a tier; the break
-  that wins a fight adds your class's flourish over the break's sound. Burn ticks, breaks and the virus's own sounds
-  are as they were. **Places:** each floor and hub has its own quiet loop, and each virus family a sound under
+  that wins a fight adds your class's flourish over the break's sound. Burn ticks and breaks are as they were.
+  **The virus's attacks:** each has a sound of its own too, from its chip's strike (a part with no theme: the lash):
+  it starts as the chip goes off and lands with the strike and the number, which waits for it. A charge and a boss's
+  beat add a layer; a blocked or evaded one glances or passes; Encrypt, Scramble, Replicate, Patch, a seal and a cast
+  have theirs. One sound an attack a batch, the biggest hit loudest. Each chip strikes at its own hit, a step before
+  the board turns for all but the last. **Places:** each floor and hub has its own quiet loop, and each virus family a sound under
   its fights, adding its attack and break sounds.
 - **Music:** a track on your server and another on a run. Each virus family's fights have their own theme (dark,
   gritty industrial synthwave, synthesized live): it fades in as the fight starts, builds as the virus breaks, and fades
@@ -2759,8 +2764,12 @@ Stacks (*Mapper*), Coldline (*On the Signal*) and Tar Beach (*Every Crown*), pic
 
 **Casing cosmetics** (Rig → **Casing**), each an achievement's reward, only ever the casing: a **colourway** (Stock
 and eight more; `casing color <name>`), the **nameplate** (stock, a title you hold, or 16 characters of your own;
-`casing plate …`), four **stickers** on the chin (`casing sticker <1-4> <sticker>|off`) and two **desk props** (`casing
-prop <1-2> <prop>|off`).
+`casing plate …`), **stickers** and **props**. Every sticker you own can go on, anywhere on the plastic: the top, either
+side or the chin. They may overlap each other, never the screen, the knobs, the plate or the lamps. Props stand on the
+desk or, when the window leaves room over it, on top of the monitor. A click on Rig → Casing puts one on or takes it
+off, and while that page is open you drag them into place on the casing itself (`casing sticker <sticker>
+[top|left|right|chin]|off`, `casing prop <prop> [desk|top]|off`). An older save's four chin slots and two desk spots
+keep their places.
 
 ### The terminal
 

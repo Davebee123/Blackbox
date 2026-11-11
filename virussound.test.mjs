@@ -147,8 +147,8 @@ test('what isn\'t a hit on you carries no weight: no boom\'s sub-drop, no punch'
   for (const key of Object.keys(ATTACKS).filter((k) => ATTACKS[k].does)) for (const name of ['subdrop', 'soft-h', 'punch-h', 'punch-m']) assert.ok(!play(PICKED, key, { power: 0.9 }).asked.has(name), `${key}: no ${name}`);
 });
 
-test('nothing in a fight plays them yet: only the effects playtest and the sound system load the module', () => {
+test('a fight plays the pick through one door (virusvoice.test.mjs): attackSound in a fight, the preview in the playtest', () => {
   const src = fs.readFileSync(new URL('./dist/app.js', import.meta.url), 'utf8');
-  assert.equal(src.match(/feel\.attack\w*\(/g)?.length, 1, 'one call: the playtest\'s preview');
+  assert.deepEqual(src.match(/feel\.attack\w*\(/g), ['feel.attack(', 'feel.attackPreview(']);
   assert.match(src, /attack: \(key, id, \{ result, power, sound = 'off' \}\) => \{[^]*?feel\.attackPreview\(/);
 });

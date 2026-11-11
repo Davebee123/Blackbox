@@ -1,5 +1,6 @@
 import { createSound } from './sound.mjs';
 import { PICKED } from './abilitysound.mjs';
+import { PICKED as THEIR_PICK } from './virussound.mjs';
 import { createSoundtrack } from './soundtrack.mjs';
 import { createPlaces } from './places.mjs';
 import { glyph } from './glyphs.mjs';
@@ -88,6 +89,10 @@ export const SIGNS = {
   pickup: { flash: 'fx-good', float: 'you', voice: 'pickup', buzz: 12 },
   // The fight is won.
   win: { flash: 'fx-win', voice: 'win', buzz: [30, 60, 90] },
+  // A boss is down, or a server is yours.
+  bosswin: { flash: 'fx-win', voice: 'bosswin', buzz: [30, 60, 90, 60, 140] },
+  // A level gained (levelup-ui.mjs).
+  levelup: { flash: 'fx-win', voice: 'levelup', buzz: [30, 60, 90] },
   // Crash or disconnect.
   lose: { flash: 'fx-hurt', edge: true, voice: 'lose', buzz: [250] },
   // A puzzle room's board (puzzle-view.mjs): a firewall going up, the worm copying into a node, a node discharging, a
@@ -201,6 +206,9 @@ export function createFeel({ settings, reducedMotion }) {
     // An ability's own sound in a fight (abilitysound.mjs, the picked style), timed by its effect's plan, in delayMs.
     // False if Sound is off or it has none to play (say() its result's voice then).
     ability(key, plan, hit, delayMs = 0) { if (!settings().sound || !sound.ability(PICKED, key, plan, hit, delayMs / 1000)) return false; places.duck(); return true; },
+    // A virus attack's own sound in a fight (virussound.mjs, the picked style), timed by its strike's plan (drawn: it
+    // flies; else contact and tail), starting in delayMs. False if Sound is off or it has none to play.
+    attack(key, plan, hit, drawn = true, delayMs = 0) { if (!settings().sound || !sound.attack(THEIR_PICK, key, plan, hit, drawn, delayMs / 1000)) return false; places.duck(); return true; },
     abilityOn: () => !!settings().sound,
     say(name, detail, delayMs = 0) { if (settings().sound && name) sound.play(name, detail || {}, delayMs / 1000); },
     // When what is added next lands, in ms after the flush (0: at once). react() sets it per event.

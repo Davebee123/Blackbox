@@ -1,6 +1,6 @@
 // The level-up (GAME_RULES.md "Levels"): a firmware update flashed on the screen. A compact panel under the top bar
-// (over the prompt on a phone): an amber kicker strip, the level in big phosphor digits beside the flash's progress
-// line, then [ OK ] per unlock as the flash finishes, the next level that brings something, and Continue (Enter).
+// (over the prompt on a phone): an amber kicker strip, the level in big phosphor digits (the old level under it, dim,
+// until the flash locks) beside the flash's progress line, then [ OK ] per unlock as the flash finishes, the next level that brings something, and Continue (Enter).
 // It lists what the level brings on every track: each gain of the level, the power line, the server's Integrity and the
 // next level. Each row's detail is its tooltip (Name: sentence), never on the row. Pure markup builders: no DOM
 // (levelup-ui.mjs puts it on the page).
@@ -80,7 +80,7 @@ export function firmwareMarkup(sum) {
   if (!sum) return '';
   const rom = `${sum.cls.toLowerCase()}.rom`;
   return `<div class="lu-b-head"><span>Firmware update · ${esc(rom)}</span><button type="button" class="lu-x" data-lu-close aria-label="Close">×</button></div>`
-    + `<div class="lu-b-top"><pre class="lu-b-big" aria-hidden="true">${bigDigits(sum.level)}</pre><div class="lu-b-flash"><span class="lu-b-ver">v${sum.from} → <b>v${sum.level}</b> <small>${esc(sum.cls)}</small></span><span class="lu-b-bar" aria-hidden="true"><i></i></span><span class="lu-b-pct" aria-hidden="true">100%</span></div></div>`
+    + `<div class="lu-b-top"><div class="lu-b-digits" aria-hidden="true"><pre class="lu-b-big lu-old">${bigDigits(sum.from)}</pre><pre class="lu-b-big">${bigDigits(sum.level)}</pre></div><div class="lu-b-flash"><span class="lu-b-ver">v${sum.from} → <b>v${sum.level}</b> <small>${esc(sum.cls)}</small></span><span class="lu-b-bar" aria-hidden="true"><i></i></span><span class="lu-b-pct" aria-hidden="true">100%</span></div></div>`
     + `<ul class="lu-b-list" aria-label="${esc(ariaOf(sum))}">${sum.items.map((it, i) => row(it, i, `<span class="lu-ok">[ OK ]</span><span class="lu-k">${esc(it.label)}</span><b class="lu-v">${esc(it.value)}</b>`)).join('')}</ul>`
     + (sum.next ? `<p class="lu-b-next" title="${esc(sum.next.tip)}" style="--i:${sum.items.length}"><span>next</span> v${sum.next.level} · ${esc(sum.next.text)}</p>` : '')
     + `<div class="lu-b-acts">${sum.skill ? '<button type="button" class="btn small" data-module="loadout">Loadout</button>' : ''}<button type="button" class="btn small primary" data-lu-close>Continue <kbd>Enter</kbd></button></div>`;
