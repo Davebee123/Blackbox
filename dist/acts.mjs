@@ -1,6 +1,6 @@
 // Boss acts (docs/puzzle-fights.md P4): a beat that repeats, three acts, and the one to leave. A P4 boss (BOSSES[id].acts,
-// by family for the Resident) plays in three acts: the first from the start, the next two from its ♛ part's ticks at 50%
-// and 25% (interrupt.mjs rule a). Each act deals one more of its tells and quickens its beat; the last speeds every attack.
+// by family for the Resident) plays in three acts: the first from the start, the next two from its ♛ part's ticks at 60%
+// and 30% (interrupt.mjs rule a, TICKS.act: the same for every boss). Each act deals one more of its tells and quickens its beat; the last speeds every attack.
 //
 //   the beat     one move on a fixed rhythm, always on the board: the Backlash (on its beat, a part your command hits
 //                that doesn't break lashes back: its own attack lands at once, doubled), the Mimic's copy (HOLLOW CHOIR),
@@ -24,6 +24,13 @@ export function actsOf(v) {
 }
 // The act now: 1 from the start, one more for each phase done.
 export const actOf = (v) => 1 + (v?.phases || []).filter((x) => x.done).length;
+// The act a boss is in, for the board (view.mjs actTag, the act break in actbreak.mjs): its number, of how many, and
+// the name and emote of the phase that started it (BOSSES phases). null: not a boss with phases.
+export function actInfo(v) {
+  if (!v?.boss || !v.phases?.length || BOSSES[v.boss]?.raid) return null;
+  const last = v.phases.filter((x) => x.done).at(-1);
+  return { n: actOf(v), of: v.phases.length + 1, name: last?.name || null, emote: last?.emote || null };
+}
 const core = (s) => livingParts(s).find((x) => x.core) || null;
 
 // ---------- the beat ----------
@@ -35,6 +42,8 @@ export function beatOf(s) {
   if (A.beat === 'copy') { const t = tellsOf(s)?.list.find((x) => x.kind === 'mimic'), p = t && part(s, t.part); return alive(p) && p.mimic ? { part: p, kind: 'copy', at: (c) => c >= t.first && (c - t.first) % t.every === 0 } : null; }
   // A part's own attack (RELAY-KING's Broadcast, REPO MAN's Collection): the cycles it played, then the ones it lands on.
   if (A.beat === 'broadcast' || A.beat === 'collect') { const p = livingParts(s).find((x) => (A.beat === 'broadcast' ? x.broadcast : x.lien) && x.attack); return p ? { part: p, kind: A.beat, at: (c) => (c < s.encounter.cycle ? (p.played || []).includes(c) : landingsOf(p, c + 1).includes(c)) } : null; }
+  // Its own part's attack (the floor bosses, floorbosses.mjs: the Gavel's Surge, the Demand's Deadline, the Logger's Dump, main()'s Surge).
+  if (A.beat === 'part') { const p = livingParts(s).find((x) => x.id === A.part && x.attack); return p ? { part: p, kind: 'part', at: (c) => (c < s.encounter.cycle ? (p.played || []).includes(c) : landingsOf(p, c + 1).includes(c)) } : null; }
   if (A.beat === 'bend') { const d = livingParts(s).find((x) => x.reflect); return d ? { part: d, kind: 'bend', at: (c) => (c + (d.reflectOff || 0)) % d.reflect === 0 } : null; }
   return null;
 }

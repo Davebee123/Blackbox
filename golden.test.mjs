@@ -30,9 +30,10 @@ const nameOk = (a, b) => {
 const strip = (v) => { const o = structuredClone(v); for (const k of ADDED) delete o[k]; return o; };
 // Bosses rebuilt on purpose (GAME_RULES.md "Solo bosses"): HASHLORD and MIRRORSHADE (docs/genome.md 5.3), P4's Resident (its
 // ransomware and worm acts, the only family this file gives it; acts.test.mjs), and the three solo bosses' own parts and
-// acts (docs/solo-bosses.md, bosses.test.mjs). Every other boss is the same fight it was.
+// acts (docs/solo-bosses.md, bosses.test.mjs). Every other boss is the same fight it was; the floor bosses built since
+// (own: parts of their own, floorbosses.mjs) are new, with nothing frozen to match.
 const REBUILT = ['nb-hashlord', 'nb-mirrorshade', 'resident', 'choir', 'relayking', 'repoman'];
-const SOLO = Object.keys(BOSSES).filter((k) => !BOSSES[k].raid && !REBUILT.includes(k));
+const SOLO = Object.keys(BOSSES).filter((k) => !BOSSES[k].raid && !BOSSES[k].own && !REBUILT.includes(k));
 
 // 10,000 seeds over everything a virus can be: wild viruses of every family at every level, strains, grades, run
 // and home numbers, mutations rolled, forced and off, elites, bosses, guards and the named fixtures.

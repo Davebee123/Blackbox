@@ -1,4 +1,5 @@
 import { createSound } from './sound.mjs';
+import { PICKED } from './abilitysound.mjs';
 import { createSoundtrack } from './soundtrack.mjs';
 import { createPlaces } from './places.mjs';
 import { glyph } from './glyphs.mjs';
@@ -59,6 +60,8 @@ export const SIGNS = {
   interrupt: { flash: 'fx-shove', float: 'you', voice: 'interrupt', buzz: 15 },
   // The virus adapted after a break.
   escalate: { flash: 'fx-enrage', voice: 'escalate', buzz: [10, 30, 10] },
+  // A boss crosses into its next act (actbreak.mjs): the break (sound.mjs actbreak), two knocks and a long one.
+  act: { voice: 'actbreak', buzz: [40, 60, 40, 60, 160] },
   // Your command was refused.
   nope: { flash: 'fx-nope', voice: 'nope', buzz: [8, 40, 8] },
   // Something lands at the end of this cycle and time is almost up.
@@ -113,6 +116,7 @@ const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 
 export function createFeel({ settings, reducedMotion }) {
   let queue = [];
+  let muting = false;
   let beatMs = 0;
   // Numbers rising off the same spot close together take turns: a lane each (motion), or a stacked list
   // (detail.stack: Effects minimal, Motion off), so separate hits never print over each other.
@@ -174,7 +178,7 @@ export function createFeel({ settings, reducedMotion }) {
     flash(el, 'on');
   }
 
-  function play({ kind, target, label, detail }) {
+  function play({ kind, target, label, detail, mute }) {
     if (typeof kind === 'function') { try { kind(); } catch { /* an effect never breaks the game */ } return; }
     const sign = SIGNS[kind];
     if (!sign) return;
@@ -188,16 +192,29 @@ export function createFeel({ settings, reducedMotion }) {
     // detail.silent: the look without the sound or buzz (a crewmate's hit when yours already sounds).
     // detail.softEdge: a fainter edge in place of the lash (a hit on you with Effects minimal, or Motion off).
     if ((sign.edge || detail?.softEdge) && !detail?.silent && !detail?.noEdge) edge(detail?.softEdge);
-    if (!detail?.silent) { voice(sign.voice, detail); buzz(sign.buzz); }
+    // mute: its ability's own sound plays in its voice's place (the flash and the buzz stay).
+    if (!detail?.silent) { if (!mute) voice(sign.voice, detail); buzz(sign.buzz); }
   }
 
   return {
     // kind: a key of SIGNS; target: a CSS selector or element; label: floating text
-    add(kind, target, label, detail) { queue.push({ kind, target, label, detail, at: beatMs }); },
+    add(kind, target, label, detail) { queue.push({ kind, target, label, detail, at: beatMs, mute: muting }); },
+    // What is added next keeps its look and its buzz and loses its voice (its ability's own sound plays instead), until
+    // this turn of the event loop is over.
+    mute(on) { muting = !!on; if (on) queueMicrotask(() => { muting = false; }); },
+    // An ability's own sound in a fight (abilitysound.mjs, the picked style), timed by its effect's plan, in delayMs.
+    // False if Sound is off or it has none to play (say() its result's voice then).
+    ability(key, plan, hit, delayMs = 0) { if (!settings().sound || !sound.ability(PICKED, key, plan, hit, delayMs / 1000)) return false; places.duck(); return true; },
+    abilityOn: () => !!settings().sound,
+    say(name, detail, delayMs = 0) { if (settings().sound && name) sound.play(name, detail || {}, delayMs / 1000); },
     // When what is added next lands, in ms after the flush (0: at once). react() sets it per event.
     beat(ms) { beatMs = Math.max(0, Math.round(ms) || 0); },
-    // Play one voice now, whatever the Sound setting (the System page's sound test).
-    preview(name) { sound.play(name, name === 'hit' ? { amount: 12 } : {}); },
+    // Play one voice now (or `delay` s from now), whatever the Sound setting (the System page's sound test).
+    preview(name, opts, delay = 0) { sound.play(name, opts || (name === 'hit' ? { amount: 12 } : {}), delay); },
+    // An ability's sound in a style, whatever the Sound setting (the ability effects playtest; abilitysound.mjs).
+    abilityPreview(style, key, plan, hit) { return sound.ability(style, key, plan, hit); },
+    // A virus attack's sound in a style, whatever the Sound setting (the same playtest; virussound.mjs).
+    attackPreview(style, key, plan, hit, drawn) { return sound.attack(style, key, plan, hit, drawn); },
     // A key on the prompt or a button press (only with Sound on).
     key(kind) { if (settings().sound) sound.key(kind); },
     // A scene with its own mix (the cold open): { ctx, out } at the effects volume, or null with Sound off.

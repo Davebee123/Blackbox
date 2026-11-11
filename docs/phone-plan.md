@@ -1,6 +1,6 @@
 # Phone plan: a phone UI of its own
 
-Plan, not built (P0 picked). Same game, state and commands on a phone; its own shell and its own markup for the core components.
+P0 picked, P1 (the shell), P2 (the fight) and P3 (maps and sheets) built. Same game, state and commands on a phone; its own shell and its own markup for the core components.
 P0 (prototypes for the designer's pick) comes before any code.
 
 ## Where the phone is now
@@ -76,7 +76,6 @@ Budget: on 375 × 667 the whole fight fits with no scroll, and the board gets at
 - **Log:** its latest line as a ticker over the tray, its side's edge in teal or red; a tap opens the log in a sheet.
 - **On its side:** the phone shell, board on the left with +3, the strip, ticker and a 2 × 4 tray in a right column.
 - **Left out:** the #net line, `>_` in the tray (combat never opens the keyboard).
-- **Known bug:** at ≤900 px chips show codes, and a *cut* chip, which has none, renders blank. P2's markup fixes it.
 
 ## The other screens
 
@@ -110,15 +109,48 @@ render(), style.css and the fight board, so no other UI session runs beside it.
 | Phase | What | Done when |
 |---|---|---|
 | **P0 Prototypes** | Scratchpad applets at 375 × 667 with fixture data: the shell (strip, tab bar, More), the fight in the options below, the sheet at its three heights, the map with a peek sheet. Screenshots to the designer | The designer has picked |
-| **P1 Shell** | `form.mjs`, `phone.css`, tokens and safe areas, the top strip, the tab bar and More, the prompt behind `>_`, tap for info, the one sheet, lazy desktop-only modules | Every page reachable in two taps; no hover-only rule left on the shell |
-| **P2 Fight** | The picked fight layout | The budget above on 320 × 568 and 375 × 667, with a crew |
-| **P3 Maps and sheets** | Map, rooms map, map cards, the room pop-up, the Server panel, Comms, the quest window and level-up in the sheet | Each pop-up is the one sheet; the four old sheets are gone |
+| **P1 Shell** (done) | `form.mjs`, `phone.css`, tokens and safe areas, the top strip, the tab bar and More, the prompt behind `>_`, tap for info, the one sheet, lazy desktop-only modules | Every page reachable in two taps; no hover-only rule left on the shell |
+| **P2 Fight** (done) | The picked fight layout | The budget above on 320 × 568 and 375 × 667, with a crew |
+| **P3 Maps and sheets** (done) | Map, rooms map, map cards, the room pop-up, the Server panel, Comms, the quest window and level-up in the sheet | Each pop-up is the one sheet; the four old sheets are gone |
 | **P4 Pages** | Loadout, Mail, Codex and Collection, Rig, Settings, hubs | No page over three screens tall at its default state |
 | **P5 Cleanup** | Delete the phone overrides the shell replaced; docs/ui.md's phone rules and GAME_RULES.md's *On a phone* rewritten | style.css has no rule under 600 px |
 
 **Tests:** a `phone.test.mjs` renders each phone view from fixture saves and checks that every action has a
 `data-` command (a tap path), every element with a rule is tappable, and nothing on the cut list is in the markup.
 Layout budgets are checked with the scratchpad screenshot set each phase.
+
+## Built (P1)
+
+`form.mjs` sets `data-form`; `phone-shell.mjs` draws the tab bar and More; `sheet.mjs` is the one sheet (tap for info and
+More use it; the old four move in P3); `phone.css` holds every phone rule. The strip is the desktop's own meters and
+pager restyled. Lazy: `window.mjs` (its districts moved to `districts.mjs`), `bench.mjs` (its save keys in
+`bench-key.mjs`), the fx playtest. `casing.mjs` stays static: the Rig page's views read it; a phone never wears the
+casing. The bench's Dev drawer is hidden on a phone; its commands work at the prompt. Tested by `phone.test.mjs`.
+
+## Built (P2)
+
+All in `phone.css` under `body.ph-fight`, plus app.js `phMenuKey`, `phTicker`, `phStage` and view.mjs `crewLineMarkup`.
+The HUD is one line (the designer's pick *C*, 41 px): the bars and their numbers, the rest in their cards (app.js
+`phHudCards`). Measured with a crewmate: the board is 379 of 568 px on 320 × 568, 478 of 667 px on 375 × 667, no scroll. A notice
+takes the ticker's slot, one line (a tap shows it whole). The Toolkit's key is left out of the tray. The board has no You row (the designer: too busy); the picked key is outlined amber. The virus's window
+steps out to the first clear stretch right of Now, top down; with none tall enough it stays home.
+
+## Built (P3)
+
+Picked: the chip row *B* (a row under the floors, a count and a word each), the rooms header *A* (one line; Wait and
+Jack out afloat as one capsule).
+- **One sheet for every pop-up:** each is still drawn where the desktop draws it; app.js `phPops` (the `PH_POPS`
+  list) lifts the element into the sheet whole, so its buttons and handlers are the desktop's, and sends it home when
+  the sheet lets go. A rule's card or More takes the sheet and the pop-up comes back after. `sheet.mjs` gained
+  `through` (no scrim, above the tab bar, the page still takes taps): map cards, a room's card, the Server and
+  Daemons panels, the level-up. Modal: Comms, the datasheet, a journal, the quest's dialogue and reward.
+- **Map:** `view.mjs` `mapChips` and `mapRail` (the chips, and the list each opens); a card's peek is built from the
+  card itself (app.js `phPeek`). The names-on-hover key is left out.
+- **Rooms:** the header is the desktop's strip restyled (`body.ph-rooms`); the top strip is away there, so More
+  carries the pager. Pinch and double-tap for both maps: app.js `phZoomAt`.
+- **The four old sheets are gone.** From 600 to 900 px the Server and Daemons panels now sit under their page, and a
+  tapped datasheet is the hover card with its buttons in it.
+- Not moved: a puzzle room's board, the pager's Take / Cancel card, scenes (P4).
 
 ## Picked (P0)
 

@@ -56,10 +56,11 @@ test('a hit that breaks the part on the beat is safe', () => {
 test('the ♛ holds at its next tick: one tick a hit, so no act is skipped', () => {
   const s = boss('resident', 'worm'), c = core(s);
   c.armor = 0;
-  assert.equal(actCap(s, c), c.integrity - Math.floor(0.5 * c.max));
-  c.integrity = Math.floor(0.5 * c.max);
+  assert.deepEqual(c.ticks.map((t) => t.at), [0.6, 0.3], 'its act ticks');
+  assert.equal(actCap(s, c), c.integrity - Math.floor(0.6 * c.max));
+  c.integrity = Math.floor(0.6 * c.max);
   c.ticks[0].spent = true;
-  assert.equal(actCap(s, c), c.integrity - Math.floor(0.25 * c.max));
+  assert.equal(actCap(s, c), c.integrity - Math.floor(0.3 * c.max));
 });
 
 test('the one to leave: the ♛ taken under its tick before the beat plays re-arms every part', () => {
@@ -69,7 +70,7 @@ test('the one to leave: the ♛ taken under its tick before the beat plays re-ar
   assert.ok(leaveOf(s) && !leaveOf(s).done, 'the board holds its tick');
   const pulse = part(s, 'pulse');
   pulse.armor = 0;
-  Object.assign(c, { armor: 0, integrity: Math.floor(0.5 * c.max) + 2 });
+  Object.assign(c, { armor: 0, integrity: Math.floor(0.6 * c.max) + 2 });
   command(s, 'overload ' + c.id);
   const ev = resolveCycle(s);
   assert.ok(ev.some((x) => x.early), 'too soon');
@@ -83,7 +84,7 @@ test('after the beat plays, the ♛ goes under its tick with no re-arm', () => {
   assert.ok(actDone(s));
   const pulse = part(s, 'pulse');
   pulse.armor = 0;
-  Object.assign(c, { armor: 0, integrity: Math.floor(0.5 * c.max) + 2 });
+  Object.assign(c, { armor: 0, integrity: Math.floor(0.6 * c.max) + 2 });
   command(s, 'overload ' + c.id);
   assert.ok(!resolveCycle(s).some((x) => x.early));
   assert.equal(pulse.armor, 0);
@@ -101,7 +102,7 @@ test('act 2 quickens the beat', () => {
   const s = boss('resident', 'worm'), v = s.encounter.virus, c = core(s);
   const every = v.backlash.every;
   to(s, v.backlash.first + 1);
-  Object.assign(c, { armor: 0, integrity: Math.floor(0.5 * c.max) + 2 });
+  Object.assign(c, { armor: 0, integrity: Math.floor(0.6 * c.max) + 2 });
   command(s, 'overload ' + c.id);
   resolveCycle(s);
   assert.equal(actOf(v), 2);

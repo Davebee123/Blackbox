@@ -55,9 +55,7 @@ test('fight tips pause the fight and wait for what they explain', () => {
   for (const id of [t.id, ...t.covers]) markSeen(s, id);
   assert.notEqual(nextTip(s, 'combat', onPage(html))?.id, 'fight-keys');
   assert.notEqual(nextTip(s, 'combat', onPage(html))?.id, 'fight-quiet', 'no Trace tip before you have Trace');
-  // The cut readout gets its own tip the first time it's in Now; a tick crossed with nothing due gets one too.
-  assert.equal(nextTip(s, 'combat', (sel) => sel === '.board .intent.cut')?.id, 'fight-cut');
-  markSeen(s, 'fight-cut');
+  // A tick crossed with nothing due gets its own tip.
   assert.equal(nextTip(s, 'combat', (sel) => sel === '.board .ptick.spent'), null, 'a tick spent on a cut is no mistake');
   s.encounter.metrics.wasted = 1;
   assert.equal(nextTip(s, 'combat', (sel) => sel === '.board .ptick.spent')?.id, 'fight-wasted');

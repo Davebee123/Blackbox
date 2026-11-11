@@ -64,7 +64,7 @@ test('a Resident that beats you is a level stronger for 6 hours, up to three', (
 });
 
 // The ghostroot Resident keeps this phase; the worm's and ransomware's play in acts (acts.test.mjs).
-test('a boss has phases (GAME_RULES.md "Solo bosses", rule a): taking the Resident\'s core part across its 50% tick re-arms every part', () => {
+test('a boss has phases (GAME_RULES.md "Solo bosses", rule a): taking the Resident\'s core part across its 60% tick re-arms every part', () => {
   const s = onRun('ghostroot');
   openVault(s);
   toCore(s);
@@ -77,7 +77,7 @@ test('a boss has phases (GAME_RULES.md "Solo bosses", rule a): taking the Reside
   for (const p of v.parts) { p.armor = 0; if (p !== core) p.integrity = Math.floor(p.max * 0.3); }
   command(s, 'hold'); resolveCycle(s);
   assert.ok(!v.phases[0].done, 'the total alone starts nothing');
-  core.integrity = Math.floor(core.max * 0.5) + 2; core.lockHp = 0;
+  core.integrity = Math.floor(core.max * 0.6) + 2; core.lockHp = 0;
   command(s, 'spike ' + core.id); resolveCycle(s);
   assert.ok(v.phases[0].done, 'across its tick: the phase');
   assert.ok(v.parts.filter((p) => p.id !== 'sentry' && p.integrity > 0).every((p) => p.armor >= 1), 're-armed');

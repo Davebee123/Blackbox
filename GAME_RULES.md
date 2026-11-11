@@ -89,8 +89,8 @@ Leaving the fight screen pauses a live fight.
 Every part has two ticks on its bar, at 50% and 25% of its Integrity. Take it across one on the cycle its move is due
 and that move is cancelled (*INTERRUPTED*); its schedule goes on as if it had landed. Each tick works once a fight:
 crossed with nothing due, it's spent for nothing, and one hit across both cancels one move at most. Burns, helpers and
-daemons count. Fragments, Packages, Droppers, the Spam Flood and the Mutex have no ticks. The Now column says what
-crossing takes (*cut ▸ 9*, *cut ▸ ◆1 + 9*), and a queued command says *cuts* or *−tick*. A charge riding the cancelled
+daemons count. Fragments, Packages, Droppers, the Spam Flood and the Mutex have no ticks. A queued command says *cuts*
+or *−tick*. A charge riding the cancelled
 move is called off with it.
 
 ### Tells (tells.mjs)
@@ -99,10 +99,10 @@ move is called off with it.
 wild viruses, guards, elites, strains, champions, solo bosses and invaders. Crew bosses have their own mechanics.
 
 **Nothing lands unannounced.** A tell is said once in the log and sits as a chip on its part's row, in the column it
-lands, until it does. The chip's last line is the answer (*▸ Cut past ◆2*, from 17 *▸ Cut past ◆2 or SIGINT*,
-*▸ SIGINT or cut*, *▸ Strip ◆3*, *▸ Pick a cheap copy*). Its number is its price (`tellPrice`): a charge's hit, a cast's
+lands, until it does. The chip says what it does, never the answer; an amber SIGINT mark sits on it when SIGINT can
+stop it (a cast, from 17 a charge too). Its number is its price (`tellPrice`): a charge's hit, a cast's
 extra damage over its 4 cycles in red (*−15*), a Self-Update's Integrity (*+55 hp*), a seal's ◆ in steel (*+4 ◆*).
-Hover it for what happens and, on its own muted ▸ line, how to stop it. Breaking a tell's part always stops it.
+Hover it for what happens; nothing on the board says how to stop it. Breaking a tell's part always stops it.
 
 | Kind | What it is | What answers it | If you don't |
 |---|---|---|---|
@@ -558,7 +558,7 @@ It remembers `s.dex` (genome.mjs) and `s.research`; crewmates' fights don't writ
 
 ### Solo bosses
 
-Bosses have phases and an enrage. A solo boss's **♛ part** (its signature) has phase ticks at 50% and 25% instead of
+Bosses have phases and an enrage. A solo boss's **♛ part** (its signature) has phase ticks at 60% and 30% instead of
 interrupts: taking it across one starts its next phase; its other parts interrupt as usual (interrupt.mjs rule a;
 `developer bossrule b|c` tries the alternatives). A boss brings three tells, every one open at its level. From its
 enrage cycle every attack lands every cycle, a quarter harder, with a warning three cycles before. A phase change
@@ -566,7 +566,10 @@ flashes on screen.
 
 **The Resident.** Opening a server's vault unseals its **Core**, where the Resident waits: the owner's process, a boss of
 the server's family (all three parts) at the server's level, 1.4× Integrity (1.1× on your first server). Its phase
-re-arms every part. A worm or ransomware Resident plays in acts instead (below): 1.1× Integrity. Beat it and the server is **taken over**: yours, teal on the map, its Core
+re-arms every part. A worm or ransomware Resident plays in acts instead (below): 1.1× Integrity. Its ♛ holds half its
+Integrity (taken from its other parts), and it runs a **Watchdog**: every 5 cycles its ♛ stands above its next tick,
+every other part patches a ◆ (up to its full). Crossing a tick restarts the count; past the last tick there is none.
+*watchdog n* on its ♛. Beat it and the server is **taken over**: yours, teal on the map, its Core
 quiet for good. Lose and you're disconnected, and for 6 hours it is a level stronger, up to three levels.
 
 On your Signal each solo boss takes its own Integrity and hits on top of the fight length (`BOSSES` long), so it runs
@@ -583,22 +586,56 @@ multiple (R3 ×1.2). A slow kill meets a round it can't survive. Crew bosses hav
 | REPO MAN (ransomware) | The Bounty event from level 8 | level 8 | 1.84× | cycle 34 |
 | HOLLOW CHOIR (ghostroot) | Its own event, from level 10 | level 10 | 1.33× | cycle 40 |
 
-Each plays in acts (below) with a part and a rule of its own, and a mechanic an act (docs/solo-bosses.md).
+Each plays in acts (below) with a part and a rule of its own, and a mechanic an act (docs/solo-bosses.md). RELAY-KING's
+and REPO MAN's ♛ holds 45% of the boss, taken from its other parts (`BOSSES` work.share).
 
-| Boss | Its part | Act 1 | Act 2 (♛ at 50%) | Act 3 (♛ at 25%) |
+| Boss | Its part | Act 1 | Act 2 (♛ at 60%) | Act 3 (♛ at 30%) |
 |---|---|---|---|---|
-| RELAY-KING | **Relay**: Broadcast every 4 cycles, its hit bigger by its base for each fragment on the board | Broadcast | **Crown Hop**: the ♛ (and its 25% tick) moves to the healthiest other part; the part it leaves heals 25% of its max and takes plain ticks | **Flood**: the Replicator hatches every 2 cycles, the Relay broadcasts every 3 |
+| RELAY-KING | **Relay**: Broadcast every 4 cycles, its hit bigger by its base for each fragment on the board | Broadcast | **Crown Hop**: the ♛ (and its 30% tick) moves to the healthiest other part; the part it leaves heals 25% of its max and takes plain ticks | **Flood**: the Replicator hatches every 2 cycles, the Relay broadcasts every 3 |
 | REPO MAN | **Ledger**: Collection every 5 cycles, its hit bigger by its base for each Lien | **Liens**: each of your commands a ◆ absorbs puts one on the Ledger (strips, piercing hits, burns and helpers don't); a Collection that lands or is cut clears them | Re-arms every part; a Collection 3 cycles out | **Interest**: each Lien counts twice; a Collection 3 cycles out |
-| HOLLOW CHOIR | A **Mimic**, its third part | One voice: the Mimic's beat every 4 cycles | **Second voice**: a second Mimic at the boss's size, beating 2 cycles behind the first | **Round**: each beat also plays back the two commands before it, at half (only those fired since the Round began); a cycle you hold adds nothing |
+| HOLLOW CHOIR | A **Mimic**, its third part | One voice: the Mimic's beat every 4 cycles | **Second voice**: a second Mimic at the ♛'s full size, beating 2 cycles behind the first | **Round**: each beat also plays back the two commands before it, at half (only those fired since the Round began); a cycle you hold adds nothing |
 
 On the board: ♛ on the crown part, ×*n* fragments on the Relay, §*n* Liens on the Ledger, *round* on a Mimic.
+
+**Floor bosses** (floorbosses.mjs, docs/boss-guide.md). Floors 2, 3 and 4 have bosses of their own: parts of their own
+only, the ♛'s act ticks at **60% and 30%** (every other part's ticks stay at 50% and 25%), the beat on a part of their
+own, a tell an act from their set (floor 4's deal none: their rule is the fight), and a verb an act. 0.4× to 0.91× Integrity, with more of it on the ♛; they enrage at cycle 36 to 44. Played blind (no rule answered) each loses most of its fights, and one misread at the wrong cycle makes the rest of the fight harder (a sale, a leak, a Dump or a Call grows the next).
+
+| Boss | Where | Lv | Its rule (on its row) | Act 2 (♛ at 60%) | Act 3 (♛ at 30%) |
+|---|---|---|---|---|---|
+| CENTRIFUGE (GLASSJAW) | Floor 2's floor job: its Boss step's server's Core | 14 | **Bidding**, on the Gavel (no ticks, so never cut): from every 3 cycles, each Surge it lands takes it one sooner, down to 2. Each one-part command you aim at it while the Rotor stands is a bid, one faster too (a delay or a Throttle isn't). A delay or Throttle on it withdraws it to 4, and SIGINT cuts a selling Surge. A Surge at every 2 sells to the buyer it names, whose part joins (TOLLGATE's Lockbox wards the Rotor ♛, SWARMLINE's Mirror twins the Gavel, PALEMASK's Veil hides its timers); the Gavel drops to every 3, each sale makes its Surge 50% harder for the fight, and (**Sold**) heals the Rotor ♛ 10% of its max. Nothing sells once the Rotor breaks. The Rotor's Encrypt comes every 7 cycles; no beat holds its ticks | **Reserve price**: a withdraw steps it back one | **Second lot**: two buyers a sale |
+| SHAKEDOWN (TOLLGATE) | The last room of every floor-2 Pit; back an hour after it falls | 12 | **Ransom Clock**, run by the Collector ♛ (it stops when the Collector breaks): 10 cycles; at 0 it leaks 35% of your max, 15% more each leak after (up to 65%), and restarts at 5. A Demand broken while the Collector stands halves the time left (*missed payment*). A Deadline (the Demand's, a wind-up) that lands adds 3; one called off buys nothing. Its Lockbox wards the Demand. **Leverage**: while a Demand stands, the Collector loses at most 15% of its max a cycle, and the rest of a hit is lost | **Second demand**, its Deadline on the same cycle; the Lockbox wards it too | **Final notice**: a leak re-arms the Demands and brings the Lockbox back |
+| SHOULDER SURFER (NULL CHOIR) | Floor 3's floor job: its Boss step's server's Core | 18 | **Replay**, on the Logger ♛ (half the boss): a Sync Window on even cycles only. The Logger takes damage only from commands fired in it; each one outside is logged, and at 2 (or every 6 cycles) its Dump (each one that plays your command back makes the next 50% bigger) plays your last logged command back at its full hit (a flat Dump if it wasn't a hit). The Pulse Node lands on the shut cycles | **Again**: every 4 cycles it plays your last three commands back, each at 40% | **From the top**: the log never clears, and the Dump plays the biggest command logged |
+| RECURSION (NULL CHOIR) | The last room of every floor-3 Gauntlet; back an hour after it falls | 19 | **Call**: frames stack over main() ♛. A one-part command at a lower frame lands on the top one; burns, helpers and area hits reach every frame. Every 5 cycles the top frame pushes a new one at 60% of its max, unless it is under a quarter of its own, or SIGINT stops it on its cycle; each Call let through makes every frame hit 35% harder and brings the next Call a cycle sooner, down to every 3 | **Return**: the top frame pushes a frame at 25% of its max as the act starts (it hardens nothing); a frame that breaks makes the one beneath attack a cycle sooner, 50% harder | **Overflow**: one more frame pushed; at 5 frames every frame attacks at once, the cycle after the Call |
+| NIGHT DESK (Kessler's old settlement process) | Floor 4's floor job: its Boss step's server's Core | 24 | **No Timeout**: its attacks never land. Each waits on its part as a pending trade. Your one-part command on a part settles its trades on you at half. At 4 pending, all settle in full and each trade after opens 25% bigger for the fight. Only the Desk ♛ takes damage, 12% of its max a hit at most; the Teller and the Clearing House go when it breaks. SIGINT, delays and Throttles do nothing to a trade | **Night shift**: the Night Clerk clocks in, a third trader holding one trade (it opens none of its own); a pending trade grows 15% a cycle | **Finality**: each trade you settle heals the Desk 4% of its max |
+| BYZANTINE (GLASSJAW) | The last room of every floor-4 Pit; back an hour after it falls | 26 | **Vote**: every 4 cycles, if the most damaged Node is 15% or more under the average of the Nodes standing, it is restored to that average, and every Node hits 30% harder for the fight. A hit takes 20% of a Node's max at most. Node B adds a fragment every 5 cycles | **Traitor**: the most damaged Node turns. While it is not the most damaged, a vote restores the most damaged to the healthiest Node's level | **Hard fork**: every broken Node returns as the act starts, at the standing Nodes' average; a Node that breaks after returns at the next vote, unless every other Node is under half |
+| CAMSWARM (SWARMLINE) | Floor 4's lair, on networks whose own boss isn't TRIPMINE (about half) | 24 | **Telnet Sweep**: every 5 cycles each part under half (never the Hive ♛) hatches a fragment and shields it: it takes no damage while that part stands, and drops when it breaks. Each fragment hatched brings the next sweep a cycle sooner, down to every 2. A fragment that lives 3 cycles is a Camera, a part with a Surge of its own. A hit takes 15% of a part's max at most; its fragments gnaw twice as hard | **Botnet**: every Camera fires with the C2 Node's Beacon; a broken C2 Node comes back, and each other part you broke returns in its place as a Camera at 30% | **Lockout**: the Hive boots a Camera, and takes no damage while a Camera stands |
+
+A floor job's Boss step points at a server on its floor's main road (never the lair); once the chain reaches the step,
+that server's Core holds the boss in the Resident's place for good, and beating it takes nothing over. A step posted at
+the lair before its boss was built moves to that server. On the board: the Gavel's interval and next buyer (red at 2),
+the buyer on a bought part, the clock on the Collector (red at 3 or less), *cap n* beside it (what Leverage still lets through this cycle) and the leak's chip in its column, *open* or
+*shut* and the log on the Logger with *again n*, *call n* (or *top*) on the top frame, *stacked* on the frames under it,
+and *n/5* on main() from act 3; a part's pending trades and their total, *n/4* on the Desk and *books* on its traders, and
+NIGHT DESK's attack chips as trades (dashed, a clock and the trade's size; solid red with all that settles on the one
+that fills the table);
+*vote n* on the Node a vote would restore (red, with what it restores, when it passes), *traitor*, *fork*; *sweep n* on
+the Hive (red, with how many would hatch), *cam n* on a fragment (*shielded* behind its part), *camera*, *locked*. The
+vote, the sweep and the leak are chips in their columns, beside their part's own attack. Each tooltip gives the rule and its answer.
 
 ### Boss acts (acts.mjs)
 
 A P4 boss (docs/puzzle-fights.md 7) plays in **three acts**: the first from the start, the next two from its ♛ part's
-ticks at 50% and 25%. Built: the worm and ransomware Residents and the three solo bosses.
+ticks at 60% and 30%. Built: the worm and ransomware Residents, the three solo
+bosses and the four floor bosses.
 
 - **One tick a hit.** A hit takes the ♛ under its next tick and no further, so no act is skipped.
+- **The act break** (actbreak.mjs). As the hit crosses the ♛'s tick, the tick bursts into red 1s and 0s. A breath
+  later the board's strip flares red with the act, *ACT 2 / 3 · TRAITOR*, for about 4 seconds, and the boss's emote
+  (its phase's `emote`) types out under its bar. The fight's clock holds meanwhile. Its sound is the *Tritone*: a heavy break as
+  the tick bursts, then a low G against its tritone, droning under the strip. Phones buzz twice short, once long; on
+  a desktop the boss's bar thumps. *ACT n/m* stays by the boss's bar, its rule and next tick in its
+  tooltip.
 - **A tell an act.** Act 1 deals the boss's first tell (its charge), act 2 its cast as well, act 3 its third.
 - **The beat** repeats, always on the board. Acts 2 and 3 bring the boss's mechanics (a Resident's: act 2 quickens its
   beat, act 3 makes every attack a cycle sooner).
@@ -611,6 +648,7 @@ ticks at 50% and 25%. Built: the worm and ransomware Residents and the three sol
 | RELAY-KING | **Broadcast**: its Relay's attack, bigger for each fragment | 4, 3 from act 3 | Clear the fragments, cut it, or a ◆ on you |
 | REPO MAN | **Collection**: its Ledger's attack, bigger for each Lien; each act calls one 3 cycles out | 5 | Few Liens, a cut, or a ◆ on you |
 | HOLLOW CHOIR | **Copy**: its Mimic copies what you fire and turns it on you (a second voice from act 2) | 4 | What costs least to have copied, hold, or break a voice |
+| The floor bosses | Its own part's attack: the Gavel's Surge, the Demand's Deadline, the Logger's Dump, main()'s Surge | its own | Their rules (above) |
 
 The Backlash's chips (*Lash −N*) sit on every part with an attack, in the columns the beat falls in.
 
@@ -629,6 +667,33 @@ Resident drops each of its two once, then makes no unique roll. After a miss the
 | REPO MAN | Repossessed Key (shell, 8) | Encryption on you stacks half as fast |
 | HOLLOW CHOIR | Choirboy (proxy, 10) | Scrambles on you last one cycle less |
 | HOLLOW CHOIR | Hollow Note (exploit, 10) | +30% damage on odd cycles |
+| SHAKEDOWN | Paper Trail (exploit, 12) | Your hits count 50% more toward calling off a wind-up, such as a Deadline |
+| SHAKEDOWN | Escrow (shell, 12) | A boss's enrage and the Ransom Clock come 2 cycles later |
+| CENTRIFUGE | Governor (proxy, 14) | An attack that lands within 2 cycles of its part's last one deals 25% less |
+| CENTRIFUGE | Cascade Failure (exploit, 14) | When you delay or Throttle an attack, its part takes 20 (grown with its level) |
+| SHOULDER SURFER | Privacy Screen (shell, 18) | The first part each fight that plays back or copies your command misses with it |
+| SHOULDER SURFER | Muscle Memory (script, 18) | A command fired exactly 2 cycles after your last deals 10% more |
+| RECURSION | Tail Call (exploit, 19) | When you break a part, your burns on the other parts tick once right away |
+| RECURSION | Stack Guard (proxy, 19) | The next attack on you within 2 cycles of a part breaking deals 20% less |
+| NIGHT DESK | Overdraft (proxy, 24) | Once a fight, a hit that would take you under 25% of your max leaves you there, and the rest lands over the next 3 cycles |
+| NIGHT DESK | Pre-Authorization (script, 24) | When you raise a shield, your next command's hits deal 10% more |
+| CAMSWARM | Changed Default (proxy, 24) | A virus can't play your helpers back at you. Your helpers deal 50% more to fragments |
+| CAMSWARM | Mass Reboot (script, 24) | When you break a part, every fragment takes 30 (grown with its level) |
+| BYZANTINE | Majority Attack (exploit, 26) | +8% damage for each part below half, up to +32% |
+| BYZANTINE | Quorum Sensor (proxy, 26) | The second attack to land on you in a cycle deals 30% less |
+
+Their set pieces: CENTRIFUGE drops Glass Ceiling's **Rotor** (as GLASSJAW's bosses and elites still do), SHOULDER SURFER
+On-Call's **Pager** (floor 4's lair boss still drops it too), NIGHT DESK its **Runbook** and BYZANTINE its **Failover** (no
+longer the lair bosses'), at a boss's set odds (8% a kill, +3% a miss). CAMSWARM holds a lair, so it pays as one: the
+lair's single roll (the same odds and pity), with floor 4's lair set pieces. Its pair comes first: while you lack
+either, a roll that hits gives one of them; once both are found, your network's natives as before.
+The Codex boss page groups its loot (*Grouped*): every kill, its uniques, its set pieces, each with the next kill's odds
+as a bar and the odds and pity in the bar's tooltip.
+
+**The Codex boss page** is a boss guide (WoW's dungeon journal): your fights, wins and research, its phases, parts, tells
+and loot. Each phase is listed by its tick (Phase 1 from the start, then one a ♛ tick) with its name; what its abilities
+do, line by line, reads only once its parts are researched to 50% on average (`BOSS_READ`; a crew boss at once). The
+floor bosses' lines are their `guide`, the rest their phase lines. It shows no signature, Integrity, enrage or blurb.
 
 ### Lairs and native bosses
 
@@ -643,7 +708,7 @@ after it falls. The map labels a found lair with its boss, and its card's boss t
 |---:|---|
 | 2 | DEADBOLT, BACK ORIFICE, PATCH TUESDAY, SLEEPWALKER, MIRRORSHADE |
 | 3 | HASHLORD, FLOODWALL, ECHOLALIA |
-| 4 | TRIPMINE |
+| 4 | TRIPMINE, CAMSWARM (a floor boss, not a native: its pair of uniques comes first in the lair's roll) |
 | 5–8 | none built yet: your native boss |
  A boss with a floor
 (HASHLORD 16, MIRRORSHADE 12) moves in only once you reach that level; until then the Core stays sealed and says from
@@ -994,6 +1059,11 @@ as you walk in, 1 code one time in five). No vault, nothing to take over, no puz
 | Nest | One family only, and strains twice as often |
 | Pit | Mixed families, 2 levels above the server, a second roll for drops. A third of its rooms hold a **◆ CREW elite** (Co-op); one that beats you, or that you run from, moves on and the room fills again in 30 minutes |
 | Gauntlet | Mixed families; clear every fight room in one visit for a bonus cache (60 + 12×level credits, code, XP) |
+
+On floor 2 a Pit's last room (its deepest fight room) is SHAKEDOWN's throne, on floor 3 a Gauntlet's is RECURSION's, and
+on floor 4 a Pit's is BYZANTINE's:
+the boss holds it at its level or the room's, whichever is higher, back an hour after it falls (a Gauntlet's full clear
+counts it).
 
 Each fight room fills again 3–5 minutes after it falls, a Stash 30 minutes after you take it. Clearing every fight
 room in one visit is a **full clear**.
@@ -1433,7 +1503,9 @@ stat the fill, its rarity the colour; uniques flicker now and then; `protocol-gl
 **Exploit** (weapon: Damage), **Proxy** (chest: Signal + Block), **Shell** (helm: Signal + Regen + Restore), **Script**
 (ring: Damage + Signal + Payload), and an **Implant** slot at level 15 and another at 30 (Implants drop from item level
 15). `load <id>` puts an item in its slot (a full slot swaps), `unload <id|slot#>`; loadouts change at home only. Each
-class loads its own. One of each unique and each Zero-day a loadout. The stash holds 40; a drop into a full stash is
+class loads its own. One of each unique and each Zero-day a loadout. **An item loads from 3 levels under its own**
+(`CONFIG.gearReq`, `reqLevel`): below that its datasheet says *Requires Level N* in red and Load is off. One already
+loaded stays on. The breach campaign has none. The stash holds 40; a drop into a full stash is
 deconstructed.
 
 ### An item: a base, affixes and a rule
@@ -1670,7 +1742,7 @@ five slot kinds, so a general set's 2-piece can go beside it.
 | **Patchwork** | 10–18: strain kills | Stitch (exploit, 10, ransomware strains): +4% damage [+5% crit] · Darn (proxy, 12, worm strains): +6% max Signal [+2 Block] · Hem (shell, 14, ghostroot strains): +2 Block [+5% damage] · Seam (implant, 15, any strain): +4% Clock Speed [+6% max Signal] | +5% damage, +5% max Signal | +5% Clock Speed | Each different skill you use in a fight adds +2% damage, up to +12% |
 | **Lantern Route** | 12+: LANTERN's couriers | Shortwave (proxy, 12): +5% Scavenge [+6% max Signal] · Logbook (script, 14): caches you take pay 10% more credits [+5% damage] · Antenna (implant, 15): you see a server's rare spawn on its map card [+5% Scavenge] | +10% Scavenge | Caches and vaults pay 25% more credits | |
 | **Glass Ceiling** | 14–26: GLASSJAW's bosses and elites | Rotor (exploit, 14): +5% damage [+5% crit] · Quorum (proxy, 17): +6% max Signal [+5% Clock Speed] · Ledger (script, 20): +5% crit [+5% damage] · Parachute (implant, 23): once a fight, below 25% Signal, heal 5% of max [+2 Block] | +6% damage | +10% damage while below half Signal | +10% Clock Speed while below half. Once a fight, dropping below 25% heals 10% of max |
-| **On-Call** | 18–30: the floor 3 and 4 lair bosses | Pager (proxy, 18): +5% Restore [+2 Block] · Runbook (script, 22): your first heal each fight is 15% larger [+6% max Signal] · Failover (shell, 26, floor 4): +2 Block [+5% Clock Speed] | +10% Restore | Healing past full becomes a shield, up to 10% of max Signal | |
+| **On-Call** | 18–30: SHOULDER SURFER and floor 4's lair boss (the Pager), NIGHT DESK (the Runbook), BYZANTINE (Failover) | Pager (proxy, 18): +5% Restore [+2 Block] · Runbook (script, 22): your first heal each fight is 15% larger [+6% max Signal] · Failover (shell, 26, floor 4): +2 Block [+5% Clock Speed] | +10% Restore | Healing past full becomes a shield, up to 10% of max Signal | |
 | **Cold Storage** | 19–26: vaults | Freezer (shell, 19): +2 Block [+6% max Signal] · Cold Cache (implant, 22): +6% max Signal [+5% damage] · Frost Line (proxy, 25): +1 Block while above 75% Signal [+5% crit] | +2 Block | Above 75% Signal, you take 8% less damage | |
 | **Overtime** | 22–30: puzzle boards won, a piece a kind | Punch Card (script, 22, Quarantine): +4% Clock Speed [+5% damage] · Time Clock (implant, 24, Cascade): +6% max Signal [+5% Clock Speed] · Late Pass (proxy, 26, Ping sweep): +2 Block [+5% crit] · Coffee Run (exploit, 28, Hunter chase): +4% damage [+6% max Signal] | +5% Clock Speed | From a fight's 6th cycle, +8% damage | From the 6th cycle, cooldowns tick an extra cycle every other cycle |
 | **Burst Buffer** | 25–32: ★ rare spawns | Cache Line (exploit, 25): +5% crit [+5% damage] · Prefetch (script, 28): your first skill each fight deals 8% more [+5% crit] · Flush (implant, 31): +4% Clock Speed [+6% max Signal] | Critical strikes deal 8% more | Your first two skills each fight deal 20% more | |
@@ -1702,12 +1774,38 @@ five slot kinds, so a general set's 2-piece can go beside it.
 | A ★ rare spawn (by floor) | 0.08% · +0.003% · 0.03% | 205 kills |
 | A strain kill (by its lineage) | 0.2% · +0.05% · 0.05% | 53 kills |
 
-- **Sources not built yet** drop from their floor's lair boss (On-Call from floors 3 and 4, Bedrock and the tier sets
+- **Sources not built yet** drop from their floor's lair boss (Bedrock and the tier sets
   from floor 8's). Floors 5 and 6 have no set of their own yet.
 - **The LOWLIGHT Badge** comes with wick's last letter at level 22 (Mail), with wick's Old Toolkit rebuilt at your level. The Toolkit can't be deconstructed, and a full stash still takes it.
 - **The tooltip** reads in WoW's grammar under the piece's effect: its green line (set green once on, grey until then),
   the set's name and count (*Kestrel Clearance (2/3)*), its pieces (??? until found), and each bonus as *(2) Set: …*.
   The Loadout lists **Set bonuses**. **Set green** (`--r-set`) sits beside the rarity colours; a piece shows in set green too (its name, card, tile and glyph), whatever its rarity.
+
+### Earned pieces
+
+One unique a floor comes from that floor's **feat**, never a roll (`earned.mjs`; the counts in one table,
+`content/earned.mjs`, to tune after play). The count starts when you reach the floor's band; when it fills, the piece
+arrives once, at your level, through the usual *New in collection* row. Outside the one-an-hour rate.
+
+| Unique (slot, level) | Feat | Effect |
+|---|---|---|
+| **Street Atlas** (script, 8) | Map every server on The Sprawl | +10% damage in a room you haven't cleared |
+| **Quiet Hours** (shell, 13) | Bank 3 Router vaults on Backhaul, the Tracker never reaching you that visit | +6% Stealth |
+| **Sweetener** (implant, 18) | Take 12 bait caches on Honeypots | Taking a cache heals 5% of your max Signal |
+| **Ring Main** (proxy, 24) | Hold 8 servers on Coldline | +1 Block for every 5 servers you hold, up to 4 |
+| **Mixed Bag** (script, 30) | Take over Deep Core servers with 6 different specials (Guarded aside) | +3% damage for each of the server's specials |
+| **Superuser** (implant, 36) | Root 3 on three servers on Kernel Space | +6% damage and max Signal on a server you hold |
+| **Bottleneck** (exploit, 42) | Clear every elite room on The Sink, every server located | +4% damage for each tell you answered this fight, up to 12% |
+| **Last Mile** (proxy, 48) | Map every server on Bedrock | +5% damage for each part in the fight past two |
+
+- **Counted:** bait caches and Router vaults as events from the band on (`s.earned`), Mixed Bag's different specials
+  too; the rest read the floor as it is, checked every second. A server cleared is a server Mapped; *every server* is
+  the lair too. An elite room counts once, for good; a server you haven't located counts as one until you do.
+- **Shown from the start:** the Ledger names it under its floor, muted, a cell a count and its goal (*Bait caches on
+  Honeypots 4/12*). The tooltip: *Sweetener: Unique implant, level 18. ▸ Take 8 more bait caches on Honeypots.*
+- **Pins:** up to 3 (`pin <piece>`, `unpin`; the pin on its Ledger line), kept in `s.pins`. The map lists them under
+  Contracts, **Pinned n/3**: a tracker row each, *Floor feat* over its name, its cells and its goal in the Ledger's
+  words, on its own line when long; a click opens its Ledger entry. On a phone, one chip. An earned piece drops off.
 
 ### Faction gear
 
@@ -1764,7 +1862,8 @@ as you left it. An entry lists its slots, one line each, in sections; daemons ha
 | Feats | its achievements (a boss's, a floor's, each set's) | you earn it |
 
 A line shows the slot's icon, its name (**???** until it fills) and a muted hint (its level and where it drops, or its
-research toward 60), and the date it first came. The rest is its tooltip. The first time a slot fills, one quiet pager
+research toward 60), and the date it first came. An earned piece is named from the start: its cells, goal and count, and
+its pin (*Earned pieces*). The rest is its tooltip. The first time a slot fills, one quiet pager
 line says so and opens its entry. A save keeps `s.collection = { slot: when }`: a unique by its id, `m:` a part
 mastered, `b:` a strain beaten, `w:` a boss won, `full:` an entry filled. An older save stamps what it has already
 done on load (as *before the log*), with one pager line.
@@ -2014,7 +2113,8 @@ minutes after you take it.
 
 A contract that points at a room marks it on that server's map (its address amber, the contract's mark), and so does any
 job a room's live virus would count for. The strip shows **Contract** and its progress (its tip has each one, a row each as
-the map's tracker draws it), the map's card each contract on that server. A takeover or recovery points at a server you've found, or at an **unknown server** one hop past one: you
+the map's tracker draws it), the map's card each contract on that server. Pinned earned pieces sit under the tracker
+(*Earned pieces*). A takeover or recovery points at a server you've found, or at an **unknown server** one hop past one: you
 trace it to find it.
 
 **The board** opens with the turf letter (the storyline's fourth), or once you've held the claimjack or turf job for an
@@ -2381,16 +2481,27 @@ no attaching, detaching or memory pips.
 
 ### People and #net
 
-- **People** (presence.mjs) is simulated until there's a server (`?dev`: `online sim` turns on a pool of 20 hackers who
-  log on and off; `online off`). The people button on the top bar (a dot and how many are online; violet when a friend
-  is on) opens **Friends** and **Online**: handle, class and level, and where they are (SPRAWL-00 and its room; *on a
-  run*, *at home* are private). `friend add|remove <handle>`, `friends`, `who`. SPRAWL-00 is shared: `ls` and arriving
-  in a room say who else is there.
+- **Runners** (runners.mjs, docs/runners.md R1): 32 people per network, drawn from its seed. Each has a handle, a class
+  (and subclass from 10), a level 4 below to 4 above yours, a faction, a temperament (Careful, Steady, Bold), one to
+  four traits (data only for now) and a trade: a payment frozen on a floor one to three below where they work.
+- **Their loop**, on logged-on time only (nothing moves while you're away): a 6–14 minute cycle on the floor of their
+  level: their faction's hub (else the floor's entry), out along the links to a server near their level, work it, and
+  back to be paid. A job's outcome is rolled from their level against the server's (Careful +8%, Bold −8%), never
+  fought; a crash pulls them out until the next cycle. Every cycle climbs them toward their trade's floor (300–900
+  cycles); reaching it, they start on another. They never touch your servers or move a faction. Saved: `s.runners`
+  (the logged-on clock, and who you know).
+- **The Rail**: under Contracts on the map, the runners you know (heard on #net), last heard first, six at most:
+  handle, class and level, where (`→` a server on the road). Click one to draw it on its floor: a paper-white diamond
+  with the handle, a dotted route through the servers passed, a dashed ring where it's heading. Again to drop it.
+- **People**: the people button on the top bar (how many are on; violet when a friend is) opens **Friends** and
+  **Online**: handle, class and level, where. On a network the people are its runners and your consortium's members;
+  a save with no network seed keeps the old simulated pool behind `?dev` `online sim`. `friend add|remove <handle>`,
+  `friends`, `who`. SPRAWL-00 is shared: `ls` and arriving in a room say who else is there.
 - **#net** (channel.mjs), the net talking to itself like WoW's General chat. Its latest line sits over the prompt; click
   it for the drawer. `say <text>` (or `'text`) posts, up to 120 characters; `channel off|on` mutes it. Every line comes
   from real game state: the director's events and how they end, faction contacts speaking for their side after a feud
-  (never at you), your feats (a unique found, a title, every tenth level), and simulated hackers chatting from what
-  they're doing and reacting to you. A line every 20–90 seconds of logged-on time; the last 80 stay on the save. It never
+  (never at you), your feats (a unique found, a title, every tenth level), and runners telling their real turns (a server
+  cleared, a crash, pay, a trade reached), chatting from what they're doing and reacting to you. A line every 20–90 seconds of logged-on time; the last 80 stay on the save. It never
   touches the pager and rolls its own dice.
 
 ### Profile: finger (profile.mjs)
@@ -2483,7 +2594,7 @@ developer mode, `crew sim <classes>` adds bot crewmates from level 5 (`crew`, `c
   damage, one more ◆ and a clash (`ELITE`; Fights), only +5% a player. A champion, a feud and the farm's packs size
   their own Integrity, keep ×1.3 damage and roll no clash. Three times the XP, three drop rolls, never less than a blue, 8% a
   unique. Never in the way of anything you need.
-- A crewmate at 0 Signal is down for the fight; you going down ends it. Their hits stay quiet: the sounds are yours.
+- A crewmate at 0 Signal is down for the fight; you going down ends it. Their abilities sound at half your level, two a batch at most, and never on your beat.
 
 ### Co-op, peer to peer (coop.mjs)
 
@@ -2522,7 +2633,7 @@ threat, a world event, a contract ready, an offer, a letter, a thread, wick's le
 A page stays while it's true, an hour at most; the same news again replaces the old line.
 
 - **The tray:** one icon per waiting page, most urgent first (threats, then events by time left, then a ready contract,
-  letters, offers), amber, red for a threat; up to four on a desktop, three on a phone, then **+n**. **One tap** does
+  letters, offers), amber, red for a threat; up to four on a desktop, three under 900 px, then **+n** (a phone shows the lamp and the count). **One tap** does
   the page's thing (**Deliver**, **Read**, **Jack in**, **Show**…); mid-fight or on a run, anything that would start a
   fight shows you where it is instead. A page that takes on a task (an offer, a world event's fight) shows its quest
   first, in the quest window's look, with **Take** (or **Intercept**, **Hunt**…) and **Cancel**.
@@ -2538,15 +2649,41 @@ casing's options. Nothing plays before your first click or key. With `?dev` a **
 test, the wire, fight reports and the log (`logs` opens it).
 
 - **Sound** is recorded CC0 samples and a little synthesis in an old-hardware palette (`dist/sfx/CREDITS.md`), with a
-  quiet room tone under it. **Places:** each floor and hub has its own quiet loop, and each virus family a sound under
+  quiet room tone under it. **Abilities:** each ability has a sound of its own, timed to its effect: it starts as it
+  leaves the key and lands with the number, in place of the hit's shared voice (the flash and the buzz stay). With
+  Screen effects off or Motion off it plays on the number's beat. A mastered ability adds a layer a tier; the break
+  that wins a fight adds your class's flourish over the break's sound. Burn ticks, breaks and the virus's own sounds
+  are as they were. **Places:** each floor and hub has its own quiet loop, and each virus family a sound under
   its fights, adding its attack and break sounds.
 - **Music:** a track on your server and another on a run. Each virus family's fights have their own theme (dark,
   gritty industrial synthwave, synthesized live): it fades in as the fight starts, builds as the virus breaks, and fades
   back to the track when the fight is over. It plays a little under the track, on the Music slider.
 - **UI scale** (Settings, `ui scale <auto|80–200>`, 100% by default) draws the whole screen larger or smaller;
   it grows only while the screen stays 1700px wide in its own pixels. **Auto** sizes it to 1800px.
-- **On a phone** (under 480 px) the board shows Now, +1 and +2 and the tray is three wide: tap a skill to pick it, tap
-  again to fire. Only a tap on the prompt itself opens the keyboard.
+- **On a phone** (up to 600 px wide, or 500 px tall on a touch screen) the top bar is one strip (the pager's lamp and
+  its count, Integrity, Signal, credits; none in a fight) and the pages are a tab bar at the bottom: Map (a fight, run
+  or breach in its place while there is one, a red dot while you're away), Mail, Loadout, Server, **More** (your Net
+  ID card, Codex, Rig, Settings, the command line). The prompt shows only from More's **>_**; in a fight it never takes
+  the focus. A tap on anything with a rule shows its card in a sheet; a long press on a button shows its card without
+  firing it. Under 480 px the board shows Now, +1 and +2 and the tray is three wide: tap a skill to pick it, tap again
+  to fire.
+- **The maps on a phone.** The map fills the screen between the strip and the tab bar; pinch to zoom, a double tap
+  on the ground zooms in there or back out, one finger pans. The floors are one row. Under them a row of chips: red for
+  what's coming (its count and the soonest timer), amber for contracts under way, a green ✓ for the ones to turn in. A
+  tap opens the list. A tap on a server brings up its name, level and main button; ▴ opens its whole card. On a server,
+  the header is one line (its name, Signal, rooms cleared, the hunter's countdown; a tap on the name shows the rest),
+  one tap walks, and a room's choice comes up with both buttons by your thumb. Wait and Jack out float at the map's
+  bottom right. With no strip there, the pager is in More.
+- **Pop-ups on a phone** all come up as one sheet from the bottom: a server's card, a room's, the Server page's
+  panel, Comms, a daemon's panel, an item's datasheet, a journal, a quest's dialogue and its reward, the level-up.
+  Drag it down or tap outside it to close.
+- **A fight on a phone** fits one screen: the HUD is one line, your bar and its number on the left (a crewmate as a
+  thin violet line under it), the virus's with its ◆ on the right, its window at the end. A tap on a bar shows its card:
+  the virus's name, level, family, writer, Integrity, ◆ and rules; your Integrity, statuses and gear. Under it the
+  board in the height left (no You row: the key you've picked is outlined amber), the log's latest line over the tray
+  (a tap opens the log), and the tray in two rows of four. The column at the row's end is the menu key (the pager's lamp on it): the pages,
+  the pager and the command line. Past eight keys, **+n** under it opens the rest. In its half the virus's window steps
+  out over the board where no chip sits, and goes home after. On its side the board takes the left with +3.
 
 ### Screen effects
 
@@ -2633,7 +2770,7 @@ Developer commands work only in tests, playtest pages, a test bench and with `?d
   empty (never under yours; a part's at its own, a rival's one over you). A rival's later fights bring its counter, read
   from your win in the one before. **Again** (`developer fight again`) restarts the last pick; ♥ refills first.
 - **Playtest pages:** `?playtest=rooms` (a throwaway server of rooms, its clocks ten times as fast), `?playtest=<strain
-  or fixture>`, `?playtest=part:<id>` (`part:<id>.exe` for its .exe build), `?playtest=fx` (every ability effect, tier and break finisher, fired from its key, by result, status and ticks left).
+  or fixture>`, `?playtest=part:<id>` (`part:<id>.exe` for its .exe build), `?playtest=fx` (every ability effect and tier, fired from its key, by result, status and ticks left; every virus attack on your bar, by result, with its sound).
 - `developer scene <id>` plays a transmission again. `developer levelup preview`, `developer thread preview`, `developer pager fill`, `developer parts`, `developer
   event`, `developer exfil`, and the rest under each section.
 
@@ -2687,9 +2824,12 @@ Checked by `node balance.mjs` (docs/BALANCE.md, `balance.test.mjs`), `farmsim.mj
 
 ## Saves
 
-The save is `SAVE_VERSION` 61 (combat.mjs). An older save is migrated on load, each step keyed on the field it converts,
+The save is `SAVE_VERSION` 62 (combat.mjs). An older save is migrated on load, each step keyed on the field it converts,
 so it is safe to run twice; nothing a save held is lost.
 
+- **Earned pieces** (no version of their own): `s.earned` (each count) and `s.pins`, made on first use (`earned.mjs`). A
+  piece you had found stays found.
+- **v62** runners: `s.runners` (the logged-on clock, who you know), made on first use (`runners.mjs`).
 - **v61** every hub's Shop has one shape: the agency stock, the premium shelves and the hubs' stock counts go
   (`store.mjs shopRestore`, keyed on the fields).
 - **v60** payloads, hub capture and swarms are cut: a held hub pays out once (its bank and a day of its income, each

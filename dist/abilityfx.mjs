@@ -50,17 +50,11 @@
 // ones and a glint that lingers under 300 ms) and the row's own overrides (TIERS: Ban's heavier hammer and the crack it
 // leaves, Ping's echo off every part, Overload's forks…). Every tier keeps every rule above. Your effect plays at the
 // tier you chose for it (default: the highest you've earned); a crewmate's at tier 1.
-//
-// Break finishers (FINISHERS, finisherLayout): the break that wins the fight plays your class's flourish on that part's
-// row and nowhere else, within FIN_CAP (900 ms), in place of the plain dissolve's bits: the Breaker's shards scatter,
-// the Bastion's seal comes down, the Infiltrator's part falls apart into 1s and 0s, the Operator's helpers converge
-// and pop (a subclass varies its class's: SUB_FINISHERS). The same rules: aria-hidden, no input, no background, ends
-// unseen, Screen effects and Motion.
 
-import { SPIKE, ABILITIES, SUBS } from './data.mjs';
+import { SPIKE, ABILITIES } from './data.mjs';
 import { NS, DEFS as LIGHT_DEFS, drawLight, throwN, crackNet, firePhases, endOf, startOf, startOf as lightStart, later as lightLater, capped } from './abilitylight.mjs';
-import { RECIPES, TIER_UP, TIERS, FINISHERS, SUB_FINISHERS } from './abilityfx-table.mjs';
-export { RECIPES, TIER_UP, TIERS, FINISHERS, SUB_FINISHERS } from './abilityfx-table.mjs';
+import { RECIPES, TIER_UP, TIERS } from './abilityfx-table.mjs';
+export { RECIPES, TIER_UP, TIERS } from './abilityfx-table.mjs';
 
 // Font metrics of the layer (style.css .afx): a monospace character is 0.6 of its size wide, a line 1.05 of it tall.
 export const CW = 0.6, LH = 1.05;
@@ -75,8 +69,7 @@ export const TRAVEL = { perPx: 0.75, min: 160, max: 340, near: 24 };
 // nothing for a light hit or a miss, up to 75 for a big one, 52 on ◆, 105 for a crit. HOLD: a crit's swing or punch
 // draws back that long first.
 export const CONTACT = new Set(['swing', 'punch', 'dart', 'fly', 'bolt', 'all', 'wave']);
-// The motions that play where they land and make contact there (a mark comes down, a clamp shuts, a cut, a blast; a
-// burn being set catches where it lands): the same rules.
+// The motions that play where they land and make contact there (a mark comes down, a clamp shuts): the same rules.
 export const LANDS = new Set(['mark', 'clamp', 'slash', 'blast']);
 export const HOLD = 120;
 // The motions that draw back (a crit; every Breaker's) before they strike.
@@ -857,7 +850,7 @@ function warp(el, at, stop) {
 // 'crew'), rnd, origin ('key' | 'bar' | 'here'), marks (the statuses the hit cashed in: exposed, quarantined, hooked,
 // tagged), cadence (its class's rhythm: CADENCE), left (a burn's tick: the ticks after this one). els: the pieces (on
 // the page as spans); light: what is drawn in light (abilitylight.mjs), in tone.
-export function layout(R, geo, { lvl = 'full', power = 0.3, crit = false, result = 'hit', kind = 'you', rnd = Math.random, origin = 'bar', marks = [], cadence: cad = null, left = null, broke = null, results = null } = {}) {
+export function layout(R, geo, { lvl = 'full', power = 0.3, crit = false, result = 'hit', kind = 'you', rnd = Math.random, origin = 'bar', marks = [], cadence: cad = null, left = null, broke = null, results = null, brokeOn = null } = {}) {
   if (!R || !lvl || !geo) return null;
   if (cad?.wind && R.motion === 'mark' && R.on !== 'you') R = { ...R, drop: true }; // the Breaker's marks slam down
   if (crit) result = 'crit';
@@ -946,6 +939,39 @@ export function layout(R, geo, { lvl = 'full', power = 0.3, crit = false, result
     const t1 = tc + 20, t2 = t1 + Math.max(140, RT(P.T));
     light.push({ kind: 'comet', a: at, b: P.O, lift: -16, t1, t2, R0: 3.2, tone: 'crit' }, { kind: 'glint', x: P.O.x, y: P.O.y, t0: t2 - 10, s: 13, dur: 220, tone: 'crit' });
   }
+  // An ability's own rule, shown.
+  // spread: it carries on from the part to every other (Shatter's shards in steel, Chain Reaction, Wormable): a spark
+  // jumps to each, nearest first, a beat apart, a small flash where it lands. 'burns' (Propagate): each part catches
+  // fire as its spark lands.
+  if (R.spread && at && !miss) {
+    const others = P.parts.filter((q) => Math.hypot(q.M.x - at.x, q.M.y - at.y) > 8).sort((a, b) => Math.hypot(a.M.x - at.x, a.M.y - at.y) - Math.hypot(b.M.x - at.x, b.M.y - at.y)).slice(0, 5);
+    others.forEach((q, k) => {
+      const t1 = tc + 90 + k * 80, t2 = t1 + 130, tone = R.spread === 'steel' ? 'steel' : undefined;
+      light.push({ kind: 'comet', a: at, b: q.M, lift: 18, t1, t2, R0: 2.4, tone }, { kind: 'flash', x: q.M.x, y: q.M.y, t0: t2, R: 11, dur: 170, tone }, { kind: 'ring', x: q.M.x, y: q.M.y, t0: t2, rx: 12, ry: 8, dur: 220, w: 1, tone });
+      if (R.spread === 'burns') for (const b of R.burst || []) throwIt(b, countOf(b, { lvl, power, crit }), R, { ...P, S: q.S, M: q.M, bar: q.bar, row: q.row, floor: q.name.b + 1 }, t2 * SPEED);
+    });
+  }
+  // breaksAll: it breaks up to that many ◆ on every part (Fork Bomb; brokeOn: how many each part lost, by id): each
+  // part's ◆ take their steel strikes as its copy arrives, a beat apart.
+  if (R.breaksAll && R.motion === 'all') P.parts.slice(0, 6).forEach((q, i) => {
+    const C2 = q.chits, res = resultOn(c, q);
+    if (!C2?.n || res === 'miss') return;
+    const nb = Math.min(brokeOn ? brokeOn[q.id] || 0 : R.breaksAll, C2.n), f0 = Math.max(0, Math.min(C2.i, C2.n - nb)), t0 = RT(i * 40 + Math.max(1, travelOf(P.O, q.M)));
+    for (let k = 0; k < nb; k++) {
+      const x = C2.l + ((f0 + k + 0.5) * (C2.r - C2.l)) / C2.n;
+      light.push({ kind: 'flash', x, y: C2.y, t0: t0 + k * 60, R: 10, dur: 180, tone: 'steel', contact: true }, { kind: 'sparks', list: throwN(rnd, 4, { x, y: C2.y }, t0 + k * 60, { a0: -Math.PI / 2, spread: Math.PI * 0.7, v: [120, 260], g: 1300, drag: 3, life: [150, 250] }), w: 1, tone: 'steel' });
+    }
+  });
+  // cuts: it stops the part's attack: a line of light pulled tight through its attack chip, held a moment.
+  if (R.cuts && P.chip && !miss) { const y = (P.chip.t + P.chip.b) / 2; light.push({ kind: 'tether', from: { x: P.chip.l - 4, y: y + 3 }, to: { x: P.chip.r + 4, y: y - 3 }, t0: tc + 60, dur: 520 }); }
+  // heals: your bar takes it: a light runs along your bar from its left end (a hit that heals, Reclaim: from the part
+  // back to your bar first).
+  const yb = geo.mine?.bar;
+  if (R.heals && yb && !miss) {
+    const back = R.on !== 'you' && at, t1 = back ? tc + 80 : tc + 40, t2 = t1 + (back ? 220 : 0), y = (yb.t + yb.b) / 2;
+    if (back) light.push({ kind: 'comet', a: at, b: { x: yb.l + 20, y }, lift: 30, t1, t2, R0: 3 });
+    light.push({ kind: 'comet', a: { x: yb.l, y }, b: { x: yb.l + (yb.r - yb.l) * 0.7, y }, lift: 0, t1: t2, t2: t2 + 260, R0: 3 }, { kind: 'glint', x: yb.l + (yb.r - yb.l) * 0.7, y, t0: t2 + 240, s: 10, dur: 180 });
+  }
   // What it does to the part's attack (Rate Limit throttles it): brackets snap onto its attack chip.
   if (R.onto === 'chip' && P.chip && !miss) light.push({ kind: 'brackets', box: P.chip, t0: tc + 110, dur: 460 });
   // A mark that misses: a puff where it would have come down.
@@ -987,21 +1013,13 @@ export function layout(R, geo, { lvl = 'full', power = 0.3, crit = false, result
   // ms already).
   for (const el of els) { el.delay /= SPEED; el.dur /= SPEED; if (el.fms) el.fms /= SPEED; }
   if (!els.length && !lights.length) return null;
-  return { els, light: lights, tone, impact: tc, stop: RT(stop), travel: RT(T), from: P.from, dur: Math.max(0, ...els.map((e) => e.delay + e.dur), ...lights.map(endOf)) };
+  return { els, light: lights, tone, impact: tc, stop: RT(stop), travel: RT(T), hold: RT(hold), from: P.from, dur: Math.max(0, ...els.map((e) => e.delay + e.dur), ...lights.map(endOf)) };
 }
 
-// ---------- break finishers ----------
-// The longest a finisher plays (ms): every piece is gone by then.
-export const FIN_CAP = 900;
-// A class's finisher, with its subclass's variation (a subclass of another class changes nothing), or null.
-export function finisherOf(cls, sub = null) {
-  const F = Object.hasOwn(FINISHERS, cls) ? FINISHERS[cls] : null;
-  if (!F) return null;
-  return SUBS[sub]?.cls === cls && SUB_FINISHERS[sub] ? { ...F, ...SUB_FINISHERS[sub], sub } : F;
-}
+// ---------- the winning break ----------
 // The break that wins the fight in a batch of events: the last part broken before its victory (a C2 node's fragments
-// dropping with it aside), and only if it was yours; else null.
-export function finisherBreak(events) {
+// dropping with it aside), and only if it was yours; else null. It plays in slow motion (app.js slowmo).
+export function winningBreak(events) {
   const won = (events || []).findIndex((e) => e?.type === 'victory');
   for (let i = won - 1; i >= 0; i--) {
     const e = events[i];
@@ -1009,85 +1027,9 @@ export function finisherBreak(events) {
   }
   return null;
 }
-// Every piece kept on the part's row: a key whose box (turned or not: its widest) pokes out of the row is moved in.
-function confine(el, box) {
-  const turns = el.keys.some((k) => (k.r || 0) !== (el.keys[0].r || 0)); // a turn between keys can poke out mid-way: its widest
-  for (const k of el.keys) {
-    const q = boxAt(el, k), cx = (q.l + q.r) / 2, cy = (q.t + q.b) / 2;
-    const half = turns ? { x: (Math.hypot(el.w, el.h) * (k.s ?? 1)) / 2, y: (Math.hypot(el.w, el.h) * (k.s ?? 1)) / 2 } : { x: (q.r - q.l) / 2, y: (q.b - q.t) / 2 };
-    const dx = cx - half.x < box.l ? box.l - (cx - half.x) : cx + half.x > box.r ? box.r - (cx + half.x) : 0;
-    const dy = cy - half.y < box.t ? box.t - (cy - half.y) : cy + half.y > box.b ? box.b - (cy + half.y) : 0;
-    k.x += dx; k.y += dy;
-  }
-  el.x = el.keys[0].x; el.y = el.keys[0].y;
-  return el;
-}
-// Each: (finisher, points, ctx) → its pieces, on the part's row (P.row), from 0 (the break).
-export const FIN_MOTIONS = {
-  // Shards: the part's name splits into shards that scatter along its row both ways, spinning (a blast at its middle
-  // too, for the Demolitionist).
-  shatter(F, P, c) {
-    const out = [], n = c.lvl === 'full' ? 22 : 11, nm = P.name;
-    for (let i = 0; i < n; i++) {
-      const size = F.size + Math.round(c.rnd() * 3), x0 = nm.l + (nm.r - nm.l) * c.rnd() - (size * CW) / 2, y0 = (nm.t + nm.b) / 2 - (size * LH) / 2 + (c.rnd() - 0.5) * 8;
-      const side = x0 + (size * CW) / 2 < (nm.l + nm.r) / 2 ? -1 : 1, d = 40 + c.rnd() * 150, at = c.rnd() * 60, life = 480 + c.rnd() * 260;
-      out.push(mote('p shard', pick(F.chars, c.rnd), size, x0, y0, at, life, [{ at: 0, x: x0, y: y0, o: 1, s: 1, e: OUT }, { at: 0.55, o: 0.9 }, { at: 1, x: x0 + side * d, y: y0 + (c.rnd() - 0.5) * 18, o: 0, r: (c.rnd() - 0.5) * 540, s: 0.7 }]));
-    }
-    if (F.blast && c.lvl === 'full') { const el = framed('art', { frames: RECIPES.detonate.frames, fms: 90 }, 14); out.push(track(el, 30, [{ t: 0, ...ctrAt(el, P.M), s: 0.7, o: 0 }, { t: 30, o: 1 }, { t: 200, s: 1.15 }, { t: 420, s: 1.3, o: 0 }])); }
-    return out;
-  },
-  // A seal: a stamp comes down on the part's name, tilted, thuds, holds a moment and fades.
-  seal(F, P, c) {
-    const el = piece('art seal', [F.word], F.size, {}), at = ctrAt(el, P.M), L = F.land, D = F.dur;
-    return [track(el, 0, [{ t: 0, ...at, s: 1.7, r: -6, o: 0, e: IN }, { t: L, s: 1, o: 1, e: OUT }, { t: L + 50, s: 1.06 }, { t: L + 120, s: 1 }, { t: D - 220, o: 1 }, { t: D, o: 0, s: 1.02 }])];
-  },
-  // The part's name falls apart into 1s and 0s: a grid of them over its name lit left to right, each dropping away.
-  dissolve(F, P, c) {
-    const out = [], nm = P.name, size = F.size, w = size * CW, h = size * LH;
-    const cols = Math.max(6, Math.floor((nm.r - nm.l) / w)), rows = Math.max(1, Math.min(2, Math.round((nm.b - nm.t) / h)));
-    for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
-      if (c.lvl !== 'full' && (i + j) % 2) continue;
-      const x0 = nm.l + i * w, y0 = nm.t + (nm.b - nm.t - rows * h) / 2 + j * h, lit = (i / cols) * 300 + c.rnd() * 40, life = 380 + c.rnd() * 180;
-      const fall = 6 + c.rnd() * 18, drift = (c.rnd() - 0.5) * 12;
-      out.push(mote('p bit', pick(F.chars, c.rnd), size, x0, y0, lit, life, [{ at: 0, x: x0, y: y0, o: 0 }, { at: 0.08, o: 1 }, { at: 0.3, o: 0.6 }, { at: 0.42, o: 1, y: y0 }, { at: 1, x: x0 + drift, y: y0 + fall, o: 0, s: 0.8 }]));
-    }
-    return out;
-  },
-  // Helpers walk in from both sides of the part's row, meet on its name and pop (a flash, or the subclass's piece).
-  converge(F, P, c) {
-    const out = [], n = c.lvl === 'full' ? F.count : Math.max(2, Math.ceil(F.count / 2)), L = F.land;
-    const left = P.row.l + 4, right = Math.min(P.row.r - 4, P.cell.r + 260);
-    for (let k = 0; k < n; k++) {
-      const el = pieceOf('art', F, F.size), fromLeft = k % 2 === 0, lane = Math.floor(k / 2);
-      const a = { x: fromLeft ? left : right - el.w, y: P.M.y - el.h / 2 + (lane % 2 ? 4 : -4) };
-      const b = { x: P.M.x - el.w / 2 + (fromLeft ? -1 : 1) * (6 + lane * el.w * 0.55), y: P.M.y - el.h / 2 };
-      const ks = [{ t: 0, ...a, o: 0 }];
-      for (let i = 1; i <= 6; i++) { const f = i / 6; ks.push({ t: L * f, x: lerp(a.x, b.x, f), y: lerp(a.y, b.y, f) - (i % 2 ? 3 : 0), o: 1 }); }
-      ks.push({ t: L + 60, s: 1.15, x: b.x, y: b.y }, { t: L + 160, s: 0.3, o: 0, x: P.M.x - el.w / 2, y: P.M.y - el.h / 2 });
-      out.push(track(el, k * 30, ks));
-    }
-    const pop = F.pop ? piece('art', [F.pop], 16, {}) : piece('p flash', ['*'], 22, {});
-    out.push(track(pop, L + 150, [{ t: 0, ...ctrAt(pop, P.M), s: 0.5, o: 0, e: OUT }, { t: 50, s: 1.25, o: 1 }, { t: F.pop ? 300 : 200, s: 1.5, o: 0 }]));
-    return out;
-  },
-};
-// A finisher on a board → { els, impact, dur }, or null (no part row). opts: lvl ('full' | 'calm'), rnd, kind.
-export function finisherLayout(F, geo, { lvl = 'full', rnd = Math.random, kind = 'you' } = {}) {
-  if (!F || !lvl || !geo?.part?.row) return null;
-  const P = pointsOf({ ...F, on: 'part' }, geo, 'here');
-  if (!P) return null;
-  const c = { lvl, power: 0.6, crit: false, rnd, t0: F.land || 0, arrive: 0, grow: 1 };
-  const els = (FIN_MOTIONS[F.motion] || MOTIONS.none)(F, P, c);
-  for (const b of F.burst || []) els.push(...PARTICLES[b.style](countOf(b, { lvl, power: 0.6 }), F, P, { ...c, t0: (F.land || 0) + (F.motion === 'converge' ? 150 : 0) }, b));
-  if (!els.length) return null;
-  for (const el of els) {
-    if (kind === 'crew') el.cls += ' crew';
-    confine(el, P.row);
-    if (el.delay + el.dur > FIN_CAP) el.dur = Math.max(1, FIN_CAP - el.delay);
-    el.keys[el.keys.length - 1].o = 0;
-  }
-  return { els, impact: F.land || 0, travel: 0, from: 'here', dur: Math.max(...els.map((e) => e.delay + e.dur)) };
-}
+// Slow motion's speed at ms into it: a quarter speed for SLOW.hold ms, then easing back to full by SLOW.dur.
+export const SLOW = { rate: 0.25, hold: 220, dur: 560 };
+export const slowAt = (ms) => (ms < SLOW.hold ? SLOW.rate : ms >= SLOW.dur ? 1 : SLOW.rate + ((1 - SLOW.rate) * (ms - SLOW.hold)) / (SLOW.dur - SLOW.hold));
 
 // ---------- on the page ----------
 // One layer over the whole page, fixed on <body> (as lash.mjs's is), placed at the board's corner and scaled with it,
@@ -1099,6 +1041,14 @@ export function finisherLayout(F, geo, { lvl = 'full', rnd = Math.random, kind =
 //   crewText(): the crew window's names and numbers.
 export function createAbilityFx(board, { canMove = () => true, level = () => 'full', mineBar = () => document.querySelector('.hud-bar.mine .bigbar'), mineNums = () => document.querySelector('.hud-bar.mine .bar-top'), keyEl = (id) => document.querySelector(`#tray .ability[data-ability="${id}"]`), keys = () => [...document.querySelectorAll('#tray .ability')], mateBars = (who) => [...document.querySelectorAll('.pmate[data-mate] .pbar')].filter((x) => x.closest('.pmate')?.dataset.mate === who), crewText = () => [...document.querySelectorAll('.pmate b, .pmate small')] } = {}) {
   let layer = null;
+  // Its clock: light keeps its own (vnow), so slow motion (timeScale) slows it with the pieces.
+  const rnow = () => globalThis.performance?.now() ?? Date.now(), tm = { v: 0, at: rnow(), rate: 1 };
+  const vnow = () => tm.v + (rnow() - tm.at) * tm.rate;
+  function timeScale(r) {
+    if (r === tm.rate) return;
+    tm.v = vnow(); tm.at = rnow(); tm.rate = r;
+    for (const a of layer?.getAnimations?.({ subtree: true }) || []) a.playbackRate = r;
+  }
   const ground = (f) => {
     if (!layer?.isConnected) { layer = document.createElement('div'); layer.id = 'abilityfx'; layer.setAttribute('aria-hidden', 'true'); document.body.appendChild(layer); }
     Object.assign(layer.style, { left: f.box.left + 'px', top: f.box.top + 'px', transform: `scale(${f.scale})` });
@@ -1121,7 +1071,9 @@ export function createAbilityFx(board, { canMove = () => true, level = () => 'fu
     const x = r.left + r.width / 2, y = r.top + r.height / 2;
     if (y < 0 || y > (globalThis.innerHeight ?? Infinity)) return false;
     const top = globalThis.document?.elementFromPoint?.(x, y);
-    return top === undefined || !!top && (row === top || !!row.contains?.(top));
+    // A row that the hit breaks is dying (style.css .dying: it takes no input, so the point finds what holds it): it is
+    // in sight when nothing but its own board is there, so the hit that breaks it plays its effect too.
+    return top === undefined || !!top && (row === top || !!row.contains?.(top) || (!!row.matches?.('.dying') && !!top.contains?.(row)));
   };
   const rowGeo = (f, row) => {
     const p = { id: row.dataset?.target ?? null, row: local(f, row), cell: local(f, row.querySelector('.bname')), name: local(f, row.querySelector('.part-top')), bar: local(f, row.querySelector('.part-bar')) };
@@ -1169,7 +1121,8 @@ export function createAbilityFx(board, { canMove = () => true, level = () => 'fu
     const delay = el.delay + shift;
     const keys = el.keys.map((k) => ({ offset: k.at, opacity: k.o, transform: `translate(${k.x.toFixed(1)}px, ${k.y.toFixed(1)}px) rotate(${(k.r || 0).toFixed(1)}deg) scale(${(k.s ?? 1).toFixed(3)})`, ...(k.e ? { easing: k.e } : {}) }));
     try {
-      span.animate(keys, { duration: el.dur, delay, fill: 'forwards' }); // hidden (style.css .afx) until it starts
+      const an = span.animate(keys, { duration: el.dur, delay, fill: 'forwards' }); // hidden (style.css .afx) until it starts
+      an.playbackRate = tm.rate;
       // Frames: one copy each, stacked, shown in turn (every fms ms; over and over if it loops, else the last stays).
       const frames = el.frames?.length > 1 ? el.frames : [el.text];
       const n = frames.length;
@@ -1180,8 +1133,9 @@ export function createAbilityFx(board, { canMove = () => true, level = () => 'fu
         if (n < 2) return;
         const after = el.loop || i < n - 1 ? 0 : 1, before = i === 0 ? 1 : 0;
         f.animate([{ offset: 0, opacity: before }, { offset: i / n, opacity: before }, { offset: i / n, opacity: 1 }, { offset: (i + 1) / n, opacity: 1 }, { offset: (i + 1) / n, opacity: after }, { offset: 1, opacity: after }],
-          { duration: el.fms * n, delay, iterations: el.loop ? Math.ceil(el.dur / (el.fms * n)) : 1, fill: 'both' });
+          { duration: el.fms * n, delay, iterations: el.loop ? Math.ceil(el.dur / (el.fms * n)) : 1, fill: 'both' }).playbackRate = tm.rate;
       });
+      if (an.finished) { an.finished.then(() => span.remove(), () => span.remove()); return; } // in step with slow motion
     } catch { span.remove(); return; }
     setTimeout(() => span.remove(), Math.max(0, delay + el.dur) + 60);
   }
@@ -1190,13 +1144,13 @@ export function createAbilityFx(board, { canMove = () => true, level = () => 'fu
   // instead), noKey (as if its key weren't on screen: the playtest's preview of the fallback), landIn (ms from now its
   // number shows: it lands then), onImpact, tier (its mastery tier: tierRecipe).
   // Its plan (layout) on the page as it is now, without playing it: when it would land (app.js waits its numbers for it).
-  function plan(key, row, { power = 0.3, crit = false, result = 'hit', kind = 'you', origin = 'key', ability = null, who = null, keyEl: kEl = null, noKey = false, lvl: force, tier = 1, marks = [], left = null, broke = null, results = null } = {}) {
+  function plan(key, row, { power = 0.3, crit = false, result = 'hit', kind = 'you', origin = 'key', ability = null, who = null, keyEl: kEl = null, noKey = false, lvl: force, tier = 1, marks = [], left = null, broke = null, results = null, brokeOn = null } = {}) {
     const R = tierRecipe(key, tier);
     const lvl = force || levelOf({ level: level(), motion: canMove() });
     if (!R || !lvl) return null;
     if (R.on !== 'you' && (!row?.isConnected || !inSight(row))) return null;
     const geo = measure(R.on === 'you' ? null : row, { ability, key: kEl, noKey, who });
-    const out = layout(R, geo, { lvl, power, crit, result, kind, origin, marks, left, broke, results, cadence: cadenceOf(key) });
+    const out = layout(R, geo, { lvl, power, crit, result, kind, origin, marks, left, broke, results, brokeOn, cadence: cadenceOf(key) });
     return out && Object.assign(out, { geo });
   }
   function play(key, row, { landIn = null, onImpact = null, ...opts } = {}) {
@@ -1220,21 +1174,9 @@ export function createAbilityFx(board, { canMove = () => true, level = () => 'fu
     svg.setAttribute('class', 'alight');
     svg.setAttribute('aria-hidden', 'true');
     onto.appendChild(svg);
-    const end = Math.max(...p.light.map(endOf)), raf = globalThis.requestAnimationFrame, now = () => globalThis.performance?.now() ?? Date.now(), t0 = now();
-    if (raf) { const step = () => { const t = now() - t0 - shift; if (t > end) { svg.innerHTML = ''; return; } svg.innerHTML = t < 0 ? '' : drawLight(p.light, t, p.tone); raf(step); }; raf(step); }
-    setTimeout(() => svg.remove(), Math.max(0, shift + end) + 60);
+    const end = Math.max(...p.light.map(endOf)), raf = globalThis.requestAnimationFrame, t0 = vnow();
+    if (raf) { const step = () => { const t = vnow() - t0 - shift; if (t > end) { svg.innerHTML = ''; svg.remove(); return; } svg.innerHTML = t < 0 ? '' : drawLight(p.light, t, p.tone); raf(step); }; raf(step); }
+    else setTimeout(() => svg.remove(), Math.max(0, shift + end) + 60);
   }
-  // A break finisher on the part's row (its class's, varied by its subclass): its plan if it played, else false.
-  function finish(cls, sub, row, { kind = 'you', lvl: force } = {}) {
-    const F = finisherOf(cls, sub);
-    const lvl = force || levelOf({ level: level(), motion: canMove() });
-    if (!F || !lvl || !row?.isConnected) return false;
-    const geo = measure(row, {});
-    const p = finisherLayout(F, geo, { lvl, kind });
-    if (!p) return false;
-    const onto = ground(geo.f);
-    for (const el of p.els) place(el, onto, 0);
-    return Object.assign(p, { geo });
-  }
-  return { play, plan, finish, measure, layer: () => layer };
+  return { play, plan, measure, timeScale, layer: () => layer };
 }

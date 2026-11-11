@@ -186,6 +186,9 @@ export const FX_IF = {
   // Set pieces (sets.mjs): their own bonuses and green lines.
   'above-75': 'you are above 75% health',
   late: "the fight has reached its 6th cycle",
+  // The floor feats' uniques (earned.mjs).
+  'room-new': "you fight in a room you haven't cleared",
+  'server-held': 'you fight on a server you hold',
 };
 // What each block does, which "when" it fits, and what it needs (value, stat). label: the effect, a verb phrase in the
 // tooltip style ("heals you for X"); fxText adds its trigger and condition after it. own: the label already says when.
@@ -230,6 +233,23 @@ export const FX_DO = {
   'quiet-trip': { when: ['custom'], label: 'keeps a Tripwire you break quiet' },
   'cast-short': { when: ['custom'], label: "shortens a compiled cast's effect by X cycles", value: true },
   'no-after': { when: ['custom'], label: 'stops a tell that lands from taking a skill offline, Corrupting you or leaving you Hung' },
+  // The floor 2 and 3 bosses' uniques (floorbosses.mjs).
+  governor: { when: ['custom'], label: "makes an attack that lands within 2 cycles of its part's last one deal X% less", value: true },
+  'slow-hit': { when: ['custom'], label: 'deals X damage to a part when you delay or Throttle its attack', value: true },
+  'windup%': { when: ['custom'], label: 'makes your hits count X% more toward calling off a wind-up, such as a Deadline', value: true },
+  late: { when: ['custom'], label: "makes a boss's enrage and the Ransom Clock come X cycles later", value: true },
+  screen: { when: ['custom'], label: 'makes the first part each fight that plays back or copies your command miss with it' },
+  rhythm: { when: ['custom'], label: 'makes a command fired exactly 2 cycles after your last deal X% more', value: true },
+  'break-burns': { when: ['custom'], label: 'makes your burns on the other parts tick once right away when you break a part' },
+  'break-guard': { when: ['custom'], label: 'makes the next attack on you within 2 cycles of a part breaking deal X% less', value: true },
+  // The floor 4 bosses' uniques (floorbosses.mjs).
+  overdraft: { when: ['custom'], label: 'leaves you at X% of your max Signal when a hit would take you lower, and the rest lands over the next 3 cycles', value: true },
+  'shield-hit': { when: ['custom'], label: 'increases the damage of your next hit by X% when you raise a shield', value: true },
+  'helpers-safe': { when: ['custom'], label: 'stops a virus from playing your helpers back at you' },
+  'helper-frags%': { when: ['custom'], label: 'makes your helpers deal X% more to fragments', value: true },
+  'break-frags': { when: ['custom'], label: 'deals X damage to every fragment when you break a part', value: true },
+  'low-parts%': { when: ['custom'], label: 'increases your damage by X% for each part below half its Integrity', value: true },
+  'second-less': { when: ['custom'], label: 'makes the second attack to land on you in a cycle deal X% less', value: true },
   'decoy-pass': { when: ['custom'], label: "lets your commands through the Decoy's bend where you aim them, at X% of their damage, and nothing bounces back", value: true },
   // The deep uniques (levels 39-50, docs/loot-plan.md Batch 1). Stats first: what they add, and to what.
   'stat+': { when: ['always'], label: 'adds X to your stat', value: true, stat: true },
@@ -278,6 +298,7 @@ export const FX_DO = {
   unveil: { when: ['custom'], label: "shows a Veiled part's next attack once it is X cycles away", value: true },
   'explore-xp%': { when: ['custom'], label: 'increases the XP from Mapped servers by X%', value: true },
   'cache%': { when: ['custom'], label: 'increases the credits caches pay by X%', value: true },
+  'cache-heal%': { when: ['custom'], label: 'heals X% of your max Signal when you take a cache', value: true, own: true },
   // Set pieces (sets.mjs runs them): a piece's own bonus and its green line, the line that counts with two or more of
   // its set worn. Each piece writes its own text, in the plan's words.
   stat: { when: ['always'], label: 'adds X to one of your stats', value: true, stat: true },
@@ -302,7 +323,8 @@ export const FX_DO = {
   chorus: { when: ['custom'], label: 'makes a damaging skill used twice in a row hit again for X% of its damage', value: true },
 };
 export const FX_SCALE = { '': 'flat', cycles: 'for each cycle the fight has lasted', contracts: 'for each contract you hold', broken: 'for each part broken this fight', reads: 'for each tell you answered this fight',
-  chits: 'for each ◆ you hold', crew: 'for each crewmate in the fight', missing: 'for each 10% of your health you are missing', sets: 'for each set bonus you have active' };
+  chits: 'for each ◆ you hold', crew: 'for each crewmate in the fight', missing: 'for each 10% of your health you are missing', sets: 'for each set bonus you have active',
+  specials: "for each of the server's specials", parts: 'for each part in the fight past two', held: 'for every 5 servers you hold' };
 export const FX_LIMIT = { '': 'every time', fight: 'once per fight', run: 'once per run', cooldown: 'then a real-time cooldown' };
 // A unique can lean toward a class: it drops three times as often for that class (combat.mjs uniqueFrom).
 export const CLASSES = { '': 'Any class', breaker: 'Breaker', bastion: 'Bastion', infiltrator: 'Infiltrator', operator: 'Operator',
@@ -313,7 +335,9 @@ export const SOURCE_KINDS = { sprawl: 'SPRAWL-00 kills', strain: 'Kills of a str
   // Set pieces only (sets.mjs SET_LOOT: each its own table, its pieces you lack first, with pity).
   courier: "LANTERN's couriers", author: "A crew's bosses and elites", takeover: 'Resident takeovers', crew: 'Crew bosses (KESSLER-FARM-00)',
   // Faction pieces only (faction-gear.mjs): assembled at the faction's hub from three parts, a part a feud won for it.
-  feud: 'Feuds won for its faction (its parts, assembled at its hub)' };
+  feud: 'Feuds won for its faction (its parts, assembled at its hub)',
+  // Earned pieces only (earned.mjs): a floor's goal, its count in the Ledger.
+  feat: "A floor's feat (floor: the floor; its goal is the piece's earn)" };
 // A source can name the floor it drops on (floor: 7 is The Sink): a vault, a lair, a rare spawn, a thread or a puzzle
 // board there and nowhere else. planned: the source it moves to once that is built (docs/loot-plan.md Decisions).
 
@@ -325,7 +349,7 @@ const FX_TRIGGER = { crit: 'when you land a critical strike', break: 'when you b
 // The effect blocks a unique carries: its effect, or each of its effects.
 export const fxList = (u) => (Array.isArray(u?.effect) ? u.effect : u?.effect ? [u.effect] : []);
 const STAT_NAME = (k) => STATS[k]?.name || k;
-const PCT = ['damage%', 'crit%', 'taken%', 'burn-sap', 'stat%', 'heal%'];
+const PCT = ['damage%', 'crit%', 'taken%', 'burn-sap', 'stat%', 'heal%', 'low-parts%'];
 export function fxText(fx, statName = STAT_NAME) {
   if (Array.isArray(fx)) return fx.filter((x) => !x.quiet).map((x) => fxText(x, statName)).filter(Boolean).join(' '); // quiet: the one before it says it too
   if (!fx?.do) return '';

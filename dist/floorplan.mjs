@@ -1254,6 +1254,8 @@ function pull(s, room, opts) {
 function takeCache(s, room) {
   const R = s.rooms, r = rnd(R, 21), C = ROOMS.cache, mill = runs(s, 'mill') && room.kind === 'cache' ? 1.5 : 1, rich = ((R.world && ask('cacheMult', s, room)) || 1) * mill; // a Cache Mill: half again
   if (isBait(s, room)) { const lost = Math.round(R.max * ROOMS.bait); setSig(s, Math.max(1, sigOf(s) - lost)); say(s, `The canary costs you ${lost} Signal.`, 'rooms-bad'); }
+  const mend = Math.round((R.max * fxPct(s, 'cache-heal%')) / 100); // Sweetener (a floor feat's unique, earned.mjs)
+  if (mend > 0) { setSig(s, Math.min(R.max, sigOf(s) + mend)); say(s, `+${mend} Signal from the cache.`, 'rooms-good'); }
   const bait = baitPays(s, room), credits = Math.round((C.credits[0] + Math.floor(r() * (C.credits[1] - C.credits[0] + 1))) * rich * (1 + R.level / 20) * bait);
   const fam = roomList(s).find((x) => x.family)?.family, kind = { ransomware: 'cipher', worm: 'worm', ghostroot: 'kernel', trojan: 'worm', cryptominer: 'cipher', wiper: 'cipher', botnet: 'worm', logicbomb: 'cipher' }[fam] || 'cipher';
   const code = Math.round((C.code[0] + Math.floor(r() * (C.code[1] - C.code[0] + 1))) * mill * bait);

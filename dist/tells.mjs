@@ -35,6 +35,7 @@
 //         opened, once logged) }]
 //   tier  the level tier's numbers (count, live, lead, mult, cap, dot, after, burn, hang), with an elite's or a
 //         boss's extra cap
+import { screened, sellingGavel, fbSlowed, callingNow, stopCall } from './floorbosses.mjs';
 import { hit, implanted, emit, alive, part, livingParts, attackers, defender, hackerLevel, skillBase, gearStat, attackAmount, strikeWith, toIntent, usable, readyIn, alliesOf, fxAnswer, fxOn, cooldownOf, armorTakes, ignoresArmor } from './combat.mjs';
 import { CONFIG, TELL, TELLS, TELL_SETS, SEAL_FROM, STRAINS, ABILITIES, BOSSES } from './data.mjs';
 import { previewDamage, delayAttack, blocked, scaled, gearDamage } from './combat.mjs';
@@ -243,15 +244,14 @@ export function answerOf(t, p, sig = false) {
 }
 // When its window opens, as the log says it: 'now', or 'next cycle', 'in 2 cycles'.
 function windowWhen(s, t) { const w = windowOf(s, t); return w ? Math.max(0, w.from - s.encounter.cycle) : 0; }
-// What the log says when a tell is announced, as short as its chip's tooltip (fightread.mjs tellTip): what, when, on
-// which part, and the answer. The Encryptor's FULL DISK lands in 3 cycles. Cut it on that cycle.
+// What the log says when a tell is announced: what, when, on which part, and what it does. The answer is the chip's
+// tooltip's (fightread.mjs tellTip). The Encryptor's FULL DISK lands in 3 cycles.
 export function sayOf(s, t, p = sourceOf(s, t)) {
   const n = tellNext(s, t) - s.encounter.cycle, L = label(t), head = t.kind === 'mimic' ? `The ${p.name} plays you back ${when(n)}.` : `The ${p.name}'s ${L} lands ${when(n)}.`;
-  if (t.kind === 'charge') return `${head} Cut it on that cycle${p.armor > 0 ? `, past its ${p.armor} ◆` : ''}.`;
-  if (t.kind === 'cast') return `${head} SIGINT or cut it in its window${n > 0 && windowWhen(s, t) <= 0 ? ', open now' : ''}.`;
-  if (t.kind === 'seal') return `${head} Each ◆ it still wears then comes back on every part: strip its ${p.armor} ◆ first.`;
-  if (t.kind === 'lock') return `${head} It locks your next command for ${cycles(t.cycles || 3)}. Break it, or feed it a cooling skill.`;
-  return `${head} It copies what you fire then and turns it on you. Fire what costs least to have copied, or cut it.`;
+  if (t.kind === 'seal') return `${head} Each ◆ it still wears then comes back on every part.`;
+  if (t.kind === 'lock') return `${head} It locks your next command for ${cycles(t.cycles || 3)}.`;
+  if (t.kind === 'mimic') return `${head} It copies what you fire then and turns it on you.`;
+  return head;
 }
 // A tell's window opens (a new cycle): the log says so, once.
 function windowOpens(s, t, p) {
@@ -685,12 +685,13 @@ export function mimicLands(s, t, p) { // (exported for exe.test.mjs)
   const was = prev ? copyOf(host, prev.id, part(host, prev.target)) : null;
   const copy = was && (!mine || (was.cost || 0) > (mine.cost || 0)) ? was : mine;
   // Echo Cancel blinds it to your helpers too (it turns your command on the Mimic, below).
-  const caught = blind || p.echoCancelUntil >= e.cycle ? [] : caughtHelpers(s, t, p), swarm = caught.reduce((n, h) => n + h.damage, 0);
+  const caught = blind || p.echoCancelUntil >= e.cycle || fxOn(s, 'helpers-safe') ? [] : caughtHelpers(s, t, p), swarm = caught.reduce((n, h) => n + h.damage, 0);
   // HOLLOW CHOIR's Round (v.round, docs/solo-bosses.md): the beat sings back the commands of the cycles before it too, three
   // cycles in all. A cycle you held adds nothing.
   const sung = blind ? [] : sungOf(host, p), notes = [...sung, ...(copy ? [copy] : [])], hits = notes.filter((c) => c.kind === 'hit');
   const direct = hits.reduce((n, c) => n + (sung.includes(c) ? Math.round(c.amount * ROUND.echo) : c.amount), 0); // a sung hit lands at half
   if (!notes.length && !swarm) { emit(s, 'blocked', `The ${p.name} has nothing to copy.`, { source: p.id, tell: t.id }); return false; }
+  if (screened(host, p, 'copy')) return false; // Privacy Screen (floorbosses.mjs): the first playback each fight misses
   const names = notes.map((c) => c.name).join(notes.length > 2 ? ', ' : ' and ').replace(/, ([^,]*)$/, ' and $1');
   const what = !swarm ? `your ${names}` : `${notes.length ? `your ${names} and ` : 'your '}${caught.length === 1 ? 'helper' : `${caught.length} helpers`}`;
   // Reflector (a native unique): a played-back hit lands on the Mimic instead, at a share of it. Echo Cancel: all of it,
@@ -786,7 +787,7 @@ export function tellCast(s) {
 export const sigintTarget = (s) => { const xs = sigintable(s).filter((t) => inWindow(s, t)); return xs.find((t) => t.kind === 'cast') || xs[0] || null; }; // a cast first: a charge open with it can still be cut
 // Why SIGINT can't fire on a solo fight now, or null: nothing compiling or charging, or no window open yet.
 export function tellSigintCheck(s) {
-  if (sigintTarget(s)) return null;
+  if (sigintTarget(s) || sellingGavel(s) || callingNow(s)) return null; // CENTRIFUGE's selling Surge, RECURSION's Call (floorbosses.mjs)
   const t = sigintable(s)[0];
   const what = sigintCharges(s) ? 'a cast or a charge' : 'a cast';
   if (!t) return `Nothing is compiling${sigintCharges(s) ? ' or charging' : ''}. SIGINT stops ${what}.`;
@@ -794,6 +795,9 @@ export function tellSigintCheck(s) {
 }
 export function tellSigint(s) {
   const t = sigintTarget(s), e = s.encounter;
+  const g = !t && sellingGavel(s);
+  if (!t && !g && callingNow(s)) { e.metrics.interrupts++; stopCall(s); return true; } // RECURSION's Call (floorbosses.mjs)
+  if (g) { e.metrics.interrupts++; emit(s, 'interrupt', `SIGINT cuts the ${g.name}'s selling Surge.`, { target: g.id }); cancelAttack(s, g); fbSlowed(s, g, 'SIGINT'); return true; } // CENTRIFUGE (floorbosses.mjs)
   if (!t) return false;
   const p = sourceOf(s, t);
   t.interrupted = (t.interrupted || 0) + 1;

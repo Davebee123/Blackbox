@@ -227,8 +227,8 @@ code { font-family: var(--mono); color: var(--amber); }
 .intent.raid.fuse { border-color: var(--amber); color: var(--amber); }
 .bescape .esc-left { color: var(--next); font-weight: 600; }
 .intent.raid.fuse.escape.now { background: rgba(255, 216, 92, 0.12); border-color: var(--next); color: var(--next); }
-/* A solo tell (tells.mjs): an attack chip, charged. A kicker strip (what kind, when), the name and what it does,
-   then the answer as an order on its own line. Charges and casts are hot; seals and the Mimic are amber. */
+/* A solo tell (tells.mjs): an attack chip, charged. A kicker strip (what kind, when), then the name and what it does,
+   with a small SIGINT mark when SIGINT stops it. Charges and casts are hot; seals and the Mimic are amber. */
 .intent.tell { --tc: var(--hot); --tc-soft: var(--hot-soft); display: grid; gap: 0; padding: 0; border: 1px solid var(--tc); color: var(--text); overflow: hidden; }
 .intent.tell.t-seal, .intent.tell.t-mimic { --tc: var(--amber); --tc-soft: rgba(241, 185, 47, 0.12); }
 .intent.tell.t-cast { border-style: dashed; }
@@ -240,23 +240,22 @@ code { font-family: var(--mono); color: var(--amber); }
 .intent.tell .tl-what { margin-left: 0; color: var(--muted); }
 .intent.tell .tl-what.tl-price { color: var(--hot); font-weight: 600; } /* what it costs you (tells.mjs tellPrice): threat */
 .intent.tell .tl-what.tl-armor { color: var(--steel); font-weight: 600; } /* the ◆ a seal would hand out */
-.intent.tell .tl-ans { display: flex; align-items: baseline; gap: 6px; padding: 1px 7px 5px; color: var(--amber); font: 600 11px var(--mono); white-space: nowrap; }
-.intent.tell .tl-prog { margin-left: auto; color: var(--muted); font-weight: 400; }
+.intent.tell .tl-main { padding-bottom: 5px; }
+.intent.tell .tl-kick .tl-sig { width: 10px; height: 10px; margin-left: auto; background: var(--amber); } /* SIGINT stops it: your key, in amber, before the timing */
+.intent.tell .tl-sig + .tl-when, .intent.tell .tl-sig + .tl-win { margin-left: 0; }
+.intent.tell.now .tl-kick .tl-sig { background: var(--panel-2); }
 .intent.tell.now { background: var(--tc-soft); }
 .intent.tell.now .tl-kick { background: var(--tc); color: var(--panel-2); }
 /* ---- Tell windows (tells.mjs, view.mjs tellChip and tellSpan) ----
    A tell can only be answered in its window: the cycle it lands, or its last few. While the window is open the chip
-   wears the Sync Window's yellow (a NOW badge, a glow, the order in yellow). A window longer than a cycle marks the
+   wears the Sync Window's yellow (a NOW badge, a glow, the SIGINT mark in yellow). A window longer than a cycle marks the
    cells before the chip with a slim WINDOW strip, lit in the cycle you're in. */
 .intent.tell { grid-template-columns: minmax(0, 1fr); }
-.intent.tell .tl-ans { white-space: normal; }
 .intent.tell .tl-win { margin-left: auto; padding: 0 3px; border-radius: 2px; background: var(--next); color: var(--panel-2); font: 700 9px var(--mono); letter-spacing: 0.5px; }
 .intent.tell.win { border-color: var(--next); box-shadow: 0 0 0 1px var(--next), 0 0 10px rgba(255, 216, 92, 0.45); }
-.intent.tell.win .tl-ans { color: var(--next); }
 .tl-window { margin: 0 0 4px; padding: 1px 6px; border: 1px dashed rgba(255, 216, 92, 0.55); border-radius: 2px; background: rgba(255, 216, 92, 0.1); color: var(--next); font: 600 9px var(--mono); letter-spacing: 1px; text-transform: uppercase; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: help; }
 .tl-window.live { border-style: solid; border-color: var(--next); background: rgba(255, 216, 92, 0.42); color: var(--panel-2); box-shadow: 0 0 10px rgba(255, 216, 92, 0.6); }
 @media (max-width: 900px) {
-  .intent.tell .tl-ans { white-space: normal; font-size: 10px; padding: 1px 5px 4px; }
   .intent.tell .tl-win { padding: 0 3px; font-size: 9px; }
   .intent.tell.win .tl-kind { display: none; } /* a narrow cell: the icon says the kind, NOW says the window */
   .tl-window { padding: 1px 2px; letter-spacing: 0; }
@@ -439,6 +438,16 @@ rect.cfx-cp-wake { fill: currentColor; filter: url(#cfx-soft); }
 .hot .cfx-mk-halo { opacity: 0.9; }
 .cfx-mk-edge { stroke: var(--bright); stroke-width: 1.4; filter: drop-shadow(0 0 3px currentColor); }
 .cfx-mk-star { fill: var(--bright); filter: drop-shadow(0 0 2px currentColor); }
+/* byte (a fragment's Gnaw): the torn chunk and its 1s and 0s are your bar's, so teal */
+.cfx-by-cell { fill: currentColor; }
+.cfx-by-cell.gone { fill: none; stroke: currentColor; stroke-width: 0.6; stroke-opacity: 0.5; }
+.cfx-by-nib { fill: var(--bright); }
+.cfx-by-bit1 { fill: var(--bright); stroke: currentColor; stroke-width: 0.8; }
+.cfx-by-bit0 { fill: none; stroke: currentColor; stroke-width: 1; }
+.cfx-by-brk { fill: none; stroke: var(--bright); stroke-width: 1.4; filter: drop-shadow(0 0 3px currentColor); }
+.cfx-by-hole { background: var(--inset); }
+.cfx-by-chunk { background: var(--you); box-shadow: 0 0 6px var(--you); }
+.cfx-by-glyph { font: 700 9px/8px var(--mono); color: var(--you); text-shadow: 0 0 4px var(--you); text-align: center; }
 @media (prefers-reduced-motion: reduce) { .fxin { display: none; } }
 .crypt-line { position: relative; height: 4px; margin: 0 0 6px; border-radius: 2px; background: repeating-linear-gradient(135deg, var(--hot) 0 4px, transparent 4px 8px); opacity: 0.7; cursor: help; }
 /* Hover: it opens up into the full chip for a moment (over the cell, nothing moves). */
@@ -825,7 +834,7 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
   .brow { grid-template-columns: minmax(96px, 1.2fr) repeat(4, minmax(0, 1fr)); padding: 0 6px; }
   #board .brow { padding-left: var(--gut, 32px); }
   .bname small { display: none; }
-  .intent b { display: none; }
+  .intent:has(.code) b { display: none; } /* the code stands in for the name; a chip with no code (a cut) keeps its name */
   .intent .code { display: inline; }
   .intent.mine small { display: none; }
   .intent.raid b { display: block; white-space: normal; font-size: 10px; letter-spacing: 0.5px; } /* a tell or a crew boss's mechanic keeps its name: it's what you answer */
@@ -1106,7 +1115,7 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
   body.cased { --side: max(26px, 1.2vw); --top: 22px; --chin: 52px; --desk: 0px; box-sizing: border-box; height: 100dvh; overflow: hidden; padding: var(--top) var(--side) calc(var(--chin) + var(--desk)); background: radial-gradient(120% 90% at 50% 40%, var(--case-hi, #2a2724), var(--case-mid, #181614) 70%, var(--case-lo, #0e0d0c)); } /* the plastic: casing.css colourways set these */
   body.cased::before { content: ''; position: fixed; top: calc(var(--top) - 14px); bottom: calc(var(--desk) + 8px); left: calc(var(--side) - 18px); right: calc(var(--side) - 18px); border-radius: 26px; pointer-events: none; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), inset 0 -2px 0 rgba(0, 0, 0, 0.6), 0 0 0 8px var(--case-rim, #0b0a09); }
   body.cased .app { height: calc((100dvh - var(--top) - var(--chin) - var(--desk)) / var(--ui, 1)); max-width: none; position: relative; overflow: hidden; border-radius: 18px; background: var(--bg) url('ui/textures/grime-overlay-subtle.png'); box-shadow: 0 0 0 2px #000, 0 0 30px 6px rgba(241, 185, 47, 0.08); }
-  body.cased #crt, body.cased .boot, body.cased #fx-edge, body.cased .poweron, body.cased .coldopen, body.cased .class-pick { inset: var(--top) var(--side) calc(var(--chin) + var(--desk)); border-radius: 18px; overflow: hidden; }
+  body.cased #crt, body.cased .boot, body.cased #fx-edge, body.cased .poweron, body.cased .class-pick { inset: var(--top) var(--side) calc(var(--chin) + var(--desk)); border-radius: 18px; overflow: hidden; }
   body.cased .class-pick { overflow-y: auto; } /* it scrolls on a short screen, inside the glass */
   body.cased .class-pick::after { display: none; } /* the tube's own scanlines (#crt) cover it now */
   body.cased #crt-bezel { border-radius: 18px; box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.65), inset 0 0 6px rgba(0, 0, 0, 0.9); }
@@ -1970,8 +1979,8 @@ body:has(.silk-stash .silk-tile[data-kind="implant"]:hover) .silk-fp[data-kind="
 }
 
 /* An item's datasheet (view.mjs protocolDetailMarkup), in its popover: a rarity edge down its left, the name first and
-   the glyph beside it. Beside a row or slot on hover or focus it only reads (the buttons are on the row); on a phone it
-   is a bottom sheet, its buttons along the bottom under your thumb, closed by a tap outside. */
+   the glyph beside it. Beside a row or slot on hover or focus it only reads (the buttons are on the row); after a tap
+   (.tap) its buttons are in it, and a tap outside closes it. On a phone it is in the one sheet (phone.css). */
 .pg-pop { position: fixed; z-index: 80; zoom: var(--ui, 1); width: 340px; max-width: calc((100vw - 16px) / var(--ui, 1)); max-height: calc((100vh - 16px) / var(--ui, 1)); overflow: auto; pointer-events: none; animation: ptip-in 0.14s ease-out; }
 .pg-pop[hidden] { display: none; }
 .pg-detail { --edge: var(--line-strong); display: grid; gap: 8px; padding: 14px 16px; background: #0a0805; border: 1px solid var(--line-strong); border-left: 3px solid var(--edge); border-radius: 4px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); color: var(--text); }
@@ -1979,23 +1988,19 @@ body:has(.silk-stash .silk-tile[data-kind="implant"]:hover) .silk-fp[data-kind="
 .pg-detail.r-zeroday { --edge: var(--r-zeroday); } .pg-detail.r-indemnified { --edge: var(--r-indemnified); }
 .pg-detail.r-set { --edge: var(--r-set); }
 .pg-detail .silk-title { font-size: 16px; }
-.pg-pop:not(.sheet) .pg-acts { display: none; }
+.pg-pop:not(.tap) .pg-acts { display: none; }
 .pg-scrim { position: fixed; inset: 0; z-index: 79; background: rgba(0, 0, 0, 0.45); }
 .pg-scrim[hidden] { display: none; }
-.pg-pop.sheet { left: 0 !important; right: 0; top: auto !important; bottom: 0; width: auto; max-width: none; max-height: 78vh; pointer-events: auto; animation: pg-up 0.18s ease-out; padding-bottom: env(safe-area-inset-bottom); }
-.pg-pop.sheet .pg-detail { border-radius: 12px 12px 0 0; border-left-width: 1px; border-top: 3px solid var(--edge); padding: 10px 16px 0; }
-.pg-pop.sheet .pg-detail::before { content: ''; justify-self: center; width: 40px; height: 4px; border-radius: 2px; background: var(--line-strong); } /* the grab bar */
-.pg-pop.sheet .pg-acts { position: sticky; bottom: 0; margin: 4px -16px 0; padding: 12px 16px 14px; background: rgba(10, 8, 5, 0.98); border-top: 1px solid var(--line); }
-.pg-pop.sheet .pg-acts .btn { flex: 1; min-height: 44px; }
-@keyframes pg-up { from { transform: translateY(40px); opacity: 0; } }
-.no-motion .pg-pop, .no-motion .pg-pop.sheet { animation: none; }
-@media (prefers-reduced-motion: reduce) { .pg-pop, .pg-pop.sheet { animation: none; } }
+.pg-pop.tap { pointer-events: auto; }
+.no-motion .pg-pop { animation: none; }
+@media (prefers-reduced-motion: reduce) { .pg-pop { animation: none; } }
 .silk-head { display: flex; align-items: flex-start; gap: 14px; } /* the title and its line sit at the top left, beside the art */
 .silk-headtext { display: grid; align-content: start; gap: 6px; flex: 1; min-width: 0; }
 .silk-plate { flex: none; display: grid; place-items: center; padding: 4px; background: #0c0905; border: 1px solid var(--line); border-radius: 3px; }
 .silk-title { margin: 0; font: 600 18px/1.25 var(--mono); overflow-wrap: break-word; text-wrap: balance; }
 .silk-sub { margin: 0; font: 12px var(--mono); color: var(--muted); }
 .silk-sub .tag { margin-left: 4px; }
+.silk-req { color: var(--hot); font-weight: normal; }
 .silk-kicker { margin: 6px 0 0; font: var(--kicker); letter-spacing: var(--kicker-track); text-transform: uppercase; color: var(--dim); }
 .silk-stats { display: grid; margin: 0; }
 .silk-stats > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 10px; padding: 3px 2px; border-bottom: 1px dotted rgba(241, 185, 47, 0.12); font-size: 13px; }
@@ -2288,9 +2293,9 @@ body:has(.silk-stash .silk-tile[data-kind="implant"]:hover) .silk-fp[data-kind="
 .afx.ember { font-weight: 600; }
 .afx.cut, .afx.streak:not(.echo) { color: #e4fffb; text-shadow: 0 0 2px rgba(0, 0, 0, 0.9), 0 0 8px rgba(127, 209, 199, 1); }
 .afx.wall { color: #e4fffb; text-shadow: 0 0 2px rgba(0, 0, 0, 0.95), 0 0 6px rgba(127, 209, 199, 0.9); } /* Firewall's bricks: they read over your bar's teal fill */
-/* Mastery tiers (mastery.mjs): tier 3's particles brighter, its marks (a scar, a glint) and cinders white-hot; a break finisher's seal. A crit, a crewmate's and ◆ still win below. */
+/* Mastery tiers (mastery.mjs): tier 3's particles brighter, its marks (a scar, a glint) and cinders white-hot. A crit, a crewmate's and ◆ still win below. */
 .afx.bright { color: #c9fff6; text-shadow: 0 0 8px rgba(127, 209, 199, 1); }
-.afx.scar, .afx.glint, .afx.cinder, .afx.seal { color: #e4fffb; text-shadow: 0 0 2px rgba(0, 0, 0, 0.9), 0 0 10px rgba(127, 209, 199, 1); }
+.afx.scar, .afx.glint, .afx.cinder { color: #e4fffb; text-shadow: 0 0 2px rgba(0, 0, 0, 0.9), 0 0 10px rgba(127, 209, 199, 1); }
 .afx.crit { color: #fff2c8; text-shadow: 0 0 8px rgba(255, 216, 92, 1); }
 .afx.chit { color: var(--steel); text-shadow: 0 0 6px var(--steel-glow); }
 .afx.crew { color: var(--daemon); text-shadow: 0 0 6px rgba(195, 166, 255, 0.85); }
@@ -2907,6 +2912,11 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .ct-row { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 4px 8px; align-items: center; padding: 6px 8px; background: rgba(12, 10, 6, 0.88); border: 1px solid var(--line); border-left: 3px solid var(--amber-deep); border-radius: var(--r-btn); color: var(--text); font: inherit; text-align: left; cursor: pointer; backdrop-filter: blur(2px); }
 .ct-row:hover, .ct-row:focus-visible { border-color: var(--line-strong); border-left-color: var(--amber); }
 .ct-row.on { border-color: var(--amber); background: rgba(40, 30, 10, 0.92); }
+/* Pinned (earned.mjs): an earned piece's row, set green's edge for a set piece, amber's for a unique; its cells and n/N. */
+.ct-row.pin-row.set { border-left-color: var(--r-set); }
+.ct-row.pin-row.set > .glyph { color: var(--r-set); }
+.ct-row.pin-row .ct-prog { flex-wrap: wrap; row-gap: 3px; }
+.pin-goal { font: 10px var(--mono); color: var(--muted); white-space: normal; line-height: 1.35; font-variant-numeric: tabular-nums; } /* its goal in words: wraps under the cells, never cut */
 .ct-row > .glyph { width: 14px; height: 14px; color: var(--amber-soft); align-self: start; margin-top: 2px; }
 .ct-txt { display: grid; min-width: 0; }
 .ct-txt b { font-size: 12px; font-weight: 600; color: var(--bright); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -2927,6 +2937,27 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .map-lcol { position: absolute; top: 56px; left: 10px; z-index: 3; width: 230px; display: grid; align-content: start; gap: var(--s5); max-height: calc(100% - 60px); overflow-y: auto; pointer-events: none; }
 .map-lcol > * { pointer-events: auto; }
 @media (max-width: 900px) { .map-lcol { position: static; width: auto; max-height: none; overflow: visible; margin: 44px 8px 0; gap: var(--s4); } }
+/* The Rail (runners-view.mjs): the runners you know, under Contracts. Paper white (--bright): a runner is nobody's
+   colour; the one you pick is drawn on the map as a diamond, its route dotted, where it's heading ringed. */
+.rrail { display: grid; gap: var(--s2); min-width: 0; }
+.rr-head { color: var(--bright); }
+.rr-row { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 5px 8px; background: rgba(12, 10, 6, 0.88); border: 1px solid var(--line); border-left: 3px solid rgba(255, 242, 200, 0.35); border-radius: var(--r-btn); color: var(--text); font: inherit; text-align: left; cursor: pointer; backdrop-filter: blur(2px); }
+.rr-row:hover, .rr-row:focus-visible { border-color: var(--line-strong); border-left-color: var(--bright); }
+.rr-row.on { border-color: var(--bright); border-left-color: var(--bright); }
+.rr-row.down { opacity: 0.6; }
+.rr-dia { width: 7px; height: 7px; transform: rotate(45deg); border: 1.5px solid var(--bright); }
+.rr-row.on .rr-dia { background: var(--bright); }
+.rr-txt { display: grid; min-width: 0; white-space: nowrap; }
+.rr-txt b { font-size: 12px; font-weight: 600; color: var(--bright); overflow: hidden; text-overflow: ellipsis; }
+.rr-txt small, .rr-at { font: 10px var(--mono); color: var(--muted); white-space: nowrap; }
+.rr-at { max-width: 120px; overflow: hidden; text-overflow: ellipsis; text-align: right; color: var(--text); }
+.rr-head .rr-dia { margin: 0 2px; }
+.mrunner { pointer-events: none; }
+.mrunner .mr-route { fill: none; stroke: var(--bright); stroke-width: 1.6; stroke-dasharray: 1.5 5; stroke-linecap: round; opacity: 0.8; }
+.mrunner .mr-ring { fill: none; stroke: var(--bright); stroke-width: 1.4; stroke-dasharray: 5 4; opacity: 0.85; }
+.mrunner .mr-dia { fill: var(--bright); stroke: var(--bg); stroke-width: 1.5; }
+.mrunner .mr-name { fill: var(--bright); font-size: calc(12px / var(--z, 1)); font-weight: 600; letter-spacing: 1px; paint-order: stroke; stroke: var(--bg); stroke-width: 3px; }
+.mrunner.down .mr-dia { fill: none; stroke: var(--bright); }
 /* Item hover card: a spinning ASCII model of the item's kind, in its rarity colour, over its details. */
 .ptip { position: fixed; z-index: 80; zoom: var(--ui, 1); pointer-events: none; animation: ptip-in 0.14s ease-out; } /* zooms with the screen (app.js placePtip) */
 @keyframes ptip-in { from { opacity: 0; transform: translateY(4px); } }
@@ -3098,6 +3129,8 @@ details.map-pick { pointer-events: auto; }
 .set-pieces .sp.held { color: var(--text); }
 .set-pieces .sp.missing { color: var(--dim); }
 .set-pieces .sp.unknown { color: var(--gray); letter-spacing: 2px; }
+.set-pieces .sp.earned { display: flex; justify-content: space-between; gap: 10px; letter-spacing: 0; } /* earned (earned.mjs): named, its goal and count right */
+.sp-goal { font: 10px var(--mono); color: var(--dim); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .set-bonuses { display: grid; gap: 1px; margin-top: 3px; }
 .sb { color: var(--gray); }
 .sb.on { color: var(--r-set); }
@@ -3662,8 +3695,8 @@ h1 .byline { font-size: 13px; vertical-align: middle; }
 @container (max-width: 132px) {
   .intent.tell .tl-kick { gap: 3px; padding: 2px 5px; letter-spacing: 0.4px; }
   .intent.tell .tl-kick .ico { display: none; }
-  .intent.tell .tl-main { padding: 3px 5px 1px; column-gap: 4px; }
-  .intent.tell .tl-ans { padding: 1px 5px 4px; white-space: normal; }
+  .intent.tell .tl-kick .ico.tl-sig { display: block; } /* the kind is the kick word; the SIGINT mark stays */
+  .intent.tell .tl-main { padding: 3px 5px 4px; column-gap: 4px; }
 }
 
 
@@ -3772,7 +3805,7 @@ body.no-motion .recap { animation: none; }
 .combat .board.dense .intent { padding: 3px 7px; font-size: 12px; }
 .combat .board.dense .intent small:not(.at), .combat .board.dense .bname small, .combat .board.dense .bcell > .quiet, .combat .board.dense .bcell > small.quiet { display: none; }
 .combat .board.dense .intent.tell .tl-main { padding-top: 2px; }
-.combat .board.dense .intent.tell .tl-ans { padding-bottom: 3px; }
+.combat .board.dense .intent.tell .tl-main { padding-bottom: 3px; }
 .combat .board.dense .bhead .cyclebar { display: none; }
 .combat .board.dense .part-top { flex-wrap: nowrap; }
 .combat .board.dense .part-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
@@ -4295,6 +4328,23 @@ p.impl { margin: 6px 0 0; padding: 4px 2px; border-bottom: 1px dotted color-mix(
 .intent.bend.harm b.bend-to { color: var(--hot); }
 .intent.bend.veiled b.bend-to { color: var(--muted); }
 .intent.bend.now { background: var(--hot-soft); }
+/* A boss's act break (actbreak.mjs): its card over the board's strip, the emote under its bar, the bits off its ♛'s tick. */
+.phase-strip.act-on { position: relative; }
+.phase-strip.act-on > :not(.act-card) { visibility: hidden; }
+.act-card { position: absolute; inset: 0; display: flex; align-items: center; gap: 14px; padding: 0 14px; overflow: hidden; white-space: nowrap; color: var(--hot); border-top: 1px solid var(--hot); pointer-events: none; }
+.act-card .ac-n, .act-card .ac-name { font: 800 15px var(--mono); letter-spacing: 0.22em; }
+.act-card .ac-of { opacity: 0.75; letter-spacing: 0.12em; }
+.act-card .ac-name { color: var(--text); }
+.hud-bar.enemy.act-emoting .gene-line { display: none; }
+.act-emote { margin: 8px 0 0; padding: 5px 10px; width: max-content; max-width: 100%; border: 1px solid color-mix(in srgb, var(--hot) 55%, transparent); border-radius: 2px; background: color-mix(in srgb, var(--hot) 8%, transparent); font: 13px var(--mono); color: var(--text); }
+.act-emote b { margin-right: 8px; color: var(--hot); letter-spacing: 0.12em; }
+.act-bit { position: fixed; z-index: 60; pointer-events: none; font: 700 13px var(--mono); color: var(--hot); text-shadow: 0 0 6px var(--hot); }
+.ptick.act-flare { box-shadow: 0 0 12px 3px var(--hot); }
+/* NIGHT DESK's attacks open trades (view.mjs tradeChip): dashed, like every chip that lands only if you let it. */
+.intent.trade { border: 1px dashed var(--hot); background: transparent; }
+.intent.trade .tr-ico { width: 14px; height: 14px; flex: none; color: var(--hot); }
+.intent.trade.full { border-style: solid; background: var(--hot-soft); }
+.intent.trade.full small { color: var(--hot); }
 .tether.k-bend { --tt: var(--hot); color: var(--hot); transform: translateY(-5px); } /* a little over the steel ones, so their arms never overlap */
 .tether.k-bend .tt-line { background: repeating-linear-gradient(180deg, var(--tt) 0 4px, transparent 4px 7px); }
 .tether.k-bend .tt-arm { background: repeating-linear-gradient(90deg, var(--tt) 0 4px, transparent 4px 7px); }

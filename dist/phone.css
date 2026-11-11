@@ -1,0 +1,326 @@
+/* The phone's shell (docs/phone-plan.md P1). Every rule sits under [data-form=phone] (form.mjs): a desktop, or a
+   600–900 px window, never reads one of them. The tab bar and the prompt's × don't exist off a phone. */
+:root:not([data-form='phone']) .ph-tabs, :root:not([data-form='phone']) .ph-prompt-x { display: none; }
+
+/* ---- Tokens: a 44 px target, the type ramp (body 15 px, nothing under 11 px), the safe areas, the tab bar ---- */
+[data-form='phone'] {
+  --tap: 44px;
+  --ph-body: 15px; --ph-small: 13px; --ph-tiny: 11px;
+  --safe-t: env(safe-area-inset-top, 0px); --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-l: env(safe-area-inset-left, 0px); --safe-r: env(safe-area-inset-right, 0px);
+  --ph-bar: calc(56px + var(--safe-b));
+}
+[data-form='phone'] body { font-size: var(--ph-body); padding: var(--safe-t) var(--safe-r) var(--ph-bar) var(--safe-l); }
+[data-form='phone'] .app { height: auto; min-height: calc(100dvh - var(--ph-bar) - var(--safe-t)); }
+[data-form='phone'] :is(button, [data-command], [data-module], [role='button'], a[href], summary) { touch-action: manipulation; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
+
+/* ---- The top strip: one 44 px row. The pager's lamp, Integrity, Signal, credits. In a fight, none (its HUD) ---- */
+[data-form='phone'] .topbar { position: sticky; top: 0; z-index: 30; background: var(--bg); display: flex; flex-wrap: nowrap; align-items: center; gap: 0 14px; height: var(--tap); min-height: var(--tap); padding: 0 12px; overflow: hidden; }
+[data-form='phone'] .topbar > :is(.brand, .modules, .whoami, .people-btn, .toggles, .bench-tag) { display: none; }
+[data-form='phone'] .topbar > .meters { display: flex; flex: 1; flex-wrap: nowrap; width: auto; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; margin: 0; }
+[data-form='phone'] .topbar .meter { grid-area: auto; min-height: var(--tap); padding: 0; justify-self: auto; border-left: 0 !important; font-size: var(--ph-small); }
+[data-form='phone'] .topbar #meter-level { display: none; }
+[data-form='phone'] .topbar .meter-label { font-size: var(--ph-tiny); }
+[data-form='phone'] .topbar :is(#meter-integrity, #meter-signal) .meter-label { display: none; } /* the tower and the bars say which; a tap gives the card */
+[data-form='phone'] .topbar .meter { flex: none; gap: 6px; }
+[data-form='phone'] .topbar .meter strong { font-size: var(--ph-body); }
+[data-form='phone'] .topbar .meter-note, [data-form='phone'] .topbar .sig-eta, [data-form='phone'] .topbar .sig-sick { font-size: var(--ph-tiny); }
+[data-form='phone'] .topbar .meters > .meter:last-child { margin-left: auto; }
+[data-form='phone'] .topbar .pager { order: -1; height: 34px; min-height: 0; padding: 0 2px; }
+[data-form='phone'] .topbar .pg-lamp { gap: 6px; min-width: var(--tap); height: var(--tap); margin: -5px 0; justify-content: center; }
+[data-form='phone'] .pg-lamp .pg-n { color: var(--amber); font: 600 var(--ph-small) var(--mono); }
+[data-form='phone'] body.ph-fight .topbar { display: none; }
+
+/* ---- The prompt: behind >_ (More). The #net line and the channel never show ---- */
+[data-form='phone'] .command-dock { bottom: var(--ph-bar); padding: 0 12px; gap: 6px; } /* sticky over the tab bar */
+[data-form='phone'] .command-dock :is(.net-line, .channel) { display: none; }
+[data-form='phone'] body:not(.ph-prompt) :is(#command-form, #suggestions) { display: none; }
+[data-form='phone'] body:not(.ph-prompt) .ph-prompt-x { display: none; }
+[data-form='phone'] body.ph-prompt .prompt-row { display: flex; align-items: center; gap: 6px; padding: 6px 0; }
+[data-form='phone'] body.ph-prompt #command-form { flex: 1; }
+[data-form='phone'] body.ph-prompt #command-input { font-size: 16px; } /* 16 px: iOS zooms in on anything smaller */
+[data-form='phone'] .ph-prompt-x { flex: none; width: var(--tap); height: var(--tap); padding: 0; color: var(--muted); font-size: 22px; line-height: 1; }
+
+/* ---- The tab bar: five slots at the bottom; the live context in Map's place, a red dot while you're away from it ---- */
+[data-form='phone'] .ph-tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); height: var(--ph-bar); padding: 0 var(--safe-r) var(--safe-b) var(--safe-l); background: var(--panel); border-top: 1px solid var(--line-strong); }
+[data-form='phone'] .ph-tab { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-width: 0; min-height: 56px; padding: 6px 2px 4px; color: var(--muted); border: 0; border-radius: 0; font: 600 var(--ph-tiny) var(--mono); letter-spacing: 0.3px; }
+[data-form='phone'] .ph-tab:hover { border-color: transparent; }
+[data-form='phone'] .ph-tab .glyph { width: 20px; height: 20px; margin: 0; }
+[data-form='phone'] .ph-tab > span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+[data-form='phone'] .ph-tab[aria-current='page'] { color: var(--amber); }
+[data-form='phone'] .ph-tab[aria-current='page']::before { content: ''; position: absolute; top: 0; left: 22%; right: 22%; height: 2px; background: var(--amber); }
+[data-form='phone'] .ph-tab.ctx:not([aria-current='page']) { color: var(--bright); }
+[data-form='phone'] .ph-dot { position: absolute; top: 8px; left: calc(50% + 9px); width: 8px; height: 8px; border-radius: 50%; background: var(--hot); box-shadow: 0 0 6px var(--hot); }
+[data-form='phone'] .ph-n { position: absolute; top: 5px; left: calc(50% + 8px); min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--amber); color: var(--bg); font: 700 var(--ph-tiny)/16px var(--mono); text-align: center; }
+[data-form='phone'] .ph-n.ok { background: var(--ready, var(--amber)); }
+[data-form='phone'] .ph-more { font: 700 18px/20px var(--mono); letter-spacing: 1px; }
+
+/* ---- The one sheet (sheet.mjs): peek, half, full; drag down or tap outside to close ---- */
+[data-form='phone'] .sheet-root { position: fixed; inset: 0; z-index: 120; }
+[data-form='phone'] .sh-scrim { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.45); animation: sh-fade 0.16s ease-out; }
+[data-form='phone'] .sh-panel { position: absolute; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; max-height: calc(100dvh - 24px); padding: 0 var(--safe-r, 0) var(--safe-b, 0) var(--safe-l, 0); background: var(--panel); border-top: 2px solid var(--amber); border-radius: 12px 12px 0 0; box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.6); animation: sh-up 0.18s ease-out; touch-action: none; transition: transform 0.12s ease-out; }
+[data-form='phone'] .sh-panel.h-half { height: 55dvh; }
+[data-form='phone'] .sh-panel.h-full { height: calc(100dvh - 24px); }
+[data-form='phone'] .sh-grab { display: flex; justify-content: center; padding: 8px 0 6px; cursor: grab; }
+[data-form='phone'] .sh-grab i { width: 40px; height: 4px; border-radius: 2px; background: var(--line-strong); }
+[data-form='phone'] .sh-body { flex: 1; min-height: 0; overflow: auto; padding: 0 16px 16px; touch-action: pan-y; overscroll-behavior: contain; }
+@keyframes sh-up { from { transform: translateY(40px); opacity: 0; } }
+@keyframes sh-fade { from { opacity: 0; } }
+[data-form='phone'] body.no-motion .sh-panel, [data-form='phone'] body.no-motion .sh-scrim { animation: none; transition: none; }
+/* The rule's card, as the hover tip draws it, in the sheet's flow */
+[data-form='phone'] .sh-tt.tt { position: static; max-width: none; padding: 4px 0 8px; background: none; border: 0; box-shadow: none; font-size: var(--ph-body, 15px); pointer-events: auto; animation: none; }
+[data-form='phone'] .sh-tt.tt b { font-size: var(--ph-small, 13px); }
+[data-form='phone'] .sh-tt.tt :is(.tt-kind, .tt-state) { font-size: var(--ph-small, 13px); }
+
+/* ---- More: the player card row (the Net ID badge's amber strip, the handle in teal), then a row per page ---- */
+[data-form='phone'] .ph-more-list { display: flex; flex-direction: column; gap: 2px; }
+[data-form='phone'] .ph-card { display: flex; flex-direction: column; align-items: stretch; margin-bottom: 8px; padding: 0; text-align: left; background: var(--inset); border: 1px solid var(--line); border-radius: var(--r-card, 6px); overflow: hidden; }
+[data-form='phone'] .ph-strip { display: block; padding: 3px 12px; background: var(--amber); color: var(--bg); font: 700 11px/16px var(--mono); letter-spacing: 2px; text-transform: uppercase; }
+[data-form='phone'] .ph-id { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 8px 12px 10px; }
+[data-form='phone'] .ph-handle { overflow: hidden; color: var(--you); font: 700 18px var(--mono); text-overflow: ellipsis; white-space: nowrap; }
+[data-form='phone'] .ph-id small { color: var(--muted); font: 13px var(--mono); }
+[data-form='phone'] .ph-xp { display: block; height: 3px; margin-top: 4px; background: var(--line); }
+[data-form='phone'] .ph-xp i { display: block; height: 100%; background: var(--amber); }
+[data-form='phone'] .ph-row { position: relative; display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 8px; text-align: left; color: var(--text); border: 0; border-bottom: 1px solid var(--line); border-radius: 0; font: 15px var(--sans); }
+[data-form='phone'] .ph-row .glyph { width: 20px; height: 20px; margin: 0; color: var(--muted); }
+[data-form='phone'] .ph-row .ph-n { position: static; margin-left: auto; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--amber); color: var(--bg); font: 700 11px/18px var(--mono); text-align: center; }
+[data-form='phone'] .ph-gt { width: 20px; color: var(--amber); font: 700 13px var(--mono); text-align: center; }
+[data-form='phone'] .bench-panel { display: none; } /* the dev panel: a desktop's (bench commands still work at the prompt) */
+
+/* The map's floor picker: the current floor's name stays inside its pill (it ran over the next floor at 320 px). */
+[data-form='phone'] .fl-btn.on { grid-template-columns: auto minmax(0, 1fr); min-width: 0; overflow: hidden; }
+[data-form='phone'] .fl-btn.on .fl-name { justify-self: stretch; min-width: 0; }
+
+/* ---- The fight (P2): the whole fight on one screen, no scroll. The HUD on top (the virus's bar over yours, its
+   window top right), the board in the height left, the ticker and the tray (two rows of four, the menu key at the
+   row's end) at the bottom. No tab bar (the menu key opens it), no #net line, no prompt (More's >_ in the menu) ---- */
+[data-form='phone'] body.ph-fight { padding-bottom: var(--safe-b); overflow: hidden; }
+[data-form='phone'] body.ph-fight .ph-tabs:not(.ph-in-sheet) { display: none; }
+[data-form='phone'] body.ph-fight .app { display: flex; flex-direction: column; height: calc(100dvh - var(--safe-t) - var(--safe-b)); min-height: 0; }
+[data-form='phone'] body.ph-fight .workspace { display: flex; flex-direction: column; flex: 1; min-height: 0; padding: 4px 8px 0; overflow: hidden; }
+[data-form='phone'] body.ph-fight :is(#sidebar, #crewwin, .statusline) { display: none !important; }
+[data-form='phone'] body.ph-fight .combat { display: flex; flex: 1; flex-direction: column; gap: 6px; height: auto; min-height: 0; }
+[data-form='phone'] body.ph-fight .combat > .log { display: none; }
+[data-form='phone'] body.ph-fight.fight-over .combat > .log { display: block; flex: 1; min-height: 0; overflow: auto; }
+
+/* The HUD, the designer's pick C: one line. Your bar on the left (the crew's violet lines under it), the virus's on
+   the right with its ◆ over it, each with its number; its window at the end. Its name, level, family, writer and
+   rules, and your statuses, are in the two bars' cards (a tap; app.js phHudCards). */
+[data-form='phone'] body.ph-fight .hud { --ph-win: 40px; position: relative; display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1fr); grid-template-areas: 'you enemy' 'crew enemy'; align-items: start; gap: 3px 10px; min-height: 0; margin: 0; padding: 6px 8px; padding-right: calc(var(--ph-win) + 14px); }
+[data-form='phone'] body.ph-fight .hud .hud-left { grid-area: you; display: block; min-width: 0; }
+[data-form='phone'] body.ph-fight .hud .ph-crew { grid-area: crew; }
+[data-form='phone'] body.ph-fight .hud .hud-bar.enemy { grid-area: enemy; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; column-gap: 4px; min-width: 0; }
+[data-form='phone'] body.ph-fight .hud .hud-bar.enemy > .bar-top { display: contents; }
+[data-form='phone'] body.ph-fight .hud .hud-bar.enemy .clock-line { grid-column: 1; grid-row: 1; margin: 0; }
+[data-form='phone'] body.ph-fight .hud .hud-bar.enemy .bar-top > span:last-child { grid-column: 3; grid-row: 1; }
+[data-form='phone'] body.ph-fight .hud .hud-bar.enemy .bigbar { grid-column: 1 / -1; grid-row: 2; }
+[data-form='phone'] body.ph-fight .hud :is(.vname, .gene-line, .hud-status) { display: none; }
+[data-form='phone'] body.ph-fight .hud .bar-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-height: 0; }
+[data-form='phone'] body.ph-fight .hud .bar-top > span:last-child { flex: none; font-size: var(--ph-small); line-height: 1; }
+[data-form='phone'] body.ph-fight .hud .mine .bar-top strong { font-size: 0; } /* its icon says server or Signal */
+[data-form='phone'] body.ph-fight .hud .mine .bar-top strong .bar-ico { width: 13px; height: 13px; margin: 0; }
+[data-form='phone'] body.ph-fight .hud .bigbar { height: 6px; margin: 2px 0 0; }
+[data-form='phone'] body.ph-fight .hud .chits { font-size: var(--ph-tiny); letter-spacing: -1px; }
+[data-form='phone'] .ph-crew { display: flex; flex-direction: column; gap: 3px; }
+[data-form='phone'] .ph-mate { display: block; height: 3px; background: var(--line); border-radius: 2px; overflow: hidden; }
+[data-form='phone'] .ph-mate i { display: block; height: 100%; background: var(--daemon); }
+[data-form='phone'] .ph-mate.down { opacity: 0.4; }
+
+/* The virus's window at the HUD's end; in its half it steps out over the board (app.js phStage) and its slot keeps a
+   dashed outline. */
+[data-form='phone'] body.ph-fight .combat > .stage { position: absolute; z-index: 12; top: 4px; right: 6px; width: 40px; height: 40px; padding: 2px; border: 1px solid var(--hot); transition: transform 0.36s ease-in-out; transform: translate(0, 0); }
+[data-form='phone'] body.ph-fight .combat > .stage .virus-stage { min-height: 0; }
+[data-form='phone'] body.ph-fight .combat > .stage .stage-flash { display: none; }
+[data-form='phone'] body.ph-fight.ph-out .combat > .stage { transform: translate(var(--ph-dx, 0), var(--ph-dy, 0)); }
+[data-form='phone'] body.ph-fight.ph-out .hud::after { content: ''; position: absolute; inset: auto; top: 4px; right: 6px; bottom: auto; left: auto; background: none; transform: none; width: 40px; height: 40px; border: 1px dashed var(--line-strong); border-radius: 4px; }
+[data-form='phone'] body.ph-fight.no-motion .combat > .stage { transition: none; transform: none; }
+[data-form='phone'] body.ph-fight.fight-over .combat > .stage { position: static; width: auto; height: auto; }
+
+/* The board: Now, +1 and +2 in the height left, the rows sharing it; the whose-half chip in its header; chips with
+   no icons. */
+[data-form='phone'] body.ph-fight .combat .board { display: flex; flex-direction: column; flex: 1; min-height: 0; max-height: none; overflow-y: auto; }
+[data-form='phone'] body.ph-fight #board .brow { grid-template-columns: minmax(0, 1.35fr) repeat(3, minmax(0, 1fr)); }
+[data-form='phone'] body.ph-fight #board .brow > .bcell:nth-child(5) { display: none; }
+[data-form='phone'] body.ph-fight #board .brow > .bcell.span4 { grid-column: 2 / -1; }
+[data-form='phone'] body.ph-fight #board .brow:not(.bhead) { flex: 1 1 auto; min-height: 44px; max-height: 96px; }
+[data-form='phone'] body.ph-fight #board .brow:not(.bhead) > .bcell { padding-top: 4px; padding-bottom: 4px; }
+[data-form='phone'] body.ph-fight #board .bhead { flex: none; position: relative; }
+[data-form='phone'] body.ph-fight #board .bhead > .bcell { padding-top: 2px; padding-bottom: 2px; font-size: var(--ph-tiny); }
+[data-form='phone'] body.ph-fight #board .bhead .bnow > span:first-child { display: flex; gap: 4px; align-items: baseline; }
+[data-form='phone'] body.ph-fight #board .bhead > .bname { visibility: hidden; }
+[data-form='phone'] body.ph-fight #board .phase-strip { position: relative; z-index: 3; flex: none; align-self: flex-start; width: calc(1.35 / 4.35 * 100%); height: 26px; margin: 0 0 -26px; padding: 4px 6px; letter-spacing: 0.5px; border: 0; background: none; font-size: var(--ph-tiny); }
+[data-form='phone'] body.ph-fight #board .phase-strip > :is(i, .ps-wait) { display: none; }
+[data-form='phone'] body.ph-fight #board .phase-strip:not(.ph-them) .ps-them, [data-form='phone'] body.ph-fight #board .phase-strip.ph-them .ps-you { display: none; }
+[data-form='phone'] body.ph-fight #board .phase-strip > span { overflow: hidden; max-width: 100%; text-overflow: ellipsis; white-space: nowrap; }
+[data-form='phone'] body.ph-fight #board .pause-strip { position: static; flex: none; margin: 2px 6px; padding: 2px 6px; font-size: var(--ph-tiny); letter-spacing: 1px; }
+[data-form='phone'] body.ph-fight #board .part-name { font-size: var(--ph-small); }
+[data-form='phone'] body.ph-fight #board .intent :is(.ico, .fxin) { display: none; }
+
+/* The ticker: the log's latest line, its side's edge */
+[data-form='phone'] .ph-ticker { display: block; width: 100%; min-height: 28px; margin: 0; padding: 4px 8px; overflow: hidden; color: var(--text); text-align: left; white-space: nowrap; text-overflow: ellipsis; background: var(--inset); border: 0; border-left: 3px solid var(--line-strong); border-radius: 0; font: var(--ph-tiny)/20px var(--mono); }
+[data-form='phone'] .ph-ticker.side-you { border-left-color: var(--you); }
+[data-form='phone'] .ph-ticker.side-them { border-left-color: var(--hot); }
+[data-form='phone'] .ph-ticker > * { display: inline; margin-right: 6px; }
+[data-form='phone'] .ph-log { height: auto; max-height: none; margin: 0; padding: 0; overflow: visible; list-style: none; font: var(--ph-small)/1.45 var(--mono); }
+
+/* The tray: two rows of four keys (icon over name), the menu column at the row's end; past eight, +n */
+[data-form='phone'] body.ph-fight .command-dock { position: static; flex: none; padding: 4px 8px 6px; gap: 4px; background: var(--bg); }
+/* A notice takes the ticker's slot, one line (a tap shows it whole): never over the board's rows, never over a key */
+[data-form='phone'] body.ph-fight .notice { top: 100%; bottom: auto; left: 0; right: 0; z-index: 8; max-width: none; height: 28px; padding: 3px 8px; overflow: hidden; font-size: var(--ph-tiny); line-height: 20px; white-space: nowrap; text-overflow: ellipsis; }
+[data-form='phone'] body.ph-fight .prompt-row { position: relative; height: 0; }
+[data-form='phone'] body.ph-fight.ph-prompt .prompt-row { height: auto; }
+[data-form='phone'] body.ph-fight #tray { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) 44px; grid-auto-flow: row; gap: 4px; }
+[data-form='phone'] body.ph-fight #tray > :is(.ability.ph-over, .tk-open) { display: none; }
+[data-form='phone'] :is(body.ph-fight #tray, .ph-more-keys) > .ability { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-width: 0; min-height: var(--tap); padding: 4px 2px; text-align: center; }
+[data-form='phone'] :is(body.ph-fight #tray, .ph-more-keys) > .ability .name { overflow: hidden; max-width: 100%; font-size: var(--ph-tiny); line-height: 1.15; text-overflow: ellipsis; white-space: nowrap; }
+[data-form='phone'] :is(body.ph-fight #tray, .ph-more-keys) > .ability .ico { width: 18px; height: 18px; }
+[data-form='phone'] :is(body.ph-fight #tray, .ph-more-keys) > .ability kbd { display: none; }
+[data-form='phone'] .ph-menu-col { grid-column: 5; grid-row: 1 / span 2; display: flex; flex-direction: column; gap: 4px; }
+[data-form='phone'] .ph-menu, [data-form='phone'] .ph-keys { display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: var(--tap); padding: 0; color: var(--muted); background: var(--inset); border: 1px solid var(--line); border-radius: var(--r-btn, 4px); font: 700 var(--ph-small) var(--mono); }
+[data-form='phone'] .ph-menu > span { font-size: 18px; line-height: 10px; letter-spacing: 1px; }
+[data-form='phone'] .ph-menu .pg-n { color: var(--amber); font: 600 var(--ph-tiny) var(--mono); }
+[data-form='phone'] .ph-menu .led { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #3a2c14; }
+[data-form='phone'] .ph-menu .led.on { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+[data-form='phone'] .ph-menu .led.alert { background: var(--hot); box-shadow: 0 0 6px var(--hot); }
+[data-form='phone'] .ph-keys { flex: none; color: var(--amber); }
+[data-form='phone'] .ph-more-keys { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+[data-form='phone'] .ph-tabs.ph-in-sheet { position: static; display: grid; height: auto; margin: 0 -16px 8px; padding: 0; background: none; border: 0; border-bottom: 1px solid var(--line); }
+[data-form='phone'] .ph-more-list .ph-row .led { width: 9px; height: 9px; margin: 0 6px; border-radius: 50%; background: #3a2c14; }
+[data-form='phone'] .ph-more-list .ph-row .led.on { background: var(--amber); }
+
+/* On its side: the board on the left (with +3), the HUD, the ticker and the tray in a column on the right */
+@media (orientation: landscape) {
+  [data-form='phone'] body.ph-fight .app { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 300px); grid-template-rows: minmax(0, 1fr); }
+  [data-form='phone'] body.ph-fight .workspace { display: contents; }
+  [data-form='phone'] body.ph-fight .combat { display: contents; }
+  [data-form='phone'] body.ph-fight .combat .board { grid-column: 1; grid-row: 1; margin: 6px 0 6px 8px; }
+  [data-form='phone'] body.ph-fight #board .brow { grid-template-columns: minmax(0, 1.35fr) repeat(4, minmax(0, 1fr)); }
+  [data-form='phone'] body.ph-fight #board .brow > .bcell:nth-child(5) { display: block; }
+  [data-form='phone'] body.ph-fight #board .phase-strip { width: calc(1.35 / 5.35 * 100% + 4px); }
+  [data-form='phone'] body.ph-fight .command-dock { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; justify-content: flex-end; padding-top: 60px; }
+  [data-form='phone'] body.ph-fight .hud { position: fixed; z-index: 11; top: calc(6px + var(--safe-t)); right: calc(8px + var(--safe-r)); width: 284px; }
+  [data-form='phone'] body.ph-fight .combat > .stage { position: fixed; top: calc(12px + var(--safe-t)); right: calc(14px + var(--safe-r)); }
+}
+/* No "You" row on a phone's board (the designer: too busy). The picked key lights in the tray and the target part
+   carries your aim pip. */
+[data-form='phone'] body.ph-fight #board .brow.byou { display: none; }
+[data-form='phone'] body.ph-fight #tray > .ability.ph-picked { border-color: var(--amber); box-shadow: inset 0 0 0 1px var(--amber), 0 0 10px rgba(241, 185, 47, 0.35); }
+
+/* ---- Maps and sheets (P3) ---- */
+/* A see-through sheet (sheet.mjs `through`): no scrim, the page and the tab bar under it still take taps; the page
+   keeps its last rows clear of it (--sh-h, app.js phPops). */
+[data-form='phone'] .sheet-root.through { pointer-events: none; }
+[data-form='phone'] .sheet-root.through .sh-panel { pointer-events: auto; }
+[data-form='phone'] body:not(.ph-fight) .sheet-root.through .sh-panel { bottom: var(--ph-bar); padding-bottom: 0; } /* over the tab bar: the pages stay a tap away */
+[data-form='phone'] body { padding-bottom: calc(var(--ph-bar) + var(--sh-h, 0px)); }
+[data-form='phone'] .sheet-root.through .sh-panel { max-height: calc(100dvh - var(--ph-bar) - 96px); }
+[data-form='phone'] #sheet :is(.pz-card, .jr-card) { width: auto; max-width: none; max-height: none; margin: 0; padding: 0; overflow: visible; background: none; border: 0; box-shadow: none; }
+
+/* Every pop-up is the one sheet (app.js phPops lifts each in): at home, in the page or on the body, none shows. */
+[data-form='phone'] #page-view :is(#map-pop, #fp-pop, #hsv-panel, .dm-panel, #th-panel), [data-form='phone'] body > :is(#comms, #levelup, .pg-pop, .pg-scrim, #jr-find, #th-offer) { display: none !important; }
+[data-form='phone'] #sheet :is(.map-pop, .hsv-panel, .dm-panel, .th-panel, .comms, .levelup, .pg-pop, .jr-wrap, .th-offer) { position: static; visibility: visible !important; inset: auto; width: auto; max-width: none; height: auto; max-height: none; margin: 0; padding: 0; overflow: visible; background: none; border: 0; border-radius: 0; box-shadow: none; filter: none; transform: none; opacity: 1; animation: none; zoom: 1; pointer-events: auto; backdrop-filter: none; container-type: normal; }
+[data-form='phone'] #sheet :is(.map-pop, .th-panel, .comms, .levelup, .pg-pop, .jr-wrap, .th-offer) { display: block; }
+[data-form='phone'] #sheet :is(.hsv-panel, .dm-panel) { display: grid; }
+[data-form='phone'] #sheet :is(.map-pop-x, .hsv-close, .dm-close, [data-comms-close], [data-lu-close], .pz-x) { display: none; } /* the sheet closes itself */
+[data-form='phone'] #sheet .card { margin: 0; padding: 4px 0 8px; background: none; border: 0; box-shadow: none; }
+[data-form='phone'] #sheet .card::before, [data-form='phone'] #sheet .card::after { display: none; }
+[data-form='phone'] #sheet .card + .card { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+[data-form='phone'] #sheet .btn { min-height: var(--tap); }
+
+/* A map card: its peek is one line (name, level, the main button); ▴ opens the whole card. */
+[data-form='phone'] .ph-peek { display: flex; align-items: center; gap: 10px; padding-bottom: 4px; }
+[data-form='phone'] .ph-peek-id { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 0 8px; flex: 1; min-width: 0; min-height: var(--tap); padding: 0; text-align: left; border: 0; }
+[data-form='phone'] .ph-peek-id > b { overflow: hidden; color: var(--bright); font: 600 16px var(--mono); text-overflow: ellipsis; white-space: nowrap; }
+[data-form='phone'] .ph-peek-id small { grid-column: 1; overflow: hidden; color: var(--muted); font: var(--ph-small) var(--mono); text-overflow: ellipsis; white-space: nowrap; }
+[data-form='phone'] .ph-peek-id small .tag { display: none; }
+[data-form='phone'] .ph-peek-id i { grid-column: 2; grid-row: 1 / span 2; color: var(--muted); font-style: normal; transition: transform 0.15s; }
+[data-form='phone'] .ph-peek > .btn { flex: none; }
+[data-form='phone'] .map-pop:has(> .ph-peek):not(.ph-open) > :not(.ph-peek) { display: none; }
+[data-form='phone'] .map-pop.ph-open .ph-peek-id i { transform: rotate(180deg); }
+[data-form='phone'] .map-pop.ph-open > .ph-peek > .btn, [data-form='phone'] .map-pop.ph-open .ph-peek-id :is(b, small) { display: none; } /* the card says it, with its own button */
+[data-form='phone'] .map-pop.ph-open .ph-peek-id { grid-template-columns: minmax(0, 1fr); justify-items: center; min-height: 28px; }
+[data-form='phone'] .map-pop.ph-open .ph-peek-id i { grid-column: 1; }
+
+/* A room's decision: the card, its buttons along the floor, side by side in thumb reach. */
+[data-form='phone'] #sheet .fp-pop :is(.fp-acts, .row) { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+[data-form='phone'] #sheet .fp-pop :is(.fp-acts, .row) > .btn { flex: 1 1 0; min-width: 0; }
+
+/* The lists a chip opens, and a server's strip in full. */
+[data-form='phone'] .ph-list { display: grid; gap: 14px; }
+[data-form='phone'] .ph-list :is(.threat-rail, .ctrack, .rrail) { position: static; width: auto; max-height: none; margin: 0; padding: 0; background: none; border: 0; }
+[data-form='phone'] .ph-list :is(.tr-row, .ct-row, .rr-row) { min-height: var(--tap); }
+[data-form='phone'] .ph-fpinfo .fp-hud { position: static; display: flex; flex-wrap: wrap; gap: 10px 16px; padding: 0; background: none; border: 0; box-shadow: none; }
+[data-form='phone'] .ph-fpinfo .fp-acts { flex: 1 1 100%; display: flex; gap: 8px; }
+[data-form='phone'] .ph-fpinfo .fp-acts .btn { flex: 1; }
+[data-form='phone'] .ph-fpinfo .fp-id { flex: 1 1 100%; }
+
+/* ---- The map: full bleed between the strip and the tab bar. One row of tools, the floors as a segmented row, the
+   chips under them (the designer's pick B: a count and a word each), the map in the height left ---- */
+[data-form='phone'] body.ph-map .workspace, [data-form='phone'] body.ph-rooms .workspace { padding: 0; }
+[data-form='phone'] body.ph-map .map-page { display: flex; height: calc(100dvh - var(--tap) - var(--ph-bar) - var(--safe-t)); }
+[data-form='phone'] body.ph-map .map-canvas { flex: 1; height: auto; min-width: 0; margin: 0; padding: 0; border: 0; border-radius: 0; }
+[data-form='phone'] body.ph-map .map-canvas::before, [data-form='phone'] body.ph-map .map-canvas::after { display: none; }
+[data-form='phone'] body.ph-map .map-tools { flex-wrap: nowrap; align-items: center; padding: 6px 8px 0; }
+[data-form='phone'] body.ph-map .map-tools .map-left { display: flex; align-items: center; }
+[data-form='phone'] body.ph-map .map-tools [data-run^='map names'] { display: none; } /* names on hover: a desktop's */
+[data-form='phone'] body.ph-map .map-tools button, [data-form='phone'] body.ph-map .map-pick summary { min-height: 32px; }
+[data-form='phone'] body.ph-map .floor-lift { position: static; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 0; width: auto; margin: 6px 8px 0; border: 1px solid var(--line-strong); border-radius: 4px; overflow: hidden; }
+[data-form='phone'] body.ph-map .fl-btn { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; min-height: 34px; padding: 0 2px; background: none; border: 0; border-right: 1px solid var(--line); border-radius: 0; box-shadow: none; opacity: 1; backdrop-filter: none; }
+[data-form='phone'] body.ph-map .fl-btn:last-child { border-right: 0; }
+[data-form='phone'] body.ph-map .fl-btn.held { box-shadow: inset 0 -2px 0 var(--hc); }
+[data-form='phone'] body.ph-map .fl-btn .fl-n { width: auto; height: auto; background: none; border: 0; font-size: var(--ph-small); }
+[data-form='phone'] body.ph-map .fl-btn:is(.next, .dark) .fl-n { color: var(--muted); opacity: 0.5; }
+[data-form='phone'] body.ph-map .fl-btn.on { grid-column: span 4; grid-template-columns: auto minmax(0, 1fr); justify-items: start; gap: 6px; padding: 0 8px; background: var(--amber); }
+[data-form='phone'] body.ph-map .fl-btn.on :is(.fl-n, .fl-name) { color: var(--bg); font-weight: 700; }
+[data-form='phone'] body.ph-map .fl-btn.on .fl-name { font-size: var(--ph-small); }
+[data-form='phone'] body.ph-map .fl-btn .fl-you { left: 50%; top: 3px; margin: 0 0 0 -3px; width: 6px; height: 6px; }
+[data-form='phone'] .ph-chips { display: flex; gap: 6px; margin: 6px 8px 0; }
+[data-form='phone'] .ph-chip { display: flex; flex: 0 1 auto; align-items: center; justify-content: center; gap: 6px; min-width: 0; min-height: 34px; padding: 0 10px; background: rgba(12, 10, 6, 0.6); border: 1px solid currentColor; border-radius: 4px; font: 600 var(--ph-small) var(--mono); white-space: nowrap; }
+[data-form='phone'] .ph-chip .glyph { flex: none; width: 14px; height: 14px; margin: 0; }
+[data-form='phone'] .ph-chip small { overflow: hidden; font: var(--ph-small) var(--mono); opacity: 0.85; text-overflow: ellipsis; }
+[data-form='phone'] .ph-chip.hot { color: var(--hot); }
+[data-form='phone'] .ph-chip.job { color: var(--amber); }
+[data-form='phone'] .ph-chip.ok { color: var(--ready, #7fd48a); }
+[data-form='phone'] .ph-chip.pin { color: var(--r-set); } /* the pinned earned pieces (earned.mjs) */
+[data-form='phone'] body.ph-map .map-svg { flex: 1; height: auto; min-height: 0; }
+[data-form='phone'] :is(.map-svg, .fp-svg) { touch-action: none; } /* pinch and double-tap are the map's (app.js) */
+[data-form='phone'] body.ph-map .map-list .mlist, [data-form='phone'] body.ph-map .map-list > :not(.map-tools) { min-height: 0; overflow: auto; }
+
+/* ---- A server's rooms: no strip; its header is one line (the designer's pick A): the server, Signal, rooms n/N, the
+   hunter's countdown. A tap on the name opens the rest. Wait and Jack out float as one capsule at the map's bottom
+   right; the map fills the rest, standing up ---- */
+[data-form='phone'] body.ph-rooms .topbar { display: none; }
+[data-form='phone'] body.ph-rooms .fp { display: flex; flex-direction: column; gap: 0; height: calc(100dvh - var(--ph-bar) - var(--safe-t)); }
+[data-form='phone'] body.ph-rooms #page-view .fp-hud { position: static; display: flex; flex: none; flex-wrap: nowrap; align-items: center; gap: 12px; height: var(--tap); padding: 0 12px; background: var(--bg); border: 0; border-bottom: 1px solid var(--line-strong); border-radius: 0; box-shadow: none; overflow: hidden; }
+[data-form='phone'] body.ph-rooms #page-view .fp-hud::before, [data-form='phone'] body.ph-rooms #page-view .fp-hud::after { display: none; }
+[data-form='phone'] body.ph-rooms #page-view .fp-hud > :not(.fp-id, .fp-sig, .fp-prog, .fp-hunt, .fp-tools) { display: none; }
+[data-form='phone'] body.ph-rooms #page-view .fp-hud :is(.lbl, .fp-id small, .fp-id .ico, .fp-sig small, .sigbar, .pbar, .fp-mapped, .fp-rules, .fp-perks, .sig-sick) { display: none; }
+[data-form='phone'] body.ph-rooms #page-view .fp-hud .fp-tools { display: contents; }
+[data-form='phone'] body.ph-rooms #page-view .fp-hud .fp-in { display: none; }
+[data-form='phone'] body.ph-rooms #page-view .fp-id { display: flex; flex: 1; flex-wrap: nowrap; order: 0; align-items: center; gap: 6px; min-width: 0; min-height: var(--tap); }
+[data-form='phone'] body.ph-rooms #page-view .fp-id b { overflow: hidden; font: 600 14px var(--mono); letter-spacing: 0.5px; text-overflow: ellipsis; }
+[data-form='phone'] body.ph-rooms #page-view .fp-id::after { content: '▾'; flex: none; color: var(--muted); font-size: var(--ph-tiny); }
+[data-form='phone'] body.ph-rooms #page-view .fp-sig { display: flex; flex: none; align-items: center; gap: 6px; min-width: 0; min-height: var(--tap); }
+[data-form='phone'] body.ph-rooms #page-view .fp-sig::before { content: ''; width: 16px; height: 12px; background: linear-gradient(90deg, currentColor 0 3px, transparent 3px 4.3px, currentColor 4.3px 7.3px, transparent 7.3px 8.6px, currentColor 8.6px 11.6px, transparent 11.6px 13px, currentColor 13px 16px); clip-path: polygon(0 100%, 0 72%, 100% 0, 100% 100%); color: var(--you); }
+[data-form='phone'] body.ph-rooms #page-view .fp-sig.mid::before { color: var(--next); }
+[data-form='phone'] body.ph-rooms #page-view .fp-sig.low::before { color: var(--hot); }
+[data-form='phone'] body.ph-rooms #page-view .fp-sig strong { font: 600 var(--ph-body) var(--mono); }
+[data-form='phone'] body.ph-rooms #page-view :is(.fp-prog, .fp-hunt) { display: flex; flex: none; align-items: center; gap: 4px; min-height: var(--tap); }
+[data-form='phone'] body.ph-rooms #page-view :is(.fp-prog, .fp-hunt) b { font: 600 14px var(--mono); }
+[data-form='phone'] body.ph-rooms #page-view .fp-hunt b { color: var(--hot); }
+[data-form='phone'] body.ph-rooms #page-view .fp-hunt.out b { color: var(--muted); }
+[data-form='phone'] body.ph-rooms .fp-map { flex: 1; min-height: 0; margin: 0; padding: 0; border: 0; border-radius: 0; overflow: hidden; }
+[data-form='phone'] body.ph-rooms .fp-map::before, [data-form='phone'] body.ph-rooms .fp-map::after { display: none; }
+[data-form='phone'] body.ph-rooms .fp-scroll { padding: 8px; }
+[data-form='phone'] body.ph-rooms .fp-svg.tall { width: 100%; height: 100%; max-width: calc(var(--w) * 1.2); max-height: calc(var(--h) * 1.2); }
+[data-form='phone'] body.ph-rooms .fp-zoom { display: none; } /* a double tap fits it */
+[data-form='phone'] body.ph-rooms #page-view .fp-acts { position: fixed; right: calc(10px + var(--safe-r)); bottom: calc(var(--ph-bar) + 10px); z-index: 20; display: flex; gap: 0; background: rgba(14, 11, 7, 0.94); border: 1px solid var(--line-strong); border-radius: 23px; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6); overflow: hidden; }
+[data-form='phone'] body.ph-rooms #page-view .fp-acts .btn { min-width: 64px; min-height: var(--tap); padding: 0 16px; background: none; border: 0; border-radius: 0; box-shadow: none; color: var(--bright); font: 600 var(--ph-small) var(--mono); letter-spacing: 0.4px; }
+[data-form='phone'] body.ph-rooms #page-view .fp-acts .btn + .btn { border-left: 1px solid var(--line-strong); }
+[data-form='phone'] body.ph-rooms #page-view .fp-acts .btn.hot-btn { color: var(--hot); }
+[data-form='phone'] body.ph-rooms #page-view .fp-acts .btn.primary { color: var(--amber); }
+[data-form='phone'] body.ph-rooms #page-view .fp-acts .btn:disabled { opacity: 0.4; }
+[data-form='phone'] body.ph-map .map-pick summary { display: flex; align-items: center; }
+[data-form='phone'] #sheet .pg-detail { padding: 0 0 0 12px; background: none; border-width: 0 0 0 3px; border-radius: 0; box-shadow: none; }
+[data-form='phone'] #sheet .pg-acts { display: flex; gap: 8px; margin-top: 4px; }
+[data-form='phone'] #sheet .pg-acts .btn { flex: 1; }

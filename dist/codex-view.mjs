@@ -142,33 +142,47 @@ const dropLine = () => `Drops components ${dropPct(SOCKET.drop.room)} of the tim
 const lootList = (parts) => `<ul class="cx-loot">${parts.filter((x) => x.spec.loot).map((x) => { const open = x.research >= RESEARCH.max; return `<li class="${open ? '' : 'unknown'}" title="${esc(open ? dropLine() : `Research ${RESEARCH.max} to learn its drop chance.`)}">${glyph('salvage')}<b>${esc(x.named ? x.spec.name : UNKNOWN)}</b><small>${open ? `${dropPct(SOCKET.drop.room)} in a room fight` : UNKNOWN}</small></li>`; }).join('')}</ul>`;
 const pctOf = (parts) => (parts.length ? Math.round((parts.reduce((n, x) => n + Math.min(x.research, RESEARCH.max) / RESEARCH.max, 0) / parts.length) * 100) : 0);
 
-// A boss's loot table (the dungeon journal): what every kill drops, its uniques (??? until found, a native boss's until
-// its first fall names them), and their odds with the bad-luck protection: the next kill's chance, in amber.
+// A boss's loot table (the dungeon journal), in the Grouped look (docs/floor-items.md): every kill, its uniques, its set
+// pieces, each group with the next kill's odds as a bar (amber, loot; a set's name in set green). Uniques and pieces are
+// ??? until found (a native boss's until its first fall names them); a bar's tooltip says the odds and the pity.
 const pc = (x) => `${Math.round(x * 100)}%`;
+const oddsBar = (x, tip) => `<span class="cxg-odds" title="${esc(tip)}"><i class="cxg-bar" aria-hidden="true"><b style="width:${Math.max(2, Math.round(Math.min(1, x) * 100))}%"></b></i><em>${pc(x)}</em></span>`;
+const group = (cls, label, sub, odds, rows) => `<div class="cxg-grp ${cls}"><div class="cxg-head"><span class="cx-label">${label}</span>${sub ? `<small>${sub}</small>` : ''}${odds}</div><ul class="cx-loot">${rows}</ul></div>`;
+const lootRow = (u, cls, tail) => `<li class="${u.name ? '' : 'unknown'}">${glyph('item')}<b${u.name ? ` class="iname ${cls}"` : ''}>${esc(u.name || UNKNOWN)}</b><small>Lv ${u.level}${u.got ? ' · found' : ''}${tail || ''}</small></li>`;
 function lootTable(t) {
-  const sure = t.sure === 'custom' ? `<li>${glyph('item')}<b class="iname r-custom">Custom</b><small>every kill, at its level</small></li>`
-    : t.sure ? `<li>${glyph('item')}<b class="iname r-tuned">Tuned</b><small>every kill, at its level · Custom ${pc(t.yellow)}</small></li>`
+  const sure = t.sure === 'custom' ? `<li>${glyph('item')}<b class="iname r-custom">Custom</b><small>at its level</small></li>`
+    : t.sure ? `<li>${glyph('item')}<b class="iname r-tuned">Tuned</b><small>at its level · Custom ${pc(t.yellow)}</small></li>`
     : `<li>${glyph('item')}<b>Like an elite</b><small>no sure drop</small></li>`;
   const gold = t.gold ? `<li>${glyph('item')}<b class="iname r-zeroday">A world unique</b><small>${pc(t.gold)} a kill</small></li>` : '';
-  const own = t.uniques.map((u) => `<li class="${u.name ? '' : 'unknown'}">${glyph('item')}<b${u.name ? ' class="iname r-zeroday"' : ''}>${esc(u.name || UNKNOWN)}</b><small>Lv ${u.level}${u.got ? ' · found' : ''}</small></li>`).join('');
-  const odds = t.done ? `<p class="cx-foot">Uniques: both found. It drops each only once, so it drops only as an elite now.</p>` : t.uniques.length || t.native ? `<p class="cx-foot" title="${esc(`${pc(t.base)} a kill, +${pc(t.pity)} for each kill without one, back to ${pc(t.base)} when one drops.`)}">${t.native ? 'Native uniques' : 'Uniques'}: ${pc(t.base)} a kill, +${pc(t.pity)} a miss. Next kill <b class="you">${pc(t.chance)}</b>.</p>` : '';
-  return `<ul class="cx-loot">${sure}${gold}${own}</ul>${odds}`;
+  const every = group('every', 'Every kill', '', t.sure ? oddsBar(1, 'Every kill drops an item at its level.') : '', sure + gold);
+  const pity = (base, step) => `${pc(base)} a kill, +${pc(step)} for each kill without one, back to ${pc(base)} when one drops.`;
+  const uniq = t.done ? group('uniq', 'Uniques', 'both found: it drops only as an elite now', '', t.uniques.map((u) => lootRow(u, 'r-zeroday')).join(''))
+    : t.uniques.length || t.native ? group('uniq', t.native && !t.own ? 'Native uniques' : 'Uniques', t.native && t.own ? 'its own first, then one you lack' : 'one you lack first', oddsBar(t.chance, `Next kill: ${pc(t.chance)}. ${pity(t.base, t.pity)}`), t.uniques.map((u) => lootRow(u, 'r-zeroday')).join('') || `<li class="unknown">${glyph('item')}<b>${UNKNOWN}</b><small>named on its first fall</small></li>`) : '';
+  const st = t.set, set = st ? group('set', st.pieces.length > 1 ? 'Set pieces' : 'Set piece', `<span class="lg-setname">${esc(st.names.join(' · '))}</span>`,
+    oddsBar(st.chance, st.lacking ? `Next kill: ${pc(st.chance)}. ${pity(st.base, st.pity)}` : `All found. It still drops one ${pc(st.found)} of kills.`), st.pieces.map((u) => lootRow(u, 'r-set', st.names.length > 1 ? ` · ${esc(u.set)}` : '')).join('')) : '';
+  return `<div class="cx-lg">${every}${uniq}${set}</div>`;
 }
 
 // ---------- the other pages ----------
+// The research (its parts' average) at which a boss's phases read in full.
+export const BOSS_READ = 50;
 function bossPage(s, e) {
   const fam = e.strain ? link(`strain:${e.strain}`, STRAINS[e.strain].name) : e.family ? link(`family:${e.family}`, famName(e.family)) : '<span class="tag dim">the server\'s family</span>';
   const head = `<header class="cx-head solo"><div class="cx-title"><h2>${e.raid ? 'Crew boss' : 'Boss'}</h2><h1>${esc(e.name)}</h1><p class="tagline">${fam}${e.floor ? `<span class="tag dim">Lv ${e.floor}+</span>` : ''}${e.lair ? `<span class="tag" title="Its lair">${esc(e.lair)}</span>` : ''}</p>
-    <div class="stats">${stat('Your fights', e.fought, 'you')}${stat('Your wins', e.won, 'you')}${e.parts.length ? stat('Research', `${pctOf(e.parts)}%`, pctOf(e.parts) >= 100 ? 'full' : '', 'The average of its parts\' research. They share it with its family or strain') : ''}${stat('Integrity', `×${e.hp}`, '', 'Its Integrity, against a plain virus of its level')}${stat('Enrages', `cycle ${e.enrageAt}`, '', 'From this cycle every attack lands every cycle, a quarter harder')}</div>
+    <div class="stats">${stat('Your fights', e.fought, 'you')}${stat('Your wins', e.won, 'you')}${e.parts.length ? stat('Research', `${pctOf(e.parts)}%`, pctOf(e.parts) >= 100 ? 'full' : '', `The average of its parts' research. They share it with its family or strain. At ${BOSS_READ}% its phases read in full`) : ''}</div>
     ${e.authors.length ? `<p class="cx-by"><span class="cx-label">Written by</span>${e.authors.map(byline).join('')}</p>` : ''}</div></header>`;
-  const about = e.about ? `<p class="cx-rule">${esc(e.about)}</p>` : '';
-  const sig = e.signature ? section('Signature', `<div class="cx-part"><div class="cxp-head"><b>${esc(e.signature.name)}</b></div><p class="cxp-does">${ruleHtml(e.signature.rule)}</p></div>`) : '';
-  const phases = e.phases.length ? section('Phases', `<ol class="cx-phases">${e.phases.map((ph) => `<li><b class="cxph-at">${Math.round(ph.at * 100)}%</b><div>${ph.name ? `<b>${esc(ph.name)}</b>` : ''}${ph.say ? `<p>${esc(ph.say)}</p>` : ''}${ph.mechs ? `<p class="cxph-mechs">${ph.mechs.map((m) => `<span class="tag">${esc(m)}</span>`).join('')}</p>` : ''}</div></li>`).join('')}</ol>${e.enrage ? `<p class="cx-foot">Past its timer: ${esc(e.enrage)}.</p>` : ''}`) : '';
+  // Its phases, as a boss guide (WoW's dungeon journal): Phase 1 from the start, then one a ♛ tick, each its abilities
+  // in turn. What each does reads only once its parts are researched to BOSS_READ% (a crew boss, with no parts, at once).
+  const read = !e.parts.length || pctOf(e.parts) >= BOSS_READ, need = `Research ${BOSS_READ}% to read it.`;
+  const lines = (xs) => (read ? `<ul class="cxph-guide">${xs.map(([k, v]) => `<li>${k ? `<b>${esc(k)}</b>` : ''}<span>${ruleHtml(v)}</span></li>`).join('')}</ul>` : `<p class="cxp-hint">${glyph('lock')}${need}</p>`);
+  const rows = [...(e.open ? [{ at: 1, title: 'Phase 1', body: lines(e.open) }] : []),
+    ...e.phases.map((ph, i) => ({ at: ph.at, title: `Phase ${i + (e.open ? 2 : 1)}${ph.name ? ` · ${ph.name}` : ''}`, body: (ph.lines || ph.say ? lines((ph.lines || [[null, ph.say]]).map(([k, v]) => [k === ph.name ? null : k, v])) : '') + (ph.mechs && read ? `<p class="cxph-mechs">${ph.mechs.map((m) => `<span class="tag">${esc(m)}</span>`).join('')}</p>` : '') }))];
+  const phases = rows.length ? section('Phases', `<ol class="cx-phases">${rows.map((r) => `<li><b class="cxph-at" title="${r.at >= 1 ? 'From the start' : `As its ♛ crosses ${Math.round(r.at * 100)}%`}">${Math.round(r.at * 100)}%</b><div><b>${esc(r.title)}</b>${r.body}</div></li>`).join('')}</ol>`) : '';
   const tells = e.raid ? '' : section('Tells', e.tells.length ? `<ul class="cx-tells">${e.tells.map(tellMarkup).join('')}</ul>` : '<p class="cx-foot">Brings no tells.</p>', ` <small>at <b class="you">Lv ${e.level}</b></small>`);
   const lv = e.parts[0]?.level || e.level, rides = (x) => e.tells.filter((t) => t.part === x.part.name).map((t) => ({ name: t.name, kind: t.kind }));
   const parts = e.parts.length ? section('Parts', `<div class="cx-parts">${e.parts.map((x) => partCard(lv, x, rides(x), false, s.exeSeen)).join('')}</div><p class="cx-foot">Its parts share their research with its ${e.strain ? 'strain' : 'family'}.</p>`, ` <small>at <b class="you">Lv ${lv}</b></small>`) : '';
   const loot = section('Loot', lootTable(e.loot));
-  return head + about + sig + phases + parts + tells + loot;
+  return head + phases + parts + tells + loot;
 }
 function mutationPage(s, e) {
   const head = `<header class="cx-head solo"><div class="cx-title"><h2>Mutation</h2><h1>${esc(e.name)}</h1><p class="tagline"><span class="tag" style="--ax:${e.axis.colour}" title="${esc(`${e.axis.name}: it punishes ${e.axis.punishes}.`)}">${glyph(e.axis.icon)}${esc(e.axis.name)}</span><span class="tag dim">Lv ${e.opens}+</span></p>

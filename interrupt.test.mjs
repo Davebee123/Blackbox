@@ -191,9 +191,9 @@ test('boss rule (a): the core part\'s ticks are its phases; its other parts inte
   pulse.integrity = 1;
   command(s, 'hold'); resolveCycle(s);
   assert.ok(v.phases.every((ph) => !ph.done), 'the total alone starts nothing');
-  // Across its 50% tick, with its move due: the phase starts, and the move isn't cancelled.
+  // Across its 60% tick, with its move due: the phase starts, and the move isn't cancelled.
   core.attack.due = e.cycle;
-  above(core, 0.5);
+  above(core, 0.6);
   core.lockHp = 0;
   strike(s, core, 5);
   assert.equal(core.attack.due, e.cycle, 'a phase tick cancels nothing');

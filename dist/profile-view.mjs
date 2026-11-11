@@ -7,7 +7,7 @@ import { ARCHETYPES } from './data.mjs';
 import { FACTIONS } from './factions.mjs';
 import { channelOf, muted } from './channel.mjs';
 import { fingerOf, BANNERS, BANNER_IDS, titles, myProfile, shownTitle, PROFILE, hash } from './profile.mjs';
-import { online, simOn, isFriend } from './presence.mjs';
+import { online, simOn, peopleOn, runnersOn, isFriend } from './presence.mjs';
 import { achievements, totalPoints, bannersOf } from './achievements.mjs';
 import { REWARD_BANNERS, REWARD_BANNER_IDS } from './profile.mjs';
 
@@ -36,7 +36,7 @@ export function tickerMarkup(s) {
   return `<span class="nl-tag">#net</span>${l ? `<span class="nl-line">${lineMarkup(s, l).replace(/^<li[^>]*>|<\/li>$/g, '')}</span>` : '<span class="nl-line quiet">quiet</span>'}`;
 }
 export const channelLinesMarkup = (s) => channelOf(s).lines.map((l) => lineMarkup(s, l)).join('') || '<li class="ch-line quiet">Quiet on the net.</li>';
-export const channelHead = (s) => `<span class="ch-name">#net</span><small>${simOn(s) ? `${online(s).length} online · simulated` : 'the wire and the hubs'}</small><span class="p-acts"><button type="button" class="act dim" data-run="channel ${muted(s) ? 'on' : 'off'}" title="${muted(s) ? 'Show #net\'s line over the prompt' : 'Hide #net\'s line over the prompt'}">${muted(s) ? 'Unmute' : 'Mute'}</button><button type="button" class="act" data-chan-close>Close</button></span>`;
+export const channelHead = (s) => `<span class="ch-name">#net</span><small>${peopleOn(s) ? `${online(s).length} online${simOn(s) && !runnersOn(s) ? ' · simulated' : ''}` : 'the wire and the hubs'}</small><span class="p-acts"><button type="button" class="act dim" data-run="channel ${muted(s) ? 'on' : 'off'}" title="${muted(s) ? 'Show #net\'s line over the prompt' : 'Hide #net\'s line over the prompt'}">${muted(s) ? 'Unmute' : 'Mute'}</button><button type="button" class="act" data-chan-close>Close</button></span>`;
 
 // ---------- the card ----------
 // Achievement points, then the few you pinned or earned last (achievements.mjs). Yours open the achievement.

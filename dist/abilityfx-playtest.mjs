@@ -5,14 +5,23 @@
 // the board, never on it. &cls= picks the class whose tray shows (its keys are where a key's effect starts; an ability
 // that isn't on this tray starts from its first key instead, and the panel says so). &crew=<class> adds a crewmate, and
 // the panel can fire as them: from their bar in the crew window, in their violet. Mastery picks the tier an effect
-// plays at (1–3, as mastery.mjs unlocks them in play; a crewmate's is always 1), and Break finishers fires each class's
-// finisher (and each subclass's variation) on the part, as the fight-winning break plays it. Status puts a status on the
+// plays at (1–3, as mastery.mjs unlocks them in play; a crewmate's is always 1). Status puts a status on the
 // part (its mark shows) for the hit to cash in: Exposed on a crit, Quarantined, Hooked, Tagged on a burn's tick. Ticks
 // left: how far a burn's tick has run down (last: it gutters). ◆ broken: how many a Crack broke (none: it glances off).
+// Sound (abilitysound.mjs): today's sound for the result, or an ability's own in a style, timed to the effect, whatever
+// the Sound setting. Every ability has one in the picked style (B13), with its mastery tier's layer; the other styles
+// have Bash, Ban, Poke and Ping only, and the rest play today's.
+// Virus attacks (virussound.mjs): every chip theme's strike into your bar from the part's chip, and the lash, as a hit, a
+// crit, blocked or evaded, at the Size above, with today's sound or their own in a style (Their sound); then Scramble,
+// Replicate (onto the part's own bar, standing in for its fragment), Patch, a cast and a seal (on the virus), which land
+// one way. Lands also has a charge (a tell landing) and a boss's beat: the attack's own sound with a layer over it. Every
+// attack has a sound in the picked style (B1); the other styles have the style round's four, and the rest play today's.
 
-import { RECIPES, FINISHERS, SUB_FINISHERS, finisherOf } from './abilityfx.mjs';
+import { RECIPES } from './abilityfx.mjs';
 import { SPIKE, ABILITIES, ARCHETYPES, SUBS } from './data.mjs';
 import { SFX } from './screenfx.mjs';
+import { STYLES, hasSound } from './abilitysound.mjs';
+import { STYLES as THEIRS, ATTACKS, RESULTS, HEAVY, PICKED as THEIR_PICK, hasAttack } from './virussound.mjs';
 
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 // The ability a row's key stands for (key 1's words are Spike; a tick is its burn's).
@@ -32,12 +41,11 @@ export function groupsOf() {
 
 // api: parts() → [{ id, name }]; level() / setLevel(level) (the Screen effects level: off, subtle, medium, bold);
 // motion() / setMotion(on); mates() → crewmates' handles; mark(partId, status) puts a status on the part ('' clears);
-// fire(key, partId, { power, crit, result, hidden, who, tier, marks, left, broke })
-// → 'fx' | 'stand-in' | 'plain' | 'none'
-// (what played: 'stand-in' when a key's effect started from another key); plain(partId, { result }) the plain strike;
-// finish(cls, sub, partId) → 'fx' | 'plain' | 'none' (a break finisher).
+// fire(key, partId, { power, crit, result, hidden, who, tier, marks, left, broke, sound }) (sound: 'off' | 'today' | a style)
+// → 'fx' | 'stand-in' | 'plain' | 'none'; attack(key, partId, { result, power, sound }) a virus attack on you → 'fx' | 'none'
+// (what played: 'stand-in' when a key's effect started from another key); plain(partId, { result }) the plain strike.
 export function mountFxPlaytest(api) {
-  const ui = { target: null, hit: 'hit', power: 0.3, key: 'shown', who: '', said: '', tier: 1, mark: '', left: '', broke: '' };
+  const ui = { target: null, hit: 'hit', power: 0.3, key: 'shown', who: '', said: '', tier: 1, mark: '', left: '', broke: '', sound: 'off', theirs: 'off', lands: 'hit' };
   const panel = document.createElement('aside');
   panel.id = 'fx-playtest';
   panel.setAttribute('aria-label', 'Ability effects playtest');
@@ -48,6 +56,7 @@ export function mountFxPlaytest(api) {
     const parts = api.parts();
     if (!parts.some((p) => p.id === ui.target)) ui.target = parts[0]?.id || null;
     panel.innerHTML = `<h2>Ability effects <small>?playtest=fx</small></h2>
+      ${seg('Sound', [['off', 'off'], ['today', 'today'], ...Object.entries(STYLES).map(([k, n]) => [k, `${k.toUpperCase()} ${n}`])], ui.sound)}
       ${seg('Screen effects', SFX.levels.map((l) => [l, l]), api.level())}
       ${seg('Motion', [['on', 'on'], ['off', 'off']], api.motion() ? 'on' : 'off')}
       ${seg('Its key', [['shown', 'on screen'], ['hidden', 'not on screen (from your bar)']], ui.key)}
@@ -62,15 +71,19 @@ export function mountFxPlaytest(api) {
       <p class="fxp-said" role="status">${esc(ui.said)}</p>
       <button type="button" data-fire="*" class="all"><b>Play all</b><small>one after another</small></button>
       ${groups.map((g) => `<h3>${esc(g.title)}</h3><div class="fxp-fx">${g.keys.map((k) => `<button type="button" data-fire="${esc(k)}"><b>${esc(RECIPES[k].label)}</b><small>${RECIPES[k].on === 'you' ? 'your bar' : RECIPES[k].at === 'chip' ? 'its attack' : RECIPES[k].motion}</small></button>`).join('')}</div>`).join('')}
-      <h3>Break finishers</h3><div class="fxp-fx">${finishersOf().map(([cls, sub]) => `<button type="button" data-fin="${esc(cls)}${sub ? ':' + esc(sub) : ''}"><b>${esc(finisherOf(cls, sub).label)}</b><small>${esc(sub ? SUBS[sub].name : ARCHETYPES[cls].name)}</small></button>`).join('')}</div>
-      <h3>Plain</h3><div class="fxp-fx"><button type="button" data-fire="" class="plain"><b>No recipe</b><small>the plain hit effect</small></button></div>`;
+      <h3>Plain</h3><div class="fxp-fx"><button type="button" data-fire="" class="plain"><b>No recipe</b><small>the plain hit effect</small></button></div>
+      <h3>Virus attacks</h3>
+      ${seg('Their sound', [['off', 'off'], ['today', 'today'], ...Object.entries(THEIRS).map(([k, n]) => [k, `${k.toUpperCase()} ${n}`])], ui.theirs)}
+      ${seg('Lands', [...RESULTS.map((r) => [r, r]), ...Object.entries(HEAVY).map(([r, n]) => [r, n])], ui.lands)}
+      <button type="button" data-attack="*" class="all"><b>Play all</b><small>one after another</small></button>
+      ${[['', (a) => !a.does], ['Not a hit on you', (a) => a.does]].map(([title, is]) => `${title ? `<h3>${title}</h3>` : ''}<div class="fxp-fx">${Object.entries(ATTACKS).filter(([, a]) => is(a)).map(([k, a]) => `<button type="button" data-attack="${esc(k)}"><b>${esc(a.name)}</b><small>${esc(a.does || a.part)}</small></button>`).join('')}</div>`).join('')}`;
   }
   const say = (t) => { ui.said = t; const p = panel.querySelector('.fxp-said'); if (p) p.textContent = t; };
   function fire(key) {
-    const o = { power: ui.power, crit: ui.hit === 'crit', result: ui.hit, hidden: ui.key === 'hidden', who: ui.who || null, tier: ui.tier, marks: ui.mark ? [ui.mark] : [], left: ui.left === '' ? null : Number(ui.left), broke: ui.broke === '' ? null : Number(ui.broke) };
+    const o = { power: ui.power, crit: ui.hit === 'crit', result: ui.hit, hidden: ui.key === 'hidden', who: ui.who || null, tier: ui.tier, marks: ui.mark ? [ui.mark] : [], left: ui.left === '' ? null : Number(ui.left), broke: ui.broke === '' ? null : Number(ui.broke), sound: ui.sound };
     if (!key) { api.plain(ui.target, o); return say('No recipe: the plain hit effect (hitfx.mjs).'); }
     const what = api.fire(key, ui.target, o), name = RECIPES[key].label;
-    const at = ui.tier > 1 && !ui.who ? ` at tier ${ui.tier}` : '';
+    const at = (ui.tier > 1 && !ui.who ? ` at tier ${ui.tier}` : '') + (STYLES[ui.sound] && !hasSound(ui.sound, key) ? ` (no ${ui.sound.toUpperCase()} sound yet: today's)` : '');
     say(what === 'fx' ? `${name}: played${at}.` : what === 'stand-in' ? `${name}: played, from the tray's first key (it isn't on this class's tray).` : what === 'plain' ? `${name}: no room here, the plain hit effect.` : `${name}: nothing at Screen effects ${api.level()}${api.motion() ? '' : ', Motion off'} (as in a fight).`);
   }
   let queue = 0;
@@ -80,7 +93,10 @@ export function mountFxPlaytest(api) {
     e.stopPropagation();
     if (b.dataset.fxp) {
       const k = b.dataset.fxp, v = b.dataset.v;
-      if (k === 'Screen effects') api.setLevel(v);
+      if (k === 'Sound') { ui.sound = v; if (v !== 'off') api.warm?.(); }
+      else if (k === 'Their sound') { ui.theirs = v; if (v !== 'off') api.warm?.(); }
+      else if (k === 'Lands') ui.lands = v;
+      else if (k === 'Screen effects') api.setLevel(v);
       else if (k === 'Motion') api.setMotion(v === 'on');
       else if (k === 'Its key') ui.key = v;
       else if (k === 'Fired by') ui.who = v;
@@ -99,9 +115,16 @@ export function mountFxPlaytest(api) {
       const next = (i) => { if (i >= keys.length) return; fire(keys[i]); queue = setTimeout(() => next(i + 1), 1400); };
       return next(0);
     }
-    if (b.dataset.fin) {
-      const [cls, sub] = b.dataset.fin.split(':'), F = finisherOf(cls, sub || null), what = api.finish?.(cls, sub || null, ui.target);
-      return say(what === 'fx' ? `${F.label}: played (the winning break).` : what === 'plain' ? `${F.label}: no room here.` : `${F.label}: nothing at Screen effects ${api.level()}${api.motion() ? '' : ', Motion off'} (as in a fight).`);
+    if (b.dataset.attack) {
+      const attack = (k) => {
+        const a = ATTACKS[k], what = api.attack(k, ui.target, { result: ui.lands, power: ui.power, sound: ui.theirs });
+        const own = ui.theirs === 'off' || ui.theirs === 'today' ? '' : !hasAttack(ui.theirs, k) ? ` Today's sound: ${THEIRS[ui.theirs]} has the style round's four only.` : HEAVY[ui.lands] && !a.does && ui.theirs !== THEIR_PICK ? ` As a hit: only ${THEIRS[THEIR_PICK]} has ${HEAVY[ui.lands]}'s layer.` : '';
+        say((what === 'fx' ? `${a.name}: ${a.does || HEAVY[ui.lands] || ui.lands}.` : `${a.name}: no strike at Screen effects ${api.level()}${api.motion() ? '' : ', Motion off'} (as in a fight); its number on the beat.`) + own);
+      };
+      if (b.dataset.attack !== '*') return attack(b.dataset.attack);
+      clearTimeout(queue);
+      const keys = Object.keys(ATTACKS), next = (i) => { if (i >= keys.length) return; attack(keys[i]); queue = setTimeout(() => next(i + 1), 2400); };
+      return next(0);
     }
     if (b.dataset.fire !== undefined) fire(b.dataset.fire);
   });
@@ -110,5 +133,3 @@ export function mountFxPlaytest(api) {
   draw();
   return { draw, fire };
 }
-// Every finisher to fire: each class's, then its subclasses' variations.
-export const finishersOf = () => Object.keys(FINISHERS).flatMap((cls) => [[cls, null], ...Object.keys(ARCHETYPES[cls]?.subs || {}).filter((sub) => SUB_FINISHERS[sub]).map((sub) => [cls, sub])]);

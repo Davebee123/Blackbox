@@ -148,8 +148,15 @@ test("bosses are ??? until fought; then their phases, rule and tells' shape", ()
   const html = codexPageMarkup(s, 'boss:nb-deadbolt');
   assert.match(html, /<h1>DEADBOLT<\/h1>/);
   assert.match(html, /<span>Your fights<\/span><strong class="you">1<\/strong>/);
-  for (const ph of BOSSES['nb-deadbolt'].phases) assert.ok(html.includes(ph.say.replace(/'/g, '&#39;')), 'each phase as it says it');
-  assert.ok(html.includes(BOSSES['nb-deadbolt'].about), 'its rule');
+  // A boss guide (WoW's dungeon journal): its phases named by tick, their mechanics only after research; no signature,
+  // Integrity, enrage or blurb.
+  assert.match(html, /60%<\/b><div><b>Phase 1<\/b>/);
+  assert.match(html, /Research 50% to read it\./, 'locked until researched');
+  for (const k of ['Signature', '<span>Integrity</span><strong', 'Enrages', BOSSES['nb-deadbolt'].about]) assert.ok(!html.includes(k), `no ${k}`);
+  s.research ||= {};
+  for (const id of ['ransomware:pulse', 'ransomware:encryptor', 'ransomware:mutex']) s.research[id] = 60;
+  const full = codexPageMarkup(s, 'boss:nb-deadbolt');
+  for (const ph of BOSSES['nb-deadbolt'].phases) assert.ok(full.includes(ph.say.replace(/'/g, '&#39;')), 'each phase once researched');
   win(s);
   assert.equal(s.dex.won['nb-deadbolt'], 1);
   assert.doesNotMatch(html, /undefined|NaN/);

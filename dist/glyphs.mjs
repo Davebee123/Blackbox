@@ -93,6 +93,8 @@ const P = {
   stall: '<rect x="4" y="3" width="2.5" height="10" rx=".5"/><rect x="9.5" y="3" width="2.5" height="10" rx=".5"/>',
   xp: '<path d="M3 11l5-5 5 5M3 7l5-5 5 5"/>',
   // An objective's mark (objectives.mjs): a Priority's target.
+  // Pin: a pushpin (an earned piece pinned to the map, earned.mjs).
+  pin: '<path d="M6 1.5h4M6.6 1.5l-.5 4.6-2.3 2.6h8.4l-2.3-2.6-.5-4.6M8 8.7v5.8"/>',
   target: '<circle cx="8" cy="8" r="6"/><circle cx="8" cy="8" r="3"/><circle cx="8" cy="8" r=".6"/>',
   // Uptime: an hourglass.
   uptime: '<path d="M4 1.5h8M4 14.5h8M5 1.5c0 4 6 4 6 6.5s-6 2.5-6 6.5M11 1.5c0 4-6 4-6 6.5s6 2.5 6 6.5"/>',

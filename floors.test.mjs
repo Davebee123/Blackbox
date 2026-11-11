@@ -302,7 +302,7 @@ test('a fight\'s floor: the server\'s on a run; at home and in a sim your floor 
 
 test('lairs by floor: floors 2–4 draw from the bosses that fit their band, the native boss on its own floor, the rest keep it', () => {
   const seen = { 2: new Set(), 3: new Set(), 4: new Set() };
-  for (const id of Object.values(FLOOR.lairs).flat()) assert.ok(NATIVE_BOSSES.includes(id), `${id} is built`);
+  for (const id of Object.values(FLOOR.lairs).flat()) assert.ok(NATIVE_BOSSES.includes(id) || BOSSES[id]?.lair, `${id} is built`); // a native, or a floor boss that holds a lair (CAMSWARM)
   for (let seed = 1; seed <= 300; seed++) {
     const native = signature(seed).boss, home = Object.keys(FLOOR.lairs).find((n) => FLOOR.lairs[n].includes(native));
     for (let n = 2; n <= 8; n++) {

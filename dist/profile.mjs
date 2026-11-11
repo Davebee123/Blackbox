@@ -11,7 +11,7 @@ import { ARCHETYPES, BOSSES } from './data.mjs';
 import { FACTIONS, FACTION_IDS, rep, REP_TIERS, hubFound, commissionOf, stanceLine } from './factions.mjs';
 import { PIECES } from './faction-gear.mjs';
 import { SETS, piecesOf, isPiece } from './sets.mjs';
-import { PRESENCE, profileOf as simOf, online, simOn, whereText } from './presence.mjs';
+import { profileOf as simOf, online, peopleOn, isPerson, whereText } from './presence.mjs';
 import { uniqueItem, seeded } from './gear.mjs';
 import { tickAchievements, rewardStickers, bannersOf, pointsOf, shownAchievements, achievements, DEED_STICKERS } from './achievements.mjs';
 import { masteredN } from './mastery.mjs';
@@ -220,6 +220,7 @@ export function tickProfile(s) {
     if (e.card === 'hunt' || e.card === 'returning') p.deeds.hunts++;
   }
   p.seen = s.serial || 0;
+  hooks.earnTick?.(s); // the earned pieces' floor goals (earned.mjs), paid before the log stamps them
   (hooks.syncCollection || syncSlots)(s); // the collection log's new slots and full entries (collection-log.mjs), before the achievements that read them
   tickAchievements(s);
   p.seen = s.serial || 0;
@@ -277,7 +278,7 @@ export function fingerOf(s, handle) {
       points: pointsOf(s), achievements: shownAchievements(s), got: s.achievements?.got || {}, // achievements.mjs: your points, and the few you pinned or earned last
     };
   }
-  if (!PRESENCE.pool.includes(handle) || !(simOn(s) || (s.channel?.lines || []).some((l) => l.from === handle))) return null;
+  if (!isPerson(s, handle) || !(peopleOn(s) || (s.channel?.lines || []).some((l) => l.from === handle))) return null;
   return simCard(s, handle);
 }
 
@@ -316,7 +317,7 @@ export function simTitle(h) {
 }
 // A simulated hacker's card, from the handle alone (and their place, if they're on).
 export function simCard(s, h) {
-  const p = simOf(h), r = seeded(Math.floor(hash(h, 40) * 2 ** 31));
+  const p = simOf(h, s), r = seeded(Math.floor(hash(h, 40) * 2 ** 31));
   const cls = p.cls, others = Object.keys(ARCHETYPES).filter((c) => c !== cls);
   const classes = [{ cls, level: p.level }];
   if (p.level >= 6) classes.push({ cls: others[Math.floor(hash(h, 43) * others.length)], level: Math.max(1, Math.floor(p.level * (0.2 + hash(h, 44) * 0.5))) });

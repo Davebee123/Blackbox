@@ -2,7 +2,7 @@
 // now, strip, then finish), playing that class's own kit. Used by the balance scripts and by
 // simulated crewmates (crew.mjs). It reads the fight through the engine's own functions.
 import { gearDamage, classPlan, classFill, hooks, classOf, subOf, toIntent, intents, attackers, livingParts, alive, part, defender, previewDamage, ignoresArmor, readyIn, skillBase, mirrorOn, bendOf, bendBad, timersHidden, usable, hookHit, wards, attackAmount, delayHeld, frontOf, bufferOn, signatureOf, cooldownOf, frozenNow, asleep, scaled } from './combat.mjs';
-import { ABILITIES, TELL, CONFIG } from './data.mjs';
+import { ABILITIES, TELL, CONFIG, BOSSES } from './data.mjs';
 import { raidMove, raidFocus, noTaunt } from './raid.mjs';
 import { tellMove, tellFocus, answers, QUIET, chargeNow, echoesNow, beatOn, beatBlind, copyCost, paceOf, tellsOf } from './tells.mjs';
 // genesim.mjs: a gene the sim ignores (genes.mjs GENE_BOTS) is played as if it weren't there, one gene at a time.
@@ -11,6 +11,8 @@ import { heatOf } from './parts.mjs';
 import { interruptMove, saveTick, toCross } from './interrupt.mjs';
 import { loudWins, blastPays, cashIn } from './order.mjs';
 import { actsOf, lashOn, actDone, actCap } from './acts.mjs';
+import { copyKind } from './tells.mjs';
+import { topFrame, canCall, callingNow, FB, pendingOf, tradeOf, nodesOf, fragsOf, camerasOf, parentOf, leverLeft } from './floorbosses.mjs';
 
 // Against a crew boss only the tank taunts (a taunt pulls its busters onto you): raid.mjs noTaunt.
 // veto: skills the planner may not pick this call (routines.mjs: a program's rotation never fires a long cooldown).
@@ -27,7 +29,10 @@ const landingNow = (s) => seen(s).filter((i) => i.col === 0 && !i.hidden);
 // The part to work on: the one whose (visible) attack lands soonest; hidden ones count as due in 2.
 const dueOf = (s, p) => (seen(s).find((i) => i.source === p.id && !i.hidden)?.col ?? (p.attack ? 2 : 9));
 // A Cold Store still frozen (combat.mjs frozenNow): nothing reaches it, so a player works on the others meanwhile.
-const reachable = (s, p) => ignores('coldstore') || !frozenNow(s, p);
+// Read (answers): NIGHT DESK's traders take no damage while the Desk stands, and CAMSWARM's Hive none under the Lockout
+// while a Camera does (floorbosses.mjs).
+const shut = (s, p) => { const v = s.encounter?.virus; return answers() && ((!!v?.desk && p.role === 'trader') || (!!v?.swarm?.lockout && !!p.core && camerasOf(s).length > 0) || (!!v?.swarm && !!parentOf(s, p))); };
+const reachable = (s, p) => (ignores('coldstore') || !frozenNow(s, p)) && !shut(s, p);
 export const soonest = (s) => attackers(s).sort((a, b) => dueOf(s, a) - dueOf(s, b) || b.max - a.max)[0] || livingParts(s).find((p) => reachable(s, p)) || livingParts(s)[0];
 // How a player who reads the codex picks a target: the most threat per point of Integrity left
 // (attack size over interval; encryption stacks, fragments multiply, a heal undoes work), armor
@@ -45,6 +50,11 @@ const others = (s, p) => livingParts(s).some((x) => x !== p && x.kind === 'syste
 // A part an order lever keeps for last right now (its lever doesn't say now).
 const keptLast = (s, p) => ((p.fuse && !p.fuseAt && !ignores('zipbomb')) || (p.deadman && !p.quiet && !ignores('tripwire'))) && others(s, p) && leverNow(s) !== p && p !== prefer;
 const leverNow = (s) => (!ignores('ward') && cashIn(s)?.part) || (!ignores('tripwire') && loudWins(s)?.part) || (!ignores('zipbomb') && blastPays(s)?.part) || null;
+// A boss whose ♛ is worked through the fight (BOSSES work, docs/solo-bosses.md "Working the ♛"), read only (answers):
+// the ♛ is the part to work on while it stands further up its bar than the rest of the boss does, by work.lead (none:
+// the ♛ waits for the others, as on any boss).
+const restOf = (v) => { const r = v.parts.filter((p) => p.kind === 'system' && !p.core && !p.noTicks); return r.reduce((n, p) => n + p.integrity, 0) / Math.max(1, r.reduce((n, p) => n + p.max, 0)); };
+const crownNow = (s) => { const v = s.encounter.virus, W = BOSSES[v.boss]?.work, c = W?.lead != null && answers() && livingParts(s).find((p) => p.core); return c && c.ticks?.some((t) => !t.spent) && others(s, c) && reachable(s, c) && c.integrity / c.max > restOf(v) + W.lead ? c : null; };
 const order = (s, p) => (p.core && p.ticks?.some((t) => !t.spent) && livingParts(s).some((x) => x !== p && x.attack) && !(actsOf(s.encounter.virus) && ignores('leave')) ? 0.4 : p.deadman && !ignores('tripwire') && others(s, p) ? 0.05 : p.fuse && !ignores('zipbomb') && others(s, p) ? 0.05 : p.hotspot && !ignores('hotspot') && others(s, p) ? 0.3 : p.command && !ignores('c2') && livingParts(s).filter((x) => x.kind === 'fragment').length >= 2 ? 4 : 1);
 export const mostThreat = (s) => livingParts(s).filter((p) => reachable(s, p)).map((p) => ({ p, k: (threatOf(p) * invested(s, p) * order(s, p)) / (p.integrity + 10 * (p.armor || 0)) })).sort((a, b) => b.k - a.k || dueOf(s, a.p) - dueOf(s, b.p))[0]?.p || soonest(s);
 const bare = (p) => alive(p) && !p.armor;
@@ -133,10 +143,140 @@ export function kitPlannerAt(s, p, no = null, read = null) {
 const BUFFING = new Set(['harden', 'brace', 'sudo', 'fork', 'debris-field', 'rm-rf', 'circuit-breaker', 'honeypot', 'maintenance-window', 'bulkhead', 'dmz', 'mesh']);
 const scrapeNow = (s) => !ignores('scraper') && landingNow(s).some((i) => part(s, i.source)?.scrape);
 export function planner(s) {
-  if (!scrapeNow(s)) return heedActs(s, heedBend(s, heedHelpers(s, spareLast(s, planner1(s)))));
+  if (!scrapeNow(s)) return heedFloor(s, heedActs(s, heedBend(s, heedHelpers(s, spareLast(s, planner1(s))))));
   const was = veto;
   veto = (id) => BUFFING.has(id) || !!(was && was(id));
-  try { return heedActs(s, heedBend(s, heedHelpers(s, spareLast(s, planner1(s))))); } finally { veto = was; }
+  try { return heedFloor(s, heedActs(s, heedBend(s, heedHelpers(s, spareLast(s, planner1(s)))))); } finally { veto = was; }
+}
+// The floor 2 and 3 bosses' rules (floorbosses.mjs), read only (answers): withdraw the Gavel's bid at every 2; let a
+// Deadline land when the Ransom Clock would leak first; on a closed cycle (or the two before an Again beat) fire nothing
+// the Logger would play back; work on the top frame.
+const SLOWS = Object.keys(ABILITIES).filter((id) => ABILITIES[id].delay > 0 || ABILITIES[id].status === 'throttled');
+const hitsBack = (s, move) => { const [id] = String(move || '').split(' '); return copyKind(id) === 'hit' && (ABILITIES[id]?.damage || 0) > 12; };
+function heedFloor(s, move) {
+  const e = s.encounter, v = e?.virus;
+  if (!v || !answers() || !move) return move;
+  const [id, at] = String(move).split(' '), c = e.cycle;
+  // one: a one-part command that hits (what a floor boss's rule counts as your command on a part).
+  const hits1 = (k) => ['part', 'attack'].includes(ABILITIES[k]?.target) && (ABILITIES[k].damage || 0) > 0;
+  if (v.bid) {
+    const g = livingParts(s).find((p) => p.gavel && p.attack);
+    if (g && g.attack.interval <= 2 && g.attack.due - c <= 1) { const slow = first(s, [...SLOWS.map((k) => `${k} ${g.id}`), ...(g.attack.due === c ? ['sigint'] : [])]); if (slow) return slow; }
+    // A command at the Gavel is a bid while the Rotor stands: work the Rotor and the buyers, the Gavel last.
+    const rotor = livingParts(s).find((p) => p.core), aim = at && part(s, at);
+    if (g && rotor && aim === g && !SLOWS.includes(id)) { const alt = first(s, [`${id} ${rotor.id}`, ...HITS.map((k) => `${k} ${rotor.id}`)]); if (alt) return alt; }
+    // No delay at hand: cut the selling Surge, when one command takes the Gavel across its tick on the cycle it lands.
+    const n = g && g.attack.interval <= 2 && g.attack.due === c ? toCross(g) : null;
+    if (n != null && !(g.armor > 0)) { const cut = first(s, [id, ...HITS].map((k) => `${k} ${g.id}`).filter((m) => previewDamage(s, m.split(' ')[0], g) >= n)); if (cut) return cut; }
+  }
+  if (v.ransom && at) {
+    const d = part(s, at);
+    // The Collector runs the clock and the Demand's Deadlines pay it: never break the last Demand while the Collector stands.
+    const col = livingParts(s).find((p) => p.core);
+    // Leverage: while a Demand stands the Collector loses only so much a cycle. A hit that would waste a third of itself
+    // on that cap goes at a Demand winding up a Deadline the clock doesn't need (never breaking the last one); else the
+    // biggest hit that fits the cap goes at the Collector.
+    const left = col ? leverLeft(s, col) : null;
+    if (left != null && d === col && hits1(id) && !(col.armor > 0) && previewDamage(s, id, col) > 1.5 * left) {
+      const dem = livingParts(s).filter((p) => p.deadline && p.attack && p.attack.due - c <= 2 && v.ransom.left > p.attack.due - c + p.attack.interval).sort((a, b) => a.attack.due - b.attack.due)[0];
+      const off = dem && !(killing(s, `${id} ${dem.id}`, dem) && livingParts(s).filter((p) => p.deadline).length === 1) && first(s, [`${id} ${dem.id}`]);
+      if (off) return off;
+      const fit = [...HITS, 'spike'].filter((k) => hits1(k) && ok(s, `${k} ${col.id}`) && previewDamage(s, k, col) <= 1.5 * left).sort((a, b) => previewDamage(s, b, col) - previewDamage(s, a, col))[0];
+      if (fit) return `${fit} ${col.id}`;
+    }
+    if (d?.deadline && col && killing(s, move, d) && livingParts(s).filter((p) => p.deadline).length === 1) { const alt = first(s, [`${id} ${col.id}`, ...HITS.map((k) => `${k} ${col.id}`)]); if (alt) return alt; }
+    if (d?.deadline && d.attack && !chargeNow(s, d) && d.attack.due - c <= 2 && v.ransom.left >= d.attack.due - c + 1 && v.ransom.left <= d.attack.due - c + d.attack.interval && !killing(s, move, d)) { // it lands before the leak, and the clock would leak before the next one
+      const to = livingParts(s).find((p) => p.core) || livingParts(s).find((p) => !p.deadline);
+      const alt = to && first(s, [`${id} ${to.id}`, ...HITS.map((k) => `${k} ${to.id}`)]);
+      if (alt) return alt;
+    }
+  }
+  if (v.stack) {
+    // A Call this cycle or next: the top frame broken or brought under a quarter first, with the biggest hit that does it.
+    const tf = topFrame(s);
+    if (callingNow(s) && ok(s, 'sigint')) return 'sigint'; // the Call this cycle: SIGINT stops it
+    if (tf && canCall(tf) && v.stack.callAt - c <= 1) {
+      const need = tf.integrity - Math.floor(tf.max * 0.25) + 1, done = (m) => { const k = m.split(' ')[0]; return !(tf.armor > 0 && !ignoresArmor(s, k)) && previewDamage(s, k, tf) >= need; };
+      if (!(at === tf.id && done(move))) { const hit = first(s, [...HITS, ...Object.keys(ABILITIES)].map((k) => `${k} ${tf.id}`).filter(done)); if (hit) return hit; }
+    }
+    // A top frame too low to Call holds the stack: break it just after a Call, never the cycle before one while the
+    // frame beneath could Call. Meanwhile area hits, burns and helpers work the frames below.
+    const top = topFrame(s), aim = at ? part(s, at) : null, below = top && livingParts(s).filter((p) => p.frame != null && p.frame < top.frame).sort((a, b) => b.frame - a.frame)[0];
+    if (top && aim === top && !canCall(top) && canCall(below) && v.stack.callAt - c <= 1 && killing(s, move, top)) {
+      const soft = first(s, [...[...AREA].filter((k) => !killing(s, k + ' ' + top.id, top)), ...['inject', 'deploy', 'botnet', 'spawn', 'thermal-runaway'].map((k) => `${k} ${below.id}`), ...quietOf(s)]);
+      if (soft) return soft;
+    }
+  }
+  const one = hits1(id), onto = (p) => first(s, [...(one ? [id] : []), ...HITS, 'spike'].filter(hits1).map((k) => `${k} ${p.id}`));
+  if (v.desk) {
+    // NIGHT DESK: only the Desk takes damage, and a hit on it settles its own trade. A trader's is answered from two
+    // pending (Finality: only when the next one would fill the table), the biggest first.
+    const pend = pendingOf(s), aim = at && part(s, at), desk = livingParts(s).find((p) => p.core), opens = (k) => livingParts(s).filter((p) => p.attack && p.attack.due <= c + k).length;
+    const sum = (p) => p.pending.reduce((n, t) => n + tradeOf(s, t), 0), held = livingParts(s).filter((p) => p.pending?.length).sort((a, b) => (b === desk) - (a === desk) || sum(b) - sum(a));
+    const must = pend.length + opens(1) >= FB.desk.full; // a trade can open before your command lands: a cycle ahead of the fourth
+    if (held.length && must) { const m = one && aim === held[0] ? move : onto(held[0]); if (m) return m; } // the Desk's own first: the hit that settles it also lands
+    if (desk && aim && aim !== desk && aim.role === 'trader') { const m = first(s, [`${id} ${desk.id}`]); if (m) return m; }
+  }
+  if (v.vote) {
+    // BYZANTINE: spread it. Each one-part command goes at the healthiest Node (the traitor while it isn't the most
+    // damaged, and never onto a Node the hit would leave under the traitor), and under the Hard fork no Node is broken
+    // while another stands at half or more.
+    const ns = nodesOf(s), aim = at && part(s, at), fr = (p) => p.integrity / p.max;
+    if (ns.length > 1 && aim?.role === 'node' && !AREA.has(id)) {
+      const tr = ns.find((p) => p.id === v.vote.traitor), byHealth = [...ns].sort((a, b) => fr(b) - fr(a) || a.armor - b.armor);
+      // A Node that can be broken before the vote is broken (under the Hard fork, only once every other is under half).
+      const left = v.vote.at - c + 1, size = (p) => Math.max(1, Math.min(previewDamage(s, hits1(id) ? id : 'spike', p), (p.limit || 1) * p.max));
+      const fits = (p) => (p.armor || 0) + Math.ceil(p.integrity / size(p)) <= left && !(v.vote.fork && ns.some((x) => x !== p && fr(x) >= 0.5));
+      let want = [...ns].sort((a, b) => a.integrity - b.integrity).find(fits);
+      if (!want) {
+        want = tr && ns.some((p) => p !== tr && fr(p) < fr(tr)) ? tr : byHealth.find((p) => p !== tr) || byHealth[0];
+        if (v.vote.fork && killing(s, `${id} ${want.id}`, want) && ns.some((p) => p !== want && fr(p) >= 0.5)) want = byHealth.find((p) => p !== want) || want;
+        // The Traitor: a hit that leaves another Node the most damaged swings the vote to the healthiest Node's level.
+        // Of the Nodes it could hit, the one whose hit would have a vote restore the least (none, when one is safe).
+        if (tr) {
+          const swing = (t) => {
+            const f = ns.map((p) => ({ p, f: p === t && !(p.armor > 0) ? Math.max(0, p.integrity - size(p)) / p.max : fr(p) })).filter((x) => x.f > 0);
+            if (f.length < 2) return 0;
+            const low = f.reduce((m, x) => (x.f < m.f ? x : m)), top = Math.max(...f.map((x) => x.f));
+            const to = low.p !== tr && f.some((x) => x.p === tr) ? top : f.reduce((n, x) => n + x.f, 0) / f.length;
+            return to - low.f >= FB.vote.pass - 1e-9 ? to - low.f : 0;
+          };
+          const safe = [want, ...byHealth.filter((p) => p !== want)].filter((p) => !(v.vote.fork && killing(s, `${id} ${p.id}`, p) && ns.some((x) => x !== p && fr(x) >= 0.5)));
+          want = safe.reduce((m, p) => (swing(p) < swing(m) - 1e-9 ? p : m), safe[0] || want);
+        }
+      }
+      if (want !== aim) { const m = first(s, [`${id} ${want.id}`]); if (m) return m; }
+    }
+  }
+  if (v.swarm) {
+    // CAMSWARM: the part that shields a fragment, before the fragment turns; a Camera before the Hive under the Lockout,
+    // or before a Beacon on the Botnet; and no part taken under half that can't be broken before the next sweep (the
+    // Hive never hatches: it takes what the others can't).
+    const aim = at && part(s, at), hive = livingParts(s).find((p) => p.core), cams = camerasOf(s).sort((a, b) => a.integrity - b.integrity), tgt = !!ABILITIES[id]?.target && ABILITIES[id].target !== 'none' && !AREA.has(id);
+    const to = (p) => first(s, [...(tgt ? [`${id} ${p.id}`] : []), ...[...HITS, 'spike'].filter(hits1).map((k) => `${k} ${p.id}`)]);
+    const fuse = fragsOf(s).filter((f) => parentOf(s, f)).sort((a, b) => a.hatched - b.hatched)[0], host = fuse && parentOf(s, fuse);
+    if (host && aim !== host) { const m = to(host); if (m) return m; }
+    const loose = fragsOf(s).filter((f) => !parentOf(s, f)).sort((a, b) => a.hatched - b.hatched)[0];
+    if (!host && loose && aim !== loose && loose.hatched + FB.swarm.grows - c <= 1) { const m = to(loose); if (m) return m; }
+    const c2 = livingParts(s).find((p) => p.role === 'c2' && p.attack);
+    const size = (p) => Math.max(1, Math.min(previewDamage(s, hits1(id) ? id : 'spike', p), (p.limit || 1) * p.max)), left = v.swarm.at - c; // commands after this one before the sweep
+    const safe = (p) => p.integrity < p.max / 2 || p.armor > 0 || p.integrity - size(p) >= p.max / 2 || Math.ceil(p.integrity / size(p)) <= left + 1;
+    if (!host && cams.length && tgt && aim?.role !== 'camera' && ((v.swarm.lockout && (aim === hive || !aim)) || (v.swarm.botnet && c2 && c2.attack.due - c <= 2))) { const cam = cams.find(safe); const m = cam && to(cam); if (m) return m; }
+    if (!host && tgt && aim && aim.kind === 'system' && !aim.core && !safe(aim)) {
+      const open = [...livingParts(s).filter((p) => p.kind === 'system' && !p.core && p !== aim && safe(p)), ...(hive && !shut(s, hive) ? [hive] : [])];
+      const m = first(s, open.map((p) => `${id} ${p.id}`)) || first(s, quietOf(s));
+      if (m) return m;
+    }
+  }
+  if (v.surf) {
+    // A closed cycle: nothing at the Logger (it shrugs it off and logs it), and nothing big once the log has started.
+    const shut = c % 2 === 1, beat = v.surf.again && v.surf.again - c <= 1, aim = at && part(s, at);
+    const others = livingParts(s).filter((p) => !p.syncOnly && !frozenNow(s, p)).sort((a, b) => dueOf(s, a) - dueOf(s, b));
+    if (shut && aim?.syncOnly) { const to = others[0], alt = to && !(hitsBack(s, move) && (e.keylog || 0) >= 1) && first(s, [`${id} ${to.id}`]); if (alt) return alt; }
+    if ((shut && (e.keylog || 0) >= 1 && (hitsBack(s, move) || aim?.syncOnly)) || (beat && hitsBack(s, move))) return first(s, [...quietOf(s), ...(others[0] ? ['spike ' + others[0].id] : [])]) || 'hold';
+    if (shut && aim?.syncOnly) return first(s, quietOf(s)) || 'hold';
+  }
+  return move;
 }
 // A P4 boss (acts.mjs): no command hit on the ♛ on its Backlash's beat, unless it breaks it, and the ♛ left above its
 // next tick until this act's beat has played. The same command goes at another part, or a quiet move, or it waits.
@@ -272,7 +412,7 @@ function play(s) {
   const frag = answers() && livingParts(s).some((p) => p.broadcast && p.attack && p.attack.due - s.encounter.cycle <= 1) ? livingParts(s).filter((p) => p.kind === 'fragment').sort((a, b) => a.integrity - b.integrity)[0] : null;
   // HOLLOW CHOIR's second voice: break the weaker Mimic, so the Round sings with one voice.
   const voices = answers() ? livingParts(s).filter((p) => p.mimic) : [], voice = voices.length > 1 ? voices.sort((a, b) => a.integrity - b.integrity)[0] : null;
-  let t0 = (alive(focus) && focus) || raidFocus(s) || tellFocus(s) || frag || voice || pick || open || key || (classOf(s) === 'infiltrator' ? soonest(s) : mostThreat(s));
+  let t0 = (alive(focus) && focus) || raidFocus(s) || tellFocus(s) || frag || voice || pick || open || crownNow(s) || key || (classOf(s) === 'infiltrator' ? soonest(s) : mostThreat(s));
   if (shunned(s, t0)) t0 = livingParts(s).filter((p) => !shunned(s, p)).sort((a, b) => dueOf(s, a) - dueOf(s, b))[0] || t0;
   // A Trojan's Loader (families.mjs): the part to break, its family's answer (the Courier only ever redeploys while it
   // stands, and every Package it delivers unpacks on a hit). Since fight length (data.mjs CONFIG.length) the Courier

@@ -371,7 +371,7 @@ test('the main game never holds a breach (only the breach campaign does), and th
   const s = fresh();
   assert.equal(s.breach, undefined);
   const { SAVE_VERSION } = await import('./dist/combat.mjs');
-  assert.equal(SAVE_VERSION, 61); // v61 one shop shape; v60 payloads cut; v59 journals; v58: one rep scale; v57: the talent tiers; v56: floors as tiers; v55: gear carries your power; v54: the compounding curve; v53: the cryptogram key; v52: rivals; v51: the scanner; v50: specials; v49: crafting goes; v48: Indemnity retires; v47: one kind of component; v46: no default subclass; v45: sets; v44: whole-number stats; v43: threads; v42: the long climb; v41: floors (R3), not the breach
+  assert.equal(SAVE_VERSION, 62); // v62 runners; v61 one shop shape; v60 payloads cut; v59 journals; v58: one rep scale; v57: the talent tiers; v56: floors as tiers; v55: gear carries your power; v54: the compounding curve; v53: the cryptogram key; v52: rivals; v51: the scanner; v50: specials; v49: crafting goes; v48: Indemnity retires; v47: one kind of component; v46: no default subclass; v45: sets; v44: whole-number stats; v43: threads; v42: the long climb; v41: floors (R3), not the breach
   assert.ok(maxSignal(s) > 0);
 });
 

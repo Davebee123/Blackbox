@@ -23,7 +23,7 @@ test('each part row shows its attack in the column where it lands', () => {
   const row = (id) => boardMarkup(s).split('data-target="').find((r) => r.startsWith(id + '"'));
   const cells = (id) => row(id).split('class="bcell').slice(2);
   assert.match(cells('pulse')[2], /Surge/, 'lands on cycle 3');
-  assert.match(cells('encryptor')[3], /Encrypt/, 'lands on cycle 4');
+  assert.match(cells('encryptor')[3], /Encrypt|Full Disk/, 'lands on cycle 4 (charged into Full Disk when the tell rides it)');
   assert.doesNotMatch(cells('pulse')[0], /intent/);
   assert.match(row('encryptor'), /◆◆/, 'its two armor chits');
 });

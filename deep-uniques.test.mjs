@@ -9,6 +9,7 @@ import { uniqueItem, seeded, BASES, STATS, LOOT } from './dist/gear.mjs';
 import { CONFIG, BOSS_LOOT, ABILITIES, defaultSub, lifted, filled, own } from './dist/data.mjs';
 // These test each heal's and shield's own numbers: sustain potency (CONFIG.length.heal, docs/scaling.md step 3) off.
 CONFIG.length = { ...CONFIG.length, heal: null };
+CONFIG.gearReq = 99; // these tests hand out gear of any level (the requirement has its own test in gear.test.mjs)
 import { checkItems, fxText, fxList } from './dist/content.mjs';
 import ITEMS from './dist/content/items.mjs';
 

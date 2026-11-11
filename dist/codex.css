@@ -128,12 +128,32 @@
 .cx-loot small { font: 11px var(--mono); color: var(--dim); }
 .cx-loot li.unknown b { font-family: var(--mono); color: var(--gray); }
 .cx-loot li.unknown .glyph { color: var(--dim); }
+/* A boss's loot, Grouped (docs/floor-items.md): a group a source, its odds for the next kill as an amber bar. */
+.cx-lg { display: grid; gap: var(--s5); }
+.cxg-head { display: flex; align-items: baseline; gap: var(--s4); padding-bottom: var(--s2); border-bottom: 1px solid var(--line-strong); }
+.cxg-head .cx-label, .cxg-head small { white-space: nowrap; }
+.cxg-head small { font: 11px var(--mono); color: var(--dim); overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.cxg-odds { margin-left: auto; display: inline-flex; align-items: center; gap: var(--s3); }
+.cxg-bar { width: 96px; height: 6px; background: var(--inset); border: 1px solid var(--line); border-radius: var(--r-tag); overflow: hidden; }
+.cxg-bar b { display: block; height: 100%; background: var(--amber); }
+.cxg-odds em { font: 600 12px var(--mono); font-style: normal; color: var(--amber); min-width: 4ch; text-align: right; }
+.cxg-grp.set .cxg-bar b { background: var(--r-set); }
+.cxg-grp.set .cxg-odds em { color: var(--r-set); }
+.cxg-grp.set .cx-loot .glyph { color: var(--r-set); }
+@media (max-width: 520px) { .cxg-head { flex-wrap: wrap; } .cxg-bar { width: 64px; } }
 
 /* A boss's phases. */
 .cx-phases { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s3); }
 .cx-phases li { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: var(--s4); align-items: start; padding: var(--s3) 0; border-bottom: 1px solid var(--line); }
 .cx-phases p { margin: 0; color: var(--text); font-size: 13px; }
 .cxph-at { font: 600 13px var(--mono); color: var(--amber); }
+.cxph-guide { list-style: none; margin: var(--s2) 0 0; padding: 0; display: grid; gap: var(--s2); }
+.cx-phases .cxph-guide li { border: 0; padding: 0; }
+.cxph-guide li > span:only-child { grid-column: 1 / -1; }
+.cxph-guide li { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: var(--s4); font-size: 13px; color: var(--text); }
+.cxph-guide li b { font: 600 12px var(--mono); color: var(--amber); }
+.cx-phases .cxp-hint { margin-top: var(--s2); color: var(--dim); }
+@media (max-width: 520px) { .cxph-guide li { grid-template-columns: minmax(0, 1fr); gap: 0; } }
 .cxph-mechs { display: flex; flex-wrap: wrap; gap: var(--s2); margin-top: var(--s2) !important; }
 .cx-chips { display: flex; flex-wrap: wrap; gap: var(--s2); }
 .cx-head .tag[style*='--ax'] { color: var(--ax); border-color: var(--ax); display: inline-flex; align-items: center; gap: var(--s2); }
@@ -210,12 +230,27 @@
 .lg-line.got b { color: var(--bright); }
 .lg-line.got b.r-zeroday { color: var(--r-zeroday); }
 .lg-line.got b.r-set { color: var(--r-set); }
+/* An earned piece you lack (earned.mjs, the Segments look): named and muted, a cell a count (set green for a set piece,
+   amber for a unique) and its goal with n/N, its pin where the date goes. */
+.lg-line b.lg-earn { color: var(--muted); }
+.lg-goal { display: flex; align-items: center; gap: var(--s3); min-width: 0; }
+.lg-goal small { font: 11px var(--mono); color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.ecells { display: inline-flex; flex: none; gap: 2px; }
+.ecells i { width: 6px; height: 8px; border: 1px solid var(--line-strong); border-radius: 1px; }
+.ecells.set i.on { background: var(--r-set); border-color: var(--r-set); }
+.ecells.uniq i.on { background: var(--amber); border-color: var(--amber); }
+.lg-pin { justify-self: end; display: inline-flex; padding: 2px; background: none; border: 0; color: var(--gray); cursor: pointer; }
+.lg-pin .glyph { width: 13px; height: 13px; margin: 0; }
+.lg-pin:hover, .lg-pin:focus-visible { color: var(--text); }
+.lg-pin.on { color: var(--r-set); }
+.lg-line:not(.set) .lg-pin.on { color: var(--amber); }
+.lg-pin:disabled { opacity: 0.35; cursor: default; }
 .lg-rs { display: grid; grid-template-columns: 120px auto; gap: var(--s4); align-items: center; }
 .lg-rs small { font: 11px var(--mono); color: var(--dim); }
 @media (max-width: 900px) {
   .lg-head { grid-template-columns: minmax(0, 1fr) 120px; gap: var(--s4); }
   .lg-line { grid-template-columns: 16px minmax(0, 1fr) 48px; }
-  .lg-line .lg-hint, .lg-line .lg-rs { grid-column: 2 / 4; grid-row: 2; padding-bottom: var(--s2); }
+  .lg-line .lg-hint, .lg-line .lg-rs, .lg-line .lg-goal { grid-column: 2 / 4; grid-row: 2; padding-bottom: var(--s2); }
 }
 
 /* ---------- Journals (journals-view.mjs): the Ledger's entry and the first find's card. Amber is found, the Cascade
@@ -288,8 +323,7 @@ button.jr-line:hover { background: var(--amber-wash); }
   .jr-line { grid-template-columns: minmax(0, 1fr) 48px; }
   .jr-line small { grid-column: 1 / -1; grid-row: 2; padding-bottom: var(--s2); }
   .jr-sheet { padding: var(--s4); }
-  .gain.jr-wrap { position: fixed; inset: 0; place-items: end stretch; padding: 0; }
-  .gain.jr-wrap .pz-card.jr-card { width: 100%; max-height: 88dvh; overflow-y: auto; border-radius: var(--r-card) var(--r-card) 0 0; border-bottom: 0; }
+  .gain.jr-wrap .pz-card.jr-card { max-height: 88dvh; overflow-y: auto; }
   .jr-card .jr-sheet { max-height: none; overflow: visible; }
   .jr-acts { position: sticky; bottom: calc(-1 * var(--s5)); margin: 0 calc(-1 * var(--s4)) calc(-1 * var(--s5)); padding: var(--s4) var(--s4) var(--s5); background: var(--panel); border-top: 1px solid var(--line); }
   .jr-acts .btn { flex: 1; }

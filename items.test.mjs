@@ -8,13 +8,14 @@ import { checkItems } from './dist/content.mjs';
 import ITEMS from './dist/content/items.mjs';
 
 CONFIG.baseCrit = 0; CONFIG.enemyCrit = 0; CONFIG.misses = false;
+CONFIG.gearReq = 99; // these tests hand out gear of any level (the requirement has its own test in gear.test.mjs)
 const wear = (s, id, level = 30) => { const it = addItem(s, uniqueItem(UNIQUES[id], level, seeded(1))); command(s, 'load ' + it.id); assert.ok(loaded(s).some((x) => x.id === it.id), `${id} loaded`); return it; };
 const fight = (s, key = 'cryptjack') => { selectEncounter(s, key, 7, { level: 30, mutation: null }); command(s, 'engage'); return s; };
 const vet = () => { const s = fresh(); s.hackers = { breaker: { level: 30, xp: 0 } }; return s; };
 
 test('the written uniques have no mistakes', () => {
   assert.deepEqual(checkItems(ITEMS, BASES, STATS).filter((x) => x.bad).map((x) => x.msg), []);
-  assert.equal(Object.keys(UNIQUES).length, 228); // 30, the Kestrel Clearance set's three (sets.mjs), the loot plan's 65 more set pieces (docs/loot-plan.md), two for each of the four bosses, nine leaning toward a class, KESSLER-FARM-00's eight, three only invasions carry, ten world uniques for 18–40, the 27 native uniques networks roll (network.mjs), and the loot plan's Batch 1: 30 for The Sink and 30 for Bedrock (deep-uniques.test.mjs), and the five faction pieces feuds give (faction-gear.mjs)
+  assert.equal(Object.keys(UNIQUES).length, 250); // the eight floor feats' uniques (earned.mjs), two for each of the three floor 4 bosses, 30, the Kestrel Clearance set's three (sets.mjs), the loot plan's 65 more set pieces (docs/loot-plan.md), two for each of the four bosses, nine leaning toward a class, KESSLER-FARM-00's eight, three only invasions carry, ten world uniques for 18–40, the 27 native uniques networks roll (network.mjs), and the loot plan's Batch 1: 30 for The Sink and 30 for Bedrock (deep-uniques.test.mjs), and the five faction pieces feuds give (faction-gear.mjs), and the floor 2 and 3 bosses' eight (floorbosses.mjs)
 });
 
 test('effect blocks: damage when synced, a chit and a crit at the start, half the first hit', () => {

@@ -88,6 +88,7 @@ export function rogueSpawns(s, loc, now = clock()) {
   // A rogue server keeps up with you inside its floor's band, then tops out (you've outgrown it).
   if (!loc.member && !loc.trunk) loc.level = Math.max(loc.level || 1, SERVER.keepUp(hackerLevel(s), loc.depth || 1));
   const who = netOf(s, loc), native = nativeStrain(s, who); // its network's lean and native strain (network.mjs)
+  const throne = throneOf(loc);
   for (const room of rogueRooms(loc)) {
     const sp = loc.spawns[room];
     if (sp?.alive || (sp && (sp.respawnAt > now || loc.occupied))) continue; // an occupation doesn't come back
@@ -95,6 +96,8 @@ export function rogueSpawns(s, loc, now = clock()) {
     const seed = ((loc.seed || 1) * 131 + n * 7919) >>> 0;
     const r = seeded(seed);
     const level = (loc.level || 1) + (loc.rogue.kind === 'pit' ? ROGUE.pitLevels : 0);
+    // Its last room holds its floor's boss (BOSSES throne: SHAKEDOWN on floor 2's Pits, RECURSION on floor 3's Gauntlets).
+    if (throne && room === throne.room) { const B = BOSSES[throne.boss]; loc.spawns[room] = { alive: true, bornAt: now, family: B.family, boss: throne.boss, level: Math.max(level, B.floor || 1), seed, name: B.name }; continue; }
     const family = loc.rogue.kind === 'nest' ? loc.family : leanPick(s, who, r(), { level, floor: loc.depth || 1 }); // the later families too, once open
     let { grade, strain } = variantFor(family, level, loc.depth || 1, seed, native);
     if (!strain && loc.rogue.kind === 'nest') strain = variantFor(family, level, loc.depth || 1, seed ^ 0x9e37, native).strain; // twice the chances
@@ -104,6 +107,14 @@ export function rogueSpawns(s, loc, now = clock()) {
   }
   return loc.spawns;
 }
+// A Pit's or a Gauntlet's boss and the room it holds (its last folder, the deepest fight room of rogueGraph), or null.
+export function throneOf(loc) {
+  if (!plainRogue(loc)) return null;
+  const boss = Object.keys(BOSSES).find((k) => BOSSES[k].throne?.kind === loc.rogue.kind && BOSSES[k].throne.floor === (loc.depth || 1));
+  if (!boss) return null;
+  const rooms = [...rogueRooms(loc)].sort((a, b) => a.split('/').length - b.split('/').length || a.localeCompare(b)); // rogueGraph's folder order
+  return { boss, room: rooms.at(-1) };
+}
 export const liveRogue = (loc) => Object.values(loc.spawns || {}).filter((x) => x.alive).length;
 export const rogueRespawn = (s) => ROGUE.respawnMs[0] + Math.floor(rand(s) * (ROGUE.respawnMs[1] - ROGUE.respawnMs[0]));
 
@@ -111,7 +122,7 @@ export const rogueRespawn = (s) => ROGUE.respawnMs[0] + Math.floor(rand(s) * (RO
 // clear (every fight room in one visit, once a visit) pays a Gauntlet's cache. Returns true on the full clear.
 export function rogueKill(s, loc, room, now, extraDrop) {
   const sp = loc.spawns?.[room];
-  if (sp) { sp.alive = false; sp.respawnAt = now + (loc.farm ? (sp.boss ? FARM.bossMs : FARM.packMs) : loc.lair ? (sp.boss ? NETWORK.lairMs : NETWORK.lairPackMs) : rogueRespawn(s)); }
+  if (sp) { sp.alive = false; sp.respawnAt = now + (loc.farm ? (sp.boss ? FARM.bossMs : FARM.packMs) : loc.lair ? (sp.boss ? NETWORK.lairMs : NETWORK.lairPackMs) : sp.boss ? NETWORK.lairMs : rogueRespawn(s)); } // a throne's boss: back an hour after it falls, like a lair's
   if (loc.farm) farmKill(s, loc, sp);
   if (loc.occupied && !liveRogue(loc)) occupationCleared(s, loc);
   if (loc.rogue.kind === 'pit') extraDrop();

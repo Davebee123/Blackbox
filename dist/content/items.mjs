@@ -1839,6 +1839,10 @@ export default {
         {
           "kind": "author",
           "id": "glassjaw"
+        },
+        {
+          "kind": "boss",
+          "id": "centrifuge"
         }
       ]
     },
@@ -1960,8 +1964,8 @@ export default {
       },
       "sources": [
         {
-          "kind": "lair",
-          "floor": 3
+          "kind": "boss",
+          "id": "shouldersurfer"
         },
         {
           "kind": "lair",
@@ -1994,12 +1998,8 @@ export default {
       },
       "sources": [
         {
-          "kind": "lair",
-          "floor": 3
-        },
-        {
-          "kind": "lair",
-          "floor": 4
+          "kind": "boss",
+          "id": "nightdesk"
         }
       ]
     },
@@ -2030,8 +2030,8 @@ export default {
       },
       "sources": [
         {
-          "kind": "lair",
-          "floor": 4
+          "kind": "boss",
+          "id": "byzantine"
         }
       ]
     },
@@ -6543,6 +6543,530 @@ export default {
         }
       ],
       "flavour": "A second voice above the tune, never quite on it."
+    },
+    {
+      "id": "governor",
+      "name": "Governor",
+      "base": "vpn-cascade",
+      "level": 14,
+      "primary": {
+        "signal": 88,
+        "reduction": 3
+      },
+      "effect": {
+        "when": "custom",
+        "do": "governor",
+        "value": 25
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "centrifuge"
+        }
+      ],
+      "flavour": "Spin it down, and everything after spins down with it."
+    },
+    {
+      "id": "cascade-failure",
+      "name": "Cascade Failure",
+      "base": "exploit-chain",
+      "level": 14,
+      "primary": {
+        "damage": [
+          17,
+          21
+        ]
+      },
+      "effect": {
+        "when": "custom",
+        "do": "slow-hit",
+        "value": 20
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "centrifuge"
+        }
+      ],
+      "flavour": "Stop one wheel and the next one tears loose."
+    },
+    {
+      "id": "paper-trail",
+      "name": "Paper Trail",
+      "base": "exploit-chain",
+      "level": 12,
+      "primary": {
+        "damage": [
+          16,
+          20
+        ]
+      },
+      "effect": {
+        "when": "custom",
+        "do": "windup%",
+        "value": 50
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "shakedown"
+        }
+      ],
+      "flavour": "Every demand leaves a receipt somewhere."
+    },
+    {
+      "id": "shakedown-escrow",
+      "name": "Escrow",
+      "base": "root-shell",
+      "level": 12,
+      "primary": {
+        "signal": 38,
+        "regen": 8
+      },
+      "effect": {
+        "when": "custom",
+        "do": "late",
+        "value": 2
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "shakedown"
+        }
+      ],
+      "flavour": "Held by a third party until the deadline. The third party is late."
+    },
+    {
+      "id": "privacy-screen",
+      "name": "Privacy Screen",
+      "base": "restricted-shell-escape",
+      "level": 18,
+      "primary": {
+        "signal": 50,
+        "regen": 10
+      },
+      "effect": {
+        "when": "custom",
+        "do": "screen"
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "shouldersurfer"
+        }
+      ],
+      "flavour": "Polarised. From the side it is a black rectangle."
+    },
+    {
+      "id": "muscle-memory",
+      "name": "Muscle Memory",
+      "base": "loader",
+      "level": 18,
+      "primary": {
+        "damage": 9,
+        "signal": 40,
+        "payload": 3.8
+      },
+      "effect": {
+        "when": "custom",
+        "do": "rhythm",
+        "value": 10
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "shouldersurfer"
+        }
+      ],
+      "flavour": "Two beats, then the key. Your hands knew before you did."
+    },
+    {
+      "id": "tail-call",
+      "name": "Tail Call",
+      "base": "zero-click",
+      "level": 19,
+      "primary": {
+        "damage": [
+          23,
+          29
+        ]
+      },
+      "effect": {
+        "when": "custom",
+        "do": "break-burns"
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "recursion"
+        }
+      ],
+      "flavour": "The last thing a frame does is hand its work on."
+    },
+    {
+      "id": "stack-guard",
+      "name": "Stack Guard",
+      "base": "onion-circuit",
+      "level": 19,
+      "primary": {
+        "signal": 104,
+        "reduction": 3
+      },
+      "effect": {
+        "when": "custom",
+        "do": "break-guard",
+        "value": 20
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "recursion"
+        }
+      ],
+      "flavour": "A canary on every frame. It sings once, then it is gone."
+    },
+    {
+      "id": "overdraft",
+      "name": "Overdraft",
+      "base": "onion-circuit",
+      "level": 24,
+      "primary": {
+        "signal": 130,
+        "reduction": 4
+      },
+      "effect": {
+        "when": "custom",
+        "do": "overdraft",
+        "value": 25,
+        "limit": "fight"
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "nightdesk"
+        }
+      ],
+      "flavour": "The desk covers it tonight. It bills you in the morning."
+    },
+    {
+      "id": "pre-authorization",
+      "name": "Pre-Authorization",
+      "base": "loader",
+      "level": 24,
+      "primary": {
+        "damage": 12,
+        "signal": 51,
+        "payload": 5
+      },
+      "effect": {
+        "when": "custom",
+        "do": "shield-hit",
+        "value": 10
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "nightdesk"
+        }
+      ],
+      "flavour": "The hold goes on the account before the charge does."
+    },
+    {
+      "id": "changed-default",
+      "name": "Changed Default",
+      "base": "onion-circuit",
+      "level": 24,
+      "primary": {
+        "signal": 130,
+        "reduction": 4
+      },
+      "effect": [
+        {
+          "when": "custom",
+          "do": "helpers-safe"
+        },
+        {
+          "when": "custom",
+          "do": "helper-frags%",
+          "value": 50
+        }
+      ],
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "camswarm"
+        }
+      ],
+      "flavour": "admin, admin. Somebody finally changed it."
+    },
+    {
+      "id": "mass-reboot",
+      "name": "Mass Reboot",
+      "base": "loader",
+      "level": 24,
+      "primary": {
+        "damage": 12,
+        "signal": 51,
+        "payload": 5
+      },
+      "effect": {
+        "when": "custom",
+        "do": "break-frags",
+        "value": 30
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "camswarm"
+        }
+      ],
+      "flavour": "Forty thousand cameras blink at once."
+    },
+    {
+      "id": "majority-attack",
+      "name": "Majority Attack",
+      "base": "wormable",
+      "level": 26,
+      "primary": {
+        "damage": [
+          32,
+          40
+        ]
+      },
+      "effect": {
+        "when": "custom",
+        "do": "low-parts%",
+        "value": 8,
+        "cap": 32
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "byzantine"
+        }
+      ],
+      "flavour": "Hold more than half and the ledger says what you say."
+    },
+    {
+      "id": "quorum-sensor",
+      "name": "Quorum Sensor",
+      "base": "mixnet",
+      "level": 26,
+      "primary": {
+        "signal": 140,
+        "reduction": 4
+      },
+      "effect": {
+        "when": "custom",
+        "do": "second-less",
+        "value": 30
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "byzantine"
+        }
+      ],
+      "flavour": "It counts the votes as they come in, and it flinches at the second."
+    },
+    {
+      "id": "street-atlas",
+      "name": "Street Atlas",
+      "base": "cron-job",
+      "level": 8,
+      "primary": {
+        "damage": 4,
+        "signal": 20,
+        "payload": 2
+      },
+      "effect": {
+        "when": "hit",
+        "if": "room-new",
+        "do": "damage%",
+        "value": 10
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 1
+        }
+      ],
+      "flavour": "Every alley on the Sprawl, inked in by hand, with the dead ends crossed out."
+    },
+    {
+      "id": "quiet-hours",
+      "name": "Quiet Hours",
+      "base": "root-shell",
+      "level": 13,
+      "primary": {
+        "signal": 37,
+        "regen": 7.9,
+        "restore": 21
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat+",
+        "stat": "stealth",
+        "value": 6
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 2
+        }
+      ],
+      "flavour": "The routers on Backhaul log less between two and five."
+    },
+    {
+      "id": "sweetener",
+      "name": "Sweetener",
+      "base": "implant",
+      "level": 18,
+      "primary": {
+        "damage": 6,
+        "signal": 32
+      },
+      "effect": {
+        "when": "custom",
+        "do": "cache-heal%",
+        "value": 5
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 3
+        }
+      ],
+      "flavour": "A canary in every block, and a little sugar under each one."
+    },
+    {
+      "id": "ring-main",
+      "name": "Ring Main",
+      "base": "onion-circuit",
+      "level": 24,
+      "primary": {
+        "signal": 114,
+        "reduction": 3
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat+",
+        "stat": "reduction",
+        "value": 1,
+        "scale": "held",
+        "cap": 4
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 4
+        }
+      ],
+      "flavour": "One cable round Coldline, fed from both ends."
+    },
+    {
+      "id": "mixed-bag",
+      "name": "Mixed Bag",
+      "base": "polymorphic-engine",
+      "level": 30,
+      "primary": {
+        "damage": 14,
+        "signal": 59,
+        "payload": 5.8
+      },
+      "effect": {
+        "when": "hit",
+        "do": "damage%",
+        "value": 3,
+        "scale": "specials"
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 5
+        }
+      ],
+      "flavour": "Seven kinds of trouble on Deep Core. It kept a sample of each."
+    },
+    {
+      "id": "superuser",
+      "name": "Superuser",
+      "base": "bootkit",
+      "level": 36,
+      "primary": {
+        "damage": 12.9,
+        "signal": 64
+      },
+      "effect": [
+        {
+          "when": "hit",
+          "if": "server-held",
+          "do": "damage%",
+          "value": 6
+        },
+        {
+          "when": "always",
+          "if": "server-held",
+          "do": "max-signal%",
+          "value": 6
+        }
+      ],
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 6
+        }
+      ],
+      "flavour": "Ring zero answers to whoever holds it longest."
+    },
+    {
+      "id": "bottleneck",
+      "name": "Bottleneck",
+      "base": "hypervisor-escape",
+      "level": 42,
+      "primary": {
+        "damage": [
+          83,
+          104
+        ]
+      },
+      "effect": {
+        "when": "hit",
+        "do": "damage%",
+        "value": 4,
+        "scale": "reads",
+        "cap": 12
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 7
+        }
+      ],
+      "flavour": "Everything on the Sink drains toward one narrow pipe."
+    },
+    {
+      "id": "last-mile",
+      "name": "Last Mile",
+      "base": "covert-channel",
+      "level": 48,
+      "primary": {
+        "signal": 395,
+        "reduction": 11
+      },
+      "effect": {
+        "when": "hit",
+        "do": "damage%",
+        "value": 5,
+        "scale": "parts"
+      },
+      "sources": [
+        {
+          "kind": "feat",
+          "floor": 8
+        }
+      ],
+      "flavour": "The last stretch of cable before the bedrock, and the slowest."
     }
   ]
 };

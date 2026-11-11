@@ -268,9 +268,6 @@
 .part-bar .ptick.spent { background: var(--bg); box-shadow: inset 0 0 0 1px var(--gray), 0 0 0 1px var(--bg); }
 .part-bar .ptick.phase { background: var(--hot); }
 .part-bar .ptick.phase.spent { background: var(--bg); box-shadow: inset 0 0 0 1px var(--hot), 0 0 0 1px var(--bg); }
-.intent.cut { border-color: var(--you); color: var(--you); background: rgba(127, 209, 199, 0.08); }
-.intent.cut b { font: 600 11px var(--mono); color: var(--you); }
-.intent.cut.none, .intent.cut.none b { color: var(--gray); border-color: var(--line); background: transparent; }
 .intent .cuts { color: var(--you); font: 600 10px var(--mono); }
 .intent .cuts.waste { color: var(--gray); }
 .cut-pips { letter-spacing: 1px; } .cut-pips i { font-style: normal; color: var(--gray); }
